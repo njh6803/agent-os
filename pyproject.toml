@@ -40,7 +40,7 @@ select = ["E", "W", "F", "I", "UP", "B", "DTZ", "TD"]
 ignore = ["TD003"]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "tools"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."
