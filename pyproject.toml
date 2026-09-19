@@ -1,0 +1,60 @@
+[project]
+name = "agent-os"
+version = "0.1.0"
+description = "플러그인 기반 에이전트 런타임. an agent OS"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "anthropic>=0.40",
+    "mcp>=1.0",
+    "pydantic>=2.9",
+]
+
+[project.scripts]
+agent-os = "agent_os.channel.cli.main:main"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pyright",
+    "pytest",
+    "import-linter",
+    "pre-commit",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_os"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "DTZ"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "llm: LLM을 실제로 호출한다. 기본 실행에서 제외. uv run pytest -m llm 으로 돌린다",
+]
+addopts = "-m \"not llm\""
+
+[tool.importlinter]
+root_packages = ["agent_os"]
+
+[[tool.importlinter.contracts]]
+name = "sdk <- core <- channel (constitution principle IV)"
+type = "layers"
+layers = ["agent_os.channel", "agent_os.core", "agent_os.sdk"]
