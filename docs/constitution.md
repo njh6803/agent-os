@@ -82,7 +82,7 @@ docs/           constitution, adr, agents, journal
 
 ### LLM 테스트
 
-LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `pytest -q`는 이 마커를 제외한다. `uv run pytest -m llm`이 돌리며, `ANTHROPIC_API_KEY`가 없으면 skip이 아니라 실패한다. 원칙 I의 판정은 이 명령이다.
+LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `pytest -q`는 이 마커를 제외한다. `uv run --env-file .env pytest -m llm`이 돌리며, `.env`의 `ANTHROPIC_API_KEY`가 없으면 skip이 아니라 실패한다. `.env`는 커밋하지 않는다. 원칙 I의 판정은 이 명령이다.
 
 ### 가드레일
 

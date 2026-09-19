@@ -7,7 +7,7 @@
 - 진행 일지: docs/journal/
 
 ## 검증 명령
-- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run pytest -m llm`)
+- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`)
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
