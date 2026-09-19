@@ -11,6 +11,12 @@
 - 코멘트와 대화 이력은 파일 끝 `## Comments` 제목 아래에 덧붙인다
 - `.scratch/`는 git에 커밋한다. 이 저장소의 유일한 작업 기록이기 때문이다
 
+## 전체 계획
+
+- `.scratch/plan.md`가 전체 계획이다. 슬라이스와 기능(slug) 목록, 기능마다 `Blocked by`와 `Status`(`todo`, `in-progress`, `done`).
+- 기능 하나가 `.scratch/<slug>/` 하나다. `Blocked by`가 비었거나 전부 `done`인 기능이 프론티어이고, 프론티어는 병렬로 돌린다.
+- 계약(`sdk/`, `openapi.json`, 헌법)을 바꾸는 티켓은 그 기능의 첫 티켓이며 다른 티켓을 막는다.
+
 ## 스킬이 "이슈 트래커에 발행하라"고 할 때
 
 `.scratch/<feature-slug>/` 아래에 새 파일을 만든다. 디렉터리가 없으면 만든다.

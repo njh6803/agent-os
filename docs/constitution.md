@@ -68,6 +68,8 @@ docs/           constitution, adr, agents, journal
 .scratch/       이슈 트래커
 ```
 
+문서는 범위가 있는 곳에 둔다. 저장소 전체에 해당하면 루트 `docs/`, 한 앱에만 해당하면 그 앱 안(README, 중첩 `CLAUDE.md`). 같은 사실을 두 곳에 두지 않고, 지역 문서는 루트를 요약하지 않고 가리키며, 루트가 지역 문서를 색인한다. 헌법, 용어집, ADR 번호열은 하나다. 지역 결정도 루트 ADR 열에 넣고 제목에 범위를 적는다.
+
 ### 플러그인 모델
 
 - 종류는 넷이다. `agent`, `mcp`, `skill`, `model`. 매니페스트는 `plugin.toml` 하나이고 `kind`, `name`, `version`을 가지며 `agent`만 `entrypoint = "모듈:속성"`을 가진다. 디렉터리와 `kind`가 어긋나면 로더가 에러를 낸다.
@@ -126,12 +128,13 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 ### 브랜치와 병합
 
 - 티켓마다 `feature/<NN>-<slug>` 브랜치. 혼자 작업하는 동안은 PR이 없다. 팀원이 생기면 거버넌스의 전환 규칙을 따른다.
-- 병합 전 `/code-review main`. 병합은 main에 fast-forward.
+- 병합 전 `/code-review main`. 병합은 main에 fast-forward. 병렬 브랜치는 main에 rebase한 뒤 ff한다.
+- 병렬 작업은 프론티어(막힌 것이 없는 티켓)에서만 하고, 티켓마다 워크트리 하나다. 티켓 세션의 일지는 `docs/journal/<날짜>-<티켓슬러그>.md`에 쓰고 날짜 파일은 조율 세션만 쓴다.
 - 커밋 메시지는 컨벤셔널 커밋, 한국어.
 
 ### 이슈 관리
 
-로컬 마크다운. `.scratch/<feature-slug>/`. 규약은 `docs/agents/issue-tracker.md`.
+로컬 마크다운. 전체 계획은 `.scratch/plan.md`, 기능별 명세와 티켓은 `.scratch/<feature-slug>/`. 규약은 `docs/agents/issue-tracker.md`.
 
 ### 환경 규약 (선행 저장소가 겪은 것)
 
@@ -150,4 +153,4 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 - 철수 조건: 연속 10일 커밋 0이면 접은 것으로 본다.
 - 성공 임계값: 첫 커밋 후 3일 안에 원칙 I의 테스트 통과. 2주 안에 첫 슬라이스 완료.
 
-**Version**: 1.4.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-19 (ADR 0001, 0002, 0003)
+**Version**: 1.5.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-20 (ADR 0001, 0002, 0003)
