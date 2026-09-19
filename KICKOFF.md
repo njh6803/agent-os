@@ -1,6 +1,8 @@
 # 새 프로젝트 첫날 킥오프 런북
 
-기준일 2026-09-19. 결정: mattpocock 스킬 유지, superpowers 비활성, 교정 루프는 `/retro` 수동 회고, 지침은 한국어. 스킬(`.claude/skills/`)과 교정 루프 문단(`CLAUDE.md`)은 모두 프로젝트 레벨에 둔다. 전역에는 grill-me, grilling 스킬만 남긴다.
+원본은 이 파일(`C:/project/agent/KICKOFF.md`)이다. 새 프로젝트는 이 파일을 복사해서 시작하고, 런북을 고칠 일이 생기면 여기를 고친 뒤 복사본에 반영한다.
+
+기준일 2026-09-19. 결정: mattpocock 스킬 유지, superpowers 비활성, 교정 루프는 `/retro` 수동 회고, 지침은 한국어. 스킬(`.claude/skills/`)과 교정 루프 문단(`CLAUDE.md`)은 모두 프로젝트 레벨에 둔다. 전역에는 프로젝트와 무관한 개인 워크플로 스킬(git-*, jira-*)만 남기고, 프로젝트가 관리하는 스킬의 전역 사본은 두지 않는다.
 
 전제: 무엇을 만들지 안다. 모르면 `/grill-me`로 브레인스토밍부터 하고 이 런북은 그 뒤에 시작한다.
 
@@ -8,16 +10,19 @@
 
 | 위치 | 내용 | 이유 |
 |---|---|---|
-| `~/.claude/CLAUDE.md` (전역) | 비워 둔다 | 교정 루프 문단은 `CODING_STANDARDS.md`와 `/retro`를 가리키므로, 그것들이 없는 다른 프로젝트에 새면 안 된다 |
-| `~/.claude/skills/` (전역) | grill-me, grilling | 코드와 무관한 그릴링용. grill-me가 grilling을 부를 수 있음 |
-| `.claude/skills/` (프로젝트) | mattpocock 엔지니어링 스킬 전부 | git에 커밋, 프로젝트마다 버전 고정 |
+| `~/.claude/CLAUDE.md` (전역. Windows는 `C:/Users/<user>/.claude/CLAUDE.md`) | 비워 둔다 | 교정 루프 문단은 `CODING_STANDARDS.md`와 `/retro`를 가리키므로, 그것들이 없는 다른 프로젝트에 새면 안 된다 |
+| `~/.claude/skills/` (전역) | 프로젝트와 무관한 개인 워크플로 스킬만(git-*, jira-*). 프로젝트가 안 쓰는 것은 그 프로젝트의 `skillOverrides`로 끈다 | 전역은 같은 이름의 프로젝트 스킬을 이기므로, 프로젝트가 관리하는 스킬(grilling 등)의 전역 사본을 두면 `npx skills update` 뒤 낡은 전역이 조용히 이긴다 |
+| `.claude/skills/` (프로젝트) | mattpocock 엔지니어링 스킬 전부 + grill-me | git에 커밋, 프로젝트마다 버전 고정. `skills-lock.json`이 출처와 해시를 기록 |
+| `.claude/settings.json` (프로젝트) | `enabledPlugins`(LSP 등 프로젝트 플러그인), `skillOverrides`(이 프로젝트가 안 쓰는 전역 스킬을 `"off"`) | 저장소와 함께 간다 |
 | `CLAUDE.md` (프로젝트) | 다른 파일을 가리키는 포인터, 검증 명령, 교정 루프 문단 | 규칙은 여기 쓰지 않는다. 교정 루프는 규칙이 아니라 규칙을 만드는 절차다 |
 | `docs/constitution.md` | 헌법. 원칙, 스택, 저장소 구조, 검증 의무, CI, 이슈관리 | 프로젝트당 한 번 |
 | `CODING_STANDARDS.md` | 검사로 못 잡는 판단 기준 | code-review 스킬이 읽음 |
 | `CONTEXT.md`, `docs/adr/` | 용어집, 결정 기록 | domain-modeling이 씀 |
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
+| `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
+| `.scratch/` | 로컬 이슈 트래커(명세, 티켓) | 원격 없는 프로젝트의 유일한 작업 기록. 커밋한다 |
 
-주의: 같은 이름의 스킬이 전역과 프로젝트에 둘 다 있으면 전역이 이긴다(공식 문서: personal over project). 그래서 전역에는 grill-me, grilling만 남긴다.
+주의: 같은 이름의 스킬이 전역과 프로젝트에 둘 다 있으면 전역이 이긴다(공식 문서: enterprise > personal > project). 그래서 프로젝트가 관리하는 스킬의 전역 사본은 두지 않는다. 전역 스킬을 `skillOverrides`로 끄면 같은 이름의 프로젝트 스킬이 살아나는지는 문서에 없으므로, 중복은 끄지 말고 옮긴다.
 
 ## 0단계. 한 번만 하는 전역 준비
 
@@ -29,10 +34,10 @@
 claude plugin disable superpowers@claude-plugins-official
 ```
 
-2. 전역 스킬 정리. grill-with-docs와 domain-modeling은 프로젝트 레벨로 옮길 것이므로 전역 복사본을 백업 폴더로 이동한다. grill-me와 grilling은 남긴다.
+2. 전역 스킬 정리. grill-with-docs, domain-modeling, grilling, grill-me는 프로젝트 레벨로 옮길 것이므로 전역 복사본을 백업 폴더로 이동한다. git-*, jira-* 같은 개인 워크플로 스킬은 남긴다.
 
 ```bash
-mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills-backup/
+mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills/grilling ~/.claude/skills/grill-me ~/.claude/skills-backup/
 ```
 
 전역 `~/.claude/CLAUDE.md`는 비워 둔다. 교정 루프 문단은 3단계에서 프로젝트 `CLAUDE.md`에 넣는다.
@@ -75,7 +80,13 @@ npx skills ls
 npx skills update -p
 ```
 
-`.claude/skills/`는 git에 커밋한다. grilling은 전역과 중복이지만 내용이 같아 무해하다.
+grill-me는 본인 스킬이라 설치기에 없다. 백업에서 복사한다.
+
+```bash
+cp -r ~/.claude/skills-backup/grill-me .claude/skills/
+```
+
+`.claude/skills/`는 git에 커밋한다. 전역에 같은 이름을 남기지 않는다.
 
 ## 3단계. CLAUDE.md 생성
 
@@ -158,7 +169,7 @@ code-review 스킬이 리뷰할 때 읽는 파일. 자동 검사(린트, 타입,
 
 통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
 
-선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 언어 서버 바이너리는 따로 설치해야 한다.
+선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-*, git-pr* 등)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 언어 서버 바이너리는 따로 설치해야 한다.
 
 ```bash
 claude plugin install typescript-lsp@claude-plugins-official --scope project
@@ -188,7 +199,7 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 
 ## 첫날 종료 체크리스트
 
-- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 전역 스킬은 grill-me·grilling만
+- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 안 쓰는 전역 스킬은 `skillOverrides`로 꺼짐
 - [ ] `.claude/skills/`에 12개 스킬, `npx skills ls`로 확인
 - [ ] `CLAUDE.md` 30줄 이내, 규칙 없음, 포인터·검증 명령·교정 루프 문단만
 - [ ] `docs/agents/issue-tracker.md`에 Jira 흐름 기록
