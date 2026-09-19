@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-agent-os = "agent_os.channel.cli.main:main"
+agent-os = "agent_os.main:main"
 
 [dependency-groups]
 dev = [
@@ -53,8 +53,27 @@ addopts = "-m \"not llm\""
 
 [tool.importlinter]
 root_packages = ["agent_os"]
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "sdk <- core <- channel (constitution principle IV)"
+name = "main -> server -> {channel | admin | adapters} -> core -> sdk (principle IV)"
 type = "layers"
-layers = ["agent_os.channel", "agent_os.core", "agent_os.sdk"]
+layers = [
+    "agent_os.main",
+    "(agent_os.server)",
+    "agent_os.channel | agent_os.admin | agent_os.adapters",
+    "agent_os.core",
+    "agent_os.sdk",
+]
+
+[[tool.importlinter.contracts]]
+name = "core knows no provider (constitution: ports and adapters)"
+type = "forbidden"
+source_modules = ["agent_os.core"]
+forbidden_modules = ["langchain_anthropic", "langchain_mcp_adapters"]
+
+[[tool.importlinter.contracts]]
+name = "sdk knows no engine (ADR 0001)"
+type = "forbidden"
+source_modules = ["agent_os.sdk"]
+forbidden_modules = ["langgraph", "langchain_core", "langchain_anthropic", "langchain_mcp_adapters"]
