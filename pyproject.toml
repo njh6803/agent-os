@@ -51,7 +51,8 @@ testpaths = ["tests"]
 markers = [
     "llm: LLM을 실제로 호출한다. 기본 실행에서 제외. uv run pytest -m llm 으로 돌린다",
 ]
-addopts = "-m \"not llm\""
+# importlib 모드: tests/ 하위 디렉터리에 같은 파일명이 있어도 모듈명 충돌이 없다(선행 저장소 AAPP-32·37 함정)
+addopts = "-m \"not llm\" --import-mode=importlib"
 
 [tool.importlinter]
 root_packages = ["agent_os"]
