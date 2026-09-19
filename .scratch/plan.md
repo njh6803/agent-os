@@ -12,3 +12,23 @@
 | 4 | web-widget | `apps/widget` 채팅 위젯. 기술은 실측으로 결정 | http-channel, web-admin | todo |
 
 프론티어: 지금은 first-slice 하나. 끝나면 http-channel, admin-api, interrupts 셋이 동시에 열린다.
+
+## 목표 배치
+
+슬라이스가 끝날 때마다 채워진다. 현재 트리는 `README.md`.
+
+```
+src/agent_os/
+  main.py                  진입점. run → channel, serve → server. 어댑터를 조립해 넘긴다
+  server.py                슬라이스 2. FastAPI 앱 조립. 채널·관리 라우터
+  sdk/  core/  adapters/
+  channel/cli/             슬라이스 1
+  channel/http/            슬라이스 2. /runs
+  admin/http/              슬라이스 2. /plugins, /traces, 위젯 설정
+web/                       슬라이스 3부터. pnpm 워크스페이스. 파이썬과 루트 분리
+  apps/admin/              Next.js 관리 화면
+  apps/widget/             슬라이스 4. 채팅 위젯. 기술은 그때 결정
+  packages/api-client/     openapi.json에서 생성
+```
+
+첫 슬라이스: `plugins/agents/`의 파이썬 에이전트 하나를 CLI로 실행하면, Anthropic 모델을 호출하고 MCP stdio 서버 하나의 도구를 써서 답을 내며, 실행 전체가 이벤트 스트림으로 나오고 JSONL 트레이스로 남는다. 첫 슬라이스가 끝나기 전에는 만들지 않는 것: 선언적 그래프 정의, 원격·WASM·FaaS 실행, 메모리·RAG, 멀티테넌시, UI, 스케줄러, HTTP 채널, 스킬 로더와 모델 로더(디렉터리와 `kind`만 예약).

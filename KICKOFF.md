@@ -15,7 +15,7 @@
 | `.claude/skills/` (프로젝트) | mattpocock 엔지니어링 스킬 전부 + grill-me | git에 커밋, 프로젝트마다 버전 고정. `skills-lock.json`이 출처와 해시를 기록 |
 | `.claude/settings.json` (프로젝트) | `enabledPlugins`(LSP 등 프로젝트 플러그인), `skillOverrides`(이 프로젝트가 안 쓰는 전역 스킬을 `"off"`) | 저장소와 함께 간다 |
 | `CLAUDE.md` (프로젝트) | 다른 파일을 가리키는 포인터, 검증 명령, 교정 루프 문단 | 규칙은 여기 쓰지 않는다. 교정 루프는 규칙이 아니라 규칙을 만드는 절차다 |
-| `docs/constitution.md` | 헌법. 원칙, 스택, 저장소 구조, 검증 의무, CI, 이슈관리 | 프로젝트당 한 번 |
+| `docs/constitution/` | 헌법. `principles.md`(원칙·거버넌스, 임포트), `tech.md`(스택), `operations.md`(검증·운영). 디렉터리별 규칙은 `.claude/rules/*.md`+`paths` | 프로젝트당 한 번 |
 | `CODING_STANDARDS.md` | 검사로 못 잡는 판단 기준 | code-review 스킬이 읽음 |
 | `CONTEXT.md`, `docs/adr/` | 용어집, 결정 기록 | domain-modeling이 씀 |
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
@@ -95,21 +95,37 @@ cp -r ~/.claude/skills-backup/grill-me .claude/skills/
 ```markdown
 # <프로젝트명>
 
+<한 줄 소개>. 원칙만 아래에서 임포트하고 나머지는 경로로 읽는다. 200줄 이하.
+
+@docs/constitution/principles.md
+
+## 레이어
+- <디렉터리>: <역할 한 줄> (3~6줄. 트리 전체는 README)
+
 ## 지도
-- 헌법(타협 불가 원칙, 스택, 저장소 구조, 검증 의무): docs/constitution.md
-- 코딩 표준(리뷰 시 적용): CODING_STANDARDS.md
-- 용어집: CONTEXT.md, 결정 기록: docs/adr/
+| 문서 | 읽는 때 | 쓰는 때 |
+|---|---|---|
+| docs/constitution/tech.md, operations.md | 스택·운영을 만질 때 | ADR 뒤 |
+| CONTEXT.md, docs/adr/ | 용어를 쓰거나 결정을 바꾸기 전 | domain-modeling, 승인 뒤 |
+| CODING_STANDARDS.md | 리뷰 때 | "규칙으로" 뒤 |
+| .scratch/plan.md, .scratch/<slug>/ | 이어서 할 때, 티켓 시작 전 | to-spec, to-tickets |
+| docs/journal/ | 이어서 할 때 끝의 "다음" | 단계를 마칠 때 |
 
 ## 검증 명령
-- 테스트:
-- 린트:
-- 타입체크:
+- 테스트: / 린트: / 타입체크:
+
+## 작업 규약
+1. 작업 전 명세·티켓·해당 ADR을 읽는다. 결정을 바꾸기 전에는 반드시.
+2. 고칠 파일과 영향을 세 줄로 적고 시작한다.
+3. 끝나면 검증 명령을 돌린다. 하네스를 바꿨으면 실제 실행으로 확인한다.
+4. 결정이 바뀌면 스킬·훅·rules·명세도 같이 고친다.
+5. 아키텍처 결정은 ADR 초안을 보여주고 승인받는다.
 
 ## 교정 루프
-- 내가 네 결과를 고치거나 되돌리면, 먼저 그 실수를 테스트·린트·훅 같은 자동 검사로 잡을 수 있는지 판단하고 검사를 제안한다.
-- 자동 검사로 잡을 수 없는 판단 기준만 CODING_STANDARDS.md에 한 줄로 제안한다. 내가 "규칙으로"라고 말하기 전에는 추가하지 않는다.
-- 이 파일에는 규칙을 쓰지 않는다. 다른 파일을 가리키는 포인터만 둔다.
-- 의미 있는 세션이 끝나면 /retro를 권한다.
+- (런북 원문 네 줄) + 지침 추가 시 로드 시점 표(도구 설정 / rules+paths / skills / docs+링크 / 이 파일)
+
+## 환경 함정
+- 명령을 치기 전에 알아야 하는 것만 (PYTHONUTF8 등)
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.
@@ -130,10 +146,10 @@ cp -r ~/.claude/skills-backup/grill-me .claude/skills/
 Spec Kit 템플릿을 내려받아 채운다. Spec Kit 자체는 설치하지 않는다. Spec Kit의 specify, clarify, plan, tasks, implement, analyze는 2단계에서 설치한 to-spec, to-tickets, implement, code-review와 1:1로 겹쳐서 둘 다 깔면 실행기가 둘이 된다. mattpocock에 없는 것은 헌법뿐이고, 헌법 스킬이 하는 인터뷰는 grill-me가 대신한다. 반대로 Spec Kit 파이프라인을 쓰고 싶으면 to-spec, to-tickets, implement, code-review를 빼고 `specify init --integration claude`로 대체한다. 어느 쪽이든 파이프라인은 한 벌만.
 
 ```bash
-curl.exe -L -o docs/constitution.md https://raw.githubusercontent.com/github/spec-kit/main/templates/constitution-template.md
+mkdir -p docs/constitution && curl.exe -L -o docs/constitution/principles.md https://raw.githubusercontent.com/github/spec-kit/main/templates/constitution-template.md
 ```
 
-채우는 방법: 에이전트에게 "`/grill-me`로 docs/constitution.md를 채우자. 한국어로. 다 채울 때까지 물어라"라고 시킨다. 이것이 킥오프 인터뷰다. 템플릿 섹션 대응:
+채우는 방법: 에이전트에게 "`/grill-me`로 docs/constitution/을 채우자. 한국어로. 다 채울 때까지 물어라"라고 시킨다. 원칙과 거버넌스는 `principles.md`, 스택은 `tech.md`, 검증·운영은 `operations.md`에 쓴다. 이것이 킥오프 인터뷰다. 템플릿 섹션 대응:
 
 | 템플릿 섹션 | 채울 내용 |
 |---|---|
@@ -144,7 +160,7 @@ curl.exe -L -o docs/constitution.md https://raw.githubusercontent.com/github/spe
 
 빈 칸 없이 채운다. 모르는 항목은 "미정"이 아니라 결정한다. 결정 못 하면 그릴링을 더 한다.
 
-**한 파일로 시작한다.** 첫날 분량은 100줄 안팎이라 나눌 이유가 없고, 버전과 개정일이 한 곳에 있어 개정 관리가 쉽다. 이 파일은 `CLAUDE.md`가 가리키기만 하고 매 세션 자동으로 읽히지는 않는다. 항상 읽혀야 하는 것은 원칙 5개뿐이므로, 파일이 작을 때는 `CLAUDE.md`에 `@docs/constitution.md`로 임포트해도 되고, 커지면 원칙만 `docs/constitution/principles.md`로 떼어 임포트하고 나머지(`tech.md`, `structure.md`)는 포인터로 둔다.
+**처음부터 셋으로 나눈다.** `principles.md`(원칙 다섯과 거버넌스, 30줄 안팎)만 `CLAUDE.md`가 `@`로 임포트하고, `tech.md`와 `operations.md`는 지도에서 "언제 읽나"와 함께 경로로 가리킨다. 디렉터리에만 해당하는 규칙(포트, 어댑터, 플러그인, 테스트)은 헌법이 아니라 `.claude/rules/*.md`에 `paths`를 붙여 둔다. 첫 프로젝트에서 한 파일로 시작해 161줄까지 키운 뒤 통째로 임포트하다 나눴다. 그 비용을 다시 치르지 않는다.
 
 나누는 기준은 주제가 아니라 셋이다. (1) 150줄을 넘거나 에이전트가 규칙을 놓치기 시작할 때. (2) 어떤 절이 다른 절과 다른 주기로 바뀔 때. 구조는 패키지를 추가할 때마다 바뀌고 원칙은 거의 안 바뀐다. (3) 어떤 절이 저장소 일부에만 해당할 때. 이 경우는 파일을 나누는 게 아니라 그 디렉터리의 `CLAUDE.md`로 옮긴다(중첩 지원). 모노레포는 루트 헌법 하나에 패키지별 중첩 `CLAUDE.md`가 기본형이다. 검증 명령처럼 매 세션 필요하고 자주 바뀌는 것은 헌법이 아니라 `CLAUDE.md`에 둔다.
 
@@ -201,9 +217,9 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 
 - [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 안 쓰는 전역 스킬은 `skillOverrides`로 꺼짐
 - [ ] `.claude/skills/`에 12개 스킬, `npx skills ls`로 확인
-- [ ] `CLAUDE.md` 30줄 이내, 규칙 없음, 포인터·검증 명령·교정 루프 문단만
+- [ ] `CLAUDE.md` 200줄 이하. 레이어 역할, 지도(언제 읽나), 검증 명령, 작업 규약, 교정 루프와 로드 시점 표, 환경 함정. `@` 임포트는 principles.md 하나
 - [ ] `docs/agents/issue-tracker.md`에 Jira 흐름 기록
-- [ ] `docs/constitution.md` 빈 칸 없음, 한국어
+- [ ] `docs/constitution/` 세 파일 빈 칸 없음, 한국어. 디렉터리별 규칙은 `.claude/rules/`
 - [ ] `CODING_STANDARDS.md` 존재, 판단 기준 비어 있음
 - [ ] 테스트, 린트, 타입체크 명령 통과, 가드레일 하나 이상
 - [ ] 첫 커밋 완료
