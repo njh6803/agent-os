@@ -1,23 +1,26 @@
 """BaseAgent 프로토콜. 플러그인이 구현하고 런타임이 호출하는 계약.
 
-TODO(사용자): run 시그니처를 정한다. 정할 것 셋.
-1. 입력. 문자열 하나인가, 구조화된 요청 모델인가.
-2. 반환. 원칙 V에 따라 이벤트의 열이다. AsyncIterator[Event]를 권한다.
-   anthropic SDK와 mcp SDK가 async 기본이라 동기 Iterator는 어댑터가 하나 더 필요하다.
-3. 의존성 전달. 에이전트가 LLM과 MCP 도구를 어떻게 받는가.
-   생성자 주입이면 플러그인이 core 타입을 알아야 하고(원칙 IV 위반 위험),
-   run()의 컨텍스트 인자로 받으면 sdk에 정의된 프로토콜만 보면 된다.
-
-권장 형태:
-
-    class BaseAgent(Protocol):
-        def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]: ...
+결정(2026-09-19):
+- 입력은 문자열 하나. 구조화된 요청은 필요가 증명될 때 ADR로 바꾼다.
+- 반환은 AsyncIterator[Event]. async generator로 구현한다(원칙 V).
+- LLM과 도구는 run()의 ctx 인자로 받는다. 플러그인은 sdk의 프로토콜만 본다(원칙 IV).
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Protocol
+
+from agent_os.sdk.events import Event
+
+
+class AgentContext(Protocol):
+    """런타임이 run()에 넘기는 것. 플러그인은 이것으로만 LLM과 도구를 쓴다."""
+
+    async def llm(self, prompt: str) -> str: ...
+
+    async def tool(self, name: str, **args: object) -> str: ...
 
 
 class BaseAgent(Protocol):
-    """TODO(사용자): run 시그니처를 채운다."""
+    def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]: ...
