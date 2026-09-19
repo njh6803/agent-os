@@ -33,9 +33,10 @@ LLM을 실제로 호출하는 테스트 하나가 통과하기 전에는 헌법,
 | 타입 | pyright strict |
 | 테스트 | pytest |
 | 경계 | import-linter |
-| 런타임 의존성 | `langgraph`, `langchain-anthropic`, `langchain-mcp-adapters`, `pydantic`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). ADR 0001 |
+| 런타임 의존성 | core: `langgraph`, `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). ADR 0001 |
 | CLI | 표준 라이브러리 argparse |
 | 웹 | Next.js, pnpm 워크스페이스, `web/`. 슬라이스 3부터. 위젯 기술은 슬라이스 4에서 결정 |
+| 프론트 구성 | 아토믹 디자인. `components/{atoms,molecules,organisms,templates}`, Next의 `app/`이 pages. API 호출은 organisms 이상만 하고 atoms·molecules는 순수. 위젯과 공유하는 atoms는 `web/packages/ui`. 세부 규칙은 슬라이스 3 인터뷰 |
 
 의존성을 추가하려면 ADR을 남긴다.
 
@@ -80,6 +81,22 @@ docs/           constitution, adr, agents, journal
 - 에이전트는 쓸 MCP 서버를 매니페스트에 명시한다. 비어 있으면 도구가 없다(ADR 0002).
 - 에이전트의 `run()`은 재실행 가능해야 한다. 파일, 시각, 난수, 네트워크 같은 부작용은 `ctx`를 통해서만 일으킨다. 둘째 슬라이스의 멈춤과 재개가 이 성질에 기댄다.
 - `AgentContext`의 메서드는 인자와 반환이 JSON으로 직렬화 가능해야 한다. 파이썬 객체를 넘기지 않는다. 원격 실행이 이 성질에 기댄다.
+
+### 포트와 어댑터
+
+헥사고날은 core가 프로세스 밖과 닿는 지점에만 쓴다. 포트는 다섯이고 닫힌 목록이다.
+
+| 포트 | 무엇 | 첫 어댑터 |
+|---|---|---|
+| TraceSink | 이벤트 쓰기 | JSONL 파일 |
+| PluginSource | 매니페스트와 코드 읽기 | 파일시스템(ADR 0003) |
+| ToolSource | 도구 목록과 호출 | MCP(langchain-mcp-adapters) |
+| ChatModel | 모델 호출 | langchain-anthropic. 포트 자체는 langchain-core의 추상 클래스 |
+| Clock | 시각과 run_id | 시스템 시계, uuid4 |
+
+- 포트를 더하려면 core가 바깥과 닿는 새 지점이어야 하고 ADR을 남긴다.
+- 유스케이스 클래스, 커맨드·결과 객체, 도메인별 포트는 두지 않는다. 채널과 관리는 core의 함수와 클래스를 직접 부른다.
+- core는 `langchain_anthropic`, `langchain_mcp_adapters`를 import하지 않는다. import-linter의 금지 계약이 판정한다. 프로바이더 교체는 core 밖의 일이다.
 
 ### 첫 슬라이스와 비목표
 
@@ -133,4 +150,4 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 - 철수 조건: 연속 10일 커밋 0이면 접은 것으로 본다.
 - 성공 임계값: 첫 커밋 후 3일 안에 원칙 I의 테스트 통과. 2주 안에 첫 슬라이스 완료.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-19 (ADR 0001, 0002, 0003)
+**Version**: 1.4.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-19 (ADR 0001, 0002, 0003)
