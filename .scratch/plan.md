@@ -4,7 +4,7 @@
 
 | 슬라이스 | 기능(slug) | 내용 | Blocked by | Status |
 |---|---|---|---|---|
-| 1 | first-slice | CLI로 에이전트 하나 실행. Anthropic 호출, MCP stdio 도구 하나, 이벤트 스트림, JSONL 트레이스. 원칙 I 기한 2026-09-22 | 없음 | todo |
+| 1 | first-slice | CLI로 에이전트 하나 실행. Anthropic 호출, MCP stdio 도구 하나, 이벤트 스트림, JSONL 트레이스. 원칙 I 기한 2026-09-22. 첫 티켓은 계약과 의존성: `pyproject.toml`을 tech.md에 맞추고(지금은 anthropic·mcp·pydantic) sdk에 `schema_version`·`principal`·`mcp`·`model`을 넣는다 | 없음 | todo |
 | 2 | http-channel | `server.py`, `channel/http` `/runs`, 스트리밍 | first-slice | todo |
 | 2 | admin-api | `admin/http` `/plugins`, `/traces`, 위젯 설정. `openapi.json` 내보내기. 씨앗: 일지 09-20 "슬라이스 2 씨앗"과 "슬라이스 2(백엔드)가 미리 갖춰야 할 것" | first-slice | todo |
 | 2 | interrupts | 사람 승인 인터럽트, 체크포인터(`thread_id = run_id`), `RunPaused` 이벤트 | first-slice | todo |

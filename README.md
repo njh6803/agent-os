@@ -33,3 +33,25 @@ docs/
 ```
 
 아직 없는 것(`server.py`, `channel/http`, `web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+
+## 원천 표
+
+사실 하나에 원천 하나. 다른 문서는 이 원천을 가리키기만 하고 요약하지 않는다. 두 곳이 다르면 원천이 맞고 나머지가 버그다.
+
+| 사실 | 원천 | 비고 |
+|---|---|---|
+| 원칙과 거버넌스 | `docs/constitution/principles.md` | `CLAUDE.md`가 임포트 |
+| 스택과 의존성의 결정 | `docs/constitution/tech.md` | 구현은 `pyproject.toml`. 둘이 다르면 pyproject를 맞추거나 ADR |
+| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령 넷은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`. 명령이 바뀌면 둘 다 |
+| 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
+| 용어 | `CONTEXT.md` | 피할 말 포함 |
+| 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |
+| 판단 기준(리뷰) | `CODING_STANDARDS.md` | "규칙으로" 승인분만 |
+| 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 열 때만 실림 |
+| 현재 구조 | 코드 | 이 README의 트리는 안내 |
+| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | |
+| 기능 명세와 티켓 | `.scratch/<slug>/` | |
+| 디스크 형식(매니페스트, 이벤트) | `src/agent_os/sdk/`와 `tests/sdk/` | `rules/sdk.md`는 결정만 |
+| 설치된 스킬과 해시 | `skills-lock.json` | |
+| 진행 기록 | `docs/journal/` | 이력이지 원천이 아니다 |
+| 환경 함정 | `CLAUDE.md`(명령 전에 볼 다섯), `operations.md`(나머지) | 런북 부록 A는 새 프로젝트용 사본 |

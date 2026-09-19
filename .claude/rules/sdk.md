@@ -6,6 +6,8 @@ paths:
 
 # sdk와 플러그인 규칙
 
+원천은 `src/agent_os/sdk/`의 코드와 `tests/sdk/`다. 아래는 확정된 결정이고, 코드가 아직 따라오지 않은 항목(`schema_version`, 에이전트의 `mcp = [...]`, `model` 종류)은 첫 슬라이스의 계약 티켓이 넣는다. 코드와 이 문서가 다르면 코드를 고치거나 ADR을 남긴다. 이 문서를 코드에 맞춰 조용히 고치지 않는다.
+
 - sdk는 플러그인이 import하는 유일한 표면이다. `langgraph`, `langchain_core`, `langchain_anthropic`, `langchain_mcp_adapters`를 import하지 않는다. import-linter가 판정한다.
 - 플러그인 종류는 넷이다. `agent`, `mcp`, `skill`, `model`. 매니페스트는 `plugin.toml` 하나이고 `schema_version`, `kind`, `name`, `version`을 가진다. `agent`만 `entrypoint = "모듈:속성"`과 쓸 MCP 서버 목록 `mcp = [...]`를 가진다. 비어 있으면 도구가 없다(ADR 0002). 디렉터리와 `kind`가 어긋나면 로더가 에러를 낸다.
 - 에이전트는 개발자가 코드로 쓰는 플러그인이다. 그래프가 아니다.
