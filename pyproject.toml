@@ -35,7 +35,9 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "UP", "B", "DTZ"]
+select = ["E", "W", "F", "I", "UP", "B", "DTZ", "TD"]
+# TD003(이슈 링크)은 로컬 트래커라 대신 TD002의 괄호에 티켓 경로를 쓴다: TODO(first-slice/03): ...
+ignore = ["TD003"]
 
 [tool.pyright]
 include = ["src", "tests"]
