@@ -281,7 +281,7 @@ main을 보호한다. 필수 상태 검사 `ci / verify`, 직접 푸시 금지. 
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
 ```
 
-1단계 갈림길이 `free`+비공개였으면 이 절은 생략하고 `/git-pr-merge`가 게이트다. 고른 것을 `operations.md` 가드레일 절에 적는다. 상세는 부록 A.
+1단계 갈림길이 `free`+비공개였으면 이 절은 생략하고 `/git-pr-merge`가 게이트다. 고른 것을 `operations.md` 가드레일 절에 적는다. 나중에 공개로 바꾸면 그날 보호를 건다(agent-os는 셋째 날 공개 전환 뒤 걸었다). 상세는 부록 A.
 
 봇 리뷰의 전제 둘은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
 

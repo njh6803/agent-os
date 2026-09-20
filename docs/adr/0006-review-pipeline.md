@@ -22,4 +22,4 @@ CodeRabbit 유료나 공개 전환(PR 봇 둘을 되살린다. 플랜 결정은 
 - 봇의 초록은 리뷰가 아니다. 병합 전에 코멘트 수를 보고, 코멘트 없는 초록은 `tools/gh_run_summary.py`로 실행 내용을 본다. 워크플로 파일을 바꾼 PR은 액션이 건너뛰므로 별도 PR로 먼저 병합한다.
 - 셀프 리뷰는 문서만 바뀐 diff에서도 돈다. 첫날 여덟 번에 Major 다섯을 잡았다. 비용은 소스 파일이 없는 diff의 Standards 축을 sonnet으로 돌려 줄인다(code-review 스킬 사본 4단계).
 - 스킬 사본 둘(retro, code-review)이 원본과 다르다. `npx skills update -p`가 덮어쓰면 사본 머리 주석으로 알아챈다.
-- 다시 열 조건: 공개 전환이나 유료 플랜이면 CodeRabbit PR 리뷰를 켜고 역할 분담을 operations.md에 다시 적는다.
+- 다시 열 조건: 공개 전환이나 유료 플랜이면 CodeRabbit PR 리뷰를 켜고 역할 분담을 operations.md에 다시 적는다. 2026-09-21 공개 전환으로 조건이 충족됐다. 켤지는 사용자 결정 대기.
