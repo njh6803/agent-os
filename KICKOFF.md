@@ -36,7 +36,7 @@
 | `.github/` | PR 템플릿, CI 워크플로, Claude Code Review 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
 | `.coderabbit.yaml` | CodeRabbit CLI 설정. 층별 path_instructions, 린터 끔, 제외는 생성물·락파일만, PR 자동 리뷰 끔 | 로컬 CLI가 읽는다. PR 리뷰는 공개 저장소나 유료일 때만 값을 한다 |
 | `.claude/agents/` | 프로젝트 서브에이전트. coderabbit-review(CLI 실행과 트리아지, 수정 없음) | 스킬은 절차, 서브에이전트는 격리된 컨텍스트에서 도구를 돌리고 보고만 한다 |
-| `tools/` | 배포되지 않는 저장소 유틸. 지침 검사, 커밋 메시지 검사 | 훅과 CI만 부른다 |
+| `tools/` | 배포되지 않는 저장소 유틸. 지침 검사, 커밋 메시지 검사, Actions 실행 요약 | 훅과 CI, 그리고 리뷰 봇 판정이 부른다 |
 | `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
 | `.scratch/` | 로컬 이슈 트래커(명세, 티켓) | 원격 없는 프로젝트의 유일한 작업 기록. 커밋한다 |
 
@@ -81,6 +81,14 @@ mkdir my-project && cd my-project && git init && mkdir docs
 ```
 
 `.gitignore`는 스캐폴딩 때 프레임워크가 만들거나 에이전트에게 맡긴다. 이 디렉터리에서 Claude Code를 연다.
+
+원격을 만들기 전에 플랜을 본다. 8단계의 보호 브랜치와 봇 경로가 여기서 갈린다.
+
+```bash
+gh api user --jq .plan.name
+```
+
+`free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
 
 `docs/journal/<날짜>-kickoff.md`를 지금 만든다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 병렬 티켓 세션은 `docs/journal/<날짜>-<티켓슬러그>.md`.
 
@@ -273,7 +281,7 @@ main을 보호한다. 필수 상태 검사 `ci / verify`, 직접 푸시 금지. 
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
 ```
 
-무료 플랜의 비공개 저장소는 보호 브랜치와 룰셋이 둘 다 403이다. 선택지는 셋이다. 공개 전환, Pro, 또는 병합을 `/git-pr-merge`로만 하는 규약(스킬이 `gh pr checks`를 보고 빨강이면 멈춘다). 고른 것을 `operations.md` 가드레일 절에 적는다. CodeRabbit 무료 플랜도 비공개 저장소에는 요약만 남긴다(선행 저장소 실측). 공개 저장소면 둘 다 무료로 풀린다.
+1단계 갈림길이 `free`+비공개였으면 이 절은 생략하고 `/git-pr-merge`가 게이트다. 고른 것을 `operations.md` 가드레일 절에 적는다. 상세는 부록 A.
 
 봇 리뷰의 전제 둘은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
 

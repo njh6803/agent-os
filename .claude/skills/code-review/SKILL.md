@@ -3,6 +3,8 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 4단계의 sonnet 규칙을 더했다. 근거는 일지 2026-09-20 첫 회고. -->
+
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 - **Standards**: does the code conform to this repo's documented coding standards?
@@ -56,6 +58,8 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
 ### 4. Spawn both sub-agents in parallel
+
+If the diff touches no source file (no `*.py` under `src/`, `tests/`, `tools/`; only docs, config, harness), spawn the Standards sub-agent with `model: sonnet`. The Spec sub-agent is usually skipped then (no spec, step 2).
 
 **Standards sub-agent prompt** should include:
 
