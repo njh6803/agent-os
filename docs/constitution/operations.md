@@ -25,7 +25,7 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 봇의 초록은 리뷰했다는 뜻이 아니다(선행 저장소 실측).
 - CodeRabbit(PR)은 작성자에게 시트가 없으면 변경 요약(Walkthrough)만 남기고 `pass`가 되고, 시간당 한도를 넘으면 "Review rate limited"로도 `pass`다(PR #2 실측 둘). 그래서 껐다. 로컬 CLI가 CodeRabbit이 코드를 보는 유일한 경로다.
 - Claude Code Review는 워크플로 파일을 바꾼 PR에서 건너뛰면서 `pass`가 된다. 액션이 워크플로 파일을 기본 브랜치의 것과 비교해 다르면 실행하지 않는다(PR #3 실측, 로그 경고 "Skipping action due to workflow validation"). 워크플로 변경은 별도 PR로 먼저 병합한다.
-- Claude Code Review는 코멘트 없이 `pass`가 되기도 한다. 원인은 PR #4 로그로 확인했다. code-review 플러그인이 서브에이전트 둘을 백그라운드로 띄우고 "완료 알림이 오면 진행하겠다"며 턴을 끝내는데, 헤드리스 실행은 그 알림 전에 종료된다. 코멘트가 남은 PR #1 첫 실행(17턴)은 서브에이전트가 제때 끝난 경우다. 워크플로에 `show_full_output: true`가 켜져 있어 로그로 확인할 수 있다. 코멘트가 없으면 `uv run python tools/gh_run_summary.py <run-id>`로 결과 블록·경고·Claude의 말을 본다.
+- Claude Code Review는 플러그인을 쓰던 동안 코멘트 없이 `pass`가 되곤 했다(PR #2·#4·#5). 플러그인이 서브에이전트를 백그라운드로 띄우고 턴을 끝내는데 헤드리스 실행이 그 전에 종료됐다. 그래서 워크플로를 직접 프롬프트(단일 에이전트, 요약 코멘트 하나가 완료 조건)로 바꾸고, 실행 시작 뒤 생긴 `claude[bot]` 코멘트가 0개면 잡을 실패시키는 스텝을 둔다(2026-09-20 회고 후보 1, PR #10). 그 워크플로부터는 코멘트가 없는 초록이 나오지 않아야 하고, 나오면 `uv run python tools/gh_run_summary.py <run-id>`로 결과 블록·경고·Claude의 말을 본다.
 - Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
 

@@ -88,7 +88,7 @@ mkdir my-project && cd my-project && git init && mkdir docs
 gh api user --jq .plan.name
 ```
 
-`free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
+Billing & plans의 결제 수단과 Actions 지출 한도도 본다. 결제가 막히면 잡이 시작조차 안 되고 CI가 게이트라 병합도 막힌다(agent-os PR #10 실측). `free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
 
 `docs/journal/<날짜>-kickoff.md`를 지금 만든다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 병렬 티켓 세션은 `docs/journal/<날짜>-<티켓슬러그>.md`.
 
@@ -247,7 +247,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 커밋 메시지 훅 `tools/check_commit_msg.py`. `.pre-commit-config.yaml`에 `stages: [commit-msg]`로 등록하고 `default_install_hook_types: [pre-commit, commit-msg]`를 둔다. 나쁜 메시지로 빨강을 본다.
 - `.github/workflows/ci.yml`. 훅과 같은 검사. LLM 테스트 제외. 경로 필터를 걸면 미매칭은 실패로.
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). path_instructions는 그 프로젝트의 층으로. 제외는 생성물·락파일만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다.
-- `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 시스템 프롬프트가 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축을 명시한다. `show_full_output: true`를 켜서 코멘트 없는 초록의 원인을 로그로 볼 수 있게 한다. 시크릿은 사람이 넣는다.
+- `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다.
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
 - `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇 하나, 초록 착시.
 
@@ -349,7 +349,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 | 스킬의 `disable-model-invocation` | 지침에 "자동으로 돌린다"고 써도 에이전트가 그 스킬을 못 부름 | 프로젝트 사본에서 플래그를 빼고, 계기를 지침에 적는다. `npx skills update`가 되돌리므로 갱신 뒤 확인 |
 | ini 계열 파일의 한글 | 환경변수로도 인코딩을 못 바꿔 죽음 | ASCII만 |
 | 셸 체인이 앞 명령의 실패를 무시 | 스크립트가 문법 오류로 안 돌았는데 뒤의 커밋이 그대로 실행돼 메시지가 내용을 앞지름 | 판정 명령 뒤에 `\|\| exit 1`. 커밋 전에 `git show --stat`으로 내용을 본다 |
-| 봇 리뷰의 초록 착시 | 시트 미할당·무료 플랜이면 CodeRabbit이 Walkthrough만 남기고 `pass`, 시간당 한도를 넘어도 `pass`. Claude Code Review는 지적이 없으면 코멘트 없이 `pass`가 되기도 하고, 워크플로를 바꾼 PR에서는 파일이 기본 브랜치와 다르다는 검증에 걸려 건너뛰며 `pass`다 | 병합 전에 코멘트 수를 본다. 비공개+무료면 CodeRabbit PR 리뷰를 끄고 CLI만. `show_full_output`으로 Claude 로그를 남긴다. 워크플로 변경은 별도 PR 먼저 |
+| 봇 리뷰의 초록 착시 | 시트 미할당·무료 플랜이면 CodeRabbit이 Walkthrough만 남기고 `pass`, 시간당 한도를 넘어도 `pass`. Claude Code Review 플러그인은 지적이 없으면 코멘트 없이 `pass`가 되곤 했고, 워크플로를 바꾼 PR에서는 파일이 기본 브랜치와 다르다는 검증에 걸려 건너뛰며 `pass`다 | 비공개+무료면 CodeRabbit PR 리뷰를 끄고 CLI만. Claude는 플러그인 대신 직접 프롬프트로 요약 코멘트를 완료 조건에 걸고 "코멘트 0개면 실패" 스텝을 둔다. `show_full_output`으로 로그를 남긴다. 워크플로 변경은 별도 PR 먼저 |
 | CodeRabbit CLI 무료 한도 | 주기당 3회. 커밋마다 돌리면 첫날에 소진 | PR마다 한 번. `coderabbit --usage`로 남은 횟수 확인 뒤 실행 |
 | `.coderabbit.yaml`의 제외 목록을 로컬 CLI도 읽음 | 테스트 경로를 빼면 로컬에서도 리뷰를 못 받음 | 제외는 생성물·락파일만 |
 | 무료 플랜 비공개 저장소의 보호 브랜치 | `gh api .../branches/main/protection`이 403 "Upgrade to GitHub Pro". 룰셋도 같다 | 공개 전환이나 Pro. 아니면 `/git-pr-merge`의 `gh pr checks`가 유일한 게이트라 직접 `gh pr merge`를 치지 않는다 |
