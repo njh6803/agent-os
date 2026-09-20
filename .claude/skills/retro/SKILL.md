@@ -1,16 +1,17 @@
 ---
 name: retro
-description: "Conduct a retrospective on a coding session."
-disable-model-invocation: true
+description: "세션 회고. 사용자가 /retro를 치거나 마무리를 말할 때, 일지의 '다음' 절을 갱신하며 단계를 닫을 때 돌린다."
 ---
 
-The user has asked for a **retrospective**. You are suggesting improvements to the coding agent's **environment** to improve future runs.
+<!-- 프로젝트 사본, model-invoked. 원본(mattpocock/skills)은 disable-model-invocation: true. 근거는 일지 2026-09-20. -->
+
+You are running a **retrospective** for this session, either because the user asked or because a stage just closed (the journal's "다음" section was updated, or the user said they are wrapping up). You are suggesting improvements to the coding agent's **environment** to improve future runs. Present candidates only; the user approves what gets applied.
 
 ## Steps
 
 1. Call the Skill tool with `writing-for-agents` for the writing style guide.
 
-2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one.
+2. Read the primary sources. In this repo the primary source is the latest file in `docs/journal/` (its "번복" and "갈린 곳" sections first), plus the current session. If the user names another session, search the session logs on this machine.
 
 3. Look for candidates for improvement in these categories.
 
