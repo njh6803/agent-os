@@ -275,7 +275,7 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 봇 리뷰의 전제 셋은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
 
 1. CodeRabbit GitHub App을 저장소에 설치하고 작성자에게 시트를 할당한다. 시트가 없으면 PR에 Walkthrough만 남고 `pass`가 된다.
-2. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다.
+2. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다. 에이전트는 `gh secret list`로 이름과 시각만 확인한다.
 3. 로컬에서 `coderabbit auth login`. `coderabbit --usage`로 남은 횟수를 본다.
 
 첫 PR에서 봇 둘이 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다.

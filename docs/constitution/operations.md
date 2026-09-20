@@ -27,7 +27,7 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 - Claude Code Review는 워크플로 파일을 바꾼 PR에서 토큰 검증에 실패해 건너뛰면서 `pass`가 된다. 워크플로 변경은 별도 PR로 먼저 병합한다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
 
-전제 셋은 사람이 한 번 한다. 원격 저장소에 CodeRabbit GitHub App 설치와 시트 할당, `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다.
+전제 셋은 사람이 한 번 한다. 원격 저장소에 CodeRabbit GitHub App 설치와 시트 할당, `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
 
 ## 이슈 관리
 로컬 마크다운. 전체 계획은 `.scratch/plan.md`, 기능별 명세와 티켓은 `.scratch/<feature-slug>/`. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.
