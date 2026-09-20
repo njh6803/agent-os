@@ -1,5 +1,6 @@
-# 유일한 자동 검사. 헌법 "가드레일" 절.
-# 클론 뒤 한 번: uv run pre-commit install
+# 로컬 자동 검사. 같은 검사를 CI(.github/workflows/ci.yml)가 최종 판정한다. 헌법 "가드레일" 절.
+# 클론 뒤 한 번: uv run pre-commit install  (pre-commit과 commit-msg 두 훅이 함께 깔린다)
+default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: local
     hooks:
@@ -37,3 +38,8 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: commit-msg
+        name: commit message (conventional commits)
+        entry: uv run python tools/check_commit_msg.py
+        language: system
+        stages: [commit-msg]

@@ -1,0 +1,34 @@
+# 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다.
+# LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run lint-imports
+      - run: uv run pytest -q
+      - run: uv run python tools/check_instructions.py

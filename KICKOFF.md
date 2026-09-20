@@ -33,6 +33,8 @@
 | `CODING_STANDARDS.md` | 검사로 못 잡는 판단 기준 | code-review 스킬이 읽음 |
 | `CONTEXT.md`, `docs/adr/` | 용어집, 결정 기록 | domain-modeling이 씀 |
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
+| `.github/` | PR 템플릿, CI 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
+| `tools/` | 배포되지 않는 저장소 유틸. 지침 검사, 커밋 메시지 검사 | 훅과 CI만 부른다 |
 | `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
 | `.scratch/` | 로컬 이슈 트래커(명세, 티켓) | 원격 없는 프로젝트의 유일한 작업 기록. 커밋한다 |
 
@@ -226,7 +228,13 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 린트 명령 1개
 - 타입체크 명령 1개 (해당 언어면)
 
-통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
+통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 셋을 같이 만든다. 런북 저장소(`C:/project/agent`)에서 복사해 검증 명령만 바꾼다.
+
+- `.github/PULL_REQUEST_TEMPLATE.md`. 변경 유형, 왜, 남긴 위험, 변경된 영역(그 프로젝트의 층), 체크리스트(검증 명령), 확인 방법, 관련 티켓. `/git-pr`이 이것을 채운다.
+- 커밋 메시지 훅 `tools/check_commit_msg.py`. `.pre-commit-config.yaml`에 `stages: [commit-msg]`로 등록하고 `default_install_hook_types: [pre-commit, commit-msg]`를 둔다. 나쁜 메시지로 빨강을 본다.
+- `.github/workflows/ci.yml`. 훅과 같은 검사. LLM 테스트 제외. 경로 필터를 걸면 미매칭은 실패로.
+
+새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
 
 디렉터리별 규칙 파일을 `.claude/rules/<dir>.md`로 만든다. 헌법 인터뷰에서 나온 디렉터리 한정 결정(포트 목록, 어댑터 규칙, 플러그인 모델, 테스트 규약)이 내용이고 `paths` 프론트매터가 필수다. 각 파일 첫 줄에 "원천은 코드와 테스트, 여기는 결정만"을 적어 규칙이 코드를 앞지를 때 조용히 고쳐지지 않게 한다.
 
@@ -242,7 +250,19 @@ claude plugin install typescript-lsp@claude-plugins-official --scope project
 git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코딩 표준, 스킬)"
 ```
 
-포함: `.claude/skills/`, `.claude/settings.json`(있으면), `CLAUDE.md`, `CODING_STANDARDS.md`, `docs/`, 골격.
+포함: `.claude/skills/`, `.claude/settings.json`(있으면), `CLAUDE.md`, `CODING_STANDARDS.md`, `docs/`, `.github/`, `tools/`, 골격.
+
+첫 커밋 뒤 원격을 만들고 푸시한다. 그다음부터는 브랜치 → `/git-pr` → CI 초록 → `/git-pr-merge`(squash)다.
+
+```bash
+gh repo create <owner>/<repo> --private --source=. --push
+```
+
+main을 보호한다. 필수 상태 검사 `ci / verify`, 직접 푸시 금지. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다.
+
+```bash
+gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
+```
 
 ## 9단계. 첫 기능
 
@@ -257,7 +277,8 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 3. 명세를 읽기 전용 서브에이전트가 체크리스트로 검토한다. 첫 기능은 체크리스트를 프롬프트에 넣은 일회성 호출이고, 두 번째 기능에서도 같은 검토를 하면 `.claude/agents/spec-reviewer.md`로 굳힌다. 체크리스트 일곱: 계약 영향과 스키마 버전 처리가 적혔는가 / 원칙 위반이 없는가, 특히 새 포트와 core의 프로바이더 import / accepted ADR과 충돌하는가 / 언급한 경로가 실재하는가 / 비목표를 침범하는가 / 수용 기준마다 덮는 테스트가 있고 LLM 테스트가 포함되는가 / 자리표시자 문장이 없는가. 분류는 blocker·should-fix·nit, "blocker 없음은 정상 결과", 근거 없는 "~일 수 있다" 금지, 편집 도구 없음.
 4. `/to-tickets` 로 수직 슬라이스 티켓. Jira면 4단계에서 적은 흐름대로 `/jira-create`.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
-6. `/code-review main` 으로 표준 축과 명세 축 리뷰.
+6. `/code-review main` 으로 표준 축과 명세 축 리뷰. 보류한 지적은 별도 티켓.
+7. `/git-pr`로 PR. CI가 초록이면 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
 
 ## 10단계. 세션 마감
 
@@ -272,7 +293,8 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 - [ ] `docs/constitution/` 세 파일 빈 칸 없음, 한국어. 디렉터리별 규칙은 `.claude/rules/`
 - [ ] `CODING_STANDARDS.md` 존재, 판단 기준 비어 있음
 - [ ] 테스트, 린트, 타입체크 명령 통과, 가드레일 하나 이상
-- [ ] 첫 커밋 완료
+- [ ] 첫 커밋 완료. 원격 생성과 푸시, main 보호, 첫 PR이 CI를 통과
+- [ ] PR 템플릿, commit-msg 훅(빨강 확인), CI 워크플로
 - [ ] `/context` 실측값을 일지나 ADR에 기록
 - [ ] `docs/PRD.md` 한 장, `docs/adr/README.md` 색인, 지침 검사 훅
 - [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판, `.claude/rules/` 디렉터리별 규칙, README의 원천 표

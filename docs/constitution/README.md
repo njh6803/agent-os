@@ -8,6 +8,6 @@
 
 디렉터리별 규칙(포트, 어댑터, sdk와 플러그인, 테스트)은 헌법이 아니라 `.claude/rules/*.md`에 있고 해당 파일을 열 때만 실린다. 현재 트리는 `README.md`, 미래 배치와 첫 슬라이스의 범위는 `.scratch/plan.md`에 있다.
 
-**Version**: 2.0.1 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-20 (ADR 0001~0004)
+**Version**: 2.1.0 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-09-20 (ADR 0001~0004). 2.1.0은 원격·CI·PR을 첫날부터로 바꾼 것
 
 2.0.0은 파일 분할이다. 원칙 I~V의 문구는 1.6.0과 같다. 1.x 이력은 git과 `docs/journal/`에 있다.
