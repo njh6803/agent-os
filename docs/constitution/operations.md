@@ -18,18 +18,18 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 두 단계, 세 축이다. 표준·명세, 보안·성능, 유지보수성·경계. 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`이고 여기는 누가 언제 무엇을 보는지만 적는다.
 
 1. **커밋 전 셀프 리뷰.** `/code-review`가 표준 축(`CODING_STANDARDS.md`)과 명세 축(`.scratch/<slug>/spec.md`)을 본다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. Minor·Nit은 별도 티켓으로 뺄 수 있다.
-2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 본다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. 남은 횟수는 `coderabbit --usage`.
-3. **PR 리뷰.** 봇 둘이 역할을 나눈다. CodeRabbit(`.coderabbit.yaml`)이 보안·버그·성능, Claude Code Review(`.github/workflows/claude-code-review.yml`)가 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정). CI가 자동 검사. 셋이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`.
+2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 본다. 이 축의 유일한 리뷰다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. 남은 횟수는 `coderabbit --usage`.
+3. **PR 리뷰.** 봇은 Claude Code Review(`.github/workflows/claude-code-review.yml`) 하나다. 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정)를 본다. CI가 자동 검사. 둘이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`. CodeRabbit의 PR 자동 리뷰는 끈다(`.coderabbit.yaml`의 `auto_review.enabled: false`, 사용자 결정 2026-09-20). 비공개 저장소의 Free 플랜은 시트가 없어 요약만 남기고 체크가 `pass`로 보였다(PR #2 실측). 공개로 바꾸거나 유료가 되면 다시 켤 수 있고 그때 역할 분담을 이 절에 적는다.
 4. **반영.** `/git-pr-feedback`이 CI 결과와 코멘트를 읽어 반영한다. 보류한 지적은 별도 티켓.
 
 봇의 초록은 리뷰했다는 뜻이 아니다(선행 저장소 실측).
-- CodeRabbit은 작성자에게 시트가 없거나 무료 플랜이면 변경 요약(Walkthrough)만 남기고 `pass`가 된다. 기다려도 풀리지 않는다. 그때는 2의 로컬 CLI가 CodeRabbit이 코드를 보는 유일한 경로다.
-- Claude Code Review는 워크플로 파일을 바꾼 PR에서 토큰 검증에 실패해 건너뛰면서 `pass`가 된다. 워크플로 변경은 별도 PR로 먼저 병합한다.
-- Claude Code Review는 지적이 없을 때 코멘트 없이 `pass`가 되기도 한다(PR #2 실측, 4턴). 실행 내용은 워크플로의 `show_full_output`이 켜져 있어야 로그에 남는다.
+- CodeRabbit(PR)은 작성자에게 시트가 없으면 변경 요약(Walkthrough)만 남기고 `pass`가 되고, 시간당 한도를 넘으면 "Review rate limited"로도 `pass`다(PR #2 실측 둘). 그래서 껐다. 로컬 CLI가 CodeRabbit이 코드를 보는 유일한 경로다.
+- Claude Code Review는 워크플로 파일을 바꾼 PR에서 건너뛰면서 `pass`가 된다. 액션이 워크플로 파일을 기본 브랜치의 것과 비교해 다르면 실행하지 않는다(PR #3 실측, 로그 경고 "Skipping action due to workflow validation"). 워크플로 변경은 별도 PR로 먼저 병합한다.
+- Claude Code Review는 지적이 없을 때 코멘트 없이 `pass`가 되기도 한다(PR #2 실측, 4턴). 워크플로에 `show_full_output: true`를 켜 두어 실행 내용이 Actions 로그에 남는다. 코멘트가 없으면 로그를 본다.
 - Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
 
-전제 셋은 사람이 한 번 한다. 원격 저장소에 CodeRabbit GitHub App 설치와 시트 할당, `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
+전제 둘은 사람이 한 번 한다. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
 
 ## 이슈 관리
 로컬 마크다운. 전체 계획은 `.scratch/plan.md`, 기능별 명세와 티켓은 `.scratch/<feature-slug>/`. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.

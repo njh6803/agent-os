@@ -1,6 +1,6 @@
 ---
 name: coderabbit-review
-description: CodeRabbit CLI로 로컬 변경을 보안·버그·성능 축으로 리뷰하고 결과를 트리아지한다. PR을 열기 직전, 특히 sdk·core·adapters를 바꿨을 때 쓴다. 코드를 고치지 않고 보고만 한다.
+description: CodeRabbit CLI로 로컬 변경을 보안·버그·성능 축으로 리뷰하고 결과를 트리아지한다. PR을 열기 직전에 쓴다. 코드를 고치지 않고 보고만 한다.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 maxTurns: 40
