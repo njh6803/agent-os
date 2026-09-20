@@ -18,12 +18,12 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 두 단계, 세 축이다. 표준·명세, 보안·성능, 유지보수성·경계. 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`이고 여기는 누가 언제 무엇을 보는지만 적는다.
 
 1. **커밋 전 셀프 리뷰.** `/code-review`가 표준 축(`CODING_STANDARDS.md`)과 명세 축(`.scratch/<slug>/spec.md`)을 본다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. Minor·Nit은 별도 티켓으로 뺄 수 있다.
-2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 본다. 이 축의 유일한 리뷰다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. 남은 횟수는 `coderabbit --usage`.
-3. **PR 리뷰.** 봇은 Claude Code Review(`.github/workflows/claude-code-review.yml`) 하나다. 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정)를 본다. CI가 자동 검사. 둘이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`. CodeRabbit의 PR 자동 리뷰는 끈다(`.coderabbit.yaml`의 `auto_review.enabled: false`, 사용자 결정 2026-09-20). 비공개 저장소의 Free 플랜은 시트가 없어 요약만 남기고 체크가 `pass`로 보였다(PR #2 실측). 2026-09-21 공개 전환으로 다시 켤 조건은 충족됐다. 켤지는 사용자 결정 대기이고, 켜면 역할 분담을 이 절에 적는다.
+2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 PR 전에 한 번 본다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. 남은 횟수는 `coderabbit --usage`.
+3. **PR 리뷰.** 봇 둘이 역할을 나눈다. CodeRabbit(`.coderabbit.yaml`)이 보안·버그·성능, Claude Code Review(`.github/workflows/claude-code-review.yml`)가 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정). CI가 자동 검사. CodeRabbit 체크는 시간당 한도를 넘으면 리뷰 없이 `pass`가 되므로 필수 검사(가드레일 절)에 넣지 않고 코멘트가 있는지로 판정한다. 셋이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`. 이력은 ADR 0006.
 4. **반영.** `/git-pr-feedback`이 CI 결과와 코멘트를 읽어 반영한다. 보류한 지적은 별도 티켓.
 
 봇의 초록은 리뷰했다는 뜻이 아니다(선행 저장소 실측).
-- CodeRabbit(PR)은 작성자에게 시트가 없으면 변경 요약(Walkthrough)만 남기고 `pass`가 되고, 시간당 한도를 넘으면 "Review rate limited"로도 `pass`다(PR #2 실측 둘). 그래서 껐다. 로컬 CLI가 CodeRabbit이 코드를 보는 유일한 경로다.
+- CodeRabbit(PR)은 비공개+무료에서 작성자에게 시트가 없으면 변경 요약(Walkthrough)만 남기고 `pass`가 되고, 시간당 한도를 넘으면 "Review rate limited"로도 `pass`다(PR #2 실측 둘). 공개 저장소에서는 전체 리뷰가 무료라 켰다. 한도 초과의 `pass`는 남으므로 코멘트가 있는지 본다.
 - Claude Code Review는 워크플로 파일을 바꾼 PR에서 건너뛰면서 `pass`가 된다. 액션이 워크플로 파일을 기본 브랜치의 것과 비교해 다르면 실행하지 않는다(PR #3 실측, 로그 경고 "Skipping action due to workflow validation"). 워크플로 변경은 별도 PR로 먼저 병합한다.
 - Claude Code Review는 플러그인을 쓰던 동안 코멘트 없이 `pass`가 되곤 했다(PR #2·#4·#5). 플러그인이 서브에이전트를 백그라운드로 띄우고 턴을 끝내는데 헤드리스 실행이 그 전에 종료됐다. 그래서 워크플로를 직접 프롬프트(단일 에이전트, 요약 코멘트 하나가 완료 조건)로 바꾸고, 실행 시작 뒤 생긴 `claude[bot]` 코멘트가 0개면 잡을 실패시키는 스텝을 둔다(2026-09-20 회고 후보 1, PR #10). 그 워크플로부터는 코멘트가 없는 초록이 나오지 않아야 하고, 나오면 `uv run python tools/gh_run_summary.py <run-id>`로 결과 블록·경고·Claude의 말을 본다.
 - Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.

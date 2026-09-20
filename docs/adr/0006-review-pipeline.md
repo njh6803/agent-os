@@ -3,9 +3,9 @@ status: accepted
 date: 2026-09-20
 ---
 
-# 리뷰는 두 단계 세 축이고 PR 봇은 하나다
+# 리뷰는 두 단계 세 축이다
 
-리뷰 파이프라인은 세 축이다. 표준·명세(커밋 전 `/code-review`), 보안·버그·성능(PR 직전 CodeRabbit CLI, `coderabbit-review` 서브에이전트), 유지보수성·경계(PR에서 Claude Code Review). 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`, 누가 언제 보는지는 `docs/constitution/operations.md`의 "리뷰 파이프라인"이다. 선행 저장소 `ai-agent-platform`의 2단계 파이프라인을 옮기되 이 계정과 플랜에서 실측한 대로 고쳤다.
+리뷰 파이프라인은 세 축이다. 표준·명세(커밋 전 `/code-review`), 보안·버그·성능(PR 직전 CodeRabbit CLI `coderabbit-review` 서브에이전트, 그리고 PR의 CodeRabbit), 유지보수성·경계(PR에서 Claude Code Review). 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`, 누가 언제 보는지는 `docs/constitution/operations.md`의 "리뷰 파이프라인"이다. 선행 저장소 `ai-agent-platform`의 2단계 파이프라인을 옮기되 이 계정과 플랜에서 실측한 대로 고쳤다.
 
 ## 개정 이력
 
@@ -22,4 +22,4 @@ CodeRabbit 유료나 공개 전환(PR 봇 둘을 되살린다. 플랜 결정은 
 - 봇의 초록은 리뷰가 아니다. 병합 전에 코멘트 수를 보고, 코멘트 없는 초록은 `tools/gh_run_summary.py`로 실행 내용을 본다. 워크플로 파일을 바꾼 PR은 액션이 건너뛰므로 별도 PR로 먼저 병합한다.
 - 셀프 리뷰는 문서만 바뀐 diff에서도 돈다. 첫날 여덟 번에 Major 다섯을 잡았다. 비용은 소스 파일이 없는 diff의 Standards 축을 sonnet으로 돌려 줄인다(code-review 스킬 사본 4단계).
 - 스킬 사본 둘(retro, code-review)이 원본과 다르다. `npx skills update -p`가 덮어쓰면 사본 머리 주석으로 알아챈다.
-- 다시 열 조건: 공개 전환이나 유료 플랜이면 CodeRabbit PR 리뷰를 켜고 역할 분담을 operations.md에 다시 적는다. 2026-09-21 공개 전환으로 조건이 충족됐다. 켤지는 사용자 결정 대기.
+- 2026-09-21 공개 전환으로 전체 리뷰가 무료가 되자 사용자 결정으로 CodeRabbit PR 리뷰를 다시 켰다(PR #12). PR 봇은 둘이고 역할 분담은 operations.md. CodeRabbit 체크는 한도 초과 시 리뷰 없이 `pass`라 필수 검사에 넣지 않는다. 다음에 끌 조건: 비공개로 돌아가거나 봇이 초록만 늘릴 때.

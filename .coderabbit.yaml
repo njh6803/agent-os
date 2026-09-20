@@ -1,15 +1,15 @@
-# CodeRabbit 설정. 로컬 CLI(coderabbit review, coderabbit-review 서브에이전트)가 읽는다.
-# PR 자동 리뷰는 끈다(auto_review.enabled: false, 사용자 결정 2026-09-20). 이유와 재개 조건,
-# 누가 언제 무엇을 보는지는 docs/constitution/operations.md의 리뷰 파이프라인.
+# CodeRabbit 설정. PR 자동 리뷰(GitHub App)와 로컬 CLI(coderabbit-review 서브에이전트)가 둘 다 읽는다.
+# PR 자동 리뷰는 2026-09-21 공개 전환 뒤 다시 켰다(사용자 결정). 이력과 누가 언제 무엇을 보는지는
+# docs/constitution/operations.md의 리뷰 파이프라인.
 # 여기서는 보안·버그·성능만 본다. 유지보수성·경계는 Claude Code Review, 포맷·타입·import 경계는 CI.
 language: "ko-KR"
 
 reviews:
   profile: "chill"
   auto_review:
-    enabled: false
+    enabled: true
     drafts: false
-  # 자동 리뷰를 꺼도 PR마다 "Review skipped" 코멘트와 초록 체크가 남는다(PR #4 실측). 그것도 끈다.
+  # 상태 코멘트("Review skipped" 등)는 끈 채로 둔다. 리뷰 코멘트만 남는다.
   review_status: false
   # ruff는 훅과 CI가 돌린다. 여기서 또 돌리면 같은 지적이 두 번 나온다.
   tools:
