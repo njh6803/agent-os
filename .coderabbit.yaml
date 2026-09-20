@@ -1,5 +1,6 @@
 # CodeRabbit 설정. PR 자동 리뷰(GitHub App)와 로컬 CLI(coderabbit-review 서브에이전트)가 둘 다 읽는다.
-# PR 자동 리뷰는 2026-09-21 공개 전환 뒤 다시 켰다(사용자 결정). 이력과 누가 언제 무엇을 보는지는
+# PR 자동 리뷰는 2026-09-21 공개 전환 뒤 다시 켰다(사용자 결정). 별 10개 미만이라 PR마다 @coderabbitai review로
+# 요청해야 돈다. 이력과 누가 언제 무엇을 보는지는
 # docs/constitution/operations.md의 리뷰 파이프라인.
 # 여기서는 보안·버그·성능만 본다. 유지보수성·경계는 Claude Code Review, 포맷·타입·import 경계는 CI.
 language: "ko-KR"
