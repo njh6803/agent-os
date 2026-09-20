@@ -25,6 +25,8 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 봇의 초록은 리뷰했다는 뜻이 아니다(선행 저장소 실측).
 - CodeRabbit은 작성자에게 시트가 없거나 무료 플랜이면 변경 요약(Walkthrough)만 남기고 `pass`가 된다. 기다려도 풀리지 않는다. 그때는 2의 로컬 CLI가 CodeRabbit이 코드를 보는 유일한 경로다.
 - Claude Code Review는 워크플로 파일을 바꾼 PR에서 토큰 검증에 실패해 건너뛰면서 `pass`가 된다. 워크플로 변경은 별도 PR로 먼저 병합한다.
+- Claude Code Review는 지적이 없을 때 코멘트 없이 `pass`가 되기도 한다(PR #2 실측, 4턴). 실행 내용은 워크플로의 `show_full_output`이 켜져 있어야 로그에 남는다.
+- Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
 
 전제 셋은 사람이 한 번 한다. 원격 저장소에 CodeRabbit GitHub App 설치와 시트 할당, `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.

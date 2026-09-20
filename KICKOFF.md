@@ -274,11 +274,11 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 
 봇 리뷰의 전제 셋은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
 
-1. CodeRabbit GitHub App을 저장소에 설치하고 작성자에게 시트를 할당한다. 시트가 없으면 PR에 Walkthrough만 남고 `pass`가 된다. 설치 확인은 PR에서 `coderabbitai[bot]` 코멘트로만 가능하다. 설치 목록 API는 앱 토큰이 필요해 `gh`로는 403이다. 비공개 저장소는 설치일부터 14일 체험이고 그 안에 플랜을 정한다.
+1. CodeRabbit GitHub App을 저장소에 설치하고 작성자에게 시트를 할당한다. 시트가 없으면 PR에 Walkthrough만 남고 `pass`가 된다. 설치 확인은 PR에서 `coderabbitai[bot]` 코멘트로만 가능하다. 설치 목록 API는 앱 토큰이 필요해 `gh`로는 403이다. 설치 직후 플랜은 Free이고 체험은 자동으로 켜지지 않는다. 시트는 대시보드의 team-management에서 사람이 할당한다. 시트 없는 작성자의 PR은 Walkthrough만 남고 체크는 `pass`다(agent-os 실측).
 2. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다. 에이전트는 `gh secret list`로 이름과 시각만 확인한다.
 3. 로컬에서 `coderabbit auth login`. `coderabbit --usage`로 남은 횟수를 본다.
 
-첫 PR에서 봇 둘이 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다.
+첫 PR에서 봇 둘이 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다.
 
 ## 9단계. 첫 기능
 
