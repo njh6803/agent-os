@@ -7,9 +7,6 @@
     "jira-complete": "off",
     "jira-create": "off",
     "jira-start": "off",
-    "jira-test": "off",
-    "git-pr": "off",
-    "git-pr-feedback": "off",
-    "git-pr-merge": "off"
+    "jira-test": "off"
   }
 }

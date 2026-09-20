@@ -43,7 +43,8 @@
 - [ ] `uv run pyright`
 - [ ] `uv run lint-imports`
 - [ ] `uv run pytest -q` (LLM 테스트를 건드렸다면 `uv run --env-file .env pytest -m llm`도)
-- [ ] `/code-review main`을 돌리고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓으로 뺐다
+- [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓으로 뺐다
+- [ ] `sdk`·`core`·`adapters`를 건드렸다면 `coderabbit-review` 서브에이전트를 돌렸다(주기당 3회, PR마다 한 번)
 - [ ] 결정을 바꿨다면 그것을 참조하는 스킬·훅·rules·명세도 같이 고쳤다
 - [ ] 새 환경 변수는 `.env.example`에 있다
 
@@ -61,4 +62,5 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 
 ## 리뷰어 참고
 
-<!-- 특히 봐줬으면 하는 부분, 불확실했던 판단. 기준은 CODING_STANDARDS.md의 심각도와 리뷰 관점 넷 -->
+<!-- 특히 봐줬으면 하는 부분, 불확실했던 판단. 기준은 CODING_STANDARDS.md의 심각도와 리뷰 관점 넷.
+     봇은 CodeRabbit이 보안·성능, Claude Code Review가 유지보수성·경계. 코멘트 0개인 초록은 리뷰 없음일 수 있다(operations.md) -->

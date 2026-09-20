@@ -33,7 +33,9 @@
 | `CODING_STANDARDS.md` | 검사로 못 잡는 판단 기준 | code-review 스킬이 읽음 |
 | `CONTEXT.md`, `docs/adr/` | 용어집, 결정 기록 | domain-modeling이 씀 |
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
-| `.github/` | PR 템플릿, CI 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
+| `.github/` | PR 템플릿, CI 워크플로, Claude Code Review 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
+| `.coderabbit.yaml` | CodeRabbit 설정. 층별 path_instructions, 린터 끔, 제외는 생성물·락파일만 | PR 봇과 로컬 CLI가 같은 파일을 읽는다 |
+| `.claude/agents/` | 프로젝트 서브에이전트. coderabbit-review(CLI 실행과 트리아지, 수정 없음) | 스킬은 절차, 서브에이전트는 격리된 컨텍스트에서 도구를 돌리고 보고만 한다 |
 | `tools/` | 배포되지 않는 저장소 유틸. 지침 검사, 커밋 메시지 검사 | 훅과 CI만 부른다 |
 | `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
 | `.scratch/` | 로컬 이슈 트래커(명세, 티켓) | 원격 없는 프로젝트의 유일한 작업 기록. 커밋한다 |
@@ -228,17 +230,21 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 린트 명령 1개
 - 타입체크 명령 1개 (해당 언어면)
 
-통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 셋을 같이 만든다. 런북 저장소(`C:/project/agent`)에서 복사해 검증 명령만 바꾼다.
+통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 여섯을 같이 만든다. 런북 저장소(`C:/project/agent`)에서 복사해 검증 명령과 층 이름만 바꾼다.
 
 - `.github/PULL_REQUEST_TEMPLATE.md`. 변경 유형, 왜, 남긴 위험, 변경된 영역(그 프로젝트의 층), 체크리스트(검증 명령), 확인 방법, 관련 티켓. `/git-pr`이 이것을 채운다.
 - 커밋 메시지 훅 `tools/check_commit_msg.py`. `.pre-commit-config.yaml`에 `stages: [commit-msg]`로 등록하고 `default_install_hook_types: [pre-commit, commit-msg]`를 둔다. 나쁜 메시지로 빨강을 본다.
 - `.github/workflows/ci.yml`. 훅과 같은 검사. LLM 테스트 제외. 경로 필터를 걸면 미매칭은 실패로.
+- `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). path_instructions는 그 프로젝트의 층으로. 제외는 생성물·락파일만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다.
+- `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 시스템 프롬프트가 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축을 명시한다. 시크릿은 사람이 넣는다.
+- `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
+- `docs/constitution/operations.md`의 리뷰 파이프라인 절. 두 단계(커밋 전 셀프 리뷰, PR 봇 둘)와 초록 착시.
 
 새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
 
 디렉터리별 규칙 파일을 `.claude/rules/<dir>.md`로 만든다. 헌법 인터뷰에서 나온 디렉터리 한정 결정(포트 목록, 어댑터 규칙, 플러그인 모델, 테스트 규약)이 내용이고 `paths` 프론트매터가 필수다. 각 파일 첫 줄에 "원천은 코드와 테스트, 여기는 결정만"을 적어 규칙이 코드를 앞지를 때 조용히 고쳐지지 않게 한다.
 
-선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-*, git-pr* 등)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 언어 서버 바이너리는 따로 설치해야 한다.
+선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 언어 서버 바이너리는 따로 설치해야 한다.
 
 ```bash
 claude plugin install typescript-lsp@claude-plugins-official --scope project
@@ -264,6 +270,14 @@ main을 보호한다. 필수 상태 검사 `ci / verify`, 직접 푸시 금지. 
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
 ```
 
+봇 리뷰의 전제 셋은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
+
+1. CodeRabbit GitHub App을 저장소에 설치하고 작성자에게 시트를 할당한다. 시트가 없으면 PR에 Walkthrough만 남고 `pass`가 된다.
+2. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다.
+3. 로컬에서 `coderabbit auth login`. `coderabbit --usage`로 남은 횟수를 본다.
+
+첫 PR에서 봇 둘이 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다.
+
 ## 9단계. 첫 기능
 
 기능마다 이 순서. 건너뛸지의 기준은 "몇 개를 건드리나"가 아니라 "건드리는 곳마다 새로 정할 것이 있나"다. 같은 패턴의 N번째 반복은 여러 모듈을 관통해도 새 결정이 없으므로 설계 인터뷰 없이 바로 시킨다.
@@ -277,8 +291,9 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 3. 명세를 읽기 전용 서브에이전트가 체크리스트로 검토한다. 첫 기능은 체크리스트를 프롬프트에 넣은 일회성 호출이고, 두 번째 기능에서도 같은 검토를 하면 `.claude/agents/spec-reviewer.md`로 굳힌다. 체크리스트 일곱: 계약 영향과 스키마 버전 처리가 적혔는가 / 원칙 위반이 없는가, 특히 새 포트와 core의 프로바이더 import / accepted ADR과 충돌하는가 / 언급한 경로가 실재하는가 / 비목표를 침범하는가 / 수용 기준마다 덮는 테스트가 있고 LLM 테스트가 포함되는가 / 자리표시자 문장이 없는가. 분류는 blocker·should-fix·nit, "blocker 없음은 정상 결과", 근거 없는 "~일 수 있다" 금지, 편집 도구 없음.
 4. `/to-tickets` 로 수직 슬라이스 티켓. Jira면 4단계에서 적은 흐름대로 `/jira-create`.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
-6. `/code-review main` 으로 표준 축과 명세 축 리뷰. 보류한 지적은 별도 티켓.
-7. `/git-pr`로 PR. CI가 초록이면 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
+6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 보류한 지적은 별도 티켓.
+7. PR 직전 `coderabbit-review` 서브에이전트로 보안·성능 축. 무료 CLI는 주기당 3회라 PR마다 한 번.
+8. `/git-pr`로 PR. CodeRabbit이 보안·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 셋이 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
 
 ## 10단계. 세션 마감
 
@@ -294,7 +309,8 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 - [ ] `CODING_STANDARDS.md` 존재, 판단 기준 비어 있음
 - [ ] 테스트, 린트, 타입체크 명령 통과, 가드레일 하나 이상
 - [ ] 첫 커밋 완료. 원격 생성과 푸시, main 보호, 첫 PR이 CI를 통과
-- [ ] PR 템플릿, commit-msg 훅(빨강 확인), CI 워크플로
+- [ ] PR 템플릿, commit-msg 훅(빨강 확인), CI 워크플로, `.coderabbit.yaml`, Claude Code Review 워크플로, coderabbit-review 서브에이전트
+- [ ] 봇 전제 셋(CodeRabbit App과 시트, `CLAUDE_CODE_OAUTH_TOKEN` 시크릿, CLI 로그인). 첫 PR에서 봇 둘의 코멘트 확인
 - [ ] `/context` 실측값을 일지나 ADR에 기록
 - [ ] `docs/PRD.md` 한 장, `docs/adr/README.md` 색인, 지침 검사 훅
 - [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판, `.claude/rules/` 디렉터리별 규칙, README의 원천 표
@@ -318,6 +334,9 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 | 전역 스킬이 프로젝트 스킬을 이김 | `npx skills update` 뒤 낡은 전역이 조용히 이김 | 프로젝트가 관리하는 스킬의 전역 사본을 두지 않는다 |
 | ini 계열 파일의 한글 | 환경변수로도 인코딩을 못 바꿔 죽음 | ASCII만 |
 | 셸 체인이 앞 명령의 실패를 무시 | 스크립트가 문법 오류로 안 돌았는데 뒤의 커밋이 그대로 실행돼 메시지가 내용을 앞지름 | 판정 명령 뒤에 `\|\| exit 1`. 커밋 전에 `git show --stat`으로 내용을 본다 |
+| 봇 리뷰의 초록 착시 | 시트 미할당·무료 플랜이면 CodeRabbit이 Walkthrough만 남기고 `pass`. 워크플로를 바꾼 PR에서 Claude Code Review가 토큰 검증 실패로 건너뛰며 `pass` | 병합 전에 코멘트 수를 본다. 워크플로 변경은 별도 PR 먼저. 로컬 CLI가 대안 |
+| CodeRabbit CLI 무료 한도 | 주기당 3회. 커밋마다 돌리면 첫날에 소진 | PR마다 한 번. `coderabbit --usage`로 남은 횟수 확인 뒤 실행 |
+| `.coderabbit.yaml`의 제외 목록을 로컬 CLI도 읽음 | 테스트 경로를 빼면 로컬에서도 리뷰를 못 받음 | 제외는 생성물·락파일만 |
 
 ## 부록 B. 세팅 프롬프트와 스킬·서브에이전트를 쓸 때
 

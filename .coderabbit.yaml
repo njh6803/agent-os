@@ -1,0 +1,65 @@
+# CodeRabbit 설정. PR 리뷰(GitHub App)와 로컬 CLI(coderabbit review)가 둘 다 이 파일을 읽는다.
+# 누가 언제 무엇을 보는지는 docs/constitution/operations.md의 리뷰 파이프라인.
+# 여기서는 보안·버그·성능만 본다. 유지보수성·경계는 Claude Code Review, 포맷·타입·import 경계는 CI.
+language: "ko-KR"
+
+reviews:
+  profile: "chill"
+  auto_review:
+    enabled: true
+    drafts: false
+  # ruff는 훅과 CI가 돌린다. 여기서 또 돌리면 같은 지적이 두 번 나온다.
+  tools:
+    ruff:
+      enabled: false
+  # 제외는 생성물, 락파일, 남이 쓴 스킬뿐이다. 로컬 CLI도 이 목록을 읽으므로
+  # 테스트나 플러그인처럼 우리가 쓴 것을 빼면 로컬에서도 리뷰를 못 받는다(선행 저장소 실측).
+  path_filters:
+    - "!**/__pycache__/**"
+    - "!uv.lock"
+    - "!skills-lock.json"
+    - "!.claude/skills/**"
+  path_instructions:
+    - path: "**"
+      instructions: |
+        보안 취약점, 실제 버그, 성능 문제에 집중한다.
+        코드 스타일, 네이밍, 포매팅, 함수 길이·복잡도·인자 수, 미사용 변수, import 순서,
+        층 사이의 import 경계 위반은 지적하지 않는다. ruff, pyright strict, import-linter가
+        CI에서 강제한다(CODING_STANDARDS.md "리뷰하지 않는 것").
+        설계, 추상화, 이름, 모듈 응집은 Claude Code Review가 담당하므로 생략한다.
+        이 저장소의 특수성: 에이전트 실행은 이벤트 스트림이고 트레이스는 이벤트를 저장한 것이다.
+        이벤트, 로그, 트레이스에 API 키·토큰·비밀번호가 실릴 수 있는 경로는 Critical이다.
+        플러그인 로딩은 저장소 밖 코드를 실행하는 일이다. 매니페스트의 entrypoint와
+        MCP 서버 command가 검증 없이 import나 subprocess로 가는지 본다.
+    - path: "src/agent_os/sdk/**"
+      instructions: |
+        플러그인이 import하는 계약 표면이다. pydantic 모델의 검증 누락(빈 문자열, 음수, 잘못된 enum)과
+        이벤트 필드에 비밀이 실릴 수 있는 구조(자유 형식 dict에 헤더나 환경변수를 넣는 경로)를 본다.
+    - path: "src/agent_os/core/**"
+      instructions: |
+        루프 상한이 실제로 걸리는지, 실패가 예외로 새지 않고 run_failed 이벤트로 바뀌는지,
+        async 함수 안의 블로킹 호출(동기 파일 I/O, time.sleep, 동기 HTTP)을 본다.
+        플러그인 entrypoint 로딩은 코드 실행이다. 경로 탈출과 임의 모듈 import를 본다.
+    - path: "src/agent_os/channel/**"
+      instructions: |
+        바깥 입력이 들어오는 면이다. 입력 검증, 에러 응답에 스택·경로·환경이 새는지,
+        HTTP가 생기면 인증과 인가(로그인 여부만 보고 리소스 소유권을 안 보는 패턴)를 본다.
+    - path: "src/agent_os/admin/**"
+      instructions: |
+        구성을 바꾸는 면이다. 파일 쓰기 경로가 plugins/ 밖으로 나갈 수 있는지,
+        인가 없는 변경이 가능한지 본다.
+    - path: "src/agent_os/adapters/**"
+      instructions: |
+        포트 구현이다. 트레이스 싱크가 이벤트를 기록할 때 비밀을 걸러야 할 자리가 있는지,
+        MCP 서버 subprocess의 command와 args에 사용자 입력이 섞이는지,
+        파일 핸들과 자식 프로세스가 정리되는지 본다.
+    - path: "plugins/**"
+      instructions: |
+        매니페스트의 entrypoint가 저장소 밖을 가리키는지, MCP 서버 command가 셸을 거치는지 본다.
+    - path: "tests/**"
+      instructions: |
+        실제 API 키가 하드코딩되는지, .env를 읽는 테스트가 llm 마커 없이 기본 실행에 들어가는지 본다.
+    - path: ".github/workflows/**"
+      instructions: |
+        시크릿이 로그나 아티팩트로 새는지, pull_request_target 같은 위험한 트리거를 쓰는지,
+        권한이 최소인지 본다.

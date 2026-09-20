@@ -25,7 +25,7 @@
 |---|---|---|
 | `docs/constitution/principles.md` | 항상(임포트) | 개정은 ADR과 승인 |
 | `docs/constitution/tech.md` | 의존성을 더하거나 스택을 바꿀 때 | ADR 뒤 |
-| `docs/constitution/operations.md` | 커밋·병합·트래커·LLM 테스트·가드레일을 만질 때 | ADR 뒤 |
+| `docs/constitution/operations.md` | 커밋·병합·리뷰·트래커·LLM 테스트·가드레일을 만질 때 | ADR 뒤 |
 | `docs/PRD.md` | 범위를 정하거나 스펙이 충돌할 때 | 사용자 승인으로 |
 | `CONTEXT.md` | 용어를 쓰거나 새 개념이 나올 때 | domain-modeling 스킬이 |
 | `docs/adr/` | 결정을 바꾸기 전, 그 영역을 처음 만질 때 | 아키텍처 결정 뒤 초안을 보여주고 승인 |
@@ -50,6 +50,7 @@
 4. 결정이 바뀌면 관련 스킬·훅·rules·명세도 같이 고친다. 하네스는 언젠가 맞출 문서가 아니라 다음 실행에 바로 영향을 주는 코드다.
 5. 아키텍처 결정을 내렸으면 `docs/adr/`에 초안을 보여주고 승인을 받는다. 임의로 확정하지 않는다.
 6. 같은 테스트가 두 번 연속 실패하면 추측 수정을 멈추고 diagnosing-bugs 스킬을 쓴다.
+7. 커밋 전에 `/code-review`로 셀프 리뷰하고 Critical·Major를 고친다. 건너뛰지 않는다. PR 봇 둘의 역할 분담과 초록 착시는 `docs/constitution/operations.md`의 리뷰 파이프라인.
 
 ## 교정 루프
 - 내가 네 결과를 고치거나 되돌리면, 먼저 그 실수를 테스트·린트·훅 같은 자동 검사로 잡을 수 있는지 판단하고 검사를 제안한다.
