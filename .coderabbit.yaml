@@ -9,6 +9,8 @@ reviews:
   auto_review:
     enabled: false
     drafts: false
+  # 자동 리뷰를 꺼도 PR마다 "Review skipped" 코멘트와 초록 체크가 남는다(PR #4 실측). 그것도 끈다.
+  review_status: false
   # ruff는 훅과 CI가 돌린다. 여기서 또 돌리면 같은 지적이 두 번 나온다.
   tools:
     ruff:
