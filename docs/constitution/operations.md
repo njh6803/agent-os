@@ -6,10 +6,10 @@
 LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `pytest -q`는 이 마커를 제외한다. `uv run --env-file .env pytest -m llm`이 돌리며, `.env`의 `ANTHROPIC_API_KEY`가 없으면 skip이 아니라 실패한다. `.env`는 커밋하지 않는다. 원칙 I의 판정은 이 명령이다. CI가 생겨도 매 푸시에서는 돌리지 않는다.
 
 ## 가드레일
-자동 검사는 둘이고 내용은 같다. 로컬 pre-commit 훅이 커밋마다, GitHub Actions CI(`.github/workflows/ci.yml`)가 푸시와 PR마다 ruff, ruff-format, pyright, import-linter, pytest(기본 마커), 지침 검사를 돈다. 훅은 각자 설치해야 하므로 CI가 최종 판정이고 main은 CI 통과 없이 병합할 수 없다. 클론 뒤 `uv run pre-commit install`을 한 번 하면 pre-commit과 commit-msg 두 훅이 깔린다. 훅이 안 걸린 저장소는 그 자체가 결함이다. 훅 시스템은 pre-commit 하나만 둔다. 둘이면 `.git/hooks/pre-commit` 한 자리를 다퉈 한쪽이 조용히 안 걸린다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·import-linter·pytest는 돈다(`always_run`). CI에 경로 필터를 걸게 되면 미매칭은 skip이 아니라 실패로 만든다.
+자동 검사는 둘이고 내용은 같다. 로컬 pre-commit 훅이 커밋마다, GitHub Actions CI(`.github/workflows/ci.yml`)가 푸시와 PR마다 ruff, ruff-format, pyright, import-linter, pytest(기본 마커), 지침 검사를 돈다. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. main 보호 브랜치가 CI 초록을 강제하는 것이 원칙이지만, 무료 플랜의 비공개 저장소는 보호 브랜치와 룰셋을 못 켠다(403 "Upgrade to GitHub Pro", 2026-09-20 실측). 그동안은 `/git-pr-merge`가 병합 전에 돌리는 `gh pr checks`가 유일한 게이트이므로 병합은 반드시 그 스킬로 하고 `gh pr merge`를 직접 치지 않는다. 공개로 바꾸거나 Pro가 되면 보호를 켜고 이 문장을 지운다. 클론 뒤 `uv run pre-commit install`을 한 번 하면 pre-commit과 commit-msg 두 훅이 깔린다. 훅이 안 걸린 저장소는 그 자체가 결함이다. 훅 시스템은 pre-commit 하나만 둔다. 둘이면 `.git/hooks/pre-commit` 한 자리를 다퉈 한쪽이 조용히 안 걸린다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·import-linter·pytest는 돈다(`always_run`). CI에 경로 필터를 걸게 되면 미매칭은 skip이 아니라 실패로 만든다.
 
 ## 브랜치와 병합
-- 원격은 GitHub, main은 보호 브랜치다. 티켓마다 `feature/<NN>-<slug>` 브랜치를 따고 혼자여도 PR을 연다. `/git-pr`이 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다.
+- 원격은 GitHub(`njh6803/agent-os`, 비공개). main은 보호 브랜치가 원칙이고 켤 수 없는 동안은 가드레일 절의 대체 게이트다. 티켓마다 `feature/<NN>-<slug>` 브랜치를 따고 혼자여도 PR을 연다. `/git-pr`이 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다.
 - 병렬 브랜치는 PR 전에 main에 rebase한다. 병합은 `/git-pr-merge`의 squash이고 main 이력은 PR 단위다. PR 제목이 곧 main의 커밋 제목이므로 컨벤셔널 커밋 형식이다. 리뷰는 아래 리뷰 파이프라인.
 - 병렬 작업은 프론티어(막힌 것이 없는 티켓)에서만 하고, 티켓마다 워크트리 하나다. 티켓 세션의 일지는 `docs/journal/<날짜>-<티켓슬러그>.md`에 쓰고 날짜 파일은 조율 세션만 쓴다.
 - 커밋 메시지는 컨벤셔널 커밋, 한국어. 형식(`<타입>: <제목>`, 72자, 마침표 없음)은 commit-msg 훅이 판정하고, 본문의 "왜 그렇게 했는지와 남긴 위험"은 리뷰가 본다.

@@ -270,6 +270,8 @@ main을 보호한다. 필수 상태 검사 `ci / verify`, 직접 푸시 금지. 
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.json
 ```
 
+무료 플랜의 비공개 저장소는 보호 브랜치와 룰셋이 둘 다 403이다. 선택지는 셋이다. 공개 전환, Pro, 또는 병합을 `/git-pr-merge`로만 하는 규약(스킬이 `gh pr checks`를 보고 빨강이면 멈춘다). 고른 것을 `operations.md` 가드레일 절에 적는다. CodeRabbit 무료 플랜도 비공개 저장소에는 요약만 남긴다(선행 저장소 실측). 공개 저장소면 둘 다 무료로 풀린다.
+
 봇 리뷰의 전제 셋은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
 
 1. CodeRabbit GitHub App을 저장소에 설치하고 작성자에게 시트를 할당한다. 시트가 없으면 PR에 Walkthrough만 남고 `pass`가 된다.
@@ -337,6 +339,7 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 | 봇 리뷰의 초록 착시 | 시트 미할당·무료 플랜이면 CodeRabbit이 Walkthrough만 남기고 `pass`. 워크플로를 바꾼 PR에서 Claude Code Review가 토큰 검증 실패로 건너뛰며 `pass` | 병합 전에 코멘트 수를 본다. 워크플로 변경은 별도 PR 먼저. 로컬 CLI가 대안 |
 | CodeRabbit CLI 무료 한도 | 주기당 3회. 커밋마다 돌리면 첫날에 소진 | PR마다 한 번. `coderabbit --usage`로 남은 횟수 확인 뒤 실행 |
 | `.coderabbit.yaml`의 제외 목록을 로컬 CLI도 읽음 | 테스트 경로를 빼면 로컬에서도 리뷰를 못 받음 | 제외는 생성물·락파일만 |
+| 무료 플랜 비공개 저장소의 보호 브랜치 | `gh api .../branches/main/protection`이 403 "Upgrade to GitHub Pro". 룰셋도 같다 | 공개 전환이나 Pro. 아니면 `/git-pr-merge`의 `gh pr checks`가 유일한 게이트라 직접 `gh pr merge`를 치지 않는다 |
 
 ## 부록 B. 세팅 프롬프트와 스킬·서브에이전트를 쓸 때
 
