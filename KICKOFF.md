@@ -34,7 +34,7 @@
 | `CONTEXT.md`, `docs/adr/` | 용어집, 결정 기록 | domain-modeling이 씀 |
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
 | `.github/` | PR 템플릿, CI 워크플로, Claude Code Review 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
-| `.coderabbit.yaml` | CodeRabbit CLI 설정. 층별 path_instructions, 린터 끔, 제외는 생성물·락파일만, PR 자동 리뷰 끔 | 로컬 CLI가 읽는다. PR 리뷰는 공개 저장소나 유료일 때만 값을 한다 |
+| `.coderabbit.yaml` | CodeRabbit 설정. 층별 path_instructions, 린터 끔, 제외는 생성물·락파일만 | PR 봇과 로컬 CLI가 같은 파일을 읽는다. PR 자동 리뷰는 공개 저장소나 유료일 때만 켠다 |
 | `.claude/agents/` | 프로젝트 서브에이전트. coderabbit-review(CLI 실행과 트리아지, 수정 없음) | 스킬은 절차, 서브에이전트는 격리된 컨텍스트에서 도구를 돌리고 보고만 한다 |
 | `tools/` | 배포되지 않는 저장소 유틸. 지침 검사, 커밋 메시지 검사, Actions 실행 요약 | 훅과 CI, 그리고 리뷰 봇 판정이 부른다 |
 | `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
@@ -249,7 +249,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). path_instructions는 그 프로젝트의 층으로. 제외는 생성물·락파일만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다.
 - `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다.
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
-- `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇 하나, 초록 착시.
+- `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇(공개·유료면 둘, 아니면 Claude 하나), 초록 착시.
 
 새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
 
@@ -288,7 +288,7 @@ gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input protection.j
 1. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다. 에이전트는 `gh secret list`로 이름과 시각만 확인한다.
 2. 로컬에서 `coderabbit auth login`. `coderabbit --usage`로 남은 횟수를 본다.
 
-CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다. 비공개 저장소에 무료 플랜이면 설치해도 Walkthrough 요약만 남고 체크는 `pass`다(agent-os 실측). 설치 여부는 PR의 `coderabbitai[bot]` 코멘트로만 확인할 수 있고 설치 목록 API는 앱 토큰이 필요해 `gh`로는 403이다. 체험은 자동으로 켜지지 않고 시트는 대시보드 team-management에서 사람이 할당한다.
+CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다. 공개라도 별이 10개 미만이면 자동 리뷰가 없고 PR마다 `@coderabbitai review`로 부른다(agent-os 실측, OSS 플랜 시간당 1회). 비공개 저장소에 무료 플랜이면 설치해도 Walkthrough 요약만 남고 체크는 `pass`다(agent-os 실측). 설치 여부는 PR의 `coderabbitai[bot]` 코멘트로만 확인할 수 있고 설치 목록 API는 앱 토큰이 필요해 `gh`로는 403이다. 체험은 자동으로 켜지지 않고 시트는 대시보드 team-management에서 사람이 할당한다.
 
 첫 PR에서 Claude Code Review가 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다.
 
@@ -307,7 +307,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
 6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 보류한 지적은 별도 티켓.
 7. PR 직전 `coderabbit-review` 서브에이전트로 보안·성능 축. 무료 CLI는 주기당 3회라 PR마다 한 번.
-8. `/git-pr`로 PR. Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 둘이 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
+8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다(시간당 1회). CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
 
 ## 10단계. 세션 마감
 

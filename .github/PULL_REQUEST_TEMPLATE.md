@@ -63,5 +63,5 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 ## 리뷰어 참고
 
 <!-- 특히 봐줬으면 하는 부분, 불확실했던 판단. 기준은 CODING_STANDARDS.md의 심각도와 리뷰 관점 넷.
-     PR 봇은 Claude Code Review(유지보수성·경계) 하나. 보안·성능은 PR 직전 CodeRabbit CLI 결과를 위 체크리스트에.
+     PR 봇은 CodeRabbit(보안·버그·성능)과 Claude Code Review(유지보수성·경계). PR 직전 CLI 결과는 위 체크리스트에.
      코멘트 0개인 초록은 리뷰 없음일 수 있다(operations.md) -->

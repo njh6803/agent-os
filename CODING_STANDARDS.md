@@ -28,4 +28,4 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 3. 이 모듈이 하나의 이유로만 바뀌는가. 보조 질문: 어떤 함수가 자기 데이터보다 다른 객체의 데이터를 더 많이 쓰고 있지 않은가.
 4. 테스트가 행동을 검증하는가, 구현을 복제하는가.
 
-PR 직전 CodeRabbit CLI가 보안·버그·성능을, PR에서 Claude Code Review가 이 넷과 경계를 본다. 누가 언제 보는지는 `docs/constitution/operations.md`의 리뷰 파이프라인.
+보안·버그·성능은 PR 직전 CodeRabbit CLI와 PR의 CodeRabbit이, 이 넷과 경계는 PR의 Claude Code Review가 본다. 누가 언제 보는지는 `docs/constitution/operations.md`의 리뷰 파이프라인.
