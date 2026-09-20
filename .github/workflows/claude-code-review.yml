@@ -2,7 +2,7 @@
 # 보안·버그·성능은 PR 직전 CodeRabbit CLI가 본다.
 # 역할 분담과 "초록 착시"는 docs/constitution/operations.md의 리뷰 파이프라인.
 # 시크릿 CLAUDE_CODE_OAUTH_TOKEN은 사람이 `claude setup-token`으로 만들어 저장소 시크릿에 넣는다.
-# 이 파일을 바꾼 PR에서는 토큰 검증에 실패해 리뷰 없이 초록이 될 수 있다(선행 저장소 실측).
+# 이 파일을 바꾼 PR에서는 액션이 리뷰를 건너뛰고 초록이 된다(PR #3 실측). 사유는 위 문서.
 # 워크플로 변경은 별도 PR로 먼저 병합한다.
 name: Claude Code Review
 
