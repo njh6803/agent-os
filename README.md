@@ -58,3 +58,4 @@ docs/
 | 설치된 스킬과 해시 | `skills-lock.json` | |
 | 진행 기록 | `docs/journal/` | 이력이지 원천이 아니다 |
 | 환경 함정 | `CLAUDE.md`(명령 전에 볼 다섯), `operations.md`(나머지) | 런북 부록 A는 새 프로젝트용 사본 |
+| 리뷰 봇 실행의 실제 내용 | Actions 로그. `tools/gh_run_summary.py`가 요약 | 체크의 초록은 원천이 아니다 |

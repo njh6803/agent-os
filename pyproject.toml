@@ -48,6 +48,8 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# tools/ 의 순수 함수를 tests/tools/ 에서 import 하기 위해 저장소 루트를 경로에 둔다
+pythonpath = ["."]
 markers = [
     "llm: LLM을 실제로 호출한다. 기본 실행에서 제외. uv run pytest -m llm 으로 돌린다",
 ]
