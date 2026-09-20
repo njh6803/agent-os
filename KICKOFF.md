@@ -88,7 +88,7 @@ mkdir my-project && cd my-project && git init && mkdir docs
 gh api user --jq .plan.name
 ```
 
-Billing & plans의 결제 수단과 Actions 지출 한도도 본다. 결제가 막히면 잡이 시작조차 안 되고 CI가 게이트라 병합도 막힌다(agent-os PR #10 실측). `free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
+Billing & plans의 Included usage도 본다. Actions 무료 분량은 계정 단위 월 2,000분이라 다른 비공개 저장소가 써 버리면 이 저장소의 잡이 시작조차 안 되고, CI가 게이트라 병합도 막힌다(agent-os PR #10 실측. 주석은 결제 실패를 말하지만 원인은 분량 소진이었다). 공개 저장소는 무제한이다. Claude 리뷰 한 번이 1~10분을 쓴다. `free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
 
 `docs/journal/<날짜>-kickoff.md`를 지금 만든다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 병렬 티켓 세션은 `docs/journal/<날짜>-<티켓슬러그>.md`.
 
