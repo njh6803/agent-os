@@ -31,7 +31,7 @@ docs/
   agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만, 수정 없음)
   rules/           디렉터리별 규칙. 해당 파일을 열 때만 로드
   skills/          엔지니어링 스킬
-.coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
+.coderabbit.yaml   CodeRabbit CLI 설정. PR 자동 리뷰는 꺼져 있다
 ```
 
 아직 없는 것(`server.py`, `channel/http`, `web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
@@ -49,7 +49,7 @@ docs/
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |
 | 판단 기준(리뷰) | `CODING_STANDARDS.md` | "규칙으로" 승인분만 |
-| 리뷰 파이프라인(누가 언제 무엇을) | `docs/constitution/operations.md` | 봇 설정은 `.coderabbit.yaml`과 `.github/workflows/claude-code-review.yml`. 기준은 CODING_STANDARDS |
+| 리뷰 파이프라인(누가 언제 무엇을) | `docs/constitution/operations.md` | PR 봇 설정은 `.github/workflows/claude-code-review.yml`, CLI 설정은 `.coderabbit.yaml`. 기준은 CODING_STANDARDS |
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 열 때만 실림 |
 | 현재 구조 | 코드 | 이 README의 트리는 안내 |
 | 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | |
