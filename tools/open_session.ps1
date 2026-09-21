@@ -7,8 +7,9 @@
 # 사용:
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <절대경로> -PromptFile <파일>
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <세션 제목>
+#   pwsh -NoProfile -File tools/open_session.ps1 -Action focus -Title <세션 제목>   (이미 패널에 있을 때)
 param(
-    [Parameter(Mandatory)] [ValidateSet('send', 'split')] [string] $Action,
+    [Parameter(Mandatory)] [ValidateSet('send', 'split', 'focus')] [string] $Action,
     [string] $Folder,
     [string] $PromptFile,
     [string] $Title,
@@ -62,9 +63,18 @@ function Wait-For([scriptblock] $probe, [string] $what, [int] $Seconds = $Timeou
 # ("분할 보기", "보내기")는 Invoke 로, 아니면(행 옵션 버튼, "다음에서 열기") 포커스를 주고 키를
 # 보낸다(Enter, 하위 메뉴는 →). 키는 포커스된 요소로만 간다. ExpandCollapse 는 쓰지 않는다.
 # 실측에서 호출이 돌아오지 않고 멈춘 적이 있다(일지 2026-09-21 open-session).
-function Press-Element($el, [string] $key = '{ENTER}') {
-    try { $el.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 600; return 'invoke' } catch {}
-    $el.SetFocus()
+function Press-Element($el, [string] $key = '{ENTER}', [switch] $NoInvoke) {
+    # Invoke 는 메뉴 항목과 "보내기"에서만 실측했다. 사이드바 행 버튼은 Invoke 가 돌아오지 않을 수 있어 키로 간다.
+    if (-not $NoInvoke) {
+        try { $el.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 600; return 'invoke' } catch {}
+    }
+    # 이름을 바꾼 직후에는 사이드바가 다시 그려지는 사이라 SetFocus 가 빈 메시지로 던진다. 짧게 다시 시도한다.
+    # ScrollIntoView 도 Expand 처럼 돌아오지 않은 적이 있어 부르지 않는다. 실측에서 통한 호출만 쓴다.
+    $focused = $false
+    for ($i = 0; $i -lt 5 -and -not $focused; $i++) {
+        try { $el.SetFocus(); $focused = $true } catch { Start-Sleep -Milliseconds 400 }
+    }
+    if (-not $focused) { throw "요소 '$($el.Current.Name)'에 포커스를 줄 수 없다." }
     Start-Sleep -Milliseconds 300
     [System.Windows.Forms.SendKeys]::SendWait($key)
     Start-Sleep -Milliseconds 600
@@ -116,12 +126,12 @@ function Split-Session {
     if (-not $Title) { throw 'split 에는 -Title 이 필요하다.' }
     $win = Get-ClaudeWindow
     # `"$Title에"` 는 PowerShell 이 `$Title에` 라는 변수로 읽는다(한글이 변수 이름 문자다). 중괄호가 필수다.
-    $row = Wait-For { Find-ByName $win @("${Title}에 대한 더 많은 옵션", "More options for ${Title}") $Types::Button } "사이드바 행 '${Title}'의 옵션 버튼"
     # 메뉴는 사용자가 앱 안 다른 곳을 클릭하면 닫힌다. 열려 있는 시간을 짧게(단계마다 3초) 두고
-    # 세 번까지 다시 연다. 세 번 다 닫히면 멈춘다. 새 세션은 이미 열려 있으니 옆 패널만 빠진다.
+    # 세 번까지 다시 연다. 행은 시도마다 다시 찾는다. 다시 그려지면 앞서 잡은 요소가 무효다.
     $last = $null
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         try {
+            $row = Wait-For { Find-ByName $win @("${Title}에 대한 더 많은 옵션", "More options for ${Title}") $Types::Button } "사이드바 행 '${Title}'의 옵션 버튼"
             $how1 = Press-Element $row
             $openIn = Wait-For { Find-ByName $win @('다음에서 열기', 'Open in') $Types::MenuItem } "'다음에서 열기' 메뉴" 3
             $how2 = Press-Element $openIn '{RIGHT}'
@@ -139,13 +149,27 @@ function Split-Session {
     # 세 번 다 닫혔으면 옆 패널을 포기하고 그 세션 행을 눌러 메인 패널에 포커스로 띄운다. 행 이름은
     # "<상태> <제목>"("유휴 …", "실행 중 …")이라 끝이 제목인 버튼을 찾는다. 옵션 버튼은 "…에 대한"이라 안 걸린다.
     $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
-    $rowButton = $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1
+    $rowButton = $null
+    try {
+        $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1 } "행 '${Title}'" 10
+    } catch {}
     if (-not $rowButton) { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 못 찾았다. 새 세션은 열려 있다. 마지막 오류: $($last.Exception.Message)" }
-    $how = Press-Element $rowButton
+    $how = Press-Element $rowButton -NoInvoke
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how (분할 메뉴가 세 번 닫혀 포커스로 대신했다: $($last.Exception.Message))"
+}
+
+# 세션이 이미 패널에 있을 때 포커스만 옮긴다. 행 버튼을 포커스+Enter 로 누른다(사이드바 행 클릭과 같다).
+function Focus-Session {
+    if (-not $Title) { throw 'focus 에는 -Title 이 필요하다.' }
+    $win = Get-ClaudeWindow
+    $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1 } "행 '${Title}'" 10
+    $how = Press-Element $rowButton -NoInvoke
+    "focus=$(Get-Date -Format HH:mm:ss.fff) via $how"
 }
 
 switch ($Action) {
     'send' { Send-Prompt }
     'split' { Split-Session }
+    'focus' { Focus-Session }
 }
