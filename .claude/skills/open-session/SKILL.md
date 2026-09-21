@@ -23,13 +23,14 @@ description: "next-session 지시문의 '어디서'가 새 세션이면 그 세�
 
    `page=`가 안 나오면 앱이 딥링크를 받지 못한 것이다(창이 없거나 다른 창이 앞에 있다). `trusted=`가 끼면 기본 폴더의 신뢰를 스크립트가 수락한 것이다(루트일 때만). `sent=`가 안 나오면 보내기 버튼이 없는 것이다. 끝: `sent=`.
 4. **이름을 붙인다.** `list_sessions`(limit 5)는 이 세션을 빼고 준다. 그중 `isRunning`이고 `createdAt`이 없으니 `lastActivityAt`이 `fired=` 이후인 항목이 새 세션이다. 둘 이상이면(병렬 세션이 그 사이 움직였다) `get_session`으로 `createdAt`이 `fired=` 이후인 것을 고른다. 없으면 제출이 안 된 것이니 3의 화면을 사람에게 알린다. 그 `cwd`가 루트여야 한다. 딥링크는 폴더를 싣지 않고 앱의 마지막 폴더를 쓰므로, 다르면(스크래치 워크스페이스 등) 그 세션을 사람에게 알리고 멈춘다. 첫 줄이 `/implement`면 티켓 파일이 없어 그 세션도 바로 멈춘다. 그 `sessionId`에 `set_session_title`로 1의 제목을 붙인다. 앱이 지은 제목은 묻지 않고 바뀐다. 끝: 응답이 `Renamed`.
-5. **옆에 띄운다.** 앱은 메인 패널에 떠 있는 세션에는 "분할 보기"를 주지 않는다. 제출 직후 새 세션이 메인 패널을 차지하므로, 먼저 `focus`로 이 세션(`get_session self`의 제목)을 앞에 두고, 그 다음 새 세션을 `split`한다. 두 실행은 **PowerShell 호출을 따로** 한다. 화면이 바뀐 직후 같은 호출 안에서 이어지는 명령이 끊긴 적이 있다. 이미 옆 패널에 있으면(`get_window_layout`) 둘 다 건너뛴다. 마우스를 쓰지 않는다(접근성 패턴, 예비로 포커스+키). 출력이 `split=`이면 `get_window_layout`에서 그 세션이 두 번째 패널에 `focused: true`다. 메뉴가 사용자 클릭과 겹쳐 세 번 닫히면 스크립트가 옆 패널을 포기하고 그 세션 행을 `Invoke`로 눌러 메인 패널에 포커스로 띄우며 `focus=`를 낸다. 둘 다 통과다. `split=`인데 `get_window_layout`의 포커스가 이 세션에 남아 있으면 `focus`를 한 번 더 돌린다.
+5. **이 세션을 옆에 붙인다.** 제출 직후 새 세션이 메인 패널을 차지한다. 그 자리를 지키고 **이 세션**(`get_session self`의 제목)을 옆 패널로 붙인 뒤 새 세션에 포커스를 되돌린다. 분할이 실패해도 사람은 새 세션에 남는다. PowerShell 호출을 **하나씩** 한다. 화면이 바뀐 직후 같은 호출 안에서 이어지는 명령이 끊긴 적이 있다.
 
    ```
-   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <제목>
+   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <이 세션 제목>
+   pwsh -NoProfile -File tools/open_session.ps1 -Action focus -Title <새 세션 제목>
    ```
 
-   끝: 새 세션이 옆 패널 또는 메인 패널에 포커스로 있다.
+   마우스를 쓰지 않는다(메뉴 항목은 `Invoke`, 그 밖은 포커스+키, 행은 `Invoke`). `split=`이면 이 세션이 두 번째 패널에 있고, `focus=`이면 새 세션이 메인 패널에 `focused: true`다(`get_window_layout`으로 본다). 분할 메뉴가 사용자 클릭과 겹쳐 세 번 닫히면 스크립트가 `focus=`로 대신하는데, 대상이 이 세션이라 이 세션이 앞에 오므로 그때도 `focus <새 세션 제목>`을 돌리면 된다. 끝: 새 세션이 메인 패널에 포커스로 있다. 옆 패널은 덤이다.
 6. **멈춘다.** 제목, 폴더, 배치를 한 줄로 보고하고 턴을 끝낸다. 새 세션의 진행은 사람이 그 패널에서 본다.
 
 ## 막히면
