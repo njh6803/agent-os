@@ -27,6 +27,7 @@ from agent_os.sdk.manifest import (
     PluginManifest,
     approval_conflicts,
     parse_manifest,
+    secret_args_by_tool,
 )
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "ToolError",
     "approval_conflicts",
     "parse_manifest",
+    "secret_args_by_tool",
 ]

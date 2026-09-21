@@ -82,6 +82,20 @@ def parse_manifest(text: str) -> PluginManifest:
     return PluginManifest.model_validate(tomllib.loads(text))
 
 
+def secret_args_by_tool(servers: Mapping[PluginName, McpServer]) -> Mapping[str, tuple[str, ...]]:
+    """도구 이름 -> 마스킹할 인자 이름들. 서버를 가로질러 평평하다.
+
+    빈 선언은 마스킹이 아니므로 뺀다. 가릴 인자가 없는 도구는 금지 규칙에도 걸리지 않고
+    마스킹 조회에서도 원문을 돌려주므로, 두 쓰임이 같은 규칙을 본다.
+    """
+    return {
+        tool: names
+        for server in servers.values()
+        for tool, names in server.secret_args.items()
+        if names
+    }
+
+
 def approval_conflicts(
     agent: PluginManifest, servers: Mapping[PluginName, McpServer]
 ) -> tuple[str, ...]:

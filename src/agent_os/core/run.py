@@ -45,16 +45,10 @@ from agent_os.sdk import (
     ToolCalled,
     ToolError,
     approval_conflicts,
+    secret_args_by_tool,
 )
 
 MASKED = "***"
-
-
-def _secret_args(servers: Mapping[PluginName, McpServer]) -> Mapping[str, tuple[str, ...]]:
-    """도구 이름 -> 마스킹할 인자 이름들. 도구 이름은 서버를 가로질러 평평하다."""
-    return {
-        tool: names for server in servers.values() for tool, names in server.secret_args.items()
-    }
 
 
 def _mask(
@@ -161,7 +155,7 @@ async def run(
     manifest = _read_agent_manifest(plugins, agent)
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
-    secrets = _secret_args(servers)
+    secrets = secret_args_by_tool(servers)
     instance = plugins.load_agent(manifest)
     run_id = clock.new_run_id()
 
