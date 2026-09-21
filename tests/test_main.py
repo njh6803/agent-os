@@ -147,8 +147,15 @@ def test_트레이스_디렉터리를_지정하지_않으면_작업_디렉터리
             "schema_version",
         ),
         ("broken", None, "def (\n", "broken"),
+        ("nomcp", MANIFEST.format(name="nomcp") + 'mcp = ["ghost"]\n', ECHO_SRC, "ghost"),
     ],
-    ids=["없는 에이전트", "매니페스트 파싱 실패", "모르는 형식 버전", "진입점 import 실패"],
+    ids=[
+        "없는 에이전트",
+        "매니페스트 파싱 실패",
+        "모르는 형식 버전",
+        "진입점 import 실패",
+        "없는 mcp 이름",
+    ],
 )
 def test_실행_전_오류는_무엇이_잘못됐는지_적고_종료_코드_1이며_트레이스를_남기지_않는다(
     tmp_path: Path,
@@ -170,6 +177,18 @@ def test_실행_전_오류는_무엇이_잘못됐는지_적고_종료_코드_1�
     assert out == ""
     assert clue in err
     assert _trace_files(tmp_path / "t") == []
+
+
+def test_빈_모델_지정은_실행_전에_진단을_적고_종료_코드_1이다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = main(["run", "echo", "hi", "--traces", "t", "--model", ""])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "모델 이름" in err
+    assert _trace_files(workspace / "t") == []
 
 
 @pytest.mark.llm
@@ -201,4 +220,5 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     (trace_file,) = _trace_files(tmp_path)
     types = [e.type for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)]
     assert "llm_called" in types
+    assert "tool_called" in types
     assert types[-1] == "run_finished"

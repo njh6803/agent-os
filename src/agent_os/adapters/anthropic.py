@@ -18,15 +18,15 @@ MAX_TOKENS = 16000
 def resolve_model_name(env: Mapping[str, str], flag: str | None = None) -> str:
     """플래그, 환경변수, 기본값 순. 폴백은 없다. 빈 값은 '지정 안 함'이 아니라 잘못된 지정이다."""
     if flag is not None:
-        return _non_empty(flag, "--model")
+        return _non_empty(flag)
     if MODEL_ENV not in env:
         return DEFAULT_MODEL
-    return _non_empty(env[MODEL_ENV], MODEL_ENV)
+    return _non_empty(env[MODEL_ENV])
 
 
-def _non_empty(name: str, source: str) -> str:
+def _non_empty(name: str) -> str:
     if not name:
-        raise ValueError(f"{source} 가 비어 있다. 모델 이름을 적거나 지정을 지운다")
+        raise ValueError("모델 이름이 비어 있다. 이름을 적거나 지정을 지운다")
     return name
 
 

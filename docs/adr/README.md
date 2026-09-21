@@ -11,6 +11,6 @@
 | [0005](0005-remote-ci-pr-from-day-one.md) | 원격, CI, PR은 첫날부터다 | accepted | 2026-09-20 |
 | [0006](0006-review-pipeline.md) | 리뷰는 두 단계 세 축이다 | accepted | 2026-09-20 |
 | [0007](0007-pytest-asyncio-auto-mode.md) | 비동기 테스트는 pytest-asyncio auto 모드로 돌린다 | accepted | 2026-09-21 |
-| [0008](0008-manifest-schema-version-and-event-principal.md) | 매니페스트는 형식 버전을, 시작 이벤트는 주체를 필수로 가진다 | proposed | 2026-09-21 |
+| [0008](0008-manifest-schema-version-and-event-principal.md) | 매니페스트는 형식 버전을, 시작 이벤트는 주체를 필수로 가진다 | accepted | 2026-09-21 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

@@ -8,14 +8,22 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
 from typing import TextIO
 
-from agent_os.core.ports import ChatModel, Clock, PluginError, PluginSource, TraceSink
+from agent_os.core.ports import (
+    ChatModel,
+    Clock,
+    PluginError,
+    PluginSource,
+    ToolSource,
+    TraceSink,
+)
 from agent_os.core.run import run
-from agent_os.sdk import AgentName, Principal, RunFailed, RunFinished
+from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished
 
 DEFAULT_TRACES = Path("traces")
 
@@ -62,6 +70,7 @@ async def run_command(
     *,
     plugins: PluginSource,
     model: ChatModel,
+    tools: ToolSource,
     trace: TraceSink,
     clock: Clock,
     stdout: TextIO,
@@ -69,21 +78,35 @@ async def run_command(
     progress: TextIO | None,
 ) -> int:
     """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
+    events = run(
+        agent,
+        request,
+        principal,
+        plugins=plugins,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
     try:
-        events = run(
-            agent, request, principal, plugins=plugins, model=model, trace=trace, clock=clock
-        )
-        exit_code = 1
-        async for event in events:
-            if progress is not None:
-                progress.write(event.model_dump_json() + "\n")
-            if isinstance(event, RunFinished):
-                stdout.write(event.output + "\n")
-                exit_code = 0
-            elif isinstance(event, RunFailed):
-                stderr.write(f"실행 실패: {event.error}\n")
-                exit_code = 1
-        return exit_code
+        return await _show(events, stdout=stdout, stderr=stderr, progress=progress)
     except PluginError as error:
         stderr.write(f"{error}\n")
         return 1
+
+
+async def _show(
+    events: AsyncIterator[Event], *, stdout: TextIO, stderr: TextIO, progress: TextIO | None
+) -> int:
+    """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다."""
+    exit_code = 1
+    async for event in events:
+        if progress is not None:
+            progress.write(event.model_dump_json() + "\n")
+        if isinstance(event, RunFinished):
+            stdout.write(event.output + "\n")
+            exit_code = 0
+        elif isinstance(event, RunFailed):
+            stderr.write(f"실행 실패: {event.error}\n")
+            exit_code = 1
+    return exit_code

@@ -8,7 +8,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] core가 모델 포트를 선언한다. 포트는 닫힌 목록 다섯 중 하나이고 새 포트를 더하지 않는다
 - [ ] 어댑터가 Anthropic 모델을 부른다. core는 프로바이더 라이브러리를 import하지 않고 경계 검사가 그것을 판정한다

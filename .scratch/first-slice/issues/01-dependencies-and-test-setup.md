@@ -6,7 +6,7 @@
 
 **Blocked by:** 없음. 바로 시작할 수 있다.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] 런타임 의존성이 `docs/constitution/tech.md`의 표와 같다. 그 표가 원천이고 목록을 여기서 다시 적지 않는다
 - [ ] MCP 라이브러리가 브리지의 요구대로 내려가는 것을 확인하고 받아들인다. ADR 0001이 예상한 대가다

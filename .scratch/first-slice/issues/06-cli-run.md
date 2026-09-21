@@ -6,7 +6,7 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] 실행 하위 명령이 에이전트 이름과 요청을 위치 인자로 받는다
 - [ ] 표준 출력에 출력 문자열만 나온다

@@ -6,7 +6,7 @@
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] core가 도구 원천 포트를 선언한다. 시작과 종료의 수명을 가진다
 - [ ] 실행 함수의 시그니처가 그 포트를 받도록 넓어진다. 04가 만든 넷에 다섯째가 붙고, 06이 이미 쓰고 있던 호출부도 같이 고친다
@@ -25,3 +25,9 @@
 - [ ] 마커를 단 end-to-end 테스트가 실제 호출로 답을 받고, 트레이스에 모델 호출과 도구 호출이 모두 남는다
 - [ ] 프로바이더와 MCP 라이브러리의 타입이 sdk와 채널로 새지 않는다. 경계는 포트다
 - [ ] 검증 명령 넷이 초록이다
+
+## Comments
+
+- 2026-09-21: "수명이 있는 도구 원천을 테스트에서 async 픽스처로 연다"는 지킬 수 없었다. pytest-asyncio가 픽스처의 setup과 teardown을 다른 태스크에서 돌려 MCP의 anyio 취소 범위가 터진다. 테스트 본문에서 `async with`로 연다. 기록은 ADR 0007 이력과 `.claude/rules/tests.md`.
+- 2026-09-21: 어댑터 테스트는 `npx` 대신 파이썬 FastMCP 서버(`tests/adapters/mcp_fixture_server.py`)에 붙는다. 기본 스위트가 네트워크도 Node도 없이 돌아야 해서다. `everything`은 llm 마커 e2e만 쓴다.
+- 2026-09-21: 후속 후보 둘. MCP 어댑터가 mcp/anyio 예외를 한 종류로 감싸기, 테스트 픽스처(매니페스트 문자열·FakeContext) 중복을 conftest로 모으기.

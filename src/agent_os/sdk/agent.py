@@ -17,14 +17,15 @@ from typing import Protocol
 
 from agent_os.sdk.events import Event
 from agent_os.sdk.ids import RunId
+from agent_os.sdk.json import Json
 
 
 class AgentContext(Protocol):
     """런타임이 run()에 넘기는 것. 플러그인은 이것으로만 LLM, 도구, 시각, 식별자를 쓴다.
 
     llm()은 프롬프트 한 번이 아니라 루프 전체다. 모델이 도구를 부르면 런타임이 실행해 되돌리고
-    모델이 멈출 때까지 반복한 뒤 마지막 텍스트를 돌려준다. tool()은 모델을 거치지 않는다.
-    인자와 반환은 JSON으로 직렬화 가능한 것만이다.
+    모델이 멈출 때까지 반복한 뒤 마지막 텍스트를 돌려준다. tool()은 모델을 거치지 않고 도구 하나를
+    부르며 실패하면 ToolError 다. 인자와 반환은 JSON으로 직렬화 가능한 것만이다.
     """
 
     @property
@@ -34,7 +35,7 @@ class AgentContext(Protocol):
 
     async def llm(self, prompt: str) -> str: ...
 
-    async def tool(self, name: str, **args: object) -> str: ...
+    async def tool(self, name: str, **args: Json) -> str: ...
 
 
 class BaseAgent(Protocol):
