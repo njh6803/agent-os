@@ -167,3 +167,15 @@ def test_mcp_매니페스트는_서버_실행_정보를_돌려준다(root: Path)
     assert manifest.server is not None
     assert manifest.server.command == "npx"
     assert plugins.read_manifest(PluginKind.MCP, PluginName("missing")) is None
+
+
+def test_디렉터리와_name이_어긋나면_에러다(root: Path) -> None:
+    directory = root / "agents" / "outer"
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(
+        _manifest("agent", "inner", 'entrypoint = "agent:Agent"\n'), encoding="utf-8"
+    )
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError, match="name"):
+        plugins.read_manifest(PluginKind.AGENT, PluginName("outer"))
