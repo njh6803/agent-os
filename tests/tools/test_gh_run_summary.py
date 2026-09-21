@@ -24,13 +24,23 @@ def test_요약은_결과_블록의_턴수와_비용만_남기고_스트림_잡�
     assert summary.results == ['"num_turns": 4', '"total_cost_usd": 0.18']
 
 
-def test_허용_밖_호출은_세어서_렌더의_결과_절에만_나타난다() -> None:
+def test_허용_밖_호출은_도구별로_세어서_렌더의_결과_절에만_나타난다() -> None:
     summary = summarize(
-        log('  "subtype": "permission_denied",', '  "subtype": "permission_denied",')
+        log(
+            '  "subtype": "permission_denied",',
+            '  "tool_name": "Bash",',
+            '  "subtype": "permission_denied",',
+            '  "tool_name": "WebFetch",',
+            '  "subtype": "permission_denied",',
+            '  "tool_name": "Bash",',
+        )
     )
-    assert summary.denied == 2
+    assert summary.denied == 3
+    assert summary.denied_tools == {"Bash": 2, "WebFetch": 1}
     assert summary.results == []
-    assert "permission_denied 이벤트 2건" in render(summary)
+    assert "permission_denied 이벤트 3건 (허용 도구 밖의 호출: Bash 2, WebFetch 1)" in render(
+        summary
+    )
 
 
 def test_워크플로_검증_건너뜀은_신호로_잡히고_결과_블록_없음을_알린다() -> None:

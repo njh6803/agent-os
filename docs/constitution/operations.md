@@ -28,6 +28,7 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 - Claude Code Review는 플러그인을 쓰던 동안 코멘트 없이 `pass`가 되곤 했다(PR #2·#4·#5). 플러그인이 서브에이전트를 백그라운드로 띄우고 턴을 끝내는데 헤드리스 실행이 그 전에 종료됐다. 그래서 워크플로를 직접 프롬프트(단일 에이전트, 요약 코멘트 하나가 완료 조건)로 바꾸고, 실행 시작 뒤 생긴 `claude[bot]` 코멘트가 0개면 잡을 실패시키는 스텝을 둔다(2026-09-20 회고 후보 1, PR #10). 그 워크플로부터는 코멘트가 없는 초록이 나오지 않아야 하고, 나오면 `uv run python tools/gh_run_summary.py <run-id>`로 결과 블록·경고·Claude의 말을 본다.
 - Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
+- CodeRabbit PR 리뷰는 OSS 시간당 한도에 자주 걸린다(첫 슬라이스 PR 일곱 중 다섯이 "Review rate limited"로 `pass`). 그 PR의 보안·버그 축은 PR 직전 CLI 슬라이스 리뷰 결과를 그 PR 코멘트로 링크한 것이 대체이고, 링크가 없으면 리뷰 없음이다.
 
 전제 둘은 사람이 한 번 한다. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
 

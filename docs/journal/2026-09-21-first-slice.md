@@ -84,3 +84,9 @@ ADR 0008이 accepted가 됐다.
 - 다 병합되면 `.scratch/plan.md`의 first-slice를 done으로 바꾸고 http-channel, admin-api, interrupts가 프론티어로 열린다.
 - 슬라이스 2 인터럽트 티켓이 열릴 때 langgraph의 strict 타입을 같은 프로브(`tests/` 아래에서)로 다시 잰다. ADR 0001 이력.
 - 후속 후보(티켓 07 코멘트): MCP 어댑터 예외 감싸기, 테스트 픽스처 중복 정리. 회고에서 규칙 후보로 볼 것: "검사 도구의 대상이 그 도구의 범위 안인지 먼저 본다"가 두 세션 연속 반복됐다(세 번째면 규칙 후보).
+
+## 회고 (2026-09-21, 슬라이스를 닫은 뒤)
+
+> 사용자: "추천대로 회고 먼저하는데 회고 시점은 자동 아니였나?"
+
+계기가 자동("일지의 '다음' 절을 갱신하며 단계를 닫을 때")인데 에이전트가 일지를 쓰고도 돌리지 않고 물어봤다. 후보 다섯 중 넷을 사용자가 승인해 반영했다(PR은 `chore/retro-2026-09-21`). (1) retro 계기 훅 — `docs/journal/*.md`를 쓰면 `tools/hook_journal_retro.py`가 컨텍스트에 계기를 넣는다. 이 저장소의 첫 훅. (2) heredoc 훅 — 40줄 넘는 heredoc을 `tools/hook_bash_heredoc.py`가 deny하고 Write로 안내한다. 같은 세션에서 두 번 어긴 지침의 훅화. (3) `tools/gh_run_summary.py`가 거부된 도구 이름을 집계한다. (4) CLAUDE.md 환경 함정에 pyright 프로브 위치, operations.md에 CodeRabbit 한도 대체 규약(+ADR 0006 이력). 환경 변경 없이 기록만: 추천 근거가 사라진 뒤 추천을 갱신하지 않은 것(브랜치 전략).
