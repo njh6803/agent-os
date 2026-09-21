@@ -40,6 +40,11 @@
             "type": "command",
             "command": "uv run --no-sync python tools/hook_bash_heredoc.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --no-sync python tools/hook_bash_python_stub.py",
+            "timeout": 20
           }
         ]
       }
