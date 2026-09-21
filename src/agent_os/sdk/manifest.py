@@ -105,7 +105,5 @@ def approval_conflicts(
     된다. 둘 다 매니페스트에 적히므로 실행 식별자가 생기기 전에 정적으로 판정된다. 거부는
     이 질의를 부르는 쪽이 한다. sdk 는 core 의 구성 오류 타입을 모르기 때문이다.
     """
-    masked = {
-        tool for server in servers.values() for tool, args in server.secret_args.items() if args
-    }
+    masked = secret_args_by_tool(servers)
     return tuple(tool for tool in agent.requires_approval if tool in masked)
