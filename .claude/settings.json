@@ -20,6 +20,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell|mcp__plugin_github_github__create_pull_request|mcp__plugin_github_github__merge_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-sync python tools/hook_pr_next_session.py",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "PreToolUse": [

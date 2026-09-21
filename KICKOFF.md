@@ -241,7 +241,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 린트 명령 1개
 - 타입체크 명령 1개 (해당 언어면)
 
-통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 파일 여섯과 절 하나를 같이 만든다. 런북 저장소(`C:/project/agent`)에서 복사해 검증 명령과 층 이름만 바꾼다.
+통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 아래 파일들과 절 하나를 같이 만든다. 런북 저장소(`C:/project/agent`)에서 복사해 검증 명령과 층 이름만 바꾼다.
 
 - `.github/PULL_REQUEST_TEMPLATE.md`. 변경 유형, 왜, 남긴 위험, 변경된 영역(그 프로젝트의 층), 체크리스트(검증 명령), 확인 방법, 관련 티켓. `/git-pr`이 이것을 채운다.
 - 커밋 메시지 훅 `tools/check_commit_msg.py`. `.pre-commit-config.yaml`에 `stages: [commit-msg]`로 등록하고 `default_install_hook_types: [pre-commit, commit-msg]`를 둔다. 나쁜 메시지로 빨강을 본다.
@@ -251,6 +251,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
 - `.claude/skills/code-review/SKILL.md` 사본에 셋을 덧댄다. 원본은 `<fixed-point>...HEAD`만 보고 리포트에서 멈춘다. (1) 범위를 미커밋·미추적까지 넓힌다. implement가 리뷰한 뒤 커밋하므로 리뷰 시점의 작업은 대개 staged·unstaged이고, 미추적 파일은 어떤 diff에도 안 잡혀 새 파일이 통째로 빠진다. (2) 보고 뒤 반영 절차를 단계로 둔다. 고칠 것(표준 위반·명세 누락·범위 추가), 먼저 물을 것(아키텍처 결정과 계약), 근거를 확인할 것, 남길 것(이유 한 줄과 티켓), 검증 명령 재실행. (3) 5단계 보고에 본 범위 한 줄(base SHA, 파일·커밋·미추적 수)을 적게 한다. 범위가 어긋난 리뷰는 실패하지 않고 초록으로 끝나므로 보고만 보고 알 수 있어야 한다. 근거 확인은 서브에이전트가 격리된 컨텍스트에서 ADR도 주변 코드도 모른 채 판단한다는 사실에 대한 장치이고, 부록 A의 초록 착시와 한 쌍이다. 문서만 바뀐 변경을 리뷰에서 면제하지 않는다. 지침과 하네스는 다음 실행에 바로 영향을 주므로 내리는 것은 모델이지 축이 아니다.
 - 덧댄 사본은 `npx skills update -p`가 조용히 되돌린다. 각 사본 첫머리에 무엇을 왜 덧댔는지 주석으로 적고, 그 주석을 센티널로 삼아 `tools/check_instructions.py`가 목록에 있는 사본마다 주석이 남아 있는지 본다. 사람이 기억하는 대신 훅이 판정한다. 부록 A의 `disable-model-invocation` 줄과 같은 병이다.
+- `.claude/skills/next-session/SKILL.md`와 `tools/hook_pr_next_session.py`. PR을 열거나 병합하면 그 세션의 작업은 끝이고, 다음 세션에 붙여 넣을 여덟 줄 지시문(형식은 스킬)을 내고 멈춘다. 훅은 `gh pr create|merge`와 GitHub MCP의 PR 도구 뒤에 계기 문장만 넣고 막지 않는다. 계기 훅을 위반 확인 전에 두는 이유는 10단계.
 - `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇(공개·유료면 둘, 아니면 Claude 하나), 초록 착시.
 
 새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
@@ -309,11 +310,11 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
 6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. 범위는 미커밋·미추적까지. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 지적은 근거를 확인한 뒤 고치고, 맞지 않아 보이면 그대로 구현하지 않는다. 보류한 지적은 이유 한 줄과 함께 별도 티켓.
 7. PR 직전 `coderabbit-review` 서브에이전트로 보안·성능 축. CLI 상한은 개발자당 시간당 3회이므로 PR마다 한 번은 한도가 아니라 선택이다.
-8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다. CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
+8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다. CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다. PR을 열면 세션은 거기서 끝이다. `next-session`이 지시문을 내고, 반영과 병합은 다음 세션이 그 지시문으로 시작한다(10단계).
 
 ## 10단계. 세션 마감
 
-`/retro`. 사람이 치지 않아도 에이전트가 계기에 돌린다. 계기는 스킬 description에 적는다("세션이 끝나면" 같은 관찰 불가능한 것이 아니라 일지의 "다음" 갱신, 마무리 발화). 원본 스킬의 플래그는 부록 A. 후보를 심각도 순으로 내놓으면 승인한 것만 반영한다. 기계적 위반은 린터 규칙이나 훅으로, 판단 기준만 `CODING_STANDARDS.md`로, 지침이 길어졌으면 잘라낸다. `/context`로 항상 로드 분량을 실측해 늘었으면 3단계의 배치 기준으로 다시 나눈다. 승격 사다리는 이렇다. 같은 주의를 세 번 손으로 되풀이하면 지침 후보, 지침으로 적은 뒤에도 어겨지면 훅 후보. 훅은 실제로 안 지켜지는 것이 확인된 뒤에만 더한다. 세션 끝에 메모리에 일지 위치, 다음 할 일, 기한을 한 줄로 남긴다. 다음 세션이 일지부터 읽게 하는 장치다.
+`/retro`. 사람이 치지 않아도 에이전트가 계기에 돌린다. 계기는 스킬 description에 적는다("세션이 끝나면" 같은 관찰 불가능한 것이 아니라 일지의 "다음" 갱신, 마무리 발화). 원본 스킬의 플래그는 부록 A. 후보를 심각도 순으로 내놓으면 승인한 것만 반영한다. 기계적 위반은 린터 규칙이나 훅으로, 판단 기준만 `CODING_STANDARDS.md`로, 지침이 길어졌으면 잘라낸다. `/context`로 항상 로드 분량을 실측해 늘었으면 3단계의 배치 기준으로 다시 나눈다. 승격 사다리는 이렇다. 같은 주의를 세 번 손으로 되풀이하면 지침 후보, 지침으로 적은 뒤에도 어겨지면 훅 후보. 막는 훅(deny, block)은 실제로 안 지켜지는 것이 확인된 뒤에만 더한다. 계기만 넣는 훅(additionalContext)은 다르다. 단계를 닫는 순간의 지침은 어겨진다는 것을 retro 계기에서 겪었으므로, 같은 자리의 지침(PR을 열거나 병합하면 `next-session`이 지시문을 내고 멈춘다)은 처음부터 계기 훅과 함께 둔다. 거짓 양성의 비용이 문장 하나라 게이트의 사다리를 타지 않는다. 세션 끝에 메모리에 일지 위치, 다음 할 일, 기한을 한 줄로 남긴다. 다음 세션이 일지부터 읽게 하는 장치이고, 지시문은 그것을 붙여 넣는 형태로 만든 것이다.
 
 ## 첫날 종료 체크리스트
 
@@ -328,7 +329,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 - [ ] PR 템플릿, commit-msg 훅(빨강 확인), CI 워크플로, `.coderabbit.yaml`, Claude Code Review 워크플로, coderabbit-review 서브에이전트
 - [ ] 봇 전제 둘(`CLAUDE_CODE_OAUTH_TOKEN` 시크릿, CLI 로그인). 첫 PR에서 Claude 코멘트 확인. CodeRabbit App은 공개 저장소나 유료일 때만
 - [ ] `/context` 실측값을 일지나 ADR에 기록
-- [ ] `docs/PRD.md` 한 장, `docs/adr/README.md` 색인, 지침 검사 훅
+- [ ] `docs/PRD.md` 한 장, `docs/adr/README.md` 색인, 지침 검사 훅, `next-session` 스킬과 PR 훅(계기 문장 실측)
 - [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판, `.claude/rules/` 디렉터리별 규칙, README의 원천 표
 
 ## 부록 A. 세팅 중 실제로 걸린 함정

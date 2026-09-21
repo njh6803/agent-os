@@ -4,7 +4,7 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 마칠 때 세션 경계. 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지. -->
 
 Implement the work described by the user in the spec or tickets.
 
@@ -18,4 +18,4 @@ Once done, use /code-review to review the work.
 
 Commit your work to that branch.
 
-거기서 멈춘다. 다음 티켓은 새 세션에서 시작한다. 티켓은 신선한 컨텍스트 하나에 맞게 잘려 있고 티켓 파일 하나가 자족적이라, 앞 티켓을 지나온 컨텍스트는 도움이 아니라 잡음이다. 이어서 해야 할 이유가 있으면 그 이유를 적는다.
+거기서 멈춘다. 다음 티켓은 새 세션이 한다. 이유와 다음 세션 지시문은 next-session 스킬이 원천이고, 사용자가 `/git-pr`로 PR을 열면 훅이 그 계기를 넣는다.
