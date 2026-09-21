@@ -17,7 +17,7 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 ## 리뷰 파이프라인
 두 단계, 세 축이다. 표준·명세, 보안·성능, 유지보수성·경계. 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`이고 여기는 누가 언제 무엇을 보는지만 적는다.
 
-1. **커밋 전 셀프 리뷰.** `/code-review`가 표준 축(`CODING_STANDARDS.md`)과 명세 축(`.scratch/<slug>/spec.md`)을 본다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. Minor·Nit은 별도 티켓으로 뺄 수 있다.
+1. **커밋 전 셀프 리뷰.** `/code-review`가 표준 축(`CODING_STANDARDS.md`)과 명세 축(`.scratch/<slug>/spec.md`)을 본다. 범위는 merge-base 이후 커밋과 미커밋 작업 전부다. staged·unstaged와 미추적 파일을 포함한다. 커밋 전 리뷰인데 `HEAD`까지만 보면 정작 리뷰할 것이 빠진다. 문서만 바뀐 변경도 면제하지 않고 모델만 내린다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. Minor·Nit은 별도 티켓으로 뺄 수 있다. 지적을 그대로 구현하지 않고 코드와 명세에서 근거를 먼저 확인하는 것은 이 축도 2단계와 같다. 아래 초록 착시의 반대편이다. 절차는 스킬 6단계.
 2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 PR 전에 한 번 본다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. CLI 상한은 개발자당 시간당 3회이고 롤링 윈도다(공식 요금제 문서의 rate limits 표, 2026-09-21 확인). 공개 저장소라 OSS 플랜이지만 CLI 상한은 무료 플랜과 같다. "PR마다 한 번, `sdk`·`core`·`adapters`가 우선"은 한도가 아니라 우리 선택이다. 시간당 3회면 커밋마다도 돌 수 있으므로 바꾸려면 ADR을 남긴다. `coderabbit --usage`는 청구 주기 누적과 초기화 날짜만 보여주고 시간당 잔량은 보여주지 않는다.
 3. **PR 리뷰.** 봇 둘이 역할을 나눈다. CodeRabbit(`.coderabbit.yaml`)이 보안·버그·성능, Claude Code Review(`.github/workflows/claude-code-review.yml`)가 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정). CI가 자동 검사. 별이 10개 미만인 공개 저장소는 CodeRabbit이 자동으로 돌지 않으므로(PR #12 실측), PR을 연 직후 에이전트가 `gh pr comment <번호> --body "@coderabbitai review"`로 요청한다. OSS 플랜의 PR 리뷰 상한은 저장소 별 수에 따라 시간당 1~10회이고 우리는 별이 적어 하한 쪽이다. CodeRabbit 체크는 한도를 넘거나 요청이 없어도 `pass`가 되므로 필수 검사(가드레일 절)에 넣지 않고 코멘트가 있는지로 판정한다. 셋이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`. 이력은 ADR 0006.
 4. **반영.** `/git-pr-feedback`이 CI 결과와 코멘트를 읽어 반영한다. 보류한 지적은 별도 티켓.
