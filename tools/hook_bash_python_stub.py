@@ -30,7 +30,7 @@ class HookPayload(TypedDict, total=False):
 
 _KEYWORDS = r"do|then|else|elif|if|while|until|exec|time|nohup"
 _COMMAND_WORD = re.compile(
-    rf"(?:^|[|&;(){{`]\s*|\$\(\s*|\b(?:{_KEYWORDS})\s+)"  # 명령어 자리. `)` 는 case 분기
+    rf"(?:^\s*|[|&;(){{`]\s*|\$\(\s*|\b(?:{_KEYWORDS})\s+)"  # 명령어 자리. `)` 는 case 분기
     r"(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*"  # 환경변수 대입 접두
     r"(python3?(?:\.\d+)?)(?=\s|$)",  # python, python3, python3.12
     re.MULTILINE,

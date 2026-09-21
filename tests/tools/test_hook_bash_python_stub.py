@@ -24,6 +24,12 @@ def test_파이프와_연결_뒤의_python도_잡는다() -> None:
     assert bare_python_calls("echo $(python -V)") == ["python"]
 
 
+def test_들여쓰기된_줄의_python도_명령어_자리다() -> None:
+    """개행은 그 자체로 명령 구분자다. 앞의 공백이 그 사실을 바꾸지 않는다."""
+    assert bare_python_calls("echo hi\n  python x.py") == ["python"]
+    assert bare_python_calls("  python x.py") == ["python"]
+
+
 def test_환경변수_접두는_건너뛰고_명령어를_본다() -> None:
     assert bare_python_calls("PYTHONUTF8=1 python x.py") == ["python"]
 
