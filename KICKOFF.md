@@ -251,7 +251,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
 - `.claude/skills/code-review/SKILL.md` 사본에 셋을 덧댄다. 원본은 `<fixed-point>...HEAD`만 보고 리포트에서 멈춘다. (1) 범위를 미커밋·미추적까지 넓힌다. implement가 리뷰한 뒤 커밋하므로 리뷰 시점의 작업은 대개 staged·unstaged이고, 미추적 파일은 어떤 diff에도 안 잡혀 새 파일이 통째로 빠진다. (2) 보고 뒤 반영 절차를 단계로 둔다. 고칠 것(표준 위반·명세 누락·범위 추가), 먼저 물을 것(아키텍처 결정과 계약), 근거를 확인할 것, 남길 것(이유 한 줄과 티켓), 검증 명령 재실행. (3) 5단계 보고에 본 범위 한 줄(base SHA, 파일·커밋·미추적 수)을 적게 한다. 범위가 어긋난 리뷰는 실패하지 않고 초록으로 끝나므로 보고만 보고 알 수 있어야 한다. 근거 확인은 서브에이전트가 격리된 컨텍스트에서 ADR도 주변 코드도 모른 채 판단한다는 사실에 대한 장치이고, 부록 A의 초록 착시와 한 쌍이다. 문서만 바뀐 변경을 리뷰에서 면제하지 않는다. 지침과 하네스는 다음 실행에 바로 영향을 주므로 내리는 것은 모델이지 축이 아니다.
 - 덧댄 사본은 `npx skills update -p`가 조용히 되돌린다. 각 사본 첫머리에 무엇을 왜 덧댔는지 주석으로 적고, 그 주석을 센티널로 삼아 `tools/check_instructions.py`가 목록에 있는 사본마다 주석이 남아 있는지 본다. 사람이 기억하는 대신 훅이 판정한다. 부록 A의 `disable-model-invocation` 줄과 같은 병이다.
-- `.claude/skills/next-session/SKILL.md`와 `tools/hook_pr_next_session.py`. PR을 열거나 병합하면 그 세션의 작업은 끝이고, 다음 세션의 지시문(형식은 스킬)을 내고 멈춘다. 훅은 `gh pr create|merge`와 GitHub MCP의 PR 도구 뒤에 계기 문장만 넣고 막지 않는다. 계기 훅을 위반 확인 전에 두는 이유는 10단계.
+- `.claude/skills/next-session/SKILL.md`와 `tools/hook_pr_next_session.py`. PR을 열거나 병합하면 다음 작업의 지시문(형식은 스킬)을 낸다. PR을 열었으면 그 세션이 반영과 병합까지 마친 뒤다. 세션을 끝내는 것은 그 사건이 아니라 지시문의 "어디서"다. 훅은 `gh pr create|merge`와 GitHub MCP의 PR 도구 뒤에 계기 문장만 넣고 막지 않는다. 계기 훅을 위반 확인 전에 두는 이유는 10단계.
 - `.claude/skills/open-session/SKILL.md`와 `tools/open_session.ps1`. 지시문의 "어디서"가 새 세션이면 그 세션을 클릭 없이 연다. 앱 딥링크(`claude://code/new?q=…`. 폴더를 실으면 신뢰 대화상자 뒤 폴더가 떨어진다)로 지시문이 채워진 세션 화면을 열고, 접근성 트리로 보내기와 분할 보기를 누르고, 제목을 브랜치명으로 바꾼다. 데스크톱 앱과 Windows 전용이다. 칩·`claude --bg`·스케줄 실행을 버린 이유는 일지 2026-09-21 open-session.
 - `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇(공개·유료면 둘, 아니면 Claude 하나), 초록 착시.
 
@@ -311,7 +311,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
 6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. 범위는 미커밋·미추적까지. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 지적은 근거를 확인한 뒤 고치고, 맞지 않아 보이면 그대로 구현하지 않는다. 보류한 지적은 이유 한 줄과 함께 별도 티켓.
 7. PR 직전 `coderabbit-review` 서브에이전트로 보안·성능 축. CLI 상한은 개발자당 시간당 3회이므로 PR마다 한 번은 한도가 아니라 선택이다.
-8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다. CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다. PR을 열면 세션은 거기서 끝이다. `next-session`이 지시문을 내고 `open-session`이 그 지시문을 첫 메시지로 넣은 새 세션을 옆 패널에 연다. 반영과 병합은 그 세션이 한다(10단계).
+8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다. CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다. 반영과 병합은 PR을 연 세션이 한다. 병합 뒤 `next-session`이 지시문을 내고, "어디서"가 새 세션이면 `open-session`이 그 지시문을 첫 메시지로 넣은 새 세션을 열고 이 세션을 옆 패널에 붙인다(10단계).
 
 ## 10단계. 세션 마감
 

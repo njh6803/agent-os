@@ -96,7 +96,8 @@ def context_for(action: Action) -> str:
     verb = "여는" if action == "create" else "병합하는"
     return (
         f"PR을 {verb} 명령이 실행됐다. 성공했으면 next-session 스킬의 계기다. "
-        "사용자에게 묻지 말고 Skill 도구로 next-session 을 지금 돌린다."
+        "사용자에게 묻지 말고 Skill 도구로 next-session 을 지금 돌린다. "
+        "PR을 열었으면 그 스킬의 1단계가 반영과 병합을 먼저 마친다. 세션은 그것으로 끝나지 않는다."
     )
 
 
