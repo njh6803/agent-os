@@ -33,7 +33,7 @@ repos:
         pass_filenames: false
         always_run: true
       - id: check-instructions
-        name: instructions (rules paths, CLAUDE.md 200줄, @ 임포트)
+        name: instructions (rules paths, CLAUDE.md 200줄, @ 임포트, 사본 센티널)
         entry: uv run python tools/check_instructions.py
         language: system
         pass_filenames: false

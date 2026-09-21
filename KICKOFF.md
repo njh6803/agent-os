@@ -173,7 +173,7 @@ cp -r ~/.claude/skills-backup/grill-me .claude/skills/
 - 답변과 문서는 한국어로 쓴다.
 ```
 
-지침을 어디에 두느냐는 로드 시점이 정한다. `paths` 누락, 200줄 초과, 원칙 외 `@` 임포트는 pre-commit 훅(`tools/check_instructions.py`)이 막는다. 스크립트는 런북 저장소(`C:/project/agent/tools/check_instructions.py`)에서 복사하고 `.pre-commit-config.yaml`에 `always_run: true`로 등록한 뒤, `paths` 없는 rules 파일을 하나 만들어 빨강을 보고 지운다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은 비용이 다르다. 셋이다. 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules), 해당 파일을 열 때(`paths` 있는 rules), 필요하다고 판단할 때(skill). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절에 있고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다. 항상 로드 분량은 `/context`를 직접 실행해 실측하고, 재배치했으면 전후 값을 ADR로 남긴다. 줄 수는 대리 지표일 뿐이다. 이 기준은 ai-agent-platform AAPP-15(2026-09-01)에서 한 번 겪었고, agent에서 담지 않아 두 번째로 겪었다.
+지침을 어디에 두느냐는 로드 시점이 정한다. `paths` 누락, 200줄 초과, 원칙 외 `@` 임포트, 그리고 덧댄 스킬 사본의 센티널 주석 소실은 pre-commit 훅(`tools/check_instructions.py`)이 막는다(넷째는 7단계). 스크립트는 런북 저장소(`C:/project/agent/tools/check_instructions.py`)에서 복사하고 `.pre-commit-config.yaml`에 `always_run: true`로 등록한 뒤, `paths` 없는 rules 파일을 하나 만들어 빨강을 보고 지운다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은 비용이 다르다. 셋이다. 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules), 해당 파일을 열 때(`paths` 있는 rules), 필요하다고 판단할 때(skill). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절에 있고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다. 항상 로드 분량은 `/context`를 직접 실행해 실측하고, 재배치했으면 전후 값을 ADR로 남긴다. 줄 수는 대리 지표일 뿐이다. 이 기준은 ai-agent-platform AAPP-15(2026-09-01)에서 한 번 겪었고, agent에서 담지 않아 두 번째로 겪었다.
 
 ## 4단계. /setup-matt-pocock-skills
 
@@ -249,6 +249,8 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). path_instructions는 그 프로젝트의 층으로. 제외는 생성물·락파일만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다.
 - `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다.
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 남은 횟수 확인, 트리아지. 코드를 고치지 않는다. 오탐 목록은 그 프로젝트의 자동 검사가 잡는 것으로.
+- `.claude/skills/code-review/SKILL.md` 사본에 셋을 덧댄다. 원본은 `<fixed-point>...HEAD`만 보고 리포트에서 멈춘다. (1) 범위를 미커밋·미추적까지 넓힌다. implement가 리뷰한 뒤 커밋하므로 리뷰 시점의 작업은 대개 staged·unstaged이고, 미추적 파일은 어떤 diff에도 안 잡혀 새 파일이 통째로 빠진다. (2) 보고 뒤 반영 절차를 단계로 둔다. 고칠 것(표준 위반·명세 누락·범위 추가), 먼저 물을 것(아키텍처 결정과 계약), 근거를 확인할 것, 남길 것(이유 한 줄과 티켓), 검증 명령 재실행. (3) 5단계 보고에 본 범위 한 줄(base SHA, 파일·커밋·미추적 수)을 적게 한다. 범위가 어긋난 리뷰는 실패하지 않고 초록으로 끝나므로 보고만 보고 알 수 있어야 한다. 근거 확인은 서브에이전트가 격리된 컨텍스트에서 ADR도 주변 코드도 모른 채 판단한다는 사실에 대한 장치이고, 부록 A의 초록 착시와 한 쌍이다. 문서만 바뀐 변경을 리뷰에서 면제하지 않는다. 지침과 하네스는 다음 실행에 바로 영향을 주므로 내리는 것은 모델이지 축이 아니다.
+- 덧댄 사본은 `npx skills update -p`가 조용히 되돌린다. 각 사본 첫머리에 무엇을 왜 덧댔는지 주석으로 적고, 그 주석을 센티널로 삼아 `tools/check_instructions.py`가 목록에 있는 사본마다 주석이 남아 있는지 본다. 사람이 기억하는 대신 훅이 판정한다. 부록 A의 `disable-model-invocation` 줄과 같은 병이다.
 - `docs/constitution/operations.md`의 리뷰 파이프라인 절. 커밋 전 셀프 리뷰, PR 직전 CLI, PR 봇(공개·유료면 둘, 아니면 Claude 하나), 초록 착시.
 
 새 검사는 일부러 깨뜨려 빨강을 보고 원복한다. 통과만 보고 넣은 검사는 무엇이든 잡는다는 증거가 없다(선행 저장소는 이것 때문에 '실패해야 할 것이 성공으로 보이던' 문제를 다섯 번 겪었다). 최소 가드레일도 이때 건다. pre-commit 훅이든 CI 잡이든 린트와 테스트가 자동으로 도는 곳 하나. retro 기준으로 가드레일 없는 저장소는 그 자체가 결함이다.
@@ -305,7 +307,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 3. 명세를 읽기 전용 서브에이전트가 체크리스트로 검토한다. 첫 기능은 체크리스트를 프롬프트에 넣은 일회성 호출이고, 두 번째 기능에서도 같은 검토를 하면 `.claude/agents/spec-reviewer.md`로 굳힌다. 체크리스트 일곱: 계약 영향과 스키마 버전 처리가 적혔는가 / 원칙 위반이 없는가, 특히 새 포트와 core의 프로바이더 import / accepted ADR과 충돌하는가 / 언급한 경로가 실재하는가 / 비목표를 침범하는가 / 수용 기준마다 덮는 테스트가 있고 LLM 테스트가 포함되는가 / 자리표시자 문장이 없는가. 분류는 blocker·should-fix·nit, "blocker 없음은 정상 결과", 근거 없는 "~일 수 있다" 금지, 편집 도구 없음.
 4. `/to-tickets` 로 수직 슬라이스 티켓. Jira면 4단계에서 적은 흐름대로 `/jira-create`.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다.
-6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 보류한 지적은 별도 티켓.
+6. 커밋 전 `/code-review`로 표준 축과 명세 축 셀프 리뷰. 범위는 미커밋·미추적까지. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 지적은 근거를 확인한 뒤 고치고, 맞지 않아 보이면 그대로 구현하지 않는다. 보류한 지적은 이유 한 줄과 함께 별도 티켓.
 7. PR 직전 `coderabbit-review` 서브에이전트로 보안·성능 축. CLI 상한은 개발자당 시간당 3회이므로 PR마다 한 번은 한도가 아니라 선택이다.
 8. `/git-pr`로 PR. 공개 저장소에 별이 10개 미만이면 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit을 부른다. CodeRabbit이 보안·버그·성능, Claude Code Review가 유지보수성·경계, CI가 자동 검사. `/git-pr-feedback`으로 반영. 전부 초록이고 코멘트가 실제로 있었는지 본 뒤 `/git-pr-merge`로 squash 병합. main 이력은 PR 단위다.
 
@@ -346,7 +348,8 @@ CodeRabbit GitHub App은 공개 저장소이거나 유료일 때만 설치한다
 | CI 경로 필터 미매칭 | 필터 구멍이 조용히 job을 skip | 미매칭을 실패로 승격 |
 | 환경 부재로 skip된 테스트 | 초록으로 보임 | CI에서는 에러. LLM 테스트는 키 없으면 실패 |
 | 전역 스킬이 프로젝트 스킬을 이김 | `npx skills update` 뒤 낡은 전역이 조용히 이김 | 프로젝트가 관리하는 스킬의 전역 사본을 두지 않는다 |
-| 스킬의 `disable-model-invocation` | 지침에 "자동으로 돌린다"고 써도 에이전트가 그 스킬을 못 부름 | 프로젝트 사본에서 플래그를 빼고, 계기를 지침에 적는다. `npx skills update`가 되돌리므로 갱신 뒤 확인 |
+| 스킬의 `disable-model-invocation` | 지침에 "자동으로 돌린다"고 써도 에이전트가 그 스킬을 못 부름 | 프로젝트 사본에서 플래그를 빼고, 계기를 지침에 적는다 |
+| `npx skills update -p`가 덧댄 사본을 되돌림 | 범위·절차가 조용히 사라지고 그 뒤로도 리뷰는 초록 | 사본 첫머리 주석을 센티널로 훅이 판정한다(7단계). 갱신 뒤 확인을 사람이 기억하지 않는다 |
 | ini 계열 파일의 한글 | 환경변수로도 인코딩을 못 바꿔 죽음 | ASCII만 |
 | 셸 체인이 앞 명령의 실패를 무시 | 스크립트가 문법 오류로 안 돌았는데 뒤의 커밋이 그대로 실행돼 메시지가 내용을 앞지름 | 판정 명령 뒤에 `\|\| exit 1`. 커밋 전에 `git show --stat`으로 내용을 본다 |
 | 봇 리뷰의 초록 착시 | 시트 미할당·무료 플랜이면 CodeRabbit이 Walkthrough만 남기고 `pass`, 시간당 한도를 넘어도 `pass`. Claude Code Review 플러그인은 지적이 없으면 코멘트 없이 `pass`가 되곤 했고, 워크플로를 바꾼 PR에서는 파일이 기본 브랜치와 다르다는 검증에 걸려 건너뛰며 `pass`다 | 비공개+무료면 CodeRabbit PR 리뷰를 끄고 CLI만. Claude는 플러그인 대신 직접 프롬프트로 요약 코멘트를 완료 조건에 걸고 "코멘트 0개면 실패" 스텝을 둔다. `show_full_output`으로 로그를 남긴다. 워크플로 변경은 별도 PR 먼저 |
