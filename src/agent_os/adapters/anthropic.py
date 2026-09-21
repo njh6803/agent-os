@@ -15,13 +15,18 @@ MODEL_ENV = "AGENT_OS_MODEL"
 MAX_TOKENS = 16000
 
 
-def resolve_model_name(env: Mapping[str, str]) -> str:
-    """환경변수, 기본값 순. 폴백은 없다. 빈 값은 '지정 안 함'이 아니라 잘못된 지정이다."""
+def resolve_model_name(env: Mapping[str, str], flag: str | None = None) -> str:
+    """플래그, 환경변수, 기본값 순. 폴백은 없다. 빈 값은 '지정 안 함'이 아니라 잘못된 지정이다."""
+    if flag is not None:
+        return _non_empty(flag, "--model")
     if MODEL_ENV not in env:
         return DEFAULT_MODEL
-    name = env[MODEL_ENV]
+    return _non_empty(env[MODEL_ENV], MODEL_ENV)
+
+
+def _non_empty(name: str, source: str) -> str:
     if not name:
-        raise ValueError(f"{MODEL_ENV} 가 비어 있다. 모델 이름을 적거나 변수를 지운다")
+        raise ValueError(f"{source} 가 비어 있다. 모델 이름을 적거나 지정을 지운다")
     return name
 
 
