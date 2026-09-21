@@ -146,13 +146,9 @@ function Split-Session {
             Start-Sleep -Milliseconds 700
         }
     }
-    # 세 번 다 닫혔으면 옆 패널을 포기하고 그 세션 행을 눌러 메인 패널에 포커스로 띄운다. 행 이름은
-    # "<상태> <제목>"("유휴 …", "실행 중 …")이라 끝이 제목인 버튼을 찾는다. 옵션 버튼은 "…에 대한"이라 안 걸린다.
-    $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    # 세 번 다 닫혔으면 옆 패널을 포기하고 그 세션 행을 눌러 메인 패널에 포커스로 띄운다.
     $rowButton = $null
-    try {
-        $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${Title}") } catch { $false } } | Select-Object -First 1 } "행 '${Title}'" 10
-    } catch {}
+    try { $rowButton = Find-RowByTitle $win $Title } catch {}
     if (-not $rowButton) { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 못 찾았다. 새 세션은 열려 있다. 마지막 오류: $($last.Exception.Message)" }
     $how = Invoke-Row $rowButton.Current.Name
     if ($how -ne 'invoke') { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 누르지 못했다($how). 새 세션은 열려 있다." }
@@ -166,8 +162,10 @@ function Invoke-Row([string] $rowName) {
         param($name)
         Add-Type -AssemblyName UIAutomationClient; Add-Type -AssemblyName UIAutomationTypes
         $Auto = [System.Windows.Automation.AutomationElement]; $Scope = [System.Windows.Automation.TreeScope]
-        $win = $Auto::RootElement.FindAll($Scope::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -eq 'Claude' } | Select-Object -First 1
-        $row = $win.FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($Auto::NameProperty, $name)))
+        # Get-ClaudeWindow 와 같은 가드. 잡은 다른 런스페이스라 함수를 못 쓴다. 창이 둘이면 조용히 고르지 않는다.
+        $wins = @($Auto::RootElement.FindAll($Scope::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -eq 'Claude' })
+        if ($wins.Count -ne 1) { return "window-ambiguous:$($wins.Count)" }
+        $row = $wins[0].FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($Auto::NameProperty, $name)))
         if (-not $row) { return 'row-missing' }
         $row.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
         return 'invoke'
@@ -179,11 +177,17 @@ function Invoke-Row([string] $rowName) {
     } finally { Remove-Job $job -Force }
 }
 
+# 사이드바 행 버튼. 이름은 "<상태> <제목>"("유휴 …", "실행 중 …", "#30 · 열기 …")이라 끝이 제목인 버튼을 찾는다.
+# 옵션 버튼은 "…에 대한 더 많은 옵션"이라 안 걸린다. 이름은 한 번만 읽는다(두 번 읽는 사이 요소가 바뀐 적이 있다).
+function Find-RowByTitle($win, [string] $title) {
+    $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    return Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${title}") } catch { $false } } | Select-Object -First 1 } "행 '${title}'" 10
+}
+
 function Focus-Session {
     if (-not $Title) { throw 'focus 에는 -Title 이 필요하다.' }
     $win = Get-ClaudeWindow
-    $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
-    $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${Title}") } catch { $false } } | Select-Object -First 1 } "행 '${Title}'" 10
+    $rowButton = Find-RowByTitle $win $Title
     $how = Invoke-Row $rowButton.Current.Name
     if ($how -ne 'invoke') { throw "행 '${Title}'을 누르지 못했다($how)." }
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how"
