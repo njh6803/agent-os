@@ -119,18 +119,26 @@ function Send-Prompt {
     # 고른다. 처음 찾은 것을 누르면 비활성 쪽에 걸려 Invoke 가 빈 예외로 끝난다(2026-09-22 실측,
     # 티켓 03 세션). 활성 버튼도 Invoke 가 빈 예외를 내고 제출이 안 된 적이 있어 Press-Element 로
     # 포커스+Enter 까지 간다. 제출됐는지는 입력창이 비었는지로 본다. 눌렀다는 것은 보냈다는 뜻이 아니다.
+    # 확인의 대상은 누르기 전에 잡는다. 지시문이 든 입력창을 못 찾으면 무엇이 비었는지 판정할 수 없고,
+    # 그 상태에서 "빈 입력창이 없다"를 성공으로 치면 확인이 공허해진다(PR #33 리뷰). 못 찾으면 멈춘다.
+    $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
     $send = Wait-For { Find-EnabledSendButton $win } '활성 보내기 버튼'
     $how = Press-Element $send
-    $editCond = New-Object System.Windows.Automation.AndCondition(
-        (New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Edit)),
-        (New-Object System.Windows.Automation.PropertyCondition($Auto::NameProperty, '프롬프트')))
     Wait-For {
-        $filled = @($win.FindAll($Scope::Descendants, $editCond) | Where-Object {
-            try { $_.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
-        })
-        $filled.Count -eq 0
-    } '제출된 뒤 비워진 입력창' 10 | Out-Null
+        try { -not $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
+    } '제출된 뒤 비워진 입력창(요소를 못 읽으면 비운 것으로 치지 않는다)' 10 | Out-Null
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
+}
+
+# 지시문이 든 입력창. 이름은 로케일에 따르므로 이름이 아니라 값으로 고른다. 값을 못 읽는 요소는 후보가 아니다.
+function Find-PromptBox($win, [string] $needle) {
+    $editCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Edit)
+    $boxes = @($win.FindAll($Scope::Descendants, $editCond) | Where-Object {
+        try { $_.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
+    })
+    if ($boxes.Count -gt 1) { throw "지시문이 든 입력창이 $($boxes.Count)개다. 앞선 실행이 남긴 페이지가 있다. 사람이 하나만 남긴다." }
+    if ($boxes.Count -eq 1) { return $boxes[0] }
+    return $null
 }
 
 function Find-EnabledSendButton($win) {
