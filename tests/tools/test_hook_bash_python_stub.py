@@ -38,6 +38,7 @@ def test_셸_키워드_뒤의_python도_명령어_자리다() -> None:
     assert bare_python_calls("for i in 1; do python x.py; done") == ["python"]
     assert bare_python_calls("if python -c 1; then :; fi") == ["python"]
     assert bare_python_calls("exec python x.py") == ["python"]
+    assert bare_python_calls("case $1 in a) python x.py;; esac") == ["python"]
 
 
 def test_heredoc_본문은_명령이_아니다() -> None:
