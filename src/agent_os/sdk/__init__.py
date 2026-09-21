@@ -6,21 +6,35 @@
 from agent_os.sdk.agent import AgentContext, BaseAgent
 from agent_os.sdk.errors import ToolError
 from agent_os.sdk.events import (
+    ApprovalDenied,
+    ApprovalGranted,
     BaseEvent,
     Event,
     LlmCalled,
     RunFailed,
     RunFinished,
+    RunPaused,
+    RunResumed,
     RunStarted,
+    ToolCall,
     ToolCalled,
 )
 from agent_os.sdk.ids import AgentName, PluginName, Principal, RunId
 from agent_os.sdk.json import Json
-from agent_os.sdk.manifest import McpServer, PluginKind, PluginManifest, parse_manifest
+from agent_os.sdk.manifest import (
+    McpServer,
+    PluginKind,
+    PluginManifest,
+    approval_conflicts,
+    parse_manifest,
+    secret_args_by_tool,
+)
 
 __all__ = [
     "AgentContext",
     "AgentName",
+    "ApprovalDenied",
+    "ApprovalGranted",
     "BaseAgent",
     "BaseEvent",
     "Event",
@@ -34,8 +48,13 @@ __all__ = [
     "RunFailed",
     "RunFinished",
     "RunId",
+    "RunPaused",
+    "RunResumed",
     "RunStarted",
+    "ToolCall",
     "ToolCalled",
     "ToolError",
+    "approval_conflicts",
     "parse_manifest",
+    "secret_args_by_tool",
 ]

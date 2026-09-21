@@ -16,7 +16,7 @@ import pytest
 
 from agent_os.adapters.jsonl import UnknownEvent, read_trace
 from agent_os.main import main
-from agent_os.sdk import RunStarted
+from agent_os.sdk import LlmCalled, RunStarted, ToolCalled
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -218,7 +218,13 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert result.returncode == 0, result.stderr
     assert "4" in result.stdout
     (trace_file,) = _trace_files(tmp_path)
-    types = [e.type for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)]
+    events = [e for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)]
+    types = [e.type for e in events]
     assert "llm_called" in types
     assert "tool_called" in types
     assert types[-1] == "run_finished"
+    # 재개의 입력이 되는 필드가 관찰이 아니라 실제 실행에서 차 있는지(ADR 0009).
+    tool_calls = [e for e in events if isinstance(e, ToolCalled)]
+    assert any(e.tool_calls for e in events if isinstance(e, LlmCalled))
+    assert any(e.args for e in tool_calls)
+    assert any(e.content for e in tool_calls)

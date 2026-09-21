@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 from langchain_core.messages import AIMessage
 
+from agent_os.sdk import ToolCall
+
 
 @dataclass(frozen=True)
 class ModelReply:
@@ -16,6 +18,7 @@ class ModelReply:
     text: str
     input_tokens: int
     output_tokens: int
+    tool_calls: tuple[ToolCall, ...]
 
 
 def reply_from(message: AIMessage) -> ModelReply:
@@ -25,6 +28,10 @@ def reply_from(message: AIMessage) -> ModelReply:
         text=message.text,
         input_tokens=usage["input_tokens"] if usage is not None else 0,
         output_tokens=usage["output_tokens"] if usage is not None else 0,
+        tool_calls=tuple(
+            ToolCall(id=call["id"] or "", name=call["name"], args=call["args"])
+            for call in message.tool_calls
+        ),
     )
 
 

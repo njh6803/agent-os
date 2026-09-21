@@ -9,7 +9,7 @@ LangGraph 대신 langchain-core 위에 직접 쓴다. 근거는 ADR 0001의 2026
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
@@ -18,6 +18,7 @@ from langchain_core.runnables import Runnable
 
 from agent_os.core.model import ModelReply, reply_from
 from agent_os.core.ports import ChatModel, ToolConnection, ToolResult, ToolSpec
+from agent_os.sdk import Json
 
 MAX_TURNS = 10
 
@@ -32,7 +33,7 @@ async def run_loop(
     *,
     tools: ToolConnection,
     on_model_call: Callable[[ModelReply], None],
-    on_tool_call: Callable[[str, bool], None],
+    on_tool_call: Callable[[str, Mapping[str, Json], ToolResult], None],
 ) -> str:
     """마지막 텍스트를 돌려준다. 호출마다 콜백이 불려 중간에 실패해도 앞선 호출이 남는다."""
     bound = _bind(model, tools.tools())
@@ -64,10 +65,12 @@ def _anthropic_style(spec: ToolSpec) -> dict[str, object]:
 
 
 async def _execute(
-    tools: ToolConnection, call: ToolCall, on_tool_call: Callable[[str, bool], None]
+    tools: ToolConnection,
+    call: ToolCall,
+    on_tool_call: Callable[[str, Mapping[str, Json], ToolResult], None],
 ) -> ToolMessage:
     result = await _call_safely(tools, call)
-    on_tool_call(call["name"], result.ok)
+    on_tool_call(call["name"], call["args"], result)
     return ToolMessage(
         content=result.content,
         tool_call_id=call["id"] or "",

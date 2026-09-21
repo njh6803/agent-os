@@ -4,7 +4,7 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 둘을 더했다. 시작 전 브랜치 규약 포인터와, 마칠 때 세션 경계. 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화와 인터럽트 설계 뒤 대화. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 마칠 때 세션 경계. 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고. -->
 
 Implement the work described by the user in the spec or tickets.
 
@@ -12,7 +12,7 @@ Implement the work described by the user in the spec or tickets.
 
 Use /tdd where possible, at pre-agreed seams.
 
-Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
 
 Once done, use /code-review to review the work.
 

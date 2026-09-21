@@ -6,12 +6,13 @@ from collections.abc import Mapping, Sequence
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.messages.tool import ToolCall as LangchainToolCall
 
 from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
 from agent_os.core.loop import run_loop
 from agent_os.core.model import ModelReply, reply_from
 from agent_os.core.ports import ChatModel, ToolConnection, ToolResult, ToolSpec
-from agent_os.sdk import Json
+from agent_os.sdk import Json, ToolCall
 
 
 class NoTools:
@@ -22,7 +23,7 @@ class NoTools:
         raise LookupError(name)
 
 
-def _ignore_tool_call(name: str, ok: bool) -> None:
+def _ignore_tool_call(name: str, args: Mapping[str, Json], result: ToolResult) -> None:
     return None
 
 
@@ -33,13 +34,24 @@ def test_모델_응답은_이름_텍스트_토큰_수를_우리_타입으로_바
         usage_metadata={"input_tokens": 7, "output_tokens": 1, "total_tokens": 8},
     )
 
-    assert reply_from(message) == ModelReply(model="m", text="4", input_tokens=7, output_tokens=1)
+    assert reply_from(message) == ModelReply(
+        model="m", text="4", input_tokens=7, output_tokens=1, tool_calls=()
+    )
 
 
 def test_토큰과_이름_정보가_없는_응답은_0과_unknown으로_센다() -> None:
     assert reply_from(AIMessage(content="ok")) == ModelReply(
-        model="unknown", text="ok", input_tokens=0, output_tokens=0
+        model="unknown", text="ok", input_tokens=0, output_tokens=0, tool_calls=()
     )
+
+
+def test_모델이_요청한_도구_호출도_우리_타입으로_바뀐다() -> None:
+    message = AIMessage(
+        content="",
+        tool_calls=[LangchainToolCall(name="add", args={"a": 2, "b": 2}, id="c1")],
+    )
+
+    assert reply_from(message).tool_calls == (ToolCall(id="c1", name="add", args={"a": 2, "b": 2}),)
 
 
 async def test_도구_없는_루프는_한_바퀴로_끝나고_마지막_텍스트를_돌려준다() -> None:

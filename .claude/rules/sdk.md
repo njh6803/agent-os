@@ -10,6 +10,7 @@ paths:
 
 - sdk는 플러그인이 import하는 유일한 표면이다. `langgraph`, `langchain_core`, `langchain_anthropic`, `langchain_mcp_adapters`를 import하지 않는다. import-linter가 판정한다.
 - 플러그인 종류는 넷이다. `agent`, `mcp`, `skill`, `model`. 매니페스트는 `plugin.toml` 하나이고 `schema_version`, `kind`, `name`, `version`을 가진다. `agent`만 `entrypoint = "모듈:속성"`과 쓸 MCP 서버 목록 `mcp = [...]`를 가진다. 비어 있으면 도구가 없다(ADR 0002). `mcp`만 `[server]` 표(`command`, `args`)를 가진다. 형식 버전과 주체의 근거는 ADR 0008. 디렉터리와 `kind`가 어긋나면 로더가 에러를 낸다.
+- 승인 게이트의 두 필드는 선택이고 기본은 빈 것이다(ADR 0009). `agent`의 `requires_approval`은 승인 없이는 부를 수 없는 도구 이름들이고, **같은 일을 할 수 있는 도구는 전부 여기 들어가야 한다.** 모델이 다른 도구로 우회하는 것은 거부가 아니라 이 목록이 막는다. `mcp`의 `[server.secret_args]`는 도구 이름마다 트레이스에 마스킹해 쓸 인자 이름들이다. 마스킹된 인자를 가진 도구는 `requires_approval`에 들어갈 수 없고, 매니페스트만으로 판정해 실행 전에 거부한다. 둘 다 선택 필드라 `schema_version`은 `"1"` 그대로다.
 - 에이전트는 개발자가 코드로 쓰는 플러그인이다. 그래프가 아니다.
 - 모델은 이름을 가진 LLM 설정이다. 첫 슬라이스는 `kind`와 디렉터리만 예약한다.
 - 스킬은 절차 지식이다. `SKILL.md`와 부속 파일의 폴더이고 에이전트의 컨텍스트에 주입된다. 함수가 아니다. 툴 경로는 MCP 하나이며 in-process 함수 툴 종류를 두지 않는다.
