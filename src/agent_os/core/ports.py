@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 
 from langchain_core.language_models import BaseChatModel
 
@@ -36,10 +36,40 @@ class PluginError(Exception):
     """
 
 
-class TraceSink(Protocol):
-    """이벤트를 쓴다. 첫 어댑터는 JSONL 파일."""
+@dataclass(frozen=True)
+class UnknownEvent:
+    """이 런타임이 모르는 종류. 원문을 그대로 들고 있어 옛 도구가 새 트레이스를 지우지 않는다."""
+
+    raw: str
+
+
+# 트레이스 형식 버전의 집합. 2 부터 이벤트가 재개의 입력이 될 만큼 두껍다(ADR 0008, 0009).
+# 버전이 뜻하는 것은 이벤트의 내용이라 어댑터가 아니라 여기가 소유한다. 어댑터는 이것을 헤더에 쓴다.
+type TraceSchemaVersion = Literal["1", "2"]
+
+
+@dataclass(frozen=True)
+class Trace:
+    """한 실행의 트레이스. 이벤트는 쓴 순서 그대로다.
+
+    schema_version 은 저장소가 그 실행을 쓸 때의 형식 버전이다. 버전 1 은 재개의 입력이 되는
+    필드가 비어 있어 읽을 수는 있지만 재개할 수 없다(ADR 0009). 그 판정은 재개 진입점이 한다.
+    """
+
+    run_id: RunId
+    schema_version: TraceSchemaVersion
+    events: tuple[Event | UnknownEvent, ...]
+
+
+class TraceStore(Protocol):
+    """이벤트를 쓰고 한 실행의 트레이스를 읽는다. 첫 어댑터는 JSONL 파일.
+
+    쓰는 곳과 읽는 곳이 항상 같다는 사실을 이 타입 하나가 강제한다(ADR 0009). 부재는 None.
+    """
 
     def write(self, event: Event) -> None: ...
+
+    def read(self, run_id: RunId) -> Trace | None: ...
 
 
 class PluginSource(Protocol):

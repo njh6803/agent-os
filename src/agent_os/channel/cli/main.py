@@ -20,7 +20,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginSource,
     ToolSource,
-    TraceSink,
+    TraceStore,
 )
 from agent_os.core.run import run
 from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished
@@ -71,7 +71,7 @@ async def run_command(
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
-    trace: TraceSink,
+    trace: TraceStore,
     clock: Clock,
     stdout: TextIO,
     stderr: TextIO,
