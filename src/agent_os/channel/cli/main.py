@@ -13,7 +13,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import TextIO
 
-from agent_os.core.ports import ChatModel, Clock, PluginError, PluginSource, TraceSink
+from agent_os.core.ports import ChatModel, Clock, PluginError, PluginSource, ToolSource, TraceSink
 from agent_os.core.run import run
 from agent_os.sdk import AgentName, Principal, RunFailed, RunFinished
 
@@ -62,6 +62,7 @@ async def run_command(
     *,
     plugins: PluginSource,
     model: ChatModel,
+    tools: ToolSource,
     trace: TraceSink,
     clock: Clock,
     stdout: TextIO,
@@ -71,7 +72,14 @@ async def run_command(
     """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
     try:
         events = run(
-            agent, request, principal, plugins=plugins, model=model, trace=trace, clock=clock
+            agent,
+            request,
+            principal,
+            plugins=plugins,
+            model=model,
+            tools=tools,
+            trace=trace,
+            clock=clock,
         )
         exit_code = 1
         async for event in events:

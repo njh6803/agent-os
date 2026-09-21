@@ -1,0 +1,9 @@
+schema_version = "1"
+kind = "mcp"
+name = "everything"
+version = "0.1.0"
+
+# 참조용 stdio 서버. add, echo 같은 도구를 준다. Node 가 필요하다.
+[server]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-everything"]

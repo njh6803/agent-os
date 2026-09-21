@@ -18,6 +18,7 @@ from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
 from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
+from agent_os.adapters.mcp import McpTools
 from agent_os.channel.cli.main import RunArgs, parse_run_args, run_command
 from agent_os.sdk import Principal
 
@@ -37,6 +38,7 @@ async def _run(args: RunArgs) -> int:
         Principal(getpass.getuser()),
         plugins=FilesystemPlugins(PLUGINS_ROOT),
         model=anthropic_chat_model(resolve_model_name(os.environ, args.model)),
+        tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),
         stdout=sys.stdout,

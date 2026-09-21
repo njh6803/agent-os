@@ -201,4 +201,5 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     (trace_file,) = _trace_files(tmp_path)
     types = [e.type for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)]
     assert "llm_called" in types
+    assert "tool_called" in types
     assert types[-1] == "run_finished"

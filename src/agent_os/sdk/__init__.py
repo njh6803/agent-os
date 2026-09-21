@@ -4,6 +4,7 @@
 """
 
 from agent_os.sdk.agent import AgentContext, BaseAgent
+from agent_os.sdk.errors import ToolError
 from agent_os.sdk.events import (
     BaseEvent,
     Event,
@@ -14,6 +15,7 @@ from agent_os.sdk.events import (
     ToolCalled,
 )
 from agent_os.sdk.ids import AgentName, PluginName, Principal, RunId
+from agent_os.sdk.json import Json
 from agent_os.sdk.manifest import McpServer, PluginKind, PluginManifest, parse_manifest
 
 __all__ = [
@@ -22,6 +24,7 @@ __all__ = [
     "BaseAgent",
     "BaseEvent",
     "Event",
+    "Json",
     "LlmCalled",
     "McpServer",
     "PluginKind",
@@ -33,5 +36,6 @@ __all__ = [
     "RunId",
     "RunStarted",
     "ToolCalled",
+    "ToolError",
     "parse_manifest",
 ]

@@ -3,3 +3,4 @@ kind = "agent"
 name = "calc"
 version = "0.1.0"
 entrypoint = "agent:Calc"
+mcp = ["everything"]
