@@ -18,7 +18,7 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 두 단계, 세 축이다. 표준·명세, 보안·성능, 유지보수성·경계. 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`이고 여기는 누가 언제 무엇을 보는지만 적는다.
 
 1. **커밋 전 셀프 리뷰.** `/code-review`가 표준 축(`CODING_STANDARDS.md`)과 명세 축(`.scratch/<slug>/spec.md`)을 본다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. Minor·Nit은 별도 티켓으로 뺄 수 있다.
-2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 PR 전에 한 번 본다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. 남은 횟수는 `coderabbit --usage`.
+2. **PR 직전 CodeRabbit CLI.** `coderabbit-review` 서브에이전트(`.claude/agents/`)가 보안·버그·성능 축을 PR 전에 한 번 본다. 트리아지(유효·오탐·보류)만 하고 수정은 본 세션이 한다. 무료 CLI는 결제 주기당 3회라 커밋마다가 아니라 PR마다 한 번이고, `sdk`·`core`·`adapters`를 건드린 PR이 우선이다. `coderabbit --usage`는 이번 주기에 쓴 횟수와 초기화 날짜를 보여준다. 상한과 남은 횟수는 보여주지 않으므로 3회라는 수는 이 명령으로 확인되지 않는다.
 3. **PR 리뷰.** 봇 둘이 역할을 나눈다. CodeRabbit(`.coderabbit.yaml`)이 보안·버그·성능, Claude Code Review(`.github/workflows/claude-code-review.yml`)가 유지보수성(리뷰 관점 넷)과 경계(import-linter가 못 보는 원칙 IV 위반, `sdk` 계약 변경의 동반 수정). CI가 자동 검사. 별이 10개 미만인 공개 저장소는 CodeRabbit이 자동으로 돌지 않으므로(PR #12 실측), PR을 연 직후 에이전트가 `gh pr comment <번호> --body "@coderabbitai review"`로 요청한다. OSS 플랜은 시간당 1회다. CodeRabbit 체크는 한도를 넘거나 요청이 없어도 `pass`가 되므로 필수 검사(가드레일 절)에 넣지 않고 코멘트가 있는지로 판정한다. 셋이 초록이고 코멘트를 반영한 뒤 `/git-pr-merge`. 이력은 ADR 0006.
 4. **반영.** `/git-pr-feedback`이 CI 결과와 코멘트를 읽어 반영한다. 보류한 지적은 별도 티켓.
 
