@@ -9,11 +9,11 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 자동 검사는 둘이고 내용은 같다. 로컬 pre-commit 훅이 커밋마다, GitHub Actions CI(`.github/workflows/ci.yml`)가 푸시와 PR마다 ruff, ruff-format, pyright, import-linter, pytest(기본 마커), 지침 검사를 돈다. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. main은 보호 브랜치다. 필수 검사 `verify`, 최신 main 기준(strict), 선형 이력, 강제 푸시와 삭제 금지, 관리자 우회 허용(혼자일 때). 경위는 ADR 0005. 병합은 여전히 `/git-pr-merge`로 한다. 스킬이 체크를 먼저 보기 때문이다. 클론 뒤 `uv run pre-commit install`을 한 번 하면 pre-commit과 commit-msg 두 훅이 깔린다. 훅이 안 걸린 저장소는 그 자체가 결함이다. 훅 시스템은 pre-commit 하나만 둔다. 둘이면 `.git/hooks/pre-commit` 한 자리를 다퉈 한쪽이 조용히 안 걸린다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·import-linter·pytest는 돈다(`always_run`). CI에 경로 필터를 걸게 되면 미매칭은 skip이 아니라 실패로 만든다.
 
 ## 브랜치와 병합
-- 원격은 GitHub(`njh6803/agent-os`, 공개). main은 보호 브랜치다(가드레일 절). 티켓마다 `feature/<NN>-<slug>` 브랜치를 따고 혼자여도 PR을 연다. `/git-pr`이 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다.
+- 원격은 GitHub(`njh6803/agent-os`, 공개). main은 보호 브랜치다(가드레일 절). 티켓마다 `feature/<NN>-<slug>` 브랜치를 따고 혼자여도 PR을 연다. 티켓 밖의 하네스·설정 변경은 `chore/<slug>`, 문서만 바꾸면 `docs/<slug>`. 브랜치 이름은 그 작업을 하는 세션의 제목이기도 하다(`open-session`). `/git-pr`이 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다.
 - 병렬 브랜치는 PR 전에 main에 rebase한다. 병합은 `/git-pr-merge`의 squash이고 main 이력은 PR 단위다. PR 제목이 곧 main의 커밋 제목이므로 컨벤셔널 커밋 형식이다. 리뷰는 아래 리뷰 파이프라인.
 - 병렬 작업은 프론티어(막힌 것이 없는 티켓)에서만 하고, 티켓마다 워크트리 하나다. 티켓 세션의 일지는 `docs/journal/<날짜>-<티켓슬러그>.md`에 쓰고 날짜 파일은 조율 세션만 쓴다.
 - 커밋 메시지는 컨벤셔널 커밋, 한국어. 형식(`<타입>: <제목>`, 72자, 마침표 없음)은 commit-msg 훅이 판정하고, 본문의 "왜 그렇게 했는지와 남긴 위험"은 리뷰가 본다.
-- PR을 열거나 병합하면 그 세션의 작업은 끝이다. 다음 작업은 새 세션이 하고, 시작점은 `next-session` 스킬이 내는 지시문이다. 계기는 훅(`tools/hook_pr_next_session.py`)이 넣는다. 사용자가 이어서 지시하면 따른다.
+- PR을 연 세션이 반영과 병합까지 한다(`/git-pr-feedback`, `/git-pr-merge`). PR 생성이나 병합은 세션을 끝내는 사건이 아니라 `next-session` 스킬의 계기이고, 계기는 훅(`tools/hook_pr_next_session.py`)이 넣는다. 지시문은 병합 뒤에 실행된다. 세션을 끝내는 것은 지시문의 "어디서"가 새 세션일 때뿐이며, 그때 `open-session` 스킬이 같은 체크아웃에 클릭 없이 연다(딥링크, 워크트리 없음). "이 세션"이면 이어간다. 어느 쪽인지는 결정표(스킬)가 정하고, 사용자가 이어서 지시하면 따른다.
 
 ## 리뷰 파이프라인
 두 단계, 세 축이다. 표준·명세, 보안·성능, 유지보수성·경계. 판단 기준과 심각도의 원천은 `CODING_STANDARDS.md`이고 여기는 누가 언제 무엇을 보는지만 적는다.
