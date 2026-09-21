@@ -25,11 +25,15 @@ class HookPayload(TypedDict, total=False):
     tool_input: ToolInput
 
 
-_OPENER = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 
 
 def longest_heredoc(command: str) -> int:
-    """명령 안 heredoc 본문 중 가장 긴 것의 줄 수. heredoc 이 없으면 0."""
+    """명령 안 heredoc 본문 중 가장 긴 것의 줄 수. heredoc 이 없으면 0.
+
+    종료 줄은 Bash 와 같이 본다. `<<EOF` 는 줄 전체가 정확히 EOF 일 때만, `<<-EOF` 는 선행 탭을
+    벗긴 뒤 EOF 일 때만 끝난다. 공백 들여쓰기된 ` EOF` 는 본문이다(PR #24 CodeRabbit 지적).
+    """
     lines = command.splitlines()
     longest = 0
     index = 0
@@ -38,15 +42,21 @@ def longest_heredoc(command: str) -> int:
         if match is None:
             index += 1
             continue
-        terminator = match.group(2)
+        strips_tabs = match.group(1) == "-"
+        terminator = match.group(3)
         body = 0
         index += 1
-        while index < len(lines) and lines[index].strip() != terminator:
+        while index < len(lines) and not _closes(lines[index], terminator, strips_tabs):
             body += 1
             index += 1
         longest = max(longest, body)
         index += 1
     return longest
+
+
+def _closes(line: str, terminator: str, strips_tabs: bool) -> bool:
+    candidate = line.lstrip("\t") if strips_tabs else line
+    return candidate == terminator
 
 
 def reason_for(command: str) -> str | None:

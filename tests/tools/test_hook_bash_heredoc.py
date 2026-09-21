@@ -25,6 +25,21 @@ def test_heredoc이_여럿이면_가장_긴_것이다() -> None:
     assert longest_heredoc(command) == 12
 
 
+def test_공백_들여쓰기된_종료_표시는_본문이다() -> None:
+    """Bash 는 <<EOF 의 종료 줄을 정확히 비교한다. ' EOF' 로 상한을 우회하지 못한다."""
+    body = "\n".join(["x"] * (MAX_LINES + 1))
+    command = f"cat <<EOF\n EOF\n{body}\nEOF"
+
+    assert longest_heredoc(command) == MAX_LINES + 2
+    assert reason_for(command) is not None
+
+
+def test_대시_형식은_선행_탭만_벗기고_종료_줄을_찾는다() -> None:
+    command = "cat <<-EOF\n\tone\n\ttwo\n\tEOF\necho done"
+
+    assert longest_heredoc(command) == 2
+
+
 def test_상한_이하는_통과하고_넘으면_이유를_돌려준다() -> None:
     assert reason_for(_heredoc(MAX_LINES)) is None
     reason = reason_for(_heredoc(MAX_LINES + 1))
