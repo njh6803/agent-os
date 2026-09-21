@@ -18,7 +18,7 @@ from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import EXIT_PAUSED
 from agent_os.core.ports import Trace, UnknownEvent
 from agent_os.main import main
-from agent_os.sdk import LlmCalled, RunId, RunPaused, RunStarted, ToolCalled
+from agent_os.sdk import ApprovalGranted, LlmCalled, RunId, RunPaused, RunStarted, ToolCalled
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MCP_FIXTURE_SERVER = REPO_ROOT / "tests" / "adapters" / "mcp_fixture_server.py"
@@ -285,8 +285,62 @@ def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표�
     assert "add" in out
     assert '"a": 2' in out
     assert '"b": 3' in out
+    assert f"agent-os resume {trace_file.stem} --approve" in out
     assert err == ""
     events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     assert [e.type for e in events] == ["run_started", "run_paused"]
     assert isinstance(events[-1], RunPaused)
     assert events[-1].args == {"a": 2, "b": 3}
+
+
+def test_승인하고_재개하면_멈췄던_도구가_실제로_불리고_실행이_끝난다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """멈출 때와 재개할 때가 다른 호출이다. 프로세스 경계를 증명하는 것은 티켓 06 이다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    paused = main(["run", "gated", "hi", "--traces", "t"])
+    (trace_file,) = _trace_files(workspace / "t")
+    capsys.readouterr()
+
+    code = main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert paused == EXIT_PAUSED
+    assert code == 0
+    assert out == "5\n"
+    assert err == ""
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    assert [e.type for e in events] == [
+        "run_started",
+        "run_paused",
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+
+
+def test_승인자가_OS_사용자_이름으로_채워진다(workspace: Path) -> None:
+    """승인자는 필수다. 나중에 누가 허락했는지 물을 때 답이 있어야 한다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    main(["run", "gated", "hi", "--traces", "t"])
+    (trace_file,) = _trace_files(workspace / "t")
+
+    main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+
+    granted = [e for e in _read(trace_file).events if isinstance(e, ApprovalGranted)]
+    assert [e.approver for e in granted] == [getpass.getuser()]
+
+
+def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_트레이스를_남기지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = main(["resume", "없는-실행", "--approve", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "없는-실행" in err
+    assert _trace_files(workspace / "t") == []
