@@ -56,9 +56,11 @@ jobs:
             3. 담당은 유지보수성과 경계다. 유지보수성은 CODING_STANDARDS.md의 리뷰 관점 넷과 판단 기준을 적용한다. 경계는 원칙 IV 중 import-linter가 못 보는 것이다. LangGraph, LangChain, anthropic, mcp의 타입이 반환값이나 예외로 sdk, channel, admin에 새는지. sdk의 계약(이벤트, 매니페스트)이 바뀌었는데 schema_version, .claude/rules/sdk.md, ADR, 명세가 같이 바뀌었는지. core의 포트 다섯 밖에 새 포트나 유스케이스 클래스가 생겼는지.
             4. 심각도는 CODING_STANDARDS.md의 분류를 쓰고 지적마다 [Critical] [Major] [Minor] [Nit] 태그를 단다. 범위는 위 두 축뿐이다. CODING_STANDARDS.md의 "리뷰하지 않는 것"은 CI가, 보안과 성능은 PR 직전 CodeRabbit CLI가 맡는다. 예외 하나, Critical 등급의 보안 문제(이벤트나 로그에 비밀이 실림, 검증 없는 코드 실행)는 [Critical] 태그로 적는다. 지적은 근거를 댄 확정 진술로 쓴다.
             5. 완료 조건: 요약을 파일에 쓰고 `gh pr comment $PR --body-file <파일>`로 게시한다. 제목은 "## 코드 리뷰". 지적이 없으면 "지적 없음"과 무엇을 봤는지 두 줄. 파일과 행이 특정되는 지적은 mcp__github_inline_comment__create_inline_comment로 인라인 코멘트도 남길 수 있다. 코멘트가 게시된 것을 확인한 뒤 끝낸다.
+            6. 도구는 허용 목록 안의 것만 쓴다. 파일은 Read로 읽고, 변경은 `gh pr diff`나 `git diff`·`git log`·`git show`로 본다. curl, WebFetch, 그 밖의 셸 명령은 거부되어 턴만 쓴다(PR #19 실측: 거부 12건으로 턴 상한 초과).
+          # 턴 상한 80: PR #19(파일 15개)에서 47턴을 써 40을 넘겼다. 거부된 호출을 빼도 여유가 필요하다.
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
-            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Write,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),mcp__github_inline_comment__create_inline_comment"
+            --max-turns 80
 
       - name: Fail when Claude left no comment
         # 초록 착시를 빨강으로. 실행 시작 뒤 생긴 claude[bot] 코멘트가 0개면 실패한다.
