@@ -31,7 +31,7 @@
 | `docs/adr/` | 결정을 바꾸기 전, 그 영역을 처음 만질 때 | 아키텍처 결정 뒤 초안을 보여주고 승인 |
 | `CODING_STANDARDS.md` | code-review 때 | 사용자가 "규칙으로"라고 한 뒤 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
-| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이 |
+| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
 | `.claude/rules/*.md` | 해당 경로의 파일을 열 때 자동 | 아래 로드 시점 표에 따라 |
@@ -76,7 +76,7 @@
 - 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다.
 - 파이프 뒤의 `&&`는 파이프 마지막 명령의 종료 코드만 본다. 판정 명령은 파이프 없이 돌린다.
 - ini 계열 파일은 ASCII만 쓴다.
-- pyright 프로브 파일은 `tests/` 아래에 둔다. 점 디렉터리(`.scratch/`)와 `include` 밖은 검사 없이 "0 errors"가 나온다(두 세션에서 반복). 분석됐는지는 `--outputjson`의 `summary.filesAnalyzed`로 본다.
+- 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(세 번 겪었다). pyright 프로브는 `tests/` 아래에 두고(점 디렉터리와 `include` 밖은 검사 없이 "0 errors") `--outputjson`의 `summary.filesAnalyzed`로 분석 여부를 본다. `--pythonpath`는 `[tool.pyright]`의 `venvPath`·`venv`에 덮여 무시되니 임시 환경은 `--venvpath`로 넘긴다. `git status`로 무엇을 커밋할지 정하기 전에 `git log`로 HEAD가 어디인지 본다.
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.
