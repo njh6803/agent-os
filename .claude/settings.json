@@ -8,5 +8,31 @@
     "jira-create": "off",
     "jira-start": "off",
     "jira-test": "off"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-sync python tools/hook_journal_retro.py",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-sync python tools/hook_bash_heredoc.py",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
   }
 }

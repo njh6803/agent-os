@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 RESULT_KEYS = ("num_turns", "total_cost_usd", "permission_denials_count")
 DENIED = '"subtype": "permission_denied"'
+DENIED_TOOL = re.compile(r'"tool_name": "([^"]+)"')
 SIGNAL_PATTERNS = (
     re.compile(r"::warning|::error"),
     re.compile(r"Skipping|Trigger result|workflow validation", re.IGNORECASE),
@@ -37,6 +38,7 @@ class Summary:
     signals: list[str] = field(default_factory=list[str])
     texts: list[str] = field(default_factory=list[str])
     denied: int = 0
+    denied_tools: dict[str, int] = field(default_factory=dict[str, int])
 
 
 def strip_prefix(line: str) -> str:
@@ -45,10 +47,18 @@ def strip_prefix(line: str) -> str:
 
 def summarize(lines: list[str]) -> Summary:
     summary = Summary()
+    awaiting_tool_name = False
     for raw in lines:
         line = strip_prefix(raw)
         if DENIED in line:
             summary.denied += 1
+            awaiting_tool_name = True
+            continue
+        tool_match = DENIED_TOOL.search(line) if awaiting_tool_name else None
+        if tool_match:
+            name = tool_match.group(1)
+            summary.denied_tools[name] = summary.denied_tools.get(name, 0) + 1
+            awaiting_tool_name = False
             continue
         if any(f'"{key}"' in line for key in RESULT_KEYS):
             summary.results.append(line.strip().rstrip(","))
@@ -67,7 +77,8 @@ def render(summary: Summary) -> str:
     out.append("## 결과")
     out.extend(summary.results or ["(결과 블록 없음. 실행이 Claude 단계 전에 끝났다)"])
     if summary.denied:
-        out.append(f"permission_denied 이벤트 {summary.denied}건 (허용 도구 밖의 호출)")
+        tools = ", ".join(f"{name} {count}" for name, count in summary.denied_tools.items())
+        out.append(f"permission_denied 이벤트 {summary.denied}건 (허용 도구 밖의 호출: {tools})")
     out.append("## 경고·건너뜀·코멘트 흔적")
     out.extend(summary.signals or ["(없음)"])
     out.append(f"## Claude의 말 (처음 {TEXT_LIMIT}줄)")

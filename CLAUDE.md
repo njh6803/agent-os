@@ -76,6 +76,7 @@
 - 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다.
 - 파이프 뒤의 `&&`는 파이프 마지막 명령의 종료 코드만 본다. 판정 명령은 파이프 없이 돌린다.
 - ini 계열 파일은 ASCII만 쓴다.
+- pyright 프로브 파일은 `tests/` 아래에 둔다. 점 디렉터리(`.scratch/`)와 `include` 밖은 검사 없이 "0 errors"가 나오고, `0 informations`가 그 신호다(두 세션에서 반복).
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.
