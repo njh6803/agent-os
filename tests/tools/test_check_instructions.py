@@ -46,5 +46,5 @@ def test_사본_파일이_통째로_사라진_것도_잡는다(tmp_path: Path) -
     assert "retro" in problems[0]
 
 
-def test_이_저장소의_사본_셋은_지금_온전하다() -> None:
+def test_이_저장소의_사본들은_지금_온전하다() -> None:
     assert patched_skills_without_sentinel() == []
