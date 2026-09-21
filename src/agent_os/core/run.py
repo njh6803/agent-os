@@ -1,19 +1,22 @@
 """주 이음매. 에이전트 이름, 요청, 주체와 포트 다섯을 받아 이벤트를 내는 async generator.
 
-로더, 루프, 도구 연결, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본 스위트가 이 지점
-하나를 민다. run_started 와 run_failed 는 런타임이 내고, 에이전트는 run_finished 하나를 마지막에
-낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다. 여기서 내는 모든 이벤트는 TraceStore 에 쓴다.
+로더, 루프, 도구 연결, 승인 게이트, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본 스위트가
+이 지점 하나를 민다. run_started, run_paused, run_failed 는 런타임이 내고, 에이전트는 run_finished
+하나를 마지막에 낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다. 여기서 내는 모든 이벤트는
+TraceStore 에 쓴다.
 
-실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름은
-실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다. MCP 서버 기동 실패부터는 실행
-안이라 run_failed 로 끝나고 트레이스가 남는다.
+실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
+마스킹과 승인이 겹치는 도구는 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다.
+MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
+가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
+실행 안의 실패다(ADR 0009).
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Mapping, Sequence
 from datetime import datetime
-from typing import TypeGuard
+from typing import NoReturn, TypeGuard
 
 from agent_os.core.loop import run_loop
 from agent_os.core.model import ModelReply
@@ -25,6 +28,7 @@ from agent_os.core.ports import (
     ToolConnection,
     ToolResult,
     ToolSource,
+    ToolSpec,
     TraceStore,
 )
 from agent_os.sdk import (
@@ -40,6 +44,7 @@ from agent_os.sdk import (
     RunFailed,
     RunFinished,
     RunId,
+    RunPaused,
     RunStarted,
     ToolCall,
     ToolCalled,
@@ -49,6 +54,14 @@ from agent_os.sdk import (
 )
 
 MASKED = "***"
+
+
+class _Paused(BaseException):
+    """게이트가 실행을 멈추는 신호. 에이전트의 제너레이터를 지나 실행 조립부까지 올라간다.
+
+    Exception 이 아닌 이유는 플러그인이 `except Exception` 으로 삼키면 가드레일이 아니기 때문이다.
+    에이전트 코드는 신뢰 경계 밖이다. 그래도 삼키면 컨텍스트가 그 뒤의 어떤 호출도 하지 않는다.
+    """
 
 
 def _mask(
@@ -66,7 +79,11 @@ def _mask(
 
 
 class _Context:
-    """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 순서대로 쌓아 둔다."""
+    """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 순서대로 쌓아 둔다.
+
+    도구 호출은 루프에서 오든 에이전트가 직접 부르든 _call 하나를 지난다. 게이트, 마스킹, 기록이
+    그 한 자리에 있어서 경로를 바꿔 빠져나갈 수 없다(ADR 0009).
+    """
 
     def __init__(
         self,
@@ -75,30 +92,38 @@ class _Context:
         model: ChatModel,
         tools: ToolConnection,
         secrets: Mapping[str, tuple[str, ...]],
+        approvals: frozenset[str],
     ) -> None:
         self.run_id = run_id
+        self._paused = False
         self._clock = clock
         self._model = model
         self._tools = tools
         self._secrets = secrets
+        self._approvals = approvals
         self._pending: list[Event] = []
+
+    @property
+    def paused(self) -> bool:
+        """조립부가 읽는다. 플러그인이 되돌릴 수 없도록 읽기 전용이다."""
+        return self._paused
 
     def now(self) -> datetime:
         return self._clock.now()
 
     async def llm(self, prompt: str) -> str:
+        self._stay_paused()
         return await run_loop(
             self._model,
             prompt,
-            tools=self._tools,
+            tools=self._tools.tools(),
+            call=self._call,
             on_model_call=self._record_model_call,
-            on_tool_call=self._record_tool_call,
         )
 
     async def tool(self, name: str, **args: Json) -> str:
         """도구가 ok=false 를 돌려주든 예외를 던지든 에이전트에게는 같은 ToolError 다."""
-        result = await _call_safely(self._tools, name, args)
-        self._record_tool_call(name, args, result)
+        result = await self._call(name, args)
         if not result.ok:
             raise ToolError(result.content)
         return result.content
@@ -107,6 +132,32 @@ class _Context:
         """쌓인 이벤트를 비우며 돌려준다. 호출 안의 이벤트가 에이전트의 다음 이벤트보다 앞선다."""
         taken, self._pending = self._pending, []
         return taken
+
+    async def _call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self._stay_paused()
+        if name in self._approvals:
+            self._pause(name, args)
+        result = await _call_safely(self._tools, name, args)
+        self._record_tool_call(name, args, result)
+        return result
+
+    def _pause(self, name: str, args: Mapping[str, Json]) -> NoReturn:
+        """도구를 부르지 않은 채 일시정지를 기록하고 실행을 끝낸다. 재개는 04 의 일이다."""
+        self._pending.append(
+            RunPaused(
+                run_id=self.run_id,
+                ts=self.now(),
+                tool=name,
+                args=_mask(name, args, self._secrets),
+            )
+        )
+        self._paused = True
+        raise _Paused()
+
+    def _stay_paused(self) -> None:
+        """멈춘 뒤에는 모델도 도구도 부르지 않는다. 신호를 삼킨 에이전트가 이어 가지 못하게."""
+        if self._paused:
+            raise _Paused()
 
     def _record_model_call(self, reply: ModelReply) -> None:
         self._pending.append(
@@ -156,6 +207,7 @@ async def run(
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
     secrets = secret_args_by_tool(servers)
+    approvals = frozenset(manifest.requires_approval)
     instance = plugins.load_agent(manifest)
     run_id = clock.new_run_id()
 
@@ -164,14 +216,27 @@ async def run(
         return event
 
     async def execute() -> AsyncIterator[Event]:
-        """도구를 연결한 채 에이전트를 돌린다. 실패해도 그때까지 쌓인 이벤트를 먼저 흘린다."""
+        """도구를 연결한 채 에이전트를 돌린다. 실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
+
+        일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
+        run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
+        신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
+        """
         async with tools.connect(servers) as connection:
-            ctx = _Context(run_id, clock, model, connection, secrets)
+            _reject_unknown_declarations(approvals, secrets, connection.tools())
+            ctx = _Context(run_id, clock, model, connection, secrets, approvals)
             try:
                 async for event in instance.run(request, ctx):
                     for pending in ctx.take_events():
                         yield pending
+                    if ctx.paused:
+                        break
                     yield event
+            except _Paused:
+                pass
+            except Exception:
+                if not ctx.paused:
+                    raise
             finally:
                 for pending in ctx.take_events():
                     yield pending
@@ -187,7 +252,7 @@ async def run(
     except Exception as error:
         yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
         return
-    if not isinstance(last, RunFinished):
+    if not isinstance(last, RunFinished | RunPaused):
         yield emit(
             RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")
         )
@@ -224,7 +289,36 @@ def _reject_masked_approvals(
         )
 
 
-async def _call_safely(tools: ToolConnection, name: str, args: dict[str, Json]) -> ToolResult:
+def _reject_unknown_declarations(
+    approvals: frozenset[str],
+    secrets: Mapping[str, tuple[str, ...]],
+    specs: Sequence[ToolSpec],
+) -> None:
+    """매니페스트가 가리키는 도구와 인자가 실재하는지. 도구 목록이 연결 뒤에 나와 여기가 첫 자리다.
+
+    오타나 중첩 프로퍼티가 게이트나 마스킹을 조용히 끄는 fail-open 을 막는다(ADR 0009 와 그
+    2026-09-21 이력). 실행 안이라 run_failed 로 끝나고 트레이스가 남는다.
+    """
+    params = {spec.name: _param_names(spec) for spec in specs}
+    for tool in approvals:
+        if tool not in params:
+            raise LookupError(f"requires_approval 이 가리키는 도구가 없다: {tool}")
+    for tool, names in secrets.items():
+        if tool not in params:
+            raise LookupError(f"secret_args 가 가리키는 도구가 없다: {tool}")
+        for name in names:
+            if name not in params[tool]:
+                raise LookupError(f"secret_args 가 가리키는 인자가 도구 {tool} 에 없다: {name}")
+
+
+def _param_names(spec: ToolSpec) -> frozenset[str]:
+    """JSON Schema 의 properties 키. 없으면 이름 있는 인자가 없는 도구다."""
+    properties = spec.input_schema.get("properties")
+    return frozenset(properties) if isinstance(properties, dict) else frozenset()
+
+
+async def _call_safely(tools: ToolConnection, name: str, args: Mapping[str, Json]) -> ToolResult:
+    """도구가 예외를 내도 실행은 죽지 않는다. 에러 내용을 결과로 바꿔 모델이 알게 한다."""
     try:
         return await tools.call(name, args)
     except Exception as error:

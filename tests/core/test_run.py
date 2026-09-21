@@ -44,6 +44,7 @@ from agent_os.sdk import (
     RunFailed,
     RunFinished,
     RunId,
+    RunPaused,
     RunStarted,
     ToolCall,
     ToolCalled,
@@ -134,12 +135,18 @@ class FakePlugins:
 
 
 class FakeConnection:
-    def __init__(self, results: Mapping[str, str | Exception]) -> None:
+    def __init__(
+        self, results: Mapping[str, str | Exception], params: Mapping[str, Sequence[str]]
+    ) -> None:
         self._results = results
+        self._params = params
         self.calls: list[tuple[str, Mapping[str, Json]]] = []
 
     def tools(self) -> Sequence[ToolSpec]:
-        return [ToolSpec(name=n, description=n, input_schema={}) for n in self._results]
+        return [
+            ToolSpec(name=n, description=n, input_schema=_schema(self._params.get(n, ())))
+            for n in self._results
+        ]
 
     async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
         self.calls.append((name, args))
@@ -149,11 +156,23 @@ class FakeConnection:
         return ToolResult(ok=True, content=result)
 
 
-class FakeTools:
-    """이름별로 결과나 에러를 정해 둔다. 어떤 서버를 받았고 닫혔는지 기록한다."""
+def _schema(params: Sequence[str]) -> Mapping[str, Json]:
+    """MCP 서버가 주는 모양의 입력 스키마. 인자 이름은 properties 의 키다."""
+    return {"type": "object", "properties": {name: {} for name in params}}
 
-    def __init__(self, results: Mapping[str, str | Exception] | None = None) -> None:
-        self.connection = FakeConnection(results or {})
+
+class FakeTools:
+    """이름별로 결과나 에러를 정해 둔다. 어떤 서버를 받았고 닫혔는지 기록한다.
+
+    params 는 도구별 인자 이름. 비밀 인자의 실재 검사가 보는 것이라 선언한 도구에만 준다.
+    """
+
+    def __init__(
+        self,
+        results: Mapping[str, str | Exception] | None = None,
+        params: Mapping[str, Sequence[str]] | None = None,
+    ) -> None:
+        self.connection = FakeConnection(results or {}, params or {})
         self.servers: Mapping[PluginName, McpServer] | None = None
         self.closed = False
 
@@ -176,7 +195,7 @@ class BrokenTools:
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
         raise ConnectionError("server did not start")
-        yield FakeConnection({})
+        yield FakeConnection({}, {})
 
 
 class ToolAwareFakeModel(GenericFakeChatModel):
@@ -233,9 +252,13 @@ def _reply(text: str) -> AIMessage:
     )
 
 
-def _tool_request(name: str = "add") -> AIMessage:
-    call = LangchainToolCall(name=name, args={"a": 2, "b": 2}, id="c1")
-    return AIMessage(content="", tool_calls=[call])
+def _tool_request(*names: str) -> AIMessage:
+    """모델이 한 턴에 낸 도구 호출들. 이름을 안 주면 add 하나다."""
+    calls = [
+        LangchainToolCall(name=name, args={"a": 2, "b": 2}, id=f"c{i}")
+        for i, name in enumerate(names or ("add",), start=1)
+    ]
+    return AIMessage(content="", tool_calls=calls)
 
 
 def _failing_replies() -> Iterator[AIMessage | str]:
@@ -540,7 +563,10 @@ async def test_마스킹된_인자를_가진_도구를_승인_대상으로_적�
 async def test_마스킹이_걸리지_않은_도구는_승인_대상으로_적어도_실행된다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    model = ToolAwareFakeModel(messages=iter([_reply("4")]))
+    tools = FakeTools(
+        {"read_inbox": "empty", "send_email": "sent"}, params={"send_email": ["api_key"]}
+    )
     plugins = FakePlugins(
         {"calc": OneShotAgent()},
         mcp=["mailer"],
@@ -549,7 +575,7 @@ async def test_마스킹이_걸리지_않은_도구는_승인_대상으로_적�
         secret_args={"send_email": ["api_key"]},
     )
 
-    events = await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
 
     assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
 
@@ -622,7 +648,7 @@ async def test_비밀로_선언된_인자는_마스킹돼_이벤트에_담긴다
     trace: FakeTrace, clock: FakeClock
 ) -> None:
     model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
-    tools = FakeTools({"add": "4"})
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
     plugins = FakePlugins(
         {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["a"]}
     )
@@ -640,7 +666,7 @@ async def test_마스킹은_이벤트에만_걸리고_도구는_진짜_값을_�
 ) -> None:
     """마스킹된 값이 실제로 보내지면 승인받은 호출이 망가진다(ADR 0009 금지 규칙의 근거)."""
     model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
-    tools = FakeTools({"add": "4"})
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
     plugins = FakePlugins(
         {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["a"]}
     )
@@ -653,7 +679,7 @@ async def test_마스킹은_이벤트에만_걸리고_도구는_진짜_값을_�
 async def test_직접_부른_도구의_비밀_인자도_마스킹된다(trace: FakeTrace, clock: FakeClock) -> None:
     """게이트와 같은 이유다. 정책은 도구에 붙는 것이지 경로에 붙는 것이 아니다."""
     model = GenericFakeChatModel(messages=iter([]))
-    tools = FakeTools({"add": "4"})
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
     plugins = FakePlugins(
         {"calc": DirectToolAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["b"]}
     )
@@ -669,7 +695,7 @@ async def test_비밀을_선언하지_않은_도구의_인자는_그대로_담�
     trace: FakeTrace, clock: FakeClock
 ) -> None:
     model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
-    tools = FakeTools({"add": "4"})
+    tools = FakeTools({"add": "4", "other": "x"}, params={"other": ["a"]})
     plugins = FakePlugins(
         {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"other": ["a"]}
     )
@@ -678,3 +704,173 @@ async def test_비밀을_선언하지_않은_도구의_인자는_그대로_담�
 
     assert isinstance(events[2], ToolCalled)
     assert events[2].args == {"a": 2, "b": 2}
+
+
+async def test_승인_대상_도구를_모델이_부르려_하면_일시정지로_끝나고_그_도구는_실행되지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("unreachable")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["send"]
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_paused"]
+    assert events[-1] == RunPaused(
+        run_id=RunId("run-1"), ts=FIXED_NOW, tool="send", args={"a": 2, "b": 2}
+    )
+    assert tools.connection.calls == []
+    assert trace.events == events
+    assert tools.closed is True
+
+
+async def test_컨텍스트로_직접_부른_승인_대상_도구도_멈춘다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """게이트는 도구에 붙는 것이지 경로에 붙는 것이 아니다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": DirectToolAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["add"]
+    )
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].tool == "add"
+    assert tools.connection.calls == []
+
+
+async def test_한_턴에_승인_대상이_둘이면_첫_것에서_멈추고_앞선_안전한_호출은_실행된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "send", "delete")]))
+    tools = FakeTools({"add": "4", "send": "sent", "delete": "gone"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        requires_approval=["send", "delete"],
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "tool_called", "run_paused"]
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].tool == "send"
+    assert [name for name, _ in tools.connection.calls] == ["add"]
+
+
+class SwallowingAgent:
+    """일시정지 신호를 삼키고 다른 도구로 이어 가려는 에이전트. 신뢰 경계 밖의 코드다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            await ctx.tool("send", to="bob")
+        except BaseException:
+            pass
+        try:
+            await ctx.tool("add", a=2, b=2)
+        except BaseException:
+            pass
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="pretend it worked")
+
+
+async def test_에이전트가_일시정지_신호를_삼켜도_그_뒤의_호출은_거부되고_실행은_멈춘_채_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4", "send": "sent"})
+    plugins = FakePlugins(
+        {"calc": SwallowingAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["send"]
+    )
+
+    events = await _run(SwallowingAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert tools.connection.calls == []
+    assert trace.events == events
+
+
+async def test_승인_대상이_실재하지_않는_도구를_가리키면_도구_연결_직후_실패하고_트레이스가_남는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["sned"]
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "sned" in events[-1].error
+    assert trace.events == events
+    assert tools.closed is True
+
+
+async def test_비밀_선언이_실재하지_않는_도구를_가리키면_같은_자리에서_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"sned": ["key"]}
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "sned" in events[-1].error
+
+
+async def test_비밀_선언이_도구에_없는_인자를_가리키면_같은_자리에서_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """중첩 프로퍼티나 오타가 마스킹을 조용히 끄지 않는다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        secret_args={"add": ["auth.key"]},
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "auth.key" in events[-1].error
+    assert "add" in events[-1].error
+
+
+class WrappingAgent:
+    """일시정지 신호를 자기 예외로 감싸 올리는 에이전트. 멈춘 실행에 실패가 덧붙으면 안 된다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            await ctx.tool("send", to="bob")
+        except BaseException as error:
+            raise RuntimeError("wrapped") from error
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="unreachable")
+
+
+async def test_에이전트가_일시정지_신호를_다른_예외로_감싸_올려도_실패가_덧붙지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent"})
+    plugins = FakePlugins(
+        {"calc": WrappingAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["send"]
+    )
+
+    events = await _run(WrappingAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert trace.events == events
