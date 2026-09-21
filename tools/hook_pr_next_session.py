@@ -19,7 +19,19 @@ MCP_TOOLS: dict[str, Action] = {
     "mcp__plugin_github_github__merge_pull_request": "merge",
 }
 
-_GH_PR = re.compile(r"\bgh\s+pr\s+(create|merge)\b")
+# 명령 위치의 `gh pr create|merge` 만 계기다. echo·printf·커밋 메시지·heredoc 본문에 문구가
+# 데이터로 들어가면 오탐이었다(CodeRabbit, PR #28). 셸 파서 없이 넷만 본다. heredoc 본문과
+# 인용 구간을 버리고, 제어 연산자와 명령 치환(`$(`, 백틱)으로 나누고, 조각 앞의 공백·괄호·
+# 환경변수 대입을 벗긴다. 대신 `bash -c "gh pr merge"` 같은 래퍼 뒤의 실행과
+# `"$(gh pr create)"` 처럼 큰따옴표 안의 치환은 못 본다. 래퍼 스크립트 사각과 같은 종류다
+# (일지 2026-09-21 세션 경계).
+_GH_PR = re.compile(r"gh\s+pr\s+(create|merge)\b")
+# hook_bash_heredoc 의 _OPENER 와 같다. 훅은 단독 실행 스크립트라 서로 import 하지 않는다.
+_HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+_QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+# `2>&1` 의 & 는 리다이렉션이라 분리자가 아니다.
+_SEPARATOR = re.compile(r"\|\||&&|\$\(|`|(?<![<>])[&|]|[;\n]")
+_PREFIX = re.compile(r"^(?:\s+|[({]|[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*")
 
 
 class ToolInput(TypedDict, total=False):
@@ -36,17 +48,47 @@ class HookPayload(TypedDict, total=False):
 def action_for(tool_name: str, command: str | None) -> Action | None:
     """PR을 여는 호출이면 "create", 병합하는 호출이면 "merge", 둘 다 아니면 None.
 
-    셸 도구는 명령 문자열에서 `gh pr create|merge` 를 찾고, GitHub MCP 도구는 이름으로 안다.
-    `gh pr view|checks|comment` 와 `git push` 는 세션을 닫는 일이 아니다.
+    셸 도구는 명령 위치에 있는 `gh pr create|merge` 를 찾고, GitHub MCP 도구는 이름으로 안다.
+    `gh pr view|checks|comment` 와 `git push` 는 세션을 닫는 일이 아니고, 문구를 데이터로 품은
+    echo·printf·커밋 메시지·heredoc 본문도 아니다.
     """
     if tool_name in MCP_TOOLS:
         return MCP_TOOLS[tool_name]
     if tool_name not in SHELL_TOOLS or command is None:
         return None
-    match = _GH_PR.search(command)
-    if match is None:
-        return None
-    return "create" if match.group(1) == "create" else "merge"
+    for segment in _executed_segments(command):
+        match = _GH_PR.match(segment)
+        if match is not None:
+            return "create" if match.group(1) == "create" else "merge"
+    return None
+
+
+def _executed_segments(command: str) -> list[str]:
+    """명령 위치부터 시작하는 조각들. heredoc 본문과 인용 구간을 버리고 나눈 뒤 앞을 벗긴다."""
+    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)))
+    return [_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
+
+
+def _without_heredoc_bodies(command: str) -> list[str]:
+    """heredoc 여는 줄은 남기고 본문과 종료 줄을 버린다. 종료 판정은 hook_bash_heredoc 와 같다."""
+    lines = command.splitlines()
+    kept: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        kept.append(line)
+        index += 1
+        opener = _HEREDOC_OPENER.search(line)
+        if opener is None:
+            continue
+        strips_tabs = opener.group(1) == "-"
+        terminator = opener.group(3)
+        while index < len(lines):
+            candidate = lines[index].lstrip("\t") if strips_tabs else lines[index]
+            index += 1
+            if candidate == terminator:
+                break
+    return kept
 
 
 def context_for(action: Action) -> str:

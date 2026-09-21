@@ -74,9 +74,27 @@
 
 다시 돌린 명령: `ruff check`·`ruff format --check`·`pyright`·`lint-imports`·`pytest`·`check_instructions.py`. 전부 초록. 전체 리뷰는 다시 돌리지 않았다.
 
+## PR 반영
+
+PR #28을 연 세션이 낸 지시문은 여덟 줄에 빈 칸이 없었고 "다음 단계"가 "PR 반영·병합"이었다. 새 세션이 그 시작 프롬프트대로 `/git-pr-feedback`을 돌렸다. 지시문의 "이어받을 상태"와 다른 것이 셋이었다. 병렬 세션(PR #29)이 그 사이 main을 움직였기 때문이고, 지시문의 결함이 아니라 스냅숏의 한계다.
+
+- main이 ed4d429에서 528c3df로 전진해 PR이 `CONFLICTING`이었다. 충돌은 `implement` 스킬의 주석 한 줄. main은 "루프 중의 린트"를, 이 브랜치는 "세션 경계의 원천은 next-session"을 더했다. 둘을 합쳐 병합 커밋 86f35bc.
+- CodeRabbit이 이번엔 한도에 걸리지 않고 인라인 코멘트 하나를 남겼다(Minor, 기능 정확성). `_GH_PR.search(command)`가 `echo 'gh pr create'`, `printf`, heredoc 본문에도 걸린다. 위 "훅이 이 세션에서 스스로 실측됐다"에서 문장 하나의 비용으로 받아들인 그 오탐이다. 유효로 판정했다. 리뷰어 둘 중 하나가 짚었고, 고치는 값이 정규식 하나에서 함수 둘로 늘어나는 것뿐이다.
+- Claude Code Review 코멘트 하나. 훅 셋의 `main()`·TypedDict 중복(Minor). 이미 회고 후보로 미룬 것이라 그대로 둔다.
+
+**고친 것.** 명령 위치만 본다. heredoc 본문과 인용 구간을 버리고(heredoc 종료 판정은 `hook_bash_heredoc`과 같다), 제어 연산자와 명령 치환(`$(`, 백틱)으로 나누고, 조각 앞의 공백·괄호·환경변수 대입을 벗긴 뒤 `gh pr create|merge`로 시작하는지. 셸 파서는 없다. 두 라운드였다. 첫 라운드는 CodeRabbit의 예시 셋(echo·printf·heredoc)을 실패 테스트로 쓰고 heredoc 제거·분리·접두 벗기기로 초록. 둘째 라운드는 아래 셀프 리뷰가 짚은 인용 구간과 치환. 실측은 페이로드 다섯. `echo 'gh pr create ...'`와 `git commit -m "fix: a; gh pr merge 28"`은 무출력, PowerShell의 `gh pr merge ...; git checkout main`은 병합 계기, `cd ... && PYTHONUTF8=1 gh pr create`와 `PR_URL=$(gh pr create --fill)`은 여는 계기.
+
+**받아들인 트레이드오프.** 못 보는 것은 래퍼 뒤의 실행이다. `bash -c "gh pr merge"`, 큰따옴표 안의 `"$(gh pr create)"`, `then`·`time`·`command` 뒤, PowerShell의 `& 'C:\...\gh.exe' pr merge`. 위 "남긴 것"의 래퍼 스크립트 사각과 같은 종류이고, 이 저장소의 스킬은 맨 `gh pr create|merge`를 치므로 스킬 설명이 포인터다. here-string `<<<`을 heredoc 여는 줄로 보고 `<<\EOF`는 못 보는 사각은 형제 훅의 `_OPENER`와 같아 공용 모듈로 뽑을 때 함께 고칠 몫이다. heredoc 여는 줄 자체가 `gh pr create --body-file - <<'EOF'`이면 그 줄은 남으므로 잡는다.
+
+**반영하지 않은 것 하나.** CodeRabbit pre-merge check의 "Docstring Coverage 22% < 80%" 경고. `.coderabbit.yaml`에 없는 기본값이고 PR #27에도 같은 경고(11%)가 있었다. 테스트 이름이 행동 명세인 이 저장소에서 테스트마다 독스트링을 달 이유가 없고, 설정 파일 머리말은 "보안·버그·성능만 본다"다. 이 PR 밖이라 끄지 않았고 회고 후보로 올린다.
+
+**셀프 리뷰(`/code-review 86f35bc`).** 범위는 병합 커밋 이후 미커밋 셋. 원래 커밋은 앞 세션이 봤다. Critical·Major 없음. Spec 축이 부분 구현 하나를 짚었다. 첫 라운드의 분리자가 인용 상태를 몰라 `echo 'a && gh pr create'`와 여러 줄 `-m` 메시지가 다시 계기가 됐다. CodeRabbit이 이름 붙인 "셸 데이터 컨텍스트"는 예시 셋보다 넓었다. 요청 밖 하나, `_PREFIX`가 `$`를 벗기는데 `echo $(gh pr create)`는 못 보는 비대칭. Standards 축은 `PR_URL=$(gh pr create)`가 옛 정규식보다 후퇴한 것과 테스트 이름 과장. 넷을 고쳤다(인용 구간 제거, `$(`·백틱을 분리자로, `$` 접두 삭제, 이름). 남긴 것은 위 트레이드오프의 사각들과 알려진 중복.
+
+검사 넷과 지침 검사 초록(`143 passed`, pyright `0 errors` 49파일, `Contracts: 3 kept`). 훅 자신은 이 세션에서 걸리지 않았다. 테스트를 붙이는 heredoc에 `gh pr create`가 데이터로 있었는데 계기 문장이 들어오지 않았다. 세션이 main의 `.claude/settings.json`으로 시작했고 이 훅은 아직 main에 없다.
+
 ## 다음
 
-- 커밋과 PR. 브랜치는 앱이 만든 `claude/session-handoff-directives-83d3df`. 규약(`chore/<slug>`) 밖 이름이지만 앱이 워크트리를 그 이름으로 추적하므로 바꾸지 않았다.
-- PR을 열면 훅이 처음으로 실제 계기를 넣고 `next-session`이 지시문을 낸다. 그 지시문의 "다음 단계"가 "PR 반영·병합"으로 나오는지, 여덟 줄에 빈 칸이 없는지 본다. 이번 일지의 지시문은 손으로 냈다.
-- `.scratch/plan.md`의 프론티어 셋(http-channel, admin-api, interrupts)은 그대로다. 이 변경은 티켓 없는 하네스 개선이다.
+- 병합 뒤 첫 실측. 다음 세션이 `/git-pr`로 PR을 열면 main의 훅이 처음으로 실제 계기를 넣고 `next-session`이 지시문을 낸다. 여덟 줄에 빈 칸이 없는지, "다음 단계"가 "PR 반영·병합"인지 본다. 이번 일지의 지시문 둘은 손으로 냈다.
+- 다음 작업은 `.scratch/plan.md`의 프론티어에서 고른다. 이 변경은 티켓 없는 하네스 개선이라 프론티어를 바꾸지 않았다.
 - Stop 훅 승격 조건: 계기 문장이 들어왔는데 지시문 없이 턴이 끝난 사건 하나.
+- 회고 후보 셋. CodeRabbit 독스트링 커버리지 경고 끄기(`.coderabbit.yaml` 기본값이 머리말 "보안·버그·성능만"과 모순, PR #27·#28 둘). 훅 셋의 `main()`·TypedDict·heredoc 종료 판정 중복(공용 모듈, 단독 실행이라 `python -m tools.hook_x`로 바꾸는 것까지 한 묶음). PR 반영 세션이 읽는 `gh pr view` 출력의 대부분이 CodeRabbit 상용구라 체크·인라인 코멘트만 뽑는 `tools/gh_pr_feedback.py`.

@@ -45,3 +45,49 @@ def test_계기_문장은_next_session_을_가리키고_동사가_다르다() ->
     assert "next-session" in create and "next-session" in merge
     assert "여는" in create
     assert "병합하는" in merge
+
+
+def test_데이터로_품은_gh_pr은_계기가_아니다() -> None:
+    """echo·printf·커밋 메시지·`-c` 문자열 안의 문구는 명령 위치가 아니다(CodeRabbit, PR #28)."""
+    for command in (
+        "echo 'gh pr create --title x'",
+        "printf 'gh pr merge %s' 28",
+        'git commit -m "chore: gh pr merge 뒤에 next-session 계기를 넣는다"',
+        "uv run python -c \"print({'command': 'gh pr create'})\"",
+    ):
+        assert action_for("Bash", command) is None, command
+
+
+def test_heredoc_본문의_gh_pr은_계기가_아니다() -> None:
+    quoted = "cat <<'EOF' > run.sh\ngh pr merge 28 --squash\nEOF"
+    tabbed = "cat <<-EOF > run.sh\n\tgh pr create --fill\n\tEOF"
+
+    assert action_for("Bash", quoted) is None
+    assert action_for("Bash", tabbed) is None
+
+
+def test_명령_위치의_gh_pr은_접두어_뒤에_있어도_계기다() -> None:
+    for command, action in (
+        ("PYTHONUTF8=1 gh pr create --fill", "create"),
+        ("cd /c/project/agent && gh pr merge 28 --squash --delete-branch", "merge"),
+        ("gh pr create --title x --body-file - <<'EOF'\nbody\nEOF", "create"),
+        ("  (gh pr merge 28)", "merge"),
+        ("git push -u origin HEAD\ngh pr create --fill", "create"),
+    ):
+        assert action_for("Bash", command) == action, command
+
+
+def test_따옴표_안의_분리자는_명령_위치를_만들지_않는다() -> None:
+    """인용 구간 안의 `;`·`&&`·개행은 데이터다(셀프 리뷰 Spec 축, PR #28)."""
+    for command in (
+        "echo 'a && gh pr create'",
+        "echo 'gh pr create; gh pr merge'",
+        'git commit -m "fix: a; gh pr merge 28"',
+        'git commit -m "a\ngh pr merge 28 뒤에"',
+    ):
+        assert action_for("Bash", command) is None, command
+
+
+def test_치환과_인용된_환경변수_뒤의_gh_pr도_명령_위치다() -> None:
+    assert action_for("Bash", "PR_URL=$(gh pr create --fill)") == "create"
+    assert action_for("Bash", "FOO='a b' gh pr merge 28") == "merge"
