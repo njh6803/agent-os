@@ -14,9 +14,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_os.adapters.jsonl import UnknownEvent, read_trace
+from agent_os.adapters.jsonl import JsonlTrace
+from agent_os.core.ports import Trace, UnknownEvent
 from agent_os.main import main
-from agent_os.sdk import LlmCalled, RunStarted, ToolCalled
+from agent_os.sdk import LlmCalled, RunId, RunStarted, ToolCalled
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,6 +71,13 @@ def _trace_files(directory: Path) -> list[Path]:
     return sorted(directory.iterdir()) if directory.is_dir() else []
 
 
+def _read(trace_file: Path) -> Trace:
+    """CLI 가 남긴 파일을 같은 어댑터로 읽는다. 파일이 있는데 None 이면 어댑터의 결함이다."""
+    trace = JsonlTrace(trace_file.parent).read(RunId(trace_file.stem))
+    assert trace is not None
+    return trace
+
+
 def test_표준_출력에는_출력_문자열만_나오고_성공하면_표준_에러는_비어_있다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -104,7 +112,7 @@ def test_실패는_진행_표시를_끈_채로도_원인이_표준_에러에_남
     assert out == ""
     assert "kaboom" in err
     (trace_file,) = _trace_files(workspace / "t")
-    assert [e.type for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)] == [
+    assert [e.type for e in _read(trace_file).events if not isinstance(e, UnknownEvent)] == [
         "run_started",
         "run_failed",
     ]
@@ -114,7 +122,7 @@ def test_주체가_OS_사용자_이름으로_채워진다(workspace: Path) -> No
     main(["run", "echo", "hi", "--traces", "t"])
 
     (trace_file,) = _trace_files(workspace / "t")
-    started = read_trace(trace_file).events[0]
+    started = _read(trace_file).events[0]
     assert isinstance(started, RunStarted)
     assert started.principal == getpass.getuser()
 
@@ -124,7 +132,7 @@ def test_지정한_트레이스_디렉터리에_실행_식별자_이름의_파�
 
     (trace_file,) = _trace_files(workspace / "t")
     assert trace_file.suffix == ".jsonl"
-    assert read_trace(trace_file).header.run_id == trace_file.stem
+    assert _read(trace_file).run_id == trace_file.stem
 
 
 def test_트레이스_디렉터리를_지정하지_않으면_작업_디렉터리의_traces_아래에_쌓인다(
@@ -218,7 +226,7 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert result.returncode == 0, result.stderr
     assert "4" in result.stdout
     (trace_file,) = _trace_files(tmp_path)
-    events = [e for e in read_trace(trace_file).events if not isinstance(e, UnknownEvent)]
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     types = [e.type for e in events]
     assert "llm_called" in types
     assert "tool_called" in types

@@ -25,7 +25,8 @@ from agent_os.core.ports import (
     ToolResult,
     ToolSource,
     ToolSpec,
-    TraceSink,
+    Trace,
+    TraceStore,
 )
 from agent_os.core.run import run
 from agent_os.sdk import (
@@ -98,6 +99,12 @@ class FakeTrace:
 
     def write(self, event: Event) -> None:
         self.events.append(event)
+
+    def read(self, run_id: RunId) -> Trace | None:
+        events = tuple(e for e in self.events if e.run_id == run_id)
+        if not events:
+            return None
+        return Trace(run_id=run_id, schema_version="2", events=events)
 
 
 class FakePlugins:
@@ -239,7 +246,7 @@ def _failing_replies() -> Iterator[AIMessage | str]:
 async def _run(
     agent: BaseAgent,
     model: ChatModel,
-    trace: TraceSink,
+    trace: TraceStore,
     clock: Clock,
     tools: ToolSource | None = None,
     plugins: PluginSource | None = None,

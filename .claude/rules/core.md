@@ -9,7 +9,7 @@ paths:
 
 | 포트 | 무엇 | 첫 어댑터 |
 |---|---|---|
-| TraceSink | 이벤트 쓰기 | JSONL 파일 |
+| TraceStore | 이벤트 쓰기와 한 실행의 트레이스 읽기 | JSONL 파일 |
 | PluginSource | 매니페스트와 코드 읽기 | 파일시스템(ADR 0003) |
 | ToolSource | 도구 목록과 호출 | MCP(langchain-mcp-adapters) |
 | ChatModel | 모델 호출 | langchain-anthropic. 포트 자체는 langchain-core의 추상 클래스 |

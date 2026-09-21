@@ -2,7 +2,7 @@
 
 로더, 루프, 도구 연결, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본 스위트가 이 지점
 하나를 민다. run_started 와 run_failed 는 런타임이 내고, 에이전트는 run_finished 하나를 마지막에
-낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다. 여기서 내는 모든 이벤트는 TraceSink 에 쓴다.
+낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다. 여기서 내는 모든 이벤트는 TraceStore 에 쓴다.
 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름은
 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다. MCP 서버 기동 실패부터는 실행
@@ -25,7 +25,7 @@ from agent_os.core.ports import (
     ToolConnection,
     ToolResult,
     ToolSource,
-    TraceSink,
+    TraceStore,
 )
 from agent_os.sdk import (
     AgentName,
@@ -149,7 +149,7 @@ async def run(
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
-    trace: TraceSink,
+    trace: TraceStore,
     clock: Clock,
 ) -> AsyncIterator[Event]:
     manifest = _read_agent_manifest(plugins, agent)
