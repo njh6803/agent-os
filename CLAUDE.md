@@ -9,7 +9,7 @@
 탐색 전에 이것만 알면 된다. 전체 트리는 `README.md`, 아직 없는 미래 배치는 `.scratch/plan.md`.
 
 - `src/agent_os/sdk/`: 플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent, AgentContext
-- `src/agent_os/core/`: 런타임, 로더, 루프(LangGraph), 포트 선언. 바깥을 모른다
+- `src/agent_os/core/`: 런타임, 로더, 루프, 포트 선언. 바깥을 모른다
 - `src/agent_os/channel/`: 실행을 일으키는 면. `cli/`(슬라이스 1), `http/`(슬라이스 2)
 - `src/agent_os/admin/`: 구성을 바꾸고 관찰하는 면(슬라이스 2)
 - `src/agent_os/adapters/`: 포트 구현. JSONL 트레이스 싱크 등

@@ -5,9 +5,9 @@ description = "플러그인 기반 에이전트 런타임. an agent OS"
 readme = "README.md"
 requires-python = "==3.12.*"
 # 원천은 docs/constitution/tech.md 의 스택 표다. anthropic SDK와 mcp는 직접 의존이 아니라
-# langchain-anthropic 과 langchain-mcp-adapters 뒤에서 온다(ADR 0001).
+# langchain-anthropic 과 langchain-mcp-adapters 뒤에서 온다(ADR 0001). langgraph 는
+# pyright strict 마찰로 뺐다(ADR 0001 의 2026-09-21 이력).
 dependencies = [
-    "langgraph>=0.2",
     "langchain-core>=0.3",
     "pydantic>=2.9",
     "langchain-anthropic>=0.3",
