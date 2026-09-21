@@ -154,8 +154,9 @@ Status: ready-for-agent
 
 ### 첫 플러그인 둘
 
-- 에이전트 `calc`. 계산 요청을 받아 도구를 써서 답한다. 매니페스트가 MCP 서버 `everything`을 지정한다.
+- 에이전트 `calc`. 계산 요청을 받아 도구를 써서 답한다. 매니페스트가 MCP 서버 `everything`을 지정한다. 슬라이스가 끝난 상태의 모습이다. `calc`는 CLI 티켓에서 MCP 지정 없이 먼저 서고 모델만으로 답하며, 마지막 티켓이 같은 플러그인의 매니페스트에 `everything`을 더한다. 셋째 에이전트를 만들지 않는다.
 - mcp 플러그인 `everything`. `npx -y @modelcontextprotocol/server-everything`으로 뜨는 stdio 서버다. 이 머신에 Node 24가 있는 것을 확인했다.
+- CLI 표면 테스트가 쓰는 에이전트는 테스트 안에만 두고 `plugins/`에 두지 않는다. 배포되는 플러그인이 아니라 픽스처이기 때문이다.
 - 진입점은 플러그인 디렉터리 기준 파일이며 고유 모듈명(`agent_os_plugins.<name>.<module>`)으로 로드한다. `sys.path`를 건드리지 않는다.
 
 ### 의존성
