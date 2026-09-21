@@ -22,15 +22,15 @@ FIXTURE = McpServer(
 
 
 @asynccontextmanager
-async def _fixture_session() -> AsyncGenerator[ToolConnection]:
+async def _fixture_connection() -> AsyncGenerator[ToolConnection]:
     tools: ToolSource = McpTools()
-    async with tools.connect({PluginName("fixture"): FIXTURE}) as session:
-        yield session
+    async with tools.connect({PluginName("fixture"): FIXTURE}) as connection:
+        yield connection
 
 
 async def test_서버의_도구_목록과_입력_스키마를_준다() -> None:
-    async with _fixture_session() as session:
-        specs = {spec.name: spec for spec in session.tools()}
+    async with _fixture_connection() as connection:
+        specs = {spec.name: spec for spec in connection.tools()}
 
     assert set(specs) == {"add", "fail"}
     properties = specs["add"].input_schema["properties"]
@@ -39,25 +39,25 @@ async def test_서버의_도구_목록과_입력_스키마를_준다() -> None:
 
 
 async def test_도구를_부르면_결과_텍스트가_온다() -> None:
-    async with _fixture_session() as session:
-        result = await session.call("add", {"a": 2, "b": 3})
+    async with _fixture_connection() as connection:
+        result = await connection.call("add", {"a": 2, "b": 3})
 
     assert result.ok is True
     assert result.content == "5"
 
 
 async def test_도구가_에러를_내면_실패로_표시되고_에러_내용이_온다() -> None:
-    async with _fixture_session() as session:
-        result = await session.call("fail", {"reason": "overflow"})
+    async with _fixture_connection() as connection:
+        result = await connection.call("fail", {"reason": "overflow"})
 
     assert result.ok is False
     assert "overflow" in result.content
 
 
 async def test_없는_도구는_에러다() -> None:
-    async with _fixture_session() as session:
+    async with _fixture_connection() as connection:
         with pytest.raises(LookupError, match="nope"):
-            await session.call("nope", {})
+            await connection.call("nope", {})
 
 
 async def test_서버_기동_실패는_연결_단계에서_예외다() -> None:

@@ -111,7 +111,7 @@ class FakePlugins:
         return self._agents[manifest.name]
 
 
-class FakeSession:
+class FakeConnection:
     def __init__(self, results: Mapping[str, str | Exception]) -> None:
         self._results = results
         self.calls: list[tuple[str, Mapping[str, Json]]] = []
@@ -131,7 +131,7 @@ class FakeTools:
     """이름별로 결과나 에러를 정해 둔다. 어떤 서버를 받았고 닫혔는지 기록한다."""
 
     def __init__(self, results: Mapping[str, str | Exception] | None = None) -> None:
-        self.session = FakeSession(results or {})
+        self.connection = FakeConnection(results or {})
         self.servers: Mapping[PluginName, McpServer] | None = None
         self.closed = False
 
@@ -141,7 +141,7 @@ class FakeTools:
     ) -> AsyncGenerator[ToolConnection]:
         self.servers = servers
         try:
-            yield self.session
+            yield self.connection
         finally:
             self.closed = True
 
@@ -154,7 +154,7 @@ class BrokenTools:
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
         raise ConnectionError("server did not start")
-        yield FakeSession({})
+        yield FakeConnection({})
 
 
 class ToolAwareFakeModel(GenericFakeChatModel):
@@ -384,7 +384,7 @@ async def test_도구를_쓰는_에이전트는_모델호출과_도구호출이_
         "run_finished",
     ]
     assert events[2] == ToolCalled(run_id=RunId("run-1"), ts=FIXED_NOW, tool="add", ok=True)
-    assert tools.session.calls == [("add", {"a": 2, "b": 2})]
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
 
 
 async def test_매니페스트가_지정한_서버만_붙는다(trace: FakeTrace, clock: FakeClock) -> None:
@@ -464,7 +464,7 @@ async def test_컨텍스트는_모델을_거치지_않고_도구를_직접_부�
     assert [e.type for e in events] == ["run_started", "tool_called", "run_finished"]
     assert isinstance(events[-1], RunFinished)
     assert events[-1].output == "4"
-    assert tools.session.calls == [("add", {"a": 2, "b": 2})]
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
 
 
 async def test_직접_부른_도구가_실패하면_에이전트가_잡을_수_있는_ToolError다(
