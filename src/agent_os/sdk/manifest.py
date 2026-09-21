@@ -7,6 +7,7 @@ schema_version을 올리면 ADR 0008의 이력에 쌓는다.
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import Literal, Self
 
@@ -35,6 +36,10 @@ class McpServer(BaseModel):
 
     command: str
     args: tuple[str, ...] = ()
+    # 도구 이름 -> 트레이스에 마스킹해 쓸 인자 이름들(ADR 0009). 도구별인 이유는 금지 규칙을
+    # 매니페스트만으로 판정하려면 도구 단위여야 하기 때문이다. 어느 도구가 어느 서버의
+    # 것인지는 MCP 에 붙어야 알 수 있어서, 평면 목록으로는 정적 판정이 성립하지 않는다.
+    secret_args: Mapping[str, tuple[str, ...]] = {}
 
 
 class PluginManifest(BaseModel):
@@ -47,6 +52,10 @@ class PluginManifest(BaseModel):
     entrypoint: str | None = Field(default=None, pattern=_ENTRYPOINT)
     # 에이전트만. 쓸 mcp 플러그인 이름. 비어 있으면 도구가 없다(ADR 0002)
     mcp: tuple[PluginName, ...] = ()
+    # 에이전트만. 승인 없이는 부를 수 없는 도구 이름. 비어 있으면 지금까지와 같다(ADR 0009).
+    # 같은 일을 할 수 있는 도구는 전부 여기 들어가야 한다. 모델이 다른 도구로 우회하는 것은
+    # 거부가 아니라 이 목록이 막는다.
+    requires_approval: tuple[str, ...] = ()
     # mcp만
     server: McpServer | None = None
 
@@ -59,6 +68,8 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 entrypoint를 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "mcp" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 mcp 목록을 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "requires_approval" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 requires_approval 목록을 갖지 않는다")
         if self.kind is PluginKind.MCP:
             if self.server is None:
                 raise ValueError("mcp 플러그인은 [server] 표가 필요하다 (command, args)")
@@ -69,3 +80,18 @@ class PluginManifest(BaseModel):
 
 def parse_manifest(text: str) -> PluginManifest:
     return PluginManifest.model_validate(tomllib.loads(text))
+
+
+def approval_conflicts(
+    agent: PluginManifest, servers: Mapping[PluginName, McpServer]
+) -> tuple[str, ...]:
+    """마스킹과 승인이 함께 걸린 도구 이름들. 비어 있으면 정책이 성립한다(ADR 0009).
+
+    마스킹된 인자는 복원할 수 없어, 승인받아 실제로 실행되는 그 호출이 마스킹된 값을 보내게
+    된다. 둘 다 매니페스트에 적히므로 실행 식별자가 생기기 전에 정적으로 판정된다. 거부는
+    이 질의를 부르는 쪽이 한다. sdk 는 core 의 구성 오류 타입을 모르기 때문이다.
+    """
+    masked = {
+        tool for server in servers.values() for tool, args in server.secret_args.items() if args
+    }
+    return tuple(tool for tool in agent.requires_approval if tool in masked)

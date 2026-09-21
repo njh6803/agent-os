@@ -12,7 +12,7 @@ import pytest
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
-from langchain_core.messages.tool import ToolCall
+from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.runnables import Runnable
 
 from agent_os.core.loop import MAX_TURNS
@@ -44,6 +44,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunStarted,
+    ToolCall,
     ToolCalled,
     ToolError,
     parse_manifest,
@@ -54,18 +55,28 @@ PRINCIPAL = Principal("alice")
 SERVER = McpServer(command="fake-server")
 
 
-def _agent_manifest(name: str, mcp: Sequence[str] = ()) -> PluginManifest:
-    mcp_line = "mcp = [" + ", ".join(f'"{m}"' for m in mcp) + "]\n"
+def _toml_list(names: Sequence[str]) -> str:
+    return "[" + ", ".join(f'"{name}"' for name in names) + "]"
+
+
+def _agent_manifest(
+    name: str, mcp: Sequence[str] = (), requires_approval: Sequence[str] = ()
+) -> PluginManifest:
     return parse_manifest(
         f'schema_version = "1"\nkind = "agent"\nname = "{name}"\n'
-        f'version = "0.1.0"\nentrypoint = "agent:Agent"\n{mcp_line}'
+        f'version = "0.1.0"\nentrypoint = "agent:Agent"\n'
+        f"mcp = {_toml_list(mcp)}\nrequires_approval = {_toml_list(requires_approval)}\n"
     )
 
 
-def _mcp_manifest(name: str) -> PluginManifest:
+def _mcp_manifest(
+    name: str, secret_args: Mapping[str, Sequence[str]] | None = None
+) -> PluginManifest:
+    table = "".join(f"{tool} = {_toml_list(args)}\n" for tool, args in (secret_args or {}).items())
     return parse_manifest(
         f'schema_version = "1"\nkind = "mcp"\nname = "{name}"\nversion = "0.1.0"\n'
         f'[server]\ncommand = "{SERVER.command}"\n'
+        + (f"\n[server.secret_args]\n{table}" if table else "")
     )
 
 
@@ -95,16 +106,20 @@ class FakePlugins:
         agents: dict[str, BaseAgent],
         mcp: Sequence[str] = (),
         servers: Sequence[str] = (),
+        requires_approval: Sequence[str] = (),
+        secret_args: Mapping[str, Sequence[str]] | None = None,
     ) -> None:
         self._agents = agents
         self._mcp = tuple(mcp)
         self._servers = tuple(servers)
+        self._requires_approval = tuple(requires_approval)
+        self._secret_args = secret_args
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
         if kind is PluginKind.AGENT and name in self._agents:
-            return _agent_manifest(name, self._mcp)
+            return _agent_manifest(name, self._mcp, self._requires_approval)
         if kind is PluginKind.MCP and name in self._servers:
-            return _mcp_manifest(name)
+            return _mcp_manifest(name, self._secret_args)
         return None
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
@@ -212,7 +227,8 @@ def _reply(text: str) -> AIMessage:
 
 
 def _tool_request(name: str = "add") -> AIMessage:
-    return AIMessage(content="", tool_calls=[ToolCall(name=name, args={"a": 2, "b": 2}, id="c1")])
+    call = LangchainToolCall(name=name, args={"a": 2, "b": 2}, id="c1")
+    return AIMessage(content="", tool_calls=[call])
 
 
 def _failing_replies() -> Iterator[AIMessage | str]:
@@ -289,7 +305,12 @@ async def test_모델_호출마다_이벤트_하나에_모델_이름과_토큰_�
     events = await _run(OneShotAgent(), model, trace, clock)
 
     assert events[1] == LlmCalled(
-        run_id=RunId("run-1"), ts=FIXED_NOW, model="fake-model", input_tokens=7, output_tokens=3
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        model="fake-model",
+        input_tokens=7,
+        output_tokens=3,
+        text="4",
     )
 
 
@@ -383,7 +404,6 @@ async def test_도구를_쓰는_에이전트는_모델호출과_도구호출이_
         "llm_called",
         "run_finished",
     ]
-    assert events[2] == ToolCalled(run_id=RunId("run-1"), ts=FIXED_NOW, tool="add", ok=True)
     assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
 
 
@@ -489,3 +509,165 @@ async def test_도구_연결은_실행이_실패해도_닫힌다(trace: FakeTrac
     await _run(OneShotAgent(), model, trace, clock, tools=tools)
 
     assert tools.closed is True
+
+
+async def test_마스킹된_인자를_가진_도구를_승인_대상으로_적으면_실행_전에_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["mailer"],
+        servers=["mailer"],
+        requires_approval=["send_email"],
+        secret_args={"send_email": ["api_key"]},
+    )
+
+    with pytest.raises(PluginError, match="send_email"):
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert clock.ids_issued == 0
+    assert trace.events == []
+
+
+async def test_마스킹이_걸리지_않은_도구는_승인_대상으로_적어도_실행된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["mailer"],
+        servers=["mailer"],
+        requires_approval=["read_inbox"],
+        secret_args={"send_email": ["api_key"]},
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
+
+
+async def test_모델_호출_이벤트가_모델이_낸_텍스트와_도구_호출을_담는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+    tools = FakeTools({"add": "4"})
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools)
+
+    assert isinstance(events[1], LlmCalled)
+    assert events[1].tool_calls == (ToolCall(id="c1", name="add", args={"a": 2, "b": 2}),)
+    assert isinstance(events[3], LlmCalled)
+    assert events[3].text == "4"
+    assert events[3].tool_calls == ()
+
+
+async def test_도구_호출_이벤트가_인자와_결과_내용을_담는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+    tools = FakeTools({"add": "4"})
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools)
+
+    assert events[2] == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="add",
+        ok=True,
+        args={"a": 2, "b": 2},
+        content="4",
+    )
+
+
+async def test_직접_부른_도구도_인자와_결과_내용을_담는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools)
+
+    assert events[1] == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="add",
+        ok=True,
+        args={"a": 2, "b": 2},
+        content="4",
+    )
+
+
+async def test_실패한_도구_호출은_결과_내용에_에러를_담는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": RuntimeError("boom")})
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools)
+
+    assert isinstance(events[1], ToolCalled)
+    assert events[1].ok is False
+    assert "boom" in events[1].content
+
+
+async def test_비밀로_선언된_인자는_마스킹돼_이벤트에_담긴다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["a"]}
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[1], LlmCalled)
+    assert events[1].tool_calls[0].args == {"a": "***", "b": 2}
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].args == {"a": "***", "b": 2}
+
+
+async def test_마스킹은_이벤트에만_걸리고_도구는_진짜_값을_받는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """마스킹된 값이 실제로 보내지면 승인받은 호출이 망가진다(ADR 0009 금지 규칙의 근거)."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["a"]}
+    )
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
+
+
+async def test_직접_부른_도구의_비밀_인자도_마스킹된다(trace: FakeTrace, clock: FakeClock) -> None:
+    """게이트와 같은 이유다. 정책은 도구에 붙는 것이지 경로에 붙는 것이 아니다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": DirectToolAgent()}, mcp=["srv"], servers=["srv"], secret_args={"add": ["b"]}
+    )
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[1], ToolCalled)
+    assert events[1].args == {"a": 2, "b": "***"}
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
+
+
+async def test_비밀을_선언하지_않은_도구의_인자는_그대로_담긴다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], secret_args={"other": ["a"]}
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].args == {"a": 2, "b": 2}

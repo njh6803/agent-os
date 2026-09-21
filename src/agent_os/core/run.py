@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from datetime import datetime
 from typing import TypeGuard
 
@@ -41,21 +41,52 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunStarted,
+    ToolCall,
     ToolCalled,
     ToolError,
+    approval_conflicts,
 )
+
+MASKED = "***"
+
+
+def _secret_args(servers: Mapping[PluginName, McpServer]) -> Mapping[str, tuple[str, ...]]:
+    """도구 이름 -> 마스킹할 인자 이름들. 도구 이름은 서버를 가로질러 평평하다."""
+    return {
+        tool: names for server in servers.values() for tool, names in server.secret_args.items()
+    }
+
+
+def _mask(
+    tool: str, args: Mapping[str, Json], secrets: Mapping[str, tuple[str, ...]]
+) -> Mapping[str, Json]:
+    """선언된 인자를 가려 이벤트에 담는다. 실제 도구 호출에는 진짜 값이 그대로 간다.
+
+    마스킹하는 자리가 core 이고 트레이스 어댑터가 아닌 이유는, 원칙 V 가 금하는 것이 파일이
+    아니라 이벤트이고 secret_args 를 아는 것도 core 이기 때문이다(ADR 0009).
+    """
+    names = secrets.get(tool, ())
+    if not names:
+        return args
+    return {key: MASKED if key in names else value for key, value in args.items()}
 
 
 class _Context:
     """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 순서대로 쌓아 둔다."""
 
     def __init__(
-        self, run_id: RunId, clock: Clock, model: ChatModel, tools: ToolConnection
+        self,
+        run_id: RunId,
+        clock: Clock,
+        model: ChatModel,
+        tools: ToolConnection,
+        secrets: Mapping[str, tuple[str, ...]],
     ) -> None:
         self.run_id = run_id
         self._clock = clock
         self._model = model
         self._tools = tools
+        self._secrets = secrets
         self._pending: list[Event] = []
 
     def now(self) -> datetime:
@@ -73,7 +104,7 @@ class _Context:
     async def tool(self, name: str, **args: Json) -> str:
         """도구가 ok=false 를 돌려주든 예외를 던지든 에이전트에게는 같은 ToolError 다."""
         result = await _call_safely(self._tools, name, args)
-        self._record_tool_call(name, result.ok)
+        self._record_tool_call(name, args, result)
         if not result.ok:
             raise ToolError(result.content)
         return result.content
@@ -91,11 +122,29 @@ class _Context:
                 model=reply.model,
                 input_tokens=reply.input_tokens,
                 output_tokens=reply.output_tokens,
+                text=reply.text,
+                tool_calls=tuple(
+                    ToolCall(
+                        id=call.id,
+                        name=call.name,
+                        args=_mask(call.name, call.args, self._secrets),
+                    )
+                    for call in reply.tool_calls
+                ),
             )
         )
 
-    def _record_tool_call(self, name: str, ok: bool) -> None:
-        self._pending.append(ToolCalled(run_id=self.run_id, ts=self.now(), tool=name, ok=ok))
+    def _record_tool_call(self, name: str, args: Mapping[str, Json], result: ToolResult) -> None:
+        self._pending.append(
+            ToolCalled(
+                run_id=self.run_id,
+                ts=self.now(),
+                tool=name,
+                ok=result.ok,
+                args=_mask(name, args, self._secrets),
+                content=result.content,
+            )
+        )
 
 
 async def run(
@@ -110,8 +159,10 @@ async def run(
     clock: Clock,
 ) -> AsyncIterator[Event]:
     manifest = _read_agent_manifest(plugins, agent)
-    instance = plugins.load_agent(manifest)
     servers = _resolve_servers(plugins, manifest)
+    _reject_masked_approvals(manifest, servers)
+    secrets = _secret_args(servers)
+    instance = plugins.load_agent(manifest)
     run_id = clock.new_run_id()
 
     def emit(event: Event) -> Event:
@@ -121,7 +172,7 @@ async def run(
     async def execute() -> AsyncIterator[Event]:
         """도구를 연결한 채 에이전트를 돌린다. 실패해도 그때까지 쌓인 이벤트를 먼저 흘린다."""
         async with tools.connect(servers) as connection:
-            ctx = _Context(run_id, clock, model, connection)
+            ctx = _Context(run_id, clock, model, connection, secrets)
             try:
                 async for event in instance.run(request, ctx):
                     for pending in ctx.take_events():
@@ -166,6 +217,17 @@ def _resolve_servers(
             raise PluginError(f"에이전트 {manifest.name} 이 지정한 mcp 플러그인이 없다: {name}")
         servers[name] = mcp.server
     return servers
+
+
+def _reject_masked_approvals(
+    manifest: PluginManifest, servers: Mapping[PluginName, McpServer]
+) -> None:
+    """금지 규칙을 실행 식별자가 생기기 전에 거부로 바꾼다. 이유는 sdk 의 approval_conflicts."""
+    conflicts = approval_conflicts(manifest, servers)
+    if conflicts:
+        raise PluginError(
+            f"마스킹된 인자를 가진 도구는 승인 대상이 될 수 없다: {', '.join(conflicts)}"
+        )
 
 
 async def _call_safely(tools: ToolConnection, name: str, args: dict[str, Json]) -> ToolResult:
