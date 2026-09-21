@@ -1,8 +1,15 @@
 """모델 이름 결정. 플래그, 환경변수, 기본값 순이고 폴백은 없다."""
 
 import pytest
+from langchain_anthropic import ChatAnthropic
 
-from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV, resolve_model_name
+from agent_os.adapters.anthropic import (
+    DEFAULT_MODEL,
+    MAX_TOKENS,
+    MODEL_ENV,
+    anthropic_chat_model,
+    resolve_model_name,
+)
 
 
 def test_환경변수가_없으면_기본_모델이다() -> None:
@@ -19,7 +26,15 @@ def test_플래그가_환경변수보다_앞선다() -> None:
 
 def test_빈_지정은_기본값으로_넘어가지_않고_거부한다() -> None:
     """빈 문자열은 '지정 안 함'이 아니라 잘못된 지정이다. 몰래 기본값으로 넘어가지 않는다."""
-    with pytest.raises(ValueError, match=MODEL_ENV):
+    with pytest.raises(ValueError, match="모델 이름"):
         resolve_model_name({MODEL_ENV: ""})
-    with pytest.raises(ValueError, match="--model"):
+    with pytest.raises(ValueError, match="모델 이름"):
         resolve_model_name({}, flag="")
+
+
+def test_정한_이름이_그대로_모델_인스턴스에_닿는다() -> None:
+    model = anthropic_chat_model("claude-haiku-4-5")
+
+    assert isinstance(model, ChatAnthropic)
+    assert model.model == "claude-haiku-4-5"
+    assert model.max_tokens == MAX_TOKENS

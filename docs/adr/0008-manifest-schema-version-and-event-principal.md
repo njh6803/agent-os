@@ -17,4 +17,5 @@ date: 2026-09-21
 
 - 같은 티켓에서 함께 들어가는 계약 변경. `PluginKind`가 `model`을 포함한 `StrEnum`이 된다(OpenAPI가 이름 있는 정의로 내보내야 슬라이스 3의 생성 클라이언트가 재사용한다). 에이전트 매니페스트에 `mcp = [...]`, mcp 매니페스트에 `[server]`(`command`, `args`). 컨텍스트에 `run_id`와 `now()`. 식별자 넷(`RunId`, `AgentName`, `PluginName`, `Principal`)은 `NewType`이고 JSON은 문자열 그대로다.
 - 판별자(`type`)와 `schema_version`만 `Literal`로 남는다. 나머지 고정 값 집합은 `StrEnum`이다.
+- 같은 슬라이스의 티켓 07이 sdk 표면에 둘을 더했다. `Json`(컨텍스트 메서드가 주고받는 값의 타입. `llm()`과 `tool()`이 JSON으로 직렬화 가능한 것만 다룬다는 규칙을 타입으로 옮긴 것)과 `ToolError`(`ctx.tool()`로 직접 부른 도구가 실패했을 때 에이전트가 이름으로 잡을 수 있는 예외. sdk만 import하는 플러그인이 core의 예외를 알 수 없어서 sdk에 둔다). 디스크 형식은 아니다.
 - `schema_version`을 올리면 이 ADR의 이력에 쌓는다. 새 ADR을 만들지 않는다.

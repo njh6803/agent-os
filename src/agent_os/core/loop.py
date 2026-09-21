@@ -17,7 +17,7 @@ from langchain_core.messages.tool import ToolCall
 from langchain_core.runnables import Runnable
 
 from agent_os.core.model import ModelReply, reply_from
-from agent_os.core.ports import ChatModel, ToolResult, ToolSession, ToolSpec
+from agent_os.core.ports import ChatModel, ToolConnection, ToolResult, ToolSpec
 
 MAX_TURNS = 10
 
@@ -30,7 +30,7 @@ async def run_loop(
     model: ChatModel,
     prompt: str,
     *,
-    tools: ToolSession,
+    tools: ToolConnection,
     on_model_call: Callable[[ModelReply], None],
     on_tool_call: Callable[[str, bool], None],
 ) -> str:
@@ -64,7 +64,7 @@ def _anthropic_style(spec: ToolSpec) -> dict[str, object]:
 
 
 async def _execute(
-    tools: ToolSession, call: ToolCall, on_tool_call: Callable[[str, bool], None]
+    tools: ToolConnection, call: ToolCall, on_tool_call: Callable[[str, bool], None]
 ) -> ToolMessage:
     result = await _call_safely(tools, call)
     on_tool_call(call["name"], result.ok)
@@ -75,7 +75,7 @@ async def _execute(
     )
 
 
-async def _call_safely(tools: ToolSession, call: ToolCall) -> ToolResult:
+async def _call_safely(tools: ToolConnection, call: ToolCall) -> ToolResult:
     """도구가 예외를 내도 실행은 죽지 않는다. 에러 내용을 결과로 바꿔 모델이 알게 한다."""
     try:
         return await tools.call(call["name"], call["args"])

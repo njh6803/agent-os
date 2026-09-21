@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage
 from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
 from agent_os.core.loop import run_loop
 from agent_os.core.model import ModelReply, reply_from
-from agent_os.core.ports import ChatModel, ToolResult, ToolSession, ToolSpec
+from agent_os.core.ports import ChatModel, ToolConnection, ToolResult, ToolSpec
 from agent_os.sdk import Json
 
 
@@ -44,7 +44,7 @@ def test_토큰과_이름_정보가_없는_응답은_0과_unknown으로_센다()
 
 async def test_도구_없는_루프는_한_바퀴로_끝나고_마지막_텍스트를_돌려준다() -> None:
     model: ChatModel = GenericFakeChatModel(messages=iter([AIMessage(content="4")]))
-    tools: ToolSession = NoTools()
+    tools: ToolConnection = NoTools()
     calls: list[ModelReply] = []
 
     text = await run_loop(
@@ -61,7 +61,7 @@ async def test_Anthropic_모델이_실제로_답한다() -> None:
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     name = resolve_model_name(os.environ)
     model = anthropic_chat_model(name)
-    tools: ToolSession = NoTools()
+    tools: ToolConnection = NoTools()
     calls: list[ModelReply] = []
 
     text = await run_loop(

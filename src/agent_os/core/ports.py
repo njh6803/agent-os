@@ -78,7 +78,7 @@ class ToolResult:
     content: str
 
 
-class ToolSession(Protocol):
+class ToolConnection(Protocol):
     """ToolSource 가 연 연결. 도구 목록을 주고 도구를 부른다."""
 
     def tools(self) -> Sequence[ToolSpec]: ...
@@ -94,4 +94,4 @@ class ToolSource(Protocol):
 
     def connect(
         self, servers: Mapping[PluginName, McpServer]
-    ) -> AbstractAsyncContextManager[ToolSession]: ...
+    ) -> AbstractAsyncContextManager[ToolConnection]: ...

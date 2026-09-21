@@ -21,8 +21,8 @@ from agent_os.core.ports import (
     Clock,
     PluginError,
     PluginSource,
+    ToolConnection,
     ToolResult,
-    ToolSession,
     ToolSource,
     ToolSpec,
     TraceSink,
@@ -136,7 +136,9 @@ class FakeTools:
         self.closed = False
 
     @asynccontextmanager
-    async def connect(self, servers: Mapping[PluginName, McpServer]) -> AsyncGenerator[ToolSession]:
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
         self.servers = servers
         try:
             yield self.session
@@ -148,7 +150,9 @@ class BrokenTools:
     """MCP 서버 기동 실패."""
 
     @asynccontextmanager
-    async def connect(self, servers: Mapping[PluginName, McpServer]) -> AsyncGenerator[ToolSession]:
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
         raise ConnectionError("server did not start")
         yield FakeSession({})
 
@@ -325,7 +329,7 @@ async def test_루프가_상한을_넘으면_실패_이벤트로_끝난다(
 
     assert sum(1 for e in events if e.type == "llm_called") == MAX_TURNS
     assert isinstance(events[-1], RunFailed)
-    assert "LoopLimitExceeded" in events[-1].error
+    assert f"{MAX_TURNS}턴" in events[-1].error
 
 
 async def test_모델_호출이_실패하면_실패_이벤트로_끝나고_트레이스가_남는다(
@@ -471,8 +475,11 @@ async def test_직접_부른_도구가_실패하면_에이전트가_잡을_수_�
 
     events = await _run(DirectToolAgent(), model, trace, clock, tools=tools)
 
-    assert isinstance(events[-1], RunFailed)
-    assert "boom" in events[-1].error
+    assert [e.type for e in events] == ["run_started", "tool_called", "run_finished"]
+    assert isinstance(events[1], ToolCalled)
+    assert events[1].ok is False
+    assert isinstance(events[-1], RunFinished)
+    assert "boom" in events[-1].output
 
 
 async def test_도구_연결은_실행이_실패해도_닫힌다(trace: FakeTrace, clock: FakeClock) -> None:

@@ -20,6 +20,7 @@ from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
 from agent_os.channel.cli.main import RunArgs, parse_run_args, run_command
+from agent_os.core.ports import ChatModel
 from agent_os.sdk import Principal
 
 PLUGINS_ROOT = Path("plugins")
@@ -28,16 +29,26 @@ PLUGINS_ROOT = Path("plugins")
 def main(argv: list[str] | None = None) -> int:
     _use_utf8(sys.stdout, sys.stderr)
     args = parse_run_args(argv)
-    return asyncio.run(_run(args))
+    try:
+        model = _chat_model(args)
+    except ValueError as error:
+        sys.stderr.write(f"{error}\n")
+        return 1
+    return asyncio.run(_run(args, model))
 
 
-async def _run(args: RunArgs) -> int:
+def _chat_model(args: RunArgs) -> ChatModel:
+    """모델 이름은 플래그, 환경변수, 기본값 순. 빈 지정은 실행 전에 거부한다."""
+    return anthropic_chat_model(resolve_model_name(os.environ, args.model))
+
+
+async def _run(args: RunArgs, model: ChatModel) -> int:
     return await run_command(
         args.agent,
         args.request,
         Principal(getpass.getuser()),
         plugins=FilesystemPlugins(PLUGINS_ROOT),
-        model=anthropic_chat_model(resolve_model_name(os.environ, args.model)),
+        model=model,
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),

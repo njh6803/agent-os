@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from agent_os.adapters.mcp import McpTools
-from agent_os.core.ports import ToolSession, ToolSource
+from agent_os.core.ports import ToolConnection, ToolSource
 from agent_os.sdk import McpServer, PluginName
 
 FIXTURE = McpServer(
@@ -22,7 +22,7 @@ FIXTURE = McpServer(
 
 
 @asynccontextmanager
-async def _fixture_session() -> AsyncGenerator[ToolSession]:
+async def _fixture_session() -> AsyncGenerator[ToolConnection]:
     tools: ToolSource = McpTools()
     async with tools.connect({PluginName("fixture"): FIXTURE}) as session:
         yield session

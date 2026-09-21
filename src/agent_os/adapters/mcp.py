@@ -16,23 +16,25 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import StdioConnection
 from langchain_mcp_adapters.tools import load_mcp_tools
 
-from agent_os.core.ports import ToolResult, ToolSession, ToolSpec
+from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
 from agent_os.sdk import Json, McpServer, PluginName
 
 
 class McpTools:
     @asynccontextmanager
-    async def connect(self, servers: Mapping[PluginName, McpServer]) -> AsyncGenerator[ToolSession]:
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
         client = MultiServerMCPClient({name: _stdio(server) for name, server in servers.items()})
         async with AsyncExitStack() as stack:
             tools: list[BaseTool] = []
             for name in servers:
                 session = await stack.enter_async_context(client.session(name))
                 tools.extend(await load_mcp_tools(session))
-            yield McpSession(tools)
+            yield McpConnection(tools)
 
 
-class McpSession:
+class McpConnection:
     def __init__(self, tools: Sequence[BaseTool]) -> None:
         self._tools = {tool.name: tool for tool in tools}
 
@@ -64,7 +66,7 @@ def _schema_of(tool: BaseTool) -> Mapping[str, Json]:
     schema = tool.args_schema
     if not isinstance(schema, dict):
         raise TypeError(f"MCP 도구 {tool.name} 의 args_schema 가 dict 가 아니다: {type(schema)}")
-    return schema
+    return dict(schema)
 
 
 def _stdio(server: McpServer) -> StdioConnection:

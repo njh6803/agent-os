@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TypeGuard
 
@@ -22,13 +22,13 @@ from agent_os.core.ports import (
     Clock,
     PluginError,
     PluginSource,
-    ToolSession,
+    ToolConnection,
+    ToolResult,
     ToolSource,
     TraceSink,
 )
 from agent_os.sdk import (
     AgentName,
-    BaseAgent,
     Event,
     Json,
     LlmCalled,
@@ -47,21 +47,16 @@ from agent_os.sdk import (
 
 
 class _Context:
-    """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 record 로 쌓는다."""
+    """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 순서대로 쌓아 둔다."""
 
     def __init__(
-        self,
-        run_id: RunId,
-        clock: Clock,
-        model: ChatModel,
-        tools: ToolSession,
-        record: Callable[[Event], None],
+        self, run_id: RunId, clock: Clock, model: ChatModel, tools: ToolConnection
     ) -> None:
         self.run_id = run_id
         self._clock = clock
         self._model = model
         self._tools = tools
-        self._record = record
+        self._pending: list[Event] = []
 
     def now(self) -> datetime:
         return self._clock.now()
@@ -76,14 +71,20 @@ class _Context:
         )
 
     async def tool(self, name: str, **args: Json) -> str:
-        result = await self._tools.call(name, args)
+        """도구가 ok=false 를 돌려주든 예외를 던지든 에이전트에게는 같은 ToolError 다."""
+        result = await _call_safely(self._tools, name, args)
         self._record_tool_call(name, result.ok)
         if not result.ok:
             raise ToolError(result.content)
         return result.content
 
+    def take_events(self) -> list[Event]:
+        """쌓인 이벤트를 비우며 돌려준다. 호출 안의 이벤트가 에이전트의 다음 이벤트보다 앞선다."""
+        taken, self._pending = self._pending, []
+        return taken
+
     def _record_model_call(self, reply: ModelReply) -> None:
-        self._record(
+        self._pending.append(
             LlmCalled(
                 run_id=self.run_id,
                 ts=self.now(),
@@ -94,7 +95,7 @@ class _Context:
         )
 
     def _record_tool_call(self, name: str, ok: bool) -> None:
-        self._record(ToolCalled(run_id=self.run_id, ts=self.now(), tool=name, ok=ok))
+        self._pending.append(ToolCalled(run_id=self.run_id, ts=self.now(), tool=name, ok=ok))
 
 
 async def run(
@@ -112,30 +113,33 @@ async def run(
     instance = plugins.load_agent(manifest)
     servers = _resolve_servers(plugins, manifest)
     run_id = clock.new_run_id()
-    pending: list[Event] = []
 
     def emit(event: Event) -> Event:
         trace.write(event)
         return event
 
-    def drain() -> list[Event]:
-        """호출 안의 이벤트가 에이전트의 다음 이벤트보다 앞선다는 순서 보장이 여기서 지켜진다."""
-        taken, pending[:] = pending[:], []
-        return taken
+    async def execute() -> AsyncIterator[Event]:
+        """도구를 연결한 채 에이전트를 돌린다. 실패해도 그때까지 쌓인 이벤트를 먼저 흘린다."""
+        async with tools.connect(servers) as connection:
+            ctx = _Context(run_id, clock, model, connection)
+            try:
+                async for event in instance.run(request, ctx):
+                    for pending in ctx.take_events():
+                        yield pending
+                    yield event
+            finally:
+                for pending in ctx.take_events():
+                    yield pending
 
     yield emit(
         RunStarted(run_id=run_id, ts=clock.now(), agent=agent, request=request, principal=principal)
     )
     last: Event | None = None
     try:
-        async with tools.connect(servers) as session:
-            ctx = _Context(run_id, clock, model, session, pending.append)
-            async for event in _events_of(instance, request, ctx, drain):
-                last = event
-                yield emit(event)
-    except Exception as error:
-        for event in drain():
+        async for event in execute():
+            last = event
             yield emit(event)
+    except Exception as error:
         yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
         return
     if not isinstance(last, RunFinished):
@@ -164,15 +168,11 @@ def _resolve_servers(
     return servers
 
 
-async def _events_of(
-    agent: BaseAgent, request: str, ctx: _Context, drain: Callable[[], list[Event]]
-) -> AsyncIterator[Event]:
-    async for event in agent.run(request, ctx):
-        for pending in drain():
-            yield pending
-        yield event
-    for pending in drain():
-        yield pending
+async def _call_safely(tools: ToolConnection, name: str, args: dict[str, Json]) -> ToolResult:
+    try:
+        return await tools.call(name, args)
+    except Exception as error:
+        return ToolResult(ok=False, content=_describe(error))
 
 
 def _describe(error: BaseException) -> str:
