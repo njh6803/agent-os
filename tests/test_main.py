@@ -8,6 +8,7 @@ llm 마커가 붙은 마지막 테스트만 실제 CLI 프로세스를 띄운다
 import getpass
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -344,3 +345,37 @@ def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_�
     assert out == ""
     assert "없는-실행" in err
     assert _trace_files(workspace / "t") == []
+
+
+def _guidance(out: str) -> list[str]:
+    """일시정지 출력이 안내한 재개 명령을 셸이 읽듯 인자로 쪼갠다."""
+    line = next(line for line in out.splitlines() if line.startswith("승인: agent-os "))
+    return shlex.split(line.removeprefix("승인: agent-os "))
+
+
+def test_안내된_재개_명령을_그대로_실행하면_재개된다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """안내가 작동하지 않으면 안내가 아니다. 공백이 있는 트레이스 경로까지 그대로 복사된다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    paused = main(["run", "gated", "hi", "--traces", "out dir"])
+    argv = _guidance(capsys.readouterr().out)
+
+    code = main(argv)
+
+    assert paused == EXIT_PAUSED
+    assert code == 0
+    assert capsys.readouterr().out == "5\n"
+
+
+def test_기본_트레이스_디렉터리면_안내_명령에_경로가_붙지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+
+    main(["run", "gated", "hi"])
+
+    argv = _guidance(capsys.readouterr().out)
+    assert "--traces" not in argv

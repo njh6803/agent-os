@@ -64,6 +64,7 @@ async def _run(args: RunArgs, model: ChatModel) -> int:
         stdout=sys.stdout,
         stderr=sys.stderr,
         progress=sys.stderr if args.verbose else None,
+        traces=args.traces,
     )
 
 
@@ -81,6 +82,7 @@ async def _resume(args: ResumeArgs, model: ChatModel) -> int:
         stdout=sys.stdout,
         stderr=sys.stderr,
         progress=sys.stderr if args.verbose else None,
+        traces=args.traces,
     )
 
 

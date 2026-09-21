@@ -129,6 +129,7 @@ async def run_command(
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
+    traces: Path,
 ) -> int:
     """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
     events = run(
@@ -141,7 +142,7 @@ async def run_command(
         trace=trace,
         clock=clock,
     )
-    return await _report(events, stdout=stdout, stderr=stderr, progress=progress)
+    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
 
 
 async def resume_command(
@@ -157,6 +158,7 @@ async def resume_command(
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
+    traces: Path,
 ) -> int:
     """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)은 PluginError 로 진단만 적는다."""
     events = resume(
@@ -169,21 +171,31 @@ async def resume_command(
         trace=trace,
         clock=clock,
     )
-    return await _report(events, stdout=stdout, stderr=stderr, progress=progress)
+    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
 
 
 async def _report(
-    events: AsyncIterator[Event], *, stdout: TextIO, stderr: TextIO, progress: TextIO | None
+    events: AsyncIterator[Event],
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+    progress: TextIO | None,
+    traces: Path,
 ) -> int:
     try:
-        return await _show(events, stdout=stdout, stderr=stderr, progress=progress)
+        return await _show(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
     except PluginError as error:
         stderr.write(f"{error}\n")
         return EXIT_FAILED
 
 
 async def _show(
-    events: AsyncIterator[Event], *, stdout: TextIO, stderr: TextIO, progress: TextIO | None
+    events: AsyncIterator[Event],
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+    progress: TextIO | None,
+    traces: Path,
 ) -> int:
     """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다."""
     exit_code = EXIT_FAILED
@@ -194,7 +206,7 @@ async def _show(
             stdout.write(event.output + "\n")
             exit_code = EXIT_FINISHED
         elif isinstance(event, RunPaused):
-            stdout.write(_approval_request(event))
+            stdout.write(_approval_request(event, traces))
             exit_code = EXIT_PAUSED
         elif isinstance(event, RunFailed):
             stderr.write(f"실행 실패: {event.error}\n")
@@ -202,12 +214,23 @@ async def _show(
     return exit_code
 
 
-def _approval_request(event: RunPaused) -> str:
-    """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다."""
+def _approval_request(event: RunPaused, traces: Path) -> str:
+    """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
+
+    안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 트레이스 디렉터리를 옮겨 실행했으면 재개도
+    거기서 읽어야 하므로 그 옵션을 같이 적는다. 기본 경로면 군더더기라 붙이지 않는다.
+    """
     args = json.dumps(event.args, ensure_ascii=False)
+    option = "" if traces == DEFAULT_TRACES else f" --traces {_as_argument(traces)}"
     return (
         f"일시정지: {event.run_id}\n"
         f"도구: {event.tool}\n"
         f"인자: {args}\n"
-        f"승인: agent-os resume {event.run_id} --approve\n"
+        f"승인: agent-os resume {event.run_id} --approve{option}\n"
     )
+
+
+def _as_argument(path: Path) -> str:
+    """공백이 있는 경로는 셸이 두 인자로 읽으므로 따옴표를 씌운다."""
+    text = str(path)
+    return f'"{text}"' if " " in text else text
