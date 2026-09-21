@@ -15,15 +15,26 @@ from pathlib import Path
 import pytest
 
 from agent_os.adapters.jsonl import JsonlTrace
+from agent_os.channel.cli.main import EXIT_PAUSED
 from agent_os.core.ports import Trace, UnknownEvent
 from agent_os.main import main
-from agent_os.sdk import LlmCalled, RunId, RunStarted, ToolCalled
+from agent_os.sdk import LlmCalled, RunId, RunPaused, RunStarted, ToolCalled
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+MCP_FIXTURE_SERVER = REPO_ROOT / "tests" / "adapters" / "mcp_fixture_server.py"
 
 MANIFEST = (
     'schema_version = "1"\nkind = "agent"\nname = "{name}"\nversion = "0.1.0"\n'
     'entrypoint = "agent:Agent"\n'
+)
+
+GATED_MANIFEST = MANIFEST.format(name="gated") + 'mcp = ["fixture"]\nrequires_approval = ["add"]\n'
+
+# 진짜 stdio 서버(tests/adapters/mcp_fixture_server.py). 경로는 TOML 기본 문자열이라 슬래시로 쓴다.
+MCP_MANIFEST = (
+    'schema_version = "1"\nkind = "mcp"\nname = "{name}"\nversion = "0.1.0"\n'
+    f'[server]\ncommand = "{Path(sys.executable).as_posix()}"\n'
+    f'args = ["{MCP_FIXTURE_SERVER.as_posix()}"]\n'
 )
 
 ECHO_SRC = """
@@ -50,6 +61,19 @@ class Agent:
 """
 
 
+GATED_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        total = await ctx.tool("add", a=2, b=3)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)
+"""
+
+
 def _write_plugin(root: Path, name: str, source: str, manifest: str | None = None) -> None:
     directory = root / "plugins" / "agents" / name
     directory.mkdir(parents=True)
@@ -57,6 +81,12 @@ def _write_plugin(root: Path, name: str, source: str, manifest: str | None = Non
         MANIFEST.format(name=name) if manifest is None else manifest, encoding="utf-8"
     )
     (directory / "agent.py").write_text(source, encoding="utf-8")
+
+
+def _write_mcp_plugin(root: Path, name: str) -> None:
+    directory = root / "plugins" / "mcp" / name
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(MCP_MANIFEST.format(name=name), encoding="utf-8")
 
 
 @pytest.fixture
@@ -236,3 +266,27 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert any(e.tool_calls for e in events if isinstance(e, LlmCalled))
     assert any(e.args for e in tool_calls)
     assert any(e.content for e in tool_calls)
+
+
+def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표준_출력에_찍히고_전용_종료_코드다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """모델은 안 쓰고 도구는 진짜 stdio 서버다. 게이트가 도구 앞에서 멈추므로 도구는 안 불린다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+
+    code = main(["run", "gated", "hi", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    (trace_file,) = _trace_files(workspace / "t")
+    assert code == EXIT_PAUSED
+    assert code not in (0, 1)
+    assert trace_file.stem in out
+    assert "add" in out
+    assert '"a": 2' in out
+    assert '"b": 3' in out
+    assert err == ""
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].args == {"a": 2, "b": 3}

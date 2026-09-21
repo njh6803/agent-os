@@ -11,20 +11,15 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
 from agent_os.core.loop import run_loop
 from agent_os.core.model import ModelReply, reply_from
-from agent_os.core.ports import ChatModel, ToolConnection, ToolResult, ToolSpec
+from agent_os.core.ports import ChatModel, ToolResult, ToolSpec
 from agent_os.sdk import Json, ToolCall
 
-
-class NoTools:
-    def tools(self) -> Sequence[ToolSpec]:
-        return []
-
-    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
-        raise LookupError(name)
+NO_TOOLS: Sequence[ToolSpec] = []
 
 
-def _ignore_tool_call(name: str, args: Mapping[str, Json], result: ToolResult) -> None:
-    return None
+async def _no_tool(name: str, args: Mapping[str, Json]) -> ToolResult:
+    """도구가 없으니 불리면 안 된다. 불리면 시끄럽게."""
+    raise LookupError(name)
 
 
 def test_모델_응답은_이름_텍스트_토큰_수를_우리_타입으로_바꾼다() -> None:
@@ -56,12 +51,9 @@ def test_모델이_요청한_도구_호출도_우리_타입으로_바뀐다() ->
 
 async def test_도구_없는_루프는_한_바퀴로_끝나고_마지막_텍스트를_돌려준다() -> None:
     model: ChatModel = GenericFakeChatModel(messages=iter([AIMessage(content="4")]))
-    tools: ToolConnection = NoTools()
     calls: list[ModelReply] = []
 
-    text = await run_loop(
-        model, "2+2?", tools=tools, on_model_call=calls.append, on_tool_call=_ignore_tool_call
-    )
+    text = await run_loop(model, "2+2?", tools=NO_TOOLS, call=_no_tool, on_model_call=calls.append)
 
     assert text == "4"
     assert len(calls) == 1
@@ -73,15 +65,14 @@ async def test_Anthropic_모델이_실제로_답한다() -> None:
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     name = resolve_model_name(os.environ)
     model = anthropic_chat_model(name)
-    tools: ToolConnection = NoTools()
     calls: list[ModelReply] = []
 
     text = await run_loop(
         model,
         "숫자 하나만 답한다. 2 더하기 2는?",
-        tools=tools,
+        tools=NO_TOOLS,
+        call=_no_tool,
         on_model_call=calls.append,
-        on_tool_call=_ignore_tool_call,
     )
 
     assert "4" in text

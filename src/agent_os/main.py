@@ -19,7 +19,7 @@ from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
-from agent_os.channel.cli.main import RunArgs, parse_run_args, run_command
+from agent_os.channel.cli.main import EXIT_FAILED, RunArgs, parse_run_args, run_command
 from agent_os.core.ports import ChatModel
 from agent_os.sdk import Principal
 
@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         model = _chat_model(args)
     except ValueError as error:
         sys.stderr.write(f"{error}\n")
-        return 1
+        return EXIT_FAILED
     return asyncio.run(_run(args, model))
 
 
