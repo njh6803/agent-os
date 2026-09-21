@@ -1,6 +1,5 @@
 """BaseAgent 프로토콜이 async generator로 구현 가능하고 이벤트가 흐르는지."""
 
-import asyncio
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
@@ -27,8 +26,8 @@ async def _collect(agent: BaseAgent, ctx: AgentContext) -> list[Event]:
     return [event async for event in agent.run("hi", ctx)]
 
 
-def test_agent_yields_event_stream() -> None:
-    events = asyncio.run(_collect(EchoAgent(), FakeContext()))
+async def test_agent_yields_event_stream() -> None:
+    events = await _collect(EchoAgent(), FakeContext())
     assert [event.type for event in events] == ["run_started", "run_finished"]
     assert isinstance(events[-1], RunFinished)
     assert events[-1].output == "echo:hi"
