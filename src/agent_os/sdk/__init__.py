@@ -13,18 +13,24 @@ from agent_os.sdk.events import (
     RunStarted,
     ToolCalled,
 )
-from agent_os.sdk.manifest import PluginKind, PluginManifest, parse_manifest
+from agent_os.sdk.ids import AgentName, PluginName, Principal, RunId
+from agent_os.sdk.manifest import McpServer, PluginKind, PluginManifest, parse_manifest
 
 __all__ = [
     "AgentContext",
+    "AgentName",
     "BaseAgent",
     "BaseEvent",
     "Event",
     "LlmCalled",
+    "McpServer",
     "PluginKind",
     "PluginManifest",
+    "PluginName",
+    "Principal",
     "RunFailed",
     "RunFinished",
+    "RunId",
     "RunStarted",
     "ToolCalled",
     "parse_manifest",
