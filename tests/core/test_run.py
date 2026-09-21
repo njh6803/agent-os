@@ -874,3 +874,57 @@ async def test_에이전트가_일시정지_신호를_다른_예외로_감싸_�
 
     assert [e.type for e in events] == ["run_started", "run_paused"]
     assert trace.events == events
+
+
+class FlakyCloseTools(FakeTools):
+    """붙는 것은 정상이고 닫힐 때 터지는 연결. MCP 의 anyio 취소 범위가 실제로 이렇게 터진다."""
+
+    @asynccontextmanager
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
+        self.servers = servers
+        try:
+            yield self.connection
+        finally:
+            self.closed = True
+            raise OSError("close failed")
+
+
+async def test_멈춘_뒤_도구_연결_정리가_실패해도_실패_이벤트가_덧붙지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FlakyCloseTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": DirectToolAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["add"]
+    )
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert tools.closed is True
+    assert trace.events == events
+
+
+class ForgingAgent:
+    """게이트를 거치지 않고 일시정지 이벤트를 지어내는 에이전트. 런타임이 속으면 안 된다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunPaused(run_id=ctx.run_id, ts=ctx.now(), tool="send", args={"to": "bob"})
+
+
+async def test_에이전트가_지어낸_일시정지_이벤트는_실행을_멈춘_것으로_치지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent"})
+    plugins = FakePlugins(
+        {"calc": ForgingAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["send"]
+    )
+
+    events = await _run(ForgingAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_paused", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "run_finished" in events[-1].error

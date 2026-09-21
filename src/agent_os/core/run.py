@@ -211,6 +211,10 @@ async def run(
     instance = plugins.load_agent(manifest)
     run_id = clock.new_run_id()
 
+    # 런타임이 실제로 게이트에서 멈췄는가. 이벤트 종류로 판정하지 않는 이유는 에이전트가
+    # run_paused 를 지어내 yield 할 수 있기 때문이다. 에이전트는 신뢰 경계 밖이다.
+    paused = False
+
     def emit(event: Event) -> Event:
         trace.write(event)
         return event
@@ -222,6 +226,7 @@ async def run(
         run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
         신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
         """
+        nonlocal paused
         async with tools.connect(servers) as connection:
             _reject_unknown_declarations(approvals, secrets, connection.tools())
             ctx = _Context(run_id, clock, model, connection, secrets, approvals)
@@ -238,6 +243,7 @@ async def run(
                 if not ctx.paused:
                     raise
             finally:
+                paused = ctx.paused
                 for pending in ctx.take_events():
                     yield pending
 
@@ -250,9 +256,12 @@ async def run(
             last = event
             yield emit(event)
     except Exception as error:
-        yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
+        # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
+        # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
+        if not paused:
+            yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
         return
-    if not isinstance(last, RunFinished | RunPaused):
+    if not paused and not isinstance(last, RunFinished):
         yield emit(
             RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")
         )

@@ -67,9 +67,28 @@ stdio 서버를 붙이게 되었다. 둘 다 새 결정이 아니라 사실 기�
 뒤 에이전트 제너레이터를 `aclose()`하지 않는 것(계약 타입이 `AsyncIterator`라 `aclose`를 보장하지
 않고, 에이전트의 `finally`가 도구를 불러도 `_stay_paused`가 막는다).
 
+## PR 직전 CodeRabbit CLI
+
+3건, 유효 3. 둘을 고쳤고 하나는 이미 열린 문제다.
+
+- **Major, 연결 정리 실패가 일시정지를 덮어쓴다.** `finally`가 `run_paused`를 흘린 뒤 `async with`를
+  나가며 `__aexit__`가 터지면 그 예외는 `try` 밖이라 `run()`이 `run_failed`를 덧붙였다. MCP 어댑터의
+  anyio 취소 범위가 실제로 이렇게 터지는 것을 ADR 0007 이력이 적어 두었으니 이론이 아니다.
+  `FlakyCloseTools`로 빨갛게 보고 고쳤다.
+- **Major, 위조 `RunPaused`.** 에이전트가 게이트를 거치지 않고 `RunPaused`를 지어내 마지막에 yield
+  하면 `isinstance(last, RunPaused)` 판정이 속아 정상 일시정지로 쳤다. 04가 그 `tool`·`args`를 승인
+  대상으로 믿게 되는 자리다. 판정을 이벤트 종류가 아니라 런타임이 실제로 게이트를 통과시켰는지
+  (`ctx.paused`를 조립부가 `nonlocal`로 넘겨받은 것)로 바꿨다. `ForgingAgent`로 빨갛게 보고 고쳤다.
+  둘을 한 플래그가 닫는다. 남는 물음 하나는 에이전트가 런타임 소유 이벤트(`run_started`,
+  `run_paused`, `run_failed`)를 아예 못 내게 타입으로 가를 것인가다. `ChattyAgent`가 `tool_called`를
+  지어내는 기존 관행과 "다른 이벤트는 그대로 통과한다"는 규칙에 닿는 계약 변경이라 이번에 하지
+  않는다. 04가 재개 입력을 신뢰하는 자리를 만들 때 ADR 후보로 올린다.
+- **Critical, 도구 결과 `content`에 비밀이 실릴 수 있다.** 맞지만 ADR 0009의 2026-09-21 이력이 이미
+  열린 문제로 적고 결정을 미룬 것이다. 이번 diff가 만든 갭이 아니라 보류.
+
 ## 검사
 
-`pytest` 154 passed, `ruff` check·format 통과, `pyright` 49파일 0 errors(`filesAnalyzed`로 먼저
+`pytest` 156 passed, `ruff` check·format 통과, `pyright` 49파일 0 errors(`filesAnalyzed`로 먼저
 확인), `lint-imports` 3 kept. 옛 이름(`on_tool_call`, `NoTools`) 잔존은 살아 있는 트리에서 0이다.
 남은 것은 사람이 지울 옛 워크트리 둘뿐이다.
 
