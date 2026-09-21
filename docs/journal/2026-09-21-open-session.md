@@ -102,7 +102,7 @@ Standards 축(sonnet): 하드 위반 없음. 판단 셋. `KICKOFF.md` 8단계 �
 ## 다음
 
 - 커밋과 PR은 지시가 있을 때. 브랜치 `chore/open-session`. 커밋 전 `/code-review`.
-- **`focus` 동작은 미검증이다.** 첫 실전(PR #30 반영 세션)에서 `split`은 붙었으나 포커스가 여는 세션에 남았고, 행 버튼에 포커스+Enter를 보내는 `focus`를 돌리자 분할이 사라지고 여는 세션만 메인 패널에 남았다. Enter가 행이 아니라 다른 곳으로 갔거나 행 Enter가 분할을 닫는 것일 수 있다. 다음 세션이 접근성 트리로 그 순간의 포커스 요소를 찍어 가른다. 그때까지 `focus`는 통과선이 아니다.
+- **`focus`는 행 버튼 `Invoke`다. 검증됐다.** 포커스된 요소를 찍어 가며 잰 결과, 행 버튼에 `SetFocus`를 해도 포커스는 '채팅 메시지'에 남아 Enter가 채팅으로 갔고(첫 실전에서 분할이 닫힌 이유), 옵션 버튼에서 Shift+Tab으로 행에 포커스를 옮겨도 Enter·Space에 행이 반응하지 않았다. 세션 `link`·`code/continue`·`code/needs-input` 딥링크는 세 형식 모두 무반응. 행 버튼 `Invoke`만 그 세션을 메인 패널에 포커스로 띄웠다(8초 제한 잡 안에서 호출, 돌아왔다). 스크립트의 `focus`와 `split`의 예비 경로가 그것이다. 실측: `focus=… via invoke`로 화면 밖의 여는 세션을 다시 앞으로 가져왔다.
 - 첫 실사용은 다음 PR 뒤다. `next-session`이 아홉 줄을 내고 `open-session`을 돌려 새 세션이 옆 패널에 뜨는지 본다. 그때 재는 것: 지시문 길이가 URL 30000자 안인지, 앱이 지은 제목이 `set_session_title`로 늦지 않게 바뀌는지, 사이드바 행이 `split`의 20초 안에 새 제목으로 갱신되는지(안 되면 대기 시간을 늘린다).
 - 정리할 것(사람이 지운다): 실측 세션들(`실측 9 검증` 스크래치 둘, `실측 11 …`, `feature/00-deeplink-test`, `feature/02-read-the-trace` 실측, `open-session 실측 3: 스케줄 실행`), 스케줄 작업 `open-session-probe`, 워크트리 `.claude/worktrees/new-session-open-skill-1ee70f`·`session-handoff-directives-83d3df`(둘 다 병합됐거나 되돌린 것).
 - 앱 갱신 뒤 깨질 수 있는 자리: 메뉴 이름("보내기", "다음에서 열기", "분할 보기", "작업 공간 신뢰"), 딥링크 파라미터. 스크립트가 20초 안에 못 찾으면 그 이름으로 멈추므로 접근성 트리를 다시 뒤진다.

@@ -63,11 +63,8 @@ function Wait-For([scriptblock] $probe, [string] $what, [int] $Seconds = $Timeou
 # ("분할 보기", "보내기")는 Invoke 로, 아니면(행 옵션 버튼, "다음에서 열기") 포커스를 주고 키를
 # 보낸다(Enter, 하위 메뉴는 →). 키는 포커스된 요소로만 간다. ExpandCollapse 는 쓰지 않는다.
 # 실측에서 호출이 돌아오지 않고 멈춘 적이 있다(일지 2026-09-21 open-session).
-function Press-Element($el, [string] $key = '{ENTER}', [switch] $NoInvoke) {
-    # Invoke 는 메뉴 항목과 "보내기"에서만 실측했다. 사이드바 행 버튼은 Invoke 가 돌아오지 않을 수 있어 키로 간다.
-    if (-not $NoInvoke) {
-        try { $el.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 600; return 'invoke' } catch {}
-    }
+function Press-Element($el, [string] $key = '{ENTER}') {
+    try { $el.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 600; return 'invoke' } catch {}
     # 이름을 바꾼 직후에는 사이드바가 다시 그려지는 사이라 SetFocus 가 빈 메시지로 던진다. 짧게 다시 시도한다.
     # ScrollIntoView 도 Expand 처럼 돌아오지 않은 적이 있어 부르지 않는다. 실측에서 통한 호출만 쓴다.
     $focused = $false
@@ -100,7 +97,8 @@ function Send-Prompt {
     $needle = $firstLine.Substring(0, [Math]::Min(24, $firstLine.Length))
     $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
     # Name 이 null 인 Text 요소가 있다. 먼저 거른다.
-    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { $_.Current.Name -and $_.Current.Name.StartsWith($needle) } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
+    # Name 은 한 번만 읽는다. 두 번 읽는 사이에 요소가 다시 그려져 두 번째가 null 이 된 적이 있다.
+    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.StartsWith($needle) } catch { $false } } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
     "page=$(Get-Date -Format HH:mm:ss.fff)"
 
     # 기본 폴더가 아직 신뢰되지 않았으면 앱이 워크스페이스 신뢰를 묻는다. 대화상자에 적힌 폴더가
@@ -151,20 +149,41 @@ function Split-Session {
     $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
     $rowButton = $null
     try {
-        $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1 } "행 '${Title}'" 10
+        $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${Title}") } catch { $false } } | Select-Object -First 1 } "행 '${Title}'" 10
     } catch {}
     if (-not $rowButton) { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 못 찾았다. 새 세션은 열려 있다. 마지막 오류: $($last.Exception.Message)" }
-    $how = Press-Element $rowButton -NoInvoke
+    $how = Invoke-Row $rowButton.Current.Name
+    if ($how -ne 'invoke') { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 누르지 못했다($how). 새 세션은 열려 있다." }
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how (분할 메뉴가 세 번 닫혀 포커스로 대신했다: $($last.Exception.Message))"
 }
 
-# 세션이 이미 패널에 있을 때 포커스만 옮긴다. 행 버튼을 포커스+Enter 로 누른다(사이드바 행 클릭과 같다).
+# 세션 행을 눌러 메인 패널에 포커스로 띄운다(사이드바 행 클릭과 같다). 행 버튼은 키(Enter, Space)에
+# 반응하지 않고 Invoke 에만 반응한다. Invoke 는 돌아오지 않은 적이 있어 잡 안에서 8초 제한으로 부른다.
+function Invoke-Row([string] $rowName) {
+    $job = Start-Job -ScriptBlock {
+        param($name)
+        Add-Type -AssemblyName UIAutomationClient; Add-Type -AssemblyName UIAutomationTypes
+        $Auto = [System.Windows.Automation.AutomationElement]; $Scope = [System.Windows.Automation.TreeScope]
+        $win = $Auto::RootElement.FindAll($Scope::Children, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -eq 'Claude' } | Select-Object -First 1
+        $row = $win.FindFirst($Scope::Descendants, (New-Object System.Windows.Automation.PropertyCondition($Auto::NameProperty, $name)))
+        if (-not $row) { return 'row-missing' }
+        $row.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        return 'invoke'
+    } -ArgumentList $rowName
+    try {
+        if (Wait-Job $job -Timeout 8) { return (Receive-Job $job) }
+        Stop-Job $job
+        return 'invoke-hung'
+    } finally { Remove-Job $job -Force }
+}
+
 function Focus-Session {
     if (-not $Title) { throw 'focus 에는 -Title 이 필요하다.' }
     $win = Get-ClaudeWindow
     $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
-    $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1 } "행 '${Title}'" 10
-    $how = Press-Element $rowButton -NoInvoke
+    $rowButton = Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${Title}") } catch { $false } } | Select-Object -First 1 } "행 '${Title}'" 10
+    $how = Invoke-Row $rowButton.Current.Name
+    if ($how -ne 'invoke') { throw "행 '${Title}'을 누르지 못했다($how)." }
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how"
 }
 

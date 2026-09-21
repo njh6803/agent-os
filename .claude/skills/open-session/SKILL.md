@@ -23,7 +23,7 @@ description: "next-session 지시문의 '어디서'가 새 세션이면 그 세�
 
    `page=`가 안 나오면 앱이 딥링크를 받지 못한 것이다(창이 없거나 다른 창이 앞에 있다). `trusted=`가 끼면 기본 폴더의 신뢰를 스크립트가 수락한 것이다(루트일 때만). `sent=`가 안 나오면 보내기 버튼이 없는 것이다. 끝: `sent=`.
 4. **이름을 붙인다.** `list_sessions`(limit 5)는 이 세션을 빼고 준다. 그중 `isRunning`이고 `createdAt`이 없으니 `lastActivityAt`이 `fired=` 이후인 항목이 새 세션이다. 둘 이상이면(병렬 세션이 그 사이 움직였다) `get_session`으로 `createdAt`이 `fired=` 이후인 것을 고른다. 없으면 제출이 안 된 것이니 3의 화면을 사람에게 알린다. 그 `cwd`가 루트여야 한다. 딥링크는 폴더를 싣지 않고 앱의 마지막 폴더를 쓰므로, 다르면(스크래치 워크스페이스 등) 그 세션을 사람에게 알리고 멈춘다. 첫 줄이 `/implement`면 티켓 파일이 없어 그 세션도 바로 멈춘다. 그 `sessionId`에 `set_session_title`로 1의 제목을 붙인다. 앱이 지은 제목은 묻지 않고 바뀐다. 끝: 응답이 `Renamed`.
-5. **옆에 띄운다.** 먼저 `get_window_layout`을 본다. 그 세션이 이미 패널에 있으면 `split` 대신 `focus`를 돌린다(분할 메뉴가 없어 헛돈다). 아니면 같은 스크립트를 `split`으로 돌린다. 마우스를 쓰지 않는다(접근성 패턴, 예비로 포커스+키). 출력이 `split=`이면 `get_window_layout`에서 그 세션이 두 번째 패널에 `focused: true`다. 메뉴가 사용자 클릭과 겹쳐 세 번 닫히면 스크립트가 옆 패널을 포기하고 그 세션 행을 눌러 메인 패널에 포커스로 띄우며 `focus=`를 낸다. 둘 다 통과다.
+5. **옆에 띄운다.** 먼저 `get_window_layout`을 본다. 그 세션이 이미 패널에 있으면 `split` 대신 `focus`를 돌린다(분할 메뉴가 없어 헛돈다). 아니면 같은 스크립트를 `split`으로 돌린다. 마우스를 쓰지 않는다(접근성 패턴, 예비로 포커스+키). 출력이 `split=`이면 `get_window_layout`에서 그 세션이 두 번째 패널에 `focused: true`다. 메뉴가 사용자 클릭과 겹쳐 세 번 닫히면 스크립트가 옆 패널을 포기하고 그 세션 행을 `Invoke`로 눌러 메인 패널에 포커스로 띄우며 `focus=`를 낸다. 둘 다 통과다. `split=`인데 `get_window_layout`의 포커스가 이 세션에 남아 있으면 `focus`를 한 번 더 돌린다.
 
    ```
    pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <제목>
