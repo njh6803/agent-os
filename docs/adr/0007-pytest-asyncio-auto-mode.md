@@ -17,4 +17,5 @@ date: 2026-09-21
 - dev 의존성이 하나 는다. 해석 결과 pytest-asyncio 1.4.0이 pytest 9.1.1과 충돌 없이 설치되고 추가 전이 의존성은 없다(2026-09-21 실측).
 - 기존 `sdk` 테스트의 `asyncio.run` 사용을 같은 티켓에서 바꾼다. 한 저장소에 두 방식을 두지 않는다.
 - `asyncio.run`을 빼먹은 코루틴은 pyright strict가 잡지 못하고 pytest는 `RuntimeWarning`만 내며 통과한다(2026-09-21 실측). auto 모드는 실행기를 붙이는 단계 자체를 없애 이 실패 양식을 지우지만, `await`를 빼먹는 쪽은 남는다. 그래서 pytest 설정에서 `RuntimeWarning`을 에러로 올린다. 원칙 II의 근거다.
+- **`RuntimeWarning` 하나만으로는 부족했다(2026-09-21 실측, 티켓 01).** `await` 누락 경고는 코루틴이 GC될 때 터지는 unraisable 예외라서, `error::RuntimeWarning`만 두면 pytest가 그것을 `PytestUnraisableExceptionWarning`으로 감싸 테스트가 그대로 통과한다. `error::pytest.PytestUnraisableExceptionWarning`을 같이 올려야 실제로 빨개진다. 설정이 그럴듯해 보이는 것과 검사가 도는 것은 다르다는 것을 일부러 await를 뺀 테스트로 확인했다.
 - 경고 전부를 에러로 올리지는 않는다. langchain과 프로바이더 SDK의 deprecation 경고가 우리 잘못이 아닌 이유로 스위트를 빨갛게 만들기 때문이다. 좁혀서 `RuntimeWarning` 하나만 올린다.
