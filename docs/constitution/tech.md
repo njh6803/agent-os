@@ -8,7 +8,7 @@
 | 패키지 관리 | uv, 단일 패키지, src 레이아웃 |
 | 린트·포맷 | ruff |
 | 타입 | pyright strict |
-| 테스트 | pytest, import 모드 importlib |
+| 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007 |
 | 경계 | import-linter |
 | 런타임 의존성 | core: `langgraph`, `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). ADR 0001 |
 | CLI | 표준 라이브러리 argparse |
