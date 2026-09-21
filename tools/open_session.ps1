@@ -20,14 +20,6 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Windows.Forms
-Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-public static class OpenSessionMouse {
-    [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
-    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-}
-'@
 
 $Auto = [System.Windows.Automation.AutomationElement]
 $Scope = [System.Windows.Automation.TreeScope]
@@ -56,26 +48,27 @@ function Find-ByName($win, [string[]] $names, $type) {
     return $null
 }
 
-function Wait-For([scriptblock] $probe, [string] $what) {
-    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+function Wait-For([scriptblock] $probe, [string] $what, [int] $Seconds = $TimeoutSec) {
+    $deadline = (Get-Date).AddSeconds($Seconds)
     while ((Get-Date) -lt $deadline) {
         $found = & $probe
         if ($found) { return $found }
         Start-Sleep -Milliseconds 500
     }
-    throw "${TimeoutSec}초 안에 $what 을(를) 찾지 못했다."
+    throw "${Seconds}초 안에 $what 을(를) 찾지 못했다."
 }
 
-# 호버로만 드러나는 버튼과 메뉴 항목은 InvokePattern 을 지원하지 않는다. 경계 상자 가운데를 클릭한다.
-function Click-Element($el) {
-    $r = $el.Current.BoundingRectangle
-    $x = [int]($r.X + $r.Width / 2)
-    $y = [int]($r.Y + $r.Height / 2)
-    [OpenSessionMouse]::SetCursorPos($x, $y) | Out-Null
-    Start-Sleep -Milliseconds 150
-    [OpenSessionMouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
-    [OpenSessionMouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 800
+# 마우스를 쓰지 않는다. 사용자가 마우스를 움직이는 중에도 돌아야 한다. Invoke 를 지원하는 요소
+# ("분할 보기", "보내기")는 Invoke 로, 아니면(행 옵션 버튼, "다음에서 열기") 포커스를 주고 키를
+# 보낸다(Enter, 하위 메뉴는 →). 키는 포커스된 요소로만 간다. ExpandCollapse 는 쓰지 않는다.
+# 실측에서 호출이 돌아오지 않고 멈춘 적이 있다(일지 2026-09-21 open-session).
+function Press-Element($el, [string] $key = '{ENTER}') {
+    try { $el.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 600; return 'invoke' } catch {}
+    $el.SetFocus()
+    Start-Sleep -Milliseconds 300
+    [System.Windows.Forms.SendKeys]::SendWait($key)
+    Start-Sleep -Milliseconds 600
+    return "key:$key"
 }
 
 function Send-Prompt {
@@ -124,12 +117,32 @@ function Split-Session {
     $win = Get-ClaudeWindow
     # `"$Title에"` 는 PowerShell 이 `$Title에` 라는 변수로 읽는다(한글이 변수 이름 문자다). 중괄호가 필수다.
     $row = Wait-For { Find-ByName $win @("${Title}에 대한 더 많은 옵션", "More options for ${Title}") $Types::Button } "사이드바 행 '${Title}'의 옵션 버튼"
-    Click-Element $row
-    $openIn = Wait-For { Find-ByName $win @('다음에서 열기', 'Open in') $Types::MenuItem } "'다음에서 열기' 메뉴"
-    Click-Element $openIn
-    $split = Wait-For { Find-ByName $win @('분할 보기', 'Split view') $Types::MenuItem } "'분할 보기' 메뉴"
-    Click-Element $split
-    "split=$(Get-Date -Format HH:mm:ss.fff)"
+    # 메뉴는 사용자가 앱 안 다른 곳을 클릭하면 닫힌다. 열려 있는 시간을 짧게(단계마다 3초) 두고
+    # 세 번까지 다시 연다. 세 번 다 닫히면 멈춘다. 새 세션은 이미 열려 있으니 옆 패널만 빠진다.
+    $last = $null
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            $how1 = Press-Element $row
+            $openIn = Wait-For { Find-ByName $win @('다음에서 열기', 'Open in') $Types::MenuItem } "'다음에서 열기' 메뉴" 3
+            $how2 = Press-Element $openIn '{RIGHT}'
+            $split = Wait-For { Find-ByName $win @('분할 보기', 'Split view') $Types::MenuItem } "'분할 보기' 메뉴" 3
+            $how3 = Press-Element $split
+            "split=$(Get-Date -Format HH:mm:ss.fff) attempt=$attempt via $how1,$how2,$how3"
+            return
+        } catch {
+            $last = $_
+            # 메뉴를 연 채로 다음 시도로 가지 않는다.
+            [System.Windows.Forms.SendKeys]::SendWait('{ESC}{ESC}')
+            Start-Sleep -Milliseconds 700
+        }
+    }
+    # 세 번 다 닫혔으면 옆 패널을 포기하고 그 세션 행을 눌러 메인 패널에 포커스로 띄운다. 행 이름은
+    # "<상태> <제목>"("유휴 …", "실행 중 …")이라 끝이 제목인 버튼을 찾는다. 옵션 버튼은 "…에 대한"이라 안 걸린다.
+    $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    $rowButton = $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { $_.Current.Name -and $_.Current.Name.EndsWith(" ${Title}") } | Select-Object -First 1
+    if (-not $rowButton) { throw "분할 메뉴가 세 번 닫혔고 행 '${Title}'도 못 찾았다. 새 세션은 열려 있다. 마지막 오류: $($last.Exception.Message)" }
+    $how = Press-Element $rowButton
+    "focus=$(Get-Date -Format HH:mm:ss.fff) via $how (분할 메뉴가 세 번 닫혀 포커스로 대신했다: $($last.Exception.Message))"
 }
 
 switch ($Action) {
