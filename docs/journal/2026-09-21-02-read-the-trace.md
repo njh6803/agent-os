@@ -50,6 +50,10 @@
 - `CONTEXT.md`에 `TraceStore`·`UnknownEvent` 항목이 없다. 포트 이름은 ADR 0009가 정했고 용어집은
   domain-modeling 스킬이 쓴다.
 
+PR 직전 CodeRabbit CLI는 Minor 하나. `read()`가 헤더와 이벤트의 `run_id` 일관성을 검증하지
+않는다. 쓰기가 `run_id`로 파일을 고르므로 정상 경로에서는 어긋날 수 없고, 어긋난 파일을 거부하는
+것은 트레이스를 재개 입력으로 신뢰하는 04의 판정 자리라 04 티켓 Comments에 이관했다.
+
 ## 검사
 
 `pytest` 145 passed, `ruff` check·format 통과, `pyright` 49파일 0 errors(`filesAnalyzed`로 먼저
