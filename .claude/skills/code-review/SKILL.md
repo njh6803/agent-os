@@ -20,7 +20,7 @@ The issue tracker should have been provided to you. If `docs/agents/issue-tracke
 
 Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main`, `HEAD~5`, etc.). If they didn't specify one, ask for it.
 
-`git merge-base <fixed-point> HEAD`로 base SHA를 한 번 구해 고정하고, 아래 명령과 서브에이전트 둘에 ref가 아니라 그 SHA를 넘긴다. 셸이 다시 확장하지 않고 두 축이 같은 나무를 본다.
+`git merge-base <fixed-point> HEAD`로 base SHA를 한 번 구해 고정하고, 아래 명령과 서브에이전트 둘에 ref가 아니라 그 SHA를 넘긴다. ref도 동작하지만 `main`은 세션 중 전진하고, 두 축이 각자 merge-base를 다시 구하면 서로 다른 나무를 본다.
 
 주 용도가 커밋 전 셀프 리뷰이므로 범위는 커밋된 것에서 끝나지 않는다. 셋을 잡는다.
 
