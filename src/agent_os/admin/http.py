@@ -252,27 +252,25 @@ class AssignRequestId(BaseHTTPMiddleware):
         return response
 
     async def _answer(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """정상 흐름과 예기치 않은 실패를 가른다(`CODING_STANDARDS.md` 의 에러 처리 분리)."""
+        """정상 흐름과 예기치 않은 실패를 가른다(`CODING_STANDARDS.md` 의 에러 처리 분리).
+
+        여기서도 `failure_for()` 를 지나는 이유는 표가 한 곳이어야 하기 때문이다. 이 자리에서
+        500 을 직접 만들면 "예상 밖 예외는 500" 이 두 곳에 있게 되고, 표의 마지막 갈래는 아무도
+        가지 않는 죽은 코드가 된다(PR 봇 둘이 같은 자리에 닿았다).
+        """
         try:
             return await call_next(request)
         except Exception as error:
             remember_failure(request, _detail_of(error))
-            return error_envelope(request, status=500, message=_INTERNAL)
+            return _enveloped(request, failure_for(error))
 
 
 def install_error_handlers(app: FastAPI) -> None:
     """예외를 상태 코드로 옮기는 표를 앱에 건다. 라우트가 각자 거는 자리를 두지 않는다."""
 
     async def handle(request: Request, error: Exception) -> Response:
-        failure = failure_for(error)
         remember_failure(request, _detail_of(error))
-        return error_envelope(
-            request,
-            status=failure.status,
-            message=failure.message,
-            violations=failure.violations,
-            headers=failure.headers,
-        )
+        return _enveloped(request, failure_for(error))
 
     app.add_exception_handler(StarletteHTTPException, handle)
     app.add_exception_handler(RequestValidationError, handle)
@@ -299,6 +297,17 @@ def admin_router(*, health: Health) -> APIRouter:
         return health
 
     return router
+
+
+def _enveloped(request: Request, failure: _Failure) -> JSONResponse:
+    """표가 정한 것을 봉투로 펼친다(질의). 기록은 부르는 쪽이 먼저 적어 둔다."""
+    return error_envelope(
+        request,
+        status=failure.status,
+        message=failure.message,
+        violations=failure.violations,
+        headers=failure.headers,
+    )
 
 
 def _failure_detail(request: Request) -> str:

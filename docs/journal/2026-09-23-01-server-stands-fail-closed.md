@@ -82,13 +82,48 @@ PR 직전 보안·버그 축이 비었다. CLI가 `You are not a member of the r
 그래서 이 PR의 보안·버그 축은 PR 봇에 맡겼다. 별 10개 미만이라 자동으로 돌지 않아 마지막 푸시
 뒤에 `@coderabbitai review`를 수동으로 남겼다.
 
-## PR 리뷰
+## PR 리뷰 — 봇 둘이 각자 자기 축에서 진짜를 냈다
 
-<!-- 병합 직전에 채운다 -->
+CodeRabbit 체크가 처음에 `pass` 였는데 사유가 "Review skipped: manual review required for this OSS
+repository"였다. 별 10개 미만이라 자동으로 돌지 않는다는 것을 operations.md가 이미 적었고, 마지막
+푸시 뒤에 `@coderabbitai review`를 수동으로 남기니 실제 리뷰가 나왔다.
+
+**CodeRabbit(보안·버그 축): 에러 봉투가 응답 헤더를 버린다.** 예외를 봉투로 바꾸면서 새
+`JSONResponse`를 만드는데 예외에 붙어 온 헤더를 넘기지 않았다. 그래서 **405가 `Allow`를 잃고
+401이 `WWW-Authenticate`를 내지 못했다.** RFC 9110이 둘 다 요구한다. 실측으로 둘 다 `None` 인
+것을 확인하고 테스트로 빨강을 본 뒤 고쳤다.
+
+이 지적이 값진 이유는 **우리가 만든 구조가 원인**이라는 것이다. "에러는 언제나 같은 봉투"라는
+결정이 옳았고 그 구현이 본문만 날랐다. 라우터가 예외에 붙여 준 정보가 봉투를 지나며 사라지는
+모양은 04·05·06이 라우트를 더할 때도 같은 자리에서 반복될 수 있었다. `_Failure`가 헤더를 한
+항목으로 같이 들게 해서 닫았다.
+
+**claude-review(유지보수성·경계 축): `.claude/rules/admin.md`의 `paths`에
+`tests/tools/test_export_openapi.py`가 빠졌다.** 그 파일만 여는 세션이 계약 규약을 자동으로 읽지
+못한다. 이 PR이 함께 만든 파일인데 목록에서 빠진 것이라, 하네스를 바꾸며 자기 하네스의 범위를
+놓친 모양이다. 같은 리뷰가 층 경계(FastAPI·Starlette 타입이 `admin`·`server`에만 머문다), 포트
+개수, CQS 분리, 미들웨어 등록 순서를 확인하고 나머지는 걸리는 것이 없다고 적었다.
+
+**PR 직전 CLI 축은 비었다.** 위의 좌석 문제 때문이고, 그래서 보안·버그 축을 PR 봇 하나가 전부
+졌다. 그 하나가 Minor 하나를 냈으니 축이 완전히 빈 것은 아니지만, CLI가 돌았으면 더 있었을지는
+알 수 없다.
+
+**둘째 바퀴에서 봇 둘이 같은 자리에 독립적으로 닿았다.** `failure_for()`의 마지막 갈래가 **도달
+불가능한 죽은 코드**였다. 등록된 예외 핸들러는 `StarletteHTTPException`·`RequestValidationError`·
+`PluginError` 셋뿐이라 그 셋만 표를 지나고, 나머지는 `AssignRequestId`가 잡아 500 봉투를 **직접**
+만들었다. "예상 밖 예외는 500"이 두 곳에 있었고 하나는 아무도 가지 않았다.
+
+첫 바퀴에서 표를 하나로 합치며 내가 놓친 것이 정확히 이것이다. 셋을 하나로 합친 것에 만족해
+**그 표를 누가 부르는지**는 보지 않았다. 미들웨어도 `failure_for()`를 지나게 해서 닫았고, 변이로
+확인했다 — 마지막 갈래의 상태 코드를 503으로 바꾸니 테스트가 빨개진다. 고치기 전이었다면 그
+변이가 초록으로 지나갔을 것이다.
 
 ## 검사
 
-<!-- 병합 직전에 채운다 -->
+`ruff check`·`ruff format --check` 통과, `pyright` 0 errors(`filesAnalyzed: 61`로 실제 분석 여부를
+먼저 봤다. main은 55였다), `lint-imports` 3 kept — **`(agent_os.server)` 층이 선언만 있던 상태에서
+실물이 됐다**, `pytest` 315 passed·3 deselected(main은 286이었다), 지침 검사, 타입 우회 검사 0건.
+pre-commit 훅 일곱이 커밋마다 같은 것을 다시 돌았다. LLM 호출은 0이라 토큰 합계가 없다.
 
 ## 회고
 
