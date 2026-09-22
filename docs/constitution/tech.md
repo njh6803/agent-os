@@ -8,7 +8,7 @@
 | 패키지 관리 | uv, 단일 패키지, src 레이아웃 |
 | 린트·포맷 | ruff |
 | 타입 | pyright strict |
-| 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007 |
+| 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007. HTTP 표면은 `httpx`의 `AsyncClient`와 `ASGITransport`로 민다(dev 전용, ADR 0010의 2026-09-22 이력) |
 | 경계 | import-linter |
 | 런타임 의존성 | core: `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. server: `fastapi`, `uvicorn`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). `langgraph`는 pyright strict 마찰로 2026-09-21에 뺐다. ADR 0001과 그 이력 |
 | CLI | 표준 라이브러리 argparse |

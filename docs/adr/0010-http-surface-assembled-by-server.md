@@ -21,3 +21,22 @@ date: 2026-09-22
 - **에러만 봉투로 감싼다.** `{code, message, violations, request_id}`. 성공 응답은 생값이고 추적 식별자는 `X-Request-Id` 헤더로 나간다. 예외를 HTTP 상태 코드로 옮기는 표는 `admin/http` 한 곳에 둔다 — 부재(포트가 `None`을 돌려준 것)는 404, `PluginError`는 **500**. 부재가 이미 404로 갈리므로 `PluginError`에 남는 것은 "서버 디스크의 매니페스트가 깨졌거나 읽을 수 없다"뿐이고, 그것은 클라이언트가 재요청으로 고칠 수 있는 일이 아니다. 4xx를 돌려주면 관리 화면이 "잘못 요청했다"고 표시해 운영자가 깨진 파일을 못 찾는다. 경로와 질의 파라미터의 형식 오류(없는 `kind` 등)는 그대로 FastAPI가 422로 내며 그것이 422의 제자리다. `core`의 예외는 상태 코드를 모른다.
 - **`main.py`에 `agent-os serve`가 는다.** `--host`(기본 `127.0.0.1`) `--port` `--traces` `--plugins-root`. 비밀만 환경변수이고, 루프백이 아닌 주소는 받지 않는다. 둘 다 ADR 0011. `--plugins-root`가 생기면서 지금 `main.py`에 `PLUGINS_ROOT = Path("plugins")`로 하드코딩된 것이 `run`·`resume`에서도 풀린다.
 - **`openapi.json`이 저장소 루트에 커밋된다.** 생성기는 `tools/export_openapi.py`, 최신성은 pytest 하나가 `create_app().openapi()`와 파일을 비교한다. 검사 명령 넷이 그대로 게이트이므로 새 훅을 만들지 않는다. 계약 파일이 하나 더 생기는 것이라 이후 `sdk`와 같은 무게로 다룬다.
+
+## 이력
+
+### 2026-09-22 테스트 클라이언트는 httpx이고 dev 의존성으로 선언한다
+
+`admin-api` 명세를 쓰며 열렸다. 이 문서는 런타임 의존성 둘(`fastapi`, `uvicorn`)만 셌는데,
+`create_app()`이 만든 앱에 요청을 넣어 보는 지점이 그 기능의 주 이음매라 그것을 미는 클라이언트가
+함께 필요하다. **`httpx`의 `AsyncClient`와 `ASGITransport`를 쓰고 dev 의존성으로 선언한다.**
+
+`fastapi.testclient.TestClient`도 같은 `httpx`를 요구하는데 동기 API라 내부에 포털을 띄운다. 이
+저장소의 비동기 테스트는 `asyncio_mode = "auto"`에서 `async def`로 쓰므로(ADR 0007) 관리 쪽에만
+다른 모양의 테스트가 생긴다. 클라이언트를 손으로 짜는 안은 거부했다 — HTTP 왕복을 짜는 그 코드가
+곧 자기는 테스트되지 않는 두 번째 클라이언트가 된다.
+
+`httpx`는 이미 `mcp` 뒤에서 락파일에 있다. 그래도 선언하는 이유는 전이 의존성에 기댄 테스트가 그
+전이 경로가 바뀌는 날 조용히 깨지기 때문이다. 선언 자체가 결정인 자리는 ADR 0007이 dev 전용
+`pytest-asyncio` 하나를 위해 문서를 남긴 것과 같다. `tech.md`가 "의존성을 추가하려면 ADR을
+남긴다"고 적었고 dev 의존성도 예외가 아니다. 스택 표의 테스트 행에 같이 적는다. **런타임 의존성은
+여섯 그대로다.**
