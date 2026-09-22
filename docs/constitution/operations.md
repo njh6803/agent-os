@@ -6,7 +6,7 @@
 LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `pytest -q`는 이 마커를 제외한다. `uv run --env-file .env pytest -m llm`이 돌리며, `.env`의 `ANTHROPIC_API_KEY`가 없으면 skip이 아니라 실패한다. `.env`는 커밋하지 않는다. 원칙 I의 판정은 이 명령이다. CI가 생겨도 매 푸시에서는 돌리지 않는다.
 
 ## 가드레일
-자동 검사는 둘이고 내용은 같다. 로컬 pre-commit 훅이 커밋마다, GitHub Actions CI(`.github/workflows/ci.yml`)가 푸시와 PR마다 ruff, ruff-format, pyright, import-linter, pytest(기본 마커), 지침 검사를 돈다. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. main은 보호 브랜치다. 필수 검사 `verify`, 최신 main 기준(strict), 선형 이력, 강제 푸시와 삭제 금지, 관리자 우회 허용(혼자일 때). 경위는 ADR 0005. 병합은 여전히 `/git-pr-merge`로 한다. 스킬이 체크를 먼저 보기 때문이다. 클론 뒤 `uv run pre-commit install`을 한 번 하면 pre-commit과 commit-msg 두 훅이 깔린다. 훅이 안 걸린 저장소는 그 자체가 결함이다. 훅 시스템은 pre-commit 하나만 둔다. 둘이면 `.git/hooks/pre-commit` 한 자리를 다퉈 한쪽이 조용히 안 걸린다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·import-linter·pytest는 돈다(`always_run`). CI에 경로 필터를 걸게 되면 미매칭은 skip이 아니라 실패로 만든다.
+자동 검사는 둘이고 내용은 같다. 로컬 pre-commit 훅이 커밋마다, GitHub Actions CI(`.github/workflows/ci.yml`)가 푸시와 PR마다 ruff, ruff-format, pyright, import-linter, pytest(기본 마커), 지침 검사, 타입 우회 검사를 돈다. 마지막 것이 원칙 III의 판정자다 — pyright strict가 `Any`·`cast`·억제 주석을 하나도 잡지 않아서 `tools/check_type_escapes.py`가 대신 판정한다. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. main은 보호 브랜치다. 필수 검사 `verify`, 최신 main 기준(strict), 선형 이력, 강제 푸시와 삭제 금지, 관리자 우회 허용(혼자일 때). 경위는 ADR 0005. 병합은 여전히 `/git-pr-merge`로 한다. 스킬이 체크를 먼저 보기 때문이다. 클론 뒤 `uv run pre-commit install`을 한 번 하면 pre-commit과 commit-msg 두 훅이 깔린다. 훅이 안 걸린 저장소는 그 자체가 결함이다. 훅 시스템은 pre-commit 하나만 둔다. 둘이면 `.git/hooks/pre-commit` 한 자리를 다퉈 한쪽이 조용히 안 걸린다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·import-linter·pytest는 돈다(`always_run`). CI에 경로 필터를 걸게 되면 미매칭은 skip이 아니라 실패로 만든다.
 
 ## 브랜치와 병합
 - 원격은 GitHub(`njh6803/agent-os`, 공개). main은 보호 브랜치다(가드레일 절). 티켓마다 `feature/<NN>-<slug>` 브랜치를 따고 혼자여도 PR을 연다. 티켓 밖의 하네스·설정 변경은 `chore/<slug>`, 문서만 바꾸면 `docs/<slug>`. 브랜치 이름은 그 작업을 하는 세션의 제목이기도 하다(`open-session`). `/git-pr`이 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다.
@@ -29,6 +29,8 @@ LLM을 실제로 호출하는 테스트는 `llm` 마커를 붙인다. 기본 `py
 - Claude Code Review는 플러그인을 쓰던 동안 코멘트 없이 `pass`가 되곤 했다(PR #2·#4·#5). 플러그인이 서브에이전트를 백그라운드로 띄우고 턴을 끝내는데 헤드리스 실행이 그 전에 종료됐다. 그래서 워크플로를 직접 프롬프트(단일 에이전트, 요약 코멘트 하나가 완료 조건)로 바꾸고, 실행 시작 뒤 생긴 `claude[bot]` 코멘트가 0개면 잡을 실패시키는 스텝을 둔다(2026-09-20 회고 후보 1, PR #10). 그 워크플로부터는 코멘트가 없는 초록이 나오지 않아야 하고, 나오면 `uv run python tools/gh_run_summary.py <run-id>`로 결과 블록·경고·Claude의 말을 본다.
 - Claude Code Review는 PR 헤드의 `.claude/`, `CLAUDE.md`, `.mcp.json`을 쓰지 않고 main의 것으로 되돌린다. 하네스를 바꾼 PR은 병합된 뒤에야 리뷰에 반영된다.
 - 병합 전에 코멘트가 실제로 있는지 본다. 코멘트 0개인 초록은 "리뷰 없음"으로 읽고 이유를 확인한다.
+- CodeRabbit이 초록으로 지나가는 사유가 하나 더 있다. **별이 10개 미만인 저장소는 자동 리뷰를 받지 않는다**(PR #43 실측, "This repository does not receive automatic reviews because it has fewer than 10 stars"). 공개라서 무료인 것과 자동으로 도는 것은 다르다. 수동으로 `@coderabbitai review`를 남겨야 하고, **그 코멘트 뒤에 푸시하면 "Pull request base or head changed"로 아무것도 하지 않는다**(같은 PR 실측). 요청은 마지막 푸시 뒤에 남긴다.
+- Claude Code Review가 워크플로 변경 PR에서 건너뛴다는 위 항목에 반례가 있다. **PR #43은 `ci.yml`을 바꿨는데도 두 번 다 실행돼 실질 리뷰를 냈다.** 조건이 무엇인지는 아직 모르므로 위 항목을 지우지 않고 둘 다 둔다. 판정은 언제나 "코멘트가 실제로 있는가"다.
 - CodeRabbit PR 리뷰는 OSS 시간당 한도에 자주 걸린다(첫 슬라이스 PR 일곱 중 다섯이 "Review rate limited"로 `pass`). 그 PR의 보안·버그 축은 PR 직전 CLI 슬라이스 리뷰 결과를 그 PR 코멘트로 링크한 것이 대체이고, 링크가 없으면 리뷰 없음이다.
 
 전제 둘은 사람이 한 번 한다. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.

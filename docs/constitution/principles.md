@@ -11,7 +11,7 @@ LLM을 실제로 호출하는 테스트 하나가 통과하기 전에는 헌법,
 구현 전에 실패하는 테스트를 쓴다. 테스트가 실패하면 테스트를 고치지 않고 멈춰 보고한다. 환경 부재로 skip된 테스트는 초록이 아니다.
 
 ## III. 타입 우회 금지
-`Any`, `cast`, `type: ignore`, `pyright: ignore`를 쓰지 않는다. pyright strict가 판정하며 테스트 코드도 대상이다.
+`Any`, `cast`, `type: ignore`, `pyright: ignore`를 쓰지 않는다. `tools/check_type_escapes.py`가 판정하며 테스트 코드도 대상이다. pyright strict는 이 넷을 하나도 잡지 않는다(ADR 0013).
 
 ## IV. 코어는 바깥을 모른다
 `agent_os.core`는 `agent_os.channel`, `agent_os.admin`, `agent_os.adapters`, DB, 구체 파일 경로를 import하지 않는다. 플러그인은 `agent_os.sdk`만 import한다. 의존 방향은 `main → server → {channel | admin | adapters} → core → sdk`, `plugins → sdk`뿐이다. 채널, 관리, 어댑터는 서로를 import하지 않고 `main`과 `server`가 조립한다. import-linter가 판정한다. 포트와 어댑터의 세부는 `.claude/rules/core.md`와 `adapters.md`.

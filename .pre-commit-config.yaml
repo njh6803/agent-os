@@ -38,6 +38,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: check-type-escapes
+        name: type escapes (Any, cast, 타입 억제 주석 — 원칙 III)
+        entry: uv run python tools/check_type_escapes.py
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: commit-msg
         name: commit message (conventional commits)
         entry: uv run python tools/check_commit_msg.py
