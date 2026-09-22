@@ -1,0 +1,192 @@
+"""타입 우회 검사. 헌법 원칙 III의 기계 판정자.
+
+원칙 III는 `Any`, `cast`, `type: ignore`, `pyright: ignore`를 금하는데 **pyright strict는 그 넷을
+하나도 잡지 않는다.** 명시적 `Any`는 Unknown이 아니고, `cast`는 정상 API이며, 억제 주석은 정의상
+억제된다. ruff의 지금 select도 마찬가지다. 그래서 헌법 원칙 하나가 교정 루프 사다리("타입 →
+린터·훅 → 아키텍처 테스트 → 지침 → 리뷰")의 맨 아래 층에 있었다.
+
+pre-commit과 CI가 돌린다. 판정자는 이 파일 하나다 — ruff 규칙 일부(ANN401, PGH003)와 pyright 설정
+일부(`enableTypeIgnoreComments`)를 함께 켜면 넷을 부분씩 나눠 보는 판정자가 둘 이상 생기고, 그것이
+티켓 01에서 같은 패턴 문자열을 엔진 둘이 다르게 읽어 계약 결함이 검사 넷을 통과한 모양이다.
+
+**grep이 아니라 파싱이다.** 이 저장소의 문서·주석·테스트는 금지된 이름을 계속 입에 올린다(이 파일이
+그 예다). 이름은 AST에서, 억제 지시문은 주석 토큰에서만 본다. 거짓 양성을 줄인 자리가 셋이다.
+
+- 속성 접근은 `typing`을 가리키는 이름 뒤일 때만 본다. 남의 `cast` 메서드를 잡지 않는다.
+- 주석은 지시문의 꼴을 온전히 갖췄을 때만 본다. 지시문을 설명하는 산문 주석은 지나간다.
+- 반대로 **문자열로 쓴 주해는 다시 파싱한다.** `x: "typing.Any"`는 AST에서 이름이 아니지만 pyright가
+  `Any`로 읽으므로 그것이 곧 우회다.
+
+이름은 문맥을 가리지 않는다. `cast`라는 지역 변수도 잡히고 비용은 개명 한 번이다. 대입과 읽기를
+가르면 `cast = 3`은 통과하고 `print(cast)`는 걸리는, 설명할 수 없는 규칙이 된다.
+"""
+
+from __future__ import annotations
+
+import ast
+import io
+import re
+import tokenize
+import tomllib
+from collections.abc import Iterator
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# 쓰면 안 되는 이름 둘. 어디서 왔든(typing 의 속성이든 import 한 이름이든) 같게 본다.
+BANNED_NAMES = frozenset({"Any", "cast"})
+
+# 속성 접근을 볼 기준이 되는 모듈. 별칭으로 import 하면 그 별칭도 여기에 붙는다.
+_TYPING_MODULES = frozenset({"typing", "typing_extensions"})
+
+_STRICT = "strict"
+
+# 주석 하나가 통째로 지시문일 때만 억제다. 산문이 뒤에 붙으면 억제하지도 않는다.
+_TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?:\[[^\]]*\])?\s*$")
+_PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S.*?)\s*$")
+# pyright 지시문 중 통과하는 것은 조이는 쪽 하나뿐이다. 억제도, basic 도, reportX=false 도
+# 전부 파일 하나의 판정을 느슨하게 하는 같은 종류다.
+_PYRIGHT_BODY = re.compile(
+    r"^(?:ignore(?:\[[^\]]*\])?|basic|standard|strict|off|report\w+\s*=\s*\S+)$"
+)
+
+
+def scanned_roots(root: Path = ROOT) -> tuple[str, ...]:
+    """검사할 디렉터리. `[tool.pyright]`의 `include`를 그대로 읽는다.
+
+    범위를 손으로 두 곳에 적지 않는다. 타입체커가 보지 않는 곳에서 우회를 금해도 뜻이 없고,
+    타입체커가 보는 곳이 늘었는데 이 판정자가 모르면 그 구간이 조용히 열린다.
+
+    `typeCheckingMode`가 strict가 아니면 멈춘다. 파일 하나에 거는 `pyright` 지시문을 잡으면서
+    저장소 전체를 끄는 설정 한 줄을 지나치면, 더 센 우회가 더 조용한 우회가 된다.
+    """
+    설정 = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    모드: object = 설정["tool"]["pyright"]["typeCheckingMode"]
+    if 모드 != _STRICT:
+        raise ValueError(f"[tool.pyright] typeCheckingMode 가 {_STRICT!r} 가 아니다: {모드!r}")
+    include: list[object] = 설정["tool"]["pyright"]["include"]
+    디렉터리 = tuple(항목 for 항목 in include if isinstance(항목, str))
+    if len(디렉터리) != len(include):
+        raise ValueError("[tool.pyright] include 가 문자열 목록이 아니다")
+    return 디렉터리
+
+
+def escapes_in(source: str) -> list[str]:
+    """소스 하나에서 찾은 우회. 항목은 `"<줄번호>: <무엇>"`이고 줄 순서다."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as error:
+        return [f"{error.lineno or 0}: 파싱할 수 없어 판정하지 못했다 ({error.msg})"]
+
+    찾은것 = _banned_names(tree) + _suppression_comments(source)
+    return [한줄 for _, 한줄 in sorted(찾은것, key=lambda 짝: 짝[0])]
+
+
+def _banned_names(tree: ast.Module) -> list[tuple[int, str]]:
+    """AST에서만 본다. 문자열 리터럴과 독스트링에 같은 말이 있어도 이름이 아니다."""
+    별칭 = _typing_aliases(tree)
+    찾은것: list[tuple[int, str]] = []
+    for node in _every_node(tree):
+        자리 = _named(node, 별칭)
+        if 자리 is not None and 자리[1] in BANNED_NAMES:
+            줄, 이름 = 자리
+            찾은것.append((줄, f"{줄}: `{이름}` 은 원칙 III 가 금한다"))
+    return 찾은것
+
+
+def _typing_aliases(tree: ast.Module) -> frozenset[str]:
+    """이 파일에서 typing 모듈을 가리키게 된 이름들. `import typing as tp` 의 `tp` 도 포함한다."""
+    이름들 = set(_TYPING_MODULES)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Import):
+            continue
+        for alias in node.names:
+            if alias.name in _TYPING_MODULES and alias.asname is not None:
+                이름들.add(alias.asname)
+    return frozenset(이름들)
+
+
+def _every_node(tree: ast.Module) -> Iterator[ast.AST]:
+    """AST의 모든 노드. 문자열로 쓴 주해는 표현식으로 다시 파싱해 그 안까지 연다."""
+    for node in ast.walk(tree):
+        yield node
+        for 주해 in _annotations_of(node):
+            yield from _reparsed_strings(주해)
+
+
+def _annotations_of(node: ast.AST) -> list[ast.expr]:
+    """주해가 실리는 자리. 문자열이 타입으로 읽히는 곳은 여기뿐이다."""
+    match node:
+        case ast.AnnAssign(annotation=주해):
+            return [주해]
+        case ast.arg(annotation=ast.expr() as 주해):
+            return [주해]
+        case ast.FunctionDef(returns=ast.expr() as 주해):
+            return [주해]
+        case ast.AsyncFunctionDef(returns=ast.expr() as 주해):
+            return [주해]
+        case _:
+            return []
+
+
+def _reparsed_strings(주해: ast.expr) -> Iterator[ast.AST]:
+    """주해 안의 문자열을 표현식으로 파싱한 노드들. 줄번호는 그 문자열이 있던 줄로 맞춘다."""
+    for node in ast.walk(주해):
+        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+            continue
+        try:
+            안 = ast.parse(node.value, mode="eval")
+        except SyntaxError:
+            continue
+        for 속 in ast.walk(안.body):
+            yield ast.copy_location(속, node)
+
+
+def _named(node: ast.AST, 별칭: frozenset[str]) -> tuple[int, str] | None:
+    """이름을 가진 노드의 줄번호와 이름. 나머지는 None."""
+    match node:
+        case ast.Name(lineno=줄, id=이름):
+            return (줄, 이름)
+        case ast.Attribute(lineno=줄, attr=이름, value=ast.Name(id=모듈)) if 모듈 in 별칭:
+            return (줄, 이름)
+        case ast.alias(lineno=줄, name=이름):
+            return (줄, 이름.rsplit(".", 1)[-1])
+        case _:
+            return None
+
+
+def _suppression_comments(source: str) -> list[tuple[int, str]]:
+    """주석 토큰에서만 본다. 지시문의 꼴을 온전히 갖춘 것만 억제로 센다."""
+    찾은것: list[tuple[int, str]] = []
+    for token in tokenize.generate_tokens(io.StringIO(source).readline):
+        if token.type != tokenize.COMMENT:
+            continue
+        줄 = token.start[0]
+        if _TYPE_IGNORE.match(token.string) is not None:
+            찾은것.append((줄, f"{줄}: 타입 억제 주석은 원칙 III 가 금한다"))
+        지시문 = _PYRIGHT_DIRECTIVE.match(token.string)
+        if 지시문 is None:
+            continue
+        본문 = 지시문.group("rest")
+        if _PYRIGHT_BODY.match(본문) is not None and 본문 != _STRICT:
+            찾은것.append((줄, f"{줄}: pyright 지시문이 판정을 느슨하게 한다"))
+    return 찾은것
+
+
+def main(root: Path = ROOT) -> int:
+    """`root` 아래의 검사 범위를 전부 훑는다. 범위는 그 트리의 pyright 설정이 정한다."""
+    문제: list[str] = []
+    for 디렉터리 in scanned_roots(root):
+        기준 = root / 디렉터리
+        if not 기준.is_dir():
+            continue
+        for path in sorted(기준.rglob("*.py")):
+            상대 = path.relative_to(root).as_posix()
+            문제.extend(f"{상대}:{한줄}" for 한줄 in escapes_in(path.read_text(encoding="utf-8")))
+    for 한줄 in 문제:
+        print(한줄)
+    return 1 if 문제 else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -3,7 +3,7 @@ name: retro
 description: "세션 회고. 사용자가 /retro를 치거나 마무리를 말할 때, 일지의 '다음' 절을 갱신하며 단계를 닫을 때 돌린다."
 ---
 
-<!-- 프로젝트 사본, model-invoked. 원본(mattpocock/skills)은 disable-model-invocation: true. 근거는 일지 2026-09-20. -->
+<!-- 프로젝트 사본, model-invoked. 원본(mattpocock/skills)은 disable-model-invocation: true. 근거는 일지 2026-09-20. 5단계(승인분을 대기열에 적는다)를 더했다. 근거는 일지 2026-09-22-10의 승인 2. -->
 
 You are running a **retrospective** for this session, either because the user asked or because a stage just closed (the journal's "다음" section was updated, or the user said they are wrapping up). You are suggesting improvements to the coding agent's **environment** to improve future runs. Present candidates only; the user approves what gets applied.
 
@@ -24,6 +24,8 @@ You are running a **retrospective** for this session, either because the user as
 - **Information access**: look for opportunities to increase the agent's access to information. Teeing dev server logs, readonly access to third-party services. _Use when_ a crucial piece of information was not available to the agent.
 
 4. Present these candidates to the user, in order of severity.
+
+5. 승인된 것 중 **이 세션에서 반영하지 않는 것**을 `.scratch/retro-queue.md`에 줄로 적는다. 후보와 기각은 일지에만 남고 거기 오지 않는다. 대기열이 일지 산문에만 있으면 다음 세션이 그것을 세느라 파일 열여섯 개를 읽는다. 이 세션에서 닫은 줄은 취소선을 긋고 어디서 닫혔는지 적는다.
 
 ## Reference
 

@@ -1,0 +1,175 @@
+"""tools/check_type_escapes.py. 원칙 III의 기계 판정자.
+
+`Any`·`cast`·`type: ignore`·`pyright: ignore`를 pyright strict 도 지금의 ruff select 도 잡지
+않는다. 교정 루프의 사다리("타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰")에서 헌법 원칙 하나가
+맨 아래 층에 있던 것을 훅 층으로 올린 것이다.
+
+이 테스트가 고정하는 것은 **판정자가 무엇을 보고 무엇을 보지 않는가**다. 양쪽 다 고정한다 —
+문자열과 주석을 가르지 못하면 이 저장소의 산문이 통째로 빨개지고, 문자열로 쓴 주해를 열지 못하면
+`Any` 가 따옴표 하나로 빠져나간다.
+"""
+
+from __future__ import annotations
+
+import tomllib
+from pathlib import Path
+
+import pytest
+from tools.check_type_escapes import ROOT, escapes_in, main, scanned_roots
+
+
+def _가짜_저장소(root: Path, *, mode: str = "strict", include: str = '["src"]') -> None:
+    """검사 범위를 정하는 것은 그 트리의 pyright 설정이다. 테스트 트리도 자기 것을 갖는다."""
+    (root / "pyproject.toml").write_text(
+        f'[tool.pyright]\ninclude = {include}\ntypeCheckingMode = "{mode}"\n',
+        encoding="utf-8",
+        newline="\n",
+    )
+    (root / "src").mkdir(exist_ok=True)
+
+
+def test_Any_를_쓰면_잡는다() -> None:
+    source = "from typing import Any\n\n\ndef f(x: Any) -> None: ...\n"
+
+    문제 = escapes_in(source)
+
+    assert 문제 != []
+    assert all("Any" in 한줄 for 한줄 in 문제)
+
+
+def test_점으로_부른_Any_도_잡는다() -> None:
+    source = "import typing\n\n\ndef f(x: typing.Any) -> None: ...\n"
+
+    assert escapes_in(source) != []
+
+
+def test_별칭으로_import_한_typing_도_잡는다() -> None:
+    source = "import typing as tp\n\n\ndef f(x: tp.Any) -> None: ...\n"
+
+    assert escapes_in(source) != []
+
+
+def test_문자열로_쓴_주해_안의_Any_도_잡는다() -> None:
+    """따옴표 하나로 빠져나가는 자리. AST에서는 이름이 아니지만 pyright 는 Any 로 읽는다."""
+    source = 'import typing\n\n\ndef f(x: "typing.Any") -> None: ...\n'
+
+    문제 = escapes_in(source)
+
+    assert len(문제) == 1
+    assert 문제[0].startswith("4:")
+
+
+def test_주해_안쪽에_끼워_넣은_문자열도_잡는다() -> None:
+    source = 'from typing import Any\n\n\nx: dict[str, "Any"] = {}\n'
+
+    assert any(한줄.startswith("4:") for 한줄 in escapes_in(source))
+
+
+def test_cast_호출을_잡는다() -> None:
+    source = "from typing import cast\n\n\ndef f(x: object) -> str:\n    return cast(str, x)\n"
+
+    문제 = escapes_in(source)
+
+    assert 문제 != []
+    assert all("cast" in 한줄 for 한줄 in 문제)
+
+
+def test_별칭으로_import_한_cast_는_import_에서_잡힌다() -> None:
+    source = "from typing import cast as c\n\n\nx = c(int, 1)\n"
+
+    assert escapes_in(source) != []
+
+
+def test_typing_이_아닌_것의_cast_속성은_잡지_않는다() -> None:
+    """남의 `cast` 메서드까지 잡으면 하드 게이트가 거짓 양성 기계가 된다."""
+    source = 'def f(col: object) -> object:\n    return col.cast("int")\n'
+
+    assert escapes_in(source) == []
+
+
+def test_진짜_억제_주석을_잡는다() -> None:
+    source = "x: int = 1\ny: str = x  # type: ignore[assignment]\n"
+
+    문제 = escapes_in(source)
+
+    assert len(문제) == 1
+    assert 문제[0].startswith("2:")
+
+
+def test_pyright_ignore_주석을_잡는다() -> None:
+    source = "x: int = 1\ny: str = x  # pyright: ignore[reportAssignmentType]\n"
+
+    assert len(escapes_in(source)) == 1
+
+
+def test_파일_전체에_거는_pyright_basic_도_잡는다() -> None:
+    """`basic` 은 억제가 아니지만 파일 하나의 strict 를 끄는 같은 종류의 우회다."""
+    assert escapes_in("# pyright: basic\nx: int = 1\n") != []
+
+
+def test_조이는_쪽의_지시문은_지나간다() -> None:
+    assert escapes_in("# pyright: strict\nx: int = 1\n") == []
+
+
+def test_지시문을_설명하는_산문_주석은_잡지_않는다() -> None:
+    """이 저장소의 주석은 금지된 지시문을 계속 입에 올린다. 꼴을 온전히 갖춘 것만 억제다."""
+    source = "# type: ignore 를 쓰지 않는다\n# pyright: ignore 를 달지 않는다는 뜻이다\nx = 1\n"
+
+    assert escapes_in(source) == []
+
+
+def test_문자열과_독스트링_안의_같은_말은_잡지_않는다() -> None:
+    """grep 판정자와 갈리는 자리."""
+    source = (
+        '"""원칙 III 는 Any 와 cast 를 금한다. type: ignore 도 마찬가지다."""\n'
+        "\n"
+        '금지 = ("Any", "cast")\n'
+        '설명 = "pyright: ignore 를 달지 않는다"\n'
+    )
+
+    assert escapes_in(source) == []
+
+
+def test_깨끗한_소스는_통과한다() -> None:
+    assert escapes_in("def f(x: int) -> str:\n    return str(x)\n") == []
+
+
+def test_파싱되지_않는_소스는_문제로_남는다() -> None:
+    """판정할 수 없는 파일을 조용히 통과시키지 않는다. ruff 가 먼저 잡겠지만 여기도 닫아 둔다."""
+    assert escapes_in("def f(\n") != []
+
+
+def test_검사_범위가_pyright_의_include_와_같다() -> None:
+    """범위를 손으로 두 곳에 적지 않는다. 티켓 01 이 판정자 둘로 갈려 겪은 것과 같은 종류다."""
+    설정 = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert list(scanned_roots()) == 설정["tool"]["pyright"]["include"]
+
+
+def test_strict_가_아니면_멈춘다(tmp_path: Path) -> None:
+    """파일 하나에 거는 지시문을 잡으면서 저장소 전체를 끄는 설정 한 줄을 지나치지 않는다."""
+    _가짜_저장소(tmp_path, mode="basic")
+
+    with pytest.raises(ValueError, match="typeCheckingMode"):
+        scanned_roots(tmp_path)
+
+
+def test_include_가_문자열_목록이_아니면_멈춘다(tmp_path: Path) -> None:
+    _가짜_저장소(tmp_path, include="[1, 2]")
+
+    with pytest.raises(ValueError, match="include"):
+        scanned_roots(tmp_path)
+
+
+def test_이_저장소에_지금_타입_우회가_0건이다() -> None:
+    assert main() == 0
+
+
+def test_우회가_있는_파일이_섞이면_실패한다(tmp_path: Path) -> None:
+    _가짜_저장소(tmp_path)
+    (tmp_path / "src" / "clean.py").write_text("x: int = 1\n", encoding="utf-8", newline="\n")
+    (tmp_path / "src" / "dirty.py").write_text(
+        "from typing import Any\n\nx: Any = 1\n", encoding="utf-8", newline="\n"
+    )
+
+    assert main(tmp_path) == 1
