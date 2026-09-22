@@ -9,13 +9,17 @@ paths:
 
 | 포트 | 무엇 | 첫 어댑터 |
 |---|---|---|
-| TraceStore | 이벤트 쓰기와 한 실행의 트레이스 읽기 | JSONL 파일 |
-| PluginSource | 매니페스트와 코드 읽기 | 파일시스템(ADR 0003) |
+| TraceStore | 이벤트 쓰기, 한 실행의 트레이스 읽기, 실행 요약 목록(`list`) | JSONL 파일 |
+| PluginSource | 매니페스트와 코드 읽기, 종류별 매니페스트 목록(`list_manifests`) | 파일시스템(ADR 0003) |
 | ToolSource | 도구 목록과 호출 | MCP(langchain-mcp-adapters) |
 | ChatModel | 모델 호출 | langchain-anthropic. 포트 자체는 langchain-core의 추상 클래스 |
 | Clock | 시각과 run_id | 시스템 시계, uuid4 |
 
-- 포트를 더하려면 core가 바깥과 닿는 새 지점이어야 하고 ADR을 남긴다.
+- 포트를 더하려면 core가 바깥과 닿는 새 지점이어야 하고 ADR을 남긴다. 기존 포트에 메서드를 더하는 것은 닿는 지점이 그대로일 때만이다(ADR 0012).
+- 목록은 읽히는 것을 전부 돌려주고 읽히지 않는 것은 표지로 남긴다(`UnreadableManifest`, `UnreadableTrace`). 같은 파일을 단건으로 읽으면 `PluginError`다. 이 비대칭은 의도이고 논증은 ADR 0012의 2026-09-22 이력 셋에 있다. 테스트가 고정한다.
+- 실행 상태는 마지막 이벤트 하나로 파생하고 어디에도 저장하지 않는다. 값은 넷이고 모르는 종류여도 결말 없음이다. 규칙은 `run_status()` 한 곳에 있어서 관리와 채널과 CLI가 각자 다시 구현하지 않는다. 요약의 필드는 일곱이고 프롬프트·토큰 수·출력·이벤트는 없다. 정렬은 시작 시각 역순이고 커서는 그 키 그대로(`Cursor`)이며 오프셋이 아니다. `limit`의 기본값 50과 상한 200은 `core/ports.py`가 소유하고 질의 검증과 `openapi.json`이 그것을 읽는다.
+- 식별자 둘의 문자 집합은 `sdk/ids.py`의 패턴이고 판정자는 `is_plugin_name`·`is_run_id` 하나씩이다. 판정자가 `match`가 아니라 `fullmatch`인 이유는 파이썬 `re`의 `$`가 꼬리 개행 앞에서도 맞아서 pydantic·FastAPI의 rust 엔진보다 느슨해지기 때문이다. 패턴 문자열은 두 엔진이 공유한다.
+- 어기는 이름을 목록이 다루는 방식은 둘이 갈리고 의도다. **트레이스 파일은 목록에서 빠진다** — 그 표지는 실행 식별자 하나만 들어서 되물을 수 없는 식별자가 곧 죽은 행이 되고, 그 이름의 파일은 런타임이 만들 수도 없다. 그래서 실행 요약과 트레이스 표지가 내는 식별자는 언제나 패턴을 만족한다. **매니페스트 디렉터리는 표지로 남는다** — 사람이 손으로 만드는 것이라 조용히 빼면 등록했다고 믿는 것과 실제가 어긋나고, 그 표지는 종류와 이름과 이유를 들어 단건 조회가 줄 것을 이미 담는다. 그래서 `UnreadableManifest.name`은 `PluginName`이 아니라 `str`이다.
 - 유스케이스 클래스, 커맨드·결과 객체, 도메인별 포트는 두지 않는다. 채널과 관리는 core의 함수와 클래스를 직접 부른다.
 - core는 `langchain_anthropic`, `langchain_mcp_adapters`, channel, admin, adapters를 import하지 않는다. import-linter가 판정한다. 프로바이더 교체는 core 밖의 일이다.
 - 루프는 `core/loop.py`가 langchain-core `BaseChatModel` 위에 직접 돌린다. 플러그인은 그것을 모른다(ADR 0001과 그 2026-09-21 이력 둘).

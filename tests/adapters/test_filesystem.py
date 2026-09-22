@@ -1,13 +1,23 @@
 """파일시스템 PluginSource. 디렉터리에 놓는 것만으로 등록이 끝나는지."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from agent_os.adapters.filesystem import FilesystemPlugins
-from agent_os.core.ports import PluginError, PluginSource
-from agent_os.sdk import AgentContext, BaseAgent, Event, PluginKind, PluginName, RunFinished, RunId
+from agent_os.core.ports import ManifestRow, PluginError, PluginSource, UnreadableManifest
+from agent_os.sdk import (
+    AgentContext,
+    BaseAgent,
+    Event,
+    PluginKind,
+    PluginManifest,
+    PluginName,
+    RunFinished,
+    RunId,
+)
 
 AGENT_SRC = """
 from collections.abc import AsyncIterator
@@ -179,3 +189,124 @@ def test_디렉터리와_name이_어긋나면_에러다(root: Path) -> None:
 
     with pytest.raises(PluginError, match="name"):
         plugins.read_manifest(PluginKind.AGENT, PluginName("outer"))
+
+
+def _names(rows: Sequence[ManifestRow]) -> list[str]:
+    return [row.name for row in rows]
+
+
+def test_종류_하나의_매니페스트를_전부_돌려준다(root: Path) -> None:
+    _write_agent(root, "alpha")
+    _write_agent(root, "beta")
+    _write_mcp(root, "everything")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert _names(rows) == ["alpha", "beta"]
+    assert all(isinstance(row, PluginManifest) for row in rows)
+
+
+def test_빈_디렉터리와_없는_디렉터리가_빈_목록이다(root: Path) -> None:
+    (root / "models").mkdir()
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    assert plugins.list_manifests(PluginKind.MODEL) == ()
+    assert plugins.list_manifests(PluginKind.SKILL) == ()
+
+
+def _write_broken(root: Path) -> None:
+    """읽히지 않는 모양 셋. 매니페스트는 사람이 손으로 쓰는 파일이라 깨지는 것이 예상된 경로다."""
+    for name, text in (
+        ("badversion", _manifest("agent", "badversion").replace('"1"', '"9"')),
+        ("nokind", 'schema_version = "1"\nname = "nokind"\nversion = "0.1.0"\n'),
+        ("wrongkind", _manifest("mcp", "wrongkind", '[server]\ncommand = "x"\n')),
+    ):
+        directory = root / "agents" / name
+        directory.mkdir(parents=True)
+        (directory / "plugin.toml").write_text(text, encoding="utf-8")
+
+
+def test_깨진_매니페스트가_섞여도_읽히는_것은_전부_돌아오고_깨진_것은_표지다(root: Path) -> None:
+    """깨진 하나가 전부를 가리면 무엇이 살아 있는지조차 알 수 없다. 표지가 이름과 이유를 든다."""
+    _write_agent(root, "alpha")
+    _write_broken(root)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert _names(rows) == ["alpha", "badversion", "nokind", "wrongkind"]
+    assert isinstance(rows[0], PluginManifest)
+    broken = rows[1:]
+    assert all(isinstance(row, UnreadableManifest) for row in broken)
+    assert all(
+        isinstance(row, UnreadableManifest)
+        and row.kind is PluginKind.AGENT
+        and row.name in row.reason
+        for row in broken
+    )
+
+
+def test_열_수_없는_매니페스트가_있어도_목록이_살아남는다(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """권한 오류와 경쟁 삭제는 OSError 이고 ValueError 가 아니다. 포장하지 않으면 매니페스트
+    하나가 목록 전체를 가리는데 그것이 ADR 0012 이력이 막으려 한 모양이다.
+
+    실제 권한 오류를 이식성 있게 만들 수 없어 읽기만 주입한다. 보는 것은 바깥 행동 그대로다 —
+    목록이 살아남고 그 자리에 표지가 서는 것.
+    """
+    _write_agent(root, "alpha")
+    _write_agent(root, "locked")
+    original = Path.read_text
+
+    def refuse(self: Path, encoding: str | None = None, errors: str | None = None) -> str:
+        if self.parent.name == "locked":
+            raise PermissionError(13, "권한이 없다")
+        return original(self, encoding, errors)
+
+    monkeypatch.setattr(Path, "read_text", refuse)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert _names(rows) == ["alpha", "locked"]
+    assert isinstance(rows[0], PluginManifest)
+    assert isinstance(rows[1], UnreadableManifest)
+    assert "권한" in rows[1].reason
+
+
+def test_같은_깨진_파일을_단건으로_읽으면_PluginError다(root: Path) -> None:
+    """목록과 단건의 비대칭이 의도다. 문서에만 두면 다음 사람이 일관성 결함으로 보고 고친다."""
+    _write_broken(root)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    for name in ("badversion", "nokind", "wrongkind"):
+        with pytest.raises(PluginError, match=name):
+            plugins.read_manifest(PluginKind.AGENT, PluginName(name))
+
+
+def test_플러그인_이름_패턴을_어기는_디렉터리도_표지로_남는다(root: Path) -> None:
+    """조용히 빼면 등록했다고 믿는 것과 실제가 어긋난다. 대소문자 오해가 가장 흔한 모양이다.
+
+    런타임은 이 디렉터리를 로드할 수 없지만 표지가 종류와 이름과 이유를 들어, 단건 조회가 줄 것을
+    이미 전부 담는다. 트레이스 쪽과 갈리는 것이 의도다 — 그 표지는 실행 식별자 하나만 든다.
+    """
+    _write_agent(root, "alpha")
+    odd = ("MyAgent", "두 낱말", "a", "-앞이하이픈")
+    for name in odd:
+        directory = root / "agents" / name
+        directory.mkdir(parents=True)
+        (directory / "plugin.toml").write_text(_manifest("agent", "alpha"), encoding="utf-8")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert sorted(_names(rows)) == sorted(["alpha", *odd])
+    readable = [row for row in rows if isinstance(row, PluginManifest)]
+    assert _names(readable) == ["alpha"]
+    assert all(
+        isinstance(row, UnreadableManifest) and "패턴" in row.reason
+        for row in rows
+        if row.name in odd
+    )

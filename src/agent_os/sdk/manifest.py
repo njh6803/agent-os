@@ -13,7 +13,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from agent_os.sdk.ids import PluginName
+from agent_os.sdk.ids import PLUGIN_NAME_PATTERN, PluginName
 
 
 class PluginKind(StrEnum):
@@ -26,7 +26,6 @@ class PluginKind(StrEnum):
 
 
 _ENTRYPOINT = r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$"
-_NAME = r"^[a-z][a-z0-9-]{1,62}$"
 
 
 class McpServer(BaseModel):
@@ -47,7 +46,7 @@ class PluginManifest(BaseModel):
 
     schema_version: Literal["1"]
     kind: PluginKind
-    name: PluginName = Field(pattern=_NAME)
+    name: PluginName = Field(pattern=PLUGIN_NAME_PATTERN)
     version: str
     entrypoint: str | None = Field(default=None, pattern=_ENTRYPOINT)
     # 에이전트만. 쓸 mcp 플러그인 이름. 비어 있으면 도구가 없다(ADR 0002)
