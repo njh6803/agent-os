@@ -443,6 +443,28 @@ def test_같은_손상_파일을_단건으로_읽으면_PluginError다(tmp_path:
             store.read(RunId(run_id))
 
 
+def test_파일_이름과_내용의_실행_식별자가_어긋나면_표지이고_단건은_PluginError다(
+    tmp_path: Path,
+) -> None:
+    """파일 이름이 실행 식별자의 유일한 원천이다. 어긋난 파일이 남의 실행 정보를 이 식별자로
+    내보내지 않는다. 재개 진입점이 같은 검사를 하지만 그쪽은 재개 경로 전용이다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    header_lies = '{"schema_version":"2","run_id":"other"}\n' + _started("a", TS).model_dump_json()
+    (tmp_path / "header-lies.jsonl").write_text(header_lies + "\n", encoding="utf-8")
+    event_lies = (
+        '{"schema_version":"2","run_id":"event-lies"}\n' + _started("other", TS).model_dump_json()
+    )
+    (tmp_path / "event-lies.jsonl").write_text(event_lies + "\n", encoding="utf-8")
+
+    rows = store.list()
+
+    assert sorted(_ids(rows)) == ["event-lies", "header-lies"]
+    assert all(isinstance(row, UnreadableTrace) for row in rows)
+    for run_id in ("header-lies", "event-lies"):
+        with pytest.raises(PluginError, match="실행 식별자"):
+            store.read(RunId(run_id))
+
+
 def test_실행_식별자_패턴을_어기는_이름의_파일은_목록에서_빠진다(tmp_path: Path) -> None:
     """런타임이 만들 수 없는 이름이라 잃어버린 실행이 아니다. 되물을 수 없는 것을 싣지 않는다."""
     store: TraceStore = JsonlTrace(tmp_path)

@@ -247,6 +247,35 @@ def test_깨진_매니페스트가_섞여도_읽히는_것은_전부_돌아오�
     )
 
 
+def test_열_수_없는_매니페스트가_있어도_목록이_살아남는다(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """권한 오류와 경쟁 삭제는 OSError 이고 ValueError 가 아니다. 포장하지 않으면 매니페스트
+    하나가 목록 전체를 가리는데 그것이 ADR 0012 이력이 막으려 한 모양이다.
+
+    실제 권한 오류를 이식성 있게 만들 수 없어 읽기만 주입한다. 보는 것은 바깥 행동 그대로다 —
+    목록이 살아남고 그 자리에 표지가 서는 것.
+    """
+    _write_agent(root, "alpha")
+    _write_agent(root, "locked")
+    original = Path.read_text
+
+    def refuse(self: Path, encoding: str | None = None, errors: str | None = None) -> str:
+        if self.parent.name == "locked":
+            raise PermissionError(13, "권한이 없다")
+        return original(self, encoding, errors)
+
+    monkeypatch.setattr(Path, "read_text", refuse)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert _names(rows) == ["alpha", "locked"]
+    assert isinstance(rows[0], PluginManifest)
+    assert isinstance(rows[1], UnreadableManifest)
+    assert "권한" in rows[1].reason
+
+
 def test_같은_깨진_파일을_단건으로_읽으면_PluginError다(root: Path) -> None:
     """목록과 단건의 비대칭이 의도다. 문서에만 두면 다음 사람이 일관성 결함으로 보고 고친다."""
     _write_broken(root)

@@ -84,6 +84,10 @@ class JsonlTrace:
 
         포장하지 않으면 빈 파일의 IndexError 와 비UTF-8 의 UnicodeDecodeError 와 pydantic 의
         검증 오류가 그대로 올라와 채널의 `except PluginError` 를 지나친다(ADR 0012 이력).
+
+        파일 이름과 어긋난 실행 식별자를 헤더에서든 이벤트에서든 만나면 손상이다. 재개 진입점이
+        재생 전에 같은 검사를 하지만 그쪽은 재개 경로 전용이라, 조회하는 소비자가 남의 실행
+        이벤트를 이 식별자로 받는 길이 남아 있었다(PR 직전 보안·버그 축).
         """
         path = self._path(run_id)
         if not path.exists():
@@ -91,11 +95,16 @@ class JsonlTrace:
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
             header = TraceHeader.model_validate_json(lines[0])
+            _require_same_run(run_id, header.run_id, "헤더")
             events = tuple(_read_event(line) for line in lines[1:])
+            for event in events:
+                # 모르는 종류는 원문만 있어 식별자를 볼 수 없다. 그것은 지우지 않고 그대로 둔다.
+                if not isinstance(event, UnknownEvent):
+                    _require_same_run(run_id, event.run_id, "이벤트")
         except (OSError, IndexError, ValueError) as error:
             # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
             raise PluginError(f"트레이스를 읽을 수 없다: {path}\n{error}") from error
-        return Trace(run_id=header.run_id, schema_version=header.schema_version, events=events)
+        return Trace(run_id=run_id, schema_version=header.schema_version, events=events)
 
     def list(
         self,
@@ -106,8 +115,12 @@ class JsonlTrace:
     ) -> tuple[RunRow, ...]:
         """디렉터리를 훑어 요약을 전부 만든 뒤 자른다. 색인을 붙이면 이 메서드만 바뀐다.
 
-        상한이 있는 이유가 여기다. 전부 만든 뒤 자르므로 상한이 없으면 요청 하나가 "실행이 쌓여도
-        목록 응답이 그만큼 커지지 않는다"를 무력화한다. 파일당 비용은 줄 셋의 파싱이다.
+        **limit 은 응답 크기를 막고 스캔 비용은 막지 않는다.** 자르는 것이 전부 만든 뒤이므로
+        limit=1 도 디렉터리의 모든 트레이스 파일을 연다. 파일당 파싱은 줄 셋이지만 마지막 줄을
+        찾으려 끝까지 흘려 읽으므로 I/O 는 파일 크기에 비례하고, 트레이스에는 마스킹되지 않은
+        도구 결과가 실릴 수 있어 파일 하나가 클 수 있다. 상한 200 이 지키는 것은 응답 하나가
+        모든 실행의 요약을 나르지 않는다는 것까지다(ADR 0012 는 이 스캔을 첫 어댑터의 값으로
+        받아들였고 색인이 붙을 때 이 메서드만 바뀐다). PR 직전 성능 축이 이 구별을 물었다.
         """
         size = _page_size(limit)
         rows = [_row(path) for path in self._files()]
@@ -189,12 +202,19 @@ def _edges(path: Path) -> _Edges:
 
 
 def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
+    """요약 일곱 필드를 줄 셋에서 만든다. 파일 이름이 실행 식별자의 유일한 원천이다.
+
+    헤더와 시작 이벤트가 둘 다 파일 이름과 같은 실행을 말하는지 본다. 그 둘이 일곱 필드 중
+    여섯의 출처이므로(형식 버전은 헤더, 에이전트와 주체와 시작 시각은 시작 이벤트), 어긋난 파일이
+    남의 실행 정보를 이 식별자로 내보내는 것을 막는다. 재개 진입점이 재생 전에 같은 검사를 하지만
+    그쪽은 재개 경로 전용이라 조회하는 소비자가 보호를 못 받았다(PR 직전 보안·버그 축).
+    """
     head = TraceHeader.model_validate_json(edges.header)
-    if head.run_id != run_id:
-        raise ValueError(f"헤더의 실행 식별자가 파일 이름과 다르다: {head.run_id}")
+    _require_same_run(run_id, head.run_id, "헤더")
     started = _EVENT.validate_json(edges.first)
     if not isinstance(started, RunStarted):
         raise ValueError(f"시작 이벤트로 열리지 않는다: {started.type}")
+    _require_same_run(run_id, started.run_id, "시작 이벤트")
     ending = _read_event(edges.last)
     return RunSummary(
         run_id=run_id,
@@ -205,6 +225,13 @@ def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
         agent=started.agent,
         principal=started.principal,
     )
+
+
+def _require_same_run(run_id: RunId, found: RunId, where: str) -> None:
+    """파일 이름과 내용이 같은 실행을 말하는지. 어긋나면 손상이고 목록에서는 표지, 단건에서는
+    PluginError 가 된다."""
+    if found != run_id:
+        raise ValueError(f"{where} 의 실행 식별자가 파일 이름과 다르다: {found}")
 
 
 def _last_at(ending: Event | UnknownEvent, line: str) -> datetime:

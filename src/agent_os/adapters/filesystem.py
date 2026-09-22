@@ -105,9 +105,17 @@ class FilesystemPlugins:
 
 
 def _parse(path: Path) -> PluginManifest:
+    """읽지 못하는 모든 이유를 PluginError 로 만든다. 파일을 여는 것부터 검증까지 전부다.
+
+    OSError 를 함께 잡는 이유는 그것이 목록의 표지 경로를 지나치기 때문이다. is_file() 로 본
+    뒤 실제로 읽는 사이에 파일이 사라지거나, 권한이 없거나, 네트워크 드라이브가 끊기면 OSError 이고
+    ValueError 가 아니다. 그러면 매니페스트 하나가 목록 전체를 가리는데 그것이 ADR 0012 의
+    2026-09-22 이력이 막으려 한 모양이다(PR 직전 보안·버그 축).
+    """
     try:
         return parse_manifest(path.read_text(encoding="utf-8"))
-    except (ValidationError, ValueError) as error:
+    except (OSError, ValidationError, ValueError) as error:
+        # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
         raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{error}") from error
 
 
