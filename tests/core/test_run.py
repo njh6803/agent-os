@@ -1869,3 +1869,50 @@ async def test_멈춘_도구_호출_대신_모델을_부르면_결정이_적용�
     assert "add" in events[-1].error
     assert model.calls == 0
     assert tools.connection.calls == []
+
+
+class DetourThenSendingAgent:
+    """멈춘 호출(send) 앞에 다른 도구를 끼워 넣고 그 실패를 삼키는, 바뀐 에이전트."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            await ctx.tool("delete", to="bob")
+        except Exception:
+            pass
+        try:
+            output = await ctx.tool("send", to="bob")
+        except ToolError as error:
+            output = f"허락을 못 받아 못 했습니다: {error}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_에이전트가_대조_실패를_삼키고_멈춘_호출을_다시_부르면_거부가_그대로_적용된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """대조가 소비보다 앞이라 삼킨 뒤에도 결정이 남는다. 정책이 풀려도 거부한 것은 안 돈다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+
+    await _run(
+        ExcusingAgent(), model, trace, clock, tools=tools, plugins=_gated_plugins(ExcusingAgent())
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(DetourThenSendingAgent(), requires_approval=[]),
+        decision=Deny(DENIAL),
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].tool == "send"
+    assert events[2].ok is False
+    assert tools.connection.calls == []

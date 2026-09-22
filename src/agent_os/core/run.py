@@ -286,18 +286,21 @@ class _Context:
     async def _call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
         """도구 하나. 재생 구간이면 기록된 결과를 돌려주고 게이트도 지나지 않는다.
 
-        재생 구간에서 게이트를 다시 걸지 않는 이유는, 기록이 있다는 것이 그 호출이 실제로
-        일어났다는 뜻이고 승인 대상이었다면 이미 승인을 받아 일어난 것이기 때문이다. 재생이 끝난
+        재생 구간에서 게이트를 다시 걸지 않는 이유는, 기록된 성공 또는 실패 결과를 돌려주고 도구를
+        다시 부르지 않기 때문이다. 거부된 호출도 실패로 기록되어 같은 길로 되살아난다. 재생이 끝난
         뒤 첫 실제 호출은 멈췄던 그 호출이어야 하고, 결정은 그 호출에만 적용된다.
+
+        대조가 소비보다 앞이다. Mismatch 는 Exception 이라 에이전트가 삼키고 다시 부를 수 있는데,
+        먼저 소비하면 그때 결정이 사라져 거부한 호출이 정책이 풀린 도구로 실행될 수 있다.
         """
         self._stay_paused()
         masked = _mask(name, args, self._policy.secrets)
         replayed = self._replay.take_tool(name, masked)
         if replayed is not None:
             return ToolResult(ok=replayed.ok, content=replayed.content)
+        if self._verdict is not None:
+            _require_paused_call(self._verdict.paused, name, masked)
         verdict = self._take_verdict()
-        if verdict is not None:
-            _require_paused_call(verdict.paused, name, masked)
         self._resume()
         if verdict is None:
             if name in self._policy.approvals:
