@@ -10,8 +10,9 @@
 | 타입 | pyright strict |
 | 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007 |
 | 경계 | import-linter |
-| 런타임 의존성 | core: `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). `langgraph`는 pyright strict 마찰로 2026-09-21에 뺐다. ADR 0001과 그 이력 |
+| 런타임 의존성 | core: `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. server: `fastapi`, `uvicorn`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). `langgraph`는 pyright strict 마찰로 2026-09-21에 뺐다. ADR 0001과 그 이력 |
 | CLI | 표준 라이브러리 argparse |
+| HTTP | FastAPI, uvicorn. 조립은 `server.py`의 `create_app()` 하나이고 전역 `app`을 두지 않는다. `openapi.json`은 저장소 루트에 커밋된 계약이고 최신성을 테스트가 판정한다. ADR 0010 |
 | 원격·CI | GitHub, GitHub Actions(`ci.yml`, ubuntu, uv). 로컬 훅과 같은 검사. LLM 테스트 제외 |
 | 로깅 | 표준 라이브러리. 구조화 기록은 이벤트가 담당한다 |
 | 웹 | Next.js, pnpm 워크스페이스, `web/`. 슬라이스 3부터. 위젯 기술은 슬라이스 4에서 결정 |
