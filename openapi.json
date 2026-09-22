@@ -1,0 +1,121 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorCode": {
+        "description": "에러 봉투의 어휘. 상태 코드와 1:1 인 넷이다.",
+        "enum": [
+          "unauthorized",
+          "invalid_request",
+          "not_found",
+          "internal_error"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "에러 응답의 모양. 성공 응답은 이것으로 감싸지 않는다.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/Violation"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "violations",
+          "request_id"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "Health": {
+        "additionalProperties": false,
+        "description": "살아 있다는 것만 답한다. 내부 구성을 싣지 않는다.",
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Violation": {
+        "additionalProperties": false,
+        "description": "형식 오류 하나. field 는 `query.limit` 처럼 점으로 이은 경로 문자열이다.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "Violation",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "등록된 플러그인과 지나간 실행을 읽는다. 읽기 전용이고 실행을 일으키지 않는다.",
+    "title": "Agent OS 관리 API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "read_health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "살아 있는지만 답한다"
+      }
+    }
+  }
+}

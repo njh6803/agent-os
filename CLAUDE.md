@@ -13,6 +13,7 @@
 - `src/agent_os/channel/`: 실행을 일으키는 면. `cli/`(슬라이스 1), `http/`(슬라이스 2)
 - `src/agent_os/admin/`: 구성을 바꾸고 관찰하는 면(슬라이스 2)
 - `src/agent_os/adapters/`: 포트 구현. JSONL 트레이스 싱크 등
+- `src/agent_os/server.py`: HTTP 표면의 조립 층. `create_app()` 하나이고 전역 `app`이 없다. 계약은 루트 `openapi.json`
 - `src/agent_os/main.py`: 조합 층. 의존 방향은 `main → server → {channel | admin | adapters} → core → sdk`, `plugins → sdk`
 - `plugins/{agents,mcp,skills,models}/`: 플러그인. 코드가 아니라 내용물
 - `tests/`: `src/`를 미러링

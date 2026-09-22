@@ -15,10 +15,11 @@ uv run pytest -q
 ```
 src/agent_os/
   main.py          진입점. run·resume → channel. 어댑터를 조립해 넘긴다
+  server.py        HTTP 표면의 조립 층. create_app() 하나. 전역 app을 두지 않는다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
   channel/cli/     실행을 일으키는 면
-  admin/           구성을 바꾸고 관찰하는 면 (슬라이스 2)
+  admin/           구성을 바꾸고 관찰하는 면. http(봉투와 라우터), auth(fail-closed 토큰)
   adapters/        포트 구현
 plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
@@ -32,9 +33,10 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 열 때만 로드
   skills/          엔지니어링 스킬
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
+openapi.json       관리 API의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것(`server.py`, `channel/http`, `web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것(`channel/http`, `web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
 
 ## 원천 표
 
