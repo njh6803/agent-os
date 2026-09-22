@@ -193,6 +193,21 @@ async def test_허용되지_않는_메서드도_봉투이고_어휘가_넷_안�
     assert response.json()["code"] == "invalid_request"
 
 
+async def test_405가_어떤_메서드를_쓸_수_있는지_알려_준다(client: AsyncClient) -> None:
+    """RFC 9110 이 405 에 Allow 를 요구한다. 라우터가 붙인 헤더를 봉투가 버리면 안 된다."""
+    response = await client.post("/health")
+
+    assert "GET" in response.headers["Allow"]
+
+
+async def test_401이_어떤_인증을_쓰는지_알려_준다(client: AsyncClient) -> None:
+    """RFC 9110 이 401 에 WWW-Authenticate 를 요구한다. 방식을 알리는 것은 노출이 아니다 —
+    401 자체가 이미 인증이 필요하다고 말한다."""
+    response = await client.get(GUARDED)
+
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
 async def test_맞는_토큰은_미들웨어를_지나_라우팅까지_간다(client: AsyncClient) -> None:
     """401 이 아니라 404 라는 것이 곧 지나갔다는 뜻이다. 데이터 라우트는 아직 없다."""
     assert (await client.get(GUARDED, headers=BEARER)).status_code == 404

@@ -28,6 +28,9 @@ from agent_os.admin.http import UNAUTHORIZED_MESSAGE, error_envelope, remember_f
 PUBLIC_PATHS = frozenset({"/health"})
 
 _SCHEME = "bearer"
+# 401 이 요구하는 챌린지(RFC 9110). 어떤 방식으로 인증하는지 알리는 것은 노출이 아니다 — 401
+# 자체가 이미 인증이 필요하다고 말한다. realm 을 붙이지 않는 이유는 그것이 내부 구성이어서다.
+_CHALLENGE = {"WWW-Authenticate": "Bearer"}
 # 헤더는 ASGI 경계에서 latin-1 로 디코딩되므로 같은 코덱으로 되돌리면 실린 바이트 그대로다.
 _HEADER_CODEC = "latin-1"
 
@@ -46,7 +49,12 @@ class RequireToken(BaseHTTPMiddleware):
             return await call_next(request)
         if not self._matches(request.headers.get("authorization")):
             remember_failure(request, UNAUTHORIZED_MESSAGE)
-            return error_envelope(request, status=401, message=UNAUTHORIZED_MESSAGE)
+            return error_envelope(
+                request,
+                status=401,
+                message=UNAUTHORIZED_MESSAGE,
+                headers=_CHALLENGE,
+            )
         return await call_next(request)
 
     def _matches(self, header: str | None) -> bool:

@@ -5,6 +5,7 @@ paths:
   - "tools/export_openapi.py"
   - "openapi.json"
   - "tests/test_server.py"
+  - "tests/tools/test_export_openapi.py"
 ---
 
 # 관리 API와 HTTP 표면 규칙

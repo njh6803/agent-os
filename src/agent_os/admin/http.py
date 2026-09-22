@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal, TextIO
@@ -115,11 +115,17 @@ _DETAILS = TypeAdapter[tuple[_ErrorDetail, ...]](tuple[_ErrorDetail, ...])
 
 @dataclass(frozen=True)
 class _Failure:
-    """예외 하나가 밖에서 어떻게 보이는가. 상태 코드와 문구와 형식 오류가 한 항목이다."""
+    """예외 하나가 밖에서 어떻게 보이는가. 상태 코드와 문구와 형식 오류와 헤더가 한 항목이다.
+
+    헤더가 여기 있는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다. 405 의 `Allow` 는
+    라우터가 예외에 붙여 주는데, 봉투를 새 응답으로 만들면서 버리면 RFC 9110 이 요구하는 것을
+    잃는다.
+    """
 
     status: int
     message: str
     violations: tuple[Violation, ...] = ()
+    headers: Mapping[str, str] | None = None
 
 
 # 상태 코드 하나가 어휘 하나다. 표 밖의 상태 코드는 계열로 접는다 — 그것은 우리가 고른 것이
@@ -144,7 +150,11 @@ def failure_for(error: Exception) -> _Failure:
     """
     match error:
         case StarletteHTTPException():
-            return _Failure(status=error.status_code, message=str(error.detail))
+            return _Failure(
+                status=error.status_code,
+                message=str(error.detail),
+                headers=error.headers,
+            )
         case RequestValidationError():
             return _Failure(status=422, message=_INVALID_REQUEST, violations=_violations(error))
         case PluginError():
@@ -194,15 +204,24 @@ def error_envelope(
     status: int,
     message: str,
     violations: Sequence[Violation] = (),
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
-    """에러 봉투 하나(질의). 기록하지 않는다."""
+    """에러 봉투 하나(질의). 기록하지 않는다.
+
+    헤더를 받는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다 — 405 의 `Allow`, 401 의
+    `WWW-Authenticate`. 봉투가 본문만 나르면 그것들이 응답에서 사라진다.
+    """
     envelope = ErrorEnvelope(
         code=_code_for(status),
         message=message,
         violations=tuple(violations),
         request_id=request_id_of(request),
     )
-    return JSONResponse(status_code=status, content=envelope.model_dump(mode="json"))
+    return JSONResponse(
+        status_code=status,
+        content=envelope.model_dump(mode="json"),
+        headers=headers,
+    )
 
 
 class AssignRequestId(BaseHTTPMiddleware):
@@ -252,6 +271,7 @@ def install_error_handlers(app: FastAPI) -> None:
             status=failure.status,
             message=failure.message,
             violations=failure.violations,
+            headers=failure.headers,
         )
 
     app.add_exception_handler(StarletteHTTPException, handle)
