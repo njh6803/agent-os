@@ -19,7 +19,15 @@ from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import EXIT_PAUSED
 from agent_os.core.ports import Trace, UnknownEvent
 from agent_os.main import main
-from agent_os.sdk import ApprovalGranted, LlmCalled, RunId, RunPaused, RunStarted, ToolCalled
+from agent_os.sdk import (
+    ApprovalDenied,
+    ApprovalGranted,
+    LlmCalled,
+    RunId,
+    RunPaused,
+    RunStarted,
+    ToolCalled,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MCP_FIXTURE_SERVER = REPO_ROOT / "tests" / "adapters" / "mcp_fixture_server.py"
@@ -71,6 +79,27 @@ from agent_os.sdk import AgentContext, Event, RunFinished
 class Agent:
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
         total = await ctx.tool("add", a=2, b=3)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)
+"""
+
+
+EXCUSING_MANIFEST = (
+    MANIFEST.format(name="excusing") + 'mcp = ["fixture"]\nrequires_approval = ["add"]\n'
+)
+
+# 거부당하면 사용자에게 왜 못 했는지 말하고 정상적으로 끝맺는 에이전트. gated 와 도구도 정책도 같다.
+EXCUSING_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished, ToolError
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            total = await ctx.tool("add", a=2, b=3)
+        except ToolError as error:
+            total = f"못 했습니다: {error}"
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)
 """
 
@@ -286,7 +315,8 @@ def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표�
     assert "add" in out
     assert '"a": 2' in out
     assert '"b": 3' in out
-    assert f"agent-os resume {trace_file.stem} --approve" in out
+    assert f"agent-os resume {trace_file.stem} --traces t --approve" in out
+    assert f"agent-os resume {trace_file.stem} --traces t --deny --reason" in out
     assert err == ""
     events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     assert [e.type for e in events] == ["run_started", "run_paused"]
@@ -347,10 +377,11 @@ def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_�
     assert _trace_files(workspace / "t") == []
 
 
-def _guidance(out: str) -> list[str]:
-    """일시정지 출력이 안내한 재개 명령을 셸이 읽듯 인자로 쪼갠다."""
-    line = next(line for line in out.splitlines() if line.startswith("승인: agent-os "))
-    return shlex.split(line.removeprefix("승인: agent-os "))
+def _guidance(out: str, label: str = "승인") -> list[str]:
+    """일시정지 출력이 안내한 재개 명령을 셸이 읽듯 인자로 쪼갠다. 안내 줄은 승인과 거부 둘이다."""
+    prefix = f"{label}: agent-os "
+    line = next(line for line in out.splitlines() if line.startswith(prefix))
+    return shlex.split(line.removeprefix(prefix))
 
 
 def test_안내된_재개_명령을_그대로_실행하면_재개된다(
@@ -369,7 +400,7 @@ def test_안내된_재개_명령을_그대로_실행하면_재개된다(
     code = main(argv)
 
     assert paused == EXIT_PAUSED
-    assert argv[-1] == "$out dir"
+    assert "$out dir" in argv
     assert code == 0
     assert capsys.readouterr().out == "5\n"
 
@@ -384,3 +415,89 @@ def test_기본_트레이스_디렉터리면_안내_명령에_경로가_붙지_�
 
     argv = _guidance(capsys.readouterr().out)
     assert "--traces" not in argv
+
+
+def test_거부하면_도구가_불리지_않고_에이전트가_사유를_담아_정상으로_끝난다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """거부는 에러가 아니라 답이다. 실행은 성공으로 끝나고 거부가 승인자와 사유와 함께 남는다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "excusing", EXCUSING_SRC, EXCUSING_MANIFEST)
+    paused = main(["run", "excusing", "hi", "--traces", "t"])
+    (trace_file,) = _trace_files(workspace / "t")
+    capsys.readouterr()
+
+    argv = ["resume", trace_file.stem, "--deny", "--reason", "지금은 안 된다", "--traces", "t"]
+    code = main(argv)
+
+    out, err = capsys.readouterr()
+    assert paused == EXIT_PAUSED
+    assert code == 0
+    assert out.startswith("못 했습니다")
+    assert "지금은 안 된다" in out
+    assert "5" not in out  # 실제 도구가 불렸다면 2+3 의 답이 나온다
+    assert err == ""
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    assert [e.type for e in events] == [
+        "run_started",
+        "run_paused",
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+    assert isinstance(events[2], ApprovalDenied)
+    assert events[2].approver == getpass.getuser()
+    assert events[2].reason == "지금은 안 된다"
+    assert isinstance(events[4], ToolCalled)
+    assert events[4].ok is False
+
+
+def test_멈추면_거부_명령도_함께_안내된다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+
+    main(["run", "gated", "hi", "--traces", "t"])
+
+    argv = _guidance(capsys.readouterr().out, "거부")
+    assert argv[:2] == ["resume", _trace_files(workspace / "t")[0].stem]
+    assert "--deny" in argv
+    assert "--reason" in argv
+
+
+def test_안내된_거부_명령은_사유를_이어_적어야_성립하고_그대로_치면_진단이다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """자리표시자를 두면 그대로 친 것이 진짜 사유로 남는다. 사유 없는 거부는 안내로도 못 만든다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "excusing", EXCUSING_SRC, EXCUSING_MANIFEST)
+    paused = main(["run", "excusing", "hi", "--traces", "$out dir"])
+    argv = _guidance(capsys.readouterr().out, "거부")
+
+    with pytest.raises(SystemExit) as verbatim:
+        main(argv)
+    code = main([*argv, "지금은 안 된다"])
+
+    assert paused == EXIT_PAUSED
+    assert "$out dir" in argv
+    assert argv[-1] == "--reason"
+    assert verbatim.value.code == 2
+    assert code == 0
+    assert capsys.readouterr().out.startswith("못 했습니다")
+    (trace_file,) = _trace_files(workspace / "$out dir")
+    denied = [e for e in _read(trace_file).events if isinstance(e, ApprovalDenied)]
+    assert [e.reason for e in denied] == ["지금은 안 된다"]
+
+
+def test_없는_실행_식별자는_거부로도_진단을_적고_트레이스를_남기지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = main(["resume", "없는-실행", "--deny", "--reason", "x", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "없는-실행" in err
+    assert _trace_files(workspace / "t") == []

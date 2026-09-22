@@ -1,7 +1,8 @@
 """CLI 채널. 실행을 일으키는 명령 둘, run 과 resume 이 여기에 붙는다.
 
 표준 출력은 실행의 결말만 싣는다. 끝나면 출력 문자열, 멈추면 실행 식별자와 승인 요청(도구 이름과
-인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령. 표준 에러는 둘을 싣고 규칙이 다르다.
+인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령 둘(승인, 사유를 붙이는 거부). 표준
+에러는 둘을 싣고 규칙이 다르다.
 실패 진단은 언제나 나가고, 진행 이벤트는 progress 스트림이 주어졌을 때만 한 줄에 JSON 하나로
 나간다(트레이스와 같은 직렬화). 종료 코드는 성공 0, 실패 1, 일시정지 3. 일시정지가 전용 코드인
 이유는 성공도 실패도 아니라는 것을 스크립트가 알아야 하기 때문이다(ADR 0009). 2 는 argparse 가
@@ -30,7 +31,7 @@ from agent_os.core.ports import (
     ToolSource,
     TraceStore,
 )
-from agent_os.core.run import Approve, Decision, resume, run
+from agent_os.core.run import Approve, Decision, Deny, resume, run
 from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunId, RunPaused
 
 DEFAULT_TRACES = Path("traces")
@@ -67,9 +68,16 @@ def build_parser() -> argparse.ArgumentParser:
     _add_shared(run_parser)
     resume_parser = commands.add_parser("resume", help="일시정지한 실행을 이어 간다")
     resume_parser.add_argument("run_id", help="멈출 때 표준 출력에 찍힌 실행 식별자")
-    # 승인과 거부 중 하나를 반드시 골라야 한다. 거부(--deny)는 티켓 05 가 이 그룹에 더한다.
+    # 승인과 거부 중 하나를 반드시 골라야 한다. 거부의 사유 필수는 argparse 로 표현되지 않아
+    # _decision 이 본다.
     decision = resume_parser.add_mutually_exclusive_group(required=True)
     decision.add_argument("--approve", action="store_true", help="이 도구 호출을 승인한다")
+    decision.add_argument(
+        "--deny", action="store_true", help="이 도구 호출을 거부한다. --reason 이 필수다"
+    )
+    resume_parser.add_argument(
+        "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
+    )
     _add_shared(resume_parser)
     return parser
 
@@ -84,14 +92,15 @@ def _add_shared(parser: argparse.ArgumentParser) -> None:
 
 
 def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
-    namespace = build_parser().parse_args(argv)
+    parser = build_parser()
+    namespace = parser.parse_args(argv)
     model = None if namespace.model is None else str(namespace.model)
     traces = Path(namespace.traces)
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":
         return ResumeArgs(
             run_id=RunId(str(namespace.run_id)),
-            decision=_decision(namespace),
+            decision=_decision(parser, namespace),
             model=model,
             traces=traces,
             verbose=verbose,
@@ -105,16 +114,28 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
     )
 
 
-def _decision(namespace: argparse.Namespace) -> Decision:
-    """고른 플래그를 core 가 받는 결정으로 바꾼다.
+def _decision(parser: argparse.ArgumentParser, namespace: argparse.Namespace) -> Decision:
+    """고른 플래그를 core 가 받는 결정으로 바꾼다. 어긋난 조합은 인자 오류(종료 코드 2)다.
 
-    상호배타 그룹이 하나를 반드시 고르게 하므로 마지막 줄은 도달하지 않는다. 그래도 분기를 두는
-    것은, 티켓 05 가 --deny 를 그룹에 더할 때 여기를 고치지 않으면 거부가 조용히 승인으로 도는
-    것을 타입이 잡아 주지 않기 때문이다.
+    거부에는 사유가 필수다. ApprovalDenied.reason 이 필수 필드라 여기서 빈 문자열을 지어내면
+    사유 없는 거부가 기본값으로 굳는다(ADR 0009). 공백만 있는 사유도 없는 것으로 본다. 반대로
+    승인에는 사유를 담을 자리가 없어, 조용히 버리는 대신 거부한다. 승인자가 적은 말이 어디에도
+    남지 않는 것을 막기 위해서다.
+
+    상호배타 그룹이 하나를 반드시 고르게 하므로 마지막 줄은 도달하지 않는다. 그래도 두는 것은
+    플래그가 늘 때 여기를 고치지 않으면 거부가 조용히 승인으로 도는 것을 타입이 잡아 주지 않기
+    때문이다.
     """
+    reason = None if namespace.reason is None else str(namespace.reason).strip()
+    if bool(namespace.deny):
+        if not reason:
+            parser.error("거부에는 --reason 으로 사유를 붙여야 한다")
+        return Deny(reason=reason)
     if bool(namespace.approve):
+        if reason is not None:
+            parser.error("--reason 은 거부(--deny)에만 쓴다. 승인에는 사유를 담을 자리가 없다")
         return Approve()
-    raise SystemExit("승인과 거부 중 하나를 골라야 한다")
+    parser.error("승인과 거부 중 하나를 골라야 한다")
 
 
 async def run_command(
@@ -219,7 +240,9 @@ def _approval_request(event: RunPaused, traces: Path) -> str:
     """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
 
     안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 트레이스 디렉터리를 옮겨 실행했으면 재개도
-    거기서 읽어야 하므로 그 옵션을 같이 적는다. 기본 경로면 군더더기라 붙이지 않는다.
+    거기서 읽어야 하므로 그 옵션을 같이 적는다. 기본 경로면 군더더기라 붙이지 않는다. 거부 줄은
+    `--reason` 에서 끝나 사유를 이어 적게 한다. 자리표시자를 두면 그대로 친 것이 진짜 사유로
+    기록되어, 사유 없는 거부를 막자는 규칙이 안내 줄로 우회된다.
     """
     args = json.dumps(event.args, ensure_ascii=False)
     option = "" if traces == DEFAULT_TRACES else f" --traces {_as_argument(traces)}"
@@ -227,7 +250,8 @@ def _approval_request(event: RunPaused, traces: Path) -> str:
         f"일시정지: {event.run_id}\n"
         f"도구: {event.tool}\n"
         f"인자: {args}\n"
-        f"승인: agent-os resume {event.run_id} --approve{option}\n"
+        f"승인: agent-os resume {event.run_id}{option} --approve\n"
+        f"거부: agent-os resume {event.run_id}{option} --deny --reason\n"
     )
 
 

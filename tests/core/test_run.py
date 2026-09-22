@@ -32,10 +32,11 @@ from agent_os.core.ports import (
     TraceStore,
     UnknownEvent,
 )
-from agent_os.core.run import Approve, resume, run
+from agent_os.core.run import Approve, Decision, Deny, resume, run
 from agent_os.sdk import (
     AgentContext,
     AgentName,
+    ApprovalDenied,
     ApprovalGranted,
     BaseAgent,
     Event,
@@ -1002,12 +1003,13 @@ async def _resume(
     tools: ToolSource | None = None,
     plugins: PluginSource | None = None,
     approver: Principal = PRINCIPAL,
+    decision: Decision | None = None,
 ) -> list[Event]:
     return [
         event
         async for event in resume(
             run_id,
-            Approve(),
+            decision if decision is not None else Approve(),
             approver,
             plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
             model=model,
@@ -1559,3 +1561,173 @@ async def test_재생_구간의_모델_호출은_모델_포트를_부르지_않�
 
     # 재생된 첫 턴은 기록에서 오고 둘째 턴만 실제 호출이다. 재생이 포트에 닿으면 3 이 된다.
     assert model.calls == 2
+
+
+# --- 거부 ---------------------------------------------------------------------
+#
+# 거부는 에러가 아니라 답이다. 도구를 부르지 않고 결과만 실패로 만들어 사유를 모델에 되돌린다.
+# 실행을 끝내면 그때까지 한 일과 에이전트가 상황을 설명할 기회를 함께 버린다(ADR 0009).
+
+DENIAL = "보낼 내용이 아니다"
+
+
+class ExcusingAgent:
+    """거부당하면 사용자에게 왜 못 했는지 말하고 정상적으로 끝맺는다(사용자 스토리 35)."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            output = await ctx.tool("send", to="bob")
+        except ToolError as error:
+            output = f"허락을 못 받아 못 했습니다: {error}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_거부하면_도구가_불리지_않고_실패가_모델에_돌아가_루프가_계속된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """이미 있는 도구 실패 경로 그대로다. 모델이 다른 길을 찾거나 사용자에게 답할 수 있다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert tools.connection.calls == []
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].tool == "send"
+    assert events[2].ok is False
+    assert DENIAL in events[2].content
+
+
+async def test_거부해도_실행이_실패로_끝나지_않고_에이전트가_정상적으로_끝맺는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """거부로 실행을 끝내면 그때까지 한 일과 설명할 기회를 함께 버린다(사용자 스토리 17)."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert "run_failed" not in [e.type for e in events]
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == "못 보냈다"
+
+
+async def test_거부가_승인자와_사유와_함께_트레이스에_먼저_기록된_뒤_재생이_시작된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """나중에 누가 왜 막았는지 물을 때 답이 있어야 한다(사용자 스토리 18)."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+        approver=Principal("bob"),
+        decision=Deny(DENIAL),
+    )
+
+    assert events[0] == ApprovalDenied(
+        run_id=RunId("run-1"), ts=FIXED_NOW, approver=Principal("bob"), reason=DENIAL
+    )
+    written = [e.type for e in trace.events]
+    assert written.index("approval_denied") < written.index("run_resumed")
+
+
+async def test_컨텍스트로_직접_부른_도구를_거부하면_사유를_담은_예외가_에이전트에게_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """이름으로 잡을 수 있는 ToolError 다. 그 자리에서 다른 길을 고를 수 있다(사용자 스토리 5·6)."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(ExcusingAgent())
+
+    await _run(ExcusingAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output.startswith("허락을 못 받아 못 했습니다")
+    assert DENIAL in events[-1].output
+    assert tools.connection.calls == []
+
+
+async def test_거부도_도구_하나만_지나가_그_뒤_승인_대상에서_다시_멈춘다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """결정 하나는 한 번만 쓰인다. 거부를 한 번 받았다고 뒤의 것까지 막아 주지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "delete"), _reply("끝")]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+    plugins = _gated_plugins(OneShotAgent(), requires_approval=["send", "delete"])
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "run_paused",
+    ]
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].tool == "delete"
+    assert tools.connection.calls == []
+
+
+async def test_거부된_호출은_다음_재생에서도_실제로_불리지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """거부는 트레이스의 사실이라 재생이 그 실패를 되살린다. 뒤의 승인이 거부를 뒤집지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "delete"), _reply("끝")]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+    plugins = _gated_plugins(OneShotAgent(), requires_approval=["send", "delete"])
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert [name for name, _ in tools.connection.calls] == ["delete"]
+
+
+def test_빈_사유의_거부는_만들어지지_않는다() -> None:
+    """채널이 검사를 빠뜨려도 core 가 막는다. 다음 채널이 올 때 fail-open 이 다시 열리지 않게."""
+    with pytest.raises(ValueError, match="사유"):
+        Deny(reason="   ")
