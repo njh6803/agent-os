@@ -47,6 +47,10 @@ class ToolCall(BaseModel):
 class LlmCalled(BaseEvent):
     """관찰용이면서 재개의 입력이다. 재생이 text 와 tool_calls 로 모델 응답을 되살린다.
 
+    prompt 는 이 호출을 일으킨 ctx.llm() 의 프롬프트이고 재생의 대조가 쓰는 유일한 입력이다.
+    루프의 첫 턴에만 담긴다. 둘째 턴부터의 입력은 기록에서 파생되므로 같은 값을 턴마다 되풀이해
+    적지 않는다. 비어 있지 않은 prompt 가 곧 ctx.llm() 하나가 시작하는 자리다(ADR 0009 이력).
+
     재개가 쓰는 필드들에 기본값이 있는 것은 형식 1 트레이스의 줄도 읽혀야 하기 때문이다
     (ADR 0009). 읽을 수 있을 뿐 재개는 못 한다는 판정은 파일 첫 줄의 형식 버전이 한다.
     """
@@ -55,6 +59,7 @@ class LlmCalled(BaseEvent):
     model: str
     input_tokens: int
     output_tokens: int
+    prompt: str = ""
     text: str = ""
     tool_calls: tuple[ToolCall, ...] = ()
 

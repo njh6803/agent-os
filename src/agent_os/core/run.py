@@ -1,25 +1,37 @@
-"""주 이음매. 에이전트 이름, 요청, 주체와 포트 다섯을 받아 이벤트를 내는 async generator.
+"""주 이음매. 에이전트를 돌려 이벤트를 내는 async generator 둘, run() 과 resume().
 
-로더, 루프, 도구 연결, 승인 게이트, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본 스위트가
-이 지점 하나를 민다. run_started, run_paused, run_failed 는 런타임이 내고, 에이전트는 run_finished
-하나를 마지막에 낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다. 여기서 내는 모든 이벤트는
-TraceStore 에 쓴다.
+로더, 루프, 도구 연결, 승인 게이트, 재생, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본
+스위트가 이 지점 하나를 민다. run_started, run_paused, run_resumed, run_failed 는 런타임이 내고,
+에이전트는 run_finished 하나를 마지막에 낸다. 에이전트가 낸 다른 이벤트는 그대로 통과한다.
+
+resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 때문이다. 재개는 에이전트 이름,
+요청, 주체를 받지 않고 트레이스의 run_started 에서 읽는다. 하나로 합치면 "재개일 때는 이 인자
+셋이 무시된다"는, 타입으로 막을 수 없는 규칙을 문서로 적어야 한다(ADR 0009). 내부는 _drive 가
+공유하고 갈리는 것은 이벤트를 어디서 얻나(재생이냐 실제 호출이냐)와 무엇을 트레이스에 쓰나뿐이다.
+
+재생 구간에서 생긴 사실은 트레이스에 다시 쓰지 않는다. 이미 거기 있기 때문이고, 에이전트가 낸
+것도 마찬가지다. 기준은 "재생 구간인가"가 아니라 "이미 트레이스에 있는가"라서, 재생 구간에서
+처음 생긴 사실인 대조 불일치의 run_failed 는 쓴다. 사실이 한 번씩만 남는다.
 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
 마스킹과 승인이 겹치는 도구는 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다.
+재개할 수 없는 트레이스(없음, 형식 1, 일시정지 아님, 손상)도 같은 자리의 PluginError 다.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
-실행 안의 실패다(ADR 0009).
+실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import NoReturn, TypeGuard
 
-from agent_os.core.loop import run_loop
-from agent_os.core.model import ModelReply
+from langchain_core.messages import AIMessage, BaseMessage
+
+from agent_os.core.loop import ModelCaller, model_caller, run_loop
+from agent_os.core.model import ModelReply, message_from, reply_from
 from agent_os.core.ports import (
     ChatModel,
     Clock,
@@ -29,10 +41,17 @@ from agent_os.core.ports import (
     ToolResult,
     ToolSource,
     ToolSpec,
+    Trace,
+    TraceSchemaVersion,
     TraceStore,
+    UnknownEvent,
 )
+from agent_os.core.replay import Record, Replay
 from agent_os.sdk import (
     AgentName,
+    ApprovalDenied,
+    ApprovalGranted,
+    BaseAgent,
     Event,
     Json,
     LlmCalled,
@@ -45,6 +64,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunPaused,
+    RunResumed,
     RunStarted,
     ToolCall,
     ToolCalled,
@@ -54,6 +74,40 @@ from agent_os.sdk import (
 )
 
 MASKED = "***"
+
+# 재개할 수 있는 트레이스 형식. 1 은 재개의 입력이 되는 필드가 비어 있어 읽기만 된다(ADR 0009).
+# 어댑터가 쓸 때 붙이는 버전과 뜻이 달라 따로 둔다. 형식이 늘면 여기에 받아들일 것을 더한다.
+RESUMABLE: tuple[TraceSchemaVersion, ...] = ("2",)
+
+# 실행의 시작과 재개의 경계를 표시하는 이벤트. 재생할 사실이 아니라 재생 기록에서 뺀다. 나머지는
+# 런타임의 모델·도구 호출과 에이전트가 낸 것이고, 트레이스만 보고는 둘을 구분할 수 없어 함께 센다.
+_BOUNDARY = (RunStarted, RunPaused, ApprovalGranted, ApprovalDenied, RunResumed)
+
+
+@dataclass(frozen=True)
+class Approve:
+    """승인. 거부는 티켓 05 가 Decision 에 더한다."""
+
+
+# 승인자가 내린 결정. 게이트가 도구 하나를 통과시키는 데 한 번 쓰인다.
+type Decision = Approve
+
+
+@dataclass(frozen=True)
+class _Policy:
+    """매니페스트가 정한 도구별 가드레일. 마스킹과 승인이 늘 함께 다녀서 한 덩어리다."""
+
+    secrets: Mapping[str, tuple[str, ...]]
+    approvals: frozenset[str]
+
+
+@dataclass(frozen=True)
+class _Prepared:
+    """실행 식별자가 생기기 전에 확정되는 것. run() 과 resume() 이 같은 준비를 거친다."""
+
+    servers: Mapping[PluginName, McpServer]
+    policy: _Policy
+    instance: BaseAgent
 
 
 class _Paused(BaseException):
@@ -78,29 +132,47 @@ def _mask(
     return {key: MASKED if key in names else value for key, value in args.items()}
 
 
+def _reject_masked_args(
+    tool: str, args: Mapping[str, Json], secrets: Mapping[str, tuple[str, ...]]
+) -> None:
+    """마스킹된 값이 실제 도구에 가려는 것을 막는다. 재생이 만드는 유일한 새 노출이다.
+
+    ADR 0009 는 "재생 구간에서 도구 인자는 쓰이지 않고 결과만 필요하다"고 보았지만, 한 모델 턴에
+    승인 대상 뒤로 마스킹된 도구가 오면 그 호출은 재개 뒤 실제로 실행되고 인자는 재생된 모델
+    응답에서 온 마스킹된 값이다. 조용히 망가진 호출을 보내느니 실패로 끝낸다.
+    """
+    leaked = [name for name in secrets.get(tool, ()) if args.get(name) == MASKED]
+    if leaked:
+        raise ValueError(f"마스킹된 인자를 실제 도구에 보낼 수 없다: {tool} 의 {', '.join(leaked)}")
+
+
 class _Context:
     """AgentContext 를 시그니처로 만족한다. 루프 안에서 생긴 이벤트를 순서대로 쌓아 둔다.
 
-    도구 호출은 루프에서 오든 에이전트가 직접 부르든 _call 하나를 지난다. 게이트, 마스킹, 기록이
-    그 한 자리에 있어서 경로를 바꿔 빠져나갈 수 없다(ADR 0009).
+    도구 호출은 루프에서 오든 에이전트가 직접 부르든 _call 하나를 지나고, 모델 호출은 _ask 하나를
+    지난다. 게이트, 마스킹, 기록, 재생이 그 두 자리에 있어서 경로를 바꿔 빠져나갈 수 없다(ADR 0009).
     """
 
     def __init__(
         self,
-        run_id: RunId,
+        started: RunStarted,
         clock: Clock,
         model: ChatModel,
         tools: ToolConnection,
-        secrets: Mapping[str, tuple[str, ...]],
-        approvals: frozenset[str],
+        policy: _Policy,
+        replay: Replay,
+        decision: Decision | None,
     ) -> None:
-        self.run_id = run_id
+        self.run_id = started.run_id
+        self._started_at = started.ts
         self._paused = False
+        self._resumed = False
         self._clock = clock
         self._model = model
         self._tools = tools
-        self._secrets = secrets
-        self._approvals = approvals
+        self._policy = policy
+        self._replay = replay
+        self._decision = decision
         self._pending: list[Event] = []
 
     @property
@@ -108,18 +180,38 @@ class _Context:
         """조립부가 읽는다. 플러그인이 되돌릴 수 없도록 읽기 전용이다."""
         return self._paused
 
+    @property
+    def replaying(self) -> bool:
+        """재생 구간인가. 여기서 에이전트가 낸 이벤트는 이미 트레이스에 있어 다시 흘리지 않는다."""
+        return self._replay.resuming and not self._resumed
+
     def now(self) -> datetime:
-        return self._clock.now()
+        """에이전트의 시계. 재개 이벤트 전에는 실행의 시작 시각이다.
+
+        처음 실행 전체가 나중에 재생될 구간이므로 처음부터 고정한다. 그래야 프롬프트에 날짜를
+        넣는 평범한 에이전트가 시각 때문에 재개 불가가 되지 않는다(ADR 0009, 사용자 스토리 8).
+        시계 읽기를 따로 기록하지 않고도 결정적이다.
+
+        런타임이 자기 이벤트에 찍는 시각은 이것이 아니라 실제 시각이다. 그쪽은 대조 대상이
+        아니라 관찰용이고, 얼리면 한 실행의 트레이스가 전부 같은 시각이 되어 쓸모를 잃는다.
+        """
+        return self._clock.now() if self._resumed else self._started_at
 
     async def llm(self, prompt: str) -> str:
+        """프롬프트와 "첫 턴인가"는 이 호출의 클로저가 들고 있다.
+
+        인스턴스에 두면 에이전트가 llm() 을 겹쳐 부를 때 서로 덮어써 대조가 엉뚱해진다.
+        """
         self._stay_paused()
-        return await run_loop(
-            self._model,
-            prompt,
-            tools=self._tools.tools(),
-            call=self._call,
-            on_model_call=self._record_model_call,
-        )
+        invoke = model_caller(self._model, self._tools.tools())
+        first = True
+
+        async def ask(messages: Sequence[BaseMessage]) -> AIMessage:
+            nonlocal first
+            turn, first = prompt if first else "", False
+            return await self._ask(invoke, messages, turn)
+
+        return await run_loop(ask, prompt, call=self._call)
 
     async def tool(self, name: str, **args: Json) -> str:
         """도구가 ok=false 를 돌려주든 예외를 던지든 에이전트에게는 같은 ToolError 다."""
@@ -133,23 +225,61 @@ class _Context:
         taken, self._pending = self._pending, []
         return taken
 
+    def replay_event(self, event: Event) -> None:
+        """재생 구간에서 에이전트가 낸 이벤트를 기록과 맞춰 소비한다. 조립부가 부른다."""
+        self._replay.take_agent_event(event)
+
+    async def _ask(
+        self, invoke: ModelCaller, messages: Sequence[BaseMessage], prompt: str
+    ) -> AIMessage:
+        """모델 한 턴. 재생 구간이면 기록을 되살리고 포트를 건드리지 않는다.
+
+        prompt 는 루프의 첫 턴에만 차 있고 둘째 턴부터는 빈 문자열이다. 둘째 턴부터의 입력은
+        기록에서 파생되므로 같은 값을 턴마다 되풀이해 적지 않는다(ADR 0009 의 2026-09-22 이력).
+        """
+        replayed = self._replay.take_model(prompt)
+        if replayed is not None:
+            return message_from(replayed)
+        self._resume()
+        message = await invoke(messages)
+        self._record_model_call(reply_from(message), prompt)
+        return message
+
     async def _call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        """도구 하나. 재생 구간이면 기록된 결과를 돌려주고 게이트도 지나지 않는다.
+
+        재생 구간에서 게이트를 다시 걸지 않는 이유는, 기록이 있다는 것이 그 호출이 실제로
+        일어났다는 뜻이고 승인 대상이었다면 이미 승인을 받아 일어난 것이기 때문이다.
+        """
         self._stay_paused()
-        if name in self._approvals:
-            self._pause(name, args)
+        masked = _mask(name, args, self._policy.secrets)
+        replayed = self._replay.take_tool(name, masked)
+        if replayed is not None:
+            return ToolResult(ok=replayed.ok, content=replayed.content)
+        self._resume()
+        if name in self._policy.approvals and self._take_decision() is None:
+            self._pause(name, masked)
+        _reject_masked_args(name, args, self._policy.secrets)
         result = await _call_safely(self._tools, name, args)
-        self._record_tool_call(name, args, result)
+        self._record_tool_call(name, masked, result)
         return result
 
-    def _pause(self, name: str, args: Mapping[str, Json]) -> NoReturn:
-        """도구를 부르지 않은 채 일시정지를 기록하고 실행을 끝낸다. 재개는 04 의 일이다."""
+    def _take_decision(self) -> Decision | None:
+        """승인 하나는 도구 하나만 통과시킨다. 그래서 둘째 승인 대상에서 다시 멈춘다."""
+        decision, self._decision = self._decision, None
+        return decision
+
+    def _resume(self) -> None:
+        """재생 구간이 끝나는 자리. 실제 실행은 여기서부터이고 시계도 여기서 움직인다."""
+        if self._resumed or not self._replay.resuming:
+            return
+        self._resumed = True
+        self._pending.append(RunResumed(run_id=self.run_id, ts=self._clock.now()))
+
+    def _pause(self, name: str, masked: Mapping[str, Json]) -> NoReturn:
+        """도구를 부르지 않은 채 일시정지를 기록하고 실행을 끝낸다."""
         self._pending.append(
-            RunPaused(
-                run_id=self.run_id,
-                ts=self.now(),
-                tool=name,
-                args=_mask(name, args, self._secrets),
-            )
+            RunPaused(run_id=self.run_id, ts=self._clock.now(), tool=name, args=masked)
         )
         self._paused = True
         raise _Paused()
@@ -159,34 +289,35 @@ class _Context:
         if self._paused:
             raise _Paused()
 
-    def _record_model_call(self, reply: ModelReply) -> None:
+    def _record_model_call(self, reply: ModelReply, prompt: str) -> None:
         self._pending.append(
             LlmCalled(
                 run_id=self.run_id,
-                ts=self.now(),
+                ts=self._clock.now(),
                 model=reply.model,
                 input_tokens=reply.input_tokens,
                 output_tokens=reply.output_tokens,
+                prompt=prompt,
                 text=reply.text,
                 tool_calls=tuple(
                     ToolCall(
                         id=call.id,
                         name=call.name,
-                        args=_mask(call.name, call.args, self._secrets),
+                        args=_mask(call.name, call.args, self._policy.secrets),
                     )
                     for call in reply.tool_calls
                 ),
             )
         )
 
-    def _record_tool_call(self, name: str, args: Mapping[str, Json], result: ToolResult) -> None:
+    def _record_tool_call(self, name: str, masked: Mapping[str, Json], result: ToolResult) -> None:
         self._pending.append(
             ToolCalled(
                 run_id=self.run_id,
-                ts=self.now(),
+                ts=self._clock.now(),
                 tool=name,
                 ok=result.ok,
-                args=_mask(name, args, self._secrets),
+                args=masked,
                 content=result.content,
             )
         )
@@ -203,13 +334,73 @@ async def run(
     trace: TraceStore,
     clock: Clock,
 ) -> AsyncIterator[Event]:
-    manifest = _read_agent_manifest(plugins, agent)
-    servers = _resolve_servers(plugins, manifest)
-    _reject_masked_approvals(manifest, servers)
-    secrets = secret_args_by_tool(servers)
-    approvals = frozenset(manifest.requires_approval)
-    instance = plugins.load_agent(manifest)
+    prepared = _prepare(plugins, agent)
     run_id = clock.new_run_id()
+    started = RunStarted(
+        run_id=run_id, ts=clock.now(), agent=agent, request=request, principal=principal
+    )
+    trace.write(started)
+    yield started
+    async for event in _drive(
+        prepared,
+        started,
+        replay=Replay.nothing(),
+        decision=None,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    ):
+        yield event
+
+
+async def resume(
+    run_id: RunId,
+    decision: Decision,
+    approver: Principal,
+    *,
+    plugins: PluginSource,
+    model: ChatModel,
+    tools: ToolSource,
+    trace: TraceStore,
+    clock: Clock,
+) -> AsyncIterator[Event]:
+    """같은 실행을 이어 간다. 새 실행이 아니라 run_id 도 트레이스 파일도 하나다.
+
+    에이전트 이름과 요청은 트레이스의 시작 이벤트에서 읽는다. 승인이 트레이스에 먼저 기록된 뒤
+    재생이 시작되므로, 재생이 무엇을 하든 누가 허락했는지는 남는다.
+    """
+    started, records = _read_paused(trace, run_id)
+    prepared = _prepare(plugins, started.agent)
+    granted = ApprovalGranted(run_id=run_id, ts=clock.now(), approver=approver)
+    trace.write(granted)
+    yield granted
+    async for event in _drive(
+        prepared,
+        started,
+        replay=Replay.of(records),
+        decision=decision,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    ):
+        yield event
+
+
+async def _drive(
+    prepared: _Prepared,
+    started: RunStarted,
+    *,
+    replay: Replay,
+    decision: Decision | None,
+    model: ChatModel,
+    tools: ToolSource,
+    trace: TraceStore,
+    clock: Clock,
+) -> AsyncIterator[Event]:
+    """도구를 연결한 채 에이전트를 돌리고 결말을 붙인다. run() 과 resume() 이 공유하는 몸통."""
+    run_id = started.run_id
 
     # 런타임이 실제로 게이트에서 멈췄는가. 이벤트 종류로 판정하지 않는 이유는 에이전트가
     # run_paused 를 지어내 yield 할 수 있기 때문이다. 에이전트는 신뢰 경계 밖이다.
@@ -220,22 +411,25 @@ async def run(
         return event
 
     async def execute() -> AsyncIterator[Event]:
-        """도구를 연결한 채 에이전트를 돌린다. 실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
+        """실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
 
         일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
         run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
         신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
         """
         nonlocal paused
-        async with tools.connect(servers) as connection:
-            _reject_unknown_declarations(approvals, secrets, connection.tools())
-            ctx = _Context(run_id, clock, model, connection, secrets, approvals)
+        async with tools.connect(prepared.servers) as connection:
+            _reject_unknown_declarations(prepared.policy, connection.tools())
+            ctx = _Context(started, clock, model, connection, prepared.policy, replay, decision)
             try:
-                async for event in instance.run(request, ctx):
+                async for event in prepared.instance.run(started.request, ctx):
                     for pending in ctx.take_events():
                         yield pending
                     if ctx.paused:
                         break
+                    if ctx.replaying:
+                        ctx.replay_event(event)
+                        continue
                     yield event
             except _Paused:
                 pass
@@ -247,9 +441,6 @@ async def run(
                 for pending in ctx.take_events():
                     yield pending
 
-    yield emit(
-        RunStarted(run_id=run_id, ts=clock.now(), agent=agent, request=request, principal=principal)
-    )
     last: Event | None = None
     try:
         async for event in execute():
@@ -265,6 +456,51 @@ async def run(
         yield emit(
             RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")
         )
+
+
+def _prepare(plugins: PluginSource, agent: AgentName) -> _Prepared:
+    """실행 식별자가 생기기 전에 끝나는 검사들. 여기서 나는 오류는 트레이스가 없다."""
+    manifest = _read_agent_manifest(plugins, agent)
+    servers = _resolve_servers(plugins, manifest)
+    _reject_masked_approvals(manifest, servers)
+    return _Prepared(
+        servers=servers,
+        policy=_Policy(
+            secrets=secret_args_by_tool(servers),
+            approvals=frozenset(manifest.requires_approval),
+        ),
+        instance=plugins.load_agent(manifest),
+    )
+
+
+def _read_paused(trace: TraceStore, run_id: RunId) -> tuple[RunStarted, tuple[Record, ...]]:
+    """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다."""
+    stored = trace.read(run_id)
+    if stored is None:
+        raise PluginError(f"그런 실행이 없다: {run_id}")
+    if stored.schema_version not in RESUMABLE:
+        raise PluginError(
+            f"형식 {stored.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
+        )
+    events = _sound_events(stored, run_id)
+    started = events[0]
+    if not isinstance(started, RunStarted):
+        raise PluginError(f"시작 이벤트로 열리지 않는 트레이스는 재개할 수 없다: {run_id}")
+    if not isinstance(events[-1], RunPaused):
+        raise PluginError(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+    return started, tuple(e for e in events if not isinstance(e, _BOUNDARY))
+
+
+def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
+    """손상된 트레이스를 거른다. 정상 쓰기 경로에서는 어긋날 수 없는 것들이다(티켓 02 리뷰)."""
+    known = tuple(e for e in stored.events if not isinstance(e, UnknownEvent))
+    if len(known) != len(stored.events):
+        raise PluginError(f"모르는 종류의 이벤트가 있어 재생할 수 없다: {run_id}")
+    if not known:
+        raise PluginError(f"비어 있는 트레이스는 재개할 수 없다: {run_id}")
+    if stored.run_id != run_id or any(event.run_id != run_id for event in known):
+        raise PluginError(f"실행 식별자가 어긋난 트레이스는 재개할 수 없다: {run_id}")
+    return known
 
 
 def _read_agent_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:
@@ -298,21 +534,18 @@ def _reject_masked_approvals(
         )
 
 
-def _reject_unknown_declarations(
-    approvals: frozenset[str],
-    secrets: Mapping[str, tuple[str, ...]],
-    specs: Sequence[ToolSpec],
-) -> None:
+def _reject_unknown_declarations(policy: _Policy, specs: Sequence[ToolSpec]) -> None:
     """매니페스트가 가리키는 도구와 인자가 실재하는지. 도구 목록이 연결 뒤에 나와 여기가 첫 자리다.
 
     오타나 중첩 프로퍼티가 게이트나 마스킹을 조용히 끄는 fail-open 을 막는다(ADR 0009 와 그
-    2026-09-21 이력). 실행 안이라 run_failed 로 끝나고 트레이스가 남는다.
+    2026-09-21 이력). 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 재개에서도 같은
+    자리에서 도므로, 승인을 기다리는 사이 매니페스트가 바뀌었으면 여기서 먼저 걸린다.
     """
     params = {spec.name: _param_names(spec) for spec in specs}
-    for tool in approvals:
+    for tool in policy.approvals:
         if tool not in params:
             raise LookupError(f"requires_approval 이 가리키는 도구가 없다: {tool}")
-    for tool, names in secrets.items():
+    for tool, names in policy.secrets.items():
         if tool not in params:
             raise LookupError(f"secret_args 가 가리키는 도구가 없다: {tool}")
         for name in names:

@@ -1,17 +1,21 @@
-"""CLI 채널. 실행을 요청하는 명령(run)이 여기에 붙는다.
+"""CLI 채널. 실행을 일으키는 명령 둘, run 과 resume 이 여기에 붙는다.
 
 표준 출력은 실행의 결말만 싣는다. 끝나면 출력 문자열, 멈추면 실행 식별자와 승인 요청(도구 이름과
-인자. 마스킹된 인자는 마스킹된 채로). 표준 에러는 둘을 싣고 규칙이 다르다. 실패 진단은 언제나
-나가고, 진행 이벤트는 progress 스트림이 주어졌을 때만 한 줄에 JSON 하나로 나간다(트레이스와 같은
-직렬화). 종료 코드는 성공 0, 실패 1, 일시정지 3. 일시정지가 전용 코드인 이유는 성공도 실패도
-아니라는 것을 스크립트가 알아야 하기 때문이다(ADR 0009). 2 는 argparse 가 인자 오류에 쓴다.
-어댑터는 main.py 가 만들어 넘기고 채널은 표시만 결정한다.
+인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령. 표준 에러는 둘을 싣고 규칙이 다르다.
+실패 진단은 언제나 나가고, 진행 이벤트는 progress 스트림이 주어졌을 때만 한 줄에 JSON 하나로
+나간다(트레이스와 같은 직렬화). 종료 코드는 성공 0, 실패 1, 일시정지 3. 일시정지가 전용 코드인
+이유는 성공도 실패도 아니라는 것을 스크립트가 알아야 하기 때문이다(ADR 0009). 2 는 argparse 가
+인자 오류에 쓴다. 어댑터는 main.py 가 만들어 넘기고 채널은 표시만 결정한다.
+
+멈춘 실행의 목록 조회는 만들지 않는다. 채널은 실행을 일으키는 면이고 관찰은 관리의 일이다.
+재개는 실행 식별자 하나만 받는다. 에이전트도 요청도 주체도 트레이스가 안다.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from importlib.metadata import version
@@ -26,8 +30,8 @@ from agent_os.core.ports import (
     ToolSource,
     TraceStore,
 )
-from agent_os.core.run import run
-from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunPaused
+from agent_os.core.run import Approve, Decision, resume, run
+from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunId, RunPaused
 
 DEFAULT_TRACES = Path("traces")
 EXIT_FINISHED = 0
@@ -44,6 +48,15 @@ class RunArgs:
     verbose: bool
 
 
+@dataclass(frozen=True)
+class ResumeArgs:
+    run_id: RunId
+    decision: Decision
+    model: str | None
+    traces: Path
+    verbose: bool
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-os", description="플러그인 기반 에이전트 런타임")
     parser.add_argument("--version", action="version", version=version("agent-os"))
@@ -51,23 +64,57 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = commands.add_parser("run", help="에이전트에 요청 하나를 던진다")
     run_parser.add_argument("agent", help="plugins/agents/ 아래 에이전트 이름")
     run_parser.add_argument("request", help="요청 문자열")
-    run_parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
-    run_parser.add_argument("--verbose", action="store_true", help="진행 이벤트를 표준 에러로")
-    run_parser.add_argument(
-        "--traces", type=Path, default=DEFAULT_TRACES, help="트레이스 디렉터리 (기본 traces/)"
-    )
+    _add_shared(run_parser)
+    resume_parser = commands.add_parser("resume", help="일시정지한 실행을 이어 간다")
+    resume_parser.add_argument("run_id", help="멈출 때 표준 출력에 찍힌 실행 식별자")
+    # 승인과 거부 중 하나를 반드시 골라야 한다. 거부(--deny)는 티켓 05 가 이 그룹에 더한다.
+    decision = resume_parser.add_mutually_exclusive_group(required=True)
+    decision.add_argument("--approve", action="store_true", help="이 도구 호출을 승인한다")
+    _add_shared(resume_parser)
     return parser
 
 
-def parse_run_args(argv: list[str] | None) -> RunArgs:
+def _add_shared(parser: argparse.ArgumentParser) -> None:
+    """두 명령이 같이 받는 것. 재개도 재생 뒤 실제로 이어 가므로 모델이 필요하다."""
+    parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
+    parser.add_argument("--verbose", action="store_true", help="진행 이벤트를 표준 에러로")
+    parser.add_argument(
+        "--traces", type=Path, default=DEFAULT_TRACES, help="트레이스 디렉터리 (기본 traces/)"
+    )
+
+
+def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
     namespace = build_parser().parse_args(argv)
+    model = None if namespace.model is None else str(namespace.model)
+    traces = Path(namespace.traces)
+    verbose = bool(namespace.verbose)
+    if namespace.command == "resume":
+        return ResumeArgs(
+            run_id=RunId(str(namespace.run_id)),
+            decision=_decision(namespace),
+            model=model,
+            traces=traces,
+            verbose=verbose,
+        )
     return RunArgs(
         agent=AgentName(str(namespace.agent)),
         request=str(namespace.request),
-        model=None if namespace.model is None else str(namespace.model),
-        traces=Path(namespace.traces),
-        verbose=bool(namespace.verbose),
+        model=model,
+        traces=traces,
+        verbose=verbose,
     )
+
+
+def _decision(namespace: argparse.Namespace) -> Decision:
+    """고른 플래그를 core 가 받는 결정으로 바꾼다.
+
+    상호배타 그룹이 하나를 반드시 고르게 하므로 마지막 줄은 도달하지 않는다. 그래도 분기를 두는
+    것은, 티켓 05 가 --deny 를 그룹에 더할 때 여기를 고치지 않으면 거부가 조용히 승인으로 도는
+    것을 타입이 잡아 주지 않기 때문이다.
+    """
+    if bool(namespace.approve):
+        return Approve()
+    raise SystemExit("승인과 거부 중 하나를 골라야 한다")
 
 
 async def run_command(
@@ -83,6 +130,7 @@ async def run_command(
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
+    traces: Path,
 ) -> int:
     """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
     events = run(
@@ -95,15 +143,60 @@ async def run_command(
         trace=trace,
         clock=clock,
     )
+    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
+
+
+async def resume_command(
+    run_id: RunId,
+    decision: Decision,
+    approver: Principal,
+    *,
+    plugins: PluginSource,
+    model: ChatModel,
+    tools: ToolSource,
+    trace: TraceStore,
+    clock: Clock,
+    stdout: TextIO,
+    stderr: TextIO,
+    progress: TextIO | None,
+    traces: Path,
+) -> int:
+    """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)은 PluginError 로 진단만 적는다."""
+    events = resume(
+        run_id,
+        decision,
+        approver,
+        plugins=plugins,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
+
+
+async def _report(
+    events: AsyncIterator[Event],
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+    progress: TextIO | None,
+    traces: Path,
+) -> int:
     try:
-        return await _show(events, stdout=stdout, stderr=stderr, progress=progress)
+        return await _show(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
     except PluginError as error:
         stderr.write(f"{error}\n")
         return EXIT_FAILED
 
 
 async def _show(
-    events: AsyncIterator[Event], *, stdout: TextIO, stderr: TextIO, progress: TextIO | None
+    events: AsyncIterator[Event],
+    *,
+    stdout: TextIO,
+    stderr: TextIO,
+    progress: TextIO | None,
+    traces: Path,
 ) -> int:
     """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다."""
     exit_code = EXIT_FAILED
@@ -114,7 +207,7 @@ async def _show(
             stdout.write(event.output + "\n")
             exit_code = EXIT_FINISHED
         elif isinstance(event, RunPaused):
-            stdout.write(_approval_request(event))
+            stdout.write(_approval_request(event, traces))
             exit_code = EXIT_PAUSED
         elif isinstance(event, RunFailed):
             stderr.write(f"실행 실패: {event.error}\n")
@@ -122,7 +215,27 @@ async def _show(
     return exit_code
 
 
-def _approval_request(event: RunPaused) -> str:
-    """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다."""
+def _approval_request(event: RunPaused, traces: Path) -> str:
+    """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
+
+    안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 트레이스 디렉터리를 옮겨 실행했으면 재개도
+    거기서 읽어야 하므로 그 옵션을 같이 적는다. 기본 경로면 군더더기라 붙이지 않는다.
+    """
     args = json.dumps(event.args, ensure_ascii=False)
-    return f"일시정지: {event.run_id}\n도구: {event.tool}\n인자: {args}\n"
+    option = "" if traces == DEFAULT_TRACES else f" --traces {_as_argument(traces)}"
+    return (
+        f"일시정지: {event.run_id}\n"
+        f"도구: {event.tool}\n"
+        f"인자: {args}\n"
+        f"승인: agent-os resume {event.run_id} --approve{option}\n"
+    )
+
+
+def _as_argument(path: Path) -> str:
+    """셸이 한 인자로 읽도록 인용한다. 공백뿐 아니라 `$` 와 따옴표도 그대로 전달돼야 한다.
+
+    직접 큰따옴표를 씌우면 그 안에서 셸이 `$` 와 백틱을 여전히 해석해, 안내한 명령이 다른
+    디렉터리를 읽게 된다. 이 함수가 고치려던 실패와 같은 모양이다. 테스트가 `shlex.split` 으로
+    되읽으므로 둘이 서로의 역이다.
+    """
+    return shlex.quote(str(path))

@@ -5,11 +5,11 @@ from collections.abc import Mapping, Sequence
 
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 
 from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
-from agent_os.core.loop import run_loop
+from agent_os.core.loop import ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, reply_from
 from agent_os.core.ports import ChatModel, ToolResult, ToolSpec
 from agent_os.sdk import Json, ToolCall
@@ -20,6 +20,18 @@ NO_TOOLS: Sequence[ToolSpec] = []
 async def _no_tool(name: str, args: Mapping[str, Json]) -> ToolResult:
     """도구가 없으니 불리면 안 된다. 불리면 시끄럽게."""
     raise LookupError(name)
+
+
+def _recording(model: ChatModel, calls: list[ModelReply]) -> ModelCaller:
+    """모델 호출자를 기록으로 감싼다. 컨텍스트가 재생과 기록으로 감싸는 자리와 같은 이음매다."""
+    invoke = model_caller(model, NO_TOOLS)
+
+    async def ask(messages: Sequence[BaseMessage]) -> AIMessage:
+        message = await invoke(messages)
+        calls.append(reply_from(message))
+        return message
+
+    return ask
 
 
 def test_모델_응답은_이름_텍스트_토큰_수를_우리_타입으로_바꾼다() -> None:
@@ -53,7 +65,7 @@ async def test_도구_없는_루프는_한_바퀴로_끝나고_마지막_텍스�
     model: ChatModel = GenericFakeChatModel(messages=iter([AIMessage(content="4")]))
     calls: list[ModelReply] = []
 
-    text = await run_loop(model, "2+2?", tools=NO_TOOLS, call=_no_tool, on_model_call=calls.append)
+    text = await run_loop(_recording(model, calls), "2+2?", call=_no_tool)
 
     assert text == "4"
     assert len(calls) == 1
@@ -68,11 +80,7 @@ async def test_Anthropic_모델이_실제로_답한다() -> None:
     calls: list[ModelReply] = []
 
     text = await run_loop(
-        model,
-        "숫자 하나만 답한다. 2 더하기 2는?",
-        tools=NO_TOOLS,
-        call=_no_tool,
-        on_model_call=calls.append,
+        _recording(model, calls), "숫자 하나만 답한다. 2 더하기 2는?", call=_no_tool
     )
 
     assert "4" in text

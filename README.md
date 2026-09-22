@@ -14,9 +14,9 @@ uv run pytest -q
 
 ```
 src/agent_os/
-  main.py          진입점. run → channel. 어댑터를 조립해 넘긴다
+  main.py          진입점. run·resume → channel. 어댑터를 조립해 넘긴다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
-  core/            런타임, 로더, 루프, 포트 선언
+  core/            런타임, 로더, 루프, 재생, 포트 선언
   channel/cli/     실행을 일으키는 면
   admin/           구성을 바꾸고 관찰하는 면 (슬라이스 2)
   adapters/        포트 구현

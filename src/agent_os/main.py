@@ -19,7 +19,14 @@ from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
-from agent_os.channel.cli.main import EXIT_FAILED, RunArgs, parse_run_args, run_command
+from agent_os.channel.cli.main import (
+    EXIT_FAILED,
+    ResumeArgs,
+    RunArgs,
+    parse_args,
+    resume_command,
+    run_command,
+)
 from agent_os.core.ports import ChatModel
 from agent_os.sdk import Principal
 
@@ -28,18 +35,20 @@ PLUGINS_ROOT = Path("plugins")
 
 def main(argv: list[str] | None = None) -> int:
     _use_utf8(sys.stdout, sys.stderr)
-    args = parse_run_args(argv)
+    args = parse_args(argv)
     try:
-        model = _chat_model(args)
+        model = _chat_model(args.model)
     except ValueError as error:
         sys.stderr.write(f"{error}\n")
         return EXIT_FAILED
+    if isinstance(args, ResumeArgs):
+        return asyncio.run(_resume(args, model))
     return asyncio.run(_run(args, model))
 
 
-def _chat_model(args: RunArgs) -> ChatModel:
+def _chat_model(name: str | None) -> ChatModel:
     """모델 이름은 플래그, 환경변수, 기본값 순. 빈 지정은 실행 전에 거부한다."""
-    return anthropic_chat_model(resolve_model_name(os.environ, args.model))
+    return anthropic_chat_model(resolve_model_name(os.environ, name))
 
 
 async def _run(args: RunArgs, model: ChatModel) -> int:
@@ -55,6 +64,25 @@ async def _run(args: RunArgs, model: ChatModel) -> int:
         stdout=sys.stdout,
         stderr=sys.stderr,
         progress=sys.stderr if args.verbose else None,
+        traces=args.traces,
+    )
+
+
+async def _resume(args: ResumeArgs, model: ChatModel) -> int:
+    """승인자는 요청한 주체와 같은 출처에서 온다. 자기 승인은 허용한다(ADR 0009)."""
+    return await resume_command(
+        args.run_id,
+        args.decision,
+        Principal(getpass.getuser()),
+        plugins=FilesystemPlugins(PLUGINS_ROOT),
+        model=model,
+        tools=McpTools(),
+        trace=JsonlTrace(args.traces),
+        clock=SystemClock(),
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        progress=sys.stderr if args.verbose else None,
+        traces=args.traces,
     )
 
 

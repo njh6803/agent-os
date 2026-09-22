@@ -6,13 +6,15 @@
 import itertools
 from collections.abc import AsyncGenerator, AsyncIterator, Iterator, Mapping, Sequence
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
+from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 
 from agent_os.core.loop import MAX_TURNS
@@ -26,12 +28,15 @@ from agent_os.core.ports import (
     ToolSource,
     ToolSpec,
     Trace,
+    TraceSchemaVersion,
     TraceStore,
+    UnknownEvent,
 )
-from agent_os.core.run import run
+from agent_os.core.run import Approve, resume, run
 from agent_os.sdk import (
     AgentContext,
     AgentName,
+    ApprovalGranted,
     BaseAgent,
     Event,
     Json,
@@ -45,6 +50,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunPaused,
+    RunResumed,
     RunStarted,
     ToolCall,
     ToolCalled,
@@ -95,8 +101,11 @@ class FakeClock:
 
 
 class FakeTrace:
-    def __init__(self) -> None:
+    """쓴 것을 그대로 읽어 준다. schema_version 은 옛 형식을 재개하려는 경우를 만들 때만 준다."""
+
+    def __init__(self, schema_version: TraceSchemaVersion = "2") -> None:
         self.events: list[Event] = []
+        self._schema_version: TraceSchemaVersion = schema_version
 
     def write(self, event: Event) -> None:
         self.events.append(event)
@@ -105,7 +114,38 @@ class FakeTrace:
         events = tuple(e for e in self.events if e.run_id == run_id)
         if not events:
             return None
-        return Trace(run_id=run_id, schema_version="2", events=events)
+        return Trace(run_id=run_id, schema_version=self._schema_version, events=events)
+
+
+class CorruptTrace(FakeTrace):
+    """헤더의 실행 식별자와 이벤트의 것이 어긋난 파일. 손으로 고쳤거나 손상된 트레이스다."""
+
+    def read(self, run_id: RunId) -> Trace | None:
+        found = super().read(run_id)
+        if found is None:
+            return None
+        intruder = RunPaused(run_id=RunId("다른-실행"), ts=FIXED_NOW, tool="x", args={})
+        return Trace(
+            run_id=found.run_id,
+            schema_version=found.schema_version,
+            events=(*found.events, intruder),
+        )
+
+
+class AdvancingClock:
+    """부를 때마다 1초씩 간다. 재생 구간의 시각이 흔들리면 프롬프트 대조가 깨지는 것을 보이려고."""
+
+    def __init__(self) -> None:
+        self.ids_issued = 0
+        self._ticks = 0
+
+    def now(self) -> datetime:
+        self._ticks += 1
+        return FIXED_NOW + timedelta(seconds=self._ticks)
+
+    def new_run_id(self) -> RunId:
+        self.ids_issued += 1
+        return RunId(f"run-{self.ids_issued}")
 
 
 class FakePlugins:
@@ -199,7 +239,13 @@ class BrokenTools:
 
 
 class ToolAwareFakeModel(GenericFakeChatModel):
-    """bind_tools 를 받아들이기만 하는 가짜. 응답은 정해진 대로."""
+    """bind_tools 를 받아들이기만 하는 가짜. 응답은 정해진 대로이고 불린 횟수를 센다.
+
+    횟수는 재생이 모델 포트에 닿지 않는다는 것을 세는 데 쓴다. 응답 iterator 가 소진되는 것으로는
+    "모자라면 터진다"만 알 수 있지 "더 부르지 않았다"를 알 수 없다.
+    """
+
+    calls: int = 0
 
     def bind_tools(
         self,
@@ -209,6 +255,16 @@ class ToolAwareFakeModel(GenericFakeChatModel):
         **kwargs: object,
     ) -> Runnable[LanguageModelInput, AIMessage]:
         return self
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: object,
+    ) -> ChatResult:
+        self.calls += 1
+        return super()._generate(messages, stop, run_manager, **kwargs)
 
 
 class OneShotAgent:
@@ -340,6 +396,7 @@ async def test_모델_호출마다_이벤트_하나에_모델_이름과_토큰_�
         model="fake-model",
         input_tokens=7,
         output_tokens=3,
+        prompt="2+2?",
         text="4",
     )
 
@@ -928,3 +985,577 @@ async def test_에이전트가_지어낸_일시정지_이벤트는_실행을_멈
     assert [e.type for e in events] == ["run_started", "run_paused", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "run_finished" in events[-1].error
+
+
+# --- 재개 ---------------------------------------------------------------------
+#
+# 일시정지한 실행을 승인해 이어 간다. 먼저 _run 으로 멈춘 실행을 만들고 같은 가짜들로 _resume 한다.
+# 가짜를 공유하는 것이 그대로 단언이 된다. 모델의 응답 iterator 가 이어지고 도구의 호출 기록이
+# 누적되므로, 재생 구간이 포트를 건드리면 응답이 모자라거나 호출이 늘어나 드러난다.
+
+
+async def _resume(
+    run_id: RunId,
+    model: ChatModel,
+    trace: TraceStore,
+    clock: Clock,
+    tools: ToolSource | None = None,
+    plugins: PluginSource | None = None,
+    approver: Principal = PRINCIPAL,
+) -> list[Event]:
+    return [
+        event
+        async for event in resume(
+            run_id,
+            Approve(),
+            approver,
+            plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
+            model=model,
+            tools=tools or FakeTools(),
+            trace=trace,
+            clock=clock,
+        )
+    ]
+
+
+class SafeThenGatedAgent:
+    """안전한 도구를 먼저 부르고 승인 대상을 부른다. 앞의 것이 재생 구간이 된다."""
+
+    def __init__(self, first: int = 2) -> None:
+        self._first = first
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        first = await ctx.tool("add", a=self._first, b=2)
+        second = await ctx.tool("send", to="bob")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"{first}/{second}")
+
+
+class AskingAgent:
+    """프롬프트를 바꿔 끼울 수 있다. 재생 대조가 보는 유일한 모델 입력이 그것이다."""
+
+    def __init__(self, prompt: str) -> None:
+        self._prompt = prompt
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=await ctx.llm(self._prompt))
+
+
+class DatedAgent:
+    """프롬프트에 시각을 넣는 평범한 에이전트. 시각 때문에 재개 불가가 되면 안 된다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        answer = await ctx.llm(f"{ctx.now().isoformat()} 기준 {request}")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
+
+
+class SecretThenGatedAgent:
+    """비밀 인자를 가진 도구를 먼저 부른다. 그 인자는 마스킹돼 기록되므로 대조에서 빠진다."""
+
+    def __init__(self, key: str) -> None:
+        self._key = key
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        first = await ctx.tool("add", a=self._key, b=2)
+        second = await ctx.tool("send", to="bob")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"{first}/{second}")
+
+
+def _gated_plugins(
+    agent: BaseAgent,
+    requires_approval: Sequence[str] = ("send",),
+    secret_args: Mapping[str, Sequence[str]] | None = None,
+) -> FakePlugins:
+    """send 가 승인 대상인 에이전트 하나. 도구는 srv 하나에서 온다."""
+    return FakePlugins(
+        {"calc": agent},
+        mcp=["srv"],
+        servers=["srv"],
+        requires_approval=requires_approval,
+        secret_args=secret_args,
+    )
+
+
+def _two_tools(params: Mapping[str, Sequence[str]] | None = None) -> FakeTools:
+    return FakeTools({"add": "4", "send": "sent"}, params=params)
+
+
+async def test_승인하고_재개하면_멈췄던_도구가_실제로_실행되고_끝까지_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    paused = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in paused] == ["run_started", "llm_called", "run_paused"]
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == "보냈다"
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
+
+
+async def test_재생_구간의_모델_호출과_도구_호출은_포트에_도달하지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """승인 한 번에 토큰 값을 두 번 내지 않고, 이미 한 도구를 다시 부르지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "send"), _reply("끝")]))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [name for name, _ in tools.connection.calls] == ["add", "send"]
+
+
+async def test_재생된_사실은_트레이스에_다시_쓰이지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """에이전트가 낸 것도 마찬가지다. 기록을 셀 때 중복을 걸러내지 않아도 된다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(ChattyAgent())
+
+    await _run(ChattyAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in trace.events] == [
+        "run_started",
+        "tool_called",  # before. 에이전트가 낸 것
+        "llm_called",
+        "run_paused",
+        "approval_granted",
+        "run_resumed",
+        "tool_called",  # send. 재개 뒤 실제 실행
+        "llm_called",
+        "tool_called",  # after
+        "run_finished",
+    ]
+    called = [e.tool for e in trace.events if isinstance(e, ToolCalled)]
+    assert called == ["before", "send", "after"]
+
+
+async def test_시작_이벤트는_재개할_때_다시_나지_않는다(trace: FakeTrace, clock: FakeClock) -> None:
+    """실행 하나에 한 번이고 트레이스는 한 파일에 이어진다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert "run_started" not in [e.type for e in events]
+    assert sum(1 for e in trace.events if isinstance(e, RunStarted)) == 1
+    assert {e.run_id for e in trace.events} == {"run-1"}
+    assert clock.ids_issued == 1
+
+
+async def test_승인이_승인자와_함께_트레이스에_먼저_기록된_뒤_재생이_시작된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, approver=Principal("bob")
+    )
+
+    assert events[0] == ApprovalGranted(
+        run_id=RunId("run-1"), ts=FIXED_NOW, approver=Principal("bob")
+    )
+    written = [e.type for e in trace.events]
+    assert written.index("approval_granted") < written.index("run_resumed")
+
+
+async def test_요청한_주체와_승인자가_같아도_재개된다(trace: FakeTrace, clock: FakeClock) -> None:
+    """자기 승인 금지는 이번 범위가 아니다. 지금 사용자가 혼자다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, approver=PRINCIPAL
+    )
+
+    assert isinstance(events[0], ApprovalGranted)
+    assert events[0].approver == PRINCIPAL
+    assert events[-1].type == "run_finished"
+
+
+async def test_컨텍스트로_직접_부른_도구도_승인하면_재개된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """재생할 기록이 하나도 없어도 재개 이벤트는 난다. 재생 구간과 실제 구간의 경계이기 때문이다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = _gated_plugins(DirectToolAgent(), requires_approval=["add"])
+
+    await _run(DirectToolAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+    assert events[1] == RunResumed(run_id=RunId("run-1"), ts=FIXED_NOW)
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
+
+
+async def test_한_턴에_승인_대상이_둘이면_재개한_뒤_둘째에서_다시_멈춘다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """승인과 실행의 1:1 대응이 여기서 닫힌다. 승인 하나는 도구 하나만 통과시킨다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "delete"), _reply("끝")]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+    plugins = _gated_plugins(OneShotAgent(), requires_approval=["send", "delete"])
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_paused",
+    ]
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].tool == "delete"
+    assert [name for name, _ in tools.connection.calls] == ["send"]
+
+
+async def test_루프_상한은_재생된_턴을_포함해_세고_멈추고_재개를_반복해도_무한히_돌지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """상한이 재개로 리셋되면 멈추고-재개를 반복해 비용이 무한정 는다."""
+    model = ToolAwareFakeModel(messages=itertools.repeat(_tool_request("send")))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    resumes = 0
+    while events[-1].type == "run_paused" and resumes <= MAX_TURNS + 1:
+        events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+        resumes += 1
+
+    assert isinstance(events[-1], RunFailed)
+    assert f"{MAX_TURNS}턴" in events[-1].error
+    assert resumes < MAX_TURNS + 1
+
+
+async def test_에이전트가_바뀌어_도구_인자가_달라지면_대조가_어긋나_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """옛 실행의 기록을 새 코드에 먹이는 것은 성공이 아니다. 시끄럽게 죽는 쪽이다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = _two_tools()
+
+    await _run(
+        SafeThenGatedAgent(),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SafeThenGatedAgent()),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SafeThenGatedAgent(first=9)),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "add" in events[-1].error
+    assert trace.events[-1] == events[-1]
+
+
+async def test_대조_불일치로_실패한_실행은_다시_재개할_수_없다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """사용자는 에이전트가 바뀌었음을 알고 새로 실행하면 된다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = _two_tools()
+
+    await _run(
+        SafeThenGatedAgent(),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SafeThenGatedAgent()),
+    )
+    await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SafeThenGatedAgent(first=9)),
+    )
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(
+            RunId("run-1"),
+            model,
+            trace,
+            clock,
+            tools=tools,
+            plugins=_gated_plugins(SafeThenGatedAgent()),
+        )
+
+
+async def test_에이전트가_바뀌어_프롬프트가_달라지면_대조가_어긋나_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+
+    await _run(
+        AskingAgent("원래 질문"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(AskingAgent("원래 질문")),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(AskingAgent("바뀐 질문")),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "바뀐 질문" in events[-1].error
+
+
+async def test_재생_구간의_시각은_실행의_시작_시각이고_재개_뒤로는_실제_시각이다(
+    trace: FakeTrace,
+) -> None:
+    """시계 읽기를 따로 기록하지 않고도 결정적이다. 프롬프트에 날짜를 넣어도 재개된다."""
+    clock = AdvancingClock()
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(DatedAgent())
+
+    paused = await _run(DatedAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    started = paused[0]
+    assert isinstance(started, RunStarted)
+    assert isinstance(paused[1], LlmCalled)
+    assert started.ts.isoformat() in paused[1].prompt
+    assert events[-1].type == "run_finished"
+    assert events[-1].ts > started.ts
+
+
+async def test_마스킹된_인자는_대조에서_빠진다(trace: FakeTrace, clock: FakeClock) -> None:
+    """복원할 수 없는 값을 대조하면 마스킹을 쓴 실행이 전부 재개 불가가 된다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = _two_tools(params={"add": ["a", "b"], "send": ["to"]})
+    secrets = {"add": ["a"]}
+
+    await _run(
+        SecretThenGatedAgent("원래-키"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SecretThenGatedAgent("원래-키"), secret_args=secrets),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SecretThenGatedAgent("새-키"), secret_args=secrets),
+    )
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+
+
+async def test_승인_대상이_재개_시점에_실재하지_않으면_연결_직후_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """승인을 기다리는 사이 매니페스트가 바뀌었으면 여기서 먼저 걸린다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+
+    await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=_gated_plugins(OneShotAgent())
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(OneShotAgent(), requires_approval=["sned"]),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "sned" in events[-1].error
+
+
+async def test_일시정지가_아닌_실행은_재개할_수_없다(trace: FakeTrace, clock: FakeClock) -> None:
+    """아무 일도 안 일어난 것과 구분되는 분명한 오류를 받는다."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    await _run(OneShotAgent(), model, trace, clock)
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(RunId("run-1"), model, trace, clock)
+
+
+async def test_없는_실행_식별자는_재개할_수_없다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(PluginError, match="없다"):
+        await _resume(RunId("없다"), model, trace, clock)
+
+    assert trace.events == []
+
+
+async def test_형식_1_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
+    """형식 1 은 재개의 입력이 되는 필드가 비어 있다. 읽기는 되고 재개만 안 된다."""
+    trace = FakeTrace(schema_version="1")
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(PluginError, match="1"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+
+async def test_다른_실행의_이벤트가_섞인_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
+    """트레이스를 재개의 입력으로 신뢰하는 자리라 손상을 여기서 거른다."""
+    trace = CorruptTrace()
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+
+class UnknownEventTrace(FakeTrace):
+    """더 새 런타임이 쓴 종류가 섞인 파일. 재생기가 그 자리를 무엇으로 셀지 알 수 없다."""
+
+    def read(self, run_id: RunId) -> Trace | None:
+        found = super().read(run_id)
+        if found is None:
+            return None
+        head, *rest = found.events
+        return Trace(
+            run_id=found.run_id,
+            schema_version=found.schema_version,
+            events=(head, UnknownEvent(raw='{"type": "from_the_future"}'), *rest),
+        )
+
+
+class EmptyTrace(FakeTrace):
+    """헤더만 있고 이벤트가 없는 파일."""
+
+    def read(self, run_id: RunId) -> Trace | None:
+        found = super().read(run_id)
+        if found is None:
+            return None
+        return Trace(run_id=found.run_id, schema_version=found.schema_version, events=())
+
+
+async def test_모르는_종류의_이벤트가_섞인_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
+    """읽기는 원문을 보존하지만 재생은 그 자리를 무엇으로 셀지 알 수 없다."""
+    trace = UnknownEventTrace()
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+
+async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
+    trace = EmptyTrace()
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+
+async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_가려_하면_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """한 턴에 승인 대상 뒤로 마스킹된 도구가 오는 조합. 금지 규칙이 못 막는 자리다.
+
+    재생된 모델 응답에 담긴 그 도구의 인자는 마스킹된 채이고, 승인 대상에서 재생이 끝나므로
+    뒤의 호출은 실제로 실행된다. 승인받은 호출이 *** 를 보내는 것보다 실패가 낫다(ADR 0009 이력).
+    """
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "add"), _reply("끝")]))
+    tools = _two_tools(params={"add": ["a", "b"], "send": ["a", "b"]})
+    plugins = _gated_plugins(OneShotAgent(), secret_args={"add": ["a"]})
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_failed",
+    ]
+    assert isinstance(events[-1], RunFailed)
+    assert "add" in events[-1].error
+    assert [name for name, _ in tools.connection.calls] == ["send"]
+
+
+async def test_재생_구간의_모델_호출은_모델_포트를_부르지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """승인 한 번에 토큰 값을 두 번 내지 않는다. 가짜 모델이 불린 횟수로 본다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    assert model.calls == 1
+
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    # 재생된 첫 턴은 기록에서 오고 둘째 턴만 실제 호출이다. 재생이 포트에 닿으면 3 이 된다.
+    assert model.calls == 2

@@ -95,7 +95,7 @@ def test_일시정지_이벤트는_부르려던_도구와_인자를_담는다() 
     assert _round_trip(event) == event
 
 
-def _as_event(**fields: str) -> Event:
+def _as_event(**fields: Json) -> Event:
     return TypeAdapter[Event](Event).validate_python({"ts": "2026-09-21T12:00:00Z", **fields})
 
 
@@ -181,3 +181,25 @@ def test_도구_호출_이벤트는_인자와_결과_내용을_담는다() -> No
     )
 
     assert _round_trip(event) == event
+
+
+def test_모델_호출_이벤트는_그_호출을_일으킨_프롬프트를_담는다() -> None:
+    """재개의 대조가 쓰는 유일한 입력이다(ADR 0009 의 2026-09-22 이력)."""
+    event = LlmCalled(
+        run_id=RunId("r1"),
+        ts=TS,
+        model="fake-model",
+        input_tokens=7,
+        output_tokens=3,
+        prompt="2 더하기 2는?",
+    )
+
+    assert _round_trip(event) == event
+
+
+def test_프롬프트가_없는_모델_호출_이벤트도_읽힌다() -> None:
+    """루프의 둘째 턴부터와 이 결정 이전에 쓰인 트레이스가 그렇다."""
+    event = _as_event(type="llm_called", run_id="r1", model="m", input_tokens=1, output_tokens=1)
+
+    assert isinstance(event, LlmCalled)
+    assert event.prompt == ""
