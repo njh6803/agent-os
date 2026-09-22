@@ -13,5 +13,8 @@
 | [0007](0007-pytest-asyncio-auto-mode.md) | 비동기 테스트는 pytest-asyncio auto 모드로 돌린다 | accepted | 2026-09-21 |
 | [0008](0008-manifest-schema-version-and-event-principal.md) | 매니페스트는 형식 버전을, 시작 이벤트는 주체를 필수로 가진다 | accepted | 2026-09-21 |
 | [0009](0009-resume-by-replaying-the-trace.md) | 일시정지한 실행은 트레이스를 재생해 재개한다 | accepted | 2026-09-21 |
+| [0010](0010-http-surface-assembled-by-server.md) | HTTP 표면은 FastAPI로 서고 `server.py` 하나가 조립한다 | accepted | 2026-09-22 |
+| [0011](0011-admin-api-is-fail-closed.md) | 관리 API는 fail-closed 토큰 인증으로 선다 | accepted | 2026-09-22 |
+| [0012](0012-ports-stay-five-lists-are-added.md) | 포트는 다섯 그대로이고 기존 포트에 목록이 는다 | accepted | 2026-09-22 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
