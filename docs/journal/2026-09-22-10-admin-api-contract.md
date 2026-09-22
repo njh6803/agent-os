@@ -125,6 +125,29 @@ monkeypatch했는데 첫 시도에 `# pyright: ignore`를 달았다. 티켓이 "
 고치지 말고 멈춰 보고한다"고 적은 자리다. 시그니처를 정확히 쓰면 우회가 필요하지 않았다.
 저장소 전체의 `Any`·`cast`·`ignore`는 여전히 0건이다.
 
+## PR 리뷰 — 같은 모양이 네 번째로 나왔다
+
+셋 다 초록이고 코멘트가 실제로 있었다. `claude-review`는 두 축(유지보수성, 경계)을 ADR과 규칙까지
+읽어 확인한 "지적 없음"이다. CodeRabbit은 처음 `Review skipped: manual review required for this
+OSS repository`로 초록이었고 — `operations.md`가 경고한 "코멘트 0개인 초록" — 수동 요청 뒤
+`Review completed`가 되며 인라인 Major 하나를 냈다.
+
+**유효.** `read()`가 모르는 종류의 이벤트에는 식별자 검사를 건너뛴다. 그런데 **내가 건너뛴 이유로
+적은 주석이 거짓이었다** — "모르는 종류는 원문만 있어 식별자를 볼 수 없다"고 썼는데, `UnknownEvent`가
+되는 것은 판별자만 모르는 줄이라 원문은 유효한 JSON이고, 나는 이미 같은 줄에서 `ts`를 읽고 있었다.
+`run-a.jsonl`에 `run-b`의 모르는 이벤트가 있으면 `Trace(run_id="run-a")`로 돌아가고, 그 줄이
+마지막이면 그 시각이 `run-a` 요약의 마지막 시각이 됐다.
+
+**같은 모양이 네 번째다.** 규칙을 한 경로에만 적용한 자리 — 판정자가 둘로 갈린 것, `OSError`를
+JSONL에서만 잡은 것, 식별자 검증이 재개 경로 전용이던 것, 그리고 이번에 모르는 이벤트를 건너뛴 것.
+이번 것만 다른 점이 있다면 **건너뛴 이유를 주석으로 지어냈다는 것**이다. 틀린 주석은 리뷰어가 읽고
+넘어갈 수 있는 자리인데, 봇이 코드로 확인해 주석을 반박했다.
+
+제안된 `RunId | None = None`(식별자가 없는 줄은 통과)을 그대로 받았다. 식별자가 **없는** 줄은 남의
+실행을 주장할 수 없어 이 구멍을 만들지 않고, 필수로 만들면 모르는 것을 지우지 않고 들고 있게 한다는
+판단(ADR 0010 이력)을 이 티켓 밖에서 좁히는 새 결정이 된다. 테스트 둘이 양쪽을 고정한다 — 어긋난
+것은 목록에서 표지이고 단건에서 `PluginError`, 식별자 없는 것은 그대로 요약과 원문이다.
+
 ## 원칙 II의 red를 보지 못했다
 
 순서는 계약 타입 → 테스트 → 어댑터였고 테스트가 구현보다 먼저 쓰인 것은 맞다. 그런데 그 상태로 한
@@ -135,7 +158,7 @@ monkeypatch했는데 첫 시도에 `# pyright: ignore`를 달았다. 티켓이 "
 
 ## 검사
 
-`ruff check`, `ruff format --check`, `pyright`(0 errors), `lint-imports`(3 kept), `pytest`(253
+`ruff check`, `ruff format --check`, `pyright`(0 errors), `lint-imports`(3 kept), `pytest`(255
 passed, 3 deselected), 지침 검사. 전부 초록. pre-commit 훅도 커밋에서 같은 것을 다시 돌았다.
 
 의존성 셋이 늘었다. 런타임이 넷에서 여섯으로(`fastapi`, `uvicorn`), dev에 `httpx`. 락파일에 이미

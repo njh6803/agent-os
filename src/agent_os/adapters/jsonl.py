@@ -65,6 +65,18 @@ class _EventEdge(BaseModel):
     ts: AwareDatetime
 
 
+class _EventOwner(BaseModel):
+    """이벤트 줄에서 실행 식별자만. 모르는 종류의 줄이 남의 실행을 주장하는지 보는 자리다.
+
+    선택인 이유는 식별자가 **없는** 줄이 이 구멍을 만들지 않기 때문이다. 필수로 만들면 모르는
+    종류를 지우지 않고 들고 있게 한다는 판단(ADR 0010 이력)을 좁히는 새 결정이 된다.
+    """
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    run_id: RunId | None = None
+
+
 class JsonlTrace:
     def __init__(self, directory: Path) -> None:
         self._directory = directory
@@ -98,8 +110,9 @@ class JsonlTrace:
             _require_same_run(run_id, header.run_id, "헤더")
             events = tuple(_read_event(line) for line in lines[1:])
             for event in events:
-                # 모르는 종류는 원문만 있어 식별자를 볼 수 없다. 그것은 지우지 않고 그대로 둔다.
-                if not isinstance(event, UnknownEvent):
+                if isinstance(event, UnknownEvent):
+                    _require_raw_run(run_id, event.raw, "모르는 종류의 이벤트")
+                else:
                     _require_same_run(run_id, event.run_id, "이벤트")
         except (OSError, IndexError, ValueError) as error:
             # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
@@ -216,6 +229,9 @@ def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
         raise ValueError(f"시작 이벤트로 열리지 않는다: {started.type}")
     _require_same_run(run_id, started.run_id, "시작 이벤트")
     ending = _read_event(edges.last)
+    if isinstance(ending, UnknownEvent):
+        # 이 줄의 시각이 요약의 마지막 시각이 되므로 그것이 이 실행의 것인지 함께 본다.
+        _require_raw_run(run_id, edges.last, "마지막 이벤트")
     return RunSummary(
         run_id=run_id,
         status=run_status(ending),
@@ -232,6 +248,17 @@ def _require_same_run(run_id: RunId, found: RunId, where: str) -> None:
     PluginError 가 된다."""
     if found != run_id:
         raise ValueError(f"{where} 의 실행 식별자가 파일 이름과 다르다: {found}")
+
+
+def _require_raw_run(run_id: RunId, line: str, where: str) -> None:
+    """모르는 종류의 줄에도 같은 규칙을 건다. 원문이 유효한 JSON 이라 식별자를 읽을 수 있다.
+
+    UnknownEvent 가 되는 것은 판별자만 모르는 줄이므로(그 밖의 검증 오류는 그대로 올라간다)
+    최소 봉투로 식별자를 볼 수 있다. 식별자가 없는 줄은 남의 실행을 주장하지 않으므로 통과한다.
+    """
+    found = _EventOwner.model_validate_json(line).run_id
+    if found is not None:
+        _require_same_run(run_id, found, where)
 
 
 def _last_at(ending: Event | UnknownEvent, line: str) -> datetime:

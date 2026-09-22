@@ -465,6 +465,42 @@ def test_파일_이름과_내용의_실행_식별자가_어긋나면_표지이�
             store.read(RunId(run_id))
 
 
+def test_모르는_종류의_이벤트도_파일_이름과_같은_실행을_말해야_한다(tmp_path: Path) -> None:
+    """원문이 유효한 JSON 이라 식별자를 읽을 수 있다. 판별자만 모르는 줄이기 때문이다.
+
+    이 검사가 없으면 남의 실행 이벤트가 이 식별자의 트레이스에 실리고, 그 줄이 마지막이면 그
+    시각이 이 실행의 마지막 시각이 된다.
+    """
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(store, "run-a")
+    intruder = '{"type":"run_rewound","run_id":"run-b","ts":"2026-09-21T13:00:00Z","to":"x"}'
+    with (tmp_path / "run-a.jsonl").open("a", encoding="utf-8") as file:
+        file.write(intruder + "\n")
+
+    rows = store.list()
+
+    assert [(row.run_id, isinstance(row, UnreadableTrace)) for row in rows] == [("run-a", True)]
+    with pytest.raises(PluginError, match="run-b"):
+        store.read(RunId("run-a"))
+
+
+def test_실행_식별자가_없는_모르는_종류는_그대로_통과한다(tmp_path: Path) -> None:
+    """식별자가 없는 줄은 남의 실행을 주장하지 않는다. 모르는 것을 지우지 않고 들고 있게 한다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(store, "run-a")
+    nameless = '{"type":"run_rewound","ts":"2026-09-21T13:00:00Z","to":"x"}'
+    with (tmp_path / "run-a.jsonl").open("a", encoding="utf-8") as file:
+        file.write(nameless + "\n")
+
+    row = store.list()[0]
+
+    assert isinstance(row, RunSummary)
+    assert (row.run_id, row.status) == ("run-a", "unfinished")
+    trace = store.read(RunId("run-a"))
+    assert trace is not None
+    assert trace.events[-1] == UnknownEvent(raw=nameless)
+
+
 def test_실행_식별자_패턴을_어기는_이름의_파일은_목록에서_빠진다(tmp_path: Path) -> None:
     """런타임이 만들 수 없는 이름이라 잃어버린 실행이 아니다. 되물을 수 없는 것을 싣지 않는다."""
     store: TraceStore = JsonlTrace(tmp_path)
