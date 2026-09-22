@@ -111,6 +111,11 @@ def test_조이는_쪽의_지시문은_지나간다() -> None:
     assert escapes_in("# pyright: strict\nx: int = 1\n") == []
 
 
+def test_규칙을_조이는_지시문도_잡는다() -> None:
+    """`reportX=error` 는 조이지만 그 파일만 다른 규칙으로 판정된다. 통과하는 것은 strict 하나다."""
+    assert escapes_in("# pyright: reportGeneralTypeIssues=error\nx = 1\n") != []
+
+
 def test_지시문을_설명하는_산문_주석은_잡지_않는다() -> None:
     """이 저장소의 주석은 금지된 지시문을 계속 입에 올린다. 꼴을 온전히 갖춘 것만 억제다."""
     source = "# type: ignore 를 쓰지 않는다\n# pyright: ignore 를 달지 않는다는 뜻이다\nx = 1\n"

@@ -47,8 +47,8 @@ _SOURCE_GLOBS = ("*.py", "*.pyi")
 # 주석 하나가 통째로 지시문일 때만 억제다. 산문이 뒤에 붙으면 억제하지도 않는다.
 _TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?:\[[^\]]*\])?\s*$")
 _PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S.*?)\s*$")
-# pyright 지시문 중 통과하는 것은 조이는 쪽 하나뿐이다. 억제도, basic 도, reportX=false 도
-# 전부 파일 하나의 판정을 느슨하게 하는 같은 종류다.
+# 파일 하나에만 거는 pyright 지시문은 저장소 설정과 갈린다. 통과하는 것은 strict 하나뿐이고
+# 억제도, basic 도, reportX=... 도 같게 본다. 조이는 쪽이라도 그 파일만 다른 규칙으로 판정된다.
 _PYRIGHT_BODY = re.compile(
     r"^(?:ignore(?:\[[^\]]*\])?|basic|standard|strict|off|report\w+\s*=\s*\S+)$"
 )
@@ -172,7 +172,9 @@ def _suppression_comments(source: str) -> list[tuple[int, str]]:
             continue
         본문 = 지시문.group("rest")
         if _PYRIGHT_BODY.match(본문) is not None and 본문 != _STRICT:
-            찾은것.append((줄, f"{줄}: pyright 지시문이 판정을 느슨하게 한다"))
+            찾은것.append(
+                (줄, f"{줄}: 파일 하나에만 거는 pyright 지시문은 두지 않는다(strict 제외)")
+            )
     return 찾은것
 
 
