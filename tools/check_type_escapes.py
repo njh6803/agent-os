@@ -92,7 +92,7 @@ def escapes_in(source: str) -> list[str]:
 def _banned_names(tree: ast.Module) -> list[tuple[int, str]]:
     """AST에서만 본다. 문자열 리터럴과 독스트링에 같은 말이 있어도 이름이 아니다."""
     별칭 = _typing_aliases(tree)
-    찾은것: list[tuple[int, str]] = []
+    찾은것: list[tuple[int, str]] = _banned_imports(tree)
     for node in _every_node(tree):
         자리 = _named(node, 별칭)
         if 자리 is not None and 자리[1] in BANNED_NAMES:
@@ -202,10 +202,26 @@ def _named(node: ast.AST, 별칭: frozenset[str]) -> tuple[int, str] | None:
             return (줄, 이름)
         case ast.Attribute(lineno=줄, attr=이름, value=ast.Name(id=모듈)) if 모듈 in 별칭:
             return (줄, 이름)
-        case ast.alias(lineno=줄, name=이름):
-            return (줄, 이름.rsplit(".", 1)[-1])
         case _:
             return None
+
+
+def _banned_imports(tree: ast.Module) -> list[tuple[int, str]]:
+    """`from typing import cast as c` 처럼 이름을 바꿔 들여오는 길. **출처가 typing 일 때만 본다.**
+
+    이름을 바꾸면 쓰는 자리가 `c(...)` 라서 이름 규칙에 걸리지 않으므로 들여오는 자리에서 잡는다.
+    출처를 보지 않으면 `from sqlalchemy import cast` 같은 남의 흔한 이름이 하드 게이트에 막힌다.
+    바꾸지 않고 들여온 것은 쓰는 자리에서 이름 규칙이 잡으므로 여기서 놓쳐도 구멍이 아니다.
+    """
+    찾은것: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module not in _TYPING_MODULES:
+            continue
+        for alias in node.names:
+            if alias.name in BANNED_NAMES:
+                줄 = alias.lineno
+                찾은것.append((줄, f"{줄}: `{alias.name}` 은 원칙 III 가 금한다"))
+    return 찾은것
 
 
 def _suppression_comments(source: str) -> list[tuple[int, str]]:

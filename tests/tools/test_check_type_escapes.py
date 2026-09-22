@@ -80,6 +80,20 @@ def test_별칭으로_import_한_cast_는_import_에서_잡힌다() -> None:
     assert escapes_in(source) != []
 
 
+def test_남의_모듈에서_같은_이름을_들여오는_것은_잡지_않는다() -> None:
+    """`from sqlalchemy import cast` 는 흔한 import 다. 출처를 안 보면 게이트가 그것을 막는다."""
+    source = "from sqlalchemy import cast as sql_cast\n\n\nx = sql_cast(1)\n"
+
+    assert escapes_in(source) == []
+
+
+def test_남의_이름을_그대로_쓰면_쓰는_자리에서_잡힌다() -> None:
+    """들여오는 자리를 좁혀도 구멍이 아니다. 이름 그대로면 이름 규칙이 잡는다."""
+    source = "from sqlalchemy import cast\n\n\nx = cast(1)\n"
+
+    assert escapes_in(source) != []
+
+
 def test_typing_이_아닌_것의_cast_속성은_잡지_않는다() -> None:
     """남의 `cast` 메서드까지 잡으면 하드 게이트가 거짓 양성 기계가 된다."""
     source = 'def f(col: object) -> object:\n    return col.cast("int")\n'
