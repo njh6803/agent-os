@@ -2,7 +2,7 @@
 
 표준 출력, 표준 에러, 종료 코드, 트레이스 파일을 본다.
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
-llm 마커가 붙은 마지막 테스트만 실제 CLI 프로세스를 띄운다. 바깥 이음매다.
+llm 마커가 붙은 둘만 실제 CLI 프로세스를 띄운다. 바깥 이음매다.
 """
 
 import getpass
@@ -37,7 +37,13 @@ MANIFEST = (
     'entrypoint = "agent:Agent"\n'
 )
 
-GATED_MANIFEST = MANIFEST.format(name="gated") + 'mcp = ["fixture"]\nrequires_approval = ["add"]\n'
+
+def _gated_manifest(name: str) -> str:
+    """fixture 서버를 쓰고 그 서버의 add 를 승인 대상으로 두는 에이전트 매니페스트."""
+    return MANIFEST.format(name=name) + 'mcp = ["fixture"]\nrequires_approval = ["add"]\n'
+
+
+GATED_MANIFEST = _gated_manifest("gated")
 
 # 진짜 stdio 서버(tests/adapters/mcp_fixture_server.py). 경로는 TOML 기본 문자열이라 슬래시로 쓴다.
 MCP_MANIFEST = (
@@ -83,9 +89,7 @@ class Agent:
 """
 
 
-EXCUSING_MANIFEST = (
-    MANIFEST.format(name="excusing") + 'mcp = ["fixture"]\nrequires_approval = ["add"]\n'
-)
+EXCUSING_MANIFEST = _gated_manifest("excusing")
 
 # 거부당하면 사용자에게 왜 못 했는지 말하고 정상적으로 끝맺는 에이전트. gated 와 도구도 정책도 같다.
 EXCUSING_SRC = """
@@ -101,6 +105,25 @@ class Agent:
         except ToolError as error:
             total = f"못 했습니다: {error}"
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)
+"""
+
+
+GATEDCALC_MANIFEST = _gated_manifest("gatedcalc")
+
+# 도구를 고르는 것이 게이트도 에이전트도 아니라 실제 모델인 유일한 픽스처. 프롬프트가 도구를
+# 강제하는 것은 모델이 2+3 을 암산해 버리면 승인 대상에 닿지 않아 잴 것이 없어지기 때문이다.
+GATEDCALC_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished
+
+PROMPT = "계산 요청이다. 반드시 add 도구로 계산한다. 최종 답만 짧게 답한다. 요청: {request}"
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = await ctx.llm(PROMPT.format(request=request))
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
 """
 
 
@@ -259,29 +282,28 @@ def test_빈_모델_지정은_실행_전에_진단을_적고_종료_코드_1이�
     assert _trace_files(workspace / "t") == []
 
 
-@pytest.mark.llm
-def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_호출이_남는다(tmp_path: Path) -> None:
-    """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출. 트레이스는 tmp_path 에 남긴다."""
-    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다.
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "agent_os.main",
-            "run",
-            "calc",
-            "2 더하기 2는?",
-            "--traces",
-            str(tmp_path),
-        ],
-        cwd=REPO_ROOT,
+    한국어 출력이 cp949 로 깨지지 않게 UTF-8 을 강제한다(CLAUDE.md 환경 함정).
+    """
+    return subprocess.run(
+        [sys.executable, "-m", "agent_os.main", *argv],
+        cwd=cwd,
         capture_output=True,
         text=True,
         encoding="utf-8",
         env={**os.environ, "PYTHONUTF8": "1"},
         check=False,
     )
+
+
+@pytest.mark.llm
+def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_호출이_남는다(tmp_path: Path) -> None:
+    """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출. 트레이스는 tmp_path 에 남긴다."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+
+    result = _cli(["run", "calc", "2 더하기 2는?", "--traces", str(tmp_path)], cwd=REPO_ROOT)
 
     assert result.returncode == 0, result.stderr
     assert "4" in result.stdout
@@ -501,3 +523,42 @@ def test_없는_실행_식별자는_거부로도_진단을_적고_트레이스�
     assert out == ""
     assert "없는-실행" in err
     assert _trace_files(workspace / "t") == []
+
+
+@pytest.mark.llm
+def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다(
+    tmp_path: Path,
+) -> None:
+    """이 기능의 존재 이유. 가짜 포트로 증명할 수 없는 주장 하나를 실물로 잰다.
+
+    일시정지는 프로세스보다 오래 산다. 첫 프로세스는 승인 대상 앞에서 끝나고, 재개는 그 프로세스가
+    죽은 뒤에 시작한다 — `subprocess.run` 이 종료를 기다리므로 둘째가 뜰 때 첫째는 이미 없다.
+    프로세스 안에서 `await` 로 기다리는 설계를 버린 이유가 여기 있다(ADR 0009).
+
+    실제 모델과 실제 stdio 서버를 프로세스 둘에서 쓴다. 둘은 같은 plugins 디렉터리와 같은 트레이스를
+    읽고, 재개 명령은 일시정지가 안내한 줄 그대로다. 안내가 프로세스 경계 너머에서도 작동한다.
+    """
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _write_mcp_plugin(tmp_path, "fixture")
+    _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
+
+    paused = _cli(["run", "gatedcalc", "2 더하기 3은?", "--traces", "t"], cwd=tmp_path)
+    # 여기서 먼저 단언한다. 멈추지 못한 첫 프로세스에서 안내 줄을 찾으면 그 진단이 표준 에러가
+    # 아니라 `_guidance` 의 StopIteration 이 되어, 가장 흔한 실패 모드의 원인을 못 보게 된다.
+    assert paused.returncode == EXIT_PAUSED, paused.stderr
+    resumed = _cli(_guidance(paused.stdout), cwd=tmp_path)
+
+    assert "add" in paused.stdout
+    assert resumed.returncode == 0, resumed.stderr
+    assert "5" in resumed.stdout
+    (trace_file,) = _trace_files(tmp_path / "t")  # 재개가 끼어도 실행 하나에 파일 하나다
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    types = [e.type for e in events]
+    boundaries = ("run_paused", "approval_granted", "run_resumed")
+    assert types[0] == "run_started"
+    assert types.count("run_started") == 1  # 재개는 새 실행이 아니라 같은 실행이다(ADR 0009)
+    assert [t for t in types if t in boundaries] == list(boundaries)
+    assert types[-1] == "run_finished"
+    # 승인받은 그 호출이 둘째 프로세스에서 실제로 일어났다. 첫째는 도구를 부르지 않고 끝났다.
+    assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
+    assert types.index("tool_called") > types.index("run_resumed")
