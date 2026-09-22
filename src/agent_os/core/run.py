@@ -48,7 +48,7 @@ from agent_os.core.ports import (
     TraceStore,
     UnknownEvent,
 )
-from agent_os.core.replay import Record, Replay
+from agent_os.core.replay import Mismatch, Record, Replay
 from agent_os.sdk import (
     AgentName,
     ApprovalDenied,
@@ -110,6 +110,20 @@ class Deny:
 # 승인자가 내린 결정. 게이트가 도구 하나를 판정하는 데 한 번 쓰인다. 거부도 한 번만 쓰이므로,
 # 거부 뒤 승인 대상을 또 만나면 다시 멈춘다. 한 번의 거부가 뒤의 것까지 막아 주지 않는다.
 type Decision = Approve | Deny
+
+
+@dataclass(frozen=True)
+class _Verdict:
+    """결정과 그것이 판정하는 호출. 사람이 승인하거나 거부한 것은 일시정지가 보여 준 그 호출이다.
+
+    재개 뒤 첫 실제 호출이 멈춘 것과 다르면 결정을 적용하지 않고 실패로 끝낸다. 재생 대조는
+    기록이 있는 구간만 보므로, 기록 끝 이후에 바뀐 에이전트(다른 도구를 부른다)나 매니페스트(그
+    도구가 승인 대상에서 빠졌다)는 여기서 잡는다. 정책이 아니라 호출에 묶여야 "사람이 승인한 것과
+    실제로 실행되는 것"이 같다(ADR 0009 와 그 2026-09-22 이력, 티켓 05).
+    """
+
+    decision: Decision
+    paused: RunPaused
 
 
 @dataclass(frozen=True)
@@ -180,7 +194,7 @@ class _Context:
         tools: ToolConnection,
         policy: _Policy,
         replay: Replay,
-        decision: Decision | None,
+        verdict: _Verdict | None,
     ) -> None:
         self.run_id = started.run_id
         self._started_at = started.ts
@@ -191,7 +205,7 @@ class _Context:
         self._tools = tools
         self._policy = policy
         self._replay = replay
-        self._decision = decision
+        self._verdict = verdict
         self._pending: list[Event] = []
 
     @property
@@ -259,6 +273,11 @@ class _Context:
         replayed = self._replay.take_model(prompt)
         if replayed is not None:
             return message_from(replayed)
+        if self._verdict is not None:
+            raise Mismatch(
+                f"멈춘 도구 호출 {self._verdict.paused.tool} 대신 모델을 부르려 했다. "
+                "에이전트가 바뀌었다"
+            )
         self._resume()
         message = await invoke(messages)
         self._record_model_call(reply_from(message), prompt)
@@ -268,35 +287,39 @@ class _Context:
         """도구 하나. 재생 구간이면 기록된 결과를 돌려주고 게이트도 지나지 않는다.
 
         재생 구간에서 게이트를 다시 걸지 않는 이유는, 기록이 있다는 것이 그 호출이 실제로
-        일어났다는 뜻이고 승인 대상이었다면 이미 승인을 받아 일어난 것이기 때문이다.
+        일어났다는 뜻이고 승인 대상이었다면 이미 승인을 받아 일어난 것이기 때문이다. 재생이 끝난
+        뒤 첫 실제 호출은 멈췄던 그 호출이어야 하고, 결정은 그 호출에만 적용된다.
         """
         self._stay_paused()
         masked = _mask(name, args, self._policy.secrets)
         replayed = self._replay.take_tool(name, masked)
         if replayed is not None:
             return ToolResult(ok=replayed.ok, content=replayed.content)
+        verdict = self._take_verdict()
+        if verdict is not None:
+            _require_paused_call(verdict.paused, name, masked)
         self._resume()
-        if name in self._policy.approvals:
+        if verdict is None:
+            if name in self._policy.approvals:
+                self._pause(name, masked)
+        else:
             # 결정의 종류마다 갈래가 있어야 한다. 폴스루로 승인하면 새 결정이 조용히 승인으로 돈다.
-            decision = self._take_decision()
-            match decision:
-                case None:
-                    self._pause(name, masked)
+            match verdict.decision:
                 case Deny(reason=reason):
                     return self._deny(name, masked, reason)
                 case Approve():
                     pass
                 case _:
-                    assert_never(decision)
+                    assert_never(verdict.decision)
         _reject_masked_args(name, args, self._policy.secrets)
         result = await _call_safely(self._tools, name, args)
         self._record_tool_call(name, masked, result)
         return result
 
-    def _take_decision(self) -> Decision | None:
+    def _take_verdict(self) -> _Verdict | None:
         """결정 하나는 도구 하나만 판정한다. 그래서 둘째 승인 대상에서 다시 멈춘다."""
-        decision, self._decision = self._decision, None
-        return decision
+        verdict, self._verdict = self._verdict, None
+        return verdict
 
     def _deny(self, name: str, masked: Mapping[str, Json], reason: str) -> ToolResult:
         """거부는 실행을 끝내지 않는다. 도구를 부르지 않은 채 실패한 결과로 기록해 돌려준다.
@@ -385,7 +408,7 @@ async def run(
         prepared,
         started,
         replay=Replay.nothing(),
-        decision=None,
+        verdict=None,
         model=model,
         tools=tools,
         trace=trace,
@@ -410,7 +433,7 @@ async def resume(
     에이전트 이름과 요청은 트레이스의 시작 이벤트에서 읽는다. 결정이 트레이스에 먼저 기록된 뒤
     재생이 시작되므로, 재생이 무엇을 하든 누가 허락했는지, 누가 왜 막았는지는 남는다.
     """
-    started, records = _read_paused(trace, run_id)
+    started, paused, records = _read_paused(trace, run_id)
     prepared = _prepare(plugins, started.agent)
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
@@ -419,7 +442,7 @@ async def resume(
         prepared,
         started,
         replay=Replay.of(records),
-        decision=decision,
+        verdict=_Verdict(decision, paused),
         model=model,
         tools=tools,
         trace=trace,
@@ -433,7 +456,7 @@ async def _drive(
     started: RunStarted,
     *,
     replay: Replay,
-    decision: Decision | None,
+    verdict: _Verdict | None,
     model: ChatModel,
     tools: ToolSource,
     trace: TraceStore,
@@ -460,7 +483,7 @@ async def _drive(
         nonlocal paused
         async with tools.connect(prepared.servers) as connection:
             _reject_unknown_declarations(prepared.policy, connection.tools())
-            ctx = _Context(started, clock, model, connection, prepared.policy, replay, decision)
+            ctx = _Context(started, clock, model, connection, prepared.policy, replay, verdict)
             try:
                 async for event in prepared.instance.run(started.request, ctx):
                     for pending in ctx.take_events():
@@ -526,8 +549,22 @@ def _prepare(plugins: PluginSource, agent: AgentName) -> _Prepared:
     )
 
 
-def _read_paused(trace: TraceStore, run_id: RunId) -> tuple[RunStarted, tuple[Record, ...]]:
-    """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다."""
+def _require_paused_call(paused: RunPaused, name: str, masked: Mapping[str, Json]) -> None:
+    """재개 뒤 첫 실제 도구 호출이 멈춘 그 호출인지. 인자는 마스킹된 것끼리 비교한다."""
+    if paused.tool != name or dict(paused.args) != dict(masked):
+        raise Mismatch(
+            f"재개 뒤 첫 호출이 멈춘 자리와 다르다. 멈춘 것은 도구 {paused.tool} "
+            f"{dict(paused.args)}, 지금 {name} {dict(masked)}. 결정을 적용하지 않는다"
+        )
+
+
+def _read_paused(
+    trace: TraceStore, run_id: RunId
+) -> tuple[RunStarted, RunPaused, tuple[Record, ...]]:
+    """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다.
+
+    시작 이벤트(에이전트와 요청), 마지막 일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다.
+    """
     stored = trace.read(run_id)
     if stored is None:
         raise PluginError(f"그런 실행이 없다: {run_id}")
@@ -539,9 +576,10 @@ def _read_paused(trace: TraceStore, run_id: RunId) -> tuple[RunStarted, tuple[Re
     started = events[0]
     if not isinstance(started, RunStarted):
         raise PluginError(f"시작 이벤트로 열리지 않는 트레이스는 재개할 수 없다: {run_id}")
-    if not isinstance(events[-1], RunPaused):
+    paused = events[-1]
+    if not isinstance(paused, RunPaused):
         raise PluginError(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
-    return started, tuple(e for e in events if not isinstance(e, _BOUNDARY))
+    return started, paused, tuple(e for e in events if not isinstance(e, _BOUNDARY))
 
 
 def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:

@@ -1731,3 +1731,141 @@ def test_빈_사유의_거부는_만들어지지_않는다() -> None:
     """채널이 검사를 빠뜨려도 core 가 막는다. 다음 채널이 올 때 fail-open 이 다시 열리지 않게."""
     with pytest.raises(ValueError, match="사유"):
         Deny(reason="   ")
+
+
+# --- 결정은 멈춘 호출에 묶인다 -------------------------------------------------
+#
+# 사람이 승인하거나 거부한 것은 일시정지가 보여 준 그 도구 호출이다. 재개 뒤 첫 실제 호출이 그것과
+# 다르면 결정을 적용하지 않고 실패로 끝낸다. 재생 대조는 기록이 있는 구간만 보므로, 기록 끝
+# 이후에 바뀐 에이전트나 매니페스트는 이 대조가 잡는다(ADR 0009 이력, 티켓 05 PR 직전 리뷰).
+
+
+class DeletingAgent:
+    """멈춘 에이전트(send)와 다른 승인 대상(delete)을 부르는, 바뀐 에이전트."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = await ctx.tool("delete", to="bob")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_승인_대기_중_매니페스트에서_그_도구가_빠져도_거부는_멈춘_호출을_막는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """결정은 정책이 아니라 사람이 본 호출에 붙는다. 정책이 풀려도 거부한 것은 실행되지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+
+    await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=_gated_plugins(OneShotAgent())
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(OneShotAgent(), requires_approval=[]),
+        decision=Deny(DENIAL),
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert tools.connection.calls == []
+
+
+async def test_에이전트가_바뀌어_멈춘_것과_다른_도구를_부르면_결정이_적용되지_않고_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """사람은 send 를 승인했다. delete 가 실행되면 승인 게이트에 구멍이 난다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+    gated = ["send", "delete"]
+
+    await _run(
+        ExcusingAgent(),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(ExcusingAgent(), requires_approval=gated),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(DeletingAgent(), requires_approval=gated),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "send" in events[-1].error
+    assert "delete" in events[-1].error
+    assert tools.connection.calls == []
+
+
+async def test_멈춘_도구와_인자가_다르면_승인이_적용되지_않고_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """같은 도구라도 인자가 다르면 사람이 본 호출이 아니다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = _two_tools()
+
+    await _run(
+        DirectToolAgent(),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(DirectToolAgent(), requires_approval=["add"]),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(SafeThenGatedAgent(first=3), requires_approval=["add"]),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "add" in events[-1].error
+    assert tools.connection.calls == []
+
+
+async def test_멈춘_도구_호출_대신_모델을_부르면_결정이_적용되지_않고_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """멈춘 자리의 다음 행동은 그 도구 호출이다. 모델이 먼저 오면 에이전트가 바뀐 것이다."""
+    model = ToolAwareFakeModel(messages=iter([_reply("unreachable")]))
+    tools = FakeTools({"add": "4"})
+
+    await _run(
+        DirectToolAgent(),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(DirectToolAgent(), requires_approval=["add"]),
+    )
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=_gated_plugins(OneShotAgent(), requires_approval=["add"]),
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "add" in events[-1].error
+    assert model.calls == 0
+    assert tools.connection.calls == []
