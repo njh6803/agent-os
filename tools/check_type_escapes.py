@@ -51,12 +51,11 @@ _SOURCE_GLOBS = ("*.py", "*.pyi")
 # 반대로 지시문이 맨 앞이 아니면 억제하지 않으므로(`# 타입 억제(type: ignore)는 금지다` 는 오류가
 # 그대로 난다) 그런 산문은 지나간다. 이 줄의 근거는 전부 pyright 를 돌려 잰 것이다.
 _TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?![A-Za-z0-9_])")
-_PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S+(?:\s*=\s*\S+)?)")
-# 파일 하나에만 거는 pyright 지시문은 저장소 설정과 갈린다. 통과하는 것은 strict 하나뿐이고
-# 억제도, basic 도, reportX=... 도 같게 본다. 조이는 쪽이라도 그 파일만 다른 규칙으로 판정된다.
-_PYRIGHT_BODY = re.compile(
-    r"^(?:ignore(?:\[[^\]]*\])?|basic|standard|strict|off|report\w+\s*=\s*\S+)$"
-)
+# pyright 지시문은 꼴을 열거하지 않고 본문이 `strict` 하나인지만 본다. 열거하면 목록이 곧
+# 구멍이 된다 — `# pyright: basic, reportX=false` 처럼 쉼표로 이은 것이 실제로 새어 나갔다.
+_PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S.*?)\s*$")
+# 파일 하나에만 거는 pyright 지시문은 저장소 설정과 갈린다. 조이는 쪽이라도 그 파일만 다른
+# 규칙으로 판정되므로 억제도, basic 도, reportX=... 도 같게 본다.
 
 
 def scanned_roots(root: Path = ROOT) -> tuple[str, ...]:
@@ -219,10 +218,7 @@ def _suppression_comments(source: str) -> list[tuple[int, str]]:
         if _TYPE_IGNORE.match(token.string) is not None:
             찾은것.append((줄, f"{줄}: 타입 억제 주석은 원칙 III 가 금한다"))
         지시문 = _PYRIGHT_DIRECTIVE.match(token.string)
-        if 지시문 is None:
-            continue
-        본문 = 지시문.group("rest")
-        if _PYRIGHT_BODY.match(본문) is not None and 본문 != _STRICT:
+        if 지시문 is not None and 지시문.group("rest") != _STRICT:
             찾은것.append(
                 (줄, f"{줄}: 파일 하나에만 거는 pyright 지시문은 두지 않는다(strict 제외)")
             )

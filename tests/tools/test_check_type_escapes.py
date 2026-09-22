@@ -111,6 +111,11 @@ def test_조이는_쪽의_지시문은_지나간다() -> None:
     assert escapes_in("# pyright: strict\nx: int = 1\n") == []
 
 
+def test_쉼표로_이은_지시문도_잡는다() -> None:
+    """꼴을 열거하면 그 목록이 곧 구멍이 된다. 본문이 `strict` 하나인지만 본다."""
+    assert escapes_in("# pyright: basic, reportMissingImports=false\nx = 1\n") != []
+
+
 def test_규칙을_조이는_지시문도_잡는다() -> None:
     """`reportX=error` 는 조이지만 그 파일만 다른 규칙으로 판정된다. 통과하는 것은 strict 하나다."""
     assert escapes_in("# pyright: reportGeneralTypeIssues=error\nx = 1\n") != []
