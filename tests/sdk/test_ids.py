@@ -2,7 +2,14 @@
 
 from uuid import uuid4
 
-from agent_os.sdk import is_plugin_name, is_run_id
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from agent_os.sdk import (
+    PLUGIN_NAME_PATTERN,
+    RUN_ID_PATTERN,
+    is_plugin_name,
+    is_run_id,
+)
 
 # 경로를 벗어나는 모양들. 윈도가 주 환경이라 역슬래시도 구분자이고, 절대 경로는 루트를 지운다 —
 # pathlib 의 `/` 는 오른쪽이 절대 경로면 왼쪽을 버린다.
@@ -53,3 +60,60 @@ def test_플러그인_이름은_소문자로_시작하는_두_글자_이상이�
     assert not is_plugin_name("a")
     assert not is_plugin_name("-leading")
     assert not is_plugin_name("1leading")
+
+
+# 패턴 문자열 하나를 엔진 둘이 읽는다. 파이썬 `re`(판정자)와 rust(pydantic 의 Field, FastAPI 의
+# 경로·질의 검증). 규칙은 "판정자는 하나씩"인데 실제로 값을 판정하는 자리가 둘이므로, 그 둘이
+# 갈리는 것을 여기서 잡는다. 검사 넷은 코드가 자기 자신과 맞는지만 보고 이 차이를 보지 못한다.
+_CANDIDATES = (
+    *_ESCAPES,
+    "calc",
+    "my-agent",
+    "a1",
+    "MyAgent",
+    "a",
+    "-leading",
+    "1leading",
+    str(uuid4()),
+    "a" * 64,
+    "a" * 65,
+    "run-1",
+    "under_score",
+    "\ttab",
+    "sp ace",
+    "trailing ",
+)
+
+
+class _Probe(BaseModel):
+    """pydantic 이 같은 패턴으로 무엇을 받는지 묻는 자리. 디스크 형식이 아니라 대조용이다."""
+
+    model_config = ConfigDict(frozen=True)
+
+    plugin_name: str = Field(pattern=PLUGIN_NAME_PATTERN)
+    run_id: str = Field(pattern=RUN_ID_PATTERN)
+
+
+def _accepts(field: str, value: str) -> bool:
+    other = {"plugin_name": "calc", "run_id": "run-1"}
+    try:
+        _Probe.model_validate({**other, field: value})
+    except ValidationError:
+        return False
+    return True
+
+
+def test_판정자와_pydantic이_같은_값에_같게_답한다() -> None:
+    """갈리면 라우트가 받은 값과 어댑터가 판정한 값이 다른 집합이 된다.
+
+    실제로 갈렸던 자리는 파이썬 `re` 의 `$` 다 — 문자열 끝 또는 꼬리 개행 앞에서 맞으므로
+    `match` 로 부르면 판정자가 rust 엔진보다 느슨해진다. `fullmatch` 가 그것을 닫는다.
+    """
+    disagreements = [
+        (field, value)
+        for field, judge in (("plugin_name", is_plugin_name), ("run_id", is_run_id))
+        for value in _CANDIDATES
+        if judge(value) != _accepts(field, value)
+    ]
+
+    assert disagreements == []
