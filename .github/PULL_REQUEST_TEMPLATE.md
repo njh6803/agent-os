@@ -44,7 +44,7 @@
 - [ ] `uv run lint-imports`
 - [ ] `uv run pytest -q` (LLM 테스트를 건드렸다면 `uv run --env-file .env pytest -m llm`도)
 - [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓으로 뺐다
-- [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·성능 축). 안 돌렸으면 이유를 적는다. 한도와 우선순위는 operations.md 리뷰 파이프라인
+- [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·성능 축). 안 돌렸으면 이유를 적는다. **좌석이 없으면 돌리지 않고 그 사실을 적는다** — 실패를 확인하려고 매번 에이전트를 띄우지 않는다. 한도와 좌석 요건은 operations.md 리뷰 파이프라인
 - [ ] 결정을 바꿨다면 그것을 참조하는 스킬·훅·rules·명세도 같이 고쳤다
 - [ ] 새 환경 변수는 `.env.example`에 있다
 
