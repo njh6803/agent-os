@@ -356,15 +356,20 @@ def _guidance(out: str) -> list[str]:
 def test_안내된_재개_명령을_그대로_실행하면_재개된다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """안내가 작동하지 않으면 안내가 아니다. 공백이 있는 트레이스 경로까지 그대로 복사된다."""
+    """안내가 작동하지 않으면 안내가 아니다.
+
+    경로에 공백과 `$` 를 함께 두는 것은, 셸이 한 인자로 읽으면서 확장도 하지 않아야 왕복이
+    성립하기 때문이다. 큰따옴표로 감싸기만 하면 `$out` 이 빈 문자열로 확장돼 다른 디렉터리를 읽는다.
+    """
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    paused = main(["run", "gated", "hi", "--traces", "out dir"])
+    paused = main(["run", "gated", "hi", "--traces", "$out dir"])
     argv = _guidance(capsys.readouterr().out)
 
     code = main(argv)
 
     assert paused == EXIT_PAUSED
+    assert argv[-1] == "$out dir"
     assert code == 0
     assert capsys.readouterr().out == "5\n"
 

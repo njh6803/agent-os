@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from importlib.metadata import version
@@ -231,6 +232,10 @@ def _approval_request(event: RunPaused, traces: Path) -> str:
 
 
 def _as_argument(path: Path) -> str:
-    """공백이 있는 경로는 셸이 두 인자로 읽으므로 따옴표를 씌운다."""
-    text = str(path)
-    return f'"{text}"' if " " in text else text
+    """셸이 한 인자로 읽도록 인용한다. 공백뿐 아니라 `$` 와 따옴표도 그대로 전달돼야 한다.
+
+    직접 큰따옴표를 씌우면 그 안에서 셸이 `$` 와 백틱을 여전히 해석해, 안내한 명령이 다른
+    디렉터리를 읽게 된다. 이 함수가 고치려던 실패와 같은 모양이다. 테스트가 `shlex.split` 으로
+    되읽으므로 둘이 서로의 역이다.
+    """
+    return shlex.quote(str(path))
