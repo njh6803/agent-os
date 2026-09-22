@@ -165,6 +165,16 @@ def test_이_저장소에_지금_타입_우회가_0건이다() -> None:
     assert main() == 0
 
 
+def test_스텁_파일의_우회도_잡는다(tmp_path: Path) -> None:
+    """pyright 는 `.pyi` 도 분석하면서 거기서도 `Any` 를 잡지 않는다. 스텁이 조용한 우회로다."""
+    _가짜_저장소(tmp_path)
+    (tmp_path / "src" / "stub.pyi").write_text(
+        "from typing import Any\n\ndef f(x: Any) -> Any: ...\n", encoding="utf-8", newline="\n"
+    )
+
+    assert main(tmp_path) == 1
+
+
 def test_우회가_있는_파일이_섞이면_실패한다(tmp_path: Path) -> None:
     _가짜_저장소(tmp_path)
     (tmp_path / "src" / "clean.py").write_text("x: int = 1\n", encoding="utf-8", newline="\n")

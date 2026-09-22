@@ -41,6 +41,9 @@ _TYPING_MODULES = frozenset({"typing", "typing_extensions"})
 
 _STRICT = "strict"
 
+# pyright 가 분석하는 확장자 둘. 스텁도 `Any` 를 담고 pyright 는 거기서도 그것을 잡지 않는다.
+_SOURCE_GLOBS = ("*.py", "*.pyi")
+
 # 주석 하나가 통째로 지시문일 때만 억제다. 산문이 뒤에 붙으면 억제하지도 않는다.
 _TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?:\[[^\]]*\])?\s*$")
 _PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S.*?)\s*$")
@@ -180,7 +183,8 @@ def main(root: Path = ROOT) -> int:
         기준 = root / 디렉터리
         if not 기준.is_dir():
             continue
-        for path in sorted(기준.rglob("*.py")):
+        파일들 = {경로 for 무늬 in _SOURCE_GLOBS for 경로 in 기준.rglob(무늬)}
+        for path in sorted(파일들):
             상대 = path.relative_to(root).as_posix()
             문제.extend(f"{상대}:{한줄}" for 한줄 in escapes_in(path.read_text(encoding="utf-8")))
     for 한줄 in 문제:
