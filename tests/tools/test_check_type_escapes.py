@@ -116,11 +116,37 @@ def test_규칙을_조이는_지시문도_잡는다() -> None:
     assert escapes_in("# pyright: reportGeneralTypeIssues=error\nx = 1\n") != []
 
 
-def test_지시문을_설명하는_산문_주석은_잡지_않는다() -> None:
-    """이 저장소의 주석은 금지된 지시문을 계속 입에 올린다. 꼴을 온전히 갖춘 것만 억제다."""
-    source = "# type: ignore 를 쓰지 않는다\n# pyright: ignore 를 달지 않는다는 뜻이다\nx = 1\n"
+def test_설명이_뒤에_붙은_억제_주석도_잡는다() -> None:
+    """pyright 실측: 뒤에 설명이 붙어도 억제는 그대로 걸린다. 산문처럼 보여도 억제는 억제다."""
+    source = "x: int = 1\ny: str = x  # type: ignore[assignment] 이유를 적는다\n"
+
+    assert len(escapes_in(source)) == 1
+
+
+def test_지시문이_맨_앞이_아니면_잡지_않는다() -> None:
+    """pyright 실측: 맨 앞이 아니면 억제하지 않는다. 이 저장소가 규칙을 설명할 때 쓰는 꼴이다."""
+    source = "# 타입 억제(type: ignore)는 금지다\n# 이것도 pyright: ignore 를 말할 뿐이다\nx = 1\n"
 
     assert escapes_in(source) == []
+
+
+def test_Literal_안의_문자열은_타입이_아니다() -> None:
+    """`Literal["cast", "keep"]` 은 정상 코드다. 전부 다시 파싱하면 하드 게이트가 그것을 막는다."""
+    source = 'from typing import Literal\n\n\ndef f(m: Literal["cast", "keep"]) -> None: ...\n'
+
+    assert escapes_in(source) == []
+
+
+def test_Annotated_의_메타데이터는_타입이_아니다() -> None:
+    source = 'from typing import Annotated\n\nx: Annotated[str, "cast"] = ""\n'
+
+    assert escapes_in(source) == []
+
+
+def test_Annotated_의_첫_인자는_타입이라_본다() -> None:
+    source = 'import typing\n\nx: typing.Annotated["typing.Any", "meta"] = 1\n'
+
+    assert escapes_in(source) != []
 
 
 def test_문자열과_독스트링_안의_같은_말은_잡지_않는다() -> None:
@@ -164,6 +190,14 @@ def test_include_가_문자열_목록이_아니면_멈춘다(tmp_path: Path) -> 
 
     with pytest.raises(ValueError, match="include"):
         scanned_roots(tmp_path)
+
+
+def test_include_에_디렉터리가_아닌_것이_있으면_멈춘다(tmp_path: Path) -> None:
+    """pyright 는 파일과 glob 도 받는다. 조용히 건너뛰면 훑은 것이 없는데 0건으로 초록이 된다."""
+    _가짜_저장소(tmp_path, include='["src", "src/**/*.py"]')
+
+    with pytest.raises(ValueError, match="디렉터리가 아니다"):
+        main(tmp_path)
 
 
 def test_이_저장소에_지금_타입_우회가_0건이다() -> None:

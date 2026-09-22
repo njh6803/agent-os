@@ -13,7 +13,9 @@ pre-commit과 CI가 돌린다. 판정자는 이 파일 하나다 — ruff 규칙
 그 예다). 이름은 AST에서, 억제 지시문은 주석 토큰에서만 본다. 거짓 양성을 줄인 자리가 셋이다.
 
 - 속성 접근은 `typing`을 가리키는 이름 뒤일 때만 본다. 남의 `cast` 메서드를 잡지 않는다.
-- 주석은 지시문의 꼴을 온전히 갖췄을 때만 본다. 지시문을 설명하는 산문 주석은 지나간다.
+- 주석은 지시문이 **맨 앞일 때만** 본다. 뒤에 설명이 붙어도 억제는 걸리므로 뒤는 닫지 않는다(실측).
+- 주해 안의 문자열 중 **타입으로 읽히는 것만** 다시 파싱한다. `Literal["cast"]`의 값과
+  `Annotated[str, "cast"]`의 메타데이터는 타입이 아니다.
 - 반대로 **문자열로 쓴 주해는 다시 파싱한다.** `x: "typing.Any"`는 AST에서 이름이 아니지만 pyright가
   `Any`로 읽으므로 그것이 곧 우회다.
 
@@ -44,9 +46,12 @@ _STRICT = "strict"
 # pyright 가 분석하는 확장자 둘. 스텁도 `Any` 를 담고 pyright 는 거기서도 그것을 잡지 않는다.
 _SOURCE_GLOBS = ("*.py", "*.pyi")
 
-# 주석 하나가 통째로 지시문일 때만 억제다. 산문이 뒤에 붙으면 억제하지도 않는다.
-_TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?:\[[^\]]*\])?\s*$")
-_PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S.*?)\s*$")
+# 지시문이 주석의 맨 앞일 때만 억제다. **뒤에 설명이 붙어도 억제는 그대로 걸린다**(pyright 실측:
+# `# type: ignore[assignment] 이유를 적는다` 로 오류가 0 이 된다). 그래서 뒤를 닫지 않는다.
+# 반대로 지시문이 맨 앞이 아니면 억제하지 않으므로(`# 타입 억제(type: ignore)는 금지다` 는 오류가
+# 그대로 난다) 그런 산문은 지나간다. 이 줄의 근거는 전부 pyright 를 돌려 잰 것이다.
+_TYPE_IGNORE = re.compile(r"^#\s*type:\s*ignore(?![A-Za-z0-9_])")
+_PYRIGHT_DIRECTIVE = re.compile(r"^#\s*pyright:\s*(?P<rest>\S+(?:\s*=\s*\S+)?)")
 # 파일 하나에만 거는 pyright 지시문은 저장소 설정과 갈린다. 통과하는 것은 strict 하나뿐이고
 # 억제도, basic 도, reportX=... 도 같게 본다. 조이는 쪽이라도 그 파일만 다른 규칙으로 판정된다.
 _PYRIGHT_BODY = re.compile(
@@ -133,16 +138,62 @@ def _annotations_of(node: ast.AST) -> list[ast.expr]:
 
 
 def _reparsed_strings(주해: ast.expr) -> Iterator[ast.AST]:
-    """주해 안의 문자열을 표현식으로 파싱한 노드들. 줄번호는 그 문자열이 있던 줄로 맞춘다."""
-    for node in ast.walk(주해):
-        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
-            continue
+    """주해 안의 전방 참조를 표현식으로 파싱한 노드들. 줄번호는 그 문자열이 있던 줄로 맞춘다."""
+    for node, 원문 in _forward_refs(주해):
         try:
-            안 = ast.parse(node.value, mode="eval")
+            안 = ast.parse(원문, mode="eval")
         except SyntaxError:
             continue
         for 속 in ast.walk(안.body):
             yield ast.copy_location(속, node)
+
+
+def _forward_refs(node: ast.expr) -> Iterator[tuple[ast.Constant, str]]:
+    """주해 안에서 **타입으로 읽히는** 문자열만. 주해 안의 모든 문자열이 타입인 것은 아니다.
+
+    `Literal["Any"]` 의 문자열은 리터럴 값이고 `Annotated[str, "cast"]` 의 둘째부터는 메타데이터다.
+    전부 다시 파싱하면 `Literal["cast", "keep"]` 같은 정상 코드가 하드 게이트에 막힌다.
+    """
+    match node:
+        case ast.Constant(value=str() as 원문):
+            yield (node, 원문)
+        case ast.Subscript(value=밑, slice=속):
+            yield from _forward_refs(밑)
+            이름 = _attr_name(밑)
+            if 이름 == "Literal":
+                return
+            if 이름 == "Annotated":
+                첫 = _first_element(속)
+                if 첫 is not None:
+                    yield from _forward_refs(첫)
+                return
+            yield from _forward_refs(속)
+        case ast.Tuple(elts=원소들) | ast.List(elts=원소들):
+            for 원소 in 원소들:
+                yield from _forward_refs(원소)
+        case ast.BinOp(left=왼, right=오른):
+            yield from _forward_refs(왼)
+            yield from _forward_refs(오른)
+        case _:
+            return
+
+
+def _attr_name(node: ast.expr) -> str | None:
+    """`Literal` 도 `typing.Literal` 도 같은 이름으로 본다."""
+    match node:
+        case ast.Name(id=이름):
+            return 이름
+        case ast.Attribute(attr=이름):
+            return 이름
+        case _:
+            return None
+
+
+def _first_element(속: ast.expr) -> ast.expr | None:
+    """`Annotated[X, ...]` 에서 타입인 것은 X 하나다."""
+    if isinstance(속, ast.Tuple):
+        return 속.elts[0] if 속.elts else None
+    return 속
 
 
 def _named(node: ast.AST, 별칭: frozenset[str]) -> tuple[int, str] | None:
@@ -184,7 +235,11 @@ def main(root: Path = ROOT) -> int:
     for 디렉터리 in scanned_roots(root):
         기준 = root / 디렉터리
         if not 기준.is_dir():
-            continue
+            raise ValueError(
+                f"[tool.pyright] include 의 {디렉터리!r} 가 디렉터리가 아니다."
+                " pyright 는 파일과 glob 패턴도 받지만 이 판정자는 아직 디렉터리만 다룬다."
+                " 조용히 건너뛰면 훑은 것이 없는데 0건으로 초록이 된다"
+            )
         파일들 = {경로 for 무늬 in _SOURCE_GLOBS for 경로 in 기준.rglob(무늬)}
         for path in sorted(파일들):
             상대 = path.relative_to(root).as_posix()
