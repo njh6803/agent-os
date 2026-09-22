@@ -21,8 +21,12 @@ from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
     ChatModel,
     Clock,
+    Cursor,
+    ManifestRow,
     PluginError,
     PluginSource,
+    RunRow,
+    RunStatus,
     ToolConnection,
     ToolResult,
     ToolSource,
@@ -117,6 +121,16 @@ class FakeTrace:
             return None
         return Trace(run_id=run_id, schema_version=self._schema_version, events=events)
 
+    def list(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> tuple[RunRow, ...]:
+        """이 가짜를 쓰는 테스트는 목록을 보지 않는다. 빈 목록은 조용히 틀린 초록이 된다."""
+        raise NotImplementedError("실행 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
+
 
 class CorruptTrace(FakeTrace):
     """헤더의 실행 식별자와 이벤트의 것이 어긋난 파일. 손으로 고쳤거나 손상된 트레이스다."""
@@ -170,6 +184,9 @@ class FakePlugins:
         if kind is PluginKind.MCP and name in self._servers:
             return _mcp_manifest(name, self._secret_args)
         return None
+
+    def list_manifests(self, kind: PluginKind) -> tuple[ManifestRow, ...]:
+        raise NotImplementedError("매니페스트 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         return self._agents[manifest.name]

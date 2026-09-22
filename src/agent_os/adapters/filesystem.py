@@ -3,6 +3,9 @@
 `<root>/<kind 디렉터리>/<name>/plugin.toml`. 부재는 None, 파싱·import 실패는 PluginError.
 진입점은 플러그인 디렉터리 기준 파일이며 고유 모듈명 `agent_os_plugins.<name>.<module>`로 로드한다.
 sys.path 를 건드리지 않는다.
+
+단건과 목록이 읽히지 않는 파일을 다르게 말한다. 단건은 PluginError, 목록은 표지다. 이 비대칭은
+의도이고 논증은 ADR 0012 의 2026-09-22 이력에 있다. 테스트가 고정한다.
 """
 
 from __future__ import annotations
@@ -13,8 +16,15 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from agent_os.core.ports import PluginError
-from agent_os.sdk import BaseAgent, PluginKind, PluginManifest, PluginName, parse_manifest
+from agent_os.core.ports import ManifestRow, PluginError, UnreadableManifest
+from agent_os.sdk import (
+    BaseAgent,
+    PluginKind,
+    PluginManifest,
+    PluginName,
+    is_plugin_name,
+    parse_manifest,
+)
 
 _DIRECTORY = {
     PluginKind.AGENT: "agents",
@@ -42,6 +52,41 @@ class FilesystemPlugins:
             raise PluginError(
                 f"디렉터리와 name이 어긋난다: {path} 는 {name} 자리인데 {manifest.name}"
             )
+        return manifest
+
+    def list_manifests(self, kind: PluginKind) -> tuple[ManifestRow, ...]:
+        """종류 디렉터리의 매니페스트를 이름 순으로. 없는 디렉터리는 빈 목록이다."""
+        directory = self._root / _DIRECTORY[kind]
+        if not directory.is_dir():
+            return ()
+        rows: list[ManifestRow] = []
+        for child in sorted(directory.iterdir()):
+            if (child / _MANIFEST).is_file():
+                rows.append(self._row(kind, child.name))
+        return tuple(rows)
+
+    def _row(self, kind: PluginKind, name: str) -> ManifestRow:
+        """디렉터리 하나. 이름이 패턴을 어기는 것도 표지로 남고 조용히 빠지지 않는다.
+
+        런타임은 그것을 로드할 수 없지만(매니페스트의 name 이 같은 패턴을 만족해야 한다) 조용히
+        빼면 등록했다고 믿는 것과 실제가 어긋난다. 대소문자 오해는 사람이 손으로 쓰는 파일에서
+        가장 흔한 모양이고, 매니페스트 표지는 종류와 이름과 이유를 들어 단건 조회가 줄 것을 이미
+        전부 담는다. 트레이스 쪽은 반대로 목록에서 빠진다 — 그 표지는 실행 식별자 하나만 들어서
+        되물을 수 없는 식별자가 곧 죽은 행이 되고, 그 파일은 런타임이 만들 수도 없다.
+        """
+        if not is_plugin_name(name):
+            return UnreadableManifest(
+                kind=kind,
+                name=name,
+                reason=f"디렉터리 이름이 플러그인 이름의 패턴을 어긴다: {name}",
+            )
+        try:
+            manifest = self.read_manifest(kind, PluginName(name))
+        except PluginError as error:
+            return UnreadableManifest(kind=kind, name=name, reason=str(error))
+        if manifest is None:
+            # 매니페스트 파일이 있는 것을 부르는 쪽이 확인했으므로 경쟁 상태로 사라진 경우뿐이다.
+            return UnreadableManifest(kind=kind, name=name, reason=f"{name} 의 매니페스트가 없다")
         return manifest
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:

@@ -19,7 +19,16 @@ from agent_os.sdk.events import (
     ToolCall,
     ToolCalled,
 )
-from agent_os.sdk.ids import AgentName, PluginName, Principal, RunId
+from agent_os.sdk.ids import (
+    PLUGIN_NAME_PATTERN,
+    RUN_ID_PATTERN,
+    AgentName,
+    PluginName,
+    Principal,
+    RunId,
+    is_plugin_name,
+    is_run_id,
+)
 from agent_os.sdk.json import Json
 from agent_os.sdk.manifest import (
     McpServer,
@@ -31,6 +40,8 @@ from agent_os.sdk.manifest import (
 )
 
 __all__ = [
+    "PLUGIN_NAME_PATTERN",
+    "RUN_ID_PATTERN",
     "AgentContext",
     "AgentName",
     "ApprovalDenied",
@@ -55,6 +66,8 @@ __all__ = [
     "ToolCalled",
     "ToolError",
     "approval_conflicts",
+    "is_plugin_name",
+    "is_run_id",
     "parse_manifest",
     "secret_args_by_tool",
 ]
