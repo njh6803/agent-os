@@ -60,6 +60,160 @@
         "title": "Health",
         "type": "object"
       },
+      "McpServer": {
+        "additionalProperties": false,
+        "description": "mcp 플러그인이 가리키는 stdio 서버의 실행 정보.",
+        "properties": {
+          "args": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Args",
+            "type": "array"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "secret_args": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Secret Args",
+            "type": "object"
+          }
+        },
+        "required": [
+          "command",
+          "args",
+          "secret_args"
+        ],
+        "title": "McpServer",
+        "type": "object"
+      },
+      "PluginKind": {
+        "description": "플러그인의 종류. 값은 넷이다.",
+        "enum": [
+          "agent",
+          "mcp",
+          "skill",
+          "model"
+        ],
+        "title": "PluginKind",
+        "type": "string"
+      },
+      "PluginManifest": {
+        "additionalProperties": false,
+        "description": "플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다.",
+        "properties": {
+          "entrypoint": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entrypoint"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PluginKind"
+          },
+          "mcp": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Mcp",
+            "type": "array"
+          },
+          "name": {
+            "pattern": "^[a-z][a-z0-9-]{1,62}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "requires_approval": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Requires Approval",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpServer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "kind",
+          "name",
+          "version",
+          "entrypoint",
+          "mcp",
+          "requires_approval",
+          "server"
+        ],
+        "title": "PluginManifest",
+        "type": "object"
+      },
+      "PluginRow": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/PluginManifest"
+          },
+          {
+            "$ref": "#/components/schemas/UnreadableManifest"
+          }
+        ]
+      },
+      "UnreadableManifest": {
+        "additionalProperties": false,
+        "description": "매니페스트로 읽히지 않는 것의 표지. 종류와 이름과 이유를 든다. 매니페스트가 아니다.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PluginKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "reason"
+        ],
+        "title": "UnreadableManifest",
+        "type": "object"
+      },
       "Violation": {
         "additionalProperties": false,
         "description": "형식 오류 하나. field 는 `query.limit` 처럼 점으로 이은 경로 문자열이다.",
@@ -115,6 +269,126 @@
           }
         },
         "summary": "살아 있는지만 답한다"
+      }
+    },
+    "/plugins": {
+      "get": {
+        "operationId": "list_plugins",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PluginRow"
+                  },
+                  "title": "Response List Plugins",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "등록된 플러그인 전부를 종류를 가리지 않고 한 목록으로"
+      }
+    },
+    "/plugins/{kind}/{name}": {
+      "get": {
+        "operationId": "read_plugin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PluginKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{1,62}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginManifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "플러그인 하나의 매니페스트를 통째로"
       }
     }
   }
