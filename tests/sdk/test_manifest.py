@@ -1,5 +1,7 @@
 """매니페스트가 디스크 형식의 규약을 지키는지. 종류별 필드 자리와 형식 버전."""
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -155,3 +157,28 @@ def test_마스킹할_인자가_실제로_없으면_승인_대상이_될_수_있
     servers = {PluginName("mailer"): _server("\n[server.secret_args]\nsend_email = []\n")}
 
     assert approval_conflicts(agent, servers) == ()
+
+
+# 저장소의 플러그인 디렉터리. 아래 테스트 하나만 디스크를 읽는다 — 재는 것이 코드가 아니라 저장소다.
+REPO_PLUGINS = Path(__file__).resolve().parents[2] / "plugins"
+
+
+def test_저장소의_매니페스트_중_secret_args_를_선언한_것이_없다() -> None:
+    """관리 API 의 트레이스 상세가 마스킹되지 않은 이벤트를 내보내도 된다는 판단이 기댄 사실을
+    불변식으로 바꾼다(ADR 0009 의 2026-09-22 이력). 처음 선언하는 날 이 테스트가 빨개지고, 그 순간이
+    곧 열린 문제 셋을 닫을지 정해야 하는 순간이다. 막는 것은 선언이 아니라 결정 없이 지나가는
+    것이고, 이 테스트를 지우는 것이 그 결정을 내리는 방법이다.
+
+    파일마다 파싱하므로 읽히지 않는 매니페스트는 선언이 있는지 판정할 수 없어 여기서 함께 실패한다.
+    mcp 매니페스트를 하나라도 읽었는지 보는 이유는 이 검사가 아무것도 읽지 않고 초록이 되는 길을
+    막기 위해서다 — `secret_args` 는 mcp 에만 있다."""
+    paths = sorted(REPO_PLUGINS.glob("*/*/plugin.toml"))
+    manifests = [parse_manifest(path.read_text(encoding="utf-8")) for path in paths]
+    declaring = [
+        manifest.name
+        for manifest in manifests
+        if manifest.server is not None and manifest.server.secret_args
+    ]
+
+    assert any(manifest.kind is PluginKind.MCP for manifest in manifests), "mcp 를 읽지 않았다"
+    assert declaring == []

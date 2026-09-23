@@ -36,7 +36,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from agent_os.admin.traces import CURSOR_PATTERN, TracePage, decode_cursor, trace_page
+from agent_os.admin.traces import (
+    CURSOR_PATTERN,
+    Trace,
+    TracePage,
+    decode_cursor,
+    trace_detail,
+    trace_page,
+)
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
@@ -47,7 +54,14 @@ from agent_os.core.ports import (
     RunStatus,
     TraceStore,
 )
-from agent_os.sdk import PLUGIN_NAME_PATTERN, PluginKind, PluginManifest, PluginName
+from agent_os.sdk import (
+    PLUGIN_NAME_PATTERN,
+    RUN_ID_PATTERN,
+    PluginKind,
+    PluginManifest,
+    PluginName,
+    RunId,
+)
 
 REQUEST_ID_HEADER = "X-Request-Id"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
@@ -409,6 +423,22 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
     ) -> TracePage:
         rows = trace.list(status=status, limit=limit, after=_decode_after(after))
         return trace_page(rows, limit=limit)
+
+    # `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되므로 `{name}` 과 같이 포트에 닿기 전에 sdk 의
+    # 패턴을 지나야 한다. 목록이 내는 식별자에 거는 것과 같은 패턴이라 목록에서 얻은 것을 그대로
+    # 넘길 수 있다. 부재는 404 이고 읽을 수 없는 파일은 포트의 PluginError 가 표를 지나 500 이 된다
+    # (ADR 0012 의 2026-09-22 이력). 쓰는 중인 파일은 어댑터가 그 앞 줄까지 돌려주므로 200 이다.
+    @router.get(
+        "/traces/{run_id:verbatim}",
+        operation_id="read_trace",
+        summary="한 실행의 이벤트 전부를 쓴 순서 그대로",
+        responses=_documented_errors(401, 404, 422),
+    )
+    def read_trace(run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)]) -> Trace:
+        found = trace.read(RunId(run_id))
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"{run_id} 실행의 트레이스가 없다")
+        return trace_detail(found)
 
     return router
 
