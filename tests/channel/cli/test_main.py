@@ -1,10 +1,19 @@
-"""CLI 인자. 하위 명령 둘, run 과 resume."""
+"""CLI 인자. 하위 명령 셋, run 과 resume 과 serve."""
 
 from pathlib import Path
 
 import pytest
 
-from agent_os.channel.cli.main import DEFAULT_TRACES, ResumeArgs, RunArgs, parse_args
+from agent_os.channel.cli.main import (
+    DEFAULT_HOST,
+    DEFAULT_PLUGINS_ROOT,
+    DEFAULT_PORT,
+    DEFAULT_TRACES,
+    ResumeArgs,
+    RunArgs,
+    ServeArgs,
+    parse_args,
+)
 from agent_os.core.run import Approve, Deny
 
 
@@ -96,3 +105,42 @@ def test_사유는_거부에만_쓴다() -> None:
     """승인에는 사유를 담을 자리가 없다. 조용히 버리면 승인자가 적은 말이 사라진다."""
     with pytest.raises(SystemExit):
         parse_args(["resume", "run-1", "--approve", "--reason", "좋다"])
+
+
+def test_serve_명령은_호스트와_포트와_디렉터리_둘을_받는다() -> None:
+    argv = ["serve", "--host", "::1", "--port", "9000", "--traces", "t", "--plugins-root", "p"]
+    args = parse_args(argv)
+
+    assert isinstance(args, ServeArgs)
+    assert args.host == "::1"
+    assert args.port == 9000
+    assert args.traces == Path("t")
+    assert args.plugins_root == Path("p")
+
+
+def test_serve_는_인자_없이도_성립하고_호스트_기본이_루프백이다() -> None:
+    """한 명령으로 뜬다. 기본값이 루프백이 아니면 바깥에 노출된 서버가 기본값이 된다(ADR 0011)."""
+    args = parse_args(["serve"])
+
+    assert isinstance(args, ServeArgs)
+    assert args.host == DEFAULT_HOST == "127.0.0.1"
+    assert args.port == DEFAULT_PORT
+    assert args.traces == DEFAULT_TRACES
+    assert args.plugins_root == DEFAULT_PLUGINS_ROOT
+
+
+def test_serve_는_모델도_진행_표시도_받지_않는다() -> None:
+    """관리 API 는 읽기 전용이라 실행을 일으키지 않는다. 받을 자리가 없는 것이 그 사실이다."""
+    with pytest.raises(SystemExit):
+        parse_args(["serve", "--model", "m"])
+
+
+def test_실행과_재개도_플러그인_루트를_받고_기본은_plugins_다() -> None:
+    """셋이 같은 인자를 받는다. 작업 디렉터리에 묶인 하드코딩이 여기서 풀린다."""
+    run_args = parse_args(["run", "calc", "hi"])
+    resume_args = parse_args(["resume", "run-1", "--approve", "--plugins-root", "p"])
+
+    assert isinstance(run_args, RunArgs)
+    assert isinstance(resume_args, ResumeArgs)
+    assert run_args.plugins_root == DEFAULT_PLUGINS_ROOT == Path("plugins")
+    assert resume_args.plugins_root == Path("p")

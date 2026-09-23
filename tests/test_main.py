@@ -14,11 +14,12 @@ import sys
 from pathlib import Path
 
 import pytest
+import uvicorn
 
 from agent_os.adapters.jsonl import JsonlTrace
-from agent_os.channel.cli.main import EXIT_PAUSED
+from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.core.ports import Trace, UnknownEvent
-from agent_os.main import main
+from agent_os.main import ADMIN_TOKEN_ENV, main
 from agent_os.sdk import (
     ApprovalDenied,
     ApprovalGranted,
@@ -562,3 +563,185 @@ def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_
     # 승인받은 그 호출이 둘째 프로세스에서 실제로 일어났다. 첫째는 도구를 부르지 않고 끝났다.
     assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
     assert types.index("tool_called") > types.index("run_resumed")
+
+
+@pytest.fixture
+def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+    """uvicorn 이 무엇을 받았는지 기록한다. 포트는 열리지 않는다.
+
+    구성 오류는 서버가 서기 전에 끝나므로 그때 이 목록은 비어 있어야 한다. 검사 순서가 뒤집히면
+    운영자는 진단 대신 401 을 보게 되는데, 그것이 ADR 0011 이 막으려던 바로 그 실패다.
+
+    uvicorn 이 실제로 포트를 여는 것은 이 스위트가 증명하지 않는다(명세). 여기서 재는 것은 그
+    앞까지다 — 판정이 막았나 지나갔나, 지나갔다면 무엇을 들려 보냈나.
+    """
+    calls: list[dict[str, object]] = []
+
+    def _record(app: object, **kwargs: object) -> None:
+        calls.append({"app": app, **kwargs})
+
+    monkeypatch.setattr(uvicorn, "run", _record)
+    return calls
+
+
+def test_토큰_환경변수가_없으면_서버가_뜨지_않고_진단과_종료_코드_1이다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+
+    code = main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert ADMIN_TOKEN_ENV in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.parametrize("token", ["", "   "], ids=["빈 문자열", "공백만"])
+def test_비어_있는_토큰은_없는_것과_같이_거부한다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+    token: str,
+) -> None:
+    """환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는 것을 막는다.
+
+    공백만 있는 값이 지나가면 그 서버는 아무도 모르는 토큰을 요구하며 서 있게 된다. 공백뿐인
+    거부 사유를 없는 것으로 보는 `_decision` 과 같은 판단이다.
+    """
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, token)
+
+    code = main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert ADMIN_TOKEN_ENV in err
+    assert uvicorn_calls == []
+
+
+def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_포트_포워딩을_안내한다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """막는 데서 끝나면 운영자는 원격에서 볼 길을 잃는다. 대안이 진단 안에 있어야 한다(ADR 0011)."""
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
+
+    code = main(["serve", "--host", "0.0.0.0"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "0.0.0.0" in err
+    assert "ssh" in err.lower()
+    assert uvicorn_calls == []
+
+
+def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """무엇이 허용되는지 적지 않으면 `--host localhost` 를 친 운영자가 빠져나올 길이 없다."""
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
+
+    main(["serve", "--host", "localhost"])
+
+    _, err = capsys.readouterr()
+    # 기댓값을 리터럴로 적는다. LOOPBACK_HOSTS 로 도는 단언은 그 열이 비는 날 조용히 통과한다.
+    assert "127.0.0.1" in err
+    assert "::1" in err
+
+
+def test_구성_오류_둘은_한꺼번에_나온다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """하나씩 내면 운영자가 고치고 다시 치고 또 막힌다. 시작 자리의 판정은 한 번에 끝낸다."""
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+
+    code = main(["serve", "--host", "0.0.0.0"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert ADMIN_TOKEN_ENV in err
+    assert "0.0.0.0" in err
+    assert uvicorn_calls == []
+
+
+def test_진단에_토큰_값이_실리지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """원칙 V. 구성을 되읊는 진단은 비밀을 같이 되읊는다."""
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, "비밀-XYZZY-42")
+
+    main(["serve", "--host", "0.0.0.0"])
+
+    out, err = capsys.readouterr()
+    assert "XYZZY" not in out + err
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected_host"),
+    [(["serve"], DEFAULT_HOST), (["serve", "--host", "::1"], "::1")],
+    ids=["기본 호스트", "다른 루프백"],
+)
+def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포트로_서버를_세운다(
+    workspace: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    uvicorn_calls: list[dict[str, object]],
+    argv: list[str],
+    expected_host: str,
+) -> None:
+    """실패 경로만 재면 판정이 늘 막는 회귀가 초록으로 지나가고 `serve` 는 영영 뜨지 않는다.
+
+    명세가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이다. 갖춰진 구성이 판정을
+    통과하는지는 면제 대상이 아니고, 기본값이 자기 정책에 막히지 않는다는 것도 여기서 닫힌다.
+    """
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
+
+    code = main([*argv, "--port", "9999"])
+
+    assert code == 0
+    assert [(call["host"], call["port"]) for call in uvicorn_calls] == [(expected_host, 9999)]
+
+
+def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_아니라_거기서_읽는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """하드코딩된 플러그인 루트가 풀렸다는 것. 지정하지 않으면 못 찾는 자리에만 에이전트를 둔다."""
+    monkeypatch.chdir(tmp_path)
+    _write_plugin(tmp_path / "custom", "echo", ECHO_SRC)
+
+    found = main(["run", "echo", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
+    out, _ = capsys.readouterr()
+    missed = main(["run", "echo", "hi", "--traces", "t"])
+
+    assert found == 0
+    assert out == "echo:hi\n"
+    assert missed == 1
+
+
+def test_플러그인_루트를_지정했으면_안내된_재개_명령이_그것을_물려받는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """안내가 작동하지 않으면 안내가 아니다. 재개도 같은 디렉터리에서 에이전트를 찾아야 한다."""
+    monkeypatch.chdir(tmp_path)
+    root = tmp_path / "custom"
+    _write_mcp_plugin(root, "fixture")
+    _write_plugin(root, "gated", GATED_SRC, GATED_MANIFEST)
+
+    paused = main(["run", "gated", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
+    argv = _guidance(capsys.readouterr().out)
+    code = main(argv)
+
+    assert paused == EXIT_PAUSED
+    assert "--plugins-root" in argv
+    assert code == 0
+    assert capsys.readouterr().out == "5\n"

@@ -14,7 +14,7 @@ uv run pytest -q
 
 ```
 src/agent_os/
-  main.py          진입점. run·resume → channel. 어댑터를 조립해 넘긴다
+  main.py          진입점. run·resume → channel, serve → server. 어댑터를 조립해 넘긴다
   server.py        HTTP 표면의 조립 층. create_app() 하나. 전역 app을 두지 않는다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
