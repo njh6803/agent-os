@@ -11,8 +11,9 @@ import getpass
 import io
 import os
 import sys
-from pathlib import Path
 from typing import TextIO
+
+import uvicorn
 
 from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
 from agent_os.adapters.clock import SystemClock
@@ -21,21 +22,43 @@ from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
+    EXIT_FINISHED,
     ResumeArgs,
     RunArgs,
+    ServeArgs,
     parse_args,
     resume_command,
     run_command,
 )
 from agent_os.core.ports import ChatModel
 from agent_os.sdk import Principal
+from agent_os.server import create_app
 
-PLUGINS_ROOT = Path("plugins")
+# 토큰은 환경변수로만 들어온다(ADR 0011). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
+ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
+# 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
+# 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
+LOOPBACK_HOSTS = ("127.0.0.1", "::1")
+
+_NO_TOKEN_DIAGNOSTIC = (
+    f"{ADMIN_TOKEN_ENV} 가 비어 있다. 관리 API 는 토큰 없이 서지 않는다(ADR 0011).\n"
+    f"  인증 없는 서버를 띄워 놓고 401 만 보게 되는 것을 막으려고 시작 자리에서 끝낸다.\n"
+    f"  값을 정해 {ADMIN_TOKEN_ENV} 로 넘긴 뒤 다시 친다."
+)
+_NOT_LOOPBACK_DIAGNOSTIC = (
+    "--host 는 루프백만 받는다({allowed}). 받은 값: {host}\n"
+    "  벗어나면 토큰이 헤더에 평문으로 실리고 마스킹되지 않은 트레이스도 평문으로 나간다.\n"
+    "  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L {port}:127.0.0.1:{port} <서버>"
+)
 
 
 def main(argv: list[str] | None = None) -> int:
     _use_utf8(sys.stdout, sys.stderr)
     args = parse_args(argv)
+    # serve 를 먼저 가르는 이유는 관리 API 가 읽기 전용이라 모델이 필요 없기 때문이다. 모델을
+    # 여기서 풀면 serve 가 쓰지도 않는 값의 부재로 실패한다.
+    if isinstance(args, ServeArgs):
+        return _serve(args)
     try:
         model = _chat_model(args.model)
     except ValueError as error:
@@ -51,12 +74,62 @@ def _chat_model(name: str | None) -> ChatModel:
     return anthropic_chat_model(resolve_model_name(os.environ, name))
 
 
+def _serve(args: ServeArgs) -> int:
+    """관리 API 를 세운다. 구성 오류는 요청 시점이 아니라 여기서 끝난다(ADR 0011).
+
+    실행 식별자가 생기기 전이라 트레이스가 없는 `PluginError` 계열과 같은 성격이다. 진단을 모아
+    한 번에 내는 이유는 하나씩 내면 운영자가 고치고 다시 치고 또 막히기 때문이다.
+
+    마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
+    서고, 그것이 이 명령이 막으려던 바로 그 상태다.
+    """
+    token = os.environ.get(ADMIN_TOKEN_ENV, "")
+    problems = _configuration_problems(args, token)
+    if problems:
+        sys.stderr.write("".join(f"{problem}\n" for problem in problems))
+        return EXIT_FAILED
+    uvicorn.run(
+        create_app(
+            plugins=FilesystemPlugins(args.plugins_root),
+            trace=JsonlTrace(args.traces),
+            token=token,
+            stderr=sys.stderr,
+        ),
+        host=args.host,
+        port=args.port,
+    )
+    return EXIT_FINISHED
+
+
+def _configuration_problems(args: ServeArgs, token: str) -> list[str]:
+    """서버가 서지 못하는 이유 전부. 비어 있으면 선다.
+
+    토큰은 있나 없나만 보고 값을 진단에 싣지 않는다(원칙 V). 구성을 되읊는 진단이 비밀을 같이
+    되읊는 자리이고, 표준 에러는 셸 이력과 CI 로그로 흘러간다.
+
+    공백만 있는 토큰도 없는 것으로 본다. 환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는
+    것이 이 명령이 막으려는 상태이고, `_decision` 이 공백뿐인 거부 사유를 없는 것으로 보는 것과
+    같은 판단이다. 대신 통과한 토큰은 다듬지 않고 그대로 넘긴다 — 비밀을 조용히 고쳐 넘기면
+    운영자가 정한 값과 서버가 요구하는 값이 갈린다.
+    """
+    problems: list[str] = []
+    if not token.strip():
+        problems.append(_NO_TOKEN_DIAGNOSTIC)
+    if args.host not in LOOPBACK_HOSTS:
+        problems.append(
+            _NOT_LOOPBACK_DIAGNOSTIC.format(
+                allowed=", ".join(LOOPBACK_HOSTS), host=args.host, port=args.port
+            )
+        )
+    return problems
+
+
 async def _run(args: RunArgs, model: ChatModel) -> int:
     return await run_command(
         args.agent,
         args.request,
         Principal(getpass.getuser()),
-        plugins=FilesystemPlugins(PLUGINS_ROOT),
+        plugins=FilesystemPlugins(args.plugins_root),
         model=model,
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
@@ -65,6 +138,7 @@ async def _run(args: RunArgs, model: ChatModel) -> int:
         stderr=sys.stderr,
         progress=sys.stderr if args.verbose else None,
         traces=args.traces,
+        plugins_root=args.plugins_root,
     )
 
 
@@ -74,7 +148,7 @@ async def _resume(args: ResumeArgs, model: ChatModel) -> int:
         args.run_id,
         args.decision,
         Principal(getpass.getuser()),
-        plugins=FilesystemPlugins(PLUGINS_ROOT),
+        plugins=FilesystemPlugins(args.plugins_root),
         model=model,
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
@@ -83,6 +157,7 @@ async def _resume(args: ResumeArgs, model: ChatModel) -> int:
         stderr=sys.stderr,
         progress=sys.stderr if args.verbose else None,
         traces=args.traces,
+        plugins_root=args.plugins_root,
     )
 
 

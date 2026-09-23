@@ -1,5 +1,9 @@
 """CLI 채널. 실행을 일으키는 명령 둘, run 과 resume 이 여기에 붙는다.
 
+serve 는 실행을 일으키지 않아 명령 자체가 여기 없고 인자만 여기서 갈린다. 관리 API 를 세우는
+것은 조립이라 `main.py` 의 일이고, 채널은 `server` 를 import 할 수 없다(원칙 IV). 그래서 serve 는
+모델도 진행 표시도 받지 않는다 — 받을 자리가 없는 것이 곧 그 사실이다.
+
 표준 출력은 실행의 결말만 싣는다. 끝나면 출력 문자열, 멈추면 실행 식별자와 승인 요청(도구 이름과
 인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령 둘(승인, 사유를 붙이는 거부). 표준
 에러는 둘을 싣고 규칙이 다르다.
@@ -35,6 +39,12 @@ from agent_os.core.run import Approve, Decision, Deny, resume, run
 from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunId, RunPaused
 
 DEFAULT_TRACES = Path("traces")
+DEFAULT_PLUGINS_ROOT = Path("plugins")
+# 루프백만 받는 규칙은 main.py 가 판정한다(ADR 0011). 여기는 그 규칙 안의 기본값 하나다.
+DEFAULT_HOST = "127.0.0.1"
+# uvicorn 자신의 기본값이라 직접 띄울 때와 같은 포트다(ADR 0010 의 2026-09-23 이력).
+DEFAULT_PORT = 8000
+MAX_PORT = 65535
 EXIT_FINISHED = 0
 EXIT_FAILED = 1
 EXIT_PAUSED = 3
@@ -46,6 +56,7 @@ class RunArgs:
     request: str
     model: str | None
     traces: Path
+    plugins_root: Path
     verbose: bool
 
 
@@ -55,7 +66,18 @@ class ResumeArgs:
     decision: Decision
     model: str | None
     traces: Path
+    plugins_root: Path
     verbose: bool
+
+
+@dataclass(frozen=True)
+class ServeArgs:
+    """관리 API 를 세우는 데 필요한 값 넷. 비밀은 없다 — 토큰만 환경변수로 온다(ADR 0011)."""
+
+    host: str
+    port: int
+    traces: Path
+    plugins_root: Path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,23 +101,69 @@ def build_parser() -> argparse.ArgumentParser:
         "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
     )
     _add_shared(resume_parser)
+    serve_parser = commands.add_parser("serve", help="관리 API 를 루프백에 세운다")
+    serve_parser.add_argument(
+        "--host", default=DEFAULT_HOST, help=f"바인딩 주소. 루프백만 (기본 {DEFAULT_HOST})"
+    )
+    serve_parser.add_argument(
+        "--port", type=_port, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"
+    )
+    _add_directories(serve_parser)
     return parser
+
+
+def _port(value: str) -> int:
+    """포트가 될 수 있는 값인지 여기서 본다. `type=int` 는 정수인지만 보고 범위를 모른다.
+
+    막지 않으면 범위 밖 값이 uvicorn 이 **뜬 뒤** 바인딩에서 `OverflowError` 로 터진다. 구성
+    오류를 시작 자리에서 끝낸다는 이 명령의 성격이 토큰과 호스트에만 걸리는 것이 아니고, 같은
+    종류의 잘못(정수 아님, 범위 밖)이 종료 코드 둘로 갈리지도 않아야 한다.
+
+    0 은 남겨 둔다. 빈 포트를 골라 달라는 뜻이고 그것을 막는 것은 TCP 가 정한 것 위에 새 정책을
+    얹는 일이다. 루프백만 받는 규칙과 달리 여기에는 그럴 근거가 없다.
+    """
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"포트는 정수다. 받은 값: {value}") from None
+    if not 0 <= port <= MAX_PORT:
+        raise argparse.ArgumentTypeError(f"포트는 0~{MAX_PORT} 다. 받은 값: {port}")
+    return port
 
 
 def _add_shared(parser: argparse.ArgumentParser) -> None:
     """두 명령이 같이 받는 것. 재개도 재생 뒤 실제로 이어 가므로 모델이 필요하다."""
     parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
     parser.add_argument("--verbose", action="store_true", help="진행 이벤트를 표준 에러로")
+    _add_directories(parser)
+
+
+def _add_directories(parser: argparse.ArgumentParser) -> None:
+    """명령 셋이 같이 받는 것. 읽고 쓰는 디렉터리가 작업 디렉터리에 묶이지 않게 한다."""
     parser.add_argument(
         "--traces", type=Path, default=DEFAULT_TRACES, help="트레이스 디렉터리 (기본 traces/)"
     )
+    parser.add_argument(
+        "--plugins-root",
+        type=Path,
+        default=DEFAULT_PLUGINS_ROOT,
+        help="플러그인 디렉터리 (기본 plugins/)",
+    )
 
 
-def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
+def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     parser = build_parser()
     namespace = parser.parse_args(argv)
-    model = None if namespace.model is None else str(namespace.model)
     traces = Path(namespace.traces)
+    plugins_root = Path(namespace.plugins_root)
+    if namespace.command == "serve":
+        return ServeArgs(
+            host=str(namespace.host),
+            port=int(namespace.port),
+            traces=traces,
+            plugins_root=plugins_root,
+        )
+    model = None if namespace.model is None else str(namespace.model)
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":
         return ResumeArgs(
@@ -103,6 +171,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
             decision=_decision(parser, namespace),
             model=model,
             traces=traces,
+            plugins_root=plugins_root,
             verbose=verbose,
         )
     return RunArgs(
@@ -110,6 +179,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs:
         request=str(namespace.request),
         model=model,
         traces=traces,
+        plugins_root=plugins_root,
         verbose=verbose,
     )
 
@@ -152,6 +222,7 @@ async def run_command(
     stderr: TextIO,
     progress: TextIO | None,
     traces: Path,
+    plugins_root: Path,
 ) -> int:
     """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
     events = run(
@@ -164,7 +235,14 @@ async def run_command(
         trace=trace,
         clock=clock,
     )
-    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
+    return await _report(
+        events,
+        stdout=stdout,
+        stderr=stderr,
+        progress=progress,
+        traces=traces,
+        plugins_root=plugins_root,
+    )
 
 
 async def resume_command(
@@ -181,6 +259,7 @@ async def resume_command(
     stderr: TextIO,
     progress: TextIO | None,
     traces: Path,
+    plugins_root: Path,
 ) -> int:
     """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)은 PluginError 로 진단만 적는다."""
     events = resume(
@@ -193,7 +272,14 @@ async def resume_command(
         trace=trace,
         clock=clock,
     )
-    return await _report(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
+    return await _report(
+        events,
+        stdout=stdout,
+        stderr=stderr,
+        progress=progress,
+        traces=traces,
+        plugins_root=plugins_root,
+    )
 
 
 async def _report(
@@ -203,9 +289,17 @@ async def _report(
     stderr: TextIO,
     progress: TextIO | None,
     traces: Path,
+    plugins_root: Path,
 ) -> int:
     try:
-        return await _show(events, stdout=stdout, stderr=stderr, progress=progress, traces=traces)
+        return await _show(
+            events,
+            stdout=stdout,
+            stderr=stderr,
+            progress=progress,
+            traces=traces,
+            plugins_root=plugins_root,
+        )
     except PluginError as error:
         stderr.write(f"{error}\n")
         return EXIT_FAILED
@@ -218,6 +312,7 @@ async def _show(
     stderr: TextIO,
     progress: TextIO | None,
     traces: Path,
+    plugins_root: Path,
 ) -> int:
     """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다."""
     exit_code = EXIT_FAILED
@@ -228,7 +323,7 @@ async def _show(
             stdout.write(event.output + "\n")
             exit_code = EXIT_FINISHED
         elif isinstance(event, RunPaused):
-            stdout.write(_approval_request(event, traces))
+            stdout.write(_approval_request(event, traces, plugins_root))
             exit_code = EXIT_PAUSED
         elif isinstance(event, RunFailed):
             stderr.write(f"실행 실패: {event.error}\n")
@@ -236,22 +331,39 @@ async def _show(
     return exit_code
 
 
-def _approval_request(event: RunPaused, traces: Path) -> str:
+def _approval_request(event: RunPaused, traces: Path, plugins_root: Path) -> str:
     """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
 
-    안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 트레이스 디렉터리를 옮겨 실행했으면 재개도
-    거기서 읽어야 하므로 그 옵션을 같이 적는다. 기본 경로면 군더더기라 붙이지 않는다. 거부 줄은
-    `--reason` 에서 끝나 사유를 이어 적게 한다. 자리표시자를 두면 그대로 친 것이 진짜 사유로
-    기록되어, 사유 없는 거부를 막자는 규칙이 안내 줄로 우회된다.
+    안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 거부 줄은 `--reason` 에서 끝나 사유를 이어
+    적게 한다. 자리표시자를 두면 그대로 친 것이 진짜 사유로 기록되어, 사유 없는 거부를 막자는
+    규칙이 안내 줄로 우회된다.
     """
     args = json.dumps(event.args, ensure_ascii=False)
-    option = "" if traces == DEFAULT_TRACES else f" --traces {_as_argument(traces)}"
+    options = _inherited_options(traces, plugins_root)
     return (
         f"일시정지: {event.run_id}\n"
         f"도구: {event.tool}\n"
         f"인자: {args}\n"
-        f"승인: agent-os resume {event.run_id}{option} --approve\n"
-        f"거부: agent-os resume {event.run_id}{option} --deny --reason\n"
+        f"승인: agent-os resume {event.run_id}{options} --approve\n"
+        f"거부: agent-os resume {event.run_id}{options} --deny --reason\n"
+    )
+
+
+def _inherited_options(traces: Path, plugins_root: Path) -> str:
+    """재개가 같은 디렉터리를 읽도록 기본값에서 벗어난 것만 붙인다. 기본이면 군더더기다.
+
+    디렉터리를 옮겨 실행했으면 재개도 거기서 읽어야 한다. 트레이스만 물려주고 플러그인 루트를
+    빠뜨리면 안내한 명령이 에이전트를 못 찾아 그대로 실패한다 — 안내가 작동하지 않으면 안내가
+    아니다. 디렉터리 옵션이 늘면 여기 한 줄이 는다.
+    """
+    directories = (
+        (traces, DEFAULT_TRACES, "--traces"),
+        (plugins_root, DEFAULT_PLUGINS_ROOT, "--plugins-root"),
+    )
+    return "".join(
+        f" {flag} {_as_argument(chosen)}"
+        for chosen, default, flag in directories
+        if chosen != default
     )
 
 
