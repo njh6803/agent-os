@@ -16,8 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from agent_os.sdk.ids import PLUGIN_NAME_PATTERN, PluginName
 
 
+# skill과 model은 첫 슬라이스에서 디렉터리와 값만 예약한다. 이 타입은 관리 API 계약에도 박히므로
+# 진행 상태는 독스트링이 아니라 여기 둔다. 독스트링이 곧 openapi.json 의 설명이다.
 class PluginKind(StrEnum):
-    """넷. skill과 model은 첫 슬라이스에서 디렉터리와 값만 예약한다."""
+    """플러그인의 종류. 값은 넷이다."""
 
     AGENT = "agent"
     MCP = "mcp"
@@ -27,11 +29,21 @@ class PluginKind(StrEnum):
 
 _ENTRYPOINT = r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$"
 
+# 매니페스트는 관리 API 의 응답 타입 그대로다(ADR 0010 의 2026-09-23 이력). 직렬화하면 필드가 언제나
+# 전부 실리는데 pydantic 은 기본값 있는 필드를 JSON 스키마의 required 에서 빼므로, 그대로 두면
+# openapi.json 에서 생성한 클라이언트가 requires_approval 같은 필드를 선택으로 받는다. 이 설정이
+# 바꾸는 것은 직렬화 쪽 JSON 스키마뿐이고 디스크 형식도 검증도 그대로다.
+_MANIFEST_CONFIG = ConfigDict(
+    extra="forbid",
+    frozen=True,
+    json_schema_serialization_defaults_required=True,
+)
+
 
 class McpServer(BaseModel):
     """mcp 플러그인이 가리키는 stdio 서버의 실행 정보."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = _MANIFEST_CONFIG
 
     command: str
     args: tuple[str, ...] = ()
@@ -42,7 +54,9 @@ class McpServer(BaseModel):
 
 
 class PluginManifest(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    """플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다."""
+
+    model_config = _MANIFEST_CONFIG
 
     schema_version: Literal["1"]
     kind: PluginKind

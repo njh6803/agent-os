@@ -4,9 +4,8 @@
 봉투이고 `code` 어휘는 상태 코드와 1:1 인 넷이다(ADR 0010). 표가 라우트마다 흩어지면 새 라우트가
 같은 예외에 다른 답을 하므로 한 곳이고, `core` 의 예외는 상태 코드를 모른다.
 
-라우트를 더하는 자리는 `admin_router()` 다. 이 티켓은 `/health` 하나만 두고 데이터 라우트는
-04·05·06 이 채운다. 그 라우트들이 부재를 말하는 방법은 `HTTPException(404)` 이고 그것도 이 표를
-지난다.
+라우트를 더하는 자리는 `admin_router()` 다. 데이터 라우트가 부재를 말하는 방법은
+`HTTPException(404)` 이고 그것도 이 표를 지난다.
 
 **실패 하나가 기록 한 줄이다.** 봉투를 만드는 것과 기록하는 것을 가른다 — 봉투 만들기는 질의라
 부수효과가 없고, 기록은 `AssignRequestId` 가 응답이 나갈 때 한 번 한다. 부르는 쪽은
@@ -25,18 +24,20 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Literal, TextIO
+from typing import Annotated, Literal, TextIO
 from uuid import uuid4
 
-from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Path, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, TypeAdapter
+from starlette.convertors import Convertor, register_url_convertor
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from agent_os.core.ports import PluginError
+from agent_os.core.ports import ManifestRow, PluginError, PluginSource
+from agent_os.sdk import PLUGIN_NAME_PATTERN, PluginKind, PluginManifest, PluginName
 
 REQUEST_ID_HEADER = "X-Request-Id"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
@@ -50,6 +51,16 @@ _FAILURE_KEY = "agent_os.failure_detail"
 _INVALID_REQUEST = "요청의 형식이 올바르지 않다"
 # 예기치 않은 실패의 문구. 원인은 서버 기록에만 남는다 — 밖으로 내면 내부 사정이 함께 나간다.
 _INTERNAL = "서버가 요청을 처리하지 못했다"
+
+# 계약에 적는 에러와 그 설명. 라우트가 자기 `responses` 에 적는다. 401 은 미들웨어가 내는 것이라
+# 프레임워크가 스키마에 넣어 주지 않고, 422 는 적지 않으면 FastAPI 가 제 모양
+# (`HTTPValidationError`)을 붙여 계약이 봉투가 아닌 것을 약속하게 된다. 500 은 라우터가 건다.
+_DOCUMENTED_ERRORS: Mapping[int, str] = {
+    401: UNAUTHORIZED_MESSAGE,
+    404: "찾는 것이 없다",
+    422: _INVALID_REQUEST,
+    500: _INTERNAL,
+}
 
 
 # StrEnum 인 이유는 생성 클라이언트가 이름 있는 타입을 받기 위해서다(ADR 0008 이 같은 이유로
@@ -95,6 +106,49 @@ class Health(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     status: Literal["ok"]
+
+
+# core 의 표지(`ports.UnreadableManifest`)를 HTTP 로 옮긴 모양이다. 따로 두는 이유는 core 의
+# 독스트링이 논증이라 그대로 계약의 description 이 되면 주석을 다듬는 것이 계약 변경으로 보이기
+# 때문이다. 필드는 셋 그대로이고 이름이 PluginName 이 아닌 이유도 core 의 것과 같다 — 이 표지가
+# 서는 경우 하나가 디렉터리 이름이 패턴을 어기는 것이다.
+class UnreadableManifest(BaseModel):
+    """매니페스트로 읽히지 않는 것의 표지. 종류와 이름과 이유를 든다. 매니페스트가 아니다."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: PluginKind
+    name: str
+    reason: str
+
+
+# 플러그인 목록의 행. 매니페스트는 sdk 의 것 그대로다(ADR 0010 의 2026-09-23 이력). 판별자가 없고
+# required 필드로 갈린다 — 표지만 reason 을, 매니페스트만 schema_version 과 version 을 든다.
+# 별칭에 이름을 주는 이유는 생성 클라이언트가 익명 유니온 대신 이 이름을 받게 하기 위해서다.
+type PluginRow = PluginManifest | UnreadableManifest
+
+
+class _Verbatim(Convertor[str]):
+    """경로 파라미터 자리에 온 것을 슬래시와 개행까지 통째로 잡는다. 판정은 패턴이 한다.
+
+    파일 경로로 조립되는 식별자는 이것으로 받는다. 기본 변환기(`[^/]+`)는 서버가 `%2F` 를 디코딩한
+    `/` 앞에서 끊고, `path` 변환기(`.*`)는 개행을 넘지 못하는데 라우팅 정규식이 파이썬 `re` 라
+    `$` 가 마지막 개행 앞에서도 맞는다. 어느 쪽이든 형식 위반이 422 가 아니라 라우팅 404 가 되거나
+    개행이 떼어진 채 유효한 이름으로 읽힌다. 라우트가 맞은 뒤 패턴이 유일한 판정자여야 한다.
+    """
+
+    regex = r"[\s\S]*"
+
+    def convert(self, value: str) -> str:
+        return value
+
+    def to_string(self, value: str) -> str:
+        return value
+
+
+# Starlette 의 공개 확장점이고 프로세스 전역 표에 키 하나를 둔다. 상태가 없고 같은 키로 다시 불러도
+# 같은 것이 들어가므로, import 시점의 부수효과가 테스트와 앱 조립에 새는 것이 없다.
+register_url_convertor("verbatim", _Verbatim())
 
 
 class _ErrorDetail(BaseModel):
@@ -277,15 +331,13 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PluginError, handle)
 
 
-def admin_router(*, health: Health) -> APIRouter:
-    """관리 라우터. 지금은 `/health` 하나이고 데이터 라우트는 04·05·06 이 이 자리에 더한다.
+def admin_router(*, health: Health, plugins: PluginSource) -> APIRouter:
+    """관리 라우터. 데이터 라우트는 이 자리에 더한다.
 
     `/health` 가 주입받은 값을 그대로 돌려주는 것이 이 라우트의 전부다. 라우트가 상태를 직접
     읽으면 인증 없이 나가는 유일한 응답이 내부 구성을 알려 주는 창이 된다(ADR 0011).
     """
-    router = APIRouter(
-        responses={500: {"model": ErrorEnvelope, "description": "서버가 요청을 처리하지 못했다"}}
-    )
+    router = APIRouter(responses=_documented_errors(500))
 
     @router.get(
         "/health",
@@ -296,7 +348,51 @@ def admin_router(*, health: Health) -> APIRouter:
     def read_health() -> Health:
         return health
 
+    # 두 플러그인 라우트는 매니페스트를 통째로 내보내므로 mcp 매니페스트의 command 와 args 도
+    # 나간다. 가리지 않는 것이 결정이고 경계는 인증이다(ADR 0009 의 2026-09-22 이력, 네 번째 열린
+    # 문제). MCP 서버에는 붙지 않는다 — 이 라우터는 도구 포트를 받지 않는다.
+    @router.get(
+        "/plugins",
+        operation_id="list_plugins",
+        summary="등록된 플러그인 전부를 종류를 가리지 않고 한 목록으로",
+        responses=_documented_errors(401),
+    )
+    def list_plugins() -> list[PluginRow]:
+        return [_plugin_row(row) for kind in PluginKind for row in plugins.list_manifests(kind)]
+
+    # `{name}` 은 `plugins/{kind}/{name}/plugin.toml` 로 조립되므로 포트에 닿기 전에 sdk 의 패턴을
+    # 지나야 한다(스토리 43). 변환기가 `verbatim` 인 이유는 `_Verbatim` 에 있다. 계약의 경로는
+    # 변환기 없이 `/plugins/{kind}/{name}` 그대로다.
+    @router.get(
+        "/plugins/{kind}/{name:verbatim}",
+        operation_id="read_plugin",
+        summary="플러그인 하나의 매니페스트를 통째로",
+        responses=_documented_errors(401, 404, 422),
+    )
+    def read_plugin(
+        kind: PluginKind, name: Annotated[str, Path(pattern=PLUGIN_NAME_PATTERN)]
+    ) -> PluginManifest:
+        manifest = plugins.read_manifest(kind, PluginName(name))
+        if manifest is None:
+            raise HTTPException(status_code=404, detail=f"{kind} 종류에 {name} 플러그인이 없다")
+        return manifest
+
     return router
+
+
+def _documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
+    """라우트의 `responses` 에 적을 에러 응답들(질의). 모양은 언제나 봉투다."""
+    return {
+        status: {"model": ErrorEnvelope, "description": _DOCUMENTED_ERRORS[status]}
+        for status in statuses
+    }
+
+
+def _plugin_row(row: ManifestRow) -> PluginRow:
+    """포트의 행을 응답의 행으로(질의). 매니페스트는 그대로이고 표지만 HTTP 의 모양으로 옮긴다."""
+    if isinstance(row, PluginManifest):
+        return row
+    return UnreadableManifest(kind=row.kind, name=row.name, reason=row.reason)
 
 
 def _enveloped(request: Request, failure: _Failure) -> JSONResponse:
