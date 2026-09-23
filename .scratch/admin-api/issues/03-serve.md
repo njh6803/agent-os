@@ -6,7 +6,7 @@
 
 **Blocked by:** 02
 
-**Status:** in-progress
+**Status:** done
 
 - [x] `serve`가 `--host`·`--port`·`--traces`·`--plugins-root`를 받고 `--host`의 기본이 `127.0.0.1`이다. 비밀만 환경변수다
 - [x] `AGENT_OS_ADMIN_TOKEN`이 없거나 빈 문자열이면 진단을 내고 실패 종료 코드로 끝난다. 서버가 뜨지 않는다. 운영자가 토큰 없는 서버를 띄워 놓고 401만 보게 되는 것을 막는다
