@@ -523,6 +523,30 @@ def test_같은_손상_파일을_단건으로_읽으면_PluginError다(tmp_path:
             store.read(RunId(run_id))
 
 
+def test_읽을_수_없는_이유가_트레이스_줄의_내용을_되울리지_않는다(tmp_path: Path) -> None:
+    """목록은 내용을 읽는 자리가 아니다(스토리 15). pydantic 의 검증 문구는 받은 값의 앞뒤를 싣는데,
+    쓰는 중에 잘린 줄이면 그 꼬리가 곧 도구 결과다. 경로와 오류 종류는 운영자가 파일을 찾고 원인을
+    짐작하는 값이라 남긴다(PR #56 의 CodeRabbit 지적)."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(store, "run-1")
+    leaked = "tool-output-that-must-not-leak"
+    called = ToolCalled(
+        run_id=RunId("run-1"), ts=TS, tool="fetch", ok=True, args={}, content=leaked
+    ).model_dump_json()
+    with (tmp_path / "run-1.jsonl").open("a", encoding="utf-8") as file:
+        file.write(called[: called.index(leaked) + len(leaked)])
+
+    row = store.list()[0]
+    with pytest.raises(PluginError) as single:
+        store.read(RunId("run-1"))
+
+    assert isinstance(row, UnreadableTrace)
+    for reason in (row.reason, str(single.value)):
+        assert "must-not-leak" not in reason
+        assert "run-1.jsonl" in reason
+        assert "json_invalid" in reason
+
+
 def test_파일_이름과_내용의_실행_식별자가_어긋나면_표지이고_단건은_PluginError다(
     tmp_path: Path,
 ) -> None:

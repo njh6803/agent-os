@@ -116,7 +116,7 @@ class JsonlTrace:
                     _require_same_run(run_id, event.run_id, "이벤트")
         except (OSError, IndexError, ValueError) as error:
             # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
-            raise PluginError(f"트레이스를 읽을 수 없다: {path}\n{error}") from error
+            raise PluginError(f"트레이스를 읽을 수 없다: {path}\n{_describe(error)}") from error
         return Trace(run_id=run_id, schema_version=header.schema_version, events=events)
 
     def list(
@@ -179,8 +179,30 @@ def _row(path: Path) -> RunRow:
         return _summarize(run_id, _edges(path))
     except (OSError, ValueError) as error:
         # 이유에 서버 경로가 실리는 것은 이 경계에서 노출이 아니다. 루프백 전용이고 인증 뒤이므로
-        # 읽는 사람이 곧 그 파일시스템의 주인이다(admin-api 명세, ADR 0011).
-        return UnreadableTrace(run_id=run_id, reason=f"{path}: {error}")
+        # 읽는 사람이 곧 그 파일시스템의 주인이다(admin-api 명세, ADR 0011). 내용은 싣지 않는다.
+        return UnreadableTrace(run_id=run_id, reason=f"{path}: {_describe(error)}")
+
+
+def _describe(error: Exception) -> str:
+    """읽을 수 없는 이유(질의). 트레이스의 내용을 되울리지 않는다.
+
+    pydantic 의 검증 문구는 받은 값의 앞뒤를 `input_value` 로 싣는데, 쓰는 중에 잘린 줄이면 그
+    꼬리가 곧 도구 결과 같은 내용이다. 목록은 내용을 읽는 자리가 아니므로(admin-api 스토리 15) 입력
+    없이 종류와 위치와 문구만 남긴다. 그 밖의 예외(OSError, UnicodeDecodeError, 여기서 낸
+    ValueError)는 경로와 바이트 위치와 식별자만 담아 그대로다. 단건의 `PluginError` 문구도 이것을
+    쓴다(PR #56).
+    """
+    if not isinstance(error, ValidationError):
+        return str(error)
+    details = error.errors(include_url=False, include_context=False, include_input=False)
+    return "; ".join(
+        f"{detail['type']}{_location(detail['loc'])}: {detail['msg']}" for detail in details
+    )
+
+
+def _location(loc: tuple[int | str, ...]) -> str:
+    """검증 오류의 위치(질의). 줄 전체가 틀렸으면 위치가 없다."""
+    return f" ({'.'.join(str(part) for part in loc)})" if loc else ""
 
 
 @dataclass(frozen=True)
