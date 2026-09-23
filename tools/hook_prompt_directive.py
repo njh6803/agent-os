@@ -9,9 +9,18 @@
 읽어 따르라는 줄을 붙인다. 앱의 전각 치환은 출처 모를 링크가 명령을 일으키지 못하게 하는 장치인데,
 여기까지 온 것은 사람이 보내기를 누른 뒤라 그 확인은 이미 있었다.
 
-못 보는 것: 지시문 모양은 누구나 쓸 수 있다. 막는 것은 사람이 보냈다는 것과, 이름이 kebab 한
-토막이라 `.claude/skills/` 밖을 가리키지 못한다는 것뿐이다. 이미 사람이 이름을 지은 세션에 지시문을
-붙여 넣으면 이 훅이 이름을 바꾸라고 하고, 그때 앱이 사람에게 승인을 묻는다.
+첫 턴에만 낸다. 내용만으로는 "지시문으로 연 세션"과 "지시문을 붙여 넣고 이야기하는 세션"이 같다.
+이 훅을 만든 세션에 사람이 지시문을 붙여 질문하자 훅이 그 세션 이름을 바꾸라고 했고, 제목이 앱이
+지은 것이라 따랐으면 묻지 않고 바뀌었다(실측). 같은 제목이 둘이 되면 open-session 1단계가 "그
+세션이 하고 있다"며 열지 않는다. 지시문으로 연 세션은 지시문이 언제나 첫 메시지이므로,
+트랜스크립트에 assistant 기록이 아직 없을 때만 낸다. 훅이 도는 시점에 지금 프롬프트가 기록됐는지와
+무관하다.
+
+못 보는 것: 지시문 모양은 누구나 쓸 수 있다. 막는 것은 사람이 보냈다는 것, 첫 턴이라는 것, 이름이
+kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못한다는 것뿐이다. 사람이 손으로 연 새 세션에
+지시문을 첫 메시지로 붙여 넣은 것도 발동하는데, 그것은 open-session 이 하는 일과 같아 의도한 쪽이다.
+`/clear` 뒤의 첫 메시지도 같다. 트랜스크립트가 새 파일로 시작해 assistant 기록이 없으므로 발동하고,
+같은 앱 세션이 그 지시문의 일로 새로 시작하는 것이라 이름을 바꾸는 것이 맞다고 본다.
 """
 
 from __future__ import annotations
@@ -19,6 +28,8 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections.abc import Iterable
+from pathlib import Path
 from typing import TypedDict
 
 FULLWIDTH_SLASH = "／"
@@ -31,6 +42,13 @@ class HookPayload(TypedDict, total=False):
     """Claude Code 가 stdin 으로 주는 훅 입력 중 이 훅이 읽는 부분."""
 
     prompt: str
+    transcript_path: str
+
+
+class TranscriptRecord(TypedDict, total=False):
+    """트랜스크립트 JSONL 한 줄 중 이 훅이 읽는 부분."""
+
+    type: str
 
 
 def context_for(prompt: str) -> str | None:
@@ -81,13 +99,51 @@ def _fullwidth_skill(prompt: str) -> str | None:
     return match.group(1) if match is not None else None
 
 
+def is_first_turn(transcript_path: str | None) -> bool:
+    """이 세션에서 모델이 아직 한 번도 답하지 않았는가.
+
+    두 부재를 반대로 판정한다. 파일이 아직 없으면 첫 턴이다 — 새 세션의 첫 프롬프트에서는
+    트랜스크립트가 만들어지기 전일 수 있다. 경로 키가 없으면 첫 턴을 증명할 수 없으니 아니라고
+    본다. 잘못 발동하면 엉뚱한 세션의 이름이 조용히 바뀌고, 발동하지 않으면 앱이 지은 제목이 남아
+    open-session 4단계의 확인이 알린다. 빈 경로도 모르는 것이다(`Path("")` 는 작업 디렉터리다).
+    """
+    if not transcript_path:
+        return False
+    path = Path(transcript_path)
+    if not path.exists():
+        return True
+    with path.open(encoding="utf-8", errors="replace") as transcript:
+        return not has_assistant_turn(transcript)
+
+
+def has_assistant_turn(lines: Iterable[str]) -> bool:
+    """트랜스크립트 JSONL 에 assistant 기록이 하나라도 있으면 True. 첫 것에서 멈춘다."""
+    return any(_record_type(line) == "assistant" for line in lines)
+
+
+def _record_type(line: str) -> str | None:
+    """JSONL 한 줄의 최상위 `type`. JSON 객체가 아니면 None.
+
+    `{` 로 시작하는 올바른 JSON 은 객체뿐이라 주해가 참이다. 본문 문자열 속의 같은 글자는
+    세지 않는다.
+    """
+    if not line.lstrip().startswith("{"):
+        return None
+    try:
+        record: TranscriptRecord = json.loads(line)
+    except ValueError:
+        return None
+    return record.get("type")
+
+
 def main() -> int:
     # 훅 환경에는 PYTHONUTF8 이 없어 텍스트 stdin 이 cp949 로 읽힌다. 그러면 한글이 깨져
     # `브랜치:` 가 매치되지 않고, 예외 없이 exit 0 에 출력 0바이트로 계기가 사라진다(실측).
     # 바이트로 받아 JSON 이 UTF-8 로 풀게 한다.
     payload: HookPayload = json.load(sys.stdin.buffer)
     context = context_for(payload.get("prompt", ""))
-    if context is None:
+    # 지시문일 때만 트랜스크립트를 연다. 평범한 프롬프트마다 긴 파일을 읽지 않는다.
+    if context is None or not is_first_turn(payload.get("transcript_path")):
         return 0
     print(
         json.dumps(

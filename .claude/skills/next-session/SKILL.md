@@ -46,4 +46,4 @@ PR을 열거나 병합하면 다음 작업의 지시문을 낸다(`docs/constitu
 이번 요청 범위: <티켓까지 / 구현·리뷰·커밋까지 / PR과 병합까지>
 ```
 
-줄은 불릿이나 인용 없이 줄 머리에서 시작한다. 새 세션의 `UserPromptSubmit` 훅(`tools/hook_prompt_directive.py`)이 줄 머리의 `브랜치:`·`어디서: 새 세션` 두 줄로 지시문을 알아보고 그 세션이 스스로 이름을 붙이게 한다. 라벨을 바꾸면 훅은 예외 없이 침묵하고 `tests/tools/test_hook_prompt_directive.py`가 빨강이 된다.
+줄은 불릿이나 인용 없이 줄 머리에서 시작한다. 새 세션의 `UserPromptSubmit` 훅(`tools/hook_prompt_directive.py`)이 첫 메시지에서만, 줄 머리의 `브랜치:`·`어디서: 새 세션` 두 줄로 지시문을 알아보고 그 세션이 스스로 이름을 붙이게 한다. 라벨을 바꾸면 훅은 예외 없이 침묵하고 `tests/tools/test_hook_prompt_directive.py`가 빨강이 된다.

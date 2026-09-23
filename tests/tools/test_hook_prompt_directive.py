@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.hook_prompt_directive import context_for
+from tools.hook_prompt_directive import context_for, has_assistant_turn, is_first_turn
 
 NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
 
@@ -122,3 +122,63 @@ def test_스킬_이름이_케밥_하나가_아니면_읽을_경로를_만들지_
 
         assert context is not None, first_line
         assert "SKILL.md" not in context, first_line
+
+
+def test_모델이_아직_답하지_않은_트랜스크립트는_첫_턴이다() -> None:
+    """지시문으로 연 세션은 지시문이 첫 메시지다. 훅이 도는 시점엔 assistant 기록이 없다."""
+    first_turn = [
+        '{"type":"queue-operation","operation":"enqueue"}',
+        '{"type":"attachment","attachment":{"type":"hook_additional_context"}}',
+        '{"type":"user","message":{"role":"user","content":"／implement x"}}',
+    ]
+
+    assert has_assistant_turn(first_turn) is False
+    assert has_assistant_turn([]) is False
+
+
+def test_모델이_한_번이라도_답했으면_첫_턴이_아니다() -> None:
+    """진행 중인 대화에 지시문을 붙여 넣은 것은 새 세션이 아니다(이 훅을 만든 세션에서 실측)."""
+    ongoing = [
+        '{"type":"user","message":{"role":"user","content":"훅을 만든다"}}',
+        '{"type":"assistant","message":{"role":"assistant","content":[]}}',
+        '{"type":"user","message":{"role":"user","content":"```\\n브랜치: x\\n```"}}',
+    ]
+
+    assert has_assistant_turn(ongoing) is True
+
+
+def test_기록의_종류는_최상위_type만_보고_깨진_줄은_건너뛴다() -> None:
+    """본문 속의 `"type":"assistant"` 는 기록의 종류가 아니다. 최상위 `type` 만 본다.
+
+    잘린 줄은 훅이 읽는 동안 앱이 마지막 줄을 쓰고 있을 때 생긴다.
+    """
+    lines = [
+        "not json",
+        "[]",
+        '{"type":"user","message":{"content":"잘린',
+        '{"type":"user","message":{"content":"{\\"type\\":\\"assistant\\"}"}}',
+        '{"type":"attachment","attachment":{"type":"assistant"}}',
+    ]
+
+    assert has_assistant_turn(lines) is False
+    assert has_assistant_turn([*lines, '{"type":"assistant"}']) is True
+
+
+def test_트랜스크립트_파일이_아직_없으면_첫_턴이다(tmp_path: Path) -> None:
+    """새 세션의 첫 프롬프트에서는 트랜스크립트가 만들어지기 전일 수 있다."""
+    assert is_first_turn(str(tmp_path / "없음.jsonl")) is True
+
+
+def test_트랜스크립트에_assistant_기록이_생기면_첫_턴이_끝난다(tmp_path: Path) -> None:
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text('{"type":"user"}\n', encoding="utf-8")
+    assert is_first_turn(str(transcript)) is True
+
+    transcript.write_text('{"type":"user"}\n{"type":"assistant"}\n', encoding="utf-8")
+    assert is_first_turn(str(transcript)) is False
+
+
+def test_트랜스크립트_경로를_모르면_첫_턴이라고_하지_않는다() -> None:
+    """잘못 발동하면 엉뚱한 세션의 이름이 조용히 바뀐다. 모를 때는 발동하지 않아야 드러난다."""
+    assert is_first_turn(None) is False
+    assert is_first_turn("") is False
