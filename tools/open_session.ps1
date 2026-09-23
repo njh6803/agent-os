@@ -1,4 +1,5 @@
-# open-session 스킬의 손발. 데스크톱 앱에 새 Code 세션을 클릭 없이 연다.
+# open-session 스킬의 손발. 데스크톱 앱에 새 Code 세션을 연다. 첫 줄이 슬래시 명령이면 앱이 그 `/` 를
+# 전각으로 바꿔 넣으므로 보내기 전에 멈추고(`held=`) 사람이 고쳐 보낸다.
 #
 # `send`: 딥링크 `claude://code/new?q=<프롬프트>`로 프롬프트가 채워진 새 세션 화면을 열고 접근성
 # 트리(UI Automation)의 "보내기"를 호출한다. `split`: 사이드바 행 메뉴 "다음에서 열기 → 분할 보기".
@@ -88,14 +89,16 @@ function Send-Prompt {
     # `list_sessions`의 cwd 로 확인한다.
     $url = 'claude://code/new?q=' + [uri]::EscapeDataString($prompt) + '&source=open-session'
     # 윈도가 프로토콜 핸들러에 URL 을 명령줄로 넘기고 그 명령줄이 잘린다. 넘치면 앱이 딥링크를 아예
-    # 받지 못하고, 스크립트는 아래 `page=` 에서 "화면을 못 찾았다"로 끝나 원인을 가린다. 실측: 9766자가
-    # 조용히 실패했고 6393자는 열렸다(2026-09-23, 티켓 03 세션). 흔히 쓰는 명령줄 상한 8191 아래로 둔다.
-    # 전에는 30000 이었는데 그 값이 이 실패를 통과시켰다.
+    # 받지 못하고, 스크립트는 아래 `page=` 에서 "화면을 못 찾았다"로 끝나 원인을 가린다. 실측: 9766자는
+    # 화면이 열리지 않았고, 같은 지시문을 6589자로 줄이자 열렸다(2026-09-23, 티켓 03 세션). 그 사이 어디가
+    # 상한인지는 재지 않았다. 흔히 쓰는 명령줄 상한 8191 아래로 둔다. 전에는 30000 이었는데 그 값이 이
+    # 실패를 통과시켰다.
     $maxUrl = 8000
     if ($url.Length -gt $maxUrl) { throw "URL 이 $($url.Length)자다(상한 $maxUrl). 지시문의 '읽을 것'을 경로 목록으로 줄인다. 넘치면 앱이 딥링크를 받지 못한다." }
 
     $win = Get-ClaudeWindow
-    # 접근성 트리는 프롬프트를 문단 단위 Text 요소로 내므로 첫 줄의 앞부분으로 찾는다.
+    # 접근성 트리는 프롬프트를 문단 단위 Text 요소로 내므로 첫 줄의 앞부분으로 찾는다. 앱이 첫 `/` 를
+    # 전각 `／` 로 바꿔 넣으므로(아래 `held=`) 비교는 Test-Needle 한 곳에서 한다.
     $needle = $firstLine.Substring(0, [Math]::Min(24, $firstLine.Length))
     $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
     # 쏘기 전에 이미 있던 매칭을 기억해 두고 새로 생긴 것만 화면으로 친다. 앞 시도가 실패하면 그 진단이
@@ -106,7 +109,7 @@ function Send-Prompt {
     foreach ($el in @($win.FindAll($Scope::Descendants, $textCond))) {
         try { $n = $el.Current.Name } catch { $n = $null }
         $key = Get-RuntimeKey $el
-        if ($n -and $n.StartsWith($needle) -and $key) { $stale[$key] = $true }
+        if ((Test-Needle $n $needle) -and $key) { $stale[$key] = $true }
     }
     if ($stale.Count -gt 0) { "stale=$($stale.Count)" }
 
@@ -115,7 +118,7 @@ function Send-Prompt {
 
     # Name 이 null 인 Text 요소가 있다. 먼저 거른다.
     # Name 은 한 번만 읽는다. 두 번 읽는 사이에 요소가 다시 그려져 두 번째가 null 이 된 적이 있다.
-    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.StartsWith($needle) -and -not $stale.ContainsKey((Get-RuntimeKey $_)) } catch { $false } } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
+    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { try { $n = $_.Current.Name; (Test-Needle $n $needle) -and -not $stale.ContainsKey((Get-RuntimeKey $_)) } catch { $false } } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
     "page=$(Get-Date -Format HH:mm:ss.fff)"
 
     # 기본 폴더가 아직 신뢰되지 않았으면 앱이 워크스페이스 신뢰를 묻는다. 대화상자에 적힌 폴더가
@@ -139,10 +142,22 @@ function Send-Prompt {
     # 확인의 대상은 누르기 전에 잡는다. 지시문이 든 입력창을 못 찾으면 무엇이 비었는지 판정할 수 없고,
     # 그 상태에서 "빈 입력창이 없다"를 성공으로 치면 확인이 공허해진다(PR #33 리뷰). 못 찾으면 멈춘다.
     $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
+
+    # 앱은 링크로 온 슬래시 명령을 그대로 실행하지 않는다. 첫 `/` 를 전각 `／`(U+FF0F)로 바꿔 넣어,
+    # 그대로 보내면 명령이 아니라 글자가 된다 — `/implement` 가 사용자 호출로 먹지 않는다(2026-09-23 실측,
+    # 입력창의 값 첫 글자가 U+FF0F). 스크립트는 되돌려 넣지 않는다. 어디서 왔는지 모르는 링크가 명령을
+    # 일으키지 못하게 한 앱의 장치를 우회하는 일이고, 사람이 첫 글자를 고쳐 보내는 것이 곧 앱이 요구하는
+    # 확인이다. 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고, 보냈다는 말을 들은 뒤 4로 간다.
+    $value = try { $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { '' }
+    if ($value -and [int][char]$value[0] -eq 0xFF0F) {
+        "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다. 사람이 / 로 고쳐 보낸다"
+        return
+    }
+
     $send = Wait-For { Find-EnabledSendButton $win } '활성 보내기 버튼'
     $how = Press-Element $send
     Wait-For {
-        try { -not $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
+        try { -not (Test-Needle ($box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) $needle) } catch { $false }
     } '제출된 뒤 비워진 입력창(요소를 못 읽으면 비운 것으로 치지 않는다)' 10 | Out-Null
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
 }
@@ -153,11 +168,24 @@ function Get-RuntimeKey($el) {
     try { return ($el.GetRuntimeId() -join '.') } catch { return '' }
 }
 
+function Normalize-Slash([string] $s) {
+    # 앱이 딥링크로 온 슬래시 명령의 첫 `/` 를 전각 `／`(U+FF0F)로 바꿔 넣는다. 찾을 때만 되돌려 비교한다.
+    # 문화권 비교는 둘을 같게 보지 않는다 — 고치기 전의 needle 이 그 화면을 끝내 못 찾은 이유다.
+    if ($s -and [int][char]$s[0] -eq 0xFF0F) { return '/' + $s.Substring(1) }
+    return $s
+}
+
+function Test-Needle([string] $s, [string] $needle) {
+    # needle 비교는 여기 한 곳이다. 쏘기 전 스냅숏, 화면 확인, 입력창 찾기, 제출 확인이 모두 부른다. 규칙이
+    # 네 자리에 흩어지면 하나를 빠뜨린 자리가 곧 다음 실패다 — 전각 슬래시 버그가 바로 그 모양이었다.
+    return [bool]($s -and (Normalize-Slash $s).StartsWith($needle))
+}
+
 # 지시문이 든 입력창. 이름은 로케일에 따르므로 이름이 아니라 값으로 고른다. 값을 못 읽는 요소는 후보가 아니다.
 function Find-PromptBox($win, [string] $needle) {
     $editCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Edit)
     $boxes = @($win.FindAll($Scope::Descendants, $editCond) | Where-Object {
-        try { $_.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
+        try { Test-Needle ($_.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) $needle } catch { $false }
     })
     if ($boxes.Count -gt 1) { throw "지시문이 든 입력창이 $($boxes.Count)개다. 앞선 실행이 남긴 페이지가 있다. 사람이 하나만 남긴다." }
     if ($boxes.Count -eq 1) { return $boxes[0] }
