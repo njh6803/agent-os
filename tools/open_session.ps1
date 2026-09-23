@@ -87,18 +87,35 @@ function Send-Prompt {
     # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 그것이 루트다. 맞는지는 스킬이
     # `list_sessions`의 cwd 로 확인한다.
     $url = 'claude://code/new?q=' + [uri]::EscapeDataString($prompt) + '&source=open-session'
-    if ($url.Length -gt 30000) { throw "URL 이 $($url.Length)자다. 프롬프트를 줄인다(핸들러가 자르면 지시문 꼬리가 사라진다)." }
+    # 윈도가 프로토콜 핸들러에 URL 을 명령줄로 넘기고 그 명령줄이 잘린다. 넘치면 앱이 딥링크를 아예
+    # 받지 못하고, 스크립트는 아래 `page=` 에서 "화면을 못 찾았다"로 끝나 원인을 가린다. 실측: 9766자가
+    # 조용히 실패했고 6393자는 열렸다(2026-09-23, 티켓 03 세션). 흔히 쓰는 명령줄 상한 8191 아래로 둔다.
+    # 전에는 30000 이었는데 그 값이 이 실패를 통과시켰다.
+    $maxUrl = 8000
+    if ($url.Length -gt $maxUrl) { throw "URL 이 $($url.Length)자다(상한 $maxUrl). 지시문의 '읽을 것'을 경로 목록으로 줄인다. 넘치면 앱이 딥링크를 받지 못한다." }
 
     $win = Get-ClaudeWindow
-    Start-Process $url
-    "fired=$(Get-Date -Format HH:mm:ss.fff)"
-
     # 접근성 트리는 프롬프트를 문단 단위 Text 요소로 내므로 첫 줄의 앞부분으로 찾는다.
     $needle = $firstLine.Substring(0, [Math]::Min(24, $firstLine.Length))
     $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
+    # 쏘기 전에 이미 있던 매칭을 기억해 두고 새로 생긴 것만 화면으로 친다. 앞 시도가 실패하면 그 진단이
+    # needle 을 지금 대화에 그대로 인쇄하고, 트리 탐색은 화면 밖 요소도 돌려주므로 그 글자가 새 세션
+    # 화면으로 오인된다. 그러면 `page=` 가 거짓으로 찍혀 "딥링크는 열렸다"로 읽힌다. 실제 보내기는 아래
+    # 입력창 확인이 막지만(그 입력창은 비어 있다) 진단이 거짓말을 하게 된다(2026-09-23 실측).
+    $stale = @{}
+    foreach ($el in @($win.FindAll($Scope::Descendants, $textCond))) {
+        try { $n = $el.Current.Name } catch { $n = $null }
+        $key = Get-RuntimeKey $el
+        if ($n -and $n.StartsWith($needle) -and $key) { $stale[$key] = $true }
+    }
+    if ($stale.Count -gt 0) { "stale=$($stale.Count)" }
+
+    Start-Process $url
+    "fired=$(Get-Date -Format HH:mm:ss.fff)"
+
     # Name 이 null 인 Text 요소가 있다. 먼저 거른다.
     # Name 은 한 번만 읽는다. 두 번 읽는 사이에 요소가 다시 그려져 두 번째가 null 이 된 적이 있다.
-    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.StartsWith($needle) } catch { $false } } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
+    $page = Wait-For { $win.FindAll($Scope::Descendants, $textCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.StartsWith($needle) -and -not $stale.ContainsKey((Get-RuntimeKey $_)) } catch { $false } } | Select-Object -First 1 } "프롬프트 첫 줄('$needle…')이 채워진 새 세션 화면"
     "page=$(Get-Date -Format HH:mm:ss.fff)"
 
     # 기본 폴더가 아직 신뢰되지 않았으면 앱이 워크스페이스 신뢰를 묻는다. 대화상자에 적힌 폴더가
@@ -128,6 +145,12 @@ function Send-Prompt {
         try { -not $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value.StartsWith($needle) } catch { $false }
     } '제출된 뒤 비워진 입력창(요소를 못 읽으면 비운 것으로 치지 않는다)' 10 | Out-Null
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
+}
+
+function Get-RuntimeKey($el) {
+    # 요소가 살아 있는 동안 같은 값이라 다시 찾아도 같은 요소인지 가를 수 있다. 못 읽으면 빈 문자열이고
+    # 그러면 어떤 기억과도 겹치지 않아 새 것으로 친다 — 못 읽는 것을 오래된 것으로 치면 진짜 화면을 놓친다.
+    try { return ($el.GetRuntimeId() -join '.') } catch { return '' }
 }
 
 # 지시문이 든 입력창. 이름은 로케일에 따르므로 이름이 아니라 값으로 고른다. 값을 못 읽는 요소는 후보가 아니다.
