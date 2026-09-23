@@ -14,7 +14,8 @@ param(
     [string] $Folder,
     [string] $PromptFile,
     [string] $Title,
-    # 사이드바 행이 새 제목으로 갱신되는 데 몇 초 걸린다. 넉넉히 둔다.
+    # 사이드바 행이 새 제목으로 갱신되는 데 몇 초 걸린다. 넉넉히 둔다. `focus` 는 새 세션이 첫 턴에
+    # 스스로 이름을 붙일 때까지 기다리므로 스킬이 더 늘려 준다.
     [int] $TimeoutSec = 30
 )
 
@@ -147,7 +148,8 @@ function Send-Prompt {
     # 그대로 보내면 명령이 아니라 글자가 된다 — `/implement` 가 사용자 호출로 먹지 않는다(2026-09-23 실측,
     # 입력창의 값 첫 글자가 U+FF0F). 스크립트는 되돌려 넣지 않는다. 어디서 왔는지 모르는 링크가 명령을
     # 일으키지 못하게 한 앱의 장치를 우회하는 일이고, 사람이 첫 글자를 고쳐 보내는 것이 곧 앱이 요구하는
-    # 확인이다. 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고, 보냈다는 말을 들은 뒤 4로 간다.
+    # 확인이다. 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고 턴을 끝낸다. 이름은 새 세션이
+    # 스스로 붙이므로(hook_prompt_directive) 사람이 이 세션으로 돌아올 필요가 없다.
     $value = try { $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { '' }
     if ($value -and [int][char]$value[0] -eq 0xFF0F) {
         "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다. 사람이 / 로 고쳐 보낸다"
@@ -264,15 +266,16 @@ function Invoke-Row([string] $rowName) {
 
 # 사이드바 행 버튼. 이름은 "<상태> <제목>"("유휴 …", "실행 중 …", "#30 · 열기 …")이라 끝이 제목인 버튼을 찾는다.
 # 옵션 버튼은 "…에 대한 더 많은 옵션"이라 안 걸린다. 이름은 한 번만 읽는다(두 번 읽는 사이 요소가 바뀐 적이 있다).
-function Find-RowByTitle($win, [string] $title) {
+function Find-RowByTitle($win, [string] $title, [int] $seconds = 10) {
     $rowCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
-    return Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${title}") } catch { $false } } | Select-Object -First 1 } "행 '${title}'" 10
+    return Wait-For { $win.FindAll($Scope::Descendants, $rowCond) | Where-Object { try { $n = $_.Current.Name; $n -and $n.EndsWith(" ${title}") } catch { $false } } | Select-Object -First 1 } "행 '${title}'" $seconds
 }
 
 function Focus-Session {
     if (-not $Title) { throw 'focus 에는 -Title 이 필요하다.' }
     $win = Get-ClaudeWindow
-    $rowButton = Find-RowByTitle $win $Title
+    # 새 세션은 첫 턴에 스스로 이름을 붙이므로(hook_prompt_directive) 행이 그 제목이 되기까지 기다린다.
+    $rowButton = Find-RowByTitle $win $Title $TimeoutSec
     $how = Invoke-Row $rowButton.Current.Name
     if ($how -ne 'invoke') { throw "행 '${Title}'을 누르지 못했다($how)." }
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how"
