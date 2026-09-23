@@ -110,6 +110,31 @@ comments", Merge Risk Minimal. 사전 병합 검사의 Docstring Coverage 경고
 병합 직전 PR head 와 로컬 HEAD 가 같은 것을 봤다. `gh pr merge --delete-branch`는 05 세션처럼 로컬 정리에서
 멈췄다(`main`이 루트 체크아웃에 있다). 원격 브랜치 삭제와 루트 main 의 fast-forward 는 손으로 했다.
 
+## 06 을 열다가 `page=`에서 멈췄다 — 모니터 절전
+
+일지 PR(#61)까지 병합하고 06 을 열자 `fired=` 뒤 30초 안에 `page=`가 나오지 않았다. 04→05 에 이어 2회차다.
+
+> 사용자: "page= 실패는 지금 고쳐봐. 잘되다가 갑자기 어느 순간 왜 안되는거야"
+
+diagnosing-bugs 로 갔다. 스크립트의 `page=` 탐색만 떼어 지금 화면에 돌리는 읽기 전용 프로브는 빨강이었지만,
+화면에는 새 세션 페이지가 아니라 이 세션이 떠 있었다 — 탐색이 아니라 화면이 문제였다. 앱 로그는 MSIX 패키지
+안(`%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Local\Claude\logs\main.log`)에 있다(`%APPDATA%\Claude\logs`는
+8월에 멈춘 옛 것이다). 딥링크마다 `second-instance: suppressing duplicate argv` 뒤 `setFocusedSession: null`과
+`checkTrust`가 오는데, 성공한 10:49 와 실패한 12:18·16:31 이 똑같았다. 앱 버전도 그날 내내 같았다. 갈린 것은
+사람이었다. 12:18 직전에 "Window focused — last poll 58분 전"이 있고, 16:31 에는 PC 입력이 50분 넘게 없었다.
+이 PC 는 입력이 30분 없으면 모니터를 끈다.
+
+가설: 꺼진 모니터에서 앱(Electron)이 창을 가려진 것으로 보고 그리지 않는다. 딥링크를 쏘고 20초 안에 태그가
+화면에 오르는지 보는 프로브로 모니터를 `SC_MONITORPOWER`로 끄고 쏘면 2/2 빨강, 쏘기 직전에
+`SetThreadExecutionState(ES_SYSTEM_REQUIRED|ES_DISPLAY_REQUIRED)`를 부르면 2/2 초록(대기 없이 1.2초). 고친
+스크립트를 모니터를 끈 채 95분 무입력에서 돌려 `idle= fired= page=`(1.1초) `held=`를 봤다. 04→05 때 스크립트는
+실패했는데 05 는 지시문을 받은 것도 이것으로 풀린다 — 화면은 사람이 돌아와 모니터가 켜진 뒤에 그려졌다.
+
+스크립트는 모든 동작 전에 화면 유휴 타이머를 한 번 되돌리고 첫 줄 `idle=`에 마지막 입력 뒤의 초를 남긴다.
+open-session 3단계의 "`page=`가 안 나오면 앱이 딥링크를 받지 못한 것이다"는 이번 두 번에는 틀렸다. 앱은 받았고
+그리지 않았다. 회귀 시험의 올바른 자리는 없다(실제 앱과 모니터가 있어야 재현된다, 대기열 17 과 같은 벽).
+`split`·`focus`가 꺼진 모니터에서 실패하는지는 재지 않았다.
+
 ## 갈린 곳
 
 - **여는 쪽의 대신 붙이기.** 확인에서 제목이 안 보이면 여는 쪽이 붙일 수 있었다. 붙이지 않고 알리기만 한다.
