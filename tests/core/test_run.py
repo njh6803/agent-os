@@ -1487,6 +1487,57 @@ async def test_다른_실행의_이벤트가_섞인_트레이스는_재개할_�
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
 
 
+class RefusingTrace(FakeTrace):
+    """어떤 종류의 이벤트를 이어 쓰지 못하는 저장소. JSONL 어댑터가 끝나지 않은 줄 뒤의 쓰기를
+    거부하는 모양이다(ADR 0012 의 2026-09-23 이력 둘째). fail 은 그 줄을 남긴 쓰기 실패다."""
+
+    def __init__(self, *, fail: str | None = None, refuse: tuple[str, ...] = ()) -> None:
+        super().__init__()
+        self.fail = fail
+        self.refuse = refuse
+
+    def write(self, event: Event) -> None:
+        if event.type == self.fail:
+            raise OSError("디스크가 찼다")
+        if event.type in self.refuse:
+            raise PluginError(f"끝나지 않은 줄 뒤에 이어 쓸 수 없다: {event.run_id}")
+        super().write(event)
+
+
+async def test_저장소가_결정을_이어_쓰지_못하면_재개는_PluginError이고_도구를_부르지_않는다(
+    clock: FakeClock,
+) -> None:
+    """재개의 첫 쓰기를 쓰다 죽은 뒤 다시 재개하는 길이다. 결정이 기록되지 않았으므로 도구도 부르지
+    않는다. 목록은 그 실행을 일시정지로 보여 주는데 재개는 거부된다 — 이력이 받아들인 어긋남이다."""
+    trace = RefusingTrace()
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    trace.refuse = ("approval_granted",)
+
+    with pytest.raises(PluginError, match="run-1"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert tools.connection.calls == []
+    assert trace.events[-1].type == "run_paused"
+
+
+async def test_쓰기가_도중에_실패한_뒤_run_failed를_쓰지_못하면_PluginError가_올라간다(
+    clock: FakeClock,
+) -> None:
+    """쓰기가 끝나지 않은 줄을 남기고 실패하면 곧바로 run_failed 를 쓰려 하고 저장소가 그것을
+    거부한다. 삼키지 않고 호출자에게 올려 채널이 진단을 적게 한다. 그 실행은 목록에서 결말
+    없음이다."""
+    trace = RefusingTrace(fail="llm_called", refuse=("run_failed",))
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    with pytest.raises(PluginError):
+        await _run(OneShotAgent(), model, trace, clock)
+
+    assert [e.type for e in trace.events] == ["run_started"]
+
+
 class UnknownEventTrace(FakeTrace):
     """더 새 런타임이 쓴 종류가 섞인 파일. 재생기가 그 자리를 무엇으로 셀지 알 수 없다."""
 
