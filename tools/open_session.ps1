@@ -23,6 +23,15 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Windows.Forms
+Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+public static class OpenSessionPower {
+    [DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags);
+    [StructLayout(LayoutKind.Sequential)] struct LastInput { public uint cbSize; public uint dwTime; }
+    [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref LastInput info);
+    public static uint IdleSeconds() { var l = new LastInput(); l.cbSize = (uint)Marshal.SizeOf(l); GetLastInputInfo(ref l); return ((uint)Environment.TickCount - l.dwTime) / 1000; }
+}
+'@
 
 $Auto = [System.Windows.Automation.AutomationElement]
 $Scope = [System.Windows.Automation.TreeScope]
@@ -281,6 +290,24 @@ function Focus-Session {
     "focus=$(Get-Date -Format HH:mm:ss.fff) via $how"
 }
 
+# 모니터가 꺼져 있으면 앱(Electron)이 창을 가려진 것으로 보고 그리지 않는다. 딥링크가 와도 새 세션 화면이
+# 접근성 트리에 오르지 않아 `page=`에서 끝난다. 사람이 자리를 비워 입력 없이 30분(이 PC의 화면 끄기 설정)이
+# 지나면 그렇게 된다 — "잘 되다가 갑자기"의 정체다(2026-09-23 실측, 04→05와 →06 두 번 다 그 조건이었다).
+# 실측: 모니터를 끄고 쏘면 두 번 다 못 찾았고, 아래 호출 뒤에 쏘면 두 번 다 1.2초에 찾았다. `split`·`focus`는
+# 재지 않았지만 같은 화면의 메뉴와 행을 누르므로 함께 깨운다. 잠금 화면은 이 호출로 풀리지 않는다. `idle=`은
+# 마지막 입력 뒤의 초라 다음 실패의 첫 단서다. 깨우기는 돕는 일이라 실패해도 본 동작을 막지 않는다.
+function Wake-Display {
+    try {
+        $idle = [OpenSessionPower]::IdleSeconds()
+        # ES_SYSTEM_REQUIRED(0x1) | ES_DISPLAY_REQUIRED(0x2). ES_CONTINUOUS 없이 한 번 되돌리기만 하고 켜 두지 않는다.
+        [void][OpenSessionPower]::SetThreadExecutionState(0x3)
+        "idle=${idle}s"
+    } catch {
+        "idle=? 화면을 깨우지 못했다: $($_.Exception.Message)"
+    }
+}
+
+Wake-Display
 switch ($Action) {
     'send' { Send-Prompt }
     'split' { Split-Session }
