@@ -1,8 +1,9 @@
-"""실행 목록의 HTTP 모양과 다음 커서. 라우트는 `http.py` 의 `admin_router()` 에 있다.
+"""실행 목록과 상세의 HTTP 모양, 그리고 다음 커서. 라우트는 `http.py` 의 `admin_router()` 에 있다.
 
-모델은 core 의 요약과 표지(`ports.RunSummary`, `ports.UnreadableTrace`)를 옮긴 것이다. 따로 두는
-이유는 매니페스트 표지와 같다 — core 의 독스트링은 논증이라 그대로 계약의 description 이 되면 주석을
-다듬는 것이 계약 변경으로 보인다. 필드 목록이 두 곳이 되는 대가는 대조 테스트가 치른다.
+모델은 core 의 요약과 표지와 트레이스(`ports.RunSummary`, `ports.UnreadableTrace`, `ports.Trace`)를
+옮긴 것이다. 따로 두는 이유는 매니페스트 표지와 같다 — core 의 독스트링은 논증이라 그대로 계약의
+description 이 되면 주석을 다듬는 것이 계약 변경으로 보인다. 필드 목록이 두 곳이 되는 대가는 대조
+테스트가 치른다. 이벤트는 옮기지 않고 sdk 의 것 그대로 싣는다(ADR 0010 의 2026-09-24 이력).
 
 **커서는 불투명하다.** 정렬 키(`ports.Cursor`)를 JSON 으로 적어 패딩 없는 base64url 로 감싼 것이고,
 계약이 약속하는 것은 문자 집합과 길이(`CURSOR_PATTERN`)뿐이다. 클라이언트는 받은 `next_cursor` 를
@@ -17,13 +18,13 @@ import base64
 import binascii
 import re
 from collections.abc import Sequence
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from agent_os.core import ports
 from agent_os.core.ports import RunStatus, TraceSchemaVersion
-from agent_os.sdk import RUN_ID_PATTERN, RunId
+from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
 
 # 커서의 문자 집합과 길이. 패딩 없는 base64url 이다. 가장 긴 키(오프셋 있는 마이크로초 시각과 64 자
 # 식별자)가 170 자 남짓이라 상한은 넉넉히 잡은 것이고, 요청 하나가 임의 크기의 해독을 시키지 못하게
@@ -81,6 +82,57 @@ class TracePage(BaseModel):
 
     runs: tuple[RunRow, ...]
     next_cursor: Annotated[str, Field(pattern=CURSOR_PATTERN)] | None
+
+
+# core 의 `ports.UnknownEvent` 를 옮기며 판별자를 단 것이다(ADR 0010 의 2026-09-22 이력). 원문은
+# JSON 줄 하나를 담은 문자열 그대로다 — 펼쳐 최상위에 판별자를 얹으면 원문이 이미 든 `type` 을
+# 덮어쓰고, 배열이나 스칼라에는 얹을 자리가 없다. 판별자 값이 실제 이벤트 종류와 겹치면 이 모듈을
+# import 하는 순간 pydantic 이 겹친 값을 적은 TypeError 를 내 앱이 서지 않는다. 디스크 형식은 바뀌지
+# 않는다. 이것은 쓰이는 타입이 아니라 읽기 결과다.
+class UnknownEvent(BaseModel):
+    """이 런타임이 모르는 종류의 이벤트. 원문 한 줄을 문자열 그대로 든다."""
+
+    model_config = _MODEL_CONFIG
+
+    type: Literal["unknown"]
+    raw: str
+
+
+# 상세의 이벤트 한 줄. sdk 의 판별 유니온에 표지 하나를 더한 것이고, 같은 판별자라 pydantic 이
+# 평평한 oneOf 하나로 펼친다. sdk 의 종류를 여기서 다시 나열하지 않으므로 종류가 늘면 이것도 저절로
+# 는다. 별칭에 이름을 주는 이유는 생성 클라이언트가 익명 유니온 대신 이 이름을 받게 하기 위해서다.
+type TraceEvent = Annotated[Event | UnknownEvent, Field(discriminator="type")]
+
+
+# core 의 `ports.Trace` 를 옮긴 것이다. 배열이 아니라 객체인 이유는 필드를 더하는 것이 파괴적 변경이
+# 아니게 하기 위해서이고, 형식 버전을 실어 목록을 거치지 않고 들어온 화면도 "이 실행은 재개할 수
+# 없다"를 말할 수 있게 하기 위해서다(ADR 0010 의 2026-09-24 이력). 목록의 `TracePage` 와 같이 봉투가
+# 아니라 이 자원의 모양이다. 이벤트는 마스킹되지 않은 채 나가고 경계는 인증이다(ADR 0009 의
+# 2026-09-22 이력, ADR 0011).
+class Trace(BaseModel):
+    """한 실행의 트레이스. 이벤트는 쓴 순서 그대로다."""
+
+    model_config = _MODEL_CONFIG
+
+    run_id: _WireRunId
+    schema_version: TraceSchemaVersion
+    events: tuple[TraceEvent, ...]
+
+
+def trace_detail(trace: ports.Trace) -> Trace:
+    """포트가 준 트레이스를 응답의 모양으로(질의). 이벤트의 순서와 개수를 바꾸지 않는다."""
+    return Trace(
+        run_id=trace.run_id,
+        schema_version=trace.schema_version,
+        events=tuple(_trace_event(event) for event in trace.events),
+    )
+
+
+def _trace_event(event: Event | ports.UnknownEvent) -> TraceEvent:
+    """이벤트 하나(질의). 아는 종류는 그대로이고 모르는 종류만 판별자를 단 표지가 된다."""
+    if isinstance(event, ports.UnknownEvent):
+        return UnknownEvent(type="unknown", raw=event.raw)
+    return event
 
 
 class _CursorWire(BaseModel):

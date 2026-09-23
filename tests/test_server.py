@@ -2,7 +2,7 @@
 
 바탕으로 재는 것은 셋이다 — 모든 라우트가 보호를 켜지 않아도 기본으로 막힌다는 것, 에러가 언제나
 같은 봉투로 나간다는 것, 인증 없이 경계 밖으로 나가는 응답이 /health 하나뿐이라는 것. 그 위에
-데이터 라우트가 하나씩 붙는다. 플러그인 둘과 트레이스 목록이 파일 끝에 있다.
+데이터 라우트가 하나씩 붙는다. 플러그인 둘과 트레이스 목록과 상세가 파일 끝에 있다.
 
 가짜 포트는 상속하지 않고 시그니처로 만족하며 픽스처가 포트 타입으로 annotate 한다. 그 한 줄이
 포트 적합성이 검증되는 자리다. 네트워크도 디스크도 타지 않는다.
@@ -12,7 +12,8 @@ import base64
 import dataclasses
 import inspect
 import io
-from collections.abc import AsyncIterator, Sequence
+import json
+from collections.abc import AsyncIterator, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
 from typing import get_type_hints
 
@@ -20,6 +21,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from pydantic import TypeAdapter
 
 from agent_os import server as server_module
 from agent_os.admin import http as admin_http
@@ -41,6 +43,7 @@ from agent_os.core.ports import (
     Trace,
     TraceSchemaVersion,
     TraceStore,
+    UnknownEvent,
     UnreadableManifest,
     UnreadableTrace,
     cursor_of,
@@ -52,12 +55,17 @@ from agent_os.sdk import (
     AgentName,
     BaseAgent,
     Event,
+    LlmCalled,
     McpServer,
     PluginKind,
     PluginManifest,
     PluginName,
     Principal,
+    RunFinished,
     RunId,
+    RunPaused,
+    RunStarted,
+    ToolCall,
     is_run_id,
     parse_manifest,
 )
@@ -193,6 +201,48 @@ SUMMARY_FIELDS = {
     "principal",
 }
 
+# 멈춘 실행 하나의 트레이스. 가운데에 이 런타임이 모르는 종류가 한 줄 끼어 있다 — 재개는 그런 줄이
+# 하나라도 있으면 거부되므로 화면이 그 줄을 보지 못하면 재개 불가의 원인을 못 찾는다. 그 줄의 원문도
+# `type` 을 들고 있어, 원문을 펼쳐 판별자를 얹으면 덮어쓰게 된다는 것을 이 데이터가 드러낸다.
+FUTURE_LINE = '{"type":"run_rewound","run_id":"7c1e2d9a","ts":"2026-09-23T12:00:30Z","to":"llm-1"}'
+PAUSED_EVENTS: tuple[Event | UnknownEvent, ...] = (
+    RunStarted(
+        run_id=PAUSED.run_id,
+        ts=T0,
+        agent=AgentName("calc"),
+        request="2+3?",
+        principal=Principal("alice"),
+    ),
+    LlmCalled(
+        run_id=PAUSED.run_id,
+        ts=T0 + timedelta(seconds=10),
+        model="claude",
+        input_tokens=12,
+        output_tokens=5,
+        prompt="2+3?",
+        tool_calls=(ToolCall(id="call-1", name="add", args={"a": 2, "b": 3}),),
+    ),
+    UnknownEvent(raw=FUTURE_LINE),
+    RunPaused(
+        run_id=PAUSED.run_id, ts=T0 + timedelta(minutes=1), tool="add", args={"a": 2, "b": 3}
+    ),
+)
+PAUSED_TRACE = Trace(run_id=PAUSED.run_id, schema_version="2", events=PAUSED_EVENTS)
+LEGACY_TRACE = Trace(
+    run_id=LEGACY.run_id,
+    schema_version="1",
+    events=(
+        RunStarted(
+            run_id=LEGACY.run_id,
+            ts=LEGACY.started_at,
+            agent=AgentName("calc"),
+            request="2+2?",
+            principal=Principal("alice"),
+        ),
+        RunFinished(run_id=LEGACY.run_id, ts=LEGACY.last_at, output="4"),
+    ),
+)
+
 
 @dataclasses.dataclass(frozen=True)
 class ListCall:
@@ -202,23 +252,30 @@ class ListCall:
 
 
 class FakeTrace:
-    """디렉터리 대신 행 목록을 들고 목록에 어댑터의 규칙으로 답한다. 받은 인자를 적어 둔다.
+    """디렉터리 대신 행 목록과 트레이스들을 들고 어댑터의 규칙으로 답한다. 받은 인자를 적어 둔다.
 
-    규칙은 상태로 거르고 정렬 키 역순으로 세운 뒤 커서 다음부터 limit 만큼 자르는 것이고, 키는
-    core 의 `cursor_of`·`order_key` 로 만든다. 가짜가 정렬을 따로 지으면 HTTP 가 되돌려 준 커서가
-    어댑터와 같은 키를 가리키는지 재지 못한다. 어댑터가 실제로 이 규칙대로 답한다는 것은
-    `tests/adapters/test_jsonl.py` 가 잰다. 쓰기와 단건은 불리면 그 자체가 결함이라 터뜨린다.
+    목록의 규칙은 상태로 거르고 정렬 키 역순으로 세운 뒤 커서 다음부터 limit 만큼 자르는 것이고,
+    키는 core 의 `cursor_of`·`order_key` 로 만든다. 가짜가 정렬을 따로 지으면 HTTP 가 되돌려 준
+    커서가 어댑터와 같은 키를 가리키는지 재지 못한다. 단건은 읽히지 않는 행에 어댑터와 같은
+    비대칭으로 답한다 — 목록에서는 표지, 단건에서는 PluginError. 어댑터가 실제로 이렇게 답한다는
+    것은 `tests/adapters/test_jsonl.py` 가 잰다. 쓰기는 불리면 그 자체가 결함이라 터뜨린다.
     """
 
-    def __init__(self, rows: Sequence[RunRow] = ()) -> None:
+    def __init__(self, rows: Sequence[RunRow] = (), traces: Sequence[Trace] = ()) -> None:
         self.rows: Sequence[RunRow] = tuple(rows)
+        self.traces: Mapping[RunId, Trace] = {trace.run_id: trace for trace in traces}
         self.calls: list[ListCall] = []
+        self.reads: list[RunId] = []
 
     def write(self, event: Event) -> None:
         raise NotImplementedError("관리는 읽기 전용이다")
 
     def read(self, run_id: RunId) -> Trace | None:
-        raise NotImplementedError("트레이스 상세는 06 의 것이다")
+        self.reads.append(run_id)
+        for row in self.rows:
+            if isinstance(row, UnreadableTrace) and row.run_id == run_id:
+                raise PluginError(row.reason)
+        return self.traces.get(run_id)
 
     def list(
         self,
@@ -253,8 +310,12 @@ def plugins() -> FakePlugins:
 
 @pytest.fixture
 def traces() -> FakeTrace:
-    """상태 넷과 형식 1 과 표지 하나. 순서를 섞어 넣어 정렬이 포트의 일임을 드러낸다."""
-    return FakeTrace(rows=(UNREADABLE, PAUSED, UNFINISHED, LEGACY, FAILED, FINISHED))
+    """상태 넷과 형식 1 과 표지 하나. 순서를 섞어 넣어 정렬이 포트의 일임을 드러낸다. 단건으로
+    읽히는 것은 멈춘 실행과 형식 1 실행 둘이다."""
+    return FakeTrace(
+        rows=(UNREADABLE, PAUSED, UNFINISHED, LEGACY, FAILED, FINISHED),
+        traces=(PAUSED_TRACE, LEGACY_TRACE),
+    )
 
 
 @pytest.fixture
@@ -723,6 +784,7 @@ def test_문서화된_에러_응답이_전부_봉투이고_내는_에러를_빠�
                 schema = responses[status]["content"]["application/json"]["schema"]
                 assert schema == envelope, (where, status)
     assert "404" in document["paths"]["/plugins/{kind}/{name}"]["get"]["responses"]
+    assert "404" in document["paths"]["/traces/{run_id}"]["get"]["responses"]
     assert "HTTPValidationError" not in document["components"]["schemas"]
 
 
@@ -875,12 +937,14 @@ async def test_멈춘_실행에_별도_경로가_없다(
     app: FastAPI, client: AsyncClient, traces: FakeTrace
 ) -> None:
     """상태는 요약의 한 필드이지 다른 자원이 아니다(스토리 23). 경로를 두면 `paused` 라는 실행
-    식별자가 생길 수 없게 되고 상태가 늘 때마다 경로가 는다."""
+    식별자가 생길 수 없게 되고 상태가 늘 때마다 경로가 는다. 그 경로는 상세이고 `paused` 는 그냥
+    실행 식별자다."""
     response = await client.get("/traces/paused", headers=BEARER)
 
     assert "/traces/paused" not in _documented_paths(app)
     assert response.status_code == 404
     assert traces.calls == []
+    assert traces.reads == ["paused"]
 
 
 async def test_잘못된_status_는_422이고_포트가_불리지_않는다(
@@ -1100,3 +1164,176 @@ def test_트레이스_목록의_HTTP_모양이_core_의_요약과_표지와_같�
     assert set(admin_traces.UnreadableTrace.model_fields) == {
         field.name for field in dataclasses.fields(UnreadableTrace)
     }
+
+
+# 트레이스 상세 — 무엇이 어긋났는지 되짚는 자리(티켓 06)
+
+
+def _expected_json(event: Event | UnknownEvent) -> dict[str, object]:
+    """이벤트 하나가 응답에서 보여야 하는 모양. 아는 종류는 sdk 의 직렬화 그대로이고 모르는 종류는
+    판별자와 원문 문자열을 나란히 든 표지다(ADR 0010 의 2026-09-22 이력)."""
+    if isinstance(event, UnknownEvent):
+        return {"type": "unknown", "raw": event.raw}
+    return event.model_dump(mode="json")
+
+
+async def test_트레이스_상세가_한_실행의_이벤트를_쓴_순서_그대로_돌려준다(
+    client: AsyncClient,
+) -> None:
+    """무엇이 어긋났는지 되짚는 자리다(스토리 16). 승인자는 무엇을 승인해 달라는지를 목록이 아니라
+    여기서 본다(스토리 25) — 마지막 이벤트가 멈춘 도구와 그 인자를 든다."""
+    response = await client.get(f"/traces/{PAUSED.run_id}", headers=BEARER)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "run_id": PAUSED.run_id,
+        "schema_version": "2",
+        "events": [_expected_json(event) for event in PAUSED_EVENTS],
+    }
+    assert body["events"][-1]["tool"] == "add"
+    assert body["events"][-1]["args"] == {"a": 2, "b": 3}
+
+
+async def test_모르는_종류의_이벤트가_판별자를_달고_원문_문자열_그대로_실린다(
+    client: AsyncClient,
+) -> None:
+    """빼면 화면이 실행에 대해 거짓말을 하고, 그 줄이 곧 재개 불가의 원인이다. 원문을 펼쳐 판별자를
+    얹지 않는다 — 원문이 이미 `type` 을 들고 있어 덮어쓰게 된다(ADR 0010 의 2026-09-22 이력)."""
+    events = (await client.get(f"/traces/{PAUSED.run_id}", headers=BEARER)).json()["events"]
+
+    unknown = events[2]
+    assert unknown == {"type": "unknown", "raw": FUTURE_LINE}
+    assert json.loads(unknown["raw"])["type"] == "run_rewound"
+
+
+async def test_형식_1_트레이스도_상세가_읽히고_형식_버전을_싣는다(client: AsyncClient) -> None:
+    """읽기는 되고 재개만 안 된다. 목록을 거치지 않고 상세로 곧장 들어온 화면도 "이 실행은 재개할
+    수 없다"를 말할 수 있다(스토리 17)."""
+    response = await client.get(f"/traces/{LEGACY.run_id}", headers=BEARER)
+
+    assert response.status_code == 200
+    assert response.json()["schema_version"] == "1"
+    assert response.json()["events"] == [_expected_json(event) for event in LEGACY_TRACE.events]
+
+
+async def test_없는_실행은_404이고_code_가_not_found_다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """내 오타와 서버의 문제가 갈린다(스토리 18). 포트가 불렸는지 보는 이유는 라우트가 없어도 같은
+    404 가 나기 때문이다 — 포트가 None 이라고 답한 404 여야 한다."""
+    response = await client.get("/traces/0000dead", headers=BEARER)
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "not_found"
+    assert traces.reads == ["0000dead"]
+
+
+async def test_읽을_수_없는_트레이스는_목록에서는_표지이고_단건으로는_500이다(
+    client: AsyncClient,
+) -> None:
+    """4xx 면 운영자가 잘못 요청했다고 믿고 깨진 파일을 못 찾는다(스토리 19). 명세의 상태 코드 표는
+    PluginError 를 매니페스트로만 적었지만 ADR 0012 의 2026-09-22 이력이 트레이스로 넓혔다.
+
+    쓰는 중인 파일은 여기 오지 않는다. 개행으로 끝나지 않은 마지막 줄은 아직 쓰이지 않은 것이라
+    어댑터가 그 앞 줄까지 돌려주고, 그것은 이 라우트에서 200 이다(ADR 0012 의 2026-09-23 이력 둘째,
+    `tests/adapters/test_jsonl.py`)."""
+    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    single = await client.get(f"/traces/{UNREADABLE.run_id}", headers=BEARER)
+
+    assert {"run_id": UNREADABLE.run_id, "reason": UNREADABLE.reason} in rows
+    assert single.status_code == 500
+    body = single.json()
+    assert set(body) == {"code", "message", "violations", "request_id"}
+    assert body["code"] == "internal_error"
+    assert "traces/c2f85a90.jsonl" in body["message"]
+
+
+async def test_루트를_벗어나려는_실행_식별자는_422이고_포트가_아예_불리지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """`traces/{run_id}.jsonl` 로 그대로 조립되므로 하나라도 포트에 닿으면 루트 밖을 읽는다. 404 와
+    500 이 갈리는 것 자체가 임의 경로의 파일 존재 오라클이다. CLI 에서는 argv 라 신뢰 경계 안이던
+    값을 HTTP 가 원격 입력으로 바꾼다. 개행과 길이도 같은 판정자가 본다."""
+    for run_id in (*ESCAPING_NAMES, "7c1e2d9a%0A", "%0A7c1e2d9a", "7c1e%0A2d9a", "a" * 65):
+        response = await client.get(f"/traces/{run_id}", headers=BEARER)
+
+        assert response.status_code == 422, run_id
+        fields = [violation["field"] for violation in response.json()["violations"]]
+        assert fields == ["path.run_id"], run_id
+    assert traces.reads == []
+
+
+def test_경로에_거는_실행_식별자_패턴이_sdk_의_그것이고_계약에_박힌다(app: FastAPI) -> None:
+    """`RunId` 는 제약 없는 NewType 이라 런타임 검증이 0 이다. 패턴은 목록이 내는 식별자에 거는 것과
+    같은 것이라, 목록에서 얻은 식별자를 그대로 넘길 수 있다(스토리 24)."""
+    parameters = app.openapi()["paths"]["/traces/{run_id}"]["get"]["parameters"]
+    run_id = next(parameter for parameter in parameters if parameter["name"] == "run_id")
+
+    assert run_id["schema"]["pattern"] == RUN_ID_PATTERN
+
+
+def test_트레이스_상세의_타입이_이름_있는_판별_유니온이다(app: FastAPI) -> None:
+    """생성 클라이언트가 `type` 하나로 항목을 가른다. 모르는 종류의 표지가 같은 판별자를 달고 한
+    유니온에 들어간다(스토리 28, ADR 0010 의 2026-09-22 이력)."""
+    document = app.openapi()
+    schemas = document["components"]["schemas"]
+    ok = document["paths"]["/traces/{run_id}"]["get"]["responses"]["200"]
+
+    assert ok["content"]["application/json"]["schema"] == {"$ref": "#/components/schemas/Trace"}
+    assert schemas["Trace"]["properties"]["events"]["items"] == {
+        "$ref": "#/components/schemas/TraceEvent"
+    }
+    discriminator = schemas["TraceEvent"]["discriminator"]
+    assert discriminator["propertyName"] == "type"
+    assert discriminator["mapping"]["unknown"] == "#/components/schemas/UnknownEvent"
+
+
+def test_모르는_종류의_판별자가_실제_이벤트_종류와_겹치지_않고_sdk_의_이벤트를_빠뜨리지_않는다(
+    app: FastAPI,
+) -> None:
+    """겹치면 생성 클라이언트가 그 값의 항목을 어느 쪽으로 읽을지 모른다. 상세의 유니온이 sdk 의
+    이벤트를 하나라도 빠뜨리면 그 종류가 여기서 읽히지 않는다."""
+    sdk_types = set(TypeAdapter[Event](Event).json_schema()["discriminator"]["mapping"])
+    mapping = app.openapi()["components"]["schemas"]["TraceEvent"]["discriminator"]["mapping"]
+
+    assert "unknown" not in sdk_types
+    assert set(mapping) == sdk_types | {"unknown"}
+
+
+def test_늘_실리는_이벤트_필드는_계약에서도_required_다(app: FastAPI) -> None:
+    """서버는 이벤트의 필드를 언제나 전부 싣는다. 기본값 있는 필드가 required 에서 빠지면 생성
+    클라이언트가 판별자 `type` 까지 선택 필드로 받아 그것으로 항목을 가르지 못한다."""
+    schemas = app.openapi()["components"]["schemas"]
+    mapping = schemas["TraceEvent"]["discriminator"]["mapping"]
+
+    for reference in mapping.values():
+        name = str(reference).rsplit("/", 1)[-1]
+        assert set(schemas[name]["required"]) == set(schemas[name]["properties"]), name
+    assert set(schemas["Trace"]["required"]) == {"run_id", "schema_version", "events"}
+    assert set(schemas["UnknownEvent"]["required"]) == {"type", "raw"}
+
+
+def test_이벤트의_스키마가_전부_한_줄_설명을_싣는다(app: FastAPI) -> None:
+    """이벤트가 계약에 박히므로 독스트링이 곧 생성 클라이언트의 문서다. 없으면 그 종류만 문서 없이
+    나가고, 여러 줄이면 주석을 다듬는 것이 계약 변경으로 보인다(`.claude/rules/sdk.md`, PR #63 의
+    claude-review 가 설명이 빠진 셋을 찾았다)."""
+    schemas = app.openapi()["components"]["schemas"]
+    mapping = schemas["TraceEvent"]["discriminator"]["mapping"]
+
+    for reference in mapping.values():
+        name = str(reference).rsplit("/", 1)[-1]
+        description = str(schemas[name].get("description", ""))
+        assert description, name
+        assert "\n" not in description, name
+
+
+def test_트레이스_상세의_HTTP_모양이_core_의_트레이스와_같은_필드를_든다() -> None:
+    """관리 쪽 모델이 core 의 것을 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
+    빨개져 관리 쪽이 조용히 뒤처지지 않는다. 표지만 판별자 하나를 더 든다."""
+    assert set(admin_traces.Trace.model_fields) == {
+        field.name for field in dataclasses.fields(Trace)
+    }
+    assert set(admin_traces.UnknownEvent.model_fields) == {
+        field.name for field in dataclasses.fields(UnknownEvent)
+    } | {"type"}
