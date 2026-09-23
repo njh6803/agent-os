@@ -147,13 +147,13 @@ function Send-Prompt {
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
 }
 
-# 지시문이 든 입력창. 이름은 로케일에 따르므로 이름이 아니라 값으로 고른다. 값을 못 읽는 요소는 후보가 아니다.
 function Get-RuntimeKey($el) {
     # 요소가 살아 있는 동안 같은 값이라 다시 찾아도 같은 요소인지 가를 수 있다. 못 읽으면 빈 문자열이고
     # 그러면 어떤 기억과도 겹치지 않아 새 것으로 친다 — 못 읽는 것을 오래된 것으로 치면 진짜 화면을 놓친다.
     try { return ($el.GetRuntimeId() -join '.') } catch { return '' }
 }
 
+# 지시문이 든 입력창. 이름은 로케일에 따르므로 이름이 아니라 값으로 고른다. 값을 못 읽는 요소는 후보가 아니다.
 function Find-PromptBox($win, [string] $needle) {
     $editCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Edit)
     $boxes = @($win.FindAll($Scope::Descendants, $editCond) | Where-Object {
