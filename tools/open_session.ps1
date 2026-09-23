@@ -297,13 +297,20 @@ function Focus-Session {
 # 실측: 모니터를 끄고 쏘면 두 번 다 못 찾았고, 아래 호출 뒤에 쏘면 두 번 다 1.2초에 찾았다. `split`·`focus`는
 # 재지 않았지만 같은 화면의 메뉴와 행을 누르므로 함께 깨운다. 잠금 화면은 이 호출로 풀리지 않는다. `idle=`은
 # 마지막 입력 뒤의 초라 다음 실패의 첫 단서다. 깨우기는 돕는 일이라 실패해도 본 동작을 막지 않는다. 두 호출은
-# 실패를 반환값으로 알리므로 반환값으로 가르고, 하나가 실패해도 다른 하나의 단서는 남긴다(PR #62 리뷰 셋).
+# 실패를 반환값으로 알리므로 반환값으로 가르고, 드물게 예외가 나도 받는다. 어느 쪽이 실패해도 먼저 읽은 단서는
+# 남긴다(PR #62 리뷰 넷: try 가 단서를 삼킨다, 반환값을 버린다 둘, try 가 없다).
 function Wake-Display {
-    $idle = [OpenSessionPower]::IdleSeconds()
-    $line = if ($idle -lt 0) { 'idle=?' } else { "idle=${idle}s" }
-    # ES_SYSTEM_REQUIRED(0x1) | ES_DISPLAY_REQUIRED(0x2). ES_CONTINUOUS 없이 한 번 되돌리기만 하고 켜 두지 않는다.
-    # 실패하면 0 이다.
-    if ([OpenSessionPower]::SetThreadExecutionState(0x3) -eq 0) { "$line 화면을 깨우지 못했다(SetThreadExecutionState 가 0)" } else { $line }
+    $line = 'idle=?'
+    try {
+        $idle = [OpenSessionPower]::IdleSeconds()
+        if ($idle -ge 0) { $line = "idle=${idle}s" }
+        # ES_SYSTEM_REQUIRED(0x1) | ES_DISPLAY_REQUIRED(0x2). ES_CONTINUOUS 없이 한 번 되돌리기만 하고 켜 두지 않는다.
+        # 실패하면 0 이다.
+        if ([OpenSessionPower]::SetThreadExecutionState(0x3) -eq 0) { $line += ' 화면을 깨우지 못했다(SetThreadExecutionState 가 0)' }
+    } catch {
+        $line += " 화면을 깨우지 못했다: $($_.Exception.Message)"
+    }
+    $line
 }
 
 Wake-Display
