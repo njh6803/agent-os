@@ -358,6 +358,7 @@
       },
       "RunFailed": {
         "additionalProperties": false,
+        "description": "실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다.",
         "properties": {
           "error": {
             "title": "Error",
@@ -390,6 +391,7 @@
       },
       "RunFinished": {
         "additionalProperties": false,
+        "description": "실행이 출력을 내고 끝났다. 에이전트가 마지막에 하나 낸다.",
         "properties": {
           "output": {
             "title": "Output",
@@ -501,6 +503,7 @@
       },
       "RunStarted": {
         "additionalProperties": false,
+        "description": "실행이 시작됐다. 에이전트와 요청과 주체를 든다. 런타임이 낸다.",
         "properties": {
           "agent": {
             "title": "Agent",

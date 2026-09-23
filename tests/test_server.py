@@ -1314,6 +1314,20 @@ def test_늘_실리는_이벤트_필드는_계약에서도_required_다(app: Fas
     assert set(schemas["UnknownEvent"]["required"]) == {"type", "raw"}
 
 
+def test_이벤트의_스키마가_전부_한_줄_설명을_싣는다(app: FastAPI) -> None:
+    """이벤트가 계약에 박히므로 독스트링이 곧 생성 클라이언트의 문서다. 없으면 그 종류만 문서 없이
+    나가고, 여러 줄이면 주석을 다듬는 것이 계약 변경으로 보인다(`.claude/rules/sdk.md`, PR #63 의
+    claude-review 가 설명이 빠진 셋을 찾았다)."""
+    schemas = app.openapi()["components"]["schemas"]
+    mapping = schemas["TraceEvent"]["discriminator"]["mapping"]
+
+    for reference in mapping.values():
+        name = str(reference).rsplit("/", 1)[-1]
+        description = str(schemas[name].get("description", ""))
+        assert description, name
+        assert "\n" not in description, name
+
+
 def test_트레이스_상세의_HTTP_모양이_core_의_트레이스와_같은_필드를_든다() -> None:
     """관리 쪽 모델이 core 의 것을 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
     빨개져 관리 쪽이 조용히 뒤처지지 않는다. 표지만 판별자 하나를 더 든다."""

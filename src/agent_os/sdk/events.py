@@ -38,6 +38,8 @@ class BaseEvent(BaseModel):
 
 
 class RunStarted(BaseEvent):
+    """실행이 시작됐다. 에이전트와 요청과 주체를 든다. 런타임이 낸다."""
+
     type: Literal["run_started"] = "run_started"
     agent: AgentName
     request: str
@@ -114,11 +116,15 @@ class RunResumed(BaseEvent):
 
 
 class RunFinished(BaseEvent):
+    """실행이 출력을 내고 끝났다. 에이전트가 마지막에 하나 낸다."""
+
     type: Literal["run_finished"] = "run_finished"
     output: str
 
 
 class RunFailed(BaseEvent):
+    """실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다."""
+
     type: Literal["run_failed"] = "run_failed"
     error: str
 
