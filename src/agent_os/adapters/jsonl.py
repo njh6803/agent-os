@@ -11,11 +11,15 @@
 이고, 목록은 헤더와 첫 줄과 마지막 줄만 보고 읽히지 않는 파일을 표지로 남긴다. 파일마다 전부
 파싱하면 목록 하나가 모든 실행의 모든 이벤트를 메모리에 올리기 때문이고, 그렇게 갈라도 되는
 이유는 ADR 0012 의 2026-09-22 이력에 있다.
+
+개행이 한 줄의 커밋 표지다(ADR 0012 의 2026-09-23 이력 둘째). 둘 다 `_committed` 가 내는 줄만 읽고,
+쓰기는 개행으로 끝나지 않은 줄 뒤에 이어 쓰지 않는다.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import os
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -43,6 +47,9 @@ from agent_os.sdk import Event, RunId, RunStarted, is_run_id
 TRACE_SCHEMA_VERSION: TraceSchemaVersion = "2"
 
 _EVENT = TypeAdapter[Event](Event)
+
+# 한 줄의 커밋 표지. UTF-8 의 여러 바이트 문자에는 이 바이트가 들어가지 않아 바이트에서 갈라도 된다.
+_NEWLINE = b"\n"
 
 
 class TraceHeader(BaseModel):
@@ -82,17 +89,29 @@ class JsonlTrace:
         self._directory = directory
 
     def write(self, event: Event) -> None:
+        """끝나지 않은 줄 뒤에는 이어 쓰지 않고 PluginError 로 거부한다. 파일은 바뀌지 않는다.
+
+        이어 쓰면 새 줄이 조각에 붙어 커밋된 손상 줄이 되고, 그 실행은 단건이 영구히 손상이며 다시
+        멈추면 재개할 수 없다. 조각을 잘라 내지 않는 이유는 다른 프로세스가 쓰는 중인 줄도 반쪽으로
+        보이기 때문이다(ADR 0012 의 2026-09-23 이력 둘째). 빈 파일은 쓰인 것이 없어 새 파일과 같다.
+        """
         path = self._path(event.run_id)
         self._directory.mkdir(parents=True, exist_ok=True)
-        is_new = not path.exists()
+        last = _last_byte(path)
+        if last not in (None, _NEWLINE):
+            raise PluginError(f"끝나지 않은 줄 뒤에 이어 쓸 수 없다: {path}")
         with path.open("a", encoding="utf-8") as file:
-            if is_new:
+            if last is None:
                 header = TraceHeader(schema_version=TRACE_SCHEMA_VERSION, run_id=event.run_id)
                 file.write(header.model_dump_json() + "\n")
             file.write(event.model_dump_json() + "\n")
 
     def read(self, run_id: RunId) -> Trace | None:
-        """부재는 None, 손상은 PluginError. 손상의 범위는 읽고 디코딩하고 파싱하는 전부다.
+        """부재는 None, 손상은 PluginError. 손상의 범위는 커밋된 줄을 읽고 디코딩하고 파싱하는
+        전부다.
+
+        끝나지 않은 마지막 줄은 손상이 아니라 아직 쓰이지 않은 것이라 그 앞 줄까지 돌려준다.
+        실행 중인 트레이스를 들여다보는 순간이 손상으로 보이지 않게 하기 위해서다.
 
         포장하지 않으면 빈 파일의 IndexError 와 비UTF-8 의 UnicodeDecodeError 와 pydantic 의
         검증 오류가 그대로 올라와 채널의 `except PluginError` 를 지나친다(ADR 0012 이력).
@@ -105,7 +124,8 @@ class JsonlTrace:
         if not path.exists():
             return None
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            with path.open("rb") as file:
+                lines = [line.decode("utf-8") for line in _committed(file)]
             header = TraceHeader.model_validate_json(lines[0])
             _require_same_run(run_id, header.run_id, "헤더")
             events = tuple(_read_event(line) for line in lines[1:])
@@ -186,8 +206,8 @@ def _row(path: Path) -> RunRow:
 def _describe(error: Exception) -> str:
     """읽을 수 없는 이유(질의). 트레이스의 내용을 되울리지 않는다.
 
-    pydantic 의 검증 문구는 받은 값의 앞뒤를 `input_value` 로 싣는데, 쓰는 중에 잘린 줄이면 그
-    꼬리가 곧 도구 결과 같은 내용이다. 목록은 내용을 읽는 자리가 아니므로(admin-api 스토리 15) 입력
+    pydantic 의 검증 문구는 받은 값의 앞뒤를 `input_value` 로 싣는데, 커밋된 줄이 깨졌으면 그
+    내용이 곧 도구 결과 같은 것이다. 목록은 내용을 읽는 자리가 아니므로(admin-api 스토리 15) 입력
     없이 종류와 위치와 문구만 남긴다. 그 밖의 예외(OSError, UnicodeDecodeError, 여기서 낸
     ValueError)는 경로와 바이트 위치와 식별자만 담아 그대로다. 단건의 `PluginError` 문구도 이것을
     쓴다(PR #56).
@@ -216,16 +236,16 @@ class _Edges:
 
 
 def _edges(path: Path) -> _Edges:
-    """헤더와 첫 이벤트 줄과 마지막 이벤트 줄. 가운데는 파싱하지 않는다.
+    """헤더와 첫 이벤트 줄과 마지막 이벤트 줄. 가운데는 디코딩도 파싱도 하지 않는다.
 
     줄을 흘려 보며 셋만 들고 있으므로 파일이 길어도 파싱은 셋이고 메모리는 줄 셋이다(읽기 자체는
     끝까지 흘린다). 요약의 일곱 필드가 정확히 이 셋에서 온다 — 형식 버전은 헤더, 에이전트와
     주체와 시작 시각은 첫 줄, 실행 상태와 마지막 시각은 마지막 줄.
     """
-    with path.open(encoding="utf-8") as file:
-        lines = (stripped for stripped in (line.strip() for line in file) if stripped)
-        header = next(lines, "")
-        first = next(lines, "")
+    with path.open("rb") as file:
+        lines = (stripped for stripped in (line.strip() for line in _committed(file)) if stripped)
+        header = next(lines, b"")
+        first = next(lines, b"")
         last = first
         for line in lines:
             last = line
@@ -233,7 +253,33 @@ def _edges(path: Path) -> _Edges:
         raise ValueError("빈 파일이라 헤더가 없다")
     if not first:
         raise ValueError("이벤트가 없어 실행을 요약할 수 없다")
-    return _Edges(header=header, first=first, last=last)
+    return _Edges(
+        header=header.decode("utf-8"), first=first.decode("utf-8"), last=last.decode("utf-8")
+    )
+
+
+def _committed(file: Iterable[bytes]) -> Iterator[bytes]:
+    """커밋된 줄을 개행과 줄 끝 CR 을 뗀 채 흘린다. 단건과 목록이 줄을 보는 유일한 자리다.
+
+    개행으로 끝나지 않은 마지막 줄은 아직 쓰이지 않은 것이라 내지 않는다. 디코딩 전의 바이트로
+    가르는 이유는 그 줄이 여러 바이트 문자의 가운데서 잘렸을 수 있고, `str.splitlines` 는 JSON 이
+    날것으로 허용하는 U+2028 에서도 가르기 때문이다. CR 은 윈도우의 텍스트 모드 쓰기가 붙인다.
+    """
+    for line in file:
+        if line.endswith(_NEWLINE):
+            yield line[: -len(_NEWLINE)].removesuffix(b"\r")
+
+
+def _last_byte(path: Path) -> bytes | None:
+    """파일의 마지막 바이트. 없는 파일과 빈 파일은 None 이다 — 쓰인 것이 없다는 점에서 같다."""
+    try:
+        with path.open("rb") as file:
+            if file.seek(0, os.SEEK_END) == 0:
+                return None
+            file.seek(-1, os.SEEK_END)
+            return file.read(1)
+    except FileNotFoundError:
+        return None
 
 
 def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:

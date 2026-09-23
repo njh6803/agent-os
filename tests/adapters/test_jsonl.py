@@ -334,10 +334,10 @@ def test_쪽_사이에_새_실행이_생겨도_있던_실행이_두_번_오거�
     assert _ids(store.list(limit=1)) == ["run-new"]
 
 
-# 알려진 한계 셋(ADR 0012 의 2026-09-23 이력). 정렬 키가 쓰기 순서가 아니라 시작 시각이라, 한 순회가
-# 이미 지나간 키 범위에 나중에 들어온 실행은 그 순회에서 보이지 않고, 순회 도중 키가 바뀐 행은 두 번
-# 온다. 받아들인 한계라 테스트가 지금의 동작을 고정한다 — 고치는 날 빨개지고 그때 이력을 함께
-# 고친다.
+# 알려진 한계 둘(ADR 0012 의 2026-09-23 이력). 정렬 키가 쓰기 순서가 아니라 시작 시각이라, 한 순회가
+# 이미 지나간 키 범위에 나중에 들어온 실행은 그 순회에서 보이지 않는다. 받아들인 한계라 테스트가
+# 지금의 동작을 고정한다 — 고치는 날 빨개지고 그때 이력을 함께 고친다. 셋째 길(순회 도중 키가 바뀐
+# 행)은 개행을 커밋 표지로 보며 닫혔고 아래의 뒤집힌 테스트가 그것을 지킨다.
 
 
 def test_알려진_한계_지나간_범위에_늦게_나타난_파일은_그_순회에서_빠진다(tmp_path: Path) -> None:
@@ -378,11 +378,10 @@ def test_알려진_한계_재개된_옛_실행이_다시_멈추면_멈춘_실행
     assert _ids(store.list(status="paused")) == ["run-c", "run-b", "run-a"]
 
 
-def test_알려진_한계_쓰는_중인_마지막_줄은_같은_실행을_꼬리에_한_번_더_세운다(
-    tmp_path: Path,
-) -> None:
-    """행의 키가 순회 도중 바뀐다. 마지막 줄이 반만 쓰인 순간의 파일은 표지가 되고 표지는 시각이
-    없어 꼬리로 간다. 큰 이벤트는 쓰기가 여러 번으로 나뉘어 실행 프로세스가 하나여도 생긴다."""
+def test_쓰는_중인_마지막_줄이_있어도_순회가_같은_실행을_두_번_세지_않는다(tmp_path: Path) -> None:
+    """알려진 한계였던 셋째 길을 뒤집은 것이다. 반만 쓰인 마지막 줄은 아직 쓰이지 않은 것이라 그 앞
+    줄로 요약하므로 행이 표지가 되어 꼬리로 가지 않는다. 한 번에 쓴 줄도 리눅스에서는 읽는 쪽에
+    반쪽으로 보여 실행 프로세스가 하나여도 생기던 길이다(ADR 0012 의 2026-09-23 이력 둘째)."""
     store: TraceStore = JsonlTrace(tmp_path)
     for name, minutes in (("run-a", 0), ("run-b", 2), ("run-c", 4)):
         _write_trace(store, name, at=TS + timedelta(minutes=minutes))
@@ -393,8 +392,8 @@ def test_알려진_한계_쓰는_중인_마지막_줄은_같은_실행을_꼬리
         file.write(finished[: len(finished) // 2])
     rest = store.list(after=cursor_of(first[-1]))
 
-    assert _ids(first) + _ids(rest) == ["run-c", "run-b", "run-a", "run-c"]
-    assert isinstance(rest[-1], UnreadableTrace)
+    assert _ids(first) + _ids(rest) == ["run-c", "run-b", "run-a"]
+    assert [row.status for row in _summaries(store.list())] == ["unfinished"] * 3
 
 
 def test_limit을_주지_않으면_기본값까지만_돌려준다(tmp_path: Path) -> None:
@@ -470,12 +469,15 @@ def test_빈_디렉터리와_없는_디렉터리가_빈_목록이다(tmp_path: P
     assert JsonlTrace(tmp_path / "없다").list() == ()
 
 
-# 읽히지 않는 모양 넷. 프로세스가 쓰다 죽거나 사람이 손을 대면 실제로 생길 수 있는 것들이다.
+# 읽히지 않는 모양 다섯. 사람이 손을 대거나, 새 줄이 조각에 붙거나, 새 실행의 첫 쓰기가 닿기 전에
+# 프로세스가 죽으면 생길 수 있는 것들이다. 끝나지 않은 마지막 줄은 손상이 아니라 아직 쓰이지 않은
+# 것이므로(ADR 0012 의 2026-09-23 이력 둘째) 커밋된 줄이 깨지거나 커밋된 헤더가 없어야 손상이다.
 _BROKEN: dict[str, bytes] = {
     "bad-header": b'{"schema_version":"9","run_id":"bad-header"}\n',
-    "cut-line": b'{"schema_version":"2","run_id":"cut-line"}\n{"type":"run_star',
+    "broken-line": b'{"schema_version":"2","run_id":"broken-line"}\n{"type":"run_star\n',
     "empty-file": b"",
-    "not-utf8": b'{"schema_version":"2","run_id":"not-utf8"}\n\xff\xfe\x00',
+    "header-fragment": b'{"schema_version":"2","run_id":"head',
+    "not-utf8": b'{"schema_version":"2","run_id":"not-utf8"}\n\xff\xfe\x00\n',
 }
 
 
@@ -525,8 +527,9 @@ def test_같은_손상_파일을_단건으로_읽으면_PluginError다(tmp_path:
 
 def test_읽을_수_없는_이유가_트레이스_줄의_내용을_되울리지_않는다(tmp_path: Path) -> None:
     """목록은 내용을 읽는 자리가 아니다(스토리 15). pydantic 의 검증 문구는 받은 값의 앞뒤를 싣는데,
-    쓰는 중에 잘린 줄이면 그 꼬리가 곧 도구 결과다. 경로와 오류 종류는 운영자가 파일을 찾고 원인을
-    짐작하는 값이라 남긴다(PR #56 의 CodeRabbit 지적)."""
+    커밋된 줄이 깨졌으면 그 내용이 곧 도구 결과다. 경로와 오류 종류는 운영자가 파일을 찾고 원인을
+    짐작하는 값이라 남긴다(PR #56 의 CodeRabbit 지적). 조각이 개행으로 끝나는 이유는 끝나지 않은
+    줄이 손상이 아니라 아직 쓰이지 않은 것이기 때문이다(ADR 0012 의 2026-09-23 이력 둘째)."""
     store: TraceStore = JsonlTrace(tmp_path)
     _write_trace(store, "run-1")
     leaked = "tool-output-that-must-not-leak"
@@ -534,7 +537,7 @@ def test_읽을_수_없는_이유가_트레이스_줄의_내용을_되울리지_
         run_id=RunId("run-1"), ts=TS, tool="fetch", ok=True, args={}, content=leaked
     ).model_dump_json()
     with (tmp_path / "run-1.jsonl").open("a", encoding="utf-8") as file:
-        file.write(called[: called.index(leaked) + len(leaked)])
+        file.write(called[: called.index(leaked) + len(leaked)] + "\n")
 
     row = store.list()[0]
     with pytest.raises(PluginError) as single:
@@ -630,3 +633,171 @@ def test_목록은_헤더와_첫_줄과_마지막_줄만_본다(tmp_path: Path) 
     assert [(row.run_id, row.status) for row in _summaries(store.list())] == [("run-1", "finished")]
     with pytest.raises(PluginError):
         store.read(RunId("run-1"))
+
+
+def test_목록은_가운데_줄을_디코딩하지도_않는다(tmp_path: Path) -> None:
+    """가운데 줄이 UTF-8 이 아니어도 요약이다. 파싱하지 않는 줄을 디코딩할 이유가 없고, 손상은
+    단건이 PluginError 로 말한다. 파일 전체를 텍스트로 읽던 때는 표지였다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(store, "run-1")
+    with (tmp_path / "run-1.jsonl").open("ab") as file:
+        file.write(b"\xff\xfe\x00\n")
+    store.write(RunFinished(run_id=RunId("run-1"), ts=TS, output="4"))
+
+    assert [(row.run_id, row.status) for row in _summaries(store.list())] == [("run-1", "finished")]
+    with pytest.raises(PluginError):
+        store.read(RunId("run-1"))
+
+
+# 끝나지 않은 마지막 줄(ADR 0012 의 2026-09-23 이력 둘째). 개행이 한 줄의 커밋 표지라 개행으로
+# 끝나지 않은 마지막 줄은 아직 쓰이지 않은 것이고, 목록과 단건 둘 다 그 앞 줄까지 읽는다. 쓰기는 그
+# 뒤에 이어 쓰지 않는다. 쓰는 도중의 파일과 쓰다 죽은 파일이 같은 모양이다.
+
+
+def _append_unterminated(path: Path, event: Event, cut: int) -> None:
+    """이벤트 줄의 앞 cut 바이트만 쓴다. 개행은 쓰지 않는다."""
+    with path.open("ab") as file:
+        file.write(event.model_dump_json().encode()[:cut])
+
+
+def test_끝나지_않은_마지막_줄은_목록이_그_앞_줄로_요약한다(tmp_path: Path) -> None:
+    """표지가 아니다. 상태와 마지막 시각이 커밋된 마지막 줄에서 온다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    paused_at = TS + timedelta(minutes=1)
+    paused = RunPaused(run_id=RunId("run-a"), ts=paused_at, tool="add", args={})
+    _write_trace(store, "run-a", ending=paused)
+    granted = ApprovalGranted(
+        run_id=RunId("run-a"), ts=TS + timedelta(minutes=2), approver=Principal("bob")
+    )
+    _append_unterminated(tmp_path / "run-a.jsonl", granted, cut=20)
+
+    [row] = _summaries(store.list())
+
+    assert (row.status, row.last_at) == ("paused", paused_at)
+
+
+def test_끝나지_않은_마지막_줄은_단건이_그_앞_줄까지_돌려준다(tmp_path: Path) -> None:
+    """실행 중인 트레이스를 들여다보는 순간이 500 이 아니다. 티켓 06 은 500 을 파일이 깨졌다는
+    신호로 정했으므로 쓰는 중인 파일에서 나면 그 신호가 거짓이 된다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    started = _started("run-a", TS)
+    paused = RunPaused(run_id=RunId("run-a"), ts=TS, tool="add", args={})
+    store.write(started)
+    store.write(paused)
+    granted = ApprovalGranted(run_id=RunId("run-a"), ts=TS, approver=Principal("bob"))
+    _append_unterminated(tmp_path / "run-a.jsonl", granted, cut=20)
+
+    trace = store.read(RunId("run-a"))
+
+    assert trace is not None
+    assert list(trace.events) == [started, paused]
+
+
+def test_한글_한_글자의_가운데서_잘린_꼬리도_아직_쓰이지_않은_것이다(tmp_path: Path) -> None:
+    """판정은 디코딩 전에 바이트로 한다. 텍스트로 먼저 읽으면 꼬리 하나 때문에 파일 전체가
+    UnicodeDecodeError 가 된다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    started = _started("run-a", TS)
+    store.write(started)
+    finished = RunFinished(run_id=RunId("run-a"), ts=TS, output="결과는 넷")
+    cut = finished.model_dump_json().encode().index("넷".encode()) + 1
+    _append_unterminated(tmp_path / "run-a.jsonl", finished, cut=cut)
+
+    [row] = _summaries(store.list())
+    trace = store.read(RunId("run-a"))
+
+    assert row.status == "unfinished"
+    assert trace is not None
+    assert list(trace.events) == [started]
+
+
+def test_헤더_뒤_첫_줄이_끝나지_않은_파일은_목록에서_표지이고_단건은_이벤트가_없다(
+    tmp_path: Path,
+) -> None:
+    """새 파일의 헤더와 큰 첫 이벤트가 두 번에 쓰이는 사이의 모양이다. 시작 이벤트가 아직 없어
+    요약을 만들 수 없으므로 표지이고 단건은 헤더만 있는 트레이스다. 표지에서 요약으로 한 방향으로만
+    바뀌고 요약은 머리에 서므로 한 순회에서 두 번 오지 않는다."""
+    path = tmp_path / "run-a.jsonl"
+    path.write_bytes(b'{"schema_version":"2","run_id":"run-a"}\n')
+    _append_unterminated(path, _started("run-a", TS), cut=20)
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    rows = store.list()
+    trace = store.read(RunId("run-a"))
+
+    assert [(row.run_id, isinstance(row, UnreadableTrace)) for row in rows] == [("run-a", True)]
+    assert trace is not None
+    assert trace.events == ()
+
+
+def test_끝나지_않은_줄_뒤에는_이어_쓰지_않는다(tmp_path: Path) -> None:
+    """새 줄이 조각에 붙으면 커밋된 손상 줄이 되어, 그 실행은 단건이 영구히 500 이고 다시 멈추면
+    재개할 수 없다. 재개의 첫 쓰기를 쓰다 죽은 뒤 다시 재개하는 길이다. 파일은 한 바이트도 바뀌지
+    않는다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(
+        store, "run-a", ending=RunPaused(run_id=RunId("run-a"), ts=TS, tool="add", args={})
+    )
+    granted = ApprovalGranted(run_id=RunId("run-a"), ts=TS, approver=Principal("bob"))
+    path = tmp_path / "run-a.jsonl"
+    _append_unterminated(path, granted, cut=20)
+    before = path.read_bytes()
+
+    with pytest.raises(PluginError, match="run-a"):
+        store.write(granted)
+
+    assert path.read_bytes() == before
+
+
+def test_비어_있는_파일은_새_파일처럼_헤더부터_쓴다(tmp_path: Path) -> None:
+    """파일을 연 뒤 첫 쓰기가 디스크에 닿기 전에 프로세스가 죽으면 빈 파일이 남는다. 쓰인 것이
+    없으므로 새 파일과 같고, 이어 붙일 조각도 없으므로 거부할 이유가 없다."""
+    (tmp_path / "run-1.jsonl").write_bytes(b"")
+    store: TraceStore = JsonlTrace(tmp_path)
+    started, finished = _events("run-1")
+
+    store.write(started)
+    store.write(finished)
+
+    trace = store.read(RunId("run-1"))
+    assert trace is not None
+    assert list(trace.events) == [started, finished]
+
+
+def test_줄의_경계는_개행_하나라_문자열_안의_줄_구분_문자가_줄을_가르지_않는다(
+    tmp_path: Path,
+) -> None:
+    """JSON 은 U+2028, U+2029, U+0085 를 문자열 안에 날것으로 허용하고 pydantic 도 그렇게 쓴다.
+    `str.splitlines` 는 그 셋에서도 가르므로 멀쩡한 트레이스가 단건과 재개에서 손상이었다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    started = _started("run-1", TS)
+    finished = RunFinished(run_id=RunId("run-1"), ts=TS, output="가\u2028나\u2029다\x85라")
+    store.write(started)
+    store.write(finished)
+
+    trace = store.read(RunId("run-1"))
+
+    assert trace is not None
+    assert list(trace.events) == [started, finished]
+
+
+def test_CRLF로_끝나는_줄도_같은_이벤트로_읽히고_원문에_CR이_남지_않는다(tmp_path: Path) -> None:
+    """윈도우의 텍스트 모드 쓰기는 줄 끝을 CRLF 로 쓴다. 리눅스에서 도는 CI 도 그 파일을 같은
+    이벤트로 읽어야 하고, 모르는 종류의 원문에 CR 이 붙으면 원문 보존이 아니다."""
+    started, finished = _events("run-1")
+    future = '{"type":"run_rewound","run_id":"run-1","ts":"2026-09-21T12:00:00Z","to":"x"}'
+    lines = [
+        '{"schema_version":"2","run_id":"run-1"}',
+        started.model_dump_json(),
+        future,
+        finished.model_dump_json(),
+    ]
+    (tmp_path / "run-1.jsonl").write_bytes("".join(line + "\r\n" for line in lines).encode())
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    trace = store.read(RunId("run-1"))
+    [row] = _summaries(store.list())
+
+    assert trace is not None
+    assert list(trace.events) == [started, UnknownEvent(raw=future), finished]
+    assert row.status == "finished"
