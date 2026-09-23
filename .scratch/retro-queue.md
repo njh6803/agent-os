@@ -5,24 +5,26 @@ retro 스킬이 낸 후보 중 **사용자가 승인했으나 아직 반영하�
 다음 회고다. 바로 지우지 않는 이유는 지시문이 들고 다니는 수와 대조할 수 있게 하기 위해서다.
 
 이 파일이 생긴 이유는 대기열이 일지 산문에만 있어 매번 열여섯 개 파일을 세야 했기 때문이다
-(일지 `2026-09-22-10`의 승인 2). 세는 일이 지시문마다 반복됐고 그때마다 수가 틀릴 수 있었다.
+(일지 `2026-09-22-10`의 승인 2).
 
 기본 반영 자리는 `chore/<slug>` 브랜치다. 계약이나 헌법에 닿는 것은 ADR과 승인이 따로 필요해
 "어디로"에 적는다.
 
 | # | 무엇 | 어디로 | 승인 |
 |---|---|---|---|
-| 1 | `operations.md`에 `-m llm`을 돌리는 계기와, 일지 "검사" 절에 트레이스의 토큰 합계를 적는 한 줄 | `docs/constitution/operations.md` | 일지 06·07 |
+| 1 | `operations.md`에 `-m llm`을 돌리는 계기와, 일지 "검사" 절에 트레이스의 토큰 합계를 적는 한 줄. **계기의 문구가 나왔다 — 테스트를 건드렸을 때가 아니라 그 테스트가 지나는 코드를 건드렸을 때.** PR #46에서 LLM 테스트를 한 줄도 안 고치고 그 아래 배관(`run_command` → `_report` → `_show` → `_approval_request`) 시그니처를 전부 바꿔 돌렸다. 템플릿 문언 "건드렸다면"은 문자 그대로는 면제였다 | `docs/constitution/operations.md` + `.github/PULL_REQUEST_TEMPLATE.md` | 일지 06·07, 문구는 PR #46의 회고 |
 | 2 | "일지는 code-review 뒤에 쓴다"를 `implement`에만 두지 않고 `next-session`으로 옮기거나 양쪽에 둔다. PR을 내는 세션이 `implement`만이 아니다 | `.claude/skills/next-session/` | 일지 05·08 |
 | 3 | 넘겨받은 Out of Scope를 찾는 한 줄. 미루는 쪽은 적지만 받는 쪽이 읽는다는 보장이 없다 | `to-spec` 스킬 | 일지 07 |
 | 4 | `sdk`의 `ApprovalDenied.reason`에 `min_length=1`. **계약 변경이라 ADR 0009 이력과 사용자 승인이 먼저다. 별도 PR** | `src/agent_os/sdk/events.py` + ADR 0009 | 일지 06 |
 | 5 | PR 템플릿의 `coderabbit-review` 줄을 날카롭게 — "문서만 바뀐 PR도 면제가 아니다. 설계 문서의 침묵이 곧 구현의 침묵이다"(PR #38 CWE-319, #39 CWE-22, 둘 다 코드 0줄) | `.github/PULL_REQUEST_TEMPLATE.md` | 일지 08 |
 | 6 | `sdk/ids.py`의 주석이 `NewType`의 구멍을 이점으로만 적는다. "경계에서 오는 값은 부르는 쪽이 검증한다" 한 절을 개념 옆에 | `src/agent_os/sdk/ids.py` | 일지 08 |
-| 7 | ~~원칙 III에 기계적 판정자가 없다~~ | `tools/check_type_escapes.py`, ADR 0013, 원칙 III 문장 | **닫힘 (이 브랜치)** |
-| 8 | 기능 하나의 실행 순서가 `KICKOFF.md`에만 있다. 강제력이 높은 자리는 지도 표가 아니라 `to-tickets` 스킬 1단계 | `.claude/skills/to-tickets/` | 일지 09 |
-| 9 | 명세 검토 프롬프트의 질문 둘(체크리스트 일곱에 없던 것)을 `KICKOFF.md` 9단계 3번에. 다음 검토가 2회째가 되어 파일로 굳을 때 함께 간다 | `KICKOFF.md` | 일지 09 |
-| 10 | ~~대기열이 일지 산문에만 있어 매번 세야 한다~~ | 이 파일 + `CLAUDE.md` 지도 표 | **닫힘 (이 브랜치)** |
-| 11 | 헌법 거버넌스가 "버전은 semver, 버전은 `README.md`에 있다"고 적는데 **README에 버전이 없다.** ADR 0013의 문구 수정이 patch 올림을 요구하는데 올릴 대상이 없어서 발견했다. 시작 값이 무엇인지는 사용자 판단이라 지어내지 않았다 | `README.md` + `principles.md` 거버넌스 | 이 브랜치의 셀프 리뷰 |
-| 12 | PR 템플릿의 하네스 줄이 "새 검사는 변이로 빨강을 봤는가"만 묻는다. **변이는 내가 생각한 우회로만 잰다** — 이번 검사 하나에 구멍 둘(문자열 주해, `.pyi`)이 있었고 둘 다 변이 목록에 없어 리뷰가 잡았다. 한 구절 더: "이 검사가 **못 보는 것**을 어디에 적었는가". 5번과 같은 파일이라 함께 간다 | `.github/PULL_REQUEST_TEMPLATE.md` | 이 브랜치의 회고 |
-| 13 | 환경 함정의 "파이프 뒤의 `&&`" 줄을 `&&` 체인까지 넓힌다. 검사 일곱을 `&&`로 이었다가 앞이 실패해 뒤가 안 돌았는데 `$?`가 앞 것을 찍어 "지침 검사 실패"로 읽었다. 같은 가족 2회째 | `CLAUDE.md` 환경 함정 | 이 브랜치의 회고 |
-| 14 | `tools/`의 식별자 언어 관례를 정한다. `check_instructions.py`·`check_commit_msg.py`는 식별자가 영문이고 문자열·주석만 한국어인데, `check_type_escapes.py`가 지역 변수까지 한국어로 썼다. 테스트 **함수명**의 한국어는 `CODING_STANDARDS.md`가 이미 요구하는 것이라 별개다. 어느 쪽이든 정하고 적어야 다음 사람이 헷갈리지 않는다(PR #43 claude-review Nit) | `CODING_STANDARDS.md` 또는 `.claude/rules/` | PR #43 리뷰 |
+| 7 | 기능 하나의 실행 순서가 `KICKOFF.md`에만 있다. 강제력이 높은 자리는 지도 표가 아니라 `to-tickets` 스킬 1단계 | `.claude/skills/to-tickets/` | 일지 09 |
+| 8 | 명세 검토 프롬프트의 질문 둘(체크리스트 일곱에 없던 것)을 `KICKOFF.md` 9단계 3번에. 다음 검토가 2회째가 되어 파일로 굳을 때 함께 간다 | `KICKOFF.md` | 일지 09 |
+| 9 | 헌법 거버넌스가 "버전은 semver, 버전은 `README.md`에 있다"고 적는데 **README에 버전이 없다.** ADR 0013의 문구 수정이 patch 올림을 요구하는데 올릴 대상이 없어서 발견했다. 시작 값이 무엇인지는 사용자 판단이라 지어내지 않았다 | `README.md` + `principles.md` 거버넌스 | PR #43의 셀프 리뷰 |
+| 10 | PR 템플릿의 하네스 줄이 "새 검사는 변이로 빨강을 봤는가"만 묻는다. **변이는 내가 생각한 우회로만 잰다** — 검사 하나에 구멍 둘(문자열 주해, `.pyi`)이 있었고 둘 다 변이 목록에 없어 리뷰가 잡았다. 한 구절 더: "이 검사가 **못 보는 것**을 어디에 적었는가". 5번과 같은 파일이라 함께 간다 | `.github/PULL_REQUEST_TEMPLATE.md` | PR #43의 회고 |
+| 11 | 환경 함정의 "파이프 뒤의 `&&`" 줄을 `&&` 체인까지 넓힌다. 검사 일곱을 `&&`로 이었다가 앞이 실패해 뒤가 안 돌았는데 `$?`가 앞 것을 찍어 "지침 검사 실패"로 읽었다. 같은 가족 2회째 | `CLAUDE.md` 환경 함정 | PR #43의 회고 |
+| 12 | `tools/`의 식별자 언어 관례를 정한다. `check_instructions.py`·`check_commit_msg.py`는 식별자가 영문이고 문자열·주석만 한국어인데, `check_type_escapes.py`가 지역 변수까지 한국어로 썼다. 테스트 **함수명**의 한국어는 `CODING_STANDARDS.md`가 이미 요구하는 것이라 별개다. 어느 쪽이든 정하고 적어야 다음 사람이 헷갈리지 않는다(PR #43 claude-review Nit) | `CODING_STANDARDS.md` 또는 `.claude/rules/` | PR #43 리뷰 |
+| 13 | **커버리지 판정자가 없다.** PR #46의 Major(`serve` 성공 경로 테스트 0개)를 기계가 먼저 가리킬 수 있었다 — 측정으로 확인했다. 성공 경로 테스트 하나를 빼면 334개가 초록인 채로 `main.py:91-101`(`uvicorn.run(create_app(...))`)이 미커버로 뜬다. 방식 셋 중 고르는 것이 남았다: 리포트만 / diff에 새로 생긴 미커버 줄만 실패 / 검증 명령에 추가. **퍼센트 하드 게이트는 거짓 양성이 많아 제외.** 의존성과 검증 명령을 건드리므로 ADR과 승인이 먼저다 | `pyproject.toml` + `tech.md`·`operations.md` + ADR | PR #46의 회고 |
+| 14 | **보류한 지적을 적을 자리가 없다.** PR 템플릿은 "보류한 지적은 **별도 티켓으로** 뺐다"를 요구하고 이 파일은 승인분만 담아, 회고 후보 단계의 것이 둘 다 아니다. PR #46에서 체크박스를 문자 그대로 만족하지 못해 본문에 단서를 달았고 claude-review가 독립적으로 같은 틈을 짚었다. 문언을 "티켓 또는 회고 후보로" 넓히거나 이 파일에 미승인 칸을 두거나. 5·10과 같은 파일이라 함께 간다 | `.github/PULL_REQUEST_TEMPLATE.md` | PR #46의 회고 + PR #46 claude-review |
+| 15 | **세션 둘이 같은 체크아웃을 쓰는 것을 아무도 안 본다.** `operations.md`의 "티켓마다 워크트리 하나"에 판정자가 없다. PR #46에서 앞 세션의 커밋이 내 브랜치에 얹혔고 reflog를 읽고서야 알았다. **훅이 다른 에이전트 세션의 존재를 알 수 있는지 확인이 먼저다** — 불가능하면 함정 한 줄로 끝낸다 | 확인 뒤 `.claude/` 훅 또는 `CLAUDE.md` 환경 함정 | PR #46의 회고 |
+| 16 | **`(traces, plugins_root)` Data Clump.** dataclass 셋(`RunArgs`·`ResumeArgs`·`ServeArgs`)과 함수 다섯 단계를 나란히 다닌다. 묶으면 `run`·`resume` 배관까지 번져 티켓 03 범위를 넘어 보류했다. 다음에 디렉터리 옵션이 하나 더 늘 때(`--config` 등) 같은 자리를 또 넓히지 않게 | `src/agent_os/channel/cli/main.py` | PR #46 리뷰 둘(claude-review, 셀프 리뷰 표준 축) |
