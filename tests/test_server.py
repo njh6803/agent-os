@@ -2,47 +2,63 @@
 
 바탕으로 재는 것은 셋이다 — 모든 라우트가 보호를 켜지 않아도 기본으로 막힌다는 것, 에러가 언제나
 같은 봉투로 나간다는 것, 인증 없이 경계 밖으로 나가는 응답이 /health 하나뿐이라는 것. 그 위에
-데이터 라우트가 하나씩 붙는다. 플러그인 둘은 파일 끝에 있다.
+데이터 라우트가 하나씩 붙는다. 플러그인 둘과 트레이스 목록이 파일 끝에 있다.
 
 가짜 포트는 상속하지 않고 시그니처로 만족하며 픽스처가 포트 타입으로 annotate 한다. 그 한 줄이
 포트 적합성이 검증되는 자리다. 네트워크도 디스크도 타지 않는다.
 """
 
+import base64
 import dataclasses
 import inspect
 import io
 from collections.abc import AsyncIterator, Sequence
+from datetime import UTC, datetime, timedelta, timezone
 from typing import get_type_hints
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from agent_os import server as server_module
 from agent_os.admin import http as admin_http
+from agent_os.admin import traces as admin_traces
 from agent_os.admin.auth import PUBLIC_PATHS
 from agent_os.admin.http import Health
+from agent_os.admin.traces import CURSOR_PATTERN
 from agent_os.core.ports import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
     Cursor,
     ManifestRow,
     PluginError,
     PluginSource,
     RunRow,
     RunStatus,
+    RunSummary,
     ToolSource,
     Trace,
+    TraceSchemaVersion,
     TraceStore,
     UnreadableManifest,
+    UnreadableTrace,
+    cursor_of,
+    order_key,
 )
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
+    RUN_ID_PATTERN,
+    AgentName,
     BaseAgent,
     Event,
     McpServer,
     PluginKind,
     PluginManifest,
     PluginName,
+    Principal,
     RunId,
+    is_run_id,
     parse_manifest,
 )
 from agent_os.server import create_app
@@ -129,8 +145,74 @@ class FakePlugins:
         raise NotImplementedError("관리는 실행을 일으키지 않는다")
 
 
+T0 = datetime(2026, 9, 23, 12, 0, tzinfo=UTC)
+
+
+def _summary(
+    run_id: str,
+    status: RunStatus,
+    *,
+    started: timedelta,
+    last: timedelta,
+    schema_version: TraceSchemaVersion = "2",
+) -> RunSummary:
+    return RunSummary(
+        run_id=RunId(run_id),
+        status=status,
+        schema_version=schema_version,
+        started_at=T0 + started,
+        last_at=T0 + last,
+        agent=AgentName("calc"),
+        principal=Principal("alice"),
+    )
+
+
+# 상태 넷과 형식 1 과 표지 하나. 시작 시각은 전부 다르고 가장 오래된 것이 형식 1 이다. 멈춘 실행의
+# 마지막 시각은 뒤에 시작한 실행들보다 오래됐다 — 방치를 알아보는 길이 그 시각뿐이다(스토리 12).
+PAUSED = _summary("7c1e2d9a", "paused", started=timedelta(minutes=0), last=timedelta(minutes=1))
+FINISHED = _summary("a41f0b33", "finished", started=timedelta(minutes=2), last=timedelta(minutes=3))
+FAILED = _summary("5d0c8e71", "failed", started=timedelta(minutes=4), last=timedelta(minutes=4))
+UNFINISHED = _summary(
+    "e93b6f02", "unfinished", started=timedelta(minutes=6), last=timedelta(minutes=7)
+)
+LEGACY = _summary(
+    "0b7d4c18", "finished", started=-timedelta(days=1), last=-timedelta(days=1), schema_version="1"
+)
+UNREADABLE = UnreadableTrace(
+    run_id=RunId("c2f85a90"), reason="traces/c2f85a90.jsonl: 헤더를 읽을 수 없다"
+)
+NEWEST_FIRST = (UNFINISHED, FAILED, FINISHED, PAUSED, LEGACY, UNREADABLE)
+
+SUMMARY_FIELDS = {
+    "run_id",
+    "status",
+    "schema_version",
+    "started_at",
+    "last_at",
+    "agent",
+    "principal",
+}
+
+
+@dataclasses.dataclass(frozen=True)
+class ListCall:
+    status: RunStatus | None
+    limit: int | None
+    after: Cursor | None
+
+
 class FakeTrace:
-    """트레이스 라우트는 05·06 의 것이라 불리지 않는다. 불리면 그 자체가 결함이라 터뜨린다."""
+    """디렉터리 대신 행 목록을 들고 목록에 어댑터의 규칙으로 답한다. 받은 인자를 적어 둔다.
+
+    규칙은 상태로 거르고 정렬 키 역순으로 세운 뒤 커서 다음부터 limit 만큼 자르는 것이고, 키는
+    core 의 `cursor_of`·`order_key` 로 만든다. 가짜가 정렬을 따로 지으면 HTTP 가 되돌려 준 커서가
+    어댑터와 같은 키를 가리키는지 재지 못한다. 어댑터가 실제로 이 규칙대로 답한다는 것은
+    `tests/adapters/test_jsonl.py` 가 잰다. 쓰기와 단건은 불리면 그 자체가 결함이라 터뜨린다.
+    """
+
+    def __init__(self, rows: Sequence[RunRow] = ()) -> None:
+        self.rows: Sequence[RunRow] = tuple(rows)
+        self.calls: list[ListCall] = []
 
     def write(self, event: Event) -> None:
         raise NotImplementedError("관리는 읽기 전용이다")
@@ -145,7 +227,16 @@ class FakeTrace:
         limit: int | None = None,
         after: Cursor | None = None,
     ) -> Sequence[RunRow]:
-        raise NotImplementedError("트레이스 목록은 05 의 것이다")
+        self.calls.append(ListCall(status=status, limit=limit, after=after))
+        rows = [
+            row
+            for row in self.rows
+            if status is None or (isinstance(row, RunSummary) and row.status == status)
+        ]
+        rows.sort(key=lambda row: order_key(cursor_of(row)), reverse=True)
+        if after is not None:
+            rows = [row for row in rows if order_key(cursor_of(row)) < order_key(after)]
+        return tuple(rows[: DEFAULT_LIMIT if limit is None else limit])
 
 
 @pytest.fixture
@@ -161,9 +252,15 @@ def plugins() -> FakePlugins:
 
 
 @pytest.fixture
-def app(stderr: io.StringIO, plugins: FakePlugins) -> FastAPI:
+def traces() -> FakeTrace:
+    """상태 넷과 형식 1 과 표지 하나. 순서를 섞어 넣어 정렬이 포트의 일임을 드러낸다."""
+    return FakeTrace(rows=(UNREADABLE, PAUSED, UNFINISHED, LEGACY, FAILED, FINISHED))
+
+
+@pytest.fixture
+def app(stderr: io.StringIO, plugins: FakePlugins, traces: FakeTrace) -> FastAPI:
     source: PluginSource = plugins
-    trace: TraceStore = FakeTrace()
+    trace: TraceStore = traces
     return create_app(plugins=source, trace=trace, token=TOKEN, stderr=stderr)
 
 
@@ -400,7 +497,7 @@ async def test_예기치_않은_실패도_봉투이고_내부_문구를_밖으�
 async def test_질의_형식_오류는_422이고_violations_가_점으로_이은_경로를_든다(
     app: FastAPI, client: AsyncClient
 ) -> None:
-    """422 는 FastAPI 가 내고 봉투만 우리 것이다. 질의 검증 자체는 04·05 의 것이다."""
+    """422 는 FastAPI 가 내고 봉투만 우리 것이다. 진짜 라우트의 질의 검증은 `/traces` 쪽이 잰다."""
 
     @app.get("/paged")
     def _paged(limit: int = 1) -> Health:  # pragma: no cover - 검증에서 끝나 몸통에 닿지 않는다
@@ -661,4 +758,345 @@ def test_플러그인_목록의_행_타입이_이름_있는_스키마다(app: Fa
             {"$ref": "#/components/schemas/PluginManifest"},
             {"$ref": "#/components/schemas/UnreadableManifest"},
         ]
+    }
+
+
+# 트레이스 목록 — 지나간 실행과 멈춘 실행(티켓 05)
+
+
+def _run_ids(response: httpx.Response) -> list[str]:
+    return [str(row["run_id"]) for row in response.json()["runs"]]
+
+
+def _opaque(payload: str) -> str:
+    """손으로 짠 커서. 형식 오류를 밀 때만 쓴다 — 클라이언트는 받은 것을 되돌려 줄 뿐이다."""
+    return base64.urlsafe_b64encode(payload.encode()).rstrip(b"=").decode("ascii")
+
+
+async def test_트레이스_목록이_실행_요약과_다음_커서를_돌려준다(client: AsyncClient) -> None:
+    """무엇이 돌았는지 기억과 스크롤백에 의존하지 않는다(스토리 8·9·12). 행마다 어떤 에이전트의
+    것이고 누가 요청했고 언제 시작해 언제 마지막으로 움직였는지가 보인다."""
+    response = await client.get("/traces", headers=BEARER)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"runs", "next_cursor"}
+    paused = next(row for row in body["runs"] if row["run_id"] == PAUSED.run_id)
+    assert paused == {
+        "run_id": "7c1e2d9a",
+        "status": "paused",
+        "schema_version": "2",
+        "started_at": "2026-09-23T12:00:00Z",
+        "last_at": "2026-09-23T12:01:00Z",
+        "agent": "calc",
+        "principal": "alice",
+    }
+
+
+async def test_요약의_필드는_일곱이고_프롬프트도_토큰_수도_없다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """목록은 개요를 보는 자리이지 내용을 읽는 자리가 아니다(스토리 15, ADR 0012 이력)."""
+    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    schema = app.openapi()["components"]["schemas"]["RunSummary"]
+
+    assert all(set(row) == SUMMARY_FIELDS for row in rows if "reason" not in row)
+    assert set(schema["properties"]) == SUMMARY_FIELDS
+
+
+async def test_최근_실행이_먼저_오고_상태_넷이_갈린다(client: AsyncClient) -> None:
+    """스크립트가 셋을 같게 다루면 멈춘 실행을 잃어버린다(스토리 10·13)."""
+    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+
+    assert [row["run_id"] for row in rows] == [row.run_id for row in NEWEST_FIRST]
+    assert [row.get("status") for row in rows[:4]] == ["unfinished", "failed", "finished", "paused"]
+
+
+def test_끝_이벤트가_없는_실행을_진행_중이라_부르지_않는다(app: FastAPI) -> None:
+    """돌고 있는 실행과 죽어 사라진 실행이 파일 위에서 똑같이 보인다(스토리 11). 어휘가 계약에
+    박히므로 생성 클라이언트도 "진행 중"이라는 값을 모른다."""
+    schemas = app.openapi()["components"]["schemas"]
+
+    assert schemas["RunStatus"]["enum"] == ["paused", "finished", "failed", "unfinished"]
+
+
+async def test_형식_1_실행도_목록에_나오고_요약이_형식_버전을_싣는다(client: AsyncClient) -> None:
+    """화면이 "이 실행은 재개할 수 없다"를 말할 수 있다(스토리 17)."""
+    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+
+    legacy = next(row for row in rows if row["run_id"] == LEGACY.run_id)
+    assert legacy["schema_version"] == "1"
+
+
+async def test_읽을_수_없는_트레이스가_있어도_나머지가_오고_그것은_표지다(
+    client: AsyncClient,
+) -> None:
+    """트레이스 하나가 /traces 전체를 죽이지 않는다(ADR 0012 의 2026-09-22 이력)."""
+    response = await client.get("/traces", headers=BEARER)
+
+    assert response.status_code == 200
+    rows = response.json()["runs"]
+    assert {"run_id": UNREADABLE.run_id, "reason": UNREADABLE.reason} in rows
+    assert len(rows) == len(NEWEST_FIRST)
+
+
+async def test_질의가_없으면_포트가_상태_없이_기본_개수로_첫_쪽을_받는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """셋 다 선택이고 status 가 없으면 전부다. 기본 개수는 계약에 박힌 그 숫자다."""
+    await client.get("/traces", headers=BEARER)
+
+    assert traces.calls == [ListCall(status=None, limit=DEFAULT_LIMIT, after=None)]
+
+
+async def test_status_limit_after_가_포트에_그대로_전달된다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    first = await client.get("/traces", params={"limit": "2"}, headers=BEARER)
+    cursor = first.json()["next_cursor"]
+
+    await client.get(
+        "/traces", params={"status": "paused", "limit": "3", "after": cursor}, headers=BEARER
+    )
+
+    assert traces.calls[-1] == ListCall(status="paused", limit=3, after=cursor_of(FAILED))
+
+
+async def test_status_paused_가_곧_멈춘_실행_목록이다(client: AsyncClient) -> None:
+    """승인자가 멈춘 실행을 찾는 길이 이 질의 하나다(스토리 22). 표지는 상태가 없어 섞이지
+    않는다."""
+    response = await client.get("/traces", params={"status": "paused"}, headers=BEARER)
+
+    assert response.status_code == 200
+    assert _run_ids(response) == [PAUSED.run_id]
+
+
+async def test_멈춘_실행에_별도_경로가_없다(
+    app: FastAPI, client: AsyncClient, traces: FakeTrace
+) -> None:
+    """상태는 요약의 한 필드이지 다른 자원이 아니다(스토리 23). 경로를 두면 `paused` 라는 실행
+    식별자가 생길 수 없게 되고 상태가 늘 때마다 경로가 는다."""
+    response = await client.get("/traces/paused", headers=BEARER)
+
+    assert "/traces/paused" not in _documented_paths(app)
+    assert response.status_code == 404
+    assert traces.calls == []
+
+
+async def test_잘못된_status_는_422이고_포트가_불리지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    for status in ("running", "in_progress", "PAUSED", ""):
+        response = await client.get("/traces", params={"status": status}, headers=BEARER)
+
+        assert response.status_code == 422, status
+        fields = [violation["field"] for violation in response.json()["violations"]]
+        assert fields == ["query.status"], status
+    assert traces.calls == []
+
+
+async def test_영_이하이거나_상한을_넘는_limit_은_422이고_포트가_불리지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """상한이 없으면 요청 하나가 "실행이 쌓여도 응답이 그만큼 커지지 않는다"를 무력화한다."""
+    for limit in ("0", "-1", str(MAX_LIMIT + 1), "many"):
+        response = await client.get("/traces", params={"limit": limit}, headers=BEARER)
+
+        assert response.status_code == 422, limit
+        fields = [violation["field"] for violation in response.json()["violations"]]
+        assert fields == ["query.limit"], limit
+    assert traces.calls == []
+
+
+async def test_limit_의_경계값은_받는다(client: AsyncClient, traces: FakeTrace) -> None:
+    for limit in (1, MAX_LIMIT):
+        response = await client.get("/traces", params={"limit": str(limit)}, headers=BEARER)
+
+        assert response.status_code == 200, limit
+    assert [call.limit for call in traces.calls] == [1, MAX_LIMIT]
+
+
+def test_limit_의_기본값과_상한이_계약에_박힌다(app: FastAPI) -> None:
+    """숫자는 core 가 소유하고 질의 검증과 openapi.json 이 그것을 읽는다
+    (`.claude/rules/core.md`)."""
+    parameters = app.openapi()["paths"]["/traces"]["get"]["parameters"]
+    limit = next(parameter for parameter in parameters if parameter["name"] == "limit")
+
+    assert limit["schema"]["default"] == DEFAULT_LIMIT
+    assert limit["schema"]["minimum"] == 1
+    assert limit["schema"]["maximum"] == MAX_LIMIT
+
+
+# 형식에 맞지 않는 커서들. 앞의 넷은 문자 집합과 길이에서, 뒤의 것들은 해독과 검증에서 걸린다. 둘 다
+# 포트에 닿기 전에 끝나야 한다 — 없으면 조작된 커서가 처리되지 않은 500 이 된다.
+MALFORMED_AFTER = (
+    "",
+    "!!!!",
+    "../../etc",
+    "a" * 257,
+    "a",  # base64 로 해독되지 않는 길이
+    _opaque("not json"),
+    _opaque("[]"),
+    _opaque('{"started_at":null}'),  # 식별자가 빠졌다
+    _opaque('{"started_at":null,"run_id":"../x"}'),  # 식별자 패턴 위반
+    _opaque('{"started_at":"2026-09-23T12:00:00","run_id":"r1"}'),  # 시간대가 없다
+    _opaque('{"started_at":"not-a-time","run_id":"r1"}'),
+    _opaque('{"started_at":null,"run_id":"r1","offset":3}'),  # 모르는 필드
+)
+
+
+async def test_형식에_맞지_않는_after_는_422이고_포트가_불리지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """04·06 이 경로 파라미터에 거는 것과 같은 종류의 검증이다. violations 가 after 를 가리켜야
+    검증이 실제로 돌았다는 것까지 본다."""
+    for after in MALFORMED_AFTER:
+        response = await client.get("/traces", params={"after": after}, headers=BEARER)
+
+        assert response.status_code == 422, after
+        assert response.json()["code"] == "invalid_request", after
+        fields = [violation["field"] for violation in response.json()["violations"]]
+        assert fields == ["query.after"], after
+    assert traces.calls == []
+
+
+async def test_받은_행이_limit_개보다_적으면_다음_커서가_null_이다(client: AsyncClient) -> None:
+    response = await client.get("/traces", params={"limit": str(MAX_LIMIT)}, headers=BEARER)
+
+    assert response.json()["next_cursor"] is None
+
+
+async def test_딱_떨어지면_다음_쪽이_비고_그때_커서가_null_이다(client: AsyncClient) -> None:
+    """포트에 limit 을 그대로 넘기므로 하나 더 읽어 끝을 미리 볼 수 없다. 대가는 요청 하나다."""
+    size = str(len(NEWEST_FIRST))
+    full = await client.get("/traces", params={"limit": size}, headers=BEARER)
+    after = full.json()["next_cursor"]
+    rest = await client.get("/traces", params={"limit": size, "after": after}, headers=BEARER)
+
+    assert after is not None
+    assert rest.json() == {"runs": [], "next_cursor": None}
+
+
+async def test_다음_커서가_마지막_행의_정렬_키를_잃지_않고_포트에_되돌아간다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """마이크로초와 UTC 가 아닌 오프셋과 시각 없는 표지까지. 하나라도 잃으면 경계의 행이 두 번
+    오거나 빠진다."""
+    seoul = timezone(timedelta(hours=9))
+    precise = dataclasses.replace(
+        FAILED, started_at=datetime(2026, 9, 23, 21, 4, 0, 123456, tzinfo=seoul)
+    )
+    traces.rows = [precise, UNREADABLE]
+
+    first = await client.get("/traces", params={"limit": "1"}, headers=BEARER)
+    second = await client.get(
+        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=BEARER
+    )
+    await client.get(
+        "/traces", params={"limit": "1", "after": second.json()["next_cursor"]}, headers=BEARER
+    )
+
+    afters = [call.after for call in traces.calls]
+    assert afters == [None, cursor_of(precise), cursor_of(UNREADABLE)]
+    returned = afters[1]
+    assert returned is not None
+    assert returned.started_at is not None
+    assert returned.started_at.utcoffset() == timedelta(hours=9)
+
+
+async def test_쪽_사이에_새_실행이_생겨도_같은_항목이_두_번_오거나_건너뛰지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """오프셋과 커서를 가르는 성질이다(스토리 33). 정적인 목록으로는 재지 못한다 — 오프셋도 목록이
+    그대로면 겹치지도 빠지지도 않는다."""
+    everything = _run_ids(await client.get("/traces", headers=BEARER))
+
+    first = await client.get("/traces", params={"limit": "2"}, headers=BEARER)
+    newest = _summary("f00d4e5b", "unfinished", started=timedelta(hours=1), last=timedelta(hours=1))
+    traces.rows = [*traces.rows, newest]
+    seen = _run_ids(first)
+    cursor = first.json()["next_cursor"]
+    while cursor is not None:
+        page = await client.get("/traces", params={"limit": "2", "after": cursor}, headers=BEARER)
+        seen.extend(_run_ids(page))
+        cursor = page.json()["next_cursor"]
+
+    assert seen == everything
+    assert _run_ids(await client.get("/traces", headers=BEARER)) == [newest.run_id, *everything]
+
+
+async def test_응답의_실행_식별자가_패턴을_만족하고_계약에_박힌다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """그대로 `agent-os resume` 에도 `/traces/{run_id}` 에도 넘길 수 있다(스토리 24)."""
+    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    schemas = app.openapi()["components"]["schemas"]
+
+    assert all(is_run_id(row["run_id"]) for row in rows)
+    assert schemas["RunSummary"]["properties"]["run_id"]["pattern"] == RUN_ID_PATTERN
+    assert schemas["UnreadableTrace"]["properties"]["run_id"]["pattern"] == RUN_ID_PATTERN
+
+
+async def test_패턴을_어기는_식별자는_응답에_실리지_않는다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """어댑터는 그런 이름의 파일을 목록에서 뺀다. 그래도 새면 계약을 어긴 응답 대신 500 이다."""
+    traces.rows = [dataclasses.replace(PAUSED, run_id=RunId("../escaped"))]
+
+    response = await client.get("/traces", headers=BEARER)
+
+    assert response.status_code == 500
+    assert "../escaped" not in response.text
+
+
+def test_다음_커서의_모양이_계약에_박힌다(app: FastAPI) -> None:
+    """불투명 문자열이고 문자 집합과 길이만 약속한다. 클라이언트는 받은 것을 되돌려 줄 뿐이라
+    정렬 키를 바꾸는 날에도 이 약속은 그대로다."""
+    document = app.openapi()
+    parameters = document["paths"]["/traces"]["get"]["parameters"]
+    after = next(parameter for parameter in parameters if parameter["name"] == "after")
+    next_cursor = document["components"]["schemas"]["TracePage"]["properties"]["next_cursor"]
+    opaque = {"type": "string", "pattern": CURSOR_PATTERN}
+
+    assert opaque in after["schema"]["anyOf"]
+    assert opaque in next_cursor["anyOf"]
+
+
+def test_트레이스_목록의_타입이_이름_있는_스키마다(app: FastAPI) -> None:
+    """생성 클라이언트가 익명 구조체 대신 이 이름들을 받는다(스토리 28)."""
+    document = app.openapi()
+    schemas = document["components"]["schemas"]
+    ok = document["paths"]["/traces"]["get"]["responses"]["200"]
+
+    assert ok["content"]["application/json"]["schema"] == {"$ref": "#/components/schemas/TracePage"}
+    assert schemas["TracePage"]["properties"]["runs"]["items"] == {
+        "$ref": "#/components/schemas/RunRow"
+    }
+    assert schemas["RunRow"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/RunSummary"},
+            {"$ref": "#/components/schemas/UnreadableTrace"},
+        ]
+    }
+    assert {"RunStatus", "TraceSchemaVersion"} <= set(schemas)
+
+
+def test_늘_실리는_트레이스_목록_필드는_계약에서도_required_다(app: FastAPI) -> None:
+    """next_cursor 가 null 일 수 있어도 키는 언제나 있다. 선택 필드로 보이면 생성 클라이언트가
+    "키가 없음"과 "마지막 쪽"을 가르는 코드를 따로 짠다."""
+    schemas = app.openapi()["components"]["schemas"]
+
+    assert set(schemas["TracePage"]["required"]) == {"runs", "next_cursor"}
+    assert set(schemas["RunSummary"]["required"]) == SUMMARY_FIELDS
+    assert set(schemas["UnreadableTrace"]["required"]) == {"run_id", "reason"}
+
+
+def test_트레이스_목록의_HTTP_모양이_core_의_요약과_표지와_같은_필드를_든다() -> None:
+    """관리 쪽 모델이 core 의 것을 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
+    빨개져 관리 쪽이 조용히 뒤처지지 않는다."""
+    assert set(admin_traces.RunSummary.model_fields) == {
+        field.name for field in dataclasses.fields(RunSummary)
+    }
+    assert set(admin_traces.UnreadableTrace.model_fields) == {
+        field.name for field in dataclasses.fields(UnreadableTrace)
     }

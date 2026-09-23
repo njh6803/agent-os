@@ -25,6 +25,7 @@ from agent_os.core.ports import (
 )
 from agent_os.sdk import (
     AgentName,
+    ApprovalGranted,
     Event,
     LlmCalled,
     Principal,
@@ -32,6 +33,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunPaused,
+    RunResumed,
     RunStarted,
     ToolCall,
     ToolCalled,
@@ -317,6 +319,84 @@ def test_after로_다음_쪽을_받으면_겹치지도_빠지지도_않는다(tm
     assert pages == everything
 
 
+def test_쪽_사이에_새_실행이_생겨도_있던_실행이_두_번_오거나_빠지지_않는다(tmp_path: Path) -> None:
+    """오프셋과 커서를 가르는 성질이다. 새 실행은 머리에 서므로 다음 첫 쪽에서 보인다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    for index in range(5):
+        _write_trace(store, f"run-{index}", at=TS + timedelta(minutes=index))
+    everything = _ids(store.list())
+
+    first = store.list(limit=2)
+    _write_trace(store, "run-new", at=TS + timedelta(hours=1))
+    rest = store.list(after=cursor_of(first[-1]))
+
+    assert _ids(first) + _ids(rest) == everything
+    assert _ids(store.list(limit=1)) == ["run-new"]
+
+
+# 알려진 한계 셋(ADR 0012 의 2026-09-23 이력). 정렬 키가 쓰기 순서가 아니라 시작 시각이라, 한 순회가
+# 이미 지나간 키 범위에 나중에 들어온 실행은 그 순회에서 보이지 않고, 순회 도중 키가 바뀐 행은 두 번
+# 온다. 받아들인 한계라 테스트가 지금의 동작을 고정한다 — 고치는 날 빨개지고 그때 이력을 함께
+# 고친다.
+
+
+def test_알려진_한계_지나간_범위에_늦게_나타난_파일은_그_순회에서_빠진다(tmp_path: Path) -> None:
+    """`run()` 이 시각을 읽은 직후 같은 호출에서 파일을 만들므로 실행 프로세스가 하나면 생기지
+    않는다. 벽시계가 뒤로 가거나 동시에 도는 실행 둘이 그 사이에서 엇갈릴 때의 모양이다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    for name, minutes in (("run-a", 0), ("run-b", 2), ("run-c", 4)):
+        _write_trace(store, name, at=TS + timedelta(minutes=minutes))
+
+    first = store.list(limit=2)
+    _write_trace(store, "run-late", at=TS + timedelta(minutes=3))
+    rest = store.list(after=cursor_of(first[-1]))
+
+    assert _ids(first) + _ids(rest) == ["run-c", "run-b", "run-a"]
+    assert "run-late" in _ids(store.list())
+
+
+def test_알려진_한계_재개된_옛_실행이_다시_멈추면_멈춘_실행_순회에서_빠진다(tmp_path: Path) -> None:
+    """실행 프로세스가 하나여도 생긴다. 한 턴에 승인 대상이 둘이면 재개한 뒤 둘째에서 다시 멈추는데,
+    그 사이 결말 없음이던 실행이 오래된 시작 시각 그대로 필터에 돌아온다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    for name, minutes in (("run-a", 0), ("run-b", 2), ("run-c", 4)):
+        _write_trace(
+            store,
+            name,
+            at=TS + timedelta(minutes=minutes),
+            ending=RunPaused(run_id=RunId(name), ts=TS, tool="add", args={}),
+        )
+    store.write(ApprovalGranted(run_id=RunId("run-b"), ts=TS, approver=Principal("bob")))
+    store.write(RunResumed(run_id=RunId("run-b"), ts=TS))
+
+    first = store.list(status="paused", limit=1)
+    second = store.list(status="paused", limit=1, after=cursor_of(first[-1]))
+    store.write(RunPaused(run_id=RunId("run-b"), ts=TS, tool="add", args={}))
+    rest = store.list(status="paused", after=cursor_of(second[-1]))
+
+    assert _ids(first) + _ids(second) + _ids(rest) == ["run-c", "run-a"]
+    assert _ids(store.list(status="paused")) == ["run-c", "run-b", "run-a"]
+
+
+def test_알려진_한계_쓰는_중인_마지막_줄은_같은_실행을_꼬리에_한_번_더_세운다(
+    tmp_path: Path,
+) -> None:
+    """행의 키가 순회 도중 바뀐다. 마지막 줄이 반만 쓰인 순간의 파일은 표지가 되고 표지는 시각이
+    없어 꼬리로 간다. 큰 이벤트는 쓰기가 여러 번으로 나뉘어 실행 프로세스가 하나여도 생긴다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    for name, minutes in (("run-a", 0), ("run-b", 2), ("run-c", 4)):
+        _write_trace(store, name, at=TS + timedelta(minutes=minutes))
+
+    first = store.list(limit=1)
+    finished = RunFinished(run_id=RunId("run-c"), ts=TS, output="4").model_dump_json()
+    with (tmp_path / "run-c.jsonl").open("a", encoding="utf-8") as file:
+        file.write(finished[: len(finished) // 2])
+    rest = store.list(after=cursor_of(first[-1]))
+
+    assert _ids(first) + _ids(rest) == ["run-c", "run-b", "run-a", "run-c"]
+    assert isinstance(rest[-1], UnreadableTrace)
+
+
 def test_limit을_주지_않으면_기본값까지만_돌려준다(tmp_path: Path) -> None:
     store: TraceStore = JsonlTrace(tmp_path)
     for index in range(DEFAULT_LIMIT + 1):
@@ -441,6 +521,30 @@ def test_같은_손상_파일을_단건으로_읽으면_PluginError다(tmp_path:
     for run_id in _BROKEN:
         with pytest.raises(PluginError, match=run_id):
             store.read(RunId(run_id))
+
+
+def test_읽을_수_없는_이유가_트레이스_줄의_내용을_되울리지_않는다(tmp_path: Path) -> None:
+    """목록은 내용을 읽는 자리가 아니다(스토리 15). pydantic 의 검증 문구는 받은 값의 앞뒤를 싣는데,
+    쓰는 중에 잘린 줄이면 그 꼬리가 곧 도구 결과다. 경로와 오류 종류는 운영자가 파일을 찾고 원인을
+    짐작하는 값이라 남긴다(PR #56 의 CodeRabbit 지적)."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_trace(store, "run-1")
+    leaked = "tool-output-that-must-not-leak"
+    called = ToolCalled(
+        run_id=RunId("run-1"), ts=TS, tool="fetch", ok=True, args={}, content=leaked
+    ).model_dump_json()
+    with (tmp_path / "run-1.jsonl").open("a", encoding="utf-8") as file:
+        file.write(called[: called.index(leaked) + len(leaked)])
+
+    row = store.list()[0]
+    with pytest.raises(PluginError) as single:
+        store.read(RunId("run-1"))
+
+    assert isinstance(row, UnreadableTrace)
+    for reason in (row.reason, str(single.value)):
+        assert "must-not-leak" not in reason
+        assert "run-1.jsonl" in reason
+        assert "json_invalid" in reason
 
 
 def test_파일_이름과_내용의_실행_식별자가_어긋나면_표지이고_단건은_PluginError다(

@@ -27,7 +27,7 @@ from enum import StrEnum
 from typing import Annotated, Literal, TextIO
 from uuid import uuid4
 
-from fastapi import APIRouter, FastAPI, HTTPException, Path, Request, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Path, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, TypeAdapter
@@ -36,7 +36,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from agent_os.core.ports import ManifestRow, PluginError, PluginSource
+from agent_os.admin.traces import CURSOR_PATTERN, TracePage, decode_cursor, trace_page
+from agent_os.core.ports import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Cursor,
+    ManifestRow,
+    PluginError,
+    PluginSource,
+    RunStatus,
+    TraceStore,
+)
 from agent_os.sdk import PLUGIN_NAME_PATTERN, PluginKind, PluginManifest, PluginName
 
 REQUEST_ID_HEADER = "X-Request-Id"
@@ -331,7 +341,7 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PluginError, handle)
 
 
-def admin_router(*, health: Health, plugins: PluginSource) -> APIRouter:
+def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) -> APIRouter:
     """관리 라우터. 데이터 라우트는 이 자리에 더한다.
 
     `/health` 가 주입받은 값을 그대로 돌려주는 것이 이 라우트의 전부다. 라우트가 상태를 직접
@@ -377,7 +387,47 @@ def admin_router(*, health: Health, plugins: PluginSource) -> APIRouter:
             raise HTTPException(status_code=404, detail=f"{kind} 종류에 {name} 플러그인이 없다")
         return manifest
 
+    # 질의 셋을 포트에 그대로 넘긴다. 멈춘 실행 목록이 `?status=paused` 이고 별도 경로가 없는
+    # 이유는 상태가 요약의 한 필드이지 다른 자원이 아니기 때문이다(ADR 0012). `limit` 의 기본값과
+    # 상한은 core 의 숫자이고 없으면 포트가 기본값을 받는다. `after` 는 문자 집합과 길이를 FastAPI
+    # 가, 해독을 `_decode_after()` 가 포트에 닿기 전에 본다.
+    @router.get(
+        "/traces",
+        operation_id="list_traces",
+        summary="지나간 실행의 요약을 최근 것부터 한 쪽씩",
+        responses=_documented_errors(401, 422),
+    )
+    def list_traces(
+        status: Annotated[
+            RunStatus | None, Query(description="없으면 전부다. paused 가 곧 멈춘 실행 목록이다")
+        ] = None,
+        limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+        after: Annotated[
+            str | None,
+            Query(pattern=CURSOR_PATTERN, description="앞 쪽의 next_cursor 를 그대로 넘긴다"),
+        ] = None,
+    ) -> TracePage:
+        rows = trace.list(status=status, limit=limit, after=_decode_after(after))
+        return trace_page(rows, limit=limit)
+
     return router
+
+
+def _decode_after(text: str | None) -> Cursor | None:
+    """질의의 커서를 정렬 키로(질의). 해독되지 않으면 FastAPI 의 검증 오류와 같은 모양으로 던진다.
+
+    같은 모양으로 던지는 이유는 문자 집합에서 걸리든 해독에서 걸리든 클라이언트가 같은 422 와 같은
+    `query.after` 를 받아야 하기 때문이다. 표(`failure_for()`)는 그대로 한 곳이다. `Query` 에
+    검증기를 달아 `Cursor` 로 바꾸지 않는 이유는 그러면 `str` 로 선언한 파라미터에 다른 타입이
+    들어와 선언이 거짓이 되기 때문이다 — 스키마가 문자열이어야 하므로 선언을 바꿀 수도 없다.
+    """
+    if text is None:
+        return None
+    try:
+        return decode_cursor(text)
+    except ValueError as error:
+        detail = {"type": "value_error", "loc": ("query", "after"), "msg": str(error)}
+        raise RequestValidationError([detail]) from error
 
 
 def _documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
