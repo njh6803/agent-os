@@ -9,6 +9,7 @@ from agent_os.channel.cli.main import (
     DEFAULT_PLUGINS_ROOT,
     DEFAULT_PORT,
     DEFAULT_TRACES,
+    MAX_PORT,
     ResumeArgs,
     RunArgs,
     ServeArgs,
@@ -144,3 +145,33 @@ def test_실행과_재개도_플러그인_루트를_받고_기본은_plugins_다
     assert isinstance(resume_args, ResumeArgs)
     assert run_args.plugins_root == DEFAULT_PLUGINS_ROOT == Path("plugins")
     assert resume_args.plugins_root == Path("p")
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["-1", "65536", "여덟", "8000.5"],
+    ids=["음수", "상한 초과", "정수 아님", "소수"],
+)
+def test_포트가_될_수_없는_값은_서버가_뜨기_전에_인자_오류다(value: str) -> None:
+    """범위 밖 값을 통과시키면 uvicorn 이 뜬 뒤 바인딩에서 OverflowError 로 터진다.
+
+    정수가 아닌 값과 범위 밖 값이 같은 종류의 잘못인데, 앞의 것만 argparse 가 막고 뒤의 것은
+    트레이스백으로 나가 종료 코드가 둘로 갈렸다.
+    """
+    with pytest.raises(SystemExit):
+        parse_args(["serve", f"--port={value}"])
+
+
+def test_포트_0은_빈_포트를_골라_달라는_뜻이라_통과한다() -> None:
+    """TCP 가 정한 것 위에 새 정책을 얹지 않는다. 루프백과 달리 막을 근거가 없다."""
+    args = parse_args(["serve", "--port", "0"])
+
+    assert isinstance(args, ServeArgs)
+    assert args.port == 0
+
+
+def test_포트_상한은_그대로_받는다() -> None:
+    args = parse_args(["serve", "--port", str(MAX_PORT)])
+
+    assert isinstance(args, ServeArgs)
+    assert args.port == MAX_PORT

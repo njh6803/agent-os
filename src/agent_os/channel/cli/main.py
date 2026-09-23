@@ -44,6 +44,7 @@ DEFAULT_PLUGINS_ROOT = Path("plugins")
 DEFAULT_HOST = "127.0.0.1"
 # uvicorn 자신의 기본값이라 직접 띄울 때와 같은 포트다(ADR 0010 의 2026-09-23 이력).
 DEFAULT_PORT = 8000
+MAX_PORT = 65535
 EXIT_FINISHED = 0
 EXIT_FAILED = 1
 EXIT_PAUSED = 3
@@ -105,10 +106,29 @@ def build_parser() -> argparse.ArgumentParser:
         "--host", default=DEFAULT_HOST, help=f"바인딩 주소. 루프백만 (기본 {DEFAULT_HOST})"
     )
     serve_parser.add_argument(
-        "--port", type=int, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"
+        "--port", type=_port, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"
     )
     _add_directories(serve_parser)
     return parser
+
+
+def _port(value: str) -> int:
+    """포트가 될 수 있는 값인지 여기서 본다. `type=int` 는 정수인지만 보고 범위를 모른다.
+
+    막지 않으면 범위 밖 값이 uvicorn 이 **뜬 뒤** 바인딩에서 `OverflowError` 로 터진다. 구성
+    오류를 시작 자리에서 끝낸다는 이 명령의 성격이 토큰과 호스트에만 걸리는 것이 아니고, 같은
+    종류의 잘못(정수 아님, 범위 밖)이 종료 코드 둘로 갈리지도 않아야 한다.
+
+    0 은 남겨 둔다. 빈 포트를 골라 달라는 뜻이고 그것을 막는 것은 TCP 가 정한 것 위에 새 정책을
+    얹는 일이다. 루프백만 받는 규칙과 달리 여기에는 그럴 근거가 없다.
+    """
+    try:
+        port = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"포트는 정수다. 받은 값: {value}") from None
+    if not 0 <= port <= MAX_PORT:
+        raise argparse.ArgumentTypeError(f"포트는 0~{MAX_PORT} 다. 받은 값: {port}")
+    return port
 
 
 def _add_shared(parser: argparse.ArgumentParser) -> None:

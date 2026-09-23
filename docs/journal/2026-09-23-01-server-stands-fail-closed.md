@@ -149,7 +149,8 @@ pre-commit 훅 일곱이 커밋마다 같은 것을 다시 돌았다. LLM 호출
    있는지가 아니라 **어느 커밋이 검사됐는지**를 봐야 잡힌다. 병합 직전에 PR head와 로컬 HEAD가
    같은지 먼저 보는 한 줄이 필요하다.
 2. **CodeRabbit CLI가 좌석 문제로 돌지 않았다.** `You are not a member of the requested
-   organization`, `Seat: not assigned`. 시간당 한도가 아니라 계정 설정이라 재시도해도 같다. 그래서
+   organization`, `Seat: not assigned`. 시간당 한도가 아니라 활성 유료 구독이 없어 좌석을 배정할
+   수 없는 상태(`Plan: Free`)라 재시도해도 같다. 그래서
    PR 직전 보안·버그 축이 통째로 비었고, PR 봇 하나가 그 축을 전부 졌는데 그것도 셋째 바퀴에서
    `Review rate limited`에 걸렸다. **증상과 조치 가능 여부를 `operations.md`에 적어 두면 다음
    세션이 같은 자리에서 진단에 시간을 쓰지 않는다.** (반영한 뒤 사용자 질문으로 다시 확인해
