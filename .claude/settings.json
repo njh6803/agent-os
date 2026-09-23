@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --no-sync python tools/hook_journal_retro.py",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_journal_retro.py\"",
             "timeout": 20
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --no-sync python tools/hook_pr_next_session.py",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_pr_next_session.py\"",
             "timeout": 20
           }
         ]
@@ -38,12 +38,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --no-sync python tools/hook_bash_heredoc.py",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_heredoc.py\"",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "uv run --no-sync python tools/hook_bash_python_stub.py",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_python_stub.py\"",
             "timeout": 20
           }
         ]
