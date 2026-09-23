@@ -173,7 +173,7 @@ cp -r ~/.claude/skills-backup/grill-me .claude/skills/
 - 답변과 문서는 한국어로 쓴다.
 ```
 
-지침을 어디에 두느냐는 로드 시점이 정한다. `paths` 누락, 200줄 초과, 원칙 외 `@` 임포트, 그리고 덧댄 스킬 사본의 센티널 주석 소실은 pre-commit 훅(`tools/check_instructions.py`)이 막는다(넷째는 7단계). 스크립트는 런북 저장소(`C:/project/agent/tools/check_instructions.py`)에서 복사하고 `.pre-commit-config.yaml`에 `always_run: true`로 등록한 뒤, `paths` 없는 rules 파일을 하나 만들어 빨강을 보고 지운다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은 비용이 다르다. 셋이다. 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules), 해당 파일을 열 때(`paths` 있는 rules), 필요하다고 판단할 때(skill). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절에 있고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다. 항상 로드 분량은 `/context`를 직접 실행해 실측하고, 재배치했으면 전후 값을 ADR로 남긴다. 줄 수는 대리 지표일 뿐이다. 이 기준은 ai-agent-platform AAPP-15(2026-09-01)에서 한 번 겪었고, agent에서 담지 않아 두 번째로 겪었다.
+지침을 어디에 두느냐는 로드 시점이 정한다. `paths` 누락, 아무 파일도 가리키지 않는 `paths` glob(규칙이 조용히 안 실린다), 저장소 파일을 상대 경로로 부르는 훅(세션이 루트를 벗어나면 깨지고, PreToolUse면 모든 Bash를 막는다. `${CLAUDE_PROJECT_DIR}`로 쓴다), 200줄 초과, 원칙 외 `@` 임포트, 그리고 덧댄 스킬 사본의 센티널 주석 소실은 pre-commit 훅(`tools/check_instructions.py`)이 막는다(마지막은 7단계). 스크립트는 런북 저장소(`C:/project/agent/tools/check_instructions.py`)에서 복사하고 `.pre-commit-config.yaml`에 `always_run: true`로 등록한 뒤, `paths` 없는 rules 파일을 하나 만들어 빨강을 보고 지운다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은 비용이 다르다. 셋이다. 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules), 해당 파일을 열 때(`paths` 있는 rules), 필요하다고 판단할 때(skill). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절에 있고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다. 항상 로드 분량은 `/context`를 직접 실행해 실측하고, 재배치했으면 전후 값을 ADR로 남긴다. 줄 수는 대리 지표일 뿐이다. 이 기준은 ai-agent-platform AAPP-15(2026-09-01)에서 한 번 겪었고, agent에서 담지 않아 두 번째로 겪었다.
 
 ## 4단계. /setup-matt-pocock-skills
 
