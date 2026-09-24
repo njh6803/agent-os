@@ -17,5 +17,8 @@
 | [0011](0011-admin-api-is-fail-closed.md) | 관리 API는 fail-closed 토큰 인증으로 선다 | accepted | 2026-09-22 |
 | [0012](0012-ports-stay-five-lists-are-added.md) | 포트는 다섯 그대로이고 기존 포트에 목록이 는다 | accepted | 2026-09-22 |
 | [0013](0013-principle-iii-has-its-own-judge.md) | 원칙 III의 판정자는 pyright가 아니라 전용 검사 하나다 | accepted | 2026-09-22 |
+| [0014](0014-http-channel-streams-the-run.md) | HTTP 채널의 응답은 실행의 이벤트 스트림이고 실행은 연결에 묶이지 않는다 | accepted | 2026-09-24 |
+| [0015](0015-http-channel-has-its-own-token.md) | HTTP 채널은 자기 토큰으로 서고 주체는 `serve`의 OS 사용자다 | accepted | 2026-09-24 |
+| [0016](0016-shared-http-layer.md) | HTTP 표면의 공용 배관은 `agent_os.http` 층에 둔다 | accepted | 2026-09-24 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
