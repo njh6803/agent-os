@@ -1,5 +1,6 @@
-# open-session 스킬의 손발. 데스크톱 앱에 새 Code 세션을 연다. 첫 줄이 슬래시 명령이면 앱이 그 `/` 를
-# 전각으로 바꿔 넣으므로 보내기 전에 멈추고(`held=`) 사람이 고쳐 보낸다.
+# open-session 스킬의 손발. 데스크톱 앱에 새 Code 세션을 연다. 첫 줄이 이 저장소의 스킬을 부르는 슬래시
+# 명령이면 쏘기 전에 그 스킬 파일을 읽어 따르라는 한 줄로 옮겨(`Convert-StartLine`) 사람 손 없이 보낸다.
+# 옮기지 못한 슬래시 명령은 앱이 `/` 를 전각으로 바꿔 넣으므로 보내기 전에 멈추고(`held=`) 사람이 고쳐 보낸다.
 #
 # `send`: 딥링크 `claude://code/new?q=<프롬프트>`로 프롬프트가 채워진 새 세션 화면을 열고 접근성
 # 트리(UI Automation)의 "보내기"를 호출한다. `split`: 사이드바 행 메뉴 "다음에서 열기 → 분할 보기".
@@ -94,6 +95,12 @@ function Send-Prompt {
     if (-not $Folder -or -not $PromptFile) { throw 'send 에는 -Folder 와 -PromptFile 이 필요하다.' }
     $prompt = Get-Content -Path $PromptFile -Raw -Encoding UTF8
     $firstLine = ($prompt -split "`r?`n")[0]
+    $startLine = Convert-StartLine $firstLine $Folder
+    if ($startLine -cne $firstLine) {
+        $prompt = $startLine + $prompt.Substring($firstLine.Length)
+        $firstLine = $startLine
+        "start=$($startLine.Substring(0, $startLine.IndexOf(' ')))"
+    }
     # `folder`를 실으면 앱이 외부에서 온 폴더로 보고(`src=external`) 신뢰를 다시 묻고, 그 대화상자를
     # 거치면 폴더가 떨어져 스크래치 워크스페이스로 열린다(실측 9). 폴더는 싣지 않는다. 앱은 마지막
     # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 그것이 루트다. 맞는지는 스킬이
@@ -157,12 +164,14 @@ function Send-Prompt {
     # 앱은 링크로 온 슬래시 명령을 그대로 실행하지 않는다. 첫 `/` 를 전각 `／`(U+FF0F)로 바꿔 넣어,
     # 그대로 보내면 명령이 아니라 글자가 된다 — `/implement` 가 사용자 호출로 먹지 않는다(2026-09-23 실측,
     # 입력창의 값 첫 글자가 U+FF0F). 스크립트는 되돌려 넣지 않는다. 어디서 왔는지 모르는 링크가 명령을
-    # 일으키지 못하게 한 앱의 장치를 우회하는 일이고, 사람이 첫 글자를 고쳐 보내는 것이 곧 앱이 요구하는
-    # 확인이다. 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고 턴을 끝낸다. 이름은 새 세션이
-    # 스스로 붙이므로(hook_prompt_directive) 사람이 이 세션으로 돌아올 필요가 없다.
+    # 일으키지 못하게 한 앱의 장치를 통째로 우회하는 일이다 — 되돌린 `/` 는 내장 명령을 포함해 아무 슬래시
+    # 명령이나 일으킨다. 위의 `Convert-StartLine` 도 효과로는 그 장치를 비껴가지만 가리킬 수 있는 것이 이
+    # 저장소의 스킬 파일뿐이다. 그렇게 옮긴 것은 여기 오지 않으므로, 여기 걸리는 것은 옮기지 못한 슬래시
+    # 명령뿐이다(스킬 파일이 없다).
+    # 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고 턴을 끝낸다.
     $value = try { $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { '' }
     if ($value -and [int][char]$value[0] -eq 0xFF0F) {
-        "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다. 사람이 / 로 고쳐 보낸다"
+        "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다(옮기지 못한 슬래시 명령). 사람이 / 로 고쳐 보낸다"
         return
     }
 
@@ -178,6 +187,23 @@ function Get-RuntimeKey($el) {
     # 요소가 살아 있는 동안 같은 값이라 다시 찾아도 같은 요소인지 가를 수 있다. 못 읽으면 빈 문자열이고
     # 그러면 어떤 기억과도 겹치지 않아 새 것으로 친다 — 못 읽는 것을 오래된 것으로 치면 진짜 화면을 놓친다.
     try { return ($el.GetRuntimeId() -join '.') } catch { return '' }
+}
+
+# 첫 줄이 이 저장소의 스킬을 부르는 슬래시 명령(`/<이름> <인자>`)이면 그 스킬 파일을 읽어 따르라는 한 줄로
+# 옮긴다. 딥링크의 슬래시 명령은 앱이 전각으로 바꿔 명령이 되지 못하고 사람이 고쳐 보내야 했다. 스킬 파일을
+# 가리키는 문장은 명령이 아니라 지시라 그대로 보낼 수 있다. 왜 이렇게 하는지와 그 대가는 open-session 스킬.
+# 이름은 훅의 전각 대체 경로와 같은 kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못하고, 파일이 없으면
+# 옮기지 않아 아래 `held=` 가 받는다.
+# 문구는 hook_prompt_directive 의 대체 안내와 같은 뜻이다. 인자에 지시문 전문이 드는 것도 슬래시 명령과 같다.
+function Convert-StartLine([string] $line, [string] $root) {
+    if ($root -and $line -cmatch '^/([a-z0-9][a-z0-9-]*)(?:\s+(.*))?$') {
+        $skill = ".claude/skills/$($Matches[1])/SKILL.md"
+        $rest = $Matches[2]
+        if (Test-Path -LiteralPath (Join-Path $root $skill) -PathType Leaf) {
+            return "$skill 를 읽어 그대로 따른다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: $rest".TrimEnd()
+        }
+    }
+    return $line
 }
 
 function Normalize-Slash([string] $s) {
