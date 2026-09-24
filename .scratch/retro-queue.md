@@ -16,7 +16,7 @@ retro 스킬이 낸 후보 중 **사용자가 승인했으나 아직 반영하�
 | 2 | "일지는 code-review 뒤에 쓴다"를 `implement`에만 두지 않고 `next-session`으로 옮기거나 양쪽에 둔다. PR을 내는 세션이 `implement`만이 아니다 | `.claude/skills/next-session/` | 일지 05·08 |
 | 3 | 넘겨받은 Out of Scope를 찾는 한 줄. 미루는 쪽은 적지만 받는 쪽이 읽는다는 보장이 없다. **2회차로 넓혔다 — 리뷰·일지의 "그 층에서 재확인이 필요하다"도 그 층을 소유한 티켓의 수용 기준으로 간다.** 01 리뷰가 표지 reason을 "오탐, 단 HTTP 층에서 재확인"으로 두었는데 05 티켓에 오지 않아 PR #56의 봇이 Critical로 잡았다. 같은 01이 커서 한계는 05 수용 기준에 넣어 제대로 닫혔다 | `to-spec`·`to-tickets` 스킬 + `code-review` 6단계(보류를 적는 자리) | 일지 07, 일지 2026-09-23-04 |
 | 4 | `sdk`의 `ApprovalDenied.reason`에 `min_length=1`. **계약 변경이라 ADR 0009 이력과 사용자 승인이 먼저다. 별도 PR** | `src/agent_os/sdk/events.py` + ADR 0009 | 일지 06 |
-| 5 | PR 템플릿의 `coderabbit-review` 줄을 날카롭게 — "문서만 바뀐 PR도 면제가 아니다. 설계 문서의 침묵이 곧 구현의 침묵이다"(PR #38 CWE-319, #39 CWE-22, 둘 다 코드 0줄) | `.github/PULL_REQUEST_TEMPLATE.md` | 일지 08 |
+| 5 | PR 템플릿의 `coderabbit-review` 줄을 날카롭게 — "문서만 바뀐 PR도 면제가 아니다. 설계 문서의 침묵이 곧 구현의 침묵이다"(PR #38 CWE-319, #39 CWE-22, 둘 다 코드 0줄). **3회차**: PR #67(http-channel 명세, 코드 0줄)에서 CodeRabbit이 CWE-94를 냈다. 명세가 "무엇이 원격 입력이 되나"(에이전트 이름)는 적고 "무엇은 여전히 신뢰 경계 안인가"(매니페스트·진입점·MCP 명령)는 적지 않았다. CLI 좌석이 없어 이 축은 PR 봇 하나였다 | `.github/PULL_REQUEST_TEMPLATE.md` | 일지 08, 2026-09-24-04 |
 | 6 | `sdk/ids.py`의 주석이 `NewType`의 구멍을 이점으로만 적는다. "경계에서 오는 값은 부르는 쪽이 검증한다" 한 절을 개념 옆에 | `src/agent_os/sdk/ids.py` | 일지 08 |
 | 7 | 기능 하나의 실행 순서가 `KICKOFF.md`에만 있다. 강제력이 높은 자리는 지도 표가 아니라 `to-tickets` 스킬 1단계 | `.claude/skills/to-tickets/` | 일지 09 |
 | 8 | 명세 검토 프롬프트의 질문 둘(체크리스트 일곱에 없던 것)을 `KICKOFF.md` 9단계 3번에. 다음 검토가 2회째가 되어 파일로 굳을 때 함께 간다 | `KICKOFF.md` | 일지 09 |
