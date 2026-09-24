@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.hook_prompt_directive import context_for, has_assistant_turn, is_first_turn
+from tools.hook_prompt_directive import (
+    block_reason_for,
+    context_for,
+    has_assistant_turn,
+    is_first_turn,
+)
 
 NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
 
@@ -122,6 +127,97 @@ def test_스킬_이름이_케밥_하나가_아니면_읽을_경로를_만들지_
 
         assert context is not None, first_line
         assert "SKILL.md" not in context, first_line
+
+
+# open_session.ps1 의 Convert-StartLine 이 옮긴 첫 줄. 스킬 파일을 상대 경로로 가리키고, 연
+# 저장소를 표지로 든다. 상대 경로라 저장소가 아닌 폴더에서는 파일을 못 찾아 멈추고, 표지로 훅이
+# 폴더를 가른다.
+ROOT = "C:\\project\\agent"
+OPEN_SESSION = Path(__file__).parents[2] / "tools" / "open_session.ps1"
+
+
+def _opened(root: str = ROOT, skill: str = "implement") -> str:
+    """Convert-StartLine 이 만드는 모양의 첫 줄로 DIRECTIVE 를 연다. 모양의 원천은 ps1 이다(아래
+    대조)."""
+    first = (
+        f".claude/skills/{skill}/SKILL.md 를 읽어 그대로 따른다. "
+        f"이 세션을 연 저장소는 `{root}`이고 "
+        "작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 "
+        "끝까지다. 인자: .scratch/admin-api/issues/05-traces-list.md"
+    )
+    return DIRECTIVE.replace(DIRECTIVE.splitlines()[0], first, 1)
+
+
+def test_연_저장소와_작업_폴더가_같으면_막지_않고_이름을_붙인다() -> None:
+    assert block_reason_for(_opened(), ROOT) is None
+    context = context_for(_opened())
+    assert context is not None
+    assert "`feature/05-traces-list`" in context
+
+
+def test_작업_폴더가_연_저장소와_다르면_프롬프트를_막는다() -> None:
+    """딥링크는 폴더를 싣지 않고 앱이 마지막 폴더를 쓴다. 그것이 워크트리면 거기에도 같은 스킬
+    파일이 있어, 사람이 보내기 전에 폴더를 보던 눈 없이 엉뚱한 곳에서 시작한다(PR #65 의
+    CodeRabbit). 모델에게 권하는 것이 아니라 프롬프트를 막는다 — 첫 줄은 "그대로 따른다"라고
+    말하므로 권고는 그것과 다툰다."""
+    worktree = f"{ROOT}\\.claude\\worktrees\\silly-carson-627e95"
+
+    reason = block_reason_for(_opened(), worktree)
+
+    assert reason is not None
+    assert f"`{worktree}`" in reason
+    assert f"`{ROOT}`" in reason
+
+
+def test_작업_폴더를_모르면_막는다() -> None:
+    """비교할 수 없으면 막는 쪽이다. 빈 문자열도 모르는 것이다."""
+    for cwd in (None, ""):
+        reason = block_reason_for(_opened(), cwd)
+
+        assert reason is not None, cwd
+        assert "(알 수 없음)" in reason, cwd
+
+
+def test_폴더_비교는_구분자와_대소문자와_끝의_구분자를_가리지_않는다() -> None:
+    """윈도 경로라 대소문자를 가리지 않는다. 운영체제의 정규화에 맡기지 않아 CI 에서도 같은
+    답이다."""
+    for cwd in ("c:/project/agent", "C:\\project\\agent\\", "C:/Project/Agent/"):
+        assert block_reason_for(_opened(), cwd) is None, cwd
+
+
+def test_연_저장소가_워크트리이거나_공백이_든_경로여도_같은_폴더면_막지_않는다() -> None:
+    for root in (f"{ROOT}\\.claude\\worktrees\\wt", "C:\\My Docs\\agent"):
+        assert block_reason_for(_opened(root=root), root) is None, root
+        assert block_reason_for(_opened(root=root), ROOT + "\\other") is not None, root
+
+
+def test_옮기지_않은_첫_줄이나_지시문이_아니면_막지_않는다() -> None:
+    """슬래시 명령과 전각은 앱이 연 폴더에서 스킬을 찾는다. 가리키는 저장소가 따로 없다. 지시문이
+    아닌 프롬프트는 이 훅의 일이 아니다."""
+    not_directive = "\n".join(
+        line for line in _opened().splitlines() if not line.startswith("브랜치:")
+    )
+    for prompt in (DIRECTIVE, DIRECTIVE.replace("／", "/", 1), not_directive):
+        assert block_reason_for(prompt, "D:\\elsewhere") is None
+
+
+def test_open_session_스크립트가_만드는_첫_줄을_훅이_알아본다() -> None:
+    """문구의 원천은 ps1 이고 훅은 그것을 글자로 파싱한다. 한쪽만 바뀌면 폴더 가드가 조용히
+    꺼지므로(표지를 못 찾으면 막을 이유가 없다) 여기서 잡는다."""
+    source = OPEN_SESSION.read_text(encoding="utf-8")
+    marker = next(line for line in source.splitlines() if "이 세션을 연 저장소는" in line)
+    template = marker.split('return "', 1)[1].split('".TrimEnd()', 1)[0]
+    first = (
+        template.replace("``", "`")
+        .replace("$skill", ".claude/skills/implement/SKILL.md")
+        .replace("$root", ROOT)
+        .replace("$rest", "x")
+    )
+    assert "$" not in first
+    prompt = DIRECTIVE.replace(DIRECTIVE.splitlines()[0], first, 1)
+
+    assert block_reason_for(prompt, ROOT) is None
+    assert block_reason_for(prompt, "D:\\elsewhere") is not None
 
 
 def test_모델이_아직_답하지_않은_트랜스크립트는_첫_턴이다() -> None:

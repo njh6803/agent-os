@@ -21,8 +21,11 @@
 트랜스크립트에 assistant 기록이 아직 없을 때만 낸다. 훅이 도는 시점에 지금 프롬프트가 기록됐는지와
 무관하다.
 
-못 보는 것: 지시문 모양은 누구나 쓸 수 있다. 막는 것은 사람이 보냈다는 것, 첫 턴이라는 것, 이름이
-kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못한다는 것뿐이다. 사람이 손으로 연 새 세션에
+못 보는 것: 지시문 모양은 누구나 쓸 수 있다. 막는 것은 첫 턴이라는 것, 이름이 kebab 한 토막이라
+`.claude/skills/` 밖을 가리키지 못한다는 것, open-session 이 옮긴 첫 줄이면 연 저장소와 작업 폴더가
+같다는 것뿐이다. 보내기는 이제 사람이 아니라 open-session 스크립트가 하기도 한다. 이 폴더 가드는 새
+훅이 도는 폴더에서만 선다. 이 변경 전 브랜치의 워크트리는 옛 훅을 쓰고, 그때 남는 것은 첫 줄의
+조건 문장과 상대 경로다(저장소가 아닌 폴더에서는 파일을 못 찾는다). 사람이 손으로 연 새 세션에
 지시문을 첫 메시지로 붙여 넣은 것도 발동하는데, 그것은 open-session 이 하는 일과 같아 의도한 쪽이다.
 `/clear` 뒤의 첫 메시지도 같다. 트랜스크립트가 새 파일로 시작해 assistant 기록이 없으므로 발동하고,
 같은 앱 세션이 그 지시문의 일로 새로 시작하는 것이라 이름을 바꾸는 것이 맞다고 본다.
@@ -40,7 +43,15 @@ from typing import TypedDict
 FULLWIDTH_SLASH = "／"
 _BRANCH_LINE = "브랜치:"
 _NEW_SESSION = re.compile(r"어디서:\s*새 세션")
-_SKILL_NAME = re.compile(r"([a-z0-9][a-z0-9-]*)(?:\s|$)")
+# 스킬 이름. 곧 경로라 kebab 한 토막만 받는다.
+_KEBAB = r"[a-z0-9][a-z0-9-]*"
+_SKILL_NAME = re.compile(rf"({_KEBAB})(?:\s|$)")
+# open_session.ps1 의 Convert-StartLine 이 옮긴 첫 줄. 스킬 파일을 상대 경로로 가리키고 연 저장소를
+# 표지로 든다. 문구의 원천은 그 스크립트이고 대조는 tests/tools 가 한다.
+_OPENED_LINE = re.compile(
+    rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\. "
+    r"이 세션을 연 저장소는 `(?P<root>[^`]+)`이고"
+)
 
 
 class HookPayload(TypedDict, total=False):
@@ -48,6 +59,7 @@ class HookPayload(TypedDict, total=False):
 
     prompt: str
     transcript_path: str
+    cwd: str
 
 
 class TranscriptRecord(TypedDict, total=False):
@@ -62,10 +74,7 @@ def context_for(prompt: str) -> str | None:
     지시문은 줄 머리에 `브랜치:` 줄(값이 있다)과 `어디서: 새 세션` 줄이 있는 프롬프트다. 문장 속에서
     형식을 인용한 것은 세지 않는다.
     """
-    lines = [line.strip() for line in prompt.splitlines()]
-    if not any(_NEW_SESSION.match(line) for line in lines):
-        return None
-    branch = _branch_of(lines)
+    branch = _directive_branch(prompt)
     if branch is None:
         return None
     context = (
@@ -83,6 +92,38 @@ def context_for(prompt: str) -> str | None:
     return context
 
 
+def block_reason_for(prompt: str, cwd: str | None) -> str | None:
+    """open-session 이 옮긴 지시문인데 작업 폴더가 연 저장소와 다르면 프롬프트를 막을 이유.
+
+    딥링크는 폴더를 싣지 않고 앱이 마지막 폴더를 쓴다. 그것이 워크트리면 거기에도 같은 스킬 파일이
+    있어, 자동 제출된 세션이 사람이 폴더를 보던 눈 없이 엉뚱한 곳에서 시작한다(PR #65 의
+    CodeRabbit).
+    모델에게 권하지 않고 막는다. 첫 줄이 "그대로 따른다"라고 말하므로 권고는 그것과 다툰다. 막으면
+    이름도 붙지 않는다 — 붙으면 다음 open-session 이 그 제목을 살아 있다고 보고 열지 않는다. 작업
+    폴더를 모르면(없거나 빈 값) 막는다.
+    """
+    if _directive_branch(prompt) is None:
+        return None
+    match = _OPENED_LINE.match(prompt.lstrip())
+    if match is None:
+        return None
+    root = match.group("root")
+    if cwd and _folder_key(root) == _folder_key(cwd):
+        return None
+    return (
+        f"이 세션의 작업 폴더 `{cwd or '(알 수 없음)'}` 가 지시문을 연 저장소 `{root}` 와 다르다. "
+        "스킬을 따르지 않도록 이 프롬프트를 막았다. 연 저장소에서 세션을 다시 연다."
+    )
+
+
+def _directive_branch(prompt: str) -> str | None:
+    """새 세션 지시문이면 `브랜치:` 줄의 값, 아니면 None."""
+    lines = [line.strip() for line in prompt.splitlines()]
+    if not any(_NEW_SESSION.match(line) for line in lines):
+        return None
+    return _branch_of(lines)
+
+
 def _branch_of(lines: list[str]) -> str | None:
     """`브랜치:` 줄의 값. 감싼 백틱은 벗긴다. 줄이 없거나 값이 비었으면 None."""
     for line in lines:
@@ -90,6 +131,16 @@ def _branch_of(lines: list[str]) -> str | None:
             value = line.removeprefix(_BRANCH_LINE).strip().strip("`").strip()
             return value or None
     return None
+
+
+def _folder_key(path: str) -> str:
+    """폴더 비교 키. 구분자를 `/` 로, 끝의 구분자를 떼고, 대소문자를 접는다.
+
+    윈도 경로라 대소문자를 가리지 않는다. `os.path` 에 맡기지 않는 이유는 그 정규화가 운영체제마다
+    달라 CI 와 이 PC 가 다른 답을 내기 때문이다. 정규화하지 않는 표기(`..`, UNC, `/c/`)는 다르다고
+    나와 막는 쪽으로 틀린다.
+    """
+    return path.replace("\\", "/").rstrip("/").casefold()
 
 
 def _fullwidth_skill(prompt: str) -> str | None:
@@ -146,7 +197,14 @@ def main() -> int:
     # `브랜치:` 가 매치되지 않고, 예외 없이 exit 0 에 출력 0바이트로 계기가 사라진다(실측).
     # 바이트로 받아 JSON 이 UTF-8 로 풀게 한다.
     payload: HookPayload = json.load(sys.stdin.buffer)
-    context = context_for(payload.get("prompt", ""))
+    prompt = payload.get("prompt", "")
+    # 막기는 첫 턴을 보지 않는다. 옮긴 첫 줄은 open-session 만 만들고, 폴더가 다르면 몇 번째 턴이든
+    # 엉뚱한 저장소에서 스킬을 따르게 된다. 막으면 프롬프트가 지워지고 이유는 사람에게만 보인다.
+    reason = block_reason_for(prompt, payload.get("cwd"))
+    if reason is not None:
+        print(json.dumps({"decision": "block", "reason": reason}))
+        return 0
+    context = context_for(prompt)
     # 지시문일 때만 트랜스크립트를 연다. 평범한 프롬프트마다 긴 파일을 읽지 않는다.
     if context is None or not is_first_turn(payload.get("transcript_path")):
         return 0

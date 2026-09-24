@@ -99,7 +99,7 @@ function Send-Prompt {
     if ($startLine -cne $firstLine) {
         $prompt = $startLine + $prompt.Substring($firstLine.Length)
         $firstLine = $startLine
-        "start=$($startLine.Substring(0, $startLine.IndexOf(' ')))"
+        "start=$($startLine.Substring(0, $startLine.IndexOf(' 를 읽어')))"
     }
     # `folder`를 실으면 앱이 외부에서 온 폴더로 보고(`src=external`) 신뢰를 다시 묻고, 그 대화상자를
     # 거치면 폴더가 떨어져 스크래치 워크스페이스로 열린다(실측 9). 폴더는 싣지 않는다. 앱은 마지막
@@ -193,14 +193,17 @@ function Get-RuntimeKey($el) {
 # 옮긴다. 딥링크의 슬래시 명령은 앱이 전각으로 바꿔 명령이 되지 못하고 사람이 고쳐 보내야 했다. 스킬 파일을
 # 가리키는 문장은 명령이 아니라 지시라 그대로 보낼 수 있다. 왜 이렇게 하는지와 그 대가는 open-session 스킬.
 # 이름은 훅의 전각 대체 경로와 같은 kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못하고, 파일이 없으면
-# 옮기지 않아 아래 `held=` 가 받는다.
-# 문구는 hook_prompt_directive 의 대체 안내와 같은 뜻이다. 인자에 지시문 전문이 드는 것도 슬래시 명령과 같다.
+# 옮기지 않아 아래 `held=` 가 받는다. 인자에 지시문 전문이 드는 것은 슬래시 명령과 같다.
+# 딥링크가 폴더를 싣지 않아 새 세션은 앱의 마지막 폴더에서 열린다. 그래서 두 겹으로 막는다. 경로는 상대 경로라
+# 저장소가 아닌 폴더에서는 파일을 못 찾아 멈추고, 연 저장소를 표지로 실어 새 세션의 훅이 자기 작업 폴더와
+# 다르면 프롬프트를 막는다(PR #65 의 CodeRabbit). 문구는 hook_prompt_directive 의 `_OPENED_LINE` 이 글자로
+# 파싱하는 형식이라, 바꾸면 tests/tools 의 대조 테스트가 빨개진다.
 function Convert-StartLine([string] $line, [string] $root) {
     if ($root -and $line -cmatch '^/([a-z0-9][a-z0-9-]*)(?:\s+(.*))?$') {
         $skill = ".claude/skills/$($Matches[1])/SKILL.md"
         $rest = $Matches[2]
         if (Test-Path -LiteralPath (Join-Path $root $skill) -PathType Leaf) {
-            return "$skill 를 읽어 그대로 따른다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: $rest".TrimEnd()
+            return "$skill 를 읽어 그대로 따른다. 이 세션을 연 저장소는 ``$root``이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: $rest".TrimEnd()
         }
     }
     return $line
