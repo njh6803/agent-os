@@ -8,13 +8,15 @@ requires-python = "==3.12.*"
 # langchain-anthropic 과 langchain-mcp-adapters 뒤에서 온다(ADR 0001). langgraph 는
 # pyright strict 마찰로 뺐다(ADR 0001 의 2026-09-21 이력). fastapi 와 uvicorn 은 HTTP 표면이다
 # (ADR 0010). openapi.json 이 이 저장소에서 계약이라 FastAPI 를 골랐다. fastapi 의 하한은 채널의
-# 스트림이 기대는 `fastapi.sse` 가 들어온 버전이다(ADR 0014). 0.134.0 에는 그 모듈이 없다.
+# 스트림이 서는 버전이다(ADR 0014 와 그 2026-09-26 이력). `fastapi.sse` 는 0.135.0 에 들어왔지만
+# 0.140.7 까지는 SSE 항목을 스트림 항목 모델로 직렬화하지 않아, 프레임이 트레이스 줄과 문자열로
+# 다르고 계약의 항목 스키마가 이벤트 타입을 가리키지 않는다.
 dependencies = [
     "langchain-core>=0.3",
     "pydantic>=2.9",
     "langchain-anthropic>=0.3",
     "langchain-mcp-adapters>=0.1",
-    "fastapi>=0.135",
+    "fastapi>=0.140.8",
     "uvicorn>=0.30",
 ]
 
