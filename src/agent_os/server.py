@@ -15,9 +15,10 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
-from agent_os.admin.auth import RequireToken
-from agent_os.admin.http import AssignRequestId, Health, admin_router, install_error_handlers
+from agent_os.admin.http import Health, admin_router
 from agent_os.core.ports import PluginSource, TraceStore
+from agent_os.http.auth import RequireToken
+from agent_os.http.errors import AssignRequestId, install_error_handlers
 
 _TITLE = "Agent OS 관리 API"
 _DESCRIPTION = "등록된 플러그인과 지나간 실행을 읽는다. 읽기 전용이고 실행을 일으키지 않는다."

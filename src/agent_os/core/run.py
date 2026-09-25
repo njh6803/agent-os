@@ -19,6 +19,9 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 마스킹과 승인이 겹치는 도구는 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다.
 재개할 수 없는 트레이스(없음, 형식 1, 일시정지 아님, 손상)도 같은 자리의 PluginError 다.
 저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012 이력).
+그 가운데 요청을 고쳐서 풀리는 것은 하위 타입이다. 요청이 댄 에이전트나 실행이 없으면 Absent,
+실행이 일시정지가 아니거나 형식 1 이면 NotResumable 이다(ADR 0014). 재개할 실행의 트레이스가
+가리키는 에이전트가 없는 것은 요청이 아니라 서버의 기록이 댄 이름이라 PluginError 그대로다.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
 실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
@@ -36,8 +39,10 @@ from langchain_core.messages import AIMessage, BaseMessage
 from agent_os.core.loop import ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, message_from, reply_from
 from agent_os.core.ports import (
+    Absent,
     ChatModel,
     Clock,
+    NotResumable,
     PluginError,
     PluginSource,
     ToolConnection,
@@ -401,7 +406,7 @@ async def run(
     trace: TraceStore,
     clock: Clock,
 ) -> AsyncIterator[Event]:
-    prepared = _prepare(plugins, agent)
+    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
     run_id = clock.new_run_id()
     started = RunStarted(
         run_id=run_id, ts=clock.now(), agent=agent, request=request, principal=principal
@@ -438,7 +443,7 @@ async def resume(
     재생이 시작되므로, 재생이 무엇을 하든 누가 허락했는지, 누가 왜 막았는지는 남는다.
     """
     started, paused, records = _read_paused(trace, run_id)
-    prepared = _prepare(plugins, started.agent)
+    prepared = _prepare(plugins, _recorded_manifest(plugins, started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
     yield decided
@@ -538,9 +543,12 @@ def _decision_event(
             assert_never(decision)
 
 
-def _prepare(plugins: PluginSource, agent: AgentName) -> _Prepared:
-    """실행 식별자가 생기기 전에 끝나는 검사들. 여기서 나는 오류는 트레이스가 없다."""
-    manifest = _read_agent_manifest(plugins, agent)
+def _prepare(plugins: PluginSource, manifest: PluginManifest) -> _Prepared:
+    """실행 식별자가 생기기 전에 끝나는 검사들. 여기서 나는 오류는 트레이스가 없다.
+
+    에이전트의 매니페스트는 부르는 쪽이 읽어 넘긴다. 없을 때의 뜻이 `run()` 과 `resume()` 에서
+    다르기 때문이다(`_requested_manifest`, `_recorded_manifest`).
+    """
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
     return _Prepared(
@@ -571,9 +579,9 @@ def _read_paused(
     """
     stored = trace.read(run_id)
     if stored is None:
-        raise PluginError(f"그런 실행이 없다: {run_id}")
+        raise Absent(f"그런 실행이 없다: {run_id}")
     if stored.schema_version not in RESUMABLE:
-        raise PluginError(
+        raise NotResumable(
             f"형식 {stored.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
         )
     events = _sound_events(stored, run_id)
@@ -582,7 +590,7 @@ def _read_paused(
         raise PluginError(f"시작 이벤트로 열리지 않는 트레이스는 재개할 수 없다: {run_id}")
     paused = events[-1]
     if not isinstance(paused, RunPaused):
-        raise PluginError(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+        raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
     return started, paused, tuple(e for e in events if not isinstance(e, _BOUNDARY))
 
 
@@ -598,10 +606,24 @@ def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
     return known
 
 
-def _read_agent_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:
+def _requested_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:
+    """요청이 이름을 댄 에이전트. 없으면 부재다."""
     manifest = plugins.read_manifest(PluginKind.AGENT, PluginName(agent))
     if manifest is None:
-        raise PluginError(f"에이전트 플러그인이 없다: {agent}")
+        raise Absent(f"에이전트 플러그인이 없다: {agent}")
+    return manifest
+
+
+def _recorded_manifest(plugins: PluginSource, started: RunStarted) -> PluginManifest:
+    """재개할 실행의 트레이스가 가리키는 에이전트. 없으면 부재가 아니라 구성 오류다.
+
+    이름을 댄 것이 요청이 아니라 서버가 가진 기록이고, 요청이 가리킨 실행은 있다. 클라이언트가
+    고칠 수 없는 일이라 부재로 말하면 식별자를 잘못 적었다고 믿게 된다(ADR 0014 의 2026-09-24
+    이력). 에이전트가 가리키는 mcp 플러그인이 없을 때와 같은 모양이다.
+    """
+    manifest = plugins.read_manifest(PluginKind.AGENT, PluginName(started.agent))
+    if manifest is None:
+        raise PluginError(f"실행 {started.run_id} 의 에이전트 플러그인이 없다: {started.agent}")
     return manifest
 
 

@@ -26,14 +26,15 @@ from pydantic import TypeAdapter
 from agent_os import server as server_module
 from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
-from agent_os.admin.auth import PUBLIC_PATHS
 from agent_os.admin.http import Health
 from agent_os.admin.traces import CURSOR_PATTERN
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
+    Absent,
     Cursor,
     ManifestRow,
+    NotResumable,
     PluginError,
     PluginSource,
     RunRow,
@@ -49,6 +50,7 @@ from agent_os.core.ports import (
     cursor_of,
     order_key,
 )
+from agent_os.http.auth import PUBLIC_PATHS
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
     RUN_ID_PATTERN,
@@ -418,8 +420,8 @@ async def test_비ASCII_토큰도_500이_아니라_401이다(client: AsyncClient
     assert response.status_code == 401
 
 
-async def test_허용되지_않는_메서드도_봉투이고_어휘가_넷_안에_있다(client: AsyncClient) -> None:
-    """405 는 프레임워크가 내는 것이라 표에 없다. 어휘를 넷으로 지키려고 계열로 접는다."""
+async def test_허용되지_않는_메서드도_봉투이고_어휘가_다섯_안에_있다(client: AsyncClient) -> None:
+    """405 는 프레임워크가 내는 것이라 표에 없다. 어휘를 다섯으로 지키려고 계열로 접는다."""
     response = await client.post("/health")
 
     assert response.status_code == 405
@@ -540,6 +542,34 @@ async def test_core_의_구성_오류는_500이고_code_가_internal_error_다(
     assert "plugin.toml" in response.json()["message"]
 
 
+async def test_core_의_부재는_404이고_code_가_not_found_다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """요청이 이름을 댄 에이전트나 실행이 없다(ADR 0014). 표가 MRO 로 옮기므로 이 갈래가 기반
+    타입의 갈래보다 먼저여야 한다 — 순서가 뒤집히면 이것이 500 이 된다."""
+    _route_that_raises(app, "/absent", Absent("에이전트 플러그인이 없다: nope"))
+
+    response = await client.get("/absent", headers=BEARER)
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "not_found"
+    assert "nope" in response.json()["message"]
+
+
+async def test_core_의_재개_불가는_409이고_code_가_conflict_다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """실행은 있는데 지금 상태가 요청과 맞지 않다. 부재도 형식 오류도 아니다(ADR 0010 의
+    2026-09-24 이력). 이 갈래도 기반 타입의 갈래보다 먼저여야 한다."""
+    _route_that_raises(app, "/done", NotResumable("일시정지 상태가 아니라 재개할 수 없다: run-1"))
+
+    response = await client.get("/done", headers=BEARER)
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+    assert "run-1" in response.json()["message"]
+
+
 async def test_예기치_않은_실패도_봉투이고_내부_문구를_밖으로_내지_않는다(
     app: FastAPI, client: AsyncClient, stderr: io.StringIO
 ) -> None:
@@ -581,14 +611,16 @@ def test_스키마에_이름_있는_타입이_나온다(app: FastAPI) -> None:
     assert {"Health", "ErrorEnvelope", "Violation"} <= set(schemas)
 
 
-def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_넷이다(app: FastAPI) -> None:
-    """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다."""
+def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(app: FastAPI) -> None:
+    """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. 다섯째인
+    conflict 는 채널이 재개할 수 없는 실행에 내는 409 다(ADR 0010 의 2026-09-24 이력)."""
     schemas = app.openapi().get("components", {}).get("schemas", {})
 
     assert set(schemas["ErrorCode"]["enum"]) == {
         "unauthorized",
         "invalid_request",
         "not_found",
+        "conflict",
         "internal_error",
     }
 

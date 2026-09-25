@@ -20,7 +20,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from agent_os.admin.http import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
+from agent_os.http.errors import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
 
 # 인증 없이 지나가는 경로. 원소는 하나이고 자라면 ADR 0011 의 이력에 쌓는다 — 목록이 문서 없이
 # 자라는 것이 fail-open 으로 돌아가는 길이다. 비교가 정확히 같은지만 보는 이유는 `/health/` 나
