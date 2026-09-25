@@ -73,11 +73,19 @@ from agent_os.sdk import (
 )
 from agent_os.server import create_app
 
+# 관리 토큰. 이 파일의 대부분이 관리 라우트를 밀어서 이름을 짧게 둔다.
 TOKEN = "t0ken-that-only-tests-know"
 BEARER = {"Authorization": f"Bearer {TOKEN}"}
+CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
+CHANNEL_BEARER = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 # allowlist 밖이면서 라우트가 없는 경로. 토큰이 없으면 401 이고 있으면 404 라는 것이 곧 미들웨어가
 # 라우팅보다 먼저라는 사실이다. 데이터 라우트가 붙어도 이 경로는 문서에 없어 그 대조가 유지된다.
 GUARDED = "/unrouted"
+# 채널 쪽의 같은 대조. 03·04 가 붙일 `/runs` 와 `/runs/{run_id}/approval` 을 쓰지 않는 이유는
+# 라우트가 붙는 순간 404 가 바뀌어 그 티켓이 이 테스트에 막히기 때문이다. 이 경로는 그 둘 어느
+# 것에도 맞지 않는다. 실행 식별자 하나로 끝나는 라우트(`/runs/{run_id}`)를 더하는 티켓은 이 경로가
+# 그 라우트에 닿는지 다시 본다 — `verbatim` 변환기는 슬래시까지 잡는다.
+CHANNEL_GUARDED = "/runs/unrouted"
 
 
 CALC = parse_manifest(
@@ -324,7 +332,13 @@ def traces() -> FakeTrace:
 def app(stderr: io.StringIO, plugins: FakePlugins, traces: FakeTrace) -> FastAPI:
     source: PluginSource = plugins
     trace: TraceStore = traces
-    return create_app(plugins=source, trace=trace, token=TOKEN, stderr=stderr)
+    return create_app(
+        plugins=source,
+        trace=trace,
+        admin_token=TOKEN,
+        channel_token=CHANNEL_TOKEN,
+        stderr=stderr,
+    )
 
 
 @pytest.fixture
@@ -448,13 +462,96 @@ async def test_맞는_토큰은_미들웨어를_지나_라우팅까지_간다(cl
     assert (await client.get(GUARDED, headers=BEARER)).status_code == 404
 
 
-def test_빈_토큰으로는_앱을_세울_수_없다(stderr: io.StringIO) -> None:
-    """토큰 없이 도는 서버를 기본값으로 남기지 않는다. 진단과 종료 코드는 03 의 것이다."""
+@pytest.mark.parametrize(
+    ("admin_token", "channel_token"),
+    [("", CHANNEL_TOKEN), (TOKEN, ""), (TOKEN, TOKEN)],
+    ids=["빈 관리 토큰", "빈 채널 토큰", "같은 두 토큰"],
+)
+def test_빈_토큰이나_같은_두_토큰으로는_앱을_세울_수_없다(
+    stderr: io.StringIO, admin_token: str, channel_token: str
+) -> None:
+    """토큰 없이 도는 면을 기본값으로 남기지 않고, 두 토큰이 같으면 분리가 무효다(ADR 0015).
+    진단과 종료 코드로 운영자에게 말하는 것은 `serve` 의 몫이다."""
     plugins: PluginSource = FakePlugins()
     trace: TraceStore = FakeTrace()
 
     with pytest.raises(ValueError):
-        create_app(plugins=plugins, trace=trace, token="", stderr=stderr)
+        create_app(
+            plugins=plugins,
+            trace=trace,
+            admin_token=admin_token,
+            channel_token=channel_token,
+            stderr=stderr,
+        )
+
+
+# 채널 토큰 — `/runs` 아래는 채널 토큰만, 그 밖은 관리 토큰만 연다(티켓 02, ADR 0015)
+
+
+def _under_channel(path: str) -> bool:
+    """전수 검사가 관리 경로를 고르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시
+    적은 것이라, 둘이 같은 규칙이라는 것은 `/runsx` 대조가 잰다."""
+    return path == "/runs" or path.startswith("/runs/")
+
+
+async def test_채널_경로는_채널_토큰만_열고_관리_토큰으로는_401이다(client: AsyncClient) -> None:
+    """트레이스를 읽는 권한이 비용과 부작용이 있는 실행을 일으키는 권한이 되지 않는다(스토리 51).
+    채널 토큰의 404 가 곧 미들웨어를 지나 라우팅까지 갔다는 뜻이다."""
+    nothing = await client.get(CHANNEL_GUARDED)
+    admin = await client.get(CHANNEL_GUARDED, headers=BEARER)
+    channel = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER)
+
+    assert nothing.status_code == 401
+    assert admin.status_code == 401
+    assert channel.status_code == 404
+
+
+async def test_접두사_그_자체도_채널이다(client: AsyncClient) -> None:
+    """`/runs` 에는 03 이 라우트를 붙여 채널 토큰의 답이 404 에서 405 로 바뀐다. 그래서 채널
+    토큰으로는 미들웨어를 지났다는 것(401 이 아니다)까지만 본다."""
+    admin = await client.get("/runs", headers=BEARER)
+    channel = await client.get("/runs", headers=CHANNEL_BEARER)
+
+    assert admin.status_code == 401
+    assert channel.status_code != 401
+
+
+async def test_접두사를_문자열로만_공유하는_경로는_채널이_아니다(client: AsyncClient) -> None:
+    """접두사 비교는 경로 조각 단위다(스토리 54). 문자열 비교였다면 이 대조가 뒤집힌다."""
+    channel = await client.get("/runsx", headers=CHANNEL_BEARER)
+    admin = await client.get("/runsx", headers=BEARER)
+
+    assert channel.status_code == 401
+    assert admin.status_code == 404
+
+
+async def test_관리_경로_전부가_채널_토큰으로_401이다(app: FastAPI, client: AsyncClient) -> None:
+    """위젯에 준 토큰으로 모든 실행의 트레이스를 읽지 못한다(스토리 52). 채널 쪽 전수 열거는 채널
+    라우트가 생기는 03 이 같은 가드와 함께 더한다."""
+    documented = _documented_paths(app)
+    admin_paths = [
+        path for path in documented if path not in PUBLIC_PATHS and not _under_channel(path)
+    ]
+    assert admin_paths, "관리 경로가 없으면 이 전수 검사는 401 을 한 번도 재지 않는다"
+
+    for path in admin_paths:
+        response = await client.get(path, headers=CHANNEL_BEARER)
+        assert response.status_code == 401, path
+
+
+async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_않는다(
+    client: AsyncClient, stderr: io.StringIO
+) -> None:
+    """원칙 V. 틀린 면에 내민 토큰도, 맞는 면에 내민 토큰도 되울리지 않는다."""
+    wrong_surface = await client.get(GUARDED, headers=CHANNEL_BEARER)
+    admin_on_channel = await client.get(CHANNEL_GUARDED, headers=BEARER)
+    accepted = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER)
+
+    for response in (wrong_surface, admin_on_channel, accepted):
+        assert CHANNEL_TOKEN not in response.text
+        assert TOKEN not in response.text
+    assert CHANNEL_TOKEN not in stderr.getvalue()
+    assert TOKEN not in stderr.getvalue()
 
 
 async def test_에러_응답이_봉투이고_code_가_상태_코드와_짝이다(client: AsyncClient) -> None:
