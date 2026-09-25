@@ -9,6 +9,7 @@
 """
 
 import base64
+import contextlib
 import dataclasses
 import inspect
 import io
@@ -21,6 +22,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 
 from agent_os import server as server_module
@@ -28,10 +30,12 @@ from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
 from agent_os.admin.http import Health
 from agent_os.admin.traces import CURSOR_PATTERN
+from agent_os.channel.http.router import CHANNEL_PREFIX
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     Absent,
+    Clock,
     Cursor,
     ManifestRow,
     NotResumable,
@@ -40,6 +44,7 @@ from agent_os.core.ports import (
     RunRow,
     RunStatus,
     RunSummary,
+    ToolConnection,
     ToolSource,
     Trace,
     TraceSchemaVersion,
@@ -306,6 +311,51 @@ class FakeTrace:
         return tuple(rows[: DEFAULT_LIMIT if limit is None else limit])
 
 
+class IdleTools:
+    """이 파일은 관리를 민다. 관리는 실행을 일으키지 않으므로 불리면 그 자체가 결함이다.
+    채널이 이 포트를 쓰는 것은 `tests/channel/http/test_router.py` 가 잰다."""
+
+    def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> contextlib.AbstractAsyncContextManager[ToolConnection]:
+        raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+
+class IdleClock:
+    """불리면 그 자체가 결함이다. 이유는 `IdleTools` 와 같다."""
+
+    def now(self) -> datetime:
+        raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+    def new_run_id(self) -> RunId:
+        raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+
+def _admin_app(
+    *,
+    plugins: PluginSource,
+    trace: TraceStore,
+    stderr: io.StringIO,
+    admin_token: str = TOKEN,
+    channel_token: str = CHANNEL_TOKEN,
+) -> FastAPI:
+    """관리를 미는 앱. 채널의 포트 셋은 불리지 않는 자리표시자다. 인자 타입이 포트 적합성을
+    검증하는 자리다."""
+    tools: ToolSource = IdleTools()
+    clock: Clock = IdleClock()
+    return create_app(
+        plugins=plugins,
+        trace=trace,
+        model=GenericFakeChatModel(messages=iter(())),
+        tools=tools,
+        clock=clock,
+        principal=Principal("alice"),
+        admin_token=admin_token,
+        channel_token=channel_token,
+        stderr=stderr,
+    )
+
+
 @pytest.fixture
 def stderr() -> io.StringIO:
     """서버 표준 에러. 실패 하나가 남기는 한 줄을 테스트가 읽는 자리다."""
@@ -330,15 +380,7 @@ def traces() -> FakeTrace:
 
 @pytest.fixture
 def app(stderr: io.StringIO, plugins: FakePlugins, traces: FakeTrace) -> FastAPI:
-    source: PluginSource = plugins
-    trace: TraceStore = traces
-    return create_app(
-        plugins=source,
-        trace=trace,
-        admin_token=TOKEN,
-        channel_token=CHANNEL_TOKEN,
-        stderr=stderr,
-    )
+    return _admin_app(plugins=plugins, trace=traces, stderr=stderr)
 
 
 @pytest.fixture
@@ -472,16 +514,13 @@ def test_빈_토큰이나_같은_두_토큰으로는_앱을_세울_수_없다(
 ) -> None:
     """토큰 없이 도는 면을 기본값으로 남기지 않고, 두 토큰이 같으면 분리가 무효다(ADR 0015).
     진단과 종료 코드로 운영자에게 말하는 것은 `serve` 의 몫이다."""
-    plugins: PluginSource = FakePlugins()
-    trace: TraceStore = FakeTrace()
-
     with pytest.raises(ValueError):
-        create_app(
-            plugins=plugins,
-            trace=trace,
+        _admin_app(
+            plugins=FakePlugins(),
+            trace=FakeTrace(),
+            stderr=stderr,
             admin_token=admin_token,
             channel_token=channel_token,
-            stderr=stderr,
         )
 
 
@@ -489,9 +528,9 @@ def test_빈_토큰이나_같은_두_토큰으로는_앱을_세울_수_없다(
 
 
 def _under_channel(path: str) -> bool:
-    """전수 검사가 관리 경로를 고르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시
-    적은 것이라, 둘이 같은 규칙이라는 것은 `/runsx` 대조가 잰다."""
-    return path == "/runs" or path.startswith("/runs/")
+    """전수 검사가 두 면을 가르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시 적은
+    것이라, 둘이 같은 규칙이라는 것은 `/runsx` 대조가 잰다. 접두사는 채널이 소유한 그것이다."""
+    return path == CHANNEL_PREFIX or path.startswith(f"{CHANNEL_PREFIX}/")
 
 
 async def test_채널_경로는_채널_토큰만_열고_관리_토큰으로는_401이다(client: AsyncClient) -> None:
@@ -525,18 +564,36 @@ async def test_접두사를_문자열로만_공유하는_경로는_채널이_아
     assert admin.status_code == 404
 
 
-async def test_관리_경로_전부가_채널_토큰으로_401이다(app: FastAPI, client: AsyncClient) -> None:
-    """위젯에 준 토큰으로 모든 실행의 트레이스를 읽지 못한다(스토리 52). 채널 쪽 전수 열거는 채널
-    라우트가 생기는 03 이 같은 가드와 함께 더한다."""
-    documented = _documented_paths(app)
-    admin_paths = [
-        path for path in documented if path not in PUBLIC_PATHS and not _under_channel(path)
-    ]
-    assert admin_paths, "관리 경로가 없으면 이 전수 검사는 401 을 한 번도 재지 않는다"
+def _documented_operations(app: FastAPI) -> tuple[tuple[str, str], ...]:
+    """앱이 아는 (메서드, 경로) 전부. 라우트를 더하면 토큰 두 방향의 전수 검사가 저절로 는다."""
+    paths = app.openapi().get("paths", {})
+    return tuple(
+        (str(method).upper(), str(path))
+        for path, operations in paths.items()
+        for method in operations
+    )
 
-    for path in admin_paths:
-        response = await client.get(path, headers=CHANNEL_BEARER)
-        assert response.status_code == 401, path
+
+async def test_토큰은_자기_면만_연다_채널_경로는_관리_토큰으로_관리_경로는_채널_토큰으로_401이다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """트레이스를 읽는 권한이 실행을 일으키는 권한이 되지 않고(스토리 51), 위젯에 준 토큰으로 모든
+    실행의 트레이스를 읽지 못한다(스토리 52). 방향마다 열거가 비면 그 방향은 아무것도 재지
+    않는다."""
+    operations = [
+        (method, path) for method, path in _documented_operations(app) if path not in PUBLIC_PATHS
+    ]
+    channel = [(method, path) for method, path in operations if _under_channel(path)]
+    admin = [(method, path) for method, path in operations if not _under_channel(path)]
+    assert channel, "채널 경로가 없으면 관리 토큰 쪽 방향은 401 을 한 번도 재지 않는다"
+    assert admin, "관리 경로가 없으면 채널 토큰 쪽 방향은 401 을 한 번도 재지 않는다"
+
+    for (method, path), wrong in [
+        *((op, BEARER) for op in channel),
+        *((op, CHANNEL_BEARER) for op in admin),
+    ]:
+        response = await client.request(method, path, headers=wrong)
+        assert response.status_code == 401, (method, path)
 
 
 async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_않는다(
@@ -722,12 +779,13 @@ def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(
     }
 
 
-def test_create_app_이_도구_포트를_받지_않는다() -> None:
-    """조회가 MCP 서버를 띄우는 것이 구조적으로 불가능하다(스토리 7)."""
-    parameters = inspect.signature(create_app).parameters
+def test_관리_라우터가_도구_포트를_받지_않는다() -> None:
+    """조회가 MCP 서버를 띄우는 것이 구조적으로 불가능하다(스토리 7). 앱은 채널을 위해 도구 포트를
+    받지만 그 성질을 지키던 것은 관리 라우터의 시그니처다(ADR 0010 의 2026-09-24 이력)."""
+    parameters = inspect.signature(admin_http.admin_router).parameters
 
     assert "tools" not in parameters
-    assert ToolSource not in get_type_hints(create_app).values()
+    assert ToolSource not in get_type_hints(admin_http.admin_router).values()
 
 
 def test_모듈_수준_전역_앱이_없다() -> None:

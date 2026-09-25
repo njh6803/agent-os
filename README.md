@@ -18,7 +18,8 @@ src/agent_os/
   server.py        HTTP 표면의 조립 층. create_app() 하나. 전역 app을 두지 않는다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
-  channel/cli/     실행을 일으키는 면
+  channel/cli/     실행을 일으키는 면. run·resume 과 명령 셋의 인자
+  channel/http/    실행을 일으키는 면. router(POST /runs 와 본문), runs(실행을 앱의 수명에 묶는다)
   admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
   http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 상태 코드 표), routes(에러 문서와 verbatim), auth(fail-closed 토큰)
   adapters/        포트 구현
@@ -34,10 +35,10 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 열 때만 로드
   skills/          엔지니어링 스킬
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
-openapi.json       관리 API의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
+openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것(`channel/http`, `web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것(`web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
 
 ## 원천 표
 

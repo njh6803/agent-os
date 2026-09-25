@@ -29,7 +29,8 @@ MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트�
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Mapping, Sequence
+from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import datetime
 from typing import NoReturn, TypeGuard, assert_never
@@ -482,7 +483,7 @@ async def _drive(
         trace.write(event)
         return event
 
-    async def execute() -> AsyncIterator[Event]:
+    async def execute() -> AsyncGenerator[Event]:
         """실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
 
         일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
@@ -513,17 +514,21 @@ async def _drive(
                 for pending in ctx.take_events():
                     yield pending
 
+    # 안쪽 제너레이터를 여기서 닫는다. 트레이스 쓰기가 실패하면 예외가 이 몸통에서 나고, 그때
+    # execute() 는 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을 닫아
+    # MCP 어댑터의 anyio 취소 범위가 깨진다 — 연결은 연 태스크가 닫아야 한다(http-channel 티켓 03).
     last: Event | None = None
-    try:
-        async for event in execute():
-            last = event
-            yield emit(event)
-    except Exception as error:
-        # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
-        # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
-        if not paused:
-            yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
-        return
+    async with aclosing(execute()) as executed:
+        try:
+            async for event in executed:
+                last = event
+                yield emit(event)
+        except Exception as error:
+            # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
+            # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
+            if not paused:
+                yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
+            return
     if not paused and not isinstance(last, RunFinished):
         yield emit(
             RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")

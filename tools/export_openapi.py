@@ -15,28 +15,45 @@ from __future__ import annotations
 
 import io
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from contextlib import AbstractAsyncContextManager
+from datetime import datetime
 from pathlib import Path
 
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+
 from agent_os.core.ports import (
+    Clock,
     Cursor,
     ManifestRow,
     PluginSource,
     RunRow,
     RunStatus,
+    ToolConnection,
+    ToolSource,
     Trace,
     TraceStore,
 )
-from agent_os.sdk import BaseAgent, Event, PluginKind, PluginManifest, PluginName, RunId
+from agent_os.sdk import (
+    BaseAgent,
+    Event,
+    McpServer,
+    PluginKind,
+    PluginManifest,
+    PluginName,
+    Principal,
+    RunId,
+)
 from agent_os.server import create_app
 
 ROOT = Path(__file__).resolve().parent.parent
 OPENAPI_PATH = ROOT / "openapi.json"
 
-# 스키마는 토큰을 읽지 않는다. 이 값들은 앱을 세우기 위한 자리표시자이고 어떤 서버에도 쓰이지
+# 스키마는 토큰도 주체도 읽지 않는다. 이 값들은 앱을 세우기 위한 자리표시자이고 어떤 서버에도 쓰이지
 # 않는다. 빈 문자열이나 같은 값을 쓸 수 없는 이유는 `create_app` 이 그런 앱을 거부하기 때문이다.
 _PLACEHOLDER_ADMIN_TOKEN = "openapi-export-only-admin"
 _PLACEHOLDER_CHANNEL_TOKEN = "openapi-export-only-channel"
+_PLACEHOLDER_PRINCIPAL = Principal("openapi-export-only")
 
 
 class _SchemaOnlyPlugins:
@@ -49,6 +66,21 @@ class _SchemaOnlyPlugins:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+
+class _SchemaOnlyTools:
+    def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AbstractAsyncContextManager[ToolConnection]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+
+class _SchemaOnlyClock:
+    def now(self) -> datetime:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def new_run_id(self) -> RunId:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 
@@ -78,9 +110,16 @@ def document() -> str:
     """
     plugins: PluginSource = _SchemaOnlyPlugins()
     trace: TraceStore = _SchemaOnlyTrace()
+    tools: ToolSource = _SchemaOnlyTools()
+    clock: Clock = _SchemaOnlyClock()
     app = create_app(
         plugins=plugins,
         trace=trace,
+        # 응답이 빈 가짜 모델이다. 불리면 곧바로 터진다 — 포트 스텁들과 같은 뜻이다.
+        model=GenericFakeChatModel(messages=iter(())),
+        tools=tools,
+        clock=clock,
+        principal=_PLACEHOLDER_PRINCIPAL,
         admin_token=_PLACEHOLDER_ADMIN_TOKEN,
         channel_token=_PLACEHOLDER_CHANNEL_TOKEN,
         stderr=io.StringIO(),

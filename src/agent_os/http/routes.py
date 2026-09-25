@@ -39,6 +39,29 @@ def documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
     }
 
 
+# 봉투 컴포넌트의 참조. `documented_errors` 를 쓰는 라우트가 모델로 그 컴포넌트를 등록하고(관리
+# 라우트가 늘 그렇다), 스트림 라우트는 이름으로 가리킨다. 둘이 같은 것을 가리킨다는 것은 에러 문서의
+# 전수 테스트가 모든 경로에서 잰다.
+_ENVELOPE_REF = f"#/components/schemas/{ErrorEnvelope.__name__}"
+
+
+def documented_stream_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
+    """스트림 라우트의 에러 응답들(질의). 모양은 봉투이고 미디어 타입은 JSON 이다.
+
+    FastAPI 는 에러 문서의 모델을 라우트 응답 클래스의 미디어 타입 아래에 싣는다(fastapi 0.141.1
+    의 `openapi/utils.py`). 스트림 라우트(`EventSourceResponse`)에서 그것은 `text/event-stream`
+    이라, 모델로 적으면 봉투가 스트림으로 온다고 계약이 말한다. 에러는 스트림이 시작되기 전에 JSON
+    봉투로 나가므로 미디어 타입을 손으로 적고 모델 대신 참조를 둔다.
+    """
+    return {
+        status: {
+            "description": _DOCUMENTED_ERRORS[status],
+            "content": {"application/json": {"schema": {"$ref": _ENVELOPE_REF}}},
+        }
+        for status in statuses
+    }
+
+
 class _Verbatim(Convertor[str]):
     """경로 파라미터 자리에 온 것을 슬래시와 개행까지 통째로 잡는다. 판정은 패턴이 한다.
 

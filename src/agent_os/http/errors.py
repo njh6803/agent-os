@@ -257,8 +257,7 @@ class AssignRequestId(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as error:
-            remember_failure(request, _detail_of(error))
-            return _enveloped(request, failure_for(error))
+            return _answered(request, error)
 
 
 def install_error_handlers(app: FastAPI) -> None:
@@ -268,12 +267,21 @@ def install_error_handlers(app: FastAPI) -> None:
     """
 
     async def handle(request: Request, error: Exception) -> Response:
-        remember_failure(request, _detail_of(error))
-        return _enveloped(request, failure_for(error))
+        return _answered(request, error)
 
     app.add_exception_handler(StarletteHTTPException, handle)
     app.add_exception_handler(RequestValidationError, handle)
     app.add_exception_handler(PluginError, handle)
+
+
+def _answered(request: Request, error: Exception) -> JSONResponse:
+    """예외 하나를 표에 넣어 봉투로 답하고 기록할 문구를 적어 둔다. 핸들러와 미들웨어가 같이 쓴다.
+
+    표를 한 번만 지나게 하려고 한 자리다. 기록 문구도 표가 뽑은 것에서 만든다.
+    """
+    failure = failure_for(error)
+    remember_failure(request, _detail_of(error, failure))
+    return _enveloped(request, failure)
 
 
 def _enveloped(request: Request, failure: _Failure) -> JSONResponse:
@@ -293,10 +301,17 @@ def _failure_detail(request: Request) -> str:
     return found if isinstance(found, str) else ""
 
 
-def _detail_of(error: Exception) -> str:
-    """서버 기록에만 가는 문구. 밖으로 나가는 `message` 와 가른 이유는 예기치 않은 실패의 원인을
-    운영자는 봐야 하고 클라이언트는 보면 안 되기 때문이다."""
-    return f"{type(error).__name__}: {error}"
+def _detail_of(error: Exception, failure: _Failure) -> str:
+    """서버 기록에만 가는 문구(질의). 밖으로 나가는 `message` 와 가른 이유는 예기치 않은 실패의
+    원인을 운영자는 봐야 하고 클라이언트는 보면 안 되기 때문이다.
+
+    형식 오류는 위치와 문구만 싣는다. 검증 오류의 문자열은 받은 값을 되울리는데, 채널의 본문은
+    사람이 쓴 요청 문자열이다(원칙 V). 표가 뽑은 `violations` 그대로라 기록과 응답이 같은 말을 한다.
+    """
+    name = type(error).__name__
+    if failure.violations:
+        return f"{name}: " + "; ".join(f"{v.field}: {v.message}" for v in failure.violations)
+    return f"{name}: {error}"
 
 
 def _new_request_id() -> str:
