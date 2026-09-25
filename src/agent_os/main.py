@@ -40,6 +40,12 @@ CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
+# 서버를 멈출 때 연결이 남은 응답을 기다리는 상한(초). uvicorn 의 기본값은 연결이 전부 끝날
+# 때까지 앱의 수명을 닫지 않아, 멈추라는 명령이 실행 하나가 끝나기를 제한 없이 기다린다(ADR 0014
+# 의 2026-09-24 이력). 유예가 지나면 남은 연결이 끊기고 앱의 수명이 닫히며 남은 실행은 전부
+# 취소되어 결말 없음이 된다. 5 초는 결말 직전의 실행이 마지막 이벤트를 흘릴 여유이고, 모델 호출
+# 하나(수십 초)를 기다려 주는 길이가 아니다. 그 실행은 트레이스에 결말 없음으로 남는다.
+SHUTDOWN_GRACE_SECONDS = 5
 
 _NO_ADMIN_TOKEN_DIAGNOSTIC = (
     f"{ADMIN_TOKEN_ENV} 가 비어 있다. 관리 API 는 토큰 없이 서지 않는다(ADR 0011).\n"
@@ -66,8 +72,8 @@ _NOT_LOOPBACK_DIAGNOSTIC = (
 def main(argv: list[str] | None = None) -> int:
     _use_utf8(sys.stdout, sys.stderr)
     args = parse_args(argv)
-    # serve 를 먼저 가르는 이유는 관리 API 가 읽기 전용이라 모델이 필요 없기 때문이다. 모델을
-    # 여기서 풀면 serve 가 쓰지도 않는 값의 부재로 실패한다.
+    # serve 를 먼저 가르는 이유는 serve 가 빈 모델 지정을 다른 구성 오류와 한 목록에 모아 내기
+    # 때문이다. 모델을 여기서 풀면 serve 의 진단이 모델 하나에서 먼저 끊긴다.
     if isinstance(args, ServeArgs):
         return _serve(args)
     try:
@@ -86,10 +92,14 @@ def _chat_model(name: str | None) -> ChatModel:
 
 
 def _serve(args: ServeArgs) -> int:
-    """관리 API 를 세운다. 구성 오류는 요청 시점이 아니라 여기서 끝난다(ADR 0011).
+    """관리 API 와 HTTP 채널을 한 앱으로 세운다. 구성 오류는 요청 시점이 아니라 여기서 끝난다.
 
     실행 식별자가 생기기 전이라 트레이스가 없는 `PluginError` 계열과 같은 성격이다. 진단을 모아
     한 번에 내는 이유는 하나씩 내면 운영자가 고치고 다시 치고 또 막히기 때문이다.
+
+    모델은 여기서 한 번 풀고 요청마다 고르지 않는다(ADR 0014). API 키는 보지 않는다 — CLI 처럼
+    실행 안의 `run_failed` 로 드러난다. 채널 실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
+    신원의 출처를 정하는 것이 조립이라 채널이 스스로 읽지 않고 여기서 넘긴다.
 
     마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
     서고, 그것이 이 명령이 막으려던 바로 그 상태다.
@@ -104,12 +114,17 @@ def _serve(args: ServeArgs) -> int:
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
             trace=JsonlTrace(args.traces),
+            model=_chat_model(args.model),
+            tools=McpTools(),
+            clock=SystemClock(),
+            principal=Principal(getpass.getuser()),
             admin_token=admin_token,
             channel_token=channel_token,
             stderr=sys.stderr,
         ),
         host=args.host,
         port=args.port,
+        timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
     )
     return EXIT_FINISHED
 
@@ -141,7 +156,23 @@ def _configuration_problems(args: ServeArgs, admin_token: str, channel_token: st
                 allowed=", ".join(LOOPBACK_HOSTS), host=args.host, port=args.port
             )
         )
+    model = _model_problem(args.model)
+    if model is not None:
+        problems.append(model)
     return problems
+
+
+def _model_problem(flag: str | None) -> str | None:
+    """빈 모델 지정이면 그 진단(질의). 모델을 시작 때 푸는 순간 이것도 시작 자리의 구성 오류다.
+
+    푸는 규칙은 CLI 와 같은 `resolve_model_name` 하나다. 여기서는 풀리는지만 보고 모델은 검사가
+    끝난 뒤 한 번 만든다.
+    """
+    try:
+        resolve_model_name(os.environ, flag)
+    except ValueError as error:
+        return str(error)
+    return None
 
 
 async def _run(args: RunArgs, model: ChatModel) -> int:

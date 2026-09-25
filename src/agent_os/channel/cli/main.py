@@ -1,8 +1,9 @@
 """CLI 채널. 실행을 일으키는 명령 둘, run 과 resume 이 여기에 붙는다.
 
-serve 는 실행을 일으키지 않아 명령 자체가 여기 없고 인자만 여기서 갈린다. 관리 API 를 세우는
-것은 조립이라 `main.py` 의 일이고, 채널은 `server` 를 import 할 수 없다(원칙 IV). 그래서 serve 는
-모델도 진행 표시도 받지 않는다 — 받을 자리가 없는 것이 곧 그 사실이다.
+serve 는 관리 API 와 HTTP 채널을 한 앱으로 세운다. 앱을 세우는 것은 조립이라 `main.py` 의 일이고,
+채널은 `server` 를 import 할 수 없다(원칙 IV). 그래서 serve 는 명령 자체가 여기 없고 인자만 여기서
+갈린다. 모델은 받고 진행 표시는 받지 않는다 — HTTP 채널이 실행을 일으키므로 모델을 시작 때 한 번
+정하고, 진행 이벤트가 가는 곳은 표준 에러가 아니라 요청마다의 스트림이다.
 
 표준 출력은 실행의 결말만 싣는다. 끝나면 출력 문자열, 멈추면 실행 식별자와 승인 요청(도구 이름과
 인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령 둘(승인, 사유를 붙이는 거부). 표준
@@ -72,10 +73,11 @@ class ResumeArgs:
 
 @dataclass(frozen=True)
 class ServeArgs:
-    """관리 API 를 세우는 데 필요한 값 넷. 비밀은 없다 — 토큰만 환경변수로 온다(ADR 0011)."""
+    """관리 API 와 채널을 세우는 데 필요한 값 다섯. 비밀은 없다 — 토큰만 환경변수로 온다."""
 
     host: str
     port: int
+    model: str | None
     traces: Path
     plugins_root: Path
 
@@ -101,13 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
     )
     _add_shared(resume_parser)
-    serve_parser = commands.add_parser("serve", help="관리 API 를 루프백에 세운다")
+    serve_parser = commands.add_parser("serve", help="관리 API 와 HTTP 채널을 루프백에 세운다")
     serve_parser.add_argument(
         "--host", default=DEFAULT_HOST, help=f"바인딩 주소. 루프백만 (기본 {DEFAULT_HOST})"
     )
     serve_parser.add_argument(
         "--port", type=_port, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"
     )
+    _add_model(serve_parser)
     _add_directories(serve_parser)
     return parser
 
@@ -133,9 +136,14 @@ def _port(value: str) -> int:
 
 def _add_shared(parser: argparse.ArgumentParser) -> None:
     """두 명령이 같이 받는 것. 재개도 재생 뒤 실제로 이어 가므로 모델이 필요하다."""
-    parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
+    _add_model(parser)
     parser.add_argument("--verbose", action="store_true", help="진행 이벤트를 표준 에러로")
     _add_directories(parser)
+
+
+def _add_model(parser: argparse.ArgumentParser) -> None:
+    """명령 셋이 같이 받는 것. 푸는 규칙은 `main.py` 가 쓰는 `resolve_model_name` 하나다."""
+    parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
 
 
 def _add_directories(parser: argparse.ArgumentParser) -> None:
@@ -156,14 +164,15 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     namespace = parser.parse_args(argv)
     traces = Path(namespace.traces)
     plugins_root = Path(namespace.plugins_root)
+    model = None if namespace.model is None else str(namespace.model)
     if namespace.command == "serve":
         return ServeArgs(
             host=str(namespace.host),
             port=int(namespace.port),
+            model=model,
             traces=traces,
             plugins_root=plugins_root,
         )
-    model = None if namespace.model is None else str(namespace.model)
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":
         return ResumeArgs(

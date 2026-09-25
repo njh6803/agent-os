@@ -17,10 +17,13 @@ import pytest
 import uvicorn
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 
+from agent_os import main as main_module
+from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
-from agent_os.core.ports import Trace, UnknownEvent
+from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     ApprovalDenied,
@@ -797,6 +800,116 @@ async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
         assert (await client.get("/unrouted", headers=channel)).status_code == 401
         assert (await client.get("/runs/unrouted", headers=channel)).status_code == 404
         assert (await client.get("/runs/unrouted", headers=admin)).status_code == 401
+
+
+@pytest.fixture
+def model_names(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """`serve` 가 모델 어댑터를 몇 번, 어떤 이름으로 만들었는지 기록한다. 모델은 부르지 않는다."""
+    names: list[str] = []
+
+    def _record(name: str) -> ChatModel:
+        names.append(name)
+        return GenericFakeChatModel(messages=iter(()))
+
+    monkeypatch.setattr(main_module, "anthropic_chat_model", _record)
+    return names
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값_순으로_푼다(
+    monkeypatch: pytest.MonkeyPatch,
+    uvicorn_calls: list[dict[str, object]],
+    model_names: list[str],
+) -> None:
+    """두 채널이 같은 모델로 돈다고 믿을 수 있게 CLI 와 같은 규칙이다(스토리 40). 요청마다 고르지
+    않는다(스토리 23)."""
+    monkeypatch.setenv(MODEL_ENV, "from-env")
+
+    main(["serve", "--model", "from-flag"])
+    main(["serve"])
+    monkeypatch.delenv(MODEL_ENV)
+    main(["serve"])
+
+    assert model_names == ["from-flag", "from-env", DEFAULT_MODEL]
+    assert len(uvicorn_calls) == 3
+
+
+def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """모델을 시작 때 푸는 순간 빈 지정도 시작 자리의 구성 오류다(스토리 43)."""
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
+
+    code = main(["serve", "--host", "0.0.0.0", "--model", ""])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert "모델 이름" in err
+    assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
+    assert "0.0.0.0" in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_API_키는_시작_때_보지_않는다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """CLI 와 같이 실행 안의 run_failed 로 드러난다(ADR 0014). 키가 없다고 서버가 안 서면 관리
+    API 까지 함께 막힌다."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    code = main(["serve"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_serve_가_연결이_남은_실행을_제한_없이_기다리지_않게_uvicorn_에_유예를_넘긴다(
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """uvicorn 의 기본값은 연결이 전부 끝날 때까지 앱의 수명을 닫지 않는다. 멈추라는 명령이 실행
+    하나가 끝나기를 제한 없이 기다리는 모양이다(ADR 0014 의 2026-09-24 이력). 그 순서는 앱의 수명을
+    직접 닫는 테스트로 잴 수 없어 넘긴 값을 판정한다."""
+    main(["serve"])
+
+    (call,) = uvicorn_calls
+    grace = call["timeout_graceful_shutdown"]
+    assert isinstance(grace, int | float)
+    assert grace > 0
+
+
+@pytest.mark.usefixtures("tokens")
+async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이고_트레이스가_그_디렉터리에_남는다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """신원의 출처를 정하는 것은 조립이다(ADR 0015). 채널이 스스로 OS 사용자를 읽지 않는다. 실행
+    하나가 도구 포트와 시계와 트레이스 포트를 모두 지나므로 `serve` 가 그것들을 만들어 넘겼다는
+    것도 함께 잰다. 무엇을 넘겼는지를 인자로 재지 않고 세운 앱의 답으로 잰다."""
+    main(["serve", "--traces", "t"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+    ):
+        response = await client.post(
+            "/runs", json={"agent": "echo", "request": "hi"}, headers=channel
+        )
+
+    frames = [block.removeprefix("data: ") for block in response.text.split("\n\n") if block]
+    events = [json.loads(frame) for frame in frames if not frame.startswith(":")]
+    assert [event["type"] for event in events] == ["run_started", "run_finished"]
+    assert events[0]["principal"] == getpass.getuser()
+    (trace_file,) = _trace_files(workspace / "t")
+    assert trace_file.stem == events[0]["run_id"]
 
 
 def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_아니라_거기서_읽는다(

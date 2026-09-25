@@ -130,10 +130,22 @@ def test_serve_는_인자_없이도_성립하고_호스트_기본이_루프백�
     assert args.plugins_root == DEFAULT_PLUGINS_ROOT
 
 
-def test_serve_는_모델도_진행_표시도_받지_않는다() -> None:
-    """관리 API 는 읽기 전용이라 실행을 일으키지 않는다. 받을 자리가 없는 것이 그 사실이다."""
+def test_serve_는_모델을_받고_없으면_지정하지_않은_것이다() -> None:
+    """채널이 실행을 일으키므로 모델을 시작 때 한 번 정한다. 순서는 CLI 와 같고 그 규칙을 푸는 것은
+    `main.py` 다(ADR 0010 의 2026-09-24 이력)."""
+    chosen = parse_args(["serve", "--model", "m"])
+    default = parse_args(["serve"])
+
+    assert isinstance(chosen, ServeArgs)
+    assert isinstance(default, ServeArgs)
+    assert chosen.model == "m"
+    assert default.model is None
+
+
+def test_serve_는_진행_표시를_받지_않는다() -> None:
+    """진행 이벤트를 보낼 곳이 표준 에러가 아니라 요청마다의 스트림이다."""
     with pytest.raises(SystemExit):
-        parse_args(["serve", "--model", "m"])
+        parse_args(["serve", "--verbose"])
 
 
 def test_실행과_재개도_플러그인_루트를_받고_기본은_plugins_다() -> None:

@@ -626,6 +626,45 @@ async def test_도구_연결은_실행이_실패해도_닫힌다(trace: FakeTrac
     assert tools.closed is True
 
 
+class FullDiskTrace(FakeTrace):
+    """정해진 개수까지만 쓰고 그 뒤로는 실패한다. 디스크가 가득 찬 것과 같다."""
+
+    def __init__(self, writable: int) -> None:
+        super().__init__()
+        self._writable = writable
+
+    def write(self, event: Event) -> None:
+        if len(self.events) >= self._writable:
+            raise OSError("트레이스를 쓸 수 없다: 디스크가 가득 찼다")
+        super().write(event)
+
+
+async def test_트레이스를_쓰지_못해_실행이_멈춰도_도구_연결은_그_자리에서_닫힌다(
+    clock: FakeClock,
+) -> None:
+    """연결을 연 태스크가 닫아야 한다. 도구 연결 안에 멈춘 안쪽 제너레이터를 가비지 수집에 맡기면
+    다른 태스크에서 닫혀 MCP 어댑터의 anyio 취소 범위가 깨진다(http-channel 티켓 03). 쓰기 실패는
+    core 가 run_failed 로 바꾸지 못하는 유일한 실패라 실행 밖으로 올라온다."""
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": DirectToolAgent()}, mcp=["calc-server"], servers=["calc-server"])
+    events = run(
+        AgentName("calc"),
+        "2+2?",
+        PRINCIPAL,
+        plugins=plugins,
+        model=ToolAwareFakeModel(messages=iter(())),
+        tools=tools,
+        trace=FullDiskTrace(writable=1),
+        clock=clock,
+    )
+
+    with pytest.raises(OSError):
+        async for _ in events:
+            pass
+
+    assert tools.closed is True
+
+
 async def test_마스킹된_인자를_가진_도구를_승인_대상으로_적으면_실행_전에_끝난다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
