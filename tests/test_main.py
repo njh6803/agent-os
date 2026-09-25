@@ -284,12 +284,15 @@ def test_빈_모델_지정은_실행_전에_진단을_적고_종료_코드_1이�
 
 
 def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다.
+    """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다."""
+    return _python(["-m", "agent_os.main", *argv], cwd=cwd)
 
-    한국어 출력이 cp949 로 깨지지 않게 UTF-8 을 강제한다(CLAUDE.md 환경 함정).
-    """
+
+def _python(args: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    """이 환경의 파이썬 프로세스 하나. 한국어 출력이 cp949 로 깨지지 않게 UTF-8 을 강제한다
+    (CLAUDE.md 환경 함정)."""
     return subprocess.run(
-        [sys.executable, "-m", "agent_os.main", *argv],
+        [sys.executable, *args],
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -297,6 +300,28 @@ def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
         env={**os.environ, "PYTHONUTF8": "1"},
         check=False,
     )
+
+
+def test_모듈로_실행하면_패키지_안의_http_층이_표준_라이브러리를_가리지_않는다(
+    tmp_path: Path,
+) -> None:
+    """`-m` 은 작업 디렉터리를 `sys.path` 첫머리에 둔다. `agent_os.http` 에는 절대 import 로만
+    닿는다. 콘솔 스크립트(`agent-os`)도 같은 import 라 이 길과 같다."""
+    result = _cli(["--help"], cwd=tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "agent-os" in result.stdout
+
+
+def test_패키지_안의_파일을_스크립트로_실행하면_이유와_처방을_말하고_끝난다(tmp_path: Path) -> None:
+    """스크립트 실행은 그 파일의 디렉터리를 `sys.path` 첫머리에 두어 `agent_os/http/` 가 표준
+    라이브러리 `http` 자리에 들어온다. 그대로면 `No module named 'http.client'` 로 죽고 원인이
+    보이지 않는다. 층이 그것을 알아채고 막는다(ADR 0016 의 2026-09-25 이력)."""
+    result = _python([str(REPO_ROOT / "src" / "agent_os" / "main.py"), "--help"], cwd=tmp_path)
+
+    assert result.returncode != 0
+    assert "표준 라이브러리" in result.stderr
+    assert "python -m agent_os.main" in result.stderr
 
 
 @pytest.mark.llm

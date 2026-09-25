@@ -19,7 +19,8 @@ src/agent_os/
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
   channel/cli/     실행을 일으키는 면
-  admin/           구성을 바꾸고 관찰하는 면. http(봉투와 라우터), auth(fail-closed 토큰)
+  admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
+  http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 상태 코드 표), routes(에러 문서와 verbatim), auth(fail-closed 토큰)
   adapters/        포트 구현
 plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml

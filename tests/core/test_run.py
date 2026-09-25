@@ -4,7 +4,15 @@
 """
 
 import itertools
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator, Mapping, Sequence
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
@@ -19,10 +27,12 @@ from langchain_core.runnables import Runnable
 
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
+    Absent,
     ChatModel,
     Clock,
     Cursor,
     ManifestRow,
+    NotResumable,
     PluginError,
     PluginSource,
     RunRow,
@@ -1586,6 +1596,199 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
 
     with pytest.raises(PluginError, match="run-1"):
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+
+# --- 실행 전 실패의 두 갈래 ---------------------------------------------------------
+#
+# 채널이 실행 전 실패를 상태 코드로 옮기려면 core 가 둘을 타입으로 갈라 던져야 한다(ADR 0014).
+# 요청이 이름을 댄 것이 없는 것(부재)과 요청이 가리킨 실행이 재개할 수 있는 상태가 아닌 것(재개
+# 불가)이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 상태 코드는 여기
+# 없다.
+
+_RUN_1 = RunId("run-1")
+
+
+def test_부재와_재개_불가는_PluginError_의_하위_타입이다() -> None:
+    """기반 타입을 잡는 채널(CLI)이 하위 타입도 잡는다는 전제다. 진단과 종료 코드가 그대로라는
+    것은 CLI 의 기존 테스트가 판정한다."""
+    assert issubclass(Absent, PluginError)
+    assert issubclass(NotResumable, PluginError)
+
+
+async def test_없는_에이전트를_부르면_부재다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent, match="nope"):
+        await _run(OneShotAgent(), model, trace, clock, name="nope")
+
+
+async def test_재개할_때_트레이스가_가리키는_에이전트가_없으면_부재가_아니라_PluginError다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """바로 위의 run() 과 같은 매니페스트 부재인데 뜻이 달라서 나란히 고정한다. 재개가 가리키는
+    것은 실행이고 그 실행은 있다. 없는 에이전트의 이름을 댄 것은 요청이 아니라 서버가 가진 기록이라
+    클라이언트가 고칠 수 없다(ADR 0014 의 2026-09-24 이력). 결정도 쓰이지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=_gated_plugins(OneShotAgent())
+    )
+
+    with pytest.raises(PluginError, match="calc") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=FakePlugins({}))
+
+    assert not isinstance(caught.value, Absent)
+    assert trace.events[-1].type == "run_paused"
+
+
+async def test_없는_실행을_재개하면_부재다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent, match="run-9"):
+        await _resume(RunId("run-9"), model, trace, clock)
+
+
+@pytest.mark.parametrize(
+    "last",
+    [
+        pytest.param(RunFinished(run_id=_RUN_1, ts=FIXED_NOW, output="4"), id="finished"),
+        pytest.param(RunFailed(run_id=_RUN_1, ts=FIXED_NOW, error="API down"), id="failed"),
+        pytest.param(
+            LlmCalled(
+                run_id=_RUN_1, ts=FIXED_NOW, model="fake-model", input_tokens=7, output_tokens=3
+            ),
+            id="unfinished",
+        ),
+    ],
+)
+async def test_일시정지가_아닌_실행을_재개하면_재개_불가다(
+    last: Event, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """실행은 있는데 지금 상태가 결정을 받을 수 없다. 이미 누군가 결정했거나 멈춘 적이 없다."""
+    trace.write(
+        RunStarted(
+            run_id=_RUN_1,
+            ts=FIXED_NOW,
+            agent=AgentName("calc"),
+            request="2+2?",
+            principal=PRINCIPAL,
+        )
+    )
+    trace.write(last)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(NotResumable, match="run-1"):
+        await _resume(_RUN_1, model, trace, clock)
+
+
+async def test_형식_1_트레이스를_재개하면_재개_불가다(clock: FakeClock) -> None:
+    """읽을 수는 있어도 재개할 수 없는 실행이다. 그 판정(`RESUMABLE`)은 core 밖으로 새지 않는다."""
+    trace = FakeTrace(schema_version="1")
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(NotResumable, match="run-1"):
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+
+class BrokenManifestPlugins(FakePlugins):
+    """어댑터가 매니페스트를 파싱하지 못한 모양. 어댑터는 그것을 PluginError 로 말한다."""
+
+    def __init__(self) -> None:
+        super().__init__({"calc": OneShotAgent()})
+
+    def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
+        raise PluginError(f"매니페스트를 읽을 수 없다: {name}")
+
+
+class UnimportablePlugins(FakePlugins):
+    """매니페스트는 읽히는데 진입점을 import하지 못한 모양. 어댑터는 이것도 PluginError 다."""
+
+    def __init__(self) -> None:
+        super().__init__({"calc": OneShotAgent()})
+
+    def load_agent(self, manifest: PluginManifest) -> BaseAgent:
+        raise PluginError(f"진입점을 import할 수 없다: {manifest.name}")
+
+
+async def _run_with(plugins: PluginSource, clock: FakeClock) -> None:
+    await _run(
+        OneShotAgent(), GenericFakeChatModel(messages=iter([])), FakeTrace(), clock, plugins=plugins
+    )
+
+
+async def _resume_paused(trace: FakeTrace, clock: FakeClock) -> None:
+    """승인 대상에서 멈춘 실행을 만들고 같은 트레이스로 재개한다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+
+async def _broken_manifest(clock: FakeClock) -> None:
+    await _run_with(BrokenManifestPlugins(), clock)
+
+
+async def _unimportable_entrypoint(clock: FakeClock) -> None:
+    await _run_with(UnimportablePlugins(), clock)
+
+
+async def _missing_mcp(clock: FakeClock) -> None:
+    await _run_with(FakePlugins({"calc": OneShotAgent()}, mcp=["ghost"]), clock)
+
+
+async def _masked_approval(clock: FakeClock) -> None:
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["mailer"],
+        servers=["mailer"],
+        requires_approval=["send_email"],
+        secret_args={"send_email": ["api_key"]},
+    )
+    await _run_with(plugins, clock)
+
+
+async def _unknown_event(clock: FakeClock) -> None:
+    await _resume_paused(UnknownEventTrace(), clock)
+
+
+async def _empty_trace(clock: FakeClock) -> None:
+    await _resume_paused(EmptyTrace(), clock)
+
+
+async def _mixed_runs(clock: FakeClock) -> None:
+    await _resume_paused(CorruptTrace(), clock)
+
+
+async def _unwritable_decision(clock: FakeClock) -> None:
+    trace = RefusingTrace(refuse=("approval_granted",))
+    await _resume_paused(trace, clock)
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        pytest.param(_broken_manifest, id="broken-manifest"),
+        pytest.param(_unimportable_entrypoint, id="unimportable-entrypoint"),
+        pytest.param(_missing_mcp, id="missing-mcp"),
+        pytest.param(_masked_approval, id="masked-approval"),
+        pytest.param(_unknown_event, id="unknown-event"),
+        pytest.param(_empty_trace, id="empty-trace"),
+        pytest.param(_mixed_runs, id="mixed-runs"),
+        pytest.param(_unwritable_decision, id="unwritable-decision"),
+    ],
+)
+async def test_구성이나_기록이_깨진_것은_부재도_재개_불가도_아닌_PluginError다(
+    scenario: Callable[[FakeClock], Awaitable[None]], clock: FakeClock
+) -> None:
+    """요청을 고쳐서 풀리는 일이 아니다. 채널은 이것을 서버의 고장으로 말한다."""
+    with pytest.raises(PluginError) as caught:
+        await scenario(clock)
+
+    assert not isinstance(caught.value, Absent | NotResumable)
 
 
 async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_가려_하면_실패한다(

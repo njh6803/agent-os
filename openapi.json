@@ -73,11 +73,12 @@
         "type": "object"
       },
       "ErrorCode": {
-        "description": "에러 봉투의 어휘. 상태 코드와 1:1 인 넷이다.",
+        "description": "에러 봉투의 어휘. 상태 코드와 1:1 이다.",
         "enum": [
           "unauthorized",
           "invalid_request",
           "not_found",
+          "conflict",
           "internal_error"
         ],
         "title": "ErrorCode",

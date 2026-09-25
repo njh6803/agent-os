@@ -21,3 +21,20 @@ HTTP 표면을 받치는 것이 전부 `admin/`에 있다. 에러 봉투(`ErrorE
 - **`.claude/rules/admin.md`의 HTTP 표면 공통 규칙이 새 층의 rules 파일로 간다.** 봉투와 어휘, 상태 코드 표, 에러 문서, `verbatim`, `operation_id`, 한 줄 독스트링, 테스트 이음매가 그것이다. `paths`는 새 층과 채널과 관리와 `server.py`를 덮는다. 관리에만 걸리는 것(목록과 상세의 모양, 커서)은 `admin.md`에 남는다.
 - **채널과 관리는 여전히 서로를 import하지 않는다.** `main`과 `server`가 조립한다는 문장도 그대로다.
 - **이름은 `agent_os.http`다.** 들어 있는 것 그대로의 이름이다. 표준 라이브러리 `http`와는 절대 import라 부딪치지 않고, `admin.http`와 `channel.http`는 앞의 접두어가 가른다.
+
+## 이력
+
+### 2026-09-25 표준 라이브러리와 부딪치지 않는 것은 모듈 실행에서만 참이다
+
+계약 티켓(`http-channel` 01)을 구현하며 적는다. 위의 "절대 import라 부딪치지 않고"는 `-m`과 콘솔
+스크립트에서만 참이다. `src/agent_os/` 안의 파일을 스크립트로 실행하면 그 디렉터리가 `sys.path`
+첫머리에 서서 이 층이 표준 라이브러리 자리에 들어오고, `main.py`에 `__main__` 블록이 있어 그 길이
+실재했다(명세 검토가 쟀고, 층을 만든 뒤 `No module named 'http.client'`로 다시 쟀다).
+
+**`agent_os/http/__init__.py`가 자기 이름이 `agent_os.http`가 아니면 처방을 담은 `ImportError`로
+막는다.** 이 층의 이름이 만든 문제라 이 층이 소유하고, `src/agent_os/` 바로 아래의 어느 파일을
+스크립트로 돌려도 같은 자리에서 걸린다. 스크립트 실행은 되지 않고 이유와 처방(`agent-os`, `python -m
+agent_os.main`)을 말하며 끝난다. `__main__` 블록을 빼고 `agent_os/__main__.py`를 두는 안은 `python -m
+agent_os.main`을 조용히 아무것도 하지 않는 명령으로 만들어 거부했다. `main.py` 첫머리에서
+`sys.path[0]`을 걷어내는 안은 import 앞에 코드를 두어 린트 억제가 들고 `main.py` 하나만 덮어
+거부했다. 테스트가 두 길을 나란히 판정한다 — `-m`은 되고, 스크립트는 처방과 함께 막힌다.

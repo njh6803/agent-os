@@ -6,14 +6,15 @@ readme = "README.md"
 requires-python = "==3.12.*"
 # 원천은 docs/constitution/tech.md 의 스택 표다. anthropic SDK와 mcp는 직접 의존이 아니라
 # langchain-anthropic 과 langchain-mcp-adapters 뒤에서 온다(ADR 0001). langgraph 는
-# pyright strict 마찰로 뺐다(ADR 0001 의 2026-09-21 이력). fastapi 와 uvicorn 은 관리 API 의
-# HTTP 표면이다(ADR 0010). openapi.json 이 이 저장소에서 계약이라 FastAPI 를 골랐다.
+# pyright strict 마찰로 뺐다(ADR 0001 의 2026-09-21 이력). fastapi 와 uvicorn 은 HTTP 표면이다
+# (ADR 0010). openapi.json 이 이 저장소에서 계약이라 FastAPI 를 골랐다. fastapi 의 하한은 채널의
+# 스트림이 기대는 `fastapi.sse` 가 들어온 버전이다(ADR 0014). 0.134.0 에는 그 모듈이 없다.
 dependencies = [
     "langchain-core>=0.3",
     "pydantic>=2.9",
     "langchain-anthropic>=0.3",
     "langchain-mcp-adapters>=0.1",
-    "fastapi>=0.115",
+    "fastapi>=0.135",
     "uvicorn>=0.30",
 ]
 
@@ -81,15 +82,24 @@ root_packages = ["agent_os"]
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "main -> server -> {channel | admin | adapters} -> core -> sdk (principle IV)"
+name = "main -> server -> {channel | admin | adapters} -> http -> core -> sdk (principle IV)"
 type = "layers"
 layers = [
     "agent_os.main",
     "(agent_os.server)",
     "agent_os.channel | agent_os.admin | agent_os.adapters",
+    "agent_os.http",
     "agent_os.core",
     "agent_os.sdk",
 ]
+
+# 층의 순서로는 어댑터가 아래의 http 를 import 할 수 있다. 어댑터는 HTTP 표면이 아니므로 따로
+# 막는다(ADR 0016).
+[[tool.importlinter.contracts]]
+name = "adapters are not an HTTP surface (principle IV, ADR 0016)"
+type = "forbidden"
+source_modules = ["agent_os.adapters"]
+forbidden_modules = ["agent_os.http"]
 
 [[tool.importlinter.contracts]]
 name = "core knows no provider (constitution: ports and adapters)"
