@@ -15,11 +15,13 @@ from pathlib import Path
 
 import pytest
 import uvicorn
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.core.ports import Trace, UnknownEvent
-from agent_os.main import ADMIN_TOKEN_ENV, main
+from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     ApprovalDenied,
     ApprovalGranted,
@@ -609,27 +611,47 @@ def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     return calls
 
 
+ADMIN_TOKEN = "adm1n-t0ken"
+CHANNEL_TOKEN = "channel-t0ken"
+
+
+@pytest.fixture
+def tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    """두 토큰을 모두 갖춘 구성. 구성 오류 하나를 재는 테스트는 이것을 깔고 하나만 어긋낸다 —
+    다른 오류가 섞이면 그 진단이 우연히 단언을 채운다."""
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, ADMIN_TOKEN)
+    monkeypatch.setenv(CHANNEL_TOKEN_ENV, CHANNEL_TOKEN)
+
+
+@pytest.mark.parametrize("env", [ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV], ids=["관리", "채널"])
+@pytest.mark.usefixtures("tokens")
 def test_토큰_환경변수가_없으면_서버가_뜨지_않고_진단과_종료_코드_1이다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
+    env: str,
 ) -> None:
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    """채널 토큰도 관리 토큰과 같은 fail-closed 다(ADR 0015). 채널만 끄고 관리만 세우지 않는다 —
+    기능이 구성에 따라 조용히 사라진다."""
+    monkeypatch.delenv(env)
 
     code = main(["serve"])
 
     out, err = capsys.readouterr()
     assert code == 1
     assert out == ""
-    assert ADMIN_TOKEN_ENV in err
+    assert env in err
     assert uvicorn_calls == []
 
 
+@pytest.mark.parametrize("env", [ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV], ids=["관리", "채널"])
 @pytest.mark.parametrize("token", ["", "   "], ids=["빈 문자열", "공백만"])
+@pytest.mark.usefixtures("tokens")
 def test_비어_있는_토큰은_없는_것과_같이_거부한다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
+    env: str,
     token: str,
 ) -> None:
     """환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는 것을 막는다.
@@ -637,24 +659,42 @@ def test_비어_있는_토큰은_없는_것과_같이_거부한다(
     공백만 있는 값이 지나가면 그 서버는 아무도 모르는 토큰을 요구하며 서 있게 된다. 공백뿐인
     거부 사유를 없는 것으로 보는 `_decision` 과 같은 판단이다.
     """
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, token)
+    monkeypatch.setenv(env, token)
 
     code = main(["serve"])
 
     _, err = capsys.readouterr()
     assert code == 1
-    assert ADMIN_TOKEN_ENV in err
+    assert env in err
     assert uvicorn_calls == []
 
 
-def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_포트_포워딩을_안내한다(
+def test_두_토큰이_같으면_서버가_뜨지_않고_진단이_그_값을_싣지_않는다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
-    """막는 데서 끝나면 운영자는 원격에서 볼 길을 잃는다. 대안이 진단 안에 있어야 한다(ADR 0011)."""
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
+    """같은 값이면 분리가 무효인데 요청 시점에는 그것을 알아챌 길이 없다(스토리 42). 둘 다 있으니
+    두 이름이 함께 나오는 진단은 이것 하나다."""
+    monkeypatch.setenv(ADMIN_TOKEN_ENV, "같은-XYZZY-값")
+    monkeypatch.setenv(CHANNEL_TOKEN_ENV, "같은-XYZZY-값")
 
+    code = main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
+    assert "XYZZY" not in out + err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_포트_포워딩을_안내한다(
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """막는 데서 끝나면 운영자는 원격에서 볼 길을 잃는다. 대안이 진단 안에 있어야 한다(ADR 0011)."""
     code = main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
@@ -665,14 +705,12 @@ def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_
     assert uvicorn_calls == []
 
 
+@pytest.mark.usefixtures("tokens")
 def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """무엇이 허용되는지 적지 않으면 `--host localhost` 를 친 운영자가 빠져나올 길이 없다."""
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
-
     main(["serve", "--host", "localhost"])
 
     _, err = capsys.readouterr()
@@ -681,19 +719,21 @@ def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
     assert "::1" in err
 
 
-def test_구성_오류_둘은_한꺼번에_나온다(
+def test_구성_오류_셋은_한꺼번에_나온다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """하나씩 내면 운영자가 고치고 다시 치고 또 막힌다. 시작 자리의 판정은 한 번에 끝낸다."""
     monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
 
     code = main(["serve", "--host", "0.0.0.0"])
 
     _, err = capsys.readouterr()
     assert code == 1
     assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
     assert "0.0.0.0" in err
     assert uvicorn_calls == []
 
@@ -705,11 +745,13 @@ def test_진단에_토큰_값이_실리지_않는다(
 ) -> None:
     """원칙 V. 구성을 되읊는 진단은 비밀을 같이 되읊는다."""
     monkeypatch.setenv(ADMIN_TOKEN_ENV, "비밀-XYZZY-42")
+    monkeypatch.setenv(CHANNEL_TOKEN_ENV, "비밀-PLUGH-7")
 
     main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
     assert "XYZZY" not in out + err
+    assert "PLUGH" not in out + err
 
 
 @pytest.mark.parametrize(
@@ -717,9 +759,8 @@ def test_진단에_토큰_값이_실리지_않는다(
     [(["serve"], DEFAULT_HOST), (["serve", "--host", "::1"], "::1")],
     ids=["기본 호스트", "다른 루프백"],
 )
+@pytest.mark.usefixtures("workspace", "tokens")
 def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포트로_서버를_세운다(
-    workspace: Path,
-    monkeypatch: pytest.MonkeyPatch,
     uvicorn_calls: list[dict[str, object]],
     argv: list[str],
     expected_host: str,
@@ -729,12 +770,33 @@ def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포�
     명세가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이다. 갖춰진 구성이 판정을
     통과하는지는 면제 대상이 아니고, 기본값이 자기 정책에 막히지 않는다는 것도 여기서 닫힌다.
     """
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, "t0ken")
-
     code = main([*argv, "--port", "9999"])
 
     assert code == 0
     assert [(call["host"], call["port"]) for call in uvicorn_calls] == [(expected_host, 9999)]
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """환경변수 둘이 `create_app` 의 두 자리로 엇갈리지 않고 들어간다. 엇갈리면 운영자가 위젯에 준
+    토큰이 트레이스를 읽는다. 무엇을 넘겼는지를 인자로 재지 않고 세운 앱의 답으로 잰다 — 404 는
+    미들웨어를 지나 라우팅까지 갔다는 뜻이다."""
+    main(["serve"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    admin = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://serve.test"
+    ) as client:
+        assert (await client.get("/unrouted", headers=admin)).status_code == 404
+        assert (await client.get("/unrouted", headers=channel)).status_code == 401
+        assert (await client.get("/runs/unrouted", headers=channel)).status_code == 404
+        assert (await client.get("/runs/unrouted", headers=admin)).status_code == 401
 
 
 def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_아니라_거기서_읽는다(

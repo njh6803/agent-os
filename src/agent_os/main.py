@@ -34,16 +34,27 @@ from agent_os.core.ports import ChatModel
 from agent_os.sdk import Principal
 from agent_os.server import create_app
 
-# 토큰은 환경변수로만 들어온다(ADR 0011). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
+# 토큰은 환경변수로만 들어온다(ADR 0011, ADR 0015). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
 ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
+CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 
-_NO_TOKEN_DIAGNOSTIC = (
+_NO_ADMIN_TOKEN_DIAGNOSTIC = (
     f"{ADMIN_TOKEN_ENV} 가 비어 있다. 관리 API 는 토큰 없이 서지 않는다(ADR 0011).\n"
     f"  인증 없는 서버를 띄워 놓고 401 만 보게 되는 것을 막으려고 시작 자리에서 끝낸다.\n"
     f"  값을 정해 {ADMIN_TOKEN_ENV} 로 넘긴 뒤 다시 친다."
+)
+_NO_CHANNEL_TOKEN_DIAGNOSTIC = (
+    f"{CHANNEL_TOKEN_ENV} 가 비어 있다. 채널도 토큰 없이 서지 않는다(ADR 0015).\n"
+    f"  채널만 조용히 끄고 관리만 세우지 않으려고 시작 자리에서 끝낸다.\n"
+    f"  관리 토큰과 다른 값을 정해 {CHANNEL_TOKEN_ENV} 로 넘긴 뒤 다시 친다."
+)
+_SAME_TOKENS_DIAGNOSTIC = (
+    f"{ADMIN_TOKEN_ENV} 와 {CHANNEL_TOKEN_ENV} 가 같다. 두 토큰은 서로 달라야 한다(ADR 0015).\n"
+    f"  같으면 트레이스를 읽는 권한이 실행을 일으키는 권한이 되고, 요청 시점에는 그것을 알아챌\n"
+    f"  길이 없다. 둘 중 하나를 다른 값으로 정한 뒤 다시 친다."
 )
 _NOT_LOOPBACK_DIAGNOSTIC = (
     "--host 는 루프백만 받는다({allowed}). 받은 값: {host}\n"
@@ -83,8 +94,9 @@ def _serve(args: ServeArgs) -> int:
     마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
     서고, 그것이 이 명령이 막으려던 바로 그 상태다.
     """
-    token = os.environ.get(ADMIN_TOKEN_ENV, "")
-    problems = _configuration_problems(args, token)
+    admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
+    channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
+    problems = _configuration_problems(args, admin_token, channel_token)
     if problems:
         sys.stderr.write("".join(f"{problem}\n" for problem in problems))
         return EXIT_FAILED
@@ -92,7 +104,8 @@ def _serve(args: ServeArgs) -> int:
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
             trace=JsonlTrace(args.traces),
-            token=token,
+            admin_token=admin_token,
+            channel_token=channel_token,
             stderr=sys.stderr,
         ),
         host=args.host,
@@ -101,20 +114,27 @@ def _serve(args: ServeArgs) -> int:
     return EXIT_FINISHED
 
 
-def _configuration_problems(args: ServeArgs, token: str) -> list[str]:
+def _configuration_problems(args: ServeArgs, admin_token: str, channel_token: str) -> list[str]:
     """서버가 서지 못하는 이유 전부. 비어 있으면 선다.
 
-    토큰은 있나 없나만 보고 값을 진단에 싣지 않는다(원칙 V). 구성을 되읊는 진단이 비밀을 같이
-    되읊는 자리이고, 표준 에러는 셸 이력과 CI 로그로 흘러간다.
+    토큰은 있나 없나, 같나 다르나만 보고 값을 진단에 싣지 않는다(원칙 V). 구성을 되읊는 진단이
+    비밀을 같이 되읊는 자리이고, 표준 에러는 셸 이력과 CI 로그로 흘러간다.
 
     공백만 있는 토큰도 없는 것으로 본다. 환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는
     것이 이 명령이 막으려는 상태이고, `_decision` 이 공백뿐인 거부 사유를 없는 것으로 보는 것과
     같은 판단이다. 대신 통과한 토큰은 다듬지 않고 그대로 넘긴다 — 비밀을 조용히 고쳐 넘기면
-    운영자가 정한 값과 서버가 요구하는 값이 갈린다.
+    운영자가 정한 값과 서버가 요구하는 값이 갈린다. 같은지도 다듬지 않은 값으로 본다.
+
+    두 토큰이 같다는 진단은 채널 토큰이 있을 때만 낸다. 없는 쪽이 있으면 그 진단이 먼저이고,
+    둘 다 비어 "같다"는 것은 고칠 거리가 아니다.
     """
     problems: list[str] = []
-    if not token.strip():
-        problems.append(_NO_TOKEN_DIAGNOSTIC)
+    if not admin_token.strip():
+        problems.append(_NO_ADMIN_TOKEN_DIAGNOSTIC)
+    if not channel_token.strip():
+        problems.append(_NO_CHANNEL_TOKEN_DIAGNOSTIC)
+    elif channel_token == admin_token:
+        problems.append(_SAME_TOKENS_DIAGNOSTIC)
     if args.host not in LOOPBACK_HOSTS:
         problems.append(
             _NOT_LOOPBACK_DIAGNOSTIC.format(

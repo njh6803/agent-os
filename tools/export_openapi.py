@@ -33,9 +33,10 @@ from agent_os.server import create_app
 ROOT = Path(__file__).resolve().parent.parent
 OPENAPI_PATH = ROOT / "openapi.json"
 
-# 스키마는 토큰을 읽지 않는다. 이 값은 앱을 세우기 위한 자리표시자이고 어떤 서버에도 쓰이지
-# 않는다. 빈 문자열을 쓸 수 없는 이유는 `create_app` 이 토큰 없는 앱을 거부하기 때문이다.
-_PLACEHOLDER_TOKEN = "openapi-export-only"
+# 스키마는 토큰을 읽지 않는다. 이 값들은 앱을 세우기 위한 자리표시자이고 어떤 서버에도 쓰이지
+# 않는다. 빈 문자열이나 같은 값을 쓸 수 없는 이유는 `create_app` 이 그런 앱을 거부하기 때문이다.
+_PLACEHOLDER_ADMIN_TOKEN = "openapi-export-only-admin"
+_PLACEHOLDER_CHANNEL_TOKEN = "openapi-export-only-channel"
 
 
 class _SchemaOnlyPlugins:
@@ -80,7 +81,8 @@ def document() -> str:
     app = create_app(
         plugins=plugins,
         trace=trace,
-        token=_PLACEHOLDER_TOKEN,
+        admin_token=_PLACEHOLDER_ADMIN_TOKEN,
+        channel_token=_PLACEHOLDER_CHANNEL_TOKEN,
         stderr=io.StringIO(),
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"
