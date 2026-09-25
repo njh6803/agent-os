@@ -1,6 +1,6 @@
 # Agent OS 헌법 · 원칙
 
-Agent OS는 커스텀 에이전트, MCP 서버, 스킬, 모델을 플러그인으로 동적 로딩해 실행하는 플러그인 기반 에이전트 런타임이다. 태그라인은 "an agent OS". 이 파일은 항상 실린다. 스택은 `tech.md`, 검증과 운영은 `operations.md`, 색인은 `README.md`. 여기 없는 결정은 `docs/adr/`에 쌓인다.
+Agent OS는 커스텀 에이전트, MCP 서버, 스킬, 모델을 플러그인으로 동적 로딩해 실행하는 플러그인 기반 에이전트 런타임이다. 태그라인은 "an agent OS". 이 파일은 항상 실린다. 스택은 `tech.md`, 검증과 운영은 `operations.md`, 색인은 `docs/constitution/README.md`. 여기 없는 결정은 `docs/adr/`에 쌓인다.
 
 선행 저장소 `ai-agent-platform`과 `agent-runtime-platform`에서 코드는 가져오지 않고 결정과 교훈만 가져온다. 둘 다 LLM 호출 코드 0줄에서 멈췄다. 원칙 I은 그 사인에 대한 처방이다.
 
@@ -22,7 +22,7 @@ LLM을 실제로 호출하는 테스트 하나가 통과하기 전에는 헌법,
 ## 거버넌스
 - 이 헌법은 다른 모든 관행에 우선한다. 충돌하면 헌법을 고치거나 관행을 버린다.
 - 개정은 ADR을 남기고 사용자가 승인한다. 에이전트는 제안만 한다. ADR은 버전 번호가 아니라 결정 단위로 하나이고, 같은 결정의 개정은 그 ADR의 이력에 쌓는다.
-- 버전은 semver. 원칙 변경은 major, 절 추가는 minor, 문구 수정은 patch. 버전은 `README.md`에 있다.
+- 버전은 semver. 원칙 변경은 major, 절 추가는 minor, 문구 수정은 patch. 버전은 `docs/constitution/README.md`에 있다.
 - 원격(GitHub), CI, PR은 첫날부터다. 혼자여도 같은 리듬으로 간다. 팀원이 생기면 리뷰 승인 필수와 CODEOWNERS를 더하고 ADR을 남긴다.
 - 철수 조건: 연속 10일 커밋 0이면 접은 것으로 본다.
 - 성공의 정의는 `docs/PRD.md`가 원천이다. 여기에는 원칙 I의 기한(첫 커밋 후 3일)만 둔다.
