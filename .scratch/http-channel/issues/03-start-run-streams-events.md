@@ -74,7 +74,7 @@
 - [x] HTTP 층 rules 파일의 `paths`가 채널 HTTP 모듈과 그 테스트를 덮는다. 01에서는 대상이 없어 지침 검사가 막았던 glob이다. 채널에만 걸리는 규칙은 이 티켓이 적는다
 - [x] lowest-direct 해석으로 한 번 돌린다. fastapi 하한에서 `fastapi.sse`가 서는지, 다른 하한도 실제 사용을 따라가는지 본다(명세 Further Notes, 기록만). `fastapi.sse`를 처음 import하는 것이 이 티켓이라 01이 아니라 여기서 잰다
   - **기록(2026-09-26).** lowest-direct로 푼 런타임 의존성(fastapi 0.135.0, langchain-core 0.3.36, langchain-anthropic 0.3.0, langchain-mcp-adapters 0.1.0, uvicorn 0.31.1)에서 스위트가 서지 않는다. 셋이 실제 사용을 따라가지 못한다
-  - **fastapi.** `fastapi.sse`는 0.135.0에 있지만, 0.140.7까지는 SSE 항목을 공백 있는 `json.dumps`로 직렬화해 프레임이 트레이스 줄과 문자열로 다르고, 계약의 항목 스키마에 `contentSchema`(`Event` 참조)가 없다. 잠긴 의존성 위에서 fastapi만 바꿔 이분 탐색하니 0.140.8부터 채널과 서버 테스트 122개가 전부 섰다. 선언된 하한(`>=0.135`)에서는 이 티켓의 두 성질이 거짓이다. 하한을 올리는 것은 `tech.md`와 ADR 0014가 함께 움직이는 일이라 이 티켓에서 바꾸지 않고 사용자에게 올린다
+  - **fastapi.** `fastapi.sse`는 0.135.0에 있지만, 0.140.7까지는 SSE 항목을 공백 있는 `json.dumps`로 직렬화해 프레임이 트레이스 줄과 문자열로 다르고, 계약의 항목 스키마에 `contentSchema`(`Event` 참조)가 없다. 잠긴 의존성 위에서 fastapi만 바꿔 이분 탐색하니 0.140.8부터 채널과 서버 테스트 122개가 전부 섰다. 선언된 하한(`>=0.135`)에서는 이 티켓의 두 성질이 거짓이다. 하한을 올리는 것은 `tech.md`와 ADR 0014가 함께 움직이는 일이라 이 티켓에서 바꾸지 않고 사용자에게 올렸다. 사용자가 별도 브랜치를 골랐다 — `chore/fastapi-lower-bound`가 `>=0.140.8`로 올리고 ADR 0014에 2026-09-26 이력을 남긴다
   - **langchain-core**(`>=0.3`). 0.3.36에서 core 테스트 36개와 모델 테스트 4개가 깬다. 채널의 모델 호출도 `run_failed`로 끝난다
   - **langchain-mcp-adapters**(`>=0.1`). 0.1.0은 mcp 상한을 두지 않아 mcp 2.2.0이 따라오고, 그 조합은 `streamablehttp_client` import에서 깨진다
 - [x] 원칙 III를 지킨다. 스트림과 ASGI를 다루는 코드가 타입 우회의 첫 선례가 되지 않는다. 필요해 보이면 멈춰 보고한다
