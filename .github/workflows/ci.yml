@@ -21,39 +21,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [fh, clean, lintimports, pyright, ruff]
+        variant: [full, dev, gceach, router, norouter, oldrouter]
     env:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
+      # 방아쇠는 lint-imports 뒤의 첫 pytest 다(넷째 탐침). 변형마다 그 조건을 새로 세운다.
       - run: |
           set +e
           v="${{ matrix.variant }}"
-          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = ruff ]; then
-            uv run ruff check . >/dev/null; uv run ruff format --check . >/dev/null
-          fi
-          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = pyright ]; then
-            uv run pyright >/dev/null
-          fi
-          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = lintimports ]; then
-            uv run lint-imports >/dev/null
-          fi
-          if [ "$v" = fh ]; then
-            PYTHONFAULTHANDLER=1 uv run pytest -q
-            echo "[DEBUG-seg] $v first exit=$?"
-          else
-            uv run pytest -q
-            echo "[DEBUG-seg] $v first exit=$?"
-          fi
-          if [ "$v" = clean ]; then
-            find . -path ./.venv -prune -o -name __pycache__ -type d -prune -exec rm -rf {} +
-            rm -rf .pytest_cache
-            uv run pytest -q
-            echo "[DEBUG-seg] $v after clean exit=$?"
-          fi
+          uv run lint-imports >/dev/null
+          export PYTHONFAULTHANDLER=1
+          case "$v" in
+            full) uv run pytest -q; code=$? ;;
+            dev) PYTHONDEVMODE=1 uv run pytest -q; code=$? ;;
+            gceach)
+              mkdir -p /tmp/gcplug
+              printf 'import gc\nimport pytest\n\n\n@pytest.fixture(autouse=True)\ndef _gc_each():\n    yield\n    gc.collect()\n' > /tmp/gcplug/gcplug.py
+              PYTHONPATH=/tmp/gcplug uv run pytest -q -v -p gcplug > /tmp/gceach.log 2>&1; code=$?
+              tail -40 /tmp/gceach.log ;;
+            router) uv run pytest -q tests/channel/http/test_router.py; code=$? ;;
+            norouter) uv run pytest -q --ignore=tests/channel/http/test_router.py; code=$? ;;
+            oldrouter)
+              git show 01b89fa:tests/channel/http/test_router.py > tests/channel/http/test_router.py
+              uv run pytest -q; code=$? ;;
+          esac
+          echo "[DEBUG-seg] $v exit=$code"
           exit 1
