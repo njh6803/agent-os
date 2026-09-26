@@ -21,29 +21,28 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run lint-imports
       # [DEBUG-seg] 종료 코드 139 탐침. 병합 전에 되돌린다.
-      # 한 스텝 안에서 파이프 없이 차례로. 변수를 하나씩만 바꾼다.
+      # 원래 잡의 순서를 되살려 재현을 먼저 보고, 그 뒤 앞 단계가 남긴 것을 하나씩 지운다.
       - run: |
           set +e
           uv run pytest -q
           echo "[DEBUG-seg] A as-is exit=$?"
-          uv run pytest -q
-          echo "[DEBUG-seg] A2 as-is again exit=$?"
-          uv run pytest -q > /tmp/b.log 2>&1
-          echo "[DEBUG-seg] B redirected to file exit=$?"
-          uv run pytest -q -p no:faulthandler
-          echo "[DEBUG-seg] C no pytest faulthandler exit=$?"
           PYTHONFAULTHANDLER=1 uv run pytest -q
-          echo "[DEBUG-seg] D PYTHONFAULTHANDLER exit=$?"
-          uv run pytest -q tests/channel/http/test_router.py
-          echo "[DEBUG-seg] E router only exit=$?"
-          uv run pytest -q --ignore=tests/channel/http/test_router.py
-          echo "[DEBUG-seg] F without router exit=$?"
+          echo "[DEBUG-seg] B PYTHONFAULTHANDLER exit=$?"
+          ls -a
+          rm -rf .import_linter_cache
+          uv run pytest -q
+          echo "[DEBUG-seg] C without import_linter_cache exit=$?"
+          rm -rf .ruff_cache
+          uv run pytest -q
+          echo "[DEBUG-seg] D without ruff_cache too exit=$?"
           exit 1
