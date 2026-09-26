@@ -1255,6 +1255,32 @@ async def test_다음_커서가_마지막_행의_정렬_키를_잃지_않고_포
     assert returned.started_at.utcoffset() == timedelta(hours=9)
 
 
+async def test_포트가_받는_커서의_시각대는_pydantic_의_것이_아니라_표준_라이브러리의_것이다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """서드파티 타입이 경계를 넘어 core 의 값에 실리지 않는다(`CODING_STANDARDS.md`). pydantic 이
+    JSON 에서 만든 시각은 pydantic-core 의 `TzInfo` 를 든다. 그것이 인터프리터 종료까지 살아 있으면
+    종료 중 GC 가 그 해제에서 세그폴트를 낸다 — FastAPI 가 라우트 함수를 모듈 전역 캐시에 두어 그
+    클로저가 붙잡은 포트(여기서는 이 가짜)가 프로세스 끝까지 살기 때문이다(PR #78 의 CI, 종료 코드
+    139)."""
+    seoul = timezone(timedelta(hours=9))
+    traces.rows = [
+        dataclasses.replace(FAILED, started_at=datetime(2026, 9, 23, 21, 4, tzinfo=seoul)),
+        UNREADABLE,
+    ]
+
+    first = await client.get("/traces", params={"limit": "1"}, headers=BEARER)
+    await client.get(
+        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=BEARER
+    )
+
+    returned = traces.calls[-1].after
+    assert returned is not None
+    assert returned.started_at is not None
+    assert type(returned.started_at.tzinfo) is timezone
+    assert returned.started_at.utcoffset() == timedelta(hours=9)
+
+
 async def test_쪽_사이에_새_실행이_생겨도_같은_항목이_두_번_오거나_건너뛰지_않는다(
     client: AsyncClient, traces: FakeTrace
 ) -> None:
