@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [full, dev, gceach, router, norouter, oldrouter]
+        variant: [control, strip, nogather, nomodel, nostored, no422]
     env:
       PYTHONUTF8: "1"
     steps:
@@ -40,18 +40,15 @@ jobs:
           uv run lint-imports >/dev/null
           export PYTHONFAULTHANDLER=1
           case "$v" in
-            full) uv run pytest -q; code=$? ;;
-            dev) PYTHONDEVMODE=1 uv run pytest -q; code=$? ;;
-            gceach)
-              mkdir -p /tmp/gcplug
-              printf 'import gc\nimport pytest\n\n\n@pytest.fixture(autouse=True)\ndef _gc_each():\n    yield\n    gc.collect()\n' > /tmp/gcplug/gcplug.py
-              PYTHONPATH=/tmp/gcplug uv run pytest -q -v -p gcplug > /tmp/gceach.log 2>&1; code=$?
-              tail -40 /tmp/gceach.log ;;
-            router) uv run pytest -q tests/channel/http/test_router.py; code=$? ;;
-            norouter) uv run pytest -q --ignore=tests/channel/http/test_router.py; code=$? ;;
-            oldrouter)
-              git show 01b89fa:tests/channel/http/test_router.py > tests/channel/http/test_router.py
+            control) uv run pytest -q; code=$? ;;
+            strip)
+              sed -i 's/Annotated\[str, Field(min_length=1), AfterValidator(_trimmed)\]/Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]/; s/^from pydantic import AfterValidator, BaseModel, ConfigDict, Field$/from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints/' src/agent_os/channel/http/router.py
+              grep -n "reason: Annotated" src/agent_os/channel/http/router.py
               uv run pytest -q; code=$? ;;
+            nogather) uv run pytest -q -k "not 한_루프에서_동시에"; code=$? ;;
+            nomodel) uv run pytest -q -k "not 거부하면_approval_denied and not 재개_스트림은_멈추기_전에 and not 재개가_다시_멈추면"; code=$? ;;
+            nostored) uv run pytest -q -k "not 재개할_수_없는_실행은 and not 기록이_깨진_실행은 and not 재개_뒤_첫_호출이 and not 없는_실행에_결정을"; code=$? ;;
+            no422) uv run pytest -q -k "not 결정의_모양이_틀리면 and not 결정에_승인자나_주체를 and not 패턴을_어기는_실행_식별자는"; code=$? ;;
           esac
           echo "[DEBUG-seg] $v exit=$code"
           exit 1
