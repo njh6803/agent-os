@@ -2,21 +2,27 @@
 
 표준 출력, 표준 에러, 종료 코드, 트레이스 파일을 본다.
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
-llm 마커가 붙은 둘만 실제 CLI 프로세스를 띄운다. 바깥 이음매다.
+llm 마커가 붙은 셋만 실제 프로세스를 띄운다 — CLI 둘과 serve 하나. 바깥 이음매다.
 """
 
 import getpass
 import json
 import os
+import re
+import secrets
 import shlex
 import subprocess
 import sys
+import time
+from collections.abc import Generator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 import uvicorn
 from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
+from fastapi.sse import KEEPALIVE_COMMENT
+from httpx import ASGITransport, AsyncClient, Client, Timeout
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 
 from agent_os import main as main_module
@@ -28,6 +34,7 @@ from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     ApprovalDenied,
     ApprovalGranted,
+    Json,
     LlmCalled,
     RunId,
     RunPaused,
@@ -294,17 +301,22 @@ def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 def _python(args: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    """이 환경의 파이썬 프로세스 하나. 한국어 출력이 cp949 로 깨지지 않게 UTF-8 을 강제한다
-    (CLAUDE.md 환경 함정)."""
+    """이 환경의 파이썬 프로세스 하나를 띄우고 끝날 때까지 기다린다."""
     return subprocess.run(
         [sys.executable, *args],
         cwd=cwd,
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**os.environ, "PYTHONUTF8": "1"},
+        env=_env(),
         check=False,
     )
+
+
+def _env() -> dict[str, str]:
+    """이 환경의 파이썬 자식 프로세스가 받는 환경. 한국어 출력이 cp949 로 깨지지 않게 UTF-8 을
+    강제한다(CLAUDE.md 환경 함정)."""
+    return {**os.environ, "PYTHONUTF8": "1"}
 
 
 def test_모듈로_실행하면_패키지_안의_http_층이_표준_라이브러리를_가리지_않는다(
@@ -602,8 +614,8 @@ def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     구성 오류는 서버가 서기 전에 끝나므로 그때 이 목록은 비어 있어야 한다. 검사 순서가 뒤집히면
     운영자는 진단 대신 401 을 보게 되는데, 그것이 ADR 0011 이 막으려던 바로 그 실패다.
 
-    uvicorn 이 실제로 포트를 여는 것은 이 스위트가 증명하지 않는다(명세). 여기서 재는 것은 그
-    앞까지다 — 판정이 막았나 지나갔나, 지나갔다면 무엇을 들려 보냈나.
+    uvicorn 이 실제로 포트를 여는 것은 기본 스위트가 증명하지 않고 `-m llm` 의 실제 serve 테스트가
+    잰다. 여기서 재는 것은 그 앞까지다 — 판정이 막았나 지나갔나, 지나갔다면 무엇을 들려 보냈나.
     """
     calls: list[dict[str, object]] = []
 
@@ -770,8 +782,9 @@ def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포�
 ) -> None:
     """실패 경로만 재면 판정이 늘 막는 회귀가 초록으로 지나가고 `serve` 는 영영 뜨지 않는다.
 
-    명세가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이다. 갖춰진 구성이 판정을
-    통과하는지는 면제 대상이 아니고, 기본값이 자기 정책에 막히지 않는다는 것도 여기서 닫힌다.
+    기본 스위트가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이고 그것은 `-m llm` 이
+    잰다. 갖춰진 구성이 판정을 통과하는지는 면제 대상이 아니고, 기본값이 자기 정책에 막히지 않는다는
+    것도 여기서 닫힌다.
     """
     code = main([*argv, "--port", "9999"])
 
@@ -883,6 +896,27 @@ def test_serve_가_연결이_남은_실행을_제한_없이_기다리지_않게_
     assert grace > 0
 
 
+def _events(stream: str) -> list[Mapping[str, Json]]:
+    """SSE 본문의 이벤트들. 프레임은 빈 줄로 갈리고 값은 `data: ` 뒤의 JSON 하나다.
+
+    keepalive 주석(`: ping`)은 이벤트가 아니라 건너뛴다. 모델이 keepalive 간격보다 오래 조용한
+    날에만 끼므로, 건너뛰지 않으면 그날만 빨개진다.
+    """
+    blocks = [block for block in stream.split("\n\n") if block and not block.startswith(":")]
+    return [json.loads(block.removeprefix("data: ")) for block in blocks]
+
+
+def test_스트림을_가를_때_keepalive_주석은_이벤트로_읽지_않는다() -> None:
+    """실제 serve 테스트가 기대는 자리(티켓 05). 주석은 모델이 오래 조용한 날에만 끼므로 그날을
+    기다리지 않고 FastAPI 가 보내는 그 바이트로 여기서 잰다."""
+    started, paused = 'data: {"type": "run_started"}\n\n', 'data: {"type": "run_paused"}\n\n'
+    ping = KEEPALIVE_COMMENT.decode()
+
+    events = _events(started + ping + ping + paused)
+
+    assert [event["type"] for event in events] == ["run_started", "run_paused"]
+
+
 @pytest.mark.usefixtures("tokens")
 async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이고_트레이스가_그_디렉터리에_남는다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
@@ -904,12 +938,142 @@ async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이
             "/runs", json={"agent": "echo", "request": "hi"}, headers=channel
         )
 
-    frames = [block.removeprefix("data: ") for block in response.text.split("\n\n") if block]
-    events = [json.loads(frame) for frame in frames if not frame.startswith(":")]
+    events = _events(response.text)
     assert [event["type"] for event in events] == ["run_started", "run_finished"]
     assert events[0]["principal"] == getpass.getuser()
     (trace_file,) = _trace_files(workspace / "t")
     assert trace_file.stem == events[0]["run_id"]
+
+
+# uvicorn 이 빈 포트를 고른 뒤 찍는 기동 줄. 앱의 수명이 열리고 소켓이 듣기 시작한 뒤에 나온다.
+LISTENING = re.compile(r"Uvicorn running on (http://\S+)")
+# 실제 serve 가 설 때까지 기다리는 상한. 대부분은 import 시간이다.
+STARTUP_SECONDS = 30
+# 읽기 상한은 keepalive 간격(FastAPI 기본 15초)보다 길면 된다. 모델이 오래 조용해도 ping 이 읽기를
+# 깨운다. 조각 사이만 재므로 전체 상한은 따로 `_post_stream` 이 본다.
+STREAM_TIMEOUT = Timeout(10.0, read=60.0)
+# 요청 하나가 결말까지 가는 상한. 모델 호출 둘과 도구 호출 하나가 넉넉히 들어가는 길이다.
+STREAM_SECONDS = 120
+
+
+@contextmanager
+def _serving(root: Path, *, admin_token: str, channel_token: str) -> Generator[str]:
+    """실제 `serve` 프로세스 하나를 빈 포트에 띄우고 요청을 받을 수 있게 되면 그 주소를 준다.
+
+    포트는 `--port 0` 으로 uvicorn 이 고르고 그 기동 줄에서 읽는다. 읽은 순간 서버가 서 있으므로
+    설 때까지 헬스 체크를 되풀이할 까닭도, 미리 고른 포트를 남이 먼저 가져갈 틈도 없다. 대가는
+    uvicorn 의 기동 문구에 기대는 것이고, 문구가 바뀌면 서지 않았다는 실패가 된다.
+
+    출력은 파이프가 아니라 파일로 받는다. 비우는 쪽이 없는 파이프는 차면 서버를 쓰기에서 세운다.
+    나갈 때 프로세스를 거두고 로그를 표준 에러로 옮긴다. pytest 는 실패한 테스트의 캡처만 보여
+    주므로 서버 쪽 원인이 실패와 함께 보이고 초록에서는 조용하다. 도구 서버도 serve 와 함께
+    끝난다 — 모델 호출 도중에 실패시킨 변이에서도 남은 프로세스가 없었다(티켓 05).
+    """
+    log = root / "serve.log"
+    env = _env() | {ADMIN_TOKEN_ENV: admin_token, CHANNEL_TOKEN_ENV: channel_token}
+    argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t"]
+    with log.open("w", encoding="utf-8") as sink:
+        process = subprocess.Popen(argv, cwd=root, stdout=sink, stderr=sink, env=env)
+        try:
+            yield _wait_for_address(process, log)
+        finally:
+            _stop(process)
+            sys.stderr.write(log.read_text(encoding="utf-8", errors="replace"))
+
+
+def _wait_for_address(process: subprocess.Popen[bytes], log: Path) -> str:
+    """기동 줄이 찍히면 그 주소. 그 전에 프로세스가 끝나거나 상한을 넘기면 실패한다."""
+    deadline = time.monotonic() + STARTUP_SECONDS
+    while time.monotonic() < deadline:
+        listening = LISTENING.search(log.read_text(encoding="utf-8", errors="replace"))
+        if listening is not None:
+            return listening.group(1)
+        if process.poll() is not None:
+            break
+        time.sleep(0.05)
+    pytest.fail("serve 가 서지 않았다. 서버 로그는 캡처된 표준 에러에 있다")
+
+
+def _stop(process: subprocess.Popen[bytes]) -> None:
+    """거두고 끝날 때까지 기다린다. 멈추라는 신호에 제때 답하지 않으면 죽인다."""
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
+def _post_stream(client: Client, url: str, body: Mapping[str, Json]) -> str:
+    """POST 하나의 SSE 본문을 결말까지. 200 이 아니면 그 봉투를 싣고 실패한다.
+
+    읽기 상한은 조각 사이만 재서, 모델 호출이 멈춰도 keepalive 가 오는 한 끝나지 않는다. 그래서
+    조각이 올 때마다 전체 상한을 보고 넘으면 받은 데까지 싣고 실패한다 — 그래야 `_serving` 의
+    정리까지 간다. keepalive 가 간격마다 오므로 상한을 넘긴 뒤 늦어도 그만큼 안에 알아챈다.
+    """
+    deadline = time.monotonic() + STREAM_SECONDS
+    with client.stream("POST", url, json=body) as response:
+        if response.status_code != 200:
+            response.read()
+            pytest.fail(f"{url} 이 {response.status_code} 로 답했다: {response.text}")
+        chunks: list[str] = []
+        for chunk in response.iter_text():
+            chunks.append(chunk)
+            if time.monotonic() > deadline:
+                pytest.fail(
+                    f"{url} 의 스트림이 {STREAM_SECONDS}초 안에 끝나지 않았다:\n{''.join(chunks)}"
+                )
+        return "".join(chunks)
+
+
+@pytest.mark.llm
+def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다(
+    tmp_path: Path,
+) -> None:
+    """바깥 이음매. 가짜로 증명할 수 없는 것만 잰다 — `main.py` 의 조립, uvicorn 이 실제 소켓으로
+    SSE 를 흘리는 것, 실제 모델이 채널을 지나는 것, 멈춘 실행이 요청을 건너 트레이스로 재개되는 것.
+
+    `gatedcalc` 와 실제 stdio 서버는 프로세스를 넘는 CLI 테스트와 같다. 다른 것은 면 하나다 —
+    실행을 일으키고 결정을 내는 것이 셸이 아니라 HTTP 요청 둘이다.
+    """
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _write_mcp_plugin(tmp_path, "fixture")
+    _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
+    # 소켓이 듣는 동안 같은 기계의 다른 프로세스가 짐작할 수 없는 값. 둘이 달라야 선다(ADR 0015).
+    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
+
+    with (
+        _serving(tmp_path, admin_token=admin_token, channel_token=channel_token) as address,
+        Client(
+            base_url=address,
+            headers={"Authorization": f"Bearer {channel_token}"},
+            timeout=STREAM_TIMEOUT,
+            trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
+        ) as client,
+    ):
+        paused = _post_stream(client, "/runs", {"agent": "gatedcalc", "request": "2 더하기 3은?"})
+        # 여기서 먼저 단언한다. 멈추지 못한 스트림의 식별자로 승인을 보내면 그 409 가 원인을 가린다.
+        paused_stream = _events(paused)
+        assert paused_stream[-1]["type"] == "run_paused", paused
+        run_id = paused_stream[0]["run_id"]
+        resumed = _post_stream(client, f"/runs/{run_id}/approval", {"decision": "approve"})
+
+    assert paused_stream[0]["type"] == "run_started"
+    assert paused_stream[-1]["tool"] == "add"
+    resumed_stream = _events(resumed)
+    assert [event["type"] for event in resumed_stream[:2]] == ["approval_granted", "run_resumed"]
+    assert resumed_stream[-1]["type"] == "run_finished", resumed
+    assert "5" in str(resumed_stream[-1]["output"])
+    (trace_file,) = _trace_files(tmp_path / "t")  # 재개가 끼어도 실행 하나에 파일 하나다
+    assert trace_file.stem == run_id
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    types = [e.type for e in events]
+    # 두 스트림을 이으면 그 실행의 트레이스다. 재개 스트림은 재생된 사실을 내지 않는다(ADR 0009).
+    assert [event["type"] for event in [*paused_stream, *resumed_stream]] == types
+    assert types.count("run_started") == 1  # 재개는 새 실행이 아니라 같은 실행이다
+    boundaries = ("approval_granted", "run_resumed", "tool_called")
+    assert [t for t in types if t in boundaries] == list(boundaries)
+    assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
 
 
 def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_아니라_거기서_읽는다(
