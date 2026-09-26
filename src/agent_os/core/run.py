@@ -442,6 +442,11 @@ async def resume(
 
     에이전트 이름과 요청은 트레이스의 시작 이벤트에서 읽는다. 결정이 트레이스에 먼저 기록된 뒤
     재생이 시작되므로, 재생이 무엇을 하든 누가 허락했는지, 누가 왜 막았는지는 남는다.
+
+    첫 걸음(트레이스 읽기, 일시정지 확인, 결정 쓰기)에 await 가 없다. 같은 실행에 동시에 온 둘째
+    결정이 마지막 이벤트를 결정으로 읽어 재개 불가가 되는 것이 이것 하나에 기댄다(ADR 0014). 읽기나
+    쓰기를 비동기로 바꾸거나 스레드로 보내면 승인된 도구가 두 번 실행된다. HTTP 채널의 동시 재개
+    테스트가 그것을 고정한다.
     """
     started, paused, records = _read_paused(trace, run_id)
     prepared = _prepare(plugins, _recorded_manifest(plugins, started))

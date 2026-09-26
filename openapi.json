@@ -72,6 +72,61 @@
         "title": "ApprovalGranted",
         "type": "object"
       },
+      "Approve": {
+        "additionalProperties": false,
+        "description": "허가. 멈춘 도구 호출이 실제로 실행된다. 사유를 담을 자리가 없다.",
+        "properties": {
+          "decision": {
+            "const": "approve",
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "Approve",
+        "type": "object"
+      },
+      "Decision": {
+        "discriminator": {
+          "mapping": {
+            "approve": "#/components/schemas/Approve",
+            "deny": "#/components/schemas/Deny"
+          },
+          "propertyName": "decision"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Approve"
+          },
+          {
+            "$ref": "#/components/schemas/Deny"
+          }
+        ]
+      },
+      "Deny": {
+        "additionalProperties": false,
+        "description": "거부. 도구를 부르지 않고 사유를 모델에 되돌린다. 사유는 비어 있을 수 없다.",
+        "properties": {
+          "decision": {
+            "const": "deny",
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "Deny",
+        "type": "object"
+      },
       "ErrorCode": {
         "description": "에러 봉투의 어휘. 상태 코드와 1:1 이다.",
         "enum": [
@@ -1193,6 +1248,118 @@
           }
         },
         "summary": "실행 하나를 일으켜 그 이벤트를 생기는 대로 흘린다"
+      }
+    },
+    "/runs/{run_id}/approval": {
+      "post": {
+        "operationId": "decide_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/Event"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 지금 상태로는 받을 수 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "멈춘 실행에 결정 하나를 내고 재개된 실행의 이벤트를 생기는 대로 흘린다"
       }
     },
     "/traces": {
