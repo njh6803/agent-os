@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [control, direct, gdb, nocore, noadmin]
+        variant: [corea, coreb]
     env:
       PYTHONUTF8: "1"
     steps:
@@ -39,16 +39,16 @@ jobs:
           v="${{ matrix.variant }}"
           uv run lint-imports >/dev/null
           export PYTHONFAULTHANDLER=1
-          case "$v" in
-            control) uv run pytest -q; code=$? ;;
-            direct) .venv/bin/python -m pytest -q; code=$? ;;
-            gdb)
-              sudo apt-get install -y -qq gdb >/dev/null 2>&1
-              gdb -q -batch -ex "set pagination off" -ex run -ex "bt 60" -ex "info sharedlibrary" --args .venv/bin/python -m pytest -q > /tmp/gdb.log 2>&1
-              code=$?
-              grep -vE "^\.+ *\[|New Thread|Thread 0x.* exited|^\[Inferior" /tmp/gdb.log | tail -150 ;;
-            nocore) uv run pytest -q --ignore=tests/core; code=$? ;;
-            noadmin) uv run pytest -q --ignore=tests/test_server.py; code=$? ;;
-          esac
+          # 실행 모양을 바꾸지 않고(대조군과 같은 `uv run pytest -q`) 코어를 남겨 gdb 로 연다. gdb 는 뒤에 깐다.
+          sudo sysctl -w kernel.core_pattern=/tmp/core.%p >/dev/null
+          ulimit -c unlimited
+          uv run pytest -q; code=$?
+          ls -la /tmp/core.* 2>/dev/null
+          sudo apt-get install -y -qq gdb >/dev/null 2>&1
+          exe=$(readlink -f .venv/bin/python)
+          for core in /tmp/core.*; do
+            [ -e "$core" ] || continue
+            gdb -q -batch -ex "set pagination off" -ex "bt 80" -ex "info symbol \$pc" -ex "x/6i \$pc" -ex "info sharedlibrary" "$exe" "$core" 2>&1 | tail -160
+          done
           echo "[DEBUG-seg] $v exit=$code"
           exit 1
