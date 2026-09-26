@@ -21,15 +21,24 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pyright
-      - run: uv run lint-imports
-      - run: uv run pytest -q
-      - run: uv run python tools/check_instructions.py
-      - run: uv run python tools/check_type_escapes.py
+      # [DEBUG-seg] 종료 코드 139 탐침. 병합 전에 되돌린다.
+      - run: |
+          set +e
+          PYTHONFAULTHANDLER=1 uv run pytest -q -p no:faulthandler 2>&1 | tail -120
+          echo "[DEBUG-seg] 1 full with faulthandler exit=${PIPESTATUS[0]}"
+          uv run pytest -q tests/channel/http/test_router.py 2>&1 | tail -3
+          echo "[DEBUG-seg] 2 router only exit=${PIPESTATUS[0]}"
+          uv run pytest -q --ignore=tests/channel/http/test_router.py 2>&1 | tail -3
+          echo "[DEBUG-seg] 3 without router exit=${PIPESTATUS[0]}"
+          git show 01b89fa:tests/channel/http/test_router.py > tests/channel/http/test_router_main.py
+          uv run pytest -q tests/channel/http/test_router_main.py 2>&1 | tail -3
+          echo "[DEBUG-seg] 4 main router tests on new code exit=${PIPESTATUS[0]}"
+          rm tests/channel/http/test_router_main.py
+          exit 1
