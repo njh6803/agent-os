@@ -22,10 +22,12 @@ from agent_os.http.errors import (
 
 # 계약에 적는 에러와 그 설명. 라우트가 자기 `responses` 에 적는다. 401 은 미들웨어가 내는 것이라
 # 프레임워크가 스키마에 넣어 주지 않고, 422 는 적지 않으면 FastAPI 가 제 모양
-# (`HTTPValidationError`)을 붙여 계약이 봉투가 아닌 것을 약속하게 된다. 500 은 라우터가 건다.
+# (`HTTPValidationError`)을 붙여 계약이 봉투가 아닌 것을 약속하게 된다. 500 은 라우터가 건다. 409 는
+# 요청이 가리킨 것이 있지만 지금 상태로는 받을 수 없는 것을 만나는 라우트만 적는다.
 _DOCUMENTED_ERRORS: Mapping[int, str] = {
     401: UNAUTHORIZED_MESSAGE,
     404: "찾는 것이 없다",
+    409: "있지만 지금 상태로는 받을 수 없다",
     422: INVALID_REQUEST_MESSAGE,
     500: INTERNAL_MESSAGE,
 }

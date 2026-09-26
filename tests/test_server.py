@@ -86,10 +86,10 @@ CHANNEL_BEARER = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 # allowlist 밖이면서 라우트가 없는 경로. 토큰이 없으면 401 이고 있으면 404 라는 것이 곧 미들웨어가
 # 라우팅보다 먼저라는 사실이다. 데이터 라우트가 붙어도 이 경로는 문서에 없어 그 대조가 유지된다.
 GUARDED = "/unrouted"
-# 채널 쪽의 같은 대조. 03·04 가 붙일 `/runs` 와 `/runs/{run_id}/approval` 을 쓰지 않는 이유는
-# 라우트가 붙는 순간 404 가 바뀌어 그 티켓이 이 테스트에 막히기 때문이다. 이 경로는 그 둘 어느
-# 것에도 맞지 않는다. 실행 식별자 하나로 끝나는 라우트(`/runs/{run_id}`)를 더하는 티켓은 이 경로가
-# 그 라우트에 닿는지 다시 본다 — `verbatim` 변환기는 슬래시까지 잡는다.
+# 채널 쪽의 같은 대조. `/runs` 와 `/runs/{run_id}/approval` 을 쓰지 않는 이유는 라우트가 있어 채널
+# 토큰의 답이 404 가 아니기 때문이다. 이 경로는 그 둘 어느 것에도 맞지 않는다 — 승인 라우트는
+# `verbatim` 이 슬래시까지 잡아도 `/approval` 로 끝나야 맞는다. 실행 식별자 하나로 끝나는
+# 라우트(`/runs/{run_id}`)를 더하는 티켓은 이 경로가 그 라우트에 닿는지 다시 본다.
 CHANNEL_GUARDED = "/runs/unrouted"
 
 
@@ -1252,6 +1252,32 @@ async def test_다음_커서가_마지막_행의_정렬_키를_잃지_않고_포
     returned = afters[1]
     assert returned is not None
     assert returned.started_at is not None
+    assert returned.started_at.utcoffset() == timedelta(hours=9)
+
+
+async def test_포트가_받는_커서의_시각대는_pydantic_의_것이_아니라_표준_라이브러리의_것이다(
+    client: AsyncClient, traces: FakeTrace
+) -> None:
+    """서드파티 타입이 경계를 넘어 core 의 값에 실리지 않는다(`CODING_STANDARDS.md`). pydantic 이
+    JSON 에서 만든 시각은 pydantic-core 의 `TzInfo` 를 든다. 그것이 인터프리터 종료까지 살아 있으면
+    종료 중 GC 가 그 해제에서 세그폴트를 낸다 — FastAPI 가 라우트 함수를 모듈 전역 캐시에 두어 그
+    클로저가 붙잡은 포트(여기서는 이 가짜)가 프로세스 끝까지 살기 때문이다(PR #78 의 CI, 종료 코드
+    139)."""
+    seoul = timezone(timedelta(hours=9))
+    traces.rows = [
+        dataclasses.replace(FAILED, started_at=datetime(2026, 9, 23, 21, 4, tzinfo=seoul)),
+        UNREADABLE,
+    ]
+
+    first = await client.get("/traces", params={"limit": "1"}, headers=BEARER)
+    await client.get(
+        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=BEARER
+    )
+
+    returned = traces.calls[-1].after
+    assert returned is not None
+    assert returned.started_at is not None
+    assert type(returned.started_at.tzinfo) is timezone
     assert returned.started_at.utcoffset() == timedelta(hours=9)
 
 

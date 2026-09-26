@@ -18,6 +18,7 @@ import base64
 import binascii
 import re
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
@@ -169,7 +170,23 @@ def decode_cursor(text: str) -> ports.Cursor:
         wire = _CursorWire.model_validate_json(_b64url_decode(text))
     except (binascii.Error, ValidationError) as error:
         raise ValueError("앞 쪽의 next_cursor 가 아니다") from error
-    return ports.Cursor(started_at=wire.started_at, run_id=RunId(wire.run_id))
+    return ports.Cursor(started_at=_standard_offset(wire.started_at), run_id=RunId(wire.run_id))
+
+
+def _standard_offset(moment: datetime | None) -> datetime | None:
+    """같은 순간과 같은 오프셋을 표준 라이브러리의 시각대로 든 시각(질의).
+
+    pydantic 이 JSON 에서 만든 시각은 pydantic-core 의 `TzInfo` 를 든다. 서드파티의 내부 타입이
+    core 의 값(`ports.Cursor`)에 실리지 않게 경계에서 바꾼다(`CODING_STANDARDS.md`). 그 타입이 값에
+    남아 인터프리터 종료까지 살면 종료 중 GC 가 그 해제에서 세그폴트를 낸다(PR #78 의 CI). 오프셋은
+    지킨다 — 커서는 받은 정렬 키를 그대로 포트에 돌려주는 것이 계약이다.
+    """
+    if moment is None:
+        return None
+    offset = moment.utcoffset()
+    if offset is None:
+        return moment
+    return moment.replace(tzinfo=timezone(offset))
 
 
 def _b64url_encode(data: bytes) -> str:
