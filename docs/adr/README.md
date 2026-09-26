@@ -20,5 +20,6 @@
 | [0014](0014-http-channel-streams-the-run.md) | HTTP 채널의 응답은 실행의 이벤트 스트림이고 실행은 연결에 묶이지 않는다 | accepted | 2026-09-24 |
 | [0015](0015-http-channel-has-its-own-token.md) | HTTP 채널은 자기 토큰으로 서고 주체는 `serve`의 OS 사용자다 | accepted | 2026-09-24 |
 | [0016](0016-shared-http-layer.md) | HTTP 표면의 공용 배관은 `agent_os.http` 층에 둔다 | accepted | 2026-09-24 |
+| [0017](0017-plugin-enablement-lives-in-an-operator-file.md) | 플러그인의 켜짐은 플러그인 루트의 운영자 파일이 든다 | accepted | 2026-09-26 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
