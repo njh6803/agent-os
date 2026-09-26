@@ -17,48 +17,19 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # [DEBUG-seg] 종료 코드 139 탐침. 병합 전에 되돌린다. 변형마다 새 체크아웃에서 첫 pytest 를 본다.
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [control, utc, clearcache]
     env:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
-      # 방아쇠는 lint-imports 뒤의 첫 pytest 다(넷째 탐침). 변형마다 그 조건을 새로 세운다.
-      - run: |
-          set +e
-          v="${{ matrix.variant }}"
-          uv run lint-imports >/dev/null
-          export PYTHONFAULTHANDLER=1
-          # 실행 모양을 바꾸지 않고(대조군과 같은 `uv run pytest -q`) 코어를 남겨 gdb 로 연다. gdb 는 뒤에 깐다.
-          sudo sysctl -w kernel.core_pattern=/tmp/core.%p >/dev/null
-          ulimit -c unlimited
-          case "$v" in
-            control) uv run pytest -q; code=$? ;;
-            utc)
-              sed -i 's/return ports.Cursor(started_at=wire.started_at, run_id=RunId(wire.run_id))/return ports.Cursor(started_at=None if wire.started_at is None else wire.started_at.astimezone(__import__("datetime").UTC), run_id=RunId(wire.run_id))/' src/agent_os/admin/traces.py
-              grep -n "return ports.Cursor" src/agent_os/admin/traces.py
-              uv run pytest -q; code=$? ;;
-            clearcache)
-              mkdir -p /tmp/plug
-              printf 'import gc\n\nfrom fastapi.dependencies import models\n\n\ndef pytest_unconfigure(config):\n    for name in ("_is_gen_callable_cached", "_is_async_gen_callable_cached", "_is_coroutine_callable_cached"):\n        getattr(models, name).cache_clear()\n    gc.collect()\n' > /tmp/plug/clearplug.py
-              PYTHONPATH=/tmp/plug uv run pytest -q -p clearplug; code=$? ;;
-          esac
-          ls -la /tmp/core.* 2>/dev/null
-          sudo apt-get install -y -qq gdb >/dev/null 2>&1
-          exe=$(readlink -f .venv/bin/python)
-          for core in /tmp/core.*; do
-            [ -e "$core" ] || continue
-            gdb -q -batch -ex "set pagination off" -ex "bt 30" -ex "info symbol \$pc" -ex "x/6i \$pc" -ex "info sharedlibrary" "$exe" "$core" 2>&1 | tail -160
-          done
-          echo "[DEBUG-seg] $v exit=$code"
-          exit 1
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run lint-imports
+      - run: uv run pytest -q
+      - run: uv run python tools/check_instructions.py
+      - run: uv run python tools/check_type_escapes.py
