@@ -17,6 +17,11 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # [DEBUG-seg] 종료 코드 139 탐침. 병합 전에 되돌린다. 변형마다 새 체크아웃에서 첫 pytest 를 본다.
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [fh, clean, lintimports, pyright, ruff]
     env:
       PYTHONUTF8: "1"
     steps:
@@ -26,23 +31,29 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pyright
-      - run: uv run lint-imports
-      # [DEBUG-seg] 종료 코드 139 탐침. 병합 전에 되돌린다.
-      # 원래 잡의 순서를 되살려 재현을 먼저 보고, 그 뒤 앞 단계가 남긴 것을 하나씩 지운다.
       - run: |
           set +e
-          uv run pytest -q
-          echo "[DEBUG-seg] A as-is exit=$?"
-          PYTHONFAULTHANDLER=1 uv run pytest -q
-          echo "[DEBUG-seg] B PYTHONFAULTHANDLER exit=$?"
-          ls -a
-          rm -rf .import_linter_cache
-          uv run pytest -q
-          echo "[DEBUG-seg] C without import_linter_cache exit=$?"
-          rm -rf .ruff_cache
-          uv run pytest -q
-          echo "[DEBUG-seg] D without ruff_cache too exit=$?"
+          v="${{ matrix.variant }}"
+          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = ruff ]; then
+            uv run ruff check . >/dev/null; uv run ruff format --check . >/dev/null
+          fi
+          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = pyright ]; then
+            uv run pyright >/dev/null
+          fi
+          if [ "$v" = fh ] || [ "$v" = clean ] || [ "$v" = lintimports ]; then
+            uv run lint-imports >/dev/null
+          fi
+          if [ "$v" = fh ]; then
+            PYTHONFAULTHANDLER=1 uv run pytest -q
+            echo "[DEBUG-seg] $v first exit=$?"
+          else
+            uv run pytest -q
+            echo "[DEBUG-seg] $v first exit=$?"
+          fi
+          if [ "$v" = clean ]; then
+            find . -path ./.venv -prune -o -name __pycache__ -type d -prune -exec rm -rf {} +
+            rm -rf .pytest_cache
+            uv run pytest -q
+            echo "[DEBUG-seg] $v after clean exit=$?"
+          fi
           exit 1
