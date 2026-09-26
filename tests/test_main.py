@@ -950,8 +950,10 @@ LISTENING = re.compile(r"Uvicorn running on (http://\S+)")
 # 실제 serve 가 설 때까지 기다리는 상한. 대부분은 import 시간이다.
 STARTUP_SECONDS = 30
 # 읽기 상한은 keepalive 간격(FastAPI 기본 15초)보다 길면 된다. 모델이 오래 조용해도 ping 이 읽기를
-# 깨운다.
+# 깨운다. 조각 사이만 재므로 전체 상한은 따로 `_post_stream` 이 본다.
 STREAM_TIMEOUT = Timeout(10.0, read=60.0)
+# 요청 하나가 결말까지 가는 상한. 모델 호출 둘과 도구 호출 하나가 넉넉히 들어가는 길이다.
+STREAM_SECONDS = 120
 
 
 @contextmanager
@@ -1002,6 +1004,28 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
         process.wait()
 
 
+def _post_stream(client: Client, url: str, body: Mapping[str, Json]) -> str:
+    """POST 하나의 SSE 본문을 결말까지. 200 이 아니면 그 봉투를 싣고 실패한다.
+
+    읽기 상한은 조각 사이만 재서, 모델 호출이 멈춰도 keepalive 가 오는 한 끝나지 않는다. 그래서
+    조각이 올 때마다 전체 상한을 보고 넘으면 받은 데까지 싣고 실패한다 — 그래야 `_serving` 의
+    정리까지 간다. keepalive 가 간격마다 오므로 상한을 넘긴 뒤 늦어도 그만큼 안에 알아챈다.
+    """
+    deadline = time.monotonic() + STREAM_SECONDS
+    with client.stream("POST", url, json=body) as response:
+        if response.status_code != 200:
+            response.read()
+            pytest.fail(f"{url} 이 {response.status_code} 로 답했다: {response.text}")
+        chunks: list[str] = []
+        for chunk in response.iter_text():
+            chunks.append(chunk)
+            if time.monotonic() > deadline:
+                pytest.fail(
+                    f"{url} 의 스트림이 {STREAM_SECONDS}초 안에 끝나지 않았다:\n{''.join(chunks)}"
+                )
+        return "".join(chunks)
+
+
 @pytest.mark.llm
 def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다(
     tmp_path: Path,
@@ -1027,20 +1051,18 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
             trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
         ) as client,
     ):
-        paused = client.post("/runs", json={"agent": "gatedcalc", "request": "2 더하기 3은?"})
+        paused = _post_stream(client, "/runs", {"agent": "gatedcalc", "request": "2 더하기 3은?"})
         # 여기서 먼저 단언한다. 멈추지 못한 스트림의 식별자로 승인을 보내면 그 409 가 원인을 가린다.
-        assert paused.status_code == 200, paused.text
-        paused_stream = _events(paused.text)
-        assert paused_stream[-1]["type"] == "run_paused", paused.text
+        paused_stream = _events(paused)
+        assert paused_stream[-1]["type"] == "run_paused", paused
         run_id = paused_stream[0]["run_id"]
-        resumed = client.post(f"/runs/{run_id}/approval", json={"decision": "approve"})
+        resumed = _post_stream(client, f"/runs/{run_id}/approval", {"decision": "approve"})
 
     assert paused_stream[0]["type"] == "run_started"
     assert paused_stream[-1]["tool"] == "add"
-    assert resumed.status_code == 200, resumed.text
-    resumed_stream = _events(resumed.text)
+    resumed_stream = _events(resumed)
     assert [event["type"] for event in resumed_stream[:2]] == ["approval_granted", "run_resumed"]
-    assert resumed_stream[-1]["type"] == "run_finished", resumed.text
+    assert resumed_stream[-1]["type"] == "run_finished", resumed
     assert "5" in str(resumed_stream[-1]["output"])
     (trace_file,) = _trace_files(tmp_path / "t")  # 재개가 끼어도 실행 하나에 파일 하나다
     assert trace_file.stem == run_id
