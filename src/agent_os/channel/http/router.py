@@ -163,14 +163,15 @@ def channel_router(
         )
         return await runs.start(events, request_id=request_id_of(request))
 
-    # 404 는 없는 에이전트, 500 은 그 밖의 구성 오류다. 409 는 없다 — 재개할 수 없는 상태를 만나는
-    # 것은 재개 라우트다.
+    # 404 는 없는 에이전트, 409 는 꺼진 것을 부르면 core 가 던지는 `Disabled` 를 표가 옮긴 것(ADR
+    # 0017, 요청한 에이전트이거나 그것이 쓰는 mcp 다), 500 은 그 밖의 구성 오류다. 재개할 수 없는
+    # 상태를 만나는 것은 재개 라우트뿐이다.
     @router.post(
         "",
         operation_id="start_run",
         summary="실행 하나를 일으켜 그 이벤트를 생기는 대로 흘린다",
         response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 422),
+        responses=documented_stream_errors(401, 404, 409, 422),
     )
     async def start_run(stream: Annotated[RunStream, Depends(run_stream)]) -> AsyncIterator[Event]:
         async for event in stream.events():

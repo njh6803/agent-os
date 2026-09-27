@@ -32,7 +32,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from agent_os.core.ports import Absent, NotResumable, PluginError
+from agent_os.core.ports import Absent, Disabled, NotResumable, PluginError
 
 REQUEST_ID_HEADER = "X-Request-Id"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
@@ -49,7 +49,9 @@ _FAILURE_KEY = "agent_os.failure_detail"
 
 # StrEnum 인 이유는 생성 클라이언트가 이름 있는 타입을 받기 위해서다(ADR 0008 이 같은 이유로
 # 골랐다). 값이 늘면 openapi.json 이 바뀌므로 어휘를 늘리는 것은 계약 변경이다. 다섯째인 conflict 는
-# 채널이 재개할 수 없는 실행에 내는 409 이고 관리 라우트는 내지 않는다(ADR 0010 의 2026-09-24 이력).
+# 대상이 있지만 그 상태가 요청을 허락하지 않는 409 다. 표가 재개 불가(`NotResumable`)와 꺼진
+# 플러그인(`Disabled`)을 거기로 옮기고, 관리 라우트는 내지 않는다(ADR 0010 의 2026-09-24·2026-09-26
+# 이력, ADR 0017).
 class ErrorCode(StrEnum):
     """에러 봉투의 어휘. 상태 코드와 1:1 이다."""
 
@@ -133,9 +135,10 @@ def failure_for(error: Exception) -> _Failure:
     갈래를 셋으로 나눠 두면 예외 하나를 더할 때 세 곳을 고쳐야 하므로 한 항목이 한 갈래다.
     관리 쪽 부재(포트가 `None` 을 돌려준 것)는 라우트가 `HTTPException(404)` 로 말하고 그것이 첫
     갈래로 들어온다. core 의 실행 전 실패는 타입으로 갈려 오고 여기가 MRO 로 옮긴다(ADR 0014) —
-    부재 404, 재개 불가 409, 그 밖의 `PluginError` 500. 하위 타입의 갈래가 기반 타입보다 먼저여야
-    한다. 뒤집히면 둘 다 500 이 된다. `PluginError` 가 500 인 이유는 요청을 고쳐서 풀리는 것이
-    이미 앞의 둘로 갈려 남는 것이 "서버의 구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만
+    부재 404, 재개 불가 409, 꺼짐 409, 그 밖의 `PluginError` 500. 하위 타입의 갈래가 기반 타입보다
+    먼저여야 한다. 뒤집히면 전부 500 이 된다. 기준은 "깨졌나"다(ADR 0014 의 2026-09-26 이력) —
+    4xx 는 대상이 없거나 대상의 상태가 요청을 허락하지 않는 것이고, `PluginError` 가 500 인 이유는
+    하위 타입 셋을 뺀 뒤 남는 것이 "서버의 구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만
     문구를 덮는다 — 우리가 쓰지 않은 예외의 말은 내부 사정을 담는다.
     """
     match error:
@@ -151,7 +154,7 @@ def failure_for(error: Exception) -> _Failure:
             )
         case Absent():
             return _Failure(status=404, message=str(error))
-        case NotResumable():
+        case NotResumable() | Disabled():
             return _Failure(status=409, message=str(error))
         case PluginError():
             return _Failure(status=500, message=str(error))

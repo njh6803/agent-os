@@ -31,9 +31,11 @@ from agent_os.core.ports import (
     ChatModel,
     Clock,
     Cursor,
+    Disabled,
     ManifestRow,
     NotResumable,
     PluginError,
+    PluginKey,
     PluginSource,
     RunRow,
     RunStatus,
@@ -45,6 +47,7 @@ from agent_os.core.ports import (
     TraceSchemaVersion,
     TraceStore,
     UnknownEvent,
+    WriteOutcome,
 )
 from agent_os.core.run import Approve, Decision, Deny, resume, run
 from agent_os.sdk import (
@@ -200,6 +203,13 @@ class FakePlugins:
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         return self._agents[manifest.name]
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        """아직 아무것도 꺼지지 않았다. 꺼진 집합을 받고 읽기를 세는 것은 다음 티켓이 더한다."""
+        return frozenset()
+
+    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+        raise NotImplementedError("core 는 켜고 끄지 않는다. 관리가 한다")
 
 
 class FakeConnection:
@@ -1666,7 +1676,8 @@ async def test_재개할_때_트레이스가_가리키는_에이전트가_없으
 ) -> None:
     """바로 위의 run() 과 같은 매니페스트 부재인데 뜻이 달라서 나란히 고정한다. 재개가 가리키는
     것은 실행이고 그 실행은 있다. 없는 에이전트의 이름을 댄 것은 요청이 아니라 서버가 가진 기록이라
-    클라이언트가 고칠 수 없다(ADR 0014 의 2026-09-24 이력). 결정도 쓰이지 않는다."""
+    기록과 구성이 어긋난 것, 곧 깨진 것이다(ADR 0014 의 2026-09-24·2026-09-26 이력). 결정도
+    쓰이지 않는다."""
     model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
     tools = FakeTools({"send": "sent"})
     await _run(
@@ -1823,11 +1834,13 @@ async def _unwritable_decision(clock: FakeClock) -> None:
 async def test_구성이나_기록이_깨진_것은_부재도_재개_불가도_아닌_PluginError다(
     scenario: Callable[[FakeClock], Awaitable[None]], clock: FakeClock
 ) -> None:
-    """요청을 고쳐서 풀리는 일이 아니다. 채널은 이것을 서버의 고장으로 말한다."""
+    """서버의 구성이나 기록이 깨진 것이다. 대상이 없는 것도, 대상의 상태가 요청을 허락하지 않는
+    것도 아니라 하위 타입 셋 어느 것도 아니다(ADR 0014 의 2026-09-26 이력). 채널은 이것을 서버의
+    고장으로 말한다."""
     with pytest.raises(PluginError) as caught:
         await scenario(clock)
 
-    assert not isinstance(caught.value, Absent | NotResumable)
+    assert not isinstance(caught.value, Absent | NotResumable | Disabled)
 
 
 async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_가려_하면_실패한다(

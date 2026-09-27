@@ -23,10 +23,11 @@ from agent_os.http.errors import AssignRequestId, install_error_handlers
 from agent_os.sdk import Principal
 
 # 계약 파일의 머리. 관리와 채널을 함께 말한다(ADR 0010 의 2026-09-24 이력). 관리만 말하면 채널이
-# 붙은 순간 "실행을 일으키지 않는다"가 거짓이 된다.
+# 붙은 순간 "실행을 일으키지 않는다"가 거짓이 되고, 읽기만 말하면 켜고 끄는 경로가 선 순간
+# (2026-09-26 이력) "읽는다"가 거짓이 된다.
 _TITLE = "Agent OS HTTP API"
 _DESCRIPTION = (
-    "관리는 등록된 플러그인과 지나간 실행을 읽고 실행을 일으키지 않는다. "
+    "관리는 등록된 플러그인과 지나간 실행을 읽고 플러그인을 켜고 끄며 실행을 일으키지 않는다. "
     "채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. 두 면은 서로 다른 토큰으로 연다."
 )
 

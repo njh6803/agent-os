@@ -8,13 +8,15 @@
 포트 적합성이 검증되는 자리다. 네트워크도 디스크도 타지 않는다.
 """
 
+import asyncio
 import base64
 import contextlib
 import dataclasses
 import inspect
 import io
 import json
-from collections.abc import AsyncIterator, Mapping, Sequence
+import time
+from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
 from typing import get_type_hints
 
@@ -37,9 +39,11 @@ from agent_os.core.ports import (
     Absent,
     Clock,
     Cursor,
+    Disabled,
     ManifestRow,
     NotResumable,
     PluginError,
+    PluginKey,
     PluginSource,
     RunRow,
     RunStatus,
@@ -52,6 +56,7 @@ from agent_os.core.ports import (
     UnknownEvent,
     UnreadableManifest,
     UnreadableTrace,
+    WriteOutcome,
     cursor_of,
     order_key,
 )
@@ -140,15 +145,34 @@ BROKEN = UnreadableManifest(
 
 
 class FakePlugins:
-    """디렉터리 대신 행 목록을 든다. 부른 횟수를 세어 검증이 포트보다 먼저 끝나는지 본다.
+    """디렉터리 대신 행 목록과 꺼진 집합을 든다. 부른 횟수를 세어 검증이 포트보다 먼저 끝나는지
+    본다.
 
     읽히지 않는 행에는 어댑터와 같은 비대칭으로 답한다 — 목록에서는 표지, 단건에서는 PluginError.
-    어댑터가 실제로 그렇게 답한다는 것은 `tests/adapters/test_filesystem.py` 가 잰다.
+    켜짐도 어댑터의 규칙으로 답한다 — 쓰기는 부재 판정이 먼저이고, 운영자 파일의 손상(`corrupt`)이
+    그다음이며, 바뀌는 것이 없어도 성공이다. 쓰기는 읽고, 디스크 시간(`disk_seconds`)을 들인 뒤
+    쓴다. 즉시 끝나면 스레드풀에서 도는 동기 라우트도 스레드 타이밍에 따라 초록으로 지나간다
+    (채널 테스트의 선례). 어댑터가 실제로 이렇게 답한다는 것은 `tests/adapters/test_filesystem.py`
+    가 잰다.
     """
 
-    def __init__(self, rows: Sequence[ManifestRow] = ()) -> None:
+    def __init__(
+        self,
+        rows: Sequence[ManifestRow] = (),
+        *,
+        disabled: Iterable[PluginKey] = (),
+        corrupt: str | None = None,
+        unwritable: str | None = None,
+        disk_seconds: float = 0.0,
+    ) -> None:
         self._rows = tuple(rows)
+        self.disabled = frozenset(disabled)
+        self._corrupt = corrupt
+        self._unwritable = unwritable
+        self._disk_seconds = disk_seconds
         self.calls = 0
+        self.disabled_reads = 0
+        self.writes: list[tuple[PluginKey, bool]] = []
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
         self.calls += 1
@@ -166,6 +190,28 @@ class FakePlugins:
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        self.calls += 1
+        self.disabled_reads += 1
+        if self._corrupt is not None:
+            raise PluginError(self._corrupt)
+        return self.disabled
+
+    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+        self.calls += 1
+        if not any(row.kind is kind and row.name == name for row in self._rows):
+            return "absent"
+        if self._corrupt is not None:
+            raise PluginError(self._corrupt)
+        if self._unwritable is not None:
+            raise PluginError(self._unwritable)
+        current = self.disabled
+        time.sleep(self._disk_seconds)
+        key = PluginKey(kind=kind, name=name)
+        self.writes.append((key, enabled))
+        self.disabled = current - {key} if enabled else current | {key}
+        return "applied"
 
 
 T0 = datetime(2026, 9, 23, 12, 0, tzinfo=UTC)
@@ -362,10 +408,18 @@ def stderr() -> io.StringIO:
     return io.StringIO()
 
 
+EVERYTHING_KEY = PluginKey(kind=PluginKind.MCP, name=PluginName("everything"))
+BROKEN_KEY = PluginKey(kind=PluginKind.AGENT, name=PluginName("broken"))
+CALC_KEY = PluginKey(kind=PluginKind.AGENT, name=PluginName("calc"))
+
+
 @pytest.fixture
 def plugins() -> FakePlugins:
-    """종류 넷에 하나 이상씩과 읽을 수 없는 것 하나. 행 순서는 어댑터처럼 종류 안에서 이름순이다."""
-    return FakePlugins(rows=(BROKEN, CALC, EVERYTHING, SUMMARIZE, SONNET))
+    """종류 넷에 하나 이상씩과 읽을 수 없는 것 하나. 행 순서는 어댑터처럼 종류 안에서 이름순이다.
+    mcp 하나가 꺼져 있다."""
+    return FakePlugins(
+        rows=(BROKEN, CALC, EVERYTHING, SUMMARIZE, SONNET), disabled={EVERYTHING_KEY}
+    )
 
 
 @pytest.fixture
@@ -724,6 +778,22 @@ async def test_core_의_재개_불가는_409이고_code_가_conflict_다(
     assert "run-1" in response.json()["message"]
 
 
+async def test_core_의_꺼짐은_409이고_code_가_conflict_다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """대상은 있는데 운영자가 끈 상태라 요청을 허락하지 않는다. 깨진 것이 아니라 500 이 아니고,
+    없는 것이 아니라 404 가 아니다(ADR 0017, ADR 0014 의 2026-09-26 이력). 이 갈래도 기반 타입의
+    갈래보다 먼저여야 한다 — 뒤집히면 500 이 된다. 던지는 쪽은 core 판정 티켓이고 여기서는 표만
+    잰다."""
+    _route_that_raises(app, "/off", Disabled("꺼진 플러그인이다: agent calc"))
+
+    response = await client.get("/off", headers=BEARER)
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+    assert "calc" in response.json()["message"]
+
+
 async def test_예기치_않은_실패도_봉투이고_내부_문구를_밖으로_내지_않는다(
     app: FastAPI, client: AsyncClient, stderr: io.StringIO
 ) -> None:
@@ -767,7 +837,8 @@ def test_스키마에_이름_있는_타입이_나온다(app: FastAPI) -> None:
 
 def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(app: FastAPI) -> None:
     """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. 다섯째인
-    conflict 는 채널이 재개할 수 없는 실행에 내는 409 다(ADR 0010 의 2026-09-24 이력)."""
+    conflict 는 대상이 있지만 그 상태가 요청을 허락하지 않는 409 이고, 표가 재개 불가와 꺼짐을
+    거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력). 관리 라우트는 내지 않는다."""
     schemas = app.openapi().get("components", {}).get("schemas", {})
 
     assert set(schemas["ErrorCode"]["enum"]) == {
@@ -813,16 +884,31 @@ async def test_플러그인_목록이_종류들을_한_평평한_목록으로_�
     ]
 
 
-async def test_목록의_항목이_매니페스트_그대로라_승인_대상_도구가_보인다(
+async def test_행의_겉은_종류_이름_켜짐이고_읽히는_행은_매니페스트를_표지_행은_이유를_든다(
+    client: AsyncClient,
+) -> None:
+    """읽히든 안 읽히든 모든 행에 스위치를 그릴 수 있다(스토리 56). 켜짐은 매니페스트 안이 아니라
+    행의 겉에 있어 `plugin.toml` 에 적으면 된다고 믿게 하지 않는다(스토리 10, ADR 0017)."""
+    rows = (await client.get("/plugins", headers=BEARER)).json()
+
+    shapes = {frozenset(row) for row in rows}
+    assert shapes == {
+        frozenset({"kind", "name", "enabled", "manifest"}),
+        frozenset({"kind", "name", "enabled", "reason"}),
+    }
+    assert all("enabled" not in row["manifest"] for row in rows if "manifest" in row)
+
+
+async def test_목록의_행이_매니페스트를_통째로_담아_승인_대상_도구가_보인다(
     client: AsyncClient,
 ) -> None:
     """가드레일의 범위를 코드를 읽지 않고 안다(스토리 3). interrupts 가 필드로 닫은 것을 읽는
-    면이다."""
+    면이다. 매니페스트는 sdk 의 것 그대로다(ADR 0010 의 2026-09-23·2026-09-26 이력)."""
     rows = (await client.get("/plugins", headers=BEARER)).json()
 
     calc = next(row for row in rows if row["name"] == "calc")
-    assert calc == CALC.model_dump(mode="json")
-    assert calc["requires_approval"] == ["add"]
+    assert calc["manifest"] == CALC.model_dump(mode="json")
+    assert calc["manifest"]["requires_approval"] == ["add"]
 
 
 async def test_mcp_매니페스트의_command_와_args_도_가리지_않고_내보낸다(
@@ -835,15 +921,18 @@ async def test_mcp_매니페스트의_command_와_args_도_가리지_않고_내�
     rows = (await client.get("/plugins", headers=BEARER)).json()
 
     everything = next(row for row in rows if row["name"] == "everything")
-    assert everything["server"]["command"] == "npx"
-    assert everything["server"]["args"] == ["-y", "@modelcontextprotocol/server-everything"]
+    assert everything["manifest"]["server"]["command"] == "npx"
+    assert everything["manifest"]["server"]["args"] == [
+        "-y",
+        "@modelcontextprotocol/server-everything",
+    ]
 
 
-async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오고_그것은_종류_이름_이유를_든_표지다(
+async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오고_그것은_켜짐과_이유를_든_표지다(
     client: AsyncClient,
 ) -> None:
     """조용히 빠지면 등록했다고 믿는 것과 실제가 어긋나고, 전체가 실패하면 무엇이 살아 있는지조차
-    모른다(스토리 5·6)."""
+    모른다(스토리 5·6). 표지에도 켜짐이 있어 깨진 것을 끈 채로 고치고 있는지 안다(스토리 8)."""
     response = await client.get("/plugins", headers=BEARER)
 
     assert response.status_code == 200
@@ -851,17 +940,110 @@ async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오�
     assert {
         "kind": "agent",
         "name": "broken",
+        "enabled": True,
         "reason": "매니페스트를 읽을 수 없다: plugins/agents/broken/plugin.toml",
     } in rows
     assert {row["name"] for row in rows} == {"broken", "calc", "everything", "summarize", "sonnet"}
 
 
-async def test_플러그인_하나를_물으면_매니페스트를_통째로_돌려준다(client: AsyncClient) -> None:
-    """목록이 말해 주지 않는 세부를 확인하는 자리다(스토리 4)."""
-    response = await client.get("/plugins/agent/calc", headers=BEARER)
+async def test_꺼진_것은_목록에서_enabled_가_거짓이고_표지_행도_꺼질_수_있다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """무엇이 꺼져 있는지 한 곳에서 본다(스토리 7·8). 켜짐은 매니페스트가 아니라 운영자 파일에서
+    온다."""
+    plugins.disabled = frozenset({EVERYTHING_KEY, BROKEN_KEY})
 
-    assert response.status_code == 200
-    assert response.json() == CALC.model_dump(mode="json")
+    rows = (await client.get("/plugins", headers=BEARER)).json()
+
+    assert {row["name"]: row["enabled"] for row in rows} == {
+        "broken": False,
+        "calc": True,
+        "everything": False,
+        "summarize": True,
+        "sonnet": True,
+    }
+
+
+async def test_이름이_패턴을_어긴_표지_행은_언제나_켜짐이다(
+    stderr: io.StringIO,
+) -> None:
+    """그런 이름은 운영자 파일에 들 수 없다 — 들면 파일이 손상이다. 꺼진 집합에 같은 문자열이 있어도
+    유효한 이름의 타입으로 감싸 견주지 않는다."""
+    odd = UnreadableManifest(
+        kind=PluginKind.AGENT,
+        name="MyAgent",
+        reason="디렉터리 이름이 플러그인 이름의 패턴을 어긴다",
+    )
+    plugins = FakePlugins(rows=(odd, CALC), disabled={CALC_KEY})
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        rows = (await client.get("/plugins", headers=BEARER)).json()
+
+    assert {row["name"]: row["enabled"] for row in rows} == {"MyAgent": True, "calc": False}
+
+
+async def test_꺼진_집합은_목록_요청_하나에_한_번_읽는다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """행마다 파일을 다시 읽지 않는다(ADR 0012 의 2026-09-26 이력)."""
+    await client.get("/plugins", headers=BEARER)
+
+    assert plugins.disabled_reads == 1
+
+
+async def test_운영자_파일이_깨지면_목록_전체가_500_봉투다(stderr: io.StringIO) -> None:
+    """매니페스트 하나가 깨졌을 때 그 행만 표지가 되는 것과 다르다. 행마다 "알 수 없음"을 실으면
+    행의 타입이 약해진다(ADR 0017). 메시지가 파일 경로를 든다(스토리 21)."""
+    plugins = FakePlugins(rows=(CALC,), corrupt="운영자 파일이 깨졌다: plugins/disabled.toml")
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        response = await client.get("/plugins", headers=BEARER)
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert "plugins/disabled.toml" in response.json()["message"]
+
+
+async def test_플러그인_하나를_물으면_켜짐과_매니페스트를_통째로_든_행을_돌려준다(
+    client: AsyncClient,
+) -> None:
+    """목록이 말해 주지 않는 세부를 확인하고(스토리 4), 목록을 다 받지 않고 켜짐 하나를 본다
+    (스토리 9)."""
+    calc = await client.get("/plugins/agent/calc", headers=BEARER)
+    everything = await client.get("/plugins/mcp/everything", headers=BEARER)
+
+    assert calc.status_code == 200
+    assert calc.json() == {
+        "kind": "agent",
+        "name": "calc",
+        "enabled": True,
+        "manifest": CALC.model_dump(mode="json"),
+    }
+    assert everything.json()["enabled"] is False
+
+
+async def test_단건_조회의_판정_순서는_부재_깨진_매니페스트_운영자_파일의_손상이다(
+    stderr: io.StringIO,
+) -> None:
+    """운영자 파일이 깨졌어도 없는 이름은 404 다(ADR 0017 의 2026-09-27 둘째 이력). 깨진
+    매니페스트는 운영자 파일보다 먼저 500 이라 메시지가 매니페스트를 가리킨다."""
+    operator_file = "운영자 파일이 깨졌다: plugins/disabled.toml"
+    plugins = FakePlugins(rows=(BROKEN, CALC), corrupt=operator_file)
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        absent = await client.get("/plugins/agent/nothing", headers=BEARER)
+        broken = await client.get("/plugins/agent/broken", headers=BEARER)
+        present = await client.get("/plugins/agent/calc", headers=BEARER)
+
+    assert absent.status_code == 404
+    assert broken.status_code == 500
+    assert "plugins/agents/broken/plugin.toml" in broken.json()["message"]
+    assert "disabled.toml" not in broken.json()["message"]
+    assert present.status_code == 500
+    assert "plugins/disabled.toml" in present.json()["message"]
 
 
 async def test_없는_플러그인은_404이고_code_가_not_found_다(client: AsyncClient) -> None:
@@ -971,43 +1153,295 @@ def test_문서화된_에러_응답이_전부_봉투이고_내는_에러를_빠�
                 schema = responses[status]["content"]["application/json"]["schema"]
                 assert schema == envelope, (where, status)
     assert "404" in document["paths"]["/plugins/{kind}/{name}"]["get"]["responses"]
+    assert "404" in document["paths"]["/plugins/{kind}/{name}/enabled"]["put"]["responses"]
     assert "404" in document["paths"]["/traces/{run_id}"]["get"]["responses"]
     assert "HTTPValidationError" not in document["components"]["schemas"]
 
 
-def test_표지의_HTTP_모양이_core_의_표지와_같은_필드를_든다() -> None:
-    """관리 쪽 모델이 core 의 표지를 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
-    빨개져 관리 쪽이 조용히 뒤처지지 않는다. 매니페스트에 별도 타입을 두지 않은 이유가 이것이다
-    (ADR 0010 의 2026-09-23 이력)."""
-    assert set(admin_http.UnreadableManifest.model_fields) == {
+def test_표지_행의_HTTP_모양이_core_의_표지에_켜짐을_더한_것이다() -> None:
+    """관리 쪽 행이 core 의 표지를 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
+    빨개져 관리 쪽이 조용히 뒤처지지 않는다. 더한 하나가 켜짐이고 그것은 표지가 아니라 행의
+    것이다(ADR 0010 의 2026-09-26 이력). 읽히는 행은 매니페스트를 통째로 담아 별도 타입이 없다."""
+    assert set(admin_http.PluginPlaceholder.model_fields) == {
         field.name for field in dataclasses.fields(UnreadableManifest)
-    }
+    } | {"enabled"}
+    assert set(admin_http.Plugin.model_fields) == {"kind", "name", "enabled", "manifest"}
 
 
-def test_늘_실리는_매니페스트_필드는_계약에서도_required_다(app: FastAPI) -> None:
+def test_늘_실리는_매니페스트_필드와_행의_필드는_계약에서도_required_다(app: FastAPI) -> None:
     """서버는 필드를 언제나 전부 싣는다. 기본값 있는 필드가 required 에서 빠지면 생성 클라이언트가
-    `requires_approval` 을 선택 필드로 받는다 — 이 티켓이 보이려는 바로 그 필드다."""
+    `requires_approval` 을 선택 필드로 받는다. 행 둘은 기본값이 없어 전부 required 이고, 그래서
+    `manifest` 와 `reason` 으로 갈린다(스토리 57)."""
     schemas = app.openapi()["components"]["schemas"]
 
     assert set(schemas["PluginManifest"]["required"]) == set(PluginManifest.model_fields)
     assert set(schemas["McpServer"]["required"]) == set(McpServer.model_fields)
-    assert set(schemas["UnreadableManifest"]["required"]) == {"kind", "name", "reason"}
+    assert set(schemas["Plugin"]["required"]) == {"kind", "name", "enabled", "manifest"}
+    assert set(schemas["PluginPlaceholder"]["required"]) == {"kind", "name", "enabled", "reason"}
+    assert schemas["Plugin"]["additionalProperties"] is False
+    assert schemas["PluginPlaceholder"]["additionalProperties"] is False
 
 
 def test_플러그인_목록의_행_타입이_이름_있는_스키마다(app: FastAPI) -> None:
-    """생성 클라이언트가 익명 유니온 대신 이름 있는 타입을 받는다(스토리 28)."""
+    """생성 클라이언트가 익명 유니온 대신 이름 있는 타입을 받는다(스토리 28·57). 단건도 같은
+    행이다."""
     document = app.openapi()
     schemas = document["components"]["schemas"]
     ok = document["paths"]["/plugins"]["get"]["responses"]["200"]
     items = ok["content"]["application/json"]["schema"]["items"]
+    single = document["paths"]["/plugins/{kind}/{name}"]["get"]["responses"]["200"]
 
     assert items == {"$ref": "#/components/schemas/PluginRow"}
     assert schemas["PluginRow"] == {
         "anyOf": [
-            {"$ref": "#/components/schemas/PluginManifest"},
-            {"$ref": "#/components/schemas/UnreadableManifest"},
+            {"$ref": "#/components/schemas/Plugin"},
+            {"$ref": "#/components/schemas/PluginPlaceholder"},
         ]
     }
+    assert single["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/Plugin"
+    }
+    assert schemas["Plugin"]["properties"]["manifest"] == {
+        "$ref": "#/components/schemas/PluginManifest"
+    }
+
+
+def test_읽히는_행의_이름은_sdk_의_패턴을_계약에_싣고_표지_행의_이름은_싣지_않는다(
+    app: FastAPI,
+) -> None:
+    """목록에서 얻은 이름을 켜고 끄는 경로에 그대로 넘길 수 있다. 표지는 패턴을 어긴 디렉터리
+    이름일 수 있어 `str` 그대로다(`.claude/rules/core.md`)."""
+    schemas = app.openapi()["components"]["schemas"]
+
+    assert schemas["Plugin"]["properties"]["name"]["pattern"] == PLUGIN_NAME_PATTERN
+    assert "pattern" not in schemas["PluginPlaceholder"]["properties"]["name"]
+
+
+# 켜고 끄기 — 관리의 첫 쓰기 경로(plugin-toggle 티켓 01, ADR 0010 의 2026-09-26 이력)
+
+ENABLED_PATH = "/plugins/agent/calc/enabled"
+OFF = {"enabled": False}
+ON = {"enabled": True}
+
+
+async def _enabled_of(client: AsyncClient, name: str) -> bool:
+    rows = (await client.get("/plugins", headers=BEARER)).json()
+    return bool(next(row for row in rows if row["name"] == name)["enabled"])
+
+
+async def test_켜고_끄기가_본문_없는_204이고_다음_목록에_반영된다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """HTTP 요청 하나로 끄고 같은 길로 켠다(스토리 1·2). 204 인 이유는 깨진 매니페스트를 끈 직후의
+    응답이 단건 조회(500)와 모양이 갈리지 않게 하기 위해서다(스토리 4, ADR 0010 의 2026-09-26
+    이력)."""
+    off = await client.put(ENABLED_PATH, json=OFF, headers=BEARER)
+    after_off = await _enabled_of(client, "calc")
+    on = await client.put(ENABLED_PATH, json=ON, headers=BEARER)
+    after_on = await _enabled_of(client, "calc")
+
+    assert off.status_code == 204
+    assert off.content == b""
+    assert after_off is False
+    assert on.status_code == 204
+    assert after_on is True
+    assert plugins.writes == [(CALC_KEY, False), (CALC_KEY, True)]
+
+
+async def test_이미_꺼진_것을_다시_꺼도_204다(client: AsyncClient) -> None:
+    """두 번 누른 버튼이나 재시도가 에러가 되면 안 된다(스토리 3)."""
+    response = await client.put("/plugins/mcp/everything/enabled", json=OFF, headers=BEARER)
+
+    assert response.status_code == 204
+    assert await _enabled_of(client, "everything") is False
+
+
+async def test_없는_플러그인의_켜고_끄기는_404이고_운영자_파일이_깨졌어도_그렇다(
+    client: AsyncClient, stderr: io.StringIO
+) -> None:
+    """오타로 지은 이름이 파일에 쌓이면 안 된다(스토리 5). 부재 판정이 손상 판정보다 먼저다(ADR
+    0017 의 2026-09-27 둘째 이력). 같은 이름이라도 종류가 다르면 없는 것이다."""
+    for path in ("/plugins/agent/nothing/enabled", "/plugins/mcp/calc/enabled"):
+        response = await client.put(path, json=OFF, headers=BEARER)
+
+        assert response.status_code == 404, path
+        assert response.json()["code"] == "not_found", path
+
+    corrupt = FakePlugins(rows=(CALC,), corrupt="운영자 파일이 깨졌다: plugins/disabled.toml")
+    transport = ASGITransport(app=_admin_app(plugins=corrupt, trace=FakeTrace(), stderr=stderr))
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as other:
+        response = await other.put("/plugins/agent/nothing/enabled", json=OFF, headers=BEARER)
+
+    assert response.status_code == 404
+    assert corrupt.writes == []
+
+
+async def test_매니페스트가_깨진_플러그인도_켜고_끌_수_있다(client: AsyncClient) -> None:
+    """고칠 때까지 런타임이 부르지 않게 하려는 것이 끄는 이유일 수 있다(스토리 6). 끄는 키는
+    매니페스트가 아니라 이름이다."""
+    response = await client.put("/plugins/agent/broken/enabled", json=OFF, headers=BEARER)
+
+    assert response.status_code == 204
+    assert await _enabled_of(client, "broken") is False
+
+
+@pytest.mark.parametrize(
+    "fake",
+    [
+        pytest.param(
+            FakePlugins(rows=(CALC,), corrupt="운영자 파일이 깨졌다: plugins/disabled.toml"),
+            id="운영자 파일의 손상",
+        ),
+        pytest.param(
+            FakePlugins(rows=(CALC,), unwritable="운영자 파일을 쓸 수 없다: plugins/disabled.toml"),
+            id="쓰기 실패",
+        ),
+    ],
+)
+async def test_있는_이름이라도_운영자_파일이_깨졌거나_쓰지_못하면_500_봉투이고_쓰지_않는다(
+    stderr: io.StringIO, fake: FakePlugins
+) -> None:
+    """깨진 파일을 덮어쓰면 끈 것이 조용히 켜질 수 있다(스토리 22). 실패한 쓰기가 켜짐을 바꾸면 안
+    된다(스토리 29)."""
+    transport = ASGITransport(app=_admin_app(plugins=fake, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        response = await client.put(ENABLED_PATH, json=OFF, headers=BEARER)
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert "plugins/disabled.toml" in response.json()["message"]
+    assert fake.writes == []
+
+
+async def test_skill_과_model_의_켜고_끄기도_204이고_기록된다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """등록된 것을 한 가지 방법으로 다룬다(스토리 17). 효과가 나는 때는 로더가 생긴 뒤이고 그것은
+    `README.md` 가 말한다(스토리 18)."""
+    skill = await client.put("/plugins/skill/summarize/enabled", json=OFF, headers=BEARER)
+    model = await client.put("/plugins/model/sonnet/enabled", json=OFF, headers=BEARER)
+
+    assert (skill.status_code, model.status_code) == (204, 204)
+    assert plugins.writes == [
+        (PluginKey(kind=PluginKind.SKILL, name=PluginName("summarize")), False),
+        (PluginKey(kind=PluginKind.MODEL, name=PluginName("sonnet")), False),
+    ]
+    assert await _enabled_of(client, "summarize") is False
+    assert await _enabled_of(client, "sonnet") is False
+
+
+async def test_켜고_끄는_경로의_이름이_루트를_벗어나거나_개행이_섞이면_422이고_포트가_불리지_않는다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """단건 조회와 같은 규칙이다(스토리 40). 이름이 파일 경로로 조립되기 전에 sdk 의 패턴을
+    지난다."""
+    for name in (*ESCAPING_NAMES, "calc%0A", "%0Acalc", "calc%0Ax"):
+        response = await client.put(f"/plugins/agent/{name}/enabled", json=OFF, headers=BEARER)
+
+        assert response.status_code == 422, name
+        fields = [violation["field"] for violation in response.json()["violations"]]
+        assert fields == ["path.name"], name
+    assert plugins.calls == 0
+
+
+async def test_enabled_를_GET_하면_422이고_이름까지만_PUT_하면_405다(client: AsyncClient) -> None:
+    """`{name:verbatim}` 이 슬래시까지 잡아 GET 은 이름 `calc/enabled` 로 단건에 맞은 뒤 패턴이
+    거른다. PUT 은 단건 경로에 라우트가 없다(ADR 0010 의 2026-09-26 이력)."""
+    get = await client.get(ENABLED_PATH, headers=BEARER)
+    put = await client.put("/plugins/agent/calc", json=OFF, headers=BEARER)
+
+    assert get.status_code == 422
+    assert [violation["field"] for violation in get.json()["violations"]] == ["path.name"]
+    assert put.status_code == 405
+    assert put.json()["code"] == "invalid_request"
+
+
+async def test_enabled_뒤에_꼬리_개행이_붙은_경로는_이름_calc_로_맞아_204다(
+    client: AsyncClient, plugins: FakePlugins
+) -> None:
+    """명세 검토의 프로브를 실제 변환기로 다시 잰 결과다. 라우팅 정규식이 파이썬 `re` 라 `$` 가
+    리터럴 `/enabled` 뒤의 꼬리 개행 앞에서도 맞는다. 포트에 닿는 이름은 `calc` 그대로라 패턴을
+    지나고 경로가 플러그인 루트를 벗어나지 않으므로 그대로 둔다."""
+    response = await client.put(f"{ENABLED_PATH}%0A", json=OFF, headers=BEARER)
+
+    assert response.status_code == 204
+    assert plugins.writes == [(CALC_KEY, False)]
+
+
+@pytest.mark.parametrize(
+    ("body", "field"),
+    [
+        pytest.param({}, "body.enabled", id="enabled 없음"),
+        pytest.param({"enabled": "false"}, "body.enabled", id="문자열 false"),
+        pytest.param({"enabled": 0}, "body.enabled", id="숫자 0"),
+        pytest.param({"enabled": False, "reason": "위험"}, "body.reason", id="추가 필드"),
+    ],
+)
+async def test_enabled_가_없거나_불린이_아니거나_추가_필드가_있으면_422이고_포트가_불리지_않는다(
+    client: AsyncClient, plugins: FakePlugins, body: dict[str, object], field: str
+) -> None:
+    """`"false"` 나 `0` 을 조용히 뜻으로 읽으면 계약에 없는 값이 켜짐을 정한다(스토리 41). 모르는
+    필드를 받으면 보낸 쪽이 자기 값이 쓰였다고 믿는다(스토리 42)."""
+    response = await client.put(ENABLED_PATH, json=body, headers=BEARER)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+    assert [violation["field"] for violation in response.json()["violations"]] == [field]
+    assert plugins.calls == 0
+
+
+def test_본문_모델은_enabled_하나가_필수인_boolean_이고_추가_필드를_받지_않는다(
+    app: FastAPI,
+) -> None:
+    """엄격한 불린이어도 계약의 스키마는 `boolean` 그대로다. 본문 모델의 이름이 기존 컴포넌트와
+    겹치지 않아 컴포넌트가 `-Input`·`-Output` 으로 갈라지지 않는다."""
+    schemas = app.openapi()["components"]["schemas"]
+    body = schemas["SetEnabled"]
+
+    assert body["properties"] == {"enabled": {"type": "boolean", "title": "Enabled"}}
+    assert body["required"] == ["enabled"]
+    assert body["additionalProperties"] is False
+    assert not {name for name in schemas if name.endswith(("-Input", "-Output"))}
+
+
+def test_켜고_끄는_라우트가_operation_id_와_봉투_에러_문서를_들고_409는_없다(app: FastAPI) -> None:
+    """생성 클라이언트의 함수 이름이 `operationId` 다. 끄는 것은 꺼진 것을 거부하지 않으므로 409 가
+    없다. 경로의 패턴은 단건 조회와 같은 sdk 의 것이다."""
+    document = app.openapi()
+    operation = document["paths"]["/plugins/{kind}/{name}/enabled"]["put"]
+    envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+
+    assert operation["operationId"] == "set_plugin_enabled"
+    errors = {status for status in operation["responses"] if not status.startswith("2")}
+    assert errors == {"401", "404", "422", "500"}
+    for status in errors:
+        schema = operation["responses"][status]["content"]["application/json"]["schema"]
+        assert schema == envelope, status
+    assert "content" not in operation["responses"]["204"]
+    name = next(parameter for parameter in operation["parameters"] if parameter["name"] == "name")
+    assert name["schema"]["pattern"] == PLUGIN_NAME_PATTERN
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert body == {"$ref": "#/components/schemas/SetEnabled"}
+
+
+async def test_동시에_온_켜고_끄기_둘이_둘_다_남는다(stderr: io.StringIO) -> None:
+    """갱신 하나가 사라지면 끈 줄 아는 것이 돈다(스토리 43). 한 프로세스 안의 쓰기 둘은 이벤트
+    루프가 줄세운다는 ADR 0017 의 전제는 쓰기 라우트가 루프 위에서 돌 때만 참이다 — 동기 `def` 면
+    FastAPI 가 워커 스레드에서 돌려 읽고 고치고 쓰기 둘이 겹친다. 가짜의 쓰기가 디스크 시간을 들이는
+    이유는 즉시 끝나면 그 겹침이 스레드 타이밍에 달려 초록으로 지나가기 때문이다."""
+    plugins = FakePlugins(rows=(CALC, EVERYTHING), disk_seconds=0.05)
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        responses = await asyncio.gather(
+            client.put(ENABLED_PATH, json=OFF, headers=BEARER),
+            client.put("/plugins/mcp/everything/enabled", json=OFF, headers=BEARER),
+        )
+        rows = (await client.get("/plugins", headers=BEARER)).json()
+
+    assert [response.status_code for response in responses] == [204, 204]
+    assert {row["name"]: row["enabled"] for row in rows} == {"calc": False, "everything": False}
 
 
 # 트레이스 목록 — 지나간 실행과 멈춘 실행(티켓 05)

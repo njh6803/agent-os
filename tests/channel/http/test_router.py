@@ -42,6 +42,7 @@ from agent_os.core.ports import (
     Cursor,
     ManifestRow,
     PluginError,
+    PluginKey,
     PluginSource,
     RunRow,
     RunStatus,
@@ -54,6 +55,7 @@ from agent_os.core.ports import (
     TraceSchemaVersion,
     TraceStore,
     UnknownEvent,
+    WriteOutcome,
     run_status,
 )
 from agent_os.core.run import run
@@ -211,6 +213,14 @@ class FakePlugins:
         if manifest.name == "unloadable":
             raise PluginError(UNLOADABLE_REASON)
         return AGENTS[manifest.name]
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        """아직 아무것도 꺼지지 않았다. 꺼진 것을 core 가 거부하는 것은 core 판정 티켓이 넣는다."""
+        self.calls += 1
+        return frozenset()
+
+    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+        raise NotImplementedError("채널은 켜고 끄지 않는다. 그 라우트는 관리 테스트가 민다")
 
 
 class FakeTrace:
@@ -1390,6 +1400,8 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
 # 채널 라우트가 붙기 전 계약의 컴포넌트 이름 전부. 채널은 이름을 더하기만 하고 기존 이름을 바꾸지
 # 않는다. 바뀌면 생성 클라이언트의 타입 이름이 바뀐다. 결정의 멤버를 `ApprovalGranted` 처럼 이벤트와
 # 같은 이름으로 지으면 여기 있는 이벤트 컴포넌트가 입력과 출력으로 갈라진다(명세 검토의 프로브).
+# 관리 쪽 이름이 바뀐 것은 여기도 따라간다 — plugin-toggle 이 `UnreadableManifest` 행을 `Plugin`·
+# `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력).
 EXISTING_COMPONENTS = frozenset(
     {
         "ApprovalDenied",
@@ -1400,8 +1412,10 @@ EXISTING_COMPONENTS = frozenset(
         "Json",
         "LlmCalled",
         "McpServer",
+        "Plugin",
         "PluginKind",
         "PluginManifest",
+        "PluginPlaceholder",
         "PluginRow",
         "RunFailed",
         "RunFinished",
@@ -1411,6 +1425,7 @@ EXISTING_COMPONENTS = frozenset(
         "RunStarted",
         "RunStatus",
         "RunSummary",
+        "SetEnabled",
         "ToolCall",
         "ToolCalled",
         "Trace",
@@ -1418,7 +1433,6 @@ EXISTING_COMPONENTS = frozenset(
         "TracePage",
         "TraceSchemaVersion",
         "UnknownEvent",
-        "UnreadableManifest",
         "UnreadableTrace",
         "Violation",
     }
@@ -1479,13 +1493,15 @@ def test_스트림_항목_스키마는_FastAPI_의_정형_그대로_data_만_필
 
 
 def test_POST_runs_가_사람이_지은_operation_id_와_봉투_에러_문서를_든다() -> None:
-    """생성 클라이언트의 함수 이름이 `operationId` 다(스토리 64). 409 는 재개 라우트의 것이다."""
+    """생성 클라이언트의 함수 이름이 `operationId` 다(스토리 64). 409 는 꺼진 것을 부르면 core 가
+    던지는 `Disabled` 를 표가 옮긴 것이다(ADR 0017). 계약이 먼저 적고 core 의 판정은 다음
+    티켓이 넣는다."""
     operation = _app().openapi()["paths"]["/runs"]["post"]
     envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
 
     assert operation["operationId"] == "start_run"
     errors = {status for status in operation["responses"] if not status.startswith("2")}
-    assert errors == {"401", "404", "422", "500"}
+    assert errors == {"401", "404", "409", "422", "500"}
     for status in errors:
         content = operation["responses"][status]["content"]
         assert set(content) == {"application/json"}, status
@@ -1525,8 +1541,9 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
     assert body == {"$ref": "#/components/schemas/Decision"}
 
 
-def test_409_는_승인_라우트에만_있다() -> None:
-    """재개할 수 없는 상태를 만나는 것은 재개 라우트뿐이다. 관리는 실행을 일으키지 않는다."""
+def test_409_는_채널_라우트에만_있다() -> None:
+    """대상의 상태가 요청을 허락하지 않는 것(재개 불가, 꺼짐)을 만나는 것은 실행을 일으키는
+    라우트뿐이다. 관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진 것을 거부하지 않는다."""
     paths = _app().openapi()["paths"]
 
     conflicting = [
@@ -1536,7 +1553,7 @@ def test_409_는_승인_라우트에만_있다() -> None:
         if "409" in operation["responses"]
     ]
 
-    assert conflicting == [("/runs/{run_id}/approval", "post")]
+    assert conflicting == [("/runs", "post"), ("/runs/{run_id}/approval", "post")]
 
 
 def test_결정_본문이_판별자_decision_의_이름_있는_유니온이고_허가와_거부가_섞이지_않는다() -> None:
