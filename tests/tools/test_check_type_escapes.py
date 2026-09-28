@@ -252,14 +252,13 @@ def test_CLI_진입점이_임시_트리의_우회를_출력한다(tmp_path: Path
     (tmp_path / "src" / "dirty.py").write_text(
         "from typing import Any\n\nx: Any = 1\n", encoding="utf-8", newline="\n"
     )
-    repo = Path(__file__).resolve().parents[2]
 
     process = subprocess.run(
-        [sys.executable, str(repo / "tools" / "check_type_escapes.py"), str(tmp_path)],
+        [sys.executable, str(ROOT / "tools" / "check_type_escapes.py"), str(tmp_path)],
         capture_output=True,
         text=True,
         encoding="utf-8",
-        cwd=repo,
+        cwd=ROOT,
         env={**os.environ, "PYTHONUTF8": "1"},
         check=False,
     )

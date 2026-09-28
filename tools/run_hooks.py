@@ -41,8 +41,8 @@ ROOT = Path(__file__).resolve().parent.parent
 PAYLOADS = ROOT / "tools" / "hook_payloads.toml"
 SETTINGS = ROOT / ".claude" / "settings.json"
 Expectation = Literal["deny", "block", "context", "silent"]
-# tests/conftest.py 의 목록과 같다. 러너는 단독 스크립트라 그쪽을 import 하지 않는다.
-_REPO_LOCATION_VARS = (
+# 저장소를 가리키는 git 환경 변수. tests/conftest.py 도 여기서 import 한다 — 목록의 원천은 하나다.
+REPO_LOCATION_VARS = (
     "GIT_DIR",
     "GIT_WORK_TREE",
     "GIT_COMMON_DIR",
@@ -176,7 +176,7 @@ def outcome_of(returncode: int, stdout: str) -> str:
 
 def hook_environment() -> dict[str, str]:
     """자식 훅의 환경. `PYTHONUTF8` 과 저장소를 가리키는 `GIT_*` 를 뺀다."""
-    excluded = {"PYTHONUTF8", *_REPO_LOCATION_VARS}
+    excluded = {"PYTHONUTF8", *REPO_LOCATION_VARS}
     return {key: value for key, value in os.environ.items() if key not in excluded}
 
 

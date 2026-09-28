@@ -16,6 +16,7 @@ from pathlib import Path
 
 from tools.check_instructions import (
     PATCHED_SKILLS,
+    ROOT,
     SENTINEL,
     claude_md_imports,
     claude_md_problems,
@@ -395,14 +396,13 @@ def test_CLI_진입점이_임시_트리의_빨강을_출력한다(tmp_path: Path
     _헌법을_쓴다(tmp_path, "# 원칙\n")
     _사본을_만든다(tmp_path, 센티널을_넣을_스킬=set(PATCHED_SKILLS))
     _파일을_둔다(tmp_path, ".claude/rules/nopaths.md", "# paths 없는 규칙\n")
-    repo = Path(__file__).resolve().parents[2]
 
     process = subprocess.run(
-        [sys.executable, str(repo / "tools" / "check_instructions.py"), str(tmp_path)],
+        [sys.executable, str(ROOT / "tools" / "check_instructions.py"), str(tmp_path)],
         capture_output=True,
         text=True,
         encoding="utf-8",
-        cwd=repo,
+        cwd=ROOT,
         env={**os.environ, "PYTHONUTF8": "1"},
         check=False,
     )
