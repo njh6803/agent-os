@@ -284,7 +284,7 @@ jsdom에서 MSW가 낸 SSE는 openapi-fetch의 `parseAs: "stream"`으로 조각�
     - `tools/check_type_escapes.py`와 `tests/sdk/test_ids.py`: 지난 사건을 적은 문장이라 그대로 참이다.
     - `KICKOFF.md`의 "검사 넷": 검증 명령이 아니라 하네스 검사 스크립트의 수라 뜻이 다르다.
   - **같은 뜻의 다른 말.** 명세 검토가 찾았다. "넷"이라는 말 없이 명령을 넷으로 나열하거나 옛 결정을 싣는 자리다.
-    - `.github/PULL_REQUEST_TEMPLATE.md`: 변경 영역의 `.github/` 줄 "워크플로 (별도 PR로 먼저 병합)"이다. 별도 PR은 `claude-code-review.yml`에만 걸리도록 고친다(ADR 0021 이력). 체크리스트의 명령 줄과 "확인 방법" 블록도 고친다. 첫 티켓의 PR이 바로 이 템플릿을 채운다.
+    - `.github/PULL_REQUEST_TEMPLATE.md`: 체크리스트의 명령 줄과 "확인 방법" 블록이 명령을 넷으로 나열한다. 첫 티켓의 PR이 바로 이 템플릿을 채운다. 변경 영역의 `.github/` 줄은 모든 워크플로 변경에 별도 PR을 요구하는 것처럼 읽혔다. 이 명세의 PR(#95)이 그 줄을 `operations.md`의 범위(`claude-code-review.yml`)로 좁혔다(PR 리뷰의 Nit, `CLAUDE.md` 작업 규약 4).
     - `README.md`의 클론 블록과 `.pre-commit-config.yaml` 머리의 "클론 뒤 한 번" 주석에는 `pnpm -C web install`이 없다. 다섯째 명령의 훅이 `always_run`으로 서면, 이 설치 없이는 첫 커밋이 빨강이다.
     - `tools/hook_bash_gate_pipe.py`의 게이트 목록에 `pnpm`이 없다. 다섯째 명령을 `| tail`에 묻어도 경고가 나지 않는다. **게이트 목록에 다섯째 명령과 e2e 명령을 더한다(이 명세가 정했다).** 파이프 뒤 `$?`가 판정을 속이는 것은 명령의 언어와 무관하기 때문이다. `tests/tools/test_hook_bash_gate_pipe.py`도 함께 고친다. `tools/hook_payloads.toml`에 발동할 실제 입력 하나와 발동하지 말아야 할 실제 입력 하나를 더하고, `tools/run_hooks.py`로 실행을 확인한다(`.claude/rules/tools.md`, #94). `KICKOFF.md`가 "게이트 명령 목록을 그 프로젝트의 검증 명령으로"라고 적은 그 자리다.
   - 티켓이 같은 패턴으로 다시 grep한다. 글자 grep은 같은 뜻의 다른 말을 놓친다(plugin-toggle 명세의 "옛 기준 문구" 절). 그래서 셋을 더 grep한다. `검증 명령`으로 수를 말하는 문장을 찾는다. `lint-imports`로 명령을 나열한 자리를 찾는다. `별도 PR로 먼저`로 옛 결정을 찾는다.
@@ -310,6 +310,7 @@ jsdom에서 MSW가 낸 SSE는 openapi-fetch의 `parseAs: "stream"`으로 조각�
 - **`ci.yml`.** 이 티켓의 같은 PR이다(ADR 0021 이력).
   - `verify` 잡에 Node 24와 pnpm 11 설정, `pnpm install --frozen-lockfile`, 다섯째 명령이 는다.
   - `claude-code-review.yml`은 바꾸지 않는다.
+  - **이 PR에서는 claude-review의 코멘트 0개 가드가 꺼진다.** 그 가드는 `.github/workflows/` 아래 어느 파일이든 바뀌면 건너뛴다. 액션 자체는 돈다(`operations.md` 리뷰 파이프라인, PR #43). 그래서 이 PR은 병합 전에 claude-review의 코멘트가 있는지 손으로 본다. 가드의 범위를 자기 파일로 좁히는 것은 명세의 PR(#95)이 회고 후보로 올렸다.
 - **`operations.md`.** 머리, 가드레일 절(검사 목록에 web의 판정자와 검사), 클론 뒤 설치다.
 - **`README.md`.** 트리의 `web/`, 원천 표, 클론 블록이다.
 - **`.gitignore`.** `node_modules/`, `.next/`, 테스트 산출물이다.
