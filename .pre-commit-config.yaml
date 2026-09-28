@@ -44,6 +44,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: check-quotes
+        name: quotes (스테이지된 .md의 더한 줄에서 20자 이상 따옴표 인용을 저장소와 대조 — 경고만, 대기열 42)
+        entry: uv run python tools/check_quotes.py
+        language: system
+        files: \.md$
+        verbose: true
       - id: commit-msg
         name: commit message (conventional commits)
         entry: uv run python tools/check_commit_msg.py

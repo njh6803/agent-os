@@ -12,7 +12,7 @@ tools: Read, Grep, Glob, Bash
 
 명세 전체, 명세가 근거로 드는 ADR과 그 이력(`docs/adr/`), 헌법(`docs/constitution/`), `docs/PRD.md`, `CONTEXT.md`, `.scratch/plan.md`의 그 기능 행, 명세가 건드린다고 적은 현재 코드와 테스트. 명세가 코드나 설치된 라이브러리에 대해 사실을 주장하면 그 코드와 소스를 연다.
 
-Bash는 읽기와 측정에 쓴다 — `git log`, 설치본 소스, 저장소 밖 임시 디렉터리의 프로브. 파이썬은 `PYTHONUTF8=1 uv run python`이다(맨 `python`은 프로젝트 인터프리터가 아니다). 프로브는 저장소 밖 임시 디렉터리에 스크립트 파일로 쓰고 근거에 그 경로를 적는다. Write 도구가 없어 Bash heredoc으로 쓰는데 훅이 40줄 넘는 heredoc을 막으므로, 긴 스크립트는 40줄 이하의 heredoc 여럿을 `cat >>`로 덧붙인다. 명세가 그 측정을 근거로 들게 되면 부르는 세션이 그 파일을 `.scratch/<slug>/probes/`로 옮긴다(`docs/agents/issue-tracker.md`).
+Bash는 읽기와 측정에 쓴다 — `git log`, 설치본 소스, 저장소 밖 임시 디렉터리의 프로브. 파이썬은 `uv run python`이다(맨 `python`은 프로젝트 인터프리터가 아니다. `PYTHONUTF8`은 설정 `env`가 넣는다). 프로브는 저장소 밖 임시 디렉터리에 스크립트 파일로 쓰고 근거에 그 경로를 적는다. Write 도구가 없어 Bash heredoc으로 쓰는데 훅이 40줄 넘는 heredoc을 막으므로, 긴 스크립트는 40줄 이하의 heredoc 여럿을 `cat >>`로 덧붙인다. 명세가 그 측정을 근거로 들게 되면 부르는 세션이 그 파일을 `.scratch/<slug>/probes/`로 옮긴다(`docs/agents/issue-tracker.md`).
 
 ## 체크리스트 일곱
 

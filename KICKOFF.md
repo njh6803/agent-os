@@ -192,7 +192,7 @@ grill-me도 설치기에 있다(`skills/productivity/grill-me`, 2026-04부터). 
 | 매 세션 필요 | 이 파일. 넣기 전에 "이 줄을 지우면 실수하게 되나"를 묻고, 코드에서 유추 가능한 것은 넣지 않는다 |
 
 ## 환경 함정
-- 명령을 치기 전에 알아야 하는 것만. (예: 파이썬·Windows면 PYTHONUTF8. 프로젝트마다 다르다)
+- 명령을 치기 전에 알아야 하는 것만. (예: 맨 `python`이 스토어 스텁인 것. 프로젝트마다 다르다)
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.
@@ -273,15 +273,16 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 
 통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 아래 파일들을 런북 저장소에서 복사한다. **파일마다 바꿀 자리가 다르다** — 각 항목 끝의 괄호가 그것이고, "검증 명령과 층 이름만"이 아니다.
 
-하네스 런타임부터 적는다. 훅 다섯과 새 둘, 검사 셋, 변이 도구, pre-commit은 파이썬이고 훅은 `uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python "${CLAUDE_PROJECT_DIR}/tools/<훅>.py"`로 돈다(`--project`가 빠지면 저장소 밖에서 시스템 파이썬으로 돈다). 파이썬 프로젝트가 아니면 개발 도구로 uv와 파이썬 하나를 두면 그대로 돈다 — uv는 pyproject가 없는 폴더에서도 시스템 파이썬으로 돌았다(2026-09-28 실측). `tools/`의 표준 라이브러리만 쓰는 스크립트라 의존성은 없다.
+하네스 런타임부터 적는다. 훅 여덟, 검사 넷, 변이 도구, pre-commit은 파이썬이고 훅은 `uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python "${CLAUDE_PROJECT_DIR}/tools/<훅>.py"`로 돈다(`--project`가 빠지면 저장소 밖에서 시스템 파이썬으로 돈다). 파이썬 프로젝트가 아니면 개발 도구로 uv와 파이썬 하나를 두면 그대로 돈다 — uv는 pyproject가 없는 폴더에서도 시스템 파이썬으로 돌았다(2026-09-28 실측). `tools/`의 표준 라이브러리만 쓰는 스크립트라 의존성은 없다.
 
-- `.claude/settings.json`의 `hooks` 블록과 `permissions.deny`. **훅 파일만 복사하면 아무것도 발동하지 않는다.** 등록 모양은 위 명령 한 줄이고 매처는 훅마다 다르다(UserPromptSubmit 하나, PostToolUse `Write|Edit`와 `Bash|PowerShell|<GitHub MCP PR 도구 둘>`, PreToolUse `Bash` 셋과 `Bash|PowerShell` 하나). `permissions.deny`에 `Read(./.env)`·`Edit(./.env)`. 에이전트의 저장소 전체 grep 한 번에 API 키가 도구 출력에 실린 적이 있다(agent-os, 2026-09-28). Bash로 읽는 길은 막지 못하므로 전체 grep은 `.env`를 뺀다. (바꿀 곳: GitHub MCP 도구 이름이 다르면 그 매처)
-- 훅 일곱과 그 테스트 `tests/tools/test_hook_*.py`. 이유는 각 파일의 독스트링이 원천이다. `hook_prompt_directive`(지시문 계기, 폴더가 다르면 `decision: block`), `hook_journal_retro`(일지의 '다음' 절을 쓰면 retro 계기), `hook_pr_next_session`(PR 열기·병합 뒤 next-session 계기), `hook_bash_heredoc`(40줄 넘는 heredoc deny), `hook_bash_python_stub`(맨 `python` deny — 파이썬 프로젝트에만), `hook_bash_gate_pipe`(게이트가 파이프에 묻히면 경고), `hook_git_main_commit`(main 위 커밋 deny). 앞의 셋은 계기 훅, 뒤의 넷은 지침이 어겨진 뒤 승격된 것이라 새 프로젝트는 처음부터 갖는다. (바꿀 곳: `hook_bash_gate_pipe`의 게이트 명령 목록을 그 프로젝트의 검증 명령으로)
+- `.claude/settings.json`의 `hooks` 블록과 `permissions.deny`. **훅 파일만 복사하면 아무것도 발동하지 않는다.** 등록 모양은 위 명령 한 줄이고 매처는 훅마다 다르다(UserPromptSubmit 하나, PostToolUse `Write|Edit`와 `Bash|PowerShell|<GitHub MCP PR 도구 둘>`, PreToolUse `Bash` 셋, `Bash|PowerShell` 하나, `Bash|Grep` 하나). `permissions.deny`에 `Read(./.env)`·`Edit(./.env)`, `env`에 `PYTHONUTF8`(파이썬이면). 에이전트의 저장소 전체 grep 한 번에 API 키가 도구 출력에 실린 적이 있다(agent-os, 2026-09-28). Bash·Grep으로 읽는 길은 `hook_env_read`가 막는다. (바꿀 곳: GitHub MCP 도구 이름이 다르면 그 매처)
+- 훅 여덟과 그 테스트 `tests/tools/test_hook_*.py`. 이유는 각 파일의 독스트링이 원천이다. `hook_prompt_directive`(지시문 계기, 폴더가 다르면 `decision: block`), `hook_journal_retro`(일지의 '다음' 절을 쓰면 retro 계기), `hook_pr_next_session`(PR 열기·병합 뒤 next-session 계기), `hook_bash_heredoc`(40줄 넘는 heredoc deny), `hook_bash_python_stub`(맨 `python` deny — 파이썬 프로젝트에만), `hook_bash_gate_pipe`(게이트가 파이프에 묻히면 경고), `hook_git_main_commit`(main 위 커밋 deny), `hook_env_read`(`.env` 읽기와 `.env`를 빼지 않은 전체 grep deny, Grep 도구의 `.env` 경로도). 앞의 셋은 계기 훅, 뒤의 다섯은 지침이 어겨진 뒤 승격된 것(넷)이거나 실패가 조용해 첫 사건에서 막는 훅으로 간 것(`hook_env_read`)이라 새 프로젝트는 처음부터 갖는다. (바꿀 곳: `hook_bash_gate_pipe`의 게이트 명령 목록을 그 프로젝트의 검증 명령으로)
 - `.claude/rules/tools.md`. 훅·검사의 규약(단독 실행, 바이트 stdin, 계기 훅과 막는 훅의 기준, 못 보는 것 절, 식별자 언어). (바꿀 곳 0)
 - `.github/PULL_REQUEST_TEMPLATE.md`. 변경 유형, 왜, 남긴 위험, 변경된 영역, 체크리스트, 확인 방법, 관련 티켓. `/git-pr`이 이것을 채운다. (바꿀 곳: 변경된 영역의 층 이름과 검증 명령, 67행 중 약 15행)
 - 커밋 메시지 훅 `tools/check_commit_msg.py`와 `tests/tools/test_check_commit_msg.py`. `.pre-commit-config.yaml`에 `stages: [commit-msg]`로 등록하고 `default_install_hook_types: [pre-commit, commit-msg]`를 둔다. 나쁜 메시지로 빨강을 본다. (바꿀 곳 0)
 - 지침 검사 `tools/check_instructions.py`와 `tests/tools/test_check_instructions.py`. `.pre-commit-config.yaml`에 `always_run: true`로 등록한다. (바꿀 곳: `PATCHED_SKILLS`·`SENTINEL`·`ALLOWED_IMPORTS` 상수를 **그 프로젝트가 실제로 덧댄 사본**으로. agent-os는 여섯(code-review·grilling·implement·retro·to-spec·to-tickets)을 덧댔고 그대로 복사하면 첫 커밋이 그 여섯의 센티널 부재로 빨강이다. 목록은 양방향으로 검사된다 — 주석이 있는데 목록에 없는 사본도 빨강)
 - 타입 우회 검사 `tools/check_type_escapes.py`(파이썬이면. 원칙 III의 판정자, ADR 0013), 변이 도구 `tools/mutate.py`(테스트가 무엇을 재는지 변이로 본다. 바이트 그대로 되돌리고 기대 결과를 받는다), Actions 실행 요약 `tools/gh_run_summary.py`(리뷰 봇이 코멘트 없이 초록일 때 로그를 읽는다. operations.md가 가리킨다). (바꿀 곳 0. 검사는 `[tool.pyright]`의 `include`를 읽는다)
+- 인용 대조 `tools/check_quotes.py`와 `tests/tools/test_check_quotes.py`. 바뀐 .md의 20자 이상 따옴표 인용을 저장소와 글자 그대로 대조해 경고만 낸다(같은 PR에서 고친 문장의 인용 둘이 옛 문구로 남았던 자리). `.pre-commit-config.yaml`에 `files: \.md$`와 `verbose: true`로 두고 CI에는 넣지 않는다. (바꿀 곳 0)
 - `.github/workflows/ci.yml`. 훅과 같은 검사. LLM 테스트 제외. 경로 필터를 걸면 미매칭은 실패로. (바꿀 곳: 파이썬이면 검사 이름만, 아니면 셋업 스텝 전부)
 - 브랜치 보호 본문 `tools/protection.json`. 8단계의 `gh api --input`이 이 파일을 읽으므로 복사하지 않으면 그 명령이 입력을 찾지 못한다(PR #91 리뷰). (바꿀 곳: `required_status_checks.contexts`의 검사 이름이 `verify`가 아니면 그것)
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). 제외는 생성물·락파일·남이 쓴 스킬 사본(`.claude/skills/**`)만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다. (바꿀 곳: `path_instructions` 아홉 블록과 "이 저장소의 특수성" 문단은 그 프로젝트의 층과 원칙으로 **새로 쓴다**. 골격만 복사하고 대부분을 다시 쓴다)
@@ -384,7 +385,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 |---|---|---|
 | [Win] PowerShell here-string | `@`가 커밋 메시지에 새어 들어감 | 여러 줄은 파일로. 지침만으로는 새 세션에서 2/3 위반이라 commit-msg 훅이 거부 |
 | 큰 heredoc | Bash 도구의 파서가 깨져 아무것도 실행되지 않음 | 긴 스크립트는 파일로 쓰고 셸에는 경로만. `hook_bash_heredoc` |
-| [Win][Py] `PYTHONUTF8=1` 누락 | 한글 출력이 cp949로 깨지고 일부 검사가 통째로 안 돎 | 명령 앞에 항상. pytest는 conftest에서 stdout 재설정. 훅 프로세스에도 없으므로 훅은 stdin을 바이트로 읽는다 |
+| [Win][Py] `PYTHONUTF8=1` 누락 | 한글 출력이 cp949로 깨지고 일부 검사가 통째로 안 돎 | `.claude/settings.json`의 `env`에 넣는다(사용자 설정 env의 다른 값이 Bash 도구에 보이는 것으로 실측. 훅 프로세스 쪽은 재지 못했다). pytest는 conftest에서 stdout 재설정. 훅은 그 값을 가정하지 않고 stdin을 바이트로 읽는다 |
 | [Py] 맨 `python` | 프로젝트 인터프리터가 아니다 — 스토어 스텁이면 아무것도 안 하고 pyenv shim이면 다른 버전이 돈다 | `uv run python`. `hook_bash_python_stub` |
 | 파이프·체인 뒤의 `$?` | 마지막 명령의 종료 코드라 게이트의 빨강이 가려짐(agent-os 4회) | 판정 명령은 파이프 없이. `hook_bash_gate_pipe`가 경고 |
 | [Win] CRLF가 훅 경로를 오염 | 포매터가 엉뚱한 경로를 받음 | 훅에서 `tr -d '\r'`, `.gitattributes`로 LF 고정 |
