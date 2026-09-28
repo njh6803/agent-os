@@ -14,6 +14,7 @@ import shlex
 import subprocess
 import sys
 import time
+import tomllib
 from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
@@ -439,6 +440,71 @@ def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_�
     assert code == 1
     assert out == ""
     assert "없는-실행" in err
+    assert _trace_files(workspace / "t") == []
+
+
+# 손으로 쓴 운영자 파일(ADR 0017). CLI 코드는 바뀌지 않았다 — 기반 타입(PluginError)을 잡으므로
+# core 가 던지는 Disabled 도 진단과 종료 코드 1의 길로 간다. 켜고 끄는 CLI 명령은 없고 손편집이 그
+# 자리다.
+OPERATOR_FILE = Path("plugins") / "disabled.toml"
+
+
+def _disable(root: Path, agent: str) -> None:
+    (root / OPERATOR_FILE).write_text(
+        f'schema_version = "1"\nagent = ["{agent}"]\n', encoding="utf-8"
+    )
+
+
+def test_운영자_파일로_끈_에이전트를_부르면_꺼진_것을_적고_종료_코드_1이며_트레이스가_없다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`serve` 를 띄우지 않고 쓰는 날도 끈 것은 꺼져 있다(스토리 35)."""
+    _disable(workspace, "echo")
+
+    code = main(["run", "echo", "hi", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "agent echo" in err
+    assert _trace_files(workspace / "t") == []
+
+
+def test_멈춘_실행의_에이전트를_손으로_끄면_재개가_진단으로_끝나고_트레이스가_바이트_그대로다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """결정이 쓰이지 않았으므로 실행은 일시정지 그대로이고 다시 켜면 같은 명령으로 이어 갈 수 있다
+    (스토리 36)."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    main(["run", "gated", "hi", "--traces", "t"])
+    (trace_file,) = _trace_files(workspace / "t")
+    before = trace_file.read_bytes()
+    _disable(workspace, "gated")
+    capsys.readouterr()
+
+    code = main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "agent gated" in err
+    assert trace_file.read_bytes() == before
+
+
+def test_운영자_파일이_깨졌으면_진단이_그_파일의_경로를_적는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """무엇을 고쳐야 하는지 바로 안다(스토리 21). 빈 파일도 깨진 것이다 — 형식 버전이 없는 파일을
+    "아무것도 꺼지지 않았다"로 읽으면 잘린 파일이 끈 것을 전부 켠다(스토리 23)."""
+    (workspace / OPERATOR_FILE).write_text("", encoding="utf-8")
+
+    code = main(["run", "echo", "hi", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert str(OPERATOR_FILE) in err
     assert _trace_files(workspace / "t") == []
 
 
@@ -943,6 +1009,47 @@ async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이
     assert events[0]["principal"] == getpass.getuser()
     (trace_file,) = _trace_files(workspace / "t")
     assert trace_file.stem == events[0]["run_id"]
+
+
+@pytest.mark.usefixtures("tokens")
+async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이고_파일을_손으로_고치면_다시_돈다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """조립이 같은 파일시스템 어댑터를 관리와 채널에 넘긴다는 것과 캐시가 없다는 것은 가짜로
+    증명할 수 없어 실제 어댑터로 한 번만 잰다(plugin-toggle 명세의 "주 이음매 위의 실제 어댑터").
+    손편집이 서버를 다시 세우지 않고 다음 요청부터 효력이 난다(스토리 11·12). 고친 파일은 종류 키가
+    빠진 손 모양이고 그것도 손상이 아니다(스토리 24)."""
+    main(["serve", "--traces", "t"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    admin = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+    operator_file = workspace / OPERATOR_FILE
+    start = {"agent": "echo", "request": "hi"}
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+    ):
+        switched = await client.put(
+            "/plugins/agent/echo/enabled", json={"enabled": False}, headers=admin
+        )
+        written = tomllib.loads(operator_file.read_text(encoding="utf-8"))
+        listed = (await client.get("/plugins", headers=admin)).json()
+        refused = await client.post("/runs", json=start, headers=channel)
+        traces_after_refusal = _trace_files(workspace / "t")
+        operator_file.write_text('schema_version = "1"\n', encoding="utf-8")
+        admitted = await client.post("/runs", json=start, headers=channel)
+
+    assert switched.status_code == 204
+    assert written["agent"] == ["echo"]
+    echo = next(row for row in listed if row["kind"] == "agent" and row["name"] == "echo")
+    assert echo["enabled"] is False
+    assert refused.status_code == 409
+    assert "agent echo" in refused.json()["message"]
+    assert traces_after_refusal == []
+    assert [event["type"] for event in _events(admitted.text)] == ["run_started", "run_finished"]
 
 
 # uvicorn 이 빈 포트를 고른 뒤 찍는 기동 줄. 앱의 수명이 열리고 소켓이 듣기 시작한 뒤에 나온다.

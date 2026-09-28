@@ -783,8 +783,8 @@ async def test_core_의_꺼짐은_409이고_code_가_conflict_다(
 ) -> None:
     """대상은 있는데 운영자가 끈 상태라 요청을 허락하지 않는다. 깨진 것이 아니라 500 이 아니고,
     없는 것이 아니라 404 가 아니다(ADR 0017, ADR 0014 의 2026-09-26 이력). 이 갈래도 기반 타입의
-    갈래보다 먼저여야 한다 — 뒤집히면 500 이 된다. 던지는 쪽은 core 판정 티켓이고 여기서는 표만
-    잰다."""
+    갈래보다 먼저여야 한다 — 뒤집히면 500 이 된다. 던지는 쪽은 core 의 준비 단계이고 그 순서는
+    `tests/core/test_run.py` 가 잰다. 여기서는 표만 잰다."""
     _route_that_raises(app, "/off", Disabled("꺼진 플러그인이다: agent calc"))
 
     response = await client.get("/off", headers=BEARER)

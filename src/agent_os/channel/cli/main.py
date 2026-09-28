@@ -270,7 +270,9 @@ async def resume_command(
     traces: Path,
     plugins_root: Path,
 ) -> int:
-    """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)은 PluginError 로 진단만 적는다."""
+    """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)과 지금은 결정을 받지 않는 실행(그
+    에이전트나 그것이 쓰는 mcp 가 꺼짐, 운영자 파일의 손상)은 PluginError 로 진단만 적는다. 결정을
+    쓰기 전에 끝나므로 뒤의 것은 다시 켜거나 고친 뒤 같은 명령으로 이어 간다."""
     events = resume(
         run_id,
         decision,
