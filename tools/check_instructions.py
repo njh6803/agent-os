@@ -28,6 +28,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TypedDict
@@ -339,22 +340,23 @@ def hooks_reading_text_stdin(root: Path = ROOT) -> list[str]:
     return problems
 
 
-def main() -> int:
+def main(root: Path = ROOT) -> int:
+    """검사 여덟을 모아 돈다. `root` 는 CLI 첫 인자로도 받는다(임시 트리에서 빨강을 재는 테스트)."""
     problems = [
-        f"{path.relative_to(ROOT)}: paths 프론트매터 없음. 없으면 매 세션 실린다"
-        for path in rules_without_paths()
+        f"{path.relative_to(root)}: paths 프론트매터 없음. 없으면 매 세션 실린다"
+        for path in rules_without_paths(root)
     ]
-    problems.extend(rules_with_dead_paths())
-    problems.extend(hooks_with_relative_paths())
-    problems.extend(claude_md_problems())
-    problems.extend(imported_files_with_dead_paths())
-    problems.extend(patched_skills_without_sentinel())
-    problems.extend(skills_with_sentinel_not_listed())
-    problems.extend(hooks_reading_text_stdin())
+    problems.extend(rules_with_dead_paths(root))
+    problems.extend(hooks_with_relative_paths(root))
+    problems.extend(claude_md_problems(root))
+    problems.extend(imported_files_with_dead_paths(root))
+    problems.extend(patched_skills_without_sentinel(root))
+    problems.extend(skills_with_sentinel_not_listed(root))
+    problems.extend(hooks_reading_text_stdin(root))
     for problem in problems:
         print(problem)
     return 1 if problems else 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT))

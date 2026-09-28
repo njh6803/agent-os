@@ -1,0 +1,186 @@
+# 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
+# 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} 는 러너가 채운다.
+# 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
+
+# --- hook_env_read (PreToolUse Bash|Grep) ---
+[[case]]
+hook = "hook_env_read.py"
+expect = "deny"
+note = "cat .env"
+payload = { tool_name = "Bash", tool_input = { command = "cat .env" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "deny"
+note = "경로 없는 저장소 전체 grep"
+payload = { tool_name = "Bash", tool_input = { command = "grep -rn ANTHROPIC ." } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "deny"
+note = "Grep 도구의 .env 경로"
+payload = { tool_name = "Grep", tool_input = { pattern = "KEY", path = ".env" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "silent"
+note = ".env.example 은 허용"
+payload = { tool_name = "Bash", tool_input = { command = "cat .env.example" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "silent"
+note = "LLM 테스트의 --env-file 은 읽기가 아니다"
+payload = { tool_name = "Bash", tool_input = { command = "uv run --env-file .env pytest -m llm" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "silent"
+note = "Grep 도구의 하위 경로"
+payload = { tool_name = "Grep", tool_input = { pattern = "KEY", path = "src" } }
+
+# --- hook_git_main_commit (PreToolUse Bash|PowerShell) ---
+[[case]]
+hook = "hook_git_main_commit.py"
+expect = "deny"
+note = "main 위의 커밋"
+payload = { tool_name = "Bash", tool_input = { command = "git add -A && git commit -m 'feat: x'" }, cwd = "${MAIN_REPO}" }
+
+[[case]]
+hook = "hook_git_main_commit.py"
+expect = "silent"
+note = "작업 브랜치의 커밋 — 이 저장소의 브랜치가 아니라 임시 저장소라 어디서 돌려도 같다"
+payload = { tool_name = "Bash", tool_input = { command = "git commit -m 'feat: x'" }, cwd = "${WORK_REPO}" }
+
+[[case]]
+hook = "hook_git_main_commit.py"
+expect = "silent"
+note = "문자열 안의 git commit"
+payload = { tool_name = "Bash", tool_input = { command = "echo 'git commit 은 나중에'" }, cwd = "${MAIN_REPO}" }
+
+# --- hook_bash_gate_pipe (PreToolUse Bash) ---
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "context"
+note = "게이트가 파이프에 묻힘"
+payload = { tool_name = "Bash", tool_input = { command = "PYTHONUTF8=1 uv run pytest -q 2>&1 | tail -3; echo $?" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "context"
+note = "체인 뒤의 $?"
+payload = { tool_name = "Bash", tool_input = { command = "uv run ruff check . && echo done; echo $?" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "파이프 없는 게이트"
+payload = { tool_name = "Bash", tool_input = { command = "PYTHONUTF8=1 uv run pytest -q" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "게이트 아닌 파이프"
+payload = { tool_name = "Bash", tool_input = { command = "git log --oneline | head -3" } }
+
+# --- hook_bash_heredoc (PreToolUse Bash) ---
+[[case]]
+hook = "hook_bash_heredoc.py"
+expect = "deny"
+note = "한글 45줄 heredoc — 바이트 stdin 이 아니면 침묵으로 새는 자리"
+payload = { tool_name = "Bash", tool_input = { command = "${KOREAN_HEREDOC_45}" } }
+
+[[case]]
+hook = "hook_bash_heredoc.py"
+expect = "silent"
+note = "짧은 heredoc"
+payload = { tool_name = "Bash", tool_input = { command = "cat <<'EOF' > x.md\n한 줄\nEOF" } }
+
+# --- hook_bash_python_stub (PreToolUse Bash) ---
+[[case]]
+hook = "hook_bash_python_stub.py"
+expect = "deny"
+note = "맨 python"
+payload = { tool_name = "Bash", tool_input = { command = "python x.py  # 한글 주석" } }
+
+[[case]]
+hook = "hook_bash_python_stub.py"
+expect = "silent"
+note = "uv run python"
+payload = { tool_name = "Bash", tool_input = { command = "PYTHONUTF8=1 uv run python tools/x.py" } }
+
+# --- hook_journal_retro (PostToolUse Write|Edit) ---
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "context"
+note = "일지 Write 에 '## 다음'"
+payload = { tool_name = "Write", tool_input = { file_path = "docs/journal/2026-09-28-04-x.md", content = "# 일지\n\n## 다음\n- web-admin" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "context"
+note = "일지 Edit 의 new_string 에 '## 다음'"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\x\\docs\\journal\\2026-09-28-04-x.md", new_string = "## 다음\n- web-admin" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "'다음' 절이 없는 일지 Write"
+payload = { tool_name = "Write", tool_input = { file_path = "docs/journal/2026-09-28-04-x.md", content = "# 일지\n\n## 감사\n" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "인용 하나 고친 Edit"
+payload = { tool_name = "Edit", tool_input = { file_path = "docs/journal/2026-09-28-04-x.md", new_string = "인용 하나 고침" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "일지가 아닌 파일"
+payload = { tool_name = "Write", tool_input = { file_path = "docs/adr/0018-x.md", content = "## 다음" } }
+
+# --- hook_prompt_directive (UserPromptSubmit) ---
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "context"
+note = "next-session 지시문이 첫 메시지(트랜스크립트가 아직 없다)"
+payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "지시문이지만 첫 턴이 아니다(assistant 기록이 있는 트랜스크립트) — 대기열 24의 반례 축"
+payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${USED_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "보통 프롬프트"
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+# --- hook_pr_next_session (PostToolUse Bash|PowerShell|GitHub MCP) ---
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "context"
+note = "gh pr create"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr create --title '한글 제목'" } }
+
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "context"
+note = "gh pr merge"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr merge 12 --squash" } }
+
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "context"
+note = "GitHub MCP 도구로 PR 을 열었다 — 매처의 둘째 입력 모양"
+payload = { tool_name = "mcp__plugin_github_github__create_pull_request", tool_input = { title = "x" } }
+
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "silent"
+note = "문자열 안의 gh pr merge"
+payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }

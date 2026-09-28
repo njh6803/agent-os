@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 from tools.check_commit_msg import MAX_SUBJECT, problems_for, subject_of
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_컨벤셔널_제목은_통과한다() -> None:
@@ -34,3 +41,22 @@ def test_병합과_되돌리기_메시지는_통과한다() -> None:
 def test_제목은_주석이_아닌_첫_줄이다() -> None:
     assert subject_of("# 주석\n\nfeat: 제목\n\n본문") == "feat: 제목"
     assert subject_of("\n\n") == ""
+
+
+def test_CLI_진입점이_나쁜_메시지에_1을_돌려준다(tmp_path: Path) -> None:
+    """commit-msg 훅이 부르는 모양 그대로 — 파일 경로 하나, 빨강이면 1."""
+    message = tmp_path / "MSG"
+    message.write_text("플러그인을 막는다\n", encoding="utf-8")
+
+    process = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "check_commit_msg.py"), str(message)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert "형식이 아니다" in process.stdout

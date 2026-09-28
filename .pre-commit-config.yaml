@@ -44,6 +44,14 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # stages 를 적은 것은 러너만이다. 나머지 always_run 훅은 commit-msg 단계에서 한 번 더 돈다(일지 2026-09-28-06 회고 2).
+      - id: run-hooks
+        name: hooks (tools/hook_payloads.toml 대로 발동·침묵 — 대기열 24)
+        entry: uv run python tools/run_hooks.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
       - id: check-quotes
         name: quotes (스테이지된 .md의 더한 줄에서 20자 이상 따옴표 인용을 저장소와 대조 — 경고만, 대기열 42)
         entry: uv run python tools/check_quotes.py

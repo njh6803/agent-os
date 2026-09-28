@@ -11,6 +11,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -241,3 +244,25 @@ def test_우회가_있는_파일이_섞이면_실패한다(tmp_path: Path) -> No
     )
 
     assert main(tmp_path) == 1
+
+
+def test_CLI_진입점이_임시_트리의_우회를_출력한다(tmp_path: Path) -> None:
+    """pre-commit 이 부르는 진입점 그대로 — 루트를 첫 인자로 주면 그 트리를 본다(tests.md)."""
+    _가짜_저장소(tmp_path)
+    (tmp_path / "src" / "dirty.py").write_text(
+        "from typing import Any\n\nx: Any = 1\n", encoding="utf-8", newline="\n"
+    )
+    repo = Path(__file__).resolve().parents[2]
+
+    process = subprocess.run(
+        [sys.executable, str(repo / "tools" / "check_type_escapes.py"), str(tmp_path)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=repo,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert "src/dirty.py" in process.stdout

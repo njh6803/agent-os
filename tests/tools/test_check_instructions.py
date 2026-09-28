@@ -8,6 +8,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from collections.abc import Container
 from pathlib import Path
 
@@ -384,3 +387,25 @@ def test_텍스트_stdin_훅을_파일과_줄로_보고한다(tmp_path: Path) ->
 
 def test_이_저장소의_훅은_지금_전부_바이트로_읽는다() -> None:
     assert hooks_reading_text_stdin() == []
+
+
+def test_CLI_진입점이_임시_트리의_빨강을_출력한다(tmp_path: Path) -> None:
+    """검사 여덟을 모으는 main 의 배관을 한 번은 실제로 부른다(tests.md). 루트는 첫 인자."""
+    _클로드_파일을_쓴다(tmp_path, "@docs/constitution/principles.md\n")
+    _헌법을_쓴다(tmp_path, "# 원칙\n")
+    _사본을_만든다(tmp_path, 센티널을_넣을_스킬=set(PATCHED_SKILLS))
+    _파일을_둔다(tmp_path, ".claude/rules/nopaths.md", "# paths 없는 규칙\n")
+    repo = Path(__file__).resolve().parents[2]
+
+    process = subprocess.run(
+        [sys.executable, str(repo / "tools" / "check_instructions.py"), str(tmp_path)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=repo,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert "paths 프론트매터 없음" in process.stdout

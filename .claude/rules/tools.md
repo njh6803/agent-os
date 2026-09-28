@@ -14,6 +14,6 @@ paths:
 - 훅은 stdin을 바이트로 읽는다(`json.load(sys.stdin.buffer)`). 훅 환경에 `PYTHONUTF8`이 있다고 가정하지 않는다 — 없으면 텍스트 stdin은 cp949이고, 한글이 든 페이로드는 조용히 출력 0바이트가 된다. 설정 `env`가 넣는 값을 훅 쪽에서는 재지 못했다(대기열 40). `tools/check_instructions.py`가 판정한다.
 - 계기 훅과 막는 훅을 가른다. 계기 훅(`additionalContext`)은 단계를 닫는 순간의 지침에 처음부터 붙인다. 막는 훅(`permissionDecision: deny`, `decision: block`)은 지침으로 적은 뒤에도 어겨진 것이 확인된 뒤에만 더한다(CLAUDE.md 교정 루프). 예외는 실패가 조용하고(어겨진 뒤에야 안다) 패턴이 고정된 것 — 그것은 첫 사건에서 막는 훅으로 간다(대기열 22·25·43, `hook_env_read`). PreToolUse에서 종료 코드 2는 "막아라"이고 stderr가 이유가 된다. 그래서 스크립트를 못 찾는 경로 오류 하나가 모든 Bash를 막는다.
 - 훅과 검사의 독스트링에는 무엇을 잡는지와 함께 **못 보는 것**을 적는다. 못 본다고 적은 주장도 잰다(대기열 10).
-- 새 훅은 넷을 함께 한다. `.claude/settings.json`에 `${CLAUDE_PROJECT_DIR}`로 등록, `tests/tools/`에 순수 함수 테스트, 발동해야 할 입력과 발동하지 말아야 할 **실제** 입력으로 실행 확인(대기열 24), 덧댄 사본이면 `PATCHED_SKILLS`. 검사의 빨강은 `tools/mutate.py`로 본다.
+- 새 훅은 넷을 함께 한다. `.claude/settings.json`에 `${CLAUDE_PROJECT_DIR}`로 등록, `tests/tools/`에 순수 함수 테스트, `tools/hook_payloads.toml`에 발동 하나와 발동하지 말아야 할 **실제** 입력 하나(반례의 축을 빼지 않게, 대기열 24)를 더해 `tools/run_hooks.py`(pre-commit)로 실행 확인(워크트리 세션의 훅으로는 바뀐 파일을 확인할 수 없다 — 주 체크아웃의 파일이 돈다), 덧댄 사본이면 `PATCHED_SKILLS`. 검사의 빨강은 `tools/mutate.py`로 본다.
 - `tools/`의 식별자는 영문, 문자열·주석·독스트링은 한국어다. `tests/tools/`는 테스트 함수와 헬퍼 이름을 한국어로 써 왔고 그대로 간다(`CODING_STANDARDS.md`가 테스트 함수명에 요구하는 것의 연장). `check_type_escapes.py`의 한국어 지역 변수는 이 규약 전의 것이라 두고, 새 도구 코드에는 쓰지 않는다(대기열 12).
 - 훅 하나가 Bash 호출마다 약 0.2초를 쓴다(2026-09-28 실측 207~217ms, `.venv`가 있을 때). PreToolUse Bash 훅이 다섯이라 호출마다 약 1초 남짓이고, Grep 호출에도 하나(`hook_env_read`)가 붙는다. 훅을 더할 때 이 값을 함께 본다.
