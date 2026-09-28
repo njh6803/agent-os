@@ -1,0 +1,46 @@
+{
+    "version": "1.1.414",
+    "time": "1789963322425",
+    "generalDiagnostics": [
+        {
+            "file": "c:\\project\\agent\\tests\\probe_lg_imports.py",
+            "severity": "error",
+            "message": "Stub file not found for \"langgraph.graph\"",
+            "range": {
+                "start": {
+                    "line": 3,
+                    "character": 5
+                },
+                "end": {
+                    "line": 3,
+                    "character": 20
+                }
+            },
+            "rule": "reportMissingTypeStubs"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_lg_imports.py",
+            "severity": "error",
+            "message": "Stub file not found for \"langgraph.graph.state\"",
+            "range": {
+                "start": {
+                    "line": 4,
+                    "character": 5
+                },
+                "end": {
+                    "line": 4,
+                    "character": 26
+                }
+            },
+            "rule": "reportMissingTypeStubs"
+        }
+    ],
+    "summary": {
+        "filesAnalyzed": 1,
+        "errorCount": 2,
+        "warningCount": 0,
+        "informationCount": 0,
+        "timeInSec": 0.913
+    }
+}
+
