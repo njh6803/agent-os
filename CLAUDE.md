@@ -88,6 +88,6 @@
 
 ## Agent skills
 ### Issue tracker
-이슈는 `.scratch/<feature-slug>/` 아래 로컬 마크다운. `docs/agents/issue-tracker.md` 참조.
+이슈와 명세는 `.scratch/<feature-slug>/` 아래 로컬 마크다운이고, 명세·ADR·코드 주석이 근거로 드는 프로브는 그 아래 `probes/`에 커밋한다. `docs/agents/issue-tracker.md` 참조.
 ### Domain docs
 단일 컨텍스트. 루트 `CONTEXT.md`와 `docs/adr/`. `docs/agents/domain.md` 참조.

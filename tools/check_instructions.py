@@ -25,7 +25,7 @@ from typing import TypedDict
 ROOT = Path(__file__).resolve().parent.parent
 MAX_LINES = 200
 ALLOWED_IMPORTS = ["@docs/constitution/principles.md"]
-PATCHED_SKILLS = ("code-review", "implement", "retro")
+PATCHED_SKILLS = ("code-review", "grilling", "implement", "retro")
 SENTINEL = "프로젝트 사본"
 SETTINGS = Path(".claude") / "settings.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"

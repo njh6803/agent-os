@@ -1,0 +1,246 @@
+{
+    "version": "1.1.414",
+    "time": "1789963256049",
+    "generalDiagnostics": [
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Stub file not found for \"langgraph.graph\"",
+            "range": {
+                "start": {
+                    "line": 6,
+                    "character": 5
+                },
+                "end": {
+                    "line": 6,
+                    "character": 20
+                }
+            },
+            "rule": "reportMissingTypeStubs"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"graph\" is \"StateGraph[State, None, State, State]\"",
+            "range": {
+                "start": {
+                    "line": 27,
+                    "character": 16
+                },
+                "end": {
+                    "line": 27,
+                    "character": 21
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"add_node\" is partially unknown\n  Type of \"add_node\" is \"Overload[(node: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: None = None, retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: type[NodeInputT@add_node], retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: str, action: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: None = None, retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: str | _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], action: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any] | None = None, *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: type[NodeInputT@add_node], retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State]]\"",
+            "range": {
+                "start": {
+                    "line": 30,
+                    "character": 4
+                },
+                "end": {
+                    "line": 30,
+                    "character": 18
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"add_node\" is partially unknown\n  Type of \"add_node\" is \"Overload[(node: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: None = None, retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: type[NodeInputT@add_node], retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: str, action: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: None = None, retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State], (node: str | _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any], action: _Node[NodeInputT@add_node] | _NodeWithConfig[NodeInputT@add_node] | _NodeWithWriter[NodeInputT@add_node] | _NodeWithStore[NodeInputT@add_node] | _NodeWithWriterStore[NodeInputT@add_node] | _NodeWithConfigWriter[NodeInputT@add_node] | _NodeWithConfigStore[NodeInputT@add_node] | _NodeWithConfigWriterStore[NodeInputT@add_node] | _NodeWithRuntime[NodeInputT@add_node, None] | Runnable[NodeInputT@add_node, Any] | None = None, *, defer: bool = False, metadata: dict[str, Any] | None = None, input_schema: type[NodeInputT@add_node], retry_policy: RetryPolicy | Sequence[RetryPolicy] | None = None, cache_policy: CachePolicy[Unknown] | None = None, error_handler: _Node[Any] | _NodeWithConfig[Any] | _NodeWithWriter[Any] | _NodeWithStore[Any] | _NodeWithWriterStore[Any] | _NodeWithConfigWriter[Any] | _NodeWithConfigStore[Any] | _NodeWithConfigWriterStore[Any] | _NodeWithRuntime[Any, None] | Runnable[Any, Any] | None = None, destinations: dict[str, str] | tuple[str, ...] | None = None, timeout: float | timedelta | TimeoutPolicy | None = None, trace_policy: TracePolicy | None = None, **kwargs: **DeprecatedKwargs) -> StateGraph[State, None, State, State]]\"",
+            "range": {
+                "start": {
+                    "line": 31,
+                    "character": 4
+                },
+                "end": {
+                    "line": 31,
+                    "character": 18
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"saver\" is \"InMemorySaver\"",
+            "range": {
+                "start": {
+                    "line": 38,
+                    "character": 16
+                },
+                "end": {
+                    "line": 38,
+                    "character": 21
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"compile\" is partially unknown\n  Type of \"compile\" is \"(checkpointer: bool | BaseCheckpointSaver[Unknown] | None = None, *, cache: BaseCache[Unknown] | None = None, store: BaseStore | None = None, interrupt_before: list[str] | Literal['*'] | None = None, interrupt_after: list[str] | Literal['*'] | None = None, debug: bool = False, name: str | None = None, transformers: Sequence[(tuple[str, ...]) -> Any] | None = None) -> CompiledStateGraph[State, None, State, State]\"",
+            "range": {
+                "start": {
+                    "line": 41,
+                    "character": 10
+                },
+                "end": {
+                    "line": 41,
+                    "character": 23
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"app\" is \"CompiledStateGraph[State, None, State, State]\"",
+            "range": {
+                "start": {
+                    "line": 42,
+                    "character": 16
+                },
+                "end": {
+                    "line": 42,
+                    "character": 19
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"ainvoke\" is partially unknown\n  Type of \"ainvoke\" is \"Overload[(input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values'] = ..., print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v2'], **kwargs: Any) -> CoroutineType[Any, Any, GraphOutput[State]], (input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'], print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v2'], **kwargs: Any) -> CoroutineType[Any, Any, list[ValuesStreamPart[State] | UpdatesStreamPart | MessagesStreamPart | CustomStreamPart | CheckpointStreamPart[State] | TasksStreamPart | DebugStreamPart[State]]], (input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = \"values\", print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v1'] = ..., **kwargs: Any) -> CoroutineType[Any, Any, dict[str, Any] | Any]]\"",
+            "range": {
+                "start": {
+                    "line": 46,
+                    "character": 18
+                },
+                "end": {
+                    "line": 46,
+                    "character": 29
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"first\" is \"dict[str, Any] | Any\"",
+            "range": {
+                "start": {
+                    "line": 47,
+                    "character": 16
+                },
+                "end": {
+                    "line": 47,
+                    "character": 21
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"cmd\" is \"Command[tuple[()]]\"",
+            "range": {
+                "start": {
+                    "line": 53,
+                    "character": 16
+                },
+                "end": {
+                    "line": 53,
+                    "character": 19
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"ainvoke\" is partially unknown\n  Type of \"ainvoke\" is \"Overload[(input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values'] = ..., print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v2'], **kwargs: Any) -> CoroutineType[Any, Any, GraphOutput[State]], (input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'], print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v2'], **kwargs: Any) -> CoroutineType[Any, Any, list[ValuesStreamPart[State] | UpdatesStreamPart | MessagesStreamPart | CustomStreamPart | CheckpointStreamPart[State] | TasksStreamPart | DebugStreamPart[State]]], (input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = \"values\", print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, version: Literal['v1'] = ..., **kwargs: Any) -> CoroutineType[Any, Any, dict[str, Any] | Any]]\"",
+            "range": {
+                "start": {
+                    "line": 54,
+                    "character": 20
+                },
+                "end": {
+                    "line": 54,
+                    "character": 31
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "error",
+            "message": "Type of \"astream\" is partially unknown\n  Type of \"astream\" is \"Overload[(input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] | None = None, print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, subgraphs: bool = False, debug: bool | None = None, version: Literal['v2'], **kwargs: **DeprecatedKwargs) -> AsyncIterator[ValuesStreamPart[State] | UpdatesStreamPart | MessagesStreamPart | CustomStreamPart | CheckpointStreamPart[State] | TasksStreamPart | DebugStreamPart[State]], (input: State | Command[Unknown] | None, config: RunnableConfig | None = None, *, context: None = None, stream_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] | None = None, print_mode: Sequence[Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom']] | Literal['values', 'updates', 'checkpoints', 'tasks', 'debug', 'messages', 'custom'] = (), output_keys: str | Sequence[str] | None = None, interrupt_before: Sequence[str] | Literal['*'] | None = None, interrupt_after: Sequence[str] | Literal['*'] | None = None, durability: Literal['sync', 'async', 'exit'] | None = None, control: RunControl | None = None, subgraphs: bool = False, debug: bool | None = None, version: Literal['v1'] = ..., **kwargs: **DeprecatedKwargs) -> AsyncIterator[dict[str, Any] | Any]]\"",
+            "range": {
+                "start": {
+                    "line": 59,
+                    "character": 23
+                },
+                "end": {
+                    "line": 59,
+                    "character": 34
+                }
+            },
+            "rule": "reportUnknownMemberType"
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"chunk\" is \"dict[str, Any] | Any\"",
+            "range": {
+                "start": {
+                    "line": 60,
+                    "character": 20
+                },
+                "end": {
+                    "line": 60,
+                    "character": 25
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"state_snapshot\" is \"StateSnapshot\"",
+            "range": {
+                "start": {
+                    "line": 65,
+                    "character": 16
+                },
+                "end": {
+                    "line": 65,
+                    "character": 30
+                }
+            }
+        },
+        {
+            "file": "c:\\project\\agent\\tests\\probe_langgraph_types.py",
+            "severity": "information",
+            "message": "Type of \"interrupt\" is \"(value: Any) -> Any\"",
+            "range": {
+                "start": {
+                    "line": 69,
+                    "character": 16
+                },
+                "end": {
+                    "line": 69,
+                    "character": 25
+                }
+            }
+        }
+    ],
+    "summary": {
+        "filesAnalyzed": 1,
+        "errorCount": 7,
+        "warningCount": 0,
+        "informationCount": 8,
+        "timeInSec": 1.259
+    }
+}
+
