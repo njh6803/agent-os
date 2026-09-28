@@ -73,6 +73,39 @@ def test_변이가_든_동안_러너는_바뀐_바이트를_보고_끝나면_원
     assert code == 0
 
 
+def test_변이한_소스의_바이트코드_캐시는_변이_동안과_되돌린_뒤에_없다(tmp_path: Path) -> None:
+    """캐시는 소스의 수정 시각(초)과 크기로만 맞춰 본다. 같은 크기의 변이가 같은 초에 쓰이면 원래
+    바이트코드가 그대로 돌고, 거꾸로 변이 동안 생긴 캐시가 남으면 되돌린 원본이 변이된 바이트코드로
+    돈다. pytest 의 assertion rewrite 캐시도 같은 자리에 같은 방식으로 산다. 이웃 소스의 캐시는
+    건드리지 않는다(PR #89 CodeRabbit)."""
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    캐시 = [
+        _파일을_둔다(tmp_path, "src/__pycache__/m.cpython-312.pyc", b"old"),
+        _파일을_둔다(tmp_path, "src/__pycache__/m.cpython-312-pytest-9.1.1.pyc", b"old"),
+    ]
+    이웃 = _파일을_둔다(tmp_path, "src/__pycache__/mm.cpython-312.pyc", b"old")
+    변이_동안: list[bool] = []
+
+    def 러너(args: Sequence[str]) -> PytestResult:
+        if b"x = 2" not in path.read_bytes():
+            return _초록
+        변이_동안.extend(pyc.exists() for pyc in 캐시)
+        for pyc in 캐시:  # 변이된 소스의 캐시를 누군가 남겼다
+            pyc.write_bytes(b"mutated")
+        return _빨강
+
+    measure(
+        load_spec(_변이_파일(old="x = 1", new="x = 2")),
+        root=tmp_path,
+        runner=러너,
+        out=lambda _: None,
+    )
+
+    assert 변이_동안 == [False, False]
+    assert [pyc.exists() for pyc in 캐시] == [False, False]
+    assert 이웃.exists()
+
+
 def test_러너가_예외를_던져도_원래_바이트로_돌아온다(tmp_path: Path) -> None:
     원래 = b"x = 1\r\n"
     path = _파일을_둔다(tmp_path, "src/m.py", 원래)

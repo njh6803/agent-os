@@ -42,9 +42,11 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 5. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 변이 파일을 읽지 못했거나
    틀렸으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지 못했거나 되돌리지 못했으면 3.
 
-하위 pytest 는 `PYTHONDONTWRITEBYTECODE=1` 로 돈다. 변이된 소스의 `.pyc` 가 남으면 되돌린 원본과
-크기와 수정 시각이 겹칠 때 낡은 바이트코드가 쓰인다. `-p no:cacheprovider` 는 변이의 실패가
-`.pytest_cache` 의 lastfailed 에 남지 않게 한다.
+바이트코드 캐시는 소스의 수정 시각(초)과 크기로만 맞춰 보므로, 크기가 같은 변이가 같은 초에 쓰이면
+낡은 캐시가 돈다. 그래서 변이를 쓴 직후와 되돌린 직후에 그 소스의 `__pycache__/<이름>.*.pyc`(CPython
+의 것과 pytest assertion rewrite 의 것)를 지우고, 하위 pytest 는 `PYTHONDONTWRITEBYTECODE=1` 로 돌아
+변이된 소스의 캐시를 새로 남기지 않는다. `-p no:cacheprovider` 는 변이의 실패가 `.pytest_cache` 의
+lastfailed 에 남지 않게 한다.
 
 못 보는 것: 프로세스가 강제로 죽으면(`finally` 가 돌지 않으면) 되돌리지 못한다. 되돌리는 쓰기가
 실패하면(파일이 잠겼다) 나머지 파일은 되돌리고 남은 파일을 알린다. 두 경우 모두 `git diff` 로 본다.
@@ -198,17 +200,25 @@ def _validate(root: Path, spec: Spec) -> None:
         _mutated(root, mutation)
 
 
+def _drop_bytecode(path: Path) -> None:
+    """그 소스의 바이트코드 캐시를 지운다. CPython 의 것과 pytest assertion rewrite 의 것이다."""
+    for cached in path.parent.glob(f"__pycache__/{path.stem}.*.pyc"):
+        cached.unlink(missing_ok=True)
+
+
 def _run_mutated(root: Path, mutation: Mutation, runner: Runner) -> list[PytestResult]:
     files = _mutated(root, mutation)
     try:
         for path, (_, mutated) in files.items():
             path.write_bytes(mutated)
+            _drop_bytecode(path)
         return [runner(mutation.tests) for _ in range(mutation.repeat)]
     finally:
         stuck: list[str] = []
         for path, (original, _) in files.items():
             try:
                 path.write_bytes(original)
+                _drop_bytecode(path)
             except OSError as error:
                 stuck.append(f"{path.relative_to(root.resolve()).as_posix()} ({error})")
         if stuck:

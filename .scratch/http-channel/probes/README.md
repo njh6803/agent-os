@@ -1,7 +1,8 @@
 # http-channel 프로브
 
 명세·ADR·코드 주석이 근거로 든 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`. 2026-09-28에
-세션 스크래치패드에서 옮겼고(대기열 29), 바꾼 것은 ruff를 지나게 한 형식뿐이다. 옮기기 전의 근거는
+세션 스크래치패드에서 옮겼고(대기열 29), 바꾼 것은 ruff를 지나게 한 형식, `shadow/pkg/main.py`의 부수 효과 import에 단 `noqa` 주석,
+그리고 `bisect_fastapi.py`의 `ROOT`를 체크아웃 기준으로 계산하게 한 것이다(PR #89 CodeRabbit). 옮기기 전의 근거는
 프로브를 날짜, "명세 검토의 프로브", "스크래치 프로브" 같은 말로 가리킨다. 이 표가 그 말을 파일로 잇는다.
 
 돌리는 법은 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/http-channel/probes/<파일>`이다.

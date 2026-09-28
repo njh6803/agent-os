@@ -5,13 +5,14 @@ import os
 import subprocess
 import sys
 import urllib.request
+from pathlib import Path
 
 SCRATCH = (
     "C:/Users/User/AppData/Local/Temp/claude/C--project-agent/"
     "67e6158e-290d-46fe-bab2-fa1688ab4776/scratchpad"
 )
 PYTHON = f"{SCRATCH}/bisect/Scripts/python.exe"
-ROOT = "C:/project/agent"
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def versions() -> list[str]:

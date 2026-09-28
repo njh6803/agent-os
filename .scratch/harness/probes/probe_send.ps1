@@ -19,5 +19,5 @@ $edits = @($win.FindAll($Scope::Descendants, (New-Object System.Windows.Automati
 foreach ($e in $edits) {
     $v = ''
     try { $v = $e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { $v = '<no value pattern>' }
-    "edit name='$($e.Current.Name)' focused=$($e.Current.HasKeyboardFocus) len=$($v.Length) head='$($v.Substring(0, [Math]::Min(60, $v.Length)))'"
+    "edit name='$($e.Current.Name)' focused=$($e.Current.HasKeyboardFocus) len=$($v.Length)"
 }
