@@ -44,7 +44,23 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      # stages 를 적은 것은 러너만이다. 나머지 always_run 훅은 commit-msg 단계에서 한 번 더 돈다(일지 2026-09-28-06 회고 2).
+      # 아래 두 검사는 받은 파일을 한 프로세스로(require_serial). 기본은 CPU 수만큼 나눠 uv 를 띄워 두세 배 느리다.
+      # stages 는 커밋 메시지 파일(text)을 넘기지 않게 한다.
+      - id: check-md-tables
+        name: markdown tables (GFM 에서 표가 깨지는 자리 — 칸 수, 표 아래 빈 줄, 표가 못 된 머리 행 — 대기열 44)
+        entry: uv run python tools/check_md_tables.py
+        language: system
+        types: [markdown]
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-line-separators
+        name: line separators (날것 U+2028·U+2029·U+0085 — 대기열 22)
+        entry: uv run python tools/check_line_separators.py
+        language: system
+        types: [text]
+        require_serial: true
+        stages: [pre-commit]
+      # stages 를 적지 않은 always_run 훅은 commit-msg 단계에서 한 번 더 돈다(일지 2026-09-28-06 회고 2).
       - id: run-hooks
         name: hooks (tools/hook_payloads.toml 대로 발동·침묵 — 대기열 24)
         entry: uv run python tools/run_hooks.py
