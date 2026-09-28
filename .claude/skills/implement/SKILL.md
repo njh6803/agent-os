@@ -4,13 +4,15 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 넷을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터, 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 다섯을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터, 이 티켓의 몫만 쓰기(대기열 35), 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29·35. -->
 
 Implement the work described by the user in the spec or tickets.
 
 시작 전에 브랜치를 `docs/constitution/operations.md`의 규약대로 딴다. 티켓마다 `feature/<NN>-<slug>` 브랜치 하나, PR 하나. 예외를 제안하려면 이유와 그 이유가 사라지는 조건을 같이 적고, 조건이 차면 규약으로 돌아간다.
 
 Use /tdd where possible, at pre-agreed seams.
+
+이 티켓의 체크박스가 요구하는 것만 쓴다. 다음 티켓에 걸릴 것(형제 티켓이 붙일 라우트의 독스트링, "재개 라우트도 같다" 같은 미래형 문장)은 그 티켓 파일의 메모로 넘긴다. 세 번 명세 축 리뷰가 잡아 한 바퀴씩 들었다(대기열 35).
 
 Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
 

@@ -4,6 +4,8 @@ description: Break a plan, spec, or the current conversation into a set of trace
 disable-model-invocation: true
 ---
 
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 둘을 더했다. 1단계의 기능 실행 순서(대기열 7 — 그 순서가 런북에만 있었다), 5단계의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+
 # To Tickets
 
 Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet vertical slices, each declaring the tickets that **block** it.
@@ -15,6 +17,8 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 ### 1. Gather context
 
 Work from whatever is already in the conversation context. If the user passes a reference (a spec path, an issue number or URL) as an argument, fetch it and read its full body and comments.
+
+기능 하나의 순서는 이렇고 이 스킬은 넷째다. 설계 인터뷰(`/grill-with-docs`, 용어는 `CONTEXT.md`, 결정은 `docs/adr/`) → 명세(`/to-spec`) → 명세 검토(`spec-reviewer` 서브에이전트, 읽기 전용) → **티켓(이 스킬)** → 구현(`/implement`, 티켓마다 새 세션과 `feature/<NN>-<slug>` 브랜치) → 커밋 전 셀프 리뷰(`/code-review`) → PR 직전 CLI(`coderabbit-review`) → PR·반영·병합(`/git-pr`, `/git-pr-feedback`, `/git-pr-merge`, 계기는 `next-session`). 명세 검토가 안 됐으면 그것부터 한다. 건너뛸지의 기준은 "몇 개를 건드리나"가 아니라 "건드리는 곳마다 새로 정할 것이 있나"다. 첫 기능 전에는 공통 규약(식별자 형식, 에러 봉투, 시간대, 디스크 형식의 버전)을 정한다.
 
 ### 2. Explore the codebase (optional)
 
@@ -63,6 +67,8 @@ Publish the approved tickets. **How** depends on the tracker `/setup-matt-pocock
 - **A real issue tracker (GitHub, Linear, …)** → publish one issue per ticket in dependency order (blockers first) so each ticket's blocking edges can reference real identifiers. Use the platform's native blocking / sub-issue relationship where it has one; otherwise set each ticket's "Blocked by" to the blocking issues. Apply the `ready-for-agent` triage label unless instructed otherwise; the tickets are agent-grabbable by construction.
 
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
+
+명세나 리뷰가 다른 티켓·기능에 넘긴 것("그 층에서 재확인", 측정)은 받는 티켓의 수용 기준이나 `.scratch/plan.md`의 받는 기능 행에 적는다. 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
 
 Do NOT close or modify any parent issue.
 

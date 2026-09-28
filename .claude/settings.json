@@ -9,6 +9,12 @@
     "jira-start": "off",
     "jira-test": "off"
   },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -55,6 +61,21 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_python_stub.py\"",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_gate_pipe.py\"",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_git_main_commit.py\"",
             "timeout": 20
           }
         ]

@@ -1,6 +1,6 @@
 # Agent OS
 
-플러그인 기반 에이전트 런타임. an agent OS. 원칙 다섯은 아래에서 임포트되고, 나머지는 필요할 때 경로로 읽는다. 이 파일은 200줄 이하로 유지한다.
+플러그인 기반 에이전트 런타임. an agent OS. 원칙 다섯은 아래에서 임포트되고, 나머지는 필요할 때 경로로 읽는다.
 
 @docs/constitution/principles.md
 
@@ -10,18 +10,18 @@
 
 - `src/agent_os/sdk/`: 플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent, AgentContext
 - `src/agent_os/core/`: 런타임, 로더, 루프, 재생, 포트 선언. 바깥을 모른다
-- `src/agent_os/channel/`: 실행을 일으키는 면. `cli/`(슬라이스 1), `http/`(슬라이스 2)
-- `src/agent_os/admin/`: 구성을 바꾸고 관찰하는 면(슬라이스 2)
+- `src/agent_os/channel/`: 실행을 일으키는 면. `cli/`, `http/`
+- `src/agent_os/admin/`: 구성을 바꾸고 관찰하는 면
 - `src/agent_os/adapters/`: 포트 구현. JSONL 트레이스 싱크 등
-- `src/agent_os/http/`: 채널과 관리가 같이 쓰는 HTTP 배관. 에러 봉투, 상태 코드 표, 인증, 경로 변환기. 어댑터는 import하지 않는다
+- `src/agent_os/http/`: 채널과 관리가 같이 쓰는 HTTP 배관. 에러 봉투, 상태 코드 표, 인증, 경로 변환기
 - `src/agent_os/server.py`: HTTP 표면의 조립 층. `create_app()` 하나이고 전역 `app`이 없다. 계약은 루트 `openapi.json`
-- `src/agent_os/main.py`: 조합 층. 의존 방향은 `main → server → {channel | admin | adapters} → http → core → sdk`, `plugins → sdk`
+- `src/agent_os/main.py`: 조합 층. 의존 방향은 원칙 IV
 - `plugins/{agents,mcp,skills,models}/`: 플러그인. 코드가 아니라 내용물
-- `tests/`: `src/`를 미러링
+- `tests/`: `src/`를 대체로 미러링. admin·http 층의 테스트는 `tests/test_server.py`, 하네스는 `tests/tools/`
 
 ## 지도
 
-무엇을 언제 읽고 어디에 쓰는지. `@`로 임포트하는 것은 `principles.md` 하나뿐이고 나머지는 경로다. 같은 사실을 두 곳에 두지 않고, 지역 문서는 루트를 요약하지 않고 가리킨다. 헌법, 용어집, ADR 번호열은 하나다.
+무엇을 언제 읽고 어디에 쓰는지. `@`로 임포트하는 것은 `principles.md` 하나뿐이고 나머지는 경로다. 같은 사실은 한 곳에만 둔다. 원천 표는 `README.md`, 문서 위치 규약은 `docs/constitution/operations.md`.
 
 | 문서 | 읽는 때 | 쓰는 때 |
 |---|---|---|
@@ -46,7 +46,7 @@
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
 
-게이트는 여섯이고 넷은 그중 손으로 치는 것이다. 나머지 둘은 훅과 CI만 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 판정자, ADR 0013). 커밋 전에 보려면 직접 친다. 티켓의 "검사 넷이 초록이다"는 위의 넷을 말한다.
+게이트는 여섯(린트는 명령 둘)이고 넷은 그중 손으로 치는 것이다. 나머지 둘은 훅과 CI만 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 판정자, ADR 0013). 커밋 전에 보려면 직접 친다. 티켓의 "검사 넷이 초록이다"는 위의 넷을 말한다.
 
 ## 작업 규약
 1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
@@ -71,17 +71,18 @@
 | 린터·타입체커·훅이 판정할 수 있는 것 | 도구 설정. 문서에는 실행 명령만 |
 | 특정 디렉터리·파일 패턴에만 해당 | `.claude/rules/*.md` + `paths` 필수 |
 | 순서 있는 다단계 절차 | `.claude/skills/` |
+| 반드시 실행되어야 하는 것 | 문서가 아니라 훅. 문서는 강제력이 없다 |
 | 가끔 참조하는 자료 | `docs/` + 마크다운 링크. `@`를 쓰지 않는다 |
 | 매 세션 필요 | 이 파일. 넣기 전에 "이 줄을 지우면 실수하게 되나"를 묻고, 코드에서 유추 가능한 것은 넣지 않는다 |
 
 ## 환경 함정
 명령을 치기 전에 알아야 해서 여기 있다. 나머지 운영 규약은 `docs/constitution/operations.md`.
 - Python 명령 앞에 `PYTHONUTF8=1`. 없으면 한국어 출력이 cp949로 깨지고 일부 검사가 통째로 안 돈다.
-- Git Bash의 `python`은 Windows 스토어 스텁이라 아무것도 하지 않는다. `uv run python`이나 `py`.
-- 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다.
-- 파이프 뒤의 `&&`는 파이프 마지막 명령의 종료 코드만 본다. 판정 명령은 파이프 없이 돌린다.
-- ini 계열 파일은 ASCII만 쓴다.
-- 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(세 번 겪었다). pyright 프로브는 `tests/` 아래에 두고(점 디렉터리와 `include` 밖은 검사 없이 "0 errors") `--outputjson`의 `summary.filesAnalyzed`로 분석 여부를 본다. `--pythonpath`는 `[tool.pyright]`의 `venvPath`·`venv`에 덮여 무시되니 임시 환경은 `--venvpath`로 넘긴다. `git status`로 무엇을 커밋할지 정하기 전에 `git log`로 HEAD가 어디인지 본다.
+- 맨 `python`은 프로젝트 인터프리터가 아니다(스토어 스텁이거나 pyenv shim). 언제나 `uv run python`. Bash에서는 훅이 막는다.
+- 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다. 워크트리 세션에서는 데스크톱 앱의 가드가 `git`이 든 복합 명령(파이프·서브셸·`$(…)`)을 거부한다. 단순 명령 하나로, 또는 스크립트 파일로 나눈다.
+- 파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 명령의 종료 코드다. 판정 명령은 파이프·체인 없이 돌린다. 훅이 경고한다.
+- 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(세 번 겪었다). pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
+- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다.
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.

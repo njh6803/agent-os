@@ -4,6 +4,8 @@ description: "Turn the current conversation into a spec and publish it to the pr
 disable-model-invocation: true
 ---
 
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 3단계의 측정 규칙(대기열 38), Implementation Decisions 의 경로 규칙을 저장소 관행에 맞춘 것(대기열 30), Out of Scope 의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
@@ -17,6 +19,8 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 Check with the user that these seams match their expectations.
 
 3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
+
+   명세가 측정을 다음 단계에 넘기려 하면("구현 티켓이 잰다", "실패한다면 무엇을 할지는 이력으로 제안한다") 그 결과가 새 결정을 낳을 수 있는지 먼저 본다. 낳을 수 있으면 그 자리에서 잰다. 설계의 ADR이 넘긴 측정도 명세가 받는 자리에서 잰다. 넘기면 티켓이 구현 도중 ADR 승인을 기다리며 멈춘다(대기열 38, 두 번 다 명세 검토가 재고서야 ADR 이력이 됐다). 프로브는 `.scratch/<slug>/probes/`에 커밋한다(`docs/agents/issue-tracker.md`).
 
 <spec-template>
 
@@ -52,7 +56,7 @@ A list of implementation decisions that were made. This can include:
 - API contracts
 - Specific interactions
 
-Do NOT include specific file paths or code snippets. They may end up being outdated very quickly.
+구현 파일의 경로와 코드 조각은 적지 않는다. 금방 낡는다. 규칙 문서(`.claude/rules/*.md`)·ADR·테스트 선례의 경로는 적는다 — 이 저장소의 명세 셋이 모두 그렇게 했고, 원본 문언대로 리뷰하면 매번 오탐이었다(대기열 30).
 
 Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.
 
@@ -67,6 +71,8 @@ A list of testing decisions that were made. Include:
 ## Out of Scope
 
 A description of the things that are out of scope for this spec.
+
+다른 기능에 넘기는 것은 받는 쪽을 이름으로 적고, `.scratch/plan.md`의 그 기능 행에도 적는다. 그 행의 Blocked by가 이 기능을 포함하는지 본다 — 받는 쪽이 이 기능보다 먼저 돌 수 있다(대기열 3).
 
 ## Further Notes
 

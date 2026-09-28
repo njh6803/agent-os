@@ -1,5 +1,6 @@
 """지침 파일과 하네스 설정 검사. 규칙 배치는 런북 3단계와 ADR 0004의 기계 판정자이고, 경로 참조
-두 가지(rules 의 glob, 훅 명령)는 2026-09-23 의 잠김(PR #52)에서 왔다.
+두 가지(rules 의 glob, 훅 명령)는 2026-09-23 의 잠김(PR #52)에서, 뒤의 넷은 2026-09-28 의 하네스
+감사(대기열 25·32 와 감사 지적)에서 왔다.
 
 - `.claude/rules/*.md`는 `paths` 프론트매터가 있어야 한다. 없으면 매 세션 전부 실린다.
 - 그 `paths`의 glob은 저장소에서 무언가를 가리켜야 한다. 아무것도 안 가리키면 그 규칙이 조용히
@@ -7,8 +8,15 @@
 - `.claude/settings.json`의 훅은 저장소 파일을 `${CLAUDE_PROJECT_DIR}`로 부른다. 상대 경로면 세션이
   루트를 벗어나는 순간 깨진다.
 - `CLAUDE.md`는 200줄 이하다.
-- `CLAUDE.md`의 `@` 임포트는 `docs/constitution/principles.md` 하나뿐이다.
-- 원본 위에 덧댄 스킬 사본은 `프로젝트 사본` 주석을 지니고 있어야 한다.
+- `CLAUDE.md`의 `@` 임포트는 `docs/constitution/principles.md` 하나뿐이다. 줄 머리만이 아니라
+  문장 속 `@경로` 도 임포트다(공식 문서: "reference them with @ syntax anywhere"). 코드 스팬과
+  펜스 안은 아니다.
+- 임포트된 파일 안의 백틱 경로는 저장소 루트 기준으로 실재해야 한다. 임포트된 파일은 루트 맥락에서
+  읽혀 형제 파일을 가리키는 상대 경로가 깨진다(대기열 32, PR #43 이 헌법 버전을 못 찾았다).
+- 원본 위에 덧댄 스킬 사본은 `프로젝트 사본` 주석을 지니고 있어야 하고, 그 주석을 지닌 사본은
+  `PATCHED_SKILLS` 에 있어야 한다. 한쪽만 보면 목록 밖의 사본이 되돌려져도 초록이다.
+- `tools/hook_*.py`는 stdin 을 바이트(`sys.stdin.buffer`)로 읽는다. 훅 환경에는 `PYTHONUTF8` 이 없어
+  텍스트 stdin 은 cp949 이고, 한글이 든 입력은 예외 없이 출력 0바이트가 된다(대기열 25).
 
 pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은
 비용이 다르다(선행 저장소 AAPP-15).
@@ -16,6 +24,7 @@ pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것�
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from collections.abc import Iterator
@@ -25,10 +34,20 @@ from typing import TypedDict
 ROOT = Path(__file__).resolve().parent.parent
 MAX_LINES = 200
 ALLOWED_IMPORTS = ["@docs/constitution/principles.md"]
-PATCHED_SKILLS = ("code-review", "grilling", "implement", "retro")
+PATCHED_SKILLS = (
+    "code-review",
+    "grilling",
+    "implement",
+    "retro",
+    "to-spec",
+    "to-tickets",
+)
 SENTINEL = "프로젝트 사본"
 SETTINGS = Path(".claude") / "settings.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"
+# 백틱 토큰이 경로인지 가르는 확장자. 슬래시가 있으면 확장자와 무관하게 경로다. `agent_os.core` 나
+# `Any` 처럼 슬래시도 이 확장자도 없는 토큰은 경로가 아니다.
+PATH_EXTENSIONS = (".md", ".py", ".toml", ".json", ".yaml", ".yml", ".ps1", ".txt", ".sh")
 
 _FRONT_MATTER = re.compile(r"^---\n(.*?)\n---\n", re.S)
 _PATHS_BLOCK = re.compile(r"^paths:[ \t]*\n((?:[ \t]+-[^\n]*\n?)+)", re.M)
@@ -36,6 +55,11 @@ _LIST_ITEM = re.compile(r"^[ \t]+-[ \t]*(.+?)[ \t]*$", re.M)
 # 상대 경로처럼 생긴 토큰. 바로 앞 글자가 경로의 일부(`/`, `}`, 이름 글자)면 잡지 않아서
 # `${CLAUDE_PROJECT_DIR}/tools/x.py` 의 `tools/x.py` 는 지나간다.
 _PATH_TOKEN = re.compile(r"(?<![\w/}.~-])([\w.-]+(?:/[\w.-]+)+)")
+_FENCE = re.compile(r"^```.*?^```[ \t]*$", re.M | re.S)
+_CODE_SPAN = re.compile(r"`([^`\n]+)`")
+# `@경로` 임포트. 앞이 공백이나 줄 머리여야 한다. `noreply@anthropic.com` 의 `@` 는 임포트가 아니다.
+_IMPORT_TOKEN = re.compile(r"(?<!\S)@([\w./~-]+)")
+_PATHISH = re.compile(r"^\.?[\w.-]+(?:/[\w.*-]+)*/?$")
 
 
 class _HookCommand(TypedDict, total=False):
@@ -151,14 +175,72 @@ def hooks_with_relative_paths(root: Path = ROOT) -> list[str]:
     return problems
 
 
-def claude_md_problems() -> list[str]:
-    lines = (ROOT / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
+def _without_code(text: str) -> str:
+    """펜스 블록과 코드 스팬을 뺀 마크다운. Claude Code 의 임포트 파서가 건너뛰는 자리와 같다."""
+    return _CODE_SPAN.sub("", _FENCE.sub("", text))
+
+
+def claude_md_imports(text: str) -> list[str]:
+    """`CLAUDE.md` 본문이 임포트하는 `@경로` 전부. 줄 머리든 문장 속이든 같다.
+
+    2026-09-28 까지는 `line.startswith("@")` 만 봐서 "자세한 것은 @docs/PRD.md" 같은 한 구절이
+    파일 하나를 매 세션 통째로 싣는데 검사는 초록이었다. 못 보는 것: 파서가 임포트로 읽지 않는
+    변형(`@` 뒤 공백, 이메일)은 여기서도 임포트가 아니다.
+    """
+    return [
+        "@" + match.group(1).rstrip(".,;:") for match in _IMPORT_TOKEN.finditer(_without_code(text))
+    ]
+
+
+def claude_md_problems(root: Path = ROOT) -> list[str]:
+    lines = (root / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
     problems: list[str] = []
     if len(lines) > MAX_LINES:
         problems.append(f"CLAUDE.md {len(lines)}줄 > {MAX_LINES}줄. 로드 시점 표로 다시 나눈다")
-    imports = [line.strip() for line in lines if line.startswith("@")]
+    imports = claude_md_imports("\n".join(lines))
     if imports != ALLOWED_IMPORTS:
-        problems.append(f"CLAUDE.md의 @ 임포트는 {ALLOWED_IMPORTS}뿐이어야 한다. 지금: {imports}")
+        problems.append(
+            f"CLAUDE.md의 @ 임포트는 {ALLOWED_IMPORTS}뿐이어야 한다. 지금: {imports}."
+            " 문장 속 @경로 도 임포트다. 가리키려면 백틱에 넣는다"
+        )
+    return problems
+
+
+def _looks_like_path(token: str) -> bool:
+    if _PATHISH.match(token) is None:
+        return False
+    return "/" in token or token.endswith(PATH_EXTENSIONS)
+
+
+def _exists(root: Path, token: str) -> bool:
+    if "*" in token:
+        return next(root.glob(token), None) is not None
+    if token.endswith("/"):
+        return (root / token).is_dir()
+    return (root / token).exists()
+
+
+def imported_files_with_dead_paths(root: Path = ROOT) -> list[str]:
+    """임포트된 파일의 백틱 경로가 저장소 루트 기준으로 실재하는지 본다.
+
+    `@` 로 임포트된 파일은 `CLAUDE.md` 의 자리, 곧 루트에서 읽힌다. `principles.md` 가 형제
+    `README.md` 를 이름만으로 가리켰을 때 루트 README 로 읽혀 PR #43 이 헌법 버전을 찾지 못했다
+    (대기열 9·32). 경로로 보는 것은 슬래시가 있거나 `PATH_EXTENSIONS` 로 끝나는 백틱 토큰이다.
+    못 보는 것: 백틱 없는 경로, 이름이 우연히 루트에도 있는 형제 파일(그때는 있다고 보고 지나간다).
+    """
+    problems: list[str] = []
+    for imported in ALLOWED_IMPORTS:
+        relative = imported[1:]
+        path = root / relative
+        if not path.is_file():
+            problems.append(f"CLAUDE.md 가 임포트하는 {relative} 이 없다")
+            continue
+        for token in _CODE_SPAN.findall(path.read_text(encoding="utf-8")):
+            if _looks_like_path(token) and not _exists(root, token):
+                problems.append(
+                    f"{relative}: `{token}` 이 저장소 루트 기준으로 없다. 임포트된 파일은 루트에서"
+                    " 읽히므로 형제 파일도 전체 경로로 적는다"
+                )
     return problems
 
 
@@ -181,6 +263,80 @@ def patched_skills_without_sentinel(root: Path = ROOT) -> list[str]:
     return problems
 
 
+def skills_with_sentinel_not_listed(root: Path = ROOT) -> list[str]:
+    """센티널을 지닌 사본이 `PATCHED_SKILLS` 밖에 있는지 본다. 앞 검사의 역방향이다.
+
+    목록은 손으로 유지된다. 사본을 새로 덧대며 주석은 붙이고 목록은 잊으면, 그 사본은 앞 검사가
+    보지 않아 `npx skills update -p` 가 되돌려도 초록이다(2026-09-28 감사). 주석을 붙이는 커밋에서
+    걸리므로 사람이 기억할 것이 없다.
+    """
+    problems: list[str] = []
+    for path in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
+        name = path.parent.name
+        if name in PATCHED_SKILLS:
+            continue
+        if SENTINEL in path.read_text(encoding="utf-8"):
+            problems.append(
+                f".claude/skills/{name}/SKILL.md 에 '{SENTINEL}' 주석이 있는데"
+                " tools/check_instructions.py 의 PATCHED_SKILLS 에 없다. 목록 밖의 사본은"
+                " 되돌려져도 검사가 초록이다"
+            )
+    return problems
+
+
+def _is_sys_stdin(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "stdin"
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "sys"
+    )
+
+
+def text_stdin_lines(source: str) -> list[int]:
+    """`sys.stdin.buffer` 가 아닌 `sys.stdin` 과 `from sys import stdin` 이 나오는 줄들.
+
+    못 보는 것: `import sys as s` 뒤의 `s.stdin`, `open(0)`, `io.TextIOWrapper(...)` 로 다시 감싼
+    것. 훅이 그렇게 쓸 이유가 없어 닫지 않았다. 생기면 여기서 넓힌다.
+    """
+    tree = ast.parse(source)
+    buffered = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and node.attr == "buffer" and _is_sys_stdin(node.value)
+    }
+    lines = {
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and _is_sys_stdin(node) and id(node) not in buffered
+    }
+    lines.update(
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module == "sys"
+        and any(alias.name == "stdin" for alias in node.names)
+    )
+    return sorted(lines)
+
+
+def hooks_reading_text_stdin(root: Path = ROOT) -> list[str]:
+    """훅이 stdin 을 텍스트로 읽는지 본다.
+
+    훅 프로세스에는 `PYTHONUTF8` 이 없어 텍스트 stdin 이 cp949 로 읽힌다. 한글이 든 페이로드는
+    깨져서 매치되지 않고, 예외 없이 exit 0·출력 0바이트로 끝나 "발동 조건 아님" 과 구별되지 않는다
+    (PR #60 에서 변이로 실측, 대기열 25). 판정은 AST 라 독스트링의 낱말은 세지 않는다.
+    """
+    problems: list[str] = []
+    for path in sorted((root / "tools").glob("hook_*.py")):
+        for lineno in text_stdin_lines(path.read_text(encoding="utf-8")):
+            problems.append(
+                f"{path.relative_to(root).as_posix()}:{lineno}: sys.stdin 을 텍스트로 읽는다."
+                " 훅 환경은 cp949 라 한글이 깨진다. json.load(sys.stdin.buffer) 로 읽는다"
+            )
+    return problems
+
+
 def main() -> int:
     problems = [
         f"{path.relative_to(ROOT)}: paths 프론트매터 없음. 없으면 매 세션 실린다"
@@ -189,7 +345,10 @@ def main() -> int:
     problems.extend(rules_with_dead_paths())
     problems.extend(hooks_with_relative_paths())
     problems.extend(claude_md_problems())
+    problems.extend(imported_files_with_dead_paths())
     problems.extend(patched_skills_without_sentinel())
+    problems.extend(skills_with_sentinel_not_listed())
+    problems.extend(hooks_reading_text_stdin())
     for problem in problems:
         print(problem)
     return 1 if problems else 0

@@ -3,7 +3,7 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 넷을 더했다. 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 줄(대기열 20, 15회차), 6단계 4의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
@@ -39,6 +39,8 @@ Look for the originating spec, in this order:
 3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
+티켓 없이 사용자 요청을 명세로 쓸 때는 **요구**와 **리뷰어 참고**를 다른 절로 적는다. 참고 절에는 "요구가 아니다 — 빠뜨렸다고 내지 마라"를 붙인다. 가르지 않으면 명세 축이 "이 세션이 한 것" 목록을 요구로 읽어 표준 축이 지우라고 한 문장을 누락으로 낸다(대기열 26).
+
 ### 3. Identify the standards sources
 
 Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
@@ -72,6 +74,7 @@ If the diff touches no source file (no `*.py` under `src/`, `tests/`, `tools/`; 
 - The full diff command, the untracked file list, and the commit list.
 - The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
+- 두 축 모두에 넣는 **주장 검증** 줄(대기열 20, 15회차까지의 처방): "diff가 담은 문서·주석·독스트링·ADR의 사실 주장을 하나하나 잰다. 수를 세어 닫는 주장('둘뿐', '유일하다', '전부')과 보편 주장('~은 ~가 아니다')은 반례를 찾아 민다. **모든** 따옴표 인용은 원문과 글자 그대로인지 grep으로 본다 — 목록으로 주면 목록 밖은 운이다. 계약 변경이 거짓으로 만드는 문장은 옛 말이 아니라 바뀐 값으로 grep한다. 틈을 닫는 티켓은 앞 티켓이 미래형으로 쓴 문장('다음 티켓', '판정 티켓')을 grep한다. 잔존 grep은 옛 결정의 논증이 쓴 말도 찾는다. 근거를 찾을 때는 그 근거가 쓰일 수 있는 말들로 grep한다('프로브'만이 아니라 '실측'·'쟀다'). 변경을 세는 기점은 날짜가 아니라 커밋이다." 밀 주장은 브리프에 나열하되 "나열 밖도 잰다"를 붙인다.
 
 **Spec sub-agent prompt** should include:
 
@@ -96,7 +99,7 @@ End with a one-line summary: total findings per axis, and the worst issue _withi
 1. **고친다.** 문서화된 표준 위반, 명세의 누락·부분 구현, 요청하지 않은 범위 추가는 고친다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다.
 2. **근거를 먼저 본다.** 지적이 불분명하거나 기술적으로 맞지 않아 보이면 그대로 구현하지 않는다. 코드와 명세에서 근거를 확인한 뒤 수정 여부를 정한다. 서브에이전트 둘은 격리된 컨텍스트에서 diff와 표준 문서만 봤고 ADR도 주변 코드도 모른다. 특히 smell baseline은 스스로 judgement call이라고 말하는 휴리스틱이라, 포트와 어댑터의 간접층이 Middle Man으로, 원칙 IV가 요구하는 경계가 Speculative Generality로 보인다. 오탐을 그대로 고치면 수정이 원칙을 깬다. 봇의 초록을 믿지 않는 것과 같은 이유로 봇의 빨강도 그대로 믿지 않는다(`docs/constitution/operations.md` 리뷰 파이프라인). PR 직전 축의 트리아지에 대응하는 것이 이 단계다.
 3. **먼저 묻는다.** 수정 방법이 아키텍처 결정이거나 계약(`sdk/`, `openapi.json`, 헌법)에 닿으면 고치기 전에 사용자 판단을 받고, ADR이 필요한지 같이 묻는다(`CLAUDE.md` 작업 규약 5).
-4. **남긴다.** Minor·Nit과 근거를 보고 보류한 지적은 별도 티켓으로 빼고 이유를 한 줄 남긴다. 판단 항목만으로 커밋을 막지 않는다.
+4. **남긴다.** Minor·Nit과 근거를 보고 보류한 지적은 별도 티켓이나 회고 후보로 빼고 이유를 한 줄 남긴다. 판단 항목만으로 커밋을 막지 않는다. 다른 층이나 다음 티켓에 넘기는 것("HTTP 층에서 재확인")은 **받는 쪽**(그 티켓의 수용 기준, `plan.md`의 그 기능 행)에 적고, 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 미루는 쪽은 적지만 받는 쪽이 읽는다는 보장이 없고, 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
 5. **다시 돌린다.** 고쳤으면 `CLAUDE.md`의 검증 명령 넷을 다시 돌린다. 전체 리뷰는 다시 돌리지 않는다.
 
 보고 끝에 세 줄을 더한다. 고친 것, 남긴 것과 이유, 다시 돌린 명령과 결과.

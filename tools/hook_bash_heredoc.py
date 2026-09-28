@@ -70,7 +70,8 @@ def reason_for(command: str) -> str | None:
 
 
 def main() -> int:
-    payload: HookPayload = json.load(sys.stdin)
+    # stdin 은 바이트로. 이유는 .claude/rules/tools.md(대기열 25).
+    payload: HookPayload = json.load(sys.stdin.buffer)
     command = payload.get("tool_input", {}).get("command")
     reason = reason_for(command) if command is not None else None
     if reason is None:
