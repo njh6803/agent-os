@@ -31,7 +31,7 @@
 - [ ] `src/agent_os/adapters/` — 포트를 상속하지 않고 시그니처로 만족하는가
 - [ ] `plugins/` — 매니페스트와 디렉터리의 `kind`가 맞는가
 - [ ] `tests/` — `src/` 미러링, Fake는 픽스처에서 포트 타입으로 annotate
-- [ ] `.claude/`, `tools/`, `.pre-commit-config.yaml` — 하네스 (실제 실행으로 확인했는가, 새 검사는 `tools/mutate.py`로 변이를 넣어 빨강을 봤는가)
+- [ ] `.claude/`, `tools/`, `.pre-commit-config.yaml` — 하네스 (실제 실행으로 확인했는가, 새 검사는 `tools/mutate.py`로 변이를 넣어 빨강을 봤는가, 이 검사가 **못 보는 것**을 어디에 적었고 그 주장을 쟀는가, 모든 입력에 도는 훅은 발동하지 말아야 할 **실제** 입력으로도 돌렸는가, 구조가 바뀌었으면 README 트리도 갱신했는가)
 - [ ] `docs/`, `CLAUDE.md`, `CONTEXT.md`, `CODING_STANDARDS.md` — 지침·헌법·ADR (원천 하나, CLAUDE.md 200줄 이하)
 - [ ] `.github/` — 워크플로 (별도 PR로 먼저 병합)
 
@@ -42,9 +42,9 @@
 - [ ] `uv run ruff check . && uv run ruff format --check .`
 - [ ] `uv run pyright`
 - [ ] `uv run lint-imports`
-- [ ] `uv run pytest -q` (LLM 테스트를 건드렸다면 `uv run --env-file .env pytest -m llm`도)
-- [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓으로 뺐다
-- [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·성능 축). 안 돌렸으면 이유를 적는다. **좌석이 없으면 돌리지 않고 그 사실을 적는다** — 실패를 확인하려고 매번 에이전트를 띄우지 않는다. 한도와 좌석 요건은 operations.md 리뷰 파이프라인
+- [ ] `uv run pytest -q` (LLM 테스트가 **지나는 코드** — `core/run.py`·`core/loop.py`, 어댑터, `channel/`, `main.py` — 를 건드렸다면 `uv run --env-file .env pytest -m llm`도. 돌렸으면 일지 검사 절에 통과 수와 토큰 합계)
+- [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓이나 회고 후보로 뺐고, 다른 층·티켓에 넘긴 것은 받는 쪽에 적었다
+- [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·버그·성능 축). 안 돌렸으면 이유를 적는다. **좌석은 PR마다 `coderabbit auth status` 한 줄로 본다 — 직전 PR의 확인은 캐시다.** 없으면 돌리지 않고 그 사실을 적는다. **문서만 바뀐 PR도 면제가 아니다** — 설계 문서의 침묵이 곧 구현의 침묵이다(코드 0줄인 PR 넷에서 CWE 넷). 한도와 좌석 요건은 operations.md 리뷰 파이프라인
 - [ ] 결정을 바꿨다면 그것을 참조하는 스킬·훅·rules·명세도 같이 고쳤다
 - [ ] 새 환경 변수는 `.env.example`에 있다
 
@@ -63,5 +63,5 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 ## 리뷰어 참고
 
 <!-- 특히 봐줬으면 하는 부분, 불확실했던 판단. 기준은 CODING_STANDARDS.md의 심각도와 리뷰 관점 넷.
-     PR 봇은 CodeRabbit(보안·버그·성능)과 Claude Code Review(유지보수성·경계). PR 직전 CLI 결과는 위 체크리스트에.
+     누가 어느 축을 보는지는 operations.md 리뷰 파이프라인. PR 직전 CLI 결과는 위 체크리스트에.
      코멘트 0개인 초록은 리뷰 없음일 수 있다(operations.md) -->

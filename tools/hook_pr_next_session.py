@@ -102,7 +102,8 @@ def context_for(action: Action) -> str:
 
 
 def main() -> int:
-    payload: HookPayload = json.load(sys.stdin)
+    # stdin 은 바이트로. 이유는 .claude/rules/tools.md(대기열 25).
+    payload: HookPayload = json.load(sys.stdin.buffer)
     tool_name = payload.get("tool_name")
     if tool_name is None:
         return 0

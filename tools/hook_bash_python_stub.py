@@ -1,8 +1,13 @@
 """PreToolUse 훅(Bash). 맨 `python` 호출을 막고 `uv run python` 으로 안내한다.
 
-CLAUDE.md 환경 함정 "Git Bash 의 python 은 Windows 스토어 스텁이라 아무것도 하지 않는다"가 지침으로
-적힌 뒤에도 2026-09-22 세션에서 어겨졌다. 스텁은 "Python" 한 줄만 찍고 종료 코드 0으로 끝나 조용히
-아무것도 안 한다. 기계적 패턴이라 훅이다(교정 루프: 지침으로 적은 뒤에도 어겨지면 막는 훅 후보).
+CLAUDE.md 환경 함정 "맨 `python`은 프로젝트 인터프리터가 아니다"가 지침으로 적힌 뒤에도
+(당시 문구는 스토어 스텁을 들었다) 2026-09-22 세션에서 어겨졌다. 기계적 패턴이라 훅이다
+(교정 루프: 지침으로 적은 뒤에도 어겨지면 막는 훅 후보). 맨 python 이 무엇으로 풀리는지는
+PC 마다 다르다 — Windows 스토어 스텁이면 "Python" 한 줄만 찍고 종료 코드 0 으로 조용히 끝나고,
+pyenv shim 이면 프로젝트가 아닌 다른 버전이 돈다(2026-09-28 실측, 이 PC 는 3.11.9 shim).
+어느 쪽이든 `.venv` 의 인터프리터가 아니라 검사가 엉뚱한 환경에서 돈다. 이 훅은 Windows 밖에서도
+뜻이 있다. 못 보는 것: 활성화된 venv 의 python(그때는 맞는 인터프리터인데 막는다 — 거짓 양성),
+PowerShell 도구(매처가 Bash 다).
 
 명령어 자리의 `python`, `python3`, `python3.12` 만 본다. 명령어 자리는 명령의 시작, 파이프·연결·
 세미콜론·서브셸 뒤, 그리고 `do`·`then` 같은 셸 키워드 뒤이고, 그 앞의 환경변수 대입은 건너뛴다.
@@ -70,13 +75,15 @@ def reason_for(command: str) -> str | None:
     if not calls:
         return None
     return (
-        f"`{calls[0]}` 을(를) 직접 불렀다. Git Bash 의 python 은 Windows 스토어 스텁이라 아무것도 "
-        "하지 않는다(CLAUDE.md 환경 함정). `uv run python` 이나 `py` 를 쓴다."
+        f"`{calls[0]}` 을(를) 직접 불렀다. 맨 python 은 프로젝트 인터프리터가 아니다 — "
+        "스토어 스텁이면 아무것도 하지 않고, pyenv shim 이면 다른 버전이 돈다"
+        "(CLAUDE.md 환경 함정). `uv run python` 을 쓴다."
     )
 
 
 def main() -> int:
-    payload: HookPayload = json.load(sys.stdin)
+    # stdin 은 바이트로. 이유는 .claude/rules/tools.md(대기열 25).
+    payload: HookPayload = json.load(sys.stdin.buffer)
     command = payload.get("tool_input", {}).get("command")
     reason = reason_for(command) if command is not None else None
     if reason is None:

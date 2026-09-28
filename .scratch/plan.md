@@ -1,6 +1,6 @@
 # 전체 계획
 
-기능 하나가 `.scratch/<slug>/`(spec.md + issues/) 하나다. `Blocked by`가 비었거나 전부 done인 기능이 프론티어이고, 프론티어는 병렬로 돌린다. 계약(`sdk/`, `openapi.json`, 헌법)을 바꾸는 티켓은 각 기능의 첫 티켓이며 다른 티켓을 막는다. 순서와 범위의 근거는 헌법 "첫 슬라이스와 비목표"와 `docs/journal/`에 있다.
+규약(기능 하나에 디렉터리 하나, 프론티어, 계약 티켓, 상태 전이)은 `docs/agents/issue-tracker.md`의 전체 계획 절이 원천이다. 순서와 범위의 근거는 `docs/journal/`에 있고, 첫 슬라이스의 범위는 이 파일 끝에 있다.
 
 | 슬라이스 | 기능(slug) | 내용 | Blocked by | Status |
 |---|---|---|---|---|

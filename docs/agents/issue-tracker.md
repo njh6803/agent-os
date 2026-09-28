@@ -14,7 +14,7 @@
 
 ## 전체 계획
 
-- `.scratch/plan.md`가 전체 계획이다. 슬라이스와 기능(slug) 목록, 기능마다 `Blocked by`와 `Status`(`todo`, `in-progress`, `done`).
+- `.scratch/plan.md`가 전체 계획이다. 슬라이스와 기능(slug) 목록, 기능마다 `Blocked by`와 `Status`(`todo`, `in-progress`, `done`). `in-progress`는 그 기능의 첫 티켓이 병합될 때, `done`은 마지막 티켓이 병합될 때 바꾼다. 명세와 티켓이 생긴 것만으로는 `todo`다. 행에는 다른 기능이 넘긴 것을 적되 계약의 모양은 ADR 번호로만 가리킨다.
 - 기능 하나가 `.scratch/<slug>/` 하나다. `Blocked by`가 비었거나 전부 `done`인 기능이 프론티어이고, 프론티어는 병렬로 돌린다.
 - 계약(`sdk/`, `openapi.json`, 헌법)을 바꾸는 티켓은 그 기능의 첫 티켓이며 다른 티켓을 막는다.
 
