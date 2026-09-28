@@ -9,6 +9,9 @@
     "jira-start": "off",
     "jira-test": "off"
   },
+  "env": {
+    "PYTHONUTF8": "1"
+  },
   "permissions": {
     "deny": [
       "Read(./.env)",
@@ -76,6 +79,16 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_git_main_commit.py\"",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_env_read.py\"",
             "timeout": 20
           }
         ]

@@ -15,8 +15,9 @@
   읽혀 형제 파일을 가리키는 상대 경로가 깨진다(대기열 32, PR #43 이 헌법 버전을 못 찾았다).
 - 원본 위에 덧댄 스킬 사본은 `프로젝트 사본` 주석을 지니고 있어야 하고, 그 주석을 지닌 사본은
   `PATCHED_SKILLS` 에 있어야 한다. 한쪽만 보면 목록 밖의 사본이 되돌려져도 초록이다.
-- `tools/hook_*.py`는 stdin 을 바이트(`sys.stdin.buffer`)로 읽는다. 훅 환경에는 `PYTHONUTF8` 이 없어
-  텍스트 stdin 은 cp949 이고, 한글이 든 입력은 예외 없이 출력 0바이트가 된다(대기열 25).
+- `tools/hook_*.py`는 stdin 을 바이트(`sys.stdin.buffer`)로 읽는다. 훅 환경에 `PYTHONUTF8` 이 있다고
+  가정하지 않는다 — 없으면 텍스트 stdin 은 cp949 이고, 한글이 든 입력은 예외 없이 출력 0바이트가
+  된다(대기열 25).
 
 pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은
 비용이 다르다(선행 저장소 AAPP-15).
@@ -324,7 +325,7 @@ def text_stdin_lines(source: str) -> list[int]:
 def hooks_reading_text_stdin(root: Path = ROOT) -> list[str]:
     """훅이 stdin 을 텍스트로 읽는지 본다.
 
-    훅 프로세스에는 `PYTHONUTF8` 이 없어 텍스트 stdin 이 cp949 로 읽힌다. 한글이 든 페이로드는
+    훅 프로세스에 `PYTHONUTF8` 이 없으면 텍스트 stdin 이 cp949 로 읽힌다. 한글이 든 페이로드는
     깨져서 매치되지 않고, 예외 없이 exit 0·출력 0바이트로 끝나 "발동 조건 아님" 과 구별되지 않는다
     (PR #60 에서 변이로 실측, 대기열 25). 판정은 AST 라 독스트링의 낱말은 세지 않는다.
     """

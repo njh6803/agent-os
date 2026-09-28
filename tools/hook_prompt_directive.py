@@ -193,7 +193,7 @@ def _record_type(line: str) -> str | None:
 
 
 def main() -> int:
-    # 훅 환경에는 PYTHONUTF8 이 없어 텍스트 stdin 이 cp949 로 읽힌다. 그러면 한글이 깨져
+    # 훅 환경에 PYTHONUTF8 이 없으면 텍스트 stdin 이 cp949 로 읽힌다. 그러면 한글이 깨져
     # `브랜치:` 가 매치되지 않고, 예외 없이 exit 0 에 출력 0바이트로 계기가 사라진다(실측).
     # 바이트로 받아 JSON 이 UTF-8 로 풀게 한다.
     payload: HookPayload = json.load(sys.stdin.buffer)
