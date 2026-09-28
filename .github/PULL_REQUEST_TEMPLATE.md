@@ -33,7 +33,7 @@
 - [ ] `tests/` — `src/` 미러링, Fake는 픽스처에서 포트 타입으로 annotate
 - [ ] `.claude/`, `tools/`, `.pre-commit-config.yaml` — 하네스 (실제 실행으로 확인했는가, 새 검사는 `tools/mutate.py`로 변이를 넣어 빨강을 봤는가, 이 검사가 **못 보는 것**을 어디에 적었고 그 주장을 쟀는가, 훅은 `tools/hook_payloads.toml`에 발동 페이로드와 발동하지 말아야 할 **실제** 입력을 더했는가(`tools/run_hooks.py`가 pre-commit에서 돈다), 구조가 바뀌었으면 README 트리도 갱신했는가)
 - [ ] `docs/`, `CLAUDE.md`, `CONTEXT.md`, `CODING_STANDARDS.md` — 지침·헌법·ADR (원천 하나, CLAUDE.md 200줄 이하)
-- [ ] `.github/` — 워크플로 (별도 PR로 먼저 병합)
+- [ ] `.github/` — 워크플로 (`claude-code-review.yml`을 바꾸면 별도 PR로 먼저 병합. 워크플로 파일이 바뀐 PR은 claude-review의 코멘트 0개 가드가 꺼지므로 코멘트를 손으로 본다. `operations.md` 리뷰 파이프라인)
 
 ## 체크리스트
 

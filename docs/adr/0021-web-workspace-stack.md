@@ -28,3 +28,42 @@ date: 2026-09-28
 - **검증 명령이 다섯이 된다.** `pnpm -C web verify`(린트, 타입, 단위 테스트, 생성물 최신성)를 늘 친다. 파이썬 티켓도 `openapi.json`을 바꾸면 생성물의 최신성을 깨기 때문이다. e2e는 별도 명령이다. pre-commit과 CI의 `verify` 잡이 둘 다 돌고, 필수 검사는 `verify` 하나 그대로다. 워크플로 변경은 별도 PR로 먼저 병합한다(`operations.md`).
 - **`next dev`의 에이전트 파일을 끈다.** `next dev`는 에이전트를 감지하면 앱 폴더에 `AGENTS.md`와 `@AGENTS.md` 한 줄짜리 `CLAUDE.md`를 만들거나 그 안에 블록을 끼워 넣는다(Next 16.3.6 `server/lib/start-server.js`, 설정 `agentRules`, 기본 true). 중첩 `CLAUDE.md`와 `@` 임포트는 지침을 `.claude/rules/*.md` + `paths`에 둔다는 결정을 조용히 우회하므로 `agentRules: false`로 끈다. 블록의 요지(Next 코드를 쓰기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 읽는다)는 web 규칙 한 줄로 옮긴다.
 - **화면 문구는 한국어이고 용어집의 말을 쓴다.** 예를 들어 실행 상태 "결말 없음"을 "실행 중"으로 옮기지 않는다.
+
+## 이력
+
+### 2026-09-28 CI의 web 단계는 뼈대와 같은 PR에 들고, e2e도 `verify` 잡이 돈다
+
+`web-admin` 명세가 정했다. 위 Consequences의 "워크플로 변경은 별도 PR로 먼저 병합한다(`operations.md`)"는
+전제가 좁았다.
+
+- `operations.md`가 별도 PR을 요구하는 것은 `claude-code-review.yml` 하나다. 자기 파일을 바꾼 PR에서 리뷰가
+  건너뛰기 때문이다. `ci.yml`만 바꾼 PR은 건너뛰지 않는다(PR #43).
+- `web/`이 없는 main에 `pnpm -C web verify`를 먼저 넣으면 필수 검사 `verify`가 빨개진다. 경로 가드로 피하면
+  "미매칭은 skip이 아니라 실패"를 어긴다.
+- 지침 검사는 아무것도 가리키지 않는 `paths`를 빨강으로 본다. 그래서 web 규칙은 `web/`이 실재하는 커밋에서만 선다.
+
+**`ci.yml`의 Node·pnpm 단계와 `pnpm -C web verify`는 web 워크스페이스의 뼈대를 만드는 첫 티켓의 PR에 함께
+든다.** 이 기능은 `claude-code-review.yml`을 바꾸지 않는다.
+
+**e2e는 CI `verify` 잡의 한 단계다.** 필수 검사는 `verify` 하나 그대로이고 e2e가 그 안에 든다. pre-commit에는
+넣지 않는다. e2e는 여전히 `pnpm -C web verify` 밖의 별도 명령이다. 로컬에서는 중계, 시작 래퍼, api-client, 서버
+라우트를 건드렸을 때 친다. 키도 비용도 들지 않으므로 LLM 테스트처럼 손에만 맡길 이유가 없다. 실제 `serve`,
+중계의 SSE, 루프백 래퍼를 함께 보는 테스트는 이것 하나다. 대가는 CI 시간(브라우저 설치와 Next 빌드)이다.
+
+거부한 안은 셋이다.
+
+- **별도 PR을 먼저 병합하고 가드를 둔다.** 규칙에 예외가 는다.
+- **뼈대 뒤에 별도 PR.** 한 PR 동안 다섯째 게이트가 CI에 없다.
+- **e2e를 필수가 아닌 별도 잡으로.** 빨개도 병합을 막지 못한다. 초록 착시(`operations.md`)와 같은 자리다.
+
+### 2026-09-28 화면을 그리는 테스트는 Testing Library로 쓰고 dev 의존성으로 선언한다
+
+`web-admin` 명세를 쓰며 열렸다. 명세의 주 이음매는 `components/pages/`의 클라이언트 컴포넌트를 jsdom에
+그리고 MSW에 붙인 것이다. 위 결정의 테스트 스택은 Vitest와 MSW까지이고, 컴포넌트를 그리고 역할과 글자로
+찾는 층이 비어 있었다. **`@testing-library/react`와 그 피어 `@testing-library/dom`, 그리고
+`@testing-library/user-event`를 `apps/admin`의 dev 의존성으로 선언한다.** 런타임 의존성은 바뀌지 않는다.
+
+ADR 0010의 2026-09-22 이력이 `httpx`를 들인 것과 같은 자리다. 그리는 코드를 손으로 짜는 안(`react-dom/client`와
+`act`)은 거부했다. 그 코드가 곧 자기는 테스트되지 않는 둘째 렌더러가 된다. 찾는 기준이 역할과 글자라서
+테스트가 운영자가 보는 것을 단언하게 된다. 클래스 이름이나 구조를 단언하지 않는다. `@testing-library/jest-dom`의
+단언은 편의라 들이지 않는다. Playwright의 컴포넌트 테스트는 실험 단계이고 브라우저가 필요해 거부했다.
