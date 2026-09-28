@@ -185,9 +185,12 @@ UNLOADABLE_REASON = (
 
 
 class FakePlugins:
-    """이름별 매니페스트와 에이전트. 부른 횟수를 세어 검증이 포트보다 먼저 끝나는지 본다.
+    """이름별 매니페스트와 에이전트와 꺼진 집합. 부른 횟수를 세어 검증이 포트보다 먼저 끝나는지
+    본다.
 
-    읽을 수 없는 매니페스트와 불러올 수 없는 진입점은 어댑터처럼 PluginError 로 답한다.
+    읽을 수 없는 매니페스트와 불러올 수 없는 진입점은 어댑터처럼 PluginError 로 답한다. 켜짐 쓰기는
+    어댑터처럼 부재를 값으로 말하고 꺼진 집합에 반영한다. 관리 라우터와 채널이 이 포트 하나를 함께
+    받으므로, 관리로 끈 것을 채널이 거부하는 흐름을 이 이음매에서 잰다.
     """
 
     def __init__(self) -> None:
@@ -196,6 +199,7 @@ class FakePlugins:
             *(GHOSTLY, LEAKY, UNLOADABLE),
         )
         self._manifests = {(m.kind, m.name): m for m in (*manifests, CALC_SERVER, SECRET_SERVER)}
+        self.disabled: frozenset[PluginKey] = frozenset()
         self.calls = 0
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
@@ -215,12 +219,16 @@ class FakePlugins:
         return AGENTS[manifest.name]
 
     def read_disabled(self) -> frozenset[PluginKey]:
-        """아직 아무것도 꺼지지 않았다. 꺼진 것을 core 가 거부하는 것은 core 판정 티켓이 넣는다."""
         self.calls += 1
-        return frozenset()
+        return self.disabled
 
     def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
-        raise NotImplementedError("채널은 켜고 끄지 않는다. 그 라우트는 관리 테스트가 민다")
+        self.calls += 1
+        if (kind, name) not in self._manifests:
+            return "absent"
+        key = PluginKey(kind=kind, name=name)
+        self.disabled = self.disabled - {key} if enabled else self.disabled | {key}
+        return "applied"
 
 
 class FakeTrace:
@@ -1109,6 +1117,80 @@ async def test_기록이_깨진_실행은_404_가_아니라_500_봉투이고_결
     assert trace.lines == before
 
 
+# 꺼진 플러그인 — 관리로 끈 것을 채널이 실행 전에 409 로 거부한다. 채널은 켜짐을 먼저 확인하지
+# 않고 core 가 던진 `Disabled` 를 표가 옮긴다(`.claude/rules/channel.md`). 판정 순서는 core 테스트가
+# 고정하고 여기서는 관리와 채널이 같은 포트를 받는다는 조립과 번역을 잰다.
+
+
+async def _set_enabled(client: AsyncClient, kind: str, name: str, *, enabled: bool) -> None:
+    """같은 앱의 관리 라우트로 켜고 끈다. 관리 토큰이고 받는 포트는 채널과 같은 것이다."""
+    response = await client.put(
+        f"/plugins/{kind}/{name}/enabled", json={"enabled": enabled}, headers=ADMIN
+    )
+    assert response.status_code == 204
+
+
+@pytest.mark.parametrize(
+    ("kind", "name", "agent"),
+    [("agent", "echo", "echo"), ("mcp", "calc-server", "adding")],
+    ids=["에이전트를 끔", "에이전트가 쓰는 mcp 를 끔"],
+)
+async def test_관리로_끈_것을_부른_실행은_409_봉투이고_메시지에_종류와_이름이_있고_트레이스가_없다(
+    kind: str, name: str, agent: str
+) -> None:
+    """없는 것(404)과 서버가 깨진 것(500)을 구분한다(스토리 45). 켜진 에이전트가 꺼진 mcp 때문에
+    거부되면 메시지는 그 mcp 를 든다 — 운영자에게 무엇을 켜 달라고 할지 알아야 한다(스토리 46).
+    실행 전 실패라 스트림이 아니라 봉투이고 트레이스가 없으며(스토리 47) MCP 서버도 뜨지 않는다."""
+    trace = FakeTrace()
+    tools = ScopedTools()
+
+    async with _serving(_app(trace=trace, tools=tools)) as client:
+        await _set_enabled(client, kind, name, enabled=False)
+        response = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["code"] == "conflict"
+    assert f"{kind} {name}" in body["message"]
+    assert body["request_id"] == response.headers["X-Request-Id"]
+    assert trace.lines == []
+    assert tools.connections == []
+
+
+async def test_멈춘_실행의_에이전트를_끄면_결정이_409_이고_다시_켜면_이어_간다() -> None:
+    """승인을 기다리는 것이 바로 그 에이전트의 도구 호출이다(스토리 31·50). 받지 않은 결정은
+    트레이스에 남지 않아 실행이 일시정지 그대로이고(스토리 52), 다시 켜면 같은 결정이 결정
+    이벤트로 시작하는 스트림을 준다(스토리 32). 409 의 뜻 셋(일시정지 아님, 형식 1, 꺼짐)은
+    메시지가 가른다(스토리 51)."""
+    trace = FakeTrace()
+    tools = ScopedTools()
+
+    async with _serving(_app(trace=trace, tools=tools)) as client:
+        await client.post("/runs", json=_start("gated"), headers=CHANNEL)
+        paused = list(trace.lines)
+        await _set_enabled(client, "agent", "gated", enabled=False)
+        refused = await _decide(client, "run-1", APPROVE)
+        after_refusal, connected = list(trace.lines), len(tools.connections)
+        await _set_enabled(client, "agent", "gated", enabled=True)
+        resumed = await _decide(client, "run-1", APPROVE)
+
+    assert refused.status_code == 409
+    body = refused.json()
+    assert body["code"] == "conflict"
+    assert "agent gated" in body["message"]
+    assert after_refusal == paused
+    assert json.loads(after_refusal[-1])["type"] == "run_paused"
+    assert connected == 1
+    assert resumed.status_code == 200
+    assert _types(_frames(resumed.text)) == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+    assert tools.calls == [("add", ADD_2_3)]
+
+
 # 결정 본문과 경로 — 형식이 틀리면 트레이스에 닿기 전에 끝난다
 
 
@@ -1494,8 +1576,7 @@ def test_스트림_항목_스키마는_FastAPI_의_정형_그대로_data_만_필
 
 def test_POST_runs_가_사람이_지은_operation_id_와_봉투_에러_문서를_든다() -> None:
     """생성 클라이언트의 함수 이름이 `operationId` 다(스토리 64). 409 는 꺼진 것을 부르면 core 가
-    던지는 `Disabled` 를 표가 옮긴 것이다(ADR 0017). 계약이 먼저 적고 core 의 판정은 다음
-    티켓이 넣는다."""
+    던지는 `Disabled` 를 표가 옮긴 것이다(ADR 0017)."""
     operation = _app().openapi()["paths"]["/runs"]["post"]
     envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
 

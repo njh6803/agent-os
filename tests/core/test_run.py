@@ -9,6 +9,7 @@ from collections.abc import (
     AsyncIterator,
     Awaitable,
     Callable,
+    Iterable,
     Iterator,
     Mapping,
     Sequence,
@@ -79,6 +80,8 @@ from agent_os.sdk import (
 FIXED_NOW = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
 PRINCIPAL = Principal("alice")
 SERVER = McpServer(command="fake-server")
+# 운영자 파일이 깨졌을 때 어댑터가 내는 문구의 모양. 경로가 든다.
+CORRUPT_OPERATOR_FILE = "운영자 파일이 깨졌다: plugins/disabled.toml"
 
 
 def _toml_list(names: Sequence[str]) -> str:
@@ -177,6 +180,14 @@ class AdvancingClock:
 
 
 class FakePlugins:
+    """이름별 에이전트와 mcp. 꺼진 집합(`disabled`)은 공개 속성이라 테스트가 같은 포트에서 켜고
+    끈다.
+
+    진입점 로드(`loads`)와 꺼진 집합 읽기(`disabled_reads`)를 센다. 꺼진 에이전트를 import하지
+    않는다는 것과 준비 한 번에 한 번 읽는다는 것이 이 두 수로 드러난다. `corrupt` 가 있으면 운영자
+    파일이 깨진 것이라 읽기가 어댑터처럼 PluginError 다.
+    """
+
     def __init__(
         self,
         agents: dict[str, BaseAgent],
@@ -184,12 +195,19 @@ class FakePlugins:
         servers: Sequence[str] = (),
         requires_approval: Sequence[str] = (),
         secret_args: Mapping[str, Sequence[str]] | None = None,
+        *,
+        disabled: Iterable[PluginKey] = (),
+        corrupt: str | None = None,
     ) -> None:
         self._agents = agents
         self._mcp = tuple(mcp)
         self._servers = tuple(servers)
         self._requires_approval = tuple(requires_approval)
         self._secret_args = secret_args
+        self.disabled = frozenset(disabled)
+        self.corrupt = corrupt
+        self.loads = 0
+        self.disabled_reads = 0
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
         if kind is PluginKind.AGENT and name in self._agents:
@@ -202,11 +220,14 @@ class FakePlugins:
         raise NotImplementedError("매니페스트 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
+        self.loads += 1
         return self._agents[manifest.name]
 
     def read_disabled(self) -> frozenset[PluginKey]:
-        """아직 아무것도 꺼지지 않았다. 꺼진 집합을 받고 읽기를 세는 것은 다음 티켓이 더한다."""
-        return frozenset()
+        self.disabled_reads += 1
+        if self.corrupt is not None:
+            raise PluginError(self.corrupt)
+        return self.disabled
 
     def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("core 는 켜고 끄지 않는다. 관리가 한다")
@@ -1647,21 +1668,27 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
 
 
-# --- 실행 전 실패의 두 갈래 ---------------------------------------------------------
+# --- 실행 전 실패의 갈래 -----------------------------------------------------------
 #
-# 채널이 실행 전 실패를 상태 코드로 옮기려면 core 가 둘을 타입으로 갈라 던져야 한다(ADR 0014).
-# 요청이 이름을 댄 것이 없는 것(부재)과 요청이 가리킨 실행이 재개할 수 있는 상태가 아닌 것(재개
-# 불가)이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 상태 코드는 여기
-# 없다.
+# 채널이 실행 전 실패를 상태 코드로 옮기려면 core 가 타입으로 갈라 던져야 한다(ADR 0014). 기준은
+# "깨졌나"다(ADR 0014 의 2026-09-26 이력). 요청이 이름을 댄 것이 없는 것(부재), 요청이 가리킨 실행이
+# 재개할 수 있는 상태가 아닌 것(재개 불가), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR
+# 0017)이 하위 타입이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의
+# 판정 순서는 아래 "꺼진 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
 
 _RUN_1 = RunId("run-1")
+# 하위 타입 셋. 깨진 것(하위 타입이 아닌 PluginError)을 단언할 때 이것을 뺀다. 늘면 여기에 더한다.
+_SUBTYPES = (Absent, NotResumable, Disabled)
 
 
-def test_부재와_재개_불가는_PluginError_의_하위_타입이다() -> None:
+def test_부재와_재개_불가와_꺼짐은_서로_다른_PluginError_의_하위_타입이다() -> None:
     """기반 타입을 잡는 채널(CLI)이 하위 타입도 잡는다는 전제다. 진단과 종료 코드가 그대로라는
-    것은 CLI 의 기존 테스트가 판정한다."""
+    것은 CLI 의 기존 테스트가 판정한다. 꺼짐은 깨진 것도 없는 것도 아니라 셋이 서로 겹치지
+    않는다."""
     assert issubclass(Absent, PluginError)
     assert issubclass(NotResumable, PluginError)
+    assert issubclass(Disabled, PluginError)
+    assert not issubclass(Disabled, Absent | NotResumable)
 
 
 async def test_없는_에이전트를_부르면_부재다(trace: FakeTrace, clock: FakeClock) -> None:
@@ -1756,10 +1783,11 @@ class BrokenManifestPlugins(FakePlugins):
 class UnimportablePlugins(FakePlugins):
     """매니페스트는 읽히는데 진입점을 import하지 못한 모양. 어댑터는 이것도 PluginError 다."""
 
-    def __init__(self) -> None:
-        super().__init__({"calc": OneShotAgent()})
+    def __init__(self, *, disabled: Iterable[PluginKey] = ()) -> None:
+        super().__init__({"calc": OneShotAgent()}, disabled=disabled)
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
+        self.loads += 1
         raise PluginError(f"진입점을 import할 수 없다: {manifest.name}")
 
 
@@ -1801,6 +1829,10 @@ async def _masked_approval(clock: FakeClock) -> None:
     await _run_with(plugins, clock)
 
 
+async def _corrupt_operator_file(clock: FakeClock) -> None:
+    await _run_with(FakePlugins({"calc": OneShotAgent()}, corrupt=CORRUPT_OPERATOR_FILE), clock)
+
+
 async def _unknown_event(clock: FakeClock) -> None:
     await _resume_paused(UnknownEventTrace(), clock)
 
@@ -1825,6 +1857,7 @@ async def _unwritable_decision(clock: FakeClock) -> None:
         pytest.param(_unimportable_entrypoint, id="unimportable-entrypoint"),
         pytest.param(_missing_mcp, id="missing-mcp"),
         pytest.param(_masked_approval, id="masked-approval"),
+        pytest.param(_corrupt_operator_file, id="corrupt-operator-file"),
         pytest.param(_unknown_event, id="unknown-event"),
         pytest.param(_empty_trace, id="empty-trace"),
         pytest.param(_mixed_runs, id="mixed-runs"),
@@ -1840,7 +1873,7 @@ async def test_구성이나_기록이_깨진_것은_부재도_재개_불가도_�
     with pytest.raises(PluginError) as caught:
         await scenario(clock)
 
-    assert not isinstance(caught.value, Absent | NotResumable | Disabled)
+    assert not isinstance(caught.value, _SUBTYPES)
 
 
 async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_가려_하면_실패한다(
@@ -1884,6 +1917,280 @@ async def test_재생_구간의_모델_호출은_모델_포트를_부르지_않�
 
     # 재생된 첫 턴은 기록에서 오고 둘째 턴만 실제 호출이다. 재생이 포트에 닿으면 3 이 된다.
     assert model.calls == 2
+
+
+# --- 꺼진 플러그인 ----------------------------------------------------------------
+#
+# 운영자가 끈 것을 부른 새 실행과 재개는 실행 전에 Disabled 로 끝난다(ADR 0017). 판정 순서는 두
+# 단이다. 앞 단은 깨짐(에이전트, 에이전트가 쓰는 mcp 들, 마스킹과 승인의 충돌)이고, 뒷 단에서 운영자
+# 파일을 한 번 읽어 에이전트, mcp 순으로 꺼짐을 본다. 진입점 import 는 그 뒤다 — 판정하려면 플러그인
+# 코드를 실행해야 해서 "깨짐이 먼저"의 유일한 예외다. 근거는 plugin-toggle 명세의 "core — 준비
+# 단계의 판정"이다. 막힌 실행에서 도구 포트가 연결되지 않는다는 것은 가짜 도구 포트가 받은 서버가
+# 없다는 것(`servers is None`)으로 본다. 결정의 "거부"(Deny)와 헷갈리지 않게 여기서는 "막힌다"고
+# 쓴다.
+
+
+def _agent_key(name: str) -> PluginKey:
+    return PluginKey(kind=PluginKind.AGENT, name=PluginName(name))
+
+
+def _mcp_key(name: str) -> PluginKey:
+    return PluginKey(kind=PluginKind.MCP, name=PluginName(name))
+
+
+class BrokenMcpPlugins(FakePlugins):
+    """에이전트는 읽히는데 그것이 쓰는 mcp 의 매니페스트를 파싱하지 못한 모양."""
+
+    def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
+        if kind is PluginKind.MCP:
+            raise PluginError(f"매니페스트를 읽을 수 없다: {name}")
+        return super().read_manifest(kind, name)
+
+
+@pytest.mark.parametrize(
+    ("disabled", "named"),
+    [(_agent_key("calc"), "agent calc"), (_mcp_key("srv"), "mcp srv")],
+    ids=["에이전트가 꺼짐", "켜진 에이전트가 쓰는 mcp 가 꺼짐"],
+)
+async def test_꺼진_것을_부른_실행은_실행_전에_Disabled_이고_메시지에_그_종류와_이름이_있다(
+    disabled: PluginKey, named: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """실행 식별자가 만들어지지 않고 트레이스가 없다. 꺼진 에이전트의 코드는 import되지 않고
+    (스토리 37) 그 MCP 서버도 뜨지 않는다(스토리 38). 꺼진 도구를 빼고 조용히 도는 것은 막는 것이
+    아니고(스토리 33), 운영자에게 무엇을 켜 달라고 할지 알도록 메시지는 꺼진 그것을 든다(스토리
+    46)."""
+    tools = FakeTools()
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], disabled=[disabled]
+    )
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Disabled, match=named):
+        await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert clock.ids_issued == 0
+    assert trace.events == []
+    assert tools.servers is None
+    assert plugins.loads == 0
+
+
+@pytest.mark.parametrize(
+    ("disabled", "named", "unnamed"),
+    [
+        ([_agent_key("calc"), _mcp_key("zeta")], "agent calc", "zeta"),
+        ([_mcp_key("alpha"), _mcp_key("zeta")], "mcp zeta", "alpha"),
+    ],
+    ids=["에이전트와 mcp", "mcp 둘"],
+)
+async def test_꺼진_것이_여럿이면_에이전트가_먼저이고_mcp_는_매니페스트에_적힌_순서다(
+    disabled: list[PluginKey], named: str, unnamed: str, clock: FakeClock
+) -> None:
+    """매니페스트는 zeta 를 alpha 보다 먼저 적었다. 이름순이나 집합의 순서로 고르면 alpha 가
+    된다."""
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["zeta", "alpha"],
+        servers=["zeta", "alpha"],
+        disabled=disabled,
+    )
+
+    with pytest.raises(Disabled, match=named) as caught:
+        await _run_with(plugins, clock)
+
+    assert unnamed not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("disabled", "corrupt"),
+    [([_agent_key("nope")], None), ([], CORRUPT_OPERATOR_FILE)],
+    ids=["꺼진 집합에 든 이름", "운영자 파일이 깨짐"],
+)
+async def test_없는_에이전트는_꺼진_집합에_들었거나_운영자_파일이_깨졌어도_부재다(
+    disabled: list[PluginKey], corrupt: str | None, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """부재 판정이 먼저다(ADR 0017). 없는 것을 꺼졌다거나 서버가 깨졌다고 말하면 이름이 맞다고
+    믿게 된다(스토리 49)."""
+    plugins = FakePlugins({"calc": OneShotAgent()}, disabled=disabled, corrupt=corrupt)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent, match="nope"):
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins, name="nope")
+
+
+async def _disabled_agent_missing_mcp(clock: FakeClock) -> None:
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["ghost"], disabled=[_agent_key("calc")])
+    await _run_with(plugins, clock)
+
+
+async def _disabled_agent_broken_mcp(clock: FakeClock) -> None:
+    plugins = BrokenMcpPlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], disabled=[_agent_key("calc")]
+    )
+    await _run_with(plugins, clock)
+
+
+async def _disabled_agent_masked_approval(clock: FakeClock) -> None:
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["mailer"],
+        servers=["mailer"],
+        requires_approval=["send_email"],
+        secret_args={"send_email": ["api_key"]},
+        disabled=[_agent_key("calc")],
+    )
+    await _run_with(plugins, clock)
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        pytest.param(_disabled_agent_missing_mcp, id="missing-mcp"),
+        pytest.param(_disabled_agent_broken_mcp, id="broken-mcp"),
+        pytest.param(_disabled_agent_masked_approval, id="masked-approval"),
+    ],
+)
+async def test_꺼진_에이전트라도_구성이_깨졌으면_하위_타입이_아닌_PluginError다(
+    scenario: Callable[[FakeClock], Awaitable[None]], clock: FakeClock
+) -> None:
+    """깨짐이 꺼짐보다 먼저다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에 고칠 것을 안다. 꺼진
+    에이전트가 가리키는 mcp 가 없을 때 409 가 되면 ADR 0017 의 "없는 것은 여전히 PluginError(500)"가
+    거짓이 된다."""
+    with pytest.raises(PluginError) as caught:
+        await scenario(clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+
+
+async def test_꺼진_에이전트는_import하지_않아_진입점이_깨졌어도_Disabled다(
+    clock: FakeClock,
+) -> None:
+    """import 실패를 판정하려면 플러그인 코드를 실행해야 한다. 위험해서 끈 에이전트의 모듈 최상위
+    코드가 돌면 끈 뜻이 없다(스토리 37). "깨짐이 먼저"의 유일한 예외다."""
+    plugins = UnimportablePlugins(disabled=[_agent_key("calc")])
+
+    with pytest.raises(Disabled, match="agent calc"):
+        await _run_with(plugins, clock)
+
+    assert plugins.loads == 0
+
+
+async def test_꺼진_집합은_새_실행과_재개가_각각_한_번_읽는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """에이전트와 mcp 들을 같은 순간의 상태로 판정한다(스토리 63). mcp 가 둘이어도 새 실행 한 번,
+    재개 한 번이다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv", "other"],
+        servers=["srv", "other"],
+        requires_approval=["send"],
+    )
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    assert plugins.disabled_reads == 1
+
+    await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+    assert plugins.disabled_reads == 2
+
+
+@pytest.mark.parametrize(
+    ("disabled", "corrupt", "error", "clue"),
+    [
+        ([_agent_key("calc")], None, Disabled, "agent calc"),
+        ([_mcp_key("srv")], None, Disabled, "mcp srv"),
+        ([], CORRUPT_OPERATOR_FILE, PluginError, "disabled.toml"),
+    ],
+    ids=["에이전트가 꺼짐", "에이전트가 쓰는 mcp 가 꺼짐", "운영자 파일이 깨짐"],
+)
+async def test_막힌_재개는_트레이스에_아무것도_쓰지_않고_도구를_연결하지_않는다(
+    disabled: list[PluginKey],
+    corrupt: str | None,
+    error: type[PluginError],
+    clue: str,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """결정 이벤트를 쓰기 전에 막히므로 실행은 일시정지 그대로다(스토리 31·52). 결정이 남으면 그
+    실행은 더는 일시정지가 아니라서 다시 켠 뒤에도 승인할 수 없다. 멈춘 실행이 기다리는 것이 바로
+    그 에이전트의 도구 호출이라 MCP 서버도 뜨지 않고 진입점도 다시 로드하지 않는다(스토리 37·38).
+    운영자 파일의 손상은 하위 타입이 아닌 PluginError 그대로다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=_two_tools(), plugins=plugins)
+    before, loads = list(trace.events), plugins.loads
+    plugins.disabled = frozenset(disabled)
+    plugins.corrupt = corrupt
+    tools = _two_tools()
+
+    with pytest.raises(error, match=clue) as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is error
+    assert trace.events == before
+    assert trace.events[-1].type == "run_paused"
+    assert tools.servers is None
+    assert plugins.loads == loads
+
+
+async def test_다시_켜면_같은_포트에서_같은_실행의_재개가_결정_이벤트로_시작한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """끈 것이 실행을 버린 것이 아니다(스토리 32). 캐시가 없어서 같은 포트에서 켠 다음 준비부터
+    효력이 난다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.disabled = frozenset({_agent_key("calc")})
+    with pytest.raises(Disabled):
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+    plugins.disabled = frozenset()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
+
+
+async def test_일시정지가_아닌_실행은_에이전트가_꺼졌어도_재개_불가다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """트레이스 판정이 준비보다 먼저다. 이미 끝난 실행을 두고 에이전트를 켜 달라고 말하면 켠
+    뒤에도 승인할 수 없다."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+    await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+    plugins.disabled = frozenset({_agent_key("calc")})
+
+    with pytest.raises(NotResumable, match="run-1"):
+        await _resume(_RUN_1, model, trace, clock, plugins=plugins)
+
+
+async def test_재개할_때_트레이스가_가리키는_에이전트가_없으면_꺼져_있어도_PluginError다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """기록과 구성이 어긋난 것(500)이 꺼짐(409)보다 먼저다(스토리 53). 사라진 것을 꺼졌다고 말하면
+    운영자가 켜러 간다. 켤 수도 없다 — 디렉터리가 없는 이름의 PUT 은 404 다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=_gated_plugins(OneShotAgent())
+    )
+    vanished = FakePlugins({}, disabled=[_agent_key("calc")])
+
+    with pytest.raises(PluginError, match="calc") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=vanished)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert trace.events[-1].type == "run_paused"
 
 
 # --- 거부 ---------------------------------------------------------------------

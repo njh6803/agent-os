@@ -16,14 +16,17 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 처음 생긴 사실인 대조 불일치의 run_failed 는 쓴다. 사실이 한 번씩만 남는다.
 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
-마스킹과 승인이 겹치는 도구는 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다.
-재개할 수 없는 트레이스(없음, 형식 1, 일시정지 아님, 손상)도 같은 자리의 PluginError 다.
-저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012 이력).
-하위 타입을 가르는 기준은 "깨졌나"다 — 대상이 없거나 대상의 상태가 요청을 허락하지 않는 것이
-하위 타입이고 남는 것이 서버의 구성이나 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력). 요청이
-댄 에이전트나 실행이 없으면 Absent, 실행이 일시정지가 아니거나 형식 1 이면 NotResumable 이다
-(ADR 0014). 재개할 실행의 트레이스가 가리키는 에이전트가 없는 것은 요청이 아니라 서버의 기록이 댄
-이름이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
+마스킹과 승인이 겹치는 도구, 운영자 파일의 손상, 운영자가 끈 에이전트나 mcp 는 실행 식별자를
+만들기 전에 PluginError 로 끝나 트레이스가 없다. 재개할 수 없는 트레이스(없음, 형식 1, 일시정지
+아님, 손상)도 같은 자리의 PluginError 다. 재개에서는 위의 것이 전부(꺼짐과 운영자 파일의 손상도)
+결정 이벤트를 쓰기 전에 나 트레이스가 그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도
+PluginError 이고 도구를 부르지 않는다(ADR 0012 이력). 하위 타입을 가르는 기준은 "깨졌나"다 —
+대상이 없거나 대상의 상태가 요청을 허락하지 않는 것이 하위 타입이고 남는 것이 서버의 구성이나
+기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력). 요청이 댄 에이전트나 실행이 없으면 Absent,
+실행이 일시정지가 아니거나 형식 1 이면 NotResumable(ADR 0014), 요청이 부른 에이전트나 그것이 쓰는
+mcp 를 운영자가 꺼 두었으면 Disabled 다(ADR 0017). 재개할 실행의 트레이스가 가리키는 에이전트가
+없는 것은 요청이 아니라 서버의 기록이 댄 이름이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
+판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import 다. 그 이유는 `_prepare`.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
 실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
@@ -45,8 +48,10 @@ from agent_os.core.ports import (
     Absent,
     ChatModel,
     Clock,
+    Disabled,
     NotResumable,
     PluginError,
+    PluginKey,
     PluginSource,
     ToolConnection,
     ToolResult,
@@ -448,7 +453,8 @@ async def resume(
     첫 걸음(트레이스 읽기, 일시정지 확인, 결정 쓰기)에 await 가 없다. 같은 실행에 동시에 온 둘째
     결정이 마지막 이벤트를 결정으로 읽어 재개 불가가 되는 것이 이것 하나에 기댄다(ADR 0014). 읽기나
     쓰기를 비동기로 바꾸거나 스레드로 보내면 승인된 도구가 두 번 실행된다. HTTP 채널의 동시 재개
-    테스트가 그것을 고정한다.
+    테스트가 그것을 고정한다. 둘 사이의 준비(꺼진 집합 읽기를 포함한다)도 첫 걸음 안이라 포트의 그
+    읽기가 동기다(ADR 0017). 준비에서 막히면 결정을 쓰기 전이라 실행은 일시정지 그대로다.
     """
     started, paused, records = _read_paused(trace, run_id)
     prepared = _prepare(plugins, _recorded_manifest(plugins, started))
@@ -560,9 +566,15 @@ def _prepare(plugins: PluginSource, manifest: PluginManifest) -> _Prepared:
 
     에이전트의 매니페스트는 부르는 쪽이 읽어 넘긴다. 없을 때의 뜻이 `run()` 과 `resume()` 에서
     다르기 때문이다(`_requested_manifest`, `_recorded_manifest`).
+
+    순서가 의도다. 깨짐(mcp 들, 마스킹과 승인의 충돌)을 다 본 뒤에 꺼짐을 보고, 진입점 import 는
+    꺼짐보다 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에 고칠 것을 알고, import 실패를
+    판정하려면 플러그인 코드를 실행해야 하는데 꺼진 에이전트는 그 코드를 돌리지 않는다(ADR 0017,
+    plugin-toggle 명세의 "core — 준비 단계의 판정").
     """
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
+    _reject_disabled(plugins.read_disabled(), manifest)
     return _Prepared(
         servers=servers,
         policy=_Policy(
@@ -661,6 +673,24 @@ def _reject_masked_approvals(
         raise PluginError(
             f"마스킹된 인자를 가진 도구는 승인 대상이 될 수 없다: {', '.join(conflicts)}"
         )
+
+
+def _reject_disabled(disabled: frozenset[PluginKey], manifest: PluginManifest) -> None:
+    """운영자가 끈 것을 부른 실행을 거부한다. 에이전트가 먼저이고 mcp 는 매니페스트에 적힌 순서다.
+
+    꺼진 집합은 부르는 쪽이 한 번 읽어 넘긴다. 에이전트와 mcp 들을 같은 순간의 상태로 판정하기
+    위해서다(ADR 0012 의 2026-09-26 이력). 메시지는 꺼진 것의 종류와 이름이다 — 켜진 에이전트가 꺼진
+    mcp 때문에 거부되면 운영자에게 켜 달라고 할 것이 그 mcp 이기 때문이다.
+    """
+    agent = PluginKey(kind=PluginKind.AGENT, name=manifest.name)
+    if agent in disabled:
+        raise Disabled(f"꺼진 플러그인이다: {agent.kind} {agent.name}")
+    for name in manifest.mcp:
+        mcp = PluginKey(kind=PluginKind.MCP, name=name)
+        if mcp in disabled:
+            raise Disabled(
+                f"꺼진 플러그인이다: {mcp.kind} {mcp.name} (에이전트 {manifest.name} 이 쓴다)"
+            )
 
 
 def _reject_unknown_declarations(policy: _Policy, specs: Sequence[ToolSpec]) -> None:
