@@ -41,9 +41,10 @@ class PluginError(Exception):
     트레이스가 없다. 읽을 수 없는 트레이스, 재개할 수 없는 트레이스, 이어 쓸 수 없는 트레이스는
     트레이스가 있는 채로 난다(ADR 0012 의 2026-09-22 이력과 2026-09-23 이력 둘째).
 
-    그 가운데 요청을 고쳐서 풀리는 둘은 하위 타입이다 — `Absent` 와 `NotResumable`. 채널이 이것으로
-    실행 전 실패를 가르고 상태 코드로의 번역은 core 밖의 표 한 곳이 한다(ADR 0014). core 는 상태
-    코드를 모른다.
+    하위 타입을 가르는 기준은 "깨졌나"다(ADR 0014 의 2026-09-26 이력). 대상이 없는 것(`Absent`)과
+    대상의 상태가 요청을 허락하지 않는 것(`NotResumable`, `Disabled`)은 하위 타입이고, 하위 타입을
+    뺀 뒤 남는 것이 서버의 구성이나 기록이 깨진 것이다. 채널이 이것으로 실행 전 실패를 가르고 상태
+    코드로의 번역은 core 밖의 표 한 곳이 한다(ADR 0014). core 는 상태 코드를 모른다.
     기반 타입을 잡는 채널(CLI)은 하위 타입이 생겨도 바뀌지 않는다.
     """
 
@@ -60,6 +61,15 @@ class NotResumable(PluginError):
     """요청이 가리킨 실행이 있지만 재개할 수 없다. 일시정지가 아니거나 형식 1 트레이스다.
 
     손상된 트레이스는 이것이 아니다. 실행의 상태가 아니라 기록이 깨진 것이라 `PluginError` 그대로다.
+    """
+
+
+class Disabled(PluginError):
+    """요청이 부른 플러그인이 있지만 운영자가 꺼 두었다(ADR 0017). 메시지가 종류와 이름을 든다.
+
+    깨진 것이 아니라 운영자가 고른 상태다. 대상은 있고 그 상태가 요청을 허락하지 않으므로
+    `NotResumable` 과 같은 자리에 선다. 던지는 자리는 `run()` 과 `resume()` 의 준비 단계이고 core 의
+    판정 티켓이 넣는다. 꺼진 것이 무엇인지는 `PluginSource.read_disabled()` 가 답한다.
     """
 
 
@@ -144,6 +154,25 @@ class UnreadableManifest:
 # 목록의 행. 읽힌 것과 표지가 같은 열에 산다.
 type RunRow = RunSummary | UnreadableTrace
 type ManifestRow = PluginManifest | UnreadableManifest
+
+
+@dataclass(frozen=True)
+class PluginKey:
+    """플러그인 하나를 가리키는 (종류, 이름). 켜고 끄는 키다(ADR 0017).
+
+    매니페스트가 아니라 이것이 키인 이유는 매니페스트가 읽히지 않는 플러그인도 끌 수 있어야 하기
+    때문이다. 이름이 `PluginName` 인 것은 패턴을 어긴 이름이 운영자 파일에 들 수 없어서다 —
+    그런 파일은 손상이다. 디렉터리가 없는 이름(고아 항목)은 들 수 있다. 그것은 손상이 아니다.
+    """
+
+    kind: PluginKind
+    name: PluginName
+
+
+# 켜짐 쓰기의 결과. 부재를 예외가 아니라 값으로 말하는 것이 이 포트의 약속이고(ADR 0012 의
+# 2026-09-26 이력), 손상과 쓰기 실패는 PluginError 다. 이미 그 상태였어도 `applied` 다 — 요청한
+# 켜짐이 지금 상태라는 뜻이지 파일을 건드렸다는 뜻이 아니다.
+type WriteOutcome = Literal["applied", "absent"]
 
 # 목록의 기본 개수와 상한. 상한이 있어야 하는 이유는 첫 어댑터가 디렉터리를 훑어 전부 만든 뒤
 # 자르기 때문이다 — 없으면 요청 하나가 "실행이 쌓여도 목록 응답이 그만큼 커지지 않는다"를
@@ -239,9 +268,12 @@ class TraceStore(Protocol):
 
 
 class PluginSource(Protocol):
-    """매니페스트를 읽고 종류별로 열거하고 에이전트를 로드한다. 첫 어댑터는 파일시스템(ADR 0003).
+    """매니페스트를 읽고 종류별로 열거하고 에이전트를 로드하며, 꺼진 것을 읽고 켜짐을 쓴다. 첫
+    어댑터는 파일시스템(ADR 0003).
 
-    부재는 None, 실패(파싱, import)는 PluginError.
+    부재는 None 이나 값으로, 실패(파싱, import, 운영자 파일의 손상, 쓰기 실패)는 PluginError 로
+    말한다. 켜짐은 플러그인 루트의 운영자 파일이 들고 닿는 바깥 지점이 플러그인 디렉터리
+    그대로라 새 포트가 아니라 이 포트의 메서드 둘이다(ADR 0017, ADR 0012 의 2026-09-26 이력).
     """
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None: ...
@@ -254,6 +286,28 @@ class PluginSource(Protocol):
         ...
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent: ...
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        """꺼진 (종류, 이름)의 집합을 한 번에. 운영자 파일이 없으면 빈 집합, 손상이면 PluginError.
+
+        한 번에 읽는 이유는 둘이다. 관리 목록이 행마다 파일을 다시 읽지 않고, core 의 준비 단계가
+        에이전트와 mcp 들을 같은 순간의 상태로 판정하게 된다(그 판정은 core 판정 티켓이 넣는다).
+        **동기다.** 준비 단계는 `resume()` 의 첫 걸음 안이고 그 첫 걸음에 `await` 가 없다는 것이
+        동시 재개의 불변식이다(ADR 0014). 캐시하지 않는다 — 부를 때마다 읽으므로 손편집도 다음
+        요청부터 효력이 난다.
+        """
+        ...
+
+    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+        """(종류, 이름) 하나의 켜짐을 쓴다. `enabled` 는 쓸 값이지 동작을 고르는 플래그가 아니다.
+
+        부재는 값으로 말한다. 그 자리에 매니페스트 파일이 없으면 쓰지 않고 `absent` 다. 판정 대상은
+        파일이 있느냐이지 읽히느냐가 아니라, 매니페스트가 읽히지 않는 플러그인도 끌 수 있다. 부재
+        판정이 운영자 파일의 손상 판정보다 먼저이고, 손상 판정이 "바뀌는 것이 없다"는 판단보다
+        먼저다(ADR 0017 의 2026-09-27 둘째 이력). 바뀌는 것이 없으면 파일을 건드리지 않는다. 이것도
+        동기다 — 한 프로세스 안의 쓰기 둘을 이벤트 루프가 줄세운다는 전제가 여기에 기댄다.
+        """
+        ...
 
 
 class Clock(Protocol):

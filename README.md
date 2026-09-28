@@ -25,6 +25,8 @@ src/agent_os/
   adapters/        포트 구현
 plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
+  disabled.toml    선택. 운영자가 끈 플러그인의 이름(ADR 0017). 없으면 전부 켜짐. 관리 API의 PUT이 쓰고
+                   손으로 고쳐도 같다. skill과 model은 로더가 생길 때 그 로더가 켜짐을 본다
 tests/             src를 미러링
 docs/
   constitution/    헌법 (principles, tech, operations)

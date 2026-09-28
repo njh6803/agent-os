@@ -26,6 +26,7 @@ from agent_os.core.ports import (
     Clock,
     Cursor,
     ManifestRow,
+    PluginKey,
     PluginSource,
     RunRow,
     RunStatus,
@@ -33,6 +34,7 @@ from agent_os.core.ports import (
     ToolSource,
     Trace,
     TraceStore,
+    WriteOutcome,
 )
 from agent_os.sdk import (
     BaseAgent,
@@ -66,6 +68,12 @@ class _SchemaOnlyPlugins:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 

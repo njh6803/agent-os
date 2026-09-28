@@ -363,6 +363,35 @@
         "title": "McpServer",
         "type": "object"
       },
+      "Plugin": {
+        "additionalProperties": false,
+        "description": "등록된 플러그인 하나. 종류와 이름과 켜짐, 그리고 매니페스트 통째로다.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PluginKind"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/PluginManifest"
+          },
+          "name": {
+            "pattern": "^[a-z][a-z0-9-]{1,62}$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "enabled",
+          "manifest"
+        ],
+        "title": "Plugin",
+        "type": "object"
+      },
       "PluginKind": {
         "description": "플러그인의 종류. 값은 넷이다.",
         "enum": [
@@ -447,13 +476,42 @@
         "title": "PluginManifest",
         "type": "object"
       },
+      "PluginPlaceholder": {
+        "additionalProperties": false,
+        "description": "매니페스트로 읽히지 않는 플러그인의 자리에 서는 표지. 종류와 이름과 켜짐과 이유를 든다.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PluginKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "enabled",
+          "reason"
+        ],
+        "title": "PluginPlaceholder",
+        "type": "object"
+      },
       "PluginRow": {
         "anyOf": [
           {
-            "$ref": "#/components/schemas/PluginManifest"
+            "$ref": "#/components/schemas/Plugin"
           },
           {
-            "$ref": "#/components/schemas/UnreadableManifest"
+            "$ref": "#/components/schemas/PluginPlaceholder"
           }
         ]
       },
@@ -700,6 +758,21 @@
         "title": "RunSummary",
         "type": "object"
       },
+      "SetEnabled": {
+        "additionalProperties": false,
+        "description": "켜짐 하나를 쓰는 요청. 거짓이면 끄고 참이면 켠다. 이미 그 상태여도 성공이다.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "SetEnabled",
+        "type": "object"
+      },
       "StartRun": {
         "additionalProperties": false,
         "description": "실행 하나를 일으키는 요청. 등록된 에이전트의 이름과 요청 문자열이다.",
@@ -938,30 +1011,6 @@
         "title": "UnknownEvent",
         "type": "object"
       },
-      "UnreadableManifest": {
-        "additionalProperties": false,
-        "description": "매니페스트로 읽히지 않는 것의 표지. 종류와 이름과 이유를 든다. 매니페스트가 아니다.",
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/PluginKind"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "name",
-          "reason"
-        ],
-        "title": "UnreadableManifest",
-        "type": "object"
-      },
       "UnreadableTrace": {
         "additionalProperties": false,
         "description": "트레이스로 읽히지 않는 것의 표지. 실행 식별자와 이유를 든다. 실행 요약이 아니다.",
@@ -1006,7 +1055,7 @@
     }
   },
   "info": {
-    "description": "관리는 등록된 플러그인과 지나간 실행을 읽고 실행을 일으키지 않는다. 채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. 두 면은 서로 다른 토큰으로 연다.",
+    "description": "관리는 등록된 플러그인과 지나간 실행을 읽고 플러그인을 켜고 끄며 실행을 일으키지 않는다. 채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. 두 면은 서로 다른 토큰으로 연다.",
     "title": "Agent OS HTTP API",
     "version": "0.1.0"
   },
@@ -1079,7 +1128,7 @@
             "description": "서버가 요청을 처리하지 못했다"
           }
         },
-        "summary": "등록된 플러그인 전부를 종류를 가리지 않고 한 목록으로"
+        "summary": "등록된 플러그인 전부를 종류를 가리지 않고 켜짐과 함께 한 목록으로"
       }
     },
     "/plugins/{kind}/{name}": {
@@ -1110,7 +1159,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PluginManifest"
+                  "$ref": "#/components/schemas/Plugin"
                 }
               }
             },
@@ -1157,7 +1206,88 @@
             "description": "서버가 요청을 처리하지 못했다"
           }
         },
-        "summary": "플러그인 하나의 매니페스트를 통째로"
+        "summary": "플러그인 하나를 켜짐과 매니페스트 통째로를 든 행으로"
+      }
+    },
+    "/plugins/{kind}/{name}/enabled": {
+      "put": {
+        "operationId": "set_plugin_enabled",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PluginKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{1,62}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetEnabled"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "플러그인 하나를 켜거나 끈다"
       }
     },
     "/runs": {
@@ -1225,6 +1355,16 @@
               }
             },
             "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 지금 상태로는 받을 수 없다"
           },
           "422": {
             "content": {
