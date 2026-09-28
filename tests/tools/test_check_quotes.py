@@ -206,6 +206,15 @@ def test_목록_안의_인용문과_펜스도_뺀다() -> None:
     assert quotes_in(markdown) == []
 
 
+def test_닫는_펜스가_여는_것보다_길어도_닫힌다() -> None:
+    """PR #92 리뷰: ``` 를 ```` 로 닫으면 열린 펜스로 봐서 뒤의 산문을 전부 코드로 버렸다."""
+    markdown = '```python\n코드\n````\n"펜스 뒤의 산문 인용은 스무 자를 넘고 잡혀야 한다"\n'
+
+    assert quotes_in(markdown) == [
+        Quote(4, "펜스 뒤의 산문 인용은 스무 자를 넘고 잡혀야 한다", None)
+    ]
+
+
 def test_굽은_따옴표도_인용이다() -> None:
     assert quotes_in("그가 “굽은 따옴표로 감싼 스무 자 넘는 인용문이다 정말로”라 했다\n") == [
         Quote(1, "굽은 따옴표로 감싼 스무 자 넘는 인용문이다 정말로", None)

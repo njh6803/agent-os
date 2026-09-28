@@ -30,7 +30,11 @@ ROOT = Path(__file__).resolve().parent.parent
 TEXT_SUFFIXES = frozenset({".md", ".py", ".toml", ".json", ".yaml", ".yml", ".txt", ".ps1", ".sh"})
 SKIPPED_PREFIXES = (".claude/skills/",)
 MIN_LENGTH = 20
-_FENCE = re.compile(r"^[ \t]*(?:[-*+]\s+)?(`{3,}|~{3,}).*?^[ \t]*\1[ \t]*$", re.M | re.S)
+# 닫는 펜스는 여는 것과 같은 글자로 같거나 더 길다(CommonMark). ```` 로 ``` 를 닫을 수 있다.
+_FENCE = re.compile(
+    r"^[ \t]*(?:[-*+]\s+)?(?P<fence>`{3,}|~{3,})(?![`~]).*?^[ \t]*(?P=fence)[`~]*[ \t]*$",
+    re.M | re.S,
+)
 _OPEN_FENCE = re.compile(
     r"^[ \t]*(?:[-*+]\s+)?(?:`{3,}|~{3,}).*\Z", re.M | re.S
 )  # 닫히지 않은 펜스

@@ -10,8 +10,9 @@ gitignore 파일을 건너뛰지만, 경로로 `.env` 를 주거나 glob(`*`·`.
 
 Bash 에서 막는 모양 셋.
 - 읽는 명령의 인자에 `.env` 파일. `cat .env`, `grep KEY .env`, `sed -n 1p ../.env`, `source .env`,
-  `diff .env x`, `find … -exec cat {} +`, `git diff --no-index .env x`. `bash -c "…"`·`eval`·`$(…)`·
-  백틱·`<(…)` 안의 명령도 한 겹씩 풀어 본다.
+  `diff .env x`, `find … -exec cat {} +`, `git diff --no-index .env x`. 셸이 `.env` 로 펼칠 glob
+  (`cat .e*`)도 — `*` 는 점파일을 빼므로 `cat *` 은 아니다. `bash -c "…"`·`eval`·`$(…)`·백틱·`<(…)`
+  안의 명령도 한 겹씩 풀어 본다.
 - 입력 리다이렉션 `< .env`.
 - 저장소 전체를 훑는 grep. `grep -r` 이 경로 없이, 또는 `.`·`..`·절대 경로·`$PWD` 같은 루트 표기로
   돌면서 `--exclude=.env*` 도 `--include=*.py` 같은 좁힘도 없다. grep 은 숨김 파일을 건너뛰지 않는다
@@ -116,11 +117,25 @@ class Segment(NamedTuple):
 
 
 def env_file_name(token: str) -> str | None:
-    """토큰이 `.env` 파일을 가리키면 그 파일 이름, `.env.example` 이거나 아니면 None."""
+    """토큰이 `.env` 파일을 가리키면 그 파일 이름, `.env.example` 이거나 아니면 None.
+
+    glob 문자가 든 토큰은 여기서 보지 않는다 — `.env.ex*` 는 `.env.example` 만 펼치므로
+    `_glob_reaching_env` 가 fnmatch 로 가른다.
+    """
+    if any(char in token for char in "*?["):
+        return None
     match = _ENV_FILE.search(token)
     if match is None or match.group(1).lower() in ALLOWED_ENV_FILES:
         return None
     return match.group(1)
+
+
+def _glob_reaching_env(token: str) -> str | None:
+    """셸이 `.env` 로 펼칠 glob 이면 그 토큰(`.e*`, `.env*`). 점으로 시작하지 않으면 아니다."""
+    leaf = token.replace("\\", "/").rsplit("/", 1)[-1]
+    if not leaf.startswith(".") or not any(char in leaf for char in "*?["):
+        return None
+    return token if _matches_env(leaf) else None
 
 
 def deny_reason_for_command(command: str, cwd: str | None = None) -> str | None:
@@ -197,12 +212,12 @@ def _segment_reason(words: list[str], inputs: list[str], cwd: str | None) -> str
         if cmd in PATTERN_COMMANDS and not _pattern_given_by_option(args):
             positionals = positionals[1:]
         for positional in positionals:
-            name = env_file_name(positional)
+            name = env_file_name(positional) or _glob_reaching_env(positional)
             if name is not None:
                 return _file_reason(cmd, name)
     if cmd == "find" and any(_command_name(arg) in READERS for arg in args):
         for arg in args:
-            name = env_file_name(arg)
+            name = env_file_name(arg) or _glob_reaching_env(arg)
             if name is not None:
                 return _file_reason("find -exec", name)
     if cmd == "git" and args and args[0] in GIT_READING_SUBCOMMANDS:
