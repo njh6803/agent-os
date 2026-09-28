@@ -147,8 +147,15 @@ conftest의 공개 `pytest.TerminalReporter`.
   독스트링의 "초안"을 지웠다.
 - **PR 직전 CLI 축.** `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다
   (operations.md 리뷰 파이프라인 2). PR 체크리스트에 그대로 적었다.
-- **커밋 하나, PR 하나, squash 병합.** 첫 커밋 시도는 위 번복 절의 pre-commit 실패로 멈췄고, 공유 config를
-  사용자가 복구한 뒤 다시 한다. 워크트리라 `git-pr-merge`의 `git checkout main`은 하지 않고
+- **커밋·PR #91.** 첫 커밋 시도는 위 번복 절의 pre-commit 실패로 멈췄고, 사용자가 공유 config를 복구한 뒤
+  커밋했다. 검사 셋(verify, claude-review, CodeRabbit) 초록, claude-review는 지적 없음. CodeRabbit 지적 여덟
+  중 여섯을 둘째 커밋으로 반영했다 — 표의 `|` 이스케이프(대기열 20·43행), KICKOFF 7단계 복사 목록에
+  `tools/protection.json`, `_FENCE`가 `~~~`·들여쓴 펜스도 벗김, gate_pipe가 `$?` 마다 판정, 훅 둘이 인용을
+  지우지 않고 자리표시자로 바꿈(`git -c "…" commit`이 빠지던 자리), journal_retro의 Write도 `## 다음`을
+  담을 때만(대기열 28의 조건을 좁혔다 — 세션 첫머리의 일지 Write는 단계를 닫는 것이 아니다). 보류 둘 —
+  `.env` Bash 읽기 훅은 대기열 43의 별도 chore이고 키 회전은 사용자, `protection.json`의
+  `required_pull_request_reviews`는 혼자이고 `enforce_admins: false`라 지금 효과가 없고 팀이 생기면
+  헌법 거버넌스대로 ADR 0005 이력이다. 워크트리라 `git-pr-merge`의 `git checkout main`은 하지 않고
   next-session 1단계(대기열 39)대로 원격 브랜치 삭제와 `git fetch origin`만.
 
 ## 검사

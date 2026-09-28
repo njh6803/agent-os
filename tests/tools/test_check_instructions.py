@@ -264,6 +264,8 @@ def test_백틱과_펜스_안의_at_은_임포트가_아니다() -> None:
         "@docs/constitution/principles.md\n\n"
         '`@`를 쓰지 않는다. 훅은 `"${CLAUDE_PROJECT_DIR}"` 로.\n'
         "```\n@docs/PRD.md\n```\n"
+        "~~~\n@docs/constitution/tech.md\n~~~\n"
+        "- 목록 안:\n  ```bash\n  cat @docs/adr/README.md\n  ```\n"
         "문의는 noreply@anthropic.com 으로.\n"
     )
 

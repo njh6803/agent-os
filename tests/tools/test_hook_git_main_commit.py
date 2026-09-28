@@ -29,6 +29,11 @@ def test_데이터로_든_문구는_잡지_않는다() -> None:
     assert not commits_in('git commit-tree HEAD^{tree} -m "x"')
 
 
+def test_인용된_옵션_값_뒤의_commit_도_잡는다() -> None:
+    """PR #91 리뷰: 인용을 지우면 commit 이 -c 의 값 자리로 밀린다."""
+    assert commits_in('git -c "user.name=작성자" commit -m x')
+
+
 def test_보호_브랜치_위의_커밋만_막는다() -> None:
     reason = reason_for("git commit -m x", "main")
 

@@ -6,11 +6,13 @@ main 은 보호 브랜치라 이 저장소에서 main 위의 커밋은 언제나
 커밋이 main 에 들어갔다. 이 훅은 뒤의 모양을 막는다. 다른 세션의 존재는 훅이 알 수 없지만 지금
 브랜치는 알 수 있고, main 위의 커밋을 막는 데는 그것으로 충분하다.
 
-명령 위치의 `git commit` 만 본다(hook_pr_next_session 과 같은 방식 — heredoc 본문과 인용 구간을
-버리고 제어 연산자로 나눈 뒤 조각 앞을 벗긴다). 브랜치는 페이로드의 `cwd` 에서
-`git branch --show-current` 로 읽는다. 환경의 `GIT_DIR`·`GIT_WORK_TREE`·`GIT_COMMON_DIR` 은 벗기고
-읽는다 — git 이 훅 자식에 내보낸 값이 남아 있으면 cwd 가 아닌 저장소의 브랜치가 나온다(pre-commit
-아래 실측, 2026-09-28). 훅은 단독 실행 스크립트라 서로 import 하지 않는다.
+명령 위치의 `git commit` 만 본다(hook_pr_next_session 과 같은 방식 — heredoc 본문을 버리고 인용
+구간을 자리표시자 `_` 로 바꾼 뒤 제어 연산자로 나누고 조각 앞을 벗긴다. 인용을 지우면
+`git -c "k=v" commit` 의 commit 이 옵션 값 자리로 밀린다, PR #91 리뷰). 브랜치는 페이로드의
+`cwd` 에서 `git branch --show-current` 로 읽는다. 환경의 `GIT_DIR`·`GIT_WORK_TREE`·
+`GIT_COMMON_DIR` 은 벗기고 읽는다 — git 이 훅 자식에 내보낸 값이 남아 있으면 cwd 가 아닌 저장소의
+브랜치가 나온다(pre-commit 아래 실측, 2026-09-28). 훅은 단독 실행 스크립트라 서로 import 하지
+않는다.
 못 보는 것: `git -C <다른 저장소> commit` 과 `cd <다른 저장소> && git commit`(둘 다 cwd 의 브랜치로
 판정한다 — 앞은 못 막고 뒤는 오탐이다), 래퍼 스크립트 안의 커밋, detached HEAD(브랜치 이름이 비어
 막지 않는다), git 이 없거나 저장소 밖(막지 않는다 — 게이트가 아니라 안전장치라 fail-open 이다),
@@ -54,7 +56,7 @@ def commits_in(command: str) -> bool:
 
 
 def _executed_segments(command: str) -> list[str]:
-    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)))
+    joined = _QUOTED.sub("_", "\n".join(_without_heredoc_bodies(command)))
     return [_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
 
 

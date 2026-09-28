@@ -46,6 +46,19 @@ def test_체인_뒤의_dollar_question_을_경고한다() -> None:
     assert "$?" in warnings[0]
 
 
+def test_dollar_question_마다_바로_앞_조각을_본다() -> None:
+    """PR #91 리뷰: 첫 `$?` 만 보면 둘째가 echo 의 종료 코드를 읽는 것을 놓친다."""
+    warnings = warnings_for("uv run ruff check .; echo $?; uv run pyright; echo done; echo $?")
+
+    assert len(warnings) == 1
+    assert "pyright" in warnings[0]
+
+
+def test_인용된_옵션_값은_자리표시자로_남겨_명령_위치를_지킨다() -> None:
+    """PR #91 리뷰: 인용을 지우면 뒤 낱말이 옵션 값 자리로 밀린다."""
+    assert len(warnings_for('uv run --project "작업 경로" pytest -q | tail -3')) == 1
+
+
 def test_게이트_바로_뒤의_dollar_question_은_경고하지_않는다() -> None:
     assert warnings_for("uv run ruff check . && uv run pyright; echo $?") == []
     assert warnings_for('uv run pytest -q; echo "exit=$?"') == []

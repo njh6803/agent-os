@@ -283,6 +283,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 지침 검사 `tools/check_instructions.py`와 `tests/tools/test_check_instructions.py`. `.pre-commit-config.yaml`에 `always_run: true`로 등록한다. (바꿀 곳: `PATCHED_SKILLS`·`SENTINEL`·`ALLOWED_IMPORTS` 상수를 **그 프로젝트가 실제로 덧댄 사본**으로. agent-os는 여섯(code-review·grilling·implement·retro·to-spec·to-tickets)을 덧댔고 그대로 복사하면 첫 커밋이 그 여섯의 센티널 부재로 빨강이다. 목록은 양방향으로 검사된다 — 주석이 있는데 목록에 없는 사본도 빨강)
 - 타입 우회 검사 `tools/check_type_escapes.py`(파이썬이면. 원칙 III의 판정자, ADR 0013), 변이 도구 `tools/mutate.py`(테스트가 무엇을 재는지 변이로 본다. 바이트 그대로 되돌리고 기대 결과를 받는다), Actions 실행 요약 `tools/gh_run_summary.py`(리뷰 봇이 코멘트 없이 초록일 때 로그를 읽는다. operations.md가 가리킨다). (바꿀 곳 0. 검사는 `[tool.pyright]`의 `include`를 읽는다)
 - `.github/workflows/ci.yml`. 훅과 같은 검사. LLM 테스트 제외. 경로 필터를 걸면 미매칭은 실패로. (바꿀 곳: 파이썬이면 검사 이름만, 아니면 셋업 스텝 전부)
+- 브랜치 보호 본문 `tools/protection.json`. 8단계의 `gh api --input`이 이 파일을 읽으므로 복사하지 않으면 그 명령이 입력을 찾지 못한다(PR #91 리뷰). (바꿀 곳: `required_status_checks.contexts`의 검사 이름이 `verify`가 아니면 그것)
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). 제외는 생성물·락파일·남이 쓴 스킬 사본(`.claude/skills/**`)만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다. (바꿀 곳: `path_instructions` 아홉 블록과 "이 저장소의 특수성" 문단은 그 프로젝트의 층과 원칙으로 **새로 쓴다**. 골격만 복사하고 대부분을 다시 쓴다)
 - `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다. (바꿀 곳: 경계 축 문장을 그 프로젝트의 원칙으로 새로 쓴다. agent-os 것은 LangGraph·LangChain 타입의 누출이다)
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 좌석 확인(`coderabbit auth status`의 `Seat:`), 트리아지. 코드를 고치지 않는다. (바꿀 곳: 오탐 목록을 그 프로젝트의 자동 검사가 잡는 것으로)
@@ -319,7 +320,7 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 gh repo create <owner>/<repo> --private --source=. --push
 ```
 
-main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 직접 푸시·삭제 금지. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 런북 저장소의 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
+main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 직접 푸시·삭제 금지. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
 
 ```bash
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input tools/protection.json

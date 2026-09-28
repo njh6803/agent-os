@@ -55,7 +55,8 @@ _LIST_ITEM = re.compile(r"^[ \t]+-[ \t]*(.+?)[ \t]*$", re.M)
 # 상대 경로처럼 생긴 토큰. 바로 앞 글자가 경로의 일부(`/`, `}`, 이름 글자)면 잡지 않아서
 # `${CLAUDE_PROJECT_DIR}/tools/x.py` 의 `tools/x.py` 는 지나간다.
 _PATH_TOKEN = re.compile(r"(?<![\w/}.~-])([\w.-]+(?:/[\w.-]+)+)")
-_FENCE = re.compile(r"^```.*?^```[ \t]*$", re.M | re.S)
+# 백틱·물결 펜스, 목록 안의 들여쓴 펜스까지. 펜스 안의 `@경로` 는 임포트가 아니다(PR #91 리뷰).
+_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1[ \t]*$", re.M | re.S)
 _CODE_SPAN = re.compile(r"`([^`\n]+)`")
 # `@경로` 임포트. 앞이 공백이나 줄 머리여야 한다. `noreply@anthropic.com` 의 `@` 는 임포트가 아니다.
 _IMPORT_TOKEN = re.compile(r"(?<!\S)@([\w./~-]+)")

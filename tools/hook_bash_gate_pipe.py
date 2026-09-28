@@ -9,9 +9,11 @@ tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 �
 위치에 선 것만 센다 — `uv run …`, `python`·`py` 와 `-m` 뒤도 명령 위치다. 판정 둘.
 - 게이트가 파이프(`|`)의 마지막이 아닌 자리에 있다. 서브셸 안이어도 본다. 그 파이프의 종료 코드는
   마지막 명령의 것이다.
-- 명령에 `$?` 가 있는데 그 바로 앞 조각이 게이트가 아니고 그 앞 어딘가에 게이트가 있다. `$?` 는
+- `$?` 마다 본다 — 그 바로 앞 조각이 게이트가 아니고 그 앞 어딘가에 게이트가 있다. `$?` 는
   바로 앞 명령의 것이라 게이트의 결과가 아니다(대기열 11 — `&&` 체인 뒤의 `$?`). 파이프 경고가
   이미 있으면 같은 원인이라 이 경고는 내지 않는다.
+인용 구간은 지우지 않고 자리표시자 `_` 로 바꾼다. 지우면 `--project "경로" pytest` 의 pytest 가 옵션
+값 자리로 밀려 명령 위치를 잃는다(PR #91 리뷰).
 못 보는 것: `set -o pipefail` 이 켜진 파이프(그래도 경고한다 — 거짓 양성), `2>&1 | tee` 처럼 결과를
 버리지 않는 파이프(그래도 경고한다), 래퍼 스크립트 안의 게이트, `$PIPESTATUS`, PowerShell 의
 `$LASTEXITCODE`(이 훅은 Bash 매처다).
@@ -58,11 +60,11 @@ def is_gate(segment: str) -> bool:
 def warnings_for(command: str) -> list[str]:
     """경고 문장들. 없으면 비어 있다."""
     without_heredoc = "\n".join(_without_heredoc_bodies(command))
-    warnings = _pipe_warnings(_DOUBLE_QUOTED.sub("", _SINGLE_QUOTED.sub("", without_heredoc)))
+    warnings = _pipe_warnings(_DOUBLE_QUOTED.sub("_", _SINGLE_QUOTED.sub("_", without_heredoc)))
     if warnings:
         return warnings
     # `$?` 는 큰따옴표 안에서도 확장되므로 따옴표 글자만 벗기고 본다.
-    return _exit_code_warnings(_SINGLE_QUOTED.sub("", without_heredoc).replace('"', ""))
+    return _exit_code_warnings(_SINGLE_QUOTED.sub("_", without_heredoc).replace('"', ""))
 
 
 def _pipe_warnings(text: str) -> list[str]:
@@ -83,15 +85,21 @@ def _exit_code_warnings(text: str) -> list[str]:
     if "$?" not in text:
         return []
     segments = [_PREFIX.sub("", s, count=1) for s in _SEGMENT.split(text)]
-    first = next(i for i, s in enumerate(segments) if "$?" in s)
-    gates = [i for i, s in enumerate(segments[:first]) if is_gate(s)]
-    if not gates or gates[-1] == first - 1:
-        return []
-    return [
-        "`$?` 바로 앞 명령이 게이트가 아니다. `$?` 는 마지막 명령의 종료 코드라 앞의 게이트"
-        f"(`{segments[gates[-1]].strip()}`)의 결과가 아니다(CLAUDE.md 환경 함정). 판정 명령"
-        " 뒤에서 바로 읽거나 파이프·체인 없이 돌린다."
-    ]
+    warnings: list[str] = []
+    for index, segment in enumerate(segments):
+        if "$?" not in segment:
+            continue
+        gates = [i for i, s in enumerate(segments[:index]) if is_gate(s)]
+        if not gates or gates[-1] == index - 1:
+            continue
+        warning = (
+            "`$?` 바로 앞 명령이 게이트가 아니다. `$?` 는 마지막 명령의 종료 코드라 앞의 게이트"
+            f"(`{segments[gates[-1]].strip()}`)의 결과가 아니다(CLAUDE.md 환경 함정). 판정 명령"
+            " 뒤에서 바로 읽거나 파이프·체인 없이 돌린다."
+        )
+        if warning not in warnings:
+            warnings.append(warning)
+    return warnings
 
 
 def _without_heredoc_bodies(command: str) -> list[str]:
