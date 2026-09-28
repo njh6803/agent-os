@@ -28,6 +28,7 @@ from __future__ import annotations
 import ast
 import io
 import re
+import sys
 import tokenize
 import tomllib
 from collections.abc import Iterator
@@ -262,4 +263,5 @@ def main(root: Path = ROOT) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # 첫 인자는 검사 루트(임시 트리에서 빨강을 재는 CLI 테스트). pre-commit 은 인자 없이 부른다.
+    raise SystemExit(main(Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT))

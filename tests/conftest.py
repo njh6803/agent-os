@@ -7,7 +7,8 @@ skip 이 하나라도 있으면 세션을 실패로 끝낸다. `-m "not llm"` �
 pre-commit 이 워크트리에서 훅을 돌리면 git 이 `GIT_DIR` 같은 저장소 위치 변수를 자식에
 내보낸다. 그 값이 남으면 테스트의 `git init` 이 임시 디렉터리가 아니라 이 저장소를 재초기화한다
 (2026-09-28 실측. 공유 config 의 core.bare 가 true 가 되어 체크아웃 전부가 work tree 를 잃었다).
-저장소를 가리키는 변수만 벗긴다.
+저장소를 가리키는 변수만 벗긴다. 목록은 `tools/run_hooks.py` 가 원천이다 — 러너도 자식 훅에서 같은
+것을 벗긴다.
 """
 
 import io
@@ -15,21 +16,13 @@ import os
 import sys
 
 import pytest
+from tools.run_hooks import REPO_LOCATION_VARS
 
 for stream in (sys.stdout, sys.stderr):
     if isinstance(stream, io.TextIOWrapper):
         stream.reconfigure(encoding="utf-8")
 
-_REPO_LOCATION_VARS = (
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_COMMON_DIR",
-    "GIT_INDEX_FILE",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_PREFIX",
-)
-for name in _REPO_LOCATION_VARS:
+for name in REPO_LOCATION_VARS:
     os.environ.pop(name, None)
 
 

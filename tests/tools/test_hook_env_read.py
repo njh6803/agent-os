@@ -91,6 +91,7 @@ def test_입력_리다이렉션도_읽기다() -> None:
         "grep -rn --include=* KEY .",
         "rg --hidden --no-ignore KEY",
         "rg --hidden -u KEY",
+        "rg -. --no-ignore KEY",
         "rg -uu KEY .",
         "rg -nuu KEY",
         "rg -uu KEY 2>/dev/null",

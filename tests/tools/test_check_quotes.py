@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -240,3 +243,23 @@ def test_이_저장소_전체를_돌려도_끝난다() -> None:
     assert files
     assert all("/.claude/skills/" not in path.as_posix() for path in files)
     warnings_for(files, ROOT)
+
+
+def test_CLI_진입점이_알려진_빨강을_출력한다(tmp_path: Path) -> None:
+    """순수 함수만 재면 main 의 배관이 조용히 비어도 초록이다(corpus 키 중복, 2026-09-28)."""
+    없는_말 = "저장소 어디에도 없는 " + "시험용 인용문이다 정말로 " * 2
+    doc = tmp_path / "note.md"
+    doc.write_text(f'감사가 말한 "{없는_말.strip()}"이라는 말.\n', encoding="utf-8")
+
+    process = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "check_quotes.py"), "--all-lines", str(doc)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert process.returncode == 0
+    assert "글자 그대로 없다" in process.stdout

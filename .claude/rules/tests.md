@@ -14,3 +14,4 @@ paths:
 - `conftest.py`가 stdout을 UTF-8로 고정한다. 한국어 단언 메시지가 깨지지 않게 하기 위해서다.
 - `conftest.py`가 저장소를 가리키는 `GIT_*` 환경(`GIT_DIR` 등)을 벗긴다. pre-commit이 워크트리에서 훅을 돌리면 git이 그 값을 내보내, 임시 디렉터리에 `git init`하는 테스트가 이 저장소를 재초기화했다(2026-09-28, 공유 config의 `core.bare`가 true). 그래서 테스트의 `git init`은 `tmp_path`에 해도 된다.
 - `tools/`의 순수 함수는 `tests/tools/`에서 검증한다. `src/` 미러링의 유일한 예외다. 셸이나 `gh`를 부르는 부분은 실제 실행으로 확인한다. 저장소 상태를 보는 검사에는 이 저장소가 지금 통과함을 재는 테스트(`test_이_저장소의_…`)와 위반을 잡는 변이 테스트(`test_…을_잡는다`)를 하나씩 둔다.
+- `tools/check_*.py`는 CLI 진입점(`main`)을 subprocess로 한 번 실제로 부르는 테스트를 둔다 — 저장소 밖 픽스처로 알려진 빨강을 만들고 그 빨강이 출력에 있는지 본다. 순수 함수 테스트만 있으면 배관이 조용히 비어도 초록이다(check_quotes의 corpus 키 중복, 2026-09-28). 저장소 상태 검사(check_instructions, check_type_escapes)도 `main`이 루트를 CLI 인자로 받아 임시 트리에서 빨강을 만든다.
