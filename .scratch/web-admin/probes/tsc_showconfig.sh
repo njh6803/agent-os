@@ -7,9 +7,12 @@ set -u
 work="${1:?작업 디렉터리를 준다}"
 mkdir -p "$work" && cd "$work" || exit 1
 printf '{ "name": "tsc-showconfig", "private": true }\n' > package.json
-npm i -s --no-audit --no-fund typescript@5.9 >/dev/null 2>&1
+npm i -s --no-audit --no-fund typescript@5.9 >/dev/null 2>&1 || exit $?
 printf '{ "compilerOptions": { "strict": true, "noEmit": true } }\n' > base.json
 printf '{ "extends": "./base.json", "compilerOptions": { "strictNullChecks": false }, "files": [] }\n' > tsconfig.json
-npx tsc -v
+npx tsc -v || exit $?
+# 종료 코드를 찍고 그대로 돌려준다. 마지막 echo 의 0 이 tsc 의 실패를 덮지 않게 한다.
 npx tsc --showConfig -p tsconfig.json
-echo "exit $?"
+status=$?
+echo "exit $status"
+exit "$status"

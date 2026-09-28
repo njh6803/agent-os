@@ -7,6 +7,8 @@
 #   2. 같은 호출이 409 JSON 봉투를 받으면 error 에 무엇이 오는가
 #   3. baseUrl 을 상대 경로("/api")로 주면 jsdom 에서 요청이 서는가
 #   4. jsdom 의 sessionStorage 가 있는가
+# 끝의 vitest 는 파이프에 물리지 않는다. 출력을 담아 걸러 보이고 vitest 의 종료 코드를 그대로 돌려준다.
+# 파이프로 거르면 종료 코드가 grep 의 것이라 vitest 의 실패가 가려진다(CLAUDE.md 환경 함정).
 set -u
 work="${1:?작업 디렉터리를 준다}"
 mkdir -p "$work" && cd "$work" || exit 1
@@ -93,6 +95,8 @@ test('스트림이 조각으로 온다', async () => {
   console.log('PROBE chunks', arrivals.length, 'first data at', firstData?.[0], 'stream closed at', streamClosedAt);
   console.log('PROBE first data before close:', (firstData?.[0] ?? Infinity) < streamClosedAt);
   expect(firstData).toBeDefined();
+  // 조각으로 흐른다는 주장 자체를 단언한다. 버퍼링돼 끝에 몰려 와도 위 단언은 통과한다.
+  expect(firstData?.[0] ?? Infinity).toBeLessThan(streamClosedAt);
 });
 
 test('409 봉투', async () => {
@@ -103,10 +107,13 @@ test('409 봉투', async () => {
   console.log('PROBE 409 status', response.status, 'data', typeof data, 'error', JSON.stringify(error));
 });
 EOF
-npm i -s --no-audit --no-fund vitest jsdom msw openapi-fetch typescript@5.9 >/dev/null 2>&1
+npm i -s --no-audit --no-fund vitest jsdom msw openapi-fetch typescript@5.9 >/dev/null 2>&1 || exit $?
 echo "=== versions ==="
 for p in vitest jsdom msw openapi-fetch typescript; do
   printf '%s ' "$p"; node -p "require('./node_modules/$p/package.json').version"
 done
 node --version
-npx vitest run --reporter=verbose 2>&1 | grep -E "PROBE|✓|×|FAIL|Error|passed|failed"
+out=$(npx vitest run --reporter=verbose 2>&1)
+status=$?
+grep -E "PROBE|✓|×|FAIL|Error|passed|failed" <<<"$out"
+exit "$status"
