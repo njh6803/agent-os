@@ -22,5 +22,8 @@
 | [0016](0016-shared-http-layer.md) | HTTP 표면의 공용 배관은 `agent_os.http` 층에 둔다 | accepted | 2026-09-24 |
 | [0017](0017-plugin-enablement-lives-in-an-operator-file.md) | 플러그인의 켜짐은 플러그인 루트의 운영자 파일이 든다 | accepted | 2026-09-26 |
 | [0018](0018-plugin-boundary-is-judged-by-a-test.md) | 원칙 IV의 플러그인 경계는 import-linter가 아니라 테스트가 판정한다 | accepted | 2026-09-28 |
+| [0019](0019-admin-ui-browser-holds-the-tokens.md) | 관리 화면은 브라우저가 토큰을 들고 Next는 무상태 중계다 | accepted | 2026-09-28 |
+| [0020](0020-principle-iii-covers-typescript.md) | 원칙 III은 TypeScript에도 걸리고 typescript-eslint가 판정한다 | accepted | 2026-09-28 |
+| [0021](0021-web-workspace-stack.md) | web 워크스페이스의 스택과 API 클라이언트는 계약에서 생성해 커밋한다 | accepted | 2026-09-28 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
