@@ -197,6 +197,7 @@ async def _resume(args: ResumeArgs, model: ChatModel) -> int:
     """승인자는 요청한 주체와 같은 출처에서 온다. 자기 승인은 허용한다(ADR 0009)."""
     return await resume_command(
         args.run_id,
+        args.pause_index,
         args.decision,
         Principal(getpass.getuser()),
         plugins=FilesystemPlugins(args.plugins_root),

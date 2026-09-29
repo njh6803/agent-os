@@ -1,0 +1,212 @@
+# 티켓 02(결정의 자리)의 테스트가 무엇을 재는지 변이로 본다. 대상은 구현 전부터 초록이었거나(모르는
+# 인자·추가 필드로 막혀 엉뚱한 이유로 초록) 빨강을 시그니처 부재(TypeError)로만 본 테스트다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-admin/probes/pause_index_mutations.toml
+
+[[mutation]]
+name = "core: 자리 판정을 일시정지 아님 앞에"
+tests = ["tests/core/test_run.py", "-k", "일시정지가_아니면_자리와_무관하게"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    paused = events[-1]
+    if not isinstance(paused, RunPaused):
+        raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+    current = len(events) - 1
+    if pause_index != current:
+        raise NotResumable(
+            f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
+            f"재개할 수 없다: {run_id}"
+        )
+'''
+new = '''
+    paused = events[-1]
+    current = len(events) - 1
+    if pause_index != current:
+        raise NotResumable(
+            f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
+            f"재개할 수 없다: {run_id}"
+        )
+    if not isinstance(paused, RunPaused):
+        raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+'''
+
+[[mutation]]
+name = "core: 자리 판정을 일시정지 아님 앞에 — 채널의 동시 재개 테스트가 잰다"
+tests = ["tests/channel/http/test_router.py", "-k", "동시에_온_결정_둘은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    paused = events[-1]
+    if not isinstance(paused, RunPaused):
+        raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+    current = len(events) - 1
+    if pause_index != current:
+        raise NotResumable(
+            f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
+            f"재개할 수 없다: {run_id}"
+        )
+'''
+new = '''
+    paused = events[-1]
+    current = len(events) - 1
+    if pause_index != current:
+        raise NotResumable(
+            f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
+            f"재개할 수 없다: {run_id}"
+        )
+    if not isinstance(paused, RunPaused):
+        raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+'''
+
+[[mutation]]
+name = "core: 자리 판정을 트레이스 판정 맨 앞에"
+tests = [
+    "tests/core/test_run.py",
+    "-k",
+    "형식_1_트레이스면_자리와_무관하게 or 손상된_트레이스면_자리와_무관하게",
+]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if stored is None:
+        raise Absent(f"그런 실행이 없다: {run_id}")
+'''
+new = '''
+    if stored is None:
+        raise Absent(f"그런 실행이 없다: {run_id}")
+    if pause_index != len(stored.events) - 1:
+        raise NotResumable(f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지가 아니다: {run_id}")
+'''
+
+[[mutation]]
+name = "core: 준비를 트레이스 판정 앞에"
+tests = ["tests/core/test_run.py", "-k", "꺼진_에이전트여도_자리_어긋남이_먼저"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    started, paused, records = _read_paused(trace, run_id, pause_index)
+    prepared = _prepare(plugins, _recorded_manifest(plugins, started))
+'''
+new = '''
+    stored = trace.read(run_id)
+    prepared = _prepare(plugins, _recorded_manifest(plugins, stored.events[0]))
+    started, paused, records = _read_paused(trace, run_id, pause_index)
+'''
+
+[[mutation]]
+name = "core: 자리로 이벤트를 꺼낸다"
+tests = ["tests/core/test_run.py", "-k", "음수_자리는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    current = len(events) - 1
+    if pause_index != current:
+'''
+new = '''
+    current = len(events) - 1
+    if events[pause_index] is not paused:
+'''
+
+[[mutation]]
+name = "채널: 자리가 lax 검증"
+tests = ["tests/channel/http/test_router.py", "-k", "0_이상의_정수가_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+        ge=0,
+        strict=True,
+'''
+new = '''
+        ge=0,
+'''
+
+[[mutation]]
+name = "채널: 자리에 하한이 없다"
+# 매개변수 id 는 pytest 가 이스케이프해 -k 로 고를 수 없다. 음수 사례 둘만 빨개지는 것은 출력으로 본다.
+tests = ["tests/channel/http/test_router.py", "-k", "0_이상의_정수가_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+        ge=0,
+        strict=True,
+'''
+new = '''
+        strict=True,
+'''
+
+[[mutation]]
+name = "채널: 승인의 자리에 기본값"
+tests = ["tests/channel/http/test_router.py", "-k", "자리가_없는_결정은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+    decision: Literal["approve"]
+    pause_index: _PauseIndex
+'''
+new = '''
+    decision: Literal["approve"]
+    pause_index: _PauseIndex = 1
+'''
+
+[[mutation]]
+name = "CLI: 자리를 int() 로 읽는다"
+tests = ["tests/test_main.py", "-m", "not llm", "-k", "자리를_빼거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+    if not (value.isascii() and value.isdigit()):
+        raise argparse.ArgumentTypeError(f"자리는 0 이상의 정수다. 받은 값: {value}")
+    return int(value)
+'''
+new = '''
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"자리는 0 이상의 정수다. 받은 값: {value}") from None
+'''
+
+[[mutation]]
+name = "CLI: 음수만 따로 막지 않는다"
+tests = ["tests/test_main.py", "-m", "not llm", "-k", "자리를_빼거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+    if not (value.isascii() and value.isdigit()):
+'''
+new = '''
+    if not (value.isascii() and value.removeprefix("-").isdigit()):
+'''
+
+[[mutation]]
+name = "CLI: 재개 스트림을 0부터 센다"
+tests = ["tests/test_main.py", "-m", "not llm", "-k", "재개가_다시_멈추면_새_안내_줄"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+        first_index=pause_index + 1,
+'''
+new = '''
+        first_index=0,
+'''

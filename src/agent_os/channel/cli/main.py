@@ -14,7 +14,8 @@ serve 는 관리 API 와 HTTP 채널을 한 앱으로 세운다. 앱을 세우�
 인자 오류에 쓴다. 어댑터는 main.py 가 만들어 넘기고 채널은 표시만 결정한다.
 
 멈춘 실행의 목록 조회는 만들지 않는다. 채널은 실행을 일으키는 면이고 관찰은 관리의 일이다.
-재개는 실행 식별자 하나만 받는다. 에이전트도 요청도 주체도 트레이스가 안다.
+재개는 실행 식별자와 결정이 답하는 일시정지의 자리를 받는다. 에이전트도 요청도 주체도 트레이스가
+안다.
 """
 
 from __future__ import annotations
@@ -64,6 +65,7 @@ class RunArgs:
 @dataclass(frozen=True)
 class ResumeArgs:
     run_id: RunId
+    pause_index: int
     decision: Decision
     model: str | None
     traces: Path
@@ -92,6 +94,15 @@ def build_parser() -> argparse.ArgumentParser:
     _add_shared(run_parser)
     resume_parser = commands.add_parser("resume", help="일시정지한 실행을 이어 간다")
     resume_parser.add_argument("run_id", help="멈출 때 표준 출력에 찍힌 실행 식별자")
+    # 결정이 답하는 일시정지의 자리. 필수이고 기본값이 없다 — 없으면 CLI 가 지금의 일시정지로
+    # 짐작하게 되고, 그러면 터미널에 남은 옛 안내 줄이 승인자가 본 적 없는 호출을 승인한다(ADR 0014
+    # 의 2026-09-28 이력). 이름은 HTTP 결정 본문의 필드와 같다.
+    resume_parser.add_argument(
+        "--pause-index",
+        type=_pause_index,
+        required=True,
+        help="멈출 때 안내된 일시정지의 자리. 트레이스 상세 events 의 0부터 센 인덱스",
+    )
     # 승인과 거부 중 하나를 반드시 골라야 한다. 거부의 사유 필수는 argparse 로 표현되지 않아
     # _decision 이 본다.
     decision = resume_parser.add_mutually_exclusive_group(required=True)
@@ -132,6 +143,18 @@ def _port(value: str) -> int:
     if not 0 <= port <= MAX_PORT:
         raise argparse.ArgumentTypeError(f"포트는 0~{MAX_PORT} 다. 받은 값: {port}")
     return port
+
+
+def _pause_index(value: str) -> int:
+    """자리가 될 수 있는 값인지 여기서 본다. ASCII 숫자만 받는다.
+
+    `int()` 로 읽으면 `1_0`(10), 앞뒤 공백, 전각이나 다른 문자 체계의 숫자도 받아, 엄격한 정수만
+    받는 HTTP 결정 본문과 받는 값이 갈린다. 음수는 core 도 받지 않지만 형식이 틀린 값이라 진단과
+    종료 코드 1이 아니라 인자 오류(종료 코드 2)다. HTTP 에서 422 인 것과 같다.
+    """
+    if not (value.isascii() and value.isdigit()):
+        raise argparse.ArgumentTypeError(f"자리는 0 이상의 정수다. 받은 값: {value}")
+    return int(value)
 
 
 def _add_shared(parser: argparse.ArgumentParser) -> None:
@@ -177,6 +200,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     if namespace.command == "resume":
         return ResumeArgs(
             run_id=RunId(str(namespace.run_id)),
+            pause_index=int(namespace.pause_index),
             decision=_decision(parser, namespace),
             model=model,
             traces=traces,
@@ -246,6 +270,7 @@ async def run_command(
     )
     return await _report(
         events,
+        first_index=0,
         stdout=stdout,
         stderr=stderr,
         progress=progress,
@@ -256,6 +281,7 @@ async def run_command(
 
 async def resume_command(
     run_id: RunId,
+    pause_index: int,
     decision: Decision,
     approver: Principal,
     *,
@@ -270,11 +296,17 @@ async def resume_command(
     traces: Path,
     plugins_root: Path,
 ) -> int:
-    """재개할 수 없는 실행(없음, 형식 1, 일시정지 아님, 손상)과 지금은 결정을 받지 않는 실행(그
-    에이전트나 그것이 쓰는 mcp 가 꺼짐, 운영자 파일의 손상)은 PluginError 로 진단만 적는다. 결정을
-    쓰기 전에 끝나므로 뒤의 것은 다시 켜거나 고친 뒤 같은 명령으로 이어 간다."""
+    """재개할 수 없는 실행(없음, 형식 1, 손상, 일시정지 아님), 지나간 자리를 든 결정, 지금은 결정을
+    받지 않는 실행(그 에이전트나 그것이 쓰는 mcp 가 꺼짐, 운영자 파일의 손상)은 PluginError 로
+    진단만 적는다. 결정을 쓰기 전에 끝나 트레이스가 그대로다. 꺼짐과 손상은 다시 켜거나 고친 뒤 같은
+    명령으로 이어 간다. 지나간 자리는 같은 명령으로는 이어 가지 못한다. 그 결정이 본 일시정지가 이미
+    지나갔다.
+
+    재개 스트림의 첫 이벤트(결정)는 받은 자리 바로 다음에 선다. core 가 그 자리가 마지막 이벤트임을
+    확인한 뒤에 결정을 쓰기 때문이다."""
     events = resume(
         run_id,
+        pause_index,
         decision,
         approver,
         plugins=plugins,
@@ -285,6 +317,7 @@ async def resume_command(
     )
     return await _report(
         events,
+        first_index=pause_index + 1,
         stdout=stdout,
         stderr=stderr,
         progress=progress,
@@ -296,6 +329,7 @@ async def resume_command(
 async def _report(
     events: AsyncIterator[Event],
     *,
+    first_index: int,
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
@@ -305,6 +339,7 @@ async def _report(
     try:
         return await _show(
             events,
+            first_index=first_index,
             stdout=stdout,
             stderr=stderr,
             progress=progress,
@@ -319,22 +354,30 @@ async def _report(
 async def _show(
     events: AsyncIterator[Event],
     *,
+    first_index: int,
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
     traces: Path,
     plugins_root: Path,
 ) -> int:
-    """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다."""
+    """마지막 종료 이벤트가 종료 코드를 정한다. 종료 이벤트가 없으면 실패다.
+
+    일시정지의 자리는 센다. core 는 이벤트를 트레이스에 쓴 뒤에 내므로, 스트림의 첫 이벤트가
+    서는 자리(`first_index`)에서 센 수가 곧 트레이스 상세 `events` 의 인덱스다. HTTP 클라이언트가
+    스트림만 보고 세는 것과 같은 규칙이다(스토리 61). 재개 스트림에는 재생된 사실이 없으므로 0 부터
+    세면 틀린다. 트레이스 포트로 다시 읽지 않는 이유는 그 사이에 다른 결정이 끼면 이 스트림이 낸
+    일시정지가 아닌 자리를 안내하게 되기 때문이다.
+    """
     exit_code = EXIT_FAILED
-    async for event in events:
+    async for index, event in _numbered(events, first_index):
         if progress is not None:
             progress.write(event.model_dump_json() + "\n")
         if isinstance(event, RunFinished):
             stdout.write(event.output + "\n")
             exit_code = EXIT_FINISHED
         elif isinstance(event, RunPaused):
-            stdout.write(_approval_request(event, traces, plugins_root))
+            stdout.write(_approval_request(event, index, traces, plugins_root))
             exit_code = EXIT_PAUSED
         elif isinstance(event, RunFailed):
             stderr.write(f"실행 실패: {event.error}\n")
@@ -342,21 +385,31 @@ async def _show(
     return exit_code
 
 
-def _approval_request(event: RunPaused, traces: Path, plugins_root: Path) -> str:
+async def _numbered(events: AsyncIterator[Event], start: int) -> AsyncIterator[tuple[int, Event]]:
+    """이벤트와 그것이 트레이스에서 서는 자리. 비동기 열에는 `enumerate` 가 없다."""
+    index = start
+    async for event in events:
+        yield index, event
+        index += 1
+
+
+def _approval_request(event: RunPaused, index: int, traces: Path, plugins_root: Path) -> str:
     """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
 
     안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 거부 줄은 `--reason` 에서 끝나 사유를 이어
     적게 한다. 자리표시자를 두면 그대로 친 것이 진짜 사유로 기록되어, 사유 없는 거부를 막자는
-    규칙이 안내 줄로 우회된다.
+    규칙이 안내 줄로 우회된다. 두 줄이 이 일시정지의 자리를 싣는다. 그래서 이 줄은 이 일시정지에만
+    쓰이고, 재개가 다시 멈춘 뒤 옛 줄을 그대로 치면 새 일시정지를 승인하지 않고 진단으로 끝난다.
     """
     args = json.dumps(event.args, ensure_ascii=False)
+    command = f"agent-os resume {event.run_id} --pause-index {index}"
     options = _inherited_options(traces, plugins_root)
     return (
         f"일시정지: {event.run_id}\n"
         f"도구: {event.tool}\n"
         f"인자: {args}\n"
-        f"승인: agent-os resume {event.run_id}{options} --approve\n"
-        f"거부: agent-os resume {event.run_id}{options} --deny --reason\n"
+        f"승인: {command}{options} --approve\n"
+        f"거부: {command}{options} --deny --reason\n"
     )
 
 

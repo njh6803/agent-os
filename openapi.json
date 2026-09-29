@@ -80,10 +80,17 @@
             "const": "approve",
             "title": "Decision",
             "type": "string"
+          },
+          "pause_index": {
+            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다",
+            "minimum": 0.0,
+            "title": "Pause Index",
+            "type": "integer"
           }
         },
         "required": [
-          "decision"
+          "decision",
+          "pause_index"
         ],
         "title": "Approve",
         "type": "object"
@@ -114,6 +121,12 @@
             "title": "Decision",
             "type": "string"
           },
+          "pause_index": {
+            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다",
+            "minimum": 0.0,
+            "title": "Pause Index",
+            "type": "integer"
+          },
           "reason": {
             "minLength": 1,
             "title": "Reason",
@@ -122,7 +135,8 @@
         },
         "required": [
           "decision",
-          "reason"
+          "reason",
+          "pause_index"
         ],
         "title": "Deny",
         "type": "object"

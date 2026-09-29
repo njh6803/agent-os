@@ -17,14 +17,16 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
 마스킹과 승인이 겹치는 도구, 운영자 파일의 손상, 운영자가 끈 에이전트나 mcp 는 실행 식별자를
-만들기 전에 PluginError 로 끝나 트레이스가 없다. 재개할 수 없는 트레이스(없음, 형식 1, 일시정지
-아님, 손상)도 같은 자리의 PluginError 다. 재개에서는 위의 것이 전부(꺼짐과 운영자 파일의 손상도)
-결정 이벤트를 쓰기 전에 나 트레이스가 그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도
-PluginError 이고 도구를 부르지 않는다(ADR 0012 이력). 하위 타입을 가르는 기준은 "깨졌나"다 —
+만들기 전에 PluginError 로 끝나 트레이스가 없다. 재개할 수 없는 트레이스(없음, 형식 1, 손상,
+일시정지 아님)와 지금의 일시정지를 가리키지 않는 결정(자리 어긋남)도 같은 자리의 PluginError 다.
+재개에서는 위의 것이 전부(꺼짐과 운영자 파일의 손상도) 결정 이벤트를 쓰기 전에 나 트레이스가
+그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012
+이력). 하위 타입을 가르는 기준은 "깨졌나"다 —
 대상이 없거나 대상의 상태가 요청을 허락하지 않는 것이 하위 타입이고 남는 것이 서버의 구성이나
 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력). 요청이 댄 에이전트나 실행이 없으면 Absent,
-실행이 일시정지가 아니거나 형식 1 이면 NotResumable(ADR 0014), 요청이 부른 에이전트나 그것이 쓰는
-mcp 를 운영자가 꺼 두었으면 Disabled 다(ADR 0017). 재개할 실행의 트레이스가 가리키는 에이전트가
+실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아니면
+NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이 쓰는 mcp 를 운영자가
+꺼 두었으면 Disabled 다(ADR 0017). 재개할 실행의 트레이스가 가리키는 에이전트가
 없는 것은 요청이 아니라 서버의 기록이 댄 이름이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import 다. 그 이유는 `_prepare`.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
@@ -129,6 +131,10 @@ type Decision = Approve | Deny
 @dataclass(frozen=True)
 class _Verdict:
     """결정과 그것이 판정하는 호출. 사람이 승인하거나 거부한 것은 일시정지가 보여 준 그 호출이다.
+
+    그 일시정지는 결정이 자리로 가리킨 것이고, 첫 걸음이 그것이 지금의 일시정지인지 이미 확인했다.
+    자리가 없으면 결정은 트레이스 끝의 일시정지에 묶여, 사람이 본 화면이 그것보다 오래될 때 본 적
+    없는 호출을 판정한다(ADR 0014 의 2026-09-28 이력).
 
     재개 뒤 첫 실제 호출이 멈춘 것과 다르면 결정을 적용하지 않고 실패로 끝낸다. 재생 대조는
     기록이 있는 구간만 보므로, 기록 끝 이후에 바뀐 에이전트(다른 도구를 부른다)나 매니페스트(그
@@ -436,6 +442,7 @@ async def run(
 
 async def resume(
     run_id: RunId,
+    pause_index: int,
     decision: Decision,
     approver: Principal,
     *,
@@ -450,13 +457,19 @@ async def resume(
     에이전트 이름과 요청은 트레이스의 시작 이벤트에서 읽는다. 결정이 트레이스에 먼저 기록된 뒤
     재생이 시작되므로, 재생이 무엇을 하든 누가 허락했는지, 누가 왜 막았는지는 남는다.
 
-    첫 걸음(트레이스 읽기, 일시정지 확인, 결정 쓰기)에 await 가 없다. 같은 실행에 동시에 온 둘째
-    결정이 마지막 이벤트를 결정으로 읽어 재개 불가가 되는 것이 이것 하나에 기댄다(ADR 0014). 읽기나
-    쓰기를 비동기로 바꾸거나 스레드로 보내면 승인된 도구가 두 번 실행된다. HTTP 채널의 동시 재개
-    테스트가 그것을 고정한다. 둘 사이의 준비(꺼진 집합 읽기를 포함한다)도 첫 걸음 안이라 포트의 그
-    읽기가 동기다(ADR 0017). 준비에서 막히면 결정을 쓰기 전이라 실행은 일시정지 그대로다.
+    `pause_index` 는 결정이 답하는 `run_paused` 가 트레이스에서 서는 0부터 센 자리다(ADR 0014 의
+    2026-09-28 이력). 결정 값(`Approve`·`Deny`)이 아니라 따로 받는 이유는 그것이 결정의 내용이
+    아니라 결정이 답하는 일시정지를 가리키는 주소라서다. 실행 식별자와 함께 "어느 실행의 어느
+    일시정지"를 이루고, 게이트는 그것을 쓰지 않는다. 기본값이 없다 — 있으면 그 값이 곧 지금의
+    일시정지라 오래된 결정이 승인자가 본 적 없는 호출을 실행한다(fail-open, ADR 0011 의 논증).
+
+    첫 걸음(트레이스 읽기, 일시정지와 자리 확인, 결정 쓰기)에 await 가 없다. 같은 실행에 동시에 온
+    둘째 결정이 마지막 이벤트를 결정으로 읽어 재개 불가가 되는 것이 이것 하나에 기댄다(ADR 0014).
+    읽기나 쓰기를 비동기로 바꾸거나 스레드로 보내면 승인된 도구가 두 번 실행된다. HTTP 채널의 동시
+    재개 테스트가 그것을 고정한다. 둘 사이의 준비(꺼진 집합 읽기를 포함한다)도 첫 걸음 안이라 포트의
+    그 읽기가 동기다(ADR 0017). 준비에서 막히면 결정을 쓰기 전이라 실행은 일시정지 그대로다.
     """
-    started, paused, records = _read_paused(trace, run_id)
+    started, paused, records = _read_paused(trace, run_id, pause_index)
     prepared = _prepare(plugins, _recorded_manifest(plugins, started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
@@ -595,11 +608,19 @@ def _require_paused_call(paused: RunPaused, name: str, masked: Mapping[str, Json
 
 
 def _read_paused(
-    trace: TraceStore, run_id: RunId
+    trace: TraceStore, run_id: RunId, pause_index: int
 ) -> tuple[RunStarted, RunPaused, tuple[Record, ...]]:
     """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다.
 
-    시작 이벤트(에이전트와 요청), 마지막 일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다.
+    시작 이벤트(에이전트와 요청), 결정이 가리킨 일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다.
+    판정 순서는 없음 → 형식 1 → 손상 → 일시정지 아님 → 자리 어긋남이다. 일시정지 아님이 자리보다
+    먼저라, 같은 자리를 든 결정 둘이 동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지 아님"을
+    듣는다.
+
+    자리로 이벤트를 꺼내지 않고 마지막 이벤트의 자리와 같은지만 본다. 꺼내면 파이썬의 음수 인덱스
+    `-1` 이 마지막 이벤트에 맞는다. 같은지만 보면 음수는 언제나 어긋남이다. 채널이 음수를 형식
+    오류로 막아도 여기서 그것을 믿지 않는다. 모르는 종류의 이벤트는 손상에서 이미 거부되므로 여기서
+    세는 자리는 트레이스 상세 `events` 의 인덱스와 같다.
     """
     stored = trace.read(run_id)
     if stored is None:
@@ -615,6 +636,12 @@ def _read_paused(
     paused = events[-1]
     if not isinstance(paused, RunPaused):
         raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
+    current = len(events) - 1
+    if pause_index != current:
+        raise NotResumable(
+            f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
+            f"재개할 수 없다: {run_id}"
+        )
     return started, paused, tuple(e for e in events if not isinstance(e, _BOUNDARY))
 
 
