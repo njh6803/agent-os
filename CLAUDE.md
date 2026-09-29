@@ -46,7 +46,7 @@
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
 
-게이트는 일곱(린트는 명령 둘)이고 넷은 그중 손으로 치는 것이다. 나머지 셋은 훅이 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 판정자, ADR 0013)는 CI도 돌리고, 훅 러너(`tools/run_hooks.py`)는 pre-commit만. 커밋 전에 보려면 직접 친다. 티켓의 "검사 넷이 초록이다"는 위의 넷을 말한다.
+게이트는 아홉(린트는 명령 둘)이고 넷은 그중 손으로 치는 것이다. 나머지 다섯은 훅이 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 판정자, ADR 0013)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 훅 러너(`tools/run_hooks.py`)는 pre-commit만. 커밋 전에 보려면 직접 친다. 티켓의 "검사 넷이 초록이다"는 위의 넷을 말한다.
 
 ## 작업 규약
 1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
