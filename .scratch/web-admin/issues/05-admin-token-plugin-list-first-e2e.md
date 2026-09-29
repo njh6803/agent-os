@@ -19,7 +19,7 @@
   - 스토어와 sessionStorage를 비운다
   - 처리하지 않은 요청은 에러다(`onUnhandledRequest: "error"`)
 - [ ] 데이터는 SWR 훅이 가져온다. 컴포넌트는 `useSWR`이나 클라이언트를 직접 부르지 않는다. API는 organisms 이상만 부른다
-- [ ] **01이 세운 web 규칙(씨앗 셋)이 이 티켓의 실제 파일을 열 때 실리는지 본다.** pages, templates, 스토어, SWR 훅이 이 티켓에서 처음 생긴다. 실리지 않으면 그 규칙의 `paths`를 고친다
+- [ ] **01이 세운 web 규칙(씨앗 셋)이 이 티켓의 실제 파일을 Read 도구로 열 때 실리는지 본다(Bash로 읽거나 Write로 새로 만들 때는 원래 안 실린다).** pages, templates, 스토어, SWR 훅이 이 티켓에서 처음 생긴다. 실리지 않으면 그 규칙의 `paths`를 고친다
 
 ### 관리 토큰
 

@@ -1,12 +1,15 @@
 """PreToolUse 훅(Bash|Grep). `.env` 를 읽는 명령과 `.env` 를 경로로 준 Grep 을 막는다.
 
-이 저장소의 `permissions.deny` 는 Read·Edit 둘만 막고 있다(Bash 규칙은 접두 일치라 `cat .env` 한
-모양씩이고 grep 의 인자 자리는 못 본다). 2026-09-28 하네스 감사에서 서브에이전트의 grep 한 번에
-`.env` 의 키 값이 도구 출력에 실렸다(대기열 43). 실패가 조용하고(실린 뒤에야 안다) 패턴이 고정돼
-첫 사건에서 막는 훅으로 갔다(`.claude/rules/tools.md`). Grep 도구는 glob 없이 훑을 때는 숨김·
-gitignore 파일을 건너뛰지만, 경로로 `.env` 를 주거나 glob(`*`·`.*`·`.env*`)이 있으면 읽는다
-(2026-09-28 가짜 `.env` 로 실측). `.env.example` 은 읽어도 된다. 파일 이름은 대소문자를 가리지
-않는다(Windows 는 `.ENV` 도 같은 파일이다).
+이 저장소의 `permissions.deny` 는 모든 위치의 `.env` 에 Read·Edit 를 막고(`//**/.env`. `./` 는
+세션 cwd 기준이라 워크트리 세션에서 주 체크아웃에 닿지 않았다), PowerShell 의 `Get-Content`·
+`Select-String`(별칭은 정규화된다)을 막는다(`.scratch/harness/probes/env_deny_probe.md`). Bash
+규칙은 호출의 모양만 맞춰 grep 의 인자 자리를 못 보므로 Bash 는 이 훅이 맡는다. 2026-09-28
+하네스 감사에서 서브에이전트의 grep 한 번에 `.env` 의 키 값이 도구 출력에 실렸다(대기열 43).
+실패가 조용하고(실린 뒤에야 안다) 패턴이 고정돼 첫 사건에서 막는 훅으로 갔다
+(`.claude/rules/tools.md`). Grep 도구는 glob 없이 훑을 때는 숨김·gitignore 파일을 건너뛰지만,
+경로로 `.env` 를 주거나 glob(`*`·`.*`·`.env*`)이 있으면 읽는다(2026-09-28 가짜 `.env` 로 실측).
+`.env.example` 은 읽어도 된다. 파일 이름은 대소문자를 가리지 않는다(Windows 는 `.ENV` 도 같은
+파일이다).
 
 Bash 에서 막는 모양 셋.
 - 읽는 명령의 인자에 `.env` 파일. `cat .env`, `grep KEY .env`, `sed -n 1p ../.env`, `source .env`,
@@ -28,7 +31,11 @@ awk 류의 첫 위치 인자는 패턴이라 파일로 보지 않는다(`grep .e
 cat`), 언어 안의 읽기(`python -c "open('.env')"`), `cp .env x` 뒤의 `cat x`, `uv run --env-file
 .env` 뒤의 `printenv`(그 명령은 LLM 테스트의 사전이라 막지 않는다), `.env` 가 없는 하위 디렉터리를
 훑는 `grep -r x sub/`, 백슬래시 경로(`C:\\x\\.env` — shlex 가 이스케이프로 읽는다), 래퍼 스크립트
-안의 읽기, PowerShell 도구, `.env` 밖의 비밀 파일(사용자 설정의 env 값 등).
+안의 읽기, PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고
+`[IO.File]::ReadAllText` 같은 읽기는 지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀
+파일(사용자 설정의 env 값 등).
+에이전트 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건
+개발용 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
 
 from __future__ import annotations

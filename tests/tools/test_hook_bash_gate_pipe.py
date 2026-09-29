@@ -46,6 +46,15 @@ def test_단독으로_친_web_검증_명령과_e2e_는_조용하다() -> None:
     assert warnings_for("pnpm -C web exec playwright test") == []
 
 
+def test_경고는_파일로_리다이렉트하는_대안을_함께_준다() -> None:
+    """파이프를 친 동기는 출력 줄이기였다(대기열 19). 막기만 하면 다음에도 파이프를 친다."""
+    pipe = warnings_for("uv run pytest -q 2>&1 | tail -3")
+    chain = warnings_for("uv run ruff check . && echo done; echo $?")
+
+    assert "리다이렉트" in pipe[0]
+    assert "리다이렉트" in chain[0]
+
+
 def test_파이프_마지막이_아닌_게이트를_경고한다() -> None:
     """PR #56 세션: `| tail -3; echo $?` 로 tail 의 종료 코드를 읽었다."""
     warnings = warnings_for("PYTHONUTF8=1 uv run pytest -q 2>&1 | tail -3; echo $?")

@@ -8,7 +8,8 @@
 | 큰 heredoc | Bash 도구의 파서가 깨져 아무것도 실행되지 않음 | 긴 스크립트는 파일로 쓰고 셸에는 경로만. `hook_bash_heredoc` |
 | [Win][Py] `PYTHONUTF8=1` 누락 | 한글 출력이 cp949로 깨지고 일부 검사가 통째로 안 돎 | `.claude/settings.json`의 `env`에 넣는다(사용자 설정 env의 다른 값이 Bash 도구에 보이는 것으로 실측. 훅 프로세스 쪽은 재지 못했다). pytest는 conftest에서 stdout 재설정. 훅은 그 값을 가정하지 않고 stdin을 바이트로 읽는다 |
 | [Py] 맨 `python` | 프로젝트 인터프리터가 아니다 — 스토어 스텁이면 아무것도 안 하고 pyenv shim이면 다른 버전이 돈다 | `uv run python`. `hook_bash_python_stub` |
-| 파이프·체인 뒤의 `$?` | 마지막 명령의 종료 코드라 게이트의 빨강이 가려짐(agent-os 4회) | 판정 명령은 파이프 없이. `hook_bash_gate_pipe`가 경고 |
+| 파이프·체인 뒤의 `$?` | 마지막 명령의 종료 코드라 게이트의 빨강이 가려짐(agent-os 4회) | 판정 명령은 파이프 없이. 출력을 줄이려면 파일로 리다이렉트하고 종료 코드를 본 뒤 실패 줄만 읽는다. `hook_bash_gate_pipe`가 경고하고 이 대안을 함께 준다 |
+| `paths` 규칙이 Bash로 읽은 파일에는 안 실림 | 규칙이 걸린 경로의 파일을 `cat`·`sed -n`으로 읽으면 그 규칙이 조용히 빠진다. 하네스의 auto mode 지침이 Bash 읽기를 권한다(agent-os 2026-09-29, 한 세션 내내 `tools.md`가 빠져 있었다) | 규칙이 걸린 경로의 파일은 Read 도구로 연다. CLAUDE.md 지도에 적었다. 적은 뒤에도 어겨지면 경고 훅 후보 |
 | [Win] CRLF가 훅 경로를 오염 | 포매터가 엉뚱한 경로를 받음 | 훅에서 `tr -d '\r'`, `.gitattributes`로 LF 고정 |
 | [Win] Git Bash `echo`가 백슬래시를 먹음 | JSON 페이로드가 안 파싱돼 훅 시험이 조용히 헛돎 | 페이로드도 파일로 |
 | [Py] 추적 파일 0개에서 `pre-commit run --all-files` | 훅 전부 "no files to check"로 exit 0 | 스테이징 뒤 다시 돌리고 `always_run` |
@@ -16,7 +17,7 @@
 | [Py] 워크트리에서 pre-commit이 돌린 테스트의 `git init` | git이 훅 자식에 `GIT_DIR`을 내보내 임시 디렉터리 대신 그 저장소를 재초기화. 공유 config의 `core.bare`가 true가 되어 체크아웃 전부가 "must be run in a work tree" | `tests/conftest.py`가 저장소를 가리키는 `GIT_*`를 벗긴다. 복구는 `git config core.bare false` |
 | 환경 부재로 skip된 테스트 | 초록으로 보임. agent-os는 "CI에서는 에러로 만든다"고 적고 장치가 없었다(2026-09-28 감사) | conftest가 skip을 세션 실패로 만든다(`tests/conftest.py`). LLM 테스트는 키 없으면 실패 |
 | 같은 체크아웃을 쓰는 세션 둘 | 커밋이 엉뚱한 브랜치에 들어감. 다른 세션의 커밋이 내 피처 브랜치에(agent-os PR #46, 2026-09-23), 다른 세션이 main으로 옮긴 32초 뒤 내 커밋이 main에(2026-09-27) | main 위 커밋을 막는 훅 `hook_git_main_commit`(뒤의 모양만). 커밋 직전 `git branch --show-current`. 하네스 작업은 워크트리에서 |
-| 에이전트의 grep이 `.env`를 읽음 | 키 값이 도구 출력에 실림(agent-os 2026-09-28) | `permissions.deny`로 Read·Edit 거부, Bash·Grep으로 읽는 길(`.env`를 빼지 않은 전체 grep 포함)은 `hook_env_read`가 막는다 |
+| 에이전트의 grep이 `.env`를 읽음 | 키 값이 도구 출력에 실림(agent-os 2026-09-28) | `permissions.deny`로 모든 위치의 `.env`에 Read·Edit 거부(`//**/.env`)와 PowerShell 읽기 모양 거부, Bash·Grep으로 읽는 길(`.env`를 빼지 않은 전체 grep 포함)은 `hook_env_read`가 막는다. 둘 다 호출의 모양을 보는 층이라, 셋째 층으로 키에 사용 한도를 걸고 실린 키는 회전한다 |
 | 헌법이 "판정자가 있다"고 적었는데 없음 | 그 절이 영영 초록(agent-os 원칙 IV의 플러그인 절, 원칙 II의 skip 절, `@` 임포트 검사가 줄 머리만) | 판정자 주장은 실제 검사와 하나씩 대조. 없으면 테스트를 만들고 문장을 고친다(ADR 0013·0018) |
 | 전역 스킬이 프로젝트 스킬을 이김 | `npx skills update` 뒤 낡은 전역이 조용히 이김 | 프로젝트가 관리하는 스킬의 전역 사본을 두지 않는다 |
 | 스킬의 `disable-model-invocation` | 지침에 "자동으로 돌린다"고 써도 에이전트가 그 스킬을 못 부름 | 자동으로 돌아야 하는 스킬(retro)만 사본에서 플래그를 뺀다. 사람이 시작을 확인해야 하는 스킬(to-spec·to-tickets·implement·grill-with-docs)은 남기고, 시작 프롬프트는 next-session 결정표가 슬래시 명령으로 적는다 |

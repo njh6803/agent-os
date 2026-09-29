@@ -1,0 +1,46 @@
+# chore/instruction-loading-and-enforcement 의 지침 검사 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/instruction_check_mutations.toml
+# 변이 넷이 한 줄씩 되돌려 그 줄을 지키는 테스트가 빨강이 되는지 잰다. 백틱 안의 @ 가드는 구현
+# 전부터 초록이었고, main 의 배관·rules 재귀·토큰 끝의 경계는 빨강을 본 테스트가 그 줄을 지키는지
+# 따로 잰다(일지 2026-09-29-04).
+
+[[mutation]]
+name = "rules 의 @ 검사에서 코드 스팬을 빼지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "백틱_안의_at_은_rules"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        imports = at_imports(path.read_text(encoding="utf-8"))'''
+new = '''        imports = ["@" + m.group(1) for m in _IMPORT_TOKEN.finditer(path.read_text(encoding="utf-8").replace("`", " "))]'''
+
+[[mutation]]
+name = "main 에서 rules·헌법 @ 검사를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "rules_임포트를_출력한다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    problems.extend(imports_outside_claude_md(root))
+'''
+new = ''''''
+
+[[mutation]]
+name = "rules 를 한 층만 찾는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "하위_폴더"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return sorted((root / ".claude" / "rules").rglob("*.md"))'''
+new = '''    return sorted((root / ".claude" / "rules").glob("*.md"))'''
+
+[[mutation]]
+name = "끝의 공백 경계를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "마침표로_끝나면 or 조사가_붙거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_IMPORT_TOKEN = re.compile(r"(?<!\S)@([^\s가-힣]+)(?=\s|$)")'''
+new = '''_IMPORT_TOKEN = re.compile(r"(?<!\S)@([^\s가-힣]+)")'''

@@ -1,0 +1,52 @@
+== R1
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+== R2
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
+\sub\CLAUDE.md | Project | nested_traversal | cwd=. | trigger=\sub\file.txt
+\sub\extra.md | Project | include | cwd=. | trigger=\sub\file.txt parent=\sub\CLAUDE.md
+\.claude\rules\scoped.md | Project | path_glob_match | cwd=. | trigger=\sub\file.txt globs=["sub"]
+== R3
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+== R4
+== R5
+== R4b
+\CLAUDE.md | Project | session_start | cwd=\sub | 
+\.claude\rules\always.md | Project | session_start | cwd=\sub | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=\sub | 
+\sub\CLAUDE.md | Project | session_start | cwd=\sub | 
+\sub\extra.md | Project | include | cwd=\sub | parent=\sub\CLAUDE.md
+== R5b
+\.claude\rules\always.md | Project | session_start | cwd=\sub | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=\sub | 
+\sub\extra.md | Project | include | cwd=\sub | parent=\sub\CLAUDE.md
+\sub\CLAUDE.md | Project | session_start | cwd=\sub | 
+\CLAUDE.md | Project | session_start | cwd=\sub | 
+\.claude\rules\scoped.md | Project | path_glob_match | cwd=\sub | trigger=\sub\file.txt globs=["sub"]
+== R6
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\scoped.md | Project | path_glob_match | cwd=. | trigger=\sub\file.txt globs=["sub"]
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+== R7
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
+== R8
+\.claude\rules\always.md | Project | session_start | cwd=. | 
+\.claude\rules\nested\deep.md | Project | session_start | cwd=. | 
+\CLAUDE.md | Project | session_start | cwd=. | 
