@@ -114,8 +114,9 @@
   `.scratch/web-admin/probes/admin_relay.mjs`가 같은 순서로 띄운다. 그 프로브는 트리를 윈도우에서 `taskkill`로, 그 밖에서
   프로세스 그룹으로 내리고 윈도우에서만 쟀다. e2e는 운영체제별 명령에 기대지 않는다. 래퍼가 next CLI를 같은 프로세스에서 부르므로 내릴 것은 래퍼 트리 하나다(`next
   dev`는 서버를 자식으로 띄운다, `next start`는 재 보지 않았다).
-- **앱의 단위 테스트는 루트 Vitest 설정(node 환경)으로 돈다.** `apps/admin/tools/*.test.ts`가 그렇다. 페이지 테스트의 jsdom
-  환경을 앱 쪽에 세울 때 이 테스트들이 node 환경에 남게 한다. `start.test.ts`는 실제 프로세스를 띄운다.
+- **앱의 단위 테스트는 루트 Vitest 설정(node 환경)으로 돈다.** `apps/admin/tools/*.test.ts`와
+  `apps/admin/next.config.test.ts`가 그렇다. 페이지 테스트의 jsdom
+  환경을 앱 쪽에 세울 때 이 테스트들이 node 환경에 남게 한다. `start.spawn.test.ts`는 실제 프로세스를 띄운다.
 - **`app/`은 next와 react(그 서브패스 포함)와 pages·templates만 import한다.** 04가 정책을 고쳐 실제 `app/layout.tsx`에서
   next·react가 지나간다. `react-dom`과 노드 내장 모듈은 막힌다. `next/font` 같은 것을 layout에서 쓰는 것은 된다.
 - **빌드 산출물.** `.next/`와 `next-env.d.ts`는 git이 무시하고, 판정자와 Prettier가 저장소 `.gitignore`를 그대로 읽어 뺀다

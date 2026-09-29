@@ -1,4 +1,4 @@
-// 티켓 04(관리 화면 앱)의 변이 31. 둘을 잰다.
+// 티켓 04(관리 화면 앱)의 변이 32. 둘을 잰다.
 //
 // 1. 01 이 경로와 무관하게 쓴 규칙이 앱의 실제 자리에서 빨간가(`lint`). 서버 파일 넷, "use server", 전역 fetch,
 //    dangerouslySetInnerHTML, app/ 의 import, 층 경계, 그리고 01 이 재지 못한 타입 기반 규칙이다. 위반을 실제 앱의
@@ -13,8 +13,8 @@
 // 틀리면 아무것도 쓰지 않는다), 변이 없이 명령이 초록인지 기준선을 본 뒤, 변이마다 원래 바이트를 쥐고 넣어 돌리고
 // finally 에서 그 바이트를 쓰며 새로 만든 파일은 지운다. Vitest 는 실패한 테스트가 셀 때만 빨강이다.
 //
-// 넣지 않은 것: 래퍼가 판정하고도 거부하지 않는 변이. start.test.ts 가 그것을 잡으려면 next dev 가 0.0.0.0 에 떠야
-// 하고, 시간 제한에 걸려 래퍼가 죽어도 next 의 자식 서버가 남는다. 표(loopback.test.ts)가 같은 변이를 잡는다.
+// 래퍼가 판정하고도 거부하지 않는 변이는 인자 테스트(start.test.ts)로만 잰다. 프로세스 테스트(start.spawn.test.ts)가
+// 그것을 잡으려면 next dev 가 0.0.0.0 에 떠야 하고, 시간 제한에 걸려 래퍼가 죽어도 next 의 자식 서버가 남는다.
 //
 // 쓰는 법: node .scratch/web-admin/probes/admin_app_mutations.mjs [이름 ...]   (저장소 루트에서. 명령은 web/ 에서 돈다)
 // 네트워크를 타지 않는다. 약 5분. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 원문이 틀리거나
@@ -28,6 +28,8 @@ const WEB = join(process.cwd(), "web");
 const VITEST = (file) => `pnpm exec vitest run ${file}`;
 const LOOPBACK_TEST = VITEST("apps/admin/tools/loopback.test.ts");
 const START_TEST = VITEST("apps/admin/tools/start.test.ts");
+const SPAWN_TEST = VITEST("apps/admin/tools/start.spawn.test.ts");
+const CONFIG_TEST = VITEST("apps/admin/next.config.test.ts");
 const JUDGE_TEST = VITEST("eslint.config.test.ts");
 const LOOPBACK = "apps/admin/tools/loopback.ts";
 const START = "apps/admin/tools/start.ts";
@@ -163,42 +165,42 @@ const MUTATIONS = [
     file: START,
     old: "  const host = values.hostname ?? DEFAULT_HOST;",
     new: '  const host = values.hostname ?? "0.0.0.0";',
-    command: LOOPBACK_TEST,
+    command: START_TEST,
   },
   {
     name: "래퍼가 모르는 인자를 받는다",
     file: START,
     old: "      strict: true,",
     new: "      strict: false,",
-    command: LOOPBACK_TEST,
+    command: START_TEST,
   },
   {
     name: "래퍼가 판정하고도 거부하지 않는다",
     file: START,
     old: "  if (problem !== null) {\n    return { problem };\n  }",
     new: "",
-    command: LOOPBACK_TEST,
+    command: START_TEST,
   },
   {
     name: "래퍼가 거부하고 0 으로 끝난다",
     file: START,
     old: "    process.exitCode = 1;",
     new: "    process.exitCode = 0;",
-    command: START_TEST,
+    command: SPAWN_TEST,
   },
   {
     name: "래퍼의 진단이 표준 출력으로 간다",
     file: START,
     old: "    console.error(command.problem);",
     new: "    console.log(command.problem);",
-    command: START_TEST,
+    command: SPAWN_TEST,
   },
   {
     name: "래퍼의 SSH 안내가 PORT 를 보지 않는다",
     file: START,
     old: '  const command = nextCommand(process.argv.slice(2), process.env["PORT"] ?? "3000");',
     new: '  const command = nextCommand(process.argv.slice(2), "3000");',
-    command: START_TEST,
+    command: SPAWN_TEST,
   },
   {
     name: "상류 호스트를 URL 의 정규화 없이 원문에서 읽는다",
@@ -215,18 +217,25 @@ const MUTATIONS = [
     command: VITEST("apps/admin/tools/next-version.test.ts"),
   },
   {
+    name: "설정 파일이 상류를 판정하지 않는다",
+    file: CONFIG,
+    old: "if (problem !== null) {\n  throw new Error(problem);\n}\n",
+    new: "",
+    command: CONFIG_TEST,
+  },
+  {
     name: "빈 상류 입력을 기본값으로 읽지 않는다",
     file: CONFIG,
     old: 'const upstream = given === undefined || given === "" ? DEFAULT_UPSTREAM : given;',
     new: "const upstream = given ?? DEFAULT_UPSTREAM;",
-    command: LOOPBACK_TEST,
+    command: CONFIG_TEST,
   },
   {
     name: "목적지가 출처가 아니라 받은 값 그대로다",
     file: CONFIG,
     old: "destination: `${origin}/:path*`",
     new: "destination: `${upstream}/:path*`",
-    command: LOOPBACK_TEST,
+    command: CONFIG_TEST,
   },
   {
     name: "app/ 의 로컬 선택자를 좁히지 않는다",

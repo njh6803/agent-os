@@ -22,8 +22,9 @@
 const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1"];
 
 export const DEFAULT_HOST = "127.0.0.1";
-// 관리 화면이 /api 를 넘기는 곳. serve 의 기본 주소다.
+// 관리 화면이 /api 를 넘기는 곳(상류)을 받는 환경 변수.
 export const UPSTREAM_ENV = "AGENT_OS_UPSTREAM";
+// 상류를 주지 않았을 때. serve 의 기본 주소다.
 export const DEFAULT_UPSTREAM = "http://127.0.0.1:8000";
 const UPSTREAM_HOST = "127.0.0.1";
 
