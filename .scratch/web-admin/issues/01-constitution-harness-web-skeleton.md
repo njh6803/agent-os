@@ -139,5 +139,5 @@
   - CI `verify` 잡의 로그에 web 단계가 있다. `gh run view`로 본다
   - 빨강은 `tools/mutate.py`로 본다
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다. tsconfig 검사의 테스트가 이 기능의 첫 TS 테스트다
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다. 이 티켓 뒤로는 다섯이다
+- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다
 - [ ] 이 기능의 첫 병합이면 `.scratch/plan.md`의 web-admin 행을 `in-progress`로 바꾼다

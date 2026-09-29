@@ -110,5 +110,5 @@
 
 ### 확인
 
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다. 01보다 먼저 병합되면 넷, 뒤면 다섯이다
+- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다
 - [ ] 이 기능의 첫 병합이면 `.scratch/plan.md`의 web-admin 행을 `in-progress`로 바꾼다
