@@ -5,8 +5,11 @@ CLAUDE.md 환경 함정 "파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 
 tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 훅이고, 거짓 양성(`set -o pipefail`, 로그만
 자르는 파이프)이 있어 deny 가 아니라 additionalContext 로 알린다. 거짓 양성의 비용은 문장 하나다.
 
-게이트 명령은 pytest·pyright·ruff·lint-imports 와 `tools/check_*.py`·`tools/mutate.py` 다. 명령
-위치에 선 것만 센다 — `uv run …`, `python`·`py` 와 `-m` 뒤도 명령 위치다. 판정 둘.
+게이트 명령은 pytest·pyright·ruff·lint-imports 와 `tools/check_*.py`·`tools/mutate.py`, 그리고
+web 의 `pnpm -C web verify`(다섯째 검증 명령)와 Playwright 실행(`playwright test`, e2e)이다.
+파이프가 판정을 가리는 것은 명령의 언어와 무관하다(web-admin 티켓 01). e2e 스크립트의 이름은
+아직 없어서 Playwright 실행 자체를 본다. 명령 위치에 선 것만 센다 — `uv run …`, `python`·`py`
+와 `-m` 뒤, `pnpm -C <디렉터리>`·`pnpm exec`·`npx` 뒤도 명령 위치다. 판정 둘.
 - 게이트가 파이프(`|`)의 마지막이 아닌 자리에 있다. 서브셸 안이어도 본다. 그 파이프의 종료 코드는
   마지막 명령의 것이다.
 - `$?` 마다 본다 — 그 바로 앞 조각이 게이트가 아니고 그 앞 어딘가에 게이트가 있다. `$?` 는
@@ -16,7 +19,9 @@ tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 �
 값 자리로 밀려 명령 위치를 잃는다(PR #91 리뷰).
 못 보는 것: `set -o pipefail` 이 켜진 파이프(그래도 경고한다 — 거짓 양성), `2>&1 | tee` 처럼 결과를
 버리지 않는 파이프(그래도 경고한다), 래퍼 스크립트 안의 게이트, `$PIPESTATUS`, PowerShell 의
-`$LASTEXITCODE`(이 훅은 Bash 매처다).
+`$LASTEXITCODE`(이 훅은 Bash 매처다). web 쪽은 verify 의 단계를 따로 친 것(`pnpm -C web lint`,
+`pnpm exec vitest`·`eslint`·`tsc`), `pnpm --filter`·`-w` 로 고른 것, `npm run verify` 를 게이트로
+보지 않는다. 파이썬 쪽이 ruff·pyright 를 하나씩 잡는 것과 다르다.
 """
 
 from __future__ import annotations
@@ -27,8 +32,12 @@ import sys
 from typing import TypedDict
 
 _GATE = re.compile(
-    r"^(?:uv\s+run\s+(?:\S+\s+)*?)?(?:(?:python3?|py)\s+(?:-\S+\s+)*?(?:-m\s+)?)?"
+    r"^(?:"
+    r"(?:uv\s+run\s+(?:\S+\s+)*?)?(?:(?:python3?|py)\s+(?:-\S+\s+)*?(?:-m\s+)?)?"
     r"(?:pytest|pyright|ruff|lint-imports|tools/(?:check_\w+|mutate)\.py)\b"
+    r"|pnpm\s+(?:(?:-C|--dir)\s+\S+\s+)?(?:run\s+)?verify\b"
+    r"|(?:(?:pnpm|npx)\s+(?:(?:-C|--dir)\s+\S+\s+)?(?:exec\s+)?)?playwright\s+test\b"
+    r")"
 )
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _SINGLE_QUOTED = re.compile(r"'[^']*'")

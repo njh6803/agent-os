@@ -23,6 +23,7 @@ from tools.check_instructions import (
     hooks_reading_text_stdin,
     hooks_with_relative_paths,
     imported_files_with_dead_paths,
+    nested_instruction_files,
     patched_skills_without_sentinel,
     rules_with_dead_paths,
     rules_without_paths,
@@ -347,6 +348,66 @@ def test_이_저장소의_임포트된_파일_경로는_지금_다_살아_있다
     assert imported_files_with_dead_paths() == []
 
 
+# 루트 밖의 지침 파일. `next dev` 는 에이전트를 감지하면 앱 폴더에 AGENTS.md 와
+# `@AGENTS.md` 한 줄짜리 CLAUDE.md 를 만든다(ADR 0021). 지침을 `.claude/rules/*.md` + `paths`
+# 에 둔다는 결정(ADR 0004)이 조용히 우회된다. 원인과 무관하게 결과를 본다.
+
+
+def test_루트_밖의_CLAUDE_md_와_AGENTS_md_를_잡는다(tmp_path: Path) -> None:
+    _클로드_파일을_쓴다(tmp_path, "# 루트\n")
+    _파일을_둔다(tmp_path, "web/apps/admin/AGENTS.md", "# Next 가 만든 것\n")
+    _파일을_둔다(tmp_path, "web/apps/admin/CLAUDE.md", "@AGENTS.md\n")
+    _파일을_둔다(tmp_path, "docs/CLAUDE.md", "# 지역 지침\n")
+
+    problems = nested_instruction_files(tmp_path)
+
+    assert [p.split(":", 1)[0] for p in problems] == [
+        "docs/CLAUDE.md",
+        "web/apps/admin/AGENTS.md",
+        "web/apps/admin/CLAUDE.md",
+    ]
+    assert ".claude/rules" in problems[0]
+
+
+def test_node_modules_와_워크트리_아래의_지침_파일은_보지_않는다(tmp_path: Path) -> None:
+    """패키지가 싣고 온 AGENTS.md 와 다른 체크아웃의 루트 CLAUDE.md 는 이 저장소의 지침이 아니다."""
+    _파일을_둔다(tmp_path, "web/node_modules/next/AGENTS.md")
+    _파일을_둔다(tmp_path, "web/node_modules/.pnpm/pkg/node_modules/pkg/CLAUDE.md")
+    _파일을_둔다(tmp_path, ".claude/worktrees/02-x/CLAUDE.md")
+    _파일을_둔다(tmp_path, ".venv/Lib/site-packages/pkg/AGENTS.md")
+
+    assert nested_instruction_files(tmp_path) == []
+
+
+def test_이_저장소의_루트_밖에는_지침_파일이_없다() -> None:
+    assert nested_instruction_files() == []
+
+
+def _CLI_로_검사한다(root: Path) -> subprocess.CompletedProcess[str]:
+    """다른 검사는 통과하는 최소 트리를 깔고 CLI 진입점을 부른다. 루트는 첫 인자다."""
+    _클로드_파일을_쓴다(root, "@docs/constitution/principles.md\n")
+    _헌법을_쓴다(root, "# 원칙\n")
+    _사본을_만든다(root, 센티널을_넣을_스킬=set(PATCHED_SKILLS))
+    return subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "check_instructions.py"), str(root)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+
+def test_CLI_진입점이_임시_트리의_중첩_지침_파일을_출력한다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "web/apps/admin/AGENTS.md")
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert process.returncode == 1
+    assert "web/apps/admin/AGENTS.md:" in process.stdout
+
+
 # 훅의 stdin. 훅 환경은 cp949 라 텍스트 stdin 은 한글을 깨뜨리고 조용히 exit 0 이 된다(대기열 25).
 
 
@@ -391,21 +452,10 @@ def test_이_저장소의_훅은_지금_전부_바이트로_읽는다() -> None:
 
 
 def test_CLI_진입점이_임시_트리의_빨강을_출력한다(tmp_path: Path) -> None:
-    """검사 여덟을 모으는 main 의 배관을 한 번은 실제로 부른다(tests.md). 루트는 첫 인자."""
-    _클로드_파일을_쓴다(tmp_path, "@docs/constitution/principles.md\n")
-    _헌법을_쓴다(tmp_path, "# 원칙\n")
-    _사본을_만든다(tmp_path, 센티널을_넣을_스킬=set(PATCHED_SKILLS))
+    """검사 아홉을 모으는 main 의 배관을 한 번은 실제로 부른다(tests.md). 루트는 첫 인자."""
     _파일을_둔다(tmp_path, ".claude/rules/nopaths.md", "# paths 없는 규칙\n")
 
-    process = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "check_instructions.py"), str(tmp_path)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        cwd=ROOT,
-        env={**os.environ, "PYTHONUTF8": "1"},
-        check=False,
-    )
+    process = _CLI_로_검사한다(tmp_path)
 
     assert process.returncode == 1
     assert "paths 프론트매터 없음" in process.stdout

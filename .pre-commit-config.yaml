@@ -1,5 +1,6 @@
 # 로컬 자동 검사. 같은 검사를 CI(.github/workflows/ci.yml)가 최종 판정한다. 헌법 "가드레일" 절.
 # 클론 뒤 한 번: uv run pre-commit install  (pre-commit과 commit-msg 두 훅이 함께 깔린다)
+#              pnpm -C web install         (없으면 web-verify 훅이 첫 커밋부터 빨갛다)
 default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: local
@@ -33,7 +34,7 @@ repos:
         pass_filenames: false
         always_run: true
       - id: check-instructions
-        name: instructions (rules paths와 그 glob, 훅 경로, CLAUDE.md 200줄, @ 임포트, 사본 센티널)
+        name: instructions (rules paths와 그 glob, 훅 경로, CLAUDE.md 200줄, @ 임포트, 사본 센티널, 중첩 지침 파일)
         entry: uv run python tools/check_instructions.py
         language: system
         pass_filenames: false
@@ -44,6 +45,15 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # 다섯째 검증 명령. pyright·pytest 처럼 web 파일이 안 바뀐 커밋에서도 돈다. e2e 는 커밋마다 브라우저와
+      # Next 빌드가 돌아 넣지 않는다(ADR 0021 이력).
+      - id: web-verify
+        name: web verify (단계는 web/package.json 의 verify — 원칙 III 의 TS 판정자가 든다)
+        entry: pnpm -C web verify
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
       # 아래 두 검사는 받은 파일을 한 프로세스로(require_serial). 기본은 CPU 수만큼 나눠 uv 를 띄워 두세 배 느리다.
       # stages 는 커밋 메시지 파일(text)을 넘기지 않게 한다.
       - id: check-md-tables

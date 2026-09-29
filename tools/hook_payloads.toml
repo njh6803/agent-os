@@ -80,6 +80,18 @@ payload = { tool_name = "Bash", tool_input = { command = "PYTHONUTF8=1 uv run py
 
 [[case]]
 hook = "hook_bash_gate_pipe.py"
+expect = "context"
+note = "web 검증 명령이 파이프에 묻힘"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web verify 2>&1 | tail -5" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "파이프 없는 web 검증 명령"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web verify" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
 expect = "silent"
 note = "게이트 아닌 파이프"
 payload = { tool_name = "Bash", tool_input = { command = "git log --oneline | head -3" } }

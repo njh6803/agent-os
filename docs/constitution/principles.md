@@ -11,7 +11,9 @@ LLM을 실제로 호출하는 테스트 하나가 통과하기 전에는 헌법,
 구현 전에 실패하는 테스트를 쓴다. 테스트가 실패하면 테스트를 고치지 않고 멈춰 보고한다. 환경 부재로 skip된 테스트는 초록이 아니다.
 
 ## III. 타입 우회 금지
-`Any`, `cast`, `type: ignore`, `pyright: ignore`를 쓰지 않는다. `tools/check_type_escapes.py`가 판정하며 테스트 코드도 대상이다. pyright strict는 이 넷을 하나도 잡지 않는다(ADR 0013).
+두 언어 모두 타입을 우회하지 않는다. 판정자는 언어마다 하나이고 테스트 코드도 대상이다.
+- 파이썬: `Any`, `cast`, `type: ignore`, `pyright: ignore`를 쓰지 않는다. `tools/check_type_escapes.py`가 판정한다. pyright strict는 이 넷을 하나도 잡지 않는다(ADR 0013).
+- TypeScript: `any`, 타입 단언(`as`와 꺾쇠, `as const`는 제외), 비null 단언 `!`, `@ts-ignore`, `@ts-nocheck`를 쓰지 않는다. `@ts-expect-error`는 타입 테스트 파일(`*.test-d.ts`)에서만 설명과 함께 쓴다. 판정자는 typescript-eslint이고 타입 기반 규칙까지 켜며 인라인 설정 주석을 끈다(`web/eslint.config.mjs`). 생성물도 판정 범위에서 빼지 않는다. tsconfig의 `strict`와 그 계열을 끄는 것도 우회이고 `web/tools/check-tsconfig.ts`가 본다(ADR 0020).
 
 ## IV. 코어는 바깥을 모른다
 `agent_os.core`는 `agent_os.channel`, `agent_os.admin`, `agent_os.adapters`, `agent_os.http`, DB, 구체 파일 경로를 import하지 않는다. 플러그인은 `agent_os.sdk`만 import한다. 의존 방향은 `main → server → {channel | admin | adapters} → http → core → sdk`, `plugins → sdk`뿐이다. 채널, 관리, 어댑터는 서로를 import하지 않고 `main`과 `server`가 조립한다. `http`는 채널과 관리가 함께 쓰는 HTTP 배관이고 어댑터는 `http`를 import하지 않는다. 플러그인 경계는 `tests/test_plugins_boundary.py`가, 나머지는 import-linter가 판정한다. 포트와 어댑터의 세부는 `.claude/rules/core.md`와 `.claude/rules/adapters.md`.

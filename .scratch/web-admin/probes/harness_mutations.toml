@@ -1,0 +1,46 @@
+# web-admin 티켓 01 의 파이썬 하네스 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-admin/probes/harness_mutations.toml
+# 넷 모두 저장소 밖 임시 트리의 테스트나 루트 CLAUDE.md 로 빨개지므로 체크아웃의 상태와 무관하다. 첫 변이에서
+# 저장소 상태 테스트까지 함께 빨개지는 것은 이 체크아웃에 .claude/worktrees/ 가 있을 때뿐이다(CI 에는 없다).
+
+[[mutation]]
+name = "워크트리 제외를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "지침_파일"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''skipped = {root / ".venv", root / ".git", root / ".claude" / "worktrees"}'''
+new = '''skipped = {root / ".venv", root / ".git"}'''
+
+[[mutation]]
+name = "루트의 CLAUDE.md 도 중첩으로 센다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "이_저장소의_루트_밖에는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        if current == root:
+            continue
+        found.extend('''
+new = '''        found.extend('''
+
+[[mutation]]
+name = "node_modules 제외를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "node_modules"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''            if name != "node_modules" and current / name not in skipped'''
+new = '''            if current / name not in skipped'''
+
+[[mutation]]
+name = "Playwright 의 무엇이든 게이트로"
+tests = ["tests/tools/test_hook_bash_gate_pipe.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_gate_pipe.py"
+old = '''playwright\s+test\b'''
+new = '''playwright\b'''

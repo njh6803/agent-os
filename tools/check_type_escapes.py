@@ -1,4 +1,4 @@
-"""타입 우회 검사. 헌법 원칙 III의 기계 판정자.
+"""타입 우회 검사. 헌법 원칙 III의 파이썬 판정자(TypeScript 는 typescript-eslint, ADR 0020).
 
 원칙 III는 `Any`, `cast`, `type: ignore`, `pyright: ignore`를 금하는데 **pyright strict는 그 넷을
 하나도 잡지 않는다.** 명시적 `Any`는 Unknown이 아니고, `cast`는 정상 API이며, 억제 주석은 정의상

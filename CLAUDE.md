@@ -17,6 +17,7 @@
 - `src/agent_os/server.py`: HTTP 표면의 조립 층. `create_app()` 하나이고 전역 `app`이 없다. 계약은 루트 `openapi.json`
 - `src/agent_os/main.py`: 조합 층. 의존 방향은 원칙 IV
 - `plugins/{agents,mcp,skills,models}/`: 플러그인. 코드가 아니라 내용물
+- `web/`: pnpm 워크스페이스(TypeScript). 앱은 `apps/*`, 공유 패키지는 `packages/*`. 파이썬과 루트를 나눈다
 - `tests/`: `src/`를 대체로 미러링. admin·http 층의 테스트는 `tests/test_server.py`, 하네스는 `tests/tools/`
 
 ## 지도
@@ -45,13 +46,14 @@
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
+- web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다)
 
-게이트는 아홉(린트는 명령 둘)이고 넷은 그중 손으로 치는 것이다. 나머지 다섯은 훅이 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 판정자, ADR 0013)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 훅 러너(`tools/run_hooks.py`)는 pre-commit만. 커밋 전에 보려면 직접 친다. 티켓의 "검사 넷이 초록이다"는 위의 넷을 말한다.
+게이트는 열(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. 나머지 다섯은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`)와 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 훅 러너(`tools/run_hooks.py`)는 pre-commit만. 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
 
 ## 작업 규약
 1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
 2. 고칠 파일과 영향을 세 줄로 적고 시작한다. 계약(`sdk/`, `openapi.json`, 헌법)에 닿으면 그 티켓이 다른 티켓을 막는다.
-3. 끝나면 검증 명령 넷을 돌린다. 하네스(스킬, 훅, rules, 설정)를 바꿨으면 실제 실행 결과로 확인한다. 파일이 그럴듯해 보이는 것은 확인이 아니다.
+3. 끝나면 검증 명령을 모두 돌린다. 하네스(스킬, 훅, rules, 설정)를 바꿨으면 실제 실행 결과로 확인한다. 파일이 그럴듯해 보이는 것은 확인이 아니다.
 4. 결정이 바뀌면 그것을 참조하는 스킬·훅·rules·워크플로·명세를 같이 고치고, 옛 표현을 저장소 전체에서 grep해 잔존이 0인지 본 뒤 3을 다시 돈다. 하네스는 언젠가 맞출 문서가 아니라 다음 실행에 바로 영향을 주는 코드다.
 5. 아키텍처 결정을 내렸으면 `docs/adr/`에 초안을 보여주고 승인을 받는다. 임의로 확정하지 않는다.
 6. 같은 테스트가 두 번 연속 실패하면 추측 수정을 멈추고 diagnosing-bugs 스킬을 쓴다.

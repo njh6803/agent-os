@@ -13,9 +13,9 @@
 | 런타임 의존성 | core: `langchain-core`, `pydantic`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. server: `fastapi`, `uvicorn`. anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). `langgraph`는 pyright strict 마찰로 2026-09-21에 뺐다. ADR 0001과 그 이력 |
 | CLI | 표준 라이브러리 argparse |
 | HTTP | FastAPI(0.140.8 이상, 채널의 스트림이 서는 버전. `fastapi.sse`는 0.135에 들어왔지만 그 사이는 프레임 직렬화와 계약의 항목 스키마가 다르다. ADR 0014와 그 2026-09-26 이력), uvicorn. 조립은 `server.py`의 `create_app()` 하나이고 전역 `app`을 두지 않는다. 채널과 관리가 같이 쓰는 배관은 `agent_os.http`(ADR 0016). `openapi.json`은 저장소 루트에 커밋된 계약이고 최신성을 테스트가 판정한다. ADR 0010 |
-| 원격·CI | GitHub, GitHub Actions(`ci.yml`, ubuntu, uv). 로컬 훅과 같은 검사. LLM 테스트 제외 |
+| 원격·CI | GitHub, GitHub Actions(`ci.yml`, ubuntu, uv, Node 24와 pnpm). 로컬 훅과 같은 검사이고 파이썬과 web이 한 잡(`verify`)이다. LLM 테스트 제외. e2e(Playwright)는 `verify` 잡의 한 단계이고 pre-commit에는 없다(ADR 0021 이력, e2e가 서는 티켓부터) |
 | 로깅 | 표준 라이브러리. 구조화 기록은 이벤트가 담당한다 |
-| 웹 | Next.js, pnpm 워크스페이스, `web/`. 슬라이스 3부터. 위젯 기술은 슬라이스 4에서 결정 |
-| 프론트 구성 | 아토믹 디자인. `components/{atoms,molecules,organisms,templates}`. API 호출은 organisms 이상만 하고 atoms·molecules는 순수. 위젯과 공유하는 atoms는 `web/packages/ui`. pages를 `components/pages/`로 둘지 `app/`에 맡길지는 슬라이스 3 인터뷰에서 결정(테스트 경계 근거는 `docs/journal/` 09-20) |
+| 웹 | `web/`, pnpm 11 워크스페이스(`apps/*`, `packages/*`), Node 24, TypeScript 5.9 고정(7은 typescript-eslint가 거부한다, ADR 0020). 관리 화면은 Next 16과 React 19. 스타일은 Tailwind와 직접 만든 atoms, 아이콘은 lucide-react를 서브패스로. 서버 데이터는 SWR, 클라이언트 상태는 Zustand(persist는 sessionStorage에, 토큰만). `packages/api-client`는 openapi-typescript와 openapi-fetch로 `openapi.json`에서 생성해 커밋한다. 린트는 ESLint(typescript-eslint, eslint-plugin-boundaries), 포맷은 Prettier, 테스트는 Vitest(jsdom)·Testing Library·MSW, e2e는 Playwright. ADR 0021. 위젯 기술은 슬라이스 4에서 결정 |
+| 프론트 구성 | 아토믹 디자인. `components/{atoms,molecules,organisms,templates,pages}`. 화면은 `components/pages/`의 클라이언트 컴포넌트이고 `app/**/page.tsx`는 라우팅과 레이아웃만 한다(ADR 0021). API 호출은 organisms 이상만 하고 atoms·molecules는 순수. 층 경계는 ESLint가 판정한다. 위젯과 공유하는 atoms는 `web/packages/ui` |
 
 파이썬 한 패키지를 유지하고 배포가 갈릴 때만 나눈다. sdk는 첫 원격 에이전트를 만들 때 별도 배포로 분리한다. 파이썬(`src/`)과 노드(`web/`)는 루트를 분리한다. 두 도구의 `apps/*` 글롭이 서로의 앱을 오인하기 때문이다.

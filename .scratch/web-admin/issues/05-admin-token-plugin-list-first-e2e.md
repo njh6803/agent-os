@@ -80,6 +80,12 @@
 - [ ] **실제 `serve`를 띄우는 것이 하나라고 적은 문장 둘을 고친다.** `.claude/rules/http.md`와 `tests/test_main.py`의 `serve` 판정 테스트 독스트링이다. e2e가 서면 실제 `serve`를 띄우는 것이 둘이 되고, 그중 매 푸시에서 도는 것은 e2e 하나다. 이 저장소에서 "둘째 구동자"는 이미 같은 앱을 ASGI로 직접 부르는 것의 이름이다. 그래서 e2e는 "실제 `serve`의 둘째 구동자"라고 부른다
 - [ ] `README.md`의 관리 화면을 띄우는 법에 관리 토큰을 넣는 줄을 더한다
 
+### 01이 남긴 메모
+
+- **게이트 훅의 모양.** 01은 `playwright test`가 명령 위치에 선 것을 게이트로 잡았다. 앞에 `pnpm exec`, `pnpm -C <디렉터리> exec`, `npx`가 와도 된다. e2e를 스크립트(예: `pnpm -C web e2e`)로 치게 하면 `tools/hook_bash_gate_pipe.py`의 `_GATE`와 그 테스트, 페이로드를 함께 넓힌다
+- **CI의 자리.** 01의 `verify` 잡은 파이썬 단계 뒤에 Node 24(setup-node)와 pnpm(pnpm/action-setup, 락파일로 스토어 캐시)을 세우고 `pnpm -C web install --frozen-lockfile`과 `pnpm -C web verify`를 돈다. e2e 단계는 그 뒤에 선다
+- **`operations.md` 가드레일 머리.** "자동 검사는 둘이고 내용은 같다"의 예외는 지금 둘(훅 러너, 인용 대조)이다. e2e가 CI에만 서면 셋째 예외가 되므로 그 문장과 검사 목록에 e2e를 더한다
+
 ### 확인
 
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다. 클래스 이름, 컴포넌트 구조, 훅의 내부 상태, 스토어의 모양은 단언하지 않는다

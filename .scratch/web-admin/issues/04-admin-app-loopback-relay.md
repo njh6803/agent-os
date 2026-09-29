@@ -58,6 +58,14 @@
   - 루프백에만 서고, 원격은 SSH 포트 포워딩이다
   - 토큰을 넣는 줄은 05(관리)와 08(채널)이 더한다
 
+### 01이 남긴 메모
+
+- **타입 기반 규칙은 앱 자리에서 돌았다.** 01은 web/ 아래 임시 트리의 `apps/admin/`에 기준 tsconfig를 `extends`하는 자기 tsconfig를 두고 그 아래 파일에 쟀다. 프로젝트 서비스는 파일에서 가장 가까운 tsconfig를 찾는다. 어느 tsconfig에도 들지 않는 파일은 규칙이 아니라 파싱 오류로 빨개진다. 위 "앱" 절의 "01이 재지 못한 것" 상자는 그래서 Next가 쓰는 실제 tsconfig(Next가 고쳐 쓰는 `compilerOptions`와 `include`)에서 다시 보는 일이 된다
+- **typecheck와 Vitest의 범위.** 01의 `pnpm run typecheck`는 루트 `web/tsconfig.json`(루트의 파일과 `tools/`)만 돈다. 앱의 tsconfig도 verify가 돌게 한다(03과 같은 일이다. 먼저 하는 쪽의 모양을 따른다). Vitest는 루트 설정 하나이고 파일을 차례로 돈다(`fileParallelism: false`. 판정자 테스트가 web/ 아래에 임시 트리를 쓰고 tsconfig 검사가 web/을 훑는다). jsdom 환경은 앱 쪽 설정이 든다
+- **빌드 산출물.** `pnpm run lint`(ESLint)와 `prettier --check .`는 web/ 전체를 보고, tsconfig 검사(`web/tools/check-tsconfig.ts`)도 `node_modules`만 빼고 web/을 훑는다. `.next/`에 Next가 생성한 `.ts`나 tsconfig 류 파일이 생기면 셋 다 그것을 본다(PR #99 CodeRabbit Nit). Prettier는 web/의 `.gitignore`만 읽고 저장소 루트의 것은 읽지 않는다. 빌드 산출물을 어떻게 다룰지 정하되, 소스를 판정 범위에서 빼는 목록이 되지 않게 한다
+- **`app/`의 import.** 01의 정책은 `app/`의 파일이 pages·templates와 외부의 `next`·`react`만 import하게 한다. 같은 요소 안의 import는 보지 않으므로 `app/globals.css`는 된다. `app/` 밖의 CSS를 import하면 막힌다
+- **아이콘.** lucide-react 1.48에는 `exports` 맵이 없다. 서브패스 import의 모양과 그 타입이 서는지 본다. 01은 `lucide-react`를 통째로 import하는 것만 막았다
+
 ### 확인
 
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다

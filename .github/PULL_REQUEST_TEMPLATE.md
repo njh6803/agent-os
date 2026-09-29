@@ -31,6 +31,7 @@
 - [ ] `src/agent_os/adapters/` — 포트를 상속하지 않고 시그니처로 만족하는가
 - [ ] `plugins/` — 매니페스트와 디렉터리의 `kind`가 맞는가
 - [ ] `tests/` — `src/` 미러링, Fake는 픽스처에서 포트 타입으로 annotate
+- [ ] `web/` — 판정자 설정(`web/eslint.config.mjs`)을 바꿨으면 `web/eslint.config.test.ts`에 위반 사례를 더했는가, 경로에 기대는 규칙을 경로와 무관하게 썼는가, 새 tsconfig는 기준 tsconfig를 extends하는가
 - [ ] `.claude/`, `tools/`, `.pre-commit-config.yaml` — 하네스 (실제 실행으로 확인했는가, 새 검사는 `tools/mutate.py`로 변이를 넣어 빨강을 봤는가, 이 검사가 **못 보는 것**을 어디에 적었고 그 주장을 쟀는가, 훅은 `tools/hook_payloads.toml`에 발동 페이로드와 발동하지 말아야 할 **실제** 입력을 더했는가(`tools/run_hooks.py`가 pre-commit에서 돈다), 구조가 바뀌었으면 README 트리도 갱신했는가)
 - [ ] `docs/`, `CLAUDE.md`, `CONTEXT.md`, `CODING_STANDARDS.md` — 지침·헌법·ADR (원천 하나, CLAUDE.md 200줄 이하)
 - [ ] `.github/` — 워크플로 (`claude-code-review.yml`을 바꾸면 별도 PR로 먼저 병합. 워크플로 파일이 바뀐 PR은 claude-review의 코멘트 0개 가드가 꺼지므로 코멘트를 손으로 본다. `operations.md` 리뷰 파이프라인)
@@ -42,6 +43,7 @@
 - [ ] `uv run ruff check . && uv run ruff format --check .`
 - [ ] `uv run pyright`
 - [ ] `uv run lint-imports`
+- [ ] `pnpm -C web verify`
 - [ ] `uv run pytest -q` (LLM 테스트가 **지나는 코드** — `core/run.py`·`core/loop.py`, 어댑터, `channel/`, `main.py` — 를 건드렸다면 `uv run --env-file .env pytest -m llm`도. 돌렸으면 일지 검사 절에 통과 수와 토큰 합계)
 - [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓이나 회고 후보로 뺐고, 다른 층·티켓에 넘긴 것은 받는 쪽에 적었다
 - [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·버그·성능 축). 안 돌렸으면 이유를 적는다. **좌석은 PR마다 `coderabbit auth status` 한 줄로 본다 — 직전 PR의 확인은 캐시다.** 없으면 돌리지 않고 그 사실을 적는다. **문서만 바뀐 PR도 면제가 아니다** — 설계 문서의 침묵이 곧 구현의 침묵이다(코드 0줄인 PR 넷에서 CWE 넷). 한도와 좌석 요건은 operations.md 리뷰 파이프라인
@@ -52,6 +54,7 @@
 
 ```bash
 uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest -q
+pnpm -C web verify
 ```
 
 <!-- 위 외에 확인한 시나리오, 재현 절차, 실행한 명령과 결과 -->

@@ -46,6 +46,14 @@
 - [ ] **01이 경로와 무관하게 쓴 전역 `fetch` 금지를 실제 패키지 자리에서 다시 본다.** 이 패키지 밖에서는 빨갛고, 이 패키지는 통과한다
 - [ ] 이 패키지 경로에만 걸리는 판단 기준이 생기면 `.claude/rules/web-*.md` + `paths`로 둔다. 생성물을 손으로 고치지 않는다는 것은 최신성 검사가 판정하므로 적지 않는다
 
+### 01이 남긴 메모
+
+- **판정 범위와 tsconfig.** 01의 판정자는 어느 tsconfig에 든 파일만 타입 기반 규칙으로 본다. 어느 tsconfig에도 들지 않는 파일은 규칙이 아니라 파싱 오류로 빨개진다. 이 패키지는 기준 tsconfig를 `extends`하는 자기 tsconfig를 두고 생성물도 그 안에 든다. 01의 `pnpm run typecheck`는 루트 `web/tsconfig.json`(루트의 파일과 `tools/`)만 돈다. 이 패키지의 tsconfig도 verify가 돌게 한다(04와 같은 일이다. 먼저 하는 쪽의 모양을 따른다)
+- **fetch 예외는 이미 있다.** 01이 `web/eslint.config.mjs`에 `**/packages/api-client/**`의 전역 `fetch` 예외를 두었다. 초록 사례는 `web/eslint.config.test.ts`에 있다. 이 패키지가 `fetch`를 직접 부르지 않으면 예외를 거둔다
+- **atoms·molecules가 이 패키지를 import하지 못하게.** 01의 층 경계는 로컬 요소만 이름으로 안다. 패키지 이름이 정해지면 `boundaries/dependencies`에 atoms·molecules에서 이 패키지로 가는 import 금지를 더하고 사례를 붙인다. `checkAllOrigins`는 이미 켜져 있다. `app/`에서는 `next`·`react` 밖의 외부 import가 이미 막혀 있다
+- **web verify가 늘 도는 둘째 이유.** 최신성 단계가 서면 파이썬 티켓의 `openapi.json` 변경이 web verify를 빨갛게 한다. `.pre-commit-config.yaml`의 web-verify 주석과 `operations.md` 가드레일의 `always_run` 문장에 이 이유를 더한다. 01은 생성물이 없어 적지 않았다
+- **verify의 단계가 적힌 곳.** 원천은 `web/package.json`의 `verify`다. 도구 이름으로 다시 적은 곳은 `operations.md` 가드레일의 web 문장 하나다(`CLAUDE.md`, PR 템플릿, pre-commit은 `package.json`을 가리킨다). 최신성 단계를 더하면 그 문장도 고친다
+
 ### 확인
 
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다
