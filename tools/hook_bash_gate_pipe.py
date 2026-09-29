@@ -4,6 +4,7 @@ CLAUDE.md 환경 함정 "파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 
 파이프·체인 없이 돌린다"가 네 번 어겨졌다(대기열 19 — `| tail -3; echo $?` 류). 게이트의 빨강이
 tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 훅이고, 거짓 양성(`set -o pipefail`, 로그만
 자르는 파이프)이 있어 deny 가 아니라 additionalContext 로 알린다. 거짓 양성의 비용은 문장 하나다.
+어긴 동기가 출력 줄이기였으므로 경고는 대안(파일로 리다이렉트)을 함께 준다.
 
 게이트 명령은 pytest·pyright·ruff·lint-imports 와 `tools/check_*.py`·`tools/mutate.py`, 그리고
 web 의 `pnpm -C web verify`(다섯째 검증 명령)와 Playwright 실행(`playwright test`, e2e)이다.
@@ -49,6 +50,10 @@ _PIPE = re.compile(r"(?<!\|)\|(?!\|)")
 # `$?` 판정용 조각 경계. _CHAIN 에 파이프를 더한 것이다 — 파이프 뒤의 명령도 "바로 앞 명령" 이다.
 _SEGMENT = re.compile(r"\|\||&&|(?<![<>])[&|]|[;\n]")
 _PREFIX = re.compile(r"^(?:\s+|[({]|[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*")
+_REDIRECT_HINT = (
+    "출력을 줄이려면 파이프 대신 파일로 리다이렉트하고(`> <스크래치 경로>/gate.log 2>&1`),"
+    " 종료 코드를 본 뒤 그 파일에서 실패 줄만 읽는다."
+)
 
 
 class ToolInput(TypedDict, total=False):
@@ -85,7 +90,7 @@ def _pipe_warnings(text: str) -> list[str]:
                 warnings.append(
                     f"`{stage.strip()}` 가 파이프의 마지막이 아니다. 파이프의 종료 코드는 마지막"
                     " 명령의 것이라 이 게이트의 빨강이 가려진다(CLAUDE.md 환경 함정). 판정 명령은"
-                    " 파이프 없이 돌린다."
+                    f" 파이프 없이 돌린다. {_REDIRECT_HINT}"
                 )
     return warnings
 
@@ -104,7 +109,7 @@ def _exit_code_warnings(text: str) -> list[str]:
         warning = (
             "`$?` 바로 앞 명령이 게이트가 아니다. `$?` 는 마지막 명령의 종료 코드라 앞의 게이트"
             f"(`{segments[gates[-1]].strip()}`)의 결과가 아니다(CLAUDE.md 환경 함정). 판정 명령"
-            " 뒤에서 바로 읽거나 파이프·체인 없이 돌린다."
+            f" 뒤에서 바로 읽거나 파이프·체인 없이 돌린다. {_REDIRECT_HINT}"
         )
         if warning not in warnings:
             warnings.append(warning)

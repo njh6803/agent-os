@@ -134,9 +134,9 @@ grill-me도 설치기에 있다(`skills/productivity/grill-me`, 2026-04부터). 
 
 `/init`으로 만든 뒤 `kickoff/claude-md-template.md`의 모양으로 줄인다. setup 스킬이 이 파일에 `## Agent skills` 블록을 추가하므로 setup보다 먼저 만든다. 이 단계는 뒤의 산출물에 기대는 자리가 둘이다 — `@` 임포트 대상은 5단계가 만들고 검증 명령은 7단계가 채운다. 그 전까지 `@` 줄은 주석으로 두고 검증 명령 칸은 비워 둔다. 훅 등록과 빨강 확인은 7단계다(pre-commit이 있어야 한다). 교정 루프 절은 템플릿 그대로 복사한다. 규칙이 아니라 규칙을 만드는 절차이므로 "규칙 없음" 원칙과 충돌하지 않는다.
 
-지침의 자리는 로드 시점이 정한다. 로드 시점은 넷이다 — 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules, 그리고 모델이 부를 수 있는 스킬의 description), 해당 파일을 열 때(`paths` 있는 rules), 필요하다고 판단할 때(skill 본문), 사건이 일어날 때(훅의 계기 문장). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절이고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다.
+지침의 자리는 로드 시점이 정한다. 로드 시점은 넷이다 — 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules, 모델이 부를 수 있는 스킬의 description, 자동 메모리 `MEMORY.md`의 앞부분, 켜 둔 MCP 서버의 도구 이름과 서버 지침), 해당 파일을 Read 도구로 열 때(`paths` 있는 rules와 하위 디렉터리의 `CLAUDE.md`. Bash `cat`·`sed`로 읽으면 안 실린다), 필요하다고 판단할 때(skill 본문. 한 번 부르면 이후 턴 내내 남는다), 사건이 일어날 때(훅의 계기 문장). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절이고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다.
 
-- 배치 규칙의 판정자는 `tools/check_instructions.py`다. `paths` 누락, 아무 파일도 가리키지 않는 `paths` glob(규칙이 조용히 안 실린다), 저장소 파일을 상대 경로로 부르는 훅(세션이 루트를 벗어나면 깨지고, PreToolUse면 모든 Bash를 막는다. `${CLAUDE_PROJECT_DIR}`로 쓴다), 200줄 초과, 원칙 외 `@` 임포트(문장 속 `@경로`도 임포트다), 임포트된 파일 안의 형제 상대 경로(임포트된 파일은 루트에서 읽힌다), 덧댄 스킬 사본의 센티널 소실과 목록 누락, 훅의 텍스트 stdin, 루트 밖의 `CLAUDE.md`·`AGENTS.md`(`node_modules`와 워크트리는 보지 않는다). 7단계에서 복사·등록하고 빨강을 본다.
+- 배치 규칙의 판정자는 `tools/check_instructions.py`다. `paths` 누락(규칙 폴더는 하위까지 본다. `paths`는 목록과 쉼표 문자열 둘 다 받는다), 아무 파일도 가리키지 않는 `paths` glob(규칙이 조용히 안 실린다), 저장소 파일을 상대 경로로 부르는 훅(세션이 루트를 벗어나면 깨지고, PreToolUse면 모든 Bash를 막는다. `${CLAUDE_PROJECT_DIR}`로 쓴다), 200줄 초과, 원칙 외 `@` 임포트(문장 속 `@경로`도 임포트다. rules와 임포트된 파일 안의 `@`도 따라가 실리므로 거기서도 잡는다), 임포트된 파일 안의 형제 상대 경로(백틱 경로는 모델이 루트 기준으로 읽는다. `@` 임포트의 상대 경로는 담은 파일 기준으로 풀린다), 덧댄 스킬 사본의 센티널 소실과 목록 누락, 훅의 텍스트 stdin, 루트 밖의 `CLAUDE.md`·`AGENTS.md`(`node_modules`와 워크트리는 보지 않는다). 7단계에서 복사·등록하고 빨강을 본다.
 - 항상 로드 분량은 `/context`를 직접 실행해 실측하고, 재배치했으면 전후 값을 ADR로 남긴다. 줄 수는 대리 지표일 뿐이다 — agent-os는 200줄 검사만 두고 실측을 한 번도 하지 않아, 재배치 커밋(2026-09-20) 뒤 여덟 날 동안 줄은 11% 늘고 글자는 39% 늘었다(2026-09-28 감사). 이 기준은 ai-agent-platform AAPP-15(2026-09-01)에서 한 번 겪었고, agent에서 담지 않아 두 번째로 겪었다.
 
 ## 4단계. /setup-matt-pocock-skills
@@ -211,7 +211,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 
 하네스 런타임부터 적는다. 훅 여덟, 검사 여섯과 훅 러너, 변이 도구, pre-commit은 파이썬이고 훅은 `uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python "${CLAUDE_PROJECT_DIR}/tools/<훅>.py"`로 돈다(`--project`가 빠지면 저장소 밖에서 시스템 파이썬으로 돈다). 파이썬 프로젝트가 아니면 개발 도구로 uv와 파이썬 하나를 두면 그대로 돈다 — uv는 pyproject가 없는 폴더에서도 시스템 파이썬으로 돌았다(2026-09-28 실측). 훅(`hook_*.py`)은 표준 라이브러리만 쓴다. 러너·변이 도구(pydantic)와 OpenAPI 내보내기(앱 의존성)는 프로젝트 venv에서 돈다.
 
-- `.claude/settings.json`의 `hooks` 블록과 `permissions.deny`. **훅 파일만 복사하면 아무것도 발동하지 않는다.** 등록 모양은 위 명령 한 줄이고 매처는 훅마다 다르다(UserPromptSubmit 하나, PostToolUse `Write|Edit`와 `Bash|PowerShell|<GitHub MCP PR 도구 둘>`, PreToolUse `Bash` 셋, `Bash|PowerShell` 하나, `Bash|Grep` 하나). `permissions.deny`에 `Read(./.env)`·`Edit(./.env)`, `env`에 `PYTHONUTF8`(파이썬이면). 에이전트의 저장소 전체 grep 한 번에 API 키가 도구 출력에 실린 적이 있다(agent-os, 2026-09-28). Bash·Grep으로 읽는 길은 `hook_env_read`가 막는다. (바꿀 곳: GitHub MCP 도구 이름이 다르면 그 매처)
+- `.claude/settings.json`의 `hooks` 블록과 `permissions.deny`. **훅 파일만 복사하면 아무것도 발동하지 않는다.** 등록 모양은 위 명령 한 줄이고 매처는 훅마다 다르다(UserPromptSubmit 하나, PostToolUse `Write|Edit`와 `Bash|PowerShell|<GitHub MCP PR 도구 둘>`, PreToolUse `Bash` 셋, `Bash|PowerShell` 하나, `Bash|Grep` 하나). `permissions.deny`에 `Read(//**/.env)`·`Edit(//**/.env)`(`./`는 세션 cwd 기준이라 워크트리 세션에서는 주 체크아웃의 `.env`에 안 걸린다)와 PowerShell 읽기 모양(`PowerShell(Get-Content *.env*)` 등, Windows면), `env`에 `PYTHONUTF8`(파이썬이면). 에이전트의 저장소 전체 grep 한 번에 API 키가 도구 출력에 실린 적이 있다(agent-os, 2026-09-28). Bash·Grep으로 읽는 길은 `hook_env_read`가 막는다. 두 장치 모두 호출의 모양을 보는 에이전트 층이라 `.NET` 읽기 같은 것은 지나간다(부록 C). 셋째 층은 키 자체다 — `.env`에는 사용 한도를 건 개발용 키만 두고, 도구 출력에 실린 키는 회전한다. (바꿀 곳: GitHub MCP 도구 이름이 다르면 그 매처)
 - 훅 여덟과 그 테스트 `tests/tools/test_hook_*.py`. 이유는 각 파일의 독스트링이 원천이다. `hook_prompt_directive`(지시문 계기, 폴더가 다르면 `decision: block`), `hook_journal_retro`(일지의 '다음' 절을 쓰면 retro 계기), `hook_pr_next_session`(PR 열기·병합 뒤 next-session 계기), `hook_bash_heredoc`(40줄 넘는 heredoc deny), `hook_bash_python_stub`(맨 `python` deny — 파이썬 프로젝트에만), `hook_bash_gate_pipe`(게이트가 파이프에 묻히면 경고), `hook_git_main_commit`(main 위 커밋 deny), `hook_env_read`(`.env` 읽기와 `.env`를 빼지 않은 전체 grep deny, Grep 도구의 `.env` 경로도). 앞의 셋은 계기 훅, 뒤의 다섯은 지침이 어겨진 뒤 승격된 것(넷)이거나 실패가 조용해 첫 사건에서 막는 훅으로 간 것(`hook_env_read`)이라 새 프로젝트는 처음부터 갖는다. (바꿀 곳: `hook_bash_gate_pipe`의 게이트 명령 목록을 그 프로젝트의 검증 명령으로)
 - `.claude/rules/tools.md`. 훅·검사의 규약(단독 실행, 바이트 stdin, 계기 훅과 막는 훅의 기준, 못 보는 것 절, 식별자 언어). (바꿀 곳 0)
 - `.github/PULL_REQUEST_TEMPLATE.md`. 변경 유형, 왜, 남긴 위험, 변경된 영역, 체크리스트, 확인 방법, 관련 티켓. `/git-pr`이 이것을 채운다. (바꿀 곳: 변경된 영역의 층 이름과 검증 명령, 67행 중 약 15행)
@@ -240,7 +240,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 
 디렉터리별 규칙 파일을 `.claude/rules/<dir>.md`로 만든다. 헌법 인터뷰에서 나온 디렉터리 한정 결정이 내용이고 `paths` 프론트매터가 필수다. 각 파일 첫머리에 원천(코드·테스트 또는 ADR·명세)을 적고 "코드와 다르면 코드를 고치거나 ADR을 남긴다"를 둔다. 코드 독스트링과 같은 문장을 되풀이하지 않는다 — 결정과 ADR 번호는 rules에, 논증은 코드에(agent-os는 다섯 쌍이 글자 그대로 중복되어 있었다). 린터가 판정하는 것(import 경계)은 도구 설정을 가리키기만 한다.
 
-선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)이 켜져 있으면 끄기를 시험한다 — `skillOverrides`가 플러그인 네임스페이스 키를 받는지는 문서에 없고 agent-os도 재지 않았다. 언어 서버 바이너리는 따로 설치해야 한다.
+선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)은 `skillOverrides`로 끌 수 없으니(부록 C) 안 쓰면 `/plugin`으로 플러그인째 끈다. 안 쓰는 MCP 서버와 같은 서버 두 벌도 `/mcp`로 끈다. 끈 전후는 `/context`로 잰다. 언어 서버 바이너리는 따로 설치해야 한다.
 
 ```bash
 claude plugin install typescript-lsp@claude-plugins-official --scope project
@@ -260,7 +260,7 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 gh repo create <owner>/<repo> --private --source=. --push
 ```
 
-main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 직접 푸시·삭제 금지. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
+main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 강제 푸시·삭제 금지. PR 필수는 두지 않는다 — main에 닿는 커밋을 거르는 것은 필수 검사다. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 관리자 우회는 사람의 토큰으로 도는 에이전트에게도 열려 있고(`gh pr merge --admin`, main 직접 푸시), 로컬 훅은 커밋만 막는다(GitHub 문서상의 동작이고 agent-os는 재지 않았다). 그래서 병합은 체크를 먼저 보는 `/git-pr-merge`로만 한다. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
 
 ```bash
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input tools/protection.json
@@ -308,7 +308,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 각 항목 끝의 괄호는 산출 단계다.
 
-- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 안 쓰는 전역·플러그인 스킬은 `skillOverrides`로 꺼짐 (0·7)
+- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 안 쓰는 전역 스킬은 `skillOverrides`로, 안 쓰는 플러그인과 MCP 서버는 `/plugin`·`/mcp`로 꺼짐 (0·7)
 - [ ] `npx skills ls`의 목록이 2단계 설치 목록 + 7단계에서 더한 스킬(next-session, open-session)과 같다 (2·7)
 - [ ] `CLAUDE.md`: 레이어 역할, 지도(언제 읽나), 검증 명령, 작업 규약, 교정 루프와 로드 시점 표, 환경 함정. `@` 임포트는 principles.md 하나 (3)
 - [ ] `docs/agents/issue-tracker.md`에 4단계에서 고른 트래커의 흐름 기록 (4)

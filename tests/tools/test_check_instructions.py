@@ -14,15 +14,17 @@ import sys
 from collections.abc import Container
 from pathlib import Path
 
+import pytest
 from tools.check_instructions import (
     PATCHED_SKILLS,
     ROOT,
     SENTINEL,
-    claude_md_imports,
+    at_imports,
     claude_md_problems,
     hooks_reading_text_stdin,
     hooks_with_relative_paths,
     imported_files_with_dead_paths,
+    imports_outside_claude_md,
     nested_instruction_files,
     patched_skills_without_sentinel,
     rules_with_dead_paths,
@@ -237,6 +239,117 @@ def test_glob_으로_읽을_수_없는_패턴은_트레이스백이_아니라_�
     assert "읽을 수 없다" in problems[0]
 
 
+# Claude Code 는 `.claude/rules/` 를 재귀로 찾고, `paths` 를 블록 목록 말고도 흐름 목록과
+# 쉼표로 가른 문자열로 받는다(공식 memory 문서, 2026-09-29 확인). 한 층과 블록 목록만 보던
+# 검사는 하위 폴더의 규칙을 못 보고, 다른 두 모양을 "paths 없음" 으로 잘못 잡았다.
+
+
+def _규칙_본문을_쓴다(root: Path, 상대_경로: str, 본문: str) -> None:
+    _파일을_둔다(root, f".claude/rules/{상대_경로}", 본문)
+
+
+def test_하위_폴더의_규칙도_paths_가_있어야_한다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(tmp_path, "frontend/bare.md", "# paths 없는 규칙\n")
+
+    assert [p.relative_to(tmp_path).as_posix() for p in rules_without_paths(tmp_path)] == [
+        ".claude/rules/frontend/bare.md"
+    ]
+
+
+def test_하위_폴더_규칙의_죽은_paths_도_잡는다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(tmp_path, "frontend/web.md", '---\npaths:\n  - "web/**"\n---\n')
+
+    problems = rules_with_dead_paths(tmp_path)
+
+    assert len(problems) == 1
+    assert ".claude/rules/frontend/web.md" in problems[0]
+
+
+def test_흐름_목록과_쉼표_문자열의_paths_도_paths_다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/a.py")
+    _파일을_둔다(tmp_path, "tests/test_a.py")
+    _규칙_본문을_쓴다(tmp_path, "flow.md", '---\npaths: ["src/**", "tests/**"]\n---\n')
+    _규칙_본문을_쓴다(tmp_path, "comma.md", '---\npaths: "src/**, tests/**"\n---\n')
+
+    assert rules_without_paths(tmp_path) == []
+    assert rules_with_dead_paths(tmp_path) == []
+
+
+def test_흐름_목록의_죽은_항목을_하나씩_잡는다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/a.py")
+    _규칙_본문을_쓴다(tmp_path, "flow.md", '---\npaths: ["src/**", "gone/**"]\n---\n')
+
+    problems = rules_with_dead_paths(tmp_path)
+
+    assert len(problems) == 1
+    assert "'gone/**'" in problems[0]
+
+
+def test_paths_키_뒤의_주석은_패턴이_아니다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/a.py")
+    _규칙_본문을_쓴다(tmp_path, "c.md", '---\npaths:  # 설명\n  - "src/**"\n---\n')
+
+    assert rules_without_paths(tmp_path) == []
+    assert rules_with_dead_paths(tmp_path) == []
+
+
+def test_들여쓰지_않은_블록_목록도_paths_다(tmp_path: Path) -> None:
+    """YAML 은 목록 항목을 키와 같은 깊이에 둬도 받는다."""
+    _파일을_둔다(tmp_path, "src/a.py")
+    _규칙_본문을_쓴다(tmp_path, "flat.md", '---\npaths:\n- "src/**"\n---\n')
+
+    assert rules_without_paths(tmp_path) == []
+    assert rules_with_dead_paths(tmp_path) == []
+
+
+def test_paths_의_항목_앞과_사이의_주석과_빈_줄을_넘는다(tmp_path: Path) -> None:
+    """YAML 은 키와 첫 항목 사이, 항목 사이의 주석 줄과 빈 줄을 받는다(PR #100 리뷰)."""
+    _파일을_둔다(tmp_path, "src/a.py")
+    본문 = '---\npaths:\n  # 설명\n\n  - "src/**"\n  # 둘째\n  - "gone/**"\n---\n'
+    _규칙_본문을_쓴다(tmp_path, "c.md", 본문)
+
+    assert rules_without_paths(tmp_path) == []
+    assert [p.split("'")[1] for p in rules_with_dead_paths(tmp_path)] == ["gone/**"]
+
+
+def test_따옴표_안의_샵은_뒷주석이_아니다(tmp_path: Path) -> None:
+    """` #` 로 자르면 `"docs/ #gone/**"` 가 살아 있는 `docs/` 가 되어 죽은 glob 이 숨는다."""
+    _파일을_둔다(tmp_path, "docs/a.md")
+    _규칙_본문을_쓴다(tmp_path, "block.md", '---\npaths:\n  - "docs/ #gone/**"  # 설명\n---\n')
+    _규칙_본문을_쓴다(tmp_path, "flow.md", '---\npaths: ["docs/**", "docs/ #gone/**"]\n---\n')
+    _규칙_본문을_쓴다(tmp_path, "string.md", '---\npaths: "docs/**, docs/ #gone/**"  # 설명\n---\n')
+
+    assert [p.split("'")[1] for p in rules_with_dead_paths(tmp_path)] == [
+        "docs/ #gone/**",
+        "docs/ #gone/**",
+        "docs/ #gone/**",
+    ]
+
+
+def test_낱말_속_작은따옴표는_뒷주석을_감추지_않는다(tmp_path: Path) -> None:
+    """`it's` 의 `'` 를 따옴표로 열면 뒤의 쉼표와 `# 설명` 이 패턴에 붙는다."""
+    _파일을_둔다(tmp_path, "src/it's/a.md")
+    _규칙_본문을_쓴다(tmp_path, "c.md", "---\npaths: src/it's/**, gone/**  # 설명\n---\n")
+
+    assert [p.split("'")[1] for p in rules_with_dead_paths(tmp_path)] == ["gone/**"]
+
+
+def test_빈_paths_뒤의_다른_키_목록은_paths_가_아니다(tmp_path: Path) -> None:
+    """주석과 빈 줄을 넘어가도 다른 키의 항목까지 먹지는 않는다."""
+    _파일을_둔다(tmp_path, "src/a.py")
+    _규칙_본문을_쓴다(tmp_path, "c.md", '---\npaths:\n# 설명\n\ntags:\n  - "src/**"\n---\n')
+
+    assert [p.name for p in rules_without_paths(tmp_path)] == ["c.md"]
+
+
+def test_중괄호_안의_쉼표는_패턴을_가르지_않는다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(tmp_path, "brace.md", '---\npaths: "src/**/*.{ts,tsx}, gone/**"\n---\n')
+
+    problems = rules_with_dead_paths(tmp_path)
+
+    assert [p.split("'")[1] for p in problems] == ["src/**/*.{ts,tsx}", "gone/**"]
+
+
 # CLAUDE.md 의 줄 수와 `@` 임포트. 2026-09-28 까지 이 둘에는 회귀 테스트가 없었고 함수가 ROOT 를
 # 직접 읽어 시험할 수도 없었다.
 
@@ -274,7 +387,7 @@ def test_백틱과_펜스_안의_at_은_임포트가_아니다() -> None:
         "문의는 noreply@anthropic.com 으로.\n"
     )
 
-    assert claude_md_imports(본문) == ["@docs/constitution/principles.md"]
+    assert at_imports(본문) == ["@docs/constitution/principles.md"]
 
 
 def test_임포트가_늘어나면_잡는다(tmp_path: Path) -> None:
@@ -299,8 +412,179 @@ def test_이_저장소의_CLAUDE_md_는_지금_문제가_없다() -> None:
     assert claude_md_problems() == []
 
 
-# 임포트된 파일 안의 상대 경로. 임포트된 파일은 루트에서 읽혀 형제 파일을 이름만으로 가리키면 깨진다
-# (대기열 32, PR #43 이 헌법 버전을 못 찾았다).
+def test_조사가_붙거나_괄호로_감싼_at_경로는_임포트가_아니다() -> None:
+    """조사가 붙은 것과 괄호로 감싼 것은 실리지 않았다(2026-09-29 `claude -p` 2.1.281 실측)."""
+    본문 = "자세한 것은 @docs/PRD.md를 본다. (@docs/x.md)\n"
+
+    assert at_imports(본문) == []
+
+
+def test_경로_글자가_아닌_문장부호가_든_at_경로도_임포트로_센다() -> None:
+    """재지 않은 모양은 보수적으로 센다. 실리는 파일을 놓치는 것보다 백틱으로 옮기는 것이 싸다."""
+    본문 = "@docs/c++.md 와 @docs/a(1).md 와 @docs/x.md, 를 본다.\n"
+
+    assert at_imports(본문) == ["@docs/c++.md", "@docs/a(1).md", "@docs/x.md,"]
+
+
+def test_허용된_임포트가_주석이나_들여쓴_코드_블록_안에만_있으면_잡는다(tmp_path: Path) -> None:
+    """두 자리의 `@경로` 는 실리지 않는다.
+
+    둘 다 2026-09-29 실측이다(블록 HTML 주석은 공식 문서도 지운다고 한다).
+
+    허용된 임포트는 한 줄에 단독으로, 들여쓰지 않고 적혀야 헌법이 실린다.
+    """
+    for 본문 in (
+        "# 프로젝트\n\n<!-- @docs/constitution/principles.md -->\n",
+        "# 프로젝트\n\n    @docs/constitution/principles.md\n",
+    ):
+        _클로드_파일을_쓴다(tmp_path, 본문)
+
+        problems = claude_md_problems(tmp_path)
+
+        assert any("한 줄에 단독으로" in problem for problem in problems), 본문
+
+
+# Claude Code 는 marked 렉서의 토큰에서 임포트를 찾는다. 펜스와 코드 스팬은 건너뛰고, 닫힌 HTML
+# 주석 안의 `@` 는 블록이든 문단 속이든 따라가지 않는다. 사례 id 는 탐침의 것이고 기대는 그
+# 실측이다(2026-09-29 claude 2.1.281, `.scratch/harness/probes/import_comments/`). c23 만은 운반
+# 파일이 실리지 않아 재지 못했고 CommonMark 로 추론했다(폼피드는 줄 끝이 아니다). 줄 단독 검사
+# 만으로는 여러 줄 주석 속의 단독 줄을 못 잡았다(PR #100 리뷰).
+_헌법 = "@docs/constitution/principles.md"
+_다른 = "@docs/PRD.md"
+
+
+@pytest.mark.parametrize(
+    "본문",
+    [
+        pytest.param(f"# P\n\n<!--\n{_헌법}\n-->\n", id="c01"),
+        pytest.param(f"원칙:\n<!--\n{_헌법}\n-->\n", id="c05"),
+        pytest.param(f"# P\n\n<!--\n{_헌법}\n", id="c06"),
+        pytest.param(f"# P\n\n```\n{_헌법}\n", id="c07"),
+        pytest.param(f"# P\n\n````\n{_헌법}\n````\n", id="c08"),
+        pytest.param(f"원칙은 `\n{_헌법}\n` 에 있다.\n", id="c10"),
+        pytest.param(f"# P\n\n<div>\n{_헌법}\n</div>\n", id="c11"),
+        pytest.param(f"<!--\f{_헌법}\f-->\n", id="c23"),
+        pytest.param(f"메모 <!--\n{_헌법}\n-->\n", id="c28"),
+        pytest.param(f"원칙:\n    <!--\n{_헌법}\n-->\n", id="c48"),
+        pytest.param(f"원칙:\n    ```\n{_헌법}\n    ```\n", id="c49"),
+        pytest.param(f"# P\n\n- ```\n  {_헌법}\n  ```\n", id="c56"),
+    ],
+)
+def test_허용된_임포트가_실리지_않는_자리에만_있으면_잡는다(tmp_path: Path, 본문: str) -> None:
+    _클로드_파일을_쓴다(tmp_path, 본문)
+
+    problems = claude_md_problems(tmp_path)
+
+    assert problems
+    assert all("principles.md" in problem for problem in problems)
+
+
+@pytest.mark.parametrize(
+    "본문",
+    [
+        pytest.param(f"# P\n\n    <!--\n{_헌법}\n-->\n", id="c04"),
+        pytest.param(f"<details>\n\n{_헌법}\n\n</details>\n", id="c12"),
+        pytest.param(f"<!--\n```\n-->\n{_헌법}\n```\n", id="c25"),
+        pytest.param(f"```\n<!--\n```\n{_헌법}\n\n<!-- 끝 -->\n", id="c26"),
+        pytest.param(f"<!-- a -->\n{_헌법}\n<!-- b -->\n", id="c27"),
+        pytest.param(f"{_헌법}\n\n<!--\n{_다른}\n-->\n", id="c33"),
+        pytest.param(f"<!-- 메모 -->\n{_헌법}\n", id="c47"),
+        pytest.param(f"<!-- a --> <!--\n{_헌법}\n-->\n", id="c53"),
+        pytest.param(f"<!-->\n{_헌법}\n-->\n", id="c54"),
+        pytest.param(f"# P\n\n- ```\n  x\n  ```\n\n{_헌법}\n", id="c58"),
+    ],
+)
+def test_허용된_임포트가_실리는_자리에_있고_주석_속_경로뿐이면_통과한다(
+    tmp_path: Path, 본문: str
+) -> None:
+    _클로드_파일을_쓴다(tmp_path, 본문)
+
+    assert claude_md_problems(tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    "본문",
+    [
+        pytest.param(f"{_헌법}\n\n``코드`` {_다른} `a`\n", id="c39"),
+        pytest.param(f"{_헌법}\n\n    ```\n{_다른}\n    ```\n", id="c40"),
+        pytest.param(f"{_헌법}\n\n```\n코드\n````\n{_다른}\n```\n", id="c41"),
+        pytest.param(f"{_헌법}\n\n- ```\n  x\n  ```\n\n{_다른}\n", id="c50"),
+        pytest.param(f"{_헌법}\n\n<div>\n```\n</div>\n\n{_다른}\n", id="c51"),
+        pytest.param(f"{_헌법}\n\n메모 <!-- a\n\n{_다른}\n\n끝 -->\n", id="c52"),
+        pytest.param(f"{_헌법}\n\n메모 <!-- a --> {_다른} <!-- b -->\n", id="c55"),
+        pytest.param(f"{_헌법}\n\n- ```\n  x\n  ```\n\n{_다른}\n\n```\ny\n```\n", id="c57"),
+        pytest.param(f"{_헌법}\n\n- ```\n  x\n    ```\n\n{_다른}\n", id="c59"),
+        pytest.param(f"{_헌법}\n\n<span>참고</span> {_다른}\n", id="c60"),
+    ],
+)
+def test_실리는_다른_경로는_펜스나_주석으로_잘못_가리지_않고_센다(본문: str) -> None:
+    """세는 쪽은 좁게 벗긴다. 짝이 어긋난 표지나 닫히지 않은 것이 뒤의 임포트를 숨기지 않게 한다."""
+    assert at_imports(본문) == [_헌법, _다른]
+
+
+def test_허용된_임포트가_마침표로_끝나면_헌법이_실리지_않아_잡는다(tmp_path: Path) -> None:
+    """끝의 마침표를 떼어 허용 목록과 맞추면, 헌법이 실리지 않는데 검사는 초록이 된다."""
+    _클로드_파일을_쓴다(tmp_path, "# 프로젝트\n\n원칙은 @docs/constitution/principles.md.\n")
+
+    problems = claude_md_problems(tmp_path)
+
+    # 사유가 둘이다. 허용 목록에 없는 토큰(`…principles.md.`)이고,
+    # 허용된 임포트가 한 줄 단독이 아니다.
+    assert len(problems) == 2
+    assert all("principles.md" in problem for problem in problems)
+
+
+# 임포트는 CLAUDE.md 에서만 일어나지 않는다. rules 파일과 임포트된 파일 안의 `@경로` 도 따라가서
+# 실린다(2026-09-29 실측, 공식 문서: 임포트는 최대 네 단계까지 재귀). 루트 CLAUDE.md 의 허용 목록만
+# 보면 그 문이 열려 있다.
+
+
+def test_rules_안의_at_임포트를_잡는다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(
+        tmp_path, "web.md", '---\npaths:\n  - "web/**"\n---\n자세한 것은 @docs/x.md 를 본다.\n'
+    )
+
+    problems = imports_outside_claude_md(tmp_path)
+
+    assert len(problems) == 1
+    assert ".claude/rules/web.md" in problems[0]
+    assert "@docs/x.md" in problems[0]
+
+
+def test_임포트된_파일_안의_at_임포트를_잡는다(tmp_path: Path) -> None:
+    _헌법을_쓴다(tmp_path, "# 원칙\n\n세부는 @docs/constitution/tech.md 에 있다.\n")
+
+    problems = imports_outside_claude_md(tmp_path)
+
+    assert len(problems) == 1
+    assert "docs/constitution/principles.md" in problems[0]
+
+
+def test_백틱_안의_at_은_rules_에서도_임포트가_아니다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(
+        tmp_path, "web.md", '---\npaths:\n  - "web/**"\n---\n`@docs/x.md` 처럼 쓰지 않는다.\n'
+    )
+    _헌법을_쓴다(tmp_path, "가리키려면 `@README` 처럼 백틱에 넣는다.\n")
+
+    assert imports_outside_claude_md(tmp_path) == []
+
+
+def test_HTML_주석_안의_at_은_rules_와_헌법에서도_임포트가_아니다(tmp_path: Path) -> None:
+    """rules 와 임포트된 파일도 CLAUDE.md 와 같은 흐름이다(2026-09-29 실측, 사례 r01·r02)."""
+    _규칙_본문을_쓴다(
+        tmp_path, "web.md", '---\npaths:\n  - "web/**"\n---\n<!--\n@docs/x.md\n-->\n본문\n'
+    )
+    _헌법을_쓴다(tmp_path, "# 원칙\n\n<!-- @docs/x.md -->\n")
+
+    assert imports_outside_claude_md(tmp_path) == []
+
+
+def test_이_저장소의_rules_와_헌법에는_at_임포트가_없다() -> None:
+    assert imports_outside_claude_md() == []
+
+
+# 임포트된 파일 안의 백틱 경로. 모델이 루트 기준으로 읽어 형제 파일을 이름만으로 가리키면 깨진다
+# (대기열 32, PR #43 이 헌법 버전을 못 찾았다). `@` 임포트의 상대 경로는 담은 파일 기준으로 풀린다.
 
 
 def _헌법을_쓴다(root: Path, 본문: str) -> None:
@@ -399,6 +683,17 @@ def _CLI_로_검사한다(root: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_CLI_진입점이_임시_트리의_rules_임포트를_출력한다(tmp_path: Path) -> None:
+    _규칙_본문을_쓴다(
+        tmp_path, "web.md", '---\npaths:\n  - "CLAUDE.md"\n---\n@docs/x.md 를 본다.\n'
+    )
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert process.returncode == 1
+    assert ".claude/rules/web.md: @ 임포트" in process.stdout
+
+
 def test_CLI_진입점이_임시_트리의_중첩_지침_파일을_출력한다(tmp_path: Path) -> None:
     _파일을_둔다(tmp_path, "web/apps/admin/AGENTS.md")
 
@@ -452,7 +747,7 @@ def test_이_저장소의_훅은_지금_전부_바이트로_읽는다() -> None:
 
 
 def test_CLI_진입점이_임시_트리의_빨강을_출력한다(tmp_path: Path) -> None:
-    """검사 아홉을 모으는 main 의 배관을 한 번은 실제로 부른다(tests.md). 루트는 첫 인자."""
+    """검사 열을 모으는 main 의 배관을 한 번은 실제로 부른다(tests.md). 루트는 첫 인자."""
     _파일을_둔다(tmp_path, ".claude/rules/nopaths.md", "# paths 없는 규칙\n")
 
     process = _CLI_로_검사한다(tmp_path)

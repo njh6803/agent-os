@@ -1,0 +1,134 @@
+# 2026-09-29 claude 2.1.281(haiku), Windows. run.sh 한 번의 요약과 cases.py judge(PR #100 반영 뒤).
+# claude 자리의 사례는 루트 CLAUDE.md 가 임포트한 a<id>.md 에서 쟀다(루트 CLAUDE.md 에는 c01 의 모양 t_root 뿐).
+# 운반 파일이 안 실린 사례(c23)의 두 칸은 뜻이 없다. '-' 는 그 사례에 해당 경로가 없다는 뜻이다.
+
+## Claude Code 실측(InstructionsLoaded 로그)
+root CLAUDE.md 주석 속 @t_root.md: 안 실림
+c01 운반 include / 허용 안 실림 / 다른 - :: 여러 줄 블록 주석 안 단독 줄
+c02 운반 include / 허용 안 실림 / 다른 - :: 여는 줄에 글이 있는 여러 줄 주석
+c03 운반 include / 허용 안 실림 / 다른 - :: 세 칸 들여쓴 <!--
+c04 운반 include / 허용 include / 다른 - :: 네 칸 들여쓴 <!--
+c05 운반 include / 허용 안 실림 / 다른 - :: 문단 바로 뒤에 연 주석
+c06 운반 include / 허용 안 실림 / 다른 - :: 닫히지 않은 <!--
+c07 운반 include / 허용 안 실림 / 다른 - :: 닫히지 않은 펜스
+c08 운반 include / 허용 안 실림 / 다른 - :: 백틱 네 개 펜스
+c09 운반 include / 허용 안 실림 / 다른 - :: ```` 펜스 안의 ``` 쌍
+c10 운반 include / 허용 안 실림 / 다른 - :: 여러 줄 코드 스팬
+c11 운반 include / 허용 안 실림 / 다른 - :: <div> 블록 안
+c12 운반 include / 허용 include / 다른 - :: <details> 와 빈 줄로 끊긴 문단
+c13 운반 include / 허용 include / 다른 - :: 인용문
+c14 운반 include / 허용 include / 다른 - :: 목록 항목
+c15 운반 include / 허용 include / 다른 - :: 문장 속
+c16 운반 include / 허용 include / 다른 - :: 앞 두 칸
+c17 운반 include / 허용 include / 다른 - :: 줄 끝 공백
+c23 운반 안 실림 / 허용 안 실림 / 다른 - :: 폼피드로 가른 한 줄 주석
+c25 운반 include / 허용 include / 다른 - :: 주석이 ``` 를 품고 닫힌 뒤
+c26 운반 include / 허용 include / 다른 - :: 펜스 안 <!-- 뒤
+c27 운반 include / 허용 include / 다른 - :: 주석 둘 사이
+c28 운반 include / 허용 안 실림 / 다른 - :: 줄 중간에서 연 주석
+c29 운반 include / 허용 include / 다른 - :: 한 줄 주석 뒤 같은 줄
+c30 운반 include / 허용 include / 다른 - :: 헌법 뒤 같은 줄 주석
+c32 운반 include / 허용 include / 다른 안 실림 :: 한 줄 주석 속 다른 경로
+c33 운반 include / 허용 include / 다른 안 실림 :: 여러 줄 주석 속 다른 경로
+c34 운반 include / 허용 include / 다른 안 실림 :: 들여쓴 코드 속 다른 경로
+c36 운반 include / 허용 include / 다른 안 실림 :: 인용문 안 펜스 속
+c37 운반 include / 허용 include / 다른 안 실림 :: <div> 블록 속
+c38 운반 include / 허용 include / 다른 안 실림 :: 프론트매터 속
+c39 운반 include / 허용 include / 다른 include :: 이중 백틱 스팬 뒤
+c40 운반 include / 허용 include / 다른 include :: 네 칸 들여쓴 ``` 사이
+c41 운반 include / 허용 include / 다른 include :: 더 긴 닫는 펜스 뒤
+c42 운반 include / 허용 include / 다른 include :: 굵게 쓴 경로
+c43 운반 include / 허용 include / 다른 include :: 링크 글자인 경로
+c44 운반 include / 허용 include / 다른 include :: 인라인 태그 속
+c45 운반 include / 허용 include / 다른 include :: #한글 조각
+c46 운반 include / 허용 include / 다른 include :: 한글 파일 이름
+c47 운반 include / 허용 include / 다른 - :: 한 줄 주석 다음 줄
+c48 운반 include / 허용 안 실림 / 다른 - :: 문단 뒤 네 칸 들여쓴 <!--
+c49 운반 include / 허용 안 실림 / 다른 - :: 문단 뒤 네 칸 들여쓴 ```
+c50 운반 include / 허용 include / 다른 include :: 목록 표지 펜스 뒤
+c51 운반 include / 허용 include / 다른 include :: <div> 안의 ``` 뒤
+c52 운반 include / 허용 include / 다른 include :: 빈 줄 넘는 <!--
+c53 운반 include / 허용 include / 다른 - :: 주석 뒤 같은 줄에서 연 주석
+c54 운반 include / 허용 include / 다른 - :: 빈 주석 <!-->
+c55 운반 include / 허용 include / 다른 include :: 문단 속 주석 둘 사이
+c56 운반 include / 허용 안 실림 / 다른 - :: 목록 표지 펜스 안
+c57 운반 include / 허용 - / 다른 include :: 목록 펜스와 펜스 사이
+c58 운반 include / 허용 include / 다른 - :: 목록 펜스 뒤 허용
+c59 운반 include / 허용 - / 다른 include :: 네 칸으로 닫은 목록 펜스 뒤
+c60 운반 include / 허용 - / 다른 include :: 인라인 태그로 여는 문단
+r01 운반 session_start / 허용 - / 다른 안 실림 :: rules 여러 줄 주석 속
+r02 운반 include / 허용 - / 다른 안 실림 :: 헌법 한 줄 주석 속
+b1_flow_unclosed: 안 실림
+b2_other_key_broken: path_glob_match
+b3_quote_unclosed: 안 실림
+b4_tab_indent: path_glob_match
+b5_duplicate_key: path_glob_match
+b6_bad_mapping: 안 실림
+ok_block: path_glob_match
+ok_comment_before_item: path_glob_match
+ok_unquoted: path_glob_match
+
+## 지침 판정자(cases.py judge)
+c01 빨강 at_imports=[] :: 여러 줄 블록 주석 안 단독 줄
+c02 빨강 at_imports=[] :: 여는 줄에 글이 있는 여러 줄 주석
+c03 빨강 at_imports=[] :: 세 칸 들여쓴 <!--
+c04 초록 at_imports=['@docs/constitution/principles.md'] :: 네 칸 들여쓴 <!--
+c05 빨강 at_imports=[] :: 문단 바로 뒤에 연 주석
+c06 빨강 at_imports=['@docs/constitution/principles.md'] :: 닫히지 않은 <!--
+c07 빨강 at_imports=['@docs/constitution/principles.md'] :: 닫히지 않은 펜스
+c08 빨강 at_imports=[] :: 백틱 네 개 펜스
+c09 빨강 at_imports=[] :: ```` 펜스 안의 ``` 쌍
+c10 빨강 at_imports=['@docs/constitution/principles.md'] :: 여러 줄 코드 스팬
+c11 빨강 at_imports=['@docs/constitution/principles.md'] :: <div> 블록 안
+c12 초록 at_imports=['@docs/constitution/principles.md'] :: <details> 와 빈 줄로 끊긴 문단
+c13 빨강 at_imports=['@docs/constitution/principles.md'] :: 인용문
+c14 빨강 at_imports=['@docs/constitution/principles.md'] :: 목록 항목
+c15 빨강 at_imports=['@docs/constitution/principles.md'] :: 문장 속
+c16 빨강 at_imports=['@docs/constitution/principles.md'] :: 앞 두 칸
+c17 초록 at_imports=['@docs/constitution/principles.md'] :: 줄 끝 공백
+c23 빨강 at_imports=[] :: 폼피드로 가른 한 줄 주석
+c25 초록 at_imports=['@docs/constitution/principles.md'] :: 주석이 ``` 를 품고 닫힌 뒤
+c26 초록 at_imports=['@docs/constitution/principles.md'] :: 펜스 안 <!-- 뒤
+c27 초록 at_imports=['@docs/constitution/principles.md'] :: 주석 둘 사이
+c28 빨강 at_imports=[] :: 줄 중간에서 연 주석
+c29 빨강 at_imports=['@docs/constitution/principles.md'] :: 한 줄 주석 뒤 같은 줄
+c30 초록 at_imports=['@docs/constitution/principles.md'] :: 헌법 뒤 같은 줄 주석
+c32 초록 at_imports=['@docs/constitution/principles.md'] :: 한 줄 주석 속 다른 경로
+c33 초록 at_imports=['@docs/constitution/principles.md'] :: 여러 줄 주석 속 다른 경로
+c34 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 들여쓴 코드 속 다른 경로
+c36 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 인용문 안 펜스 속
+c37 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: <div> 블록 속
+c38 빨강 at_imports=['@docs/PRD.md', '@docs/constitution/principles.md'] :: 프론트매터 속
+c39 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 이중 백틱 스팬 뒤
+c40 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 네 칸 들여쓴 ``` 사이
+c41 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 더 긴 닫는 펜스 뒤
+c42 초록 at_imports=['@docs/constitution/principles.md'] :: 굵게 쓴 경로
+c43 초록 at_imports=['@docs/constitution/principles.md'] :: 링크 글자인 경로
+c44 초록 at_imports=['@docs/constitution/principles.md'] :: 인라인 태그 속
+c45 초록 at_imports=['@docs/constitution/principles.md'] :: #한글 조각
+c46 초록 at_imports=['@docs/constitution/principles.md'] :: 한글 파일 이름
+c47 초록 at_imports=['@docs/constitution/principles.md'] :: 한 줄 주석 다음 줄
+c48 빨강 at_imports=[] :: 문단 뒤 네 칸 들여쓴 <!--
+c49 빨강 at_imports=['@docs/constitution/principles.md'] :: 문단 뒤 네 칸 들여쓴 ```
+c50 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 목록 표지 펜스 뒤
+c51 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: <div> 안의 ``` 뒤
+c52 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 빈 줄 넘는 <!--
+c53 초록 at_imports=['@docs/constitution/principles.md'] :: 주석 뒤 같은 줄에서 연 주석
+c54 초록 at_imports=['@docs/constitution/principles.md'] :: 빈 주석 <!-->
+c55 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: 문단 속 주석 둘 사이
+c56 빨강 at_imports=[] :: 목록 표지 펜스 안
+c57 빨강 at_imports=['@docs/PRD.md'] :: 목록 펜스와 펜스 사이
+c58 초록 at_imports=['@docs/constitution/principles.md'] :: 목록 펜스 뒤 허용
+c59 빨강 at_imports=['@docs/PRD.md'] :: 네 칸으로 닫은 목록 펜스 뒤
+c60 빨강 at_imports=['@docs/PRD.md'] :: 인라인 태그로 여는 문단
+r01 초록 at_imports=[] :: rules 여러 줄 주석 속
+r02 초록 at_imports=[] :: 헌법 한 줄 주석 속
+b1_flow_unclosed patterns=['sub/**']
+b2_other_key_broken patterns=['sub/**']
+b3_quote_unclosed patterns=['sub/**']
+b4_tab_indent patterns=['sub/**']
+b5_duplicate_key patterns=['zzz/**']
+b6_bad_mapping patterns=['sub/**: x: y']
+ok_block patterns=['sub/**']
+ok_comment_before_item patterns=['sub/**']
+ok_unquoted patterns=['sub/**']
