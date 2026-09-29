@@ -231,9 +231,9 @@ def channel_router(
     # 결정은 쓰이지 않는다. 꺼짐이면 다시 켠 뒤 같은 결정을 보낼 수 있다. 자리 어긋남은 그 결정이 본
     # 일시정지가 이미 지나간 것이라 같은 결정은 다시 보내도 받아들여지지 않는다. 트레이스가 가리키는
     # 에이전트가 사라진 실행은 요청이 아니라 서버의 기록이 댄 이름이라 404 가 아니라 500 이다(ADR
-    # 0014 의 2026-09-24 이력). `{run_id}` 는
-    # `traces/{run_id}.jsonl` 로 조립되는 원격 입력이라 관리의 `/traces/{run_id}` 와 같이
-    # `verbatim` 과 sdk 의 패턴을 지난다. 계약의 경로는 변환기 없이 적힌다.
+    # 0014 의 2026-09-24 이력). `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되는 원격 입력이라
+    # 관리의 `/traces/{run_id}` 와 같이 `verbatim` 과 sdk 의 패턴을 지난다. 계약의 경로는 변환기
+    # 없이 적힌다.
     @router.post(
         "/{run_id:verbatim}/approval",
         operation_id="decide_approval",
