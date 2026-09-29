@@ -193,6 +193,27 @@ describe("재개 스트림 읽기", () => {
     expect(stream.locked).toBe(false);
   });
 
+  test("요청을 끊어 다음 조각을 기다리던 스트림이 에러로 끝나면 그 에러를 던지고 잠금을 푼다", async () => {
+    // 브라우저의 fetch 는 요청의 signal 이 끊기면 본문 스트림을 그 에러로 끝낸다. 여기서는 스트림을 손으로 끝낸다.
+    let abort: (reason: unknown) => void = () => undefined;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(STARTED)}\n\n`));
+        abort = (reason) => {
+          controller.error(reason);
+        };
+      },
+    });
+    const frames = readFrames(stream);
+    expect((await frames.next()).value).toEqual({ kind: "event", event: STARTED });
+
+    const waiting = frames.next();
+    abort(new DOMException("요청을 끊었다", "AbortError"));
+
+    await expect(waiting).rejects.toThrow("요청을 끊었다");
+    expect(stream.locked).toBe(false);
+  });
+
   test("읽는 쪽이 도중에 멈추면 잠금을 풀어 부른 쪽이 스트림을 닫을 수 있다", async () => {
     const stream = streamOf(
       `data: ${JSON.stringify(STARTED)}\n\n`,

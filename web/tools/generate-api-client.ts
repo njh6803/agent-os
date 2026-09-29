@@ -60,27 +60,31 @@ export async function generate(contract: string): Promise<string> {
 }
 
 /** 커밋될 생성물을 쓴다. */
-async function write(contract: string): Promise<number> {
+async function write(contract: string): Promise<void> {
   const generated = await generate(contract);
   mkdirSync(dirname(GENERATED), { recursive: true });
   writeFileSync(GENERATED, generated);
-  return 0;
 }
 
-/** 커밋된 생성물이 계약에서 다시 생성한 것과 같은지 본다. 쓰지 않는다. */
-async function check(contract: string): Promise<number> {
+/** 커밋된 생성물이 계약에서 다시 생성한 것과 다르면 그 진단, 같으면 null. 쓰지 않는다. */
+async function staleness(contract: string): Promise<string | null> {
   const generated = await generate(contract);
   if (existsSync(GENERATED) && readFileSync(GENERATED, "utf-8") === generated) {
-    return 0;
+    return null;
   }
-  console.log(
-    `생성물이 계약과 다르다: ${contract}. pnpm -C web run generate:api-client 로 다시 생성해 같은 커밋에 담는다`,
-  );
-  return 1;
+  return `생성물이 계약과 다르다: ${contract}. pnpm -C web run generate:api-client 로 다시 생성해 같은 커밋에 담는다`;
 }
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const contract = args.find((arg) => arg !== "--check") ?? CONTRACT;
-  process.exitCode = await (args.includes("--check") ? check(contract) : write(contract));
+  if (args.includes("--check")) {
+    const problem = await staleness(contract);
+    if (problem !== null) {
+      console.log(problem);
+      process.exitCode = 1;
+    }
+  } else {
+    await write(contract);
+  }
 }

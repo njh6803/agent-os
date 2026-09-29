@@ -3,7 +3,8 @@
 // 변이 없이 명령이 초록인지 기준선을 본 뒤, 변이마다 원래 바이트를 쥐고 넣어 돌리고 finally 에서 그 바이트를 쓴다.
 //
 // 쓰는 법: node .scratch/web-admin/probes/api_client_mutations.mjs [이름 ...]   (저장소 루트에서. 명령은 web/ 에서 돈다)
-// 네트워크를 타지 않는다. 약 2분. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 원문이 틀리면 2.
+// 네트워크를 타지 않는다. 약 2분. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 원문이 틀리거나
+// 없는 이름을 주면 2.
 //
 // 빨강과 오류를 가른다(`tools/mutate.py` 의 규약 4). Vitest 는 실패한 테스트가 셀 때만, tsc 는 변이가 적은 파일
 // (`diagnosticIn`)에서 진단이 날 때만 빨강이다. tsc 의 종료 코드는 문법 오류와 타입 에러가 같고(2), 오류 번호로도
@@ -53,9 +54,9 @@ const MUTATIONS = [
   {
     name: "최신성 검사가 생성물을 고쳐 쓴다",
     file: GENERATOR,
-    old: "async function check(contract: string): Promise<number> {\n  const generated = await generate(contract);\n",
+    old: "async function staleness(contract: string): Promise<string | null> {\n  const generated = await generate(contract);\n",
     // 보고는 그대로 하되(종료 1과 안내) 생성물을 사본의 결과로 덮어쓴다. "고쳐 쓰지 않는다" 테스트 하나만 빨개야 한다.
-    new: "async function check(contract: string): Promise<number> {\n  const generated = await generate(contract);\n  const before = existsSync(GENERATED) ? readFileSync(GENERATED, \"utf-8\") : \"\";\n  writeFileSync(GENERATED, generated);\n  if (before !== generated) {\n    console.log(\"pnpm -C web run generate:api-client\");\n    return 1;\n  }\n",
+    new: "async function staleness(contract: string): Promise<string | null> {\n  const generated = await generate(contract);\n  const before = existsSync(GENERATED) ? readFileSync(GENERATED, \"utf-8\") : \"\";\n  writeFileSync(GENERATED, generated);\n  if (before !== generated) {\n    return \"pnpm -C web run generate:api-client\";\n  }\n",
     command: GENERATOR_TEST,
     expect: "red",
     // 이 변이는 생성물을 바꾼 사본의 결과로 덮어쓴다. 되돌리기는 생성물도 쥔다.
@@ -150,6 +151,22 @@ const MUTATIONS = [
     expect: "red",
   },
   {
+    name: "스트림이 에러로 끝나면 에러를 삼킨다",
+    file: STREAM,
+    old: "  try {\n    yield* framesFrom(reader);\n  } finally {",
+    new: "  try {\n    yield* framesFrom(reader);\n  } catch (error) {\n    void error;\n  } finally {",
+    command: STREAM_TEST,
+    expect: "red",
+  },
+  {
+    name: "스트림이 에러로 끝나면 잠금을 풀지 않는다",
+    file: STREAM,
+    old: "  try {\n    yield* framesFrom(reader);\n  } finally {\n    reader.releaseLock();\n  }",
+    new: "  try {\n    yield* framesFrom(reader);\n  } catch (error) {\n    throw error;\n  }\n  reader.releaseLock();",
+    command: STREAM_TEST,
+    expect: "red",
+  },
+  {
     name: "잠금을 풀지 않는다",
     file: STREAM,
     old: "  } finally {\n    reader.releaseLock();\n  }",
@@ -234,6 +251,11 @@ function run(command, diagnosticIn) {
 }
 
 const selected = process.argv.slice(2);
+const unknown = selected.filter((name) => !MUTATIONS.some((m) => m.name === name));
+if (unknown.length > 0) {
+  console.log(`없는 변이 이름: ${unknown.join(", ")}`);
+  process.exit(2);
+}
 const chosen = selected.length > 0 ? MUTATIONS.filter((m) => selected.includes(m.name)) : MUTATIONS;
 
 for (const mutation of chosen) {

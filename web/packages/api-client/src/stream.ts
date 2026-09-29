@@ -119,8 +119,10 @@ function parseJson(
 /**
  * `parseAs: "stream"` 으로 받은 본문을 프레임으로 읽는다. 조각이 오는 대로 끝난 프레임을 넘긴다.
  *
- * 스트림의 수명은 부른 쪽의 것이다. 다 읽거나 도중에 멈추면 잠금만 풀고 닫지 않는다. 멈춘 뒤 연결을 닫으려면
- * 부른 쪽이 `stream.cancel()` 을 부른다.
+ * 스트림의 수명은 부른 쪽의 것이다. 연결을 끊는 길은 요청에 준 `signal`(AbortController)이다. 끊으면 다음 조각을
+ * 기다리던 읽기가 그 에러로 끝나고, 이 반복자가 그 에러를 던지며 잠금을 푼다. 응답이 오기 전에도 같은 길이다.
+ * 반복자의 `return()` 으로는 끊지 못한다. 기다리던 읽기가 풀린 뒤(다음 조각이나 keepalive)에야 닿고, 그동안 스트림이
+ * 잠겨 `stream.cancel()` 도 거부된다. 다 읽거나 루프에서 멈추면 잠금만 풀고 닫지 않는다.
  */
 export async function* readFrames(
   stream: ReadableStream<Uint8Array>,
