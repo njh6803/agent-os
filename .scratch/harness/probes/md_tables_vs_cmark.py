@@ -1,10 +1,14 @@
 """tools/check_md_tables.py 와 cmark-gfm 의 차분 대조. 같은 문서를 둘에 넣고 표의 모양을 비교한다.
 
 돌리는 법(저장소 루트에서):
-    PYTHONUTF8=1 uv run --with cmarkgfm python .scratch/harness/probes/md_tables_vs_cmark.py
+    PYTHONUTF8=1 uv run --with cmarkgfm==2025.10.22 --with cffi==2.1.1 \
+        python .scratch/harness/probes/md_tables_vs_cmark.py
     ... --fuzz 60000 --seed 7     무작위 문서 수와 씨앗(기본 20000, 1). --show 는 찍을 어긋남 수
 
-cmarkgfm 은 프로젝트 의존성이 아니다. `--with` 가 uv 의 일회용 환경에만 넣는다. GitHub 은
+cmarkgfm 은 프로젝트 의존성이 아니다. `--with` 가 uv 의 일회용 환경에만 넣는다. 버전을 고정한다
+— 고정하지 않으면 실행마다 그때의 최신 판(네이티브 코드)을 받아 저장소 루트에서 돌리고, 아래 기록의
+기준이 조용히 바뀐다(PR #96 대체 리뷰). 해시 고정은 `--with` 로는 되지 않아, 훅으로 올릴 때는 ADR 을
+거쳐 잠근 의존성으로 간다(대기열 54). GitHub 은
 cmark-gfm 으로 렌더하고 각주를 켠다 — 적대 검증의 반박자들이 `gh api markdown -f mode=gfm` 과
 cmarkgfm 0.29.0.gfm.13 의 출력이 같음을 확인했다. 그래서 여기서도 각주를 켠다.
 

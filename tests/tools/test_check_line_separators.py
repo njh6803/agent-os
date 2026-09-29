@@ -74,6 +74,14 @@ def test_UTF_8_BOM_은_열로_세지_않는다() -> None:
     assert problems_in(data) == ["1:2: U+2028 LINE SEPARATOR", "2:2: U+2028 LINE SEPARATOR"]
 
 
+def test_BOM_뒤의_무효_바이트는_파일의_바이트_자리로_알린다() -> None:
+    """utf-8-sig 는 BOM 을 떼고 센다. 알리는 자리는 파일 기준이어야 편집기에서 찾는다."""
+    problems = problems_in(b"\xef\xbb\xbf\xff")
+
+    assert len(problems) == 1
+    assert "바이트 3)" in problems[0]
+
+
 def test_UTF_8_로_읽히지_않는_텍스트_파일은_어긋남이다() -> None:
     """판정할 수 없는 파일을 조용히 통과시키지 않는다."""
     problems = problems_in("한글".encode("cp949"))

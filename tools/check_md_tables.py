@@ -56,24 +56,32 @@ MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 _REGULAR_MODES = frozenset({"100644", "100755"})
 # 비 ASCII 문자는 chr() 로 만든다. 편집 도구가 역슬래시-u 이스케이프를 날것으로 저장한다.
 _BOM = chr(0xFEFF)
+# cmark 는 NUL 을 U+FFFD 로 바꾼 뒤 읽는다.
+_REPLACEMENT = chr(0xFFFD)
+
+# 성능: 정규식에서 같은 글자를 나눠 가질 수 있는 반복 둘은 소유 수량자(`*+`)로 둔다. 그렇지 않으면
+# 끝에서 실패하는 긴 줄 하나에 제곱 시간이 든다(16KB 에 수 초 — PR #96 대체 리뷰가 쟀다).
 
 # cmark-gfm 표 스캐너의 spacechar. 블록 들여쓰기는 스페이스만 센다(탭은 먼저 편다).
 _SPACE = " \t\v\f"
-_MARKER = r"[ \t\v\f]*:?-+:?[ \t\v\f]*"
+# 뒤 공백은 소유 수량자다 — 패턴 끝의 `\|?[ \t\v\f]*` 과 같은 공백을 나눠 갖지 않게.
+_MARKER = r"[ \t\v\f]*:?-+:?[ \t\v\f]*+"
 _TABLE_START = re.compile(rf"\|?{_MARKER}(?:\|{_MARKER})*\|?[ \t\v\f]*")
 _NON_ASCII_SPACE = re.compile(r"[^\S \t\v\f\n\r]")
 
 _ATX = re.compile(r"#{1,6}(?:[ \t]|$)")
 _SETEXT = re.compile(r"(?:=+|-+)[ \t]*")
-_THEMATIC = re.compile(r"(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,}")
 _FENCE_OPEN = re.compile(r"(?P<fence>`{3,}|~{3,})(?P<info>.*)")
-_LIST_MARKER = re.compile(r"[-+*]|(?P<number>\d{1,9})[.)]")
+# 순서 목록의 번호는 ASCII 숫자만이다(`\d` 는 전각·아랍 숫자에도 맞는다).
+_LIST_MARKER = re.compile(r"[-+*]|(?P<number>[0-9]{1,9})[.)]")
 # GitHub 은 각주를 켜고 렌더한다. 각주 정의는 네 칸 들여쓰기로 이어지는 컨테이너다.
 _FOOTNOTE = re.compile(r"\[\^[^\] \r\n\x00\t]+\]:[ \t]*")
 # 한 줄짜리 링크 참조 정의. 문단이 이것으로만 되어 있으면 아래 `---` 는 제목 밑줄이 아니라
 # 문단의 글이 된다(cmark 가 참조를 먼저 풀고 남은 내용이 없으면 제목을 만들지 않는다).
+# 라벨의 "비공백 글자 하나" 는 첫 번째 것으로 못박고 반복은 소유 수량자다 — 그 글자를 어디에 둘지
+# 고르는 되감기가 없어야 `[` 로 시작하고 `]` 가 없는 긴 줄에서 선형이다.
 _REFERENCE = re.compile(
-    r"\[(?:[^\]\\]|\\.)*[^\]\\ \t](?:[^\]\\]|\\.)*\]:[ \t]*(?:<[^>]*>|\S+)"
+    r"\[(?:[ \t]|\\.)*+[^\]\\ \t](?:[^\]\\]|\\.)*+\]:[ \t]*(?:<[^>]*>|\S+)"
     r"(?:[ \t]+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?[ \t]*"
 )
 
@@ -89,20 +97,22 @@ _ATTRIBUTE = (
     rf"{_TAG_SPACE}+[A-Za-z_:][A-Za-z0-9:._-]*"
     rf"(?:{_TAG_SPACE}*={_TAG_SPACE}*(?:[^ \t\n\v\f\r\"'=<>`]+|'[^']*'|\"[^\"]*\"))?"
 )
+# 태그 이름의 대소문자 무시는 ASCII 만이다(유니코드 IGNORECASE 는 U+017F·U+212A 를 s·k 로 맞춘다).
+_TAG_CASE = re.IGNORECASE | re.ASCII
 _HTML_STARTS: tuple[tuple[int, re.Pattern[str]], ...] = (
-    (1, re.compile(r"<(?:script|pre|style|textarea)(?:[ \t\v\f>]|$)", re.IGNORECASE)),
+    (1, re.compile(r"<(?:script|pre|style|textarea)(?:[ \t\v\f>]|$)", _TAG_CASE)),
     (2, re.compile(r"<!--")),
     (3, re.compile(r"<\?")),
     (4, re.compile(r"<![A-Z]")),
     (5, re.compile(r"<!\[CDATA\[")),
-    (6, re.compile(rf"</?(?:{_BLOCK_TAGS})(?:[ \t\v\f]|/?>|$)", re.IGNORECASE)),
+    (6, re.compile(rf"</?(?:{_BLOCK_TAGS})(?:[ \t\v\f]|/?>|$)", _TAG_CASE)),
 )
 _HTML_START_7 = re.compile(
     rf"<(?:[A-Za-z][A-Za-z0-9-]*(?:{_ATTRIBUTE})*{_TAG_SPACE}*/?>"
     rf"|/[A-Za-z][A-Za-z0-9-]*{_TAG_SPACE}*>)[ \t\f]*$"
 )
 _HTML_ENDS = {
-    1: re.compile(r"</(?:script|pre|style|textarea)>", re.IGNORECASE),
+    1: re.compile(r"</(?:script|pre|style|textarea)>", _TAG_CASE),
     2: re.compile(r"-->"),
     3: re.compile(r"\?>"),
     4: re.compile(r">"),
@@ -200,6 +210,24 @@ def _has_separator(content: str) -> bool:
     )
 
 
+def _thematic_stop(line: str, first: int) -> int:
+    """`first` 부터가 수평선이면 -1, 아니면 수평선 글자(표식 하나·스페이스·탭)가 끊긴 자리.
+
+    cmark 의 thematic_break_kill_pos 를 옮긴 것이다. 끊긴 자리보다 앞에서 다시 재면 같은 표식이라
+    같은 자리에서 끊기므로, 부르는 쪽이 그 자리를 기억해 다시 재지 않는다. 그러지 않으면 한 줄에
+    겹친 목록 표식(`- - - … a`)에서 단계마다 줄 끝까지 다시 잰다.
+    """
+    marker = line[first] if first < len(line) else ""
+    if marker not in ("*", "-", "_"):
+        return first
+    count = 0
+    end = first
+    while end < len(line) and line[end] in (marker, " ", "\t"):
+        count += line[end] == marker
+        end += 1
+    return -1 if end == len(line) and count >= 3 else end
+
+
 def _after_quote_marker(line: str, first: int) -> int:
     """`first` 의 `>` 와 그 뒤의 선택 스페이스 하나를 지난 자리."""
     return first + 1 + (line[first + 1 : first + 2] == " ")
@@ -284,8 +312,20 @@ class _Parser:
         line = raw.expandtabs(4)
         position = 0
         matched = 0
+        # cmark 의 first_nonspace 캐시. position 은 한 줄 안에서 줄지 않으므로, 앞서 찾은 첫
+        # 비공백이 position 뒤에 있으면 그대로 맞다. 캐시가 없으면 컨테이너마다 같은 공백을 다시
+        # 세어 깊은 중첩에서 제곱 이상이 된다(PR #96 대체 리뷰).
+        scanned = -1
+        thematic_kill = 0
+
+        def first_nonspace() -> tuple[int, int]:
+            nonlocal scanned
+            if scanned < position:
+                scanned, _ = _first_nonspace(line, position)
+            return scanned, scanned - position
+
         for block in self.stack:
-            first, indent = _first_nonspace(line, position)
+            first, indent = first_nonspace()
             blank = first == len(line)
             if block.kind == "quote":
                 if indent > 3 or blank or line[first] != ">":
@@ -330,10 +370,15 @@ class _Parser:
             kind = self.stack[container].kind if container >= 0 else "document"
             if kind in ("fence", "icode", "html"):
                 break
-            first, indent = _first_nonspace(line, position)
+            first, indent = first_nonspace()
             blank = first == len(line)
             rest = line[first:]
             indented = indent >= 4
+            thematic = False
+            if not indented and first >= thematic_kill:
+                stop = _thematic_stop(line, first)
+                thematic = stop < 0
+                thematic_kill = max(thematic_kill, stop)
             if not indented and rest.startswith(">"):
                 container = self.open(container, lineno, _Block("quote"))
                 position = _after_quote_marker(line, first)
@@ -355,7 +400,7 @@ class _Parser:
                 else:
                     self.stack.pop()
                 return
-            elif not indented and _THEMATIC.fullmatch(rest):
+            elif not indented and thematic:
                 self.open(container, lineno, None)
                 return
             elif not indented and (footnote := _FOOTNOTE.match(rest)):
@@ -386,7 +431,7 @@ class _Parser:
             opened = True
             maybe_lazy = False
 
-        first, _ = _first_nonspace(line, position)
+        first, _ = first_nonspace()
         blank = first == len(line)
         tip = self.stack[-1] if self.stack else None
         if not opened and not all_matched and tip is not None and tip.kind == "paragraph":
@@ -479,7 +524,8 @@ class _Parser:
 
 def parse(text: str) -> tuple[list[Table], list[Refused]]:
     """문서 하나의 표와 표가 되지 못한 자리. BOM 을 벗기고 CRLF·CR 도 줄 끝으로 본다."""
-    lines = re.split(r"\r\n|\r|\n", text.removeprefix(_BOM))
+    text = text.removeprefix(_BOM).replace("\0", _REPLACEMENT)
+    lines = re.split(r"\r\n|\r|\n", text)
     parser = _Parser()
     for lineno, line in enumerate(lines, 1):
         parser.feed(lineno, line)
@@ -508,16 +554,21 @@ def tracked_markdown(root: Path = ROOT) -> list[Path]:
         ["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True
     )
     files: list[Path] = []
-    for entry in listing.stdout.decode("utf-8").split("\0"):
+    seen: set[str] = set()
+    # UTF-8 이 아닌 경로 이름은 surrogateescape 로 살린다(열 때 읽을 수 없어 어긋남이 된다). 병합
+    # 충돌 중에는 같은 경로가 단계 1·2·3 으로 세 번 나오므로 한 번만 훑는다.
+    for entry in listing.stdout.decode("utf-8", "surrogateescape").split("\0"):
         if not entry:
             continue
         meta, name = entry.split("\t", 1)
         path = root / name
         if (
-            meta.split(" ", 1)[0] in _REGULAR_MODES
+            name not in seen
+            and meta.split(" ", 1)[0] in _REGULAR_MODES
             and path.suffix.lower() in MARKDOWN_SUFFIXES
             and path.is_file()
         ):
+            seen.add(name)
             files.append(path)
     return files
 

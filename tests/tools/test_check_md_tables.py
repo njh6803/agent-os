@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -221,6 +222,53 @@ def test_BOM_과_CRLF_와_탭을_GFM_처럼_읽는다() -> None:
     assert problems_in(BOM + TABLE) == []
     assert problems_in(TABLE.replace("\n", "\r\n") + "| 1 |\r\n") == ["4: 칸 1, 머리 행 2"]
     assert problems_in(TABLE + "\t| 3 | 4 |\n") == [f"4: {CUT}"]
+
+
+def _seconds(text: str) -> float:
+    started = time.perf_counter()
+    problems_in(text)
+    return time.perf_counter() - started
+
+
+# 옛 코드는 아래 입력마다 2~4초가 걸렸다(PR #96 대체 리뷰가 쟀다). 지금은 밀리초라 1초는 넉넉하다.
+LIMIT_SECONDS = 1.0
+
+
+def test_대괄호로_시작하는_긴_줄_아래의_밑줄이_선형이다() -> None:
+    """참조 정의 판정(_REFERENCE)이 `]` 없는 긴 라벨에서 되감지 않는다."""
+    assert _seconds("[" + "a" * 16000 + "\n===\n") < LIMIT_SECONDS
+
+
+def test_구분_행_모양_뒤의_긴_공백이_선형이다() -> None:
+    """구분 행 판정(_TABLE_START)이 끝 공백을 두 반복으로 나눠 갖지 않는다. 탭은 네 칸으로 편다."""
+    assert _seconds("글\n--" + "\t" * 6000 + "x\n") < LIMIT_SECONDS
+
+
+def test_한_줄에_겹친_목록_표식이_선형이다() -> None:
+    """수평선 판정이 끊긴 자리를 기억한다(cmark 의 thematic_break_kill_pos)."""
+    assert _seconds("- " * 8000 + "a\n") < LIMIT_SECONDS
+
+
+def test_깊은_중첩_뒤의_들여쓴_줄이_선형이다() -> None:
+    """첫 비공백 자리를 한 줄 안에서 캐시한다(cmark 의 first_nonspace)."""
+    text = "- " * 2000 + "a\n" + (" " * 4000 + "x\n") * 10
+
+    assert _seconds(text) < LIMIT_SECONDS
+
+
+def test_순서_목록의_번호는_ASCII_숫자만이다() -> None:
+    """전각 숫자 `１.` 은 목록 표식이 아니라 머리 행의 글이다."""
+    text = f"{chr(0xFF11)}. | a |\n| --- | --- |\n"
+
+    assert problems_in(text) == []
+    assert len(parse(text)[0]) == 1
+
+
+def test_HTML_태그_이름의_대소문자_무시는_ASCII_만이다() -> None:
+    """`<ſcript>`(U+017F) 는 HTML 블록이 아니라 칸 하나짜리 행이다."""
+    line = f"<{chr(0x017F)}cript>"
+
+    assert problems_in(TABLE + line + "\n") == ["4: 칸 1, 머리 행 2"]
 
 
 def test_이_저장소의_표는_전부_GFM_에서_깨지지_않는다() -> None:

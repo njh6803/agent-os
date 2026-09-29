@@ -28,6 +28,7 @@ pre-commit 은 스테이지된 텍스트 파일을 한 프로세스로 넘긴다
 
 from __future__ import annotations
 
+import codecs
 import io
 import subprocess
 import sys
@@ -60,6 +61,9 @@ def is_text(data: bytes) -> bool:
 def separators_in(text: str) -> list[str]:
     """날것 줄 구분 문자의 자리. 항목은 `"<줄>:<열>: U+XXXX <이름>"`. 줄은 개행으로만 나눈다."""
     found: list[str] = []
+    # 거의 모든 파일에는 셋 중 하나도 없다. 그때는 글자마다 도는 파이썬 루프를 건너뛴다.
+    if not any(separator in text for separator in SEPARATORS):
+        return found
     for lineno, line in enumerate(text.split("\n"), 1):
         for column, character in enumerate(line, 1):
             name = SEPARATORS.get(character)
@@ -75,7 +79,9 @@ def problems_in(data: bytes) -> list[str]:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as error:
-        where = f"{error.reason}, 바이트 {error.start}"
+        # utf-8-sig 는 BOM 을 떼고 센 자리를 준다. 파일의 바이트 자리로 되돌린다.
+        start = error.start + (len(codecs.BOM_UTF8) if data.startswith(codecs.BOM_UTF8) else 0)
+        where = f"{error.reason}, 바이트 {start}"
         return [f"0:0: UTF-8 로 읽을 수 없어 판정하지 못했다 ({where})"]
     return separators_in(text)
 
@@ -86,12 +92,16 @@ def tracked_files(root: Path = ROOT) -> list[Path]:
         ["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True
     )
     files: list[Path] = []
-    for entry in listing.stdout.decode("utf-8").split("\0"):
+    seen: set[str] = set()
+    # UTF-8 이 아닌 경로 이름은 surrogateescape 로 살린다(열 때 읽을 수 없어 어긋남이 된다). 병합
+    # 충돌 중에는 같은 경로가 단계 1·2·3 으로 세 번 나오므로 한 번만 훑는다.
+    for entry in listing.stdout.decode("utf-8", "surrogateescape").split("\0"):
         if not entry:
             continue
         meta, name = entry.split("\t", 1)
         path = root / name
-        if meta.split(" ", 1)[0] in _REGULAR_MODES and path.is_file():
+        if name not in seen and meta.split(" ", 1)[0] in _REGULAR_MODES and path.is_file():
+            seen.add(name)
             files.append(path)
     return files
 
