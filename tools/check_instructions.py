@@ -349,16 +349,18 @@ def nested_instruction_files(root: Path = ROOT) -> list[str]:
     """루트 밖의 `CLAUDE.md` 와 `AGENTS.md`.
 
     지침은 `.claude/rules/*.md` + `paths` 에 둔다(ADR 0004). 하위 디렉터리의 `CLAUDE.md` 는
-    그 디렉터리의 파일을 열 때 통째로 실리고 `@` 임포트도 따라가서, 로드 시점 표와 임포트
-    검사를 조용히 우회한다. `next dev` 는 에이전트를 감지하면 앱 폴더에 두 파일을 만든다
-    (ADR 0021). `agentRules: false` 가 그것을 끄지만, 설정 한 줄을 보는 테스트보다 결과를
-    보는 검사가 원인과 무관하게 잡는다.
+    Claude 가 그 디렉터리의 파일을 Read 할 때 통째로 실리고(cwd 가 그 디렉터리면 시작 시),
+    그 안의 `@` 임포트도 따라온다. 그래서 루트 지침에 거는 검사(200줄, 임포트 허용 목록) 밖에
+    놓인다(2026-09-29 `claude -p` 2.1.281 실측). `next dev` 는 에이전트를 감지하면 앱 폴더에
+    두 파일을 만든다(ADR 0021). `agentRules: false` 가 그것을 끄지만, 설정 한 줄을 보는
+    테스트보다 결과를 보는 검사가 원인과 무관하게 잡는다.
 
     작업 트리를 훑으므로 pre-commit 은 추적하지 않는 파일도 보고, CI 는 체크아웃된 것(추적하는
     것)만 본다. 보지 않는 곳: 어느 깊이든 `node_modules`, 루트의 `.venv` 와 `.git`(설치된
     의존성과 git 의 것이라 이 저장소의 지침이 아니다), `.claude/worktrees`(다른 체크아웃의 루트
-    `CLAUDE.md`). 못 보는 것: 대소문자가 다른 이름(`claude.md`)과 다른 도구의 지침 파일
-    이름(`GEMINI.md`, `.cursorrules`).
+    `CLAUDE.md`). 못 보는 것: 대소문자가 다른 이름(`claude.md`), 다른 도구의 지침 파일
+    이름(`GEMINI.md`, `.cursorrules`), 하위 디렉터리의 `CLAUDE.local.md` 와 `.claude/rules/`
+    (공식 문서상 이것들도 그 디렉터리에서 실린다).
     """
     skipped = {root / ".venv", root / ".git", root / ".claude" / "worktrees"}
     found: list[str] = []

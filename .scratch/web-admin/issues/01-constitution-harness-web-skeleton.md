@@ -8,7 +8,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 헌법과 문서
 
@@ -129,12 +129,12 @@
   - 다섯째 명령을 도는 훅을 `always_run`으로 둔다. 파이썬 파일이 안 바뀐 커밋에서도 pyright·pytest가 도는 것과 같은 이유다. 파이썬 티켓의 `openapi.json` 변경이 생성물 최신성을 깨는 것도 이유다(03부터)
   - e2e는 넣지 않는다(ADR 0021 이력)
 - [x] **`ci.yml`의 `verify` 잡.** Node 24와 pnpm 11 설정, `pnpm install --frozen-lockfile`, 다섯째 명령을 더한다. pnpm 스토어 캐시는 이 티켓이 본다. `claude-code-review.yml`은 바꾸지 않는다
-- [ ] **claude-review의 코멘트 0개 가드.** 대기열 50이 먼저 병합됐으면 이 PR에서도 가드가 돈다. 아니면 가드가 꺼진다. `.github/workflows/` 아래 파일이 바뀌면 건너뛰기 때문이다. 그 경우 병합 전에 claude-review의 코멘트가 있는지 손으로 보고 PR에 적는다
+- [x] **claude-review의 코멘트 0개 가드.** 대기열 50이 먼저 병합됐으면 이 PR에서도 가드가 돈다. 아니면 가드가 꺼진다. `.github/workflows/` 아래 파일이 바뀌면 건너뛰기 때문이다. 그 경우 병합 전에 claude-review의 코멘트가 있는지 손으로 보고 PR에 적는다
 - [x] **`ci.yml`을 함께 바꾸는 하네스 워크플로 PR이 있다**(러너와 마크다운 검사 둘을 CI에, 일지 2026-09-28-08의 "다음"). 뒤에 병합되는 쪽이 main을 받아 합친다
 
 ### 확인
 
-- [ ] **실제 실행으로 확인한다**(`CLAUDE.md` 작업 규약 3)
+- [x] **실제 실행으로 확인한다**(`CLAUDE.md` 작업 규약 3)
   - pre-commit이 다섯째 명령을 실제로 돈다. 훅의 출력으로 본다
   - CI `verify` 잡의 로그에 web 단계가 있다. `gh run view`로 본다
   - 빨강은 `tools/mutate.py`로 본다

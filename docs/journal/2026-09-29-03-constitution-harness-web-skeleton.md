@@ -102,3 +102,41 @@ PR에서는 claude-review의 코멘트 0개 가드가 꺼진다. 산출물은 �
 "그대로 두는 것" 둘(`tools/check_type_escapes.py`, `tests/sdk/test_ids.py`)만 남았다. `검증 명령`·`lint-imports`에
 걸린 줄은 수를 말하지 않거나 다섯째 명령을 함께 나열한다. `별도 PR로 먼저`는 둘 다 `claude-code-review.yml`의
 범위로 좁혀져 있다.
+
+## PR 리뷰
+
+PR #99. 세 검사가 첫 푸시(`2ff7a23`)에서 초록이었다.
+
+- **CI `verify`.** 로그에 web 단계가 모두 있다(`pnpm -C web install --frozen-lockfile`, eslint, prettier, tsc, vitest 파일
+  2 통과, tsconfig 검사). pnpm 스토어 캐시는 첫 실행이라 저장됐다.
+- **claude-review.** `ci.yml`을 바꿔 코멘트 0개 가드가 꺼진 PR이라 손으로 봤다. "지적 없음" 요약 코멘트가 있다.
+- **CodeRabbit.** Nit 하나. `findTsconfigs`가 `.next/`와 `judge-*` 임시 트리까지 훑는다. 코드는 바꾸지 않았다.
+  `judge-*`의 tsconfig는 기준을 extends해 남아도 초록이고, 빼면 "훑어서 전부 본다"는 검사에 제외 목록이 생긴다.
+  `.next/`는 04 메모의 빌드 산출물 항목에 더했다.
+- **PR 직전 CodeRabbit CLI.** `Seat: not assigned`(Plan: Free)라 돌리지 않았다.
+
+## 사용자 질문 둘 — 지침의 자리, 강제 장치와 컨텍스트
+
+PR의 CI가 도는 동안 사용자가 다른 대화에서 받은 설명 둘을 붙여 넣고 물었다.
+
+> 사용자: "위 내용이 맞아? 우리 프로젝트가 하는 방식이 맞아?" (중첩 CLAUDE.md와 `.claude/rules/`를 비교한 설명)
+
+> 사용자: "추가로 위 내용도 확인해줘. 확인해보고 적용할만한 것은 적용하자. (필요하면 KICKOFF.md도 갱신)" (테스트·lint·
+> 권한·hooks·CI의 기준과 컨텍스트 낭비 요인을 다룬 설명)
+
+워크플로 둘(에이전트 23·16)로 공식 문서 두 갈래, CHANGELOG·이슈, `claude -p` 2.1.281 탐침(카나리아와
+`InstructionsLoaded` 훅 로그)을 대조했다. 결과 원문은 이 세션의 스크래치패드에 있고 적용 목록은 뒤따르는 chore가 원천이다.
+
+- **지침의 자리.** 이 저장소의 방식(중첩 금지, rules와 `paths`)은 유지한다. 공식 문서(`large-codebases`)의 선택 기준은
+  소유권이다. 디렉터리마다 소유자가 제 규약을 유지하면 중첩 `CLAUDE.md`, 한곳에 모으면 `paths` 규칙이다. 붙여 넣은
+  설명에서 틀린 곳은 넷이다. 실리는 계기는 "다룰 때"가 아니라 Read다. AGENTS.md는 2.1.277부터 직접 읽는다(CLAUDE.md가
+  있으면 가려진다). 실린 파일은 `/memory`가 아니라 `/context`로 본다. "위치면 중첩, 종류면 rules"는 공식 구분이 아니다.
+- **이 PR이 쓴 과장 셋을 고쳤다.** "로드 시점 표를 조용히 우회한다", "열 때"(`operations.md` 문서 위치,
+  `check_instructions.py` 독스트링, KICKOFF.md (3)). 로드 시점은 `paths` 규칙과 비슷하고, 다른 점은 그 안의 `@` 임포트가
+  루트 지침의 검사 밖에 놓인다는 것이다. KICKOFF의 "모노레포도 `paths`가 기본형"은 공식 기준을 인용해 런북의 선택으로
+  적었다. CLAUDE.md의 "나머지 다섯은 훅이 돌린다"는 "pre-commit이 돌린다"로 바꿨다(Claude 훅과 헷갈린다).
+- **주 세션에서도 재현했다.** `paths` 규칙은 Read 도구로 연 파일에만 실린다. `sed -n`으로 `adapters/clock.py`를 읽으면
+  `adapters.md`가 실리지 않았고 Read로 열자 실렸다. 이 세션도 `tools/*.py`를 `cat`으로 읽는 동안 `tools.md`가 빠져 있었다.
+- **탐침의 부작용.** `claude -p` 두 번이 사용자 전역 Stop 훅으로 Slack 알림을 보냈다. 판정자 하나가 스크래치패드의
+  다른 탐침 트리를 지웠다(그 실행은 근거에서 뺐다). 탐침 세션 기록이 `~/.claude/projects/` 아래에 생겼다. 사용자에게
+  알렸다.
