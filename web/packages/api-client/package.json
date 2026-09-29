@@ -1,0 +1,11 @@
+{
+  "name": "@agent-os/api-client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  }
+}

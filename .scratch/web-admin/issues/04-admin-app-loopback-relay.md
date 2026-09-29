@@ -66,6 +66,12 @@
 - **`app/`의 import.** 01의 정책은 `app/`의 파일이 pages·templates와 외부의 `next`·`react`만 import하게 한다. 같은 요소 안의 import는 보지 않으므로 `app/globals.css`는 된다. `app/` 밖의 CSS를 import하면 막힌다
 - **아이콘.** lucide-react 1.48에는 `exports` 맵이 없다. 서브패스 import의 모양과 그 타입이 서는지 본다. 01은 `lucide-react`를 통째로 import하는 것만 막았다
 
+### 03이 남긴 메모
+
+- **typecheck는 워크스페이스 패키지마다 돈다.** 03이 `typecheck`를 `tsc --noEmit && pnpm -r exec tsc --noEmit`으로 두었다.
+  앱의 tsconfig는 목록을 고치지 않아도 든다. Next가 쓰는 `next-env.d.ts`와 `include`로 `tsc --noEmit`이 앱 폴더에서 서는지
+  본다. tsconfig가 없는 패키지에서는 tsc가 도움말을 내고 1로 끝난다.
+
 ### 확인
 
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다

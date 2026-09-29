@@ -9,13 +9,15 @@
 // 실측). 그래서 사례마다 "빨갛다"가 아니라 기대한 규칙이 보고됐는지를 본다.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { ESLint, type Linter } from "eslint";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { GENERATED } from "./tools/generate-api-client.ts";
 
 const WEB = import.meta.dirname;
 const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
+const API_CLIENT = join(WEB, "packages", "api-client");
 
 // 자기 tsconfig 를 두는 자리. 임시 트리 뿌리에는 tsconfig 가 없다.
 const PROJECTS = ["apps/admin", "apps/widget", "packages/api-client", "cli"];
@@ -68,6 +70,12 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/components/atoms/Icon.ts":
     'import { Camera } from "lucide-react";\n\nexport const 아이콘 = Camera;\n',
   "apps/admin/components/organisms/Card.ts": "export const 카드 = 1;\n",
+  "apps/admin/components/atoms/Api.ts":
+    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
+  "apps/admin/components/molecules/Api.ts":
+    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
+  "apps/admin/components/organisms/Api.ts":
+    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
   "apps/admin/components/organisms/Panel.ts":
     'import { 라벨 } from "../atoms/Label";\n\nexport const 판 = 라벨;\n',
   "apps/admin/components/organisms/DeepApi.ts":
@@ -93,7 +101,7 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/app/runs/page.ts":
     'import { 카드 } from "../../components/organisms/Card";\n\nexport const 화면 = 카드;\n',
   "apps/admin/app/layout.ts":
-    'import { 클라이언트 } from "@agent-os/api-client";\n\nexport const 틀 = 클라이언트;\n',
+    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 틀 = createAdminClient;\n',
   "apps/admin/lib/kinds.ts": 'export const 종류 = ["plugins", "runs"] as const;\n',
   "apps/admin/lib/kinds.test-d.ts":
     "// @ts-expect-error: 숫자는 문자열 자리에 들어가지 않는다\nexport const 틀린_값: string = 1;\n",
@@ -103,6 +111,8 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/widget/lib/widget.ts": "export const 위젯 = 1;\n",
   "packages/api-client/src/client.ts":
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
+  "packages/api-client/src/global-fetch.ts":
+    'export function 부른다(): Promise<Response> {\n  return globalThis.fetch("/api/runs");\n}\n',
   // 끄기 주석. CLI 로 따로 돈다.
   "cli/next-line.ts":
     "// eslint-disable-next-line @typescript-eslint/no-explicit-any\nexport function 받는다(값: any): void {\n  void 값;\n}\n",
@@ -233,6 +243,27 @@ const RED: readonly RedCase[] = [
     path: "apps/admin/app/layout.ts",
     rule: BOUNDARIES,
   },
+  {
+    name: "atoms 가 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/atoms/Api.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "molecules 가 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/molecules/Api.ts",
+    rule: BOUNDARIES,
+  },
+  // 생성 클라이언트 패키지는 fetch 를 직접 부르지 않는다. openapi-fetch 가 부른다. 그래서 예외가 없다.
+  {
+    name: "생성 클라이언트 패키지 안의 전역 fetch",
+    path: "packages/api-client/src/client.ts",
+    rule: "no-restricted-globals",
+  },
+  {
+    name: "생성 클라이언트 패키지 안에서 globalThis 로 부른 fetch",
+    path: "packages/api-client/src/global-fetch.ts",
+    rule: "no-restricted-properties",
+  },
 ];
 
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
@@ -241,7 +272,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   { name: "barrel 을 거친 import", path: "apps/admin/components/organisms/Runs.ts" },
   { name: "organisms 가 atoms 를 import", path: "apps/admin/components/organisms/Panel.ts" },
   { name: "app/ 이 pages 와 templates 를 import", path: "apps/admin/app/page.ts" },
-  { name: "생성 클라이언트 패키지 안의 전역 fetch", path: "packages/api-client/src/client.ts" },
+  {
+    name: "organisms 가 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/organisms/Api.ts",
+  },
 ];
 
 let fixture = "";
@@ -257,6 +291,14 @@ beforeAll(async () => {
     mkdirSync(dirname(join(fixture, path)), { recursive: true });
     writeFileSync(join(fixture, path), source);
   }
+  // 앱이 워크스페이스 의존성으로 생성 클라이언트를 들면 pnpm 이 이렇게 링크한다(윈도우는 junction). 링크가 없으면
+  // import 가 풀리지 않아 초록 사례가 타입 기반 규칙으로 빨개진다.
+  mkdirSync(join(fixture, "apps/admin/node_modules/@agent-os"), { recursive: true });
+  symlinkSync(
+    API_CLIENT,
+    join(fixture, "apps/admin/node_modules/@agent-os/api-client"),
+    "junction",
+  );
   const results = await new ESLint({ cwd: WEB }).lintFiles([
     join(fixture, "apps"),
     join(fixture, "packages"),
@@ -294,6 +336,39 @@ describe("판정자가 지나보내는 것", () => {
       expect(messages.get(path)).toEqual([]);
     });
   }
+});
+
+// 임시 트리가 아니라 커밋된 파일의 자리에서 잰다. 위반은 파일에 쓰지 않고 lintText 로 그 경로에 넣는다.
+describe("실제 생성 클라이언트 자리", () => {
+  const eslint = new ESLint({ cwd: WEB });
+
+  async function ruleIdsAt(path: string, source: string): Promise<(string | null)[]> {
+    const [result] = await eslint.lintText(source, { filePath: path });
+    return (result?.messages ?? []).map((message) => message.ruleId);
+  }
+
+  test("커밋된 생성물은 판정 범위 안이고 아무것도 보고되지 않는다", async () => {
+    // 판정에서 빠진 파일을 이름으로 주면 ESLint 는 "무시된 파일" 경고 하나를 낸다. 빈 목록이 범위 안이라는 뜻이다.
+    const [result] = await eslint.lintFiles([GENERATED]);
+
+    expect(result?.messages).toEqual([]);
+  });
+
+  test("커밋된 생성물의 재귀 Json 자리에 any 가 들면 판정자가 빨갛게 본다", async () => {
+    const generated = readFileSync(GENERATED, "utf-8");
+    expect(generated.split("Json: unknown;").length - 1).toBe(1);
+
+    const found = await ruleIdsAt(GENERATED, generated.replace("Json: unknown;", "Json: any;"));
+
+    expect(found).toContain("@typescript-eslint/no-explicit-any");
+  });
+
+  test("생성 클라이언트 패키지의 실제 파일에서도 전역 fetch 는 빨갛다", async () => {
+    const path = join(API_CLIENT, "src", "clients.ts");
+    const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/api/runs");\n`;
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
 });
 
 describe("끄기 주석", () => {

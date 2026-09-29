@@ -332,7 +332,7 @@ jsdom에서 MSW가 낸 SSE는 openapi-fetch의 `parseAs: "stream"`으로 조각�
   - **Next에서 API를 부르는 서버 코드 금지(이 명세가 정했다).** 대상은 셋이다.
     - Server Actions 지시문(`"use server"`)은 web 전체에서 막는다.
     - Next 서버가 돌리는 파일은 앱의 어느 자리에 두어도 막는다. 라우트 핸들러(`route`), `middleware`, `proxy`, `instrumentation`이다. 명세 검토가 Next 16.3.3 설치본의 파일 관례를 읽었다. 16.3.6은 앱을 세우는 티켓이 다시 본다.
-    - 전역 `fetch`는 생성 클라이언트 패키지 밖에서 막는다(`no-restricted-globals`). 모든 HTTP가 생성 클라이언트를 지나게 되고, `app/**/page.tsx`가 import 없이 `fetch`를 부르는 길도 닫힌다.
+    - 전역 `fetch`는 web 전체에서 막는다(`no-restricted-globals`). 생성 클라이언트 패키지도 `fetch`를 직접 부르지 않아(부르는 것은 openapi-fetch다) 예외를 두지 않는다(티켓 03이 거뒀다). 모든 HTTP가 생성 클라이언트를 지나게 되고, `app/**/page.tsx`가 import 없이 `fetch`를 부르는 길도 닫힌다.
 
   경로에 기대는 규칙은 뼈대의 가상 경로가 아니라 **경로와 무관하게** 쓴다. 규칙이 첫 티켓에 서고 앱은 뒤 티켓에 서기 때문이다. 앱이 다른 배치(예: `src/app/`)를 쓰면 가상 경로에 건 규칙은 아무것도 보지 않고, 변이 테스트는 초록이 된다. 앱을 세우는 티켓은 실제 배치에서 변이가 빨강인지 다시 본다.
 
@@ -439,7 +439,7 @@ plugin-toggle이 쓴 셋째 grep(`재개 불가|NotResumable|재개할 수 없�
 
 ### 생성 클라이언트 — `packages/api-client` (ADR 0021, ADR 0010 이력)
 
-- **생성은 openapi-typescript `--immutable`이다.** 필드는 readonly이고 열거는 리터럴 유니온이다.
+- **생성은 openapi-typescript의 기본 출력이다.** 열거는 리터럴 유니온이다. `--immutable`은 거뒀다. openapi-fetch 0.17.0이 readonly 배열을 배열로 보지 못해 응답을 순회할 수 없었다(ADR 0021의 2026-09-29 이력).
 - **재귀 `Json`은 생성 스크립트가 `unknown`으로 바꾼다.** openapi-typescript는 `Json`이 제 자신을 가리키는 한 자리에서 TS2502를 내고 그것을 `any`로 둔다(설계 세션이 생성물 `ots/v31.d.ts`를 grep했다). 바꾼 뒤 생성물에 `any`가 없다는 것을 판정자가 본다. 변환은 순수 함수이고 그 자리 하나만 바꾼다. 다른 곳에 `any`가 생기면 판정자가 빨개지도록 둔다.
 - **생성물을 커밋한다.** 최신성은 다섯째 명령의 한 단계다.
 - **클라이언트는 둘이다(이 명세가 정했다).** 토큰은 요청의 경로를 보고 고르지 않고, 클라이언트가 고른다.
@@ -648,7 +648,7 @@ plugin-toggle이 쓴 셋째 grep(`재개 불가|NotResumable|재개할 수 없�
 - **ESLint 판정자**
   - 위반을 담은 코드를 테스트가 만들어 판정자에 넣는다. 커밋한 파일에 위반을 두지 않는다. 두면 그 파일을 빼는 목록이 생긴다(ADR 0013이 경계한 모양).
   - 재는 위반은 이렇다.
-    - `.ts`: `any`, `as`, 꺾쇠 단언, `!`, `@ts-ignore`, `@ts-nocheck`, TS `enum`, 생성 클라이언트 밖의 전역 `fetch`
+    - `.ts`: `any`, `as`, 꺾쇠 단언, `!`, `@ts-ignore`, `@ts-nocheck`, TS `enum`, 전역 `fetch`(생성 클라이언트 패키지 안팎. 패키지의 예외는 티켓 03이 거뒀다)
     - `.tsx`: `dangerouslySetInnerHTML`
     - `.d.ts`: `any`
     - 타입 테스트가 아닌 파일의 `@ts-expect-error`

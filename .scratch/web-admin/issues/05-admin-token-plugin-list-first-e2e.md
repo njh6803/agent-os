@@ -86,6 +86,21 @@
 - **CI의 자리.** 01의 `verify` 잡은 파이썬 단계 뒤에 Node 24(setup-node)와 pnpm(pnpm/action-setup, 락파일로 스토어 캐시)을 세우고 `pnpm -C web install --frozen-lockfile`과 `pnpm -C web verify`를 돈다. e2e 단계는 그 뒤에 선다
 - **`operations.md` 가드레일 머리.** "자동 검사는 둘이고 내용은 같다"의 예외는 지금 둘(훅 러너, 인용 대조)이다. e2e가 CI에만 서면 셋째 예외가 되므로 그 문장과 검사 목록에 e2e를 더한다
 
+### 03이 남긴 메모
+
+- **앱은 생성 클라이언트를 워크스페이스 의존성으로 든다.** `"@agent-os/api-client": "workspace:*"`다. 패키지는 TS 원본을
+  내보낸다(`exports`의 `.`이 `./src/index.ts`). Next가 그것을 번역하는지(`transpilePackages`가 필요한지) 실제 앱에서 본다.
+- **관리 클라이언트는 `createAdminClient(관리 토큰)`이다.** `baseUrl`은 `location.origin`에서 만든 절대 주소라 jsdom의
+  페이지 테스트가 제품과 같은 코드를 지난다. 관리 토큰만 실린다는 헤더 단언이 이 티켓의 몫이다.
+- **atoms·molecules가 이 패키지를 import하면 판정자가 빨갛다.** 03은 임시 트리의 앱 자리에 실제 패키지로 가는 junction을
+  두고 쟀다. 실제 앱의 링크에서도 같은 변이가 빨간지 본다.
+- **응답의 배열은 가변 타입이다.** `--immutable`을 거뒀다(ADR 0021의 2026-09-29 이력). SWR이 든 값을 제자리에서 바꾸지
+  않는 것은 타입이 막지 않는다.
+- **판정자가 아직 막지 않는 HTTP 길이 셋 있다.** 03의 셀프 리뷰가 찾았다. 앱이 `openapi-fetch`를 직접 import해 클라이언트를
+  만드는 것, `EventSource`나 `XMLHttpRequest`를 쓰는 것, 상대 경로로 `packages/api-client/src/*`를 import하는 것(로컬로
+  분류되어 03의 모듈 이름 정책을 피한다)이다. 앱 코드가 처음 API를 부르는 이 티켓에서 막을지 정한다. 막으면 경로와
+  무관하게 쓰고 `web/eslint.config.test.ts`에 사례를 붙인다(`.claude/rules/web-workspace.md`).
+
 ### 확인
 
 - [ ] TS 테스트의 이름은 행동을 말하는 한국어 문장이다. 클래스 이름, 컴포넌트 구조, 훅의 내부 상태, 스토어의 모양은 단언하지 않는다

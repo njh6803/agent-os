@@ -45,7 +45,8 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      # 다섯째 검증 명령. pyright·pytest 처럼 web 파일이 안 바뀐 커밋에서도 돈다. e2e 는 커밋마다 브라우저와
+      # 다섯째 검증 명령. pyright·pytest 처럼 web 파일이 안 바뀐 커밋에서도 돈다. 파이썬 티켓이 openapi.json 을
+      # 바꾸면 생성물 최신성 단계가 빨개져 다시 생성한 타입이 같은 커밋에 담긴다. e2e 는 커밋마다 브라우저와
       # Next 빌드가 돌아 넣지 않는다(ADR 0021 이력).
       - id: web-verify
         name: web verify (단계는 web/package.json 의 verify — 원칙 III 의 TS 판정자가 든다)

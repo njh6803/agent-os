@@ -33,7 +33,10 @@ tests/             src를 미러링
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
-  tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다)
+  tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트의
+                   타입을 openapi.json에서 만들고 --check 로 최신성을 본다)
+  packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
+                   재개 스트림을 프레임으로 읽는 것(ADR 0021)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
@@ -49,7 +52,7 @@ kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플
 openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것(`web/`의 앱과 패키지)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것(`web/`의 앱)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
 
 ## 원천 표
 

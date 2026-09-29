@@ -41,7 +41,11 @@ const SERVER_FILE = {
     "Next 서버가 돌리는 파일(route, middleware, proxy, instrumentation)을 두지 않는다. API 를 부르는 서버 코드가 없다(ADR 0019)",
 };
 
+// 생성 클라이언트 패키지도 예외가 아니다. fetch 를 부르는 것은 그 안의 openapi-fetch 다.
 const FETCH_MESSAGE = "HTTP 는 생성 클라이언트로 부른다. 전역 fetch 를 직접 쓰지 않는다(ADR 0021)";
+
+// 생성 클라이언트 패키지(ADR 0021). 앱이 워크스페이스 의존성으로 든다.
+const API_CLIENT = "@agent-os/api-client";
 
 // 아토믹 층. 아래 층은 위 층을 import 하지 않고, atoms·molecules 는 API 를 부르지 않는다(tech.md 프론트 구성).
 const LAYER_POLICIES = [
@@ -147,6 +151,14 @@ export default defineConfig(
           policies: [
             ...LAYER_POLICIES,
             {
+              // pnpm 링크(윈도우는 junction)로 풀린 워크스페이스 패키지는 external 로 분류된다(2026-09-29 실측. 판정자
+              // 테스트가 그 링크를 둔다). 상대 경로로 패키지 안을 import 하면 로컬이라 이 정책이 보지 못한다.
+              from: { element: { types: { anyOf: ["atom", "molecule"] } } },
+              disallow: { to: { module: { origin: "external", source: API_CLIENT } } },
+              message:
+                "atoms 와 molecules 는 순수하다. 생성 클라이언트는 organisms 이상만 부른다(tech.md 프론트 구성)",
+            },
+            {
               from: { file: { categories: "in-app" } },
               disallow: {
                 to: {
@@ -177,14 +189,6 @@ export default defineConfig(
           ],
         },
       ],
-    },
-  },
-  {
-    // 예외: 생성 클라이언트 패키지(ADR 0021)는 HTTP 를 부르는 자리 그 자체라 전역 fetch 를 쓸 수 있다.
-    files: ["**/packages/api-client/**"],
-    rules: {
-      "no-restricted-globals": "off",
-      "no-restricted-properties": "off",
     },
   },
   {
