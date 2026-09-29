@@ -12,7 +12,7 @@
 - `CLAUDE.md`는 200줄 이하다.
 - `CLAUDE.md`의 `@` 임포트는 `docs/constitution/principles.md` 하나뿐이다. 줄 머리만이 아니라
   문장 속 `@경로` 도 임포트다(공식 문서: "reference them with @ syntax anywhere"). 코드 스팬과
-  펜스 안은 아니다.
+  펜스 안, 닫힌 HTML 주석 안은 아니다(주석은 2026-09-29 실측, PR #100 리뷰).
 - 임포트된 파일 안의 백틱 경로는 저장소 루트 기준으로 실재해야 한다. `@` 임포트의 상대 경로는 그
   임포트를 담은 파일 기준으로 풀리지만, 백틱 경로는 모델이 읽는 글자라 루트(작업의 자리) 기준으로
   읽혔다(대기열 32, PR #43 이 헌법의 형제 `README.md` 를 루트 README 로 읽어 버전을 못 찾았다).
@@ -61,18 +61,31 @@ PATH_EXTENSIONS = (".md", ".py", ".toml", ".json", ".yaml", ".yml", ".ps1", ".tx
 
 _FRONT_MATTER = re.compile(r"^---\n(.*?)\n---\n", re.S)
 _PATHS_KEY = re.compile(r"^paths:[ \t]*(.*)$", re.M)
-# 키 뒤의 주석(`paths:  # 설명`)을 넘고, 키와 같은 깊이의 항목(`- "src/**"`)도 받는다
-# (YAML 이 받는다).
-_PATHS_BLOCK = re.compile(r"^paths:[ \t]*(?:#[^\n]*)?\n((?:[ \t]*-[^\n]*\n?)+)", re.M)
-_LIST_ITEM = re.compile(r"^[ \t]*-[ \t]*(.+?)[ \t]*$", re.M)
+# 블록 목록의 항목. 키와 같은 깊이(`- "src/**"`)도 받는다(YAML 이 받는다). 값 없는 `-` 는
+# 빈 항목이다.
+_LIST_ITEM = re.compile(r"^[ \t]*-[ \t]*(.*?)[ \t]*$")
 # 상대 경로처럼 생긴 토큰. 바로 앞 글자가 경로의 일부(`/`, `}`, 이름 글자)면 잡지 않아서
 # `${CLAUDE_PROJECT_DIR}/tools/x.py` 의 `tools/x.py` 는 지나간다.
 _PATH_TOKEN = re.compile(r"(?<![\w/}.~-])([\w.-]+(?:/[\w.-]+)+)")
-# 백틱·물결 펜스, 목록 안의 들여쓴 펜스까지. 펜스 안의 `@경로` 는 임포트가 아니다(PR #91 리뷰).
-_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1[ \t]*$", re.M | re.S)
+# 펜스와 블록 HTML 주석의 경계는 CommonMark 다. 여는 펜스는 0~3칸 들여쓴(목록 표지 뒤도) ```
+# 이상이나 ~~~ 이상이고(백틱 펜스의 정보 문자열에는 백틱이 없다), 닫는 펜스는 같은 문자로 여는 길이
+# 이상이다.
+# 블록 주석은 0~3칸 들여쓴 `<!--` 로 여는 줄부터 `-->` 가 든 줄까지다. 네 칸 이상은 들여쓴 코드다.
+_FENCE_OPEN = re.compile(r"^ {0,3}(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)?(?:(`{3,})[^`]*|(~{3,}).*)$")
+_FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
+_COMMENT_BLOCK_OPEN = re.compile(r"^ {0,3}<!--")
+_HTML_BLOCK_OPEN = re.compile(r"^ {0,3}</?[A-Za-z]")
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+# 문단 속 주석과 코드 스팬은 빈 줄(문단의 끝)을 넘지 못한다. 코드 스팬은 같은 길이의 백틱끼리
+# 짝짓는다.
+_INLINE_COMMENT = re.compile(r"<!--(?:(?!\n[ \t]*\n).)*?-->", re.S)
+_INLINE_CODE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+_INLINE_CODE_LINES = re.compile(r"(?<!`)(`+)(?!`)((?:(?!\n[ \t]*\n).)+?)(?<!`)\1(?!`)", re.S)
+# 임포트된 파일의 백틱 경로를 뽑는 데만 쓴다.
 _CODE_SPAN = re.compile(r"`([^`\n]+)`")
 # `@경로` 임포트. 앞이 공백이나 줄 머리이고 뒤가 공백이나 줄 끝인 토큰을 모두 센다. 한글이 든 것만
-# 뺀다 — 조사가 붙은 `@x.md를` 은 실리지 않았다(2026-09-29 `claude -p` 2.1.281 실측). 앞이 공백이
+# 뺀다 — 조사가 붙은 `@x.md를` 은 실리지 않았다(2026-09-29 `claude -p` 2.1.281 실측. 한글 이름의
+# 파일은 실렸으니 그 이름의 파일이 없어서로 보인다 — 추론, `at_imports` 의 못 보는 것). 앞이 공백이
 # 아닌 `noreply@anthropic.com` 과 `(@x.md)` 도 아니다(같은 실측). 그 밖의 문장부호가 든 것(`@x.md.`,
 # `@x.md,`, `@c++.md`)은 재지 않은 것까지 보수적으로 센다 — 실리는 파일을 놓치는 것보다 백틱으로
 # 옮기는 것이 싸다. `@x.md.` 는 끝의 마침표까지 토큰이라 허용된 임포트와 다른 것으로 잡힌다.
@@ -99,16 +112,21 @@ def _front_matter(text: str) -> str | None:
     return None if match is None else match.group(1)
 
 
+def _opens_quote(value: str, index: int) -> bool:
+    """YAML 따옴표는 값의 머리나 공백·`[`·`,` 뒤에서만 연다. 낱말 속의 `'`(`it's`)는 아니다."""
+    return value[index] in "\"'" and (index == 0 or value[index - 1] in " \t[,")
+
+
 def _split_patterns(value: str) -> list[str]:
     """쉼표로 가른 패턴들. 중괄호(`*.{ts,tsx}`)와 따옴표 안의 쉼표는 가르지 않는다."""
     items: list[str] = []
     current: list[str] = []
     depth = 0
     quote = ""
-    for char in value:
+    for index, char in enumerate(value):
         if quote:
             quote = "" if char == quote else quote
-        elif char in "\"'":
+        elif _opens_quote(value, index):
             quote = char
         elif char == "{":
             depth += 1
@@ -123,30 +141,65 @@ def _split_patterns(value: str) -> list[str]:
     return items
 
 
+def _without_yaml_comment(value: str) -> str:
+    """YAML 뒷주석(`# 설명`)을 뗀 값. 따옴표 안의 `#` 는 주석이 아니다(`"docs/ #x/**"`).
+
+    따옴표를 벗기기 전의 값에 쓴다. 벗긴 뒤에 쓰면 따옴표가 지키던 ` #` 를 주석으로 자른다.
+    """
+    quote = ""
+    for index, char in enumerate(value):
+        if quote:
+            quote = "" if char == quote else quote
+        elif _opens_quote(value, index):
+            quote = char
+        elif char == "#" and (index == 0 or value[index - 1] in " \t"):
+            return value[:index]
+    return value
+
+
+def _block_items(after_key: str) -> list[str]:
+    """`paths:` 줄 뒤의 블록 목록 항목. 빈 줄과 주석 줄은 넘고, 항목이 아닌 줄에서 멈춘다."""
+    items: list[str] = []
+    for line in after_key.split("\n")[1:]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        item = _LIST_ITEM.match(line)
+        if item is None:
+            break
+        items.append(item.group(1))
+    return items
+
+
 def _paths_patterns(text: str) -> list[str] | None:
     """`paths` 의 패턴들. 프론트매터나 키가 없거나 항목이 비었으면 없는 것(`None`)이다.
 
     공식 문서가 받는 모양 셋을 읽는다. 블록 목록(`- "src/**"`), 흐름 목록(`["src/**", "b/**"]`),
-    쉼표로 가른 문자열(`"src/**, b/**"`). 두 검사가 이 판정을 같이 쓴다. 따로 쓰면 항목 없는
-    `paths:` 가 둘 다를 빠져나간다. 못 보는 것: YAML 로 파싱되지 않는 프론트매터. Claude Code 는
-    그때 `paths` 가 없는 것처럼 매 세션 싣는데, 이 판정은 YAML 파서가 아니라 그것을 모른다.
+    쉼표로 가른 문자열(`"src/**, b/**"`). 블록 목록은 키와 항목 사이, 항목 사이의 빈 줄과 주석
+    줄을 넘는다 — 넘지 못하던 때는 주석 뒤의 항목을 잘라 죽은 glob 을 숨겼다(PR #100 리뷰). 두
+    검사가 이 판정을 같이 쓴다. 따로 쓰면 항목 없는 `paths:` 가 둘 다를 빠져나간다.
+
+    이 판정은 YAML 파서가 아니다. 못 보는 것: 여러 줄에 걸친 흐름 목록과 plain 스칼라, 블록
+    스칼라(`|`·`>`), 따옴표 친 키, 앵커, `null`, 따옴표 없이 `*` 로 여는 패턴(YAML 에서는 별칭),
+    겹친 키(Claude Code 는 뒤의 값을 썼는데 여기서는 앞의 값을 읽는다), 그리고
+    YAML 로 읽히지 않는 프론트매터. 마지막 것을 공식 문서는 `paths` 없는 규칙처럼 매 세션
+    싣는다고 하지만, 2.1.281 에서 닫히지 않은 흐름 목록(`["sub/**"`)과 따옴표(`"sub/**`)는 시작
+    때도 그 경로를 Read 할 때도 실리지 않았다(2026-09-29 실측,
+    `.scratch/harness/probes/import_comments/`). 어느 쪽이든 여기서는 살아 있는 glob 으로 보인다.
     """
     front = _front_matter(text)
-    key = None if front is None else _PATHS_KEY.search(front)
-    if front is None or key is None:
+    if front is None:
         return None
-    inline = key.group(1).split(" #", 1)[0].strip()
-    if inline.startswith("#"):
-        inline = ""
+    key = _PATHS_KEY.search(front)
+    if key is None:
+        return None
+    inline = _without_yaml_comment(key.group(1)).strip()
     if inline.startswith("["):
         items = _split_patterns(inline.strip("[]"))
     elif inline:
         items = _split_patterns(inline.strip("\"'"))
     else:
-        block = _PATHS_BLOCK.search(front)
-        items = [] if block is None else [m.group(1) for m in _LIST_ITEM.finditer(block.group(1))]
-    # YAML 뒷주석(`- "src/**"  # 설명`)은 패턴이 아니다.
-    patterns = [item.split(" #", 1)[0].strip().strip("\"'").strip() for item in items]
+        items = [_without_yaml_comment(item) for item in _block_items(front[key.end() :])]
+    patterns = [item.strip().strip("\"'").strip() for item in items]
     return [pattern for pattern in patterns if pattern] or None
 
 
@@ -237,9 +290,93 @@ def hooks_with_relative_paths(root: Path = ROOT) -> list[str]:
     return problems
 
 
-def _without_code(text: str) -> str:
-    """펜스 블록과 코드 스팬을 뺀 마크다운. 공식 문서가 임포트 파서가 건너뛴다고 밝힌 자리다."""
-    return _CODE_SPAN.sub("", _FENCE.sub("", text))
+def _comment_residual(block: str) -> str:
+    """블록 주석 줄들에서 주석 구간을 뺀 나머지(c29·c53).
+
+    짝 없는 `<!--` 는 다음 문단과 짝짓지 않게 지운다.
+    """
+    return _HTML_COMMENT.sub("", block).replace("<!--", "")
+
+
+def _without_blocks(text: str, *, widest: bool) -> str:
+    """펜스 코드 블록과 블록 HTML 주석을 뺀 본문. 한 줄씩 상태를 넘긴다.
+
+    둘을 따로 지우면 서로의 표지를 잘못 짝짓는다. 주석 안의 ``` 는 펜스가 아니고 펜스 안의
+    `<!--` 는 주석이 아니다(사례 c25·c26). 목록 표지 줄에서 연 펜스(`- ```bash`)도 연다 — 모르면
+    그 닫는 줄을 여는 줄로 읽는다(c50·c56). 블록 주석의 마지막 `-->` 뒤 글자는 남긴다(c29).
+
+    `widest` 는 허용된 임포트가 실리는지 볼 때다. 그때는 닫히지 않은 펜스와 주석이 파일 끝까지
+    가고(c06·c07), HTML 블록(`<div>` 같은 줄부터 빈 줄까지)도 뺀다(c11·c12). 세는 쪽은 그 둘을
+    글자로 둔다. 표지를 잘못 읽었을 때 뒤의 임포트가 통째로 숨지 않게 하려는 것이다(c51).
+    """
+    kept: list[str] = []
+    held: list[str] = []
+    fence = ""
+    in_comment = False
+    in_html = False
+    for line in text.split("\n"):
+        if in_html:
+            if not line.strip():
+                in_html = False
+                kept.append(line)
+            continue
+        if fence:
+            held.append(line)
+            closing = _FENCE_CLOSE.match(line)
+            if closing and closing.group(1)[0] == fence[0] and len(closing.group(1)) >= len(fence):
+                fence, held = "", []
+            continue
+        if in_comment:
+            held.append(line)
+            if "-->" in line:
+                kept.append(_comment_residual("\n".join(held)))
+                in_comment, held = False, []
+            continue
+        opening = _FENCE_OPEN.match(line)
+        if opening:
+            fence, held = opening.group(1) or opening.group(2), [line]
+            continue
+        if _COMMENT_BLOCK_OPEN.match(line):
+            if "-->" in line:
+                kept.append(_comment_residual(line))
+            else:
+                in_comment, held = True, [line]
+            continue
+        if widest and _HTML_BLOCK_OPEN.match(line):
+            in_html = True
+            continue
+        kept.append(line)
+    if not widest:
+        kept.extend(held)
+    return "\n".join(kept)
+
+
+def _inline_comment(match: re.Match[str]) -> str:
+    """문단 속 주석은 지운다. 들여쓴 코드 블록(빈 줄 뒤 네 칸 이상)에서 연 것은 코드라 둔다.
+
+    문단 바로 뒤의 네 칸 줄은 문단이 이어지는 것이라 코드가 아니다(c04 는 둔다, c48 은 지운다).
+    """
+    text = match.string
+    start = text.rfind("\n", 0, match.start()) + 1
+    head = text[start : match.start()].expandtabs(4)
+    before = text[: max(start - 1, 0)]
+    previous = before[before.rfind("\n") + 1 :] if start else ""
+    in_code = len(head) - len(head.lstrip(" ")) >= 4 and not previous.strip()
+    return match.group(0) if in_code else " "
+
+
+def _without_code(text: str, *, widest: bool = False) -> str:
+    """임포트 파서가 보지 않는 자리를 뺀 마크다운. 펜스, 코드 스팬, 닫힌 HTML 주석이다.
+
+    공식 문서가 밝힌 것은 앞의 둘이다. 주석 안의 `@` 는 블록이든 문단 속이든 따라가지
+    않았다(2026-09-29 claude 2.1.281 실측, `.scratch/harness/probes/import_comments/`. 블록 주석은
+    루트 CLAUDE.md·rules·임포트된 파일에서, 문단 속 주석은 임포트된 파일에서 쟀다). 문단 속 주석과
+    코드 스팬은 빈 줄을 넘지 못한다(c52). `widest` 면 코드 스팬이 줄을 넘는다(c10·c49). 세는 쪽이
+    줄을 넘기면 들여쓴 코드 줄의 ``` 끼리 짝지어 사이의 임포트를 숨긴다(c40).
+    """
+    spans = _INLINE_CODE_LINES if widest else _INLINE_CODE
+    without_spans = spans.sub(" ", _without_blocks(text, widest=widest))
+    return _INLINE_COMMENT.sub(_inline_comment, without_spans)
 
 
 def at_imports(text: str) -> list[str]:
@@ -248,33 +385,39 @@ def at_imports(text: str) -> list[str]:
     2026-09-28 까지는 `line.startswith("@")` 만 봐서 "자세한 것은 @docs/PRD.md" 같은 한 구절이
     파일 하나를 매 세션 통째로 싣는데 검사는 초록이었다. 무엇을 세는지는 `_IMPORT_TOKEN` 이다.
     끝의 마침표는 토큰에 든다 — 그것을 떼어 맞추던 때는 실리지 않는
-    `@docs/constitution/principles.md.` 가 허용 목록을 통과했다. 못 보는 것: 블록 HTML
-    주석(공식 문서: 주입 전에 지운다)과 들여쓴 코드 블록(2026-09-29 실측) 안의 `@경로` 는
-    Claude Code 가 싣지 않지만 여기서는 임포트로 센다. 허용된
-    임포트 쪽의 거짓 초록은 `claude_md_problems` 가 한 줄 단독 검사로 막는다. 한글이 든 경로는
-    임포트로 세지 않는다.
+    `@docs/constitution/principles.md.` 가 허용 목록을 통과했다.
+
+    Claude Code 는 marked 렉서의 토큰에서 임포트를 찾고 이 판정은 줄과 정규식으로 흉내 낸다.
+    그래서 본문을 두 번 읽는다. 여기(세는 쪽)는 확실히 안 실리는 자리만 좁게 벗긴다. 허용된
+    임포트가 실리는지는 `claude_md_problems` 가 넓게 벗긴 본문에서 본다. 어느 쪽이 틀려도 빨강으로
+    틀린다. 못 보는 것(2026-09-29 실측, 괄호는 `.scratch/harness/probes/import_comments/` 의 사례
+    id). 실리지 않는데 세는 자리(거짓 빨강) — HTML 블록(c37), 들여쓴 코드 블록(c34), 인용문 안의
+    펜스(c36), 프론트매터(c38), 그리고 추론으로 네 칸 이상 들여쓴 목록 속 펜스. 실리는데 세지 않는
+    자리(거짓 초록) — 굵게·링크 글자·인라인 태그(c42~c44), `#` 조각이나 한글이 든 경로(c45·c46).
     """
     return ["@" + match.group(1) for match in _IMPORT_TOKEN.finditer(_without_code(text))]
 
 
 def claude_md_problems(root: Path = ROOT) -> list[str]:
-    lines = (root / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
+    text = (root / "CLAUDE.md").read_text(encoding="utf-8")
+    lines = text.splitlines()
     problems: list[str] = []
     if len(lines) > MAX_LINES:
         problems.append(f"CLAUDE.md {len(lines)}줄 > {MAX_LINES}줄. 로드 시점 표로 다시 나눈다")
-    imports = at_imports("\n".join(lines))
+    imports = at_imports(text)
     if imports != ALLOWED_IMPORTS:
         problems.append(
             f"CLAUDE.md의 @ 임포트는 {ALLOWED_IMPORTS}뿐이어야 한다. 지금: {imports}."
             " 문장 속 @경로 도 임포트다. 가리키려면 백틱에 넣는다"
         )
-    # 허용된 임포트는 실려야 한다. 주석이나 들여쓴 코드 블록 안이면 토큰으로는 세어지지만
-    # 실리지 않는다.
+    # 허용된 임포트는 실려야 한다. 넓게 벗긴 본문(닫히지 않은 것은 파일 끝까지, HTML 블록과 여러
+    # 줄 코드 스팬도 뺀다)에 한 줄 단독으로 남아야 한다. 인용문·목록·문장 속도 실렸지만 받지 않는다.
+    visible = [line.rstrip() for line in _without_code(text, widest=True).split("\n")]
     for allowed in ALLOWED_IMPORTS:
-        if allowed not in lines:
+        if allowed not in visible:
             problems.append(
-                f"CLAUDE.md의 {allowed} 는 한 줄에 단독으로, 들여쓰지 않고 적는다. 주석이나 들여쓴"
-                " 코드 블록 안이면 헌법이 실리지 않는다"
+                f"CLAUDE.md의 {allowed} 는 주석과 코드 밖의 한 줄에 단독으로, 들여쓰지 않고"
+                " 적는다. 이 검사가 받는 모양은 그것 하나다(주석·펜스 안이면 헌법이 실리지 않는다)"
             )
     return problems
 

@@ -1,8 +1,8 @@
 # chore/instruction-loading-and-enforcement 의 지침 검사 변이. 형식은 tools/mutate.py 의 독스트링.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/instruction_check_mutations.toml
-# 변이 넷이 한 줄씩 되돌려 그 줄을 지키는 테스트가 빨강이 되는지 잰다. 백틱 안의 @ 가드는 구현
-# 전부터 초록이었고, main 의 배관·rules 재귀·토큰 끝의 경계는 빨강을 본 테스트가 그 줄을 지키는지
-# 따로 잰다(일지 2026-09-29-04).
+# 변이마다 한 줄씩 되돌려 그 줄을 지키는 테스트가 빨강이 되는지 잰다. 앞의 넷은 이 chore 의 것이다.
+# 백틱 안의 @ 가드는 구현 전부터 초록이었고, main 의 배관·rules 재귀·토큰 끝의 경계는 빨강을 본
+# 테스트가 그 줄을 지키는지 따로 잰다(일지 2026-09-29-04). 뒤의 열은 PR #100 리뷰 반영이다.
 
 [[mutation]]
 name = "rules 의 @ 검사에서 코드 스팬을 빼지 않는다"
@@ -44,3 +44,120 @@ expect = "red"
 file = "tools/check_instructions.py"
 old = '''_IMPORT_TOKEN = re.compile(r"(?<!\S)@([^\s가-힣]+)(?=\s|$)")'''
 new = '''_IMPORT_TOKEN = re.compile(r"(?<!\S)@([^\s가-힣]+)")'''
+
+# PR #100 리뷰 반영. 구현 전부터 초록이던 가드(c04·c12·c26·c27·c47, 다른 키 목록)와 셀프 리뷰 뒤에
+# 더한 가드(c55·c57·c58, c51 의 되돌림)가 제 줄을 지키는지 잰다. 나머지 새 테스트는 구현 전에 빨강을 봤다.
+
+[[mutation]]
+name = "블록 주석을 들여쓰기와 무관하게 연다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c04"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_COMMENT_BLOCK_OPEN = re.compile(r"^ {0,3}<!--")'''
+new = '''_COMMENT_BLOCK_OPEN = re.compile(r"^[ \t]*<!--")'''
+
+[[mutation]]
+name = "들여쓴 코드 줄에서 연 문단 속 주석도 지운다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c04"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return match.group(0) if in_code else " "'''
+new = '''    return " "'''
+
+[[mutation]]
+name = "펜스 안에서도 블록 주석을 연다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c26"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        if fence:
+            held.append(line)'''
+new = '''        if fence and _COMMENT_BLOCK_OPEN.match(line):
+            fence, held, in_comment = "", [line], True
+            continue
+        if fence:
+            held.append(line)'''
+
+[[mutation]]
+name = "한 줄 블록 주석을 그 줄에서 닫지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c47"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''            if "-->" in line:
+                kept.append(_comment_residual(line))
+            else:
+                in_comment, held = True, [line]'''
+new = '''            in_comment, held = True, [line]'''
+
+[[mutation]]
+name = "HTML 블록이 빈 줄에서 끝나지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c12"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''            if not line.strip():
+                in_html = False'''
+new = '''            if False:
+                in_html = False'''
+
+[[mutation]]
+name = "세는 쪽도 닫히지 않은 펜스를 파일 끝까지 지운다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c51"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    if not widest:
+        kept.extend(held)
+'''
+new = ''''''
+
+[[mutation]]
+name = "목록 표지 줄의 펜스를 모른다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c57 or c58"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_FENCE_OPEN = re.compile(r"^ {0,3}(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)?(?:(`{3,})[^`]*|(~{3,}).*)$")'''
+new = '''_FENCE_OPEN = re.compile(r"^ {0,3}(?:(`{3,})[^`]*|(~{3,}).*)$")'''
+
+[[mutation]]
+name = "문단 속 주석을 탐욕으로 지운다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "c55"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_INLINE_COMMENT = re.compile(r"<!--(?:(?!\n[ \t]*\n).)*?-->", re.S)'''
+new = '''_INLINE_COMMENT = re.compile(r"<!--(?:(?!\n[ \t]*\n).)*-->", re.S)'''
+
+[[mutation]]
+name = "블록 목록이 항목 아닌 줄에서 멈추지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "다른_키_목록"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        if item is None:
+            break'''
+new = '''        if item is None:
+            continue'''
+
+[[mutation]]
+name = "낱말 속 작은따옴표도 따옴표로 연다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "작은따옴표"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return value[index] in "\"'" and (index == 0 or value[index - 1] in " \t[,")'''
+new = '''    return value[index] in "\"'"'''
