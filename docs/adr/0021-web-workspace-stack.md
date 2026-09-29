@@ -80,3 +80,25 @@ ADR 0010의 2026-09-22 이력이 `httpx`를 들인 것과 같은 자리다. 그�
   통째로 실리기 때문이다.
 - `agentRules: false`와 결과를 보는 검사(`tools/check_instructions.py`의 중첩 지침 파일)는 그대로다. `next dev`의
   파일 생성은 이 체크아웃에 Next가 없어 다시 재지 않았다. 앱을 세우는 티켓(04)이 본다.
+
+### 2026-09-29 `--immutable`을 거둔다 — openapi-fetch가 readonly 배열을 배열로 보지 못한다
+
+생성 클라이언트 티켓(03)이 구현하며 쟀다. 위 Consequences의 "`--immutable`로 필드가 readonly가 되고"는 생성물만
+보고 정했고, 생성 타입이 openapi-fetch를 지난 뒤의 모양은 재지 않았다.
+
+- openapi-fetch 0.17.0(최신)은 응답을 헬퍼 `openapi-typescript-helpers` 0.1.0의 `Readable<T>`로 감싼다. 배열을
+  `T extends (infer E)[]`로 알아보는데 `readonly E[]`는 여기 들지 않고, 키를 재매핑하는 객체 갈래가 배열성을 지운다.
+- 그래서 `GET /plugins`의 `data`를 순회할 수 없다(TS2488). 트레이스 상세의 `events`, 에러 봉투의 `violations`도
+  같다. 가변 생성물에서는 셋 다 배열이다(`.scratch/web-admin/probes/immutable_readable.sh`, 스크립트로 쟀다).
+
+**`--immutable` 없이 생성한다.** 열거는 그대로 리터럴 유니온이다(`--enum`을 주지 않는 기본값). 잃는 것은 생성
+타입의 readonly다. 화면 코드가 서버 데이터를 제자리에서 바꾸는 실수를 타입이 막지 못한다.
+
+거부한 안은 둘이다.
+
+- **pnpm patch로 헬퍼의 `Readable`·`Writable`에 readonly 배열 갈래를 더한다.** 쟀을 때 세 자리가 모두 풀렸다(같은 프로브).
+  그러나 판을 올릴 때마다 볼 패치가 생기고, 막을 것(제자리 변경)을 요구하는 화면이 아직 없다.
+- **생성물을 두 벌(가변 `paths`, 불변 `components`)로 둔다.** 같은 계약의 타입이 두 벌이다.
+
+**다시 켜는 조건.** openapi-fetch가 readonly 배열을 배열로 보면 다시 켠다. 클라이언트 타입 테스트
+(`web/packages/api-client/src/clients.test-d.ts`)의 배열 순회가 그 자리다.
