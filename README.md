@@ -6,8 +6,10 @@
 
 ```bash
 uv sync
+pnpm -C web install
 uv run pre-commit install
 uv run pytest -q
+pnpm -C web verify
 ```
 
 ## 구조
@@ -28,6 +30,10 @@ plugins/
   disabled.toml    선택. 운영자가 끈 플러그인의 이름(ADR 0017). 없으면 전부 켜짐. 관리 API의 PUT이 쓰고
                    손으로 고쳐도 같다. skill과 model은 로더가 생길 때 그 로더가 켜짐을 본다
 tests/             src를 미러링
+web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
+  eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
+  tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
+  tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
@@ -43,7 +49,7 @@ kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플
 openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것(`web/`)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것(`web/`의 앱과 패키지)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
 
 ## 원천 표
 
@@ -52,8 +58,8 @@ openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않�
 | 사실 | 원천 | 비고 |
 |---|---|---|
 | 원칙과 거버넌스 | `docs/constitution/principles.md` | `CLAUDE.md`가 임포트 |
-| 스택과 의존성의 결정 | `docs/constitution/tech.md` | 구현은 `pyproject.toml`. 둘이 다르면 pyproject를 맞추거나 ADR |
-| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령 넷은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`. 명령이 바뀌면 둘 다 |
+| 스택과 의존성의 결정 | `docs/constitution/tech.md` | 구현은 `pyproject.toml`과 `web/package.json`. 둘이 다르면 구현을 맞추거나 ADR |
+| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`과 `.github/workflows/ci.yml`. 명령이 바뀌면 셋 다 |
 | 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |

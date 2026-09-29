@@ -1,4 +1,4 @@
-"""tools/check_type_escapes.py. 원칙 III의 기계 판정자.
+"""tools/check_type_escapes.py. 원칙 III의 파이썬 판정자.
 
 `Any`·`cast`·`type: ignore`·`pyright: ignore`를 pyright strict 도 지금의 ruff select 도 잡지
 않는다. 교정 루프의 사다리("타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰")에서 헌법 원칙 하나가

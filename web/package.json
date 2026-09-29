@@ -1,0 +1,26 @@
+{
+  "name": "agent-os-web",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "verify": "pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
+    "lint": "eslint --max-warnings 0",
+    "format": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:tsconfig": "node tools/check-tsconfig.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-boundaries": "^7.2.0",
+    "prettier": "^3.9.9",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.2"
+  }
+}

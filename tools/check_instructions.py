@@ -1,6 +1,7 @@
 """지침 파일과 하네스 설정 검사. 규칙 배치는 런북 3단계와 ADR 0004의 기계 판정자이고, 경로 참조
-두 가지(rules 의 glob, 훅 명령)는 2026-09-23 의 잠김(PR #52)에서, 뒤의 넷은 2026-09-28 의 하네스
-감사(대기열 25·32 와 감사 지적)에서 왔다.
+두 가지(rules 의 glob, 훅 명령)는 2026-09-23 의 잠김(PR #52)에서, 그 뒤의 넷(`@` 임포트부터 훅의
+stdin 까지)은 2026-09-28 의 하네스 감사(대기열 25·32 와 감사 지적)에서, 마지막 중첩 지침 파일은
+web-admin 티켓 01 에서 왔다.
 
 - `.claude/rules/*.md`는 `paths` 프론트매터가 있어야 한다. 없으면 매 세션 전부 실린다.
 - 그 `paths`의 glob은 저장소에서 무언가를 가리켜야 한다. 아무것도 안 가리키면 그 규칙이 조용히
@@ -18,6 +19,8 @@
 - `tools/hook_*.py`는 stdin 을 바이트(`sys.stdin.buffer`)로 읽는다. 훅 환경에 `PYTHONUTF8` 이 있다고
   가정하지 않는다 — 없으면 텍스트 stdin 은 cp949 이고, 한글이 든 입력은 예외 없이 출력 0바이트가
   된다(대기열 25).
+- 루트 밖에 `CLAUDE.md` 와 `AGENTS.md` 가 없다. `next dev` 가 앱 폴더에 두 파일을 만든다(ADR 0021,
+  web-admin 티켓 01).
 
 pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은
 비용이 다르다(선행 저장소 AAPP-15).
@@ -27,6 +30,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import sys
 from collections.abc import Iterator
@@ -45,6 +49,7 @@ PATCHED_SKILLS = (
     "to-tickets",
 )
 SENTINEL = "프로젝트 사본"
+NESTED_INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
 SETTINGS = Path(".claude") / "settings.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"
 # 백틱 토큰이 경로인지 가르는 확장자. 슬래시가 있으면 확장자와 무관하게 경로다. `agent_os.core` 나
@@ -340,8 +345,46 @@ def hooks_reading_text_stdin(root: Path = ROOT) -> list[str]:
     return problems
 
 
+def nested_instruction_files(root: Path = ROOT) -> list[str]:
+    """루트 밖의 `CLAUDE.md` 와 `AGENTS.md`.
+
+    지침은 `.claude/rules/*.md` + `paths` 에 둔다(ADR 0004). 하위 디렉터리의 `CLAUDE.md` 는
+    그 디렉터리의 파일을 열 때 통째로 실리고 `@` 임포트도 따라가서, 로드 시점 표와 임포트
+    검사를 조용히 우회한다. `next dev` 는 에이전트를 감지하면 앱 폴더에 두 파일을 만든다
+    (ADR 0021). `agentRules: false` 가 그것을 끄지만, 설정 한 줄을 보는 테스트보다 결과를
+    보는 검사가 원인과 무관하게 잡는다.
+
+    작업 트리를 훑으므로 pre-commit 은 추적하지 않는 파일도 보고, CI 는 체크아웃된 것(추적하는
+    것)만 본다. 보지 않는 곳: 어느 깊이든 `node_modules`, 루트의 `.venv` 와 `.git`(설치된
+    의존성과 git 의 것이라 이 저장소의 지침이 아니다), `.claude/worktrees`(다른 체크아웃의 루트
+    `CLAUDE.md`). 못 보는 것: 대소문자가 다른 이름(`claude.md`)과 다른 도구의 지침 파일
+    이름(`GEMINI.md`, `.cursorrules`).
+    """
+    skipped = {root / ".venv", root / ".git", root / ".claude" / "worktrees"}
+    found: list[str] = []
+    for directory, subdirectories, files in os.walk(root):
+        current = Path(directory)
+        subdirectories[:] = sorted(
+            name
+            for name in subdirectories
+            if name != "node_modules" and current / name not in skipped
+        )
+        if current == root:
+            continue
+        found.extend(
+            (current / name).relative_to(root).as_posix()
+            for name in NESTED_INSTRUCTION_FILES
+            if name in files
+        )
+    return [
+        f"{path}: 루트 밖의 지침 파일이다. 지침은 .claude/rules/*.md + paths 에 둔다(ADR 0004)."
+        " next dev 가 만든 것이면 next.config 의 agentRules: false 를 본다(ADR 0021)"
+        for path in sorted(found)
+    ]
+
+
 def main(root: Path = ROOT) -> int:
-    """검사 여덟을 모아 돈다. `root` 는 CLI 첫 인자로도 받는다(임시 트리에서 빨강을 재는 테스트)."""
+    """검사 아홉을 모아 돈다. `root` 는 CLI 첫 인자로도 받는다(임시 트리에서 빨강을 재는 테스트)."""
     problems = [
         f"{path.relative_to(root)}: paths 프론트매터 없음. 없으면 매 세션 실린다"
         for path in rules_without_paths(root)
@@ -353,6 +396,7 @@ def main(root: Path = ROOT) -> int:
     problems.extend(patched_skills_without_sentinel(root))
     problems.extend(skills_with_sentinel_not_listed(root))
     problems.extend(hooks_reading_text_stdin(root))
+    problems.extend(nested_instruction_files(root))
     for problem in problems:
         print(problem)
     return 1 if problems else 0

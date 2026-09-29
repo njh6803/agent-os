@@ -21,6 +21,31 @@ def test_게이트_명령_자리를_알아본다() -> None:
     assert not is_gate("grep -rn pyright src")
 
 
+def test_web_검증_명령과_Playwright_실행도_게이트다() -> None:
+    """파이프 뒤 `$?` 가 판정을 속이는 것은 명령의 언어와 무관하다(web-admin 티켓 01).
+
+    e2e 스크립트의 이름은 아직 없어서 Playwright 실행 자체를 게이트로 본다.
+    """
+    assert is_gate("pnpm -C web verify")
+    assert is_gate("pnpm --dir web run verify")
+    assert is_gate("pnpm verify")
+    assert is_gate("pnpm -C web exec playwright test")
+    assert is_gate("npx playwright test --project chromium")
+    assert not is_gate("pnpm -C web install --frozen-lockfile")
+    assert not is_gate("pnpm -C web exec playwright install --with-deps")
+    assert not is_gate("echo pnpm -C web verify")
+
+
+def test_파이프에_묻힌_web_검증_명령과_e2e_를_경고한다() -> None:
+    assert len(warnings_for("pnpm -C web verify 2>&1 | tail -5")) == 1
+    assert len(warnings_for("pnpm -C web exec playwright test | tail -20")) == 1
+
+
+def test_단독으로_친_web_검증_명령과_e2e_는_조용하다() -> None:
+    assert warnings_for("pnpm -C web verify") == []
+    assert warnings_for("pnpm -C web exec playwright test") == []
+
+
 def test_파이프_마지막이_아닌_게이트를_경고한다() -> None:
     """PR #56 세션: `| tail -3; echo $?` 로 tail 의 종료 코드를 읽었다."""
     warnings = warnings_for("PYTHONUTF8=1 uv run pytest -q 2>&1 | tail -3; echo $?")

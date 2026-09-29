@@ -1,8 +1,8 @@
 """`openapi.json` 생성기. 계약 파일은 저장소 루트에 커밋된다(ADR 0010).
 
 슬라이스 3 의 `packages/api-client` 가 이 파일에서 생성되므로, 파일이 앱과 어긋나면 생성된
-클라이언트가 조용히 틀린다. 최신성은 pytest 하나가 판정한다 — 검사 명령 넷이 그대로 게이트이고
-새 훅을 만들지 않는다.
+클라이언트가 조용히 틀린다. 최신성은 pytest 하나가 판정한다 — `CLAUDE.md` 의 검증 명령이 그대로
+게이트이고 새 훅을 만들지 않는다.
 
     PYTHONUTF8=1 uv run python tools/export_openapi.py
 

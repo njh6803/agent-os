@@ -9,3 +9,10 @@ dist/
 .env
 .idea/
 traces/
+# web/ (Node). 의존성, Next 빌드, 테스트 산출물
+node_modules/
+.next/
+coverage/
+test-results/
+playwright-report/
+blob-report/

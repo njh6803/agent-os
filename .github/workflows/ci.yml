@@ -1,4 +1,5 @@
-# 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다.
+# 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. 파이썬과 web 이 한 잡이다 —
+# 필수 검사는 verify 하나다(ADR 0005, ADR 0021 이력).
 # LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
 name: ci
 
@@ -33,3 +34,14 @@ jobs:
       - run: uv run pytest -q
       - run: uv run python tools/check_instructions.py
       - run: uv run python tools/check_type_escapes.py
+      # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+      - run: pnpm -C web install --frozen-lockfile
+      - run: pnpm -C web verify
