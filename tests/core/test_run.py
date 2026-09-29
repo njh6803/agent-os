@@ -1101,11 +1101,18 @@ async def _resume(
     plugins: PluginSource | None = None,
     approver: Principal = PRINCIPAL,
     decision: Decision | None = None,
+    pause_index: int | None = None,
 ) -> list[Event]:
+    """결정의 자리를 주지 않으면 결정 직전에 트레이스를 읽은 클라이언트가 볼 자리를 싣는다.
+
+    자리 자체를 재는 테스트만 자리를 준다(아래 "결정의 자리" 절). 나머지는 자리가 맞는 결정이고,
+    단언의 뜻은 자리가 생기기 전과 같다.
+    """
     return [
         event
         async for event in resume(
             run_id,
+            _last_index(trace, run_id) if pause_index is None else pause_index,
             decision if decision is not None else Approve(),
             approver,
             plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
@@ -1115,6 +1122,12 @@ async def _resume(
             clock=clock,
         )
     ]
+
+
+def _last_index(trace: TraceStore, run_id: RunId) -> int:
+    """트레이스 상세를 읽은 클라이언트가 보는 마지막 이벤트의 인덱스. 없는 실행이면 0 이다."""
+    stored = trace.read(run_id)
+    return 0 if stored is None else len(stored.events) - 1
 
 
 class SafeThenGatedAgent:
@@ -1672,9 +1685,10 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
 #
 # 채널이 실행 전 실패를 상태 코드로 옮기려면 core 가 타입으로 갈라 던져야 한다(ADR 0014). 기준은
 # "깨졌나"다(ADR 0014 의 2026-09-26 이력). 요청이 이름을 댄 것이 없는 것(부재), 요청이 가리킨 실행이
-# 재개할 수 있는 상태가 아닌 것(재개 불가), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR
-# 0017)이 하위 타입이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의
-# 판정 순서는 아래 "꺼진 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
+# 재개할 수 있는 상태가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아닌 것(재개 불가, 뒤의 것은
+# 아래 "결정의 자리" 절), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR 0017)이 하위 타입이다.
+# 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의 판정 순서는 아래 "꺼진
+# 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
 
 _RUN_1 = RunId("run-1")
 # 하위 타입 셋. 깨진 것(하위 타입이 아닌 PluginError)을 단언할 때 이것을 뺀다. 늘면 여기에 더한다.
@@ -2545,4 +2559,157 @@ async def test_에이전트가_대조_실패를_삼키고_멈춘_호출을_다�
     assert isinstance(events[2], ToolCalled)
     assert events[2].tool == "send"
     assert events[2].ok is False
+    assert tools.connection.calls == []
+
+
+# --- 결정의 자리 --------------------------------------------------------------
+#
+# 결정은 그것이 답하는 일시정지가 트레이스에서 서는 자리(트레이스 상세 `events` 의 0부터 센
+# 인덱스)를 든다(ADR 0014 의 2026-09-28 이력). 그 자리가 지금의 일시정지가 아니면 결정을 쓰기 전에
+# 재개 불가다. 오래된 화면이나 터미널에 남은 옛 안내 줄의 결정이 승인자가 본 적 없는 호출을 실행하지
+# 않게 한다. 판정은 트레이스 판정의 끝(일시정지 아님 뒤)이고 준비보다 앞이다. 아래 트레이스의 자리는
+# 시작(0), 모델 호출(1), 첫 일시정지(2)이고, 승인하면 결정(3), 재개(4), 도구 호출(5), 둘째
+# 일시정지(6)다.
+
+
+async def test_지나간_일시정지의_자리를_든_결정은_재개_불가이고_두_자리를_들며_아무것도_쓰지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """오래된 화면의 결정이다. 첫 일시정지에 다른 곳이 승인해 실행이 둘째에서 다시 멈춘 뒤, 첫
+    일시정지를 보고 누른 결정이 온다. 그 결정이 본 호출은 이미 지나갔다. 자리가 맞는 첫 결정은
+    자리가 생기기 전과 같다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "delete"), _reply("끝")]))
+    tools = FakeTools({"send": "sent", "delete": "gone"})
+    plugins = _gated_plugins(OneShotAgent(), requires_approval=["send", "delete"])
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    first = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=2)
+    before = list(trace.events)
+
+    with pytest.raises(NotResumable) as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=2)
+
+    assert [e.type for e in first] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_paused",
+    ]
+    assert "자리 2" in str(caught.value)
+    assert "자리 6" in str(caught.value)
+    assert "run-1" in str(caught.value)
+    assert trace.events == before
+    assert [name for name, _ in tools.connection.calls] == ["send"]
+
+
+async def test_같은_도구를_같은_인자로_두_번_멈춰도_자리가_둘을_가르고_맞는_자리로는_이어_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """도구와 인자로 결정을 묶는 안을 거부한 근거다(ADR 0014 의 2026-09-28 이력). 두 일시정지의
+    도구와 인자가 같아 그것만 보면 옛 결정이 새 일시정지에 들어맞는다. 거절된 결정은 아무것도 쓰지
+    않으므로 맞는 자리로 다시 결정할 수 있다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=2)
+    first, second = trace.events[2], trace.events[6]
+    before = list(trace.events)
+
+    with pytest.raises(NotResumable, match="자리 6"):
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=2)
+    refused = list(trace.events)
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=6)
+
+    assert isinstance(first, RunPaused)
+    assert isinstance(second, RunPaused)
+    assert (first.tool, first.args) == (second.tool, second.args)
+    assert refused == before
+    assert events[-1].type == "run_finished"
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2}), ("send", {"a": 2, "b": 2})]
+
+
+@pytest.mark.parametrize("pause_index", [2, 1], ids=["마지막 이벤트의 자리", "다른 자리"])
+async def test_일시정지가_아니면_자리와_무관하게_일시정지_아님이다(
+    pause_index: int, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """판정 순서가 일시정지 아님 → 자리 어긋남이다. 이미 결정된 실행에 온 옛 결정은 "지나간 자리"가
+    아니라 "일시정지가 아니다"를 듣는다. 같은 자리를 든 결정 둘이 동시에 오면 둘째가 듣는 것과 같다
+    (ADR 0014)."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    await _run(OneShotAgent(), model, trace, clock)
+
+    with pytest.raises(NotResumable, match="일시정지 상태가 아니") as caught:
+        await _resume(_RUN_1, model, trace, clock, pause_index=pause_index)
+
+    assert "자리" not in str(caught.value)
+
+
+async def test_형식_1_트레이스면_자리와_무관하게_형식을_듣는다(clock: FakeClock) -> None:
+    """판정 순서가 형식 1 → 자리 어긋남이다. 읽기만 되는 트레이스에 지나간 자리로 온 결정이 "자리"를
+    들으면 맞는 자리로 다시 보내도 재개할 수 없다는 것을 모른다."""
+    trace = FakeTrace(schema_version="1")
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(NotResumable, match="형식 1") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=0)
+
+    assert "자리" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "trace", [UnknownEventTrace(), CorruptTrace()], ids=["모르는 종류", "다른 실행이 섞임"]
+)
+async def test_손상된_트레이스면_자리와_무관하게_하위_타입이_아닌_PluginError다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """판정 순서가 손상 → 자리 어긋남이다. 기록이 깨진 것(500)을 결정이 지나갔다(409)로 말하면
+    운영자는 트레이스를 다시 읽고 결정을 다시 보낸다. 모르는 종류가 섞인 트레이스는 세는 자리부터
+    트레이스 상세의 인덱스와 같다는 보장이 없다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    with pytest.raises(PluginError) as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=0)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+
+
+async def test_꺼진_에이전트여도_자리_어긋남이_먼저이고_꺼진_집합을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """트레이스 판정이 준비보다 먼저다. 지나간 결정을 두고 에이전트를 켜 달라고 말하면 켠 뒤에도
+    그 결정은 받아들여지지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=_two_tools(), plugins=plugins)
+    plugins.disabled = frozenset({_agent_key("calc")})
+    reads = plugins.disabled_reads
+
+    with pytest.raises(NotResumable, match="자리 1"):
+        await _resume(_RUN_1, model, trace, clock, plugins=plugins, pause_index=1)
+
+    assert plugins.disabled_reads == reads
+
+
+async def test_음수_자리는_마지막_이벤트를_가리키지_않고_재개_불가다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """파이썬의 음수 인덱스로 이벤트를 꺼내면 -1 이 마지막 이벤트, 곧 지금의 일시정지에 맞는다. core
+    는 받은 값이 마지막 이벤트의 인덱스와 같은지만 본다. 채널이 음수를 형식 오류로 막아도 core 는
+    그것을 믿지 않는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    before = list(trace.events)
+
+    with pytest.raises(NotResumable, match="자리 -1"):
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=-1)
+
+    assert trace.events == before
     assert tools.connection.calls == []

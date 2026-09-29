@@ -72,6 +72,27 @@ class StartRun(BaseModel):
     request: str
 
 
+# 결정이 답하는 일시정지의 자리. 두 멤버에 같은 이름과 같은 스키마로 실린다(ADR 0014 의
+# 2026-09-28 이력). 기본값이 없다 — 있으면 그 값이 곧 "지금의 일시정지"라 오래된 화면의 결정이 다시
+# 받아들여진다. `strict` 인 이유는 lax 검증이면 문자열 `"2"`, 실수 `2.0`, 불린 `true` 가 모두
+# 정수로 읽히기 때문이다(`true` 는 1). 계약이 `integer` 라 적는데 문자열이 자리를 정하면 안 되고,
+# 스키마는 lax 와 같다(명세 검토의 프로브, 선례는 관리의 `_CursorWire`). 이름을 `…_at` 으로 짓지
+# 않은 것은 시각으로 읽히기 때문이다. 필드에는 독스트링을 둘 자리가 없어 계약의 설명이
+# `description` 에 있다. `type` 별칭으로 쓰지 않는 이유는 관리의 `_WireRunId` 와 같다 — pydantic 이
+# 이름 있는 스키마로 떼어 낸다.
+_PauseIndex = Annotated[
+    int,
+    Field(
+        ge=0,
+        strict=True,
+        description=(
+            "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. "
+            "지금의 일시정지가 아니면 409 다"
+        ),
+    ),
+]
+
+
 # 결정 본문의 멤버 둘과 그 유니온. 이름이 core 의 `Approve`·`Deny`·`Decision` 과 같다. 용어집의
 # 결정은 "허가이거나, 사유를 붙인 거부"이고 이것과 core 의 것은 같은 개념의 두 모양(와이어와 core
 # 의 값)이라, 관리의 `Trace`·`RunSummary` 가 core 의 것과 이름이 같은 선례를 따른다. core 쪽은 이
@@ -87,6 +108,7 @@ class Approve(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     decision: Literal["approve"]
+    pause_index: _PauseIndex
 
     def to_core(self) -> CoreApprove:
         """core 가 받는 결정(질의)."""
@@ -116,6 +138,7 @@ class Deny(BaseModel):
 
     decision: Literal["deny"]
     reason: Annotated[str, Field(min_length=1), AfterValidator(_trimmed)]
+    pause_index: _PauseIndex
 
     def to_core(self) -> CoreDeny:
         """core 가 받는 결정(질의)."""
@@ -184,12 +207,14 @@ def channel_router(
     ) -> RunStream:
         """결정을 내고 재개된 실행의 첫 이벤트(그 결정)를 받는다. 응답은 이것이 돌아온 뒤에 선다.
 
-        실행의 상태도 플러그인의 켜짐도 먼저 확인하지 않는다. 부재와 재개 불가와 꺼짐은 core 의
-        `resume()` 이 던진 타입을 표가 옮긴다. 채널이 포트나 `run_status()` 로 먼저 보면 형식 1
-        판정과 준비 단계의 판정 순서가 core 밖으로 샌다(ADR 0014, ADR 0017).
+        실행의 상태도 결정의 자리도 플러그인의 켜짐도 먼저 확인하지 않는다. 부재와 재개 불가와
+        꺼짐은 core 의 `resume()` 이 던진 타입을 표가 옮긴다. 채널이 포트나 `run_status()` 로 먼저
+        보면 형식 1 판정과 자리 판정과 준비 단계의 판정 순서가 core 밖으로 샌다(ADR 0014 와 그
+        2026-09-28 이력, ADR 0017).
         """
         events = resume(
             RunId(run_id),
+            decision.pause_index,
             decision.to_core(),
             principal,
             plugins=plugins,
@@ -200,13 +225,15 @@ def channel_router(
         )
         return await runs.start(events, request_id=request_id_of(request))
 
-    # 404 는 없는 실행, 409 는 결정을 받을 수 없는 상태의 실행이다. 뜻이 셋이고 메시지가 가른다 —
-    # 일시정지가 아님, 형식 1(ADR 0014), 그 실행의 에이전트나 그것이 쓰는 mcp 가 꺼짐(ADR 0017).
-    # 꺼짐으로 받지 않은 결정은 쓰이지 않아 다시 켜면 같은 결정을 보낼 수 있다. 트레이스가 가리키는
+    # 404 는 없는 실행, 409 는 결정을 받을 수 없는 상태의 실행이다. 뜻이 넷이고 메시지가 가른다 —
+    # 형식 1 트레이스(ADR 0014), 일시정지가 아닌 실행, 지금의 일시정지가 아닌 자리를 든 결정(ADR
+    # 0014 의 2026-09-28 이력), 그 실행의 에이전트나 그것이 쓰는 mcp 가 꺼짐(ADR 0017). 받지 않은
+    # 결정은 쓰이지 않는다. 꺼짐이면 다시 켠 뒤 같은 결정을 보낼 수 있다. 자리 어긋남은 그 결정이 본
+    # 일시정지가 이미 지나간 것이라 같은 결정은 다시 보내도 받아들여지지 않는다. 트레이스가 가리키는
     # 에이전트가 사라진 실행은 요청이 아니라 서버의 기록이 댄 이름이라 404 가 아니라 500 이다(ADR
-    # 0014 의 2026-09-24 이력). `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되는 원격
-    # 입력이라 관리의 `/traces/{run_id}` 와 같이 `verbatim` 과 sdk 의 패턴을 지난다. 계약의 경로는
-    # 변환기 없이 적힌다.
+    # 0014 의 2026-09-24 이력). `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되는 원격 입력이라
+    # 관리의 `/traces/{run_id}` 와 같이 `verbatim` 과 sdk 의 패턴을 지난다. 계약의 경로는 변환기
+    # 없이 적힌다.
     @router.post(
         "/{run_id:verbatim}/approval",
         operation_id="decide_approval",

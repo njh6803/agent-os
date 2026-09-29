@@ -43,12 +43,14 @@ def test_하위_명령이_없으면_거부한다() -> None:
         parse_args([])
 
 
-def test_재개_명령은_실행_식별자_하나만_있으면_된다() -> None:
-    """멈춘 실행을 다시 찾아가는 일이 쉬워야 한다. 에이전트도 요청도 트레이스가 안다."""
-    args = parse_args(["resume", "run-1", "--approve"])
+def test_재개_명령은_실행_식별자와_일시정지의_자리만_있으면_된다() -> None:
+    """멈춘 실행을 다시 찾아가는 일이 쉬워야 한다. 에이전트도 요청도 트레이스가 안다. 자리는 결정이
+    답하는 일시정지를 가리킨다(ADR 0014 의 2026-09-28 이력)."""
+    args = parse_args(["resume", "run-1", "--pause-index", "2", "--approve"])
 
     assert isinstance(args, ResumeArgs)
     assert args.run_id == "run-1"
+    assert args.pause_index == 2
     assert args.traces == DEFAULT_TRACES
     assert args.model is None
     assert args.verbose is False
@@ -56,7 +58,7 @@ def test_재개_명령은_실행_식별자_하나만_있으면_된다() -> None:
 
 def test_고른_결정이_core_가_받는_값으로_바뀐다() -> None:
     """플래그를 파싱만 하고 버리면 거부가 조용히 승인으로 돈다. 타입이 잡아 주지 않는 자리다."""
-    args = parse_args(["resume", "run-1", "--approve"])
+    args = parse_args(["resume", "run-1", "--pause-index", "2", "--approve"])
 
     assert isinstance(args, ResumeArgs)
     assert args.decision == Approve()
@@ -64,7 +66,18 @@ def test_고른_결정이_core_가_받는_값으로_바뀐다() -> None:
 
 def test_재개도_모델과_진행_표시와_트레이스_디렉터리를_받는다() -> None:
     """재개는 재생이 끝난 뒤 실제로 이어 가므로 모델이 필요하다."""
-    argv = ["resume", "run-1", "--approve", "--model", "m", "--verbose", "--traces", "o"]
+    argv = [
+        "resume",
+        "run-1",
+        "--pause-index",
+        "2",
+        "--approve",
+        "--model",
+        "m",
+        "--verbose",
+        "--traces",
+        "o",
+    ]
     args = parse_args(argv)
 
     assert isinstance(args, ResumeArgs)
@@ -76,11 +89,13 @@ def test_재개도_모델과_진행_표시와_트레이스_디렉터리를_받�
 def test_결정을_고르지_않은_재개는_거부한다() -> None:
     """승인 없이 재개하는 길을 두면 승인자 없는 승인이 기본값으로 굳는다."""
     with pytest.raises(SystemExit):
-        parse_args(["resume", "run-1"])
+        parse_args(["resume", "run-1", "--pause-index", "2"])
 
 
 def test_거부는_사유와_함께_core_가_받는_값으로_바뀐다() -> None:
-    args = parse_args(["resume", "run-1", "--deny", "--reason", "보낼 내용이 아니다"])
+    args = parse_args(
+        ["resume", "run-1", "--pause-index", "2", "--deny", "--reason", "보낼 내용이 아니다"]
+    )
 
     assert isinstance(args, ResumeArgs)
     assert args.decision == Deny(reason="보낼 내용이 아니다")
@@ -89,23 +104,25 @@ def test_거부는_사유와_함께_core_가_받는_값으로_바뀐다() -> Non
 def test_사유_없는_거부에는_진단을_낸다() -> None:
     """ApprovalDenied.reason 이 필수 필드다. CLI 가 빈 문자열을 지어내면 사유 없는 거부가 굳는다."""
     with pytest.raises(SystemExit):
-        parse_args(["resume", "run-1", "--deny"])
+        parse_args(["resume", "run-1", "--pause-index", "2", "--deny"])
 
 
 def test_공백만_있는_사유도_없는_것으로_보고_진단을_낸다() -> None:
     with pytest.raises(SystemExit):
-        parse_args(["resume", "run-1", "--deny", "--reason", "   "])
+        parse_args(["resume", "run-1", "--pause-index", "2", "--deny", "--reason", "   "])
 
 
 def test_승인과_거부를_둘_다_주면_진단을_낸다() -> None:
     with pytest.raises(SystemExit):
-        parse_args(["resume", "run-1", "--approve", "--deny", "--reason", "x"])
+        parse_args(
+            ["resume", "run-1", "--pause-index", "2", "--approve", "--deny", "--reason", "x"]
+        )
 
 
 def test_사유는_거부에만_쓴다() -> None:
     """승인에는 사유를 담을 자리가 없다. 조용히 버리면 승인자가 적은 말이 사라진다."""
     with pytest.raises(SystemExit):
-        parse_args(["resume", "run-1", "--approve", "--reason", "좋다"])
+        parse_args(["resume", "run-1", "--pause-index", "2", "--approve", "--reason", "좋다"])
 
 
 def test_serve_명령은_호스트와_포트와_디렉터리_둘을_받는다() -> None:
@@ -151,7 +168,9 @@ def test_serve_는_진행_표시를_받지_않는다() -> None:
 def test_실행과_재개도_플러그인_루트를_받고_기본은_plugins_다() -> None:
     """셋이 같은 인자를 받는다. 작업 디렉터리에 묶인 하드코딩이 여기서 풀린다."""
     run_args = parse_args(["run", "calc", "hi"])
-    resume_args = parse_args(["resume", "run-1", "--approve", "--plugins-root", "p"])
+    resume_args = parse_args(
+        ["resume", "run-1", "--pause-index", "2", "--approve", "--plugins-root", "p"]
+    )
 
     assert isinstance(run_args, RunArgs)
     assert isinstance(resume_args, ResumeArgs)

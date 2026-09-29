@@ -103,6 +103,24 @@ class Agent:
 """
 
 
+TWICE_MANIFEST = _gated_manifest("twice")
+
+# 승인 대상을 두 번 부른다. 시작(0) 뒤 첫 일시정지가 자리 1 이고, 승인하면 결정(2), 재개(3), 도구
+# 호출(4) 뒤 둘째 일시정지가 자리 5 다.
+TWICE_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        first = await ctx.tool("add", a=2, b=3)
+        second = await ctx.tool("add", a=4, b=5)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"{first}/{second}")
+"""
+
+
 EXCUSING_MANIFEST = _gated_manifest("excusing")
 
 # 거부당하면 사용자에게 왜 못 했는지 말하고 정상적으로 끝맺는 에이전트. gated 와 도구도 정책도 같다.
@@ -381,8 +399,8 @@ def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표�
     assert "add" in out
     assert '"a": 2' in out
     assert '"b": 3' in out
-    assert f"agent-os resume {trace_file.stem} --traces t --approve" in out
-    assert f"agent-os resume {trace_file.stem} --traces t --deny --reason" in out
+    assert f"agent-os resume {trace_file.stem} --pause-index 1 --traces t --approve" in out
+    assert f"agent-os resume {trace_file.stem} --pause-index 1 --traces t --deny --reason" in out
     assert err == ""
     events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     assert [e.type for e in events] == ["run_started", "run_paused"]
@@ -400,7 +418,7 @@ def test_승인하고_재개하면_멈췄던_도구가_실제로_불리고_실�
     (trace_file,) = _trace_files(workspace / "t")
     capsys.readouterr()
 
-    code = main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+    code = main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert paused == EXIT_PAUSED
@@ -425,7 +443,7 @@ def test_승인자가_OS_사용자_이름으로_채워진다(workspace: Path) ->
     main(["run", "gated", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
 
-    main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+    main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     granted = [e for e in _read(trace_file).events if isinstance(e, ApprovalGranted)]
     assert [e.approver for e in granted] == [getpass.getuser()]
@@ -434,7 +452,7 @@ def test_승인자가_OS_사용자_이름으로_채워진다(workspace: Path) ->
 def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_트레이스를_남기지_않는다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["resume", "없는-실행", "--approve", "--traces", "t"])
+    code = main(["resume", "없는-실행", "--pause-index", "0", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -483,7 +501,7 @@ def test_멈춘_실행의_에이전트를_손으로_끄면_재개가_진단으�
     _disable(workspace, "gated")
     capsys.readouterr()
 
-    code = main(["resume", trace_file.stem, "--approve", "--traces", "t"])
+    code = main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -558,7 +576,10 @@ def test_거부하면_도구가_불리지_않고_에이전트가_사유를_담�
     (trace_file,) = _trace_files(workspace / "t")
     capsys.readouterr()
 
-    argv = ["resume", trace_file.stem, "--deny", "--reason", "지금은 안 된다", "--traces", "t"]
+    argv = [
+        *("resume", trace_file.stem, "--pause-index", "1"),
+        *("--deny", "--reason", "지금은 안 된다", "--traces", "t"),
+    ]
     code = main(argv)
 
     out, err = capsys.readouterr()
@@ -593,7 +614,7 @@ def test_멈추면_거부_명령도_함께_안내된다(
     main(["run", "gated", "hi", "--traces", "t"])
 
     argv = _guidance(capsys.readouterr().out, "거부")
-    assert argv[:2] == ["resume", _trace_files(workspace / "t")[0].stem]
+    assert argv[:4] == ["resume", _trace_files(workspace / "t")[0].stem, "--pause-index", "1"]
     assert "--deny" in argv
     assert "--reason" in argv
 
@@ -625,13 +646,103 @@ def test_안내된_거부_명령은_사유를_이어_적어야_성립하고_그�
 def test_없는_실행_식별자는_거부로도_진단을_적고_트레이스를_남기지_않는다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["resume", "없는-실행", "--deny", "--reason", "x", "--traces", "t"])
+    code = main(
+        ["resume", "없는-실행", "--pause-index", "0", "--deny", "--reason", "x", "--traces", "t"]
+    )
 
     out, err = capsys.readouterr()
     assert code == 1
     assert out == ""
     assert "없는-실행" in err
     assert _trace_files(workspace / "t") == []
+
+
+# 결정의 자리(ADR 0014 의 2026-09-28 이력). 터미널에 남은 옛 안내 줄이 곧 오래된 화면이다.
+
+
+def _paused_twice(workspace: Path) -> None:
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "twice", TWICE_SRC, TWICE_MANIFEST)
+
+
+def test_재개가_다시_멈추면_새_안내_줄의_자리가_새_일시정지의_것이고_그대로_치면_끝까지_간다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """재개 스트림에는 재생된 사실이 없다. 재개 스트림의 수만 세면 둘째 일시정지를 자리 3 으로
+    안내하고, 그 줄은 거절된다. 받은 자리에 재개 스트림의 수를 더해야 5 다."""
+    _paused_twice(workspace)
+    main(["run", "twice", "hi", "--traces", "t"])
+    first = _guidance(capsys.readouterr().out)
+
+    paused = main(first)
+    second = _guidance(capsys.readouterr().out)
+    code = main(second)
+
+    (trace_file,) = _trace_files(workspace / "t")
+    events = _read(trace_file).events
+    assert first[:4] == ["resume", trace_file.stem, "--pause-index", "1"]
+    assert paused == EXIT_PAUSED
+    assert second[:4] == ["resume", trace_file.stem, "--pause-index", "5"]
+    assert isinstance(events[5], RunPaused)
+    assert events[5].args == {"a": 4, "b": 5}
+    assert code == 0
+    assert capsys.readouterr().out == "5/9\n"
+
+
+def test_옛_안내_줄을_그대로_치면_진단과_종료_코드_1이고_트레이스가_바이트_그대로다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """첫 일시정지의 안내 줄은 이미 쓰였다. 그 줄을 다시 치면 승인자가 본 적 없는 둘째 호출을
+    승인하게 된다. 진단이 두 자리를 들어 무엇이 지나갔는지 말한다."""
+    _paused_twice(workspace)
+    main(["run", "twice", "hi", "--traces", "t"])
+    old = _guidance(capsys.readouterr().out)
+    main(old)
+    capsys.readouterr()
+    (trace_file,) = _trace_files(workspace / "t")
+    before = trace_file.read_bytes()
+
+    code = main(old)
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "자리 1" in err
+    assert "자리 5" in err
+    assert trace_file.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "pause_index",
+    [
+        [],
+        ["--pause-index", "-1"],
+        ["--pause-index", "1.0"],
+        ["--pause-index", "1_0"],
+        ["--pause-index", "１"],
+    ],
+    ids=["없음", "음수", "실수", "밑줄", "전각"],
+)
+def test_자리를_빼거나_0_이상의_정수가_아니면_인자_오류이고_트레이스가_바이트_그대로다(
+    pause_index: list[str], workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """CLI 가 지금의 일시정지로 짐작하면 거절의 뜻이 없어진다(ADR 0014 의 2026-09-28 이력).
+
+    받는 값은 HTTP 의 엄격한 정수와 같다. 파이썬 `int()` 는 `1_0` 을 10 으로, 전각 숫자 1 을 1 로
+    읽는다. 뒤의 것은 멈춘 자리(1)라 그대로 재개까지 간다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    main(["run", "gated", "hi", "--traces", "t"])
+    (trace_file,) = _trace_files(workspace / "t")
+    before = trace_file.read_bytes()
+    capsys.readouterr()
+
+    with pytest.raises(SystemExit) as refused:
+        main(["resume", trace_file.stem, *pause_index, "--approve", "--traces", "t"])
+
+    assert refused.value.code == 2
+    assert "--pause-index" in capsys.readouterr().err
+    assert trace_file.read_bytes() == before
 
 
 @pytest.mark.llm
@@ -1163,7 +1274,9 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
         paused_stream = _events(paused)
         assert paused_stream[-1]["type"] == "run_paused", paused
         run_id = paused_stream[0]["run_id"]
-        resumed = _post_stream(client, f"/runs/{run_id}/approval", {"decision": "approve"})
+        # 스트림만 본 클라이언트의 자리다. 본 프레임 수에서 1을 뺀 것이 마지막 이벤트다(스토리 61).
+        decision = {"decision": "approve", "pause_index": len(paused_stream) - 1}
+        resumed = _post_stream(client, f"/runs/{run_id}/approval", decision)
 
     assert paused_stream[0]["type"] == "run_started"
     assert paused_stream[-1]["tool"] == "add"

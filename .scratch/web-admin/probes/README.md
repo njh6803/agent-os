@@ -4,6 +4,7 @@ ADR 0010·0011·0014의 2026-09-28 이력, ADR 0019~0021, `../spec.md`가 근거
 위의 셋(`gen_run.mjs`, `next_measure.mjs`, `ts7_lint.sh`)은 설계 인터뷰(일지 2026-09-28-06) 중에 쟀다. 그때의 판은 Next 16.3.6,
 openapi-typescript 7.13.0, typescript-eslint 8.70.1, TypeScript 5.9.3과 7.0.2다. 아래 넷은 명세를 쓰며(일지 2026-09-28-07) 쟀다.
 npm에 닿는 둘은 판을 그 행에 적었고, 파이썬 둘은 저장소의 락파일 판으로 돈다. 결과를 다시 볼 때는 판을 함께 본다. 판이 바뀌면 값도 바뀔 수 있다.
+마지막 행(`pause_index_mutations.toml`)은 계약 티켓 02가 구현하며(일지 2026-09-29-02) 더한 변이 파일이다.
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 |
 |---|---|---|---|
@@ -14,3 +15,4 @@ npm에 닿는 둘은 판을 그 행에 적었고, 파이썬 둘은 저장소의 
 | `probe_lax_index.py` | 결정 본문에 자리 필드를 채널 모델 모양대로 lax와 `strict=True`로 둘 때 FastAPI가 무엇을 받는지 잰다. 정수, 문자열, 실수, 불린, 소수, 음수 본문과 두 스키마다 | 명세의 계약 티켓 절(자리는 엄격한 정수) | `uv run python .scratch/web-admin/probes/probe_lax_index.py`. 네트워크를 타지 않는다. 2026-09-28 결과: lax는 `"2"`·`2.0`·`true`를 200으로 받고 `true`를 1로 읽는다. strict는 정수 밖을 모두 422(`int_type`)로 거절한다. 음수는 둘 다 422이다. 스키마는 둘 다 `{'type': 'integer', 'minimum': 0.0, 'title': 'At'}`로 찍혔다. 명세 검토가 쟀고 이 명세가 옮겼다 |
 | `tsc_showconfig.sh` | tsconfig 검사의 재료인 `tsc --showConfig`가 `extends`를 풀고 strict 계열의 개별 플래그를 드러내는지 잰다 | 명세의 "판정자와 검사" 절(tsconfig 검사의 자리) | `bash .scratch/web-admin/probes/tsc_showconfig.sh <작업 디렉터리>`. npm 레지스트리에 닿는다. 2026-09-28 결과(TypeScript 5.9.3): 부모의 `strict: true`와 자식의 `strictNullChecks: false`가 함께 나오고, 나머지 strict 계열이 `true`로 풀려 나왔다 |
 | `jsdom_sse.sh` | 관리 화면의 주 이음매(Vitest jsdom + MSW + openapi-fetch)에서 넷을 잰다. SSE가 `parseAs: "stream"`으로 조각마다 오는지, 409 봉투가 `error`에 오는지, 상대 `baseUrl`이 서는지, `sessionStorage`가 있는지다 | 명세의 이음매 절과 생성 클라이언트 절 | `bash .scratch/web-admin/probes/jsdom_sse.sh <작업 디렉터리>`. npm 레지스트리에 닿는다. 2026-09-28 결과(vitest 5.0.2, jsdom 30.1.1, msw 2.15.0, openapi-fetch 0.17.0, Node 24.19.0): 조각 8개이고 첫 프레임이 닫히기 약 0.43초 전에 왔다. 409는 `error`에 봉투가 파싱돼 온다. 상대 `baseUrl`은 `Failed to parse URL`이다. `sessionStorage`가 있다. 첫 프레임이 스트림이 닫히기 전에 오는 것은 단언이라, 버퍼링돼 끝에 몰려 오면 Vitest가 실패하고 스크립트는 그 종료 코드(1)로 끝난다 |
+| `pause_index_mutations.toml` | 계약 티켓(02)의 테스트가 무엇을 재는지 변이 11로 본다. core의 판정 순서 넷(자리를 일시정지 아님 앞에 — core 테스트와 채널의 동시 재개 테스트로 한 번씩, 자리를 트레이스 판정 맨 앞에, 준비를 트레이스 판정 앞에), 자리로 이벤트를 꺼내는 것, 채널의 lax·하한 없음·기본값, CLI의 `int()` 파싱·음수 허용과 재개 스트림을 0부터 세는 것이다 | 티켓 02의 "이 티켓이 정한 것" | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-admin/probes/pause_index_mutations.toml`. 네트워크를 타지 않는다. 약 1분. 2026-09-29 결과: 11 모두 기대대로 빨강. 매개변수 id는 pytest가 이스케이프해 `-k`로 고르지 못하므로 어느 사례가 빨간지는 출력으로 본다. 원문이 파일에 한 번 있어야 하므로 코드가 바뀌면 변이도 고친다 |

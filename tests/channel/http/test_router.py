@@ -799,8 +799,16 @@ async def test_422의_서버_기록은_위치와_문구만_싣고_입력값을_�
 
 # 승인 — 멈춘 실행에 결정을 내고 재개된 실행의 스트림을 받는다
 
-APPROVE: Mapping[str, Json] = {"decision": "approve"}
-DENY: Mapping[str, Json] = {"decision": "deny", "reason": "너무 크다"}
+
+def _approve(pause_index: int) -> Mapping[str, Json]:
+    """결정이 답하는 일시정지의 자리(트레이스 상세 `events` 의 인덱스)를 든 승인."""
+    return {"decision": "approve", "pause_index": pause_index}
+
+
+# `gated` 와 아래 `STORED` 는 시작(0) 바로 뒤가 일시정지(1)다. 자리가 다른 실행은 `_approve` 로
+# 적는다.
+APPROVE = _approve(1)
+DENY: Mapping[str, Json] = {"decision": "deny", "reason": "너무 크다", "pause_index": 1}
 
 # 채널을 지나지 않고 트레이스에 직접 둔 실행. 식별자가 `FakeClock` 이 내는 것과 겹치지 않는다.
 STORED = RunId("stored-1")
@@ -866,7 +874,9 @@ async def test_거부하면_approval_denied_가_다듬은_사유를_싣고_거�
         await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
         before = len(trace.lines)
         response = await _decide(
-            client, "run-1", {"decision": "deny", "reason": " \x1c 너무 크다 \x1f\n"}
+            client,
+            "run-1",
+            {"decision": "deny", "reason": " \x1c 너무 크다 \x1f\n", "pause_index": 2},
         )
 
     frames = _frames(response.text)
@@ -901,7 +911,7 @@ async def test_재개_스트림은_멈추기_전에_이미_본_사실을_되풀�
 
     async with _serving(app) as client:
         started = await client.post("/runs", json=_start("careful"), headers=CHANNEL)
-        response = await _decide(client, "run-1", APPROVE)
+        response = await _decide(client, "run-1", _approve(3))
 
     assert _types(_frames(started.text)) == [
         "run_started",
@@ -952,8 +962,8 @@ async def test_재개가_다시_멈추면_같은_경로로_둘째_결정을_내_
 
     async with _serving(app) as client:
         started = await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
-        first = await _decide(client, "run-1", APPROVE)
-        second = await _decide(client, "run-1", APPROVE)
+        first = await _decide(client, "run-1", _approve(2))
+        second = await _decide(client, "run-1", _approve(6))
 
     assert json.loads(_frames(started.text)[-1])["args"] == ADD_2_3
     assert _types(_frames(first.text)) == [
@@ -972,6 +982,68 @@ async def test_재개가_다시_멈추면_같은_경로로_둘째_결정을_내_
     ]
     assert json.loads(_frames(second.text)[-1])["output"] == "5 와 9"
     assert tools.calls == [("add", ADD_2_3), ("add", add_4_5)]
+
+
+def _twice_paused() -> tuple[ToolAwareModel, ScopedTools, FakeTrace]:
+    """한 턴에 승인 대상 add 가 둘이다. 첫 일시정지는 자리 2, 승인하면 둘째가 자리 6 이다."""
+    model = _tool_calling_model(
+        _tool_request(("add", ADD_2_3), ("add", {"a": 4, "b": 5})), AIMessage(content="5 와 9")
+    )
+    return model, ScopedTools(), FakeTrace()
+
+
+async def test_지나간_자리를_든_결정은_409_봉투이고_두_자리를_들며_트레이스가_바뀌지_않는다() -> (
+    None
+):
+    """오래된 화면의 결정이다(ADR 0014 의 2026-09-28 이력). 화면이 첫 일시정지를 보여 주는 동안
+    다른 곳이 그것을 승인해 실행이 둘째에서 다시 멈췄다. 그 뒤 화면에서 누른 결정은 화면이 본 적
+    없는 둘째 호출을 실행하지 않는다. 받지 않은 결정은 쓰이지 않아 맞는 자리로 다시 낼 수 있다."""
+    model, tools, trace = _twice_paused()
+    app = _app(trace=trace, tools=tools, model=model)
+
+    async with _serving(app) as client:
+        await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        await _decide(client, "run-1", _approve(2))
+        before, called = list(trace.lines), list(tools.calls)
+        stale = await _decide(client, "run-1", _approve(2))
+        after = list(trace.lines)
+        fresh = await _decide(client, "run-1", _approve(6))
+
+    assert stale.status_code == 409
+    body = stale.json()
+    assert body["code"] == "conflict"
+    assert "자리 2" in body["message"]
+    assert "자리 6" in body["message"]
+    assert body["request_id"] == stale.headers["X-Request-Id"]
+    assert after == before
+    assert called == [("add", ADD_2_3)]
+    assert fresh.status_code == 200
+    assert _types(_frames(fresh.text))[-1] == "run_finished"
+
+
+async def test_스트림만_본_클라이언트도_센_프레임_수로_다음_결정의_자리를_낸다() -> None:
+    """트레이스 상세를 읽지 않아도 된다(스토리 61). 스트림의 프레임은 트레이스의 줄과 1:1 이고 재개
+    스트림은 재생된 사실을 싣지 않으므로, 본 프레임의 총수에서 1을 뺀 것이 마지막 이벤트, 곧 새
+    일시정지의 자리다. 첫 스트림이 셋이고 재개 스트림이 넷이면 자리는 6이다. 1을 빼지 않은 수는
+    409다."""
+    model, tools, trace = _twice_paused()
+    app = _app(trace=trace, tools=tools, model=model)
+
+    async with _serving(app) as client:
+        started = await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        seen = len(_frames(started.text))
+        first = await _decide(client, "run-1", _approve(seen - 1))
+        seen += len(_frames(first.text))
+        uncounted = await _decide(client, "run-1", _approve(seen))
+        second = await _decide(client, "run-1", _approve(seen - 1))
+
+    assert len(_frames(started.text)) == 3
+    assert len(_frames(first.text)) == 4
+    assert seen - 1 == 6
+    assert uncounted.status_code == 409
+    assert second.status_code == 200
+    assert _types(_frames(second.text))[-1] == "run_finished"
+    assert tools.calls == [("add", ADD_2_3), ("add", {"a": 4, "b": 5})]
 
 
 async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인자는_채널의_주체다() -> None:
@@ -1010,8 +1082,10 @@ async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인�
 async def test_한_루프에서_동시에_온_결정_둘은_하나만_받아들여져_도구가_한_번_불린다() -> None:
     """두 번 누른 버튼 하나가 승인된 도구를 두 번 실행하지 않는다(스토리 34·35·73, ADR 0014).
 
-    이것을 지키는 것은 설계가 아니라 `resume()` 의 첫 걸음(트레이스 읽기, 일시정지 확인, 결정
-    쓰기)에 await 가 없다는 사실 하나다. 트레이스 쓰기를 비동기로 바꾸거나 스레드로 보내는 변경은
+    두 결정은 같은 자리(1)를 든다 — 같은 화면을 두 번 누른 것이다. 자리 판정이 이것을 막지 않는다.
+    이것을 지키는 것은 설계가 아니라 `resume()` 의 첫 걸음(트레이스 읽기, 일시정지와 자리 확인,
+    결정 쓰기)에 await 가 없다는 사실 하나다. 둘째는 첫째의 결정을 마지막 이벤트로 읽어 "일시정지
+    아님"을 듣는다. 트레이스 쓰기를 비동기로 바꾸거나 스레드로 보내는 변경은
     성능 개선처럼 보이지만 둘째 결정이 마지막 이벤트를 아직 일시정지로 읽게 만든다. 그 순간 여기가
     깨진다. 범위는 이벤트 루프 하나(워커 하나)다. 프로세스 사이의 경합 — CLI `resume` 과 HTTP 승인이
     같은 순간 같은 실행에 오는 것 — 은 알려진 한계이고 이 테스트가 재지 않는다.
@@ -1039,6 +1113,7 @@ async def test_한_루프에서_동시에_온_결정_둘은_하나만_받아들�
         "run_finished",
     ]
     assert rejected.json()["code"] == "conflict"
+    assert "일시정지 상태가 아니" in rejected.json()["message"]
     decisions = [kind for kind in _types(trace.lines) if kind.startswith("approval_")]
     assert decisions == ["approval_granted"]
     assert tools.calls == [("add", ADD_2_3)]
@@ -1160,8 +1235,8 @@ async def test_관리로_끈_것을_부른_실행은_409_봉투이고_메시지�
 async def test_멈춘_실행의_에이전트를_끄면_결정이_409_이고_다시_켜면_이어_간다() -> None:
     """승인을 기다리는 것이 바로 그 에이전트의 도구 호출이다(스토리 31·50). 받지 않은 결정은
     트레이스에 남지 않아 실행이 일시정지 그대로이고(스토리 52), 다시 켜면 같은 결정이 결정
-    이벤트로 시작하는 스트림을 준다(스토리 32). 409 의 뜻 셋(일시정지 아님, 형식 1, 꺼짐)은
-    메시지가 가른다(스토리 51)."""
+    이벤트로 시작하는 스트림을 준다(스토리 32). 409 의 뜻 넷(형식 1 트레이스, 일시정지가 아닌 실행,
+    지나간 자리를 든 결정, 꺼진 플러그인)은 메시지가 가른다(스토리 51)."""
     trace = FakeTrace()
     tools = ScopedTools()
 
@@ -1197,12 +1272,12 @@ async def test_멈춘_실행의_에이전트를_끄면_결정이_409_이고_다�
 @pytest.mark.parametrize(
     ("decision", "field"),
     [
-        ({"decision": "approve", "reason": "좋다"}, "body.approve.reason"),
-        ({"decision": "approve", "reason": ""}, "body.approve.reason"),
-        ({"decision": "deny"}, "body.deny.reason"),
-        ({"decision": "deny", "reason": ""}, "body.deny.reason"),
-        ({"decision": "deny", "reason": " \t\n "}, "body.deny.reason"),
-        ({"decision": "deny", "reason": "\x1c\x1f"}, "body.deny.reason"),
+        ({**APPROVE, "reason": "좋다"}, "body.approve.reason"),
+        ({**APPROVE, "reason": ""}, "body.approve.reason"),
+        ({"decision": "deny", "pause_index": 1}, "body.deny.reason"),
+        ({**DENY, "reason": ""}, "body.deny.reason"),
+        ({**DENY, "reason": " \t\n "}, "body.deny.reason"),
+        ({**DENY, "reason": "\x1c\x1f"}, "body.deny.reason"),
         ({}, "body"),
         ({"reason": "좋다"}, "body"),
         ({"decision": "maybe"}, "body"),
@@ -1253,6 +1328,57 @@ async def test_결정에_승인자나_주체를_실으면_무시하지_않고_42
     assert response.status_code == 422
     fields = [violation["field"] for violation in response.json()["violations"]]
     assert fields == [f"body.{decision['decision']}.{extra}"]
+    assert trace.reads == []
+
+
+def _without_pause_index(decision: Mapping[str, Json]) -> Mapping[str, Json]:
+    return {key: value for key, value in decision.items() if key != "pause_index"}
+
+
+# 자리로 받지 않는 값. 문자열, 실수, 불린은 멈춘 자리(1)로 읽힐 수 있는 것을 고른다 — 본문 모델이
+# lax 검증이면 셋이 모두 1 로 읽혀 결정이 받아들여지고 재개까지 간다(`probe_lax_index.py`). 계약이
+# `integer` 라 적는데 문자열이 자리를 정하면 안 된다. 이 셋이 없는 사례 집합은 lax 로도 초록이다.
+MALFORMED_PAUSE_INDEXES: tuple[Json, ...] = (-1, "1", 1.0, True, 1.5, None)
+
+
+@pytest.mark.parametrize(
+    "pause_index", MALFORMED_PAUSE_INDEXES, ids=["음수", "문자열", "실수", "불린", "소수", "null"]
+)
+@pytest.mark.parametrize("decision", [APPROVE, DENY], ids=["승인", "거부"])
+async def test_자리가_0_이상의_정수가_아니면_422이고_violations_가_그_필드를_가리킨다(
+    decision: Mapping[str, Json], pause_index: Json
+) -> None:
+    """자리는 엄격한 정수다(명세의 계약 티켓 절). 음수는 core 도 받지 않지만 형식이 틀린 값이라
+    409 가 아니라 422 다(ADR 0014 의 2026-09-28 이력)."""
+    trace = _stored(_stored_start(), _stored_pause())
+    before = list(trace.lines)
+    body = {**decision, "pause_index": pause_index}
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _decide(client, STORED, body)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+    fields = [violation["field"] for violation in response.json()["violations"]]
+    assert fields == [f"body.{decision['decision']}.pause_index"]
+    assert trace.reads == []
+    assert trace.lines == before
+
+
+@pytest.mark.parametrize("decision", [APPROVE, DENY], ids=["승인", "거부"])
+async def test_자리가_없는_결정은_422이고_마지막_일시정지로_짐작하지_않는다(
+    decision: Mapping[str, Json],
+) -> None:
+    """자리를 선택으로 두면 기본값이 곧 "지금의 일시정지"라 오래된 결정이 다시 받아들여진다
+    (fail-open, ADR 0014 의 2026-09-28 이력). 멈춘 실행 하나뿐이라 짐작이 맞을 자리에서도 422다."""
+    trace = _stored(_stored_start(), _stored_pause())
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _decide(client, STORED, _without_pause_index(decision))
+
+    assert response.status_code == 422
+    fields = [violation["field"] for violation in response.json()["violations"]]
+    assert fields == [f"body.{decision['decision']}.pause_index"]
     assert trace.reads == []
 
 
@@ -1653,13 +1779,40 @@ def test_결정_본문이_판별자_decision_의_이름_있는_유니온이고_�
         },
     }
     approve, deny = schemas["Approve"], schemas["Deny"]
-    assert set(approve["required"]) == set(approve["properties"]) == {"decision"}
-    assert set(deny["required"]) == set(deny["properties"]) == {"decision", "reason"}
+    assert set(approve["required"]) == set(approve["properties"]) == {"decision", "pause_index"}
+    assert (
+        set(deny["required"])
+        == set(deny["properties"])
+        == {
+            "decision",
+            "reason",
+            "pause_index",
+        }
+    )
     assert approve["properties"]["decision"]["const"] == "approve"
     assert deny["properties"]["decision"]["const"] == "deny"
     for member in (approve, deny):
         assert member["additionalProperties"] is False
         assert "\n" not in member["description"]
+
+
+def test_결정의_자리는_두_멤버에_같은_0_이상_정수이고_트레이스_상세의_인덱스라고_말한다() -> None:
+    """생성 클라이언트가 자리를 빠뜨린 결정을 타입으로 막는다(ADR 0014 의 2026-09-28 이력). 필드에는
+    독스트링을 둘 자리가 없어 설명이 스키마의 `description` 에 실린다. 자리를 어디서 세는지 모르면
+    클라이언트는 그 값을 만들 수 없다."""
+    schemas = _app().openapi()["components"]["schemas"]
+
+    for name in ("Approve", "Deny"):
+        pause_index = schemas[name]["properties"]["pause_index"]
+        assert pause_index["type"] == "integer", name
+        assert pause_index["minimum"] == 0, name
+        assert "default" not in pause_index, name
+        assert "events" in pause_index["description"], name
+        assert "\n" not in pause_index["description"], name
+    assert (
+        schemas["Approve"]["properties"]["pause_index"]
+        == (schemas["Deny"]["properties"]["pause_index"])
+    )
 
 
 def test_채널에는_승인_요청을_읽는_경로가_없다() -> None:
