@@ -78,6 +78,8 @@ CASES: list[tuple[str, str, str, str]] = [
     ("c56", "claude", "목록 표지 펜스 안", f"# P\n\n- ```\n  {ALLOWED}\n  ```\n"),
     ("c57", "claude", "목록 펜스와 펜스 사이", f"- ```\n  x\n  ```\n\n{OTHER}\n\n```\ny\n```\n"),
     ("c58", "claude", "목록 펜스 뒤 허용", f"# P\n\n- ```\n  x\n  ```\n\n{ALLOWED}\n"),
+    ("c59", "claude", "네 칸으로 닫은 목록 펜스 뒤", f"- ```\n  x\n    ```\n\n{OTHER}\n"),
+    ("c60", "claude", "인라인 태그로 여는 문단", f"# P\n\n<span>참고</span> {OTHER}\n"),
     ("r01", "rules", "rules 여러 줄 주석 속", f"<!--\n{RULE_OTHER}\n-->\n본문\n"),
     ("r02", "imported", "헌법 한 줄 주석 속", f"# 원칙\n\n<!-- {RULE_OTHER} -->\n"),
 ]

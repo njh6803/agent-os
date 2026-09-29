@@ -513,6 +513,8 @@ def test_허용된_임포트가_실리는_자리에_있고_주석_속_경로뿐�
         pytest.param(f"{_헌법}\n\n메모 <!-- a\n\n{_다른}\n\n끝 -->\n", id="c52"),
         pytest.param(f"{_헌법}\n\n메모 <!-- a --> {_다른} <!-- b -->\n", id="c55"),
         pytest.param(f"{_헌법}\n\n- ```\n  x\n  ```\n\n{_다른}\n\n```\ny\n```\n", id="c57"),
+        pytest.param(f"{_헌법}\n\n- ```\n  x\n    ```\n\n{_다른}\n", id="c59"),
+        pytest.param(f"{_헌법}\n\n<span>참고</span> {_다른}\n", id="c60"),
     ],
 )
 def test_실리는_다른_경로는_펜스나_주석으로_잘못_가리지_않고_센다(본문: str) -> None:

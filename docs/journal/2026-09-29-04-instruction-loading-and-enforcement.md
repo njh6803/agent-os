@@ -118,6 +118,13 @@ skill-creator 세 벌, 인증되지 않은 Slack 플러그인, Playwright MCP �
 - **근거와 변이.** 사례와 실측은 `.scratch/harness/probes/import_comments/`(`cases.py`, `run.sh`, `results.txt`)에
   남겼다. `run.sh`는 `--setting-sources project,local`로 사용자 전역 훅을 뺀다. 구현 전부터 초록이던 가드와 셀프
   리뷰 뒤에 더한 가드는 변이 열로 쟀다. 이 chore의 넷과 합쳐 변이 14개가 모두 기대대로 빨강이다.
+- **둘째 회차.** 반영 커밋에 CodeRabbit은 새 지적이 없었다. claude-review가 둘을 냈다. 하나는 Minor로, 두 읽기를
+  가르던 `widest` 불리언 인자가 `CODING_STANDARDS.md`의 "불리언 플래그 인자를 만들지 않는다"에 걸린다는
+  것이다. 내가 넣었고 내 셀프 리뷰의 표준 축도 놓쳤다. 다른 하나는 Nit으로, CLAUDE.md 고친 문장의 주어다. 상태
+  기계 하나(`_block_lines`)가 줄마다 자리(`text`·`html`·`unclosed`)를 붙이고, 두 진입점(`_counted_text`,
+  `_loaded_text`)이 그것을 다르게 거르게 바꿨다. 이제 HTML 블록 안의 ```는 두 쪽 모두에서 펜스가 아니다.
+  세는 쪽이 HTML 블록 줄과 닫히지 않은 줄을 남기는지는 가드 둘로 지킨다. c59는 네 칸으로 닫은 목록 펜스, c60은
+  인라인 태그로 여는 문단이고, 둘 다 먼저 실측했다. 변이는 이 chore의 넷과 합쳐 15개가 모두 기대대로다.
 - **남긴 것.** 판정자를 CommonMark 파서(markdown-it-py)와 YAML 파서로 옮기면 남은 어긋남 대부분이 닫힌다.
   의존성을 더하는 일이라 `tech.md`와 ADR 절차가 먼저다. 후속 후보로 둔다.
 
@@ -150,8 +157,8 @@ ruff는 첫 판에 E501 둘을 냈고(독스트링을 고치며 뒷문장이 한
 
 잔존 grep: "모양 여섯", `claude_md_imports`, "Other exit codes", "직접 푸시 금지"는 이 일지의 경위 서술 밖에 0건이다.
 
-PR 리뷰 반영 뒤 같은 스크립트로 다시 돌렸다. pytest 1011 passed(4 deselected), 변이는 이 chore와 PR 리뷰 반영을
-합쳐 14개가 모두 기대대로이고, 나머지 검사도 모두 통과다. 한국어 폭 E501은 이 반영에서도 두 판에 걸쳐 여섯 줄이
+PR 리뷰 반영 뒤 같은 스크립트로 다시 돌렸다(둘째 회차 뒤에도). pytest 1013 passed(4 deselected, 둘째 회차 뒤), 변이는
+이 chore와 PR 리뷰 반영을 합쳐 15개가 모두 기대대로이고, 나머지 검사도 모두 통과다. 한국어 폭 E501은 이 반영에서도 두 판에 걸쳐 여섯 줄이
 나왔다(대기열 53). 옛 이름 `_PATHS_BLOCK`·`_FENCE`와 옛 메시지 "주석이나 들여쓴 코드 블록 안이면"은
 `tools/check_instructions.py`와 그 테스트·변이 파일에 남지 않았다(`tools/check_quotes.py`의 `_FENCE`는 그 모듈의
 것이다).

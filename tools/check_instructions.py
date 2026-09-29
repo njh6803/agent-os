@@ -38,7 +38,7 @@ import re
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_LINES = 200
@@ -83,6 +83,8 @@ _INLINE_CODE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
 _INLINE_CODE_LINES = re.compile(r"(?<!`)(`+)(?!`)((?:(?!\n[ \t]*\n).)+?)(?<!`)\1(?!`)", re.S)
 # 임포트된 파일의 백틱 경로를 뽑는 데만 쓴다.
 _CODE_SPAN = re.compile(r"`([^`\n]+)`")
+# 줄의 자리. `_block_lines` 가 붙이고 두 읽기가 다르게 거른다.
+_Place = Literal["text", "html", "unclosed"]
 # `@경로` 임포트. 앞이 공백이나 줄 머리이고 뒤가 공백이나 줄 끝인 토큰을 모두 센다. 한글이 든 것만
 # 뺀다 — 조사가 붙은 `@x.md를` 은 실리지 않았다(2026-09-29 `claude -p` 2.1.281 실측. 한글 이름의
 # 파일은 실렸으니 그 이름의 파일이 없어서로 보인다 — 추론, `at_imports` 의 못 보는 것). 앞이 공백이
@@ -298,18 +300,19 @@ def _comment_residual(block: str) -> str:
     return _HTML_COMMENT.sub("", block).replace("<!--", "")
 
 
-def _without_blocks(text: str, *, widest: bool) -> str:
-    """펜스 코드 블록과 블록 HTML 주석을 뺀 본문. 한 줄씩 상태를 넘긴다.
+def _block_lines(text: str) -> list[tuple[_Place, str]]:
+    """본문의 줄을 (자리, 줄)로 가른다. 펜스와 닫힌 블록 HTML 주석은 빼고 한 줄씩 상태를 넘긴다.
 
     둘을 따로 지우면 서로의 표지를 잘못 짝짓는다. 주석 안의 ``` 는 펜스가 아니고 펜스 안의
     `<!--` 는 주석이 아니다(사례 c25·c26). 목록 표지 줄에서 연 펜스(`- ```bash`)도 연다 — 모르면
-    그 닫는 줄을 여는 줄로 읽는다(c50·c56). 블록 주석의 마지막 `-->` 뒤 글자는 남긴다(c29).
-
-    `widest` 는 허용된 임포트가 실리는지 볼 때다. 그때는 닫히지 않은 펜스와 주석이 파일 끝까지
-    가고(c06·c07), HTML 블록(`<div>` 같은 줄부터 빈 줄까지)도 뺀다(c11·c12). 세는 쪽은 그 둘을
-    글자로 둔다. 표지를 잘못 읽었을 때 뒤의 임포트가 통째로 숨지 않게 하려는 것이다(c51).
+    그 닫는 줄을 여는 줄로 읽는다(c50·c56). 블록 주석의 마지막 `-->` 뒤 글자는 `text` 로
+    남긴다(c29). 주석 안의 `@` 는 블록이든 문단 속이든 따라가지 않았다(2026-09-29 claude 2.1.281
+    실측, `.scratch/harness/probes/import_comments/`. 블록 주석은 루트 CLAUDE.md·rules·임포트된
+    파일에서, 문단 속 주석은 임포트된 파일에서 쟀다). `html` 은 HTML 블록(`<div>` 같은 줄부터 빈
+    줄까지)이고 그 안의 ``` 와 `<!--` 는 표지가 아니다. `unclosed` 는 파일 끝까지 닫히지 않은 펜스와
+    주석의 줄이다. 두 읽기(`_counted_text`, `_loaded_text`)가 이 자리를 다르게 거른다.
     """
-    kept: list[str] = []
+    lines: list[tuple[_Place, str]] = []
     held: list[str] = []
     fence = ""
     in_comment = False
@@ -318,7 +321,7 @@ def _without_blocks(text: str, *, widest: bool) -> str:
         if in_html:
             if not line.strip():
                 in_html = False
-                kept.append(line)
+            lines.append(("html" if in_html else "text", line))
             continue
         if fence:
             held.append(line)
@@ -329,7 +332,7 @@ def _without_blocks(text: str, *, widest: bool) -> str:
         if in_comment:
             held.append(line)
             if "-->" in line:
-                kept.append(_comment_residual("\n".join(held)))
+                lines.append(("text", _comment_residual("\n".join(held))))
                 in_comment, held = False, []
             continue
         opening = _FENCE_OPEN.match(line)
@@ -338,17 +341,17 @@ def _without_blocks(text: str, *, widest: bool) -> str:
             continue
         if _COMMENT_BLOCK_OPEN.match(line):
             if "-->" in line:
-                kept.append(_comment_residual(line))
+                lines.append(("text", _comment_residual(line)))
             else:
                 in_comment, held = True, [line]
             continue
-        if widest and _HTML_BLOCK_OPEN.match(line):
+        if _HTML_BLOCK_OPEN.match(line):
             in_html = True
+            lines.append(("html", line))
             continue
-        kept.append(line)
-    if not widest:
-        kept.extend(held)
-    return "\n".join(kept)
+        lines.append(("text", line))
+    lines.extend(("unclosed", line) for line in held)
+    return lines
 
 
 def _inline_comment(match: re.Match[str]) -> str:
@@ -365,18 +368,28 @@ def _inline_comment(match: re.Match[str]) -> str:
     return match.group(0) if in_code else " "
 
 
-def _without_code(text: str, *, widest: bool = False) -> str:
-    """임포트 파서가 보지 않는 자리를 뺀 마크다운. 펜스, 코드 스팬, 닫힌 HTML 주석이다.
+def _without_inline(text: str, spans: re.Pattern[str]) -> str:
+    """코드 스팬과 문단 속 주석을 뺀다. 문단 속 주석은 빈 줄을 넘지 못한다(c52)."""
+    return _INLINE_COMMENT.sub(_inline_comment, spans.sub(" ", text))
 
-    공식 문서가 밝힌 것은 앞의 둘이다. 주석 안의 `@` 는 블록이든 문단 속이든 따라가지
-    않았다(2026-09-29 claude 2.1.281 실측, `.scratch/harness/probes/import_comments/`. 블록 주석은
-    루트 CLAUDE.md·rules·임포트된 파일에서, 문단 속 주석은 임포트된 파일에서 쟀다). 문단 속 주석과
-    코드 스팬은 빈 줄을 넘지 못한다(c52). `widest` 면 코드 스팬이 줄을 넘는다(c10·c49). 세는 쪽이
-    줄을 넘기면 들여쓴 코드 줄의 ``` 끼리 짝지어 사이의 임포트를 숨긴다(c40).
+
+def _counted_text(text: str) -> str:
+    """임포트를 셀 본문. 확실히 안 실리는 자리만 좁게 뺀다 — 펜스, 닫힌 주석, 한 줄 코드 스팬.
+
+    HTML 블록과 닫히지 않은 펜스·주석은 글자로 둔다. 인라인 태그로 여는 문단(c60)이나 네 칸으로 닫은
+    목록 펜스(c59)처럼 표지를 잘못 읽어도 뒤의 임포트가 숨지 않게 하려는 것이다. 코드 스팬이 줄을
+    넘으면 들여쓴 코드 줄의 ``` 끼리 짝지어 사이의 임포트를 숨긴다(c40).
     """
-    spans = _INLINE_CODE_LINES if widest else _INLINE_CODE
-    without_spans = spans.sub(" ", _without_blocks(text, widest=widest))
-    return _INLINE_COMMENT.sub(_inline_comment, without_spans)
+    counted = "\n".join(line for _place, line in _block_lines(text))
+    return _without_inline(counted, _INLINE_CODE)
+
+
+def _loaded_text(text: str) -> str:
+    """허용 임포트가 실리는지 볼 본문. 넓게 뺀다 — HTML 블록(c11), 닫히지 않은 펜스와 주석
+    (c06·c07), 줄을 넘는 코드 스팬(c10·c49)까지. 헌법 줄은 이 본문에도 남아야 한다.
+    """
+    loaded = "\n".join(line for place, line in _block_lines(text) if place == "text")
+    return _without_inline(loaded, _INLINE_CODE_LINES)
 
 
 def at_imports(text: str) -> list[str]:
@@ -388,14 +401,15 @@ def at_imports(text: str) -> list[str]:
     `@docs/constitution/principles.md.` 가 허용 목록을 통과했다.
 
     Claude Code 는 marked 렉서의 토큰에서 임포트를 찾고 이 판정은 줄과 정규식으로 흉내 낸다.
-    그래서 본문을 두 번 읽는다. 여기(세는 쪽)는 확실히 안 실리는 자리만 좁게 벗긴다. 허용된
-    임포트가 실리는지는 `claude_md_problems` 가 넓게 벗긴 본문에서 본다. 어느 쪽이 틀려도 빨강으로
-    틀린다. 못 보는 것(2026-09-29 실측, 괄호는 `.scratch/harness/probes/import_comments/` 의 사례
-    id). 실리지 않는데 세는 자리(거짓 빨강) — HTML 블록(c37), 들여쓴 코드 블록(c34), 인용문 안의
-    펜스(c36), 프론트매터(c38), 그리고 추론으로 네 칸 이상 들여쓴 목록 속 펜스. 실리는데 세지 않는
-    자리(거짓 초록) — 굵게·링크 글자·인라인 태그(c42~c44), `#` 조각이나 한글이 든 경로(c45·c46).
+    그래서 본문을 두 번 읽는다. 여기는 좁게 뺀 본문(`_counted_text`)에서 센다. 허용된 임포트가
+    실리는지는 `claude_md_problems` 가 넓게 뺀 본문(`_loaded_text`)에서 본다. 어느 쪽이 틀려도
+    빨강으로 틀린다. 못 보는 것(2026-09-29 실측, 괄호는 `.scratch/harness/probes/import_comments/`
+    의 사례 id). 실리지 않는데 세는 자리(거짓 빨강) — HTML 블록(c37), 들여쓴 코드 블록(c34),
+    인용문 안의 펜스(c36), 프론트매터(c38), 그리고 추론으로 네 칸 이상 들여쓴 목록 속 펜스. 실리는데
+    세지 않는 자리(거짓 초록) — 굵게·링크 글자·인라인 태그(c42~c44), `#` 조각이나 한글이 든
+    경로(c45·c46).
     """
-    return ["@" + match.group(1) for match in _IMPORT_TOKEN.finditer(_without_code(text))]
+    return ["@" + match.group(1) for match in _IMPORT_TOKEN.finditer(_counted_text(text))]
 
 
 def claude_md_problems(root: Path = ROOT) -> list[str]:
@@ -410,9 +424,9 @@ def claude_md_problems(root: Path = ROOT) -> list[str]:
             f"CLAUDE.md의 @ 임포트는 {ALLOWED_IMPORTS}뿐이어야 한다. 지금: {imports}."
             " 문장 속 @경로 도 임포트다. 가리키려면 백틱에 넣는다"
         )
-    # 허용된 임포트는 실려야 한다. 넓게 벗긴 본문(닫히지 않은 것은 파일 끝까지, HTML 블록과 여러
-    # 줄 코드 스팬도 뺀다)에 한 줄 단독으로 남아야 한다. 인용문·목록·문장 속도 실렸지만 받지 않는다.
-    visible = [line.rstrip() for line in _without_code(text, widest=True).split("\n")]
+    # 허용된 임포트는 실려야 한다. 넓게 뺀 본문에도 한 줄 단독으로 남아야 한다. 인용문·목록·문장
+    # 속도 실렸지만 받지 않는다.
+    visible = [line.rstrip() for line in _loaded_text(text).split("\n")]
     for allowed in ALLOWED_IMPORTS:
         if allowed not in visible:
             problems.append(

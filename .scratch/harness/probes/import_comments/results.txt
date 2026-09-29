@@ -54,6 +54,8 @@ c55 운반 include / 허용 include / 다른 include :: 문단 속 주석 둘 �
 c56 운반 include / 허용 안 실림 / 다른 - :: 목록 표지 펜스 안
 c57 운반 include / 허용 - / 다른 include :: 목록 펜스와 펜스 사이
 c58 운반 include / 허용 include / 다른 - :: 목록 펜스 뒤 허용
+c59 운반 include / 허용 - / 다른 include :: 네 칸으로 닫은 목록 펜스 뒤
+c60 운반 include / 허용 - / 다른 include :: 인라인 태그로 여는 문단
 r01 운반 session_start / 허용 - / 다른 안 실림 :: rules 여러 줄 주석 속
 r02 운반 include / 허용 - / 다른 안 실림 :: 헌법 한 줄 주석 속
 b1_flow_unclosed: 안 실림
@@ -117,6 +119,8 @@ c55 빨강 at_imports=['@docs/constitution/principles.md', '@docs/PRD.md'] :: �
 c56 빨강 at_imports=[] :: 목록 표지 펜스 안
 c57 빨강 at_imports=['@docs/PRD.md'] :: 목록 펜스와 펜스 사이
 c58 초록 at_imports=['@docs/constitution/principles.md'] :: 목록 펜스 뒤 허용
+c59 빨강 at_imports=['@docs/PRD.md'] :: 네 칸으로 닫은 목록 펜스 뒤
+c60 빨강 at_imports=['@docs/PRD.md'] :: 인라인 태그로 여는 문단
 r01 초록 at_imports=[] :: rules 여러 줄 주석 속
 r02 초록 at_imports=[] :: 헌법 한 줄 주석 속
 b1_flow_unclosed patterns=['sub/**']
