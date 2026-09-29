@@ -37,7 +37,7 @@ ADR 0011과 0020에 2026-09-30 이력을 쌓았다.
 
 ## 잰 것
 
-- **01의 규칙을 실제 자리에서.** `lintText`는 없는 경로에서 "was not found by the project service"로 파싱 오류가 났다.
+- **01의 규칙을 실제 자리에서.** `lintText`는 없는 경로에서 `was not found by the project service`로 파싱 오류가 났다.
   그래서 실제 자리에 파일을 잠깐 만들어 verify의 린트 명령을 JSON으로 돌리는 변이 러너를 두었다
   (`probes/admin_app_mutations.mjs`). 여섯 대상과 타입 기반 규칙이 모두 기대한 규칙 ID로 빨갰다.
 - **`app/`이 next를 import하면 빨갰다.** 실제 `app/layout.tsx`의 `import type { Metadata } from "next"`다. boundaries의
@@ -85,7 +85,7 @@ Major가 하나였다.
   옛 패턴을 판정의 문제로 만든 자리다.
 - **닫은 틈의 미래형 문장.** 명세 다섯 곳과 ADR 0021 하나에 "(2026-09-30, 티켓 04)"를 달았다.
 - **Standards.**
-  - `start.ts` 독스트링의 과장을 좁혔다("래퍼만 죽어 next가 홀로 남는 일이 없다").
+  - `start.ts` 독스트링의 과장을 좁혔다. next가 홀로 남지 않는다고 적었는데, `next dev`는 서버를 자식으로 띄운다.
   - 커밋된 근거 없는 "실측"에 이 일지를 달았다.
   - 프로브 README의 근거 자리를 고쳤고, `ruleIdsAt`와 ESLint 인스턴스 셋을 하나로 모았다.
   - SSH 안내를 한 함수로 뺐다.

@@ -91,7 +91,7 @@
   dev와 build가 서로 다른 경로(`.next/dev/types`, `.next/types`)를 가리키게 고쳐 쓴다. tsconfig 검사는 그대로 `web/`을
   훑는다. `.next/`에 tsconfig 류 파일이 생기지 않았다(dev와 build 모두 쟀다).
 - **`app/`의 import 정책을 고쳤다.** 01의 정책이 next와 react까지 막았다. 앱의 `node_modules`로 풀린 외부 모듈은 경로가
-  `apps/admin/` 아래라 `workspace-app` 요소로도 분류돼, "pages·templates가 아니다"는 선택자에 걸렸다(boundaries 디버그 출력).
+  `apps/admin/` 아래라 `workspace-app` 요소로도 분류돼, pages·templates가 아닌 것을 막는 선택자에 걸렸다(boundaries 디버그 출력).
   임시 트리에는 next가 설치되지 않아 드러나지 않았다. 그 선택자를 `module: { origin: "local" }`로 좁혔다. 같은 자리에서 노드
   내장 모듈(`core`)이 두 선택자 어디에도 걸리지 않는 것을 보고 `{external,core}`로 함께 막았다. 판정자 테스트에 초록(실제
   `app/layout.tsx`의 next·react·`next/navigation`)과 빨강(`react-dom`, 앱의 다른 파일, 노드 내장 모듈)을 더했다.
