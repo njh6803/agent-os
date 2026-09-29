@@ -102,6 +102,8 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { 카드 } from "../../components/organisms/Card";\n\nexport const 화면 = 카드;\n',
   "apps/admin/app/layout.ts":
     'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 틀 = createAdminClient;\n',
+  "apps/admin/app/server/page.ts":
+    'import { readFileSync } from "node:fs";\n\nexport const 읽기 = readFileSync;\n',
   "apps/admin/lib/kinds.ts": 'export const 종류 = ["plugins", "runs"] as const;\n',
   "apps/admin/lib/kinds.test-d.ts":
     "// @ts-expect-error: 숫자는 문자열 자리에 들어가지 않는다\nexport const 틀린_값: string = 1;\n",
@@ -244,6 +246,11 @@ const RED: readonly RedCase[] = [
     rule: BOUNDARIES,
   },
   {
+    name: "app/ 이 노드 내장 모듈을 import",
+    path: "apps/admin/app/server/page.ts",
+    rule: BOUNDARIES,
+  },
+  {
     name: "atoms 가 생성 클라이언트 패키지를 import",
     path: "apps/admin/components/atoms/Api.ts",
     rule: BOUNDARIES,
@@ -299,10 +306,7 @@ beforeAll(async () => {
     join(fixture, "apps/admin/node_modules/@agent-os/api-client"),
     "junction",
   );
-  const results = await new ESLint({ cwd: WEB }).lintFiles([
-    join(fixture, "apps"),
-    join(fixture, "packages"),
-  ]);
+  const results = await judge.lintFiles([join(fixture, "apps"), join(fixture, "packages")]);
   for (const result of results) {
     messages.set(relative(fixture, result.filePath).split(sep).join("/"), result.messages);
   }
@@ -313,6 +317,14 @@ afterAll(() => {
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+// 판정자 하나를 모든 테스트가 쓴다. 커밋된 파일의 자리에서 재는 테스트는 위반을 파일에 쓰지 않고 lintText 로 그 경로에 넣는다.
+const judge = new ESLint({ cwd: WEB });
+
+async function ruleIdsAt(path: string, source: string): Promise<(string | null)[]> {
+  const [result] = await judge.lintText(source, { filePath: path });
+  return (result?.messages ?? []).map((message) => message.ruleId);
+}
 
 function reported(path: string): readonly (string | null)[] {
   const found = messages.get(path);
@@ -338,18 +350,11 @@ describe("판정자가 지나보내는 것", () => {
   }
 });
 
-// 임시 트리가 아니라 커밋된 파일의 자리에서 잰다. 위반은 파일에 쓰지 않고 lintText 로 그 경로에 넣는다.
+// 임시 트리가 아니라 커밋된 파일의 자리에서 잰다.
 describe("실제 생성 클라이언트 자리", () => {
-  const eslint = new ESLint({ cwd: WEB });
-
-  async function ruleIdsAt(path: string, source: string): Promise<(string | null)[]> {
-    const [result] = await eslint.lintText(source, { filePath: path });
-    return (result?.messages ?? []).map((message) => message.ruleId);
-  }
-
   test("커밋된 생성물은 판정 범위 안이고 아무것도 보고되지 않는다", async () => {
     // 판정에서 빠진 파일을 이름으로 주면 ESLint 는 "무시된 파일" 경고 하나를 낸다. 빈 목록이 범위 안이라는 뜻이다.
-    const [result] = await eslint.lintFiles([GENERATED]);
+    const [result] = await judge.lintFiles([GENERATED]);
 
     expect(result?.messages).toEqual([]);
   });
@@ -368,6 +373,95 @@ describe("실제 생성 클라이언트 자리", () => {
     const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/api/runs");\n`;
 
     expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+});
+
+// 관리 화면 앱의 실제 자리. 임시 트리에는 next 와 react 가 설치되지 않고 tsconfig 도 손으로 지은 것이라, 실제
+// node_modules 와 Next 가 읽는 tsconfig 에 기대는 것은 여기서 잰다. 파일이 있는 자리만 쓴다. 없는 경로를 주면
+// 프로젝트 서비스가 그 파일을 찾지 못해 규칙이 아니라 파싱 오류가 난다(2026-09-30 실측, 일지 2026-09-30-01).
+describe("실제 관리 화면 자리", () => {
+  const ADMIN = join(WEB, "apps", "admin");
+  const LAYOUT = join(ADMIN, "app", "layout.tsx");
+
+  test("app/ 이 next 와 react 를 import 하는 것은 아무것도 보고되지 않는다", async () => {
+    // 앱의 node_modules 로 풀린 next 는 workspace-app 요소로도 분류된다. 로컬로 좁히기 전에는 이것이 빨갰다.
+    const source = [
+      'import type { Metadata } from "next";',
+      'import { notFound } from "next/navigation";',
+      'import type { ReactNode } from "react";',
+      "",
+      "export const 정보: Metadata = {};",
+      "export const 없음 = notFound;",
+      "export type 자식 = ReactNode;",
+      "",
+    ].join("\n");
+
+    expect(await ruleIdsAt(LAYOUT, source)).toEqual([]);
+  });
+
+  test("app/ 이 next·react 밖의 외부 모듈을 import 하면 빨갛다", async () => {
+    const source =
+      'import { createPortal } from "react-dom";\n\nexport const 포털 = createPortal;\n';
+
+    expect(await ruleIdsAt(LAYOUT, source)).toContain(BOUNDARIES);
+  });
+
+  test("app/ 이 pages·templates 밖의 앱 파일을 import 하면 빨갛다", async () => {
+    const source =
+      'import { DEFAULT_HOST } from "../tools/loopback.ts";\n\nexport const 호스트 = DEFAULT_HOST;\n';
+
+    expect(await ruleIdsAt(LAYOUT, source)).toContain(BOUNDARIES);
+  });
+
+  test("타입 기반 규칙이 앱의 실제 파일에서 돈다", async () => {
+    // 파싱 오류(규칙 ID null)가 아니라 타입 정보가 있어야 도는 규칙이 보고된다.
+    const path = join(ADMIN, "components", "pages", "HomePage.tsx");
+    const source = 'export const 수: number = JSON.parse("1");\n';
+
+    expect(await ruleIdsAt(path, source)).toEqual(["@typescript-eslint/no-unsafe-assignment"]);
+  });
+});
+
+// 판정자가 빼는 것은 저장소의 .gitignore 가 무시하는 것(빌드 산출물)뿐이다. 그 파일에 소스를 덮는 줄이 들어가도
+// 판정 범위가 조용히 줄지 않게, git 이 추적하는 파일로 잰다.
+describe("판정 범위", () => {
+  const LINTED = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/;
+
+  test("git 이 추적하는 web/ 의 코드 파일은 하나도 판정에서 빠지지 않는다", async () => {
+    const tracked = spawnSync("git", ["ls-files", "-z", "--", "."], {
+      cwd: WEB,
+      encoding: "utf-8",
+    });
+    expect(tracked.status).toBe(0);
+    const files = tracked.stdout.split("\0").filter((path) => LINTED.test(path));
+    // 이 파일 자신이 있다. git 이 아무것도 내놓지 않는데 초록이 되지 않게 한다.
+    expect(files).toContain("eslint.config.test.ts");
+
+    const ignored: string[] = [];
+    for (const path of files) {
+      if (await judge.isPathIgnored(join(WEB, path))) {
+        ignored.push(path);
+      }
+    }
+
+    expect(ignored).toEqual([]);
+  });
+
+  test("Next 의 빌드 산출물은 판정에서 빠진다", async () => {
+    // .next/types/validator.ts 는 Next 가 빌드마다 다시 쓰고 as 와 @ts-ignore 를 싣는다(2026-09-30 실측, 일지 2026-09-30-01).
+    const built = join(WEB, "apps", "admin", ".next", "types", "validator.ts");
+
+    expect(await judge.isPathIgnored(built)).toBe(true);
+  });
+
+  test("git 이 추적하기 전인 소스 자리도 .gitignore 의 파이썬 산출물 이름에 걸리지 않는다", async () => {
+    // 추적 파일 가드는 git 도 무시해 추적되지 못한 파일을 보지 못한다. 앵커 없는 traces/ 는 관리 화면의 실행 목록
+    // 자리(티켓 07)를 git 과 판정자에서 함께 뺐다(2026-09-30 셀프 리뷰가 찾았다).
+    for (const name of ["traces", "dist"]) {
+      const source = join(WEB, "apps", "admin", "app", name, "page.tsx");
+
+      expect(await judge.isPathIgnored(source)).toBe(false);
+    }
   });
 });
 

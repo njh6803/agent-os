@@ -1,6 +1,9 @@
 // web 워크스페이스의 ESLint 설정. 원칙 III 의 TypeScript 판정자(ADR 0020)와 web 의 층 경계(ADR 0021)다.
 //
-// - 판정 범위에서 빼는 목록을 두지 않는다(ADR 0013). 대상은 TS 파일 전부이고 `.d.ts` 와 생성물도 든다.
+// - 판정 범위에서 빼는 목록을 두지 않는다(ADR 0013). 대상은 TS 파일 전부이고 `.d.ts` 와 커밋하는 생성물도 든다.
+//   빠지는 것은 저장소의 `.gitignore` 가 무시하는 빌드 산출물(`.next/` 등)뿐이고, 그 파일을 그대로 읽는다. 그래서
+//   목록이 둘이 되지 않는다(ADR 0020 의 2026-09-30 이력). 추적하는 파일이 하나도 빠지지 않는다는 것은
+//   eslint.config.test.ts 가 git 으로 재고, 아직 추적되지 않은 소스 자리의 반례(`app/traces/`)도 거기 있다.
 // - 인라인 설정 주석은 끈다(`noInlineConfig`). 끄기 주석은 에러가 아니라 경고로 보고되므로 린트 명령이
 //   `--max-warnings 0` 이어야 게이트다(package.json 의 lint). 정당한 예외는 이 파일에 경로와 함께 둔다.
 // - 경로에 기대는 규칙은 경로와 무관하게 쓴다. 앱이 어느 배치(`app/`, `src/app/`)를 쓰든 걸린다.
@@ -11,11 +14,14 @@
 //
 // 설정 파일이 .mjs 인 이유: ESLint 10 은 .ts 설정에 jiti(새 의존성)나 불안정 플래그를 요구한다.
 
-import { defineConfig } from "eslint/config";
+import { join } from "node:path";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import boundaries from "eslint-plugin-boundaries";
 import tseslint from "typescript-eslint";
 
 const TYPESCRIPT = ["**/*.{ts,tsx,mts,cts}"];
+// 저장소 뿌리의 .gitignore. git 의 해석 그대로(자기 디렉터리 기준) 읽는다.
+const GITIGNORE = join(import.meta.dirname, "..", ".gitignore");
 
 // no-restricted-syntax 는 파일마다 한 번만 설정된다. 뒤 블록이 이 규칙을 다시 적으면 앞 목록을 통째로
 // 덮으므로, 금지 구문은 이 상수 하나에 두고 서버 파일 블록도 이것을 펼쳐 쓴다.
@@ -60,6 +66,7 @@ const LAYER_POLICIES = [
 }));
 
 export default defineConfig(
+  includeIgnoreFile(GITIGNORE, { gitignoreResolution: true, name: ".gitignore 가 무시하는 것" }),
   {
     linterOptions: { noInlineConfig: true },
   },
@@ -179,8 +186,15 @@ export default defineConfig(
               from: { element: { type: "route" } },
               disallow: {
                 to: [
-                  { element: { types: { noneOf: ["page", "template"] } } },
-                  { module: { origin: "external", source: "!{next,react}" } },
+                  // 로컬로 좁힌다. 앱의 node_modules 로 풀린 외부 모듈(next, react)은 경로가 apps/<이름>/ 아래라
+                  // workspace-app 요소로도 분류돼, 좁히지 않으면 "pages·templates 가 아니다"에 걸렸다(티켓 04 가 실제
+                  // app/layout.tsx 에서 봤다. 임시 트리에는 next 가 설치되지 않아 드러나지 않았다).
+                  {
+                    module: { origin: "local" },
+                    element: { types: { noneOf: ["page", "template"] } },
+                  },
+                  // 노드 내장 모듈(core)도 막는다. app/ 의 파일이 서버에서 도는 코드를 부르는 길이다.
+                  { module: { origin: "{external,core}", source: "!{next,react}" } },
                 ],
               },
               message:

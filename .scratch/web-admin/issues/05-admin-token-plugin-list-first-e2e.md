@@ -100,6 +100,30 @@
   만드는 것, `EventSource`나 `XMLHttpRequest`를 쓰는 것, 상대 경로로 `packages/api-client/src/*`를 import하는 것(로컬로
   분류되어 03의 모듈 이름 정책을 피한다)이다. 앱 코드가 처음 API를 부르는 이 티켓에서 막을지 정한다. 막으면 경로와
   무관하게 쓰고 `web/eslint.config.test.ts`에 사례를 붙인다(`.claude/rules/web-workspace.md`).
+- **두 클라이언트는 브라우저에서만 만든다.** `createAdminClient`·`createChannelClient`는 만들 때 `location.origin`을 읽는다
+  (`clients.ts`의 `apiBaseUrl`). 서버 쪽 코드에서 부르면 `ReferenceError`다. 클라이언트 컴포넌트도 Next가 서버에서 한 번
+  그리므로(SSR), 렌더 중에 만들지 않고 브라우저에서만 도는 자리(SWR의 fetcher, 효과)에서 만든다. PR #101의 둘째
+  claude-review가 남겼다(Minor).
+
+### 04가 남긴 메모
+
+- **e2e가 관리 화면을 띄우는 모양.** 상류 입력은 `AGENT_OS_UPSTREAM`이고 `http://127.0.0.1:<serve의 포트>`만 받는다(`::1`은
+  Next가 넘기지 못해 구성 오류다, ADR 0011의 2026-09-30 이력). 그 환경으로 `pnpm -C web/apps/admin build`를 한 뒤
+  `node web/apps/admin/tools/start.ts start --port <포트>`(또는 `pnpm -C web/apps/admin start --port <포트>`)로 띄운다.
+  래퍼는 `--hostname`과 `--port`만 받는다. `start` 때 준 상류는 판정만 하고, 넘기는 곳은 빌드 때 값이다.
+  `.scratch/web-admin/probes/admin_relay.mjs`가 같은 순서로 띄운다. 그 프로브는 트리를 윈도우에서 `taskkill`로, 그 밖에서
+  프로세스 그룹으로 내리고 윈도우에서만 쟀다. e2e는 운영체제별 명령에 기대지 않는다. 래퍼가 next CLI를 같은 프로세스에서 부르므로 내릴 것은 래퍼 트리 하나다(`next
+  dev`는 서버를 자식으로 띄운다, `next start`는 재 보지 않았다).
+- **앱의 단위 테스트는 루트 Vitest 설정(node 환경)으로 돈다.** `apps/admin/tools/*.test.ts`가 그렇다. 페이지 테스트의 jsdom
+  환경을 앱 쪽에 세울 때 이 테스트들이 node 환경에 남게 한다. `start.test.ts`는 실제 프로세스를 띄운다.
+- **`app/`은 next와 react(그 서브패스 포함)와 pages·templates만 import한다.** 04가 정책을 고쳐 실제 `app/layout.tsx`에서
+  next·react가 지나간다. `react-dom`과 노드 내장 모듈은 막힌다. `next/font` 같은 것을 layout에서 쓰는 것은 된다.
+- **빌드 산출물.** `.next/`와 `next-env.d.ts`는 git이 무시하고, 판정자와 Prettier가 저장소 `.gitignore`를 그대로 읽어 뺀다
+  (ADR 0020의 2026-09-30 이력). Playwright의 산출물(`test-results/`, `playwright-report/`)도 이미 그 파일에 있다. 새 산출물
+  디렉터리가 생기면 `.gitignore`에 더한다. 소스를 빼려고 더하면 판정자 테스트의 추적 파일 가드가 빨갛다.
+- **`README.md`의 관리 화면 절.** 띄우는 법과 상류·포트·루프백은 04가 적었다. 관리 토큰을 넣는 줄을 이 티켓이 더한다.
+- **01의 아이콘 메모는 04가 재지 않았다.** 04에는 아이콘이 없다. "lucide-react 1.48에는 `exports` 맵이 없다. 서브패스
+  import의 모양과 그 타입이 서는지 본다"는 아이콘을 처음 들이는 티켓의 몫이다. 이 티켓이 들이면 여기서 본다.
 
 ### 확인
 

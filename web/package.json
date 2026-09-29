@@ -9,7 +9,7 @@
   "scripts": {
     "verify": "pnpm run check:api-client && pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
     "lint": "eslint --max-warnings 0",
-    "format": "prettier --check .",
+    "format": "prettier --check . --ignore-path ../.gitignore --ignore-path .prettierignore",
     "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit",
     "test": "vitest run",
     "check:tsconfig": "node tools/check-tsconfig.ts",

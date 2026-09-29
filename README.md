@@ -37,6 +37,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
                    재개 스트림을 프레임으로 읽는 것(ADR 0021)
+  apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/pages/(화면), next.config.ts(/api 중계),
+                   tools/start.ts(루프백에만 띄우는 시작 래퍼)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
@@ -52,7 +54,21 @@ kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플
 openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것(`web/`의 앱)은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+
+## 관리 화면
+
+관리 화면(`web/apps/admin`)은 루프백에만 서고, 같은 출처의 `/api/*`를 파이썬 `serve`로 넘기는 중계다(ADR 0019).
+
+```bash
+uv run agent-os serve              # 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 선다
+pnpm -C web/apps/admin build
+pnpm -C web/apps/admin start       # http://127.0.0.1:3000
+```
+
+- **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
+- **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
+- **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다. Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.
 
 ## 원천 표
 
