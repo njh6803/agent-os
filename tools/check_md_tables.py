@@ -47,7 +47,10 @@ from typing import Literal
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# pre-commit(identify) 이 markdown 으로 넘기는 확장자. 인자 없는 범위를 훅과 맞춘다(테스트가 대조).
+# pre-commit(identify) 이 markdown 으로 넘기는 확장자. 인자 없는 범위를 훅과 맞춘다. identify
+# 2.6.19 의 EXTENSIONS 에서 잰 값이다(2026-09-29). identify 는 pre-commit 의 전이 의존이라 테스트가
+# import 해 대조하지 않는다 — 의존성 선언은 ADR 이 먼저다(tech.md). 훅은 파일을 인자로 넘기므로
+# identify 가 확장자를 더해도 새는 것은 인자 없는 범위뿐이다.
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 # 인덱스에서 내용이 있는 일반 파일의 모드. 160000(서브모듈)과 120000(링크)은 뺀다.
 _REGULAR_MODES = frozenset({"100644", "100755"})
@@ -246,16 +249,19 @@ class _Parser:
         self.tables: list[Table] = []
         self.refused: list[Refused] = []
 
-    def close_from(self, index: int, lineno: int, *, cut: bool) -> None:
-        """`index` 부터 닫는다. `cut` 이면 닫히는 표가 같은 층의 내용에 끊긴 것이다.
+    def mark_cut(self, index: int, lineno: int) -> None:
+        """`index` 부터 닫힐 표가 `lineno` 의 내용에 빈 줄 없이 끊겼다고 적는다.
 
         바깥 컨테이너가 끝나서(목록 항목의 들여쓰기가 줄었다, 인용의 `>` 가 없다) 닫히는 표는 대개
         끊긴 것이 아니다 — 다음 항목이나 목록 밖 문단은 표를 뜻한 줄이 아니다. 그 줄이 칸을 나누는
-        `|` 를 품었을 때만 부르는 쪽(`feed`)이 `cut` 을 준다.
+        `|` 를 품었을 때만 `feed` 가 이것을 부른다.
         """
         for block in self.stack[index:]:
-            if block.table is not None and cut:
+            if block.table is not None:
                 block.table.cut_line = lineno
+
+    def close_from(self, index: int) -> None:
+        """`index` 부터 닫는다."""
         del self.stack[index:]
 
     def open(self, container: int, lineno: int, block: _Block | None) -> int:
@@ -264,10 +270,10 @@ class _Parser:
         `block` 이 None 이면 한 줄짜리 잎(ATX 제목, 수평선)이라 스택에 남기지 않는다.
         """
         keep = container + 1
-        leaf = keep > 0 and self.stack[keep - 1].kind in _LEAVES
-        if leaf:
+        if keep > 0 and self.stack[keep - 1].kind in _LEAVES:
             keep -= 1
-        self.close_from(keep, lineno, cut=leaf)
+            self.mark_cut(keep, lineno)
+        self.close_from(keep)
         if self.stack and self.stack[-1].kind == "item":
             self.stack[-1].has_child = True
         if block is not None:
@@ -397,7 +403,9 @@ class _Parser:
             # 리뷰가 찾았다). 빈 줄과 `|` 없는 줄은 표를 뜻한 줄이 아니다.
             tip_is_table = tip is not None and tip.kind == "table"
             stray_row = tip_is_table and not blank and _has_separator(line[first:])
-            self.close_from(matched, lineno, cut=stray_row)
+            if stray_row:
+                self.mark_cut(matched, lineno)
+            self.close_from(matched)
         tip = self.stack[-1] if self.stack else None
         if tip is not None and tip.kind in ("fence", "icode"):
             return
@@ -429,7 +437,12 @@ class _Parser:
         return marker.end()
 
     def _try_header(self, container: int, lineno: int, rest: str, indented: bool) -> bool:
-        """문단의 마지막 줄을 머리 행으로, 이 줄을 구분 행으로 표를 연다. 열었으면 True."""
+        """문단의 마지막 줄을 머리 행으로, 이 줄을 구분 행으로 표를 연다. 열었으면 True.
+
+        True 는 "이 줄을 소비했다"는 뜻이라 `feed` 가 거기서 멈춘다. 명령과 질의가 한 몸인 것은
+        cmark 의 try-open 함수(블록을 열어 보고 열었는지 돌려준다)를 그대로 옮긴 모양이다 — 나누면
+        같은 판정을 두 번 한다(PR #96 리뷰가 짚었고 판단 항목으로 두었다).
+        """
         paragraph = self.stack[container]
         if _TABLE_START.fullmatch(rest) is None:
             loose = _NON_ASCII_SPACE.sub(" ", rest)
@@ -463,9 +476,6 @@ class _Parser:
         if _has_separator(header) and header_line == lineno - 1:
             self.refused.append(Refused(header_line, reason))
 
-    def finish(self, lineno: int) -> None:
-        self.close_from(0, lineno, cut=False)
-
 
 def parse(text: str) -> tuple[list[Table], list[Refused]]:
     """문서 하나의 표와 표가 되지 못한 자리. BOM 을 벗기고 CRLF·CR 도 줄 끝으로 본다."""
@@ -473,7 +483,6 @@ def parse(text: str) -> tuple[list[Table], list[Refused]]:
     parser = _Parser()
     for lineno, line in enumerate(lines, 1):
         parser.feed(lineno, line)
-    parser.finish(len(lines) + 1)
     return parser.tables, parser.refused
 
 

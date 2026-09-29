@@ -111,6 +111,21 @@ pytest는 바이트 리터럴의 비 ASCII로 SyntaxError를 냈고, 새 검사�
 결정의 비용이다(tools.md). `identify` import는 pre-commit의 분류기를 그대로 대조하려는 것이라 따로 선언하지 않고 주석으로 이유를
 적었다(pre-commit이 떼면 ImportError로 빨강). `" U+" in problem`으로 힌트를 가르는 것은 두었다.
 
+## PR #96 리뷰 반영
+
+CI 셋은 초록이었다. CodeRabbit은 두 번 모두 "Review rate limited"여서 이 PR 전체를 한 번도 보지 않았고, CLI는 좌석이 없다
+(operations.md의 리뷰 없음). claude-review 둘은 Critical·Major 없이 Minor를 냈고, 둘이 겹친 것이 셋이다.
+
+- `close_from(cut=...)` 불리언 플래그(둘 다) → `mark_cut`과 `close_from`으로 나눴다. 아무것도 하지 않던 `finish`를 지웠다.
+- 테스트가 전이 의존 `identify`를 import(셀프 리뷰와 claude-review) → 선언은 `tech.md`가 ADR을 요구해, import를 빼고 확장자를
+  identify 2.6.19에서 잰 값으로 고정했다. 훅은 파일을 인자로 넘기므로 identify가 확장자를 더해도 새는 것은 인자 없는 범위뿐이다.
+- 두 검사 사이의 중복(둘 다) → 셋째 사본이 되기 전에 `tools/` 공용 모듈 여부를 정하라고 받는 쪽인 대기열 48에 적었다.
+- `_try_header`의 CQS → 이유를 독스트링에 적었다(cmark의 try-open 모양, 나누면 같은 판정을 두 번 한다).
+
+남긴 것: `feed`를 단계 셋으로 쪼개기(cmark의 `S_process_line`과 같은 한 덩어리이고, 쪼개는 리팩터는 차분 대조가 받치는 별도
+작업), 힌트를 출력 문자열로 가르는 것(두 방향 모두 테스트가 있다 — CLI 테스트가 힌트가 나오는 쪽을 본다), 날짜 Nit(작업이
+09-29로 넘어갔고 일지 첫머리에 적었다), 테스트 이름의 `row_from_string`(cmark와의 동치가 명세다).
+
 ## 갈린 곳
 
 - **44의 범위.** 44는 "칸 수 검사"였다. 적대 검증 뒤 cmark-gfm의 블록 파싱을 옮긴 약 500줄의 검사가 됐다. 좁게 두면 목록·인용·HTML

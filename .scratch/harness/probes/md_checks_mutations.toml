@@ -25,8 +25,15 @@ tests = ["tests/tools/test_check_md_tables.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/check_md_tables.py"
-old = "        self.close_from(keep, lineno, cut=leaf)"
-new = "        self.close_from(keep, lineno, cut=True)"
+old = '''
+        self.close_from(keep)
+        if self.stack and self.stack[-1].kind == "item":
+'''
+new = '''
+        self.mark_cut(keep, lineno)
+        self.close_from(keep)
+        if self.stack and self.stack[-1].kind == "item":
+'''
 
 [[mutation]]
 name = "표: 각주 정의를 컨테이너로 보지 않는다"

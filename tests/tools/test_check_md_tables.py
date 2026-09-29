@@ -17,13 +17,7 @@ import sys
 from pathlib import Path
 
 import pytest
-
-# identify 는 pre-commit 이 파일 종류를 가르는 분류기다. 선언한 pre-commit 을
-# 따라오는 그 판을 그대로 대조하는 것이 요점이라 따로 선언하지 않는다.
-# pre-commit 이 그것을 떼면 여기가 ImportError 로 빨강이다.
-from identify.extensions import EXTENSIONS
 from tools.check_md_tables import (
-    MARKDOWN_SUFFIXES,
     ROOT,
     main,
     parse,
@@ -267,7 +261,8 @@ def _git(repo: Path, *arguments: str) -> str:
 
 
 def test_인자_없는_범위는_훅과_같은_확장자이고_지운_파일은_건너뛴다(tmp_path: Path) -> None:
-    """pre-commit 은 identify 가 markdown 으로 본 파일을 넘긴다. 인자 없는 범위도 같아야 한다."""
+    """pre-commit 은 identify 가 markdown 으로 본 파일(`.md`·`.markdown`, 대소문자 무관)을
+    넘긴다. 인자 없는 범위도 같아야 한다."""
     _git(tmp_path, "init", "-q")
     for name in ("a.md", "b.MARKDOWN", "c.txt", "gone.md"):
         (tmp_path / name).write_text(TABLE, encoding="utf-8", newline="\n")
@@ -276,9 +271,6 @@ def test_인자_없는_범위는_훅과_같은_확장자이고_지운_파일은_
 
     assert tracked_markdown(tmp_path) == [tmp_path / "a.md", tmp_path / "b.MARKDOWN"]
     assert main(root=tmp_path) == 0
-    assert {f".{name}" for name, tags in EXTENSIONS.items() if "markdown" in tags} == (
-        MARKDOWN_SUFFIXES
-    )
 
 
 def test_CLI_진입점이_인자로_받은_파일의_깨진_표를_출력한다(tmp_path: Path) -> None:
