@@ -166,8 +166,8 @@ const MUTATIONS = [
   {
     name: "성공 뒤에만 목록과 그 행을 다시 읽는다",
     file: HOOKS,
-    old: "      } finally {\n        await Promise.all([",
-    new: "      } catch (error: unknown) {\n        throw error;\n      }\n      {\n        await Promise.all([",
+    old: "      } finally {\n        // mutate 는",
+    new: "      } catch (error: unknown) {\n        throw error;\n      }\n      {\n        // mutate 는",
     command: HOME_PAGE,
   },
   {
@@ -194,7 +194,7 @@ const MUTATIONS = [
   {
     name: "다음 켜고 끄기에 앞의 실패를 걷지 않는다",
     file: LIST,
-    old: "    report(null);\n",
+    old: "    onSwitchFailure(null);\n",
     new: "",
     command: HOME_PAGE,
   },

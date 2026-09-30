@@ -92,6 +92,8 @@ export function useSetPluginEnabled(): (
           setPluginEnabled(token, kind, name, enabled),
         );
       } finally {
+        // mutate 는 다시 읽기의 실패를 던지지 않고 그 키의 error 로 둔다. 그래서 이 finally 가 try 의 실패를 덮지
+        // 않는다. 페이지 테스트 "켜고 끈 뒤 다시 읽기도 실패하면…"이 알림이 하나뿐인지로 그것을 본다.
         await Promise.all([
           mutate(pluginKeys.list(generation)),
           mutate(pluginKeys.one(generation, kind, name), undefined, { revalidate: true }),

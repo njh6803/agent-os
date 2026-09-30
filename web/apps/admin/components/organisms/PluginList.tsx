@@ -5,13 +5,16 @@ import type { PluginKind, PluginRow } from "../../api/plugins";
 import { usePlugins, useSetPluginEnabled } from "../../hooks/queries/plugins";
 import { FailureNotice } from "../molecules/FailureNotice";
 
-/** 종류의 차례와 이름. 이름은 용어집의 말이다. */
-const KINDS = [
-  ["agent", "에이전트"],
-  ["mcp", "MCP"],
-  ["skill", "스킬"],
-  ["model", "모델"],
-] as const satisfies readonly (readonly [PluginKind, string])[];
+/**
+ * 종류의 이름과 차례(적은 차례대로 묶는다). 이름은 용어집의 말이다. `Record` 라서 계약에 종류가 늘거나 줄면 여기가
+ * 컴파일에서 깨진다. 빠진 종류의 행이 목록에서 조용히 사라지지 않는다.
+ */
+const KIND_NAMES = {
+  agent: "에이전트",
+  mcp: "MCP",
+  skill: "스킬",
+  model: "모델",
+} as const satisfies Record<PluginKind, string>;
 
 /** 로더가 아직 없는 종류. 끄고 켜도 런타임이 달라지지 않는다(스토리 21). */
 const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill", "model"]);
@@ -56,12 +59,12 @@ export function PluginList() {
       ) : data === undefined ? (
         <p role="status">플러그인 목록을 불러오는 중이다</p>
       ) : (
-        KINDS.map(([kind, label]) => (
+        Object.entries(KIND_NAMES).map(([kind, label]) => (
           <KindGroup
             key={kind}
             label={label}
             rows={data.filter((row) => row.kind === kind)}
-            report={setSwitchFailure}
+            onSwitchFailure={setSwitchFailure}
           />
         ))
       )}
@@ -72,10 +75,10 @@ export function PluginList() {
 interface KindGroupProps {
   readonly label: string;
   readonly rows: PluginRow[];
-  readonly report: (failure: SwitchFailure | null) => void;
+  readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
 
-function KindGroup({ label, rows, report }: KindGroupProps) {
+function KindGroup({ label, rows, onSwitchFailure }: KindGroupProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId}>
@@ -85,7 +88,7 @@ function KindGroup({ label, rows, report }: KindGroupProps) {
       ) : (
         <ul>
           {rows.map((row) => (
-            <Row key={row.name} row={row} report={report} />
+            <Row key={row.name} row={row} onSwitchFailure={onSwitchFailure} />
           ))}
         </ul>
       )}
@@ -96,7 +99,7 @@ function KindGroup({ label, rows, report }: KindGroupProps) {
 interface RowProps {
   readonly row: PluginRow;
   /** 켜고 끄기의 실패를 목록에 알린다. 누르기 시작하면 앞의 실패를 걷는다(null). */
-  readonly report: (failure: SwitchFailure | null) => void;
+  readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
 
 /**
@@ -105,13 +108,13 @@ interface RowProps {
  * 스위치는 목록이 읽은 켜짐을 그대로 보인다. 누르면 요청을 보내고 목록을 다시 읽을 때까지 막는다. 화면이 값을 먼저
  * 뒤집어 두지 않고(스토리 18), 응답 전의 두 번째 누름이 요청을 더 보내지 않는다(스토리 22).
  */
-function Row({ row, report }: RowProps) {
+function Row({ row, onSwitchFailure }: RowProps) {
   const setEnabled = useSetPluginEnabled();
   const [pending, setPending] = useState(false);
 
   async function setOpposite(): Promise<void> {
     setPending(true);
-    report(null);
+    onSwitchFailure(null);
     try {
       await setEnabled(row.kind, row.name, !row.enabled);
     } catch (error: unknown) {
@@ -120,7 +123,10 @@ function Row({ row, report }: RowProps) {
         throw error;
       }
       const { message, requestId } = describeFailure(error);
-      report({ message: `켜고 끄지 못했다: ${row.kind}/${row.name}\n${message}`, requestId });
+      onSwitchFailure({
+        message: `켜고 끄지 못했다: ${row.kind}/${row.name}\n${message}`,
+        requestId,
+      });
     } finally {
       setPending(false);
     }
