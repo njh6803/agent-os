@@ -101,3 +101,38 @@ web-admin 티켓 08, 이 기능의 마지막 티켓. 일지 2026-09-30-04의 "�
 - `uv run pytest -q` 1015 passed. `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`(0 errors),
   `uv run lint-imports` 초록. `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
 - `pnpm -C web verify` 초록(테스트 263). e2e 7 passed.
+
+## PR 리뷰
+
+PR #106. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: not assigned`, 이 PR에서 다시 봤다).
+
+- **CI**(`b281b0f`). `verify` 2분 53초, `claude-review` 59초, 둘 다 초록. 검사가 돈 커밋을 `gh run list`의 `headSha`로 봤다.
+  `verify`의 로그에서 e2e 7이 ubuntu에서 돈 것도 봤다(결정 흐름 셋 포함).
+- **CodeRabbit**(`@coderabbitai review`, `bbf5862…b281b0f`). 짚은 것이 없다. 사전 검사의 독스트링 커버리지 경고(76.92%)는
+  저장소의 기준이 아니라 두었고, 되풀이라 회고로 올렸다(대기열 69).
+- **claude-review**. 지적 없음.
+
+## 회고
+
+후보 넷을 냈고 넷 모두 승인됐다. 넷 모두 하네스라 티켓의 PR이 아니라 chore 배치의 몫이다.
+
+> 사용자(질문에 답): "59에 5회차 (추천),독스트링 검사 끄기 (추천),MSW 끊김 모양 가리키기,관찰 안 되는 가드"
+
+- **59(5회차).** 티켓이 압축의 되돌림을 `tools/mutate.py`로 보라고 적었지만 그 도구는 pytest만 돈다. 다섯째 JS 러너를 지었고,
+  원문만 보는 스크래치 도우미도 세 번째로 지었다. 러너가 처리하지 않은 에러를 빨강과 가르지 못해 가드 변이 하나를 셀 수
+  없었다. 러너가 소스를 제자리에서 고쳐 약 45~50분의 실행이 두 번 리뷰와 web 편집을 막았다. 반영 때 함께 볼 것: 원문만 보는
+  모드, 변이마다 테스트 이름으로 좁히기, 오류와 빨강의 구분, 제자리가 아닌 실행.
+- **69(새로).** CodeRabbit의 독스트링 커버리지 사전 검사. 일지에 적힌 것만 여섯 PR 넘게 두었다. `.coderabbit.yaml`의 머리말
+  (보안·버그·성능만 본다)과 어긋나는 기본값이다.
+- **70(새로, 1회차).** MSW 3.0.0의 끊김 모양(위 "잰 것")을 web 규칙이 가리킨다. web-widget의 SSE 페이지 테스트가 곧 닿는다.
+- **71(새로, 2회차).** 변이로 관찰되지 않는 가드는 걷거나 막는 것을 주석에 적는다. 06과 08이 같은 판단을 했다. 판단 기준
+  후보다.
+- 일지에만: 파이썬 `write_text`가 윈도우에서 줄 끝을 CRLF로 바꿔 프로브 README가 CRLF가 됐다(git이 커밋에서 LF로 맞췄고
+  작업 사본은 바이트로 되돌렸다). `tools/mutate.py` 독스트링이 적은 그 함정이다. 1회차.
+
+## 다음
+
+- **web-admin이 닫혔다.** 다음은 결정표의 하네스 chore 배치다. `tools/check_quotes.py`의 열린 항목 넷(51·55·66·67)과
+  `.coderabbit.yaml`의 69를 한 PR로 묶는다. 59(5회차, `tools/mutate.py`)는 그다음으로 크다. web-widget은 풀렸지만 설계
+  인터뷰가 먼저이고, 그 SSE 페이지 테스트가 70을 읽는다.
+- 칩 하나(`sdk.md`의 `paths`가 web의 `plugins` 도메인 폴더에 걸린다)는 사용자가 띄우면 따로 돈다.
