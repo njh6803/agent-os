@@ -3,19 +3,20 @@
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 생성 클라이언트, SWR 훅, 스토어는 진짜다. 보는 것은
 // 바깥 행동이다. 화면에 보이는 역할과 글자, 경계를 지나는 요청의 헤더, 브라우저 저장소에 남은 것이다.
 
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { inspect } from "node:util";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, envelope, network, type Plugin, type PluginRow } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { enterAdminToken } from "../../testing/token";
+import { enterAdminToken, enterChannelToken } from "../../testing/token";
 import { HomePage } from "./HomePage";
 import { PluginPage } from "./PluginPage";
 
 const TOKEN = "adm-7Qx2-page-token";
 const REJECTED = "admin-token-the-server-refuses";
+const CHANNEL = "chn-5Ht9-page-token";
 
 const CALC: Plugin = {
   kind: "agent",
@@ -198,20 +199,22 @@ describe("관리 토큰", () => {
     expect(entries(sessionStorage).filter(([, value]) => value.includes(REJECTED))).toEqual([]);
   });
 
-  test("받아들여진 관리 토큰은 sessionStorage 에만 남고 그 밖의 상태는 저장되지 않는다", async () => {
+  test("받아들여진 관리 토큰과 넣은 채널 토큰은 sessionStorage 에만 남고 그 밖의 상태는 저장되지 않는다", async () => {
     servePlugins(rows);
     renderPage(<HomePage />);
+    const user = userEvent.setup();
 
-    await enterAdminToken(userEvent.setup(), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await enterAdminToken(user, TOKEN);
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
 
     expect(entries(localStorage)).toEqual([]);
     const stored = entries(sessionStorage);
     expect(stored).toHaveLength(1);
     const [[, value] = ["", ""]] = stored;
     const parsed: unknown = JSON.parse(value);
-    // persist 가 붙이는 판 번호(수) 밖에 저장된 값은 토큰 하나다. 넣는 자리의 알림과 받아들인 횟수 같은 화면의 상태는 남지 않는다.
-    expect(leaves(parsed).filter((leaf) => typeof leaf !== "number")).toEqual([TOKEN]);
+    // persist 가 붙이는 판 번호(수) 밖에 저장된 값은 토큰 둘이다. 넣는 자리의 알림과 받아들인 횟수 같은 화면의 상태는 남지 않는다.
+    expect(leaves(parsed).filter((leaf) => typeof leaf !== "number")).toEqual([TOKEN, CHANNEL]);
   });
 
   test("같은 탭에서 새로 고쳐도 관리 토큰을 다시 넣지 않는다", async () => {
@@ -307,6 +310,124 @@ describe("관리 토큰", () => {
       expect(document.documentElement.outerHTML).not.toContain(token);
       expect(printed.map((arg) => inspect(arg)).join("\n")).not.toContain(token);
     }
+  });
+});
+
+describe("채널 토큰", () => {
+  test("채널 토큰을 넣어도 확인 요청을 보내지 않고 넣었다고만 말한다", async () => {
+    const authorizations = servePlugins(rows);
+    const user = await showList();
+    const before = authorizations.length;
+
+    await enterChannelToken(user, CHANNEL);
+
+    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
+    expect(screen.queryByLabelText("채널 토큰")).toBeNull();
+    expect(authorizations).toHaveLength(before);
+  });
+
+  test("채널 토큰을 넣어도 관리 요청에는 관리 토큰만 실린다", async () => {
+    const authorizations = servePlugins(rows);
+    const user = await showList();
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+
+    await user.click(screen.getByRole("button", { name: "새로 고침" }));
+
+    await waitFor(() => {
+      expect(authorizations.length).toBeGreaterThan(2);
+    });
+    expect(new Set(authorizations)).toEqual(new Set([`Bearer ${TOKEN}`]));
+  });
+
+  test("같은 탭에서 새로 고쳐도 채널 토큰을 다시 넣지 않는다", async () => {
+    servePlugins(rows);
+    const user = userEvent.setup();
+    const first = renderPage(<HomePage />);
+    await enterAdminToken(user, TOKEN);
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+    first.unmount();
+
+    vi.resetModules();
+    const reloaded = await import("./HomePage");
+    renderPage(<reloaded.HomePage />);
+
+    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
+    expect(screen.queryByLabelText("채널 토큰")).toBeNull();
+  });
+
+  test("관리 요청이 401 을 받으면 관리 토큰만 지우고 채널 토큰은 sessionStorage 에 남는다", async () => {
+    servePlugins((call) => (call < 2 ? rows() : refused()));
+    const user = await showList();
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+
+    await user.click(screen.getByRole("button", { name: "새로 고침" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
+    const stored = entries(sessionStorage)
+      .map(([, value]) => value)
+      .join("\n");
+    expect(stored).not.toContain(TOKEN);
+    expect(stored).toContain(CHANNEL);
+  });
+
+  test("관리 토큰이 거부돼 넣는 자리로 돌아가도 남은 채널 토큰을 토큰 지우기로 지울 수 있다", async () => {
+    servePlugins((call) => (call < 2 ? rows() : refused()));
+    const user = await showList();
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+    await user.click(screen.getByRole("button", { name: "새로 고침" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
+
+    await user.click(screen.getByRole("button", { name: "토큰 지우기" }));
+
+    const stored = entries(sessionStorage)
+      .map(([, value]) => value)
+      .join("\n");
+    expect(stored).not.toContain(CHANNEL);
+    // 지울 토큰이 없으면 버튼도 없다.
+    expect(screen.queryByRole("button", { name: "토큰 지우기" })).toBeNull();
+    expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
+  });
+
+  test("토큰 지우기를 누르면 두 토큰이 모두 사라진다", async () => {
+    servePlugins(rows);
+    const user = await showList();
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+
+    await user.click(screen.getByRole("button", { name: "토큰 지우기" }));
+
+    expect(await screen.findByLabelText("관리 토큰")).toBeTruthy();
+    const stored = entries(sessionStorage)
+      .map(([, value]) => value)
+      .join("\n");
+    expect(stored).not.toContain(TOKEN);
+    expect(stored).not.toContain(CHANNEL);
+    // 관리 토큰을 다시 넣어도 지운 채널 토큰은 돌아오지 않는다.
+    await enterAdminToken(user, TOKEN);
+    expect(await screen.findByLabelText("채널 토큰")).toBeTruthy();
+  });
+
+  test("채널 토큰이 주소에도 화면의 글자에도 콘솔에도 나오지 않는다", async () => {
+    const printed: unknown[] = [];
+    for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+        printed.push(...args);
+      });
+    }
+    servePlugins(rows);
+    const user = await showList();
+
+    expect(screen.getByLabelText("채널 토큰").getAttribute("type")).toBe("password");
+    await enterChannelToken(user, CHANNEL);
+    await screen.findByText("채널 토큰을 넣었다");
+
+    expect(location.href).not.toContain(CHANNEL);
+    expect(document.documentElement.outerHTML).not.toContain(CHANNEL);
+    expect(printed.map((arg) => inspect(arg)).join("\n")).not.toContain(CHANNEL);
   });
 });
 

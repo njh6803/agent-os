@@ -6,10 +6,12 @@
  *   커밋할 수 없다. 인터프리터는 `uv run` 이 쓰는 가상 환경의 것이다(`tests/test_main.py` 가 `sys.executable` 로
  *   짓는 것과 같다). 목록에 종류마다 행이 서고, 표지 행 둘(읽을 수 없는 매니페스트, 이름이 패턴 밖인 디렉터리)과
  *   꺼진 행 하나가 서게 채운다. 켜고 끄기 흐름이 그 루트의 운영자 파일을 읽도록 경로를 워커의 환경에 넘긴다.
+ * - 결정 흐름의 에이전트 둘은 모델 없이 승인 대상 도구(MCP 픽스처 서버의 add)를 `ctx.tool()` 로 직접 부른다. 그래서
+ *   결정 뒤의 재개가 모델 없이 끝까지 간다. 멈춘 실행은 흐름이 채널 토큰으로 만든다(`channel.ts`).
  * - 읽기 흐름이 볼 트레이스는 serve 를 띄우기 전에 트레이스 디렉터리에 쓴다(`traces.ts`).
- * - 토큰 둘은 여기서 무작위로 만들어 `serve` 의 환경에 넘긴다. 관리 토큰은 테스트가 화면에 넣도록 워커의 환경에도
- *   넘긴다. 관리 화면(Next)에는 넘기지 않는다. 무상태 중계라 토큰을 모른다(ADR 0019). 이 셸의 환경에 토큰 변수가
- *   있어도 Next 에는 벗겨서 준다. 어느 것도 커밋하지 않는다.
+ * - 토큰 둘은 여기서 무작위로 만들어 `serve` 의 환경에 넘긴다. 테스트가 화면에 넣고 흐름의 요청이 싣도록 워커의
+ *   환경에도 넘긴다. 관리 화면(Next)에는 넘기지 않는다. 무상태 중계라 토큰을 모른다(ADR 0019). 이 셸의 환경에 토큰
+ *   변수가 있어도 Next 에는 벗겨서 준다. 어느 것도 커밋하지 않는다.
  * - `serve` 는 `--port 0` 으로 띄우고 기동 줄에서 주소를 읽는다(`tests/test_main.py` 의 `_serving` 과 같다). 그 주소를
  *   상류로 관리 화면을 빌드한 뒤 `start` 로 띄운다. `rewrites` 는 빌드 산출물에 박히므로 상류는 빌드 전에 정해야 하고,
  *   `dev` 는 설정을 바로 읽어 운영과 다른 길을 잰다. 빌드는 앱의 `.next/` 를 다시 쓴다.
@@ -27,7 +29,7 @@ import { createRequire } from "node:module";
 import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { ADMIN_TOKEN_ENV, ADMIN_URL_ENV, PLUGINS_ROOT_ENV } from "./env";
+import { ADMIN_TOKEN_ENV, ADMIN_URL_ENV, CHANNEL_TOKEN_ENV, PLUGINS_ROOT_ENV } from "./env";
 import { writeReadTraces } from "./traces";
 
 const APP = dirname(import.meta.dirname);
@@ -67,6 +69,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const traces = join(work, "traces");
     writeReadTraces(traces);
     const adminToken = token("admin");
+    const channelToken = token("channel");
 
     const serve = launch(
       "serve",
@@ -87,7 +90,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         ...process.env,
         PYTHONUTF8: "1",
         AGENT_OS_ADMIN_TOKEN: adminToken,
-        AGENT_OS_CHANNEL_TOKEN: token("channel"),
+        AGENT_OS_CHANNEL_TOKEN: channelToken,
       },
     );
     launched.push(serve);
@@ -111,6 +114,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     process.env[ADMIN_URL_ENV] = `http://127.0.0.1:${String(port)}`;
     process.env[ADMIN_TOKEN_ENV] = adminToken;
+    process.env[CHANNEL_TOKEN_ENV] = channelToken;
     process.env[PLUGINS_ROOT_ENV] = plugins;
     return teardown;
   } catch (error: unknown) {
@@ -147,8 +151,8 @@ function nextEnv(upstream: string): NodeJS.ProcessEnv {
 }
 
 /**
- * 종류 넷의 행, 표지 행 하나, 꺼진 행 하나. TOML 기본 문자열은 JSON 문자열과 이스케이프가 같아 경로를
- * `JSON.stringify` 로 적는다(윈도우 경로의 역슬래시).
+ * 종류 넷의 행, 표지 행 둘, 꺼진 행 하나, 결정 흐름의 에이전트 둘. TOML 기본 문자열은 JSON 문자열과 이스케이프가
+ * 같아 경로를 `JSON.stringify` 로 적는다(윈도우 경로의 역슬래시).
  */
 function writeFixturePlugins(root: string, python: string): void {
   const write = (path: string, text: string): void => {
@@ -157,6 +161,32 @@ function writeFixturePlugins(root: string, python: string): void {
   };
   const manifest = (kind: string, name: string, extra = ""): string =>
     `schema_version = "1"\nkind = "${kind}"\nname = "${name}"\nversion = "0.1.0"\n${extra}`;
+  // MCP 픽스처 서버의 add 를 승인 대상으로 두는 에이전트. `tests/test_main.py` 의 `_gated_manifest` 와 같다.
+  const gated = (name: string, body: readonly string[]): void => {
+    write(
+      `agents/${name}/plugin.toml`,
+      manifest(
+        "agent",
+        name,
+        'entrypoint = "agent:Agent"\nmcp = ["fixture"]\nrequires_approval = ["add"]\n',
+      ),
+    );
+    write(
+      `agents/${name}/agent.py`,
+      [
+        "import asyncio",
+        "from collections.abc import AsyncIterator",
+        "",
+        "from agent_os.sdk import AgentContext, Event, RunFinished",
+        "",
+        "",
+        "class Agent:",
+        "    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:",
+        ...body.map((line) => `        ${line}`),
+        "",
+      ].join("\n"),
+    );
+  };
 
   write("agents/echo/plugin.toml", manifest("agent", "echo", 'entrypoint = "agent:Agent"\n'));
   write(
@@ -173,6 +203,19 @@ function writeFixturePlugins(root: string, python: string): void {
       "",
     ].join("\n"),
   );
+  // 승인하면 도구를 부르고 2초 뒤에 끝난다. 그 틈에 재개 스트림이 조각으로 오는지(첫 이벤트가 결말보다 먼저 화면에
+  // 있는지) 결정 흐름이 본다. 켜고 끄기 흐름이 끄는 에이전트도 이것이다.
+  gated("gated", [
+    'total = await ctx.tool("add", a=2, b=3)',
+    "await asyncio.sleep(2)",
+    "yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)",
+  ]);
+  // 한 턴에 승인 대상이 둘이다. 오래된 화면 흐름이 첫 일시정지를 다른 곳에서 허가하면 둘째에서 다시 멈춘다.
+  gated("twice", [
+    'first = await ctx.tool("add", a=2, b=3)',
+    'second = await ctx.tool("add", a=4, b=5)',
+    'yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"{first}/{second}")',
+  ]);
   write("agents/broken/plugin.toml", 'schema_version = "1"\nkind = \n');
   // 디렉터리 이름이 패턴 밖인 표지. 주소에서 인코딩해야 하는 글자(띄어쓰기)가 든다.
   write("agents/Old Calc/plugin.toml", manifest("agent", "old-calc"));

@@ -2,10 +2,12 @@
 // sessionStorage 에만 남는다. 새로 고쳐도 다시 넣지 않고, 탭을 닫으면 사라진다. localStorage 는 디스크에 평문으로
 // 남고 모든 탭이 나눠 가져서 쓰지 않는다.
 //
-// persist 는 토큰만 저장한다(partialize). 넣는 자리의 알림은 화면의 상태라 새로 고치면 사라진다. 서버 응답은 여기
-// 복사하지 않는다. 서버 데이터는 SWR 이 든다.
+// 토큰은 둘이고 서로 다른 면을 여는 다른 권한이다(ADR 0015). 관리 토큰은 필수이고 넣을 때 확인한다. 채널 토큰은
+// 선택이고 확인하지 않는다. 확인할 채널의 읽기 경로가 없어(ADR 0014) 틀린 채널 토큰은 첫 결정의 401 로 드러난다.
+// 한 토큰이 거부되면 그 토큰만 내려놓는다.
 //
-// 채널 토큰은 결정 화면(티켓 08)이 더한다.
+// persist 는 토큰 둘만 저장한다(partialize). 넣는 자리의 알림과 받아들인 횟수는 화면의 상태라 새로 고치면 사라진다.
+// 서버 응답은 여기 복사하지 않는다. 서버 데이터는 SWR 이 든다.
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -24,11 +26,17 @@ interface Tokens {
   readonly adminTokenGeneration: number;
   /** 넣는 자리의 알림. 토큰이 받아들여지거나 지워지면 걷힌다. */
   readonly adminTokenNotice: AdminTokenNotice | null;
+  /** 넣은 채널 토큰. 없으면 멈춘 실행에 결정 자리가 서지 않는다. 관리 화면의 나머지는 이것 없이 쓴다. */
+  readonly channelToken: string | null;
   readonly acceptAdminToken: (token: string) => void;
   /** 거부된 관리 토큰을 내려놓는다. 거부된 토큰을 들고 있으면 모든 요청이 같은 401 을 되풀이한다. */
   readonly rejectAdminToken: () => void;
   /** 넣은 관리 토큰을 판정하지 못했다. 저장하지 않는다. */
   readonly leaveAdminTokenUnjudged: () => void;
+  readonly acceptChannelToken: (token: string) => void;
+  /** 거부된 채널 토큰만 내려놓는다. 관리 토큰은 그대로라 관리 화면은 계속 쓴다. */
+  readonly rejectChannelToken: () => void;
+  /** 두 토큰을 모두 지운다. */
   readonly clearTokens: () => void;
 }
 
@@ -38,6 +46,7 @@ export const useTokens = create<Tokens>()(
       adminToken: null,
       adminTokenGeneration: 0,
       adminTokenNotice: null,
+      channelToken: null,
       acceptAdminToken: (token) => {
         set(({ adminTokenGeneration }) => ({
           adminToken: token,
@@ -51,15 +60,21 @@ export const useTokens = create<Tokens>()(
       leaveAdminTokenUnjudged: () => {
         set({ adminTokenNotice: "unreachable" });
       },
+      acceptChannelToken: (token) => {
+        set({ channelToken: token });
+      },
+      rejectChannelToken: () => {
+        set({ channelToken: null });
+      },
       clearTokens: () => {
-        set({ adminToken: null, adminTokenNotice: null });
+        set({ adminToken: null, adminTokenNotice: null, channelToken: null });
       },
     }),
     {
       name: "agent-os-admin-tokens",
       // 서버에서 한 번 그릴 때는 sessionStorage 가 없다. 그때 zustand 는 저장소 없이 선다.
       storage: createJSONStorage(() => sessionStorage),
-      partialize: ({ adminToken }) => ({ adminToken }),
+      partialize: ({ adminToken, channelToken }) => ({ adminToken, channelToken }),
     },
   ),
 );

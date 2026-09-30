@@ -6,7 +6,7 @@
 // - rewrites 는 빌드 산출물(routes-manifest.json)에 박힌다(.scratch/web-admin/probes/admin_relay.mjs). start 는 이 파일을 다시 읽어 판정하지만 실제로 넘기는 곳은
 //   빌드 때의 값이다. 상류를 바꾸면 다시 빌드한다. 빌드 때 판정을 지난 값만 박힌다.
 // - compress: false. 기본 압축은 SSE 를 끝에 몰았고, 끄면 생기는 대로 흘렀다(.scratch/web-admin/probes/next_measure.mjs).
-//   회귀를 잡는 것은 결정 화면의 e2e(티켓 08)다. 그 전에는 SSE 를 중계로 받는 화면이 없어 빠져도 빨개지지 않는다.
+//   회귀를 잡는 것은 결정 흐름의 e2e(e2e/decision.e2e.ts)다. 재개 스트림의 첫 이벤트가 결말보다 먼저 화면에 있는지 본다.
 // - agentRules: false. next dev 가 에이전트를 감지하면 앱 폴더에 AGENTS.md 와 CLAUDE.md 를 만든다(ADR 0021).
 //   만들어지면 tools/check_instructions.py 의 중첩 지침 파일 검사가 빨갛다. 블록의 요지는 .claude/rules/web-admin.md 에 있다.
 

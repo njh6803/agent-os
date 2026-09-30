@@ -50,7 +50,8 @@ const MUTATIONS = [
   {
     name: "partialize 없이 상태 전부를 저장한다",
     file: STORE,
-    old: "      partialize: ({ adminToken }) => ({ adminToken }),\n",
+    // (2026-09-30, 티켓 08) 채널 토큰이 더해져 partialize 가 토큰 둘을 든다.
+    old: "      partialize: ({ adminToken, channelToken }) => ({ adminToken, channelToken }),\n",
     new: "",
     command: PAGES,
   },
@@ -106,8 +107,9 @@ const MUTATIONS = [
   {
     name: "토큰 지우기가 토큰을 남긴다",
     file: STORE,
-    old: "      clearTokens: () => {\n        set({ adminToken: null, adminTokenNotice: null });",
-    new: "      clearTokens: () => {\n        set({ adminTokenNotice: null });",
+    // (2026-09-30, 티켓 08) 지우기가 채널 토큰도 지운다. 변이는 관리 토큰만 남긴다.
+    old: "      clearTokens: () => {\n        set({ adminToken: null, adminTokenNotice: null, channelToken: null });",
+    new: "      clearTokens: () => {\n        set({ adminTokenNotice: null, channelToken: null });",
     command: PAGES,
   },
   {

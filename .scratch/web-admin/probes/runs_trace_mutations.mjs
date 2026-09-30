@@ -31,6 +31,8 @@ const E2E = "pnpm -C apps/admin exec playwright test";
 const HOOKS = "apps/admin/hooks/queries/traces/index.ts";
 const LIST = "apps/admin/components/organisms/RunList.tsx";
 const DETAIL = "apps/admin/components/organisms/RunDetail.tsx";
+// 티켓 08 이 이벤트 하나를 그리는 코드를 RunDetail 에서 옮겼다. 재개 스트림도 같은 것을 지난다.
+const EVENT = "apps/admin/components/organisms/EventItem.tsx";
 const SECTION = "apps/admin/components/organisms/ReadSection.tsx";
 const SCREEN = "apps/admin/components/pages/AdminScreen.tsx";
 const PAGE = "apps/admin/components/pages/RunPage.tsx";
@@ -216,21 +218,21 @@ const MUTATIONS = [
   },
   {
     name: "문자열 필드를 JSON 으로 적는다",
-    file: DETAIL,
+    file: EVENT,
     old: AS_TEXT,
     new: "return JSON.stringify(value, null, 2);",
     command: RUN_PAGE,
   },
   {
     name: "JSON 값을 들여 적지 않는다",
-    file: DETAIL,
+    file: EVENT,
     old: AS_TEXT,
     new: 'return typeof value === "string" ? value : JSON.stringify(value);',
     command: RUN_PAGE,
   },
   {
     name: "모르는 종류의 원문을 보이지 않는다",
-    file: DETAIL,
+    file: EVENT,
     old: FIELDS,
     new: '.filter(([name]) => name !== "type" && name !== "run_id" && name !== "raw")',
     command: RUN_PAGE,
@@ -238,14 +240,14 @@ const MUTATIONS = [
   {
     // 셀프 리뷰의 명세 축이 짚었다. 화면 문구는 용어집의 말이다.
     name: "필드에 용어집의 말을 붙이지 않는다",
-    file: DETAIL,
+    file: EVENT,
     old: "{isEventField(name) ? `${FIELD_NAMES[name]} ` : null}",
     new: "{null}",
     command: RUN_PAGE,
   },
   {
     name: "모르는 종류를 판별자 이름으로 부른다",
-    file: DETAIL,
+    file: EVENT,
     old: '{event.type === "unknown" ? "모르는 종류" : event.type}',
     new: "{event.type}",
     command: RUN_PAGE,
@@ -259,7 +261,7 @@ const MUTATIONS = [
   },
   {
     name: "트레이스를 HTML 로 그린다",
-    file: DETAIL,
+    file: EVENT,
     old: '<dd style={{ whiteSpace: "pre-wrap" }}>{asText(value)}</dd>',
     new: AS_HTML,
     command: RUN_PAGE,
@@ -324,7 +326,7 @@ const MUTATIONS = [
   },
   {
     name: "e2e: 트레이스를 HTML 로 그린다",
-    file: DETAIL,
+    file: EVENT,
     old: '<dd style={{ whiteSpace: "pre-wrap" }}>{asText(value)}</dd>',
     new: AS_HTML,
     command: E2E,
@@ -338,7 +340,7 @@ const MUTATIONS = [
   },
   {
     name: "e2e: 모르는 종류의 원문을 보이지 않는다",
-    file: DETAIL,
+    file: EVENT,
     old: FIELDS,
     new: '.filter(([name]) => name !== "type" && name !== "run_id" && name !== "raw")',
     command: E2E,

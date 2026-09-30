@@ -3,22 +3,30 @@
 
 export const ADMIN_URL_ENV = "AGENT_OS_E2E_ADMIN_URL";
 export const ADMIN_TOKEN_ENV = "AGENT_OS_E2E_ADMIN_TOKEN";
+export const CHANNEL_TOKEN_ENV = "AGENT_OS_E2E_CHANNEL_TOKEN";
 export const PLUGINS_ROOT_ENV = "AGENT_OS_E2E_PLUGINS_ROOT";
 
 /**
- * 준비가 띄운 관리 화면의 주소, 그 serve 가 받는 관리 토큰, 그 serve 의 플러그인 루트. 토큰은 테스트만 아는 값이다.
- * 켜고 끄기 흐름이 루트의 운영자 파일을 읽는다.
+ * 준비가 띄운 관리 화면의 주소, 그 serve 가 받는 토큰 둘, 그 serve 의 플러그인 루트. 토큰은 테스트만 아는 값이다.
+ * 켜고 끄기 흐름이 루트의 운영자 파일을 읽는다. 채널 토큰은 테스트가 화면에 넣고, 준비의 요청(`channel.ts`)이 싣는다.
  */
 export function stack(): {
   readonly adminUrl: string;
   readonly adminToken: string;
+  readonly channelToken: string;
   readonly pluginsRoot: string;
 } {
   const adminUrl = process.env[ADMIN_URL_ENV];
   const adminToken = process.env[ADMIN_TOKEN_ENV];
+  const channelToken = process.env[CHANNEL_TOKEN_ENV];
   const pluginsRoot = process.env[PLUGINS_ROOT_ENV];
-  if (adminUrl === undefined || adminToken === undefined || pluginsRoot === undefined) {
+  if (
+    adminUrl === undefined ||
+    adminToken === undefined ||
+    channelToken === undefined ||
+    pluginsRoot === undefined
+  ) {
     throw new Error("e2e 의 준비(globalSetup)가 돌지 않았다. playwright.config.ts 로 띄운다");
   }
-  return { adminUrl, adminToken, pluginsRoot };
+  return { adminUrl, adminToken, channelToken, pluginsRoot };
 }
