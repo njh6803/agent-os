@@ -129,6 +129,20 @@ PR #103. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
   `RequestFailure`가 아닌 예외를 다시 던지면 `enter`가 reject되어 "넣기" 버튼이 막힌 채 남는다. 예외는 결함이라 삼키지 않고,
   넣는 자리가 `finally`로 버튼을 푼다. Nit 하나(던지는 뜻)는 `verdictOf`에 주석으로 밝혔다. 이 길을 여는 방법(요청 함수는
   모든 실패를 `RequestFailure`로 던진다)이 없어 테스트는 두지 않았다.
+- **둘째 CI**(`970b19c`, 캐시 맞음). `verify` 1분 58초. 캐시 복원 2초, `install-deps` 14초(캐시가 없을 때의 설치 23초 대신),
+  e2e 11초. 시스템 의존성은 캐시 밖이라 아낀 것은 9초 남짓이다.
+- **둘째 claude-review**(`970b19c`). Minor 넷, Nit 하나. 처분은 PR 코멘트로 답했다. 401 규칙이 두 곳에 있던 것은
+  `isRejection` 하나로 모았고, `clearTokens`가 횟수를 올리지 않는 뜻은 독스트링에 적었다. fetcher가 스토어에 쓰는 것은 둔다.
+  거부는 그 요청이 실은 토큰에 묶여야 하고 그것을 아는 자리가 fetcher뿐이다. `onError`는 옛 키의 에러를 부르지 않는다는
+  SWR의 내부 동작에 기댄다. organism이 데이터를 가져오는 것도 둔다(`tech.md`의 "API 호출은 organisms 이상").
+- **CodeRabbit**(`@coderabbitai review`, `c7dff2e…970b19c`). 짚은 것이 없었다. 이 시간의 리뷰 한도를 썼고 증분 리뷰라, 뒤의
+  작은 커밋은 다시 보지 않는다.
+- **행을 지우는 결정.** 둘째 claude-review가 `web-workspace.md`의 "다시 확인하는 동안 보인 것을 지우지 않는다"와 부딪혀
+  보인다고 짚었다. 사용자에게 물었다.
+
+  > 사용자(질문에 답): "지운다 (지금, Recommended)"
+
+  그대로 두고, 앞 문장은 응답을 기다리는 동안의 일이고 실패는 그 밖이라는 한 줄을 `.claude/rules/web-admin.md`에 더했다.
 
 ## 회고
 

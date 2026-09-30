@@ -82,10 +82,15 @@ function verdictOf(error: unknown): Verdict {
   if (!(error instanceof RequestFailure)) {
     throw error;
   }
-  if (error.status === 401) {
+  if (isRejection(error)) {
     return "rejected";
   }
   return error.envelope === null ? "unjudged" : "accepted";
+}
+
+/** 관리 토큰이 거부됐다는 실패인가. 401 이 거부라는 규칙은 확인 요청과 fetcher 가 이것 하나를 쓴다. */
+function isRejection(error: unknown): boolean {
+  return error instanceof RequestFailure && error.status === 401;
 }
 
 /** SWR 의 fetcher. 목록을 읽고, 401 이면 그 요청이 실은 관리 토큰을 내려놓는다. */
@@ -101,7 +106,7 @@ async function listOrReject(adminToken: string): Promise<PluginRow[]> {
 /** 그 사이 운영자가 다른 토큰을 넣었으면 그것은 둔다. 거부된 것은 옛 요청이 실은 토큰이다. */
 function rejectIfStillHeld(error: unknown, adminToken: string): void {
   const tokens = useTokens.getState();
-  if (error instanceof RequestFailure && error.status === 401 && tokens.adminToken === adminToken) {
+  if (isRejection(error) && tokens.adminToken === adminToken) {
     tokens.rejectAdminToken();
   }
 }

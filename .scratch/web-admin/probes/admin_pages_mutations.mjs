@@ -88,8 +88,8 @@ const MUTATIONS = [
   {
     name: "지운 토큰의 늦은 401 이 새 토큰을 내려놓는다",
     file: HOOKS,
-    old: "error.status === 401 && tokens.adminToken === adminToken",
-    new: "error.status === 401",
+    old: "isRejection(error) && tokens.adminToken === adminToken",
+    new: "isRejection(error)",
     command: PAGES,
   },
   {
