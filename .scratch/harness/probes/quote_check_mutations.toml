@@ -7,8 +7,8 @@ tests = ["tests/tools/test_check_quotes.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/check_quotes.py"
-old = "            if body is None or _PROPOSAL.search(before):"
-new = "            if body is None:"
+old = "    if body is None or _PROPOSAL.search(before):"
+new = "    if body is None:"
 
 [[mutation]]
 name = "51: 표지 뒤의 '후보'·'더'를 모른다"

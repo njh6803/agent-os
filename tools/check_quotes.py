@@ -134,6 +134,20 @@ def _clean(text: str) -> str | None:
     return text
 
 
+def _as_quote(number: int, raw: str, before: str) -> Quote | None:
+    """따옴표 한 쌍을 대조할 인용으로 정한다. `before` 는 여는 따옴표 앞의 같은 줄이다.
+
+    제안 표지 뒤이거나 짝이 어긋난 조각이거나 짧으면 None. ADR 가까이면 그 ADR 에서 찾는다.
+    """
+    body = _clean(raw)
+    if body is None or _PROPOSAL.search(before):
+        return None
+    adr = _ADR_BEFORE.search(before)
+    if adr is not None and len(body) >= ADR_MIN_LENGTH:
+        return Quote(number, body, adr.group(1))
+    return Quote(number, body, None) if len(body) >= MIN_LENGTH else None
+
+
 def quotes_in(markdown: str) -> list[Quote]:
     """산문의 큰따옴표 인용. 펜스·코드 스팬·`>` 줄과 제안 표지 뒤는 뺀다.
 
@@ -145,16 +159,12 @@ def quotes_in(markdown: str) -> list[Quote]:
         for match in _QUOTE.finditer(text):
             if "\n" in match.group(1):
                 continue  # 줄을 넘는 인용. 짝만 소비하고 대조하지 않는다
-            before = text[text.rfind("\n", 0, match.start()) + 1 : match.start()]
-            body = _clean(match.group(1))
-            if body is None or _PROPOSAL.search(before):
-                continue
-            number = block[text.count("\n", 0, match.start())][0]
-            adr = _ADR_BEFORE.search(before)
-            if adr is not None and len(body) >= ADR_MIN_LENGTH:
-                quotes.append(Quote(number, body, adr.group(1)))
-            elif len(body) >= MIN_LENGTH:
-                quotes.append(Quote(number, body, None))
+            start = match.start()
+            number = block[text.count("\n", 0, start)][0]
+            before = text[text.rfind("\n", 0, start) + 1 : start]
+            quote = _as_quote(number, match.group(1), before)
+            if quote is not None:
+                quotes.append(quote)
     return quotes
 
 
@@ -234,12 +244,6 @@ class Report:
     files_read: int  # 넘긴 파일 중 실제로 읽은 것. 뺀 사본과 없는 파일은 세지 않는다
     files_whole: int  # 그중 줄 필터 없이 전체를 본 것(diff 가 비었거나 `--all-lines`)
     quotes_checked: int  # 줄 필터를 지나 대조한 인용 수
-
-
-def warnings_for(
-    files: list[Path], root: Path = ROOT, line_filter: LineFilter | None = None
-) -> list[str]:
-    return check(files, root, line_filter).warnings
 
 
 def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None = None) -> Report:

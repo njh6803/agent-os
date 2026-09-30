@@ -13,9 +13,9 @@ from tools.check_quotes import (
     Quote,
     added_lines,
     added_lines_from_diff,
+    check,
     default_files,
     quotes_in,
-    warnings_for,
 )
 
 원문 = "지침을 쓰는 사람이 그 지침을 가장 먼저 어긴다는 것이 이 저장소가 훅을 위에 두는 이유다"
@@ -46,14 +46,14 @@ def _덧붙인다(path: Path, 줄: str) -> None:
 def test_원문이_다른_파일에_있으면_경고가_없다(tmp_path: Path) -> None:
     quoting = _저장소를_만든다(tmp_path, f'감사가 말한 "{원문}"가 여기 적용된다.\n')
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_원문이_어디에도_없으면_파일과_줄을_들어_경고한다(tmp_path: Path) -> None:
     문서 = '첫 줄\n감사가 말한 "지침을 쓰는 사람이 그 지침을 나중에야 어긴다는 것"이라는 말.\n'
     quoting = _저장소를_만든다(tmp_path, 문서)
 
-    warnings = warnings_for([quoting], tmp_path)
+    warnings = check([quoting], tmp_path).warnings
 
     assert len(warnings) == 1
     assert warnings[0].startswith("docs/quoting.md:2:")
@@ -64,7 +64,7 @@ def test_같은_파일_안의_원문도_두_번째_자리다(tmp_path: Path) -> 
     문서 = f'{원문}\n\n위 문장, 곧 "{원문}"를 다시 든다.\n'
     quoting = _저장소를_만든다(tmp_path, 문서, 원천="다른 것")
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_인용문_줄과_코드_안은_보지_않는다() -> None:
@@ -86,7 +86,7 @@ def test_코드_스팬과_강조는_벗기고_대조한다(tmp_path: Path) -> No
         원천="스트림의 항목 스키마는 `itemSchema`로 계약에 실린다.",
     )
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_따옴표_쌍이_어긋나_잡힌_조각은_버린다() -> None:
@@ -110,7 +110,7 @@ def test_더한_줄만_볼_때_diff_가_없으면_전체를_본다(tmp_path: Pat
     문서 = '첫 줄\n감사가 말한 "지침을 쓰는 사람이 그 지침을 나중에야 어긴다는 것"이라는 말.\n'
     quoting = _저장소를_만든다(tmp_path, 문서)
 
-    filtered = warnings_for([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path))
+    filtered = check([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path)).warnings
 
     assert len(filtered) == 1
 
@@ -127,7 +127,7 @@ def test_더한_줄은_스테이지와_상관없이_작업_트리가_HEAD_에_�
     _git(tmp_path, "add", ".")
     _덧붙인다(quoting, '안 한 줄 "스테이지하지 않은 줄의 틀린 인용도 스무 자를 넘어 잡혀야 한다"\n')
 
-    warnings = warnings_for([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path))
+    warnings = check([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path)).warnings
 
     assert [warning.split(":")[1] for warning in warnings] == ["2", "3"]
 
@@ -140,14 +140,14 @@ def test_상대_경로로_넘어온_파일도_한_번만_센다(
     _저장소를_만든다(tmp_path, 문서)
     monkeypatch.chdir(tmp_path)
 
-    assert len(warnings_for([Path("docs/quoting.md")], tmp_path)) == 1
+    assert len(check([Path("docs/quoting.md")], tmp_path).warnings) == 1
 
 
 def test_추적되지_않은_새_파일의_옳은_인용은_자기_자리를_센다(tmp_path: Path) -> None:
     """corpus 는 git ls-files 인데 새 파일은 거기 없다. 그러면 옳은 인용도 한 자리 모자란다."""
     quoting = _저장소를_만든다(tmp_path, f'감사가 말한 "{원문}"가 여기 적용된다.\n')
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_가운데가_생략된_인용은_조각마다_찾는다(tmp_path: Path) -> None:
@@ -157,7 +157,7 @@ def test_가운데가_생략된_인용은_조각마다_찾는다(tmp_path: Path)
         원천="플러그인은 sdk만 import한다. 의존 방향은 여섯이다. import-linter가 판정한다.",
     )
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_코드_스팬_안의_셸_인용은_인용이_아니다() -> None:
@@ -190,7 +190,7 @@ def test_ADR_가까이의_인용은_그_ADR_파일에서_찾는다(tmp_path: Pat
         encoding="utf-8",
     )
 
-    warnings = warnings_for([quoting], tmp_path)
+    warnings = check([quoting], tmp_path).warnings
 
     assert len(warnings) == 2
     assert "ADR 0009 에 이 문구가 글자 그대로 없다" in warnings[0]
@@ -208,7 +208,7 @@ def test_ADR_가까이_적혔을_뿐_다른_자리에_있는_인용은_경고하
         'ADR 0009 뒤에 명세가 "재개를 트레이스 재생으로 정한다"고 했다.\n', encoding="utf-8"
     )
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_생략된_인용의_조각도_두_번째_자리를_요구한다(tmp_path: Path) -> None:
@@ -217,7 +217,7 @@ def test_생략된_인용의_조각도_두_번째_자리를_요구한다(tmp_pat
         tmp_path, '없는 말을 "이 조각은 어디에도 없다 … 이 조각도 어디에 없다"고 적었다.\n'
     )
 
-    assert len(warnings_for([quoting], tmp_path)) == 1
+    assert len(check([quoting], tmp_path).warnings) == 1
 
 
 def test_코드_스팬_안의_홑_따옴표_하나가_줄의_인용을_지우지_않는다() -> None:
@@ -361,7 +361,7 @@ def test_TS_와_JS_의_원문도_찾는다(tmp_path: Path, 확장자: str) -> No
     quoting = tmp_path / "note.md"
     quoting.write_text(f'테스트 "{이름}"가 초록이다.\n', encoding="utf-8")
 
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path: Path) -> None:
@@ -381,16 +381,16 @@ def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path:
 
     같은_틀린_인용 = f'하나 "{원문[:-3]} 까닭이다"\n둘 "{원문[:-3]} 까닭이다"\n'
     quoting = _저장소를_만든다(tmp_path, 같은_틀린_인용, 원천="다른 것")
-    assert warnings_for([quoting], tmp_path) == []
+    assert check([quoting], tmp_path).warnings == []
 
 
 def test_이_저장소_전체를_돌려도_끝난다() -> None:
-    """경고 수는 고정하지 않는다 — 경고만 내는 검사라 초록의 기준이 없다. 돌아가는 것만 본다."""
+    """경고 수는 고정하지 않는다 — 경고만 내는 검사라 초록의 기준이 없다. 다 읽었는지만 본다."""
     files = default_files(ROOT)
 
     assert files
     assert all("/.claude/skills/" not in path.as_posix() for path in files)
-    warnings_for(files, ROOT)
+    assert check(files, ROOT).files_read == len(files)
 
 
 def test_CLI_진입점이_알려진_빨강을_출력한다(tmp_path: Path) -> None:
