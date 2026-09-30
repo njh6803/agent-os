@@ -1,23 +1,11 @@
 // 읽기 흐름의 첫 조각. 관리 토큰을 넣고 플러그인 목록을 본다(web-admin 티켓 05). 실행 목록과 실행 하나는 07 이 잇는다.
 // 실제 serve, 시작 래퍼로 띄운 실제 next start, 실제 중계(rewrites)를 지난다. 준비는 stack.ts 다.
 
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { stack } from "./env";
+import { enterAdminToken, row } from "./screen";
 
 const TOKEN_FIELD_SEEN = "e2e: 관리 토큰 칸이 문서에 붙었다";
-
-function group(page: Page, heading: string): Locator {
-  return page.getByRole("region", { name: heading });
-}
-
-function row(page: Page, heading: string, name: string): Locator {
-  return group(page, heading).getByRole("listitem").filter({ hasText: name });
-}
-
-async function enterAdminToken(page: Page, token: string): Promise<void> {
-  await page.getByLabel("관리 토큰", { exact: true }).fill(token);
-  await page.getByRole("button", { name: "넣기" }).click();
-}
 
 /** 그 탭의 브라우저 저장소 둘에 든 값 전부. */
 function storedValues(page: Page): Promise<{ local: string[]; session: string[] }> {

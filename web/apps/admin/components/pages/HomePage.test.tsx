@@ -8,29 +8,33 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { inspect } from "node:util";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { api, envelope, network, type PluginRow } from "../../testing/network";
+import { api, envelope, network, type Plugin, type PluginRow } from "../../testing/network";
 import { renderPage } from "../../testing/render";
+import { enterAdminToken } from "../../testing/token";
 import { HomePage } from "./HomePage";
+import { PluginPage } from "./PluginPage";
 
 const TOKEN = "adm-7Qx2-page-token";
 const REJECTED = "admin-token-the-server-refuses";
 
-const ROWS: PluginRow[] = [
-  {
+const CALC: Plugin = {
+  kind: "agent",
+  name: "calc",
+  enabled: true,
+  manifest: {
+    schema_version: "1",
     kind: "agent",
     name: "calc",
-    enabled: true,
-    manifest: {
-      schema_version: "1",
-      kind: "agent",
-      name: "calc",
-      version: "0.1.0",
-      entrypoint: "agent:Calc",
-      mcp: ["everything"],
-      requires_approval: ["add"],
-      server: null,
-    },
+    version: "0.1.0",
+    entrypoint: "agent:Calc",
+    mcp: ["everything"],
+    requires_approval: ["add"],
+    server: null,
   },
+};
+
+const ROWS: PluginRow[] = [
+  CALC,
   {
     kind: "agent",
     name: "broken",
@@ -110,11 +114,6 @@ function refused(): Response {
   return HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 });
 }
 
-async function enterAdminToken(user: UserEvent, token: string): Promise<void> {
-  await user.type(screen.getByLabelText("관리 토큰"), token);
-  await user.click(screen.getByRole("button", { name: "넣기" }));
-}
-
 function group(heading: string): HTMLElement {
   return screen.getByRole("region", { name: heading });
 }
@@ -127,6 +126,15 @@ function row(heading: string, name: string): HTMLElement {
     throw new Error(`${heading} 묶음에 ${name} 행이 없다`);
   }
   return found;
+}
+
+/** 관리 토큰을 넣고 목록이 설 때까지 기다린다. 이어서 누를 사용자를 돌려준다. */
+async function showList(): Promise<UserEvent> {
+  const user = userEvent.setup();
+  renderPage(<HomePage />);
+  await enterAdminToken(user, TOKEN);
+  await screen.findByRole("region", { name: "에이전트" });
+  return user;
 }
 
 /** 브라우저 저장소 하나의 [키, 값] 전부. */
@@ -303,12 +311,6 @@ describe("관리 토큰", () => {
 });
 
 describe("플러그인 목록", () => {
-  async function showList(): Promise<void> {
-    renderPage(<HomePage />);
-    await enterAdminToken(userEvent.setup(), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
-  }
-
   test("플러그인이 종류별로 묶여 켜짐과 함께 보인다", async () => {
     servePlugins(rows);
 
@@ -333,6 +335,28 @@ describe("플러그인 목록", () => {
     expect(broken.textContent).toContain(
       "매니페스트를 읽을 수 없다: plugins/agents/broken/plugin.toml",
     );
+  });
+
+  test("행마다 그 플러그인을 여는 링크가 있고 표지 행도 그렇다", async () => {
+    // 디렉터리 이름이 패턴을 어긴 표지는 이름에 주소에 쓸 수 없는 글자가 들 수 있다.
+    const odd: PluginRow = {
+      kind: "agent",
+      name: "Old Calc",
+      enabled: true,
+      reason: "패턴을 어긴다",
+    };
+    servePlugins(() => HttpResponse.json([...ROWS, odd]));
+
+    await showList();
+
+    const href = (heading: string, name: string): string | null =>
+      within(row(heading, name)).getByRole("link", { name }).getAttribute("href");
+    expect(href("에이전트", "calc")).toBe("/plugins/agent/calc");
+    expect(href("에이전트", "broken")).toBe("/plugins/agent/broken");
+    expect(href("에이전트", "Old Calc")).toBe("/plugins/agent/Old%20Calc");
+    expect(href("MCP", "everything")).toBe("/plugins/mcp/everything");
+    expect(href("스킬", "summarize")).toBe("/plugins/skill/summarize");
+    expect(href("모델", "sonnet")).toBe("/plugins/model/sonnet");
   });
 
   test("스킬과 모델 행에만 로더가 생기기 전에는 효과가 없다가 보인다", async () => {
@@ -372,9 +396,9 @@ describe("플러그인 목록", () => {
         ? rows()
         : HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 }),
     );
-    await showList();
+    const user = await showList();
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "새로 고침" }));
+    await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("운영자 파일이 깨졌다");
     expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
@@ -414,6 +438,248 @@ describe("플러그인 목록", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("서버에 닿지 못했다");
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
     expect(entries(sessionStorage).filter(([, value]) => value.includes(TOKEN))).toEqual([]);
+  });
+});
+
+describe("켜고 끄기", () => {
+  interface Put {
+    readonly path: string;
+    readonly authorization: string;
+    readonly body: unknown;
+  }
+
+  /** `PUT /plugins/{kind}/{name}/enabled` 에 답한다. 요청마다 경로, `Authorization`, 본문을 쌓는다. */
+  function serveSwitch(reply: (call: number) => Response | Promise<Response>): Put[] {
+    const puts: Put[] = [];
+    network.use(
+      http.put(api("/plugins/:kind/:name/enabled"), async ({ request }) => {
+        puts.push({
+          path: new URL(request.url).pathname,
+          authorization: request.headers.get("Authorization") ?? "(없음)",
+          body: await request.json(),
+        });
+        return reply(puts.length - 1);
+      }),
+    );
+    return puts;
+  }
+
+  function applied(): Response {
+    return new HttpResponse(null, { status: 204 });
+  }
+
+  /** ROWS 에서 이름 하나의 켜짐만 바꾼 목록. */
+  function rowsWith(name: string, enabled: boolean): Response {
+    return HttpResponse.json(
+      ROWS.map((plugin) => (plugin.name === name ? { ...plugin, enabled } : plugin)),
+    );
+  }
+
+  function switchOf(heading: string, name: string): HTMLInputElement {
+    return within(row(heading, name)).getByRole<HTMLInputElement>("switch");
+  }
+
+  test("스위치를 누르면 관리 토큰을 실은 PUT 이 끄기를 보내고 204 뒤에 다시 읽은 목록이 꺼짐을 보인다", async () => {
+    // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
+    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    const puts = serveSwitch(applied);
+    const user = await showList();
+    expect(switchOf("에이전트", "calc").checked).toBe(true);
+
+    await user.click(switchOf("에이전트", "calc"));
+
+    expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
+    expect(switchOf("에이전트", "calc").checked).toBe(false);
+    // 204 는 성공이다. 실패로 읽어도 다시 읽은 목록은 꺼짐이라, 실패가 보이지 않는 것을 따로 본다.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(puts).toEqual([
+      {
+        path: "/api/plugins/agent/calc/enabled",
+        authorization: `Bearer ${TOKEN}`,
+        body: { enabled: false },
+      },
+    ]);
+    expect(authorizations).toEqual(Array(3).fill(`Bearer ${TOKEN}`));
+  });
+
+  test("꺼진 행의 스위치를 누르면 켜기를 보낸다", async () => {
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", true)));
+    const puts = serveSwitch(applied);
+    const user = await showList();
+    expect(switchOf("스킬", "summarize").checked).toBe(false);
+
+    await user.click(switchOf("스킬", "summarize"));
+
+    expect(await within(row("스킬", "summarize")).findByText("켜짐")).toBeTruthy();
+    expect(puts.map(({ path, body }) => [path, body])).toEqual([
+      ["/api/plugins/skill/summarize/enabled", { enabled: true }],
+    ]);
+  });
+
+  test("다시 읽을 때까지 스위치는 뒤집히지 않은 채 막혀 있고 그동안의 누름은 요청을 더 보내지 않는다", async () => {
+    const answer = Promise.withResolvers<Response>();
+    const reread = Promise.withResolvers<Response>();
+    const authorizations = servePlugins((call) => (call < 2 ? rows() : reread.promise));
+    const puts = serveSwitch(() => answer.promise);
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "calc"));
+    await vi.waitFor(() => {
+      expect(puts).toHaveLength(1);
+    });
+
+    // PUT 의 응답 전.
+    expect(switchOf("에이전트", "calc").checked).toBe(true);
+    expect(switchOf("에이전트", "calc").disabled).toBe(true);
+    expect(within(row("에이전트", "calc")).getByText("켜짐")).toBeTruthy();
+    await user.click(switchOf("에이전트", "calc"));
+    // PUT 은 답했고 목록을 다시 읽는 중. 스위치는 아직 옛 값이라 풀리면 같은 PUT 을 한 번 더 보낼 수 있다.
+    answer.resolve(applied());
+    await vi.waitFor(() => {
+      expect(authorizations).toHaveLength(3);
+    });
+    expect(switchOf("에이전트", "calc").disabled).toBe(true);
+    await user.click(switchOf("에이전트", "calc"));
+    reread.resolve(rowsWith("calc", false));
+    expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
+    await vi.waitFor(() => {
+      expect(switchOf("에이전트", "calc").disabled).toBe(false);
+    });
+    expect(puts).toHaveLength(1);
+    expect(authorizations).toHaveLength(3);
+  });
+
+  test("켜고 끄기가 실패하면 메시지와 추적 식별자를 보이고 스위치는 다시 읽은 값이다", async () => {
+    const message = "운영자 파일이 깨졌다: C:/root/plugins/disabled.toml";
+    // 그 사이 다른 곳에서 꺼졌다. 스위치가 누르기 전의 값이 아니라 다시 읽은 값을 따르는지 여기서 가린다.
+    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    serveSwitch(() =>
+      HttpResponse.json(envelope("internal_error", message, "req-77aa"), { status: 500 }),
+    );
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "calc"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("agent/calc");
+    expect(alert.textContent).toContain(message);
+    expect(alert.textContent).toContain("req-77aa");
+    await vi.waitFor(() => {
+      expect(switchOf("에이전트", "calc").checked).toBe(false);
+    });
+    expect(authorizations).toHaveLength(3);
+  });
+
+  test("그 사이 플러그인이 사라져 404 이면 다시 읽은 목록에 그 행이 없어도 메시지가 남는다", async () => {
+    servePlugins((call) =>
+      call < 2 ? rows() : HttpResponse.json(ROWS.filter((plugin) => plugin.name !== "calc")),
+    );
+    serveSwitch(() =>
+      HttpResponse.json(envelope("not_found", "플러그인이 없다: agent/calc", "req-404c"), {
+        status: 404,
+      }),
+    );
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "calc"));
+
+    await vi.waitFor(() => {
+      expect(within(group("에이전트")).getAllByRole("listitem")).toHaveLength(1);
+    });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("플러그인이 없다: agent/calc");
+    expect(alert.textContent).toContain("req-404c");
+  });
+
+  test("다음 켜고 끄기를 시작하면 앞의 실패가 걷힌다", async () => {
+    servePlugins((call) => (call < 3 ? rows() : rowsWith("summarize", true)));
+    serveSwitch((call) =>
+      call === 0
+        ? HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 })
+        : applied(),
+    );
+    const user = await showList();
+    await user.click(switchOf("에이전트", "calc"));
+    await screen.findByRole("alert");
+
+    await user.click(switchOf("스킬", "summarize"));
+
+    expect(await within(row("스킬", "summarize")).findByText("켜짐")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("표지 행도 끌 수 있다", async () => {
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("broken", false)));
+    const puts = serveSwitch(applied);
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "broken"));
+
+    expect(await within(row("에이전트", "broken")).findByText("꺼짐")).toBeTruthy();
+    expect(puts.map(({ path, body }) => [path, body])).toEqual([
+      ["/api/plugins/agent/broken/enabled", { enabled: false }],
+    ]);
+  });
+
+  test("켜고 끄기가 401 을 받으면 관리 토큰을 지우고 입력 화면으로 돌아가며 목록을 다시 읽지 않는다", async () => {
+    const authorizations = servePlugins(rows);
+    serveSwitch(refused);
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "calc"));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
+    expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
+    expect(entries(sessionStorage).filter(([, value]) => value.includes(TOKEN))).toEqual([]);
+    // 거부된 토큰으로 다시 읽을 까닭이 없다.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(authorizations).toHaveLength(2);
+  });
+
+  test("켜고 끈 뒤 다시 읽기도 실패하면 스위치 대신 목록의 실패가 보인다", async () => {
+    servePlugins((call) =>
+      call < 2
+        ? rows()
+        : HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 }),
+    );
+    serveSwitch(applied);
+    const user = await showList();
+
+    await user.click(switchOf("에이전트", "calc"));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("운영자 파일이 깨졌다");
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  test("켜고 끈 뒤 전에 열어 본 그 플러그인을 다시 열면 옛 켜짐 없이 새로 읽는다", async () => {
+    // 화면을 옮겨 다녀도 SWR 의 캐시는 하나다. 세 번의 그리기에 캐시 하나를 넘긴다.
+    const cache = new Map();
+    // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    serveSwitch(applied);
+    const reads: string[] = [];
+    network.use(
+      http.get(api("/plugins/agent/calc"), ({ request }) => {
+        reads.push(request.headers.get("Authorization") ?? "(없음)");
+        return HttpResponse.json({ ...CALC, enabled: reads.length === 1 });
+      }),
+    );
+    const user = userEvent.setup();
+    const opened = renderPage(<PluginPage kind="agent" name="calc" />, cache);
+    await enterAdminToken(user, TOKEN);
+    expect(await within(screen.getByRole("main")).findByText("켜짐")).toBeTruthy();
+    opened.unmount();
+    const list = renderPage(<HomePage />, cache);
+    await screen.findByRole("region", { name: "에이전트" });
+    await user.click(within(row("에이전트", "calc")).getByRole("switch"));
+    expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
+    list.unmount();
+
+    renderPage(<PluginPage kind="agent" name="calc" />, cache);
+
+    expect(screen.queryByText("켜짐")).toBeNull();
+    expect(await within(screen.getByRole("main")).findByText("꺼짐")).toBeTruthy();
+    expect(reads).toHaveLength(2);
   });
 });
 

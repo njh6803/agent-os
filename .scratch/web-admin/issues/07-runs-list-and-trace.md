@@ -53,6 +53,25 @@
   흐름들은 차례로 돈다(`workers: 1`).
 - **Next가 페이지에 두는 경로 알림도 `role="alert"`다.** e2e에서 alert를 찾을 때 글자로 거른다.
 
+### 06이 남긴 메모
+
+- **화면은 `components/pages/AdminScreen`을 지난다.** hydration 가드, 관리 토큰을 넣는 자리, 토큰 지우기가 거기 있다.
+  라우트가 부르는 화면에만 `"use client"`를 둔다.
+- **주소가 있는 화면의 선례는 `app/plugins/[kind]/[name]/page.tsx`다.** 서버 컴포넌트가 `params`(Promise)를 기다려 조각을
+  그대로 화면에 넘기고, 풀고 가리는 것은 화면이다(`app/`은 pages와 templates만 import한다). **Next 16.3.6의 동적
+  조각은 퍼센트 인코딩된 채로 온다.** 화면이 `decodeURIComponent`로 풀지 않으면 요청이 두 번 인코딩된다
+  (`PluginPage`의 `decodeSegment`, e2e가 쟀다). 실행 식별자가 패턴 안이면 드러나지 않으니 인코딩이 필요한 글자로 잰다. 라우트의 props 타입은
+  `next build`가 본다. `pnpm -C web verify`의 tsc는 빌드 산출물(`.next/types/`)이 없으면 보지 않아 CI에서는 e2e의 빌드가
+  본다. 목록 행에서 여는 링크는 `next/link`이고, jsdom에는 라우터가 없어 `<a>`로 그려지므로 페이지 테스트는 `href`만 본다.
+  실제로 여는 것은 e2e가 본다.
+- **도우미 자리.** 페이지 테스트의 토큰 넣기는 `testing/token.ts`, e2e의 화면 도우미(묶음, 행, 토큰 넣기)는 `e2e/screen.ts`다.
+  화면을 옮겨 다니는 운영자를 재려면 `renderPage`에 캐시 하나를 넘긴다(목록에서 실행 하나로, 다시 목록으로).
+- **읽기 골격이 두 벌이다.** `organisms/PluginList`와 `organisms/PluginDetail`이 새로 고침 버튼, "다시 확인하는 중",
+  실패·자리표시·값의 갈래를 같은 모양으로 든다. `.claude/rules/web-admin.md`의 "다시 읽다 실패하면 지운다"도 두 곳에
+  산다. 실행 목록과 실행 하나가 셋째와 넷째를 만들면 그 모양을 뽑는다(06 셀프 리뷰의 표준 축).
+- **관리 요청의 401은 `hooks/queries/plugins`의 `orRejectAdminToken`을 지난다.** 실행의 훅이 plugins 도메인 밖에 서면
+  `READ`와 함께 두 도메인이 쓰는 자리로 옮긴다.
+
 ### 확인
 
 - [ ] 화면 문구는 한국어이고 용어집의 말을 쓴다(05의 규칙). 실행, 트레이스, 일시정지, 읽을 수 없는 트레이스 같은 말이다. 각 항목의 _Avoid_(예: 실행 중, 대기)를 쓰지 않는다
