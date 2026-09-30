@@ -24,11 +24,13 @@ def test_게이트_명령_자리를_알아본다() -> None:
 def test_web_검증_명령과_Playwright_실행도_게이트다() -> None:
     """파이프 뒤 `$?` 가 판정을 속이는 것은 명령의 언어와 무관하다(web-admin 티켓 01).
 
-    e2e 스크립트의 이름은 아직 없어서 Playwright 실행 자체를 게이트로 본다.
+    e2e 는 스크립트 이름 없이 앱 폴더의 Playwright 를 직접 친다(티켓 05). 그래서 Playwright 실행
+    자체를 게이트로 본다.
     """
     assert is_gate("pnpm -C web verify")
     assert is_gate("pnpm --dir web run verify")
     assert is_gate("pnpm verify")
+    assert is_gate("pnpm -C web/apps/admin exec playwright test")
     assert is_gate("pnpm -C web exec playwright test")
     assert is_gate("npx playwright test --project chromium")
     assert not is_gate("pnpm -C web install --frozen-lockfile")

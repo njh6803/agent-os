@@ -1,0 +1,35 @@
+# 티켓 05 의 파이썬 테스트 둘이 무엇을 재는지 본다. 둘 다 이미 참인 성질을 고정해 처음부터 초록이라 빨강은
+# 변이로 본다. 중계가 기대는 서버의 성질이다(web-admin 명세 "e2e").
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-admin/probes/relay_server_mutations.toml
+# 둘째 변이는 가상 환경 안의 FastAPI 를 고친다. 윈도우의 가상 환경 배치(.venv/Lib/site-packages)라 다른
+# 운영체제에서는 경로를 바꾼다. 되돌리기는 mutate.py 가 바이트 그대로 한다.
+
+[[mutation]]
+name = "미들웨어가 OPTIONS 를 통과시킨다"
+tests = ["tests/test_server.py", "-k", "preflight"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/auth.py"
+old = '''
+        if path in PUBLIC_PATHS:
+            return await call_next(request)
+'''
+new = '''
+        if path in PUBLIC_PATHS or request.method == "OPTIONS":
+            return await call_next(request)
+'''
+
+[[mutation]]
+name = "keepalive 간격이 중계의 침묵 한도에 닿는다"
+tests = ["tests/channel/http/test_router.py", "-k", "keepalive_간격이"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".venv/Lib/site-packages/fastapi/sse.py"
+old = '''
+_PING_INTERVAL: float = 15.0
+'''
+new = '''
+_PING_INTERVAL: float = 30.0
+'''

@@ -92,6 +92,24 @@ payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web verify" } 
 
 [[case]]
 hook = "hook_bash_gate_pipe.py"
+expect = "context"
+note = "e2e 명령(web-admin 티켓 05)이 파이프에 묻힘"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web/apps/admin exec playwright test 2>&1 | tail -20" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "파이프 없는 e2e 명령"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web/apps/admin exec playwright test" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "브라우저 설치는 게이트가 아니다"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web/apps/admin exec playwright install --with-deps --only-shell chromium 2>&1 | tail -3" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
 expect = "silent"
 note = "게이트 아닌 파이프"
 payload = { tool_name = "Bash", tool_input = { command = "git log --oneline | head -3" } }

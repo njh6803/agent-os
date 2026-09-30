@@ -37,8 +37,9 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
                    재개 스트림을 프레임으로 읽는 것(ADR 0021)
-  apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/pages/(화면), next.config.ts(/api 중계),
-                   tools/start.ts(루프백에만 띄우는 시작 래퍼)
+  apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
+                   (요청 함수와 SWR 훅), stores/(토큰), next.config.ts(/api 중계), tools/start.ts(루프백에만 띄우는
+                   시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리), e2e/(실제 serve 를 지나는 Playwright)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
@@ -66,6 +67,7 @@ pnpm -C web/apps/admin build
 pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 ```
 
+- **관리 토큰을 넣는다.** 처음 열면 관리 토큰을 넣는 자리다. `serve`에 준 `AGENT_OS_ADMIN_TOKEN`의 값을 넣는다. 토큰은 그 탭의 sessionStorage에만 남아 새로 고쳐도 다시 넣지 않고, 탭을 닫거나 "토큰 지우기"를 누르면 사라진다. 거부되면 "관리 토큰이 거부됐다"를 보이고 저장하지 않는다(ADR 0019).
 - **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
 - **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
 - **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다. Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.

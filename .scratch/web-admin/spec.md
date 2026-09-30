@@ -571,7 +571,7 @@ plugin-toggle이 쓴 셋째 grep(`재개 불가|NotResumable|재개할 수 없�
 프리어 아트는 아직 없다. 이 기능이 첫 TS 테스트다. 원칙은 파이썬 쪽의 주 이음매와 같다. 가짜는 바깥 경계(HTTP) 하나에만 두고, 그 안은 진짜다(`tests/test_server.py`, `tests/channel/http/test_router.py`의 `create_app()` + `ASGITransport`).
 
 - **가짜의 모양.** MSW 핸들러의 응답 본문은 생성 타입(`components["schemas"]`)으로 적는다. 계약이 바뀌면 핸들러가 컴파일에서 깨진다(스토리 81). SSE 핸들러는 `ReadableStream`으로 프레임을 시간 간격을 두고 낸다(`jsdom_sse.sh`의 모양).
-- **격리.** 테스트마다 SWR 캐시를 새로 두고(`provider`), 스토어와 sessionStorage를 비운다. 처리하지 않은 요청은 에러다(`onUnhandledRequest: "error"`). 화면이 부르지 말아야 할 경로를 부르면 빨개진다.
+- **격리.** 테스트마다 SWR 캐시를 새로 두고(`provider`), 스토어와 sessionStorage를 비운다. 처리하지 않은 요청은 에러다(`onUnhandledRequest: "error"`). 화면이 부르지 말아야 할 경로를 부르면 빨개진다. (2026-09-30, 티켓 05) MSW 3.0.0에서 옵션 이름은 `onUnhandledFrame`이다. `"error"` 전략은 요청을 네트워크 에러로 끝내고 콘솔에 찍기만 해서 테스트를 빨갛게 하지 않는다. 그래서 `request:unhandled` 사건을 받아 적고 테스트가 끝날 때 본다(`web/apps/admin/testing/setup.ts`).
 
 여기서 판정하는 것:
 

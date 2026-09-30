@@ -1,5 +1,5 @@
 # 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. 파이썬과 web 이 한 잡이다 —
-# 필수 검사는 verify 하나다(ADR 0005, ADR 0021 이력).
+# 필수 검사는 verify 하나다(ADR 0005, ADR 0021 이력). e2e 는 pre-commit 에 없고 이 잡에만 있다.
 # LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
 name: ci
 
@@ -34,6 +34,7 @@ jobs:
       - run: uv run pytest -q
       - run: uv run python tools/check_instructions.py
       - run: uv run python tools/check_type_escapes.py
+      - run: uv run python tools/run_hooks.py
       # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
       - uses: actions/setup-node@v7
         with:
@@ -45,3 +46,18 @@ jobs:
           cache_dependency_path: web/pnpm-lock.yaml
       - run: pnpm -C web install --frozen-lockfile
       - run: pnpm -C web verify
+      # e2e. 실제 serve 와 시작 래퍼로 띄운 관리 화면을 지난다. 필수 검사 안에서 돈다(ADR 0021 이력). 브라우저는
+      # 헤드리스 셸 하나이고, Playwright 판이 같으면 캐시에서 되살린다. 시스템 의존성은 캐시에 들지 않아 매번 깐다.
+      # 브라우저가 없으면 e2e 는 건너뛰지 않고 실패한다.
+      - id: playwright
+        run: echo "version=$(pnpm -C web/apps/admin exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm -C web/apps/admin exec playwright install --with-deps --only-shell chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm -C web/apps/admin exec playwright install-deps chromium
+      - run: pnpm -C web/apps/admin exec playwright test
