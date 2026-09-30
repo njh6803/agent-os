@@ -20,7 +20,9 @@ function Boxes {
         try { $v = $_.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value; $v -and $v.Replace([string][char]0xFF0F, '/').StartsWith($needle) } catch { $false }
     })
 }
-"needle=[$needle] before=$((Boxes).Count) url=$(('claude://code/new?q=' + [uri]::EscapeDataString($prompt)).Length)"
+# 첫 줄의 글자는 찍지 않는다. 대화에 찍힌 글자가 접근성 트리에 남으면 open_session.ps1 의 다음 전송이 그것을 걸러야
+# 한다(stale=). 길이만 낸다.
+"needle=$($needle.Length)chars before=$((Boxes).Count) url=$(('claude://code/new?q=' + [uri]::EscapeDataString($prompt)).Length)"
 $start = Get-Date
 Start-Process ('claude://code/new?q=' + [uri]::EscapeDataString($prompt) + '&source=open-session')
 while (((Get-Date) - $start).TotalSeconds -lt $Seconds) {
