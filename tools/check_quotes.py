@@ -275,26 +275,32 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
             if allowed is not None and quote.line not in allowed:
                 continue
             quotes_checked += 1
-            shown = quote.text if len(quote.text) <= 60 else quote.text[:57] + "…"
-            where = f'{relative}:{quote.line}: "{shown}"'
-            if quote.adr is not None:
-                text = adr_text(quote.adr, root)
-                if text is not None and _contains(text, quote.text):
-                    continue
-                if _found_elsewhere(quote.text, corpus):
-                    continue  # 그 ADR 것이 아니라 가까이 적혔을 뿐인 인용
-                if text is None:
-                    warnings.append(f"{where} — ADR {quote.adr} 파일이 없다")
-                else:
-                    warnings.append(f"{where} — ADR {quote.adr} 에 이 문구가 글자 그대로 없다")
-                continue
-            if not _found_elsewhere(quote.text, corpus):
-                warnings.append(
-                    f"{where} — 저장소의 다른 자리에 글자 그대로 없다. 원문을 다시 열어 그대로 "
-                    "옮기거나 따옴표를 뗀다(대기열 42). 아직 없는 제안 문장이면 `한 줄 후보:` "
-                    "같은 표지 바로 뒤에 둔다(대기열 51)"
-                )
+            warning = _warning(quote, relative, corpus, root)
+            if warning is not None:
+                warnings.append(warning)
     return Report(warnings, files_read, files_whole, quotes_checked)
+
+
+def _warning(quote: Quote, relative: str, corpus: dict[Path, str], root: Path) -> str | None:
+    """인용 하나의 경고(파일:줄: 인용 — 이유). 원문을 찾으면 None."""
+    shown = quote.text if len(quote.text) <= 60 else quote.text[:57] + "…"
+    where = f'{relative}:{quote.line}: "{shown}"'
+    if quote.adr is not None:
+        text = adr_text(quote.adr, root)
+        if text is not None and _contains(text, quote.text):
+            return None
+        if _found_elsewhere(quote.text, corpus):
+            return None  # 그 ADR 것이 아니라 가까이 적혔을 뿐인 인용
+        if text is None:
+            return f"{where} — ADR {quote.adr} 파일이 없다"
+        return f"{where} — ADR {quote.adr} 에 이 문구가 글자 그대로 없다"
+    if _found_elsewhere(quote.text, corpus):
+        return None
+    return (
+        f"{where} — 저장소의 다른 자리에 글자 그대로 없다. 원문을 다시 열어 그대로 "
+        "옮기거나 따옴표를 뗀다(대기열 42). 아직 없는 제안 문장이면 `한 줄 후보:` "
+        "같은 표지 바로 뒤에 둔다(대기열 51)"
+    )
 
 
 def _pieces(quote: str) -> list[str]:
