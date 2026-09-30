@@ -32,33 +32,37 @@ const LIST = "apps/admin/components/organisms/PluginList.tsx";
 const DETAIL = "apps/admin/components/organisms/PluginDetail.tsx";
 const PAGE = "apps/admin/components/pages/PluginPage.tsx";
 const ROUTE = "apps/admin/app/plugins/[kind]/[name]/page.tsx";
+// (2026-09-30, 티켓 07) 새로 고침과 실패의 표시는 읽기 골격으로, 주소의 조각을 푸는 것은 화면 둘이 함께 쓰는 자리로
+// 옮겼다. 변이는 옮긴 자리에 넣고 명령은 그대로다.
+const SECTION = "apps/admin/components/organisms/ReadSection.tsx";
+const SEGMENT = "apps/admin/components/pages/segment.ts";
 
 const MUTATIONS = [
   // ---- 플러그인 하나 ----
   {
     name: "매니페스트를 들여 적지 않는다",
     file: DETAIL,
-    old: "JSON.stringify(data.manifest, null, 2)",
-    new: "JSON.stringify(data.manifest)",
+    old: "JSON.stringify(plugin.manifest, null, 2)",
+    new: "JSON.stringify(plugin.manifest)",
     command: DETAIL_PAGE,
   },
   {
     name: "플러그인 하나의 켜짐을 거꾸로 보인다",
     file: DETAIL,
-    old: '<p>{data.enabled ? "켜짐" : "꺼짐"}</p>',
-    new: '<p>{data.enabled ? "꺼짐" : "켜짐"}</p>',
+    old: '<p>{plugin.enabled ? "켜짐" : "꺼짐"}</p>',
+    new: '<p>{plugin.enabled ? "꺼짐" : "켜짐"}</p>',
     command: DETAIL_PAGE,
   },
   {
     name: "플러그인 하나의 실패에 추적 식별자를 싣지 않는다",
-    file: DETAIL,
+    file: SECTION,
     old: "<FailureNotice {...describeFailure(error)} />",
     new: "<FailureNotice message={describeFailure(error).message} requestId={null} />",
     command: DETAIL_PAGE,
   },
   {
     name: "다시 읽다 실패해도 보인 매니페스트를 둔다",
-    file: DETAIL,
+    file: SECTION,
     old: "{error !== undefined ? (",
     new: "{error !== undefined && data === undefined ? (",
     command: DETAIL_PAGE,
@@ -73,13 +77,13 @@ const MUTATIONS = [
   {
     name: "플러그인 하나의 새로 고침 버튼이 다시 읽지 않는다",
     file: DETAIL,
-    old: "          void mutate();",
-    new: "          void 0;",
+    old: "        void mutate();",
+    new: "        void 0;",
     command: DETAIL_PAGE,
   },
   {
     name: "플러그인 하나를 다시 확인하는 중을 보이지 않는다",
-    file: DETAIL,
+    file: SECTION,
     old: '{shown && isValidating ? <span role="status">다시 확인하는 중</span> : null}',
     new: "{null}",
     command: DETAIL_PAGE,
@@ -107,14 +111,14 @@ const MUTATIONS = [
   },
   {
     name: "주소의 조각을 풀지 않는다",
-    file: PAGE,
+    file: SEGMENT,
     old: "    return decodeURIComponent(segment);",
     new: "    return segment;",
     command: DETAIL_PAGE,
   },
   {
     name: "풀 수 없는 조각에도 요청을 보낸다",
-    file: PAGE,
+    file: SEGMENT,
     old: "  } catch {\n    return null;\n  }",
     new: "  } catch {\n    return segment;\n  }",
     command: DETAIL_PAGE,
@@ -237,7 +241,7 @@ const MUTATIONS = [
   {
     // Next 16.3.6 이 동적 조각을 인코딩된 채로 넘기는 것은 실제 Next 에서만 드러난다.
     name: "e2e: 주소의 조각을 풀지 않는다",
-    file: PAGE,
+    file: SEGMENT,
     old: "    return decodeURIComponent(segment);",
     new: "    return segment;",
     command: E2E,

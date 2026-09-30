@@ -27,6 +27,10 @@ const JUDGE = "pnpm exec vitest run eslint.config.test.ts";
 const E2E = "pnpm -C apps/admin exec playwright test";
 const STORE = "apps/admin/stores/tokens.ts";
 const HOOKS = "apps/admin/hooks/queries/plugins/index.ts";
+// (2026-09-30, 티켓 07) 읽기 정책과 401 의 처리는 두 도메인이 함께 쓰는 자리로, 목록의 새로 고침과 실패의 표시는 읽기
+// 골격으로 옮겼다. 변이는 옮긴 자리에 넣고 명령은 그대로다.
+const ADMIN = "apps/admin/hooks/queries/admin/index.ts";
+const SECTION = "apps/admin/components/organisms/ReadSection.tsx";
 const API = "apps/admin/api/plugins/index.ts";
 const FAILURE = "apps/admin/api/failure/index.ts";
 const FORM = "apps/admin/components/organisms/AdminTokenForm.tsx";
@@ -80,14 +84,14 @@ const MUTATIONS = [
   },
   {
     name: "관리 요청의 401 에 토큰을 내려놓지 않는다",
-    file: HOOKS,
+    file: ADMIN,
     old: "    tokens.rejectAdminToken();\n",
     new: "",
     command: PAGES,
   },
   {
     name: "지운 토큰의 늦은 401 이 새 토큰을 내려놓는다",
-    file: HOOKS,
+    file: ADMIN,
     old: "isRejection(error) && tokens.adminToken === adminToken",
     new: "isRejection(error)",
     command: PAGES,
@@ -132,8 +136,8 @@ const MUTATIONS = [
   {
     name: "종류로 묶지 않는다",
     file: LIST,
-    old: "rows={data.filter((row) => row.kind === kind)}",
-    new: "rows={data}",
+    old: "rows={rows.filter((row) => row.kind === kind)}",
+    new: "rows={rows}",
     command: PAGES,
   },
   {
@@ -152,7 +156,7 @@ const MUTATIONS = [
   },
   {
     name: "실패해도 옛 행을 둔다",
-    file: LIST,
+    file: SECTION,
     old: "{error !== undefined ? (",
     new: "{error !== undefined && data === undefined ? (",
     command: PAGES,
@@ -174,42 +178,42 @@ const MUTATIONS = [
   // ---- 새로 고침과 상태 ----
   {
     name: "포커스 재검증을 끈다",
-    file: HOOKS,
+    file: ADMIN,
     old: "  revalidateOnFocus: true,",
     new: "  revalidateOnFocus: false,",
     command: PAGES,
   },
   {
     name: "주기 재검증을 둔다",
-    file: HOOKS,
+    file: ADMIN,
     old: "  refreshInterval: 0,",
     new: "  refreshInterval: 60_000,",
     command: PAGES,
   },
   {
     name: "재연결 재검증을 켠다",
-    file: HOOKS,
+    file: ADMIN,
     old: "  revalidateOnReconnect: false,",
     new: "  revalidateOnReconnect: true,",
     command: PAGES,
   },
   {
     name: "실패 뒤 스스로 다시 시도한다",
-    file: HOOKS,
+    file: ADMIN,
     old: "  shouldRetryOnError: false,",
     new: "  shouldRetryOnError: true,",
     command: PAGES,
   },
   {
     name: "다시 확인하는 중을 보이지 않는다",
-    file: LIST,
+    file: SECTION,
     old: '{shown && isValidating ? <span role="status">다시 확인하는 중</span> : null}',
     new: "",
     command: PAGES,
   },
   {
     name: "다시 확인하는 동안 행을 지운다",
-    file: LIST,
+    file: SECTION,
     old: ") : data === undefined ? (",
     new: ") : data === undefined || isValidating ? (",
     command: PAGES,

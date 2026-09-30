@@ -6,6 +6,7 @@ import { setupServer } from "msw/node";
 import type { ErrorEnvelope } from "../api/failure";
 
 export type { Plugin, PluginRow } from "../api/plugins";
+export type { RunRow, RunSummary, Trace, TracePage } from "../api/traces";
 
 export const network = setupServer();
 

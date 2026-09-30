@@ -1,4 +1,4 @@
-// 읽기 흐름의 첫 조각. 관리 토큰을 넣고 플러그인 목록을 본다(web-admin 티켓 05). 실행 목록과 실행 하나는 07 이 잇는다.
+// 읽기 흐름의 첫 조각. 관리 토큰을 넣고 플러그인 목록을 본다(web-admin 티켓 05). 실행 목록과 실행 하나는 runs.e2e.ts 가 잇는다.
 // 실제 serve, 시작 래퍼로 띄운 실제 next start, 실제 중계(rewrites)를 지난다. 준비는 stack.ts 다.
 
 import { expect, type Page, test } from "@playwright/test";

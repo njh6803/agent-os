@@ -6,6 +6,7 @@
  *   커밋할 수 없다. 인터프리터는 `uv run` 이 쓰는 가상 환경의 것이다(`tests/test_main.py` 가 `sys.executable` 로
  *   짓는 것과 같다). 목록에 종류마다 행이 서고, 표지 행 둘(읽을 수 없는 매니페스트, 이름이 패턴 밖인 디렉터리)과
  *   꺼진 행 하나가 서게 채운다. 켜고 끄기 흐름이 그 루트의 운영자 파일을 읽도록 경로를 워커의 환경에 넘긴다.
+ * - 읽기 흐름이 볼 트레이스는 serve 를 띄우기 전에 트레이스 디렉터리에 쓴다(`traces.ts`).
  * - 토큰 둘은 여기서 무작위로 만들어 `serve` 의 환경에 넘긴다. 관리 토큰은 테스트가 화면에 넣도록 워커의 환경에도
  *   넘긴다. 관리 화면(Next)에는 넘기지 않는다. 무상태 중계라 토큰을 모른다(ADR 0019). 이 셸의 환경에 토큰 변수가
  *   있어도 Next 에는 벗겨서 준다. 어느 것도 커밋하지 않는다.
@@ -27,6 +28,7 @@ import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { ADMIN_TOKEN_ENV, ADMIN_URL_ENV, PLUGINS_ROOT_ENV } from "./env";
+import { writeReadTraces } from "./traces";
 
 const APP = dirname(import.meta.dirname);
 const REPO = join(APP, "..", "..", "..");
@@ -62,6 +64,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const python = interpreter();
     const plugins = join(work, "plugins");
     writeFixturePlugins(plugins, python);
+    const traces = join(work, "traces");
+    writeReadTraces(traces);
     const adminToken = token("admin");
 
     const serve = launch(
@@ -76,7 +80,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         "--plugins-root",
         plugins,
         "--traces",
-        join(work, "traces"),
+        traces,
       ],
       work,
       {
