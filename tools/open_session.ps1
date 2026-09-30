@@ -120,7 +120,8 @@ function Send-Prompt {
     try { $quitMarker = Get-AppQuitMarker } catch { "quitcheck=판정하지 못했다: $($_.Exception.Message)" }
     if ($quitMarker) {
         "quitting=$quitMarker"
-        # 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)은 같은 깃발에 막혀 아무 일도 하지 않는다(`QA`·`$A` 의 `ej()||`).
+        # 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)은 같은 깃발에 막혀 아무 일도 하지 않는다(앱 2.9939.2 번들의 `QA`·`$A` 의
+        # `ej()||`. 축약 이름이라 판이 바뀌면 달라진다. 뜻은 `Find-QuitMarker` 앞의 주석).
         throw "앱이 끝나는 중이라(위 quitting= 의 로그 줄부터) 딥링크를 버린다. 쏘지 않았다. 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)은 이 상태에서 아무 일도 하지 않는다. 사람이 작업 관리자에서 Claude 를 끝내고 다시 켠 뒤 이 스크립트를 다시 돌린다."
     }
 
