@@ -123,8 +123,9 @@ const MUTATIONS = [
   {
     name: "관리 요청에 다른 토큰을 싣는다",
     file: API,
-    old: "await createAdminClient(adminToken)",
-    new: 'await createAdminClient(`${adminToken}-x`)',
+    // 06 이 요청 함수를 셋으로 늘려 원문을 목록 요청으로 좁혔다.
+    old: 'await createAdminClient(adminToken)\n    .GET("/plugins")\n',
+    new: 'await createAdminClient(`${adminToken}-x`)\n    .GET("/plugins")\n',
     command: PAGES,
   },
   // ---- 목록 ----

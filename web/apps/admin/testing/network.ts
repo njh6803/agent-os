@@ -5,7 +5,7 @@
 import { setupServer } from "msw/node";
 import type { ErrorEnvelope } from "../api/failure";
 
-export type { PluginRow } from "../api/plugins";
+export type { Plugin, PluginRow } from "../api/plugins";
 
 export const network = setupServer();
 
