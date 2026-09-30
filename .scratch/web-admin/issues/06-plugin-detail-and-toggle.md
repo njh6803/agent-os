@@ -39,7 +39,7 @@
 - **MSW 3.0.0의 옵션 이름은 `onUnhandledFrame`이다.** 명세의 `onUnhandledRequest`는 2의 이름이다. `"error"` 전략은 요청을
   네트워크 에러로 끝내고 콘솔에 찍기만 한다. 화면이 그것을 "서버에 닿지 못했다"로 보이면 테스트가 초록일 수 있어서
   `request:unhandled` 사건을 받아 적고 테스트 끝에 본다.
-- **읽기 정책은 `hooks/queries/plugins`의 `READ`다.** 포커스 재검증만 켜고 주기·재연결·실패 뒤 재시도를 끈다. 플러그인
+- **읽기 정책은 `hooks/queries/plugins`의 `READ`다(07이 `hooks/queries/admin`으로 옮겼다).** 포커스 재검증만 켜고 주기·재연결·실패 뒤 재시도를 끈다. 플러그인
   하나의 훅도 같은 정책을 쓴다. 쓰기 직후의 다시 읽기는 SWR의 `mutate`다. 목록 키는 `pluginKeys.list(generation)`이다.
   토큰 대신 토큰을 받아들인 횟수(스토어의 `adminTokenGeneration`)를 싣는다. 토큰마다 캐시와 진행 중인 요청을 가르기
   위해서다. 플러그인 하나의 키도 그것을 싣는다. SWR 2.5는 마운트한 뒤 5초(`focusThrottleInterval`)와 요청 뒤 2초(`dedupingInterval`) 동안 포커스를 흘려보낸다.

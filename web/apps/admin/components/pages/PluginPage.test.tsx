@@ -9,7 +9,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Plugin } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { enterAdminToken } from "../../testing/token";
+import { acceptTokens, enterAdminToken } from "../../testing/token";
 import { PluginPage } from "./PluginPage";
 
 const TOKEN = "adm-4Kp9-plugin-page-token";
@@ -45,11 +45,6 @@ const CALC_MANIFEST = `{
   ],
   "server": null
 }`;
-
-/** 넣은 관리 토큰을 확인하는 목록 요청에 답한다. 이 화면은 그 밖에는 목록을 읽지 않는다. */
-function acceptTokens(): void {
-  network.use(http.get(api("/plugins"), () => HttpResponse.json([])));
-}
 
 /**
  * `GET /plugins/{kind}/{name}` 하나에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 요청마다의

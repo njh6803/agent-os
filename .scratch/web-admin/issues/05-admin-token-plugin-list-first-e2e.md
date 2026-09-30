@@ -141,7 +141,7 @@
   CQS와 "실패의 형태는 층마다 하나"로 짚었다(처음에는 스토어에 쓰면서 실패를 돌려줬다).
 - **관리 요청의 401은 그 요청이 실은 토큰이 지금의 토큰일 때만 내려놓는다.** 그 사이 운영자가 다른 토큰을 넣었으면 옛
   요청의 401이 새 토큰을 지우지 않는다(`hooks/queries/plugins`의 `rejectIfStillHeld`. 06이 스토어의 어휘에 맞춰
-  `rejectAdminTokenIfStillHeld`로 이름을 바꿨다. PR #103의 셋째 claude-review Nit).
+  `rejectAdminTokenIfStillHeld`로 이름을 바꿨다. PR #103의 셋째 claude-review Nit. 07이 실행의 훅과 함께 쓰게 `hooks/queries/admin`으로 옮겼다).
 - **SWR 키는 토큰 대신 토큰을 받아들인 횟수를 싣는다.** 키가 토큰마다 같으면, 토큰을 지우고 2초(`dedupingInterval`) 안에
   새 토큰을 넣었을 때 새 목록이 지운 토큰의 진행 중인 요청을 나눠 받아 그 401을 보였다. 셀프 리뷰가 요구한 테스트(옛
   토큰의 늦은 401)를 짜다 드러났다. 횟수는 저장하지 않는다. 새로 고치면 캐시도 새로 선다.

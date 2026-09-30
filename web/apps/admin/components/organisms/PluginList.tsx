@@ -4,6 +4,7 @@ import { describeFailure, RequestFailure } from "../../api/failure";
 import type { PluginKind, PluginRow } from "../../api/plugins";
 import { usePlugins, useSetPluginEnabled } from "../../hooks/queries/plugins";
 import { FailureNotice, type FailureNoticeProps } from "../molecules/FailureNotice";
+import { ReadSection } from "./ReadSection";
 
 /**
  * 종류의 이름과 차례(적은 차례대로 묶는다). 이름은 용어집의 말이다. `Record` 라서 계약에 종류가 늘거나 줄면 여기가
@@ -23,11 +24,9 @@ const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill", "m
 type SwitchFailure = FailureNoticeProps;
 
 /**
- * 플러그인 목록(`GET /plugins`). 종류별로 묶고 행마다 켜짐과 스위치를 보인다.
- *
- * 실패하면 목록 대신 실패를 보인다. 이미 보인 행이 있어도 지운다. 운영자 파일이 깨졌을 때 무엇이 꺼져 있는지 모르는
- * 채 옛 목록을 믿으면 안 되기 때문이다(스토리 16). 처음 불러오는 중은 자리표시, 이미 보인 것을 다시 확인하는 중은
- * 작은 표시이고 보인 것을 지우지 않는다(스토리 36).
+ * 플러그인 목록(`GET /plugins`). 종류별로 묶고 행마다 켜짐과 스위치를 보인다. 새로 고침과 실패의 표시는 읽기
+ * 골격(`ReadSection`)이다. 다시 읽다 실패하면 옛 행을 지운다. 운영자 파일이 깨졌을 때 무엇이 꺼져 있는지 모르는 채 옛
+ * 목록을 믿으면 안 되기 때문이다(스토리 16).
  *
  * 켜고 끄기의 실패는 행이 아니라 목록의 머리에 보인다. 그 사이 플러그인이 사라져 404 이면 다시 읽은 목록에서 그 행이
  * 빠지는데, 실패를 행이 들면 메시지도 함께 사라진다(스토리 19). 다음 켜고 끄기가 시작될 때 걷힌다.
@@ -35,37 +34,30 @@ type SwitchFailure = FailureNoticeProps;
 export function PluginList() {
   const { data, error, isValidating, mutate } = usePlugins();
   const [switchFailure, setSwitchFailure] = useState<SwitchFailure | null>(null);
-  const headingId = useId();
-  const shown = data !== undefined || error !== undefined;
 
   return (
-    <section aria-labelledby={headingId}>
-      <h2 id={headingId}>플러그인</h2>
-      <button
-        type="button"
-        onClick={() => {
-          void mutate();
-        }}
-      >
-        새로 고침
-      </button>
-      {shown && isValidating ? <span role="status">다시 확인하는 중</span> : null}
-      {switchFailure === null ? null : <FailureNotice {...switchFailure} />}
-      {error !== undefined ? (
-        <FailureNotice {...describeFailure(error)} />
-      ) : data === undefined ? (
-        <p role="status">플러그인 목록을 불러오는 중이다</p>
-      ) : (
+    <ReadSection
+      heading="플러그인"
+      data={data}
+      error={error}
+      isValidating={isValidating}
+      onRefresh={() => {
+        void mutate();
+      }}
+      placeholder="플러그인 목록을 불러오는 중이다"
+      above={switchFailure === null ? null : <FailureNotice {...switchFailure} />}
+    >
+      {(rows) =>
         Object.entries(KIND_NAMES).map(([kind, label]) => (
           <KindGroup
             key={kind}
             label={label}
-            rows={data.filter((row) => row.kind === kind)}
+            rows={rows.filter((row) => row.kind === kind)}
             onSwitchFailure={setSwitchFailure}
           />
         ))
-      )}
-    </section>
+      }
+    </ReadSection>
   );
 }
 

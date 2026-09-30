@@ -1,7 +1,5 @@
-// 플러그인의 SWR 훅. 컴포넌트는 useSWR 이나 요청 함수를 직접 부르지 않고 이 훅을 쓴다.
-//
-// 다시 읽는 때는 창 포커스, 새로 고침 버튼, 쓰기 직후뿐이다(web-admin 명세 "새로 고침과 상태"). 주기 재검증을 두지
-// 않고, 재연결과 실패 뒤의 재시도도 끈다. 둘 다 시간이 흐르는 것만으로 서버를 다시 부른다(스토리 35).
+// 플러그인의 SWR 훅. 컴포넌트는 useSWR 이나 요청 함수를 직접 부르지 않고 이 훅을 쓴다. 읽기 정책과 401 의 처리는
+// 실행의 훅과 함께 쓴다(`hooks/queries/admin`).
 //
 // 관리 토큰의 판정은 결과를 돌려주지 않고 스토어에 남긴다. 받아들임, 거부, 판정하지 못함이 모두 스토어의 값이다.
 
@@ -17,6 +15,7 @@ import {
   type PluginRow,
 } from "../../../api/plugins";
 import { useTokens } from "../../../stores/tokens";
+import { isRejection, orRejectAdminToken, READ } from "../admin";
 
 /**
  * SWR 키. 토큰은 키에 싣지 않는다. 토큰은 요청의 헤더에만 있다. 대신 토큰을 받아들인 횟수를 실어 토큰마다 캐시와
@@ -27,13 +26,6 @@ export const pluginKeys = {
   one: (generation: number, kind: PluginKind, name: string) =>
     ["plugins", generation, kind, name] as const,
 };
-
-const READ = {
-  revalidateOnFocus: true,
-  revalidateOnReconnect: false,
-  refreshInterval: 0,
-  shouldRetryOnError: false,
-} as const;
 
 type Verdict = "accepted" | "rejected" | "unjudged";
 
@@ -151,30 +143,4 @@ function verdictOf(error: unknown): Verdict {
     return "rejected";
   }
   return error.envelope === null ? "unjudged" : "accepted";
-}
-
-/** 관리 토큰이 거부됐다는 실패인가. 401 이 거부라는 규칙은 확인 요청과 관리 요청이 이것 하나를 쓴다. */
-function isRejection(error: unknown): boolean {
-  return error instanceof RequestFailure && error.status === 401;
-}
-
-/** 관리 요청 하나를 보낸다. 401 이면 그 요청이 실은 관리 토큰을 내려놓고 실패를 그대로 던진다. */
-async function orRejectAdminToken<T>(
-  adminToken: string,
-  request: (adminToken: string) => Promise<T>,
-): Promise<T> {
-  try {
-    return await request(adminToken);
-  } catch (error: unknown) {
-    rejectAdminTokenIfStillHeld(error, adminToken);
-    throw error;
-  }
-}
-
-/** 그 사이 운영자가 다른 토큰을 넣었으면 그것은 둔다. 거부된 것은 옛 요청이 실은 토큰이다. */
-function rejectAdminTokenIfStillHeld(error: unknown, adminToken: string): void {
-  const tokens = useTokens.getState();
-  if (isRejection(error) && tokens.adminToken === adminToken) {
-    tokens.rejectAdminToken();
-  }
 }
