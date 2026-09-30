@@ -21,3 +21,28 @@ date: 2026-09-28
 - **생성물을 판정 범위에서 빼지 않는다.** openapi-typescript는 재귀 `Json`에서 TS2502를 내고 그것을 `any`로 둔다. 그래서 생성 스크립트가 그 자리를 `unknown`으로 바꿔 생성물의 우회를 0으로 만든다. 빼는 목록을 두면 ADR 0013이 경계한 모양(범위를 손으로 두 곳에 적는다)이 된다. 대상 글롭은 `.d.ts`도 든다. ADR 0013이 `.pyi`를 범위에 넣은 이유와 같다.
 - **tsconfig의 `strict`를 끄는 것도 우회다.** 타입 기반 규칙은 타입 정보에 기대므로, 설정 한 줄이 파일 하나의 단언보다 세다. ADR 0013의 `typeCheckingMode`와 같은 자리이고, `strict`가 켜져 있는지를 검사가 본다. ESLint 규칙이 아니라 설정을 읽는 검사라 판정자와 별개이고, 자리는 명세가 정한다.
 - **헌법 개정은 web-admin의 첫 티켓이 한다.** http-channel의 첫 티켓이 원칙 IV를 개정한 것과 같다. `principles.md`의 원칙 III 문장이 두 언어를 말하게 되고, `docs/constitution/README.md`의 버전이 3.0.0이 된다.
+
+## 이력
+
+### 2026-09-30 판정에서 빠지는 것은 git이 추적하지 않는 빌드 산출물뿐이다
+
+티켓 04가 관리 화면 앱을 세우며 정했다. `next build`와 `next dev`는 앱의 `.next/`에 번들 JS와 타입 파일을 쓴다.
+그중 `.next/types/validator.ts`는 Next가 빌드마다 다시 쓰고 `any`, `as`, `@ts-ignore`를 싣는다. 판정자는 빌드 한
+번 뒤 `.next/`에서 파일 43개를 읽고 그중 14개에서 96건으로 빨갰다(2026-09-30 실측, 일지 2026-09-30-01). 앱의 tsconfig `include`에 `.next/types/**/*.ts`가 드는
+것도 Next의 관례다. `distDir`을 프로젝트 밖에 두는 길은 Next가 받지 않는다(설치본 문서 `distDir.md`).
+
+**ESLint와 Prettier는 저장소의 `.gitignore`를 그대로 읽어 거기 적힌 것을 뺀다.** ESLint 10의 내장
+`includeIgnoreFile`과 Prettier의 `--ignore-path`다. 위 Consequences의 "생성물"은 커밋하는 생성물(생성 클라이언트)이다.
+빌드 산출물은 커밋하지 않고 빌드마다 다시 생겨 소스가 아니다. 판정자 설정에 빼는 목록을 새로 두지 않으므로 ADR
+0013이 경계한 "범위를 손으로 두 곳에"가 아니다. 대신 `.gitignore`의 한 줄이 판정 범위를 줄일 수 있다. 그래서 git이
+추적하는 `web/`의 코드 파일이 하나도 판정에서 빠지지 않는다는 것을 테스트가 잰다(`web/eslint.config.test.ts`).
+`next-env.d.ts`도 Next 문서대로 git이 무시한다. dev와 build가 서로 다른 경로를 가리키게 고쳐 쓴다.
+
+**`.gitignore`의 파이썬 산출물 패턴(`dist/`, `traces/`)은 뿌리에 앵커한다.** 앵커가 없으면 관리 화면의 실행 목록
+자리(`app/traces/`) 같은 아직 추적되지 않은 소스를 git과 판정자가 함께 빼고, 추적 파일 가드는 그것을 보지 못한다
+(셀프 리뷰가 찾았다). 그 자리는 판정자 테스트가 따로 잰다.
+
+거부한 안은 둘이다.
+
+- **`.next/`를 판정자 설정에 따로 적는다.** `.gitignore`와 목록이 둘이 된다.
+- **빌드 산출물을 `web/` 밖에 둔다.** Next가 프로젝트 밖의 `distDir`을 받지 않는다.

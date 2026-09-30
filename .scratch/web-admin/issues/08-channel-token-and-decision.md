@@ -102,6 +102,11 @@
   페이지 테스트에서 끊김이 실제로 그 모양인지 본다.
 - **채널 클라이언트는 결정 경로 하나만 안다.** `createChannelClient(채널 토큰)`이다. 채널 토큰만 실린다는 헤더 단언이 이
   티켓의 몫이다.
+- **다시 내보낸 `Event`는 DOM 전역 `Event`와 이름이 같다.** `@agent-os/api-client`의 `index.ts`가 계약의 스키마 이름
+  그대로 `type Event`를 내보낸다. 그것을 import한 파일에서는 DOM의 `Event`(예: 입력 핸들러의 인자)가 가려져
+  `globalThis.Event`로 적어야 한다. import를 빠뜨린 파일에서는 `Event`가 DOM 전역으로 조용히 풀린다. `type`이 `string`이라
+  `event.type === "run_finished"` 같은 비교도 컴파일된다. import할 때 `type Event as RunEvent`처럼 이름을 바꿔 쓰면 두
+  쪽을 다 피한다. PR #101의 둘째 claude-review가 남겼다(Minor).
 
 ### 닫기
 

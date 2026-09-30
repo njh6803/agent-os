@@ -11,7 +11,7 @@
  *    열거는 기본값으로 리터럴 유니온이다.
  * 2. 재귀 `Json` 한 자리를 `unknown` 으로 바꾼다. openapi-typescript 는 `Json` 이 제 자신을 가리키는 그 자리에서
  *    TS2502 를 내고 그것을 `any` 로 둔다(ADR 0020). 다른 곳에 `any` 가 생기면 판정자가 빨개지도록 그 자리만 바꾼다.
- * 3. Prettier. 생성물도 `prettier --check .` 의 범위다. 저장소가 `* text=auto eol=lf` 라 윈도우와 CI 가 같은 바이트를 본다.
+ * 3. Prettier. 생성물도 verify 의 포맷 검사(`pnpm run format`) 범위다. 저장소가 `* text=auto eol=lf` 라 윈도우와 CI 가 같은 바이트를 본다.
  *
  * 사용: node tools/generate-api-client.ts [--check] [계약 파일]. 계약 파일을 주지 않으면 루트 `openapi.json` 이다.
  * 쓰는 곳은 늘 커밋된 생성물 하나다. `--check` 는 쓰지 않고, 어긋나면 한 줄 쓰고 1.

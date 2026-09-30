@@ -4,14 +4,17 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .import_linter_cache/
-dist/
+# 뿌리의 파이썬 산출물(uv build, serve 의 기본 트레이스). 뿌리에 건다. 걸지 않으면 web 의 같은 이름 소스
+# 자리(관리 화면의 app/traces/)까지 git 과 판정자가 뺀다(ADR 0020 의 2026-09-30 이력).
+/dist/
 *.egg-info/
 .env
 .idea/
-traces/
+/traces/
 # web/ (Node). 의존성, Next 빌드, 테스트 산출물
 node_modules/
 .next/
+next-env.d.ts
 coverage/
 test-results/
 playwright-report/
