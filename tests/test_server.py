@@ -500,6 +500,24 @@ async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401�
     assert (await client.get(GUARDED)).status_code == 401
 
 
+async def test_다른_출처의_preflight_는_토큰이_없으면_관리_경로도_채널_경로도_401이다(
+    client: AsyncClient,
+) -> None:
+    """관리 화면의 중계는 `OPTIONS` 를 그대로 상류로 넘긴다(ADR 0019). CORS 가 없는 것이 곧
+    차단이라는 것은 미들웨어가 메서드를 가르지 않는다는 데 기댄다(ADR 0011 이력, 스토리 65).
+    허용 헤더도 없다."""
+    preflight = {
+        "Origin": "http://evil.example",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "authorization",
+    }
+
+    for path in ("/plugins", CHANNEL_PREFIX):
+        response = await client.options(path, headers=preflight)
+        assert response.status_code == 401, path
+        assert "access-control-allow-origin" not in response.headers, path
+
+
 async def test_틀린_토큰도_빈_토큰도_401이다(client: AsyncClient) -> None:
     """헤더 부재를 빈 문자열로 다루는 구현과 겹치면 그 자체가 fail-open 이다."""
     headers: tuple[dict[str, str], ...] = (

@@ -108,6 +108,25 @@
   `event.type === "run_finished"` 같은 비교도 컴파일된다. import할 때 `type Event as RunEvent`처럼 이름을 바꿔 쓰면 두
   쪽을 다 피한다. PR #101의 둘째 claude-review가 남겼다(Minor).
 
+### 05가 남긴 메모
+
+- **스토어는 `apps/admin/stores/tokens.ts`다.** 채널 토큰을 더하고 `partialize`에 넣는다. `clearTokens`가 두 토큰을 지우게
+  넓힌다. 페이지 테스트 "받아들여진 관리 토큰은 sessionStorage 에만 남고…"는 저장된 잎이 토큰 하나라고 센다. 두 토큰으로
+  넓힌다. 넣는 자리의 알림(`adminTokenNotice`)과 받아들인 횟수(`adminTokenGeneration`)는 저장하지 않는다. 채널 토큰의 알림도 같다.
+- **hydration 가드(`hooks/useHydrated.ts`).** 서버의 그림과 hydration의 첫 그림은 토큰을 보지 않는다. 채널 토큰으로 갈리는
+  결정 자리도 그 뒤에 선다. 가드가 막는 것은 서버가 미리 그린 HTML에 넣는 칸이 박혀 새로 고칠 때 번쩍이는 것이고, e2e가
+  그 칸이 문서에 붙는지로 본다. 두 그림의 어긋남은 zustand가 막는다(`probes/admin_pages_mutations.mjs`).
+- **e2e의 준비는 `apps/admin/e2e/stack.ts`다.** 채널 토큰을 만들어 `serve`에만 넘기고 워커에는 넘기지 않는다. 멈춘 실행을
+  만드는 `POST /runs`와 오래된 화면의 "다른 곳"은 채널 토큰을 아는 준비에서 보낸다. 화면에 넣을 채널 토큰이 필요하면
+  `e2e/env.ts`에 더한다.
+- **e2e의 콘솔 단언은 401만 봐준다.** 브라우저는 실패한 응답을 콘솔 에러("Failed to load resource")로 찍는다. 409를 받는
+  흐름은 그것도 봐줘야 한다.
+- **Next가 페이지에 두는 경로 알림도 `role="alert"`다.** e2e에서 alert를 찾을 때 글자로 거른다.
+- **아이콘은 아직 아무도 들이지 않았다.** 01의 메모(lucide-react의 서브패스 import와 그 타입)는 아이콘을 처음 들이는
+  티켓의 몫이다.
+- **MSW 3.0.0의 SSE.** `jsdom_sse.sh`는 msw 2.15.0으로 쟀다. 3.0.0에서 `ReadableStream` 응답이 조각마다 오는지는 재지 않았다.
+  이 티켓의 첫 재개 스트림 테스트가 본다.
+
 ### 닫기
 
 - [ ] 화면 문구는 한국어이고 용어집의 말을 쓴다(05의 규칙). 일시정지, 결정, 승인, 승인자, 재개 같은 말이다. 각 항목의 _Avoid_를 쓰지 않는다

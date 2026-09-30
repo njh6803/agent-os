@@ -30,6 +30,33 @@
 - [ ] 다시 켜면 목록이 켜짐을 보인다
 - [ ] 멈춘 실행의 결정 버튼이 막히고 풀리는 부분은 08이 이 흐름에 더한다
 
+### 05가 남긴 메모
+
+- **페이지 이음매의 자리는 `apps/admin/testing/`의 셋이다.** `network.ts`는 MSW 서버 `network`, 주소 `api(path)`, 봉투
+  `envelope()`, 생성 타입 별칭을 든다. `render.tsx`의 `renderPage`는 그릴 때마다 SWR 캐시를 새로 둔다. `setup.ts`는
+  Vitest `pages` 프로젝트의 준비다. 스토어와 브라우저 저장소를 비우고, 처리하지 않은 요청이 있으면 그 테스트를 빨갛게
+  한다. 페이지 테스트는 `components/**/*.test.tsx`이고 jsdom에서 돈다(`web/vitest.config.ts`).
+- **MSW 3.0.0의 옵션 이름은 `onUnhandledFrame`이다.** 명세의 `onUnhandledRequest`는 2의 이름이다. `"error"` 전략은 요청을
+  네트워크 에러로 끝내고 콘솔에 찍기만 한다. 화면이 그것을 "서버에 닿지 못했다"로 보이면 테스트가 초록일 수 있어서
+  `request:unhandled` 사건을 받아 적고 테스트 끝에 본다.
+- **읽기 정책은 `hooks/queries/plugins`의 `READ`다.** 포커스 재검증만 켜고 주기·재연결·실패 뒤 재시도를 끈다. 플러그인
+  하나의 훅도 같은 정책을 쓴다. 쓰기 직후의 다시 읽기는 SWR의 `mutate`다. 목록 키는 `pluginKeys.list(generation)`이다.
+  토큰 대신 토큰을 받아들인 횟수(스토어의 `adminTokenGeneration`)를 싣는다. 토큰마다 캐시와 진행 중인 요청을 가르기
+  위해서다. 플러그인 하나의 키도 그것을 싣는다. SWR 2.5는 마운트한 뒤 5초(`focusThrottleInterval`)와 요청 뒤 2초(`dedupingInterval`) 동안 포커스를 흘려보낸다.
+  포커스 테스트는 가짜 시계(`shouldAdvanceTime`)로 그 너머로 민다.
+- **실패의 표시.** 요청 함수는 데이터가 아니면 `RequestFailure`(`api/failure`)를 던진다. 화면은 `describeFailure()`와
+  `FailureNotice`(molecule)로 봉투의 `message`·`request_id`를, 봉투가 아니면 "서버에 닿지 못했다"를 보인다. 관리 요청의
+  401은 훅의 fetcher가 관리 토큰을 내려놓는다(`readPlugins`). 새 관리 훅도 같은 자리에서 한다.
+- **목록은 다시 읽다 실패하면 이미 보인 행을 지운다(스토리 16).** 켜고 끄기가 실패한 뒤 "다시 읽은 값이 스위치를 정한다"와
+  만나는 자리다. 다시 읽기도 실패하면 스위치 대신 실패가 보인다.
+- **e2e의 준비는 `apps/admin/e2e/stack.ts`다.** 플러그인 루트(에이전트 `echo`, 표지 `broken`, mcp `fixture`, 꺼진 스킬
+  `summarize`, 모델 `sonnet`)를 임시 디렉터리에 쓴다. 켜고 끄기 흐름이 볼 루트 경로는 아직 테스트에 넘기지 않는다.
+  `e2e/env.ts`에 더한다. 흐름들은 `serve` 하나를 함께 쓰고 차례로 돈다(`workers: 1`). 앞 흐름이 바꾼 켜짐이 뒤 흐름에 남는다.
+- **Next가 페이지에 두는 경로 알림도 `role="alert"`다.** e2e에서 alert를 찾을 때 글자로 거른다. 페이지 테스트(jsdom)에는
+  그것이 없다.
+- **아이콘은 아직 아무도 들이지 않았다.** 01의 메모("lucide-react 1.48에는 `exports` 맵이 없다. 서브패스 import의 모양과
+  그 타입이 서는지 본다")는 아이콘을 처음 들이는 티켓의 몫이다. 스위치에 아이콘을 쓰면 여기서 본다.
+
 ### 확인
 
 - [ ] 화면 문구는 한국어이고 용어집의 말을 쓴다(05의 규칙). 꺼진 플러그인, 표지 같은 말이다. 각 항목의 _Avoid_(예: 비활성 플러그인, 차단, 중지)를 쓰지 않는다

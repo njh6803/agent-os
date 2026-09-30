@@ -50,8 +50,34 @@ const SERVER_FILE = {
 // 생성 클라이언트 패키지도 예외가 아니다. fetch 를 부르는 것은 그 안의 openapi-fetch 다.
 const FETCH_MESSAGE = "HTTP 는 생성 클라이언트로 부른다. 전역 fetch 를 직접 쓰지 않는다(ADR 0021)";
 
+// fetch 밖에서 HTTP 를 내는 브라우저 전역. SSE 는 생성 클라이언트가 `parseAs: "stream"` 으로 받는다(ADR 0021).
+// 티켓 03 의 셀프 리뷰가 판정자가 막지 않는 길로 찾았고, 앱 코드가 처음 API 를 부르는 티켓 05 가 막았다.
+const HTTP_GLOBALS = [
+  { name: "fetch", message: FETCH_MESSAGE },
+  ...["EventSource", "XMLHttpRequest"].map((name) => ({
+    name,
+    message: `HTTP 는 생성 클라이언트로 부른다. ${name} 을 쓰지 않는다(ADR 0021)`,
+  })),
+];
+
 // 생성 클라이언트 패키지(ADR 0021). 앱이 워크스페이스 의존성으로 든다.
 const API_CLIENT = "@agent-os/api-client";
+
+// no-restricted-imports 도 파일마다 한 번만 설정된다. 생성 클라이언트 패키지의 블록이 목록을 다시 적으므로 항목을
+// 상수로 둔다.
+const ICON_SET_IMPORT = {
+  name: "lucide-react",
+  message: "아이콘은 세트가 아니라 아이콘 하나의 서브패스로 import 한다(ADR 0021)",
+};
+const OPENAPI_FETCH_IMPORT = {
+  name: "openapi-fetch",
+  message: `클라이언트를 직접 만들지 않는다. 토큰을 고르는 것은 ${API_CLIENT} 의 클라이언트 둘이다(ADR 0021)`,
+};
+// 상대 경로로 패키지 안을 import 하면 로컬로 분류되어 층 경계의 모듈 이름 정책을 피한다(티켓 03 의 셀프 리뷰).
+const API_CLIENT_INTERNALS = {
+  group: ["**/packages/api-client/**"],
+  message: `생성 클라이언트는 패키지 이름(${API_CLIENT})으로만 import 한다. 층 경계가 그 이름을 본다`,
+};
 
 // 아토믹 층. 아래 층은 위 층을 import 하지 않고, atoms·molecules 는 API 를 부르지 않는다(tech.md 프론트 구성).
 const LAYER_POLICIES = [
@@ -130,25 +156,16 @@ export default defineConfig(
     },
     rules: {
       "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX],
-      "no-restricted-globals": ["error", { name: "fetch", message: FETCH_MESSAGE }],
+      "no-restricted-globals": ["error", ...HTTP_GLOBALS],
       "no-restricted-properties": [
         "error",
-        ...["globalThis", "window", "self"].map((object) => ({
-          object,
-          property: "fetch",
-          message: FETCH_MESSAGE,
-        })),
+        ...["globalThis", "window", "self"].flatMap((object) =>
+          HTTP_GLOBALS.map(({ name, message }) => ({ object, property: name, message })),
+        ),
       ],
       "no-restricted-imports": [
         "error",
-        {
-          paths: [
-            {
-              name: "lucide-react",
-              message: "아이콘은 세트가 아니라 아이콘 하나의 서브패스로 import 한다(ADR 0021)",
-            },
-          ],
-        },
+        { paths: [ICON_SET_IMPORT, OPENAPI_FETCH_IMPORT], patterns: [API_CLIENT_INTERNALS] },
       ],
       "boundaries/dependencies": [
         "error",
@@ -202,6 +219,16 @@ export default defineConfig(
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    // 생성 클라이언트 패키지는 openapi-fetch 로 클라이언트 둘을 만드는 유일한 자리다. 여기서만 그 import 를 푼다.
+    files: ["**/packages/api-client/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: [ICON_SET_IMPORT], patterns: [API_CLIENT_INTERNALS] },
       ],
     },
   },

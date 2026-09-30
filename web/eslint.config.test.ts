@@ -53,6 +53,14 @@ const SOURCES: Readonly<Record<string, string>> = {
     'export async function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "apps/admin/lib/global-fetch.ts":
     'export async function 부른다(): Promise<Response> {\n  return globalThis.fetch("/api/runs");\n}\n',
+  "apps/admin/lib/event-source.ts": 'export const 연결 = new EventSource("/api/runs");\n',
+  "apps/admin/lib/window-event-source.ts":
+    'export const 연결 = new window.EventSource("/api/runs");\n',
+  "apps/admin/lib/xhr.ts": "export const 요청 = new XMLHttpRequest();\n",
+  "apps/admin/lib/raw-client.ts":
+    'import createClient from "openapi-fetch";\n\nexport const 만든다 = createClient;\n',
+  "apps/admin/components/organisms/DeepClient.ts":
+    'import { createAdminClient } from "../../../../packages/api-client/src/clients";\n\nexport const 관리 = createAdminClient;\n',
   "apps/admin/lib/global.d.ts": "export declare const 값: any;\n",
   "apps/admin/lib/actions.ts":
     '"use server";\n\nexport async function 저장(): Promise<void> {\n  await Promise.resolve();\n}\n',
@@ -179,6 +187,23 @@ const RED: readonly RedCase[] = [
     name: "globalThis 로 부른 fetch",
     path: "apps/admin/lib/global-fetch.ts",
     rule: "no-restricted-properties",
+  },
+  { name: "EventSource", path: "apps/admin/lib/event-source.ts", rule: "no-restricted-globals" },
+  {
+    name: "window 로 부른 EventSource",
+    path: "apps/admin/lib/window-event-source.ts",
+    rule: "no-restricted-properties",
+  },
+  { name: "XMLHttpRequest", path: "apps/admin/lib/xhr.ts", rule: "no-restricted-globals" },
+  {
+    name: "앱이 openapi-fetch 로 클라이언트를 직접 만든다",
+    path: "apps/admin/lib/raw-client.ts",
+    rule: "no-restricted-imports",
+  },
+  {
+    name: "상대 경로로 생성 클라이언트 패키지 안을 import",
+    path: "apps/admin/components/organisms/DeepClient.ts",
+    rule: "no-restricted-imports",
   },
   {
     name: ".d.ts 의 any",
@@ -368,6 +393,16 @@ describe("실제 생성 클라이언트 자리", () => {
     expect(found).toContain("@typescript-eslint/no-explicit-any");
   });
 
+  test("생성 클라이언트 패키지의 실제 파일은 openapi-fetch 를 import 해도 아무것도 보고되지 않는다", async () => {
+    // 클라이언트 둘을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
+    // 설치되지 않아 타입 기반 규칙이 풀리지 않은 import 를 빨갛게 보므로 실제 자리에서 잰다.
+    const path = join(API_CLIENT, "src", "clients.ts");
+    const source = readFileSync(path, "utf-8");
+    expect(source).toContain('from "openapi-fetch"');
+
+    expect(await ruleIdsAt(path, source)).toEqual([]);
+  });
+
   test("생성 클라이언트 패키지의 실제 파일에서도 전역 fetch 는 빨갛다", async () => {
     const path = join(API_CLIENT, "src", "clients.ts");
     const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/api/runs");\n`;
@@ -419,6 +454,13 @@ describe("실제 관리 화면 자리", () => {
     const source = 'export const 수: number = JSON.parse("1");\n';
 
     expect(await ruleIdsAt(path, source)).toEqual(["@typescript-eslint/no-unsafe-assignment"]);
+  });
+
+  test("앱의 요청 함수 자리에서 openapi-fetch 로 클라이언트를 직접 만들면 빨갛다", async () => {
+    const path = join(ADMIN, "api", "plugins", "index.ts");
+    const source = `${readFileSync(path, "utf-8")}\nimport createClient from "openapi-fetch";\nexport const 만든다 = createClient;\n`;
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-imports");
   });
 });
 

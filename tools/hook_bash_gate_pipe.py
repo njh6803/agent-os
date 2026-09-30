@@ -8,9 +8,10 @@ tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 �
 
 게이트 명령은 pytest·pyright·ruff·lint-imports 와 `tools/check_*.py`·`tools/mutate.py`, 그리고
 web 의 `pnpm -C web verify`(다섯째 검증 명령)와 Playwright 실행(`playwright test`, e2e)이다.
-파이프가 판정을 가리는 것은 명령의 언어와 무관하다(web-admin 티켓 01). e2e 스크립트의 이름은
-아직 없어서 Playwright 실행 자체를 본다. 명령 위치에 선 것만 센다 — `uv run …`, `python`·`py`
-와 `-m` 뒤, `pnpm -C <디렉터리>`·`pnpm exec`·`npx` 뒤도 명령 위치다. 판정 둘.
+파이프가 판정을 가리는 것은 명령의 언어와 무관하다(web-admin 티켓 01). e2e 는 스크립트 이름 없이
+`pnpm -C web/apps/admin exec playwright test` 로 치므로(티켓 05) Playwright 실행 자체를 본다.
+명령 위치에 선 것만 센다 — `uv run …`, `python`·`py` 와 `-m` 뒤, `pnpm -C <디렉터리>`·`pnpm exec`·
+`npx` 뒤도 명령 위치다. 판정 둘.
 - 게이트가 파이프(`|`)의 마지막이 아닌 자리에 있다. 서브셸 안이어도 본다. 그 파이프의 종료 코드는
   마지막 명령의 것이다.
 - `$?` 마다 본다 — 그 바로 앞 조각이 게이트가 아니고 그 앞 어딘가에 게이트가 있다. `$?` 는

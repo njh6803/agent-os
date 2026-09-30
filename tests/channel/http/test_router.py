@@ -594,6 +594,25 @@ async def test_모델이_조용한_동안_keepalive_주석이_나간다(monkeypa
     assert _types(_frames(response.text)) == ["run_started", "llm_called", "run_finished"]
 
 
+# 관리 화면의 중계(Next 의 rewrites)가 연결을 끊는 침묵의 길이. 프록시 타임아웃의 기본값이다
+# (ADR 0019).
+RELAY_SILENCE_LIMIT_SECONDS = 30
+
+
+def test_keepalive_간격이_관리_화면_중계의_침묵_한도보다_짧다() -> None:
+    """keepalive 와 중계의 한도는 짝이다. 간격이 한도를 넘으면 모델이 조용한 동안 관리 화면의 재개
+    스트림이 끊긴다(ADR 0019, 스토리 67).
+
+    바깥 행동만 재는 규칙의 예외다(web-admin 명세 "e2e"). 행동으로 재려면 기본 스위트에서 15초 넘게
+    기다려야 해서 FastAPI 의 사적 이름을 읽는다. 위 테스트가 이미 같은 이름을 줄여 쓰므로 새로 느는
+    결합은 없다. FastAPI 를 올리며 이름이 사라지면 두 테스트가 함께 깨지고, 그것이 다시 볼 신호다.
+    """
+    interval: object = vars(fastapi.routing)["_PING_INTERVAL"]
+
+    assert isinstance(interval, int | float)
+    assert interval < RELAY_SILENCE_LIMIT_SECONDS
+
+
 @pytest.mark.parametrize(
     ("agent", "model", "tools", "cause"),
     [
