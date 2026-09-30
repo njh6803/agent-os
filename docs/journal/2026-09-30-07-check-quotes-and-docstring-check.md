@@ -77,6 +77,10 @@ PR #108. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
 - **claude-review 2회차**(`c0e0d61`, 초록). Critical·Major 없음. `check()`가 순회·계수와 인용 하나의 경고 조립을 한
   함수에 두었다는 Minor("후속으로 허용")는 앞 커밋의 `_as_quote`와 같은 모양이라 바로 `_warning`으로 뗐다. 변이
   열다섯이 다시 모두 빨강이다. `_git` Nit은 같다.
+- **병합이 마지막 푸시보다 먼저 났다.** 14:39에 이 PR의 auto-merge(squash)가 사용자 계정으로 켜져 있었고, 14:54에
+  `c0e0d61`의 검사가 초록이 되자 병합됐다(`d0e2856`). 위 `_warning` 커밋은 15:01에 닫힌 PR의 브랜치로 푸시돼 main에
+  들어가지 않았다. 세션은 푸시 뒤 상태를 읽을 때 옛 커밋의 초록을 봤고, 사용자의 "끝났어?"에 PR 사건 목록을 읽고서야
+  알았다. 사용자가 후속 PR을 골라 main에서 딴 `chore/check-quotes-warning-extract`로 cherry-pick했다.
 
 ## 남긴 것
 
