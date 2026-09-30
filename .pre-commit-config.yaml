@@ -80,7 +80,7 @@ repos:
         always_run: true
         stages: [pre-commit]
       - id: check-quotes
-        name: quotes (스테이지된 .md의 더한 줄에서 20자 이상 따옴표 인용을 저장소와 대조 — 경고만, 대기열 42)
+        name: quotes (바뀐 .md가 HEAD에 더한 줄에서 20자 이상 따옴표 인용을 저장소와 대조 — 경고만, 대기열 42)
         entry: uv run python tools/check_quotes.py
         language: system
         files: \.md$

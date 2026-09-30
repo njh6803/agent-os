@@ -1,0 +1,164 @@
+# 인용 대조 검사의 테스트가 무엇을 재는지 변이로 본다. PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+# 대기열 51·55·66·67 과 그 셀프 리뷰가 더한 규칙 하나를 빼면 그 테스트 파일이 빨강이어야 한다.
+
+[[mutation]]
+name = "51: 제안 표지 뒤의 따옴표도 인용으로 본다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = "    if body is None or _PROPOSAL.search(before):"
+new = "    if body is None:"
+
+[[mutation]]
+name = "51: 표지 뒤의 '후보'·'더'를 모른다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '(?:\s*(?:후보|더))?'
+new = ''
+
+[[mutation]]
+name = "51: '한 줄의 문구'를 모른다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '(?:의\s*문구)?'
+new = ''
+
+[[mutation]]
+name = "51: '로그의 한 줄'도 제안으로 본다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '(?<!의\s)'
+new = ''
+
+[[mutation]]
+name = "51: '옛 문구'도 제안으로 본다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '|문구\s*후보)'
+new = '|문구)'
+
+[[mutation]]
+name = "55: 스테이지된 줄만 본다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '["git", "-C", str(root), "diff", "HEAD", "-U0", "--no-color", "--", str(path)],'
+new = '["git", "-C", str(root), "diff", "--cached", "-U0", "--no-color", "--", str(path)],'
+
+[[mutation]]
+name = "55: 본 인용 수를 세지 않는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = "            quotes_checked += 1\n"
+new = ""
+
+[[mutation]]
+name = "55: 넘긴 인자를 읽은 파일로 센다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''
+        files_read += 1
+        if allowed is None:
+'''
+new = '''
+        if allowed is None:
+'''
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''
+    for path in files:
+        relative = _relative(path, root)
+'''
+new = '''
+    for path in files:
+        files_read += 1
+        relative = _relative(path, root)
+'''
+
+[[mutation]]
+name = "66: TS·JS 를 원문 자리로 보지 않는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''
+    | {".ts", ".tsx", ".mjs", ".js"}
+'''
+new = ""
+
+[[mutation]]
+name = "67: 짝을 줄마다 짓는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''_QUOTE = re.compile(r"[\"“]([^\"”]*)[\"”]")'''
+new = '''_QUOTE = re.compile(r"[\"“]([^\"”\n]*)[\"”]")'''
+
+[[mutation]]
+name = "67: 목록 항목이 묶음을 새로 열지 않는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = "        if blank or _BLOCK_START.match(line):"
+new = "        if blank:"
+
+[[mutation]]
+name = "67: 줄을 넘는 인용도 대조한다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''
+            if "\n" in match.group(1):
+                continue  # 줄을 넘는 인용. 짝만 소비하고 대조하지 않는다
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "67: 제목·표 행·setext 밑줄에서 묶음을 닫지 않는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '''
+        if _BLOCK_END.match(line):
+            blocks.append(current)
+            current = []
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "67: 괄호 번호 목록을 모른다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '_MARKER = r"(?:[-*+]|\d+[.)])"'
+new = '_MARKER = r"(?:[-*+]|\d+\.)"'
+
+[[mutation]]
+name = "67: 인용문의 게으른 이어짐을 산문으로 본다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = "        if blank or in_quote:"
+new = '        if blank or _LIST_MARKER.sub("", line).lstrip().startswith(">"):'
