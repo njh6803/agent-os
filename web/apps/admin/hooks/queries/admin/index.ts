@@ -1,6 +1,7 @@
 // 관리 요청의 훅들이 함께 쓰는 것. 플러그인과 실행 두 도메인이 쓴다. 읽기 정책과, 관리 요청의 401 로 관리 토큰을
 // 내려놓는 것이 여기 있다. 넣는 자리의 확인 요청이 거부를 스토어에 남기는 것은 `hooks/queries/plugins` 의
-// `useAdminTokenEntry` 이고, 401 을 거부로 읽는 규칙(`isRejection`)은 둘이 함께 쓴다.
+// `useAdminTokenEntry` 다. 401 을 거부로 읽는 규칙(`isRejection`)은 토큰을 가리지 않아 채널 토큰을 싣는 결정
+// (`hooks/queries/approval` 과 `organisms/RunDecision`)도 이것을 쓴다.
 
 import { RequestFailure } from "../../../api/failure";
 import { useTokens } from "../../../stores/tokens";
@@ -18,7 +19,7 @@ export const READ = {
   shouldRetryOnError: false,
 } as const;
 
-/** 관리 토큰이 거부됐다는 실패인가. 401 이 거부라는 규칙은 확인 요청과 관리 요청이 이것 하나를 쓴다. */
+/** 요청이 실은 토큰이 거부됐다는 실패인가. 401 이 거부라는 규칙은 이것 하나다(쓰는 자리는 이 파일의 머리). */
 export function isRejection(error: unknown): boolean {
   return error instanceof RequestFailure && error.status === 401;
 }

@@ -1,6 +1,7 @@
 // 재개 스트림(SSE)을 읽는 층의 테스트. 프레임 파서와 판별자 술어는 순수 함수로, 스트림 읽기는 조각을 손으로
 // 나눠 넣은 ReadableStream 으로 잰다. 네트워크를 타지 않는다. openapi-fetch 가 jsdom 의 MSW 스트림을 조각마다
-// 넘기는 것은 설계 프로브(jsdom_sse.sh)가 쟀고, 화면을 지나는 것은 결정 화면 티켓(08)의 페이지 테스트가 잰다.
+// 넘기는 것은 설계 프로브(jsdom_sse.sh)가 쟀고, 화면을 지나는 것은 결정의 페이지 테스트
+// (`apps/admin/components/pages/RunPage.decision.test.tsx`)가 잰다.
 
 import { describe, expect, test } from "vitest";
 import { EVENT_TYPES, isEvent, readFrames, splitFrames, type StreamFrame } from "./stream";
