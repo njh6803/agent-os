@@ -58,7 +58,9 @@
 - **화면은 `components/pages/AdminScreen`을 지난다.** hydration 가드, 관리 토큰을 넣는 자리, 토큰 지우기가 거기 있다.
   라우트가 부르는 화면에만 `"use client"`를 둔다.
 - **주소가 있는 화면의 선례는 `app/plugins/[kind]/[name]/page.tsx`다.** 서버 컴포넌트가 `params`(Promise)를 기다려 조각을
-  그대로 화면에 넘기고, 가리는 것은 화면이다(`app/`은 pages와 templates만 import한다). 라우트의 props 타입은
+  그대로 화면에 넘기고, 풀고 가리는 것은 화면이다(`app/`은 pages와 templates만 import한다). **Next 16.3.6의 동적
+  조각은 퍼센트 인코딩된 채로 온다.** 화면이 `decodeURIComponent`로 풀지 않으면 요청이 두 번 인코딩된다
+  (`PluginPage`의 `decodeSegment`, e2e가 쟀다). 실행 식별자가 패턴 안이면 드러나지 않으니 인코딩이 필요한 글자로 잰다. 라우트의 props 타입은
   `next build`가 본다. `pnpm -C web verify`의 tsc는 빌드 산출물(`.next/types/`)이 없으면 보지 않아 CI에서는 e2e의 빌드가
   본다. 목록 행에서 여는 링크는 `next/link`이고, jsdom에는 라우터가 없어 `<a>`로 그려지므로 페이지 테스트는 `href`만 본다.
   실제로 여는 것은 e2e가 본다.

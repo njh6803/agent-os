@@ -16,10 +16,11 @@ PR #103의 셋째 claude-review Nit이다. `hooks/queries/plugins`의 `rejectIfS
   204를 응답의 상태로 가른다. 훅 `useSetPluginEnabled`가 PUT 뒤에 목록을 다시 읽고 그 플러그인 하나의 캐시를 버리며, 그것이
   끝나야 돌아온다. 행은 그동안 스위치를 막고, 실패는 목록의 머리에 보인다.
 - **401 처리 한 자리.** fetcher 둘과 쓰기 하나가 `orRejectAdminToken`을 지난다. 지시문의 이름 바꾸기를 실었다.
-- **페이지 테스트 21.** 플러그인 하나 10(새 파일), 목록에 링크 1과 켜고 끄기 10. 토큰 넣기 도우미를 `testing/token.ts`로
-  옮기고, `renderPage`가 캐시를 받아 화면을 옮겨 다니는 운영자를 잴 수 있게 했다.
-- **e2e.** `e2e/plugin-toggle.e2e.ts`가 에이전트 `echo`를 끄고, 운영자 파일의 `agent` 줄을 보고, 열어 보고, 다시 켠다.
-  준비가 플러그인 루트를 `AGENT_OS_E2E_PLUGINS_ROOT`로 넘긴다. 두 흐름의 화면 도우미를 `e2e/screen.ts`로 옮겼다.
+- **페이지 테스트 23.** 플러그인 하나 12(새 파일, 둘은 셋째 claude-review 뒤), 목록에 링크 1과 켜고 끄기 10. 토큰 넣기
+  도우미를 `testing/token.ts`로 옮기고, `renderPage`가 캐시를 받아 화면을 옮겨 다니는 운영자를 잴 수 있게 했다.
+- **e2e.** `e2e/plugin-toggle.e2e.ts`의 첫 흐름이 에이전트 `echo`를 끄고, 운영자 파일의 `agent` 줄을 보고, 열어 보고, 다시
+  켠다. 둘째 흐름(셋째 claude-review 뒤)은 이름이 패턴 밖인 표지를 열어 풀린 이름과 422를 본다. 준비가 플러그인 루트를
+  `AGENT_OS_E2E_PLUGINS_ROOT`로 넘기고 그 표지(`agents/Old Calc`)를 쓴다. 흐름들의 화면 도우미를 `e2e/screen.ts`로 옮겼다.
 - **프로브 둘.** `probes/plugin_toggle_mutations.mjs`(변이)와 `probes/switch_after_rejection.mjs`(401 뒤 `finally`의 목록).
   05의 러너 원문 하나를 좁혔다.
 - **문서.** 티켓 06의 체크와 "이 티켓이 정한 것", `spec.md`에 이 티켓이 달리 읽은 세 자리의 주석, 07·08의 "06이 남긴
@@ -105,7 +106,8 @@ SWR의 `mutate`와 `revalidateIfStale`)을 맞다고 했다.
 ## 검사
 
 반영 뒤 검증 명령을 모두 다시 돌렸다. pytest 1015, ruff check·format, pyright 0, lint-imports, 지침 검사, 타입 우회 검사,
-훅 러너(페이로드 34, 어긋남 0), `pnpm -C web verify`(테스트 188), e2e 2가 초록이다. 게이트 훅이 짚은 대로 판정 명령은
+훅 러너(페이로드 34, 어긋남 0), `pnpm -C web verify`(테스트 188), e2e 2가 초록이다. 셋째 claude-review를 반영한 뒤 다시 돌려
+`pnpm -C web verify`(테스트 190), e2e 3이고 나머지는 같다. 게이트 훅이 짚은 대로 판정 명령은
 파이프 없이 출력을 파일로 보내고 종료 코드를 따로 적었다. `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
 
 ## PR 리뷰
@@ -123,6 +125,13 @@ PR #104. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
   실패를 덮을 수 있다는 Nit에는 `mutate`가 다시 읽기의 실패를 던지지 않는다는 전제와 그것을 재는 테스트를 주석에 적었다.
   읽기 골격 두 벌(Minor)은 07 메모로 넘긴 것이다. 바뀐 자리를 지키는 변이 넷과 05의 "종류로 묶지 않는다"를 다시 돌려 모두
   빨강이다.
+- **셋째 claude-review**(`ad54c1a`). Minor 하나, Nit 하나. **Minor가 진짜 결함이었다.** 라우트가 넘기는 이름이 풀린
+  값인지 재는 것이 없다고 짚었다. e2e 픽스처에 이름이 패턴 밖인 표지(`agents/Old Calc`)를 두고 목록의 링크로 열자
+  제목이 `Old%20Calc`였다. Next 16.3.6은 동적 조각을 퍼센트 인코딩된 채로 넘기고, 요청 함수가 다시 인코딩해
+  `Old%2520Calc`로 나갔다. 페이지 테스트 둘(인코딩된 조각, 풀 수 없는 조각)을 먼저 빨갛게 하고 `PluginPage`가 조각을
+  풀게 했다. e2e 셋이 초록이고 변이 셋(페이지 둘, e2e 하나)이 빨갛다. 셀프 리뷰의 명세 축은 같은 표지를 "422가 난다"로만
+  보았고, 422가 나니 인코딩이 틀려도 드러나지 않았다. Nit(`SwitchFailure`가 `FailureNotice`의 props를 다시 선언한다)은
+  `FailureNoticeProps`를 내보내 그것을 쓰게 했다.
 - 커밋 때 인용 대조가 경고 셋을 냈다. 둘은 같은 커밋의 `.mjs`에 있는 변이 이름이라 맞는 인용이다. 검사가 `.mjs`를 원문
   자리로 보지 않는다(대기열 66). 하나는 줄을 넘는 인용이 다음 인용과 짝지어진 것이다(대기열 67). 인용을 한 줄에 두게 다시
   접었다.

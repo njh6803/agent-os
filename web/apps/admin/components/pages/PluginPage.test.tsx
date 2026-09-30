@@ -216,6 +216,33 @@ describe("플러그인 하나", () => {
     );
   });
 
+  test("주소의 조각이 인코딩된 채로 와도 풀어서 보이고 요청은 한 번만 인코딩한다", async () => {
+    // Next 16.3.6 은 동적 조각을 퍼센트 인코딩된 채로 넘긴다(e2e 의 패턴 밖 표지 흐름이 쟀다).
+    acceptTokens();
+    const authorizations = servePlugin("/plugins/agent/Old%20Calc", () =>
+      HttpResponse.json(envelope("invalid_request", "요청의 형식이 올바르지 않다"), {
+        status: 422,
+      }),
+    );
+
+    // 두 번 인코딩한 요청(Old%2520Calc)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
+    await openPlugin("agent", "Old%20Calc");
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Old Calc" })).toBeTruthy();
+    expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
+    expect(authorizations).toHaveLength(1);
+  });
+
+  test("풀 수 없는 주소의 조각이면 요청을 보내지 않고 그렇다고 말한다", async () => {
+    acceptTokens();
+
+    await openPlugin("agent", "%E0%A4%A");
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "주소를 풀 수 없다: agent/%E0%A4%A",
+    );
+  });
+
   test("플러그인 목록으로 돌아가는 링크가 있다", async () => {
     acceptTokens();
     servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));

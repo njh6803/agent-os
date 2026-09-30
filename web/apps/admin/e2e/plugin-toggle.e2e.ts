@@ -53,3 +53,23 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
   expect(disabledAgents(pluginsRoot)).toEqual([]);
   expect(crashes).toEqual([]);
 });
+
+test("이름이 패턴 밖인 표지를 열면 주소의 조각이 풀린 이름과 422 봉투의 메시지가 보인다", async ({
+  page,
+}) => {
+  // 목록의 링크는 이름을 조각으로 적는다. 라우트가 넘기는 조각이 풀린 이름인지는 실제 Next 에서만 잰다.
+  const { adminUrl, adminToken } = stack();
+  await page.goto(adminUrl);
+  await enterAdminToken(page, adminToken);
+  const odd = row(page, "에이전트", "Old Calc");
+  await expect(odd).toContainText("디렉터리 이름이 플러그인 이름의 패턴을 어긴다");
+
+  await odd.getByRole("link", { name: "Old Calc" }).click();
+
+  await expect(page).toHaveURL(`${adminUrl}/plugins/agent/Old%20Calc`);
+  await expect(page.getByRole("heading", { level: 2, name: "Old Calc" })).toBeVisible();
+  // Next 가 페이지에 두는 경로 알림도 alert 라 글자로 거른다.
+  await expect(
+    page.getByRole("alert").filter({ hasText: "요청의 형식이 올바르지 않다" }),
+  ).toBeVisible();
+});

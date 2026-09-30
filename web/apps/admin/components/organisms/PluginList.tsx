@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { describeFailure, RequestFailure } from "../../api/failure";
 import type { PluginKind, PluginRow } from "../../api/plugins";
 import { usePlugins, useSetPluginEnabled } from "../../hooks/queries/plugins";
-import { FailureNotice } from "../molecules/FailureNotice";
+import { FailureNotice, type FailureNoticeProps } from "../molecules/FailureNotice";
 
 /**
  * 종류의 이름과 차례(적은 차례대로 묶는다). 이름은 용어집의 말이다. `Record` 라서 계약에 종류가 늘거나 줄면 여기가
@@ -19,11 +19,8 @@ const KIND_NAMES = {
 /** 로더가 아직 없는 종류. 끄고 켜도 런타임이 달라지지 않는다(스토리 21). */
 const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill", "model"]);
 
-/** 스위치의 실패 하나. 누른 행이 다시 읽은 목록에서 빠져도 보이도록 목록이 든다. */
-interface SwitchFailure {
-  readonly message: string;
-  readonly requestId: string | null;
-}
+/** 스위치의 실패 하나. 누른 행이 다시 읽은 목록에서 빠져도 보이도록 목록이 든다. 모양은 보이는 자리의 것이다. */
+type SwitchFailure = FailureNoticeProps;
 
 /**
  * 플러그인 목록(`GET /plugins`). 종류별로 묶고 행마다 켜짐과 스위치를 보인다.

@@ -1,4 +1,4 @@
-interface FailureNoticeProps {
+export interface FailureNoticeProps {
   readonly message: string;
   /** 추적 식별자. 서버의 표준 에러에서 같은 줄을 찾는 자리다(.claude/rules/http.md). 없으면 싣지 않는다. */
   readonly requestId: string | null;

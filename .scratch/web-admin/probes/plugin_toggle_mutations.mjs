@@ -105,6 +105,20 @@ const MUTATIONS = [
     new: '<Link href="/plugins">플러그인 목록으로</Link>',
     command: DETAIL_PAGE,
   },
+  {
+    name: "주소의 조각을 풀지 않는다",
+    file: PAGE,
+    old: "    return decodeURIComponent(segment);",
+    new: "    return segment;",
+    command: DETAIL_PAGE,
+  },
+  {
+    name: "풀 수 없는 조각에도 요청을 보낸다",
+    file: PAGE,
+    old: "  } catch {\n    return null;\n  }",
+    new: "  } catch {\n    return segment;\n  }",
+    command: DETAIL_PAGE,
+  },
   // ---- 목록의 링크 ----
   {
     name: "링크가 이름을 조각으로 적지 않는다",
@@ -218,6 +232,14 @@ const MUTATIONS = [
     file: ROUTE,
     old: "<PluginPage kind={kind} name={name} />",
     new: "<PluginPage kind={name} name={kind} />",
+    command: E2E,
+  },
+  {
+    // Next 16.3.6 이 동적 조각을 인코딩된 채로 넘기는 것은 실제 Next 에서만 드러난다.
+    name: "e2e: 주소의 조각을 풀지 않는다",
+    file: PAGE,
+    old: "    return decodeURIComponent(segment);",
+    new: "    return segment;",
     command: E2E,
   },
   {
