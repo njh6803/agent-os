@@ -132,6 +132,9 @@ PR #104. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
   풀게 했다. e2e 셋이 초록이고 변이 셋(페이지 둘, e2e 하나)이 빨갛다. 셀프 리뷰의 명세 축은 같은 표지를 "422가 난다"로만
   보았고, 422가 나니 인코딩이 틀려도 드러나지 않았다. Nit(`SwitchFailure`가 `FailureNotice`의 props를 다시 선언한다)은
   `FailureNoticeProps`를 내보내 그것을 쓰게 했다.
+- **넷째 claude-review**(`bd04825`). Minor 둘, Nit 하나. `.claude/rules/web-admin.md`의 "플러그인 목록은 페이지 테스트가 이
+  행동을 고정한다"가 플러그인 하나를 빠뜨렸다는 Minor는 맞다(작업 규약 4). 고쳤다. 읽기 골격(Minor)은 07 메모 그대로다.
+  `void setOpposite()`가 결함의 예외를 처리되지 않은 rejection으로 남긴다는 Nit은 덮지 않겠다는 뜻 그대로라 두었다.
 - 커밋 때 인용 대조가 경고 셋을 냈다. 둘은 같은 커밋의 `.mjs`에 있는 변이 이름이라 맞는 인용이다. 검사가 `.mjs`를 원문
   자리로 보지 않는다(대기열 66). 하나는 줄을 넘는 인용이 다음 인용과 짝지어진 것이다(대기열 67). 인용을 한 줄에 두게 다시
   접었다.
