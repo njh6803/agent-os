@@ -31,8 +31,12 @@ export function AdminTokenForm() {
       return;
     }
     setChecking(true);
-    await enter(token);
-    setChecking(false);
+    try {
+      await enter(token);
+    } finally {
+      // 예상하지 못한 예외(판정이 다시 던진 것)에도 버튼은 풀린다. 예외는 삼키지 않고 콘솔에 드러난다.
+      setChecking(false);
+    }
   }
 
   return (

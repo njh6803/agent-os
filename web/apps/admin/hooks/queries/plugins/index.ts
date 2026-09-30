@@ -77,6 +77,8 @@ async function judgeAdminToken(token: string): Promise<Verdict> {
  * 파일 손상 같은 500)는 목록 자리가 말한다.
  */
 function verdictOf(error: unknown): Verdict {
+  // 요청 함수는 응답이 없거나 데이터가 아닌 것을 모두 RequestFailure 로 던진다. 그 밖의 예외는 이 코드의 결함이라
+  // "서버에 닿지 못했다"로 덮지 않고 다시 던진다. 넣는 자리는 그때도 버튼을 푼다.
   if (!(error instanceof RequestFailure)) {
     throw error;
   }
