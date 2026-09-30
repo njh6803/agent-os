@@ -8,7 +8,8 @@ import { useTokens } from "../../../stores/tokens";
 /**
  * 서버 데이터를 읽는 정책. 다시 읽는 때는 창 포커스, 새로 고침 버튼, 쓰기 직후뿐이다(web-admin 명세 "새로 고침과
  * 상태"). 주기 재검증을 두지 않고, 재연결과 실패 뒤의 재시도도 끈다. 둘 다 시간이 흐르는 것만으로 서버를 다시
- * 부른다(스토리 35).
+ * 부른다(스토리 35). 실행 목록은 여기에 `revalidateAll` 을 더해 포커스와 더 보기에 본 쪽을 모두 다시 읽는다
+ * (`hooks/queries/traces` 의 `useRunList`). 더 보기는 운영자가 누른 때라 버튼의 몫으로 본다.
  */
 export const READ = {
   revalidateOnFocus: true,

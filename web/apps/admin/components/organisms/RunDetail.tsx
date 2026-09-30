@@ -52,7 +52,7 @@ type FieldOf<T> = T extends unknown ? keyof T : never;
 
 /**
  * 필드 이름 앞에 붙이는 용어집의 말. `Record` 라서 계약의 이벤트에 필드가 늘거나 줄면 여기가 컴파일에서 깨진다. 화면이
- * 빌드된 뒤 서버에 는 필드는 이름만 보인다.
+ * 빌드된 뒤 서버에서 느는 필드는 이름만 보인다.
  */
 const FIELD_NAMES = {
   ts: "시각",
