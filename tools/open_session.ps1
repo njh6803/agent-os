@@ -113,6 +113,16 @@ function Send-Prompt {
     # 실패를 통과시켰다.
     $maxUrl = 8000
     if ($url.Length -gt $maxUrl) { throw "URL 이 $($url.Length)자다(상한 $maxUrl). 지시문의 '읽을 것'을 경로 목록으로 줄인다. 넘치면 앱이 딥링크를 받지 못한다." }
+    # 앱이 끝나는 중이면 딥링크를 로그 없이 버린다(`Find-QuitMarker`). 쏘면 `page=` 에서 원인 없이 기다리다 끝나므로 쏘기 전에
+    # 멈춘다. 쏘지 않았으니 앱을 다시 시작한 뒤 다시 돌려도 세션이 둘 생기지 않는다. 판정 자체가 실패하면 막지 않는다. 판정은
+    # 돕는 일이고, 막으면 관계없는 에러가 여는 일을 막는다. 그 사실은 `quitcheck=` 로 남긴다.
+    $quitMarker = $null
+    try { $quitMarker = Get-AppQuitMarker } catch { "quitcheck=판정하지 못했다: $($_.Exception.Message)" }
+    if ($quitMarker) {
+        "quitting=$quitMarker"
+        # 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)은 같은 깃발에 막혀 아무 일도 하지 않는다(`QA`·`$A` 의 `ej()||`).
+        throw "앱이 끝나는 중이라(위 quitting= 의 로그 줄부터) 딥링크를 버린다. 쏘지 않았다. 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)은 이 상태에서 아무 일도 하지 않는다. 사람이 작업 관리자에서 Claude 를 끝내고 다시 켠 뒤 이 스크립트를 다시 돌린다."
+    }
 
     $win = Get-ClaudeWindow
     # 접근성 트리는 프롬프트를 문단 단위 Text 요소로 내므로 첫 줄의 앞부분으로 찾는다. 앱이 첫 `/` 를
@@ -340,6 +350,58 @@ function Wake-Display {
         $line += " 화면을 깨우지 못했다: $($_.Exception.Message)"
     }
     $line
+}
+
+# 앱이 끝나는 중이면 딥링크를 받지 않는다. 데스크톱 앱(2.9939.2)의 `second-instance` 처리기는 첫 줄 `if(ej())return;` 에서
+# 끝내기 깃발 셋(`JA||YA||XA`)을 보고 로그 없이 돌아간다. 딥링크를 받은 두 번째 인스턴스는 제 기동 줄(`Starting app` 에서
+# `Not main instance` 까지)만 남기고 물러나므로 스크립트는 `page=` 에서 원인 없이 끝난다. 깃발 가운데 업데이트를 위한
+# 끝내기(`JA`)와 끝낼 준비(`XA`)는 한 번 켜지면 풀리는 자리가 없다. 업데이트를 위한 끝내기가 시작되고 앱이 끝나지 않으면, 밖에서
+# 앱을 끝낼 때까지 모든 딥링크가 버려졌다(2026-09-29 12:19 부터 32시간 넘게). 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)도
+# 같은 깃발에 막힌다(`QA`·`$A` 의 `ej()||`). 설치본의 app.asar 와 main.log 를 읽었다. 경위는 일지 2026-09-30-06. 그래서 쏘기
+# 전에 앱의 로그에서 주 프로세스가 선 뒤의 끝내기 표지를 찾는다.
+#
+# 이 함수는 순수하다. 로그 줄과 주 프로세스가 선 시각을 받아, 그 뒤에 선 표지 줄 가운데 가장 이른 것을 `시각 메시지` 로
+# 준다. 없으면 null 이다. 시각이 없는 줄(여러 줄 객체의 속)은 건너뛴다. 표지는 `JA`·`XA` 를 켠 뒤의 줄이다.
+#   - `beforeQuitForUpdate handler fired`: 자동 업데이트가 끝내기 직전에 부르는 처리기가 `JA` 를 켰다.
+#   - `Update check still in flight`, `Session stop before update took`, `CLI exit before update`: 업데이트를 위한 끝내기
+#     함수(`Hln`, 배너와 스텔스 업데이트가 함께 부른다)가 첫 줄에서 `JA` 를 켠 뒤에 찍는다. 마지막 것은 로컬 CLI 세션이 있을
+#     때만 찍힌다.
+#   - `marking readyForQuit`: 끝내기 정리를 마쳐 `XA` 를 켰다.
+# 끝내기 처리기가 도는 중(`YA`)의 표지는 보지 않는다. 정리가 끝나면 실패해도 풀려(`finally`), 로그에 남은 표지가 지금 켜져 있다는
+# 뜻이 아니다. 못 보는 것: 문구가 바뀐 판의 끝내기, `JA` 를 켜고 표지를 찍기 전에 멈춘 끝내기. 그때는 전처럼 `page=` 에서 끝난다.
+function Find-QuitMarker([string[]] $Lines, [datetime] $Since) {
+    $markers = 'beforeQuitForUpdate handler fired|Update check still in flight|Session stop before update took|CLI exit before update|marking readyForQuit'
+    foreach ($line in $Lines) {
+        if ($line -notmatch '^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) \[\w+\] (.*)$') { continue }
+        $time = $Matches[1]
+        $message = $Matches[2]
+        $at = [datetime]::ParseExact($time, 'yyyy-MM-dd HH:mm:ss', [cultureinfo]::InvariantCulture)
+        if ($at -ge $Since -and $message -match $markers) { return "$time $message" }
+    }
+    return $null
+}
+
+# 도는 앱의 주 프로세스가 선 뒤에 끝내기 표지가 있으면 그 줄, 없으면 null 이다. 주 프로세스나 로그를 못 찾으면 null 이다
+# (판정하지 못하면 막지 않는다. 판정 중의 예외는 부르는 쪽이 `quitcheck=` 로 남기고 지나간다). 주 프로세스는
+# `app\Claude.exe` 가운데 `--type=` 이 없는 가장 오래된 것이다. 딥링크마다 잠깐 뜨는 두 번째 인스턴스도 같은 모양이지만 더
+# 늦게 선다. 같은 이름의 CLI(`claude.exe`)는 경로가 다르다. 로그는 MSIX 설치(`Packages\Claude_*`)와 일반 설치
+# (`%APPDATA%\Claude`) 가운데 가장 최근에 쓰인 곳이다. 표지가 돌림 파일로 밀렸을 수 있어 `main1.log` 도 읽되, 주 프로세스가
+# 서기 전에 마지막으로 쓰인 돌림 파일은 볼 것이 없어 건너뛴다(10MB 인 그 파일까지 읽으면 판정 전체가 2.66초였다, 셀프 리뷰).
+function Get-AppQuitMarker {
+    $main = @(Get-CimInstance Win32_Process -Filter "Name = 'Claude.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.ExecutablePath -match '\\app(-[\d.]+)?\\Claude\.exe$' -and $_.CommandLine -notmatch '--type=' } |
+        Sort-Object CreationDate)
+    if ($main.Count -eq 0 -or $null -eq $main[0].CreationDate) { return $null }
+    $started = $main[0].CreationDate
+    $dirs = @(Get-ChildItem -Path "$env:LOCALAPPDATA\Packages" -Directory -Filter 'Claude_*' -ErrorAction SilentlyContinue |
+        ForEach-Object { Join-Path $_.FullName 'LocalCache\Local\Claude\logs' }) + @("$env:APPDATA\Claude\logs")
+    $logs = @($dirs | ForEach-Object { Join-Path $_ 'main.log' } | Where-Object { Test-Path -LiteralPath $_ } |
+        Sort-Object { (Get-Item -LiteralPath $_).LastWriteTime } -Descending)
+    if ($logs.Count -eq 0) { return $null }
+    $files = @((Join-Path (Split-Path $logs[0]) 'main1.log'), $logs[0]) |
+        Where-Object { (Test-Path -LiteralPath $_) -and (Get-Item -LiteralPath $_).LastWriteTime -ge $started }
+    $lines = foreach ($file in $files) { Get-Content -LiteralPath $file -Encoding UTF8 }
+    return Find-QuitMarker @($lines) $started
 }
 
 Wake-Display

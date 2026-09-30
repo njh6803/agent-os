@@ -4,7 +4,8 @@
 `harness`를 쓴다. 규약은 `docs/agents/issue-tracker.md`. 2026-09-28에 세션 스크래치패드에서
 옮겼다(대기열 29). 옮기기 전의 근거는 프로브를 "실측"으로 가리킨다. 이 표가 그 말을 파일로 잇는다.
 
-`probe_*.ps1` 둘은 Claude 데스크톱 창의 접근성 트리를 읽기만 하고 아무것도 누르지 않는다. 창이 하나 떠 있어야 한다.
+`probe_send.ps1`·`probe_tree.ps1` 둘은 Claude 데스크톱 창의 접근성 트리를 읽기만 하고 아무것도 누르지 않는다. 창이 하나 떠 있어야 한다.
+`probe_deeplink.ps1`은 딥링크를 쏜다. 새 세션 화면이 열리면 남으니 사람이 닫는다(보내지는 않는다).
 `probe_tree.ps1`은 화면의 글이 곧 측정 대상이라 대화 원문의 앞부분을 찍는다. 출력을 옮기기 전에 비밀이
 없는지 본다. `probe_send.ps1`은 입력창 값의 길이만 찍는다(PR #89 CodeRabbit, CWE-532).
 돌리는 법은 `pwsh -File .scratch/harness/probes/<파일>`이다.
@@ -24,3 +25,7 @@ cmarkgfm은 uv의 일회용 환경에만 들어가고 프로젝트 의존성이 
 | `import_comments/` | 임포트와 `paths`의 경계 사례에서 지침 판정자와 Claude Code가 어떻게 갈리는지. `cases.py`가 사례(HTML 주석·펜스·코드 스팬·HTML 블록·굵게·한글 경로, 깨진 YAML의 `paths`)를 담고 `judge`로 판정자 쪽을, `run.sh <저장소 밖 디렉터리>`가 트리를 만들어 `claude -p`의 `InstructionsLoaded` 로그로 실측 쪽을 낸다. `results.txt`는 둘을 나란히 둔 요약이다. 2026-09-29 claude 2.1.281(haiku), Windows | `tools/check_instructions.py`의 `_block_lines`·`_counted_text`·`_loaded_text`·`at_imports`·`_paths_patterns` 독스트링, `tests/tools/test_check_instructions.py`의 사례 id, `kickoff/facts.md` | 판을 올렸을 때, 판정자를 고칠 때. `claude` CLI와 인증이 든다. `--setting-sources project,local`로 사용자 전역 훅을 뺀다 |
 | `env_deny_probe.md` | `.env` deny를 넓히기 전후에 Read·Bash·PowerShell의 읽기 모양이 막히는지. 가짜 `.env`로 쟀고 결과표만 남긴다(스크립트 없음) | `tools/hook_env_read.py` 독스트링, `docs/constitution/operations.md` 가드레일, `kickoff/facts.md` | `.claude/settings.json`의 deny를 바꿀 때. 진짜 `.env`로 재지 않는다 |
 | `instruction_check_mutations.toml` | `tools/check_instructions.py`의 새 판정 넷(rules 재귀, 임포트 끝 경계, rules·헌법 안의 `@`, 그 배관)과 PR #100 리뷰 반영 열하나(블록 주석의 들여쓰기, 들여쓴 코드 줄의 문단 속 주석, 펜스 안의 `<!--`, 한 줄 블록 주석의 닫힘, HTML 블록의 끝, 세는 쪽의 닫히지 않은 펜스, 세는 쪽의 HTML 블록 줄, 목록 표지 펜스, 문단 속 주석의 비탐욕, `paths` 블록의 멈춤, 따옴표 여는 자리). 돌리는 법은 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/instruction_check_mutations.toml` | 일지 2026-09-29-04의 변이 줄과 PR #100 리뷰 반영 절 | 검사나 그 테스트를 고칠 때 |
+| `probe_deeplink.ps1` | open-session의 딥링크가 지금 새 세션 화면을 여는지. 딥링크를 쏘고 프롬프트가 든 입력창(Edit)이 서는지만 본다(보내지 않는다) | `tools/open_session.ps1`의 `Find-QuitMarker` 주석, `open-session` 스킬 3단계의 `quitting=`, 일지 2026-09-30-06 | `pwsh -NoProfile -File .scratch/harness/probes/probe_deeplink.ps1 -PromptFile <첫 줄이 고유한 파일>`. 열리면 새 세션 화면이 남는다. 2026-09-30 결과: 앱이 끝나는 중인 동안 ASCII 프롬프트도 `none after 20s` |
+| `deeplink_timeline.ps1` | 앱의 로그에서 딥링크(두 번째 인스턴스)마다 새 세션 화면이 서기까지의 초. 앞 세션의 턴이 끝난 때와 세션이 시작한 때도 | 일지 2026-09-30-06(언제부터 딥링크가 버려졌는지) | `pwsh -NoProfile -File .scratch/harness/probes/deeplink_timeline.ps1`. 읽기만 한다. 2026-09-30 결과: 09-28 22:53까지 대체로 `page+0s`(+0이 아닌 것: 09-23 17:07~17:17, 09-26 01:51), 09-29 07:50부터 한 번도 +0s가 아니다. 사람이 세션을 옮길 때도 같은 줄이 찍혀 +0s가 아닌 값은 딥링크가 아닌 때로만 읽는다. 두 번째 인스턴스도 딥링크만이 아니라 앱을 다시 켜려 한 클릭까지 센다 |
+| `asar_grep.mjs` | 데스크톱 앱의 `app.asar`를 풀지 않고 .js에서 패턴 주변을 찍는다 | `tools/open_session.ps1`의 `Find-QuitMarker` 주석(앱의 `second-instance` 처리기와 끝내기 깃발), 일지 2026-09-30-06 | `node .scratch/harness/probes/asar_grep.mjs <app.asar> <정규식> [앞뒤 글자 수] [청크 경로의 일부]`. 읽기만 한다. 2026-09-30(앱 2.9939.2) 결과: 처리기의 첫 줄이 `if(ej())return;`이고 `ej=()=>JA\|\|YA\|\|XA`. 판이 바뀌면 축약 이름이 바뀐다 |
+| `open_session_quit_mutations.toml` | `Find-QuitMarker` 테스트의 변이 넷(주 프로세스 전의 표지, 표지 셋을 빼기, 가장 늦은 것, 지금 시각) | `tests/tools/test_open_session.py` | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_quit_mutations.toml`. 테스트가 pwsh를 부른다. 2026-09-30 결과: 넷 모두 기대대로 빨강 |

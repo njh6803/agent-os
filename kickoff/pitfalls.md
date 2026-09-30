@@ -14,7 +14,7 @@
 | [Win] Git Bash `echo`가 백슬래시를 먹음 | JSON 페이로드가 안 파싱돼 훅 시험이 조용히 헛돎 | 페이로드도 파일로 |
 | [Py] 추적 파일 0개에서 `pre-commit run --all-files` | 훅 전부 "no files to check"로 exit 0 | 스테이징 뒤 다시 돌리고 `always_run` |
 | CI 경로 필터 미매칭 | 필터 구멍이 조용히 job을 skip | 미매칭을 실패로 승격 |
-| [Py] 워크트리에서 pre-commit이 돌린 테스트의 `git init` | git이 훅 자식에 `GIT_DIR`을 내보내 임시 디렉터리 대신 그 저장소를 재초기화. 공유 config의 `core.bare`가 true가 되어 체크아웃 전부가 "must be run in a work tree" | `tests/conftest.py`가 저장소를 가리키는 `GIT_*`를 벗긴다. 복구는 `git config core.bare false` |
+| [Py] 워크트리에서 pre-commit이 돌린 테스트의 git 호출 | git이 훅 자식에 `GIT_DIR`을 내보내 테스트의 `git init`이 임시 디렉터리 대신 그 저장소를 재초기화. 공유 config의 `core.bare`가 true가 되어 체크아웃 전부가 "must be run in a work tree". `GIT_WORK_TREE` 없는 `GIT_DIR`은 cwd를 작업 트리의 뿌리로 삼아, 하위 디렉터리에서 `git ls-files`를 부른 web 테스트는 경로가 어긋나 빨갛다(2026-09-30. 그 테스트는 주 체크아웃에서 한 커밋들을 지나갔다) | `tests/conftest.py`가 저장소를 가리키는 `GIT_*`를 벗긴다. 다른 언어의 테스트는 그 호출의 `env`에서 벗긴다(`web/eslint.config.test.ts`). 복구는 `git config core.bare false` |
 | 환경 부재로 skip된 테스트 | 초록으로 보임. agent-os는 "CI에서는 에러로 만든다"고 적고 장치가 없었다(2026-09-28 감사) | conftest가 skip을 세션 실패로 만든다(`tests/conftest.py`). LLM 테스트는 키 없으면 실패 |
 | 같은 체크아웃을 쓰는 세션 둘 | 커밋이 엉뚱한 브랜치에 들어감. 다른 세션의 커밋이 내 피처 브랜치에(agent-os PR #46, 2026-09-23), 다른 세션이 main으로 옮긴 32초 뒤 내 커밋이 main에(2026-09-27) | main 위 커밋을 막는 훅 `hook_git_main_commit`(뒤의 모양만). 커밋 직전 `git branch --show-current`. 하네스 작업은 워크트리에서 |
 | 에이전트의 grep이 `.env`를 읽음 | 키 값이 도구 출력에 실림(agent-os 2026-09-28) | `permissions.deny`로 모든 위치의 `.env`에 Read·Edit 거부(`//**/.env`)와 PowerShell 읽기 모양 거부, Bash·Grep으로 읽는 길(`.env`를 빼지 않은 전체 grep 포함)은 `hook_env_read`가 막는다. 둘 다 호출의 모양을 보는 층이라, 셋째 층으로 키에 사용 한도를 걸고 실린 키는 회전한다 |

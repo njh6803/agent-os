@@ -470,9 +470,16 @@ describe("판정 범위", () => {
   const LINTED = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/;
 
   test("git 이 추적하는 web/ 의 코드 파일은 하나도 판정에서 빠지지 않는다", async () => {
+    // pre-commit 이 워크트리에서 돌면 git 이 훅 자식에 GIT_DIR 을 내보낸다. GIT_WORK_TREE 없는 GIT_DIR 은 cwd 를
+    // 작업 트리의 뿌리로 삼아 경로가 web/ 기준이 아니게 되고, 이 테스트가 빨개졌다(2026-09-30, 일지 2026-09-30-06).
+    // tests/conftest.py 가 파이썬 쪽에서 벗기는 것과 같은 까닭이다. 여기서는 GIT_ 로 시작하는 것을 다 벗긴다.
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
+    );
     const tracked = spawnSync("git", ["ls-files", "-z", "--", "."], {
       cwd: WEB,
       encoding: "utf-8",
+      env,
     });
     expect(tracked.status).toBe(0);
     const files = tracked.stdout.split("\0").filter((path) => LINTED.test(path));

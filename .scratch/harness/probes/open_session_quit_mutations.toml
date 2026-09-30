@@ -1,0 +1,48 @@
+# open_session.ps1 의 끝내기 표지 판정(`Find-QuitMarker`)의 테스트가 무엇을 재는지 변이로 본다(다섯).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_quit_mutations.toml
+# 테스트는 파워셸 AST 에서 함수를 떼어 pwsh 로 부른다(tests/tools/test_open_session.py). 규칙 하나를 빼면 빨강이어야 한다.
+
+[[mutation]]
+name = "주 프로세스가 서기 전의 표지도 센다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '        if ($at -ge $Since -and $message -match $markers) { return "$time $message" }'
+new = '        if ($message -match $markers) { return "$time $message" }'
+
+[[mutation]]
+name = "업데이트를 위한 끝내기만 표지로 본다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    $markers = 'beforeQuitForUpdate handler fired|Update check still in flight|Session stop before update took|CLI exit before update|marking readyForQuit'"
+new = "    $markers = 'beforeQuitForUpdate handler fired'"
+
+[[mutation]]
+name = "끝내기 처리기가 돈 표지(풀리는 깃발)도 센다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    $markers = 'beforeQuitForUpdate handler fired|Update check still in flight|Session stop before update took|CLI exit before update|marking readyForQuit'"
+new = "    $markers = 'beforeQuitForUpdate handler fired|Update check still in flight|Session stop before update took|CLI exit before update|marking readyForQuit|preventing quit'"
+
+[[mutation]]
+name = "가장 늦은 표지를 준다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '    foreach ($line in $Lines) {'
+new = '    foreach ($line in ($Lines | Sort-Object -Descending)) {'
+
+[[mutation]]
+name = "표지의 시각 대신 지금 시각을 준다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '        if ($at -ge $Since -and $message -match $markers) { return "$time $message" }'
+new = '''        if ($at -ge $Since -and $message -match $markers) { return "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $message" }'''
