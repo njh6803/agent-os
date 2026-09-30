@@ -1,0 +1,92 @@
+# 2026-10-01 (01) `tools/mutate.py`가 pytest 밖의 명령도 돈다 — 대기열 59
+
+web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지 2026-09-30-07의 "다음"이 가리킨 next-session 지시문에서 왔다.
+브랜치는 `chore/mutate-any-runner`, 워크트리(`.claude/worktrees/mutate-any-runner`, base `d1afa7d`)다.
+
+> 사용자: ".scratch/retro-queue.md의 59(tools/mutate.py가 pytest 밖의 명령도 돈다)를 chore PR로 반영한다"
+
+지시문의 읽을 것은 일지 2026-09-30-05 회고 절의 59였고, 반영 때 함께 볼 넷(원문만 보는 모드, 변이마다 테스트 이름으로
+좁히기, 오류와 빨강의 구분, 제자리가 아닌 실행)을 거기서 받았다. 3·4회차(일지 2026-09-30-03·04)의 되돌림 기록과 묶음
+실행도 함께 봤다.
+
+## 한 것
+
+- **러너 표.** 변이 파일에 `[runner.<이름>]`(명령, 자리, 판정)을 두고 변이가 `runner`로 고른다. `tests`는 명령 뒤에 붙는
+  인자라 pytest는 `-k`, Vitest는 `-t`로 변이마다 좁힌다. 기준선은 러너와 인자의 짝마다 한 번이라, 좁힌 선택이 비었는지도
+  기준선이 본다. 러너를 적지 않으면 내장 pytest라 기존 TOML 일곱(변이 80)은 그대로 읽힌다(`--check`로 봤다).
+- **판정 넷, 결과 넷.** 판정은 pytest(옛 규칙), vitest, playwright, tsc다. 결과는 초록, 빨강, 처리하지 않은 에러
+  (`unhandled`, vitest만), 오류다. Vitest는 `Tests` 줄에 실패가 셀 때만 빨강이고, 파일 단위 FAIL(`[ 파일 ]`, 수집 오류)이
+  하나라도 있으면 오류다. 실패 없이 `Errors` 줄만 있으면 `unhandled`다 — 08이 셀 수 없던 가드 변이는 이제 그것을 기대로
+  적어 센다. tsc는 변이마다 적은 `diagnostic_in` 파일에 진단이 날 때만 빨강이다(JS 러너의 `diagnosticIn` 부분 문자열을
+  경로 경계로 좁혔다).
+- **`--check`.** 명령을 돌리지 않고 고른 변이의 원문, 러너의 자리, 되돌릴 파일을 보고 틀린 것을 모두 알린다. 3·4·5회차에
+  세 번 지은 스크래치 도우미의 자리다.
+- **`restore`.** JS 러너의 `also`다. 명령이 고쳐 쓰는 파일(최신성 검사가 덮어쓰는 생성물)을 쥐었다 되돌린다.
+- **빨간 것의 이름.** Vitest의 FAIL 줄, Playwright의 실패 요약 아래 제목, tsc의 진단 자리를 찍는다. JS 러너는 `red`와
+  `error(2)`만 찍었다.
+- **제자리가 아닌 실행은 코드가 아니라 절차다.** 도구의 `ROOT`가 `__file__`에서 오므로 다른 워크트리의 도구를 돌리면 그
+  워크트리만 바뀐다. 독스트링에 절차(커밋, `git worktree add --detach`, `uv sync`, `pnpm install --offline`, `.env` 복사,
+  명령 상한을 넘으면 백그라운드)를 적고, `implement` 스킬의 변이 줄에 계기를 한 구절 붙였다. 3회차의 되돌림 기록은 이것이
+  대신한다 — 강제로 죽어 남는 것은 버릴 워크트리다.
+- **`api_client_mutations.mjs`를 `api_client_mutations.toml`로 옮기고 지웠다.** 남은 `.mjs` 러너 다섯은 두었다. 넷은 다시
+  돌릴 때 옮기고, `admin_app_mutations.mjs`는 새 파일을 만드는 변이(다섯)와 ESLint 규칙 ID 판정(열)을 도구가 받지 않아
+  옮기지 못한다(프로브 README).
+- 옛 포인터: 프로브 README 둘(행 셋과 문단), 티켓 03의 변이 줄, `.mjs` 머리 주석 셋.
+
+## 잰 것
+
+- **실제 출력의 모양.** 임시 프로브 테스트(커밋하지 않았다)로 Vitest 5.0.2를 봤다. 실패는 종료 1에 `Tests  1 failed | 2
+  passed (3)`, FAIL 줄은 stderr다. 처리하지 않은 거부는 종료 1에 `Tests  3 passed (3)`와 `Errors  1 error`다. 문법 오류는
+  종료 1에 `Test Files  1 failed | 1 passed (2)`, `Tests  3 passed (3)`, 파일 단위 FAIL이고 색 코드가 섞인다. `-t`로 좁히면
+  나머지가 `2 skipped`로 세어진다. tsc 5.9.3은 `path(줄,칸): error TS…`에 종료 2, `pnpm run typecheck`은 패키지 기준 경로에
+  종료 1이다. Playwright(`list` 리포터)는 `N passed`, `N failed` 아래 `[chromium] › …` 제목이고, `--grep`은 고르지 않은
+  테스트를 세지 않는다(`1 passed`만 찍혔다).
+- **윈도우의 `pnpm.CMD`.** `shutil.which`로 풀어 셸 없이 부른다. 한국어와 공백이 든 `-t`가 그대로 닿았다. `&`와 `%`가 든
+  패턴은 아무것도 고르지 못했다(`Tests  3 skipped (3)`) — 판정은 통과가 없어 오류다. 배치 파일이 cmd.exe를 지나는 것은 못
+  보는 것에 적었다.
+- **옮김 대조.** JS 배열을 그대로 평가해 JSON으로 뽑고, 지은 TOML을 `tomllib`로 다시 읽어 25개의 원문·새 글·파일·기대를
+  바이트로 대조했다(명세 축도 따로 대조했다).
+- **옮긴 TOML 실행.** 첫 실행은 기준선에서 멈췄다 — 임시 프로브 테스트가 tsc 진단 둘을 냈고, 기준선의 tsc와 typecheck가
+  오류로 잡았다. 프로브를 지운 뒤 기준선 여섯 초록, 25 모두 기대대로 빨강이다(JS 러너의 2026-09-29 결과와 같다).
+- **스크래치 TOML의 실제 실행.** Vitest 넷: 처리하지 않은 거부만 난 변이는 `unhandled`로 기대대로, `-t`로 좁힌 실패는 빨강,
+  좁힌 선택 밖의 실패는 초록, 문법 오류는 오류라 빨강 기대와 어긋났다. Playwright 하나: 08 러너의 꺼짐이 결정 버튼을 막지
+  않는 변이를 `--grep`으로 좁혀 기준선 `1 passed`, 변이 `1 failed`와 그 테스트 이름.
+- **자기 변이**(`.scratch/harness/probes/mutate_runners_mutations.toml`). 새 테스트는 모두 없는 이름의 import(수집 오류)로만
+  빨갰으므로, 새 규칙 하나씩을 뺀 변이로 행동의 빨강을 봤다. 셀프 리뷰 반영 뒤 스물아홉 모두 기대대로 빨강이다(62초).
+  처음에 README에 약 30초로 적었는데 재 보니 58초였다.
+- **워크트리의 비용.** `pnpm -C web install --frozen-lockfile --offline`이 13.2초였다. 변이 열 넷(25, 29, 4, 1)이 도는 동안
+  주 체크아웃은 바뀌지 않았다.
+- **E501 스물셋.** 한글 폭 2(대기열 53의 모양)다. 폭을 재는 스크래치 감기 도우미로 다시 감았고, 도우미가 `사용:` 줄을 다음
+  문장에 붙이고 코드 스팬을 가른 두 자리를 손으로 고쳤다.
+
+## 셀프 리뷰
+
+`/code-review`, base `d1afa7d`, 추적 파일 10(삭제 1), 미추적 2, 커밋 0. 두 축 모두 기본 모델.
+
+- **명세 축.** 25의 보존을 하나씩 확인했다. 짚은 것: `admin_app`의 `create`·`rule` 때문에 남은 러너 다섯을 다시 돌릴 때 옮긴다는
+  README 문단이 한 러너에서 틀렸다, README 28행의 지운 파일 포인터, 아직 없는 일지를 근거로 든 것, 문구가 바뀌어도 빨강으로는 기울지
+  않는다던 독스트링 주장의 반례, 01·02는 TOML이었으니 web 티켓마다 JS 러너를 지었다는 머리 문장이 과장이다, 절차에 명령 상한과 `.env`가 없다.
+- **표준 축.** 하드: 못 보는 것의 반례 둘(vitest 파일 단위 표지, playwright의 skip 문구가 바뀌면 빨강·초록으로 지나간다),
+  `main`의 `try` 안에서 인자를 파싱하며 스스로 던지고 잡던 것, 옛 말 둘(README 28·36행), `admin_app`, 없는 일지. 판단:
+  `.CMD`가 cmd.exe를 지나는 것, 판정의 입력을 실제 출력에서 옮겼다던 테스트 독스트링(일부는 비튼 입력), `implement` 스킬의 기대 목록에
+  `unhandled`가 빠진 것과 머리 주석의 근거, 내장 `"pytest"` 리터럴 다섯 자리, `_ANSI.sub` 두 자리, `_mismatches`와
+  `_problems`의 이름, 러너 표를 비교하던 테스트(행동이 아니라 구현).
+- **고친 것.** 위 전부. 못 보는 것은 읽는 문구(바뀌면 오류로)와 거르는 표지(바뀌면 못 보고 지나간다)로 갈라 적고, 여섯
+  사례를 테스트로 쟀다. 인자 파싱은 `try` 밖으로, 내장 러너는 `_BUILTIN` 표와 `_runners`로, 색 코드는
+  `CommandResult.plain`으로, 이름은 `_pairing_problems`·`_file_problems`로. `--check`만 준 경우의 새 분기에 변이를 하나
+  더했다.
+- **남긴 것.** 판정 지식을 표 하나로 모으는 것(Repeated Switches)은 판정 넷의 `match`가 pyright로 망라 검사되어 지금은
+  읽기가 낫다. `SpecError`를 문제 목록으로 짓는 두 자리, `_run_mutated`의 `resolve()` 직접 호출(검증을 지난 뒤라 `_inside`의
+  바깥 갈래가 관찰되지 않는다), `admin_app` 머리 주석의 규약이 도구와 같다는 문장(뒤 문장이 더한 것을 적는다).
+
+## 검사
+
+- `uv run pytest -q` 1098 passed(`tests/tools/test_mutate.py` 82). `uv run ruff check .`, `uv run ruff format --check .`,
+  `uv run pyright`(0 errors), `uv run lint-imports` 초록. `pnpm -C web verify` 초록(테스트 263, web은 바꾸지 않았다).
+  `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
+- 변이: 옮긴 TOML 25, 자기 변이 29 모두 기대대로 빨강. 기존 TOML 일곱은 `--check`로 원문이 모두 한 번씩 있다.
+
+## 남긴 것
+
+- `admin_app_mutations.mjs`의 새 파일 변이와 규칙 ID 판정. 도구에 넣을지는 그 러너를 다시 돌릴 때 본다.
+- 3·4회차의 묶음 실행은 이름 고르기와 백그라운드로 두었다. 되돌림 기록은 다른 워크트리의 실행이 대신한다.
