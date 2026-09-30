@@ -11,10 +11,10 @@ import pytest
 from tools.check_quotes import (
     ROOT,
     Quote,
+    added_lines,
     added_lines_from_diff,
     default_files,
     quotes_in,
-    staged_added_lines,
     warnings_for,
 )
 
@@ -27,6 +27,20 @@ def _저장소를_만든다(root: Path, 문서: str, 원천: str = 원문) -> Pa
     quoting = root / "docs" / "quoting.md"
     quoting.write_text(문서, encoding="utf-8")
     return quoting
+
+
+def _git(root: Path, *args: str) -> None:
+    # CI 러너에는 git 신원이 없다. 커밋은 여기서 주는 신원으로 한다.
+    subprocess.run(
+        ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        check=True,
+        capture_output=True,
+    )
+
+
+def _덧붙인다(path: Path, 줄: str) -> None:
+    with path.open("a", encoding="utf-8", newline="\n") as file:
+        file.write(줄)
 
 
 def test_원문이_다른_파일에_있으면_경고가_없다(tmp_path: Path) -> None:
@@ -91,16 +105,31 @@ def test_diff_헝크_머리에서_더한_줄을_읽는다() -> None:
     assert added_lines_from_diff(diff) == {3, 4, 5, 6, 12}
 
 
-def test_스테이지된_줄만_볼_때_diff_가_없으면_전체를_본다(tmp_path: Path) -> None:
+def test_더한_줄만_볼_때_diff_가_없으면_전체를_본다(tmp_path: Path) -> None:
     """저장소 밖(테스트)에서는 diff 가 없어 None 이고 전체가 대상이다. 조용히 비지 않는다."""
     문서 = '첫 줄\n감사가 말한 "지침을 쓰는 사람이 그 지침을 나중에야 어긴다는 것"이라는 말.\n'
     quoting = _저장소를_만든다(tmp_path, 문서)
 
-    filtered = warnings_for(
-        [quoting], tmp_path, line_filter=lambda p: staged_added_lines(p, tmp_path)
-    )
+    filtered = warnings_for([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path))
 
     assert len(filtered) == 1
+
+
+def test_더한_줄은_스테이지와_상관없이_작업_트리가_HEAD_에_더한_줄이다(tmp_path: Path) -> None:
+    """스테이지된 줄만 보면 부분 스테이지된 파일의 나머지 편집을 조용히 건너뛴다(대기열 55)."""
+    quoting = _저장소를_만든다(
+        tmp_path, '옛 줄 "커밋된 옛 줄의 틀린 인용은 이번 변경이 아니라 보지 않는다"\n'
+    )
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    _덧붙인다(quoting, '스테이지한 줄 "스테이지한 줄의 틀린 인용도 스무 자를 넘어 잡혀야 한다"\n')
+    _git(tmp_path, "add", ".")
+    _덧붙인다(quoting, '안 한 줄 "스테이지하지 않은 줄의 틀린 인용도 스무 자를 넘어 잡혀야 한다"\n')
+
+    warnings = warnings_for([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path))
+
+    assert [warning.split(":")[1] for warning in warnings] == ["2", "3"]
 
 
 def test_상대_경로로_넘어온_파일도_한_번만_센다(
@@ -224,12 +253,131 @@ def test_굽은_따옴표도_인용이다() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "표지",
+    [
+        "한 줄: ",
+        "한 줄 후보: ",
+        "한 구절: ",
+        "한 구절 후보: ",
+        "한 구절 더: ",
+        "한 줄의 문구: ",
+        "문구 후보: ",
+    ],
+)
+def test_제안_표지_뒤의_따옴표는_인용이_아니다(표지: str) -> None:
+    """대기열·일지의 한 줄 후보는 아직 없는 문장이다. 원문을 찾으면 늘 거짓 경고다(대기열 51)."""
+    markdown = (
+        f'implement 스킬에 **{표지.strip()}** "이 티켓의 체크박스가 요구하는 것만 쓰고 넘긴다"\n'
+    )
+
+    assert quotes_in(markdown) == []
+
+
+@pytest.mark.parametrize("표지", ["옛 문구: ", "경고 문구: ", "로그의 한 줄: ", "일지의 한 구절: "])
+def test_있는_글을_가리키는_표지_뒤의_인용은_본다(표지: str) -> None:
+    """옛 문구를 인용하는 것이 이 검사가 잡으려는 바로 그 모양이다(셀프 리뷰 표준 축)."""
+    원문_인용 = "스무 자를 넘는 진짜 원문 인용이라 대조되어야 한다"
+
+    assert quotes_in(f'검사의 {표지}"{원문_인용}"\n') == [Quote(1, 원문_인용, None)]
+
+
+def test_제안_표지가_없는_같은_줄의_인용은_그대로_본다() -> None:
+    markdown = (
+        '한 구절 후보: "아직 없는 제안 문장은 스무 자를 넘어도 보지 않는다", '
+        '브리프의 "제안 표지가 없는 인용은 스무 자를 넘으면 본다"\n'
+    )
+
+    assert quotes_in(markdown) == [Quote(1, "제안 표지가 없는 인용은 스무 자를 넘으면 본다", None)]
+
+
+def test_줄을_넘는_인용의_닫는_따옴표는_다음_인용과_짝짓지_않는다() -> None:
+    """닫는 따옴표를 여는 것으로 읽으면 사이의 산문이 인용이 되어 거짓 경고가 난다(대기열 67)."""
+    markdown = (
+        '- **67.** 닫는 따옴표가 다음 인용과 짝지어진다. 독스트링은 "못\n'
+        '  본다"고만 적었고 그 뒤에 긴 산문이 스무 자를 넘게 이어진 다음에야 '
+        '"둘째 줄의 진짜 인용은 스무 자를 넘고 잡혀야 한다"가 온다.\n'
+    )
+
+    assert quotes_in(markdown) == [
+        Quote(2, "둘째 줄의 진짜 인용은 스무 자를 넘고 잡혀야 한다", None)
+    ]
+
+
+def test_짝은_목록_항목과_문단_안에서만_짓는다() -> None:
+    """짝이 없는 따옴표 하나(인치 표시 등)가 다음 항목의 짝을 모두 뒤집지 않는다."""
+    markdown = (
+        '- 27" 모니터 하나\n'
+        '- "다음 목록 항목의 인용은 스무 자를 넘고 잡혀야 한다"\n'
+        "\n"
+        '문단의 짝 없는 " 하나\n'
+        "\n"
+        '"다음 문단의 인용도 스무 자를 넘고 잡혀야 한다 정말로"\n'
+    )
+
+    assert quotes_in(markdown) == [
+        Quote(2, "다음 목록 항목의 인용은 스무 자를 넘고 잡혀야 한다", None),
+        Quote(6, "다음 문단의 인용도 스무 자를 넘고 잡혀야 한다 정말로", None),
+    ]
+
+
+진짜_인용 = "스무 자를 넘는 진짜 인용은 여기에 있다 정말로"
+
+
+@pytest.mark.parametrize(
+    ("markdown", "줄"),
+    [
+        (f'## 27" 모니터\n본문 "{진짜_인용}" 끝\n', 2),
+        (f'1) 27" 모니터\n2) "{진짜_인용}"\n', 2),
+        (f'제목 27" 모니터\n===\n본문 "{진짜_인용}"\n', 3),
+    ],
+    ids=["ATX 제목은 한 줄", "괄호 번호 목록", "setext 밑줄에서 끝난다"],
+)
+def test_묶음은_제목과_번호_목록에서도_끊긴다(markdown: str, 줄: int) -> None:
+    """제목 다음 줄과 `1)` 목록이 앞 묶음에 붙으면 짝 없는 따옴표가 뒤의 짝을 뒤집는다."""
+    assert quotes_in(markdown) == [Quote(줄, 진짜_인용, None)]
+
+
+def test_인용문의_게으른_이어짐도_인용문이라_보지_않는다() -> None:
+    """`>` 없이 이어진 줄도 CommonMark 에서는 그 인용문의 문단이다."""
+    markdown = (
+        "> 사용자가 한 말의 첫 줄\n"
+        '게으른 줄 "게으른 이어짐도 인용문이라 스무 자를 넘어도 보지 않는다"\n'
+        "\n"
+        f'인용문 밖 "{진짜_인용}"\n'
+    )
+
+    assert quotes_in(markdown) == [Quote(4, 진짜_인용, None)]
+
+
+@pytest.mark.parametrize("확장자", [".ts", ".tsx", ".mjs", ".js"])
+def test_TS_와_JS_의_원문도_찾는다(tmp_path: Path, 확장자: str) -> None:
+    """일지가 web 테스트 이름이나 변이 이름을 인용하면 원문은 TS·JS 에 있다(대기열 66)."""
+    이름 = "관리 토큰이 없으면 플러그인 목록 대신 토큰 입력을 보인다"
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web" / f"page.test{확장자}").write_text(
+        f'it("{이름}", () => {{}});\n', encoding="utf-8"
+    )
+    quoting = tmp_path / "note.md"
+    quoting.write_text(f'테스트 "{이름}"가 초록이다.\n', encoding="utf-8")
+
+    assert warnings_for([quoting], tmp_path) == []
+
+
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path: Path) -> None:
     """못 본다는 주장도 잰다(.claude/rules/tools.md). 잡게 되면 독스트링을 고친다."""
     홑따옴표 = "'홑따옴표로 감싼 스무 자 넘는 인용은 보지 않는다 정말로'\n"
     줄바꿈 = '"줄바꿈을 넘는 인용은 첫 줄에서 끊겨\n보지 않는다 정말로 스무 자를 넘어도"\n'
+    제안_표지_뒤의_원문 = '반영한 한 줄: "지침을 쓰는 사람이 그 지침을 가장 먼저 어긴다는 것이"\n'
+    짝_없는_따옴표_뒤 = '27" 모니터와 "뒤의 인용은 스무 자를 넘어도 짝이 뒤집혀 못 본다 정말로"\n'
+    번호처럼_보이는_줄 = f'브리프가 "줄을 넘는 인용이\n42. 로 시작하는 줄" 뒤에 "{진짜_인용}"\n'
+    줄을_넘는_코드_스팬 = f'`a "\nb` 뒤 "{진짜_인용}"\n'
     assert quotes_in(홑따옴표) == []
     assert quotes_in(줄바꿈) == []
+    assert quotes_in(제안_표지_뒤의_원문) == []
+    assert quotes_in(짝_없는_따옴표_뒤) == []
+    assert quotes_in(번호처럼_보이는_줄) == []
+    assert quotes_in(줄을_넘는_코드_스팬) == []
 
     같은_틀린_인용 = f'하나 "{원문[:-3]} 까닭이다"\n둘 "{원문[:-3]} 까닭이다"\n'
     quoting = _저장소를_만든다(tmp_path, 같은_틀린_인용, 원천="다른 것")
@@ -263,3 +411,26 @@ def test_CLI_진입점이_알려진_빨강을_출력한다(tmp_path: Path) -> No
 
     assert process.returncode == 0
     assert "글자 그대로 없다" in process.stdout
+
+
+def test_CLI_는_경고가_없어도_본_인용_수를_출력한다(tmp_path: Path) -> None:
+    """무출력 초록은 '다 맞았다'와 '아무것도 안 봤다'를 가르지 못한다(대기열 55)."""
+    문장 = "같은 파일 안에서 두 번 적힌 문장이라 원문을 찾는 인용이다"
+    doc = tmp_path / "note.md"
+    doc.write_text(f'{문장}\n\n다시 "{문장}"를 든다.\n', encoding="utf-8")
+    없는_파일 = tmp_path / "없는.md"
+
+    process = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "check_quotes.py"), str(doc), str(없는_파일)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert process.returncode == 0
+    # 넘긴 인자는 둘이지만 읽은 파일은 하나다. 저장소 밖이라 diff 가 없어 전체를 봤다.
+    assert "파일 1개(그중 전체를 본 것 1개)에서 인용 1건" in process.stdout
+    assert "경고 없음" in process.stdout

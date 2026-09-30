@@ -12,6 +12,13 @@ reviews:
     drafts: false
   # 상태 코멘트("Review skipped" 등)는 끈 채로 둔다. 리뷰 코멘트만 남는다.
   review_status: false
+  # 사전 검사의 독스트링 커버리지(기본 warning, 80%)는 끈다. 위 머리말대로 여기서는 보안·버그·성능만
+  # 보고, 테스트 이름이 행동 명세인 저장소라 테스트 헬퍼까지 세는 커버리지는 기준이 아니다(대기열 69).
+  # "off"는 따옴표로 둔다 — YAML 1.1 파서는 맨 off 를 불리언 false 로 읽는다. 키와 값은 설정 스키마 v2로
+  # 쟀다(.scratch/harness/probes/coderabbit_schema.py).
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
   # ruff는 훅과 CI가 돌린다. 여기서 또 돌리면 같은 지적이 두 번 나온다.
   tools:
     ruff:
