@@ -152,6 +152,21 @@ def test_닫히지_않은_펜스는_끝까지_코드다() -> None:
     assert prose_of("한 줄\n```\nnot closed\nstill code") == "한 줄\n"
 
 
+def test_백틱이_든_줄은_펜스를_열지_않는다() -> None:
+    """정보 문자열에 백틱이 있으면 펜스가 아니라 코드 스팬이다(CommonMark, PR #118 CodeRabbit)."""
+    assert block_reason_for("```uv run pytest```\nNow merge.") is not None
+
+
+def test_다른_문자가_섞인_줄은_펜스를_닫지_않는다() -> None:
+    """닫는 펜스는 여는 펜스와 같은 문자만 쓴다(CommonMark, PR #118 CodeRabbit)."""
+    message = (
+        "```\nprint(1)\n```~~~\nNow merge this branch after the checks pass, please.\n```\n"
+        "완료했습니다."
+    )
+
+    assert block_reason_for(message) is None
+
+
 def test_긴_백틱_묶음의_코드_스팬도_뺀다() -> None:
     assert prose_of("앞 ``a ` b`` 뒤") == "앞  뒤"
 

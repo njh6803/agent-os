@@ -12,8 +12,10 @@ Stop 훅이 받는 답만 센다. `stop_reason` 이 `end_turn` 인 assistant 메
 `queued_command`)가 "한국어로"를 담으면, 그 앞의 가장 가까운 답에 표지를 붙인다.
 
 출력: SDK 세션의 수와 그 텍스트 블록 중 지금 판정이 막을 것의 수, 판정한 답의 수, 글자가 적어
-판정하지 않은 답의 수, 한글 비율 구간별 개수, 막는 답 전부(표지와
-앞 120자), 판정하지 않은 답 중 한글이 없는 것, 표지가 붙은 답 전부. 돌리는 법은 저장소 루트에서
+판정하지 않은 답의 수, 한글 비율 구간별 개수, 막는 답 전부, 판정하지 않은 답 중 한글이 없는 것,
+표지가 붙은 답 전부. 답은 비율과 트랜스크립트 이름의 앞 여덟 글자, 메시지 id 로만 찍고 원문은 찍지
+않는다 — 답에 키나 토큰이 있으면 이 출력이 도구 출력과 트레이스로 복제된다(PR #118 CodeRabbit,
+CWE-532). 원문은 그 트랜스크립트에서 메시지 id 로 찾는다. 돌리는 법은 저장소 루트에서
 `PYTHONUTF8=1 uv run python .scratch/harness/probes/stop_korean_ratio.py [--near 0.5]`. `--near` 는
 그 비율 아래인데 막지 않은 답도 찍는다. 읽기만 한다.
 """
@@ -227,19 +229,19 @@ def main() -> int:
     print(f"막는 답 {len(blocked)}개")
     for ratio, answer in sorted(blocked, key=lambda item: item[0]):
         mark = "고침" if answer.corrected else "    "
-        print(f"  [{mark}] {ratio:.3f} {answer.transcript[:8]} {answer.text[:120]!r}")
+        print(f"  [{mark}] {ratio:.3f} {answer.transcript[:8]} {answer.message_id}")
     unseen = [item for item in skipped if item[0] == 0 and item[1] > 0]
     print(f"판정하지 않은 답 중 한글이 없는 것 {len(unseen)}개")
     for _, latin, answer in unseen:
-        print(f"  라틴 {latin} {answer.transcript[:8]} {answer.text[:120]!r}")
+        print(f"  라틴 {latin} {answer.transcript[:8]} {answer.message_id}")
     if args.near:
         print(f"막지 않았지만 비율 {args.near} 아래인 답 {len(near)}개")
         for ratio, answer in sorted(near, key=lambda item: item[0]):
-            print(f"  {ratio:.3f} {answer.transcript[:8]} {answer.text[:120]!r}")
+            print(f"  {ratio:.3f} {answer.transcript[:8]} {answer.message_id}")
     print(f"고친 표지(다음 사람 프롬프트가 '{CORRECTION}') {len(corrected)}개")
     for ratio, answer in corrected:
         verdict = "막는다" if block_reason_for(answer.text) is not None else "지나간다"
-        print(f"  {ratio:.3f} {verdict} {answer.transcript[:8]} {answer.text[:120]!r}")
+        print(f"  {ratio:.3f} {verdict} {answer.transcript[:8]} {answer.message_id}")
     return 0
 
 

@@ -60,8 +60,11 @@ MIN_HANGUL_RATIO = 0.2
 SDK_PREFIX = "sdk-"
 
 # 여는 펜스부터 같은 문자로 여는 길이 이상의 닫는 펜스까지. 닫히지 않으면 끝까지다(CommonMark).
+# 백틱 펜스의 정보 문자열에는 백틱이 없다 — 있으면 펜스가 아니라 코드 스팬이다.
 _FENCE = re.compile(
-    r"^ {0,3}(?P<fence>`{3,}|~{3,})[^\n]*\n.*?(?:^ {0,3}(?P=fence)[`~]*[ \t]*$|\Z)",
+    r"^ {0,3}(?:"
+    r"(?P<ticks>`{3,})[^`\n]*\n.*?(?:^ {0,3}(?P=ticks)`*[ \t]*$|\Z)"
+    r"|(?P<tildes>~{3,})[^\n]*\n.*?(?:^ {0,3}(?P=tildes)~*[ \t]*$|\Z))",
     re.MULTILINE | re.DOTALL,
 )
 # 인용 블록의 줄.

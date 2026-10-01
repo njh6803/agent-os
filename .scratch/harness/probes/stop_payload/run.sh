@@ -11,6 +11,8 @@ work=${1:?저장소 밖 디렉터리를 넘긴다}
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../../../.." && pwd)
 mkdir -p "$work"
+# 뒤의 cd 와 설정·로그 경로가 같은 곳을 가리키게 절대 경로로 고정한다(PR #118 CodeRabbit).
+work=$(cd "$work" && pwd)
 rm -f "$work/stop.jsonl"
 hook="uv run --project \\\"$root\\\" --no-sync python \\\"$here/dump_stop.py\\\" \\\"$work/stop.jsonl\\\""
 cat > "$work/settings.json" <<EOF

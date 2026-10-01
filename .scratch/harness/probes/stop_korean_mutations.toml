@@ -19,8 +19,26 @@ tests = ["tests/tools/test_hook_stop_korean.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_stop_korean.py"
-old = '''(?P=fence)[`~]*[ \t]*$|\Z)",'''
-new = '''(?P=fence)[`~]*[ \t]*$)",'''
+old = '''(?P=ticks)`*[ \t]*$|\Z)"'''
+new = '''(?P=ticks)`*[ \t]*$)"'''
+
+[[mutation]]
+name = "백틱 펜스의 정보 문자열에 백틱을 허용한다(PR #118 CodeRabbit)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''(?P<ticks>`{3,})[^`\n]*\n'''
+new = '''(?P<ticks>`{3,})[^\n]*\n'''
+
+[[mutation]]
+name = "닫는 펜스에 다른 문자가 섞여도 닫는다(PR #118 CodeRabbit)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''(?P=ticks)`*[ \t]*$|\Z)"'''
+new = '''(?P=ticks)[`~]*[ \t]*$|\Z)"'''
 
 [[mutation]]
 name = "인용 줄을 세다"
