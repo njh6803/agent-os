@@ -1,0 +1,177 @@
+# tools/hook_stop_korean.py(대기열 83)의 판정 규칙과 배선을 하나씩 빼는 변이, 그리고 러너가 그 훅 때문에 벗기는
+# 환경 변수 하나.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/stop_korean_mutations.toml
+# 문턱 둘은 경계 근처의 문장(막는 쪽 0.033 — 측정의 최고 0.041 바로 아래, 지나가는 쪽 0.391 — 측정에서 막지 않은
+# 답 중 둘째로 낮다, 판정 하한의 여덟 글자 "Now merge.")을 테스트로 고정해 잰다.
+
+[[mutation]]
+name = "코드 펜스를 세다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    prose = _FENCE.sub("", message)'''
+new = '''    prose = message'''
+
+[[mutation]]
+name = "닫히지 않은 펜스는 코드가 아니다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''(?P=ticks)`*[ \t]*$|\Z)"'''
+new = '''(?P=ticks)`*[ \t]*$)"'''
+
+[[mutation]]
+name = "백틱 펜스의 정보 문자열에 백틱을 허용한다(PR #118 CodeRabbit)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''(?P<ticks>`{3,})[^`\n]*\n'''
+new = '''(?P<ticks>`{3,})[^\n]*\n'''
+
+[[mutation]]
+name = "닫는 펜스에 다른 문자가 섞여도 닫는다(PR #118 CodeRabbit)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''(?P=ticks)`*[ \t]*$|\Z)"'''
+new = '''(?P=ticks)[`~]*[ \t]*$|\Z)"'''
+
+[[mutation]]
+name = "인용 줄을 세다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    prose = _BLOCKQUOTE.sub("", prose)
+'''
+new = ''''''
+
+[[mutation]]
+name = "코드 스팬을 세다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    prose = _CODE_SPAN.sub("", prose)
+'''
+new = ''''''
+
+[[mutation]]
+name = "링크 대상을 세다(식별자 규칙이 잡지 못하는 상대 경로)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    prose = _LINK_TARGET.sub("]", prose)
+'''
+new = ''''''
+
+[[mutation]]
+name = "URL 을 세다(점이 없는 호스트)"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    prose = _URL.sub("", prose)
+'''
+new = ''''''
+
+[[mutation]]
+name = "한글 사이의 구분자도 식별자로 본다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''_IDENTIFIER = re.compile(r"\S*[A-Za-z0-9_][-_./:#@][A-Za-z0-9_]\S*")'''
+new = '''_IDENTIFIER = re.compile(r"\S*\w[-_./:#@]\w\S*")'''
+
+[[mutation]]
+name = "식별자(경로·kebab·snake 이름)를 세다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    return _IDENTIFIER.sub("", prose)'''
+new = '''    return prose'''
+
+[[mutation]]
+name = "비율 문턱을 지나가는 쪽 경계(0.39) 위로"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''MIN_HANGUL_RATIO = 0.2'''
+new = '''MIN_HANGUL_RATIO = 0.4'''
+
+[[mutation]]
+name = "비율 문턱을 막는 쪽 경계(0.03) 아래로"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''MIN_HANGUL_RATIO = 0.2'''
+new = '''MIN_HANGUL_RATIO = 0.03'''
+
+[[mutation]]
+name = "판정 하한을 여덟 글자 위로"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''MIN_LETTERS = 8'''
+new = '''MIN_LETTERS = 9'''
+
+[[mutation]]
+name = "막은 뒤의 Stop 도 판정한다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    if payload.get("stop_hook_active"):
+        return 0
+'''
+new = ''''''
+
+[[mutation]]
+name = "SDK 세션도 판정한다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    if is_program_session(os.environ.get("CLAUDE_CODE_ENTRYPOINT")):
+        return 0
+'''
+new = ''''''
+
+[[mutation]]
+name = "sdk-py 하나만 SDK 세션이다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''entrypoint.startswith(SDK_PREFIX)'''
+new = '''entrypoint == "sdk-py"'''
+
+[[mutation]]
+name = "입력에 마지막 답이 없어도 판정한다"
+tests = ["tests/tools/test_hook_stop_korean.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_stop_korean.py"
+old = '''    if not isinstance(message, str):
+        return 0
+'''
+new = ''''''
+
+[[mutation]]
+name = "러너가 entrypoint 를 물려준다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    excluded = {"PYTHONUTF8", "CLAUDE_CODE_ENTRYPOINT", *REPO_LOCATION_VARS}'''
+new = '''    excluded = {"PYTHONUTF8", *REPO_LOCATION_VARS}'''
