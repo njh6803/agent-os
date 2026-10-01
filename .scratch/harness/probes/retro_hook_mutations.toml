@@ -145,10 +145,8 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_journal_retro.py"
 old = '''
-    if journal is not None:
-        retro = section_body(journal, RETRO_HEADING)
-        if retro is not None and is_written(retro):
-            return None
+    if journal is not None and retro_recorded(journal):
+        return None
 '''
 new = '''
 '''
@@ -159,8 +157,17 @@ tests = ["tests/tools/test_hook_journal_retro.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_journal_retro.py"
-old = '''        if retro is not None and is_written(retro):'''
-new = '''        if retro is not None:'''
+old = '''        is_written(_body_after(journal, found.end())) for found in RETRO_HEADING.finditer(journal)'''
+new = '''        True for found in RETRO_HEADING.finditer(journal)'''
+
+[[mutation]]
+name = "회고 절이 여럿이면 모두 본다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''for found in RETRO_HEADING.finditer(journal)'''
+new = '''for found in list(RETRO_HEADING.finditer(journal))[:1]'''
 
 [[mutation]]
 name = "줄 머리의 회고 제목만 본다"

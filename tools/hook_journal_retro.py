@@ -74,21 +74,31 @@ def is_journal(file_path: str) -> bool:
     return tuple(parts[-3:-1]) == JOURNAL_PARTS
 
 
-def section_body(text: str, heading: re.Pattern[str]) -> str | None:
-    """`heading` 절의 본문 — 제목 줄 뒤부터 다음 `#`·`##` 제목 전까지. 앞뒤 공백은 벗긴다. 제목이
-    없으면 None."""
-    found = heading.search(text)
-    if found is None:
-        return None
-    rest = text[found.end() :]
+def _body_after(text: str, start: int) -> str:
+    """`start`(제목 줄 끝)부터 다음 `#`·`##` 제목 전까지. 앞뒤 공백은 벗긴다."""
+    rest = text[start:]
     end = SECTION_END.search(rest)
     return (rest[: end.start()] if end else rest).strip()
+
+
+def section_body(text: str, heading: re.Pattern[str]) -> str | None:
+    """`heading` 의 첫 절의 본문. 제목이 없으면 None."""
+    found = heading.search(text)
+    return None if found is None else _body_after(text, found.end())
 
 
 def is_written(body: str) -> bool:
     """절에 자리 표시가 아닌 줄이 하나라도 있는가."""
     lines = [line.strip() for line in body.splitlines() if line.strip()]
     return any(not PLACEHOLDER.match(line) for line in lines)
+
+
+def retro_recorded(journal: str) -> bool:
+    """자리 표시가 아닌 회고 절이 하나라도 있는가. 날짜를 붙인 회고 절이 더해질 수 있어 첫 절만
+    보지 않는다(PR #113 CodeRabbit)."""
+    return any(
+        is_written(_body_after(journal, found.end())) for found in RETRO_HEADING.finditer(journal)
+    )
 
 
 def context_for(
@@ -107,10 +117,8 @@ def context_for(
         return None
     if previous is not None and section_body(previous, CLOSING_HEADING) == closing:
         return None
-    if journal is not None:
-        retro = section_body(journal, RETRO_HEADING)
-        if retro is not None and is_written(retro):
-            return None
+    if journal is not None and retro_recorded(journal):
+        return None
     return CONTEXT
 
 

@@ -34,7 +34,8 @@ CodeRabbit 재요청은 한도 초과였으며 스레드 답글이 `9465ce4`를 
 
 ## 한 것
 
-- `tools/hook_journal_retro.py`: `section_body`·`is_written`·`read_journal`, 제목 정규식 둘, 발동 조건 넷과 못 보는 것.
+- `tools/hook_journal_retro.py`: `section_body`·`is_written`·`retro_recorded`·`read_journal`, 제목 정규식 둘, 발동 조건
+  넷과 못 보는 것.
 - `tests/tools/test_hook_journal_retro.py`: 판정마다의 테스트와 못 보는 것(괄호 한 쌍 밖의 자리 표시, 펜스)을 재는 테스트.
 - `tools/hook_payloads.toml`과 `tools/run_hooks.py`: 침묵 넷, 발동 하나를 더하고 일지 픽스처 둘(`${OPEN_JOURNAL}`,
   `${CLOSED_JOURNAL}`).
@@ -86,3 +87,17 @@ CodeRabbit 재요청은 한도 초과였으며 스레드 답글이 `9465ce4`를 
   0 errors, `uv run lint-imports` 5 kept, `pnpm -C web verify` 초록(테스트 263, web은 바꾸지 않았다). 지침·타입 우회·마크다운
   표·줄 구분 검사 초록, 훅 러너 42건에 어긋남 0.
   `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
+
+## PR 리뷰
+
+PR #113. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: not assigned`, 이 PR에서 다시 봤다).
+
+- **CI**(`4a331f0`). `verify` 2분 49초, `claude-review` 1분 1초, 둘 다 초록.
+- **CodeRabbit**(`@coderabbitai review`). Minor 하나: 회고 절을 첫 것만 본다. 첫 절이 자리 표시이고 뒤에 날짜 붙은 절에
+  내용이 있으면 다시 울린다. 지금 저장소에 회고 절이 둘 이상인 일지는 없지만, 날짜를 붙인 회고 제목이 있어 더해질 수 있는
+  모양이다. 회고 절을 모두 보는 `retro_recorded`로 고치고 회귀 테스트를 먼저 빨갛게 본 뒤 초록으로, 변이 하나(첫 절만
+  보기)를 더했다. 변이 스물일곱 모두 기대대로.
+- **claude-review.** Nit 하나: 대기열 73의 어디로 칸은 `load_spec`이고 닫힘은 `read_spec`이다. 반영하지 않았다 — 대기열은
+  어디로 칸에 승인 때의 계획을 두고 닫힘을 무엇 칸의 취소선 뒤에 적는다(대기열 1·2·59의 모양, 일지 2026-10-01-02가 53의
+  어디로 칸을 고치라는 지적을 같은 이유로 두었다).
+  닫힘 문장이 이미 `load_spec`을 감싼 `read_spec`이라고 잇는다.

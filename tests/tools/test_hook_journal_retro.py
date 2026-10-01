@@ -152,6 +152,16 @@ def test_일지에_회고_절이_이미_있으면_계기가_아니다(제목: st
     assert context_for("Write", JOURNAL, journal, None, journal) is None
 
 
+def test_회고_절이_여럿이면_하나라도_쓴_것이_있으면_계기가_아니다() -> None:
+    """첫 절이 자리 표시뿐이고 뒤의 날짜 붙은 절에 내용이 있는 일지(PR #113 CodeRabbit)."""
+    journal = (
+        "# 일지\n\n## 회고\n\n(retro 뒤에)\n\n## 한 것\n\n- 04\n\n"
+        "## 회고 (2026-10-01, 단계를 닫은 뒤)\n\n- 62(새로)\n\n## 다음\n\n- 05\n"
+    )
+
+    assert context_for("Edit", JOURNAL, "## 다음\n\n- 05", None, journal) is None
+
+
 @pytest.mark.parametrize(
     "일지",
     [
