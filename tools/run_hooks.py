@@ -10,10 +10,12 @@
 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는 pre-commit 이 매 커밋
 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 여섯 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 여덟 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
 않는다), `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는
-트랜스크립트 — 첫 턴과 그 반례), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc). 기대는 넷.
+트랜스크립트 — 첫 턴과 그 반례), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff
+설정이 있는 임시 디렉터리 — 한글 줄이 넘친 `long.py` 와 짧은 `short.py`), `${LOOSE_PY}`(같은 한글
+줄을 ruff 설정 밖에 둔 파일 — 이 저장소의 파일에 기대를 걸지 않는다). 기대는 넷.
 deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
 (`additionalContext`), silent(종료 0, 출력 없음). `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
@@ -248,7 +250,9 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     """자리표시자가 가리킬 것들을 `scratch` 에 만들고 그 값을 돌려준다.
 
     임시 저장소 둘(main, 작업 브랜치)은 `GIT_*` 를 벗긴 환경으로 만든다. 트랜스크립트 하나는
-    assistant 기록이 있는 파일로 두고, 다른 하나는 만들지 않은 경로다(첫 턴).
+    assistant 기록이 있는 파일로 두고, 다른 하나는 만들지 않은 경로다(첫 턴). ruff 프로젝트 하나는
+    줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
+    밖(`loose.py`)에도 둔다.
     """
     main_repo = scratch / "on-main"
     work_repo = scratch / "on-topic"
@@ -264,6 +268,19 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         '{"type": "user"}\n{"type": "assistant"}\n', encoding="utf-8", newline="\n"
     )
     korean_heredoc = "cat <<'EOF'\n" + "\n".join(f"한글 줄 {i}" for i in range(45)) + "\nEOF"
+    ruff_project = scratch / "ruff-project"
+    ruff_project.mkdir()
+    # 이 저장소처럼 E 와 F 를 고른다. ruff 의 기본 선택에는 E501 이 없다.
+    (ruff_project / "pyproject.toml").write_text(
+        '[tool.ruff]\nline-length = 100\n\n[tool.ruff.lint]\nselect = ["E", "F"]\n',
+        encoding="utf-8",
+    )
+    # 52자에 폭 102. 한글은 폭 2라 글자 수로는 짧아도 E501 이다.
+    long_korean = "# " + "가" * 50 + "\n"
+    (ruff_project / "long.py").write_text(long_korean, encoding="utf-8")
+    (ruff_project / "short.py").write_text("x = 1\n", encoding="utf-8")
+    loose = scratch / "loose.py"
+    loose.write_text(long_korean, encoding="utf-8")
     return {
         "ROOT": ROOT.as_posix(),
         "MAIN_REPO": main_repo.as_posix(),
@@ -271,6 +288,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "KOREAN_HEREDOC_45": korean_heredoc,
+        "RUFF_PROJECT": ruff_project.as_posix(),
+        "LOOSE_PY": loose.as_posix(),
     }
 
 

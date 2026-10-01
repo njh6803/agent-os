@@ -1,0 +1,159 @@
+# tools/hook_ruff_line_width.py 의 규칙 하나씩을 뺀 변이(대기열 53).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/ruff_line_width_mutations.toml
+# 테스트는 실제 ruff 를 돌린다. 마지막 하나는 초록 기대다 — 확장자 검사는 판정이 아니라 ruff 를 띄우지 않는 비용이다.
+
+[[mutation]]
+name = "조상에 ruff 설정이 있는 파일만 본다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+    if not ruff_governs(path):
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "tool.ruff 표가 없는 pyproject 는 지나친다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = 'RUFF_TABLE = re.compile(r"^\s*\[tool\.ruff[\].]", re.MULTILINE)'
+new = 'RUFF_TABLE = re.compile(r"", re.MULTILINE)'
+
+[[mutation]]
+name = "tool.ruff 의 하위 표만 있어도 설정이다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = 'RUFF_TABLE = re.compile(r"^\s*\[tool\.ruff[\].]", re.MULTILINE)'
+new = 'RUFF_TABLE = re.compile(r"^\s*\[tool\.ruff\]", re.MULTILINE)'
+
+[[mutation]]
+name = "ruff.toml 도 설정이다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = 'RUFF_CONFIG_FILES = (".ruff.toml", "ruff.toml")'
+new = 'RUFF_CONFIG_FILES = (".ruff.toml",)'
+
+[[mutation]]
+name = "설정의 선택과 ignore 를 따른다(--select 를 주지 않는다)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+                "--force-exclude",
+'''
+new = '''
+                "--force-exclude",
+                "--select",
+                "E501",
+'''
+
+[[mutation]]
+name = "설정의 제외를 따른다(--force-exclude)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+                "--force-exclude",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "E501 이 아닌 진단(다른 규칙, 문법 오류)을 거른다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+        if diagnostic["code"] != "E501":
+            continue
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "ruff 의 빈 출력(깨진 설정)에 조용히 지나간다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+    except json.JSONDecodeError:
+        return []
+'''
+new = '''
+    except OSError:
+        return []
+'''
+
+[[mutation]]
+name = "캐시를 쓰지 않는다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+                "--no-cache",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "Write 와 Edit 만 본다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '    if tool_name not in ("Write", "Edit"):'
+new = '    if tool_name == "":'
+
+[[mutation]]
+name = "앞의 열 줄만 적는다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '    shown = ", ".join(f"{row}행 {width}" for row, width in lines[:SHOWN])'
+new = '    shown = ", ".join(f"{row}행 {width}" for row, width in lines)'
+
+[[mutation]]
+name = "적지 않은 나머지를 센다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '    rest = f" 외 {len(lines) - SHOWN}줄" if len(lines) > SHOWN else ""'
+new = '    rest = f" 외 {len(lines)}줄" if len(lines) > SHOWN else ""'
+
+[[mutation]]
+name = "메시지에서 폭만 뗀다"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '            (diagnostic["location"]["row"], width.group(1) if width else diagnostic["message"])'
+new = '            (diagnostic["location"]["row"], diagnostic["message"])'
+
+[[mutation]]
+name = "확장자 검사는 비용이다(ruff 도 .md 를 지나친다)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+    if path.suffix not in PYTHON_SUFFIXES:
+        return None
+'''
+new = '''
+'''

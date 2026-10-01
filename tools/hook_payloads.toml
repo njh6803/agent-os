@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} 는 러너가 채운다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
@@ -170,6 +170,25 @@ hook = "hook_journal_retro.py"
 expect = "silent"
 note = "일지가 아닌 파일"
 payload = { tool_name = "Write", tool_input = { file_path = "docs/adr/0018-x.md", content = "## 다음" } }
+
+# --- hook_ruff_line_width (PostToolUse Write|Edit) ---
+[[case]]
+hook = "hook_ruff_line_width.py"
+expect = "context"
+note = "글자 수로는 짧은 한글 줄의 E501"
+payload = { tool_name = "Edit", tool_input = { file_path = "${RUFF_PROJECT}/long.py", new_string = "# 가" } }
+
+[[case]]
+hook = "hook_ruff_line_width.py"
+expect = "silent"
+note = "줄이 모두 짧은 파이썬 Edit"
+payload = { tool_name = "Edit", tool_input = { file_path = "${RUFF_PROJECT}/short.py", new_string = "x = 1" } }
+
+[[case]]
+hook = "hook_ruff_line_width.py"
+expect = "silent"
+note = "ruff 설정 밖의 스크래치 스크립트 — 러너의 cwd 는 이 저장소라 설정을 보지 않으면 발동한다"
+payload = { tool_name = "Write", tool_input = { file_path = "${LOOSE_PY}", content = "# 가" } }
 
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]
