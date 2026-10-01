@@ -14,7 +14,7 @@ Use /tdd where possible, at pre-agreed seams.
 
 이 티켓의 체크박스가 요구하는 것만 쓴다. 다음 티켓에 걸릴 것(형제 티켓이 붙일 라우트의 독스트링, "재개 라우트도 같다" 같은 미래형 문장)은 그 티켓 파일의 메모로 넘긴다. 세 번 명세 축 리뷰가 잡아 한 바퀴씩 들었다(대기열 35).
 
-의존성을 더하거나 올리면 설치된 판을 명세·ADR이 근거로 든 측정의 판(프로브 README가 적는다)과 견준다. major가 다르면 그 측정을 다시 돌린다. 명세가 msw 2.15.0의 프로브에서 옮긴 옵션이 설치된 3.0.0에서 이름과 뜻이 달랐다(대기열 61, 규약은 `docs/agents/issue-tracker.md`의 프로브와 근거 절).
+의존성을 더하거나 올리면 설치된 판을 명세·ADR이 근거로 든 측정의 판(그 프로브의 README 줄)과 견준다. major가 다르면 그 측정을 다시 돌린다(대기열 61, 규약은 `docs/agents/issue-tracker.md`의 프로브와 근거 절).
 
 Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
 
