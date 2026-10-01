@@ -95,7 +95,7 @@ def is_written(body: str) -> bool:
 
 def retro_recorded(journal: str) -> bool:
     """자리 표시가 아닌 회고 절이 하나라도 있는가. 날짜를 붙인 회고 절이 더해질 수 있어 첫 절만
-    보지 않는다(PR #113 CodeRabbit)."""
+    보지 않는다."""
     return any(
         is_written(_body_after(journal, found.end())) for found in RETRO_HEADING.finditer(journal)
     )
