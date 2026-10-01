@@ -1,0 +1,253 @@
+# tools/hook_journal_retro.py 의 새 판정(대기열 62·74, 회고 절)과 변이 파일 읽힘 테스트(대기열 73)의 규칙 하나씩을 뺀 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/retro_hook_mutations.toml
+# 훅의 main 이 old_string 과 일지 파일을 넘기는 것은 순수 함수 테스트 밖이라 페이로드 표(tools/run_hooks.py)로 잰다.
+# 그 러너의 판정은 pytest 의 것(종료 0 초록, 1 빨강)을 빌린다. run_hooks 는 어긋남이 있으면 1 로 끝나지만 잡히지 않은
+# 예외도 1 이라, 빨강이 어긋남인지는 결과의 요약 줄("어긋남 N건")로 본다.
+
+[runner.hooks]
+command = ["uv", "run", "--no-sync", "python", "tools/run_hooks.py"]
+judge = "pytest"
+
+[[mutation]]
+name = "줄 머리의 다음 제목만 본다(코드 스팬은 제목이 아니다)"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''CLOSING_HEADING = re.compile(r"^## 다음[ \t\r]*$", re.MULTILINE)'''
+new = '''CLOSING_HEADING = re.compile(r"## 다음", re.MULTILINE)'''
+
+[[mutation]]
+name = "다음 제목 줄 끝의 공백은 제목이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''CLOSING_HEADING = re.compile(r"^## 다음[ \t\r]*$", re.MULTILINE)'''
+new = '''CLOSING_HEADING = re.compile(r"^## 다음\r*$", re.MULTILINE)'''
+
+[[mutation]]
+name = "다음 제목 줄 끝의 CR 은 제목이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''CLOSING_HEADING = re.compile(r"^## 다음[ \t\r]*$", re.MULTILINE)'''
+new = '''CLOSING_HEADING = re.compile(r"^## 다음[ \t]*$", re.MULTILINE)'''
+
+[[mutation]]
+name = "절은 뒤의 제목에서 끝난다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    return (rest[: end.start()] if end else rest).strip()'''
+new = '''    return rest.strip()'''
+
+[[mutation]]
+name = "# 제목에서도 절이 끝난다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''SECTION_END = re.compile(r"^#{1,2} ", re.MULTILINE)'''
+new = '''SECTION_END = re.compile(r"^## ", re.MULTILINE)'''
+
+[[mutation]]
+name = "### 하위 제목은 절 안이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''SECTION_END = re.compile(r"^#{1,2} ", re.MULTILINE)'''
+new = '''SECTION_END = re.compile(r"^#+ ", re.MULTILINE)'''
+
+[[mutation]]
+name = "괄호 한 줄은 자리 표시다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    return any(not PLACEHOLDER.match(line) for line in lines)'''
+new = '''    return any(True for line in lines)'''
+
+[[mutation]]
+name = "불릿의 괄호 한 줄도 자리 표시다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（][^()（）]*[)）]$")'''
+new = '''PLACEHOLDER = re.compile(r"^[(（][^()（）]*[)）]$")'''
+
+[[mutation]]
+name = "전각 괄호도 자리 표시다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（][^()（）]*[)）]$")'''
+new = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(][^()（）]*[)]$")'''
+
+[[mutation]]
+name = "괄호로 닫히지 않은 줄은 내용이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（][^()（）]*[)）]$")'''
+new = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（].*$")'''
+
+[[mutation]]
+name = "괄호 안에 괄호가 든 줄은 내용이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（][^()（）]*[)）]$")'''
+new = '''PLACEHOLDER = re.compile(r"^(?:[-*] +)?[(（].*[)）]$")'''
+
+[[mutation]]
+name = "빈 절은 쓴 것이 아니다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    return any(not PLACEHOLDER.match(line) for line in lines)'''
+new = '''    return all(not PLACEHOLDER.match(line) for line in lines)'''
+
+[[mutation]]
+name = "Edit 가 앞뒤에 같은 절을 옮겼으면 침묵한다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+    if previous is not None and section_body(previous, CLOSING_HEADING) == closing:
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "끝 줄바꿈의 차이는 같은 절이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    return (rest[: end.start()] if end else rest).strip()'''
+new = '''    return rest[: end.start()] if end else rest'''
+
+[[mutation]]
+name = "일지에 회고 절이 이미 있으면 침묵한다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+    if journal is not None:
+        retro = section_body(journal, RETRO_HEADING)
+        if retro is not None and is_written(retro):
+            return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "비었거나 자리 표시뿐인 회고 절은 회고가 아니다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''        if retro is not None and is_written(retro):'''
+new = '''        if retro is not None:'''
+
+[[mutation]]
+name = "줄 머리의 회고 제목만 본다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''RETRO_HEADING = re.compile(r"^## 회고(?:[ \t].*)?\r?$", re.MULTILINE)'''
+new = '''RETRO_HEADING = re.compile(r"## 회고", re.MULTILINE)'''
+
+[[mutation]]
+name = "덧붙인 회고 제목도 회고다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''RETRO_HEADING = re.compile(r"^## 회고(?:[ \t].*)?\r?$", re.MULTILINE)'''
+new = '''RETRO_HEADING = re.compile(r"^## 회고\r?$", re.MULTILINE)'''
+
+[[mutation]]
+name = "회고로 시작하는 다른 제목은 회고가 아니다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''RETRO_HEADING = re.compile(r"^## 회고(?:[ \t].*)?\r?$", re.MULTILINE)'''
+new = '''RETRO_HEADING = re.compile(r"^## 회고.*\r?$", re.MULTILINE)'''
+
+[[mutation]]
+name = "회고 제목 줄 끝의 CR 은 제목이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''RETRO_HEADING = re.compile(r"^## 회고(?:[ \t].*)?\r?$", re.MULTILINE)'''
+new = '''RETRO_HEADING = re.compile(r"^## 회고(?:[ \t].*)?$", re.MULTILINE)'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 일지는 읽지 못한 것이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    except (OSError, UnicodeDecodeError):'''
+new = '''    except OSError:'''
+
+[[mutation]]
+name = "없는 일지는 읽지 못한 것이다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    except (OSError, UnicodeDecodeError):'''
+new = '''    except UnicodeDecodeError:'''
+
+[[mutation]]
+name = "main 이 Edit 의 old_string 을 넘긴다"
+runner = "hooks"
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''        text, previous = tool_input.get("new_string"), tool_input.get("old_string")'''
+new = '''        text, previous = tool_input.get("new_string"), None'''
+
+[[mutation]]
+name = "main 이 쓰기 뒤의 일지를 읽어 넘긴다"
+runner = "hooks"
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''    journal = read_journal(file_path) if is_journal(file_path) else None'''
+new = '''    journal = None'''
+
+[[mutation]]
+name = "변이 파일 형식이 바뀌면 커밋된 파일이 읽히지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "변이_파일은_지금의"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    tests: list[str] = Field(default_factory=list[str])'''
+new = '''    targets: list[str] = Field(default_factory=list[str])'''
+
+[[mutation]]
+name = "변이 파일을 하위 디렉터리까지 찾는다"
+tests = ["tests/tools/test_mutate.py", "-k", "변이_파일은_지금의"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_mutate.py"
+old = '''    경로들 = sorted(ROOT.glob(".scratch/**/*_mutations.toml"))'''
+new = '''    경로들 = sorted(ROOT.glob(".scratch/*_mutations.toml"))'''

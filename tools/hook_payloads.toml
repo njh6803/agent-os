@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
@@ -170,6 +170,36 @@ hook = "hook_journal_retro.py"
 expect = "silent"
 note = "일지가 아닌 파일"
 payload = { tool_name = "Write", tool_input = { file_path = "docs/adr/0018-x.md", content = "## 다음" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "산문의 코드 스팬 `## 다음`(대기열 74)"
+payload = { tool_name = "Write", tool_input = { file_path = "docs/journal/2026-10-01-02-x.md", content = "# 일지\n\n## 잰 것\n\n- 임시 일지에\n  `## 다음`을 Write로, 이어서 Edit로 쓰자 둘 다 문구가 이 세션에 닿았다\n" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "자리 표시뿐인 '다음' 절(대기열 62, 원래 문구는 남지 않아 재구성)"
+payload = { tool_name = "Write", tool_input = { file_path = "docs/journal/2026-09-28-04-x.md", content = "# 일지\n\n## 한 것\n\n- 04\n\n## 다음\n\n(회고 뒤에 채운다)\n" } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "context"
+note = "회고 절이 없는 일지의 자리 표시를 채운 Edit"
+payload = { tool_name = "Edit", tool_input = { file_path = "${OPEN_JOURNAL}", old_string = "## 다음\n\n(회고 뒤에 채운다)", new_string = "## 다음\n\n- web-admin의 04가 다음이다." } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "회고 절이 이미 있는 일지에 '다음'을 채운 Edit(일지 2026-09-30-02)"
+payload = { tool_name = "Edit", tool_input = { file_path = "${CLOSED_JOURNAL}", old_string = "## 다음\n\n(회고 뒤에 채운다)", new_string = "## 다음\n\n- web-admin의 04가 다음이다." } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "다른 절을 적어 넣고 '다음' 절은 그대로 옮긴 Edit(대기열 62)"
+payload = { tool_name = "Edit", tool_input = { file_path = "${OPEN_JOURNAL}", old_string = "## 다음\n\n- web-admin의 04가 다음이다.", new_string = "## 한 것\n\n- 04\n\n## 다음\n\n- web-admin의 04가 다음이다." } }
 
 # --- hook_ruff_line_width (PostToolUse Write|Edit) ---
 [[case]]
