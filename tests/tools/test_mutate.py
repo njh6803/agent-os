@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from tools.mutate import (
+    ROOT,
     CommandResult,
     JudgeName,
     RestoreError,
@@ -23,6 +24,7 @@ from tools.mutate import (
     load_spec,
     main,
     measure,
+    read_spec,
     select,
 )
 
@@ -916,3 +918,21 @@ def test_main_은_테스트를_돌리지_못하면_3이고_변이는_되돌렸�
 
     assert code == 3
     assert path.read_bytes() == b"x = 1\n"
+
+
+# 커밋된 변이 파일. 도구의 형식이 바뀌면 옛 파일이 조용히 깨진다 — 2026-10-01 에 형식을
+# 넓히며 일곱을 손으로 `--check` 했다(대기열 73). 원문은 보지 않는다. 옛 프로브의 원문은
+# 코드가 바뀌면 썩어도 되고, 다시 돌 때 `--check` 가 알린다.
+
+
+def test_이_저장소의_변이_파일은_지금의_도구로_모두_읽힌다() -> None:
+    경로들 = sorted(ROOT.glob(".scratch/**/*_mutations.toml"))
+    문제: list[str] = []
+    for 경로 in 경로들:
+        try:
+            read_spec(경로)
+        except SpecError as error:
+            문제.append(f"{경로.relative_to(ROOT).as_posix()}: {error}")
+
+    assert 경로들, "변이 파일을 하나도 찾지 못했다. glob 이 아무것도 재지 않는다"
+    assert 문제 == []

@@ -11,18 +11,12 @@ ruff 는 줄 길이를 폭으로 재고 한글은 폭 2다. 줄 길이 100에 �
 것이다 — ruff 는 조상에 설정이 없으면 실행 위치의 설정으로 떨어져(2026-10-01 실측), 스크래치
 스크립트에 저장소의 줄 길이를 들이댄다.
 
-ruff 는 설정을 그대로 따르게 부른다. `--select` 를 주면 설정의 `select`·`ignore` 를
-덮고, `--force-exclude` 가 없으면 이름으로 넘긴 파일에 `exclude` 가 듣지 않는다(셀프
-리뷰가 잡았다). 그래서 설정이 고른 규칙이 다 오고, 그중 E501 만 남긴다. import 를 먼저
-쓰고 쓰는 자리를 다음 Edit 로 붙이는 동안의 F401 처럼 편집 순서가 잠깐 만드는 위반을
-편집마다 울리면, 세션이 이 계기를 무시하는 법을 배운다(hook_journal_retro 의 교훈). 줄
-길이는 그 줄 하나의 성질이라 순서와 무관하다. ruff 는 이 훅을 돌리는 파이썬의 `-m ruff`
-로 부른다 — 훅은 표준 라이브러리만 import 한다(.claude/rules/tools.md). 캐시를 쓰지
-않는다(`--no-cache`, 쓰면 `.ruff_cache` 가 생긴다). 파일을 고치지 않는다 — `fix` 는
-파일의 조상이 아니라 실행 위치(세션 위치)의 설정에서 읽혀, `fix = true` 면 다음 Edit 에서
-쓸 import 를 F401 수정이 지우고, `fix-only = true` 는 `--no-fix` 로도 꺼지지 않고 고친 뒤
-진단까지 숨긴다(PR #111 CodeRabbit, 2026-10-01 실측). 그래서 `--no-fix` 와 `--no-fix-only`
-둘이다. 비용은 .claude/rules/tools.md 의 실측 줄에 있다.
+ruff 는 설정을 그대로 따르게 부르고 파일을 고치지 않는다. 플래그마다의 이유는
+`ruff_diagnostics` 의 인자 옆에 있다. 설정이 고른 규칙이 다 오고, 그중 E501 만 남긴다.
+import 를 먼저 쓰고 쓰는 자리를 다음 Edit 로 붙이는 동안의 F401 처럼 편집 순서가 잠깐
+만드는 위반을 편집마다 울리면, 세션이 이 계기를 무시하는 법을 배운다(hook_journal_retro 의
+교훈). 줄 길이는 그 줄 하나의 성질이라 순서와 무관하다. 비용은 .claude/rules/tools.md 의
+실측 줄에 있다.
 
 못 보는 것: `ruff format` 이 감을 코드 줄과 문자열·주석의 줄을 가르지 않는다(둘 다 알린다 — 코드
 줄은 커밋 전 format 이 감는다). `# noqa: E501` 은 ruff 가 지나친다. `[tool]` 아래 점 키
@@ -93,19 +87,29 @@ def ruff_governs(path: Path) -> bool:
     return False
 
 
-def long_lines(path: Path) -> list[tuple[int, str]]:
-    """ruff E501 이 잡은 줄의 (행, 폭). 폭은 "102 > 100" 꼴이고, 메시지가 그 꼴이 아니면 메시지
-    그대로다. ruff 가 돌지 못하면 빈 목록이다(fail-open)."""
+def ruff_diagnostics(path: Path) -> list[_Diagnostic]:
+    """`path` 의 ruff 진단 전부. ruff 가 돌지 못하면 빈 목록이다(fail-open)."""
     try:
         result = subprocess.run(
             [
+                # 이 훅을 돌리는 파이썬의 ruff 다. 훅은 표준 라이브러리만 import 한다
+                # (.claude/rules/tools.md).
                 sys.executable,
                 "-m",
                 "ruff",
                 "check",
+                # 파일을 고치지 않는다. 플래그가 둘인 까닭: `fix` 는 파일의 조상이 아니라 실행
+                # 위치(세션 위치)의 설정에서 읽혀, `fix = true` 면 다음 Edit 에서 쓸 import 를
+                # F401 수정이 지우고, `fix-only = true` 는 `--no-fix` 로도 꺼지지 않고 고친 뒤
+                # 진단까지 숨긴다(PR #111 CodeRabbit 의 `fix = true` 지적, 일지 2026-10-01-02).
+                # 실행 위치를 옮긴 테스트
+                # `test_실행_위치의_설정이_자동_수정을_켜도_파일을_고치지_않는다` 가 잰다.
                 "--no-fix",
                 "--no-fix-only",
+                # 쓰면 `.ruff_cache` 가 생긴다.
                 "--no-cache",
+                # 없으면 이름으로 넘긴 파일에 설정의 `exclude` 가 듣지 않는다. `--select` 는
+                # 주지 않는다 — 설정의 `select`·`ignore` 를 덮는다(둘 다 셀프 리뷰가 잡았다).
                 "--force-exclude",
                 "--output-format",
                 "json",
@@ -122,9 +126,14 @@ def long_lines(path: Path) -> list[tuple[int, str]]:
         diagnostics: list[_Diagnostic] = json.loads(result.stdout.decode("utf-8", "replace"))
     except json.JSONDecodeError:
         return []
+    return diagnostics
+
+
+def e501_lines(diagnostics: list[_Diagnostic]) -> list[tuple[int, str]]:
+    """E501 진단의 (행, 폭). 폭은 "102 > 100" 꼴이고, 메시지가 그 꼴이 아니면 메시지 그대로다.
+    설정이 고른 다른 규칙과 문법 오류(`invalid-syntax`)는 편집 중간의 상태일 수 있어 거른다."""
     lines: list[tuple[int, str]] = []
     for diagnostic in diagnostics:
-        # 설정이 고른 다른 규칙과 문법 오류(`invalid-syntax`)는 편집 중간의 상태일 수 있다.
         if diagnostic["code"] != "E501":
             continue
         width = WIDTH.search(diagnostic["message"])
@@ -157,7 +166,7 @@ def context_for(tool_name: str, file_path: str) -> str | None:
         return None
     if not ruff_governs(path):
         return None
-    lines = long_lines(path)
+    lines = e501_lines(ruff_diagnostics(path))
     return summary(file_path, lines) if lines else None
 
 
