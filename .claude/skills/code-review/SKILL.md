@@ -3,7 +3,7 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 줄(대기열 20, 15회차), 6단계 4의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 줄(대기열 20, 15회차. 근거 문장의 종류는 대기열 45), 6단계 4의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
@@ -74,7 +74,7 @@ If the diff touches no source file (no `*.py` under `src/`, `tests/`, `tools/`; 
 - The full diff command, the untracked file list, and the commit list.
 - The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
-- 두 축 모두에 넣는 **주장 검증** 줄(대기열 20, 15회차까지의 처방): "diff가 담은 문서·주석·독스트링·ADR의 사실 주장을 하나하나 잰다. 수를 세어 닫는 주장('둘뿐', '유일하다', '전부')과 보편 주장('~은 ~가 아니다')은 반례를 찾아 민다. **모든** 따옴표 인용은 원문과 글자 그대로인지 grep으로 본다 — 목록으로 주면 목록 밖은 운이다. 계약 변경이 거짓으로 만드는 문장은 옛 말이 아니라 바뀐 값으로 grep한다. 틈을 닫는 티켓은 앞 티켓이 미래형으로 쓴 문장('다음 티켓', '판정 티켓')을 grep한다. 잔존 grep은 옛 결정의 논증이 쓴 말도 찾는다. 근거를 찾을 때는 그 근거가 쓰일 수 있는 말들로 grep한다('프로브'만이 아니라 '실측'·'쟀다'). 변경을 세는 기점은 날짜가 아니라 커밋이다." 밀 주장은 브리프에 나열하되 "나열 밖도 잰다"를 붙인다.
+- 두 축 모두에 넣는 **주장 검증** 줄(대기열 20, 15회차까지의 처방. 근거 문장의 종류는 대기열 45): "diff가 담은 문서·주석·독스트링·ADR의 사실 주장을 하나하나 잰다. 수를 세어 닫는 주장('둘뿐', '유일하다', '전부')과 보편 주장('~은 ~가 아니다')은 반례를 찾아 민다. **모든** 따옴표 인용은 원문과 글자 그대로인지 grep으로 본다 — 목록으로 주면 목록 밖은 운이다. 계약 변경이 거짓으로 만드는 문장은 옛 말이 아니라 바뀐 값으로 grep한다. 틈을 닫는 티켓은 앞 티켓이 미래형으로 쓴 문장('다음 티켓', '판정 티켓')을 grep한다. 잔존 grep은 옛 결정의 논증이 쓴 말도 찾는다. 근거를 찾을 때는 그 근거가 쓰일 수 있는 말들로 grep한다('프로브'만이 아니라 '실측'·'쟀다'). 근거 문장은 종류를 본다. '쟀다'·'실측'이 프로브를 가리키면 그 스크립트가 그 항목을 실제로 재는지 코드로 확인하고, 손으로 본 것·코드를 읽은 것·어림이 측정처럼 적혔으면 낸다. 변경을 세는 기점은 날짜가 아니라 커밋이다." 밀 주장은 브리프에 나열하되 "나열 밖도 잰다"를 붙인다.
 
 **Spec sub-agent prompt** should include:
 

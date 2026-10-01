@@ -82,7 +82,7 @@
 - 맨 `python`은 프로젝트 인터프리터가 아니다(스토어 스텁이거나 pyenv shim). 언제나 `uv run python`. Bash에서는 훅이 막는다.
 - 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다. 워크트리 세션에서는 데스크톱 앱의 가드가 `git`이 든 복합 명령(파이프·서브셸·`$(…)`)을 거부한다. 단순 명령 하나로, 또는 스크립트 파일로 나눈다.
 - 파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 명령의 종료 코드다. 판정 명령은 파이프·체인 없이 돌린다. 훅이 경고한다.
-- 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(세 번 겪었다). pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
+- 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(되풀이해 겪었다). 탐침은 실제 호출과 같은 실행 위치·환경으로 돈다. 실행 위치가 다르자 ruff가 그 프로젝트의 `fix` 설정을 읽지 않았다. pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
 - 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다.
 
 ## 원칙
@@ -90,6 +90,6 @@
 
 ## Agent skills
 ### Issue tracker
-이슈와 명세는 `.scratch/<feature-slug>/` 아래 로컬 마크다운이고, 명세·ADR·코드 주석이 근거로 드는 프로브는 그 아래 `probes/`에 커밋한다. `docs/agents/issue-tracker.md` 참조.
+이슈와 명세는 `.scratch/<feature-slug>/` 아래 로컬 마크다운이고, 명세·ADR·코드 주석이 근거로 드는 프로브는 그 아래 `probes/`에 커밋한다. `docs/agents/issue-tracker.md` 참조. 근거 문장(쟀다·실측·수치)을 쓸 때는 그 문서의 프로브와 근거 절을 따른다.
 ### Domain docs
 단일 컨텍스트. 루트 `CONTEXT.md`와 `docs/adr/`. `docs/agents/domain.md` 참조.

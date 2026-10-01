@@ -4,7 +4,7 @@ description: "Turn the current conversation into a spec and publish it to the pr
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 3단계의 측정 규칙(대기열 38), Implementation Decisions 의 경로 규칙을 저장소 관행에 맞춘 것(대기열 30), Out of Scope 의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 3단계의 측정 규칙(대기열 38, 측정이 가는 범위는 61), Implementation Decisions 의 경로 규칙을 저장소 관행에 맞춘 것(대기열 30), Out of Scope 의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
@@ -20,7 +20,7 @@ Check with the user that these seams match their expectations.
 
 3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
 
-   명세가 측정을 다음 단계에 넘기려 하면("구현 티켓이 잰다", "실패한다면 무엇을 할지는 이력으로 제안한다") 그 결과가 새 결정을 낳을 수 있는지 먼저 본다. 낳을 수 있으면 그 자리에서 잰다. 설계의 ADR이 넘긴 측정도 명세가 받는 자리에서 잰다. 넘기면 티켓이 구현 도중 ADR 승인을 기다리며 멈춘다(대기열 38, 두 번 다 명세 검토가 재고서야 ADR 이력이 됐다). 프로브는 `.scratch/<slug>/probes/`에 커밋한다(`docs/agents/issue-tracker.md`).
+   명세가 측정을 다음 단계에 넘기려 하면("구현 티켓이 잰다", "실패한다면 무엇을 할지는 이력으로 제안한다") 그 결과가 새 결정을 낳을 수 있는지 먼저 본다. 낳을 수 있으면 그 자리에서 잰다. 설계의 ADR이 넘긴 측정도 명세가 받는 자리에서 잰다. 넘기면 티켓이 구현 도중 ADR 승인을 기다리며 멈춘다(대기열 38, 두 번 다 명세 검토가 재고서야 ADR 이력이 됐다). 명세가 재거나 설계에서 받아 쓰는 측정은 명세의 범위까지 간다. 그것을 쓰는 코드가 타입 검사와 실행을 지나는 데까지, 명세가 받을 입력 전부(상류를 IPv4와 `::1`로 받으면 둘 다)까지, 설치할 판으로 잰다. 설계의 측정이 그만큼 가지 않았으면 그 자리에서 다시 잰다(대기열 61). 프로브를 두는 자리와 근거 문장의 종류(쟀다, 손으로 봤다, 코드를 읽었다, 어림)는 `docs/agents/issue-tracker.md`의 프로브와 근거 절이다.
 
 <spec-template>
 
