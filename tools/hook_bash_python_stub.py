@@ -6,13 +6,29 @@ CLAUDE.md 환경 함정 "맨 `python`은 프로젝트 인터프리터가 아니�
 PC 마다 다르다 — Windows 스토어 스텁이면 "Python" 한 줄만 찍고 종료 코드 0 으로 조용히 끝나고,
 pyenv shim 이면 프로젝트가 아닌 다른 버전이 돈다(2026-09-28 실측, 이 PC 는 3.11.9 shim).
 어느 쪽이든 `.venv` 의 인터프리터가 아니라 검사가 엉뚱한 환경에서 돈다. 이 훅은 Windows 밖에서도
-뜻이 있다. 못 보는 것: 활성화된 venv 의 python(그때는 맞는 인터프리터인데 막는다 — 거짓 양성),
-PowerShell 도구(매처가 Bash 다).
+뜻이 있다.
 
 명령어 자리의 `python`, `python3`, `python3.12` 만 본다. 명령어 자리는 명령의 시작, 파이프·연결·
 세미콜론·서브셸 뒤, 그리고 `do`·`then` 같은 셸 키워드 뒤이고, 그 앞의 환경변수 대입은 건너뛴다.
-`uv run python` 은 `run` 뒤라 명령어 자리가 아니다. 인자나 문자열 안의 python 도, heredoc 본문의
-python 도 명령어 자리가 아니다. heredoc 본문은 heredoc 훅과 같은 규칙으로 벗긴다.
+`uv run python` 은 `run` 뒤라 명령어 자리가 아니고, 인자의 python(`echo python`)도 셸 키워드
+낱말 바로 뒤가 아니면 아니다. heredoc 본문은 heredoc 훅과 같은 규칙으로 벗긴다.
+
+따옴표는 풀지 않는다. 그래서 따옴표 안이라도 분리자·셸 키워드 뒤와 줄 머리의 python 은 명령어
+자리로 보고, 따옴표 바로 뒤의 python 은 보지 않는다. 설계한 경계가 아니라 따옴표를 풀지 않은
+결과다. 옛 독스트링은 문자열 안의 python 이 명령어 자리가 아니라고 적었다(대기열 82).
+`bash -c "cd tools; python x.py"` 처럼 셸이 실행할 것은 막지만 `sh -c "python x.py"` 는 놓치고,
+`echo "python x"` 는 맞게 지나가지만 `echo "a; python x"` 는 막는다.
+
+못 보는 것:
+- 활성화된 venv 의 python. 그때는 맞는 인터프리터인데 막는다(거짓 양성).
+- 컨테이너 안의 python. `docker run … -c "id -u; python --version"` 을 막았다(거짓 양성,
+  일지 2026-10-01-06). 따옴표 안의 분리자 뒤라서다. `docker run … python --version` 은 인자
+  자리라 지나간다.
+- 따옴표 안의 데이터가 분리자·키워드 뒤나 줄 머리에 둔 python. `echo "a; python x"`,
+  `git commit -m "fix: if python fails"`, 여러 줄 커밋 메시지의 줄 머리 python 을 막는다(거짓 양성).
+  키워드 낱말을 인자로 쓴 `echo if python` 도 같다.
+- 문자열 머리에서 실행되는 python(`sh -c "python x.py"`, 거짓 음성).
+- PowerShell 도구(매처가 Bash 다).
 """
 
 from __future__ import annotations

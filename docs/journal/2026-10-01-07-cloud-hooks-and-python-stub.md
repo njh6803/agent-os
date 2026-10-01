@@ -1,0 +1,75 @@
+# 2026-10-01 (07) 클라우드 세션의 PR 도구와 세션 제목, python 스텁 훅의 독스트링 — 대기열 79·81·82
+
+web-admin 뒤 하네스 chore 배치의 다음 묶음이다. 지시문은 일지 2026-10-01-06의 "다음"이 가리킨 next-session 지시문에서
+왔다. 브랜치는 `chore/cloud-hooks-and-python-stub`다. 데스크톱 앱 세션이 주 체크아웃에서 시작해 `EnterWorktree`로 만든
+워크트리에서 일했다. 세션 제목은 UserPromptSubmit 훅의 지시대로 브랜치 이름으로 바꿨고, 이 앱에서는 `self`가 통했다.
+
+> 사용자: ".scratch/retro-queue.md의 79·81·82(훅 셋)를 chore PR 하나로 반영한다"
+
+앞 PR의 끝을 여기 남긴다(일지 06에 없다). PR #115는 4회차(`db33ecc`, CI 초록) 뒤 `6add776`로 병합됐다. 4회차
+claude-review의 Nit 하나(`_restore`가 반복마다 `root.resolve()`를 부른다)는 작성자 재량이라 반영하지 않았다. CodeRabbit은
+4회차에 `7eeb132`부터 `db33ecc`까지 보고 지적이 없었다.
+
+## 자리를 정한 것
+
+- **79.** `tools/hook_pr_next_session.py`의 `MCP_TOOLS`와 `.claude/settings.json`의 매처에 `mcp__github__create_pull_request`·
+  `mcp__github__merge_pull_request`를 더했다. 사건의 원인은 두 목록 중 하나가 빠진 것이 아니라 둘 다 클라우드 이름을
+  몰랐던 것이지만, 둘이 따로 사는 한 다음 이름도 한쪽만 더해질 수 있다. 그래서 매처의 MCP 이름과 `MCP_TOOLS`가 같은
+  집합인지 보는 테스트를 더했다. `tools/run_hooks.py`는 훅 파일을 직접 불러 매처를 보지 않는다(그 독스트링의 "못 보는
+  것"). 훅 주석의 "못 보는 것"에는 claude.ai 커넥터로 붙인 GitHub(`mcp__<uuid>__…`)를 적었다. `KICKOFF.md`의 매처 서술도
+  "도구 둘"에서 "넷"으로 고치고, 바꿀 곳에 `MCP_TOOLS`를 더했다.
+- **81.** 계기 문구에 `self`가 거부되면 "이 세션의 ID 를 찾아 `self` 대신 넘긴다"를 더했다. 행은 `get_session`으로
+  얻는 구절을 적었지만, 데스크톱 앱의 `get_session`은 이 세션을 `self`로만 가리키고 `list_sessions`는 이 세션을 뺀다(도구
+  설명, open-session 4단계). 처음에는 둘을 길로 들었다가 셀프 리뷰 두 축이 모두 짚어, 도구를 들지 않고 막다른 길을 적는
+  쪽으로 바꿨다. 클라우드 세션이 ID를 어디서 얻었는지는 일지 05에 없다. 이 앱의 세션 검색으로 그 세션의 기록을 찾았지만
+  나오지 않았다. 같은 지시문으로 데스크톱에서 열렸다 끊긴 세션 하나만 나왔다. 페이로드 표에는 사례를 더하지 않았다. 러너는
+  계기의 유무만 보고 문구는 보지 않아, 같은 판정을 내는 사례가 이미 있다. 일지 06의 "다음"은 "셋 다" 표에 사례를 더한다고
+  적었다.
+- **82.** 동작은 바꾸지 않고 독스트링을 실제 동작에 맞췄다. 따옴표를 풀지 않으므로 따옴표 안이라도 분리자·셸 키워드 뒤와
+  줄 머리의 python은 명령어 자리로 보고, 따옴표 바로 뒤의 python은 보지 않는다. 설계한 경계가 아니라 그 결과다(옛 독스트링은
+  문자열 안의 python이 명령어 자리가 아니라고 적었다). "못 보는 것"을 항목으로 나눠 컨테이너 안의 python, 따옴표 안의 데이터,
+  문자열 머리에서 실행되는 python(거짓 음성)을 적었다. 테스트는 지금 동작을 고정하는 특성 테스트이고, 페이로드 표에는
+  같은 `docker run`의 두 모양(따옴표 안 `;` 뒤는 막고, 이미지 뒤 인자 자리는 지나간다)을 재구성해 더했다.
+
+## 잰 것
+
+- **매처 대조 테스트가 두 방향을 잡는다(프로브 `.scratch/harness/probes/cloud_hooks_mutations.toml`).** 빨강 기대 셋(훅이
+  클라우드 도구를 모른다, 훅에만 있다, 매처에만 있다)과 초록 기대 하나(셋째를 셀프 리뷰 전의 `<=` 대조로 재기)가 모두
+  기대대로였다. 구현 순서로도 빨강을 봤다. 테스트를 쓴 뒤 훅에만 이름을 더하자 대조 테스트가 빨갰고, 매처에 더하자 초록이 됐다.
+- **훅 입력의 세션 ID는 앱의 세션 ID가 아니다(손으로 봤다).** 이 세션의 트랜스크립트 파일 이름은 `59aeea28-…`이고
+  `get_session self`의 `sessionId`는 `local_0ca607c2-…`였다. 훅이 입력의 ID를 계기 문구에 넣는 길은 데스크톱에서는 틀린다.
+  클라우드에서 어떤지는 재지 않았다.
+- **python 스텁 훅이 따옴표 안의 키워드 뒤와 줄 머리도 막는다(스크래치 스크립트로 손으로 봤다).** 명세 축이 먼저 찾았고 같은
+  열 가지 모양으로 다시 봤다. `git commit -m "fix: if python fails"`, `echo "time python x"`, `echo if python`, 여러 줄
+  커밋 메시지의 줄 머리 python이 막혔고 `echo "python x"`, `sh -c "python x.py"`, `docker run --rm img python --version`은
+  지나갔다. 처음에는 탐침을 `uv run python -c "…"`로 치다가 훅이 그 명령을 막았다. 따옴표 안 탐침 목록의 `if python`이
+  명령어 자리로 읽힌 것이라, 찾던 거짓 양성이 그대로 났다.
+
+## 셀프 리뷰
+
+`/code-review`, base `6add776`, 수정 파일 8, 커밋 0, 미추적 0. 두 축 모두 기본 모델이다(`tools/`와 `tests/`의 파이썬이
+바뀌었다). 명세는 대기열 79·81·82 행이다.
+
+- **명세 축.** Major 하나: 81의 `list_sessions`는 이 세션을 빼고 `get_session`은 `self`로만 가리켜, 계기 문구가 실패할 길을
+  안내한다. Minor: 82의 독스트링이 키워드 뒤를 빠뜨렸다, 사건 인용에 `sh`가 끼었다(원문은 `docker run … -c`),
+  `KICKOFF.md`의 "도구 둘"이 잔존이다. Nit: 따옴표 뒤 테스트에 인자 자리 사례가 섞였다. 81의 표 사례를 뺀 판단은 맞다고 했다.
+- **표준 축.** 경성 위반은 없다. 같은 81과 82의 지적에 더해: 훅 주석의 "두 목록의 대조"가 한 방향(`<=`)만 본다, 커넥터
+  도구의 셋째 이름 모양이 "못 보는 것"에 없다, 테스트 이름 하나가 거짓 음성을 명세처럼 고정하고 다른 하나는 동작 원리를
+  이름에 넣었다(`CODING_STANDARDS.md`의 "테스트 이름은 행동 명세"), 표의 침묵 사례에 재구성 표기가 없다. 판단 사항:
+  테스트의 settings 스키마가 셋째 사본이다(Duplicated Code).
+- **고친 것.** 81의 문구와 독스트링, 그 테스트(도구 이름이 아니라 "`self` 대신 넘긴다"를 본다). 82의 원리 문장과 "못 보는
+  것", 인용, 테스트 이름과 배치. 79의 대조를 같음으로 바꾸고 주석을 좁혔다. 커넥터 모양, `KICKOFF.md`, 표의 재구성 표기.
+  `SETTINGS`는 `tools.run_hooks`에서 가져왔다.
+- **남긴 것.** 스키마 사본은 두었다. 다른 둘은 비공개 이름이라 pyright strict가 import를 막고, 테스트 하나를 위해 도구의
+  표면을 넓히지 않는다. 테스트 파일에 그 이유를 한 줄 적었다.
+
+## 검사
+
+- 리뷰 반영 뒤: `uv run pytest -q` 1153 passed(경고 3은 `tests/test_conftest.py`의 pytest-asyncio 설정 경고로 이번 변경과
+  무관하다), `uv run ruff check .`·`uv run ruff format --check .` 통과, `uv run pyright` 0 errors, `uv run lint-imports` 5 kept,
+  `tools/check_type_escapes.py`·`tools/check_instructions.py` 통과, `tools/run_hooks.py` 45건 어긋남 0. web과 `src/`를
+  바꾸지 않아 `pnpm -C web verify`와 `-m llm`은 돌리지 않았다.
+
+## 다음
+
+(회고 뒤에 채운다)

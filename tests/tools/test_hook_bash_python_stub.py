@@ -34,10 +34,30 @@ def test_환경변수_접두는_건너뛰고_명령어를_본다() -> None:
     assert bare_python_calls("PYTHONUTF8=1 python x.py") == ["python"]
 
 
-def test_인자나_문자열_안의_python은_명령이_아니다() -> None:
+def test_인자의_python은_명령이_아니다() -> None:
     assert bare_python_calls("echo python") == []
     assert bare_python_calls("grep -rn python src") == []
     assert bare_python_calls("ls .venv/Scripts/python.exe") == []
+    assert bare_python_calls("docker run --rm img python --version") == []
+
+
+def test_따옴표_안이라도_분리자와_키워드_뒤와_줄_머리의_python은_막는다() -> None:
+    """셸이 실행할 것도, 데이터인 것(거짓 양성)도, 컨테이너 안의 것(거짓 양성)도 같다.
+
+    대기열 82, 일지 2026-10-01-06.
+    """
+    assert bare_python_calls('bash -c "cd tools; python x.py"') == ["python"]
+    assert bare_python_calls('echo "a; python x"') == ["python"]
+    assert bare_python_calls('git commit -m "fix: if python fails"') == ["python"]
+    assert bare_python_calls('git commit -m "a\npython x"') == ["python"]
+    docker = 'docker run --rm --entrypoint sh img -c "id -u; python --version"'
+    assert bare_python_calls(docker) == ["python"]
+
+
+def test_문자열_머리의_python은_막지_않는다() -> None:
+    """데이터인 것은 맞게 지나가고, `sh -c` 가 실행할 것도 지나간다(거짓 음성)."""
+    assert bare_python_calls('echo "python x"') == []
+    assert bare_python_calls('sh -c "python x.py"') == []
 
 
 def test_셸_키워드_뒤의_python도_명령어_자리다() -> None:

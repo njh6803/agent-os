@@ -1,0 +1,48 @@
+# tools/hook_pr_next_session.py 의 클라우드 도구 이름(대기열 79)과, 그 이름을 settings.json 매처와 대조하는 테스트의
+# 두 방향을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/cloud_hooks_mutations.toml
+# 대기열 81·82는 계기 문구와 독스트링이라 변이로 재지 않는다. 82의 테스트는 지금 동작을 고정하는 특성 테스트다.
+
+[[mutation]]
+name = "훅이 클라우드 도구를 모른다(대기열 79의 사건)"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_next_session.py"
+old = '''
+    "mcp__github__create_pull_request": "create",
+    "mcp__github__merge_pull_request": "merge",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "훅만 알고 매처에는 없다(이름을 훅에만 더했다)"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''|mcp__github__create_pull_request|mcp__github__merge_pull_request",'''
+new = '''",'''
+
+[[mutation]]
+name = "매처만 알고 훅은 모른다(이름을 매처에만 더했다)"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''|mcp__github__merge_pull_request",'''
+new = '''|mcp__github__merge_pull_request|mcp__github__update_pull_request",'''
+
+[[mutation]]
+name = "셀프 리뷰 전의 한 방향 대조로는 매처에만 있는 이름이 지나간다"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "green"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''|mcp__github__merge_pull_request",'''
+new = '''|mcp__github__merge_pull_request|mcp__github__update_pull_request",'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_pr_next_session.py"
+old = '''    assert set(matchers[0].split("|")) - SHELL_TOOLS == set(MCP_TOOLS)'''
+new = '''    assert set(MCP_TOOLS) <= set(matchers[0].split("|"))'''
