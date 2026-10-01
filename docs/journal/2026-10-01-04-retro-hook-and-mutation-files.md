@@ -108,6 +108,10 @@ PR #113. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
   Minor: `context_for`의 `None` 둘이 "Write라 앞 본문이 없다"와 "일지를 읽지 못했다"를 한 값으로 뭉친다 — 리뷰가 동작은
   맞고 조건이 더 늘면 값 객체나 함수 둘로 가르라며 후속을 허용해 두었다. Nit: `retro_recorded` 독스트링의 리뷰 출처를 지우고
   규칙의 이유만 남겼다.
+- **3회차**(`53eebcb`). CodeRabbit 재요청은 다시 한도 초과였고, 2회차의 스레드 답글에 CodeRabbit이 `517123c`를 읽고 고침을
+  확인했다고 답했다(대기열 41의 모양). claude-review는 Nit 둘. `main`이 `is_journal`로 먼저 거르고 `context_for`가 같은
+  조건을 다시 본다 — 읽기가 먼저라는 이유를 주석으로 남겼다. `is_written`을 `has_content` 같은 이름으로 — 독스트링과 이
+  일지가 자리 표시와 대비해 "쓴 절"이라 부르는 어휘와 맞아 두었다(리뷰도 후속을 허용했다).
 
 ## 회고
 

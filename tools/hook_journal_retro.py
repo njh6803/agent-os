@@ -141,6 +141,7 @@ def main() -> int:
         text, previous = tool_input.get("content"), None
     else:
         text, previous = tool_input.get("new_string"), tool_input.get("old_string")
+    # 일지가 아닌 파일은 읽지 않는다. context_for 도 같은 조건으로 거르지만 읽기가 그보다 먼저다.
     journal = read_journal(file_path) if is_journal(file_path) else None
     context = context_for(tool_name, file_path, text, previous, journal)
     if context is None:
