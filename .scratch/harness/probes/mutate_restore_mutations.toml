@@ -1,0 +1,117 @@
+# tools/mutate.py 의 되돌림 가드(대기열 77)에서 규칙 하나씩을 뺀다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_restore_mutations.toml
+
+[[mutation]]
+name = "가드를 뺀다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            if path in written and path.read_bytes() != written[path]:'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "다른 쓰기를 알리고도 덮는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+                continue
+            path.write_bytes(original)'''
+new = '''
+            path.write_bytes(original)'''
+
+[[mutation]]
+name = "다른 쓰기를 알리지 않고 건너뛴다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''                stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
+'''
+new = ''''''
+
+[[mutation]]
+name = "되돌릴 파일로 적은 편집 파일도 본다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            if path not in rewritable:
+                written[path] = mutated'''
+new = '''
+            written[path] = mutated'''
+
+[[mutation]]
+name = "쓰기 전에 쓴 것으로 적는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            path.write_bytes(mutated)
+            _drop_bytecode(path)
+            if path not in rewritable:
+                written[path] = mutated'''
+new = '''
+            if path not in rewritable:
+                written[path] = mutated
+            path.write_bytes(mutated)
+            _drop_bytecode(path)'''
+
+[[mutation]]
+name = "쓰기에 성공한 파일만 쥔다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    held = {path: original for path, (original, _) in files.items()}'''
+new = '''
+    held: dict[Path, bytes] = {}'''
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            _drop_bytecode(path)
+            if path not in rewritable:'''
+new = '''
+            _drop_bytecode(path)
+            held.setdefault(path, files[path][0])
+            if path not in rewritable:'''
+
+# 위 변이를, 쓰다 만 앞부분을 남기지 않는 리뷰 전의 테스트로 잰다. 그 테스트로는 지나간다.
+[[mutation]]
+name = "쓰기에 성공한 파일만 쥔다(앞부분 없는 테스트)"
+tests = ["tests/tools/test_mutate.py"]
+expect = "green"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    held = {path: original for path, (original, _) in files.items()}'''
+new = '''
+    held: dict[Path, bytes] = {}'''
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            _drop_bytecode(path)
+            if path not in rewritable:'''
+new = '''
+            _drop_bytecode(path)
+            held.setdefault(path, files[path][0])
+            if path not in rewritable:'''
+
+[[mutation.edit]]
+file = "tests/tools/test_mutate.py"
+old = '''lambda data: data == b"a = 2\n", 남는_앞부분=3)'''
+new = '''lambda data: data == b"a = 2\n")'''

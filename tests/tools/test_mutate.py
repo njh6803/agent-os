@@ -9,7 +9,6 @@ Playwright 의 `list` 리포터, 일지 2026-10-01-01). 색 코드를 넣거나 
 
 from __future__ import annotations
 
-import stat
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -750,13 +749,38 @@ def test_되돌릴_파일이_없거나_저장소_밖이면_변이_파일_오류�
         measure(load_spec(변이), root=root, runner=_부르면_안_되는_러너, out=lambda _: None)
 
 
-def _잠그는_러너(잠글_파일: Path, 표지: bytes) -> 러너:
-    """변이가 든 동안 파일을 읽기 전용으로 바꿔, 되돌리는 쓰기가 `PermissionError` 가 되게 한다."""
+def _쓰기를_막는다(
+    monkeypatch: pytest.MonkeyPatch,
+    막을_파일: Path,
+    막을_때: Callable[[bytes], bool],
+    *,
+    남는_앞부분: int = 0,
+) -> None:
+    """그 파일에 `막을_때` 가 참인 바이트를 쓰면 앞의 `남는_앞부분` 바이트만 쓰고(0 이면 아무것도
+    쓰지 않고) `PermissionError` 를 낸다.
+
+    권한(`chmod` 읽기 전용)으로 막으면 root(uid 0)는 쓰기가 통해, 클라우드 컨테이너에서 되돌림 실패
+    테스트 셋이 빨갰다(대기열 80, `.scratch/harness/probes/mutate_as_root.sh`).
+    """
+    원래_쓰기 = Path.write_bytes
+
+    def 막힌_쓰기(self: Path, data: bytes) -> int:
+        if self.resolve() == 막을_파일.resolve() and 막을_때(data):
+            if 남는_앞부분:
+                원래_쓰기(self, data[:남는_앞부분])
+            raise PermissionError(13, "쓰기를 막았다", str(self))
+        return 원래_쓰기(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", 막힌_쓰기)
+
+
+def _잠그는_러너(잠글_파일: Path, 표지: bytes, monkeypatch: pytest.MonkeyPatch) -> 러너:
+    """변이가 든 동안 그 파일의 쓰기를 막아, 되돌리는 쓰기가 `PermissionError` 가 되게 한다."""
 
     def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
         if 표지 not in 잠글_파일.read_bytes():
             return _초록
-        잠글_파일.chmod(stat.S_IREAD)
+        _쓰기를_막는다(monkeypatch, 잠글_파일, lambda _: True)
         return _빨강
 
     return 러너
@@ -771,22 +795,80 @@ def _두_파일_변이(tmp_path: Path) -> tuple[Path, Path, str]:
     return m, a, 변이
 
 
-def test_되돌리지_못한_파일이_있으면_RestoreError_이고_나머지는_되돌린다(tmp_path: Path) -> None:
+def test_되돌리지_못한_파일이_있으면_RestoreError_이고_나머지는_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """되돌림 실패를 명세 오류로 알리면 변이된 채 남은 파일을 아무도 모른다(셀프 리뷰 Major)."""
     m, a, 변이 = _두_파일_변이(tmp_path)
-    try:
-        with pytest.raises(RestoreError, match="src/m.py"):
-            measure(
-                load_spec(변이),
-                root=tmp_path,
-                runner=_잠그는_러너(m, b"x = 2"),
-                out=lambda _: None,
-            )
 
-        assert a.read_bytes() == b"a = 1\n"
-        assert m.read_bytes() == b"x = 2\n"
-    finally:
-        m.chmod(stat.S_IREAD | stat.S_IWRITE)
+    with pytest.raises(RestoreError, match="src/m.py.*쓰기를 막았다"):
+        measure(
+            load_spec(변이),
+            root=tmp_path,
+            runner=_잠그는_러너(m, b"x = 2", monkeypatch),
+            out=lambda _: None,
+        )
+
+    assert a.read_bytes() == b"a = 1\n"
+    assert m.read_bytes() == b"x = 2\n"
+
+
+def test_변이가_든_동안_다른_쓰기가_들어온_파일은_덮지_않고_알린다(tmp_path: Path) -> None:
+    """되돌림이 변이 전 바이트를 그대로 쓰면 도는 동안 고친 것이 조용히 사라진다. 변이가 도는 동안
+    더한 훅 독스트링 한 문장이 그렇게 사라졌다(대기열 77). 나머지 파일은 되돌린다."""
+    m, a, 변이 = _두_파일_변이(tmp_path)
+
+    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+        if b"x = 2" not in m.read_bytes():
+            return _초록
+        m.write_bytes(m.read_bytes() + b"# doc\n")  # 도는 동안 편집기가 저장했다
+        return _빨강
+
+    with pytest.raises(RestoreError, match="src/m.py.*다른 쓰기"):
+        measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert m.read_bytes() == b"x = 2\n# doc\n"
+    assert a.read_bytes() == b"a = 1\n"
+
+
+def test_되돌릴_파일로_적은_편집_파일은_명령이_고쳐_써도_되돌린다(tmp_path: Path) -> None:
+    """`restore` 는 명령이 고쳐 쓰는 파일이다. 그 쓰기는 다른 쓰기와 가를 수 없어 보지 않는다."""
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+
+    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+        if b"x = 2" not in path.read_bytes():
+            return _초록
+        path.write_bytes(b"x = 2\n# generated\n")
+        return _빨강
+
+    변이 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'expect = "red"', 'expect = "red"\nrestore = ["src/m.py"]'
+    )
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert code == 0
+    assert path.read_bytes() == b"x = 1\n"
+
+
+def test_변이를_쓰지_못한_파일은_다른_쓰기로_보지_않고_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """변이 바이트를 쓰다 실패한 파일은 쓰다 만 앞부분이 남아도 도구가 마지막으로 쓴 것이다. 그것을
+    다른 쓰기로 알리면 쓰지 못한 원인이 가려지고 그 파일이 쓰다 만 채로 남는다."""
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    _쓰기를_막는다(monkeypatch, a, lambda data: data == b"a = 2\n", 남는_앞부분=3)
+
+    with pytest.raises(PermissionError):
+        measure(
+            load_spec(변이),
+            root=tmp_path,
+            runner=_변이면(m, b"x = 2", _빨강),
+            out=lambda _: None,
+        )
+
+    assert m.read_bytes() == b"x = 1\n"
+    assert a.read_bytes() == b"a = 1\n"
 
 
 def _변이_파일을_쓴다(tmp_path: Path, 내용: str) -> str:
@@ -861,28 +943,30 @@ def test_원문만_보아_모두_맞으면_0이고_파일을_건드리지_않는
     assert any("1" in 한줄 and "한 번" in 한줄 for 한줄 in 줄)
 
 
-def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(tmp_path: Path) -> None:
+def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     m, _, 변이 = _두_파일_변이(tmp_path)
     줄: list[str] = []
-    try:
-        code = main(
-            [_변이_파일을_쓴다(tmp_path, 변이)],
-            root=tmp_path,
-            runner=_잠그는_러너(m, b"x = 2"),
-            out=줄.append,
-        )
-    finally:
-        m.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+    code = main(
+        [_변이_파일을_쓴다(tmp_path, 변이)],
+        root=tmp_path,
+        runner=_잠그는_러너(m, b"x = 2", monkeypatch),
+        out=줄.append,
+    )
 
     assert code == 3
     assert any("git diff" in 한줄 and "src/m.py" in 한줄 for 한줄 in 줄)
 
 
-def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(tmp_path: Path) -> None:
+def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """되돌림 실패가 원인 예외(명령을 돌리지 못했다)를 가리면 왜 멈췄는지 아무도 모른다(PR #110
     claude-review)."""
     m, _, 변이 = _두_파일_변이(tmp_path)
-    잠그는 = _잠그는_러너(m, b"x = 2")
+    잠그는 = _잠그는_러너(m, b"x = 2", monkeypatch)
 
     def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
         잠그는(argv, cwd)
@@ -891,10 +975,7 @@ def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(
         return _초록
 
     줄: list[str] = []
-    try:
-        code = main([_변이_파일을_쓴다(tmp_path, 변이)], root=tmp_path, runner=러너, out=줄.append)
-    finally:
-        m.chmod(stat.S_IREAD | stat.S_IWRITE)
+    code = main([_변이_파일을_쓴다(tmp_path, 변이)], root=tmp_path, runner=러너, out=줄.append)
 
     assert code == 3
     assert any("git diff" in 한줄 for 한줄 in 줄)
