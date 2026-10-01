@@ -98,6 +98,8 @@ PR #111. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
   않고 낡는다 — 경위는 대기열 53과 이 일지로 가리키고 "왜 훅인가"만 남겼다. Nit 둘: `ruff_governs`가 읽지 못하는
   pyproject.toml의 `OSError`를 잡지 않아 fail-open이 갈렸다 — 설정이 아닌 것으로 보게 하고 테스트와 변이를 하나씩 더했다.
   `context_for`의 검사 순서를 바꿨다.
+- **claude-review 3회차**(`699333f`). Nit 하나: PR 본문의 변이·테스트 수가 옛 값이었다 — 본문을 고쳤다(저장소 파일은 맞았다).
+  이 커밋의 CodeRabbit 재요청은 한도 초과였다(대기열 41의 모양). 그래서 `699333f`는 CodeRabbit이 보지 않았다.
 
 ## 회고
 
