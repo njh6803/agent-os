@@ -25,7 +25,7 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
 - `tools/hook_ruff_line_width.py`(PostToolUse Write|Edit). `.py`·`.pyi`이고 조상에 ruff 설정이 있으면
   `python -m ruff check --no-fix --no-fix-only --no-cache --force-exclude --output-format json <파일>`을 돌려 E501만 행과
   폭(`2행 102 > 100`)으로 알린다. 열 줄까지 적고 나머지는 센다.
-- 등록은 `hook_journal_retro`와 같은 Write|Edit 그룹. 테스트 15, 페이로드 표 셋(발동 하나, 짧은 파이썬 Edit 침묵, 설정 밖
+- 등록은 `hook_journal_retro`와 같은 Write|Edit 그룹. 테스트 16, 페이로드 표 셋(발동 하나, 짧은 파이썬 Edit 침묵, 설정 밖
   스크래치 스크립트 침묵)과 러너의 자리표시자 둘(`${RUFF_PROJECT}`, `${LOOSE_PY}`).
 - 변이 파일 `.scratch/harness/probes/ruff_line_width_mutations.toml`과 프로브 README 행, `tools.md`의 비용 줄, KICKOFF(훅
   아홉, 계기 넷), 대기열 53 닫기.
@@ -48,7 +48,7 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
   JSON 출력에서도 파일을 고쳤고(2 fixed), 실행 위치가 다른 곳이면 같은 설정이 듣지 않았다 — 첫 탐침은 이 때문에 지적을
   기각할 뻔했다. `fix = true`는 `--no-fix`로 꺼진다. `fix-only = true`는 `--no-fix`로 꺼지지 않고 고친 뒤 진단까지 숨기며
   (`Fixed 2 errors.`), `--no-fix-only`로 꺼진다.
-- **변이.** 열다섯 빨강, 확장자 검사 하나 초록(판정이 아니라 비용이라). 처음 판으로 되돌린 변이(`--select E501`)와 두 수정
+- **변이.** 열여섯 빨강, 확장자 검사 하나 초록(판정이 아니라 비용이라). 처음 판으로 되돌린 변이(`--select E501`)와 두 수정
   플래그를 하나씩 뺀 변이가 빨갛다.
   러너의 침묵 사례 note("설정을 보지 않으면 발동한다")는 스크래치 변이 파일로 한 번 쟀다(러너 어긋남 1건).
 - **이 세션의 E501.** 워크트리 세션의 훅은 주 체크아웃의 파일로 돌아 이 세션에는 새 훅이 없었다. 그래서 이 세션도 커밋 전
@@ -76,11 +76,11 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
 
 ## 검사
 
-- `uv run pytest -q` 1114 passed(`tests/tools/test_hook_ruff_line_width.py` 13, PR 리뷰 반영 뒤 15). `uv run ruff check .`,
+- `uv run pytest -q` 1114 passed(`tests/tools/test_hook_ruff_line_width.py` 13, PR 리뷰 반영 뒤 16). `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run pyright`(0 errors), `uv run lint-imports` 초록. `pnpm -C web verify` 초록(테스트
   263, web은 바꾸지 않았다). 지침·타입 우회·마크다운 표·줄 구분 검사 초록, 훅 러너 37건에 어긋남 0, 인용 대조는 바뀐
   파일에 경고 0. `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
-- 변이 14 모두 기대대로(PR 리뷰 반영 뒤 16).
+- 변이 14 모두 기대대로(PR 리뷰 반영 뒤 17).
 
 ## PR 리뷰
 
@@ -93,7 +93,11 @@ PR #111. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
     실제 조건이다. `--no-fix`·`--no-fix-only`를 더하고, 실행 위치를 옮긴 회귀 테스트 둘(`fix`, `fix-only`)과 변이 둘을 더했다.
   - Minor: 대기열 53의 어디로 칸을 실제 자리로 바꾸고 미정 후보와 0.2초 어림을 지우라. 반영하지 않았다 — 이 파일은 어디로
     칸에 승인 때의 계획을 두고 닫힘은 무엇 칸의 취소선 뒤와 승인 칸에 적는다(대기열 1·2·59가 그 모양). 53의 어디로 칸을
-    덮어쓴 일은 일지 2026-09-29-04에서 실수로 보고 되돌렸다.
+    덮어쓴 일은 일지 2026-09-29-04에서 실수로 보고 되돌렸다. CodeRabbit이 답글로 지적을 철회했다.
+- **claude-review 2회차**(`0edbd95`). Minor: 독스트링의 앞 절반이 대기열 번호·날짜·회차 같은 경위라 코드와 함께 갱신되지
+  않고 낡는다 — 경위는 대기열 53과 이 일지로 가리키고 "왜 훅인가"만 남겼다. Nit 둘: `ruff_governs`가 읽지 못하는
+  pyproject.toml의 `OSError`를 잡지 않아 fail-open이 갈렸다 — 설정이 아닌 것으로 보게 하고 테스트와 변이를 하나씩 더했다.
+  `context_for`의 검사 순서를 바꿨다.
 
 ## 회고
 

@@ -117,6 +117,22 @@ def test_ruff_설정은_ruff_toml_이나_tool_ruff_표가_있는_pyproject다(tm
     assert ruff_governs(module)
 
 
+def test_pyproject_를_읽지_못하면_설정이_없는_것으로_보고_침묵한다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """계기 훅은 fail-open 이다. 권한 같은 `OSError` 로 훅이 예외로 끝나지 않는다(PR #111
+    claude-review)."""
+    path = _ruff_설정_아래에_쓴다(tmp_path, LONG)
+
+    def unreadable(self: Path, encoding: str | None = None, errors: str | None = None) -> str:
+        raise PermissionError(self)
+
+    monkeypatch.setattr(Path, "read_text", unreadable)
+
+    assert not ruff_governs(path)
+    assert context_for("Edit", str(path)) is None
+
+
 def test_줄이_많으면_앞의_열_줄만_적고_나머지는_센다(tmp_path: Path) -> None:
     context = context_for("Edit", str(_ruff_설정_아래에_쓴다(tmp_path, *[LONG] * 12)))
 

@@ -34,6 +34,21 @@ old = 'RUFF_TABLE = re.compile(r"^\s*\[tool\.ruff[\].]", re.MULTILINE)'
 new = 'RUFF_TABLE = re.compile(r"^\s*\[tool\.ruff\]", re.MULTILINE)'
 
 [[mutation]]
+name = "읽지 못하는 pyproject 에 예외로 끝나지 않는다(fail-open)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+        except OSError:
+            return False
+'''
+new = '''
+        except ValueError:
+            return False
+'''
+
+[[mutation]]
 name = "ruff.toml 도 설정이다"
 tests = ["tests/tools/test_hook_ruff_line_width.py"]
 expect = "red"

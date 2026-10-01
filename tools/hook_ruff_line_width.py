@@ -1,13 +1,10 @@
 """PostToolUse 훅(Write|Edit). 파이썬 파일을 쓴 직후 E501 로 넘친 줄을 컨텍스트에 넣는다.
 
 ruff 는 줄 길이를 폭으로 재고 한글은 폭 2다. 줄 길이 100에 한글이면 45~50자라, 글자 수로 가늠하면
-넘긴 줄을 모른 채 쓴다. 이 사실은 `docs/constitution/operations.md` 에 2026-09-20 부터 있었다("한글
-한 글자가 2로 세어진다"). 그런데도 대기열 53 이 일지 2026-09-28-08(그 세션만 열 번 남짓)에서 생겨
-2026-09-29-02, 2026-09-30-07, 2026-10-01-01 에 회차가 더해졌다. 대개 커밋 직전 `ruff check` 나
-리뷰에서야 알았고, 한 번에 다시 감은 줄이 많게는 스물셋이었다. 한꺼번에 감으려 지은 스크래치 감기
-도우미는 줄 하나로 선 `사용:` 줄을 다음 문장에 붙이고 코드 스팬을 줄에서 갈랐다(일지 2026-10-01-01).
-지침이 어겨졌으니 훅이다(CLAUDE.md 교정 루프). 판정을 편집 순간으로 당기면 다시 감을 줄은 방금 쓴
-몇 줄이라 감기 도구가 필요 없다. 막지 않는 계기 훅이다 — 막는 것은 커밋 전 게이트가 이미 한다.
+넘긴 줄을 모른 채 쓴다. 그 사실을 적은 지침(`docs/constitution/operations.md`)이 있었는데도 대개
+커밋 직전 `ruff check` 나 리뷰에서야 알았다. 지침이 어겨졌으니 훅이다(CLAUDE.md 교정 루프, 경위는
+대기열 53 과 일지 2026-10-01-02). 판정을 편집 순간으로 당기면 다시 감을 줄은 방금 쓴 몇 줄이라 감기
+도구가 필요 없다. 막지 않는 계기 훅이다 — 막는 것은 커밋 전 게이트가 이미 한다.
 
 발동 조건은 셋이다. 도구가 Write 나 Edit, 파일이 `.py`·`.pyi`, 파일의 조상에 ruff 설정(`ruff.toml`,
 `.ruff.toml`, `tool.ruff` 표가 있는 `pyproject.toml`)이 있을 것. 셋째는 게이트가 보는 파일만 보려는
@@ -79,14 +76,19 @@ class _Diagnostic(TypedDict):
 
 
 def ruff_governs(path: Path) -> bool:
-    """`path` 의 조상에 ruff 설정이 있는가. 없으면 게이트가 보지 않는 파일이다."""
+    """`path` 의 조상에 ruff 설정이 있는가. 없으면 게이트가 보지 않는 파일이다. 읽지 못하는
+    pyproject.toml 은 설정이 아닌 것으로 본다(fail-open)."""
     for directory in path.parents:
         if any((directory / name).is_file() for name in RUFF_CONFIG_FILES):
             return True
         pyproject = directory / "pyproject.toml"
-        if pyproject.is_file() and RUFF_TABLE.search(
-            pyproject.read_text(encoding="utf-8", errors="replace")
-        ):
+        if not pyproject.is_file():
+            continue
+        try:
+            text = pyproject.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return False
+        if RUFF_TABLE.search(text):
             return True
     return False
 
@@ -146,9 +148,9 @@ def summary(file_path: str, lines: list[tuple[int, str]]) -> str:
 def context_for(tool_name: str, file_path: str) -> str | None:
     """Write·Edit 가 ruff 설정 아래의 파이썬 파일에 넘친 줄을 남겼으면 컨텍스트 문장, 아니면
     None."""
-    path = Path(file_path)
     if tool_name not in ("Write", "Edit"):
         return None
+    path = Path(file_path)
     # 판정이 아니라 비용이다. ruff 는 `.md` 를 넘겨도 "No Python files found" 로 지나치지만
     # (2026-10-01 실측), 일지·문서의 Write·Edit 마다 ruff 를 띄우지 않는다.
     if path.suffix not in PYTHON_SUFFIXES:
