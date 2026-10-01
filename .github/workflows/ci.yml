@@ -92,11 +92,13 @@ jobs:
   # 필수 검사. 건너뛴 잡은 필수 검사여도 성공으로 보고되고(GitHub 문서), 앞 잡이 실패하면 needs 로 이은 잡은
   # 기본적으로 건너뛴다. 그래서 always() 로 언제나 돌고, needs 의 결과가 모두 success 일 때만 초록이다.
   # failure 뿐 아니라 cancelled 와 skipped 도 빨강이다.
-  # needs 에 없는 잡은 필수 검사 밖에서 돈다. 그래서 같은 실행 시도의 잡 이름을 API 로 읽어, 자기 밖의 잡이 needs 에
-  # 없으면 빨강이다. 잡에 name: 을 두지 않으므로 API 의 잡 이름이 잡 id 와 같다. 읽은 목록에 verify 자신이 없으면
-  # (빈 목록이면) 비교할 것이 없어 조용히 초록이 되므로 그것도 빨강이다. 일부러 필수 검사 밖에 둘 잡이 생기면 아래
-  # 차집합에 그 이름을 예외로 더한다. verify 뒤에 도는 잡(needs: [verify])은 verify 가 도는 동안 목록에 없어 이 검사가
-  # 보지 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은 필수 검사 밖이다(ADR 0021 이력, PR #119 실험).
+  # needs 에 없는 잡은 필수 검사 밖에서 돈다. 그래서 같은 실행의 모든 시도(filter=all)의 잡 이름을 API 로 읽어, 자기
+  # 밖의 잡이 needs 에 없으면 빨강이다. 지금 시도만 읽지 않는 것은, 실패한 잡만 다시 돌린 시도에서는 앞 시도의 잡이
+  # 새 시도로 옮겨지는 중이라 목록에서 빠질 수 있기 때문이다. 잡에 name: 을 두지 않으므로 API 의 잡 이름이 잡 id 와
+  # 같다. 읽은 목록에 verify 자신이 없으면(빈 목록이면) 비교할 것이 없어 조용히 초록이 되므로 그것도 빨강이다.
+  # 일부러 필수 검사 밖에 둘 잡이 생기면 아래 차집합에 그 이름을 예외로 더한다. verify 뒤에 도는 잡(needs: [verify])은
+  # 첫 시도에서는 verify 가 도는 동안 목록에 없어 이 검사가 보지 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은
+  # 필수 검사 밖이다(ADR 0021 이력, PR #119 실험).
   verify:
     if: always()
     needs: [python, web, e2e]
@@ -109,7 +111,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
-          names=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" --jq '[.jobs[].name]')
+          pages=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=all&per_page=100")
+          names=$(jq -c '[.[].jobs[].name] | unique' <<< "$pages")
           echo "이 실행의 잡: $names"
           if ! jq -e 'index("verify") != null' <<< "$names" > /dev/null; then
             echo "::error::잡 목록에 verify 가 없다. 목록을 읽지 못한 것이다."
