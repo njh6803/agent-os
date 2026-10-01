@@ -6,9 +6,10 @@
 `.claude/settings.json` 이 등록한 모양(`uv run --project <루트> --no-sync python <훅>`)으로 자식을
 띄우고 stdin 에 페이로드를 넣는다. 자식 환경에서 `PYTHONUTF8` 을 빼고(훅 환경에 있다고 가정하지
 않는다, 대기열 25·40) 저장소를 가리키는 `GIT_*` 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이
-임시 저장소를 이 저장소로 돌린다, tests/conftest.py). 자식은 settings.json 이 그 훅에 준
-`timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는 pre-commit 이 매 커밋
-돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
+임시 저장소를 이 저장소로 돌린다, tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열
+83 — Stop 훅이 SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). 자식은
+settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
+pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
 페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
@@ -213,8 +214,12 @@ def outcome_of(returncode: int, stdout: str, event: str) -> str:
 
 
 def hook_environment() -> dict[str, str]:
-    """자식 훅의 환경. `PYTHONUTF8` 과 저장소를 가리키는 `GIT_*` 를 뺀다."""
-    excluded = {"PYTHONUTF8", *REPO_LOCATION_VARS}
+    """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT` 를 뺀다.
+
+    마지막 것은 `hook_stop_korean` 이 SDK 세션에서 침묵하는 근거라, 러너를 띄운 세션의 값을 물려주면
+    판정이 러너가 도는 자리에 따라 바뀐다.
+    """
+    excluded = {"PYTHONUTF8", "CLAUDE_CODE_ENTRYPOINT", *REPO_LOCATION_VARS}
     return {key: value for key, value in os.environ.items() if key not in excluded}
 
 
