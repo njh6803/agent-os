@@ -67,8 +67,8 @@ def test_self가_거부되면_세션_ID를_대신_넘기라고_한다() -> None:
     context = context_for(DIRECTIVE.replace("／", "/", 1))
 
     assert context is not None
-    assert "`self` 를 거부하면" in context
-    assert "ID 를 찾아 `self` 대신 넘긴다" in context
+    assert "거부" in context
+    assert "세션의 ID" in context
 
 
 def test_첫_글자가_전각이면_스킬_파일을_읽어_따르라는_계기가_붙는다() -> None:

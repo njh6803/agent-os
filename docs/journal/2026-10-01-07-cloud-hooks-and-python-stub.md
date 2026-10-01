@@ -70,6 +70,18 @@ claude-review의 Nit 하나(`_restore`가 반복마다 `root.resolve()`를 부�
   `tools/check_type_escapes.py`·`tools/check_instructions.py` 통과, `tools/run_hooks.py` 45건 어긋남 0. web과 `src/`를
   바꾸지 않아 `pnpm -C web verify`와 `-m llm`은 돌리지 않았다.
 
+## PR 리뷰
+
+PR #116. PR 직전 CodeRabbit CLI는 돌리지 않았다. 열기 전 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`였다.
+
+- **CI**(`c514cfc`). `verify` 2분 21초, `claude-review` 53초, 둘 다 초록.
+- **CodeRabbit**(`@coderabbitai review`). 지적 없음. 요약의 범위가 `6add776`부터 `c514cfc`까지라 HEAD까지 봤다. 이번 리뷰로
+  시간당 포함 한도(1회)를 다 썼다.
+- **claude-review.** Minor 둘과 Nit 하나. 고친 것: 81의 테스트가 계기 문구의 어순을 그대로 단언한다는 Minor라, 핵심
+  낱말("거부", "세션의 ID")만 보게 좁혔다. 82의 테스트가 거짓 음성(`sh -c "python x.py"`)을 데이터인 python과 한 이름으로
+  고정한다는 Minor라, 둘로 나누고 거짓 음성 쪽 이름에 "지금은 지나간다"를 넣었다. 남긴 것: 계기 문구가 클라우드 세션에
+  실행 가능한 길을 주지 못한다는 Nit은 PR 본문의 남긴 위험과 같고, 길을 재지 않았으니 적을 것이 없다.
+
 ## 다음
 
 (회고 뒤에 채운다)

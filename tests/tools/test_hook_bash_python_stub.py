@@ -54,9 +54,12 @@ def test_따옴표_안이라도_분리자와_키워드_뒤와_줄_머리의_pyth
     assert bare_python_calls(docker) == ["python"]
 
 
-def test_문자열_머리의_python은_막지_않는다() -> None:
-    """데이터인 것은 맞게 지나가고, `sh -c` 가 실행할 것도 지나간다(거짓 음성)."""
+def test_문자열_머리의_데이터인_python은_막지_않는다() -> None:
     assert bare_python_calls('echo "python x"') == []
+
+
+def test_sh_c_문자열_머리에서_실행될_python은_지금은_지나간다() -> None:
+    """거짓 음성이다. 따옴표를 푸는 판정으로 고치면 이 테스트를 뒤집는다(대기열 82)."""
     assert bare_python_calls('sh -c "python x.py"') == []
 
 
