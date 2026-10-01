@@ -128,6 +128,33 @@ def test_식별자만_나열한_답은_판정하지_않는다() -> None:
     assert block_reason_for(message) is None
 
 
+def test_한글도_라틴_문자도_아닌_글자는_세지_않는다() -> None:
+    """못 보는 것의 고정. 일본어 답은 섞인 라틴 문자만으로 판정한다.
+
+    라틴 문자가 8자 이상이면 막고, 적으면 지나간다.
+    """
+    long_latin = "PR を作成しました。Claude Code Review と CodeRabbit を待っています。"
+    short_latin = "PR を作成しました。確認をお願いします。"
+
+    assert block_reason_for(long_latin) is not None
+    assert block_reason_for(short_latin) is None
+
+
+def test_구분자_없는_이름만_나열한_답은_막힌다() -> None:
+    """못 보는 것의 고정. `grilling`·`tdd` 같은 이름은 식별자로 빠지지 않고 산문으로 센다."""
+    assert block_reason_for("grilling, tdd, retro, implement, simplify, loop, schedule") is not None
+
+
+def test_따옴표로_길게_든_영어_원문은_센다() -> None:
+    """못 보는 것의 고정. 인용 줄(`>`)만 빼고 산문 속 따옴표 인용은 센다."""
+    message = (
+        '스킬 본문은 "When a frontier question needs a fact from the environment, dispatch a '
+        'subagent to find it rather than asking the user" 라고 적었다.'
+    )
+
+    assert block_reason_for(message) is not None
+
+
 def test_SDK_로_띄운_세션만_프로그램_세션이다() -> None:
     """사람이 읽는 세션은 막고, 결과를 프로그램이 읽는 세션은 건드리지 않는다."""
     assert is_program_session("sdk-py")
