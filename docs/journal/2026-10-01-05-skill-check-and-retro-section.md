@@ -30,7 +30,8 @@ web-admin 뒤 하네스 chore 배치의 다음 묶음이다. 지시문은 일지
 
 - **바꾼 스킬 둘이 새 세션에 실린다(스크래치 스크립트로 손으로 봤다).** 대조군으로 main(`25d2009`)을 스크래치패드의 임시
   워크트리에 꺼냈다. 두 체크아웃에서 `claude -p --setting-sources project,local --allowed-tools Skill --model sonnet`을
-  스킬마다 세 번, 모두 열두 번 병렬로 돌렸고 13초가 걸렸다(claude 2.1.286). 질문은 둘이다.
+  스킬마다 세 번, 모두 열두 번 병렬로 돌렸고 13초가 걸렸다(claude 2.1.286). 이 첫 판은 Read를 막지 않아 증거가 약하다(아래
+  PR 리뷰의 CodeRabbit). 도구를 좁혀 다시 돈 판이 그 아래에 있다. 질문은 둘이다.
   - retro: "본문이 회고 결과를 적을 일지 절의 제목 줄을 글자 그대로 지정하는가? 지정하면 그 제목 줄과, 그 제목을 읽는다고
     본문이 적은 파일의 경로를 본문 그대로 옮겨라. 본문에 그런 지정이 없으면 '없음' 한 낱말로만 답하라." 바꾼 쪽 셋은 모두
     `## 회고`와 `tools/hook_journal_retro.py`를 옮겼고, 대조군 셋은 모두 "없음"이었다.
@@ -49,6 +50,18 @@ web-admin 뒤 하네스 chore 배치의 다음 묶음이다. 지시문은 일지
   적었으면 그 조건을 담은 문장을 본문 그대로 옮기고, 승인된 것마다 일지에 무엇을 적으라고 하는지도 본문 그대로 옮겨라.
   그런 문장이 없으면 '없음'"이다. 바꾼 쪽 셋은 모두 "자리 표시가 아닌 그 절이 있으면"과 "사건과 간 자리"를 옮겼고, 대조군
   셋은 모두 "없음"이었다.
+- **`--allowed-tools`는 Read를 막지 않는다(stream-json으로 손으로 봤다).** `--allowed-tools Skill`로 띄운 세션에 바꾼 retro
+  파일을 Read로 열게 하자 승인 없이 읽고 5단계 첫 문장을 옮겼다(`permission_denials` 빈 목록). 도구를 좁힌 세션 넷을 같이
+  돌렸다. `--tools Skill`은 Read가 "No such tool available"이었다. `--tools Read --disallowed-tools 'Read(./.claude/**)'`는
+  `.claude/rules/tools.md`를 여는 것이 거부됐다. 같은 플래그로 `tools/run_hooks.py`를 읽게 하자 `tools.md` 본문의 첫 문장을
+  옮겼고, `README.md`(`paths` 밖)를 읽게 하자 "없음"이었다. init 이벤트의 `tools`는 지정한 하나뿐이었고 `mcp_servers`는
+  비었다.
+- **도구를 좁혀 두 스킬을 다시 불렀다(스크래치 스크립트로 손으로 봤다).** 첫 판과 같은 짝(두 체크아웃, 스킬마다 세 번,
+  열두 번)을 `--tools Skill`과 `--output-format stream-json --verbose`로 돌렸고 9초가 걸렸다. retro 질문은 "본문이 '회고 절이
+  어떤 상태일 때 훅이 계기를 다시 넣지 않는다'고 적었으면 그 조건을 담은 문장과, 그 훅의 파일 경로를 본문 그대로 옮겨라.
+  그런 문장이 없으면 '없음'"이고 code-review 질문은 첫 판과 같다. 열두 세션 모두 init의 `tools`가 `['Skill']`, `mcp_servers`가
+  비었고 도구 호출은 Skill 한 번이었다. 바꾼 쪽 여섯은 "자리 표시가 아닌 그 절이 있으면"과 `tools/hook_journal_retro.py`,
+  번호 목록 여덟과 머리말 여덟을 옮겼고, 대조군 여섯은 "없음"과 "문단"이었다.
 
 ## 셀프 리뷰
 
@@ -79,3 +92,16 @@ web-admin 뒤 하네스 chore 배치의 다음 묶음이다. 지시문은 일지
 - 실패 3건은 위 "잰 것"의 root 전용이다. root가 아닌 사용자로 `tests/tools/test_mutate.py` 전체를 돌리자 86 passed였다.
 - 커밋의 pre-commit은 `SKIP=pytest`로 pytest 훅만 건너뛰었다. 그 3건이 커밋을 막기 때문이다. 위의 두 실행이 그 대신이고,
   최종 판정은 CI(ubuntu 러너, root 아님)다.
+
+## PR 리뷰
+
+PR #114. PR 직전 CodeRabbit CLI는 돌리지 않았다. 이 컨테이너에는 CLI가 설치돼 있지 않다(`which coderabbit` 없음).
+
+- **CI**(`0406a62`). `verify` 3분 3초, `claude-review` 1분, 둘 다 초록.
+- **claude-review.** Minor 하나: 열린 대기열 60 행의 어디로 칸이 아직 "주장 검증 줄"이다. 셀프 리뷰 두 축도 짚었던 것이라
+  셋째로 짚힌 셈이다. 60은 열린 행이라 다음 구현자가 읽는 안내이므로 "주장 검증 목록(대기열 76 뒤로 번호 항목)"으로 고쳤다.
+- **CodeRabbit**(`@coderabbitai review`). Minor 하나: `--allowed-tools`는 도구를 막지 않아 모델이 바뀐 파일을 Read로 직접 읽고
+  카나리아에 답할 수 있다. 위 "잰 것"대로 참이었다. 고침의 제안(`--tools ""`, 규칙 대조군만 Read)은 그대로 받지 않았다.
+  `paths` 규칙은 Read로 맞는 파일을 열어야 실리므로 규칙 카나리아 자체에 Read가 있어야 한다. 그래서 스킬은 `--tools Skill`,
+  규칙은 `--tools Read`에 `.claude/` 읽기 거부를 더하고, init 이벤트의 도구 목록을 보게 했다. 두 스킬을 그 법으로 다시
+  불렀다. 대기열 63의 닫힘에 명령이 행과 달라진 것을 적었다.
