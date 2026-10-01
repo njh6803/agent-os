@@ -1,0 +1,243 @@
+# tools/hook_pr_head_sync.py(대기열 86)의 판정 규칙과 배선을 하나씩 빼는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/pr_head_sync_mutations.toml
+# 배선 둘(main 이 로컬 판정을 gh 앞에 두는 것, 러너 픽스처의 푸시하지 않은 커밋)은 tools/run_hooks.py 를
+# 러너로 돈다. 그 러너는 어긋남이 있으면 1 이라 판정은 pytest 의 것(종료 0·1)을 빌린다. gh 를 부르는 길은
+# 네트워크라 변이로 재지 않는다.
+
+[runner.hooks]
+command = ["uv", "run", "--no-sync", "python", "tools/run_hooks.py"]
+judge = "pytest"
+
+[[mutation]]
+name = "draft 로 되돌리는 --undo 도 잡는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+        if token == "--undo":
+            return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "CodeRabbit 을 부르지 않는 코멘트도 잡는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+        if kind == "coderabbit" and not mentions_coderabbit:
+            continue
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "full review 를 언급으로 보지 않는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''_CODERABBIT = re.compile(r"@coderabbitai\s+(?:full\s+)?review\b", re.IGNORECASE)'''
+new = '''_CODERABBIT = re.compile(r"@coderabbitai\s+review\b", re.IGNORECASE)'''
+
+[[mutation]]
+name = "저장소 옵션을 그냥 값 옵션으로 본다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+        if name in _REPO_OPTIONS:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "인용된 선택자를 선택자로 쓴다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+            if token == _QUOTED_PLACEHOLDER:
+                return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "값 옵션의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+            if name in _VALUE_OPTIONS and not has_value:
+                index += 1
+'''
+new = '''
+            pass
+'''
+
+[[mutation]]
+name = "리다이렉션을 선택자로 읽는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''        if "<" in token or ">" in token:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "떨어진 리다이렉션 연산자의 대상을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+            if _BARE_REDIRECT.fullmatch(token):
+                index += 1
+'''
+new = '''
+            pass
+'''
+
+[[mutation]]
+name = "선택자가 있어도 로컬로 판정한다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if request.selector is not None or local.upstream is None:'''
+new = '''    if local.upstream is None:'''
+
+[[mutation]]
+name = "upstream 보다 뒤처진 HEAD 도 막는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if local.upstream == local.head or head_behind_upstream:'''
+new = '''    if local.upstream == local.head:'''
+
+[[mutation]]
+name = "다른 브랜치의 PR 도 막는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if pr.branch != local.branch or pr.oid == local.head or pr_ahead:'''
+new = '''    if pr.oid == local.head or pr_ahead:'''
+
+[[mutation]]
+name = "앞선 PR head 도 막는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if pr.branch != local.branch or pr.oid == local.head or pr_ahead:'''
+new = '''    if pr.branch != local.branch or pr.oid == local.head:'''
+
+[[mutation]]
+name = "객체가 아닌 gh 출력도 읽는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if not text.lstrip().startswith("{"):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "문자열이 아닌 head 값도 받는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if not isinstance(oid, str) or not isinstance(branch, str):
+        return None
+    return PrHead(oid, branch)'''
+new = '''    return PrHead(str(oid), str(branch))'''
+
+[[mutation]]
+name = "환경의 GIT_DIR 을 물려준다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    return {key: value for key, value in os.environ.items() if key not in _REPO_LOCATION_VARS}'''
+new = '''    return dict(os.environ)'''
+
+[[mutation]]
+name = "커밋이 없는 저장소도 읽는다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if branch is None or head is None:
+        return None
+    return LocalState(branch, head,'''
+new = '''    if branch is None:
+        return None
+    return LocalState(branch, str(head),'''
+
+[[mutation]]
+name = "모르는 커밋을 조상으로 본다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''
+    result = _git(cwd, "merge-base", "--is-ancestor", older, newer)
+    return result is not None and result.returncode == 0
+'''
+new = '''
+    result = _git(cwd, "merge-base", "--is-ancestor", older, newer)
+    return result is not None and result.returncode != 1
+'''
+
+[[mutation]]
+name = "로컬에 없는 PR head 도 판정한다(셀프 리뷰 두 축이 재현한 첫 판)"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if pr.branch != local.branch or pr.oid == local.head or not has_commit(cwd, pr.oid):'''
+new = '''    if pr.branch != local.branch or pr.oid == local.head:'''
+
+[[mutation]]
+name = "대소문자가 다른 언급을 놓친다"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''_CODERABBIT = re.compile(r"@coderabbitai\s+(?:full\s+)?review\b", re.IGNORECASE)'''
+new = '''_CODERABBIT = re.compile(r"@coderabbitai\s+(?:full\s+)?review\b")'''
+
+[[mutation]]
+name = "main 이 로컬 판정을 건너뛰고 gh 만 본다"
+runner = "hooks"
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if local.upstream is not None and local.upstream != local.head:
+        behind'''
+new = '''    if False:
+        behind'''
+
+[[mutation]]
+name = "러너 픽스처가 마지막 커밋도 푸시한다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''
+        ["git", "-C", str(repo), *identity, "commit", "-q", "--allow-empty", "-m", "unpushed"],
+    ]'''
+new = '''
+        ["git", "-C", str(repo), *identity, "commit", "-q", "--allow-empty", "-m", "unpushed"],
+        ["git", "-C", str(repo), "push", "-q", "origin", "chore/x"],
+    ]'''

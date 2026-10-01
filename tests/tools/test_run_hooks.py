@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -208,6 +209,27 @@ def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path
     assert run_case(silent, replacements, registration).ok
     assert (tmp_path / "on-main" / ".git").is_dir()
     assert (tmp_path / "transcript-used.jsonl").is_file()
+
+
+def test_푸시하지_않은_커밋이_있는_저장소를_만든다(tmp_path: Path) -> None:
+    """`${UNPUSHED_REPO}` 는 upstream 이 HEAD 의 조상이고 HEAD 와 다르다.
+
+    hook_pr_head_sync 의 발동 사례가 기대는 모양이다.
+    """
+    repo = create_fixtures(tmp_path)["UNPUSHED_REPO"]
+
+    def rev(name: str) -> str:
+        result = subprocess.run(
+            ["git", "-C", repo, "rev-parse", name], check=True, capture_output=True, text=True
+        )
+        return result.stdout.strip()
+
+    ancestor = subprocess.run(
+        ["git", "-C", repo, "merge-base", "--is-ancestor", "@{u}", "HEAD"], check=False
+    )
+
+    assert rev("HEAD") != rev("@{u}")
+    assert ancestor.returncode == 0
 
 
 def test_등록된_이벤트와_다른_훅은_실제로_돌려도_어긋남이다(tmp_path: Path) -> None:
