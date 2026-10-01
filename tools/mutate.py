@@ -568,6 +568,8 @@ def main(
         return 2
     except RestoreError as error:
         out(f"되돌리지 못했다. 변이된 채 남은 파일을 git diff 로 보고 되돌린다: {error}")
+        if error.__context__ is not None:  # finally 에서 던져 가린, 그 전에 난 예외
+            out(f"되돌리기 전에 난 예외: {error.__context__!r}")
         return 3
     except OSError as error:
         out(f"테스트를 돌리지 못했다(변이는 되돌렸다): {error}")

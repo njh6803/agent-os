@@ -52,7 +52,7 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
   좁힌 선택 밖의 실패는 초록, 문법 오류는 오류라 빨강 기대와 어긋났다. Playwright 하나: 08 러너의 꺼짐이 결정 버튼을 막지
   않는 변이를 `--grep`으로 좁혀 기준선 `1 passed`, 변이 `1 failed`와 그 테스트 이름.
 - **자기 변이**(`.scratch/harness/probes/mutate_runners_mutations.toml`). 새 테스트는 모두 없는 이름의 import(수집 오류)로만
-  빨갰으므로, 새 규칙 하나씩을 뺀 변이로 행동의 빨강을 봤다. 셀프 리뷰 반영 뒤 스물아홉 모두 기대대로 빨강이다(62초).
+  빨갰으므로, 새 규칙 하나씩을 뺀 변이로 행동의 빨강을 봤다. 셀프 리뷰와 PR 리뷰 반영 뒤 서른 모두 기대대로 빨강이다(67초).
   처음에 README에 약 30초로 적었는데 재 보니 58초였다.
 - **워크트리의 비용.** `pnpm -C web install --frozen-lockfile --offline`이 13.2초였다. 변이 열 넷(25, 29, 4, 1)이 도는 동안
   주 체크아웃은 바뀌지 않았다.
@@ -81,10 +81,10 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
 
 ## 검사
 
-- `uv run pytest -q` 1098 passed(`tests/tools/test_mutate.py` 82). `uv run ruff check .`, `uv run ruff format --check .`,
+- `uv run pytest -q` 1101 passed(`tests/tools/test_mutate.py` 85). `uv run ruff check .`, `uv run ruff format --check .`,
   `uv run pyright`(0 errors), `uv run lint-imports` 초록. `pnpm -C web verify` 초록(테스트 263, web은 바꾸지 않았다).
   `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
-- 변이: 옮긴 TOML 25, 자기 변이 29 모두 기대대로 빨강. 기존 TOML 일곱은 `--check`로 원문이 모두 한 번씩 있다.
+- 변이: 옮긴 TOML 25, 자기 변이 30 모두 기대대로 빨강. 기존 TOML 일곱은 `--check`로 원문이 모두 한 번씩 있다.
 
 ## PR 리뷰
 
@@ -94,7 +94,11 @@ PR #110. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: no
 - **claude-review**. Minor 하나: `diagnostic_in`을 진단 경로의 꼬리로 맞추므로 이름만 적으면(`index.ts`) 다른 디렉터리의 같은
   이름도 빨강으로 센다. 옮긴 TOML 25는 이름이 겹치지 않아 실제 오판은 없다. 경로 접미사를 강제하는 대신 독스트링의 tsc
   판정 줄에 적고, 테스트 두 사례(이름만 적으면 맞는 것, 디렉터리까지 적으면 가르는 것)로 쟀다.
-- **CodeRabbit**(`@coderabbitai review`, `d1afa7d…0750525`). 짚은 것이 없다.
+- **CodeRabbit**(`@coderabbitai review`, `d1afa7d…0750525`). 짚은 것이 없다. 수정 커밋(`9945fc5`)의 재요청은 한도
+  초과였다(대기열 41의 모양).
+- **claude-review 2회차**(`9945fc5`, 초록). Minor 하나: 되돌리기가 실패하면 `finally`의 `RestoreError`가 그 전에 난 예외
+  (명령을 돌리지 못했다)를 가린다. 이 PR 전부터 있던 모양이지만 고쳤다 — `main`이 `__context__`도 찍는다. 테스트 하나와
+  자기 변이 하나를 더했다. Nit(변이마다 파일을 다시 읽는다)은 비용이 없어 두었다.
 
 ## 남긴 것
 

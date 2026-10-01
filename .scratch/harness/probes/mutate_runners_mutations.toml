@@ -345,3 +345,13 @@ new = '''
     if not argv:
         out(__doc__ or "")
 '''
+
+[[mutation]]
+name = "되돌리기 전에 난 예외를 알리지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if error.__context__ is not None:'''
+new = '''        if error.__context__ is None:'''

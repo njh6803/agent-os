@@ -876,6 +876,29 @@ def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(tmp_p
     assert any("git diff" in 한줄 and "src/m.py" in 한줄 for 한줄 in 줄)
 
 
+def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(tmp_path: Path) -> None:
+    """되돌림 실패가 원인 예외(명령을 돌리지 못했다)를 가리면 왜 멈췄는지 아무도 모른다(PR #110
+    claude-review)."""
+    m, _, 변이 = _두_파일_변이(tmp_path)
+    잠그는 = _잠그는_러너(m, b"x = 2")
+
+    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+        잠그는(argv, cwd)
+        if b"x = 2" in m.read_bytes():
+            raise FileNotFoundError("pnpm 이 없다")
+        return _초록
+
+    줄: list[str] = []
+    try:
+        code = main([_변이_파일을_쓴다(tmp_path, 변이)], root=tmp_path, runner=러너, out=줄.append)
+    finally:
+        m.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+    assert code == 3
+    assert any("git diff" in 한줄 for 한줄 in 줄)
+    assert any("pnpm 이 없다" in 한줄 for 한줄 in 줄)
+
+
 def test_main_은_테스트를_돌리지_못하면_3이고_변이는_되돌렸다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
 
