@@ -63,7 +63,7 @@ def test_클라우드_세션의_GitHub_MCP_도구도_이름으로_안다() -> No
     assert action_for("mcp__github__merge_pull_request", None) == "merge"
 
 
-def test_settings의_매처와_훅이_아는_MCP_도구가_같다() -> None:
+def test_settings의_매처와_훅이_아는_도구가_같다() -> None:
     """이름을 훅에만 더하면 등록이 그 도구에 훅을 걸지 않고, 매처에만 더하면 훅이 조용히 지나간다.
 
     tools/run_hooks.py 는 훅 파일을 직접 부르므로 매처를 보지 않는다.
@@ -76,7 +76,7 @@ def test_settings의_매처와_훅이_아는_MCP_도구가_같다() -> None:
     ]
 
     assert len(matchers) == 1
-    assert set(matchers[0].split("|")) - SHELL_TOOLS == set(MCP_TOOLS)
+    assert set(matchers[0].split("|")) == SHELL_TOOLS | set(MCP_TOOLS)
 
 
 def test_셸이_아닌_도구의_명령은_보지_않는다() -> None:

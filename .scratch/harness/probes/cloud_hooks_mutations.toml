@@ -44,5 +44,14 @@ old = '''|mcp__github__merge_pull_request",'''
 new = '''|mcp__github__merge_pull_request|mcp__github__update_pull_request",'''
 [[mutation.edit]]
 file = "tests/tools/test_hook_pr_next_session.py"
-old = '''    assert set(matchers[0].split("|")) - SHELL_TOOLS == set(MCP_TOOLS)'''
+old = '''    assert set(matchers[0].split("|")) == SHELL_TOOLS | set(MCP_TOOLS)'''
 new = '''    assert set(MCP_TOOLS) <= set(matchers[0].split("|"))'''
+
+[[mutation]]
+name = "매처에서 셸 도구가 빠졌다(PR #116 claude-review 2회차 Nit)"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''"matcher": "Bash|PowerShell|mcp__plugin_github_github__create_pull_request'''
+new = '''"matcher": "Bash|mcp__plugin_github_github__create_pull_request'''
