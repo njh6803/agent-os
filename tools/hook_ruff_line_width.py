@@ -21,8 +21,11 @@ ruff 는 설정을 그대로 따르게 부른다. `--select` 를 주면 설정�
 편집마다 울리면, 세션이 이 계기를 무시하는 법을 배운다(hook_journal_retro 의 교훈). 줄
 길이는 그 줄 하나의 성질이라 순서와 무관하다. ruff 는 이 훅을 돌리는 파이썬의 `-m ruff`
 로 부른다 — 훅은 표준 라이브러리만 import 한다(.claude/rules/tools.md). 캐시를 쓰지
-않는다(`--no-cache`, 쓰면 `.ruff_cache` 가 생긴다). 비용은 .claude/rules/tools.md 의
-실측 줄에 있다.
+않는다(`--no-cache`, 쓰면 `.ruff_cache` 가 생긴다). 파일을 고치지 않는다 — `fix` 는
+파일의 조상이 아니라 실행 위치(세션 위치)의 설정에서 읽혀, `fix = true` 면 다음 Edit 에서
+쓸 import 를 F401 수정이 지우고, `fix-only = true` 는 `--no-fix` 로도 꺼지지 않고 고친 뒤
+진단까지 숨긴다(PR #111 CodeRabbit, 2026-10-01 실측). 그래서 `--no-fix` 와 `--no-fix-only`
+둘이다. 비용은 .claude/rules/tools.md 의 실측 줄에 있다.
 
 못 보는 것: `ruff format` 이 감을 코드 줄과 문자열·주석의 줄을 가르지 않는다(둘 다 알린다 — 코드
 줄은 커밋 전 format 이 감는다). `# noqa: E501` 은 ruff 가 지나친다. `[tool]` 아래 점 키
@@ -98,6 +101,8 @@ def long_lines(path: Path) -> list[tuple[int, str]]:
                 "-m",
                 "ruff",
                 "check",
+                "--no-fix",
+                "--no-fix-only",
                 "--no-cache",
                 "--force-exclude",
                 "--output-format",

@@ -23,9 +23,9 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
 ## 한 것
 
 - `tools/hook_ruff_line_width.py`(PostToolUse Write|Edit). `.py`·`.pyi`이고 조상에 ruff 설정이 있으면
-  `python -m ruff check --no-cache --force-exclude --output-format json <파일>`을 돌려 E501만 행과 폭(`2행 102 > 100`)으로
-  알린다. 열 줄까지 적고 나머지는 센다.
-- 등록은 `hook_journal_retro`와 같은 Write|Edit 그룹. 테스트 13, 페이로드 표 셋(발동 하나, 짧은 파이썬 Edit 침묵, 설정 밖
+  `python -m ruff check --no-fix --no-fix-only --no-cache --force-exclude --output-format json <파일>`을 돌려 E501만 행과
+  폭(`2행 102 > 100`)으로 알린다. 열 줄까지 적고 나머지는 센다.
+- 등록은 `hook_journal_retro`와 같은 Write|Edit 그룹. 테스트 15, 페이로드 표 셋(발동 하나, 짧은 파이썬 Edit 침묵, 설정 밖
   스크래치 스크립트 침묵)과 러너의 자리표시자 둘(`${RUFF_PROJECT}`, `${LOOSE_PY}`).
 - 변이 파일 `.scratch/harness/probes/ruff_line_width_mutations.toml`과 프로브 README 행, `tools.md`의 비용 줄, KICKOFF(훅
   아홉, 계기 넷), 대기열 53 닫기.
@@ -44,7 +44,12 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
   `--select E501` 아래서도 `invalid-syntax`로 온다. 캐시를 쓰면 설정 자리에 `.ruff_cache`가 생긴다. `--select`를 빼면 기본
   선택(E501 없음)과 `ignore`를 따르고, `extend-exclude`는 `--force-exclude`와 함께일 때만 듣는다. `--force-exclude`는
   워크트리 파일을 어느 실행 위치에서도 건너뛰지 않았다(주 저장소의 `.gitignore`에 걸리지 않는다).
-- **변이.** 열셋 빨강, 확장자 검사 하나 초록(판정이 아니라 비용이라). 처음 판으로 되돌린 변이(`--select E501`)가 빨갛다.
+- **자동 수정.** `fix`는 파일의 조상이 아니라 실행 위치의 설정에서 읽힌다. 실행 위치를 그 프로젝트로 두면 `fix = true`가
+  JSON 출력에서도 파일을 고쳤고(2 fixed), 실행 위치가 다른 곳이면 같은 설정이 듣지 않았다 — 첫 탐침은 이 때문에 지적을
+  기각할 뻔했다. `fix = true`는 `--no-fix`로 꺼진다. `fix-only = true`는 `--no-fix`로 꺼지지 않고 고친 뒤 진단까지 숨기며
+  (`Fixed 2 errors.`), `--no-fix-only`로 꺼진다.
+- **변이.** 열다섯 빨강, 확장자 검사 하나 초록(판정이 아니라 비용이라). 처음 판으로 되돌린 변이(`--select E501`)와 두 수정
+  플래그를 하나씩 뺀 변이가 빨갛다.
   러너의 침묵 사례 note("설정을 보지 않으면 발동한다")는 스크래치 변이 파일로 한 번 쟀다(러너 어긋남 1건).
 - **이 세션의 E501.** 워크트리 세션의 훅은 주 체크아웃의 파일로 돌아 이 세션에는 새 훅이 없었다. 그래서 이 세션도 커밋 전
   `ruff check`에서야 알았다 — 넷, 하나, 다섯. 모두 한글 독스트링·주석 줄이다.
@@ -71,8 +76,49 @@ web-admin 뒤 하네스 chore 배치의 다음 항목이다. 지시문은 일지
 
 ## 검사
 
-- `uv run pytest -q` 1114 passed(`tests/tools/test_hook_ruff_line_width.py` 13). `uv run ruff check .`,
+- `uv run pytest -q` 1114 passed(`tests/tools/test_hook_ruff_line_width.py` 13, PR 리뷰 반영 뒤 15). `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run pyright`(0 errors), `uv run lint-imports` 초록. `pnpm -C web verify` 초록(테스트
   263, web은 바꾸지 않았다). 지침·타입 우회·마크다운 표·줄 구분 검사 초록, 훅 러너 37건에 어긋남 0, 인용 대조는 바뀐
   파일에 경고 0. `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
-- 변이 14 모두 기대대로.
+- 변이 14 모두 기대대로(PR 리뷰 반영 뒤 16).
+
+## PR 리뷰
+
+PR #111. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: not assigned`, 이 PR에서 다시 봤다).
+
+- **CI**(`00756fd`). `verify` 2분 56초, `claude-review` 47초, 둘 다 초록. claude-review는 지적 없음.
+- **CodeRabbit**(`@coderabbitai review`). 별 10개 미만이라 자동 리뷰는 건너뛰고 수동 요청으로 돌았다. 인라인 둘.
+  - Major: 조상 설정의 `fix = true`면 훅이 파일을 고친다. 첫 탐침(실행 위치가 워크트리)에서는 파일이 바뀌지 않아 기각할
+    뻔했는데, 실행 위치를 그 프로젝트로 두자 고쳐졌다(잰 것의 자동 수정). 훅의 실행 위치는 세션 위치, 곧 프로젝트 루트라
+    실제 조건이다. `--no-fix`·`--no-fix-only`를 더하고, 실행 위치를 옮긴 회귀 테스트 둘(`fix`, `fix-only`)과 변이 둘을 더했다.
+  - Minor: 대기열 53의 어디로 칸을 실제 자리로 바꾸고 미정 후보와 0.2초 어림을 지우라. 반영하지 않았다 — 이 파일은 어디로
+    칸에 승인 때의 계획을 두고 닫힘은 무엇 칸의 취소선 뒤와 승인 칸에 적는다(대기열 1·2·59가 그 모양). 53의 어디로 칸을
+    덮어쓴 일은 일지 2026-09-29-04에서 실수로 보고 되돌렸다.
+
+## 회고
+
+후보 셋을 냈고 둘이 승인됐다.
+
+> 사용자(질문에 답): "retro 헛계기 정규식 (추천),탐침의 실행 위치 (추천)"
+
+- **74(새로).** 이 일지를 처음 Write했을 때 retro 계기가 떴는데, "다음" 절은 없었고 "잰 것" 절의 코드 스팬
+  `` `## 다음` ``이 부분 문자열 검사에 걸렸다. 단계를 닫는 순간이 아니라 계기를 따르지 않았다. 헛계기가 진짜 계기를
+  무시하게 만든다는 것은 그 훅 자신의 교훈이고, 이 PR이 E501만 남긴 이유와 같다.
+- **75(4회차).** CodeRabbit의 `fix = true` 지적을 첫 탐침이 기각할 뻔했다. 탐침의 실행 위치가 워크트리라 ruff가 그
+  프로젝트의 `fix` 설정을 읽지 않았고, 훅의 실제 실행 위치(세션 위치)로 옮기자 파일이 고쳐졌다. `CLAUDE.md` 환경 함정의
+  "검사 도구가 내가 생각하는 것을 실제로 봤는지"가 세 번을 센 바로 그 모양이다. 훅으로 잡을 수 없어 그 줄을 날카롭게 한다.
+- 기각한 것(일지에만): 게이트의 도구를 부르는 훅은 판정을 게이트와 같게 하고 부작용을 끈다는 `tools.md` 한 줄. 셀프 리뷰
+  (`--select`)와 CodeRabbit(`fix`)이 이 PR에서 하나씩 찾았지만 한 PR의 사건이라 규칙으로는 이르다.
+- 일지에만: 이 세션도 E501을 커밋 전에야 세 판 봤다(넷, 하나, 다섯) — 워크트리 세션의 훅은 주 체크아웃의 파일로 돌아 새
+  훅이 없었다. 워크트리 가드가 `env -u`로 감싼 명령, `bash`를 부르는 for 루프, 주 체크아웃으로 `cd`한 `git check-ignore`를
+  거부해 스크립트 파일로 옮겼다(알려진 모양). 변이 도구가 원본 바이트를 되쓰며 수정 시각이 바뀌어 Write가 한 번
+  거절됐다(내용은 스테이지와 같았다). CodeRabbit의 Minor(대기열 어디로 칸)는 파일 머리가 그 칸을 닫을 때 어떻게 두는지
+  적지 않아 생긴 오독일 수 있으나, 기존 행의 모양이 원천이라 두었다.
+
+## 다음
+
+- 대기열 53이 닫혔다. 훅은 병합 뒤 주 체크아웃이 main을 받은 다음부터 돈다. 실제 세션에서 계기가 뜨는지는 파이썬을 처음
+  쓰는 세션이 본다.
+- 다음 chore는 탐침과 근거의 규약 셋, 45(4회차)·61(3회차)·75(4회차)다. 자리가 `docs/agents/issue-tracker.md`의 프로브
+  규약과 `CLAUDE.md` 환경 함정 한 줄이라 한 PR로 묶인다. 그 뒤 작은 하네스 둘(73 변이 파일 읽힘 테스트, 74 retro 계기
+  정규식). web-widget은 설계 인터뷰가 먼저다.

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from tools.hook_ruff_line_width import context_for, ruff_governs
 
 # 52자에 폭 102. 글자 수로는 한참 짧은데 E501 이다 — 이 대기열 항목의 모양이다.
@@ -153,3 +154,22 @@ def test_ruff_캐시를_남기지_않는다(tmp_path: Path) -> None:
     context_for("Edit", str(_ruff_설정_아래에_쓴다(tmp_path, LONG)))
 
     assert not (tmp_path / ".ruff_cache").exists()
+
+
+@pytest.mark.parametrize("fix", ["fix = true", "fix-only = true"])
+def test_실행_위치의_설정이_자동_수정을_켜도_파일을_고치지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fix: str
+) -> None:
+    """`fix` 는 파일의 조상이 아니라 실행 위치의 설정에서 읽히고, 훅은 세션 위치(프로젝트 루트)에서
+    돈다. 그대로 두면 다음 Edit 에서 쓸 import 를 F401 수정이 지운다. `fix-only` 는 고친 뒤 진단도
+    숨긴다(PR #111 CodeRabbit, 2026-10-01 실측)."""
+    config = CONFIG.replace("line-length = 100\n", f"line-length = 100\n{fix}\n")
+    path = _ruff_설정_아래에_쓴다(tmp_path, "import os", LONG, config=config)
+    before = path.read_bytes()
+    monkeypatch.chdir(tmp_path)
+
+    context = context_for("Edit", str(path))
+
+    assert path.read_bytes() == before
+    assert context is not None
+    assert "2행 102 > 100" in context

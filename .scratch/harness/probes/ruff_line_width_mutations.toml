@@ -98,6 +98,30 @@ new = '''
 '''
 
 [[mutation]]
+name = "실행 위치의 fix = true 에도 파일을 고치지 않는다(--no-fix)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+                "--no-fix",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "실행 위치의 fix-only = true 에도 파일을 고치지 않는다(--no-fix-only)"
+tests = ["tests/tools/test_hook_ruff_line_width.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ruff_line_width.py"
+old = '''
+                "--no-fix-only",
+'''
+new = '''
+'''
+
+[[mutation]]
 name = "캐시를 쓰지 않는다"
 tests = ["tests/tools/test_hook_ruff_line_width.py"]
 expect = "red"
