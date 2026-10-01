@@ -871,6 +871,37 @@ def test_변이를_쓰지_못한_파일은_다른_쓰기로_보지_않고_되돌
     assert a.read_bytes() == b"a = 1\n"
 
 
+def test_못_보는_것_앞_파일의_변이_쓰기가_실패하면_아직_쓰지_않은_파일에_든_쓰기는_덮는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """변이를 쓰지 못한 파일은 쓴 변이 바이트가 없어 보지 않고 되돌린다. 처음 읽은 뒤 되돌리기까지의
+    틈에 든 쓰기는 사라진다. 앞 파일의 쓰기가 실패하면 곧바로 되돌리므로 그 틈은 짧다(독스트링의 못
+    보는 것, PR #115 claude-review)."""
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    끼운_뒤: list[bytes] = []
+
+    def 다른_쓰기를_끼우고_막는다(data: bytes) -> bool:
+        if data != b"x = 2\n":
+            return False
+        with a.open("ab") as f:  # m 의 변이를 쓰는 사이 a 에 다른 쓰기가 든다
+            f.write(b"# doc\n")
+        끼운_뒤.append(a.read_bytes())
+        return True
+
+    _쓰기를_막는다(monkeypatch, m, 다른_쓰기를_끼우고_막는다)
+
+    with pytest.raises(PermissionError):
+        measure(
+            load_spec(변이),
+            root=tmp_path,
+            runner=_변이면(m, b"x = 2", _빨강),
+            out=lambda _: None,
+        )
+
+    assert 끼운_뒤 == [b"a = 1\n# doc\n"]
+    assert a.read_bytes() == b"a = 1\n"
+
+
 def _변이_파일을_쓴다(tmp_path: Path, 내용: str) -> str:
     path = tmp_path / "mutations.toml"
     path.write_text(내용, encoding="utf-8")
