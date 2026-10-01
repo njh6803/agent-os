@@ -1,6 +1,7 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
 # 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
+# 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
@@ -250,6 +251,25 @@ hook = "hook_prompt_directive.py"
 expect = "silent"
 note = "보통 프롬프트"
 payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+# --- hook_stop_korean (Stop) ---
+[[case]]
+hook = "hook_stop_korean.py"
+expect = "block"
+note = "사용자가 '한국어로 말해줘'라고 고친 답(일지 2026-10-01-07)"
+payload = { hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "The new comment is just CodeRabbit confirming it received the review request, so there's nothing to fix or reply to. All three checks for `98f1ed0` (`verify`, `claude-review`, CodeRabbit) are still running. When they finish, I'll check the results, merge, and finish journal 07." }
+
+[[case]]
+hook = "hook_stop_korean.py"
+expect = "silent"
+note = "식별자가 섞인 한국어 답 — 비율 0.391, 막지 않은 답 724개 중 둘째로 낮다(트랜스크립트 39159309, 2026-10-01 측정)"
+payload = { hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "새 커밋의 CI가 통과했습니다. Claude Code Review와 CodeRabbit을 기다립니다." }
+
+[[case]]
+hook = "hook_stop_korean.py"
+expect = "silent"
+note = "멈춤을 한 번 막은 뒤의 Stop — stop_hook_active 가 참(stop_payload 탐침)"
+payload = { hook_event_name = "Stop", stop_hook_active = true, last_assistant_message = "Now merge." }
 
 # --- hook_pr_next_session (PostToolUse Bash|PowerShell|GitHub MCP) ---
 [[case]]

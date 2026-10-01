@@ -18,6 +18,7 @@ from tools.run_hooks import (
     Registration,
     coverage_gaps,
     create_fixtures,
+    hook_environment,
     load_cases,
     outcome_of,
     registered_hooks,
@@ -174,6 +175,18 @@ def test_표의_훅을_등록에서_빼면_빈자리를_잡는다() -> None:
     assert coverage_gaps(load_cases(PAYLOADS), registered) == [
         "hook_env_read.py: 표에 있는데 등록되지 않았다"
     ]
+
+
+def test_자식_환경은_러너를_띄운_세션의_entrypoint_를_물려주지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stop 훅(hook_stop_korean)은 SDK 세션에서 침묵한다. 러너가 SDK 세션 안에서 돌면 그 값을
+    물려받아 발동 사례가 침묵으로 어긋난다. 판정이 러너를 띄운 자리에 기대지 않게 한다.
+    """
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "sdk-py")
+
+    # 키만 본다. 환경 전체를 단언하면 실패 출력에 값(토큰일 수 있다)이 찍힌다.
+    assert "CLAUDE_CODE_ENTRYPOINT" not in hook_environment().keys()
 
 
 def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path) -> None:
