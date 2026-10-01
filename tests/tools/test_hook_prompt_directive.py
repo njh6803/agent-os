@@ -69,6 +69,7 @@ def test_self가_거부되면_세션_ID를_대신_넘기라고_한다() -> None:
     assert context is not None
     assert "거부" in context
     assert "세션의 ID" in context
+    assert "알린다" in context
 
 
 def test_첫_글자가_전각이면_스킬_파일을_읽어_따르라는_계기가_붙는다() -> None:

@@ -41,12 +41,15 @@ def test_인자의_python은_명령이_아니다() -> None:
     assert bare_python_calls("docker run --rm img python --version") == []
 
 
-def test_따옴표_안이라도_분리자와_키워드_뒤와_줄_머리의_python은_막는다() -> None:
-    """셸이 실행할 것도, 데이터인 것(거짓 양성)도, 컨테이너 안의 것(거짓 양성)도 같다.
-
-    대기열 82, 일지 2026-10-01-06.
-    """
+def test_따옴표_안이라도_셸이_실행할_분리자_뒤의_python은_막는다() -> None:
     assert bare_python_calls('bash -c "cd tools; python x.py"') == ["python"]
+
+
+def test_따옴표_안의_데이터나_컨테이너의_python도_지금은_막는다() -> None:
+    """거짓 양성이다. 분리자·키워드 뒤와 줄 머리면 따옴표 안이라도 막는다.
+
+    따옴표를 푸는 판정으로 고치면 이 테스트를 뒤집는다(대기열 82, 일지 2026-10-01-06).
+    """
     assert bare_python_calls('echo "a; python x"') == ["python"]
     assert bare_python_calls('git commit -m "fix: if python fails"') == ["python"]
     assert bare_python_calls('git commit -m "a\npython x"') == ["python"]
