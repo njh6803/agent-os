@@ -498,6 +498,8 @@ _TSC_진단 = (
             "clients.ts",
             "error",
         ),
+        (CommandResult(2, "other/index.ts(1,1): error TS2322: x.\n"), "index.ts", "red"),
+        (CommandResult(2, "other/index.ts(1,1): error TS2322: x.\n"), "src/index.ts", "error"),
     ],
     ids=[
         "진단_없음",
@@ -507,6 +509,8 @@ _TSC_진단 = (
         "파일_이름의_끝만_같다",
         "pnpm_r_의_패키지_기준_경로",
         "진단_없이_실패",
+        "못_보는_것_다른_디렉터리의_같은_이름",
+        "디렉터리까지_적으면_가른다",
     ],
 )
 def test_tsc_는_적은_파일에서_진단이_날_때만_빨강이다(
