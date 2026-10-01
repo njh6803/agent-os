@@ -4,7 +4,7 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 다섯을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터(pytest 밖, 다른 워크트리, `--check`), 이 티켓의 몫만 쓰기(대기열 35), 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29·35·59. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 여섯을 더했다. 시작 전 브랜치 규약 포인터, 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터(pytest 밖, 다른 워크트리, `--check`), 이 티켓의 몫만 쓰기(대기열 35), 설치한 판과 측정한 판의 견줌(대기열 61), 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29·35·59·61. -->
 
 Implement the work described by the user in the spec or tickets.
 
@@ -13,6 +13,8 @@ Implement the work described by the user in the spec or tickets.
 Use /tdd where possible, at pre-agreed seams.
 
 이 티켓의 체크박스가 요구하는 것만 쓴다. 다음 티켓에 걸릴 것(형제 티켓이 붙일 라우트의 독스트링, "재개 라우트도 같다" 같은 미래형 문장)은 그 티켓 파일의 메모로 넘긴다. 세 번 명세 축 리뷰가 잡아 한 바퀴씩 들었다(대기열 35).
+
+의존성을 더하거나 올리면 설치된 판을 명세·ADR이 근거로 든 측정의 판(프로브 README가 적는다)과 견준다. major가 다르면 그 측정을 다시 돌린다. 명세가 msw 2.15.0의 프로브에서 옮긴 옵션이 설치된 3.0.0에서 이름과 뜻이 달랐다(대기열 61, 규약은 `docs/agents/issue-tracker.md`의 프로브와 근거 절).
 
 Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
 
