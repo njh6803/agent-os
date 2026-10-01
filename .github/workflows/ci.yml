@@ -94,8 +94,9 @@ jobs:
   # failure 뿐 아니라 cancelled 와 skipped 도 빨강이다.
   # needs 에 없는 잡은 필수 검사 밖에서 돈다. 그래서 같은 실행 시도의 잡 이름을 API 로 읽어, 자기 밖의 잡이 needs 에
   # 없으면 빨강이다. 잡에 name: 을 두지 않으므로 API 의 잡 이름이 잡 id 와 같다. 읽은 목록에 verify 자신이 없으면
-  # (빈 목록이면) 비교할 것이 없어 조용히 초록이 되므로 그것도 빨강이다. 일부러 필수 검사 밖에 둘 잡이나 verify 뒤에
-  # 도는 잡(needs: [verify])이 생기면 아래 차집합에 그 이름을 예외로 더한다.
+  # (빈 목록이면) 비교할 것이 없어 조용히 초록이 되므로 그것도 빨강이다. 일부러 필수 검사 밖에 둘 잡이 생기면 아래
+  # 차집합에 그 이름을 예외로 더한다. verify 뒤에 도는 잡(needs: [verify])은 verify 가 도는 동안 목록에 없어 이 검사가
+  # 보지 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은 필수 검사 밖이다(ADR 0021 이력, PR #119 실험).
   verify:
     if: always()
     needs: [python, web, e2e]
@@ -120,14 +121,3 @@ jobs:
             exit 1
           fi
           jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null
-
-  extra:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo extra
-
-  after:
-    needs: [verify]
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo after
