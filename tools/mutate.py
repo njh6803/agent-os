@@ -65,7 +65,9 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
    빨간데 변이가 빨가면 그 빨강은 아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서
    본다.
 3. 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어 돌린 뒤 `finally` 에서 그 바이트를
-   그대로 쓴다.
+   그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지 본다. 다르면 변이가 든 동안 다른
+   쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열 77). 되돌릴 파일(`restore`)은
+   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다.
 4. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 변이 파일을 읽지 못했거나
    틀렸으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지 못했거나 되돌리지 못했으면 3.
 
@@ -74,7 +76,9 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 커밋하고 다른 워크트리에서 그 워크트리의 도구로 돌린다. 변이 파일은 어느 경로여도 되고 편집의 `file`
 은 도는 도구가 든 체크아웃 기준이다. pnpm 은 저장소(store)에서 링크만 해 네트워크를 타지
 않는다(2026-10-01 13초, 일지 2026-10-01-01). `.env` 는 추적하지 않으므로 LLM 변이면 새 워크트리에
-복사한다. 에이전트의 명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다.
+복사한다. 에이전트의 명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다. 도는 동안 변이한 파일을
+고치면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어
+낸다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -89,7 +93,15 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 lastfailed 에 남지 않게 한다.
 
 못 보는 것: 프로세스가 강제로 죽으면(`finally` 가 돌지 않으면) 되돌리지 못한다. 되돌리는 쓰기가
-실패하면(파일이 잠겼다) 나머지 파일은 되돌리고 남은 파일을 알린다. 두 경우 모두 `git diff` 로 본다.
+실패하거나(파일이 잠겼다) 다른 쓰기가 들어왔으면 나머지 파일은 되돌리고 남은 파일을 알린다. 세 경우
+모두 `git diff` 로 본다. 되돌릴 파일(`restore`, 편집한 파일을 함께 적은 것 포함)에 든 다른 쓰기는
+명령의 쓰기와 가를 수 없어 덮는다. 편집한 파일을 읽은 뒤 쓰기까지의 틈에 든 쓰기도 덮는다. 틈은
+다음과 같다.
+- 원래 바이트를 읽고 변이를 쓰기까지.
+- 되돌리기 전에 읽어 보고 다시 쓰기까지.
+- 앞 파일의 변이 쓰기가 실패해 변이를 쓰지 못한 파일이면, 처음 읽은 뒤 되돌리기까지. 쓴 변이
+  바이트가 없어 보지 않는다.
+
 원문의 줄 끝은 파일과 같아야 한다 — 변이 파일의 `\\n` 은 CRLF 파일에서 맞지 않는다. vitest 의 skip
 은 세지 않는다. `-t` 로 좁히면 고르지 않은 테스트가 skipped 로 세어져 `it.skip` 과 가를 수 없다. tsc
 의 빨강은 진단이 난 파일만 본다. 변이가 낸 문법 오류가 적은 파일까지 번져도 빨강이다. 윈도우에서
@@ -146,7 +158,8 @@ class SpecError(Exception):
 
 
 class RestoreError(Exception):
-    """변이를 되돌리지 못한 파일이 있다. 그 파일은 변이된 채 남았다."""
+    """변이를 되돌리지 못한 파일이 있다. 변이가 든 동안 다른 쓰기가 들어왔거나, 그 파일을 읽거나
+    다시 쓰다가 `OSError` 가 났다."""
 
 
 class _Model(BaseModel):
@@ -438,30 +451,53 @@ def _invoke(
     return runner([*command.command, *tests], root / command.cwd)
 
 
+class _WrittenMeanwhile(Exception):
+    """변이가 든 동안 다른 쓰기가 들어와, 파일이 쓴 변이 바이트가 아니다."""
+
+
+def _restore_file(path: Path, original: bytes, written: bytes | None) -> None:
+    """원래 바이트를 되쓴다. 쓴 변이 바이트(`written`)가 있는데 파일이 그것과 다르면 덮지 않고
+    `_WrittenMeanwhile`."""
+    if written is not None and path.read_bytes() != written:
+        raise _WrittenMeanwhile
+    path.write_bytes(original)
+    _drop_bytecode(path)
+
+
+def _restore(root: Path, name: str, held: dict[Path, bytes], written: dict[Path, bytes]) -> None:
+    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`."""
+    stuck: list[str] = []
+    for path, original in held.items():
+        relative = path.relative_to(root.resolve()).as_posix()
+        try:
+            _restore_file(path, original, written.get(path))
+        except _WrittenMeanwhile:
+            stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
+        except OSError as error:
+            stuck.append(f"{relative} ({error})")
+    if stuck:
+        raise RestoreError(f"{name}: {', '.join(stuck)}")
+
+
 def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> list[CommandResult]:
     files = _mutated(root, mutation)
+    rewritable = [(root / relative).resolve() for relative in mutation.restore]
     held = {path: original for path, (original, _) in files.items()}
-    for relative in mutation.restore:
-        path = (root / relative).resolve()
+    for path in rewritable:
         held.setdefault(path, path.read_bytes())
+    written: dict[Path, bytes] = {}  # 쓰기가 끝난 변이 바이트. 되돌릴 파일은 넣지 않는다
     try:
         for path, (_, mutated) in files.items():
             path.write_bytes(mutated)
             _drop_bytecode(path)
+            if path not in rewritable:
+                written[path] = mutated
         return [
             _invoke(root, spec, mutation.runner, mutation.tests, runner)
             for _ in range(mutation.repeat)
         ]
     finally:
-        stuck: list[str] = []
-        for path, original in held.items():
-            try:
-                path.write_bytes(original)
-                _drop_bytecode(path)
-            except OSError as error:
-                stuck.append(f"{path.relative_to(root.resolve()).as_posix()} ({error})")
-        if stuck:
-            raise RestoreError(f"{mutation.name}: {', '.join(stuck)}")
+        _restore(root, mutation.name, held, written)
 
 
 def _details(judged: Sequence[tuple[CommandResult, Verdict]], out: Callable[[str], None]) -> None:
@@ -567,7 +603,7 @@ def main(
         out(f"변이 파일 오류(아무 파일도 쓰지 않았다): {error}")
         return 2
     except RestoreError as error:
-        out(f"되돌리지 못했다. 변이된 채 남은 파일을 git diff 로 보고 되돌린다: {error}")
+        out(f"되돌리지 못했다. 남은 파일을 git diff 로 보고 변이만 걷어 낸다: {error}")
         if error.__context__ is not None:  # finally 에서 던져 가린, 그 전에 난 예외
             out(f"되돌리기 전에 난 예외: {error.__context__!r}")
         return 3
