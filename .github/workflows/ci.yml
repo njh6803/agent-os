@@ -124,3 +124,8 @@ jobs:
             exit 1
           fi
           jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null
+
+  extra:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo extra
