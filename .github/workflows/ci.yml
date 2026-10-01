@@ -22,7 +22,6 @@ jobs:
     env:
       PYTHONUTF8: "1"
     steps:
-      - run: exit 1
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
