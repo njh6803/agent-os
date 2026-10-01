@@ -40,6 +40,11 @@
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_journal_retro.py\"",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_ruff_line_width.py\"",
+            "timeout": 20
           }
         ]
       },
