@@ -46,7 +46,7 @@
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
-- web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다. e2e는 `pnpm -C web/apps/admin exec playwright test`이고 CI의 `verify` 잡이 돈다. 로컬에서는 중계·시작 래퍼·api-client·서버 라우트를 건드렸을 때 친다)
+- web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다. e2e는 `pnpm -C web/apps/admin exec playwright test`이고 CI의 `e2e` 잡이 돈다. 로컬에서는 중계·시작 래퍼·api-client·서버 라우트를 건드렸을 때 친다)
 
 게이트는 열하나(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. 다섯은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 하나인 e2e는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
 
