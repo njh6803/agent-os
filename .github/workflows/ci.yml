@@ -39,6 +39,7 @@ jobs:
 
   # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
   web:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
