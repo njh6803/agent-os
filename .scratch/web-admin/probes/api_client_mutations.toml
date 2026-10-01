@@ -1,0 +1,368 @@
+# 티켓 03(생성 클라이언트)의 TS 테스트가 무엇을 재는지 변이로 본다. 처음에는 `tools/mutate.py` 가 pytest 만 돌아서
+# 같은 규약의 JS 러너(`api_client_mutations.mjs`)로 지었고, 그 도구가 pytest 밖의 명령을 돌게 되며 여기로 옮겼다
+# (대기열 59). 빨강의 판정은 도구의 독스트링이다. Vitest 는 실패한 테스트가 셀 때만, tsc 는 변이마다 적은 파일
+# (`diagnostic_in`)에서 진단이 날 때만 빨강이다.
+#
+# 판정자·tsconfig 검사·최신성 검사의 위반 사례는 테스트가 스스로 만들어 넣어 매 실행이 빨강을 다시 잰다. 여기 있는
+# 것은 그 테스트들이 기대는 코드와 설정 쪽(최신성 검사의 보고와 쓰기, 판정자의 범위)의 변이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-admin/probes/api_client_mutations.toml [이름 ...]
+# 네트워크를 타지 않는다. `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[runner.tsc]
+command = ["pnpm", "exec", "tsc", "--noEmit", "-p", "packages/api-client"]
+cwd = "web"
+judge = "tsc"
+
+[runner.typecheck]
+command = ["pnpm", "run", "typecheck"]
+cwd = "web"
+judge = "tsc"
+
+[[mutation]]
+name = "재귀 Json 자리가 없어도 지나간다"
+runner = "vitest"
+tests = ["tools/generate-api-client.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/tools/generate-api-client.ts"
+old = '  if (at === -1 || source.includes(RECURSIVE_JSON, at + 1)) {'
+new = '''
+  if (at === -1) {
+    return source;
+  }
+  if (source.includes(RECURSIVE_JSON, at + 1)) {'''
+
+[[mutation]]
+name = "재귀 Json 자리가 둘이어도 첫째를 바꾼다"
+runner = "vitest"
+tests = ["tools/generate-api-client.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/tools/generate-api-client.ts"
+old = '  if (at === -1 || source.includes(RECURSIVE_JSON, at + 1)) {'
+new = '  if (at === -1) {'
+
+[[mutation]]
+name = "최신성 검사가 어긋남을 보고하지 않는다"
+runner = "vitest"
+tests = ["tools/generate-api-client.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/tools/generate-api-client.ts"
+old = '  if (existsSync(GENERATED) && readFileSync(GENERATED, "utf-8") === generated) {'
+new = '  if (existsSync(GENERATED)) {'
+
+# 보고는 그대로 하되(종료 1과 안내) 생성물을 사본의 결과로 덮어쓴다. "고쳐 쓰지 않는다" 테스트 하나만
+# 빨개야 한다. 명령이 생성물을 덮어쓰므로 되돌리기는 생성물도 쥔다.
+[[mutation]]
+name = "최신성 검사가 생성물을 고쳐 쓴다"
+runner = "vitest"
+tests = ["tools/generate-api-client.test.ts"]
+expect = "red"
+restore = ["web/packages/api-client/src/generated/openapi.ts"]
+
+[[mutation.edit]]
+file = "web/tools/generate-api-client.ts"
+old = '''
+async function staleness(contract: string): Promise<string | null> {
+  const generated = await generate(contract);
+'''
+new = '''
+async function staleness(contract: string): Promise<string | null> {
+  const generated = await generate(contract);
+  const before = existsSync(GENERATED) ? readFileSync(GENERATED, "utf-8") : "";
+  writeFileSync(GENERATED, generated);
+  if (before !== generated) {
+    return "pnpm -C web run generate:api-client";
+  }
+'''
+
+[[mutation]]
+name = "줄 끝의 \\r 를 벗기지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = 'buffer[end - 1] === "\r" ? end - 1 : end'
+new = 'end'
+
+[[mutation]]
+name = "data: 뒤의 공백을 벗기지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = 'return [value.startsWith(" ") ? value.slice(1) : value];'
+new = 'return [value];'
+
+[[mutation]]
+name = "data: 뒤의 공백을 모두 벗긴다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = 'return [value.startsWith(" ") ? value.slice(1) : value];'
+new = 'return [value.trimStart()];'
+
+[[mutation]]
+name = "여러 data 줄을 줄바꿈 없이 잇는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = 'data.push(values.join("\n"));'
+new = 'data.push(values.join(""));'
+
+[[mutation]]
+name = "data 가 아닌 필드도 값으로 읽는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  if (name !== "data") {
+    return [];
+  }'''
+new = '''
+  if (name === "") {
+    return [];
+  }'''
+
+[[mutation]]
+name = "끝나지 않은 프레임의 앞부분을 남기지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '  return { data, rest: buffer.slice(frameStart) };'
+new = '  return { data, rest: buffer.slice(lineStart) };'
+
+[[mutation]]
+name = "술어가 프로토타입의 이름을 종류로 본다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '    Object.hasOwn(EVENT_TYPES, value.type)'
+new = '    value.type in EVENT_TYPES'
+
+[[mutation]]
+name = "술어가 판별자 밖의 필드를 요구한다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '    "type" in value &&'
+new = '''
+    "type" in value &&
+    "run_id" in value &&'''
+
+[[mutation]]
+name = "JSON 이 아닌 프레임을 버린다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '    : { kind: "raw", raw: data };'
+new = '    : { kind: "raw", raw: parsed.ok ? data : "" };'
+
+[[mutation]]
+name = "스트림이 끝날 때 남은 프레임을 버린다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '    buffer += done ? `${decoder.decode()}\n\n` : decoder.decode(value, { stream: true });'
+new = '    buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });'
+
+[[mutation]]
+name = "조각을 이어 해독하지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = 'decoder.decode(value, { stream: true })'
+new = 'decoder.decode(value)'
+
+[[mutation]]
+name = "스트림이 에러로 끝나면 에러를 삼킨다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  try {
+    yield* framesFrom(reader);
+  } finally {'''
+new = '''
+  try {
+    yield* framesFrom(reader);
+  } catch (error) {
+    void error;
+  } finally {'''
+
+[[mutation]]
+name = "스트림이 에러로 끝나면 잠금을 풀지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  try {
+    yield* framesFrom(reader);
+  } finally {
+    reader.releaseLock();
+  }'''
+new = '''
+  try {
+    yield* framesFrom(reader);
+  } catch (error) {
+    throw error;
+  }
+  reader.releaseLock();'''
+
+[[mutation]]
+name = "잠금을 풀지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  } finally {
+    reader.releaseLock();
+  }'''
+new = '''
+  } finally {
+    void reader;
+  }'''
+
+[[mutation]]
+name = "관리 클라이언트가 채널 경로도 안다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = 'export type AdminPaths = Omit<paths, ChannelPath>;'
+new = 'export type AdminPaths = paths;'
+
+[[mutation]]
+name = "채널 클라이언트가 실행을 일으키는 경로도 안다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = 'export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;'
+new = 'export type ChannelPaths = Pick<paths, ChannelPath>;'
+
+[[mutation]]
+name = "목록 응답이 readonly 배열이다(--immutable 을 다시 켠 모양)"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/generated/openapi.ts"
+old = '          "application/json": components["schemas"]["PluginRow"][];'
+new = '          "application/json": readonly components["schemas"]["PluginRow"][];'
+
+[[mutation]]
+name = "종류 목록에서 하나가 빠진다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "stream.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  run_failed: true,
+'''
+new = ''
+
+[[mutation]]
+name = "패키지의 타입 에러를 typecheck 가 본다"
+runner = "typecheck"
+tests = []
+expect = "red"
+diagnostic_in = "clients.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = 'function bearer(token: string): { readonly Authorization: string } {'
+new = '''
+export const 틀린_값: number = "문자열";
+
+function bearer(token: string): { readonly Authorization: string } {'''
+
+[[mutation]]
+name = "판정자가 생성물을 범위에서 뺀다"
+runner = "vitest"
+tests = ["eslint.config.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/eslint.config.mjs"
+old = '''
+  {
+    linterOptions: { noInlineConfig: true },
+  },'''
+new = '''
+  {
+    linterOptions: { noInlineConfig: true },
+  },
+  { ignores: ["**/generated/**"] },'''
+
+[[mutation]]
+name = "클라이언트가 상대 경로 /api 를 baseUrl 로 쓴다"
+runner = "vitest"
+tests = ["packages/api-client/src/clients.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = '  return new URL("/api", location.origin).href;'
+new = '  return "/api";'
