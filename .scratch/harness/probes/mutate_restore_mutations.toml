@@ -8,8 +8,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            if path in written and path.read_bytes() != written[path]:'''
-new = '''            if False:'''
+old = '''    if written is not None and path.read_bytes() != written:'''
+new = '''    if False:'''
 
 [[mutation]]
 name = "다른 쓰기를 알리고도 덮는다"
@@ -19,10 +19,16 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
-                continue
-            path.write_bytes(original)'''
+    if written is not None and path.read_bytes() != written:
+        raise _WrittenMeanwhile
+    path.write_bytes(original)
+    _drop_bytecode(path)'''
 new = '''
-            path.write_bytes(original)'''
+    current = path.read_bytes()
+    path.write_bytes(original)
+    _drop_bytecode(path)
+    if written is not None and current != written:
+        raise _WrittenMeanwhile'''
 
 [[mutation]]
 name = "다른 쓰기를 알리지 않고 건너뛴다"
@@ -31,9 +37,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''                stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
-'''
-new = ''''''
+old = '''            stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")'''
+new = '''            pass'''
 
 [[mutation]]
 name = "되돌릴 파일로 적은 편집 파일도 본다"

@@ -72,13 +72,13 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
    틀렸으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지 못했거나 되돌리지 못했으면 3.
 
 제자리가 아닌 실행. 변이는 이 도구가 든 체크아웃을 고친다. 도는 동안(web 변이 수십 개는 40분이
-넘는다) 그 체크아웃을 고치거나 소스를 읽는 리뷰를 띄우면 변이된 소스를 본다. 고친 파일이 변이한
-파일이면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로
-걷어 낸다. 그래서 잴 코드를
+넘는다) 그 체크아웃을 고치거나 소스를 읽는 리뷰를 띄우면 변이된 소스를 본다. 그래서 잴 코드를
 커밋하고 다른 워크트리에서 그 워크트리의 도구로 돌린다. 변이 파일은 어느 경로여도 되고 편집의 `file`
 은 도는 도구가 든 체크아웃 기준이다. pnpm 은 저장소(store)에서 링크만 해 네트워크를 타지
 않는다(2026-10-01 13초, 일지 2026-10-01-01). `.env` 는 추적하지 않으므로 LLM 변이면 새 워크트리에
-복사한다. 에이전트의 명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다.
+복사한다. 에이전트의 명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다. 도는 동안 변이한 파일을
+고치면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어
+낸다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -445,18 +445,28 @@ def _invoke(
     return runner([*command.command, *tests], root / command.cwd)
 
 
+class _WrittenMeanwhile(Exception):
+    """변이가 든 동안 다른 쓰기가 들어와, 파일이 쓴 변이 바이트가 아니다."""
+
+
+def _restore_file(path: Path, original: bytes, written: bytes | None) -> None:
+    """원래 바이트를 되쓴다. 쓴 변이 바이트(`written`)가 있는데 파일이 그것과 다르면 덮지 않고
+    `_WrittenMeanwhile`."""
+    if written is not None and path.read_bytes() != written:
+        raise _WrittenMeanwhile
+    path.write_bytes(original)
+    _drop_bytecode(path)
+
+
 def _restore(root: Path, name: str, held: dict[Path, bytes], written: dict[Path, bytes]) -> None:
-    """쥔 원래 바이트를 되쓴다. 쓴 변이 바이트(`written`)와 달라진 파일은 변이가 든 동안 다른
-    쓰기가 들어온 것이라 덮지 않는다. 남은 파일이 있으면 나머지를 모두 되쓴 뒤 `RestoreError`."""
+    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`."""
     stuck: list[str] = []
     for path, original in held.items():
         relative = path.relative_to(root.resolve()).as_posix()
         try:
-            if path in written and path.read_bytes() != written[path]:
-                stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
-                continue
-            path.write_bytes(original)
-            _drop_bytecode(path)
+            _restore_file(path, original, written.get(path))
+        except _WrittenMeanwhile:
+            stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
         except OSError as error:
             stuck.append(f"{relative} ({error})")
     if stuck:

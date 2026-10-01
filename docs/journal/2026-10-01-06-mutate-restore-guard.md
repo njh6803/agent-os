@@ -66,3 +66,42 @@ claude-review의 Nit 둘(`operations.md` 새 항목의 머리 문단을 하위 �
 - 리뷰 반영 뒤: `uv run pytest -q` 1147 passed(경고 3은 `tests/test_conftest.py`의 pytest-asyncio 설정 경고로 이번 변경과
   무관하다), `uv run ruff check .`·`uv run ruff format --check .` 통과, `uv run pyright` 0 errors, `uv run lint-imports` 5 kept,
   `pnpm -C web verify` 초록(테스트 263, web은 바꾸지 않았다). `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
+
+## PR 리뷰
+
+PR #115. PR 직전 CodeRabbit CLI는 돌리지 않았다. 열기 전 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`였다.
+
+- **CI**(`7eeb132`). `verify` 13분 40초, `claude-review` 1분 9초, 둘 다 초록. `verify`가 앞 PR(3분 남짓)보다 길었던 것은
+  `uv sync --frozen` 한 단계가 10분 21초였기 때문이다(아래 회고).
+- **CodeRabbit**(`@coderabbitai review`). 지적 없음. 요약의 범위가 `ca056df`부터 `7eeb132`까지라 HEAD까지 봤다.
+- **claude-review.** Minor 하나: `_restore`의 `try` 안에 판정과 쓰기가 함께 있다(`CODING_STANDARDS.md`의 "에러 처리와 정상
+  흐름을 분리한다"). 셀프 리뷰의 같은 지적에 `finally`에서 `_restore`로 떼었지만, 그 안의 `try`가 같은 모양을 다시 가졌다.
+  파일 하나를 되돌리는 `_restore_file`로 떼고 다른 쓰기는 `_WrittenMeanwhile` 예외로 내, `try`에는 호출 하나만 남겼다. 리뷰가
+  제안한 질의 함수(`-> bool`)는 읽다가 `OSError`를 낼 수 있어 `try` 안에 판정이 남는다. Nit 하나: "제자리가 아닌 실행"의 새
+  문장이 "그래서"의 앞 문장을 바꿔 인과가 어긋났다. 단락 끝으로 옮겼다. 변이 셋의 원문을 새 구조에 맞췄고("알리고도
+  덮는다"는 판정을 쓰기 뒤로 옮기는 변이가 됐다) 일곱 모두 다시 기대대로였다.
+
+## 회고
+
+후보 셋을 냈고 하나가 승인됐다.
+
+> 사용자(질문에 답): "새 항목 (Recommended)", "기록만 (Recommended)", "기록만 (Recommended)"
+
+- **82(새로).** `tools/hook_bash_python_stub.py`가 컨테이너 안의 python을 부르는 `docker run … -c "id -u; python --version"`을
+  막아, 스크립트 파일로 우회했다. 같은 모양의 페이로드를 훅에 넣어 보니(스크래치 스크립트로 손으로 봤다) `echo "a; python x"`도
+  막았고, `echo "python x"`와 `docker run … python --version`은 지나갔다. 독스트링이 문자열 안의 python은 명령어 자리가
+  아니라고 적은 것은 문자열 머리의 python에만 맞는다.
+- 기각한 것(일지에만): 리뷰 반영이 같은 규칙 위반을 한 층 아래로 옮겼다. 셀프 리뷰가 짚은 "`try` 안에 로직을 쌓지 않는다"를
+  `_restore`로 떼어 고쳤는데 그 안의 `try`가 같은 모양이었고, claude-review가 다시 잡았다. 한 번이다. CI의 `uv sync`가 10분
+  21초였다. setup-uv 캐시는 적중했지만 크기가 약 0MB(99328 B)였고, 같은 휠의 내려받기가 세 번씩 다시 시작됐다(로그를 읽었다).
+  `prune-cache` 기본값(true)이 미리 빌드된 휠을 캐시에서 뺀 탓으로 본다(어림, setup-uv 문서는 읽지 않았다). 한 번이고 외부
+  네트워크 사정이다.
+- 일지에만: 프로브 README에 변이마다 서로 다른 테스트가 빨갰다고 로그를 다시 보지 않고 적었고 두 축이 모두 잡았다. 대기열
+  20의 주장 검증이 이번에도 셋(그 문장, `docker run`의 기본 pull, 프로브가 다시 내지 못하는 판)을 잡았다. 세션 제목 훅의
+  `self`는 이 데스크톱 앱 세션에서 통했다. 81의 거부는 클라우드 세션의 도구에서만 났다.
+
+## 다음
+
+- 대기열 77·80이 닫혔다. 이 PR의 2회차 CI와 병합은 다음 일지에 한 줄 남긴다.
+- 다음 chore는 훅 셋인 79·81·82다. 셋 다 `tools/hook_payloads.toml`에 사례를 더한다. 81의 `self` 거부는 클라우드 세션에서만
+  났다. 그 뒤 60(주장 검증 목록의 항목 하나)이다. web-widget은 설계 인터뷰가 먼저다.
