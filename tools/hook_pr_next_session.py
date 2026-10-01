@@ -14,9 +14,17 @@ from typing import Literal, TypedDict
 Action = Literal["create", "merge"]
 
 SHELL_TOOLS = frozenset({"Bash", "PowerShell"})
+# 데스크톱 앱의 GitHub 플러그인 도구와 claude.ai 클라우드 세션의 GitHub 도구는 이름이 다르다.
+# 클라우드 쪽이 빠져 PR을 열어도 계기가 들어오지 않았다(대기열 79). 이 표의 이름과
+# .claude/settings.json 매처의 MCP 이름은 같아야 하고, tests/tools 가 두 집합이 같은지 본다.
+# 못 보는 것: claude.ai 커넥터로 붙인 GitHub. 데스크톱 앱에서 커넥터 도구는 `mcp__<uuid>__…`
+# 꼴이라(데스크톱 앱 세션의 Atlassian·Slack 커넥터가 그랬다, 2026-10-01 손으로 봤다) 여기 이름에
+# 걸리지 않는다.
 MCP_TOOLS: dict[str, Action] = {
     "mcp__plugin_github_github__create_pull_request": "create",
     "mcp__plugin_github_github__merge_pull_request": "merge",
+    "mcp__github__create_pull_request": "create",
+    "mcp__github__merge_pull_request": "merge",
 }
 
 # 명령 위치의 `gh pr create|merge` 만 계기다. echo·printf·커밋 메시지·heredoc 본문에 문구가

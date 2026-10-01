@@ -62,6 +62,20 @@ def test_새_세션_지시문이면_브랜치_이름으로_제목을_바꾸는_�
     assert "SKILL.md" not in context
 
 
+def test_self가_거부되면_세션_ID를_대신_넘기라고_한다() -> None:
+    """클라우드 세션의 `set_session_title` 은 `self` 를 거부했다(대기열 81, 일지 2026-10-01-05).
+
+    세 낱말은 지시의 세 갈래를 대신한다. "거부"는 거부될 때의 분기, "세션의 ID"는 ID 로 바꿔
+    넘기기, "알린다"는 찾지 못했을 때 사용자에게 알리기다. 어순은 보지 않는다.
+    """
+    context = context_for(DIRECTIVE.replace("／", "/", 1))
+
+    assert context is not None
+    assert "거부" in context
+    assert "세션의 ID" in context
+    assert "알린다" in context
+
+
 def test_첫_글자가_전각이면_스킬_파일을_읽어_따르라는_계기가_붙는다() -> None:
     context = context_for(DIRECTIVE)
 

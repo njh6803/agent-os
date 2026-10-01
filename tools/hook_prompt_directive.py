@@ -29,6 +29,15 @@
 지시문을 첫 메시지로 붙여 넣은 것도 발동하는데, 그것은 open-session 이 하는 일과 같아 의도한 쪽이다.
 `/clear` 뒤의 첫 메시지도 같다. 트랜스크립트가 새 파일로 시작해 assistant 기록이 없으므로 발동하고,
 같은 앱 세션이 그 지시문의 일로 새로 시작하는 것이라 이름을 바꾸는 것이 맞다고 본다.
+
+`self` 는 데스크톱 앱의 세션 도구가 받는다. claude.ai 클라우드 세션의 `set_session_title` 은 `self`
+를 거부했고 세션 ID 로는 바뀌었다(대기열 81, 일지 2026-10-01-05). 그 세션이 ID 를 어디서 얻었는지는
+기록에 없어, 계기 문구는 길을 정하지 않고 ID 를 넘기라고 한다. 실행할 수 없는 지시만 남지 않게,
+찾지 못하면 제목을 두고 사용자에게 알리게 한다. 막다른 길은 적는다. 데스크톱 앱의
+`list_sessions` 는 이 세션을 빼고(도구 설명, open-session 4단계), `get_session` 은 이 세션을 `self`
+로만 가리킨다. 훅 입력의 Claude Code 세션 ID 도 앱의 세션 ID 가 아니다 — 데스크톱에서 트랜스크립트
+파일 이름(`59aeea28-…`)과 `get_session self` 의 `local_0ca607c2-…` 가 달랐다(2026-10-01 손으로
+봤다). 못 보는 것: 클라우드 세션에서 이 세션의 ID 를 얻는 길. 재지 않았다.
 """
 
 from __future__ import annotations
@@ -80,7 +89,10 @@ def context_for(prompt: str) -> str | None:
     context = (
         "next-session 지시문으로 연 새 세션이다. 여는 쪽은 이름을 붙이지 않는다. 다른 일보다 먼저 "
         "이 세션의 제목을 지시문의 브랜치 이름으로 바꾼다 — `set_session_title` 에 "
-        f"`self` 와 `{branch}`. 앱이 지은 제목이면 묻지 않고 바뀐다."
+        f"`self` 와 `{branch}`. 앱이 지은 제목이면 묻지 않고 바뀐다. 도구가 `self` 를 거부하면"
+        "(클라우드 세션에서 그랬다) 이 세션의 ID 를 찾아 `self` 대신 넘기고, 찾지 못하면 제목을 "
+        "바꾸지 않고 사용자에게 알린다. 데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` "
+        "는 이 세션을 빼고 `get_session` 은 이 세션을 `self` 로만 가리킨다."
     )
     skill = _fullwidth_skill(prompt)
     if skill is not None:

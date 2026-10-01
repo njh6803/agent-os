@@ -34,10 +34,36 @@ def test_환경변수_접두는_건너뛰고_명령어를_본다() -> None:
     assert bare_python_calls("PYTHONUTF8=1 python x.py") == ["python"]
 
 
-def test_인자나_문자열_안의_python은_명령이_아니다() -> None:
+def test_인자의_python은_명령이_아니다() -> None:
     assert bare_python_calls("echo python") == []
     assert bare_python_calls("grep -rn python src") == []
     assert bare_python_calls("ls .venv/Scripts/python.exe") == []
+    assert bare_python_calls("docker run --rm img python --version") == []
+
+
+def test_따옴표_안이라도_셸이_실행할_분리자_뒤의_python은_막는다() -> None:
+    assert bare_python_calls('bash -c "cd tools; python x.py"') == ["python"]
+
+
+def test_따옴표_안의_데이터나_컨테이너의_python도_지금은_막는다() -> None:
+    """거짓 양성이다. 분리자·키워드 뒤와 줄 머리면 따옴표 안이라도 막는다.
+
+    따옴표를 푸는 판정으로 고치면 이 테스트를 뒤집는다(대기열 82, 일지 2026-10-01-06).
+    """
+    assert bare_python_calls('echo "a; python x"') == ["python"]
+    assert bare_python_calls('git commit -m "fix: if python fails"') == ["python"]
+    assert bare_python_calls('git commit -m "a\npython x"') == ["python"]
+    docker = 'docker run --rm --entrypoint sh img -c "id -u; python --version"'
+    assert bare_python_calls(docker) == ["python"]
+
+
+def test_문자열_머리의_데이터인_python은_막지_않는다() -> None:
+    assert bare_python_calls('echo "python x"') == []
+
+
+def test_sh_c_문자열_머리에서_실행될_python은_지금은_지나간다() -> None:
+    """거짓 음성이다. 따옴표를 푸는 판정으로 고치면 이 테스트를 뒤집는다(대기열 82)."""
+    assert bare_python_calls('sh -c "python x.py"') == []
 
 
 def test_셸_키워드_뒤의_python도_명령어_자리다() -> None:

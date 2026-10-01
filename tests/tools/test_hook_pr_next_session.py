@@ -2,7 +2,28 @@
 
 from __future__ import annotations
 
-from tools.hook_pr_next_session import action_for, context_for
+import json
+from typing import TypedDict
+
+from tools.hook_pr_next_session import MCP_TOOLS, SHELL_TOOLS, action_for, context_for
+from tools.run_hooks import SETTINGS
+
+HOOK_FILE = "tools/hook_pr_next_session.py"
+
+
+# 매처를 읽는 모양. 같은 스키마가 tools/check_instructions.py 와 tools/run_hooks.py 에 비공개로
+# 있고, run_hooks 의 것은 매처를 읽지 않는다. 테스트 하나를 위해 도구의 표면을 넓히지 않는다.
+class _HookEntry(TypedDict, total=False):
+    command: str
+
+
+class _HookGroup(TypedDict, total=False):
+    matcher: str
+    hooks: list[_HookEntry]
+
+
+class _Settings(TypedDict, total=False):
+    hooks: dict[str, list[_HookGroup]]
 
 
 def test_gh_pr_create는_PR을_여는_명령이다() -> None:
@@ -31,6 +52,31 @@ def test_PR을_열거나_병합하지_않는_명령은_None이다() -> None:
 def test_GitHub_MCP의_PR_도구는_이름으로_안다() -> None:
     assert action_for("mcp__plugin_github_github__create_pull_request", None) == "create"
     assert action_for("mcp__plugin_github_github__merge_pull_request", None) == "merge"
+
+
+def test_클라우드_세션의_GitHub_MCP_도구도_이름으로_안다() -> None:
+    """claude.ai 클라우드 세션의 GitHub 도구는 플러그인 접두가 없다.
+
+    대기열 79, 일지 2026-10-01-05.
+    """
+    assert action_for("mcp__github__create_pull_request", None) == "create"
+    assert action_for("mcp__github__merge_pull_request", None) == "merge"
+
+
+def test_settings의_매처와_훅이_아는_도구가_같다() -> None:
+    """이름을 훅에만 더하면 등록이 그 도구에 훅을 걸지 않고, 매처에만 더하면 훅이 조용히 지나간다.
+
+    tools/run_hooks.py 는 훅 파일을 직접 부르므로 매처를 보지 않는다.
+    """
+    settings: _Settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+    matchers = [
+        group.get("matcher", "")
+        for group in settings.get("hooks", {}).get("PostToolUse", [])
+        if any(HOOK_FILE in entry.get("command", "") for entry in group.get("hooks", []))
+    ]
+
+    assert len(matchers) == 1
+    assert set(matchers[0].split("|")) == SHELL_TOOLS | set(MCP_TOOLS)
 
 
 def test_셸이_아닌_도구의_명령은_보지_않는다() -> None:
