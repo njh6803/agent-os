@@ -2,7 +2,7 @@
 # 환경 변수 하나.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/stop_korean_mutations.toml
 # 문턱 둘은 경계 근처의 문장(막는 쪽 0.033 — 측정의 최고 0.041 바로 아래, 지나가는 쪽 0.391 — 측정에서 막지 않은
-# 한국어 문장 답의 최저, 판정 하한의 여덟 글자 "Now merge.")을 테스트로 고정해 잰다.
+# 답 중 둘째로 낮다, 판정 하한의 여덟 글자 "Now merge.")을 테스트로 고정해 잰다.
 
 [[mutation]]
 name = "코드 펜스를 세다"

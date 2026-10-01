@@ -262,7 +262,7 @@ payload = { hook_event_name = "Stop", stop_hook_active = false, last_assistant_m
 [[case]]
 hook = "hook_stop_korean.py"
 expect = "silent"
-note = "식별자가 섞인 한국어 답 — 비율 0.391, 막지 않은 답 724개 중 둘째로 낮다(트랜스크립트 39159309, 2026-10-01 측정)"
+note = "식별자가 섞인 한국어 답 — 비율 0.391, 막지 않은 답 724개 중 둘째로 낮다(가장 낮은 0.340 은 스킬 이름 목록, 트랜스크립트 39159309, 2026-10-01 측정)"
 payload = { hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "새 커밋의 CI가 통과했습니다. Claude Code Review와 CodeRabbit을 기다립니다." }
 
 [[case]]

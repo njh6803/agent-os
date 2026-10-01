@@ -101,6 +101,16 @@ CodeRabbit은 이 PR에서 1회차(`c514cfc`까지)만 봤고 나머지는 시�
   어긋남 0. `pnpm -C web verify`는 리뷰 전에 한 번 돌려 263 passed였고 web은 바꾸지 않았다. `src/`를 바꾸지 않아 `-m llm`은
   돌리지 않았다.
 
+## PR 리뷰
+
+PR #118. 1회차(`b038aa5`)에서 `verify`와 `claude-review`가 초록이었고, CodeRabbit은 시간당 한도에 걸려 아무것도 보지
+못했다. PR 직전 CLI는 `Seat: not assigned`라 돌리지 않았으므로 이 PR의 보안·버그 축은 비어 있다.
+
+- 고친 것: 0.391을 세 곳(페이로드 표, 테스트 독스트링, 변이 파일 머리)이 다르게 설명했다(claude, Nit). "막지 않은 답 중
+  둘째로 낮다"로 맞추고 가장 낮은 것이 스킬 이름 목록이라고 적었다.
+- 둔 것: 러너 테스트의 `.keys()`가 불필요하다(claude, Nit). `in dict`로 단언하면 실패 출력에 환경 변수의 값이 찍힌다. 그래서
+  키만 비교했고, 그 이유는 테스트 주석에 있다.
+
 ## 보고 언어
 
 이 세션도 도구 호출 사이의 중간 문장 몇을 영어로 썼다("Main is clean and behind by #116. Pulling with ff-only." 같은 것).
