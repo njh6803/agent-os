@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
@@ -59,6 +59,33 @@ hook = "hook_git_main_commit.py"
 expect = "silent"
 note = "문자열 안의 git commit"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'git commit 은 나중에'" }, cwd = "${MAIN_REPO}" }
+
+# --- hook_pr_head_sync (PreToolUse Bash|PowerShell) ---
+# 발동은 선택자 없는 요청이라 gh 를 부르기 전에 로컬에서 판정한다. gh 의 길은 네트워크라 발동으로 두지 않는다.
+# 침묵 둘은 실제로 친 명령이다. 둘 다 명령 판정(`--undo`, 언급 없음)에서 걸러져 git 도 gh 도 부르지 않는다.
+[[case]]
+hook = "hook_pr_head_sync.py"
+expect = "deny"
+note = "푸시하지 않은 커밋 위에서 선택자 없이 ready(대기열 86)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr ready" }, cwd = "${UNPUSHED_REPO}" }
+
+[[case]]
+hook = "hook_pr_head_sync.py"
+expect = "deny"
+note = "PowerShell 로 남긴 CodeRabbit 요청 — 매처의 둘째 도구"
+payload = { tool_name = "PowerShell", tool_input = { command = "gh pr comment --body \"@coderabbitai review\"" }, cwd = "${UNPUSHED_REPO}" }
+
+[[case]]
+hook = "hook_pr_head_sync.py"
+expect = "silent"
+note = "실제로 친 draft 되돌리기(PR #78 세션)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr ready 78 --undo 2>&1 | tail -1 && uv run pip list 2>/dev/null | grep -i pytest" }, cwd = "${UNPUSHED_REPO}" }
+
+[[case]]
+hook = "hook_pr_head_sync.py"
+expect = "silent"
+note = "실제로 남긴, CodeRabbit 을 부르지 않는 코멘트(PR #94 세션)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr comment 94 --body \"claude-review 둘을 d3bf5bd 로 반영했다. GIT_* 목록은 tools/run_hooks.py 의 REPO_LOCATION_VARS 하나가 원천이고 tests/conftest.py 가 import 한다. CLI 진입점 테스트 둘은 이미 import 한 ROOT 를 쓴다.\"" }, cwd = "${UNPUSHED_REPO}" }
 
 # --- hook_bash_gate_pipe (PreToolUse Bash) ---
 [[case]]
