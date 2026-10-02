@@ -204,6 +204,25 @@ old = '''        return self.outcome == self.expected'''
 new = '''        return self.outcome in {"context", "notice"}'''
 
 [[mutation]]
+name = "러너가 래퍼 알림의 systemMessage 를 보지 않는다(PR #122 CodeRabbit 2회차)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if outcome != "context" or _HookOutput.model_validate_json(stdout.strip()).systemMessage:'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "모델에게 알리는 이벤트에서 사용자 알림을 빼도 러너가 잡는다(배선)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        output["hookSpecificOutput"] = {'''
+new = '''        output = {}
+        output["hookSpecificOutput"] = {'''
+
+[[mutation]]
 name = "러너가 Stop 계열에도 context 를 기대한다"
 tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"

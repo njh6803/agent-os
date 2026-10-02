@@ -24,6 +24,7 @@ from tools.run_hooks import (
     hook_environment,
     launch_argv,
     load_cases,
+    notice_outcome,
     outcome_of,
     registered_hooks,
     registration_command,
@@ -312,6 +313,19 @@ def test_래퍼의_알림은_모델에게_닿는_이벤트에서_context_이고_
     for event in ("Stop", "SubagentStop"):
         assert expected_notice(event) == "notice"
         assert not NoticeResult(event, "context", "").ok
+
+
+def test_래퍼의_알림은_사용자에게_가는_systemMessage_가_없으면_context_여도_어긋남이다() -> None:
+    """outcome_of 는 additionalContext 만 있어도 context 다. 표의 훅은 systemMessage 를 내지 않으니
+    그 판정은 그대로 두고, 래퍼의 알림만 사용자 몫을 따로 본다(PR #122 CodeRabbit 2회차)."""
+    specific = {"hookEventName": "PreToolUse", "additionalContext": "x"}
+    model_only = json.dumps({"hookSpecificOutput": specific})
+    both = json.dumps({"systemMessage": "x", "hookSpecificOutput": specific})
+
+    assert notice_outcome(0, model_only, "PreToolUse") != "context"
+    assert notice_outcome(0, both, "PreToolUse") == "context"
+    assert notice_outcome(0, json.dumps({"systemMessage": "x"}), "Stop") == "notice"
+    assert notice_outcome(2, "", "PreToolUse") == "block"
 
 
 @pytest.mark.parametrize("outcome", ["silent", "block", "output", "event Stop", "timeout"])

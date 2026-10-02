@@ -31,7 +31,8 @@ deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2
 않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더 잰다. 등록된
 이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에 기대한
 출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
-`systemMessage` 하나인 `notice`, 나머지는 모델에게도 가는 `context` 다. 표의 사례는 훅 파일이
+`systemMessage` 하나인 `notice`, 나머지는 모델에게도 가는 `context` 다. `context` 에도 사용자 몫의
+`systemMessage` 가 있어야 한다(`notice_outcome`). 표의 사례는 훅 파일이
 있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
 돌리고 하나라도 어긋나면 1 이다. 새 훅은 표에 발동 하나와 침묵 하나를 더하되, 침묵은 손으로 지은
 반례가 아니라 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(대기열 24 — 지시문 훅은 첫
@@ -53,7 +54,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -281,6 +282,19 @@ def outcome_of(returncode: int, stdout: str, event: str) -> str:
     return "output"
 
 
+type Judge = Callable[[int, str, str], str]
+
+
+def notice_outcome(returncode: int, stdout: str, event: str) -> str:
+    """래퍼 알림의 판정. `outcome_of` 와 같되 `context` 에도 사용자에게 가는 `systemMessage` 가
+    있어야 한다 — 없으면 `context 사용자 알림 없음`. 표의 훅은 `systemMessage` 를 내지 않으므로
+    `outcome_of` 에 넣지 않는다(PR #122 CodeRabbit 2회차)."""
+    outcome = outcome_of(returncode, stdout, event)
+    if outcome != "context" or _HookOutput.model_validate_json(stdout.strip()).systemMessage:
+        return outcome
+    return "context 사용자 알림 없음"
+
+
 def hook_environment() -> dict[str, str]:
     """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT` 를 뺀다.
 
@@ -306,7 +320,9 @@ def launch_argv(hook: str, root: Path = ROOT) -> list[str]:
     return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]
 
 
-def _launch(hook: str, payload: JsonValue, registration: Registration) -> tuple[str, str]:
+def _launch(
+    hook: str, payload: JsonValue, registration: Registration, judge: Judge = outcome_of
+) -> tuple[str, str]:
     """자식 하나를 등록의 모양과 시간 제한으로 돌려 (판정, 출력). 넘기면 판정 `timeout`."""
     try:
         process = subprocess.run(
@@ -322,7 +338,7 @@ def _launch(hook: str, payload: JsonValue, registration: Registration) -> tuple[
         return "timeout", f"{registration.timeout}초 안에 끝나지 않았다"
     stdout = process.stdout.decode("utf-8", "replace")
     stderr = process.stderr.decode("utf-8", "replace")
-    outcome = outcome_of(process.returncode, stdout, registration.event)
+    outcome = judge(process.returncode, stdout, registration.event)
     return outcome, (stdout or stderr).strip()
 
 
@@ -345,7 +361,10 @@ def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
     for registration in registrations.values():
         by_event.setdefault(registration.event, registration)
     return [
-        NoticeResult(event, *_launch(ABSENT_HOOK, {"hook_event_name": event}, registration))
+        NoticeResult(
+            event,
+            *_launch(ABSENT_HOOK, {"hook_event_name": event}, registration, notice_outcome),
+        )
         for event, registration in sorted(by_event.items())
     ]
 
