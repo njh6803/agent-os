@@ -9,8 +9,9 @@
 
 ## 자리를 정한 것
 
-- **판정.** `verify`가 `gh api …/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs`로 같은 실행 시도의 잡
-  이름을 읽고, 자기 밖의 잡이 `needs`에 없으면 빨강이다. 목록에 `verify` 자신이 없으면(빈 목록) 그것도 빨강이다.
+- **판정.** 처음에는 `verify`가 `gh api …/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs`로 같은 실행
+  시도의 잡 이름을 읽었다. PR 리뷰 1회차 뒤 `runs/$GITHUB_RUN_ID/jobs?filter=all`(모든 시도)로 바꿨다(아래 잰 것과
+  PR 리뷰 절). 어느 쪽이든 잡 이름을 읽고, 자기 밖의 잡이 `needs`에 없으면 빨강이다. 목록에 `verify` 자신이 없으면(빈 목록) 그것도 빨강이다.
   `actions: read`는 이 잡에만 준다. 셸은 Actions 기본(`bash -e`)이고 파이프를 쓰지 않는다. 명령 치환이 든 대입이
   실패하면 단계가 끝나는 것에 기댄다.
 - **ADR 0021의 둘째 2026-10-01 이력.** 초안을 보여주고 받았다. 거부한 안은 pytest의 저장소 상태 테스트와, 체크아웃한
@@ -82,3 +83,31 @@ PR #119를 draft로 열었다. PR 직전 CodeRabbit CLI는 돌리지 않았다(`
   승인받은 ADR 문장을 바꾸므로 PR을 draft로 되돌리고 바뀌는 문장을 보여준 뒤 받았다.
 
 > 사용자: "진행"
+
+- **2회차**(`9da3875`). CI 초록. CodeRabbit은 인라인 스레드에서 수정을 확인하고 자기 설명이 부정확했다고 적은 뒤
+  스레드를 닫았다. 다시 요청한 전체 리뷰는 "Review failed"로 끝나, CodeRabbit이 본 범위는 `c9c2a06`까지다. claude-review는
+  Critical·Major 없이 Minor 하나와 Nit 하나를 냈다. Minor: `operations.md`와 `ci.yml` 주석의 "ADR 0021 이력"이 같은 날짜의
+  이력 둘 중 어느 것인지 가리지 못한다. Nit: 이 일지의 판정 항목이 처음의 `attempts` 엔드포인트를 적는다. 둘 다
+  고쳤다("첫째·둘째 2026-10-01 이력", 판정 항목에 바뀐 경위 한 줄).
+
+## 회고
+
+후보 하나를 냈고 승인됐다.
+
+> 사용자(질문에 답): "새 항목 (Recommended)"
+
+- **90(새로).** 필수 검사의 판정을 바꾸는 PR은 draft 동안 빨강 경우를 실험 커밋으로, 다시 돌린 시도를
+  `gh run rerun --failed`로 본다. 이번 PR에서 재지 않은 동작을 둘 먼저 적었다. `verify` 뒤의 잡은 "예외로 적는다"였는데
+  첫 시도의 목록에 나오지도 않았고(명세 축이 두 갈래를 짚어 실험에 넣었다), 지금 시도만 읽는 판정은 다시 돌린 시도에서
+  새는 경합이 있었다(CodeRabbit이 짚은 뒤 쟀다). PR #117은 빨강 실험만 했다.
+- 일지에만: 실험 실행에서 `playwright install-deps`(apt)가 4분 32초 걸렸다(평소 14~18초). 한 번이다. CodeRabbit의 다시
+  요청한 리뷰가 이유 없이 "Review failed"로 끝났다. 이번에는 PR head가 갱신된 것을 보고 ready와 리뷰 요청을 했고(대기열
+  86의 손 절차), 1회차에 옛 head를 본 리뷰는 나오지 않았다. CI 결과는 폴링하지 않고 사용자의 알림을 받아 이어갔다.
+
+## 다음
+
+- PR #119의 마지막 CI와 병합은 다음 일지에 한 줄 남긴다.
+- CI 주제는 여기서 닫는다. pytest-xdist는 ADR 0021의 첫째 2026-10-01 이력이 "잡을 나눈 효과를 먼저 본 뒤에 다시
+  본다"고 남겼고, 나눈 뒤 가장 긴 잡은 `python`(60~84초)이다.
+- 다음 chore는 대상 파일이 `operations.md`로 겹치는 대기열 85·86·87·90과, ADR 규약의 88이다. 84는 워크플로 파일이라
+  별도 PR이다. 34(lowest-direct 잡)는 그 잡을 `verify`의 `needs`에 넣으면 이 PR의 판정이 받는다.
