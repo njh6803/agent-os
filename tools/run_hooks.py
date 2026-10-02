@@ -9,16 +9,17 @@
 훅 파일이 없을 때 2로 끝나 PreToolUse 면 그 매처의 모든 호출을 막는다(대기열 91). 자식 환경에서
 `PYTHONUTF8` 을 빼고(훅 환경에 있다고 가정하지 않는다, 대기열 25·40) 저장소를 가리키는 `GIT_*`
 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이 임시 저장소를 이 저장소로 돌린다,
-tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열
-83 — Stop 훅이 SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). 자식은
+tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열 83·94 — 한국어 판정 훅 둘이
+SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). 자식은
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열하나 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열둘 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
 않는다), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고 그 위에 푸시하지 않은 커밋이
 하나 있는 작업 브랜치 저장소), `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와
-assistant 기록이 있는 트랜스크립트 — 첫 턴과 그 반례), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc),
+assistant 기록이 있는 트랜스크립트 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간
+문장 뒤의 호출이 든 트랜스크립트), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc),
 `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글 줄이 넘친 `long.py` 와 짧은 `short.py`),
 `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이 저장소의 파일에 기대를 걸지 않는다),
 `${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것). 기대는 넷.
@@ -89,6 +90,24 @@ ABSENT_HOOK = "hook_absent_for_launch_notice.py"
 NOTICE_ONLY_EVENTS = frozenset({"Stop", "SubagentStop"})
 # Claude Code 가 `timeout` 을 적지 않은 훅에 주는 시간(초).
 DEFAULT_HOOK_TIMEOUT = 60
+# `${MIDTURN_TRANSCRIPT}` 의 기록. 내용 블록 하나에 한 줄인 Claude Code 의 모양이다
+# (`.scratch/harness/probes/pretool_text/`). 영어 중간 문장 뒤의 병렬 호출 둘(`toolu_english`,
+# `toolu_sibling`)과, 그 결과 뒤 한국어 중간 문장 뒤의 호출 하나(`toolu_korean`)다. 메시지 id 자리의
+# `user` 는 도구 결과 기록이다.
+_MIDTURN_BLOCKS: tuple[tuple[str, dict[str, JsonValue]], ...] = (
+    ("msg_en", {"type": "text", "text": "Now let me run the full verification suite."}),
+    ("msg_en", {"type": "tool_use", "id": "toolu_english", "name": "Bash"}),
+    ("msg_en", {"type": "tool_use", "id": "toolu_sibling", "name": "Bash"}),
+    ("user", {"type": "tool_result", "tool_use_id": "toolu_english", "content": "ok"}),
+    ("msg_ko", {"type": "text", "text": "이제 린트를 돌립니다."}),
+    ("msg_ko", {"type": "tool_use", "id": "toolu_korean", "name": "Bash"}),
+)
+_MIDTURN_RECORDS: tuple[dict[str, JsonValue], ...] = tuple(
+    {"type": "user", "message": {"role": "user", "content": [block]}}
+    if message == "user"
+    else {"type": "assistant", "isSidechain": False, "message": {"id": message, "content": [block]}}
+    for message, block in _MIDTURN_BLOCKS
+)
 # 저장소를 가리키는 git 환경 변수. tests/conftest.py 도 여기서 import 한다 — 목록의 원천은 하나다.
 REPO_LOCATION_VARS = (
     "GIT_DIR",
@@ -298,8 +317,8 @@ def notice_outcome(returncode: int, stdout: str, event: str) -> str:
 def hook_environment() -> dict[str, str]:
     """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT` 를 뺀다.
 
-    마지막 것은 `hook_stop_korean` 이 SDK 세션에서 침묵하는 근거라, 러너를 띄운 세션의 값을 물려주면
-    판정이 러너가 도는 자리에 따라 바뀐다.
+    마지막 것은 `hook_stop_korean`·`hook_midturn_korean` 이 SDK 세션에서 침묵하는 근거라, 러너를
+    띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다.
     """
     excluded = {"PYTHONUTF8", "CLAUDE_CODE_ENTRYPOINT", *REPO_LOCATION_VARS}
     return {key: value for key, value in os.environ.items() if key not in excluded}
@@ -374,7 +393,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
 
     임시 저장소(main, 작업 브랜치, 푸시하지 않은 커밋이 있는 작업 브랜치와 그 upstream 인 bare
     저장소)는 `GIT_*` 를 벗긴 환경으로 만든다. 트랜스크립트 하나는 assistant 기록이 있는 파일로
-    두고, 다른 하나는 만들지 않은 경로다(첫 턴). ruff 프로젝트 하나는
+    두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든 대화(`_MIDTURN_RECORDS`)다.
+    ruff 프로젝트 하나는
     줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
     밖(`loose.py`)에도 둔다. 일지 둘은 "다음" 절을 채운 뒤의 모양이고, 하나만 회고 절이 있다.
     """
@@ -391,6 +411,12 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     used_transcript = scratch / "transcript-used.jsonl"
     used_transcript.write_text(
         '{"type": "user"}\n{"type": "assistant"}\n', encoding="utf-8", newline="\n"
+    )
+    midturn_transcript = scratch / "transcript-midturn.jsonl"
+    midturn_transcript.write_text(
+        "\n".join(json.dumps(record, ensure_ascii=False) for record in _MIDTURN_RECORDS) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     korean_heredoc = "cat <<'EOF'\n" + "\n".join(f"한글 줄 {i}" for i in range(45)) + "\nEOF"
     ruff_project = scratch / "ruff-project"
@@ -420,6 +446,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "UNPUSHED_REPO": unpushed_repo.as_posix(),
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
+        "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
         "KOREAN_HEREDOC_45": korean_heredoc,
         "RUFF_PROJECT": ruff_project.as_posix(),
         "LOOSE_PY": loose.as_posix(),

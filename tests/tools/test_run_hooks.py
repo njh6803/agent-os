@@ -16,6 +16,7 @@ from pydantic import JsonValue
 from tools.run_hooks import (
     PAYLOADS,
     Case,
+    Expectation,
     NoticeResult,
     Registration,
     coverage_gaps,
@@ -262,6 +263,25 @@ def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path
     assert run_case(silent, replacements, registration).ok
     assert (tmp_path / "on-main" / ".git").is_dir()
     assert (tmp_path / "transcript-used.jsonl").is_file()
+
+
+def test_중간_문장_트랜스크립트는_영어_뒤의_첫_호출에서만_알림을_낸다(tmp_path: Path) -> None:
+    """`${MIDTURN_TRANSCRIPT}` 가 표의 세 사례를 실제로 가르는지 본다(대기열 94)."""
+    replacements = create_fixtures(tmp_path)
+    registration = Registration("PreToolUse", 20)
+
+    def case(tool_use_id: str, expect: Expectation) -> Case:
+        payload: dict[str, JsonValue] = {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_use_id": tool_use_id,
+            "transcript_path": "${MIDTURN_TRANSCRIPT}",
+        }
+        return Case(hook="hook_midturn_korean.py", expect=expect, payload=payload)
+
+    assert run_case(case("toolu_english", "context"), replacements, registration).ok
+    assert run_case(case("toolu_sibling", "silent"), replacements, registration).ok
+    assert run_case(case("toolu_korean", "silent"), replacements, registration).ok
 
 
 def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_알림이다(tmp_path: Path) -> None:

@@ -1,7 +1,7 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
-# 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean)은 표가 아니라 tests/tools 가 본다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} 는 러너가 채운다.
+# 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
@@ -141,6 +141,12 @@ hook = "hook_bash_gate_pipe.py"
 expect = "silent"
 note = "게이트 아닌 파이프"
 payload = { tool_name = "Bash", tool_input = { command = "git log --oneline | head -3" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "게이트마다 바로 읽은 $? — 훅 러너 뒤에서 거짓 경고했다(대기열 95, 일지 2026-10-02-03)"
+payload = { tool_name = "Bash", tool_input = { command = "uv run python tools/check_type_escapes.py > S/g6.log 2>&1\necho \"type escapes $?\"\nuv run python tools/run_hooks.py > S/g7.log 2>&1\necho \"run_hooks $?\"" } }
 
 # --- hook_bash_heredoc (PreToolUse Bash) ---
 [[case]]
@@ -297,6 +303,31 @@ hook = "hook_stop_korean.py"
 expect = "silent"
 note = "멈춤을 한 번 막은 뒤의 Stop — stop_hook_active 가 참(stop_payload 탐침)"
 payload = { hook_event_name = "Stop", stop_hook_active = true, last_assistant_message = "Now merge." }
+
+# --- hook_midturn_korean (PreToolUse, 모든 도구) ---
+[[case]]
+hook = "hook_midturn_korean.py"
+expect = "context"
+note = "영어 중간 문장 바로 뒤의 호출"
+payload = { hook_event_name = "PreToolUse", tool_name = "Bash", tool_input = { command = "uv run pytest -q" }, tool_use_id = "toolu_english", transcript_path = "${MIDTURN_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_midturn_korean.py"
+expect = "silent"
+note = "같은 영어 문장 뒤의 병렬 둘째 호출 — 첫 호출이 이미 알렸다"
+payload = { hook_event_name = "PreToolUse", tool_name = "Bash", tool_input = { command = "uv run ruff check ." }, tool_use_id = "toolu_sibling", transcript_path = "${MIDTURN_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_midturn_korean.py"
+expect = "silent"
+note = "한국어 중간 문장 뒤의 호출"
+payload = { hook_event_name = "PreToolUse", tool_name = "Bash", tool_input = { command = "uv run ruff check ." }, tool_use_id = "toolu_korean", transcript_path = "${MIDTURN_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_midturn_korean.py"
+expect = "silent"
+note = "서브에이전트의 호출 — 입력에 agent_id 가 오고 transcript_path 는 주 세션의 파일이다(pretool_text 탐침 B)"
+payload = { hook_event_name = "PreToolUse", tool_name = "Bash", tool_input = { command = "echo sub" }, tool_use_id = "toolu_english", agent_id = "a1", agent_type = "general-purpose", transcript_path = "${MIDTURN_TRANSCRIPT}" }
 
 # --- hook_pr_next_session (PostToolUse Bash|PowerShell|GitHub MCP) ---
 [[case]]
