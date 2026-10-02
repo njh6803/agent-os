@@ -29,9 +29,10 @@ deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
 발동·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로 센다. 등록되지
 않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더 잰다. 등록된
-이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트가 받는
-출력(`context`, 또는 사용자에게만 가는 `systemMessage` 하나인 `notice`)인지 본다(대기열 93). 표의
-사례는 훅 파일이 있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
+이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에 기대한
+출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
+`systemMessage` 하나인 `notice`, 나머지는 모델에게도 가는 `context` 다. 표의 사례는 훅 파일이
+있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
 돌리고 하나라도 어긋나면 1 이다. 새 훅은 표에 발동 하나와 침묵 하나를 더하되, 침묵은 손으로 지은
 반례가 아니라 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(대기열 24 — 지시문 훅은 첫
 턴이라는 축을 반례가 보지 못했다).
@@ -78,9 +79,13 @@ Expectation = Literal["deny", "block", "context", "silent"]
 # 래퍼가 없는 훅을 지나갈 때의 알림(대기열 93)을 등록된 이벤트마다 재는 훅 이름. tools/ 에 없어야
 # 한다.
 ABSENT_HOOK = "hook_absent_for_launch_notice.py"
-# 그 알림의 판정. 모델에게 가는 context 거나, 그것을 받지 않는 이벤트(Stop)에서 사용자에게만 가는
-# notice 다. 어느 이벤트가 어느 쪽인지는 래퍼의 `CONTEXT_EVENTS` 가 정하고 tests/tools/ 가 고정한다.
-NOTICE_OUTCOMES = frozenset({"context", "notice"})
+# 그 알림을 사용자에게만 내야 하는 이벤트. 여기서는 additionalContext 가 대화를 잇는다(공식 hooks
+# 문서, `.scratch/harness/probes/hook_registration/run.sh` 의 G). 나머지 이벤트는 모델에게도 가는
+# context 여야 한다. 래퍼의 `CONTEXT_EVENTS` 를 import 하지 않고 따로 적는다 — 같은 원천을 되읽으면
+# 래퍼가 이벤트를 빠뜨려도 러너가 따라 바뀌어 초록이다(PR #122 CodeRabbit). 그 집합 밖의 이벤트에
+# 훅을 등록하면(Notification 등) 래퍼는 notice 를 내고 러너는 context 를 기대해 빨갛다 — 그
+# 이벤트가 모델에게 알림을 받는지 보고 둘 중 하나를 고친다.
+NOTICE_ONLY_EVENTS = frozenset({"Stop", "SubagentStop"})
 # Claude Code 가 `timeout` 을 적지 않은 훅에 주는 시간(초).
 DEFAULT_HOOK_TIMEOUT = 60
 # 저장소를 가리키는 git 환경 변수. tests/conftest.py 도 여기서 import 한다 — 목록의 원천은 하나다.
@@ -153,6 +158,12 @@ class Result:
         return self.outcome == self.case.expect
 
 
+def expected_notice(event: str) -> str:
+    """래퍼가 없는 훅을 `event` 에서 지나갈 때 기대하는 판정. `NOTICE_ONLY_EVENTS` 면 notice,
+    아니면 context."""
+    return "notice" if event in NOTICE_ONLY_EVENTS else "context"
+
+
 @dataclass(frozen=True)
 class NoticeResult:
     """래퍼가 없는 훅을 한 이벤트에서 지나갈 때의 판정."""
@@ -162,8 +173,12 @@ class NoticeResult:
     output: str
 
     @property
+    def expected(self) -> str:
+        return expected_notice(self.event)
+
+    @property
     def ok(self) -> bool:
-        return self.outcome in NOTICE_OUTCOMES
+        return self.outcome == self.expected
 
 
 def load_cases(path: Path = PAYLOADS) -> list[Case]:
@@ -445,7 +460,7 @@ def main() -> int:
     for notice in notices:
         mark = "ok  " if notice.ok else "FAIL"
         label = f"launch_hook 없는 훅 {notice.event}"
-        print(f"[{mark}] {label:<28} 기대 context 또는 notice 실제 {notice.outcome}")
+        print(f"[{mark}] {label:<28} 기대 {notice.expected:<7} 실제 {notice.outcome}")
         if not notice.ok:
             print(f"       출력: {notice.output[:200]}")
     for gap in gaps:

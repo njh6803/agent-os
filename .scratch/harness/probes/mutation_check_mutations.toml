@@ -1,8 +1,8 @@
 # tools/mutate.py --check 가 변이 표 여럿을 받아 pre-commit 에서 도는 배선(대기열 92)을 하나씩 빼는 변이.
 # 도구가 자기 자신을 고친다(돌고 있는 프로세스는 이미 읽은 원본으로 돈다).
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutation_check_mutations.toml
-# 마지막 변이(UTF-8 로 다시 열지 않음)는 파이프의 기본 인코딩이 UTF-8 이 아닌 곳(이 윈도우의 cp949)에서만
-# 빨갛다. 로캘이 UTF-8 인 곳에서는 초록일 수 있다(그런 곳에서 재지는 않았다).
+# UTF-8 로 다시 열지 않는 변이는 테스트가 자식에 PYTHONIOENCODING=cp949 를 주어 로캘과 무관하게 빨갛다(PR #122
+# CodeRabbit. 첫 판은 이 윈도우의 cp949 파이프에 기대 로캘이 UTF-8 인 곳에서는 초록일 수 있었다).
 
 [[mutation]]
 name = "읽지 못한 표에서 멈춘다"
@@ -25,6 +25,15 @@ expect = "red"
 file = "tools/mutate.py"
 old = '''            out(f"{path}: {line}")'''
 new = '''            out(line)'''
+
+[[mutation]]
+name = "여러 줄인 진단의 첫 줄에만 경로를 붙인다(PR #122 CodeRabbit)"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        for line in "\n".join(lines).splitlines():'''
+new = '''        for line in lines:'''
 
 [[mutation]]
 name = "마지막 표의 판정만 돌려준다"

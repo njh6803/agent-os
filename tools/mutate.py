@@ -596,7 +596,8 @@ def _check_files(paths: Sequence[str], *, root: Path, out: Callable[[str], None]
         except SpecError as error:
             lines.append(f"!! 변이 파일 오류: {error}")
             code = 2
-        for line in lines:
+        # 변이 파일 오류는 문제를 줄바꿈으로 잇는다. 줄마다 붙여야 둘째 줄의 출처가 보인다
+        for line in "\n".join(lines).splitlines():
             out(f"{path}: {line}")
     return code
 

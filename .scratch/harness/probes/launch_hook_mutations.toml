@@ -127,7 +127,7 @@ new = '''        "SessionStart",
 '''
 
 [[mutation]]
-name = "PostToolUse 에서 모델에게 알리지 않는다(러너는 notice 도 받는다)"
+name = "PostToolUse 에서 모델에게 알리지 않는다"
 tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
@@ -193,6 +193,24 @@ old = '''    if output.systemMessage:
         return "notice"
 '''
 new = ''
+
+[[mutation]]
+name = "러너가 이벤트를 가리지 않고 context·notice 를 둘 다 받는다(PR #122 CodeRabbit)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        return self.outcome == self.expected'''
+new = '''        return self.outcome in {"context", "notice"}'''
+
+[[mutation]]
+name = "러너가 Stop 계열에도 context 를 기대한다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return "notice" if event in NOTICE_ONLY_EVENTS else "context"'''
+new = '''    return "context"'''
 
 [[mutation]]
 name = "러너가 알림을 이벤트 하나에서만 잰다"

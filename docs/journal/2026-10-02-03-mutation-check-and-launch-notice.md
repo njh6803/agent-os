@@ -13,9 +13,11 @@
 
 선행 조건은 이렇게 봤다. 새 세션의 훅이 래퍼를 거쳐 도는지는 UserPromptSubmit 훅이 제목 지시를 넣은 것, PreToolUse
 훅 둘이 이 세션에서 발동한 것(`hook_bash_gate_pipe`이 파이프 뒤의 판정 명령에 계기를 넣었고, `hook_env_read`가 Grep의
-`!**/node_modules/**` glob을 막았다)으로 봤다. 트랜스크립트의 `stop_hook_summary`는 턴이 끝날 때 남아 이 턴 안에서는
-볼 수 없었다. 대신 앞 세션(`477c3ffa`)의 04:00 UTC 기록에 `hook_stop_korean`의 command가 이미 `launch_hook.py`를
-가리켰다(병합 뒤 당긴 설정을 그 세션이 다시 읽었다). Bash·PowerShell·Grep은 막히지 않았다.
+`!**/node_modules/**` glob을 막았다)으로 봤다. 트랜스크립트의 `stop_hook_summary`는 턴이 끝날 때 남아 첫 턴 안에서는
+볼 수 없었다. 앞 세션(`477c3ffa`)의 04:00 UTC 기록에는 `hook_stop_korean`의 command가 이미 `launch_hook.py`를
+가리켰다(병합 뒤 당긴 설정을 그 세션이 다시 읽었다). PR을 연 뒤 이 세션의 기록 넷(04:33~05:08 UTC)에서도 command가
+`launch_hook.py`를 가리켰고 `hookErrors`가 비었고 `preventedContinuation`이 false였다. `EnterWorktree` 뒤의 기록은 워크트리
+이름의 트랜스크립트 폴더(`C--project-agent--claude-worktrees-…`)에 있었다. Bash·PowerShell·Grep은 막히지 않았다.
 
 ## 자리를 정한 것
 
@@ -36,7 +38,8 @@
 - **93: 러너의 판정.** 표의 사례는 훅 파일이 있어야 하므로(`load_cases`) 래퍼가 지나가는 길을 돌지 않는다. 그래서
   러너가 등록된 이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄우고 `context`나 `notice`(새 판정, `systemMessage`
   하나)면 맞다고 본다. 어느 이벤트가 어느 쪽인지는 래퍼의 `CONTEXT_EVENTS`가 정하고, 등록된 이벤트마다의 기대는
-  `tests/tools/test_run_hooks.py`가 고정한다. 러너가 그 집합을 다시 적지 않게 둘 다 받는다.
+  `tests/tools/test_run_hooks.py`가 고정한다. 러너가 그 집합을 다시 적지 않게 둘 다 받는다. 이 판단은 PR 리뷰에서
+  바꿨다(아래 PR 리뷰 절).
 - **93: 해시할 수 없는 이벤트.** `isinstance(event, str)`은 타입을 좁히는 것만이 아니다. 페이로드의 `hook_event_name`이
   목록이면 집합에 바로 물을 때 TypeError로 1이 되어 알림이 없다. 테스트의 첫 판은 그 자리에 `1`을 넣어 확인을 빼도
   초록이었고, 변이 표를 쓰다가 보고 목록으로 바꿨다.
@@ -62,7 +65,7 @@
 - **변이.** `launch_hook_mutations.toml` 스물하나(91의 열에 93의 열하나)와 `mutation_check_mutations.toml` 일곱이 모두
   기대대로 빨갰다. 셀프 리뷰를 반영한 뒤 둘 다 다시 돌렸다. 리뷰 전에는 스물과 일곱이었고, 리뷰가 짚은 틈(PostToolUse를
   `CONTEXT_EVENTS`에서 빼도 초록)을 겨누는 변이를 하나 더했다. UTF-8로 다시 열지 않는 변이는 이 윈도우의 cp949
-  파이프에서 빨갰고, 로캘이 UTF-8인 곳에서는 재지 않았다.
+  파이프에서 빨갰고, 로캘이 UTF-8인 곳에서는 재지 않았다. PR 리뷰 뒤의 수는 PR 리뷰 절에 있다.
 - **바꾼 규칙의 카나리아**(스크래치 스크립트, sonnet, `operations.md` 환경 규약 상세의 명령). 실험군은
   `tools/hook_env_read.py`를 Read한 세션이고 셋 모두 새 줄이 근거로 든 변형 글자 "G"를 답했다. 대조군은 `paths` 밖의
   `README.md`를 Read한 세션이고 셋 모두 "없음"이었다.
@@ -94,7 +97,7 @@
   것만 보는 pre-commit 전용 검사이고, 그 목록의 원천은 `operations.md` 가드레일의 첫 문장이다. `hook_path`와
   `skip_reason`이 `len(argv) != 2`를 둘 다 묻는 것은 훅이 있는 길에 일을 더하지 않으려고 두었다. `run_hooks.main`의 출력
   루프 둘은 형식이 달라 두었다. `_launch`의 튜플은 값이 둘뿐이라 두었다. `NoticeResult.ok`가 Stop의 `context`도
-  받는 것은 테스트가 이벤트마다 고정하므로 두었다.
+  받는 것은 테스트가 이벤트마다 고정하므로 두었다 — PR 리뷰에서 CodeRabbit이 같은 자리를 Major로 짚어 고쳤다.
 
 ## 검사
 
@@ -103,3 +106,27 @@
   `tools/run_hooks.py` 52건 어긋남 0과 래퍼 알림 4건 어긋남 0, 변이 표 열일곱의 `--check`. `pnpm -C web verify`는 반영
   전에 통과(Vitest 263 passed)했고 커밋의 pre-commit이 다시 돈다. 워크트리에 web 의존성이 없어 `pnpm -C web install
   --frozen-lockfile --offline`을 한 번 했다. `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
+- 커밋(`fbe2af3`)의 pre-commit에서 새 `check-mutations` 훅이 이 PR의 표 둘을 받아 통과했다. 인용 대조가 일지의 첫 판
+  인용 둘(지금 저장소에 없는 문장)로 경고했고, 따옴표 없이 가리키게 고친 커밋(`0a58321`)을 더했다.
+
+## PR 리뷰
+
+PR #122. PR 직전 CLI는 이 PR에서도 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았고, 보안·버그
+축은 PR 봇 하나다. PR head와 로컬 HEAD(`0a58321`)가 같은 것을 본 뒤 `@coderabbitai review`를 남겼다.
+
+> 사용자: "끝났어"
+
+1회차(`0a58321`). CI 여섯(`python`, `web`, `e2e`, `verify`, `claude-review`, CodeRabbit)이 초록이었다. claude-review는 지적
+없음이었다. CodeRabbit은 인라인 둘과 Nit 하나를 냈고 셋 다 유효해 고쳤다.
+
+- **Major: 러너가 PreToolUse·PostToolUse의 `notice`도 성공으로 본다.** 셀프 리뷰에서 테스트가 이벤트마다 고정하므로
+  두었던 판단이다. 러너는 pre-commit과 CI에서 따로 판정하는 검사이므로, 모델 알림이 빠졌는데 0으로 끝나는 것은 결함이다.
+  러너가 이벤트마다 기대를 정한다(`NOTICE_ONLY_EVENTS`의 Stop·SubagentStop은 `notice`, 나머지는 `context`). 래퍼의
+  `CONTEXT_EVENTS`를 import하지 않았다. 같은 원천을 되읽으면 래퍼가 이벤트를 빠뜨려도 러너가 따라 바뀌어 초록이다. 그
+  집합 밖의 이벤트(Notification 등)에 훅을 등록하면 러너가 빨갛고, 그때 어느 쪽을 고칠지 정한다(주석에 적었다). 변이 둘을
+  더했다.
+- **Minor: 여러 줄인 진단의 첫 줄에만 표 경로가 붙는다.** 변이 파일 오류는 문제를 줄바꿈으로 잇는다. 줄마다 붙인다
+  (테스트, 변이 하나).
+- **Nit: 자식 환경이 `PYTHONIOENCODING`을 물려받으면 다시 열기를 빼도 초록이다.** 테스트가 자식에
+  `PYTHONIOENCODING=cp949`를 준다. 셀프 리뷰 때 남긴 단서(윈도우에서만 빨갛다)가 걷혔다.
+- 반영 뒤 변이: `launch_hook_mutations.toml` 스물셋과 `mutation_check_mutations.toml` 여덟이 모두 기대대로 빨갰다.

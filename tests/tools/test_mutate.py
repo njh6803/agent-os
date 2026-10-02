@@ -1020,6 +1020,26 @@ def test_원문만_볼_때_읽지_못한_변이_파일이_있어도_나머지_�
     assert any(틀린 in 한줄 and "0번" in 한줄 for 한줄 in 줄)
 
 
+def test_원문만_볼_때_여러_줄인_진단도_줄마다_표의_경로를_붙인다(tmp_path: Path) -> None:
+    """변이 파일 오류는 문제를 줄바꿈으로 잇는다. 첫 줄에만 붙으면 표 여럿을 함께 볼 때 둘째 줄부터
+    출처가 없다(PR #122 CodeRabbit)."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    러너_둘_없음 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'tests = ["tests/test_x.py"]', 'runner = "없다"\ntests = ["tests/test_x.py"]'
+    )
+    둘 = 러너_둘_없음 + 러너_둘_없음.replace('name = "하나"', 'name = "둘"')
+    깨진 = _표를_쓴다(tmp_path, "a_mutations.toml", 둘)
+    맞는 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
+    줄: list[str] = []
+
+    code = main(["--check", 깨진, 맞는], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+
+    출력 = "\n".join(줄).splitlines()
+    assert code == 2
+    assert sum("러너 없다" in 한줄 for 한줄 in 출력) == 2
+    assert all(한줄.startswith((f"{깨진}: ", f"{맞는}: ")) for 한줄 in 출력)
+
+
 def test_원문만_볼_때_변이_파일_여럿이_모두_맞으면_0이다(tmp_path: Path) -> None:
     _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\n")
     가 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
@@ -1045,7 +1065,9 @@ def test_변이_파일_여럿은_원문_확인에서만_받고_이름과_섞지_
 
 def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다(tmp_path: Path) -> None:
     """pre-commit 은 표 경로를 인자 끝에 붙여 띄운다. 훅 환경에 `PYTHONUTF8` 이 있다고 가정하지
-    않는다 — 없으면 윈도우의 파이프는 cp949 라 한국어 출력이 깨지거나 인코딩 오류로 끝난다."""
+    않는다 — 없으면 윈도우의 파이프는 cp949 라 한국어 출력이 깨지거나 인코딩 오류로 끝난다. 자식의
+    `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳(리눅스 CI)에서도 다시 열기를 빼면
+    빨갛게 한다(PR #122 CodeRabbit)."""
     맞는 = _표를_쓴다(
         tmp_path,
         "a_mutations.toml",
@@ -1065,7 +1087,7 @@ def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다
         [sys.executable, "tools/mutate.py", "--check", 맞는, 틀린],
         cwd=ROOT,
         capture_output=True,
-        env=hook_environment(),
+        env={**hook_environment(), "PYTHONIOENCODING": "cp949"},
         check=False,
         timeout=60,
     )

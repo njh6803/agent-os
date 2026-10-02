@@ -20,6 +20,7 @@ from tools.run_hooks import (
     Registration,
     coverage_gaps,
     create_fixtures,
+    expected_notice,
     hook_environment,
     launch_argv,
     load_cases,
@@ -292,23 +293,29 @@ def test_사용자에게만_가는_systemMessage_는_notice_다() -> None:
 
 def test_등록된_이벤트마다_래퍼가_없는_훅을_지나갈_때의_알림을_받아들이는_모양으로_낸다() -> None:
     """세션이 띄우는 모양(uv run 래퍼)과 등록된 이벤트 이름 그대로 잰다. 래퍼의 사본 테스트는 이벤트
-    이름을 손으로 고른다. 러너는 context 와 notice 를 둘 다 받으므로, 이벤트마다 어느 쪽인지는
-    여기서 고정한다 — PostToolUse 가 notice 로 바뀌면 모델에게 가는 알림이 조용히 빠진다."""
+    이름을 손으로 고른다."""
     registrations = registered_hooks()
 
     results = run_notices(registrations)
 
     assert {result.event for result in results} == {r.event for r in registrations.values()}
     assert [result for result in results if not result.ok] == []
-    expected = {
-        result.event: "notice" if result.event in {"Stop", "SubagentStop"} else "context"
-        for result in results
-    }
-    assert {result.event: result.outcome for result in results} == expected
+
+
+def test_래퍼의_알림은_모델에게_닿는_이벤트에서_context_이고_Stop_계열에서_notice_다() -> None:
+    """Stop·SubagentStop 의 additionalContext 는 대화를 잇는다. 나머지 이벤트에서 notice 만 나오면
+    모델에게 가는 알림이 빠진 것이다 — 러너가 둘 다 받으면 그것을 0으로 지나간다(PR #122
+    CodeRabbit)."""
+    for event in ("PreToolUse", "PostToolUse", "UserPromptSubmit"):
+        assert expected_notice(event) == "context"
+        assert not NoticeResult(event, "notice", "").ok
+    for event in ("Stop", "SubagentStop"):
+        assert expected_notice(event) == "notice"
+        assert not NoticeResult(event, "context", "").ok
 
 
 @pytest.mark.parametrize("outcome", ["silent", "block", "output", "event Stop", "timeout"])
-def test_래퍼의_알림이_context_도_notice_도_아니면_어긋남이다(outcome: str) -> None:
+def test_래퍼의_알림이_기대한_판정이_아니면_어긋남이다(outcome: str) -> None:
     assert not NoticeResult("PreToolUse", outcome, "").ok
     assert NoticeResult("PreToolUse", "context", "").ok
     assert NoticeResult("Stop", "notice", "").ok
