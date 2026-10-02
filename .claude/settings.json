@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_prompt_directive.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_prompt_directive.py",
             "timeout": 20
           }
         ]
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_stop_korean.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_stop_korean.py",
             "timeout": 20
           }
         ]
@@ -49,12 +49,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_journal_retro.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_journal_retro.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_ruff_line_width.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_ruff_line_width.py",
             "timeout": 20
           }
         ]
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_pr_next_session.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_pr_next_session.py",
             "timeout": 20
           }
         ]
@@ -76,17 +76,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_heredoc.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_heredoc.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_python_stub.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_python_stub.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_bash_gate_pipe.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_gate_pipe.py",
             "timeout": 20
           }
         ]
@@ -96,12 +96,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_git_main_commit.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_git_main_commit.py",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_pr_head_sync.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_pr_head_sync.py",
             "timeout": 20
           }
         ]
@@ -111,7 +111,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/hook_env_read.py\"",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_env_read.py",
             "timeout": 20
           }
         ]

@@ -277,7 +277,9 @@ def hooks_with_relative_paths(root: Path = ROOT) -> list[str]:
     데이터로만 쓰는 훅(`grep -q docs/x.md`). 못 보는 것: 백슬래시 경로(`tools\\x.py`),
     루트의 파일을 이름만으로 부르는 것(`python x.py`), `$PWD/…`, 그리고 `uv run` 에
     `--project` 가 빠진 것(저장소 밖에서
-    프로젝트가 아니라 시스템 파이썬으로 돈다). 지금 이 저장소의 훅은 어느 쪽에도 해당하지 않는다.
+    프로젝트가 아니라 시스템 파이썬으로 돈다). 이 넷은 tools/run_hooks.py 가 등록 명령을 한 모양과
+    대조해 잡는다(대기열 91). 등록이 래퍼에 넘기는 훅 이름(`hook_x.py`)은 슬래시가 없어 여기서
+    경로로 잡지 않는다.
     """
     problems: list[str] = []
     for event, command in _hook_commands(root):
