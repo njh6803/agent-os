@@ -1,7 +1,8 @@
 """ADR 본문의 `(바뀜: ...)` 포인터가 실제 이력 제목과 글자 그대로 맞는지 본다(대기열 88).
 
 포인터 모양은 `.claude/rules/adr.md`가 정한다. 제목은 가리키는 ADR(앞에 `ADR NNNN`이 없으면
-자기 ADR)의 `###` 줄에서 날짜 뒤와 같아야 하고, 포인터는 `## 이력` 위(본문)에 있어야 한다.
+자기 ADR)의 `## 이력` 안 `###` 줄에서 날짜 뒤와 같아야 하고, 포인터는 `## 이력` 위(본문)에
+있어야 한다.
 0006의 `## 개정 이력`은 그 뒤에 Consequences가 오는 본문의 절이라 이력으로 보지 않는다.
 `(바뀜:`으로 시작하지만 모양이 맞지 않는 것(따옴표 빠짐, `ADR 14`, `ADR 0016이력`)과 없는 ADR을
 가리키는 것도 어긋남으로 센다.
@@ -39,8 +40,15 @@ def adr_file(number: str) -> Path | None:
 
 
 def history_titles(path: Path) -> set[str]:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    return {line[4:].strip() for line in lines if line.startswith("### ")}
+    """`## 이력` 절 안의 `###` 제목. 본문의 같은 모양 줄은 이력이 아니다(PR #124 CodeRabbit)."""
+    titles: set[str] = set()
+    in_history = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## "):
+            in_history = line.strip() == "## 이력"
+        elif in_history and line.startswith("### "):
+            titles.add(line[4:].strip())
+    return titles
 
 
 def problems_of(path: Path) -> tuple[int, list[str]]:
