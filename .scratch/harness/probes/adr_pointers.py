@@ -3,8 +3,8 @@
 포인터 모양은 `.claude/rules/adr.md`가 정한다. 제목은 가리키는 ADR(앞에 `ADR NNNN`이 없으면
 자기 ADR)의 `###` 줄에서 날짜 뒤와 같아야 하고, 포인터는 `## 이력` 위(본문)에 있어야 한다.
 0006의 `## 개정 이력`은 그 뒤에 Consequences가 오는 본문의 절이라 이력으로 보지 않는다.
-`(바뀜:`으로 시작하지만 모양이 맞지 않는 것(따옴표 빠짐, `ADR 14`)과 없는 ADR을 가리키는 것도
-어긋남으로 센다.
+`(바뀜:`으로 시작하지만 모양이 맞지 않는 것(따옴표 빠짐, `ADR 14`, `ADR 0016이력`)과 없는 ADR을
+가리키는 것도 어긋남으로 센다.
 
 못 보는 것: 포인터가 달려야 하는데 없는 본문 문장. 그것은 뜻의 판단이라 사람과 리뷰가 본다.
 제목이 맞아도 그 이력이 정말 그 문장을 바꿨는지도 보지 못한다.
@@ -21,7 +21,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 ADR_DIR = ROOT / "docs" / "adr"
 MARK = "(바뀜:"
-POINTER = re.compile(r'\(바뀜: (?:ADR (\d{4}) ?)?(?:이력 (\d{4}-\d{2}-\d{2}) "([^"]+)")?\)')
+# 모양은 셋이다. `(바뀜: 이력 날짜 "제목")`, `(바뀜: ADR NNNN 이력 날짜 "제목")`,
+# `(바뀜: ADR NNNN)`. 번호와 `이력` 사이의 공백은 꼭 하나라 `ADR 0016이력`은 모양이 틀린
+# 것으로 센다(PR #124 CodeRabbit).
+POINTER = re.compile(
+    r"\(바뀜: (?:"
+    r'이력 (?P<date>\d{4}-\d{2}-\d{2}) "(?P<title>[^"]+)"'
+    r"|ADR (?P<adr>\d{4})"
+    r'(?: 이력 (?P<cited_date>\d{4}-\d{2}-\d{2}) "(?P<cited_title>[^"]+)")?'
+    r")\)"
+)
 
 
 def adr_file(number: str) -> Path | None:
@@ -47,13 +56,13 @@ def problems_of(path: Path) -> tuple[int, list[str]]:
         if line.count(MARK) != len(matches):
             found.append(f"{where}: 모양이 맞지 않는 `{MARK}`가 있다")
         for match in matches:
-            cited_adr, date, title = match.groups()
+            cited_adr = match.group("adr")
+            date = match.group("date") or match.group("cited_date")
+            title = match.group("title") or match.group("cited_title")
             target = adr_file(cited_adr) if cited_adr else path
             reasons: list[str] = []
             if index >= history_at:
                 reasons.append("이력 절 안에 있다")
-            if cited_adr is None and date is None:
-                reasons.append("가리키는 것이 없다")
             if target is None:
                 reasons.append(f"ADR {cited_adr}이 없다")
             elif date is not None:

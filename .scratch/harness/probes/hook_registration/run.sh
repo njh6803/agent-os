@@ -1,6 +1,6 @@
 #!/bin/sh
 # 훅 등록의 실행 래퍼(tools/launch_hook.py, 대기열 91)가 실제 Claude Code 세션에서 어떻게 도는지 변형마다 잰다.
-#   A_registered      — 저장소의 등록 그대로. 래퍼를 거친 등록 전부 아래에서 Bash 가 돈다.
+#   A_registered      — 저장소의 등록 그대로(등록은 모두 래퍼를 거친다). Bash 가 돈다.
 #   B_missing_wrapped — 없는 훅을 래퍼로 등록한 것을 더한다. 막지 않고 Bash 가 돈다.
 #   C_missing_direct  — 같은 없는 훅을 옛 모양(`python <훅 경로>`)으로 등록한 것을 더한다. 대조군이고 막힌다.
 #   D_firing          — 저장소의 등록 그대로 맨 `python` 을 부른다. 래퍼를 거친 hook_bash_python_stub 이 막는다.
