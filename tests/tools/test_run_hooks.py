@@ -16,6 +16,7 @@ from pydantic import JsonValue
 from tools.run_hooks import (
     PAYLOADS,
     Case,
+    NoticeResult,
     Registration,
     coverage_gaps,
     create_fixtures,
@@ -26,6 +27,7 @@ from tools.run_hooks import (
     registered_hooks,
     registration_command,
     run_case,
+    run_notices,
     substitute,
 )
 
@@ -260,14 +262,56 @@ def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path
     assert (tmp_path / "transcript-used.jsonl").is_file()
 
 
-def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_침묵이다(tmp_path: Path) -> None:
+def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_알림이다(tmp_path: Path) -> None:
     """훅을 바로 띄우면 파이썬이 2로 끝나 block 으로 읽힌다. 세션이 띄우는 모양과 같아야 한다."""
     replacements = create_fixtures(tmp_path)
-    case = Case(hook="hook_없다.py", expect="silent", payload={"tool_name": "Bash"})
+    case = Case(
+        hook="hook_없다.py",
+        expect="context",
+        payload={"hook_event_name": "PreToolUse", "tool_name": "Bash"},
+    )
 
     result = run_case(case, replacements, Registration("PreToolUse", 20))
 
-    assert result.outcome == "silent"
+    assert result.outcome == "context"
+
+
+def test_사용자에게만_가는_systemMessage_는_notice_다() -> None:
+    """래퍼가 Stop 처럼 additionalContext 를 내지 않는 이벤트에서 지나갈 때의 출력이다(대기열
+    93)."""
+    assert outcome_of(0, json.dumps({"systemMessage": "x"}), "Stop") == "notice"
+    both = json.dumps(
+        {
+            "systemMessage": "x",
+            "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "x"},
+        }
+    )
+    assert outcome_of(0, both, "PreToolUse") == "context"
+    assert outcome_of(0, json.dumps({"systemMessage": ""}), "Stop") == "output"
+
+
+def test_등록된_이벤트마다_래퍼가_없는_훅을_지나갈_때의_알림을_받아들이는_모양으로_낸다() -> None:
+    """세션이 띄우는 모양(uv run 래퍼)과 등록된 이벤트 이름 그대로 잰다. 래퍼의 사본 테스트는 이벤트
+    이름을 손으로 고른다. 러너는 context 와 notice 를 둘 다 받으므로, 이벤트마다 어느 쪽인지는
+    여기서 고정한다 — PostToolUse 가 notice 로 바뀌면 모델에게 가는 알림이 조용히 빠진다."""
+    registrations = registered_hooks()
+
+    results = run_notices(registrations)
+
+    assert {result.event for result in results} == {r.event for r in registrations.values()}
+    assert [result for result in results if not result.ok] == []
+    expected = {
+        result.event: "notice" if result.event in {"Stop", "SubagentStop"} else "context"
+        for result in results
+    }
+    assert {result.event: result.outcome for result in results} == expected
+
+
+@pytest.mark.parametrize("outcome", ["silent", "block", "output", "event Stop", "timeout"])
+def test_래퍼의_알림이_context_도_notice_도_아니면_어긋남이다(outcome: str) -> None:
+    assert not NoticeResult("PreToolUse", outcome, "").ok
+    assert NoticeResult("PreToolUse", "context", "").ok
+    assert NoticeResult("Stop", "notice", "").ok
 
 
 def test_푸시하지_않은_커밋이_있는_저장소를_만든다(tmp_path: Path) -> None:

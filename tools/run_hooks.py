@@ -28,7 +28,10 @@ deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
 발동·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로 센다. 등록되지
-않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). pre-commit 이 `always_run` 으로
+않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더 잰다. 등록된
+이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트가 받는
+출력(`context`, 또는 사용자에게만 가는 `systemMessage` 하나인 `notice`)인지 본다(대기열 93). 표의
+사례는 훅 파일이 있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
 돌리고 하나라도 어긋나면 1 이다. 새 훅은 표에 발동 하나와 침묵 하나를 더하되, 침묵은 손으로 지은
 반례가 아니라 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(대기열 24 — 지시문 훅은 첫
 턴이라는 축을 반례가 보지 못했다).
@@ -72,6 +75,12 @@ _REGISTRATION_PATTERN = re.compile(
     re.escape(REGISTRATION).replace(re.escape("{hook}"), r"(hook_\w+\.py)")
 )
 Expectation = Literal["deny", "block", "context", "silent"]
+# 래퍼가 없는 훅을 지나갈 때의 알림(대기열 93)을 등록된 이벤트마다 재는 훅 이름. tools/ 에 없어야
+# 한다.
+ABSENT_HOOK = "hook_absent_for_launch_notice.py"
+# 그 알림의 판정. 모델에게 가는 context 거나, 그것을 받지 않는 이벤트(Stop)에서 사용자에게만 가는
+# notice 다. 어느 이벤트가 어느 쪽인지는 래퍼의 `CONTEXT_EVENTS` 가 정하고 tests/tools/ 가 고정한다.
+NOTICE_OUTCOMES = frozenset({"context", "notice"})
 # Claude Code 가 `timeout` 을 적지 않은 훅에 주는 시간(초).
 DEFAULT_HOOK_TIMEOUT = 60
 # 저장소를 가리키는 git 환경 변수. tests/conftest.py 도 여기서 import 한다 — 목록의 원천은 하나다.
@@ -108,6 +117,7 @@ class _HookSpecific(BaseModel):
 class _HookOutput(BaseModel):
     decision: str | None = None
     additionalContext: str | None = None
+    systemMessage: str | None = None
     hookSpecificOutput: _HookSpecific | None = None
 
 
@@ -141,6 +151,19 @@ class Result:
     @property
     def ok(self) -> bool:
         return self.outcome == self.case.expect
+
+
+@dataclass(frozen=True)
+class NoticeResult:
+    """래퍼가 없는 훅을 한 이벤트에서 지나갈 때의 판정."""
+
+    event: str
+    outcome: str
+    output: str
+
+    @property
+    def ok(self) -> bool:
+        return self.outcome in NOTICE_OUTCOMES
 
 
 def load_cases(path: Path = PAYLOADS) -> list[Case]:
@@ -216,7 +239,9 @@ def outcome_of(returncode: int, stdout: str, event: str) -> str:
     """훅의 종료 코드와 stdout 을 기대 넷 중 하나로(또는 그 밖의 설명으로) 읽는다.
 
     `hookSpecificOutput` 은 `hookEventName` 이 있어야 하고(없으면 Claude Code 가 받지 않는 출력이라
-    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`).
+    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). 기대 넷
+    밖의 `notice` 는 사용자에게만 가는 `systemMessage` 하나다 — 래퍼가 Stop 에서 없는 훅을 지나갈
+    때의 출력이고(대기열 93), 표의 훅은 내지 않는다.
     """
     if returncode == 2:
         return "block"
@@ -236,6 +261,8 @@ def outcome_of(returncode: int, stdout: str, event: str) -> str:
         return "block"
     if (specific is not None and specific.additionalContext) or output.additionalContext:
         return "context"
+    if output.systemMessage:
+        return "notice"
     return "output"
 
 
@@ -264,12 +291,11 @@ def launch_argv(hook: str, root: Path = ROOT) -> list[str]:
     return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]
 
 
-def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정한다. 넘기면 어긋남 `timeout`."""
-    payload = substitute(case.payload, replacements)
+def _launch(hook: str, payload: JsonValue, registration: Registration) -> tuple[str, str]:
+    """자식 하나를 등록의 모양과 시간 제한으로 돌려 (판정, 출력). 넘기면 판정 `timeout`."""
     try:
         process = subprocess.run(
-            launch_argv(case.hook),
+            launch_argv(hook),
             input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             capture_output=True,
             env=hook_environment(),
@@ -278,11 +304,35 @@ def run_case(case: Case, replacements: dict[str, str], registration: Registratio
             timeout=registration.timeout,
         )
     except subprocess.TimeoutExpired:
-        return Result(case, "timeout", f"{registration.timeout}초 안에 끝나지 않았다")
+        return "timeout", f"{registration.timeout}초 안에 끝나지 않았다"
     stdout = process.stdout.decode("utf-8", "replace")
     stderr = process.stderr.decode("utf-8", "replace")
     outcome = outcome_of(process.returncode, stdout, registration.event)
-    return Result(case, outcome, (stdout or stderr).strip())
+    return outcome, (stdout or stderr).strip()
+
+
+def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
+    """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정한다. 넘기면 어긋남 `timeout`."""
+    payload = substitute(case.payload, replacements)
+    return Result(case, *_launch(case.hook, payload, registration))
+
+
+def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
+    """등록된 이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워 지나갈 때의 알림을 판정한다.
+
+    `${CLAUDE_PROJECT_DIR}` 이 그 훅이 없는 체크아웃을 가리키면 세션이 받는 출력이다. 표의 사례는
+    훅 파일이 있어야 하므로(`load_cases`) 이 길을 돌지 않는다. 시간 제한은 그 이벤트에 처음 등록된
+    훅의 것이다. `ABSENT_HOOK` 이 `tools/` 에 있으면 ValueError.
+    """
+    if (ROOT / "tools" / ABSENT_HOOK).exists():
+        raise ValueError(f"tools/{ABSENT_HOOK} 이 있다. 래퍼가 지나가는 길을 재지 못한다")
+    by_event: dict[str, Registration] = {}
+    for registration in registrations.values():
+        by_event.setdefault(registration.event, registration)
+    return [
+        NoticeResult(event, *_launch(ABSENT_HOOK, {"hook_event_name": event}, registration))
+        for event, registration in sorted(by_event.items())
+    ]
 
 
 def create_fixtures(scratch: Path) -> dict[str, str]:
@@ -382,7 +432,9 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as scratch:
         replacements = create_fixtures(Path(scratch))
         results = [run_case(case, replacements, registrations[case.hook]) for case in runnable]
+    notices = run_notices(registrations)
     failures = [result for result in results if not result.ok]
+    notice_failures = [result for result in notices if not result.ok]
     for result in results:
         mark = "ok  " if result.ok else "FAIL"
         note = f" — {result.case.note}" if result.case.note else ""
@@ -390,13 +442,22 @@ def main() -> int:
         print(f"[{mark}] {result.case.hook:<28} 기대 {expect:<7} 실제 {actual}{note}")
         if not result.ok:
             print(f"       출력: {result.output[:200]}")
+    for notice in notices:
+        mark = "ok  " if notice.ok else "FAIL"
+        label = f"launch_hook 없는 훅 {notice.event}"
+        print(f"[{mark}] {label:<28} 기대 context 또는 notice 실제 {notice.outcome}")
+        if not notice.ok:
+            print(f"       출력: {notice.output[:200]}")
     for gap in gaps:
         print(f"[GAP ] {gap}")
     skipped = len(cases) - len(runnable)
     unregistered = f", 등록되지 않아 돌리지 않은 사례 {skipped}건" if skipped else ""
-    summary = f"훅 페이로드 {len(results)}건, 어긋남 {len(failures)}건, 표의 빈자리 {len(gaps)}건"
+    summary = (
+        f"훅 페이로드 {len(results)}건, 어긋남 {len(failures)}건, 래퍼 알림 {len(notices)}건,"
+        f" 어긋남 {len(notice_failures)}건, 표의 빈자리 {len(gaps)}건"
+    )
     print(f"{summary}{unregistered}.")
-    return 1 if failures or gaps else 0
+    return 1 if failures or notice_failures or gaps else 0
 
 
 if __name__ == "__main__":

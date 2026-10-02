@@ -71,6 +71,15 @@ repos:
         types: [text]
         require_serial: true
         stages: [pre-commit]
+      # 커밋에 든 변이 표만 본다. ruff 훅 뒤라 포맷이 고친 코드와 대조한다 — 변이를 돌린 뒤 ruff format 이
+      # 코드를 고쳐 커밋한 표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 옛 표는 썩어도 된다.
+      - id: check-mutations
+        name: mutation tables (커밋에 든 변이 표의 원문이 코드에 정확히 한 번 있는지 — tools/mutate.py --check, 대기열 92)
+        entry: uv run python tools/mutate.py --check
+        language: system
+        files: _mutations\.toml$
+        require_serial: true
+        stages: [pre-commit]
       # stages 를 적지 않은 always_run 훅은 commit-msg 단계에서 한 번 더 돈다(일지 2026-09-28-06 회고 2).
       - id: run-hooks
         name: hooks (tools/hook_payloads.toml 대로 발동·침묵 — 대기열 24)

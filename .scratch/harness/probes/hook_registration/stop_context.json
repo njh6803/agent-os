@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/.scratch/harness/probes/hook_registration/stop_context_hook.py\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}
