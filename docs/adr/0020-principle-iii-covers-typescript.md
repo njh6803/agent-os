@@ -18,7 +18,7 @@ date: 2026-09-28
 
 - **TypeScript는 5.9에 고정한다.** npm 최신인 7.0.2에서 typescript-eslint 8.70.1은 `typescript-eslint does not support TS 7.0`을 내며 시작부터 거부했다. 5.9.3에서는 `no-unsafe-*`와 단언 금지가 탐침의 다섯 건을 모두 잡았다(`.scratch/web-admin/probes/ts7_lint.sh`). 7.0.2는 JS 컴파일러 API를 내보내지 않아 openapi-typescript의 생성도 죽는다(`gen_run.mjs`). 올리는 날은 판정자가 먼저 서야 한다.
 - **판정자는 언어마다 하나다.** 파이썬은 `tools/check_type_escapes.py`(ADR 0013)이고 TS는 ESLint다. 한 언어 안에서 판정자가 둘로 갈리지 않는다.
-- **생성물을 판정 범위에서 빼지 않는다.** openapi-typescript는 재귀 `Json`에서 TS2502를 내고 그것을 `any`로 둔다. 그래서 생성 스크립트가 그 자리를 `unknown`으로 바꿔 생성물의 우회를 0으로 만든다. 빼는 목록을 두면 ADR 0013이 경계한 모양(범위를 손으로 두 곳에 적는다)이 된다. 대상 글롭은 `.d.ts`도 든다. ADR 0013이 `.pyi`를 범위에 넣은 이유와 같다.
+- **생성물을 판정 범위에서 빼지 않는다.** (바뀜: 이력 2026-09-30 "판정에서 빠지는 것은 git이 추적하지 않는 빌드 산출물뿐이다") openapi-typescript는 재귀 `Json`에서 TS2502를 내고 그것을 `any`로 둔다. 그래서 생성 스크립트가 그 자리를 `unknown`으로 바꿔 생성물의 우회를 0으로 만든다. 빼는 목록을 두면 ADR 0013이 경계한 모양(범위를 손으로 두 곳에 적는다)이 된다. 대상 글롭은 `.d.ts`도 든다. ADR 0013이 `.pyi`를 범위에 넣은 이유와 같다.
 - **tsconfig의 `strict`를 끄는 것도 우회다.** 타입 기반 규칙은 타입 정보에 기대므로, 설정 한 줄이 파일 하나의 단언보다 세다. ADR 0013의 `typeCheckingMode`와 같은 자리이고, `strict`가 켜져 있는지를 검사가 본다. ESLint 규칙이 아니라 설정을 읽는 검사라 판정자와 별개이고, 자리는 명세가 정한다.
 - **헌법 개정은 web-admin의 첫 티켓이 한다.** http-channel의 첫 티켓이 원칙 IV를 개정한 것과 같다. `principles.md`의 원칙 III 문장이 두 언어를 말하게 되고, `docs/constitution/README.md`의 버전이 3.0.0이 된다.
 
