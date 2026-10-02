@@ -20,7 +20,7 @@ HTTP 표면을 받치는 것이 전부 `admin/`에 있다. 에러 봉투(`ErrorE
 - **옮기는 것과 남는 것.** 에러 봉투 셋, `failure_for`와 그 표, `install_error_handlers`, `AssignRequestId`, `error_envelope`·`remember_failure`·`request_id_of`, `_documented_errors`, `_Verbatim`, 인증 미들웨어가 간다. 인증 미들웨어는 접두사→토큰 표를 받는 일반형이 되고 표는 `server`가 넘긴다(ADR 0015). 관리 라우터와 관리의 응답 모델(`Health`, 목록과 상세의 행, 커서)은 `admin`에 남는다.
 - **`.claude/rules/admin.md`의 HTTP 표면 공통 규칙이 새 층의 rules 파일로 간다.** 봉투와 어휘, 상태 코드 표, 에러 문서, `verbatim`, `operation_id`, 한 줄 독스트링, 테스트 이음매가 그것이다. `paths`는 새 층과 채널과 관리와 `server.py`를 덮는다. 관리에만 걸리는 것(목록과 상세의 모양, 커서)은 `admin.md`에 남는다.
 - **채널과 관리는 여전히 서로를 import하지 않는다.** `main`과 `server`가 조립한다는 문장도 그대로다.
-- **이름은 `agent_os.http`다.** 들어 있는 것 그대로의 이름이다. 표준 라이브러리 `http`와는 절대 import라 부딪치지 않고, `admin.http`와 `channel.http`는 앞의 접두어가 가른다.
+- **이름은 `agent_os.http`다.** 들어 있는 것 그대로의 이름이다. 표준 라이브러리 `http`와는 절대 import라 부딪치지 않고, `admin.http`와 `channel.http`는 앞의 접두어가 가른다. (바뀜: 이력 2026-09-25 "표준 라이브러리와 부딪치지 않는 것은 모듈 실행에서만 참이다")
 
 ## 이력
 

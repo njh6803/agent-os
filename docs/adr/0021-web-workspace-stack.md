@@ -20,13 +20,13 @@ date: 2026-09-28
 
 ## Consequences
 
-- **계약 파일은 바뀌지 않는다.** openapi-typescript는 3.1.0 선언을 그대로 받고, 3.1과 3.2의 생성물이 바이트까지 같다. 기본 모드에서는 태그가 생성물을 바꾸지 않아 태그도 붙이지 않는다(ADR 0010의 2026-09-28 이력). `--immutable`로 필드가 readonly가 되고, 열거는 리터럴 유니온이다.
+- **계약 파일은 바뀌지 않는다.** (바뀜: ADR 0014 이력 2026-09-28 "결정은 그것이 답하는 일시정지를 트레이스 안의 자리로 가리킨다") openapi-typescript는 3.1.0 선언을 그대로 받고, 3.1과 3.2의 생성물이 바이트까지 같다. 기본 모드에서는 태그가 생성물을 바꾸지 않아 태그도 붙이지 않는다(ADR 0010의 2026-09-28 이력). `--immutable`로 필드가 readonly가 되고, 열거는 리터럴 유니온이다. (바뀜: 이력 2026-09-29 "`--immutable`을 거둔다 — openapi-fetch가 readonly 배열을 배열로 보지 못한다")
 - **SSE는 손으로 받는다.** 잰 생성기 넷 중 `itemSchema`를 쓰는 것이 없다. openapi-fetch는 기본 설정에서 SSE 200에 `SyntaxError`를 던지므로 `parseAs: "stream"`으로 받아 `data:` 줄을 파싱한다. `JSON.parse`의 `any`는 `no-unsafe-*`가 막으므로(ADR 0020), 항목은 판별자만 보는 타입 술어로 `Event`가 된다. 객체인지, `type`이 계약의 종류 중 하나인지만 본다. 종류 목록은 `satisfies Record<Event["type"], true>`로 두어 컴파일러가 생성 타입과 대조한다. 손으로 쓴 목록이지만 어긋날 수 없다.
 - **브랜드 식별자를 두지 않는다.** `as`가 금지되어 브랜드를 만드는 길은 패턴을 보는 타입 술어뿐이고, 그러면 서버의 식별자 패턴이 TS에 한 번 더 산다. 09-20 씨앗의 Brand 규칙은 채택하지 않는다.
 - **화면은 `components/pages/`의 클라이언트 컴포넌트이고, `app/**/page.tsx`는 라우팅과 레이아웃만 한다.** 데이터를 브라우저가 가져오므로(ADR 0019) 화면은 클라이언트 컴포넌트다. 그래서 09-20 씨앗의 근거(서버 컴포넌트는 Vitest가 보지 못한다)가 그대로 서고, `tech.md` 프론트 구성 행의 미결이 이것으로 닫힌다.
 - **09-20 씨앗은 강제력 높은 층부터 들인다.** 층 경계와 앱 간 import, barrel import, TS `enum` 금지, 아이콘 서브패스 import는 ESLint 설정이 판정한다. 판단 기준만 `.claude/rules/web-*.md` + `paths`에 둔다. 스토리 규칙은 Storybook을 들이는 날 다시 보고, Brand 규칙은 위와 같이 채택하지 않는다.
-- **검증 명령이 다섯이 된다.** `pnpm -C web verify`(린트, 타입, 단위 테스트, 생성물 최신성)를 늘 친다. 파이썬 티켓도 `openapi.json`을 바꾸면 생성물의 최신성을 깨기 때문이다. e2e는 별도 명령이다. pre-commit과 CI의 `verify` 잡이 둘 다 돌고, 필수 검사는 `verify` 하나 그대로다. 워크플로 변경은 별도 PR로 먼저 병합한다(`operations.md`).
-- **`next dev`의 에이전트 파일을 끈다.** `next dev`는 에이전트를 감지하면 앱 폴더에 `AGENTS.md`와 `@AGENTS.md` 한 줄짜리 `CLAUDE.md`를 만들거나 그 안에 블록을 끼워 넣는다(Next 16.3.6 `server/lib/start-server.js`, 설정 `agentRules`, 기본 true). 중첩 `CLAUDE.md`와 `@` 임포트는 지침을 `.claude/rules/*.md` + `paths`에 둔다는 결정을 조용히 우회하므로 `agentRules: false`로 끈다. 블록의 요지(Next 코드를 쓰기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 읽는다)는 web 규칙 한 줄로 옮긴다.
+- **검증 명령이 다섯이 된다.** `pnpm -C web verify`(린트, 타입, 단위 테스트, 생성물 최신성)를 늘 친다. 파이썬 티켓도 `openapi.json`을 바꾸면 생성물의 최신성을 깨기 때문이다. e2e는 별도 명령이다. pre-commit과 CI의 `verify` 잡이 둘 다 돌고, 필수 검사는 `verify` 하나 그대로다. (바뀜: 이력 2026-10-01 "CI를 잡 셋으로 나누고 필수 검사 `verify`가 그 결과를 모은다") 워크플로 변경은 별도 PR로 먼저 병합한다(`operations.md`). (바뀜: 이력 2026-09-28 "CI의 web 단계는 뼈대와 같은 PR에 들고, e2e도 `verify` 잡이 돈다")
+- **`next dev`의 에이전트 파일을 끈다.** `next dev`는 에이전트를 감지하면 앱 폴더에 `AGENTS.md`와 `@AGENTS.md` 한 줄짜리 `CLAUDE.md`를 만들거나 그 안에 블록을 끼워 넣는다(Next 16.3.6 `server/lib/start-server.js`, 설정 `agentRules`, 기본 true). 중첩 `CLAUDE.md`와 `@` 임포트는 지침을 `.claude/rules/*.md` + `paths`에 둔다는 결정을 조용히 우회하므로 `agentRules: false`로 끈다. (바뀜: 이력 2026-09-29 "`next dev`가 만드는 파일이 실리는 길") 블록의 요지(Next 코드를 쓰기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 읽는다)는 web 규칙 한 줄로 옮긴다.
 - **화면 문구는 한국어이고 용어집의 말을 쓴다.** 예를 들어 실행 상태 "결말 없음"을 "실행 중"으로 옮기지 않는다.
 
 ## 이력
