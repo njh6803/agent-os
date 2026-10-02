@@ -9,6 +9,8 @@ Playwright 의 `list` 리포터, 일지 2026-10-01-01). 색 코드를 넣거나 
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -26,6 +28,7 @@ from tools.mutate import (
     read_spec,
     select,
 )
+from tools.run_hooks import hook_environment
 
 _초록 = CommandResult(0, "1 passed in 0.01s\n")
 _빨강 = CommandResult(1, "FAILED tests/test_x.py::test_x - AssertionError\n1 failed in 0.01s\n")
@@ -958,6 +961,8 @@ def test_원문만_보면_명령을_돌리지_않고_틀린_원문을_모두_알
     assert any("둘:" in 한줄 and "0번" in 한줄 for 한줄 in 줄)
     assert any("셋:" in 한줄 and "2번" in 한줄 for 한줄 in 줄)
     assert not any("하나:" in 한줄 for 한줄 in 줄)
+    # pre-commit 이 표 하나만 넘겨도 어느 표가 틀렸는지 보인다
+    assert all(한줄.startswith(f"{경로}: ") for 한줄 in 줄)
 
 
 def test_원문만_보아_모두_맞으면_0이고_파일을_건드리지_않는다(tmp_path: Path) -> None:
@@ -972,6 +977,125 @@ def test_원문만_보아_모두_맞으면_0이고_파일을_건드리지_않는
     assert code == 0
     assert path.read_bytes() == b"x = 1\n"
     assert any("1" in 한줄 and "한 번" in 한줄 for 한줄 in 줄)
+
+
+_이_도구 = "tools/mutate.py"
+
+
+def _표를_쓴다(tmp_path: Path, 이름: str, 내용: str) -> str:
+    path = tmp_path / 이름
+    path.write_text(내용, encoding="utf-8")
+    return str(path)
+
+
+def test_원문만_볼_때는_변이_파일_여럿을_받아_틀린_파일을_가리킨다(tmp_path: Path) -> None:
+    """pre-commit 이 커밋에 든 변이 표를 한 번에 넘긴다(대기열 92). 앞 파일에서 멈추면 뒤 파일을
+    못 본다."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    맞는 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
+    틀린 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="z = 1", new="z = 2"))
+    줄: list[str] = []
+
+    code = main(["--check", 틀린, 맞는], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+
+    assert code == 2
+    assert any(틀린 in 한줄 and "0번" in 한줄 for 한줄 in 줄)
+    assert any(맞는 in 한줄 and "한 번" in 한줄 for 한줄 in 줄)
+    assert not any(맞는 in 한줄 and "!!" in 한줄 for 한줄 in 줄)
+
+
+def test_원문만_볼_때_읽지_못한_변이_파일이_있어도_나머지_파일을_본다(tmp_path: Path) -> None:
+    깨진 = tmp_path / "broken_mutations.toml"
+    깨진.write_bytes(b'name = "\xff"\n')
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    틀린 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="z = 1", new="z = 2"))
+    줄: list[str] = []
+
+    code = main(
+        ["--check", str(깨진), 틀린], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any(str(깨진) in 한줄 for 한줄 in 줄)
+    assert any(틀린 in 한줄 and "0번" in 한줄 for 한줄 in 줄)
+
+
+def test_원문만_볼_때_여러_줄인_진단도_줄마다_표의_경로를_붙인다(tmp_path: Path) -> None:
+    """변이 파일 오류는 문제를 줄바꿈으로 잇는다. 첫 줄에만 붙으면 표 여럿을 함께 볼 때 둘째 줄부터
+    출처가 없다(PR #122 CodeRabbit)."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    러너_둘_없음 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'tests = ["tests/test_x.py"]', 'runner = "없다"\ntests = ["tests/test_x.py"]'
+    )
+    둘 = 러너_둘_없음 + 러너_둘_없음.replace('name = "하나"', 'name = "둘"')
+    깨진 = _표를_쓴다(tmp_path, "a_mutations.toml", 둘)
+    맞는 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
+    줄: list[str] = []
+
+    code = main(["--check", 깨진, 맞는], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+
+    출력 = "\n".join(줄).splitlines()
+    assert code == 2
+    assert sum("러너 없다" in 한줄 for 한줄 in 출력) == 2
+    assert all(한줄.startswith((f"{깨진}: ", f"{맞는}: ")) for 한줄 in 출력)
+
+
+def test_원문만_볼_때_변이_파일_여럿이_모두_맞으면_0이다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\n")
+    가 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
+    나 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="y = 1", new="y = 2"))
+
+    code = main(["--check", 가, 나], root=tmp_path, runner=_부르면_안_되는_러너, out=print)
+
+    assert code == 0
+
+
+def test_변이_파일_여럿은_원문_확인에서만_받고_이름과_섞지_않는다(tmp_path: Path) -> None:
+    """변이를 돌리는 것은 표 하나씩이다. 이름은 어느 표의 것인지 가를 수 없다."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\n")
+    가 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
+    나 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="y = 1", new="y = 2"))
+
+    for argv in ([가, 나], ["--check", 가, 나, "하나"]):
+        줄: list[str] = []
+        code = main(argv, root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+        assert code == 2, argv
+        assert any("변이 파일 여럿" in 한줄 for 한줄 in 줄), argv
+
+
+def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다(tmp_path: Path) -> None:
+    """pre-commit 은 표 경로를 인자 끝에 붙여 띄운다. 훅 환경에 `PYTHONUTF8` 이 있다고 가정하지
+    않는다 — 없으면 윈도우의 파이프는 cp949 라 한국어 출력이 깨지거나 인코딩 오류로 끝난다. 자식의
+    `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳(리눅스 CI)에서도 다시 열기를 빼면
+    빨갛게 한다(PR #122 CodeRabbit)."""
+    맞는 = _표를_쓴다(
+        tmp_path,
+        "a_mutations.toml",
+        _변이_파일(
+            old="ROOT = Path(__file__).resolve().parent.parent", new="ROOT = Path()", file=_이_도구
+        ),
+    )
+    틀린 = _표를_쓴다(
+        tmp_path,
+        "b_mutations.toml",
+        _변이_파일(old="없는 원문 — 대기열 92", new="x", file=_이_도구).replace(
+            "하나", "틀린 — 표"
+        ),
+    )
+
+    done = subprocess.run(
+        [sys.executable, "tools/mutate.py", "--check", 맞는, 틀린],
+        cwd=ROOT,
+        capture_output=True,
+        env={**hook_environment(), "PYTHONIOENCODING": "cp949"},
+        check=False,
+        timeout=60,
+    )
+    stdout = done.stdout.decode("utf-8")
+
+    assert done.returncode == 2, done.stderr.decode("utf-8", "replace")
+    assert "틀린 — 표" in stdout
+    assert 틀린 in stdout
 
 
 def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(

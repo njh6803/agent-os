@@ -1,5 +1,5 @@
 """훅 등록의 실행 래퍼. 인자로 받은 이름의 훅 파일이 이 파일 옆(`tools/`)에 없으면 막지 않고 0으로
-끝나고, 있으면 같은 프로세스에서 그 훅을 `__main__` 으로 돌린다.
+끝나며 그것을 세션에 알리고, 있으면 같은 프로세스에서 그 훅을 `__main__` 으로 돌린다.
 
 등록이 `python "${CLAUDE_PROJECT_DIR}/tools/<훅>.py"` 꼴이던 때는 훅 파일이 없으면 파이썬이 2로
 끝났다. PreToolUse 에서 2는 "막아라"라 그 매처의 모든 호출이 막혔다(2026-09-29 실측). PR #120
@@ -9,10 +9,19 @@
 훅은 없는 것처럼 지나간다. `claude -p` 세션에서 없는 훅을 옛 모양으로 더하면 Bash 가 막혔고 이
 래퍼로 더하면 돌았다(2026-10-02, `.scratch/harness/probes/hook_registration/run.sh`).
 
+지나갈 때는 stdout 에 JSON 하나를 낸다. 사용자에게는 `systemMessage`, 모델에게는 `CONTEXT_EVENTS`
+일 때 `additionalContext` 다(`notice`). 첫 판은 stderr 에 한 줄만 남겼는데, 종료 0의 stderr 는
+디버그 로그로만 가서 `.env` 읽기 차단(`hook_env_read`)이 꺼져도 세션이 몰랐다(대기열 93, PR #121
+claude-review). `claude -p` 세션에서 PreToolUse 의 알림은 모델이 모델 몫의 문장을 옮겼고, Stop 의
+알림은 사용자 알림 하나로 끝나 대화가 이어지지 않았다(2026-10-02, 같은 `run.sh` 의 E·F, 대조군
+G). 인자가 틀린 것과 파일이 없는 것은 문구를 가른다(`skip_reason`) — 고치는 자리가 다르다(앞의
+것은 등록, 뒤의 것은 주 체크아웃 당기기). json 은 이 길에서만 import 한다.
+
 등록 명령의 모양은 그대로이고 스크립트 자리에 이 파일이, 끝에 훅 이름이 온다. 셸 문법(`[ -f … ]`)을
 더하지 않으므로 등록이 셸에 기대는 몫(`${CLAUDE_PROJECT_DIR}` 의 전개와 따옴표)은 래퍼 전과 같다.
 모양은 `tools/run_hooks.py` 가 대조한다. 래퍼는 훅 한 번에 약 10ms 를 더한다(2026-10-02,
-`.scratch/harness/probes/hook_registration/time_launch.sh`).
+`.scratch/harness/probes/hook_registration/time_launch.sh`. 93 반영 뒤에 다시 재 바로 205~218ms,
+래퍼 212~220ms).
 
 훅이 있으면 종료 코드와 stdin·stdout 은 훅을 바로 돌릴 때와 같다. 훅 안의 예외도 1(막지 않는
 오류)로 끝나지만, stderr 의 traceback 에는 래퍼와 runpy 의 프레임이 더해진다. 훅이 보는 `__name__`
@@ -26,9 +35,13 @@
   이 파일을 들이는 PR 이 병합된 뒤 주 체크아웃을 당기기 전, 주 체크아웃이 그보다 앞서 딴 브랜치에
   있을 때, 이 파일의 이름을 바꾼 뒤다. 그래서 이 파일을 들인 PR 은 병합 직후 주 체크아웃을 당긴다.
 - 훅 파일은 있지만 그 판이 등록과 맞지 않는 것(주 체크아웃의 옛 훅이 새 등록의 이벤트로 도는 것).
-- 지나간 것을 세션에 알리지 않는다. stderr 에 한 줄을 남길 뿐이고(stdout 은 비어 러너는 침묵으로
-  읽는다), 종료 0의 stderr 가 모델이나 사용자에게 보이는지는 재지 않았다. 그 훅이 꺼진 것을 세션이
-  모를 수 있다.
+- 알림이 데스크톱 앱에서 어떻게 보이는지. `systemMessage` 는 `claude -p` 의 stream-json 에서
+  `informational` 이벤트로 오는 것만 봤다. 공식 hooks 문서는 Setup 이 JSON 출력(`systemMessage`
+  포함)을 버리고 StopFailure 가 출력을 무시한다고 적는다 — 그 이벤트에 훅을 등록하면 알림이 없다.
+  지금 등록된 이벤트(UserPromptSubmit, PreToolUse, PostToolUse, Stop)는 아니다.
+- 같은 알림이 그 매처의 호출마다 되풀이된다. 상태를 두지 않는다. 새 훅을 등록한 워크트리 세션이 다시
+  시작되면(주 체크아웃에 그 훅이 아직 없다) 병합 뒤 당길 때까지 그렇다.
+- Stop 에서는 모델이 알림을 받지 않는다. 사용자가 보고 전할 때까지 모델은 그 훅이 꺼진 것을 모른다.
 """
 
 from __future__ import annotations
@@ -38,8 +51,25 @@ import runpy
 import sys
 
 # pathlib 을 쓰지 않는다. pathlib 을 import 하지 않는 훅에서 그 import 가 훅 한 번에 약 8ms 를
-# 더했다(손으로 견줬다, 일지 2026-10-02-02).
+# 더했다(손으로 견줬다, 일지 2026-10-02-02). json 도 지나갈 때만 import 한다.
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+# `hookSpecificOutput.additionalContext` 를 모델에게 전하는 이벤트(공식 hooks 문서, 2026-10-02
+# 읽음). Stop·SubagentStop 도 받지만 거기서는 대화를 잇게 해 턴이 끝날 때마다 한 번 더 돈다 —
+# 넣지 않는다(`claude -p` 세션에서 Stop 의 additionalContext 가 답 하나를 더했다,
+# `.scratch/harness/probes/hook_registration/run.sh` 의 G).
+CONTEXT_EVENTS = frozenset(
+    {
+        "SessionStart",
+        "SubagentStart",
+        "UserPromptSubmit",
+        "UserPromptExpansion",
+        "PreToolUse",
+        "PostToolUse",
+        "PostToolUseFailure",
+        "PostToolBatch",
+        "PostModelSwitch",
+    }
+)
 
 
 def hook_path(argv: list[str]) -> str | None:
@@ -50,10 +80,58 @@ def hook_path(argv: list[str]) -> str | None:
     return path if os.path.isfile(path) else None
 
 
+def skip_reason(argv: list[str]) -> str:
+    """훅을 돌리지 않고 지나가는 이유. 인자가 틀린 것과 파일이 없는 것은 고치는 자리가 다르다."""
+    if len(argv) != 2:
+        return (
+            f"launch_hook: 등록 명령의 훅 이름 인자가 하나가 아니라({argv[1:]}) 아무 훅도"
+            " 돌리지 않고 지나갔다. 등록 모양은 tools/run_hooks.py 의 REGISTRATION 이고 그"
+            " 대조가 커밋을 막는다."
+        )
+    return (
+        f"launch_hook: 훅 파일이 없어 돌리지 않고 지나갔다: {os.path.join(TOOLS_DIR, argv[1])}."
+        " 그 훅이 막거나 알리던 것이 이 호출에서 꺼져 있다. 주 체크아웃이 그 훅을 들인 커밋보다"
+        " 뒤에 있으면(병합 뒤 당기지 않았거나 워크트리에서 더한 훅이 아직 병합되지 않았다) 그렇다."
+        " 병합된 훅이면 주 체크아웃을 당긴다."
+    )
+
+
+# 모델에게만 덧붙인다. 사용자에게는 같은 이유를 systemMessage 로 낸다(보이는지는 이벤트와 화면에
+# 따른다 — 독스트링의 못 보는 것). 지나간 훅은 막는 훅일 수도 계기 훅일 수도 있다.
+MODEL_SUFFIX = (
+    " 같은 이유를 사용자 알림(systemMessage)으로도 냈다. 그 훅이 막던 일은 스스로 하지 않고,"
+    " 알리던 일은 스스로 챙긴다."
+)
+
+
+def notice(reason: str, payload: bytes) -> str:
+    """지나간 것을 알리는 출력. 사용자에게는 `systemMessage`(공통 필드라 이벤트를 가리지 않고
+    낸다), 모델에게는 `CONTEXT_EVENTS` 일 때만 `additionalContext`(이유 뒤에 `MODEL_SUFFIX`)다.
+    이벤트는 페이로드의 `hook_event_name` 이고, 읽지 못하면 모르는 이벤트로 본다 — Claude Code 는
+    이벤트 이름이 다른 `hookSpecificOutput` 을 받지 않는다."""
+    import json
+
+    try:
+        data: dict[str, object] = json.loads(payload)
+        event = data.get("hook_event_name")
+    except (ValueError, AttributeError):
+        event = None
+    output: dict[str, object] = {"systemMessage": reason}
+    if isinstance(event, str) and event in CONTEXT_EVENTS:
+        output["hookSpecificOutput"] = {
+            "hookEventName": event,
+            "additionalContext": reason + MODEL_SUFFIX,
+        }
+    return json.dumps(output, ensure_ascii=False)
+
+
 def main() -> int:
     path = hook_path(sys.argv)
     if path is None:
-        sys.stderr.write(f"launch_hook: 훅 파일이 없어 지나간다: {sys.argv[1:]}\n")
+        reason = skip_reason(sys.argv)
+        # 훅 환경에 PYTHONUTF8 이 있다고 가정하지 않는다. 텍스트 스트림은 cp949 일 수 있다.
+        sys.stdout.buffer.write(notice(reason, sys.stdin.buffer.read()).encode("utf-8"))
+        sys.stderr.buffer.write(f"{reason}\n".encode())  # 종료 0의 stderr 는 디버그 로그로 간다
         return 0
     sys.argv = [path]
     runpy.run_path(path, run_name="__main__")

@@ -7,10 +7,16 @@
 저마다 지었고 첫 판정이 틀렸다(대기열 59, tsc 의 종료 코드 2를 빨강으로, TS1360 을 문법 오류로).
 
 사용: PYTHONUTF8=1 uv run python tools/mutate.py <변이 파일.toml> [이름 ...] [--check]
+      uv run python tools/mutate.py --check <변이 파일.toml> <변이 파일.toml> ...
 LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/mutate.py …` 이고 tests 에
 `-m llm` 을 넣는다. 이름을 주면 그 변이만 돈다. `--check` 는 원문만 본다 — 명령을 돌리지 않고, 고른
 변이마다 원문이 파일에 정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을 모두
-알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다.
+알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
+파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름을 섞지 않는다. 이름 없이 주면 줄마다 그
+파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. pre-commit 이 커밋에 든 변이
+표(`_mutations.toml`)를 이 모양으로 넘긴다 — 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
+표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 옛 표는 보지 않는다. 옛 프로브의
+원문은 코드가 바뀌면 썩어도 되고, 다시 돌리거나 고쳐 커밋할 때 이 확인이 알린다.
 
 변이 파일은 TOML 이다. 원문은 리터럴 여러 줄 문자열(`'''`)로 적으면 이스케이프가 없다. 여는 `'''`
 바로 뒤의 줄바꿈은 TOML 이 버린다. 아래 예시는 네 칸 들여쓴 채라 옮길 때 그 네 칸을 걷어 낸다.
@@ -116,6 +122,7 @@ lastfailed 에 남지 않게 한다.
 
 from __future__ import annotations
 
+import io
 import os
 import re
 import shutil
@@ -578,6 +585,23 @@ def run_command(argv: Sequence[str], cwd: Path) -> CommandResult:
     return CommandResult(completed.returncode, completed.stdout + completed.stderr)
 
 
+def _check_files(paths: Sequence[str], *, root: Path, out: Callable[[str], None]) -> int:
+    """변이 파일 여럿의 원문을 본다. 줄마다 앞에 그 파일의 경로를 붙이고, 읽지 못한 파일이 있어도
+    나머지를 본다. 모두 맞으면 0, 하나라도 틀리면 2."""
+    code = 0
+    for path in paths:
+        lines: list[str] = []
+        try:
+            code = max(code, check(read_spec(Path(path)), root=root, out=lines.append))
+        except SpecError as error:
+            lines.append(f"!! 변이 파일 오류: {error}")
+            code = 2
+        # 변이 파일 오류는 문제를 줄바꿈으로 잇는다. 줄마다 붙여야 둘째 줄의 출처가 보인다
+        for line in "\n".join(lines).splitlines():
+            out(f"{path}: {line}")
+    return code
+
+
 def main(
     argv: Sequence[str],
     *,
@@ -585,6 +609,7 @@ def main(
     runner: Runner = run_command,
     out: Callable[[str], None] = print,
 ) -> int:
+    checking = "--check" in argv
     rest = [arg for arg in argv if arg != "--check"]
     flags = [arg for arg in rest if arg.startswith("--")]
     if flags:
@@ -594,9 +619,15 @@ def main(
         out(__doc__ or "")
         return 2
     spec_path, *names = rest
+    more_tables = [name for name in names if name.endswith(".toml")]
+    if more_tables and (not checking or len(more_tables) != len(names)):
+        out("변이 파일 여럿은 --check 로만 받고 이름과 섞지 않는다. 변이는 표 하나씩 돌린다")
+        return 2
+    if checking and len(more_tables) == len(names):
+        return _check_files([spec_path, *more_tables], root=root, out=out)
     try:
         spec = select(read_spec(Path(spec_path)), names)
-        if "--check" in argv:
+        if checking:
             return check(spec, root=root, out=out)
         return measure(spec, root=root, runner=runner, out=out)
     except SpecError as error:
@@ -613,4 +644,8 @@ def main(
 
 
 if __name__ == "__main__":
+    # pre-commit 훅 환경에 PYTHONUTF8 이 있다고 가정하지 않는다. 없으면 윈도우의 파이프는 cp949 다.
+    stream = sys.stdout
+    if isinstance(stream, io.TextIOWrapper):
+        stream.reconfigure(encoding="utf-8")
     raise SystemExit(main(sys.argv[1:]))

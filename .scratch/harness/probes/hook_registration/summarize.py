@@ -32,17 +32,23 @@ def _text(content: object) -> str:
 
 
 def summarize(path: Path) -> list[str]:
+    """Bash 호출과 도구 결과, 훅의 systemMessage(`informational` 이벤트, 대기열 93), 모델의 답
+    텍스트."""
     lines: list[str] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         try:
             event = json.loads(raw)
         except json.JSONDecodeError:
             continue
+        if isinstance(event, dict) and event.get("subtype") == "informational":
+            lines.append(f"  사용자 알림: {str(event.get('content'))[:160]}")
         for block in _blocks(event, "assistant"):
             if block.get("type") == "tool_use":
                 tool_input = block.get("input")
                 command = tool_input.get("command") if isinstance(tool_input, dict) else None
                 lines.append(f"  호출 {block.get('name')}: {command}")
+            if block.get("type") == "text":
+                lines.append(f"  답: {' '.join(str(block.get('text')).split())[:240]}")
         for block in _blocks(event, "user"):
             if block.get("type") == "tool_result":
                 text = " ".join(_text(block.get("content")).split())

@@ -1,5 +1,5 @@
-# tools/launch_hook.py(대기열 91)의 지나가기와 위임, 그리고 tools/run_hooks.py 가 그 래퍼로 띄우고 등록 모양을
-# 대조하는 배선을 하나씩 빼는 변이.
+# tools/launch_hook.py(대기열 91)의 지나가기와 위임, 지나갈 때의 알림(대기열 93), 그리고 tools/run_hooks.py 가
+# 그 래퍼로 띄우고 등록 모양과 이벤트마다의 알림을 판정하는 배선을 하나씩 빼는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/launch_hook_mutations.toml
 
 [[mutation]]
@@ -8,9 +8,9 @@ tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/launch_hook.py"
-old = '''        sys.stderr.write(f"launch_hook: 훅 파일이 없어 지나간다: {sys.argv[1:]}\n")
+old = '''        sys.stderr.buffer.write(f"{reason}\n".encode())  # 종료 0의 stderr 는 디버그 로그로 간다
         return 0'''
-new = '''        sys.stderr.write(f"launch_hook: 훅 파일이 없어 지나간다: {sys.argv[1:]}\n")
+new = '''        sys.stderr.buffer.write(f"{reason}\n".encode())  # 종료 0의 stderr 는 디버그 로그로 간다
         return 2'''
 
 [[mutation]]
@@ -58,8 +58,8 @@ tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_hooks.py"
-old = '''            launch_argv(case.hook),'''
-new = '''            ["uv", "run", "--project", str(ROOT), "--no-sync", "python", str(ROOT / "tools" / case.hook)],'''
+old = '''            launch_argv(hook),'''
+new = '''            ["uv", "run", "--project", str(ROOT), "--no-sync", "python", str(ROOT / "tools" / hook)],'''
 
 [[mutation]]
 name = "등록 모양을 앞부분만 맞춘다"
@@ -101,3 +101,150 @@ expect = "red"
 file = "tools/run_hooks.py"
 old = '''    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]'''
 new = '''    return shlex.split(registration_command(hook).replace(_PROJECT_DIR, root_text))'''
+
+# 대기열 93: 지나갈 때의 알림
+
+[[mutation]]
+name = "없는 훅을 침묵으로 지나간다(93 전)"
+tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        sys.stdout.buffer.write(notice(reason, sys.stdin.buffer.read()).encode("utf-8"))
+'''
+new = ''
+
+[[mutation]]
+name = "Stop 에서도 모델에게 알려 대화를 잇는다"
+tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        "SessionStart",
+'''
+new = '''        "SessionStart",
+        "Stop",
+'''
+
+[[mutation]]
+name = "PostToolUse 에서 모델에게 알리지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        "PostToolUse",
+'''
+new = ''
+
+[[mutation]]
+name = "모델에게 할 일 문장을 더하지 않는다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''            "additionalContext": reason + MODEL_SUFFIX,'''
+new = '''            "additionalContext": reason,'''
+
+[[mutation]]
+name = "인자가 틀린 것을 파일이 없는 것처럼 알린다(PR #121 claude-review Nit)"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''            f"launch_hook: 등록 명령의 훅 이름 인자가 하나가 아니라({argv[1:]}) 아무 훅도"
+            " 돌리지 않고 지나갔다. 등록 모양은 tools/run_hooks.py 의 REGISTRATION 이고 그"
+            " 대조가 커밋을 막는다."'''
+new = '''            f"launch_hook: 훅 파일이 없어 돌리지 않고 지나갔다: {argv[1:]}. 주 체크아웃을 당긴다."'''
+
+[[mutation]]
+name = "이벤트를 읽지 않고 PreToolUse 로 적는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''            "hookEventName": event,'''
+new = '''            "hookEventName": "PreToolUse",'''
+
+[[mutation]]
+name = "목록 페이로드의 AttributeError 를 잡지 않는다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    except (ValueError, AttributeError):'''
+new = '''    except ValueError:'''
+
+[[mutation]]
+name = "문자열인지 보지 않고 이벤트 집합에 묻는다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    if isinstance(event, str) and event in CONTEXT_EVENTS:'''
+new = '''    if event in CONTEXT_EVENTS:'''
+
+[[mutation]]
+name = "러너가 systemMessage 하나를 notice 로 읽지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if output.systemMessage:
+        return "notice"
+'''
+new = ''
+
+[[mutation]]
+name = "러너가 이벤트를 가리지 않고 context·notice 를 둘 다 받는다(PR #122 CodeRabbit)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        return self.outcome == self.expected'''
+new = '''        return self.outcome in {"context", "notice"}'''
+
+[[mutation]]
+name = "러너가 래퍼 알림의 systemMessage 를 보지 않는다(PR #122 CodeRabbit 2회차)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if outcome != "context" or _HookOutput.model_validate_json(stdout.strip()).systemMessage:'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "모델에게 알리는 이벤트에서 사용자 알림을 빼도 러너가 잡는다(배선)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        output["hookSpecificOutput"] = {'''
+new = '''        output = {}
+        output["hookSpecificOutput"] = {'''
+
+[[mutation]]
+name = "러너가 Stop 계열에도 context 를 기대한다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return "notice" if event in NOTICE_ONLY_EVENTS else "context"'''
+new = '''    return "context"'''
+
+[[mutation]]
+name = "러너가 알림을 이벤트 하나에서만 잰다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        for event, registration in sorted(by_event.items())'''
+new = '''        for event, registration in sorted(by_event.items())[:1]'''
+
+[[mutation]]
+name = "러너가 알림의 페이로드에 이벤트 이름을 넣지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''{"hook_event_name": event}'''
+new = '''{}'''
