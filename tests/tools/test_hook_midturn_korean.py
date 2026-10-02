@@ -309,13 +309,17 @@ def test_기다리는_사이에_쓰인_자기_기록을_읽어_알린다(tmp_pat
         env=hook_environment(),
     )
     assert process.stdin is not None
+    assert process.stdout is not None
     process.stdin.write(json.dumps(_payload(transcript, "t1")).encode("utf-8"))
     process.stdin.close()
     time.sleep(WAIT_SECONDS / 4)
     with transcript.open("a", encoding="utf-8") as late:
         late.write(_assistant("m1", _text(ENGLISH)) + "\n" + _assistant("m1", _use("t1")) + "\n")
 
-    stdout, _ = process.communicate(timeout=20)
+    # stdin 을 이미 닫아 communicate() 를 쓰지 않는다. 리눅스의 communicate() 는 닫힌 stdin 을
+    # flush 하다 ValueError 를 낸다(PR #123 CI, 윈도우에서는 지나갔다).
+    stdout = process.stdout.read()
+    process.wait(timeout=20)
 
     assert "additionalContext" in stdout.decode("utf-8")
 
