@@ -78,7 +78,7 @@
 - **두 축: 근거의 종류.** Stop의 `additionalContext`가 대화를 잇는다는 것을 E·F의 실측으로 적었는데, F는
   `systemMessage`만 낸 경우라 대조군이 없었다. 근거는 문서뿐이었다. 대조군 G를 더해 쟀고, 문장마다 문서와 실측을
   갈랐다. "Stop만은"이라는 닫힌 주장은 SubagentStop과 `CONTEXT_EVENTS` 밖의 이벤트로 넓혔다.
-- **두 축: "`systemMessage`는 모든 이벤트가 받는다".** 문서는 Setup이 그 JSON 출력을 버리고 StopFailure가 출력을
+- **두 축: `systemMessage`를 모든 이벤트가 받는다고 적은 첫 판.** 문서는 Setup이 그 JSON 출력을 버리고 StopFailure가 출력을
   무시한다고 적는다. `kickoff/facts.md`와 `notice` 독스트링을 고치고 래퍼의 못 보는 것에 더했다.
 - **명세 Minor: 이벤트별 고정이 절반.** 테스트가 Stop과 PreToolUse만 고정해, `CONTEXT_EVENTS`에서 PostToolUse를 빼도
   테스트·러너·변이가 모두 초록이었다. 러너는 `notice`도 받기 때문이다. 테스트가 등록된 이벤트마다 기대를 고정하게
@@ -87,7 +87,7 @@
   "막던 일"은 계기 훅(`hook_journal_retro` 등)에 맞지 않았다. 둘 다 고쳤다.
 - **표준 Minor 그 밖.** 프로브 README의 "변형 넷"이 여섯을 나열했다(이제 일곱). 바꾼 rules의 카나리아가 없었다(아래
   검사 절). 일지의 변이 결과 자리가 비어 있었다.
-- **Nit, 고친 것.** 표 열일곱의 셈(추적된 열여섯과 새 표 하나), "리눅스의 파이프는 처음부터 UTF-8"을 재지 않은 짐작으로,
+- **Nit, 고친 것.** 표 열일곱의 셈(추적된 열여섯과 새 표 하나), 리눅스의 파이프가 UTF-8이라던 첫 판을 재지 않은 짐작으로,
   "약 10ms"를 93 뒤에 다시 쟀다, 프로브 README에 B의 `echo` 결과, `mutate.main`이 `"--check" in argv`를 세 번 묻던
   것을 `checking` 하나로, 이름 `more`→`more_tables`, `_자기`→`_이_도구`, 테스트 이름의 "받히는"→"받아들이는".
 - **남긴 것.** `CLAUDE.md`의 게이트 수(열하나)에 `check-mutations`를 세지 않았다. commit-msg·인용 대조처럼 커밋에 든
