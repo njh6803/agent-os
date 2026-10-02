@@ -29,7 +29,7 @@ G). 인자가 틀린 것과 파일이 없는 것은 문구를 가른다(`skip_re
 있다 — 지금 훅은 둘 다 쓰지 않는다), `sys.path[0]` 은 둘 다 `tools/` 다.
 
 못 보는 것:
-- 이 파일 자체가 없을 때. 그때는 예전처럼 파이썬이 2로 끝나고, 등록 열하나가 모두 그렇다. 2의 효과는
+- 이 파일 자체가 없을 때. 그때는 예전처럼 파이썬이 2로 끝나고, 등록 열둘이 모두 그렇다. 2의 효과는
   이벤트마다 다르다 — PreToolUse 는 그 매처의 호출을 막고, UserPromptSubmit·Stop 도 2를 막기로
   읽는다(공식 hooks 문서, 재지 않았다). 주 체크아웃이 이 파일을 들인 커밋보다 뒤에 있으면 그렇다.
   이 파일을 들이는 PR 이 병합된 뒤 주 체크아웃을 당기기 전, 주 체크아웃이 그보다 앞서 딴 브랜치에
@@ -56,7 +56,8 @@ TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 # `hookSpecificOutput.additionalContext` 를 모델에게 전하는 이벤트(공식 hooks 문서, 2026-10-02
 # 읽음). Stop·SubagentStop 도 받지만 거기서는 대화를 잇게 해 턴이 끝날 때마다 한 번 더 돈다 —
 # 넣지 않는다(`claude -p` 세션에서 Stop 의 additionalContext 가 답 하나를 더했다,
-# `.scratch/harness/probes/hook_registration/run.sh` 의 G).
+# `.scratch/harness/probes/hook_registration/run.sh` 의 G). 러너(tools/run_hooks.py)는 이 집합을
+# import 하지 않고 `NOTICE_ONLY_EVENTS` 로 따로 적어 대조한다 — 여기를 고치면 그쪽도 본다.
 CONTEXT_EVENTS = frozenset(
     {
         "SessionStart",

@@ -21,6 +21,28 @@ def test_게이트_명령_자리를_알아본다() -> None:
     assert not is_gate("grep -rn pyright src")
 
 
+def test_훅_러너도_게이트다() -> None:
+    """CLAUDE.md 가 훅 러너를 게이트로 센다(대기열 95)."""
+    assert is_gate("uv run python tools/run_hooks.py")
+    assert len(warnings_for("uv run python tools/run_hooks.py 2>&1 | tail -3")) == 1
+
+
+def test_게이트마다_바로_읽은_dollar_question_은_훅_러너_뒤에서도_조용하다() -> None:
+    """2026-10-02-03 세션의 명령에서 뒤의 게이트 쌍 셋을 옮기고 경로를 줄였다(앞의 쌍 넷은
+    ruff·ruff format·pyright·lint-imports). 러너를 게이트로 보지 않아 마지막 `$?` 를 앞선
+    `check_type_escapes` 의 것으로 읽고 두 번 경고했다(대기열 95)."""
+    command = (
+        "uv run python tools/check_instructions.py > S/g5.log 2>&1\n"
+        'echo "instructions $?"\n'
+        "uv run python tools/check_type_escapes.py > S/g6.log 2>&1\n"
+        'echo "type escapes $?"\n'
+        "uv run python tools/run_hooks.py > S/g7.log 2>&1\n"
+        'echo "run_hooks $?"'
+    )
+
+    assert warnings_for(command) == []
+
+
 def test_web_검증_명령과_Playwright_실행도_게이트다() -> None:
     """파이프 뒤 `$?` 가 판정을 속이는 것은 명령의 언어와 무관하다(web-admin 티켓 01).
 
