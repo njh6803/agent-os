@@ -27,15 +27,22 @@ head 의 리뷰가 남는다.
    경우를 막았다. 셀프 리뷰 두 축이 따로 재현했고, 기다려도 같아지지 않고 푸시는 non-ff 로
    거부되어 거부 이유가 안내한 길로는 풀리지 않았다.
 git 과 gh 는 페이로드의 `cwd` 에서 돌고, 저장소를 가리키는 `GIT_*` 는 벗긴다(hook_git_main_commit).
-못 보는 것: 인용된 선택자나 저장소 값(`gh pr ready "$PR"` — 판정하지 않는다), `--body-file` 이
-가리키는 파일 안의 언급, `gh api` 로 남긴 코멘트, GitHub MCP 도구(이 훅은 셸 매처다), `gh pr
-merge`(병합 직전 확인은 `operations.md` 리뷰 파이프라인의 지침이다), 다른 명령의 데이터로 든 언급과
-같은 명령 안의 `gh pr comment`(언급이 그 코멘트의 것인지 가리지 않는다 — 거짓 양성), `cd <다른
-저장소> && gh pr ready` 와 `Set-Location`(cwd 의 저장소로 판정한다 — hook_git_main_commit 과 같은
-한계), 로컬에 없는 PR head 가 사실은 옛 head 인 경우(다른 클론이 푸시한 것 — 지나간다). git·gh 가
-없거나, 저장소 밖이거나, detached HEAD 이거나, 커밋이 없거나, gh 가 실패하거나 시간을 넘기면 막지
-않는다 — 게이트가 아니라 안전장치라 fail-open 이다. 다른 세션이 막 푸시한 것처럼 판정 뒤에 head 가
-바뀌는 것도 못 본다.
+못 보는 것:
+- 인용된 선택자나 저장소 값(`gh pr ready "$PR"`). 판정하지 않는다.
+- `--body-file` 이 가리키는 파일 안의 언급, `gh api` 로 남긴 코멘트, GitHub MCP 도구(이 훅은 셸
+  매처다).
+- `gh pr merge`. 병합 직전 확인은 `operations.md` 리뷰 파이프라인의 지침이다.
+- 다른 명령의 데이터로 든 언급과 같은 명령 안의 `gh pr comment`. 언급이 그 코멘트의 것인지 가리지
+  않는다(거짓 양성).
+- `cd <다른 저장소> && gh pr ready` 와 `Set-Location`. cwd 의 저장소로 판정한다(hook_git_main_commit
+  과 같은 한계).
+- 로컬에 없는 PR head 가 사실은 옛 head 인 경우(다른 클론이 푸시한 것). 지나간다.
+- 판정 뒤에 head 가 바뀌는 것(다른 세션이 막 푸시한 것).
+- git·gh 가 없거나, 저장소 밖이거나, detached HEAD 이거나, 커밋이 없거나, gh 가 실패하거나 시간을
+  넘기면 막지 않는다. 게이트가 아니라 안전장치라 fail-open 이다.
+- 이 파일 자체가 없을 때. 등록이 `python <경로>` 꼴이라 파이썬이 2로 끝나 모든 Bash·PowerShell 을
+  막는다(`.claude/rules/tools.md`). PR #120 세션이 다시 시작되며 워크트리의 settings.json 을 싣고
+  `${CLAUDE_PROJECT_DIR}` 은 아직 이 파일이 없는 주 체크아웃을 가리켜 실제로 그랬다.
 """
 
 from __future__ import annotations
@@ -81,6 +88,12 @@ class LocalState(NamedTuple):
     branch: str
     head: str
     upstream: str | None
+
+    def upstream_if_different(self) -> str | None:
+        """읽은 upstream 이 HEAD 와 다르면 그 upstream, 아니면 None. 1단계가 볼 일이 있는 경우다."""
+        if self.upstream is None or self.upstream == self.head:
+            return None
+        return self.upstream
 
 
 class PrHead(NamedTuple):
@@ -193,12 +206,11 @@ def unpushed_reason(
     request: Request, local: LocalState, *, head_behind_upstream: bool
 ) -> str | None:
     """선택자 없는 요청에서 로컬 HEAD 가 upstream 에 아직 없으면 막는 이유, 아니면 None."""
-    if request.selector is not None or local.upstream is None:
-        return None
-    if local.upstream == local.head or head_behind_upstream:
+    upstream = local.upstream_if_different()
+    if request.selector is not None or upstream is None or head_behind_upstream:
         return None
     return (
-        f"로컬 HEAD `{_short(local.head)}` 가 upstream `{_short(local.upstream)}` 에 아직 없다. "
+        f"로컬 HEAD `{_short(local.head)}` 가 upstream `{_short(upstream)}` 에 아직 없다. "
         f"{_effect(request.kind)}(대기열 86). 푸시하지 않은 커밋은 리뷰되지 않는다. 먼저 푸시하고, "
         "`gh pr view --json headRefOid` 가 로컬 HEAD 와 같아진 뒤 다시 친다."
     )
@@ -327,9 +339,10 @@ def reason_for(request: Request, cwd: str | None) -> str | None:
     local = local_state(cwd)
     if local is None:
         return None
-    # 판정은 unpushed_reason 이 한다. 이 조건은 그 판정이 볼 일 없는 경우에 git 호출을 아낄 뿐이다.
-    if local.upstream is not None and local.upstream != local.head:
-        behind = is_ancestor(cwd, local.head, local.upstream)
+    # upstream 이 같으면 조상 판정(git 호출)이 필요 없다. 조건은 unpushed_reason 과 같은 질의다.
+    upstream = local.upstream_if_different()
+    if upstream is not None:
+        behind = is_ancestor(cwd, local.head, upstream)
         reason = unpushed_reason(request, local, head_behind_upstream=behind)
         if reason is not None:
             return reason

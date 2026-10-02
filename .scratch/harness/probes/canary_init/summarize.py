@@ -17,7 +17,11 @@ def init_event(path: Path) -> dict[str, object] | None:
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        event = json.loads(line)
+        # claude 가 중간에 끝나면 마지막 줄이 잘릴 수 있다. 그 줄로 요약이 멈추지 않게 건너뛴다.
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
         if not isinstance(event, dict):
             continue
         if event.get("type") == "system" and event.get("subtype") == "init":

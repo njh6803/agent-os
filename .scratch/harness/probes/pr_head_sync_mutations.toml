@@ -112,8 +112,8 @@ tests = ["tests/tools/test_hook_pr_head_sync.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_pr_head_sync.py"
-old = '''    if request.selector is not None or local.upstream is None:'''
-new = '''    if local.upstream is None:'''
+old = '''    if request.selector is not None or upstream is None or head_behind_upstream:'''
+new = '''    if upstream is None or head_behind_upstream:'''
 
 [[mutation]]
 name = "upstream 보다 뒤처진 HEAD 도 막는다"
@@ -121,8 +121,17 @@ tests = ["tests/tools/test_hook_pr_head_sync.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_pr_head_sync.py"
-old = '''    if local.upstream == local.head or head_behind_upstream:'''
-new = '''    if local.upstream == local.head:'''
+old = '''    if request.selector is not None or upstream is None or head_behind_upstream:'''
+new = '''    if request.selector is not None or upstream is None:'''
+
+[[mutation]]
+name = "HEAD 와 같은 upstream 도 다르다고 본다(PR #120 claude-review 2회차의 질의)"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''        if self.upstream is None or self.upstream == self.head:'''
+new = '''        if self.upstream is None:'''
 
 [[mutation]]
 name = "다른 브랜치의 PR 도 막는다"
@@ -233,7 +242,7 @@ runner = "hooks"
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_pr_head_sync.py"
-old = '''    if local.upstream is not None and local.upstream != local.head:
+old = '''    if upstream is not None:
         behind'''
 new = '''    if False:
         behind'''
