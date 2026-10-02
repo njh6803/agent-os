@@ -70,22 +70,13 @@ old = '''        if len(_MARK_OUTSIDE_CODE.findall(line)) != len(matches):'''
 new = '''        if False:'''
 
 [[mutation]]
-name = "코드 스팬으로 적은 모양의 예시는 세지 않는다"
+name = "코드 스팬으로 적은 포인터 모양은 코드다"
 tests = ["tests/tools/test_check_adr_pointers.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/check_adr_pointers.py"
-old = '''_MARK_OUTSIDE_CODE = re.compile(r"(?<!`)\(바뀜:")'''
-new = '''_MARK_OUTSIDE_CODE = re.compile(r"\(바뀜:")'''
-
-[[mutation]]
-name = "코드 스팬으로 적은 올바른 모양도 포인터가 아니다"
-tests = ["tests/tools/test_check_adr_pointers.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/check_adr_pointers.py"
-old = '''    r"(?<!`)\(바뀜: (?:"'''
-new = '''    r"\(바뀜: (?:"'''
+old = '''_OUTSIDE_CODE = r"(?<!`)"'''
+new = '''_OUTSIDE_CODE = r""'''
 
 [[mutation]]
 name = "펜스 안의 줄은 코드다"

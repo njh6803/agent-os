@@ -45,9 +45,11 @@ ADR_DIR = ROOT / "docs" / "adr"
 MARK = "(바뀜:"
 HISTORY_HEADING = "## 이력"
 # 바로 앞이 백틱인 `(바뀜:`은 코드 스팬으로 적은 예시다(규약 문서가 모양을 그렇게 적는다).
-_MARK_OUTSIDE_CODE = re.compile(r"(?<!`)\(바뀜:")
+# 두 정규식이 이 접두를 함께 써야 모양 틀림의 개수 대조가 맞는다(PR #125 claude-review).
+_OUTSIDE_CODE = r"(?<!`)"
+_MARK_OUTSIDE_CODE = re.compile(_OUTSIDE_CODE + r"\(바뀜:")
 POINTER = re.compile(
-    r"(?<!`)\(바뀜: (?:"
+    _OUTSIDE_CODE + r"\(바뀜: (?:"
     r'이력 (?P<date>\d{4}-\d{2}-\d{2}) "(?P<title>[^"]+)"'
     r"|ADR (?P<adr>\d{4})"
     r'(?: 이력 (?P<cited_date>\d{4}-\d{2}-\d{2}) "(?P<cited_title>[^"]+)")?'
