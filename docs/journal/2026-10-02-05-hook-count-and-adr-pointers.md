@@ -99,5 +99,6 @@
   `tools/check_type_escapes.py` 통과, `tools/run_hooks.py` 57건 어긋남 0과 래퍼 알림 4건 어긋남 0, `pnpm -C web verify`
   통과(Vitest 263 passed). 워크트리에 web 의존성이 없어 `pnpm -C web install --frozen-lockfile --offline`을 한 번 했다.
   `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다.
-- `tools/check_quotes.py`는 바꾼 줄 중 0001 10행과 0009 20행의 원래 인용을 경고했다. 이 PR이 단 포인터의 인용은 경고가
+- 커밋(`3f97914`)의 pre-commit에서 인용 대조가 0001 10행의 원래 인용 하나("UI에서 그리는 선언적 그래프")를 경고했다.
+  선행 저장소의 ADR 0002를 인용한 문장인데 검사는 이 저장소의 ADR 0002로 읽는다. 이 PR이 단 포인터의 인용은 경고가
   없었다.
