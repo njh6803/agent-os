@@ -1,5 +1,6 @@
 #!/bin/sh
-# hook_pr_head_sync 한 번의 시간을 settings.json 의 등록 모양(uv run --no-sync python)으로 잰다.
+# hook_pr_head_sync 한 번의 시간을 래퍼 전의 등록 모양(uv run --no-sync python 으로 훅을 바로)으로 잰다.
+# 래퍼(tools/launch_hook.py)의 몫은 hook_registration/time_launch.sh 가 잰다.
 # 세 길을 다섯 번씩 돌려 밀리초와 판정(deny 또는 silent)을 찍는다.
 #   other — 리뷰를 부르지 않는 명령. 훅이 받는 입력의 대부분이고 git 도 gh 도 부르지 않는다.
 #   local — 선택자 없는 `gh pr ready` 를 푸시하지 않은 커밋 위에서. git 만 부르고 막는다.

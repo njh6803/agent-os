@@ -6,9 +6,9 @@ import json
 from typing import TypedDict
 
 from tools.hook_pr_next_session import MCP_TOOLS, SHELL_TOOLS, action_for, context_for
-from tools.run_hooks import SETTINGS
+from tools.run_hooks import SETTINGS, registration_command
 
-HOOK_FILE = "tools/hook_pr_next_session.py"
+HOOK_COMMAND = registration_command("hook_pr_next_session.py")
 
 
 # 매처를 읽는 모양. 같은 스키마가 tools/check_instructions.py 와 tools/run_hooks.py 에 비공개로
@@ -66,13 +66,13 @@ def test_클라우드_세션의_GitHub_MCP_도구도_이름으로_안다() -> No
 def test_settings의_매처와_훅이_아는_도구가_같다() -> None:
     """이름을 훅에만 더하면 등록이 그 도구에 훅을 걸지 않고, 매처에만 더하면 훅이 조용히 지나간다.
 
-    tools/run_hooks.py 는 훅 파일을 직접 부르므로 매처를 보지 않는다.
+    tools/run_hooks.py 는 훅을 이름으로 부르므로 매처를 보지 않는다.
     """
     settings: _Settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
     matchers = [
         group.get("matcher", "")
         for group in settings.get("hooks", {}).get("PostToolUse", [])
-        if any(HOOK_FILE in entry.get("command", "") for entry in group.get("hooks", []))
+        if any(entry.get("command") == HOOK_COMMAND for entry in group.get("hooks", []))
     ]
 
     assert len(matchers) == 1

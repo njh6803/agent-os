@@ -40,9 +40,10 @@ git 과 gh 는 페이로드의 `cwd` 에서 돌고, 저장소를 가리키는 `G
 - 판정 뒤에 head 가 바뀌는 것(다른 세션이 막 푸시한 것).
 - git·gh 가 없거나, 저장소 밖이거나, detached HEAD 이거나, 커밋이 없거나, gh 가 실패하거나 시간을
   넘기면 막지 않는다. 게이트가 아니라 안전장치라 fail-open 이다.
-- 이 파일 자체가 없을 때. 등록이 `python <경로>` 꼴이라 파이썬이 2로 끝나 모든 Bash·PowerShell 을
-  막는다(`.claude/rules/tools.md`). PR #120 세션이 다시 시작되며 워크트리의 settings.json 을 싣고
-  `${CLAUDE_PROJECT_DIR}` 은 아직 이 파일이 없는 주 체크아웃을 가리켜 실제로 그랬다.
+- 이 파일 자체가 없을 때. 등록의 실행 래퍼(tools/launch_hook.py)가 막지 않고 지나가게 해, 이 훅이
+  없는 것과 같다(대기열 91). PR #120 세션이 다시 시작되며 워크트리의 settings.json 을 싣고
+  `${CLAUDE_PROJECT_DIR}` 은 아직 이 파일이 없는 주 체크아웃을 가리켰다. 그때는 등록이 이 파일을
+  바로 불러 파이썬이 2로 끝났고 모든 Bash·PowerShell 이 막혔다.
 """
 
 from __future__ import annotations

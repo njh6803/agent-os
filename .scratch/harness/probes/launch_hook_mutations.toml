@@ -1,0 +1,103 @@
+# tools/launch_hook.py(대기열 91)의 지나가기와 위임, 그리고 tools/run_hooks.py 가 그 래퍼로 띄우고 등록 모양을
+# 대조하는 배선을 하나씩 빼는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/launch_hook_mutations.toml
+
+[[mutation]]
+name = "없는 훅에서 옛 등록처럼 2로 끝난다"
+tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        sys.stderr.write(f"launch_hook: 훅 파일이 없어 지나간다: {sys.argv[1:]}\n")
+        return 0'''
+new = '''        sys.stderr.write(f"launch_hook: 훅 파일이 없어 지나간다: {sys.argv[1:]}\n")
+        return 2'''
+
+[[mutation]]
+name = "파일이 있는지 보지 않고 돌린다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    return path if os.path.isfile(path) else None'''
+new = '''    return path'''
+
+[[mutation]]
+name = "이름 인자의 수를 보지 않는다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    if len(argv) != 2:
+        return None
+'''
+new = ''
+
+[[mutation]]
+name = "훅에 래퍼의 인자를 그대로 넘긴다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    sys.argv = [path]
+'''
+new = ''
+
+[[mutation]]
+name = "훅을 __main__ 이 아닌 이름으로 돌린다"
+tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''run_name="__main__"'''
+new = '''run_name="hook"'''
+
+[[mutation]]
+name = "러너가 래퍼를 거치지 않고 훅을 바로 띄운다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''            launch_argv(case.hook),'''
+new = '''            ["uv", "run", "--project", str(ROOT), "--no-sync", "python", str(ROOT / "tools" / case.hook)],'''
+
+[[mutation]]
+name = "등록 모양을 앞부분만 맞춘다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''_REGISTRATION_PATTERN.fullmatch(entry.command)'''
+new = '''_REGISTRATION_PATTERN.match(entry.command)'''
+
+[[mutation]]
+name = "등록 모양을 대조하지 않고 마지막 경로 조각을 훅 이름으로 읽는다(옛 판)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''                matched = _REGISTRATION_PATTERN.fullmatch(entry.command)
+                if matched is None:
+                    raise ValueError(
+                        f"{event} 훅의 등록 모양이 다르다: {entry.command} — 모양은 {REGISTRATION}"
+                    )
+                hook = matched.group(1)'''
+new = '''                hook = entry.command.rsplit(" ", 1)[-1].rsplit("/", 1)[-1].rstrip('"')'''
+
+[[mutation]]
+name = "러너가 루트 자리를 바꾸지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]'''
+new = '''    return shlex.split(registration_command(hook))'''
+
+[[mutation]]
+name = "루트를 넣은 뒤 나눈다(PR #121 CodeRabbit)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]'''
+new = '''    return shlex.split(registration_command(hook).replace(_PROJECT_DIR, root_text))'''

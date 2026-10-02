@@ -20,9 +20,11 @@ from tools.run_hooks import (
     coverage_gaps,
     create_fixtures,
     hook_environment,
+    launch_argv,
     load_cases,
     outcome_of,
     registered_hooks,
+    registration_command,
     run_case,
     substitute,
 )
@@ -102,29 +104,76 @@ def _settings(hooks: dict[str, list[dict[str, JsonValue]]]) -> str:
     return json.dumps({"hooks": groups})
 
 
+# 등록 모양의 글자는 test_러너가_띄우는_인자는_… 가 인자 목록으로 고정한다. 여기서는 그 원천을 쓴다.
+_REGISTERED_X = registration_command("hook_x.py")
+
+
 def test_등록은_이벤트와_시간_제한이고_시간_제한이_없으면_Claude_Code_기본값이다(
     tmp_path: Path,
 ) -> None:
     settings = tmp_path / "settings.json"
-    command = 'uv run python "${CLAUDE_PROJECT_DIR}/tools/hook_x.py"'
     settings.write_text(
-        _settings({"PreToolUse": [{"command": command, "timeout": 20}]}), encoding="utf-8"
+        _settings({"PreToolUse": [{"command": _REGISTERED_X, "timeout": 20}]}), encoding="utf-8"
     )
     assert registered_hooks(settings) == {"hook_x.py": Registration("PreToolUse", 20)}
 
-    settings.write_text(_settings({"PostToolUse": [{"command": command}]}), encoding="utf-8")
+    settings.write_text(_settings({"PostToolUse": [{"command": _REGISTERED_X}]}), encoding="utf-8")
     assert registered_hooks(settings) == {"hook_x.py": Registration("PostToolUse", 60)}
 
 
 def test_훅_하나가_이벤트_둘에_등록되면_거절한다(tmp_path: Path) -> None:
     settings = tmp_path / "settings.json"
-    entry: dict[str, JsonValue] = {"command": 'python "${CLAUDE_PROJECT_DIR}/tools/hook_x.py"'}
+    entry: dict[str, JsonValue] = {"command": _REGISTERED_X}
     settings.write_text(
         _settings({"PreToolUse": [entry], "PostToolUse": [entry]}), encoding="utf-8"
     )
 
     with pytest.raises(ValueError, match="둘에 등록"):
         registered_hooks(settings)
+
+
+def test_래퍼를_거치지_않거나_모양이_다른_등록은_거절한다(tmp_path: Path) -> None:
+    """옛 모양은 훅 파일이 없으면 2로 끝나 PreToolUse 면 그 매처의 모든 호출을 막았다(대기열 91).
+
+    `--project` 가 빠지면 저장소 밖에서 시스템 파이썬으로 돈다(KICKOFF.md 하네스 런타임).
+    """
+    settings = tmp_path / "settings.json"
+    commands = [
+        'uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python'
+        ' "${CLAUDE_PROJECT_DIR}/tools/hook_x.py"',
+        'uv run --no-sync python "${CLAUDE_PROJECT_DIR}/tools/launch_hook.py" hook_x.py',
+        _REGISTERED_X.replace("hook_x.py", "tools/hook_x.py"),
+        _REGISTERED_X + " --flag",
+    ]
+    for command in commands:
+        settings.write_text(_settings({"PreToolUse": [{"command": command}]}), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="등록 모양"):
+            registered_hooks(settings)
+
+
+def test_러너가_띄우는_인자는_등록_명령에서_루트만_바꾼_것이다() -> None:
+    root = Path("/r o/agent")
+
+    assert launch_argv("hook_x.py", root) == [
+        "uv",
+        "run",
+        "--project",
+        "/r o/agent",
+        "--no-sync",
+        "python",
+        "/r o/agent/tools/launch_hook.py",
+        "hook_x.py",
+    ]
+
+
+def test_루트의_따옴표는_인자를_가르지_않고_경로에_남는다() -> None:
+    """셸의 `"${CLAUDE_PROJECT_DIR}"` 전개는 경로 속 따옴표를 글자로 남긴다(PR #121 CodeRabbit)."""
+    argv = launch_argv("hook_x.py", Path('/r"o/agent'))
+
+    assert argv[3] == '/r"o/agent'
+    assert argv[6] == '/r"o/agent/tools/launch_hook.py'
+    assert len(argv) == 8
 
 
 def _case(hook: str, expect: str) -> Case:
@@ -209,6 +258,16 @@ def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path
     assert run_case(silent, replacements, registration).ok
     assert (tmp_path / "on-main" / ".git").is_dir()
     assert (tmp_path / "transcript-used.jsonl").is_file()
+
+
+def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_침묵이다(tmp_path: Path) -> None:
+    """훅을 바로 띄우면 파이썬이 2로 끝나 block 으로 읽힌다. 세션이 띄우는 모양과 같아야 한다."""
+    replacements = create_fixtures(tmp_path)
+    case = Case(hook="hook_없다.py", expect="silent", payload={"tool_name": "Bash"})
+
+    result = run_case(case, replacements, Registration("PreToolUse", 20))
+
+    assert result.outcome == "silent"
 
 
 def test_푸시하지_않은_커밋이_있는_저장소를_만든다(tmp_path: Path) -> None:

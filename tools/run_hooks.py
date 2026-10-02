@@ -3,10 +3,13 @@
 새 훅의 넷 중 "실제 입력으로 실행 확인"(대기열 24)을 두 세션이 스크래치패드 스크립트로 손수 다시
 만들었다(일지 2026-09-28-05 회고 1). 워크트리 세션의 훅으로는 바뀐 훅을 확인할 수 없다 — 워크트리의
 훅 파일에 넣은 계측이 돌지 않았고 주 체크아웃의 파일이 돈다(2026-09-28). 그래서 이 러너가
-`.claude/settings.json` 이 등록한 모양(`uv run --project <루트> --no-sync python <훅>`)으로 자식을
-띄우고 stdin 에 페이로드를 넣는다. 자식 환경에서 `PYTHONUTF8` 을 빼고(훅 환경에 있다고 가정하지
-않는다, 대기열 25·40) 저장소를 가리키는 `GIT_*` 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이
-임시 저장소를 이 저장소로 돌린다, tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열
+`.claude/settings.json` 이 등록한 모양(`REGISTRATION` — `uv run --project <루트> --no-sync python
+<루트>/tools/launch_hook.py <훅>`)으로 자식을 띄우고 stdin 에 페이로드를 넣는다. 등록 명령이 모두 그
+모양인지도 대조한다. 다르면 러너가 재는 것과 세션이 띄우는 것이 갈리고, 래퍼를 거치지 않은 등록은
+훅 파일이 없을 때 2로 끝나 PreToolUse 면 그 매처의 모든 호출을 막는다(대기열 91). 자식 환경에서
+`PYTHONUTF8` 을 빼고(훅 환경에 있다고 가정하지 않는다, 대기열 25·40) 저장소를 가리키는 `GIT_*`
+도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이 임시 저장소를 이 저장소로 돌린다,
+tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열
 83 — Stop 훅이 SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). 자식은
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
@@ -30,8 +33,9 @@ deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2
 반례가 아니라 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(대기열 24 — 지시문 훅은 첫
 턴이라는 축을 반례가 보지 못했다).
 못 보는 것: Claude Code 가 실제로 주는 페이로드 모양과 표가 다른 것(표는 손으로 쓴다 — 런타임 입력
-계약은 검증하지 않는다), settings.json 의 매처(어느 도구에 걸리는지는 등록이 정하고 러너는 훅 파일을
-직접 부른다), 훅이 쓰는 시간(제한을 넘기는지만 본다).
+계약은 검증하지 않는다), settings.json 의 매처(어느 도구에 걸리는지는 등록이 정하고 러너는 훅을
+이름으로 부른다), 등록 명령을 돌리는 셸(러너는 셸 없이 띄워 `${CLAUDE_PROJECT_DIR}` 의 전개와 따옴표
+처리를 재지 않는다), 훅이 쓰는 시간(제한을 넘기는지만 본다).
 """
 
 from __future__ import annotations
@@ -39,6 +43,8 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -53,6 +59,18 @@ from pydantic import BaseModel, JsonValue, ValidationError
 ROOT = Path(__file__).resolve().parent.parent
 PAYLOADS = ROOT / "tools" / "hook_payloads.toml"
 SETTINGS = ROOT / ".claude" / "settings.json"
+# `.claude/settings.json` 이 훅마다 등록하는 명령. `{hook}` 자리에 `tools/` 의 훅 파일 이름이 온다.
+# 래퍼(tools/launch_hook.py)가 없는 훅을 지나가게 한다(대기열 91). 저장소 파일을 부르지 않는 훅
+# (`echo …`)도 이 모양이 아니라 거절한다. tools/check_instructions.py 는 그런 훅을 받지만, 러너는 그
+# 전에도 표에 없는 훅을 빈자리로 세어 커밋을 막았다 — 모든 등록이 tools/ 의 훅이라는 전제는 같다.
+REGISTRATION = (
+    'uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python'
+    ' "${CLAUDE_PROJECT_DIR}/tools/launch_hook.py" {hook}'
+)
+_PROJECT_DIR = "${CLAUDE_PROJECT_DIR}"
+_REGISTRATION_PATTERN = re.compile(
+    re.escape(REGISTRATION).replace(re.escape("{hook}"), r"(hook_\w+\.py)")
+)
 Expectation = Literal["deny", "block", "context", "silent"]
 # Claude Code 가 `timeout` 을 적지 않은 훅에 주는 시간(초).
 DEFAULT_HOOK_TIMEOUT = 60
@@ -140,14 +158,21 @@ def load_cases(path: Path = PAYLOADS) -> list[Case]:
 def registered_hooks(settings_path: Path = SETTINGS) -> dict[str, Registration]:
     """`.claude/settings.json` 이 등록한 훅 파일 이름 → 등록.
 
-    훅 하나가 이벤트 둘에 등록되면 ValueError — 훅은 `hookEventName` 하나를 내므로 대조할 수 없다.
+    명령이 `REGISTRATION` 모양이 아니면 ValueError — 러너는 그 모양으로 띄우므로, 다른 모양이면
+    세션이 띄우는 것을 재지 않는다. 훅 하나가 이벤트 둘에 등록되어도 ValueError — 훅은
+    `hookEventName` 하나를 내므로 대조할 수 없다.
     """
     settings = _Settings.model_validate_json(settings_path.read_text(encoding="utf-8"))
     registrations: dict[str, Registration] = {}
     for event, groups in settings.hooks.items():
         for group in groups:
             for entry in group.hooks:
-                hook = entry.command.rsplit("/", 1)[-1].rstrip('"')
+                matched = _REGISTRATION_PATTERN.fullmatch(entry.command)
+                if matched is None:
+                    raise ValueError(
+                        f"{event} 훅의 등록 모양이 다르다: {entry.command} — 모양은 {REGISTRATION}"
+                    )
+                hook = matched.group(1)
                 previous = registrations.get(hook)
                 if previous is not None and previous.event != event:
                     raise ValueError(f"{hook} 이 {previous.event} 와 {event} 둘에 등록됐다")
@@ -224,20 +249,27 @@ def hook_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if key not in excluded}
 
 
+def registration_command(hook: str) -> str:
+    """훅 하나의 등록 명령. settings.json 에 적히는 글자 그대로다."""
+    return REGISTRATION.replace("{hook}", hook)
+
+
+def launch_argv(hook: str, root: Path = ROOT) -> list[str]:
+    """등록 명령을 셸 없이 띄우는 인자 목록. `${CLAUDE_PROJECT_DIR}` 자리에 `root` 가 온다.
+
+    템플릿을 먼저 나누고 인자마다 루트를 넣는다. 루트를 먼저 넣으면 경로 속 따옴표를 `shlex` 가
+    구문으로 읽는다(PR #121 CodeRabbit).
+    """
+    root_text = root.as_posix()
+    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]
+
+
 def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
-    """자식 하나를 등록의 시간 제한 안에 돌려 판정한다. 넘기면 어긋남 `timeout`."""
+    """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정한다. 넘기면 어긋남 `timeout`."""
     payload = substitute(case.payload, replacements)
     try:
         process = subprocess.run(
-            [
-                "uv",
-                "run",
-                "--project",
-                str(ROOT),
-                "--no-sync",
-                "python",
-                str(ROOT / "tools" / case.hook),
-            ],
+            launch_argv(case.hook),
             input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             capture_output=True,
             env=hook_environment(),
