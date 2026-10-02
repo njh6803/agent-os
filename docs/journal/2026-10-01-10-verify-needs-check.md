@@ -33,6 +33,15 @@
   둘이 이것으로 섰다. 실험 커밋(`1db1ef1`, `36881731015`)에 `needs`에 없는 `extra`와 `needs: [verify]`인 `after`를
   더하자 `verify`가 `["extra"]`를 찍고 빨갰다. 목록에 `after`는 없었다. 그래서 ADR 초안의 "`verify` 뒤에 도는 잡은
   예외로 적는다"를 "이 검사가 보지 못한다"로 고쳤다. 실험 커밋은 `ci.yml`을 `01c74d6`의 것으로 되돌려 지웠다.
+- **다시 돌린 시도의 경합(손으로 봤다).** PR 리뷰 1회차의 CodeRabbit Major를 재려고 `36881731015`를
+  `gh run rerun --failed`로 다시 돌렸다. 다시 돈 `verify`가 읽은 `attempts/2/jobs`는 `["verify","web","extra"]`였고, 끝난
+  뒤 같은 API는 여섯 잡을 모두 돌려줬다. 앞 시도의 잡이 새 시도로 옮겨지는 중이었다. `extra`가 먼저 옮겨져 빨갰을 뿐
+  순서가 달랐다면 초록으로 샜다. 같은 실행을 `runs/<id>/jobs?filter=all`로 읽으면 두 시도의 잡이 다 나오고, 건너뛴
+  `after@1`도 든다(스크래치 스크립트로 봤다).
+- **`filter=all`(`e8fb257`, `36943557322`, 손으로 봤다).** 고친 판정에 `extra`를 다시 더한 실험에서 첫 시도와
+  `gh run rerun --failed`로 다시 돌린 둘째 시도 모두 `verify`가 `["e2e","extra","python","verify","web"]`를 읽고
+  `["extra"]`로 빨갰다. 러너의 `gh api --paginate --slurp`도 동작했다. 실험 커밋은 `ci.yml`을 수정 커밋의 것으로
+  되돌려 지웠다.
 - **e2e 지연.** 실험 실행에서 `e2e` 잡이 5분 24초 걸렸다. `playwright install-deps chromium`(apt)이 4분 32초였고
   평소에는 14~18초다. 이번 변경과 무관한 러너 쪽 지연으로 보인다(어림, 한 번).
 
@@ -63,3 +72,13 @@
 PR #119를 draft로 열었다. PR 직전 CodeRabbit CLI는 돌리지 않았다(`Plan: Free`, `Seat: not assigned`). draft 동안의
 실험은 위 잰 것 절에 있다. 이번에는 `gh pr ready`와 `@coderabbitai review` 앞에서 PR head가 로컬 HEAD와 같은지 먼저
 봤다(대기열 86의 사건).
+
+- **main 동기화.** ready로 바꾸기 전에 나란히 돈 세션의 PR #118이 먼저 병합됐다(`f120f9a`). `git merge origin/main`이
+  충돌 없이 들어갔고 대기열 끝은 82~89 순서다. 병합 뒤 ruff·`pnpm -C web verify`·훅 러너를 다시 돌렸다.
+- **1회차**(`c9c2a06`). CI 초록. claude-review는 "지적 없음". CodeRabbit은 Major 하나를 인라인으로 냈다(Merge Risk
+  Moderate). 실패한 잡만 다시 돌린 시도에서는 이 API가 그 시도의 잡만 돌려줘 앞 시도의 `needs` 밖 잡이 빠진다는
+  지적이다. 그대로 믿지 않고 위 잰 것 절처럼 다시 돌려 쟀다. 원인은 조금 달랐다. 그 시도의 잡만 돌려주는 것이
+  아니라 앞 시도의 잡이 옮겨지는 중이라 빠질 수 있었다. 결론(새는 길이 있다)은 맞아 `filter=all`로 고쳤다. 이 수정은
+  승인받은 ADR 문장을 바꾸므로 PR을 draft로 되돌리고 바뀌는 문장을 보여준 뒤 받았다.
+
+> 사용자: "진행"
