@@ -24,6 +24,7 @@ from tools.run_hooks import (
     load_cases,
     outcome_of,
     registered_hooks,
+    registration_command,
     run_case,
     substitute,
 )
@@ -103,10 +104,8 @@ def _settings(hooks: dict[str, list[dict[str, JsonValue]]]) -> str:
     return json.dumps({"hooks": groups})
 
 
-_REGISTERED_X = (
-    'uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python'
-    ' "${CLAUDE_PROJECT_DIR}/tools/launch_hook.py" hook_x.py'
-)
+# 등록 모양의 글자는 test_러너가_띄우는_인자는_… 가 인자 목록으로 고정한다. 여기서는 그 원천을 쓴다.
+_REGISTERED_X = registration_command("hook_x.py")
 
 
 def test_등록은_이벤트와_시간_제한이고_시간_제한이_없으면_Claude_Code_기본값이다(
@@ -166,6 +165,15 @@ def test_러너가_띄우는_인자는_등록_명령에서_루트만_바꾼_것�
         "/r o/agent/tools/launch_hook.py",
         "hook_x.py",
     ]
+
+
+def test_루트의_따옴표는_인자를_가르지_않고_경로에_남는다() -> None:
+    """셸의 `"${CLAUDE_PROJECT_DIR}"` 전개는 경로 속 따옴표를 글자로 남긴다(PR #121 CodeRabbit)."""
+    argv = launch_argv("hook_x.py", Path('/r"o/agent'))
+
+    assert argv[3] == '/r"o/agent'
+    assert argv[6] == '/r"o/agent/tools/launch_hook.py'
+    assert len(argv) == 8
 
 
 def _case(hook: str, expect: str) -> Case:

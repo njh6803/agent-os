@@ -90,5 +90,14 @@ tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_hooks.py"
-old = '''    return shlex.split(registration_command(hook).replace(_PROJECT_DIR, root.as_posix()))'''
+old = '''    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]'''
 new = '''    return shlex.split(registration_command(hook))'''
+
+[[mutation]]
+name = "루트를 넣은 뒤 나눈다(PR #121 CodeRabbit)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]'''
+new = '''    return shlex.split(registration_command(hook).replace(_PROJECT_DIR, root_text))'''

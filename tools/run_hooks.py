@@ -255,8 +255,13 @@ def registration_command(hook: str) -> str:
 
 
 def launch_argv(hook: str, root: Path = ROOT) -> list[str]:
-    """등록 명령을 셸 없이 띄우는 인자 목록. `${CLAUDE_PROJECT_DIR}` 자리에 `root` 가 온다."""
-    return shlex.split(registration_command(hook).replace(_PROJECT_DIR, root.as_posix()))
+    """등록 명령을 셸 없이 띄우는 인자 목록. `${CLAUDE_PROJECT_DIR}` 자리에 `root` 가 온다.
+
+    템플릿을 먼저 나누고 인자마다 루트를 넣는다. 루트를 먼저 넣으면 경로 속 따옴표를 `shlex` 가
+    구문으로 읽는다(PR #121 CodeRabbit).
+    """
+    root_text = root.as_posix()
+    return [arg.replace(_PROJECT_DIR, root_text) for arg in shlex.split(registration_command(hook))]
 
 
 def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:

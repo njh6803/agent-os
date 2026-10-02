@@ -15,7 +15,9 @@ CodeRabbit Minor(일지 회고의 91 제목이 지금 동작과 반대)는 대�
 
 선행 조건(일지 08의 "다음")은 반만 봤다. UserPromptSubmit 훅이 제목 지시를 넣었고, PreToolUse 훅이 돌았다 —
 `hook_bash_python_stub`이 내 명령 둘을 막았다(회고의 일지에만). Bash·PowerShell이 막히지 않았으니 옛 모양으로 등록된
-`hook_pr_head_sync`도 파일을 찾았다. Stop 훅의 판정은 이 세션의 첫 턴 끝, 곧 이 일지를 쓴 뒤라 아직이다.
+`hook_pr_head_sync`도 파일을 찾았다. Stop 훅은 이 세션의 턴 끝 둘(02:34, 03:06 UTC)에서 돌았다.
+트랜스크립트의 `stop_hook_summary`에 `hook_stop_korean`이 697ms·293ms로 있고, `hookErrors`가 비었고
+`preventedContinuation`이 false다. 한국어 답은 막히지 않았다.
 
 ## 자리를 정한 것
 
@@ -93,6 +95,27 @@ CodeRabbit Minor(일지 회고의 91 제목이 지금 동작과 반대)는 대�
   `tools/hook_pr_next_session.py`라는 글자로 자기 훅을 찾았는데 새 모양에는 훅 이름만 남는다. 러너에
   `registration_command`를 두고 그 테스트가 등록 명령 전체와 대조하게 했다.
 
+## PR 리뷰
+
+PR #121. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았으므로 이 PR의
+보안·버그 축은 PR 봇 하나다. PR head와 로컬 HEAD가 같은 것을 본 뒤 `@coderabbitai review`를 남겼다.
+
+> 사용자: "끝났어?"
+
+1회차(`29db986`). CI 여섯(`python`, `web`, `e2e`, `verify`, `claude-review`, CodeRabbit)이 초록이었다. CodeRabbit은
+`29db986`까지 보고 지적 하나를 냈고, 그 리뷰로 시간당 한도를 다 썼다고 적었다. claude-review는 Minor 둘과 Nit 하나를 냈다.
+
+- 고친 것: `launch_argv`가 루트를 먼저 넣고 `shlex.split`해, 경로에 큰따옴표가 있으면 인자가 깨진다(CodeRabbit, Minor).
+  템플릿을 먼저 나누고 인자마다 루트를 넣었다(테스트·변이 하나).
+- 고친 것: 테스트의 `_REGISTERED_X`가 `REGISTRATION`의 글자를 다시 적었다(claude, Minor). `registration_command`를
+  쓰고, 모양의 글자는 인자 목록을 적은 테스트가 고정한다.
+- 대기열로: 막는 훅의 파일이 없으면 래퍼가 조용히 지나가 그 훅이 꺼진 것을 세션이 모른다(claude, Minor). 남긴 위험에
+  적은 것이고, 추적할 행을 두자는 지적이다.
+
+> 사용자(질문에 답): "대기열 새 항목 (Recommended)"
+
+- 둔 것: `main()`이 `sys.argv`를 다시 묶는다(claude, Nit). 리뷰어도 그대로 둬도 된다고 했다.
+
 ## 보고 언어
 
 도구 호출 사이의 중간 문장 셋을 영어로 썼다("Now the runner tests: …", "Now I'll edit the KICKOFF lines.", "Now the
@@ -100,7 +123,7 @@ mutation table's old-version entry …"). 사용자가 고치지는 않았다. S
 
 ## 회고
 
-후보 셋을 냈고 하나가 새 항목으로 승인됐다.
+후보 셋을 냈고 하나가 새 항목으로 승인됐다. PR 리뷰에서 하나가 더 대기열로 갔다.
 
 > 사용자(질문에 답): "기록만", "새 항목 (Recommended)", "기록만 (Recommended)"
 
@@ -110,6 +133,7 @@ mutation table's old-version entry …"). 사용자가 고치지는 않았다. S
 - **92(새로): 커밋에 든 변이 표의 원문이 코드에 있는지 pre-commit이 본다.** 위 셀프 리뷰의 Major다. 고정된 패턴이라
   1회차지만 검사로 간다.
 - **기록만: 래퍼 자체가 없는 창.** 래퍼 독스트링과 rules에 적었고, 이 PR 병합 직후 주 체크아웃을 당기면 닫힌다.
+- **93(새로, PR 리뷰에서): 래퍼가 없는 훅을 지나갈 때 세션에 알린다.** 위 PR 리뷰 절의 claude-review Minor다.
 - 일지에만: `hook_bash_python_stub`이 내 grep 패턴의 `python`(따옴표 안의 `|` 뒤)을 두 번 막았다. 대기열 82가 적은 거짓
   양성 그대로다. 워크트리 가드가 `$@`가 든 복합 명령을 거부해 스크립트 파일로 옮겼다(기억과 `CLAUDE.md`에 이미 있다).
   명세 축 브리프를 쓸 때 돌고 있던 규칙 카나리아를 브리프에 넣지 않아 누락으로 나왔다.
@@ -119,6 +143,5 @@ mutation table's old-version entry …"). 사용자가 고치지는 않았다. S
 - 이 PR의 마지막 CI와 병합은 다음 일지에 한 줄 남긴다.
 - **병합 직후 주 체크아웃을 당긴다.** 그 전에 이 워크트리 세션이나 새 main에서 뜬 워크트리 세션이 다시 시작되면 등록
   열하나가 모두 2로 끝난다(래퍼 부재 창).
-- Stop 훅의 첫 세션 확인(일지 08의 "다음")은 이 세션의 턴 끝 판정이다. 결과는 다음 일지에 적는다.
-- 다음 chore 후보는 92(이번 회고, pre-commit 한 줄), 84(워크플로 파일이라 별도 PR), 88·49(ADR 본문과 이력의 표시
-  규약, 같은 대상)다.
+- 다음 chore 후보는 92(이번 회고, pre-commit 한 줄)와 93(래퍼가 지나간 것을 알리기, 같은 래퍼), 84(워크플로 파일이라
+  별도 PR), 88·49(ADR 본문과 이력의 표시 규약, 같은 대상)다.
