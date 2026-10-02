@@ -1,0 +1,187 @@
+# tools/check_adr_pointers.py(대기열 97)의 판정 규칙과 배선을 하나씩 빼는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/adr_pointer_check_mutations.toml
+# 앞의 넷은 PR #124의 프로브가 실제로 겪은 자리다(번호 뒤 공백, 이력 절 밖의 ### 줄, 첫 판이 세지 않은
+# `(바뀜: ADR NNNN)` 모양, 한 줄의 포인터 여럿). 이력 절의 경계 둘(제목이 정확히 `## 이력`, 다음 `##`에서 끝남)은
+# 처음에 변이 하나("개정 이력 절은 이력이 아니다")로 쟀다가 초록으로 남았다. 절 단위로 추적하면 0006의
+# Consequences는 어느 쪽이든 다시 본문이라, 개정 이력 절 안의 포인터와 이력 절 뒤의 절로 따로 잰다.
+# 펜스·코드 스팬·번호 겹침·빈 디렉터리는 옮기는 판의 셀프 리뷰가 찾았다.
+
+[[mutation]]
+name = "번호와 이력 사이의 공백은 꼭 하나다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    r'(?: 이력 (?P<cited_date>'''
+new = '''    r'(?: ?이력 (?P<cited_date>'''
+
+[[mutation]]
+name = "이력 제목은 이력 절 안의 것만이다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        if in_history and line.startswith("### ")'''
+new = '''        if line.startswith("### ")'''
+
+[[mutation]]
+name = "ADR 번호만 가리키는 모양도 포인터다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''"(?P<cited_title>[^"]+)")?''''
+new = '''"(?P<cited_title>[^"]+)")''''
+
+[[mutation]]
+name = "한 줄의 포인터를 모두 본다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        matches = list(POINTER.finditer(line))'''
+new = '''        matches = list(POINTER.finditer(line))[:1]'''
+
+[[mutation]]
+name = "이력 절은 제목이 정확히 이력인 절이다(개정 이력은 아니다)"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''            in_history = line.strip() == HISTORY_HEADING'''
+new = '''            in_history = line.strip().endswith("이력")'''
+
+[[mutation]]
+name = "이력 절은 다음 ## 제목에서 끝난다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''            in_history = line.strip() == HISTORY_HEADING'''
+new = '''            in_history = in_history or line.strip() == HISTORY_HEADING'''
+
+[[mutation]]
+name = "모양이 틀린 포인터를 센다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        if len(_MARK_OUTSIDE_CODE.findall(line)) != len(matches):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "코드 스팬으로 적은 포인터 모양은 코드다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''_OUTSIDE_CODE = r"(?<!`)"'''
+new = '''_OUTSIDE_CODE = r""'''
+
+[[mutation]]
+name = "펜스 안의 줄은 코드다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")'''
+new = '''_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(?!)")'''
+
+[[mutation]]
+name = "더 짧은 펜스 줄은 펜스를 닫지 못한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        and closing.group(1).startswith(fence)'''
+new = '''        and closing.group(1)[0] == fence[0]'''
+
+[[mutation]]
+name = "펜스가 닫히면 다시 본다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''            if _closes(fence, line):'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "이력 절 안의 포인터를 잡는다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''            reason = "이력 절 안에 있다" if in_history else _reason(match, own_titles, titles_of)'''
+new = '''            reason = _reason(match, own_titles, titles_of)'''
+
+[[mutation]]
+name = "없는 ADR을 잡는다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        return f"ADR {cited}이 없다"'''
+new = '''        return None'''
+
+[[mutation]]
+name = "제목을 글자 그대로 대조한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    if date is not None and f"{date} {title}" not in titles:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "다른 ADR을 가리키면 그 ADR의 제목과 대조한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    titles = own_titles if cited is None else titles_of(cited)'''
+new = '''    titles = own_titles if cited is None or titles_of(cited) is not None else None'''
+
+[[mutation]]
+name = "main 이 ADR 전부를 판정한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    for number, path, text in adrs:'''
+new = '''    for number, path, text in adrs[:1]:'''
+
+[[mutation]]
+name = "번호가 겹친 ADR을 알린다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        if numbers.count(number) > 1:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "번호가 겹치면 둘의 이력 제목을 함께 본다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''        titles.setdefault(number, set()).update(history_titles(text))'''
+new = '''        titles[number] = history_titles(text)'''
+
+[[mutation]]
+name = "ADR이 하나도 없으면 실패한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    if not adrs:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "CLI 가 인자로 받은 디렉터리를 판정한다"
+tests = ["tests/tools/test_check_adr_pointers.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_adr_pointers.py"
+old = '''    sys.exit(main(Path(sys.argv[1]) if len(sys.argv) > 1 else ADR_DIR))'''
+new = '''    sys.exit(main())'''
