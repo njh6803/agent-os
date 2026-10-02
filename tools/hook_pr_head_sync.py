@@ -14,9 +14,11 @@ head 의 리뷰가 남는다.
 언급은 원래 명령에서 찾는다.
 
 판정은 두 단계다.
-1. 선택자(PR 번호·URL·브랜치) 없이 쳤으면 지금 브랜치의 PR 이다. 로컬 HEAD 가 upstream(`@{u}`)과
-   다르고 upstream 의 조상도 아니면 푸시하지 않은 커밋이 있다는 것이라 막는다. PR head 는 기껏해야
-   upstream 이므로 로컬 HEAD 와 같을 수 없다. 네트워크 없이 판정한다.
+1. 선택자(PR 번호·URL·브랜치) 없이 쳤으면 지금 브랜치의 PR 이다. upstream(`@{u}`)이 같은 이름의
+   원격 브랜치이고, 로컬 HEAD 가 그것과 다르며 그 조상도 아니면 푸시하지 않은 커밋이 있다는 것이라
+   막는다. PR head 는 기껏해야 upstream 이므로 로컬 HEAD 와 같을 수 없다. 네트워크 없이 판정한다.
+   upstream 이 다른 이름(base 를 추적하는 작업 브랜치)이면 이 단계를 건너뛴다 — 첫 판은 그 upstream
+   으로 재서 푸시한 뒤에도 영원히 막았다(PR #120 claude-review).
 2. 그 밖에는 `gh pr view [선택자] --json headRefOid,headRefName` 으로 PR head 를 읽는다. PR 의
    브랜치가 지금 브랜치이고, PR head 가 로컬 HEAD 와 다르고, 로컬에 있는 커밋이며, 로컬 HEAD 가
    PR head 의 조상도 아니면 막는다. PR 쪽이 앞선 것은 당기지 않았을 뿐이라 리뷰는 맞는 것을 본다.
@@ -28,13 +30,12 @@ git 과 gh 는 페이로드의 `cwd` 에서 돌고, 저장소를 가리키는 `G
 못 보는 것: 인용된 선택자나 저장소 값(`gh pr ready "$PR"` — 판정하지 않는다), `--body-file` 이
 가리키는 파일 안의 언급, `gh api` 로 남긴 코멘트, GitHub MCP 도구(이 훅은 셸 매처다), `gh pr
 merge`(병합 직전 확인은 `operations.md` 리뷰 파이프라인의 지침이다), 다른 명령의 데이터로 든 언급과
-같은 명령 안의 `gh pr comment`(언급이 그 코멘트의 것인지 가리지 않는다 — 거짓 양성), 선택자 없이
-upstream 이 PR 의 브랜치가 아닌 경우(1단계가 그 upstream 으로 판정한다), `cd <다른 저장소> && gh pr
-ready` 와 `Set-Location`(cwd 의 저장소로 판정한다 — hook_git_main_commit 과 같은 한계), 로컬에
-없는 PR head 가 사실은 옛 head 인 경우(다른 클론이 푸시한 것 — 지나간다). git·gh 가 없거나, 저장소
-밖이거나, detached HEAD 이거나, 커밋이 없거나, gh 가 실패하거나 시간을 넘기면 막지 않는다 — 게이트가
-아니라 안전장치라 fail-open 이다. 다른 세션이 막 푸시한 것처럼 판정 뒤에 head 가 바뀌는 것도 못
-본다.
+같은 명령 안의 `gh pr comment`(언급이 그 코멘트의 것인지 가리지 않는다 — 거짓 양성), `cd <다른
+저장소> && gh pr ready` 와 `Set-Location`(cwd 의 저장소로 판정한다 — hook_git_main_commit 과 같은
+한계), 로컬에 없는 PR head 가 사실은 옛 head 인 경우(다른 클론이 푸시한 것 — 지나간다). git·gh 가
+없거나, 저장소 밖이거나, detached HEAD 이거나, 커밋이 없거나, gh 가 실패하거나 시간을 넘기면 막지
+않는다 — 게이트가 아니라 안전장치라 fail-open 이다. 다른 세션이 막 푸시한 것처럼 판정 뒤에 head 가
+바뀌는 것도 못 본다.
 """
 
 from __future__ import annotations
@@ -242,11 +243,18 @@ def _git_line(cwd: str | None, *args: str) -> str | None:
 
 
 def local_state(cwd: str | None) -> LocalState | None:
-    """`cwd` 의 브랜치, HEAD, upstream. 저장소가 아니거나 detached 이거나 커밋이 없으면 None."""
+    """`cwd` 의 브랜치, HEAD, upstream. 저장소가 아니거나 detached 이거나 커밋이 없으면 None.
+
+    upstream 은 같은 이름의 원격 브랜치를 추적할 때만 읽는다. base 를 추적하는 작업 브랜치(`git
+    checkout -b x origin/main`)의 upstream 은 PR head 가 아니라, 그것으로 재면 푸시한 뒤에도 막는다.
+    """
     branch = _git_line(cwd, "branch", "--show-current")
     head = _git_line(cwd, "rev-parse", "--verify", "-q", "HEAD")
     if branch is None or head is None:
         return None
+    merge = _git_line(cwd, "config", "--get", f"branch.{branch}.merge")
+    if merge != f"refs/heads/{branch}":
+        return LocalState(branch, head, None)
     return LocalState(branch, head, _git_line(cwd, "rev-parse", "--verify", "-q", "@{u}"))
 
 
@@ -319,6 +327,7 @@ def reason_for(request: Request, cwd: str | None) -> str | None:
     local = local_state(cwd)
     if local is None:
         return None
+    # 판정은 unpushed_reason 이 한다. 이 조건은 그 판정이 볼 일 없는 경우에 git 호출을 아낄 뿐이다.
     if local.upstream is not None and local.upstream != local.head:
         behind = is_ancestor(cwd, local.head, local.upstream)
         reason = unpushed_reason(request, local, head_behind_upstream=behind)

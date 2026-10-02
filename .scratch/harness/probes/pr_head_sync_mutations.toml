@@ -179,10 +179,20 @@ expect = "red"
 file = "tools/hook_pr_head_sync.py"
 old = '''    if branch is None or head is None:
         return None
-    return LocalState(branch, head,'''
+    merge ='''
 new = '''    if branch is None:
         return None
-    return LocalState(branch, str(head),'''
+    head = str(head)
+    merge ='''
+
+[[mutation]]
+name = "다른 이름의 브랜치를 추적해도 upstream 으로 읽는다(PR #120 claude-review)"
+tests = ["tests/tools/test_hook_pr_head_sync.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_head_sync.py"
+old = '''    if merge != f"refs/heads/{branch}":'''
+new = '''    if merge is None:'''
 
 [[mutation]]
 name = "모르는 커밋을 조상으로 본다"

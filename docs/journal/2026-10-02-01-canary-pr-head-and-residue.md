@@ -64,7 +64,8 @@ PR에서 2회차(`86b5a0c`까지)만 봤다.
   그 뒤 훅을 1초 간격으로 돌리며 푸시했다. 3.0초에는 upstream이 이미 `7a73cb0`인데 PR head는 `fbdb755`라 막았고, 5.4초에
   PR head가 따라와 지나갔다. 대기열 86의 사건(푸시 직후의 지연)을 훅이 실제로 막는 것을 본 표본 하나다.
 - **변이(`.scratch/harness/probes/pr_head_sync_mutations.toml`).** 첫 판의 열아홉은 모두 기대대로 빨강이었다. 셀프
-  리뷰를 반영한 뒤 둘(로컬에 없는 PR head, 대소문자 다른 언급)을 더한 스물하나도 모두 기대대로 빨강이다. pytest 변이는
+  리뷰를 반영한 뒤 둘(로컬에 없는 PR head, 대소문자 다른 언급)을 더한 스물하나도, PR 리뷰 1회차 반영으로 하나(다른
+  이름의 브랜치를 추적하는 upstream)를 더한 스물둘도 모두 기대대로 빨강이다. pytest 변이는
   앞선 PR head(테스트 둘)를 빼고 저마다 테스트 하나만 빨갰고, main의 로컬 판정 변이는 러너의 어긋남 2건(발동 사례
   둘)이었다. 첫 판의 열아홉이 모두 빨강이었어도, 그중 "모르는 커밋을 조상으로 본다"는 틀린 동작을 고정하고 있었다.
   변이는 테스트가 무엇을 재는지 보여 줄 뿐, 잰 것이 맞는지는 보여 주지 않는다.
@@ -104,6 +105,23 @@ PR에서 2회차(`86b5a0c`까지)만 봤다.
   263 passed), `tools/check_instructions.py`·`tools/check_type_escapes.py` 통과, `tools/run_hooks.py` 52건 어긋남 0.
   `src/`를 바꾸지 않아 `-m llm`은 돌리지 않았다. 워크트리에 web 의존성이 없어 `pnpm -C web install --frozen-lockfile`을
   한 번 했다.
+
+## PR 리뷰
+
+PR #120. draft로 열고 위 gh 길을 잰 뒤 ready로 바꿨다. 바꾸기 전에 `gh pr view --json headRefOid`와 `git rev-parse HEAD`가
+같은 것을 봤다. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았으므로 이 PR의
+보안·버그 축은 PR 봇 하나다.
+
+1회차(`15b63a8`). CI 다섯(`python`, `web`, `e2e`, `verify`, `claude-review`)이 초록이었다. CodeRabbit은 00:06 UTC에
+"Review rate limited"였고 안내는 "2분 뒤"였다. claude-review는 Minor 둘과 Nit 하나를 냈다.
+
+- 고친 것: 선택자 없는 로컬 판정이 upstream이 PR의 브랜치라고 가정했다(claude, Minor). `git checkout -b x origin/main`
+  처럼 base를 추적하는 작업 브랜치는 푸시한 뒤에도 로컬 HEAD가 upstream보다 앞서 영원히 막힌다. "못 보는 것"에 적어
+  두었지만 거부 이유의 길로 풀리지 않는 막다른 길이다. 셀프 리뷰의 Major와 같은 모양이다. upstream은 같은 이름의 원격
+  브랜치를 추적할 때만 읽게 했다(테스트·변이 하나).
+- 고친 것: `reason_for`의 바깥 조건과 `unpushed_reason`의 조건이 겹친다(claude, Minor). 바깥 조건은 git 호출을 아끼는
+  것이라 두고, 판정은 안쪽이 한다는 주석을 달았다.
+- 둔 것: 헌법 README의 버전 줄이 너무 길다(claude, Nit). 줄을 나누면 같은 줄을 고치는 PR #119와 더 크게 충돌한다.
 
 ## 보고 언어
 

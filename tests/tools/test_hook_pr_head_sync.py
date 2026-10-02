@@ -211,6 +211,22 @@ def test_upstream_이_없으면_None_으로_읽는다(tmp_path: Path) -> None:
     assert local_state(str(work)) == LocalState("chore/x", _git(work, "rev-parse", "HEAD"), None)
 
 
+def test_다른_이름의_브랜치를_추적하면_upstream_을_읽지_않는다(tmp_path: Path) -> None:
+    """`git checkout -b x origin/main` 처럼 base 를 추적하는 작업 브랜치(PR #120 claude-review).
+
+    그 upstream 은 PR head 가 아니라서, 로컬 판정이 그것으로 재면 푸시한 뒤에도 영원히 막는다.
+    """
+    work = _푸시한_저장소(tmp_path)
+    _git(work, "checkout", "-q", "-b", "topic", "--track", "origin/chore/x")
+    _git(work, "commit", "-q", "--allow-empty", "-m", "b")
+
+    state = local_state(str(work))
+
+    assert state is not None
+    assert state.branch == "topic"
+    assert state.upstream is None
+
+
 def test_커밋이_없거나_저장소가_아니면_None이다(tmp_path: Path) -> None:
     empty = tmp_path / "empty"
     subprocess.run(["git", "init", "-q", "-b", "chore/x", str(empty)], check=True)
