@@ -128,7 +128,7 @@ PR #120. draft로 열고 위 gh 길을 잰 뒤 ready로 바꿨다. 바꾸기 전
 병합 위험을 Low로 냈다. 지적은 셋이었다.
 
 - 고친 것: `canary_init/summarize.py`가 잘린 JSONL 줄 하나에서 예외로 멈춘다(CodeRabbit, Minor). 그 줄은 건너뛴다.
-- 고친 것: 1회차의 주석으로는 겹친 조건이 그대로다(claude, Minor). "upstream이 있고 HEAD와 다르다"를 `LocalState`의
+- 고친 것: 1회차의 주석으로는 겹친 조건이 그대로다(claude, Minor). upstream이 있고 HEAD와 다르다는 조건을 `LocalState`의
   질의 `upstream_if_different` 하나로 빼서 `reason_for`와 `unpushed_reason`이 같은 것을 부르게 했다(변이 하나).
 - 고친 것: 독스트링의 "못 보는 것"이 한 문단에 열 개 넘게 이어져 항목마다 대조하기 어렵다(claude, Nit). 불릿으로 나눴다.
 
