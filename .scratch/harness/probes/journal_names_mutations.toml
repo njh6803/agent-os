@@ -1,0 +1,66 @@
+# tests/test_journal_names.py(대기열 99)의 판정 규칙과 범위를 하나씩 빼는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/journal_names_mutations.toml
+# 판정 함수가 테스트 파일 안에 있어(tests/test_plugins_boundary.py와 같은 모양) 변이도 그 파일을 고친다.
+
+[[mutation]]
+name = "겹침은 같은 날의 순번으로 묶는다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''        by_number.setdefault(match["number"], []).append(name)'''
+new = '''        by_number.setdefault(name, []).append(name)'''
+
+[[mutation]]
+name = "순번은 빠질 수 없다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''(?P<number>\d{4}-\d{2}-\d{2}-\d{2})'''
+new = '''(?P<number>\d{4}-\d{2}-\d{2}(?:-\d{2})?)'''
+
+[[mutation]]
+name = "순번 모양이 아닌 새 이름을 알린다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''            if name not in BEFORE_NUMBERING:'''
+new = '''            if not name:'''
+
+[[mutation]]
+name = "순번 규약 전의 옛 이름은 예외다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''            if name not in BEFORE_NUMBERING:'''
+new = '''            if name:'''
+
+[[mutation]]
+name = "이미 병합된 한 쌍은 정확히 그 둘일 때만 예외다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''frozenset(group) != SHARED_NUMBERS.get(number)'''
+new = '''number not in SHARED_NUMBERS'''
+
+[[mutation]]
+name = "이미 병합된 한 쌍은 예외다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''frozenset(group) != SHARED_NUMBERS.get(number)'''
+new = '''len(group) > 1'''
+
+[[mutation]]
+name = "일지 디렉터리를 잘못 가리키면 빨강이다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''JOURNAL = ROOT / "docs" / "journal"'''
+new = '''JOURNAL = ROOT / "docs" / "journals"'''
