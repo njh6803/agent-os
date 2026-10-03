@@ -91,6 +91,13 @@ def test_순번이_없는_새_일지를_잡는다() -> None:
     ]
 
 
+def test_이미_병합된_한_쌍은_정확히_그_둘이면_지나간다() -> None:
+    """저장소 상태 테스트에만 기대면, 두 파일이 옮겨져 예외가 죽어도 초록이다(PR #127 리뷰)."""
+    names = ["2026-09-28-06-hook-runner.md", "2026-09-28-06-web-admin-design.md"]
+
+    assert journal_name_problems(names) == []
+
+
 def test_이미_병합된_한_쌍에_셋째가_붙으면_잡는다() -> None:
     names = [
         "2026-09-28-06-hook-runner.md",
