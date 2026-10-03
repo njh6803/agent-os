@@ -1,0 +1,9 @@
+export const metadata = { title: "widget probe" };
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="ko">
+      <body>{children}</body>
+    </html>
+  );
+}

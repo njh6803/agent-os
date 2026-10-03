@@ -1,0 +1,16 @@
+{
+  "name": "@agent-os/widget-ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "@agent-os/api-client": "workspace:*",
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "~5.9.3"
+  }
+}
