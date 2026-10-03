@@ -1,0 +1,28 @@
+{
+  "name": "@agent-os/widget",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:element": "vite build --mode element",
+    "build:page": "vite build --mode page",
+    "build:next": "next build",
+    "start:next": "next start"
+  },
+  "dependencies": {
+    "@agent-os/api-client": "workspace:*",
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "msw": "^3.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.2"
+  }
+}

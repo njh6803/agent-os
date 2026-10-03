@@ -25,5 +25,9 @@
 | [0019](0019-admin-ui-browser-holds-the-tokens.md) | 관리 화면은 브라우저가 토큰을 들고 Next는 무상태 중계다 | accepted | 2026-09-28 |
 | [0020](0020-principle-iii-covers-typescript.md) | 원칙 III은 TypeScript에도 걸리고 typescript-eslint가 판정한다 | accepted | 2026-09-28 |
 | [0021](0021-web-workspace-stack.md) | web 워크스페이스의 스택과 API 클라이언트는 계약에서 생성해 커밋한다 | accepted | 2026-09-28 |
+| [0022](0022-conversation-is-a-chain-of-finished-runs.md) | 대화는 끝난 실행을 가리키는 고리이고 에이전트는 자기 교환과 요약만 안다 | accepted | 2026-10-03 |
+| [0023](0023-end-user-channel-is-signed-by-the-site.md) | 최종 사용자는 사이트가 서명한 토큰으로 자기 접두사의 채널을 쓰고 스트림은 걸러 받는다 | accepted | 2026-10-03 |
+| [0024](0024-widget-app-ships-two-embeds-behind-nginx.md) | 위젯은 한 앱 폴더에서 iframe 페이지와 페이지 안 번들을 내고 nginx 뒤에 선다 | accepted | 2026-10-03 |
+| [0025](0025-design-system-source-is-code.md) | 디자인 시스템은 코드가 원천이고 Claude Design은 탐색과 화면을 맡는다 | accepted | 2026-10-03 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
