@@ -139,10 +139,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/continuation.py"
 old = '''
-    if link.summary_at and link.summary_at[0] != 1:
+    if link.summary_at and link.summary_at[0] != SUMMARY_INDEX:
 '''
 new = '''
-    if link.summary_at and link.summary_at[0] != 1 and False:
+    if link.summary_at and link.summary_at[0] != SUMMARY_INDEX and False:
 '''
 
 [[mutation]]
@@ -263,10 +263,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    conversation = resumed_conversation(trace, own)
+    resumption = _read_paused(trace, run_id, pause_index)
 '''
 new = '''
-    conversation = resumed_conversation(trace, own)
+    resumption = _read_paused(trace, run_id, pause_index)
     trace.write(
         ConversationSummarized(
             run_id=run_id,
@@ -395,4 +395,95 @@ old = '''
 '''
 new = '''
         trace.write(outcome)
+'''
+
+# --- 티켓 03 (2026-10-05) -----------------------------------------------------------------
+# 구현 전부터 초록이던 가드 둘(이어 가지 않은 실행의 프롬프트 리터럴, 재개와 serve 의 옵션 거절)과
+# 코드를 옮긴 자리(`_read_paused` 가 멤버까지 읽는다), 그리고 CLI 가 앞 실행을 core 에 넘기는 배관.
+
+[[mutation]]
+name = "calc 가 이어 가지 않은 실행에도 앞 대화 블록을 붙인다"
+tests = ["tests/test_calc_plugin.py", "-k", "글자_그대로_같다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "plugins/agents/calc/agent.py"
+old = '''
+    if not lines:
+        return ""
+'''
+new = '''
+    if not lines:
+        lines.append("[요약] 없음")
+'''
+
+[[mutation]]
+name = "calc 가 요약을 교환 뒤에 둔다"
+tests = ["tests/test_calc_plugin.py", "-k", "요약이_교환보다_앞에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "plugins/agents/calc/agent.py"
+old = '''
+    if conversation.summary is not None:
+        lines.append(f"[요약] {conversation.summary}")
+    for exchange in conversation.exchanges:
+        lines.append(f"[요청] {exchange.request}")
+        lines.append(f"[출력] {exchange.output}")
+'''
+new = '''
+    for exchange in conversation.exchanges:
+        lines.append(f"[요청] {exchange.request}")
+        lines.append(f"[출력] {exchange.output}")
+    if conversation.summary is not None:
+        lines.append(f"[요약] {conversation.summary}")
+'''
+
+[[mutation]]
+name = "CLI 가 앞 실행을 core 에 넘기지 않는다"
+tests = ["tests/test_main.py", "-k", "둘째_트레이스가_첫째를 or 거절된_이어_가기는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+        previous_run=previous_run,
+        plugins=plugins,
+'''
+new = '''
+        previous_run=None,
+        plugins=plugins,
+'''
+
+[[mutation]]
+name = "재개도 앞 실행 옵션을 받는다"
+tests = ["tests/channel/cli/test_main.py", "-k", "앞_실행을_받지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+    resume_parser.add_argument(
+        "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
+    )
+'''
+new = '''
+    resume_parser.add_argument(
+        "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
+    )
+    resume_parser.add_argument("--continuation")
+'''
+
+[[mutation]]
+name = "재개가 멤버를 다시 거슬러 읽지 않는다"
+tests = ["tests/core/test_run.py", "-k", "멈춘_이어_간_실행을_재개하면_같은_멤버를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        conversation=resumed_conversation(trace, link),
+'''
+new = '''
+        conversation=NEW_CONVERSATION,
 '''

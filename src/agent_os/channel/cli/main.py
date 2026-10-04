@@ -16,6 +16,11 @@ serve 는 관리 API 와 HTTP 채널을 한 앱으로 세운다. 앱을 세우�
 멈춘 실행의 목록 조회는 만들지 않는다. 채널은 실행을 일으키는 면이고 관찰은 관리의 일이다.
 재개는 실행 식별자와 결정이 답하는 일시정지의 자리를 받는다. 에이전트도 요청도 주체도 트레이스가
 안다.
+
+run 은 이어 갈 끝난 실행을 `--continuation` 으로 받는다(ADR 0022, conversation 명세 "CLI"). 끝난
+실행에 이어 가기 안내를 찍지 않는다 — 찍으면 성공한 실행의 표준 에러가 비지 않거나 표준 출력이
+출력 아닌 것을 싣는다. 식별자는 `--verbose` 의 시작 이벤트, 관리 화면, 트레이스 디렉터리에서 얻는다.
+거절(없음, 남의 실행, 끝나지 않음, 고리 깨짐)은 다른 실행 전 오류와 같은 진단과 종료 코드 1 이다.
 """
 
 from __future__ import annotations
@@ -54,8 +59,11 @@ EXIT_PAUSED = 3
 
 @dataclass(frozen=True)
 class RunArgs:
+    """`previous_run` 은 이어 갈 끝난 실행이고 없음은 새 대화라는 뜻 하나뿐이다(ADR 0022)."""
+
     agent: AgentName
     request: str
+    previous_run: RunId | None
     model: str | None
     traces: Path
     plugins_root: Path
@@ -91,6 +99,14 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = commands.add_parser("run", help="에이전트에 요청 하나를 던진다")
     run_parser.add_argument("agent", help="plugins/agents/ 아래 에이전트 이름")
     run_parser.add_argument("request", help="요청 문자열")
+    # 낱말은 HTTP 경로 `/runs/{run_id}/continuation` 과 같다. 재개에는 두지 않는다 — 재개는 앞
+    # 실행을 트레이스가 안다(conversation 명세 "CLI"). 끝난 실행에 이 옵션을 안내하지 않으므로
+    # 식별자는 --verbose 의 시작 이벤트, 관리 화면, 트레이스 디렉터리에서 얻는다.
+    run_parser.add_argument(
+        "--continuation",
+        metavar="RUN_ID",
+        help="이어 갈 끝난 실행의 식별자. 같은 주체의 run_finished 로 끝난 실행만 이어 간다",
+    )
     _add_shared(run_parser)
     resume_parser = commands.add_parser("resume", help="일시정지한 실행을 이어 간다")
     resume_parser.add_argument("run_id", help="멈출 때 표준 출력에 찍힌 실행 식별자")
@@ -207,9 +223,11 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
             plugins_root=plugins_root,
             verbose=verbose,
         )
+    continuation = namespace.continuation
     return RunArgs(
         agent=AgentName(str(namespace.agent)),
         request=str(namespace.request),
+        previous_run=None if continuation is None else RunId(str(continuation)),
         model=model,
         traces=traces,
         plugins_root=plugins_root,
@@ -246,6 +264,7 @@ async def run_command(
     request: str,
     principal: Principal,
     *,
+    previous_run: RunId | None,
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
@@ -257,11 +276,16 @@ async def run_command(
     traces: Path,
     plugins_root: Path,
 ) -> int:
-    """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다."""
+    """종료 코드를 돌려준다. 실행 전 오류(PluginError)는 트레이스 없이 진단만 적는다.
+
+    거절된 이어 가기(없음, 남의 실행, 끝나지 않음, 고리 깨짐)도 같은 자리다 — core 가 가른 하위
+    타입을 CLI 는 가르지 않고 기반 타입 하나로 잡는다. 면마다 응답이 다른 것은 HTTP 의 일이고 CLI 의
+    답은 진단과 종료 코드 1 하나다(ADR 0022, ADR 0023)."""
     events = run(
         agent,
         request,
         principal,
+        previous_run=previous_run,
         plugins=plugins,
         model=model,
         tools=tools,

@@ -60,7 +60,6 @@ from langchain_core.messages import AIMessage, BaseMessage
 from agent_os.core.continuation import (
     NEW_CONVERSATION,
     Fold,
-    Link,
     check_record_rules,
     gather_continued,
     limit_of,
@@ -124,12 +123,12 @@ MASKED = "***"
 # 형식을 가리지 않는다 — 앞 실행을 재개하는 것이 아니라 읽는 것이고 필요한 것은 형식 1 에도 있다.
 RESUMABLE: tuple[TraceSchemaVersion, ...] = ("2", "3")
 
-# 재생 기록 열에 들지 않는 이벤트. 실행의 시작과 재개의 경계를 표시하는 것들은 재생할 사실이
-# 아니고, 대화 요약은 에이전트가 부른 호출이 아니라 런타임이 에이전트를 부르기 전에 한 것이라 재개가
-# 모델을 다시 부르지 않고 트레이스에서 읽는다(ADR 0022). 들면 재개의 모델 대조가 LlmCalled 가 아닌
-# 기록을 받아 Mismatch 다. 나머지는 런타임의 모델·도구 호출과 에이전트가 낸 것이고, 트레이스만
+# 재생 기록 열에 들지 않는 이벤트. 경계 이벤트(실행의 시작과 재개의 경계를 표시하는 것들)는 재생할
+# 사실이 아니고, 대화 요약은 에이전트가 부른 호출이 아니라 런타임이 에이전트를 부르기 전에 한 것이라
+# 재개가 모델을 다시 부르지 않고 트레이스에서 읽는다(ADR 0022). 들면 재개의 모델 대조가 LlmCalled 가
+# 아닌 기록을 받아 Mismatch 다. 나머지는 런타임의 모델·도구 호출과 에이전트가 낸 것이고, 트레이스만
 # 보고는 둘을 구분할 수 없어 함께 센다.
-_BOUNDARY = (
+_NOT_REPLAYED = (
     RunStarted,
     RunPaused,
     ApprovalGranted,
@@ -543,19 +542,17 @@ async def resume(
     그렇고, 그보다 오래된 트레이스를 지우면 재개가 그대로 선다. 주체의 비교 대상은 멈춘 실행의
     `run_started` 주체다.
     """
-    own, paused, records = _read_paused(trace, run_id, pause_index)
-    started = own.started
-    conversation = resumed_conversation(trace, own)
-    prepared = _prepare(plugins, _recorded_manifest(plugins, started))
+    resumption = _read_paused(trace, run_id, pause_index)
+    prepared = _prepare(plugins, _recorded_manifest(plugins, resumption.started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
     yield decided
     async for event in _drive(
         prepared,
-        started,
-        replay=Replay.of(records),
-        verdict=_Verdict(decision, paused),
-        conversation=conversation,
+        resumption.started,
+        replay=Replay.of(resumption.records),
+        verdict=_Verdict(decision, resumption.paused),
+        conversation=resumption.conversation,
         model=model,
         tools=tools,
         trace=trace,
@@ -709,14 +706,23 @@ def _require_paused_call(paused: RunPaused, name: str, masked: Mapping[str, Json
         )
 
 
-def _read_paused(
-    trace: TraceStore, run_id: RunId, pause_index: int
-) -> tuple[Link, RunPaused, tuple[Record, ...]]:
+@dataclass(frozen=True)
+class _Resumption:
+    """재개의 입력. 멈춘 실행의 시작 이벤트, 결정이 답하는 일시정지, 재생 기록, 처음과 같은 멤버.
+    거슬러 읽기의 표현(`Link`)은 `_read_paused` 안에서 끝나고 실행을 모는 쪽으로 새지 않는다."""
+
+    started: RunStarted
+    paused: RunPaused
+    records: tuple[Record, ...]
+    conversation: Conversation
+
+
+def _read_paused(trace: TraceStore, run_id: RunId, pause_index: int) -> _Resumption:
     """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다.
 
-    재개하는 실행 자신(시작 이벤트와 자기 트레이스의 대화 요약 이벤트를 든 `Link`), 결정이 가리킨
-    일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다. 판정 순서는 없음 → 형식 1 → 손상 → 일시정지
-    아님 → 자리 어긋남이다. 손상에는 고리의 실행에 거는 기록 규칙(앞 실행 필드의 패턴, 요약
+    멈춘 실행의 시작 이벤트, 결정이 가리킨 일시정지(결정이 묶이는 호출), 재생 기록, 시작 이벤트의 앞
+    실행에서 다시 거슬러 읽은 멤버를 돌려준다. 판정 순서는 없음 → 형식 1 → 손상 → 일시정지 아님 →
+    자리 어긋남 → 고리다. 손상에는 고리의 실행에 거는 기록 규칙(앞 실행 필드의 패턴, 요약
     이벤트의 자리와 개수)도 든다 — 자기 트레이스에만 빼는 이유가 없다(ADR 0022). 일시정지 아님이
     자리보다 먼저라, 같은 자리를 든 결정 둘이 동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지
     아님"을 듣는다.
@@ -744,8 +750,13 @@ def _read_paused(
             f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
             f"재개할 수 없다: {run_id}"
         )
-    records = tuple(e for e in link.events if not isinstance(e, _BOUNDARY))
-    return link, paused, records
+    records = tuple(e for e in link.events if not isinstance(e, _NOT_REPLAYED))
+    return _Resumption(
+        started=link.started,
+        paused=paused,
+        records=records,
+        conversation=resumed_conversation(trace, link),
+    )
 
 
 def _requested_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:

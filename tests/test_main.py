@@ -11,12 +11,14 @@ import os
 import re
 import secrets
 import shlex
+import shutil
 import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Generator, Mapping
+from collections.abc import Callable, Generator, Mapping
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -33,10 +35,15 @@ from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
+    AgentName,
     ApprovalDenied,
     ApprovalGranted,
+    ConversationSummarized,
+    Event,
     Json,
     LlmCalled,
+    Principal,
+    RunFinished,
     RunId,
     RunPaused,
     RunStarted,
@@ -1330,3 +1337,236 @@ def test_플러그인_루트를_지정했으면_안내된_재개_명령이_그�
     assert "--plugins-root" in argv
     assert code == 0
     assert capsys.readouterr().out == "5\n"
+
+
+# --- 이어 가기 -------------------------------------------------------------------------
+# `run` 이 이어 갈 끝난 실행을 `--continuation` 으로 받는다(ADR 0022 "모든 채널이 이어 가기를
+# 받는다", conversation 명세 "CLI"). 낱말은 HTTP 경로 `/runs/{run_id}/continuation` 과 같다. 끝난
+# 실행에 안내를 찍지 않으므로 식별자는 트레이스 디렉터리(여기), `--verbose` 의 시작 이벤트, 관리
+# 화면에서 얻는다. 거절은 core 의 `PluginError` 계열이고 CLI 는 기반 타입 하나를 잡아 다른 실행 전
+# 실패와 같은 모양이다. 실제 모델로 calc 를 이어 가는 둘은 이 절 끝의 `-m llm` 이다.
+
+_NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+
+
+def _run_id_of(directory: Path) -> RunId:
+    """트레이스 디렉터리에 하나뿐인 실행의 식별자."""
+    (trace_file,) = _trace_files(directory)
+    return RunId(trace_file.stem)
+
+
+def _write_started(
+    directory: Path, run_id: str, *, principal: str, previous_run: str | None = None
+) -> None:
+    """런타임을 거치지 않고 시작 이벤트 하나를 쓴다. 끝나지 않은 실행이다."""
+    JsonlTrace(directory).write(
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=_NOW,
+            agent=AgentName("echo"),
+            request="hi",
+            principal=Principal(principal),
+            previous_run=None if previous_run is None else RunId(previous_run),
+        )
+    )
+
+
+def _write_finished(
+    directory: Path, run_id: str, *, principal: str, previous_run: str | None = None
+) -> None:
+    """런타임을 거치지 않고 끝난 실행의 트레이스를 쓴다. 남의 실행과 깨진 고리를 만드는 데 쓴다."""
+    _write_started(directory, run_id, principal=principal, previous_run=previous_run)
+    JsonlTrace(directory).write(RunFinished(run_id=RunId(run_id), ts=_NOW, output="echo:hi"))
+
+
+def test_이어_가기_옵션으로_두_번_돌리면_둘째_트레이스가_첫째를_앞_실행으로_들고_출력만_나온다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """끝난 실행에 이어 가기 안내를 찍지 않는다. 찍으면 표준 에러가 비지 않거나 표준 출력이 출력
+    아닌 것을 싣는다(명세 "CLI")."""
+    first_code = main(["run", "echo", "hi", "--traces", "t"])
+    first = _run_id_of(workspace / "t")
+    capsys.readouterr()
+
+    code = main(["run", "echo", "again", "--traces", "t", "--continuation", first])
+
+    out, err = capsys.readouterr()
+    assert first_code == 0
+    assert code == 0
+    assert out == "echo:again\n"
+    assert err == ""
+    traces = {RunId(f.stem): _read(f) for f in _trace_files(workspace / "t")}
+    (second,) = (run_id for run_id in traces if run_id != first)
+    first_started, second_started = traces[first].events[0], traces[second].events[0]
+    assert isinstance(first_started, RunStarted)
+    assert isinstance(second_started, RunStarted)
+    assert first_started.previous_run is None
+    assert second_started.previous_run == first
+
+
+def _missing(directory: Path) -> str:
+    return "run-ghost"
+
+
+def _other_principal(directory: Path) -> str:
+    _write_finished(directory, "run-theirs", principal="someone-else")
+    return "run-theirs"
+
+
+def _unfinished(directory: Path) -> str:
+    _write_started(directory, "run-open", principal=getpass.getuser())
+    return "run-open"
+
+
+def _broken_chain(directory: Path) -> str:
+    _write_finished(directory, "run-broken", principal=getpass.getuser(), previous_run="run-gone")
+    return "run-broken"
+
+
+@pytest.mark.parametrize(
+    ("prepare", "clue"),
+    [
+        (_missing, "이어 갈 앞 실행이 없다"),
+        (_other_principal, "요청한 주체의 실행이 아니라"),
+        (_unfinished, "끝나지 않아 이어 갈 수 없다"),
+        (_broken_chain, "고리의 실행이 없다"),
+    ],
+    ids=["없음", "남의 실행", "끝나지 않음", "고리 깨짐"],
+)
+def test_거절된_이어_가기는_진단과_종료_코드_1이고_트레이스를_남기지_않는다(
+    workspace: Path,
+    capsys: pytest.CaptureFixture[str],
+    prepare: Callable[[Path], str],
+    clue: str,
+) -> None:
+    """실행 식별자를 만들기 전의 거절이라 다른 실행 전 실패와 같은 모양이다(ADR 0022). 남의 실행은
+    주체를 바꿔 손으로 쓴 트레이스다 — CLI 의 주체는 OS 사용자 하나라 달리 만들 수 없다."""
+    previous = prepare(workspace / "t")
+    before = [f.read_bytes() for f in _trace_files(workspace / "t")]
+
+    code = main(["run", "echo", "again", "--traces", "t", "--continuation", previous])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert clue in err
+    assert [f.read_bytes() for f in _trace_files(workspace / "t")] == before
+
+
+def test_이어_간_실행이_멈추면_지금의_안내_줄로_재개되고_재개는_앞_실행을_받지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """재개는 앞 실행을 트레이스가 안다(명세 "CLI"). 안내 줄의 자리가 맞는 것은 요약 이벤트가 둘째
+    프레임이라는 02 의 고정에 기댄다 — 여기서는 요약이 없어 일시정지가 자리 1 이다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    main(["run", "echo", "hi", "--traces", "t"])
+    first = _run_id_of(workspace / "t")
+    capsys.readouterr()
+
+    paused = main(["run", "gated", "hi", "--traces", "t", "--continuation", first])
+    argv = _guidance(capsys.readouterr().out)
+    code = main(argv)
+
+    assert paused == EXIT_PAUSED
+    assert "--continuation" not in argv
+    assert code == 0
+    assert capsys.readouterr().out == "5\n"
+    (second_file,) = [f for f in _trace_files(workspace / "t") if f.stem != first]
+    events = [e for e in _read(second_file).events if not isinstance(e, UnknownEvent)]
+    assert isinstance(events[0], RunStarted)
+    assert events[0].previous_run == first
+    assert [e.type for e in events] == [
+        "run_started",
+        "run_paused",
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "run_finished",
+    ]
+
+
+def _cli_run(request: str, *, cwd: Path, traces: Path, previous: RunId | None = None) -> RunId:
+    """실제 CLI 프로세스로 calc 를 돌리고 새로 생긴 실행의 식별자를 돌려준다. 표준 출력은 출력
+    하나다."""
+    before = {f.stem for f in _trace_files(traces)}
+    continuation = [] if previous is None else ["--continuation", previous]
+    result = _cli(["run", "calc", request, "--traces", str(traces), *continuation], cwd=cwd)
+    assert result.returncode == 0, result.stderr
+    (run_id,) = {f.stem for f in _trace_files(traces)} - before
+    finished = _trace_events(traces / f"{run_id}.jsonl")[-1]
+    assert isinstance(finished, RunFinished)
+    assert result.stdout == finished.output + "\n"
+    return RunId(run_id)
+
+
+def _trace_events(trace_file: Path) -> list[Event]:
+    return [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+
+
+def _copy_repo_plugins(root: Path, *, conversation_limit: int) -> None:
+    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)를 임시 루트에 복사하고 calc 에 한도를
+    적는다."""
+    for kind, name in (("agents", "calc"), ("mcp", "everything")):
+        shutil.copytree(
+            REPO_ROOT / "plugins" / kind / name,
+            root / "plugins" / kind / name,
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+    manifest = root / "plugins" / "agents" / "calc" / "plugin.toml"
+    text = manifest.read_text(encoding="utf-8")
+    manifest.write_text(f"{text}conversation_limit = {conversation_limit}\n", encoding="utf-8")
+
+
+@pytest.mark.llm
+def test_실제_CLI_로_calc_를_이어_가면_앞_대화를_알고_답한다(tmp_path: Path) -> None:
+    """바깥 이음매. 실제 CLI 프로세스 둘, 실제 Anthropic 호출, 실제 stdio 서버. 둘째 프로세스는
+    첫째가 죽은 뒤 뜨고 트레이스 디렉터리만 공유한다 — "거기"를 아는 것은 트레이스에서 거슬러 읽은
+    교환을 calc 가 프롬프트에 엮었기 때문이다. 플러그인은 저장소의 것 그대로라 한도는 기본값이다."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    traces = tmp_path / "t"
+
+    first = _cli_run("2 더하기 3은?", cwd=REPO_ROOT, traces=traces)
+    second = _cli_run("거기에 4를 곱하면?", cwd=REPO_ROOT, traces=traces, previous=first)
+
+    events = _trace_events(traces / f"{second}.jsonl")
+    assert isinstance(events[0], RunStarted)
+    assert events[0].previous_run == first
+    assert isinstance(events[-1], RunFinished)
+    assert "20" in events[-1].output
+    assert not any(isinstance(e, ConversationSummarized) for e in events)
+
+
+@pytest.mark.llm
+def test_한도를_작게_적은_calc_의_셋째_이어_가기는_요약을_지나고_여전히_앞_대화를_안다(
+    tmp_path: Path,
+) -> None:
+    """한도 30. 첫 교환은 요청 25자와 답(모델이 "5"면 1자)으로 26이라 둘째 이어 가기에서 한도
+    안이고, 둘째 교환 "거기에 4를 곱하면?"(11자)과 답("20"이면 2자)의 13을 더한 39 가 한도를 넘어
+    셋째에서 계기가 선다(명세 Testing "바깥 이음매"). 절반 15 안에 둘째 교환(13)이 들어 원문 꼬리로
+    남고 첫 교환만 접히므로 덮는 끝은 첫 실행이다. 목표 글자 수는 30 의 4 분의 1 을 올림한 8 이다.
+    셋째가 "거기"를 아는 것은 원문 꼬리의 둘째 답이다 — 첫 요청을 25자로 늘린 이유다. 한도 22 로
+    둘째 교환까지 접었을 때는 목표 6 자의 요약이 "5" 하나였고(2026-10-05 손으로 돌려 봤다, 일지)
+    셋째가 -1 을 냈다. 작은 목표의 요약이 무엇을 남기는지는 모델의 몫이라 거기에 단언을 걸지
+    않는다. 트레이스 디렉터리는 앞의 둘과 같다."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _copy_repo_plugins(tmp_path, conversation_limit=30)
+    traces = tmp_path / "t"
+
+    first = _cli_run("2 더하기 3은? 답은 숫자 하나만 적어 줘.", cwd=tmp_path, traces=traces)
+    second = _cli_run("거기에 4를 곱하면?", cwd=tmp_path, traces=traces, previous=first)
+    third = _cli_run("거기에서 6을 빼면?", cwd=tmp_path, traces=traces, previous=second)
+
+    events = _trace_events(traces / f"{third}.jsonl")
+    types = [e.type for e in events]
+    assert types[:2] == ["run_started", "conversation_summarized"]
+    assert types[-1] == "run_finished"
+    summarized = events[1]
+    assert isinstance(summarized, ConversationSummarized)
+    assert summarized.last_covered_run == first
+    (called,) = (e for e in events if isinstance(e, LlmCalled) and e.prompt)
+    assert "거기에 4를 곱하면?" in called.prompt  # 둘째 교환은 접히지 않고 원문으로 실렸다
+    assert summarized.input_tokens > 0
+    assert summarized.output_tokens > 0
+    assert isinstance(events[-1], RunFinished)
+    assert "14" in events[-1].output

@@ -206,3 +206,35 @@ def test_포트_상한은_그대로_받는다() -> None:
 
     assert isinstance(args, ServeArgs)
     assert args.port == MAX_PORT
+
+
+def test_실행_명령은_이어_갈_앞_실행을_옵션으로_받고_없으면_새_대화다() -> None:
+    """낱말은 HTTP 경로 `/runs/{run_id}/continuation` 과 같다(conversation 명세 "CLI"). 없음은 새
+    대화라는 뜻 하나뿐이고 고리를 짐작하는 기본값이 없다(ADR 0022)."""
+    continued = parse_args(["run", "calc", "거기에 4를 곱하면?", "--continuation", "run-1"])
+    fresh = parse_args(["run", "calc", "2 더하기 3은?"])
+
+    assert isinstance(continued, RunArgs)
+    assert continued.previous_run == "run-1"
+    assert isinstance(fresh, RunArgs)
+    assert fresh.previous_run is None
+
+
+def test_재개와_serve_는_앞_실행을_받지_않는다() -> None:
+    """재개는 앞 실행을 트레이스가 안다. serve 는 바뀌지 않는다. 인자 오류(종료 코드 2)다."""
+    with pytest.raises(SystemExit) as resumed:
+        parse_args(
+            ["resume", "run-1", "--pause-index", "2", "--approve", "--continuation", "run-0"]
+        )
+    with pytest.raises(SystemExit) as served:
+        parse_args(["serve", "--continuation", "run-0"])
+
+    assert resumed.value.code == 2
+    assert served.value.code == 2
+
+
+def test_실행_명령의_도움말에_이어_가기_옵션이_든다(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        parse_args(["run", "--help"])
+
+    assert "--continuation" in capsys.readouterr().out
