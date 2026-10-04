@@ -1504,18 +1504,31 @@ def _trace_events(trace_file: Path) -> list[Event]:
     return [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
 
 
-def _copy_repo_plugins(root: Path, *, conversation_limit: int) -> None:
-    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)를 임시 루트에 복사하고 calc 에 한도를
-    적는다."""
+def _copy_repo_plugins(root: Path) -> None:
+    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)를 임시 루트에 복사한다."""
     for kind, name in (("agents", "calc"), ("mcp", "everything")):
         shutil.copytree(
             REPO_ROOT / "plugins" / kind / name,
             root / "plugins" / kind / name,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
+
+
+def _set_conversation_limit(root: Path, limit: int) -> None:
+    """임시 루트의 calc 매니페스트에 한도를 적는다. 매니페스트는 실행마다 시작 때 읽히므로 앞의
+    실행이 끝난 뒤에 적어도 다음 실행에 든다."""
     manifest = root / "plugins" / "agents" / "calc" / "plugin.toml"
     text = manifest.read_text(encoding="utf-8")
-    manifest.write_text(f"{text}conversation_limit = {conversation_limit}\n", encoding="utf-8")
+    manifest.write_text(f"{text}conversation_limit = {limit}\n", encoding="utf-8")
+
+
+def _exchange_size(traces: Path, run_id: RunId) -> int:
+    """그 실행이 남긴 교환의 글자 수. 런타임이 한도에 세는 것과 같은 식(요청과 출력의 `len`)이다."""
+    events = _trace_events(traces / f"{run_id}.jsonl")
+    started, finished = events[0], events[-1]
+    assert isinstance(started, RunStarted)
+    assert isinstance(finished, RunFinished)
+    return len(started.request) + len(finished.output)
 
 
 @pytest.mark.llm
@@ -1541,20 +1554,24 @@ def test_실제_CLI_로_calc_를_이어_가면_앞_대화를_알고_답한다(tm
 def test_한도를_작게_적은_calc_의_셋째_이어_가기는_요약을_지나고_여전히_앞_대화를_안다(
     tmp_path: Path,
 ) -> None:
-    """한도 30. 첫 교환은 요청 25자와 답(모델이 "5"면 1자)으로 26이라 둘째 이어 가기에서 한도
-    안이고, 둘째 교환 "거기에 4를 곱하면?"(11자)과 답("20"이면 2자)의 13을 더한 39 가 한도를 넘어
-    셋째에서 계기가 선다(명세 Testing "바깥 이음매"). 절반 15 안에 둘째 교환(13)이 들어 원문 꼬리로
-    남고 첫 교환만 접히므로 덮는 끝은 첫 실행이다. 목표 글자 수는 30 의 4 분의 1 을 올림한 8 이다.
-    셋째가 "거기"를 아는 것은 원문 꼬리의 둘째 답이다 — 첫 요청을 25자로 늘린 이유다. 한도 22 로
-    둘째 교환까지 접었을 때는 목표 6 자의 요약이 "5" 하나였고(2026-10-05 손으로 돌려 봤다, 일지)
-    셋째가 -1 을 냈다. 작은 목표의 요약이 무엇을 남기는지는 모델의 몫이라 거기에 단언을 걸지
-    않는다. 트레이스 디렉터리는 앞의 둘과 같다."""
+    """한도는 앞 교환 둘의 글자 수 합보다 1 작게, 둘째 실행이 끝난 뒤 실제 트레이스에서 정한다 —
+    모델의 답 길이에 기대지 않기 위해서다(명세 Testing "바깥 이음매"). 앞의 둘은 기본 한도(20,000)로
+    돌아 요약이 없고, 셋째만 한도를 넘어 계기가 선다. 첫 요청이 25자라 둘째 교환(11자와 답)은 절반
+    안에 들어 원문 꼬리로 남고 첫 교환만 접힌다(덮는 끝은 첫 실행). 모델이 "5"와 "20"이라 답하면
+    교환은 26과 13, 한도는 38, 절반 19, 목표 10이다. 셋째가 "거기"를 아는 것은 원문 꼬리의 둘째
+    답이다. 명세 문장 그대로 한도 22 로 둘째 교환까지 접었을 때는 목표 6 자의 요약이 "5" 하나라
+    셋째가 -1 을 낸 실행이 있었다(2026-10-05, 일지). 작은 목표의 요약이 무엇을 남기는지는 모델의
+    몫이라 거기에 단언을 걸지 않는다. 트레이스 디렉터리는 앞의 둘과 같다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
-    _copy_repo_plugins(tmp_path, conversation_limit=30)
+    _copy_repo_plugins(tmp_path)
     traces = tmp_path / "t"
 
     first = _cli_run("2 더하기 3은? 답은 숫자 하나만 적어 줘.", cwd=tmp_path, traces=traces)
     second = _cli_run("거기에 4를 곱하면?", cwd=tmp_path, traces=traces, previous=first)
+    sizes = _exchange_size(traces, first), _exchange_size(traces, second)
+    limit = sum(sizes) - 1
+    assert sizes[1] <= limit // 2, f"둘째 교환이 꼬리에 남지 않는다: 교환 {sizes}, 한도 {limit}"
+    _set_conversation_limit(tmp_path, limit)
     third = _cli_run("거기에서 6을 빼면?", cwd=tmp_path, traces=traces, previous=second)
 
     events = _trace_events(traces / f"{third}.jsonl")
