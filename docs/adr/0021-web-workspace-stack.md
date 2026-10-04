@@ -5,7 +5,7 @@ date: 2026-09-28
 
 # web 워크스페이스의 스택과 API 클라이언트는 계약에서 생성해 커밋한다
 
-`tech.md`는 웹을 "Next.js, pnpm 워크스페이스, `web/`"까지만 적고 나머지는 슬라이스 3 인터뷰로 넘겼다. 넘긴 것은 pages의 자리와 일지 2026-09-19의 09-20 절이 남긴 스택 선택이다. 의존성을 더하려면 ADR을 남긴다. **`web/`은 pnpm 11 워크스페이스이고 Node 24, TypeScript 5.9다(ADR 0020). 관리 화면은 Next 16과 React 19다. 스타일은 Tailwind와 직접 만든 atoms이고 아이콘은 lucide-react를 서브패스로 import한다. (바뀜: 이력 2026-10-03 "관리 화면은 스타일과 아이콘을 들이지 않았고 위젯이 처음 들인다") 서버 데이터는 SWR, 클라이언트 상태는 Zustand다(persist를 sessionStorage에 걸고 토큰만 partialize). `packages/api-client`는 openapi-typescript와 openapi-fetch로 `openapi.json`에서 생성하고, 생성물을 커밋해 최신성을 검사한다. 린트는 ESLint(typescript-eslint, eslint-plugin-boundaries)이고 포맷은 Prettier다. 테스트는 Vitest(jsdom)와 MSW이고, 끝에서 끝은 픽스처로 띄운 `agent-os serve`에 대고 Playwright가 돈다.** 생성물을 커밋하는 이유는 `openapi.json`을 커밋하는 이유와 같다(ADR 0010). 계약을 바꾸는 PR에 생성 diff가 함께 보이고, 설치하지 않은 리뷰어와 봇도 그것을 읽는다.
+`tech.md`는 웹을 "Next.js, pnpm 워크스페이스, `web/`"까지만 적고 나머지는 슬라이스 3 인터뷰로 넘겼다. 넘긴 것은 pages의 자리와 일지 2026-09-19의 09-20 절이 남긴 스택 선택이다. 의존성을 더하려면 ADR을 남긴다. **`web/`은 pnpm 11 워크스페이스이고 Node 24, TypeScript 5.9다(ADR 0020). 관리 화면은 Next 16과 React 19다. 스타일은 Tailwind와 직접 만든 atoms이고 아이콘은 lucide-react를 서브패스로 import한다. (바뀜: 이력 2026-10-03 "관리 화면은 스타일과 아이콘을 들이지 않았고 design-system이 처음 들인다") 서버 데이터는 SWR, 클라이언트 상태는 Zustand다(persist를 sessionStorage에 걸고 토큰만 partialize). `packages/api-client`는 openapi-typescript와 openapi-fetch로 `openapi.json`에서 생성하고, 생성물을 커밋해 최신성을 검사한다. 린트는 ESLint(typescript-eslint, eslint-plugin-boundaries)이고 포맷은 Prettier다. 테스트는 Vitest(jsdom)와 MSW이고, 끝에서 끝은 픽스처로 띄운 `agent-os serve`에 대고 Playwright가 돈다.** 생성물을 커밋하는 이유는 `openapi.json`을 커밋하는 이유와 같다(ADR 0010). 계약을 바꾸는 PR에 생성 diff가 함께 보이고, 설치하지 않은 리뷰어와 봇도 그것을 읽는다.
 
 ## Considered Options
 
@@ -184,16 +184,18 @@ PR #119에서 이 단계를 실제로 돌렸다. 바꾼 커밋 그대로의 실�
   `gh`·`jq`도 같다. 갈리는 것은 모으는 잡이 작업 트리를 체크아웃하지 않고 `contents` 권한도 없다는 지금의 경계가
   사라지는 것이다.
 
-### 2026-10-03 관리 화면은 스타일과 아이콘을 들이지 않았고 위젯이 처음 들인다
+### 2026-10-03 관리 화면은 스타일과 아이콘을 들이지 않았고 design-system이 처음 들인다
 
 위젯 설계 인터뷰에서 손으로 확인했다. 위 결정은 "스타일은 Tailwind와 직접 만든 atoms이고 아이콘은 lucide-react를
 서브패스로 import한다"고 적었다. 그러나 web-admin은 셋 중 아무것도 들이지 않고 닫혔다. `web/pnpm-lock.yaml`에
 tailwind는 0건이고, 관리 화면에는 Tailwind와 lucide를 쓰는 파일이 없으며, `components/`에 `atoms/` 폴더가 없다
 (`776b074`). 아이콘이 끝내 들어오지 않은 것은 web-admin이 web-widget에 넘긴 (8)이 이미 적었다.
 
-**위젯이 Tailwind와 lucide-react 서브패스를 처음 들인다(ADR 0024). 관리 화면은 지금처럼 둔다.** 관리 화면에
-들이는 일은 `plan.md`의 admin-style로 따로 올린다. 위젯이 관리 화면의 스타일 작업까지 맡으면 범위가 web-widget 밖으로
-커진다.
+**Tailwind는 design-system이 토큰과 함께 처음 들이고(ADR 0025), 위젯(ADR 0024)과 관리 화면이 그것을 쓴다. 관리
+화면은 그때까지 지금처럼 둔다.** 관리 화면에 들이는 일은 `plan.md`의 admin-style로 따로 올린다. 기능 순서가
+design-system을 web-widget보다 앞에 두므로, 처음 들이는 것은 위젯이 아니다. 측정은 위젯의 모양으로 했다
+(`.scratch/web-widget/probes/widget_tailwind/`). 아이콘(lucide-react 서브패스)도 처음 들이는 기능의 티켓이 ADR
+0024의 측정을 따른다.
 
 **공유 atoms(`packages/ui`)와 Storybook은 web-widget이 정하지 않고 design-system 기능에 넘긴다.** 위 Considered
 Options가 위젯에서 다시 보라고 넘긴 둘이다. 같은 인터뷰가 두 앱이 디자인 시스템 하나를 나누기로 해서(ADR 0025), 무엇을
