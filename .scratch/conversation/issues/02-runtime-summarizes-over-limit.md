@@ -61,7 +61,7 @@
 
 근거와 대안은 일지 `docs/journal/2026-10-04-04-runtime-summarizes.md`.
 
-1. **거슬러 읽기와 요약은 `core/continuation.py`다.** 01이 넘긴 메모의 결정. `run.py`가 바뀌는 이유(실행을 모는 것)와 갈린다. 포트는 늘지 않는다. 공개 이름은 함수 `continued`, `resumed`, `plan_fold`, `summarize`, `limit_of`, `read_link`, `link_of`, `check_record_rules`, 값 `Link`, `OwnRun`, `Gathered`, `Fold`, 상수 `DEFAULT_CONVERSATION_LIMIT`, `SUMMARY_INSTRUCTIONS`, `NEW_CONVERSATION`. 밑줄 이름은 `run.py`가 부르지 않는 것이다.
+1. **거슬러 읽기와 요약은 `core/continuation.py`다.** 01이 넘긴 메모의 결정. `run.py`가 바뀌는 이유(실행을 모는 것)와 갈린다. 포트는 늘지 않는다. 공개 이름은 함수 `gather_continued`, `resumed_conversation`, `plan_fold`, `summarize`, `limit_of`, `read_link`, `link_of`, `check_record_rules`, 값 `Link`, `OwnRun`, `Gathered`, `Fold`, 상수 `DEFAULT_CONVERSATION_LIMIT`, `SUMMARY_INSTRUCTIONS`, `NEW_CONVERSATION`. 밑줄 이름은 `run.py`가 부르지 않는 것이다.
 2. **첫 실행의 주체·끝남은 부르는 쪽이 판정해 `_walk`에 `run_finished`와 함께 넘긴다.** `run()`은 하위 타입으로, `resume()`은 `PluginError`로. `_walk`가 첫 링크에 죽은 분기를 두지 않는다(01 메모). `_require_link`는 `check_record_rules`(기록 규칙, 명령)와 `_finished_of`(주체·끝남, 값을 돌려줌)로 갈랐다.
 3. **요약 이벤트의 자리들은 `Link.summary_at`에 한 번 세고 `check_record_rules`가 판정한다**(claude-review 5회차 Minor).
 4. **재개의 자기 트레이스 검증은 손상 자리다.** `_read_paused`가 `link_of` + `check_record_rules`로 읽어 앞 실행 필드의 패턴과 요약의 자리·개수를 일시정지 판정보다 앞에 본다. 이어 가지 않은 실행(고리의 처음과 재개하는 실행 자신)에 요약 이벤트가 있는 것도 기록 규칙 `check_record_rules`의 `PluginError`다(요구에 없던 한 줄. 런타임이 만들 수 없는 모양이라 손상이다. 셀프 리뷰가 `resumed()`에만 있던 것을 기록 규칙으로 옮겼다).

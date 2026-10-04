@@ -33,8 +33,8 @@ PR도, `.scratch/end-user-channel/`도 없었다. 값 기반 마스킹의 ADR 00
   모듈이라 ADR은 두지 않았다(작업 규약 1의 네 상황에 들지 않는다). 테스트는 주 이음매 `run()`·`resume()` 그대로라 `tests/core/test_run.py`에
   있다. 이름을 `conversation.py`로 하지 않은 것은 `sdk/conversation.py`와 겹쳐서다.
 - **`_walk`가 첫 실행의 `run_finished`를 받는다.** 01 메모의 "`_walk`가 첫 링크에 `_require_link`를 다시 돌려 주체·끝남이 그 링크에서 죽은
-  분기"를 없앤 모양이다. 첫 실행의 주체·끝남은 부르는 쪽이 제 예외 타입으로 판정하고(`continued`는 하위 타입, `resumed`는 `PluginError`)
-  다음 실행부터 `_finished_of`가 본다. `continued`와 `resumed`의 "패턴 → 읽기 → None" 세 줄 중복은 그대로 두었다. 예외 타입이 곧 뜻이라
+  분기"를 없앤 모양이다. 첫 실행의 주체·끝남은 부르는 쪽이 제 예외 타입으로 판정하고(`gather_continued`는 하위 타입, `resumed_conversation`은 `PluginError`)
+  다음 실행부터 `_finished_of`가 본다. `gather_continued`와 `resumed_conversation`의 "패턴 → 읽기 → None" 세 줄 중복은 그대로 두었다. 예외 타입이 곧 뜻이라
   두 함수가 각자 읽히는 것이 낫다는 01 리뷰어의 판단과 같다.
 - **`_require_link`를 둘로 갈랐다.** 기록 규칙(`check_record_rules`, 명령)과 주체·끝남(`_finished_of`, 값을 돌려줌). 01 메모의 CQS 지적
   (`require`가 값을 돌려준다)이 이것으로 닫힌다. `check_record_rules`는 재개의 첫 걸음도 쓴다 — 자기 트레이스의 요약 자리·개수 검증을 고리의
@@ -81,14 +81,31 @@ PR도, `.scratch/end-user-channel/`도 없었다. 값 기반 마스킹의 ADR 00
     `resumed()`의 요구에 없던 한 줄은 수용(위 Minor로 자리가 옮겨 갔다). 티켓의 공개 이름 목록에 값 타입 넷과 `read_link`가 빠져 목록을
     코드에 맞췄다.
   - 표준 축이 브리프의 네 물음에 답했다. 모듈 분리가 Divergent Change를 해소하고 Shotgun은 아니다. `_walk`는 순수 질의라 CQS에 맞다.
-    `continued`·`resumed`의 두 줄 중복은 예외 타입이 뜻이라 허용. 변이 "재개가 다시 판정한다"는 논리가 아니라 증상을 심은 약한 변이라는
+    `gather_continued`·`resumed_conversation`의 두 줄 중복은 예외 타입이 뜻이라 허용. 변이 "재개가 다시 판정한다"는 논리가 아니라 증상을 심은 약한 변이라는
     판단 항목을 받았다 — 재개 경로에는 판정 코드 자체가 없어 되돌릴 논리가 없고, 그 테스트가 무는지만 보는 변이로 두었다.
 - 고친 뒤 검증 명령을 모두 다시 돌렸다(아래 검사 절). 원문이 옮겨 간 변이 하나를 `--check`가 잡아 고치고, 바뀐 코드를 겨눈 변이 셋을 다시
   돌려 빨강을 봤다.
 
+## PR 리뷰
+
+PR #132. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다. 푸시 뒤 `@coderabbitai review`를 남겼다.
+
+> 사용자: "끝났어?"
+
+1회차(`71cd8d0`). CI 여섯이 초록이었다(`gh run list`로 그 커밋의 실행인 것을 봤다). CodeRabbit은 `4112d2b..71cd8d0`를 실제로 보고 지적이
+없었다. claude-review는 Critical·Major 0, Minor 1, Nit 2를 냈고 셋 다 반영했다.
+
+- **Minor(반영): `run()` 본문의 요약 `try/except`와 실패 이벤트 조립.** "에러 처리와 정상 흐름을 분리한다"에 걸렸다. `_summary_outcome`이
+  요약 이벤트나 `RunFailed`를 돌려주고 `run()`은 쓰고 흘린 뒤 실패면 돌아간다. 그 자리를 겨눴던 변이("요약 이벤트를 쓰기만 하고 흘리지
+  않는다")의 원문을 `--check`가 잡아 고치고 다시 돌려 빨강을 봤다.
+- **Nit(반영): 모듈 독스트링이 한도·절반·4분의 1·실패 정책을 `core.md`·명세와 세 곳에 되풀이했다.** 독스트링은 이유와 포인터만 남기고
+  규칙은 `core.md`의 "대화 요약" 항목 하나에 두었다(`CLAUDE.md`의 "같은 사실은 한 곳에").
+- **Nit(반영): `continued`·`resumed`가 과거분사.** `gather_continued`·`resumed_conversation`으로. 같은 파일의 `read_link`·`plan_fold`·
+  `summarize`와 어휘를 맞췄다. 티켓의 공개 이름 목록과 변이 표의 원문 둘을 같이 고쳤다.
+
 ## 검사
 
-판정 명령은 파이프 없이 스크립트 파일(`gates.sh`)로 돌리고 종료 코드를 모았다.
+판정 명령은 파이프 없이 스크립트 파일(`gates.sh`)로 돌리고 종료 코드를 모았다. PR 리뷰 반영 뒤 전부 다시 돌렸다.
 
 - pytest 1408 passed, 4 deselected(경고 셋은 변경 전부터 있던 pytest-asyncio의 것)
 - ruff check와 ruff format 통과
@@ -99,7 +116,7 @@ PR도, `.scratch/end-user-channel/`도 없었다. 값 기반 마스킹의 ADR 00
 - `uv run --env-file .env pytest -m llm` 4 passed. core 실행 모듈을 건드렸으므로 돌렸다. `--basetemp`로 남긴 트레이스 셋이 모두 형식 3이고
   `llm_called` 6건의 토큰 합계는 7,105(입력 6,895, 출력 210)다. 리뷰 반영 전후로 두 번 돌렸고 두 번 다 같은 합계였다. 새 LLM
   사례(셋째 이어 가기의 요약)는 03이다. 토큰 합계는 스크래치의 스크립트가 트레이스의 `llm_called`를 더해 냈다.
-- 변이 17 모두 기대대로, 리뷰 반영 뒤 바뀐 코드를 겨눈 셋을 다시 돌려 기대대로(프로브 README).
+- 변이 17 모두 기대대로. 셀프 리뷰 반영 뒤 바뀐 코드를 겨눈 셋, PR 리뷰 반영 뒤 셋을 다시 돌려 기대대로(프로브 README).
 
 ## 회고
 

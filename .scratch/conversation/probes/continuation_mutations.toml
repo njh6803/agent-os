@@ -117,14 +117,18 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    gathered = None if previous_run is None else continued(trace, previous_run, agent, principal)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+    )
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
 '''
 new = '''
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
-    gathered = None if previous_run is None else continued(trace, previous_run, agent, principal)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+    )
 '''
 
 [[mutation]]
@@ -259,10 +263,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    conversation = resumed(trace, own)
+    conversation = resumed_conversation(trace, own)
 '''
 new = '''
-    conversation = resumed(trace, own)
+    conversation = resumed_conversation(trace, own)
     trace.write(
         ConversationSummarized(
             run_id=run_id,
@@ -386,9 +390,9 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-        trace.write(summarized)
-        yield summarized
+        trace.write(outcome)
+        yield outcome
 '''
 new = '''
-        trace.write(summarized)
+        trace.write(outcome)
 '''

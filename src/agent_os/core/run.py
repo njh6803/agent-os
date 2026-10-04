@@ -59,13 +59,14 @@ from langchain_core.messages import AIMessage, BaseMessage
 
 from agent_os.core.continuation import (
     NEW_CONVERSATION,
+    Fold,
     Link,
     check_record_rules,
-    continued,
+    gather_continued,
     limit_of,
     link_of,
     plan_fold,
-    resumed,
+    resumed_conversation,
     summarize,
 )
 from agent_os.core.loop import ModelCaller, model_caller, run_loop
@@ -467,7 +468,9 @@ async def run(
     식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고
     이벤트 루프 위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
     """
-    gathered = None if previous_run is None else continued(trace, previous_run, agent, principal)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+    )
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
     fold = None if gathered is None else plan_fold(gathered, limit_of(manifest))
@@ -485,21 +488,12 @@ async def run(
     if fold is None:
         conversation = NEW_CONVERSATION if gathered is None else gathered.conversation()
     else:
-        # 요약은 에이전트를 부르기 전, 시작 이벤트 바로 뒤다(ADR 0022). 실패하면 요약 이벤트 없이
-        # run_failed 이고 도구도 연결하지 않는다. 다시 시도하지도 원문으로 진행하지도 않는다 —
-        # 같은 앞 실행으로 다시 이어 가는 것이 곧 다시 시도다(core/continuation.py).
-        try:
-            summarized = await summarize(model, fold, run_id, clock)
-        except Exception as error:
-            failed = RunFailed(
-                run_id=run_id, ts=clock.now(), error=f"대화 요약이 실패했다: {_describe(error)}"
-            )
-            trace.write(failed)
-            yield failed
+        outcome = await _summary_outcome(model, fold, run_id, clock)
+        trace.write(outcome)
+        yield outcome
+        if isinstance(outcome, RunFailed):
             return
-        trace.write(summarized)
-        yield summarized
-        conversation = fold.conversation(summarized.summary)
+        conversation = fold.conversation(outcome.summary)
     async for event in _drive(
         prepared,
         started,
@@ -551,7 +545,7 @@ async def resume(
     """
     own, paused, records = _read_paused(trace, run_id, pause_index)
     started = own.started
-    conversation = resumed(trace, own)
+    conversation = resumed_conversation(trace, own)
     prepared = _prepare(plugins, _recorded_manifest(plugins, started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
@@ -649,6 +643,23 @@ async def _drive(
     if not paused and not isinstance(last, RunFinished):
         yield emit(
             RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")
+        )
+
+
+async def _summary_outcome(
+    model: ChatModel, fold: Fold, run_id: RunId, clock: Clock
+) -> ConversationSummarized | RunFailed:
+    """요약 이벤트, 또는 요약이 실패한 실행의 결말. 에이전트를 부르기 전, 시작 이벤트 바로 뒤다.
+
+    실패(모델 예외, 빈 요약 글)는 요약 이벤트 없이 run_failed 이고 도구도 연결하지 않는다. 다시
+    시도하지도 원문으로 진행하지도 않는다 — 같은 앞 실행으로 다시 이어 가는 것이 곧 다시 시도다
+    (ADR 0022, core/continuation.py).
+    """
+    try:
+        return await summarize(model, fold, run_id, clock)
+    except Exception as error:
+        return RunFailed(
+            run_id=run_id, ts=clock.now(), error=f"대화 요약이 실패했다: {_describe(error)}"
         )
 
 
