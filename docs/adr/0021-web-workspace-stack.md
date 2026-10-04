@@ -194,8 +194,8 @@ tailwind는 0건이고, 관리 화면에는 Tailwind와 lucide를 쓰는 파일�
 **Tailwind는 design-system이 토큰과 함께 처음 들이고(ADR 0025), 위젯(ADR 0024)과 관리 화면이 그것을 쓴다. 관리
 화면은 그때까지 지금처럼 둔다.** 관리 화면에 들이는 일은 `plan.md`의 admin-style로 따로 올린다. 기능 순서가
 design-system을 web-widget보다 앞에 두므로, 처음 들이는 것은 위젯이 아니다. 측정은 위젯의 모양으로 했다
-(`.scratch/web-widget/probes/widget_tailwind/`). 아이콘(lucide-react 서브패스)도 처음 들이는 기능의 티켓이 ADR
-0024의 측정을 따른다.
+(`.scratch/web-widget/probes/widget_tailwind/`). 아이콘(lucide-react 서브패스)도 design-system이 처음
+들이고, 그 티켓이 ADR 0024의 측정을 따른다.
 
 **공유 atoms(`packages/ui`)와 Storybook은 web-widget이 정하지 않고 design-system 기능에 넘긴다.** 위 Considered
 Options가 위젯에서 다시 보라고 넘긴 둘이다. 같은 인터뷰가 두 앱이 디자인 시스템 하나를 나누기로 해서(ADR 0025), 무엇을
