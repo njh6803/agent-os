@@ -69,7 +69,7 @@ PR도, `.scratch/end-user-channel/`도 없었다. 값 기반 마스킹의 ADR 00
 `/code-review main`을 두 축 병렬로 돌렸다. 범위는 base `4112d2b`, 수정 10, 커밋 0, 미추적 1(`core/continuation.py`)이었다.
 
 - **표준 축**: Critical·Major 0, Minor 4, Nit 5. **명세 축**: Critical·Major 0, Minor 0, Nit 3.
-  - **Minor(표준, 반영) 넷.** 모듈 독스트링의 닫힌 주장 "TraceStore.read 와 ChatModel 만 쓴다"에 반례 `Clock.now`가 있어 셋으로 고쳤다.
+  - **Minor(표준, 반영) 넷.** 모듈 독스트링의 닫힌 주장(쓰는 포트가 TraceStore.read 와 ChatModel 둘뿐이라는 문장)에 반례 `Clock.now`가 있어 셋으로 고쳤다.
     "이어 가지 않은 실행에 요약 이벤트" 규칙이 `resumed()`에만 있어 고리의 처음이 같은 모양이면 지나갔다 — 기록 규칙 함수로 옮겨 고리의
     실행과 재개하는 실행 자신에 같이 걸린다. 그러자 고리의 처음에 자리 어긋난 요약을 둔 기존 사례가 "자리" 대신 새 문구를 들어, 새 규칙을
     자리·개수 검사 뒤에 두었다. `_read_paused`가 `started`와 `own`을 따로 돌려주던 것(한 `Link`에서 나온 둘)을 `Link` 하나로 바꾸고
