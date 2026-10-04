@@ -37,13 +37,20 @@ class BaseEvent(BaseModel):
     ts: AwareDatetime
 
 
+# previous_run 은 이 실행이 이어 간 앞 실행이고 대화의 고리는 이 필드 하나로 파생된다(ADR 0022).
+# 기본값이 None 인 것은 형식 1·2 트레이스의 줄에 이 키가 없기 때문이다 — 기본값이 있어야 그 줄이
+# 손상이 아니다. 직렬화 스키마에서는 BaseEvent 의 설정대로 required 이고 null 을 허락한다. sdk 의
+# 식별자 패턴을 걸지 않는 것은 이벤트의 run_id 와 같은 규칙이다. 패턴 위반은 거슬러 읽기가 기록의
+# 손상으로 판정한다. 모델에 걸면 그 판정이 단건 읽기의 손상으로 옮고, 손편집 사례를 타입 있는 가짜로
+# 만들 수 없다.
 class RunStarted(BaseEvent):
-    """실행이 시작됐다. 에이전트와 요청과 주체를 든다. 런타임이 낸다."""
+    """실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다."""
 
     type: Literal["run_started"] = "run_started"
     agent: AgentName
     request: str
     principal: Principal
+    previous_run: RunId | None = None
 
 
 class ToolCall(BaseModel):
@@ -129,6 +136,26 @@ class RunFailed(BaseEvent):
     error: str
 
 
+# 이어 간 실행의 트레이스에서 run_started 바로 뒤에 서고 실행 하나에 많아야 하나다(ADR 0022).
+# 런타임이 그 에이전트의 앞 요약과 오래된 교환을 그 실행의 모델로 접은 글이고, 다음 이어 가기의
+# 거슬러 읽기가 트레이스에서 읽는 입력이다. 그래서 런타임만 낸다 — 에이전트가 이 종류를 yield 하면
+# 그 실행은 run_failed 다. 에이전트가 지어낸 요약이 통과하면 런타임의 것과 가를 수 없다. summary 가
+# `text` 가 아닌 이유는 관리 화면의 필드 이름 표가 `text` 에 "응답 텍스트"를 붙이기 때문이다.
+# last_covered_run 은 이 요약이 덮는 범위의 끝, 곧 덮인 교환 가운데 가장 최근 실행이다. 시작은 적지
+# 않는다 — 새 요약은 언제나 앞 요약을 접어 만들어지므로 시작은 고리에서 그 에이전트의 첫 교환이다.
+# 거슬러 읽기는 가장 가까운 요약을 만나면 덮는 끝의 실행까지만 가고 그 실행은 읽지 않는다. 식별자에
+# 패턴을 걸지 않는 이유는 RunStarted.previous_run 과 같다. 토큰 수는 요약에 든 비용이 보이게 한다.
+class ConversationSummarized(BaseEvent):
+    """런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다."""
+
+    type: Literal["conversation_summarized"] = "conversation_summarized"
+    summary: str
+    last_covered_run: RunId
+    model: str
+    input_tokens: int
+    output_tokens: int
+
+
 Event = Annotated[
     RunStarted
     | LlmCalled
@@ -138,6 +165,7 @@ Event = Annotated[
     | ApprovalDenied
     | RunResumed
     | RunFinished
-    | RunFailed,
+    | RunFailed
+    | ConversationSummarized,
     Field(discriminator="type"),
 ]

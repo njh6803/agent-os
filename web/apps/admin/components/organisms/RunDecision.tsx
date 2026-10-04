@@ -66,7 +66,8 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
 /**
  * 결정 자리와 재개 스트림(web-admin 티켓 08). 실행 하나의 이벤트 아래에 선다.
  *
- * 결정 자리가 보이는 조건은 셋이다. 채널 토큰이 있고, 실행이 일시정지이고, 형식 2 트레이스다. 형식 1 이면 두지 않는다.
+ * 결정 자리가 보이는 조건은 셋이다. 채널 토큰이 있고, 실행이 일시정지이고, 형식 1 트레이스가 아니다. 형식 1 만 재개할 수
+ * 없으므로 "형식 1 이 아니다"로 가른다 — 형식이 늘 때마다 결정 자리가 조용히 사라지지 않게(conversation 명세, 스토리 56).
  * 재개할 수 없다는 이유는 실행 하나의 한 줄이 이미 말한다(스토리 52). 결정 뒤의 알림과 재개 스트림은 결정 자리 밖에
  * 선다. 다시 읽은 트레이스가 일시정지가 아니면 결정 자리는 걷히지만 무엇이 있었는지는 남는다.
  */
@@ -74,7 +75,7 @@ export function RunDecision({ runId, trace }: { readonly runId: string; readonly
   const channelToken = useTokens((state) => state.channelToken);
   const { busy, frames, cut, failure, decide } = useDecision(runId);
   const streamId = useId();
-  const pause = trace.schema_version === "2" ? pauseOf(trace) : null;
+  const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
   const notice = noticeOf(failure, channelToken);
 
   return (

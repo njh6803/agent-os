@@ -9,13 +9,13 @@
 import createClient, { type Client } from "openapi-fetch";
 import type { paths } from "./generated/openapi";
 
-/** 채널 토큰이 여는 경로. 실행을 일으키는 것과 결정을 내는 것이다. */
-type ChannelPath = "/runs" | "/runs/{run_id}/approval";
+/** 채널 토큰이 여는 경로. 실행을 일으키는 것, 결정을 내는 것, 끝난 실행을 이어 가는 것이다. */
+type ChannelPath = "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation";
 
-/** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로 둘을 뺀 것이다. */
+/** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로 셋을 뺀 것이다. */
 export type AdminPaths = Omit<paths, ChannelPath>;
 
-/** 채널 클라이언트가 아는 경로. 관리 화면이 채널에 내는 요청은 결정 하나뿐이다. */
+/** 채널 클라이언트가 아는 경로. 관리 화면이 채널에 내는 요청은 결정 하나뿐이다. 관리는 실행을 일으키지도 이어 가지도 않는다. */
 export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;
 
 export type AdminClient = Client<AdminPaths>;

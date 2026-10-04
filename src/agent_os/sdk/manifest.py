@@ -69,6 +69,14 @@ class PluginManifest(BaseModel):
     # 같은 일을 할 수 있는 도구는 전부 여기 들어가야 한다. 모델이 다른 도구로 우회하는 것은
     # 거부가 아니라 이 목록이 막는다.
     requires_approval: tuple[str, ...] = ()
+    # 에이전트만. 대화에서 이 에이전트가 받는 원문 교환(가장 가까운 자기 대화 요약 뒤의 요청과
+    # 출력)의 글자 수 한도. 넘긴 것이 요약의 대상이고 그 동작(계기, 실패)은 conversation 티켓 02 가
+    # core 에 적는다(ADR 0022, ADR 0008 의 2026-10-03 이력). 없음이 기본이고 숫자 기본값을 두지
+    # 않는다 — 두면 그 숫자가 직렬화 스키마와 관리 API 의 매니페스트 응답에 박혀 기본값을 바꾸는
+    # 것이 계약 변경이 된다. 없음을 기본 한도로 읽는 것은 core 의 몫이다(루프 상한과 같은 자리).
+    # strict 인 이유는 lax 검증이 TOML 의 true 를 1 로, "300" 을 300 으로, 2.0 을 2 로 받기
+    # 때문이다. 0 을 받으면 모든 이어 가기가 요약되고 원문이 남지 않는다.
+    conversation_limit: int | None = Field(default=None, strict=True, ge=1)
     # mcp만
     server: McpServer | None = None
 
@@ -83,6 +91,8 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 mcp 목록을 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "requires_approval" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 requires_approval 목록을 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "conversation_limit" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 conversation_limit 을 갖지 않는다")
         if self.kind is PluginKind.MCP:
             if self.server is None:
                 raise ValueError("mcp 플러그인은 [server] 표가 필요하다 (command, args)")

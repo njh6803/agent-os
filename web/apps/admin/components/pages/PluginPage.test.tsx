@@ -26,6 +26,7 @@ const CALC: Plugin = {
     entrypoint: "agent:Calc",
     mcp: ["everything"],
     requires_approval: ["add"],
+    conversation_limit: null,
     server: null,
   },
 };
@@ -43,6 +44,7 @@ const CALC_MANIFEST = `{
   "requires_approval": [
     "add"
   ],
+  "conversation_limit": null,
   "server": null
 }`;
 

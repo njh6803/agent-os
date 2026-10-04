@@ -4,6 +4,7 @@
 """
 
 import itertools
+import json
 from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
@@ -25,6 +26,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
+from pydantic import BaseModel
 
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
@@ -32,8 +34,10 @@ from agent_os.core.ports import (
     ChatModel,
     Clock,
     Cursor,
+    DifferentPrincipal,
     Disabled,
     ManifestRow,
+    NotContinuable,
     NotResumable,
     PluginError,
     PluginKey,
@@ -57,6 +61,8 @@ from agent_os.sdk import (
     ApprovalDenied,
     ApprovalGranted,
     BaseAgent,
+    Conversation,
+    ConversationSummarized,
     Event,
     Json,
     LlmCalled,
@@ -122,20 +128,37 @@ class FakeClock:
 
 
 class FakeTrace:
-    """쓴 것을 그대로 읽어 준다. schema_version 은 옛 형식을 재개하려는 경우를 만들 때만 준다."""
+    """쓴 것을 그대로 읽어 준다. schema_version 은 옛 형식을 재개하려는 경우를 만들 때만 준다.
 
-    def __init__(self, schema_version: TraceSchemaVersion = "2") -> None:
+    실행마다 다른 형식은 `versions` 에 적는다(형식 1·2 의 끝난 실행을 이어 가는 사례). 읽은 실행
+    식별자를 `reads` 에 쌓아 거슬러 읽기가 어디서 멈추는지 보고, `damaged` 에 든 실행은 마지막 줄
+    앞에 모르는 종류가 낀 채로 읽힌다. `forget` 은 트레이스 파일을 지운 것이다.
+    """
+
+    def __init__(self, schema_version: TraceSchemaVersion = "3") -> None:
         self.events: list[Event] = []
         self._schema_version: TraceSchemaVersion = schema_version
+        self.versions: dict[RunId, TraceSchemaVersion] = {}
+        self.reads: list[RunId] = []
+        self.damaged: set[RunId] = set()
 
     def write(self, event: Event) -> None:
         self.events.append(event)
 
     def read(self, run_id: RunId) -> Trace | None:
+        self.reads.append(run_id)
         events = tuple(e for e in self.events if e.run_id == run_id)
         if not events:
             return None
-        return Trace(run_id=run_id, schema_version=self._schema_version, events=events)
+        stored: tuple[Event | UnknownEvent, ...] = events
+        if run_id in self.damaged:
+            stored = (*events[:-1], UnknownEvent(raw='{"type": "from_the_future"}'), events[-1])
+        version = self.versions.get(run_id, self._schema_version)
+        return Trace(run_id=run_id, schema_version=version, events=stored)
+
+    def forget(self, run_id: RunId) -> None:
+        """그 실행의 트레이스 파일을 지운 것과 같다."""
+        self.events = [e for e in self.events if e.run_id != run_id]
 
     def list(
         self,
@@ -1686,23 +1709,25 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
 # 채널이 실행 전 실패를 상태 코드로 옮기려면 core 가 타입으로 갈라 던져야 한다(ADR 0014). 기준은
 # "깨졌나"다(ADR 0014 의 2026-09-26 이력). 요청이 이름을 댄 것이 없는 것(부재), 요청이 가리킨 실행이
 # 재개할 수 있는 상태가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아닌 것(재개 불가, 뒤의 것은
-# 아래 "결정의 자리" 절), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR 0017)이 하위 타입이다.
-# 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의 판정 순서는 아래 "꺼진
-# 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
+# 아래 "결정의 자리" 절), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR 0017), 이어 갈 앞
+# 실행이 다른 주체의 것이거나 끝나지 않은 것(다른 주체, 이어 갈 수 없음, 아래 "이어 가기" 절)이 하위
+# 타입이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의 판정 순서는
+# 아래 "꺼진 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
 
 _RUN_1 = RunId("run-1")
-# 하위 타입 셋. 깨진 것(하위 타입이 아닌 PluginError)을 단언할 때 이것을 뺀다. 늘면 여기에 더한다.
-_SUBTYPES = (Absent, NotResumable, Disabled)
+# 하위 타입 다섯. 깨진 것(하위 타입이 아닌 PluginError)을 단언할 때 이것을 뺀다. 늘면 여기에 더한다.
+# 다른 주체와 이어 갈 수 없음은 이어 가기의 것이다(아래 "이어 가기" 절, ADR 0022·0023).
+_SUBTYPES = (Absent, NotResumable, Disabled, DifferentPrincipal, NotContinuable)
 
 
-def test_부재와_재개_불가와_꺼짐은_서로_다른_PluginError_의_하위_타입이다() -> None:
+def test_하위_타입_다섯은_서로_겹치지_않는_PluginError_의_하위_타입이다() -> None:
     """기반 타입을 잡는 채널(CLI)이 하위 타입도 잡는다는 전제다. 진단과 종료 코드가 그대로라는
-    것은 CLI 의 기존 테스트가 판정한다. 꺼짐은 깨진 것도 없는 것도 아니라 셋이 서로 겹치지
-    않는다."""
-    assert issubclass(Absent, PluginError)
-    assert issubclass(NotResumable, PluginError)
-    assert issubclass(Disabled, PluginError)
-    assert not issubclass(Disabled, Absent | NotResumable)
+    것은 CLI 의 기존 테스트가 판정한다. 다섯은 서로 겹치지 않는다 — 어느 것도 다른 것의 하위
+    타입이 아니라서 표의 갈래 하나가 둘을 잡지 않는다."""
+    for subtype in _SUBTYPES:
+        assert issubclass(subtype, PluginError)
+        others = tuple(other for other in _SUBTYPES if other is not subtype)
+        assert not issubclass(subtype, others), subtype
 
 
 async def test_없는_에이전트를_부르면_부재다(trace: FakeTrace, clock: FakeClock) -> None:
@@ -1881,9 +1906,9 @@ async def _unwritable_decision(clock: FakeClock) -> None:
 async def test_구성이나_기록이_깨진_것은_부재도_재개_불가도_아닌_PluginError다(
     scenario: Callable[[FakeClock], Awaitable[None]], clock: FakeClock
 ) -> None:
-    """서버의 구성이나 기록이 깨진 것이다. 대상이 없는 것도, 대상의 상태가 요청을 허락하지 않는
-    것도 아니라 하위 타입 셋 어느 것도 아니다(ADR 0014 의 2026-09-26 이력). 채널은 이것을 서버의
-    고장으로 말한다."""
+    """서버의 구성이나 기록이 깨진 것이다. 대상이 없는 것도, 대상의 상태나 주체가 요청을 허락하지
+    않는 것도 아니라 하위 타입 다섯 어느 것도 아니다(ADR 0014 의 2026-09-26 이력). 채널은 이것을
+    서버의 고장으로 말한다."""
     with pytest.raises(PluginError) as caught:
         await scenario(clock)
 
@@ -2713,3 +2738,763 @@ async def test_음수_자리는_마지막_이벤트를_가리키지_않고_재�
 
     assert trace.events == before
     assert tools.connection.calls == []
+
+
+# --- 이어 가기 ----------------------------------------------------------------
+#
+# 새 실행이 같은 주체의 끝난 실행 하나를 가리켜 시작한다(ADR 0022, 용어집 "이어 가기"). 재개와 달리
+# 새 실행 식별자와 새 트레이스 파일이고 시작 이벤트의 `previous_run` 이 고리의 원천이다. 에이전트는
+# 고리에서 자기가 처리한 교환(요청과 출력)과 자기 대화 요약만 컨텍스트 멤버로 받고, 아래 판정
+# 에이전트가 그 값을 출력에 JSON 으로 옮겨 단언한다. 판정 순서는 세 덩어리다 — 앞 실행(없음 → 손상 →
+# 다른 주체 → 이어 갈 수 없음), 고리(어느 것이든 PluginError), 준비(기존 `_prepare` 그대로). 전부
+# 실행 식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 이 티켓에서 요약 이벤트는
+# 가짜 트레이스에 손으로 쓴 것이고 런타임은 아직 내지 않는다(티켓 02).
+
+BOB = Principal("bob")
+
+
+class WeavingAgent:
+    """컨텍스트 멤버의 값을 출력에 JSON 으로 옮긴다. 모델도 도구도 쓰지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=_woven(ctx.conversation))
+
+
+class WeavingTwiceAgent:
+    """모델 호출 앞뒤로 멤버를 읽는다. 실행 안에서 값이 바뀌지 않는 것을 본다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        before = ctx.conversation
+        await ctx.llm(request)
+        after = ctx.conversation
+        yield RunFinished(
+            run_id=ctx.run_id, ts=ctx.now(), output=f"same={before == after and before is after}"
+        )
+
+
+class WeavingGatedAgent:
+    """멤버를 엮은 프롬프트로 모델을 부른다. 모델이 승인 대상을 부르면 멈추고, 재개 뒤 재생이 그
+    프롬프트를 대조한다. 멤버가 재개에서 달라지면 여기서 대조 불일치다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        answer = await ctx.llm(f"{_woven(ctx.conversation)}\n{request}")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
+
+
+class SummarizingAgent:
+    """런타임만 내야 하는 대화 요약 이벤트를 지어낸다. 신뢰 경계 밖의 에이전트다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield ConversationSummarized(
+            run_id=ctx.run_id,
+            ts=ctx.now(),
+            summary="지어낸 요약",
+            last_covered_run=RunId("run-0"),
+            model="forged",
+            input_tokens=0,
+            output_tokens=0,
+        )
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="끝")
+
+
+def _woven(conversation: Conversation) -> str:
+    return json.dumps(
+        {
+            "summary": conversation.summary,
+            "exchanges": [[e.request, e.output] for e in conversation.exchanges],
+        },
+        ensure_ascii=False,
+    )
+
+
+class _Woven(BaseModel):
+    """판정 에이전트의 출력 모양. 손으로 좁히는 자리가 원칙 III 의 선례가 되지 않게 모델로 본다."""
+
+    summary: str | None
+    exchanges: list[tuple[str, str]]
+
+
+def _unwoven(output: str) -> tuple[str | None, list[list[str]]]:
+    """판정 에이전트의 출력을 되읽는다. 요약과 교환의 열이다."""
+    woven = _Woven.model_validate_json(output)
+    return woven.summary, [[request, answer] for request, answer in woven.exchanges]
+
+
+def _output_of(events: Sequence[Event]) -> str:
+    last = events[-1]
+    assert isinstance(last, RunFinished), [e.type for e in events]
+    return last.output
+
+
+async def _continue(
+    previous: str,
+    trace: TraceStore,
+    clock: Clock,
+    *,
+    agent: BaseAgent | None = None,
+    name: str = "calc",
+    request: str = "그럼?",
+    principal: Principal = PRINCIPAL,
+    model: ChatModel | None = None,
+    tools: ToolSource | None = None,
+    plugins: PluginSource | None = None,
+) -> list[Event]:
+    """앞 실행을 가리켜 새 실행을 일으킨다. 에이전트를 주지 않으면 판정 에이전트다."""
+    return [
+        event
+        async for event in run(
+            AgentName(name),
+            request,
+            principal,
+            previous_run=RunId(previous),
+            plugins=plugins or FakePlugins({name: agent or WeavingAgent()}),
+            model=model or GenericFakeChatModel(messages=iter([])),
+            tools=tools or FakeTools(),
+            trace=trace,
+            clock=clock,
+        )
+    ]
+
+
+def _summarized(run_id: str, covers: str, summary: str = "요약") -> ConversationSummarized:
+    return ConversationSummarized(
+        run_id=RunId(run_id),
+        ts=FIXED_NOW,
+        summary=summary,
+        last_covered_run=RunId(covers),
+        model="fake-model",
+        input_tokens=7,
+        output_tokens=3,
+    )
+
+
+def _write_finished(
+    trace: FakeTrace,
+    run_id: str,
+    *,
+    agent: str = "calc",
+    request: str = "2+2?",
+    output: str = "4",
+    principal: Principal = PRINCIPAL,
+    previous: str | None = None,
+    between: Sequence[Event] = (),
+) -> None:
+    """끝난 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(남의 주체, 요약 자리)도 쓴다."""
+    trace.write(
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=FIXED_NOW,
+            agent=AgentName(agent),
+            request=request,
+            principal=principal,
+            previous_run=None if previous is None else RunId(previous),
+        )
+    )
+    for event in between:
+        trace.write(event)
+    trace.write(RunFinished(run_id=RunId(run_id), ts=FIXED_NOW, output=output))
+
+
+# 컨텍스트 멤버의 값
+
+
+async def test_이어_가지_않은_실행의_멤버는_요약이_없고_교환이_비어_있다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    events = await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    assert _unwoven(_output_of(events)) == (None, [])
+    started = events[0]
+    assert isinstance(started, RunStarted)
+    assert started.previous_run is None
+
+
+async def test_이어_가기는_새_실행이고_시작_이벤트가_앞_실행을_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    first = await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    second = await _continue("run-1", trace, clock)
+
+    started = second[0]
+    assert isinstance(started, RunStarted)
+    assert started.run_id == "run-2"
+    assert started.previous_run == "run-1"
+    assert started.request == "그럼?"
+    assert [e.type for e in second] == ["run_started", "run_finished"]
+    assert trace.read(RunId("run-1")) is not None
+    assert [e.run_id for e in trace.events] == ["run-1"] * len(first) + ["run-2"] * 2
+
+
+async def test_같은_에이전트로_셋을_이어_가면_교환_셋이_오래된_것부터_온다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    first = await _run(WeavingAgent(), model, trace, clock)
+    second = await _continue("run-1", trace, clock, request="3+3?")
+    third = await _continue("run-2", trace, clock, request="4+4?")
+
+    fourth = await _continue("run-3", trace, clock, request="5+5?")
+
+    assert _unwoven(_output_of(fourth)) == (
+        None,
+        [
+            ["2+2?", _output_of(first)],
+            ["3+3?", _output_of(second)],
+            ["4+4?", _output_of(third)],
+        ],
+    )
+
+
+async def test_에이전트를_바꿔_쓰면_각자_자기_교환만_받는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """A → B → A. B 는 A 의 교환을 받지 않고, 돌아온 A 는 사이의 B 를 건너뛰어 자기 교환을 잇는다
+    (스토리 5·6·7)."""
+    plugins = FakePlugins({"alpha": WeavingAgent(), "beta": WeavingAgent()})
+    model = GenericFakeChatModel(messages=iter([]))
+    first = await _run(WeavingAgent(), model, trace, clock, plugins=plugins, name="alpha")
+    second = await _continue("run-1", trace, clock, name="beta", request="b?", plugins=plugins)
+
+    third = await _continue("run-2", trace, clock, name="alpha", request="a?", plugins=plugins)
+
+    assert _unwoven(_output_of(second)) == (None, [])
+    assert _unwoven(_output_of(third)) == (None, [["2+2?", _output_of(first)]])
+
+
+@pytest.mark.parametrize("version", ["1", "2"])
+async def test_형식_1과_2의_끝난_실행도_이어_간다(
+    version: TraceSchemaVersion, clock: FakeClock
+) -> None:
+    """이어 가기는 앞 실행을 재개하는 것이 아니라 읽는 것이고, 필요한 것은 형식 1 에도 있다. 형식
+    1·2 실행은 앞 실행 필드가 없으므로 고리의 처음이다."""
+    trace = FakeTrace()
+    _write_finished(trace, "old", request="옛 요청", output="옛 출력")
+    trace.versions[RunId("old")] = version
+
+    events = await _continue("old", trace, clock)
+
+    assert _unwoven(_output_of(events)) == (None, [["옛 요청", "옛 출력"]])
+
+
+async def test_같은_앞_실행을_둘이_이어_가면_둘_다_선다(trace: FakeTrace, clock: FakeClock) -> None:
+    """갈래다. 앞 실행은 끝난 실행이라 더 쓰이지 않으므로 막을 것도 경합도 없다(스토리 4)."""
+    first = await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    left = await _continue("run-1", trace, clock, request="왼쪽")
+    right = await _continue("run-1", trace, clock, request="오른쪽")
+
+    assert _unwoven(_output_of(left)) == (None, [["2+2?", _output_of(first)]])
+    assert _unwoven(_output_of(right)) == (None, [["2+2?", _output_of(first)]])
+    assert left[0].run_id != right[0].run_id
+
+
+async def test_멤버의_값은_실행_안에서_바뀌지_않는다(trace: FakeTrace, clock: FakeClock) -> None:
+    """런타임이 에이전트를 부르기 전에 정한다. 재생이 같은 프롬프트를 요구한다(스토리 33)."""
+    model = GenericFakeChatModel(messages=iter([_reply("4"), _reply("8")]))
+    await _run(WeavingTwiceAgent(), model, trace, clock)
+
+    events = await _continue("run-1", trace, clock, agent=WeavingTwiceAgent(), model=model)
+
+    assert _output_of(events) == "same=True"
+
+
+# 거슬러 읽기가 멈추는 자리
+
+
+async def test_가장_가까운_요약을_만나면_덮는_끝까지만_거슬러_가고_그_실행은_읽지_않는다(
+    clock: FakeClock,
+) -> None:
+    """요약은 그 실행의 에이전트의 것이고 요약 뒤 교환은 원문으로 남은 것이라 모은다(ADR 0022). 덮는
+    끝에서 멈추는 것은 읽힌 실행 식별자로 본다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", request="q0", output="a0")
+    _write_finished(trace, "r1", request="q1", output="a1", previous="r0")
+    _write_finished(
+        trace,
+        "r2",
+        request="q2",
+        output="a2",
+        previous="r1",
+        between=[_summarized("r2", covers="r1", summary="r1 까지의 요약")],
+    )
+    _write_finished(trace, "r3", request="q3", output="a3", previous="r2")
+    trace.reads.clear()
+
+    events = await _continue("r3", trace, clock)
+
+    assert _unwoven(_output_of(events)) == ("r1 까지의 요약", [["q2", "a2"], ["q3", "a3"]])
+    assert trace.reads == [RunId("r3"), RunId("r2")]
+
+
+async def test_요약이_없으면_고리의_처음까지_가고_다른_에이전트의_실행은_교환도_요약도_내지_않는다(
+    clock: FakeClock,
+) -> None:
+    """다른 에이전트의 실행에 든 요약은 지금 에이전트의 것이 아니라 쓰지 않고, 멈추는 자리도
+    되지 않는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", request="q0", output="a0")
+    _write_finished(
+        trace,
+        "r1",
+        agent="other",
+        request="x",
+        output="y",
+        previous="r0",
+        between=[_summarized("r1", covers="r0", summary="남의 요약")],
+    )
+    _write_finished(trace, "r2", request="q2", output="a2", previous="r1")
+    trace.reads.clear()
+
+    events = await _continue("r2", trace, clock)
+
+    assert _unwoven(_output_of(events)) == (None, [["q0", "a0"], ["q2", "a2"]])
+    assert trace.reads == [RunId("r2"), RunId("r1"), RunId("r0")]
+
+
+async def test_가장_가까운_요약보다_오래된_요약은_쓰지_않는다(clock: FakeClock) -> None:
+    """새 요약은 앞 요약을 접어 만들어지므로 처음 만나는 요약이 가장 많이 덮는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", request="q0", output="a0")
+    _write_finished(
+        trace,
+        "r1",
+        request="q1",
+        output="a1",
+        previous="r0",
+        between=[_summarized("r1", covers="r0", summary="옛 요약")],
+    )
+    _write_finished(
+        trace,
+        "r2",
+        request="q2",
+        output="a2",
+        previous="r1",
+        between=[_summarized("r2", covers="r0", summary="새 요약")],
+    )
+
+    events = await _continue("r2", trace, clock)
+
+    assert _unwoven(_output_of(events)) == ("새 요약", [["q1", "a1"], ["q2", "a2"]])
+
+
+# 판정 순서 — 앞 실행
+
+
+async def test_없는_앞_실행은_부재이고_트레이스도_실행_식별자도_생기지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    with pytest.raises(Absent, match="run-9"):
+        await _continue("run-9", trace, clock)
+
+    assert trace.events == []
+    assert clock.ids_issued == 0
+
+
+@pytest.mark.parametrize("previous", ["../etc", "a/b", "run-1\n", "", "Run 1"])
+async def test_패턴을_어긴_앞_실행은_부재이고_포트를_부르지_않는다(
+    previous: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """요청이 댄 식별자는 포트에 닿기 전에 sdk 의 판정자를 지난다. 런타임은 그런 이름의 트레이스를
+    만들 수 없다(명세 "이어 가기 진입점"). 재개는 거르지 않는다."""
+    with pytest.raises(Absent):
+        await _continue(previous, trace, clock)
+
+    assert trace.reads == []
+    assert trace.events == []
+
+
+@pytest.mark.parametrize(
+    "trace", [UnknownEventTrace(), CorruptTrace(), EmptyTrace()], ids=["모르는 종류", "섞임", "빔"]
+)
+async def test_손상된_앞_실행은_주체보다_먼저_하위_타입이_아닌_PluginError다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """손상된 트레이스의 주체는 믿을 수 없다. 남의 손상된 실행이어도 500 이다(명세 "판정 순서")."""
+    _write_finished(trace, "run-1", principal=BOB)
+
+    with pytest.raises(PluginError, match="run-1") as caught:
+        await _continue("run-1", trace, clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert clock.ids_issued == 0
+
+
+async def test_남의_실행은_다른_주체이고_끝나지_않은_것보다_먼저다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 끝나지 않음이 먼저 드러나면 안 된다
+    (ADR 0023). 메시지는 식별자를 들고 남의 주체 이름은 들지 않는다."""
+    trace.write(
+        RunStarted(run_id=_RUN_1, ts=FIXED_NOW, agent=AgentName("calc"), request="x", principal=BOB)
+    )
+    trace.write(RunPaused(run_id=_RUN_1, ts=FIXED_NOW, tool="send", args={}))
+
+    with pytest.raises(DifferentPrincipal, match="run-1") as caught:
+        await _continue("run-1", trace, clock)
+
+    assert "bob" not in str(caught.value)
+    assert not isinstance(caught.value, NotContinuable)
+    assert clock.ids_issued == 0
+
+
+@pytest.mark.parametrize(
+    ("last", "status"),
+    [
+        pytest.param(RunFailed(run_id=_RUN_1, ts=FIXED_NOW, error="API down"), "failed", id="실패"),
+        pytest.param(
+            RunPaused(run_id=_RUN_1, ts=FIXED_NOW, tool="send", args={}), "paused", id="일시정지"
+        ),
+        pytest.param(
+            LlmCalled(
+                run_id=_RUN_1, ts=FIXED_NOW, model="fake-model", input_tokens=7, output_tokens=3
+            ),
+            "unfinished",
+            id="결말 없음",
+        ),
+    ],
+)
+async def test_끝나지_않은_앞_실행은_이어_갈_수_없고_메시지가_그_상태를_든다(
+    last: Event, status: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """실패인지 일시정지인지에 따라 할 일이 다르다(스토리 10). 상태는 `run_status()` 의 말이다."""
+    trace.write(
+        RunStarted(
+            run_id=_RUN_1, ts=FIXED_NOW, agent=AgentName("calc"), request="x", principal=PRINCIPAL
+        )
+    )
+    trace.write(last)
+    before = list(trace.events)
+
+    with pytest.raises(NotContinuable, match="run-1") as caught:
+        await _continue("run-1", trace, clock)
+
+    assert status in str(caught.value)
+    assert not isinstance(caught.value, NotResumable)
+    assert trace.events == before
+
+
+# 판정 순서 — 고리
+
+
+def _chain_of_two(trace: FakeTrace) -> None:
+    """같은 에이전트의 끝난 실행 둘. r2 가 r1 을 이어 갔다."""
+    _write_finished(trace, "r1", request="q1", output="a1")
+    _write_finished(trace, "r2", request="q2", output="a2", previous="r1")
+
+
+async def _missing_link(trace: FakeTrace, clock: FakeClock) -> None:
+    _chain_of_two(trace)
+    trace.forget(RunId("r1"))
+    await _continue("r2", trace, clock)
+
+
+async def _damaged_link(trace: FakeTrace, clock: FakeClock) -> None:
+    _chain_of_two(trace)
+    trace.damaged.add(RunId("r1"))
+    await _continue("r2", trace, clock)
+
+
+async def _foreign_link(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", principal=BOB)
+    _write_finished(trace, "r2", previous="r1")
+    await _continue("r2", trace, clock)
+
+
+async def _unfinished_link(trace: FakeTrace, clock: FakeClock) -> None:
+    trace.write(
+        RunStarted(
+            run_id=RunId("r1"),
+            ts=FIXED_NOW,
+            agent=AgentName("calc"),
+            request="x",
+            principal=PRINCIPAL,
+        )
+    )
+    trace.write(RunFailed(run_id=RunId("r1"), ts=FIXED_NOW, error="down"))
+    _write_finished(trace, "r2", previous="r1")
+    await _continue("r2", trace, clock)
+
+
+async def _cycle(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", previous="r2")
+    _write_finished(trace, "r2", previous="r1")
+    await _continue("r2", trace, clock)
+
+
+async def _cycle_at_covered_end(trace: FakeTrace, clock: FakeClock) -> None:
+    """되돌아가는 간선의 목적지가 요약이 덮는 끝과 같다. 멈춤 조건이 먼저면 순환이 조용히 선다."""
+    _write_finished(trace, "r2", previous="r1")
+    _write_finished(trace, "r1", previous="r2", between=[_summarized("r1", covers="r2")])
+    await _continue("r2", trace, clock)
+
+
+async def _uncovered_end(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1")
+    _write_finished(trace, "r2", previous="r1", between=[_summarized("r2", covers="ghost")])
+    await _continue("r2", trace, clock)
+
+
+async def _escaping_previous_field(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", previous="../etc")
+    _write_finished(trace, "r2", previous="r1")
+    await _continue("r2", trace, clock)
+
+
+async def _escaping_covered_field(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1")
+    _write_finished(trace, "r2", previous="r1", between=[_summarized("r2", covers="../etc")])
+    await _continue("r2", trace, clock)
+
+
+async def _misplaced_summary(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1")
+    _write_finished(
+        trace,
+        "r2",
+        previous="r1",
+        between=[
+            LlmCalled(run_id=RunId("r2"), ts=FIXED_NOW, model="m", input_tokens=1, output_tokens=1),
+            _summarized("r2", covers="r1"),
+        ],
+    )
+    await _continue("r2", trace, clock)
+
+
+async def _two_summaries(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1")
+    _write_finished(
+        trace,
+        "r2",
+        previous="r1",
+        between=[_summarized("r2", covers="r1"), _summarized("r2", covers="r1")],
+    )
+    await _continue("r2", trace, clock)
+
+
+async def _own_escaping_previous_field(trace: FakeTrace, clock: FakeClock) -> None:
+    """앞 실행 자신의 앞 실행 필드. 주체와 끝남 뒤라 하위 타입이 아니라 고리의 PluginError 다."""
+    _write_finished(trace, "r2", previous="../etc")
+    await _continue("r2", trace, clock)
+
+
+async def _own_misplaced_summary(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(
+        trace,
+        "r2",
+        between=[
+            LlmCalled(run_id=RunId("r2"), ts=FIXED_NOW, model="m", input_tokens=1, output_tokens=1),
+            _summarized("r2", covers="r1"),
+        ],
+    )
+    await _continue("r2", trace, clock)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "run_id", "reason"),
+    [
+        pytest.param(_missing_link, "r1", "없다", id="중간 실행 없음"),
+        pytest.param(_damaged_link, "r1", "모르는 종류", id="중간 실행 손상"),
+        pytest.param(_foreign_link, "r1", "주체", id="중간 실행의 주체가 다름"),
+        pytest.param(_unfinished_link, "r1", "failed", id="중간 실행이 끝나지 않음"),
+        pytest.param(_cycle, "r1", "순환", id="순환"),
+        pytest.param(_cycle_at_covered_end, "r2", "순환", id="덮는 끝으로 되돌아가는 순환"),
+        pytest.param(_uncovered_end, "ghost", "덮는 끝", id="덮는 끝을 못 만남"),
+        pytest.param(_escaping_previous_field, "r1", "패턴", id="앞 실행 필드의 패턴 위반"),
+        pytest.param(_escaping_covered_field, "r2", "패턴", id="덮는 끝 필드의 패턴 위반"),
+        pytest.param(_misplaced_summary, "r2", "자리", id="요약이 시작 바로 뒤가 아님"),
+        pytest.param(_two_summaries, "r2", "둘", id="요약이 둘"),
+        pytest.param(
+            _own_escaping_previous_field, "r2", "패턴", id="앞 실행 자신의 필드 패턴 위반"
+        ),
+        pytest.param(_own_misplaced_summary, "r2", "자리", id="앞 실행 자신의 요약 자리 위반"),
+    ],
+)
+async def test_고리가_깨지면_하위_타입이_아닌_PluginError이고_메시지가_실행_식별자와_이유를_든다(
+    scenario: Callable[[FakeTrace, FakeClock], Awaitable[None]],
+    run_id: str,
+    reason: str,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """요청이 이름을 댄 것이 아니라 서버의 기록이 가리킨 것이라 깨진 것이다(ADR 0022). 운영자는 어느
+    실행을 되살려야 하는지 문구에서 안다(스토리 46). 거절된 이어 가기는 트레이스를 남기지 않는다."""
+    with pytest.raises(PluginError) as caught:
+        await scenario(trace, clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert run_id in str(caught.value)
+    assert reason in str(caught.value)
+    assert clock.ids_issued == 0
+    assert all(e.run_id != "run-1" for e in trace.events)
+
+
+async def test_남의_앞_실행은_그_자신의_고리_위반보다_먼저_다른_주체다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """앞 실행 자신의 앞 실행 필드 패턴과 요약 자리는 고리 덩어리라 주체 뒤다(명세 검토)."""
+    _write_finished(
+        trace, "r2", principal=BOB, previous="../etc", between=[_summarized("r2", covers="x")]
+    )
+
+    with pytest.raises(DifferentPrincipal):
+        await _continue("r2", trace, clock)
+
+
+# 판정 순서 — 준비는 고리 뒤
+
+
+async def test_없는_에이전트로_이어_가도_앞_실행과_고리가_먼저다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """요청이 댄 에이전트가 없는 것은 준비 단계의 부재이고, 그 앞에 앞 실행의 판정이 선다."""
+    _write_finished(trace, "r1", principal=BOB)
+
+    plugins = FakePlugins({"calc": WeavingAgent()})
+
+    with pytest.raises(DifferentPrincipal):
+        await _continue("r1", trace, clock, name="nope", plugins=plugins)
+    with pytest.raises(Absent, match="nope"):
+        await _continue("r1", trace, clock, name="nope", principal=BOB, plugins=plugins)
+
+
+async def test_꺼진_에이전트로_이어_가도_고리가_먼저이고_깨졌으면_꺼진_집합을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """재개가 트레이스 판정을 준비보다 앞에 두는 것과 같다. 고리가 성하면 그제야 꺼짐이다."""
+    plugins = FakePlugins({"calc": WeavingAgent()}, disabled=[_agent_key("calc")])
+    _chain_of_two(trace)
+    trace.forget(RunId("r1"))
+
+    with pytest.raises(PluginError) as caught:
+        await _continue("r2", trace, clock, plugins=plugins)
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert plugins.disabled_reads == 0
+
+    _write_finished(trace, "r1", request="q1", output="a1")
+    with pytest.raises(Disabled):
+        await _continue("r2", trace, clock, plugins=plugins)
+    assert plugins.disabled_reads == 1
+    assert clock.ids_issued == 0
+
+
+# 이어 간 실행의 재개 — 에이전트는 처음과 같은 멤버를 받는다
+
+
+async def _paused_continuation(
+    trace: FakeTrace, clock: FakeClock
+) -> tuple[ToolAwareFakeModel, FakeTools, FakePlugins]:
+    """r0 → r1 을 거쳐 r1 을 이어 간 실행이 승인 대상에서 멈춘다. 돌아온 것으로 재개한다."""
+    _write_finished(trace, "r0", request="q0", output="a0")
+    _write_finished(trace, "r1", request="q1", output="a1", previous="r0")
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    events = await _continue("r1", trace, clock, model=model, tools=tools, plugins=plugins)
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_paused"]
+    return model, tools, plugins
+
+
+async def test_승인_대상에서_멈춘_이어_간_실행을_재개하면_같은_멤버를_받아_재생_대조가_통과한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model, tools, plugins = await _paused_continuation(trace, clock)
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
+    assert RunId("r1") in trace.reads
+    assert RunId("r0") in trace.reads
+
+
+async def test_멈춘_사이_거슬러_읽는_범위의_트레이스를_지우면_재개는_결정을_쓰기_전에_PluginError다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """고리가 깨졌으면 실행은 일시정지 그대로다. 되살린 뒤 같은 결정을 다시 보낸다(스토리 54)."""
+    model, tools, plugins = await _paused_continuation(trace, clock)
+    trace.forget(RunId("r0"))
+    before = list(trace.events)
+
+    with pytest.raises(PluginError, match="r0") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert trace.events == before
+    assert tools.connection.calls == []
+
+
+async def test_멈춘_사이_덮는_끝_앞의_트레이스를_지워도_재개는_그대로_선다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """거슬러 읽는 범위 밖(가장 가까운 요약이 덮는 끝과 그 앞)은 읽지 않으므로 지워도 이어 간다
+    (스토리 45)."""
+    _write_finished(trace, "old", request="오래된 질문", output="오래된 답")
+    _write_finished(trace, "r0", request="q0", output="a0", previous="old")
+    _write_finished(
+        trace,
+        "r1",
+        request="q1",
+        output="a1",
+        previous="r0",
+        between=[_summarized("r1", covers="r0", summary="r0 까지의 요약")],
+    )
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    await _continue("r1", trace, clock, model=model, tools=tools, plugins=plugins)
+    trace.forget(RunId("old"))
+    trace.forget(RunId("r0"))
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    recorded = next(e for e in trace.events if isinstance(e, LlmCalled) and e.prompt)
+    assert _unwoven(recorded.prompt.split("\n")[0]) == ("r0 까지의 요약", [["q1", "a1"]])
+
+
+async def test_형식_2_트레이스의_재개와_이어_가지_않은_실행의_재개는_바뀌지_않는다() -> None:
+    """앞 실행 필드가 없어 거슬러 읽을 것이 없고 멤버는 비어 있다."""
+    for trace in (FakeTrace(schema_version="2"), FakeTrace()):
+        model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+        tools = FakeTools({"send": "sent"})
+        plugins = _gated_plugins(WeavingGatedAgent())
+        clock = FakeClock()
+        await _run(WeavingGatedAgent(), model, trace, clock, tools=tools, plugins=plugins)
+        trace.reads.clear()
+
+        events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+        assert events[-1].type == "run_finished"
+        assert set(trace.reads) == {_RUN_1}
+
+
+# 에이전트가 낸 요약 이벤트는 실패다
+
+
+@pytest.mark.parametrize("continued", [False, True], ids=["새 대화", "이어 간 실행"])
+async def test_에이전트가_대화_요약_이벤트를_내면_그_실행은_run_failed_로_끝난다(
+    continued: bool, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """요약 이벤트는 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라 런타임만 낸다. 에이전트가
+    지어낸 것이 통과하면 런타임의 것과 가를 수 없고, 그 실행을 지나는 모든 이어 가기가 영구히 깨진다
+    (스토리 68)."""
+    model = GenericFakeChatModel(messages=iter([]))
+    if continued:
+        _write_finished(trace, "r1")
+        events = await _continue("r1", trace, clock, agent=SummarizingAgent(), model=model)
+    else:
+        events = await _run(SummarizingAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    assert "대화 요약" in failed.error
+    assert trace.events[-1] == failed

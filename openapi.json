@@ -95,6 +95,59 @@
         "title": "Approve",
         "type": "object"
       },
+      "ConversationSummarized": {
+        "additionalProperties": false,
+        "description": "런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.",
+        "properties": {
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "last_covered_run": {
+            "title": "Last Covered Run",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "conversation_summarized",
+            "default": "conversation_summarized",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "ts",
+          "type",
+          "summary",
+          "last_covered_run",
+          "model",
+          "input_tokens",
+          "output_tokens"
+        ],
+        "title": "ConversationSummarized",
+        "type": "object"
+      },
       "Decision": {
         "discriminator": {
           "mapping": {
@@ -190,6 +243,7 @@
           "mapping": {
             "approval_denied": "#/components/schemas/ApprovalDenied",
             "approval_granted": "#/components/schemas/ApprovalGranted",
+            "conversation_summarized": "#/components/schemas/ConversationSummarized",
             "llm_called": "#/components/schemas/LlmCalled",
             "run_failed": "#/components/schemas/RunFailed",
             "run_finished": "#/components/schemas/RunFinished",
@@ -227,6 +281,9 @@
           },
           {
             "$ref": "#/components/schemas/RunFailed"
+          },
+          {
+            "$ref": "#/components/schemas/ConversationSummarized"
           }
         ]
       },
@@ -421,6 +478,18 @@
         "additionalProperties": false,
         "description": "플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다.",
         "properties": {
+          "conversation_limit": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Limit"
+          },
           "entrypoint": {
             "anyOf": [
               {
@@ -485,6 +554,7 @@
           "entrypoint",
           "mcp",
           "requires_approval",
+          "conversation_limit",
           "server"
         ],
         "title": "PluginManifest",
@@ -676,11 +746,22 @@
       },
       "RunStarted": {
         "additionalProperties": false,
-        "description": "실행이 시작됐다. 에이전트와 요청과 주체를 든다. 런타임이 낸다.",
+        "description": "실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다.",
         "properties": {
           "agent": {
             "title": "Agent",
             "type": "string"
+          },
+          "previous_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Run"
           },
           "principal": {
             "title": "Principal",
@@ -712,7 +793,8 @@
           "type",
           "agent",
           "request",
-          "principal"
+          "principal",
+          "previous_run"
         ],
         "title": "RunStarted",
         "type": "object"
@@ -922,6 +1004,7 @@
           "mapping": {
             "approval_denied": "#/components/schemas/ApprovalDenied",
             "approval_granted": "#/components/schemas/ApprovalGranted",
+            "conversation_summarized": "#/components/schemas/ConversationSummarized",
             "llm_called": "#/components/schemas/LlmCalled",
             "run_failed": "#/components/schemas/RunFailed",
             "run_finished": "#/components/schemas/RunFinished",
@@ -962,6 +1045,9 @@
             "$ref": "#/components/schemas/RunFailed"
           },
           {
+            "$ref": "#/components/schemas/ConversationSummarized"
+          },
+          {
             "$ref": "#/components/schemas/UnknownEvent"
           }
         ]
@@ -1000,7 +1086,8 @@
       "TraceSchemaVersion": {
         "enum": [
           "1",
-          "2"
+          "2",
+          "3"
         ],
         "type": "string"
       },
@@ -1378,7 +1465,7 @@
                 }
               }
             },
-            "description": "있지만 지금 상태로는 받을 수 없다"
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
           },
           "422": {
             "content": {
@@ -1490,7 +1577,7 @@
                 }
               }
             },
-            "description": "있지만 지금 상태로는 받을 수 없다"
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
           },
           "422": {
             "content": {
@@ -1514,6 +1601,118 @@
           }
         },
         "summary": "멈춘 실행에 결정 하나를 내고 재개된 실행의 이벤트를 생기는 대로 흘린다"
+      }
+    },
+    "/runs/{run_id}/continuation": {
+      "post": {
+        "operationId": "continue_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/Event"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "끝난 실행을 이어 가는 새 실행을 일으켜 그 이벤트를 생기는 대로 흘린다"
       }
     },
     "/traces": {

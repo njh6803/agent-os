@@ -39,6 +39,7 @@ export const EVENT_TYPES = {
   run_resumed: true,
   run_finished: true,
   run_failed: true,
+  conversation_summarized: true,
 } satisfies EventTypes;
 
 /** 판별자만 본다. 객체이고 `type` 이 계약의 종류 가운데 하나면 참이다. 다른 필드는 서버를 믿는다. */

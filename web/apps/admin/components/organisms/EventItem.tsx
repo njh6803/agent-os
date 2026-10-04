@@ -19,6 +19,7 @@ const FIELD_NAMES = {
   ts: "시각",
   agent: "에이전트",
   principal: "주체",
+  previous_run: "앞 실행",
   request: "요청",
   model: "모델",
   prompt: "프롬프트",
@@ -34,6 +35,8 @@ const FIELD_NAMES = {
   reason: "사유",
   output: "출력",
   error: "에러",
+  summary: "요약 글",
+  last_covered_run: "덮는 끝",
   raw: "원문",
 } as const satisfies Record<EventField, string>;
 

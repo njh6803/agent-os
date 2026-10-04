@@ -6,13 +6,14 @@
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
-from agent_os.sdk import AgentContext, BaseAgent, Event, RunFinished, RunId
+from agent_os.sdk import AgentContext, BaseAgent, Conversation, Event, RunFinished, RunId
 
 FIXED_NOW = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
 
 
 class FakeContext:
     run_id = RunId("r1")
+    conversation = Conversation(summary=None, exchanges=())
 
     def now(self) -> datetime:
         return FIXED_NOW

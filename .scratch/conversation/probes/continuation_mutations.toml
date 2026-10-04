@@ -1,0 +1,220 @@
+# 티켓 01의 가드가 실제로 무는지 변이로 본다(implement 스킬, 대기열 29). 이 티켓의 새 테스트는 구현 전에
+# import 오류로만 빨갰고 단언 하나하나가 빨강을 본 적은 없어서, 판정 순서·멈추는 자리·표·조건의 가드를
+# 하나씩 되돌려 그 단언이 무는지 본다. 사용: PYTHONUTF8=1 uv run python tools/mutate.py
+# .scratch/conversation/probes/continuation_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[runner.tsc]
+command = ["pnpm", "exec", "tsc", "--noEmit", "-p", "packages/api-client"]
+cwd = "web"
+judge = "tsc"
+
+[[mutation]]
+name = "다른 주체보다 끝나지 않음을 먼저 본다"
+tests = ["tests/core/test_run.py", "-k", "끝나지_않은_것보다_먼저다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if link.started.principal != principal:
+        raise DifferentPrincipal(
+            f"앞 실행 {previous} 은 요청한 주체의 실행이 아니라 이어 갈 수 없다"
+        )
+    if not isinstance(link.last, RunFinished):
+        raise NotContinuable(
+            f"앞 실행 {previous} 은 끝나지 않아 이어 갈 수 없다: 상태 {run_status(link.last)}"
+        )
+'''
+new = '''
+    if not isinstance(link.last, RunFinished):
+        raise NotContinuable(
+            f"앞 실행 {previous} 은 끝나지 않아 이어 갈 수 없다: 상태 {run_status(link.last)}"
+        )
+    if link.started.principal != principal:
+        raise DifferentPrincipal(
+            f"앞 실행 {previous} 은 요청한 주체의 실행이 아니라 이어 갈 수 없다"
+        )
+'''
+
+[[mutation]]
+name = "요청이 댄 앞 실행의 패턴을 거르지 않는다"
+tests = ["tests/core/test_run.py", "-k", "패턴을_어긴_앞_실행은_부재이고_포트를_부르지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if not is_run_id(previous):
+        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
+    link = _read_link(trace, previous)
+'''
+new = '''
+    link = _read_link(trace, previous)
+'''
+
+[[mutation]]
+name = "덮는 끝에서 멈추지 않고 고리의 처음까지 읽는다"
+tests = ["tests/core/test_run.py", "-k", "덮는_끝까지만_거슬러_가고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if summary is not None and older == summary.last_covered_run:
+        return None
+    next_link = _read_link(trace, older)
+'''
+new = '''
+    next_link = _read_link(trace, older)
+'''
+
+[[mutation]]
+name = "다른 에이전트의 교환도 모은다"
+tests = ["tests/core/test_run.py", "-k", "각자_자기_교환만_받는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        if link.started.agent == agent:
+            newest_first.append(Exchange(request=link.started.request, output=finished.output))
+'''
+new = '''
+        if True:
+            newest_first.append(Exchange(request=link.started.request, output=finished.output))
+'''
+
+[[mutation]]
+name = "에이전트가 낸 요약 이벤트를 통과시킨다"
+tests = ["tests/core/test_run.py", "-k", "대화_요약_이벤트를_내면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+                    if isinstance(event, ConversationSummarized):
+                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+'''
+new = '''
+                    if isinstance(event, ConversationSummarized) and False:
+                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+'''
+
+[[mutation]]
+name = "준비를 고리보다 먼저 한다"
+tests = ["tests/core/test_run.py", "-k", "꺼진_에이전트로_이어_가도_고리가_먼저이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    conversation = (
+        _NEW_CONVERSATION
+        if previous_run is None
+        else _continued(trace, previous_run, agent, principal)
+    )
+    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
+'''
+new = '''
+    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
+    conversation = (
+        _NEW_CONVERSATION
+        if previous_run is None
+        else _continued(trace, previous_run, agent, principal)
+    )
+'''
+
+[[mutation]]
+name = "요약 이벤트의 자리를 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "고리가_깨지면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if at and at[0] != 1:
+'''
+new = '''
+    if at and at[0] != 1 and False:
+'''
+
+[[mutation]]
+name = "표에서 새 하위 타입 둘을 빼면 500 이 된다"
+tests = ["tests/channel/http/test_router.py", "-k", "다른_주체와_끝나지_않음과_꺼짐은_409"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+        case NotResumable() | Disabled() | DifferentPrincipal() | NotContinuable():
+'''
+new = '''
+        case NotResumable() | Disabled():
+'''
+
+[[mutation]]
+name = "어댑터가 헤더에 2 를 쓴다"
+tests = ["tests/adapters/test_jsonl.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/jsonl.py"
+old = '''
+TRACE_SCHEMA_VERSION: TraceSchemaVersion = "3"
+'''
+new = '''
+TRACE_SCHEMA_VERSION: TraceSchemaVersion = "2"
+'''
+
+[[mutation]]
+name = "한도의 엄격 검증을 끈다"
+tests = ["tests/sdk/test_manifest.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/sdk/manifest.py"
+old = '''
+    conversation_limit: int | None = Field(default=None, strict=True, ge=1)
+'''
+new = '''
+    conversation_limit: int | None = Field(default=None, ge=1)
+'''
+
+[[mutation]]
+name = "결정 자리의 형식 조건을 형식 2 로 되돌린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "형식 3"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+  const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
+'''
+new = '''
+  const pause = trace.schema_version === "2" ? pauseOf(trace) : null;
+'''
+
+[[mutation]]
+name = "스트림 술어의 종류 목록에서 요약을 뺀다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "src/stream.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+  run_failed: true,
+  conversation_summarized: true,
+} satisfies EventTypes;
+'''
+new = '''
+  run_failed: true,
+} satisfies EventTypes;
+'''

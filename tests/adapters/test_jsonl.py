@@ -18,6 +18,7 @@ from agent_os.core.ports import (
     PluginError,
     RunRow,
     RunSummary,
+    TraceSchemaVersion,
     TraceStore,
     UnknownEvent,
     UnreadableTrace,
@@ -26,6 +27,7 @@ from agent_os.core.ports import (
 from agent_os.sdk import (
     AgentName,
     ApprovalGranted,
+    ConversationSummarized,
     Event,
     LlmCalled,
     Principal,
@@ -77,7 +79,7 @@ def test_첫_줄은_형식_버전과_실행_식별자를_담은_헤더이고_다
         store.write(event)
 
     lines = (tmp_path / "run-1.jsonl").read_text(encoding="utf-8").splitlines()
-    assert json.loads(lines[0]) == {"schema_version": "2", "run_id": "run-1"}
+    assert json.loads(lines[0]) == {"schema_version": "3", "run_id": "run-1"}
     assert lines[1:] == [event.model_dump_json() for event in events]
 
 
@@ -91,7 +93,7 @@ def test_쓴_것을_다시_읽으면_넣은_이벤트와_같다(tmp_path: Path) 
 
     assert trace is not None
     assert trace.run_id == "run-1"
-    assert trace.schema_version == "2"
+    assert trace.schema_version == "3"
     assert list(trace.events) == events
 
 
@@ -801,3 +803,92 @@ def test_CRLF로_끝나는_줄도_같은_이벤트로_읽히고_원문에_CR이_
     assert trace is not None
     assert list(trace.events) == [started, UnknownEvent(raw=future), finished]
     assert row.status == "finished"
+
+
+# --- 형식 3(ADR 0022) ----------------------------------------------------------------
+
+
+def _continued_events(run_id: str, previous: str) -> list[Event]:
+    """이어 간 실행 하나. 시작 이벤트가 앞 실행을 들고 그 뒤에 대화 요약 이벤트가 선다."""
+    return [
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=TS,
+            agent=AgentName("calc"),
+            request="그럼?",
+            principal=Principal("alice"),
+            previous_run=RunId(previous),
+        ),
+        ConversationSummarized(
+            run_id=RunId(run_id),
+            ts=TS,
+            summary="요청한 쪽이 2+2 를 물었고 에이전트가 4 라고 답했다",
+            last_covered_run=RunId(previous),
+            model="m",
+            input_tokens=70,
+            output_tokens=30,
+        ),
+        RunFinished(run_id=RunId(run_id), ts=TS, output="8"),
+    ]
+
+
+def test_새_이벤트와_시작_이벤트의_앞_실행이_왕복한다(tmp_path: Path) -> None:
+    store: TraceStore = JsonlTrace(tmp_path)
+    events = _continued_events("run-2", "run-1")
+    for event in events:
+        store.write(event)
+
+    trace = store.read(RunId("run-2"))
+
+    assert trace is not None
+    assert trace.schema_version == "3"
+    assert list(trace.events) == events
+
+
+# 형식 2 로 쓰인 트레이스. 시작 이벤트에 앞 실행 키가 없고 대화 요약 이벤트가 없다.
+_V2_TRACE = (
+    '{"schema_version":"2","run_id":"paused"}\n'
+    '{"type":"run_started","run_id":"paused","ts":"2026-09-21T12:00:00Z",'
+    '"agent":"calc","request":"2+2?","principal":"alice"}\n'
+    '{"type":"run_paused","run_id":"paused","ts":"2026-09-21T12:00:01Z",'
+    '"tool":"send","args":{}}\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("version", "text"),
+    [("1", _V1_TRACE), ("2", _V2_TRACE)],
+    ids=["형식 1", "형식 2"],
+)
+def test_형식_1과_2_파일을_읽고_앞_실행이_없는_시작_이벤트는_없음으로_읽힌다(
+    version: TraceSchemaVersion, text: str, tmp_path: Path
+) -> None:
+    (tmp_path / "x.jsonl").write_text(
+        text.replace('"old"', '"x"').replace('"paused"', '"x"'), "utf-8"
+    )
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    trace = store.read(RunId("x"))
+
+    assert trace is not None
+    assert trace.schema_version == version
+    for event in trace.events:
+        if isinstance(event, RunStarted):
+            assert event.previous_run is None
+
+
+def test_형식_2_파일에_재개가_이어_쓴_뒤에도_헤더는_2_다(tmp_path: Path) -> None:
+    """재개는 헤더를 다시 쓰지 않는다. 형식이 오른 날 멈춰 있던 실행을 새 런타임이 그대로 재개한다
+    (스토리 47). 재개가 형식 3 에만 있는 이벤트를 이어 쓰지 않으므로 그 파일은 형식 2 그대로다."""
+    (tmp_path / "paused.jsonl").write_text(_V2_TRACE, encoding="utf-8")
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    store.write(ApprovalGranted(run_id=RunId("paused"), ts=TS, approver=Principal("alice")))
+
+    lines = (tmp_path / "paused.jsonl").read_text(encoding="utf-8").splitlines()
+    assert json.loads(lines[0]) == {"schema_version": "2", "run_id": "paused"}
+    assert len(lines) == 4
+    trace = store.read(RunId("paused"))
+    assert trace is not None
+    assert trace.schema_version == "2"
+    assert isinstance(trace.events[-1], ApprovalGranted)

@@ -24,7 +24,8 @@ import { traceKeys } from "../traces";
  * 이벤트 종류마다 재개 스트림을 끝맺는가. 스트림은 실행이 멈추거나 끝나거나 실패한 이벤트로 끝난다(ADR 0014). 이것으로
  * 끝나지 않은 스트림은 결말 없이 끊긴 것이다. 참인 셋은 core `run_status()` 가 결말 없음이 아닌 상태를 주는 갈래와
  * 같다(web-admin 명세 "실행 하나"의 2026-09-30 이력). 상태의 이름은 보이지 않는다. `Record` 라서 계약에 종류가 늘면
- * 여기가 컴파일에서 깨져, 그 종류가 스트림을 끝맺는지 정하게 된다.
+ * 여기가 컴파일에서 깨져, 그 종류가 스트림을 끝맺는지 정하게 된다. 대화 요약은 결말이 아니다 — `run_status()` 의
+ * 갈래 밖이고 실행은 그 뒤에도 계속된다(ADR 0022).
  */
 const ENDS_STREAM = {
   run_started: false,
@@ -36,6 +37,7 @@ const ENDS_STREAM = {
   run_resumed: false,
   run_finished: true,
   run_failed: true,
+  conversation_summarized: false,
 } as const satisfies Record<RunEvent["type"], boolean>;
 
 /** 스트림의 마지막 프레임이 결말인가. 프레임이 없거나 읽지 못한 프레임이면 아니다. */

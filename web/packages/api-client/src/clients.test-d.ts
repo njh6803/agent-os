@@ -49,6 +49,11 @@ export async function 관리_클라이언트로_채널_경로를_부르면_컴�
   await 관리.POST("/runs/{run_id}/approval", { params: { path: { run_id: "r1" } }, body: 결정 });
   // @ts-expect-error: 관리 클라이언트는 실행을 일으키는 채널 경로도 모른다
   await 관리.POST("/runs", { body: { agent: "echo", request: "안녕" } });
+  // @ts-expect-error: 관리 클라이언트는 끝난 실행을 이어 가는 채널 경로도 모른다. 관리는 실행을 일으키지 않는다
+  await 관리.POST("/runs/{run_id}/continuation", {
+    params: { path: { run_id: "r1" } },
+    body: { agent: "echo", request: "그럼?" },
+  });
 }
 
 export async function 채널_클라이언트로_관리_경로를_부르면_컴파일이_실패한다(): Promise<void> {
@@ -86,5 +91,5 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
 >();
 expectTypeOf<keyof ChannelPaths>().toEqualTypeOf<"/runs/{run_id}/approval">();
 expectTypeOf<Exclude<keyof paths, keyof AdminPaths>>().toEqualTypeOf<
-  "/runs" | "/runs/{run_id}/approval"
+  "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation"
 >();

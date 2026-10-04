@@ -1,16 +1,20 @@
-"""HTTP 채널의 라우터와 본문. 경로는 둘이고 둘 다 실행 하나의 이벤트 스트림을 돌려준다.
+"""HTTP 채널의 라우터와 본문. 경로는 셋이고 셋 다 실행 하나의 이벤트 스트림을 돌려준다.
 
 `POST /runs` 는 실행 하나를 일으키고, `POST /runs/{run_id}/approval` 은 멈춘 실행에 결정 하나를 내
 재개한다. 재개 스트림의 첫 이벤트는 그 결정이고 재생된 사실은 다시 나가지 않는다(ADR 0009, 0014).
-
+`POST /runs/{run_id}/continuation` 은 끝난 실행을 이어 가는 새 실행을 일으킨다. 본문은 `POST /runs`
+와 같고 스트림도 같다(ADR 0022). 앞 실행은 경로에만 있다 — 본문에 두면 기본값을 둘 수 없어 지금의
+모든 호출이 `null` 을 보내야 하고, 본문 둘의 유니온은 형식 오류의 경로가 두 멤버의 이름으로 함께
+실린다. 접미사가 있는 이유는 `verbatim` 이 슬래시까지 잡기 때문이다. 접미사 없는
+`/{run_id:verbatim}` 을 결정 경로 앞에 두면 `{id}/approval` 을 통째로 잡는다.
 **응답은 첫 이벤트를 받은 뒤에 시작한다**(ADR 0014). 스트리밍 응답은 첫 바이트 전에 상태
 코드를 확정하므로, 실행 전 실패(`PluginError` 계열)는 첫 이벤트 전에 갈라야 상태 코드와 봉투로
 답할 수 있다. FastAPI 는 의존성을 전부 푼 뒤에 SSE 제너레이터를 부르고 응답을 시작한다. 그래서
-의존성이 실행을 일으키고 첫 이벤트를 기다리며, 그 전의 예외는 의존성에서 던져져 기존 예외
-핸들러를 지나 봉투가 된다. 제너레이터 안에서 첫 yield 전에 던지면 이미 200 이 나간 뒤이고, 그
-예외는 태스크 그룹의 예외 그룹으로 감싸져 표의 마지막 갈래(고정 문구의 500)로 간다. 응답을 직접
-만들어 돌려주는 길로 가면 FastAPI 가 제너레이터 라우트에만 붙이는 keepalive 를 잃는다. 두 경로가
-같다 — `run()` 에서는 `run_started` 앞이, `resume()` 에서는 결정 이벤트 앞이 실행 전이다.
+의존성이 실행을 일으키고 첫 이벤트를 기다리며, 그 전의 예외는 의존성에서 던져져 기존 예외 핸들러를
+지나 봉투가 된다. 제너레이터 안에서 첫 yield 전에 던지면 이미 200 이 나간 뒤이고, 그 예외는 태스크
+그룹의 예외 그룹으로 감싸져 표의 마지막 갈래(고정 문구의 500)로 간다. 응답을 직접 만들어 돌려주는
+길로 가면 FastAPI 가 제너레이터 라우트에만 붙이는 keepalive 를 잃는다. 세 경로가 같다 — `run()`(이어
+가기도)에서는 `run_started` 앞이, `resume()` 에서는 결정 이벤트 앞이 실행 전이다.
 
 **프레임은 `data:` 하나다.** 종류는 JSON 의 `type` 한 곳에 있고 `event:` 와 `id:` 를 싣지 않는다
 (ADR 0014). 계약의 항목 스키마는 FastAPI 의 정형이라 `event`·`id`·`retry` 를 선택 필드로 광고하지만
@@ -172,12 +176,13 @@ def channel_router(
         prefix=CHANNEL_PREFIX, lifespan=runs.lifespan, responses=documented_stream_errors(500)
     )
 
-    async def run_stream(body: StartRun, request: Request) -> RunStream:
-        """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다."""
+    async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
+        """새 실행을 일으키고 첫 이벤트를 받는다. 시작과 이어 가기가 앞 실행 하나만 다르게 준다."""
         events = run(
             body.agent,
             body.request,
             principal,
+            previous_run=previous_run,
             plugins=plugins,
             model=model,
             tools=tools,
@@ -186,9 +191,18 @@ def channel_router(
         )
         return await runs.start(events, request_id=request_id_of(request))
 
+    async def run_stream(body: StartRun, request: Request) -> RunStream:
+        """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
+
+        `started` 를 바로 의존성으로 걸지 않는 이유는 FastAPI 가 그 시그니처의 `previous_run` 을
+        질의 파라미터로 읽기 때문이다. 경로마다 앞 실행을 고정한 래퍼 하나가 의존성이다.
+        """
+        return await started(body, request, None)
+
     # 404 는 없는 에이전트, 409 는 꺼진 것을 부르면 core 가 던지는 `Disabled` 를 표가 옮긴 것(ADR
     # 0017, 요청한 에이전트이거나 그것이 쓰는 mcp 다), 500 은 그 밖의 구성 오류다. 재개할 수 없는
-    # 상태를 만나는 것은 재개 라우트뿐이다.
+    # 상태를 만나는 것은 재개 라우트뿐이고, 이어 갈 수 없는 앞 실행을 만나는 것은 이어 가기
+    # 라우트뿐이다.
     @router.post(
         "",
         operation_id="start_run",
@@ -243,6 +257,38 @@ def channel_router(
     )
     async def decide_approval(
         stream: Annotated[RunStream, Depends(resume_stream)],
+    ) -> AsyncIterator[Event]:
+        async for event in stream.events():
+            yield event
+
+    async def continue_stream(
+        run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)], body: StartRun, request: Request
+    ) -> RunStream:
+        """앞 실행을 가리켜 새 실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 선다.
+
+        앞 실행의 존재도 상태도 주체도 먼저 확인하지 않는다. 부재, 다른 주체, 이어 갈 수 없음, 꺼짐,
+        깨진 고리는 core 의 `run()` 이 던진 타입을 표가 옮긴다. 채널이 포트나 `run_status()` 로 먼저
+        보면 판정 순서(앞 실행 → 고리 → 준비)가 core 밖으로 샌다(`.claude/rules/channel.md`).
+        """
+        return await started(body, request, RunId(run_id))
+
+    # 404 는 없는 앞 실행이거나 없는 에이전트이고 메시지가 가른다. 409 는 뜻이 셋이고 메시지가
+    # 가른다 — 앞 실행이 다른 주체의 것(`DifferentPrincipal`), 앞 실행이 `run_finished` 로 끝나지
+    # 않음 (`NotContinuable`, 메시지가 실패·일시정지·결말 없음을 든다), 요청한 에이전트나 그것이
+    # 쓰는 mcp 가 꺼짐(`Disabled`). 500 은 거슬러 읽는 고리가 깨진 것(없거나 손상이거나 주체가
+    # 다르거나 끝나지 않았거나 순환하는 실행)과 그 밖의 구성 오류이고, 봉투의 `message` 가 그
+    # `PluginError` 의 문구라 운영자가 어느 실행을 되살려야 하는지 안다. 전부 실행 식별자를 만들기
+    # 전이라 트레이스가 생기지 않는다(ADR 0022). `{run_id}` 는 결정 경로와 같이 `verbatim` 과 sdk 의
+    # 패턴을 지난다.
+    @router.post(
+        "/{run_id:verbatim}/continuation",
+        operation_id="continue_run",
+        summary="끝난 실행을 이어 가는 새 실행을 일으켜 그 이벤트를 생기는 대로 흘린다",
+        response_class=EventSourceResponse,
+        responses=documented_stream_errors(401, 404, 409, 422),
+    )
+    async def continue_run(
+        stream: Annotated[RunStream, Depends(continue_stream)],
     ) -> AsyncIterator[Event]:
         async for event in stream.events():
             yield event

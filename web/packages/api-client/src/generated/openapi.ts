@@ -104,6 +104,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/runs/{run_id}/continuation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 끝난 실행을 이어 가는 새 실행을 일으켜 그 이벤트를 생기는 대로 흘린다 */
+    post: operations["continue_run"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/traces": {
     parameters: {
       query?: never;
@@ -200,6 +217,34 @@ export interface components {
        */
       pause_index: number;
     };
+    /**
+     * ConversationSummarized
+     * @description 런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.
+     */
+    ConversationSummarized: {
+      /** Input Tokens */
+      input_tokens: number;
+      /** Last Covered Run */
+      last_covered_run: string;
+      /** Model */
+      model: string;
+      /** Output Tokens */
+      output_tokens: number;
+      /** Run Id */
+      run_id: string;
+      /** Summary */
+      summary: string;
+      /**
+       * Ts
+       * Format: date-time
+       */
+      ts: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "conversation_summarized";
+    };
     Decision: components["schemas"]["Approve"] | components["schemas"]["Deny"];
     /**
      * Deny
@@ -247,7 +292,8 @@ export interface components {
       | components["schemas"]["ApprovalDenied"]
       | components["schemas"]["RunResumed"]
       | components["schemas"]["RunFinished"]
-      | components["schemas"]["RunFailed"];
+      | components["schemas"]["RunFailed"]
+      | components["schemas"]["ConversationSummarized"];
     /**
      * Health
      * @description 살아 있다는 것만 답한다. 내부 구성을 싣지 않는다.
@@ -342,6 +388,8 @@ export interface components {
      * @description 플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다.
      */
     PluginManifest: {
+      /** Conversation Limit */
+      conversation_limit: number | null;
       /** Entrypoint */
       entrypoint: string | null;
       kind: components["schemas"]["PluginKind"];
@@ -465,11 +513,13 @@ export interface components {
     RunRow: components["schemas"]["RunSummary"] | components["schemas"]["UnreadableTrace"];
     /**
      * RunStarted
-     * @description 실행이 시작됐다. 에이전트와 요청과 주체를 든다. 런타임이 낸다.
+     * @description 실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다.
      */
     RunStarted: {
       /** Agent */
       agent: string;
+      /** Previous Run */
+      previous_run: string | null;
       /** Principal */
       principal: string;
       /** Request */
@@ -600,6 +650,7 @@ export interface components {
       | components["schemas"]["RunResumed"]
       | components["schemas"]["RunFinished"]
       | components["schemas"]["RunFailed"]
+      | components["schemas"]["ConversationSummarized"]
       | components["schemas"]["UnknownEvent"];
     /**
      * TracePage
@@ -612,7 +663,7 @@ export interface components {
       runs: components["schemas"]["RunRow"][];
     };
     /** @enum {string} */
-    TraceSchemaVersion: "1" | "2";
+    TraceSchemaVersion: "1" | "2" | "3";
     /**
      * UnknownEvent
      * @description 이 런타임이 모르는 종류의 이벤트. 원문 한 줄을 문자열 그대로 든다.
@@ -882,7 +933,7 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
-      /** @description 있지만 지금 상태로는 받을 수 없다 */
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
       409: {
         headers: {
           [name: string]: unknown;
@@ -953,7 +1004,78 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
-      /** @description 있지만 지금 상태로는 받을 수 없다 */
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  continue_run: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
       409: {
         headers: {
           [name: string]: unknown;

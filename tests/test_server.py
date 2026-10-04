@@ -855,8 +855,9 @@ def test_스키마에_이름_있는_타입이_나온다(app: FastAPI) -> None:
 
 def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(app: FastAPI) -> None:
     """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. 다섯째인
-    conflict 는 대상이 있지만 그 상태가 요청을 허락하지 않는 409 이고, 표가 재개 불가와 꺼짐을
-    거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력). 관리 라우트는 내지 않는다."""
+    conflict 는 대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 이고, 표가 재개 불가와
+    꺼짐과 다른 주체와 이어 갈 수 없음을 거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력, ADR
+    0022). 관리 라우트는 내지 않는다."""
     schemas = app.openapi().get("components", {}).get("schemas", {})
 
     assert set(schemas["ErrorCode"]["enum"]) == {

@@ -35,6 +35,7 @@ const STARTED: RunEvent = {
   agent: "calc",
   request: "2 더하기 3 하고 4 더하기 5",
   principal: "operator",
+  previous_run: null,
 };
 const CALLED: RunEvent = {
   type: "llm_called",
@@ -95,6 +96,7 @@ const CALC: Plugin = {
     entrypoint: "agent:Calc",
     mcp: ["fixture"],
     requires_approval: ["add"],
+    conversation_limit: null,
     server: null,
   },
 };
@@ -110,6 +112,7 @@ const FIXTURE: Plugin = {
     entrypoint: null,
     mcp: [],
     requires_approval: [],
+    conversation_limit: null,
     server: { command: "python", args: ["fixture.py"], secret_args: {} },
   },
 };
@@ -287,6 +290,16 @@ describe("결정 자리", () => {
     expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.getAllByText(/재개할 수 없다/)).toHaveLength(1);
+  });
+
+  test("형식 3 트레이스의 멈춘 실행에도 결정 자리가 선다", async () => {
+    // 형식 조건은 "형식 1 이 아니다"다. 형식이 늘 때마다 결정 자리가 조용히 사라지지 않는다(스토리 56).
+    serveTrace(() => ({ ...PAUSED, schema_version: "3" }));
+    servePlugins(ROWS);
+
+    await openDecision();
+
+    expect(place().textContent).toContain("add");
   });
 });
 

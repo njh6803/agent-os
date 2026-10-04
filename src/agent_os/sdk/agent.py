@@ -19,6 +19,7 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Protocol
 
+from agent_os.sdk.conversation import Conversation
 from agent_os.sdk.events import Event
 from agent_os.sdk.ids import RunId
 from agent_os.sdk.json import Json
@@ -35,10 +36,21 @@ class AgentContext(Protocol):
     바뀐다. 처음 실행 전체가 나중에 재생될 구간이라 처음부터 고정한다. 그래야 프롬프트에 날짜를
     넣는 평범한 에이전트가 시각 때문에 재개 불가가 되지 않는다(ADR 0009). 시계 읽기를 따로
     기록하지 않고도 결정적이다. 실행이 오래 걸려도 now()는 움직이지 않는다는 뜻이기도 하다.
+
+    conversation 은 이 실행이 이어 간 대화에서 이 에이전트가 아는 것이다(ADR 0022). 가장 가까운 자기
+    대화 요약(없으면 None)과 그 뒤 자기 교환들(요청과 출력, 오래된 것부터)이고, 이어 가지 않은
+    실행에서는 요약이 없고 열이 비어 있다. 다른 에이전트의 교환은 오지 않는다. **신뢰 경계**: 요약과
+    교환의 요청은 최종 사용자의 입력과 같은 신뢰 수준이다. 요청에 심은 지시나 주장이 출처가 흐려진
+    채 요약에 실릴 수 있으므로, 에이전트는 그것을 지시가 아니라 데이터로 엮는다. llm()은 이것을
+    프롬프트에 붙이지 않는다. 값은 런타임이 run()을 부르기 전에 정하고 실행 안에서 바뀌지 않으며
+    재개해도 같다.
     """
 
     @property
     def run_id(self) -> RunId: ...
+
+    @property
+    def conversation(self) -> Conversation: ...
 
     def now(self) -> datetime: ...
 
