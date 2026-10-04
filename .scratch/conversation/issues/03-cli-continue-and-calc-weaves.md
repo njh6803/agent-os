@@ -34,3 +34,12 @@
 
 - [ ] **기능을 닫는지는 병합 직전에 판정한다.** `git fetch` 뒤 `origin/main`의 04 티켓 파일 `Status:`가 `done`이면 이 PR이 `.scratch/plan.md`의 conversation 행을 `done`으로 바꾸고 프론티어 문단을 고친다. 아니면 04가 닫는다. main이 최신 기준(strict)이라 뒤에 병합되는 쪽은 앞의 병합을 들인 뒤에야 병합되므로 둘이 함께 열려 있어도 한쪽은 반드시 본다. web-widget 행은 end-user-channel과 design-system에 아직 막혀 있다
 - [ ] 검증 명령이 모두 초록이다
+
+### 02가 넘긴 메모 (2026-10-05, PR #132 리뷰)
+
+claude-review 3회차의 Minor 둘과 Nit 둘. 02가 반영 루프를 멈추고 병합하며 넘겼다. `core/run.py`·`core/continuation.py`를 지나는 쪽이 본다(이 티켓이 `-m llm`의 요약 사례로 그 코드를 지난다). 경위는 일지 2026-10-04-04의 PR 리뷰 절.
+
+- `run.py`의 `_BOUNDARY`는 "시작과 재개의 경계"라는 이름인데 02가 요약 이벤트를 넣어 이름이 뜻과 어긋난다. `_NOT_REPLAYED`처럼 "재생 기록 열에 들지 않는 것"으로 바꾸고 `.claude/rules/core.md`와 변이 표 `continuation_mutations.toml`의 같은 이름을 함께 고친다.
+- `_read_paused`가 `Link`를 돌려줘 `run.py`가 `own.started`를 읽는다. 거슬러 읽기의 표현이 실행을 모는 모듈로 새는 것을 좁힐 자리다(리뷰어는 지금 크기로는 후속 허용).
+- `continuation.py`의 독스트링·주석이 티켓과 리뷰 회차를 근거로 든다("conversation 티켓 01 리뷰", "http-channel 티켓 02 리뷰", "(to-tickets)", "(명세 검토)"). 근거를 ADR 0022와 명세의 절 이름으로 옮긴다.
+- `gather_continued`의 독스트링이 판정 순서와 그 예외(앞 실행 자신의 필드 패턴·요약 자리 위반은 주체 뒤)를 한 문장에 섞어 모순처럼 읽힌다. 규칙 한 문장, 예외 한 문장으로.

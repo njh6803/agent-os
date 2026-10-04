@@ -118,6 +118,20 @@ PR #132. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 - **Nit(보류): `run()`의 `conversation`을 정하는 세 갈래를 함수로 뺄 후보.** 리뷰어도 "다음 티켓에서 분기가 더 붙으면"이라 했고 03(CLI)과
   04(관리 화면)는 `run()`에 분기를 더하지 않는다. 받는 티켓이 없어 여기 기록으로만 둔다.
 
+> 사용자: "끝났어?"
+
+3회차(`e1bf41e`). CI 여섯이 초록이었다. CodeRabbit은 `71cd8d0..e1bf41e`를 보고 지적이 없었다. claude-review는 Critical·Major 0, Minor 2,
+Nit 2이고 회차마다 새 자리를 냈다. 01과 같은 기준으로 여기서 반영 루프를 멈추고 병합한다 — 넷 다 `core/run.py`·`continuation.py`를 다음에
+지나는 쪽이 보도록 티켓 03 끝에 "02가 넘긴 메모"로 적었다.
+
+- **Minor(보류): `_BOUNDARY`라는 이름.** "시작과 재개의 경계"인데 요약 이벤트가 들어 이름이 뜻과 어긋난다. `_NOT_REPLAYED` 같은
+  "재생 기록 열에 들지 않는 것"이 맞다. `core.md`와 변이 표가 그 이름을 가리키므로 셋을 함께 고친다.
+- **Minor(보류, 리뷰어도 후속 허용): `_read_paused`가 `Link`를 돌려줘 `run.py`가 그 필드를 읽는다.** `resume()`이 쓰는 것은 `own.started`
+  하나라, 거슬러 읽기의 표현이 실행을 모는 모듈로 새는 것을 좁힐 자리다.
+- **Nit(보류) 둘.** `continuation.py`의 독스트링이 티켓·리뷰 회차를 근거로 든다("conversation 티켓 01 리뷰", "(to-tickets)", "(명세 검토)")
+  — 티켓은 닫히고 근거는 ADR 0022와 명세에 남으니 그 이름으로 옮긴다. `gather_continued` 독스트링이 순서 규칙과 예외를 한 문장에 섞어
+  스스로 모순처럼 읽힌다.
+
 ## 검사
 
 판정 명령은 파이프 없이 스크립트 파일(`gates.sh`)로 돌리고 종료 코드를 모았다. PR 리뷰 반영 뒤 전부 다시 돌렸다.
