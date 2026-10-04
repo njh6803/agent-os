@@ -487,3 +487,33 @@ old = '''
 new = '''
         conversation=NEW_CONVERSATION,
 '''
+
+[[mutation]]
+name = "앞 실행이 없어도 링크를 그린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "링크가 아니라 글자다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  if (isEventField(name) && RUN_FIELDS.has(name) && typeof value === "string") {
+'''
+new = '''
+  if (isEventField(name) && RUN_FIELDS.has(name) && value !== undefined) {
+'''
+
+[[mutation]]
+name = "요약 글의 용어집 말을 바꾼다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "요약 이벤트의 필드는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  summary: "요약 글",
+'''
+new = '''
+  summary: "요약",
+'''

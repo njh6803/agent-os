@@ -66,6 +66,38 @@ const TRACE: Trace = {
   ],
 };
 
+// 이어 간 실행. 앞 실행과 요약이 덮는 끝의 식별자에 띄어쓰기·빗금·한글을 두어 링크의 주소가 인코딩되는 것을 잰다.
+const CONTINUED = "r-calc-3";
+const PREVIOUS = "r calc/둘";
+const COVERED = "r calc/하나";
+const SUMMARY = "2+3 묻자 5 답함(실행 r calc/하나).";
+const CONTINUED_TRACE: Trace = {
+  run_id: CONTINUED,
+  schema_version: "3",
+  events: [
+    {
+      type: "run_started",
+      run_id: CONTINUED,
+      ts: TS,
+      agent: "calc",
+      request: "거기에 4를 더하면",
+      principal: "operator",
+      previous_run: PREVIOUS,
+    },
+    {
+      type: "conversation_summarized",
+      run_id: CONTINUED,
+      ts: TS,
+      summary: SUMMARY,
+      last_covered_run: COVERED,
+      model: "claude-sonnet-5",
+      input_tokens: 543,
+      output_tokens: 38,
+    },
+    { type: "run_finished", run_id: CONTINUED, ts: TS, output: "9" },
+  ],
+};
+
 /**
  * `GET /traces/{run_id}` 하나에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 요청마다의 `Authorization` 을
  * 쌓아 돌려준다.
@@ -179,6 +211,55 @@ describe("실행 하나", () => {
     expect(names(4)).toEqual(["원문 raw"]);
   });
 
+  test("앞 실행과 요약이 덮는 끝은 그 실행의 상세로 가는 링크이고 주소는 인코딩한 식별자다", async () => {
+    serveTrace(`/traces/${CONTINUED}`, () => HttpResponse.json(CONTINUED_TRACE));
+
+    await openRun(CONTINUED);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    const previous = within(eventItem(0)).getByRole("link", { name: PREVIOUS });
+    expect(previous.getAttribute("href")).toBe(`/runs/${encodeURIComponent(PREVIOUS)}`);
+    expect(previous.getAttribute("href")).toBe("/runs/r%20calc%2F%EB%91%98");
+    const covered = within(eventItem(1)).getByRole("link", { name: COVERED });
+    expect(covered.getAttribute("href")).toBe("/runs/r%20calc%2F%ED%95%98%EB%82%98");
+    // 링크는 실행 식별자 필드 둘뿐이다. 요약 글에 든 식별자는 글자다.
+    expect(within(events()).getAllByRole("link")).toHaveLength(2);
+  });
+
+  test("이어 가지 않은 실행의 앞 실행은 링크가 아니라 글자다", async () => {
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    expect(within(events()).queryByRole("link")).toBeNull();
+    expect(eventItem(0).textContent).toContain("null");
+  });
+
+  test("요약 이벤트의 필드는 용어집의 말과 계약의 이름을 함께 보이고 글과 토큰 수는 글자다", async () => {
+    serveTrace(`/traces/${CONTINUED}`, () => HttpResponse.json(CONTINUED_TRACE));
+
+    await openRun(CONTINUED);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    expect(
+      within(eventItem(1))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual([
+      "시각 ts",
+      "요약 글 summary",
+      "덮는 끝 last_covered_run",
+      "모델 model",
+      "입력 토큰 수 input_tokens",
+      "응답 토큰 수 output_tokens",
+    ]);
+    const shown = eventItem(1).textContent;
+    expect(shown).toContain(SUMMARY);
+    expect(shown).toContain("543");
+    expect(shown).toContain("38");
+  });
+
   test("인자와 도구 호출 같은 JSON 값은 들여 적은 글자로 보인다", async () => {
     serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
 
@@ -233,9 +314,11 @@ describe("실행 하나", () => {
     const script = "<script>window.__agentOsXss = true</script>";
     const link = '<a href="javascript:window.__agentOsXss = true">눌러</a>';
     const bold = '{"type":"<b>굵게</b>"}';
+    // 앞 실행의 값은 링크의 href 에 든다. 인코딩되어 `/runs/` 아래의 조각으로만 남아야 한다.
+    const previous = "javascript:window.__agentOsXss = true/../../plugins?x#y";
     const hostile: Trace = {
       run_id: RUN,
-      schema_version: "2",
+      schema_version: "3",
       events: [
         {
           type: "run_started",
@@ -244,7 +327,7 @@ describe("실행 하나", () => {
           agent: "calc",
           request: script,
           principal: "operator",
-          previous_run: null,
+          previous_run: previous,
         },
         {
           type: "llm_called",
@@ -275,13 +358,16 @@ describe("실행 하나", () => {
 
     await screen.findByRole("region", { name: "이벤트" });
     const shown = events().textContent;
-    for (const text of [image, script, link, bold]) {
+    for (const text of [image, script, link, bold, previous]) {
       expect(shown).toContain(text);
     }
     expect(document.querySelector("img")).toBeNull();
     expect(document.body.querySelector("script")).toBeNull();
     expect(document.querySelector("b")).toBeNull();
     expect(document.querySelector('a[href^="javascript"]')).toBeNull();
+    expect(within(events()).getByRole("link", { name: previous }).getAttribute("href")).toBe(
+      "/runs/javascript%3Awindow.__agentOsXss%20%3D%20true%2F..%2F..%2Fplugins%3Fx%23y",
+    );
     expect(Reflect.has(window, "__agentOsXss")).toBe(false);
   });
 

@@ -222,7 +222,7 @@ _Avoid_: 리플레이, 재실행, 캐시
 
 | 동사 | 뜻 | 예 |
 |---|---|---|
-| `read` | 포트에서 하나를 읽어 값으로 만든다. 깨졌으면 `PluginError`. 없음은 None이거나, 없음이 곧 거절인 자리에서는 `Absent` | `read_link`(None), `_read_paused`(`Absent`) |
+| `read` | 포트에서 입력 하나를 읽고 판정해 값으로 만든다. 그 값의 멤버를 채우느라 다른 이름의 읽기(`gather`, 명사구)를 안에서 부를 수 있다. 깨졌으면 `PluginError`. 없음은 None이거나, 없음이 곧 거절인 자리에서는 `Absent` | `read_link`(None), `_read_paused`(`Absent`. 멤버는 `resumed_conversation`으로) |
 | `gather` | 포트를 여러 번 읽어 모은다. 읽기의 합이고 판정이 끼어 있다 | `gather_continued` |
 | `check` | 규칙을 보고 어긋나면 던진다. 값을 돌려주지 않는다(명령) | `check_record_rules` |
 | `plan` | 무엇을 할지 정하고 아무것도 하지 않는다. 할 것이 없으면 None | `plan_fold` |
