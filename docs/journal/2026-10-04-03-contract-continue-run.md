@@ -130,6 +130,13 @@ PR #131. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 - **Nit 하나(반영): `run_stream`이 `started(body, request, None)` 한 줄 래퍼인 이유.** `started`를 바로 의존성으로 걸면 FastAPI가 `previous_run`을
   질의 파라미터로 읽는다. 독스트링에 적었다.
 
+> 사용자: "ci 끝났어"
+
+3회차(`39af1bc`). CI 여섯이 초록이었다. CodeRabbit은 "Review finished"였고 인라인 코멘트가 0이라 둘째·셋째 커밋에도 지적이 없다. claude-review는
+Critical·Major 0, Minor 2, Nit 1이고 회차마다 새 자리를 냈다. 고리 읽기를 별도 모듈로 옮길지는 02 전에 정하라는 것이라 티켓 02 끝에 "01이 넘긴
+메모"로 적었고, 재개가 같은 멤버를 준다는 동등성 테스트는 이미 있는 재개 테스트(재생 대조가 통과하는 것)가 그것이라 더하지 않았다. `_require_link`의
+이름(값을 돌려주는 `require`)도 그 메모에 들었다. 여기서 반영 루프를 멈추고 병합한다 — 셋 다 02가 지나는 자리이고 받는 쪽에 적혔다.
+
 ## 갈린 곳
 
 - 시그니처는 새 함수가 아니라 `run(previous_run=)`으로 갔다. 일지 02는 "새 함수인지 `run()`의 인자인지"로 열어 두었고, `resume()`을 따로 둔
