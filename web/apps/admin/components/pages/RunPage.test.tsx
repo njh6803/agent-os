@@ -30,6 +30,7 @@ const TRACE: Trace = {
       agent: "calc",
       request: "1 더하기 2",
       principal: "operator",
+      previous_run: null,
     },
     {
       type: "llm_called",
@@ -167,7 +168,13 @@ describe("실행 하나", () => {
       within(eventItem(index))
         .getAllByRole("term")
         .map((term) => term.textContent);
-    expect(names(0)).toEqual(["시각 ts", "에이전트 agent", "요청 request", "주체 principal"]);
+    expect(names(0)).toEqual([
+      "시각 ts",
+      "에이전트 agent",
+      "요청 request",
+      "주체 principal",
+      "앞 실행 previous_run",
+    ]);
     expect(names(3)).toEqual(["시각 ts", "도구 tool", "성공 ok", "인자 args", "결과 내용 content"]);
     expect(names(4)).toEqual(["원문 raw"]);
   });
@@ -209,14 +216,17 @@ describe("실행 하나", () => {
     expect(screen.getByText(/읽을 수 있지만 재개할 수 없다/)).toBeTruthy();
   });
 
-  test("형식 2 트레이스에는 재개할 수 없다는 말이 없다", async () => {
-    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
+  test.each(["2", "3"] as const)(
+    "형식 %s 트레이스에는 재개할 수 없다는 말이 없다",
+    async (version) => {
+      serveTrace(`/traces/${RUN}`, () => HttpResponse.json({ ...TRACE, schema_version: version }));
 
-    await openRun(RUN);
+      await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
-    expect(screen.queryByText(/재개할 수 없다/)).toBeNull();
-  });
+      await screen.findByRole("region", { name: "이벤트" });
+      expect(screen.queryByText(/재개할 수 없다/)).toBeNull();
+    },
+  );
 
   test("트레이스에 든 HTML 은 글자 그대로 보이고 요소로 그려지지 않는다", async () => {
     const image = '<img src=x onerror="window.__agentOsXss = true">';
@@ -234,6 +244,7 @@ describe("실행 하나", () => {
           agent: "calc",
           request: script,
           principal: "operator",
+          previous_run: null,
         },
         {
           type: "llm_called",

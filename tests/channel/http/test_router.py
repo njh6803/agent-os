@@ -278,7 +278,7 @@ class FakeTrace:
         stored: tuple[Event | UnknownEvent, ...] = events
         if run_id in self._damaged:
             stored = (*events[:-1], UnknownEvent(raw='{"type": "from_the_future"}'), events[-1])
-        version: TraceSchemaVersion = "1" if run_id in self._legacy else "2"
+        version: TraceSchemaVersion = "1" if run_id in self._legacy else "3"
         return Trace(run_id=run_id, schema_version=version, events=stored)
 
     def list(
@@ -296,7 +296,7 @@ class FakeTrace:
             summary = RunSummary(
                 run_id=run_id,
                 status=run_status(events[-1]),
-                schema_version="2",
+                schema_version="3",
                 started_at=started.ts,
                 last_at=events[-1].ts,
                 agent=started.agent,
@@ -1633,6 +1633,7 @@ EXISTING_COMPONENTS = frozenset(
     {
         "ApprovalDenied",
         "ApprovalGranted",
+        "ConversationSummarized",
         "ErrorCode",
         "ErrorEnvelope",
         "Health",
@@ -1676,13 +1677,17 @@ def _members(schema: Mapping[str, Json]) -> list[str]:
     return references
 
 
-CHANNEL_OPERATIONS = (("/runs", "post"), ("/runs/{run_id}/approval", "post"))
+CHANNEL_OPERATIONS = (
+    ("/runs", "post"),
+    ("/runs/{run_id}/approval", "post"),
+    ("/runs/{run_id}/continuation", "post"),
+)
 
 
 def test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_멤버를_가리킨다() -> None:
     """생성 클라이언트가 `Streamitem Start Run` 같은 익명 유니온을 받지 않고(스토리 21), 같은
     이벤트를 두 타입으로 다루지 않는다(스토리 22). 기존 이름은 그대로이고 새 이름만 늘며 입력과
-    출력으로 갈라진 이름이 없다. 두 채널 라우트의 스트림이 같은 항목이다."""
+    출력으로 갈라진 이름이 없다. 세 채널 라우트의 스트림이 같은 항목이다."""
     document = _app().openapi()
     schemas = document["components"]["schemas"]
 
@@ -1768,8 +1773,9 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
 
 
 def test_409_는_채널_라우트에만_있다() -> None:
-    """대상의 상태가 요청을 허락하지 않는 것(재개 불가, 꺼짐)을 만나는 것은 실행을 일으키는
-    라우트뿐이다. 관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진 것을 거부하지 않는다."""
+    """대상의 상태나 주체가 요청을 허락하지 않는 것(재개 불가, 꺼짐, 다른 주체, 이어 갈 수 없음)을
+    만나는 것은 실행을 일으키는 라우트뿐이다. 관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진
+    것을 거부하지 않는다."""
     paths = _app().openapi()["paths"]
 
     conflicting = [
@@ -1779,7 +1785,7 @@ def test_409_는_채널_라우트에만_있다() -> None:
         if "409" in operation["responses"]
     ]
 
-    assert conflicting == [("/runs", "post"), ("/runs/{run_id}/approval", "post")]
+    assert conflicting == list(CHANNEL_OPERATIONS)
 
 
 def test_결정_본문이_판별자_decision_의_이름_있는_유니온이고_허가와_거부가_섞이지_않는다() -> None:
@@ -1843,7 +1849,11 @@ def test_채널에는_승인_요청을_읽는_경로가_없다() -> None:
         path: set(operations) for path, operations in paths.items() if path.startswith("/runs")
     }
 
-    assert channel == {"/runs": {"post"}, "/runs/{run_id}/approval": {"post"}}
+    assert channel == {
+        "/runs": {"post"},
+        "/runs/{run_id}/approval": {"post"},
+        "/runs/{run_id}/continuation": {"post"},
+    }
 
 
 def test_계약의_제목과_설명이_관리와_채널을_함께_말한다() -> None:
@@ -1854,3 +1864,196 @@ def test_계약의_제목과_설명이_관리와_채널을_함께_말한다() ->
     assert "채널" in info["description"]
     assert "읽기 전용" not in info["title"] + info["description"]
     assert info["title"] != "Agent OS 관리 API"
+
+
+# 이어 가기 — 끝난 실행을 가리켜 새 실행을 일으킨다(ADR 0022). 채널은 앞 실행을 먼저 확인하지 않고
+# core 가 던진 타입을 표가 옮긴다(`.claude/rules/channel.md`). 판정 순서는 core 테스트가 고정하고
+# 여기서는 경로, 스트림, 상태 코드와 봉투, 계약을 잰다.
+
+CONTINUATION = f"/runs/{STORED}/continuation"
+
+
+def _finished_stored(agent: str = "echo", principal: Principal = PRINCIPAL) -> FakeTrace:
+    """채널을 지나지 않고 트레이스에 둔 끝난 실행 하나."""
+    started = RunStarted(
+        run_id=STORED, ts=T0, agent=AgentName(agent), request="2+3?", principal=principal
+    )
+    return _stored(started, RunFinished(run_id=STORED, ts=T0, output="5"))
+
+
+async def _continue(client: AsyncClient, run_id: str, body: Mapping[str, Json]) -> Response:
+    return await client.post(f"/runs/{run_id}/continuation", json=body, headers=CHANNEL)
+
+
+async def test_이어_가기는_같은_SSE_스트림이고_첫_이벤트가_앞_실행을_든_run_started_다() -> None:
+    """프레임이 트레이스 한 줄과 글자로 같고(스토리 23), 새 실행은 새 식별자다."""
+    trace = _finished_stored()
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _continue(client, STORED, _start("echo", "그럼?"))
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    frames = _frames(response.text)
+    assert _types(frames) == ["run_started", "run_finished"]
+    started = json.loads(frames[0])
+    assert started["previous_run"] == STORED
+    assert started["run_id"] == "run-1"
+    assert started["request"] == "그럼?"
+    assert frames == trace.lines[2:]
+
+
+async def test_없는_앞_실행과_없는_에이전트는_404_봉투이고_메시지가_가른다() -> None:
+    """앞 실행이 없는 것과 요청한 에이전트가 없는 것은 같은 `Absent` 이고 메시지가 가른다."""
+    trace = _finished_stored()
+
+    async with _serving(_app(trace=trace)) as client:
+        no_run = await _continue(client, "nobody-1", _start("echo"))
+        no_agent = await _continue(client, STORED, _start("nobody"))
+
+    for response, word in ((no_run, "nobody-1"), (no_agent, "nobody")):
+        assert response.status_code == 404
+        body = response.json()
+        assert body["code"] == "not_found"
+        assert word in body["message"]
+    assert trace.lines == trace.lines[:2]
+
+
+@pytest.mark.parametrize(
+    ("trace", "disabled", "word"),
+    [
+        pytest.param(_finished_stored(principal=Principal("bob")), None, "주체", id="다른 주체"),
+        pytest.param(
+            _stored(_stored_start("echo"), _stored_pause()), None, "paused", id="끝나지 않음"
+        ),
+        pytest.param(_finished_stored(), "echo", "꺼진", id="꺼짐"),
+    ],
+)
+async def test_다른_주체와_끝나지_않음과_꺼짐은_409_봉투이고_트레이스가_생기지_않는다(
+    trace: FakeTrace, disabled: str | None, word: str
+) -> None:
+    """에러 코드는 늘지 않고 `conflict` 의 뜻이 는다(스토리 28). 메시지가 가른다 — 남의 실행, 끝나지
+    않은 실행의 상태, 꺼진 것의 이름이다."""
+    before = list(trace.lines)
+    app = _app(trace=trace)
+
+    async with _serving(app) as client:
+        if disabled is not None:
+            await _set_enabled(client, "agent", disabled, enabled=False)
+        response = await _continue(client, STORED, _start("echo"))
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["code"] == "conflict"
+    assert word in body["message"]
+    assert "bob" not in body["message"]
+    assert trace.lines == before
+
+
+async def test_고리가_깨지면_500_봉투이고_message_가_그_PluginError_의_문구다() -> None:
+    """요청이 가리킨 앞 실행은 있지만 그것이 가리키는 실행이 없다. 서버의 기록이 깨진 것이라 404 가
+    아니다(ADR 0022). 문구는 어느 실행이 없는지 든다(스토리 46)."""
+    started = RunStarted(
+        run_id=STORED,
+        ts=T0,
+        agent=AgentName("echo"),
+        request="2+3?",
+        principal=PRINCIPAL,
+        previous_run=RunId("vanished-1"),
+    )
+    trace = _stored(started, RunFinished(run_id=STORED, ts=T0, output="5"))
+    before = list(trace.lines)
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _continue(client, STORED, _start("echo"))
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["code"] == "internal_error"
+    assert "vanished-1" in body["message"]
+    assert body["message"] != INTERNAL_MESSAGE
+    assert trace.lines == before
+
+
+async def test_패턴을_어기는_앞_실행은_422이고_트레이스_포트가_불리지_않는다() -> None:
+    """경로의 식별자는 `traces/{run_id}.jsonl` 로 조립되는 원격 입력이다(스토리 27)."""
+    trace = _finished_stored()
+    before = list(trace.lines)
+
+    async with _serving(_app(trace=trace)) as client:
+        for run_id in ESCAPING_RUN_IDS:
+            response = await _continue(client, run_id, _start("echo"))
+
+            assert response.status_code == 422, run_id
+            fields = [violation["field"] for violation in response.json()["violations"]]
+            assert fields == ["path.run_id"], run_id
+    assert trace.reads == []
+    assert trace.lines == before
+
+
+@pytest.mark.parametrize("extra", ["principal", "model", "previous_run"])
+async def test_이어_가기_본문에_추가_필드를_실으면_무시하지_않고_422다(extra: str) -> None:
+    """본문은 `POST /runs` 의 것 그대로다. 앞 실행은 경로에 있지 본문에 없다."""
+    trace = _finished_stored()
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _continue(client, STORED, {**_start("echo"), extra: "x"})
+
+    assert response.status_code == 422
+    fields = [violation["field"] for violation in response.json()["violations"]]
+    assert fields == [f"body.{extra}"]
+    assert trace.reads == []
+
+
+async def test_이어_가기_경로와_결정_경로는_서로_가로채지_않는다() -> None:
+    """`verbatim` 이 슬래시까지 잡으므로 접미사 없는 경로를 결정 경로 앞에 두면 `{id}/approval` 을
+    통째로 잡는다(명세 검토). 고유한 접미사 둘이라 각 요청이 제 라우트에 닿는다."""
+    trace = _stored(_stored_start(), _stored_pause())
+
+    async with _serving(_app(trace=trace)) as client:
+        decided = await _decide(client, STORED, APPROVE)
+        misrouted = await _continue(client, STORED, APPROVE)
+
+    assert decided.status_code == 200
+    assert _types(_frames(decided.text))[0] == "approval_granted"
+    assert misrouted.status_code == 422
+    fields = {violation["field"] for violation in misrouted.json()["violations"]}
+    assert {"body.agent", "body.request"} <= fields
+
+
+# 계약 — 이어 가기 경로
+
+
+def test_이어_가기_라우트가_지은_operation_id_와_봉투_에러_문서와_같은_본문을_든다() -> None:
+    """본문은 `StartRun` 그대로라 새 본문 컴포넌트가 없다. 409 의 설명은 세 채널 라우트가 나눠 쓰는
+    공유 설명이고 다른 주체를 덮는다(명세 검토)."""
+    operation = _app().openapi()["paths"]["/runs/{run_id}/continuation"]["post"]
+    envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+
+    assert operation["operationId"] == "continue_run"
+    errors = {status for status in operation["responses"] if not status.startswith("2")}
+    assert errors == {"401", "404", "409", "422", "500"}
+    for status in errors:
+        content = operation["responses"][status]["content"]
+        assert set(content) == {"application/json"}, status
+        assert content["application/json"]["schema"] == envelope, status
+    assert "주체" in operation["responses"]["409"]["description"]
+    run_id = next(p for p in operation["parameters"] if p["name"] == "run_id")
+    assert run_id["in"] == "path"
+    assert run_id["schema"]["pattern"] == RUN_ID_PATTERN
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert body == {"$ref": "#/components/schemas/StartRun"}
+
+
+def test_공유_409_설명은_세_채널_라우트에서_같고_상태와_주체를_함께_말한다() -> None:
+    paths = _app().openapi()["paths"]
+
+    descriptions = {
+        paths[path][method]["responses"]["409"]["description"]
+        for path, method in CHANNEL_OPERATIONS
+    }
+
+    assert len(descriptions) == 1
+    description = descriptions.pop()
+    assert "상태" in description
+    assert "주체" in description

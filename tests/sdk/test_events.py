@@ -9,6 +9,7 @@ from agent_os.sdk import (
     AgentName,
     ApprovalDenied,
     ApprovalGranted,
+    ConversationSummarized,
     Event,
     Json,
     LlmCalled,
@@ -203,3 +204,111 @@ def test_프롬프트가_없는_모델_호출_이벤트도_읽힌다() -> None:
 
     assert isinstance(event, LlmCalled)
     assert event.prompt == ""
+
+
+# --- 대화(ADR 0022, 형식 3) ----------------------------------------------------
+
+
+def test_시작_이벤트의_앞_실행은_선택이고_기본이_없음이라_옛_줄이_그대로_읽힌다() -> None:
+    """형식 1·2 의 줄에는 이 키가 없다. 기본값이 있어야 그 줄이 손상이 아니다(ADR 0022)."""
+    old = _as_event(
+        type="run_started",
+        run_id="r1",
+        ts="2026-09-21T12:00:00Z",
+        agent="echo",
+        request="hi",
+        principal="alice",
+    )
+    continued = _as_event(
+        type="run_started",
+        run_id="r2",
+        ts="2026-09-21T12:00:00Z",
+        agent="echo",
+        request="그럼?",
+        principal="alice",
+        previous_run="r1",
+    )
+
+    assert isinstance(old, RunStarted)
+    assert old.previous_run is None
+    assert isinstance(continued, RunStarted)
+    assert continued.previous_run == "r1"
+    assert _round_trip(continued) == continued
+
+
+def test_앞_실행과_덮는_끝에는_sdk_의_패턴을_걸지_않는다() -> None:
+    """패턴 위반은 거슬러 읽기가 기록의 손상으로 판정한다. 모델에 걸면 그 판정이 단건 읽기의
+    손상으로 옮고 손편집 사례를 타입 있는 가짜로 만들 수 없다(명세 검토)."""
+    started = _as_event(
+        type="run_started",
+        run_id="r2",
+        ts="2026-09-21T12:00:00Z",
+        agent="echo",
+        request="그럼?",
+        principal="alice",
+        previous_run="../etc",
+    )
+    summarized = _as_event(
+        type="conversation_summarized",
+        run_id="r2",
+        ts="2026-09-21T12:00:00Z",
+        summary="요약",
+        last_covered_run="a/b",
+        model="m",
+        input_tokens=1,
+        output_tokens=1,
+    )
+
+    assert isinstance(started, RunStarted)
+    assert started.previous_run == "../etc"
+    assert isinstance(summarized, ConversationSummarized)
+    assert summarized.last_covered_run == "a/b"
+
+
+def test_대화_요약_이벤트는_글과_덮는_끝과_모델과_토큰_수를_담고_왕복한다() -> None:
+    event = ConversationSummarized(
+        run_id=RunId("r2"),
+        ts=TS,
+        summary="요청한 쪽이 2+2 를 물었고 에이전트가 4 라고 답했다",
+        last_covered_run=RunId("r1"),
+        model="fake-model",
+        input_tokens=70,
+        output_tokens=30,
+    )
+
+    assert _round_trip(event) == event
+    assert event.type == "conversation_summarized"
+
+
+@pytest.mark.parametrize(
+    "missing", ["summary", "last_covered_run", "model", "input_tokens", "output_tokens"]
+)
+def test_대화_요약_이벤트의_필드는_전부_필수다(missing: str) -> None:
+    complete: dict[str, Json] = {
+        "type": "conversation_summarized",
+        "run_id": "r2",
+        "ts": "2026-09-21T12:00:00Z",
+        "summary": "요약",
+        "last_covered_run": "r1",
+        "model": "m",
+        "input_tokens": 1,
+        "output_tokens": 1,
+    }
+
+    with pytest.raises(ValidationError):
+        TypeAdapter[Event](Event).validate_python(
+            {key: value for key, value in complete.items() if key != missing}
+        )
+
+
+def test_직렬화_스키마에서_새_필드와_새_이벤트의_필드가_required_다() -> None:
+    """서버는 필드를 언제나 전부 싣는다. 기본값 있는 `previous_run` 이 required 에서 빠지면 생성
+    클라이언트가 그것을 선택 필드로 받는다(ADR 0022)."""
+    # 직렬화 쪽 JSON 스키마. 관리 API 와 openapi.json 이 보는 그것이다.
+    defs = TypeAdapter[Event](Event).json_schema(mode="serialization")["$defs"]
+
+    for name in ("RunStarted", "ConversationSummarized"):
+        assert set(defs[name]["required"]) == set(defs[name]["properties"]), name
+    previous = defs["RunStarted"]["properties"]["previous_run"]
+    assert previous["anyOf"] == [{"type": "string"}, {"type": "null"}]
+    assert previous["default"] is None

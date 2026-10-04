@@ -30,6 +30,7 @@ from agent_os.core.ports import (
 from agent_os.sdk import (
     AgentContext,
     BaseAgent,
+    Conversation,
     Event,
     PluginKind,
     PluginManifest,
@@ -75,6 +76,7 @@ def _write_mcp(root: Path, name: str) -> None:
 
 class FakeContext:
     run_id = RunId("r1")
+    conversation = Conversation(summary=None, exchanges=())
 
     def now(self) -> datetime:
         return datetime(2026, 9, 21, tzinfo=UTC)

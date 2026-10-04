@@ -182,3 +182,46 @@ def test_저장소의_매니페스트_중_secret_args_를_선언한_것이_없�
 
     assert any(manifest.kind is PluginKind.MCP for manifest in manifests), "mcp 를 읽지 않았다"
     assert declaring == []
+
+
+# --- 대화 요약의 한도(ADR 0008 의 2026-10-03 이력) ----------------------------------
+
+
+def test_한도를_적지_않으면_없음이고_형식_버전은_1_그대로다() -> None:
+    manifest = parse_manifest(AGENT)
+
+    assert manifest.conversation_limit is None
+    assert manifest.schema_version == "1"
+
+
+@pytest.mark.parametrize("value", ["1", "20000"])
+def test_한도는_1_이상의_정수를_받는다(value: str) -> None:
+    manifest = parse_manifest(AGENT + f"conversation_limit = {value}\n")
+
+    assert manifest.conversation_limit == int(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["0", "-1", "true", '"300"', "2.0", "1.5"],
+    ids=["0", "음수", "불린", "숫자 문자열", "정수 값의 실수", "실수"],
+)
+def test_0_음수_불린_숫자_문자열_실수_한도는_읽는_단계에서_거부한다(value: str) -> None:
+    """pydantic 의 느슨한 정수 검증은 `true` 를 1 로, `"300"` 을 300 으로, `2.0` 을 2 로 받는다.
+    0 을 받으면 모든 이어 가기가 요약되고 원문이 남지 않는다(명세 "한도 값의 규칙")."""
+    with pytest.raises(ValidationError):
+        parse_manifest(AGENT + f"conversation_limit = {value}\n")
+
+
+@pytest.mark.parametrize("kind", ["mcp", "skill", "model"])
+def test_에이전트가_아니면_한도를_갖지_못한다(kind: str) -> None:
+    """`requires_approval` 과 같은 규칙이다."""
+    manifest = (
+        _top_level(MCP, "conversation_limit = 100")
+        if kind == "mcp"
+        else f'schema_version = "1"\nkind = "{kind}"\nname = "x-{kind}"\nversion = "0.1.0"\n'
+        "conversation_limit = 100\n"
+    )
+
+    with pytest.raises(ValidationError, match="conversation_limit"):
+        parse_manifest(manifest)
