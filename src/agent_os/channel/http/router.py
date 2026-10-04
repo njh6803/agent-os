@@ -192,7 +192,11 @@ def channel_router(
         return await runs.start(events, request_id=request_id_of(request))
 
     async def run_stream(body: StartRun, request: Request) -> RunStream:
-        """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다."""
+        """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
+
+        `started` 를 바로 의존성으로 걸지 않는 이유는 FastAPI 가 그 시그니처의 `previous_run` 을
+        질의 파라미터로 읽기 때문이다. 경로마다 앞 실행을 고정한 래퍼 하나가 의존성이다.
+        """
         return await started(body, request, None)
 
     # 404 는 없는 에이전트, 409 는 꺼진 것을 부르면 core 가 던지는 `Disabled` 를 표가 옮긴 것(ADR

@@ -119,6 +119,17 @@ PR #131. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 - **Nit 하나(보류): `_Context.__init__`의 위치 인자 여덟.** 다음 멤버가 늘 때 키워드 전용으로 바꾼다. 부르는 자리가 `_drive` 하나다.
 - 용어집의 "덮는 끝"·"갈래"는 셀프 리뷰 보류와 같은 판단이고 02·04가 같은 말을 쓰면 올린다.
 
+> 사용자: "ci 끝났어"
+
+2회차(`e33bacd`). CI 여섯이 초록이었다. CodeRabbit은 "Review rate limited"라 둘째 커밋(리팩터와 일지)을 보지 않았다. 1회차가 시간당 포함 리뷰
+하나를 썼다. claude-review는 Critical·Major 0, Minor 2, Nit 1이었다.
+
+- **Minor 둘(보류, 리뷰어도 후속으로 허용).** `_continued`와 `_resumed_conversation`의 셋 줄 중복(1회차와 같은 자리), 그리고 `_walk`가 첫
+  링크에 `_require_link`를 다시 돌려 주체·끝남 두 검사가 그 링크에서는 죽은 분기인 것. 둘 다 02가 거슬러 읽기를 지날 때 한 번에 본다. 02의
+  티켓이 "거슬러 읽기가 모은 원문 교환"에서 시작하므로 그 세션이 이 자리를 읽는다.
+- **Nit 하나(반영): `run_stream`이 `started(body, request, None)` 한 줄 래퍼인 이유.** `started`를 바로 의존성으로 걸면 FastAPI가 `previous_run`을
+  질의 파라미터로 읽는다. 독스트링에 적었다.
+
 ## 갈린 곳
 
 - 시그니처는 새 함수가 아니라 `run(previous_run=)`으로 갔다. 일지 02는 "새 함수인지 `run()`의 인자인지"로 열어 두었고, `resume()`을 따로 둔
