@@ -109,7 +109,7 @@ PR #130. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 > 사용자: "ci 끝났어?"
 
 1회차(`2df31c4`). CI 여섯이 초록이었다. claude-review는 지적이 없었다. CodeRabbit은 `e222b5f`부터 `2df31c4`까지 실제로 보고
-Major 하나를 냈다(Merge Risk Low, 구조 리뷰는 "기존 조건이지 이 PR이 새로 만든 노출이 아니다").
+Major 하나를 냈다(Merge Risk Low. 같은 봇의 구조 리뷰는 그것을 이 PR이 새로 만든 노출이 아니라 기존 조건으로 적었다).
 
 - **CodeRabbit Major(설계로 올림): 요약 글을 이벤트에 쓰기 전에 자격 증명을 마스킹하라(CWE-532).** 티켓 02의 "요약 글은
   마스킹하지 않는다"는 accepted ADR 0022의 결정을 옮긴 것이고, 자유 형식 글의 마스킹은 ADR 0009가 열린 문제로 둔 설계
