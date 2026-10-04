@@ -1,9 +1,10 @@
 # 2026-10-04 (01) conversation 명세
 
 일지 2026-10-03-03의 "다음"이 가리킨 새 세션이다. `/to-spec conversation`으로 시작했고 브랜치는
-`docs/conversation-spec`, 주 체크아웃이다. 제품 코드는 쓰지 않았다. 산출물은 다섯이다.
+`docs/conversation-spec`, 주 체크아웃이다. 제품 코드는 쓰지 않았다. 산출물은 여섯이다.
 
 - 명세 `.scratch/conversation/spec.md`
+- 용어 둘(이어 가기, 앞 실행. PR 리뷰 뒤)
 - 측정 둘과 README(`.scratch/conversation/probes/`)
 - `plan.md`의 행 셋(conversation, 그리고 넘긴 것을 받는 web-widget과 end-user-channel)
 - 회고 대기열 103
@@ -133,6 +134,23 @@ sonnet이다. 명세 축의 요구는 ADR 0022와 이력, plan 행의 "명세가
 - **ADR 0022 본문의 "계약 티켓이 정하되".** 사용자가 명세에서 정했다. 포인터는 ADR의 이력이 본문을 바꿀 때 다는 것이고
   (`.claude/rules/adr.md`), 이것은 ADR의 결정을 바꾼 것이 아니라 정할 자리가 앞당겨진 것이라 이력도 포인터도 두지 않는다.
 - **일지의 "다음".** 병합 뒤에 next-session과 함께 쓴다.
+
+## PR 리뷰
+
+PR #129. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다. 푸시 뒤
+`@coderabbitai review`를 남겼다.
+
+> 사용자: "CI 끝났어"
+
+1회차(`66f9fc2`). CI 여섯이 초록이었다. CodeRabbit은 `cae38e5`부터 `66f9fc2`까지 실제로 보고 지적이 없었다(Merge Risk
+Minimal). 이번에는 프로브가 셋뿐이라 파일 수 한도에 걸리지 않았다. 보안 구조 메모의 강화 제안 셋 가운데 둘(손상된 남의
+트레이스의 응답, 요약 이벤트의 투영)은 이미 end-user-channel 행에 넘긴 것이었다. 셋째는 새로 넘겼다.
+
+- **CodeRabbit 제안(반영): 덜 믿는 호출자에게 열기 전에 거슬러 읽기의 일 예산이나 스레드.** 알려진 한계는 운영자 채널을 두고
+  고른 것이라, 최종 사용자 경로에 이어 가기를 더하는 web-widget 행과 명세의 Out of Scope에 적었다.
+- **claude-review Minor(반영): 이어 가기와 앞 실행이 용어집에 없다.** 계약 티켓이 옵션·경로·하위 타입·필드의 이름을 지을 때
+  기댈 말이라 domain-modeling 스킬로 `CONTEXT.md`의 `## 실행`에 더했다. 재개와 섞이지 않게 Avoid를 두었다.
+- **claude-review Nit(반영): 고정 프롬프트를 글자 그대로 단언하는 테스트.** 테스트는 요소마다 본다고 고쳤다.
 
 ## 회고
 
