@@ -1903,6 +1903,49 @@ async def test_이어_가기는_같은_SSE_스트림이고_첫_이벤트가_앞_
     assert frames == trace.lines[2:]
 
 
+def _long_finished_stored() -> FakeTrace:
+    """원문 교환이 core 의 기본 한도 20,000자를 하나 넘는 끝난 실행. 이어 가면 런타임이 요약한다."""
+    started = RunStarted(
+        run_id=STORED, ts=T0, agent=AgentName("echo"), request="요" * 20_000, principal=PRINCIPAL
+    )
+    return _stored(started, RunFinished(run_id=STORED, ts=T0, output="답"))
+
+
+async def test_런타임이_요약하면_요약_이벤트가_스트림의_둘째_프레임이고_트레이스의_줄과_같다() -> (
+    None
+):
+    """쓰기만 하고 흘리지 않으면 CLI 가 스트림에서 센 안내 줄의 자리가 하나 밀린다(스토리 24, 명세
+    검토)."""
+    trace = _long_finished_stored()
+    model = GenericFakeChatModel(messages=iter([AIMessage(content="요약 글")]))
+
+    async with _serving(_app(trace=trace, model=model)) as client:
+        response = await _continue(client, STORED, _start("echo", "그럼?"))
+
+    assert response.status_code == 200
+    frames = _frames(response.text)
+    assert _types(frames) == ["run_started", "conversation_summarized", "run_finished"]
+    summarized = json.loads(frames[1])
+    assert summarized["summary"] == "요약 글"
+    assert summarized["last_covered_run"] == STORED
+    assert frames == trace.lines[2:]
+
+
+async def test_요약_실패는_200_스트림_안의_run_failed_다() -> None:
+    """첫 이벤트 run_started 는 이미 나갔다(스토리 15). 요약 이벤트는 없다."""
+    trace = _long_finished_stored()
+    model = GenericFakeChatModel(messages=_failing_replies())
+
+    async with _serving(_app(trace=trace, model=model)) as client:
+        response = await _continue(client, STORED, _start("echo", "그럼?"))
+
+    assert response.status_code == 200
+    frames = _frames(response.text)
+    assert _types(frames) == ["run_started", "run_failed"]
+    assert "대화 요약" in json.loads(frames[-1])["error"]
+    assert frames == trace.lines[2:]
+
+
 async def test_없는_앞_실행과_없는_에이전트는_404_봉투이고_메시지가_가른다() -> None:
     """앞 실행이 없는 것과 요청한 에이전트가 없는 것은 같은 `Absent` 이고 메시지가 가른다."""
     trace = _finished_stored()

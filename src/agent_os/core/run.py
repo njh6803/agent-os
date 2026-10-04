@@ -3,11 +3,12 @@
 로더, 루프, 도구 연결, 승인 게이트, 재생, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본
 스위트가 이 지점 하나를 민다. run_started, run_paused, approval_granted, approval_denied,
 run_resumed, run_failed 는 런타임이 내고, 에이전트는 run_finished 하나를 마지막에 낸다.
-conversation_summarized 는 런타임만 낼 수 있다(내는 계기와 실패는 conversation 티켓 02). 에이전트가
-낸 다른 이벤트는 그대로 통과하되 conversation_summarized 만은 예외다 — 그것은 다음 실행의 거슬러
-읽기가 트레이스에서 읽는 입력이라 에이전트가 내면 그 실행은 run_failed 다(ADR 0022). 거부는 실행을
-끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며,
-에이전트가 정상적으로 끝맺는다(ADR 0009).
+conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 한도를 넘었을 때 에이전트를 부르기
+전에 낸다(계기, 범위, 실패는 core/continuation.py). 에이전트가 낸 다른 이벤트는 그대로 통과하되
+conversation_summarized 만은 예외다 — 그것은 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+에이전트가 내면 그 실행은 run_failed 다(ADR 0022). 거부는 실행을 끝내지 않는다. 거부된 도구 호출은
+불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가 정상적으로 끝맺는다(ADR
+0009).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -39,7 +40,8 @@ DifferentPrincipal, 앞 실행이 run_finished 로 끝나지 않았으면 NotCon
 재개할 실행의 트레이스가 가리키는 에이전트가 없는 것과 고리에서 만나는 실행이 없거나 깨진 것은
 요청이 아니라 서버의 기록이 댄 것이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import 다. 그 이유는 `_prepare`. 이어 가기는 그 앞에 앞
-실행(없음 → 손상 → 다른 주체 → 끝나지 않음)과 고리의 판정이 선다. 그 이유는 `_continued` 와 `_walk`.
+실행(없음 → 손상 → 다른 주체 → 끝나지 않음)과 고리의 판정이 선다. 그 이유는 core/continuation.py 다.
+요약이 실패한 실행은 run_started 뒤에 run_failed 로 끝나고 에이전트를 부르지 않는다.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
 실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
@@ -55,15 +57,25 @@ from typing import NoReturn, TypeGuard, assert_never
 
 from langchain_core.messages import AIMessage, BaseMessage
 
+from agent_os.core.continuation import (
+    NEW_CONVERSATION,
+    Fold,
+    Link,
+    check_record_rules,
+    gather_continued,
+    limit_of,
+    link_of,
+    plan_fold,
+    resumed_conversation,
+    summarize,
+)
 from agent_os.core.loop import ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, message_from, reply_from
 from agent_os.core.ports import (
     Absent,
     ChatModel,
     Clock,
-    DifferentPrincipal,
     Disabled,
-    NotContinuable,
     NotResumable,
     PluginError,
     PluginKey,
@@ -72,11 +84,8 @@ from agent_os.core.ports import (
     ToolResult,
     ToolSource,
     ToolSpec,
-    Trace,
     TraceSchemaVersion,
     TraceStore,
-    UnknownEvent,
-    run_status,
 )
 from agent_os.core.replay import Mismatch, Record, Replay
 from agent_os.sdk import (
@@ -87,7 +96,6 @@ from agent_os.sdk import (
     Conversation,
     ConversationSummarized,
     Event,
-    Exchange,
     Json,
     LlmCalled,
     McpServer,
@@ -105,7 +113,6 @@ from agent_os.sdk import (
     ToolCalled,
     ToolError,
     approval_conflicts,
-    is_run_id,
     secret_args_by_tool,
 )
 
@@ -117,12 +124,19 @@ MASKED = "***"
 # 형식을 가리지 않는다 — 앞 실행을 재개하는 것이 아니라 읽는 것이고 필요한 것은 형식 1 에도 있다.
 RESUMABLE: tuple[TraceSchemaVersion, ...] = ("2", "3")
 
-# 이어 가지 않은 실행의 컨텍스트 멤버. 요약이 없고 교환이 비어 있다.
-_NEW_CONVERSATION = Conversation(summary=None, exchanges=())
-
-# 실행의 시작과 재개의 경계를 표시하는 이벤트. 재생할 사실이 아니라 재생 기록에서 뺀다. 나머지는
-# 런타임의 모델·도구 호출과 에이전트가 낸 것이고, 트레이스만 보고는 둘을 구분할 수 없어 함께 센다.
-_BOUNDARY = (RunStarted, RunPaused, ApprovalGranted, ApprovalDenied, RunResumed)
+# 재생 기록 열에 들지 않는 이벤트. 실행의 시작과 재개의 경계를 표시하는 것들은 재생할 사실이
+# 아니고, 대화 요약은 에이전트가 부른 호출이 아니라 런타임이 에이전트를 부르기 전에 한 것이라 재개가
+# 모델을 다시 부르지 않고 트레이스에서 읽는다(ADR 0022). 들면 재개의 모델 대조가 LlmCalled 가 아닌
+# 기록을 받아 Mismatch 다. 나머지는 런타임의 모델·도구 호출과 에이전트가 낸 것이고, 트레이스만
+# 보고는 둘을 구분할 수 없어 함께 센다.
+_BOUNDARY = (
+    RunStarted,
+    RunPaused,
+    ApprovalGranted,
+    ApprovalDenied,
+    RunResumed,
+    ConversationSummarized,
+)
 
 
 @dataclass(frozen=True)
@@ -454,12 +468,12 @@ async def run(
     식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고
     이벤트 루프 위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
     """
-    conversation = (
-        _NEW_CONVERSATION
-        if previous_run is None
-        else _continued(trace, previous_run, agent, principal)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
-    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
+    manifest = _requested_manifest(plugins, agent)
+    prepared = _prepare(plugins, manifest)
+    fold = None if gathered is None else plan_fold(gathered, limit_of(manifest))
     run_id = clock.new_run_id()
     started = RunStarted(
         run_id=run_id,
@@ -471,6 +485,15 @@ async def run(
     )
     trace.write(started)
     yield started
+    if fold is None:
+        conversation = NEW_CONVERSATION if gathered is None else gathered.conversation()
+    else:
+        outcome = await _summary_outcome(model, fold, run_id, clock)
+        trace.write(outcome)
+        yield outcome
+        if isinstance(outcome, RunFailed):
+            return
+        conversation = fold.conversation(outcome.summary)
     async for event in _drive(
         prepared,
         started,
@@ -520,8 +543,9 @@ async def resume(
     그렇고, 그보다 오래된 트레이스를 지우면 재개가 그대로 선다. 주체의 비교 대상은 멈춘 실행의
     `run_started` 주체다.
     """
-    started, paused, records = _read_paused(trace, run_id, pause_index)
-    conversation = _resumed_conversation(trace, started)
+    own, paused, records = _read_paused(trace, run_id, pause_index)
+    started = own.started
+    conversation = resumed_conversation(trace, own)
     prepared = _prepare(plugins, _recorded_manifest(plugins, started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
@@ -622,6 +646,23 @@ async def _drive(
         )
 
 
+async def _summary_outcome(
+    model: ChatModel, fold: Fold, run_id: RunId, clock: Clock
+) -> ConversationSummarized | RunFailed:
+    """요약 이벤트, 또는 요약이 실패한 실행의 결말. 에이전트를 부르기 전, 시작 이벤트 바로 뒤다.
+
+    실패(모델 예외, 빈 요약 글)는 요약 이벤트 없이 run_failed 이고 도구도 연결하지 않는다. 다시
+    시도하지도 원문으로 진행하지도 않는다 — 같은 앞 실행으로 다시 이어 가는 것이 곧 다시 시도다
+    (ADR 0022, core/continuation.py).
+    """
+    try:
+        return await summarize(model, fold, run_id, clock)
+    except Exception as error:
+        return RunFailed(
+            run_id=run_id, ts=clock.now(), error=f"대화 요약이 실패했다: {_describe(error)}"
+        )
+
+
 def _decision_event(
     run_id: RunId, decision: Decision, approver: Principal, clock: Clock
 ) -> ApprovalGranted | ApprovalDenied:
@@ -670,13 +711,15 @@ def _require_paused_call(paused: RunPaused, name: str, masked: Mapping[str, Json
 
 def _read_paused(
     trace: TraceStore, run_id: RunId, pause_index: int
-) -> tuple[RunStarted, RunPaused, tuple[Record, ...]]:
+) -> tuple[Link, RunPaused, tuple[Record, ...]]:
     """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다.
 
-    시작 이벤트(에이전트와 요청), 결정이 가리킨 일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다.
-    판정 순서는 없음 → 형식 1 → 손상 → 일시정지 아님 → 자리 어긋남이다. 일시정지 아님이 자리보다
-    먼저라, 같은 자리를 든 결정 둘이 동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지 아님"을
-    듣는다.
+    재개하는 실행 자신(시작 이벤트와 자기 트레이스의 대화 요약 이벤트를 든 `Link`), 결정이 가리킨
+    일시정지(결정이 묶이는 호출), 재생 기록을 돌려준다. 판정 순서는 없음 → 형식 1 → 손상 → 일시정지
+    아님 → 자리 어긋남이다. 손상에는 고리의 실행에 거는 기록 규칙(앞 실행 필드의 패턴, 요약
+    이벤트의 자리와 개수)도 든다 — 자기 트레이스에만 빼는 이유가 없다(ADR 0022). 일시정지 아님이
+    자리보다 먼저라, 같은 자리를 든 결정 둘이 동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지
+    아님"을 듣는다.
 
     자리로 이벤트를 꺼내지 않고 마지막 이벤트의 자리와 같은지만 본다. 꺼내면 파이썬의 음수 인덱스
     `-1` 이 마지막 이벤트에 맞는다. 같은지만 보면 음수는 언제나 어긋남이다. 채널이 음수를 형식
@@ -690,216 +733,19 @@ def _read_paused(
         raise NotResumable(
             f"형식 {stored.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
         )
-    events = _sound_events(stored, run_id)
-    started = events[0]
-    if not isinstance(started, RunStarted):
-        raise PluginError(f"시작 이벤트로 열리지 않는 트레이스는 재개할 수 없다: {run_id}")
-    paused = events[-1]
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+    paused = link.last
     if not isinstance(paused, RunPaused):
         raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
-    current = len(events) - 1
+    current = len(link.events) - 1
     if pause_index != current:
         raise NotResumable(
             f"결정이 가리킨 자리 {pause_index} 는 지금의 일시정지(자리 {current})가 아니라 "
             f"재개할 수 없다: {run_id}"
         )
-    return started, paused, tuple(e for e in events if not isinstance(e, _BOUNDARY))
-
-
-def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
-    """손상된 트레이스를 거른다. 정상 쓰기 경로에서는 어긋날 수 없는 것들이다(티켓 02 리뷰).
-
-    재개와 이어 가기의 거슬러 읽기가 같이 쓴다. 문구가 재개를 말하지 않는 이유다.
-    """
-    known = tuple(e for e in stored.events if not isinstance(e, UnknownEvent))
-    if len(known) != len(stored.events):
-        raise PluginError(f"모르는 종류의 이벤트가 섞인 트레이스다: {run_id}")
-    if not known:
-        raise PluginError(f"비어 있는 트레이스다: {run_id}")
-    if stored.run_id != run_id or any(event.run_id != run_id for event in known):
-        raise PluginError(f"실행 식별자가 어긋난 트레이스다: {run_id}")
-    return known
-
-
-# --- 이어 가기 — 앞 실행의 판정과 고리를 거슬러 읽기(ADR 0022) ------------------------------
-
-
-@dataclass(frozen=True)
-class _Link:
-    """고리의 실행 하나에서 거슬러 읽기가 보는 것. 시작 이벤트, 마지막 이벤트, 이벤트 전부, 그리고
-    시작 바로 뒤에 선 대화 요약 이벤트(없으면 None). 요약의 자리와 개수는 `_require_link` 가
-    본다."""
-
-    started: RunStarted
-    last: Event
-    events: tuple[Event, ...]
-    summary: ConversationSummarized | None
-
-    @property
-    def run_id(self) -> RunId:
-        return self.started.run_id
-
-
-def _continued(
-    trace: TraceStore, previous: RunId, agent: AgentName, principal: Principal
-) -> Conversation:
-    """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽는다.
-
-    순서는 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
-    (`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수 없어서이고,
-    주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 남의
-    실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023). 앞 실행 자신의 앞 실행 필드 패턴과 요약
-    자리 위반은 고리의 판정(`_walk`)에 들어 주체와 끝남 뒤다 — 손상이 주체보다 앞이라는 논거와
-    갈리지만 동작은 이것이고, 최종 사용자 경로에서는 오히려 존재를 덜 드러낸다(명세 검토).
-
-    요청이 댄 식별자는 포트에 닿기 전에 sdk 의 판정자를 지난다. 런타임은 그런 이름의 트레이스를 만들
-    수 없으므로 패턴 위반은 없음이다. 재개는 거르지 않는다(명세 "이어 가기 진입점").
-    """
-    if not is_run_id(previous):
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = _read_link(trace, previous)
-    if link is None:
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    if link.started.principal != principal:
-        raise DifferentPrincipal(
-            f"앞 실행 {previous} 은 요청한 주체의 실행이 아니라 이어 갈 수 없다"
-        )
-    if not isinstance(link.last, RunFinished):
-        raise NotContinuable(
-            f"앞 실행 {previous} 은 끝나지 않아 이어 갈 수 없다: 상태 {run_status(link.last)}"
-        )
-    return _walk(trace, link, agent, principal)
-
-
-def _resumed_conversation(trace: TraceStore, started: RunStarted) -> Conversation:
-    """재개하는 실행의 멤버. 시작 이벤트의 앞 실행에서 다시 거슬러 읽어 처음과 같은 값을 만든다.
-
-    앞 실행이 없으면(이어 가지 않은 실행, 형식 2로 쓰인 트레이스) 거슬러 읽을 것이 없다. 있는데 그
-    실행이 없거나 깨졌으면 요청이 아니라 서버의 기록이 가리킨 것이라 `PluginError` 그대로다. 주체의
-    비교 대상은 멈춘 실행의 `run_started` 주체다. 이 티켓에서 런타임은 재개하는 실행 자신의
-    트레이스에 든 요약 이벤트를 읽지 않는다(티켓 02).
-    """
-    previous = started.previous_run
-    if previous is None:
-        return _NEW_CONVERSATION
-    if not is_run_id(previous):
-        raise PluginError(f"실행 {started.run_id} 의 앞 실행 필드가 패턴을 어긴다: {previous!r}")
-    link = _read_link(trace, previous)
-    if link is None:
-        raise PluginError(f"실행 {started.run_id} 이 이어 간 앞 실행이 없다: {previous}")
-    return _walk(trace, link, started.agent, started.principal)
-
-
-def _read_link(trace: TraceStore, run_id: RunId) -> _Link | None:
-    """고리의 실행 하나. 없으면 None, 손상(단건 읽기의 것과 재개가 보는 것)은 PluginError 다."""
-    stored = trace.read(run_id)
-    if stored is None:
-        return None
-    events = _sound_events(stored, run_id)
-    started = events[0]
-    if not isinstance(started, RunStarted):
-        raise PluginError(f"시작 이벤트로 열리지 않는 트레이스다: {run_id}")
-    last = events[-1]
-    second = events[1] if len(events) > 1 else None
-    summary = second if isinstance(second, ConversationSummarized) else None
-    return _Link(started=started, last=last, events=events, summary=summary)
-
-
-def _walk(trace: TraceStore, first: _Link, agent: AgentName, principal: Principal) -> Conversation:
-    """앞 실행에서 시작 이벤트의 앞 실행 필드를 따라 거슬러 가며 지금 에이전트의 것만 모은다.
-
-    지금 에이전트와 같은 실행은 교환 하나(시작 이벤트의 요청과 run_finished 의 출력)를 내고, 그
-    트레이스에 대화 요약 이벤트가 있고 아직 요약을 만나지 않았으면 그것이 가장 가까운 요약이다. 다른
-    에이전트의 실행은 교환도 요약도 내지 않고 지나간다. 가장 가까운 요약을 만나면 그 요약이 덮는
-    끝의 실행까지 거슬러 가되 그 실행은 읽지 않고 멈춘다. 요약이 없으면 고리의 처음(앞 실행 필드가
-    없는 실행)까지 간다. 더 오래된 요약은 쓰지 않는다 — 새 요약은 언제나 앞 요약을 접어 만들어진다.
-
-    실행마다 검증한다(`_require_link`). 어느 것이든 서버의 기록이 가리킨 것이 깨진 것이라
-    PluginError 이고 메시지가 그 실행과 이유를 든다. 다음 실행을 읽을지 멈출지는 `_next_link` 가
-    가른다. 포트에 가벼운 읽기를 더하지 않고 트레이스 전체를 읽는다 — 비용은 지나는 실행의 수에
-    비례하고 측정은 명세의 프로브다.
-    """
-    summary: ConversationSummarized | None = None
-    newest_first: list[Exchange] = []
-    visited: set[RunId] = set()
-    link: _Link | None = first
-    while link is not None:
-        visited.add(link.run_id)
-        finished = _require_link(link, principal)
-        if link.started.agent == agent:
-            newest_first.append(Exchange(request=link.started.request, output=finished.output))
-            if summary is None and link.summary is not None:
-                summary = link.summary
-        link = _next_link(trace, link, summary, visited)
-    return Conversation(
-        summary=None if summary is None else summary.summary,
-        exchanges=tuple(reversed(newest_first)),
-    )
-
-
-def _next_link(
-    trace: TraceStore,
-    link: _Link,
-    summary: ConversationSummarized | None,
-    visited: set[RunId],
-) -> _Link | None:
-    """거슬러 읽기의 다음 실행. None 이면 멈춘다 — 고리의 처음이거나 가장 가까운 요약이 덮는 끝이다.
-
-    덮는 끝의 실행은 읽지 않는다. 순환은 지나온 실행 식별자로 보고 멈춤 조건보다 먼저다 — 정상
-    고리에서 덮는 끝은 요약보다 오래돼 지나온 실행일 수 없으므로, 되돌아가는 간선의 목적지가 덮는
-    끝과 같은 손편집 트레이스만 여기서 갈린다. 요약을 만났는데 덮는 끝 없이 고리의 처음에 닿는 것과
-    다음 실행이 없는 것은 기록이 깨진 것이다.
-    """
-    older = link.started.previous_run
-    if older is None:
-        if summary is not None:
-            raise PluginError(
-                f"요약이 덮는 끝 {summary.last_covered_run} 을 만나지 못한 채 고리의 처음 "
-                f"{link.run_id} 에 닿았다"
-            )
-        return None
-    if older in visited:
-        raise PluginError(f"고리가 순환한다: 실행 {link.run_id} 의 앞 실행 {older} 을 이미 지났다")
-    if summary is not None and older == summary.last_covered_run:
-        return None
-    next_link = _read_link(trace, older)
-    if next_link is None:
-        raise PluginError(f"고리의 실행이 없다: {older} (실행 {link.run_id} 의 앞 실행)")
-    return next_link
-
-
-def _require_link(link: _Link, principal: Principal) -> RunFinished:
-    """고리의 실행 하나가 성한지. 주체, 끝남, 앞 실행 필드의 패턴, 요약의 자리·개수·덮는 끝의 패턴.
-    끝남을 본 그 `run_finished` 를 돌려줘 부르는 쪽이 다시 좁히지 않는다.
-
-    요청이 댄 앞 실행에서는 주체와 끝남이 하위 타입으로 먼저 걸러져 여기서는 지나가고, 고리의 중간
-    실행에서는 전부 기록이 깨진 것이다(ADR 0022).
-    """
-    run_id = link.run_id
-    if link.started.principal != principal:
-        raise PluginError(f"고리의 실행 {run_id} 은 다른 주체의 실행이다")
-    if not isinstance(link.last, RunFinished):
-        raise PluginError(f"고리의 실행 {run_id} 은 끝나지 않았다: 상태 {run_status(link.last)}")
-    older = link.started.previous_run
-    if older is not None and not is_run_id(older):
-        raise PluginError(f"고리의 실행 {run_id} 의 앞 실행 필드가 패턴을 어긴다: {older!r}")
-    at = [
-        index
-        for index, event in enumerate(link.events)
-        if isinstance(event, ConversationSummarized)
-    ]
-    if len(at) > 1:
-        raise PluginError(f"고리의 실행 {run_id} 에 대화 요약 이벤트가 둘 이상이다")
-    if at and at[0] != 1:
-        raise PluginError(
-            f"고리의 실행 {run_id} 의 대화 요약 이벤트가 시작 바로 뒤의 자리가 아니다"
-        )
-    found = link.summary
-    if found is not None and not is_run_id(found.last_covered_run):
-        raise PluginError(
-            f"고리의 실행 {run_id} 의 요약이 덮는 끝이 패턴을 어긴다: {found.last_covered_run!r}"
-        )
-    return link.last
+    records = tuple(e for e in link.events if not isinstance(e, _BOUNDARY))
+    return link, paused, records
 
 
 def _requested_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:

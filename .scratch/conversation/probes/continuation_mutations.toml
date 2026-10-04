@@ -19,7 +19,7 @@ tests = ["tests/core/test_run.py", "-k", "끝나지_않은_것보다_먼저다"]
 expect = "red"
 
 [[mutation.edit]]
-file = "src/agent_os/core/run.py"
+file = "src/agent_os/core/continuation.py"
 old = '''
     if link.started.principal != principal:
         raise DifferentPrincipal(
@@ -47,14 +47,18 @@ tests = ["tests/core/test_run.py", "-k", "패턴을_어긴_앞_실행은_부재�
 expect = "red"
 
 [[mutation.edit]]
-file = "src/agent_os/core/run.py"
+file = "src/agent_os/core/continuation.py"
 old = '''
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = _read_link(trace, previous)
+    link = read_link(trace, previous)
+    if link is None:
+        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
 '''
 new = '''
-    link = _read_link(trace, previous)
+    link = read_link(trace, previous)
+    if link is None:
+        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
 '''
 
 [[mutation]]
@@ -63,14 +67,14 @@ tests = ["tests/core/test_run.py", "-k", "덮는_끝까지만_거슬러_가고"]
 expect = "red"
 
 [[mutation.edit]]
-file = "src/agent_os/core/run.py"
+file = "src/agent_os/core/continuation.py"
 old = '''
     if summary is not None and older == summary.last_covered_run:
         return None
-    next_link = _read_link(trace, older)
+    next_link = read_link(trace, older)
 '''
 new = '''
-    next_link = _read_link(trace, older)
+    next_link = read_link(trace, older)
 '''
 
 [[mutation]]
@@ -79,14 +83,14 @@ tests = ["tests/core/test_run.py", "-k", "각자_자기_교환만_받는다"]
 expect = "red"
 
 [[mutation.edit]]
-file = "src/agent_os/core/run.py"
+file = "src/agent_os/core/continuation.py"
 old = '''
         if link.started.agent == agent:
-            newest_first.append(Exchange(request=link.started.request, output=finished.output))
+            exchange = Exchange(request=link.started.request, output=finished.output)
 '''
 new = '''
         if True:
-            newest_first.append(Exchange(request=link.started.request, output=finished.output))
+            exchange = Exchange(request=link.started.request, output=finished.output)
 '''
 
 [[mutation]]
@@ -113,19 +117,17 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    conversation = (
-        _NEW_CONVERSATION
-        if previous_run is None
-        else _continued(trace, previous_run, agent, principal)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
-    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
+    manifest = _requested_manifest(plugins, agent)
+    prepared = _prepare(plugins, manifest)
 '''
 new = '''
-    prepared = _prepare(plugins, _requested_manifest(plugins, agent))
-    conversation = (
-        _NEW_CONVERSATION
-        if previous_run is None
-        else _continued(trace, previous_run, agent, principal)
+    manifest = _requested_manifest(plugins, agent)
+    prepared = _prepare(plugins, manifest)
+    gathered = (
+        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
 '''
 
@@ -135,12 +137,12 @@ tests = ["tests/core/test_run.py", "-k", "고리가_깨지면"]
 expect = "red"
 
 [[mutation.edit]]
-file = "src/agent_os/core/run.py"
+file = "src/agent_os/core/continuation.py"
 old = '''
-    if at and at[0] != 1:
+    if link.summary_at and link.summary_at[0] != 1:
 '''
 new = '''
-    if at and at[0] != 1 and False:
+    if link.summary_at and link.summary_at[0] != 1 and False:
 '''
 
 [[mutation]]
@@ -217,4 +219,180 @@ old = '''
 new = '''
   run_failed: true,
 } satisfies EventTypes;
+'''
+
+# --- 티켓 02(런타임의 요약). 구현 전에 빨강을 보지 못한 가드(한도 기본값, 긴 마지막 교환, 요약 글을 세지
+# 않음, 재개가 다시 판정하지 않음)와, 구현 뒤에 한 번만 빨갰던 단언들을 되돌려 본다.
+
+[[mutation]]
+name = "재생 기록 열에 요약 이벤트를 둔다"
+tests = ["tests/core/test_run.py", "-k", "요약한_실행을_재개하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    RunResumed,
+    ConversationSummarized,
+)
+'''
+new = '''
+    RunResumed,
+)
+'''
+
+[[mutation]]
+name = "재개가 자기 요약을 이미 만난 요약으로 다루지 않는다"
+tests = ["tests/core/test_run.py", "-k", "한도를_내린_뒤의_재개"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    gathered = _walk(trace, link, finished, started.agent, started.principal, summary=own.summary)
+'''
+new = '''
+    gathered = _walk(trace, link, finished, started.agent, started.principal, summary=None)
+'''
+
+[[mutation]]
+name = "재개가 요약할지를 다시 판정한다"
+tests = ["tests/core/test_run.py", "-k", "요약하지_않은_이어_간_실행을_재개하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    conversation = resumed_conversation(trace, own)
+'''
+new = '''
+    conversation = resumed_conversation(trace, own)
+    trace.write(
+        ConversationSummarized(
+            run_id=run_id,
+            ts=clock.now(),
+            summary="다시 판정",
+            last_covered_run=run_id,
+            model="m",
+            input_tokens=0,
+            output_tokens=0,
+        )
+    )
+'''
+
+[[mutation]]
+name = "재개가 자기 요약의 자리를 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "자기_요약_이벤트의_자리나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+'''
+new = '''
+    link = link_of(stored, run_id)
+'''
+
+[[mutation]]
+name = "빈 요약 글을 받아들인다"
+tests = ["tests/core/test_run.py", "-k", "요약이_실패하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    if not reply.text.strip():
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "한도와 같아도 요약한다"
+tests = ["tests/core/test_run.py", "-k", "한도와_같으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    if sum(run.size for run in gathered.runs) <= limit:
+'''
+new = '''
+    if sum(run.size for run in gathered.runs) < limit:
+'''
+
+[[mutation]]
+name = "요약 글을 글자 수에 센다"
+tests = ["tests/core/test_run.py", "-k", "요약_글은_글자_수에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    if sum(run.size for run in gathered.runs) <= limit:
+'''
+new = '''
+    previous = "" if gathered.summary is None else gathered.summary.summary
+    if sum(run.size for run in gathered.runs) + len(previous) <= limit:
+'''
+
+[[mutation]]
+name = "기본 한도가 20,000 이 아니다"
+tests = ["tests/core/test_run.py", "-k", "기본_20000자"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+DEFAULT_CONVERSATION_LIMIT = 20_000
+'''
+new = '''
+DEFAULT_CONVERSATION_LIMIT = 20_004
+'''
+
+[[mutation]]
+name = "가장 최근 교환은 절반보다 길어도 원문으로 남긴다"
+tests = ["tests/core/test_run.py", "-k", "절반보다_길면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+        if total + run.size > half:
+            break
+'''
+new = '''
+        if kept and total + run.size > half:
+            break
+'''
+
+[[mutation]]
+name = "목표 글자 수를 내림한다"
+tests = ["tests/core/test_run.py", "-k", "4분의_1을_올림"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+        target=-(-limit // 4),
+'''
+new = '''
+        target=limit // 4,
+'''
+
+[[mutation]]
+name = "요약 이벤트를 쓰기만 하고 스트림에 흘리지 않는다"
+tests = ["tests/channel/http/test_router.py", "-k", "둘째_프레임"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        trace.write(outcome)
+        yield outcome
+'''
+new = '''
+        trace.write(outcome)
 '''
