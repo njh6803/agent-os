@@ -215,3 +215,18 @@ _Avoid_: 재시작, 복구, 재실행(처음부터 다시 하는 것)
 **재생(Replay)**:
 재개할 때 이미 한 모델 호출과 도구 호출을 다시 실행하지 않고 트레이스에 기록된 값으로 대신하는 것.
 _Avoid_: 리플레이, 재실행, 캐시
+
+## 동사
+
+코드 이름의 동사 어휘. 같은 뜻에 다른 동사를 섞지 않고(`CODING_STANDARDS.md`) 이 표가 원천이다. 처음 정한 것은 `core/continuation.py`의 것이고, 다른 모듈이 같은 뜻을 쓰면 여기에 맞추고 새 뜻이면 줄을 더한다.
+
+| 동사 | 뜻 | 예 |
+|---|---|---|
+| `read` | 포트에서 하나를 읽어 값으로 만든다. 깨졌으면 `PluginError`. 없음은 None이거나, 없음이 곧 거절인 자리에서는 `Absent` | `read_link`(None), `_read_paused`(`Absent`) |
+| `gather` | 포트를 여러 번 읽어 모은다. 읽기의 합이고 판정이 끼어 있다 | `gather_continued` |
+| `check` | 규칙을 보고 어긋나면 던진다. 값을 돌려주지 않는다(명령) | `check_record_rules` |
+| `plan` | 무엇을 할지 정하고 아무것도 하지 않는다. 할 것이 없으면 None | `plan_fold` |
+| `<명사>_of` | 이미 손에 든 값에서 파생한다. 포트에 닿지 않는다 | `link_of`, `limit_of` |
+| `summarize` | 모델을 불러 대화 요약을 만든다. 명령이고 실패는 예외다 | `summarize` |
+
+명사구 이름(`resumed_conversation`, `NEW_CONVERSATION`)은 돌려주는 값을 말하는 것이라 이 표 밖이다. 포트를 여러 번 읽는 것은 `gather`와 같지만 재개가 받는 값의 이름을 앞에 둔다.

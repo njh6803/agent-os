@@ -2,7 +2,7 @@
 
 run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 일이 여기 있다(요약 실패를 run_failed
 로 바꾸는 것과 재생 기록 열에서 요약을 빼는 것은 run.py 다). run.py 가 바뀌는 이유(실행을 모는 것)와
-이 모듈이 바뀌는 이유(대화를 읽고 줄이는 것)가 다르다(conversation 티켓 01 리뷰). 포트는 늘지 않는다
+이 모듈이 바뀌는 이유(대화를 읽고 줄이는 것)가 다르다. 포트는 늘지 않는다
 — 쓰는 것은 TraceStore.read, ChatModel.ainvoke, Clock.now 다.
 
 **거슬러 읽기.** 앞 실행에서 시작 이벤트의 previous_run 을 따라 거슬러 가며 지금 에이전트의 것만
@@ -97,6 +97,10 @@ output은 에이전트가 답한 글이다.
 # 이어 가지 않은 실행의 컨텍스트 멤버. 요약이 없고 교환이 비어 있다.
 NEW_CONVERSATION = Conversation(summary=None, exchanges=())
 
+# 대화 요약 이벤트가 서는 자리. 시작 이벤트 바로 뒤 하나다(ADR 0022). `Link.summary` 가 읽는 자리와
+# `check_record_rules` 가 판정하는 자리가 이 하나에서 나온다.
+SUMMARY_INDEX = 1
+
 
 @dataclass(frozen=True)
 class Link:
@@ -117,9 +121,9 @@ class Link:
     def summary(self) -> ConversationSummarized | None:
         """시작 바로 뒤에 선 요약 이벤트 하나. 그 자리가 아니거나 둘 이상이면 None 이고, 그것이
         규칙 위반인지는 `check_record_rules` 가 말한다. 그 뒤에 읽는 것이 뜻이 있다."""
-        if self.summary_at != (1,):
+        if self.summary_at != (SUMMARY_INDEX,):
             return None
-        second = self.events[1]
+        second = self.events[SUMMARY_INDEX]
         return second if isinstance(second, ConversationSummarized) else None
 
 
@@ -177,15 +181,17 @@ def gather_continued(
 ) -> Gathered:
     """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽는다.
 
-    순서는 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
+    규칙: 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
     (`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수 없어서이고,
     주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 남의
-    실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023). 앞 실행 자신의 앞 실행 필드 패턴과 요약
-    자리 위반은 고리의 판정(`_walk`)에 들어 주체와 끝남 뒤다 — 손상이 주체보다 앞이라는 논거와
-    갈리지만 동작은 이것이고, 최종 사용자 경로에서는 오히려 존재를 덜 드러낸다(명세 검토).
+    실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023).
+
+    예외: 앞 실행 자신의 기록 규칙 위반(앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수)은 손상이지만
+    고리의 판정(`_walk`)에 들어 주체와 끝남 뒤에 선다. 최종 사용자 경로에서 존재를 덜 드러내는
+    쪽이고 명세 "core — 판정 순서"가 그렇게 정했다.
 
     요청이 댄 식별자는 포트에 닿기 전에 sdk 의 판정자를 지난다. 런타임은 그런 이름의 트레이스를 만들
-    수 없으므로 패턴 위반은 없음이다. 재개는 거르지 않는다(명세 "이어 가기 진입점").
+    수 없으므로 패턴 위반은 없음이다. 재개는 거르지 않는다(명세 "core — 이어 가기 진입점").
     """
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
@@ -250,8 +256,8 @@ def link_of(stored: Trace, run_id: RunId) -> Link:
 
 
 def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
-    """손상된 트레이스를 거른다. 정상 쓰기 경로에서는 어긋날 수 없는 것들이다(http-channel 티켓 02
-    리뷰). 재개와 이어 가기의 거슬러 읽기가 같이 쓴다. 문구가 재개를 말하지 않는 이유다."""
+    """손상된 트레이스를 거른다. 정상 쓰기 경로에서는 어긋날 수 없는 것들이다(ADR 0014 의 재개
+    판정). 재개와 이어 가기의 거슬러 읽기가 같이 쓴다. 문구가 재개를 말하지 않는 이유다."""
     known = tuple(e for e in stored.events if not isinstance(e, UnknownEvent))
     if len(known) != len(stored.events):
         raise PluginError(f"모르는 종류의 이벤트가 섞인 트레이스다: {run_id}")
@@ -273,7 +279,7 @@ def check_record_rules(link: Link) -> None:
         raise PluginError(f"실행 {run_id} 의 앞 실행 필드가 패턴을 어긴다: {older!r}")
     if len(link.summary_at) > 1:
         raise PluginError(f"실행 {run_id} 에 대화 요약 이벤트가 둘 이상이다")
-    if link.summary_at and link.summary_at[0] != 1:
+    if link.summary_at and link.summary_at[0] != SUMMARY_INDEX:
         raise PluginError(f"실행 {run_id} 의 대화 요약 이벤트가 시작 바로 뒤의 자리가 아니다")
     if older is None and link.summary_at:
         # 요약은 이어 가기에서만 만들어진다. 고리의 처음이 요약을 들면 손편집이다.
@@ -375,7 +381,7 @@ def plan_fold(gathered: Gathered, limit: int) -> Fold | None:
 
     꼬리는 가장 최근 교환부터 거꾸로 세어 합이 한도의 절반(정수 나눗셈. 합은 정수라 같은 조건이다)을
     넘지 않는 데까지다. 합이 한도를 넘고 꼬리가 절반 이하이므로 접히는 실행이 적어도 하나 있다. 목표
-    글자 수는 한도의 4분의 1을 올림한 값이라 한도가 1 이상이면 1 이상이다(to-tickets).
+    글자 수는 한도의 4분의 1을 올림한 값이라 한도가 1 이상이면 1 이상이다(명세 "core — 대화 요약").
     """
     if sum(run.size for run in gathered.runs) <= limit:
         return None

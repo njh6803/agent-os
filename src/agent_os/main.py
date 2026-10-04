@@ -180,6 +180,7 @@ async def _run(args: RunArgs, model: ChatModel) -> int:
         args.agent,
         args.request,
         Principal(getpass.getuser()),
+        previous_run=args.previous_run,
         plugins=FilesystemPlugins(args.plugins_root),
         model=model,
         tools=McpTools(),
