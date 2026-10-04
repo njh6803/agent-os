@@ -3705,6 +3705,24 @@ async def test_요약_호출은_그_실행의_모델_포트_그대로이고_도�
     assert tools.servers is not None
 
 
+async def test_요약_호출은_루프_상한에_들지_않는다(clock: FakeClock) -> None:
+    """요약한 뒤 에이전트의 루프가 상한 턴을 꽉 채워도 끝까지 간다. 요약이 턴으로 세이면 상한을
+    하나 넘어 실패한다(명세 "루프 상한(10턴)에 들지 않는다")."""
+    trace = FakeTrace()
+    last = _chain(trace, 6, 6)
+    turns = [_tool_request() for _ in range(MAX_TURNS - 1)] + [_reply("끝")]
+    model = _summarizing_model(_reply("요약 글"), *turns)
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"])
+    plugins.conversation_limit = 10
+
+    events = await _continue(last, trace, clock, model=model, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    assert sum(1 for e in events if e.type == "llm_called") == MAX_TURNS
+    assert model.calls == MAX_TURNS + 1
+
+
 async def test_요약_호출의_사용자_메시지는_JSON_문서_하나이고_요청의_글이_문자열_안에_남는다(
     clock: FakeClock,
 ) -> None:

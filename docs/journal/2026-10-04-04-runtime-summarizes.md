@@ -7,7 +7,7 @@
   요약 호출(`summarize`), 기본 한도(`DEFAULT_CONVERSATION_LIMIT`)를 더했다
 - `run.py`: `run()`이 `run_started` 뒤에 요약 이벤트를 쓰고 흘리며 실패하면 `run_failed`로 끝낸다. `resume()`이 자기 요약을 읽고
   `_BOUNDARY`에 요약 이벤트가 든다
-- 테스트: core의 "대화 요약" 절 열일곱(계기, 꼬리, 모델 호출, 이벤트, 실패, 재개), 채널의 둘(둘째 프레임, 실패 200 스트림)
+- 테스트: core의 "대화 요약" 절 열여덟(계기, 꼬리, 모델 호출, 루프 상한, 이벤트, 실패, 재개. 루프 상한은 PR 리뷰 뒤에 더했다), 채널의 둘(둘째 프레임, 실패 200 스트림)
 - rules 둘(`core.md`의 "대화 요약" 항목과 재개 문장, `sdk.md`), 매니페스트 주석, `CONTEXT.md`의 "덮는 끝", 변이 표에 열하나와 그 README
 - 티켓 02를 done으로, 끝에 "이 티켓이 정한 것", 이 일지
 
@@ -103,18 +103,33 @@ PR #132. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 - **Nit(반영): `continued`·`resumed`가 과거분사.** `gather_continued`·`resumed_conversation`으로. 같은 파일의 `read_link`·`plan_fold`·
   `summarize`와 어휘를 맞췄다. 티켓의 공개 이름 목록과 변이 표의 원문 둘을 같이 고쳤다.
 
+> 사용자: "끝났어?"
+
+2회차(`a191f94`). CI 여섯이 초록이었다. CodeRabbit은 "Review rate limited"라 둘째 커밋을 보지 않았다(1회차가 시간당 포함 리뷰 하나를
+썼다). claude-review는 Critical·Major 0, Minor 2, Nit 2였다.
+
+- **Minor(반영): `Link`가 `summary_at`과 거기서 파생되는 `summary`를 둘 다 들어 짝이 호출부의 지식이었다.** `summary`를 필드에서
+  `summary_at`으로 계산하는 속성으로 바꿔 둘이 어긋날 수 없게 했다. `link_of`와 `check_record_rules`를 한 함수로 묶는 안은 쓰지 않았다 —
+  요청이 댄 앞 실행에서는 주체·끝남의 하위 타입 판정이 기록 규칙보다 앞이라(테스트 "남의 앞 실행은 그 자신의 고리 위반보다 먼저 다른
+  주체다") 읽기와 규칙 검사 사이에 호출부의 판정이 끼어야 한다.
+- **Minor(반영): 루프 상한에 요약 호출이 들지 않는 것을 직접 단언하는 테스트.** 요약한 뒤 에이전트의 루프가 상한 턴을 꽉 채워도
+  `run_finished`로 끝나고 모델 호출이 상한 더하기 하나인 사례를 더했다. 명세 축 셀프 리뷰가 Nit으로 냈고 PR 본문이 보류로 밝힌 자리다.
+- **Nit(반영): `_finished_of` 독스트링의 어색한 줄바꿈.** 문장을 다시 감았다.
+- **Nit(보류): `run()`의 `conversation`을 정하는 세 갈래를 함수로 뺄 후보.** 리뷰어도 "다음 티켓에서 분기가 더 붙으면"이라 했고 03(CLI)과
+  04(관리 화면)는 `run()`에 분기를 더하지 않는다. 받는 티켓이 없어 여기 기록으로만 둔다.
+
 ## 검사
 
 판정 명령은 파이프 없이 스크립트 파일(`gates.sh`)로 돌리고 종료 코드를 모았다. PR 리뷰 반영 뒤 전부 다시 돌렸다.
 
-- pytest 1408 passed, 4 deselected(경고 셋은 변경 전부터 있던 pytest-asyncio의 것)
+- pytest 1409 passed, 4 deselected(경고 셋은 변경 전부터 있던 pytest-asyncio의 것)
 - ruff check와 ruff format 통과
 - pyright 0 errors
 - lint-imports 5 kept
 - 지침 검사와 타입 우회 검사 통과
 - `pnpm -C web verify` 통과
 - `uv run --env-file .env pytest -m llm` 4 passed. core 실행 모듈을 건드렸으므로 돌렸다. `--basetemp`로 남긴 트레이스 셋이 모두 형식 3이고
-  `llm_called` 6건의 토큰 합계는 7,105(입력 6,895, 출력 210)다. 리뷰 반영 전후로 두 번 돌렸고 두 번 다 같은 합계였다. 새 LLM
+  `llm_called` 6건의 토큰 합계는 7,105(입력 6,895, 출력 210)다. 셀프 리뷰와 PR 리뷰 두 회차의 반영 뒤마다 돌려 네 번 모두 같은 합계였다. 새 LLM
   사례(셋째 이어 가기의 요약)는 03이다. 토큰 합계는 스크래치의 스크립트가 트레이스의 `llm_called`를 더해 냈다.
 - 변이 17 모두 기대대로. 셀프 리뷰 반영 뒤 바뀐 코드를 겨눈 셋, PR 리뷰 반영 뒤 셋을 다시 돌려 기대대로(프로브 README).
 

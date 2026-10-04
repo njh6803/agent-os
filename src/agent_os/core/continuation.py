@@ -101,18 +101,26 @@ NEW_CONVERSATION = Conversation(summary=None, exchanges=())
 @dataclass(frozen=True)
 class Link:
     """고리의 실행 하나에서 거슬러 읽기가 보는 것. 시작 이벤트, 마지막 이벤트, 이벤트 전부, 대화
-    요약 이벤트가 선 자리들, 그리고 시작 바로 뒤에 선 요약(그 자리가 아니면 None). 자리와 개수가
-    규칙에 맞는지는 `check_record_rules` 가 본다 — 한 번 센 자리로 두 함수가 같은 판정을 한다."""
+    요약 이벤트가 선 자리들. 자리와 개수가 규칙에 맞는지는 `check_record_rules` 가 본다 — 한 번 센
+    자리로 판정하고 `summary` 도 거기서 파생해 둘이 어긋날 수 없다."""
 
     started: RunStarted
     last: Event
     events: tuple[Event, ...]
     summary_at: tuple[int, ...]
-    summary: ConversationSummarized | None
 
     @property
     def run_id(self) -> RunId:
         return self.started.run_id
+
+    @property
+    def summary(self) -> ConversationSummarized | None:
+        """시작 바로 뒤에 선 요약 이벤트 하나. 그 자리가 아니거나 둘 이상이면 None 이고, 그것이
+        규칙 위반인지는 `check_record_rules` 가 말한다. 그 뒤에 읽는 것이 뜻이 있다."""
+        if self.summary_at != (1,):
+            return None
+        second = self.events[1]
+        return second if isinstance(second, ConversationSummarized) else None
 
 
 @dataclass(frozen=True)
@@ -238,9 +246,7 @@ def link_of(stored: Trace, run_id: RunId) -> Link:
     at = tuple(
         index for index, event in enumerate(events) if isinstance(event, ConversationSummarized)
     )
-    second = events[1] if at == (1,) else None
-    summary = second if isinstance(second, ConversationSummarized) else None
-    return Link(started=started, last=events[-1], events=events, summary_at=at, summary=summary)
+    return Link(started=started, last=events[-1], events=events, summary_at=at)
 
 
 def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
@@ -280,9 +286,8 @@ def check_record_rules(link: Link) -> None:
 
 def _finished_of(link: Link, principal: Principal) -> RunFinished:
     """고리의 중간 실행이 같은 주체의 끝난 실행인지. 끝남을 본 그 `run_finished` 를 돌려줘 부르는
-    쪽이 다시 좁히지 않는다. 요청이 댄 앞 실행에서는 같은 두 조건이 하위 타입이고
-    (`gather_continued`),
-    고리의 중간 실행에서는 기록이 깨진 것이다(ADR 0022)."""
+    쪽이 다시 좁히지 않는다. 같은 두 조건이 요청이 댄 앞 실행에서는 `gather_continued` 의 하위
+    타입이고, 고리의 중간 실행에서는 기록이 깨진 것이다(ADR 0022)."""
     if link.started.principal != principal:
         raise PluginError(f"고리의 실행 {link.run_id} 은 다른 주체의 실행이다")
     if not isinstance(link.last, RunFinished):
