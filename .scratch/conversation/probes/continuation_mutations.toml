@@ -65,12 +65,12 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-        if summary is not None and older == summary.last_covered_run:
-            break
-        next_link = _read_link(trace, older)
+    if summary is not None and older == summary.last_covered_run:
+        return None
+    next_link = _read_link(trace, older)
 '''
 new = '''
-        next_link = _read_link(trace, older)
+    next_link = _read_link(trace, older)
 '''
 
 [[mutation]]
@@ -82,11 +82,11 @@ expect = "red"
 file = "src/agent_os/core/run.py"
 old = '''
         if link.started.agent == agent:
-            newest_first.append(Exchange(request=link.started.request, output=_output_of(link)))
+            newest_first.append(Exchange(request=link.started.request, output=finished.output))
 '''
 new = '''
         if True:
-            newest_first.append(Exchange(request=link.started.request, output=_output_of(link)))
+            newest_first.append(Exchange(request=link.started.request, output=finished.output))
 '''
 
 [[mutation]]

@@ -449,11 +449,10 @@ async def run(
     """새 실행 하나. `previous_run` 을 주면 그 끝난 실행을 이어 간다(ADR 0022).
 
     이어 가기의 판정은 준비보다 앞이다 — 앞 실행(없음 → 손상 → 다른 주체 → 끝나지 않음), 고리,
-    그다음
-    준비(부재 → 깨짐 → 꺼짐 → import). 재개가 트레이스 판정을 준비보다 앞에 두는 것과 같은 모양이고,
-    꺼진 에이전트로 이어 가려는 요청도 고리를 다 읽은 뒤에 거절되는 비용이 있다. 전부 실행 식별자를
-    만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고 이벤트 루프
-    위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
+    그다음 준비(부재 → 깨짐 → 꺼짐 → import). 재개가 트레이스 판정을 준비보다 앞에 두는 것과 같은
+    모양이고, 꺼진 에이전트로 이어 가려는 요청도 고리를 다 읽은 뒤에 거절되는 비용이 있다. 전부 실행
+    식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고
+    이벤트 루프 위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
     """
     conversation = (
         _NEW_CONVERSATION
@@ -727,11 +726,14 @@ def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
 
 @dataclass(frozen=True)
 class _Link:
-    """고리의 실행 하나에서 거슬러 읽기가 보는 것. 시작 이벤트, 마지막 이벤트, 이벤트 전부다."""
+    """고리의 실행 하나에서 거슬러 읽기가 보는 것. 시작 이벤트, 마지막 이벤트, 이벤트 전부, 그리고
+    시작 바로 뒤에 선 대화 요약 이벤트(없으면 None). 요약의 자리와 개수는 `_require_link` 가
+    본다."""
 
     started: RunStarted
     last: Event
     events: tuple[Event, ...]
+    summary: ConversationSummarized | None
 
     @property
     def run_id(self) -> RunId:
@@ -797,7 +799,10 @@ def _read_link(trace: TraceStore, run_id: RunId) -> _Link | None:
     started = events[0]
     if not isinstance(started, RunStarted):
         raise PluginError(f"시작 이벤트로 열리지 않는 트레이스다: {run_id}")
-    return _Link(started=started, last=events[-1], events=events)
+    last = events[-1]
+    second = events[1] if len(events) > 1 else None
+    summary = second if isinstance(second, ConversationSummarized) else None
+    return _Link(started=started, last=last, events=events, summary=summary)
 
 
 def _walk(trace: TraceStore, first: _Link, agent: AgentName, principal: Principal) -> Conversation:
@@ -810,50 +815,62 @@ def _walk(trace: TraceStore, first: _Link, agent: AgentName, principal: Principa
     없는 실행)까지 간다. 더 오래된 요약은 쓰지 않는다 — 새 요약은 언제나 앞 요약을 접어 만들어진다.
 
     실행마다 검증한다(`_require_link`). 어느 것이든 서버의 기록이 가리킨 것이 깨진 것이라
-    PluginError 이고 메시지가 그 실행과 이유를 든다. 순환은 지나온 실행 식별자로 본다. 포트에 가벼운
-    읽기를 더하지 않고 트레이스 전체를 읽는다 — 비용은 지나는 실행의 수에 비례하고 측정은 명세의
-    프로브다.
+    PluginError 이고 메시지가 그 실행과 이유를 든다. 다음 실행을 읽을지 멈출지는 `_next_link` 가
+    가른다. 포트에 가벼운 읽기를 더하지 않고 트레이스 전체를 읽는다 — 비용은 지나는 실행의 수에
+    비례하고 측정은 명세의 프로브다.
     """
     summary: ConversationSummarized | None = None
     newest_first: list[Exchange] = []
     visited: set[RunId] = set()
-    link = first
-    while True:
+    link: _Link | None = first
+    while link is not None:
         visited.add(link.run_id)
-        _require_link(link, principal)
-        found = _summary_of(link)
+        finished = _require_link(link, principal)
         if link.started.agent == agent:
-            newest_first.append(Exchange(request=link.started.request, output=_output_of(link)))
-            if summary is None and found is not None:
-                summary = found
-        older = link.started.previous_run
-        if older is None:
-            if summary is not None:
-                raise PluginError(
-                    f"요약이 덮는 끝 {summary.last_covered_run} 을 만나지 못한 채 고리의 처음 "
-                    f"{link.run_id} 에 닿았다"
-                )
-            break
-        # 순환이 멈춤 조건보다 먼저다. 정상 고리에서 덮는 끝은 요약보다 오래돼 지나온 실행일 수
-        # 없으므로, 되돌아가는 간선의 목적지가 덮는 끝과 같은 손편집 트레이스만 여기서 갈린다.
-        if older in visited:
-            raise PluginError(
-                f"고리가 순환한다: 실행 {link.run_id} 의 앞 실행 {older} 을 이미 지났다"
-            )
-        if summary is not None and older == summary.last_covered_run:
-            break
-        next_link = _read_link(trace, older)
-        if next_link is None:
-            raise PluginError(f"고리의 실행이 없다: {older} (실행 {link.run_id} 의 앞 실행)")
-        link = next_link
+            newest_first.append(Exchange(request=link.started.request, output=finished.output))
+            if summary is None and link.summary is not None:
+                summary = link.summary
+        link = _next_link(trace, link, summary, visited)
     return Conversation(
         summary=None if summary is None else summary.summary,
         exchanges=tuple(reversed(newest_first)),
     )
 
 
-def _require_link(link: _Link, principal: Principal) -> None:
+def _next_link(
+    trace: TraceStore,
+    link: _Link,
+    summary: ConversationSummarized | None,
+    visited: set[RunId],
+) -> _Link | None:
+    """거슬러 읽기의 다음 실행. None 이면 멈춘다 — 고리의 처음이거나 가장 가까운 요약이 덮는 끝이다.
+
+    덮는 끝의 실행은 읽지 않는다. 순환은 지나온 실행 식별자로 보고 멈춤 조건보다 먼저다 — 정상
+    고리에서 덮는 끝은 요약보다 오래돼 지나온 실행일 수 없으므로, 되돌아가는 간선의 목적지가 덮는
+    끝과 같은 손편집 트레이스만 여기서 갈린다. 요약을 만났는데 덮는 끝 없이 고리의 처음에 닿는 것과
+    다음 실행이 없는 것은 기록이 깨진 것이다.
+    """
+    older = link.started.previous_run
+    if older is None:
+        if summary is not None:
+            raise PluginError(
+                f"요약이 덮는 끝 {summary.last_covered_run} 을 만나지 못한 채 고리의 처음 "
+                f"{link.run_id} 에 닿았다"
+            )
+        return None
+    if older in visited:
+        raise PluginError(f"고리가 순환한다: 실행 {link.run_id} 의 앞 실행 {older} 을 이미 지났다")
+    if summary is not None and older == summary.last_covered_run:
+        return None
+    next_link = _read_link(trace, older)
+    if next_link is None:
+        raise PluginError(f"고리의 실행이 없다: {older} (실행 {link.run_id} 의 앞 실행)")
+    return next_link
+
+
+def _require_link(link: _Link, principal: Principal) -> RunFinished:
     """고리의 실행 하나가 성한지. 주체, 끝남, 앞 실행 필드의 패턴, 요약의 자리·개수·덮는 끝의 패턴.
+    끝남을 본 그 `run_finished` 를 돌려줘 부르는 쪽이 다시 좁히지 않는다.
 
     요청이 댄 앞 실행에서는 주체와 끝남이 하위 타입으로 먼저 걸러져 여기서는 지나가고, 고리의 중간
     실행에서는 전부 기록이 깨진 것이다(ADR 0022).
@@ -877,24 +894,12 @@ def _require_link(link: _Link, principal: Principal) -> None:
         raise PluginError(
             f"고리의 실행 {run_id} 의 대화 요약 이벤트가 시작 바로 뒤의 자리가 아니다"
         )
-    found = _summary_of(link)
+    found = link.summary
     if found is not None and not is_run_id(found.last_covered_run):
         raise PluginError(
             f"고리의 실행 {run_id} 의 요약이 덮는 끝이 패턴을 어긴다: {found.last_covered_run!r}"
         )
-
-
-def _summary_of(link: _Link) -> ConversationSummarized | None:
-    """그 실행의 대화 요약 이벤트. 자리와 개수는 `_require_link` 가 이미 봤다."""
-    second = link.events[1] if len(link.events) > 1 else None
-    return second if isinstance(second, ConversationSummarized) else None
-
-
-def _output_of(link: _Link) -> str:
-    """끝난 실행의 출력. `_require_link` 가 끝남을 봤으므로 마지막은 run_finished 다."""
-    if not isinstance(link.last, RunFinished):
-        raise PluginError(f"고리의 실행 {link.run_id} 은 끝나지 않았다")
-    return link.last.output
+    return link.last
 
 
 def _requested_manifest(plugins: PluginSource, agent: AgentName) -> PluginManifest:

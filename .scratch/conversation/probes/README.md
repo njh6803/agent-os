@@ -42,4 +42,4 @@ PYTHONUTF8=1 uv run --env-file .env python .scratch/conversation/probes/token_ra
 | 한국어 | 4,000 | 4,181 | 1.045 |
 | 영어 | 4,000 | 1,426 | 0.356 |
 
-`continuation_mutations.toml`(2026-10-04, 티켓 01의 셀프 리뷰 전). 변이 12 모두 기대대로 빨갰다. pytest 변이 열은 각 1~3 failed, vitest 변이는 `형식 3` 사례 하나가 failed, tsc 변이는 `stream.ts(42,3)`의 TS1360과 `stream.test-d.ts(8,56)`의 TS2344 둘이었다. 셀프 리뷰 뒤 `_walk`의 순환 검사를 멈춤 조건 앞으로 옮기고 라우터의 중복을 걷었다. `--check`가 덮는 끝 변이의 원문이 옮겨 간 것을 잡아 새 모양으로 고치고 그 변이만 다시 돌려 빨강을 봤다. 나머지 열하나는 원문이 그대로다.
+`continuation_mutations.toml`(2026-10-04, 티켓 01의 셀프 리뷰 전). 변이 12 모두 기대대로 빨갰다. pytest 변이 열은 각 1~3 failed, vitest 변이는 `형식 3` 사례 하나가 failed, tsc 변이는 `stream.ts(42,3)`의 TS1360과 `stream.test-d.ts(8,56)`의 TS2344 둘이었다. 셀프 리뷰 뒤 `_walk`의 순환 검사를 멈춤 조건 앞으로 옮기고 라우터의 중복을 걷었다. `--check`가 덮는 끝 변이의 원문이 옮겨 간 것을 잡아 새 모양으로 고치고 그 변이만 다시 돌려 빨강을 봤다. PR 리뷰 뒤 `_walk`를 `_next_link`로 나누고 `_output_of`를 지우자 덮는 끝 변이와 다른 에이전트의 교환 변이의 원문이 다시 옮겨 가, 같은 길로 고치고 둘을 다시 돌려 빨강을 봤다. 나머지는 원문이 그대로다.
