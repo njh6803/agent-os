@@ -389,9 +389,13 @@ class BrokenTools:
 
 
 class GatedModel(GenericFakeChatModel):
-    """테스트가 문을 열 때까지 답하지 않는다. 실행의 진행을 테스트가 쥔다."""
+    """테스트가 문을 열 때까지 답하지 않는다. 실행의 진행을 테스트가 쥔다.
+
+    `waiting` 은 모델이 문 앞에 닿아 기다리기 시작하면 켜진다.
+    """
 
     gate: asyncio.Event
+    waiting: asyncio.Event
 
     async def _agenerate(
         self,
@@ -400,12 +404,15 @@ class GatedModel(GenericFakeChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: object,
     ) -> ChatResult:
+        self.waiting.set()
         await self.gate.wait()
         return self._generate(messages, stop, None, **kwargs)
 
 
 def _gated_model(answer: str = "4") -> GatedModel:
-    return GatedModel(messages=iter([AIMessage(content=answer)]), gate=asyncio.Event())
+    return GatedModel(
+        messages=iter([AIMessage(content=answer)]), gate=asyncio.Event(), waiting=asyncio.Event()
+    )
 
 
 class ToolAwareModel(GenericFakeChatModel):
@@ -581,13 +588,26 @@ async def test_응답에_추적_식별자와_버퍼링을_막는_헤더가_있�
 
 async def test_모델이_조용한_동안_keepalive_주석이_나간다(monkeypatch: pytest.MonkeyPatch) -> None:
     """중간 프록시가 유휴 연결을 자른다(스토리 19). 첫 이벤트를 기다리는 방식이 FastAPI 의 SSE
-    경로를 벗어나면 keepalive 를 잃는데, 이 테스트가 그 자리를 닫는다. 간격을 줄여 잰다."""
+    경로를 벗어나면 keepalive 를 잃는데, 이 테스트가 그 자리를 닫는다. 간격을 줄여 잰다.
+
+    침묵 0.2초는 모델이 기다리기 시작한 뒤부터 센다. 전에는 서버를 띄우기 전에 0.2초 타이머를 걸어,
+    수집이 늘어 GC(어림 0.15초)가 그 창에 떨어지면 무관한 변경에도 빨강이었다(손으로 봤다, 일지
+    2026-10-05-05). 지금 테스트가 같은 지연을 견디는 것은
+    `.scratch/harness/probes/worktree_guards_mutations.toml` 의 기동 지연 변이가 잰다."""
     monkeypatch.setattr(fastapi.routing, "_PING_INTERVAL", 0.01)
     model = _gated_model()
-    asyncio.get_running_loop().call_later(0.2, model.gate.set)
 
-    async with _serving(_app(model=model)) as client:
-        response = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
+    async def open_after_silence() -> None:
+        await model.waiting.wait()
+        await asyncio.sleep(0.2)
+        model.gate.set()
+
+    opener = asyncio.create_task(open_after_silence())
+    try:
+        async with _serving(_app(model=model)) as client:
+            response = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
+    finally:
+        opener.cancel()
 
     blocks = _blocks(response.text)
     assert ": ping" in blocks

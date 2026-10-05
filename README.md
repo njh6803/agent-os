@@ -12,6 +12,8 @@ uv run pytest -q
 pnpm -C web verify
 ```
 
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다.
+
 ## 구조
 
 ```

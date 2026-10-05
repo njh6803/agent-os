@@ -188,7 +188,7 @@ def _file_reason(cmd: str, name: str) -> str:
         f"`{cmd}` 가 `{name}` 을 읽는다. `.env` 는 비밀이라 도구 출력에 싣지 않는다(대기열 43 — "
         "2026-09-28 감사에서 grep 한 번에 키가 실렸다). 키 이름은 `.env.example` 에 있고 값은 "
         "사용자가 넣는다. LLM 테스트는 `uv run --env-file .env pytest -m llm` 으로 값을 "
-        "프로세스에만 넘긴다."
+        "프로세스에만 넘긴다(워크트리에서는 `--env-file ../../../.env`)."
     )
 
 

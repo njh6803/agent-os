@@ -24,6 +24,8 @@
 - 루트 밖에 `CLAUDE.md` 와 `AGENTS.md` 가 없다. `next dev` 가 앱 폴더에 두 파일을 만든다(ADR 0021,
   web-admin 티켓 01).
 - rules 파일과 임포트된 파일 안에도 `@` 임포트가 없다. 그것들도 따라가서 실린다.
+- `.claude/settings.local.json` 에 가드(deny·ask·hooks)가 없다. local 은 워크트리에 없어 거기서 연
+  세션에서 조용히 빠진다(2026-10-05 워크트리 감사).
 
 pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것과 나중에 전부 재배치하는 것은
 비용이 다르다(선행 저장소 AAPP-15).
@@ -35,6 +37,7 @@ import ast
 import json
 import os
 import re
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -54,6 +57,7 @@ PATCHED_SKILLS = (
 SENTINEL = "프로젝트 사본"
 NESTED_INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
 SETTINGS = Path(".claude") / "settings.json"
+LOCAL_SETTINGS = Path(".claude") / "settings.local.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"
 # 백틱 토큰이 경로인지 가르는 확장자. 슬래시가 있으면 확장자와 무관하게 경로다. `agent_os.core` 나
 # `Any` 처럼 슬래시도 이 확장자도 없는 토큰은 경로가 아니다.
@@ -106,6 +110,16 @@ class _HookGroup(TypedDict, total=False):
 
 
 class _Settings(TypedDict, total=False):
+    hooks: dict[str, list[_HookGroup]]
+
+
+class _Permissions(TypedDict, total=False):
+    deny: list[str]
+    ask: list[str]
+
+
+class _LocalSettings(TypedDict, total=False):
+    permissions: _Permissions
     hooks: dict[str, list[_HookGroup]]
 
 
@@ -248,6 +262,82 @@ def rules_with_dead_paths(root: Path = ROOT) -> list[str]:
                     " 조용히 안 실린다"
                 )
     return problems
+
+
+def local_settings_with_guards(root: Path = ROOT) -> list[str]:
+    """local 설정에 가드(`permissions.deny`·`permissions.ask`·`hooks`)가 있는지 본다.
+
+    local(`.claude/settings.local.json`)은 추적하지 않는다(이 PC 의 사용자 전역 ignore). 손으로 판
+    워크트리에는 없고 EnterWorktree 는 만들 때 한 번 복사하므로(2026-10-05 워크트리 감사
+    서브에이전트가 워크트리마다 local 유무를 손으로 대조했다), 워크트리 폴더에서 연 세션에서는 거기
+    둔 가드가 알림 없이 빠진다. 가드는 추적하는 `settings.json` 에
+    두고 local 은 allow 만 든다. 파일이 없거나 가드 목록이 비었으면 문제가 없다. 워크트리에서
+    돌면 그 워크트리의 local 과 함께 주 체크아웃의 local 도 본다 — 가드를 잃는 쪽이 그것이다. CI
+    체크아웃에는 이 파일이 없어 이 검사는 pre-commit 에서만 뜻이 있다. 못 보는 것: `env`·`model`
+    같은 다른 키(사람마다 다를 수 있어 두었다), 사용자 수준 `~/.claude/settings.json`.
+    """
+    places = [(root / LOCAL_SETTINGS, LOCAL_SETTINGS.as_posix())]
+    main = _main_checkout(root)
+    if main is not None and main.resolve() != root.resolve():
+        places.append((main / LOCAL_SETTINGS, f"{(main / LOCAL_SETTINGS).as_posix()}(주 체크아웃)"))
+    problems: list[str] = []
+    for index, (path, label) in enumerate(places):
+        guards = _local_guards(path)
+        if not guards:
+            continue
+        fix = (
+            "settings.json 으로 옮기고 local 에는 allow 만 둔다"
+            if index == 0
+            else "주 체크아웃의 파일이라 이 워크트리에서 고치지 않고 사람에게 알린다"
+        )
+        problems.append(
+            f"{label}: 가드({', '.join(guards)})가 있다. local 은 워크트리에 없어 거기서 연"
+            f" 세션에서 조용히 빠진다. {fix}"
+        )
+    return problems
+
+
+def _local_guards(path: Path) -> list[str]:
+    """local 설정 파일 하나의 가드 키. 파일이 없거나 목록이 비었으면 없다."""
+    if not path.exists():
+        return []
+    settings: _LocalSettings = json.loads(path.read_text(encoding="utf-8"))
+    permissions = settings.get("permissions", {})
+    guards: list[str] = []
+    if permissions.get("deny"):
+        guards.append("permissions.deny")
+    if permissions.get("ask"):
+        guards.append("permissions.ask")
+    if settings.get("hooks"):
+        guards.append("hooks")
+    return guards
+
+
+def _main_checkout(root: Path) -> Path | None:
+    """`root` 가 든 저장소의 주 체크아웃. git 저장소가 아니거나 알 수 없으면 None.
+
+    워크트리의 공용 git 디렉터리(`<주 체크아웃>/.git`)의 부모다. pre-commit 이 워크트리 커밋에서
+    내보내는 `GIT_DIR` 같은 위치 변수가 남으면 `root` 가 아니라 그 저장소를 보므로 `GIT_` 로
+    시작하는 변수를 모두 벗긴다(`tools/run_hooks.py` 의 `REPO_LOCATION_VARS` 를 덮는다. 이 도구는
+    스크립트로 돌아 그 모듈을 import 하지 못한다, `.claude/rules/tools.md`).
+    """
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            check=False,
+        )
+    except OSError:
+        return None
+    common = Path(result.stdout.strip())
+    if result.returncode != 0 or common.name != ".git":
+        return None
+    return common.parent
 
 
 def _hook_commands(root: Path) -> Iterator[tuple[str, str]]:
@@ -639,6 +729,7 @@ def main(root: Path = ROOT) -> int:
     ]
     problems.extend(rules_with_dead_paths(root))
     problems.extend(hooks_with_relative_paths(root))
+    problems.extend(local_settings_with_guards(root))
     problems.extend(claude_md_problems(root))
     problems.extend(imported_files_with_dead_paths(root))
     problems.extend(patched_skills_without_sentinel(root))

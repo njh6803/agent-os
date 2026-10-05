@@ -216,8 +216,9 @@ def test_옮기지_않은_첫_줄이나_지시문이_아니면_막지_않는다(
 
 
 def test_open_session_스크립트가_만드는_첫_줄을_훅이_알아본다() -> None:
-    """문구의 원천은 ps1 이고 훅은 그것을 글자로 파싱한다. 한쪽만 바뀌면 폴더 가드가 조용히
-    꺼지므로(표지를 못 찾으면 막을 이유가 없다) 여기서 잡는다."""
+    """문구의 원천은 ps1 이고 훅은 그것을 글자로 파싱한다. 고정 머리 뒤만 갈리면 훅이 막지만
+    (fail-closed), 머리까지 바뀌면 조용히 지나가므로 한 체크아웃 안의 두 문구 대조는 여기서
+    잡는다(체크아웃 사이는 못 잡는다)."""
     source = OPEN_SESSION.read_text(encoding="utf-8")
     marker = next(line for line in source.splitlines() if "이 세션을 연 저장소는" in line)
     template = marker.split('return "', 1)[1].split('".TrimEnd()', 1)[0]
@@ -232,6 +233,64 @@ def test_open_session_스크립트가_만드는_첫_줄을_훅이_알아본다()
 
     assert block_reason_for(prompt, ROOT) is None
     assert block_reason_for(prompt, "D:\\elsewhere") is not None
+
+
+def test_스킬_파일로_시작하는데_연_저장소_표지를_못_읽으면_막는다() -> None:
+    """쏘는 ps1 은 여는 세션의 체크아웃 사본이고 파싱하는 훅은 받는 세션의 주 체크아웃 사본이다.
+
+    두 사본의 문구가 갈리면 표지를 못 읽는다. 그때 지나가면 폴더 가드가 조용히 꺼지므로 막는다
+    (2026-10-05 워크트리 감사 13). 작업 폴더가 맞아 보여도 비교할 표지가 없으니 막는다.
+    """
+    drifted = _opened().replace("이 세션을 연 저장소는 `", "연 저장소: `", 1)
+
+    for cwd in (ROOT, "D:\\elsewhere"):
+        reason = block_reason_for(drifted, cwd)
+
+        assert reason is not None, cwd
+        assert "표지" in reason, cwd
+        assert "open_session.ps1" in reason, cwd
+
+
+def test_사람이_스킬_경로로_시작해_쓴_지시문은_막지_않는다() -> None:
+    """막는 것은 ps1 이 만드는 고정 머리(`<스킬 경로> 를 읽어 그대로 따른다.`)로 시작할 때뿐이다.
+
+    사람이 손으로 쓴 첫 줄이 스킬 경로로 시작해도 그 머리가 아니면 open-session 이 옮긴 줄이 아니다.
+    """
+    human = DIRECTIVE.replace(
+        DIRECTIVE.splitlines()[0], ".claude/skills/implement/SKILL.md 를 참고해 구현한다", 1
+    )
+
+    assert block_reason_for(human, ROOT) is None
+
+
+def test_어디서_줄이_워크트리를_말하면_계기가_그것을_먼저_따르라고_한다() -> None:
+    """받는 쪽은 지시문 자체다. implement 밖의 시작 프롬프트(설계·명세·티켓·chore)도 지나는 자리라
+    첫 턴 계기가 짚는다(next-session 3단계, 2026-10-06 수정 검증)."""
+    worktree = DIRECTIVE.replace(
+        "어디서: 새 세션",
+        "어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃에서 브랜치를 따지 않고 "
+        "EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 "
+        "거기서 브랜치를 바꾼다",
+    )
+
+    with_worktree = context_for(worktree)
+    plain = context_for(DIRECTIVE)
+
+    assert with_worktree is not None
+    assert "워크트리" in with_worktree
+    assert "먼저" in with_worktree
+    assert plain is not None
+    assert "EnterWorktree" not in plain
+
+
+def test_스킬_파일로_시작해도_지시문이_아니면_막지_않는다() -> None:
+    """막는 것은 open-session 이 옮긴 지시문뿐이다.
+
+    사람이 스킬 경로로 시작한 보통 프롬프트는 지나간다.
+    """
+    plain = ".claude/skills/implement/SKILL.md 를 읽고 요약해 줘"
+
+    assert block_reason_for(plain, ROOT) is None
 
 
 def test_모델이_아직_답하지_않은_트랜스크립트는_첫_턴이다() -> None:
