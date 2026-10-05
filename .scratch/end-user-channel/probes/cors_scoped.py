@@ -12,7 +12,8 @@ ADR 0023 은 CORS 를 새 접두사에만 걸고(허용 출처는 사이트 파�
 밖 preflight 는 401 이다. (3) 접두사 아래 토큰 없는 요청의 401 에
 `Access-Control-Allow-Origin` 과 `Vary: Origin` 이 있다. (4) 접두사 아래 라우트가 낸
 429 의 `Retry-After` 가 `Access-Control-Expose-Headers` 에 든다. (5) 허용 목록 밖 출처의
-요청은 CORS 헤더 없이 지나간다(브라우저가 막는다). (6) 접두사 밖은 출처가 있어도 CORS
+요청은 `Access-Control-Allow-Origin` 없이 지나간다(브라우저가 막는다. Starlette 는 `expose_headers`
+를 주면 출처와 무관하게 `Expose-Headers` 는 붙인다). (6) 접두사 밖은 출처가 있어도 CORS
 헤더가 없다. (7) 라우트의 예기치 않은 예외가 500 봉투가 될 때, 변환이 CORS 안쪽에 있으면
 헤더가 붙고 바깥의 `AssignRequestId` 에만 있으면(지금의 조립, 대조군) 붙지 않는다 — PR #135
 의 CodeRabbit 이 짚었다. 인증은 저장소의 `RequireToken` 을 그대로 쓴다 — 서명 토큰 검증이
