@@ -27,20 +27,23 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
 마스킹과 승인이 겹치는 도구, 운영자 파일의 손상, 운영자가 끈 에이전트나 mcp, 이어 갈 수 없는 앞
 실행(없음, 손상, 다른 주체, 끝나지 않음)과 깨진 고리는 실행 식별자를 만들기 전에 PluginError 로 끝나
-트레이스가 없다. 재개할 수 없는 트레이스(없음, 형식 1, 손상, 일시정지 아님)와 지금의 일시정지를
-가리키지 않는 결정(자리 어긋남)도 같은 자리의 PluginError 다. 재개에서는 위의 것이 전부(꺼짐과
-운영자 파일의 손상, 깨진 고리도) 결정 이벤트를 쓰기 전에 나 트레이스가 그대로다. 저장소가 결정
-이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012 이력). 하위 타입을 가르는
-기준은 "깨졌나"다 — 대상이 없거나 대상의 상태나 주체가 요청을 허락하지 않는 것이 하위 타입이고 남는
-것이 서버의 구성이나 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력). 요청이 댄 에이전트나 실행이나
-이어 갈 앞 실행이 없으면 Absent, 실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가
-지금의 일시정지가 아니면 NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이
-쓰는 mcp 를 운영자가 꺼 두었으면 Disabled(ADR 0017), 앞 실행이 다른 주체의 것이면
+트레이스가 없다. 재개할 수 없는 트레이스(없음, 손상, 다른 주체, 열 에이전트 밖, 형식 1, 일시정지
+아님)와 지금의 일시정지를 가리키지 않는 결정(자리 어긋남)도 같은 자리의 PluginError 다. 재개에서는
+위의 것이 전부(꺼짐과 운영자 파일의 손상, 깨진 고리도) 결정 이벤트를 쓰기 전에 나 트레이스가
+그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012
+이력). 하위 타입을 가르는 기준은 "깨졌나"다 — 대상이 없거나 대상의 상태나 주체가 요청을 허락하지
+않는 것이 하위 타입이고 남는 것이 서버의 구성이나 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력).
+요청이 댄 에이전트나 실행이나 이어 갈 앞 실행이 없거나, 호출자가 볼 수 있는 에이전트의 집합 밖이면
+Absent, 실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아니면
+NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이 쓰는 mcp 를 운영자가 꺼
+두었으면 Disabled(ADR 0017), 결정하는 쪽이 그 실행의 주체가 아니거나 앞 실행이 다른 주체의 것이면
 DifferentPrincipal, 앞 실행이 run_finished 로 끝나지 않았으면 NotContinuable 이다(ADR 0022·0023).
 재개할 실행의 트레이스가 가리키는 에이전트가 없는 것과 고리에서 만나는 실행이 없거나 깨진 것은
 요청이 아니라 서버의 기록이 댄 것이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import 다. 그 이유는 `_prepare`. 이어 가기는 그 앞에 앞
 실행(없음 → 손상 → 다른 주체 → 끝나지 않음)과 고리의 판정이 선다. 그 이유는 core/continuation.py 다.
+재개는 그 앞에 트레이스 판정(없음 → 손상 → 다른 주체 → 열 에이전트 밖 → 형식 1 → 일시정지 아님 →
+자리 어긋남)과 고리가 선다. 그 이유는 `_read_paused` 와 `read_own_run` 이다.
 요약이 실패한 실행은 run_started 뒤에 run_failed 로 끝나고 에이전트를 부르지 않는다.
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
@@ -60,6 +63,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from agent_os.core.continuation import (
     NEW_CONVERSATION,
     Fold,
+    Link,
     check_record_rules,
     gather_continued,
     limit_of,
@@ -74,6 +78,7 @@ from agent_os.core.ports import (
     Absent,
     ChatModel,
     Clock,
+    DifferentPrincipal,
     Disabled,
     NotResumable,
     PluginError,
@@ -453,6 +458,7 @@ async def run(
     principal: Principal,
     *,
     previous_run: RunId | None = None,
+    visible_agents: frozenset[AgentName] | None = None,
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
@@ -466,10 +472,18 @@ async def run(
     모양이고, 꺼진 에이전트로 이어 가려는 요청도 고리를 다 읽은 뒤에 거절되는 비용이 있다. 전부 실행
     식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고
     이벤트 루프 위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
+
+    `visible_agents` 는 호출자가 볼 수 있는 에이전트의 집합이고 없음은 전부다(ADR 0023 의
+    2026-10-05 이력). 최종 사용자 경로가 그 사이트의 열 에이전트 목록을 넘긴다. 요청이 댄 에이전트가
+    집합 밖이면 없는 에이전트와 글자 그대로 같은 `Absent` 이고 매니페스트를 읽기 전이다 — 목록
+    밖인지 꺼졌는지 있는지가 드러나지 않는다. 이어 가기에서도 요청한 에이전트만 본다. 앞 실행의
+    에이전트가 집합 밖이어도 그 교환은 어차피 넘어가지 않는다(ADR 0022).
     """
     gathered = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
     fold = None if gathered is None else plan_fold(gathered, limit_of(manifest))
@@ -513,6 +527,7 @@ async def resume(
     decision: Decision,
     approver: Principal,
     *,
+    visible_agents: frozenset[AgentName] | None = None,
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
@@ -539,10 +554,15 @@ async def resume(
     이어 간 실행의 재개는 시작 이벤트의 앞 실행에서 다시 거슬러 읽어 처음과 같은 멤버를 준다(ADR
     0022). 그것도 첫 걸음 안이고 트레이스 판정 뒤, 준비 앞이다. 고리가 깨졌으면 결정 이벤트를 쓰기
     전에 PluginError 라 실행은 일시정지 그대로다 — 멈춘 사이 거슬러 읽는 범위의 트레이스를 지우면
-    그렇고, 그보다 오래된 트레이스를 지우면 재개가 그대로 선다. 주체의 비교 대상은 멈춘 실행의
+    그렇고, 그보다 오래된 트레이스를 지우면 재개가 그대로 선다. 고리의 주체 비교 대상은 멈춘 실행의
     `run_started` 주체다.
+
+    결정은 그 실행의 주체만 내린다(ADR 0009 의 2026-10-03 이력). 승인자가 멈춘 실행의 `run_started`
+    주체와 다르면 `DifferentPrincipal` 이고, 트레이스가 가리키는 에이전트가 `visible_agents` 밖이면
+    없는 실행과 같은 `Absent` 다. 둘 다 첫 걸음의 자기 실행 읽기(`read_own_run`)가 이미 읽은 값으로
+    하고 결정 이벤트를 쓰기 전이다.
     """
-    resumption = _read_paused(trace, run_id, pause_index)
+    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
     prepared = _prepare(plugins, _recorded_manifest(plugins, resumption.started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
@@ -717,30 +737,89 @@ class _Resumption:
     conversation: Conversation
 
 
-def _read_paused(trace: TraceStore, run_id: RunId, pause_index: int) -> _Resumption:
+@dataclass(frozen=True)
+class OwnTrace:
+    """자기 실행 읽기가 돌려주는 것. 저장소의 형식 버전과, 손상·주체·열 에이전트의 판정을 지난 실행
+    하나(`Link`). 형식 1 과 일시정지 아님은 거르지 않는다 — 그 판정은 재개의 것이고 구독은
+    읽기다."""
+
+    schema_version: TraceSchemaVersion
+    link: Link
+
+
+def read_own_run(
+    trace: TraceStore,
+    run_id: RunId,
+    principal: Principal,
+    visible_agents: frozenset[AgentName] | None,
+) -> OwnTrace:
+    """요청한 주체가 볼 수 있는 자기 실행 하나를 읽는다. 재개의 첫 걸음이고 구독(채널)도 이것을
+    부른다.
+
+    판정 순서는 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 열 에이전트
+    밖(`Absent`)이다(ADR 0014 의 2026-10-05 이력). 손상은 재개가 손상이라 부르던 것 그대로다 — 단건
+    읽기(`link_of`: 모르는 종류, 빈 트레이스, 식별자 어긋남, 시작 이벤트로 열리지 않음)와 기록 규칙
+    (`check_record_rules`: 앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수). 손상이 주체보다 앞인
+    이유는 손상된 트레이스의 주체를 믿을 수 없어서다. 주체와 열 에이전트는 최종 사용자 면에서 둘 다
+    404 라 순서가 노출을 바꾸지 않는다. 열 에이전트 밖의 메시지는 없는 실행의 것과 글자 그대로 같고,
+    다른 주체의 메시지는 실행을 들되 그 실행의 주체 이름을 들지 않는다.
+
+    동기이고 await 가 없다. 재개의 첫 걸음과 구독의 한 걸음(트레이스 읽기와 등록부 보기)이 여기에
+    기댄다(ADR 0014). 이어 가기의 `gather_continued` 와는 나누지 않는다 — 이어 가기는 앞 실행 자신의
+    기록 규칙을 주체·끝남 뒤에 보므로, 이것을 쓰면 그 결정된 순서가 바뀐다.
+    """
+    stored = trace.read(run_id)
+    if stored is None:
+        raise Absent(_no_run(run_id))
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+    if link.started.principal != principal:
+        raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
+    if visible_agents is not None and link.started.agent not in visible_agents:
+        raise Absent(_no_run(run_id))
+    return OwnTrace(schema_version=stored.schema_version, link=link)
+
+
+def _no_run(run_id: RunId) -> str:
+    """없는 실행의 메시지. 열 에이전트 밖의 실행도 글자 그대로 이것이다."""
+    return f"그런 실행이 없다: {run_id}"
+
+
+def _no_agent(agent: AgentName) -> str:
+    """없는 에이전트의 메시지. 열 에이전트 밖의 에이전트도 글자 그대로 이것이다."""
+    return f"에이전트 플러그인이 없다: {agent}"
+
+
+def _read_paused(
+    trace: TraceStore,
+    run_id: RunId,
+    pause_index: int,
+    approver: Principal,
+    visible_agents: frozenset[AgentName] | None,
+) -> _Resumption:
     """재개의 입력을 읽고 재개할 수 없는 것을 거부한다. 트레이스를 신뢰하는 유일한 자리다.
 
     멈춘 실행의 시작 이벤트, 결정이 가리킨 일시정지(결정이 묶이는 호출), 재생 기록, 시작 이벤트의 앞
-    실행에서 다시 거슬러 읽은 멤버를 돌려준다. 판정 순서는 없음 → 형식 1 → 손상 → 일시정지 아님 →
-    자리 어긋남 → 고리다. 손상에는 고리의 실행에 거는 기록 규칙(앞 실행 필드의 패턴, 요약
-    이벤트의 자리와 개수)도 든다 — 자기 트레이스에만 빼는 이유가 없다(ADR 0022). 일시정지 아님이
-    자리보다 먼저라, 같은 자리를 든 결정 둘이 동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지
-    아님"을 듣는다.
+    실행에서 다시 거슬러 읽은 멤버를 돌려준다. 판정 순서는 자기 실행 읽기(없음 → 손상 → 다른 주체 →
+    열 에이전트 밖) → 형식 1 → 일시정지 아님 → 자리 어긋남 → 고리다(ADR 0014 의 2026-10-05 이력).
+    다른 주체가 형식 1·일시정지 아님·자리 어긋남보다 앞인 이유는 최종 사용자 면이 남의 실행을 없는
+    실행처럼 숨기려면 남의 실행의 상태가 먼저 드러나면 안 되기 때문이다. 형식 1 이 손상 뒤인 것은
+    형식 1 트레이스의 주체도 읽어야 해서다. 손상된 형식 1 트레이스에 온 결정이 재개 불가가 아니라
+    깨진 기록인 것이 그 대가다. 손상에는 고리의 실행에 거는 기록 규칙도 든다 — 자기 트레이스에만
+    빼는 이유가 없다(ADR 0022). 일시정지 아님이 자리보다 먼저라, 같은 자리를 든 결정 둘이
+    동시에 오면 둘째는 "지나간 자리"가 아니라 "일시정지 아님"을 듣는다.
 
     자리로 이벤트를 꺼내지 않고 마지막 이벤트의 자리와 같은지만 본다. 꺼내면 파이썬의 음수 인덱스
     `-1` 이 마지막 이벤트에 맞는다. 같은지만 보면 음수는 언제나 어긋남이다. 채널이 음수를 형식
     오류로 막아도 여기서 그것을 믿지 않는다. 모르는 종류의 이벤트는 손상에서 이미 거부되므로 여기서
     세는 자리는 트레이스 상세 `events` 의 인덱스와 같다.
     """
-    stored = trace.read(run_id)
-    if stored is None:
-        raise Absent(f"그런 실행이 없다: {run_id}")
-    if stored.schema_version not in RESUMABLE:
+    own = read_own_run(trace, run_id, approver, visible_agents)
+    if own.schema_version not in RESUMABLE:
         raise NotResumable(
-            f"형식 {stored.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
+            f"형식 {own.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
         )
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+    link = own.link
     paused = link.last
     if not isinstance(paused, RunPaused):
         raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")
@@ -763,7 +842,7 @@ def _requested_manifest(plugins: PluginSource, agent: AgentName) -> PluginManife
     """요청이 이름을 댄 에이전트. 없으면 부재다."""
     manifest = plugins.read_manifest(PluginKind.AGENT, PluginName(agent))
     if manifest is None:
-        raise Absent(f"에이전트 플러그인이 없다: {agent}")
+        raise Absent(_no_agent(agent))
     return manifest
 
 

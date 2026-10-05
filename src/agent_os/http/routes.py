@@ -1,6 +1,6 @@
 """라우트를 선언하는 쪽이 쓰는 것 둘. 라우트별 에러 문서와 경로 변환기 `verbatim` 이다(ADR 0016).
 
-관리와 채널의 라우트가 이것을 import 한다. 미들웨어와 핸들러는 `server` 가 앱 전체에 걸어 두 면을
+관리와 채널의 라우트가 이것을 import 한다. 미들웨어와 핸들러는 `server` 가 앱 전체에 걸어 모든 면을
 함께 덮지만, 라우트가 `responses=` 에 봉투를 적는 것과 `{run_id:verbatim}` 은 라우트 쪽의 일이다.
 
 **라우트는 `operation_id` 를 손으로 준다.** FastAPI 가 라우트 함수 이름으로 `operationId` 를 짓는데
@@ -16,6 +16,7 @@ from starlette.convertors import Convertor, register_url_convertor
 from agent_os.http.errors import (
     INTERNAL_MESSAGE,
     INVALID_REQUEST_MESSAGE,
+    NOT_FOUND_MESSAGE,
     UNAUTHORIZED_MESSAGE,
     ErrorEnvelope,
 )
@@ -24,21 +25,35 @@ from agent_os.http.errors import (
 # 프레임워크가 스키마에 넣어 주지 않고, 422 는 적지 않으면 FastAPI 가 제 모양
 # (`HTTPValidationError`)을 붙여 계약이 봉투가 아닌 것을 약속하게 된다. 500 은 라우터가 건다. 409 는
 # 요청이 가리킨 것이 있지만 그 상태나 주체가 요청을 허락하지 않는 것을 만나는 라우트만 적는다. 그
-# 설명은 채널 라우트 셋이 나눠 쓴다 — 재개 불가와 꺼짐은 상태이고, 남의 실행은 주체다(ADR
-# 0022·0023).
+# 설명은 운영자 채널과 최종 사용자 면의 라우트가 나눠 쓴다 — 재개 불가와 꺼짐은 상태이고, 남의
+# 실행은 주체다(ADR 0022·0023). 429 는 요청하는 쪽의 상한이고 최종 사용자 면의 라우트만 적는다(ADR
+# 0023).
 _DOCUMENTED_ERRORS: Mapping[int, str] = {
     401: UNAUTHORIZED_MESSAGE,
-    404: "찾는 것이 없다",
+    404: NOT_FOUND_MESSAGE,
     409: "있지만 상태나 주체가 요청을 허락하지 않는다",
     422: INVALID_REQUEST_MESSAGE,
+    429: "요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다",
     500: INTERNAL_MESSAGE,
+}
+
+# 상태 코드가 요구하는 응답 헤더와 그 설명. 429 는 언제 다시 보낼 수 있는지를 `Retry-After`(초)로
+# 싣는다(RFC 9110). 상태 코드에 딸린 것이라 그 상태를 적는 라우트마다 저절로 붙는다. 스키마는
+# 정수 하나이고 하한은 설명에 적는다 — `minimum` 을 두면 FastAPI 가 계약을 pydantic 모델로 다시
+# 읽으며 라우트 하나에서만 `1.0` 으로 바꿔 같은 헤더가 라우트마다 다르게 실렸다.
+_DOCUMENTED_HEADERS: Mapping[int, Mapping[str, str]] = {
+    429: {"Retry-After": "다시 보내도 되기까지의 초. 1 이상의 정수다"},
 }
 
 
 def documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
     """라우트의 `responses` 에 적을 에러 응답들(질의). 모양은 언제나 봉투다."""
     return {
-        status: {"model": ErrorEnvelope, "description": _DOCUMENTED_ERRORS[status]}
+        status: {
+            "model": ErrorEnvelope,
+            "description": _DOCUMENTED_ERRORS[status],
+            **_headers_of(status),
+        }
         for status in statuses
     }
 
@@ -49,20 +64,40 @@ def documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
 _ENVELOPE_REF = f"#/components/schemas/{ErrorEnvelope.__name__}"
 
 
-def documented_stream_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
+def documented_stream_errors(
+    *statuses: int, descriptions: Mapping[int, str] | None = None
+) -> dict[int | str, dict[str, object]]:
     """스트림 라우트의 에러 응답들(질의). 모양은 봉투이고 미디어 타입은 JSON 이다.
 
     FastAPI 는 에러 문서의 모델을 라우트 응답 클래스의 미디어 타입 아래에 싣는다(fastapi 0.141.1
     의 `openapi/utils.py`). 스트림 라우트(`EventSourceResponse`)에서 그것은 `text/event-stream`
     이라, 모델로 적으면 봉투가 스트림으로 온다고 계약이 말한다. 에러는 스트림이 시작되기 전에 JSON
     봉투로 나가므로 미디어 타입을 손으로 적고 모델 대신 참조를 둔다.
+
+    `descriptions` 는 그 라우트에서만 공유 설명과 다르게 말할 상태 코드의 설명이다. 같은 상태 코드가
+    라우트마다 다른 것을 약속하는 자리를 라우트 선언에 두어, 공유 표가 라우트를 알지 않게 한다.
     """
+    own = descriptions or {}
     return {
         status: {
-            "description": _DOCUMENTED_ERRORS[status],
+            "description": own.get(status, _DOCUMENTED_ERRORS[status]),
             "content": {"application/json": {"schema": {"$ref": _ENVELOPE_REF}}},
+            **_headers_of(status),
         }
         for status in statuses
+    }
+
+
+def _headers_of(status: int) -> dict[str, object]:
+    """상태 코드가 요구하는 응답 헤더의 문서(질의). 없으면 응답 문서에 키가 없다."""
+    headers = _DOCUMENTED_HEADERS.get(status)
+    if headers is None:
+        return {}
+    return {
+        "headers": {
+            name: {"description": description, "schema": {"type": "integer"}}
+            for name, description in headers.items()
+        }
     }
 
 

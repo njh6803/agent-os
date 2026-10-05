@@ -2,6 +2,57 @@
 // openapi-typescript 의 출력에서 재귀 Json 한 자리만 unknown 으로 바꿨다(web/tools/generate-api-client.ts).
 
 export interface paths {
+  "/end-user/runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 서명한 최종 사용자로 실행 하나를 일으켜 그 항목을 생기는 대로 흘린다 */
+    post: operations["start_end_user_run"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/end-user/runs/{run_id}/approval": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 서명한 최종 사용자의 멈춘 실행에 결정 하나를 내고 결정 항목부터 흘린다 */
+    post: operations["decide_end_user_approval"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/end-user/runs/{run_id}/subscription": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** 서명한 최종 사용자의 실행에 다시 붙어 놓친 항목부터 결말까지 흘린다 */
+    get: operations["subscribe_end_user_run"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/health": {
     parameters: {
       query?: never;
@@ -213,7 +264,7 @@ export interface components {
       decision: "approve";
       /**
        * Pause Index
-       * @description 이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다
+       * @description 이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 최종 사용자 스트림에서는 일시정지 항목의 id 다. 지금의 일시정지가 아니면 409 다
        */
       pause_index: number;
     };
@@ -245,6 +296,24 @@ export interface components {
        */
       type: "conversation_summarized";
     };
+    /**
+     * DecidedItem
+     * @description 결정이 기록됐다. 허가인지 거부인지와 거부의 사유를 든다.
+     */
+    DecidedItem: {
+      /**
+       * Decision
+       * @enum {string}
+       */
+      decision: "approve" | "deny";
+      /** Reason */
+      reason: string | null;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "decided";
+    };
     Decision: components["schemas"]["Approve"] | components["schemas"]["Deny"];
     /**
      * Deny
@@ -258,18 +327,32 @@ export interface components {
       decision: "deny";
       /**
        * Pause Index
-       * @description 이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다
+       * @description 이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 최종 사용자 스트림에서는 일시정지 항목의 id 다. 지금의 일시정지가 아니면 409 다
        */
       pause_index: number;
       /** Reason */
       reason: string;
     };
+    EndUserItem:
+      | components["schemas"]["StartedItem"]
+      | components["schemas"]["ProgressItem"]
+      | components["schemas"]["PausedItem"]
+      | components["schemas"]["DecidedItem"]
+      | components["schemas"]["FinishedItem"]
+      | components["schemas"]["FailedItem"]
+      | components["schemas"]["UnfinishedItem"];
     /**
      * ErrorCode
      * @description 에러 봉투의 어휘. 상태 코드와 1:1 이다.
      * @enum {string}
      */
-    ErrorCode: "unauthorized" | "invalid_request" | "not_found" | "conflict" | "internal_error";
+    ErrorCode:
+      | "unauthorized"
+      | "invalid_request"
+      | "not_found"
+      | "conflict"
+      | "too_many_requests"
+      | "internal_error";
     /**
      * ErrorEnvelope
      * @description 에러 응답의 모양. 성공 응답은 이것으로 감싸지 않는다.
@@ -294,6 +377,34 @@ export interface components {
       | components["schemas"]["RunFinished"]
       | components["schemas"]["RunFailed"]
       | components["schemas"]["ConversationSummarized"];
+    /**
+     * FailedItem
+     * @description 실행이 실패로 끝났다. 고정 문구와 실행 식별자를 든다.
+     */
+    FailedItem: {
+      /** Message */
+      message: string;
+      /** Run Id */
+      run_id: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "failed";
+    };
+    /**
+     * FinishedItem
+     * @description 실행이 출력을 내고 끝났다.
+     */
+    FinishedItem: {
+      /** Output */
+      output: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "finished";
+    };
     /**
      * Health
      * @description 살아 있다는 것만 답한다. 내부 구성을 싣지 않는다.
@@ -366,6 +477,23 @@ export interface components {
       };
     };
     /**
+     * PausedItem
+     * @description 승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.
+     */
+    PausedItem: {
+      /** Args */
+      args: {
+        [key: string]: components["schemas"]["Json"];
+      };
+      /** Tool */
+      tool: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "paused";
+    };
+    /**
      * Plugin
      * @description 등록된 플러그인 하나. 종류와 이름과 켜짐, 그리고 매니페스트 통째로다.
      */
@@ -428,6 +556,21 @@ export interface components {
       reason: string;
     };
     PluginRow: components["schemas"]["Plugin"] | components["schemas"]["PluginPlaceholder"];
+    /**
+     * ProgressItem
+     * @description 도구 하나가 불렸다. 도구 이름과 성패만 든다.
+     */
+    ProgressItem: {
+      /** Ok */
+      ok: boolean;
+      /** Tool */
+      tool: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "progress";
+    };
     /**
      * RunFailed
      * @description 실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다.
@@ -564,6 +707,37 @@ export interface components {
       status: components["schemas"]["RunStatus"];
     };
     /**
+     * ServerSentEvent
+     * @description Represents a single Server-Sent Event.
+     *
+     *     When `yield`ed from a *path operation function* that uses
+     *     `response_class=EventSourceResponse`, each `ServerSentEvent` is encoded
+     *     into the [SSE wire format](https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream)
+     *     (`text/event-stream`).
+     *
+     *     If you yield a plain object (dict, Pydantic model, etc.) instead, it is
+     *     automatically JSON-encoded and sent as the `data:` field.
+     *
+     *     All `data` values **including plain strings** are JSON-serialized.
+     *
+     *     For example, `data="hello"` produces `data: "hello"` on the wire (with
+     *     quotes).
+     */
+    ServerSentEvent: {
+      /** Comment */
+      comment?: string | null;
+      /** Data */
+      data?: unknown;
+      /** Event */
+      event?: string | null;
+      /** Id */
+      id?: string | null;
+      /** Raw Data */
+      raw_data?: string | null;
+      /** Retry */
+      retry?: number | null;
+    };
+    /**
      * SetEnabled
      * @description 켜짐 하나를 쓰는 요청. 거짓이면 끄고 참이면 켠다. 이미 그 상태여도 성공이다.
      */
@@ -580,6 +754,19 @@ export interface components {
       agent: string;
       /** Request */
       request: string;
+    };
+    /**
+     * StartedItem
+     * @description 실행이 시작됐다. 구독과 결정에 쓸 실행 식별자를 든다.
+     */
+    StartedItem: {
+      /** Run Id */
+      run_id: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "started";
     };
     /**
      * ToolCall
@@ -665,6 +852,17 @@ export interface components {
     /** @enum {string} */
     TraceSchemaVersion: "1" | "2" | "3";
     /**
+     * UnfinishedItem
+     * @description 실행이 끝내지 못하고 사라졌다. 구독이 닫을 때만 낸다.
+     */
+    UnfinishedItem: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "unfinished";
+    };
+    /**
      * UnknownEvent
      * @description 이 런타임이 모르는 종류의 이벤트. 원문 한 줄을 문자열 그대로 든다.
      */
@@ -706,6 +904,248 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  start_end_user_run: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 포인트(파이썬 len)로 세고 상한의 기본값은 20,000자다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다 */
+      429: {
+        headers: {
+          /** @description 다시 보내도 되기까지의 초. 1 이상의 정수다 */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  decide_end_user_approval: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Decision"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다 */
+      429: {
+        headers: {
+          /** @description 다시 보내도 되기까지의 초. 1 이상의 정수다 */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  subscribe_end_user_run: {
+    parameters: {
+      query?: never;
+      header?: {
+        "last-event-id"?: string | null;
+      };
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다 */
+      429: {
+        headers: {
+          /** @description 다시 보내도 되기까지의 초. 1 이상의 정수다 */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
   read_health: {
     parameters: {
       query?: never;

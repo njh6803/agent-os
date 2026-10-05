@@ -12,6 +12,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langchain-mcp-adapters" },
     { name = "pydantic" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "uvicorn" },
 ]
 
@@ -33,6 +34,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=0.3" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1" },
     { name = "pydantic", specifier = ">=2.9" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.14" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
 

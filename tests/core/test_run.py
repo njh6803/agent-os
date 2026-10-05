@@ -54,7 +54,7 @@ from agent_os.core.ports import (
     UnknownEvent,
     WriteOutcome,
 )
-from agent_os.core.run import Approve, Decision, Deny, resume, run
+from agent_os.core.run import Approve, Decision, Deny, read_own_run, resume, run
 from agent_os.sdk import (
     AgentContext,
     AgentName,
@@ -213,7 +213,8 @@ class FakePlugins:
     진입점 로드(`loads`)와 꺼진 집합 읽기(`disabled_reads`)를 센다. 꺼진 에이전트를 import하지
     않는다는 것과 준비 한 번에 한 번 읽는다는 것이 이 두 수로 드러난다. `corrupt` 가 있으면 운영자
     파일이 깨진 것이라 읽기가 어댑터처럼 PluginError 다. 대화 한도(`conversation_limit`)는 공개
-    속성이라 멈춘 사이 매니페스트를 고친 것을 흉내 낸다.
+    속성이라 멈춘 사이 매니페스트를 고친 것을 흉내 낸다. 매니페스트 읽기(`manifest_reads`)는 열
+    에이전트 밖의 시작이 플러그인 포트에 닿지 않는 것을 센다.
     """
 
     def __init__(
@@ -238,8 +239,10 @@ class FakePlugins:
         self.conversation_limit = conversation_limit
         self.loads = 0
         self.disabled_reads = 0
+        self.manifest_reads = 0
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
+        self.manifest_reads += 1
         if kind is PluginKind.AGENT and name in self._agents:
             return _agent_manifest(
                 name, self._mcp, self._requires_approval, self.conversation_limit
@@ -426,6 +429,7 @@ async def _run(
     tools: ToolSource | None = None,
     plugins: PluginSource | None = None,
     name: str = "calc",
+    visible_agents: frozenset[AgentName] | None = None,
 ) -> list[Event]:
     plugins = plugins or FakePlugins({"calc": agent})
     tools = tools or FakeTools()
@@ -435,6 +439,7 @@ async def _run(
             AgentName(name),
             "2+2?",
             PRINCIPAL,
+            visible_agents=visible_agents,
             plugins=plugins,
             model=model,
             tools=tools,
@@ -1139,6 +1144,7 @@ async def _resume(
     approver: Principal = PRINCIPAL,
     decision: Decision | None = None,
     pause_index: int | None = None,
+    visible_agents: frozenset[AgentName] | None = None,
 ) -> list[Event]:
     """결정의 자리를 주지 않으면 결정 직전에 트레이스를 읽은 클라이언트가 볼 자리를 싣는다.
 
@@ -1152,6 +1158,7 @@ async def _resume(
             _last_index(trace, run_id) if pause_index is None else pause_index,
             decision if decision is not None else Approve(),
             approver,
+            visible_agents=visible_agents,
             plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
             model=model,
             tools=tools or FakeTools(),
@@ -1310,24 +1317,24 @@ async def test_시작_이벤트는_재개할_때_다시_나지_않는다(trace: 
 async def test_승인이_승인자와_함께_트레이스에_먼저_기록된_뒤_재생이_시작된다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
+    """승인자는 그 실행의 주체다. 다른 주체의 결정은 아래 "결정의 주체" 절이다(ADR 0023)."""
     model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
     tools = FakeTools({"send": "sent"})
     plugins = _gated_plugins(OneShotAgent())
 
     await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
     events = await _resume(
-        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, approver=Principal("bob")
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, approver=PRINCIPAL
     )
 
-    assert events[0] == ApprovalGranted(
-        run_id=RunId("run-1"), ts=FIXED_NOW, approver=Principal("bob")
-    )
+    assert events[0] == ApprovalGranted(run_id=RunId("run-1"), ts=FIXED_NOW, approver=PRINCIPAL)
     written = [e.type for e in trace.events]
     assert written.index("approval_granted") < written.index("run_resumed")
 
 
 async def test_요청한_주체와_승인자가_같아도_재개된다(trace: FakeTrace, clock: FakeClock) -> None:
-    """자기 승인 금지는 이번 범위가 아니다. 지금 사용자가 혼자다."""
+    """자기 승인 금지는 범위 밖이다. 결정은 그 실행의 주체만 내리므로 언제나 자기 승인이다(ADR
+    0009 의 2026-10-03 이력, ADR 0023)."""
     model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
     tools = FakeTools({"send": "sent"})
     plugins = _gated_plugins(OneShotAgent())
@@ -2326,12 +2333,12 @@ async def test_거부가_승인자와_사유와_함께_트레이스에_먼저_�
         clock,
         tools=tools,
         plugins=plugins,
-        approver=Principal("bob"),
+        approver=PRINCIPAL,
         decision=Deny(DENIAL),
     )
 
     assert events[0] == ApprovalDenied(
-        run_id=RunId("run-1"), ts=FIXED_NOW, approver=Principal("bob"), reason=DENIAL
+        run_id=RunId("run-1"), ts=FIXED_NOW, approver=PRINCIPAL, reason=DENIAL
     )
     written = [e.type for e in trace.events]
     assert written.index("approval_denied") < written.index("run_resumed")
@@ -2754,6 +2761,380 @@ async def test_음수_자리는_마지막_이벤트를_가리키지_않고_재�
     assert tools.connection.calls == []
 
 
+# --- 결정의 주체 --------------------------------------------------------------
+#
+# 결정은 그 실행의 주체만 내린다(ADR 0009 의 2026-10-03 이력, ADR 0023). 결정하는 쪽의 주체가 멈춘
+# 실행의 `run_started` 주체와 다르면 결정을 쓰기 전에 다른 주체다. 호출자가 볼 수 있는 에이전트의
+# 집합(최종 사용자 경로가 사이트의 열 에이전트 목록을 넘긴다) 밖의 에이전트를 가리키는 실행은 없는
+# 실행과 같다. 재개의 첫 걸음은 자기 실행 읽기(없음 → 손상 → 다른 주체 → 열 에이전트 밖)이고 그 뒤가
+# 형식 1 → 일시정지 아님 → 자리 어긋남 → 고리 → 준비다(ADR 0014 의 2026-10-05 이력). 사례마다 앞의
+# 것과 뒤의 것을 함께 어긋나게 해 앞의 것이 이기는지 본다. 거부는 결정을 쓰기 전이라 트레이스가
+# 그대로다. 손으로 쓴 멈춘 실행은 시작(0) 뒤 일시정지(1)다.
+
+# 최종 사용자의 주체 모양(`발급자|sub`). core 는 그 모양을 모르고 글자로만 비교한다.
+MALLORY = Principal("https://site.example|mallory")
+# calc 를 품지 않는 집합. 사이트의 열 에이전트 목록에서 calc 를 뺀 것과 같다.
+ELSEWHERE = frozenset({AgentName("other")})
+
+
+def _write_paused(
+    trace: FakeTrace,
+    run_id: str = "run-1",
+    *,
+    principal: Principal = PRINCIPAL,
+    between: Sequence[Event] = (),
+) -> None:
+    """멈춘 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(요약 이벤트의 자리)도 쓴다."""
+    trace.write(
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=FIXED_NOW,
+            agent=AgentName("calc"),
+            request="2+2?",
+            principal=principal,
+        )
+    )
+    for event in between:
+        trace.write(event)
+    trace.write(RunPaused(run_id=RunId(run_id), ts=FIXED_NOW, tool="send", args={"a": 2, "b": 2}))
+
+
+async def _paused_run(
+    trace: FakeTrace, clock: FakeClock
+) -> tuple[ToolAwareFakeModel, FakeTools, FakePlugins]:
+    """런타임이 승인 대상에서 멈춘 실행 하나. 돌아온 가짜들로 재개한다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    paused = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+    return model, tools, plugins
+
+
+async def test_다른_주체의_결정은_DifferentPrincipal_이고_아무것도_쓰지_않으며_도구를_부르지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """최종 사용자가 보지 않은 도구 호출이 그 사람의 실행에서 실행되지 않는다(스토리 59). 메시지는
+    실행을 들되 그 실행의 주체 이름을 들지 않는다 — 최종 사용자 면이 404 로 덮을 때 새지 않게."""
+    model, tools, plugins = await _paused_run(trace, clock)
+    before = list(trace.events)
+
+    with pytest.raises(DifferentPrincipal) as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, approver=MALLORY)
+
+    assert "run-1" in str(caught.value)
+    assert PRINCIPAL not in str(caught.value)
+    assert MALLORY not in str(caught.value)
+    assert trace.events == before
+    assert tools.connection.calls == []
+
+
+async def test_없는_실행은_다른_주체로도_집합_밖으로도_없음이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent, match="nope"):
+        await _resume(
+            RunId("nope"),
+            model,
+            trace,
+            clock,
+            approver=MALLORY,
+            visible_agents=ELSEWHERE,
+            pause_index=1,
+        )
+
+
+def _damaged_paused(trace: FakeTrace) -> None:
+    """단건 읽기에서 손상인 멈춘 실행. 마지막 줄 앞에 모르는 종류가 끼어 있다."""
+    _write_paused(trace)
+    trace.damaged.add(_RUN_1)
+
+
+def _unrecorded_summary(trace: FakeTrace) -> None:
+    """기록 규칙을 어긴 멈춘 실행. 이어 가지 않은 실행에 대화 요약 이벤트가 있다."""
+    _write_paused(trace, between=(_summarized("run-1", covers="r0"),))
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    [_damaged_paused, _unrecorded_summary],
+    ids=["단건 읽기의 손상", "기록 규칙의 손상"],
+)
+async def test_손상된_트레이스는_다른_주체이고_집합_밖이어도_하위_타입이_아닌_PluginError다(
+    corrupt: Callable[[FakeTrace], object], trace: FakeTrace, clock: FakeClock
+) -> None:
+    """손상된 트레이스의 주체는 믿을 수 없다. 그래서 손상이 주체보다 앞이다(ADR 0014 의
+    2026-10-05 이력)."""
+    corrupt(trace)
+    model = GenericFakeChatModel(messages=iter([]))
+    before = list(trace.events)
+
+    with pytest.raises(PluginError) as caught:
+        await _resume(
+            _RUN_1, model, trace, clock, approver=MALLORY, visible_agents=ELSEWHERE, pause_index=1
+        )
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert trace.events == before
+
+
+async def test_다른_주체는_집합_밖보다_먼저다(trace: FakeTrace, clock: FakeClock) -> None:
+    """둘 다 최종 사용자 면에서 404 라 순서가 노출을 바꾸지 않는다. 운영자 면은 집합이 없다."""
+    _write_paused(trace)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(DifferentPrincipal):
+        await _resume(
+            _RUN_1, model, trace, clock, approver=MALLORY, visible_agents=ELSEWHERE, pause_index=1
+        )
+
+
+@pytest.mark.parametrize(
+    ("schema_version", "last"),
+    [("1", "paused"), ("3", "finished"), ("3", "paused")],
+    ids=["형식 1", "일시정지 아님", "자리 어긋남"],
+)
+async def test_다른_주체는_형식_1과_일시정지_아님과_자리_어긋남보다_먼저다(
+    schema_version: TraceSchemaVersion, last: str, clock: FakeClock
+) -> None:
+    """최종 사용자 면이 남의 실행을 없는 실행처럼 숨기려면 남의 실행의 상태가 먼저 드러나면 안 된다.
+    형식 1 트레이스의 주체도 읽힌다 — 첫 슬라이스부터 시작 이벤트의 필수 필드다(ADR 0008)."""
+    trace = FakeTrace(schema_version=schema_version)
+    if last == "paused":
+        _write_paused(trace)
+    else:
+        _write_finished(trace, "run-1")
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(DifferentPrincipal):
+        await _resume(_RUN_1, model, trace, clock, approver=MALLORY, pause_index=0)
+
+
+@pytest.mark.parametrize(
+    ("schema_version", "last"),
+    [("1", "paused"), ("3", "finished"), ("3", "paused")],
+    ids=["형식 1", "일시정지 아님", "자리 어긋남"],
+)
+async def test_집합_밖은_형식_1과_일시정지_아님과_자리_어긋남보다_먼저이고_없는_실행과_같다(
+    schema_version: TraceSchemaVersion, last: str, clock: FakeClock
+) -> None:
+    """목록에서 뺀 에이전트의 멈춘 실행을 최종 사용자가 계속 재개하지 못한다(ADR 0023). 메시지는
+    없는 실행의 것과 글자 그대로 같다 — 같은 404 로 덮이기 전에 core 에서부터 같다."""
+    trace = FakeTrace(schema_version=schema_version)
+    if last == "paused":
+        _write_paused(trace)
+    else:
+        _write_finished(trace, "run-1")
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent) as outside:
+        await _resume(_RUN_1, model, trace, clock, visible_agents=ELSEWHERE, pause_index=0)
+    with pytest.raises(Absent) as missing:
+        await _resume(_RUN_1, model, FakeTrace(), clock, pause_index=0)
+
+    assert str(outside.value) == str(missing.value)
+
+
+async def test_집합_밖은_준비보다_먼저라_꺼진_집합을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    _write_paused(trace)
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.disabled = frozenset({_agent_key("calc")})
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(Absent):
+        await _resume(_RUN_1, model, trace, clock, plugins=plugins, visible_agents=ELSEWHERE)
+
+    assert plugins.disabled_reads == 0
+    assert plugins.loads == 0
+
+
+async def test_손상된_형식_1_트레이스에_보낸_결정은_재개_불가가_아니라_깨진_기록이다(
+    clock: FakeClock,
+) -> None:
+    """형식 1 판정이 손상 뒤로 가며 바뀐 것이다(ADR 0014 의 2026-10-05 이력). 어느 쪽이든 재개는
+    안 되고 500 이 깨진 자리를 더 바로 가리킨다."""
+    trace = FakeTrace(schema_version="1")
+    _write_paused(trace)
+    trace.damaged.add(_RUN_1)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(PluginError) as caught:
+        await _resume(_RUN_1, model, trace, clock, pause_index=2)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+
+
+async def test_형식_1은_일시정지_아님보다_먼저다(clock: FakeClock) -> None:
+    trace = FakeTrace(schema_version="1")
+    _write_finished(trace, "run-1")
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(NotResumable, match="형식 1"):
+        await _resume(_RUN_1, model, trace, clock, pause_index=1)
+
+
+async def test_자리_어긋남은_고리보다_먼저다(trace: FakeTrace, clock: FakeClock) -> None:
+    """고리를 거슬러 읽기 전에 결정이 지금의 일시정지를 가리키는지 본다. 지나간 결정에 고리를
+    되살리라고 말하면 되살린 뒤에도 그 결정은 받아들여지지 않는다."""
+    model, tools, plugins = await _paused_continuation(trace, clock)
+    trace.forget(RunId("r0"))
+
+    with pytest.raises(NotResumable, match="자리 0"):
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=0)
+
+
+async def test_고리는_준비보다_먼저라_꺼진_집합을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model, tools, plugins = await _paused_continuation(trace, clock)
+    trace.forget(RunId("r0"))
+    plugins.disabled = frozenset({_agent_key("calc")})
+    reads = plugins.disabled_reads
+
+    with pytest.raises(PluginError, match="r0") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert plugins.disabled_reads == reads
+
+
+async def test_같은_주체이고_집합_안이면_그대로_재개된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model, tools, plugins = await _paused_run(trace, clock)
+
+    events = await _resume(
+        _RUN_1,
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+        visible_agents=frozenset({AgentName("calc")}),
+    )
+
+    assert events[0].type == "approval_granted"
+    assert events[-1].type == "run_finished"
+
+
+# 열 에이전트 — 시작
+
+
+async def test_집합_밖의_에이전트로_시작하면_없는_에이전트와_같고_플러그인_포트가_불리지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """목록 밖과 없는 것이 같은 404 다(ADR 0017 이력). 매니페스트를 읽기 전이라 꺼졌는지도, 있는지도
+    드러나지 않는다. 실행 식별자를 만들기 전이라 트레이스가 없다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    with pytest.raises(Absent) as outside:
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins, visible_agents=ELSEWHERE)
+    with pytest.raises(Absent) as missing:
+        await _run(OneShotAgent(), model, FakeTrace(), clock, plugins=FakePlugins({}))
+
+    assert str(outside.value) == str(missing.value)
+    assert plugins.manifest_reads == 0
+    assert plugins.disabled_reads == 0
+    assert plugins.loads == 0
+    assert trace.events == []
+    assert clock.ids_issued == 0
+
+
+async def test_집합이_없으면_전부이고_집합_안이면_선다(clock: FakeClock) -> None:
+    for visible in (None, frozenset({AgentName("calc"), AgentName("other")})):
+        model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+        events = await _run(OneShotAgent(), model, FakeTrace(), clock, visible_agents=visible)
+
+        assert events[-1].type == "run_finished", visible
+
+
+async def test_이어_가기는_요청한_에이전트만_보아_앞_실행의_에이전트가_집합_밖이어도_선다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """다른 에이전트의 교환은 어차피 넘어가지 않는다(ADR 0022). 같은 에이전트면 요청한 에이전트의
+    판정이 잡는다."""
+    _write_finished(trace, "r1", agent="old")
+
+    events = await _continue("r1", trace, clock, visible_agents=frozenset({AgentName("calc")}))
+
+    assert events[-1].type == "run_finished"
+
+
+async def test_이어_가기도_요청한_에이전트가_집합_밖이면_없는_에이전트다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    _write_finished(trace, "r1")
+
+    with pytest.raises(Absent, match="calc"):
+        await _continue("r1", trace, clock, visible_agents=ELSEWHERE)
+
+
+# 자기 실행 읽기 — 재개의 첫 걸음이고 구독(채널)도 같은 함수를 부른다
+
+
+def _refusals() -> list[tuple[str, Callable[[FakeTrace], object], Principal, frozenset[AgentName]]]:
+    """판정 넷. 실행을 어떻게 쓰고 누가 어떤 집합으로 읽는가. 손상은 단건 읽기와 기록 규칙이다."""
+    everything = frozenset({AgentName("calc")})
+    return [
+        ("없음", lambda trace: None, PRINCIPAL, everything),
+        ("단건 읽기의 손상", _damaged_paused, MALLORY, ELSEWHERE),
+        ("기록 규칙의 손상", _unrecorded_summary, MALLORY, ELSEWHERE),
+        ("다른 주체", _write_paused, MALLORY, ELSEWHERE),
+        ("열 에이전트 밖", _write_paused, PRINCIPAL, ELSEWHERE),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("write", "principal", "visible"),
+    [refusal[1:] for refusal in _refusals()],
+    ids=[refusal[0] for refusal in _refusals()],
+)
+async def test_자기_실행_읽기는_재개와_같은_판정을_같은_순서로_내린다(
+    write: Callable[[FakeTrace], object],
+    principal: Principal,
+    visible: frozenset[AgentName],
+    clock: FakeClock,
+) -> None:
+    """구독이 "실행의 주체만 구독한다"를 core 의 규칙 하나로 지난다. 같은 가짜로 재개를 돌린 결과와
+    타입도 메시지도 같다."""
+    trace = FakeTrace()
+    write(trace)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    with pytest.raises(PluginError) as read:
+        read_own_run(trace, _RUN_1, principal, visible)
+    with pytest.raises(PluginError) as resumed:
+        await _resume(
+            _RUN_1, model, trace, clock, approver=principal, visible_agents=visible, pause_index=1
+        )
+
+    assert type(read.value) is type(resumed.value)
+    assert str(read.value) == str(resumed.value)
+
+
+async def test_자기_실행_읽기는_판정을_지나면_형식과_이벤트를_쓴_그대로_돌려준다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """형식 1 도 일시정지가 아닌 것도 읽기는 지난다. 그 판정은 재개의 것이고 구독은 읽기다."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    await _run(OneShotAgent(), model, trace, clock)
+
+    own = read_own_run(trace, _RUN_1, PRINCIPAL, None)
+    legacy = FakeTrace(schema_version="1")
+    _write_finished(legacy, "run-1")
+    legacy_own = read_own_run(legacy, _RUN_1, PRINCIPAL, frozenset({AgentName("calc")}))
+
+    assert own.schema_version == "3"
+    assert list(own.link.events) == trace.events
+    assert legacy_own.schema_version == "1"
+
+
 # --- 이어 가기 ----------------------------------------------------------------
 #
 # 새 실행이 같은 주체의 끝난 실행 하나를 가리켜 시작한다(ADR 0022, 용어집 "이어 가기"). 재개와 달리
@@ -2853,6 +3234,7 @@ async def _continue(
     model: ChatModel | None = None,
     tools: ToolSource | None = None,
     plugins: PluginSource | None = None,
+    visible_agents: frozenset[AgentName] | None = None,
 ) -> list[Event]:
     """앞 실행을 가리켜 새 실행을 일으킨다. 에이전트를 주지 않으면 판정 에이전트다."""
     return [
@@ -2862,6 +3244,7 @@ async def _continue(
             request,
             principal,
             previous_run=RunId(previous),
+            visible_agents=visible_agents,
             plugins=plugins or FakePlugins({name: agent or WeavingAgent()}),
             model=model or GenericFakeChatModel(messages=iter([])),
             tools=tools or FakeTools(),

@@ -2,9 +2,11 @@
 // 클라이언트는 관리 토큰만, 채널 클라이언트는 채널 토큰만 싣는다. 한 토큰이 맡지 않은 경로에 실리는 실수는 타입이
 // 막는다. 각 클라이언트가 아는 경로가 그 토큰이 여는 경로뿐이라서다.
 //
-// 서버의 접두사→토큰 표(`/runs` 아래는 채널, 그 밖은 관리. `.claude/rules/http.md`)를 여기서 다시 판정하지 않는다.
-// TS 가 아는 것은 생성된 경로 키 가운데 어느 것이 채널의 것인가뿐이다. 계약에 경로가 늘면 관리 클라이언트의 타입에
-// 새 경로가 보이고, 경로 목록을 고정한 타입 테스트(`clients.test-d.ts`)가 빨개진다.
+// 서버의 접두사→자격 표(`/runs` 아래는 채널 토큰, `/end-user` 아래는 사이트가 서명한 토큰, 그 밖은 관리 토큰.
+// `.claude/rules/http.md`)를 여기서 다시 판정하지 않는다. TS 가 아는 것은 생성된 경로 키 가운데 어느 것이 관리의
+// 것이 아닌가뿐이다. 계약에 경로가 늘면 관리 클라이언트의 타입에 새 경로가 보이고, 경로 목록을 고정한 타입
+// 테스트(`clients.test-d.ts`)가 빨개진다. 최종 사용자 경로의 클라이언트(위젯의 것)는 여기 없다 — 관리 화면은 그
+// 경로를 부르지 않는다(ADR 0024).
 
 import createClient, { type Client } from "openapi-fetch";
 import type { paths } from "./generated/openapi";
@@ -12,8 +14,12 @@ import type { paths } from "./generated/openapi";
 /** 채널 토큰이 여는 경로. 실행을 일으키는 것, 결정을 내는 것, 끝난 실행을 이어 가는 것이다. */
 type ChannelPath = "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation";
 
-/** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로 셋을 뺀 것이다. */
-export type AdminPaths = Omit<paths, ChannelPath>;
+/** 사이트가 서명한 토큰이 여는 경로. 최종 사용자가 자기 실행을 시작하고 결정하고 구독한다. */
+type EndUserPath =
+  "/end-user/runs" | "/end-user/runs/{run_id}/approval" | "/end-user/runs/{run_id}/subscription";
+
+/** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로와 최종 사용자의 경로를 뺀 것이다. */
+export type AdminPaths = Omit<paths, ChannelPath | EndUserPath>;
 
 /** 채널 클라이언트가 아는 경로. 관리 화면이 채널에 내는 요청은 결정 하나뿐이다. 관리는 실행을 일으키지도 이어 가지도 않는다. */
 export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;
