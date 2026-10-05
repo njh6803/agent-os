@@ -76,11 +76,35 @@ PR #133의 claude-review 3회차(`7bba2b6`에 든 문서 커밋). 병합 뒤라 
     둘, 잔존 0("텍스트 자식으로만"은 기록에만), 미래형은 `plan.md`의 그 문장 하나뿐이었고 고쳤다.
 - 고친 뒤 검증 명령을 모두 다시 돌렸다(아래 검사 절).
 
+## PR 리뷰
+
+PR #134. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다. 푸시 뒤 `@coderabbitai review`를 남겼다.
+
+> 사용자: "끝났어?"
+
+1회차(`2ab9219`). CI 여섯이 초록이었고 PR 머리와 로컬 HEAD가 같았다. CodeRabbit은 `7bba2b6..2ab9219`를 보고 지적 없음("No actionable
+comments")이었다. 보안 검토는 화면의 인코딩과 서버의 식별자 패턴 검증이 서로 다른 통제라고 적었다. claude-review는 Minor 1, Nit 2.
+
+- **Minor(반영): `encodeURIComponent`는 `.`과 `..`을 그대로 돌려주므로 `href`가 `/runs/..`이 되어 브라우저가 `/`로 푼다.** 머리
+  주석의 "값이 그 경로 조각 밖으로 나가지 못한다"가 실제보다 강했고 적대적 트레이스 테스트도 그 둘을 덮지 않았다. 리뷰어가 낸 두 길(주석을
+  좁히거나, 그 값이면 글자로 그리고 테스트를 더하기) 가운데 뒤를 택했다 — `runHref`가 둘에 null을 돌려주고 `FieldValue`가 글자로
+  떨어진다. 계약의 식별자 패턴은 둘을 허락하지 않지만 트레이스는 바깥에서 온 텍스트라 화면이 믿지 않는다(web-admin 스토리 32). 테스트
+  둘(`.`, `..`)을 구현 전에 써 빨강(`/runs/.`·`/runs/..` 링크)을 봤다. web에 식별자 술어가 없고 패턴을 손으로 옮기면 계약의 복제라
+  둘만 가른다. `RunList`는 같은 모양이지만 이 티켓 밖이고 목록의 식별자는 서버가 어댑터의 파일 이름에서 낸 것이라 두었다(아래 Nit).
+- **Nit(보류, 이유가 둘로 늘었다): 경로 모양이 `RunList`와 `EventItem` 두 자리.** 리뷰어는 `.`·`..` 처리가 생기면 한 곳에 둘 이유가
+  둘이라 그때 함께 뽑자고 했다. 이 PR은 `EventItem` 쪽에만 `runHref`를 두었다. `RunList`를 고치는 것은 티켓 밖이고, 목록의 식별자에
+  `.`·`..`이 들 길은 어댑터가 쓴 파일 이름뿐이다. 다음에 `RunList`나 셋째 자리를 건드리는 쪽이 `runHref`를 공용으로 올린다. 받는
+  티켓은 없어 기록으로 둔다.
+- **Nit(보류): `isEventField(name) && RUN_FIELDS.has(name)` 두 번 검사.** 리뷰어도 `Set<EventField>`의 컴파일 이점이 이 PR의 의도라
+  지금 모양을 유지해도 된다고 했다.
+
 ## 검사
 
-판정 명령은 파이프 없이 돌리고 종료 코드를 봤다. 셀프 리뷰 반영 뒤 전부 다시 돌렸다.
+판정 명령은 파이프 없이 돌리고 종료 코드를 봤다. 셀프 리뷰 반영 뒤 전부 다시 돌렸고, PR 1회차 반영 뒤 web verify와 변이 표의 원문
+확인을 다시 돌렸다(파이썬과 그 밖의 문서는 바뀌지 않았다. pre-commit이 pytest를 다시 돈다).
 
-- `pnpm -C web verify` 통과(생성물 최신성, ESLint, Prettier, tsc, Vitest, tsconfig 검사). `RunPage.test.tsx`는 23 passed
+- `pnpm -C web verify` 통과(생성물 최신성, ESLint, Prettier, tsc, Vitest, tsconfig 검사). `RunPage.test.tsx`는 23 passed, PR 1회차 뒤
+  25 passed
 - pytest 1421 passed, 6 deselected(경고 셋은 변경 전부터 있던 pytest-asyncio의 것). 파이썬은 바뀌지 않아 `-m llm`은 돌리지 않았다
 - ruff check와 ruff format 통과, pyright 0 errors, lint-imports 5 kept
 - 지침 검사와 타입 우회 검사 통과. 마크다운 표 검사와 줄 구분 문자 검사를 바뀐 문서에 손으로 돌려 통과

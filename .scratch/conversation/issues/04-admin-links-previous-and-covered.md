@@ -28,3 +28,4 @@
 4. **변이 둘.** 구현 전부터 초록이던 가드 둘(값 없는 앞 실행은 글자, 요약 필드의 용어집 말)에 변이를 겨눠 빨강을 봤다(`probes/continuation_mutations.toml`).
 5. **기능을 닫았다.** `git fetch` 뒤 `origin/main`의 03 티켓이 `done`이라 이 PR이 `.scratch/plan.md`의 conversation 행을 `done`으로 바꾸고 프론티어 문단을 고쳤다.
 6. **PR #133 3회차 리뷰의 Minor 하나를 닫았다.** `CONTEXT.md` 동사 표의 `read` 줄이 `_read_paused`와 어긋났던 것. 뜻을 "포트에서 입력 하나를 읽고 판정해 값으로 만든다. 그 값의 멤버를 채우느라 다른 이름의 읽기(`gather`, 명사구)를 안에서 부를 수 있다"로 넓혔다.
+7. **`.`과 `..`은 링크가 아니라 글자다**(PR #134 claude-review 1회차 Minor). `encodeURIComponent`가 그대로 두는 둘은 `/runs/..`이 `/`로 풀린다. `EventItem`의 `runHref`가 둘에 null을 돌려준다. web에 계약의 식별자 패턴 술어를 손으로 옮기지 않고 둘만 가른다. `RunList`는 티켓 밖이라 두었고, 셋째 자리나 `RunList`를 다음에 건드리는 쪽이 `runHref`를 공용으로 올린다.

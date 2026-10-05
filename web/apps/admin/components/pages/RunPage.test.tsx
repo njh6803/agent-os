@@ -236,6 +236,25 @@ describe("실행 하나", () => {
     expect(eventItem(0).textContent).toContain("null");
   });
 
+  test.each([".", ".."])(
+    "앞 실행이 %s 이면 주소가 /runs/ 밖으로 풀리므로 링크가 아니라 글자다",
+    async (dot) => {
+      const [started, ...rest] = TRACE.events;
+      if (started?.type !== "run_started") {
+        throw new Error("첫 이벤트가 시작 이벤트가 아니다");
+      }
+      serveTrace(`/traces/${RUN}`, () =>
+        HttpResponse.json({ ...TRACE, events: [{ ...started, previous_run: dot }, ...rest] }),
+      );
+
+      await openRun(RUN);
+
+      await screen.findByRole("region", { name: "이벤트" });
+      expect(within(events()).queryByRole("link")).toBeNull();
+      expect(eventItem(0).textContent).toContain(`previous_run${dot}`);
+    },
+  );
+
   test("요약 이벤트의 필드는 용어집의 말과 계약의 이름을 함께 보이고 글과 토큰 수는 글자다", async () => {
     serveTrace(`/traces/${CONTINUED}`, () => HttpResponse.json(CONTINUED_TRACE));
 

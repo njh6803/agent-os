@@ -10,7 +10,8 @@ import type { TraceEvent } from "../../api/traces";
 // 필드 둘(`RUN_FIELDS`)이다. 그 값은 링크의 글자이면서 `href` 에도 든다. 글자로만 그린다는 규칙과 양립하는 것은
 // `href` 가 트레이스의 값을 그대로 받지 않고 `/runs/` 뒤에 `encodeURIComponent` 로 감싼 조각으로만 받기 때문이다.
 // 빗금·물음표·우물 정자·콜론이 모두 인코딩되어 값이 그 경로 조각 밖으로 나가지 못하고, `javascript:` 로 시작하는 값도
-// 같은 경로 아래의 식별자 글자가 된다. 실행 목록의 링크와 같은 모양이다(`RunList`).
+// 같은 경로 아래의 식별자 글자가 된다. 인코딩이 그대로 두는 `.` 과 `..` 만은 `/runs/..` 이 `/` 로 풀리므로 링크가 아니라
+// 글자다(`runHref`). 실행 목록의 링크와 같은 모양이다(`RunList`).
 
 /** 이벤트 종류 가운데 어느 하나라도 가진 필드의 이름. 판별자와 실행 식별자는 보이지 않는다. */
 type EventField = Exclude<FieldOf<TraceEvent>, "type" | "run_id">;
@@ -86,9 +87,20 @@ export function EventItem({ event }: { readonly event: TraceEvent }) {
 /** 필드 값 하나. 실행 식별자 필드의 문자열 값은 그 실행으로 가는 링크이고, 나머지는 글자다(`asText`). */
 function FieldValue({ name, value }: { readonly name: string; readonly value: unknown }) {
   if (isEventField(name) && RUN_FIELDS.has(name) && typeof value === "string") {
-    return <Link href={`/runs/${encodeURIComponent(value)}`}>{value}</Link>;
+    const href = runHref(value);
+    if (href !== null) {
+      return <Link href={href}>{value}</Link>;
+    }
   }
   return asText(value);
+}
+
+/**
+ * 실행 상세의 주소. `encodeURIComponent` 가 그대로 두는 `.` 과 `..` 은 브라우저가 `/runs/` 위로 풀어 다른 화면으로 보내므로
+ * 주소가 없다(null). 계약의 식별자 패턴은 둘을 허락하지 않지만, 트레이스는 바깥에서 온 텍스트라 여기서 믿지 않는다.
+ */
+function runHref(runId: string): string | null {
+  return runId === "." || runId === ".." ? null : `/runs/${encodeURIComponent(runId)}`;
 }
 
 /**
