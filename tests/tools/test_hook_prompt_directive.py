@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from tools.hook_prompt_directive import (
@@ -281,6 +282,129 @@ def test_어디서_줄이_워크트리를_말하면_계기가_그것을_먼저_�
     assert "먼저" in with_worktree
     assert plain is not None
     assert "EnterWorktree" not in plain
+
+
+WORKTREE_SENTENCE = (
+    "주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 "
+    "먼저 들어가 거기서 브랜치를 바꾼다"
+)
+WORKTREE_WHERE = "어디서: 새 세션. " + WORKTREE_SENTENCE
+STALE_ROOT = (
+    "확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "
+    '"워크트리에서 병합할 때"를 Read로 열어 따른다'
+)
+
+
+def _stale(where: str = WORKTREE_WHERE, condition: str = STALE_ROOT) -> str:
+    """워크트리에서 병합한 세션이 낸 지시문(next-session "워크트리에서 병합할 때" 4).
+
+    "어디서" 줄의 tidy-checkouts 머리는 기본으로 넣지 않는다. 쓰는 쪽이 머리를 빠뜨려도 훅은 짚는다.
+    """
+    return DIRECTIVE.replace("어디서: 새 세션", where).replace("확인할 선행 조건: 없음", condition)
+
+
+def _bundled(k: str, head: str = "") -> str:
+    """나란히 여는 둘 중 k 번째 지시문의 "어디서" 줄. `head` 는 워크트리 문장 앞에 붙는다."""
+    return f"어디서: 새 세션. 나란히 여는 2 중 {k}. {head}{WORKTREE_SENTENCE}"
+
+
+def test_주_체크아웃_미갱신이면_워크트리_전에_tidy_checkouts를_돌라고_한다() -> None:
+    """새 세션은 EnterWorktree 전까지 주 체크아웃 세션이라 그 스킬이 루트를 당길 수 있다.
+
+    들어간 뒤에는 그 스킬이 1에서 멈춘다. 그래서 순서를 짚는다(next-session "워크트리에서 병합할
+    때" 4). 그 스킬이 사람에게 넘기는 확인을 기다리면 첫 턴이 멈추므로 잇게 한다.
+    """
+    context = context_for(_stale())
+
+    assert context is not None
+    assert "`tidy-checkouts`" in context
+    assert "Skill" in context
+    assert context.index("set_session_title") < context.index("`tidy-checkouts`")
+    assert context.index("`tidy-checkouts`") < context.index("'어디서' 줄이 워크트리")
+    assert "`tidy-checkouts` 를 돈 뒤 다른 일보다 먼저" in context
+    assert "제목을 바꾼 뒤 다른 일보다 먼저" not in context
+    assert "기다리지 않" in context
+
+
+def test_나란히_여는_묶음이면_첫_세션만_tidy_checkouts를_돈다() -> None:
+    """함께 돌면 같은 루트를 당기거나 같은 워크트리를 지우려 할 수 있다. 첫 세션(k=1)만 돈다.
+
+    k 는 글자 그대로 1일 때만 첫 세션이다. 잘못 적은 0 이나 `01` 은 돌지 않는 쪽으로 틀린다.
+    """
+    first = context_for(_stale(where=_bundled("1")))
+
+    assert first is not None
+    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in first
+    for k in ("2", "3", "0", "01"):
+        later = context_for(_stale(where=_bundled(k)))
+        assert later is not None, k
+        assert "Skill 도구로 `tidy-checkouts` 를 돈다" not in later, k
+        assert "돌지 않는다" in later, k
+        assert "첫 세션" in later, k
+
+
+def test_미갱신은_확인할_선행_조건_줄의_머리_라벨로만_알아본다() -> None:
+    """다른 줄이 미갱신을 인용하거나 줄 머리가 아닌 데서 라벨을 인용한 것은 세지 않는다."""
+    quoted = _stale(condition="확인할 선행 조건: 없음").replace(
+        "이어받을 상태: 없음", "이어받을 상태: 앞 세션 일지에 `주 체크아웃 미갱신` 한 줄이 있다"
+    )
+    inline = _stale(condition="확인할 선행 조건: 없음").replace(
+        "읽을 것:", "읽을 것: 확인할 선행 조건: 주 체크아웃 미갱신 형식은 next-session 3.", 1
+    )
+    no_stale = _stale(condition="확인할 선행 조건: 없음")
+
+    for prompt in (quoted, inline, no_stale):
+        context = context_for(prompt)
+        assert context is not None
+        assert "tidy-checkouts" not in context
+
+
+def test_미갱신인데_워크트리_문장이_없어도_tidy_checkouts를_먼저_돈다() -> None:
+    """주 체크아웃에서 끊은 작업을 잇는 지시문이면 워크트리 문장이 없다. 그래도 루트는 낡았다."""
+    context = context_for(_stale(where="어디서: 새 세션"))
+
+    assert context is not None
+    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in context
+    assert "EnterWorktree" not in context
+
+
+def test_next_session_스킬이_적으라는_미갱신_문구를_훅이_알아본다() -> None:
+    """훅은 글자로 판정한다. 지시문을 쓰는 쪽의 문구가 갈리면 계기가 조용히 빠진다.
+
+    next-session 3단계가 적으라는 것을 그대로 꺼내 지시문을 짓고 훅에 준다. 첫 지시문의 "어디서"
+    머리, "확인할 선행 조건"의 두 줄(묶음의 나머지와 그 밖), 형식 블록의 라벨이다. 머리는 순서와
+    기다리지 않기를 스스로 말하고 워크트리 문장보다 앞에 와야 한다 — 이 계기를 들인 뒤 주 체크아웃이
+    처음 당겨지기 전의 옛 훅과 옛 implement 는 워크트리 문장을 먼저 따르라고만 한다.
+    """
+    text = NEXT_SESSION.read_text(encoding="utf-8")
+    form = text.split("## 지시문 형식", 1)[1].split("```", 2)[1]
+    assert any(line.startswith("확인할 선행 조건:") for line in form.splitlines())
+    assert "`새 세션. 나란히 여는 <N> 중 <k>.`" in text
+    assert "`주 체크아웃 미갱신: 루트는 <브랜치>`" in text
+    rests = re.findall(r"`(주 체크아웃 미갱신: 루트는 <브랜치>\.[^`]*)`", text)
+    heads = re.findall(r"`(주 체크아웃 미갱신이라 [^`]*)`", text)
+    assert len(rests) == 1, rests
+    assert len(heads) == 1, heads
+    rest = rests[0].replace("<브랜치>", "main")
+    head = heads[0]
+    assert "첫 세션" in rest
+    assert "tidy-checkouts" in head
+    assert "먼저" in head
+    assert "기다리지 않" in head
+
+    first = _stale(
+        where=_bundled("1", head + " "),
+        condition="확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main",
+    )
+    where_line = next(line for line in first.splitlines() if line.startswith("어디서:"))
+    first_context = context_for(first)
+    rest_context = context_for(_stale(where=_bundled("2"), condition=f"확인할 선행 조건: {rest}"))
+
+    assert where_line.index("tidy-checkouts") < where_line.index("EnterWorktree")
+    assert first_context is not None
+    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in first_context
+    assert rest_context is not None
+    assert "돌지 않는다" in rest_context
 
 
 def test_스킬_파일로_시작해도_지시문이_아니면_막지_않는다() -> None:

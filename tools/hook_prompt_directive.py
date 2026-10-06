@@ -39,6 +39,17 @@ open-session 스크립트가 하기도 한다. 이 폴더 가드는 새 훅이 �
 로만 가리킨다. 훅 입력의 Claude Code 세션 ID 도 앱의 세션 ID 가 아니다 — 데스크톱에서 트랜스크립트
 파일 이름(`59aeea28-…`)과 `get_session self` 의 `local_0ca607c2-…` 가 달랐다(2026-10-01 손으로
 봤다). 못 보는 것: 클라우드 세션에서 이 세션의 ID 를 얻는 길. 재지 않았다.
+
+주 체크아웃 미갱신. 워크트리에서 병합한 세션은 앱의 워크트리 가드 때문에 주 체크아웃을 당기지
+못해, 지시문의 '확인할 선행 조건'에 미갱신 한 줄을 남기고 묶음의 첫 지시문이면 '어디서' 줄의
+워크트리 문장을 `tidy-checkouts` 로 시작한다(next-session 3단계가 원천이고 순서와 첫 세션만인
+이유도 거기 있다). 계기는 그 순서(제목, `tidy-checkouts`, 워크트리 문장)와 첫 세션만이라는 것을
+다시 짚는다. 판정은 그 스킬에 그대로 맡기고, 사람에게 넘기는 확인을 기다리면 첫 턴이 멈추므로 잇게
+한다. 훅이 셸에서 git 으로 대신 당기지 않는 것은 그것이 가드를 돌아가는 길이라서다. 못 보는 것:
+미갱신 줄이 생길 때 주 체크아웃은 정의상 낡았고 새 세션의 훅은 그 사본이다. 이 계기를 들인 병합
+뒤 주 체크아웃이 한 번 당겨지기 전에는 옛 훅이 돌고, 옛 훅은 워크트리 문장을 다른 일보다 먼저
+따르라고만 한다. 그래서 순서는 그 문장 안에 있다. 작업 폴더가 주 체크아웃인지는 이 계기가 보지
+않는다 — open-session 이 옮긴 첫 줄이면 위의 폴더 가드가, 아니면 `tidy-checkouts` 1이 본다.
 """
 
 from __future__ import annotations
@@ -64,6 +75,12 @@ _OPENED_HEAD = re.compile(_OPENED_HEAD_PATTERN)
 _OPENED_LINE = re.compile(_OPENED_HEAD_PATTERN + r" 이 세션을 연 저장소는 `(?P<root>[^`]+)`이고")
 # "어디서" 줄의 워크트리 문장(next-session 3단계). 받는 쪽은 지시문 자체라 첫 턴 계기가 짚는다.
 _WHERE_LABEL = "어디서:"
+# 워크트리에서 병합한 세션이 주 체크아웃을 당기지 못했다는 줄(next-session "워크트리에서 병합할
+# 때" 4)과 그 줄이 사는 라벨, "어디서" 줄의 묶음 표시(next-session 3단계). 문구의 원천은 그 스킬이고
+# tests/tools 의 계약 테스트가 대조한다. 묶음 표시의 그룹은 k 하나다.
+_CONDITION_LABEL = "확인할 선행 조건:"
+_STALE_ROOT = "주 체크아웃 미갱신"
+_BUNDLE = re.compile(r"나란히 여는\s*\d+\s*중\s*(\d+)")
 
 
 class HookPayload(TypedDict, total=False):
@@ -97,9 +114,27 @@ def context_for(prompt: str) -> str | None:
         "바꾸지 않고 사용자에게 알린다. 데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` "
         "는 이 세션을 빼고 `get_session` 은 이 세션을 `self` 로만 가리킨다."
     )
+    tidies = False
+    if _stale_root(prompt):
+        tidies = _first_of_bundle(prompt)
+        if tidies:
+            context += (
+                " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말한다. 제목을 바꾼 뒤 "
+                "워크트리에 들어가기 전에 Skill 도구로 `tidy-checkouts` 를 돈다. 이 세션은 아직 "
+                "주 체크아웃에 있어 그 스킬이 루트를 당길 수 있고, 워크트리에 들어간 뒤에는 그 "
+                "스킬이 멈춘다. 무엇을 당기고 지울지는 그 스킬이 정한다. 그 스킬이 사람에게 넘기는 "
+                "것은 보고만 하고 답을 기다리지 않고 지시문을 잇는다."
+            )
+        else:
+            context += (
+                " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말하지만, 이 세션은 나란히 "
+                "여는 묶음의 첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다 — 첫 세션이 돈다. "
+                "함께 돌면 같은 루트를 함께 당기거나 같은 워크트리를 함께 지우려 할 수 있다."
+            )
     if _wants_worktree(prompt):
+        after = "`tidy-checkouts` 를 돈 뒤" if tidies else "제목을 바꾼 뒤"
         context += (
-            " 지시문의 '어디서' 줄이 워크트리를 말한다. 제목을 바꾼 뒤 다른 일보다 먼저 그 "
+            f" 지시문의 '어디서' 줄이 워크트리를 말한다. {after} 다른 일보다 먼저 그 "
             "문장을 따른다. 주 체크아웃에서 새 브랜치를 따지 않는다 — 그 체크아웃은 다른 세션이 "
             "쓰고 있을 수 있다."
         )
@@ -153,12 +188,33 @@ def block_reason_for(prompt: str, cwd: str | None) -> str | None:
     )
 
 
+def _labeled_lines(prompt: str, label: str) -> list[str]:
+    """줄 머리가 `label` 인 줄들. 앞뒤 공백을 벗긴다. 문장 속에서 라벨을 인용한 것은 세지 않는다."""
+    stripped = (line.strip() for line in prompt.splitlines())
+    return [line for line in stripped if line.startswith(label)]
+
+
 def _wants_worktree(prompt: str) -> bool:
     """줄 머리의 `어디서:` 줄에 `EnterWorktree` 가 들었는가."""
-    return any(
-        line.strip().startswith(_WHERE_LABEL) and "EnterWorktree" in line
-        for line in prompt.splitlines()
-    )
+    return any("EnterWorktree" in line for line in _labeled_lines(prompt, _WHERE_LABEL))
+
+
+def _stale_root(prompt: str) -> bool:
+    """줄 머리의 `확인할 선행 조건:` 줄에 주 체크아웃 미갱신이 들었는가."""
+    return any(_STALE_ROOT in line for line in _labeled_lines(prompt, _CONDITION_LABEL))
+
+
+def _first_of_bundle(prompt: str) -> bool:
+    """묶음이 아니거나 묶음의 첫 세션인가. `어디서:` 줄의 `나란히 여는 <N> 중 <k>` 를 본다.
+
+    k 가 글자 그대로 1일 때만 첫 세션이다. 0 이나 `01` 처럼 잘못 적은 수도 첫 세션이 아니라고
+    본다 — 돌지 않으면 루트가 낡은 채 남을 뿐이고, 함께 돌면 같은 루트나 워크트리를 다툴 수 있다.
+    """
+    for line in _labeled_lines(prompt, _WHERE_LABEL):
+        match = _BUNDLE.search(line)
+        if match is not None:
+            return match.group(1) == "1"
+    return True
 
 
 def _directive_branch(prompt: str) -> str | None:
