@@ -134,6 +134,31 @@ PR #136은 3회차(`8b28517`)에서 CI 여섯이 초록이었고 `009b1d1`로 �
     둘을 가르면 그 사이에 await가 없다는 보장을 부르는 쪽이 진다), `Sites | list[str]`의 `isinstance` 두 번, 포트 다섯이 같이 다니는 것
     (Data Clumps. 운영자 채널의 하위 라우터도 같은 포트를 따로 받는다).
 
+## PR 리뷰
+
+PR #137. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다. 푸시 뒤 `@coderabbitai review`를 남겼다.
+
+> 사용자: "CI 끝났어"
+
+1회차(`af53dc8`). CI 여섯이 초록이었다(`gh run list`로 그 커밋의 실행인 것을 봤다). CodeRabbit은 `009b1d1..af53dc8`을 실제로 보고(파일 42,
+락과 생성 타입은 경로 필터로 제외) 실행 가능한 지적이 없었다. 시간당 포함 리뷰 1회를 썼다. claude-review는 Critical·Major 0, Minor 1이었다.
+
+- **Minor(claude-review, 반영): `_concluded`가 `run_status()`의 규칙을 다시 구현했다.** `core.md`가 "규칙은 `run_status()` 한 곳에 있어서
+  관리와 채널과 CLI가 각자 다시 구현하지 않는다"고 정한 그것이다. 지금은 두 판정이 같지만 상태 값이 늘면 구독만 옛 규칙에 남는다. 두 자리에서
+  `run_status(...) != "unfinished"`를 부르고 함수와 이벤트 타입 import 셋을 지웠다. `channel.md`가 막는 것은 core의 판정보다 먼저
+  `run_status()`로 보는 것이고, 이것은 자기 실행 읽기 뒤에 결말을 가르는 것이라 해당하지 않는다. 그 자리를 겨눈 변이 하나의 원문을 고치고
+  `--check`로 31개의 원문을 본 뒤 그 하나만 다시 돌려 빨강을 봤다. 셀프 리뷰의 두 축이 놓친 것이다 — 주장 검증 목록은 문서의 사실 주장을
+  미는 것이라 규칙의 재구현은 표준 축의 몫이었는데, 표준 축은 `run_status()`가 diff 밖에 있어 같은 판정인 줄 몰랐다.
+- **CodeRabbit 보안 아키텍처 절(High, 추론. 두고 답함): 유효한 최종 사용자 토큰이 상한 없이 실행과 구독을 쌓을 수 있다.** 받아들인 위험이고
+  닫는 자리가 이미 있다. 상한과 백로그는 티켓 02, 실행 타임아웃은 03이고, 원격에 여는 nginx는 web-widget의 몫인데 `plan.md`에서 web-widget이
+  end-user-channel 전체(02·03 포함)에 막혀 있다. 그 전에 `serve`는 루프백에만 선다(ADR 0011). 01의 틈으로 티켓 서두와 PR 본문에 적은 것이다.
+- **CodeRabbit 제안(보류): 독립된 사이트가 서로 다른 서명 키를 써야 하는지.** 사이트 파일은 발급자의 중복과 사이트 안의 `kid` 중복을 막지만
+  사이트 사이의 같은 키는 막지 않는다. 두 사이트에 같은 공개 키를 적는 것은 그 키의 주인을 두 발급자로 믿는다는 운영자의 선택이고, 명세는
+  신뢰의 단위를 사이트 항목으로 두며 키 공유를 금지하지 않았다. 막으려면 사이트 파일 규칙이 하나 늘어 명세와 ADR 0023 이력의 일이다.
+  같은 지적이 다시 나오거나 web-widget 설계가 사이트 사이의 격리를 묻으면 그때 본다.
+- **CodeRabbit 제안(이미 그렇다): 허용 출처를 아직 적용된 통제로 적지 않는다.** `sites.py`의 `Site` 독스트링과 `http.md`가 CORS는 티켓 04가
+  들이고 그 전에는 읽고 검증만 한다고 적는다.
+
 ## 갈린 곳
 
 - `Last-Event-ID`가 범위 밖인 409는 표의 새 타입이 아니라 라우트의 `HTTPException(409)`이고, `http.md`의 "라우트는 상태 코드를 스스로
@@ -166,3 +191,7 @@ PR #136은 3회차(`8b28517`)에서 CI 여섯이 초록이었고 `009b1d1`로 �
 - `uv run --env-file .env pytest -m llm` 7 passed. `channel/`·`main.py`·`core/run.py`를 건드렸고 새 LLM 테스트가 하나 늘었다.
 - 바뀐 문서의 마크다운 표와 줄 구분 문자 검사 통과
 - 변이 31 모두 기대대로(위)
+
+PR 1회차 반영(`_concluded`) 뒤 다시 돌렸다. pytest 1554 passed, ruff check와 format 통과, pyright 0 errors, lint-imports 5 kept, 지침
+검사와 타입 우회 검사 통과, `-m llm` 7 passed(`channel/`을 건드렸다). web은 바뀌지 않아 다시 돌리지 않았다. 변이는 원문 `--check`와 바뀐
+자리의 하나.

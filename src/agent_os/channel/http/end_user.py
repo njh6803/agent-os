@@ -51,13 +51,20 @@ from pydantic.json_schema import SkipJsonSchema
 from agent_os.channel.http.bodies import Decision, StartRun
 from agent_os.channel.http.items import EndUserItem, UnfinishedItem, project
 from agent_os.channel.http.runs import Indexed, Runs, RunStream
-from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
+from agent_os.core.ports import (
+    ChatModel,
+    Clock,
+    PluginSource,
+    ToolSource,
+    TraceStore,
+    run_status,
+)
 from agent_os.core.run import read_own_run, resume, run
 from agent_os.http.auth import end_user_of
 from agent_os.http.errors import request_id_of
 from agent_os.http.routes import documented_stream_errors
 from agent_os.http.sites import EndUser
-from agent_os.sdk import RUN_ID_PATTERN, Event, RunFailed, RunFinished, RunId, RunPaused
+from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
 
 # 서명 토큰이 여는 접두사이자 이 면의 라우트의 접두사(ADR 0023). 한 값이라 이 면의 라우트가 서명
 # 토큰의 면 밖에 설 길이 없다. `/runs` 를 품지도 그것에 품기지도 않는다. 인증 표와 예외 표의 면을
@@ -201,7 +208,7 @@ def end_user_router(
                 status_code=409,
                 detail=f"Last-Event-ID {start - 1} 이 이 실행의 마지막 자리 {last} 보다 크다",
             )
-        live = None if _concluded(events[-1]) else runs.join(RunId(run_id))
+        live = None if run_status(events[-1]) != "unfinished" else runs.join(RunId(run_id))
         return _Subscription(events=events, start=start, live=live)
 
     # 404 는 결정과 같다. 409 는 `Last-Event-ID` 가 트레이스의 마지막 인덱스보다 큰 것이다 —
@@ -239,7 +246,7 @@ class _Subscription:
                 frame = _frame(index, self.events[index])
                 if frame is not None:
                     yield frame
-            if _concluded(self.events[-1]):
+            if run_status(self.events[-1]) != "unfinished":
                 return
             if self.live is None:
                 yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
@@ -258,11 +265,6 @@ def _signed_in(request: Request) -> EndUser:
     if found is None:
         raise RuntimeError("서명 토큰을 지나지 않은 요청이 최종 사용자 경로에 닿았다")
     return found
-
-
-def _concluded(last: Event) -> bool:
-    """트레이스가 결말로 끝났는가(질의). 끝남, 실패, 일시정지다. 구독은 그 뒤를 기다리지 않는다."""
-    return isinstance(last, RunFinished | RunFailed | RunPaused)
 
 
 def _frame(index: int, event: Event) -> ServerSentEvent | None:

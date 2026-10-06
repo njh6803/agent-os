@@ -337,7 +337,7 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/channel/http/end_user.py"
 old = '''
-        live = None if _concluded(events[-1]) else runs.join(RunId(run_id))
+        live = None if run_status(events[-1]) != "unfinished" else runs.join(RunId(run_id))
 '''
 new = '''
         live = None
