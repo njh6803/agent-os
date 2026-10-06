@@ -415,6 +415,7 @@ def _admin_app(
         admin_token=admin_token,
         channel_token=channel_token,
         sites=sites or Sites(),
+        run_timeout_seconds=None,
         stderr=stderr,
     )
 

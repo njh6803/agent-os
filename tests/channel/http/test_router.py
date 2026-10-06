@@ -97,6 +97,12 @@ TERMINAL = frozenset({"run_finished", "run_failed", "run_paused"})
 # 크기가 제한된 큐에 기다리며 넣는 구현이면 실행이 그 큐 앞에서 멈춘다.
 BURST = 100
 
+# 실행 타임아웃(초)과 그것이 끊은 실행의 메시지. 걸리는 사례는 이만큼 실제로 기다린다.
+TIMEOUT = 0.05
+TIMED_OUT = "실행이 0.05초 안에 끝나지 않았다"
+# 타임아웃이 끊지 않으면 늦은 도구가 돌아오는 시각. `TIMEOUT` 보다 한참 뒤다.
+LATE = 1.0
+
 
 def _toml_list(names: Sequence[str]) -> str:
     return "[" + ", ".join(f'"{name}"' for name in names) + "]"
@@ -351,16 +357,30 @@ class FakeConnection:
         return ToolResult(ok=True, content="5")
 
 
+class StuckConnection(FakeConnection):
+    """도구 호출이 `LATE` 뒤에야 돌아온다. 실행 타임아웃이 그 호출을 끊는 것을 본다."""
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self.calls.append((name, args))
+        await anyio.sleep(LATE)
+        return ToolResult(ok=True, content="5")
+
+
 class ScopedTools:
     """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다.
 
     취소 범위는 들어간 태스크와 다른 태스크에서 닫으면 RuntimeError 를 낸다. 그러면 실행은
-    run_finished 가 아니라 run_failed 로 끝난다.
+    run_finished 가 아니라 run_failed 로 끝난다. 연결은 붙을 때마다 `connection` 으로 새로 만든다.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        connection: Callable[[Mapping[PluginName, McpServer]], FakeConnection] = FakeConnection,
+    ) -> None:
         self.connections: list[FakeConnection] = []
         self.closed = False
+        self._connection = connection
 
     @property
     def calls(self) -> list[tuple[str, Mapping[str, Json]]]:
@@ -371,7 +391,7 @@ class ScopedTools:
     async def connect(
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
-        connection = FakeConnection(servers)
+        connection = self._connection(servers)
         self.connections.append(connection)
         with anyio.CancelScope():
             yield connection
@@ -455,6 +475,7 @@ def _app(
     tools: ToolSource | None = None,
     clock: Clock | None = None,
     stderr: io.StringIO | None = None,
+    run_timeout_seconds: float | None = None,
 ) -> FastAPI:
     """채널이 붙은 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다."""
     return create_app(
@@ -467,6 +488,7 @@ def _app(
         admin_token=ADMIN_TOKEN,
         channel_token=CHANNEL_TOKEN,
         sites=Sites(),
+        run_timeout_seconds=run_timeout_seconds,
         stderr=stderr or io.StringIO(),
     )
 
@@ -661,6 +683,35 @@ async def test_실행_안의_실패는_200_스트림_속_run_failed_다(
     assert _types(frames) == ["run_started", "run_failed"]
     assert cause in json.loads(frames[-1])["error"]
     assert frames == trace.lines
+
+
+async def test_시작과_이어_가기와_결정은_앱이_받은_타임아웃으로_끊긴다() -> None:
+    """`create_app` 이 받은 값을 운영자 채널의 세 경로가 core 에 넘긴다. 시작과 이어 가기는 모델이
+    문 앞에서 영영 기다리고, 결정은 승인된 도구가 돌아오지 않는다. 셋 다 200 스트림 안의 run_failed
+    이고 결말이 그 시간을 든다(ADR 0014 의 2026-10-05 이력)."""
+    earlier = RunId("stored-2")
+    trace = _stored(
+        _stored_start(),
+        _stored_pause(),
+        RunStarted(
+            run_id=earlier, ts=T0, agent=AgentName("asking"), request="2+3?", principal=PRINCIPAL
+        ),
+        RunFinished(run_id=earlier, ts=T0, output="5"),
+    )
+    tools = ScopedTools(connection=StuckConnection)
+    app = _app(trace=trace, model=_gated_model(), tools=tools, run_timeout_seconds=TIMEOUT)
+
+    async with _serving(app) as client, asyncio.timeout(5):
+        started = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
+        continued = await _continue(client, earlier, _start("asking"))
+        decided = await _decide(client, STORED, APPROVE)
+
+    assert _types(_frames(started.text)) == ["run_started", "run_failed"]
+    assert _types(_frames(continued.text)) == ["run_started", "run_failed"]
+    assert _types(_frames(decided.text)) == ["approval_granted", "run_resumed", "run_failed"]
+    for response in (started, continued, decided):
+        assert json.loads(_frames(response.text)[-1])["error"] == TIMED_OUT
+    assert tools.calls == [("add", ADD_2_3)]
 
 
 async def test_채널에서_일으킨_실행이_같은_앱의_관리_API_목록과_상세에_바로_보인다() -> None:

@@ -21,6 +21,10 @@ run 은 이어 갈 끝난 실행을 `--continuation` 으로 받는다(ADR 0022, 
 실행에 이어 가기 안내를 찍지 않는다 — 찍으면 성공한 실행의 표준 에러가 비지 않거나 표준 출력이
 출력 아닌 것을 싣는다. 식별자는 `--verbose` 의 시작 이벤트, 관리 화면, 트레이스 디렉터리에서 얻는다.
 거절(없음, 남의 실행, 끝나지 않음, 고리 깨짐)은 다른 실행 전 오류와 같은 진단과 종료 코드 1 이다.
+
+run 과 resume 에는 실행 타임아웃의 플래그가 없다. core 의 기본값이 그대로 걸리고, 그 시간을 넘긴
+실행은 다른 실행 안의 실패처럼 진단과 종료 코드 1 이다(end-user-channel 명세 "실행 타임아웃").
+serve 만 `--run-timeout` 으로 바꾼다. 필요가 생기면 둘에도 더한다.
 """
 
 from __future__ import annotations
@@ -42,7 +46,7 @@ from agent_os.core.ports import (
     ToolSource,
     TraceStore,
 )
-from agent_os.core.run import Approve, Decision, Deny, resume, run
+from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS, Approve, Decision, Deny, resume, run
 from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunId, RunPaused
 
 DEFAULT_TRACES = Path("traces")
@@ -83,10 +87,11 @@ class ResumeArgs:
 
 @dataclass(frozen=True)
 class ServeArgs:
-    """관리 API 와 채널을 세우는 데 필요한 값 여섯. 비밀은 없다 — 토큰만 환경변수로 온다.
+    """관리 API 와 채널을 세우는 데 필요한 값 일곱. 비밀은 없다 — 토큰만 환경변수로 온다.
 
     사이트 파일은 공개 키라 비밀이 아니고 경로로 받는다. 없음은 받아들일 사이트가 없다는 뜻이다(ADR
-    0023).
+    0023). 실행 타임아웃의 없음은 core 의 기본값이다 — 여기서 기본값을 짓지 않는다. 0 이하인지는
+    `main.py` 가 다른 구성 오류와 함께 본다.
     """
 
     host: str
@@ -95,6 +100,7 @@ class ServeArgs:
     traces: Path
     plugins_root: Path
     site_file: Path | None
+    run_timeout_seconds: int | None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -148,6 +154,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="받아들일 사이트를 적은 TOML. 없으면 최종 사용자 경로의 모든 토큰이 401 이다",
     )
+    # 기본값을 두지 않는다. 없음이 core 에 가서 core 의 기본값이 된다 — 그 값이 서는 자리가 하나다
+    # (end-user-channel 명세 검토). 도움말은 그 값을 읽어 적는다. CLI 의 run·resume 은 이 플래그
+    # 없이 같은 기본값이다.
+    serve_parser.add_argument(
+        "--run-timeout",
+        type=_run_timeout,
+        metavar="SECONDS",
+        help=(
+            "실행 하나가 시작(재개는 결정) 뒤 결말까지 갈 수 있는 초. 넘기면 run_failed 로 끝난다 "
+            f"(기본 {DEFAULT_RUN_TIMEOUT_SECONDS})"
+        ),
+    )
     _add_model(serve_parser)
     _add_directories(serve_parser)
     return parser
@@ -170,6 +188,20 @@ def _port(value: str) -> int:
     if not 0 <= port <= MAX_PORT:
         raise argparse.ArgumentTypeError(f"포트는 0~{MAX_PORT} 다. 받은 값: {port}")
     return port
+
+
+def _run_timeout(value: str) -> int:
+    """초 단위의 정수인지만 여기서 본다. 0 이하는 `main.py` 의 구성 오류다.
+
+    `_port` 와 달리 범위를 여기서 보지 않는다. 티켓(end-user-channel 03)이 0 이하를 구성 오류(종료
+    코드 1과 진단)로 정했고, 명세의 `serve` 절이 구성 오류를 토큰·호스트·모델 진단과 한 번에 모아
+    낸다. 그래서 `_port` 가 피하려는 갈림(정수 아님은 2, 범위 밖은 1)이 여기서는 생긴다. 알고 둔
+    것이고 경위는 일지 2026-10-06-06 의 "갈린 곳"이다.
+    """
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"실행 타임아웃은 정수(초)다. 받은 값: {value}") from None
 
 
 def _pause_index(value: str) -> int:
@@ -217,6 +249,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     model = None if namespace.model is None else str(namespace.model)
     if namespace.command == "serve":
         site_file = namespace.site_file
+        run_timeout = namespace.run_timeout
         return ServeArgs(
             host=str(namespace.host),
             port=int(namespace.port),
@@ -224,6 +257,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
             traces=traces,
             plugins_root=plugins_root,
             site_file=None if site_file is None else Path(site_file),
+            run_timeout_seconds=None if run_timeout is None else int(run_timeout),
         )
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":

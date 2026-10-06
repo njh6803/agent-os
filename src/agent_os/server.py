@@ -49,6 +49,7 @@ def create_app(
     admin_token: str,
     channel_token: str,
     sites: Sites,
+    run_timeout_seconds: float | None,
     stderr: TextIO,
 ) -> FastAPI:
     """관리 API 와 HTTP 채널과 최종 사용자 경로가 선 앱 하나. 포트는 부르는 쪽이 만들어 넘긴다.
@@ -65,6 +66,10 @@ def create_app(
 
     채널의 실행은 앱의 수명이 소유한다. 채널 라우터가 들고 온 수명이 앱의 수명에 합쳐지므로 서버가
     수명을 열어야 실행을 받고, 닫으면 남은 실행이 취소된다(ADR 0014).
+
+    실행 타임아웃은 채널이 일으키는 모든 실행(운영자 채널과 최종 사용자 경로)에 걸리는 값 하나이고
+    채널이 core 에 그대로 넘긴다. 없음은 core 의 기본값이다 — 여기서도 `serve` 에서도 기본값을 짓지
+    않는다(ADR 0014 의 2026-10-05 이력 "실행에 타임아웃이 생긴다").
 
     빈 토큰을 거부하는 이유는 인증 없이 도는 면을 기본값으로 남기지 않기 위해서다(ADR 0011). 같은
     두 토큰을 거부하는 이유는 같으면 토큰을 가른 것이 무효인데 요청 시점에는 그것을 알아챌 길이
@@ -93,6 +98,7 @@ def create_app(
             trace=trace,
             clock=clock,
             principal=principal,
+            run_timeout_seconds=run_timeout_seconds,
             stderr=stderr,
         )
     )
