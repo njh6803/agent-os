@@ -7,6 +7,7 @@ name = "agent-os"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "fastapi" },
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
@@ -29,6 +30,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", specifier = ">=4.15.1,<5" },
     { name = "fastapi", specifier = ">=0.140.8" },
     { name = "langchain-anthropic", specifier = ">=0.3" },
     { name = "langchain-core", specifier = ">=0.3" },
