@@ -281,7 +281,7 @@ props의 원천은 디자인 파일 05절의 props 표다. 상태 표(기본, �
 
 ### 사진 비교 게이트 (ADR 0026과 넷째 이력. 모양은 명세가 정했다)
 
-- **도구.** Playwright Test의 `toHaveScreenshot`, `maxDiffPixels: 0`이다. 입력은 Storybook 정적 빌드이고, 스토리 `iframe.html`을 route로 파일에서 낸다. 이미지는 `mcr.microsoft.com/playwright:v1.63.0-noble`이고 Playwright 판과 함께 올린다.
+- **도구.** Playwright Test의 `toHaveScreenshot`, `maxDiffPixels: 0`이다. 입력은 Storybook 정적 빌드이고, 스토리 `iframe.html`을 route로 파일에서 낸다. 이미지는 `mcr.microsoft.com/playwright:v1.63.0-noble`이고 Playwright 판과 함께 올린다. CI와 로컬 비교는 태그에 digest까지 붙여(`<이미지>:<태그>@sha256:<digest>`) 같은 이미지를 쓴다. 같은 태그가 다시 빌드되면 글꼴과 라이브러리가 바뀌어 코드 변경 없이 정답 사진이 모두 깨질 수 있기 때문이다. digest의 값은 사진 비교 티켓이 그때 받은 이미지에서 적고, Playwright 판을 올릴 때 태그와 함께 바꾼다(PR #153의 CodeRabbit 지적).
 - **찍는 것.** 패키지의 스토리 전부를 먹의 라이트와 다크로 찍는다(ADR 0026 둘째 이력). 판정 스토리(Matrix 등)는 뺀다. 상호작용 컴포넌트는 실제 입력의 올림, 누름, 키보드 포커스를 더 찍는다(누른 뒤에는 빈 자리를 눌러 순차 탐색의 출발점을 돌린 다음 Tab을 누른다. 측정에서 그러지 않자 포커스가 버튼에 오지 않았다).
 - **움직임 줄이기.** 같은 Playwright가 `reducedMotion: "reduce"`에서 도는 표시와 값 모름 진행 막대의 animation-name이 `none`인지 본다. 사진은 Playwright가 움직임을 멈춰 찍으므로 사진으로는 가르지 못한다.
 - **정답 사진**은 한 벌이고 컨테이너 안에서만 만든다. 자리는 패키지 안이고 커밋한다. 갱신 명령도 컨테이너에서만 돈다.

@@ -144,6 +144,12 @@ GitHub 러너를 뺀 셋과 셋째 이력이 넘긴 둘을 쟀다. 앞 세션의
 - 프로브: 표본을 얹은 사본의 `pnpm verify` 여섯 단계 통과(288개), `measure.mjs`와 `visual.mjs`의 마지막 실행 결과가
   `probes/README.md`의 결과 절과 같다.
 
+## PR 리뷰
+
+PR #153의 claude-review는 지적이 없었다. CodeRabbit은 Trivial 하나를 냈다. 사진 비교 이미지를 태그만으로 고정하면 같은
+태그가 다시 빌드될 때 정답 사진이 모두 깨질 수 있어 digest까지 붙이라는 것이고, 명세의 사진 비교 절에 반영했다(값은 사진
+비교 티켓이 적는다). CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) PR 전에 돌지 않았다.
+
 ## 회고
 
 후보 다섯을 냈고 넷이 승인됐다.
