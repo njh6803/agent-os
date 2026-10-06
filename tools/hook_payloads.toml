@@ -281,6 +281,18 @@ payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서:
 
 [[case]]
 hook = "hook_prompt_directive.py"
+expect = "block"
+note = "첫 줄이 스킬 파일인데 연 저장소 표지의 문구가 갈렸다(쏜 ps1 과 훅이 다른 체크아웃 사본, 2026-10-05 워크트리 감사 13)"
+payload = { prompt = ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 연 저장소: `C:\\project\\agent`. 인자: x\n\n다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "context"
+note = "사람이 스킬 경로로 시작해 쓴 지시문은 ps1 의 고정 머리가 아니라 막지 않는다(이름 계기만)"
+payload = { prompt = ".claude/skills/implement/SKILL.md 를 참고해 구현한다\n\n다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
 expect = "silent"
 note = "보통 프롬프트"
 payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }

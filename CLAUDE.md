@@ -42,7 +42,7 @@
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
 ## 검증 명령
-- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`)
+- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트)
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
@@ -80,10 +80,11 @@
 ## 환경 함정
 명령을 치기 전에 알아야 해서 여기 있다. 나머지 운영 규약은 `docs/constitution/operations.md`.
 - 맨 `python`은 프로젝트 인터프리터가 아니다(스토어 스텁이거나 pyenv shim). 언제나 `uv run python`. Bash에서는 훅이 막는다.
-- 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다. 워크트리 세션에서는 데스크톱 앱의 가드가 `git`이 든 복합 명령(파이프·서브셸·`$(…)`)을 거부한다. 단순 명령 하나로, 또는 스크립트 파일로 나눈다.
+- 커밋 메시지는 Bash heredoc이나 파일(`git commit -F`)로 넘긴다. PowerShell here-string은 `@`를 메시지에 흘린다. 긴 스크립트는 파일로 쓰고 셸에는 경로만 넘긴다. 큰 heredoc은 셸 파서가 깨진다. 워크트리 세션에서는 데스크톱 앱의 가드가 Bash 도구의 `git` 복합 명령(파이프·서브셸·`$(…)`)과 주 체크아웃을 당기는 `git -C <루트> pull`을 거부했다. git은 단순 명령 하나로 친다. 가드는 워크트리 세션이 다른 체크아웃을 바꾸지 못하게 하는 경계라, 주 체크아웃 당기기와 다른 워크트리 지우기는 사람이나 주 체크아웃 세션에 넘긴다(next-session "워크트리에서 병합할 때").
+- 로컬 `main`은 main을 체크아웃한 체크아웃에서 `pull`로만 옮기고, 워크트리의 기준은 `origin/main`이다. 다른 체크아웃이 main을 체크아웃한 채 `fetch origin main:main`이나 `branch -f main`으로 옮기면 공유 ref라 그 체크아웃의 HEAD만 움직이고 파일은 남아, main의 새 변경이 스테이지된 되돌림으로 보인다(이 PC의 git 2.32에서 2026-10-05 워크트리 감사 서브에이전트가 임시 저장소로 손으로 재현했다).
 - 파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 명령의 종료 코드다. 판정 명령은 파이프·체인 없이 돌린다. 훅이 경고한다.
 - 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(되풀이해 겪었다). 탐침은 실제 호출과 같은 실행 위치·환경으로 돈다. 실행 위치가 다르자 ruff가 그 프로젝트의 `fix` 설정을 읽지 않았다. pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
-- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. `git fetch`도 하고 `git diff --name-only HEAD...origin/main`이 비지 않으면, 이 브랜치가 새로 매긴 번호(일지 순번·대기열 행·ADR)와 이름으로 든 파일을 그 목록과 대조한다. 긴 세션 동안 main에 병합된 PR과 번호가 부딪혔고, 따라야 할 규약이 새로 섰다(대기열 48).
+- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. `git fetch`도 하고 `git diff --name-only HEAD...origin/main`이 비지 않으면, 이 브랜치가 새로 매긴 번호(일지 순번·대기열 행·ADR)와 이름으로 든 파일을 그 목록과 대조한다. 긴 세션 동안 main에 병합된 PR과 번호가 부딪혔고, 따라야 할 규약이 새로 섰다(대기열 48). 나란히 도는 형제 워크트리(`git worktree list`)의 `docs/journal/`·`docs/adr/`·`.scratch/retro-queue.md`도 파일로 본다. 커밋 전의 번호는 git으로 보이지 않는다. 겹쳐서 번호를 바꾸면 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다.
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.

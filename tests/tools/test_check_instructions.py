@@ -25,6 +25,7 @@ from tools.check_instructions import (
     hooks_with_relative_paths,
     imported_files_with_dead_paths,
     imports_outside_claude_md,
+    local_settings_with_guards,
     nested_instruction_files,
     patched_skills_without_sentinel,
     rules_with_dead_paths,
@@ -32,6 +33,7 @@ from tools.check_instructions import (
     skills_with_sentinel_not_listed,
     text_stdin_lines,
 )
+from tools.run_hooks import REPO_LOCATION_VARS
 
 
 def _사본을_만든다(root: Path, *, 센티널을_넣을_스킬: Container[str]) -> None:
@@ -157,6 +159,126 @@ def test_훅_설정이_없으면_문제가_없다(tmp_path: Path) -> None:
 
 def test_이_저장소의_훅은_지금_작업_디렉터리에_묶이지_않는다() -> None:
     assert hooks_with_relative_paths() == []
+
+
+# local 설정의 가드. `.claude/settings.local.json` 은 추적하지 않아 손으로 판 워크트리에는 없고,
+# EnterWorktree 는 만들 때 한 번 복사한다. 거기 둔 가드는 워크트리 세션에서 조용히 빠진다(2026-10-05
+# 워크트리 감사 8).
+
+
+# 실제 훅 항목 하나를 든 local 설정. 이벤트 이름만 있고 항목이 없으면 가드가 아니다.
+_훅_하나: dict[str, object] = {
+    "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo x"}]}]}
+}
+
+
+def _local_설정을_쓴다(root: Path, 설정: dict[str, object]) -> None:
+    path = root / ".claude" / "settings.local.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(설정), encoding="utf-8")
+
+
+def test_local_설정의_deny_와_ask_를_잡는다(tmp_path: Path) -> None:
+    _local_설정을_쓴다(
+        tmp_path,
+        {"permissions": {"allow": ["Bash(git log *)"], "deny": ["Read(x)"], "ask": ["Bash(rm *)"]}},
+    )
+
+    problems = local_settings_with_guards(tmp_path)
+
+    assert len(problems) == 1
+    assert ".claude/settings.local.json" in problems[0]
+    assert "permissions.deny" in problems[0]
+    assert "permissions.ask" in problems[0]
+    assert "settings.json" in problems[0]
+
+
+def test_local_설정의_hooks_를_잡는다(tmp_path: Path) -> None:
+    _local_설정을_쓴다(tmp_path, _훅_하나)
+
+    problems = local_settings_with_guards(tmp_path)
+
+    assert len(problems) == 1
+    assert "hooks" in problems[0]
+
+
+def test_local_설정에_allow_만_있으면_문제가_없다(tmp_path: Path) -> None:
+    _local_설정을_쓴다(tmp_path, {"permissions": {"allow": ["Bash(git log *)"]}})
+
+    assert local_settings_with_guards(tmp_path) == []
+
+
+# 이벤트 이름은 있어도 실제 훅 항목이 없는 모양들. 가드가 아니다.
+_빈_훅들: tuple[dict[str, object], ...] = ({}, {"Stop": []}, {"Stop": [{"hooks": []}]})
+
+
+def test_빈_가드_목록은_가드가_아니다(tmp_path: Path) -> None:
+    """빠져도 잃는 것이 없다. 잡으면 거짓 양성으로 커밋을 막는다. 훅은 이벤트 이름이 아니라 실제
+    훅 항목이 있어야 가드다(PR #138 CodeRabbit)."""
+    for hooks in _빈_훅들:
+        _local_설정을_쓴다(tmp_path, {"permissions": {"deny": [], "ask": []}, "hooks": hooks})
+
+        assert local_settings_with_guards(tmp_path) == [], hooks
+
+
+def test_깨진_local_설정은_트레이스백이_아니라_문제로_낸다(tmp_path: Path) -> None:
+    """주 체크아웃의 local 까지 읽으므로 깨진 파일 하나가 예외로 모든 커밋을 막으면 원인을 찾기
+    어렵다(PR #138 claude-review). 다른 검사처럼 경로와 함께 문제로 돌려준다."""
+    path = tmp_path / ".claude" / "settings.local.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{not json", encoding="utf-8")
+
+    problems = local_settings_with_guards(tmp_path)
+
+    assert len(problems) == 1
+    assert ".claude/settings.local.json" in problems[0]
+    assert "읽을 수 없다" in problems[0]
+
+
+def test_GIT_접두사를_벗기면_저장소_위치_변수를_모두_벗긴다() -> None:
+    """`_main_checkout` 은 스크립트로 돌아 `REPO_LOCATION_VARS` 를 import 하지 못하고 `GIT_`
+    접두사로 벗긴다. 두 목록이 갈리지 않게 여기서 잰다(PR #138 claude-review)."""
+    assert all(name.startswith("GIT_") for name in REPO_LOCATION_VARS)
+
+
+def test_local_설정이_없으면_문제가_없다(tmp_path: Path) -> None:
+    assert local_settings_with_guards(tmp_path) == []
+
+
+def test_이_체크아웃의_local_설정에는_가드가_없다() -> None:
+    assert local_settings_with_guards() == []
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+
+
+def test_워크트리에서는_주_체크아웃의_local_가드도_잡는다(tmp_path: Path) -> None:
+    """손으로 판 워크트리에는 local 이 없어 그 체크아웃만 보면 늘 빈 판정이다(2026-10-06 수정 검증).
+    가드를 잃는 것은 주 체크아웃의 local 이므로 그것을 본다."""
+    main = tmp_path / "main"
+    main.mkdir()
+    _git(main, "init", "-q")
+    _git(
+        main,
+        *("-c", "user.name=t", "-c", "user.email=t@t"),
+        *("commit", "-q", "--allow-empty", "-m", "x"),
+    )
+    _git(main, "worktree", "add", "-q", str(tmp_path / "wt"))
+    _local_설정을_쓴다(main, _훅_하나)
+
+    problems = local_settings_with_guards(tmp_path / "wt")
+
+    assert len(problems) == 1
+    assert "주 체크아웃" in problems[0]
+    assert "hooks" in problems[0]
+
+
+def test_주_체크아웃에서는_local_을_한_번만_본다(tmp_path: Path) -> None:
+    _git(tmp_path, "init", "-q")
+    _local_설정을_쓴다(tmp_path, {"permissions": {"deny": ["Read(x)"]}})
+
+    assert len(local_settings_with_guards(tmp_path)) == 1
 
 
 def _규칙을_쓴다(root: Path, 이름: str, *경로: str) -> None:
@@ -692,6 +814,15 @@ def test_CLI_진입점이_임시_트리의_rules_임포트를_출력한다(tmp_p
 
     assert process.returncode == 1
     assert ".claude/rules/web.md: @ 임포트" in process.stdout
+
+
+def test_CLI_진입점이_임시_트리의_local_가드를_출력한다(tmp_path: Path) -> None:
+    _local_설정을_쓴다(tmp_path, {"permissions": {"deny": ["Read(x)"]}})
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert process.returncode == 1
+    assert ".claude/settings.local.json:" in process.stdout
 
 
 def test_CLI_진입점이_임시_트리의_중첩_지침_파일을_출력한다(tmp_path: Path) -> None:

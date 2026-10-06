@@ -1,6 +1,8 @@
 # 로컬 자동 검사. 같은 검사를 CI(.github/workflows/ci.yml)가 최종 판정한다. 헌법 "가드레일" 절.
-# 클론 뒤 한 번: uv run pre-commit install  (pre-commit과 commit-msg 두 훅이 함께 깔린다)
-#              pnpm -C web install         (없으면 web-verify 훅이 첫 커밋부터 빨갛다)
+# 클론 뒤 주 체크아웃에서 한 번: uv run pre-commit install  (pre-commit과 commit-msg 두 훅이 함께
+#   깔린다. git 훅은 워크트리와 공유되고, 워크트리에서 치면 훅의 파이썬 경로가 그 워크트리로 덮인다)
+# 체크아웃·워크트리마다: uv sync, pnpm -C web install --frozen-lockfile  (없으면 web-verify 훅이 첫
+#   커밋부터 빨갛다)
 default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: local
@@ -34,7 +36,7 @@ repos:
         pass_filenames: false
         always_run: true
       - id: check-instructions
-        name: instructions (rules paths와 그 glob, 훅 경로, CLAUDE.md 200줄, @ 임포트, 사본 센티널, 중첩 지침 파일)
+        name: instructions (rules paths와 그 glob, 훅 경로, CLAUDE.md 200줄, @ 임포트, 사본 센티널, 중첩 지침 파일, local 가드)
         entry: uv run python tools/check_instructions.py
         language: system
         pass_filenames: false
