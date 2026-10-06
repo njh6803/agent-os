@@ -1,0 +1,202 @@
+<!doctype html>
+<!--
+  visual_docker 표본 페이지. run.mjs 가 이 파일과 Pretendard woff2 둘(fonts/)을 작업 폴더의 site/ 로 옮기고,
+  capture.spec.mjs 가 http://visual.probe/ 아래로 route 해 낸다. 바깥 네트워크에 닿는 자원은 없다.
+  영역(id)마다 요소 스크린샷을 찍으므로 그림자·포커스 링이 잘리지 않게 영역에 여백을 둔다.
+-->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>visual_docker 표본</title>
+    <style>
+      @font-face {
+        font-family: "Pretendard Probe";
+        src: url("fonts/Pretendard-Regular.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Pretendard Probe";
+        src: url("fonts/Pretendard-Bold.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --fg: #1a1c21;
+        --muted: #5b6070;
+        --surface: #f4f5f8;
+        --border: #d5d8e0;
+        --accent: #3b5bdb;
+        --accent-fg: #ffffff;
+        --shadow: rgba(16, 24, 40, 0.18);
+        --ring: #4c6ef5;
+        --grad-a: #ff8a65;
+        --grad-b: #7e57c2;
+        --grad-c: rgba(255, 255, 255, 0.55);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #121417;
+          --fg: #e8eaf0;
+          --muted: #9aa0b0;
+          --surface: #1d2026;
+          --border: #353a45;
+          --accent: #748ffc;
+          --accent-fg: #0b0d12;
+          --shadow: rgba(0, 0, 0, 0.55);
+          --ring: #91a7ff;
+          --grad-a: #f4511e;
+          --grad-b: #4527a0;
+          --grad-c: rgba(255, 255, 255, 0.25);
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      body {
+        width: 800px;
+        padding: 16px 24px 24px;
+      }
+      .web {
+        font-family: "Pretendard Probe", sans-serif;
+      }
+      .system {
+        font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      }
+      .text {
+        padding: 8px 12px;
+        margin-bottom: 8px;
+      }
+      .text h2 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .text p {
+        margin: 0 0 4px;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .text .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .boxes {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin-bottom: 8px;
+      }
+      .cell {
+        padding: 24px 20px;
+      }
+      .box {
+        height: 88px;
+        border-radius: 12px;
+      }
+      #box-border .box {
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
+      #box-shadow .box {
+        background: var(--surface);
+        box-shadow:
+          0 1px 2px var(--shadow),
+          0 8px 20px var(--shadow);
+      }
+      #box-ring .box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+      }
+      #box-gradient .box {
+        border-radius: 16px 4px 16px 4px;
+        background:
+          radial-gradient(circle at 30% 25%, var(--grad-c), transparent 60%),
+          linear-gradient(135deg, var(--grad-a), var(--grad-b));
+      }
+      #buttons {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 12px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      .primary {
+        background: var(--accent);
+        color: var(--accent-fg);
+        box-shadow: 0 1px 3px var(--shadow);
+      }
+      .secondary {
+        background: var(--bg);
+        color: var(--fg);
+        border-color: var(--border);
+      }
+      .ghost {
+        background: transparent;
+        color: var(--accent);
+      }
+      .primary:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="text-web" class="text web">
+      <h2>실행 승인 요청 · Approval required</h2>
+      <p>Agent OS의 실행 <b>run_7f3a91</b>이 도구 호출 승인을 기다리고 있습니다. The weather-agent wants to call
+        <code>fetch_forecast</code> with 3 arguments — 허가하거나 거부해 주세요.</p>
+      <p class="small">마지막 이벤트 2026-10-06 14:32:07 KST · 토큰 1,284개 · 지연 0.82초 (p95 1.4s)</p>
+    </section>
+    <section id="text-system" class="text system">
+      <h2>실행 승인 요청 · Approval required</h2>
+      <p>Agent OS의 실행 <b>run_7f3a91</b>이 도구 호출 승인을 기다리고 있습니다. The weather-agent wants to call
+        <code>fetch_forecast</code> with 3 arguments — 허가하거나 거부해 주세요.</p>
+      <p class="small">마지막 이벤트 2026-10-06 14:32:07 KST · 토큰 1,284개 · 지연 0.82초 (p95 1.4s)</p>
+    </section>
+    <div class="boxes">
+      <div id="box-border" class="cell"><div class="box"></div></div>
+      <div id="box-shadow" class="cell"><div class="box"></div></div>
+      <div id="box-ring" class="cell"><div class="box"></div></div>
+      <div id="box-gradient" class="cell"><div class="box"></div></div>
+    </div>
+    <div id="buttons" class="web">
+      <button id="btn-focus" class="btn primary" type="button">허가 Approve</button>
+      <button class="btn secondary" type="button">거부 Reject</button>
+      <span class="btn ghost" role="button">자세히 보기 Details</span>
+      <button class="btn primary" type="button" disabled>대기 중 Pending</button>
+      <button id="btn-native" type="button">기본 버튼 Native</button>
+    </div>
+  </body>
+</html>

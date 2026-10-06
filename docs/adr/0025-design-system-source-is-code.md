@@ -20,7 +20,7 @@ date: 2026-10-03
 
 - **design-system 기능이 `plan.md`에 는다.** web-widget과 admin-style이 그것을 기다리고, 파이썬 기능(conversation, end-user-channel)과는 나란히 간다.
 - **Tailwind는 design-system이 토큰과 함께 처음 들인다.** 토큰은 Tailwind의 테마로 코드에 선다. 위젯과 관리 화면이 그것을 쓴다(ADR 0021 이력 2026-10-03, ADR 0024). shadow root와 rem의 측정은 위젯의 모양으로 했고, 그 결과를 토큰의 단위와 shadow root용 CSS에 반영하는 것이 이 기능의 일이다.
-- **세부는 design-system 기능의 인터뷰가 정한다.** 두 앱이 토큰과 컴포넌트를 나누는 패키지의 모양(`packages/ui`를 둘지), rem과 px, 다크 모드, 접근성, 한글 글꼴과 남의 페이지에 싣는 법, Storybook을 둘지(Claude Design의 디자인 시스템이 미리보기를 대신할 수 있다), 디자인 문서의 이름과 자리와 실리는 방식(공유 하나와 앱별, `.claude/rules`의 `paths`)이다.
+- **세부는 design-system 기능의 인터뷰가 정한다.** 두 앱이 토큰과 컴포넌트를 나누는 패키지의 모양(`packages/ui`를 둘지), rem과 px, 다크 모드, 접근성, 한글 글꼴과 남의 페이지에 싣는 법, Storybook을 둘지(Claude Design의 디자인 시스템이 미리보기를 대신할 수 있다), 디자인 문서의 이름과 자리와 실리는 방식(공유 하나와 앱별, `.claude/rules`의 `paths`)이다. (바뀜: ADR 0026)
 - **`.scratch/<slug>/design/`은 새 자리다.** 그 규약을 `docs/agents/issue-tracker.md`에 더하는 일은 design-system 기능이 맡는다.
 - **화면은 기능마다 그린다.** 위젯의 화면은 web-widget의 명세 직전에, 관리 화면의 화면은 admin-style에서 그린다.
-- **코드가 바뀌면 `/design-sync`로 다시 맞춘다.** 자동으로 맞춰지지 않는다.
+- **코드가 바뀌면 `/design-sync`로 다시 맞춘다.** (바뀜: ADR 0026) 자동으로 맞춰지지 않는다.

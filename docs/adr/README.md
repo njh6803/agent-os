@@ -29,5 +29,6 @@
 | [0023](0023-end-user-channel-is-signed-by-the-site.md) | 최종 사용자는 사이트가 서명한 토큰으로 자기 접두사의 채널을 쓰고 스트림은 걸러 받는다 | accepted | 2026-10-03 |
 | [0024](0024-widget-app-ships-two-embeds-behind-nginx.md) | 위젯은 한 앱 폴더에서 iframe 페이지와 페이지 안 번들을 내고 nginx 뒤에 선다 | accepted | 2026-10-03 |
 | [0025](0025-design-system-source-is-code.md) | 디자인 시스템은 코드가 원천이고 Claude Design은 탐색과 화면을 맡는다 | accepted | 2026-10-03 |
+| [0026](0026-design-system-is-one-package-judged-by-storybook.md) | 디자인 시스템은 `packages/ui` 하나에 px 디자인 토큰과 두 테마를 두고, Storybook과 컨테이너 안의 사진으로 판정한다 | accepted | 2026-10-06 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
