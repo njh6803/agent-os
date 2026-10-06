@@ -1,0 +1,68 @@
+/*
+ * 디자인 시스템의 CSS 원본 하나(프로브의 표본). Storybook(preview 의 전역 import), 패키지 빌드(@tailwindcss/cli),
+ * shadow root 데코레이터(`?inline`)가 이 파일을 함께 쓴다.
+ * - 훑을 곳은 components/ 로 못 박고 자동 탐색은 끈다(widget_tailwind 와 같다).
+ * - Tailwind 기본 테마를 비우고(`--*: initial`) 토큰만 px 로 둔다. 사이트의 `html { font-size }` 를 따라가지 않게 한다.
+ * - 색 토큰은 쓰임새 이름만 둔다. 다크 값은 같은 변수를 `[data-theme=dark]`(shadow 안에서는 호스트의 data-theme),
+ *   data-theme 이 없을 때는 `prefers-color-scheme: dark` 아래에서 다시 정의한다. 컴포넌트에는 `dark:` 가 없다.
+ */
+@import "tailwindcss" source(none);
+@source "../components";
+
+@theme {
+  --*: initial;
+  --spacing: 4px;
+  --font-sans: system-ui, sans-serif;
+  --default-font-family: var(--font-sans);
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-md: 16px;
+  --text-md--line-height: 24px;
+  --font-weight-medium: 500;
+  --radius-md: 6px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.12);
+  --color-surface: #ffffff;
+  --color-text: #18181b;
+  --color-border: #71717a;
+  --color-accent: #1d4ed8;
+  --color-on-accent: #ffffff;
+  --color-danger: #b91c1c;
+  --color-on-danger: #ffffff;
+}
+
+@layer theme {
+  [data-theme="dark"],
+  :host([data-theme="dark"]) {
+    color-scheme: dark;
+    --color-surface: #18181b;
+    --color-text: #fafafa;
+    --color-border: #a1a1aa;
+    --color-accent: #60a5fa;
+    --color-on-accent: #0b1220;
+    --color-danger: #f87171;
+    --color-on-danger: #1a0505;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]),
+    :host(:not([data-theme])) {
+      color-scheme: dark;
+      --color-surface: #18181b;
+      --color-text: #fafafa;
+      --color-border: #a1a1aa;
+      --color-accent: #60a5fa;
+      --color-on-accent: #0b1220;
+      --color-danger: #f87171;
+      --color-on-danger: #1a0505;
+    }
+  }
+}
+
+@layer base {
+  html,
+  :host {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+}
