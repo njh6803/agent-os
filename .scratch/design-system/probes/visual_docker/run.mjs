@@ -392,8 +392,10 @@ function decoderAgrees(buffer, decoded) {
   return other.width === decoded.width && other.height === decoded.height && Buffer.compare(other.data, decoded.rgba) === 0;
 }
 
+// 실패한 실행은 결과 파일을 남기지 않는다. 그 실행은 null 로 두고 뒤의 비교가 건너뛰어, result.json 은 언제나 쓰인다.
 function readRun(label, scheme) {
-  return JSON.parse(readFileSync(join(work, "out", label, `run-${scheme}.json`), "utf-8"));
+  const path = join(work, "out", label, `run-${scheme}.json`);
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) : null;
 }
 
 // 사진 좌표계로 옮긴 글자 사각형(1px 넓힘)과 영역 상자
@@ -558,10 +560,14 @@ for (const pair of PAIRS) {
   const name = pair.join("-");
   comparisons[name] = {};
   for (const scheme of SCHEMES) {
-    comparisons[name][scheme] = {
-      widths: compareWidths(pair, scheme),
-      shots: SHOTS.map((shot) => compareShot(pair, scheme, shot, facts[scheme])),
-    };
+    const missing = pair.filter((label) => facts[scheme][label] === null);
+    comparisons[name][scheme] =
+      missing.length > 0
+        ? { skipped: `실행 결과 없음: ${missing.join(", ")}` }
+        : {
+            widths: compareWidths(pair, scheme),
+            shots: SHOTS.map((shot) => compareShot(pair, scheme, shot, facts[scheme])),
+          };
   }
 }
 
@@ -569,7 +575,7 @@ const toHaveScreenshot = {};
 for (const run of runs.filter((item) => item.mode === "compare")) {
   toHaveScreenshot[run.label] = {};
   for (const scheme of SCHEMES) {
-    for (const check of facts[scheme][run.label].checks) {
+    for (const check of facts[scheme][run.label]?.checks ?? []) {
       const bucket = (toHaveScreenshot[run.label][check.variant] ??= { pass: 0, fail: 0, failures: [] });
       if (check.pass) {
         bucket.pass += 1;
@@ -584,23 +590,27 @@ for (const run of runs.filter((item) => item.mode === "compare")) {
 // run-*.json 에서 판정에 쓰는 사실만 옮긴다(글자 사각형 같은 큰 재료는 out/ 의 원본에 있다)
 const runFacts = Object.fromEntries(
   runs.map((run) => {
-    const light = facts.light[run.label];
+    const any = SCHEMES.map((scheme) => facts[scheme][run.label]).find((item) => item !== null);
+    if (any === undefined) {
+      return [run.label, { ...run, result: "없음" }];
+    }
+    const per = (pick) => Object.fromEntries(SCHEMES.map((scheme) => [scheme, facts[scheme][run.label] === null ? null : pick(facts[scheme][run.label])]));
     return [
       run.label,
       {
         ...run,
-        platform: light.platform,
-        node: light.node,
-        packages: light.packages,
-        browser: light.browser,
-        executablePath: light.executablePath,
-        browsersPath: light.browsersPath,
-        linux: light.linux,
-        documentSize: Object.fromEntries(SCHEMES.map((scheme) => [scheme, facts[scheme][run.label].geometry.documentSize])),
-        focus: Object.fromEntries(SCHEMES.map((scheme) => [scheme, facts[scheme][run.label].focus])),
-        external: SCHEMES.flatMap((scheme) => facts[scheme][run.label].external),
-        platformFonts: Object.fromEntries(SCHEMES.map((scheme) => [scheme, facts[scheme][run.label].platformFonts])),
-        timing: Object.fromEntries(SCHEMES.map((scheme) => [scheme, facts[scheme][run.label].timing])),
+        platform: any.platform,
+        node: any.node,
+        packages: any.packages,
+        browser: any.browser,
+        executablePath: any.executablePath,
+        browsersPath: any.browsersPath,
+        linux: any.linux,
+        documentSize: per((item) => item.geometry.documentSize),
+        focus: per((item) => item.focus),
+        external: SCHEMES.flatMap((scheme) => facts[scheme][run.label]?.external ?? []),
+        platformFonts: per((item) => item.platformFonts),
+        timing: per((item) => item.timing),
       },
     ];
   }),
@@ -629,12 +639,21 @@ if (pulled !== null) {
 }
 console.log(`packages ${JSON.stringify(prepared.packages)} native=${String(prepared.nativeFiles.length)}`);
 for (const [label, run] of Object.entries(runFacts)) {
+  if (run.result === "없음") {
+    console.log(`${label} 결과 없음 status=${String(run.status)}`);
+    continue;
+  }
   console.log(`${label} ${run.browser.product} ${run.platform} node=${run.node} exe=${run.executablePath}`);
   console.log(`  fonts ${JSON.stringify(run.platformFonts.light)}`);
   console.log(`  size ${JSON.stringify(run.documentSize)} focus ${JSON.stringify(run.focus.light)} external=${String(run.external.length)}`);
 }
 for (const [name, byScheme] of Object.entries(comparisons)) {
-  for (const [scheme, { widths, shots }] of Object.entries(byScheme)) {
+  for (const [scheme, compared] of Object.entries(byScheme)) {
+    if ("skipped" in compared) {
+      console.log(`${name} ${scheme} 건너뜀 (${compared.skipped})`);
+      continue;
+    }
+    const { widths, shots } = compared;
     const moved = Object.entries(widths).filter(([, item]) => item.textDelta !== 0 || item.boxDelta !== 0);
     console.log(
       `${name} ${scheme} widths ${moved.length === 0 ? "같다" : moved.map(([selector, item]) => `${selector} text ${item.text.join("→")} box ${item.box.join("→")}`).join("; ")}`,

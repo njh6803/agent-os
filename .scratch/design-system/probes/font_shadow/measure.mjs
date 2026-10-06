@@ -119,8 +119,13 @@ function listen(server, from) {
         fail(new Error("8890~8899 에 빈 포트가 없다"));
         return;
       }
-      server.once("error", () => attempt(port + 1));
-      server.listen(port, HOST, () => ok(port));
+      // 포트를 잡은 뒤에는 이 시도의 리스너를 걷는다. 남겨 두면 나중의 서버 오류가 재시도를 부른다.
+      const onError = () => attempt(port + 1);
+      server.once("error", onError);
+      server.listen(port, HOST, () => {
+        server.off("error", onError);
+        ok(port);
+      });
     };
     attempt(from);
   });
