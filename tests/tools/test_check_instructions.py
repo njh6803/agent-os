@@ -33,6 +33,7 @@ from tools.check_instructions import (
     skills_with_sentinel_not_listed,
     text_stdin_lines,
 )
+from tools.run_hooks import REPO_LOCATION_VARS
 
 
 def _사본을_만든다(root: Path, *, 센티널을_넣을_스킬: Container[str]) -> None:
@@ -165,6 +166,12 @@ def test_이_저장소의_훅은_지금_작업_디렉터리에_묶이지_않는�
 # 워크트리 감사 8).
 
 
+# 실제 훅 항목 하나를 든 local 설정. 이벤트 이름만 있고 항목이 없으면 가드가 아니다.
+_훅_하나: dict[str, object] = {
+    "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo x"}]}]}
+}
+
+
 def _local_설정을_쓴다(root: Path, 설정: dict[str, object]) -> None:
     path = root / ".claude" / "settings.local.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,7 +194,7 @@ def test_local_설정의_deny_와_ask_를_잡는다(tmp_path: Path) -> None:
 
 
 def test_local_설정의_hooks_를_잡는다(tmp_path: Path) -> None:
-    _local_설정을_쓴다(tmp_path, {"hooks": {"Stop": []}})
+    _local_설정을_쓴다(tmp_path, _훅_하나)
 
     problems = local_settings_with_guards(tmp_path)
 
@@ -201,11 +208,37 @@ def test_local_설정에_allow_만_있으면_문제가_없다(tmp_path: Path) ->
     assert local_settings_with_guards(tmp_path) == []
 
 
-def test_빈_가드_목록은_가드가_아니다(tmp_path: Path) -> None:
-    """빠져도 잃는 것이 없다. 잡으면 거짓 양성으로 커밋을 막는다."""
-    _local_설정을_쓴다(tmp_path, {"permissions": {"deny": [], "ask": []}, "hooks": {}})
+# 이벤트 이름은 있어도 실제 훅 항목이 없는 모양들. 가드가 아니다.
+_빈_훅들: tuple[dict[str, object], ...] = ({}, {"Stop": []}, {"Stop": [{"hooks": []}]})
 
-    assert local_settings_with_guards(tmp_path) == []
+
+def test_빈_가드_목록은_가드가_아니다(tmp_path: Path) -> None:
+    """빠져도 잃는 것이 없다. 잡으면 거짓 양성으로 커밋을 막는다. 훅은 이벤트 이름이 아니라 실제
+    훅 항목이 있어야 가드다(PR #138 CodeRabbit)."""
+    for hooks in _빈_훅들:
+        _local_설정을_쓴다(tmp_path, {"permissions": {"deny": [], "ask": []}, "hooks": hooks})
+
+        assert local_settings_with_guards(tmp_path) == [], hooks
+
+
+def test_깨진_local_설정은_트레이스백이_아니라_문제로_낸다(tmp_path: Path) -> None:
+    """주 체크아웃의 local 까지 읽으므로 깨진 파일 하나가 예외로 모든 커밋을 막으면 원인을 찾기
+    어렵다(PR #138 claude-review). 다른 검사처럼 경로와 함께 문제로 돌려준다."""
+    path = tmp_path / ".claude" / "settings.local.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{not json", encoding="utf-8")
+
+    problems = local_settings_with_guards(tmp_path)
+
+    assert len(problems) == 1
+    assert ".claude/settings.local.json" in problems[0]
+    assert "읽을 수 없다" in problems[0]
+
+
+def test_GIT_접두사를_벗기면_저장소_위치_변수를_모두_벗긴다() -> None:
+    """`_main_checkout` 은 스크립트로 돌아 `REPO_LOCATION_VARS` 를 import 하지 못하고 `GIT_`
+    접두사로 벗긴다. 두 목록이 갈리지 않게 여기서 잰다(PR #138 claude-review)."""
+    assert all(name.startswith("GIT_") for name in REPO_LOCATION_VARS)
 
 
 def test_local_설정이_없으면_문제가_없다(tmp_path: Path) -> None:
@@ -232,7 +265,7 @@ def test_워크트리에서는_주_체크아웃의_local_가드도_잡는다(tmp
         *("commit", "-q", "--allow-empty", "-m", "x"),
     )
     _git(main, "worktree", "add", "-q", str(tmp_path / "wt"))
-    _local_설정을_쓴다(main, {"hooks": {"Stop": [{"hooks": []}]}})
+    _local_설정을_쓴다(main, _훅_하나)
 
     problems = local_settings_with_guards(tmp_path / "wt")
 
