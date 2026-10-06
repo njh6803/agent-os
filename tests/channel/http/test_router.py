@@ -36,6 +36,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
 
+from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
     ChatModel,
     Clock,
@@ -94,8 +95,11 @@ T0 = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
 TERMINAL = frozenset({"run_finished", "run_failed", "run_paused"})
 
 # 받는 쪽을 막아 둔 사이에 실행이 내는 이벤트 수. FastAPI 와 미들웨어 사이의 버퍼보다 훨씬 커서,
-# 크기가 제한된 큐에 기다리며 넣는 구현이면 실행이 그 큐 앞에서 멈춘다.
+# 크기가 제한된 큐에 기다리며 넣는 구현이면 실행이 그 큐 앞에서 멈춘다. 백로그 상한보다는 작아
+# 받는 쪽은 결국 전부 받는다.
 BURST = 100
+# 백로그 상한을 넘기는 이벤트 수(end-user-channel 티켓 02).
+FLOOD = BACKLOG_FRAMES + 100
 
 # 실행 타임아웃(초)과 그것이 끊은 실행의 메시지. 걸리는 사례는 이만큼 실제로 기다린다.
 TIMEOUT = 0.05
@@ -151,6 +155,18 @@ class ChattyAgent:
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
 
 
+class FloodingAgent:
+    """모델의 답을 받은 뒤 백로그 상한보다 많은 이벤트를 쉬지 않고 내고, 모델에게 한 번 더 물은 뒤
+    끝낸다. 막힌 받는 쪽을 넘치게 하고, 둘째 물음이 넘친 뒤에도 실행이 돌고 있는 동안을 만든다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        answer = await ctx.llm(request)
+        for index in range(FLOOD):
+            yield ToolCalled(run_id=ctx.run_id, ts=ctx.now(), tool=f"note-{index}", ok=True)
+        await ctx.llm(request)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
+
+
 class ToolAgent:
     """모델을 거치지 않고 add 를 직접 부른다. 매니페스트가 그것을 승인 대상으로 두면 멈춘다."""
 
@@ -164,6 +180,7 @@ class ToolAgent:
 ECHO = _agent("echo")
 ASKING = _agent("asking")
 CHATTY = _agent("chatty")
+FLOODING = _agent("flooding")
 ADDING = _agent("adding", mcp=["calc-server"])
 GATED = _agent("gated", mcp=["calc-server"], requires_approval=["add"])
 GATED_ASKING = _agent("gated-asking", mcp=["calc-server"], requires_approval=["add"])
@@ -177,6 +194,7 @@ AGENTS: Mapping[str, BaseAgent] = {
     "echo": EchoAgent(),
     "asking": AskingAgent(),
     "chatty": ChattyAgent(),
+    "flooding": FloodingAgent(),
     "adding": ToolAgent(),
     "gated": ToolAgent(),
     "gated-asking": AskingAgent(),
@@ -202,7 +220,7 @@ class FakePlugins:
 
     def __init__(self) -> None:
         manifests = (
-            *(ECHO, ASKING, CHATTY, ADDING, GATED, GATED_ASKING, CAREFUL),
+            *(ECHO, ASKING, CHATTY, FLOODING, ADDING, GATED, GATED_ASKING, CAREFUL),
             *(GHOSTLY, LEAKY, UNLOADABLE),
         )
         self._manifests = {(m.kind, m.name): m for m in (*manifests, CALC_SERVER, SECRET_SERVER)}
@@ -430,9 +448,12 @@ class GatedModel(GenericFakeChatModel):
         return self._generate(messages, stop, None, **kwargs)
 
 
-def _gated_model(answer: str = "4") -> GatedModel:
+def _gated_model(answer: str = "4", *, answers: int = 1) -> GatedModel:
+    """문이 열리면 같은 답을 `answers` 번 한다."""
     return GatedModel(
-        messages=iter([AIMessage(content=answer)]), gate=asyncio.Event(), waiting=asyncio.Event()
+        messages=iter([AIMessage(content=answer)] * answers),
+        gate=asyncio.Event(),
+        waiting=asyncio.Event(),
     )
 
 
@@ -489,6 +510,7 @@ def _app(
         channel_token=CHANNEL_TOKEN,
         sites=Sites(),
         run_timeout_seconds=run_timeout_seconds,
+        end_user_concurrent_runs=None,
         stderr=stderr or io.StringIO(),
     )
 
@@ -1675,6 +1697,40 @@ async def test_받는_쪽이_느려도_실행은_기다리지_않고_끝까지_�
 
     assert wire.frames() == trace.lines
     assert len(trace.lines) == BURST + 3
+
+
+async def test_받는_쪽이_백로그_상한만큼_뒤처지면_그_연결만_닫히고_실행은_끝까지_간다() -> None:
+    """연결마다 쌓이는 프레임은 1,000 까지다(ADR 0023, end-user-channel 티켓 02). 넘으면 그 흐름을
+    닫는다. 운영자는 결말 없이 끝난 스트림을 보고 트레이스로 이어 본다. 실행은 받는 쪽을 기다리지
+    않는다. 받는 쪽을 막아 둔 채 실행이 넘치게 내고 모델 앞에 다시 서면, 풀어 준 응답은 실행이
+    끝나기 전에 끝난다 — 넘친 이벤트만 버리고 흐름을 남기는 구현이면 끝나지 않고 결말까지 받는다.
+    막힌 응답이 받은 것은 상한만큼과 응답의 태스크들이 이미 쥐고 있던 몇이다."""
+    model = _gated_model(answers=2)
+    trace = FakeTrace()
+    app = _app(model=model, trace=trace)
+    wire = _Wire(_start("flooding"))
+
+    async with _lifespan(app):
+        call = asyncio.create_task(app(_scope(), wire.receive, wire.send))
+        await _until(lambda: wire.frames() != [])
+        await _until(model.waiting.is_set)
+        wire.hold()
+        model.waiting.clear()
+        model.gate.set()
+        model.gate.clear()
+        await _until(model.waiting.is_set)
+        wire.release()
+        async with asyncio.timeout(5):
+            await call
+        cut_while_running = trace.status(RunId("run-1")) == "unfinished"
+        model.gate.set()
+        await _until(lambda: trace.status(RunId("run-1")) == "finished")
+
+    received = _types(wire.frames())
+    assert cut_while_running
+    assert len(trace.lines) == FLOOD + 4
+    assert "run_finished" not in received
+    assert BACKLOG_FRAMES < len(received) <= BACKLOG_FRAMES + 10
 
 
 async def test_서버가_멈추면_떠난_실행은_기다리지_않고_취소되어_결말_없음이다() -> None:

@@ -1,0 +1,535 @@
+# 티켓 02(상한·백로그)의 변이 표. 구현 뒤에 쓴 테스트와 구현 없이도 초록이던 가드(정수가 아닌 전역
+# 상한의 인자 오류 — 모르는 인자도 종료 코드 2 다)가 빨강을 볼 수 있는지 잰다. 셈(동시 실행의 세
+# 범위, 결정, 시간당 창의 경계와 올림), 칸의 반환(실행 전 실패, 앱 종료, 반환과 흐름 닫기 사이),
+# 구독 수(세는 자리, 줄이는 자리), 요청 글자 수, 백로그(크기, 넘친 흐름 닫기), 공용 층의 헤더,
+# `serve` 의 배선이다. 가드 하나에 변이 하나를 따로 겨눈다 — `-k` 가 여럿을 고르면 하나만 빨개도
+# 빨강이라 나머지가 재지 않은 채 지나간다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-channel/probes/limits_mutations.toml
+
+# --- 셈 --------------------------------------------------------------------------------
+
+[[mutation]]
+name = "전역 동시 실행을 세지 않음"
+tests = ["tests/channel/http/test_end_user.py", "-k", "전역_동시_실행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+            ("전역", len(self._seats), self._concurrent_runs),
+'''
+new = '''
+            ("전역", 0, self._concurrent_runs),
+'''
+
+[[mutation]]
+name = "사이트별 동시 실행을 주체로 셈"
+tests = ["tests/channel/http/test_end_user.py", "-k", "사이트별_동시_실행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+                sum(1 for seat in self._seats if seat.issuer == issuer),
+'''
+new = '''
+                sum(1 for seat in self._seats if seat.principal == user.principal),
+'''
+
+[[mutation]]
+name = "결정은 칸을 차지하지 않음"
+tests = ["tests/channel/http/test_end_user.py", "-k", "결정도_동시_실행의_칸을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            first_index=decision.pause_index + 1,
+            end_user=user,
+'''
+new = '''
+            first_index=decision.pause_index + 1,
+            end_user=None,
+'''
+
+[[mutation]]
+name = "결정은 시간당 셈에 들지 않음"
+tests = ["tests/channel/http/test_end_user.py", "-k", "사이트별_시간당_실행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            first_index=decision.pause_index + 1,
+            end_user=user,
+'''
+new = '''
+            first_index=decision.pause_index + 1,
+            end_user=None,
+'''
+
+[[mutation]]
+name = "창의 경계를 열린 구간으로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "주체별_시간당_실행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+            while times and times[0] <= cutoff:
+'''
+new = '''
+            while times and times[0] < cutoff:
+'''
+
+[[mutation]]
+name = "Retry-After 를 버림으로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "주체별_시간당_실행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+    return max(1, math.ceil(seconds))
+'''
+new = '''
+    return max(1, math.floor(seconds))
+'''
+
+[[mutation]]
+name = "기본 주체별 시간당 실행을 61 로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "기본값_60이다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+DEFAULT_HOURLY_RUNS_PER_PRINCIPAL = 60
+'''
+new = '''
+DEFAULT_HOURLY_RUNS_PER_PRINCIPAL = 61
+'''
+
+[[mutation]]
+name = "상한 기록에 주체를 실음"
+tests = ["tests/channel/http/test_end_user.py", "-k", "주체별_동시_실행은_둘이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+                return _exceeded(
+                    Limit.CONCURRENT_RUNS, scope, limit, issuer, BUSY_RETRY_AFTER_SECONDS
+                )
+'''
+new = '''
+                return _exceeded(
+                    Limit.CONCURRENT_RUNS, scope, limit, user.principal, BUSY_RETRY_AFTER_SECONDS
+                )
+'''
+
+# --- 요청 글자 수 ------------------------------------------------------------------------
+
+[[mutation]]
+name = "글자 수를 UTF-8 바이트로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "코드_포인트로_세고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+    if len(request) <= limit:
+'''
+new = '''
+    if len(request.encode("utf-8")) <= limit:
+'''
+
+[[mutation]]
+name = "글자 수의 경계를 미만으로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "기본값_20000자다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+    if len(request) <= limit:
+'''
+new = '''
+    if len(request) < limit:
+'''
+
+# --- 칸의 반환 ---------------------------------------------------------------------------
+
+[[mutation]]
+name = "등록부에 단 실행만 칸을 돌려줌 — 실행 전 실패"
+tests = ["tests/channel/http/test_end_user.py", "-k", "실행_전_실패와_결말은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+            finally:
+                if self._live.get(first.run_id) is live:
+                    del self._live[first.run_id]
+        finally:
+            if seat is not None:
+                self._quota.give_back(seat)
+            live.close()
+'''
+new = '''
+            finally:
+                if self._live.get(first.run_id) is live:
+                    del self._live[first.run_id]
+                if seat is not None:
+                    self._quota.give_back(seat)
+        finally:
+            live.close()
+'''
+
+[[mutation]]
+name = "정상 종료에서만 칸을 돌려줌 — 앱 종료의 취소"
+tests = ["tests/channel/http/test_end_user.py", "-k", "앱이_멈추며_취소한_실행도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+                await _offer_all(first, events, live, first_index)
+'''
+new = '''
+                await _offer_all(first, events, live, first_index)
+                if seat is not None:
+                    self._quota.give_back(seat)
+                    seat = None
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+        finally:
+            if seat is not None:
+                self._quota.give_back(seat)
+            live.close()
+'''
+new = '''
+        finally:
+            if seat is not None and failure.error is not None:
+                self._quota.give_back(seat)
+            live.close()
+'''
+
+# 이 변이가 재는 것은 "await 가 없다"가 아니라 "흐름이 닫힌 뒤 칸이 늦게 돌아오지 않는다"다. 그 사이의
+# `sleep(0)` 하나는 끝을 본 받는 쪽의 응답이 몇 태스크를 지나 닫히는 동안 칸이 돌아와 초록일 수 있어,
+# 늦음이 바깥에 보이도록 0.2초를 잔다.
+[[mutation]]
+name = "흐름을 닫은 뒤 await 하고 칸을 돌려줌"
+tests = ["tests/channel/http/test_end_user.py", "-k", "연결이_끊겨도_칸은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+        finally:
+            if seat is not None:
+                self._quota.give_back(seat)
+            live.close()
+'''
+new = '''
+        finally:
+            live.close()
+            await anyio.sleep(0.2)
+            if seat is not None:
+                self._quota.give_back(seat)
+'''
+
+# --- 구독 수 -----------------------------------------------------------------------------
+
+[[mutation]]
+name = "구독 수를 줄이지 않음"
+tests = ["tests/channel/http/test_end_user.py", "-k", "주체별_구독은_넷까지"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        finally:
+            subscriptions.give_back(seat)
+'''
+new = '''
+        finally:
+            pass
+'''
+
+# 옛 모양은 칸을 응답의 제너레이터가 돌려준다. 라우트는 의존성의 칸을 받지 못하므로 같은 주체의 칸을
+# 새로 지어 돌려준다(`give_back` 은 주체만 본다).
+[[mutation]]
+name = "구독 수를 응답의 제너레이터에서 줄임(옛 모양)"
+tests = ["tests/channel/http/test_end_user.py", "-k", "응답이_막힌_채_떠난_구독도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        seat = subscriptions.take(user)
+        try:
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+            try:
+                yield subscribed
+            finally:
+                subscribed.close()
+        finally:
+            subscriptions.give_back(seat)
+'''
+new = '''
+        seat = subscriptions.take(user)
+        try:
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+        except BaseException:
+            subscriptions.give_back(seat)
+            raise
+        try:
+            yield subscribed
+        finally:
+            subscribed.close()
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+    async def subscribe_end_user_run(
+        subscribed: Annotated[_Subscription, Depends(subscription)],
+    ) -> AsyncIterator[EndUserItem | SkipJsonSchema[ServerSentEvent]]:
+        async for frame in subscribed.frames():
+            yield frame
+'''
+new = '''
+    async def subscribe_end_user_run(
+        subscribed: Annotated[_Subscription, Depends(subscription)],
+        request: Request,
+    ) -> AsyncIterator[EndUserItem | SkipJsonSchema[ServerSentEvent]]:
+        try:
+            async for frame in subscribed.frames():
+                yield frame
+        finally:
+            user = _signed_in(request)
+            subscriptions.give_back(Seat(principal=user.principal, issuer=user.site.issuer))
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+    DEFAULT_REQUEST_CHARS,
+    SubscriptionQuota,
+'''
+new = '''
+    DEFAULT_REQUEST_CHARS,
+    Seat,
+    SubscriptionQuota,
+'''
+
+[[mutation]]
+name = "구독 수를 자기 실행 읽기 뒤에 셈"
+tests = ["tests/channel/http/test_end_user.py", "-k", "주체별_구독은_넷까지"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        seat = subscriptions.take(user)
+        try:
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+            try:
+'''
+new = '''
+        first_step(user, RunId(run_id), last_event_id)
+        seat = subscriptions.take(user)
+        try:
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+            try:
+'''
+
+# --- 백로그 ------------------------------------------------------------------------------
+
+[[mutation]]
+name = "백로그를 열 배로 — 최종 사용자"
+tests = ["tests/channel/http/test_end_user.py", "-k", "백로그_상한에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+        send, receive = anyio.create_memory_object_stream[Indexed](BACKLOG_FRAMES)
+'''
+new = '''
+        send, receive = anyio.create_memory_object_stream[Indexed](BACKLOG_FRAMES * 10)
+'''
+
+[[mutation]]
+name = "백로그를 열 배로 — 운영자 채널"
+tests = ["tests/channel/http/test_router.py", "-k", "백로그_상한만큼"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+        send, receive = anyio.create_memory_object_stream[Indexed](BACKLOG_FRAMES)
+'''
+new = '''
+        send, receive = anyio.create_memory_object_stream[Indexed](BACKLOG_FRAMES * 10)
+'''
+
+[[mutation]]
+name = "넘친 흐름을 닫지 않고 그 이벤트만 버림 — 최종 사용자"
+tests = ["tests/channel/http/test_end_user.py", "-k", "백로그_상한에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+            except (anyio.BrokenResourceError, anyio.WouldBlock):
+'''
+new = '''
+            except anyio.WouldBlock:
+                continue
+            except anyio.BrokenResourceError:
+'''
+
+[[mutation]]
+name = "넘친 흐름을 닫지 않고 그 이벤트만 버림"
+tests = ["tests/channel/http/test_router.py", "-k", "백로그_상한만큼"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/runs.py"
+old = '''
+            except (anyio.BrokenResourceError, anyio.WouldBlock):
+'''
+new = '''
+            except anyio.WouldBlock:
+                continue
+            except anyio.BrokenResourceError:
+'''
+
+# --- 공용 층 -----------------------------------------------------------------------------
+
+[[mutation]]
+name = "429 에 Retry-After 를 싣지 않음"
+tests = ["tests/test_server.py", "-k", "상한_초과는_429와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+                headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
+'''
+new = '''
+                headers=None,
+'''
+
+[[mutation]]
+name = "429 에 Retry-After 를 싣지 않음 — CORS 의 429 행"
+tests = ["tests/channel/http/test_end_user.py", "-k", "CORS_헤더_셋을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+                headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
+'''
+new = '''
+                headers=None,
+'''
+
+# --- serve ------------------------------------------------------------------------------
+
+[[mutation]]
+name = "사이트 파일의 상한 표를 넘기지 않음"
+tests = ["tests/test_main.py", "-k", "상한_표가_세운_앱의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+                limits=entry.limits.to_site_limits(),
+'''
+new = '''
+                limits=SiteLimits(),
+'''
+
+# 매개변수의 이름(`상한 0`)은 노드 식별자에서 이스케이프되어 `-k` 로 고를 수 없다. 사례 전부를 고르되
+# 이 변이가 건드리는 것은 그 사례 하나다.
+[[mutation]]
+name = "상한 표의 두 키를 엇갈려 옮김"
+tests = ["tests/test_main.py", "-k", "상한_표_여섯은_엇갈리지_않고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            concurrent_runs_per_site=self.concurrent_runs_per_site,
+            hourly_runs_per_site=self.hourly_runs_per_site,
+'''
+new = '''
+            concurrent_runs_per_site=self.hourly_runs_per_site,
+            hourly_runs_per_site=self.concurrent_runs_per_site,
+'''
+
+[[mutation]]
+name = "상한 표의 0 을 받음"
+tests = ["tests/test_main.py", "-k", "사이트_파일의_구성_오류는_서버가_서기_전에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    request_chars: int | None = Field(default=None, ge=1)
+'''
+new = '''
+    request_chars: int | None = Field(default=None, ge=0)
+'''
+
+[[mutation]]
+name = "전역 상한 인자를 앱에 넘기지 않음"
+tests = ["tests/test_main.py", "-k", "전역_동시_실행_상한이_세운_앱의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            end_user_concurrent_runs=args.end_user_concurrent_runs,
+'''
+new = '''
+            end_user_concurrent_runs=None,
+'''
+
+[[mutation]]
+name = "0 이하의 전역 상한을 진단하지 않음"
+tests = ["tests/test_main.py", "-k", "0_이하의_전역_동시_실행_상한은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if args.end_user_concurrent_runs is not None and args.end_user_concurrent_runs <= 0:
+'''
+new = '''
+    if args.end_user_concurrent_runs is not None and args.end_user_concurrent_runs < 0:
+'''
+
+[[mutation]]
+name = "전역 상한 인자를 실수로 받음"
+tests = ["tests/test_main.py", "-k", "정수가_아닌_전역_동시_실행_상한은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"동시 실행 상한은 정수다. 받은 값: {value}") from None
+'''
+new = '''
+        return int(float(value))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"동시 실행 상한은 정수다. 받은 값: {value}") from None
+'''

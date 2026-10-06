@@ -270,5 +270,7 @@ _Avoid_: 테마(여러 벌의 이름), 명암, 색 구성표, 외관
 | `plan` | 무엇을 할지 정하고 아무것도 하지 않는다. 할 것이 없으면 None | `plan_fold` |
 | `<명사>_of` | 이미 손에 든 값에서 파생한다. 포트에 닿지 않는다 | `link_of`, `limit_of` |
 | `summarize` | 모델을 불러 대화 요약을 만든다. 명령이고 실패는 예외다 | `summarize` |
+| `take` | 상한을 보고 자리 하나를 차지한다. 명령이고, 걸리면 상한 초과를 던지며, 차지한 자리를 돌려준다 — 그것을 버리면 자리가 샌다 | `RunQuota.take`, `SubscriptionQuota.take` |
+| `give_back` | `take`가 준 자리를 돌려준다. 명령이고 자리 하나에 꼭 한 번이다 | `RunQuota.give_back`, `SubscriptionQuota.give_back` |
 
 명사구 이름(`resumed_conversation`, `NEW_CONVERSATION`)은 돌려주는 값을 말하는 것이라 이 표 밖이다. 포트를 여러 번 읽는 것은 `gather`와 같지만 재개가 받는 값의 이름을 앞에 둔다.

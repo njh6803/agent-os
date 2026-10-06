@@ -70,6 +70,7 @@ def channel_router(
     clock: Clock,
     principal: Principal,
     run_timeout_seconds: float | None,
+    end_user_concurrent_runs: int | None,
     stderr: TextIO,
 ) -> APIRouter:
     """채널 라우터. 실행을 소유하는 수명을 들고 있어 앱에 붙으면 그 수명이 앱의 수명에 합쳐진다.
@@ -81,8 +82,11 @@ def channel_router(
     포트는 조립 층이 만들어 넘기고 라우터는 받은 것만 쓴다(ADR 0010). 트레이스 포트는 관리 라우터와
     같은 것이라 채널에서 일으킨 실행이 같은 앱의 관리 API 에 바로 보인다. 운영자 채널의 주체는
     조립이 넘긴 것이고, 최종 사용자 면의 주체는 요청마다 서명 토큰이 정한다.
+
+    전역 동시 실행 상한은 최종 사용자 경로의 칸을 세는 등록부가 받는다. 없음은 채널의 기본값이다
+    (`limits`). 운영자 채널의 실행은 칸을 차지하지 않는다(ADR 0023).
     """
-    runs = Runs(stderr=stderr)
+    runs = Runs(stderr=stderr, clock=clock, end_user_concurrent_runs=end_user_concurrent_runs)
     router = APIRouter(lifespan=runs.lifespan)
     router.include_router(
         _operator_router(
@@ -121,7 +125,11 @@ def _operator_router(
     principal: Principal,
     run_timeout_seconds: float | None,
 ) -> APIRouter:
-    """운영자 채널의 라우터. 채널 토큰이 열고 원문 이벤트와 원문 에러를 싣는다(ADR 0023)."""
+    """운영자 채널의 라우터. 채널 토큰이 열고 원문 이벤트와 원문 에러를 싣는다(ADR 0023).
+
+    상한이 없다 — 실행은 등록부의 칸을 차지하지 않고 429 를 내지 않는다(ADR 0023). 연결마다의
+    백로그(`runs`)만 최종 사용자 면과 같다.
+    """
     router = APIRouter(prefix=CHANNEL_PREFIX, responses=documented_stream_errors(500))
 
     async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
@@ -138,7 +146,9 @@ def _operator_router(
             trace=trace,
             clock=clock,
         )
-        return await runs.start(events, request_id=request_id_of(request), first_index=0)
+        return await runs.start(
+            events, request_id=request_id_of(request), first_index=0, end_user=None
+        )
 
     async def run_stream(body: StartRun, request: Request) -> RunStream:
         """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
@@ -188,7 +198,10 @@ def _operator_router(
             clock=clock,
         )
         return await runs.start(
-            events, request_id=request_id_of(request), first_index=decision.pause_index + 1
+            events,
+            request_id=request_id_of(request),
+            first_index=decision.pause_index + 1,
+            end_user=None,
         )
 
     # 404 는 없는 실행, 409 는 결정을 받을 수 없는 실행이다. 뜻이 다섯이고 메시지가 가른다 — 그

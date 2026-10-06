@@ -25,7 +25,8 @@ src/agent_os/
   channel/cli/     실행을 일으키는 면. run·resume 과 명령 셋의 인자
   channel/http/    실행을 일으키는 면. router(운영자 채널 /runs 와 두 접두사의 조립), end_user(최종 사용자 면
                    /end-user 의 시작·결정·구독), items(최종 사용자 항목과 투영), bodies(두 면의 요청 본문),
-                   runs(실행을 앱의 수명에 묶는 것과 도는 실행의 등록부)
+                   runs(실행을 앱의 수명에 묶는 것과 도는 실행의 등록부, 연결마다의 백로그),
+                   limits(최종 사용자 경로의 상한. 기본값 일곱과 셈)
   admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
   http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 면별 상태 코드 표), routes(에러 문서와 verbatim),
                    auth(fail-closed 인증. 공유 토큰 둘과 사이트가 서명한 토큰), sites(사이트 목록과 서명 토큰 검증),

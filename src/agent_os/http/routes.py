@@ -17,6 +17,7 @@ from agent_os.http.errors import (
     INTERNAL_MESSAGE,
     INVALID_REQUEST_MESSAGE,
     NOT_FOUND_MESSAGE,
+    RETRY_AFTER_HEADER,
     UNAUTHORIZED_MESSAGE,
     ErrorEnvelope,
 )
@@ -42,7 +43,7 @@ _DOCUMENTED_ERRORS: Mapping[int, str] = {
 # 정수 하나이고 하한은 설명에 적는다 — `minimum` 을 두면 FastAPI 가 계약을 pydantic 모델로 다시
 # 읽으며 라우트 하나에서만 `1.0` 으로 바꿔 같은 헤더가 라우트마다 다르게 실렸다.
 _DOCUMENTED_HEADERS: Mapping[int, Mapping[str, str]] = {
-    429: {"Retry-After": "다시 보내도 되기까지의 초. 1 이상의 정수다"},
+    429: {RETRY_AFTER_HEADER: "다시 보내도 되기까지의 초. 1 이상의 정수다"},
 }
 
 
