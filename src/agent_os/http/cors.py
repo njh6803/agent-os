@@ -33,11 +33,12 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from agent_os.http.errors import REQUEST_ID_HEADER
 from agent_os.http.paths import is_under
 
-# 값은 명세가 정했다. 메서드는 최종 사용자 면의 경로 셋이 쓰는 둘과 preflight 의 `OPTIONS` 이고,
-# 헤더는 서명 토큰과 JSON 본문과 구독의 재개 지점이다. 라이브러리가 CORS 안전 목록 헤더
-# (`Accept`·`Accept-Language`·`Content-Language`)를 늘 더하므로 preflight 가 허용하는 헤더는 이
-# 셋보다 넓다. 노출 헤더는 429 의 기다릴 초와, 위젯이 운영자에게 건넬 추적 식별자다. 쿠키를 쓰지
-# 않으므로 자격 증명은 허용하지 않고, `max_age` 는 라이브러리 기본값이다.
+# 값은 명세가 정했다(`.scratch/end-user-channel/spec.md` 의 "CORS"). 메서드는 최종 사용자 면의
+# 경로 셋이 쓰는 둘과 preflight 의 `OPTIONS` 이고, 헤더는 서명 토큰과 JSON 본문과 구독의 재개
+# 지점이다. 라이브러리가 CORS 안전 목록 헤더(`Accept`·`Accept-Language`·`Content-Language`)를 늘
+# 더하므로 preflight 가 허용하는 헤더는 이 셋보다 넓다. 노출 헤더는 429 의 기다릴 초와, 위젯이
+# 운영자에게 건넬 추적 식별자다. 쿠키를 쓰지 않으므로 자격 증명은 허용하지 않고, `max_age` 는
+# 라이브러리 기본값이다.
 ALLOW_METHODS = ("GET", "POST", "OPTIONS")
 ALLOW_HEADERS = ("Authorization", "Content-Type", "Last-Event-ID")
 EXPOSE_HEADERS = ("Retry-After", REQUEST_ID_HEADER)
