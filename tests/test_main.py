@@ -5,6 +5,7 @@
 llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥 이음매다.
 """
 
+import asyncio
 import getpass
 import json
 import os
@@ -28,7 +29,10 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi import FastAPI
 from fastapi.sse import KEEPALIVE_COMMENT
 from httpx import ASGITransport, AsyncClient, Client, Timeout
+from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatResult
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
@@ -1400,6 +1404,116 @@ def test_사이트_파일의_진단도_토큰_진단과_한꺼번에_나온다(
     assert ADMIN_TOKEN_ENV in err
     assert "no-such.toml" in err
     assert uvicorn_calls == []
+
+
+# --- 실행 타임아웃 -----------------------------------------------------------------------
+# `serve --run-timeout SECONDS` 가 실행 하나의 시간을 정한다(end-user-channel 티켓 03). 빼면 core 의
+# 기본값이다 — `serve` 는 기본값을 따로 두지 않는다. 기한의 동작은 core 테스트가 재고, 여기서는
+# 인자가 세운 앱에 닿는 것과 구성 오류를 잰다.
+
+ASKING_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=await ctx.llm(request))
+"""
+
+# 늦은 모델이 답하는 시각(초). 아래 사례의 타임아웃보다 한참 뒤다.
+_LATE = 3.0
+
+
+class _LateModel(GenericFakeChatModel):
+    """답하기 전에 `_LATE` 초를 잔다. 실행 타임아웃이 그 잠을 끊는다."""
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: object,
+    ) -> ChatResult:
+        await asyncio.sleep(_LATE)
+        return self._generate(messages, stop, None, **kwargs)
+
+
+@pytest.fixture
+def late_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`serve` 가 만드는 모델을 늦은 가짜로 바꾼다."""
+
+    def _late(name: str) -> ChatModel:
+        return _LateModel(messages=iter([AIMessage(content="늦은 답")]))
+
+    monkeypatch.setattr(main_module, "anthropic_chat_model", _late)
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["--run-timeout", "1"], "실행이 1초 안에 끝나지 않았다"),
+        ([], "실행이 0.05초 안에 끝나지 않았다"),
+    ],
+    ids=["인자", "core 의 기본값"],
+)
+@pytest.mark.usefixtures("tokens", "late_model")
+async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_빼면_core_의_기본값이다(
+    argv: list[str],
+    expected: str,
+    workspace: Path,
+    uvicorn_calls: list[dict[str, object]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """인자가 `create_app` 을 지나 채널이 core 에 넘긴다는 것을 세운 앱의 답으로 잰다(스토리 46).
+    빼면 `serve` 가 값을 짓지 않고 core 의 기본값이 선다 — 600 이 서는 자리는 하나다(명세 검토).
+    그 시간을 기다리지 않으려고 core 의 상수를 줄인다."""
+    monkeypatch.setattr("agent_os.core.run.DEFAULT_RUN_TIMEOUT_SECONDS", 0.05)
+    _write_plugin(workspace, "asking", ASKING_SRC)
+    main(["serve", "--traces", "t", *argv])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+        asyncio.timeout(_LATE * 2),
+    ):
+        response = await client.post(
+            "/runs", json={"agent": "asking", "request": "hi"}, headers=channel
+        )
+
+    events = _events(response.text)
+    assert [event["type"] for event in events] == ["run_started", "run_failed"]
+    assert events[-1]["error"] == expected
+
+
+@pytest.mark.parametrize("value", ["0", "-5"], ids=["0", "음수"])
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_0_이하의_실행_타임아웃은_서버가_서기_전에_진단과_종료_코드_1이다(
+    value: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """그 값이면 모델이나 도구를 기다리는 실행은 모두 그 자리에서 실패한다. 다른 구성 오류와 같이
+    시작 자리에서 끝난다."""
+    code = main(["serve", "--run-timeout", value])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert f"--run-timeout 은 1 이상의 정수(초)다. 받은 값: {value}" in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.parametrize("value", ["1.5", "abc"], ids=["소수", "글자"])
+def test_정수가_아닌_실행_타임아웃은_인자_오류다(value: str) -> None:
+    """초 단위의 정수만 받는다. 포트처럼 정수가 아닌 값은 argparse 가 막는다(종료 코드 2)."""
+    with pytest.raises(SystemExit) as refused:
+        main(["serve", "--run-timeout", value])
+
+    assert refused.value.code == 2
 
 
 # OS 사용자 이름의 구분자 — `|` 가 든 주체는 언제나 최종 사용자의 것이어야 한다(ADR 0015 이력)

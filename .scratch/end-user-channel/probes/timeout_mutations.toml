@@ -1,0 +1,201 @@
+# 티켓 03(실행 타임아웃)의 변이 표 11개. 구현 전부터 초록이던 가드와 빨강을 한 번만 본 배선이 빨강을 볼 수
+# 있는지 잰다. 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-channel/probes/timeout_mutations.toml
+
+# --- core: 범위와 결말 ---------------------------------------------------------------------
+
+[[mutation]]
+name = "재개가 시작 시각부터 시계 포트로 이어 센다"
+tests = ["tests/core/test_run.py", "-k", "다시_세고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        conversation=resumption.conversation,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+    seconds = _timeout_of(timeout_seconds)
+'''
+new = '''
+        conversation=resumption.conversation,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+    elapsed = (clock.now() - resumption.started.ts).total_seconds()
+    seconds = _timeout_of(timeout_seconds) - elapsed
+'''
+
+[[mutation]]
+name = "시작의 기한이 받은 값이 아니라 0"
+tests = ["tests/core/test_run.py", "-k", "타임아웃_안에_끝나면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        conversation=conversation,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+    seconds = _timeout_of(timeout_seconds)
+'''
+new = '''
+        conversation=conversation,
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+    seconds = 0.0
+'''
+
+[[mutation]]
+name = "결말을 쓴 뒤에도 실패를 덧붙인다"
+tests = ["tests/core/test_run.py", "-k", "결말을_쓴_뒤"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        if self._settled:
+            return None
+'''
+new = '''
+        if False:
+            return None
+'''
+
+[[mutation]]
+name = "돌아오기만 하면 결말로 본다"
+tests = ["tests/core/test_run.py", "-k", "run_finished_없이_돌아온"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+                self._settled = self._paused or isinstance(last, RunFinished)
+'''
+new = '''
+                self._settled = True
+'''
+
+# --- 채널: 받은 값을 core 에 넘기는 네 자리 -----------------------------------------------------
+
+[[mutation]]
+name = "운영자 채널의 시작과 이어 가기가 넘기지 않는다"
+tests = ["tests/channel/http/test_router.py", "-k", "앱이_받은_타임아웃으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+            previous_run=previous_run,
+            timeout_seconds=run_timeout_seconds,
+'''
+new = '''
+            previous_run=previous_run,
+'''
+
+[[mutation]]
+name = "운영자 채널의 결정이 넘기지 않는다"
+tests = ["tests/channel/http/test_router.py", "-k", "앱이_받은_타임아웃으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+            principal,
+            timeout_seconds=run_timeout_seconds,
+'''
+new = '''
+            principal,
+'''
+
+[[mutation]]
+name = "최종 사용자의 시작이 넘기지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "등록부를_떠난다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            body.request,
+            user.principal,
+            visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds,
+'''
+new = '''
+            body.request,
+            user.principal,
+            visible_agents=user.site.agents,
+'''
+
+[[mutation]]
+name = "최종 사용자의 결정이 넘기지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "결정_뒤_시간_안에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            decision.to_core(),
+            user.principal,
+            visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds,
+'''
+new = '''
+            decision.to_core(),
+            user.principal,
+            visible_agents=user.site.agents,
+'''
+
+# --- serve: 인자와 구성 오류 ----------------------------------------------------------------
+
+[[mutation]]
+name = "serve 가 기본값을 따로 짓는다"
+tests = ["tests/test_main.py", "-k", "serve_의_실행_타임아웃"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            run_timeout_seconds=args.run_timeout_seconds,
+'''
+new = '''
+            run_timeout_seconds=args.run_timeout_seconds or DEFAULT_RUN_TIMEOUT_SECONDS,
+'''
+
+[[mutation]]
+name = "0 이하를 막지 않는다"
+tests = ["tests/test_main.py", "-k", "0_이하의_실행_타임아웃"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if args.run_timeout_seconds is not None and args.run_timeout_seconds <= 0:
+'''
+new = '''
+    if args.run_timeout_seconds is not None and args.run_timeout_seconds < 0:
+'''
+
+[[mutation]]
+name = "정수가 아닌 값도 받는다"
+tests = ["tests/test_main.py", "-k", "정수가_아닌_실행_타임아웃"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+        type=_run_timeout,
+'''
+new = '''
+        type=float,
+'''

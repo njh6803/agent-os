@@ -65,6 +65,7 @@ from agent_os.sdk import (
     PluginManifest,
     PluginName,
     Principal,
+    RunFailed,
     RunFinished,
     RunId,
     RunPaused,
@@ -138,6 +139,11 @@ CALC_SERVER = parse_manifest(
 TOOL_RESULT = "도구-결과-원문"
 # 모델에 가는 프롬프트. 어떤 항목에도 실리면 안 된다.
 PROMPT = "모델에-가는-프롬프트"
+# 실행 타임아웃(초)과 그것이 끊은 실행의 메시지. 걸리는 사례는 이만큼 실제로 기다린다.
+TIMEOUT = 0.05
+TIMED_OUT = "실행이 0.05초 안에 끝나지 않았다"
+# 타임아웃이 끊지 않으면 늦은 도구가 돌아오는 시각. `TIMEOUT` 보다 한참 뒤다.
+LATE = 1.0
 
 
 class EchoAgent:
@@ -293,15 +299,31 @@ class FakeConnection:
         return ToolResult(ok=True, content=TOOL_RESULT)
 
 
+class StuckConnection(FakeConnection):
+    """도구 호출이 `LATE` 뒤에야 돌아온다. 실행 타임아웃이 그 호출을 끊는 것을 본다."""
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        await anyio.sleep(LATE)
+        return await super().call(name, args)
+
+
 class ScopedTools:
-    """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다."""
+    """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다. 연결은 붙을 때마다 `connection` 으로
+    새로 만든다."""
+
+    def __init__(
+        self,
+        *,
+        connection: Callable[[Mapping[PluginName, McpServer]], FakeConnection] = FakeConnection,
+    ) -> None:
+        self._connection = connection
 
     @asynccontextmanager
     async def connect(
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
         with anyio.CancelScope():
-            yield FakeConnection(servers)
+            yield self._connection(servers)
 
 
 class GatedModel(GenericFakeChatModel):
@@ -332,19 +354,21 @@ def _app(
     clock: Clock | None = None,
     stderr: io.StringIO | None = None,
     sites: Sites | None = None,
+    tools: ToolSource | None = None,
+    run_timeout_seconds: float | None = None,
 ) -> FastAPI:
     """최종 사용자 경로가 선 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다."""
-    tools: ToolSource = ScopedTools()
     return create_app(
         plugins=plugins or FakePlugins(),
         trace=trace or FakeTrace(),
         model=model or GenericFakeChatModel(messages=iter([AIMessage(content="답")])),
-        tools=tools,
+        tools=tools or ScopedTools(),
         clock=clock or StepClock(),
         principal=OPERATOR,
         admin_token=ADMIN_TOKEN,
         channel_token=CHANNEL_TOKEN,
         sites=sites or _site(),
+        run_timeout_seconds=run_timeout_seconds,
         stderr=stderr or io.StringIO(),
     )
 
@@ -587,6 +611,24 @@ async def test_결정의_응답은_결정_항목부터이고_id_가_pause_index_
         "decision": "approve",
         "reason": None,
     }
+
+
+async def test_결정_뒤_시간_안에_결말이_없으면_결정_항목_뒤_실패_항목이다() -> None:
+    """`create_app` 이 받은 타임아웃을 이 면의 결정이 core 에 넘긴다. 재개의 범위는 결정 이벤트
+    뒤부터이고, 승인된 도구가 돌아오지 않아도 응답이 실패 항목으로 닫힌다(스토리 54). 재개의 경계
+    (3)는 항목이 없다. 멈춘 실행은 손으로 쓴다 — 짧은 기한 안에 멈춰야 할 일을 두지 않는다."""
+    trace = FakeTrace()
+    _write(trace, "held", _started("held", agent="gated"), _paused("held"))
+    tools = ScopedTools(connection=StuckConnection)
+    app = _app(trace=trace, tools=tools, run_timeout_seconds=TIMEOUT)
+
+    async with _serving(app) as client:
+        response = await client.post(_decide_path("held"), json=APPROVE, headers=_as())
+
+    assert _types(_frames(response.text)) == [(2, "decided"), (4, "failed")]
+    failed = trace.events[-1]
+    assert isinstance(failed, RunFailed)
+    assert failed.error == TIMED_OUT
 
 
 async def test_거부의_결정_항목은_사유를_들고_승인자를_싣지_않는다() -> None:
@@ -1017,6 +1059,31 @@ async def test_구독이_떠나도_실행은_끝까지_가고_다른_받는_쪽�
     assert _types(leaving.frames()) == [(0, "started")]
     assert _types(starting.frames()) == [(0, "started"), (2, "finished")]
     assert trace.events[-1].type == "run_finished"
+
+
+async def test_타임아웃으로_끝난_실행은_실패_항목으로_닫히고_등록부를_떠난다() -> None:
+    """모델이 문 앞에서 영영 기다린다. `create_app` 이 받은 타임아웃이 그 호출을 끊어 시작 응답이
+    실패 항목(고정 문구)으로 닫힌다(스토리 54). 응답의 흐름은 실행이 등록부를 떠나는 그 자리에서
+    닫히므로 닫힌 것이 그 표지다 — 칸이 돌아오는 것은 티켓 02 가 상한으로 잰다(스토리 55). 앱의
+    수명은 깨지지 않고 닫히고, 트레이스의 결말이 그 시간을 든다."""
+    model = _gated_model()
+    trace = FakeTrace()
+    app = _app(model=model, trace=trace, run_timeout_seconds=TIMEOUT)
+    starting = _Wire(_start("asking"))
+
+    async with _lifespan(app):
+        start = _call(app, _scope("POST", START, _token()), starting)
+        async with asyncio.timeout(5):
+            await start
+
+    assert starting.frames() == [
+        (0, {"type": "started", "run_id": "run-1"}),
+        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1"}),
+    ]
+    failed = trace.events[-1]
+    assert isinstance(failed, RunFailed)
+    assert failed.error == TIMED_OUT
+    assert not model.gate.is_set()
 
 
 async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같은_토큰의_다음_요청은_401이다() -> None:
