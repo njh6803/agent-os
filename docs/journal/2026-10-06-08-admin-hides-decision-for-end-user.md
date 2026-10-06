@@ -95,8 +95,8 @@ sonnet --tools Read --disallowed-tools 'Read(./.claude/**)'`, 워크트리에서
 ## PR 리뷰
 
 PR #146. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌리지 않았다. CI 여섯은 head `9945603`에서 초록이었다.
-CodeRabbit은 PR을 열 때와 마지막 푸시 뒤 `@coderabbitai review` 두 번 모두 "Review rate limited"였다. 이 PR의 보안·버그 축은 리뷰가 없다.
-claude-review는 옛 head(`4c01dbf`)와 `9945603`에서 두 번 돌았고 둘 다 Critical·Major 0이다.
+CodeRabbit은 PR을 열 때와 푸시 뒤마다 남긴 `@coderabbitai review`(`9945603`·`17eeff4`·`6e47abb`) 넷이 모두 "Review rate limited"였고, 다섯째
+(`72a5090`)에서 리뷰를 마쳤다(아래 "CodeRabbit 리뷰"). claude-review는 옛 head(`4c01dbf`)와 `9945603`에서 두 번 돌았고 둘 다 Critical·Major 0이다.
 
 - **[Minor] 구분자의 사본에 자동 검사가 없다(두 회차 모두).** 셀프 리뷰 표준 축과 같은 지적이고 리뷰어도 후속으로 남기면 된다고 했다. 위 "셀프
   리뷰"의 보류 이유 그대로 둔다. 세 리뷰가 같은 자리를 짚었다는 것만 여기 적는다.
@@ -117,6 +117,16 @@ claude-review는 옛 head(`4c01dbf`)와 `9945603`에서 두 번 돌았고 둘 �
 README와 대기열 끝)를 양쪽 모두 남겨 풀었다. 04는 대기열 122를 써서 이 브랜치의 120·121과 겹치지 않았다. 04가 `http/sites.py`를 고쳤지만
 `PRINCIPAL_SEPARATOR`와 그 주석은 그대로다. 들인 뒤 pytest 1603 passed, ruff check와 format, pyright 0 errors, lint-imports 5 kept, 마크다운 표
 검사, 변이 원문 `--check`를 다시 돌렸다. 이번에도 `web/`과 `openapi.json`은 바뀌지 않았다.
+
+### CodeRabbit 리뷰
+
+`72a5090`에서 리뷰를 마쳤다. 범위는 PR의 base부터 그 head까지라 코드 변경 전부가 든다. 지적은 하나다.
+
+- **[Minor, 반영] 이 절의 첫 문단이 CodeRabbit을 두 번 모두 한도에 걸려 리뷰가 없다고 적었다.** 그때는 참이었지만 다섯째 요청이 리뷰를 마쳐
+  거짓이 됐다. 요청의 수와 결과로 고쳤다.
+
+5회차 claude-review(`72a5090`)는 같은 Minor 둘(중첩 삼항, 구분자 사본)과 Nit 하나(문구가 컴포넌트와 테스트에 따로 적힘. 명세의 인용이라 지금은
+문제가 아니라고 리뷰어가 적었다)였고 셋 다 그대로 둔다.
 
 ## 번복하거나 고친 것
 
