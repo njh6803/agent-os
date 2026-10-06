@@ -100,6 +100,7 @@ def end_user_router(
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
+    run_timeout_seconds: float | None,
 ) -> APIRouter:
     """최종 사용자 면의 라우터. 운영자 채널과 같은 `Runs` 를 받아 등록부 하나를 나눠 쓴다."""
     router = APIRouter(prefix=END_USER_PREFIX, responses=documented_stream_errors(500))
@@ -116,6 +117,7 @@ def end_user_router(
             body.request,
             user.principal,
             visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             model=model,
             tools=tools,
@@ -159,6 +161,7 @@ def end_user_router(
             decision.to_core(),
             user.principal,
             visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             model=model,
             tools=tools,

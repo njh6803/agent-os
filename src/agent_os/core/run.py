@@ -17,7 +17,7 @@ conversation_summarized 만은 예외다 — 그것은 다음 실행의 거슬�
 
 resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 때문이다. 재개는 에이전트 이름,
 요청, 주체를 받지 않고 트레이스의 run_started 에서 읽는다. 하나로 합치면 "재개일 때는 이 인자
-셋이 무시된다"는, 타입으로 막을 수 없는 규칙을 문서로 적어야 한다(ADR 0009). 내부는 _drive 가
+셋이 무시된다"는, 타입으로 막을 수 없는 규칙을 문서로 적어야 한다(ADR 0009). 내부는 몸통(`_Body`)을
 공유하고 갈리는 것은 이벤트를 어디서 얻나(재생이냐 실제 호출이냐)와 무엇을 트레이스에 쓰나뿐이다.
 
 재생 구간에서 생긴 사실은 트레이스에 다시 쓰지 않는다. 이미 거기 있기 때문이고, 에이전트가 낸
@@ -48,6 +48,20 @@ DifferentPrincipal, 앞 실행이 run_finished 로 끝나지 않았으면 NotCon
 MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
 실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
+
+실행 타임아웃(ADR 0014 의 2026-10-05 이력 "실행에 타임아웃이 생긴다"): 시작 이벤트(재개에서는 결정
+이벤트)를 쓴 뒤 정한 시간 안에 결말이 나지 않으면 run_failed("실행이 N초 안에 끝나지 않았다")로
+끝난다. 자리는 진입점 둘이고, 진입점이 `anyio.fail_after` 를 열어 몸통(`_Body`) 하나를 감싼다 —
+몸통은 이어 가기의 요약 호출부터 결말까지다. 기한이 오면 취소가 안쪽 await 에 들어가고, 취소는
+BaseException 이라 몸통과 요약의 `except Exception` 을 지나쳐 범위를 나오며 `TimeoutError` 가 된다.
+진입점은 그것을 잡아 몸통에게 결말이 이미 정해졌는지 묻고(`_Body.deadline_failure`), 아니면
+run_failed 를 쓴다. 그래서 요약 중이었어도 같은 메시지이고, 결말을 쓴 뒤 도구 연결을 닫다 기한이
+와도 결말이 둘이 되지 않는다. 부르던 도구는 취소되어 tool_called 가 없고, 그때까지 쌓인 런타임
+이벤트(재개 이벤트 따위)는 결말 앞에 흘린다. 테스트가 기한을 떨어뜨린 자리는 요약 호출, 모델 호출,
+도구 호출, 도구 연결의 닫기이고 도구 연결을 여는 자리는 같은 모양이라는 어림이다. 재개마다 다시
+센다 — 멈춰 있는 시간은 세지 않는다(ADR 0009). 기한은 시계 포트가 아니라 이벤트 루프의 시계로 센다.
+범위가 yield 를 건너므로 부르는 쪽은 이벤트 사이에 await 하지 않는다 — 도구 연결의 취소 범위가 이미
+요구하던 것이다(`.claude/rules/channel.md`).
 """
 
 from __future__ import annotations
@@ -58,6 +72,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import NoReturn, TypeGuard, assert_never
 
+import anyio
 from langchain_core.messages import AIMessage, BaseMessage
 
 from agent_os.core.continuation import (
@@ -127,6 +142,12 @@ MASKED = "***"
 # 의 차이는 시작 이벤트의 앞 실행과 대화 요약 이벤트뿐이라 둘 다 재개한다(ADR 0022). 이어 가기는
 # 형식을 가리지 않는다 — 앞 실행을 재개하는 것이 아니라 읽는 것이고 필요한 것은 형식 1 에도 있다.
 RESUMABLE: tuple[TraceSchemaVersion, ...] = ("2", "3")
+
+# 실행 하나가 시작 이벤트(재개에서는 결정 이벤트)를 쓴 뒤 결말까지 갈 수 있는 시간(초). `run()`·
+# `resume()` 이 타임아웃을 받지 않으면 이것이다. 루프 상한(`MAX_TURNS`)과 기본 대화 한도처럼 core 가
+# 소유하고 `serve` 의 인자는 기본값을 따로 두지 않는다 — 600 이 서는 자리가 하나다(명세 검토). 루프
+# 상한 10턴에 모델 호출 수십 초를 곱한 어림이다(end-user-channel 명세 "실행 타임아웃").
+DEFAULT_RUN_TIMEOUT_SECONDS = 600
 
 # 재생 기록 열에 들지 않는 이벤트. 경계 이벤트(실행의 시작과 재개의 경계를 표시하는 것들)는 재생할
 # 사실이 아니고, 대화 요약은 에이전트가 부른 호출이 아니라 런타임이 에이전트를 부르기 전에 한 것이라
@@ -459,6 +480,7 @@ async def run(
     *,
     previous_run: RunId | None = None,
     visible_agents: frozenset[AgentName] | None = None,
+    timeout_seconds: float | None = None,
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
@@ -478,6 +500,10 @@ async def run(
     집합 밖이면 없는 에이전트와 글자 그대로 같은 `Absent` 이고 매니페스트를 읽기 전이다 — 목록
     밖인지 꺼졌는지 있는지가 드러나지 않는다. 이어 가기에서도 요청한 에이전트만 본다. 앞 실행의
     에이전트가 집합 밖이어도 그 교환은 어차피 넘어가지 않는다(ADR 0022).
+
+    `timeout_seconds` 는 시작 이벤트를 쓴 뒤 결말까지의 시간(초)이고 없음은
+    `DEFAULT_RUN_TIMEOUT_SECONDS` 다. 운영자 채널과 최종 사용자 경로는 `serve` 가 받은 값을, CLI 는
+    없음을 넘긴다. 범위와 실패 정책은 모듈 독스트링이다.
     """
     gathered = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
@@ -498,16 +524,11 @@ async def run(
     )
     trace.write(started)
     yield started
-    if fold is None:
-        conversation = NEW_CONVERSATION if gathered is None else gathered.conversation()
+    if fold is not None:
+        conversation: Conversation | Fold = fold
     else:
-        outcome = await _summary_outcome(model, fold, run_id, clock)
-        trace.write(outcome)
-        yield outcome
-        if isinstance(outcome, RunFailed):
-            return
-        conversation = fold.conversation(outcome.summary)
-    async for event in _drive(
+        conversation = NEW_CONVERSATION if gathered is None else gathered.conversation()
+    body = _Body(
         prepared,
         started,
         replay=Replay.nothing(),
@@ -517,8 +538,17 @@ async def run(
         tools=tools,
         trace=trace,
         clock=clock,
-    ):
-        yield event
+    )
+    seconds = _timeout_of(timeout_seconds)
+    try:
+        with anyio.fail_after(seconds):
+            async for event in body.events():
+                yield event
+    except TimeoutError:
+        failure = body.deadline_failure(seconds)
+        if failure is not None:
+            trace.write(failure)
+            yield failure
 
 
 async def resume(
@@ -528,6 +558,7 @@ async def resume(
     approver: Principal,
     *,
     visible_agents: frozenset[AgentName] | None = None,
+    timeout_seconds: float | None = None,
     plugins: PluginSource,
     model: ChatModel,
     tools: ToolSource,
@@ -561,13 +592,16 @@ async def resume(
     주체와 다르면 `DifferentPrincipal` 이고, 트레이스가 가리키는 에이전트가 `visible_agents` 밖이면
     없는 실행과 같은 `Absent` 다. 둘 다 첫 걸음의 자기 실행 읽기(`read_own_run`)가 이미 읽은 값으로
     하고 결정 이벤트를 쓰기 전이다.
+
+    `timeout_seconds` 는 결정 이벤트를 쓴 뒤 결말까지의 시간이고 `run()` 과 같다. 재개마다 처음부터
+    센다 — 멈춰 있던 시간도, 멈추기 전에 쓴 시간도 들지 않는다.
     """
     resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
     prepared = _prepare(plugins, _recorded_manifest(plugins, resumption.started))
     decided = _decision_event(run_id, decision, approver, clock)
     trace.write(decided)
     yield decided
-    async for event in _drive(
+    body = _Body(
         prepared,
         resumption.started,
         replay=Replay.of(resumption.records),
@@ -577,90 +611,166 @@ async def resume(
         tools=tools,
         trace=trace,
         clock=clock,
-    ):
-        yield event
+    )
+    seconds = _timeout_of(timeout_seconds)
+    try:
+        with anyio.fail_after(seconds):
+            async for event in body.events():
+                yield event
+    except TimeoutError:
+        failure = body.deadline_failure(seconds)
+        if failure is not None:
+            trace.write(failure)
+            yield failure
 
 
-async def _drive(
-    prepared: _Prepared,
-    started: RunStarted,
-    *,
-    replay: Replay,
-    verdict: _Verdict | None,
-    conversation: Conversation,
-    model: ChatModel,
-    tools: ToolSource,
-    trace: TraceStore,
-    clock: Clock,
-) -> AsyncIterator[Event]:
-    """도구를 연결한 채 에이전트를 돌리고 결말을 붙인다. run() 과 resume() 이 공유하는 몸통."""
-    run_id = started.run_id
+class _Body:
+    """실행의 몸통. 시작 이벤트(재개에서는 결정 이벤트) 뒤부터 결말까지이고 run() 과 resume() 이
+    공유한다.
 
-    # 런타임이 실제로 게이트에서 멈췄는가. 이벤트 종류로 판정하지 않는 이유는 에이전트가
-    # run_paused 를 지어내 yield 할 수 있기 때문이다. 에이전트는 신뢰 경계 밖이다.
-    paused = False
+    이어 가기에서 원문이 한도를 넘었으면(`Fold`) 먼저 요약하고, 도구를 연결한 채 에이전트를 돌리고,
+    결말을 붙인다. 진입점의 실행 타임아웃이 이것 하나를 감싼다. 기한이 몸통을 끊으면 진입점은
+    `deadline_failure` 로 결말이 이미 정해졌는지 묻는다 — 그 판정이 몸통 안에 있는 이유는 이벤트의
+    종류로 정할 수 없어서다(아래 `_paused` 의 주석).
+    """
 
-    def emit(event: Event) -> Event:
-        trace.write(event)
+    def __init__(
+        self,
+        prepared: _Prepared,
+        started: RunStarted,
+        *,
+        replay: Replay,
+        verdict: _Verdict | None,
+        conversation: Conversation | Fold,
+        model: ChatModel,
+        tools: ToolSource,
+        trace: TraceStore,
+        clock: Clock,
+    ) -> None:
+        self._prepared = prepared
+        self._started = started
+        self._replay = replay
+        self._verdict = verdict
+        self._conversation = conversation
+        self._model = model
+        self._tools = tools
+        self._trace = trace
+        self._clock = clock
+        # 런타임이 실제로 게이트에서 멈췄는가. 이벤트 종류로 판정하지 않는 이유는 에이전트가
+        # run_paused 를 지어내 yield 할 수 있기 때문이다. 에이전트는 신뢰 경계 밖이다.
+        self._paused = False
+        # 결말이 정해졌는가. 몸통이 run_failed 를 썼거나, 런타임이 멈췄거나, 에이전트가
+        # run_finished 를 마지막으로 내고 돌아왔다. 그 뒤에 남는 것은 도구 연결의 정리뿐이다.
+        self._settled = False
+
+    def deadline_failure(self, seconds: float) -> RunFailed | None:
+        """기한이 몸통을 끊은 실행의 결말(질의). 결말이 이미 정해졌으면 없음이다.
+
+        결말을 쓴 뒤 도구 연결을 닫는 데 기한이 지난 것은 실행이 시간 안에 끝나지 않은 것이
+        아니다 — 범위는 결말까지다. 덧붙이면 결말이 둘이 되고 멈춘 실행은 재개할 수 없게 된다.
+        에이전트가 결말 모양의 이벤트(지어낸 run_paused, 아직 돌아오지 않은 채 낸 run_finished)를
+        낸 뒤에 걸린 것은 결말이 정해지지 않은 것이라 실패로 끝낸다. 몸통의 끝 판정과 같은 기준이다.
+        """
+        if self._settled:
+            return None
+        error = f"실행이 {seconds:g}초 안에 끝나지 않았다"
+        return RunFailed(run_id=self._started.run_id, ts=self._clock.now(), error=error)
+
+    async def events(self) -> AsyncIterator[Event]:
+        """요약(필요하면)과 에이전트의 이벤트와 결말. 런타임이 내는 것은 트레이스에 쓴 뒤에 낸다."""
+        conversation = self._conversation
+        if isinstance(conversation, Fold):
+            run_id = self._started.run_id
+            outcome = await _summary_outcome(self._model, conversation, run_id, self._clock)
+            yield self._emit(outcome)
+            if isinstance(outcome, RunFailed):
+                self._settled = True
+                return
+            conversation = conversation.conversation(outcome.summary)
+        async for event in self._drive(conversation):
+            yield event
+
+    def _emit(self, event: Event) -> Event:
+        self._trace.write(event)
         return event
 
-    async def execute() -> AsyncGenerator[Event]:
-        """실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
+    async def _drive(self, conversation: Conversation) -> AsyncIterator[Event]:
+        """도구를 연결한 채 에이전트를 돌리고 결말을 붙인다."""
+        run_id = self._started.run_id
+        last: Event | None = None
 
-        일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
-        run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
-        신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
-        """
-        nonlocal paused
-        async with tools.connect(prepared.servers) as connection:
-            _reject_unknown_declarations(prepared.policy, connection.tools())
-            ctx = _Context(
-                started, clock, model, connection, prepared.policy, replay, verdict, conversation
-            )
-            try:
-                async for event in prepared.instance.run(started.request, ctx):
+        async def execute() -> AsyncGenerator[Event]:
+            """실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
+
+            일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
+            run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
+            신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
+            """
+            prepared = self._prepared
+            async with self._tools.connect(prepared.servers) as connection:
+                _reject_unknown_declarations(prepared.policy, connection.tools())
+                ctx = _Context(
+                    self._started,
+                    self._clock,
+                    self._model,
+                    connection,
+                    prepared.policy,
+                    self._replay,
+                    self._verdict,
+                    conversation,
+                )
+                try:
+                    async for event in prepared.instance.run(self._started.request, ctx):
+                        for pending in ctx.take_events():
+                            yield pending
+                        if ctx.paused:
+                            break
+                        if isinstance(event, ConversationSummarized):
+                            # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는
+                            # 입력이라 에이전트가 지어낸 것이 통과하면 런타임의 것과 가를 수 없고,
+                            # 그 실행을 지나는 모든 이어 가기가 영구히 깨진다(ADR 0022). 재생
+                            # 구간에서도 같다.
+                            raise RuntimeError(
+                                f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}"
+                            )
+                        if ctx.replaying:
+                            ctx.replay_event(event)
+                            continue
+                        yield event
+                except _Paused:
+                    pass
+                except Exception:
+                    if not ctx.paused:
+                        raise
+                finally:
+                    self._paused = ctx.paused
                     for pending in ctx.take_events():
                         yield pending
-                    if ctx.paused:
-                        break
-                    if isinstance(event, ConversationSummarized):
-                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
-                        # 에이전트가 지어낸 것이 통과하면 런타임의 것과 가를 수 없고, 그 실행을
-                        # 지나는 모든 이어 가기가 영구히 깨진다(ADR 0022). 재생 구간에서도 같다.
-                        raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
-                    if ctx.replaying:
-                        ctx.replay_event(event)
-                        continue
-                    yield event
-            except _Paused:
-                pass
-            except Exception:
-                if not ctx.paused:
-                    raise
-            finally:
-                paused = ctx.paused
-                for pending in ctx.take_events():
-                    yield pending
+                # 에이전트의 몫이 끝났다. 여기서부터는 도구 연결의 정리뿐이다. 마지막 이벤트가
+                # run_finished 가 아니면 결말은 아래의 run_failed 이고 아직 쓰지 않았다.
+                self._settled = self._paused or isinstance(last, RunFinished)
 
-    # 안쪽 제너레이터를 여기서 닫는다. 트레이스 쓰기가 실패하면 예외가 이 몸통에서 나고, 그때
-    # execute() 는 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을 닫아
-    # MCP 어댑터의 anyio 취소 범위가 깨진다 — 연결은 연 태스크가 닫아야 한다(http-channel 티켓 03).
-    last: Event | None = None
-    async with aclosing(execute()) as executed:
-        try:
-            async for event in executed:
-                last = event
-                yield emit(event)
-        except Exception as error:
-            # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
-            # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
-            if not paused:
-                yield emit(RunFailed(run_id=run_id, ts=clock.now(), error=_describe(error)))
-            return
-    if not paused and not isinstance(last, RunFinished):
-        yield emit(
-            RunFailed(run_id=run_id, ts=clock.now(), error="에이전트가 run_finished 없이 끝났다")
-        )
+        # 안쪽 제너레이터를 여기서 닫는다. 트레이스 쓰기가 실패하면 예외가 이 몸통에서 나고, 그때
+        # execute() 는 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을
+        # 닫아 MCP 어댑터의 anyio 취소 범위가 깨진다 — 연결은 연 태스크가 닫아야 한다(http-channel
+        # 티켓 03).
+        async with aclosing(execute()) as executed:
+            try:
+                async for event in executed:
+                    last = event
+                    yield self._emit(event)
+            except Exception as error:
+                # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
+                # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
+                if not self._paused:
+                    failed = RunFailed(run_id=run_id, ts=self._clock.now(), error=_describe(error))
+                    self._settled = True
+                    yield self._emit(failed)
+                return
+        if not self._paused and not isinstance(last, RunFinished):
+            error = "에이전트가 run_finished 없이 끝났다"
+            self._settled = True
+            yield self._emit(RunFailed(run_id=run_id, ts=self._clock.now(), error=error))
 
 
 async def _summary_outcome(
@@ -678,6 +788,11 @@ async def _summary_outcome(
         return RunFailed(
             run_id=run_id, ts=clock.now(), error=f"대화 요약이 실패했다: {_describe(error)}"
         )
+
+
+def _timeout_of(timeout_seconds: float | None) -> float:
+    """받은 타임아웃, 없으면 core 의 기본값. 상수를 부를 때 읽는다."""
+    return DEFAULT_RUN_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
 
 
 def _decision_event(
