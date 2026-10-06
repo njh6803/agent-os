@@ -19,7 +19,7 @@ import io
 import json
 import time
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping, Sequence
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 
 import anyio
@@ -608,6 +608,8 @@ async def test_모델이_조용한_동안_keepalive_주석이_나간다(monkeypa
             response = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
     finally:
         opener.cancel()
+        with suppress(asyncio.CancelledError):
+            await opener
 
     blocks = _blocks(response.text)
     assert ": ping" in blocks

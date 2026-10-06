@@ -42,7 +42,7 @@
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
 ## 검증 명령
-- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. `.env`는 추적하지 않아 워크트리에는 없으니 `.claude/worktrees/<이름>/`에서는 `--env-file ../../../.env`)
+- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트)
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`

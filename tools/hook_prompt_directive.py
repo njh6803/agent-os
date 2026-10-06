@@ -56,16 +56,12 @@ _NEW_SESSION = re.compile(r"어디서:\s*새 세션")
 # 스킬 이름. 곧 경로라 kebab 한 토막만 받는다.
 _KEBAB = r"[a-z0-9][a-z0-9-]*"
 _SKILL_NAME = re.compile(rf"({_KEBAB})(?:\s|$)")
-# open_session.ps1 의 Convert-StartLine 이 옮긴 첫 줄. 스킬 파일을 상대 경로로 가리키고 연 저장소를
-# 표지로 든다. 문구의 원천은 그 스크립트이고 대조는 tests/tools 가 한다.
-_OPENED_LINE = re.compile(
-    rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\. "
-    r"이 세션을 연 저장소는 `(?P<root>[^`]+)`이고"
-)
-# 옮긴 첫 줄의 고정 머리. 이것으로 시작하는데 위 표지를 못 읽으면 쏜 ps1 과 이 훅의 문구가 갈린
-# 것이다. 머리까지 바뀌면 조용히 지나간다. 한 체크아웃 안의 두 문구는 tests/tools 의 계약 테스트가
-# 대조하지만, 쏘는 쪽과 받는 쪽이 다른 체크아웃일 때 머리까지 갈린 것은 아무것도 잡지 못한다.
-_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\.")
+# open_session.ps1 의 Convert-StartLine 이 옮긴 첫 줄의 고정 머리. 표지 줄과 머리 판정이 이 하나를
+# 같이 쓴다. 머리는 맞는데 표지를 못 읽을 때 막는 이유와 못 보는 것은 `block_reason_for` 독스트링.
+_OPENED_HEAD_PATTERN = rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\."
+_OPENED_HEAD = re.compile(_OPENED_HEAD_PATTERN)
+# 옮긴 첫 줄 전체. 머리 뒤에 연 저장소를 표지로 든다. 문구의 원천은 그 스크립트다.
+_OPENED_LINE = re.compile(_OPENED_HEAD_PATTERN + r" 이 세션을 연 저장소는 `(?P<root>[^`]+)`이고")
 # "어디서" 줄의 워크트리 문장(next-session 3단계). 받는 쪽은 지시문 자체라 첫 턴 계기가 짚는다.
 _WHERE_LABEL = "어디서:"
 
