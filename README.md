@@ -23,9 +23,13 @@ src/agent_os/
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
   channel/cli/     실행을 일으키는 면. run·resume 과 명령 셋의 인자
-  channel/http/    실행을 일으키는 면. router(POST /runs 와 본문), runs(실행을 앱의 수명에 묶는다)
+  channel/http/    실행을 일으키는 면. router(운영자 채널 /runs 와 두 접두사의 조립), end_user(최종 사용자 면
+                   /end-user 의 시작·결정·구독), items(최종 사용자 항목과 투영), bodies(두 면의 요청 본문),
+                   runs(실행을 앱의 수명에 묶는 것과 도는 실행의 등록부)
   admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
-  http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 상태 코드 표), routes(에러 문서와 verbatim), auth(fail-closed 토큰)
+  http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 면별 상태 코드 표), routes(에러 문서와 verbatim),
+                   auth(fail-closed 인증. 공유 토큰 둘과 사이트가 서명한 토큰), sites(사이트 목록과 서명 토큰 검증),
+                   paths(접두사 비교)
   adapters/        포트 구현
 plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
@@ -54,7 +58,7 @@ docs/
 tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, OpenAPI 내보내기, Actions 요약
 kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플릿과 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
-openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
+openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
 아직 없는 것은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
@@ -64,7 +68,8 @@ openapi.json       관리 API와 HTTP 채널의 계약. 손으로 고치지 않�
 관리 화면(`web/apps/admin`)은 루프백에만 서고, 같은 출처의 `/api/*`를 파이썬 `serve`로 넘기는 중계다(ADR 0019).
 
 ```bash
-uv run agent-os serve              # 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 선다
+uv run agent-os serve              # 공유 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 선다.
+                                   # --site-file 은 선택이다(최종 사용자 경로, ADR 0023)
 pnpm -C web/apps/admin build
 pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 ```

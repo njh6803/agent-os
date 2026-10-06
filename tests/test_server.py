@@ -18,7 +18,7 @@ import json
 import time
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
-from typing import get_type_hints
+from typing import Literal, get_type_hints
 
 import httpx
 import pytest
@@ -26,12 +26,24 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.signing import (
+    AUDIENCE,
+    SigningKey,
+    bearer,
+    claims,
+    hs256_with,
+    new_key,
+    sign,
+    unsigned,
+)
 
 from agent_os import server as server_module
 from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
 from agent_os.admin.http import Health
 from agent_os.admin.traces import CURSOR_PATTERN
+from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
@@ -61,6 +73,8 @@ from agent_os.core.ports import (
     order_key,
 )
 from agent_os.http.auth import PUBLIC_PATHS
+from agent_os.http.errors import UNAUTHORIZED_MESSAGE
+from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
     RUN_ID_PATTERN,
@@ -384,20 +398,23 @@ def _admin_app(
     stderr: io.StringIO,
     admin_token: str = TOKEN,
     channel_token: str = CHANNEL_TOKEN,
+    sites: Sites | None = None,
+    clock: Clock | None = None,
 ) -> FastAPI:
     """관리를 미는 앱. 채널의 포트 셋은 불리지 않는 자리표시자다. 인자 타입이 포트 적합성을
-    검증하는 자리다."""
+    검증하는 자리다. 서명 토큰을 재는 테스트만 사이트 목록과 토큰의 시간을 셀 시계를 준다."""
     tools: ToolSource = IdleTools()
-    clock: Clock = IdleClock()
+    idle: Clock = IdleClock()
     return create_app(
         plugins=plugins,
         trace=trace,
         model=GenericFakeChatModel(messages=iter(())),
         tools=tools,
-        clock=clock,
+        clock=clock or idle,
         principal=Principal("alice"),
         admin_token=admin_token,
         channel_token=channel_token,
+        sites=sites or Sites(),
         stderr=stderr,
     )
 
@@ -548,8 +565,8 @@ async def test_비ASCII_토큰도_500이_아니라_401이다(client: AsyncClient
     assert response.status_code == 401
 
 
-async def test_허용되지_않는_메서드도_봉투이고_어휘가_다섯_안에_있다(client: AsyncClient) -> None:
-    """405 는 프레임워크가 내는 것이라 표에 없다. 어휘를 다섯으로 지키려고 계열로 접는다."""
+async def test_허용되지_않는_메서드도_봉투이고_어휘_안에_있다(client: AsyncClient) -> None:
+    """405 는 프레임워크가 내는 것이라 표에 없다. 어휘를 늘리지 않으려고 계열로 접는다."""
     response = await client.post("/health")
 
     assert response.status_code == 405
@@ -599,10 +616,22 @@ def test_빈_토큰이나_같은_두_토큰으로는_앱을_세울_수_없다(
 # 채널 토큰 — `/runs` 아래는 채널 토큰만, 그 밖은 관리 토큰만 연다(티켓 02, ADR 0015)
 
 
-def _under_channel(path: str) -> bool:
-    """전수 검사가 두 면을 가르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시 적은
-    것이라, 둘이 같은 규칙이라는 것은 `/runsx` 대조가 잰다. 접두사는 채널이 소유한 그것이다."""
-    return path == CHANNEL_PREFIX or path.startswith(f"{CHANNEL_PREFIX}/")
+type _Surface = Literal["end_user", "channel", "admin"]
+
+
+def _surface_of(path: str) -> _Surface:
+    """전수 검사가 세 면을 가르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시 적은
+    것이라, 둘이 같은 규칙이라는 것은 `/runsx` 와 `/end-userx` 대조가 잰다. 접두사는 채널이 소유한
+    그것이다. 둘로만 가르면 최종 사용자 경로가 관리로 분류되어, 새 접두사에서 관리 토큰이 401 인지가
+    재어지지 않은 채 초록이다(end-user-channel 명세 검토가 짚었다)."""
+    prefixes: tuple[tuple[str, _Surface], ...] = (
+        (END_USER_PREFIX, "end_user"),
+        (CHANNEL_PREFIX, "channel"),
+    )
+    for prefix, surface in prefixes:
+        if path == prefix or path.startswith(f"{prefix}/"):
+            return surface
+    return "admin"
 
 
 async def test_채널_경로는_채널_토큰만_열고_관리_토큰으로는_401이다(client: AsyncClient) -> None:
@@ -637,7 +666,7 @@ async def test_접두사를_문자열로만_공유하는_경로는_채널이_아
 
 
 def _documented_operations(app: FastAPI) -> tuple[tuple[str, str], ...]:
-    """앱이 아는 (메서드, 경로) 전부. 라우트를 더하면 토큰 두 방향의 전수 검사가 저절로 는다."""
+    """앱이 아는 (메서드, 경로) 전부. 라우트를 더하면 자격 세 방향의 전수 검사가 저절로 는다."""
     paths = app.openapi().get("paths", {})
     return tuple(
         (str(method).upper(), str(path))
@@ -646,26 +675,34 @@ def _documented_operations(app: FastAPI) -> tuple[tuple[str, str], ...]:
     )
 
 
-async def test_토큰은_자기_면만_연다_채널_경로는_관리_토큰으로_관리_경로는_채널_토큰으로_401이다(
-    app: FastAPI, client: AsyncClient
-) -> None:
+async def test_자격은_자기_면만_연다_세_면마다_다른_두_자격은_401이다(stderr: io.StringIO) -> None:
     """트레이스를 읽는 권한이 실행을 일으키는 권한이 되지 않고(스토리 51), 위젯에 준 토큰으로 모든
-    실행의 트레이스를 읽지 못한다(스토리 52). 방향마다 열거가 비면 그 방향은 아무것도 재지
+    실행의 트레이스를 읽지 못한다(스토리 52). 운영자의 두 공유 토큰은 최종 사용자 접두사를 열지
+    못하고 사이트가 서명한 토큰은 그 밖을 열지 못한다(ADR 0023, end-user-channel 스토리 69). 서명
+    토큰은 최종 사용자 접두사에서는 통하는 토큰이다 — 사이트 목록이 비어 아무것도 열지 못하는
+    토큰으로 재면 이 방향은 비어 있어도 초록이다. 방향마다 열거가 비면 그 방향은 아무것도 재지
     않는다."""
+    app = _signed_app(stderr)
+    signed = bearer(sign(KEY_A1, _good()))
     operations = [
         (method, path) for method, path in _documented_operations(app) if path not in PUBLIC_PATHS
     ]
-    channel = [(method, path) for method, path in operations if _under_channel(path)]
-    admin = [(method, path) for method, path in operations if not _under_channel(path)]
-    assert channel, "채널 경로가 없으면 관리 토큰 쪽 방향은 401 을 한 번도 재지 않는다"
-    assert admin, "관리 경로가 없으면 채널 토큰 쪽 방향은 401 을 한 번도 재지 않는다"
+    end_user = [op for op in operations if _surface_of(op[1]) == "end_user"]
+    channel = [op for op in operations if _surface_of(op[1]) == "channel"]
+    admin = [op for op in operations if _surface_of(op[1]) == "admin"]
+    assert end_user, "최종 사용자 경로가 없으면 공유 토큰 두 방향은 401 을 한 번도 재지 않는다"
+    assert channel, "채널 경로가 없으면 관리 토큰과 서명 토큰 쪽 방향은 비어 있다"
+    assert admin, "관리 경로가 없으면 채널 토큰과 서명 토큰 쪽 방향은 비어 있다"
 
-    for (method, path), wrong in [
-        *((op, BEARER) for op in channel),
-        *((op, CHANNEL_BEARER) for op in admin),
-    ]:
-        response = await client.request(method, path, headers=wrong)
-        assert response.status_code == 401, (method, path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://all.test") as client:
+        assert (await client.get(END_USER_GUARDED, headers=signed)).status_code == 404
+        for (method, path), wrong in [
+            *((op, header) for op in end_user for header in (BEARER, CHANNEL_BEARER)),
+            *((op, header) for op in channel for header in (BEARER, signed)),
+            *((op, header) for op in admin for header in (CHANNEL_BEARER, signed)),
+        ]:
+            response = await client.request(method, path, headers=wrong)
+            assert response.status_code == 401, (method, path, wrong)
 
 
 async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_않는다(
@@ -681,6 +718,257 @@ async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_�
         assert TOKEN not in response.text
     assert CHANNEL_TOKEN not in stderr.getvalue()
     assert TOKEN not in stderr.getvalue()
+
+
+# 서명 토큰 — 최종 사용자 접두사 아래는 사이트가 서명한 토큰만 연다(ADR 0023, end-user-channel
+# 티켓 01). 검증을 지났는지는 라우트가 없는 경로의 404(지났다)와 401(막혔다)로 본다. 받아들인 토큰의
+# 주체가 실행에 드는 것은 최종 사용자 경로의 테스트(`tests/channel/http/test_end_user.py`)가 잰다.
+
+# 최종 사용자 접두사 아래이면서 라우트가 없는 경로.
+END_USER_GUARDED = f"{END_USER_PREFIX}/unrouted"
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+ISSUER_A = "https://a.example"
+ISSUER_B = "https://b.example"
+# 사이트 A 는 키를 바꾸는 중이라 kid 둘이고, 사이트 B 는 kid 없는 키 하나다.
+KEY_A1 = new_key("k1")
+KEY_A2 = new_key("k2")
+KEY_B = new_key()
+SITES = Sites(
+    (
+        Site(
+            issuer=ISSUER_A,
+            audience=AUDIENCE,
+            keys=(KEY_A1.site_key(), KEY_A2.site_key()),
+            allowed_origins=(),
+            agents=frozenset(),
+        ),
+        Site(
+            issuer=ISSUER_B,
+            audience=AUDIENCE,
+            keys=(KEY_B.site_key(),),
+            allowed_origins=(),
+            agents=frozenset(),
+        ),
+    )
+)
+
+
+class StillClock:
+    """테스트가 정한 시각에 서 있는 시계. 서명 토큰의 시간 클레임을 이것으로 센다.
+
+    관리는 실행을 일으키지 않으므로 실행 식별자를 달라고 하면 그 자체가 결함이다."""
+
+    def __init__(self, at: datetime) -> None:
+        self.at = at
+
+    def now(self) -> datetime:
+        return self.at
+
+    def new_run_id(self) -> RunId:
+        raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+
+def _signed_app(stderr: io.StringIO, clock: Clock | None = None) -> FastAPI:
+    """사이트 둘을 받아들이는 앱. 시계는 주지 않으면 `NOW` 에 서 있다."""
+    return _admin_app(
+        plugins=FakePlugins(),
+        trace=FakeTrace(),
+        stderr=stderr,
+        sites=SITES,
+        clock=clock or StillClock(NOW),
+    )
+
+
+def _good(**changed: object) -> dict[str, object]:
+    """사이트 A 의 사용자 alice 가 지금 받은 토큰의 클레임. 바꿀 것만 준다. `None` 은 뺀다."""
+    payload = claims(ISSUER_A, "alice", NOW) | changed
+    return {name: value for name, value in payload.items() if value is not None}
+
+
+async def _gate(app: FastAPI, token: str) -> httpx.Response:
+    """라우트가 없는 최종 사용자 경로에 그 토큰을 내민다. 404 면 지났고 401 이면 막혔다."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        return await c.get(END_USER_GUARDED, headers=bearer(token))
+
+
+_ISSUED = int(NOW.timestamp())
+
+# 거절 열다섯. 이름, 토큰, 서버 기록이 원인으로 드는 말.
+_REFUSED: tuple[tuple[str, str, str], ...] = (
+    ("서명 틀림", sign(KEY_B, _good(), kid="k1"), "서명"),
+    ("만료", sign(KEY_A1, _good(iat=_ISSUED - 400, exp=_ISSUED - 30)), "만료"),
+    ("미래 iat", sign(KEY_A1, _good(iat=_ISSUED + 31, exp=_ISSUED + 331)), "iat"),
+    ("수명 601초", sign(KEY_A1, _good(exp=_ISSUED + 601)), "수명"),
+    ("iat 없음", sign(KEY_A1, _good(iat=None)), "MissingRequiredClaimError"),
+    ("sub 없음", sign(KEY_A1, _good(sub=None)), "MissingRequiredClaimError"),
+    ("aud 없음", sign(KEY_A1, _good(aud=None)), "MissingRequiredClaimError"),
+    ("exp 없음", sign(KEY_A1, _good(exp=None)), "MissingRequiredClaimError"),
+    ("iss 없음", sign(KEY_A1, _good(iss=None)), "발급자"),
+    ("다른 대상", sign(KEY_A1, _good(aud="someone-else")), "InvalidAudienceError"),
+    ("모르는 발급자", sign(KEY_A1, _good(iss="https://c.example")), "모르는 발급자"),
+    ("모르는 kid", sign(KEY_A1, _good(), kid="k9"), "kid"),
+    ("alg none", unsigned(_good()), "InvalidAlgorithmError"),
+    ("HS256", hs256_with(KEY_A1.public_pem().encode(), _good()), "InvalidAlgorithmError"),
+    ("형식 깨짐", "not-a-jwt", "형식"),
+)
+
+
+@pytest.mark.parametrize(
+    ("token", "reason"),
+    [(token, reason) for _, token, reason in _REFUSED],
+    ids=[name for name, _, _ in _REFUSED],
+)
+async def test_서명_토큰의_거절은_전부_같은_401_고정_문구이고_원인은_서버_기록에만_있다(
+    token: str, reason: str, stderr: io.StringIO
+) -> None:
+    """만료인지 서명인지 밖으로 말하면 토큰을 다듬어 가며 단계를 알아낼 수 있다(스토리 51). 운영자는
+    서버 기록에서 원인을 본다. 토큰 값은 응답에도 기록에도 싣지 않는다(원칙 V)."""
+    response = await _gate(_signed_app(stderr), token)
+
+    assert response.status_code == 401
+    assert response.json()["message"] == UNAUTHORIZED_MESSAGE
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert reason in stderr.getvalue()
+    assert token not in response.text
+    assert token not in stderr.getvalue()
+
+
+def test_거절_사례는_열다섯이고_서로_다른_토큰이다() -> None:
+    """사례가 줄거나 둘이 같은 토큰이 되면 그 거절은 재어지지 않는다."""
+    assert len(_REFUSED) == 15
+    assert len({token for _, token, _ in _REFUSED}) == 15
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        sign(KEY_A1, _good()),
+        sign(KEY_A2, _good()),
+        sign(SigningKey(KEY_A2.private, None), _good()),
+        sign(KEY_B, _good(iss=ISSUER_B)),
+        sign(KEY_A1, _good(exp=_ISSUED + 600)),
+        sign(KEY_A1, _good(aud=[AUDIENCE, "other"])),
+    ],
+    ids=[
+        "옛 키(k1)",
+        "새 키(k2)",
+        "kid 없이 키 둘인 사이트 — 차례로 시도",
+        "kid 없는 키 하나인 사이트",
+        "수명이 꼭 600초",
+        "대상 배열에 우리가 든다",
+    ],
+)
+async def test_받아들이는_토큰은_라우팅까지_간다(token: str, stderr: io.StringIO) -> None:
+    """키를 바꾸는 동안 옛 키와 새 키가 함께 받아들여진다(스토리 19). 키가 하나인 작은 사이트는
+    kid 없이 서명한다(스토리 20). 수명이 꼭 600초인 토큰은 경계 안이다 — 경계는 명세가 정했다."""
+    response = await _gate(_signed_app(stderr), token)
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        sign(SigningKey(KEY_A1.private, None), _good(iss=ISSUER_B)),
+        sign(KEY_B, _good()),
+        sign(KEY_B, _good(), kid="k2"),
+    ],
+    ids=["A 의 키로 B 를 주장", "B 의 키로 A 를 주장(kid 없음)", "B 의 키로 A 를 주장(A 의 kid)"],
+)
+async def test_다른_사이트의_키로_서명한_토큰은_401이다(token: str, stderr: io.StringIO) -> None:
+    """발급자로 고른 항목의 키로만 검증한다. 한 사이트가 다른 사이트의 발급자를 주장해 그 사용자로
+    서명할 수 없다(스토리 21, ADR 0023)."""
+    assert (await _gate(_signed_app(stderr), token)).status_code == 401
+
+
+@pytest.mark.parametrize(
+    "token",
+    [sign(KEY_A1, _good(sub="")), sign(KEY_A1, _good(sub=7))],
+    ids=["빈 sub", "숫자 sub"],
+)
+async def test_sub_는_비지_않은_문자열이어야_한다(token: str, stderr: io.StringIO) -> None:
+    """주체 이름 `발급자|sub` 의 뒤가 빈 것도, 수를 글자로 바꿔 받는 것도 막는다."""
+    assert (await _gate(_signed_app(stderr), token)).status_code == 401
+
+
+async def test_수명은_정수로_자르지_않은_값으로_센다(stderr: io.StringIO) -> None:
+    """NumericDate 는 소수일 수 있다. 자른 값으로 세면 600.5초가 600초로 읽혀 경계를 넘은 토큰이
+    지나간다. 만료와 미래는 라이브러리처럼 자른 값으로 견준다."""
+    token = sign(KEY_A1, _good(exp=_ISSUED + 600.5))
+
+    response = await _gate(_signed_app(stderr), token)
+
+    assert response.status_code == 401
+    assert "수명 600.5초" in stderr.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("changed", "expected"),
+    [
+        ({"iat": _ISSUED - 400, "exp": _ISSUED - 29}, 404),
+        ({"iat": _ISSUED - 400, "exp": _ISSUED - 30}, 401),
+        ({"iat": _ISSUED + 30, "exp": _ISSUED + 330}, 404),
+        ({"iat": _ISSUED + 31, "exp": _ISSUED + 331}, 401),
+        ({"nbf": _ISSUED + 30}, 404),
+        ({"nbf": _ISSUED + 31}, 401),
+    ],
+    ids=[
+        "만료 29초 지남",
+        "만료 30초 지남",
+        "iat 가 30초 뒤",
+        "iat 가 31초 뒤",
+        "nbf 가 30초 뒤",
+        "nbf 가 31초 뒤",
+    ],
+)
+async def test_시계_여유_30초가_exp_iat_nbf_에_같이_걸린다(
+    changed: dict[str, object], expected: int, stderr: io.StringIO
+) -> None:
+    """라이브러리의 시간 비교식(PyJWT 2.14.0 `api_jwt.py`, 코드를 읽었다)을 검증 자리가 시계
+    포트로 옮긴다. 만료는 `exp <= 지금 - 여유`, 미래는 `> 지금 + 여유` 다."""
+    response = await _gate(_signed_app(stderr), sign(KEY_A1, _good(**changed)))
+
+    assert response.status_code == expected
+
+
+async def test_토큰의_시간은_앱이_받은_시계로_센다(stderr: io.StringIO) -> None:
+    """같은 토큰이 시계를 돌리면 만료된다. 라이브러리가 벽시계로 세면 가짜 시계로는 만료를 잴 수
+    없고, 열린 스트림이 만료 뒤에도 끊기지 않는 것(스토리 15)도 잴 수 없다(티켓 01의 결정)."""
+    clock = StillClock(NOW)
+    app = _signed_app(stderr, clock)
+    token = sign(KEY_A1, _good())
+
+    before = await _gate(app, token)
+    clock.at = NOW + timedelta(seconds=300 + 30)
+    after = await _gate(app, token)
+
+    assert before.status_code == 404
+    assert after.status_code == 401
+    assert "만료" in stderr.getvalue()
+
+
+async def test_사이트가_없으면_서명_토큰이_전부_401이다(
+    client: AsyncClient, stderr: io.StringIO
+) -> None:
+    """사이트 파일을 주지 않은 배치. 최종 사용자 경로는 서되 받아들일 사이트가 없다(스토리 41).
+    모르는 발급자에서 끝나 시계에 닿지 않는다 — 이 앱의 시계는 불리면 터진다."""
+    response = await client.get(END_USER_GUARDED, headers=bearer(sign(KEY_A1, _good())))
+
+    assert response.status_code == 401
+    assert "모르는 발급자" in stderr.getvalue()
+
+
+async def test_접두사를_문자열로만_공유하는_경로는_최종_사용자_면이_아니다(
+    stderr: io.StringIO,
+) -> None:
+    """접두사 비교는 경로 조각 단위다. `/end-userx` 는 관리 토큰의 면이다."""
+    app = _signed_app(stderr)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        signed = await c.get("/end-userx", headers=bearer(sign(KEY_A1, _good())))
+        admin = await c.get("/end-userx", headers=BEARER)
+
+    assert signed.status_code == 401
+    assert admin.status_code == 404
 
 
 async def test_에러_응답이_봉투이고_code_가_상태_코드와_짝이다(client: AsyncClient) -> None:
@@ -853,11 +1141,12 @@ def test_스키마에_이름_있는_타입이_나온다(app: FastAPI) -> None:
     assert {"Health", "ErrorEnvelope", "Violation"} <= set(schemas)
 
 
-def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(app: FastAPI) -> None:
-    """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. 다섯째인
-    conflict 는 대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 이고, 표가 재개 불가와
-    꺼짐과 다른 주체와 이어 갈 수 없음을 거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력, ADR
-    0022). 관리 라우트는 내지 않는다."""
+def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_여섯이다(app: FastAPI) -> None:
+    """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. conflict 는
+    대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 이고, 표가 재개 불가와 꺼짐과 다른
+    주체와 이어 갈 수 없음을 거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력, ADR 0022). 관리
+    라우트는 내지 않는다. 여섯째인 too_many_requests 는 요청하는 쪽의 상한에 걸린 429 다(ADR 0023,
+    ADR 0010 의 2026-10-03 이력)."""
     schemas = app.openapi().get("components", {}).get("schemas", {})
 
     assert set(schemas["ErrorCode"]["enum"]) == {
@@ -865,8 +1154,23 @@ def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_다섯이다(
         "invalid_request",
         "not_found",
         "conflict",
+        "too_many_requests",
         "internal_error",
     }
+
+
+async def test_429_는_계열로_접히지_않고_too_many_requests_다(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    """어휘 테스트는 enum 의 집합만 본다. 상태 코드→어휘 표에 429 가 없으면 4xx 계열로 접혀
+    `invalid_request` 가 되고 그 테스트는 초록이다(end-user-channel 명세 검토). 429 를 내는 자리는
+    상한 티켓이 들이므로 여기서는 표만 잰다."""
+    _route_that_raises(app, "/busy", StarletteHTTPException(status_code=429, detail="바쁘다"))
+
+    response = await client.get("/busy", headers=BEARER)
+
+    assert response.status_code == 429
+    assert response.json()["code"] == "too_many_requests"
 
 
 def test_관리_라우터가_도구_포트를_받지_않는다() -> None:

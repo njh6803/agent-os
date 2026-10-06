@@ -36,6 +36,7 @@ from agent_os.core.ports import (
     TraceStore,
     WriteOutcome,
 )
+from agent_os.http.sites import Sites
 from agent_os.sdk import (
     BaseAgent,
     Event,
@@ -130,6 +131,8 @@ def document() -> str:
         principal=_PLACEHOLDER_PRINCIPAL,
         admin_token=_PLACEHOLDER_ADMIN_TOKEN,
         channel_token=_PLACEHOLDER_CHANNEL_TOKEN,
+        # 사이트가 없다. 스키마는 사이트 목록을 읽지 않는다.
+        sites=Sites(),
         stderr=io.StringIO(),
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"

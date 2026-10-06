@@ -1,0 +1,493 @@
+# 티켓 01(계약)의 변이 표. 구현 뒤에 쓴 테스트와 구현 전부터 초록이던 순서 가드가 빨강을 볼 수 있는지
+# 잰다. 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-channel/probes/contract_mutations.toml
+
+# --- core: 자기 실행 읽기와 재개의 판정 순서 ------------------------------------------------
+
+[[mutation]]
+name = "주체를 손상보다 먼저"
+tests = ["tests/core/test_run.py", "-k", "손상된_트레이스는_다른_주체이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+    if link.started.principal != principal:
+        raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
+'''
+new = '''
+    if stored.events and getattr(stored.events[0], "principal", principal) != principal:
+        raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+'''
+
+[[mutation]]
+name = "열 에이전트를 주체보다 먼저"
+tests = ["tests/core/test_run.py", "-k", "다른_주체는_집합_밖보다_먼저다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if link.started.principal != principal:
+        raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
+    if visible_agents is not None and link.started.agent not in visible_agents:
+        raise Absent(_no_run(run_id))
+'''
+new = '''
+    if visible_agents is not None and link.started.agent not in visible_agents:
+        raise Absent(_no_run(run_id))
+    if link.started.principal != principal:
+        raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
+'''
+
+[[mutation]]
+name = "형식 1 을 자기 실행 읽기보다 먼저(옛 순서)"
+tests = ["tests/core/test_run.py", "-k", "형식_1 and (다른_주체 or 손상된_형식_1 or 집합_밖은)"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    schema_version, link = _own_link(trace, run_id, approver, visible_agents)
+    if schema_version not in RESUMABLE:
+'''
+new = '''
+    early = trace.read(run_id)
+    if early is not None and early.schema_version not in RESUMABLE:
+        raise NotResumable(f"형식 {early.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}")
+    schema_version, link = _own_link(trace, run_id, approver, visible_agents)
+    if schema_version not in RESUMABLE:
+'''
+
+[[mutation]]
+name = "재개가 열 에이전트를 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "집합_밖"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if visible_agents is not None and link.started.agent not in visible_agents:
+        raise Absent(_no_run(run_id))
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "시작의 열 에이전트를 매니페스트 뒤에"
+tests = ["tests/core/test_run.py", "-k", "집합_밖의_에이전트로_시작하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
+    manifest = _requested_manifest(plugins, agent)
+'''
+new = '''
+    manifest = _requested_manifest(plugins, agent)
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
+'''
+
+# --- 공용 층: 서명 토큰 ----------------------------------------------------------------
+
+[[mutation]]
+name = "만료의 경계를 미만으로"
+tests = ["tests/test_server.py", "-k", "시계_여유"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    if int(expires) <= now - LEEWAY_SECONDS:
+'''
+new = '''
+    if int(expires) < now - LEEWAY_SECONDS:
+'''
+
+[[mutation]]
+name = "미래 iat 의 여유를 하나 더"
+tests = ["tests/test_server.py", "-k", "시계_여유 or 거절은_전부"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    if int(issued) > now + LEEWAY_SECONDS:
+'''
+new = '''
+    if int(issued) > now + LEEWAY_SECONDS + 1:
+'''
+
+[[mutation]]
+name = "nbf 를 보지 않는다"
+tests = ["tests/test_server.py", "-k", "시계_여유"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    if "nbf" in claims and int(_numeric_date(claims, "nbf")) > now + LEEWAY_SECONDS:
+'''
+new = '''
+    if "nbf" in claims and int(_numeric_date(claims, "nbf")) > now + LEEWAY_SECONDS + 3600:
+'''
+
+[[mutation]]
+name = "수명 600초 꼭을 거절"
+tests = ["tests/test_server.py", "-k", "받아들이는_토큰"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    if lifetime > MAX_LIFETIME_SECONDS:
+'''
+new = '''
+    if lifetime >= MAX_LIFETIME_SECONDS:
+'''
+
+[[mutation]]
+name = "kid 를 보지 않고 키 전부를 시도"
+tests = ["tests/test_server.py", "-k", "거절은_전부"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    kid = header.get("kid")
+    if kid is None:
+        return site.keys
+'''
+new = '''
+    kid = header.get("kid")
+    if kid is None or kid:
+        return site.keys
+'''
+
+[[mutation]]
+name = "라이브러리의 시간 검증을 켠다(벽시계)"
+tests = ["tests/test_server.py", "-k", "토큰의_시간은_앱이_받은_시계로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+                        "verify_exp": False,
+'''
+new = '''
+                        "verify_exp": True,
+'''
+
+[[mutation]]
+name = "빈 sub 를 받는다"
+tests = ["tests/test_server.py", "-k", "sub_는_비지_않은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    if not isinstance(subject, str) or not subject:
+'''
+new = '''
+    if not isinstance(subject, str):
+'''
+
+[[mutation]]
+name = "서명 토큰이 공유 토큰의 면도 연다"
+tests = ["tests/test_server.py", "-k", "자격은_자기_면만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/auth.py"
+old = '''
+            case _Shared(value=expected):
+                if not _matches(header, expected):
+                    return _refused(request, UNAUTHORIZED_MESSAGE)
+'''
+new = '''
+            case _Shared(value=expected):
+                if not _matches(header, expected) and (
+                    _bearer(header) is None or _bearer(header).count(".") != 2
+                ):
+                    return _refused(request, UNAUTHORIZED_MESSAGE)
+'''
+
+# --- 공용 층: 면별 번역 ------------------------------------------------------------------
+
+[[mutation]]
+name = "실행을 가리키는 경로의 깨진 기록을 500 으로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "손상된"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+                case Surface.END_USER_RUN:
+                    return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''
+new = '''
+                case Surface.END_USER_RUN:
+                    return _Failure(status=500, message=INTERNAL_MESSAGE)
+'''
+
+[[mutation]]
+name = "최종 사용자 면의 다른 주체를 409 로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "남의_실행"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+            if operator:
+                return _Failure(status=409, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''
+new = '''
+            return _Failure(status=409, message=str(error))
+'''
+
+[[mutation]]
+name = "최종 사용자 면의 부재가 메시지를 그대로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "목록_밖과_없는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+            return _Failure(status=404, message=str(error) if operator else NOT_FOUND_MESSAGE)
+'''
+new = '''
+            return _Failure(status=404, message=str(error))
+'''
+
+[[mutation]]
+name = "최종 사용자 면의 꺼짐이 이름을 든다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "꺼진"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+            return _Failure(status=409, message=str(error) if operator else UNAVAILABLE_MESSAGE)
+'''
+new = '''
+            return _Failure(status=409, message=str(error))
+'''
+
+[[mutation]]
+name = "429 가 어휘 표에 없다"
+tests = ["tests/test_server.py", "-k", "429_는_계열로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+    429: ErrorCode.TOO_MANY_REQUESTS,
+    500: ErrorCode.INTERNAL_ERROR,
+'''
+new = '''
+    500: ErrorCode.INTERNAL_ERROR,
+'''
+
+[[mutation]]
+name = "서버 기록이 원래 상태를 적지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "손상된_실행과_열_에이전트_밖의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+    if original.status != shown.status:
+        detail = f"원래 상태 {original.status} {detail}"
+'''
+new = '''
+'''
+
+# --- 채널: 인덱스와 구독 ---------------------------------------------------------------
+
+[[mutation]]
+name = "결정 응답의 첫 인덱스를 pause_index 로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "결정의_응답은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        return await runs.start(
+            events, request_id=request_id_of(request), first_index=decision.pause_index + 1
+        )
+'''
+new = '''
+        return await runs.start(
+            events, request_id=request_id_of(request), first_index=decision.pause_index
+        )
+'''
+
+[[mutation]]
+name = "도는 실행에 붙지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "도는_실행에_붙은_구독"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        live = None if run_status(events[-1]) != "unfinished" else runs.join(RunId(run_id))
+'''
+new = '''
+        live = None
+'''
+
+[[mutation]]
+name = "끝내지 못함의 id 를 마지막 인덱스로"
+tests = ["tests/channel/http/test_end_user.py", "-k", "등록부에_없고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+                yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
+'''
+new = '''
+                yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events) - 1))
+'''
+
+[[mutation]]
+name = "범위 밖 Last-Event-ID 를 받는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "범위_밖 or 등록부에_없고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        if start > last + 1:
+'''
+new = '''
+        if start > last + 2:
+'''
+
+[[mutation]]
+name = "Last-Event-ID 의 형식이 느슨하다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "형식에_맞지_않는_Last_Event_ID"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+LAST_EVENT_ID_PATTERN = r"^[0-9]{1,12}$"
+'''
+new = '''
+LAST_EVENT_ID_PATTERN = r"^-?[0-9]{1,13}$"
+'''
+
+[[mutation]]
+name = "진행 항목이 도구 결과를 싣는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "항목은_프롬프트도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/items.py"
+old = '''
+        case ToolCalled(tool=tool, ok=ok):
+            return ProgressItem(tool=tool, ok=ok)
+'''
+new = '''
+        case ToolCalled(tool=tool, ok=ok, content=content):
+            return ProgressItem(tool=f"{tool}:{content}", ok=ok)
+'''
+
+# --- main: OS 사용자 이름 가드와 사이트 파일 ------------------------------------------------
+
+[[mutation]]
+name = "OS 사용자 이름의 구분자를 보지 않는다"
+tests = ["tests/test_main.py", "-k", "OS_사용자_이름에_구분자"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if PRINCIPAL_SEPARATOR not in user:
+        return None
+'''
+new = '''
+    if PRINCIPAL_SEPARATOR not in user or user:
+        return None
+'''
+
+[[mutation]]
+name = "허용 출처의 와일드카드를 받는다"
+tests = ["tests/test_main.py", "-k", "사이트_파일의_구성_오류는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            if origin == "*"
+'''
+new = '''
+            if origin == "**"
+'''
+
+[[mutation]]
+name = "같은 kid 를 받는다"
+tests = ["tests/test_main.py", "-k", "kid"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if len(kids) != len(set(kids)):
+'''
+new = '''
+    if len(kids) != len(kids):
+'''
+
+# --- 셀프 리뷰 뒤에 더한 것 -------------------------------------------------------------
+
+[[mutation]]
+name = "구독의 한 걸음 사이에 await"
+tests = ["tests/channel/http/test_end_user.py", "-k", "읽는_바로_그때"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
+'''
+new = '''
+        own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
+        await __import__("asyncio").sleep(0.05)
+'''
+
+[[mutation]]
+name = "SubjectPublicKeyInfo 가 아닌 PEM 을 받는다"
+tests = ["tests/test_main.py", "-k", "사이트_파일의_구성_오류는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+        if not entry.pem.lstrip().startswith(_SPKI_HEADER):
+'''
+new = '''
+        if not entry.pem.lstrip().startswith("-----BEGIN"):
+'''
+
+[[mutation]]
+name = "수명을 자른 정수로 센다"
+tests = ["tests/test_server.py", "-k", "수명은_정수로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+    lifetime = expires - issued
+'''
+new = '''
+    lifetime = int(expires) - int(issued)
+'''

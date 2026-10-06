@@ -83,13 +83,18 @@ class ResumeArgs:
 
 @dataclass(frozen=True)
 class ServeArgs:
-    """관리 API 와 채널을 세우는 데 필요한 값 다섯. 비밀은 없다 — 토큰만 환경변수로 온다."""
+    """관리 API 와 채널을 세우는 데 필요한 값 여섯. 비밀은 없다 — 토큰만 환경변수로 온다.
+
+    사이트 파일은 공개 키라 비밀이 아니고 경로로 받는다. 없음은 받아들일 사이트가 없다는 뜻이다(ADR
+    0023).
+    """
 
     host: str
     port: int
     model: str | None
     traces: Path
     plugins_root: Path
+    site_file: Path | None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -136,6 +141,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve_parser.add_argument(
         "--port", type=_port, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"
+    )
+    # 낱말은 용어집의 "사이트 파일"이다. 시작할 때 한 번 읽고, 바꾸면 다시 시작한다(ADR 0023).
+    serve_parser.add_argument(
+        "--site-file",
+        type=Path,
+        help="받아들일 사이트를 적은 TOML. 없으면 최종 사용자 경로의 모든 토큰이 401 이다",
     )
     _add_model(serve_parser)
     _add_directories(serve_parser)
@@ -205,12 +216,14 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     plugins_root = Path(namespace.plugins_root)
     model = None if namespace.model is None else str(namespace.model)
     if namespace.command == "serve":
+        site_file = namespace.site_file
         return ServeArgs(
             host=str(namespace.host),
             port=int(namespace.port),
             model=model,
             traces=traces,
             plugins_root=plugins_root,
+            site_file=None if site_file is None else Path(site_file),
         )
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":

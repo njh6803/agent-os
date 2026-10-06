@@ -2,7 +2,7 @@
 
 표준 출력, 표준 에러, 종료 코드, 트레이스 파일을 본다.
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
-llm 마커가 붙은 셋만 실제 프로세스를 띄운다 — CLI 둘과 serve 하나. 바깥 이음매다.
+llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥 이음매다.
 """
 
 import getpass
@@ -16,17 +16,20 @@ import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 import uvicorn
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi import FastAPI
 from fastapi.sse import KEEPALIVE_COMMENT
 from httpx import ASGITransport, AsyncClient, Client, Timeout
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
 from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
@@ -752,6 +755,30 @@ def test_자리를_빼거나_0_이상의_정수가_아니면_인자_오류이고
     assert trace_file.read_bytes() == before
 
 
+def test_최종_사용자의_멈춘_실행에_CLI_로_결정하면_진단과_종료_코드_1이고_트레이스가_그대로다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """비상구가 없다는 것이 결정이다(end-user-channel 스토리 61, ADR 0009 의 2026-10-03 이력). CLI
+    코드는 바뀌지 않았다 — core 의 다른 주체를 기반 타입으로 잡는다. 진단은 그 실행의 주체를 싣지
+    않는다."""
+    directory = workspace / "t"
+    _write_started(directory, "eu-1", principal="https://site.example|alice")
+    JsonlTrace(directory).write(
+        RunPaused(run_id=RunId("eu-1"), ts=_NOW, tool="add", args={"a": 2, "b": 3})
+    )
+    (trace_file,) = _trace_files(directory)
+    before = trace_file.read_bytes()
+
+    code = main(["resume", "eu-1", "--pause-index", "1", "--approve", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "eu-1" in err
+    assert "site.example" not in err
+    assert trace_file.read_bytes() == before
+
+
 @pytest.mark.llm
 def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다(
     tmp_path: Path,
@@ -1171,6 +1198,272 @@ async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이�
     assert [event["type"] for event in _events(admitted.text)] == ["run_started", "run_finished"]
 
 
+# --- 사이트 파일 -------------------------------------------------------------------------
+# `serve --site-file` 이 받아들일 사이트를 읽는다(ADR 0023, end-user-channel 티켓 01). 인자가 없으면
+# 사이트가 없어 최종 사용자 경로의 모든 토큰이 401 이고, 줬는데 파일이 없거나 깨졌으면 다른 구성
+# 오류와 함께 시작 자리에서 끝난다. 토큰 검증의 사례는 `tests/test_server.py`, 경로의 동작은
+# `tests/channel/http/test_end_user.py` 가 잰다. 여기서는 파일 읽기와 진단과 조립을 잰다.
+
+SITE_KEY = new_key("k1")
+SITE_ISSUER = "https://shop.example"
+
+
+def _site_file(*sites: str, head: str = 'schema_version = "1"\n') -> str:
+    return head + "".join(sites)
+
+
+def _site(
+    *,
+    issuer: str = SITE_ISSUER,
+    keys: Sequence[tuple[str, str | None]] | None = None,
+    origins: str = '["https://shop.example"]',
+    agents: str = '["echo"]',
+    extra: str = "",
+) -> str:
+    """사이트 표 하나. 키는 (PEM, kid) 의 열이고 주지 않으면 `SITE_KEY` 하나다."""
+    chosen = [(SITE_KEY.public_pem(), "k1")] if keys is None else keys
+    table = (
+        f'\n[[sites]]\nissuer = "{issuer}"\naudience = "{AUDIENCE}"\n'
+        f"allowed_origins = {origins}\nagents = {agents}\n{extra}"
+    )
+    for pem, kid in chosen:
+        table += f'\n[[sites.public_keys]]\npem = """{pem}"""\n'
+        if kid is not None:
+            table += f'kid = "{kid}"\n'
+    return table
+
+
+def _ec_public_pem() -> str:
+    """RSA 가 아닌 공개 키 하나."""
+    key = ec.generate_private_key(ec.SECP256R1()).public_key()
+    pem = key.public_bytes(
+        serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return pem.decode("ascii")
+
+
+def _pkcs1_public_pem() -> str:
+    """RSA 공개 키이지만 SubjectPublicKeyInfo 가 아닌 PKCS#1 PEM(`BEGIN RSA PUBLIC KEY`)."""
+    pem = SITE_KEY.private.public_key().public_bytes(
+        serialization.Encoding.PEM, serialization.PublicFormat.PKCS1
+    )
+    return pem.decode("ascii")
+
+
+# 머리글은 갖췄지만 본문이 공개 키가 아닌 PEM.
+_GARBLED_PEM = "-----BEGIN PUBLIC KEY-----\nnot-a-key\n-----END PUBLIC KEY-----\n"
+
+
+def _site_token(subject: str = "alice") -> dict[str, str]:
+    """실제 시각으로 서명한 토큰. `serve` 가 시스템 시계로 세기 때문이다."""
+    return bearer(sign(SITE_KEY, claims(SITE_ISSUER, subject, datetime.now(UTC))))
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+async def test_사이트_파일이_없으면_최종_사용자_경로가_서되_모든_토큰이_401이다(
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """위젯을 쓰지 않는 배치가 빈 파일을 만들지 않아도 된다(스토리 41). 경로가 구성에 따라 조용히
+    사라지지 않고 그대로 선다 — 401 이다(ADR 0023)."""
+    main(["serve"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as c:
+        response = await c.post(
+            "/end-user/runs", json={"agent": "echo", "request": "hi"}, headers=_site_token()
+        )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.usefixtures("tokens")
+async def test_사이트_파일을_주면_서명한_최종_사용자의_실행이_발급자와_sub_의_주체로_돈다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """`serve` 가 읽은 사이트 목록이 `create_app` 에 닿는다는 것을 세운 앱의 답으로 잰다. 주체는
+    `발급자|sub` 이고 OS 사용자가 아니다(ADR 0023)."""
+    (workspace / "sites.toml").write_text(_site_file(_site()), encoding="utf-8")
+    main(["serve", "--site-file", "sites.toml", "--traces", "t"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+    ):
+        response = await client.post(
+            "/end-user/runs", json={"agent": "echo", "request": "hi"}, headers=_site_token()
+        )
+
+    assert response.status_code == 200
+    items = _items(response.text)
+    assert [(index, item["type"]) for index, item in items] == [(0, "started"), (1, "finished")]
+    (trace_file,) = _trace_files(workspace / "t")
+    started = _read(trace_file).events[0]
+    assert isinstance(started, RunStarted)
+    assert started.principal == f"{SITE_ISSUER}|alice"
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_열_에이전트에_없는_이름은_구성_오류가_아니다(
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """플러그인 루트는 `serve` 가 뜬 뒤에도 바뀐다(ADR 0003). 요청 때 core 의 부재가 답한다."""
+    Path("sites.toml").write_text(_site_file(_site(agents='["not-yet"]')), encoding="utf-8")
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+_BROKEN_SITE_FILES: tuple[tuple[str, str | None, str], ...] = (
+    ("파일 없음", None, "파일이 없다"),
+    ("TOML 이 아님", 'schema_version = "1"\n[[sites]\n', "TOML 이 아니다"),
+    ("형식 버전 없음", _site_file(_site(), head=""), "schema_version"),
+    ("모르는 키", _site_file(_site(extra="limits = 3\n")), "sites[0].limits"),
+    ("필드 빠짐", _site_file(_site(origins='["x"]').replace("audience", "audiance")), "audience"),
+    ("발급자 빔", _site_file(_site(issuer=" ")), "issuer 가 비었다"),
+    ("발급자 겹침", _site_file(_site(), _site()), "sites[0] 의 것과 겹친다"),
+    ("발급자에 구분자", _site_file(_site(issuer="https://a|b")), "issuer 에 '|'"),
+    ("PEM 아님", _site_file(_site(keys=[("not a pem", "k1")])), "SubjectPublicKeyInfo 형식"),
+    ("PKCS#1 PEM", _site_file(_site(keys=[(_pkcs1_public_pem(), "k1")])), "SubjectPublicKeyInfo"),
+    (
+        "PEM 본문 깨짐",
+        _site_file(_site(keys=[(_GARBLED_PEM, "k1")])),
+        "PEM 공개 키로 읽히지 않는다",
+    ),
+    ("RSA 아님", _site_file(_site(keys=[(_ec_public_pem(), "k1")])), "RSA 공개 키가 아니다"),
+    (
+        "kid 겹침",
+        _site_file(_site(keys=[(SITE_KEY.public_pem(), "k1"), (SITE_KEY.public_pem(), "k1")])),
+        "같은 kid",
+    ),
+    (
+        "kid 없는 키 둘",
+        _site_file(_site(keys=[(SITE_KEY.public_pem(), None), (SITE_KEY.public_pem(), None)])),
+        "kid 없는 키가 둘",
+    ),
+    ("키 없음", _site_file(_site(keys=[])), "public_keys"),
+    ("열 에이전트 패턴", _site_file(_site(agents='["Bad Name"]')), "agents[0]"),
+    ("허용 출처 와일드카드", _site_file(_site(origins='["*"]')), "allowed_origins[0]"),
+)
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [(content, expected) for _, content, expected in _BROKEN_SITE_FILES],
+    ids=[name for name, _, _ in _BROKEN_SITE_FILES],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_사이트_파일의_구성_오류는_서버가_서기_전에_진단과_종료_코드_1이고_키_값을_싣지_않는다(
+    content: str | None,
+    expected: str,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """경로 오타나 깨진 파일이 조용히 401 이 되지 않는다(스토리 40·42). 진단은 짧아야 해서 공개
+    키라도 싣지 않는다(원칙 V)."""
+    if content is not None:
+        Path("sites.toml").write_text(content, encoding="utf-8")
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "sites.toml" in err
+    assert expected in err
+    assert "BEGIN PUBLIC KEY" not in err
+    assert "MII" not in err
+    assert uvicorn_calls == []
+
+
+def test_사이트_파일의_진단도_토큰_진단과_한꺼번에_나온다(
+    workspace: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """같은 자리(`_configuration_problems`)에서 모아 낸다. 하나씩 내면 고치고 다시 치고 또
+    막힌다."""
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
+
+    code = main(["serve", "--site-file", "no-such.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert ADMIN_TOKEN_ENV in err
+    assert "no-such.toml" in err
+    assert uvicorn_calls == []
+
+
+# OS 사용자 이름의 구분자 — `|` 가 든 주체는 언제나 최종 사용자의 것이어야 한다(ADR 0015 이력)
+
+
+@pytest.fixture
+def piped_user(monkeypatch: pytest.MonkeyPatch) -> str:
+    """`getpass.getuser()` 가 먼저 읽는 환경변수에 구분자가 든 이름을 심는다."""
+    name = "ops|admin"
+    for variable in ("LOGNAME", "USER", "LNAME", "USERNAME"):
+        monkeypatch.setenv(variable, name)
+    return name
+
+
+@pytest.mark.usefixtures("tokens")
+def test_OS_사용자_이름에_구분자가_들면_serve_가_서지_않는다(
+    workspace: Path,
+    piped_user: str,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """그 이름이 최종 사용자의 것과 섞이면 주체 비교가 거짓이 된다(스토리 57)."""
+    code = main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert piped_user in err
+    assert "LOGNAME" in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["run", "echo", "hi", "--traces", "t"],
+        ["resume", "some-run", "--pause-index", "1", "--approve", "--traces", "t"],
+    ],
+    ids=["run", "resume"],
+)
+def test_OS_사용자_이름에_구분자가_들면_run_과_resume_이_시작_자리에서_끝난다(
+    workspace: Path, piped_user: str, argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = main(argv)
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert piped_user in err
+    assert _trace_files(workspace / "t") == []
+
+
+def _items(stream: str) -> list[tuple[int, Mapping[str, Json]]]:
+    """최종 사용자 스트림의 프레임마다 `id` 와 `data`. keepalive 주석은 건너뛴다."""
+    items: list[tuple[int, Mapping[str, Json]]] = []
+    for block in stream.split("\n\n"):
+        if not block or block.startswith(":"):
+            continue
+        fields = dict(line.split(": ", 1) for line in block.split("\n"))
+        payload: Json = json.loads(fields["data"])
+        assert isinstance(payload, dict)
+        items.append((int(fields["id"]), payload))
+    return items
+
+
 # uvicorn 이 빈 포트를 고른 뒤 찍는 기동 줄. 앱의 수명이 열리고 소켓이 듣기 시작한 뒤에 나온다.
 LISTENING = re.compile(r"Uvicorn running on (http://\S+)")
 # 실제 serve 가 설 때까지 기다리는 상한. 대부분은 import 시간이다.
@@ -1183,7 +1476,9 @@ STREAM_SECONDS = 120
 
 
 @contextmanager
-def _serving(root: Path, *, admin_token: str, channel_token: str) -> Generator[str]:
+def _serving(
+    root: Path, *, admin_token: str, channel_token: str, extra: Sequence[str] = ()
+) -> Generator[str]:
     """실제 `serve` 프로세스 하나를 빈 포트에 띄우고 요청을 받을 수 있게 되면 그 주소를 준다.
 
     포트는 `--port 0` 으로 uvicorn 이 고르고 그 기동 줄에서 읽는다. 읽은 순간 서버가 서 있으므로
@@ -1197,7 +1492,7 @@ def _serving(root: Path, *, admin_token: str, channel_token: str) -> Generator[s
     """
     log = root / "serve.log"
     env = _env() | {ADMIN_TOKEN_ENV: admin_token, CHANNEL_TOKEN_ENV: channel_token}
-    argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t"]
+    argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t", *extra]
     with log.open("w", encoding="utf-8") as sink:
         process = subprocess.Popen(argv, cwd=root, stdout=sink, stderr=sink, env=env)
         try:
@@ -1302,6 +1597,62 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
     boundaries = ("approval_granted", "run_resumed", "tool_called")
     assert [t for t in types if t in boundaries] == list(boundaries)
     assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
+
+
+# 모델에게 요청을 그대로 묻고 그 답으로 끝내는 에이전트. 최종 사용자 경로를 실제 모델로 지나는 데
+# 쓴다.
+ASKER_SRC = """
+from collections.abc import AsyncIterator
+
+from agent_os.sdk import AgentContext, Event, RunFinished
+
+
+class Agent:
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=await ctx.llm(request))
+"""
+
+
+@pytest.mark.llm
+def test_실제_serve_에서_사이트가_서명한_토큰으로_시작한_실행이_항목과_id_를_흘린다(
+    tmp_path: Path,
+) -> None:
+    """바깥 이음매. 실제 uvicorn 과 사이트 파일과 PyJWT 의 조립을 실제 실행으로 보는 유일한 자리다
+    (end-user-channel 티켓 01). 프레임은 `id:` 를 싣고, 모델 호출은 항목이 없어 그 자리를 건너뛰며,
+    주체는 `발급자|sub` 로 트레이스에 남는다. 토큰은 실제 시각으로 서명한다."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _write_plugin(tmp_path, "asker", ASKER_SRC)
+    (tmp_path / "sites.toml").write_text(_site_file(_site(agents='["asker"]')), encoding="utf-8")
+    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
+    token = sign(SITE_KEY, claims(SITE_ISSUER, "alice", datetime.now(UTC)))
+
+    with (
+        _serving(
+            tmp_path,
+            admin_token=admin_token,
+            channel_token=channel_token,
+            extra=["--site-file", "sites.toml"],
+        ) as address,
+        Client(
+            base_url=address,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=STREAM_TIMEOUT,
+            trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
+        ) as client,
+    ):
+        stream = _post_stream(
+            client, "/end-user/runs", {"agent": "asker", "request": "한 단어로 인사해 줘"}
+        )
+
+    items = _items(stream)
+    assert [(index, item["type"]) for index, item in items] == [(0, "started"), (2, "finished")]
+    assert str(items[1][1]["output"]).strip()
+    (trace_file,) = _trace_files(tmp_path / "t")
+    events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
+    started = events[0]
+    assert isinstance(started, RunStarted)
+    assert started.principal == f"{SITE_ISSUER}|alice"
 
 
 def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_아니라_거기서_읽는다(
