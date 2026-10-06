@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -128,6 +129,25 @@ def test_훅_이름_인자가_틀려도_지나가고_파일이_없을_때와_다
     assert wrong_argv in two_names and "hook_a.py" in two_names
     assert no_file in missing and wrong_argv not in missing
     assert "주 체크아웃을 당긴다" in missing and "당긴다" not in no_name
+
+
+def test_파일이_없을_때_안내하는_스킬_명령은_이_저장소에_있다(tmp_path: Path) -> None:
+    """안내문은 주 체크아웃을 당기는 길로 스킬 명령(`/tidy-checkouts`)을 든다. 스킬 이름을 바꾸거나
+    지우면 안내문이 조용히 낡으므로, 안내문이 든 `/<이름>` 꼴 명령마다 이 저장소에 그 스킬 파일이
+    있는지 본다(PR #141 claude-review). 안내문에는 없는 훅의 경로가 들고 리눅스에서는 그 경로가
+    공백 뒤의 `/`로 시작하므로, 경로를 먼저 걷어 내고 찾는다."""
+    payload = b'{"hook_event_name": "PreToolUse"}'
+    launcher = _래퍼_사본을_둔다(tmp_path)
+    missing = _모델이_받는_문구(_알림(_돌린다(launcher, "hook_없다.py", stdin=payload)))
+    hook_path = str(tmp_path / "hook_없다.py")
+    assert hook_path in missing, missing
+
+    text = missing.replace(hook_path, "<훅 경로>")
+    commands = re.findall(r"(?:^|[\s(])/([a-z][a-z0-9]*(?:-[a-z0-9]+)*)", text)
+
+    assert "tidy-checkouts" in commands, missing
+    for command in commands:
+        assert (ROOT / ".claude" / "skills" / command / "SKILL.md").is_file(), command
 
 
 def test_훅의_종료_코드와_stdin_stdout_stderr_는_그대로다(tmp_path: Path) -> None:
