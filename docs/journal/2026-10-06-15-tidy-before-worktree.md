@@ -122,6 +122,23 @@
 - **다시 돌렸다.** pytest 1643 통과, ruff, ruff format(428), pyright 0, import-linter 5 kept, `pnpm -C web verify` 종료 0,
   지침 검사, `tools/run_hooks.py`(페이로드 61, 어긋남 0), 변이 아홉, 스킬 셋과 규칙의 카나리아(위 검사 절).
 
+## PR 리뷰 반영
+
+PR #154의 CI 여섯이 초록이었고, CodeRabbit이 인라인 Major 둘, claude-review가 Minor 셋과 Nit 둘을 남겼다.
+
+- **고쳤다, CodeRabbit 첫째의 일부.** 새 세션이 워크트리 폴더에서 열리면 `tidy-checkouts`가 돌지 못한다는 지적이다. 연 저장소
+  표지는 `tools/open_session.ps1`의 `-Folder`이고 open-session 3단계가 그 값을 주 체크아웃으로 고정해 넘기므로, 그 경우
+  훅이 표지와 작업 폴더를 비교해 프롬프트를 막는다. 다만 계기 문장이 "이 세션은 아직 주 체크아웃에 있어"라고 단정한 것은
+  보장이 아니라, 그 스킬이 주 체크아웃 세션에서만 당기고 아니면 1에서 멈추며 그때도 지시문을 잇는다고 고쳤다.
+- **남겼다, CodeRabbit 둘째.** 묶음의 둘째 세션이 첫 세션의 갱신 전에 워크트리를 따면 병합된 커밋이 빠질 수 있다는 지적이다.
+  워크트리의 기준은 로컬 main이 아니라 `origin/main`이고, 병합한 세션이 "워크트리에서 병합할 때" 3에서 `git fetch origin`을
+  친 뒤에 새 세션을 연다. 첫 세션의 `tidy-checkouts`가 당기는 것은 주 체크아웃의 작업 트리다. 스레드에 이유를 답했다.
+- **고쳤다, claude-review Minor 셋.** 미갱신을 형식의 콜론까지(`주 체크아웃 미갱신:`) 대조해 같은 줄의 부정을 세지 않는다
+  (부정 사례와 변이 하나를 더해 변이가 열이다). 분기 안에서 세우던 `tidies`를 계기 상수 둘(`_TIDY_FIRST`, `_TIDY_LATER`)과
+  식 하나로 풀었다. 테스트가 여러 곳에서 되풀이한 계기 문구를 상수 하나(`RUNS_TIDY`)로 모았다.
+- **남겼다, Nit 둘.** 페이로드 두 사례의 긴 지시문 중복은 TOML이 사례 사이에 문자열을 나누지 못해 두었다.
+  `.claude/rules/tools.md` 불릿의 길이는 이 PR의 범위 밖이다.
+
 ## 카나리아 절차가 오늘 규칙을 싣지 않았다
 
 `docs/constitution/operations.md` 환경 규약 상세의 규칙 카나리아 명령(`--tools Read --disallowed-tools 'Read(./.claude/**)'`)

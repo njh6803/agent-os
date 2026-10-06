@@ -11,8 +11,18 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_prompt_directive.py"
-old = '''    if _stale_root(prompt):'''
-new = '''    if False:'''
+old = '''    stale = _stale_root(prompt)'''
+new = '''    stale = False'''
+
+[[mutation]]
+name = "미갱신을 콜론 없이 대조해 같은 줄의 부정도 센다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "머리_라벨로만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''_STALE_ROOT = "주 체크아웃 미갱신:"'''
+new = '''_STALE_ROOT = "주 체크아웃 미갱신"'''
 
 [[mutation]]
 name = "미갱신을 줄 머리 라벨 없이 아무 줄에서나 알아본다"

@@ -77,10 +77,24 @@ _OPENED_LINE = re.compile(_OPENED_HEAD_PATTERN + r" 이 세션을 연 저장소�
 _WHERE_LABEL = "어디서:"
 # 워크트리에서 병합한 세션이 주 체크아웃을 당기지 못했다는 줄(next-session "워크트리에서 병합할
 # 때" 4)과 그 줄이 사는 라벨, "어디서" 줄의 묶음 표시(next-session 3단계). 문구의 원천은 그 스킬이고
-# tests/tools 의 계약 테스트가 대조한다. 묶음 표시의 그룹은 k 하나다.
+# tests/tools 의 계약 테스트가 대조한다. 미갱신은 콜론까지 대조해 같은 줄의 부정이나 설명("미갱신
+# 아님")을 세지 않는다. 묶음 표시의 그룹은 k 하나다.
 _CONDITION_LABEL = "확인할 선행 조건:"
-_STALE_ROOT = "주 체크아웃 미갱신"
+_STALE_ROOT = "주 체크아웃 미갱신:"
 _BUNDLE = re.compile(r"나란히 여는\s*\d+\s*중\s*(\d+)")
+# 미갱신 지시문에 붙는 계기. 묶음의 첫 세션(묶음이 아니면 그 세션)과 나머지 세션.
+_TIDY_FIRST = (
+    " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말한다. 제목을 바꾼 뒤 워크트리에 "
+    "들어가기 전에 Skill 도구로 `tidy-checkouts` 를 돈다. 그 스킬은 주 체크아웃 세션에서만 "
+    "루트를 당기고, 워크트리에 들어간 뒤나 주 체크아웃이 아닌 폴더에서는 1에서 멈춘다. 무엇을 "
+    "당기고 지울지는 그 스킬이 정한다. 그 스킬이 멈추거나 사람에게 넘기는 것은 보고만 하고 답을 "
+    "기다리지 않고 지시문을 잇는다."
+)
+_TIDY_LATER = (
+    " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말하지만, 이 세션은 나란히 여는 묶음의 "
+    "첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다 — 첫 세션이 돈다. 함께 돌면 같은 루트를 "
+    "함께 당기거나 같은 워크트리를 함께 지우려 할 수 있다."
+)
 
 
 class HookPayload(TypedDict, total=False):
@@ -114,23 +128,10 @@ def context_for(prompt: str) -> str | None:
         "바꾸지 않고 사용자에게 알린다. 데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` "
         "는 이 세션을 빼고 `get_session` 은 이 세션을 `self` 로만 가리킨다."
     )
-    tidies = False
-    if _stale_root(prompt):
-        tidies = _first_of_bundle(prompt)
-        if tidies:
-            context += (
-                " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말한다. 제목을 바꾼 뒤 "
-                "워크트리에 들어가기 전에 Skill 도구로 `tidy-checkouts` 를 돈다. 이 세션은 아직 "
-                "주 체크아웃에 있어 그 스킬이 루트를 당길 수 있고, 워크트리에 들어간 뒤에는 그 "
-                "스킬이 멈춘다. 무엇을 당기고 지울지는 그 스킬이 정한다. 그 스킬이 사람에게 넘기는 "
-                "것은 보고만 하고 답을 기다리지 않고 지시문을 잇는다."
-            )
-        else:
-            context += (
-                " 지시문의 '확인할 선행 조건'이 주 체크아웃 미갱신을 말하지만, 이 세션은 나란히 "
-                "여는 묶음의 첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다 — 첫 세션이 돈다. "
-                "함께 돌면 같은 루트를 함께 당기거나 같은 워크트리를 함께 지우려 할 수 있다."
-            )
+    stale = _stale_root(prompt)
+    tidies = stale and _first_of_bundle(prompt)
+    if stale:
+        context += _TIDY_FIRST if tidies else _TIDY_LATER
     if _wants_worktree(prompt):
         after = "`tidy-checkouts` 를 돈 뒤" if tidies else "제목을 바꾼 뒤"
         context += (

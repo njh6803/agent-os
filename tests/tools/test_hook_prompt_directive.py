@@ -308,6 +308,10 @@ def _bundled(k: str, head: str = "") -> str:
     return f"어디서: 새 세션. 나란히 여는 2 중 {k}. {head}{WORKTREE_SENTENCE}"
 
 
+# 계기가 tidy-checkouts 를 돌라고 하는 문구. 문구를 다듬으면 여기 한 곳만 고친다.
+RUNS_TIDY = "Skill 도구로 `tidy-checkouts` 를 돈다"
+
+
 def test_주_체크아웃_미갱신이면_워크트리_전에_tidy_checkouts를_돌라고_한다() -> None:
     """새 세션은 EnterWorktree 전까지 주 체크아웃 세션이라 그 스킬이 루트를 당길 수 있다.
 
@@ -334,26 +338,30 @@ def test_나란히_여는_묶음이면_첫_세션만_tidy_checkouts를_돈다() 
     first = context_for(_stale(where=_bundled("1")))
 
     assert first is not None
-    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in first
+    assert RUNS_TIDY in first
     for k in ("2", "3", "0", "01"):
         later = context_for(_stale(where=_bundled(k)))
         assert later is not None, k
-        assert "Skill 도구로 `tidy-checkouts` 를 돈다" not in later, k
+        assert RUNS_TIDY not in later, k
         assert "돌지 않는다" in later, k
         assert "첫 세션" in later, k
 
 
 def test_미갱신은_확인할_선행_조건_줄의_머리_라벨로만_알아본다() -> None:
-    """다른 줄이 미갱신을 인용하거나 줄 머리가 아닌 데서 라벨을 인용한 것은 세지 않는다."""
+    """다른 줄이 미갱신을 인용하거나 줄 머리가 아닌 데서 라벨을 인용한 것은 세지 않는다.
+
+    같은 줄이라도 형식(`주 체크아웃 미갱신: 루트는 …`)의 콜론이 없는 부정이나 설명은 세지 않는다.
+    """
     quoted = _stale(condition="확인할 선행 조건: 없음").replace(
         "이어받을 상태: 없음", "이어받을 상태: 앞 세션 일지에 `주 체크아웃 미갱신` 한 줄이 있다"
     )
     inline = _stale(condition="확인할 선행 조건: 없음").replace(
-        "읽을 것:", "읽을 것: 확인할 선행 조건: 주 체크아웃 미갱신 형식은 next-session 3.", 1
+        "읽을 것:", "읽을 것: 확인할 선행 조건: 주 체크아웃 미갱신: 형식은 next-session 3.", 1
     )
+    negated = _stale(condition="확인할 선행 조건: 주 체크아웃 미갱신 아님(이 세션이 당겼다)")
     no_stale = _stale(condition="확인할 선행 조건: 없음")
 
-    for prompt in (quoted, inline, no_stale):
+    for prompt in (quoted, inline, negated, no_stale):
         context = context_for(prompt)
         assert context is not None
         assert "tidy-checkouts" not in context
@@ -364,7 +372,7 @@ def test_미갱신인데_워크트리_문장이_없어도_tidy_checkouts를_먼�
     context = context_for(_stale(where="어디서: 새 세션"))
 
     assert context is not None
-    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in context
+    assert RUNS_TIDY in context
     assert "EnterWorktree" not in context
 
 
@@ -402,7 +410,7 @@ def test_next_session_스킬이_적으라는_미갱신_문구를_훅이_알아�
 
     assert where_line.index("tidy-checkouts") < where_line.index("EnterWorktree")
     assert first_context is not None
-    assert "Skill 도구로 `tidy-checkouts` 를 돈다" in first_context
+    assert RUNS_TIDY in first_context
     assert rest_context is not None
     assert "돌지 않는다" in rest_context
 
