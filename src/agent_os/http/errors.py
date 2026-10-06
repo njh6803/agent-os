@@ -310,27 +310,27 @@ def error_envelope(
 class AssignRequestId(BaseHTTPMiddleware):
     """추적 식별자를 심고 응답에 실어 보내며, 실패 하나를 서버 기록에 한 줄 남긴다.
 
-    이 미들웨어가 인증보다 바깥인 이유는 401 응답과 500 봉투가 같은 식별자를 들어야 하기
-    때문이다. 등록된 예외 핸들러는 라우터 쪽(`ExceptionMiddleware`)에서 도는데, 거기 걸리지 않은
-    예외는 여기까지 올라온다. 그것을 잡지 않으면 봉투가 아닌 기본 500 이 나가고 추적 식별자도
-    없다.
+    이 미들웨어가 앱에 거는 것 가운데 가장 바깥인 이유는 모든 응답이 같은 식별자를 들어야 하기
+    때문이다 — 인증이 낸 401, 표가 낸 봉투, CORS 미들웨어가 직접 답한 preflight 까지. 봉투를 만드는
+    자리는 이보다 안쪽이고 봉투의 `request_id` 는 여기서 심은 값을 읽는다.
 
     기록에 경로도 주체도 적지 않는다 — 누가 무엇을 조회했는지는 이 기능이 남기는 것이 아니고
-    (감사 로그는 비목표다), 이 한 줄은 실패 하나의 상관 키다.
+    (감사 로그는 비목표다), 이 한 줄은 실패 하나의 상관 키다. 적어 둔 문구가 없는 실패(CORS
+    미들웨어가 답한 preflight 의 400)는 상태 코드만 남는다.
 
-    여기까지 올라온 예외도 그 요청의 면으로 번역한다. 예기치 않은 예외는 어느 면에서나 같은 고정
-    문구지만, 핸들러를 비켜 온 `PluginError` 가 최종 사용자 면에서 원문으로 나가지 않게 한다.
+    핸들러가 놓친 예외를 봉투로 바꾸는 일은 여기가 아니라 `CatchUnexpected` 다. 둘이 한
+    미들웨어면 그 변환이 CORS 보다 바깥에 서서 최종 사용자 면의 예기치 않은 500 에 CORS 헤더가
+    붙지 않는다(end-user-channel 명세 "CORS", `cors_scoped.py` 사례 7 과 대조군 7').
     """
 
-    def __init__(self, app: ASGIApp, *, stderr: TextIO, end_user: EndUserPaths) -> None:
+    def __init__(self, app: ASGIApp, *, stderr: TextIO) -> None:
         super().__init__(app)
         self._stderr = stderr
-        self._end_user = end_user
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = _new_request_id()
         request.scope[_REQUEST_ID_KEY] = request_id
-        response = await self._answer(request, call_next)
+        response = await call_next(request)
         response.headers[REQUEST_ID_HEADER] = request_id
         if response.status_code >= 400:
             detail = _failure_detail(request)
@@ -338,13 +338,28 @@ class AssignRequestId(BaseHTTPMiddleware):
             self._stderr.write(f"요청 실패: request_id={request_id} status={status} {detail}\n")
         return response
 
-    async def _answer(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """정상 흐름과 예기치 않은 실패를 가른다(`CODING_STANDARDS.md` 의 에러 처리 분리).
 
-        여기서도 `failure_for()` 를 지나는 이유는 표가 한 곳이어야 하기 때문이다. 이 자리에서
-        500 을 직접 만들면 "예상 밖 예외는 500" 이 두 곳에 있게 되고, 표의 마지막 갈래는 아무도
-        가지 않는 죽은 코드가 된다(PR 봇 둘이 같은 자리에 닿았다).
-        """
+class CatchUnexpected(BaseHTTPMiddleware):
+    """핸들러가 놓친 예외를 그 요청의 면으로 번역해 봉투로 답한다.
+
+    등록된 예외 핸들러는 라우터 쪽(`ExceptionMiddleware`)에서 도는데, 거기 걸리지 않은 예외는
+    여기까지 올라온다. 그것을 잡지 않으면 봉투가 아닌 기본 500 이 나가고 추적 식별자도 없다.
+    예기치 않은 예외는 어느 면에서나 같은 고정 문구지만, 핸들러를 비켜 온 `PluginError` 가 최종
+    사용자 면에서 원문으로 나가지 않게 면을 넘긴다.
+
+    자리는 인증의 바깥이고 CORS 의 안쪽이다. 최종 사용자 접두사에서 CORS 가 이것을 감싸야 그 500
+    에도 CORS 헤더가 붙는다. 운영자 면에서는 식별자 심기와 인증 사이, 갈라지기 전과 같은 자리다.
+
+    여기서도 `failure_for()` 를 지나는 이유는 표가 한 곳이어야 하기 때문이다. 이 자리에서 500 을
+    직접 만들면 "예상 밖 예외는 500" 이 두 곳에 있게 되고, 표의 마지막 갈래는 아무도 가지 않는
+    죽은 코드가 된다(PR 봇 둘이 같은 자리에 닿았다).
+    """
+
+    def __init__(self, app: ASGIApp, *, end_user: EndUserPaths) -> None:
+        super().__init__(app)
+        self._end_user = end_user
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             return await call_next(request)
         except Exception as error:

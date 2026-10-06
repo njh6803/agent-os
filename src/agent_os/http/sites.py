@@ -68,9 +68,9 @@ class Site:
     """받아들이는 사이트 하나. 발급자, 대상, 공개 키 목록, 허용 출처, 열 에이전트를 든다.
 
     발급자는 비지 않았고 사이트끼리 겹치지 않으며 `|` 를 품지 않는다 — 사이트 파일을 읽는 쪽이
-    판정하고 이 타입은 그것을 믿는다. 허용 출처는 CORS 의 입력이다(그 미들웨어는 end-user-channel
-    티켓 04 가 들인다. 그 전에는 읽고 검증만 한다). 열 에이전트는 이 사이트의 최종 사용자가 볼 수
-    있는 에이전트의 집합이고 core 가 판정한다(ADR 0023 의 2026-10-05 이력).
+    판정하고 이 타입은 그것을 믿는다. 허용 출처는 CORS 의 입력이고 사이트 목록이 모든 사이트의 것을
+    합쳐 넘긴다(`Sites.origins`). 열 에이전트는 이 사이트의 최종 사용자가 볼 수 있는 에이전트의
+    집합이고 core 가 판정한다(ADR 0023 의 2026-10-05 이력).
     """
 
     issuer: str
@@ -89,6 +89,17 @@ class Sites:
     def of(self, issuer: str) -> Site | None:
         """발급자의 사이트 항목(질의). 발급자는 겹치지 않으므로 많아야 하나다."""
         return next((site for site in self.entries if site.issuer == issuer), None)
+
+    def origins(self) -> tuple[str, ...]:
+        """모든 사이트의 허용 출처를 합친 것(질의). 처음 나온 순서이고 겹친 것은 하나다.
+
+        CORS 가 이것 하나를 받는다. 사이트별로 가르지 않는 이유는 preflight 에 토큰이 없어
+        미들웨어가 출처의 사이트를 토큰보다 먼저 가를 수 없기 때문이다(end-user-channel 명세
+        "CORS"). 그래서 한 사이트의 페이지에서 다른 사이트의 토큰으로 보낸 요청도 읽힌다 — 둘 다
+        운영자가 사이트 파일에 올린 사이트라 믿는 범위 안이고, 가르려면 토큰과 출처를 묶는 규칙이
+        하나 더 든다.
+        """
+        return tuple(dict.fromkeys(o for site in self.entries for o in site.allowed_origins))
 
 
 @dataclass(frozen=True)

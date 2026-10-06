@@ -82,6 +82,9 @@ T0 = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 
 ISSUER = "https://shop.example"
 OTHER_ISSUER = "https://other.example"
+# 사이트마다 위젯을 넣은 페이지의 출처. CORS 의 허용 출처다.
+ORIGIN = "https://www.shop.example"
+OTHER_ORIGIN = "https://www.other.example"
 KEY = new_key("k1")
 OTHER_KEY = new_key()
 ALICE = Principal(f"{ISSUER}|alice")
@@ -106,14 +109,14 @@ def _site(agents: frozenset[AgentName] = OPEN_AGENTS) -> Sites:
                 issuer=ISSUER,
                 audience=AUDIENCE,
                 keys=(KEY.site_key(),),
-                allowed_origins=(),
+                allowed_origins=(ORIGIN,),
                 agents=agents,
             ),
             Site(
                 issuer=OTHER_ISSUER,
                 audience=AUDIENCE,
                 keys=(OTHER_KEY.site_key(),),
-                allowed_origins=(),
+                allowed_origins=(OTHER_ORIGIN,),
                 agents=frozenset({AgentName("echo")}),
             ),
         )
@@ -1040,6 +1043,41 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
 
     assert _types(wire.frames()) == [(0, "started"), (2, "finished")]
     assert later.status_code == 401
+
+
+# CORS — 허용 출처의 페이지가 성공 응답도 에러 봉투도 읽는다(ADR 0023, end-user-channel 티켓 04).
+# 미들웨어의 자리와 범위(preflight, 허용 밖 출처, 접두사 밖, 사이트 둘, 예기치 않은 500)는
+# `tests/test_server.py` 의 CORS 절이 잰다. 여기서는 진짜 라우트가 낸 상태 코드마다 헤더가 붙는지
+# 본다.
+
+
+async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_헤더_셋을_받는다() -> None:
+    """페이지 안 위젯이 에러 봉투를 읽는다(스토리 24). 401 은 인증이, 404·409·422·500 은 표가 낸다 —
+    CORS 가 인증과 라우터를 감싸므로 어느 것에나 붙는다. 노출 헤더가 추적 식별자를 들어 위젯이 그
+    값을 운영자에게 건넬 수 있다."""
+    origin = {"Origin": ORIGIN}
+
+    async with _serving(_app()) as client:
+        ok = await client.post(START, json=_start("echo"), headers=_as() | origin)
+        refused = await client.post(START, json=_start("echo"), headers=origin)
+        missing = await client.post(START, json=_start("secret"), headers=_as() | origin)
+        run_id = await _paused_run(client)
+        stale = await client.post(
+            _decide_path(run_id),
+            json={"decision": "approve", "pause_index": 0},
+            headers=_as() | origin,
+        )
+        invalid = await client.post(
+            START, json={**_start("echo"), "model": "x"}, headers=_as() | origin
+        )
+        broken = await client.post(START, json=_start("unloadable"), headers=_as() | origin)
+
+    responses = {200: ok, 401: refused, 404: missing, 409: stale, 422: invalid, 500: broken}
+    for status, response in responses.items():
+        assert response.status_code == status
+        assert response.headers["access-control-allow-origin"] == ORIGIN, status
+        assert response.headers["vary"] == "Origin", status
+        assert response.headers["access-control-expose-headers"] == "Retry-After, X-Request-Id"
 
 
 # 계약 — 새 접두사의 경로 셋과 항목 유니온

@@ -59,3 +59,7 @@
 - 사이트 파일 읽기와 진단은 `main.py`에 있다(`_SiteEntry`·`_read_sites`·`_keys_of` 등, 티켓 01이 그 자리로 정했다). 01의 셀프 리뷰가 `main.py`가 조립에 더해 사이트 파일의 스키마와 진단까지 맡는 것을 Divergent Change로 짚었고 보류했다. 이 티켓이 상한 표의 키를 들이면 그 읽기가 더 자라므로, 모듈을 나눌지 여기서 다시 본다(일지 `docs/journal/2026-10-06-01-end-user-channel-contract.md`의 셀프 리뷰 절)
 - 같은 자리의 `_read_sites`가 `Sites | list[str]`(진단 목록)를 돌려주고 `_serve`와 `_configuration_problems`가 `isinstance`로 가른다. 01의 셀프 리뷰와 PR #137 3회차 claude-review가 짚었고 보류했다. 모듈을 나눌 때 실패를 담는 타입으로 바꿀지 함께 본다
 - 시작·결정·구독은 모두 의존성이 등록부에 받는 쪽을 열고, 닫는 것은 응답 제너레이터(`RunStream.items()`의 `with`, `_Subscription.frames()`의 `finally`)다. 요청이 의존성과 제너레이터 시작 사이에서 끝나면 그 받는 쪽은 실행이 끝날 때까지 실황에 남는다(PR #137 3회차 claude-review가 구독에서 짚었다. 같은 모양이 운영자 경로에도 있다. 코드를 읽었고 재지는 않았다). 주체별 구독 상한을 셀 때 이것이 세어지는지 재고, 닫는 자리를 둘지 여기서 정한다
+
+### 04가 넘긴 메모 (2026-10-06)
+
+- 429의 CORS 헤더는 `tests/channel/http/test_end_user.py`의 `test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_헤더_셋을_받는다`가 상태 코드마다 세 헤더를 보는 표(`responses`)에 429 한 줄을 더하면 된다. 그 테스트의 앱은 허용 출처가 `ORIGIN`인 사이트를 든다(`_site()`). `Retry-After`는 이미 노출 헤더다(`src/agent_os/http/cors.py`의 `EXPOSE_HEADERS`). 429를 내는 자리가 CORS 분기 안쪽(인증 뒤의 라우트나 의존성)이면 헤더는 저절로 붙는다 — 상한 검사를 미들웨어로 두어 CORS 바깥에 서면 붙지 않는다(`.claude/rules/http.md`의 CORS, 미들웨어 순서)

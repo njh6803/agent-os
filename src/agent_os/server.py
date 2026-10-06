@@ -21,7 +21,13 @@ from agent_os.channel.http.end_user import END_USER_PREFIX, END_USER_START_PATH
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
 from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
-from agent_os.http.errors import AssignRequestId, EndUserPaths, install_error_handlers
+from agent_os.http.cors import CorsUnderPrefix
+from agent_os.http.errors import (
+    AssignRequestId,
+    CatchUnexpected,
+    EndUserPaths,
+    install_error_handlers,
+)
 from agent_os.http.sites import Sites
 from agent_os.sdk import Principal
 
@@ -71,9 +77,15 @@ def create_app(
     없어서다(ADR 0015). 진단과 종료 코드로 그것을 운영자에게 말하는 것은 `serve` 의 몫이고,
     여기서는 그런 앱이 만들어지지 않는다는 것까지다.
 
-    미들웨어의 순서가 의도다. 추적 식별자가 바깥이라 인증이 낸 401 과 라우터가 낸 500 이 같은
-    식별자를 들고 나간다. 나중에 건 것이 바깥이므로 인증을 먼저 건다. 인증 표와 예외 표는 같은
-    접두사를 같은 비교(`is_under`)로 보아, 서명 토큰으로 열린 경로가 곧 최종 사용자 면으로 번역된다.
+    미들웨어의 순서가 의도다. 나중에 건 것이 바깥이므로 안쪽부터 건다. 바깥에서 안쪽으로 추적
+    식별자 → CORS 분기 → 핸들러가 놓친 예외의 변환 → 인증 → 라우터다. 추적 식별자가 앱에 건 것
+    가운데 가장 바깥이라 인증이 낸 401 과 라우터가 낸 500 과 CORS 가 직접 답한 preflight 가 모두
+    식별자를 들고 나간다. CORS 분기는 최종 사용자 접두사의 요청만 CORS 로 두르고(allowlist 밖의 그
+    밖 경로에서 preflight 는 인증이 401 로 막는다), 그것이 변환과 인증을 감싸므로 인증의 401 에도
+    예기치 않은 500 의 봉투에도 CORS 헤더가 붙는다. 허용 출처는 모든 사이트의 것을 합친
+    하나다(`Sites.origins`). 변환이 운영자 면에 서는 자리는 식별자 심기와 인증 사이로, 둘이 한
+    미들웨어였을 때와 같다. 인증 표와 예외 표와 CORS 분기는 같은 접두사를 같은 비교(`is_under`)로
+    보아, 서명 토큰으로 열린 경로가 곧 최종 사용자 면으로 번역되고 CORS 헤더를 받는다.
     """
     if not admin_token or not channel_token:
         raise ValueError("관리 API 와 채널은 토큰 없이 설 수 없다")
@@ -106,5 +118,7 @@ def create_app(
             END_USER_PREFIX: SiteSigned(sites=sites, clock=clock),
         },
     )
-    app.add_middleware(AssignRequestId, stderr=stderr, end_user=end_user)
+    app.add_middleware(CatchUnexpected, end_user=end_user)
+    app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
+    app.add_middleware(AssignRequestId, stderr=stderr)
     return app
