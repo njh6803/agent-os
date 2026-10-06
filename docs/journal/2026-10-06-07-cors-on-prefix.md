@@ -58,7 +58,8 @@ README의 2026-10-05 표와 같았다.
 - "봉투 규칙의 유일한 예외"의 열거가 닫히지 않았다. to-tickets에서 사용자가 고른 것은 허용 밖 출처의 400이고, 허용 밖의 메서드·헤더·private
   network는 같은 라이브러리 검사의 같은 400이다. 예외의 범위를 "라이브러리의 preflight 검사에 걸린 것"으로 적었다.
 - "그 밖의 경로에서 preflight는 401"에 반례 `/health`(인증을 지나 라우터의 405)가 있었다. "allowlist 밖"으로 좁혔다.
-- `AssignRequestId` 독스트링이 "둘이 한 미들웨어였을 때는 … 붙지 않았다"고 겪은 일처럼 적었는데, 그때 저장소에는 CORS가 없었다. 조건문으로 고쳤다.
+- `AssignRequestId` 독스트링이 둘이 한 미들웨어이던 때 예기치 않은 500에 CORS 헤더가 붙지 않았다고 겪은 일처럼 적었는데, 그때 저장소에는 CORS가
+  없었다. 조건문으로 고쳤다.
 - nit: "헤더를 내지 않을 뿐"(허용 밖 출처에도 `Expose-Headers`는 붙는다), "사례 7"(바깥이면 붙지 않는 것은 대조군 7'), 테스트의 인용
   "allowlist 가"(ADR 원문은 "allowlist가"), "가장 바깥"(`ServerErrorMiddleware`가 더 바깥), lifespan만 든 문장(websocket scope도 경로가 있다),
   `_preflight`의 인자 이름 `headers`(→ `asked`).
