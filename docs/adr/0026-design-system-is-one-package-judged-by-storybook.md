@@ -5,15 +5,15 @@ date: 2026-10-06
 
 # 디자인 시스템은 `packages/ui` 하나에 px 디자인 토큰과 두 테마를 두고, Storybook과 컨테이너 안의 사진으로 판정한다
 
-ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키지의 모양, rem과 px, 다크 모드, 접근성, 한글 글꼴, Storybook, 디자인 문서)를 design-system 기능의 설계 인터뷰로 넘겼다. 이 ADR이 그 세부다. 측정은 모두 `.scratch/design-system/probes/`에 있고, 아래에서 프로브 이름만 적은 것은 그 폴더의 것이다. **디자인 시스템은 `web/packages/ui` 패키지 하나다. 디자인 토큰(Tailwind의 `@theme` CSS)과 atoms·molecules를 들고, organisms 이상은 앱에 남는다. 처음 내는 atoms·molecules는 두 앱의 화면에서 뽑은 최소 집합(버튼, 아이콘 버튼, 글 입력(한 줄·여러 줄), 스위치, 상태 배지, 알림, 진행 표시, 표면, 아이콘)이다. 앱은 `packages/api-client`처럼 소스를 그대로 import하고, 패키지의 `build`(JS, `.d.ts`, 컴파일한 CSS를 `dist/`에 낸다)는 `/design-sync`만 쓰며 커밋하지 않는다. 디자인 토큰의 길이는 px이고, Tailwind의 기본 `@theme` 값을 비운 뒤 우리 디자인 토큰만 정의한다. 색 토큰은 쓰임새 이름뿐이고, 테마(라이트와 다크)가 같은 CSS 변수에 다른 값을 준다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "색 토큰은 두 층이고 컴포넌트는 쓰임새 토큰만 본다") 테마는 루트의 `data-theme`이 고르고, 없으면 시스템 설정을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 접근성의 목표는 WCAG 2.2 AA다. 글자와 바탕 토큰 짝의 명암비를 테마마다 단위 테스트가 계산하고, 실제 브라우저에서 axe가 돈다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 상호작용 부품은 네이티브 요소로 짓고, 변형은 의존성 없는 타입 맵이다. 한글 웹폰트는 자가 호스팅하고, 페이지 안 위젯은 사이트 문서에 고유한 family 이름으로 등록한다. 미리보기와 실제 브라우저 테스트는 패키지의 Storybook이 맡고, 스토리가 `/design-sync`의 원천이다. 시각 회귀는 정답 사진 한 벌을 판을 고정한 Playwright Linux 이미지 안에서만 찍고 비교한다. 디자인 판단 기준은 `.claude/rules/web-design.md`가 원천이고, `/design-sync`가 같은 파일을 Claude Design에 올린다.**
+ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키지의 모양, rem과 px, 다크 모드, 접근성, 한글 글꼴, Storybook, 디자인 문서)를 design-system 기능의 설계 인터뷰로 넘겼다. 이 ADR이 그 세부다. 측정은 모두 `.scratch/design-system/probes/`에 있고, 아래에서 프로브 이름만 적은 것은 그 폴더의 것이다. **디자인 시스템은 `web/packages/ui` 패키지 하나다. 디자인 토큰(Tailwind의 `@theme` CSS)과 atoms·molecules를 들고, organisms 이상은 앱에 남는다. 처음 내는 atoms·molecules는 두 앱의 화면에서 뽑은 최소 집합(버튼, 아이콘 버튼, 글 입력(한 줄·여러 줄), 스위치, 상태 배지, 알림, 진행 표시, 표면, 아이콘)이다. 앱은 `packages/api-client`처럼 소스를 그대로 import하고, 패키지의 `build`(JS, `.d.ts`, 컴파일한 CSS를 `dist/`에 낸다)는 `/design-sync`만 쓰며 커밋하지 않는다. 디자인 토큰의 길이는 px이고, Tailwind의 기본 `@theme` 값을 비운 뒤 우리 디자인 토큰만 정의한다. 색 토큰은 쓰임새 이름뿐이고, 테마(라이트와 다크)가 같은 CSS 변수에 다른 값을 준다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "색 토큰은 두 층이고 컴포넌트는 쓰임새 토큰만 본다") 테마는 루트의 `data-theme`이 고르고, 없으면 시스템 설정을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 접근성의 목표는 WCAG 2.2 AA다. 글자와 바탕 토큰 짝의 명암비를 테마마다 단위 테스트가 계산하고, 실제 브라우저에서 axe가 돈다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") 상호작용 부품은 네이티브 요소로 짓고, 변형은 의존성 없는 타입 맵이다. 한글 웹폰트는 자가 호스팅하고, 페이지 안 위젯은 사이트 문서에 고유한 family 이름으로 등록한다. 미리보기와 실제 브라우저 테스트는 패키지의 Storybook이 맡고, 스토리가 `/design-sync`의 원천이다. 시각 회귀는 정답 사진 한 벌을 판을 고정한 Playwright Linux 이미지 안에서만 찍고 비교한다. 디자인 판단 기준은 `.claude/rules/web-design.md`가 원천이고, `/design-sync`가 같은 파일을 Claude Design에 올린다.**
 
 **패키지.** 앱 사이의 import는 ESLint가 막으므로 두 앱이 나눌 것은 `packages/`로 간다. ADR 0024가 `packages/widget-ui`를 거부한 이유는 소비자가 하나라는 것이었는데, 여기서는 위젯과 관리 화면 둘이다. 층 경계 규칙은 경로의 끝으로 맞추므로 패키지 안의 `components/atoms`에도 그대로 걸린다(`web/eslint.config.mjs`를 읽었다). 디자인 토큰과 컴포넌트를 두 패키지로 나누지 않는 것은 디자인 토큰만 쓰는 소비자가 없어서다. `/design-sync`는 컴파일된 `dist/`를 묶고, 빌드가 없으면 최후 수단으로 `src/`에서 진입점을 합성하며 그때 `.d.ts` 계약이 약해진다. Tailwind는 돌리지 않고 CSS 파일을 그대로 복사한다. 이것은 Claude Code 2.1.286 실행 파일에 압축되어 든 스킬을 풀어 읽은 것이다. 그래서 `build`가 따로 있다. `tsc`와 Tailwind CLI로 2.0초에 `dist/`가 나왔다(`storybook/build.mjs`).
 
-**단위.** 사이트에 `html { font-size: 10px }`가 있으면 rem 기반 페이지 안 위젯이 폭 320px에서 200px로 줄었다(ADR 0024, `.scratch/web-widget/probes/widget_tailwind/`). px로 두면 사이트가 닿지 않고 두 앱의 값이 한 벌이다. 기본 `@theme` 값을 비우고 px 디자인 토큰만 둔 패키지 CSS에서 rem은 0이었다(`storybook/style.mjs`, `storybook/build.mjs`). 대가는 브라우저의 기본 글자 크기 설정을 따르지 않는 것이다. 확대(zoom)는 따른다. 기본값을 비우면 `text-base`, `rounded`, `font-bold` 같은 익숙한 클래스가 오류 없이 아무 CSS도 만들지 않는다. Tailwind 기본값의 유틸리티 이름 51개 중 24개가 그랬다(`storybook/build.mjs`). 에이전트가 학습한 기본 클래스를 쓰는 실수가 조용히 지나가므로, 컴포넌트에 쓴 클래스가 모두 CSS를 만드는지 테스트가 판정한다. 방법은 첫 티켓이 잰다.
+**단위.** 사이트에 `html { font-size: 10px }`가 있으면 rem 기반 페이지 안 위젯이 폭 320px에서 200px로 줄었다(ADR 0024, `.scratch/web-widget/probes/widget_tailwind/`). px로 두면 사이트가 닿지 않고 두 앱의 값이 한 벌이다. 기본 `@theme` 값을 비우고 px 디자인 토큰만 둔 패키지 CSS에서 rem은 0이었다(`storybook/style.mjs`, `storybook/build.mjs`). 대가는 브라우저의 기본 글자 크기 설정을 따르지 않는 것이다. 확대(zoom)는 따른다. 기본값을 비우면 `text-base`, `rounded`, `font-bold` 같은 익숙한 클래스가 오류 없이 아무 CSS도 만들지 않는다. Tailwind 기본값의 유틸리티 이름 51개 중 24개가 그랬다(`storybook/build.mjs`). 에이전트가 학습한 기본 클래스를 쓰는 실수가 조용히 지나가므로, 컴포넌트에 쓴 클래스가 모두 CSS를 만드는지 테스트가 판정한다. 방법은 첫 티켓이 잰다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다")
 
 **색과 테마.** 다크를 지금 두므로 컴포넌트가 테마를 모르게 한다. 색 토큰은 쓰임새 이름(바탕, 글자, 강조, 위험 등)뿐이고 팔레트를 비우므로, 컴포넌트에는 `dark:` 클래스가 없다. (바뀜: 이력 2026-10-06 "색 토큰은 두 층이고 컴포넌트는 쓰임새 토큰만 본다") 명암비 테스트가 볼 짝도 디자인 토큰 쪽 한자리에 모인다. `data-theme`은 문서에서는 `html`에, 페이지 안 위젯에서는 호스트에 둔다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 값을 바꾸면 색 토큰의 CSS 변수와 색이 바뀌었고, 속성이 없을 때는 `prefers-color-scheme`을 따랐다. 문서와 shadow 호스트 둘 다 그랬다(`storybook/style.mjs`). 관리 화면은 속성을 두지 않아 시스템을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 위젯은 사이트가 어두운데 운영체제가 밝을 수 있어서 사이트가 값을 넘기는 길이 필요하다. 그 길은 web-widget이 정한다.
 
-**접근성.** axe는 `@storybook/addon-a11y`(axe-core 4.13.0)로 스토리 테스트 안에서 돈다. 대비가 2.56:1인 스토리를 `test: "error"`에서 `color-contrast` 위반으로 실패시켰다(`storybook/cases.mjs`). 명암비 단위 테스트는 의존성 없는 계산이고, 테마마다 같은 짝 목록을 본다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다")
+**접근성.** axe는 `@storybook/addon-a11y`(axe-core 4.13.0)로 스토리 테스트 안에서 돈다. 대비가 2.56:1인 스토리를 `test: "error"`에서 `color-contrast` 위반으로 실패시켰다(`storybook/cases.mjs`). 명암비 단위 테스트는 의존성 없는 계산이고, 테마마다 같은 짝 목록을 본다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다")
 
 **글꼴.** Chromium 153과 Firefox 146은 shadow root 안의 `@font-face`를 쓰지 않았다. WebKit 26(윈도우용 Playwright 빌드)은 쓰기는 했지만 그 글꼴이 사이트 문서로 샜다. 문서에 선언하면 세 브라우저 모두 shadow 안의 글자에 적용됐다. 사이트가 쓰는 이름과 같은 family로 선언하면 사이트 글자가 바뀌었고, 고유한 이름으로 선언하면 사이트 글자는 그대로였으며 `document.fonts`의 항목 하나만 남았다. 다른 출처의 글꼴은 `Access-Control-Allow-Origin`이 없으면 Chromium과 Firefox가 막았다(`font_shadow/measure.mjs`). 그래서 패키지가 글꼴 파일과 `@font-face`를 든다. 관리 화면과 iframe은 자기 문서에 선언하고, 페이지 안 위젯은 사이트 문서에 고유한 이름으로 FontFace API를 써서 한 번 등록한다. API로 등록하면 사이트의 스타일시트 수가 늘지 않았다. 글꼴 스택의 뒤에 시스템 글꼴을 두어, 사이트의 CSP가 글꼴을 막아도 시스템 글꼴로 그린다. CSP로 막히는 경우는 재지 않았다. 글꼴은 OFL이고 저자가 낸 동적 서브셋을 쓴다. 예를 들어 Pretendard 1.3.9는 예약 글꼴 이름이 붙어 있어, 직접 서브셋하면 그 이름을 쓸 수 없다. 이것은 라이선스 문서를 읽은 해석이며 법적 판단은 아니다. Pretendard의 동적 서브셋은 굵기 하나에 92조각이고, 한글 문장 하나를 그릴 때 세 조각 약 40KB를 받았다. 전체 파일은 766KB다(`font_shadow/sizes.mjs`, `font_shadow/measure.mjs`). 어떤 글꼴을 쓸지는 Claude Design 탐색이 고른다.
 
@@ -66,11 +66,11 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 - **web-widget에 넘기는 것.** 사이트가 위젯에 테마를 넘기는 길, 글꼴 파일을 위젯 출처에서 `Access-Control-Allow-Origin`과 함께 내는 것(nginx와 Next), 페이지 안 번들이 사이트 문서에 글꼴을 등록하는 코드, 그리고 사이트의 CSP가 글꼴을 막을 때 시스템 글꼴로 내려간다는 것을 임베드 안내에 적는 일이다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다")
 - **admin-style.** 관리 화면은 `data-theme`을 두지 않고 시스템을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 패키지를 들이는 일과 관리 화면만 쓰는 컴포넌트는 그 기능이 한다.
 - **게이트가 열둘이 된다.** 사진 비교는 e2e에 이어 CI에서만 도는 둘째 게이트다. `CLAUDE.md`의 검증 명령 절, `docs/constitution/operations.md`, `tech.md` 원격·CI 행과 `ci.yml` 머리 주석의 잡 수, `ci.yml`의 새 잡과 `verify`의 `needs`, CI web 잡의 chromium 설치는 그 게이트를 들이는 티켓이 함께 고친다. 보호 설정(`tools/protection.json`)은 바뀌지 않는다.
-- **`pnpm-workspace.yaml`에 `allowBuilds`가 든다.** esbuild와 @parcel/watcher의 설치 스크립트를 끈다. 공급망 유예(`minimumReleaseAge`)는 건드리지 않는다.
+- **`pnpm-workspace.yaml`에 `allowBuilds`가 든다.** esbuild와 @parcel/watcher의 설치 스크립트를 끈다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") 공급망 유예(`minimumReleaseAge`)는 건드리지 않는다.
 - **`tech.md`의 웹 행과 프론트 구성 행**을 이 결정에 맞춘다. 스토리를 컴포넌트와 같은 폴더에 두는 것은 09-20 씨앗의 스토리 규칙이다.
 - **`.scratch/<slug>/design/`의 규약을 `docs/agents/issue-tracker.md`에 더한다(ADR 0025).** 화면을 그리기 직전에 `/design-sync`를 돌고, 그 폴더의 `README.md`에 화면마다 내보낸 파일, 근거 문서의 전체 경로, 기준 커밋, 동기화한 커밋을 적는다.
 - **design-system의 순서.** 이 인터뷰 다음은 Claude Design 탐색(색과 글꼴 짝, 라이트와 다크, 대략의 화면)이다. 사용자가 진행하고, 고른 방향은 `.scratch/design-system/design/`에 내보낸다. 그다음이 명세, 티켓, 코드다. 디자인 토큰의 값은 탐색이 정한다.
-- **첫 티켓이 잴 것.** 디자인 토큰에 없는 클래스를 잡는 방법, 관리 화면(Next)과 Vite가 패키지의 글꼴 `url()`을 내는 방법, 사진 비교의 도구(Vitest 브라우저 모드의 스크린샷이나 Playwright), GitHub 러너에서의 사진 일치다.
+- **첫 티켓이 잴 것.** 디자인 토큰에 없는 클래스를 잡는 방법, 관리 화면(Next)과 Vite가 패키지의 글꼴 `url()`을 내는 방법, 사진 비교의 도구(Vitest 브라우저 모드의 스크린샷이나 Playwright), GitHub 러너에서의 사진 일치다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다")
 - **용어.** `CONTEXT.md`에 디자인 시스템, 디자인 토큰, 테마를 세웠다. 단독 "토큰"은 채널 토큰이나 서명 토큰과 섞이므로 디자인 쪽 문서와 코드 이름은 "디자인 토큰"을 쓴다.
 
 ## 이력
@@ -165,3 +165,55 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 
 - **쓰임새 토큰만 둔다(위의 결정).** 한 층이라 단순하지만 다섯 테마 × 두 모드의 값을 하나씩 관리한다.
 - **탐색에서만 두 층을 보고, 코드에 둘지는 명세가 그 결과를 보고 정한다.** 사용자가 지금 정하는 쪽을 골랐다.
+
+### 2026-10-06 글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다
+
+명세(`.scratch/design-system/spec.md`)가 탐색 결과(`.scratch/design-system/design/`의 v3)를 받아 정한 것 가운데 넷이 위
+결정의 문장을 바꾼다. 위 결정이 첫 티켓에 넘긴 측정 넷 가운데 셋은 명세가 쟀다(to-spec 스킬의 측정 규칙). 측정은 모두
+`.scratch/design-system/probes/tokens/`이고 결과는 `.scratch/design-system/probes/README.md`의 "결과 — tokens"다.
+
+**글꼴은 다섯 테마가 함께 쓰는 한글 Noto Sans KR과, 테마마다 고르는 고정폭 JetBrains Mono 또는 IBM Plex Mono다. 셋은
+npm 패키지 `@fontsource/noto-sans-kr`, `@fontsource/jetbrains-mono`, `@ibm/plex-mono`에서 받고 `packages/ui`의 의존성이다.
+`@ibm/plex-mono`의 설치 스크립트는 `pnpm-workspace.yaml`의 `allowBuilds`에서 끈다. 명암비는 단위 테스트가 아니라 스토리
+테스트가 본다. 브라우저가 계산한 쓰임새 토큰 값을 의존성 없는 함수로 잰다. 디자인 토큰에 없는 클래스도 스토리 테스트가
+잡는다. 그린 요소의 class 낱말마다 시트에 그것을 고르는 규칙이 있어야 하고, 임의값(`[...]`)은 쓰지 않는다. 사진 비교는
+Storybook 정적 빌드를 이미지 안의 Playwright가 `toHaveScreenshot`으로 찍는다.**
+
+- 글꼴의 조건(OFL, 자가 호스팅, 한글 글꼴은 저자가 낸 동적 서브셋)은 라이선스 문서를 읽은 해석이며 법적 판단은 아니다.
+  Noto Sans KR의 예약 글꼴 이름은 `Source`뿐이고(google/fonts의 `ofl/notosanskr/OFL.txt`), Fontsource 판은 Google
+  Fonts의 동적 서브셋(굵기마다 unicode-range 조각 124개, 패키지 CSS를 셌다)을 그대로 담는다. JetBrains Mono는 예약 이름이 없다. IBM Plex는
+  예약 이름이 `Plex`이고 google/fonts의 사본에도 그대로라, 저자(IBM)가 낸 split 파일을 쓴다. IBM의 CSS는 `local()`을 원본
+  앞에 두어 그 글꼴이 깔린 기계마다 다르게 그리므로, split 파일만 `local()` 없이 다시 선언한다.
+- `@ibm/plex-mono` 2.5.0은 postinstall로 IBM 원격 측정(`ibmtelemetry`)을 돌리고 `@ibm/telemetry-js`에 의존한다. pnpm
+  11.24.0은 그 스크립트에서 설치를 멈췄고, `false`로 끄자 설치되고 글꼴이 적재됐다. 락에는 `@ibm/telemetry-js`가 들지만
+  돌지 않는다. 위의 esbuild·@parcel/watcher와 같은 자리다.
+- 명암비를 브라우저에서 재는 것은 사용자가 이음매를 스토리 테스트 하나로 고른 결과다. CSS 파일을 글자로 읽는 단위
+  테스트는 `var()`의 연결과 선택자를 손으로 풀어야 하고, 브라우저는 실제 cascade로 푼다. 열 벌 모두 쓰임새 토큰 26개가
+  디자인 파일의 값과 같았고 짝 43개가 기준을 넘었다.
+- 없는 클래스: 기본값을 비운 테마에서 `text-base`, `rounded`, `font-bold`, `shadow`, `text-red-500`, `animate-pulse`, 원색
+  이름 `bg-gray-500`, `--spacing`을 읽는 `p-5`·`w-64`·`inset-y-0`은 규칙을 하나도 만들지 않았고 판정이 잡았다. Tailwind가
+  훑지 않은 파일의 클래스(`@source` 밖에 쓴 `flex`)도 같은 판정에 걸렸다(프로브의 첫
+  실행에서 손으로 봤다). 임의값(`p-[13px]`, `bg-[var(--nope)]`)은 규칙을 만들어 그 판정을 지나므로 따로 막는다.
+- 사진: 같은 이미지에서 따로 띄운 컨테이너 둘이 14장(스토리 넷 × 먹의 라이트·다크, 주 버튼의 올림·누름·키보드
+  포커스 × 라이트·다크)을 바이트까지 같게 찍었고, `maxDiffPixels: 0`으로 모두 지났다. 컨테이너는 네트워크 없이 돌았고
+  글꼴은 정적 빌드 안에 있었다. Playwright 패키지는 순수 JS라 호스트 설치본을 복사해 썼다. 같은 이미지의 컨테이너 안에서
+  설치하고 지은 Linux 정적 빌드도 Windows에서 지은 빌드의 정답 14장을 바이트까지 같게 지났다. Windows 호스트는 14장 모두
+  바이트가 달랐다.
+- 올림과 누름은 사진 비교가 본다. 스토리의 `userEvent`(`storybook/test`)는 합성 이벤트라 `:hover`·`:active`가 걸리지 않았고,
+  Playwright의 실제 마우스로는 열 벌 모두 `accent-hover`·`accent-press`의 값이었다. 키보드 포커스는 둘 다 걸려 스토리 테스트가
+  본다. 움직임 줄이기도 사진 비교의 Playwright가 본다(animation-name이 `none`이었다).
+- 재고 바뀌지 않은 것: 원색 토큰은 `@theme` 밖이라 유틸리티가 없다. 쓰임새 토큰은 문서 뿌리, 안쪽 요소, shadow 호스트(문서의
+  시트를 모두 끈 채), 시스템 모드에서 `data-theme`과 `data-mode`를 따랐고, 두 속성이 없는 뿌리와 호스트는 먹이었다(54사례). 패키지 CSS가 `@import`한 Fontsource
+  CSS의 상대 `url()`은 Vite(Storybook 빌드)와 Next 16(`@tailwindcss/postcss`)이 모두 실제 파일로 냈다. 위 셋째 이력이 첫
+  티켓에 넘긴 측정 둘이 이것으로 닫혔다.
+- 남은 것: GitHub Actions 러너에서의 사진 일치는 로컬에서 잴 수 없어 첫 구현 PR의 CI가 본다. 그 밖에 재지 못한 것은 결과
+  절의 "재지 못한 것"에 있다.
+
+거부한 안은 넷이다.
+
+- **IBM Plex Mono를 Fontsource 판으로 받는다.** 스크립트가 없고 다른 글꼴과 모양이 같지만, 예약 이름이 붙은 글꼴을 저자가
+  아닌 쪽이 자른 판이다.
+- **고정폭을 JetBrains Mono 하나로 줄인다.** 패키지가 하나 줄지만 청록·황토의 글꼴 짝이 디자인과 달라진다.
+- **명암비를 디자인 토큰 CSS를 읽는 단위 테스트로 둔다(위의 결정).** 사용자가 이음매를 스토리 테스트 하나로 골랐다.
+- **사진 비교를 Vitest 브라우저 모드의 스크린샷으로 한다.** 스토리 테스트와 같은 도구지만 컨테이너 안에서 Vite 개발 서버까지
+  띄워야 하고, 로컬 비교도 컨테이너 안의 설치를 요구한다. 재지 않았다. Playwright의 길은 정적 빌드만 있으면 되고 쟀다.
