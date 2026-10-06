@@ -1,5 +1,6 @@
 // 결정. 운영자가 채널 토큰을 넣으면 멈춘 실행에 결정 자리가 서고, 허가나 거부를 보내면 재개된 실행의 이벤트가 받는
-// 대로 붙는다(web-admin 티켓 08). 결정의 자리는 화면이 트레이스 상세에서 읽은 인덱스다(ADR 0019 이력).
+// 대로 붙는다(web-admin 티켓 08). 결정의 자리는 화면이 트레이스 상세에서 읽은 인덱스다(ADR 0019 이력). 최종 사용자의
+// 실행에는 자리 대신 그 이유 한 줄이 선다(end-user-channel 티켓 05).
 //
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 재개 스트림은 `ReadableStream` 으로 프레임을 시간
 // 간격을 두고 낸다(testing/stream.ts). 결정 요청에는 채널 토큰만, 관리 요청에는 관리 토큰만 실리는 것을 핸들러가
@@ -83,6 +84,14 @@ const REPAUSED_TAIL = [GRANTED, RESUMED, tool(FIRST_ARGS, "5"), paused(SECOND_AR
 const REPAUSED = trace([...PAUSED.events, ...REPAUSED_TAIL]);
 const FINISHED_TAIL = [GRANTED, RESUMED, tool(FIRST_ARGS, "5"), FINISHED] as const;
 const DONE = trace([...PAUSED.events, ...FINISHED_TAIL]);
+
+/** 최종 사용자의 주체. 사이트의 발급자와 `sub` 를 구분자 `|` 로 묶은 이름이다(end-user-channel 명세 "주체"). */
+const END_USER = "https://shop.example|user-42";
+/** `PAUSED` 와 같되 주체가 최종 사용자이고 형식 3 이다. */
+const END_USER_PAUSED: Trace = {
+  ...trace([{ ...STARTED, principal: END_USER }, ...PAUSED.events.slice(1)]),
+  schema_version: "3",
+};
 
 const CALC: Plugin = {
   kind: "agent",
@@ -300,6 +309,31 @@ describe("결정 자리", () => {
     await openDecision();
 
     expect(place().textContent).toContain("add");
+  });
+
+  test("최종 사용자의 멈춘 실행에는 채널 토큰이 있어도 결정 자리가 없고 결정은 그 사람만 낸다는 말 하나가 있다", async () => {
+    // 주체 이름 `<발급자>|<sub>` 의 구분자로 최종 사용자를 알아본다(end-user-channel 명세 "관리 화면"). 서버에 묻지
+    // 않는다. 같은 트레이스에 `|` 가 없으면 자리가 선다(위 형식 3 의 사례).
+    serveTrace(() => END_USER_PAUSED);
+    servePlugins(ROWS);
+    const user = await openRun();
+
+    await enterChannelToken(user, CHANNEL);
+
+    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
+    expect(screen.getAllByText(/최종 사용자의 실행이라 결정은 그 사람만 낸다/)).toHaveLength(1);
+  });
+
+  test("최종 사용자의 실행에서도 주체는 구분자 `|` 를 든 글자 그대로 이벤트에 보인다", async () => {
+    // 목록과 상세는 바뀌지 않는다. 주체는 글자로 그려지고 `|` 는 글자다(web-admin 스토리 32).
+    serveTrace(() => END_USER_PAUSED);
+    servePlugins(ROWS);
+
+    await openRun();
+
+    expect(within(events()).getByText(END_USER)).toBeTruthy();
   });
 });
 

@@ -1,0 +1,58 @@
+# 티켓 05(관리 화면의 가림)의 변이 표. 결정 자리를 가리는 새 페이지 테스트는 구현 전에 자리가 서서 빨갰고, 첫
+# 변이는 그 빨강을 고정한다. 주체가 글자 그대로 보이는 새 테스트와 `|` 가 없는 같은 트레이스에 자리가 서는 기존
+# 사례는 이 티켓에서 빨강을 본 적이 없다. 둘째·셋째 변이가 조건을 늘 켜고 주체의 그림을 바꿔 그 둘이 무는지
+# 본다. 사용: PYTHONUTF8=1 uv run python tools/mutate.py
+# .scratch/end-user-channel/probes/admin_hides_decision_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "최종 사용자를 알아보지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "최종 사용자의 멈춘 실행에는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+const PRINCIPAL_SEPARATOR = "|";
+'''
+new = '''
+const PRINCIPAL_SEPARATOR = "\\";
+'''
+
+[[mutation]]
+name = "모든 실행을 최종 사용자로 본다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "형식 3 트레이스의 멈춘 실행에도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+  return first?.type === "run_started" && first.principal.includes(PRINCIPAL_SEPARATOR);
+'''
+new = '''
+  return first?.type === "run_started";
+'''
+
+[[mutation]]
+name = "주체의 구분자를 글자로 그리지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "최종 사용자의 실행에서도 주체는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+                <FieldValue name={name} value={value} />
+'''
+new = '''
+                <FieldValue
+                  name={name}
+                  value={name === "principal" && typeof value === "string" ? value.split("|").join(" ") : value}
+                />
+'''
