@@ -16,6 +16,7 @@ from collections.abc import (
     Sequence,
 )
 from contextlib import asynccontextmanager
+from dataclasses import fields
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -3121,7 +3122,10 @@ async def test_자기_실행_읽기는_재개와_같은_판정을_같은_순서�
 async def test_자기_실행_읽기는_판정을_지나면_형식과_이벤트를_쓴_그대로_돌려준다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """형식 1 도 일시정지가 아닌 것도 읽기는 지난다. 그 판정은 재개의 것이고 구독은 읽기다."""
+    """형식 1 도 일시정지가 아닌 것도 읽기는 지난다. 그 판정은 재개의 것이고 구독은 읽기다.
+
+    돌려주는 것은 형식과 이벤트 열 둘뿐이다. 거슬러 읽기의 표현(`Link`)은 core 안에서 끝나 이것을
+    부르는 채널로 새지 않는다 — 필드가 늘면 채널이 core 의 내부 표현에 기대게 된다."""
     model = GenericFakeChatModel(messages=iter([_reply("4")]))
     await _run(OneShotAgent(), model, trace, clock)
 
@@ -3130,8 +3134,9 @@ async def test_자기_실행_읽기는_판정을_지나면_형식과_이벤트�
     _write_finished(legacy, "run-1")
     legacy_own = read_own_run(legacy, _RUN_1, PRINCIPAL, frozenset({AgentName("calc")}))
 
+    assert {field.name for field in fields(own)} == {"schema_version", "events"}
     assert own.schema_version == "3"
-    assert list(own.link.events) == trace.events
+    assert list(own.events) == trace.events
     assert legacy_own.schema_version == "1"
 
 

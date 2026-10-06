@@ -164,6 +164,20 @@ PR #137. PR 직전 CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not a
 README의 판 줄 하나였고, main의 3.0.9를 두고 이 브랜치의 것을 3.0.10으로 올렸다. 일지 순번(06-01과 06-02)과 대기열 번호(이 회고의 112·113은
 main의 111 뒤)는 부딪히지 않았다.
 
+> 사용자: "CI 끝났어"
+
+2회차(`8c8475c`). CI 여섯이 초록이었다. CodeRabbit은 `af53dc8..8c8475c`를 실제로 보고 지적이 없었다(시간당 포함 리뷰 1회를 다시 썼다).
+claude-review는 Critical·Major 0, Minor 2, Nit 1이었다.
+
+- **Minor(반영): `OwnTrace.link`가 core의 내부 표현 `Link`를 채널로 냈다.** `_Resumption`의 독스트링이 "거슬러 읽기의 표현(`Link`)은
+  `_read_paused` 안에서 끝나고 실행을 모는 쪽으로 새지 않는다"고 적었는데, 같은 `Link`가 구독 의존성까지 나왔고 채널은 그중 이벤트 열만
+  썼다. 판정을 core 안의 `_own_link`로 옮겨 재개가 그것을 직접 부르고, 공개 `read_own_run`은 형식 버전과 이벤트 열만 든 `OwnTrace`를
+  돌려준다. 테스트가 `OwnTrace`의 필드가 그 둘뿐인 것을 단언하게 먼저 고쳐 빨강을 봤다. 옮긴 판정을 겨눈 변이 하나의 원문을 고치고
+  core 변이 다섯을 다시 돌려 모두 빨강을 봤다. `core.md`와 티켓 01의 정한 것 6을 같이 고쳤다.
+- **Minor(보류, 리뷰어도 후속으로 허용): `Runs.join`의 CQS.** 셀프 리뷰가 이미 보류한 것이다(위 셀프 리뷰 절).
+- **Nit(보류): `end_user.py` 모듈 독스트링이 `channel.md`와 논증을 겹쳐 싣는다.** 이 저장소의 모듈 독스트링은 그 코드의 이유를 들고 rules는
+  경로 규칙을 드는 관례라(`core/run.py`가 같다) 지금 옮기지 않는다. 둘이 어긋나는 일이 생기면 그때 한쪽을 가리키게 줄인다.
+
 ## 갈린 곳
 
 - `Last-Event-ID`가 범위 밖인 409는 표의 새 타입이 아니라 라우트의 `HTTPException(409)`이고, `http.md`의 "라우트는 상태 코드를 스스로
@@ -203,6 +217,9 @@ PR 1회차 반영(`_concluded`) 뒤 다시 돌렸다. pytest 1554 passed, ruff c
 
 main을 들인 뒤(`d53141d`) 다시 돌렸다. pytest 1570 passed(main이 더한 테스트를 포함한다), ruff check와 format 통과, pyright 0 errors,
 lint-imports 5 kept, 지침 검사와 타입 우회 검사 통과. main의 변경은 하네스·문서·테스트이고 `src/`와 `web/`이 없어 web과 `-m llm`은 다시 돌리지 않았다.
+
+PR 2회차 반영(`OwnTrace`) 뒤 다시 돌렸다. pytest 1570 passed, ruff check와 format 통과, pyright 0 errors, lint-imports 5 kept, 지침
+검사와 타입 우회 검사 통과, `-m llm` 7 passed(`core/run.py`와 `channel/`을 건드렸다). 변이는 원문 `--check`와 core 다섯.
 
 ## 회고
 

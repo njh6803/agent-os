@@ -51,15 +51,15 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    own = read_own_run(trace, run_id, approver, visible_agents)
-    if own.schema_version not in RESUMABLE:
+    schema_version, link = _own_link(trace, run_id, approver, visible_agents)
+    if schema_version not in RESUMABLE:
 '''
 new = '''
     early = trace.read(run_id)
     if early is not None and early.schema_version not in RESUMABLE:
         raise NotResumable(f"형식 {early.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}")
-    own = read_own_run(trace, run_id, approver, visible_agents)
-    if own.schema_version not in RESUMABLE:
+    schema_version, link = _own_link(trace, run_id, approver, visible_agents)
+    if schema_version not in RESUMABLE:
 '''
 
 [[mutation]]

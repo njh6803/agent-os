@@ -740,11 +740,12 @@ class _Resumption:
 @dataclass(frozen=True)
 class OwnTrace:
     """자기 실행 읽기가 돌려주는 것. 저장소의 형식 버전과, 손상·주체·열 에이전트의 판정을 지난 실행
-    하나(`Link`). 형식 1 과 일시정지 아님은 거르지 않는다 — 그 판정은 재개의 것이고 구독은
-    읽기다."""
+    하나의 이벤트 열. 형식 1 과 일시정지 아님은 거르지 않는다 — 그 판정은 재개의 것이고 구독은
+    읽기다. 거슬러 읽기의 표현(`Link`)은 들지 않는다. 그것은 재개가 core 안에서 받고(`_own_link`)
+    이것을 부르는 채널로 새지 않는다."""
 
     schema_version: TraceSchemaVersion
-    link: Link
+    events: tuple[Event, ...]
 
 
 def read_own_run(
@@ -753,8 +754,8 @@ def read_own_run(
     principal: Principal,
     visible_agents: frozenset[AgentName] | None,
 ) -> OwnTrace:
-    """요청한 주체가 볼 수 있는 자기 실행 하나를 읽는다. 재개의 첫 걸음이고 구독(채널)도 이것을
-    부른다.
+    """요청한 주체가 볼 수 있는 자기 실행 하나를 읽는다. 재개의 첫 걸음과 같은 판정(`_own_link`)이고
+    구독(채널)이 이것을 부른다.
 
     판정 순서는 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 열 에이전트
     밖(`Absent`)이다(ADR 0014 의 2026-10-05 이력). 손상은 재개가 손상이라 부르던 것 그대로다 — 단건
@@ -768,6 +769,18 @@ def read_own_run(
     기댄다(ADR 0014). 이어 가기의 `gather_continued` 와는 나누지 않는다 — 이어 가기는 앞 실행 자신의
     기록 규칙을 주체·끝남 뒤에 보므로, 이것을 쓰면 그 결정된 순서가 바뀐다.
     """
+    schema_version, link = _own_link(trace, run_id, principal, visible_agents)
+    return OwnTrace(schema_version=schema_version, events=link.events)
+
+
+def _own_link(
+    trace: TraceStore,
+    run_id: RunId,
+    principal: Principal,
+    visible_agents: frozenset[AgentName] | None,
+) -> tuple[TraceSchemaVersion, Link]:
+    """자기 실행 읽기의 판정 자체(판정 순서는 `read_own_run`). 재개는 거슬러 읽기의 표현이 필요해
+    이것을 직접 부르고, 채널은 이벤트 열만 받는 `read_own_run` 을 부른다."""
     stored = trace.read(run_id)
     if stored is None:
         raise Absent(_no_run(run_id))
@@ -777,7 +790,7 @@ def read_own_run(
         raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
     if visible_agents is not None and link.started.agent not in visible_agents:
         raise Absent(_no_run(run_id))
-    return OwnTrace(schema_version=stored.schema_version, link=link)
+    return stored.schema_version, link
 
 
 def _no_run(run_id: RunId) -> str:
@@ -814,12 +827,11 @@ def _read_paused(
     오류로 막아도 여기서 그것을 믿지 않는다. 모르는 종류의 이벤트는 손상에서 이미 거부되므로 여기서
     세는 자리는 트레이스 상세 `events` 의 인덱스와 같다.
     """
-    own = read_own_run(trace, run_id, approver, visible_agents)
-    if own.schema_version not in RESUMABLE:
+    schema_version, link = _own_link(trace, run_id, approver, visible_agents)
+    if schema_version not in RESUMABLE:
         raise NotResumable(
-            f"형식 {own.schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
+            f"형식 {schema_version} 트레이스는 읽을 수는 있어도 재개할 수 없다: {run_id}"
         )
-    link = own.link
     paused = link.last
     if not isinstance(paused, RunPaused):
         raise NotResumable(f"일시정지 상태가 아니라 재개할 수 없다: {run_id}")

@@ -128,7 +128,7 @@ PR에서 사용자가 이름을 본다. 결정과 근거는 일지에 적고, �
 3. **어휘 여섯째**: `too_many_requests`(429). 기존 다섯처럼 상태의 뜻을 말하는 낱말이다.
 4. **사이트 파일의 키**: `schema_version = "1"`, `[[sites]]`마다 `issuer`, `audience`, `allowed_origins`, `agents`, 그리고 `[[sites.public_keys]]`마다 `pem`과 선택 `kid`. 허용 출처와 열 에이전트는 비어 있을 수 있되 적어야 하고, 공개 키는 하나 이상이다. 값은 엄격한 타입이다.
 5. **접두사 표의 값과 사이트 목록 타입**: `Credential = SharedToken | SiteSigned`(`http/auth.py`). 사이트 목록은 `Sites`(항목 `Site`, 키 `SiteKey`, `http/sites.py`). 검증을 지난 요청의 신원은 `EndUser`(주체와 사이트 항목)이고 라우트가 `end_user_of`로 읽는다.
-6. **집합 인자와 자기 실행 읽기**: `run(..., visible_agents=)`·`resume(..., visible_agents=)`(호출자가 볼 수 있는 에이전트), `read_own_run(trace, run_id, principal, visible_agents) -> OwnTrace`(형식 버전과 읽은 실행). `core/run.py`에 둔다.
+6. **집합 인자와 자기 실행 읽기**: `run(..., visible_agents=)`·`resume(..., visible_agents=)`(호출자가 볼 수 있는 에이전트), `read_own_run(trace, run_id, principal, visible_agents) -> OwnTrace`(형식 버전과 읽은 이벤트 열. PR 2회차에 `Link`를 이벤트 열로 바꿨다). `core/run.py`에 둔다.
 7. **면과 꺼짐의 고정 문구**: `Surface`(`OPERATOR`, `END_USER_START`, `END_USER_RUN`, `http/errors.py`)와 `failure_for(error, surface)`. 면은 조립이 넘긴 `EndUserPaths`(접두사와 시작 경로)로 정한다. 꺼짐 409의 문구는 "에이전트를 지금 쓸 수 없다"(`UNAVAILABLE_MESSAGE`). 404의 고정 문구는 공유 404 설명 그대로이고 `NOT_FOUND_MESSAGE`로 이름을 줬다.
 8. **`serve`의 인자**: `--site-file PATH`(용어집 "사이트 파일").
 9. **라우터의 나눔**: `channel_router` 하나가 `Runs` 하나와 수명을 들고 접두사 둘의 하위 라우터를 품는다(`_operator_router`와 `end_user_router(runs, …)`). 본문 모델은 두 면이 같이 쓰므로 `channel/http/bodies.py`로 옮겼다(계약의 이름은 그대로).

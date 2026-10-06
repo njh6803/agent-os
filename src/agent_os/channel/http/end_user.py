@@ -200,7 +200,7 @@ def end_user_router(
         """
         user = _signed_in(request)
         own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
-        events = own.link.events
+        events = own.events
         start = 0 if last_event_id is None else int(last_event_id) + 1
         last = len(events) - 1
         if start > last + 1:
