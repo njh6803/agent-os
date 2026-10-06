@@ -42,6 +42,22 @@ function pauseOf(trace: Trace): Pause | null {
 }
 
 /**
+ * 주체 이름 `<발급자>|<sub>` 의 구분자. 서버의 `PRINCIPAL_SEPARATOR`(`agent_os.http.sites`)와 같은 글자이고 sdk 계약
+ * 밖의 결합이다. 구분자를 바꾸는 결정은 이것을 함께 바꾼다.
+ */
+const PRINCIPAL_SEPARATOR = "|";
+
+/**
+ * 최종 사용자의 실행인지. 시작 이벤트(`run_started`)의 주체에 구분자가 들었는지로 본다(end-user-channel 명세 "관리
+ * 화면"). 최종 사용자가 아닌 주체는 OS 사용자 이름이고, `serve`·`run`·`resume` 이 그 이름에 이 글자를 금지한다
+ * (end-user-channel 티켓 01). 그래서 그 가드 뒤에 쓴 트레이스에서 이것이 든 주체는 최종 사용자다.
+ */
+function isEndUserRun(trace: Trace): boolean {
+  const first = trace.events[0];
+  return first?.type === "run_started" && first.principal.includes(PRINCIPAL_SEPARATOR);
+}
+
+/**
  * 이 실행을 재개할 수 없게 꺼진 플러그인(ADR 0017, 0019). 실행의 에이전트와 그 매니페스트의 `mcp` 를 목록의 행과
  * 잇는다. 목록이 없거나(아직 읽는 중이거나 읽다 실패했다), 에이전트를 모르거나, 에이전트 행이 표지이거나 없으면 미리
  * 알 수 없어 비어 있다. 그때는 누르면 서버의 봉투가 말한다.
@@ -66,10 +82,12 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
 /**
  * 결정 자리와 재개 스트림(web-admin 티켓 08). 실행 하나의 이벤트 아래에 선다.
  *
- * 결정 자리가 보이는 조건은 셋이다. 채널 토큰이 있고, 실행이 일시정지이고, 형식 1 트레이스가 아니다. 형식 1 만 재개할 수
- * 없으므로 "형식 1 이 아니다"로 가른다 — 형식이 늘 때마다 결정 자리가 조용히 사라지지 않게(conversation 명세, 스토리 56).
- * 재개할 수 없다는 이유는 실행 하나의 한 줄이 이미 말한다(스토리 52). 결정 뒤의 알림과 재개 스트림은 결정 자리 밖에
- * 선다. 다시 읽은 트레이스가 일시정지가 아니면 결정 자리는 걷히지만 무엇이 있었는지는 남는다.
+ * 결정 자리가 보이는 조건은 넷이다. 채널 토큰이 있고, 실행이 일시정지이고, 형식 1 트레이스가 아니고, 최종 사용자의
+ * 실행이 아니다. 형식 1 만 재개할 수 없으므로 "형식 1 이 아니다"로 가른다 — 형식이 늘 때마다 결정 자리가 조용히
+ * 사라지지 않게(conversation 명세, 스토리 56). 재개할 수 없다는 이유는 실행 하나의 한 줄이 이미 말한다(스토리 52).
+ * 최종 사용자의 실행은 그 실행의 주체만 결정하므로(ADR 0023) 앞의 셋이 맞으면 자리 대신 그 이유 한 줄이 선다. 서버에
+ * 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 결정 뒤의 알림과 재개 스트림은 결정 자리 밖에 선다. 다시 읽은
+ * 트레이스가 일시정지가 아니면 결정 자리는 걷히지만 무엇이 있었는지는 남는다.
  */
 export function RunDecision({ runId, trace }: { readonly runId: string; readonly trace: Trace }) {
   const channelToken = useTokens((state) => state.channelToken);
@@ -81,12 +99,16 @@ export function RunDecision({ runId, trace }: { readonly runId: string; readonly
   return (
     <>
       {channelToken !== null && pause !== null ? (
-        <DecisionPlace
-          pause={pause}
-          busy={busy}
-          invalid={failure?.status === 422 ? failure : null}
-          onDecide={decide}
-        />
+        isEndUserRun(trace) ? (
+          <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
+        ) : (
+          <DecisionPlace
+            pause={pause}
+            busy={busy}
+            invalid={failure?.status === 422 ? failure : null}
+            onDecide={decide}
+          />
+        )
       ) : null}
       {notice === null ? null : <FailureNotice {...notice} />}
       {frames.length > 0 ? (
