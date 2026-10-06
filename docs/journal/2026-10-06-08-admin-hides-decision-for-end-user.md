@@ -108,6 +108,11 @@ claude-review는 옛 head(`4c01dbf`)와 `9945603`에서 두 번 돌았고 둘 �
 
 반영 뒤 `pnpm -C web verify`(테스트 272)와 변이 셋을 다시 돌렸다. 파이썬은 바뀌지 않았다.
 
+3회차 claude-review(`17eeff4`)는 같은 Minor(구분자 사본)와 Nit(분기를 헬퍼로 더 풀기, 작성자 재량) 하나였고 둘 다 그대로 둔다. 병합하려 하자 형제
+03(PR #148)이 먼저 병합돼 PR이 충돌 상태였다. rebase에서 프로브 README와 대기열 끝의 행이 부딪혀 양쪽을 모두 남겼다(03의 변이 표 행과 대기열 119,
+이 브랜치의 행과 120·121). 들인 뒤 pytest 1593 passed, ruff check와 format, pyright 0 errors, lint-imports 5 kept, 마크다운 표 검사, 변이 원문
+`--check`를 다시 돌렸다. main의 변경에 `web/`과 `openapi.json`이 없어 web은 다시 돌리지 않았다.
+
 ## 번복하거나 고친 것
 
 - **일지 순번을 05에서 08로, 새 대기열 행을 120·121로 바꿨다.** 첫 커밋 때 `origin/main`과 형제 03·04의 일지 폴더를 대조했고 05가 비어 있었다.
