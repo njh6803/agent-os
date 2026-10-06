@@ -19,8 +19,9 @@ from contextlib import asynccontextmanager
 from dataclasses import fields
 from datetime import UTC, datetime, timedelta
 
+import anyio
 import pytest
-from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -55,7 +56,15 @@ from agent_os.core.ports import (
     UnknownEvent,
     WriteOutcome,
 )
-from agent_os.core.run import Approve, Decision, Deny, read_own_run, resume, run
+from agent_os.core.run import (
+    DEFAULT_RUN_TIMEOUT_SECONDS,
+    Approve,
+    Decision,
+    Deny,
+    read_own_run,
+    resume,
+    run,
+)
 from agent_os.sdk import (
     AgentContext,
     AgentName,
@@ -431,6 +440,7 @@ async def _run(
     plugins: PluginSource | None = None,
     name: str = "calc",
     visible_agents: frozenset[AgentName] | None = None,
+    timeout_seconds: float | None = None,
 ) -> list[Event]:
     plugins = plugins or FakePlugins({"calc": agent})
     tools = tools or FakeTools()
@@ -441,6 +451,7 @@ async def _run(
             "2+2?",
             PRINCIPAL,
             visible_agents=visible_agents,
+            timeout_seconds=timeout_seconds,
             plugins=plugins,
             model=model,
             tools=tools,
@@ -1146,6 +1157,7 @@ async def _resume(
     decision: Decision | None = None,
     pause_index: int | None = None,
     visible_agents: frozenset[AgentName] | None = None,
+    timeout_seconds: float | None = None,
 ) -> list[Event]:
     """결정의 자리를 주지 않으면 결정 직전에 트레이스를 읽은 클라이언트가 볼 자리를 싣는다.
 
@@ -1160,6 +1172,7 @@ async def _resume(
             decision if decision is not None else Approve(),
             approver,
             visible_agents=visible_agents,
+            timeout_seconds=timeout_seconds,
             plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
             model=model,
             tools=tools or FakeTools(),
@@ -3240,6 +3253,7 @@ async def _continue(
     tools: ToolSource | None = None,
     plugins: PluginSource | None = None,
     visible_agents: frozenset[AgentName] | None = None,
+    timeout_seconds: float | None = None,
 ) -> list[Event]:
     """앞 실행을 가리켜 새 실행을 일으킨다. 에이전트를 주지 않으면 판정 에이전트다."""
     return [
@@ -3250,6 +3264,7 @@ async def _continue(
             principal,
             previous_run=RunId(previous),
             visible_agents=visible_agents,
+            timeout_seconds=timeout_seconds,
             plugins=plugins or FakePlugins({name: agent or WeavingAgent()}),
             model=model or GenericFakeChatModel(messages=iter([])),
             tools=tools or FakeTools(),
@@ -4436,3 +4451,327 @@ async def test_자기_요약_이벤트의_자리나_개수가_어긋난_재개�
     assert reason in str(caught.value)
     assert trace.events == before
     assert tools.servers is None
+
+
+# --- 실행 타임아웃 ---------------------------------------------------------------------
+#
+# 시작 이벤트(재개에서는 결정 이벤트)를 쓴 뒤 정한 시간 안에 결말이 나지 않으면 런타임이 실행을
+# run_failed 로 끝낸다(ADR 0014 의 2026-10-05 이력, end-user-channel 명세 "실행 타임아웃"). 시간은
+# 시계 포트가 아니라 이벤트 루프의 시계로 센다 — 진입점이 여는 취소 범위의 기한이라서다. 그래서
+# 아래 테스트는 짧은 실제 시간을 쓴다. 오래 걸리는 가짜는 `LATE` 뒤에 돌아오므로 기한이 없는
+# 구현에서도 멈추지 않고 빨개진다.
+
+# 걸리는 사례의 타임아웃(초). 기한 전에 끝나야 할 일이 없는 사례만 쓴다 — 프로세스에서 처음 부른
+# 가짜 모델의 답이 이것보다 늦게 온 적이 있다(결말 가드의 첫 판. 스레드 실행기의 준비라는 원인은
+# 어림이고 재지 않았다).
+SHORT = 0.05
+TIMED_OUT = "실행이 0.05초 안에 끝나지 않았다"
+# 기한 전에 끝나야 할 일(모델의 답, 결말 쓰기)이 있는 사례의 타임아웃.
+PACED = 0.5
+# 걸리지 않아야 하는 사례의 타임아웃. 가짜 포트만 지나는 실행이 넉넉히 끝나는 길이다.
+AMPLE = 5.0
+# 기한이 끊지 않으면 돌아오는 시각. `PACED` 보다 한참 뒤다.
+LATE = 1.0
+
+
+class SleepyModel(ToolAwareFakeModel):
+    """답하기 전에 `delay` 초를 잔다. 기한이 오면 그 잠이 취소된다."""
+
+    delay: float = 0.0
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: object,
+    ) -> ChatResult:
+        await anyio.sleep(self.delay)
+        return self._generate(messages, stop, None, **kwargs)
+
+
+class StuckConnection(FakeConnection):
+    """도구 호출이 `LATE` 뒤에야 돌아온다. 부른 것은 `calls` 에 남는다."""
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self.calls.append((name, args))
+        await anyio.sleep(LATE)
+        return ToolResult(ok=True, content="늦은 결과")
+
+
+class ScopedTools(FakeTools):
+    """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다. 연 태스크가 아닌 곳에서 닫히면 그 범위가
+    RuntimeError 를 낸다. 받은 연결을 그대로 주고, 닫는 데 `close_seconds` 가 걸린다(서버
+    프로세스가 늦게 내려가는 것과 같다)."""
+
+    def __init__(self, connection: FakeConnection, *, close_seconds: float = 0.0) -> None:
+        super().__init__()
+        self.connection = connection
+        self._close_seconds = close_seconds
+
+    @asynccontextmanager
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
+        self.servers = servers
+        try:
+            with anyio.CancelScope():
+                yield self.connection
+        finally:
+            self.closed = True
+            await anyio.sleep(self._close_seconds)
+
+
+class MovableClock(FakeClock):
+    """테스트가 옮기는 시계 포트. 멈춘 사이 시간이 흐른 것을 흉내 낸다."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.at = FIXED_NOW
+
+    def now(self) -> datetime:
+        return self.at
+
+
+def _failure(events: Sequence[Event]) -> str:
+    last = events[-1]
+    assert isinstance(last, RunFailed), [e.type for e in events]
+    return last.error
+
+
+async def _driven_in_group(events: AsyncIterator[Event]) -> list[Event]:
+    """채널의 `Runs._drive` 처럼 태스크 그룹의 자식 태스크가 이벤트 사이에 await 없이 몬다. 실행이
+    취소 범위를 깨면 태스크 그룹을 나오며 예외(그룹)가 올라온다."""
+    received: list[Event] = []
+
+    async def drive() -> None:
+        async for event in events:
+            received.append(event)
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(drive)
+    return received
+
+
+async def test_모델이_타임아웃보다_오래_자면_run_started_뒤_run_failed_이고_메시지가_그_시간을_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """런타임이 내는 결말이라 트레이스에 남아 결말 없음과 갈린다(스토리 54). 취소된 모델 호출은
+    이벤트가 없다. 도구 연결은 연 자리에서 닫힌다."""
+    model = SleepyModel(messages=iter([_reply("늦은 답")]), delay=LATE)
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"])
+
+    events = await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=SHORT
+    )
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == TIMED_OUT
+    assert trace.events == events
+    assert tools.servers == {"srv": SERVER}
+    assert tools.closed
+
+
+async def test_요약_호출에서_시간이_지나도_같은_메시지의_run_failed_하나이고_요약_이벤트가_없다(
+    clock: FakeClock,
+) -> None:
+    """기한이 요약과 몸통을 함께 감싼다. 취소는 BaseException 이라 요약의 실패 경로("대화 요약이
+    실패했다")를 지나친다(티켓 03). 에이전트도 도구 연결도 없다."""
+    trace = FakeTrace()
+    last = _chain(trace, 6, 6)
+    model = SleepyModel(messages=iter([_reply("요약 글")]), delay=LATE)
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": WeavingAgent()}, mcp=["srv"], servers=["srv"], conversation_limit=10
+    )
+
+    events = await _continue(
+        last, trace, clock, model=model, tools=tools, plugins=plugins, timeout_seconds=SHORT
+    )
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == TIMED_OUT
+    assert [e for e in trace.events if e.run_id == "run-1"] == events
+    assert tools.servers is None
+
+
+async def test_재개도_결정_뒤_시간_안에_결말이_없으면_run_failed_이고_부르던_도구는_취소된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """재개의 범위는 결정 이벤트 뒤부터다. 승인된 도구가 돌아오지 않으면 그 호출이 취소되고
+    tool_called 가 없다 — 프로세스가 죽은 것과 같은 모양이다. 재개 이벤트는 실제로 일어난 것이라
+    결말 앞에 남는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
+    tools = ScopedTools(StuckConnection({"send": "sent"}, {}))
+    plugins = _gated_plugins(OneShotAgent())
+    paused = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+
+    events = await _resume(
+        _RUN_1, model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=SHORT
+    )
+
+    assert [e.type for e in events] == ["approval_granted", "run_resumed", "run_failed"]
+    assert _failure(events) == TIMED_OUT
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
+    assert tools.closed
+
+
+async def test_재개마다_다시_세고_멈춰_있던_시간은_세지_않는다(trace: FakeTrace) -> None:
+    """일시정지는 실행이 끝난 것이라(ADR 0009) 승인을 며칠 기다려도 된다. 두 구간이 저마다
+    타임아웃의 절반을 넘게 걸려 합은 타임아웃을 넘고, 멈춘 사이 시계 포트는 사흘을 간다. 기한을
+    시작부터 이어 세거나 시계 포트로 세면 재개가 서지 않는다."""
+    clock = MovableClock()
+    budget = PACED * 2
+    replies = iter([_tool_request("send"), _reply("보냈다")])
+    model = SleepyModel(messages=replies, delay=budget * 0.6)
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(OneShotAgent())
+    paused = await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=budget
+    )
+    clock.at += timedelta(days=3)
+
+    events = await _resume(
+        _RUN_1, model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=budget
+    )
+
+    assert paused[-1].type == "run_paused"
+    assert [e.type for e in events][-1] == "run_finished"
+
+
+async def test_타임아웃_안에_끝나면_실행은_그대로다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, timeout_seconds=AMPLE)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
+
+
+async def test_타임아웃을_주지_않으면_core_의_기본값_600초다(
+    trace: FakeTrace, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """600 은 core 한 곳에 선다(명세 검토). 그 시간을 기다리지 않으려고 상수를 줄여 잰다 — 없음이
+    "기한 없음"이 아니라 이 상수라는 것이 재는 것이다."""
+    monkeypatch.setattr("agent_os.core.run.DEFAULT_RUN_TIMEOUT_SECONDS", SHORT)
+    model = SleepyModel(messages=iter([_reply("늦은 답")]), delay=LATE)
+
+    events = await _run(OneShotAgent(), model, trace, clock)
+
+    assert _failure(events) == TIMED_OUT
+    assert DEFAULT_RUN_TIMEOUT_SECONDS == 600
+
+
+async def test_타임아웃으로_실패한_실행은_재개할_수도_이어_갈_수도_없다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """다른 실패와 같다(ADR 0022). 같은 요청을 다시 보내는 것이 곧 다시 시도다."""
+    model = SleepyModel(messages=iter([_reply("늦은 답")]), delay=LATE)
+    await _run(OneShotAgent(), model, trace, clock, timeout_seconds=SHORT)
+    assert trace.events[-1].type == "run_failed"
+
+    with pytest.raises(NotResumable):
+        await _resume(_RUN_1, model, trace, clock, pause_index=1)
+    with pytest.raises(NotContinuable):
+        await _continue("run-1", trace, clock)
+
+
+async def test_태스크_그룹의_자식이_몰아도_run_failed_는_하나이고_태스크_그룹이_깨지지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """채널의 모양이다(`Runs._drive`). 기한은 진입점의 취소 범위라 몸통의 `except Exception` 이
+    먼저 잡지 않는다 — anyio 는 범위 안에는 취소로 전하고 범위를 나올 때만 결말로 바뀐다(티켓 03 의
+    어림). 연결은 MCP 어댑터처럼 anyio 취소 범위 안에서 열리고, 기한은 도구 호출 중에 온다."""
+    tools = ScopedTools(StuckConnection({"add": "4"}, {}))
+    plugins = FakePlugins({"calc": DirectToolAgent()}, mcp=["srv"], servers=["srv"])
+    events = run(
+        AgentName("calc"),
+        "2+2?",
+        PRINCIPAL,
+        timeout_seconds=SHORT,
+        plugins=plugins,
+        model=GenericFakeChatModel(messages=iter([])),
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+
+    received = await _driven_in_group(events)
+
+    assert [e.type for e in received] == ["run_started", "run_failed"]
+    assert _failure(received) == TIMED_OUT
+    assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
+    assert tools.closed
+
+
+@pytest.mark.parametrize("gated", [False, True], ids=["끝남", "일시정지"])
+async def test_결말을_쓴_뒤_도구_연결을_닫다_기한이_와도_결말을_덧붙이지_않는다(
+    gated: bool, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """범위는 결말까지다. 결말이 트레이스에 선 뒤 연결의 정리가 늦은 것은 실행이 시간 안에 끝나지
+    않은 것이 아니다 — 덧붙이면 결말이 둘이 되고, 멈춘 실행은 재개할 수 없게 된다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send") if gated else _reply("4")]))
+    tools = ScopedTools(FakeConnection({"send": "sent"}, {}), close_seconds=LATE)
+    plugins = _gated_plugins(OneShotAgent())
+
+    events = await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=PACED
+    )
+
+    concluded = "run_paused" if gated else "run_finished"
+    assert [e.type for e in events] == ["run_started", "llm_called", concluded]
+    assert trace.events == events
+    assert tools.closed
+
+
+async def test_run_finished_없이_돌아온_뒤_연결을_닫다_기한이_오면_그_결말은_실패다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """돌아온 것만으로는 결말이 아니다. 마지막이 run_finished 가 아니면 몸통의 결말은 실패이고 아직
+    쓰기 전이라, 기한이 그것을 대신 쓴다. 결말은 하나다."""
+    tools = ScopedTools(FakeConnection({}, {}), close_seconds=LATE)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(SilentAgent(), model, trace, clock, tools=tools, timeout_seconds=SHORT)
+
+    assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
+    assert _failure(events) == TIMED_OUT
+
+
+class LingeringAgent:
+    """결말 모양의 이벤트를 낸 뒤에도 돌아가지 않고 `LATE` 를 기다린다. 신뢰 경계 밖이다."""
+
+    def __init__(self, said: Callable[[AgentContext], Event]) -> None:
+        self._said = said
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield self._said(ctx)
+        await anyio.sleep(LATE)
+
+
+def _forged_pause(ctx: AgentContext) -> Event:
+    return RunPaused(run_id=ctx.run_id, ts=ctx.now(), tool="send", args={})
+
+
+def _early_finish(ctx: AgentContext) -> Event:
+    return RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="다 했다")
+
+
+@pytest.mark.parametrize(
+    ("said", "said_type"),
+    [(_forged_pause, "run_paused"), (_early_finish, "run_finished")],
+    ids=["지어낸 일시정지", "끝남 뒤에도 돈다"],
+)
+async def test_에이전트가_결말_모양의_이벤트를_낸_뒤에도_돌면_기한이_실패로_끝낸다(
+    said: Callable[[AgentContext], Event], said_type: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """결말은 이벤트의 종류가 아니라 런타임이 정한다 — 멈춘 것은 게이트가 멈췄을 때이고, 끝난 것은
+    에이전트가 run_finished 를 마지막으로 내고 돌아왔을 때다(몸통의 끝 판정과 같다). 지어낸
+    일시정지를 결말로 보면 기한이 끊은 실행이 재개할 수 있는 실행처럼 남는다."""
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(LingeringAgent(said), model, trace, clock, timeout_seconds=SHORT)
+
+    assert [e.type for e in events] == ["run_started", said_type, "run_failed"]
+    assert _failure(events) == TIMED_OUT

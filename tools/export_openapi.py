@@ -133,6 +133,8 @@ def document() -> str:
         channel_token=_PLACEHOLDER_CHANNEL_TOKEN,
         # 사이트가 없다. 스키마는 사이트 목록을 읽지 않는다.
         sites=Sites(),
+        # core 의 기본값이다. 스키마는 실행 타임아웃을 싣지 않는다.
+        run_timeout_seconds=None,
         stderr=io.StringIO(),
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"

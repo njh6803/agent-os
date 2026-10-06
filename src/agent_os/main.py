@@ -48,6 +48,7 @@ from agent_os.channel.cli.main import (
     run_command,
 )
 from agent_os.core.ports import ChatModel
+from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
 from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, Sites
 from agent_os.sdk import AgentName, Principal, is_plugin_name
 from agent_os.server import create_app
@@ -84,6 +85,11 @@ _NOT_LOOPBACK_DIAGNOSTIC = (
     "--host 는 루프백만 받는다({allowed}). 받은 값: {host}\n"
     "  벗어나면 토큰이 헤더에 평문으로 실리고 마스킹되지 않은 트레이스도 평문으로 나간다.\n"
     "  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L {port}:127.0.0.1:{port} <서버>"
+)
+_NOT_POSITIVE_TIMEOUT_DIAGNOSTIC = (
+    "--run-timeout 은 1 이상의 정수(초)다. 받은 값: {value}\n"
+    "  0 이하면 모델이나 도구를 기다리는 실행은 모두 그 자리에서 run_failed 로 끝난다.\n"
+    "  빼면 core 의 기본값 {default}초다."
 )
 
 
@@ -129,6 +135,9 @@ def _serve(args: ServeArgs) -> int:
 
     사이트 파일은 여기서 한 번 읽고 요청마다 읽지 않는다. 요청마다 읽으면 파일이 깨지는 순간부터
     최종 사용자 경로가 모두 500 이다(ADR 0023).
+
+    실행 타임아웃은 받은 그대로 넘긴다. 없으면 없음을 넘겨 core 의 기본값이 선다. 0 이하는 모델이나
+    도구를 기다리는 실행이 모두 그 자리에서 실패하는 서버라 다른 구성 오류와 함께 여기서 끝난다.
     """
     admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
     channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
@@ -149,6 +158,7 @@ def _serve(args: ServeArgs) -> int:
             admin_token=admin_token,
             channel_token=channel_token,
             sites=sites,
+            run_timeout_seconds=args.run_timeout_seconds,
             stderr=sys.stderr,
         ),
         host=args.host,
@@ -193,6 +203,12 @@ def _configuration_problems(
         problems.append(
             _NOT_LOOPBACK_DIAGNOSTIC.format(
                 allowed=", ".join(LOOPBACK_HOSTS), host=args.host, port=args.port
+            )
+        )
+    if args.run_timeout_seconds is not None and args.run_timeout_seconds <= 0:
+        problems.append(
+            _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC.format(
+                value=args.run_timeout_seconds, default=DEFAULT_RUN_TIMEOUT_SECONDS
             )
         )
     model = _model_problem(args.model)

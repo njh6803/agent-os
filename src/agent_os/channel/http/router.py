@@ -69,6 +69,7 @@ def channel_router(
     trace: TraceStore,
     clock: Clock,
     principal: Principal,
+    run_timeout_seconds: float | None,
     stderr: TextIO,
 ) -> APIRouter:
     """채널 라우터. 실행을 소유하는 수명을 들고 있어 앱에 붙으면 그 수명이 앱의 수명에 합쳐진다.
@@ -92,10 +93,19 @@ def channel_router(
             trace=trace,
             clock=clock,
             principal=principal,
+            run_timeout_seconds=run_timeout_seconds,
         )
     )
     router.include_router(
-        end_user_router(runs, plugins=plugins, model=model, tools=tools, trace=trace, clock=clock)
+        end_user_router(
+            runs,
+            plugins=plugins,
+            model=model,
+            tools=tools,
+            trace=trace,
+            clock=clock,
+            run_timeout_seconds=run_timeout_seconds,
+        )
     )
     return router
 
@@ -109,6 +119,7 @@ def _operator_router(
     trace: TraceStore,
     clock: Clock,
     principal: Principal,
+    run_timeout_seconds: float | None,
 ) -> APIRouter:
     """운영자 채널의 라우터. 채널 토큰이 열고 원문 이벤트와 원문 에러를 싣는다(ADR 0023)."""
     router = APIRouter(prefix=CHANNEL_PREFIX, responses=documented_stream_errors(500))
@@ -120,6 +131,7 @@ def _operator_router(
             body.request,
             principal,
             previous_run=previous_run,
+            timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             model=model,
             tools=tools,
@@ -168,6 +180,7 @@ def _operator_router(
             decision.pause_index,
             decision.to_core(),
             principal,
+            timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             model=model,
             tools=tools,
