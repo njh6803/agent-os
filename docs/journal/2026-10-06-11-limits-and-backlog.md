@@ -122,6 +122,16 @@
   그 상수, 구독 수를 줄이는 자리, `LimitExceeded`와 그 층, 칸의 반환 자리를 두 규칙 파일에서 읽었다고 답했다. 리뷰 반영 뒤 둘째 판은 동사
   `take`·`give_back`, 백로그로 잘린 스트림이 칸을 쥔다는 것, 기본값이 `DEFAULT_*` 상수에만 있다는 것을 읽었다.
 
+## PR 리뷰
+
+PR #151. CI 다섯(python, web, e2e, verify, claude-review)이 초록이었다. CodeRabbit은 `604ac2c`까지 보고 지적이 없었다. claude-review는 경계에
+지적이 없고 유지보수성에 Minor 셋·Nit 하나였다. 모두 보류했다.
+
+- [Minor] `take`가 칸을 돌려주는 CQS 꼴, [Minor] `Runs.start(end_user=None)`, [Nit] `_refusal`의 평행 루프 — 셀프 리뷰에서 같은 이유로 보류한
+  것이다(위 셀프 리뷰 절).
+- [Minor] 구독의 칸이 `Seat`의 `issuer`를 쓰지 않는다 — 새 지적이다. 동시 실행의 칸과 구독 수를 같은 동사·같은 타입으로 맞춘 대가이고, 구독 쪽이
+  주체만 돌려주면 동사 표의 `take`가 둘로 갈린다. 보류했다.
+
 ## 회고
 
 후보 넷을 냈고 셋이 승인됐다.
