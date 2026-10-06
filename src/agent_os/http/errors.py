@@ -6,6 +6,10 @@
 라우트마다 흩어지면 새 라우트가 같은 예외에 다른 답을 하므로 한 곳이고, `core` 의 예외는 상태
 코드를 모른다.
 
+**표는 면을 인자로 받는다**(ADR 0023 과 그 2026-10-05 이력). 운영자 면(관리와 `/runs`)은 원문을
+싣고, 최종 사용자 면은 남의 실행이 있다는 것과 내부 사정을 드러내지 않게 덮는다. 덮는 것도 이 표
+안이라 예외 하나를 두 면이 다르게 번역하는 자리가 하나다. 서버 기록은 덮기 전의 것을 남긴다.
+
 **실패 하나가 기록 한 줄이다.** 봉투를 만드는 것과 기록하는 것을 가른다 — 봉투 만들기는 질의라
 부수효과가 없고, 기록은 `AssignRequestId` 가 응답이 나갈 때 한 번 한다. 부르는 쪽은
 `remember_failure()` 로 남길 문구를 적어 둘 뿐이다. 둘을 한 함수에 두면 봉투만 필요한 호출자가
@@ -20,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum, StrEnum
 from typing import TextIO
 from uuid import uuid4
 
@@ -40,12 +44,21 @@ from agent_os.core.ports import (
     NotResumable,
     PluginError,
 )
+from agent_os.http.paths import is_under
 
 REQUEST_ID_HEADER = "X-Request-Id"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
 INVALID_REQUEST_MESSAGE = "요청의 형식이 올바르지 않다"
 # 예기치 않은 실패의 문구. 원인은 서버 기록에만 남는다 — 밖으로 내면 내부 사정이 함께 나간다.
 INTERNAL_MESSAGE = "서버가 요청을 처리하지 못했다"
+# 없다는 것의 문구. 계약의 404 설명이고, 최종 사용자 면의 404 는 전부 이 문구 하나다 — 덮인 404 와
+# 본래의 404 가 메시지로 갈리면 덮은 뜻이 없고, 표는 요청이 댄 식별자를 모르므로 본래 메시지를 지어
+# 맞출 수 없다.
+NOT_FOUND_MESSAGE = "찾는 것이 없다"
+# 최종 사용자 면에서 운영자가 꺼 둔 것을 부른 409 의 문구. 꺼진 것의 종류도 이름도 들지 않는다 —
+# 일시적인 것(409)과 영구적인 것(404)만 가른다(ADR 0017 의 2026-10-03 이력). 계약의 설명은 공유 409
+# 설명 그대로다.
+UNAVAILABLE_MESSAGE = "에이전트를 지금 쓸 수 없다"
 
 # 추적 식별자와 기록에 남길 문구를 담는 ASGI scope 의 키. 미들웨어와 예외 핸들러가 이것으로
 # 만나, 헤더와 봉투가 같은 값을 쓰고 실패 하나가 한 줄만 남는다. 남의 키와 부딪히지 않게
@@ -55,10 +68,14 @@ _FAILURE_KEY = "agent_os.failure_detail"
 
 
 # StrEnum 인 이유는 생성 클라이언트가 이름 있는 타입을 받기 위해서다(ADR 0008 이 같은 이유로
-# 골랐다). 값이 늘면 openapi.json 이 바뀌므로 어휘를 늘리는 것은 계약 변경이다. 다섯째인 conflict 는
-# 대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 다. 표가 재개 불가(`NotResumable`), 꺼진
-# 플러그인(`Disabled`), 다른 주체(`DifferentPrincipal`), 이어 갈 수 없음(`NotContinuable`)을 거기로
-# 옮기고, 관리 라우트는 내지 않는다(ADR 0010 의 2026-09-24·2026-09-26 이력, ADR 0017, ADR 0022).
+# 골랐다). 값이 늘면 openapi.json 이 바뀌므로 어휘를 늘리는 것은 계약 변경이다. 어휘는 여섯이다.
+# conflict 는 대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 다. 표가 재개 불가
+# (`NotResumable`), 꺼진 플러그인(`Disabled`), 다른 주체(`DifferentPrincipal`, 운영자 면), 이어 갈
+# 수 없음(`NotContinuable`)을 거기로 옮기고, 관리 라우트는 내지 않는다(ADR 0010 의 2026-09-24·
+# 2026-09-26 이력, ADR 0017, ADR 0022). 여섯째인 too_many_requests 는 요청하는 쪽의 상한에 걸린
+# 429 다 — 대상의 상태가 아니라 요청하는 쪽의 사정이라 409 의 뜻이 맞지 않는다(ADR 0023, ADR 0010
+# 의 2026-10-03 이력). 최종 사용자 면의 라우트가 계약에 적고, 관리 라우트도 운영자 채널도 내지
+# 않는다.
 class ErrorCode(StrEnum):
     """에러 봉투의 어휘. 상태 코드와 1:1 이다."""
 
@@ -66,6 +83,7 @@ class ErrorCode(StrEnum):
     INVALID_REQUEST = "invalid_request"
     NOT_FOUND = "not_found"
     CONFLICT = "conflict"
+    TOO_MANY_REQUESTS = "too_many_requests"
     INTERNAL_ERROR = "internal_error"
 
 
@@ -132,11 +150,47 @@ _CODE_BY_STATUS = {
     404: ErrorCode.NOT_FOUND,
     409: ErrorCode.CONFLICT,
     422: ErrorCode.INVALID_REQUEST,
+    429: ErrorCode.TOO_MANY_REQUESTS,
     500: ErrorCode.INTERNAL_ERROR,
 }
 
 
-def failure_for(error: Exception) -> _Failure:
+class Surface(Enum):
+    """요청이 어느 면의 것인가. 표가 같은 예외를 면마다 다르게 번역한다(ADR 0023).
+
+    운영자 면(관리와 `/runs`)은 원문 그대로다. 최종 사용자 면은 둘로 갈린다 — 실행을 일으키는 시작
+    경로와, 있는 실행을 가리키는 경로(결정, 구독)다. 둘이 가르는 것은 하위 타입이 아닌
+    `PluginError`(기록이나 구성이 깨진 것) 하나다. 실행을 가리키는 경로에서 그것을 그대로 내면
+    손상된 남의 트레이스가 있다는 것이 드러난다. 그래서 그 경로에서는 구성 오류도 404 가 되고 원인은
+    서버 기록에 남는다(ADR 0023 의 2026-10-05 이력). 불리언 둘이 아니라 열거 하나인 이유는
+    `CODING_STANDARDS.md` 의 불리언 플래그 인자다.
+    """
+
+    OPERATOR = "operator"
+    END_USER_START = "end_user_start"
+    END_USER_RUN = "end_user_run"
+
+
+@dataclass(frozen=True)
+class EndUserPaths:
+    """최종 사용자 면이 서는 자리. 조립 층이 채널의 접두사와 시작 경로를 넘긴다.
+
+    면은 요청의 경로로 정한다. 접두사 비교는 인증 표와 같은 `is_under` 하나라, 서명 토큰으로 열린
+    경로와 최종 사용자 면으로 번역되는 경로가 갈리지 않는다. 시작 경로는 정확히 같은지만 본다 —
+    실행을 가리키는 경로는 그 아래에 서므로 접두사로 보면 둘이 섞인다.
+    """
+
+    prefix: str
+    start: str
+
+    def surface_of(self, path: str) -> Surface:
+        """경로 하나의 면(질의)."""
+        if not is_under(path, self.prefix):
+            return Surface.OPERATOR
+        return Surface.END_USER_START if path == self.start else Surface.END_USER_RUN
+
+
+def failure_for(error: Exception, surface: Surface) -> _Failure:
     """예외를 상태 코드와 문구로 옮기는 표. 이 함수가 그 표의 유일한 자리다.
 
     갈래를 셋으로 나눠 두면 예외 하나를 더할 때 세 곳을 고쳐야 하므로 한 항목이 한 갈래다.
@@ -148,12 +202,22 @@ def failure_for(error: Exception) -> _Failure:
     허락하지 않는 것이고, `PluginError` 가 500 인 이유는 하위 타입 다섯을 뺀 뒤 남는 것이 "서버의
     구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의
     말은 내부 사정을 담는다.
+
+    최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05 이력). 404 는 전부 고정 문구 하나다.
+    다른 주체(409)는 없는 실행과 같은 404 다. 실행을 가리키는 경로의 하위 타입이 아닌
+    `PluginError`(500, 기록이나 구성이 깨진 것)도 404 다 — 손상이 주체 판정보다 앞이라(core) 남의
+    손상된 실행이 500 으로 그 존재를 드러내기 때문이고, 구성 오류까지 404 가 되는 것이 그 대가다.
+    시작 경로의 그것은 500 이되 고정 문구다. 꺼짐(409)은 종류와 이름 없는 고정 문구다. 재개 불가와
+    이어 갈 수 없음은 자기 실행의 상태라 메시지 그대로다.
     """
+    operator = surface is Surface.OPERATOR
     match error:
         case StarletteHTTPException():
+            status = error.status_code
+            detail = str(error.detail)
             return _Failure(
-                status=error.status_code,
-                message=str(error.detail),
+                status=status,
+                message=detail if operator or status != 404 else NOT_FOUND_MESSAGE,
                 headers=error.headers,
             )
         case RequestValidationError():
@@ -161,11 +225,23 @@ def failure_for(error: Exception) -> _Failure:
                 status=422, message=INVALID_REQUEST_MESSAGE, violations=_violations(error)
             )
         case Absent():
-            return _Failure(status=404, message=str(error))
-        case NotResumable() | Disabled() | DifferentPrincipal() | NotContinuable():
+            return _Failure(status=404, message=str(error) if operator else NOT_FOUND_MESSAGE)
+        case DifferentPrincipal():
+            if operator:
+                return _Failure(status=409, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+        case Disabled():
+            return _Failure(status=409, message=str(error) if operator else UNAVAILABLE_MESSAGE)
+        case NotResumable() | NotContinuable():
             return _Failure(status=409, message=str(error))
         case PluginError():
-            return _Failure(status=500, message=str(error))
+            match surface:
+                case Surface.OPERATOR:
+                    return _Failure(status=500, message=str(error))
+                case Surface.END_USER_START:
+                    return _Failure(status=500, message=INTERNAL_MESSAGE)
+                case Surface.END_USER_RUN:
+                    return _Failure(status=404, message=NOT_FOUND_MESSAGE)
         case _:
             return _Failure(status=500, message=INTERNAL_MESSAGE)
 
@@ -241,11 +317,15 @@ class AssignRequestId(BaseHTTPMiddleware):
 
     기록에 경로도 주체도 적지 않는다 — 누가 무엇을 조회했는지는 이 기능이 남기는 것이 아니고
     (감사 로그는 비목표다), 이 한 줄은 실패 하나의 상관 키다.
+
+    여기까지 올라온 예외도 그 요청의 면으로 번역한다. 예기치 않은 예외는 어느 면에서나 같은 고정
+    문구지만, 핸들러를 비켜 온 `PluginError` 가 최종 사용자 면에서 원문으로 나가지 않게 한다.
     """
 
-    def __init__(self, app: ASGIApp, *, stderr: TextIO) -> None:
+    def __init__(self, app: ASGIApp, *, stderr: TextIO, end_user: EndUserPaths) -> None:
         super().__init__(app)
         self._stderr = stderr
+        self._end_user = end_user
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = _new_request_id()
@@ -268,31 +348,38 @@ class AssignRequestId(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as error:
-            return _answered(request, error)
+            return _answered(request, error, self._end_user.surface_of(request.url.path))
 
 
-def install_error_handlers(app: FastAPI) -> None:
+def install_error_handlers(app: FastAPI, *, end_user: EndUserPaths) -> None:
     """예외를 상태 코드로 옮기는 표를 앱에 건다. 라우트가 각자 거는 자리를 두지 않는다.
 
     `PluginError` 하나를 걸면 하위 타입도 여기로 온다. 핸들러를 찾는 것이 예외의 MRO 를 따라서다.
+    면은 요청의 경로로 정한다. 라우트는 상태 코드도 면도 스스로 정하지 않는다.
     """
 
     async def handle(request: Request, error: Exception) -> Response:
-        return _answered(request, error)
+        return _answered(request, error, end_user.surface_of(request.url.path))
 
     app.add_exception_handler(StarletteHTTPException, handle)
     app.add_exception_handler(RequestValidationError, handle)
     app.add_exception_handler(PluginError, handle)
 
 
-def _answered(request: Request, error: Exception) -> JSONResponse:
+def _answered(request: Request, error: Exception, surface: Surface) -> JSONResponse:
     """예외 하나를 표에 넣어 봉투로 답하고 기록할 문구를 적어 둔다. 핸들러와 미들웨어가 같이 쓴다.
 
-    표를 한 번만 지나게 하려고 한 자리다. 기록 문구도 표가 뽑은 것에서 만든다.
+    표를 지나는 자리가 이 하나다. 기록은 덮기 전의 것(운영자 면의 번역)을 남긴다 — 최종 사용자 면이
+    404 로 덮은 500 의 원인을 운영자가 그 추적 식별자로 찾아야 한다(스토리 52). 덮어 상태 코드가
+    바뀌었으면 원래 상태 코드도 적는다. 응답의 상태 코드는 기록 줄의 앞에 따로 실린다.
     """
-    failure = failure_for(error)
-    remember_failure(request, _detail_of(error, failure))
-    return _enveloped(request, failure)
+    shown = failure_for(error, surface)
+    original = failure_for(error, Surface.OPERATOR)
+    detail = _detail_of(error, original)
+    if original.status != shown.status:
+        detail = f"원래 상태 {original.status} {detail}"
+    remember_failure(request, detail)
+    return _enveloped(request, shown)
 
 
 def _enveloped(request: Request, failure: _Failure) -> JSONResponse:

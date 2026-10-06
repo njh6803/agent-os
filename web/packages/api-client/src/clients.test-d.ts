@@ -56,6 +56,13 @@ export async function 관리_클라이언트로_채널_경로를_부르면_컴�
   });
 }
 
+export async function 관리_클라이언트로_최종_사용자_경로를_부르면_컴파일이_실패한다(): Promise<void> {
+  // @ts-expect-error: 관리 클라이언트는 최종 사용자의 시작 경로를 모른다. 관리 토큰이 그 경로에 실리지 않는다
+  await 관리.POST("/end-user/runs", { body: { agent: "echo", request: "안녕" } });
+  // @ts-expect-error: 관리 클라이언트는 최종 사용자의 구독 경로도 모른다. 관리 화면은 그 스트림을 읽지 않는다
+  await 관리.GET("/end-user/runs/{run_id}/subscription", { params: { path: { run_id: "r1" } } });
+}
+
 export async function 채널_클라이언트로_관리_경로를_부르면_컴파일이_실패한다(): Promise<void> {
   // @ts-expect-error: 채널 클라이언트는 관리 경로를 모른다. 채널 토큰이 관리 경로에 실리지 않는다
   await 채널.GET("/plugins");
@@ -80,7 +87,8 @@ export async function 결정_스트림은_본문을_스트림으로_에러를_�
 }
 
 // 경로 목록을 고정한다. 계약에 경로가 늘면 관리 클라이언트의 타입에 새 경로가 보여 여기서 컴파일이 실패한다.
-// 채널의 경로면 `clients.ts` 의 채널 경로 목록에, 관리의 경로면 아래 목록에 더한다. 고칠 자리가 컴파일러 앞에 선다.
+// 채널의 경로면 `clients.ts` 의 채널 경로 목록에, 최종 사용자의 경로면 그 목록에, 관리의 경로면 아래 목록에 더한다.
+// 고칠 자리가 컴파일러 앞에 선다.
 expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/health"
   | "/plugins"
@@ -91,5 +99,10 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
 >();
 expectTypeOf<keyof ChannelPaths>().toEqualTypeOf<"/runs/{run_id}/approval">();
 expectTypeOf<Exclude<keyof paths, keyof AdminPaths>>().toEqualTypeOf<
-  "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation"
+  | "/runs"
+  | "/runs/{run_id}/approval"
+  | "/runs/{run_id}/continuation"
+  | "/end-user/runs"
+  | "/end-user/runs/{run_id}/approval"
+  | "/end-user/runs/{run_id}/subscription"
 >();
