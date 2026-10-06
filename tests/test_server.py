@@ -73,7 +73,7 @@ from agent_os.core.ports import (
     order_key,
 )
 from agent_os.http.auth import PUBLIC_PATHS
-from agent_os.http.errors import UNAUTHORIZED_MESSAGE
+from agent_os.http.errors import INTERNAL_MESSAGE, REQUEST_ID_HEADER, UNAUTHORIZED_MESSAGE
 from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -521,9 +521,10 @@ async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401�
 async def test_다른_출처의_preflight_는_토큰이_없으면_관리_경로도_채널_경로도_401이다(
     client: AsyncClient,
 ) -> None:
-    """관리 화면의 중계는 `OPTIONS` 를 그대로 상류로 넘긴다(ADR 0019). CORS 가 없는 것이 곧
-    차단이라는 것은 미들웨어가 메서드를 가르지 않는다는 데 기댄다(ADR 0011 이력, 스토리 65).
-    허용 헤더도 없다."""
+    """관리 화면의 중계는 `OPTIONS` 를 그대로 상류로 넘긴다(ADR 0019). 관리 경로와 채널 경로에는
+    CORS 가 없고 그것이 곧 차단이라는 것은 미들웨어가 메서드를 가르지 않는다는 데 기댄다(ADR 0011
+    이력, 스토리 65). 허용 헤더도 없다. CORS 가 preflight 에 답하는 것은 최종 사용자 접두사뿐이고
+    (ADR 0023), 그 범위는 아래 CORS 절의 전수 검사가 잰다."""
     preflight = {
         "Origin": "http://evil.example",
         "Access-Control-Request-Method": "GET",
@@ -730,6 +731,9 @@ END_USER_GUARDED = f"{END_USER_PREFIX}/unrouted"
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 ISSUER_A = "https://a.example"
 ISSUER_B = "https://b.example"
+# 사이트마다 위젯을 넣은 페이지의 출처 하나. CORS 의 허용 출처다.
+ORIGIN_A = "https://www.a.example"
+ORIGIN_B = "https://www.b.example"
 # 사이트 A 는 키를 바꾸는 중이라 kid 둘이고, 사이트 B 는 kid 없는 키 하나다.
 KEY_A1 = new_key("k1")
 KEY_A2 = new_key("k2")
@@ -740,14 +744,14 @@ SITES = Sites(
             issuer=ISSUER_A,
             audience=AUDIENCE,
             keys=(KEY_A1.site_key(), KEY_A2.site_key()),
-            allowed_origins=(),
+            allowed_origins=(ORIGIN_A,),
             agents=frozenset(),
         ),
         Site(
             issuer=ISSUER_B,
             audience=AUDIENCE,
             keys=(KEY_B.site_key(),),
-            allowed_origins=(),
+            allowed_origins=(ORIGIN_B,),
             agents=frozenset(),
         ),
     )
@@ -970,6 +974,222 @@ async def test_접두사를_문자열로만_공유하는_경로는_최종_사용
 
     assert signed.status_code == 401
     assert admin.status_code == 404
+
+
+# CORS — 최종 사용자 접두사에만 걸고 에러 응답에도 붙는다(ADR 0023, end-user-channel 티켓 04).
+# 브라우저가 허용 출처의 페이지에서 보낸 요청만 응답을 읽는다. 서버는 막지 않고 허용 밖 출처에
+# `Allow-Origin` 을 내지 않을 뿐이다. 여기서는 미들웨어의 자리와 범위를 잰다. 라우트가 낸 상태
+# 코드 전부에 헤더가 붙는 것은 최종 사용자 경로의 테스트(`tests/channel/http/test_end_user.py`)가
+# 잰다.
+
+ALLOW_ORIGIN = "access-control-allow-origin"
+# 허용 출처의 응답에 붙는 셋. 허용 밖 출처에는 `Allow-Origin` 이 없다.
+CORS_HEADERS = (ALLOW_ORIGIN, "vary", "access-control-expose-headers")
+EXPOSED = "Retry-After, X-Request-Id"
+EVIL_ORIGIN = "https://evil.example"
+
+
+def _preflight(
+    origin: str | None, method: str = "POST", asked: str = "authorization"
+) -> dict[str, str]:
+    """preflight 의 헤더. 묻는 메서드와 묻는 헤더 목록(`asked`)을 싣고, 출처가 없으면 `Origin` 을
+    싣지 않는다."""
+    sent = {"Access-Control-Request-Method": method, "Access-Control-Request-Headers": asked}
+    return sent if origin is None else sent | {"Origin": origin}
+
+
+def _cors_of(response: httpx.Response) -> list[str]:
+    """응답에 붙은 CORS 헤더의 이름들. 접두사 밖에서는 비어야 한다."""
+    return [name for name in CORS_HEADERS if name in response.headers]
+
+
+async def test_허용_출처의_preflight_는_최종_사용자_접두사에서만_토큰_없이_200이고_그_밖은_401이다(
+    stderr: io.StringIO,
+) -> None:
+    """ADR 0011 의 2026-10-03 이력이 "allowlist가 메서드 하나만큼 자란다"고 한 범위를 판정한다.
+    앱이 아는 오퍼레이션 가운데 allowlist 밖의 전부에 허용 출처의 preflight 를 토큰 없이 보낸다.
+    CORS 미들웨어가 답하는 것은 최종 사용자 접두사뿐이고, 그 밖은 허용 출처라도 인증이 401 로
+    막으며 그 401 에는 CORS 헤더도 없다. `PUBLIC_PATHS` 는 그대로 `/health` 하나다 — preflight 는
+    그 목록의 원소가 아니라 CORS 미들웨어의 몫이다(`/health` 의 preflight 는 인증을 지나 라우터의
+    405 다). 방향마다 열거가 비면 그 방향은 아무것도 재지 않는다."""
+    app = _signed_app(stderr)
+    operations = [
+        (method, path) for method, path in _documented_operations(app) if path not in PUBLIC_PATHS
+    ]
+    end_user = [op for op in operations if _surface_of(op[1]) == "end_user"]
+    others = [op for op in operations if _surface_of(op[1]) != "end_user"]
+    assert end_user, "최종 사용자 경로가 없으면 preflight 가 지나가는 쪽은 아무것도 재지 않는다"
+    assert {_surface_of(path) for _, path in others} == {"channel", "admin"}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        for method, path in end_user:
+            response = await c.options(path, headers=_preflight(ORIGIN_A, method))
+            assert response.status_code == 200, (method, path)
+            assert response.headers[ALLOW_ORIGIN] == ORIGIN_A, (method, path)
+        for method, path in others:
+            response = await c.options(path, headers=_preflight(ORIGIN_A, method))
+            assert response.status_code == 401, (method, path)
+            assert _cors_of(response) == [], (method, path)
+
+
+async def test_접두사의_preflight_는_허용_출처면_200_허용_밖이면_400_평문_출처가_없으면_401이다(
+    stderr: io.StringIO,
+) -> None:
+    """preflight 는 CORS 미들웨어가 인증 앞에서 답하고 갈래는 셋이다. 허용 밖 출처의 400 은
+    라이브러리의 평문이고 봉투가 아니다 — 봉투 규칙의 유일한 예외다(`.claude/rules/http.md`).
+    브라우저는 preflight 의 실패를 페이지 스크립트에 드러내지 않아 봉투가 있어도 읽히지 않는다.
+    `Origin` 이 없으면 CORS 요청이 아니라서 미들웨어가 안쪽으로 넘기고 인증이 막는다. 셋 다 추적
+    식별자를 든다 — 식별자를 심는 미들웨어가 CORS 바깥이다. 라우트가 없는 경로로 재는 이유는
+    preflight 가 라우팅에 닿지 않아서다."""
+    app = _signed_app(stderr)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        allowed = await c.options(END_USER_GUARDED, headers=_preflight(ORIGIN_A))
+        disallowed = await c.options(END_USER_GUARDED, headers=_preflight(EVIL_ORIGIN))
+        no_origin = await c.options(END_USER_GUARDED, headers=_preflight(None))
+
+    assert allowed.status_code == 200
+    assert allowed.headers[ALLOW_ORIGIN] == ORIGIN_A
+    assert allowed.headers["vary"] == "Origin"
+    assert (disallowed.status_code, disallowed.text) == (400, "Disallowed CORS origin")
+    assert disallowed.headers["content-type"].startswith("text/plain")
+    assert ALLOW_ORIGIN not in disallowed.headers
+    assert no_origin.status_code == 401
+    assert no_origin.json()["code"] == "unauthorized"
+    for response in (allowed, disallowed, no_origin):
+        assert REQUEST_ID_HEADER in response.headers
+
+
+async def test_preflight_는_허용_밖의_메서드와_헤더를_400으로_막고_자격_증명은_허용하지_않는다(
+    stderr: io.StringIO,
+) -> None:
+    """허용 메서드는 `GET`·`POST`·`OPTIONS`, 허용 헤더는 `Authorization`·`Content-Type`·
+    `Last-Event-ID` 다(end-user-channel 명세 "CORS"). 라이브러리가 CORS 안전 목록 헤더를 늘 더하므로
+    허용되는 헤더는 그보다 넓지만, 그 밖의 메서드나 헤더를 묻는 preflight 는 허용 출처라도
+    라이브러리의 400 이다. 쿠키를 쓰지 않으므로 자격 증명은 허용하지 않는다."""
+    app = _signed_app(stderr)
+    asked = "authorization, content-type, last-event-id"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        allowed = await c.options(END_USER_GUARDED, headers=_preflight(ORIGIN_A, "GET", asked))
+        method = await c.options(END_USER_GUARDED, headers=_preflight(ORIGIN_A, "DELETE"))
+        header = await c.options(
+            END_USER_GUARDED, headers=_preflight(ORIGIN_A, "POST", "x-api-key")
+        )
+
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-methods"] == "GET, POST, OPTIONS"
+    assert "access-control-allow-credentials" not in allowed.headers
+    assert (method.status_code, method.text) == (400, "Disallowed CORS method")
+    assert (header.status_code, header.text) == (400, "Disallowed CORS headers")
+
+
+async def test_허용_밖_출처의_요청에는_Allow_Origin_이_없고_요청_자체는_막지_않는다(
+    stderr: io.StringIO,
+) -> None:
+    """읽지 못하게 하는 것은 브라우저다(스토리 23). 그래서 허용 밖 출처의 요청도 인증과 라우팅을
+    그대로 지난다 — 토큰이 없으면 401 이고 맞는 토큰이면 라우팅까지 간다."""
+    app = _signed_app(stderr)
+    evil = {"Origin": EVIL_ORIGIN}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        refused = await c.get(END_USER_GUARDED, headers=evil)
+        routed = await c.get(END_USER_GUARDED, headers=evil | bearer(sign(KEY_A1, _good())))
+
+    assert refused.status_code == 401
+    assert routed.status_code == 404
+    for response in (refused, routed):
+        assert ALLOW_ORIGIN not in response.headers
+        assert "access-control-allow-credentials" not in response.headers
+
+
+async def test_접두사_밖에는_허용_출처의_요청에도_CORS_헤더가_없다(stderr: io.StringIO) -> None:
+    """관리와 운영자 채널은 브라우저가 다른 출처에서 부르는 면이 아니다(관리 화면의 중계는 같은
+    출처다, ADR 0019). 허용 출처는 최종 사용자 접두사에만 걸린다. 접두사를 문자열로만 공유하는
+    경로도 밖이다 — 분기의 비교가 경로 조각 단위다."""
+    app = _signed_app(stderr)
+    origin = {"Origin": ORIGIN_A}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        admin = await c.get("/plugins", headers=origin | BEARER)
+        channel = await c.get(CHANNEL_GUARDED, headers=origin | CHANNEL_BEARER)
+        refused = await c.get(GUARDED, headers=origin)
+        lookalike = await c.get("/end-userx", headers=origin | BEARER)
+
+    assert [r.status_code for r in (admin, channel, refused, lookalike)] == [200, 404, 401, 404]
+    for response in (admin, channel, refused, lookalike):
+        assert _cors_of(response) == [], response.url
+
+
+async def test_사이트_둘의_출처가_모두_허용되고_출처와_토큰의_사이트를_묶지_않는다(
+    stderr: io.StringIO,
+) -> None:
+    """허용 출처는 모든 사이트의 것을 합친 하나다(명세가 정했다). preflight 에는 토큰이 없어
+    미들웨어가 출처의 사이트를 토큰보다 먼저 가를 수 없기 때문이다. 그래서 사이트 B 의 페이지에서
+    사이트 A 의 토큰으로 보낸 요청도 읽힌다 — 둘 다 운영자가 사이트 파일에 올린 사이트라 믿는 범위
+    안이다."""
+    app = _signed_app(stderr)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        preflights = [
+            await c.options(END_USER_GUARDED, headers=_preflight(origin))
+            for origin in (ORIGIN_A, ORIGIN_B)
+        ]
+        crossed = await c.get(
+            END_USER_GUARDED, headers={"Origin": ORIGIN_B} | bearer(sign(KEY_A1, _good()))
+        )
+
+    assert [(r.status_code, r.headers.get(ALLOW_ORIGIN)) for r in preflights] == [
+        (200, ORIGIN_A),
+        (200, ORIGIN_B),
+    ]
+    assert crossed.status_code == 404
+    assert crossed.headers[ALLOW_ORIGIN] == ORIGIN_B
+
+
+async def test_사이트_파일이_없으면_허용_출처가_비어_어느_출처에도_붙지_않고_preflight_는_400이다(
+    client: AsyncClient,
+) -> None:
+    """사이트 파일을 주지 않은 배치(스토리 41). 최종 사용자 경로는 서되 받아들일 사이트도 출처도
+    없다."""
+    preflight = await client.options(END_USER_GUARDED, headers=_preflight(ORIGIN_A))
+    simple = await client.get(END_USER_GUARDED, headers={"Origin": ORIGIN_A})
+
+    assert (preflight.status_code, preflight.text) == (400, "Disallowed CORS origin")
+    assert simple.status_code == 401
+    assert ALLOW_ORIGIN not in preflight.headers
+    assert ALLOW_ORIGIN not in simple.headers
+
+
+async def test_최종_사용자_면의_예기치_않은_500도_봉투이고_CORS_헤더와_추적_식별자를_든다(
+    stderr: io.StringIO,
+) -> None:
+    """핸들러가 놓친 예외를 봉투로 바꾸는 자리가 CORS 안쪽이라 페이지가 그 500 의 봉투를 읽는다.
+    변환이 CORS 바깥에만 있으면 그 500 에는 헤더가 붙지 않는다(`cors_scoped.py` 사례 7 과 대조군).
+    원인은 서버 기록에만 간다. 운영자 면의 같은 500 은 "예기치 않은 실패도 봉투" 테스트가 잰다."""
+    app = _signed_app(stderr)
+    _route_that_raises(app, f"{END_USER_PREFIX}/oops", RuntimeError("내부 사정이 담긴 문구"))
+    headers = {"Origin": ORIGIN_A} | bearer(sign(KEY_A1, _good()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        response = await c.get(f"{END_USER_PREFIX}/oops", headers=headers)
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == INTERNAL_MESSAGE
+    assert response.headers[ALLOW_ORIGIN] == ORIGIN_A
+    assert response.headers["vary"] == "Origin"
+    assert response.headers["access-control-expose-headers"] == EXPOSED
+    assert response.headers[REQUEST_ID_HEADER] == response.json()["request_id"]
+    assert "내부 사정이 담긴 문구" not in response.text
+    assert "내부 사정이 담긴 문구" in stderr.getvalue()
+
+
+async def test_CORS_분기는_인증과_같은_경로로_면을_가른다(stderr: io.StringIO) -> None:
+    """인증 표와 예외 표와 CORS 분기가 같은 비교(`is_under`)에 같은 경로(`request.url.path`)를
+    넣는다. 경로에 퍼센트 인코딩된 `?` 가 들면 ASGI 의 `path` 와 다시 파싱한 URL 의 경로가 갈린다.
+    인증은 이 경로를 최종 사용자 면으로 보아 관리 토큰을 401 로 막는데, CORS 가 다른 경로를 보면 그
+    401 의 봉투를 페이지가 읽지 못한다."""
+    app = _signed_app(stderr)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        response = await c.get(f"{END_USER_PREFIX}%3Fx", headers={"Origin": ORIGIN_A} | BEARER)
+
+    assert response.status_code == 401
+    assert response.headers[ALLOW_ORIGIN] == ORIGIN_A
 
 
 async def test_에러_응답이_봉투이고_code_가_상태_코드와_짝이다(client: AsyncClient) -> None:

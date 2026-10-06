@@ -8,14 +8,23 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] **Starlette의 `CORSMiddleware`를 새 접두사에만 건다.** 경로 접두사로 가르는 작은 ASGI 분기 하나가 접두사 아래는 `CORSMiddleware(인증(앱))`로, 그 밖은 `인증(앱)`으로 보낸다. 분기의 비교는 01이 둔 공용 층의 접두사 비교 함수다. 미들웨어는 `add_middleware`로 건다(프로브가 앱을 밖에서 감싸 `ServerErrorMiddleware` 안쪽에 들어갔던 사례. 일지 2026-10-05-03). 직접 쓰지 않는다
-- [ ] **허용 출처는 모든 사이트의 허용 출처를 합친 집합이다.** 사이트별로 가르지 않는다(preflight에는 토큰이 없다). 토큰과 출처를 묶는 것은 범위 밖이다
-- [ ] **허용 메서드는 `GET`, `POST`, `OPTIONS`. 허용 헤더는 `Authorization`, `Content-Type`, `Last-Event-ID`. 노출 헤더는 `Retry-After`, `X-Request-Id`.** 자격 증명(쿠키)은 허용하지 않는다. `max_age`는 라이브러리 기본값. 셀프 리뷰 표준 축이 저장소 밖 탐침으로 손으로 봤다 — 설치된 Starlette 1.6.0은 `allow_methods`의 `OPTIONS`를 `Allow-Methods: GET, POST, OPTIONS`로 그대로 싣는다. 테스트가 그 값을 고정한다
-- [ ] **preflight는 CORS 미들웨어가 인증 앞에서 답하고 갈래는 셋이다**(설치된 Starlette의 코드를 to-tickets가 읽었다 — `Origin`이 없을 때만 안쪽으로 넘기고, `Origin`이 있는 preflight는 미들웨어가 직접 답한다). 허용 출처의 preflight는 토큰 없이 200. **허용 밖 출처(사이트 파일이 없어 허용 출처가 빈 것도)의 preflight는 라이브러리의 400 평문("Disallowed CORS origin")이고 봉투가 아니다**(to-tickets에서 사용자가 골랐다. 브라우저는 preflight 실패를 페이지 스크립트에 드러내지 않아 봉투가 있어도 읽히지 않고, 명세가 직접 쓰는 안을 거부한 이유가 그대로 든다). `Origin` 없는 `OPTIONS`는 인증의 401이다. 이 400이 봉투 규칙의 유일한 예외라는 것을 `http.md`에 적고 테스트가 셋을 고정한다. `PUBLIC_PATHS`는 `/health` 하나 그대로이고 preflight는 목록의 원소가 아니다(01이 `http.md`에 가름을 적었다)
-- [ ] **예기치 않은 500도 CORS 안쪽에서 봉투가 된다.** 추적 식별자 미들웨어를 둘로 가른다 — 식별자 심기는 바깥 그대로(preflight 응답도 식별자를 든다), 핸들러가 놓친 예외의 봉투 변환은 접두사 분기 안 CORS 안쪽. 운영자 면의 변환 자리는 그대로다. 측정 `cors_scoped.py` 사례 7과 대조군이 근거다
-- [ ] **인증 전수 검사에 preflight 축을 더한다.** 앱이 아는 모든 경로에 대해 허용 출처의 preflight가 새 접두사에서만 토큰 없이 200이고 그 밖은 401이다(01의 3분법 분류를 쓴다). 기존 테스트 `test_다른_출처의_preflight_는_토큰이_없으면_관리_경로도_채널_경로도_401이다`의 독스트링이 CORS가 없는 것이 곧 차단이라 적은 것을 새 접두사의 예외를 아는 문장으로 고친다(명세 검토 nit)
-- [ ] **CORS 테스트.** 허용 출처의 요청에 세 헤더가 200·401·404·409·422·500 모두에 붙고(429는 02가 더한다 — 이 티켓에는 429를 내는 자리가 없다), 허용 밖 출처에는 `Allow-Origin`이 없고, 접두사 밖에는 출처가 있어도 없다. 사이트 둘의 출처가 모두 허용된다. 사이트 파일이 없으면 허용 출처가 비어 어느 출처에도 붙지 않고 preflight는 400이다
-- [ ] **`http.md`에 CORS의 자리(접두사 분기, 미들웨어 순서, 변환의 자리)와 헤더 집합, preflight의 예외를 적는다.** 조립 층 독스트링의 미들웨어 순서 문단을 고친다
-- [ ] 검증 명령이 모두 초록이다. `server.py`와 공용 층을 건드리고 `channel/`은 건드리지 않으므로 `-m llm`은 돌리지 않는다(채널 라우트를 건드리게 되면 돌린다)
+- [x] **Starlette의 `CORSMiddleware`를 새 접두사에만 건다.** 경로 접두사로 가르는 작은 ASGI 분기 하나가 접두사 아래는 `CORSMiddleware(인증(앱))`로, 그 밖은 `인증(앱)`으로 보낸다. 분기의 비교는 01이 둔 공용 층의 접두사 비교 함수다. 미들웨어는 `add_middleware`로 건다(프로브가 앱을 밖에서 감싸 `ServerErrorMiddleware` 안쪽에 들어갔던 사례. 일지 2026-10-05-03). 직접 쓰지 않는다
+- [x] **허용 출처는 모든 사이트의 허용 출처를 합친 집합이다.** 사이트별로 가르지 않는다(preflight에는 토큰이 없다). 토큰과 출처를 묶는 것은 범위 밖이다
+- [x] **허용 메서드는 `GET`, `POST`, `OPTIONS`. 허용 헤더는 `Authorization`, `Content-Type`, `Last-Event-ID`. 노출 헤더는 `Retry-After`, `X-Request-Id`.** 자격 증명(쿠키)은 허용하지 않는다. `max_age`는 라이브러리 기본값. 셀프 리뷰 표준 축이 저장소 밖 탐침으로 손으로 봤다 — 설치된 Starlette 1.6.0은 `allow_methods`의 `OPTIONS`를 `Allow-Methods: GET, POST, OPTIONS`로 그대로 싣는다. 테스트가 그 값을 고정한다
+- [x] **preflight는 CORS 미들웨어가 인증 앞에서 답하고 갈래는 셋이다**(설치된 Starlette의 코드를 to-tickets가 읽었다 — `Origin`이 없을 때만 안쪽으로 넘기고, `Origin`이 있는 preflight는 미들웨어가 직접 답한다). 허용 출처의 preflight는 토큰 없이 200. **허용 밖 출처(사이트 파일이 없어 허용 출처가 빈 것도)의 preflight는 라이브러리의 400 평문("Disallowed CORS origin")이고 봉투가 아니다**(to-tickets에서 사용자가 골랐다. 브라우저는 preflight 실패를 페이지 스크립트에 드러내지 않아 봉투가 있어도 읽히지 않고, 명세가 직접 쓰는 안을 거부한 이유가 그대로 든다). `Origin` 없는 `OPTIONS`는 인증의 401이다. 이 400이 봉투 규칙의 유일한 예외라는 것을 `http.md`에 적고 테스트가 셋을 고정한다. `PUBLIC_PATHS`는 `/health` 하나 그대로이고 preflight는 목록의 원소가 아니다(01이 `http.md`에 가름을 적었다)
+- [x] **예기치 않은 500도 CORS 안쪽에서 봉투가 된다.** 추적 식별자 미들웨어를 둘로 가른다 — 식별자 심기는 바깥 그대로(preflight 응답도 식별자를 든다), 핸들러가 놓친 예외의 봉투 변환은 접두사 분기 안 CORS 안쪽. 운영자 면의 변환 자리는 그대로다. 측정 `cors_scoped.py` 사례 7과 대조군이 근거다
+- [x] **인증 전수 검사에 preflight 축을 더한다.** 앱이 아는 모든 경로에 대해 허용 출처의 preflight가 새 접두사에서만 토큰 없이 200이고 그 밖은 401이다(01의 3분법 분류를 쓴다). 기존 테스트 `test_다른_출처의_preflight_는_토큰이_없으면_관리_경로도_채널_경로도_401이다`의 독스트링이 CORS가 없는 것이 곧 차단이라 적은 것을 새 접두사의 예외를 아는 문장으로 고친다(명세 검토 nit)
+- [x] **CORS 테스트.** 허용 출처의 요청에 세 헤더가 200·401·404·409·422·500 모두에 붙고(429는 02가 더한다 — 이 티켓에는 429를 내는 자리가 없다), 허용 밖 출처에는 `Allow-Origin`이 없고, 접두사 밖에는 출처가 있어도 없다. 사이트 둘의 출처가 모두 허용된다. 사이트 파일이 없으면 허용 출처가 비어 어느 출처에도 붙지 않고 preflight는 400이다
+- [x] **`http.md`에 CORS의 자리(접두사 분기, 미들웨어 순서, 변환의 자리)와 헤더 집합, preflight의 예외를 적는다.** 조립 층 독스트링의 미들웨어 순서 문단을 고친다
+- [x] 검증 명령이 모두 초록이다. `server.py`와 공용 층을 건드리고 `channel/`은 건드리지 않으므로 `-m llm`은 돌리지 않는다(채널 라우트를 건드리게 되면 돌린다)
+
+### 이 티켓이 정한 것 (2026-10-06)
+
+- CORS 분기는 새 모듈 `src/agent_os/http/cors.py`의 `CorsUnderPrefix`이고, 받은 안쪽 앱 하나 위에 CORS를 두른 사슬과 맨 사슬을 짓는다. 인증 사슬을 분기 안에서 짓지 않고 미들웨어 넷을 모두 `add_middleware`로 건다 — 바깥에서 안쪽으로 `AssignRequestId` → `CorsUnderPrefix` → `CatchUnexpected` → `RequireToken`. 그래서 변환(`CatchUnexpected`)은 두 면이 하나를 나눠 쓰고, 최종 사용자 접두사에서는 CORS 안쪽, 운영자 면에서는 식별자 심기와 인증 사이에 선다
+- 분기는 `is_under`에 인증·예외 표와 같은 경로(`request.url.path`, 곧 `URL(scope=scope).path`)를 넣는다. ASGI의 `path`는 퍼센트 인코딩된 `?`가 든 경로에서 갈린다(테스트 `test_CORS_분기는_인증과_같은_경로로_면을_가른다`)
+- 허용 출처의 합집합은 `Sites.origins()`(처음 나온 순서, 겹친 것은 하나)이고 조립이 그것을 넘긴다
+- "봉투 규칙의 유일한 예외"는 허용 밖 출처만이 아니라 라이브러리의 preflight 검사(출처, 메서드, 헤더, private network)에 걸린 400 전부다. 셀프 리뷰 명세 축이 짚었다
+- ADR 0023의 "층"이 CORS를 인증 미들웨어가 맡는다고 적은 것은 이력 초안(2026-10-06)으로 올렸다. ADR 0019의 "CORS가 없는 것이 곧 차단이다"에는 `(바뀜: ADR 0023)`을 달았다
+- 프로브 `cors_scoped.py`를 다시 돌게 고쳤다(티켓 01 뒤 인증 표의 값과, 이 티켓이 떼어 낸 변환). 변이 표 `cors_mutations.toml` 16개

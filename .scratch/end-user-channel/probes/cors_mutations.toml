@@ -1,0 +1,241 @@
+# 티켓 04(CORS)의 변이 표. 구현 전부터 초록이던 가드 셋(허용 밖 출처, 접두사 밖, 관리·채널 경로의
+# preflight 401)과 구현 뒤의 세부 단언(미들웨어 순서, 헤더 값, 합집합, 경로의 출처)이 빨강을 볼 수
+# 있는지 잰다. 가드 하나에 변이 하나를 따로 겨눈다 — `-k` 가 여럿을 고르면 하나만 빨개도 빨강이라
+# 나머지가 재지 않은 채 지나간다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-channel/probes/cors_mutations.toml
+
+# --- 분기의 범위 ------------------------------------------------------------------------
+
+[[mutation]]
+name = "CORS 를 앱 전체에 — 전수 검사"
+tests = ["tests/test_server.py", "-k", "최종_사용자_접두사에서만_토큰_없이_200이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+        if scope["type"] == "http" and is_under(URL(scope=scope).path, self._prefix):
+'''
+new = '''
+        if scope["type"] == "http":
+'''
+
+[[mutation]]
+name = "CORS 를 앱 전체에 — 접두사 밖 가드"
+tests = ["tests/test_server.py", "-k", "접두사_밖에는_허용_출처의_요청에도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+        if scope["type"] == "http" and is_under(URL(scope=scope).path, self._prefix):
+'''
+new = '''
+        if scope["type"] == "http":
+'''
+
+[[mutation]]
+name = "CORS 를 앱 전체에 — 관리·채널 경로의 preflight 401 가드"
+tests = ["tests/test_server.py", "-k", "관리_경로도_채널_경로도_401이다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+        if scope["type"] == "http" and is_under(URL(scope=scope).path, self._prefix):
+'''
+new = '''
+        if scope["type"] == "http":
+'''
+
+[[mutation]]
+name = "분기가 문자열 접두사로 비교"
+tests = ["tests/test_server.py", "-k", "접두사_밖에는_허용_출처의_요청에도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+        if scope["type"] == "http" and is_under(URL(scope=scope).path, self._prefix):
+'''
+new = '''
+        if scope["type"] == "http" and URL(scope=scope).path.startswith(self._prefix):
+'''
+
+[[mutation]]
+name = "분기가 ASGI path 를 본다"
+tests = ["tests/test_server.py", "-k", "CORS_분기는_인증과_같은_경로로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+        if scope["type"] == "http" and is_under(URL(scope=scope).path, self._prefix):
+'''
+new = '''
+        if scope["type"] == "http" and is_under(scope["path"], self._prefix):
+'''
+
+# --- 미들웨어 순서 -----------------------------------------------------------------------
+
+[[mutation]]
+name = "변환을 CORS 바깥에"
+tests = ["tests/test_server.py", "-k", "최종_사용자_면의_예기치_않은_500도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/server.py"
+old = '''
+    app.add_middleware(CatchUnexpected, end_user=end_user)
+    app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
+'''
+new = '''
+    app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
+    app.add_middleware(CatchUnexpected, end_user=end_user)
+'''
+
+[[mutation]]
+name = "변환을 없앤다 — 운영자 면"
+tests = ["tests/test_server.py", "-k", "예기치_않은_실패도_봉투이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/server.py"
+old = '''
+    app.add_middleware(CatchUnexpected, end_user=end_user)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "식별자를 CORS 안쪽에"
+tests = ["tests/test_server.py", "-k", "400_평문_출처가_없으면_401이다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/server.py"
+old = '''
+    app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
+    app.add_middleware(AssignRequestId, stderr=stderr)
+'''
+new = '''
+    app.add_middleware(AssignRequestId, stderr=stderr)
+    app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
+'''
+
+# --- 허용 출처 ---------------------------------------------------------------------------
+
+[[mutation]]
+name = "허용 출처를 전부 — 허용 밖 출처 가드"
+tests = ["tests/test_server.py", "-k", "허용_밖_출처의_요청에는_Allow_Origin_이_없고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+            allow_origins=tuple(origins),
+'''
+new = '''
+            allow_origins=("*",),
+'''
+
+[[mutation]]
+name = "허용 출처를 전부 — 사이트 파일 없음"
+tests = ["tests/test_server.py", "-k", "사이트_파일이_없으면_허용_출처가_비어"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+            allow_origins=tuple(origins),
+'''
+new = '''
+            allow_origins=("*",),
+'''
+
+[[mutation]]
+name = "허용 출처를 첫 사이트만"
+tests = ["tests/test_server.py", "-k", "사이트_둘의_출처가_모두_허용되고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+        return tuple(dict.fromkeys(o for site in self.entries for o in site.allowed_origins))
+'''
+new = '''
+        return self.entries[0].allowed_origins if self.entries else ()
+'''
+
+# --- 헤더 집합 ---------------------------------------------------------------------------
+
+[[mutation]]
+name = "OPTIONS 를 허용 메서드에서 뺀다"
+tests = ["tests/test_server.py", "-k", "허용_밖의_메서드와_헤더를_400으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+ALLOW_METHODS = ("GET", "POST", "OPTIONS")
+'''
+new = '''
+ALLOW_METHODS = ("GET", "POST")
+'''
+
+[[mutation]]
+name = "Last-Event-ID 를 허용 헤더에서 뺀다"
+tests = ["tests/test_server.py", "-k", "허용_밖의_메서드와_헤더를_400으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+ALLOW_HEADERS = ("Authorization", "Content-Type", "Last-Event-ID")
+'''
+new = '''
+ALLOW_HEADERS = ("Authorization", "Content-Type")
+'''
+
+[[mutation]]
+name = "허용 헤더를 전부"
+tests = ["tests/test_server.py", "-k", "허용_밖의_메서드와_헤더를_400으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+ALLOW_HEADERS = ("Authorization", "Content-Type", "Last-Event-ID")
+'''
+new = '''
+ALLOW_HEADERS = ("*",)
+'''
+
+[[mutation]]
+name = "추적 식별자를 노출하지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "200과_에러_응답_모두에_CORS_헤더_셋을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+EXPOSE_HEADERS = ("Retry-After", REQUEST_ID_HEADER)
+'''
+new = '''
+EXPOSE_HEADERS = ("Retry-After",)
+'''
+
+[[mutation]]
+name = "자격 증명을 허용"
+tests = ["tests/test_server.py", "-k", "허용_밖_출처의_요청에는_Allow_Origin_이_없고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/cors.py"
+old = '''
+            expose_headers=EXPOSE_HEADERS,
+'''
+new = '''
+            expose_headers=EXPOSE_HEADERS,
+            allow_credentials=True,
+'''

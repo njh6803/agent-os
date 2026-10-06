@@ -15,9 +15,11 @@ ADR 0023 은 CORS 를 새 접두사에만 걸고(허용 출처는 사이트 파�
 요청은 `Access-Control-Allow-Origin` 없이 지나간다(브라우저가 막는다. Starlette 는 `expose_headers`
 를 주면 출처와 무관하게 `Expose-Headers` 는 붙인다). (6) 접두사 밖은 출처가 있어도 CORS
 헤더가 없다. (7) 라우트의 예기치 않은 예외가 500 봉투가 될 때, 변환이 CORS 안쪽에 있으면
-헤더가 붙고 바깥의 `AssignRequestId` 에만 있으면(지금의 조립, 대조군) 붙지 않는다 — PR #135
-의 CodeRabbit 이 짚었다. 인증은 저장소의 `RequireToken` 을 그대로 쓴다 — 서명 토큰 검증이
-들어서도 "401 을 미들웨어가 낸다"는 모양은 같다.
+헤더가 붙고 바깥에만 있으면(대조군) 붙지 않는다 — PR #135 의 CodeRabbit 이 짚었다. 처음 판의
+대조군은 저장소의 `AssignRequestId` 가 식별자 심기와 그 변환을 함께 하던 조립이었다. 티켓 04 가
+둘을 갈라 `AssignRequestId` 가 변환을 하지 않으므로, 대조군은 이 파일의 변환을 분기 바깥에 둔다.
+인증은 저장소의 `RequireToken` 을 그대로 쓴다 — 서명 토큰 검증이 들어서도 "401 을 미들웨어가
+낸다"는 모양은 같다. 표의 값은 티켓 01 뒤로 `SharedToken` 이다.
 
     PYTHONUTF8=1 uv run python .scratch/end-user-channel/probes/cors_scoped.py
 """
@@ -33,7 +35,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from agent_os.http.auth import RequireToken
+from agent_os.http.auth import RequireToken, SharedToken
 from agent_os.http.errors import INTERNAL_MESSAGE, AssignRequestId, error_envelope
 
 PREFIX = "/chat"
@@ -41,8 +43,9 @@ ORIGIN = "https://site.example"
 
 
 class CatchUnexpected(BaseHTTPMiddleware):
-    """예기치 않은 예외를 고정 문구의 500 봉투로 바꾼다. 지금은 `AssignRequestId` 가 함께 하는 일을
-    떼어 낸 것이다 — CORS 안쪽에 두려면 식별자 심기(모든 응답)와 가라야 한다(PR #135 CodeRabbit)."""
+    """예기치 않은 예외를 고정 문구의 500 봉투로 바꾼다. 처음 판에서 `AssignRequestId` 가 함께 하던
+    일을 떼어 낸 것이다 — CORS 안쪽에 두려면 식별자 심기(모든 응답)와 가라야 한다(PR #135
+    CodeRabbit). 티켓 04 뒤로 저장소의 `errors.CatchUnexpected` 가 그 자리다."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
@@ -62,7 +65,11 @@ class SplitByPrefix:
     """
 
     def __init__(self, app: ASGIApp, *, catch_inside: bool) -> None:
-        authed = RequireToken(app, default="admin-token", prefixes={PREFIX: "chat-token"})
+        authed = RequireToken(
+            app,
+            default=SharedToken("admin-token"),
+            prefixes={PREFIX: SharedToken("chat-token")},
+        )
         inner: ASGIApp = CatchUnexpected(authed) if catch_inside else authed
         self._inside: ASGIApp = CORSMiddleware(
             inner,
@@ -80,8 +87,9 @@ class SplitByPrefix:
 
 
 def build(*, catch_inside: bool) -> ASGIApp:
-    """`catch_inside` 가 참이면 예외→봉투 변환을 CORS 안쪽에 두고, 거짓이면 지금처럼 바깥의
-    `AssignRequestId` 에만 맡긴다(대조군). 미들웨어는 실제 조립과 같이 `add_middleware` 로 건다."""
+    """`catch_inside` 가 참이면 예외→봉투 변환을 CORS 안쪽에 두고, 거짓이면 분기 바깥(식별자 심기
+    안쪽)에 둔다(대조군. 티켓 04 전의 조립에서 변환이 서던 자리다). 미들웨어는 실제 조립과 같이
+    `add_middleware` 로 건다."""
     app = FastAPI()
 
     @app.post(f"{PREFIX}/runs")
@@ -101,6 +109,8 @@ def build(*, catch_inside: bool) -> ASGIApp:
         return []
 
     app.add_middleware(SplitByPrefix, catch_inside=catch_inside)
+    if not catch_inside:
+        app.add_middleware(CatchUnexpected)
     app.add_middleware(AssignRequestId, stderr=io.StringIO())
     return app
 
@@ -171,7 +181,7 @@ async def main() -> None:
     control = httpx.ASGITransport(app=build(catch_inside=False))
     async with httpx.AsyncClient(transport=control, base_url="http://probe") as client:
         show(
-            "(7') 같은 500, 변환이 바깥(지금의 AssignRequestId)뿐인 대조군",
+            "(7') 같은 500, 변환이 분기 바깥인 대조군",
             await client.post(f"{PREFIX}/boom", headers=boom_headers),
             *cors_names,
             "x-request-id",

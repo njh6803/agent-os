@@ -1,7 +1,8 @@
 """HTTP 표면의 공용 배관. 채널과 관리가 같이 쓴다(ADR 0016).
 
 에러 봉투와 면별 상태 코드 표(`errors`), 라우트가 쓰는 에러 문서와 경로 변환기(`routes`),
-fail-closed 인증(`auth`), 사이트 목록과 서명 토큰 검증(`sites`), 접두사 비교(`paths`). 채널과 관리와
+fail-closed 인증(`auth`), 사이트 목록과 서명 토큰 검증(`sites`), 최종 사용자 접두사의 CORS
+(`cors`), 접두사 비교(`paths`). 채널과 관리와
 `server` 와 `main` 이 이것을 import 하고, 이것은 core 와 sdk 만 import 한다. 어댑터는 이것을 import
 하지 않는다 — HTTP 표면이 아니다.
 
