@@ -123,6 +123,14 @@ class _LocalSettings(TypedDict, total=False):
     hooks: dict[str, list[_HookGroup]]
 
 
+class _LocalPlace(NamedTuple):
+    """local 설정 파일 하나와 그것을 알릴 이름, 고치는 길."""
+
+    path: Path
+    label: str
+    fix: str
+
+
 def _front_matter(text: str) -> str | None:
     match = _FRONT_MATTER.match(text)
     return None if match is None else match.group(1)
@@ -264,49 +272,12 @@ def rules_with_dead_paths(root: Path = ROOT) -> list[str]:
     return problems
 
 
-def local_settings_with_guards(root: Path = ROOT) -> list[str]:
-    """local 설정에 가드(`permissions.deny`·`permissions.ask`·`hooks`)가 있는지 본다.
-
-    local(`.claude/settings.local.json`)은 추적하지 않는다(이 PC 의 사용자 전역 ignore). 손으로 판
-    워크트리에는 없고 EnterWorktree 는 만들 때 한 번 복사하므로, 워크트리 폴더에서 연 세션에서는
-    거기 둔 가드가 알림 없이 빠진다(2026-10-05 워크트리 감사 서브에이전트가 워크트리마다 local
-    유무를 손으로 대조했다). 가드는 추적하는 `settings.json` 에 두고 local 은 allow 만 든다. 파일이
-    없거나 가드 목록이 비었으면 문제가 없고, 훅은 이벤트 이름이 아니라 실제 훅 항목이 있어야 가드다.
-    깨진 JSON 은 예외가 아니라 문제로 돌려준다 — 주 체크아웃의 local 까지 읽으므로 예외면 고칠 수
-    없는 파일 하나가 모든 커밋을 트레이스백으로 막는다. 워크트리에서 돌면 그 워크트리의 local 과
-    함께 주 체크아웃의 local 도 본다 — 가드를 잃는 쪽이 그것이다. CI 체크아웃에는 이 파일이 없어 이
-    검사는 pre-commit 에서만 뜻이 있다. 못 보는 것: `env`·`model` 같은 다른 키(사람마다 다를 수 있어
-    두었다), 사용자 수준 `~/.claude/settings.json`.
-    """
-    places = [
-        _LocalPlace(
-            root / LOCAL_SETTINGS,
-            LOCAL_SETTINGS.as_posix(),
-            "이 파일을 고친다(가드는 settings.json 으로 옮기고 local 에는 allow 만 둔다)",
-        )
-    ]
-    main = _main_checkout(root)
-    if main is not None and main.resolve() != root.resolve():
-        places.append(
-            _LocalPlace(
-                main / LOCAL_SETTINGS,
-                f"{(main / LOCAL_SETTINGS).as_posix()}(주 체크아웃)",
-                "주 체크아웃의 파일이라 이 워크트리에서 고치지 않고 사람에게 알린다",
-            )
-        )
-    return [problem for place in places if (problem := _local_problem(place)) is not None]
-
-
-class _LocalPlace(NamedTuple):
-    """local 설정 파일 하나와 그것을 알릴 이름, 고치는 길."""
-
-    path: Path
-    label: str
-    fix: str
-
-
 def _local_problem(place: _LocalPlace) -> str | None:
-    """local 설정 파일 하나의 문제. 파일이 없거나 가드가 없으면 None."""
+    """local 설정 파일 하나의 문제. 파일이 없거나 가드가 없으면 None.
+
+    깨진 JSON 은 예외가 아니라 문제로 돌려준다. 주 체크아웃의 local 까지 읽으므로 예외면 이
+    워크트리에서 고칠 수 없는 파일 하나가 모든 커밋을 트레이스백으로 막는다.
+    """
     if not place.path.exists():
         return None
     try:
@@ -355,6 +326,40 @@ def _main_checkout(root: Path) -> Path | None:
     if result.returncode != 0 or common.name != ".git":
         return None
     return common.parent
+
+
+def local_settings_with_guards(root: Path = ROOT) -> list[str]:
+    """local 설정에 가드(`permissions.deny`·`permissions.ask`·`hooks`)가 있는지 본다.
+
+    가드 목록이 비지 않았으면 문제다. 훅은 이벤트 이름이 아니라 실제 훅 항목이 있어야 가드다. 깨진
+    JSON 도 문제로 낸다. 워크트리에서 돌면 그 워크트리의 local 과 함께 주 체크아웃의 local 도 본다.
+
+    local(`.claude/settings.local.json`)은 추적하지 않는다(이 PC 의 사용자 전역 ignore). 손으로 판
+    워크트리에는 없고 EnterWorktree 는 만들 때 한 번 복사하므로, 워크트리 폴더에서 연 세션에서는
+    거기 둔 가드가 알림 없이 빠진다(2026-10-05 워크트리 감사 서브에이전트가 워크트리마다 local
+    유무를 손으로 대조했다). 가드는 추적하는 `settings.json` 에 두고 local 은 allow 만 든다. 가드를
+    잃는 쪽은 주 체크아웃의 local 이다.
+
+    못 보는 것: `env`·`model` 같은 다른 키(사람마다 다를 수 있어 두었다), 사용자 수준
+    `~/.claude/settings.json`. CI 체크아웃에는 local 이 없어 이 검사는 pre-commit 에서만 뜻이 있다.
+    """
+    places = [
+        _LocalPlace(
+            root / LOCAL_SETTINGS,
+            LOCAL_SETTINGS.as_posix(),
+            "이 파일을 고친다(가드는 settings.json 으로 옮기고 local 에는 allow 만 둔다)",
+        )
+    ]
+    main = _main_checkout(root)
+    if main is not None and main.resolve() != root.resolve():
+        places.append(
+            _LocalPlace(
+                main / LOCAL_SETTINGS,
+                f"{(main / LOCAL_SETTINGS).as_posix()}(주 체크아웃)",
+                "주 체크아웃의 파일이라 이 워크트리에서 고치지 않고 사람에게 알린다",
+            )
+        )
+    return [problem for place in places if (problem := _local_problem(place)) is not None]
 
 
 def _hook_commands(root: Path) -> Iterator[tuple[str, str]]:

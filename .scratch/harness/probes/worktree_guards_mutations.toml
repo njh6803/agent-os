@@ -37,7 +37,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_prompt_directive.py"
-old = '''_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\.")'''
+old = '''_OPENED_HEAD = re.compile(_OPENED_HEAD_PATTERN)'''
 new = '''_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md\s")'''
 
 [[mutation]]
