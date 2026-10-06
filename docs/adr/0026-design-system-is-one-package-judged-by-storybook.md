@@ -168,7 +168,7 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 
 ### 2026-10-06 글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다
 
-명세(`.scratch/design-system/spec.md`)가 탐색 결과(`.scratch/design-system/design/`의 v3)를 받아 정한 것 가운데 셋이 위
+명세(`.scratch/design-system/spec.md`)가 탐색 결과(`.scratch/design-system/design/`의 v3)를 받아 정한 것 가운데 넷이 위
 결정의 문장을 바꾼다. 위 결정이 첫 티켓에 넘긴 측정 넷 가운데 셋은 명세가 쟀다(to-spec 스킬의 측정 규칙). 측정은 모두
 `.scratch/design-system/probes/tokens/`이고 결과는 `.scratch/design-system/probes/README.md`의 "결과 — tokens"다.
 
