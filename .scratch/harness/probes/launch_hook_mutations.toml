@@ -248,3 +248,32 @@ expect = "red"
 file = "tools/run_hooks.py"
 old = '''{"hook_event_name": event}'''
 new = '''{}'''
+
+# PR #141 리뷰: 안내문이 가리키는 스킬 명령
+
+[[mutation]]
+name = "안내문이 없는 스킬을 가리킨다(PR #141 claude-review)"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''세션에서 /tidy-checkouts)'''
+new = '''세션에서 /tidy-checkout)'''
+
+[[mutation]]
+name = "안내문에서 스킬 명령을 뺀다"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''세션에서 /tidy-checkouts)'''
+new = '''세션에서 tidy-checkouts)'''
+
+[[mutation]]
+name = "안내문이 다른 있는 스킬을 가리킨다(PR #141 셀프 리뷰 명세 축)"
+tests = ["tests/tools/test_launch_hook.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''세션에서 /tidy-checkouts)'''
+new = '''세션에서 /next-session)'''
