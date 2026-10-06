@@ -29,7 +29,7 @@ src/agent_os/
   admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
   http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 면별 상태 코드 표), routes(에러 문서와 verbatim),
                    auth(fail-closed 인증. 공유 토큰 둘과 사이트가 서명한 토큰), sites(사이트 목록과 서명 토큰 검증),
-                   paths(접두사 비교)
+                   cors(최종 사용자 접두사에만 거는 CORS), paths(접두사 비교)
   adapters/        포트 구현
 plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
