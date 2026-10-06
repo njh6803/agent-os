@@ -113,6 +113,11 @@ claude-review는 옛 head(`4c01dbf`)와 `9945603`에서 두 번 돌았고 둘 �
 이 브랜치의 행과 120·121). 들인 뒤 pytest 1593 passed, ruff check와 format, pyright 0 errors, lint-imports 5 kept, 마크다운 표 검사, 변이 원문
 `--check`를 다시 돌렸다. main의 변경에 `web/`과 `openapi.json`이 없어 web은 다시 돌리지 않았다.
 
+4회차 claude-review(`6e47abb`)는 같은 Nit 하나였다. 병합하려 하자 이번에는 형제 04(PR #147)가 먼저 병합돼 다시 충돌 상태였다. 같은 자리(프로브
+README와 대기열 끝)를 양쪽 모두 남겨 풀었다. 04는 대기열 122를 써서 이 브랜치의 120·121과 겹치지 않았다. 04가 `http/sites.py`를 고쳤지만
+`PRINCIPAL_SEPARATOR`와 그 주석은 그대로다. 들인 뒤 pytest 1603 passed, ruff check와 format, pyright 0 errors, lint-imports 5 kept, 마크다운 표
+검사, 변이 원문 `--check`를 다시 돌렸다. 이번에도 `web/`과 `openapi.json`은 바뀌지 않았다.
+
 ## 번복하거나 고친 것
 
 - **일지 순번을 05에서 08로, 새 대기열 행을 120·121로 바꿨다.** 첫 커밋 때 `origin/main`과 형제 03·04의 일지 폴더를 대조했고 05가 비어 있었다.
