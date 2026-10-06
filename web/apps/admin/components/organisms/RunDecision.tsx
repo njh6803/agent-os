@@ -98,18 +98,16 @@ export function RunDecision({ runId, trace }: { readonly runId: string; readonly
 
   return (
     <>
-      {channelToken !== null && pause !== null ? (
-        isEndUserRun(trace) ? (
-          <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
-        ) : (
-          <DecisionPlace
-            pause={pause}
-            busy={busy}
-            invalid={failure?.status === 422 ? failure : null}
-            onDecide={decide}
-          />
-        )
-      ) : null}
+      {channelToken === null || pause === null ? null : isEndUserRun(trace) ? (
+        <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
+      ) : (
+        <DecisionPlace
+          pause={pause}
+          busy={busy}
+          invalid={failure?.status === 422 ? failure : null}
+          onDecide={decide}
+        />
+      )}
       {notice === null ? null : <FailureNotice {...notice} />}
       {frames.length > 0 ? (
         <section aria-labelledby={streamId}>
