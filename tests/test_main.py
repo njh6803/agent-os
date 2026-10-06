@@ -40,6 +40,7 @@ from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
+from agent_os.http.sites import Site, SiteKey, SiteLimits
 from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     AgentName,
@@ -1328,7 +1329,42 @@ _BROKEN_SITE_FILES: tuple[tuple[str, str | None, str], ...] = (
     ("파일 없음", None, "파일이 없다"),
     ("TOML 이 아님", 'schema_version = "1"\n[[sites]\n', "TOML 이 아니다"),
     ("형식 버전 없음", _site_file(_site(), head=""), "schema_version"),
-    ("모르는 키", _site_file(_site(extra="limits = 3\n")), "sites[0].limits"),
+    ("모르는 키", _site_file(_site(extra="quota = 3\n")), "sites[0].quota"),
+    (
+        "모르는 상한",
+        _site_file(_site(extra="\n[sites.limits]\nruns_per_day = 3\n")),
+        "sites[0].limits.runs_per_day",
+    ),
+    (
+        "상한 0",
+        _site_file(_site(extra="\n[sites.limits]\nrequest_chars = 0\n")),
+        "sites[0].limits.request_chars",
+    ),
+    (
+        "상한 음수",
+        _site_file(_site(extra="\n[sites.limits]\nconcurrent_runs_per_site = -1\n")),
+        "sites[0].limits.concurrent_runs_per_site",
+    ),
+    (
+        "상한 실수",
+        _site_file(_site(extra="\n[sites.limits]\nhourly_runs_per_principal = 2.0\n")),
+        "sites[0].limits.hourly_runs_per_principal",
+    ),
+    (
+        "상한 숫자 문자열",
+        _site_file(_site(extra='\n[sites.limits]\nhourly_runs_per_site = "10"\n')),
+        "sites[0].limits.hourly_runs_per_site",
+    ),
+    (
+        "상한 불린",
+        _site_file(_site(extra="\n[sites.limits]\nsubscriptions_per_principal = true\n")),
+        "sites[0].limits.subscriptions_per_principal",
+    ),
+    (
+        "상한 표가 아님",
+        _site_file(_site(extra="limits = 3\n")),
+        "sites[0].limits",
+    ),
     ("필드 빠짐", _site_file(_site(origins='["x"]').replace("audience", "audiance")), "audience"),
     ("발급자 빔", _site_file(_site(issuer=" ")), "issuer 가 비었다"),
     ("발급자 겹침", _site_file(_site(), _site()), "sites[0] 의 것과 겹친다"),
@@ -1404,6 +1440,91 @@ def test_사이트_파일의_진단도_토큰_진단과_한꺼번에_나온다(
     assert ADMIN_TOKEN_ENV in err
     assert "no-such.toml" in err
     assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+async def test_사이트_파일의_상한_표가_세운_앱의_최종_사용자_경로에_닿는다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """사이트마다 적은 값이 기본값을 대신한다(스토리 44, end-user-channel 티켓 02). 요청 글자 수를
+    넘으면 422, 시간당 실행을 넘으면 429 다. 적지 않은 값은 채널의 기본값이다."""
+    limits = "\n[sites.limits]\nrequest_chars = 5\nhourly_runs_per_principal = 1\n"
+    (workspace / "sites.toml").write_text(_site_file(_site(extra=limits)), encoding="utf-8")
+    main(["serve", "--site-file", "sites.toml", "--traces", "t"])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+    ):
+        long = await client.post(
+            "/end-user/runs", json={"agent": "echo", "request": "123456"}, headers=_site_token()
+        )
+        first = await client.post(
+            "/end-user/runs", json={"agent": "echo", "request": "hi"}, headers=_site_token()
+        )
+        second = await client.post(
+            "/end-user/runs", json={"agent": "echo", "request": "hi"}, headers=_site_token()
+        )
+
+    assert long.status_code == 422
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.json()["message"] == "시간당 실행 수의 상한을 넘었다"
+
+
+@pytest.mark.usefixtures("workspace", "tokens", "uvicorn_calls")
+def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_항목에_든다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """키마다 다른 값을 적어 옮김이 엇갈리지 않는지 본다(end-user-channel 티켓 02). 위 테스트가
+    행동으로 재는 것은 둘이고, 여섯을 다 행동으로 재려면 열린 연결이 여럿 든다. 그래서 사이트 항목을
+    짓는 자리에서 받은 상한 표를 본다. 상한마다의 동작은 `tests/channel/http/test_end_user.py` 가
+    상한 표를 직접 넣어 잰다."""
+    built: list[SiteLimits] = []
+
+    def recording(
+        *,
+        issuer: str,
+        audience: str,
+        keys: tuple[SiteKey, ...],
+        allowed_origins: tuple[str, ...],
+        agents: frozenset[AgentName],
+        limits: SiteLimits,
+    ) -> Site:
+        built.append(limits)
+        return Site(
+            issuer=issuer,
+            audience=audience,
+            keys=keys,
+            allowed_origins=allowed_origins,
+            agents=agents,
+            limits=limits,
+        )
+
+    monkeypatch.setattr(main_module, "Site", recording)
+    limits = (
+        "\n[sites.limits]\nrequest_chars = 1\nconcurrent_runs_per_principal = 2\n"
+        "hourly_runs_per_principal = 3\nconcurrent_runs_per_site = 4\n"
+        "hourly_runs_per_site = 5\nsubscriptions_per_principal = 6\n"
+    )
+    Path("sites.toml").write_text(_site_file(_site(extra=limits)), encoding="utf-8")
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert built == [
+        SiteLimits(
+            request_chars=1,
+            concurrent_runs_per_principal=2,
+            hourly_runs_per_principal=3,
+            concurrent_runs_per_site=4,
+            hourly_runs_per_site=5,
+            subscriptions_per_principal=6,
+        )
+    ]
 
 
 # --- 실행 타임아웃 -----------------------------------------------------------------------
@@ -1512,6 +1633,99 @@ def test_정수가_아닌_실행_타임아웃은_인자_오류다(value: str) ->
     """초 단위의 정수만 받는다. 포트처럼 정수가 아닌 값은 argparse 가 막는다(종료 코드 2)."""
     with pytest.raises(SystemExit) as refused:
         main(["serve", "--run-timeout", value])
+
+    assert refused.value.code == 2
+
+
+# --- 전역 동시 실행 상한 ------------------------------------------------------------------
+# `serve --end-user-concurrent-runs N` 이 모든 사이트를 합친 최종 사용자 경로의 동시 실행 수를
+# 정한다(end-user-channel 티켓 02). 빼면 채널의 기본값이다 — `serve` 는 기본값을 따로 두지 않는다.
+# 셈의 동작은 `tests/channel/http/test_end_user.py` 가 재고, 여기서는 인자가 세운 앱에 닿는 것과
+# 구성 오류를 잰다.
+
+
+class _GatedModel(GenericFakeChatModel):
+    """테스트가 문을 열 때까지 답하지 않는다. 실행 하나를 돌고 있는 채로 둔다."""
+
+    gate: asyncio.Event
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: object,
+    ) -> ChatResult:
+        await self.gate.wait()
+        return self._generate(messages, stop, None, **kwargs)
+
+
+@pytest.mark.usefixtures("tokens")
+async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사용자_경로에_닿는다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """기계 하나의 몫이라 모든 사이트와 주체를 합쳐 센다(스토리 45). 하나로 낮추면 문 앞에 선 실행
+    하나 뒤의 시작은 다른 주체여도 429 다. 운영자 채널은 세지 않는다."""
+    gate = asyncio.Event()
+
+    def _gated(name: str) -> ChatModel:
+        return _GatedModel(messages=iter([AIMessage(content="답")]), gate=gate)
+
+    monkeypatch.setattr(main_module, "anthropic_chat_model", _gated)
+    _write_plugin(workspace, "asking", ASKING_SRC)
+    sites = _site_file(_site(agents='["asking", "echo"]'))
+    (workspace / "sites.toml").write_text(sites, encoding="utf-8")
+    argv = ["--site-file", "sites.toml", "--traces", "t", "--end-user-concurrent-runs", "1"]
+    main(["serve", *argv])
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    asking = {"agent": "asking", "request": "hi"}
+    echo = {"agent": "echo", "request": "hi"}
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+        asyncio.timeout(10),
+    ):
+        held = asyncio.create_task(
+            client.post("/end-user/runs", json=asking, headers=_site_token("alice"))
+        )
+        while not _trace_files(workspace / "t"):
+            await asyncio.sleep(0.01)
+        busy = await client.post("/end-user/runs", json=echo, headers=_site_token("bob"))
+        operator = await client.post("/runs", json=echo, headers=channel)
+        gate.set()
+        admitted = await held
+
+    assert admitted.status_code == 200
+    assert busy.status_code == 429
+    assert busy.json()["message"] == "동시 실행 수의 상한을 넘었다"
+    assert operator.status_code == 200
+
+
+@pytest.mark.parametrize("value", ["0", "-5"], ids=["0", "음수"])
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_0_이하의_전역_동시_실행_상한은_서버가_서기_전에_진단과_종료_코드_1이다(
+    value: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """그 값이면 최종 사용자 경로의 모든 시작과 결정이 429 다. 다른 구성 오류와 같이 시작 자리에서
+    끝난다."""
+    code = main(["serve", "--end-user-concurrent-runs", value])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert f"--end-user-concurrent-runs 는 1 이상의 정수다. 받은 값: {value}" in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.parametrize("value", ["1.5", "abc"], ids=["소수", "글자"])
+def test_정수가_아닌_전역_동시_실행_상한은_인자_오류다(value: str) -> None:
+    """실행 타임아웃과 같은 모양이다 — 정수가 아니면 argparse 가 막는다(종료 코드 2)."""
+    with pytest.raises(SystemExit) as refused:
+        main(["serve", "--end-user-concurrent-runs", value])
 
     assert refused.value.code == 2
 

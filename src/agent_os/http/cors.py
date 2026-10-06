@@ -30,7 +30,7 @@ from starlette.datastructures import URL
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from agent_os.http.errors import REQUEST_ID_HEADER
+from agent_os.http.errors import REQUEST_ID_HEADER, RETRY_AFTER_HEADER
 from agent_os.http.paths import is_under
 
 # 값은 명세가 정했다(`.scratch/end-user-channel/spec.md` 의 "CORS"). 메서드는 최종 사용자 면의
@@ -41,7 +41,7 @@ from agent_os.http.paths import is_under
 # 라이브러리 기본값이다.
 ALLOW_METHODS = ("GET", "POST", "OPTIONS")
 ALLOW_HEADERS = ("Authorization", "Content-Type", "Last-Event-ID")
-EXPOSE_HEADERS = ("Retry-After", REQUEST_ID_HEADER)
+EXPOSE_HEADERS = (RETRY_AFTER_HEADER, REQUEST_ID_HEADER)
 
 
 class CorsUnderPrefix:

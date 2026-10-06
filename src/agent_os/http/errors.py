@@ -47,6 +47,9 @@ from agent_os.core.ports import (
 from agent_os.http.paths import is_under
 
 REQUEST_ID_HEADER = "X-Request-Id"
+# 429 가 언제 다시 보낼 수 있는지 싣는 헤더(RFC 9110). 값은 초 단위의 정수다. 표의 429 갈래가 달고,
+# 계약의 429 문서(`routes`)와 최종 사용자 접두사 CORS 의 노출 헤더(`cors`)가 이 이름을 쓴다.
+RETRY_AFTER_HEADER = "Retry-After"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
 INVALID_REQUEST_MESSAGE = "요청의 형식이 올바르지 않다"
 # 예기치 않은 실패의 문구. 원인은 서버 기록에만 남는다 — 밖으로 내면 내부 사정이 함께 나간다.
@@ -155,6 +158,35 @@ _CODE_BY_STATUS = {
 }
 
 
+class Limit(Enum):
+    """요청하는 쪽이 걸린 상한이 어느 것인가. 값은 봉투의 문구에 드는 이름이다.
+
+    셋뿐이다 — 주체별인지 사이트별인지 전역인지는 여기 들지 않는다. 봉투는 어느 상한인지만 말하고,
+    사이트 전체가 바쁘다는 것을 한 사용자에게 말할 이유가 없다(end-user-channel 명세 "상한"). 범위는
+    서버 기록에만 간다(`LimitExceeded` 의 문구).
+    """
+
+    CONCURRENT_RUNS = "동시 실행 수"
+    HOURLY_RUNS = "시간당 실행 수"
+    SUBSCRIPTIONS = "구독 수"
+
+
+class LimitExceeded(Exception):
+    """요청하는 쪽의 상한에 걸렸다. 표가 429 와 `Retry-After` 로 옮긴다(ADR 0023).
+
+    이 층이 소유하고 채널이 던진다. 표는 채널의 타입을 import 할 수 없고(원칙 IV) 라우트는 상태
+    코드를 스스로 정하지 않으므로(`HTTPException(429)` 를 던지지 않는다) 타입 하나가 둘 사이에 선다.
+    `limit` 은 어느 상한인지이고 봉투의 문구가 된다. `retry_after_seconds` 는 다시 보내도 되기까지의
+    초이고 1 이상의 정수다. 예외의 문구는 서버 기록에만 간다 — 사이트의 발급자와 상한의 범위와 값을
+    들되 주체(`sub`)는 들지 않는다(감사 로그는 비목표다).
+    """
+
+    def __init__(self, detail: str, *, limit: Limit, retry_after_seconds: int) -> None:
+        super().__init__(detail)
+        self.limit = limit
+        self.retry_after_seconds = retry_after_seconds
+
+
 class Surface(Enum):
     """요청이 어느 면의 것인가. 표가 같은 예외를 면마다 다르게 번역한다(ADR 0023).
 
@@ -201,7 +233,8 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
     "깨졌나"다(ADR 0014 의 2026-09-26 이력) — 4xx 는 대상이 없거나 대상의 상태나 주체가 요청을
     허락하지 않는 것이고, `PluginError` 가 500 인 이유는 하위 타입 다섯을 뺀 뒤 남는 것이 "서버의
     구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의
-    말은 내부 사정을 담는다.
+    말은 내부 사정을 담는다. 요청하는 쪽의 상한(`LimitExceeded`)은 면과 무관하게 429 이고 문구는
+    어느 상한인지만 들며 `Retry-After` 를 싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
 
     최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05 이력). 404 는 전부 고정 문구 하나다.
     다른 주체(409)는 없는 실행과 같은 404 다. 실행을 가리키는 경로의 하위 타입이 아닌
@@ -234,6 +267,12 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
             return _Failure(status=409, message=str(error) if operator else UNAVAILABLE_MESSAGE)
         case NotResumable() | NotContinuable():
             return _Failure(status=409, message=str(error))
+        case LimitExceeded():
+            return _Failure(
+                status=429,
+                message=f"{error.limit.value}의 상한을 넘었다",
+                headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
+            )
         case PluginError():
             match surface:
                 case Surface.OPERATOR:
@@ -379,6 +418,7 @@ def install_error_handlers(app: FastAPI, *, end_user: EndUserPaths) -> None:
     app.add_exception_handler(StarletteHTTPException, handle)
     app.add_exception_handler(RequestValidationError, handle)
     app.add_exception_handler(PluginError, handle)
+    app.add_exception_handler(LimitExceeded, handle)
 
 
 def _answered(request: Request, error: Exception, surface: Surface) -> JSONResponse:

@@ -27,6 +27,12 @@
 **시작과 결정의 응답은 등록부의 받는 쪽 하나다.** 처음부터(결정은 결정 항목부터) 받는 구독과 같은
 프레임이고, 응답은 첫 이벤트를 받은 뒤에 시작한다(`router` 모듈 독스트링).
 
+**상한은 이 면에만 걸린다**(`limits` 모듈, ADR 0023). 검사의 자리는 인증과 본문 검증 뒤, core
+앞이다. 시작은 요청 글자 수(422) → 동시 실행과 시간당 실행(429) 순이고, 결정은 동시 실행과 시간당
+실행(429), 구독은 구독 수(429)다. 시작과 결정의 칸은 등록부가 차지하고 돌려준다(`Runs.start`).
+구독 수는 구독의 의존성이 들어올 때 세고, 응답이 끝난 뒤 FastAPI 가 요청 단위로 그 의존성을 닫을 때
+줄인다. 응답의 제너레이터에 맡기지 않는 이유는 `subscription` 의 독스트링이다.
+
 **구독의 첫 걸음은 한 걸음이다.** core 의 자기 실행 읽기(`read_own_run`) → `Last-Event-ID` 의 범위 →
 등록부 보기(도는 실행이면 실황에 붙는다) 사이에 await 가 없다. 그 사이에 실행이 이벤트를 내 빠지거나
 두 번 나가지 않는다. 그 뒤 트레이스에서 `Last-Event-ID` 다음 인덱스부터 투영해 보내고 네 갈래로
@@ -50,6 +56,11 @@ from pydantic.json_schema import SkipJsonSchema
 
 from agent_os.channel.http.bodies import Decision, StartRun
 from agent_os.channel.http.items import EndUserItem, UnfinishedItem, project
+from agent_os.channel.http.limits import (
+    DEFAULT_REQUEST_CHARS,
+    SubscriptionQuota,
+    check_request_chars,
+)
 from agent_os.channel.http.runs import Indexed, Runs, RunStream
 from agent_os.core.ports import (
     ChatModel,
@@ -82,13 +93,12 @@ END_USER_START_PATH = f"{END_USER_PREFIX}{_RUNS}"
 # 든다.
 LAST_EVENT_ID_PATTERN = r"^[0-9]{1,12}$"
 
-# 시작 경로의 422 설명. 요청 글자 수의 상한은 사이트마다 다른 값이라(사이트 파일의 상한 표는
-# end-user-channel 티켓 02 가 들인다) 계약에는 단위와 기본값만 글자로 적는다 — 본문이 `StartRun`
-# 그대로라 `maxLength` 를 둘 자리가 없다(명세의 2026-10-05 to-tickets 주석). 이 설명은 계약의
-# 약속이고, 서버가 글자 수를 재어 422 로 답하는 것도 티켓 02 가 들인다.
+# 시작 경로의 422 설명. 요청 글자 수의 상한은 사이트 파일의 상한 표에서 오는 사이트마다 다른 값이라
+# 계약에는 단위와 기본값만 글자로 적는다 — 본문이 `StartRun` 그대로라 `maxLength` 를 둘 자리가
+# 없다(명세의 2026-10-05 to-tickets 주석). 기본값은 서버가 재는 그 상수에서 읽는다.
 _START_INVALID = (
     "요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 "
-    "포인트(파이썬 len)로 세고 상한의 기본값은 20,000자다"
+    f"포인트(파이썬 len)로 세고 상한의 기본값은 {DEFAULT_REQUEST_CHARS:,}자다"
 )
 
 
@@ -102,16 +112,22 @@ def end_user_router(
     clock: Clock,
     run_timeout_seconds: float | None,
 ) -> APIRouter:
-    """최종 사용자 면의 라우터. 운영자 채널과 같은 `Runs` 를 받아 등록부 하나를 나눠 쓴다."""
+    """최종 사용자 면의 라우터. 운영자 채널과 같은 `Runs` 를 받아 등록부 하나를 나눠 쓴다.
+
+    구독 수의 셈은 이 라우터가 든다 — 앱 하나에 하나다.
+    """
     router = APIRouter(prefix=END_USER_PREFIX, responses=documented_stream_errors(500))
+    subscriptions = SubscriptionQuota()
 
     async def start_stream(body: StartRun, request: Request) -> RunStream:
         """서명한 주체로 실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
 
         에이전트가 그 사이트의 열 에이전트 목록 안인지 먼저 보지 않는다. 목록 밖이면 core 가 없는
-        에이전트와 같은 `Absent` 를 던지고 매니페스트를 읽지 않는다.
+        에이전트와 같은 `Absent` 를 던지고 매니페스트를 읽지 않는다. 상한은 그보다 먼저다 — 요청
+        글자 수를 여기서 보고, 동시 실행과 시간당 실행은 등록부가 실행을 받으며 본다.
         """
         user = _signed_in(request)
+        check_request_chars(body.request, user.site)
         events = run(
             body.agent,
             body.request,
@@ -124,11 +140,14 @@ def end_user_router(
             trace=trace,
             clock=clock,
         )
-        return await runs.start(events, request_id=request_id_of(request), first_index=0)
+        return await runs.start(
+            events, request_id=request_id_of(request), first_index=0, end_user=user
+        )
 
     # 404 는 목록 밖이거나 없는 에이전트이고 메시지가 같다. 409 는 운영자가 꺼 둔 것을 부른 것이고
-    # 종류와 이름 없는 고정 문구다. 429 는 요청하는 쪽의 상한이다. 500 은 그 밖의 구성 오류이고 고정
-    # 문구다 — 원문은 서버 기록에만 있다.
+    # 종류와 이름 없는 고정 문구다. 422 는 본문의 형식이거나 요청 글자 수의 상한이다. 429 는
+    # 요청하는 쪽의 동시 실행이나 시간당 실행의 상한이고 404·409 보다 먼저다. 500 은 그 밖의 구성
+    # 오류이고 고정 문구다 — 원문은 서버 기록에만 있다.
     @router.post(
         _RUNS,
         operation_id="start_end_user_run",
@@ -152,7 +171,9 @@ def end_user_router(
         """서명한 주체의 결정을 내고 결정 항목부터 받는다. 응답은 이것이 돌아온 뒤에 선다.
 
         실행의 주체도 에이전트도 상태도 결정의 자리도 먼저 보지 않는다. 판정 순서는 core 의
-        `resume()` 이다(자기 실행 읽기 → 형식 1 → 일시정지 아님 → 자리 → 고리 → 준비).
+        `resume()` 이다(자기 실행 읽기 → 형식 1 → 일시정지 아님 → 자리 → 고리 → 준비). 결정도
+        동시 실행과 시간당 실행에 들고 그 검사는 core 보다 먼저다 — 남의 실행에 낸 결정도 404 보다
+        429 가 먼저이고, 드러나는 것은 요청하는 쪽 자신의 셈뿐이다.
         """
         user = _signed_in(request)
         events = resume(
@@ -169,7 +190,10 @@ def end_user_router(
             clock=clock,
         )
         return await runs.start(
-            events, request_id=request_id_of(request), first_index=decision.pause_index + 1
+            events,
+            request_id=request_id_of(request),
+            first_index=decision.pause_index + 1,
+            end_user=user,
         )
 
     # 404 는 남의 실행, 없는 실행, 열 에이전트 밖의 실행, 그리고 하위 타입이 아닌 `PluginError` 전부
@@ -191,18 +215,9 @@ def end_user_router(
         async for frame in _framed(stream.items()):
             yield frame
 
-    async def subscription(
-        run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)],
-        request: Request,
-        last_event_id: Annotated[str | None, Header(pattern=LAST_EVENT_ID_PATTERN)] = None,
-    ) -> _Subscription:
-        """구독의 첫 걸음. 자기 실행 읽기와 범위 확인과 등록부 보기가 await 없이 한 걸음이다.
-
-        동기 함수로 두지 않는다 — FastAPI 가 동기 의존성을 워커 스레드에서 돌려 이 걸음이 이벤트
-        루프 밖으로 나가고, 그 사이에 실행이 이벤트를 내면 빠지거나 두 번 나간다.
-        """
-        user = _signed_in(request)
-        own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
+    def first_step(user: EndUser, run_id: RunId, last_event_id: str | None) -> _Subscription:
+        """구독의 첫 걸음. 자기 실행 읽기와 범위 확인과 등록부 보기가 await 없이 한 걸음이다."""
+        own = read_own_run(trace, run_id, user.principal, user.site.agents)
         events = own.events
         start = 0 if last_event_id is None else int(last_event_id) + 1
         last = len(events) - 1
@@ -211,13 +226,42 @@ def end_user_router(
                 status_code=409,
                 detail=f"Last-Event-ID {start - 1} 이 이 실행의 마지막 자리 {last} 보다 크다",
             )
-        live = None if run_status(events[-1]) != "unfinished" else runs.join(RunId(run_id))
+        live = None if run_status(events[-1]) != "unfinished" else runs.join(run_id)
         return _Subscription(events=events, start=start, live=live)
+
+    async def subscription(
+        run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)],
+        request: Request,
+        last_event_id: Annotated[str | None, Header(pattern=LAST_EVENT_ID_PATTERN)] = None,
+    ) -> AsyncIterator[_Subscription]:
+        """구독 수를 세고 첫 걸음을 딛는다. 응답이 끝나면 붙은 실황을 닫고 구독 수를 줄인다.
+
+        동기 함수로 두지 않는다 — FastAPI 가 동기 의존성을 워커 스레드에서 돌려 첫 걸음이 이벤트
+        루프 밖으로 나가고, 그 사이에 실행이 이벤트를 내면 빠지거나 두 번 나간다.
+
+        yield 하는 의존성인 이유는 닫는 자리다. FastAPI 는 응답이 끝난 뒤 요청 단위로 이것을
+        닫는다(설치된 FastAPI 0.141.1 의 `routing.py` 를 읽었다). 응답의 제너레이터의 `finally` 에
+        두면, 받는 쪽이 막힌 채 떠나 제너레이터가 yield 에 멈춘 채 버려졌을 때 다음 구독이 서기 전에
+        구독 수가 줄지 않는다 — `test_응답이_막힌_채_떠난_구독도_구독_수를_돌려준다` 가 그 모양에서
+        빨갛다. 제너레이터가 시작되기 전에 요청이 끝나는 경우도 같은 자리가 닫지만 그것은 코드를
+        읽은 것이고 재지 않았다.
+        """
+        user = _signed_in(request)
+        seat = subscriptions.take(user)
+        try:
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+            try:
+                yield subscribed
+            finally:
+                subscribed.close()
+        finally:
+            subscriptions.give_back(seat)
 
     # 404 는 결정과 같다. 409 는 `Last-Event-ID` 가 트레이스의 마지막 인덱스보다 큰 것이다 —
     # 클라이언트가 서버의 기록보다 앞선 것을 봤다는 주장이라 상태가 맞지 않는다(끝내지 못함 항목의
     # `id` 를 되돌려 보낸 것이 여기 든다). 그 판정은 자기 실행 읽기의 네 판정 뒤라 남의 실행의
-    # 길이가 드러나지 않는다.
+    # 길이가 드러나지 않는다. 429 는 주체의 구독 수이고 404·409 보다 먼저다 — 걸린 구독은 트레이스를
+    # 읽지 않는다.
     @router.get(
         f"{_RUNS}/{{run_id:verbatim}}/subscription",
         operation_id="subscribe_end_user_run",
@@ -243,22 +287,23 @@ class _Subscription:
     live: MemoryObjectReceiveStream[Indexed] | None
 
     async def frames(self) -> AsyncIterator[ServerSentEvent]:
-        """네 갈래(모듈 독스트링). 받는 쪽이 떠나 이 제너레이터가 닫히면 붙은 실황도 닫는다."""
-        try:
-            for index in range(self.start, len(self.events)):
-                frame = _frame(index, self.events[index])
-                if frame is not None:
-                    yield frame
-            if run_status(self.events[-1]) != "unfinished":
-                return
-            if self.live is None:
-                yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
-                return
-            async for frame in _framed(self.live):
+        """네 갈래(모듈 독스트링). 붙은 실황을 닫는 것은 구독의 의존성이다(`close`)."""
+        for index in range(self.start, len(self.events)):
+            frame = _frame(index, self.events[index])
+            if frame is not None:
                 yield frame
-        finally:
-            if self.live is not None:
-                self.live.close()
+        if run_status(self.events[-1]) != "unfinished":
+            return
+        if self.live is None:
+            yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
+            return
+        async for frame in _framed(self.live):
+            yield frame
+
+    def close(self) -> None:
+        """붙은 실황을 닫는다(명령). 실행이 그 흐름에 더 넣지 않는다. 두 번 불러도 같다."""
+        if self.live is not None:
+            self.live.close()
 
 
 def _signed_in(request: Request) -> EndUser:
