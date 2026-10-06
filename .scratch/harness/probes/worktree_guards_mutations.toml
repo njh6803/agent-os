@@ -1,0 +1,101 @@
+# chore/parallel-open-session 의 워크트리 가드와 keepalive 시간 예산 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/worktree_guards_mutations.toml
+# 2026-10-05 워크트리 감사 반영에서 더한 가드를 하나씩 꺼서 그것을 지키는 테스트가 빨강이 되는지, 그리고
+# keepalive 테스트가 기동 지연을 견디고 침묵이 없으면 빨강인지 잰다.
+# conftest 가드의 테스트는 구현 뒤에 썼고, 나머지는 빨강을 본 뒤 구현했지만 같은 표에 둔다
+# (일지 2026-10-05-05). 끝의 둘은 keepalive 테스트의 시간 예산이다. 기동 지연을 넣어도 초록이고
+# 침묵을 없애면 빨강이다. 고치기 전의 테스트는 같은 지연에 세 번 모두 빨강이었다(손으로 봤다).
+
+[[mutation]]
+name = "conftest 가 다른 체크아웃의 agent_os 를 막지 않는다"
+tests = ["tests/test_conftest.py", "-k", "다른_체크아웃에서_불리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''    if origin is not None and origin.is_relative_to(CHECKOUT / "src"):
+        return'''
+new = '''    if origin is not None:
+        return'''
+
+[[mutation]]
+name = "지시문 훅이 표지를 못 읽으면 지나간다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "표지를_못_읽으면_막는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''        if _OPENED_HEAD.match(head) is None:
+            return None'''
+new = '''        if True:
+            return None'''
+
+[[mutation]]
+name = "지시문 훅이 사람이 쓴 스킬 경로 첫 줄도 막는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "사람이_스킬_경로로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\.")'''
+new = '''_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md\s")'''
+
+[[mutation]]
+name = "첫 턴 계기가 워크트리 문장을 짚지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "워크트리를_말하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    if _wants_worktree(prompt):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "local 가드 검사가 주 체크아웃의 local 을 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "주_체크아웃의_local_가드도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    if main is not None and main.resolve() != root.resolve():'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "local 가드 검사가 deny 를 세지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "deny_와_ask_를_잡는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    if permissions.get("deny"):
+        guards.append("permissions.deny")'''
+new = '''    if False:
+        guards.append("permissions.deny")'''
+
+[[mutation]]
+name = "keepalive 테스트가 기동 지연 0.25초를 견딘다"
+tests = ["tests/channel/http/test_router.py", "-k", "keepalive_주석이_나간다"]
+expect = "green"
+repeat = 3
+
+[[mutation.edit]]
+file = "tests/channel/http/test_router.py"
+old = '''    opener = asyncio.create_task(open_after_silence())
+'''
+new = '''    opener = asyncio.create_task(open_after_silence())
+    time.sleep(0.25)
+'''
+
+[[mutation]]
+name = "keepalive 테스트가 침묵 없이 문을 열면 빨강이다"
+tests = ["tests/channel/http/test_router.py", "-k", "keepalive_주석이_나간다"]
+expect = "red"
+repeat = 3
+
+[[mutation.edit]]
+file = "tests/channel/http/test_router.py"
+old = '''        await model.waiting.wait()
+        await asyncio.sleep(0.2)
+        model.gate.set()'''
+new = '''        await model.waiting.wait()
+        model.gate.set()'''

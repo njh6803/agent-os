@@ -23,12 +23,13 @@
 
 못 보는 것: 지시문 모양은 누구나 쓸 수 있다. 막는 것은 첫 턴이라는 것, 이름이 kebab 한 토막이라
 `.claude/skills/` 밖을 가리키지 못한다는 것, open-session 이 옮긴 첫 줄이면 연 저장소와 작업 폴더가
-같다는 것뿐이다. 보내기는 이제 사람이 아니라 open-session 스크립트가 하기도 한다. 이 폴더 가드는 새
-훅이 도는 폴더에서만 선다. 이 변경 전 브랜치의 워크트리는 옛 훅을 쓰고, 그때 남는 것은 첫 줄의
-조건 문장과 상대 경로다(저장소가 아닌 폴더에서는 파일을 못 찾는다). 사람이 손으로 연 새 세션에
-지시문을 첫 메시지로 붙여 넣은 것도 발동하는데, 그것은 open-session 이 하는 일과 같아 의도한 쪽이다.
-`/clear` 뒤의 첫 메시지도 같다. 트랜스크립트가 새 파일로 시작해 assistant 기록이 없으므로 발동하고,
-같은 앱 세션이 그 지시문의 일로 새로 시작하는 것이라 이름을 바꾸는 것이 맞다고 본다.
+같다는 것, 옮긴 첫 줄의 머리인데 표지를 못 읽으면 막는다는 것뿐이다. 보내기는 이제 사람이 아니라
+open-session 스크립트가 하기도 한다. 이 폴더 가드는 새 훅이 도는 폴더에서만 선다. 이 변경 전
+브랜치의 워크트리는 옛 훅을 쓰고, 그때 남는 것은 첫 줄의 조건 문장과 상대 경로다(저장소가 아닌
+폴더에서는 파일을 못 찾는다). 사람이 손으로 연 새 세션에 지시문을 첫 메시지로 붙여 넣은 것도
+발동하는데, 그것은 open-session 이 하는 일과 같아 의도한 쪽이다. `/clear` 뒤의 첫 메시지도 같다.
+트랜스크립트가 새 파일로 시작해 assistant 기록이 없으므로 발동하고, 같은 앱 세션이 그 지시문의 일로
+새로 시작하는 것이라 이름을 바꾸는 것이 맞다고 본다.
 
 `self` 는 데스크톱 앱의 세션 도구가 받는다. claude.ai 클라우드 세션의 `set_session_title` 은 `self`
 를 거부했고 세션 ID 로는 바뀌었다(대기열 81, 일지 2026-10-01-05). 그 세션이 ID 를 어디서 얻었는지는
@@ -61,6 +62,12 @@ _OPENED_LINE = re.compile(
     rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\. "
     r"이 세션을 연 저장소는 `(?P<root>[^`]+)`이고"
 )
+# 옮긴 첫 줄의 고정 머리. 이것으로 시작하는데 위 표지를 못 읽으면 쏜 ps1 과 이 훅의 문구가 갈린
+# 것이다. 머리까지 바뀌면 조용히 지나간다. 한 체크아웃 안의 두 문구는 tests/tools 의 계약 테스트가
+# 대조하지만, 쏘는 쪽과 받는 쪽이 다른 체크아웃일 때 머리까지 갈린 것은 아무것도 잡지 못한다.
+_OPENED_HEAD = re.compile(rf"\.claude/skills/{_KEBAB}/SKILL\.md 를 읽어 그대로 따른다\.")
+# "어디서" 줄의 워크트리 문장(next-session 3단계). 받는 쪽은 지시문 자체라 첫 턴 계기가 짚는다.
+_WHERE_LABEL = "어디서:"
 
 
 class HookPayload(TypedDict, total=False):
@@ -94,6 +101,12 @@ def context_for(prompt: str) -> str | None:
         "바꾸지 않고 사용자에게 알린다. 데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` "
         "는 이 세션을 빼고 `get_session` 은 이 세션을 `self` 로만 가리킨다."
     )
+    if _wants_worktree(prompt):
+        context += (
+            " 지시문의 '어디서' 줄이 워크트리를 말한다. 제목을 바꾼 뒤 다른 일보다 먼저 그 "
+            "문장을 따른다. 주 체크아웃에서 새 브랜치를 따지 않는다 — 그 체크아웃은 다른 세션이 "
+            "쓰고 있을 수 있다."
+        )
     skill = _fullwidth_skill(prompt)
     if skill is not None:
         context += (
@@ -113,18 +126,42 @@ def block_reason_for(prompt: str, cwd: str | None) -> str | None:
     모델에게 권하지 않고 막는다. 첫 줄이 "그대로 따른다"라고 말하므로 권고는 그것과 다툰다. 막으면
     이름도 붙지 않는다 — 붙으면 다음 open-session 이 그 제목을 살아 있다고 보고 열지 않는다. 작업
     폴더를 모르면(없거나 빈 값) 막는다.
+
+    첫 줄이 ps1 의 고정 머리(`<스킬 경로> 를 읽어 그대로 따른다.`)로 시작하는데 표지를 읽지 못해도
+    막는다(fail-closed). 쏘는 ps1 은 여는 세션의 작업 폴더 사본이고 이 훅은 받는 세션의
+    `${CLAUDE_PROJECT_DIR}` 사본이라, 여는 세션이 워크트리면 둘이 다른 브랜치의 것일 수 있다.
+    문구가 갈렸을 때 지나가면 폴더 가드가 조용히 꺼진다(2026-10-05 워크트리 감사 13). 사람이 스킬
+    경로로 시작해 쓴 첫 줄은 그 머리가 아니라 막지 않는다. 머리까지 바뀌면 지나간다 — 한 체크아웃
+    안에서는 tests/tools 의 계약 테스트가 잡지만, 두 체크아웃 사이의 머리 변경은 못 잡는다. 버린
+    길: ps1 을 절대 경로로 불러 한 체크아웃에 묶으면 워크트리에서 ps1 을 고쳐 시험할 수 없게 된다.
     """
     if _directive_branch(prompt) is None:
         return None
-    match = _OPENED_LINE.match(prompt.lstrip())
+    head = prompt.lstrip()
+    match = _OPENED_LINE.match(head)
     if match is None:
-        return None
+        if _OPENED_HEAD.match(head) is None:
+            return None
+        return (
+            "첫 줄이 스킬 파일을 가리키는데 연 저장소 표지를 읽지 못했다. 이 지시문을 쏜 "
+            "`tools/open_session.ps1` 과 이 훅이 다른 체크아웃의 사본이라 문구가 갈렸을 수 "
+            "있다. 작업 폴더를 확인할 수 없어 이 프롬프트를 막았다. 두 체크아웃의 사본을 맞춘 "
+            "뒤 다시 연다."
+        )
     root = match.group("root")
     if cwd and _folder_key(root) == _folder_key(cwd):
         return None
     return (
         f"이 세션의 작업 폴더 `{cwd or '(알 수 없음)'}` 가 지시문을 연 저장소 `{root}` 와 다르다. "
         "스킬을 따르지 않도록 이 프롬프트를 막았다. 연 저장소에서 세션을 다시 연다."
+    )
+
+
+def _wants_worktree(prompt: str) -> bool:
+    """줄 머리의 `어디서:` 줄에 `EnterWorktree` 가 들었는가."""
+    return any(
+        line.strip().startswith(_WHERE_LABEL) and "EnterWorktree" in line
+        for line in prompt.splitlines()
     )
 
 
