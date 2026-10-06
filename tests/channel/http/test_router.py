@@ -60,6 +60,7 @@ from agent_os.core.ports import (
 )
 from agent_os.core.run import run
 from agent_os.http.errors import INTERNAL_MESSAGE
+from agent_os.http.sites import Sites
 from agent_os.sdk import (
     RUN_ID_PATTERN,
     AgentContext,
@@ -465,6 +466,7 @@ def _app(
         principal=PRINCIPAL,
         admin_token=ADMIN_TOKEN,
         channel_token=CHANNEL_TOKEN,
+        sites=Sites(),
         stderr=stderr or io.StringIO(),
     )
 
@@ -1087,19 +1089,20 @@ async def test_스트림만_본_클라이언트도_센_프레임_수로_다음_�
     assert tools.calls == [("add", ADD_2_3), ("add", {"a": 4, "b": 5})]
 
 
-async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인자는_채널의_주체다() -> None:
-    """CLI 에서 시작한 실행을 HTTP 로 승인하는 것과 같은 모양이다(스토리 37). 트레이스가 같으면
-    같은 실행이다. 시작한 주체와 승인자가 다른 것이 곧 결정의 승인자가 채널의 주체라는 뜻이다."""
-    plugins = FakePlugins()
-    tools = ScopedTools()
-    trace = FakeTrace()
-    clock = FakeClock()
+async def _paused_outside(
+    principal: Principal,
+    plugins: FakePlugins,
+    tools: ScopedTools,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> RunPaused:
+    """채널을 지나지 않고 core 로 일으켜 멈춘 실행. CLI 에서 시작한 것과 같은 모양이다."""
     outside = [
         event
         async for event in run(
             AgentName("gated"),
             "2+3?",
-            Principal("bob"),
+            principal,
             plugins=plugins,
             model=GenericFakeChatModel(messages=iter(())),
             tools=tools,
@@ -1109,6 +1112,18 @@ async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인�
     ]
     paused = outside[-1]
     assert isinstance(paused, RunPaused)
+    return paused
+
+
+async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인자는_채널의_주체다() -> None:
+    """CLI 에서 시작한 실행을 HTTP 로 승인하는 것과 같은 모양이다(스토리 37, end-user-channel
+    스토리 60). 트레이스가 같으면 같은 실행이다. 운영자가 CLI 로 시작한 실행의 주체는 `serve` 의 OS
+    사용자와 같아 HTTP 로도 그대로 결정한다."""
+    plugins = FakePlugins()
+    tools = ScopedTools()
+    trace = FakeTrace()
+    clock = FakeClock()
+    paused = await _paused_outside(PRINCIPAL, plugins, tools, trace, clock)
     app = _app(plugins=plugins, trace=trace, tools=tools, clock=clock)
 
     async with _serving(app) as client:
@@ -1118,6 +1133,29 @@ async def test_채널_밖에서_멈춘_실행을_채널이_재개하고_승인�
     assert _types(frames) == ["approval_granted", "run_resumed", "tool_called", "run_finished"]
     assert json.loads(frames[0])["approver"] == PRINCIPAL
     assert tools.calls == [("add", ADD_2_3)]
+
+
+async def test_다른_주체의_멈춘_실행에_채널이_결정하면_409_봉투이고_결정이_쓰이지_않는다() -> None:
+    """결정은 그 실행의 주체만 내린다(ADR 0009 의 2026-10-03 이력). 운영자 면은 409 이고 메시지가
+    가른다 — 최종 사용자 면은 같은 실행을 없는 실행과 같은 404 로 덮는다(최종 사용자 경로의 테스트).
+    메시지는 그 실행의 주체 이름을 들지 않는다."""
+    plugins = FakePlugins()
+    tools = ScopedTools()
+    trace = FakeTrace()
+    clock = FakeClock()
+    paused = await _paused_outside(Principal("bob"), plugins, tools, trace, clock)
+    before = list(trace.lines)
+    app = _app(plugins=plugins, trace=trace, tools=tools, clock=clock)
+
+    async with _serving(app) as client:
+        response = await _decide(client, paused.run_id, APPROVE)
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+    assert paused.run_id in response.json()["message"]
+    assert "bob" not in response.json()["message"]
+    assert trace.lines == before
+    assert tools.calls == []
 
 
 async def test_한_루프에서_동시에_온_결정_둘은_하나만_받아들여져_도구가_한_번_불린다() -> None:
@@ -1704,6 +1742,29 @@ CHANNEL_OPERATIONS = (
     ("/runs/{run_id}/approval", "post"),
     ("/runs/{run_id}/continuation", "post"),
 )
+# 최종 사용자 면의 오퍼레이션 목록. 운영자 채널의 목록과 따로 든다 — 스트림 항목이 이벤트가 아니라
+# 최종 사용자 항목이라 항목 스키마의 단언이 목록마다 다르다. 409 를 문서화한 오퍼레이션 전부는 두
+# 목록의 합이다. 그 경로들의 나머지 계약은 `tests/channel/http/test_end_user.py` 가 잰다.
+END_USER_OPERATIONS = (
+    ("/end-user/runs", "post"),
+    ("/end-user/runs/{run_id}/approval", "post"),
+    ("/end-user/runs/{run_id}/subscription", "get"),
+)
+# 최종 사용자 면이 계약에 더한 컴포넌트. 항목 유니온과 멤버 일곱, 그리고 프레임에 `id` 를 싣는
+# 모양의 대가로 FastAPI 가 남기는 고아 `ServerSentEvent` 하나다(ADR 0023, 명세의 프레임 절).
+END_USER_COMPONENTS = frozenset(
+    {
+        "EndUserItem",
+        "StartedItem",
+        "ProgressItem",
+        "PausedItem",
+        "DecidedItem",
+        "FinishedItem",
+        "FailedItem",
+        "UnfinishedItem",
+        "ServerSentEvent",
+    }
+)
 
 
 def test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_멤버를_가리킨다() -> None:
@@ -1713,12 +1774,16 @@ def test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_�
     document = _app().openapi()
     schemas = document["components"]["schemas"]
 
-    for path, method in CHANNEL_OPERATIONS:
-        ok = document["paths"][path][method]["responses"]["200"]
-        item = ok["content"]["text/event-stream"]["itemSchema"]
-        assert item["properties"]["data"]["contentSchema"] == {
-            "$ref": "#/components/schemas/Event"
-        }, path
+    for operations, item_name in (
+        (CHANNEL_OPERATIONS, "Event"),
+        (END_USER_OPERATIONS, "EndUserItem"),
+    ):
+        for path, method in operations:
+            ok = document["paths"][path][method]["responses"]["200"]
+            item = ok["content"]["text/event-stream"]["itemSchema"]
+            assert item["properties"]["data"]["contentSchema"] == {
+                "$ref": f"#/components/schemas/{item_name}"
+            }, path
     assert EXISTING_COMPONENTS <= set(schemas)
     assert set(schemas) - EXISTING_COMPONENTS == {
         "Event",
@@ -1726,6 +1791,7 @@ def test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_�
         "Decision",
         "Approve",
         "Deny",
+        *END_USER_COMPONENTS,
     }
     assert not any(name.endswith(("-Input", "-Output")) for name in schemas)
     assert not any("Streamitem" in name for name in schemas)
@@ -1796,8 +1862,8 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
 
 def test_409_는_채널_라우트에만_있다() -> None:
     """대상의 상태나 주체가 요청을 허락하지 않는 것(재개 불가, 꺼짐, 다른 주체, 이어 갈 수 없음)을
-    만나는 것은 실행을 일으키는 라우트뿐이다. 관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진
-    것을 거부하지 않는다."""
+    만나는 것은 실행을 일으키거나 가리키는 라우트뿐이다 — 운영자 채널의 셋과 최종 사용자 면의 셋.
+    관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진 것을 거부하지 않는다."""
     paths = _app().openapi()["paths"]
 
     conflicting = [
@@ -1807,7 +1873,7 @@ def test_409_는_채널_라우트에만_있다() -> None:
         if "409" in operation["responses"]
     ]
 
-    assert conflicting == list(CHANNEL_OPERATIONS)
+    assert conflicting == [*CHANNEL_OPERATIONS, *END_USER_OPERATIONS]
 
 
 def test_결정_본문이_판별자_decision_의_이름_있는_유니온이고_허가와_거부가_섞이지_않는다() -> None:
@@ -2110,12 +2176,14 @@ def test_이어_가기_라우트가_지은_operation_id_와_봉투_에러_문서
     assert body == {"$ref": "#/components/schemas/StartRun"}
 
 
-def test_공유_409_설명은_세_채널_라우트에서_같고_상태와_주체를_함께_말한다() -> None:
+def test_공유_409_설명은_모든_채널_라우트에서_같고_상태와_주체를_함께_말한다() -> None:
+    """운영자 채널의 셋과 최종 사용자 면의 셋이 같은 설명을 나눠 쓴다. 최종 사용자 면의 꺼짐은
+    메시지만 고정 문구이고 설명은 공유 설명 그대로다(ADR 0017 이력)."""
     paths = _app().openapi()["paths"]
 
     descriptions = {
         paths[path][method]["responses"]["409"]["description"]
-        for path, method in CHANNEL_OPERATIONS
+        for path, method in (*CHANNEL_OPERATIONS, *END_USER_OPERATIONS)
     }
 
     assert len(descriptions) == 1

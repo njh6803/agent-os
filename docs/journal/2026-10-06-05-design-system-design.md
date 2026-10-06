@@ -8,7 +8,7 @@ next-session 지시문으로 연 새 세션이다. `grill-with-docs`로 시작�
 - 용어 셋(디자인 시스템, 디자인 토큰, 테마)과 `CONTEXT.md`의 새 절 "화면"
 - `plan.md`의 design-system 행(인터뷰가 정할 것을 정한 것으로), web-widget과 admin-style 행에 넘기는 것, 프론티어 문단
 - `docs/agents/issue-tracker.md`의 새 절 "화면 디자인"(ADR 0025가 이 기능에 맡긴 `.scratch/<slug>/design/` 규약)
-- `tech.md`의 스택 표 문구 둘과 헌법 3.0.10
+- `tech.md`의 스택 표 문구 둘과 헌법 3.0.11(PR #137이 먼저 3.0.10을 써서 병합 때 다시 매겼다)
 - `.scratch/design-system/probes/`의 측정 셋(글꼴, Storybook, 컨테이너 사진)과 README
 
 > 사용자: ".claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. … 다음 작업: 기능 design-system. 위젯과
@@ -107,7 +107,7 @@ plan 행이 넘긴 물음은 일곱이었다(패키지 모양, rem과 px, 다크
 - 검증 명령 전부를 셀프 리뷰 전과 고친 뒤 두 번 돌렸다. 둘 다 테스트 1437 통과, ruff·pyright·import-linter 초록,
   web verify 270 통과다. 지침 검사도 초록이다.
 - 인용 대조: 고친 문서에서는 경고가 없다. 대기열의 경고 18건은 모두 이번에 손대지 않은 줄의 것이다. 헌법
-  README의 경고 둘은 지운 문장을 인용한 것이라 저장소에 남아 있지 않은 것이 맞다(3.0.8 문단의 것과 이번 3.0.10
+  README의 경고 둘은 지운 문장을 인용한 것이라 저장소에 남아 있지 않은 것이 맞다(3.0.8 문단의 것과 이번 3.0.11
   문단의 것).
 - 하네스는 바꾸지 않았다. 새 세션에서 불러 볼 스킬이나 rules가 없다.
 
@@ -133,12 +133,10 @@ plan 행이 넘긴 물음은 일곱이었다(패키지 모양, rem과 px, 다크
 
 - **PR을 열고 병합은 사용자가 말할 때.** 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로
   열어 따른다.
-- **PR #137과 세 자리가 부딪힌다.** 둘 다 헌법을 3.0.10으로 올리고 `docs/constitution/README.md`의 같은 줄을
-  고친다. 뒤에 병합되는 쪽이 3.0.11로 다시 매기고 충돌을 푼다. `.scratch/retro-queue.md`는 둘 다 111 뒤에 줄을
-  더해(#137은 112·113, 이 브랜치는 114·115) 끝에서 충돌하고, 번호 순서대로 둘 다 남기면 된다. `.scratch/plan.md`는
-  #137이 end-user-channel 행을, 이 브랜치가 바로 아래 web-widget 행을 고쳐 이웃한 줄에서 충돌한다(셀프 리뷰의 명세
-  축이 `git merge-file`로 흉내 냈다). 두 행의 고친 내용을 모두 남긴다. `tech.md`는 고친 행 사이에 다른 행이 있어
-  겹치지 않는다.
+- **PR #137과의 충돌은 이 PR이 풀었다.** CI가 끝났을 때 #137이 먼저 병합돼 있어(`8df4d87`) 이 PR이
+  `CONFLICTING`이었다. main을 병합하며 예고한 세 자리를 풀었다. 헌법은 #137의 3.0.10 뒤에 이 브랜치의 항목을
+  3.0.11로 얹었고, 대기열은 112~115 순서로 둘 다 남겼으며, `plan.md`의 충돌 구간 네 행은 행마다 기점과 견줘 바뀐
+  쪽을 골랐다(end-user-channel은 main, 나머지 셋은 이 브랜치. 양쪽이 함께 바꾼 행은 없었다).
 - **design-system의 다음은 Claude Design 탐색이다.** 사용자가 Claude Design에서 색과 글꼴 짝, 라이트와 다크, 대략의
   화면으로 방향을 고르고 `.scratch/design-system/design/`에 내보낸다(`docs/agents/issue-tracker.md`의 화면 디자인 절).
   `packages/ui`가 아직 없어 그 표의 동기화한 커밋 칸은 "없음"이다. 그다음이 명세다.

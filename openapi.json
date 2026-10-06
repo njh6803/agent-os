@@ -82,7 +82,7 @@
             "type": "string"
           },
           "pause_index": {
-            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다",
+            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 최종 사용자 스트림에서는 일시정지 항목의 id 다. 지금의 일시정지가 아니면 409 다",
             "minimum": 0.0,
             "title": "Pause Index",
             "type": "integer"
@@ -148,6 +148,44 @@
         "title": "ConversationSummarized",
         "type": "object"
       },
+      "DecidedItem": {
+        "additionalProperties": false,
+        "description": "결정이 기록됐다. 허가인지 거부인지와 거부의 사유를 든다.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "deny"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "type": {
+            "const": "decided",
+            "default": "decided",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "decision",
+          "reason"
+        ],
+        "title": "DecidedItem",
+        "type": "object"
+      },
       "Decision": {
         "discriminator": {
           "mapping": {
@@ -175,7 +213,7 @@
             "type": "string"
           },
           "pause_index": {
-            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 지금의 일시정지가 아니면 409 다",
+            "description": "이 결정이 답하는 run_paused 이벤트가 트레이스 상세 events 에서 서는 0부터 센 인덱스. 최종 사용자 스트림에서는 일시정지 항목의 id 다. 지금의 일시정지가 아니면 409 다",
             "minimum": 0.0,
             "title": "Pause Index",
             "type": "integer"
@@ -194,6 +232,43 @@
         "title": "Deny",
         "type": "object"
       },
+      "EndUserItem": {
+        "discriminator": {
+          "mapping": {
+            "decided": "#/components/schemas/DecidedItem",
+            "failed": "#/components/schemas/FailedItem",
+            "finished": "#/components/schemas/FinishedItem",
+            "paused": "#/components/schemas/PausedItem",
+            "progress": "#/components/schemas/ProgressItem",
+            "started": "#/components/schemas/StartedItem",
+            "unfinished": "#/components/schemas/UnfinishedItem"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StartedItem"
+          },
+          {
+            "$ref": "#/components/schemas/ProgressItem"
+          },
+          {
+            "$ref": "#/components/schemas/PausedItem"
+          },
+          {
+            "$ref": "#/components/schemas/DecidedItem"
+          },
+          {
+            "$ref": "#/components/schemas/FinishedItem"
+          },
+          {
+            "$ref": "#/components/schemas/FailedItem"
+          },
+          {
+            "$ref": "#/components/schemas/UnfinishedItem"
+          }
+        ]
+      },
       "ErrorCode": {
         "description": "에러 봉투의 어휘. 상태 코드와 1:1 이다.",
         "enum": [
@@ -201,6 +276,7 @@
           "invalid_request",
           "not_found",
           "conflict",
+          "too_many_requests",
           "internal_error"
         ],
         "title": "ErrorCode",
@@ -286,6 +362,55 @@
             "$ref": "#/components/schemas/ConversationSummarized"
           }
         ]
+      },
+      "FailedItem": {
+        "additionalProperties": false,
+        "description": "실행이 실패로 끝났다. 고정 문구와 실행 식별자를 든다.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "failed",
+            "default": "failed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "message",
+          "run_id"
+        ],
+        "title": "FailedItem",
+        "type": "object"
+      },
+      "FinishedItem": {
+        "additionalProperties": false,
+        "description": "실행이 출력을 내고 끝났다.",
+        "properties": {
+          "output": {
+            "title": "Output",
+            "type": "string"
+          },
+          "type": {
+            "const": "finished",
+            "default": "finished",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "output"
+        ],
+        "title": "FinishedItem",
+        "type": "object"
       },
       "Health": {
         "additionalProperties": false,
@@ -432,6 +557,36 @@
           "secret_args"
         ],
         "title": "McpServer",
+        "type": "object"
+      },
+      "PausedItem": {
+        "additionalProperties": false,
+        "description": "승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.",
+        "properties": {
+          "args": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Json"
+            },
+            "title": "Args",
+            "type": "object"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "type": {
+            "const": "paused",
+            "default": "paused",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "tool",
+          "args"
+        ],
+        "title": "PausedItem",
         "type": "object"
       },
       "Plugin": {
@@ -598,6 +753,33 @@
             "$ref": "#/components/schemas/PluginPlaceholder"
           }
         ]
+      },
+      "ProgressItem": {
+        "additionalProperties": false,
+        "description": "도구 하나가 불렸다. 도구 이름과 성패만 든다.",
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "type": {
+            "const": "progress",
+            "default": "progress",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "tool",
+          "ok"
+        ],
+        "title": "ProgressItem",
+        "type": "object"
       },
       "RunFailed": {
         "additionalProperties": false,
@@ -854,6 +1036,72 @@
         "title": "RunSummary",
         "type": "object"
       },
+      "ServerSentEvent": {
+        "description": "Represents a single Server-Sent Event.\n\nWhen `yield`ed from a *path operation function* that uses\n`response_class=EventSourceResponse`, each `ServerSentEvent` is encoded\ninto the [SSE wire format](https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream)\n(`text/event-stream`).\n\nIf you yield a plain object (dict, Pydantic model, etc.) instead, it is\nautomatically JSON-encoded and sent as the `data:` field.\n\nAll `data` values **including plain strings** are JSON-serialized.\n\nFor example, `data=\"hello\"` produces `data: \"hello\"` on the wire (with\nquotes).",
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "data": {
+            "title": "Data"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "raw_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Data"
+          },
+          "retry": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry"
+          }
+        },
+        "title": "ServerSentEvent",
+        "type": "object"
+      },
       "SetEnabled": {
         "additionalProperties": false,
         "description": "켜짐 하나를 쓰는 요청. 거짓이면 끄고 참이면 켠다. 이미 그 상태여도 성공이다.",
@@ -888,6 +1136,28 @@
           "request"
         ],
         "title": "StartRun",
+        "type": "object"
+      },
+      "StartedItem": {
+        "additionalProperties": false,
+        "description": "실행이 시작됐다. 구독과 결정에 쓸 실행 식별자를 든다.",
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "started",
+            "default": "started",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id"
+        ],
+        "title": "StartedItem",
         "type": "object"
       },
       "ToolCall": {
@@ -1091,6 +1361,23 @@
         ],
         "type": "string"
       },
+      "UnfinishedItem": {
+        "additionalProperties": false,
+        "description": "실행이 끝내지 못하고 사라졌다. 구독이 닫을 때만 낸다.",
+        "properties": {
+          "type": {
+            "const": "unfinished",
+            "default": "unfinished",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "UnfinishedItem",
+        "type": "object"
+      },
       "UnknownEvent": {
         "additionalProperties": false,
         "description": "이 런타임이 모르는 종류의 이벤트. 원문 한 줄을 문자열 그대로 든다.",
@@ -1156,12 +1443,397 @@
     }
   },
   "info": {
-    "description": "관리는 등록된 플러그인과 지나간 실행을 읽고 플러그인을 켜고 끄며 실행을 일으키지 않는다. 채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. 두 면은 서로 다른 토큰으로 연다.",
+    "description": "관리는 등록된 플러그인과 지나간 실행을 읽고 플러그인을 켜고 끄며 실행을 일으키지 않는다. 채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. 최종 사용자 경로는 사이트가 서명한 토큰으로 열고 이벤트 대신 걸러진 항목을 받는다. 세 면은 서로 다른 자격으로 연다.",
     "title": "Agent OS HTTP API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/end-user/runs": {
+      "post": {
+        "operationId": "start_end_user_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/EndUserItem"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 포인트(파이썬 len)로 세고 상한의 기본값은 20,000자다"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다",
+            "headers": {
+              "Retry-After": {
+                "description": "다시 보내도 되기까지의 초. 1 이상의 정수다",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "서명한 최종 사용자로 실행 하나를 일으켜 그 항목을 생기는 대로 흘린다"
+      }
+    },
+    "/end-user/runs/{run_id}/approval": {
+      "post": {
+        "operationId": "decide_end_user_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/EndUserItem"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다",
+            "headers": {
+              "Retry-After": {
+                "description": "다시 보내도 되기까지의 초. 1 이상의 정수다",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "서명한 최종 사용자의 멈춘 실행에 결정 하나를 내고 결정 항목부터 흘린다"
+      }
+    },
+    "/end-user/runs/{run_id}/subscription": {
+      "get": {
+        "operationId": "subscribe_end_user_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "last-event-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{1,12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/EndUserItem"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다",
+            "headers": {
+              "Retry-After": {
+                "description": "다시 보내도 되기까지의 초. 1 이상의 정수다",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "서명한 최종 사용자의 실행에 다시 붙어 놓친 항목부터 결말까지 흘린다"
+      }
+    },
     "/health": {
       "get": {
         "operationId": "read_health",
