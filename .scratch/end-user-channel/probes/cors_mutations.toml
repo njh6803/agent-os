@@ -219,10 +219,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/http/cors.py"
 old = '''
-EXPOSE_HEADERS = ("Retry-After", REQUEST_ID_HEADER)
+EXPOSE_HEADERS = (RETRY_AFTER_HEADER, REQUEST_ID_HEADER)
 '''
 new = '''
-EXPOSE_HEADERS = ("Retry-After",)
+EXPOSE_HEADERS = (RETRY_AFTER_HEADER,)
 '''
 
 [[mutation]]

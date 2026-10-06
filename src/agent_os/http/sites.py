@@ -4,7 +4,7 @@
 신원을 보증한다. 서버는 공개 키만 들어 토큰을 만들 수 없다. 사이트 목록은 운영자가 사이트 파일에
 적은 것이고 `main.py` 가 TOML 을 읽어 이 타입으로 만든다 — 이 층은 TOML 을 모르고, 파일의 키
 이름과 손상 판정은 그쪽이 소유한다. 인증 미들웨어(`auth`)가 이것으로 토큰을 검증하고, 채널이 열
-에이전트를 본다.
+에이전트와 상한을 본다.
 
 **검증 순서는 토큰 형식 → 발급자로 사이트 항목 → `kid` 로 키 → 서명·필수 클레임·`aud`·`iss`
 (라이브러리) → `exp`·`iat`·`nbf`·수명(여기) → `sub` 다.** 발급자와 `kid` 는 서명을 검증하기 전에
@@ -64,13 +64,33 @@ class SiteKey:
 
 
 @dataclass(frozen=True)
+class SiteLimits:
+    """사이트 파일의 상한 표. 값마다 선택이고 없음은 채널의 기본값이다.
+
+    요청 글자 수, 주체별 동시 실행, 주체별 시간당 실행, 사이트별 동시 실행, 사이트별 시간당 실행,
+    주체별 구독의 여섯이다(ADR 0023). 값은 1 이상의 정수다 — 사이트 파일을 읽는 쪽이 판정하고 이
+    타입은 그것을 믿는다. 기본값을 여기 두지 않는 이유는 기본값 일곱이 채널의 한 곳
+    (`agent_os.channel.http.limits`)에 있어야 하기 때문이다. 이 층은 채널을 import 할 수 없고,
+    여기도 숫자를 두면 같은 값이 두 곳에 선다. 전역 동시 실행은 사이트의 것이 아니라 `serve` 의
+    인자다.
+    """
+
+    request_chars: int | None = None
+    concurrent_runs_per_principal: int | None = None
+    hourly_runs_per_principal: int | None = None
+    concurrent_runs_per_site: int | None = None
+    hourly_runs_per_site: int | None = None
+    subscriptions_per_principal: int | None = None
+
+
+@dataclass(frozen=True)
 class Site:
-    """받아들이는 사이트 하나. 발급자, 대상, 공개 키 목록, 허용 출처, 열 에이전트를 든다.
+    """받아들이는 사이트 하나. 발급자, 대상, 공개 키, 허용 출처, 열 에이전트, 상한 표를 든다.
 
     발급자는 비지 않았고 사이트끼리 겹치지 않으며 `|` 를 품지 않는다 — 사이트 파일을 읽는 쪽이
     판정하고 이 타입은 그것을 믿는다. 허용 출처는 CORS 의 입력이고 사이트 목록이 모든 사이트의 것을
     합쳐 넘긴다(`Sites.origins`). 열 에이전트는 이 사이트의 최종 사용자가 볼 수 있는 에이전트의
-    집합이고 core 가 판정한다(ADR 0023 의 2026-10-05 이력).
+    집합이고 core 가 판정한다(ADR 0023 의 2026-10-05 이력). 상한 표는 채널이 센다.
     """
 
     issuer: str
@@ -78,6 +98,7 @@ class Site:
     keys: tuple[SiteKey, ...]
     allowed_origins: tuple[str, ...]
     agents: frozenset[AgentName]
+    limits: SiteLimits = SiteLimits()
 
 
 @dataclass(frozen=True)

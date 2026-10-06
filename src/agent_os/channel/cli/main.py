@@ -25,6 +25,9 @@ run 은 이어 갈 끝난 실행을 `--continuation` 으로 받는다(ADR 0022, 
 run 과 resume 에는 실행 타임아웃의 플래그가 없다. core 의 기본값이 그대로 걸리고, 그 시간을 넘긴
 실행은 다른 실행 안의 실패처럼 진단과 종료 코드 1 이다(end-user-channel 명세 "실행 타임아웃").
 serve 만 `--run-timeout` 으로 바꾼다. 필요가 생기면 둘에도 더한다.
+
+serve 의 `--end-user-concurrent-runs` 는 최종 사용자 경로에만 걸리는 전역 동시 실행 상한이다. 그
+기본값은 HTTP 채널의 상수 하나라(`agent_os.channel.http.limits`) 도움말이 거기서 읽는다.
 """
 
 from __future__ import annotations
@@ -38,6 +41,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import TextIO
 
+from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import (
     ChatModel,
     Clock,
@@ -87,11 +91,11 @@ class ResumeArgs:
 
 @dataclass(frozen=True)
 class ServeArgs:
-    """관리 API 와 채널을 세우는 데 필요한 값 일곱. 비밀은 없다 — 토큰만 환경변수로 온다.
+    """관리 API 와 채널을 세우는 데 필요한 값 여덟. 비밀은 없다 — 토큰만 환경변수로 온다.
 
     사이트 파일은 공개 키라 비밀이 아니고 경로로 받는다. 없음은 받아들일 사이트가 없다는 뜻이다(ADR
-    0023). 실행 타임아웃의 없음은 core 의 기본값이다 — 여기서 기본값을 짓지 않는다. 0 이하인지는
-    `main.py` 가 다른 구성 오류와 함께 본다.
+    0023). 실행 타임아웃의 없음은 core 의 기본값이고, 전역 동시 실행 상한의 없음은 HTTP 채널의
+    기본값이다 — 여기서 기본값을 짓지 않는다. 0 이하인지는 `main.py` 가 다른 구성 오류와 함께 본다.
     """
 
     host: str
@@ -101,6 +105,7 @@ class ServeArgs:
     plugins_root: Path
     site_file: Path | None
     run_timeout_seconds: int | None
+    end_user_concurrent_runs: int | None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -166,6 +171,17 @@ def build_parser() -> argparse.ArgumentParser:
             f"(기본 {DEFAULT_RUN_TIMEOUT_SECONDS})"
         ),
     )
+    # 낱말은 그 상한이 걸리는 면을 든다 — 운영자 채널(`/runs`)에는 상한이 없다(ADR 0023). 기본값을
+    # 두지 않는 이유는 `--run-timeout` 과 같다. 값이 서는 자리는 HTTP 채널의 상수 하나다.
+    serve_parser.add_argument(
+        "--end-user-concurrent-runs",
+        type=_concurrent_runs,
+        metavar="N",
+        help=(
+            "모든 사이트를 합친 최종 사용자 경로의 동시 실행 수. 넘으면 429 다 "
+            f"(기본 {DEFAULT_CONCURRENT_RUNS})"
+        ),
+    )
     _add_model(serve_parser)
     _add_directories(serve_parser)
     return parser
@@ -202,6 +218,14 @@ def _run_timeout(value: str) -> int:
         return int(value)
     except ValueError:
         raise argparse.ArgumentTypeError(f"실행 타임아웃은 정수(초)다. 받은 값: {value}") from None
+
+
+def _concurrent_runs(value: str) -> int:
+    """정수인지만 여기서 본다. 0 이하는 `_run_timeout` 과 같은 이유로 `main.py` 의 구성 오류다."""
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"동시 실행 상한은 정수다. 받은 값: {value}") from None
 
 
 def _pause_index(value: str) -> int:
@@ -250,6 +274,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
     if namespace.command == "serve":
         site_file = namespace.site_file
         run_timeout = namespace.run_timeout
+        concurrent_runs = namespace.end_user_concurrent_runs
         return ServeArgs(
             host=str(namespace.host),
             port=int(namespace.port),
@@ -258,6 +283,7 @@ def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
             plugins_root=plugins_root,
             site_file=None if site_file is None else Path(site_file),
             run_timeout_seconds=None if run_timeout is None else int(run_timeout),
+            end_user_concurrent_runs=None if concurrent_runs is None else int(concurrent_runs),
         )
     verbose = bool(namespace.verbose)
     if namespace.command == "resume":

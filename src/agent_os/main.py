@@ -47,9 +47,10 @@ from agent_os.channel.cli.main import (
     resume_command,
     run_command,
 )
+from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import ChatModel
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
-from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, Sites
+from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, SiteLimits, Sites
 from agent_os.sdk import AgentName, Principal, is_plugin_name
 from agent_os.server import create_app
 
@@ -90,6 +91,11 @@ _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC = (
     "--run-timeout 은 1 이상의 정수(초)다. 받은 값: {value}\n"
     "  0 이하면 모델이나 도구를 기다리는 실행은 모두 그 자리에서 run_failed 로 끝난다.\n"
     "  빼면 core 의 기본값 {default}초다."
+)
+_NOT_POSITIVE_CONCURRENT_RUNS_DIAGNOSTIC = (
+    "--end-user-concurrent-runs 는 1 이상의 정수다. 받은 값: {value}\n"
+    "  0 이하면 최종 사용자 경로의 모든 시작과 결정이 429 로 거절된다.\n"
+    "  빼면 채널의 기본값 {default} 이다."
 )
 
 
@@ -138,6 +144,7 @@ def _serve(args: ServeArgs) -> int:
 
     실행 타임아웃은 받은 그대로 넘긴다. 없으면 없음을 넘겨 core 의 기본값이 선다. 0 이하는 모델이나
     도구를 기다리는 실행이 모두 그 자리에서 실패하는 서버라 다른 구성 오류와 함께 여기서 끝난다.
+    전역 동시 실행 상한도 같다 — 없으면 채널의 기본값이고 0 이하는 구성 오류다.
     """
     admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
     channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
@@ -159,6 +166,7 @@ def _serve(args: ServeArgs) -> int:
             channel_token=channel_token,
             sites=sites,
             run_timeout_seconds=args.run_timeout_seconds,
+            end_user_concurrent_runs=args.end_user_concurrent_runs,
             stderr=sys.stderr,
         ),
         host=args.host,
@@ -211,6 +219,12 @@ def _configuration_problems(
                 value=args.run_timeout_seconds, default=DEFAULT_RUN_TIMEOUT_SECONDS
             )
         )
+    if args.end_user_concurrent_runs is not None and args.end_user_concurrent_runs <= 0:
+        problems.append(
+            _NOT_POSITIVE_CONCURRENT_RUNS_DIAGNOSTIC.format(
+                value=args.end_user_concurrent_runs, default=DEFAULT_CONCURRENT_RUNS
+            )
+        )
     model = _model_problem(args.model)
     if model is not None:
         problems.append(model)
@@ -257,11 +271,15 @@ _OS_USER_DIAGNOSTIC = (
 #
 # 모양은 TOML 이고 `schema_version = "1"` 이 필수다. 사이트마다 `[[sites]]` 표 하나에 발급자
 # (`issuer`), 대상(`audience`), 공개 키 목록(`[[sites.public_keys]]` 마다 PEM 문자열 `pem` 과 선택
-# `kid`), 허용 출처(`allowed_origins`), 열 에이전트(`agents`)다. 모르는 키는 손상이다 — 운영자
-# 파일(ADR 0017)과 같은 규칙이고, 오타가 조용히 무시되면 운영자가 적었다고 믿는 것과 서버가 쓰는
-# 것이 갈린다. 상한 표는 아직 이 모양에 없어 적으면 모르는 키다. 값은 엄격한 타입이다 — 수를
-# 글자로, 글자를 목록으로 받아 주지 않는다. 그래서 열은 TOML 배열이 읽히는 그대로 `list` 다(엄격한
-# 검증은 `tuple` 필드에 리스트를 받지 않는다).
+# `kid`), 허용 출처(`allowed_origins`), 열 에이전트(`agents`), 선택 상한 표(`[sites.limits]`)다.
+# 상한 표의 키는 여섯이고 값마다 선택이다 — `request_chars`, `concurrent_runs_per_principal`,
+# `hourly_runs_per_principal`, `concurrent_runs_per_site`, `hourly_runs_per_site`,
+# `subscriptions_per_principal`. 1 이상의 엄격한 정수이고(매니페스트의 `conversation_limit` 과 같은
+# 규칙) 적지 않은 값은 HTTP 채널의 기본값이다. 이 모양은 숫자 기본값을 짓지 않는다 — 값이 서는
+# 자리는 채널의 한 곳이다. 모르는 키는 손상이다 — 운영자 파일(ADR 0017)과 같은 규칙이고, 오타가
+# 조용히 무시되면 운영자가 적었다고 믿는 것과 서버가 쓰는 것이 갈린다. 값은 엄격한 타입이다 — 수를
+# 글자로, 글자를 목록으로, 불린이나 실수를 정수로 받아 주지 않는다. 그래서 열은 TOML 배열이 읽히는
+# 그대로 `list` 다(엄격한 검증은 `tuple` 필드에 리스트를 받지 않는다).
 
 _STRICT = ConfigDict(extra="forbid", frozen=True, strict=True)
 
@@ -275,8 +293,32 @@ class _PublicKeyEntry(BaseModel):
     kid: str | None = None
 
 
+class _LimitsEntry(BaseModel):
+    """상한 표. 값마다 선택이고 1 이상의 정수다. 빠진 값은 채널의 기본값이다."""
+
+    model_config = _STRICT
+
+    request_chars: int | None = Field(default=None, ge=1)
+    concurrent_runs_per_principal: int | None = Field(default=None, ge=1)
+    hourly_runs_per_principal: int | None = Field(default=None, ge=1)
+    concurrent_runs_per_site: int | None = Field(default=None, ge=1)
+    hourly_runs_per_site: int | None = Field(default=None, ge=1)
+    subscriptions_per_principal: int | None = Field(default=None, ge=1)
+
+    def to_site_limits(self) -> SiteLimits:
+        """공용 층의 상한 표로(질의)."""
+        return SiteLimits(
+            request_chars=self.request_chars,
+            concurrent_runs_per_principal=self.concurrent_runs_per_principal,
+            hourly_runs_per_principal=self.hourly_runs_per_principal,
+            concurrent_runs_per_site=self.concurrent_runs_per_site,
+            hourly_runs_per_site=self.hourly_runs_per_site,
+            subscriptions_per_principal=self.subscriptions_per_principal,
+        )
+
+
 class _SiteEntry(BaseModel):
-    """사이트 하나. 허용 출처와 열 에이전트는 비어 있을 수 있되 적어야 한다."""
+    """사이트 하나. 허용 출처와 열 에이전트는 비어 있을 수 있되 적어야 한다. 상한 표는 선택이다."""
 
     model_config = _STRICT
 
@@ -285,6 +327,7 @@ class _SiteEntry(BaseModel):
     public_keys: list[_PublicKeyEntry] = Field(min_length=1)
     allowed_origins: list[str]
     agents: list[str]
+    limits: _LimitsEntry = Field(default_factory=_LimitsEntry)
 
 
 class _SiteFile(BaseModel):
@@ -381,6 +424,7 @@ def _sites_of(parsed: _SiteFile) -> tuple[Sites, list[str]]:
                 keys=keys,
                 allowed_origins=tuple(entry.allowed_origins),
                 agents=frozenset(AgentName(name) for name in entry.agents),
+                limits=entry.limits.to_site_limits(),
             )
         )
     return Sites(entries=tuple(sites)), problems

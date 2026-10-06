@@ -135,6 +135,8 @@ def document() -> str:
         sites=Sites(),
         # core 의 기본값이다. 스키마는 실행 타임아웃을 싣지 않는다.
         run_timeout_seconds=None,
+        # 채널의 기본값이다. 스키마는 상한의 값을 싣지 않는다.
+        end_user_concurrent_runs=None,
         stderr=io.StringIO(),
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"

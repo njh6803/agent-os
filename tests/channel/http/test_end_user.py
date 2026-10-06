@@ -31,6 +31,11 @@ from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.items import FAILED_MESSAGE
+from agent_os.channel.http.limits import (
+    DEFAULT_REQUEST_CHARS,
+    DEFAULT_SUBSCRIPTIONS_PER_PRINCIPAL,
+)
+from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
     ChatModel,
     Clock,
@@ -51,7 +56,7 @@ from agent_os.core.ports import (
     WriteOutcome,
 )
 from agent_os.http.errors import INTERNAL_MESSAGE, NOT_FOUND_MESSAGE, UNAVAILABLE_MESSAGE
-from agent_os.http.sites import Site, Sites
+from agent_os.http.sites import Site, SiteLimits, Sites
 from agent_os.sdk import (
     AgentContext,
     AgentName,
@@ -70,6 +75,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     RunStarted,
+    ToolCalled,
     parse_manifest,
 )
 from agent_os.server import create_app
@@ -98,12 +104,13 @@ SUBSCRIPTION = f"{END_USER_PREFIX}/runs/{{run_id}}/subscription"
 # 이 사이트가 여는 에이전트. `secret` 은 등록돼 있지만 목록 밖이고, `nope` 은 목록 안이지만 없다.
 OPEN_AGENTS = frozenset(
     AgentName(name)
-    for name in ("echo", "asking", "gated", "working", "silent", "unloadable", "nope")
+    for name in ("echo", "asking", "gated", "working", "silent", "chatty", "unloadable", "nope")
 )
 
 
-def _site(agents: frozenset[AgentName] = OPEN_AGENTS) -> Sites:
-    """사이트 둘. 이 파일의 최종 사용자는 대부분 첫째 사이트의 사람이다."""
+def _site(agents: frozenset[AgentName] = OPEN_AGENTS, *, limits: SiteLimits | None = None) -> Sites:
+    """사이트 둘. 이 파일의 최종 사용자는 대부분 첫째 사이트의 사람이다. 상한 표는 첫째 사이트의
+    것이고 주지 않으면 기본값이다. 둘째 사이트는 기본값 그대로다."""
     return Sites(
         (
             Site(
@@ -112,13 +119,14 @@ def _site(agents: frozenset[AgentName] = OPEN_AGENTS) -> Sites:
                 keys=(KEY.site_key(),),
                 allowed_origins=(ORIGIN,),
                 agents=agents,
+                limits=limits or SiteLimits(),
             ),
             Site(
                 issuer=OTHER_ISSUER,
                 audience=AUDIENCE,
                 keys=(OTHER_KEY.site_key(),),
                 allowed_origins=(OTHER_ORIGIN,),
-                agents=frozenset({AgentName("echo")}),
+                agents=frozenset({AgentName("echo"), AgentName("asking")}),
             ),
         )
     )
@@ -147,6 +155,11 @@ TIMEOUT = 0.05
 TIMED_OUT = "실행이 0.05초 안에 끝나지 않았다"
 # 타임아웃이 끊지 않으면 늦은 도구가 돌아오는 시각. `TIMEOUT` 보다 한참 뒤다.
 LATE = 1.0
+# 백로그 상한을 넘기려고 한 실행이 한꺼번에 내는 진행 항목의 수. `BACKLOG_FRAMES` 보다 크다.
+BURST = BACKLOG_FRAMES + 100
+# 진행 항목 하나를 낸 뒤 에이전트가 이벤트 루프에 양보하는 횟수. 받는 쪽의 응답은 태스크 몇을 지나
+# 나가므로, 이만큼 쉬어야 막히지 않은 받는 쪽이 뒤처지지 않는다.
+YIELDS_PER_ITEM = 4
 
 
 class EchoAgent:
@@ -180,12 +193,28 @@ class SilentAgent:
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않는다")
 
 
+class ChattyAgent:
+    """모델의 답을 받은 뒤 진행 항목을 백로그 상한보다 많이 내고, 모델에게 한 번 더 물은 뒤
+    끝낸다. 항목마다 이벤트 루프에 양보해 막히지 않은 받는 쪽이 따라오게 한다 — 막힌 받는 쪽만
+    뒤처진다. 둘째 물음은 넘친 뒤에도 실행이 돌고 있는 동안을 만든다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        answer = await ctx.llm(PROMPT)
+        for index in range(BURST):
+            yield ToolCalled(run_id=ctx.run_id, ts=ctx.now(), tool=f"note-{index}", ok=True)
+            for _ in range(YIELDS_PER_ITEM):
+                await asyncio.sleep(0)
+        await ctx.llm(PROMPT)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
+
+
 AGENTS: Mapping[str, BaseAgent] = {
     "echo": EchoAgent(),
     "asking": AskingAgent(),
     "gated": ToolAgent(),
     "working": ToolAgent(),
     "silent": SilentAgent(),
+    "chatty": ChattyAgent(),
     "secret": EchoAgent(),
 }
 MANIFESTS = {
@@ -194,6 +223,7 @@ MANIFESTS = {
     "gated": _manifest("gated", mcp=["calc-server"], approval=["add"]),
     "working": _manifest("working", mcp=["calc-server"]),
     "silent": _manifest("silent"),
+    "chatty": _manifest("chatty"),
     "secret": _manifest("secret"),
     "unloadable": _manifest("unloadable"),
 }
@@ -310,6 +340,18 @@ class StuckConnection(FakeConnection):
         return await super().call(name, args)
 
 
+class GatedConnection(FakeConnection):
+    """테스트가 문을 열 때까지 도구 호출이 돌아오지 않는다. 재개한 실행을 돌고 있는 채로 둔다."""
+
+    def __init__(self, servers: Mapping[PluginName, McpServer], gate: asyncio.Event) -> None:
+        super().__init__(servers)
+        self._gate = gate
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        await self._gate.wait()
+        return await super().call(name, args)
+
+
 class ScopedTools:
     """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다. 연결은 붙을 때마다 `connection` 으로
     새로 만든다."""
@@ -329,10 +371,19 @@ class ScopedTools:
             yield self._connection(servers)
 
 
+def _gated_tools(gate: asyncio.Event) -> ScopedTools:
+    """도구 호출이 `gate` 가 열릴 때까지 돌아오지 않는 도구 포트."""
+    return ScopedTools(connection=lambda servers: GatedConnection(servers, gate))
+
+
 class GatedModel(GenericFakeChatModel):
-    """테스트가 문을 열 때까지 답하지 않는다. 실행의 진행을 테스트가 쥔다."""
+    """테스트가 문을 열 때까지 답하지 않는다. 실행의 진행을 테스트가 쥔다.
+
+    `waiting` 은 모델이 문 앞에 닿아 기다리기 시작하면 켜진다.
+    """
 
     gate: asyncio.Event
+    waiting: asyncio.Event
 
     async def _agenerate(
         self,
@@ -341,12 +392,18 @@ class GatedModel(GenericFakeChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: object,
     ) -> ChatResult:
+        self.waiting.set()
         await self.gate.wait()
         return self._generate(messages, stop, None, **kwargs)
 
 
-def _gated_model(answer: str = "답") -> GatedModel:
-    return GatedModel(messages=iter([AIMessage(content=answer)]), gate=asyncio.Event())
+def _gated_model(answer: str = "답", *, answers: int = 1) -> GatedModel:
+    """문이 열리면 같은 답을 `answers` 번 한다. 문 앞에 함께 선 실행 하나가 답 하나를 쓴다."""
+    return GatedModel(
+        messages=iter([AIMessage(content=answer)] * answers),
+        gate=asyncio.Event(),
+        waiting=asyncio.Event(),
+    )
 
 
 def _app(
@@ -359,6 +416,7 @@ def _app(
     sites: Sites | None = None,
     tools: ToolSource | None = None,
     run_timeout_seconds: float | None = None,
+    end_user_concurrent_runs: int | None = None,
 ) -> FastAPI:
     """최종 사용자 경로가 선 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다."""
     return create_app(
@@ -372,6 +430,7 @@ def _app(
         channel_token=CHANNEL_TOKEN,
         sites=sites or _site(),
         run_timeout_seconds=run_timeout_seconds,
+        end_user_concurrent_runs=end_user_concurrent_runs,
         stderr=stderr or io.StringIO(),
     )
 
@@ -391,8 +450,10 @@ async def _serving(app: FastAPI) -> AsyncGenerator[AsyncClient]:
         yield client
 
 
-def _token(subject: str = "alice", *, key: SigningKey = KEY, issuer: str = ISSUER) -> str:
-    return sign(key, claims(issuer, subject, T0))
+def _token(
+    subject: str = "alice", *, key: SigningKey = KEY, issuer: str = ISSUER, at: datetime = T0
+) -> str:
+    return sign(key, claims(issuer, subject, at))
 
 
 def _as(subject: str = "alice") -> dict[str, str]:
@@ -916,7 +977,8 @@ async def test_다른_사이트의_같은_sub_는_다른_주체라_구독하지_
 class _Wire:
     """같은 앱을 ASGI 로 직접 부르는 쪽. 받은 메시지를 순서대로 적는다.
 
-    receive 는 본문을 한 번 주고 그 뒤로는 테스트가 떠날 때까지 기다린다.
+    receive 는 본문을 한 번 주고 그 뒤로는 테스트가 떠날 때까지 기다린다. send 는 막아 두면 그
+    자리에서 기다린다 — 느린 수신자다.
     """
 
     def __init__(self, body: Mapping[str, Json] | None = None) -> None:
@@ -924,6 +986,8 @@ class _Wire:
         self._body = b"" if body is None else json.dumps(body).encode()
         self._requested = False
         self._gone = asyncio.Event()
+        self._flowing = asyncio.Event()
+        self._flowing.set()
 
     async def receive(self) -> Message:
         if not self._requested:
@@ -933,10 +997,17 @@ class _Wire:
         return {"type": "http.disconnect"}
 
     async def send(self, message: Message) -> None:
+        await self._flowing.wait()
         self.sent.append(message)
 
     def leave(self) -> None:
         self._gone.set()
+
+    def hold(self) -> None:
+        self._flowing.clear()
+
+    def release(self) -> None:
+        self._flowing.set()
 
     def status(self) -> int | None:
         for message in self.sent:
@@ -980,6 +1051,20 @@ def _scope(method: str, path: str, token: str, last_event_id: str | None = None)
 def _call(app: FastAPI, scope: Scope, wire: _Wire) -> asyncio.Task[None]:
     """앱을 ASGI 로 한 번 부르는 태스크."""
     return asyncio.create_task(app(scope, wire.receive, wire.send))
+
+
+async def _held(
+    app: FastAPI, scope: Scope, body: Mapping[str, Json] | None = None
+) -> tuple[asyncio.Task[None], _Wire]:
+    """앱을 ASGI 로 불러 본문의 첫 조각까지 기다린다. 응답은 200 이고 열린 채 남는다 — 그 실행이
+    문 앞에 서 있거나, 구독이 그 실행에 붙어 있다. 프레임을 해석하지 않는 이유는 운영자 채널의
+    프레임에 `id:` 가 없어서다. 상태 코드를 보는 이유는 거절도 본문(봉투)이 있어서다 — 보지 않으면
+    429 가 열린 응답으로 지나간다."""
+    wire = _Wire(body)
+    task = _call(app, scope, wire)
+    await _until(lambda: any(m["type"] == "http.response.body" for m in wire.sent))
+    assert wire.status() == 200, wire.sent
+    return task, wire
 
 
 async def test_도는_실행에_붙은_구독은_그_뒤_항목을_생기는_대로_받는다() -> None:
@@ -1067,8 +1152,8 @@ async def test_구독이_떠나도_실행은_끝까지_가고_다른_받는_쪽�
 async def test_타임아웃으로_끝난_실행은_실패_항목으로_닫히고_등록부를_떠난다() -> None:
     """모델이 문 앞에서 영영 기다린다. `create_app` 이 받은 타임아웃이 그 호출을 끊어 시작 응답이
     실패 항목(고정 문구)으로 닫힌다(스토리 54). 응답의 흐름은 실행이 등록부를 떠나는 그 자리에서
-    닫히므로 닫힌 것이 그 표지다 — 칸이 돌아오는 것은 티켓 02 가 상한으로 잰다(스토리 55). 앱의
-    수명은 깨지지 않고 닫히고, 트레이스의 결말이 그 시간을 든다."""
+    닫히므로 닫힌 것이 그 표지다 — 칸이 돌아오는 것은 아래 "칸의 반환" 절이 상한으로 잰다(스토리
+    55). 앱의 수명은 깨지지 않고 닫히고, 트레이스의 결말이 그 시간을 든다."""
     model = _gated_model()
     trace = FakeTrace()
     app = _app(model=model, trace=trace, run_timeout_seconds=TIMEOUT)
@@ -1112,6 +1197,462 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
     assert later.status_code == 401
 
 
+# 상한 — 너무 길거나 잦은 요청은 422·429 로 거절된다(ADR 0023, end-user-channel 티켓 02). 셈은
+# 채널이 프로세스 메모리에 든다. 동시 실행과 구독은 열린 채 남은 응답이 칸을 쥐고 있어야 하므로
+# 둘째 구동자로 붙잡고(`_held`), 거절될 요청은 `ASGITransport` 로 민다 — 429 는 응답이 곧 끝난다.
+# 거절되지 않으면 끝나지 않을 요청은 기한 안에서 민다.
+
+CONCURRENT = (429, "too_many_requests", "동시 실행 수의 상한을 넘었다", "5")
+SUBSCRIPTIONS = (429, "too_many_requests", "구독 수의 상한을 넘었다", "5")
+
+
+def _hourly(retry_after: int) -> tuple[int, str, str, str]:
+    return (429, "too_many_requests", "시간당 실행 수의 상한을 넘었다", str(retry_after))
+
+
+def _refusal(response: Response) -> tuple[int, object, object, str | None]:
+    """거절 응답의 상태 코드, 어휘, 문구, `Retry-After`."""
+    body = response.json()
+    return response.status_code, body["code"], body["message"], response.headers.get("Retry-After")
+
+
+def _starting(token: str) -> Scope:
+    return _scope("POST", START, token)
+
+
+def _subscribing(token: str, run_id: str = "run-1") -> Scope:
+    return _scope("GET", _subscribe_path(run_id), token)
+
+
+def _other_site() -> dict[str, str]:
+    """둘째 사이트의 최종 사용자. 상한 표는 기본값이다."""
+    return bearer(_token(key=OTHER_KEY, issuer=OTHER_ISSUER))
+
+
+async def test_요청_글자_수는_코드_포인트로_세고_상한을_넘으면_body_request_의_422다() -> None:
+    """바이트도 UTF-16 단위도 아니다 — BMP 밖 글자도 한 글자다(명세 "상한"). 422 가 429 보다
+    먼저이고 셈에 들지 않으며 core 에 닿지 않는다. 시간당 상한을 둘로 둔 사이트에서 넘친 요청 뒤에도
+    둘째 시작이 서고, 시간당 상한이 찬 뒤에 넘친 요청은 여전히 422 다."""
+    limits = SiteLimits(request_chars=3, hourly_runs_per_principal=2)
+    plugins = FakePlugins()
+
+    async with _serving(_app(plugins=plugins, sites=_site(limits=limits))) as client:
+        fits = await client.post(START, json=_start("echo", "가😀b"), headers=_as())
+        calls = plugins.calls
+        over = await client.post(START, json=_start("echo", "가😀bc"), headers=_as())
+        untouched = plugins.calls == calls
+        second = await client.post(START, json=_start("echo", "abc"), headers=_as())
+        exhausted = await client.post(START, json=_start("echo", "가😀bc"), headers=_as())
+
+    assert fits.status_code == second.status_code == 200
+    assert over.status_code == exhausted.status_code == 422
+    assert [v["field"] for v in over.json()["violations"]] == ["body.request"]
+    assert untouched
+
+
+async def test_적지_않은_요청_글자_수의_상한은_기본값_20000자다() -> None:
+    """01 이 계약의 422 설명에 글자로 적은 값이 채널의 상수 하나에서 온다(티켓 02)."""
+    edge = _start("echo", "a" * DEFAULT_REQUEST_CHARS)
+    over = _start("echo", "a" * (DEFAULT_REQUEST_CHARS + 1))
+
+    async with _serving(_app()) as client:
+        fits = await client.post(START, json=edge, headers=_as())
+        refused = await client.post(START, json=over, headers=_as())
+
+    assert DEFAULT_REQUEST_CHARS == 20_000
+    assert fits.status_code == 200
+    assert refused.status_code == 422
+
+
+async def test_주체별_동시_실행은_둘이고_셋째는_core_에_닿지_않는_429와_Retry_After_5다() -> None:
+    """실행이 언제 끝날지 알 수 없어 짐작하지 않는다(명세 "상한"). 다른 주체는 그대로 시작한다.
+    걸린 요청은 core 에 닿지 않아 포트도 트레이스도 그대로다 — 목록 밖 에이전트로 보낸 시작도
+    404 보다 429 가 먼저다. 본문의 형식 오류는 429 보다 422 가 먼저다. 서버 기록 한 줄이 사이트의
+    발급자와 상한의 범위를 들고 주체는 들지 않는다(스토리 53)."""
+    model = _gated_model(answers=2)
+    plugins = FakePlugins()
+    trace = FakeTrace()
+    stderr = io.StringIO()
+    app = _app(model=model, plugins=plugins, trace=trace, stderr=stderr)
+    token = _token()
+
+    async with _serving(app) as client:
+        first, _ = await _held(app, _starting(token), _start("asking"))
+        second, _ = await _held(app, _starting(token), _start("asking"))
+        before = (plugins.calls, list(trace.events))
+        third = await client.post(START, json=_start("echo"), headers=_as())
+        outside = await client.post(START, json=_start("secret"), headers=_as())
+        malformed = await client.post(START, json={**_start("echo"), "model": "x"}, headers=_as())
+        after = (plugins.calls, list(trace.events))
+        other = await client.post(START, json=_start("echo"), headers=_as("bob"))
+        model.gate.set()
+        async with asyncio.timeout(5):
+            await first
+            await second
+
+    assert _refusal(third) == _refusal(outside) == CONCURRENT
+    assert malformed.status_code == 422
+    assert after == before
+    assert other.status_code == 200
+    lines = [line for line in stderr.getvalue().splitlines() if "status=429" in line]
+    assert len(lines) == 2
+    for line in lines:
+        assert f"LimitExceeded: 사이트 {ISSUER}" in line
+        assert "주체별 동시 실행 수 상한 2" in line
+        assert "alice" not in line
+
+
+async def test_결정도_동시_실행의_칸을_차지하고_남의_실행에도_404보다_429가_먼저다() -> None:
+    """멈춰 둔 실행을 한꺼번에 승인해 상한을 넘기지 못한다(ADR 0023). 결정 하나와 시작 하나가
+    칸 둘을 채운다. 거절된 결정은 core 에 닿지 않아 쓰이지 않는다. 남의 실행에 낸 결정이 드러내는
+    것은 요청하는 쪽 자신의 셈이라 노출이 아니다(명세 "상한"). 형식이 틀린 결정은 429 보다 422 가
+    먼저다."""
+    gate = asyncio.Event()
+    model = _gated_model()
+    trace = FakeTrace()
+    for run_id in ("held-1", "held-2"):
+        _write(trace, run_id, _started(run_id, agent="gated"), _paused(run_id))
+    _write(trace, "bobs", _started("bobs", BOB, "gated"), _paused("bobs"))
+    app = _app(model=model, trace=trace, tools=_gated_tools(gate))
+    token = _token()
+
+    async with _serving(app) as client:
+        deciding, _ = await _held(app, _scope("POST", _decide_path("held-1"), token), APPROVE)
+        starting, _ = await _held(app, _starting(token), _start("asking"))
+        before = list(trace.events)
+        decision = await client.post(_decide_path("held-2"), json=APPROVE, headers=_as())
+        foreign = await client.post(_decide_path("bobs"), json=APPROVE, headers=_as())
+        start = await client.post(START, json=_start("echo"), headers=_as())
+        malformed = await client.post(
+            _decide_path("held-2"), json={"decision": "approve"}, headers=_as()
+        )
+        after = list(trace.events)
+        gate.set()
+        model.gate.set()
+        async with asyncio.timeout(5):
+            await deciding
+            await starting
+
+    assert _refusal(decision) == _refusal(foreign) == _refusal(start) == CONCURRENT
+    assert malformed.status_code == 422
+    assert after == before
+
+
+async def test_사이트별_동시_실행은_그_사이트의_주체를_합쳐_세고_다른_사이트는_따로_센다() -> None:
+    """로그인하지 않은 최종 사용자에게 매번 새 `sub` 를 주는 연동에서도 비용이 묶인다(ADR 0023).
+    기본값 20 을 사이트의 상한 표(`SiteLimits`)로 6 까지 낮춰 잰다 — 주체 셋이 각자 둘을 채우면
+    넷째 주체의 첫 시작이 걸린다. 사이트 파일에서 그 표로 옮기는 것은 `tests/test_main.py` 가
+    잰다."""
+    model = _gated_model(answers=6)
+    app = _app(model=model, sites=_site(limits=SiteLimits(concurrent_runs_per_site=6)))
+    held: list[asyncio.Task[None]] = []
+
+    async with _serving(app) as client:
+        for subject in ("alice", "bob", "carol"):
+            for _ in range(2):
+                task, _ = await _held(app, _starting(_token(subject)), _start("asking"))
+                held.append(task)
+        dave = await client.post(START, json=_start("echo"), headers=_as("dave"))
+        other = await client.post(START, json=_start("echo"), headers=_other_site())
+        model.gate.set()
+        async with asyncio.timeout(5):
+            for task in held:
+                await task
+
+    assert _refusal(dave) == CONCURRENT
+    assert other.status_code == 200
+
+
+async def test_전역_동시_실행은_모든_사이트를_합쳐_세고_운영자_채널은_세지도_걸리지도_않는다() -> (
+    None
+):
+    """기계 하나의 몫이라 `serve` 인자이고 `create_app` 이 받는다(스토리 45). 사이트 둘이 하나씩
+    채우면 셋째는 어느 사이트의 누구든 걸린다. 운영자 채널의 실행은 칸을 차지하지 않고, 칸이 찬
+    뒤에도 운영자 채널은 선다(ADR 0023)."""
+    model = _gated_model(answers=3)
+    app = _app(model=model, end_user_concurrent_runs=2)
+
+    async with _serving(app) as client:
+        operating, _ = await _held(app, _scope("POST", "/runs", CHANNEL_TOKEN), _start("asking"))
+        mine, _ = await _held(app, _starting(_token()), _start("asking"))
+        theirs, _ = await _held(
+            app, _starting(_token(key=OTHER_KEY, issuer=OTHER_ISSUER)), _start("asking")
+        )
+        bob = await client.post(START, json=_start("echo"), headers=_as("bob"))
+        operator = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        model.gate.set()
+        async with asyncio.timeout(5):
+            for task in (operating, mine, theirs):
+                await task
+
+    assert _refusal(bob) == CONCURRENT
+    assert operator.status_code == 200
+
+
+async def test_주체별_시간당_실행은_미끄러지는_창이고_Retry_After_는_남은_초다() -> None:
+    """최근 3,600초 안의 시작 시각을 센다(명세 "상한"). 가장 오래된 시각이 창을 나가는 초를 올림해
+    싣고(1,800.5초는 1,801), 그 시각이 되면 창 밖이라 다시 받는다. 시계는 토큰의 시간 클레임을 세는
+    그것이라 토큰도 그때그때 새로 서명한다."""
+    clock = StepClock()
+    app = _app(clock=clock, sites=_site(limits=SiteLimits(hourly_runs_per_principal=2)))
+    statuses: list[int] = []
+    refusals: list[tuple[int, object, object, str | None]] = []
+
+    async with _serving(app) as client:
+        for seconds in (0, 600, 1799.5, 3599, 3600, 3600):
+            clock.at = T0 + timedelta(seconds=seconds)
+            headers = bearer(_token(at=clock.at))
+            response = await client.post(START, json=_start("echo"), headers=headers)
+            statuses.append(response.status_code)
+            if response.status_code == 429:
+                refusals.append(_refusal(response))
+
+    assert statuses == [200, 200, 429, 429, 200, 429]
+    assert refusals == [_hourly(1801), _hourly(1), _hourly(600)]
+
+
+async def test_사이트별_시간당_실행은_그_사이트의_주체를_합쳐_세고_결정도_센다() -> None:
+    """시작과 결정 모두 모델을 돌리는 요청이다(명세 "상한"). 한 사람의 시작과 결정, 다른 사람의
+    시작이 셋을 채우면 셋째 사람이 걸린다. 다른 사이트는 따로 센다."""
+    app = _app(sites=_site(limits=SiteLimits(hourly_runs_per_site=3)))
+
+    async with _serving(app) as client:
+        run_id = await _paused_run(client)
+        decided = await client.post(_decide_path(run_id), json=APPROVE, headers=_as())
+        bob = await client.post(START, json=_start("echo"), headers=_as("bob"))
+        carol = await client.post(START, json=_start("echo"), headers=_as("carol"))
+        other = await client.post(START, json=_start("echo"), headers=_other_site())
+
+    assert decided.status_code == bob.status_code == other.status_code == 200
+    assert _refusal(carol) == _hourly(3600)
+
+
+async def test_적지_않은_주체별_시간당_실행의_상한은_기본값_60이다() -> None:
+    async with _serving(_app()) as client:
+        statuses = [
+            (await client.post(START, json=_start("echo"), headers=_as())).status_code
+            for _ in range(61)
+        ]
+
+    assert statuses == [200] * 60 + [429]
+
+
+async def test_주체별_구독은_넷까지이고_시작_응답은_세지_않으며_하나가_떠나면_다시_붙는다() -> None:
+    """구독 수는 열린 구독 연결(`GET`)의 수다. 시작·결정 응답의 연결은 동시 실행이 센다(명세
+    "등록부와 구독"). 다섯째는 429 이고 남의 실행에 낸 구독도 404 보다 429 가 먼저다. 형식이 틀린
+    `Last-Event-ID` 는 429 보다 422 가 먼저다. 걸린 구독은 트레이스를 읽지 않는다. 하나가 떠나면 그
+    자리가 돌아온다."""
+    model = _gated_model()
+    trace = FakeTrace()
+    _write(trace, "bobs", _started("bobs", BOB), _finished("bobs"))
+    app = _app(model=model, trace=trace)
+    token = _token()
+
+    async with _serving(app) as client:
+        start, _ = await _held(app, _starting(token), _start("asking"))
+        subscribed = [
+            await _held(app, _subscribing(token))
+            for _ in range(DEFAULT_SUBSCRIPTIONS_PER_PRINCIPAL)
+        ]
+        reads = list(trace.reads)
+        async with asyncio.timeout(5):
+            fifth = await _subscribe(client, "run-1")
+            foreign = await _subscribe(client, "bobs")
+            malformed = await _subscribe(client, "run-1", "abc")
+        untouched = trace.reads == reads
+        leaving_task, leaving = subscribed[0]
+        leaving.leave()
+        async with asyncio.timeout(5):
+            await leaving_task
+        again, _ = await _held(app, _subscribing(token))
+        model.gate.set()
+        async with asyncio.timeout(5):
+            for task in (start, again, *(task for task, _ in subscribed[1:])):
+                await task
+
+    assert DEFAULT_SUBSCRIPTIONS_PER_PRINCIPAL == 4
+    assert _refusal(fifth) == _refusal(foreign) == SUBSCRIPTIONS
+    assert malformed.status_code == 422
+    assert untouched
+
+
+async def test_응답이_막힌_채_떠난_구독도_구독_수를_돌려준다() -> None:
+    """받는 쪽이 막혀 응답의 태스크들이 멈추면 구독의 제너레이터는 yield 에 멈춘 채 버려진다. 그래도
+    떠난 뒤 구독 수가 돌아와 다음 구독이 선다(티켓 01 이 넘긴 메모). 구독 수를 하나로 낮춰 잰다.
+    구독 수를 응답의 제너레이터의 `finally` 에서 줄이는 모양은 여기서 빨갛다(변이 표). 끝난 실행의
+    프레임이 응답의 태스크들이 쥘 수 있는 것보다 많아야 제너레이터가 yield 에 멈춘다. 가장 바깥
+    미들웨어는 막힌 send 에 남으므로 다음 구독 뒤에 막힘을 풀어 그 호출을 끝낸다. 그 호출이 어떻게
+    끝나는지는 재지 않는다 — 이 구동자의 send 는 떠난 뒤에도 막힘을 풀 때까지 막혀 있어, 풀린 바깥
+    미들웨어가 이미 닫힌 안쪽 흐름에 닿아 예외로 끝난다."""
+    trace = FakeTrace()
+    notes = [
+        ToolCalled(run_id=RunId("long"), ts=T0, tool=f"note-{index}", ok=True)
+        for index in range(20)
+    ]
+    _write(trace, "long", _started("long"), *notes, _finished("long"))
+    app = _app(trace=trace, sites=_site(limits=SiteLimits(subscriptions_per_principal=1)))
+    token = _token()
+
+    async with _serving(app) as client:
+        stuck, stuck_wire = await _held(app, _subscribing(token, "long"))
+        stuck_wire.hold()
+        await asyncio.sleep(0.05)
+        stuck_wire.leave()
+        await asyncio.sleep(0.05)
+        async with asyncio.timeout(5):
+            again = await _subscribe(client, "long")
+        stuck_wire.release()
+        async with asyncio.timeout(5):
+            await asyncio.wait({stuck})
+        stuck.exception()
+
+    assert again.status_code == 200
+    assert _types(_frames(again.text))[-1] == (21, "finished")
+
+
+# 칸의 반환 — 동시 실행의 칸은 실행의 태스크가 끝나는 한 자리에서 꼭 한 번 돌아온다(스토리 55, 명세
+# "상한"). 주체별 동시 실행을 하나로 낮춰, 앞의 것이 칸을 돌려주지 않았으면 다음 요청이 429 가 되게
+# 한다.
+
+ONE_AT_A_TIME = SiteLimits(concurrent_runs_per_principal=1)
+
+
+async def test_실행_전_실패와_결말은_칸을_돌려줘_다음_요청이_선다() -> None:
+    """차례대로 목록 밖 에이전트(404), 꺼진 에이전트(409), 구성 오류(500), 일시정지, 결정의 실행 전
+    실패(지나간 자리 409, 남의 실행 404), 실패, 끝남이다. 어느 것도 다음 요청을 막지 않는다."""
+    plugins = FakePlugins()
+    plugins.disabled = frozenset({PluginKey(kind=PluginKind.AGENT, name=PluginName("working"))})
+    trace = FakeTrace()
+    _write(trace, "bobs", _started("bobs", BOB, "gated"), _paused("bobs"))
+    app = _app(plugins=plugins, trace=trace, sites=_site(limits=ONE_AT_A_TIME))
+    stale = {"decision": "approve", "pause_index": 0}
+
+    async with _serving(app) as client:
+        refused = [
+            await client.post(START, json=_start(agent), headers=_as())
+            for agent in ("secret", "working", "unloadable")
+        ]
+        run_id = await _paused_run(client)
+        passed = await client.post(_decide_path(run_id), json=stale, headers=_as())
+        foreign = await client.post(_decide_path("bobs"), json=APPROVE, headers=_as())
+        failed = await client.post(START, json=_start("silent"), headers=_as())
+        finished = await client.post(START, json=_start("echo"), headers=_as())
+        last = await client.post(START, json=_start("echo"), headers=_as())
+
+    assert [response.status_code for response in refused] == [404, 409, 500]
+    assert (passed.status_code, foreign.status_code) == (409, 404)
+    assert _types(_frames(failed.text))[-1][1] == "failed"
+    assert finished.status_code == last.status_code == 200
+
+
+async def test_타임아웃으로_끝난_실행도_칸을_돌려준다() -> None:
+    """걸린 실행이 칸을 다시 시작할 때까지 붙잡던 열린 문제가 타임아웃으로 닫혔다(티켓 03). 모델이
+    문 앞에서 영영 기다리고, 기한이 그 실행을 끊은 뒤 다음 시작이 선다."""
+    model = _gated_model()
+    app = _app(model=model, sites=_site(limits=ONE_AT_A_TIME), run_timeout_seconds=TIMEOUT)
+
+    async with _serving(app) as client, asyncio.timeout(5):
+        timed_out = await client.post(START, json=_start("asking"), headers=_as())
+        admitted = await client.post(START, json=_start("echo"), headers=_as())
+
+    assert _types(_frames(timed_out.text)) == [(0, "started"), (1, "failed")]
+    assert admitted.status_code == 200
+    assert not model.gate.is_set()
+
+
+async def test_앱이_멈추며_취소한_실행도_칸을_돌려준다() -> None:
+    """앱의 수명이 닫히면 남은 실행은 기다리지 않고 취소된다(ADR 0014). 그 취소도 칸을 돌려주는
+    자리를 지난다. 같은 앱의 수명을 다시 열어 잰다 — 셈은 앱이 들고 있다."""
+    model = _gated_model()
+    app = _app(model=model, sites=_site(limits=ONE_AT_A_TIME))
+
+    async with _serving(app) as client:
+        held, _ = await _held(app, _starting(_token()), _start("asking"))
+        refused = await client.post(START, json=_start("echo"), headers=_as())
+    async with asyncio.timeout(5):
+        await held
+    async with _serving(app) as client:
+        admitted = await client.post(START, json=_start("echo"), headers=_as())
+
+    assert _refusal(refused) == CONCURRENT
+    assert admitted.status_code == 200
+    assert not model.gate.is_set()
+
+
+async def test_시작_응답의_연결이_끊겨도_칸은_실행이_끝날_때까지_차_있다() -> None:
+    """끊김은 전송의 사건이지 사람의 결정이 아니다 — 실행은 계속 돌고 칸도 그대로다(ADR
+    0014). 실행이 끝나면 돌아온다. 끝을 보는 것은 같은 실행에 붙은 구독이고, 그 구독이 닫힌 때는
+    칸이 이미 돌아온 뒤다 — 칸을 돌려주는 것과 흐름을 닫는 것 사이에 await 가 없다."""
+    model = _gated_model()
+    app = _app(model=model, sites=_site(limits=ONE_AT_A_TIME))
+    token = _token()
+
+    async with _serving(app) as client:
+        start, starting = await _held(app, _starting(token), _start("asking"))
+        watch, watching = await _held(app, _subscribing(token))
+        starting.leave()
+        async with asyncio.timeout(5):
+            await start
+        refused = await client.post(START, json=_start("echo"), headers=_as())
+        model.gate.set()
+        async with asyncio.timeout(5):
+            await watch
+        admitted = await client.post(START, json=_start("echo"), headers=_as())
+
+    assert _types(starting.frames()) == [(0, "started")]
+    assert _types(watching.frames()) == [(0, "started"), (2, "finished")]
+    assert _refusal(refused) == CONCURRENT
+    assert admitted.status_code == 200
+
+
+# 백로그 — 느린 수신자 하나가 메모리를 끝없이 쌓지 않는다(스토리 56, 명세 "백로그")
+
+
+async def test_뒤처진_연결은_백로그_상한에서_그_연결만_닫히고_실행과_구독은_끝까지_간다() -> None:
+    """연결마다 쌓이는 프레임은 1,000 까지이고 넘으면 그 연결의 흐름을 닫는다. 실행은 받는 쪽을
+    기다리지 않고 계속 간다(ADR 0014). 버려도 잃는 것이 없다 — 그 이벤트는 트레이스에 있고 최종
+    사용자는 구독으로 다시 붙는다. 시작 응답을 막아 둔 채 실행이 넘치게 내고 모델 앞에 다시 서면,
+    풀어 준 시작 응답은 실행이 끝나기 전에 결말 없이 끝난다 — 넘친 이벤트만 버리고 흐름을 남기는
+    구현이면 끝나지 않고 결말까지 받는다. 막히지 않은 구독은 결말까지 받는다. 막힌 응답이 받은 것은
+    상한만큼과 응답의 태스크들이 이미 쥐고 있던 몇이다. 잘린 쪽은 마지막으로 받은 `id` 를
+    `Last-Event-ID` 로 보내 다시 붙고, 둘을 이으면 빠짐도 중복도 없다."""
+    model = _gated_model(answers=2)
+    trace = FakeTrace()
+    app = _app(model=model, trace=trace)
+    token = _token()
+
+    async with _lifespan(app):
+        start, starting = await _held(app, _starting(token), _start("chatty"))
+        starting.hold()
+        watch, watching = await _held(app, _subscribing(token))
+        await _until(model.waiting.is_set)
+        model.waiting.clear()
+        model.gate.set()
+        model.gate.clear()
+        async with asyncio.timeout(10):
+            await _until(model.waiting.is_set, within=10)
+            starting.release()
+            await start
+        cut_while_running = trace.events[-1].type != "run_finished"
+        last_seen = str(starting.frames()[-1][0])
+        resuming = _scope("GET", _subscribe_path("run-1"), token, last_seen)
+        resume, resumed = await _held(app, resuming)
+        model.gate.set()
+        async with asyncio.timeout(5):
+            await watch
+            await resume
+
+    assert cut_while_running
+    assert starting.frames() + resumed.frames() == watching.frames()
+    assert trace.events[-1].type == "run_finished"
+    assert len(trace.events) == BURST + 4
+    assert len(watching.frames()) == BURST + 2
+    assert _types(watching.frames())[-1] == (BURST + 3, "finished")
+    cut = _types(starting.frames())
+    assert all(kind != "finished" for _, kind in cut)
+    assert BACKLOG_FRAMES < len(cut) <= BACKLOG_FRAMES + 10
+
+
 # CORS — 허용 출처의 페이지가 성공 응답도 에러 봉투도 읽는다(ADR 0023, end-user-channel 티켓 04).
 # 미들웨어의 자리와 범위(preflight, 허용 밖 출처, 접두사 밖, 사이트 둘, 예기치 않은 500)는
 # `tests/test_server.py` 의 CORS 절이 잰다. 여기서는 진짜 라우트가 낸 상태 코드마다 헤더가 붙는지
@@ -1119,11 +1660,16 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
 
 
 async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_헤더_셋을_받는다() -> None:
-    """페이지 안 위젯이 에러 봉투를 읽는다(스토리 24). 401 은 인증이, 404·409·422·500 은 표가 낸다 —
-    CORS 가 인증과 라우터를 감싸므로 어느 것에나 붙는다. 노출 헤더가 추적 식별자를 들어 위젯이 그
-    값을 운영자에게 건넬 수 있다."""
+    """페이지 안 위젯이 에러 봉투를 읽는다(스토리 24). 401 은 인증이, 404·409·422·429·500 은 표가
+    낸다 — CORS 가 인증과 라우터를 감싸므로 어느 것에나 붙는다. 노출 헤더가 추적 식별자와
+    `Retry-After` 를 들어 위젯이 다시 보낼 때를 읽고 식별자를 운영자에게 건넬 수 있다(스토리 34).
+    429 는 시간당 상한을 하나로 낮춘 앱에서 낸다."""
     origin = {"Origin": ORIGIN}
+    hourly_once = _site(limits=SiteLimits(hourly_runs_per_principal=1))
 
+    async with _serving(_app(sites=hourly_once)) as limited:
+        await limited.post(START, json=_start("echo"), headers=_as() | origin)
+        busy = await limited.post(START, json=_start("echo"), headers=_as() | origin)
     async with _serving(_app()) as client:
         ok = await client.post(START, json=_start("echo"), headers=_as() | origin)
         refused = await client.post(START, json=_start("echo"), headers=origin)
@@ -1139,12 +1685,21 @@ async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_�
         )
         broken = await client.post(START, json=_start("unloadable"), headers=_as() | origin)
 
-    responses = {200: ok, 401: refused, 404: missing, 409: stale, 422: invalid, 500: broken}
+    responses = {
+        200: ok,
+        401: refused,
+        404: missing,
+        409: stale,
+        422: invalid,
+        429: busy,
+        500: broken,
+    }
     for status, response in responses.items():
         assert response.status_code == status
         assert response.headers["access-control-allow-origin"] == ORIGIN, status
         assert response.headers["vary"] == "Origin", status
         assert response.headers["access-control-expose-headers"] == "Retry-After, X-Request-Id"
+    assert "retry-after" in busy.headers
 
 
 # 계약 — 새 접두사의 경로 셋과 항목 유니온

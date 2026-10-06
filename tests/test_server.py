@@ -73,7 +73,15 @@ from agent_os.core.ports import (
     order_key,
 )
 from agent_os.http.auth import PUBLIC_PATHS
-from agent_os.http.errors import INTERNAL_MESSAGE, REQUEST_ID_HEADER, UNAUTHORIZED_MESSAGE
+from agent_os.http.errors import (
+    INTERNAL_MESSAGE,
+    REQUEST_ID_HEADER,
+    UNAUTHORIZED_MESSAGE,
+    Limit,
+    LimitExceeded,
+    Surface,
+    failure_for,
+)
 from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -416,6 +424,7 @@ def _admin_app(
         channel_token=channel_token,
         sites=sites or Sites(),
         run_timeout_seconds=None,
+        end_user_concurrent_runs=None,
         stderr=stderr,
     )
 
@@ -1384,14 +1393,55 @@ async def test_429_는_계열로_접히지_않고_too_many_requests_다(
     app: FastAPI, client: AsyncClient
 ) -> None:
     """어휘 테스트는 enum 의 집합만 본다. 상태 코드→어휘 표에 429 가 없으면 4xx 계열로 접혀
-    `invalid_request` 가 되고 그 테스트는 초록이다(end-user-channel 명세 검토). 429 를 내는 자리는
-    상한 티켓이 들이므로 여기서는 표만 잰다."""
+    `invalid_request` 가 되고 그 테스트는 초록이다(end-user-channel 명세 검토). 진짜 라우트가 내는
+    429 의 어휘는 `tests/channel/http/test_end_user.py` 의 상한 절이 다시 잰다."""
     _route_that_raises(app, "/busy", StarletteHTTPException(status_code=429, detail="바쁘다"))
 
     response = await client.get("/busy", headers=BEARER)
 
     assert response.status_code == 429
     assert response.json()["code"] == "too_many_requests"
+
+
+async def test_상한_초과는_429와_Retry_After_이고_범위는_서버_기록에만_있다(
+    app: FastAPI, client: AsyncClient, stderr: io.StringIO
+) -> None:
+    """예외 타입은 공용 층이 소유하고 채널이 던진다(end-user-channel 티켓 02). 라우트가 상태 코드를
+    정하지 않고 표의 갈래 하나가 429 와 헤더로 옮긴다. 봉투는 어느 상한인지만 말하고 주체별인지
+    사이트별인지 전역인지는 말하지 않는다 — 사이트 전체가 바쁘다는 것을 한 사용자에게 말할 이유가
+    없다. 운영자는 서버 기록에서 어느 사이트가 어느 범위의 상한에 걸렸는지 본다(스토리 53)."""
+    detail = "사이트 https://shop.example — 사이트별 시간당 실행 수 상한 1000"
+    exceeded = LimitExceeded(detail, limit=Limit.HOURLY_RUNS, retry_after_seconds=42)
+    _route_that_raises(app, "/busy", exceeded)
+
+    response = await client.get("/busy", headers=BEARER)
+
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "42"
+    assert response.json()["code"] == "too_many_requests"
+    assert response.json()["message"] == "시간당 실행 수의 상한을 넘었다"
+    assert "사이트별" not in response.text
+    assert "shop.example" not in response.text
+    assert f"status=429 LimitExceeded: {detail}" in stderr.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("limit", "message"),
+    [
+        (Limit.CONCURRENT_RUNS, "동시 실행 수의 상한을 넘었다"),
+        (Limit.HOURLY_RUNS, "시간당 실행 수의 상한을 넘었다"),
+        (Limit.SUBSCRIPTIONS, "구독 수의 상한을 넘었다"),
+    ],
+)
+def test_상한의_문구는_세_가지이고_범위를_들지_않는다(limit: Limit, message: str) -> None:
+    """어느 상한인지는 셋으로 갈린다. 운영자 면이든 최종 사용자 면이든 같은 429 다."""
+    exceeded = LimitExceeded("기록", limit=limit, retry_after_seconds=5)
+
+    for surface in Surface:
+        failure = failure_for(exceeded, surface)
+
+        assert (failure.status, failure.message) == (429, message)
+        assert failure.headers == {"Retry-After": "5"}
 
 
 def test_관리_라우터가_도구_포트를_받지_않는다() -> None:

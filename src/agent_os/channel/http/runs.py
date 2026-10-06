@@ -21,12 +21,23 @@
 실황은 결정부터이고 그 앞은 트레이스에만 있다). 구독이 트레이스 읽기와
 등록부 보기를 await 없이 한 걸음에 하면 빠짐도 중복도 없는 것이 이것 하나에 기댄다.
 
-**실행은 받는 쪽을 기다리지 않는다.** 실행과 받는 쪽 사이는 크기 제한이 없는 흐름이고 실행은
-기다리지 않고 넣는다. 받는 쪽이 느리면 쌓이고 떠나면 버린다. 버려도 잃는 것이 없다 — 흐름에 넣는
-이벤트는 core 가 이미 트레이스에 쓴 것이다. 상한을 두지 않는 이유는 쌓이는 양이 그 실행이 낸
-이벤트만큼이고 실행이 끝나거나 받는 쪽이 떠나면 사라지기 때문이다. 여러 실행이 겹친 합은 범위 밖에
-둔 동시 실행 상한의 문제다(명세 Further Notes). 크기가 제한된 흐름에 기다리며 넣으면 느린 수신자
-하나가 실행을 세운다.
+**실행은 받는 쪽을 기다리지 않는다.** 실행과 받는 쪽 사이는 연결마다 1,000 프레임까지 쌓이는
+흐름이고(`BACKLOG_FRAMES`, ADR 0023) 실행은 기다리지 않고 넣는다. 받는 쪽이 떠났거나 그만큼
+뒤처졌으면 그 흐름만 닫고 버린다. 받는 쪽은 쌓인 것을 다 받은 뒤 결말 없이 끝난 스트림을 보고,
+최종 사용자는 구독으로 다시 붙고 운영자는 트레이스로 이어 본다. 버려도 잃는 것이 없다 — 흐름에 넣는
+이벤트는 core 가 이미 트레이스에 쓴 것이다. 크기가 제한된 흐름에 기다리며 넣으면 느린 수신자 하나가
+실행을 세운다. 바이트는 세지 않는다 — 최종 사용자 항목은 프롬프트와 도구 결과를 싣지 않아 작고,
+운영자 채널의 큰 프레임(첫 턴의 프롬프트)은 실행마다 하나라 1,000 개가 쌓이는 자리가 아니다
+(end-user-channel 명세 "백로그"). 운영자 채널(`/runs`)도 같은 값이다.
+
+**최종 사용자 경로의 실행은 동시 실행의 칸 하나를 차지한다**(`limits` 모듈). 칸의 입장과 반환은 이
+등록부 한 곳이 소유한다. 입장은 실행을 수명에 넘기는 자리(`Runs.start`)에서 상한을 보고 칸을
+차지하는 것이고 await 없이 한 걸음이다 — 동시 요청 둘이 마지막 칸을 함께 차지하지 못한다. 반환은
+실행의 태스크가 끝나는 한 자리에서 꼭 한 번이다. 첫 이벤트 전의 실행 전 실패(404·409·500 으로 답하는
+것 전부), 결말(끝남·실패·일시정지), 타임아웃, 앱 종료의 취소가 모두 그 자리를 지난다. 시작·결정
+응답의 연결이 끊긴 것은 반환이 아니다 — 실행은 계속 돈다. 칸을 돌려주는 것과 실행이 끝나 흐름을
+닫는 것 사이에 await 가 없으므로, 그렇게 닫힌 스트림의 끝을 본 받는 쪽이 곧바로 보낸 다음 요청은
+그 칸을 쓸 수 있다. 백로그로 잘린 흐름은 실행이 아직 돌고 있어 칸을 쥔 채 끝난다.
 
 **앱이 멈추면 실행을 기다리지 않고 취소한다.** 그 실행은 결말 없음이다. core 의 트레이스 쓰기가
 동기라 취소가 반쪽 줄을 남기지 않는다. 실행 하나가 통째로 한 태스크에서 돌므로 도구 연결도 그
@@ -35,7 +46,6 @@
 
 from __future__ import annotations
 
-import math
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -45,7 +55,16 @@ import anyio
 from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
+from agent_os.channel.http.limits import RunQuota, Seat
+from agent_os.core.ports import Clock
+from agent_os.http.sites import EndUser
 from agent_os.sdk import Event, RunId
+
+# 받는 쪽 하나의 흐름에 쌓일 수 있는 이벤트의 수(모듈 독스트링). 넘으면 그 흐름만 닫는다. 값은
+# 어림이다 — 실행 하나가 내는 이벤트는 루프 상한(10턴)에 턴마다 도구 호출 수를 곱한 정도라 보통
+# 수십이고, 받는 쪽이 이만큼 뒤처진 것은 떠난 것과 같다. 다시 볼 조건은 메모리가 실제로 문제가 될
+# 때다(end-user-channel 명세 "백로그").
+BACKLOG_FRAMES = 1_000
 
 
 @dataclass(frozen=True)
@@ -115,16 +134,17 @@ class _Live:
 
     def join(self) -> MemoryObjectReceiveStream[Indexed]:
         """받는 쪽 하나를 더하고 그 수신 흐름을 돌려준다. 그 뒤에 넣는 것부터 받는다."""
-        send, receive = anyio.create_memory_object_stream[Indexed](math.inf)
+        send, receive = anyio.create_memory_object_stream[Indexed](BACKLOG_FRAMES)
         self._sends.append(send)
         return receive
 
     def offer(self, item: Indexed) -> None:
-        """기다리지 않고 모든 받는 쪽에 넣는다. 떠난 쪽은 버린다 — 그 이벤트는 트레이스에 있다."""
+        """기다리지 않고 모든 받는 쪽에 넣는다. 떠난 쪽과 백로그가 찬 쪽은 그 흐름을 닫고 버린다 —
+        그 이벤트는 트레이스에 있다. 남은 받는 쪽은 그대로 받는다."""
         for send in tuple(self._sends):
             try:
                 send.send_nowait(item)
-            except anyio.BrokenResourceError:
+            except (anyio.BrokenResourceError, anyio.WouldBlock):
                 self._sends.remove(send)
                 send.close()
 
@@ -144,10 +164,13 @@ class Runs:
     닫힌 스트림과 서버 기록 한 줄로 남는다.
     """
 
-    def __init__(self, *, stderr: TextIO) -> None:
+    def __init__(
+        self, *, stderr: TextIO, clock: Clock, end_user_concurrent_runs: int | None
+    ) -> None:
         self._stderr = stderr
         self._group: TaskGroup | None = None
         self._live: dict[RunId, _Live] = {}
+        self._quota = RunQuota(clock=clock, concurrent_runs=end_user_concurrent_runs)
 
     @asynccontextmanager
     async def lifespan(self, app: object) -> AsyncGenerator[None]:
@@ -161,7 +184,12 @@ class Runs:
                 group.cancel_scope.cancel()
 
     async def start(
-        self, events: AsyncIterator[Event], *, request_id: str, first_index: int
+        self,
+        events: AsyncIterator[Event],
+        *,
+        request_id: str,
+        first_index: int,
+        end_user: EndUser | None,
     ) -> RunStream:
         """실행 하나를 수명에 넘기고 첫 이벤트를 기다린다. 첫 이벤트 전의 예외는 여기서 다시 던진다.
 
@@ -169,14 +197,19 @@ class Runs:
         열리지 않았으면 실행을 받지 않는다. 받으면 그 실행을 소유할 것이 없어 요청의 태스크에
         묶이고, 그것이 이 모듈이 막으려는 모양이다. 추적 식별자는 실행이 도중에 멈췄을 때 그 기록을
         클라이언트가 받은 `X-Request-Id` 와 잇는다. 응답의 연결은 실황의 첫 받는 쪽이다.
+
+        `end_user` 는 최종 사용자 경로의 실행이면 그 신원이고 운영자 채널은 없음이다. 있으면 실행을
+        넘기기 전에 상한을 보고 칸을 차지한다 — 걸리면 `LimitExceeded` 이고 실행은 시작되지 않아
+        core 에 닿지 않는다. 검사와 차지와 넘김 사이에 await 가 없다.
         """
         group = self._group
         if group is None:
             raise RuntimeError("앱의 수명이 열리지 않아 실행을 받을 수 없다")
+        seat = None if end_user is None else self._quota.take(end_user)
         live = _Live()
         receive = live.join()
         failure = _PreRunFailure()
-        group.start_soon(self._drive, events, live, failure, request_id, first_index)
+        group.start_soon(self._drive, events, live, failure, request_id, first_index, seat)
         return await RunStream.opened(receive, failure)
 
     def join(self, run_id: RunId) -> MemoryObjectReceiveStream[Indexed] | None:
@@ -196,6 +229,7 @@ class Runs:
         failure: _PreRunFailure,
         request_id: str,
         first_index: int,
+        seat: Seat | None,
     ) -> None:
         """실행을 결말까지 몬다. 받는 쪽이 떠나도 멈추지 않는다.
 
@@ -212,6 +246,10 @@ class Runs:
 
         첫 이벤트 뒤의 예외는 core 가 이벤트를 트레이스에 쓰지 못한 것뿐이다. 나머지는 core 가
         `run_failed` 로 바꾼다. 그 실행은 결말 없음이고 받는 쪽은 결말 없이 닫힌 스트림을 본다.
+
+        최종 사용자 경로의 칸은 바깥 `finally` 에서 돌려준다. 실행 전 실패도 결말도 앱 종료의
+        취소도 이 태스크가 끝나는 자리라 꼭 한 번이다. 흐름을 닫는 것과 await 없이 한 걸음이다
+        (모듈 독스트링). 취소된 태스크의 `finally` 라 여기서 await 하면 그 자리에서 다시 취소된다.
         """
         try:
             first = await _take_first(events)
@@ -227,6 +265,8 @@ class Runs:
                 if self._live.get(first.run_id) is live:
                     del self._live[first.run_id]
         finally:
+            if seat is not None:
+                self._quota.give_back(seat)
             live.close()
 
 
