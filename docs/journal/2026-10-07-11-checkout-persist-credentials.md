@@ -42,7 +42,12 @@ PR #158(design-system 티켓 02)이 띄운 작업 칩의 일이다. 주 체크�
 - `ci.yml`을 PyYAML로 읽어 잡마다 체크아웃 단계의 값을 뽑았다. `python`·`web`·`e2e`·`visual`이 `False`이고 `verify`는
   체크아웃이 없다.
 - 검증 명령: ruff 둘, pyright 0 errors, lint-imports 5 kept, pytest 1750 통과, `pnpm -C web verify`(Vitest 312 통과).
-- 실제 실행은 이 PR의 CI다. 세 잡이 자격 증명 없이 초록이면 위 확인이 맞은 것이다.
+- 실제 실행: PR #162의 CI가 `201fef0`에서 `python`·`web`·`e2e`·`visual`·`verify` 모두 초록이다. 세 잡이 자격 증명 없이 끝까지
+  돌았으니 위 확인이 맞았다.
+- **PR 리뷰.** claude-review는 지적 없음이었다. 이 PR은 `ci.yml`을 바꿔 코멘트 0개 가드가 꺼지므로 코멘트를 손으로 봤다.
+  CodeRabbit은 첫 요청이 한도에 걸렸고, 한도가 풀린 뒤 다시 요청해 `49d9630..201fef0`을 리뷰했다. 지적 없음이고, 보안 검토가
+  세 잡이 끈 자격 증명에 기대지 않는다고 적었다. CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 돌리지 않았다. 이 일지
+  줄을 더한 커밋은 CodeRabbit이 시간당 한 번인 리뷰를 다 쓴 뒤라 리뷰되지 않는다(요약 코멘트의 "0 remain").
 
 ## 셀프 리뷰
 
@@ -86,4 +91,4 @@ PR #158(design-system 티켓 02)이 띄운 작업 칩의 일이다. 주 체크�
 
 - `.github/workflows/claude-code-review.yml`의 체크아웃(`actions/checkout@v7`)도 자격 증명을 남긴다. 그 잡은 PR의 코드를
   실행하지 않지만 PR의 글을 읽는 모델이 `Read`로 파일을 읽고 `gh pr comment`로 게시할 수 있다. 그 파일을 바꾸면 리뷰가 자기
-  자신을 건너뛰므로 별도 PR이다(`operations.md` 리뷰 파이프라인). 작업 칩으로 띄웠다.
+  자신을 건너뛰므로 별도 PR이다(`operations.md` 리뷰 파이프라인). 작업 칩으로 띄웠고, 사용자가 별도 세션으로 시작했다.
