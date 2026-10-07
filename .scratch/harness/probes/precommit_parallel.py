@@ -6,9 +6,12 @@
   all    — 일곱을 한꺼번에 띄운다
 명령은 잴 때(`cbb6a6c`)의 `.pre-commit-config.yaml` entry 를 손으로 옮긴 것이고, 지금은
 `tools/run_checks.py` 의 `CHECKS` 와 같다. ruff 둘은 파일을 고쳐서 넣지 않았다. `uv sync` 와
-`pnpm -C web install --frozen-lockfile` 이 된 체크아웃이어야 한다.
+`pnpm -C web install --frozen-lockfile` 이 된 체크아웃이어야 한다. 명령은 러너처럼 `shutil.which`
+로 찾는다. Windows 에서 `pnpm` 은 `pnpm.cmd` 라 경로 없이는 띄우지 못한다. 출력은 명령마다 종료
+코드와 시간이고, 실패한 명령은 출력의 끝 40줄을 덧붙인다(CI 로그에서 까닭을 보려고).
 """
 
+import shutil
 import subprocess
 import sys
 import threading
@@ -27,13 +30,25 @@ COMMANDS: dict[str, list[str]] = {
     "web-verify": ["pnpm", "-C", "web", "verify"],
 }
 
-Results = dict[str, tuple[int, float]]
+Results = dict[str, tuple[int, float, str]]
 
 
 def run(name: str, results: Results) -> None:
     start = time.monotonic()
-    proc = subprocess.run(COMMANDS[name], cwd=ROOT, capture_output=True, check=False)
-    results[name] = (proc.returncode, time.monotonic() - start)
+    command = COMMANDS[name]
+    executable = shutil.which(command[0])
+    if executable is None:
+        results[name] = (127, time.monotonic() - start, f"명령을 찾지 못했다: {command[0]}")
+        return
+    proc = subprocess.run(
+        [executable, *command[1:]],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    tail = "\n".join(proc.stdout.decode(errors="replace").splitlines()[-40:])
+    results[name] = (proc.returncode, time.monotonic() - start, tail)
 
 
 def run_serial(names: list[str], results: Results) -> None:
@@ -66,9 +81,12 @@ def main() -> None:
     for t in threads:
         t.join()
     wall = time.monotonic() - start
-    for name, (rc, sec) in results.items():
+    for name, (rc, sec, _) in results.items():
         print(f"{name:20} rc={rc} {sec:6.1f}s")
     print(f"{'wall':20}      {wall:6.1f}s")
+    for name, (rc, _, tail) in results.items():
+        if rc != 0:
+            print(f"\n--- {name} (rc={rc}) 출력의 끝 ---\n{tail}")
 
 
 if __name__ == "__main__":
