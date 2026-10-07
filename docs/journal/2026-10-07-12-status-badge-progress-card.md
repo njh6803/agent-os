@@ -38,7 +38,7 @@ origin/main(`49d9630`)에서 `feature/03-status-badge-progress-card`를 땄다. 
 
 ## TDD와 변이
 
-스토리 셋(17개)을 컴포넌트보다 먼저 써서 돌렸고, 세 파일 모두 "Failed to import test file"로 빨갰다. 이 빨강은 모듈이 없어서라
+스토리 셋(17개)을 컴포넌트보다 먼저 써서 돌렸고, 세 파일 모두 vitest의 `Failed to import test file`로 빨갰다. 이 빨강은 모듈이 없어서라
 단언 하나하나의 이빨은 재지 않는다. 그래서 구현 뒤에 변이 표 `.scratch/design-system/probes/atoms_mutations.toml`(지금
 33개)을 돌렸다. 스토리 테스트 30개는 단언마다 하나씩(글자, 숨은 아이콘, 쓰임새 토큰의 색, 높이, Tab, `aria-valuenow`·`aria-valuemax`,
 `value`·`max`의 기본값, 이름, 보이는 이름, 막대 비율, 톤, 트랙의 높이와 바탕, 움직임, `as`, elevation 셋, padding, 테두리, 모서리, 320px의
