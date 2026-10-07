@@ -7,7 +7,7 @@
 #   (web-verify 의 스토리 테스트가 쓴다. 없으면 건너뛰지 않고 빨갛다)
 default_install_hook_types: [pre-commit, commit-msg]
 # 훅은 기본으로 커밋 직전에만 돈다. 커밋 메시지 훅만 commit-msg 단계다. 단계를 적지 않은 always_run 훅은
-# commit-msg 단계에서 한 번 더 돌아 pyright·pytest 가 커밋마다 두 번이었다(대기열 118, 일지 2026-10-07-02).
+# commit-msg 단계에서 한 번 더 돌아 pyright·pytest 가 커밋마다 두 번이었다(대기열 118, 일지 2026-10-07-03).
 default_stages: [pre-commit]
 repos:
   - repo: local
