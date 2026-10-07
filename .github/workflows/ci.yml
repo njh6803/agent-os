@@ -2,6 +2,9 @@
 # 잡 넷으로 함께 돌고, 필수 검사는 그 결과를 모으는 verify 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘). 잡을 더하면
 # verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다. e2e 와 사진 비교는 pre-commit 에 없고 CI 에만 있다(ADR 0026).
 # LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
+# 체크아웃하는 잡은 모두 persist-credentials: false 다. 모두 PR 의 코드를 짓고 돌리는데 체크아웃 뒤에 github.com 을 상대로
+# 한 git 명령(push, 인증된 fetch)이 없어서, 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
+# 잡을 더해도 같고, 자격 증명이 필요한 잡이 생기면 그 잡에서만 켜고 까닭을 적는다.
 name: ci
 
 on:
@@ -23,6 +26,8 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -45,6 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -76,6 +83,8 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -113,7 +122,6 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host
     steps:
-      # PR 의 코드를 짓고 돌리는 잡이라 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

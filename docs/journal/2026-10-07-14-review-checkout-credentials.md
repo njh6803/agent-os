@@ -161,5 +161,6 @@ v7의 `includeIf` 배치에서 같은 일이 다시 났다. `persist-credentials
 ## 다음
 
 - 병합 뒤 첫 PR의 claude-review 로그에서 셋을 본다. 체크아웃의 `Removing auth`가 단계 안에서 헤더를 지우는지, 액션의
-  base fetch(`Restoring … from origin/main`)가 지나는지, `ci.yml`만 바꾼 PR이면 가드가 코멘트를 세는지다.
-- PR #162와의 겹침은 위 셀프 리뷰의 마지막 항목대로 나중에 병합되는 쪽이 푼다.
+  base fetch(`Restoring … from origin/main`)가 지나는지, `ci.yml`만 바꾼 PR이면 가드가 코멘트를 세는지다. **봤다(PR #162,
+  셋 다 그렇다. 일지 2026-10-07-11의 "PR #164와의 충돌").**
+- PR #162와의 겹침은 위 셀프 리뷰의 마지막 항목대로 나중에 병합되는 쪽이 푼다. **풀었다(PR #162, 같은 절).**
