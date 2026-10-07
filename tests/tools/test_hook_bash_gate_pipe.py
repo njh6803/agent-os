@@ -33,6 +33,12 @@ def test_검사_러너도_게이트다() -> None:
     assert len(warnings_for("uv run python tools/run_checks.py 2>&1 | tail -3")) == 1
 
 
+def test_형제_번호_대조도_게이트다() -> None:
+    """번호가 겹치면 1로 끝나는 커밋 직전의 판정이다(대기열 115)."""
+    assert is_gate("uv run python tools/sibling_overlap.py")
+    assert len(warnings_for("uv run python tools/sibling_overlap.py | head -5")) == 1
+
+
 def test_게이트마다_바로_읽은_dollar_question_은_훅_러너_뒤에서도_조용하다() -> None:
     """2026-10-02-03 세션의 명령에서 뒤의 게이트 쌍 셋을 옮기고 경로를 줄였다(앞의 쌍 넷은
     ruff·ruff format·pyright·lint-imports). 러너를 게이트로 보지 않아 마지막 `$?` 를 앞선
