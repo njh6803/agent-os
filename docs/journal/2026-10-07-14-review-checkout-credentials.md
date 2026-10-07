@@ -97,8 +97,13 @@ v7의 `includeIf` 배치에서 같은 일이 다시 났다. `persist-credentials
   #156·#158, `git log origin/main -- .github/workflows/`)이고 열린 #162까지 여덟이다. `claude[bot]` 코멘트가 차례로
   6·2·3·3·3·2·5·2개 있다(`gh api repos/njh6803/agent-os/issues/<n>/comments`). 새 가드였어도 모두 초록이었다. 처음에는
   #162의 일지가 센 목록(대기열 50 승인 뒤)을 옮겨 #43을 빠뜨렸고, 명세 축이 짚었다.
-- 이 PR의 CI에서 액션과 가드는 둘 다 건너뛴다(자기 파일을 바꿨다). 체크아웃 단계의 로그만 바뀐 모양을 보인다. 체크아웃
-  토큰 없이 액션이 도는지는 병합 뒤 첫 PR의 claude-review 실행이 처음 보인다.
+- 이 PR의 claude-review 실행(`37582092240`, `89b57e3`)을 `gh run view --log`로 손으로 봤다. 체크아웃은 자기 fetch에 쓸
+  헤더를 `includeIf` 넷과 `RUNNER_TEMP`의 파일로 걸었다가, 같은 단계 끝의 `Removing auth`에서 넷을 지우고
+  `Removing credentials config`로 파일도 지웠다. 다음 단계(`Record start time`) 전이고, `Post Checkout repository`는 지울
+  것을 찾지 못했다. 액션은 `Skipping action due to workflow validation`으로 건너뛰었고, 새 가드는 `이 워크플로를 바꾼 PR`
+  줄을 찍고 건너뛰었다. 체크아웃 토큰 없이 액션이 도는지와 가드가 `ci.yml`만 바꾼 PR에서 세는지는 병합 뒤 첫 PR의
+  claude-review 실행이 처음 보인다.
+- CodeRabbit은 첫 요청에서 OSS 한도에 걸렸다(`Review rate limited`). 한도가 풀린 뒤 마지막 푸시 다음에 다시 요청했다.
 
 ## 남은 위험
 
@@ -133,3 +138,28 @@ v7의 `includeIf` 배치에서 같은 일이 다시 났다. `persist-credentials
   #162가 더하는 142행은 `claude-code-review.yml`에 아직 빠져 있다고 적어, 두 PR이 다 병합되면 거짓이 된다. 나중에
   병합되는 쪽이 50행의 충돌을 풀고(회차와 닫힘을 함께 둔다) 142행의 그 구절을 고친다. #162가 먼저 병합되면 이 브랜치가
   main을 병합하며 한다.
+
+## 회고
+
+후보 넷을 냈고 넷 다 승인됐다. 이 PR에서 반영하지 않고 대기열 144~147로 갔다(#162가 142, #163이 143을 쓴다).
+
+> 사용자: (고른 것) "1. 실패의 까닭 단언,2. Grep 생략 줄 훅,3. 리뷰 봇의 .git 읽기 거부,4. Windows의 맨 bash"
+
+1. **실패를 기대하는 검사는 실패의 까닭까지 단언한다(대기열 144, 3회차).** 탐침의 첫 판이 종료 코드만 봐서 bash가
+   스크립트를 찾지 못한 실행이 가드의 "실패" 사례와 맞았다(위 검사). 일지 2026-09-26-03이 1·2회차를 세고 "다음이
+   3회차다"라고 적었다. 규약은 ESLint 사례와 `tools/mutate.py`의 수집 오류 판정에만 있다. 판단 기준이라 자리는
+   `CODING_STANDARDS.md`인데, 거기 넣는 것은 사용자가 "규칙으로"라고 한 뒤다.
+2. **Grep의 생략 줄을 훅이 알린다(대기열 145, 1회차).** 잔존 grep에서 열린 대기열 31행이
+   `[Omitted long matching line]`로만 나와 열어 보지 않았다(위 셀프 리뷰). 출력의 고정 표지라 지침보다 훅이 맞다.
+3. **리뷰 봇이 `.git/`을 읽지 못하게 한다(대기열 146, 1회차).** 위 "남은 위험"의 앱 토큰이다. 권한 문법의 탐침이 먼저이고
+   `claude-code-review.yml`이라 별도 PR이다.
+4. **Windows의 맨 `bash`(대기열 147, 1회차).** 위 검사의 둘째 함정이다.
+
+일지에만 남기는 것: 액션의 지우기가 checkout v7에서 헛돈 것은 `persist-credentials`를 사람의 규약이 아니라 기계로
+판정해야 한다는 대기열 142의 근거를 하나 더한다. 142는 아직 #162에만 있어 회차를 더하지 않았다.
+
+## 다음
+
+- 병합 뒤 첫 PR의 claude-review 로그에서 셋을 본다. 체크아웃의 `Removing auth`가 단계 안에서 헤더를 지우는지, 액션의
+  base fetch(`Restoring … from origin/main`)가 지나는지, `ci.yml`만 바꾼 PR이면 가드가 코멘트를 세는지다.
+- PR #162와의 겹침은 위 셀프 리뷰의 마지막 항목대로 나중에 병합되는 쪽이 푼다.
