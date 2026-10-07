@@ -485,9 +485,22 @@ def _broken_web(scratch: Path) -> Path:
     """`web/package.json` 의 의존성이 `web/pnpm-lock.yaml` 에 없는 디렉터리. `pnpm install
     --frozen-lockfile` 이 네트워크 없이 곧 실패한다(`pnpm -C <이 디렉터리>/web install
     --frozen-lockfile` 을 손으로 봤다. `packageManager` 가 없어 전역 pnpm 10.28.0 이 돌았고 0.35초에
-    종료 1, `ERR_PNPM_OUTDATED_LOCKFILE`. 일지 2026-10-07-09)."""
-    web = scratch / "broken-web" / "web"
+    종료 1, `ERR_PNPM_OUTDATED_LOCKFILE`. 일지 2026-10-07-09).
+
+    루트는 빈 pre-commit 설정을 든 자기 git 저장소라, 훅의 git 훅 설치가 이 저장소가 아니라 그
+    저장소에 깔거나 그 자리에서 실패한다(일지 2026-10-07-10). 어느 쪽이든 web 설치가 실패해
+    알린다."""
+    root = scratch / "broken-web"
+    web = root / "web"
     web.mkdir(parents=True)
+    (root / ".pre-commit-config.yaml").write_text("repos: []\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "init", "-q", str(root)],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
     (web / "package.json").write_text(
         '{"name": "x", "version": "0.0.0", "private": true,'
         ' "dependencies": {"left-pad": "1.3.0"}}\n',

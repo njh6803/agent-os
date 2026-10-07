@@ -13,7 +13,7 @@ uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 pnpm 설치를 대신하고, `uv sync`는 `--no-sync` 없는 첫 `uv run`이 한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`pnpm -C web visual`, `web/packages/ui`를 건드렸을 때)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다.
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`pnpm -C web visual`, `web/packages/ui`를 건드렸을 때)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다.
 
 ## 구조
 
@@ -63,7 +63,7 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
-tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, OpenAPI 내보내기, Actions 요약
+tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap)
 kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플릿과 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
 openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
