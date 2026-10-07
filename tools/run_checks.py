@@ -3,7 +3,9 @@
 pre-commit 은 훅을 하나씩 돈다(4.6.2 `commands/run.py` 의 `_run_hooks`). 커밋마다 도는 검사 일곱을
 차례로 돌면 145.5초, 한꺼번에 띄우면 가장 긴 pytest 만큼인 73.7초였다
 (`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4, 일지 2026-10-07-02).
-잰 트리는 PR #156 이 web verify 에 스토리 테스트를 더하기 전의 `cbb6a6c` 다. 그래서
+잰 트리는 PR #156 이 web verify 에 스토리 테스트를 더하기 전의 `cbb6a6c` 다. 더한 뒤 GitHub
+Actions 러너(CPU 4)에서는 Linux 가 115.0초에서 66.5초, Windows 가 240.0초에서 142.5초였다(실행
+37561588972, `.scratch/harness/probes/run_checks_ci_probe.yml`, 일지 2026-10-07-04). 그래서
 `.pre-commit-config.yaml` 은 이 일곱을 훅 하나로 두고 이 러너가 함께 띄운다. 파일을 고치는 ruff 둘은
 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기 하나다. CI 는 잡마다
 명령을 직접 돈다(`.github/workflows/ci.yml`).
@@ -18,8 +20,9 @@ pre-commit 은 훅을 하나씩 돈다(4.6.2 `commands/run.py` 의 `_run_hooks`)
 건너뛴다(코드를 읽었다, 일지 2026-10-07-02).
 
 못 보는 것: 검사 하나가 멈추면 러너도 멈춘다(시간 제한이 없다. pre-commit 도 두지 않는다). CPU 가
-적은 기계에서 함께 띄운 것이 차례로 돈 것보다 느린지는 재지 않았다. Windows 에서 `.cmd` 를 경로로
-띄우는 길은 테스트가 도는 Linux 에서 재지 않았다.
+넷보다 적은 기계에서 함께 띄운 것이 차례로 돈 것보다 느린지는 재지 않았다. Windows 에서 npm 전역
+설치의 `pnpm.CMD` 를 찾아 띄우는 것은 위 실행의 windows-latest 에서 봤고(경로 없는 `subprocess` 는
+WinError 2 였다), 테스트는 Linux 에서만 돈다.
 """
 
 from __future__ import annotations
