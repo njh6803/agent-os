@@ -55,7 +55,7 @@
    하드링크로 채워져, 어느 체크아웃의 파이썬이 확장 모듈을 실으면 같은 캐시 파일에 걸린 다른
    워크트리의 `.pyd` 도 그 처지가 된다. 링크 수는 손으로 봤다
    (`pydantic_core` 의 `.pyd` 22, `yaml` 의 `.pyd` 19). 2026-10-07 에 `mutate-restore-guard` 가
-   `Invalid argument` 로 그 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-10). 같은
+   `Invalid argument` 로 그 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-15). 같은
    까닭으로 이 도구는 표준 라이브러리만 쓴다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만
    지운다.
 5. `git worktree remove <경로>`. git 2.32 는 지우다 실패해도 등록을 지우고(`.scratch/harness/probes/
@@ -125,7 +125,7 @@ RECREATABLE_PATHS = frozenset({"web/packages/ui/dist/", "web/packages/ui/storybo
 
 _LOCK_PID = re.compile(r"^claude session \S+ \(pid (\d+)\)$")
 # 찍은 명령을 에이전트가 셸에 그대로 친다. git 은 브랜치 이름에 `$`·`;`·`(`·백틱을 허락해, 그런
-# 이름이 든 명령은 찍지 않고 사람에게 넘긴다(셀프 보안 리뷰, 일지 2026-10-07-10)
+# 이름이 든 명령은 찍지 않고 사람에게 넘긴다(셀프 보안 리뷰, 일지 2026-10-07-15)
 _SHELL_UNSAFE = re.compile(r"[\s$`\"'\\;&|<>(){}*?\[\]!#~]")
 _ACTIONS: dict[Action, str] = {
     "delete": "지운다",

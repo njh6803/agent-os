@@ -1,0 +1,212 @@
+# tools/sibling_overlap.py(대기열 115)를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 timeout 600 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
+
+[[mutation]]
+name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return {number: heads[number] for number in sorted(merges) if number in heads}'''
+new = '''    return dict(sorted(heads.items()))'''
+
+[[mutation]]
+name = "gh api 가 읽은 열린 PR 을 버리고 merge ref 로만 가린다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if from_gh is not None:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "아는 판을 새 판에서 빼지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if version is not None and any(version == other.version for other in known):'''
+new = '''    if version is None:'''
+
+[[mutation]]
+name = "같은 파일의 일지·ADR 도 겹침으로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            if mine[key] != other[key]:'''
+new = '''            if True:'''
+
+[[mutation]]
+name = "같은 대기열 행도 겹침으로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if ours.rows[row] != theirs.rows[row]:'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "헌법 판의 겹침을 보지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if ours.version is not None and ours.version == theirs.version:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "옮길 일지 순번이 날짜를 가리지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        top = max((int(k[11:]) for n in taken for k in n.journals if k[:10] == date), default=0)'''
+new = '''        top = max((int(k[11:]) for n in taken for k in n.journals), default=0)'''
+
+[[mutation]]
+name = "겹친 번호만 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        olds = [int(key[11:]) for key in ours.journals if key[:10] == date]'''
+new = '''        olds = [int(c.key[11:]) for c in found if c.kind == "일지" and c.key[:10] == date]'''
+
+[[mutation]]
+name = "자리가 그대로인 번호도 옮길 번호로 낸다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return [(old, new) for old, new in pairs if old != new]'''
+new = '''    return pairs'''
+
+[[mutation]]
+name = "옮길 번호가 main 의 번호를 보지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    taken = [base_numbers, main_numbers]'''
+new = '''    taken = [base_numbers]'''
+
+[[mutation]]
+name = "git 이 한글 경로를 따옴표로 감싼다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    result = _run(["git", "-c", "core.quotepath=false", *args], cwd, timeout)'''
+new = '''    result = _run(["git", *args], cwd, timeout)'''
+
+[[mutation]]
+name = "미추적 파일을 고친 파일에 넣지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return _lines(tracked) | _lines(untracked)'''
+new = '''    return _lines(tracked)'''
+
+[[mutation]]
+name = "열린 PR 의 head 를 fetch 하지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        *(f"refs/pull/{number}/head" for number in pulls),
+'''
+new = ''''''
+
+[[mutation]]
+name = "이 브랜치를 작업 트리가 아니라 HEAD 로 읽는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    ours = fresh(numbers_of(Disk(root)), base_numbers)'''
+new = '''    ours = fresh(numbers_of(Tree(root, "HEAD")), base_numbers)'''
+
+[[mutation]]
+name = "푸시 전의 새 커밋 위에 있는 이 브랜치 자신의 PR 도 형제로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if head == remote.own_head or is_ancestor(root, head, "HEAD"):'''
+new = '''        if head == remote.own_head:'''
+
+[[mutation]]
+name = "amend 뒤 밀지 않은 이 브랜치 자신의 PR 도 형제로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if head == remote.own_head or is_ancestor(root, head, "HEAD"):'''
+new = '''        if is_ancestor(root, head, "HEAD"):'''
+
+[[mutation]]
+name = "형제가 main 의 번호를 되풀이한다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        siblings.append(Sibling(label, head, fresh(numbers, base_numbers, main_numbers), changed))'''
+new = '''        siblings.append(Sibling(label, head, fresh(numbers, base_numbers), changed))'''
+
+[[mutation]]
+name = "이 작업 트리도 형제 워크트리로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if path == root or not path.is_dir():'''
+new = '''        if not path.is_dir():'''
+
+[[mutation]]
+name = "형제 워크트리를 커밋한 트리로 읽는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        add(f"워크트리 {path}", head, numbers_of(Disk(path)), changed)'''
+new = '''        add(f"워크트리 {path}", head, numbers_of(Tree(root, head)), changed)'''
+
+[[mutation]]
+name = "얕은 클론에서 merge-base 가 없는 형제 하나로 대조 전체가 멈춘다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if result.returncode == 1:
+        return None
+'''
+new = ''''''
+
+[[mutation]]
+name = "번호의 자리가 비어도 대조를 잇는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if missing := empty_places(base_numbers):'''
+new = '''    if missing := empty_places(base_numbers) and False:'''
+
+[[mutation]]
+name = "트리에 없는 파일을 git show 의 실패로 안다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if not git(self.root, "ls-tree", "--name-only", self.commit, "--", path).strip():'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "겹쳐도 0 으로 끝난다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return 1 if found else 0'''
+new = '''    return 0'''
