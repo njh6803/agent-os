@@ -35,7 +35,8 @@
 - init 의 `tools` 가 그 도구 하나이고 `mcp_servers` 가 비었다.
 - 읽는 이벤트(system, assistant, user, result)의 모양이 예상과 같다. 어긋난 줄은 사실로 쓰지 않고
   실패로 본다. 건너뛰면 대상 밖 Read 를 놓쳐 거짓 통과가 날 수 있다(PR #157 리뷰).
-- `result` 가 성공이고 `claude` 가 0 으로 끝났다.
+- `result` 가 성공이고 `claude` 가 0 으로 끝났다. 회차마다 제한 시간(600초)을 넘기면 종료
+  코드 124 다.
 - rule: Read 를 한 번 이상 불렀고 모두 `<체크아웃>/<target>` 이다. 다른 파일(특히 규칙 파일)을
   읽었으면 답이 실린 규칙이 아니라 그 파일에서 왔을 수 있다.
 - skill: 실린 스킬 본문의 자리(`Base directory for this skill:` 줄)는 모두 `<체크아웃>/.claude/
@@ -65,7 +66,7 @@ rule 갈래의 대상 파일에 카나리아가 있는지, 갈래의 체크아�
 - Read 의 결과가 오류였는지. 돌리기 전에 대상 파일이 있는지만 본다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
-3 `claude` 를 띄우지 못했다(원본을 남기지 않았다).
+3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했다(원본을 남기지 않았다).
 """
 
 from __future__ import annotations
@@ -95,6 +96,8 @@ _ROLE_NAMES: dict[Role, str] = {"experiment": "실험군", "control": "대조군
 _SKILL_DIR = re.compile(r"^Base directory for this skill:\s*(.+?)\s*$", re.MULTILINE)
 _NONE_NOISE = re.compile(r"[\s`*_\"'“”‘’.。!]")
 _ANSWER_WIDTH = 160
+_TIMEOUT_SECONDS = 600.0  # 회차 하나의 제한 시간
+_TIMED_OUT = 124  # GNU timeout 의 관례
 
 
 class SpecError(Exception):
@@ -432,20 +435,33 @@ def target_problems(spec: Spec, arm: Arm, checkout: Path) -> list[str]:
     return []
 
 
-def run_claude(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+def _text(data: bytes | str | None) -> str:
+    if data is None:
+        return ""
+    return data if isinstance(data, str) else data.decode("utf-8", "replace")
+
+
+def run_claude(
+    args: Sequence[str], cwd: Path, stdin: str, timeout: float = _TIMEOUT_SECONDS
+) -> RunResult:
+    """`claude` 를 한 번 띄운다. 제한 시간을 넘기면 그때까지의 출력과 종료 코드 124 를 돌려준다.
+
+    멈춘 세션 하나가 나머지 회차의 원본까지 붙잡지 않게 하려는 것이다(PR #157 CodeRabbit).
+    """
     executable = shutil.which(args[0]) or args[0]
-    completed = subprocess.run(
-        [executable, *args[1:]],
-        cwd=cwd,
-        input=stdin.encode("utf-8"),
-        capture_output=True,
-        check=False,
-    )
-    return RunResult(
-        completed.returncode,
-        completed.stdout.decode("utf-8", "replace"),
-        completed.stderr.decode("utf-8", "replace"),
-    )
+    try:
+        completed = subprocess.run(
+            [executable, *args[1:]],
+            cwd=cwd,
+            input=stdin.encode("utf-8"),
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as expired:
+        note = f"\n제한 시간 {timeout:g}초를 넘겨 끝냈다"
+        return RunResult(_TIMED_OUT, _text(expired.stdout), _text(expired.stderr) + note)
+    return RunResult(completed.returncode, _text(completed.stdout), _text(completed.stderr))
 
 
 @dataclass(frozen=True)
@@ -477,24 +493,44 @@ def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
     ]
 
 
-def _report(
-    spec: Spec, job: _Job, result: RunResult, output: Path, out: Callable[[str], None]
-) -> bool:
-    """회차 하나의 원본을 남기고 판정을 찍는다. 실패면 True."""
-    stem = f"{job.arm.name}-{job.index}"
-    (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
-    (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
+def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult]:
+    """회차를 나란히 돌린다. `claude` 를 띄우지 못하면 OSError 가 그대로 올라온다."""
+    args = command(spec)
+
+    def run(job: _Job) -> RunResult:
+        return runner(args, job.checkout, prompt_for(spec, job.arm))
+
+    with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
+        return list(pool.map(run, jobs))
+
+
+def _verdict(spec: Spec, job: _Job, result: RunResult) -> tuple[Facts, list[str]]:
+    """회차 하나의 사실과 실패 이유. 이유가 비면 통과다."""
     facts = read_facts(result.stdout.splitlines())
     reasons = judge(spec, job.arm, facts, job.checkout)
     if result.exit_code != 0:
         last = (result.stderr.strip().splitlines() or ["stderr 없음"])[-1]
         reasons.append(f"claude 가 종료 코드 {result.exit_code} 로 끝났다: {last}")
+    return facts, reasons
+
+
+def _record(
+    job: _Job,
+    result: RunResult,
+    verdict: tuple[Facts, list[str]],
+    output: Path,
+    out: Callable[[str], None],
+) -> None:
+    """회차 하나의 원본을 남기고 판정을 찍는다."""
+    facts, reasons = verdict
+    stem = f"{job.arm.name}-{job.index}"
+    (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
+    (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
     label = f"{job.arm.name}({_ROLE_NAMES[job.arm.role]}) {job.index}/{job.arm.times}"
     out(f"[{'실패' if reasons else '통과'}] {label}")
     for reason in reasons:
         out(f"  - {reason}")
     out(f"  {_summary(facts)}")
-    return bool(reasons)
 
 
 def main(
@@ -524,21 +560,20 @@ def main(
         for problem in problems:
             out(f"  {problem}")
         return 2
-    output.mkdir(parents=True, exist_ok=True)
-    args = command(spec)
-
-    def run(job: _Job) -> RunResult:
-        return runner(args, job.checkout, prompt_for(spec, job.arm))
-
     try:
-        with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
-            results = list(pool.map(run, jobs))
+        output.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        out(f"출력 디렉터리를 만들지 못했다(아무것도 돌리지 않았다): {error}")
+        return 3
+    try:
+        results = _run_all(spec, jobs, runner)
     except OSError as error:
         out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
         return 3
-    failed = sum(
-        _report(spec, job, result, output, out) for job, result in zip(jobs, results, strict=True)
-    )
+    verdicts = [_verdict(spec, job, result) for job, result in zip(jobs, results, strict=True)]
+    for job, result, verdict in zip(jobs, results, verdicts, strict=True):
+        _record(job, result, verdict, output, out)
+    failed = sum(1 for _, reasons in verdicts if reasons)
     out(f"통과 {len(jobs) - failed} · 실패 {failed}. 원본은 {output}")
     return 1 if failed else 0
 

@@ -274,6 +274,36 @@ new = '''
 '''
 
 [[mutation]]
+name = "claude 에 제한 시간을 두지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            timeout=timeout,
+'''
+new = '''
+            timeout=None,
+'''
+
+[[mutation]]
+name = "출력 디렉터리를 만들지 못한 예외를 그대로 올린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except OSError as error:
+        out(f"출력 디렉터리를 만들지 못했다(아무것도 돌리지 않았다): {error}")
+'''
+new = '''
+    except KeyError as error:
+        out(f"출력 디렉터리를 만들지 못했다(아무것도 돌리지 않았다): {error}")
+'''
+
+[[mutation]]
 name = "모양이 어긋난 줄을 판정에 올리지 않는다"
 tests = ["tests/tools/test_canary.py"]
 expect = "red"

@@ -10,6 +10,7 @@ stream-json --verbose`, 규칙은 `--tools Read`, 스킬은 `--tools Skill`)의 
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -25,6 +26,7 @@ from tools.canary import (
     main,
     prompt_for,
     read_facts,
+    run_claude,
     target_problems,
 )
 
@@ -621,6 +623,34 @@ def test_claude를_띄우지_못하면_3이고_원인을_찍는다(tmp_path: Pat
 
     assert code == 3
     assert any("claude 없음" in line for line in printed)
+
+
+def test_출력_디렉터리를_만들지_못하면_3이다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    (tmp_path / "out").write_text("디렉터리가 아니다", encoding="utf-8")
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+    )
+
+    assert code == 3
+    assert 가짜.호출 == []
+    assert any("출력" in line for line in printed)
+
+
+def test_claude가_제한_시간을_넘기면_그_회차는_0이_아닌_코드로_남는다(tmp_path: Path) -> None:
+    """실제 하위 프로세스로 잰다. 멈춘 세션 하나가 러너 전체를 붙잡지 않는다(PR #157 CodeRabbit)."""
+    잠드는_명령 = [sys.executable, "-c", "import time; print('{}'); time.sleep(30)"]
+
+    result = run_claude(잠드는_명령, tmp_path, "", timeout=1.0)
+
+    assert result.exit_code != 0
+    assert "시간" in result.stderr
 
 
 @pytest.mark.parametrize("argv", [[], ["a.toml"], ["a.toml", "out", "더"]])
