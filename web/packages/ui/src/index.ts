@@ -6,6 +6,13 @@ export {
   type ButtonSize,
   type ButtonVariant,
 } from "./components/atoms/Button";
+export {
+  Card,
+  type CardElement,
+  type CardElevation,
+  type CardPadding,
+  type CardProps,
+} from "./components/atoms/Card";
 export { Icon, type IconName, type IconProps, type IconSize } from "./components/atoms/Icon";
 export {
   IconButton,
@@ -13,5 +20,11 @@ export {
   type IconButtonSize,
   type IconButtonVariant,
 } from "./components/atoms/IconButton";
+export { Progress, type ProgressProps, type ProgressTone } from "./components/atoms/Progress";
+export {
+  StatusBadge,
+  type StatusBadgeProps,
+  type StatusBadgeStatus,
+} from "./components/atoms/StatusBadge";
 export { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeEntry, type ThemeKey } from "./themes";
 export { UI_ROOT_ATTRIBUTE, shadowSheets } from "./styles/shadow";
