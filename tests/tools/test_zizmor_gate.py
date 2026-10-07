@@ -14,6 +14,7 @@ unpinned-uses 정책이 서드파티까지 넓어지면 여기가 빨갛다.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -27,8 +28,11 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 CONFIG = ROOT / ".github" / "zizmor.yml"
 PERSIST = re.compile(r"^\s*persist-credentials:\s*false\s*$")
 CHECKOUT = re.compile(r"^\s*(?:-\s+)?uses:\s*actions/checkout@")
-# 서드파티 액션의 해시 고정: `uses: 소유자/저장소@<40자 해시> # v판`
-HASH_PIN = re.compile(r"^(\s*(?:-\s+)?uses:\s*)([\w.-]+/[\w.-]+)@[0-9a-f]{40}\s+#\s*(v\S+)\s*$")
+# 서드파티 액션의 해시 고정: `uses: 소유자/저장소@<40자 해시> # v판`. `actions/*` 는 태그를
+# 허용하므로 정책보다 엄하게 해시로 고정해도 태그로 되돌린 변이가 지나간다. 그래서 사례에서 뺀다.
+HASH_PIN = re.compile(
+    r"^(\s*(?:-\s+)?uses:\s*)((?!actions/)[\w.-]+/[\w.-]+)@[0-9a-f]{40}\s+#\s*(v\S+)\s*$"
+)
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -71,7 +75,11 @@ def _findings(stdout: str) -> list[tuple[str, str, int]]:
 
 
 def _zizmor(tree: Path) -> tuple[int, list[tuple[str, str, int]], str]:
-    """게이트의 인자에 JSON 출력을 더해 tree 에서 돌린다. 종료 코드, 발견, stderr."""
+    """게이트의 인자에 JSON 출력을 더해 tree 에서 돌린다. 종료 코드, 발견, stderr.
+
+    거둔 입력을 stderr 의 INFO 줄로 보므로 로그 수준을 고정한다. 셸에 `RUST_LOG=warn` 이 있으면
+    그 줄이 사라져 저장소 테스트만 빨갰다(PR #169 의 버그·성능 리뷰가 재현했다).
+    """
     executable = shutil.which("zizmor")
     assert executable is not None, "zizmor 가 PATH 에 없다. uv sync 로 dev 의존성을 깐다"
     process = subprocess.run(
@@ -80,6 +88,7 @@ def _zizmor(tree: Path) -> tuple[int, list[tuple[str, str, int]], str]:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env={**os.environ, "RUST_LOG": "info"},
         check=False,
     )
     return process.returncode, _findings(process.stdout), process.stderr
