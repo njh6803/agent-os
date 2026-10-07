@@ -1,0 +1,23 @@
+# `.claude/rules/tests.md` 의 llm 마커 항목에 더한 두 문장(트레이스를 `tmp_path` 아래에 남긴다, 실행 끝의 토큰
+# 합계는 그 아래만 센다, 대기열 113)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지.
+# 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tests_rule_llm_tokens.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 실제 모델을 부르는 테스트에 붙이는 마커를 다루는 항목이 있으면,
+그 항목에서 트레이스를 어디에 남기라고 적은 문장과, 그 바로 다음 문장을 각각 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["트레이스는 tmp_path 아래에 남긴다", "실행 끝의 토큰 합계는 그 아래만 센다"]
+source = ".claude/rules/tests.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tests/test_plugins_boundary.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

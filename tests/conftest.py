@@ -18,6 +18,11 @@ pre-commit 이 워크트리에서 훅을 돌리면 git 이 `GIT_DIR` 같은 저�
 정한다 — 이 파일의 위치로 정하면 이 파일을 임시 디렉터리에 옮겨 도는 `tests/test_conftest.py` 가
 걸린다.
 `uv run pytest` 는 그 체크아웃의 `.venv` 를 쓰므로 걸리지 않는다.
+
+llm 마커 테스트가 돌았으면 실행 끝의 결과 요약 바로 위에, 그 테스트들이 `tmp_path` 에 남긴
+트레이스의 토큰 합계를 찍는다(대기열 113). 세는 법과 못 보는 것은 `tools/llm_tokens.py` 가
+원천이다. 그 테스트가 하나도 돌지 않은 실행(기본 `-m "not llm"`)에서는 찍지 않는다. 0 이 찍히면
+LLM 테스트를 돌렸다고 읽힌다.
 """
 
 import importlib.util
@@ -28,9 +33,12 @@ from pathlib import Path
 
 import pytest
 
-from tools import run_hooks
+from tools import llm_tokens, run_hooks
 
 CHECKOUT = Path(run_hooks.__file__).resolve().parents[1]
+
+# llm 마커 테스트가 하나라도 돌았을 때만 값이 있다.
+_LLM_TOKENS = pytest.StashKey[llm_tokens.Tokens]()
 
 for stream in (sys.stdout, sys.stderr):
     if isinstance(stream, io.TextIOWrapper):
@@ -49,6 +57,28 @@ def pytest_configure(config: pytest.Config) -> None:
         f"agent_os 가 이 체크아웃({CHECKOUT})의 src 가 아니라 {origin} 에서 불린다. 다른 체크아웃의"
         " .venv 인터프리터다. 이 체크아웃에서 uv run pytest 로 돌린다"
     )
+
+
+# tryfirst 라 픽스처를 정리하기 전이고, teardown 이라 테스트 본문은 끝났다. funcargs 에는 테스트가
+# 거쳐 받은 픽스처까지 든다.
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_teardown(item: pytest.Item) -> None:
+    if item.get_closest_marker("llm") is None:
+        return
+    root = item.funcargs.get("tmp_path") if isinstance(item, pytest.Function) else None
+    found = llm_tokens.count(root) if isinstance(root, Path) else llm_tokens.Tokens()
+    if found.traces == 0:
+        found += llm_tokens.Tokens(untraced_tests=1)
+    stash = item.config.stash
+    stash[_LLM_TOKENS] = stash.get(_LLM_TOKENS, llm_tokens.Tokens()) + found
+
+
+def pytest_terminal_summary(
+    terminalreporter: pytest.TerminalReporter, config: pytest.Config
+) -> None:
+    tokens = config.stash.get(_LLM_TOKENS, None)
+    if tokens is not None:
+        terminalreporter.write_line(llm_tokens.summary(tokens))
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int | pytest.ExitCode) -> None:

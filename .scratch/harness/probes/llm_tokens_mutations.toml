@@ -1,0 +1,175 @@
+# 대기열 113. `-m llm` 실행 끝에 트레이스 토큰 합계를 찍는 tools/llm_tokens.py 와 tests/conftest.py 의 변이.
+# 변이마다 빨개져야 할 테스트 하나로 `-k` 를 좁힌다. 엉뚱한 테스트의 빨강이 기대와 맞지 않게 하기 위해서다
+# (docs/agents/issue-tracker.md 프로브와 근거 절, 대기열 144).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/llm_tokens_mutations.toml
+
+[[mutation]]
+name = "llm 마커를 보지 않는다"
+tests = ["tests/test_conftest.py", "-k", "돌지_않으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''
+    if item.get_closest_marker("llm") is None:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "테스트가 끝나기 전에 센다"
+tests = ["tests/test_conftest.py", "-k", "남긴_트레이스의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''
+def pytest_runtest_teardown(item: pytest.Item) -> None:
+'''
+new = '''
+def pytest_runtest_call(item: pytest.Item) -> None:
+'''
+
+[[mutation]]
+name = "실패가 없을 때 합계 줄이 통과 수 줄 바로 위가 아니다"
+tests = ["tests/test_conftest.py", "-k", "남긴_트레이스의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''
+        terminalreporter.write_line(llm_tokens.summary(tokens))
+'''
+new = '''
+        terminalreporter.write_line(llm_tokens.summary(tokens))
+        terminalreporter.write_line("")
+'''
+
+[[mutation]]
+name = "한 단 아래를 보지 않는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "아래_디렉터리까지"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+    for path in sorted(root.rglob("*.jsonl")):
+'''
+new = '''
+    for path in sorted(root.glob("*.jsonl")):
+'''
+
+[[mutation]]
+name = "트레이스가 아닌 파일도 읽는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "트레이스가_아닌_파일은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+    for path in sorted(root.rglob("*.jsonl")):
+'''
+new = '''
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+'''
+
+[[mutation]]
+name = "커밋되지 않은 줄도 센다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "커밋되지_않은_줄은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+    for line in data.split(b"\n")[:-1]:
+'''
+new = '''
+    for line in data.split(b"\n"):
+'''
+
+[[mutation]]
+name = "디코딩한 문자열을 splitlines 로 가른다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "줄_구분_문자가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+    for line in data.split(b"\n")[:-1]:
+'''
+new = '''
+    for line in data.decode("utf-8").splitlines():
+'''
+
+[[mutation]]
+name = "디코딩 오류를 잡지 않는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "UTF8_이_아닌"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+    except ValueError:  # UnicodeDecodeError 도 여기 든다
+'''
+new = '''
+    except json.JSONDecodeError:
+'''
+
+[[mutation]]
+name = "읽기 오류를 잡지 않는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "jsonl_이름의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+        except OSError:  # 그 이름의 디렉터리도 여기 든다
+            continue
+'''
+new = '''
+        except FileNotFoundError:
+            continue
+'''
+
+[[mutation]]
+name = "트레이스를 남기지 않은 테스트를 세지 않는다"
+tests = ["tests/test_conftest.py", "-k", "남긴_트레이스의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''
+    if found.traces == 0:
+        found += llm_tokens.Tokens(untraced_tests=1)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "세지 못한 수를 줄에 적지 않는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "남기지_않은_LLM_테스트가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+        if tokens.untraced_tests
+'''
+new = '''
+        if False
+'''
+
+[[mutation]]
+name = "천 단위를 끊지 않는다"
+tests = ["tests/tools/test_llm_tokens.py", "-k", "천_단위로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_tokens.py"
+old = '''
+        f"LLM 토큰 합계 {total:,}(입력 {tokens.input_tokens:,}, 출력 {tokens.output_tokens:,})."
+'''
+new = '''
+        f"LLM 토큰 합계 {total}(입력 {tokens.input_tokens}, 출력 {tokens.output_tokens})."
+'''
