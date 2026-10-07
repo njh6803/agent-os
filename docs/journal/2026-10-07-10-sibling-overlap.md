@@ -111,15 +111,79 @@ main의 번호를 함께 들고 있었기 때문이다. main이 PR #9 뒤로 한
 - **남겼다.** 종류를 문자열(`"일지"` 등)로 들고 `_describe`에서 가른다. 네 종류가 출력 문구와 같아 두었다. 열 때부터 충돌한 PR의
   merge ref는 재지 않았다(위). 원격 브랜치를 PR 없이 민 형제(클라우드 세션의 PR 전 상태)는 독스트링의 못 보는 것에 두었다.
 
+## 형제가 실제로 생겼다
+
+PR #161을 연 뒤 대기열 141을 더하고 도구를 다시 치자, 그 사이 다른 세션이 연 PR #162(CI 체크아웃 하드닝)를 `gh api`로 읽었다.
+번호 겹침은 없었고(#162는 일지 11과 대기열 142를 쓴다), 함께 고친 파일로 `.scratch/retro-queue.md`를 알렸다. 두 PR이 대기열
+표의 끝에 행을 하나씩 더해, 나중에 병합하는 쪽에서 글자 충돌이 난다. 같은 실행에서 이 브랜치 자신의 PR #161은 `gh api` 목록에
+있었지만 원격 브랜치의 커밋과 같아 형제에서 빠졌다.
+
 ## 바꾼 것
 
 - `tools/sibling_overlap.py`, `tests/tools/test_sibling_overlap.py`(20건, 새 파일).
 - `tools/hook_bash_gate_pipe.py`(게이트 목록)와 `tests/tools/test_hook_bash_gate_pipe.py`(1건).
 - `.scratch/harness/probes/sibling_overlap_mutations.toml`과 프로브 README의 행.
 - `CLAUDE.md` 환경 함정의 커밋 전 줄, `README.md`의 `tools/` 줄, `KICKOFF.md`의 도구 목록, `tests/test_journal_names.py` 독스트링.
-- `.scratch/retro-queue.md`(115 닫힘).
+- `.scratch/retro-queue.md`(115 닫힘, 141 새 행).
+- 회고 반영(아래): `tools/hook_session_web_deps.py`와 `tests/tools/test_hook_session_web_deps.py`(22건), 그 변이 표
+  `.scratch/harness/probes/session_web_deps_mutations.toml`(29개), 훅 러너의 픽스처 `${BROKEN_WEB}`(`tools/run_hooks.py`)와 그 사례의
+  설명(`tools/hook_payloads.toml`), 카나리아 명세 `.scratch/harness/probes/canary/tools_rule_session_hooks.toml`,
+  `.claude/rules/tools.md`의 훅별 시간, `README.md`의 클론 뒤 설치, `KICKOFF.md`의 훅 목록과 바꿀 곳, `.scratch/harness/cloud-setup.sh`의
+  머리 주석, 프로브 README의 세 행.
+- PR 봇 반영: `tools/sibling_overlap.py`의 `read_remote`가 원격을 읽기만 하고 fetch는 `fetch`가 한다(claude-review의 Minor, CQS).
+  열린 PR을 읽은 길은 식별자로 들고 표시 문구는 `render`가 정한다(같은 리뷰의 Nit).
 
 ## 검사
 
 - 처음 판에서 `uv run ruff check .`, `uv run ruff format --check .`, 검사 러너 `uv run python tools/run_checks.py`(지침 검사,
-  import-linter, 타입 우회 검사, 훅 러너, pyright, web verify, pytest)가 모두 초록이었다. 리뷰 반영 뒤의 결과는 아래에 더한다.
+  import-linter, 타입 우회 검사, 훅 러너, pyright, web verify, pytest)가 모두 초록이었다. 첫 커밋(`9caf2b7`)은 손으로 깐 pre-commit을
+  지났다(검사 러너 일곱, 표, 줄 구분 문자, 변이 표 원문, 인용, 커밋 메시지).
+- 회고와 둘째 셀프 리뷰를 반영한 뒤 검사 러너와 ruff 둘, 훅 러너(65건, 어긋남 0)를 다시 돌렸다. 둘째 커밋의 pre-commit이
+  표·줄 구분 문자·인용·변이 표 원문까지 한 번 더 본다.
+- 변이: `session_web_deps_mutations.toml` 29개, `sibling_overlap_mutations.toml` 23개(PR 봇 반영 뒤)가 모두 빨갰다.
+- 바꾼 규칙은 새 `claude -p` 세션의 카나리아로 봤다. `uv run python tools/canary.py
+  .scratch/harness/probes/canary/tools_rule_session_hooks.toml <스크래치>`가 통과 4, 실패 0이었다(claude 2.1.292, sonnet).
+  실험군 셋은 `tools/hook_env_read.py` 하나만 읽고 제목과 두 조각을 옮겼고, 대조군은 `README.md`를 읽고 "없음"이었다. 둘째
+  셀프 리뷰 뒤 같은 항목에 재설치 시간을 더하고 다시 돌려 같은 통과 4, 실패 0이었다.
+
+## 회고
+
+일지의 "다음"을 쓰기 전에 retro를 돌렸다. 후보 둘을 냈고 둘 다 승인됐다.
+
+> 사용자(질문에 답): "이 PR에서 반영한다", "대기열에 올린다 (Recommended)"
+
+1. **[자동 검사] 클라우드 세션의 새 클론에 pre-commit 훅이 없었다(이 PR에서 반영).** 커밋 직전에 `.git/hooks`를 보니 비어
+   있었고, 손으로 `uv run pre-commit install`을 친 뒤 커밋했다. 깔지 않았다면 인용 대조·변이 표 원문 확인·커밋 메시지 검사(셋
+   다 CI에 없다)가 조용히 돌지 않았다. SessionStart 훅(`tools/hook_session_web_deps.py`)이 클라우드 세션에서 루트의
+   `.pre-commit-config.yaml`을 보고 `uv run --directory <루트> pre-commit install`을 먼저, pnpm을 다음에 치고(`plan`), 둘이 훅
+   안의 시간 제한 240초를 나눠 쓴다(`run_steps`). 테스트를 먼저 써 빨강(가져올 이름이 없다)을 본 뒤 고쳤다. 둘째 셀프 리뷰의
+   두 축이 모두 차례와 몫의 배선을 테스트가 재지 않는다고 짚어(사본에서 두 변이가 초록), `plan`과 `run_steps`로 나눠 시계와
+   `which`를 받게 하고 그 테스트를 먼저 써 빨강을 본 뒤 옮겼다. 표준 축의 제안대로 손으로 칠 명령을 `cd … &&` 대신
+   `uv run --directory`로 바꿔 `pnpm -C`와 모양을 맞췄다. `Failure`는 `NamedTuple`이다. 훅 러너의 픽스처는 빈 pre-commit 설정을
+   든 자기 git 저장소가 되어, 페이로드 표의 클라우드 사례가 git 훅 길도 지난다(같은 픽스처를 스크래치에 만들어 손으로 부르자
+   픽스처 저장소에 `pre-commit` 훅이 깔리고 web 설치의 실패를 알렸다). 이 컨테이너에서 `.venv`(옆으로 옮겼다)와 `.git/hooks`의
+   둘을 치우고 등록과 같은 명령에 `source: startup` 페이로드를 넣어 부르자, 약 3.5초에 종료 0, 출력 0바이트였고 git 훅 둘과
+   `.venv`가 다시 생겼다(`INSTALL_PYTHON`이 `.venv/bin/python3`). uv 캐시가 찬 채라 새 VM보다 짧다. 파일 이름은 그대로 두었다.
+   이름을 바꾸면 등록·러너 표·변이 표·문서를 함께 옮겨야 한다. 실제 새 클라우드 세션에서 도는지는 병합 뒤의 새 세션에서 처음 본다.
+2. **[정보 접근] 클라우드 세션의 `gh`와 클론(대기열 141).** `gh pr list`, `gh pr checks 161`, `gh pr view 161 --json
+   headRefOid`는 HTTP 403이었고 `gh pr view 161 --json number`와 `gh api`의 REST는 됐다(손으로 봤다. `gh pr merge`는 치지
+   않았다). 클론은 깊이 50의 얕은 클론이다. 하네스의 `gh` 사용처(`tools/hook_pr_head_sync.py`의 `gh pr view`, `next-session` 병합 단계의
+   `gh pr checks`·`gh pr merge`)가 클라우드에서 조용히 지나가거나 실패한다. 이 세션도 PR을 MCP로 열고 병합한다.
+
+일지에만 남기는 것: 원칙 II에서 어긋난 둘(위). 그리고 셀프 리뷰 전에 인용 대조를 돌렸다고 적었지만 그때 이 일지는 아직 없었다.
+표준 축이 일지의 어긋난 인용 둘을 잡았다.
+
+둘째 셀프 리뷰(base `9caf2b7`, 커밋하지 않은 변경 12파일과 미추적 1)는 위의 배선 말고도 넷을 고치게 했다. 대기열 141의 "무엇"이
+두 문장이었고 재지 않은 `gh` 명령을 403으로 적었다. KICKOFF의 바꿀 곳이 이 훅을 pnpm 워크스페이스가 있는 프로젝트로만
+가렸다. 프로브 README가 변이 수를 옛 값으로 두었다. 일지가 아직 하지 않은 커밋의 결과를 지난 일로 적었다. 남긴 것은 훅 파일
+이름(위)과 `install`·`manual_command`의 옛 이름이다. 새 이름(`pre_commit_root`, `install_pre_commit`, `pre_commit_command`)만
+고쳤다. 루트가 워크트리일 때 공유 git 훅의 인터프리터를 덮는 것은 독스트링의 못 보는 것에 두었다.
+
+## 다음
+
+- 이 PR(#161)은 CI와 리뷰 봇을 반영한 뒤 이 세션이 병합한다. 열린 PR #162와는 번호가 겹치지 않지만 `.scratch/retro-queue.md` 표의
+  끝에서 글자가 충돌한다. 나중에 병합하는 쪽이 푼다.
+- 병합 뒤의 첫 클라우드 세션에서 SessionStart 훅이 git 훅도 깔았는지 본다. 첫 턴에 `.git/hooks/pre-commit`이 있거나, 없으면 훅이
+  낸 알림(손으로 칠 명령)이 컨텍스트에 있어야 한다.
+- 로컬 Windows에서 `uv run python tools/sibling_overlap.py`를 처음 칠 때 `gh api`의 길과 워크트리 경로가 맞는지 본다.
+- 대기열 139·140·141은 그대로다.

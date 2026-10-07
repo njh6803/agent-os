@@ -130,7 +130,7 @@ class Survey:
     changed: frozenset[str]
     siblings: list[Sibling]
     taken: list[Numbers]  # 이 브랜치 밖의 모든 자리(merge-base, main, 형제)의 번호 전체
-    pulls_from: str  # 열린 PR 을 읽은 길
+    pulls_from: str  # 열린 PR 을 읽은 길(FROM_GH 또는 FROM_MERGE_REF)
 
 
 def read_numbers(
@@ -398,17 +398,21 @@ def _worktree_changes(path: Path, since: str) -> frozenset[str]:
     return _lines(tracked) | _lines(untracked)
 
 
+FROM_GH = "gh api"
+FROM_MERGE_REF = "merge ref"
+
+
 @dataclass(frozen=True)
 class Remote:
     """원격에서 읽은 것. 열린 PR(번호 → head), 그것을 읽은 길, 이 브랜치의 원격 커밋."""
 
     pulls: dict[int, str]
-    pulls_from: str
+    pulls_from: str  # FROM_GH 또는 FROM_MERGE_REF
     own_head: str | None
 
 
 def read_remote(root: Path) -> Remote:
-    """열린 PR 과 이 브랜치의 원격 커밋을 읽고, main 과 열린 PR 의 head 를 fetch 한다."""
+    """열린 PR 과 이 브랜치의 원격 커밋을 읽는다. 로컬의 ref 는 움직이지 않는다."""
     branch = current_branch(root)
     patterns = ["refs/pull/*/head", "refs/pull/*/merge"]
     patterns += [f"refs/heads/{branch}"] if branch else []
@@ -416,9 +420,14 @@ def read_remote(root: Path) -> Remote:
     repo = github_repo(git(root, "remote", "get-url", REMOTE))
     from_gh = gh_listing(root, *repo) if repo else None
     if from_gh is not None:
-        pulls, pulls_from = gh_pulls(from_gh), "gh api"
+        pulls, pulls_from = gh_pulls(from_gh), FROM_GH
     else:
-        pulls, pulls_from = open_pulls(listing), "merge ref(gh api 를 쓰지 못했다)"
+        pulls, pulls_from = open_pulls(listing), FROM_MERGE_REF
+    return Remote(pulls, pulls_from, remote_head(listing, branch) if branch else None)
+
+
+def fetch(root: Path, pulls: dict[int, str]) -> None:
+    """main 을 `origin/main` 으로 당기고, 열린 PR 의 head 를 ref 없이 받는다."""
     git(
         root,
         "fetch",
@@ -430,7 +439,6 @@ def read_remote(root: Path) -> Remote:
         *(f"refs/pull/{number}/head" for number in pulls),
         timeout=NETWORK_TIMEOUT,
     )
-    return Remote(pulls, pulls_from, remote_head(listing, branch) if branch else None)
 
 
 def survey(root: Path, remote: Remote) -> Survey:
@@ -488,6 +496,9 @@ def _describe(clash: Clash) -> str:
     return f"이 브랜치 {clash.ours}, 그쪽 {clash.theirs}"
 
 
+_PULLS_FROM = {FROM_GH: "gh api", FROM_MERGE_REF: "merge ref(gh api 를 쓰지 못했다)"}
+
+
 def _ours_line(ours: Numbers) -> str:
     keys = [f"일지 {key}" for key in sorted(ours.journals)]
     keys += [f"ADR {key}" for key in sorted(ours.adrs)]
@@ -499,7 +510,7 @@ def _ours_line(ours: Numbers) -> str:
 def render(result: Survey, found: list[tuple[Sibling, Clash]]) -> str:
     lines = [
         "형제: " + ", ".join(f"{s.label} {s.commit[:7]}" for s in result.siblings),
-        f"열린 PR 을 읽은 길: {result.pulls_from}",
+        f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
         _ours_line(result.ours),
     ]
     if found:
@@ -529,7 +540,9 @@ def main(argv: list[str] | None = None) -> int:
     start = Path(args[0]) if args else Path.cwd()
     try:
         root = Path(git(start, "rev-parse", "--show-toplevel").strip()).resolve()
-        result = survey(root, read_remote(root))
+        remote = read_remote(root)
+        fetch(root, remote.pulls)
+        result = survey(root, remote)
     except SurveyError as error:
         print(f"형제를 대조하지 못했다. {error}", file=sys.stderr)
         return 2
