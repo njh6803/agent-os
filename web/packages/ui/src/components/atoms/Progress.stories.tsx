@@ -96,18 +96,20 @@ export const IndeterminateDanger: Story = {
 };
 
 export const OutOfRange: Story = {
-  name: "끝 값을 넘는 값은 끝 값으로, 음수와 max 가 0 인 값은 0 으로 잘라 aria-valuenow 와 막대가 같은 값을 보인다",
+  name: "끝 값을 넘는 값은 끝 값으로, 음수 값과 max 가 0 이하인 값은 0 으로 잘라 aria 값과 막대가 같은 범위를 보인다",
   render: (args) => (
     <div className="flex flex-col gap-4">
       <Progress {...args} label="넘친 값" value={5} max={3} />
       <Progress {...args} label="음수 값" value={-1} max={3} />
       <Progress {...args} label="끝 값 0" value={1} max={0} />
+      <Progress {...args} label="끝 값 음수" value={1} max={-2} />
     </div>
   ),
   play: async ({ canvas }) => {
     const over = canvas.getByRole("progressbar", { name: "넘친 값" });
     const below = canvas.getByRole("progressbar", { name: "음수 값" });
     const zero = canvas.getByRole("progressbar", { name: "끝 값 0" });
+    const negative = canvas.getByRole("progressbar", { name: "끝 값 음수" });
     const ratio = (progressbar: HTMLElement): number => {
       const { track, bar } = partsOf(progressbar);
       return bar.getBoundingClientRect().width / track.getBoundingClientRect().width;
@@ -119,6 +121,9 @@ export const OutOfRange: Story = {
       belowRatio: ratio(below),
       zeroNow: zero.getAttribute("aria-valuenow"),
       zeroRatio: ratio(zero),
+      negativeNow: negative.getAttribute("aria-valuenow"),
+      negativeMax: negative.getAttribute("aria-valuemax"),
+      negativeRatio: ratio(negative),
     }).toEqual({
       overNow: "3",
       overRatio: 1,
@@ -126,6 +131,10 @@ export const OutOfRange: Story = {
       belowRatio: 0,
       zeroNow: "0",
       zeroRatio: 0,
+      // max 가 0 이하이면 범위는 0 부터 0 까지다. 최대가 최소(0)보다 작게 나가지 않는다.
+      negativeNow: "0",
+      negativeMax: "0",
+      negativeRatio: 0,
     });
   },
 };

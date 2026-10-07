@@ -24,8 +24,8 @@ interface ProgressOwnProps {
   /** null 이면 값 모름(불러오는 중). 기본 null. */
   value?: number | null;
   /**
-   * 끝 값. 기본 1. 0 보다 크게 넘긴다. 0 이하이면 막대는 비고 `aria-valuemax` 는 넘긴 값 그대로라 최소 0 과 범위를 이루지
-   * 못한다. 그것을 고칠 정규화가 없어 계약으로 둔다(PR #166 의 claude-review).
+   * 끝 값. 기본 1. 0 보다 크게 넘긴다. 0 이하이면 막대는 비고 범위는 0 부터 0 까지다(`aria-valuemax` 가 최소 0 보다 작게
+   * 나가지 않는다).
    */
   max?: number;
   /** 보이는 이름이자 접근 이름. 몇 단계 중 몇째인지 글로 적는다. */
@@ -79,7 +79,7 @@ export function Progress({
       role="progressbar"
       aria-label={label}
       aria-valuenow={now ?? undefined}
-      aria-valuemax={max}
+      aria-valuemax={Math.max(max, 0)}
       className="flex flex-col gap-2"
     >
       <span className="text-small text-text">{label}</span>
