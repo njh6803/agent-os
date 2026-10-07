@@ -85,7 +85,7 @@
 - 로컬 `main`은 main을 체크아웃한 체크아웃에서 `pull`로만 옮기고, 워크트리의 기준은 `origin/main`이다. 다른 체크아웃이 main을 체크아웃한 채 `fetch origin main:main`이나 `branch -f main`으로 옮기면 공유 ref라 그 체크아웃의 HEAD만 움직이고 파일은 남아, main의 새 변경이 스테이지된 되돌림으로 보인다(이 PC의 git 2.32에서 2026-10-05 워크트리 감사 서브에이전트가 임시 저장소로 손으로 재현했다).
 - 파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 명령의 종료 코드다. 판정 명령은 파이프·체인 없이 돌린다. 훅이 경고한다.
 - 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(되풀이해 겪었다). 탐침은 실제 호출과 같은 실행 위치·환경으로 돈다. 실행 위치가 다르자 ruff가 그 프로젝트의 `fix` 설정을 읽지 않았다. pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
-- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. `git fetch`도 하고 `git diff --name-only HEAD...origin/main`이 비지 않으면, 이 브랜치가 새로 매긴 번호(일지 순번·대기열 행·ADR)와 이름으로 든 파일을 그 목록과 대조한다. 긴 세션 동안 main에 병합된 PR과 번호가 부딪혔고, 따라야 할 규약이 새로 섰다(대기열 48). 나란히 도는 형제 워크트리(`git worktree list`)의 `docs/journal/`·`docs/adr/`·`.scratch/retro-queue.md`도 파일로 본다. 커밋 전의 번호는 git으로 보이지 않는다. 겹쳐서 번호를 바꾸면 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다.
+- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. 그리고 `uv run python tools/sibling_overlap.py`를 친다(무엇을 보는지는 그 독스트링). 긴 세션 동안 main에 병합된 PR(대기열 48)과 아직 열린 PR(대기열 115)이 번호를 먼저 가져갔다. 1로 끝나면 이 브랜치가 출력의 "옮길 번호"대로 비켜 가고, 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다. 출력의 origin/main 줄이 움직였으면 `git diff --name-only HEAD...origin/main`을 이 브랜치가 이름으로 든 파일과도 대조한다. 따라야 할 규약이 새로 섰을 수 있다(대기열 48).
 
 ## 원칙
 - 답변과 문서는 한국어로 쓴다.

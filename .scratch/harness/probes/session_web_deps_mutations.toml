@@ -66,6 +66,87 @@ old = '''            timeout=timeout,
 new = ''''''
 
 [[mutation]]
+name = "pre-commit 설정이 없어도 git 훅을 깔려 한다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return path if (path / PRE_COMMIT_CONFIG).is_file() else None'''
+new = '''    return path'''
+
+[[mutation]]
+name = "git 훅을 루트가 아닌 곳에서 깐다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return ["run", "--directory", str(root), "pre-commit", "install"]'''
+new = '''    return ["run", "pre-commit", "install"]'''
+
+[[mutation]]
+name = "git 훅을 깔지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return ["run", "--directory", str(root), "pre-commit", "install"]'''
+new = '''    return ["run", "--directory", str(root), "pre-commit", "--version"]'''
+
+[[mutation]]
+name = "프로그램을 찾지 못하면 조용히 지나간다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''            reason: str | None = step.missing'''
+new = '''            reason: str | None = None'''
+
+[[mutation]]
+name = "실패를 모으지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''            failures.append(Failure(step.what, reason, step.command))'''
+new = '''            pass'''
+
+[[mutation]]
+name = "git 훅의 손으로 칠 명령이 루트로 가지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return shlex.join(["uv", *pre_commit_args(root)])'''
+new = '''    return shlex.join(["uv", "run", "pre-commit", "install"])'''
+
+[[mutation]]
+name = "두 설치가 시간 제한을 나눠 쓰지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return max(deadline - now, MIN_STEP_SECONDS)'''
+new = '''    return deadline'''
+
+[[mutation]]
+name = "web 의존성을 git 훅보다 먼저 깐다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''        steps.append(Step(WEB_DEPS_LABEL, "pnpm", PNPM_MISSING, run_pnpm, command))'''
+new = '''        steps.insert(0, Step(WEB_DEPS_LABEL, "pnpm", PNPM_MISSING, run_pnpm, command))'''
+
+[[mutation]]
+name = "단계마다 시간 제한 전부를 준다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''            reason = step.run(program, step_timeout(deadline, clock()))'''
+new = '''            reason = step.run(program, TIMEOUT_SECONDS)'''
+
+[[mutation]]
 name = "훅 안의 시간 제한이 등록의 것보다 길다"
 tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
@@ -81,7 +162,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
 old = '''    except OSError as error:
-        return f"{command[0]} 를 띄우지 못했다: {error}"
+        return f"{argv[0]} 를 띄우지 못했다: {error}"
 '''
 new = ''''''
 
@@ -100,8 +181,8 @@ tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
-old = '''        f" 돌리기 전에 `{command}` 를 직접 친다. 까닭:\n{reason}"'''
-new = '''        f" 돌리기 전에 직접 깐다. 까닭:\n{reason}"'''
+old = '''    items = [f"- {f.what}: `{f.command}` 를 직접 친다. 까닭:\n{f.reason}" for f in failures]'''
+new = '''    items = [f"- {f.what}: 직접 깐다. 까닭:\n{f.reason}" for f in failures]'''
 
 [[mutation]]
 name = "사용자에게 손으로 칠 명령을 알리지 않는다"
@@ -109,8 +190,8 @@ tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
-old = '''        "systemMessage": f"web 의존성을 깔지 못했다. `{command}` 를 직접 친다.",'''
-new = '''        "systemMessage": "web 의존성을 깔지 못했다.",'''
+old = '''        "systemMessage": f"세션 준비가 덜 됐다. {commands} 를 직접 친다.",'''
+new = '''        "systemMessage": "세션 준비가 덜 됐다.",'''
 
 [[mutation]]
 name = "실패를 삼킨다"
@@ -118,17 +199,17 @@ tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
-old = '''        print(json.dumps(failure_output(reason, web)))'''
+old = '''        print(json.dumps(failure_output(failures)))'''
 new = '''        pass'''
 
 [[mutation]]
-name = "pnpm 이 없으면 조용히 지나간다"
+name = "uv 가 없을 때의 까닭을 pnpm 의 것으로 든다"
 tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
-old = '''    reason = PNPM_MISSING if pnpm is None else install([pnpm], web, TIMEOUT_SECONDS)'''
-new = '''    reason = None if pnpm is None else install([pnpm], web, TIMEOUT_SECONDS)'''
+old = '''        steps.append(Step(GIT_HOOKS_LABEL, "uv", UV_MISSING, run_pre_commit, command))'''
+new = '''        steps.append(Step(GIT_HOOKS_LABEL, "uv", PNPM_MISSING, run_pre_commit, command))'''
 
 [[mutation]]
 name = "실패하면 종료 2로 끝난다"
@@ -136,9 +217,9 @@ tests = ["tests/tools/test_hook_session_web_deps.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_session_web_deps.py"
-old = '''        print(json.dumps(failure_output(reason, web)))
+old = '''        print(json.dumps(failure_output(failures)))
     return 0'''
-new = '''        print(json.dumps(failure_output(reason, web)))
+new = '''        print(json.dumps(failure_output(failures)))
         return 2
     return 0'''
 
