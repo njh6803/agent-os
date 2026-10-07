@@ -267,6 +267,32 @@ def test_결과가_오류면_답_대신_오류를_적는다(subtype: str, is_err
     assert facts.error is not None and subtype in facts.error
 
 
+def test_읽는_이벤트의_모양이_어긋나면_그_줄을_남기고_사실로_쓰지_않는다(tmp_path: Path) -> None:
+    """모양이 어긋난 Read 를 조용히 건너뛰면 대상 밖 Read 를 놓쳐 거짓 통과가 난다(PR #157 리뷰)."""
+    bad_read: dict[str, object] = {"type": "tool_use", "name": "Read", "input": "a.py"}
+    lines = [
+        _init(),
+        _줄({"type": "assistant", "message": {"content": [bad_read]}}),
+        _줄({"type": "result", "subtype": "success", "is_error": False, "result": 3}),
+        _줄({"type": "system", "subtype": "init", "tools": "Read"}),
+    ]
+
+    facts = read_facts(lines)
+
+    assert [line.split("번째", 1)[0] for line in facts.malformed] == ["2", "3", "4"]
+    assert facts.reads == ()
+    assert facts.answer is None
+    assert facts.tools == ("Read",)
+
+
+def test_읽지_않는_이벤트의_모양은_보지_않는다() -> None:
+    odd: dict[str, object] = {"type": "rate_limit_event", "message": 3, "tools": "x"}
+    facts = read_facts([_init(), _줄(odd), _결과("없음")])
+
+    assert facts.malformed == ()
+    assert facts.answer == "없음"
+
+
 # 판정
 
 
@@ -346,6 +372,15 @@ def test_init이_없거나_세션이_답을_내지_못하면_실패다(tmp_path:
     assert any("init" in reason for reason in _규칙_판정(_사실(tools=None, reads=대상), tmp_path))
     오류 = _사실(reads=대상, answer=None, error="error_max_turns: 멈췄다")
     assert any("error_max_turns" in reason for reason in _규칙_판정(오류, tmp_path))
+
+
+def test_모양이_어긋난_줄이_있으면_실패다(tmp_path: Path) -> None:
+    facts = replace(
+        _사실(reads=(str(tmp_path / "tools" / "hook_env_read.py"),)),
+        malformed=("2번째 줄(assistant): message.content.0.input",),
+    )
+
+    assert any("모양" in reason for reason in _규칙_판정(facts, tmp_path))
 
 
 def _스킬_판정(facts: Facts, checkout: Path) -> list[str]:

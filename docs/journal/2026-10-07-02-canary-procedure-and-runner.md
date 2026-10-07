@@ -91,10 +91,10 @@
 ## 바꾼 것
 
 - `tools/canary.py`(새 파일): 러너. 명세 검증은 pydantic이고 `tools/mutate.py`의 관례를 따랐다.
-- `tests/tools/test_canary.py`(새 파일): 명세, 명령, 사실 뽑기, 판정, 실행의 사례 63.
+- `tests/tools/test_canary.py`(새 파일): 명세, 명령, 사실 뽑기, 판정, 실행의 사례 66.
 - `.scratch/harness/probes/canary/`: 명세 둘. `tools_rule.toml`(통과 기대, 카나리아는 문장과 그 자리인 규칙 파일의 제목),
   `tidy_skill_same_copy.toml`(대조군이 새 사본이라 실패 기대).
-- `.scratch/harness/probes/canary_mutations.toml`: 변이 스물셋. 프로브 README에 두 행.
+- `.scratch/harness/probes/canary_mutations.toml`: 변이 스물다섯. 프로브 README에 두 행.
 - `docs/constitution/operations.md` 환경 규약 상세의 카나리아 항목, `docs/constitution/README.md`의 버전.
 - `CLAUDE.md` 환경 함정의 가드 문장.
 - `.scratch/retro-queue.md`: 120·122·127·129와, 같은 현상을 #156이 새 행으로 넣은 131을 닫았다. 122는 10회차로 셌다.
@@ -114,8 +114,8 @@
 
 - 테스트를 먼저 쓰고 같은 이름의 뼈대에서 돌렸다. 47이 빨강이었고 초록 8은 "통과여야 한다"는 사례였다(판정이 아무것도
   거르지 않는 뼈대에서 지난다). 그 여덟은 아래 변이가 잰다. 셀프 리뷰 반영 때는 새 사례를 먼저 더해 이름만 바꾼 옛
-  구현에서 빨강 여섯을 봤다. 지금 63 모두 초록.
-- 변이 스물셋 모두 빨강. 첫 판에서 둘이 이름이 그 동작인 테스트를 지났다. 백틱·강조 변이는 답의 표시가 카나리아 밖에만
+  구현에서 빨강 여섯을, PR 리뷰 반영 때는 모양 검증 사례 셋의 빨강을 봤다. 지금 66 모두 초록.
+- 변이 스물다섯 모두 빨강. 첫 판에서 둘이 이름이 그 동작인 테스트를 지났다. 백틱·강조 변이는 답의 표시가 카나리아 밖에만
   있었고, 스킬 호출 변이는 테스트가 호출과 자리 줄을 함께 비워 자리 줄 판정만으로 빨강이 났다. 두 테스트를 고친 뒤
   모두 빨강이다.
 - 실제 실행(sonnet, claude 2.1.291): `tools_rule.toml`은 통과 4다. 실험군 셋 모두 Read가 대상 하나였고 규칙 파일의
@@ -152,6 +152,24 @@ PR을 열기 전 `git fetch`에서 형제 01의 티켓이 #156으로 병합된 �
   것"에 적었다.
 - **다시 돌렸다.** pytest 1706 통과, ruff, ruff format(436), pyright 0, import-linter 5 kept, `pnpm -C web verify` 종료 0,
   지침 검사, 타입 우회 검사, `tools/run_hooks.py`(페이로드 61, 어긋남 0), 변이 스물셋, 두 명세의 실제 실행.
+
+## PR 리뷰 반영
+
+PR #157의 CI 여섯이 초록이었다. CodeRabbit은 무료 OSS 한도에 걸려 리뷰하지 않았고(`@coderabbitai review` 요청도 한도로
+끝났다), claude-review가 Minor 넷과 Nit 하나를 남겼다. 인라인 코멘트는 없었다.
+
+- **고쳤다, Minor(`main`의 추상화 수준).** 사전 검증을 `_preflight`로, 회차 하나의 원본 쓰기와 판정 출력을 `_report`로 뺐다.
+- **고쳤다, Minor(이벤트 모양을 검증하지 않음).** 읽는 종류(system, assistant, user, result)만 종류별 `TypedDict`를 pydantic
+  `TypeAdapter`로 검증하고, 어긋난 줄은 사실로 쓰지 않고 실패 이유로 올린다. 봇은 트레이스백을 짚었지만, 어긋난 Read를
+  조용히 건너뛰면 대상 밖 Read를 놓쳐 거짓 통과가 나는 쪽이 더 컸다. 이 세션에서 모은 실제 원본 21개(러너 출력 열여섯,
+  손으로 돌린 표본 다섯)는 모두 모양이 맞았다(손으로 돌렸다).
+- **고쳤다, Minor(`CLAUDE.md` 첫 불릿).** 가드를 별도 불릿으로 가르고, 거부된 모양과 근거는 `operations.md` 환경 규약 상세의
+  새 항목으로 내렸다.
+- **고쳤다, Minor(`operations.md` 카나리아 불릿 약 2,000자).** 러너, 명령, 거부 플래그, 커넥터를 하위 불릿으로 갈랐다. 글은
+  그대로 옮겼다.
+- **남겼다, Nit(헌법 README의 버전 줄).** 버전마다 문장이 붙어 한 줄이 길지만 이 PR이 만든 모양이 아니다.
+- **다시 돌렸다.** 모양 검증 사례 셋을 먼저 더해 옛 구현에서 빨강 셋을 봤다. 변이 스물다섯(모양 변이 둘을 더했다) 모두 빨강,
+  검증 명령은 커밋의 pre-commit이 돌았다.
 
 ## 회고
 

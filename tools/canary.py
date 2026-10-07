@@ -33,6 +33,8 @@
 
 판정. 회차마다 아래가 모두 맞아야 통과다.
 - init 의 `tools` 가 그 도구 하나이고 `mcp_servers` 가 비었다.
+- 읽는 이벤트(system, assistant, user, result)의 모양이 예상과 같다. 어긋난 줄은 사실로 쓰지 않고
+  실패로 본다. 건너뛰면 대상 밖 Read 를 놓쳐 거짓 통과가 날 수 있다(PR #157 리뷰).
 - `result` 가 성공이고 `claude` 가 0 으로 끝났다.
 - rule: Read 를 한 번 이상 불렀고 모두 `<체크아웃>/<target>` 이다. 다른 파일(특히 규칙 파일)을
   읽었으면 답이 실린 규칙이 아니라 그 파일에서 왔을 수 있다.
@@ -82,7 +84,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
 
 type Kind = Literal["rule", "skill"]
 type Role = Literal["experiment", "control"]
@@ -157,7 +159,10 @@ class Spec(_Model):
 
 @dataclass(frozen=True)
 class Facts:
-    """회차 하나의 stream-json 에서 뽑은 것. init 이 없으면 `tools` 가 None 이다."""
+    """회차 하나의 stream-json 에서 뽑은 것. init 이 없으면 `tools` 가 None 이다.
+
+    `malformed` 는 읽는 이벤트 가운데 모양이 어긋나 사실로 쓰지 않은 줄이다.
+    """
 
     tools: tuple[str, ...] | None
     servers: tuple[str, ...]
@@ -166,6 +171,7 @@ class Facts:
     skill_dirs: tuple[str, ...]
     answer: str | None
     error: str | None
+    malformed: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -189,14 +195,31 @@ class _Message(TypedDict, total=False):
     content: list[_Block] | str
 
 
-class _Event(TypedDict, total=False):
+class _Head(TypedDict, total=False):
     type: str
+
+
+class _System(TypedDict, total=False):
     subtype: str
     tools: list[str]
     mcp_servers: list[dict[str, object] | str]
+
+
+class _Turn(TypedDict, total=False):
     message: _Message
+
+
+class _Result(TypedDict, total=False):
+    subtype: str
     result: str
     is_error: bool
+
+
+# 읽는 종류만 그 모양을 검증한다. 다른 종류(rate_limit_event 등)는 모양이 무엇이든 건너뛴다.
+_HEAD = TypeAdapter(_Head)
+_SYSTEM = TypeAdapter(_System)
+_TURN = TypeAdapter(_Turn)
+_RESULT = TypeAdapter(_Result)
 
 
 def load_spec(text: str) -> Spec:
@@ -238,14 +261,15 @@ def prompt_for(spec: Spec, arm: Arm) -> str:
     return spec.question
 
 
-def _event(line: str) -> _Event | None:
+def _json_object(line: str) -> object | None:
+    """JSON 객체 줄이면 그 값. 빈 줄, 경고, 잘린 줄이면 None 이다."""
     if not line.lstrip().startswith("{"):
         return None
     try:
-        event: _Event = json.loads(line)
+        value: object = json.loads(line)
     except ValueError:  # claude 가 중간에 끝나면 마지막 줄이 잘린다
         return None
-    return event
+    return value
 
 
 def _server_name(server: dict[str, object] | str) -> str:
@@ -255,9 +279,14 @@ def _server_name(server: dict[str, object] | str) -> str:
     return name if isinstance(name, str) else repr(server)
 
 
-def _blocks(event: _Event) -> list[_Block]:
-    content = event.get("message", {}).get("content", [])
+def _blocks(turn: _Turn) -> list[_Block]:
+    content = turn.get("message", {}).get("content", [])
     return [] if isinstance(content, str) else content
+
+
+def _where(error: ValidationError) -> str:
+    first = error.errors()[0]
+    return f"{'.'.join(str(part) for part in first['loc'])}: {first['msg']}"
 
 
 def read_facts(lines: Iterable[str]) -> Facts:
@@ -268,37 +297,54 @@ def read_facts(lines: Iterable[str]) -> Facts:
     skill_dirs: list[str] = []
     answer: str | None = None
     error: str | None = None
-    for line in lines:
-        event = _event(line)
-        if event is None:
+    malformed: list[str] = []
+    for number, line in enumerate(lines, 1):
+        raw = _json_object(line)
+        if raw is None:
             continue
-        kind = event.get("type")
-        if kind == "system" and event.get("subtype") == "init":
-            tools = tuple(event.get("tools", []))
-            servers = tuple(_server_name(server) for server in event.get("mcp_servers", []))
-        elif kind == "assistant":
-            for block in _blocks(event):
-                if block.get("type") != "tool_use":
-                    continue
-                arguments = block.get("input", {})
-                if block.get("name") == "Read":
-                    path = arguments.get("file_path")
-                    reads.append(path if isinstance(path, str) else repr(arguments))
-                elif block.get("name") == "Skill":
-                    name = arguments.get("skill")
-                    skills.append(name if isinstance(name, str) else repr(arguments))
-        elif kind == "user":
-            for block in _blocks(event):
-                if block.get("type") == "text":
-                    skill_dirs.extend(_SKILL_DIR.findall(block.get("text", "")))
-        elif kind == "result":
-            subtype = event.get("subtype", "")
-            text = event.get("result", "")
-            if subtype == "success" and not event.get("is_error", False):
-                answer, error = text, None
-            else:
-                answer, error = None, f"{subtype or '결과 없음'}: {text}"
-    return Facts(tools, servers, tuple(reads), tuple(skills), tuple(skill_dirs), answer, error)
+        kind: str | None = None
+        try:
+            kind = _HEAD.validate_python(raw).get("type")
+            if kind == "system":
+                system = _SYSTEM.validate_python(raw)
+                if system.get("subtype") == "init":
+                    tools = tuple(system.get("tools", []))
+                    servers = tuple(_server_name(s) for s in system.get("mcp_servers", []))
+            elif kind == "assistant":
+                for block in _blocks(_TURN.validate_python(raw)):
+                    if block.get("type") != "tool_use":
+                        continue
+                    arguments = block.get("input", {})
+                    if block.get("name") == "Read":
+                        path = arguments.get("file_path")
+                        reads.append(path if isinstance(path, str) else repr(arguments))
+                    elif block.get("name") == "Skill":
+                        name = arguments.get("skill")
+                        skills.append(name if isinstance(name, str) else repr(arguments))
+            elif kind == "user":
+                for block in _blocks(_TURN.validate_python(raw)):
+                    if block.get("type") == "text":
+                        skill_dirs.extend(_SKILL_DIR.findall(block.get("text", "")))
+            elif kind == "result":
+                result = _RESULT.validate_python(raw)
+                subtype = result.get("subtype", "")
+                text = result.get("result", "")
+                if subtype == "success" and not result.get("is_error", False):
+                    answer, error = text, None
+                else:
+                    answer, error = None, f"{subtype or '결과 없음'}: {text}"
+        except ValidationError as invalid:
+            malformed.append(f"{number}번째 줄({kind or '종류 없음'}) {_where(invalid)}")
+    return Facts(
+        tools,
+        servers,
+        tuple(reads),
+        tuple(skills),
+        tuple(skill_dirs),
+        answer,
+        error,
+        tuple(malformed),
+    )
 
 
 def _flat(text: str) -> str:
@@ -324,6 +370,11 @@ def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
         reasons.append(f"도구가 {tool} 하나가 아니다: {', '.join(facts.tools) or '없음'}")
     if facts.servers:
         reasons.append(f"MCP 서버가 실렸다: {', '.join(facts.servers)}")
+    if facts.malformed:
+        reasons.append(
+            "stream-json 모양이 어긋난 줄이 있어 뽑은 사실이 빠졌을 수 있다(판이 바뀌었는지 본다): "
+            + "; ".join(facts.malformed[:3])
+        )
     if spec.kind == "rule" and arm.target is not None:
         target = checkout / arm.target
         if not facts.reads:
@@ -414,6 +465,38 @@ def _summary(facts: Facts) -> str:
     return f"도구 {tools} · 서버 {len(facts.servers)} · 읽음 {reads} · 스킬 {skills} · 답: {answer}"
 
 
+def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
+    """돌리기 전에 막을 문제들. 갈래의 체크아웃이 없거나 rule 갈래의 대상 파일이 어긋났다."""
+    problems = [
+        f"{arm.name}: 체크아웃 {places[arm.name]} 이 없다"
+        for arm in spec.arm
+        if not places[arm.name].is_dir()
+    ]
+    return problems + [
+        problem for arm in spec.arm for problem in target_problems(spec, arm, places[arm.name])
+    ]
+
+
+def _report(
+    spec: Spec, job: _Job, result: RunResult, output: Path, out: Callable[[str], None]
+) -> bool:
+    """회차 하나의 원본을 남기고 판정을 찍는다. 실패면 True."""
+    stem = f"{job.arm.name}-{job.index}"
+    (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
+    (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
+    facts = read_facts(result.stdout.splitlines())
+    reasons = judge(spec, job.arm, facts, job.checkout)
+    if result.exit_code != 0:
+        last = (result.stderr.strip().splitlines() or ["stderr 없음"])[-1]
+        reasons.append(f"claude 가 종료 코드 {result.exit_code} 로 끝났다: {last}")
+    label = f"{job.arm.name}({_ROLE_NAMES[job.arm.role]}) {job.index}/{job.arm.times}"
+    out(f"[{'실패' if reasons else '통과'}] {label}")
+    for reason in reasons:
+        out(f"  - {reason}")
+    out(f"  {_summary(facts)}")
+    return bool(reasons)
+
+
 def main(
     argv: Sequence[str],
     *,
@@ -435,14 +518,7 @@ def main(
     jobs = [
         _Job(arm, index, places[arm.name]) for arm in spec.arm for index in range(1, arm.times + 1)
     ]
-    problems = [
-        f"{arm.name}: 체크아웃 {places[arm.name]} 이 없다"
-        for arm in spec.arm
-        if not places[arm.name].is_dir()
-    ]
-    problems += [
-        problem for arm in spec.arm for problem in target_problems(spec, arm, places[arm.name])
-    ]
+    problems = _preflight(spec, places)
     if problems:
         out("명세 오류(아무것도 돌리지 않았다):")
         for problem in problems:
@@ -460,22 +536,9 @@ def main(
     except OSError as error:
         out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
         return 3
-    failed = 0
-    for job, result in zip(jobs, results, strict=True):
-        stem = f"{job.arm.name}-{job.index}"
-        (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
-        (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
-        facts = read_facts(result.stdout.splitlines())
-        reasons = judge(spec, job.arm, facts, job.checkout)
-        if result.exit_code != 0:
-            last = (result.stderr.strip().splitlines() or ["stderr 없음"])[-1]
-            reasons.append(f"claude 가 종료 코드 {result.exit_code} 로 끝났다: {last}")
-        label = f"{job.arm.name}({_ROLE_NAMES[job.arm.role]}) {job.index}/{job.arm.times}"
-        out(f"[{'실패' if reasons else '통과'}] {label}")
-        for reason in reasons:
-            out(f"  - {reason}")
-        out(f"  {_summary(facts)}")
-        failed += bool(reasons)
+    failed = sum(
+        _report(spec, job, result, output, out) for job, result in zip(jobs, results, strict=True)
+    )
     out(f"통과 {len(jobs) - failed} · 실패 {failed}. 원본은 {output}")
     return 1 if failed else 0
 

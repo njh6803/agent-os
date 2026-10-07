@@ -267,10 +267,38 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-        if result.exit_code != 0:
+    if result.exit_code != 0:
 '''
 new = '''
-        if False:
+    if False:
+'''
+
+[[mutation]]
+name = "모양이 어긋난 줄을 판정에 올리지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if facts.malformed:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "모양이 어긋난 줄을 조용히 건너뛴다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            malformed.append(f"{number}번째 줄({kind or '종류 없음'}) {_where(invalid)}")
+'''
+new = '''
+            continue
 '''
 
 [[mutation]]
