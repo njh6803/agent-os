@@ -52,8 +52,9 @@ Playwright 1.63.0(chromium-headless-shell 1243)이다.
   프로브 README의 두 행.
 - `docs/adr/0005-remote-ci-pr-from-day-one.md`: 이력에서 가장 긴 검사를 다시 재야 한다고 적었던 문장을 위 표의 값으로
   바꿨다. ADR 이력의 문구를 승인 뒤에 또 바꾼 것이라 답에서 사용자에게 알린다.
-- `tools/run_checks.py` 독스트링: CI 시간을 더하고, "못 보는 것"의 Windows 문장을 위 실행에서 본 것으로 바꿨다.
-- `KICKOFF.md`: 러너 항목에 Windows 러너의 시간과 `shutil.which`의 까닭.
+- `tools/run_checks.py` 독스트링: Windows의 `pnpm.cmd`를 `shutil.which`가 찾고 경로 없는 `subprocess`가
+  실패한 것을 위 실행으로 적었다. 시간은 적지 않고 ADR을 가리킨다(셀프 리뷰 표준 축).
+- `KICKOFF.md`: 러너 항목의 시간을 "4할 남짓 줄었다"와 ADR 포인터로 줄이고 `shutil.which`의 까닭을 더했다.
 
 ## 검사
 
@@ -62,6 +63,25 @@ Playwright 1.63.0(chromium-headless-shell 1243)이다.
   검사, 훅 러너, pyright가 통과했다. pytest(9 failed, 1644 passed, 실패는 모두 `pwsh` 부재)와 web verify(스토리
   테스트가 `chromium_headless_shell-1243`을 찾지 못함)는 이 컨테이너의 환경 탓으로 실패했다(대기열 132). 같은 두
   검사가 위 GitHub Actions 러너에서는 통과했다.
+
+## 셀프 리뷰
+
+`/code-review`, base `dea61c2`(앞 단계에서 리뷰한 커밋), 커밋 셋(`dc9079b`, `ab7c50e`, `006e807`)과 스테이지 5파일.
+`ab7c50e`와 `006e807`은 서로 지운다. 두 축 모두 Critical·Major는 없었다.
+
+- **고쳤다, 명세 축.** 러너 독스트링의 "테스트는 Linux 에서만 돈다"를 상설 테스트가 없고 CI가 Linux에서만 돈다는
+  말로 좁혔다. npm 전역 설치는 사용자 PC의 방식을 확인하지 않은 가정이라 그렇게 적었다. `KICKOFF.md`에 Linux CI
+  값을 짝으로 두었다가, 아래 표준 축의 중복 지적으로 시간 자체를 ADR 포인터로 줄였다(`f7ffcdc`와 이 단계의 마지막
+  커밋).
+- **고쳤다, 표준 축.** 같은 시간이 ADR, 러너 독스트링, `KICKOFF.md` 세 곳에 있던 것을 ADR 하나로 모았다. 독스트링
+  안에서 `pnpm.cmd`와 `pnpm.CMD`가 섞이고 근거가 뒤 단락에만 있던 것을 앞 단락 한 곳으로 모았다. 프로브 README의
+  `precommit_parallel.py` 행에 실패 출력의 끝을 찍는 것과 CI 실행의 판이 있는 행을 가리키는 말을, CI 프로브 행에
+  pre-commit 4.6.2를 더했다.
+- **남겼다.** `precommit_parallel.py`의 `run`이 러너의 `run_one`과 닮았고(OSError 처리만 없다) 결과를 튜플로 든다.
+  프로브는 러너와 독립으로 두어야 러너가 바뀌어도 같은 것을 다시 잰다. 받은 dict에 결과를 쓰는 것은 처음 판부터의
+  모양이다. uv 0.12.23은 setup-uv가 판을 고정하지 않아 저장소로 확인할 수 없다(로그의 경로에서 읽었다).
+- **사용자에게 알린다.** ADR 0005 이력의 측정 문장을 승인 뒤에 다시 바꿨다. 결정이 아니라 측정값의 갱신이고, 이
+  단계의 답에서 알린다.
 
 ## 회고
 
