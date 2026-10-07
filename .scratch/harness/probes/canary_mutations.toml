@@ -304,6 +304,22 @@ new = '''
 '''
 
 [[mutation]]
+name = "원본을 쓰지 못한 예외를 그대로 올린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except OSError as error:
+        out(f"원본을 쓰지 못했다(판정을 끝까지 찍지 못했다): {error}")
+'''
+new = '''
+    except KeyError as error:
+        out(f"원본을 쓰지 못했다(판정을 끝까지 찍지 못했다): {error}")
+'''
+
+[[mutation]]
 name = "모양이 어긋난 줄을 판정에 올리지 않는다"
 tests = ["tests/tools/test_canary.py"]
 expect = "red"

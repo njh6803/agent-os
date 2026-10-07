@@ -66,7 +66,7 @@ rule 갈래의 대상 파일에 카나리아가 있는지, 갈래의 체크아�
 - Read 의 결과가 오류였는지. 돌리기 전에 대상 파일이 있는지만 본다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
-3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했다(원본을 남기지 않았다).
+3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다.
 """
 
 from __future__ import annotations
@@ -571,8 +571,12 @@ def main(
         out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
         return 3
     verdicts = [_verdict(spec, job, result) for job, result in zip(jobs, results, strict=True)]
-    for job, result, verdict in zip(jobs, results, verdicts, strict=True):
-        _record(job, result, verdict, output, out)
+    try:
+        for job, result, verdict in zip(jobs, results, verdicts, strict=True):
+            _record(job, result, verdict, output, out)
+    except OSError as error:
+        out(f"원본을 쓰지 못했다(판정을 끝까지 찍지 못했다): {error}")
+        return 3
     failed = sum(1 for _, reasons in verdicts if reasons)
     out(f"통과 {len(jobs) - failed} · 실패 {failed}. 원본은 {output}")
     return 1 if failed else 0
