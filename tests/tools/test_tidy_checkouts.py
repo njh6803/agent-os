@@ -30,7 +30,7 @@ from tools.tidy_checkouts import (
     main,
     parse_merged,
     parse_worktrees,
-    pid_alive,
+    process_alive,
     real_git,
     tasklist_has,
     unrecreatable,
@@ -267,7 +267,7 @@ def test_제목이_어느_브랜치와도_맞지_않는_세션이_돌면_지울_
     delete = judge(_WT, _FACTS, _MERGED, (), _죽었다)
     keep = judge(_WT, _FACTS, {}, (), _죽었다)
     held = hold_for_strangers([delete, keep], ("앱이 지은 이름",), {"main", "chore/x"})
-    assert [verdict.action for verdict in held] == ["human", "keep"]
+    assert [verdict.action for verdict in held] == ["hold", "keep"]
     assert "앱이 지은 이름" in held[0].reason
 
 
@@ -504,14 +504,14 @@ def test_gh_가_실패하면_3으로_끝난다(repo: Path) -> None:
 
 
 def test_살아_있는_pid_와_끝난_pid_를_가른다() -> None:
-    assert pid_alive(os.getpid())
+    assert process_alive(os.getpid())
     finished = subprocess.run(
         [sys.executable, "-c", "import os; print(os.getpid())"],
         capture_output=True,
         text=True,
         check=True,
     )
-    assert not pid_alive(int(finished.stdout))
+    assert not process_alive(int(finished.stdout))
 
 
 def test_remove_는_무시된_것을_먼저_지우고_워크트리와_브랜치를_지운다(repo: Path) -> None:
@@ -652,6 +652,23 @@ def test_remove_는_탐침이_막히면_죽은_잠금도_풀지_않는다(repo: 
         raise PermissionError(13, "액세스가 거부되었습니다")
 
     ops = replace(_ops({"chore/done": frozenset({head})}), rename=held)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
+    done = next(w for w in listing if w.branch == "chore/done")
+    assert done.locked == "claude session done (pid 999999)"
+
+
+def test_remove_는_앞지우기_직전에_멈추면_죽은_잠금도_풀지_않는다(repo: Path) -> None:
+    """PR #163 claude-review: 잠금을 푼 뒤에 재판정이 멈추면 '바꾼 것 없음'이 거짓이 된다."""
+    path, head = _add(repo, "done")
+    _git("worktree", "lock", "--reason", "claude session done (pid 999999)", str(path), cwd=repo)
+
+    def rename_then_write(src: str, dst: str) -> None:
+        os.rename(src, dst)
+        if Path(dst).name == "done":
+            (path / ".env").write_text("SECRET=x\n", encoding="utf-8")
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=rename_then_write)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
     listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
     done = next(w for w in listing if w.branch == "chore/done")

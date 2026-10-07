@@ -45,20 +45,22 @@
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
    `Permission denied`·`Invalid argument` 로 지우다 만 폴더를 남긴다(`.scratch/harness/probes/
-   worktree_occupancy.py` 의 B·C). 막히면 아무것도 바꾸지 않고 멈춘다. 그래서 잠금 풀기보다 앞이다.
-2. 죽은 잠금을 푼다.
-3. 앞지우기. 무시된 항목을 판정 2로 다시 거른 뒤(판정 뒤에 생긴 `.env` 를 지우지 않게) 이 도구가
-   먼저 지운다. 막히면 멈춘다. 등록과 `.git` 파일은 남는다(프로브의 F). 워크트리 밖의 하드링크
-   이름으로 같은 DLL 을 적재한 프로세스는 이름 바꾸기를 지나는데 git 은 지우다 만 폴더를 남긴다
-   (프로브의 E). uv 의 `.venv` 는 캐시에서 하드링크로 채워져, 어느 체크아웃의 파이썬이 확장 모듈을
-   실으면 같은 캐시 파일에 걸린 다른 워크트리의 `.pyd` 도 그 처지가 된다. 링크 수는 손으로 봤다
+   worktree_occupancy.py` 의 B·C). 막히면 아무것도 바꾸지 않고 멈춘다.
+2. 다시 거르기. 판정 1~3을 한 번 더 내고, 지울 무시된 항목도 그때 읽는다. 판정 뒤에 생긴 `.env` 나
+   새 파일을 앞지우기가 지우지 않게 한다. 어긋나면 아무것도 바꾸지 않고 멈춘다.
+3. 죽은 잠금을 푼다. 1·2가 막히면 잠금도 그대로 남도록 그 뒤다.
+4. 앞지우기. 2가 읽은 무시된 항목을 이 도구가 git 보다 먼저 지운다. 막히면 멈춘다. 등록과
+   `.git` 파일은 남는다(프로브의 F). 워크트리 밖의 하드링크 이름으로 같은 DLL 을 적재한 프로세스는
+   이름 바꾸기를 지나는데 git 은 지우다 만 폴더를 남긴다(프로브의 E). uv 의 `.venv` 는 캐시에서
+   하드링크로 채워져, 어느 체크아웃의 파이썬이 확장 모듈을 실으면 같은 캐시 파일에 걸린 다른
+   워크트리의 `.pyd` 도 그 처지가 된다. 링크 수는 손으로 봤다
    (`pydantic_core` 의 `.pyd` 22, `yaml` 의 `.pyd` 19). 2026-10-07 에 `mutate-restore-guard` 가
    `Invalid argument` 로 그 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-10). 같은
    까닭으로 이 도구는 표준 라이브러리만 쓴다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만
    지운다.
-4. `git worktree remove <경로>`. git 2.32 는 지우다 실패해도 등록을 지우고(`.scratch/harness/probes/
+5. `git worktree remove <경로>`. git 2.32 는 지우다 실패해도 등록을 지우고(`.scratch/harness/probes/
    worktree_longpath.py`), 그 폴더의 `.git` 파일도 지운다(`worktree_occupancy.py` 의 B·C·E).
-5. `git branch -D <브랜치>`. squash 병합이라 `-d` 는 병합을 알아보지 못한다.
+6. `git branch -D <브랜치>`. squash 병합이라 `-d` 는 병합을 알아보지 못한다.
 
 못 보는 것.
 - 앞지우기 뒤에 남은 추적 파일을 다른 프로세스가 워크트리 밖의 하드링크 이름으로 적재한 것.
@@ -69,8 +71,9 @@
   것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다.
 
 종료 코드. `judge`: 0 찍었다, 2 인자가 틀렸거나 주 체크아웃이 아니다, 3 git 이나 gh 가 실패했다.
-`remove`·`remove-branch`: 0 지웠다. 1 망가뜨린 것 없이 멈췄다. 아무것도 바꾸지 않았거나, 죽은 잠금을
-풀고 다시 만들 수 있는 것만 지웠거나(등록과 `.git` 이 남는다), 워크트리는 지웠는데 브랜치가 남았다.
+`remove`·`remove-branch`: 0 지웠다. 1 망가뜨린 것 없이 멈췄다. 아무것도 바꾸지 않았거나(1·2에서
+멈췄다), 죽은 잠금을 풀고 다시 만들 수 있는 것만 지웠거나(4에서 멈췄다. 등록과 `.git` 이 남는다),
+워크트리는 지웠는데 브랜치가 남았다(6).
 다음 후보로 가도 된다. 2 인자가 틀렸거나 주 체크아웃이 아니다. 3 멈추고 사람에게 넘긴다. 지우다 만
 폴더나 옆 이름에 남은 폴더가 생겼을 수 있거나, git·gh 를 부르지 못했다.
 """
@@ -91,7 +94,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
-type Action = Literal["delete", "keep", "human"]
+type Action = Literal["delete", "keep", "human", "hold"]
 type GitRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -124,7 +127,12 @@ _LOCK_PID = re.compile(r"^claude session \S+ \(pid (\d+)\)$")
 # 찍은 명령을 에이전트가 셸에 그대로 친다. git 은 브랜치 이름에 `$`·`;`·`(`·백틱을 허락해, 그런
 # 이름이 든 명령은 찍지 않고 사람에게 넘긴다(셀프 보안 리뷰, 일지 2026-10-07-10)
 _SHELL_UNSAFE = re.compile(r"[\s$`\"'\\;&|<>(){}*?\[\]!#~]")
-_ACTIONS: dict[Action, str] = {"delete": "지운다", "keep": "남긴다", "human": "넘긴다"}
+_ACTIONS: dict[Action, str] = {
+    "delete": "지운다",
+    "keep": "남긴다",
+    "human": "넘긴다",
+    "hold": "넘긴다",
+}
 
 
 class ToolError(Exception):
@@ -157,7 +165,8 @@ class Facts:
 
 @dataclass(frozen=True)
 class Verdict:
-    """`held` 는 판정 1·2를 지났는데 제목 모를 세션 때문에 넘긴 것이다. 사람이 승인하면 지운다."""
+    """`hold` 는 지울 것이었는데 제목 모를 세션 때문에 넘긴 것이다. 사람이 승인하면 지운다.
+    `human` 은 사람이 직접 본다. `unlock` 은 지우기 전에 죽은 잠금을 풀어야 한다는 뜻이다."""
 
     action: Action
     path: str
@@ -165,7 +174,6 @@ class Verdict:
     branch: str | None = None
     head: str | None = None
     unlock: bool = False
-    held: bool = False
 
 
 # --- 바깥을 부르는 것 ---------------------------------------------------------------------------
@@ -206,7 +214,7 @@ def gh_merged_heads(root: Path) -> dict[str, frozenset[str]]:
         raise ToolError(f"gh pr list 의 출력을 읽지 못했다: {error}") from error
 
 
-def pid_alive(pid: int) -> bool:
+def process_alive(pid: int) -> bool:
     """그 pid 의 프로세스가 있는지. 알 수 없으면 있다고 본다(지우지 않는 쪽)."""
     if sys.platform == "win32":
         query = ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"]
@@ -260,7 +268,7 @@ class Ops:
 
     git: GitRunner = real_git
     merged: Callable[[Path], dict[str, frozenset[str]]] = gh_merged_heads
-    pid_alive: Callable[[int], bool] = pid_alive
+    pid_alive: Callable[[int], bool] = process_alive
     rename: Callable[[str, str], None] = os.rename
     delete: Callable[[Path], None] = delete_path
 
@@ -349,8 +357,8 @@ def judge(
 ) -> Verdict:
     """워크트리 하나의 판정. 순서와 근거는 모듈 독스트링."""
 
-    def verdict(action: Action, reason: str, unlock: bool = False) -> Verdict:
-        return Verdict(action, wt.path, reason, wt.branch, wt.head, unlock)
+    def verdict(action: Action, reason: str) -> Verdict:
+        return Verdict(action, wt.path, reason, wt.branch, wt.head)
 
     if wt.prunable:
         return verdict("human", "등록이 prunable 이다. 지우다 만 폴더일 수 있다")
@@ -381,7 +389,8 @@ def judge(
         return verdict("human", f"잠금 사유에 pid 가 없다: {wt.locked or '(사유 없음)'}")
     if alive(pid):
         return verdict("keep", f"잠금 pid {pid} 가 살아 있다. 그 세션: {wt.locked}")
-    return verdict("delete", f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다", unlock=True)
+    dead = f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다"
+    return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=True)
 
 
 def hold_for_strangers(
@@ -393,8 +402,7 @@ def hold_for_strangers(
         return list(verdicts)
     reason = f"제목이 체크아웃된 어느 브랜치와도 맞지 않는 세션이 돈다: {', '.join(strangers)}"
     return [
-        replace(v, action="human", reason=reason, held=True) if v.action == "delete" else v
-        for v in verdicts
+        replace(v, action="hold", reason=reason) if v.action == "delete" else v for v in verdicts
     ]
 
 
@@ -425,14 +433,21 @@ def _same_bytes(left: Path, right: Path) -> bool:
         return False
 
 
+def _misplaced(*, exists: bool, toplevel: str | None) -> Facts:
+    """자리가 어긋나 status 를 읽지 않은 재료. 그 폴더의 git 은 루트에 닿을 수 있다."""
+    return Facts(
+        exists=exists, toplevel=toplevel, status="", status_err="", ignored=(), settings_same=False
+    )
+
+
 def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
     path = Path(wt.path)
     if not path.is_dir():
-        return Facts(False, None, "", "", (), False)
+        return _misplaced(exists=False, toplevel=None)
     top = git(["rev-parse", "--show-toplevel"], path)
     toplevel = top.stdout.strip() if top.returncode == 0 else None
     if toplevel is None or not same_path(toplevel, wt.path):
-        return Facts(True, toplevel, "", "", (), False)
+        return _misplaced(exists=True, toplevel=toplevel)
     status = git(["status", "--porcelain", "-z", "--untracked-files=all"], path)
     status_err = status.stderr or ("" if status.returncode == 0 else f"exit {status.returncode}")
     listed = git(["status", "--porcelain", "-z", "--ignored"], path)
@@ -440,7 +455,14 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
         status_err = listed.stderr or f"exit {listed.returncode}"
     ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
     settings_same = _same_bytes(root / SETTINGS, path / SETTINGS)
-    return Facts(True, toplevel, status.stdout, status_err, ignored, settings_same)
+    return Facts(
+        exists=True,
+        toplevel=toplevel,
+        status=status.stdout,
+        status_err=status_err,
+        ignored=ignored,
+        settings_same=settings_same,
+    )
 
 
 def _place(cwd: Path, git: GitRunner) -> tuple[Path, list[Worktree]]:
@@ -466,10 +488,10 @@ def _render(verdict: Verdict, kind: Literal["worktree", "branch"]) -> str:
     else:
         command = f"{COMMAND} remove-branch {verdict.branch} {verdict.head}"
     names = (verdict.path, verdict.branch or "", verdict.head or "")
-    if (verdict.action == "delete" or verdict.held) and any(map(_SHELL_UNSAFE.search, names)):
+    if verdict.action in ("delete", "hold") and any(map(_SHELL_UNSAFE.search, names)):
         hand_off = "넘긴다" if kind == "worktree" else "브랜치를 넘긴다"
         return f"{hand_off} {verdict.path} — 셸이 풀 수 있는 글자가 든 이름이라 명령을 찍지 않는다"
-    if verdict.held:
+    if verdict.action == "hold":
         return f"{label} {verdict.path} — {verdict.reason}. 승인하면 → {command}"
     if verdict.action != "delete":
         return f"{label} {verdict.path} — {verdict.reason}"
@@ -507,6 +529,7 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
 def _remove(
     root: Path, listing: list[Worktree], target: str, branch: str, head: str, ops: Ops
 ) -> int:
+    """판정 4. 단계의 순서와 종료 코드는 모듈 독스트링."""
     wt = next((w for w in listing[1:] if same_path(w.path, target)), None)
     if wt is None:
         print(f"남겼다 {target} — 등록된 워크트리가 아니다")
@@ -515,57 +538,94 @@ def _remove(
         print(f"남겼다 {target} — judge 뒤에 바뀌었다: 지금 {wt.branch} {wt.head}")
         return 1
     merged = ops.merged(root)
-    verdict = judge(wt, gather(root, wt, ops.git), merged, (), ops.pid_alive)
-    if verdict.action != "delete":
-        print(f"남겼다 {target} — 다시 판정했다: {verdict.reason}")
+    if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
         return 1
-    path = Path(wt.path)
+    stop = _probe(Path(wt.path), ops.rename)
+    if stop is not None:
+        return stop
+    # 판정 뒤에 생긴 것(`.env`, 새 파일)을 앞지우기가 지우지 않게, 지울 목록을 다시 판정해 읽는다
+    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+    if again is None:
+        return 1
+    verdict, facts = again
+    if verdict.unlock and not _unlock(root, wt, ops.git):
+        return 1
+    if not _pre_delete(Path(wt.path), facts.ignored, ops.delete):
+        return 1
+    return _git_remove(root, wt.path, branch, ops.git)
+
+
+def _still_candidate(
+    root: Path, wt: Worktree, merged: Mapping[str, frozenset[str]], ops: Ops, moment: str
+) -> tuple[Verdict, Facts] | None:
+    """판정 1~3(세션 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
+    facts = gather(root, wt, ops.git)
+    verdict = judge(wt, facts, merged, (), ops.pid_alive)
+    if verdict.action != "delete":
+        print(f"남겼다 {wt.path} — {moment} 다시 판정했다: {verdict.reason}")
+        return None
+    return verdict, facts
+
+
+def _probe(path: Path, rename: Callable[[str, str], None]) -> int | None:
+    """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 되돌리지 못하면 3."""
     aside = path.with_name(path.name + PROBE_SUFFIX)
     if os.path.lexists(aside):
-        print(f"남겼다 {target} — 탐침 자리 {aside.as_posix()} 가 이미 있다")
+        print(f"남겼다 {path.as_posix()} — 탐침 자리 {aside.as_posix()} 가 이미 있다")
         return 1
     try:
-        ops.rename(_long(path), _long(aside))
+        rename(_long(path), _long(aside))
     except OSError as error:
-        print(f"남겼다 {target} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error})")
+        print(
+            f"남겼다 {path.as_posix()} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error})"
+        )
         return 1
     try:
-        ops.rename(_long(aside), _long(path))
+        rename(_long(aside), _long(path))
     except OSError as error:
-        print(f"멈췄다 {target} — 폴더가 {aside.as_posix()} 에 남았다. 되돌리지 못했다: {error}")
+        print(
+            f"멈췄다 {path.as_posix()} — 폴더가 {aside.as_posix()} 에 남았다. "
+            f"되돌리지 못했다: {error}"
+        )
         return 3
-    if verdict.unlock:
-        unlocked = ops.git(["worktree", "unlock", wt.path], root)
-        if unlocked.returncode != 0:
-            print(f"남겼다 {target} — 잠금을 풀지 못했다: {unlocked.stderr.strip()}")
-            return 1
-    # 판정 뒤에 생긴 것(`.env`, 새 파일)을 앞지우기가 지우지 않게, 지울 목록을 판정 2로 다시 거른다
-    again = gather(root, wt, ops.git)
-    recheck = judge(wt, again, merged, (), ops.pid_alive)
-    if recheck.action != "delete":
-        print(f"남겼다 {target} — 앞지우기 직전에 다시 봤다: {recheck.reason}")
-        return 1
-    for entry in again.ignored:
+    return None
+
+
+def _unlock(root: Path, wt: Worktree, git: GitRunner) -> bool:
+    unlocked = git(["worktree", "unlock", wt.path], root)
+    if unlocked.returncode != 0:
+        print(f"남겼다 {wt.path} — 잠금을 풀지 못했다: {unlocked.stderr.strip()}")
+        return False
+    return True
+
+
+def _pre_delete(path: Path, entries: Sequence[str], delete: Callable[[Path], None]) -> bool:
+    """앞지우기. 막히면 그 자리에서 멈추고 False. 등록과 `.git` 은 남는다."""
+    for entry in entries:
         try:
-            ops.delete(path / entry)
+            delete(path / entry)
         except OSError as error:
             print(
-                f"남겼다 {target} — 다시 만들 수 있는 {entry} 를 지우다 막혔다({error}). "
+                f"남겼다 {path.as_posix()} — 다시 만들 수 있는 {entry} 를 지우다 막혔다({error}). "
                 "등록과 .git 은 남았다"
             )
-            return 1
-    removed = ops.git(["worktree", "remove", wt.path], root)
+            return False
+    return True
+
+
+def _git_remove(root: Path, path: str, branch: str, git: GitRunner) -> int:
+    removed = git(["worktree", "remove", path], root)
     if removed.returncode != 0:
         print(
-            f"멈췄다 {target} — git worktree remove 가 {removed.returncode} 로 끝났다: "
+            f"멈췄다 {path} — git worktree remove 가 {removed.returncode} 로 끝났다: "
             f"{removed.stderr.strip()}. 등록과 .git 파일이 지워졌을 수 있다"
         )
         return 3
-    deleted = ops.git(["branch", "-D", branch], root)
+    deleted = git(["branch", "-D", branch], root)
     if deleted.returncode != 0:
-        print(f"지웠다 {target}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
+        print(f"지웠다 {path}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
         return 1
-    print(f"지웠다 {target} 와 브랜치 {branch}")
+    print(f"지웠다 {path} 와 브랜치 {branch}")
     return 0
 
 

@@ -168,8 +168,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    return verdict("delete", f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다", unlock=True)'''
-new = '''    return verdict("delete", f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다", unlock=False)'''
+old = '''    return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=True)'''
+new = '''    return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=False)'''
 
 [[mutation]]
 name = "판정 3: pid 없는 잠금을 지운다"
@@ -208,8 +208,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        replace(v, action="human", reason=reason, held=True) if v.action == "delete" else v'''
-new = '''        replace(v, action="human", reason=reason, held=False) if v.action == "delete" else v'''
+old = '''        replace(v, action="hold", reason=reason) if v.action == "delete" else v for v in verdicts'''
+new = '''        replace(v, action="human", reason=reason) if v.action == "delete" else v for v in verdicts'''
 
 [[mutation]]
 name = "체크아웃된 브랜치에서 루트를 뺀다"
@@ -409,10 +409,11 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if verdict.action != "delete":
-        print(f"남겼다 {target} — 다시 판정했다: {verdict.reason}")'''
-new = '''    if False:
-        print(f"남겼다 {target} — 다시 판정했다: {verdict.reason}")'''
+old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
+        return 1
+'''
+new = '''    pass
+'''
 
 [[mutation]]
 name = "remove: 죽은 잠금을 풀지 않는다"
@@ -421,7 +422,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if verdict.unlock:'''
+old = '''    if verdict.unlock and not _unlock(root, wt, ops.git):'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -442,7 +443,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''    try:
-        ops.rename(_long(path), _long(aside))
+        rename(_long(path), _long(aside))
     except OSError as error:'''
 new = '''    try:
         pass
@@ -455,9 +456,11 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        print(f"멈췄다 {target} — 폴더가 {aside.as_posix()} 에 남았다. 되돌리지 못했다: {error}")
+old = '''            f"되돌리지 못했다: {error}"
+        )
         return 3'''
-new = '''        print(f"멈췄다 {target} — 폴더가 {aside.as_posix()} 에 남았다. 되돌리지 못했다: {error}")
+new = '''            f"되돌리지 못했다: {error}"
+        )
         return 1'''
 
 [[mutation]]
@@ -467,7 +470,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    for entry in again.ignored:'''
+old = '''    for entry in entries:'''
 new = '''    for entry in ():'''
 
 [[mutation]]
@@ -479,7 +482,7 @@ expect = "red"
 file = "tools/tidy_checkouts.py"
 old = '''                "등록과 .git 은 남았다"
             )
-            return 1'''
+            return False'''
 new = '''                "등록과 .git 은 남았다"
             )
             continue'''
@@ -526,8 +529,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if recheck.action != "delete":'''
-new = '''    if False:'''
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")'''
+new = '''    again = (Verdict("delete", wt.path, "", wt.branch, wt.head), gather(root, wt, ops.git))'''
 
 [[mutation]]
 name = "remove: 죽은 잠금을 탐침보다 먼저 푼다"
@@ -536,24 +539,39 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if verdict.unlock:
-        unlocked = ops.git(["worktree", "unlock", wt.path], root)
-        if unlocked.returncode != 0:
-            print(f"남겼다 {target} — 잠금을 풀지 못했다: {unlocked.stderr.strip()}")
-            return 1
+old = '''    if verdict.unlock and not _unlock(root, wt, ops.git):
+        return 1
 '''
 new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    aside = path.with_name(path.name + PROBE_SUFFIX)
+old = '''    stop = _probe(Path(wt.path), ops.rename)
 '''
-new = '''    if verdict.unlock:
-        unlocked = ops.git(["worktree", "unlock", wt.path], root)
-        if unlocked.returncode != 0:
-            print(f"남겼다 {target} — 잠금을 풀지 못했다: {unlocked.stderr.strip()}")
-            return 1
-    aside = path.with_name(path.name + PROBE_SUFFIX)
+new = '''    if not _unlock(root, wt, ops.git):
+        return 1
+    stop = _probe(Path(wt.path), ops.rename)
+'''
+
+[[mutation]]
+name = "remove: 죽은 잠금을 앞지우기 직전 재판정보다 먼저 푼다(PR #163 claude-review)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞지우기_직전에_멈추면_죽은_잠금도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if verdict.unlock and not _unlock(root, wt, ops.git):
+        return 1
+'''
+new = ''''''
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+'''
+new = '''    if not _unlock(root, wt, ops.git):
+        return 1
+    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
 '''
 
 [[mutation]]
@@ -563,9 +581,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        print(f"지웠다 {target}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
+old = '''        print(f"지웠다 {path}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
         return 1'''
-new = '''        print(f"지웠다 {target}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
+new = '''        print(f"지웠다 {path}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
         return 0'''
 
 [[mutation]]
@@ -585,7 +603,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if (verdict.action == "delete" or verdict.held) and any(map(_SHELL_UNSAFE.search, names)):'''
+old = '''    if verdict.action in ("delete", "hold") and any(map(_SHELL_UNSAFE.search, names)):'''
 new = '''    if False:'''
 
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
