@@ -44,3 +44,37 @@ date: 2026-09-20
 거부한 안. 사용자 수준 `/git-pr-merge`가 워크트리를 스스로 판정하게 고치는 것은 저장소 밖의 파일이라 이 저장소의
 리뷰와 이력에 남지 않는다. 워크트리에서 `--delete-branch`를 막는 훅은 일이 난 적이 없어 막는 훅의 조건
 (`.claude/rules/tools.md`)에 못 미친다. 한 번이라도 나면 다시 본다.
+
+### 2026-10-07 pre-commit의 읽기 검사는 러너 하나가 함께 띄운다
+
+pre-commit은 훅을 하나씩 돈다(4.6.2 `commands/run.py`의 `_run_hooks`를 읽었다). 커밋마다 도는 `always_run` 검사 일곱
+(pyright, import-linter, pytest, 지침 검사, 타입 우회 검사, 훅 러너, `pnpm -C web verify`)을 차례로 돌면 145.5초이고,
+한꺼번에 띄우면 가장 긴 pytest만큼인 73.7초다(`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4,
+일지 2026-10-07-02).
+
+**`.pre-commit-config.yaml`에서 일곱을 훅 하나(`parallel-checks`)로 묶고, 그 훅이 부르는 `tools/run_checks.py`가 일곱을
+함께 띄운다.**
+
+- ruff 둘은 파일을 고치므로 러너 앞에 따로 둔다. pre-commit이 훅을 순서대로 돌므로 러너는 고친 뒤의 파일을 본다. 받은
+  파일만 보는 빠른 검사(마크다운 표, 줄 구분 문자, 변이 표, 인용 대조)도 따로 둔다.
+- 러너는 검사가 끝난 차례로 이름·결과·시간 한 줄을 찍고, 실패한 검사는 그 줄 뒤에 모은 출력을 함께 찍는다. 하나라도
+  실패하면 1로 끝난다. 훅에 `verbose: true`를 두어 통과한 커밋에서도 그 줄들이 보인다.
+- pre-commit의 `SKIP` 환경 변수를 같은 id(`pyright`, `lint-imports`, `pytest`, …)로 읽어, `SKIP=pytest git commit`이
+  지금처럼 통한다.
+- 명령 목록의 원천은 러너의 `CHECKS` 하나다. CI(`ci.yml`)는 잡마다 명령을 직접 돌아 바뀌지 않는다. 같은 검사를 러너와
+  훅에 함께 두면 커밋마다 두 번 돌므로, 설정의 `entry`가 `CHECKS`의 명령과 겹치지 않는지 pytest가 본다.
+- 최상위에 `default_stages: [pre-commit]`을 두고 커밋 메시지 훅만 `stages: [commit-msg]`로 적는다. 훅마다 `stages`를
+  적던 것(대기열 118)을 대신해, 새 훅이 commit-msg 단계에서 다시 도는 누락이 생기지 않는다.
+- 함께 돌 때 서로 보는 파일은 Vitest의 판정자 테스트가 `web/judge-*`에 쓰는 임시 트리 하나다. 지침 검사의 `os.walk`가
+  그 트리를 지나도 찾는 이름이 없고, 도중에 사라진 디렉터리는 건너뛴다(코드를 읽었다).
+- 잃는 것은 둘이다. pre-commit 출력의 훅별 줄이 러너 출력 안으로 들어가고, `pre-commit run pytest`처럼 id 하나로 부르는
+  길이 없어진다(명령을 직접 친다).
+
+거부한 안은 셋이다.
+
+- **prek.** Rust로 다시 쓴 pre-commit이고, 같은 `priority`의 훅을 함께 돈다(prek 문서 prek.j178.dev를 읽었다). 훅
+  시스템을 바꾸는 것이라 체크아웃마다 설치가 바뀌고, `operations.md`의 "훅 시스템은 pre-commit 하나만 둔다"를 다시
+  정해야 한다.
+- **pytest-xdist만.** pytest는 약 30초가 되지만(일회성 실행으로 손으로 봤다) 나머지는 그대로 차례로 돈다. 러너와 겹치지
+  않는 선택이라 따로 다시 본다(ADR 0021의 첫째 2026-10-01 이력).
+- **그대로 둔다.** 대기열 118로 커밋 한 번이 약 230초에서 약 150초가 됐지만 여전히 길다.

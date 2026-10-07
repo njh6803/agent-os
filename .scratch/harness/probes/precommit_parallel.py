@@ -4,8 +4,9 @@
   serial — 일곱을 차례로 돈다(pre-commit 이 훅을 도는 모양)
   groups — 파이썬 묶음(그 안은 차례로)과 web verify 를 나란히 띄운다
   all    — 일곱을 한꺼번에 띄운다
-명령은 `.pre-commit-config.yaml` 의 entry 를 손으로 옮긴 것이다. ruff 둘은 파일을 고쳐서
-넣지 않았다. `uv sync` 와 `pnpm -C web install --frozen-lockfile` 이 된 체크아웃이어야 한다.
+명령은 잴 때(`cbb6a6c`)의 `.pre-commit-config.yaml` entry 를 손으로 옮긴 것이고, 지금은
+`tools/run_checks.py` 의 `CHECKS` 와 같다. ruff 둘은 파일을 고쳐서 넣지 않았다. `uv sync` 와
+`pnpm -C web install --frozen-lockfile` 이 된 체크아웃이어야 한다.
 """
 
 import subprocess
