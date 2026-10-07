@@ -98,3 +98,42 @@
 - 검증 명령: `uv run pytest -q` 1750 통과(7 deselected), `ruff check`·`ruff format --check`, `pyright`, `lint-imports`,
   `pnpm -C web verify`(25파일 338개) 모두 초록. 사진 비교 `pnpm -C web visual`은 63개 통과다(사진 45, 실제 입력 11, 미디어 특성
   5, 정적 빌드 밖 경로 1, 그리고 셀프 리뷰 뒤의 `Combinations` 1). 판정 명령은 파이프 없이 돌리고 로그 파일로 봤다.
+- **PR 직전 축.** `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 `coderabbit-review`는 돌리지 않았다. 대기열 136의
+  승인된 처방대로 내장 `/security-review`를 돌렸고 확신도 8 이상의 발견은 없었다(프로브 `static_play.mjs`의 route가 디코딩한
+  경로를 정적 빌드 안에 가두지 않는 것은 공격자가 조종할 입력이 없어 확신도 3 이하였다).
+- **PR [njh6803/agent-os#165](https://github.com/njh6803/agent-os/pull/165)의 CI.** 다섯 잡과 `verify`가 초록이다. claude-review는
+  지적 없음이었고, CodeRabbit은 무료 한도에 걸려 리뷰하지 않았다(`@coderabbitai review`도 rate limit).
+- **병합 직전.** 그 사이 main에 PR #161(`tools/sibling_overlap.py`)이 들어와 `origin/main`을 이 브랜치에 병합했다(충돌 없음).
+  새 규약대로 그 도구를 돌렸고 번호 겹침이 없었다. 03(PR #166)과 함께 고친 파일은 `src/index.ts`와 프로브 README다.
+  `origin/main`의 03은 `ready-for-agent`라 이 PR은 마지막 병합이 아니고 기능을 닫지 않는다.
+
+## 회고
+
+후보 셋을 냈고 셋 모두 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "1 사진의 userEvent 가드,2 Vite 재최적화,3 대기열 136 회차"
+
+1. **사진 비교가 play의 `userEvent` 뒤 상태를 찍지 못하는 것을 테스트 하나와 지침 한 줄로 고정한다 → 대기열 149(새 행, 1회차).**
+   위 "정적 빌드의 play에서 `userEvent`가 비어 있다"의 사건이다. 지금은 우연히 결정적이고, 출처가 보안 맥락이 되면 기존
+   사진이 조용히 바뀐다. `Typing`을 쓰며 play로 넣은 글이 사진에 든다고 기대했다.
+2. **스토리 테스트가 처음 쓰는 의존성의 Vite 재최적화 → 대기열 150(새 행, 1회차).** 셀프 리뷰의 "고치다 만난 것"이다. 캐시가
+   없는 CI에서 나는지는 재지 않아, 재는 것부터가 그 행의 일이다.
+3. **CLI 좌석이 없고 PR 봇이 rate limit이라 버그·성능 축이 비었다 → 대기열 136(3회차).** PR #156, #158에 이어 이 PR이다.
+   보안 축은 승인된 처방(`/security-review`)으로 채웠다.
+
+일지에만 남기는 것:
+
+- 워크트리 가드가 변수를 쓴 `sed`와 복합 명령(파이썬 heredoc, `mkdir`과 heredoc의 체인)을 세 번 거부했다. `CLAUDE.md`의 환경
+  함정이 이미 덮는 모양이라 그대로 따르지 않은 것이다. 파일 도구와 단일 명령으로 돌았다.
+- `cd`로 작업 폴더를 두 번 옮겨 다음 명령이 다른 자리에서 돌 뻔했다.
+- 명세 축 리뷰어가 사진 비교의 수를 63으로 셌다(실제 입력의 새 항목을 여섯으로 봤다). 근거를 보고 받아들이지 않았다.
+- 새 행을 main의 마지막(141) 다음인 142·143으로 매겼다가, `tools/sibling_overlap.py`가 열린 PR #162·#163이 먼저 가져간
+  번호라고 알려 149·150으로 옮겼다. PR #161이 세운 규약이 이 세션 안에서 바로 동작했다.
+
+## 다음
+
+- **PR #165의 병합.** 워크트리에서 열었으니 next-session의 "워크트리에서 병합할 때"를 따른다. 주 체크아웃 미갱신: 루트는
+  `chore/checkout-persist-credentials`(PR #162가 열려 있다).
+- **design-system에 남은 것은 03(PR #166)이다.** 그 세션이 돌고 있고 늦게 병합되는 쪽이라, main을 받아 `src/index.ts`의
+  내보내기와 프로브 README 표를 합친 뒤 기능을 닫는다(03 티켓의 마지막 체크박스). 이 세션은 03의 지시문을 내지 않는다.
+- **대기열.** 149·150이 새로 섰고 136이 3회차다. design-system을 닫는 세션이 next-session 결정표의 chore 배치 조건으로 본다.
