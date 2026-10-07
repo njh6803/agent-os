@@ -5,7 +5,8 @@
 // `<progress>` 가 아니라 `<div role="progressbar">` 다(공통의 "브라우저 기본 요소" 문장의 예외. design-system 명세의
 // 컴포넌트 공통 절 주석). 이름은 보이는 글자와 같은 `aria-label` 이다. WAI-ARIA 가 progressbar 의 자식을 꾸밈(children
 // presentational)으로 정해 이름을 두 번 읽지 않는다고 본다(정의에서 나온 어림. 화면 읽기 프로그램으로 듣지 않았다).
-// 최소값은 0 으로 두고(`aria-valuemin` 을 받지 않는다. progressbar 의 기본이 0 이다) 막대는 `value / max` 다.
+// 최소값은 0 으로 두고(`aria-valuemin` 을 받지 않는다. progressbar 의 기본이 0 이다) 막대는 자른 값을 `max` 로 나눈
+// 비율이다(아래 `clamp`).
 import type { NativeProps } from "../../props";
 
 export type ProgressTone = "accent" | "danger";
@@ -42,6 +43,14 @@ export type ProgressProps = ProgressOwnProps &
     | "aria-valuemax"
   >;
 
+/**
+ * 값을 0 과 끝 값 사이로 자른다. 끝 값이 0 이하이면 0 이다. `aria-valuenow` 는 최소·최대 밖에 두지 않고(WAI-ARIA),
+ * 막대의 폭도 이 값에서 나와 둘이 어긋나지 않는다.
+ */
+function clamp(value: number, max: number): number {
+  return Math.min(Math.max(value, 0), Math.max(max, 0));
+}
+
 export function Progress({
   value = null,
   max = 1,
@@ -49,15 +58,16 @@ export function Progress({
   tone = "accent",
   ...rest
 }: ProgressProps) {
+  const now = value === null ? null : clamp(value, max);
   const bar =
-    value === null ? (
+    now === null ? (
       <div
         className={`absolute inset-y-0 rounded-full ${BAR_CLASS[tone]} ${INDETERMINATE_CLASS}`}
       />
     ) : (
       <div
         className={`absolute inset-y-0 left-0 rounded-full ${BAR_CLASS[tone]}`}
-        style={{ width: `${String(Math.min(Math.max(value / max, 0), 1) * 100)}%` }}
+        style={{ width: `${String(max > 0 ? (now / max) * 100 : 0)}%` }}
       />
     );
   return (
@@ -65,7 +75,7 @@ export function Progress({
       {...rest}
       role="progressbar"
       aria-label={label}
-      aria-valuenow={value ?? undefined}
+      aria-valuenow={now ?? undefined}
       aria-valuemax={max}
       className="flex flex-col gap-2"
     >

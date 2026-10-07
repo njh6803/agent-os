@@ -147,7 +147,7 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Progress.tsx"
 old = '''
-      aria-valuenow={value ?? undefined}
+      aria-valuenow={now ?? undefined}
 '''
 new = '''
       aria-valuenow={undefined}
@@ -162,10 +162,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Progress.tsx"
 old = '''
-      aria-valuenow={value ?? undefined}
+      aria-valuenow={now ?? undefined}
 '''
 new = '''
-      aria-valuenow={value ?? 0}
+      aria-valuenow={now ?? 0}
 '''
 
 [[mutation]]
@@ -254,10 +254,73 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Progress.tsx"
 old = '''
-        style={{ width: `${String(Math.min(Math.max(value / max, 0), 1) * 100)}%` }}
+        style={{ width: `${String(max > 0 ? (now / max) * 100 : 0)}%` }}
 '''
 new = '''
-        style={{ width: `${String(Math.min(Math.max(value, 0), 1) * 100)}%` }}
+        style={{ width: `${String(max > 0 ? now * 100 : 0)}%` }}
+'''
+
+# PR #166 의 claude-review 가 짚은 범위 밖의 값. aria-valuenow 와 막대가 자른 한 값에서 나오는지 본다.
+[[mutation]]
+name = "aria-valuenow 에 자르기 전의 값을 두면 범위 밖 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "끝 값을 넘는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+      aria-valuenow={now ?? undefined}
+'''
+new = '''
+      aria-valuenow={value ?? undefined}
+'''
+
+[[mutation]]
+name = "끝 값으로 자르지 않으면 범위 밖 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "끝 값을 넘는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+  return Math.min(Math.max(value, 0), Math.max(max, 0));
+'''
+new = '''
+  return Math.max(value, 0);
+'''
+
+[[mutation]]
+name = "0 아래를 자르지 않으면 범위 밖 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "끝 값을 넘는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+  return Math.min(Math.max(value, 0), Math.max(max, 0));
+'''
+new = '''
+  return Math.min(value, Math.max(max, 0));
+'''
+
+# 대조. `max > 0` 의 갈래를 빼면 max 가 0 일 때 자른 값도 0 이라 폭이 `NaN%` 가 되는데, 브라우저가 그 폭을 버려 내용 없는
+# 막대의 폭이 0 이 되므로 같은 그림이라고 본다. 그 어림이 맞으면 이 변이는 지난다. 갈래는 DOM 에 `NaN%` 를 쓰지 않으려고 둔다.
+[[mutation]]
+name = "max 가 0 일 때의 갈래를 빼도 막대의 폭이 0 이라 범위 밖 스토리가 지난다"
+runner = "stories"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "끝 값을 넘는"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+        style={{ width: `${String(max > 0 ? (now / max) * 100 : 0)}%` }}
+'''
+new = '''
+        style={{ width: `${String((now / max) * 100)}%` }}
 '''
 
 [[mutation]]

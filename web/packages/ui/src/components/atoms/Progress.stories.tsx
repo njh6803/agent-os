@@ -95,6 +95,41 @@ export const IndeterminateDanger: Story = {
   },
 };
 
+export const OutOfRange: Story = {
+  name: "끝 값을 넘는 값은 끝 값으로, 음수와 max 가 0 인 값은 0 으로 잘라 aria-valuenow 와 막대가 같은 값을 보인다",
+  render: (args) => (
+    <div className="flex flex-col gap-4">
+      <Progress {...args} label="넘친 값" value={5} max={3} />
+      <Progress {...args} label="음수 값" value={-1} max={3} />
+      <Progress {...args} label="끝 값 0" value={1} max={0} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const over = canvas.getByRole("progressbar", { name: "넘친 값" });
+    const below = canvas.getByRole("progressbar", { name: "음수 값" });
+    const zero = canvas.getByRole("progressbar", { name: "끝 값 0" });
+    const ratio = (progressbar: HTMLElement): number => {
+      const { track, bar } = partsOf(progressbar);
+      return bar.getBoundingClientRect().width / track.getBoundingClientRect().width;
+    };
+    await expect({
+      overNow: over.getAttribute("aria-valuenow"),
+      overRatio: ratio(over),
+      belowNow: below.getAttribute("aria-valuenow"),
+      belowRatio: ratio(below),
+      zeroNow: zero.getAttribute("aria-valuenow"),
+      zeroRatio: ratio(zero),
+    }).toEqual({
+      overNow: "3",
+      overRatio: 1,
+      belowNow: "0",
+      belowRatio: 0,
+      zeroNow: "0",
+      zeroRatio: 0,
+    });
+  },
+};
+
 export const DeterminateDark: Story = {
   name: "다크 모드에서도 트랙은 tint, 막대는 accent 다",
   args: { value: 2, max: 3 },

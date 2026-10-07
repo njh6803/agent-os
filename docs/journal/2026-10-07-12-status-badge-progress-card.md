@@ -91,7 +91,8 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
     사진의 변이가 잰다. 움직임이 없을 때 `left-7/20`이 서는 것은 같은 규칙이라 두었다.
   - `ELEVATION_CLASS`의 앞 공백은 `Button.tsx`의 `LIVE_CLASS` 이어 붙이기와 같은 모양이다.
   - `${what}가`의 조사는 두 값이 모두 모음으로 끝난다.
-  - `aria-valuenow`를 끝 값 밖에서 자르지 않는 것은 범위 밖의 값을 넘기는 쪽의 몫으로 두었다. `max`만 0이면 `value / max`가
+  - `aria-valuenow`를 끝 값 밖에서 자르지 않는 것은 범위 밖의 값을 넘기는 쪽의 몫으로 두었다(PR 리뷰가 다시 짚어 바꿨다.
+    아래 "PR" 절). `max`만 0이면 `value / max`가
     Infinity라 막대가 꽉 차고, `value`와 `max`가 모두 0이면 폭이 `NaN%`라 막대의 폭이 서지 않는다(코드를 읽은 어림. 그려 보지
     않았다).
   - `SPINNERS`라는 이름이 이제 진행 막대도 담는다. 이름을 바꾸면 `.claude/rules/web-design.md`를 고치고 새 세션에서 불러 봐야
@@ -107,3 +108,22 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
   래퍼·api-client·서버 라우트를 건드리지 않는다).
 - 커밋 직전에 `git fetch` 뒤 `HEAD..origin/main`이 비었고, 나란히 도는 04의 워크트리가 일지 13을 쓰고 있어 순번이 겹치지
   않았다.
+
+## PR
+
+- **PR 직전 축.** `coderabbit auth status`가 `Seat: not assigned`라 `coderabbit-review`는 돌지 않았다. 대기열 136의 승인된
+  처방대로 보안 축은 내장 `/security-review`를 대신 돌렸고(하위 작업 하나가 diff와 둘레 코드를 읽었다) 신뢰도 8 이상의
+  발견이 없었다. 버그·성능 축은 비어 있다.
+- **[njh6803/agent-os#166](https://github.com/njh6803/agent-os/pull/166)의 첫 CI.** `f8feb7b`에서 다섯 잡과 `verify`가
+  초록이었다. CodeRabbit은 "Review rate limited"였고 `@coderabbitai review` 요청도 같은 이유로 돌지 않았다.
+- **claude-review는 Minor 둘과 Nit 하나였다.** `max`가 0이면 막대 폭이 `NaN%`가 되고, `aria-valuenow`는 자르지 않은 값이라
+  `value`가 `max`를 넘으면 막대(꽉 참)와 어긋난다는 것이다. 셀프 리뷰에서는 쓰는 쪽의 몫으로 두었지만, WAI-ARIA가
+  `aria-valuenow`를 최소·최대 안에 두게 하므로 컴포넌트의 몫이라 보고 고쳤다. 값을 0과 `max` 사이로 자르는 `clamp` 하나에서
+  `aria-valuenow`와 막대가 함께 나오고, `max`가 0 이하이면 0이다. 고치기 전에 범위 밖 스토리(`OutOfRange`. 넘친 값, 음수,
+  `max` 0)를 더해 `aria-valuenow`가 5와 1이고 `max` 0의 막대가 꽉 찬 것으로 빨간 것을 봤다. Nit(테스트 이름이 바뀌었지만
+  깨지는 변이 표는 없다)은 조치할 것이 없다.
+- **그 반영의 변이.** 자르기 셋(`aria-valuenow`에 자르기 전의 값, 끝 값 자르기를 뺌, 0 아래 자르기를 뺌)을 더하고, `max > 0`의
+  갈래를 빼도 지나는지 보는 대조를 하나 두었다. 갈래를 빼면 폭이 `NaN%`인데 브라우저가 그 폭을 버려 막대의 폭이 0이 되리라는
+  어림을 그 대조가 잰다. 표 37개를 다시 돌려 빨강 36과 대조 초록 1이 모두 기대대로였고 기준선 열여덟이 초록이었다(16:07:30에
+  띄워 16:16에 끝났다). 새 스토리의 정답 사진 두 장을 컨테이너에서 만들었고 기존 사진은 md5가 그대로였다(스토리 18개, 사진
+  33장).
