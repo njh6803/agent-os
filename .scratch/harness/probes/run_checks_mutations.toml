@@ -1,0 +1,131 @@
+# tools/run_checks.py(ADR 0005 이력 2026-10-07)의 동작과 설정 배선을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/run_checks_mutations.toml
+
+[[mutation]]
+name = "검사를 하나씩 돈다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''        with ThreadPoolExecutor(max_workers=len(to_run)) as pool:'''
+new = '''        with ThreadPoolExecutor(max_workers=1) as pool:'''
+
+[[mutation]]
+name = "SKIP 을 읽지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    return frozenset(part.strip() for part in environ.get("SKIP", "").split(",") if part.strip())'''
+new = '''    return frozenset()'''
+
+[[mutation]]
+name = "SKIP 의 공백을 걷지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    return frozenset(part.strip() for part in environ.get("SKIP", "").split(",") if part.strip())'''
+new = '''    return frozenset(part for part in environ.get("SKIP", "").split(",") if part)'''
+
+[[mutation]]
+name = "실패해도 0으로 끝난다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    return 1 if failed else 0'''
+new = '''    return 0'''
+
+[[mutation]]
+name = "실패한 검사의 출력을 찍지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''                    out.write(outcome.output)
+'''
+new = ''''''
+
+[[mutation]]
+name = "통과한 검사의 출력도 찍는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''                if not outcome.passed:
+                    failed = True
+                    out.write(outcome.output)'''
+new = '''                out.write(outcome.output)
+                if not outcome.passed:
+                    failed = True'''
+
+[[mutation]]
+name = "띄우지 못한 명령을 잡지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    except OSError as error:'''
+new = '''    except ValueError as error:'''
+
+[[mutation]]
+name = "main 의 종료 코드를 버린다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    sys.exit(main())'''
+new = '''    main()'''
+
+[[mutation]]
+name = "건너뛴 검사를 알리지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''            out.write(status_line(check.id, "Skipped"))'''
+new = '''            pass'''
+
+[[mutation]]
+name = "러너의 검사를 훅으로도 등록한다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".pre-commit-config.yaml"
+old = '''      - id: parallel-checks
+'''
+new = '''      - id: pyright
+        name: pyright
+        entry: uv run pyright
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: parallel-checks
+'''
+
+[[mutation]]
+name = "게이트 목록에서 검사 러너를 뺀다"
+tests = ["tests/tools/test_hook_bash_gate_pipe.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_bash_gate_pipe.py"
+old = '''tools/(?:check_\w+|mutate|run_hooks|run_checks)\.py'''
+new = '''tools/(?:check_\w+|mutate|run_hooks)\.py'''
+
+[[mutation]]
+name = "러너의 검사를 같은 id 의 다른 명령으로 다시 등록한다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".pre-commit-config.yaml"
+old = '''      - id: parallel-checks
+'''
+new = '''      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: parallel-checks
+'''

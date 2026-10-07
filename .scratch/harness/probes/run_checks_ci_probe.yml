@@ -1,0 +1,55 @@
+# 검사 러너(tools/run_checks.py)를 GitHub Actions 의 Windows·Linux 러너에서 재는 임시 워크플로(일지 2026-10-07-07).
+# 다시 돌릴 때는 .github/workflows/ 에 복사하고 아래 branches 를 그 브랜치로 바꿔 푸시한 뒤, 잰 다음 되돌린다.
+# 잰 것: (1) Windows 에서 npm 전역 설치의 pnpm.cmd 를 러너가 찾아 web verify 를 띄우는지(경로 없는 subprocess 는
+# 못 띄우는지도 함께), (2) 브라우저가 있는 러너에서 always_run 검사 일곱의 차례·동시 시간(PR #156 뒤).
+# PYTHONUTF8 은 두지 않는다. 사람의 터미널에서 도는 pre-commit 은 그것 없이 돈다(operations.md 환경 규약).
+name: probe-run-checks
+
+on:
+  push:
+    branches: [claude/funny-planck-itf28j]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # npm 전역 설치로 pnpm.cmd 를 둔다. 사용자 PC 의 설치 방식은 확인하지 않았다(저장소의 기록은
+      # Windows 에 pnpm.CMD 가 있다는 것뿐이다, 일지 2026-10-01-01)
+      - run: npm install -g pnpm@11.24.0
+      - run: pnpm --version
+      - run: pnpm -C web install --frozen-lockfile
+      - if: runner.os == 'Linux'
+        run: pnpm -C web exec playwright install --with-deps --only-shell chromium
+      - if: runner.os == 'Windows'
+        run: pnpm -C web exec playwright install --only-shell chromium
+      - name: which
+        run: uv run python -c "import os, shutil, sys; print(sys.platform, os.cpu_count(), shutil.which('pnpm'), shutil.which('uv'))"
+      - name: subprocess without path
+        continue-on-error: true
+        run: uv run python -c "import subprocess; subprocess.run(['pnpm', '--version'], check=True)"
+      - name: runner through pre-commit
+        continue-on-error: true
+        run: uv run pre-commit run parallel-checks --all-files
+      - name: probe serial
+        continue-on-error: true
+        run: uv run python .scratch/harness/probes/precommit_parallel.py serial
+      - name: probe all
+        continue-on-error: true
+        run: uv run python .scratch/harness/probes/precommit_parallel.py all
