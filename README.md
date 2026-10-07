@@ -47,7 +47,7 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
                    재개 스트림을 프레임으로 읽는 것(ADR 0021)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
-                   판정 스토리), src/components/atoms/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
+                   판정 스토리), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
                    사진 snapshots/). 스토리 테스트는 뿌리 vitest.config.ts 의 storybook 프로젝트가 실제 chromium 에서
                    돈다(ADR 0026)
