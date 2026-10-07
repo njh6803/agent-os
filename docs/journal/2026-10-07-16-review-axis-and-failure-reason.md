@@ -55,7 +55,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 136
 
 - `.claude/agents/bug-perf-review.md`: 새 서브에이전트. 범위 잡기, 실패 시나리오 찾기, 트리아지, 보고 형식.
 - `docs/constitution/operations.md` 리뷰 파이프라인 2단계(대체 둘)와 초록 착시의 CodeRabbit 한도 항목.
-  `docs/constitution/README.md` 3.0.19.
+  `docs/constitution/README.md` 3.0.20. 처음에는 3.0.19였는데, 커밋 직전의 `tools/sibling_overlap.py`가 형제 워크트리
+  `zizmor-workflow-audit`도 3.0.19로 올렸다고 알려 이 브랜치가 비켜 갔다(#160이 3.0.17을 비워 둔 선례).
 - `.github/PULL_REQUEST_TEMPLATE.md`의 `coderabbit-review` 줄, `CODING_STANDARDS.md`(판단 기준 한 줄, 리뷰 관점 끝 줄),
   `docs/agents/issue-tracker.md` 프로브 절, ADR 0006 이력과 본문 포인터.
 - 새 서브에이전트를 가리키는 자리: `README.md` 트리, `KICKOFF.md`(구조 표, 복사 목록, 기능 순서 7),
@@ -126,4 +127,45 @@ Critical·Major는 없었다.
 - 새 서브에이전트는 만든 지 한참 뒤에 이 세션의 에이전트 목록에도 올라왔다. `kickoff/pitfalls.md`의 "세션 중에 만든
   `.claude/agents/*.md`" 줄과 같은 동작이다. 실제 실행 확인은 그 전에 `claude -p`로 했다.
 
+## PR 리뷰 반영
+
+PR [njh6803/agent-os#167](https://github.com/njh6803/agent-os/pull/167). CI 여섯이 `cd57132`에서 초록이었다. CodeRabbit은 PR을
+연 직후와 요청 뒤 모두 OSS 한도에 걸렸다("Review rate limited", 23분 뒤). 이 PR이 세운 규약대로 그 PR의 보안·버그 축은 PR
+본문 체크리스트에 적은 대체 둘의 결과가 맡는다. claude-review는 Minor 둘과 Nit 하나를 냈다.
+
+- 고친 것: `operations.md` 2단계 항목이 계기의 회차와 PR 번호를 ADR 0006 이력과 겹쳐 적었다(Minor). #165를 병합할 때 실제로
+  두 곳을 함께 고쳐야 했다. `operations.md`에서는 계기 문장을 빼고 ADR 포인터만 남겼다.
+- 남긴 것: `claude-code-review.yml`의 잔존(Minor)은 작업 칩으로 넘겼고 그 세션이 돌고 있다. 헌법 버전 줄이 긴 것(Nit)은
+  이력 형식에 쌓인 문제라 이 PR에서 고치지 않는다.
+
+## 회고
+
+후보 둘을 냈고 둘 다 승인됐다. 둘 다 이 PR에서 반영하지 않고 대기열로 갔다. PR #166(열림)이 151·152를 쓰므로 153·154다.
+
+> 사용자: (고른 것) "1. 카나리아에 서브에이전트 갈래,2. 리뷰 반영 때 쓴 새 사실의 근거"
+
+1. **새 서브에이전트가 실리는지 보는 카나리아 갈래가 없다(대기열 153, 1회차).** 위 검사 절의 `claude -p`를 스크래치
+   스크립트로 새로 썼다. 129가 카나리아 스크립트에 대해 닫은 것과 같은 모양이고, `tools/canary.py`는 스킬과 규칙만 안다.
+2. **셀프 리뷰 지적을 고치며 쓴 새 사실이 틀렸다(대기열 154, 1회차).** 위 셀프 리뷰 절의 #157·#164 서술이다. 표준 축이
+   잡아 해는 없었다. 대기열 45의 가족이고, #166의 151과 같은 스킬(`code-review` 6단계)을 겨눈다.
+
+이 세션에서 반영한 것: `/security-review`가 미커밋 변경을 모으지 못한 것은 `operations.md` 2단계와 PR 템플릿에 "커밋한 뒤에
+돌린다"로 바로 넣었다(위 PR 직전 절).
+
+일지에만 남기는 것:
+
+- 첫 턴의 `tidy-checkouts`는 루트가 `chore/checkout-persist-credentials`에 머물러 #163 전의 옛 사본이었고, 판정을 스크래치
+  스크립트로 했다. 루트가 당겨지지 않으면 새 도구도 실리지 않는다. 대기열 134와 모드 표가 이미 다루는 모양이다.
+- `ruff format`의 파일 수가 바뀐 것을 확인하는 데 도구 호출 여섯을 썼다. 마크다운도 센다는 것은 `--verbose` 한 번으로
+  알 수 있었다.
+- Grep의 부정 glob(`!docs/journal/**`)을 `hook_env_read`가 `.env`에 닿는다고 막았다. 훅이 설계대로 동작했고 확장자 glob으로
+  바꿔 쳤다.
+
 ## 다음
+
+- 주 체크아웃: 이 세션이 시작할 때는 `chore/checkout-persist-credentials`였고, 세션 중에 다른 세션이 main(`5c069d4`,
+  #165)으로 옮겼다. 이 PR이 병합된 뒤 당겨지기 전에는 새 세션에 `bug-perf-review`와 `coderabbit-review`의 새 안내 줄이
+  실리지 않는다.
+- PR #166이 대기열 136·137에 회차(일지 12)를 더한다. 이 PR이 먼저 병합되면 #166이 닫힌 136 행과 137 행의 충돌을 푼다.
+- 사람에게 넘긴 것은 일지 15의 "다음"과 같다(지우다 만 폴더, prunable `05-admin-hides-decision-for-end-user`, 등록 없는
+  폴더들, PR 머리가 다른 `skill-check-and-retro-section`, 분리 HEAD `unruffled-lalande-9017fa`, 대기열 148).
