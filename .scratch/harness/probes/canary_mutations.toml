@@ -39,9 +39,11 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
+        present = [canary for canary in canaries if canary in answer]
         if present:
 '''
 new = '''
+        present = [canary for canary in canaries if canary in answer]
         if False:
 '''
 
@@ -403,4 +405,172 @@ old = '''
 '''
 new = '''
         if False:
+'''
+
+# 대기열 133 — 원천 사본 확인
+
+[[mutation]]
+name = "명세의 원천 칸을 선택으로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    source: str = Field(min_length=1)
+'''
+new = '''
+    source: str = ""
+'''
+
+[[mutation]]
+name = "실험군 원천의 카나리아 누락을 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            missing = [canary for canary in spec.expect if _flat(canary) not in text]
+            if missing:
+'''
+new = '''
+            missing = [canary for canary in spec.expect if _flat(canary) not in text]
+            if False:
+'''
+
+[[mutation]]
+name = "실험군 원천 파일이 없어도 넘어간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if arm.role == "experiment":
+                problems.append(f"{arm.name}: 원천 {path} 이 없다")
+'''
+new = '''
+            if False:
+                problems.append(f"{arm.name}: 원천 {path} 이 없다")
+'''
+
+[[mutation]]
+name = "대조군 원천 파일이 없어도 알린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if arm.role == "experiment":
+                problems.append(f"{arm.name}: 원천 {path} 이 없다")
+'''
+new = '''
+            if True:
+                problems.append(f"{arm.name}: 원천 {path} 이 없다")
+'''
+
+[[mutation]]
+name = "같은 체크아웃의 대조군도 원천을 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if arm.role == "control" and spec.kind == "rule" and _place_key(checkout) in fresh:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "같은 체크아웃 면제를 skill 명세에도 건다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if arm.role == "control" and spec.kind == "rule" and _place_key(checkout) in fresh:
+'''
+new = '''
+        if arm.role == "control" and _place_key(checkout) in fresh:
+'''
+
+[[mutation]]
+name = "skill 을 주지 않은 명세는 원천을 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    fresh = {_place_key(places[arm.name]) for arm in spec.arm if arm.role == "experiment"}
+    problems: list[str] = []
+'''
+new = '''
+    if spec.kind == "skill" and spec.skill is None:
+        return []
+    fresh = {_place_key(places[arm.name]) for arm in spec.arm if arm.role == "experiment"}
+    problems: list[str] = []
+'''
+
+[[mutation]]
+name = "원천을 읽지 못한 것을 넘어간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            problems.append(f"{arm.name}: 원천 {path} 을 읽지 못했다: {error}")
+'''
+new = '''
+            pass
+'''
+
+[[mutation]]
+name = "대조군 메시지에서 카나리아 쪽 원인을 뺀다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다"
+'''
+new = '''
+                    "대조군이 새 사본이다"
+'''
+
+[[mutation]]
+name = "대조군 사본의 카나리아를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if present:
+                found = ", ".join(present)
+'''
+new = '''
+            if False:
+                found = ", ".join(present)
+'''
+
+[[mutation]]
+name = "원천 확인을 사전 확인에 잇지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return problems + source_problems(spec, places)
+'''
+new = '''
+    return problems
 '''

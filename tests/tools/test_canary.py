@@ -27,6 +27,7 @@ from tools.canary import (
     prompt_for,
     read_facts,
     run_claude,
+    source_problems,
     target_problems,
 )
 
@@ -36,6 +37,7 @@ question = """
 Read 도구로 `{target}` 하나만 읽어라. 실린 지시에서 tools 의 식별자 언어를 옮겨라. 없으면 "없음".
 """
 expect = ["식별자는 영문"]
+source = ".claude/rules/tools.md"
 
 [[arm]]
 name = "실험군"
@@ -52,6 +54,7 @@ _스킬_명세 = """
 kind = "skill"
 question = "tidy-checkouts 스킬을 불러 부르는 곳 절의 도구 이름을 옮겨라. 없으면 \\"없음\\"."
 expect = ["EnterWorktree"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
 skill = "tidy-checkouts"
 
 [[arm]]
@@ -475,6 +478,94 @@ def test_카나리아가_규칙_대상_파일에_있으면_답이_파일에서_�
     assert target_problems(spec, spec.arm[1], tmp_path) == []
 
 
+def test_실험군_사본의_원천에_카나리아가_없으면_알린다(tmp_path: Path) -> None:
+    """질문이 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로 잘못 읽는다(대기열 133)."""
+    spec = load_spec(_스킬_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새", _옛_본문), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    problems = source_problems(spec, places)
+
+    assert any(p.startswith("새") and "EnterWorktree" in p for p in problems)
+
+
+def test_실험군_사본에_원천_파일이_없으면_알린다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+    (tmp_path / "새").mkdir()
+    places = {"새": tmp_path / "새", "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    assert any(p.startswith("새") and "없다" in p for p in source_problems(spec, places))
+
+
+def test_체크아웃이_다른_대조군_사본에_카나리아가_있으면_알린다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛", _새_본문)}
+
+    assert any(p.startswith("옛") and "EnterWorktree" in p for p in source_problems(spec, places))
+
+
+def test_대조군_사본에_원천_파일이_없으면_새_스킬이라_괜찮다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+    (tmp_path / "옛").mkdir()
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": tmp_path / "옛"}
+
+    assert source_problems(spec, places) == []
+
+
+def test_체크아웃이_같은_대조군은_원천을_다시_보지_않는다(tmp_path: Path) -> None:
+    """규칙의 대조군은 같은 체크아웃의 paths 밖 파일을 읽는다. 원천은 새 사본 그대로다."""
+    spec = load_spec(_규칙_명세)
+    rules = tmp_path / ".claude" / "rules"
+    rules.mkdir(parents=True)
+    (rules / "tools.md").write_text("`tools/`의 **식별자는 영문**이다.\n", encoding="utf-8")
+
+    assert source_problems(spec, {"실험군": tmp_path, "대조군": tmp_path}) == []
+
+
+def test_스킬_명세에서_같은_체크아웃의_대조군은_새_사본이라_알린다(tmp_path: Path) -> None:
+    """같은 체크아웃의 면제는 규칙에만 건다. 스킬의 대조군은 바뀌기 전 사본이어야 한다."""
+    spec = load_spec(_스킬_명세)
+    새 = _스킬_체크아웃(tmp_path, "새")
+
+    problems = source_problems(spec, {"새": 새, "옛": 새})
+
+    assert any(p.startswith("옛") and "새 사본" in p for p in problems)
+
+
+def test_대조군_메시지는_카나리아가_바뀐_본문에만_있는_글이_아닐_수도_있다고_알린다(
+    tmp_path: Path,
+) -> None:
+    """옛 사본의 다른 절에 같은 낱말이 있어도 막힌다. 원인이 둘이라 둘 다 적는다."""
+    spec = load_spec(_스킬_명세)
+    옛_본문 = _옛_본문 + "\n## 잠금\n\n`EnterWorktree` 이름이 잠금 사유에 든다.\n"
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛", 옛_본문)}
+
+    problems = source_problems(spec, places)
+
+    assert any(p.startswith("옛") and "바뀐 본문에만" in p for p in problems)
+
+
+def test_skill을_주지_않은_슬래시_명령_명세도_원천을_본다(tmp_path: Path) -> None:
+    """대기열 133의 사건이 난 길이다. 본문이 프롬프트에 펼쳐지는 스킬도 원천은 파일에 있다."""
+    spec = load_spec(_스킬_명세.replace('skill = "tidy-checkouts"\n', ""))
+    places = {"새": _스킬_체크아웃(tmp_path, "새", _옛_본문), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    assert any(p.startswith("새") and "EnterWorktree" in p for p in source_problems(spec, places))
+
+
+def test_원천을_읽지_못하면_알린다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+    새 = tmp_path / "새"
+    (새 / ".claude" / "skills" / "tidy-checkouts" / "SKILL.md").mkdir(parents=True)
+    places = {"새": 새, "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    assert any(p.startswith("새") and "읽지 못했다" in p for p in source_problems(spec, places))
+
+
+def test_원천_칸이_없으면_명세_오류다() -> None:
+    with pytest.raises(SpecError, match="source"):
+        load_spec(_규칙_명세.replace('source = ".claude/rules/tools.md"\n', ""))
+
+
 def test_규칙_대상_파일이_없으면_알린다(tmp_path: Path) -> None:
     spec = load_spec(_규칙_명세)
 
@@ -497,9 +588,17 @@ class _가짜:
         return RunResult(self.exit_code, "\n".join(self.답들[cwd.name]) + "\n", "")
 
 
-def _스킬_체크아웃(root: Path, 이름: str) -> Path:
+_새_본문 = "## 부르는 곳\n\n새 세션이 첫 턴에 `EnterWorktree`보다 먼저 부른다.\n"
+_옛_본문 = "## 부르는 곳\n\n사람이 아무 때나 친다.\n"
+
+
+def _스킬_체크아웃(root: Path, 이름: str, 본문: str | None = None) -> Path:
+    """`SKILL.md` 를 둔 체크아웃. 본문을 주지 않으면 "새" 만 카나리아가 든 새 사본이다."""
     checkout = root / 이름
-    (checkout / ".claude" / "skills" / "tidy-checkouts").mkdir(parents=True)
+    folder = checkout / ".claude" / "skills" / "tidy-checkouts"
+    folder.mkdir(parents=True)
+    text = 본문 if 본문 is not None else (_새_본문 if 이름 == "새" else _옛_본문)
+    (folder / "SKILL.md").write_text(text, encoding="utf-8")
     return checkout
 
 
@@ -623,6 +722,23 @@ def test_claude를_띄우지_못하면_3이고_원인을_찍는다(tmp_path: Pat
 
     assert code == 3
     assert any("claude 없음" in line for line in printed)
+
+
+def test_원천이_어긋나면_돌리지_않고_2다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새", _옛_본문)
+    _스킬_체크아웃(tmp_path, "옛")
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+    )
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("원천" in line for line in printed)
 
 
 def test_출력_디렉터리를_만들지_못하면_3이다(tmp_path: Path) -> None:
