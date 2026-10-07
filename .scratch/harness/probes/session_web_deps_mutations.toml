@@ -1,0 +1,189 @@
+# tools/hook_session_web_deps.py(대기열 135)와 훅 러너의 사례 env 를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 timeout 600 uv run python tools/mutate.py .scratch/harness/probes/session_web_deps_mutations.toml
+
+[[mutation]]
+name = "클라우드 세션인지 보지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return remote == "true" and source in INSTALL_SOURCES'''
+new = '''    return source in INSTALL_SOURCES'''
+
+[[mutation]]
+name = "source 를 보지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return remote == "true" and source in INSTALL_SOURCES'''
+new = '''    return remote == "true"'''
+
+[[mutation]]
+name = "CLAUDE_PROJECT_DIR 를 보지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return project_dir or cwd or os.getcwd()'''
+new = '''    return cwd or os.getcwd()'''
+
+[[mutation]]
+name = "잠금 파일이 없어도 web 으로 본다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return web if (web / "pnpm-lock.yaml").is_file() else None'''
+new = '''    return web'''
+
+[[mutation]]
+name = "잠금 파일을 고정하지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''INSTALL_ARGS = ("install", "--frozen-lockfile")'''
+new = '''INSTALL_ARGS = ("install",)'''
+
+[[mutation]]
+name = "손으로 칠 명령이 상대 경로다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return shlex.join(["pnpm", "-C", str(web), *INSTALL_ARGS])'''
+new = '''    return shlex.join(["pnpm", "-C", "web", *INSTALL_ARGS])'''
+
+[[mutation]]
+name = "시간 제한을 넘기지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''            timeout=timeout,
+'''
+new = ''''''
+
+[[mutation]]
+name = "훅 안의 시간 제한이 등록의 것보다 길다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''TIMEOUT_SECONDS = 240.0'''
+new = '''TIMEOUT_SECONDS = 600.0'''
+
+[[mutation]]
+name = "띄우지 못한 명령을 잡지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    except OSError as error:
+        return f"{command[0]} 를 띄우지 못했다: {error}"
+'''
+new = ''''''
+
+[[mutation]]
+name = "실패의 출력을 까닭에 넣지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    return f"종료 코드 {process.returncode}\n{tail}"'''
+new = '''    return f"종료 코드 {process.returncode}"'''
+
+[[mutation]]
+name = "모델에게 손으로 칠 명령을 알리지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''        f" 돌리기 전에 `{command}` 를 직접 친다. 까닭:\n{reason}"'''
+new = '''        f" 돌리기 전에 직접 깐다. 까닭:\n{reason}"'''
+
+[[mutation]]
+name = "사용자에게 손으로 칠 명령을 알리지 않는다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''        "systemMessage": f"web 의존성을 깔지 못했다. `{command}` 를 직접 친다.",'''
+new = '''        "systemMessage": "web 의존성을 깔지 못했다.",'''
+
+[[mutation]]
+name = "실패를 삼킨다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''        print(json.dumps(failure_output(reason, web)))'''
+new = '''        pass'''
+
+[[mutation]]
+name = "pnpm 이 없으면 조용히 지나간다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''    reason = PNPM_MISSING if pnpm is None else install([pnpm], web, TIMEOUT_SECONDS)'''
+new = '''    reason = None if pnpm is None else install([pnpm], web, TIMEOUT_SECONDS)'''
+
+[[mutation]]
+name = "실패하면 종료 2로 끝난다"
+tests = ["tests/tools/test_hook_session_web_deps.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_session_web_deps.py"
+old = '''        print(json.dumps(failure_output(reason, web)))
+    return 0'''
+new = '''        print(json.dumps(failure_output(reason, web)))
+        return 2
+    return 0'''
+
+[[mutation]]
+name = "러너가 사례의 env 를 버린다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''            env={**hook_environment(), **(env or {})},'''
+new = '''            env=hook_environment(),'''
+
+[[mutation]]
+name = "러너가 사례의 env 를 넘기지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    return Result(case, *_launch(case.hook, payload, registration, env=env))'''
+new = '''    return Result(case, *_launch(case.hook, payload, registration))'''
+
+[[mutation]]
+name = "러너가 env 의 자리표시자를 바꾸지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    env = {key: _replace(value, replacements) for key, value in case.env.items()}'''
+new = '''    env = dict(case.env)'''
+
+[[mutation]]
+name = "러너가 CLAUDE_CODE_REMOTE 를 물려준다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        "CLAUDE_CODE_REMOTE",
+        *REPO_LOCATION_VARS,'''
+new = '''        *REPO_LOCATION_VARS,'''
+
+[[mutation]]
+name = "잠금 파일이 package.json 과 맞는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        ' "dependencies": {"left-pad": "1.3.0"}}\n','''
+new = '''        ' "dependencies": {}}\n','''

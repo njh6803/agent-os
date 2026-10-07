@@ -2,6 +2,10 @@
 # agent-os 클라우드 환경 설정 스크립트(claude.ai 의 클라우드 환경 → Edit → Setup script 에 붙여 넣는 원본). 세션이 뜨기 전에 root 로 돈다.
 # 어느 단계가 실패해도 세션은 뜨도록 단계마다 실패를 stderr 에 알리기만 하고 넘어가며, 끝에서 0 으로 나간다.
 # 내려받기와 apt 에는 시간 제한을 둔다. 멈춘 채로 두면 세션이 뜨지 않는다.
+# 저장소 안의 설치(pnpm -C web install --frozen-lockfile)는 여기 두지 않는다. 공식 문서는 이 스크립트를
+# VM 을 갖추는 자리로 두고, 환경 캐시가 있으면 건너뛴다. 그 설치는 SessionStart 훅
+# (tools/hook_session_web_deps.py)이 세션이 시작되거나 이어질 때마다 한다. uv sync 는 --no-sync 없는 첫
+# uv run 이 한다.
 export DEBIAN_FRONTEND=noninteractive
 CURL="curl -fsSL --connect-timeout 20 --max-time 300 --retry 2"
 

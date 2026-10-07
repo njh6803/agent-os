@@ -10,11 +10,12 @@
 `PYTHONUTF8` 을 빼고(훅 환경에 있다고 가정하지 않는다, 대기열 25·40) 저장소를 가리키는 `GIT_*`
 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이 임시 저장소를 이 저장소로 돌린다,
 tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열 83·94 — 한국어 판정 훅 둘이
-SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). 자식은
+SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). `CLAUDE_CODE_REMOTE` 도 벗긴다
+(`hook_session_web_deps` 가 클라우드 세션에서만 깐다). 자식은
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열둘 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열셋 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
 않는다), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고 그 위에 푸시하지 않은 커밋이
 하나 있는 작업 브랜치 저장소), `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와
@@ -22,7 +23,10 @@ assistant 기록이 있는 트랜스크립트 — 첫 턴과 그 반례), `${MID
 문장 뒤의 호출이 든 트랜스크립트), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc),
 `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글 줄이 넘친 `long.py` 와 짧은 `short.py`),
 `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이 저장소의 파일에 기대를 걸지 않는다),
-`${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것). 기대는 넷.
+`${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것),
+`${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
+네트워크 없이 곧 실패한다). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서
+벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
 deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
 (`additionalContext`), silent(종료 0, 출력 없음). `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
@@ -121,11 +125,13 @@ REPO_LOCATION_VARS = (
 
 
 class Case(BaseModel):
-    """표의 한 줄. `hook` 은 tools/ 아래 파일 이름, `payload` 는 stdin 에 넣을 JSON 이다."""
+    """표의 한 줄. `hook` 은 tools/ 아래 파일 이름, `payload` 는 stdin 에 넣을 JSON, `env` 는
+    자식 환경에 덧씌울 값이다."""
 
     hook: str
     expect: Expectation
     payload: dict[str, JsonValue]
+    env: dict[str, str] = {}
     note: str = ""
 
 
@@ -260,14 +266,18 @@ def coverage_gaps(cases: list[Case], registered: Collection[str]) -> list[str]:
 def substitute(value: JsonValue, replacements: dict[str, str]) -> JsonValue:
     """문자열 값 안의 `${이름}` 을 바꾼다. 표와 목록은 안으로 들어간다."""
     if isinstance(value, str):
-        for name, replacement in replacements.items():
-            value = value.replace("${" + name + "}", replacement)
-        return value
+        return _replace(value, replacements)
     if isinstance(value, dict):
         return {key: substitute(item, replacements) for key, item in value.items()}
     if isinstance(value, list):
         return [substitute(item, replacements) for item in value]
     return value
+
+
+def _replace(text: str, replacements: dict[str, str]) -> str:
+    for name, replacement in replacements.items():
+        text = text.replace("${" + name + "}", replacement)
+    return text
 
 
 def outcome_of(returncode: int, stdout: str, event: str) -> str:
@@ -315,12 +325,20 @@ def notice_outcome(returncode: int, stdout: str, event: str) -> str:
 
 
 def hook_environment() -> dict[str, str]:
-    """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT` 를 뺀다.
+    """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT`,
+    `CLAUDE_CODE_REMOTE` 를 뺀다.
 
-    마지막 것은 `hook_stop_korean`·`hook_midturn_korean` 이 SDK 세션에서 침묵하는 근거라, 러너를
+    뒤의 둘은 훅이 세션의 종류를 가리는 근거다. `CLAUDE_CODE_ENTRYPOINT` 는
+    `hook_stop_korean`·`hook_midturn_korean` 이 SDK 세션에서 침묵하는 근거이고,
+    `CLAUDE_CODE_REMOTE` 는 `hook_session_web_deps` 가 클라우드 세션에서만 까는 근거다. 러너를
     띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다.
     """
-    excluded = {"PYTHONUTF8", "CLAUDE_CODE_ENTRYPOINT", *REPO_LOCATION_VARS}
+    excluded = {
+        "PYTHONUTF8",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_REMOTE",
+        *REPO_LOCATION_VARS,
+    }
     return {key: value for key, value in os.environ.items() if key not in excluded}
 
 
@@ -340,15 +358,21 @@ def launch_argv(hook: str, root: Path = ROOT) -> list[str]:
 
 
 def _launch(
-    hook: str, payload: JsonValue, registration: Registration, judge: Judge = outcome_of
+    hook: str,
+    payload: JsonValue,
+    registration: Registration,
+    judge: Judge = outcome_of,
+    env: dict[str, str] | None = None,
 ) -> tuple[str, str]:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌려 (판정, 출력). 넘기면 판정 `timeout`."""
+    """자식 하나를 등록의 모양과 시간 제한으로 돌려 (판정, 출력). 넘기면 판정 `timeout`.
+
+    `env` 는 `hook_environment()` 위에 덧씌운다."""
     try:
         process = subprocess.run(
             launch_argv(hook),
             input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             capture_output=True,
-            env=hook_environment(),
+            env={**hook_environment(), **(env or {})},
             cwd=ROOT,
             check=False,
             timeout=registration.timeout,
@@ -364,7 +388,8 @@ def _launch(
 def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
     """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정한다. 넘기면 어긋남 `timeout`."""
     payload = substitute(case.payload, replacements)
-    return Result(case, *_launch(case.hook, payload, registration))
+    env = {key: _replace(value, replacements) for key, value in case.env.items()}
+    return Result(case, *_launch(case.hook, payload, registration, env=env))
 
 
 def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
@@ -452,7 +477,26 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "LOOSE_PY": loose.as_posix(),
         "OPEN_JOURNAL": open_journal.as_posix(),
         "CLOSED_JOURNAL": closed_journal.as_posix(),
+        "BROKEN_WEB": _broken_web(scratch).as_posix(),
     }
+
+
+def _broken_web(scratch: Path) -> Path:
+    """`web/package.json` 의 의존성이 `web/pnpm-lock.yaml` 에 없는 디렉터리. `pnpm install
+    --frozen-lockfile` 이 네트워크 없이 곧 실패한다(`pnpm -C <이 디렉터리>/web install
+    --frozen-lockfile` 을 손으로 봤다. `packageManager` 가 없어 전역 pnpm 10.28.0 이 돌았고 0.35초에
+    종료 1, `ERR_PNPM_OUTDATED_LOCKFILE`. 일지 2026-10-07-07)."""
+    web = scratch / "broken-web" / "web"
+    web.mkdir(parents=True)
+    (web / "package.json").write_text(
+        '{"name": "x", "version": "0.0.0", "private": true,'
+        ' "dependencies": {"left-pad": "1.3.0"}}\n',
+        encoding="utf-8",
+    )
+    (web / "pnpm-lock.yaml").write_text(
+        "lockfileVersion: '9.0'\n\nimporters:\n\n  .: {}\n", encoding="utf-8"
+    )
+    return web.parent
 
 
 def _unpushed_repository(scratch: Path) -> Path:

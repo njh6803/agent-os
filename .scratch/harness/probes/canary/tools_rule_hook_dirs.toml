@@ -1,0 +1,23 @@
+# `.claude/rules/tools.md` 에 더한 항목(훅이 디렉터리를 고를 때 `CLAUDE_PROJECT_DIR` 과 페이로드의 `cwd` 를
+# 가르는 것, SessionStart 의 종료 코드 2)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-07-07).
+# 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 셋이다. 규칙 파일의 첫 제목, 항목의 앞 문장 조각, 같은 항목의 SessionStart 문장 조각.
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_hook_dirs.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 훅이 디렉터리를 고를 때 환경 변수와 훅 입력의 필드 가운데 무엇을 쓸지 가르는 항목이 있으면,
+그 항목이 든 지시 파일의 첫 `#` 제목, 그 항목의 첫 문장 다음 문장, 그 항목 안에서 어떤 훅 이벤트가 종료 코드로 할 수 없는 것을 적은 문장을 각각 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["하네스 규칙", "세션이 시작된 프로젝트 루트에 머물고", "세션을 막지 못하고"]
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
