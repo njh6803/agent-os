@@ -3,7 +3,9 @@
 PR #167(대기열 136)이 띄운 작업 칩의 일이다. 그 PR의 잔존 grep이 `.github/workflows/claude-code-review.yml`의 두 자리를
 찾았지만, 그 파일을 바꾼 PR은 claude-review가 건너뛰므로 별도 PR로 넘겼다(일지 16의 잔존 grep). 워크트리
 `charming-bhaskara-4d6dc8`에서 #167이 병합되기를 기다린 뒤 `origin/main`(`eda296e`)으로 `chore/review-owner-fallback`을
-땄다. 순번은 18이다. 17은 열린 PR #169(`17-zizmor-workflow-audit`)가 쓴다(`tools/sibling_overlap.py`).
+땄다. 순번은 18이다. 17은 PR #169(`17-zizmor-workflow-audit`)가 쓴다(`tools/sibling_overlap.py`). PR을 연 뒤 #169가
+병합되어(`4d34bee`) 이 브랜치에 main을 병합했다. 대기열이 충돌했고, 145 행은 main의 회차(2회차)를, 146 행은 이 브랜치의
+한 줄을 두고, 새 행은 155~157 뒤에 main의 158·159를 이었다.
 
 ## 계기
 
