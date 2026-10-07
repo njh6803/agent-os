@@ -47,7 +47,9 @@ ADR 초안을 보여 주고 `unpinned-uses` 정책을 물었더니 쉬운 설명
 - `.github/workflows/ci.yml`: `python` 잡의 마지막 단계로 같은 명령. 머리 주석의 규약을 판정자 문장과 무시 주석의 모양으로
   바꿨다. 서드파티 액션 다섯을 해시로 고정했다.
 - `.github/workflows/claude-code-review.yml`: `claude-code-action`을 해시로 고정하고 머리 주석에 한 줄. 이 파일을 바꾼 PR은
-  claude-review가 건너뛰므로 별도 PR로 먼저 병합한다(`operations.md` 리뷰 파이프라인).
+  claude-review가 건너뛰므로 별도 PR로 먼저 병합했다(`operations.md` 리뷰 파이프라인). 이 워크트리에서 `origin/main`으로
+  `chore/pin-review-action`을 따 그 파일만 옮겨 PR #168로 냈다. CI는 모두 초록, claude-review는 예상대로 건너뛰었고,
+  CodeRabbit은 HEAD까지 리뷰해 지적 없음이었다. 병합(`b54bff3`) 뒤 이 브랜치에 main을 병합해 그 파일의 차이가 없어졌다.
 - `tests/tools/test_zizmor_gate.py`: 게이트 명령의 옵션과 CI의 같은 명령, 저장소가 지나고 워크플로를 모두 거두는 것,
   artipacked 다섯, unpinned-uses 여섯, 깨진 YAML, 무시 주석. 테스트를 먼저 써서 빨강을 본 뒤 구현했다(무시 주석
   한 건은 셀프 리뷰 뒤에 더했다).
