@@ -26,5 +26,12 @@ export {
   type StatusBadgeProps,
   type StatusBadgeStatus,
 } from "./components/atoms/StatusBadge";
+export { Alert, type AlertProps, type AlertTone } from "./components/molecules/Alert";
+export { Switch, type SwitchProps } from "./components/molecules/Switch";
+export {
+  TextField,
+  type TextFieldProps,
+  type TextFieldVariant,
+} from "./components/molecules/TextField";
 export { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeEntry, type ThemeKey } from "./themes";
 export { UI_ROOT_ATTRIBUTE, shadowSheets } from "./styles/shadow";

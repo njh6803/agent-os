@@ -1,0 +1,143 @@
+# design-system 티켓 04 의 변이 표. 스토리 테스트(뿌리 vitest 의 storybook 프로젝트) 가운데 빈 컴포넌트에서도 초록이던
+# 폭 320px 스토리 둘이 가로로 넘치는 그림을 잡는지 본다. 나머지 스토리는 타입만 갖춘 빈 컴포넌트에서 먼저 빨갰다
+# (일지 2026-10-07 의 티켓 04).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-system/probes/molecules_mutations.toml [이름 ...]
+# 실제 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다(docs/constitution/operations.md).
+
+[runner.stories]
+command = ["pnpm", "exec", "vitest", "run", "--project", "storybook"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "글 입력의 도움말 줄이 줄을 바꾸지 않으면 320px 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "폭 320px"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''
+          className={`flex items-center gap-1 text-small font-regular ${NOTE_COLOR[state]}`}
+'''
+new = '''
+          className={`flex items-center gap-1 whitespace-nowrap text-small font-regular ${NOTE_COLOR[state]}`}
+'''
+
+[[mutation]]
+name = "알림의 본문이 줄을 바꾸지 않으면 320px 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "폭 320px"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''
+            <div className="text-small font-regular text-muted">{children}</div>
+'''
+new = '''
+            <div className="whitespace-nowrap text-small font-regular text-muted">{children}</div>
+'''
+
+# Typing 은 기본 그림의 스토리에서 글 넣기를 옮겨 오며 구현 뒤에 쓴 스토리다. 한 줄 칸이 값을 넘기지 않는 변이로 본다.
+[[mutation]]
+name = "한 줄 칸이 onChange 에 값을 넘기지 않으면 Typing 이 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "글을 넣으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''
+        type="text"
+        onChange={(event) => onChange?.(event.currentTarget.value)}
+'''
+new = '''
+        type="text"
+        onChange={() => onChange?.("")}
+'''
+
+# 아이콘은 클래스가 아니라 모양(svg 안쪽 마크업)으로 견준다(expect.ts 의 iconShape). 다른 아이콘을 그리면 빨개야 한다.
+[[mutation]]
+name = "실패 알림이 circle-minus 를 그리면 Danger 가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "실패 알림은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''
+  danger: "circle-x",
+'''
+new = '''
+  danger: "circle-minus",
+'''
+
+[[mutation]]
+name = "글 입력의 오류 아이콘이 info 이면 WithError 가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "오류이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''
+          {error === null ? null : <Icon name="circle-x" size="14" />}
+'''
+new = '''
+          {error === null ? null : <Icon name="info" size="14" />}
+'''
+
+# 셀프 리뷰가 더한 단언 셋. 조합 스토리, 넘긴 checked 에 남는 스위치, 닫아도 스스로 사라지지 않는 알림.
+[[mutation]]
+name = "알림이 모두 status 이면 조합 스토리가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "톤 셋마다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''
+      role={tone === "danger" ? "alert" : "status"}
+'''
+new = '''
+      role="status"
+'''
+
+[[mutation]]
+name = "스위치가 넘긴 checked 보다 스스로 든 상태를 앞세우면 Off 가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/Switch.stories.tsx", "-t", "꺼진 스위치는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Switch.tsx"
+old = '''
+  const on = checked ?? selfChecked;
+'''
+new = '''
+  const on = selfChecked || (checked ?? false);
+'''
+
+[[mutation]]
+name = "닫기가 알림의 역할을 스스로 걷으면 WithClose 가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "onClose 가 있으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''
+          <IconButton icon="x" label="닫기" size="s" onClick={onClose} />
+'''
+new = '''
+          <IconButton
+            icon="x"
+            label="닫기"
+            size="s"
+            onClick={() => {
+              onClose();
+              document.querySelector("[role=status]")?.removeAttribute("role");
+            }}
+          />
+'''

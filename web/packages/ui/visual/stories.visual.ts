@@ -66,6 +66,8 @@ interface Interaction {
 }
 
 const BUTTON: readonly State[] = ["hover", "press", "focus"];
+// 글 입력은 디자인 파일의 상태 표에 누름이 없다.
+const FIELD: readonly State[] = ["hover", "focus"];
 
 // 실제 입력의 상태를 더 찍는 스토리. 스토리 테스트의 userEvent 는 합성 이벤트라 :hover·:active 가 걸리지 않는다
 // (ADR 0026 의 2026-10-06 이력). 변형마다 올림·누름의 클래스가 달라 변형마다 하나다. 상호작용 컴포넌트를 더하는 티켓은
@@ -99,6 +101,34 @@ const INTERACTIONS: readonly Interaction[] = [
   {
     story: "atoms-iconbutton--secondary",
     target: (page) => page.getByRole("button", { name: "더 보기" }),
+    states: BUTTON,
+  },
+  {
+    story: "molecules-textfield--single",
+    target: (page) => page.getByRole("textbox", { name: "플러그인 이름" }),
+    states: FIELD,
+  },
+  {
+    story: "molecules-textfield--multi",
+    target: (page) => page.getByRole("textbox", { name: "거부 사유" }),
+    states: FIELD,
+  },
+  // 스위치는 켜짐과 꺼짐의 올림·누름이 다르다. 두 스토리 모두 checked 를 넘겨, 누름을 놓아 생긴 click 이 그림을
+  // 바꾸지 않는다(그 뒤의 포커스 사진이 같은 상태를 찍는다).
+  {
+    story: "molecules-switch--off",
+    target: (page) => page.getByRole("switch", { name: "결제 환불" }),
+    states: BUTTON,
+  },
+  {
+    story: "molecules-switch--on",
+    target: (page) => page.getByRole("switch", { name: "주문 조회" }),
+    states: BUTTON,
+  },
+  // 알림 자체는 상태가 없고 닫기 버튼(투명·작은 아이콘 버튼)이 상태를 따른다. 알림의 면 위에서 찍는다.
+  {
+    story: "molecules-alert--with-close",
+    target: (page) => page.getByRole("button", { name: "닫기" }),
     states: BUTTON,
   },
 ];
