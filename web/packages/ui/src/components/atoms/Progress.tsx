@@ -23,7 +23,10 @@ const INDETERMINATE_CLASS = "left-7/20 w-3/10 animate-progress motion-reduce:ani
 interface ProgressOwnProps {
   /** null 이면 값 모름(불러오는 중). 기본 null. */
   value?: number | null;
-  /** 끝 값. 기본 1. */
+  /**
+   * 끝 값. 기본 1. 0 보다 크게 넘긴다. 0 이하이면 막대는 비고 `aria-valuemax` 는 넘긴 값 그대로라 최소 0 과 범위를 이루지
+   * 못한다. 그것을 고칠 정규화가 없어 계약으로 둔다(PR #166 의 claude-review).
+   */
   max?: number;
   /** 보이는 이름이자 접근 이름. 몇 단계 중 몇째인지 글로 적는다. */
   label: string;
