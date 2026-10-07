@@ -90,41 +90,70 @@ def test_명령을_찾지_못하면_실패로_알린다(tmp_path: Path) -> None:
     assert "agent-os-no-such-command" in out.getvalue().decode()
 
 
-def test_CLI_진입점이_SKIP_으로_모든_검사를_건너뛴다(tmp_path: Path) -> None:
-    """main 의 배관(검사 목록, SKIP, 종료 코드)을 진짜 검사를 띄우지 않고 지난다.
+def test_띄우지_못한_명령도_실패로_알린다(tmp_path: Path) -> None:
+    """찾았지만 띄울 수 없는 파일(실행 형식이 아니다)도 traceback 이 아니라 실패 한 줄이다."""
+    program = tmp_path / "not-a-program"
+    program.write_bytes(b"\x00\x01 not an executable")
+    program.chmod(0o755)
+    out = io.BytesIO()
 
-    PATH 를 빈 디렉터리로 바꿔, SKIP 이 깨져도 uv·pnpm 을 찾지 못해 곧바로 빨갛다. 그러지
-    않으면 러너가 띄운 pytest 가 이 테스트를 다시 불러 러너를 또 띄운다(변이 표를 처음 돌릴
-    때 그렇게 돌았다).
+    code = run((Check("broken", (str(program),)),), {}, tmp_path, out)
+
+    assert code == 1
+    assert "not-a-program" in out.getvalue().decode()
+
+
+def _cli(path_dir: Path, skips: list[str]) -> subprocess.CompletedProcess[str]:
+    """CLI 를 PATH 를 비운 채 부른다.
+
+    PATH 가 빈 디렉터리라 SKIP 이 깨져도 uv·pnpm 을 찾지 못해 곧바로 끝난다. 그러지 않으면 러너가
+    띄운 pytest 가 이 테스트를 다시 불러 러너를 또 띄운다(변이 표를 처음 돌릴 때 그렇게 돌았다).
     """
-    process = subprocess.run(
+    return subprocess.run(
         [sys.executable, str(ROOT / "tools" / "run_checks.py")],
         capture_output=True,
         text=True,
         encoding="utf-8",
         cwd=ROOT,
-        env={
-            **os.environ,
-            "PATH": str(tmp_path),
-            "SKIP": ",".join(check.id for check in CHECKS),
-        },
+        env={**os.environ, "PATH": str(path_dir), "SKIP": ",".join(skips)},
         check=False,
     )
+
+
+def test_CLI_진입점이_SKIP_으로_모든_검사를_건너뛴다(tmp_path: Path) -> None:
+    """main 의 배관(검사 목록, SKIP)을 진짜 검사를 띄우지 않고 지난다."""
+    process = _cli(tmp_path, [check.id for check in CHECKS])
 
     assert process.returncode == 0, process.stdout + process.stderr
     assert process.stdout.count("Skipped") == len(CHECKS)
 
 
+def test_CLI_진입점이_알려진_빨강을_종료_코드와_출력으로_낸다(tmp_path: Path) -> None:
+    """검사 하나만 남기고 PATH 를 비우면 그 명령을 찾지 못한다. 종료 코드가 main 밖으로 나가는지
+    본다."""
+    target = CHECKS[-1]
+    process = _cli(tmp_path, [check.id for check in CHECKS if check is not target])
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert target.command[0] in process.stdout
+    assert any(
+        line.startswith(target.id) and "Failed" in line for line in process.stdout.splitlines()
+    )
+
+
 def test_이_저장소의_pre_commit_은_러너의_검사를_따로_등록하지_않는다() -> None:
-    """같은 검사를 러너와 훅에 함께 두면 커밋마다 두 번 돈다(대기열 118과 같은 낭비)."""
+    """같은 검사를 러너와 훅에 함께 두면 커밋마다 두 번 돈다(대기열 118과 같은 낭비).
+
+    글자 그대로의 명령과 같은 id 만 본다. 옵션을 바꿔 적은 명령(`uv run pytest` 처럼 `-q` 를 뺀
+    것)은 못 본다.
+    """
     config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
-    entries = {
-        line.strip().removeprefix("entry:").strip()
-        for line in config.splitlines()
-        if line.strip().startswith("entry:")
-    }
+    lines = [line.strip() for line in config.splitlines()]
+    entries = {line.removeprefix("entry:").strip() for line in lines if line.startswith("entry:")}
+    hook_ids = {line.removeprefix("- id:").strip() for line in lines if line.startswith("- id:")}
 
     assert "uv run python tools/run_checks.py" in entries
-    assert len(CHECKS) == 7
+    assert CHECKS
     for check in CHECKS:
         assert " ".join(check.command) not in entries, check.id
+        assert check.id not in hook_ids, check.id

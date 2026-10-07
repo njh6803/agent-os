@@ -50,7 +50,8 @@ date: 2026-09-20
 pre-commit은 훅을 하나씩 돈다(4.6.2 `commands/run.py`의 `_run_hooks`를 읽었다). 커밋마다 도는 `always_run` 검사 일곱
 (pyright, import-linter, pytest, 지침 검사, 타입 우회 검사, 훅 러너, `pnpm -C web verify`)을 차례로 돌면 145.5초이고,
 한꺼번에 띄우면 가장 긴 pytest만큼인 73.7초다(`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4,
-일지 2026-10-07-02).
+일지 2026-10-07-02). 잰 트리는 `cbb6a6c`이고, 그 뒤 PR #156이 web verify에 스토리 테스트를 더해 가장 긴
+검사가 무엇인지는 다시 재야 한다.
 
 **`.pre-commit-config.yaml`에서 일곱을 훅 하나(`parallel-checks`)로 묶고, 그 훅이 부르는 `tools/run_checks.py`가 일곱을
 함께 띄운다.**
@@ -62,7 +63,8 @@ pre-commit은 훅을 하나씩 돈다(4.6.2 `commands/run.py`의 `_run_hooks`를
 - pre-commit의 `SKIP` 환경 변수를 같은 id(`pyright`, `lint-imports`, `pytest`, …)로 읽어, `SKIP=pytest git commit`이
   지금처럼 통한다.
 - 명령 목록의 원천은 러너의 `CHECKS` 하나다. CI(`ci.yml`)는 잡마다 명령을 직접 돌아 바뀌지 않는다. 같은 검사를 러너와
-  훅에 함께 두면 커밋마다 두 번 돌므로, 설정의 `entry`가 `CHECKS`의 명령과 겹치지 않는지 pytest가 본다.
+  훅에 함께 두면 커밋마다 두 번 돌므로, `CHECKS`의 명령이 글자 그대로 `entry`로 있거나 같은 id의 훅이
+  있으면 pytest가 빨갛다. 옵션을 바꿔 적은 명령은 보지 못한다.
 - 최상위에 `default_stages: [pre-commit]`을 두고 커밋 메시지 훅만 `stages: [commit-msg]`로 적는다. 훅마다 `stages`를
   적던 것(대기열 118)을 대신해, 새 훅이 commit-msg 단계에서 다시 도는 누락이 생기지 않는다.
 - 함께 돌 때 서로 보는 파일은 Vitest의 판정자 테스트가 `web/judge-*`에 쓰는 임시 트리 하나다. 지침 검사의 `os.walk`가

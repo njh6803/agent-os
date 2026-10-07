@@ -2,7 +2,8 @@
 
 pre-commit 은 훅을 하나씩 돈다(4.6.2 `commands/run.py` 의 `_run_hooks`). 커밋마다 도는 검사 일곱을
 차례로 돌면 145.5초, 한꺼번에 띄우면 가장 긴 pytest 만큼인 73.7초였다
-(`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4, 일지 2026-10-07-02). 그래서
+(`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4, 일지 2026-10-07-02).
+잰 트리는 PR #156 이 web verify 에 스토리 테스트를 더하기 전의 `cbb6a6c` 다. 그래서
 `.pre-commit-config.yaml` 은 이 일곱을 훅 하나로 두고 이 러너가 함께 띄운다. 파일을 고치는 ruff 둘은
 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기 하나다. CI 는 잡마다
 명령을 직접 돈다(`.github/workflows/ci.yml`).
@@ -71,19 +72,23 @@ def skipped_ids(environ: Mapping[str, str]) -> frozenset[str]:
 
 
 def run_one(check: Check, cwd: Path) -> Outcome:
-    """검사 하나를 띄워 끝날 때까지 기다린다. 명령을 찾지 못하면 예외 대신 실패로 돌려준다."""
+    """검사 하나를 띄워 끝날 때까지 기다린다. 명령을 찾거나 띄우지 못하면 예외 대신 실패다."""
     start = time.monotonic()
     executable = shutil.which(check.command[0])
     if executable is None:
         message = f"명령을 찾지 못했다: {check.command[0]}\n".encode()
         return Outcome(check, False, message, time.monotonic() - start)
-    process = subprocess.run(
-        [executable, *check.command[1:]],
-        cwd=cwd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
+    try:
+        process = subprocess.run(
+            [executable, *check.command[1:]],
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+    except OSError as error:
+        message = f"명령을 띄우지 못했다: {executable}: {error}\n".encode()
+        return Outcome(check, False, message, time.monotonic() - start)
     return Outcome(check, process.returncode == 0, process.stdout, time.monotonic() - start)
 
 
@@ -92,7 +97,10 @@ def status_line(check_id: str, status: str) -> bytes:
 
 
 def run(checks: Sequence[Check], environ: Mapping[str, str], cwd: Path, out: BinaryIO) -> int:
-    """SKIP 밖의 검사를 한꺼번에 띄우고 끝난 차례로 찍는다. 하나라도 실패하면 1."""
+    """SKIP 밖의 검사를 한꺼번에 띄우고 끝난 차례로 찍는다. 하나라도 실패하면 1.
+
+    environ 은 SKIP 을 읽는 데만 쓴다. 자식은 이 프로세스의 환경을 그대로 물려받는다.
+    """
     skips = skipped_ids(environ)
     to_run = [check for check in checks if check.id not in skips]
     for check in checks:

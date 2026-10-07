@@ -28,7 +28,7 @@ def test_훅_러너도_게이트다() -> None:
 
 
 def test_검사_러너도_게이트다() -> None:
-    """pre-commit 의 always_run 검사 일곱을 함께 띄우는 러너다(ADR 0005 이력 2026-10-07)."""
+    """pre-commit 의 always_run 검사를 함께 띄우는 러너다(ADR 0005 이력 2026-10-07)."""
     assert is_gate("uv run python tools/run_checks.py")
     assert len(warnings_for("uv run python tools/run_checks.py 2>&1 | tail -3")) == 1
 

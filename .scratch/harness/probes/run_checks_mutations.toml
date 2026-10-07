@@ -61,15 +61,22 @@ new = '''                out.write(outcome.output)
                     failed = True'''
 
 [[mutation]]
-name = "명령을 찾지 못하면 예외로 터진다"
+name = "띄우지 못한 명령을 잡지 않는다"
 tests = ["tests/tools/test_run_checks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_checks.py"
-old = '''    executable = shutil.which(check.command[0])
-    if executable is None:'''
-new = '''    executable = check.command[0]
-    if not executable:'''
+old = '''    except OSError as error:'''
+new = '''    except ValueError as error:'''
+
+[[mutation]]
+name = "main 의 종료 코드를 버린다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    sys.exit(main())'''
+new = '''    main()'''
 
 [[mutation]]
 name = "건너뛴 검사를 알리지 않는다"
@@ -105,3 +112,20 @@ expect = "red"
 file = "tools/hook_bash_gate_pipe.py"
 old = '''tools/(?:check_\w+|mutate|run_hooks|run_checks)\.py'''
 new = '''tools/(?:check_\w+|mutate|run_hooks)\.py'''
+
+[[mutation]]
+name = "러너의 검사를 같은 id 의 다른 명령으로 다시 등록한다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".pre-commit-config.yaml"
+old = '''      - id: parallel-checks
+'''
+new = '''      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: parallel-checks
+'''

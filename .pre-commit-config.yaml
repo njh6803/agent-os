@@ -22,14 +22,13 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
-      # 파일을 고치지 않는 always_run 검사 일곱(pyright, lint-imports, pytest, check-instructions,
-      # check-type-escapes, run-hooks, web-verify)을 러너가 함께 띄운다. pre-commit 은 훅을 하나씩 돈다(ADR 0005
+      # 파일을 고치지 않는 always_run 검사를 러너가 함께 띄운다. pre-commit 은 훅을 하나씩 돈다(ADR 0005
       # 이력 2026-10-07). 목록의 원천은 tools/run_checks.py 의 CHECKS 이고, 건너뛰기는 그 id 로
       # SKIP=pytest 처럼 한다. ruff 둘 뒤라 고친 파일을 본다. web-verify 는 web 파일이 안 바뀐 커밋에서도
       # 돈다. 파이썬 티켓이 openapi.json 을 바꾸면 생성물 최신성 단계가 빨개져 다시 생성한 타입이 같은
       # 커밋에 담긴다. e2e 는 커밋마다 브라우저와 Next 빌드가 돌아 넣지 않는다(ADR 0021 이력).
       - id: parallel-checks
-        name: checks (pyright, import-linter, pytest, 지침, 타입 우회, 훅 러너, web verify — 함께 띄운다)
+        name: checks (tools/run_checks.py 의 CHECKS 를 함께 띄운다)
         entry: uv run python tools/run_checks.py
         language: system
         pass_filenames: false
