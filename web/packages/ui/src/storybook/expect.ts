@@ -24,6 +24,15 @@ export function colorsOf(element: Element): { background: string; text: string; 
 /** 투명한 배경의 계산값. */
 export const TRANSPARENT = "rgba(0, 0, 0, 0)";
 
+/**
+ * 올림을 칠하는 요소의 기대 색. 그 요소가 `:hover` 면 올림의 쓰임새 토큰(`hover`), 아니면 쉬는 토큰(`rest`)이다. 스토리
+ * 테스트의 userEvent 는 합성 이벤트라 실제 포인터를 옮기지 못하는데, CI 의 한 실행(PR #165)에서 포인터가 화면 위쪽에 머물러
+ * 폭을 채운 라벨이 `:hover` 였다. 라벨의 `:hover` 는 그 칸에도 걸린다. 쉬는 모양은 포인터를 다루는 사진 비교가 지킨다.
+ */
+export function hoverAwareColor(element: Element, rest: string, hover: string): string {
+  return semanticColor(element, element.matches(":hover") ? hover : rest);
+}
+
 interface FocusRing {
   style: string;
   width: string;

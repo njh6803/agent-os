@@ -4,6 +4,7 @@ import {
   colorsOf,
   expectedFocusRing,
   focusRingOf,
+  hoverAwareColor,
   iconShape,
   semanticColor,
 } from "../../storybook/expect";
@@ -65,7 +66,7 @@ export const Single: Story = {
     await expect(colorsOf(input)).toEqual({
       background: semanticColor(input, "raised"),
       text: semanticColor(input, "text"),
-      border: semanticColor(input, "border"),
+      border: hoverAwareColor(input, "border", "border-hover"),
     });
     await expect(getComputedStyle(input, "::placeholder").color).toBe(
       semanticColor(input, "muted"),
@@ -94,7 +95,7 @@ export const Multi: Story = {
     await expect(colorsOf(textarea)).toEqual({
       background: semanticColor(textarea, "raised"),
       text: semanticColor(textarea, "text"),
-      border: semanticColor(textarea, "border"),
+      border: hoverAwareColor(textarea, "border", "border-hover"),
     });
   },
 };
@@ -262,7 +263,7 @@ export const SingleDark: Story = {
     await expect(colorsOf(input)).toEqual({
       background: semanticColor(input, "raised"),
       text: semanticColor(input, "text"),
-      border: semanticColor(input, "border"),
+      border: hoverAwareColor(input, "border", "border-hover"),
     });
   },
 };

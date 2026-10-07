@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
-import { colorsOf, expectedFocusRing, focusRingOf, semanticColor } from "../../storybook/expect";
+import {
+  colorsOf,
+  expectedFocusRing,
+  focusRingOf,
+  hoverAwareColor,
+  semanticColor,
+} from "../../storybook/expect";
 import { Switch } from "./Switch";
 
 const meta = {
@@ -74,7 +80,7 @@ export const Off: Story = {
     });
     await expect(switchColors(parts)).toEqual({
       track: semanticColor(track, "raised"),
-      border: semanticColor(track, "border"),
+      border: hoverAwareColor(row, "border", "border-hover"),
       knob: semanticColor(track, "muted"),
       label: semanticColor(track, "text"),
       state: semanticColor(track, "muted"),
@@ -113,8 +119,8 @@ export const On: Story = {
       state: "켜짐",
     });
     await expect(switchColors(parts)).toMatchObject({
-      track: semanticColor(track, "accent"),
-      border: semanticColor(track, "accent"),
+      track: hoverAwareColor(parts.row, "accent", "accent-hover"),
+      border: hoverAwareColor(parts.row, "accent", "accent-hover"),
       knob: semanticColor(track, "on-accent"),
     });
     // 손잡이는 오른쪽에서 4px 이다.
@@ -143,7 +149,9 @@ export const Toggle: Story = {
       state: "켜짐",
     });
     await expect(args.onChange).toHaveBeenLastCalledWith(true);
-    await expect(colorsOf(track).background).toBe(semanticColor(track, "accent"));
+    await expect(colorsOf(track).background).toBe(
+      hoverAwareColor(parts.row, "accent", "accent-hover"),
+    );
     await userEvent.click(canvas.getByText("켜짐"));
     await expect({
       checked: parts.track.checked,
@@ -196,7 +204,7 @@ export const OnDark: Story = {
     const parts = partsOf(canvas.getByRole("switch", { name: "주문 조회" }));
     await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
     await expect(switchColors(parts)).toMatchObject({
-      track: semanticColor(parts.track, "accent"),
+      track: hoverAwareColor(parts.row, "accent", "accent-hover"),
       knob: semanticColor(parts.track, "on-accent"),
     });
   },
