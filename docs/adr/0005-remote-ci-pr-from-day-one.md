@@ -50,9 +50,9 @@ date: 2026-09-20
 pre-commit은 훅을 하나씩 돈다(4.6.2 `commands/run.py`의 `_run_hooks`를 읽었다). 커밋마다 도는 `always_run` 검사 일곱
 (pyright, import-linter, pytest, 지침 검사, 타입 우회 검사, 훅 러너, `pnpm -C web verify`)을 차례로 돌면 145.5초이고,
 한꺼번에 띄우면 가장 긴 pytest만큼인 73.7초다(`.scratch/harness/probes/precommit_parallel.py`, Linux 컨테이너 CPU 4,
-일지 2026-10-07-03). 잰 트리는 `cbb6a6c`다. PR #156이 web verify에 스토리 테스트를 더한 뒤 GitHub Actions의
+일지 2026-10-07-05). 잰 트리는 `cbb6a6c`다. PR #156이 web verify에 스토리 테스트를 더한 뒤 GitHub Actions의
 러너(CPU 4)에서 같은 프로브로 다시 쟀다(실행 37561588972, `.scratch/harness/probes/run_checks_ci_probe.yml`, 일지
-2026-10-07-05). Linux는 차례로 115.0초, 한꺼번에 66.5초이고 가장 긴 것은 pytest였다. Windows는 240.0초와 142.5초이고
+2026-10-07-07). Linux는 차례로 115.0초, 한꺼번에 66.5초이고 가장 긴 것은 pytest였다. Windows는 240.0초와 142.5초이고
 가장 긴 것은 web verify(pytest는 135.1초)였다. 함께 띄우면 바닥은 pytest와 web verify 중 긴 쪽이다.
 
 **`.pre-commit-config.yaml`에서 일곱을 훅 하나(`parallel-checks`)로 묶고, 그 훅이 부르는 `tools/run_checks.py`가 일곱을

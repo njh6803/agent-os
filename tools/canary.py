@@ -17,6 +17,7 @@
     Read 도구로 `{target}` 하나만 통째로 읽어라. ...없으면 "없음"이라고만 답하라.
     '''                              # stdin 으로 간다. rule 이면 {target} 이 갈래의 대상으로 바뀐다
     expect = ["식별자는 영문"]        # 카나리아. 바뀐 본문에만 있는 글. 질문에 있으면 안 된다
+    source = ".claude/rules/tools.md"  # 바뀐 규칙·스킬 파일. 체크아웃 기준
     # skill = "tidy-checkouts"       skill 이면 선택. 실험군 회차마다 이 스킬을 Skill 로 불러야 한다
 
     [[arm]]
@@ -47,8 +48,10 @@
   대조군과 같은 답이면 확인이 빈 것이지 통과가 아니다.
 - 대조군: 답에 카나리아가 하나도 없다. "없음"이든 옛 줄이든 된다. 카나리아가 있으면 질문이 답을
   흘렸거나 대조군이 새 사본이다.
-카나리아 대조는 백틱과 `*` 를 걷고 공백을 하나로 모은 뒤의 부분 문자열이다. 돌리기 전에 질문과
-rule 갈래의 대상 파일에 카나리아가 있는지, 갈래의 체크아웃이 있는지 보고, 어긋나면 돌리지 않는다.
+카나리아 대조는 백틱과 `*` 를 걷고 공백을 하나로 모은 뒤의 부분 문자열이다. 돌리기 전에 아래를 보고
+어긋나면 돌리지 않는다. 질문과 rule 갈래의 대상 파일에 카나리아가 없다. 갈래의 체크아웃이 있다.
+실험군 사본의 원천(`source`)에 카나리아가 모두 있고, 실험군과 체크아웃이 다른 대조군 사본에는 하나도
+없다(대기열 133). 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로 잘못 읽는다.
 
 모델이 부르지 못하는 스킬(`disable-model-invocation: true`)은 질문 머리에 슬래시 명령으로 넣고
 `skill` 을 주지 않는다. 그 본문은 프롬프트에 펼쳐져 Skill 호출도 자리 줄도 남기지 않는다
@@ -64,6 +67,9 @@ rule 갈래의 대상 파일에 카나리아가 있는지, 갈래의 체크아�
 - 질문이 카나리아를 바꿔 말해 드러냈는지. 글자 그대로 든 것만 명세 오류로 잡고, 나머지는 대조군이
   잡는다(대조군 답에 카나리아가 있으면 실패).
 - Read 의 결과가 오류였는지. 돌리기 전에 대상 파일이 있는지만 본다.
+- 카나리아가 원천의 어느 자리에 있는지. 원천 확인은 파일 전체의 부분 문자열이라, 질문이 묻는
+  자리(절, 칸)에는 없고 다른 절에만 있어도 실험군 확인을 지난다. 대조군 사본은 다른 절에 같은
+  낱말만 있어도 막힌다. 카나리아는 바뀐 본문에만 있는 글로 고른다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
 3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다.
@@ -125,6 +131,7 @@ class Spec(_Model):
     model: str = "sonnet"
     question: str = Field(min_length=1)
     expect: list[str] = Field(min_length=1)
+    source: str = Field(min_length=1)
     skill: str | None = None
     arm: list[Arm] = Field(min_length=1)
 
@@ -360,7 +367,7 @@ def _says_none(answer: str) -> bool:
 
 def _same_place(path: str, expected: Path, checkout: Path) -> bool:
     seen = Path(path) if Path(path).is_absolute() else checkout / path
-    return os.path.normcase(os.path.normpath(seen)) == os.path.normcase(os.path.normpath(expected))
+    return _place_key(seen) == _place_key(expected)
 
 
 def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
@@ -441,6 +448,54 @@ def _text(data: bytes | str | None) -> str:
     return data if isinstance(data, str) else data.decode("utf-8", "replace")
 
 
+def source_problems(spec: Spec, places: dict[str, Path]) -> list[str]:
+    """원천(바뀐 규칙·스킬 파일)의 사본이 갈래와 맞지 않으면 그 문제들.
+
+    실험군 사본에는 카나리아가 모두 있어야 한다. 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로
+    읽는다(대기열 133). 대조군 사본에는 하나도 없어야 한다. 있으면 그 대조군이 새 사본이거나,
+    카나리아가 바뀐 본문에만 있는 글이 아니다(옛 사본의 다른 절에 같은 낱말이 있다). 대조군 사본에
+    파일이 없으면 새 규칙·스킬이라 괜찮다. rule 명세에서 실험군과 같은 체크아웃의 대조군은 `paths`
+    밖 파일을 읽는 갈래이고 사본이 같으니 원천을 읽지 않는다. skill 명세에는 이 면제가 없다.
+    """
+    fresh = {_place_key(places[arm.name]) for arm in spec.arm if arm.role == "experiment"}
+    problems: list[str] = []
+    for arm in spec.arm:
+        checkout = places[arm.name]
+        if not checkout.is_dir():
+            continue  # `_preflight` 가 따로 알린다
+        if arm.role == "control" and spec.kind == "rule" and _place_key(checkout) in fresh:
+            continue
+        path = checkout / spec.source
+        try:
+            text = _flat(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            if arm.role == "experiment":
+                problems.append(f"{arm.name}: 원천 {path} 이 없다")
+            continue
+        except (OSError, UnicodeDecodeError) as error:
+            problems.append(f"{arm.name}: 원천 {path} 을 읽지 못했다: {error}")
+            continue
+        if arm.role == "experiment":
+            missing = [canary for canary in spec.expect if _flat(canary) not in text]
+            if missing:
+                problems.append(
+                    f"{arm.name}: 원천 {spec.source} 에 카나리아가 없다: {', '.join(missing)}"
+                )
+        else:
+            present = [canary for canary in spec.expect if _flat(canary) in text]
+            if present:
+                found = ", ".join(present)
+                problems.append(
+                    f"{arm.name}: 대조군 사본의 원천 {spec.source} 에 카나리아가 있다: {found}. "
+                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다"
+                )
+    return problems
+
+
+def _place_key(path: Path | str) -> str:
+    return os.path.normcase(os.path.normpath(path))
+
+
 def run_claude(
     args: Sequence[str], cwd: Path, stdin: str, timeout: float = _TIMEOUT_SECONDS
 ) -> RunResult:
@@ -482,15 +537,17 @@ def _summary(facts: Facts) -> str:
 
 
 def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
-    """돌리기 전에 막을 문제들. 갈래의 체크아웃이 없거나 rule 갈래의 대상 파일이 어긋났다."""
+    """돌리기 전에 막을 문제들. 갈래의 체크아웃이 없거나, rule 갈래의 대상 파일이 어긋났거나,
+    원천 사본이 갈래와 맞지 않는다."""
     problems = [
         f"{arm.name}: 체크아웃 {places[arm.name]} 이 없다"
         for arm in spec.arm
         if not places[arm.name].is_dir()
     ]
-    return problems + [
+    problems += [
         problem for arm in spec.arm for problem in target_problems(spec, arm, places[arm.name])
     ]
+    return problems + source_problems(spec, places)
 
 
 def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult]:

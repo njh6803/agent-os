@@ -1,7 +1,7 @@
-"""SessionStart 훅(startup|resume). 클라우드 세션이면 web 의존성을 깐다(대기열 135).
+"""SessionStart 훅(startup|resume). 클라우드 세션이면 web 의존성을 깐다(대기열 138).
 
 클라우드 세션의 VM 에는 `web/node_modules` 가 없어, web verify 와 러너(tools/run_checks.py)를
-돌리기 전에 `pnpm -C web install --frozen-lockfile` 을 손으로 쳐야 했다(일지 2026-10-07-03).
+돌리기 전에 `pnpm -C web install --frozen-lockfile` 을 손으로 쳐야 했다(일지 2026-10-07-05).
 공식 문서(code.claude.com 의 cloud-environments, "Setup scripts vs. SessionStart hooks", 2026-10-07
 읽음)는 설정 스크립트를 VM 을 갖추는 자리로, 프로젝트 설치를 SessionStart 훅의 자리로 가른다.
 설정 스크립트는 환경 캐시가 있으면 건너뛰고, 훅은 시작과 이어짐마다 돈다. 클라우드 세션에서만

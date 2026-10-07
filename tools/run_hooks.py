@@ -485,7 +485,7 @@ def _broken_web(scratch: Path) -> Path:
     """`web/package.json` 의 의존성이 `web/pnpm-lock.yaml` 에 없는 디렉터리. `pnpm install
     --frozen-lockfile` 이 네트워크 없이 곧 실패한다(`pnpm -C <이 디렉터리>/web install
     --frozen-lockfile` 을 손으로 봤다. `packageManager` 가 없어 전역 pnpm 10.28.0 이 돌았고 0.35초에
-    종료 1, `ERR_PNPM_OUTDATED_LOCKFILE`. 일지 2026-10-07-07)."""
+    종료 1, `ERR_PNPM_OUTDATED_LOCKFILE`. 일지 2026-10-07-09)."""
     web = scratch / "broken-web" / "web"
     web.mkdir(parents=True)
     (web / "package.json").write_text(

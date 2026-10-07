@@ -1,4 +1,4 @@
-# tools/hook_session_web_deps.py(대기열 135)와 훅 러너의 사례 env 를 하나씩 깨는 변이.
+# tools/hook_session_web_deps.py(대기열 138)와 훅 러너의 사례 env 를 하나씩 깨는 변이.
 #   PYTHONUTF8=1 timeout 600 uv run python tools/mutate.py .scratch/harness/probes/session_web_deps_mutations.toml
 
 [[mutation]]
