@@ -4,11 +4,11 @@ description: "Implement a piece of work based on a spec or set of tickets."
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 일곱을 더했다. 시작 전 브랜치 규약 포인터, 워크트리 먼저(next-session 3단계와 주 체크아웃의 자기 점검), 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터(pytest 밖, 다른 워크트리, `--check`), 이 티켓의 몫만 쓰기(대기열 35), 설치한 판과 측정한 판의 견줌(대기열 61), 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29·35·59·61. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 일곱을 더했다. 시작 전 브랜치 규약 포인터, 워크트리 먼저(next-session 3단계와 주 체크아웃의 자기 점검, 그보다 앞선 tidy-checkouts), 루프 중의 린트, 빨강을 본 적 없는 테스트의 변이 도구 포인터(pytest 밖, 다른 워크트리, `--check`), 이 티켓의 몫만 쓰기(대기열 35), 설치한 판과 측정한 판의 견줌(대기열 61), 마칠 때 세션 경계(원천은 next-session 스킬). 근거는 일지 2026-09-21 첫 슬라이스 회고 뒤 대화, 인터럽트 설계 뒤 대화, 티켓 01 회고, 세션 경계 일지, 대기열 29·35·59·61. -->
 
 Implement the work described by the user in the spec or tickets.
 
-시작 전에 브랜치를 `docs/constitution/operations.md`의 규약대로 딴다. 티켓마다 `feature/<NN>-<slug>` 브랜치 하나, PR 하나. 지시문의 "어디서" 줄이 워크트리를 말하면(조건은 next-session 3단계) 그 문장대로 워크트리에 먼저 들어가고 거기서 브랜치를 다룬다. 지시문이 없어도, 작업 폴더가 주 체크아웃인데 `git branch --show-current`가 main도 이 티켓의 브랜치도 아니거나, main인데 `git status --porcelain`이 비지 않았으면 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`로 간다(이 티켓의 브랜치면 주 체크아웃에서 끊은 작업을 잇는 것이다) — 같은 체크아웃의 다른 세션이 그 브랜치 전환으로 커밋 대상을 잃는다(일지 2026-09-23-02). 새 워크트리에 들어가면 먼저 `uv sync`와 `pnpm -C web install --frozen-lockfile`을 친다. 예외를 제안하려면 이유와 그 이유가 사라지는 조건을 같이 적고, 조건이 차면 규약으로 돌아간다.
+시작 전에 브랜치를 `docs/constitution/operations.md`의 규약대로 딴다. 티켓마다 `feature/<NN>-<slug>` 브랜치 하나, PR 하나. 지시문의 "어디서" 줄이 워크트리를 말하면(조건은 next-session 3단계) 그 문장대로 워크트리에 먼저 들어가고 거기서 브랜치를 다룬다. 그 문장이 `tidy-checkouts`를 먼저 돌라고 하면 워크트리보다 그것이 먼저다 — 주 체크아웃 세션일 때만 루트를 당길 수 있다(next-session 3단계). 지시문이 없어도, 작업 폴더가 주 체크아웃인데 `git branch --show-current`가 main도 이 티켓의 브랜치도 아니거나, main인데 `git status --porcelain`이 비지 않았으면 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`로 간다(이 티켓의 브랜치면 주 체크아웃에서 끊은 작업을 잇는 것이다) — 같은 체크아웃의 다른 세션이 그 브랜치 전환으로 커밋 대상을 잃는다(일지 2026-09-23-02). 새 워크트리에 들어가면 먼저 `uv sync`와 `pnpm -C web install --frozen-lockfile`을 친다. 예외를 제안하려면 이유와 그 이유가 사라지는 조건을 같이 적고, 조건이 차면 규약으로 돌아간다.
 
 Use /tdd where possible, at pre-agreed seams.
 
