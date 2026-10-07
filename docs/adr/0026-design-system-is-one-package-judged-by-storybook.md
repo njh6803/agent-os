@@ -5,7 +5,7 @@ date: 2026-10-06
 
 # 디자인 시스템은 `packages/ui` 하나에 px 디자인 토큰과 두 테마를 두고, Storybook과 컨테이너 안의 사진으로 판정한다
 
-ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키지의 모양, rem과 px, 다크 모드, 접근성, 한글 글꼴, Storybook, 디자인 문서)를 design-system 기능의 설계 인터뷰로 넘겼다. 이 ADR이 그 세부다. 측정은 모두 `.scratch/design-system/probes/`에 있고, 아래에서 프로브 이름만 적은 것은 그 폴더의 것이다. **디자인 시스템은 `web/packages/ui` 패키지 하나다. 디자인 토큰(Tailwind의 `@theme` CSS)과 atoms·molecules를 들고, organisms 이상은 앱에 남는다. 처음 내는 atoms·molecules는 두 앱의 화면에서 뽑은 최소 집합(버튼, 아이콘 버튼, 글 입력(한 줄·여러 줄), 스위치, 상태 배지, 알림, 진행 표시, 표면, 아이콘)이다. 앱은 `packages/api-client`처럼 소스를 그대로 import하고, 패키지의 `build`(JS, `.d.ts`, 컴파일한 CSS를 `dist/`에 낸다)는 `/design-sync`만 쓰며 커밋하지 않는다. 디자인 토큰의 길이는 px이고, Tailwind의 기본 `@theme` 값을 비운 뒤 우리 디자인 토큰만 정의한다. 색 토큰은 쓰임새 이름뿐이고, 테마(라이트와 다크)가 같은 CSS 변수에 다른 값을 준다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "색 토큰은 두 층이고 컴포넌트는 쓰임새 토큰만 본다") 테마는 루트의 `data-theme`이 고르고, 없으면 시스템 설정을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 접근성의 목표는 WCAG 2.2 AA다. 글자와 바탕 토큰 짝의 명암비를 테마마다 단위 테스트가 계산하고, 실제 브라우저에서 axe가 돈다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") 상호작용 부품은 네이티브 요소로 짓고, 변형은 의존성 없는 타입 맵이다. 한글 웹폰트는 자가 호스팅하고, 페이지 안 위젯은 사이트 문서에 고유한 family 이름으로 등록한다. 미리보기와 실제 브라우저 테스트는 패키지의 Storybook이 맡고, 스토리가 `/design-sync`의 원천이다. 시각 회귀는 정답 사진 한 벌을 판을 고정한 Playwright Linux 이미지 안에서만 찍고 비교한다. 디자인 판단 기준은 `.claude/rules/web-design.md`가 원천이고, `/design-sync`가 같은 파일을 Claude Design에 올린다.**
+ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키지의 모양, rem과 px, 다크 모드, 접근성, 한글 글꼴, Storybook, 디자인 문서)를 design-system 기능의 설계 인터뷰로 넘겼다. 이 ADR이 그 세부다. 측정은 모두 `.scratch/design-system/probes/`에 있고, 아래에서 프로브 이름만 적은 것은 그 폴더의 것이다. **디자인 시스템은 `web/packages/ui` 패키지 하나다. 디자인 토큰(Tailwind의 `@theme` CSS)과 atoms·molecules를 들고, organisms 이상은 앱에 남는다. 처음 내는 atoms·molecules는 두 앱의 화면에서 뽑은 최소 집합(버튼, 아이콘 버튼, 글 입력(한 줄·여러 줄), 스위치, 상태 배지, 알림, 진행 표시, 표면, 아이콘)이다. 앱은 `packages/api-client`처럼 소스를 그대로 import하고, 패키지의 `build`(JS, `.d.ts`, 컴파일한 CSS를 `dist/`에 낸다)는 `/design-sync`만 쓰며 커밋하지 않는다. 디자인 토큰의 길이는 px이고, Tailwind의 기본 `@theme` 값을 비운 뒤 우리 디자인 토큰만 정의한다. 색 토큰은 쓰임새 이름뿐이고, 테마(라이트와 다크)가 같은 CSS 변수에 다른 값을 준다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "색 토큰은 두 층이고 컴포넌트는 쓰임새 토큰만 본다") 테마는 루트의 `data-theme`이 고르고, 없으면 시스템 설정을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 접근성의 목표는 WCAG 2.2 AA다. 글자와 바탕 토큰 짝의 명암비를 테마마다 단위 테스트가 계산하고, 실제 브라우저에서 axe가 돈다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") 상호작용 부품은 네이티브 요소로 짓고, 변형은 의존성 없는 타입 맵이다. 한글 웹폰트는 자가 호스팅하고, 페이지 안 위젯은 사이트 문서에 고유한 family 이름으로 등록한다. 미리보기와 실제 브라우저 테스트는 패키지의 Storybook이 맡고, 스토리가 `/design-sync`의 원천이다. (바뀜: 이력 2026-10-07 "앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다") 시각 회귀는 정답 사진 한 벌을 판을 고정한 Playwright Linux 이미지 안에서만 찍고 비교한다. 디자인 판단 기준은 `.claude/rules/web-design.md`가 원천이고, `/design-sync`가 같은 파일을 Claude Design에 올린다.**
 
 **패키지.** 앱 사이의 import는 ESLint가 막으므로 두 앱이 나눌 것은 `packages/`로 간다. ADR 0024가 `packages/widget-ui`를 거부한 이유는 소비자가 하나라는 것이었는데, 여기서는 위젯과 관리 화면 둘이다. 층 경계 규칙은 경로의 끝으로 맞추므로 패키지 안의 `components/atoms`에도 그대로 걸린다(`web/eslint.config.mjs`를 읽었다). 디자인 토큰과 컴포넌트를 두 패키지로 나누지 않는 것은 디자인 토큰만 쓰는 소비자가 없어서다. `/design-sync`는 컴파일된 `dist/`를 묶고, 빌드가 없으면 최후 수단으로 `src/`에서 진입점을 합성하며 그때 `.d.ts` 계약이 약해진다. Tailwind는 돌리지 않고 CSS 파일을 그대로 복사한다. 이것은 Claude Code 2.1.286 실행 파일에 압축되어 든 스킬을 풀어 읽은 것이다. 그래서 `build`가 따로 있다. `tsc`와 Tailwind CLI로 2.0초에 `dist/`가 나왔다(`storybook/build.mjs`).
 
@@ -21,7 +21,7 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 
 **부품과 변형.** 네이티브 요소(`<button>`, `<dialog>`, `role="switch"`인 체크박스)는 shadow root 밖으로 그리는 포털이 없다. 헤드리스 라이브러리는 네이티브 요소로 지을 수 없는 부품이 생길 때 ADR로 들인다. 변형은 `satisfies Record<변형, string>` 객체로 클래스를 고르고, 소비자가 클래스를 덧붙여 스타일을 덮는 길은 두지 않는다.
 
-**Storybook.** `/design-sync`는 `.storybook/main.*`가 있으면 storybook 모양으로 돈다. 스토리를 컴파일하고, Storybook이 그린 참조 화면과 스크린샷을 비교해 충실도를 판정한다. 없으면 에이전트가 `.design-sync/previews/`에 미리보기를 따로 쓴다(같은 실행 파일을 읽었다). 그래서 스토리 한 벌이 갤러리, 실제 브라우저 테스트, Claude Design의 원천을 함께 맡는다. Storybook 10.6.1(`@storybook/react-vite`, `@storybook/addon-vitest`, `@storybook/addon-a11y`)과 Vitest 5.0.2의 브라우저 모드를 `web/` 사본에 설치하자, 판정자의 범위에서 아무것도 빼지 않고 우회도 없이 `pnpm -C web verify`의 여섯 단계를 지났다(`storybook/verify.mjs`, `storybook/cases.mjs`). 스토리 테스트만 돌리면 이 기계에서 11~13초였다. `storybook build`는 `index.json`(v5, `entries`)을 냈다(`storybook/style.mjs`). `/design-sync`의 storybook 모양이 이 파일을 읽는다는 것은 실행 파일을 읽은 것이고, 이 `index.json`과 `dist/`를 실제로 읽는지는 재지 못했다. 설치와 판정의 조건은 셋이다.
+**Storybook.** `/design-sync`는 `.storybook/main.*`가 있으면 storybook 모양으로 돈다. 스토리를 컴파일하고, Storybook이 그린 참조 화면과 스크린샷을 비교해 충실도를 판정한다. 없으면 에이전트가 `.design-sync/previews/`에 미리보기를 따로 쓴다(같은 실행 파일을 읽었다). 그래서 스토리 한 벌이 갤러리, 실제 브라우저 테스트, Claude Design의 원천을 함께 맡는다. (바뀜: 이력 2026-10-07 "앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다") Storybook 10.6.1(`@storybook/react-vite`, `@storybook/addon-vitest`, `@storybook/addon-a11y`)과 Vitest 5.0.2의 브라우저 모드를 `web/` 사본에 설치하자, 판정자의 범위에서 아무것도 빼지 않고 우회도 없이 `pnpm -C web verify`의 여섯 단계를 지났다(`storybook/verify.mjs`, `storybook/cases.mjs`). 스토리 테스트만 돌리면 이 기계에서 11~13초였다. `storybook build`는 `index.json`(v5, `entries`)을 냈다(`storybook/style.mjs`). `/design-sync`의 storybook 모양이 이 파일을 읽는다는 것은 실행 파일을 읽은 것이고, 이 `index.json`과 `dist/`를 실제로 읽는지는 재지 못했다. 설치와 판정의 조건은 셋이다.
 
 - pnpm 11은 esbuild와 @parcel/watcher의 빌드 스크립트에서 설치를 멈춘다. 이것은 `allowBuilds` 없이 돈 첫 `setup.mjs`에서 손으로 봤고, 지금의 프로브는 이 실패를 다시 내지 않는다. 그래서 `pnpm-workspace.yaml`의 `allowBuilds`로 둘의 스크립트를 끈다. 스크립트를 꺼도 두 바이너리는 동작했다.
 - `.storybook/`은 점으로 시작해 `**/*`에 맞지 않으므로 tsconfig의 include에 따로 적는다. 빼면 ESLint가 파싱 오류를 낸다.
@@ -31,7 +31,7 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 
 스토리 테스트는 뿌리 vitest 설정의 프로젝트로 두어 `pnpm -C web verify`의 test 단계에서 돈다. 그래서 pre-commit도 돌리고, CI의 web 잡은 chromium을 설치한다. 검증 명령의 수는 그대로다. shadow root의 판정은 문서에 전역 CSS가 없는 자리에서 한다. 문서에 전역 CSS가 실리면 보정 CSS를 빼도 shadow 안이 같아 보였다(`storybook/style.mjs`).
 
-**시각 회귀.** 같은 표본을 Windows와 Linux 컨테이너에서 찍자, 도형만 있는 상자는 바이트까지 같았고 글자가 든 사진은 페이지 픽셀의 약 8.4%가 달랐다. 같은 글꼴 파일인데 글자열 폭이 Linux에서는 정수, Windows에서는 소수였다. 같은 이미지(`mcr.microsoft.com/playwright:v1.63.0-noble`)로 컨테이너를 따로 두 번 띄워 찍은 사진 16장은 바이트까지 같았다(`visual_docker/run.mjs`). 그래서 정답 사진은 한 벌이고, 그 이미지 안에서만 찍고 비교한다. 이미지의 판은 Playwright의 판과 함께 올린다. 사진 비교는 별도 명령이다. CI에서는 그 이미지를 컨테이너로 쓰는 잡이 돌고, 필수 검사 `verify`가 `needs`로 모은다. pre-commit에는 넣지 않고, 로컬에서는 `packages/ui`를 건드렸을 때 Docker로 친다. e2e와 같은 자리다. 이미지는 받는 양이 약 956MB, 디스크가 2.5GB였고 한 번 실행에 14~32초가 걸렸다. GitHub Actions 러너에서 같은 사진이 나오는지는 재지 못했고, 구현 PR의 첫 CI가 본다. 값을 직접 확인하는 브라우저 테스트(계산 스타일, 역할, axe)는 그대로 둔다.
+**시각 회귀.** 같은 표본을 Windows와 Linux 컨테이너에서 찍자, 도형만 있는 상자는 바이트까지 같았고 글자가 든 사진은 페이지 픽셀의 약 8.4%가 달랐다. 같은 글꼴 파일인데 글자열 폭이 Linux에서는 정수, Windows에서는 소수였다. 같은 이미지(`mcr.microsoft.com/playwright:v1.63.0-noble`)로 컨테이너를 따로 두 번 띄워 찍은 사진 16장은 바이트까지 같았다(`visual_docker/run.mjs`). 그래서 정답 사진은 한 벌이고, 그 이미지 안에서만 찍고 비교한다. 이미지의 판은 Playwright의 판과 함께 올린다. 사진 비교는 별도 명령이다. CI에서는 그 이미지를 컨테이너로 쓰는 잡이 돌고, 필수 검사 `verify`가 `needs`로 모은다. pre-commit에는 넣지 않고, 로컬에서는 `packages/ui`를 건드렸을 때 Docker로 친다. e2e와 같은 자리다. 이미지는 받는 양이 약 956MB, 디스크가 2.5GB였고 한 번 실행에 14~32초가 걸렸다. GitHub Actions 러너에서 같은 사진이 나오는지는 재지 못했고, 구현 PR의 첫 CI가 본다. (바뀜: 이력 2026-10-07 "앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다") 값을 직접 확인하는 브라우저 테스트(계산 스타일, 역할, axe)는 그대로 둔다.
 
 **디자인 문서.** 디자인 판단 기준은 `.claude/rules/web-design.md`(paths: `web/packages/ui/**`, `web/apps/*/components/**`)에 둔다. 그 경로의 파일을 Read하면 실리고, `/design-sync`의 `guidelinesGlob`이 같은 파일을 Claude Design의 guidelines로 올린다. 그래서 사본이 없다. `/design-sync`에 관한 이 절의 사실은 모두 같은 실행 파일을 읽은 것이다. `guidelinesGlob`은 패키지 밖이라도 저장소 안의 `.md`를 받고, 패키지 루트의 README.md나 DESIGN.md는 기본값으로 올리지 않는다. 앱별 기준은 필요할 때 `web-design-widget.md`와 `web-design-admin.md`로 더한다. 컴포넌트별 쓰임은 스토리 옆의 `<Name>.md`에 적고, `/design-sync`가 그 컴포넌트의 설명으로 올린다. 디자인 토큰의 값은 코드에만 둔다.
 
@@ -65,12 +65,12 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
   - ADR 0021 Consequences의 "스토리 규칙은 Storybook을 들이는 날 다시 보고"는 스토리를 컴포넌트와 같은 폴더에 두는 것으로 정해졌다.
 - **web-widget에 넘기는 것.** 사이트가 위젯에 테마를 넘기는 길, 글꼴 파일을 위젯 출처에서 `Access-Control-Allow-Origin`과 함께 내는 것(nginx와 Next), 페이지 안 번들이 사이트 문서에 글꼴을 등록하는 코드, 그리고 사이트의 CSP가 글꼴을 막을 때 시스템 글꼴로 내려간다는 것을 임베드 안내에 적는 일이다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다")
 - **admin-style.** 관리 화면은 `data-theme`을 두지 않고 시스템을 따른다. (바뀜: 이력 2026-10-06 "테마는 색과 글꼴의 한 벌이고 다섯이며, 라이트·다크는 모드다") 패키지를 들이는 일과 관리 화면만 쓰는 컴포넌트는 그 기능이 한다.
-- **게이트가 열둘이 된다.** 사진 비교는 e2e에 이어 CI에서만 도는 둘째 게이트다. `CLAUDE.md`의 검증 명령 절, `docs/constitution/operations.md`, `tech.md` 원격·CI 행과 `ci.yml` 머리 주석의 잡 수, `ci.yml`의 새 잡과 `verify`의 `needs`, CI web 잡의 chromium 설치는 그 게이트를 들이는 티켓이 함께 고친다. 보호 설정(`tools/protection.json`)은 바뀌지 않는다.
+- **게이트가 열둘이 된다.** 사진 비교는 e2e에 이어 CI에서만 도는 둘째 게이트다. `CLAUDE.md`의 검증 명령 절, `docs/constitution/operations.md`, `tech.md` 원격·CI 행과 `ci.yml` 머리 주석의 잡 수, `ci.yml`의 새 잡과 `verify`의 `needs`, CI web 잡의 chromium 설치는 그 게이트를 들이는 티켓이 함께 고친다. (바뀜: 이력 2026-10-07 "앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다") 보호 설정(`tools/protection.json`)은 바뀌지 않는다.
 - **`pnpm-workspace.yaml`에 `allowBuilds`가 든다.** esbuild와 @parcel/watcher의 설치 스크립트를 끈다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") 공급망 유예(`minimumReleaseAge`)는 건드리지 않는다.
 - **`tech.md`의 웹 행과 프론트 구성 행**을 이 결정에 맞춘다. 스토리를 컴포넌트와 같은 폴더에 두는 것은 09-20 씨앗의 스토리 규칙이다.
 - **`.scratch/<slug>/design/`의 규약을 `docs/agents/issue-tracker.md`에 더한다(ADR 0025).** 화면을 그리기 직전에 `/design-sync`를 돌고, 그 폴더의 `README.md`에 화면마다 내보낸 파일, 근거 문서의 전체 경로, 기준 커밋, 동기화한 커밋을 적는다.
 - **design-system의 순서.** 이 인터뷰 다음은 Claude Design 탐색(색과 글꼴 짝, 라이트와 다크, 대략의 화면)이다. 사용자가 진행하고, 고른 방향은 `.scratch/design-system/design/`에 내보낸다. 그다음이 명세, 티켓, 코드다. 디자인 토큰의 값은 탐색이 정한다.
-- **첫 티켓이 잴 것.** 디자인 토큰에 없는 클래스를 잡는 방법, 관리 화면(Next)과 Vite가 패키지의 글꼴 `url()`을 내는 방법, 사진 비교의 도구(Vitest 브라우저 모드의 스크린샷이나 Playwright), GitHub 러너에서의 사진 일치다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다")
+- **첫 티켓이 잴 것.** 디자인 토큰에 없는 클래스를 잡는 방법, 관리 화면(Next)과 Vite가 패키지의 글꼴 `url()`을 내는 방법, 사진 비교의 도구(Vitest 브라우저 모드의 스크린샷이나 Playwright), GitHub 러너에서의 사진 일치다. (바뀜: 이력 2026-10-06 "글꼴은 패키지 셋에서 받고, 명암비와 없는 클래스는 스토리 테스트가, 사진은 정적 빌드의 Playwright가 판정한다") (바뀜: 이력 2026-10-07 "앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다")
 - **용어.** `CONTEXT.md`에 디자인 시스템, 디자인 토큰, 테마를 세웠다. 단독 "토큰"은 채널 토큰이나 서명 토큰과 섞이므로 디자인 쪽 문서와 코드 이름은 "디자인 토큰"을 쓴다.
 
 ## 이력
@@ -217,3 +217,43 @@ Storybook 정적 빌드를 이미지 안의 Playwright가 `toHaveScreenshot`으�
 - **명암비를 디자인 토큰 CSS를 읽는 단위 테스트로 둔다(위의 결정).** 사용자가 이음매를 스토리 테스트 하나로 골랐다.
 - **사진 비교를 Vitest 브라우저 모드의 스크린샷으로 한다.** 스토리 테스트와 같은 도구지만 컨테이너 안에서 Vite 개발 서버까지
   띄워야 하고, 로컬 비교도 컨테이너 안의 설치를 요구한다. 재지 않았다. Playwright의 길은 정적 빌드만 있으면 되고 쟀다.
+
+### 2026-10-07 앱의 스토리는 앱마다의 Storybook에 두고 패키지의 미리보기를 나눠 쓴다
+
+위 결정은 미리보기와 실제 브라우저 테스트를 패키지의 Storybook에 맡겼다. 그러면 앱의 organisms(승인 묻기, 실행 목록 등)에는
+스토리와 판정이 설 자리가 없다. 명세 검토(2026-10-06)가 짚었고, 사용자가 받는 기능에 넘기지 않고 첫 티켓이 정하게 골랐다
+(일지 2026-10-06-14). 고를 때의 조건은 넷이었다. `/design-sync`가 올리는 것은 디자인 시스템의 스토리뿐이다. 사진 비교가 앱의
+스토리도 찍을 수 있다. 앱의 스토리도 판정 함수(`@agent-os/ui/testing`)와 axe를 지난다. 층 경계(앱 사이 import 금지, 패키지는 앱을
+모른다)를 지킨다.
+
+**앱의 스토리는 그 앱의 Storybook(`apps/<앱>/.storybook/`)에 둔다. 패키지는 미리보기의 본체(globals 셋과 데코레이터, 모든
+스토리에 클래스 판정을 거는 afterEach, axe의 `test: "error"`)를 다섯째 진입점 `@agent-os/ui/storybook`으로 내고, 앱의 미리보기는
+자기 CSS와 글꼴 CSS를 실은 뒤 자기 CSS를 shadow 틀의 CSS로 넘겨 그것을 부른다. 앱의 CSS는 디자인 토큰 CSS를 `@import`하고 자기
+컴포넌트를 `@source`로 덮는다.
+앱의 스토리 테스트는 뿌리 `vitest.config.ts`에 앱마다 스토리 테스트 프로젝트를 하나씩 더해 같은 `verify`에서 돈다(Vitest는 프로젝트
+이름이 겹치면 거부하므로 이름은 앱마다 다르다). 사진 비교는
+정적 빌드의 자리를 받아 앱의 정적 빌드도 같은 도구로 찍는다.**
+
+- `/design-sync`는 디자인 시스템 패키지를 대상으로 돌고, 그 자리에 `.storybook/main.*`가 있으면 storybook 모양으로 돈다(위
+  "Storybook" 절의 실행 파일 읽기). 앱의 Storybook은 앱 폴더에 있어 그 대상이 아니므로 앱의 스토리는 올라가지 않는다고 본다(어림.
+  첫 `/design-sync`가 확인한다). organisms는 앱에 남는다는 위 결정과 맞는다.
+- 패키지는 앱의 경로를 적지 않는다. 앱이 패키지를 이름으로 import하고 패키지는 미리보기를 낼 뿐이다.
+- 앱의 CSS가 자기 `@source`를 빠뜨리면 패키지 소스에 없는 앱의 클래스가 조용히 사라진다. 앱의 미리보기가 그 CSS를 싣고
+  afterEach가 앱의 스토리를 판정하므로 그 실수는 스토리 테스트가 잡는다. 패키지 소스에도 쓰인 클래스(`flex`, `bg-bg` 등)는 디자인
+  토큰 CSS의 `@source`가 앱의 빌드에서도 만들어 판정을 지나는데, 앱의 실제 빌드에도 같은 규칙이 있으므로 거짓 초록이 아니다.
+  앱 둘의 CSS를 한 문서에 싣지 않으므로 다른 앱의 CSS만 만드는 규칙으로 판정을 지나는 일은 없다.
+- 재지 않은 것: 앱의 CSS가 디자인 토큰 CSS를 `@import`하고 자기 `@source`를 더한 모양이 앱의 빌드(Next의 `@tailwindcss/postcss`,
+  위젯의 Vite)와 앱의 Storybook에서 서는지, 그리고 앱의 CSS를 shadow 틀에 넘기는 길은 앱의 Storybook을 처음 두는 기능(web-widget,
+  admin-style)이 잰다. 미리보기 본체를 이름으로 푸는 것은 패키지 안의 자기 참조로 봤다(진입점 스토리, design-system 티켓 01).
+- to-tickets(2026-10-06)가 바꾼 일 배정 둘을 여기 적는다. 결정이 아니라 차례다. CI web 잡의 chromium 설치는 게이트 티켓이
+  아니라 스토리 테스트를 들인 티켓 01이 했다. GitHub 러너에서의 사진 일치는 첫 구현 PR이 아니라 사진 비교 티켓 02의 PR CI가
+  본다.
+
+거부한 안은 셋이다.
+
+- **패키지의 Storybook이 앱 폴더도 훑는다.** 설정 하나로 끝나지만 `/design-sync`가 organisms까지 올리고, 패키지의 설정과 디자인
+  토큰 CSS의 `@source`가 앱의 경로를 적어 패키지가 앱을 안다.
+- **`web/` 뿌리에 앱들의 Storybook 하나를 둔다.** 패키지의 것과 둘이면 되지만 앱 둘의 CSS가 한 문서에 실려, 한 앱의 클래스가
+  다른 앱의 CSS만 만든 규칙으로 판정을 지난다. 그 앱의 실제 빌드에는 그 규칙이 없다.
+- **앱이 미리보기를 스스로 짓고 판정 함수만 나눠 쓴다.** 진입점이 넷으로 남지만 globals, 데코레이터, shadow 틀, afterEach가 앱마다
+  한 벌씩 생겨 어긋날 수 있다.

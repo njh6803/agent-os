@@ -51,3 +51,10 @@ PR에서 사용자가 이름을 본다. 결정과 근거는 일지에 적고, �
 3. 판정 스토리를 사진에서 빼는 방법(01의 태그를 읽는 모양)
 4. 로컬 비교가 컨테이너에 Playwright 패키지를 넣는 방법
 5. CI 잡의 이름과 실패 아티팩트의 모양
+
+### 01이 넘긴 것 (2026-10-07)
+
+- 정적 빌드의 스크립트는 `pnpm -C web/packages/ui run build-storybook`이고 산출물은 `web/packages/ui/storybook-static/`이다(뿌리 `.gitignore`에 앵커를 붙여 든다).
+- 판정 스토리의 태그는 `judgment`, 그 가운데 심은 것을 그리는 음성 사례는 `planted`도 단다. 정적 빌드의 `index.json` 항목마다 `tags`에 그대로 실린다(01이 지어 본 빌드에서 봤다).
+- 앱 스토리의 자리는 앱마다의 Storybook이다(ADR 0026의 2026-10-07 이력). 사진 비교 명령이 정적 빌드의 자리를 받게 두면 앱의 정적 빌드도 같은 명령으로 찍는다.
+- 다크 스토리는 globals `mode: "dark"`로 둔다(`Button`의 `PrimaryDark` 등). 포커스 링의 스토리 둘은 globals `theme: "gongmun"`이다(먹은 `focus`와 `accent`가 같은 색이다).

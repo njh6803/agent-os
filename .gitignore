@@ -28,3 +28,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+# 디자인 시스템 패키지의 빌드(/design-sync 만 쓴다)와 Storybook 정적 빌드(사진 비교의 입력). 앵커를 붙여야 판정 범위에서
+# 빠진다. 패키지 안의 .gitignore 나 앵커 없는 dist/ 는 판정자나 판정 범위 테스트에 걸렸다(ADR 0026, storybook/build.mjs).
+/web/packages/ui/dist/
+/web/packages/ui/storybook-static/
