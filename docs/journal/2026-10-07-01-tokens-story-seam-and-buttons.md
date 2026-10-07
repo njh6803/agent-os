@@ -127,4 +127,43 @@ project,local --strict-mcp-config`, 워크트리에서)으로 불렀다.
 - 검증 명령: `uv run pytest -q` 1638 통과(7 deselected), `ruff check`·`ruff format --check`, `pyright` 0 오류, `lint-imports` 5 계약,
   `pnpm -C web verify`(21파일 309개, 스토리 34개 포함) 모두 초록. 판정 명령은 파이프 없이 돌리고 로그 파일로 봤다.
 - 지침 검사, 타입 우회 검사, 바뀐 마크다운의 표 검사 초록.
-- 변이 36개 모두 기대대로(위). e2e는 중계·시작 래퍼·api-client·서버 라우트를 건드리지 않아 CI가 돈다.
+- 변이 37개 모두 기대대로(위). e2e는 중계·시작 래퍼·api-client·서버 라우트를 건드리지 않아 CI가 돈다.
+- 커밋 뒤 origin/main(PR #154, `tidy-checkouts` 순서)을 병합했다. implement 스킬의 같은 문단에 두 쪽이 다른 문장을 더해 충돌했고 둘
+  다 살렸다. 병합 커밋의 pre-commit(pytest, web verify 포함)이 모두 지났다.
+- PR 직전 CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`(Plan: Free)라 돌지 않았다.
+
+## 회고
+
+후보 여섯을 냈고 셋이 승인됐다. 셋은 일지에만 남는다.
+
+> 사용자(질문에 답): "1 카나리아 명령(대기열 131), 2 같은 값의 토큰 짝(이 PR), 3 가드의 cd(대기열 122)"
+
+1. **규칙 카나리아 명령이 거짓 "없음"을 낸다 → 대기열 131(새 행, 1회차).** 위 "하네스 확인"의 사건이다. 헌법의 명령은 Claude Code
+   2.1.291에서 새 규칙과 기존 규칙을 가리지 않고 "없음"이었고, 거부 플래그를 빼자 실렸다. 하네스 확인이 조용히 거짓 음성을 내는
+   자리라 가장 무겁다. 고치는 일은 작업 칩으로도 띄웠다.
+2. **계산값으로 가를 수 없는 쓰임새 토큰 짝 → 이 PR의 `.claude/rules/web-design.md`.** 변이 하나가 초록이었던 까닭(`tint`와
+   `disabled-surface`는 열 벌 모두 같다)과 먹의 `focus`·`accent`를 묶어, 계산값은 맞대는 토큰이 이웃과 다른 값인 테마·모드에서 잰다고
+   스토리 항목을 일반화했다. 03·04가 색을 맞댈 때 같은 함정에 빠진다. 새 `claude -p` 세션(거부 플래그 없이, stream-json으로 읽은 파일
+   확인)에서 세 번 모두 그 두 토큰을 옮겼다.
+3. **주 체크아웃으로 `cd`한 셸이 거기 남아 가드가 모든 명령을 거부했다 → 대기열 122에 9회차.** 주 체크아웃에서 카나리아를 돌리려고
+   `cd C:/project/agent && claude -p …`를 쳤는데, 그 뒤로 셸의 작업 폴더가 주 체크아웃에 남아 가드가 `cd` 하나까지 거부했다.
+   `EnterWorktree(path)`로 다시 들어가 되돌렸다.
+
+일지에만 남기는 것:
+
+- 재지 않은 추론(Tailwind 변형 순서)을 일지에는 어림이라 적고 rules와 주석에는 사실로 적었다. 표준 축 리뷰가 잡아 층이 동작했다.
+- 프로브의 Fonts 판정은 `document.fonts.load`가 가까운 굵기로도 `loaded`라 답해 굵기 하나가 빠져도 초록이었다. 대체를 허용하는
+  API의 결과는 받은 것의 속성까지 본다.
+- Vite가 캐시가 있는 체크아웃에서 새 의존성을 처음 import한 실행을 다시 읽어 그 실행을 깼다. 다시 돌리면 지난다.
+
+## 다음
+
+- **PR [njh6803/agent-os#156](https://github.com/njh6803/agent-os/pull/156)의 병합.** 워크트리에서 열었으니 next-session의
+  "워크트리에서 병합할 때"를 따른다. `ci.yml`을 바꾼 PR이라 claude-review의 코멘트를 손으로 보고, CI web 잡이 `--only-shell
+  chromium`으로 스토리 테스트를 지나는지가 이 PR에서 처음 드러난다.
+- **design-system의 다음은 티켓 02(사진 비교 게이트)다.** 03·04는 01·02 뒤다. 02가 01에서 받을 것은 그 티켓 파일의 "01이 넘긴 것"
+  절이다.
+- **규칙 카나리아 명령.** 헌법의 명령(`--disallowed-tools 'Read(./.claude/**)'`)은 Claude Code 2.1.291에서 거짓 "없음"을 냈다(위
+  하네스 확인). 고치는 일은 이 세션이 작업 칩으로 띄웠다. 그 전에 rules를 바꾸는 세션은 그 플래그를 빼고 stream-json으로 읽은 파일을
+  함께 본다.
+

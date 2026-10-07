@@ -24,7 +24,7 @@ paths:
 - 쓸 수 없음은 `disabled` 속성이고 `disabled-surface`·`disabled-text`로 칠한다. 명암비 기준의 대상이 아니다.
 - 불러오는 중은 `disabled`가 아니다. `aria-busy`와 `aria-disabled`를 달고 누름(제출 포함)을 무시하며, 색은 기본 그대로이고 포커스가 남고 너비가 그대로다. 도는 표시는 `loader-circle`이고 `motion-reduce:animate-none`을 함께 쓴다.
 - 부품의 치수는 공통 크기의 이름 있는 단계(부품 치수 포함)로만 쓴다. 컴포넌트가 스스로 쓰는 화면 문구는 그 `<Name>.md`가 적은 것뿐이고 나머지 글자는 쓰는 쪽이 넘긴다.
-- 스토리는 변형·크기와 상태 prop(아이콘, 불러오는 중, 쓸 수 없음 등)이 만드는 클래스가 모두 한 번은 그려지게 둔다. 그래야 afterEach가 그 클래스까지 판정한다. 다크(`globals: { mode: "dark" }`) 스토리를 하나 이상 둔다. play는 클래스 글자를 단언하지 않고 쓰임새 토큰이 풀린 계산값으로 본다(`src/storybook/expect.ts`). 포커스 링처럼 `focus`와 `accent`가 같은 먹에서는 가르지 못하는 값은 공문에서 잰다.
+- 스토리는 변형·크기와 상태 prop(아이콘, 불러오는 중, 쓸 수 없음 등)이 만드는 클래스가 모두 한 번은 그려지게 둔다. 그래야 afterEach가 그 클래스까지 판정한다. 다크(`globals: { mode: "dark" }`) 스토리를 하나 이상 둔다. play는 클래스 글자를 단언하지 않고 쓰임새 토큰이 풀린 계산값으로 본다(`src/storybook/expect.ts`). 계산값은 맞대는 토큰이 이웃 토큰과 다른 값인 테마·모드에서 잰다. 먹에서는 `focus`와 `accent`가 같아 포커스 링은 공문에서 재고, `tint`와 `disabled-surface`는 열 벌 모두 같아 계산값으로 가를 수 없다.
 - 판정 스토리와 음성 사례의 태그는 글자 그대로 `"judgment"`와 `"planted"`다. Storybook의 색인이 정적으로 읽어 상수를 받지 않는다. `judgment`는 사진 비교(design-system 티켓 02)가 뺄 수 있게 달고, afterEach의 판정은 `planted`를 건너뛴다.
 
 ## 쓰는 법
