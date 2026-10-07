@@ -107,6 +107,15 @@ PR #167(대기열 136)이 띄운 작업 칩의 일이다. 그 PR의 잔존 grep�
 
 ## PR 리뷰 반영
 
+PR [njh6803/agent-os#171](https://github.com/njh6803/agent-os/pull/171). CI 여섯이 `7ca6301`에서 초록이었다. 봇 리뷰는 없다.
+
+- claude-review는 설계대로 건너뛰었다. `gh run view 37621109443 --log`에 `Skipping action due to workflow validation`과 가드의
+  `이 워크플로를 바꾼 PR` 줄이 있다. 체크아웃의 `Removing auth`도 단계 안에서 돌았다.
+- CodeRabbit은 요청 직후 OSS 한도에 걸렸다("Review rate limited", 40분 뒤 다시 가능). `operations.md` 리뷰 파이프라인대로
+  이 PR의 보안·버그 축은 PR 체크리스트에 적은 대체 둘의 결과가 맡는다. 두 봇이 모두 비어 있어 기다릴지 물었다.
+
+> 사용자: (고른 것) "지금 병합 (Recommended)"
+
 ## 회고
 
 후보 셋을 냈고 셋 다 승인됐다. 셋 다 이 PR에서 반영하지 않고 대기열로 갔다. PR #166(열림)이 151·152를 쓰므로 155~157이다.
