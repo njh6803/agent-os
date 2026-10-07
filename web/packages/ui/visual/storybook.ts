@@ -6,12 +6,12 @@
 // - 판정 스토리(태그 `judgment`)는 색인에서 뺀다. 태그는 정적 빌드의 `index.json` 항목에 그대로 실린다. 기본 테마가
 //   아닌 테마에서 값을 재는 스토리도 그 태그를 단다(사진은 기본 테마만, ADR 0026 의 2026-10-06 이력).
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { test as base, expect, type Page } from "@playwright/test";
 import { DEFAULT_THEME, type ThemeKey } from "../src/themes.ts";
 
 const SITE = join(import.meta.dirname, "..", "storybook-static");
-const ORIGIN = "http://storybook.invalid";
+export const ORIGIN = "http://storybook.invalid";
 const JUDGMENT_TAG = "judgment";
 
 export interface StoryEntry {
@@ -116,8 +116,9 @@ export const test = base.extend<{ storybook: Storybook }>({
         await route.abort();
         return;
       }
+      // 인코딩한 `/` 는 URL 파서가 접지 않아 디코딩한 경로가 정적 빌드 밖을 가리킬 수 있다(storybook.visual.ts).
       const path = join(SITE, decodeURIComponent(url.pathname));
-      if (!existsSync(path) || statSync(path).isDirectory()) {
+      if (!path.startsWith(SITE + sep) || !existsSync(path) || statSync(path).isDirectory()) {
         await route.fulfill({ status: 404 });
         return;
       }

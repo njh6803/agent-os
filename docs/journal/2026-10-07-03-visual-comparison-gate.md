@@ -153,8 +153,14 @@ digest를 붙인 이름으로 `docker run`하자 매니페스트만 받고 층�
   명세와 ADR 0026이 남겨 둔 측정이 이것으로 닫혔다(명세의 두 자리에 날짜 주석을 달았다).
 - **PR 리뷰.** claude-review는 Critical·Major·Minor 없이 Nit 둘이었다. `buildStorybook`이 띄우기 실패를 보지 않는다는 것은
   고쳤다(`run`을 걷고 띄운 결과에서 종료 코드를 읽는 `exitCode` 하나로 두 자리를 처리한다. 불리언 인자를 다시 들이지 않았다).
-  정적 빌드가 없으면 질의가 던진다는 것은 리뷰어도 재량이라 했고 원칙 II와 맞아 두었다. CodeRabbit은 두 번 모두 rate limit이었고
-  PR 직전 CLI는 `Seat: not assigned`라 돌지 않아, 이 PR의 보안·버그 축 리뷰는 없다(대기열 136).
+  정적 빌드가 없으면 질의가 던진다는 것은 리뷰어도 재량이라 했고 원칙 II와 맞아 두었다. CodeRabbit은 첫 커밋에서 두 번 모두
+  rate limit이었고 PR 직전 CLI는 `Seat: not assigned`라 돌지 않았다(대기열 136).
+- **둘째 푸시(`90ecd09`)의 리뷰.** CodeRabbit이 이번에는 HEAD까지 리뷰해 Minor 셋을 남겼고 근거를 보고 모두 고쳤다. `visual`
+  잡의 체크아웃에 `persist-credentials: false`(CWE-522. 같은 모양인 python·web·e2e 잡은 이 PR 밖이라 작업 칩으로 띄웠다).
+  route가 디코딩한 경로를 정적 빌드 안으로 묶는다(CWE-22. 인코딩한 `/`는 URL 파서가 접지 않아 `..%2Fpackage.json`이 패키지의
+  `package.json`을 냈다. 그것을 묻는 테스트 `storybook.visual.ts`를 먼저 써서 `Received: 200`으로 빨간 것을 본 뒤 고쳤다). 대기열
+  136의 문구는 `/security-review`가 보안만 본다는 것에 맞췄다. claude-review의 둘째 코멘트는 Nit 하나라 테마 읽기를
+  `renderedMode`와 같은 모양의 `renderedTheme`으로 맞췄다. 사진 비교는 35개 통과다.
 
 ## 회고
 

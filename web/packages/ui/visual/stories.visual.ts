@@ -25,9 +25,13 @@ async function shoot(page: Page, name: string): Promise<void> {
 async function openInMuk(storybook: Storybook, page: Page, id: string, mode: Mode): Promise<void> {
   await storybook.open(id, muk(mode));
   expect(
-    await page.evaluate(() => document.documentElement.dataset["theme"]),
+    await renderedTheme(page),
     "기본 테마가 아닌 테마를 정한 스토리는 judgment 태그를 단다",
   ).toBe(DEFAULT_THEME);
+}
+
+async function renderedTheme(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => document.documentElement.dataset["theme"]);
 }
 
 async function renderedMode(page: Page): Promise<string | undefined> {

@@ -113,7 +113,10 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host
     steps:
+      # PR 의 코드를 짓고 돌리는 잡이라 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: web/package.json
