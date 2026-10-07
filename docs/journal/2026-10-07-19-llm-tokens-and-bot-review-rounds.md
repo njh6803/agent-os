@@ -110,4 +110,7 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 113
   - 오탐으로 둔 것: 트레이스를 통째로 읽는 비용(가장 큰 것이 20KB 밑), `rglob`의 범위, 기본 실행에 더하는 비용(합성 테스트
     2000개에서 잡음 안), tryfirst의 시점, CRLF.
   - 반영 뒤 검증 명령을 다시 돌렸다. `uv run pytest -q` 1857 passed(7 deselected), `ruff`·`pyright`·`lint-imports`·지침
-    검사·타입 우회 검사가 초록이고, `pnpm -C web verify`는 커밋의 pre-commit이 돈다(web 파일은 바뀌지 않았다).
+    검사·타입 우회 검사가 초록이었다. `pnpm -C web verify`는 커밋 `5612bc5`의 pre-commit이 돌았고 훅 열다섯이 모두 지났다.
+- **보안(`/security-review`).** 커밋한 뒤에 불렀고 그 명령이 이 브랜치의 파일 15개와 diff를 모았다. 발견이 없었다. 새 코드는
+  표준 `json.loads`만 쓰고, 합계 줄에는 정수 집계만 실려 트레이스 내용(프롬프트, 응답, 키)이 나가지 않는다(원칙 V). 프로브
+  TOML의 값이 셸 명령으로 조립되는 길도 없다.
