@@ -144,8 +144,12 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
   리뷰이기도 해서 고쳤다. 범위 밖 스토리에 음수 `max`의 막대를 더해 `aria-valuemax`가 `-2`로 빨간 것을 본 뒤
   `Math.max(max, 0)`으로 두었다. 바뀐 사진은 그 스토리의 두 장뿐이었다(md5). 변이를 하나 더해(38개) 진행 표시를 겨누는 여섯을
   이름으로 다시 돌렸고 모두 기대대로였다(빨강 5, 대조 초록 1, 기준선 둘).
-- **기능 닫기 판정.** `origin/main`(`394c465`)의 04는 `Status: ready-for-agent`이고 PR #165는 열려 있다. 이 PR은 마지막 병합이
-  아니라 `plan.md`를 고치지 않았다.
+- **기능 닫기 판정.** 처음 본 `origin/main`(`394c465`)에서는 04가 `Status: ready-for-agent`이고 PR #165가 열려 있어 이 PR이
+  마지막이 아니라고 적었다. 커밋 직전의 번호 대조에서 `origin/main`이 `5c069d4`로 움직였고 04가 08:11에 먼저 병합된 것을
+  봤다. 04는 자기 판정 때 이 티켓이 열려 있어 닫지 않았으므로 이 PR이 마지막 병합이다. main을 받아 `plan.md`의 design-system
+  행을 `done`으로, 프론티어 줄과 web-widget·admin-style 행을 고쳤다. 받을 때 04와 함께 고친 셋이 충돌했다.
+  `web/packages/ui/src/index.ts`는 atoms 다음에 molecules를 두었다. probes README는 이 티켓의 행 다음에 04의 행 둘을 두었다.
+  대기열은 136을 4회차(일지 01·03·12·13)로, 137은 이 브랜치의 2회차로 두었고, 끝은 번호 순서대로 149~152다.
 
 ## 회고
 
@@ -171,9 +175,17 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
 
 ## 다음
 
-- **design-system의 남은 티켓은 04(PR #165)이고 그 세션이 돌고 있다.** 04가 늦게 병합하므로 main을 받아 위 두 파일의 글자
-  충돌과 대기열 끝의 행 순서를 풀고, 병합 직전의 판정으로 기능을 닫는다(`plan.md`의 design-system 행과 프론티어 줄).
-  기능이 닫히면 대기열 136이 3회차라 결정표의 chore 배치 줄이 먼저 맞는다.
-- **주 체크아웃 미갱신: 루트는 `chore/checkout-persist-credentials`**(PR #162의 세션). 이 세션은 새 세션을 열지 않는다.
+- **design-system이 닫혔다.** 결정표에서는 chore 배치 줄이 먼저 맞는다. 회차 3 이상의 열린 대기열 행이 열이다(41, 52, 56,
+  106, 112, 113, 114, 125, 136, 144). 그 가운데 136은 `chore/review-axis-and-failure-reason`, 142(2회차)는
+  `chore/zizmor-workflow-audit` 세션이 이 병합 때 돌고 있었다. 남은 묶음은 대상 파일로 다음과 같다.
+  - spec-reviewer: 106·125
+  - 도구: 52·56·112
+  - `operations.md` LLM 테스트: 113
+  - grilling: 114
+  - 사용자가 "규칙으로"라고 해야 하는 것: 144
+  - ADR이 필요한 것: 41
+  그다음 프론티어는 web-widget과 admin-style이다.
+- **주 체크아웃의 브랜치는 병합 뒤 `git worktree list`의 첫 줄로 본다.** 번호 대조 때 루트는 `origin/main`과 같은
+  `5c069d4`였다.
 - 진행 표시의 "지금 하는 일" 자리(디자인 파일에만 있다)는 진행 표시를 처음 쓰는 기능이 정한다. `plan.md`의 web-widget과
   admin-style 행에 적었다.

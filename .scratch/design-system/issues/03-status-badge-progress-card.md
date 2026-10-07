@@ -19,7 +19,7 @@
 - [x] **사진.** 새 스토리의 정답 사진을 02의 명령으로 컨테이너에서 만들어 커밋하고, 바뀐 사진이 이 셋의 것뿐인지 본다. 셋은 상호작용 컴포넌트가 아니라 올림·누름·포커스 사진은 없다. 02의 움직임 줄이기 확인에 값 모름 진행 막대(`animation-name`이 줄이기에서 `none`, 아니면 `progress`)를 더한다
 - [x] **원칙 III.** `as`·`any`·`!` 없이 쓴다. 01이 정한 props 타입의 모양을 따르고, 따를 수 없으면 멈춰 보고한다
 - [x] `CLAUDE.md`의 검증 명령이 모두 초록이고 사진 비교 명령도 로컬에서 초록이다
-- [x] **이 기능을 닫는지는 병합 직전에 판정한다**(대기열 104의 한 줄 후보). `git fetch` 뒤 `origin/main`에서 04의 `Status`가 `done`이면 이 PR이 마지막 병합이다. 그때 `.scratch/plan.md`의 design-system 행을 `done`으로, 프론티어 줄을 고치고(web-widget과 admin-style이 풀린다), 두 행이 기다리던 것이 섰다고 적는다. main이 최신 기준이라 뒤에 병합되는 쪽은 앞의 병합을 들인 뒤에야 병합되므로 한쪽은 반드시 본다(2026-10-07 판정: `origin/main`(`394c465`)의 04는 `Status: ready-for-agent`이고 04는 열린 PR #165다. 이 PR이 마지막 병합이 아니라 `plan.md`는 고치지 않았다. 닫는 일은 04가 한다)
+- [x] **이 기능을 닫는지는 병합 직전에 판정한다**(대기열 104의 한 줄 후보). `git fetch` 뒤 `origin/main`에서 04의 `Status`가 `done`이면 이 PR이 마지막 병합이다. 그때 `.scratch/plan.md`의 design-system 행을 `done`으로, 프론티어 줄을 고치고(web-widget과 admin-style이 풀린다), 두 행이 기다리던 것이 섰다고 적는다. main이 최신 기준이라 뒤에 병합되는 쪽은 앞의 병합을 들인 뒤에야 병합되므로 한쪽은 반드시 본다(2026-10-07 판정: 처음 본 `origin/main`(`394c465`)에서는 04가 `Status: ready-for-agent`이고 열린 PR #165라 마지막이 아니라고 봤다. 그 뒤 04가 먼저 병합됐고(`5c069d4`, `Status: done`. 04는 자기 판정 때 이 티켓이 열려 있어 닫지 않았다) 이 PR이 마지막 병합이 되었다. main을 받아 `plan.md`의 design-system 행을 `done`으로, 프론티어 줄과 web-widget·admin-style 행을 고쳤다)
 
 ### 이 티켓이 정한 것 (2026-10-07, 일지 2026-10-07-12)
 
