@@ -1,0 +1,107 @@
+# chore/tidy-before-worktree 의 첫 턴 계기와 next-session 문구 계약 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/tidy_before_worktree_mutations.toml
+# tools/hook_prompt_directive.py 가 주 체크아웃 미갱신 지시문에 넣는 tidy-checkouts 계기와, next-session 3단계가
+# 적으라는 문구의 규칙을 하나씩 꺼서 그것을 지키는 테스트가 빨강이 되는지 잰다. 첫 판의 테스트는 훅을 고치기 전에
+# 빨강을 봤다(일지 2026-10-06-15 검사).
+
+[[mutation]]
+name = "미갱신 줄을 알아보지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "미갱신이면_워크트리_전에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    stale = _stale_root(prompt)'''
+new = '''    stale = False'''
+
+[[mutation]]
+name = "미갱신을 콜론 없이 대조해 같은 줄의 부정도 센다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "머리_라벨로만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''_STALE_ROOT = "주 체크아웃 미갱신:"'''
+new = '''_STALE_ROOT = "주 체크아웃 미갱신"'''
+
+[[mutation]]
+name = "미갱신을 줄 머리 라벨 없이 아무 줄에서나 알아본다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "머리_라벨로만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    return any(_STALE_ROOT in line for line in _labeled_lines(prompt, _CONDITION_LABEL))'''
+new = '''    return any(_STALE_ROOT in line for line in prompt.splitlines())'''
+
+[[mutation]]
+name = "묶음의 둘째 세션도 tidy-checkouts 를 돈다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "첫_세션만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''            return match.group(1) == "1"'''
+new = '''            return True'''
+
+[[mutation]]
+name = "묶음 표시의 k 를 수로 읽어 01 도 첫 세션으로 본다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "첫_세션만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''            return match.group(1) == "1"'''
+new = '''            return int(match.group(1)) == 1'''
+
+[[mutation]]
+name = "묶음이 아니면 tidy-checkouts 를 돌지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "워크트리_문장이_없어도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''            return match.group(1) == "1"
+    return True'''
+new = '''            return match.group(1) == "1"
+    return False'''
+
+[[mutation]]
+name = "워크트리 문장이 tidy-checkouts 뒤라고 하지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "미갱신이면_워크트리_전에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''        after = "`tidy-checkouts` 를 돈 뒤" if tidies else "제목을 바꾼 뒤"'''
+new = '''        after = "제목을 바꾼 뒤"'''
+
+[[mutation]]
+name = "next-session 이 묶음의 나머지 지시문에 적으라는 미갱신 줄의 문구를 바꾼다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱신_문구를"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".claude/skills/next-session/SKILL.md"
+old = '''`주 체크아웃 미갱신: 루트는 <브랜치>. tidy-checkouts는'''
+new = '''`주 체크아웃이 낡았다: 루트는 <브랜치>. tidy-checkouts는'''
+
+[[mutation]]
+name = "next-session 의 어디서 머리가 tidy-checkouts 를 먼저 돌라고 하지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱신_문구를"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".claude/skills/next-session/SKILL.md"
+old = '''Skill 도구로 tidy-checkouts를 먼저 돌고'''
+new = '''워크트리에 들어간 뒤 tidy-checkouts를 생각하고'''
+
+[[mutation]]
+name = "next-session 의 어디서 머리가 사람의 답을 기다리지 말라고 하지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱신_문구를"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".claude/skills/next-session/SKILL.md"
+old = '''보고만 하고 답을 기다리지 않는다) 그 뒤`'''
+new = '''보고한다) 그 뒤`'''
