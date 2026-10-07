@@ -1,0 +1,191 @@
+# 2026-10-07 (12) design-system 티켓 03: 상태 배지·진행 표시·카드
+
+일지 2026-10-07-03의 "다음"으로 연 새 세션이다. 04(글 입력·스위치·알림)와 나란히 여는 둘 가운데 첫째라, 지시문대로 주
+체크아웃에서 `tidy-checkouts`를 먼저 돌고 `EnterWorktree`로 `.claude/worktrees/03-status-badge-progress-card`에 들어가
+origin/main(`49d9630`)에서 `feature/03-status-badge-progress-card`를 땄다. 순번은 main의 09, 나란히 도는
+`tidy-checkouts-tool` 워크트리의 10, 주 체크아웃에서 커밋 전인 11(`checkout-persist-credentials`) 다음이라 12다.
+
+## 정리
+
+`tidy-checkouts`는 루트를 옮기지 않았다. 루트가 `chore/checkout-persist-credentials`에 있고 `ci.yml`이 고쳐진 채였으며
+(PR 없음) 그 일을 하는 세션이 돌고 있었다. 루트의 HEAD는 `origin/main`과 같았다. 판정 3에서 제목이 체크아웃된 어느
+브랜치와도 맞지 않는 실행 중 세션("Disable checkout credential persistence in CI jobs")이 있어 워크트리는 하나도 지우지
+않았고, 어디에도 체크아웃되지 않은 병합된 로컬 브랜치 다섯(`chore/canary-procedure-and-runner`,
+`chore/hook-registration-fail-open`, `chore/mutate-any-runner`, `chore/mutate-restore-guard`, `docs/design-system-tickets`)만
+지웠다. 병합되고 깨끗한 워크트리 아홉, 무시된 빌드 산출물(`dist/`, `storybook-static/`)이 남은 01·02, 반쯤 지워진
+`05-admin-hides-decision-for-end-user`, 분리 HEAD 하나, 등록 없는 폴더 여섯은 보고만 하고 지시문을 이었다.
+
+## 이 세션이 정한 것
+
+티켓 파일의 "이 티켓이 정한 것" 절이 원천이고 여기는 근거다.
+
+- **배지는 `w-fit`이다.** 처음 만든 사진 31장을 손으로 보다가 폭 320px 카드 안의 배지가 카드 폭(286px)만큼 늘어난 것을
+  찾았다. 카드가 `flex flex-col`이라 자식이 가로로 늘어난다. 카드의 정렬(`items-start`)을 바꾸면 04의 글 입력처럼 폭을
+  채워야 할 자식도 줄어들어, 배지 쪽을 고쳤다. `self-start`는 가로 묶음(`items-center`)에 놓인 배지의 세로 정렬까지 바꾸므로
+  고르지 않았다. 고치기 전에 카드의 320px 스토리에 배지의 폭이 카드 폭의 반보다 작은지 보는 단언을 더해 `expected 286 to be less
+  than 159`로 빨간 것을 봤다. 고친 뒤 바뀐 사진은 그 스토리의 둘뿐이었다(사진 31장의 md5를 앞뒤로 견줬다).
+- **진행 표시는 바깥 요소가 progressbar다.** 디자인 파일의 그림은 이름 줄과 트랙을 감싼 `div` 안에 트랙이 있지만, props 표의
+  요소가 `<div role="progressbar">`이고 이름이 `aria-label`이다. 그래서 progressbar가 이름 글자와 트랙을 함께 담고 01의
+  규칙대로 나머지 속성을 받는다. progressbar의 자식은 접근성 트리에서 꾸밈이라 이름을 두 번 읽지 않는다는 것은 ARIA의
+  정의에서 나온 어림이다(화면 읽기 프로그램으로 듣지 않았다).
+- **값 모름 막대는 멈추면 35%에 선다.** 01이 둔 `progress` keyframes는 `left`를 -30%에서 100%로 옮긴다. 움직임이 없으면
+  `left`가 정해지지 않아 왼쪽에 붙고, 그러면 값이 30%인 막대와 같아 보인다. `left-7/20`을 두어 움직임 줄이기와 사진(Playwright가
+  무한 움직임을 멈춰 찍는다)에서 디자인 파일의 정지 그림처럼 가운데에 서게 했다. 사진 변이가 그것을 지킨다(아래).
+- **카드의 테두리는 `border`다.** 디자인 파일은 테두리를 inset 그림자(`inset 0 0 0 1px var(--divider)`)로 그렸는데, 그 모양이면
+  elevation `"0"`에도 `box-shadow`가 남아, `"0"`이면 `box-shadow`가 `none`이어야 한다는 티켓의 요구와 맞지 않는다.
+- **`SPINNERS`는 이름을 두고 항목의 모양만 바꿨다.** `.claude/rules/web-design.md`가 이 이름을 가리키므로 이름을 바꾸면
+  rules를 고치고 새 세션에서 다시 불러 봐야 한다. 이 PR은 rules를 고치지 않는다.
+
+## TDD와 변이
+
+스토리 셋(17개)을 컴포넌트보다 먼저 써서 돌렸고, 세 파일 모두 vitest의 `Failed to import test file`로 빨갰다. 이 빨강은 모듈이 없어서라
+단언 하나하나의 이빨은 재지 않는다. 그래서 구현 뒤에 변이 표 `.scratch/design-system/probes/atoms_mutations.toml`(지금
+33개)을 돌렸다. 스토리 테스트 30개는 단언마다 하나씩(글자, 숨은 아이콘, 쓰임새 토큰의 색, 높이, Tab, `aria-valuenow`·`aria-valuemax`,
+`value`·`max`의 기본값, 이름, 보이는 이름, 막대 비율, 톤, 트랙의 높이와 바탕, 움직임, `as`, elevation 셋, padding, 테두리, 모서리, 320px의
+넘침과 배지 폭)이고, 새 컴포넌트의 클래스와 새 스토리의 그림에 afterEach의 클래스 판정이 걸리는지도 하나씩 본다. 사진 쪽 셋은
+값 모름 막대의 움직임 줄이기, 멈춘 막대의 자리, 배지의 아이콘과 글자 사이다. 첫 판 32개가 모두 기대대로 빨갰고 기준선 열일곱이
+모두 초록이었다(로그의 `기준선` 줄을 셌다). 14:16에 띄워 14:23에 끝났다(로그 파일의 만든 시각과 마지막 쓴 시각). 셀프
+리뷰를 반영하며 진행 표시의 시그니처와 배지 스토리가 바뀌어(아래) `value` 기본값의 변이를 더한 33개를 다시 돌렸고, 33개 모두
+기대대로였으며 기준선 열일곱이 초록이었다(14:41:54에 띄워 14:50에 끝났다).
+
+변이 표를 처음 쓸 때 원문 넷이 `--check`에서 걸렸다. TOML의 `'''` 여러 줄 문자열은 닫는 따옴표 앞의 줄바꿈을 원문에 넣어, 줄의
+일부만 적은 원문(`Math.max(value / max, 0)` 등)이 실제 줄과 맞지 않았다. 온전한 줄로 고쳤다. 02의 변이 표가 `-g
+"atoms-button--loading 의 도는"`으로 움직임 테스트의 이름을 겨누므로 테스트 이름의 앞부분을 그대로 두었고, 표 셋(`ui`, `visual`,
+`atoms`)의 `--check`가 모두 지났다.
+
+## 사진
+
+새 스토리 17개의 정답 사진 31장을 `pnpm -C web visual:update`로 컨테이너 안에서 만들었다(다크 스토리는 다크 한 장씩). 만들기 전의
+`pnpm -C web visual`은 그 17개가 "A snapshot doesn't exist"로 빨갛고 나머지 36개(새 움직임 테스트 포함)가 지났다. 기존 79장은
+바뀌지 않았다(`git status`에 고친 사진이 없다). 배지 넷의 라이트·다크, 값 있음·값 모름 막대, 다크의 위험 막대, 그림자 넷의
+라이트·다크, 320px 카드를 손으로 봤다. 다크의 그림자는 바탕과 대비가 작아 거의 보이지 않는다. `--shadow-color`의 값대로다.
+
+## 셀프 리뷰
+
+`/code-review`(base `49d9630`, 고친 파일 3, 미추적 11과 사진 31, 커밋 0)를 두 축 나란히 돌렸다. 소스가 든 변경이라
+sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. 표준 축은 Minor 8·Nit 4, 명세 축은 Minor 3·Nit 5였고 겹치는
+것이 셋이었다.
+
+- **고쳤다.**
+  - 진행 표시의 `value`가 필수였다. props 표의 기본값은 `null`이다(두 축). 값 모름 스토리가 `value`를 넘기지 않게 바꿔 tsc가
+    TS2322로 빨간 것을 본 뒤 기본값을 두었다. 그 기본값을 겨누는 변이를 하나 더했다(33개).
+  - 진행 표시가 `aria-valuemin`을 받아 쓰는 쪽이 최소값을 덮을 수 있었다. 막대는 최소값을 0으로 두므로 받지 않는다.
+  - `Progress.tsx`의 "자식은 꾸밈"이 어림인데 사실처럼 적혔다(어림이라고 적었다).
+  - `Card.md`의 "줄은 카드의 폭을 채운다"에 같은 diff의 배지라는 반례가 있었다.
+  - 프로브 README에 새 변이 표의 행이 없었다(두 축).
+  - 02 티켓의 "값 모름 진행 막대는 03이 같은 자리에 더한다"가 미래형으로 남았다(두 축. 날짜 주석을 달았다).
+  - 배지 스토리의 render 둘과 기대값 두 벌이 겹쳤다(상태별 기대값 맵 하나로 모았다).
+  - `SPINNERS` 주석이 목록을 전부처럼 적었다(컴포넌트마다 하나라고 고쳤다).
+  - 변이 표 주석이 `divider`가 `tint`와 같다는 근거로 규칙 파일을 들었는데 그 규칙은 `disabled-surface`만 적는다(theme.css로
+    고쳤다).
+  - 일지의 따옴표 인용 둘이 원문과 달랐다(인용을 풀었다).
+  - 티켓의 `Status`가 아직 `ready-for-agent`였다(`done`).
+- **확인하고 고치지 못했다.** 카드의 나머지 속성이 `div`의 것이라 section·article에서도 ref와 이벤트가 `HTMLDivElement`로
+  적힌다. 셋이 함께 지는 `HTMLElement`의 속성(`NativeProps<"section">`)으로 바꾸자 그 ref가 div의 ref에 맞지 않아 tsc가
+  TS2322로 거부했다. 다형 제네릭은 타입 단언 없이 넘기기 어렵다(원칙 III). TypeScript 5.9의 lib.dom을 읽으니 다른 것은
+  낡은 `align` 하나라 `div`의 것으로 두고 그 사실을 주석과 티켓에 적었다.
+- **근거를 보고 두었다.**
+  - 변이 이름의 "모두"(라이트·다크, 값 있음·값 모름)가 판정보다 세다는 지적은 두 변이 모두 로그가 실패한 스토리 둘을 이름으로
+    들어 맞다.
+  - `Progress.md`의 "움직임 줄이기 설정이면 가운데에 멈춘다"에서 줄이기 경로가 재는 것은 animation-name뿐이다. 자리는 멈춘
+    사진의 변이가 잰다. 움직임이 없을 때 `left-7/20`이 서는 것은 같은 규칙이라 두었다.
+  - `ELEVATION_CLASS`의 앞 공백은 `Button.tsx`의 `LIVE_CLASS` 이어 붙이기와 같은 모양이다.
+  - `${what}가`의 조사는 두 값이 모두 모음으로 끝난다.
+  - `aria-valuenow`를 끝 값 밖에서 자르지 않는 것은 범위 밖의 값을 넘기는 쪽의 몫으로 두었다(PR 리뷰가 다시 짚어 바꿨다.
+    아래 "PR" 절). `max`만 0이면 `value / max`가
+    Infinity라 막대가 꽉 차고, `value`와 `max`가 모두 0이면 폭이 `NaN%`라 막대의 폭이 서지 않는다(코드를 읽은 어림. 그려 보지
+    않았다).
+  - `SPINNERS`라는 이름이 이제 진행 막대도 담는다. 이름을 바꾸면 `.claude/rules/web-design.md`를 고치고 새 세션에서 불러 봐야
+    해서, rules를 고치는 다음 하네스 일에 묶는다.
+- **사용자가 볼 것.** 디자인 파일의 진행 표시는 이름 옆에 "지금 하는 일"(고정폭 흐린 글자, 예: `orders.search`)을 그리는데
+  props 표에는 없어 두지 않았다. 쓰는 쪽은 그것을 `label`에 담거나 진행 표시 밖에 둔다.
+
+## 검사
+
+- 검증 명령(리뷰 반영 뒤): `uv run pytest -q` 1750 통과(7 deselected), `ruff check`·`ruff format --check`, `pyright`,
+  `lint-imports`, `pnpm -C web verify`(25파일 329개) 모두 초록. 사진 비교 `pnpm -C web visual` 53개 통과(스토리 사진 40, 실제 입력
+  6, 미디어 특성 6, 정적 빌드의 경로 1). 판정 명령은 파이프 없이 돌리고 로그 파일로 봤다. web 파일만 바꿔 LLM 테스트와 e2e는 돌리지 않았다(중계·시작
+  래퍼·api-client·서버 라우트를 건드리지 않는다).
+- 커밋 직전에 `git fetch` 뒤 `HEAD..origin/main`이 비었고, 나란히 도는 04의 워크트리가 일지 13을 쓰고 있어 순번이 겹치지
+  않았다.
+
+## PR
+
+- **PR 직전 축.** `coderabbit auth status`가 `Seat: not assigned`라 `coderabbit-review`는 돌지 않았다. 대기열 136의 승인된
+  처방대로 보안 축은 내장 `/security-review`를 대신 돌렸고(하위 작업 하나가 diff와 둘레 코드를 읽었다) 신뢰도 8 이상의
+  발견이 없었다. 버그·성능 축은 비어 있다.
+- **[njh6803/agent-os#166](https://github.com/njh6803/agent-os/pull/166)의 첫 CI.** `f8feb7b`에서 다섯 잡과 `verify`가
+  초록이었다. CodeRabbit은 "Review rate limited"였고 `@coderabbitai review` 요청도 같은 이유로 돌지 않았다.
+- **claude-review는 Minor 둘과 Nit 하나였다.** `max`가 0이면 막대 폭이 `NaN%`가 되고, `aria-valuenow`는 자르지 않은 값이라
+  `value`가 `max`를 넘으면 막대(꽉 참)와 어긋난다는 것이다. 셀프 리뷰에서는 쓰는 쪽의 몫으로 두었지만, WAI-ARIA가
+  `aria-valuenow`를 최소·최대 안에 두게 하므로 컴포넌트의 몫이라 보고 고쳤다. 값을 0과 `max` 사이로 자르는 `clamp` 하나에서
+  `aria-valuenow`와 막대가 함께 나오고, `max`가 0 이하이면 0이다. 고치기 전에 범위 밖 스토리(`OutOfRange`. 넘친 값, 음수,
+  `max` 0)를 더해 `aria-valuenow`가 5와 1이고 `max` 0의 막대가 꽉 찬 것으로 빨간 것을 봤다. Nit(테스트 이름이 바뀌었지만
+  깨지는 변이 표는 없다)은 조치할 것이 없다.
+- **그 반영의 변이.** 자르기 셋(`aria-valuenow`에 자르기 전의 값, 끝 값 자르기를 뺌, 0 아래 자르기를 뺌)을 더하고, `max > 0`의
+  갈래를 빼도 지나는지 보는 대조를 하나 두었다. 갈래를 빼면 폭이 `NaN%`인데 브라우저가 그 폭을 버려 막대의 폭이 0이 되리라는
+  어림을 그 대조가 잰다. 표 37개를 다시 돌려 빨강 36과 대조 초록 1이 모두 기대대로였고 기준선 열여덟이 초록이었다(16:07:30에
+  띄워 16:16에 끝났다). 새 스토리의 정답 사진 두 장을 컨테이너에서 만들었고 기존 사진은 md5가 그대로였다(스토리 18개, 사진
+  33장).
+- **main 받기.** 그 사이 main에 #161·#163·#164가 들어와 `origin/main`(`394c465`)을 이 브랜치에 병합했다(충돌 없음). 병합한
+  나무에서 `pnpm -C web verify` 330개와 `pytest` 1846개가 초록이었다. #161이 들인 `tools/sibling_overlap.py`가 일지 번호의
+  겹침은 없다고 했고, 열린 04 PR(#165)과 `web/packages/ui/src/index.ts`·`.scratch/design-system/probes/README.md`를 함께
+  고친다고 알렸다. 늦게 병합하는 04가 그 글자 충돌을 푼다.
+- **둘째 CI와 리뷰(`fda978d`).** 다섯 잡과 `verify`가 초록이었고 CodeRabbit은 다시 "Review rate limited"였다. claude-review는
+  Minor 하나와 Nit 하나였다. Minor는 `max`가 0 이하이면 `aria-valuemax`도 0 이하라 최소 0과 범위를 이루지 못한다는 것인데,
+  어떤 정규화로도 최소·최대가 둘 다 0이 되어 범위가 서지 않으므로 코드는 두고 "`max`는 0보다 크게 넘긴다"를 독스트링과
+  `Progress.md`에 계약으로 적었다(이 판단은 틀렸다. 아래 셋째 회차). Nit(이름을 보이는 글자와 `aria-label`에 두 번 싣는다)은 PR 본문의 남긴 위험에 이미 있다.
+  둘째 회차부터는 Critical·Major만 고친다는 대기열 137의 한 줄 후보대로 다음 회차의 Minor는 기록만 한다.
+- **셋째 CI와 리뷰(`7350ebb`, 그 사이 #162를 받았다).** 다섯 잡과 `verify`가 초록이었다. claude-review는 Minor 둘(카드 ref
+  타입의 후속, `max`가 동적일 때의 호출부 책임)과 Nit 둘(막대 클래스의 겹침, 코드 주석의 PR 번호)이었고 대기열 137대로 기록만
+  했다. CodeRabbit은 이번에 rate limit이 풀려 PR 전체(`61884df..7350ebb`)를 리뷰했고 Minor 하나를 냈다. `max`가 0 이하이면
+  `aria-valuemax`를 0으로 두면 범위가 0부터 0까지라 최대가 최소보다 작게 나가지 않는다는 것이다. 최소와 최대가 같은 범위를
+  빠뜨려 둘째 회차의 내 판단이 틀렸다. 그 회차에 적은 계약 문장(범위가 서지 않는다는 문장)도 사실과 달라, 보안·버그 축의 첫 실제
+  리뷰이기도 해서 고쳤다. 범위 밖 스토리에 음수 `max`의 막대를 더해 `aria-valuemax`가 `-2`로 빨간 것을 본 뒤
+  `Math.max(max, 0)`으로 두었다. 바뀐 사진은 그 스토리의 두 장뿐이었다(md5). 변이를 하나 더해(38개) 진행 표시를 겨누는 여섯을
+  이름으로 다시 돌렸고 모두 기대대로였다(빨강 5, 대조 초록 1, 기준선 둘).
+- **기능 닫기 판정.** 처음 본 `origin/main`(`394c465`)에서는 04가 `Status: ready-for-agent`이고 PR #165가 열려 있어 이 PR이
+  마지막이 아니라고 적었다. 커밋 직전의 번호 대조에서 `origin/main`이 `5c069d4`로 움직였고 04가 08:11에 먼저 병합된 것을
+  봤다. 04는 자기 판정 때 이 티켓이 열려 있어 닫지 않았으므로 이 PR이 마지막 병합이다. main을 받아 `plan.md`의 design-system
+  행을 `done`으로, 프론티어 줄과 web-widget·admin-style 행을 고쳤다. 받을 때 04와 함께 고친 셋이 충돌했다.
+  `web/packages/ui/src/index.ts`는 atoms 다음에 molecules를 두었다. probes README는 이 티켓의 행 다음에 04의 행 둘을 두었다.
+  대기열은 136을 4회차(일지 01·03·12·13)로, 137은 이 브랜치의 2회차로 두었고, 끝은 번호 순서대로 149~152다.
+
+## 회고
+
+후보 넷을 냈고 넷 모두 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "1 보안 축 공백 (136),2 봇 리뷰 회차 (137),3 보류 근거를 표준으로,4 mutate.py 원문 줄바꿈"
+
+1. **CLI 좌석이 없고 CodeRabbit이 두 번 모두 rate limit이라 보안·버그·성능 축이 비었다 → 대기열 136(3회차).** 보안은
+   `/security-review`로 대신했다. 3회차라 `next-session` 결정표의 chore 배치 조건이 된다.
+2. **claude-review가 첫 회차의 Minor 둘을 고치자 둘째 회차에 그 고침에서 새 Minor를 냈다 → 대기열 137(2회차).**
+3. **셀프 리뷰가 쓰는 쪽의 몫으로 보류한 지적을 PR 봇이 다시 냈다 → 대기열 151(새 행).** `aria-valuenow`의 범위는 WAI-ARIA가
+   저자의 몫으로 정해 둔 것이었다. 보류의 근거로 책임을 정한 표준을 들지 않았다.
+4. **변이 표의 원문에 닫는 `'''` 앞의 줄바꿈이 든다 → 대기열 152(새 행).** 줄의 일부만 적은 원문 넷을 `--check`가 잡았다.
+
+번호는 처음에 149·150이었는데 `tools/sibling_overlap.py`가 열린 04 PR이 그 둘을 먼저 가져갔다고 알려 151·152로 옮겼다.
+
+일지에만 남기는 것:
+
+- 첫 사진을 손으로 보다가 배지가 카드 폭으로 늘어나는 버그를 찾았다. 스토리 테스트는 그 모양을 재지 않았다.
+- `max`가 0일 때 "막대가 그려지지 않는다"고 먼저 적었다가, 값이 0보다 크면 Infinity라 꽉 찬다는 것을 셈해 고쳤다.
+- Git Bash가 `git show origin/main:<경로>`의 인자를 Windows 경로로 바꿔 실패했다. `MSYS_NO_PATHCONV=1`로 돌았다.
+- 도구 호출 사이의 문장을 영어로 쓴 것을 훅이 두 번 짚었다.
+
+## 다음
+
+- **design-system이 닫혔다.** 결정표에서는 chore 배치 줄이 먼저 맞는다. 회차 3 이상의 열린 대기열 행이 열이다(41, 52, 56,
+  106, 112, 113, 114, 125, 136, 144). 그 가운데 136은 `chore/review-axis-and-failure-reason`, 142(2회차)는
+  `chore/zizmor-workflow-audit` 세션이 이 병합 때 돌고 있었다. 남은 묶음은 대상 파일로 다음과 같다.
+  - spec-reviewer: 106·125
+  - 도구: 52·56·112
+  - `operations.md` LLM 테스트: 113
+  - grilling: 114
+  - 사용자가 "규칙으로"라고 해야 하는 것: 144
+  - ADR이 필요한 것: 41
+  그다음 프론티어는 web-widget과 admin-style이다.
+- **주 체크아웃의 브랜치는 병합 뒤 `git worktree list`의 첫 줄로 본다.** 번호 대조 때 루트는 `origin/main`과 같은
+  `5c069d4`였다.
+- 진행 표시의 "지금 하는 일" 자리(디자인 파일에만 있다)는 진행 표시를 처음 쓰는 기능이 정한다. `plan.md`의 web-widget과
+  admin-style 행에 적었다.
