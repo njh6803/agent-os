@@ -59,7 +59,7 @@ docs/
   adr/  agents/  journal/
 .scratch/          로컬 이슈 트래커. plan.md와 기능별 spec·티켓
 .claude/
-  agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), spec-reviewer(명세 검토). 둘 다 수정 없음
+  agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), bug-perf-review(CLI가 못 돌 때 버그·성능), spec-reviewer(명세 검토). 모두 수정 없음
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
