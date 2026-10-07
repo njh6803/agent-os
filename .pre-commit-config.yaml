@@ -19,36 +19,43 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
+      # always_run 훅에는 stages 를 적는다. 적지 않으면 commit-msg 단계에서 한 번 더 돌아 pyright·pytest 가
+      # 커밋마다 두 번이었다(대기열 118, 일지 2026-10-07-02).
       - id: pyright
         name: pyright
         entry: uv run pyright
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
       - id: lint-imports
         name: import-linter
         entry: uv run lint-imports
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
       - id: pytest
         name: pytest
         entry: uv run pytest -q
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
       - id: check-instructions
         name: instructions (rules paths와 그 glob, 훅 경로, CLAUDE.md 200줄, @ 임포트, 사본 센티널, 중첩 지침 파일, local 가드)
         entry: uv run python tools/check_instructions.py
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
       - id: check-type-escapes
         name: type escapes (Any, cast, 타입 억제 주석 — 원칙 III)
         entry: uv run python tools/check_type_escapes.py
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
       # 다섯째 검증 명령. pyright·pytest 처럼 web 파일이 안 바뀐 커밋에서도 돈다. 파이썬 티켓이 openapi.json 을
       # 바꾸면 생성물 최신성 단계가 빨개져 다시 생성한 타입이 같은 커밋에 담긴다. e2e 는 커밋마다 브라우저와
       # Next 빌드가 돌아 넣지 않는다(ADR 0021 이력).
@@ -84,7 +91,6 @@ repos:
         files: _mutations\.toml$
         require_serial: true
         stages: [pre-commit]
-      # stages 를 적지 않은 always_run 훅은 commit-msg 단계에서 한 번 더 돈다(일지 2026-09-28-06 회고 2).
       - id: run-hooks
         name: hooks (tools/hook_payloads.toml 대로 발동·침묵 — 대기열 24)
         entry: uv run python tools/run_hooks.py
