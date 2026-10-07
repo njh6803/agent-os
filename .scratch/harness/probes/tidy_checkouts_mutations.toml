@@ -578,6 +578,16 @@ file = "tools/tidy_checkouts.py"
 old = '''        return verdict("keep", f"잠금 pid {pid} 가 살아 있다. 그 세션: {wt.locked}")'''
 new = '''        return verdict("keep", f"잠금 pid {pid} 가 살아 있다")'''
 
+[[mutation]]
+name = "셸이 풀 글자가 든 이름에도 명령을 찍는다(셀프 보안 리뷰)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "셸이_풀_글자가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if (verdict.action == "delete" or verdict.held) and any(map(_SHELL_UNSAFE.search, names)):'''
+new = '''    if False:'''
+
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.
 [[mutation]]

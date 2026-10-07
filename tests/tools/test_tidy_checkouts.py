@@ -458,6 +458,18 @@ def test_judge_는_체크아웃되지_않은_병합된_브랜치를_찍는다(
     assert f"remove-branch chore/loose {tip}" in loose
 
 
+def test_judge_는_셸이_풀_글자가_든_브랜치에_명령을_찍지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """git 은 브랜치 이름에 `;` 를 허락하고, 에이전트는 찍힌 명령을 셸에 그대로 친다."""
+    _git("branch", "chore/a;b", cwd=repo)
+    tip = _git("rev-parse", "chore/a;b", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({"chore/a;b": frozenset({tip})})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "chore/a;b" in line)
+    assert line.startswith("브랜치를 넘긴다")
+    assert "remove-branch" not in line
+
+
 def test_워크트리에서_부르면_아무것도_하지_않고_2로_끝난다(repo: Path) -> None:
     path, head = _add(repo, "done")
     merged = {"chore/done": frozenset({head})}

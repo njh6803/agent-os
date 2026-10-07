@@ -11,7 +11,8 @@
 
 `--running` 은 `list_sessions` 에서 이 세션을 뺀 `isRunning` 세션의 제목이다. 도구는 앱의 세션을
 보지 못해 부르는 쪽이 넘긴다. `judge` 는 줄마다 `지운다`·`남긴다`·`넘긴다`(사람에게)와 이유를 찍고,
-지울 것에는 부를 `remove`·`remove-branch` 명령을 붙인다. git 은 모두 `core.longpaths=true` 로 친다
+지울 것에는 부를 `remove`·`remove-branch` 명령을 붙인다. 경로나 브랜치 이름에 셸이 풀 수 있는
+글자가 들었으면 명령 없이 넘긴다. git 은 모두 `core.longpaths=true` 로 친다
 (스킬 머리 문단).
 
 판정. 워크트리마다 아래 순서로 보고 처음 어긋난 것을 이유로 찍는다. 모두 맞아야 지운다.
@@ -120,6 +121,9 @@ RECREATABLE_FILES = frozenset({"next-env.d.ts"})
 RECREATABLE_PATHS = frozenset({"web/packages/ui/dist/", "web/packages/ui/storybook-static/"})
 
 _LOCK_PID = re.compile(r"^claude session \S+ \(pid (\d+)\)$")
+# 찍은 명령을 에이전트가 셸에 그대로 친다. git 은 브랜치 이름에 `$`·`;`·`(`·백틱을 허락해, 그런
+# 이름이 든 명령은 찍지 않고 사람에게 넘긴다(셀프 보안 리뷰, 일지 2026-10-07-10)
+_SHELL_UNSAFE = re.compile(r"[\s$`\"'\\;&|<>(){}*?\[\]!#~]")
 _ACTIONS: dict[Action, str] = {"delete": "지운다", "keep": "남긴다", "human": "넘긴다"}
 
 
@@ -461,6 +465,10 @@ def _render(verdict: Verdict, kind: Literal["worktree", "branch"]) -> str:
         command = f'{COMMAND} remove "{verdict.path}" {verdict.branch} {verdict.head}'
     else:
         command = f"{COMMAND} remove-branch {verdict.branch} {verdict.head}"
+    names = (verdict.path, verdict.branch or "", verdict.head or "")
+    if (verdict.action == "delete" or verdict.held) and any(map(_SHELL_UNSAFE.search, names)):
+        hand_off = "넘긴다" if kind == "worktree" else "브랜치를 넘긴다"
+        return f"{hand_off} {verdict.path} — 셸이 풀 수 있는 글자가 든 이름이라 명령을 찍지 않는다"
     if verdict.held:
         return f"{label} {verdict.path} — {verdict.reason}. 승인하면 → {command}"
     if verdict.action != "delete":
