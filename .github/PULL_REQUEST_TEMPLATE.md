@@ -44,7 +44,7 @@
 - [ ] `uv run pyright`
 - [ ] `uv run lint-imports`
 - [ ] `pnpm -C web verify`
-- [ ] `uv run pytest -q` (LLM 테스트가 **지나는 코드** — `core/run.py`·`core/loop.py`, 어댑터, `channel/`, `main.py` — 를 건드렸다면 `uv run --env-file .env pytest -m llm`도(워크트리에서의 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 돌렸으면 일지 검사 절에 통과 수와 토큰 합계)
+- [ ] `uv run pytest -q` (LLM 테스트가 **지나는 코드** — `core/run.py`·`core/loop.py`, 어댑터, `channel/`, `main.py` — 를 건드렸다면 `uv run --env-file .env pytest -m llm`도(워크트리에서의 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 돌렸으면 일지 검사 절에 통과 수와 토큰 합계(실행 끝의 `LLM 토큰 합계` 줄))
 - [ ] 커밋 전 `/code-review`로 셀프 리뷰하고 Critical·Major를 반영했다. 보류한 지적은 별도 티켓이나 회고 후보로 뺐고, 다른 층·티켓에 넘긴 것은 받는 쪽에 적었다
 - [ ] PR 직전 `coderabbit-review` 서브에이전트를 돌렸다(보안·버그·성능 축). **좌석은 PR마다 `coderabbit auth status` 한 줄로 본다 — 직전 PR의 확인은 캐시다.** CLI가 돌지 못하면(미설치, 로그인·좌석 없음, 한도 초과) 내장 `/security-review`(보안, 커밋한 뒤에)와 `bug-perf-review` 서브에이전트(버그·성능)를 대신 돌리고, 무엇이 돌았는지와 결과를 적는다. **문서만 바뀐 PR도 면제가 아니다** — 설계 문서의 침묵이 곧 구현의 침묵이다(코드 0줄인 PR 넷에서 CWE 넷). 한도와 좌석 요건은 operations.md 리뷰 파이프라인
 - [ ] 결정을 바꿨다면 그것을 참조하는 스킬·훅·rules·명세도 같이 고쳤다
