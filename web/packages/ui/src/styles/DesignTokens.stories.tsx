@@ -1,5 +1,5 @@
 // 디자인 토큰의 판정 스토리. 열 벌(테마 다섯 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 일곱 벌, rem 0,
-// shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그는 사진 비교(티켓 02)가 이 스토리들을 뺄 수 있게 단다.
+// shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
 // 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB), 테마 사이의 차이, 명암비로 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";

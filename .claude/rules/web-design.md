@@ -12,6 +12,8 @@ paths:
 
 디자인 토큰에 없는 클래스(Tailwind 기본값, 원색 토큰 이름, 임의값), axe 위반, 열 벌의 명암비, 기준 폭, 글꼴, rem은 스토리 테스트가 판정한다. 명령은 `pnpm -C web verify`이고 패키지의 스토리만 돌리면 `pnpm -C web exec vitest run --project storybook`이다. 클래스 판정은 미리보기의 afterEach가 모든 스토리의 그림에 건다.
 
+사진은 사진 비교가 판정한다. 판정 스토리를 뺀 패키지의 스토리를 기본 테마(먹)의 라이트·다크로 찍어 `web/packages/ui/visual/snapshots/`의 정답과 픽셀까지 비교하고, 상호작용 컴포넌트는 실제 마우스·키보드의 올림·누름·포커스를 더 찍는다. 스토리가 globals로 모드를 정했으면 그 모드만 찍는다. 사진은 기본 테마만이라(ADR 0026) 다른 테마를 정한 스토리가 오면 실패한다. 명령은 `pnpm -C web visual`이고 Docker가 있어야 한다. 스토리를 더하거나 모양을 바꾸면 `pnpm -C web visual:update`로 정답을 컨테이너 안에서 다시 만들고, 바뀐 사진을 사람이 보고 PR 본문에 적는다. 상호작용 컴포넌트를 더하면 `web/packages/ui/visual/stories.visual.ts`의 `INTERACTIONS`에 변형마다 스토리 하나를 더하고, 움직이는 표시가 있으면 `web/packages/ui/visual/media.visual.ts`의 `SPINNERS`처럼 움직임 줄이기의 사례를 더한다.
+
 판정되는 것은 지금 패키지의 스토리뿐이다. 앱의 components에는 아직 스토리가 없다. 앱은 자기 Storybook을 `apps/<앱>/.storybook/`에 두고 미리보기는 `@agent-os/ui/storybook`을 나눠 쓴다(ADR 0026의 2026-10-07 이력). 그 일은 web-widget과 admin-style이 한다.
 
 ## 컴포넌트 공통
@@ -25,7 +27,7 @@ paths:
 - 불러오는 중은 `disabled`가 아니다. `aria-busy`와 `aria-disabled`를 달고 누름(제출 포함)을 무시하며, 색은 기본 그대로이고 포커스가 남고 너비가 그대로다. 도는 표시는 `loader-circle`이고 `motion-reduce:animate-none`을 함께 쓴다.
 - 부품의 치수는 공통 크기의 이름 있는 단계(부품 치수 포함)로만 쓴다. 컴포넌트가 스스로 쓰는 화면 문구는 그 `<Name>.md`가 적은 것뿐이고 나머지 글자는 쓰는 쪽이 넘긴다.
 - 스토리는 변형·크기와 상태 prop(아이콘, 불러오는 중, 쓸 수 없음 등)이 만드는 클래스가 모두 한 번은 그려지게 둔다. 그래야 afterEach가 그 클래스까지 판정한다. 다크(`globals: { mode: "dark" }`) 스토리를 하나 이상 둔다. play는 클래스 글자를 단언하지 않고 쓰임새 토큰이 풀린 계산값으로 본다(`src/storybook/expect.ts`). 계산값은 맞대는 토큰이 이웃 토큰과 다른 값인 테마·모드에서 잰다. 먹에서는 `focus`와 `accent`가 같아 포커스 링은 공문에서 재고, `tint`와 `disabled-surface`는 열 벌 모두 같아 계산값으로 가를 수 없다.
-- 판정 스토리와 음성 사례의 태그는 글자 그대로 `"judgment"`와 `"planted"`다. Storybook의 색인이 정적으로 읽어 상수를 받지 않는다. `judgment`는 사진 비교(design-system 티켓 02)가 뺄 수 있게 달고, afterEach의 판정은 `planted`를 건너뛴다.
+- 판정 스토리와 음성 사례의 태그는 글자 그대로 `"judgment"`와 `"planted"`다. Storybook의 색인이 정적으로 읽어 상수를 받지 않는다. `judgment`가 붙은 스토리는 사진 비교가 찍지 않고, afterEach의 판정은 `planted`를 건너뛴다. 기본 테마가 아닌 테마에서 값을 재는 스토리(공문의 포커스 링)도 `judgment`를 단다.
 
 ## 쓰는 법
 

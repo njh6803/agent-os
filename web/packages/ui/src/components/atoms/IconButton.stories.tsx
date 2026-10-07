@@ -142,9 +142,11 @@ export const GhostDark: Story = {
   },
 };
 
-// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이라 링이 accent 를 읽어도 지난다.
+// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이라 링이 accent 를 읽어도 지난다. 기본 테마가 아닌 테마에서 값을 재는
+// 판정 스토리라 사진에서 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
 export const Focus: Story = {
   name: "Tab 으로 포커스하면 focus 색의 실선 테두리가 바깥에 그려진다",
+  tags: ["judgment"],
   globals: { theme: "gongmun" },
   play: async ({ canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "보내기" });
