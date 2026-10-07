@@ -1,0 +1,38 @@
+{
+  "name": "@agent-os/ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./src/styles/theme.css",
+    "./fonts.css": "./src/styles/fonts.css",
+    "./testing": "./src/testing/index.ts",
+    "./storybook": "./src/storybook/preview.tsx"
+  },
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "build": "tsc -p tsconfig.build.json && tailwindcss -i src/styles/theme.css -o dist/theme.css"
+  },
+  "peerDependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@fontsource/noto-sans-kr": "5.3.0",
+    "@ibm/plex-mono": "2.5.0",
+    "lucide-react": "1.51.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.1"
+  }
+}

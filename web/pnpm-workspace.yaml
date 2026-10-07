@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+# 설치 스크립트를 돌리지 않는다(false). pnpm 11 은 정하지 않은 스크립트에서 설치를 멈춘다. esbuild·@parcel/watcher 는
+# 스크립트 없이도 바이너리가 동작했고, @ibm/plex-mono 의 스크립트는 IBM 원격 측정이다(ADR 0026 과 그 2026-10-06 이력).
+allowBuilds:
+  esbuild: false
+  "@parcel/watcher": false
+  "@ibm/plex-mono": false

@@ -3,6 +3,8 @@
 #   깔린다. git 훅은 워크트리와 공유되고, 워크트리에서 치면 훅의 파이썬 경로가 그 워크트리로 덮인다)
 # 체크아웃·워크트리마다: uv sync, pnpm -C web install --frozen-lockfile  (없으면 web-verify 훅이 첫
 #   커밋부터 빨갛다)
+# 기계마다 처음과 Playwright 판이 바뀔 때: pnpm -C web exec playwright install --only-shell chromium
+#   (web-verify 의 스토리 테스트가 쓴다. 없으면 건너뛰지 않고 빨갛다)
 default_install_hook_types: [pre-commit, commit-msg]
 repos:
   - repo: local

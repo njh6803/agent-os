@@ -1,0 +1,643 @@
+/*
+ * 디자인 토큰 CSS(`@agent-os/ui/theme.css`). 디자인 토큰의 값은 이 파일 한 자리에만 있다(ADR 0025·0026).
+ * 처음 값은 디자인 파일 v3(.scratch/design-system/design/)에서 .scratch/design-system/probes/tokens/design.mjs 가
+ * 뽑은 그대로이고, 그 뒤의 원천은 이 파일이다. 디자인을 바꾸면 Claude Design 에서 다시 내보내고 차이를 여기 옮긴다.
+ *
+ * - @theme 에는 값이 글자 그대로인 것(길이, 글자, 모서리, 굵기, 기준 폭, 움직임)을 둔다. `--*: initial` 로 Tailwind 의
+ *   기본값을 비우므로 `text-base`·`rounded` 같은 익숙한 클래스는 아무 CSS 도 만들지 않는다. 그 실수는 스토리 테스트가
+ *   잡는다(미리보기의 afterEach).
+ * - @theme inline 에는 테마나 모드마다 바뀌는 CSS 변수를 읽는 것(쓰임새 26개, 글꼴, 중간 굵기, 그림자)을 둔다.
+ * - 원색 토큰(--gray-500 등)과 쓰임새 토큰(--bg 등)은 @theme 밖의 CSS 변수라 유틸리티가 없다. 원색은 테마마다,
+ *   쓰임새는 테마나 모드를 다는 요소마다 다시 선언한다. 사용자 정의 속성의 var() 는 선언한 요소에서 풀리므로, 쓰임새를
+ *   :root 에만 두면 안쪽 요소의 data-theme 이 바꾼 원색을 다시 읽지 않는다.
+ * - 고르는 것: data-theme(테마 키)과 data-mode(light, dark)를 같은 요소에 단다. 모드가 없으면 prefers-color-scheme 을
+ *   따르고, 속성이 없는 문서와 호스트는 먹(muk)이다. shadow 안에서는 :host(…) 로 호스트를 본다.
+ * - 글꼴 파일은 여기 없다. 글꼴 CSS(`./fonts.css`)는 자기 문서에 선언하는 쪽만 따로 들인다. 페이지 안 번들(Vite
+ *   라이브러리 모드)이 이 파일과 함께 들이면 글꼴이 모두 data URL 로 박힌다(.scratch/design-system/probes/tokens/libmode.mjs).
+ * - 길이는 모두 px 이고 rem 이 없다(ADR 0026). 판정 스토리가 CSSOM 으로 본다.
+ */
+@import "tailwindcss" source(none);
+/* 패키지의 소스 전체(컴포넌트와 스토리). 컴포넌트 폴더만 두자 스토리 파일의 클래스가 CSS 를 만들지 않았다(프로브의 첫 실행). */
+@source "..";
+
+@theme {
+  --*: initial;
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-title--font-weight: 600;
+  --text-heading: 18px;
+  --text-heading--line-height: 26px;
+  --text-heading--font-weight: 600;
+  --text-body: 15px;
+  --text-body--line-height: 24px;
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-code: 13px;
+  --text-code--line-height: 20px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-control-m: 40px;
+  --spacing-control-s: 32px;
+  --spacing-icon-xs: 14px;
+  --spacing-icon-s: 16px;
+  --spacing-icon-m: 20px;
+  --spacing-icon-l: 24px;
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --radius-full: 999px;
+  --font-weight-regular: 400;
+  /* 테마와 무관한 500. 승인 묻기의 도구 이름(고정폭 500)에 쓴다. 테마마다의 중간 굵기는 아래 `mid` 다. */
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --breakpoint-wide: 768px;
+  --container-wide: 360px;
+  --spacing-0: 0px;
+  --spacing-switch-w: 36px;
+  --spacing-switch-h: 20px;
+  --spacing-row-touch: 48px;
+  --spacing-progress: 6px;
+  --spacing-field-multi: 88px;
+  --animate-spin: spin 1s linear infinite;
+  --animate-progress: progress 1.2s ease-in-out infinite;
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes progress {
+    from {
+      left: -30%;
+    }
+    to {
+      left: 100%;
+    }
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--raised);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-focus: var(--focus);
+  --color-tint: var(--tint);
+  --color-tint-hover: var(--tint-hover);
+  --color-tint-press: var(--tint-press);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
+  --color-border-hover: var(--border-hover);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-tint-press: var(--danger-tint-press);
+  --color-warning-tint: var(--warning-tint);
+  --color-success-tint: var(--success-tint);
+  --color-info-tint: var(--info-tint);
+  --color-disabled-surface: var(--disabled-surface);
+  --color-disabled-text: var(--disabled-text);
+  --color-divider: var(--divider);
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --default-font-family: var(--sans);
+  --default-mono-font-family: var(--mono);
+  --font-weight-mid: var(--weight-mid);
+  --text-small--font-weight: var(--weight-mid);
+  --text-caption--font-weight: var(--weight-mid);
+  --shadow-1: 0 1px 2px var(--shadow-color);
+  --shadow-2: 0 4px 16px var(--shadow-color);
+  --shadow-3: 0 12px 32px var(--shadow-color);
+}
+
+@layer theme {
+  :root,
+  :host,
+  [data-theme="muk"],
+  :host([data-theme="muk"]) {
+    --gray-50: #fafafa;
+    --gray-100: #f4f3f3;
+    --gray-200: #e7e6e5;
+    --gray-300: #d2d1cf;
+    --gray-400: #b2b1ae;
+    --gray-500: #888682;
+    --gray-600: #65635f;
+    --gray-700: #4f4d4a;
+    --gray-800: #373533;
+    --gray-900: #222120;
+    --gray-950: #141412;
+    --accent-50: #f7faff;
+    --accent-100: #edf4ff;
+    --accent-200: #d9e7ff;
+    --accent-300: #b9d2ff;
+    --accent-400: #86b1ff;
+    --accent-500: #4e82e6;
+    --accent-600: #285cc2;
+    --accent-700: #1745a0;
+    --accent-800: #092e78;
+    --accent-900: #031c51;
+    --accent-950: #021035;
+    --danger-50: #fff8f7;
+    --danger-100: #ffefed;
+    --danger-200: #ffddd9;
+    --danger-300: #ffbfb6;
+    --danger-400: #ff8b7f;
+    --danger-500: #de4e46;
+    --danger-600: #b7191c;
+    --danger-700: #94000c;
+    --danger-800: #6a0006;
+    --danger-900: #470002;
+    --danger-950: #2e0001;
+    --warning-50: #fff9f3;
+    --warning-100: #fcf2e6;
+    --warning-200: #f8e2cb;
+    --warning-300: #efca9f;
+    --warning-400: #dca564;
+    --warning-500: #b87505;
+    --warning-600: #8a5600;
+    --warning-700: #6c4300;
+    --warning-800: #4c2e00;
+    --warning-900: #321c00;
+    --warning-950: #1f1000;
+    --success-50: #f5fcf6;
+    --success-100: #ebf7ed;
+    --success-200: #d6eeda;
+    --success-300: #b3debb;
+    --success-400: #83c390;
+    --success-500: #479b5d;
+    --success-600: #137738;
+    --success-700: #005e28;
+    --success-800: #00421a;
+    --success-900: #002a0e;
+    --success-950: #001a06;
+    --info-50: #f4fcff;
+    --info-100: #e9f6fb;
+    --info-200: #d1ebf6;
+    --info-300: #abd9ec;
+    --info-400: #75bdd9;
+    --info-500: #2b93b5;
+    --info-600: #006e8c;
+    --info-700: #00566e;
+    --info-800: #003c4d;
+    --info-900: #002633;
+    --info-950: #001720;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --weight-mid: 600;
+  }
+  [data-theme="cheongnok"],
+  :host([data-theme="cheongnok"]) {
+    --gray-50: #f9fafa;
+    --gray-100: #f2f4f4;
+    --gray-200: #e4e7e8;
+    --gray-300: #cdd2d4;
+    --gray-400: #abb2b5;
+    --gray-500: #7f888b;
+    --gray-600: #5c6568;
+    --gray-700: #474e52;
+    --gray-800: #303639;
+    --gray-900: #1e2224;
+    --gray-950: #111416;
+    --accent-50: #f4fcfb;
+    --accent-100: #e8f7f6;
+    --accent-200: #d0edeb;
+    --accent-300: #a8ddd9;
+    --accent-400: #6ec2bd;
+    --accent-500: #109a94;
+    --accent-600: #00736e;
+    --accent-700: #005956;
+    --accent-800: #003f3c;
+    --accent-900: #002826;
+    --accent-950: #001817;
+    --danger-50: #fff8f8;
+    --danger-100: #ffefee;
+    --danger-200: #ffddda;
+    --danger-300: #ffbeb8;
+    --danger-400: #ff8a82;
+    --danger-500: #de4e4b;
+    --danger-600: #b71824;
+    --danger-700: #940014;
+    --danger-800: #6a000b;
+    --danger-900: #470005;
+    --danger-950: #2e0002;
+    --warning-50: #fff9f3;
+    --warning-100: #fdf1e6;
+    --warning-200: #f9e2cc;
+    --warning-300: #f2c8a1;
+    --warning-400: #dfa367;
+    --warning-500: #bc7315;
+    --warning-600: #8e5300;
+    --warning-700: #6f4000;
+    --warning-800: #4f2c00;
+    --warning-900: #341b00;
+    --warning-950: #210f00;
+    --success-50: #f6fcf6;
+    --success-100: #ecf7ec;
+    --success-200: #d8edd8;
+    --success-300: #b7ddb7;
+    --success-400: #8ac28b;
+    --success-500: #529955;
+    --success-600: #27762f;
+    --success-700: #135d1d;
+    --success-800: #03420e;
+    --success-900: #002b06;
+    --success-950: #001a03;
+    --info-50: #f7faff;
+    --info-100: #ecf4ff;
+    --info-200: #d6e8ff;
+    --info-300: #b3d4ff;
+    --info-400: #83b4f3;
+    --info-500: #4a88d4;
+    --info-600: #2063b0;
+    --info-700: #0c4c91;
+    --info-800: #00346b;
+    --info-900: #002148;
+    --info-950: #00132f;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --weight-mid: 500;
+  }
+  [data-theme="gongmun"],
+  :host([data-theme="gongmun"]) {
+    --gray-50: #fafafb;
+    --gray-100: #f3f3f4;
+    --gray-200: #e5e6e8;
+    --gray-300: #cfd1d4;
+    --gray-400: #aeb1b6;
+    --gray-500: #82868c;
+    --gray-600: #5f6469;
+    --gray-700: #4a4d52;
+    --gray-800: #333639;
+    --gray-900: #202225;
+    --gray-950: #121416;
+    --accent-50: #f8faff;
+    --accent-100: #eef4ff;
+    --accent-200: #dae7ff;
+    --accent-300: #bad1ff;
+    --accent-400: #8ab0fe;
+    --accent-500: #5682e1;
+    --accent-600: #325cbd;
+    --accent-700: #21469c;
+    --accent-800: #122e74;
+    --accent-900: #081d4f;
+    --accent-950: #041033;
+    --danger-50: #fff8f7;
+    --danger-100: #ffefed;
+    --danger-200: #ffddd9;
+    --danger-300: #ffbfb6;
+    --danger-400: #ff8b7f;
+    --danger-500: #de4e46;
+    --danger-600: #b7191c;
+    --danger-700: #94000c;
+    --danger-800: #6a0006;
+    --danger-900: #470002;
+    --danger-950: #2e0001;
+    --warning-50: #fff9f5;
+    --warning-100: #fff0e9;
+    --warning-200: #ffdfcf;
+    --warning-300: #fec2a4;
+    --warning-400: #ef996c;
+    --warning-500: #cd6423;
+    --warning-600: #9f4500;
+    --warning-700: #7d3500;
+    --warning-800: #592300;
+    --warning-900: #3b1500;
+    --warning-950: #260a00;
+    --success-50: #f5fcf6;
+    --success-100: #ebf7ed;
+    --success-200: #d6eeda;
+    --success-300: #b3debb;
+    --success-400: #83c390;
+    --success-500: #479b5d;
+    --success-600: #137738;
+    --success-700: #005e28;
+    --success-800: #00421a;
+    --success-900: #002a0e;
+    --success-950: #001a06;
+    --info-50: #f6fbff;
+    --info-100: #eaf5fe;
+    --info-200: #d3eafb;
+    --info-300: #aed7f5;
+    --info-400: #7bb9e5;
+    --info-500: #3a8ec4;
+    --info-600: #006a9d;
+    --info-700: #00537c;
+    --info-800: #003958;
+    --info-900: #00243a;
+    --info-950: #001625;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --weight-mid: 600;
+  }
+  [data-theme="hwangto"],
+  :host([data-theme="hwangto"]) {
+    --gray-50: #fafaf9;
+    --gray-100: #f4f3f2;
+    --gray-200: #e8e6e3;
+    --gray-300: #d4d0cc;
+    --gray-400: #b5b0aa;
+    --gray-500: #8b857e;
+    --gray-600: #68625b;
+    --gray-700: #514c45;
+    --gray-800: #39352f;
+    --gray-900: #24211d;
+    --gray-950: #151311;
+    --accent-50: #fff9f5;
+    --accent-100: #fef1e8;
+    --accent-200: #fae1d0;
+    --accent-300: #f3c6a9;
+    --accent-400: #e1a174;
+    --accent-500: #be7034;
+    --accent-600: #974c00;
+    --accent-700: #773a00;
+    --accent-800: #542700;
+    --accent-900: #381800;
+    --accent-950: #240d00;
+    --danger-50: #fff8f9;
+    --danger-100: #ffeff1;
+    --danger-200: #ffdce1;
+    --danger-300: #ffbcc7;
+    --danger-400: #fc88a0;
+    --danger-500: #db4b71;
+    --danger-600: #b4144e;
+    --danger-700: #91003b;
+    --danger-800: #670028;
+    --danger-900: #450018;
+    --danger-950: #2d000d;
+    --warning-50: #fdfaf2;
+    --warning-100: #f8f3e6;
+    --warning-200: #f0e5cb;
+    --warning-300: #e3cfa1;
+    --warning-400: #cbae66;
+    --warning-500: #a5810e;
+    --warning-600: #7b5f00;
+    --warning-700: #614900;
+    --warning-800: #443300;
+    --warning-900: #2c2000;
+    --warning-950: #1b1200;
+    --success-50: #f7fcf5;
+    --success-100: #eef6ea;
+    --success-200: #dcecd4;
+    --success-300: #bfdbb1;
+    --success-400: #96bf80;
+    --success-500: #649646;
+    --success-600: #40731a;
+    --success-700: #2d5a05;
+    --success-800: #1d3f00;
+    --success-900: #102900;
+    --success-950: #071900;
+    --info-50: #f6fbff;
+    --info-100: #ebf5ff;
+    --info-200: #d6e9fc;
+    --info-300: #b4d5f8;
+    --info-400: #85b6e9;
+    --info-500: #4c8ac8;
+    --info-600: #2266a4;
+    --info-700: #0e4f86;
+    --info-800: #003763;
+    --info-900: #002242;
+    --info-950: #00142b;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --weight-mid: 600;
+  }
+  [data-theme="jadu"],
+  :host([data-theme="jadu"]) {
+    --gray-50: #fafafb;
+    --gray-100: #f4f3f4;
+    --gray-200: #e7e6e8;
+    --gray-300: #d2d0d4;
+    --gray-400: #b2b0b6;
+    --gray-500: #88848c;
+    --gray-600: #656269;
+    --gray-700: #4e4c52;
+    --gray-800: #363439;
+    --gray-900: #222124;
+    --gray-950: #141316;
+    --accent-50: #fbf9ff;
+    --accent-100: #f6f0ff;
+    --accent-200: #ede0fd;
+    --accent-300: #dcc5f9;
+    --accent-400: #c29feb;
+    --accent-500: #9a6dca;
+    --accent-600: #7847a6;
+    --accent-700: #5f3388;
+    --accent-800: #442064;
+    --accent-900: #2c1243;
+    --accent-950: #1b092b;
+    --danger-50: #fff8f8;
+    --danger-100: #ffeff0;
+    --danger-200: #ffdcde;
+    --danger-300: #ffbdc1;
+    --danger-400: #fe8894;
+    --danger-500: #dd4b62;
+    --danger-600: #b6143f;
+    --danger-700: #92002e;
+    --danger-800: #69001e;
+    --danger-900: #460011;
+    --danger-950: #2e0008;
+    --warning-50: #fff9f2;
+    --warning-100: #fcf2e6;
+    --warning-200: #f7e3ca;
+    --warning-300: #eeca9f;
+    --warning-400: #daa663;
+    --warning-500: #b67700;
+    --warning-600: #885700;
+    --warning-700: #6b4300;
+    --warning-800: #4b2e00;
+    --warning-900: #311d00;
+    --warning-950: #1f1000;
+    --success-50: #f4fcf8;
+    --success-100: #eaf7ef;
+    --success-200: #d2eede;
+    --success-300: #addfc3;
+    --success-400: #77c49c;
+    --success-500: #2e9c6c;
+    --success-600: #00764c;
+    --success-700: #005c3b;
+    --success-800: #004128;
+    --success-900: #002a18;
+    --success-950: #001a0d;
+    --info-50: #f7faff;
+    --info-100: #edf4ff;
+    --info-200: #d8e8ff;
+    --info-300: #b7d3fc;
+    --info-400: #8ab3ef;
+    --info-500: #5587d0;
+    --info-600: #2f62ac;
+    --info-700: #1e4b8d;
+    --info-800: #0e3468;
+    --info-900: #062046;
+    --info-950: #03132d;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --weight-mid: 500;
+  }
+  :root,
+  :host,
+  [data-theme],
+  [data-mode] {
+    color-scheme: light;
+    --bg: var(--gray-100);
+    --raised: var(--gray-50);
+    --text: var(--gray-900);
+    --muted: var(--gray-600);
+    --border: var(--gray-500);
+    --accent: var(--accent-600);
+    --on-accent: var(--gray-50);
+    --danger: var(--danger-600);
+    --warning: var(--warning-600);
+    --success: var(--success-600);
+    --info: var(--info-600);
+    --focus: var(--accent-600);
+    --tint: var(--gray-200);
+    --tint-hover: var(--gray-300);
+    --tint-press: var(--gray-400);
+    --accent-hover: var(--accent-700);
+    --accent-press: var(--accent-800);
+    --border-hover: var(--gray-600);
+    --danger-tint: var(--danger-100);
+    --danger-tint-press: var(--danger-200);
+    --warning-tint: var(--warning-100);
+    --success-tint: var(--success-100);
+    --info-tint: var(--info-100);
+    --disabled-surface: var(--gray-200);
+    --disabled-text: var(--gray-500);
+    --divider: var(--gray-200);
+    --shadow-color: color-mix(in srgb, var(--gray-900) 14%, transparent);
+  }
+  [data-mode="dark"],
+  :host([data-mode="dark"]) {
+    color-scheme: dark;
+    --bg: var(--gray-950);
+    --raised: var(--gray-900);
+    --text: var(--gray-50);
+    --muted: var(--gray-400);
+    --border: var(--gray-500);
+    --accent: var(--accent-400);
+    --on-accent: var(--accent-950);
+    --danger: var(--danger-400);
+    --warning: var(--warning-400);
+    --success: var(--success-400);
+    --info: var(--info-400);
+    --focus: var(--accent-400);
+    --tint: var(--gray-800);
+    --tint-hover: var(--gray-700);
+    --tint-press: var(--gray-600);
+    --accent-hover: var(--accent-300);
+    --accent-press: var(--accent-200);
+    --border-hover: var(--gray-400);
+    --danger-tint: var(--danger-900);
+    --danger-tint-press: var(--danger-800);
+    --warning-tint: var(--warning-900);
+    --success-tint: var(--success-900);
+    --info-tint: var(--info-900);
+    --disabled-surface: var(--gray-800);
+    --disabled-text: var(--gray-500);
+    --divider: var(--gray-800);
+    --shadow-color: color-mix(in srgb, color-mix(in srgb, var(--gray-950), black) 70%, transparent);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-mode]),
+    :host(:not([data-mode])),
+    [data-theme]:not([data-mode]) {
+      color-scheme: dark;
+      --bg: var(--gray-950);
+      --raised: var(--gray-900);
+      --text: var(--gray-50);
+      --muted: var(--gray-400);
+      --border: var(--gray-500);
+      --accent: var(--accent-400);
+      --on-accent: var(--accent-950);
+      --danger: var(--danger-400);
+      --warning: var(--warning-400);
+      --success: var(--success-400);
+      --info: var(--info-400);
+      --focus: var(--accent-400);
+      --tint: var(--gray-800);
+      --tint-hover: var(--gray-700);
+      --tint-press: var(--gray-600);
+      --accent-hover: var(--accent-300);
+      --accent-press: var(--accent-200);
+      --border-hover: var(--gray-400);
+      --danger-tint: var(--danger-900);
+      --danger-tint-press: var(--danger-800);
+      --warning-tint: var(--warning-900);
+      --success-tint: var(--success-900);
+      --info-tint: var(--info-900);
+      --disabled-surface: var(--gray-800);
+      --disabled-text: var(--gray-500);
+      --divider: var(--gray-800);
+      --shadow-color: color-mix(
+        in srgb,
+        color-mix(in srgb, var(--gray-950), black) 70%,
+        transparent
+      );
+    }
+  }
+  [data-theme="gongmun"][data-mode="light"],
+  :host([data-theme="gongmun"][data-mode="light"]) {
+    --accent: var(--accent-700);
+    --focus: var(--warning-600);
+    --accent-hover: var(--accent-800);
+    --accent-press: var(--accent-900);
+  }
+  @media (prefers-color-scheme: light) {
+    [data-theme="gongmun"]:not([data-mode]),
+    :host([data-theme="gongmun"]:not([data-mode])) {
+      --accent: var(--accent-700);
+      --focus: var(--warning-600);
+      --accent-hover: var(--accent-800);
+      --accent-press: var(--accent-900);
+    }
+  }
+  [data-theme="gongmun"][data-mode="dark"],
+  :host([data-theme="gongmun"][data-mode="dark"]) {
+    --focus: var(--warning-400);
+  }
+  @media (prefers-color-scheme: dark) {
+    [data-theme="gongmun"]:not([data-mode]),
+    :host([data-theme="gongmun"]:not([data-mode])) {
+      --focus: var(--warning-400);
+    }
+  }
+}
+
+@layer base {
+  html,
+  :host {
+    background-color: var(--bg);
+    color: var(--text);
+  }
+  /*
+   * 감싼 요소(`data-ui-root`). shadow root 안에서 우리 그림을 감싸는 요소이고 상속 속성을 우리 값으로 다시 정한다.
+   * 사이트의 `* { … }` 나 호스트 태그 선택자는 :host 의 보통 선언을 이기지만 shadow 안의 요소에는 닿지 않는다
+   * (ADR 0026, ADR 0024 의 Shadow DOM 격리). 판정 스토리의 shadow 표본이 사이트를 흉내 낸 `*` 규칙을 둔 채 잰다.
+   */
+  [data-ui-root] {
+    color: var(--text);
+    font-family: var(--sans);
+    font-feature-settings: normal;
+    font-size: var(--text-body);
+    font-style: normal;
+    font-variation-settings: normal;
+    font-weight: var(--font-weight-regular);
+    letter-spacing: normal;
+    line-height: var(--text-body--line-height);
+    text-align: start;
+    text-indent: 0;
+    text-transform: none;
+    white-space: normal;
+    word-spacing: normal;
+  }
+}

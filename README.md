@@ -7,12 +7,13 @@
 ```bash
 uv sync
 pnpm -C web install
+pnpm -C web exec playwright install --only-shell chromium
 uv run pre-commit install
 uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다.
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`).
 
 ## 구조
 
@@ -44,6 +45,10 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
                    재개 스트림을 프레임으로 읽는 것(ADR 0021)
+  packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
+                   판정 스토리), src/components/atoms/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
+                   src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정). 스토리 테스트는 뿌리
+                   vitest.config.ts 의 storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
                    (요청 함수와 SWR 훅), stores/(토큰), next.config.ts(/api 중계), tools/start.ts(루프백에만 띄우는
                    시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리), e2e/(실제 serve 를 지나는 Playwright)

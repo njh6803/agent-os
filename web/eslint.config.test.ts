@@ -20,7 +20,10 @@ const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
 const API_CLIENT = join(WEB, "packages", "api-client");
 
 // 자기 tsconfig 를 두는 자리. 임시 트리 뿌리에는 tsconfig 가 없다.
-const PROJECTS = ["apps/admin", "apps/widget", "packages/api-client", "cli"];
+const PROJECTS = ["apps/admin", "apps/widget", "packages/api-client", "packages/ui", "cli"];
+
+// 경로 참조(`/// <reference path>`). 디자인 시스템 패키지의 Icon.tsx 에서만 푼다.
+const PATH_REFERENCE = '/// <reference path="./glyphs.d.ts" />\nexport const 아이콘 = 1;\n';
 
 function projectTsconfig(project: string): string {
   const base = relative(join(fixture, project), join(WEB, "tsconfig.base.json"));
@@ -123,6 +126,11 @@ const SOURCES: Readonly<Record<string, string>> = {
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "packages/api-client/src/global-fetch.ts":
     'export function 부른다(): Promise<Response> {\n  return globalThis.fetch("/api/runs");\n}\n',
+  "packages/ui/src/components/atoms/glyphs.d.ts":
+    'declare module "glyphs/*" {\n  const 그림: number;\n  export default 그림;\n}\n',
+  "packages/ui/src/components/atoms/Icon.tsx": PATH_REFERENCE,
+  "packages/ui/src/components/atoms/Button.tsx": PATH_REFERENCE,
+  "apps/admin/components/atoms/Glyph.tsx": PATH_REFERENCE,
   // 끄기 주석. CLI 로 따로 돈다.
   "cli/next-line.ts":
     "// eslint-disable-next-line @typescript-eslint/no-explicit-any\nexport function 받는다(값: any): void {\n  void 값;\n}\n",
@@ -296,6 +304,16 @@ const RED: readonly RedCase[] = [
     path: "packages/api-client/src/global-fetch.ts",
     rule: "no-restricted-properties",
   },
+  {
+    name: "디자인 시스템 패키지의 Icon.tsx 밖의 경로 참조",
+    path: "packages/ui/src/components/atoms/Button.tsx",
+    rule: "@typescript-eslint/triple-slash-reference",
+  },
+  {
+    name: "앱의 atoms 에 둔 경로 참조",
+    path: "apps/admin/components/atoms/Glyph.tsx",
+    rule: "@typescript-eslint/triple-slash-reference",
+  },
 ];
 
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
@@ -307,6 +325,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   {
     name: "organisms 가 생성 클라이언트 패키지를 import",
     path: "apps/admin/components/organisms/Api.ts",
+  },
+  {
+    name: "디자인 시스템 패키지의 Icon.tsx 가 아이콘 모듈 선언을 경로로 참조",
+    path: "packages/ui/src/components/atoms/Icon.tsx",
   },
 ];
 

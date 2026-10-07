@@ -233,6 +233,18 @@ export default defineConfig(
     },
   },
   {
+    // 디자인 시스템 패키지의 아이콘. lucide-react 서브패스의 모듈 선언(ADR 0024)은 앰비언트라 import 로 끌어올 수 없고,
+    // 패키지를 소스로 import 하는 앱의 tsc 에는 그 선언이 실리지 않는다(2026-10-07 스크래치 tsc 로 손으로 봤다: TS2307).
+    // 그것을 쓰는 이 파일의 경로 참조만이 앱의 프로그램에 선언을 싣는다. 이 파일에서만 경로 참조를 푼다.
+    files: ["**/packages/ui/src/components/atoms/Icon.tsx"],
+    rules: {
+      "@typescript-eslint/triple-slash-reference": [
+        "error",
+        { path: "always", types: "prefer-import", lib: "always" },
+      ],
+    },
+  },
+  {
     // Next 서버가 돌리는 파일. 앱의 어느 자리에 두어도 막는다(ADR 0019).
     files: ["**/{route,middleware,proxy,instrumentation}.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"],
     rules: {

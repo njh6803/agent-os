@@ -38,6 +38,9 @@ jobs:
       - run: uv run python tools/run_hooks.py
 
   # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
+  # verify 의 test 단계가 디자인 시스템의 스토리 테스트를 실제 chromium 에서 돌아(ADR 0026) 그 전에 브라우저를 깐다.
+  # 모양은 e2e 잡과 같다. 헤드리스 셸 하나이고, Playwright 판이 같으면 캐시에서 되살리며, 시스템 의존성은 매번 깐다.
+  # 브라우저가 없으면 스토리 테스트는 건너뛰지 않고 실패한다.
   web:
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +54,17 @@ jobs:
           cache: true
           cache_dependency_path: web/pnpm-lock.yaml
       - run: pnpm -C web install --frozen-lockfile
+      - id: playwright
+        run: echo "version=$(pnpm -C web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm -C web exec playwright install --with-deps --only-shell chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm -C web exec playwright install-deps chromium
       - run: pnpm -C web verify
 
   # e2e. 실제 serve 와 시작 래퍼로 띄운 관리 화면을 지난다. 준비(e2e/stack.ts)가 serve 를 uv 의 가상 환경으로 띄우므로
