@@ -20,7 +20,7 @@
  * 끝난다(건너뛰지 않는다).
  */
 
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { cpSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -94,8 +94,8 @@ function containerArgs(
   ];
 }
 
-function run(command: string, args: readonly string[], cwd: string): number {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
+/** 띄운 프로세스의 종료 코드. 띄우지 못했으면 그 이유를 쓰고 1 이다. */
+function exitCode(result: SpawnSyncReturns<Buffer>, command: string): number {
   if (result.error !== undefined) {
     console.error(`${command} 를 띄우지 못했다: ${result.error.message}`);
     return 1;
@@ -110,7 +110,7 @@ function buildStorybook(packageDir: string): number {
     shell: true,
     stdio: "inherit",
   });
-  return build.status ?? 1;
+  return exitCode(build, "pnpm");
 }
 
 /** 정적 빌드를 짓고 컨테이너에서 `playwright test` 를 그 인자로 돌린다. 종료 코드를 돌려준다. */
@@ -125,7 +125,8 @@ function main(target: string, playwrightArgs: readonly string[]): number {
   console.log(`사진 비교: ${IMAGE} 에서 ${target} ${playwrightArgs.join(" ")}`);
   const staged = copyPlaywright(packageDir);
   try {
-    return run("docker", containerArgs(target, staged, playwrightArgs), packageDir);
+    const args = containerArgs(target, staged, playwrightArgs);
+    return exitCode(spawnSync("docker", args, { cwd: packageDir, stdio: "inherit" }), "docker");
   } finally {
     rmSync(staged, { recursive: true, force: true });
   }

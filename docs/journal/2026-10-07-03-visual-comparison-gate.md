@@ -146,12 +146,49 @@ digest를 붙인 이름으로 `docker run`하자 매니페스트만 받고 층�
 
 - 검증 명령: `uv run pytest -q` 1644 통과(7 deselected), `ruff check`·`ruff format --check`, `pyright`, `lint-imports`,
   `pnpm -C web verify`(22파일 312개) 모두 초록. 사진 비교 `pnpm -C web visual` 초록. 판정 명령은 파이프 없이 돌리고 로그
-  파일로 봤다.
+  파일로 봤다. 커밋의 pre-commit도 모두 지났다(제목 78자로 commit-msg만 한 번 빨갰다).
+- **PR [njh6803/agent-os#158](https://github.com/njh6803/agent-os/pull/158)의 CI.** 다섯 잡과 `verify`가 초록이다. `visual` 잡은
+  러너가 고정한 digest로 이미지를 받아(27초) `--ipc=host`로 띄우고, 그 안에서 설치하고 Linux로 정적 빌드를 지은 뒤 34개를
+  모두 지났다(40.1초). **GitHub 러너의 사진이 이 기계의 컨테이너가 Windows 빌드로 만든 정답과 `threshold: 0`에서 같았다.**
+  명세와 ADR 0026이 남겨 둔 측정이 이것으로 닫혔다(명세의 두 자리에 날짜 주석을 달았다).
+- **PR 리뷰.** claude-review는 Critical·Major·Minor 없이 Nit 둘이었다. `buildStorybook`이 띄우기 실패를 보지 않는다는 것은
+  고쳤다(`run`을 걷고 띄운 결과에서 종료 코드를 읽는 `exitCode` 하나로 두 자리를 처리한다. 불리언 인자를 다시 들이지 않았다).
+  정적 빌드가 없으면 질의가 던진다는 것은 리뷰어도 재량이라 했고 원칙 II와 맞아 두었다. CodeRabbit은 두 번 모두 rate limit이었고
+  PR 직전 CLI는 `Seat: not assigned`라 돌지 않아, 이 PR의 보안·버그 축 리뷰는 없다(대기열 136).
 
 ## 회고
 
-(회고를 채운다)
+후보 넷을 냈고 넷 모두 승인됐다. 이 PR에서는 반영하지 않고 대기열에 적었다.
+
+> 사용자(질문에 답): "1 tidy-checkouts 판정 2,2 보안 축 대체,3 가드 거부 (122),4 카나리아 스크립트 (129)"
+
+1. **`tidy-checkouts`가 `.git` 없는 워크트리 폴더의 상태를 루트의 것으로 읽는다 → 대기열 135(새 행, 1회차).** 이 세션의
+   첫 정리에서 `05-admin-hides-decision-for-end-user`(`prunable`)의 `git -C <경로> status`가 루트 저장소에 닿았다. 무시된 목록에
+   `.env`와 `.claude/worktrees/`가 보여서 알아챘다. 스킬은 이 확인을 자기 자리(1단계의 `--show-prefix`)에서만 한다.
+2. **보안·버그 축 리뷰가 두 PR 연속 없었다 → 대기열 136(새 행, 2회차).** PR #156과 이 PR이다. CodeRabbit은 rate limit, CLI는
+   좌석이 없다. 좌석이 없을 때 내장 `/security-review`를 PR 직전에 대신 돌리는 처방이고, 리뷰 파이프라인을 바꾸므로 ADR 이력이
+   필요할 수 있다.
+3. **워크트리 가드가 `.github` 경로, 변수로 계산한 인자, heredoc을 거부했다 → 대기열 122에 10회차.** `prettier … ../.github/
+   workflows/ci.yml`이 "git을 부른다"로, `node $C/…`가 계산한 인자로 거부됐다. 파일 도구(Write)로 쓰고 경로를 글자 그대로 주어
+   돌았다.
+4. **카나리아 스크립트를 또 스크래치에 새로 썼다 → 대기열 129에 2회차.** 실행기 셋과 stream-json 요약기 하나다.
+
+일지에만 남기는 것:
+
+- 변이의 기대 둘이 틀렸다(정적 빌드의 play 실패가 오류 화면을 띄운다고 봤고, 문서 뿌리가 시스템 다크의 선택자 하나에만 걸린다고
+  봤다). 변이 도구가 초록으로 어긋남을 알려 잡혔다.
+- 재지 않은 시간("약 40분")을 먼저 적었다가 로그의 시각으로 8분임을 보고 고쳤다. 리뷰도 "416KB"(`du`의 할당량)와 "변이 하나에
+  1분 남짓"을 잡았다. 리뷰 브리프의 근거 항목이 동작했다.
+- ADR 0026의 "정답 사진은 기본 테마만"을 구현 때 놓쳐 공문 사진 4장을 만들었고 명세 축이 잡았다.
+- 도구 호출 사이의 문장을 영어로 쓴 것을 훅이 세 번 짚었다.
 
 ## 다음
 
-(다음을 채운다)
+- **PR #158의 병합.** 워크트리에서 열었으니 next-session의 "워크트리에서 병합할 때"를 따른다. 병합 직전에 fetch해 main의
+  헌법 버전을 본다. 나란히 도는 `chore/canary-procedure-and-runner`도 3.0.15에서 3.0.16으로 올렸으므로, 그쪽이 먼저 병합됐으면
+  이 브랜치를 3.0.17로 고친다. 그 브랜치의 대기열은 132~134를 써서 이 브랜치는 135·136을 썼다.
+- **design-system의 다음은 티켓 03과 04다.** 둘 다 01·02 뒤라 나란히 연다. 자기 컴포넌트의 정답 사진은 `pnpm -C web visual:update`로
+  만들고, 실제 입력과 움직임 줄이기의 자리와 공문에서 재는 스토리의 태그는 `.claude/rules/web-design.md`에 있다.
+- **첫 정리가 멈춘 자리.** 이 세션의 `tidy-checkouts`가 `mutate-any-runner`의 `git worktree remove` 실패("Invalid argument")에서
+  멈췄다. 그 폴더는 등록 없이 남았고, 판정을 지난 워크트리 아홉과 등록 없는 폴더 넷, `05-admin-hides-decision-for-end-user`의
+  반쯤 지워진 폴더가 남았다. 다음 정리가 다시 보고, 등록 없는 폴더는 사람에게 넘긴다.

@@ -10,7 +10,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 이미지와 도구
 
@@ -40,7 +40,7 @@
 - [x] **보호 설정(`tools/protection.json`)은 바뀌지 않는다.** 필수 검사는 `verify` 하나 그대로다
 - [x] **잔존 grep.** `게이트는 열하나`, `열하나(린트는`, `잡 셋`, `세 잡`, `CI만 돈다`, `CI에만 있다`, `남은 하나인 e2e`를 저장소 전체에서 찾는다. 기록(일지, ADR의 지난 이력, done인 기능의 `.scratch/`, 대기열의 닫힌 행)과 이 기능의 `.scratch/design-system/`, `.claude/worktrees/`는 제외한다. 글자 grep은 같은 뜻의 다른 말을 놓치므로 걸린 것 둘레도 읽는다
 - [x] **01이 정한 앱 스토리의 자리대로 둔다.** 앱의 Storybook이 따로 서는 결정이면 이 명령이 그 정적 빌드도 찍을 수 있는 모양인지 보고, 앱의 스토리가 아직 없으므로 지금 찍는다고 적지 않는다
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이고 사진 비교 명령도 로컬에서 초록이다. `ci.yml`만 바꾼 PR도 claude-review는 돈다(`operations.md` 리뷰 파이프라인). 판정은 코멘트가 실제로 있는가다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이고 사진 비교 명령도 로컬에서 초록이다. `ci.yml`만 바꾼 PR도 claude-review는 돈다(`operations.md` 리뷰 파이프라인). 판정은 코멘트가 실제로 있는가다
 
 ### 이 티켓이 정할 것
 
@@ -61,6 +61,8 @@ PR에서 사용자가 이름을 본다. 결정과 근거는 일지에 적고, �
 3. **판정 스토리를 빼는 방법.** 정적 빌드의 `index.json` 항목 가운데 `type`이 `story`이고 `tags`에 `judgment`가 없는 것을 찍는다. 스토리가 globals로 모드를 정했으면(`PrimaryDark` 등) URL의 globals보다 그 값이 이겨 그 모드로만 그려지므로, 다른 모드를 요청한 차례는 찍지 않는다. 사진은 기본 테마만이라(ADR 0026의 둘째 2026-10-06 이력) 공문에서 포커스 링의 값을 재는 01의 `Focus` 스토리 둘에 `judgment`를 달았고, 먹이 아닌 테마로 그려진 스토리가 사진 테스트에 오면 실패한다. 03·04가 공문에서 재는 스토리를 더하면 같은 태그를 단다(`.claude/rules/web-design.md`).
 4. **컨테이너에 Playwright를 넣는 방법.** 프로브와 같다. 패키지에 깔린 `@playwright/test`·`playwright`·`playwright-core`를 링크를 풀어 임시 폴더로 복사하고 컨테이너의 `<패키지>/node_modules`에 읽기 전용으로 bind한다. `web/`은 읽기 전용, `<패키지>/visual/`만 쓰기다. 그래서 `@playwright/test`를 `packages/ui`의 devDependency로 더했다(락은 이미 1.63.0이었다). CI는 잡의 컨테이너 안에서 pnpm으로 설치한다. 설정은 이미지의 표지 파일(`/ms-playwright/.docker-info`)이 없으면 던져, 호스트에서는 비교도 정답 쓰기도 돌지 않는다.
 5. **CI 잡과 실패 아티팩트.** 잡 이름은 `visual`이고 컨테이너 옵션은 정답을 만든 로컬 실행과 같은 `--ipc=host`다. 실패하면 `web/packages/ui/visual/test-results/`(실제·정답·차이 그림과 error-context)를 아티팩트 `visual-test-results`로 14일 남긴다.
+
+GitHub 러너에서의 일치: PR #158의 CI `visual` 잡이 고정한 digest로 이미지를 받아 그 안에서 설치하고 Linux로 정적 빌드를 지은 뒤 34개를 모두 지났다(`threshold: 0`, `maxDiffPixels: 0`). 러너의 사진이 이 기계의 컨테이너가 Windows 빌드로 만든 정답과 같았다.
 
 실제 입력의 목록(`INTERACTIONS`)은 항목마다 찍을 상태(올림, 누름, 키보드 포커스)를 든다. 04의 글 입력처럼 디자인 파일의 상태 표가 누름을 두지 않는 컴포넌트는 그 상태를 빼고 더한다.
 
