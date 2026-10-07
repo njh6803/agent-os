@@ -5,8 +5,8 @@
 `--basetemp` 없이 돌린 세션은 같은 사용자의 다른 세션과 나눠 쓰는 `pytest-current` 에서 섞인 실행을
 모델 이름으로 걸러 셌다(일지 2026-10-06-11). 그래서 `tests/conftest.py` 가 llm 마커 테스트마다 그
 `tmp_path` 를 이것으로 세어, 실행 끝의 결과 요약(`short test summary info` 와 통과 수 줄) 바로 위에
-찍는다. `tmp_path` 는 그 실행만의
-basetemp(`pytest-N`) 아래에 테스트마다 따로 생겨 다른 세션의 실행이 섞이지 않는다.
+찍는다. `tmp_path` 는 그 실행만의 basetemp(`pytest-N`) 아래에 테스트마다 따로 생겨 다른 세션의
+실행이 섞이지 않는다.
 
 토큰 이벤트는 종류 이름이 아니라 모양으로 고른다. 최상위에 정수 `input_tokens` 와 `output_tokens`
 를 든 줄이면 모델 호출 하나다. 지금은 `llm_called` 와 `conversation_summarized` 이고, sdk 에 토큰을
@@ -37,8 +37,6 @@ class Tokens:
     calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
-    # 세지 못한 LLM 테스트의 수. 센 쪽(count)이 아니라 테스트마다 부르는 쪽(conftest)이 채운다.
-    untraced_tests: int = 0
 
     def __add__(self, other: Tokens) -> Tokens:
         return Tokens(
@@ -46,7 +44,6 @@ class Tokens:
             calls=self.calls + other.calls,
             input_tokens=self.input_tokens + other.input_tokens,
             output_tokens=self.output_tokens + other.output_tokens,
-            untraced_tests=self.untraced_tests + other.untraced_tests,
         )
 
 
@@ -66,17 +63,19 @@ def count(root: Path) -> Tokens:
     return total
 
 
-def summary(tokens: Tokens) -> str:
+def summary(tokens: Tokens, untraced_tests: int) -> str:
+    """`untraced_tests` 는 트레이스를 남기지 않은 LLM 테스트의 수다. `count` 는 테스트를 모르므로
+    테스트마다 그것을 부르는 쪽(`tests/conftest.py`)이 센다."""
     total = tokens.input_tokens + tokens.output_tokens
     untraced = (
-        f" 트레이스를 남기지 않은 LLM 테스트 {tokens.untraced_tests}개는 세지 못했다."
-        if tokens.untraced_tests
+        f" 트레이스를 남기지 않은 LLM 테스트 {untraced_tests}개는 세지 못했다."
+        if untraced_tests
         else ""
     )
     return (
         f"LLM 토큰 합계 {total:,}(입력 {tokens.input_tokens:,}, 출력 {tokens.output_tokens:,})."
         f" 트레이스 {tokens.traces}개, 모델 호출 {tokens.calls}건.{untraced}"
-        " 일지 검사 절에 옮긴다(operations.md LLM 테스트)"
+        " 일지 검사 절에 옮긴다(operations.md LLM 테스트)."
     )
 
 

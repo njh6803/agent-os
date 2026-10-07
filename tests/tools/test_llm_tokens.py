@@ -122,16 +122,17 @@ def test_없는_디렉터리는_0이다(tmp_path: Path) -> None:
 
 
 def test_합계_줄은_천_단위로_끊고_입력과_출력과_범위를_적는다() -> None:
-    line = summary(Tokens(traces=9, calls=20, input_tokens=40190, output_tokens=1153))
+    line = summary(Tokens(traces=9, calls=20, input_tokens=40190, output_tokens=1153), 0)
 
     assert "LLM 토큰 합계 41,343(입력 40,190, 출력 1,153)" in line
     assert "트레이스 9개" in line
     assert "모델 호출 20건" in line
     assert "세지 못했다" not in line
+    assert line.endswith("(operations.md LLM 테스트).")
 
 
 def test_트레이스를_남기지_않은_LLM_테스트가_있으면_합계_줄이_그_수를_적는다() -> None:
     """모델을 바로 부르는 테스트만 돌면 0 만 찍혀 호출이 없었다고 읽힌다."""
-    line = summary(Tokens(untraced_tests=1))
+    line = summary(Tokens(), untraced_tests=1)
 
     assert "트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다" in line

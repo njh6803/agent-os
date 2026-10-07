@@ -37,8 +37,9 @@ from tools import llm_tokens, run_hooks
 
 CHECKOUT = Path(run_hooks.__file__).resolve().parents[1]
 
-# llm 마커 테스트가 하나라도 돌았을 때만 값이 있다.
-_LLM_TOKENS = pytest.StashKey[llm_tokens.Tokens]()
+# llm 마커 테스트가 하나라도 돌았을 때만 값이 있다. 둘째 값은 트레이스를 남기지 않은 그 테스트의
+# 수다.
+_LLM_TOKENS = pytest.StashKey[tuple[llm_tokens.Tokens, int]]()
 
 for stream in (sys.stdout, sys.stderr):
     if isinstance(stream, io.TextIOWrapper):
@@ -67,18 +68,17 @@ def pytest_runtest_teardown(item: pytest.Item) -> None:
         return
     root = item.funcargs.get("tmp_path") if isinstance(item, pytest.Function) else None
     found = llm_tokens.count(root) if isinstance(root, Path) else llm_tokens.Tokens()
-    if found.traces == 0:
-        found += llm_tokens.Tokens(untraced_tests=1)
-    stash = item.config.stash
-    stash[_LLM_TOKENS] = stash.get(_LLM_TOKENS, llm_tokens.Tokens()) + found
+    tokens, untraced = item.config.stash.get(_LLM_TOKENS, (llm_tokens.Tokens(), 0))
+    untraced += 1 if found.traces == 0 else 0
+    item.config.stash[_LLM_TOKENS] = (tokens + found, untraced)
 
 
 def pytest_terminal_summary(
     terminalreporter: pytest.TerminalReporter, config: pytest.Config
 ) -> None:
-    tokens = config.stash.get(_LLM_TOKENS, None)
-    if tokens is not None:
-        terminalreporter.write_line(llm_tokens.summary(tokens))
+    counted = config.stash.get(_LLM_TOKENS, None)
+    if counted is not None:
+        terminalreporter.write_line(llm_tokens.summary(*counted))
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int | pytest.ExitCode) -> None:

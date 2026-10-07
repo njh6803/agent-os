@@ -114,3 +114,18 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 113
 - **보안(`/security-review`).** 커밋한 뒤에 불렀고 그 명령이 이 브랜치의 파일 15개와 diff를 모았다. 발견이 없었다. 새 코드는
   표준 `json.loads`만 쓰고, 합계 줄에는 정수 집계만 실려 트레이스 내용(프롬프트, 응답, 키)이 나가지 않는다(원칙 V). 프로브
   TOML의 값이 셸 명령으로 조립되는 길도 없다.
+
+## PR 리뷰 반영
+
+PR [njh6803/agent-os#170](https://github.com/njh6803/agent-os/pull/170). CI 여섯이 `5d4e7be`에서 초록이었다. CodeRabbit은 요청
+뒤 OSS 한도에 걸렸다("Review rate limited"). 그래서 이 PR의 보안·버그 축은 PR 본문 체크리스트에 적은 대체 둘의 결과가 맡는다.
+
+claude-review 1회차는 Critical·Major 없이 Minor 둘·Nit 셋이었다. 이 PR이 세운 기준(대기열 137)을 처음으로 적용했다. 이 봇의
+첫 리뷰라 첫 회차이고, 지적마다 판단했다.
+
+- 고친 것: `Tokens`가 `count()`가 채우지 않는 `untraced_tests`를 들어 두 이유로 바뀌었다(Minor, 리뷰 관점 3). conftest가 따로
+  세어 `summary()`의 인자로 넘긴다. `operations.md` LLM 테스트 절이 세지 못한 수까지 되풀이했다(Minor, 같은 사실은 한 곳에만).
+  "그 줄을 옮긴다"와 원천 포인터만 남겼다. 독스트링의 어색한 줄바꿈과 합계 줄 끝 문장의 마침표(Nit 둘).
+- 보류한 것: `next-session` 1단계가 길어 기준을 `operations.md`로 옮기고 스킬은 가리키기만 하자는 Nit. 대기열 137이 승인한
+  자리가 행동이 일어나는 1단계이고, `operations.md` 리뷰 파이프라인 4가 그 자리를 가리킨다. 이유는 PR 코멘트에 남겼다.
+- 변이 열둘이 다시 모두 기대대로였다(원문이 바뀐 셋을 고쳤다).

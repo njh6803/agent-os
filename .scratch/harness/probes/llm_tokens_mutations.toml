@@ -39,10 +39,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tests/conftest.py"
 old = '''
-        terminalreporter.write_line(llm_tokens.summary(tokens))
+        terminalreporter.write_line(llm_tokens.summary(*counted))
 '''
 new = '''
-        terminalreporter.write_line(llm_tokens.summary(tokens))
+        terminalreporter.write_line(llm_tokens.summary(*counted))
         terminalreporter.write_line("")
 '''
 
@@ -140,10 +140,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tests/conftest.py"
 old = '''
-    if found.traces == 0:
-        found += llm_tokens.Tokens(untraced_tests=1)
+    untraced += 1 if found.traces == 0 else 0
 '''
 new = '''
+    untraced += 0
 '''
 
 [[mutation]]
@@ -154,7 +154,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/llm_tokens.py"
 old = '''
-        if tokens.untraced_tests
+        if untraced_tests
 '''
 new = '''
         if False
