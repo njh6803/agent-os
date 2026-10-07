@@ -10,8 +10,10 @@
     "verify": "pnpm run check:api-client && pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
     "lint": "eslint --max-warnings 0",
     "format": "prettier --check . --ignore-path ../.gitignore --ignore-path .prettierignore",
-    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual",
     "test": "vitest run",
+    "visual": "node tools/visual.ts packages/ui",
+    "visual:update": "node tools/visual.ts packages/ui --update",
     "check:tsconfig": "node tools/check-tsconfig.ts",
     "generate:api-client": "node tools/generate-api-client.ts",
     "check:api-client": "node tools/generate-api-client.ts --check"

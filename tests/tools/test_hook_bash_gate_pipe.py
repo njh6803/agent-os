@@ -66,6 +66,19 @@ def test_web_검증_명령과_Playwright_실행도_게이트다() -> None:
     assert not is_gate("echo pnpm -C web verify")
 
 
+def test_사진_비교_명령도_게이트다() -> None:
+    """사진 비교(design-system 티켓 02)는 web 의 스크립트로 친다.
+
+    정답을 다시 쓰는 명령도 비교의 종료 코드를 낸다.
+    """
+    assert is_gate("pnpm -C web visual")
+    assert is_gate("pnpm -C web run visual")
+    assert is_gate("pnpm -C web visual:update")
+    assert not is_gate("pnpm -C web visualize")
+    assert len(warnings_for("pnpm -C web visual 2>&1 | tail -30")) == 1
+    assert warnings_for('pnpm -C web visual > S/visual3.log 2>&1; echo "exit3=$?"') == []
+
+
 def test_파이프에_묻힌_web_검증_명령과_e2e_를_경고한다() -> None:
     assert len(warnings_for("pnpm -C web verify 2>&1 | tail -5")) == 1
     assert len(warnings_for("pnpm -C web exec playwright test | tail -20")) == 1

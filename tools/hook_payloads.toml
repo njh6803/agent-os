@@ -132,6 +132,18 @@ payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web/apps/admin
 
 [[case]]
 hook = "hook_bash_gate_pipe.py"
+expect = "context"
+note = "사진 비교 명령(design-system 티켓 02)이 파이프에 묻힘"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web visual 2>&1 | tail -30" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
+expect = "silent"
+note = "사진 비교 바로 뒤의 $? — 티켓 02 세션이 실제로 친 명령"
+payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web visual > S/visual3.log 2>&1; echo \"exit3=$?\"; grep -E \" passed| failed|flaky\" S/visual3.log" } }
+
+[[case]]
+hook = "hook_bash_gate_pipe.py"
 expect = "silent"
 note = "브라우저 설치는 게이트가 아니다"
 payload = { tool_name = "Bash", tool_input = { command = "pnpm -C web/apps/admin exec playwright install --with-deps --only-shell chromium 2>&1 | tail -3" } }
