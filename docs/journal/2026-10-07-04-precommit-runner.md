@@ -42,7 +42,7 @@
   구성을 말하지 않는다). ADR 0021·0026의 pre-commit 문장은 web verify가 러너 안에서 여전히 pre-commit으로 돌아 참이다.
   ADR 0004의 "검사 넷"과 0013의 "pre-commit 훅과 CI 스텝이 하나씩 는다"는 결정 때의 셈이라 포인터를 달지 않는다
   (`.claude/rules/adr.md`의 "달지 않는 것").
-- `docs/constitution/operations.md` 가드레일과 `docs/constitution/README.md`(3.0.16).
+- `docs/constitution/operations.md` 가드레일과 `docs/constitution/README.md`(3.0.17, 처음에는 3.0.16으로 올렸고 일지 06에서 옮겼다).
 - `KICKOFF.md`: 커밋 메시지 훅 줄에 `default_stages`, 지침 검사는 러너의 `CHECKS`로, 파일 검사 둘의 `stages`를 걷고
   러너 항목을 더했다. `README.md`: 원천 표의 실행 자리와 `tools/` 줄. `.claude/rules/tools.md`: GIT 환경을 벗기는 쪽의
   "러너"를 "훅 러너"로(러너가 둘이 됐다).
@@ -80,7 +80,7 @@
 
 - **고쳤다, 표준 하드.** CLI 테스트가 종료 코드 0만 봐 `sys.exit(main())`을 `main()`으로 바꾸는 변이가 살았다. 검사 하나만
   남기고 `PATH`를 비워 알려진 빨강(1과 Failed 줄)을 내는 CLI 테스트를 더하고 그 변이를 표에 넣었다. 측정 수(145.5초,
-  73.7초)를 적은 ADR, 러너 독스트링, `KICKOFF.md`에 잰 트리(`cbb6a6c`, 스토리 테스트 전)를 밝혔다. 일지 03가 미래형으로
+  73.7초)를 적은 ADR, 러너 독스트링, `KICKOFF.md`에 잰 트리(`cbb6a6c`, 스토리 테스트 전)를 밝혔다. 일지 03이 미래형으로
   남긴 "프로브를 다시 돌린다"는 아래 "다음"으로 넘겼다.
 - **고쳤다, 두 축의 Minor.** 찾은 뒤 띄우지 못한 명령(실행 형식 오류 등)이 traceback으로 터지던 것을 실패 한 줄로 바꾸고
   테스트와 변이를 더했다. 겹침 테스트가 같은 id로 다시 등록한 훅도 보게 하고 그 변이를 더했으며, ADR 문장은 테스트가
