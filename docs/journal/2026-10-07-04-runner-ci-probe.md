@@ -19,7 +19,8 @@
 되돌렸다(`ab7c50e`를 `006e807`이 되돌렸다). PR #117이 실험 커밋을 올렸다 되돌린 것(ADR 0021 이력)과 같은 모양이다.
 워크플로의 사본은 `.scratch/harness/probes/run_checks_ci_probe.yml`이다.
 
-- 사람의 Windows처럼 `npm install -g pnpm@11.24.0`으로 `pnpm.cmd`를 두었다.
+- `npm install -g pnpm@11.24.0`으로 `pnpm.cmd`를 두었다. 사용자 PC의 설치 방식은 확인하지 않았다. 저장소의
+  기록은 Windows에 `pnpm.CMD`가 있다는 것뿐이다(일지 2026-10-01-01).
 - `PYTHONUTF8`을 두지 않았다. 사람의 터미널에서 도는 pre-commit은 그것 없이 돈다.
 - 먼저 측정 프로브 `precommit_parallel.py`를 고쳤다. 명령을 경로 없이 띄우고 있어서 Windows에서는 web verify를 띄우지
   못했을 것이다. 러너처럼 `shutil.which`로 찾게 하고, 실패한 명령은 출력의 끝을 찍게 했다(`dc9079b`).

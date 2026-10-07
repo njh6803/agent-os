@@ -21,8 +21,8 @@ Actions 러너(CPU 4)에서는 Linux 가 115.0초에서 66.5초, Windows 가 240
 
 못 보는 것: 검사 하나가 멈추면 러너도 멈춘다(시간 제한이 없다. pre-commit 도 두지 않는다). CPU 가
 넷보다 적은 기계에서 함께 띄운 것이 차례로 돈 것보다 느린지는 재지 않았다. Windows 에서 npm 전역
-설치의 `pnpm.CMD` 를 찾아 띄우는 것은 위 실행의 windows-latest 에서 봤고(경로 없는 `subprocess` 는
-WinError 2 였다), 테스트는 Linux 에서만 돈다.
+설치의 `pnpm.CMD` 를 찾아 띄우는 것은 위 실행의 windows-latest 에서 한 번 봤다(경로 없는
+`subprocess` 는 WinError 2 였다). 그 길을 거는 상설 테스트는 없다. CI 는 Linux 에서만 돈다.
 """
 
 from __future__ import annotations

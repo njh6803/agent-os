@@ -30,7 +30,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      # 사람의 Windows 처럼 npm 전역 설치로 pnpm.cmd 를 둔다
+      # npm 전역 설치로 pnpm.cmd 를 둔다. 사용자 PC 의 설치 방식은 확인하지 않았다(저장소의 기록은
+      # Windows 에 pnpm.CMD 가 있다는 것뿐이다, 일지 2026-10-01-01)
       - run: npm install -g pnpm@11.24.0
       - run: pnpm --version
       - run: pnpm -C web install --frozen-lockfile
