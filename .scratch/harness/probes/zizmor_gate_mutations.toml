@@ -1,0 +1,56 @@
+# zizmor 게이트(ADR 0027)의 테스트가 무엇을 재는지 변이로 본다.
+# PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/zizmor_gate_mutations.toml
+# 설정이나 게이트 명령에서 판정 하나를 끄면 tests/tools/test_zizmor_gate.py 가 빨강이어야 한다.
+
+[[mutation]]
+name = "설정: 서드파티도 태그 고정을 허용한다"
+tests = ["tests/tools/test_zizmor_gate.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".github/zizmor.yml"
+old = '        "*": hash-pin'
+new = '        "*": ref-pin'
+
+[[mutation]]
+name = "설정: artipacked 를 끈다"
+tests = ["tests/tools/test_zizmor_gate.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".github/zizmor.yml"
+old = '''
+rules:
+  unpinned-uses:
+'''
+new = '''
+rules:
+  artipacked:
+    disable: true
+  unpinned-uses:
+'''
+
+[[mutation]]
+name = "명령: 깨진 입력을 건너뛴다"
+tests = ["tests/tools/test_zizmor_gate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '("uv", "run", "zizmor", "--offline", "--strict-collection")'
+new = '("uv", "run", "zizmor", "--offline")'
+
+[[mutation]]
+name = "명령: 설정을 명시하지 않는다"
+tests = ["tests/tools/test_zizmor_gate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '        + ("--config", ".github/zizmor.yml", "."),'
+new = '        + (".",),'
+
+[[mutation]]
+name = "CI: python 잡이 다른 명령을 돈다"
+tests = ["tests/tools/test_zizmor_gate.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = "      - run: uv run zizmor --offline --strict-collection --config .github/zizmor.yml ."
+new = "      - run: uv run zizmor --offline ."

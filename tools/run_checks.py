@@ -3,9 +3,11 @@
 pre-commit 은 훅을 하나씩 돈다(4.6.2 `commands/run.py` 의 `_run_hooks`). 커밋마다 도는 검사 일곱을
 한꺼번에 띄우면 차례로 돌 때보다 Linux 와 Windows 모두 4할 남짓 줄었다(잰 시간과 프로브는
 ADR 0005 의 2026-10-07 이력). 그래서
-`.pre-commit-config.yaml` 은 이 일곱을 훅 하나로 두고 이 러너가 함께 띄운다. 파일을 고치는 ruff 둘은
-이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기 하나다. CI 는 잡마다
-명령을 직접 돈다(`.github/workflows/ci.yml`).
+`.pre-commit-config.yaml` 은 이 검사들을 훅 하나로 두고 이 러너가 함께 띄운다. 잰 뒤에 워크플로
+감사(zizmor, ADR 0027)가 더해져 여덟이다. 그 검사는 한 번에 0.3초 남짓이지만, 그 회귀 테스트가
+병목인 pytest 에 1.5~6.7초를 더한다(손으로 봤다). 함께 띄운 벽시계 시간은 다시 재지 않았다. 파일을
+고치는 ruff 둘은 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기
+하나다. CI 는 잡마다 명령을 직접 돈다(`.github/workflows/ci.yml`).
 
 통과한 검사는 한 줄을, 실패한 검사는 그 줄 뒤에 모은 출력(stdout 과 stderr)을 끝난 차례로 찍는다.
 하나라도 실패하면 1로 끝난다. pre-commit 의 `SKIP` 을 같은 id 로 읽어, `SKIP=pytest git commit` 이
@@ -43,7 +45,7 @@ _NAME_WIDTH = 40
 
 @dataclass(frozen=True)
 class Check:
-    """검사 하나. id 는 예전 훅 id 와 같아 `SKIP` 이 그대로 통한다."""
+    """검사 하나. id 는 `SKIP` 이 읽는 이름이고, 러너 전부터 있던 검사는 예전 훅 id 와 같다."""
 
     id: str
     command: tuple[str, ...]
@@ -64,6 +66,11 @@ CHECKS: tuple[Check, ...] = (
     Check("check-instructions", ("uv", "run", "python", "tools/check_instructions.py")),
     Check("check-type-escapes", ("uv", "run", "python", "tools/check_type_escapes.py")),
     Check("run-hooks", ("uv", "run", "python", "tools/run_hooks.py")),
+    Check(
+        "zizmor",
+        ("uv", "run", "zizmor", "--offline", "--strict-collection")
+        + ("--config", ".github/zizmor.yml", "."),
+    ),
     Check("web-verify", ("pnpm", "-C", "web", "verify")),
 )
 
