@@ -479,17 +479,22 @@ def _place(cwd: Path, git: GitRunner) -> tuple[Path, list[Worktree]]:
     return Path(listing[0].path), listing
 
 
-def _render(verdict: Verdict, kind: Literal["worktree", "branch"]) -> str:
-    label = (
-        _ACTIONS[verdict.action] if kind == "worktree" else "브랜치를 " + _ACTIONS[verdict.action]
-    )
-    if kind == "worktree":
-        command = f'{COMMAND} remove "{verdict.path}" {verdict.branch} {verdict.head}'
-    else:
-        command = f"{COMMAND} remove-branch {verdict.branch} {verdict.head}"
+def _render_worktree(verdict: Verdict) -> str:
+    command = f'{COMMAND} remove "{verdict.path}" {verdict.branch} {verdict.head}'
+    return _render(verdict, "", command)
+
+
+def _render_branch(verdict: Verdict) -> str:
+    command = f"{COMMAND} remove-branch {verdict.branch} {verdict.head}"
+    return _render(verdict, "브랜치를 ", command)
+
+
+def _render(verdict: Verdict, prefix: str, command: str) -> str:
+    """판정 한 줄. `prefix` 는 라벨 앞에 붙는 말이다(브랜치 줄은 `브랜치를 `)."""
+    label = prefix + _ACTIONS[verdict.action]
     names = (verdict.path, verdict.branch or "", verdict.head or "")
     if verdict.action in ("delete", "hold") and any(map(_SHELL_UNSAFE.search, names)):
-        hand_off = "넘긴다" if kind == "worktree" else "브랜치를 넘긴다"
+        hand_off = prefix + "넘긴다"
         return f"{hand_off} {verdict.path} — 셸이 풀 수 있는 글자가 든 이름이라 명령을 찍지 않는다"
     if verdict.action == "hold":
         return f"{label} {verdict.path} — {verdict.reason}. 승인하면 → {command}"
@@ -507,7 +512,7 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     ]
     checked_out = {wt.branch for wt in listing if wt.branch is not None}
     for verdict in hold_for_strangers(verdicts, running, checked_out):
-        print(_render(verdict, "worktree"))
+        print(_render_worktree(verdict))
     registered = [wt.path for wt in listing]
     holder = root / WORKTREES_DIR
     strays = sorted(p for p in holder.iterdir() if p.is_dir()) if holder.is_dir() else []
@@ -522,7 +527,7 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
         if branch and branch not in checked_out:
-            print(_render(judge_branch(branch, tip, merged), "branch"))
+            print(_render_branch(judge_branch(branch, tip, merged)))
     return 0
 
 
