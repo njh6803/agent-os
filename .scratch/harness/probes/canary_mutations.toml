@@ -1,0 +1,332 @@
+# tools/canary.py 의 명세 검사와 판정 규칙을 하나씩 끈 변이. 모두 빨강이 기대다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/canary_mutations.toml
+
+[[mutation]]
+name = "실험군의 없음을 따로 알리지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if _says_none(facts.answer):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "카나리아가 없는 실험군을 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            missing = [canary for canary in canaries if canary not in answer]
+            if missing:
+'''
+new = '''
+            missing = [canary for canary in canaries if canary not in answer]
+            if False:
+'''
+
+[[mutation]]
+name = "카나리아가 있는 대조군을 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if present:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "대상 밖 Read 를 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if outside:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "Read 없는 규칙 회차를 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if not facts.reads:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "상대 Read 경로를 체크아웃에 잇지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    seen = Path(path) if Path(path).is_absolute() else checkout / path
+'''
+new = '''
+    seen = Path(path)
+'''
+
+[[mutation]]
+name = "스킬 자리를 접두사로 견준다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if not _same_place(str(Path(folder).parent), home, checkout)
+'''
+new = '''
+            if not os.path.normcase(folder).startswith(os.path.normcase(str(checkout)))
+'''
+
+[[mutation]]
+name = "스킬 호출을 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if spec.skill not in facts.skills:
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "실험군의 스킬 자리 줄을 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if not any(Path(folder).name == spec.skill for folder in facts.skill_dirs):
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "스킬 호출을 대조군에도 요구한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if spec.skill is not None and arm.role == "experiment":
+'''
+new = '''
+        if spec.skill is not None:
+'''
+
+[[mutation]]
+name = "skill 을 주지 않은 명세에도 스킬 호출을 요구한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if spec.skill is not None and arm.role == "experiment":
+'''
+new = '''
+        if arm.role == "experiment":
+'''
+
+[[mutation]]
+name = "질문에 든 카나리아를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if shown:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "갈래의 체크아웃이 없어도 돌린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if not places[arm.name].is_dir()
+'''
+new = '''
+        if False
+'''
+
+[[mutation]]
+name = "claude 를 띄우지 못한 예외를 그대로 올린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except OSError as error:
+        out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
+'''
+new = '''
+    except KeyError as error:
+        out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
+'''
+
+[[mutation]]
+name = "MCP 서버를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if facts.servers:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "도구가 그 하나인지 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    elif facts.tools != (tool,):
+'''
+new = '''
+    elif False:
+'''
+
+[[mutation]]
+name = "카나리아 대조에서 백틱과 강조를 걷지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return " ".join(text.replace("`", "").replace("*", "").split())
+'''
+new = '''
+    return " ".join(text.split())
+'''
+
+[[mutation]]
+name = "대상 파일의 카나리아를 보고도 돌린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if problems:
+        out("명세 오류(아무것도 돌리지 않았다):")
+'''
+new = '''
+    if False:
+        out("명세 오류(아무것도 돌리지 않았다):")
+'''
+
+[[mutation]]
+name = "claude 의 종료 코드를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if result.exit_code != 0:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "규칙 명령에 읽기 거부를 다시 넣는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        _TOOLS[spec.kind],
+'''
+new = '''
+        _TOOLS[spec.kind],
+        "--disallowed-tools",
+        "Read(./.claude/**)",
+'''
+
+[[mutation]]
+name = "실험군의 기본 회차를 하나로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+_DEFAULT_RUNS: dict[Role, int] = {"experiment": 3, "control": 1}
+'''
+new = '''
+_DEFAULT_RUNS: dict[Role, int] = {"experiment": 1, "control": 1}
+'''
+
+[[mutation]]
+name = "규칙 질문의 대상 자리를 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if "{target}" not in self.question:
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "대조군 없는 명세를 받는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if roles != {"experiment", "control"}:
+'''
+new = '''
+        if False:
+'''
