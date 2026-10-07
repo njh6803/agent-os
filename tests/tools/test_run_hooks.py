@@ -244,6 +244,17 @@ def test_자식_환경은_러너를_띄운_세션의_entrypoint_를_물려주지
     assert "CLAUDE_CODE_ENTRYPOINT" not in hook_environment().keys()
 
 
+def test_자식_환경은_러너를_띄운_세션이_클라우드인지_물려주지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`hook_session_web_deps` 는 클라우드 세션에서만 깐다. 러너가 클라우드 세션 안에서 돌면 그
+    값을 물려받아 로컬 사례가 설치를 띄운다. 클라우드 사례는 표의 `env` 가 값을 준다.
+    """
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
+
+    assert "CLAUDE_CODE_REMOTE" not in hook_environment().keys()
+
+
 def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path) -> None:
     """배관(uv run 자식, 바이트 stdin, PYTHONUTF8 없는 환경)을 한 번은 실제로 본다."""
     replacements = create_fixtures(tmp_path)
@@ -263,6 +274,39 @@ def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path
     assert run_case(silent, replacements, registration).ok
     assert (tmp_path / "on-main" / ".git").is_dir()
     assert (tmp_path / "transcript-used.jsonl").is_file()
+
+
+def test_사례의_env_는_자리표시자를_바꿔_자식_환경을_덧씌운다(tmp_path: Path) -> None:
+    """`CLAUDE_CODE_REMOTE` 와 `CLAUDE_PROJECT_DIR` 을 보는 SessionStart 훅의 판정을 사례가
+    정한다. `cwd` 는 루트 아래라, 훅이 `${BROKEN_WEB}` 으로 바뀐 `CLAUDE_PROJECT_DIR` 을 읽어야
+    web/ 을 본다. 어긋난 잠금 파일이라 pnpm 이 있어도 네트워크 없이 곧 실패한다. env 가 없는
+    사례는 로컬 세션이다.
+    """
+    replacements = create_fixtures(tmp_path)
+    registration = Registration("SessionStart", 300)
+    payload: dict[str, JsonValue] = {
+        "hook_event_name": "SessionStart",
+        "source": "startup",
+        "cwd": "${BROKEN_WEB}/web",
+    }
+    cloud = Case(
+        hook="hook_session_web_deps.py",
+        expect="context",
+        payload=payload,
+        env={"CLAUDE_CODE_REMOTE": "true", "CLAUDE_PROJECT_DIR": "${BROKEN_WEB}"},
+    )
+    local = Case(hook="hook_session_web_deps.py", expect="silent", payload=payload)
+
+    assert run_case(cloud, replacements, registration).ok
+    assert run_case(local, replacements, registration).ok
+
+
+def test_어긋난_잠금_파일의_web_을_만든다(tmp_path: Path) -> None:
+    web = Path(create_fixtures(tmp_path)["BROKEN_WEB"]) / "web"
+
+    assert (web / "pnpm-lock.yaml").is_file()
+    assert "left-pad" in (web / "package.json").read_text(encoding="utf-8")
+    assert "left-pad" not in (web / "pnpm-lock.yaml").read_text(encoding="utf-8")
 
 
 def test_중간_문장_트랜스크립트는_영어_뒤의_첫_호출에서만_알림을_낸다(tmp_path: Path) -> None:

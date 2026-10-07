@@ -11,7 +11,9 @@ tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 �
 `pnpm -C web visual`(정답을 다시 쓰는 `visual:update` 도 비교의 종료 코드를 낸다. design-system
 티켓 02)과 Playwright 실행(`playwright test`, e2e)이다. 훅 러너는 CLAUDE.md 가 게이트로 센다.
 목록에 없던 때 판정마다 `echo "… $?"` 를 붙인 명령에서 러너 뒤의 `$?` 를 앞선 게이트의 것으로 보고
-두 번 거짓 경고했다(일지 2026-10-02-03, 대기열 95).
+두 번 거짓 경고했다(일지 2026-10-02-03, 대기열 95). 검사 러너 `tools/run_checks.py` 도 같은 까닭으로
+본다. 게이트 여럿을 함께 띄우고 그 결과로 끝나는 명령이라 게이트 수는 늘지 않는다(ADR 0005 이력
+2026-10-07).
 파이프가 판정을 가리는 것은 명령의 언어와 무관하다(web-admin 티켓 01). e2e 는 스크립트 이름 없이
 `pnpm -C web/apps/admin exec playwright test` 로 치므로(티켓 05) Playwright 실행 자체를 본다.
 명령 위치에 선 것만 센다 — `uv run …`, `python`·`py` 와 `-m` 뒤, `pnpm -C <디렉터리>`·`pnpm exec`·
@@ -40,7 +42,7 @@ from typing import TypedDict
 _GATE = re.compile(
     r"^(?:"
     r"(?:uv\s+run\s+(?:\S+\s+)*?)?(?:(?:python3?|py)\s+(?:-\S+\s+)*?(?:-m\s+)?)?"
-    r"(?:pytest|pyright|ruff|lint-imports|tools/(?:check_\w+|mutate|run_hooks)\.py)\b"
+    r"(?:pytest|pyright|ruff|lint-imports|tools/(?:check_\w+|mutate|run_hooks|run_checks)\.py)\b"
     r"|pnpm\s+(?:(?:-C|--dir)\s+\S+\s+)?(?:run\s+)?(?:verify|visual)\b"
     r"|(?:(?:pnpm|npx)\s+(?:(?:-C|--dir)\s+\S+\s+)?(?:exec\s+)?)?playwright\s+test\b"
     r")"

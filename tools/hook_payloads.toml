@@ -395,3 +395,18 @@ hook = "hook_pr_next_session.py"
 expect = "silent"
 note = "문자열 안의 gh pr merge"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }
+
+# --- hook_session_web_deps (SessionStart startup|resume) ---
+# 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.
+[[case]]
+hook = "hook_session_web_deps.py"
+expect = "context"
+note = "클라우드 세션의 이어짐, cwd 가 루트 아래 — 루트를 CLAUDE_PROJECT_DIR 로 찾고, 잠금 파일이 어긋나 설치가 실패해 알린다"
+env = { CLAUDE_CODE_REMOTE = "true", CLAUDE_PROJECT_DIR = "${BROKEN_WEB}" }
+payload = { hook_event_name = "SessionStart", source = "resume", cwd = "${BROKEN_WEB}/web" }
+
+[[case]]
+hook = "hook_session_web_deps.py"
+expect = "silent"
+note = "로컬 세션의 시작(CLAUDE_CODE_REMOTE 없음) — 아무것도 하지 않는다"
+payload = { hook_event_name = "SessionStart", source = "startup", cwd = "${BROKEN_WEB}" }

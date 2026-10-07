@@ -151,5 +151,5 @@ tests = ["tests/tools/test_hook_bash_gate_pipe.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_gate_pipe.py"
-old = '''tools/(?:check_\w+|mutate|run_hooks)\.py'''
-new = '''tools/(?:check_\w+|mutate)\.py'''
+old = '''tools/(?:check_\w+|mutate|run_hooks|run_checks)\.py'''
+new = '''tools/(?:check_\w+|mutate|run_checks)\.py'''
