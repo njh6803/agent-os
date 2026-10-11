@@ -62,6 +62,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -470,49 +471,67 @@ def run_case(claude: str, rules: Rules, case: Case) -> Outcome:
     return outcome
 
 
+def _forget_project(repo: Path) -> None:
+    """`claude -p` 가 임시 저장소 이름으로 만든 ~/.claude/projects 폴더를 지운다.
+
+    `--no-session-persistence` 로도 빈 `memory` 폴더를 든 프로젝트 폴더는 생겼다. 파일이 하나도
+    없을 때만 지우므로 대화 기록이 든 폴더는 건드리지 않는다.
+    """
+    folder = Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(repo))
+    if folder.is_dir() and not any(path.is_file() for path in folder.rglob("*")):
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def _run_once(claude: str, rules: Rules, case: Case) -> Outcome:
     with tempfile.TemporaryDirectory(prefix="review-git-read-") as tmp:
         repo, env = make_repo(Path(tmp))
-        command = [
-            claude,
-            "-p",
-            "--setting-sources",
-            "project,local",
-            "--strict-mcp-config",
-            # 사례마다 임시 경로 이름의 대화 기록이 ~/.claude/projects 에 쌓였다(PR 직전 리뷰)
-            "--no-session-persistence",
-            "--model",
-            "haiku",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-            "--max-turns",
-            "3",
-            "--allowedTools",
-            ",".join(rules.allowed),
-        ]
-        if rules.disallowed:
-            command += ["--disallowedTools", ",".join(rules.disallowed)]
         try:
-            done = subprocess.run(
-                command,
-                input=instruction(case, repo),
-                cwd=repo,
-                env=env,
-                capture_output=True,
-                encoding="utf-8",
-                timeout=TIMEOUT,
-            )
-        except subprocess.TimeoutExpired:
-            return Outcome(f"시간 초과({TIMEOUT}초)", "")
-        outcome = judge(case, repo, done.stdout)
-        # 호출이 하나도 없을 때 `claude` 가 실패로 끝났으면 모델이 시도하지 않은 것과 가른다.
-        # 세션이 끊기던 중의 실행이 대조군까지 모두 "시도 안 함"으로 나온 적이 있다
-        failed = done.returncode != 0 or '"is_error":true' in done.stdout.replace(" ", "")
-        if outcome.result == NOT_TRIED and failed:
-            tail = (done.stderr.strip() or done.stdout.strip()).splitlines()[-1:] or [""]
-            return Outcome(RUN_FAILED, f"종료 {done.returncode}: {tail[0][:100]}")
-        return outcome
+            return _run_in(claude, rules, case, repo, env)
+        finally:
+            _forget_project(repo)
+
+
+def _run_in(claude: str, rules: Rules, case: Case, repo: Path, env: dict[str, str]) -> Outcome:
+    command = [
+        claude,
+        "-p",
+        "--setting-sources",
+        "project,local",
+        "--strict-mcp-config",
+        # 사례마다 임시 경로 이름의 대화 기록이 ~/.claude/projects 에 쌓였다(PR 직전 리뷰)
+        "--no-session-persistence",
+        "--model",
+        "haiku",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--max-turns",
+        "3",
+        "--allowedTools",
+        ",".join(rules.allowed),
+    ]
+    if rules.disallowed:
+        command += ["--disallowedTools", ",".join(rules.disallowed)]
+    try:
+        done = subprocess.run(
+            command,
+            input=instruction(case, repo),
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            encoding="utf-8",
+            timeout=TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return Outcome(f"시간 초과({TIMEOUT}초)", "")
+    outcome = judge(case, repo, done.stdout)
+    # 호출이 하나도 없을 때 `claude` 가 실패로 끝났으면 모델이 시도하지 않은 것과 가른다.
+    # 세션이 끊기던 중의 실행이 대조군까지 모두 "시도 안 함"으로 나온 적이 있다
+    failed = done.returncode != 0 or '"is_error":true' in done.stdout.replace(" ", "")
+    if outcome.result == NOT_TRIED and failed:
+        tail = (done.stderr.strip() or done.stdout.strip()).splitlines()[-1:] or [""]
+        return Outcome(RUN_FAILED, f"종료 {done.returncode}: {tail[0][:100]}")
+    return outcome
 
 
 def expected(case: Case) -> frozenset[str]:
