@@ -3,8 +3,10 @@
 ruff 는 줄 길이를 폭으로 재고 한글은 폭 2다. 줄 길이 100에 한글이면 45~50자라, 글자 수로 가늠하면
 넘긴 줄을 모른 채 쓴다. 그 사실을 적은 지침(`docs/constitution/operations.md`)이 있었는데도 대개
 커밋 직전 `ruff check` 나 리뷰에서야 알았다. 지침이 어겨졌으니 훅이다(CLAUDE.md 교정 루프, 경위는
-대기열 53 과 일지 2026-10-01-02). 판정을 편집 순간으로 당기면 다시 감을 줄은 방금 쓴 몇 줄이라 감기
-도구가 필요 없다. 막지 않는 계기 훅이다 — 막는 것은 커밋 전 게이트가 이미 한다.
+대기열 53 과 일지 2026-10-01-02). 처음에는 판정을 편집 순간으로 당기면 다시 감을 줄이 방금 쓴 몇
+줄이라 손으로 감는다고 봤다. 그런데 안내마다 손으로 다시 감기가 세션마다 거듭돼(대기열 112, 4회차)
+감기 도구 `tools/rewrap_comments.py` 를 두고 안내에 그 명령을 싣는다. 막지 않는 계기 훅이다 — 막는
+것은 커밋 전 게이트가 이미 한다.
 
 발동 조건은 셋이다. 도구가 Write 나 Edit, 파일이 `.py`·`.pyi`, 파일의 조상에 ruff 설정(`ruff.toml`,
 `.ruff.toml`, `tool.ruff` 표가 있는 `pyproject.toml`)이 있을 것. 셋째는 게이트가 보는 파일만 보려는
@@ -150,7 +152,9 @@ def summary(file_path: str, lines: list[tuple[int, str]]) -> str:
     return (
         f"`{file_path}` 에 ruff E501(줄 길이)이 {len(lines)}줄 있다: {shown}{rest}. "
         "ruff 는 한글을 폭 2로 센다(글자 수로 가늠하면 넘긴다). 커밋 전 `ruff check` 가 막으니 "
-        "넘친 줄을 지금 다시 감는다."
+        "넘친 줄을 지금 다시 감는다. 주석·독스트링은 "
+        f'`uv run python tools/rewrap_comments.py "{file_path}"` 가 어절 단위로 감고, '
+        "코드 줄은 `ruff format` 이 감는다."
     )
 
 
