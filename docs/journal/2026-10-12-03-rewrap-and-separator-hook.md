@@ -52,7 +52,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 112
 - `tools/hook_line_separators.py`(새 훅)와 `tests/tools/test_hook_line_separators.py`, `.claude/settings.json`의 등록,
   `tools/hook_payloads.toml`의 사례 둘, `tools/run_hooks.py`의 자리표시자.
 - `tools/hook_ruff_line_width.py`의 안내 문구(감기 명령)와 독스트링(감기 도구가 필요 없다던 문장), 그 시험 하나.
-- `.claude/rules/tools.md`의 비용 줄, `KICKOFF.md`의 훅 목록과 도구 항목.
+- `.claude/rules/tools.md`의 비용 줄, `KICKOFF.md`의 훅 목록과 도구 항목, `README.md`의 `tools/` 줄(PR을 열기 전에 템플릿의
+  하네스 항목이 묻는 README 트리를 보고 더했다. 훅은 `hook_*`로 이미 든다).
 - 프로브: `rewrap_width.py`, `rewrap_comments_mutations.toml`, `line_separators_hook_mutations.toml`,
   `line_separators_hook_time.sh`, 그 README의 네 행.
 - `.scratch/retro-queue.md`: 112·160 닫힘.
