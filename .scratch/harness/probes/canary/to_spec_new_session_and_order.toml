@@ -1,0 +1,25 @@
+# to-spec 첫머리에 더한 새 세션의 맥락(대기열 103)과 3단계에 더한 명세를 쓴 뒤의 차례(대기열 105·126)가
+# 새 세션에 실리는지. to-spec 은 모델이 부르지 못하는 스킬이라 질문 머리에 슬래시 명령으로 넣는다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 주 체크아웃이다. 옛 판에는 두 카나리아가 모두 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 대조군의 `checkout` 을 옛 판으로 바꾼다(README `canary/` 행).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/to_spec_new_session_and_order.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+/to-spec
+위에 실린 스킬 본문이 시키는 일(저장소 탐색, 명세 쓰기, 질문)은 하지 않는다. 본문만 보고 답한다.
+1) 본문의 첫머리(Process 절 앞)에서, 설계 인터뷰의 대화가 없을 때 무엇을 읽어 그것을 대신하라고 적은 문장을 글자 그대로 옮겨라.
+2) Process 의 3단계에서, 명세를 쓴 뒤에 무엇을 어떤 차례로 하라고 적은 문장을 글자 그대로 옮겨라.
+본문에 그런 문장이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["설계 일지를 읽어 대화를 대신한다","서두의 수 세기, ADR 초안·이력의 승인, 커밋이다"]
+source = ".claude/skills/to-spec/SKILL.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
