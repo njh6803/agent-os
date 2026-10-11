@@ -20,8 +20,8 @@ PR 번호 식은 1 로 바꾼다) 그 규칙으로 `claude -p` 를 띄운다. �
 - 됨: 대조군이 거부되지 않고 기대한 출력을 냈다.
 - 시도 안 함 / 다른 호출 / 출력 다름: 모델이 시킨 호출을 하지 않았거나 바꿨거나, 대조군이
   기대와 다른 출력을 냈다.
-- 실행 실패: 호출이 하나도 없고 `claude` 가 0 이 아닌 코드나 오류 결과로 끝났다(인증, 한도,
-  끊긴 세션). 모델이 시도하지 않은 것과 가른다.
+- 실행 실패: 호출이 하나도 없고 `claude` 가 0 이 아닌 코드나 오류 결과로 끝났거나(인증, 한도,
+  끊긴 세션), 제한 시간을 넘겼다. 모델이 시도하지 않은 것과 가른다.
 - 시도 안 함·다른 호출·실행 실패면 그 사례를 모두 세 번까지 돌고, 남으면 어긋남이다.
 
 사례마다 기대하는 거부의 갈래를 적는다. 기본은 거부(규칙)이고, 승인이나 자체 검사로 막히는
@@ -523,7 +523,8 @@ def _run_in(claude: str, rules: Rules, case: Case, repo: Path, env: dict[str, st
             timeout=TIMEOUT,
         )
     except subprocess.TimeoutExpired:
-        return Outcome(f"시간 초과({TIMEOUT}초)", "")
+        # 시간 초과도 끊긴 세션·한도처럼 실행이 돌지 못한 것이라 다시 돈다(PR #173 CodeRabbit)
+        return Outcome(RUN_FAILED, f"시간 초과({TIMEOUT}초)")
     outcome = judge(case, repo, done.stdout)
     # 호출이 하나도 없을 때 `claude` 가 실패로 끝났으면 모델이 시도하지 않은 것과 가른다.
     # 세션이 끊기던 중의 실행이 대조군까지 모두 "시도 안 함"으로 나온 적이 있다
