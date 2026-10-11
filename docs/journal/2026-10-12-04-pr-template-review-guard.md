@@ -90,3 +90,50 @@ Minor 1·Nit 3, 명세 축은 Minor 2·Nit 3이었다.
     밖의 파일이 함께 실리면 실패"가 덮거나 가드가 스스로 안내한다). 31행 괄호에 161의 갈래가 없다(그 괄호의 주제는
     건너뛰는지이고 그 갈래는 실패다). 열린 행 163(위 표준 참고).
   - 확인하지 못한 것: `gh pr comment`로 게시한 코멘트의 작성자가 가드가 세는 `claude[bot]`인지. 아래 PR 리뷰에서 본다.
+
+## PR 리뷰
+
+PR #176(커밋 둘, `397e474`).
+
+- **claude-review.** 37초, 9턴, $0.16. 도구 호출은 `gh pr view 176 --json title,body`, `gh pr diff 176`,
+  `gh pr diff 176 --name-only`, Read, Grep, Write, 그리고 `gh pr comment 176 --body-file review-comment.md` 하나로 게시했다.
+  `permission_denials`는 빈 배열이었고, 코멘트 작성자는 `claude[bot]`이라 가드가 1개로 셌다. 지적 없음이었다. #173이 바꾼
+  5단계(Write로 쓰고 고정 경로의 명령 하나로 게시)와 허용 규칙이 맞물려 돈 것이다. 거부 수는 `tools/gh_run_summary.py`의
+  요약에 없어 로그(`gh run view --log`)에서 `permission_denials`를 찾았다.
+- **이 PR이 첫 실행은 아니었다.** 지시문은 이 PR이 #173의 규칙으로 처음 도는 PR이라고 했으나, #173이 22:17에 병합된 뒤
+  22:34에 #174(`chore/rewrap-and-separator-hook`)의 claude-review가 먼저 돌았다. `pull_request` 실행은 base를 합친 병합
+  ref의 워크플로로 돌아, 브랜치가 #173 전에 땄어도 새 규칙을 쓴다. 그 실행도 `gh pr comment 174 --body-file
+  review-comment.md`로 게시했고 거부 0, 코멘트 1이었다.
+- **Stop 훅 오류.** 두 실행 모두 끝에 `stop-hook-error` 알림("Stop hook error occurred")이 찍혔다. 같은 실행의
+  SessionStart 훅 응답이 `/bin/sh: 1: uv: not found`(종료 127)였다. 저장소의 훅 등록은 모두 `uv run … launch_hook.py`인데
+  러너에 uv가 없다. #173 전의 #172 실행에도 SessionStart가 같은 127로 끝났으니 #173이 만든 것이 아니다. #172에는
+  `stop-hook-error` 알림이 없었고 그 까닭은 재지 않았다. 127은 막는 코드(2)가 아니어서 훅이 지나가고, 리뷰의 권한은 훅이
+  아니라 `claude_args`가 쥐므로 이 실행의 결과에 미친 것은 알림 한 줄이다.
+- **CodeRabbit.** PR을 연 직후 "Review limit reached"였고 `@coderabbitai review` 요청도 "Review rate limited"로 끝났다.
+  이 PR의 보안·버그·성능 축은 위 PR 직전 대체 둘이 대신한다(`operations.md` 리뷰 파이프라인).
+
+## 회고
+
+PR 리뷰 절을 쓴 뒤 단계를 닫기 전에 돌렸다. 후보 셋을 냈고 셋 다 승인됐다. 셋 다 이 PR의 범위(대기열 164) 밖이라
+대기열로 갔다. 처음에는 170~172로 적었으나, 그사이 main이 170·171을, 열린 PR #177이 172를 써서
+`tools/sibling_overlap.py`가 고른 176~178로 옮겼다.
+
+> 사용자: (고른 것) "1. gh_run_summary 보강,2. 쥔 프로세스 이름,3. CI 훅 127 기록"
+
+1. **`gh_run_summary.py`가 거부 수와 훅 오류를 보여 주지 못한다(대기열 176, 1회차).** 일지 21의 "다음"은 거부 수를 이
+   도구로 보라고 했으나, 도구가 찾는 `permission_denials_count`가 2.1.292의 결과 블록에 없어 요약이 거부에 대해 아무것도
+   말하지 않았다. `::error` 패턴은 Claude가 Read로 읽은 워크플로 원문 줄에 걸려 그 줄을 두 번 통째로 찍었고, SessionStart
+   훅의 127은 찍지 않았다. 로그를 받아 손으로 찾았다(위 PR 리뷰 절).
+2. **`tidy_checkouts.py`가 폴더를 쥔 프로세스를 대지 못한다(대기열 177, 3회차).** 일지 2026-10-07-19·21의
+   `tidy-before-worktree`와 이 일지의 `review-workflow-guards`가 모두 "다른 프로세스가 쥐고 있다"로 남았고, 어느 세션도
+   무엇을 닫을지 몰랐다. 그 브랜치의 세션은 `isRunning`이 아니었다.
+3. **CI의 claude-review에서 저장소 훅이 127로 지나간다(대기열 178, 1회차).** 위 PR 리뷰 절의 Stop 훅 오류다. 로컬의 막는
+   훅(`hook_env_read` 등)이 CI에서는 돌지 않는다는 것이 어디에도 적혀 있지 않았다.
+
+일지에만 남기는 것:
+
+- pytest를 `| tail`로 이어 쳐 종료 코드를 가렸다. 훅이 짚어 다시 돌렸다(위 검사 절). 이미 있는 훅이 제 일을 했다.
+- 일지 21의 잔존 grep이 열린 행 31을 놓쳤다. `code-review`의 주장 검증 5항(옛 결정의 논증이 쓴 말도 찾는다)이 이번 명세
+  축에서 잡았다. 같은 세션이 아니라 다음 PR의 리뷰가 잡은 것이다.
+- 지시문은 이 PR이 #173의 규칙으로 처음 도는 PR이라고 했으나 #174가 먼저 돌았다(위 PR 리뷰 절). `pull_request` 실행은
+  병합 ref의 워크플로를 쓴다. 워크플로 변경의 첫 실행을 보려면 병합 시각 뒤의 `gh run list --workflow`를 본다.
