@@ -23,6 +23,10 @@ llm 마커 테스트가 돌았으면 실행 끝의 결과 요약 바로 위에, 
 트레이스의 토큰 합계를 찍는다(대기열 113). 세는 법과 못 보는 것은 `tools/llm_tokens.py` 가
 원천이다. 그 테스트가 하나도 돌지 않은 실행(기본 `-m "not llm"`)에서는 찍지 않는다. 0 이 찍히면
 LLM 테스트를 돌렸다고 읽힌다.
+
+매개변수 id 는 `pyproject.toml` 의 옵션이 이스케이프를 꺼 한국어를 그대로 둔다(대기열 56). 그 옵션은
+줄바꿈 같은 인쇄되지 않는 문자도 그대로 두어 그런 값의 id 가 출력 줄을 갈랐다(2026-10-11, 여섯 개).
+문자열 값에 그런 문자가 있으면 그 문자만 `\\n` 꼴로 되돌린다. 손으로 준 `ids` 는 보지 않는다.
 """
 
 import importlib.util
@@ -57,6 +61,14 @@ def pytest_configure(config: pytest.Config) -> None:
     raise pytest.UsageError(
         f"agent_os 가 이 체크아웃({CHECKOUT})의 src 가 아니라 {origin} 에서 불린다. 다른 체크아웃의"
         " .venv 인터프리터다. 이 체크아웃에서 uv run pytest 로 돌린다"
+    )
+
+
+def pytest_make_parametrize_id(config: pytest.Config, val: object, argname: str) -> str | None:
+    if not isinstance(val, str) or val.isprintable():
+        return None
+    return "".join(
+        ch if ch.isprintable() else ch.encode("unicode_escape").decode("ascii") for ch in val
     )
 
 

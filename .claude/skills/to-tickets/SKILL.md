@@ -4,7 +4,7 @@ description: Break a plan, spec, or the current conversation into a set of trace
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 둘을 더했다. 1단계의 기능 실행 순서(대기열 7 — 그 순서가 런북에만 있었다), 5단계의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 셋을 더했다. 1단계의 기능 실행 순서(대기열 7 — 그 순서가 런북에만 있었다), 5단계의 받는 쪽 확인(대기열 3)과 옮기는 테스트의 이음매 확인(대기열 106). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 # To Tickets
 
@@ -69,6 +69,8 @@ Publish the approved tickets. **How** depends on the tracker `/setup-matt-pocock
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
 명세나 리뷰가 다른 티켓·기능에 넘긴 것("그 층에서 재확인", 측정)은 받는 티켓의 수용 기준이나 `.scratch/plan.md`의 받는 기능 행에 적는다. 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
+
+명세 검토나 리뷰가 제안한 테스트 문장을 수용 기준으로 옮길 때는 그 테스트를 지금 이음매(주입되는 포트, 시계)로 잴 수 있는지 코드로 본다. 잴 수 없는 테스트는 어떤 구현에서도 초록이다. 명세 검토의 "가짜 시계를 `exp` 너머로"를 그대로 옮겼는데, 그때의 인증 미들웨어는 시계 포트를 받지 않았고 PyJWT는 벽시계를 읽었다(대기열 106, 검토의 문구를 뜻을 되짚지 않고 옮긴 세 번째).
 
 Do NOT close or modify any parent issue.
 
