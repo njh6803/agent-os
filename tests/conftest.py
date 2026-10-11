@@ -26,7 +26,9 @@ LLM 테스트를 돌렸다고 읽힌다.
 
 매개변수 id 는 `pyproject.toml` 의 옵션이 이스케이프를 꺼 한국어를 그대로 둔다(대기열 56). 그 옵션은
 줄바꿈 같은 인쇄되지 않는 문자도 그대로 두어 그런 값의 id 가 출력 줄을 갈랐다(2026-10-11, 여섯 개).
-문자열 값에 그런 문자가 있으면 그 문자만 `\\n` 꼴로 되돌린다. 손으로 준 `ids` 는 보지 않는다.
+문자열 값에 그런 문자가 있으면 그 문자만 `\\n` 꼴로 되돌린다. 바이트 값은 그 옵션이 켜지면 pytest
+가 문자열로 바꾸지 않아 수집이 죽으므로 언제나 `\\xff` 꼴의 문자열로 바꿔 같은 길로 보낸다. 손으로
+준 id(`ids=` 의 목록과 함수, `pytest.param(id=...)`)는 이 훅을 거치지 않아 보지 않는다.
 """
 
 import importlib.util
@@ -65,10 +67,14 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_make_parametrize_id(config: pytest.Config, val: object, argname: str) -> str | None:
-    if not isinstance(val, str) or val.isprintable():
+    if isinstance(val, bytes):
+        text = val.decode("ascii", "backslashreplace")
+    elif isinstance(val, str) and not val.isprintable():
+        text = val
+    else:
         return None
     return "".join(
-        ch if ch.isprintable() else ch.encode("unicode_escape").decode("ascii") for ch in val
+        ch if ch.isprintable() else ch.encode("unicode_escape").decode("ascii") for ch in text
     )
 
 

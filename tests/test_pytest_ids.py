@@ -21,3 +21,10 @@ def test_한국어_매개변수_id_를_이스케이프하지_않는다(사례: s
 def test_인쇄되지_않는_문자만_이스케이프한다(사례: str) -> None:
     assert "[첫_줄\\n둘째_줄\\t끝]" in os.environ["PYTEST_CURRENT_TEST"]
     assert 사례 not in os.environ["PYTEST_CURRENT_TEST"]
+
+
+@pytest.mark.parametrize("사례", [b"ab\xff\n"])
+def test_바이트_값도_이스케이프해_id_로_쓴다(사례: bytes) -> None:
+    """옵션이 켜지면 pytest 는 바이트 값을 문자열로 바꾸지 않고 id 를 이어 붙이다 수집에서
+    죽는다."""
+    assert "[ab\\xff\\n]" in os.environ["PYTEST_CURRENT_TEST"]
