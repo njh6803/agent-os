@@ -1,6 +1,7 @@
 # grilling 라운드 문단에 더한 기술 개념 풀이의 자리(대기열 114)가 새 세션에 실리는지. 풀이의 원천은
 # CLAUDE.md 원칙이고 그것은 `claude_md_adr_order_and_gloss.toml` 이 본다.
-# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 카나리아가 없다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 주 체크아웃이다. 옛 판에는 카나리아가 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 대조군의 `checkout` 을 옛 판으로 바꾼다(README `canary/` 행).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/grilling_concept_gloss.toml <출력 디렉터리>
 kind = "skill"
