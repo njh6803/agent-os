@@ -4,10 +4,11 @@
 `tools/canary.py` 에 에이전트 갈래가 없어(대기열 153) 같은 판정을 손으로 옮겼다.
 명령의 모양은 그 도구와 같고(`--setting-sources project,local --strict-mcp-config
 --model sonnet`), 도구는 `Agent` 와 spec-reviewer 정의의 도구 넷으로 좁힌다.
-첫 판은 `Agent` 하나로 좁혀 네 회차 모두 서브에이전트가 "would be spawned with zero
-tools — refusing" 으로 뜨지 않았고, 넷을 더한 손 실행 한 회차에서는 떴다(claude
-2.1.292, 일지 2026-10-12-02). 서브에이전트의 도구가 본 세션의 `--tools` 에 묶인다고
-보는 근거는 이 두 구성뿐이고 부분집합은 재지 않았다. 실험군은 이 스크립트가 있는
+첫 판은 `Agent` 하나로 좁혀 네 회차 모두 서브에이전트가 도구 0개로
+거부됐고("would be spawned with zero tools — refusing"), 넷을 더한 손 실행 한
+회차에서는 서브에이전트가 돌아 답했다(claude 2.1.292, 일지 2026-10-12-02).
+서브에이전트의 도구가 본 세션의 `--tools` 에 묶인다고 보는 근거는 이 두 구성뿐이고
+부분집합은 재지 않았다. 실험군은 이 스크립트가 있는
 체크아웃에서 셋, 대조군은 인자로 받은 체크아웃(바뀌기 전 사본)에서 하나다. 병합 뒤에는
 주 체크아웃이 새 사본이므로 `git worktree add --detach <경로> 58969f7` 로 옛 판을 주
 체크아웃 밖에 꺼내 대조군으로 준다.
