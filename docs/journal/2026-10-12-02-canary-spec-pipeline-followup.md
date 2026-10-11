@@ -48,8 +48,9 @@ spec-reviewer·`CLAUDE.md`)가 새 세션에 실리는지, 그날 계정 주간 
 - **진단.** 되먹임 고리는 저장한 원본에 판정만 다시 거는 스크래치 스크립트였다(0.3초, 결정적). 가설 넷(도구 결과의
   메타데이터, `task_*` 이벤트, 앞쪽 실행은 내보내지 않음, 플래그가 있어야 내보냄) 가운데 첫째가 맞았고, 셋째도 앞쪽 실행에
   한해 맞았다. 앞쪽 실행이면
-  stream-json에 서브에이전트의 메시지가 찍히지 않고, 도구 결과 이벤트의 `tool_use_result`가 `agentType`, `status`,
-  `totalToolUseCount`를 싣는다. 백그라운드 실행이면 그 자리는 `status: async_launched`이고 서브에이전트의 assistant
+  서브에이전트의 마지막 텍스트 답이 stream-json에 찍히지 않아 텍스트만 답한 회차에는 서브에이전트의 assistant 이벤트가 없고,
+  도구 결과 이벤트의 `tool_use_result`가 `agentType`, `status`, `totalToolUseCount`를 싣는다(서브에이전트의 도구 호출은
+  앞쪽에서도 찍힌다는 것은 아래 PR 직전 리뷰가 봤다). 백그라운드 실행이면 그 자리는 `status: async_launched`이고 서브에이전트의 assistant
   이벤트가 `parent_tool_use_id`를 달고 찍힌다. 본 세션 모델이 `run_in_background`를 빼면 백그라운드, `false`를 주면 앞쪽이었다.
 - **셋째 판.** 판정이 두 근거를 모두 받는다. 앞쪽이면 `agentType: spec-reviewer`, `status: completed`, `totalToolUseCount: 0`,
   백그라운드면 도구 호출 없는 assistant 이벤트다. 돌리기 전 확인에 두 정의의 `tools` 줄이 그 넷인지도 더했다. 회귀 확인은
@@ -92,6 +93,23 @@ spec-reviewer·`CLAUDE.md`)가 새 세션에 실리는지, 그날 계정 주간 
   - 열린 대기열 153 행이 이번 발견을 담지 않은 것(표준 축 9)과 `docs/constitution/operations.md` 환경 규약 상세의 대조군
     안내(명세 축 참고). 회고 후보로 넘긴다.
   - `judge`가 파싱과 판정을 함께 하는 구조(표준 축 smell). 기존 모양이라 두었다.
+
+## PR 직전 보안·버그·성능 축
+
+CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 나란히 돌렸다(커밋 `878bb4b` 기준).
+
+- **보안(`/security-review`).** 지적 없음. 탐침의 `subprocess.run`은 고정 인자에 `shell=True`가 없고, 넓힌 `--tools`에도 권한
+  모드를 바꾸는 플래그가 없다. 바깥 입력은 개발자가 넘기는 대조군 경로 하나다.
+- **버그·성능(`bug-perf-review`).** 유효 둘·보류 하나였고 둘을 고쳤다.
+  - 독스트링과 일지의 "앞쪽이면 서브에이전트의 메시지가 찍히지 않는다"가 넓었다. 리뷰가 서브에이전트에게 `Read`를 시킨 손
+    실행 두 회차(앞쪽·백그라운드)에서 서브에이전트의 도구 호출은 두 방식 모두 `parent_tool_use_id`를 단 assistant 이벤트로
+    찍혔다. 찍히지 않는 것은 앞쪽 실행의 마지막 텍스트 답이다. 문장을 좁혔고, 그 두 원본도 판정이 실패로 잡는 것을 회귀
+    확인에 더했다.
+  - JSON이지만 객체가 아닌 줄이나 모양이 어긋난 assistant 이벤트에서 `judge`가 예외로 죽었다. 회귀 확인에 다섯 입력을 먼저
+    넣어 죽는 것을 보고, 그 줄을 실패 사유로 돌리게 고쳤다. 회귀 확인 스물넷이 모두 맞았고, 최종 판의 원본 넷은 고친
+    판정에서도 통과한다(손으로 다시 판정했다. `claude` 호출은 바뀌지 않았다).
+  - 보류: 대조군은 카나리아가 0이면 답이 비어도 통과한다. `tools/canary.py`의 대조군도 같은 판정이고, 실험군이 문장 셋을
+    요구해 위험이 낮다.
 
 ## 바꾼 것
 

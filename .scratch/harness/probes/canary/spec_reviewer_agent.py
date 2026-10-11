@@ -15,7 +15,8 @@ tools — refusing" 으로 뜨지 않았고, 넷을 더한 손 실행 한 회차
 돌리기 전에 실험군 사본에는 카나리아가 모두 있고 대조군 사본에는 하나도 없는지, 두
 정의의 `tools` 줄이 그 넷인지 보고, 어긋나면 아무것도 돌리지 않고 종료 2다.
 회차마다 아래가 모두 맞아야 통과다.
-- 모든 줄이 JSON 이다. 어긋난 줄은 사실로 쓰지 않고 실패로 본다.
+- 모든 줄이 JSON 객체이고 assistant 이벤트의 내용이 목록이다. 어긋난 줄은 사실로 쓰지
+  않고 실패로 본다.
 - init 의 `tools` 가 `Agent` 와 그 넷이고 `mcp_servers` 가 비었고, `agents` 에
   spec-reviewer 가 있다. init 은 `Agent` 를 옛 이름 `Task` 로 찍는다.
 - 본 세션의 도구 호출은 spec-reviewer 를 부른 Agent 한 번뿐이다. 본 세션과 다른
@@ -23,10 +24,13 @@ tools — refusing" 으로 뜨지 않았고, 넷을 더한 손 실행 한 회차
   서브에이전트에게 읽혀 옮긴 답은 이 판정이 막는다.
 - 서브에이전트가 돌았고 도구를 부르지 않았다. 근거는 본 세션이 서브에이전트를 띄운
   방식마다 다르다(`run_in_background` 를 빼면 백그라운드, `false` 면 앞쪽이었다).
-  앞쪽이면 stream-json 에 서브에이전트의 메시지가 찍히지 않고, 도구 결과 이벤트의
-  `tool_use_result` 가 `agentType: spec-reviewer`, `status: completed` 이고
+  앞쪽이면 서브에이전트의 마지막 텍스트 답이 stream-json 에 찍히지 않아, 텍스트만
+  답한 회차에는 서브에이전트의 assistant 이벤트가 하나도 없다. 그래서 도구 결과
+  이벤트의 `tool_use_result` 가 `agentType: spec-reviewer`, `status: completed` 이고
   `totalToolUseCount` 가 0 이어야 한다. 백그라운드면 서브에이전트의 assistant 이벤트
   (`parent_tool_use_id` 가 붙은 것)가 찍히고, 그 가운데 도구 호출이 없어야 한다.
+  서브에이전트의 도구 호출은 두 방식 모두 `parent_tool_use_id` 를 단 assistant
+  이벤트로도 찍혔다(Read 를 시킨 손 실행 두 회차, 일지 2026-10-12-02).
   서브에이전트에게 넘긴 프롬프트는 거부된 회차에도 `parent_tool_use_id` 를 단 user
   이벤트로 찍히므로 근거로 세지 않는다. 근거가 없으면 도구 판정이 비어 통과하므로 실패다.
 - 백그라운드로 띄운 서브에이전트가 끝나면 결과 이벤트가 둘이고 답은 마지막 것이다.
@@ -128,6 +132,9 @@ def judge(raw: str, experiment: bool) -> list[str]:
         except json.JSONDecodeError:
             reasons.append(f"{number}번째 줄이 JSON 이 아니다")
             continue
+        if not isinstance(event, dict):
+            reasons.append(f"{number}번째 줄이 JSON 객체가 아니다")
+            continue
         if event.get("type") == "system" and event.get("subtype") == "init":
             init = event
         if event.get("parent_tool_use_id") and event.get("type") == "assistant":
@@ -139,15 +146,22 @@ def judge(raw: str, experiment: bool) -> list[str]:
                 if meta.get("totalToolUseCount") != 0:
                     sub_calls.append(f"앞쪽 실행의 도구 {meta.get('totalToolUseCount')}회")
         if event.get("type") == "assistant":
-            for block in event["message"].get("content", []):
-                if block.get("type") != "tool_use":
+            message = event.get("message")
+            content = message.get("content") if isinstance(message, dict) else None
+            if not isinstance(content, list):
+                reasons.append(f"{number}번째 줄의 assistant 내용이 목록이 아니다")
+                continue
+            for block in content:
+                if not isinstance(block, dict) or block.get("type") != "tool_use":
                     continue
                 name = canonical(str(block.get("name", "?")))
                 if event.get("parent_tool_use_id"):
                     sub_calls.append(name)
                     continue
                 if name == "Agent":
-                    name = f"Agent({block.get('input', {}).get('subagent_type')})"
+                    given = block.get("input")
+                    kind = given.get("subagent_type") if isinstance(given, dict) else None
+                    name = f"Agent({kind})"
                 main_calls.append(name)
         if event.get("type") == "result":
             answer = str(event.get("result", ""))
