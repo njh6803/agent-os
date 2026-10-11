@@ -75,10 +75,11 @@ jobs:
         # 초록 착시를 빨강으로. 실행 시작 뒤 생긴 claude[bot] 코멘트가 0개면 실패한다.
         # 이 파일을 바꾼 PR은 액션이 건너뛰므로(위 5행) 코멘트를 세지 않는다. 대신 그 PR이 이 파일과 기록(일지,
         # 대기열, 하네스 탐침) 밖의 파일을 함께 실으면 실패한다. 함께 실린 파일이 리뷰 없이 병합되기 때문이다
-        # (대기열 158). 다른 워크플로(ci.yml)만 바꾼 PR은 액션이 돌므로 센다(대기열 50). 바뀐 파일 목록을 얻지
-        # 못하면 어느 쪽인지 가를 수 없어 그 까닭을 찍고 실패한다. 전에는 그 실패가 이 파일을 바꾸지 않은 PR로
-        # 읽혀 코멘트를 셌다(PR #171의 HTTP 500, 대기열 161). 가짜 gh로 돌리는 탐침은
-        # .scratch/harness/probes/review_workflow.py.
+        # (대기열 158). 다른 워크플로(ci.yml)만 바꾼 PR은 액션이 돌므로 센다(대기열 50). 바뀐 파일 목록은 pulls
+        # files API로 받아 이름 바꾸기의 옛 경로까지 본다. `gh pr diff --name-only`는 새 경로만 찍고 한글 이름을
+        # 따옴표로 감쌌다(PR #70·#153). 목록을 얻지 못하면 어느 쪽인지 가를 수 없어 그 까닭을 찍고 실패한다.
+        # 전에는 그 실패가 이 파일을 바꾸지 않은 PR로 읽혀 코멘트를 셌다(PR #171의 HTTP 500, 대기열 161).
+        # 가짜 gh로 돌리는 탐침은 .scratch/harness/probes/review_workflow.py.
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -86,14 +87,14 @@ jobs:
           STARTED_AT: ${{ steps.start.outputs.at }}
         run: |
           self='.github/workflows/claude-code-review.yml'
-          if ! files="$(gh pr diff "$PR" --name-only)"; then
-            echo "::error::바뀐 파일 목록을 얻지 못했다(gh pr diff 실패). 이 워크플로를 바꾼 PR인지 가를 수 없어 실패로 만든다. 잡을 다시 돌린다."
+          if ! files="$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')"; then
+            echo "::error::바뀐 파일 목록을 얻지 못했다(gh api pulls/files 실패). 이 워크플로를 바꾼 PR인지 가를 수 없어 실패로 만든다. 잡을 다시 돌린다."
             exit 1
           fi
           if printf '%s\n' "$files" | grep -qxF "$self"; then
             # 탐침은 이 파일의 변경이 근거로 드는 측정이라 함께 싣는다
             others="$(printf '%s\n' "$files" | grep -vxF "$self" \
-              | grep -vE '^(docs/journal/|\.scratch/retro-queue\.md$|\.scratch/harness/probes/)' || true)"
+              | grep -vE '^(docs/journal/|\.scratch/retro-queue\.md$|\.scratch/harness/probes/)' || [ $? -eq 1 ])"
             if [ -n "$others" ]; then
               echo "::error::이 워크플로를 바꾼 PR은 리뷰가 건너뛰므로 일지·대기열·하네스 탐침 밖의 파일을 함께 싣지 않는다. 아래 파일은 따로 PR로 낸다."
               printf '%s\n' "$others"

@@ -3,13 +3,19 @@
 하나. `.github/workflows/claude-code-review.yml` 의 체크아웃 단계에서 `persist-credentials` 가
 `false` 인지 본다. 없으면 기본값 true 라 어긋남이다.
 
-둘. 가드 스텝("Fail when Claude left no comment")의 `run` 을 꺼내 사례마다 돌려 결과를 기대와
+둘. 리뷰 단계의 허용 규칙 `Bash(gh pr comment …)` 안의 명령이 프롬프트에 백틱으로 글자 그대로
+있는지 본다. 허용은 정확 일치라 한쪽만 고치면 CI 에서 게시가 거부된다.
+
+셋. 가드 스텝("Fail when Claude left no comment")의 `run` 을 꺼내 사례마다 돌려 결과를 기대와
 견준다. 셸은 러너가 `shell:` 이 없을 때 쓰는 `bash -e` 이고, `gh` 는 셸 함수로 갈아 끼워
-`pr diff` 에는 바뀐 파일 목록을, `api` 에는 코멘트 JSON 을 낸다. `jq` 는 진짜를 쓴다.
-바뀐 파일 목록이 없는 사례(`None`)는 가짜 `pr diff` 가 HTTP 500 처럼 실패한다. 결과는 다섯으로
-가른다. 건너뛴다는 줄이 있고 집계 줄("claude[bot] 코멘트 (")이 없이 0 이면 건너뜀, 집계 줄이
-있으면 종료 0 은 통과, 1 은 실패, 함께 실었다는 오류 줄이 있고 1 이면 함께 실음, 목록을 얻지
-못했다는 오류 줄이 있고 1 이면 목록 실패다. 그 밖은 이상으로 찍고 어긋남으로 센다. 종료 코드만
+`api …/pulls/…/files` 에는 바뀐 파일 이름을(이름 바꾸기면 새 이름과 옛 이름을. `--jq` 를 거친
+모양이다), 그 밖의 `api` 에는 코멘트 JSON 을 낸다. 전의 판이 쓰던 `pr diff` 에는
+`gh pr diff --name-only` 처럼 새 이름만 내고 한글 이름은 따옴표와 8진수로 낸다(PR #70·#153).
+사례의 이름 바꾸기는 `옛 -> 새` 로 적는다. `jq` 는 진짜를 쓴다. 바뀐 파일 목록이 없는
+사례(`None`)는 가짜 목록 호출이 HTTP 500 처럼 실패한다. 결과는 다섯으로 가른다. 건너뛴다는
+줄이 있고 집계 줄("claude[bot] 코멘트 (")이 없이 0 이면 건너뜀, 집계 줄이 있으면 종료 0 은 통과,
+1 은 실패, 함께 실었다는 오류 줄이 있고 1 이면 함께 실음, 목록을 얻지 못했다는 오류 줄이 있고
+1 이면 목록 실패다. 그 밖은 이상으로 찍고 어긋남으로 센다. 종료 코드만
 보면 스크립트를 찾지 못한 실행도 "실패"로 기대와 맞아 버린다(첫 판이 그랬다).
 
 기대는 대기열 50·158·161 을 반영한 판이다. 가드는 이 워크플로 파일 자체가 바뀐 PR 에서만 코멘트를
@@ -32,6 +38,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -42,19 +49,25 @@ import yaml
 
 WORKFLOW = ".github/workflows/claude-code-review.yml"
 GUARD_STEP = "Fail when Claude left no comment"
+REVIEW_STEP = "Run Claude Code Review"
+PUBLISH_RULE = re.compile(r"Bash\((gh pr comment [^)]*|gh pr comment:\*)\)")
 STARTED_AT = "2026-10-07T05:23:00Z"
 
 FAKE_GH = """\
 gh() {
   case "$1 $2" in
-    "pr diff")
-      if [ -n "$FAKE_DIFF_FAIL" ]; then echo "HTTP 500: 가짜" >&2; return 1; fi
+    "api "*/pulls/*/files)
+      if [ -n "$FAKE_LIST_FAIL" ]; then echo "HTTP 500: 가짜" >&2; return 1; fi
       printf '%s\\n' "$FAKE_FILES" ;;
+    "pr diff")
+      if [ -n "$FAKE_LIST_FAIL" ]; then echo "HTTP 500: 가짜" >&2; return 1; fi
+      printf '%s\\n' "$FAKE_DIFF_NAMES" ;;
     "api "*) printf '%s\\n' "$FAKE_COMMENTS" ;;
     *) echo "가짜 gh: 모르는 호출: $*" >&2; return 2 ;;
   esac
 }
 """
+RENAME = " -> "
 
 
 def _comment(login: str, created_at: str) -> dict[str, object]:
@@ -72,12 +85,19 @@ LIST_FAIL_LINE = "::error::바뀐 파일 목록을 얻지 못했다"
 SKIP, PASS, FAIL, MIXED, LIST_FAIL = "건너뜀", "통과", "실패", "함께 실음", "목록 실패"
 
 JOURNAL = "docs/journal/2026-10-07-19-x.md"
+JOURNAL_KO = "docs/journal/2026-10-07-19-한글 이름.md"
 QUEUE = ".scratch/retro-queue.md"
 PROBE = ".scratch/harness/probes/review_workflow.py"
-RECORDS = (JOURNAL, QUEUE, PROBE)  # 사례가 기록으로 쓰는 경로. 함께 실음의 목록에서 빠져야 한다
+MOVED = ".scratch/harness/probes/moved.py"
+# 사례가 기록으로 쓰는 경로. 함께 실음의 목록에서 빠져야 한다
+RECORDS = (JOURNAL, JOURNAL_KO, QUEUE, PROBE, MOVED)
 
-# (이름, 바뀐 파일(None 이면 `pr diff` 가 실패한다), 코멘트, 기대 결과)
+# (이름, 바뀐 파일(None 이면 목록 호출이 실패한다), 코멘트, 기대 결과)
 CASES: list[tuple[str, list[str] | None, list[dict[str, object]], str]] = [
+    # 옛 경로가 기록 밖이면 그 지우기가 리뷰 없이 병합된다. `pr diff` 는 새 경로만 찍었다
+    ("기록으로 옮긴 이름 바꾸기", [WORKFLOW, ".scratch/x/a.py" + RENAME + MOVED], [], MIXED),
+    # `pr diff` 는 한글 이름을 따옴표와 8진수로 찍어 `^` 정규식에 걸리지 않았다(PR #153)
+    ("한글 이름의 일지", [WORKFLOW, JOURNAL_KO], [], SKIP),
     # 161 전에는 실패가 이 파일을 바꾸지 않은 PR 로 읽혀 코멘트를 셌다
     ("목록 실패, 시작 뒤 코멘트", None, [AFTER], LIST_FAIL),
     ("목록 실패, 코멘트 없음", None, [], LIST_FAIL),
@@ -141,6 +161,31 @@ def _guard(steps: list[dict[str, object]]) -> str:
     raise SystemExit(f"가드 스텝 {GUARD_STEP!r} 가 없다")
 
 
+def _api_names(files: list[str]) -> list[str]:
+    """pulls files API 를 `--jq '.[] | .filename, (.previous_filename // empty)'` 로 거친 모양."""
+    names: list[str] = []
+    for entry in files:
+        old, _, new = entry.partition(RENAME)
+        names += [new, old] if new else [old]
+    return names
+
+
+def _diff_names(files: list[str]) -> list[str]:
+    """`gh pr diff --name-only` 의 모양. 이름 바꾸기는 새 이름만, 한글 이름은 따옴표와 8진수다."""
+    names: list[str] = []
+    for entry in files:
+        old, _, new = entry.partition(RENAME)
+        name = new or old
+        if not name.isascii():
+            escaped = "".join(
+                char if char.isascii() else "".join(f"\\{byte:o}" for byte in char.encode())
+                for char in name
+            )
+            name = f'"{escaped}"'
+        names.append(name)
+    return names
+
+
 def _run(
     script: Path, files: list[str] | None, comments: list[dict[str, object]]
 ) -> tuple[str, str]:
@@ -150,8 +195,9 @@ def _run(
         "REPO": "owner/repo",
         "PR": "1",
         "STARTED_AT": STARTED_AT,
-        "FAKE_FILES": "\n".join(files or []),
-        "FAKE_DIFF_FAIL": "1" if files is None else "",
+        "FAKE_FILES": "\n".join(_api_names(files or [])),
+        "FAKE_DIFF_NAMES": "\n".join(_diff_names(files or [])),
+        "FAKE_LIST_FAIL": "1" if files is None else "",
         "FAKE_COMMENTS": json.dumps(comments),
     }
     # Windows 에서 맨 "bash" 는 PATH 보다 System32 를 먼저 보아 WSL 의 bash 가 되고, 그 bash 는
@@ -179,11 +225,26 @@ def _run(
         # (목록이 다르면 기대와 다른 결과로 남긴다)
         start = next(i for i, line in enumerate(lines) if line.startswith(MIXED_LINE))
         listed = lines[start + 1 :]
-        others = [path for path in files if path not in (WORKFLOW, *RECORDS)]
+        others = [path for path in _api_names(files) if path not in (WORKFLOW, *RECORDS)]
         outcome = MIXED if listed == others else f"{MIXED}(목록 {listed}, 기대 {others})"
     else:
         outcome = f"이상(종료 {done.returncode})"
     return outcome, lines[-1] if lines else ""
+
+
+def _publish_command(steps: list[dict[str, object]]) -> tuple[str, bool]:
+    """허용 규칙의 게시 명령과, 그것이 정확 일치이고 프롬프트에 백틱으로 그대로 있는지."""
+    for step in steps:
+        if step.get("name") == REVIEW_STEP:
+            with_ = step.get("with") or {}
+            assert isinstance(with_, dict)
+            found = PUBLISH_RULE.search(str(with_.get("claude_args", "")))
+            if found is None:
+                return "(규칙 없음)", False
+            command = found.group(1)
+            exact = "*" not in command
+            return command, exact and f"`{command}`" in str(with_.get("prompt", ""))
+    raise SystemExit(f"리뷰 단계 {REVIEW_STEP!r} 가 없다")
 
 
 def main() -> int:
@@ -194,6 +255,10 @@ def main() -> int:
     mismatches = int(persist is not False)
     mark = "어긋남" if mismatches else "기대대로"
     print(f"[{mark}] 체크아웃 persist-credentials: {persist!r}(기대 False)")
+    command, same = _publish_command(steps)
+    mismatches += not same
+    mark = "기대대로" if same else "어긋남"
+    print(f"[{mark}] 게시 명령이 정확 일치 규칙이고 프롬프트에 그대로 있다: {command}")
     with tempfile.TemporaryDirectory() as tmp:
         script = Path(tmp) / "guard.sh"
         script.write_text(FAKE_GH + _guard(steps), encoding="utf-8", newline="\n")
@@ -202,7 +267,7 @@ def main() -> int:
             mark = "기대대로" if outcome == expected else "어긋남"
             mismatches += outcome != expected
             print(f"[{mark}] {name}: {outcome}(기대 {expected}) — {last}")
-    print(f"어긋남 {mismatches}/{len(CASES) + 1}")
+    print(f"어긋남 {mismatches}/{len(CASES) + 2}")
     return 1 if mismatches else 0
 
 
