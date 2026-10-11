@@ -37,7 +37,7 @@
 | `docs/agents/` | 이슈 트래커 규칙, 도메인 문서 위치 | setup 스킬이 씀 |
 | `.github/` | PR 템플릿, CI 워크플로, Claude Code Review 워크플로 | 첫날. 런북 저장소에서 복사해 검증 명령만 바꾼다 |
 | `.coderabbit.yaml` | CodeRabbit 설정. 층별 path_instructions, 린터 끔, 제외는 생성물·락파일·남이 쓴 스킬 사본만 | PR 봇과 로컬 CLI가 같은 파일을 읽는다. PR 자동 리뷰는 공개 저장소나 유료일 때만 켠다(2026-09-20 실측) |
-| `.claude/agents/` | 프로젝트 서브에이전트. coderabbit-review(CLI 실행과 트리아지), spec-reviewer(명세 검토). 둘 다 Edit·Write 없음 | 스킬은 절차, 서브에이전트는 격리된 컨텍스트에서 도구를 돌리고 보고만 한다 |
+| `.claude/agents/` | 프로젝트 서브에이전트. coderabbit-review(CLI 실행과 트리아지), bug-perf-review(CLI가 못 돌 때 버그·성능 리뷰), spec-reviewer(명세 검토). 모두 Edit·Write 없음 | 스킬은 절차, 서브에이전트는 격리된 컨텍스트에서 도구를 돌리고 보고만 한다 |
 | `tools/` | 배포되지 않는 저장소 유틸. 훅(`hook_*.py`)과 그 실행 래퍼(`launch_hook.py`), 검사(`check_*.py`), 검사 러너(`run_checks.py`), 훅 러너(`run_hooks.py`와 페이로드 표), 변이 도구, Actions 실행 요약 | 훅과 CI, 그리고 리뷰 봇 판정이 부른다. 규약은 `.claude/rules/tools.md` |
 | `docs/journal/` | 진행 일지. 단계별 사실, 사용자 프롬프트 원문, 갈린 곳과 번복 | 세션을 넘어 이어가고 `/retro`의 입력 |
 | `.scratch/` | 로컬 이슈 트래커(명세, 티켓, 프로브)와 회고 대기열(`retro-queue.md`) | 원격 트래커를 쓰지 않는 프로젝트의 작업 기록. 커밋한다 |
@@ -230,6 +230,7 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). 제외는 생성물·락파일·남이 쓴 스킬 사본(`.claude/skills/**`)만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다. (바꿀 곳: `path_instructions` 아홉 블록과 "이 저장소의 특수성" 문단은 그 프로젝트의 층과 원칙으로 **새로 쓴다**. 골격만 복사하고 대부분을 다시 쓴다)
 - `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다. (바꿀 곳: 경계 축 문장을 그 프로젝트의 원칙으로 새로 쓴다. agent-os 것은 LangGraph·LangChain 타입의 누출이다)
 - `.claude/agents/coderabbit-review.md`. CLI 실행, 좌석 확인(`coderabbit auth status`의 `Seat:`), 트리아지. 코드를 고치지 않는다. (바꿀 곳: 오탐 목록을 그 프로젝트의 자동 검사가 잡는 것으로)
+- `.claude/agents/bug-perf-review.md`. CLI가 못 돌 때(미설치, 로그인·좌석 없음, 한도 초과) 버그·성능 축을 같은 트리아지(유효·오탐·보류)로 본다. 보안 축은 내장 `/security-review`가 맡는다(agent-os ADR 0006의 2026-10-07 이력). (바꿀 곳: 성능 항목의 훅 시간 포인터를 그 프로젝트의 것으로)
 - `.claude/agents/spec-reviewer.md`. 명세를 티켓 전에 검토하는 읽기 전용 검토자. 9단계 3번의 체크리스트와 질문의 원천이다. (바꿀 곳: 체크리스트 2와 6의 원칙 항목을 그 프로젝트 헌법으로)
 - `.claude/skills/code-review/SKILL.md` 사본. 원본은 `<fixed-point>...HEAD`만 보고 리포트에서 멈춘다. 덧댄 것은 사본 첫머리 주석이 원천이다 — 범위를 미커밋·미추적까지, 보고 뒤 반영 절차, 본 범위 한 줄, 소스 없는 변경은 sonnet, 요구·참고 가름, 두 브리프의 주장 검증 목록, 받는 쪽 확인. 근거 확인은 서브에이전트가 격리된 컨텍스트에서 ADR도 주변 코드도 모른 채 판단한다는 사실에 대한 장치이고, 부록 A의 초록 착시와 한 쌍이다. 문서만 바뀐 변경을 리뷰에서 면제하지 않는다. (바꿀 곳 0)
 - 나머지 덧댄 사본 다섯(`grilling`, `implement`, `retro`, `to-spec`, `to-tickets`). 무엇을 덧댔는지는 각 사본 첫머리 주석이 원천이다. 덧댄 사본은 `npx skills update -p`가 조용히 되돌리므로 그 주석을 센티널로 삼아 지침 검사가 본다. 사람이 기억하는 대신 훅이 판정한다. 부록 A의 `disable-model-invocation` 줄과 같은 병이다. (바꿀 곳: 덧댐이 그 프로젝트에 맞지 않으면 사본을 원본으로 두고 `PATCHED_SKILLS`에서 뺀다)
@@ -297,7 +298,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 4. `/to-tickets` 로 수직 슬라이스 티켓. 원격 트래커면 4단계에서 적은 흐름대로 발행한다.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다. 이 티켓의 몫만 쓴다.
 6. 커밋 전 `/code-review`. 범위(미커밋·미추적까지)와 반영 규칙(Critical·Major는 커밋 전에, 근거를 먼저, 보류는 티켓이나 회고 후보로)은 사본 6단계가 원천이다.
-7. PR 직전 `coderabbit-review` 서브에이전트. 좌석이 있을 때만이다(8단계).
+7. PR 직전 `coderabbit-review` 서브에이전트. 좌석이 있을 때만이다(8단계). CLI가 못 돌면(미설치, 로그인·좌석 없음, 한도 초과) 내장 `/security-review`(보안)와 `bug-perf-review` 서브에이전트(버그·성능)를 나란히 돌린다.
 8. `/git-pr`로 PR. 별이 10개 미만인 공개 저장소는 `gh pr comment <번호> --body "@coderabbitai review"`로 부른다. 봇 둘과 CI의 역할 분담, 코멘트 0개인 초록을 읽는 법은 `operations.md` 리뷰 파이프라인이 원천이다. `/git-pr-feedback`으로 반영하고 `/git-pr-merge`로 squash 병합한다. 반영과 병합은 PR을 연 세션이 하고, 병합 뒤는 10단계다.
 
 ## 10단계. 세션 마감
@@ -320,7 +321,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 - [ ] `CODING_STANDARDS.md` 존재, 판단 기준 비어 있음 (6)
 - [ ] 테스트, 린트, 타입체크 명령 통과. 가드레일 하나 이상 (7)
 - [ ] `.claude/settings.json`에 훅 등록과 `permissions.deny`(`.env`). 훅마다 `tools/hook_payloads.toml`에 발동·침묵 사례가 있고 `uv run python tools/run_hooks.py`와 `uv run pytest tests/tools`가 초록 (7)
-- [ ] PR 템플릿, commit-msg 훅(빨강 확인), 지침 검사(상수를 이 프로젝트에 맞춤), CI 워크플로, `.coderabbit.yaml`, Claude Code Review 워크플로, 서브에이전트 둘, `.claude/rules/` 디렉터리별 규칙과 `tools.md`, `.scratch/retro-queue.md`, README의 원천 표 (7)
+- [ ] PR 템플릿, commit-msg 훅(빨강 확인), 지침 검사(상수를 이 프로젝트에 맞춤), CI 워크플로, `.coderabbit.yaml`, Claude Code Review 워크플로, 서브에이전트 셋, `.claude/rules/` 디렉터리별 규칙과 `tools.md`, `.scratch/retro-queue.md`, README의 원천 표 (7)
 - [ ] 첫 커밋 완료. 원격 생성과 푸시, 첫 PR이 CI를 통과. main 보호를 걸었거나(`tools/protection.json`) free+비공개라 `/git-pr-merge` 게이트를 `operations.md`에 적었다 (8)
 - [ ] 봇 전제 둘(`CLAUDE_CODE_OAUTH_TOKEN` 시크릿, CLI 로그인과 `Seat:` 확인). 첫 PR에서 Claude 코멘트 확인. CodeRabbit App은 공개 저장소나 유료일 때만 (8)
 - [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판 (1·4)

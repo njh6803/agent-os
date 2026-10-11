@@ -4,7 +4,9 @@
 # LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
 # 체크아웃하는 잡은 모두 persist-credentials: false 다. 모두 PR 의 코드를 짓고 돌리는데 체크아웃 뒤에 github.com 을 상대로
 # 한 git 명령(push, 인증된 fetch)이 없어서, 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
-# 잡을 더해도 같고, 자격 증명이 필요한 잡이 생기면 그 잡에서만 켜고 까닭을 적는다.
+# 워크플로 하드닝은 zizmor 가 판정한다(ADR 0027, 설정은 .github/zizmor.yml). 빠뜨리면 artipacked 가, 서드파티 액션을 해시
+# 대신 태그로 가져오면 unpinned-uses 가 python 잡을 빨갛게 한다. 자격 증명이 필요한 잡이 생기면 그 체크아웃 줄에
+# `# zizmor: ignore[artipacked]` 와 까닭을 함께 둔다.
 name: ci
 
 on:
@@ -28,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
       - run: uv python install 3.12
@@ -41,6 +43,7 @@ jobs:
       - run: uv run python tools/check_instructions.py
       - run: uv run python tools/check_type_escapes.py
       - run: uv run python tools/run_hooks.py
+      - run: uv run zizmor --offline --strict-collection --config .github/zizmor.yml .
 
   # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
   # verify 의 test 단계가 디자인 시스템의 스토리 테스트를 실제 chromium 에서 돌아(ADR 0026) 그 전에 브라우저를 깐다.
@@ -55,7 +58,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: web/package.json
           cache: true
@@ -85,7 +88,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
       - run: uv python install 3.12
@@ -93,7 +96,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: web/package.json
           cache: true
@@ -125,7 +128,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: web/package.json
           cache: true

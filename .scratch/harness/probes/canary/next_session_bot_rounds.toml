@@ -1,0 +1,23 @@
+# next-session 1단계에 더한 PR 봇 리뷰 회차의 기준(대기열 137)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_bot_rounds.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 1단계에서 PR 봇 리뷰가 거듭될 때 어느 회차부터 어떤 등급의 지적만 고치는지 적은 구절과,
+나머지 지적을 어디에 무엇과 함께 남기는지 적은 구절을 각각 글자 그대로 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["둘째 회차부터는 Critical·Major만 고치고", "보류 이유를 PR 코멘트에 남긴 뒤 병합한다"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

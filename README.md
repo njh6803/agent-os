@@ -59,7 +59,7 @@ docs/
   adr/  agents/  journal/
 .scratch/          로컬 이슈 트래커. plan.md와 기능별 spec·티켓
 .claude/
-  agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), spec-reviewer(명세 검토). 둘 다 수정 없음
+  agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), bug-perf-review(CLI가 못 돌 때 버그·성능), spec-reviewer(명세 검토). 모두 수정 없음
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
@@ -96,7 +96,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 |---|---|---|
 | 원칙과 거버넌스 | `docs/constitution/principles.md` | `CLAUDE.md`가 임포트 |
 | 스택과 의존성의 결정 | `docs/constitution/tech.md` | 구현은 `pyproject.toml`과 `web/package.json`. 둘이 다르면 구현을 맞추거나 ADR |
-| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`(커밋마다 도는 검사 일곱은 그것이 부르는 `tools/run_checks.py`의 `CHECKS`)과 `.github/workflows/ci.yml`. 명령이 바뀌면 넷 다 |
+| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`(커밋마다 도는 검사 여덟은 그것이 부르는 `tools/run_checks.py`의 `CHECKS`)과 `.github/workflows/ci.yml`. 명령이 바뀌면 넷 다. 워크플로 감사의 설정은 `.github/zizmor.yml` |
 | 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |

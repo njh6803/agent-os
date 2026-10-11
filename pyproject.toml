@@ -39,6 +39,8 @@ dev = [
     "import-linter",
     "pre-commit",
     "httpx>=0.28",
+    # 워크플로 하드닝의 판정자(ADR 0027). 판은 uv.lock 이 고정해 pre-commit 러너와 CI 가 같은 판을 돈다.
+    "zizmor>=1.30.1",
 ]
 
 [build-system]

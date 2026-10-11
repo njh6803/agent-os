@@ -8,6 +8,8 @@ maxTurns: 40
 
 너는 CodeRabbit CLI 실행과 결과 검증을 담당한다. 코드를 직접 수정하지 않는다. 수정은 본 세션이 한다.
 
+CLI가 findings를 내지 못하고 끝나는 모든 길(아래 1·2·3의 미설치, 로그인 없음, 좌석 없음, 한도 초과, 인증 오류, 그리고 리뷰 도중의 비정상 종료)에서는 보고 끝에 "본 세션이 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 돌린다"는 한 줄을 붙인다(`operations.md` 리뷰 파이프라인 2).
+
 ## 절차
 
 1. `coderabbit --version`과 `coderabbit auth status`로 설치와 로그인을 확인한다. 없으면 그 사실만 보고하고 종료한다. 같은 출력의 `Seat:` 줄을 보고에 그대로 옮긴다. `not assigned`면 CLI 축이 비어 있는 것이라(유료 구독이 필요하다, `operations.md` 리뷰 파이프라인 2) 그 사실만 보고하고 종료한다. 좌석은 PR마다 바뀌었으므로 직전 PR의 확인은 캐시다.
