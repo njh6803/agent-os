@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import stat
 import subprocess
 import sys
 import unicodedata
@@ -176,6 +177,52 @@ def test_여러_줄_문자열_안에서_샵으로_시작하는_줄은_주석이_
     assert rewrap_source(source, 20).source == source
 
 
+def test_샵_바로_뒤에_공백이_없는_주석은_문단에_넣지_않는다() -> None:
+    """`##` 제목과 `#:` 속성 설명을 감으면 줄이 합쳐지고 새 줄의 `#` 뒤 공백이 사라졌다(PR 직전
+    버그·성능 리뷰가 손으로 재현했다)."""
+    source = "## aaa bbb ccc ddd eee\n#: fff ggg hhh iii jjj\n"
+
+    result = rewrap_source(source, 20)
+
+    assert result.source == source
+    assert [row for row, _ in result.remaining] == [1, 2]
+
+
+def test_SPDX_머리_줄은_ruff_처럼_넘친_줄이_아니고_감지도_않는다() -> None:
+    """ruff 0.16.8 은 `#` 뒤에 공백이 있는 `SPDX-License-Identifier:`·`SPDX-FileCopyrightText:` 줄만
+    E501 에서 뺀다(프로브 `rewrap_width.py`). 다른 SPDX 줄도 기계가 읽으므로 감지 않는다."""
+    tail = " Apache-2.0 OR MIT OR BSD-3-Clause"
+    source = "# SPDX-License-Identifier:" + tail + "\n# SPDX-FileContributor:" + tail + "\n"
+
+    assert not overlong("# SPDX-License-Identifier:" + tail, 20)
+    assert not overlong("#   SPDX-FileCopyrightText:" + tail, 20)
+    assert overlong("# SPDX-FileContributor:" + tail, 20)
+    assert overlong("#SPDX-License-Identifier:" + tail, 20)
+    # 30이면 `SPDX-FileContributor:` 뒤에서 끊을 수 있다. 20이면 첫 어절만으로 차서 가르지 못한다.
+    assert rewrap_source(source, 30).source == source
+
+
+def test_doctest_줄과_코드_펜스_안은_문단에_넣지_않는다() -> None:
+    """감으면 doctest 의 출력이 코드 줄에 붙었다(PR 직전 버그·성능 리뷰가 손으로 재현했다)."""
+    lines = (
+        '"""aaa',
+        ">>> call(bbb, ccc, ddd, eee)",
+        "... ggg(hhh, iii, jjj, kkk)",
+        "fff",
+        "```",
+        "hhh iii jjj kkk lll mmm",
+        "```",
+        '"""',
+    )
+
+    assert _감는다(*lines) == list(lines)
+
+
+def test_역슬래시_바로_뒤에서는_끊지_않는다() -> None:
+    """비 raw 문자열에서 줄 끝 역슬래시는 다음 줄과 이어 읽혀 내용이 바뀐다. 어디서나 피한다."""
+    assert _감는다("# aaa bbbbb \\ cccccccc") == ["# aaa bbbbb", "# \\ cccccccc"]
+
+
 def test_지시_주석과_역슬래시로_끝나는_줄은_감지_않는다() -> None:
     """지시 주석은 도구가 읽는 꼴이고, 역슬래시는 다음 줄과 이어 읽힌다."""
     pragma = "# noqa: E501 aaa bbb ccc ddd\n#!/usr/bin/env python aaa bbb\n"
@@ -306,6 +353,27 @@ def test_감지_못한_줄이_남으면_1로_끝난다(
 
     assert main([str(path)]) == 1
     assert "넘친 채 남았다" in capsys.readouterr().out
+
+
+def test_고쳐_쓰지_못하면_2로_알리고_다음_파일로_간다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """쓰기가 try 밖에 있어 traceback 과 종료 1(넘친 줄이 남았다)로 끝나고 뒤의 파일을 건너뛰었다(PR
+    직전 버그·성능 리뷰가 손으로 재현했다)."""
+    data = ("# " + " ".join(["가나"] * 30) + "\n").encode()
+    locked = _설정_아래에_쓴다(tmp_path, data)
+    other = tmp_path / "other.py"
+    other.write_bytes(data)
+    locked.chmod(stat.S_IREAD)
+    try:
+        status = main([str(locked), str(other)])
+    finally:
+        locked.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+    assert status == 2
+    assert "고쳐 쓰지 못했다" in capsys.readouterr().out
+    assert locked.read_bytes() == data
+    assert other.read_bytes() != data
 
 
 def test_ruff_설정_밖의_파일과_읽지_못하는_설정은_고치지_않고_2로_끝난다(

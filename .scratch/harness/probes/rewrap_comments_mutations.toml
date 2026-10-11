@@ -182,10 +182,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-            if rows and row.head == continuation and _joinable(row) and not _opens(row):
+            if rows and row.head == continuation and joinable and not _opens(row):
 '''
 new = '''
-            if rows and row.head.strip() == continuation.strip() and _joinable(row) and not _opens(row):
+            if rows and row.head.strip() == continuation.strip() and joinable and not _opens(row):
 '''
 
 [[mutation]]
@@ -238,7 +238,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-        and not row.pragma
+        and not row.fixed
 '''
 new = '''
 '''
@@ -555,4 +555,107 @@ old = '''
 '''
 new = '''
         "넘친 줄을 지금 다시 감는다."
+'''
+
+[[mutation]]
+name = "샵 바로 뒤에 공백이 없는 주석도 문단에 넣는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "샵_바로_뒤에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+        fixed = DIRECTIVE.match(text) is not None or not head.group().endswith((" ", "\t"))
+'''
+new = '''
+        fixed = DIRECTIVE.match(text) is not None
+'''
+
+[[mutation]]
+name = "SPDX 머리 줄을 넘친 줄로 본다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "SPDX_머리"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+    if part is None or SPDX.match(line):
+'''
+new = '''
+    if part is None:
+'''
+
+[[mutation]]
+name = "SPDX 태그 줄을 문단에 넣는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "SPDX_머리"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+DIRECTIVE = re.compile(rf"{RUFF_PRAGMAS}|(?:fmt|mypy|pragma):|!|-\*-|SPDX-")
+'''
+new = '''
+DIRECTIVE = re.compile(rf"{RUFF_PRAGMAS}|(?:fmt|mypy|pragma):|!|-\*-")
+'''
+
+[[mutation]]
+name = "doctest 줄을 문단에 넣는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "doctest_줄과"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+        and DOCTEST.match(row.text) is None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "코드 펜스 안의 줄을 문단에 넣는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "doctest_줄과"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+            joinable = _joinable(row) and not fenced and not fence
+'''
+new = '''
+            joinable = _joinable(row) and not fence
+'''
+
+[[mutation]]
+name = "역슬래시 바로 뒤에서도 끊는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "역슬래시_바로_뒤에서는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+        if not text[:end].endswith("\\"):
+            fitting = count
+'''
+new = '''
+        fitting = count
+'''
+
+[[mutation]]
+name = "고쳐 쓰기 실패를 잡지 않는다"
+tests = ["tests/tools/test_rewrap_comments.py", "-k", "고쳐_쓰지_못하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/rewrap_comments.py"
+old = '''
+            try:
+                path.write_bytes(encoded)
+            except OSError as error:
+                print(f"{argument}: 고쳐 쓰지 못했다({error})")
+                status = 2
+                continue
+'''
+new = '''
+            path.write_bytes(encoded)
 '''

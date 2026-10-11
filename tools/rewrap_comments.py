@@ -17,14 +17,17 @@ CRLF 로 바꾸고, 빈 줄과 닫는 따옴표를 문단에 붙이고, 혼자 �
 문자열이다(모듈·클래스·함수의 독스트링과 속성 아래의 문자열). 독스트링의 여는 줄 다음은 따옴표를 뺀
 들여쓰기가 머리다. 경계는 틀려도 안전한 쪽으로 둔다 — 경계가 하나 더 있으면 줄이 조금 들쭉날쭉할
 뿐이지만, 놓치면 문장이 합쳐진다. 빈 줄, 머리가 다른 줄(더 들여 쓴 예시), 닫는 따옴표만 선 줄, 지시
-주석(`# noqa`, `#!` 등), 역슬래시로 끝나는 줄(다음 줄과 이어 읽힌다), 탭이 든 줄은 문단에 들지
-않는다. 목록 표지(`- `, `1. `)나 이름표(`사용:`, `못 보는 것:`)로 시작하는 줄은 새 문단을 연다. 목록
-항목의 이어지는 줄은 표지 너비만큼 더 들여 쓴다.
+주석(`# noqa`, `#!`, SPDX 머리 등), `#` 바로 뒤에 공백이 없는 주석(`##` 제목, `#:` 속성 설명),
+doctest 줄(`>>>`, `...`), 코드 펜스(백틱 셋)의 여닫는 줄과 그 안, 역슬래시로 끝나는 줄(다음 줄과
+이어 읽힌다), 탭이 든 줄은 문단에 들지 않는다. 같은 까닭으로 역슬래시 바로 뒤에서는 끊지 않는다.
+목록 표지(`- `, `1. `)나 이름표(`사용:`, `못 보는 것:`)로 시작하는 줄은 새 문단을 연다. 목록 항목의
+이어지는 줄은 표지 너비만큼 더 들여 쓴다.
 
 폭과 넘친 줄의 판정은 ruff 의 E501 을 따른다. 동아시아 넓은 글자는 2, 결합 문자·제어 문자·폭 없는
 형식 문자와 조합형 한글의 가운뎃소리·끝소리 자모는 0, 나머지는 1이다. 공백으로 가른 덩어리가 하나인
-줄과, 끝 덩어리가 URL(`://`)이고 그 앞까지가 줄 길이 안인 줄은 넘친 줄이 아니다. 줄 끝 주석이 ruff
-의 지시 주석(`# noqa: B010`, `# pyright:` 등)이면 그 앞의 코드만 재고, 코드를 들지 않은 `# noqa` 와
+줄, 끝 덩어리가 URL(`://`)이고 그 앞까지가 줄 길이 안인 줄,
+`# SPDX-License-Identifier:`·`# SPDX-FileCopyrightText:` 줄은 넘친 줄이 아니다. 줄 끝 주석이 ruff 의
+지시 주석(`# noqa: B010`, `# pyright:` 등)이면 그 앞의 코드만 재고, 코드를 들지 않은 `# noqa` 와
 E501 을 든 noqa 는 그 줄을 넘친 줄로 보지 않는다. 그 판정들을 ruff 와 대조하는 것은
 `.scratch/harness/probes/rewrap_width.py` 이고, 이 저장소의 줄과 그 프로브가 더한 줄만 잰다. 줄
 길이는 파일마다 ruff 처럼 조상에서 가장 가까운 설정(`.ruff.toml`, `ruff.toml`, `tool.ruff` 표가 든
@@ -33,8 +36,9 @@ E501 을 든 noqa 는 그 줄을 넘친 줄로 보지 않는다. 그 판정들�
 
 사용: `uv run python tools/rewrap_comments.py <파일> [<파일> ...]`. 파일을 고쳐 쓰고 감은 자리와
 감은 뒤에도 넘친 줄을 줄마다 알린다. 종료 0 은 넘친 줄이 남지 않았다, 1 은 남았다, 2 는 인자가
-없거나, 파일이나 설정을 읽지 못했거나, ruff 설정 밖이거나, 파이썬으로 파싱하지 못했다(그 파일은
-고치지 않는다).
+없거나, 파일이나 설정을 읽지 못했거나, ruff 설정 밖이거나, 파이썬으로 파싱하지 못했거나(그 파일은
+고치지 않는다), 고쳐 쓰지 못했다. 2가 나도 뒤의 파일은 마저 본다. 쓰기는 파일을 비운 뒤 쓰므로 쓰는
+도중의 실패(디스크가 찼다)는 파일을 자를 수 있다.
 
 못 보는 것: 코드 줄과 줄 끝 주석, 독스트링이 아닌 문자열(남았다고 알린다 — 코드 줄은 커밋 전
 `ruff format` 이 감는다), 한 어절이 폭을 넘는 줄. 주석으로 막아 둔 코드는 산문으로 보고 감는다.
@@ -42,10 +46,13 @@ E501 을 든 noqa 는 그 줄을 넘친 줄로 보지 않는다. 그 판정들�
 꼬리를 넘기면 그 사이에 공백이 하나 생긴다. 문단을 한 줄로 써 두고 이 도구로 감으면 공백에서만
 끊긴다. 이름표도 목록 표지도 아닌 혼자 선 짧은 줄은 문단의 일부로 보아 앞줄에서 넘친 꼬리를 받는다.
 짧은 줄을 채우지 않으므로 리뷰가 짚는 어색한 줄바꿈은 고치지 않는다. 주석으로 막은 코드, 공백 없는
-줄바꿈, 혼자 선 짧은 줄의 셋은 시험이 지금의 동작으로 고정한다. 설정의 `extend` 는 따라가지 않는다.
-탭의 폭은 4로 어림하고 재지 않았다(`git grep -P '\\t' -- '*.py'` 로 손으로 본 2026-10-07 에 이
-저장소의 파이썬 파일에는 탭이 없었다). 홀로 선 CR 이 든 파일은 감지 않는다 — 파이썬은 그것을 줄
-끝으로 읽고 이 도구는 개행(`\\n`)으로만 가른다.
+줄바꿈, 혼자 선 짧은 줄의 셋은 시험이 지금의 동작으로 고정한다. 두 줄에 걸쳐 쓴 코드 스팬은 닫는
+백틱이 다음 줄에서 새 스팬을 열어 그 줄의 나머지가 한 어절이 된다(감지 않고 남았다고 알린다). 이
+저장소 밖의 드문 문자(일부 기호, 이 파이썬의 유니코드 표에 없는 코드 포인트)는 ruff 와 폭이 다를 수
+있다(PR 직전 리뷰가 전체 코드 포인트를 손으로 쟀다). 설정의 `extend` 는 따라가지 않는다. 탭의 폭은
+4로 어림하고 재지 않았다(`git grep -P '\\t' -- '*.py'` 로 손으로 본 2026-10-07 에 이 저장소의 파이썬
+파일에는 탭이 없었다). 홀로 선 CR 이 든 파일은 감지 않는다 — 파이썬은 그것을 줄 끝으로 읽고 이
+도구는 개행(`\\n`)으로만 가른다.
 """
 
 from __future__ import annotations
@@ -80,10 +87,16 @@ DOCSTRING_OPEN = re.compile(r"([ \t]*)[rRuU]?(\"\"\"|''')")
 # 0.16.8, `.scratch/harness/probes/rewrap_width.py`).
 RUFF_PRAGMAS = r"(?i:noqa)|nosec|(?:isort|type|pyright|pylint|flake8|ruff):"
 RUFF_PRAGMA = re.compile(rf"#\s*(?:{RUFF_PRAGMAS})")
-# 문단에 넣지 않는 주석. 도구가 읽는 꼴이다. `#!` 와 인코딩 표지(`# -*- coding`)도 여기 든다.
-DIRECTIVE = re.compile(rf"{RUFF_PRAGMAS}|(?:fmt|mypy|pragma):|!|-\*-")
+# 문단에 넣지 않는 주석. 도구가 읽는 꼴이다. `#!` 와 인코딩 표지(`# -*- coding`), SPDX 머리도 든다.
+DIRECTIVE = re.compile(rf"{RUFF_PRAGMAS}|(?:fmt|mypy|pragma):|!|-\*-|SPDX-")
 # 줄의 E501 을 끄는 noqa. 코드를 들지 않은 것과 E501 을 든 것.
 NOQA_E501 = re.compile(r"#\s*(?i:noqa)(?!:)|#\s*(?i:noqa):.*\bE501\b")
+# ruff 가 E501 에서 빼는 SPDX 머리 줄. `#` 뒤에 공백이 있어야 하고 다른 SPDX 태그는 들지 않는다(ruff
+# 0.16.8, 프로브 `rewrap_width.py`).
+SPDX = re.compile(r"[ \t]*#[ \t]+SPDX-(?:License-Identifier|FileCopyrightText):")
+# doctest 의 입력 줄과 이어지는 줄.
+DOCTEST = re.compile(r"(?:>>>|\.\.\.)(?: |$)")
+FENCE = "```"
 LIST_MARKER = re.compile(r"(?:[-*+]|\d+[.)]) +")
 # 세 어절까지의 이름 뒤 쌍점. `https://` 와 `C:\` 는 쌍점 뒤가 공백이 아니라 들지 않는다.
 LABEL = re.compile(r"[^\s:`]+(?: [^\s:`]+){0,2}:(?:\s|$)")
@@ -102,7 +115,8 @@ class Row:
     tail: str = ""
     # 독스트링의 여는 줄이면 그다음 줄들의 머리(따옴표를 뺀 들여쓰기).
     next_head: str | None = None
-    pragma: bool = False
+    # 문단에 넣지 않고 그대로 두는 주석(지시 주석, `#` 바로 뒤에 공백이 없는 주석).
+    fixed: bool = False
 
 
 @dataclass(frozen=True)
@@ -153,10 +167,10 @@ def measured(line: str, comment: int | None = None) -> str | None:
 
 
 def overlong(line: str, limit: int, comment: int | None = None) -> bool:
-    """ruff 가 E501 로 볼 줄인가. 덩어리가 하나인 줄과, 줄 길이 안에서 시작한 URL 로 끝나는 줄은
-    아니다. `comment` 는 `measured` 와 같다."""
+    """ruff 가 E501 로 볼 줄인가. 덩어리가 하나인 줄, 줄 길이 안에서 시작한 URL 로 끝나는 줄, SPDX
+    머리 줄은 아니다. `comment` 는 `measured` 와 같다."""
     part = measured(line, comment)
-    if part is None:
+    if part is None or SPDX.match(line):
         return False
     total = width(part)
     if total <= limit:
@@ -250,13 +264,15 @@ def _words(text: str) -> list[tuple[int, int]]:
 
 def _cut(head: str, text: str, limit: int) -> int | None:
     """`text` 를 어디서 끊어 꼬리를 넘길지. 한 어절은 반드시 넘긴다(끝 줄은 닫는 따옴표가 그
-    어절을 따라간다). 첫 어절도 들지 않으면 None."""
+    어절을 따라간다). 역슬래시 바로 뒤에서는 끊지 않는다(비 raw 문자열에서 다음 줄과 이어 읽힌다).
+    끊을 자리가 없으면 None."""
     spans = _words(text)
     fitting = 0
     for count, (_, end) in enumerate(spans[:-1], 1):
         if width(head + text[:end]) > limit:
             break
-        fitting = count
+        if not text[:end].endswith("\\"):
+            fitting = count
     return spans[fitting][0] if fitting else None
 
 
@@ -278,7 +294,10 @@ def _comment_rows(lines: list[str], source: str) -> list[Row]:
         if line[:column].strip() or head is None:
             continue
         text = line[head.end() :]
-        rows.append(Row(index, head.group(), text, pragma=DIRECTIVE.match(text) is not None))
+        # `##` 제목과 `#:` 속성 설명은 `#` 바로 뒤에 공백이 없다. 머리가 `#` 하나로 같아 문단이
+        # 합쳐지고 새 줄의 `#` 뒤 공백이 사라졌다(PR 직전 버그·성능 리뷰).
+        fixed = DIRECTIVE.match(text) is not None or not head.group().endswith((" ", "\t"))
+        rows.append(Row(index, head.group(), text, fixed=fixed))
     return rows
 
 
@@ -334,7 +353,8 @@ def _blocks(source: str) -> list[list[Row]]:
 def _joinable(row: Row) -> bool:
     return (
         bool(row.text.strip())
-        and not row.pragma
+        and not row.fixed
+        and DOCTEST.match(row.text) is None
         and "\t" not in row.head + row.text
         and not row.text.rstrip().endswith("\\")
     )
@@ -358,14 +378,19 @@ def _paragraphs(source: str) -> list[Paragraph]:
     for block in _blocks(source):
         rows: list[Row] = []
         continuation = ""
+        fenced = False
         for row in block:
-            if rows and row.head == continuation and _joinable(row) and not _opens(row):
+            # 코드 펜스의 여닫는 줄과 그 안의 줄은 문단에 넣지 않는다.
+            fence = row.text.lstrip().startswith(FENCE)
+            joinable = _joinable(row) and not fenced and not fence
+            fenced = fenced != fence
+            if rows and row.head == continuation and joinable and not _opens(row):
                 rows.append(row)
                 continue
             if rows:
                 found.append(Paragraph(tuple(rows), continuation))
                 rows = []
-            if _joinable(row):
+            if joinable:
                 rows = [row]
                 continuation = _continuation(row)
         if rows:
@@ -494,7 +519,12 @@ def main(argv: list[str] | None = None) -> int:
             continue
         encoded = result.source.encode("utf-8")
         if encoded != data:
-            path.write_bytes(encoded)
+            try:
+                path.write_bytes(encoded)
+            except OSError as error:
+                print(f"{argument}: 고쳐 쓰지 못했다({error})")
+                status = 2
+                continue
         for first, last in result.wrapped:
             print(f"{argument}:{first}: 감았다({last - first + 1}줄)")
         for row, reason in result.remaining:

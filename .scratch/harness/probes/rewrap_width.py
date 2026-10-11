@@ -9,7 +9,7 @@
    줄표, `# noqa: E402` 로 끝나는 줄 같은 이 저장소의 실제 줄이 든다. 저장소에 없는 결합 문자, 폭
    없는 공백, 조합형(NFD) 한글 자모는 임시 파일의 줄로 더한다.
 2. 넘친 줄의 예외. 덩어리가 하나인 줄, 줄 길이 안에서 시작한 URL 로 끝나는 줄, 줄 끝 지시 주석(ruff
-   가 빼는 것과 빼지 않는 것), 코드를 들지 않은 noqa 와 그 반례를 임시 파일에 두고
+   가 빼는 것과 빼지 않는 것), 코드를 들지 않은 noqa, SPDX 머리 줄과 그 반례를 임시 파일에 두고
    `--line-length 100` 의 E501 과 도구의 `overlong` 을 줄마다 견준다.
 
 어긋난 줄을 찍고, 하나라도 있으면 1로 끝난다. 이 저장소는 읽기만 하고 임시 파일은 끝에 지운다.
@@ -61,6 +61,10 @@ EXCEPTION_LINES = [
     LONG_CODE + "  # noqa: E501",
     LONG_CODE + "  # noqa: B010",
     "# noqa: B010 " + "d " * 50,
+    "# SPDX-License-Identifier: " + "d " * 50,
+    "#   SPDX-FileCopyrightText: " + "d " * 50,
+    "# SPDX-FileContributor: " + "d " * 50,
+    "#SPDX-License-Identifier: " + "d " * 50,
 ]
 
 
