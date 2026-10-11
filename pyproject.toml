@@ -77,6 +77,10 @@ markers = [
 # importlib 모드: tests/ 하위 디렉터리에 같은 파일명이 있어도 모듈명 충돌이 없다(선행 저장소 AAPP-32·37 함정)
 # strict-markers: 선언하지 않은 마커(오타)는 경고가 아니라 수집 오류다. 마커의 원천을 위 표 하나로 둔다
 addopts = "-m \"not llm\" --import-mode=importlib --strict-markers"
+# 한국어 매개변수 id 를 \uXXXX 로 바꾸지 않는다. 바꾸면 실패 출력에서 사례를 읽지 못하고 매개변수 id 로
+# 고른 -k 선택이 빈다(대기열 56). 인쇄되지 않는 문자만 되돌리는 것과 출력이 cp949 로 깨지지 않게 하는
+# 것은 tests/conftest.py 가 맡는다
+disable_test_id_escaping_and_forfeit_all_rights_to_community_support = true
 # ADR 0007: 비동기 테스트는 async def 하나로 쓴다. 데코레이터도 마커도 없다
 asyncio_mode = "auto"
 # await 를 빼먹은 코루틴이 경고만 내고 초록으로 지나가지 않게 한다. 경고 전부를 올리지는 않는다
