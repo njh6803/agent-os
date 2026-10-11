@@ -150,6 +150,13 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
   행을 `done`으로, 프론티어 줄과 web-widget·admin-style 행을 고쳤다. 받을 때 04와 함께 고친 셋이 충돌했다.
   `web/packages/ui/src/index.ts`는 atoms 다음에 molecules를 두었다. probes README는 이 티켓의 행 다음에 04의 행 둘을 두었다.
   대기열은 136을 4회차(일지 01·03·12·13)로, 137은 이 브랜치의 2회차로 두었고, 끝은 번호 순서대로 149~152다.
+- **넷째 CI와 리뷰(`8afa9b5`).** 2026-10-11에 이어받은 세션이 봤다. 다섯 잡과 `verify`가 초록이었고 claude-review는 "지적
+  없음"이었다. CodeRabbit은 다시 "Review rate limited"였다. 그 사이 main에 #167~#171이 들어왔고, 그 가운데 #167·#170이 이
+  브랜치도 고친 대기열 136·137 행을 닫아 PR이 `CONFLICTING`이었다.
+- **main 받기(`f71e577`).** 충돌은 대기열 하나였다. main이 136(`chore/review-axis-and-failure-reason`)과
+  137(`chore/llm-tokens-and-bot-review-rounds`)을 닫았는데 그 회차에 일지 12가 빠져 있어, main의 닫힌 행을 두고 일지 12를
+  더했다(136은 5회차, 137은 4회차). main의 일지 16·19가 이 풀이를 예고했다. main의 세션들이 151·152를 이 브랜치 몫으로 비워
+  두고 153부터 썼으므로 번호는 옮기지 않았다.
 
 ## 회고
 
@@ -175,17 +182,18 @@ sonnet으로 내리지 않았다. 두 축 모두 Critical·Major는 없었다. �
 
 ## 다음
 
-- **design-system이 닫혔다.** 결정표에서는 chore 배치 줄이 먼저 맞는다. 회차 3 이상의 열린 대기열 행이 열이다(41, 52, 56,
-  106, 112, 113, 114, 125, 136, 144). 그 가운데 136은 `chore/review-axis-and-failure-reason`, 142(2회차)는
-  `chore/zizmor-workflow-audit` 세션이 이 병합 때 돌고 있었다. 남은 묶음은 대상 파일로 다음과 같다.
+- **design-system이 닫혔다.** 결정표에서는 chore 배치 줄이 먼저 맞는다. main 받기 뒤 회차 3 이상의 열린 대기열 행은
+  여덟이다(17, 41, 52, 56, 106, 112, 114, 125). 이 절을 처음 쓸 때 셌던 113·136·144는 그 사이 main에서 닫혔고, 17은 회차를
+  "무엇" 칸에 적은 옛 모양이라 처음부터 빠져 있었다. 묶음은 다음과 같다.
   - spec-reviewer: 106·125
-  - 도구: 52·56·112
-  - `operations.md` LLM 테스트: 113
+  - 검사 도구와 설정(대상 파일은 각각 다르다): 52·56·112
   - grilling: 114
-  - 사용자가 "규칙으로"라고 해야 하는 것: 144
-  - ADR이 필요한 것: 41
+  - ADR이 필요한 것: 17·41
+  `retro` 5단계의 다른 조건(같은 대상 파일의 열린 항목이 셋 이상)으로는 다음도 든다. 결정표는 이 조건을 적지 않는다.
+  - `claude-code-review.yml`: 84·146·158·161(그 파일이라 별도 PR이다)
+  - `code-review` 스킬: 151·154·156
+  - `spec-reviewer`: 106·121·125
+  - `to-spec` 스킬: 103·105·126
   그다음 프론티어는 web-widget과 admin-style이다.
-- **주 체크아웃의 브랜치는 병합 뒤 `git worktree list`의 첫 줄로 본다.** 번호 대조 때 루트는 `origin/main`과 같은
-  `5c069d4`였다.
 - 진행 표시의 "지금 하는 일" 자리(디자인 파일에만 있다)는 진행 표시를 처음 쓰는 기능이 정한다. `plan.md`의 web-widget과
   admin-style 행에 적었다.
