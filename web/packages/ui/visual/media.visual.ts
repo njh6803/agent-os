@@ -93,24 +93,45 @@ test("shadow 호스트에서 data-theme·data-mode 를 지우면 문서의 시�
   }
 });
 
-// 불러오는 중인 컴포넌트의 스토리와 그 도는 표시. 값 모름 진행 막대는 그것을 들이는 티켓이 여기 더한다.
-const SPINNERS = ["atoms-button--loading", "atoms-iconbutton--loading"] as const;
+interface Motion {
+  readonly story: string;
+  /** 테스트 이름에 드는 표시의 이름. */
+  readonly what: string;
+  readonly target: (page: Page) => Locator;
+  /** 줄이기가 없을 때의 animation-name. 줄이기에서는 `none` 이다. */
+  readonly animation: string;
+}
 
-for (const story of SPINNERS) {
-  test(`${story} 의 도는 표시가 움직임 줄이기에서 멈추고 줄이기가 없으면 돈다`, async ({
+const SPINNER = (page: Page): Locator => page.locator("[aria-busy=true] svg");
+
+// 움직이는 표시를 그리는 컴포넌트마다 그 상태의 스토리 하나. 불러오는 중인 버튼과 아이콘 버튼의 도는 표시, 값 모름
+// 진행 막대(트랙 안의 막대)다. 같은 컴포넌트의 다른 스토리(제출 버튼, 실패 톤)는 같은 클래스라 더 보지 않는다.
+const SPINNERS: readonly Motion[] = [
+  { story: "atoms-button--loading", what: "도는 표시", target: SPINNER, animation: "spin" },
+  { story: "atoms-iconbutton--loading", what: "도는 표시", target: SPINNER, animation: "spin" },
+  {
+    story: "atoms-progress--indeterminate",
+    what: "값 모름 진행 막대",
+    target: (page) => page.locator("[role=progressbar]:not([aria-valuenow]) > div > div"),
+    animation: "progress",
+  },
+];
+
+for (const { story, what, target, animation } of SPINNERS) {
+  test(`${story} 의 ${what}가 움직임 줄이기에서 멈추고 줄이기가 없으면 움직인다`, async ({
     page,
     storybook,
   }) => {
     for (const [reducedMotion, name] of [
-      ["no-preference", "spin"],
+      ["no-preference", animation],
       ["reduce", "none"],
     ] as const) {
       await page.emulateMedia({ reducedMotion });
       await storybook.open(story, muk("light"));
-      const spinner = page.locator("[aria-busy=true] svg");
-      await expect(spinner, reducedMotion).toHaveCount(1);
+      const moving = target(page);
+      await expect(moving, reducedMotion).toHaveCount(1);
       expect(
-        await spinner.evaluate((element) => getComputedStyle(element).animationName),
+        await moving.evaluate((element) => getComputedStyle(element).animationName),
         reducedMotion,
       ).toBe(name);
     }
