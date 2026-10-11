@@ -96,6 +96,19 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 둘 가운�
 
 > 사용자(질문에 답): "승인, 커밋·PR·병합 (Recommended)"
 
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해, 대체 둘을 커밋 뒤에 나란히 돌렸다. `/security-review`는
+문서만 바뀐 것을 확인하고 지적이 없었다. `bug-perf-review`는 유효 셋, 보류 둘, 오탐 셋을 냈다.
+
+- 유효: ADR이 그리기 전 스크립트의 후보로 든 `next/script`의 `beforeInteractive`는 앱 라우터에서 `self.__next_s`에 밀어 넣는
+  코드가 되어 Next 런타임이 싣는다(설치본 `next/dist/client/script.js`를 이 세션이 읽어 확인했다). 후보를 `<head>`의 막는
+  `<script src>`로 좁혔다. 저장된 값의 검증(없는 키, 저장소 예외, 다른 탭의 변경)과 스크립트·앱의 저장 키와 형식이 어긋나는 것을
+  잡는 검사를 명세가 정할 것으로 ADR에 더했다.
+- 보류: 스토리 사이에 남는 localStorage의 테마, 목록과 이벤트 필드의 시간대 차이와 테스트의 시간대 고정. 받는 쪽인 `plan.md`의
+  admin-style 행에 적었다.
+- 오탐: 카드의 글꼴 비용, 하이드레이션 경고(이미 명세 몫), `public/` 스크립트의 왕복.
+
 ## 회고
 
 후보 셋을 냈고 셋 다 승인됐다.
