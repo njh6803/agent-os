@@ -29,10 +29,11 @@ doctest 줄(`>>>`, `...`), 코드 펜스(백틱 셋)의 여닫는 줄과 그 안
 `# SPDX-License-Identifier:`·`# SPDX-FileCopyrightText:` 줄은 넘친 줄이 아니다. 줄 끝 주석이 ruff 의
 지시 주석(`# noqa: B010`, `# pyright:` 등)이면 그 앞의 코드만 재고, 코드를 들지 않은 `# noqa` 와
 E501 을 든 noqa 는 그 줄을 넘친 줄로 보지 않는다. 그 판정들을 ruff 와 대조하는 것은
-`.scratch/harness/probes/rewrap_width.py` 이고, 이 저장소의 줄과 그 프로브가 더한 줄만 잰다. 줄
-길이는 파일마다 ruff 처럼 조상에서 가장 가까운 설정(`.ruff.toml`, `ruff.toml`, `tool.ruff` 표가 든
-`pyproject.toml`)에서 읽는다. `lint.pycodestyle.max-line-length` 가 있으면 그것, 없으면
-`line-length`, 그것도 없으면 ruff 의 기본값 88이다.
+`.scratch/harness/probes/rewrap_width.py` 이고, 이 저장소의 줄과 그 프로브가 더한 줄만 잰다. 판정이
+ruff 판에 묶여 있으니 ruff 를 올리면 그 프로브를 다시 돌린다. 줄 길이는 파일마다 ruff 처럼 조상에서
+가장 가까운 설정(`.ruff.toml`, `ruff.toml`, `tool.ruff` 표가 든 `pyproject.toml`)에서 읽는다.
+`lint.pycodestyle.max-line-length` 가 있으면 그것, 없으면 `line-length`, 그것도 없으면 ruff 의
+기본값 88이다.
 
 사용: `uv run python tools/rewrap_comments.py <파일> [<파일> ...]`. 파일을 고쳐 쓰고 감은 자리와
 감은 뒤에도 넘친 줄을 줄마다 알린다. 종료 0 은 넘친 줄이 남지 않았다, 1 은 남았다, 2 는 인자가
@@ -124,6 +125,16 @@ class Paragraph:
     rows: tuple[Row, ...]
     # 문단의 둘째 줄부터와 새로 낸 줄의 머리.
     continuation: str
+
+
+@dataclass(frozen=True)
+class RenderedLine:
+    """새 소스의 줄 하나."""
+
+    text: str
+    # 그 줄의 CR. LF 로 끝나는 줄이면 빈 문자열이다.
+    ending: str
+    changed: bool
 
 
 @dataclass(frozen=True)
@@ -422,20 +433,20 @@ def _rewrap(paragraph: Paragraph, limit: int) -> tuple[list[str], list[str]]:
 
 def _render(
     paragraph: Paragraph, lines: list[str], endings: list[str], limit: int
-) -> list[tuple[str, str, bool]]:
-    """감은 문단의 줄들. 항목은 (줄, 그 줄의 CR, 바뀌었나). 바뀌지 않은 줄은 원래 줄 그대로다. 원래
-    줄은 제 줄 끝을, 새 줄은 원래 끝 줄의 줄 끝을 쓴다."""
+) -> list[RenderedLine]:
+    """감은 문단의 줄들. 바뀌지 않은 줄은 원래 줄 그대로다. 원래 줄은 제 줄 끝을, 새 줄은 원래 끝
+    줄의 줄 끝을 쓴다."""
     rows = paragraph.rows
     heads, texts = _rewrap(paragraph, limit)
-    rendered: list[tuple[str, str, bool]] = []
+    rendered: list[RenderedLine] = []
     for offset, (head, text) in enumerate(zip(heads, texts, strict=True)):
         original = rows[min(offset, len(rows) - 1)]
         ending = endings[original.index]
         if offset < len(rows) and text == original.text:
-            rendered.append((lines[original.index], ending, False))
+            rendered.append(RenderedLine(lines[original.index], ending, changed=False))
         else:
             tail = original.tail if offset == len(texts) - 1 else ""
-            rendered.append((head + text + tail, ending, True))
+            rendered.append(RenderedLine(head + text + tail, ending, changed=True))
     return rendered
 
 
@@ -470,68 +481,67 @@ def rewrap_source(source: str, limit: int) -> Rewrapped:
         raise ValueError("홀로 선 CR 이 있다. 파이썬과 줄 번호가 갈려 감지 않는다")
     lines, endings = _split(body)
     starts = {paragraph.rows[0].index: paragraph for paragraph in _paragraphs(body)}
-    out: list[tuple[str, str]] = []
+    out: list[RenderedLine] = []
     wrapped: list[tuple[int, int]] = []
     index = 0
     while index < len(lines):
         paragraph = starts.get(index)
         if paragraph is None:
-            out.append((lines[index], endings[index]))
+            out.append(RenderedLine(lines[index], endings[index], changed=False))
             index += 1
             continue
         changed: list[int] = []
-        for line, ending, was_changed in _render(paragraph, lines, endings, limit):
-            out.append((line, ending))
-            if was_changed:
+        for rendered in _render(paragraph, lines, endings, limit):
+            out.append(rendered)
+            if rendered.changed:
                 changed.append(len(out))
         if changed:
             wrapped.append((changed[0], changed[-1]))
         index = paragraph.rows[-1].index + 1
-    new_body = "\n".join(line + ending for line, ending in out)
+    new_body = "\n".join(line.text + line.ending for line in out)
     return Rewrapped(bom + new_body, wrapped, _remaining(new_body, limit))
 
 
+def _fail(argument: str, reason: str) -> int:
+    """감지 못한 까닭을 알리고 종료 코드 2를 돌려준다."""
+    print(f"{argument}: {reason}")
+    return 2
+
+
+def _rewrap_file(argument: str) -> int:
+    """파일 하나를 감아 고쳐 쓰고 알린다. 그 파일의 종료 코드(모듈 독스트링)를 돌려준다."""
+    path = Path(argument)
+    try:
+        limit = line_length(path)
+        data = path.read_bytes()
+    except (OSError, ValueError) as error:
+        return _fail(argument, f"파일이나 ruff 설정을 읽지 못했다({error})")
+    if limit is None:
+        return _fail(argument, "ruff 설정 밖이라 줄 길이를 모른다. 감지 않았다")
+    try:
+        result = rewrap_source(data.decode("utf-8"), limit)
+    except (UnicodeDecodeError, SyntaxError, ValueError, tokenize.TokenError) as error:
+        return _fail(argument, f"파이썬으로 읽지 못해 감지 않았다({error})")
+    encoded = result.source.encode("utf-8")
+    if encoded != data:
+        try:
+            path.write_bytes(encoded)
+        except OSError as error:
+            return _fail(argument, f"고쳐 쓰지 못했다({error})")
+    for first, last in result.wrapped:
+        print(f"{argument}:{first}: 감았다({last - first + 1}줄)")
+    for row, reason in result.remaining:
+        print(f"{argument}:{row}: 넘친 채 남았다: {reason}")
+    return 1 if result.remaining else 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    """인자의 파일마다 감아 고쳐 쓴다. 종료 코드는 모듈 독스트링."""
+    """인자의 파일마다 감아 고쳐 쓴다. 종료 코드는 파일마다의 코드 가운데 가장 큰 것이다."""
     arguments = sys.argv[1:] if argv is None else argv
     if not arguments:
         print(USAGE)
         return 2
-    status = 0
-    for argument in arguments:
-        path = Path(argument)
-        try:
-            limit = line_length(path)
-            data = path.read_bytes()
-        except (OSError, ValueError) as error:
-            print(f"{argument}: 파일이나 ruff 설정을 읽지 못했다({error})")
-            status = 2
-            continue
-        if limit is None:
-            print(f"{argument}: ruff 설정 밖이라 줄 길이를 모른다. 감지 않았다")
-            status = 2
-            continue
-        try:
-            result = rewrap_source(data.decode("utf-8"), limit)
-        except (UnicodeDecodeError, SyntaxError, ValueError, tokenize.TokenError) as error:
-            print(f"{argument}: 파이썬으로 읽지 못해 감지 않았다({error})")
-            status = 2
-            continue
-        encoded = result.source.encode("utf-8")
-        if encoded != data:
-            try:
-                path.write_bytes(encoded)
-            except OSError as error:
-                print(f"{argument}: 고쳐 쓰지 못했다({error})")
-                status = 2
-                continue
-        for first, last in result.wrapped:
-            print(f"{argument}:{first}: 감았다({last - first + 1}줄)")
-        for row, reason in result.remaining:
-            print(f"{argument}:{row}: 넘친 채 남았다: {reason}")
-        if result.remaining:
-            status = max(status, 1)
-    return status
+    return max([_rewrap_file(argument) for argument in arguments])
 
 
 if __name__ == "__main__":

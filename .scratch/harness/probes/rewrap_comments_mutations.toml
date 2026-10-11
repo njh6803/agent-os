@@ -490,10 +490,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-        except (OSError, ValueError) as error:
+    except (OSError, ValueError) as error:
 '''
 new = '''
-        except OSError as error:
+    except OSError as error:
 '''
 
 [[mutation]]
@@ -504,13 +504,11 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-        if limit is None:
-            print(f"{argument}: ruff 설정 밖이라 줄 길이를 모른다. 감지 않았다")
-            status = 2
-            continue
+    if limit is None:
+        return _fail(argument, "ruff 설정 밖이라 줄 길이를 모른다. 감지 않았다")
 '''
 new = '''
-        limit = 100 if limit is None else limit
+    limit = 100 if limit is None else limit
 '''
 
 [[mutation]]
@@ -521,10 +519,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-        if result.remaining:
-            status = max(status, 1)
+    return 1 if result.remaining else 0
 '''
 new = '''
+    return 0
 '''
 
 [[mutation]]
@@ -535,10 +533,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-        except (UnicodeDecodeError, SyntaxError, ValueError, tokenize.TokenError) as error:
+    except (UnicodeDecodeError, SyntaxError, ValueError, tokenize.TokenError) as error:
 '''
 new = '''
-        except (UnicodeDecodeError, ValueError, tokenize.TokenError) as error:
+    except (UnicodeDecodeError, ValueError, tokenize.TokenError) as error:
 '''
 
 [[mutation]]
@@ -649,13 +647,11 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/rewrap_comments.py"
 old = '''
-            try:
-                path.write_bytes(encoded)
-            except OSError as error:
-                print(f"{argument}: 고쳐 쓰지 못했다({error})")
-                status = 2
-                continue
+        try:
+            path.write_bytes(encoded)
+        except OSError as error:
+            return _fail(argument, f"고쳐 쓰지 못했다({error})")
 '''
 new = '''
-            path.write_bytes(encoded)
+        path.write_bytes(encoded)
 '''
