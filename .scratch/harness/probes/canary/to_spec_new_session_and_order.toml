@@ -2,6 +2,7 @@
 # 새 세션에 실리는지. to-spec 은 모델이 부르지 못하는 스킬이라 질문 머리에 슬래시 명령으로 넣는다.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(58969f7)이다. 옛 판에는 두 카나리아가 모두 없다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.292, 대조군 `58969f7`, 일지 2026-10-12-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   git worktree add --detach ../../../../agent-canary-58969f7 58969f7
 #   uv run python tools/canary.py .scratch/harness/probes/canary/to_spec_new_session_and_order.toml <출력 디렉터리>

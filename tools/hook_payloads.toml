@@ -224,6 +224,29 @@ expect = "silent"
 note = "서브셸 안의 cd 는 작업 폴더를 남기지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "(cd ${MAIN_REPO} && git log --oneline -3)" }, cwd = "${WORK_REPO}" }
 
+# --- hook_bash_msys_pathconv (PreToolUse Bash) ---
+# 훅은 윈도이거나 `MSYSTEM` 이 있을 때만 알린다. 리눅스 CI 에서도 판정을 돌리려고 모든 사례에 넣는다.
+[[case]]
+hook = "hook_bash_msys_pathconv.py"
+expect = "context"
+note = "일지 2026-10-12-21 의 명령 — 병합 충돌을 보려고 main 의 판을 읽었다"
+payload = { tool_name = "Bash", tool_input = { command = "git show origin/main:.scratch/harness/probes/README.md" } }
+env = { MSYSTEM = "MINGW64" }
+
+[[case]]
+hook = "hook_bash_msys_pathconv.py"
+expect = "silent"
+note = "변환을 끈 우회 — 이 훅을 만든 세션이 안내를 정하기 전에 친 명령(일지 2026-10-12-30). 일지 2026-10-07-12 는 git show 를 같은 식으로 돌렸다"
+payload = { tool_name = "Bash", tool_input = { command = "MSYS_NO_PATHCONV=1 git rev-parse --verify origin/main:.scratch/retro-queue.md" } }
+env = { MSYSTEM = "MINGW64" }
+
+[[case]]
+hook = "hook_bash_msys_pathconv.py"
+expect = "silent"
+note = "콜론 오른쪽이 점으로 시작하지 않는 main 의 판 — 일지 2026-10-12-21 이 손으로 갈라 지나간 인자(명령은 재구성)"
+payload = { tool_name = "Bash", tool_input = { command = "git show origin/main:README.md" } }
+env = { MSYSTEM = "MINGW64" }
+
 # --- hook_journal_retro (PostToolUse Write|Edit) ---
 [[case]]
 hook = "hook_journal_retro.py"

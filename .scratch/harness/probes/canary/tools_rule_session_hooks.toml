@@ -2,6 +2,7 @@
 # pnpm 을 차례로 기다리는 것, 새로 본 3.5초)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-07-10).
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 셋이다. 규칙 파일의 첫 제목, 클라우드 세션에서 기다리는 두 설치의 조각, 새로 더한 시간 조각.
+# 최신 결과: 통과 4(2026-10-07, 클라우드 컨테이너, claude 2.1.292, 일지 2026-10-07-10).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_session_hooks.toml <출력 디렉터리>
 kind = "rule"
 question = '''

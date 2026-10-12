@@ -3,6 +3,7 @@
 # 전에 대조군 사본의 원천에 카나리아가 있다며 막는다(종료 2). 카나리아 낱말 EnterWorktree 는 "부르는 곳"
 # 줄이 없는 옛 판(9a7821b)의 잠금 절에도 있어, 주 체크아웃이 그 판이어도 막힌다. 카나리아가 바뀐 본문에만
 # 있는 글이 아니어서다.
+# 최신 결과: 돌리기 전에 종료 2(2026-10-07, 일지 2026-10-07-04).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_same_copy.toml <출력 디렉터리>
 kind = "skill"
