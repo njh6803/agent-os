@@ -91,6 +91,28 @@ PR #201 봇 리뷰 둘째·셋째 회차에서 보류한 둘을 고쳤다. `Move
   파일의 `"구현"` 비교. 측정 스크립트이고 결과를 바꾸지 않아 두었다.
 - 다시 돌린 것: `collect.py`·`analyze.py`·`judge.py score`. 가설과 판정 실험의 결론은 같았다.
 
+## 회고
+
+후보 다섯, 승인 둘(이 PR에서 반영), 기각 셋, 넘김 없음. 판정은 main을 합친 뒤의 retro 판(후보를 retro가 판정한다)을 따랐다.
+
+- [승인] main을 합친 뒤 Skill 도구가 retro의 합치기 전 판을 실었다. 그 판의 머리 문단은 "Present candidates only; the user
+  approves what gets applied."였다. 디스크의 새 판을 Read로 다시 열어 따랐고(비용은 그 Read 한 번), 알아채지 못했으면 지금
+  `CLAUDE.md`와 다른 옛 절차로 사용자에게 승인을 물었을 것이다(어림). 사건은 이 세션, 층은 행동이 일어나는 자리의 문장
+  (`CLAUDE.md` 환경 함정에서 origin/main 대조 항목 바로 뒤의 한 항목), PR 하나로 되돌릴 수 있다. 사실의 원천은
+  `docs/constitution/operations.md` 환경 규약 상세의 "스킬은 세션을 시작한 체크아웃의 사본이 실린다"이고, 당기기에서 같은
+  일을 다룬 자리는 `tidy-checkouts` 2단계다(대기열 134, 일지 2026-10-07-02). 카나리아
+  `.scratch/harness/probes/canary/claude_md_skill_after_merge.toml`이 통과 4였다(실험군 셋이 문장을 옮겼고 대조군 주
+  체크아웃 `5a618af`는 "없음", claude 2.1.296).
+- [승인] 사전 등록의 정의가 고정 범위 밖에 있었고 "처음 커밋된 판" 가드가 squash 뒤에 헛돈다는 것을 셀프 리뷰가 짚었다.
+  층은 프로브 규약의 자리(`docs/agents/issue-tracker.md` "프로브와 근거"의 한 줄), PR 하나로 되돌릴 수 있다.
+- [기각] 앱의 워크트리 가드가 복합 명령(세미콜론 체인과 명령 치환, 리다이렉트 뒤의 `echo`, 인라인 스크립트)을 세 번, 이
+  저장소의 `cd` 훅(`tools/hook_bash_cd_outside.py`)이 체크아웃 밖으로의 `cd`를 한 번 막았다. 둘 다 이미 막고 있고, 복합 명령을
+  하나씩 치라는 지침은 `CLAUDE.md` 환경 함정에 있다. 비용은 거부 한 번씩이었다.
+- [기각] 파이썬의 텍스트 모드가 윈도에서 데이터 파일과 README를 CRLF로 썼다. git이 스테이징에서 LF로 바꿔(`.gitattributes`의
+  `eol=lf`) 남은 해가 없었고, 두 스크립트는 LF로 쓰게 고쳤다.
+- [기각] 구현이 사전 등록의 정의와 글자가 여덟 곳 어긋났다(위 셀프 리뷰 절의 명세 Major 하나와 정의 일곱). 셀프 리뷰가 잡았고
+  그것이 그 리뷰의 몫이다.
+
 ## 다음
 
 - ③ 지표 문서 `docs/model-selection.md`. 이 프로브의 결과(README 결과 절)를 이 저장소의 측정으로 옮긴다.
