@@ -6,9 +6,10 @@
 - B_summary·C_passthrough: 같은 호출의 탐침 기록(요약이었는지 통과였는지)과 모델의 마지막 답을
   찍는다. B 는 요약이고 답이 훅의 첫 문장(`tools/hook_webfetch_summary.py` 의 `LEAD`)을 옮겼을 때,
   C 는 통과이고 답이 그 문장 없이 '알림 없음' 일 때 기대대로다. 탐침 기록이 없거나 그 호출이
-  요약·통과가 아니었으면 측정이 아니다. stream-json 에는 훅의 additionalContext 가 실리지 않는다(B
-  의 스트림에서 그 문장은 모델의 답에만 있었다, 일지 2026-10-13-03). 그래서 스트림이 아니라 답으로
-  판정한다.
+  요약·통과가 아니었으면 측정이 아니다. 스트림이 아니라 답으로 판정하는 까닭도 B 가 찍는다. 모델의
+  답(assistant·result 이벤트) 밖의 줄에 훅 문장이나 `additionalContext` 가 있는지다. 훅은
+  `json.dumps` 의 기본값으로 한글을 이스케이프해 내므로 이스케이프한 첫 문장도 찾는다. 없으면
+  stream-json 이 훅의 additionalContext 를 싣지 않은 것이다.
 
 측정이 아닌 변형, 기대와 다른 변형, 모르는 변형 이름이 하나라도 있으면 1로 끝난다.
 돌리는 법:
@@ -59,6 +60,25 @@ def final_answer(stream: list[dict[str, object]]) -> str:
     return answers[-1] if answers else ""
 
 
+def hook_text_outside_answer(stream_path: Path, lead: str) -> int:
+    """모델의 답(assistant·result 이벤트) 밖의 줄 가운데 훅 문장(날것이나 이스케이프한 것)이나
+    `additionalContext` 가 든 줄의 수."""
+    if not stream_path.exists():
+        return 0
+    escaped = json.dumps(lead)[1:-1]
+    count = 0
+    for line in stream_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict) and event.get("type") in ("assistant", "result"):
+            continue
+        if lead in line or escaped in line or "additionalContext" in line:
+            count += 1
+    return count
+
+
 def check_payload(out: Path) -> list[str]:
     entries = read_jsonl(out / "A_payload_posttool.jsonl")
     problems: list[str] = []
@@ -101,6 +121,9 @@ def check_notice(out: Path, name: str, lead: str) -> list[str]:
     entries = read_jsonl(out / f"{name}_posttool.jsonl")
     answer = final_answer(read_jsonl(out / f"{name}.jsonl"))
     print(f"{name} 탐침 기록 {len(entries)}건\n  답 {answer!r}")
+    if summary:
+        outside = hook_text_outside_answer(out / f"{name}.jsonl", lead)
+        print(f"  모델의 답 밖 줄에 훅 문장·additionalContext {outside}")
     if len(entries) != 1:
         return [f"{name}: 측정 아님 — WebFetch 의 PostToolUse 기록이 {len(entries)}건이다"]
     equal = response_of(entries[0]).get("utf8_equals_bytes")
