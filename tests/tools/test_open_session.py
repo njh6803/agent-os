@@ -257,3 +257,60 @@ def test_이_저장소의_결정표_모델_칸은_스크립트가_읽는다() ->
     assert completed.returncode == 0, completed.stderr
     read = completed.stdout.strip().splitlines()
     assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == cells
+
+
+# 노력 버튼의 이름(앱 2.19675.0.0, 한국어)에서 칸을 읽는다. 버튼은 이름 뒤에 덧붙임이 붙을 수 있다.
+_EFFORT_BUTTON = """
+$button = [pscustomobject]@{ Current = [pscustomobject]@{ Name = $given.name } }
+$step = Get-EffortButtonStep $button
+if ($null -eq $step) { '(없음)' } else { "$step" }
+"""
+
+
+@pytest.mark.parametrize(
+    ("name", "step"),
+    [
+        ("노력: 낮음", "0"),
+        ("노력: 중간", "1"),
+        ("노력: 엑스트라", "3"),
+        ("노력: 최대 3.5× 이상 사용량", "4"),  # Opus 의 최대 칸은 사용량 덧붙임이 붙는다
+        ("노력: Ultracode", "(없음)"),  # 레벨이 아닌 칸은 되돌리지 않는다
+        ("노력: 높음이", "(없음)"),  # 이름 뒤에 공백 없이 붙은 글은 다른 이름이다
+    ],
+)
+def test_노력_버튼의_이름에서_칸을_읽는다(name: str, step: str) -> None:
+    completed = _call(
+        "Get-EffortLabels,Test-ButtonShows,Get-EffortButtonStep", _EFFORT_BUTTON, {"name": name}
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == step
+
+
+_REPAIR_HINT = """
+$script:DraftModel = $given.model
+$script:DraftEffortStep = if ($null -eq $given.step) { $null } else { [int]$given.step }
+Get-RepairHint
+"""
+
+
+def test_복구_안내는_원래_값으로_돌리는_명령이다() -> None:
+    completed = _call(
+        "Get-EffortSteps,Get-RepairHint", _REPAIR_HINT, {"model": "Opus 5.5", "step": 3}
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == (
+        "친다: pwsh -NoProfile -File tools/open_session.ps1 -Action defaults"
+        " -Model 'Opus 5.5' -Effort xhigh"
+    )
+
+
+def test_원래_노력이_목록_밖이면_복구_안내는_화면에서_고르라고_한다() -> None:
+    completed = _call(
+        "Get-EffortSteps,Get-RepairHint", _REPAIR_HINT, {"model": "Opus 5.5", "step": None}
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "-Effort" not in completed.stdout
+    assert "새 세션 화면에서 모델을 'Opus 5.5' 로" in completed.stdout
