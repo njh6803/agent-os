@@ -12,6 +12,7 @@
 | `paths` 규칙이 Bash로 읽은 파일에는 안 실림 | 규칙이 걸린 경로의 파일을 `cat`·`sed -n`으로 읽으면 그 규칙이 조용히 빠진다. 하네스의 auto mode 지침이 Bash 읽기를 권한다(agent-os 2026-09-29, 한 세션 내내 `tools.md`가 빠져 있었다) | 규칙이 걸린 경로의 파일은 Read 도구로 연다. CLAUDE.md 지도에 적었다. 적은 뒤에도 어겨지면 경고 훅 후보 |
 | [Win] CRLF가 훅 경로를 오염 | 포매터가 엉뚱한 경로를 받음 | 훅에서 `tr -d '\r'`, `.gitattributes`로 LF 고정 |
 | [Win] Git Bash `echo`가 백슬래시를 먹음 | JSON 페이로드가 안 파싱돼 훅 시험이 조용히 헛돎 | 페이로드도 파일로 |
+| [Win] Git Bash가 git 인자를 경로 목록으로 바꿈 | `git show origin/main:.scratch/x.md`가 git에 `origin\main;.scratch\x.md`로 가 `fatal: ambiguous argument`로 끝난다. 다섯 세션이 여섯 번 헛쳤고 매번 일지에만 남았다(agent-os, 2026-09-23~2026-10-12). 일지가 적은 조건 "콜론 양쪽에 `/`"는 틀렸고, 대개 첫 콜론 왼쪽에 `/`가 있고 오른쪽이 `.`·`/`로 시작할 때 바뀐다(점으로 시작하는 경로) | git 바로 앞에 `MSYS_NO_PATHCONV=1`, 또는 저장소 루트에서 `<rev>:./<경로>`. `hook_bash_msys_pathconv`가 그 모양을 경고한다 |
 | [Py] 추적 파일 0개에서 `pre-commit run --all-files` | 훅 전부 "no files to check"로 exit 0 | 스테이징 뒤 다시 돌리고 `always_run` |
 | CI 경로 필터 미매칭 | 필터 구멍이 조용히 job을 skip | 미매칭을 실패로 승격 |
 | [Py] 워크트리에서 pre-commit이 돌린 테스트의 git 호출 | git이 훅 자식에 `GIT_DIR`을 내보내 테스트의 `git init`이 임시 디렉터리 대신 그 저장소를 재초기화. 공유 config의 `core.bare`가 true가 되어 체크아웃 전부가 "must be run in a work tree". `GIT_WORK_TREE` 없는 `GIT_DIR`은 cwd를 작업 트리의 뿌리로 삼아, 하위 디렉터리에서 `git ls-files`를 부른 web 테스트는 경로가 어긋나 빨갛다(2026-09-30. 그 테스트는 주 체크아웃에서 한 커밋들을 지나갔다) | `tests/conftest.py`가 저장소를 가리키는 `GIT_*`를 벗긴다. 다른 언어의 테스트는 그 호출의 `env`에서 벗긴다(`web/eslint.config.test.ts`). 복구는 `git config core.bare false` |
