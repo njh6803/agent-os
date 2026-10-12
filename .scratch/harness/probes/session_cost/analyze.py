@@ -273,37 +273,45 @@ def feature_population(rows: list[Row]) -> list[Row]:
 
 
 NO_JUDGMENT = "결론 없음"
+BLOCKED = "사전 등록 또는 판정하지 않는 조건"
+# 사전 등록의 문턱. 가설 1은 ρ와 그 90% 구간의 아래 끝, 이른 시기를 뺀 되풀이의 ρ, 가설 2는 중앙값의
+# 비와 그 구간의 아래 끝
+RHO_MIN, RHO_CI_LOW_ABOVE, EARLY_RHO_MIN = 0.3, 0.0, 0.2
+RATIO_MIN, RATIO_CI_LOW_ABOVE = 1.5, 1.0
 
 
-def verdict_rho(xs: list[float], ys: list[float], judge: bool) -> tuple[str, float | None, str]:
+def verdict_rho(
+    xs: list[float], ys: list[float], blocked: str | None
+) -> tuple[str, float | None, str]:
+    """`blocked`는 판정을 막는 까닭이다. 없으면(None) 문턱으로 판정한다."""
     rho = spearman(xs, ys)
     ci, skipped = boot_rho(xs, ys) if len(xs) >= 3 else (None, 0)
-    if not judge:
-        v = f"{NO_JUDGMENT}(사전 등록 또는 판정하지 않는 조건)"
+    if blocked is not None:
+        v = f"{NO_JUDGMENT}({blocked})"
     elif len(xs) < MIN_SAMPLE:
         v = f"{NO_JUDGMENT}(표본 {len(xs)} < {MIN_SAMPLE})"
-    elif rho is not None and ci is not None and rho >= 0.3 and ci[0] > 0:
+    elif rho is not None and ci is not None and rho >= RHO_MIN and ci[0] > RHO_CI_LOW_ABOVE:
         v = "선다"
     else:
         v = "서지 않는다"
     return v, rho, f"{ci_text(ci)}(뺀 회차 {skipped})"
 
 
-def hypothesis_1(pop: list[Row], judge: bool) -> list[list[str]]:
+def hypothesis_1(pop: list[Row], blocked: str | None) -> list[list[str]]:
     rows: list[list[str]] = []
+    late = [r for r in pop if not r.get("early")]
     for outcome, label in (("cost", "합"), ("cost_main", "본 세션만")):
         xs, ys = pairs_of(pop, "ticket_features", "open_decisions", outcome)
-        v, rho, ci = verdict_rho(xs, ys, judge)
-        late = [r for r in pop if not r.get("early")]
+        v, rho, ci = verdict_rho(xs, ys, blocked)
         lx, ly = pairs_of(late, "ticket_features", "open_decisions", outcome)
         late_rho = spearman(lx, ly)
-        if v == "선다" and (late_rho is None or late_rho < 0.2):
+        if v == "선다" and (late_rho is None or late_rho < EARLY_RHO_MIN):
             v = "시기와 섞여 선다"
         rows.append([label, v, str(len(xs)), f2(rho), ci, f"{f2(late_rho)} (n={len(lx)})"])
     return rows
 
 
-def hypothesis_2(pop: list[Row], judge: bool) -> list[list[str]]:
+def hypothesis_2(pop: list[Row], blocked: str | None) -> list[list[str]]:
     rows: list[list[str]] = []
     for outcome, label in (("cost", "합"), ("cost_main", "본 세션만")):
         contact = [num(r, outcome) for r in pop if feat(r, "ticket_features", "contract") == 1.0]
@@ -312,11 +320,16 @@ def hypothesis_2(pop: list[Row], judge: bool) -> list[list[str]]:
         m_o = statistics.median(other) if other else None
         ratio = m_c / m_o if m_c is not None and m_o else None
         ci = boot_median_ratio(contact, other) if contact and other else None
-        if not judge:
-            v = f"{NO_JUDGMENT}(사전 등록 또는 판정하지 않는 조건)"
+        if blocked is not None:
+            v = f"{NO_JUDGMENT}({blocked})"
         elif len(contact) + len(other) < MIN_SAMPLE or min(len(contact), len(other)) < MIN_GROUP:
             v = f"{NO_JUDGMENT}(표본 {len(contact)}/{len(other)})"
-        elif ratio is not None and ci is not None and ratio >= 1.5 and ci[0] > 1:
+        elif (
+            ratio is not None
+            and ci is not None
+            and ratio >= RATIO_MIN
+            and ci[0] > RATIO_CI_LOW_ABOVE
+        ):
             v = "선다"
         else:
             v = "서지 않는다"
@@ -400,7 +413,8 @@ def report(meta: dict[str, Json], rows: list[Row]) -> tuple[str, bool]:
         f"- 턴 시간(Claude Code 대 이 프로브, 초): {json.dumps(meta.get('turn_duration_control'))}"
     )
     out += ["", "## 가설 (사전 등록)", ""]
-    h1 = hypothesis_1(feature_pop, judge)
+    blocked = None if judge else BLOCKED
+    h1 = hypothesis_1(feature_pop, blocked)
     out.append(f"가설 1: **{combine(h1)}**")
     out.append("")
     out.append(table(["비용", "판정", "n", "ρ", "90% 구간", "이른 시기 뺀 ρ"], h1))
@@ -410,7 +424,7 @@ def report(meta: dict[str, Json], rows: list[Row]) -> tuple[str, bool]:
     )
     out.append(f"열린 결정 수의 분포: {sorted(dist.items())}")
     out.append("")
-    h2 = hypothesis_2(feature_pop, judge)
+    h2 = hypothesis_2(feature_pop, blocked)
     out.append(f"가설 2: **{combine(h2)}**")
     out.append("")
     out.append(table(["비용", "판정", "n(접촉/비접촉)", "중앙값($)", "비", "90% 구간"], h2))

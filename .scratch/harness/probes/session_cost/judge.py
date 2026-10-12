@@ -57,7 +57,12 @@ REPEATS = 3
 ANCHORS = 10
 MAX_TOKENS = 16000
 AXES = ("ambiguity", "scope", "novelty", "verification", "contract")
+# 사전 등록의 문턱: 대상 수, 쓸모(ρ, 그 구간의 아래 끝, 단순 지표보다 큰 몫), 보정(80% 범위가 담은
+# 비율), 시간 범위의 가운데 값을 셀 때 아래로 자르는 분
 MIN_TARGETS = 20
+USEFUL_RHO_MIN, USEFUL_CI_LOW_ABOVE, USEFUL_MARGIN = 0.4, 0.0, 0.1
+COVER_MIN, COVER_MAX = 0.6, 0.95
+MINUTES_FLOOR = 0.1
 
 
 SYSTEM = """너는 소프트웨어 작업의 크기를 시작하기 전에 어림하는 판정자다. 저장소는 볼 수 없다.
@@ -418,7 +423,10 @@ def score(rows: list[Row]) -> int:
 
     actual_min = [num(r, "turn_min") for r in complete]
     mid = [
-        math.sqrt(max(med(r, ("minutes", "low")), 0.1) * max(med(r, ("minutes", "high")), 0.1))
+        math.sqrt(
+            max(med(r, ("minutes", "low")), MINUTES_FLOOR)
+            * max(med(r, ("minutes", "high")), MINUTES_FLOOR)
+        )
         for r in complete
     ]
     rho = spearman(mid, actual_min)
@@ -433,7 +441,13 @@ def score(rows: list[Row]) -> int:
     best = max(ind, key=lambda t: t[1]) if ind else ("-", 0.0)
     if len(complete) < MIN_TARGETS:
         verdict = f"판정하지 않음(대상 {len(complete)} < {MIN_TARGETS})"
-    elif rho is not None and ci is not None and rho >= 0.4 and ci[0] > 0 and rho >= best[1] + 0.1:
+    elif (
+        rho is not None
+        and ci is not None
+        and rho >= USEFUL_RHO_MIN
+        and ci[0] > USEFUL_CI_LOW_ABOVE
+        and rho >= best[1] + USEFUL_MARGIN
+    ):
         verdict = "쓸모 있다"
     else:
         verdict = "쓸모 있다고 볼 수 없다"
@@ -458,7 +472,7 @@ def score(rows: list[Row]) -> int:
             if med(r, (key, "low")) <= num(r, actual_key) <= med(r, (key, "high"))
         )
         cover = inside / len(complete)
-        calibrated = "보정됨" if 0.6 <= cover <= 0.95 else "아님"
+        calibrated = "보정됨" if COVER_MIN <= cover <= COVER_MAX else "아님"
         lines.append(f"보정 {key}: {inside}/{len(complete)} = {cover:.2f} ({calibrated})")
     core = [num(r, "turn_min") - num(r, "trailing_min") for r in complete]
     lines.append(f"(탐색) 턴 끝의 system 기록 꼬리를 뺀 턴 시간과: ρ = {spearman(mid, core)}")
