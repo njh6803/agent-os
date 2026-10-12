@@ -159,5 +159,5 @@ Anything to avoid?
 4. **반영은 기능으로 한다.** 차례는 `.scratch/plan.md`의 design-refresh 행이다. 패키지의 디자인 토큰 CSS와 테마 목록, 판정 스토리, 사진 비교 정답(`pnpm -C web visual:update`, Docker)을 고치고, 보여 주기용 미리보기와 기초 카드, 목록 타일을 만든 뒤 사람이 `/design-sync`를 다시 돈다. 테마의 이름·수·기본 테마, 밀도, 글꼴이 바뀌면 함께 고칠 자리가 있다.
    - `.scratch/admin-style/design/screens-prompt.md`: 기본 테마 "먹", 테마 다섯의 이름, 배치와 밀도의 수치.
    - `.design-sync/`: 사용 규약 `conventions.md`와 그 검사기, 변환기 포크의 기본 테마 `muk`(고치면 다시 채점한다, NOTES), 목록 타일 `thumbnail.html`.
-   - `.claude/rules/web-design.md`(먹과 공문을 든 판정 문장), `CONTEXT.md`의 테마.
-   - 고정폭 글꼴: `packages/ui`의 의존성(`@fontsource/jetbrains-mono`·`@ibm/plex-mono`를 Noto Sans Mono의 패키지로)과 글꼴 CSS, 페이지 안 번들의 글꼴 이름, `web/pnpm-workspace.yaml`의 `allowBuilds`(`@ibm/plex-mono`의 설치 스크립트를 끄는 줄과 그 주석), `docs/constitution/tech.md`의 글꼴 줄과 `docs/constitution/README.md`의 새 버전 항목. 패키지 이름과 라이선스는 들이기 전에 확인한다. 글꼴은 ADR 0026의 지난 이력이 정했으므로 포인터를 달지 않고 새 이력에 적는다(`.claude/rules/adr.md`).
+   - `.claude/rules/web-design.md`(테마의 수와 판정하는 벌의 수, 기본 테마, 먹과 공문을 든 판정 문장), `CONTEXT.md`의 테마와 새 개념인 밀도.
+   - 고정폭 글꼴: `packages/ui`의 의존성(`@fontsource/jetbrains-mono`·`@ibm/plex-mono`를 Noto Sans Mono의 패키지로)과 글꼴 CSS, 페이지 안 번들의 글꼴 이름, `web/pnpm-workspace.yaml`의 `allowBuilds`(`@ibm/plex-mono`의 설치 스크립트를 끄는 줄과 그 주석), `docs/constitution/tech.md`의 글꼴 줄과 테마의 수, `docs/constitution/README.md`의 새 버전 항목, `.scratch/plan.md` web-widget 행의 글꼴 크기 셈(옛 글꼴 기준). 패키지 이름과 라이선스는 들이기 전에 확인한다. 글꼴은 ADR 0026의 지난 이력이 정했으므로 포인터를 달지 않고 새 이력에 적는다(`.claude/rules/adr.md`).
