@@ -14,7 +14,7 @@ Work the tree in **rounds**. The **frontier** is every decision whose prerequisi
 결정의 조건은 라벨이 아니라 선택지의 설명에 있다.
 
 - **올리기 전.** 설명에 넣는 사실(지금 코드가 무엇을 하는지, 도구가 언제 무엇을 읽는지, 판정자가 막는지, 선례)은 지금 코드와 판정자(린터, 타입 검사, 훅)에 대 본다. 선례를 들면 반대 방향의 선례도 찾는다. 확인하지 못한 사실은 설명에 어림이라고 적는다. 설명의 사실을 대 보지 않은 일이 세 세션에서 있었다. 저장소의 주석이 이미 반박한 전제(헤더가 시작 때 읽힌다), 반대 방향의 선례를 빠뜨린 트레이스 형식, 지금 코드에 대 보지 않은 anyio 5의 변경, 지금 화면과 다른 설명(걸린 시간), ESLint가 막는 인라인 스크립트다(대기열 101).
-- **옮길 때.** 답을 다른 자리(일지의 `> 사용자:` 인용, 명세, ADR, 리뷰 브리프)로 옮길 때는 라벨과 함께 고른 선택지의 설명을 글자 그대로 옮기고, 요약을 확인받은 질문이면 그 요약도 옮긴다. 라벨만 넘긴 명세에서 리뷰가 설명과 요약에 있던 결정을 범위 넘침으로 냈다(대기열 46).
+- **옮길 때.** 답을 다른 자리(일지의 `> 사용자:` 인용, 명세, ADR, 리뷰 브리프)로 옮길 때는 라벨과 함께 고른 선택지의 설명을 글자 그대로 옮기고, 요약을 확인받은 질문이면 그 요약도 옮긴다. 설명과 요약은 에이전트가 쓴 글이라, 일지 인용에서는 사용자가 고른 라벨만 따옴표 안에 두고 설명은 그 뒤에 `— 설명:`으로 붙인다. 라벨만 넘긴 명세에서 리뷰가 설명과 요약에 있던 결정을 범위 넘침으로 냈다(대기열 46).
 
 Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 
