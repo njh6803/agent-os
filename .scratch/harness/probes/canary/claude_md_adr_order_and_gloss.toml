@@ -2,11 +2,10 @@
 # 새 세션에 실리는지. CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다. 두 갈래 모두 같은 README.md 를
 # 읽고 체크아웃만 다르다.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(58969f7)이다. 옛 판에는 두 카나리아가 모두 없다.
-# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 주 체크아웃 밖에 꺼낸다(README `canary/` 행).
-# 워크트리가 주 체크아웃 안에 있어 실험군에는 상위 폴더(주 체크아웃)의 `CLAUDE.md`도 함께 실릴 수 있다(재지
-# 않았다). 그래서 옛 판을 `.claude/worktrees/` 아래에 꺼내면 병합 뒤 새 판이 된 주 체크아웃의 `CLAUDE.md`가
-# 대조군에 섞일 수 있다. 주 체크아웃 밖(`C:/project`에는 `CLAUDE.md`가 없다)에 꺼내는 까닭이다.
-# 실험군의 통과는 새 판이 실렸다는 뜻이지만, 실패는 옛 줄을 옮긴 것인지 원본의 답을 보고 가른다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 워크트리 세션에는 주 체크아웃의 `CLAUDE.md`가 실리지 않아(`.scratch/harness/probes/claude_md_parent.py`,
+# 대기열 171) 실험군의 통과는 워크트리 사본이 실렸다는 뜻이다. 옛 판은 다른 명세와 같은 자리를 쓴다.
+# 실패는 옛 줄을 옮긴 것인지 원본의 답을 보고 가른다.
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   git worktree add --detach ../../../../agent-canary-58969f7 58969f7
 #   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_adr_order_and_gloss.toml <출력 디렉터리>

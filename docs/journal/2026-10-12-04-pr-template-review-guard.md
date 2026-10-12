@@ -1,0 +1,154 @@
+# 2026-10-12 (04) PR 템플릿의 `.github/` 줄을 158 뒤의 가드로 고친다
+
+next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 164를 닫는다. PR #173이 claude-review 워크플로의 코멘트 0개
+가드를 바꿨는데, PR 템플릿은 그 가드의 허용 경로 밖이라 #173에 실을 수 없어 이 PR로 따로 왔다. 이 PR은
+`claude-code-review.yml`을 바꾸지 않으므로, #173이 바꾼 프롬프트(5·6단계)와 권한 규칙(`--allowedTools`·`--disallowedTools`)으로
+claude-review가 도는 PR이기도 하다. 지시문은 처음 도는 PR이라고 했으나 #174가 먼저 돌았다(아래 PR 리뷰 절). 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
+`EnterWorktree(name=pr-template-review-guard)`로 들어가 `origin/main`(`2a3964f`, #173)에서 `chore/pr-template-review-guard`를 땄다.
+순번은 04다. 처음에는 01로 썼으나 커밋 전의 `tools/sibling_overlap.py`가 워크트리 `admin-style-design`도 01을 쓴다고 알려
+그 도구가 고른 04로 옮겼다.
+
+## 계기
+
+> 사용자: "대기열 164(PR 템플릿의 `.github/` 줄)를 chore PR로 반영한다. 이 PR은 claude-code-review.yml을 바꾸지 않아 PR #173이 바꾼 프롬프트와 권한 규칙으로 claude-review가 처음 도는 PR이니 그 실행도 본다"
+
+## 첫 턴의 tidy-checkouts
+
+- **루트.** main이고 깨끗했다. `57efd62`에서 `2a3964f`로 당겼다. 스킬 파일은 바뀌지 않았다.
+- **종료 1로 남은 것.** `review-workflow-guards`는 다른 프로세스가 폴더를 쥐어 이름 바꾸기가 막혔다(WinError 32).
+  `spec-pipeline-and-pytest-ids`는 다시 만들 수 있는 `.venv/`를 지우다 `.pyd` 하나에서 막혔다(WinError 5). 등록과 `.git`은
+  남았다. 둘 다 그 세션들이 멈춘 뒤에도 무언가가 파일을 쥐고 있다는 뜻이고, 다음 정리가 다시 본다.
+- **사람에게 넘긴 것.** prunable `05-admin-hides-decision-for-end-user`, PR 머리가 다른 `skill-check-and-retro-section`,
+  분리 HEAD 넷(`agent-canary-58969f7`, `confident-wright-2d3ebf`, `elegant-dijkstra-aaddb9`, `unruffled-lalande-9017fa`),
+  등록 없는 폴더 여섯(대기열 148). 지시문대로 답을 기다리지 않았다.
+
+## 바꾼 것
+
+- `.github/PULL_REQUEST_TEMPLATE.md`의 `.github/` 줄. 옛 줄은 그 워크플로를 바꾼 PR에서 "코멘트 0개 가드도 꺼지므로"라고
+  적었다. 158 뒤로 그 PR에서 가드는 코멘트를 세지 않는 대신 그 파일과 허용 경로(`docs/journal/`,
+  `.scratch/retro-queue.md`, `.scratch/harness/probes/`) 밖의 파일이 함께 실리면 실패한다. 줄은 이제 그것을 적고,
+  허용 경로는 "일지·대기열 등"의 예시와 원천(가드 스텝의 `grep -vE` 패턴)으로 가리킨다. 그래서 그 워크플로의 동작을
+  서술한 문서 가운데 허용 경로 밖의 것(이 템플릿, `operations.md` 등)은 그 PR이 병합된 뒤 따로 고친다고 안내한다. 끝
+  문장은 "리뷰도 가드도 돈다"에서 "리뷰가 돌고 가드가 코멘트를 센다"로 바꿨다. 이제는 그 PR에서도 가드가 돌기 때문이다.
+- `.scratch/retro-queue.md`: 164를 닫았다. 열린 행 31의 2026-10-07 정정 괄호 "코멘트 0개 가드도 그 파일을 바꾼 PR에서만
+  건너뛴다"를 "코멘트를 세지 않는다(대기열 50·158, 2026-10-07)"로 고쳤다.
+
+## 잔존 grep
+
+`가드도 꺼`, `가드가 꺼`, `코멘트 0개 가드`, 그리고 `가드`와 20자 안의 `건너뛴`(앞뒤 양쪽)을 md·yml·yaml·py·toml·json·ts에서
+찾았다. 살아 있는 문서의 옛 서술은 템플릿 37행과 열린 행 31 둘이었고 둘 다 고쳤다. 일지 2026-10-07-21의 잔존 grep은 "37행 하나"로 닫았는데,
+`건너뛴다`를 찾지 않아 행 31을 놓쳤다(명세 축이 찾았다). 나머지 적중은 일지, 닫힌 행(50·84·158·161), done인 web-admin의
+명세·티켓이라 기록이다. `operations.md` 리뷰 파이프라인의 "그 파일의 변경은 별도 PR로 먼저 병합한다"와 워크플로 주석,
+`review_workflow.py` 독스트링, 탐침 README는 지금의 동작과 같다.
+
+## 검사
+
+- 검증 명령: `uv run pytest -q` 1875 통과(7 deselected), `ruff check`·`ruff format --check`, `pyright`, `lint-imports`,
+  `pnpm -C web verify`(28파일 356개)가 모두 초록이다. 셀프 리뷰를 반영한 뒤 모두 다시 돌렸고 같은 결과였다. 이 워크트리에는
+  web 의존성이 없어 `pnpm -C web install --frozen-lockfile`을 먼저 쳤다. pytest를 처음에 `| tail`로 이어 쳤다가 훅이 종료
+  코드를 가린다고 짚어, 멈추고 파일로 리다이렉트해 다시 돌렸다.
+
+## 셀프 리뷰
+
+`/code-review`(기준 `2a3964f`, 수정 2·미추적 0, 커밋 0). 소스가 없어 표준 축은 sonnet이다. 명세는 대기열 164 행과
+지시문이고, 가드의 실제 동작과 이 세션이 할 일을 리뷰어 참고로 갈라 넘겼다. 두 축 모두 Critical·Major는 없었다. 표준 축은
+Minor 1·Nit 3, 명세 축은 Minor 2·Nit 3이었다.
+
+- **고친 것.**
+  - 명세 Minor: 가드 문장에 "그 PR에서"라는 한정이 없어 가드가 어떤 PR에서도 코멘트를 세지 않는다고 읽혔다. 끝 문장
+    "리뷰도 가드도 돈다"는 옛 "가드도 꺼지므로"와의 대비라, 이제는 그 PR에서 가드가 돌지 않는다고 읽혔다. 둘 다 고쳤다.
+  - 명세 Minor: 첫 초안은 그 워크플로의 동작을 서술한 다른 문서를 모두 병합 뒤로 미룬다고 적어 넓었다. 탐침의 독스트링과
+    README도 그 동작을 서술하지만 허용 경로 안이라 같은 PR에 실을 수 있다. "허용 경로 밖의 것"으로 좁혔다.
+  - 명세 Nit·표준 Nit(겹침): 첫 초안은 허용 범위의 원천을 가드 스텝의 주석으로 가리켜 판정자를 가리키지 않았다. 주석은
+    범주만 적고 경로는 `run:`의 패턴에만 있다. "원천은 그 스텝의 패턴"으로 고쳤다. 대기열 164의 닫힘 메모도 같이.
+  - 표준 Nit: "코멘트 0개 가드"는 워크플로에 없는 이름이라 스텝 이름(`Fail when Claude left no comment`)을 붙였다.
+  - 명세 Nit: 열린 행 31의 정정 괄호(위 잔존 grep).
+  - 표준 Minor(Duplicated Code, 판단 항목)와 표준 Nit(괄호 열거가 "기록"의 오독을 줄인다)이 서로 당겼다. 닫힌 열거
+    "기록(일지·대기열·하네스 탐침)"을 "일지·대기열 등"의 예시로 줄이고 원천을 가리키게 했다. 이 줄이 가드의 목록을 그대로
+    옮겨 적다 낡은 것이 164였다.
+- **남긴 것.**
+  - 명세 Nit: 161의 갈래(목록을 얻지 못하면 실패)가 템플릿에 없다. 가드가 실패할 때 스스로 "잡을 다시 돌린다"를 찍고,
+    템플릿은 PR을 짤 때 보는 것이라 옮기지 않았다.
+  - 표준 Nit: 병합 뒤로 미룬 일을 어디에 적는지가 없다. next-session의 "다음"과 retro가 이미 맡는 일이고, 164의 범위를
+    넘는 새 규칙이라 넣지 않았다.
+  - 표준 참고: 열린 행 163은 워크플로, `operations.md`, ADR을 한 칸에 적는다. 새 문장대로면 `operations.md`는 워크플로
+    PR이 병합된 뒤의 PR이다. 이 diff의 문제가 아니고 163을 할 세션이 템플릿에서 읽는다.
+
+## PR 직전 보안·버그·성능 축
+
+`coderabbit-review`는 돌리지 않았다. `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`였다. 그래서
+`operations.md` 리뷰 파이프라인 2단계의 대체 둘을 커밋(`787d06c`) 뒤에 나란히 돌렸다.
+
+- **보안(`/security-review`).** 식별 단계의 지적이 0건이라 오탐 거르기는 띄우지 않았다. 템플릿 문구를 가드 스크립트와
+  대조해 묶음을 부추기지 않는다고 봤고, 더한 줄에 비밀·토큰·PII가 없었다. 기존 설계라 넣지 않은 관찰 둘(워크플로 PR에
+  탐침이 리뷰 없이 실린다, `pull_request`는 PR 쪽 워크플로 사본으로 돈다)은 이 PR이 넓히지 않았다.
+- **버그·성능(`bug-perf-review`).** 유효 1, 보류 1, 오탐 5. Critical·Major는 없었다. 템플릿과 대기열 31행의 서술을 가드
+  코드와 대조했고, `review_workflow.py`가 이 브랜치에서 어긋남 0/21이었다(가짜 `gh` 탐침).
+  - 고친 것, Nit: 대기열 164의 닫힘 메모에 일지 참조가 없었다. 158·161처럼 붙였다.
+  - 보류, Minor: 이 일지에 "다음"이 없다. PR의 claude-review 실행을 본 뒤 병합 전에 쓴다.
+  - 오탐: 두 워크플로를 같이 바꾼 PR, 이름 바꾸기의 옛 경로, 목록 API 실패를 템플릿이 따로 적지 않는다(셋 다 "허용 경로
+    밖의 파일이 함께 실리면 실패"가 덮거나 가드가 스스로 안내한다). 31행 괄호에 161의 갈래가 없다(그 괄호의 주제는
+    건너뛰는지이고 그 갈래는 실패다). 열린 행 163(위 표준 참고).
+  - 확인하지 못한 것: `gh pr comment`로 게시한 코멘트의 작성자가 가드가 세는 `claude[bot]`인지. 아래 PR 리뷰에서 본다.
+
+## PR 리뷰
+
+PR #176(커밋 둘, `397e474`).
+
+- **claude-review.** 37초, 9턴, $0.16. 도구 호출은 `gh pr view 176 --json title,body`, `gh pr diff 176`,
+  `gh pr diff 176 --name-only`, Read, Grep, Write, 그리고 `gh pr comment 176 --body-file review-comment.md` 하나로 게시했다.
+  `permission_denials`는 빈 배열이었고, 코멘트 작성자는 `claude[bot]`이라 가드가 1개로 셌다. 지적 없음이었다. #173이 바꾼
+  5단계(Write로 쓰고 고정 경로의 명령 하나로 게시)와 허용 규칙이 맞물려 돈 것이다. 거부 수는 `tools/gh_run_summary.py`의
+  요약에 없어 로그(`gh run view --log`)에서 `permission_denials`를 찾았다.
+- **이 PR이 첫 실행은 아니었다.** 지시문은 이 PR이 #173의 규칙으로 처음 도는 PR이라고 했으나, #173이 22:17에 병합된 뒤
+  22:34에 #174(`chore/rewrap-and-separator-hook`)의 claude-review가 먼저 돌았다. `pull_request` 실행은 base를 합친 병합
+  ref의 워크플로로 돌아, 브랜치가 #173 전에 땄어도 새 규칙을 쓴다. 그 실행도 `gh pr comment 174 --body-file
+  review-comment.md`로 게시했고 거부 0, 코멘트 1이었다.
+- **Stop 훅 오류.** 두 실행 모두 끝에 `stop-hook-error` 알림("Stop hook error occurred")이 찍혔다. 같은 실행의
+  SessionStart 훅 응답이 `/bin/sh: 1: uv: not found`(종료 127)였다. 저장소의 훅 등록은 모두 `uv run … launch_hook.py`인데
+  러너에 uv가 없다. #173 전의 #172 실행에도 SessionStart가 같은 127로 끝났으니 #173이 만든 것이 아니다. #172에는
+  `stop-hook-error` 알림이 없었고 그 까닭은 재지 않았다. 127은 막는 코드(2)가 아니어서 훅이 지나가고, 리뷰의 권한은 훅이
+  아니라 `claude_args`가 쥐므로 이 실행의 결과에 미친 것은 알림 한 줄이다.
+- **CodeRabbit.** PR을 연 직후 "Review limit reached"였고 `@coderabbitai review` 요청도 두 번 "Review rate limited"로
+  끝났다. 셋째 요청(`8449276`)에서 리뷰가 돌아 Minor 하나를 냈다. 이 일지의 첫 문단이 이 PR을 claude-review가 처음 도는
+  PR이라고 적어 아래 #174의 실행과 어긋났다. 맞아서 고쳤다(1회차).
+- **claude-review 2·3회차.** 2회차(`06b42c7`)는 Nit 하나였다. 템플릿 37행이 길고 가드 서술은 `operations.md`에 있으니
+  그쪽을 가리키라는 것인데, `operations.md`에는 그 서술이 없어 전제가 맞지 않았다. 둘째 회차의 Nit이라 보류 이유를 PR
+  코멘트로 남겼다. 3회차(`8449276`, main을 두 번째로 병합한 뒤)는 지적 없음이었다.
+- **main 병합 둘.** PR을 연 뒤 #175·#177, 이어 #174가 병합되어 대기열 끝 행이 두 번 충돌했다. 두 번 모두 main의 행을
+  먼저, 이 브랜치의 176~178을 뒤에 두었다.
+
+## 회고
+
+PR 리뷰 절을 쓴 뒤 단계를 닫기 전에 돌렸다. 후보 셋을 냈고 셋 다 승인됐다. 셋 다 이 PR의 범위(대기열 164) 밖이라
+대기열로 갔다. 처음에는 170~172로 적었으나, 그사이 main이 170·171을, 열린 PR #177이 172를 써서
+`tools/sibling_overlap.py`가 고른 176~178로 옮겼다.
+
+> 사용자: (고른 것) "1. gh_run_summary 보강,2. 쥔 프로세스 이름,3. CI 훅 127 기록"
+
+1. **`gh_run_summary.py`가 거부 수와 훅 오류를 보여 주지 못한다(대기열 176, 1회차).** 일지 21의 "다음"은 거부 수를 이
+   도구로 보라고 했으나, 도구가 찾는 `permission_denials_count`가 2.1.292의 결과 블록에 없어 요약이 거부에 대해 아무것도
+   말하지 않았다. `::error` 패턴은 Claude가 Read로 읽은 워크플로 원문 줄에 걸려 그 줄을 두 번 통째로 찍었고, SessionStart
+   훅의 127은 찍지 않았다. 로그를 받아 손으로 찾았다(위 PR 리뷰 절).
+2. **`tidy_checkouts.py`가 폴더를 쥔 프로세스를 대지 못한다(대기열 177, 3회차).** 일지 2026-10-07-19·21의
+   `tidy-before-worktree`와 이 일지의 `review-workflow-guards`가 모두 "다른 프로세스가 쥐고 있다"로 남았고, 어느 세션도
+   무엇을 닫을지 몰랐다. 그 브랜치의 세션은 `isRunning`이 아니었다.
+3. **CI의 claude-review에서 저장소 훅이 127로 지나간다(대기열 178, 1회차).** 위 PR 리뷰 절의 Stop 훅 오류다. 로컬의 막는
+   훅(`hook_env_read` 등)이 CI에서는 돌지 않는다는 것이 어디에도 적혀 있지 않았다.
+
+일지에만 남기는 것:
+
+- pytest를 `| tail`로 이어 쳐 종료 코드를 가렸다. 훅이 짚어 다시 돌렸다(위 검사 절). 이미 있는 훅이 제 일을 했다.
+- 일지 21의 잔존 grep이 열린 행 31을 놓쳤다. `code-review`의 주장 검증 5항(옛 결정의 논증이 쓴 말도 찾는다)이 이번 명세
+  축에서 잡았다. 같은 세션이 아니라 다음 PR의 리뷰가 잡은 것이다.
+- 지시문은 이 PR이 #173의 규칙으로 처음 도는 PR이라고 했으나 #174가 먼저 돌았다(위 PR 리뷰 절). `pull_request` 실행은
+  병합 ref의 워크플로를 쓴다. 워크플로 변경의 첫 실행을 보려면 병합 시각 뒤의 `gh run list --workflow`를 본다.
+
+## 다음
+
+- 대기열 176·177·178을 한 chore PR로 반영한다. 셋 다 이번 claude-review 관찰과 첫 턴의 tidy-checkouts에서 나왔고, 177은
+  3회차다. 178은 `operations.md`의 한 줄이라 헌법 버전의 patch가 함께 간다.
+- 177을 잴 대상: 이 세션의 tidy-checkouts에서 `review-workflow-guards`는 그 브랜치의 세션이 `isRunning`이 아닌데도 폴더가
+  쥐여 있었다(WinError 32). 다음 정리에서도 남아 있으면 그 폴더가 쥔 프로세스를 대는 첫 실측 대상이다.
+- 176을 잴 대상: 이 일지의 PR 리뷰 절이 든 두 실행(`38181949361`, PR #174의 `38180949060`)은 거부 0, 훅 127,
+  `::error` 원문 줄을 모두 담는다. 결과 블록의 키가 `permission_denials`인 것은 PR #172의 실행(`38120400317`)도 같다.
