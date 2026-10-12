@@ -101,7 +101,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 | 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |
-| 판단 기준(리뷰) | `CODING_STANDARDS.md` | "규칙으로" 승인분만 |
+| 판단 기준(리뷰) | `CODING_STANDARDS.md` | 더할지는 retro 스킬 4단계가 판정 |
 | 리뷰 파이프라인(누가 언제 무엇을) | `docs/constitution/operations.md` | 봇 설정은 `.coderabbit.yaml`과 `.github/workflows/claude-code-review.yml`. 기준은 CODING_STANDARDS |
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 Read 도구로 열 때만 실림 |
 | 지침의 로드 시점 표 | `CLAUDE.md` 교정 루프 절 | ADR 0004는 결정의 기록, 런북 3단계 템플릿은 새 프로젝트용 사본 |
