@@ -1,4 +1,4 @@
-# 2026-10-12 (23) 변이 도구가 변이마다 시간 제한을 두고 번호와 커밋으로 고른다
+# 2026-10-12 (29) 변이 도구가 변이마다 시간 제한을 두고 번호와 커밋으로 고른다
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 139·152·193을 한 PR로 닫는다. 셋 다
 `tools/mutate.py` 한 파일이다. 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
@@ -64,8 +64,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 139
   번호 고르기와 숫자뿐인 이름 거부, `changed_names`·`changed_since`, 출력의 번호와 `다시 돌릴 번호` 줄, 인자를
   가르는 `_parse`·`_Args`·`_UsageError`, `--since`가 고른 것을 내는 `_since_picks`. 독스트링의 사용법·고르기·변이
   파일·하는 일 3·4·제자리가 아닌 실행·못 보는 것.
-- `tests/tools/test_mutate.py`: 가짜 러너 열여덟과 타입 별칭의 시그니처, 새 시험 함수 스물(시간 제한 넷, 실제
-  러너 다섯, 152 하나, 고르기 열), 기존 시험 하나에 `--since`를 섞는 경우.
+- `tests/tools/test_mutate.py`: 가짜 러너 열여덟과 타입 별칭의 시그니처, 새 시험 함수 스물둘(시간 제한 넷, 실제
+  러너 여섯, 152 하나, 고르기 열하나. 못 보는 것을 고정한 둘은 main 합치기 절), 기존 시험 하나에 `--since`를 섞는 경우.
 - `.scratch/harness/probes/`: 새 표 `mutate_timeout_select_mutations.toml`, 원문이 옮겨 간 `mutate_runners`
   다섯·`mutation_check` 셋, `mutate_restore` 7번의 고르기와 주석, 바깥 `timeout`을 걷은 표 머리 둘, README 행
   넷(새 행 하나와 다시 돌린 셋)과 바깥 `timeout`을 걷은 행 둘.
@@ -98,13 +98,30 @@ README 행 둘을 고쳤고, 남은 것은 일지(기록)뿐이다. 옛 사용 �
     536초가 됐다.
   - 새 고르기를 그 자리에서 썼다. 첫 판 뒤 `mutate_restore` 7번의 기대를 고치고
     `tools/mutate.py .scratch/harness/probes/mutate_restore_mutations.toml 7`로 그 하나만 다시 돌렸고, 둘째 판의
-    `retro_hook`도 번호(`26 27`)로 골랐다. 둘째 판이 잰 `tools/mutate.py`와 시험은 이 일지가 처음 든 커밋의 것과
-    같다(다음에 `--since`로 견줄 커밋).
+    `retro_hook`도 번호(`26 27`)로 골랐다. 둘째 판이 잰 것은 첫 커밋 `7cf300b`의 판이고, 그 뒤 더한 시험 둘과 27번은
+    main 합치기 절에 있다.
 - 검증 명령: `ruff check`·`ruff format --check`, `pyright` 0 errors, `lint-imports` 5 kept, 지침 검사와 타입 우회
   검사가 초록이었다. `uv run pytest -q`는 셀프 리뷰 전에 2095 passed(7 deselected)였고, 반영 뒤에는
   `test_mutate.py` 123 passed와 커밋의 pre-commit으로 갈음한다. web 파일은 바꾸지 않았다.
 - 실제 러너 시험은 이 윈도우에서 돌았고, POSIX의 프로세스 그룹 길은 CI의 리눅스 pytest가 돈다.
 - 워크트리라 `uv sync`와 `pnpm -C web install --frozen-lockfile --offline`을 먼저 쳤다.
+
+## main 합치기
+
+첫 커밋(`7cf300b`)의 pre-commit은 모두 초록이었다(pytest 280초, web verify 193초, `Skipped` 없음). 커밋 직전의
+대조가 `origin/main`이 `f5052ed`에서 `79a0c19`(#189, #188, #190)로 움직였다고 알려 합쳤고 충돌은 없었다. 그 가운데
+#188이 `.claude/rules/tools.md`에 새 규칙을 세웠다. 독스트링의 못 보는 것을 새로 적거나 고치면 그 항목마다 입력을
+시험 하나로 고정한다. 이 브랜치가 적은 항목 가운데 둘이 시험이 없었다. POSIX에서 프로세스 그룹만 따로 연 손자는
+`test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서_남는다`가(윈도우에서는 `taskkill /T`가 끝내는 것을
+단언한다), `--since`가 코드나 시험만 바뀐 판에서 고를 것이 없는 것은
+`test_못_보는_것_since_는_코드나_시험만_바뀐_판에서_고를_것이_없다`가 고정한다. 둘째를 뒤집는 변이(27번)를 더했다.
+시험을 더하기만 한 판이라 고르기 기준대로 `--since 7cf300b`로 그 하나만 골라 돌렸고 빨갰다. 이 PR의 기능을 이 PR
+안에서 처음 쓴 것이다.
+
+둘째 커밋 직전의 대조에서 `origin/main`이 다시 `8ac8620`(#191, 킥오프 진행 스킬)으로 움직였고, 그 일지(25)보다 이
+일지가 이름순으로 앞선다고 1로 끝났다. 합친 뒤(충돌 없음, `KICKOFF.md`의 이 브랜치 문장은 남았다) 안내대로 이
+일지를 23에서 29로 옮기고, 옛 번호를 든 인용 여섯(대기열 셋, `tools/mutate.py` 독스트링, `mutate_restore` 표 주석,
+프로브 README)을 고쳤다. 다시 돌린 대조는 0으로 끝났다.
 
 ## 셀프 리뷰
 

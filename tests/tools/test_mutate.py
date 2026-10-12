@@ -368,6 +368,41 @@ def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_�
             os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
 
 
+_그룹을_여는_자식 = """
+import pathlib, subprocess, sys, time
+심장 = pathlib.Path(sys.argv[2])
+손자 = [sys.executable, "-c", sys.argv[1], sys.argv[2]]
+쥘_파이프 = {"stdout": sys.stdout, "stderr": sys.stderr}
+if sys.platform == "win32":
+    subprocess.Popen(손자, **쥘_파이프)
+else:
+    subprocess.Popen(손자, **쥘_파이프, process_group=0)  # 그룹만 따로 연다
+while not 심장.exists():
+    time.sleep(0.05)
+print("손자가 뛴다", flush=True)
+time.sleep(60)
+"""
+
+
+def test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서_남는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`killpg` 는 자식이 이끄는 그룹만 끝내 그룹을 따로 연 손자를 담지 않는다. 윈도우에는 그 그룹이
+    없고 `taskkill /T` 가 부모를 따라 찾아 끝낸다(독스트링의 못 보는 것,
+    `.claude/rules/tools.md`)."""
+    monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
+    심장 = tmp_path / "heartbeat"
+
+    결과 = run_command([sys.executable, "-c", _그룹을_여는_자식, _손자, str(심장)], tmp_path, 3)
+
+    try:
+        assert 결과.timed_out_after == 3
+        assert _뛰는지(심장) == (sys.platform != "win32")
+    finally:
+        with contextlib.suppress(OSError):  # 끝냈거나 스스로 끝났으면 없다
+            os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
+
+
 def test_실제_러너는_시간_안에_끝난_명령의_종료_코드와_출력을_돌려준다(tmp_path: Path) -> None:
     결과 = run_command(
         [sys.executable, "-c", "import sys; print('나옴'); sys.exit(3)"], tmp_path, 60
@@ -696,6 +731,22 @@ def test_since_로_고를_것이_없으면_아무것도_돌리지_않고_2다(tm
 
     assert code == 2
     assert any("HEAD" in 한줄 and "바뀌거나 더한 변이가 없다" in 한줄 for 한줄 in 줄)
+
+
+def test_못_보는_것_since_는_코드나_시험만_바뀐_판에서_고를_것이_없다(tmp_path: Path) -> None:
+    """`--since` 는 표만 견준다. 코드만 바꿔 둘레가 바뀐 변이도, 시험을 더해 빨개질 수 있는 대조군도
+    고르지 않는다(독스트링의 고르기 문단의 못 보는 것, `.claude/rules/tools.md`)."""
+    표 = _커밋한_표(tmp_path, _셋())
+    (tmp_path / "src/m.py").write_bytes(b"x = 1\ny = 1\nz = 1\nw = 1\n")
+    _파일을_둔다(tmp_path, "tests/test_x.py", b"def test_more() -> None:\n    pass\n")
+    줄: list[str] = []
+
+    code = main(
+        [str(표), "--since", "HEAD"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("바뀌거나 더한 변이가 없다" in 한줄 for 한줄 in 줄)
 
 
 def test_since_의_커밋에_표가_없으면_모두_새로_더한_변이다(tmp_path: Path) -> None:

@@ -264,3 +264,14 @@ expect = "red"
 file = "tools/mutate.py"
 old = '''        out(f"다시 돌릴 번호: {' '.join(str(numbers[name]) for name in mismatched)}")'''
 new = '''        pass'''
+
+# 못 보는 것을 고정한 시험(`.claude/rules/tools.md`)을 뒤집는다. 표만 견주지 않고 모두 고르면 코드만 바뀐 판도
+# 고를 것이 생긴다.
+[[mutation]]
+name = "--since 가 표를 견주지 않고 모두 고른다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if before.get(m.name) != m or old_runners.get(m.runner) != new_runners.get(m.runner)'''
+new = '''        if True'''
