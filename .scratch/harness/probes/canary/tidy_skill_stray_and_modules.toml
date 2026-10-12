@@ -1,0 +1,28 @@
+# tidy-checkouts 스킬 3에 더한 구절(판정 3의 모듈을 올린 프로세스, 대기열 201. 등록 없는 폴더의 remove-stray,
+# 대기열 148)이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주
+# 체크아웃에는 세 카나리아가 모두 없다. 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면 옛 판을 `git worktree
+# add --detach` 로 꺼내 대조군의 checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 주 체크아웃의 옛 판 `c30cd25`, 일지 2026-10-12-38).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_stray_and_modules.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+tidy-checkouts 스킬을 Skill 도구로 불러 본문을 읽고 셋을 답하라.
+1. 3의 첫 문단에서 판정 3을 줄인 구절, 곧 "판정 3은"으로 시작해 "없는지"까지를 글자 그대로 옮겨라.
+2. 3의 첫 문단에서 `.claude/worktrees/` 바로 아래의 등록 없는 폴더를 어떤 조건에서 무엇으로 지우는지 적은 문장을
+   글자 그대로 옮겨라.
+3. 3의 2("지운다")에서 Bash 호출 하나에 하나씩 치라는 명령의 이름을 모두 옮겨라.
+본문에 그런 구절이나 문장이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["모듈(하드링크 이름 포함)", "참조에서 닿는 커밋", "remove-stray"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
