@@ -1,0 +1,27 @@
+# next-session에 더한 claude-review 계정 한도 빨강의 병합 길(대기열 165)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-35). 그 뒤 1단계 새 문장의 주어를
+#   `/git-pr-merge`로 밝혀 적은 것과, PR 직전 리뷰를 반영해 "워크트리에서 병합할 때" 1에 `UNSTABLE`을, 그 절의 "끝:"에
+#   "4를 거쳤으면"을 더한 것은 사전 확인으로 갈음했다(2026-10-12, 일지 2026-10-12-35).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_rate_limit_merge.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문에서 두 구절을 각각 글자 그대로 옮겨라.
+1. "워크트리에서 병합할 때" 절의 1(확인)에서, `gh pr checks`의 실패에 붙은 예외를 적은 구절.
+2. 순서의 1단계에서, 주 체크아웃의 병합 스킬(`/git-pr-merge`)이 멈추는 경우를 다룬 문장.
+본문에 그런 것이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["claude-review가 계정의 주간 사용량 한도로만 빨가면 실패로 세지 않고", "실패가 claude-review의 계정 한도뿐이면"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
