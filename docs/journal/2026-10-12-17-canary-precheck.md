@@ -114,6 +114,11 @@ README와 대기열이고, 새 규약을 세운 파일은 없었다(`.claude/age
 체크아웃이라 병합 뒤 그대로 돌지 않는 묶음이 넷이 됐고, 명세는 열여덟이다. 188은 169와 같은 파일이라 묶지 않았는데, 그
 169를 맡은 PR #184가 이 사이에 병합됐다.
 
+PR 리뷰를 반영한 커밋 직전의 대조에서는 대기열 193·194를 PR #187이 먼저 가져가 195·196으로 옮겼다. 그사이 PR #189
+(`chore/perf-review-background-and-triage`)가 열려 `tools/canary.py`·`operations.md`·헌법 README를 함께 고치고 188·190을
+닫는다. 헌법 번호는 그쪽이 3.0.26으로 매겨 겹치지 않았다. origin/main은 `15e41a6`(PR #186)으로 움직였지만 이 브랜치가 고친
+파일과 겹치지 않아 다시 합치지 않았다.
+
 ## PR 직전 보안·버그·성능 축
 
 CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 돌렸다(커밋 `949a5fd` 기준, 범위 `0661d72...HEAD`).
@@ -133,3 +138,44 @@ CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 돌렸다(�
     디렉터리처럼 보이는 인자(명세로 읽혀 실패하고 `claude`는 뜨지 않는다), 같은 명세를 두 번 넘긴 경우, `monkeypatch.chdir`가
     다른 테스트로 새는지 등이다.
 - 반영 뒤 `tests/tools/test_canary.py`는 144 passed였다.
+
+## PR
+
+[njh6803/agent-os#188](https://github.com/njh6803/agent-os/pull/188). 첫 푸시(`b627698`)의 CI는 python·web·e2e·visual·verify·
+claude-review가 초록이었다. CodeRabbit은 PR을 연 직후 "manual review required for this OSS repository"로 건너뛰었고,
+`@coderabbitai review` 요청에는 한도("Review rate limited")로 리뷰 없이 끝났다. 이 PR의 보안·버그·성능 축은 위 PR 직전 절의
+대체 둘이다. claude-review는 첫 회차에 Nit 둘을 냈고 둘 다 고쳤다.
+
+- 뒤에 둔 깃발 테스트가 `--preflight` 하나만 고정해 "깃발 전반을 막는다"를 단언하지 못했다. `--out`을 매개변수로 더했다.
+- 튜플 테스트의 이름이 구현 사정(인자 타입)을 말했다. "사전 확인 깃발은 리스트가 아닌 시퀀스에서도 알아본다"로 바꿨다.
+- 반영 뒤 기준선 145 passed, 깃발 변이 둘은 다시 빨강이었다.
+
+## 회고
+
+후보 둘을 냈고 둘 다 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "MSYS 경로 변환 함정 (Recommended),canary/ 행을 머리 주석으로 쪼개기"
+
+1. **Git Bash가 `git show <ref>:<경로>`를 깨뜨렸다 → 대기열 195(새 행, 5회차).** 병합 충돌을 보려고 친
+   `git show origin/main:.scratch/harness/probes/README.md`가 `origin\main;.scratch\harness\probes\README.md`로 바뀌어
+   실패했다. 손으로 갈라 보니 `origin/main:README.md`와 `a76107e:.scratch/retro-queue.md`는 지나갔고
+   `origin/main:.scratch/retro-queue.md`는 실패했다(콜론 양쪽에 `/`가 있을 때). 같은 모양이 일지 2026-09-23-02,
+   2026-10-05-02(두 번), 2026-10-07-12에 있었고 매번 일지에만 남았다.
+2. **`canary/` 행이 병합 충돌의 단골 자리다 → 대기열 196(새 행, 2회차).** 185로 줄였어도 명세마다의 결과가 한 줄에 이어져,
+   main의 PR #184가 명세 둘을 더한 것과 이 브랜치의 재작성이 그 줄에서 부딪혔다. 일지 2026-10-07-09에서도 같은 줄이 충돌했다.
+
+일지에만 남기는 것:
+
+- 중간 문장을 영어로 세 번 써 훅이 짚었다.
+- 프로브 README에 "`tidy_skill_same_copy.toml`만 종료 2"를 명세 전부에 사전 확인을 쳐 보지 않고 적었고, 셀프 리뷰 두 축이
+  잡았다. 줄인 행의 길이도 처음에는 awk가 센 바이트 수로 "약 9000자"라 적었다가 파이썬의 글자 수로 다시 셌다.
+- `bug-perf-review` 브리프에 대기열 188의 모양(띄운 백그라운드 작업은 보고 전에 멈춘다)을 미리 적었고, 띄운 것이 없었다는
+  보고를 받았다. 188 자체는 열려 있다.
+- 변이 표 전체 실행의 출력이 파일로 가는 동안 버퍼에 남아, 끝났는지 보려고 감시를 세 번 걸었다.
+
+## 다음
+
+- **하네스 chore: 대기열 195.** 회차 다섯이라 결정표의 chore 배치다. 196·191(둘 다 카나리아 문서)을 묶을지는 그 세션이
+  정한다. 188·190은 PR #189(`chore/perf-review-background-and-triage`), 157·175·182는 PR #187
+  (`chore/sibling-overlap-next-numbers`)이 맡아 돌고 있다.
+- 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.

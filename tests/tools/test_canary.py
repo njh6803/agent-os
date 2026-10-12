@@ -1287,10 +1287,14 @@ def test_인자가_맞지_않으면_사용법을_알리고_2다(tmp_path: Path, 
     assert printed != []
 
 
-def test_사전_확인_깃발을_뒤에_두면_출력_디렉터리로_삼지_않고_사용법을_알린다(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("깃발", ["--preflight", "--out"])
+def test_깃발을_뒤에_두면_출력_디렉터리로_삼지_않고_사용법을_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 깃발: str
 ) -> None:
-    """출력 디렉터리는 프로세스의 작업 폴더 기준이라 그 자리를 `tmp_path` 로 옮겨 본다."""
+    """출력 디렉터리는 프로세스의 작업 폴더 기준이라 그 자리를 `tmp_path` 로 옮겨 본다.
+
+    `--preflight` 만이 아니라 `--` 로 시작하는 인자를 모두 막는다.
+    """
     monkeypatch.chdir(tmp_path)
     spec_path = tmp_path / "canary.toml"
     spec_path.write_text(_스킬_명세, encoding="utf-8")
@@ -1299,11 +1303,11 @@ def test_사전_확인_깃발을_뒤에_두면_출력_디렉터리로_삼지_않
     가짜 = _가짜({})
     printed: list[str] = []
 
-    code = main([str(spec_path), "--preflight"], cwd=tmp_path, runner=가짜, out=printed.append)
+    code = main([str(spec_path), 깃발], cwd=tmp_path, runner=가짜, out=printed.append)
 
     assert code == 2
     assert 가짜.호출 == []
-    assert not (tmp_path / "--preflight").exists()
+    assert not (tmp_path / 깃발).exists()
     assert any("사용:" in line for line in printed)
 
 
@@ -1337,7 +1341,7 @@ def test_사전_확인은_claude를_띄우지_않고_출력도_남기지_않으�
     assert any("[통과]" in line and "canary.toml" in line for line in printed)
 
 
-def test_사전_확인은_인자가_튜플이어도_돈다(tmp_path: Path) -> None:
+def test_사전_확인_깃발은_리스트가_아닌_시퀀스에서도_알아본다(tmp_path: Path) -> None:
     """`main` 은 `Sequence[str]` 를 받는다. 리스트만 깃발로 알아보면 튜플은 사용법으로 떨어진다."""
     spec_path = tmp_path / "canary.toml"
     spec_path.write_text(_스킬_명세, encoding="utf-8")
