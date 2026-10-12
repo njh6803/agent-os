@@ -130,3 +130,37 @@ next-session 스킬을 바꿨으므로 PR 전에 main을 이 브랜치에 병합
   모양을 Chromium에 띄워 마운트 직후 8, 137ms 간격으로 4.70·5.92를 쟀다고 보고했다. 나는 다시 재지 않았다). 회전과 무관한
   이름의 자리(이름의 왼쪽 − progressbar의 왼쪽 = 도는 표시 16 + 사이 8)로 바꾸고, 그 스토리를 겨누는 변이 넷(3~6번)을 다시
   돌려 모두 빨강을 봤다.
+
+## PR 리뷰
+
+PR #205. CI 일곱이 모두 초록이었다(python, web, e2e, visual, verify, claude-review, CodeRabbit의 `pass`). PR을 연 뒤 main에
+#201이 들어와 `BEHIND`였고, CI가 막 돌기 시작한 때라 main을 한 번 더 합쳐 푸시했다.
+
+- **CodeRabbit.** `@coderabbitai review`를 세 번(PR을 연 직후, 병합 푸시 뒤, 다음 날) 요청했고 세 번 모두 "Review rate limited"였다.
+  이 PR의 어느 커밋도 CodeRabbit의 리뷰를 받지 않았다. 보안·버그·성능 축은 PR 직전의 대체 둘이 덮었고, 그 뒤 고친
+  `e998660`(테스트 한 줄)은 그 축으로 다시 보지 않았다. 덮인 것과 빈 것을 PR 코멘트에 적고 기다리지 않았다(operations.md
+  리뷰 파이프라인).
+- **claude-review.** 두 회차에 Minor 넷·Nit 둘, Critical·Major 없음. 모두 `.design-sync/`(사용 규약의 `elevation`과
+  `shadow-1`~`shadow-3`, NOTES의 `CARD_ELEVATIONS`)와 `theme.css`의 `--shadow-color`였다. 앞의 셋은 티켓 02가 05로 넘긴 자리이고
+  05의 잔존 grep이 받는다. `--shadow-color`는 04의 `float`가 읽는다. 지적마다 보류 이유를 PR 코멘트에 남겼다.
+
+## 회고
+
+후보 셋을 냈고 하나가 승인됐다.
+
+> 사용자(질문에 답): "A. 사진 갱신을 all로 (Recommended)"
+
+- 승인(대기열 215): 사진 비교가 안티에일리어싱 픽셀만 바뀐 그림을 지나보내고 `visual:update`가 그 사진을 다시 쓰지 않았다. 위 사진
+  항목과 PR 리뷰가 사건이다. 이 PR은 티켓 PR이라 반영하지 않았다.
+- 기각(일지에만): 변이 표가 기대한 실패 테스트의 이름을 단언하는 칸(`failing`)을 `tools/mutate.py`에 두는 것. 이번에는 `-t`로
+  좁혀 손으로 막았다. 새 일지 파일을 Write할 때 번호가 `sibling_overlap.py`의 다음 빈 번호와 다르면 알리는 계기 훅. 번호를 지은
+  자리가 구현 중이라 next-session 1단계의 규칙이 실리기 전이었고, 커밋 전 대조가 잡아 인용 넷을 고쳤다.
+- 일지에만 남기는 것: Bash의 `cd`가 작업 폴더를 워크트리의 하위 폴더로 옮겼다(일지 2026-10-12-36에 이어 둘째). 셋째에 규칙
+  후보로 올린다. 변이가 도는 동안 머리 주석 셋을 sed로 고쳤는데, 그때 변이가 든 파일(`Icon.tsx`)은 건드리지 않아 되돌림이 깨지지
+  않았다.
+
+## 다음
+
+- design-refresh 티켓 03. 01(PR #204)과 02 가운데 나중에 병합한 세션이 지시문을 낸다. 03 티켓에 02의 메모 둘(진행 표시 줄,
+  카드 줄)이 있다.
+- 주 체크아웃 미갱신: 루트는 main. 다음 새 세션이 `tidy-checkouts`로 당긴다.
