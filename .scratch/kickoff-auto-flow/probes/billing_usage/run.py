@@ -2,13 +2,15 @@
 
 GitHub REST 의 사용자 billing usage 두 길을 부른다. 하나는 항목 목록(`settings/billing/usage`), 다른
 하나는 요약(`settings/billing/usage/summary`)이고, 둘 다 `year`·`month` 로 이번 달만 받는다. 찍는
-것은 응답의 모양(항목의 열쇠, product·sku·unitType 의 값)과, Actions 분을 저장소마다 더한 값과 그
-저장소의 공개 여부(`gh api repos/<주인>/<이름> --jq .visibility`)다. 금액은 찍지 않는다. 응답 헤더의
-`X-Accepted-OAuth-Scopes` 도 찍는다. 이번 달은 UTC 날짜로 고른다.
+것은 응답의 모양(항목의 열쇠, product·sku·unitType 의 값)과, Actions 분을 저장소와 sku 마다 더한
+값과 그 저장소의 공개 여부다. 공개 여부는 `gh repo list <주인> --json name,visibility` 한 번으로
+받은 목록과 맞추고, 목록에 없는 이름은 "알 수 없음"이다. 사용량이 있는 저장소만 이름을 찍는다.
+금액은 찍지 않는다. 응답 헤더의 `X-Accepted-OAuth-Scopes` 도 찍는다. 이번 달은 UTC 날짜로 고른다.
 
 거르기가 실제로 됐다는 표지는 길마다 하나다. 항목 길은 항목이 하나 이상 있고 모든 항목의 `date` 가
 이번 달이라는 것이다. 요약 길은 항목이 하나 이상 있고 `timePeriod` 가 이번 달의 연·월이라는 것이다.
-표지가 없으면 측정이 아니라고 찍고 1로 끝난다. 어느 길의 응답이 오류여도 1이다.
+저장소 목록은 하나 이상이어야 한다. 표지가 없으면 측정이 아니라고 찍고 1로 끝난다. 어느 길의 응답이
+오류여도 1이다.
 
 못 보는 것: 조직 주인의 길(`organizations/<org>/settings/billing/usage`. 조직 관리자만 부른다고
 GitHub REST 문서가 적는다, 원문을 받아 손으로 봤다), 기본 범위로 막 로그인한 토큰(`user` 범위가
@@ -28,18 +30,40 @@ from collections import defaultdict
 
 
 def gh_json(path: str) -> object:
-    result = subprocess.run(["gh", "api", path], capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        ["gh", "api", path], capture_output=True, text=True, encoding="utf-8", check=False
+    )
     if result.returncode != 0:
         return {"오류": result.stderr.strip()[:300]}
     return json.loads(result.stdout)
 
 
 def accepted_scopes(path: str) -> str:
-    result = subprocess.run(["gh", "api", "-i", path], capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        ["gh", "api", "-i", path], capture_output=True, text=True, encoding="utf-8", check=False
+    )
     for line in result.stdout.splitlines():
         if line.lower().startswith("x-accepted-oauth-scopes:"):
             return line.split(":", 1)[1].strip()
     return "(헤더 없음)"
+
+
+def repository_visibilities(owner: str) -> dict[str, str]:
+    """주인의 저장소 이름마다 공개 여부. 사용량 항목의 `repositoryName` 은 주인 없는 이름이다."""
+    listed = gh_list(["gh", "repo", "list", owner, "--json", "name,visibility", "--limit", "1000"])
+    return {
+        text(entry.get("name")): text(entry.get("visibility"))
+        for entry in listed
+        if isinstance(entry, dict)
+    }
+
+
+def gh_list(command: list[str]) -> list[object]:
+    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", check=False)
+    if result.returncode != 0:
+        return []
+    parsed = json.loads(result.stdout)
+    return parsed if isinstance(parsed, list) else []
 
 
 def text(value: object) -> str:
@@ -89,16 +113,21 @@ def main() -> int:
         return 1
     print(f"  date 범위 {dates[0]} ~ {dates[-1]} (모두 이번 달)")
 
-    minutes: dict[str, float] = defaultdict(float)
+    # sku 마다 따로 더한다. Windows·macOS 의 배수는 재지 않아 sku 끼리 더하지 않는다(명세 "준비").
+    minutes: dict[tuple[str, str], float] = defaultdict(float)
     for item in items:
         if text(item.get("product")) == "actions" and text(item.get("unitType")) == "Minutes":
-            minutes[text(item.get("repositoryName"))] += number(item.get("quantity"))
-    print("이번 달 Actions 분(저장소마다):")
-    for repository, total in sorted(minutes.items()):
-        name = repository if "/" in repository else f"{login}/{repository}"
-        detail = gh_json(f"repos/{name}")
-        visibility = text(detail.get("visibility")) if isinstance(detail, dict) else ""
-        print(f"  {repository or '(이름 없음)'}: {total:g}분, visibility={visibility or '?'}")
+            key = (text(item.get("repositoryName")), text(item.get("sku")))
+            minutes[key] += number(item.get("quantity"))
+    visibilities = repository_visibilities(login)
+    if not visibilities:
+        print("측정 아님: gh repo list 가 저장소를 하나도 내지 않았다")
+        return 1
+    print(f"저장소 목록 {len(visibilities)}개(gh repo list 한 번)")
+    print("이번 달 Actions 분(저장소와 sku 마다):")
+    for (repository, sku), total in sorted(minutes.items()):
+        visibility = visibilities.get(repository, "알 수 없음")
+        print(f"  {repository or '(이름 없음)'} {sku}: {total:g}분, visibility={visibility}")
 
     summary_path = f"users/{login}/settings/billing/usage/summary?{query}&product=actions"
     summary = gh_json(summary_path)

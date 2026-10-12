@@ -277,7 +277,8 @@ def main() -> int:
     token = secrets.token_hex(4)
     marker = f"SKILL-LOADED-{token}"
     summary: dict[str, list[TurnResult]] = {}
-    with tempfile.TemporaryDirectory(prefix="skill-live-") as scratch:
+    # 자식이 폴더를 쥔 채 끝나면 Windows 에서 정리가 실패한다. 측정 요약을 잃지 않게 넘긴다.
+    with tempfile.TemporaryDirectory(prefix="skill-live-", ignore_cleanup_errors=True) as scratch:
         for variant in args.only:
             cwd = Path(scratch) / variant
             cwd.mkdir()
@@ -285,14 +286,17 @@ def main() -> int:
             turns = turns_for(variant, cwd, name, marker)
             log = out / f"{variant}.jsonl"
             summary[variant] = converse(claude, cwd, turns, name, marker, log)
-    version = subprocess.run([claude, "--version"], capture_output=True, text=True, check=False)
+    version = subprocess.run(
+        [claude, "--version"], capture_output=True, text=True, encoding="utf-8", check=False
+    )
     print(f"claude {version.stdout.strip()}, 표지 {marker}")
     unmeasured = 0
     for variant, results in summary.items():
         print(variant)
         for result in results:
             excerpt = " ".join(result.result.split())[:100]
-            print(f"  {result.label}: {result.verdict} — {excerpt}")
+            # 구분자는 ASCII 다. cp949 콘솔(PYTHONUTF8 없음)에서도 요약이 찍히게 한다.
+            print(f"  {result.label}: {result.verdict} : {excerpt}")
             unmeasured += result.verdict == NOT_MEASURED
     print(f"측정이 아닌 부르기 턴: {unmeasured}")
     return 1 if unmeasured else 0

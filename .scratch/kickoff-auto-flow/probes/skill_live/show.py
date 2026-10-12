@@ -38,12 +38,22 @@ def _blocks(content: object) -> list[str]:
 
 def main() -> int:
     for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
-        event = json.loads(line)
+        # run.py 는 JSON 이 아닌 줄도 기록에 그대로 남긴다.
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            print(f"(JSON 아님) {_flat(line)}")
+            continue
         if not isinstance(event, dict):
             continue
         kind = event.get("type")
         if kind == "system" and event.get("subtype") == "init":
-            names = [*event.get("skills", []), *event.get("slash_commands", [])]
+            skills = event.get("skills")
+            commands = event.get("slash_commands")
+            names = [
+                *(skills if isinstance(skills, list) else []),
+                *(commands if isinstance(commands, list) else []),
+            ]
             probes = sorted({name for name in names if "probe" in str(name)})
             print(f"init: 프로브 스킬 {probes or '없음'}")
         elif kind in ("user", "assistant"):
