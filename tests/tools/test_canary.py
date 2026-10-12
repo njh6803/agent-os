@@ -1279,12 +1279,124 @@ def test_claude가_제한_시간을_넘기면_그_회차는_0이_아닌_코드�
     assert "시간" in result.stderr
 
 
-@pytest.mark.parametrize("argv", [[], ["a.toml"], ["a.toml", "out", "더"]])
-def test_인자가_둘이_아니면_사용법을_알리고_2다(tmp_path: Path, argv: list[str]) -> None:
+@pytest.mark.parametrize("argv", [[], ["a.toml"], ["a.toml", "out", "더"], ["--preflight"]])
+def test_인자가_맞지_않으면_사용법을_알리고_2다(tmp_path: Path, argv: list[str]) -> None:
     printed: list[str] = []
 
     assert main(argv, cwd=tmp_path, runner=_가짜({}), out=printed.append) == 2
     assert printed != []
+
+
+@pytest.mark.parametrize("깃발", ["--preflight", "--out"])
+def test_깃발을_뒤에_두면_출력_디렉터리로_삼지_않고_사용법을_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 깃발: str
+) -> None:
+    """출력 디렉터리는 프로세스의 작업 폴더 기준이라 그 자리를 `tmp_path` 로 옮겨 본다.
+
+    `--preflight` 만이 아니라 `--` 로 시작하는 인자를 모두 막는다.
+    """
+    monkeypatch.chdir(tmp_path)
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main([str(spec_path), 깃발], cwd=tmp_path, runner=가짜, out=printed.append)
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert not (tmp_path / 깃발).exists()
+    assert any("사용:" in line for line in printed)
+
+
+# 사전 확인
+
+
+def _사전_확인(tmp_path: Path, *명세들: Path) -> tuple[int, list[str], _가짜]:
+    가짜 = _가짜({})
+    printed: list[str] = []
+    argv = ["--preflight", *(str(path) for path in 명세들)]
+    return main(argv, cwd=tmp_path, runner=가짜, out=printed.append), printed, 가짜
+
+
+def test_사전_확인은_claude를_띄우지_않고_출력도_남기지_않으며_통과하면_0이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """출력 디렉터리는 프로세스의 작업 폴더 기준이라 그 자리도 `tmp_path` 로 옮겨 트리 전체를
+    견준다."""
+    monkeypatch.chdir(tmp_path)
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    before = sorted(tmp_path.rglob("*"))
+
+    code, printed, 가짜 = _사전_확인(tmp_path, spec_path)
+
+    assert code == 0
+    assert 가짜.호출 == []
+    assert sorted(tmp_path.rglob("*")) == before
+    assert any("[통과]" in line and "canary.toml" in line for line in printed)
+
+
+def test_사전_확인_깃발은_리스트가_아닌_시퀀스에서도_알아본다(tmp_path: Path) -> None:
+    """`main` 은 `Sequence[str]` 를 받는다. 리스트만 깃발로 알아보면 튜플은 사용법으로 떨어진다."""
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    printed: list[str] = []
+
+    code = main(("--preflight", str(spec_path)), cwd=tmp_path, runner=_가짜({}), out=printed.append)
+
+    assert code == 0
+    assert any("[통과]" in line for line in printed)
+
+
+def test_사전_확인은_명세마다_판정하고_하나라도_어긋나면_2다(tmp_path: Path) -> None:
+    """명세 여럿을 한 명령으로 받는다. 워크트리 가드가 명세마다 도는 반복문을 거부한다(대기열
+    120)."""
+    맞는_명세 = tmp_path / "맞는.toml"
+    맞는_명세.write_text(_스킬_명세, encoding="utf-8")
+    틀린_명세 = tmp_path / "틀린.toml"
+    틀린_명세.write_text(_스킬_명세.replace('"EnterWorktree"', '"없는 카나리아"'), encoding="utf-8")
+    깨진_명세 = tmp_path / "깨진.toml"
+    깨진_명세.write_text("kind = ", encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+
+    code, printed, 가짜 = _사전_확인(tmp_path, 맞는_명세, 틀린_명세, 깨진_명세)
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("[통과]" in line and "맞는.toml" in line for line in printed)
+    assert any("[실패]" in line and "틀린.toml" in line for line in printed)
+    assert any("원천" in line and "없는 카나리아" in line for line in printed)
+    assert any("[실패]" in line and "깨진.toml" in line for line in printed)
+    assert any("명세 오류" in line for line in printed)
+
+
+def test_사전_확인은_원천이_실리는지_보지_않는다(tmp_path: Path) -> None:
+    """못 보는 것. 원천의 `paths` 가 실험군의 대상을 덮지 않아 규칙이 실리지 않을 원천도 지나간다.
+
+    실린다는 근거는 같은 명세가 앞서 `claude` 로 통과한 것이다. 그 뒤 머리말을 고쳤으면 다시 돌린다.
+    """
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_규칙_명세, encoding="utf-8")
+    (tmp_path / ".claude" / "rules").mkdir(parents=True)
+    (tmp_path / ".claude" / "rules" / "tools.md").write_text(
+        '---\npaths:\n  - "docs/**"\n---\n\n식별자는 영문이다\n', encoding="utf-8"
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "hook_env_read.py").write_text("# 훅\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("안내\n", encoding="utf-8")
+
+    code, _, 가짜 = _사전_확인(tmp_path, spec_path)
+
+    assert code == 0
+    assert 가짜.호출 == []
 
 
 def _에이전트_회차(답: str, agents: Sequence[str] = ("spec-reviewer",)) -> list[str]:

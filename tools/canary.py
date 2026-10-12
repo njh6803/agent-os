@@ -10,6 +10,12 @@
 2026-10-11-01·2026-10-12-02).
 
 사용: uv run python tools/canary.py <명세.toml> <출력 디렉터리>
+      uv run python tools/canary.py --preflight <명세.toml> [<명세.toml> ...]
+
+`--preflight` 는 `claude` 를 띄우지 않고 명세마다 돌리기 전의 확인(`_preflight`, 판정 목록 아래
+문단)만 돌며 출력 디렉터리도 쓰지 않는다. 한 번 통과한 명세의 원천에서 문구만 고친 뒤 다시 돌리는
+대신 쓴다. 갈음하는 조건은 `operations.md` 의 카나리아 항목이 원천이다. 이 모드가 없을 때 문구를
+고칠 때마다 다시 돌려 `claude -p` 40번 가운데 28번이 재확인이었다(대기열 184, 일지 2026-10-12-09).
 
 명세는 TOML 이다. 체크아웃은 이 도구를 부른 폴더 기준이다.
 
@@ -101,9 +107,12 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 - 상위 폴더 P 의 `P/CLAUDE.local.md` 와 `P/.claude/CLAUDE.md`. 실리는지 재지 않아 보지 않는다. 다만
   체크아웃이 `P/.claude/` 안에 있으면(이 저장소의 워크트리) `P/.claude/` 도 상위 폴더라 그
   `CLAUDE.md` 는 본다.
+- `--preflight` 는 원천이 실리는지 재지 않는다. 원천의 머리말(규칙의 `paths` 등)이 실험군의 대상을
+  덮지 않아도 지나간다. 실린다는 근거는 같은 명세가 앞서 `claude` 로 통과한 것뿐이다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
 3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다.
+`--preflight` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다.
 """
 
 from __future__ import annotations
@@ -135,6 +144,7 @@ _NONE_NOISE = re.compile(r"[\s`*_\"'“”‘’.。!]")
 _ANSWER_WIDTH = 160
 _TIMEOUT_SECONDS = 600.0  # 회차 하나의 제한 시간
 _TIMED_OUT = 124  # GNU timeout 의 관례
+_PREFLIGHT = "--preflight"
 
 
 class SpecError(Exception):
@@ -332,7 +342,9 @@ def tools_for(spec: Spec) -> tuple[str, ...]:
 
     서브에이전트의 도구가 본 세션의 `--tools` 에 묶이기 때문이다. `--tools Agent` 하나로 좁힌 본
     세션에서는 서브에이전트가 도구 0개로 거부됐고, 정의의 도구 넷을 더하자 돌았다(claude 2.1.292
-    에서 손으로 본 두 구성, 일지 2026-10-12-02). 부분집합은 재지 않았다.
+    에서 손으로 본 두 구성, 일지 2026-10-12-02). 정의의 도구가 본 세션 도구의 부분집합인 구성(정의에
+    `TaskStop` 이 없고 본 세션에 있다)에서도 서브에이전트가 돌았다(claude 2.1.296,
+    `.scratch/harness/probes/subagent_task_stop.py` 의 대조군).
     """
     return (_TOOLS[spec.kind], *(spec.agent_tools or []))
 
@@ -855,6 +867,29 @@ def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
     return problems + ancestor_problems(spec, places)
 
 
+def _places(spec: Spec, base: Path) -> dict[str, Path]:
+    return {arm.name: Path(os.path.abspath(base / arm.checkout)) for arm in spec.arm}
+
+
+def _preflight_only(paths: Sequence[str], base: Path, out: Callable[[str], None]) -> int:
+    """`--preflight`. 명세마다 돌리기 전의 확인만 돈다. 하나가 어긋나도 나머지를 마저 본다."""
+    failed = 0
+    for name in paths:
+        try:
+            spec = read_spec(Path(name))
+        except SpecError as error:
+            problems = [f"명세 오류: {error}"]
+        else:
+            problems = _preflight(spec, _places(spec, base))
+        out(f"[{'실패' if problems else '통과'}] {name}")
+        for problem in problems:
+            out(f"  {problem}")
+        if problems:
+            failed += 1
+    out(f"사전 확인 통과 {len(paths) - failed} · 실패 {failed}. claude 는 돌리지 않았다")
+    return 2 if failed else 0
+
+
 def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult]:
     """회차를 나란히 돌린다. `claude` 를 띄우지 못하면 OSError 가 그대로 올라온다."""
     args = command(spec)
@@ -902,17 +937,20 @@ def main(
     runner: Runner = run_claude,
     out: Callable[[str], None] = print,
 ) -> int:
-    if len(argv) != 2:
+    base = cwd if cwd is not None else Path.cwd()
+    if len(argv) > 1 and argv[0] == _PREFLIGHT:
+        return _preflight_only(argv[1:], base, out)
+    # 깃발을 뒤에 두거나 잘못 쓰면 출력 디렉터리로 삼아 `claude` 를 돌린다. 그 전에 막는다.
+    if len(argv) != 2 or any(arg.startswith("--") for arg in argv):
         out(__doc__ or "")
         return 2
-    base = cwd if cwd is not None else Path.cwd()
     try:
         spec = read_spec(Path(argv[0]))
     except SpecError as error:
         out(f"명세 오류(아무것도 돌리지 않았다): {error}")
         return 2
     output = Path(argv[1])
-    places = {arm.name: Path(os.path.abspath(base / arm.checkout)) for arm in spec.arm}
+    places = _places(spec, base)
     jobs = [
         _Job(arm, index, places[arm.name]) for arm in spec.arm for index in range(1, arm.times + 1)
     ]

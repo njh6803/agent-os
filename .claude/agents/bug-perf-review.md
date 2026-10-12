@@ -1,7 +1,7 @@
 ---
 name: bug-perf-review
 description: CodeRabbit CLI가 돌지 못할 때 PR 직전에 로컬 변경을 버그·성능 축으로 리뷰하고 트리아지한다. 보안 축은 본 세션의 내장 /security-review가 본다. 코드를 고치지 않고 보고만 한다.
-tools: Bash, Read, Grep, Glob
+tools: Bash, Read, Grep, Glob, TaskStop
 model: sonnet
 maxTurns: 60
 ---
@@ -32,6 +32,8 @@ Bash는 읽기에 쓴다. 명령은 하나씩 치고 파이프·`&&`·`$(…)`�
 ## 보고 형식
 
 도구 호출이 40번에 이르면 새 경로를 따라가거나 손으로 재현(로그 받기, 자식 프로세스 띄우기)하지 않고 바로 트리아지를 마쳐 보고한다. 확인하지 못한 지적은 `보류`로 두고 무엇이 더 필요한지 적으며, 따라가지 못한 파일은 아래 요약에 적는다. 턴 한도(`maxTurns`)에 닿으면 보고 없이 끝나 본 세션이 이어 붙여 보고를 받아야 했다(대기열 169, 네 번).
+
+보고 전에 이 리뷰가 남긴 백그라운드 작업을 `TaskStop`으로 멈춘다. Bash는 시간 제한을 넘긴 명령을 죽이지 않고 백그라운드로 옮겨 결과에 그 ID를 찍으므로, `run_in_background`를 쓰지 않았어도 남는다(`.scratch/harness/probes/subagent_task_stop.py`). 남긴 채 보고하자 본 세션이 그 작업을 멈췄다(대기열 188).
 
 `오탐`은 맨 아래에 한 줄씩만. `유효`와 `보류`만 아래 형식으로.
 
