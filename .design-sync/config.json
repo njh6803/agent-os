@@ -1,0 +1,21 @@
+{
+  "pkg": "@agent-os/ui",
+  "projectId": "47b7547e-5594-4fee-a2d8-1f9b3f4e4825",
+  "shape": "storybook",
+  "storybookConfigDir": "web/packages/ui/.storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "buildCmd": "pnpm -C web/packages/ui run build",
+  "entry": "web/packages/ui/dist/index.js",
+  "tsconfig": "../../../.design-sync/esbuild-paths.json",
+  "extraEntries": ["../../../.design-sync/story-constants.js"],
+  "libOverrides": {
+    "preview-gen-storybook.mjs": "스토리의 globals(mode·theme)를 data-theme/data-mode 를 단 감싸는 요소로 옮긴다. 원본 compose 는 globals 를 비워 다크·공문 스토리 열넷이 라이트·먹으로 그려졌다"
+  },
+  "guidelinesGlob": ["../../../.claude/rules/web-design.md"],
+  "readmeHeader": ".design-sync/conventions.md",
+  "titleMap": {
+    "진입점": null,
+    "판정": null,
+    "판정의음성사례": null
+  }
+}
