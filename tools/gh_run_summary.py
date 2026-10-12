@@ -6,7 +6,7 @@
 - Claude 단계의 stream-json 이벤트. 들여 쓴 JSON 객체라, 접두를 뗀 줄이 `{`인 데서 `}`인
   데까지를 객체 하나로 읽는다. 여기서 넷을 뽑는다.
   - 결과 블록(`type: result`)의 `RESULT_KEYS`와 거부. 거부는 `permission_denials` 배열의 길이와
-    항목의 `tool_name`이다. 키가 없으면 0건이 아니라 없다고 적는다.
+    항목의 `tool_name`이다. 키가 없으면 0건이 아니라 없다고 적는다. 블록이 여럿이면 둘 다 모은다.
   - 훅 응답(`subtype: hook_response`) 중 `outcome`이 `success`가 아닌 것.
   - 알림(`subtype: notification`). 아래 실행들에서 Stop 훅의 오류는 훅 응답 없이 이것으로만
     남았다.
@@ -157,7 +157,10 @@ def summarize(lines: list[str]) -> Summary:
                 summary.signals.append(block.strip())
         elif block.get("type") == "result":
             summary.results.extend(_result_lines(block))
-            summary.denials = _denied_tools(block)
+            denied = _denied_tools(block)
+            if denied is not None:
+                # 턴수·비용처럼 블록마다 모은다. 키 없는 블록이 앞 블록의 거부를 덮지 않는다
+                summary.denials = [*(summary.denials or []), *denied]
         elif block.get("type") == "system" and block.get("subtype") == "hook_response":
             hook = _hook_error(block)
             if hook is not None:

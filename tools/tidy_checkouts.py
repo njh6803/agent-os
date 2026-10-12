@@ -397,13 +397,17 @@ def _process_cwds() -> list[ProcessCwd] | None:
 
 
 def cwd_holders(folder: Path) -> list[Holder] | None:
-    """작업 디렉터리가 `folder` 이거나 그 아래인 프로세스. 이 OS 에서 볼 수 없으면 None.
+    """작업 디렉터리가 `folder` 이거나 그 아래인 프로세스. 이 OS 에서 볼 수 없거나 읽다 실패하면
+    None.
 
     점유 탐침이 막힌 뒤에만 부른다(판정 4의 1). 지울지를 가르지 않고 남긴 이유에 이름만 붙인다.
     """
     try:
         processes = _process_cwds()
-    except OSError:
+    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):
+        # DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지 못했다. 진단을 읽다
+        # 난 실패가 판정 4의 1의 이유 줄을 지우지 않게 볼 수 없는 것으로 돌려준다(PR #182
+        # claude-review)
         return None
     if processes is None:
         return None
@@ -543,7 +547,7 @@ def is_within(child: str, parent: str) -> bool:
 def describe_holders(holders: Sequence[Holder] | None) -> str:
     """남긴 이유에 붙일 쥔 프로세스. 못 찾은 것(빈 목록)과 볼 수 없는 것(None)을 가른다."""
     if holders is None:
-        return "이 OS 에서는 쥔 프로세스를 찾지 못한다"
+        return "쥔 프로세스를 찾지 못했다(이 OS 에서 볼 수 없거나 프로세스를 읽다 실패했다)"
     if not holders:
         return (
             "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"

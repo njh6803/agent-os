@@ -699,6 +699,16 @@ file = "tools/tidy_checkouts.py"
 old = '''            "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"'''
 new = '''            "작업 디렉터리로 쥔 프로세스는 없다. 읽지 못한 프로세스"'''
 
+[[mutation]]
+name = "쥔 프로세스: ctypes 쪽 예외를 볼 수 없는 것으로 돌리지 않는다(PR #182 claude-review)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "읽다_실패하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):'''
+new = '''    except OSError:'''
+
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.
 [[mutation]]

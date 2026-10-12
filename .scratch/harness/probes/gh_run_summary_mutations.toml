@@ -141,3 +141,18 @@ expect = "red"
 file = "tools/gh_run_summary.py"
 old = '''    return text.split("\n")'''
 new = '''    return text.splitlines()'''
+
+# PR #182 claude-review 반영
+
+[[mutation]]
+name = "결과 블록이 여럿이면 키 없는 블록이 거부를 덮는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "결과_블록이_여럿이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''            denied = _denied_tools(block)
+            if denied is not None:'''
+new = '''            denied = _denied_tools(block)
+            summary.denials = denied
+            if denied is not None:'''

@@ -56,6 +56,14 @@ def test_거부는_결과_블록의_배열에서_도구별로_센다() -> None:
     assert "거부 3건 (허용 도구 밖의 호출: Bash 2, WebFetch 1)" in render(summary)
 
 
+def test_결과_블록이_여럿이면_거부를_모으고_키_없는_블록이_덮지_않는다() -> None:
+    """PR #182 claude-review: 턴수·비용은 블록마다 쌓이는데 거부는 마지막 블록이 덮어 썼다."""
+    denials: list[Json] = [{"tool_name": "Bash", "tool_use_id": "toolu_1", "tool_input": {}}]
+    summary = summarize([*result(num_turns=1, permission_denials=denials), *result(num_turns=2)])
+    assert summary.denials == ["Bash"]
+    assert "거부 1건" in render(summary)
+
+
 def test_결과_블록에_거부_키가_없으면_0건과_가른다() -> None:
     summary = summarize(result(num_turns=1))
     assert summary.denials is None

@@ -9,6 +9,7 @@ worktree_occupancy.py` 가 잰다. 여기서는 그 실패를 가짜 `rename`·`
 from __future__ import annotations
 
 import ast
+import ctypes
 import os
 import subprocess
 import sys
@@ -39,6 +40,8 @@ from tools.tidy_checkouts import (
     tasklist_has,
     unrecreatable,
 )
+
+from tools import tidy_checkouts
 
 _HEAD = "b" * 40
 _OLD = "a" * 40
@@ -150,7 +153,28 @@ def test_쥔_프로세스는_이름과_pid_로_적고_못_찾은_것과_볼_수_
     assert describe_holders([]).startswith(
         "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다"
     )
-    assert describe_holders(None).startswith("이 OS 에서는 쥔 프로세스를 찾지 못한다")
+    assert describe_holders(None).startswith("쥔 프로세스를 찾지 못했다")
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        OSError("dll"),
+        AttributeError("K32EnumProcesses"),
+        ctypes.ArgumentError("bad"),
+        ValueError("x"),
+    ],
+)
+def test_프로세스를_읽다_실패하면_볼_수_없는_것으로_돌려준다(
+    error: Exception, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PR #182 claude-review: 진단을 읽다 난 예외가 판정 4의 1의 이유 줄을 지우지 않게 한다."""
+
+    def failing() -> None:
+        raise error
+
+    monkeypatch.setattr(tidy_checkouts, "_process_cwds", failing)
+    assert cwd_holders(Path("C:/repo/.claude/worktrees/x")) is None
 
 
 def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(tmp_path: Path) -> None:

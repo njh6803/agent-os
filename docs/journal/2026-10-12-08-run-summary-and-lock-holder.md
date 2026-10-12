@@ -131,4 +131,21 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 176
     있는 프로세스 가운데에서만 없다고 적는다.
   - Nit: `\\?\` 머리째 작업 디렉터리를 옮긴 프로세스를 놓쳤다(서브에이전트가 손으로 재현했다). 비교 전에 머리를 뗀다.
   - 보류, Nit: `cwd_holders`가 OSError 밖의 예외를 내면 이유 문구 없이 트레이스백으로 끝난다. 그런 예외의 구체적인
-    출처를 찾지 못했다.
+    출처를 찾지 못했다. PR 리뷰에서 claude-review가 같은 자리를 짚어 고쳤다(아래).
+
+## PR 리뷰
+
+PR [#182](https://github.com/njh6803/agent-os/pull/182)(커밋 `7c61b2b`까지). CI 일곱이 모두 초록이었다.
+
+- **CodeRabbit.** `@coderabbitai review`를 남겼으나 "Review limit reached"(한도)로 리뷰가 없었다. 회차에 세지 않는다.
+  보안·버그 축은 위 PR 직전 대체 둘이 맡았다.
+- **claude-review 1회차.** Minor 3·Nit 1, Critical·Major 없음. 첫 회차라 지적마다 판단했다.
+  - 고친 것, Minor: `summarize`가 턴수·비용은 결과 블록마다 모으면서 거부는 마지막 블록이 덮어, 키 없는 뒤 블록이
+    앞 블록의 거부를 "키 없음"으로 바꿀 수 있었다. 거부도 모은다. 테스트와 변이를 더했다.
+  - 고친 것, Minor: `cwd_holders`가 OSError만 잡아 ctypes 쪽 예외(AttributeError, ValueError, `ctypes.ArgumentError`)
+    가 판정 4의 1의 이유 줄을 지웠다. 버그 리뷰가 보류했던 것을 두 번째 리뷰어가 짚었다. `CODING_STANDARDS.md`의
+    "부재는 `X | None`, 실패의 형태는 층마다 하나"대로 볼 수 없는 것(None)으로 돌려주고, None의 문구를 "찾지
+    못했다(이 OS에서 볼 수 없거나 읽다 실패했다)"로 넓혔다. 넷을 매개변수로 둔 테스트와 변이를 더했다.
+  - 보류, Minor(Divergent Change): 셀프 리뷰에서 보류한 것과 같다. 봇도 차단 사유가 아니라고 적었다.
+  - 보류, Nit(`ProcessCwd` 튜플과 `Holder`): `Holder`는 이유 줄에 붙는 출력의 모양이고 작업 디렉터리를 싣지 않는다.
+    튜플은 플랫폼 갈래 셋이 내는 안쪽 값이다. 봇도 작성자 재량이라 적었다.
