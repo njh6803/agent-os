@@ -1,5 +1,5 @@
 // 디자인 토큰의 판정 스토리. 열 벌(테마 다섯 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 일곱 벌, rem 0,
-// shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
+// `@theme` 토큰이 모두 CSS 변수로 나오는 것, shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
 // 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB), 테마 사이의 차이, 명암비로 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
@@ -9,6 +9,7 @@ import { sheetsDefining } from "../testing";
 import { MODES, THEMES } from "../themes";
 import { CONTRAST_PAIRS, SEMANTIC_TOKENS, contrastFailures } from "./contrast";
 import themeCss from "./theme.css?inline";
+import themeSource from "./theme.css?raw";
 
 // 태그는 글자 그대로 적는다. Storybook 의 색인이 정적으로 읽어 상수를 받지 않는다(태그 둘은 storybook/preview.tsx 머리).
 const meta = {
@@ -154,6 +155,47 @@ export const Fonts: Story = {
       }
     }
     await expect(missing).toEqual([]);
+  },
+};
+
+/**
+ * 디자인 토큰 CSS 소스에서 `@theme` 블록(inline 이 아닌 것)의 맨 위 단계 토큰 이름. `--*: initial` 과
+ * `@keyframes` 안의 선언은 뺀다.
+ */
+function themeTokenNames(source: string): string[] {
+  const start = source.search(/@theme (?:static )?\{/);
+  if (start === -1) {
+    throw new Error("디자인 토큰 CSS 에 inline 이 아닌 @theme 블록이 없다");
+  }
+  const names: string[] = [];
+  let depth = 0;
+  for (const line of source.slice(start).split("\n")) {
+    const declared = depth === 1 ? /^\s*(--[a-z0-9-]+)\s*:/.exec(line) : null;
+    if (declared?.[1] !== undefined) {
+      names.push(declared[1]);
+    }
+    depth += (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
+    if (depth === 0) {
+      break;
+    }
+  }
+  return names;
+}
+
+// Tailwind v4 는 쓰인 토큰만 CSS 변수로 낸다. 그래서 /design-sync 가 Claude Design 에 올린 CSS 에 소스가 쓰지 않은
+// 토큰(제목 글자, 넓은 여백 등)이 없었다(2026-10-12 첫 /design-sync). `@theme static` 이 모두 낸다. 아래 셋은 블록을
+// 바로 읽었는지 보는 표본이다. 이 파일이 글자로 적어 Tailwind 가 쓰인 것으로 보므로 판정은 나머지 이름이 가른다.
+export const ThemeTokensEmitted: Story = {
+  name: "@theme 의 디자인 토큰은 쓰이지 않아도 모두 문서 뿌리에서 풀린다",
+  render: () => <p className="text-body">토큰</p>,
+  play: async () => {
+    const names = themeTokenNames(themeSource);
+    const root = getComputedStyle(document.documentElement);
+    const unresolved = names.filter((name) => root.getPropertyValue(name).trim() === "");
+    await expect(names).toEqual(
+      expect.arrayContaining(["--text-title", "--spacing-8", "--radius-s"]),
+    );
+    await expect(unresolved).toEqual([]);
   },
 };
 
