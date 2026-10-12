@@ -218,14 +218,14 @@ new = '''
 '''
 
 [[mutation]]
-name = "도구가 그 하나인지 보지 않는다"
+name = "init 의 도구를 보지 않는다"
 tests = ["tests/tools/test_canary.py"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    elif facts.tools != (tool,):
+    elif sorted(facts.tools) != sorted(tools):
 '''
 new = '''
     elif False:
@@ -357,10 +357,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-        _TOOLS[spec.kind],
+        ",".join(tools_for(spec)),
 '''
 new = '''
-        _TOOLS[spec.kind],
+        ",".join(tools_for(spec)),
         "--disallowed-tools",
         "Read(./.claude/**)",
 '''
@@ -569,7 +569,440 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    return problems + source_problems(spec, places)
+    problems += source_problems(spec, places)
+'''
+new = '''
+    problems += []
+'''
+
+# 대기열 153 — 에이전트 갈래
+
+[[mutation]]
+name = "에이전트 명세의 두 칸을 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if not self.agent or not self.agent_tools:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "agent_tools 에 Agent 를 받는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if {"Agent", "Task"} & set(self.agent_tools):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "에이전트 칸을 다른 kind 에도 받는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if self.agent is not None or self.agent_tools is not None:
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "에이전트 명령에 정의의 도구를 더하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return (_TOOLS[spec.kind], *(spec.agent_tools or []))
+'''
+new = '''
+    return (_TOOLS[spec.kind],)
+'''
+
+[[mutation]]
+name = "Task 를 Agent 로 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return "Agent" if name == "Task" else name
+'''
+new = '''
+    return name
+'''
+
+[[mutation]]
+name = "서브에이전트의 이벤트를 본 세션의 것으로 센다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                if turn.get("parent_tool_use_id"):
+                    sub_turns += 1
+'''
+new = '''
+                if False:
+                    sub_turns += 1
+'''
+
+[[mutation]]
+name = "Agent 결과를 사실로 남기지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                        outcomes.append(_outcome(agent_calls[called], value))
+'''
+new = '''
+                        pass
+'''
+
+[[mutation]]
+name = "다른 도구의 결과도 Agent 결과로 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                    if block.get("type") == "tool_result" and called in agent_calls:
+'''
+new = '''
+                    if block.get("type") == "tool_result":
+'''
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                        outcomes.append(_outcome(agent_calls[called], value))
+'''
+new = '''
+                        outcomes.append(_outcome(agent_calls.get(called or "", "?"), value))
+'''
+
+[[mutation]]
+name = "본 세션의 다른 도구 호출을 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if other:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "정의가 있는 갈래의 init agents 를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if defined and not loaded:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "에이전트 호출 횟수를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if times != 1:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "서브에이전트가 돈 근거를 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if not any(outcome.status == "completed" for outcome in mine) and facts.sub_turns == 0:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "근거를 다른 에이전트의 결과에서도 찾는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        mine = [outcome for outcome in facts.outcomes if outcome.agent == spec.agent]
+'''
+new = '''
+        mine = list(facts.outcomes)
+'''
+
+[[mutation]]
+name = "그 에이전트가 실린 대조군에 호출과 근거를 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if defined or loaded:
+'''
+new = '''
+    if defined:
+'''
+
+[[mutation]]
+name = "그 에이전트가 없는 대조군에도 호출을 요구한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if defined or loaded:
+'''
+new = '''
+    if True:
+'''
+
+[[mutation]]
+name = "대조군 사본의 정의를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    defined = arm.role == "experiment" or (checkout / spec.source).is_file()
+'''
+new = '''
+    defined = arm.role == "experiment"
+'''
+
+[[mutation]]
+name = "서브에이전트의 user 이벤트도 턴으로 센다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                if turn.get("parent_tool_use_id"):
+                    continue
+'''
+new = '''
+                if turn.get("parent_tool_use_id"):
+                    sub_turns += 1
+                    continue
+'''
+
+[[mutation]]
+name = "결과 이벤트가 둘이면 첫 답을 남긴다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                if subtype == "success" and not result.get("is_error", False):
+'''
+new = '''
+                if answer is None and subtype == "success" and not result.get("is_error", False):
+'''
+
+[[mutation]]
+name = "서브에이전트의 도구 호출을 통과로"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if used:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "앞쪽 실행의 도구 횟수를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if outcome.status == "completed" and outcome.tool_uses != 0:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "정의의 name 을 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if name != spec.agent:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "정의의 tools 를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if declared != wanted:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "정의의 머리말이 없어도 넘어간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if fields is None:
+            problems.append(f"{arm.name}: 원천 {spec.source} 에 `---` 로 둘러싼 머리말이 없다")
+            continue
+'''
+new = '''
+        if fields is None:
+            continue
+'''
+
+[[mutation]]
+name = "대조군의 정의도 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if arm.role != "experiment":
+            continue
+'''
+new = '''
+        if False:
+            continue
+'''
+
+[[mutation]]
+name = "정의 확인을 사전 확인에 잇지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    problems += agent_problems(spec, places)
+'''
+new = '''
+    problems += []
+'''
+
+# 대기열 171 — 상위 폴더의 CLAUDE.md
+
+[[mutation]]
+name = "상위 폴더의 카나리아를 알리지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if found:
+                problems.append(
+                    f"{arm.name}: 상위 폴더의 {path} 에 카나리아가 있다: {', '.join(found)}. "
+'''
+new = '''
+            if False:
+                problems.append(
+                    f"{arm.name}: 상위 폴더의 {path} 에 카나리아가 있다: {', '.join(found)}. "
+'''
+
+[[mutation]]
+name = "주 워크트리 루트를 건너뛰지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if skipped is not None and _place_key(parent) == _place_key(skipped):
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "상대 gitdir 을 워크트리에 잇지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    worktrees = Path(os.path.normpath(checkout / gitdir)).parent
+'''
+new = '''
+    worktrees = Path(os.path.normpath(gitdir)).parent
+'''
+
+[[mutation]]
+name = "상위 폴더 확인을 사전 확인에 잇지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return problems + ancestor_problems(spec, places)
 '''
 new = '''
     return problems
