@@ -1,0 +1,37 @@
+# code-review 2·4·6단계에 더한 여섯 문장(대기열 46·181·156·154·151·180)이 새 세션에 실리는지.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(02b21d0)이다. 옛 판에는 카나리아가 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 주 체크아웃 밖에 꺼낸다(README `canary/` 행).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   git worktree add --detach ../../../../agent-canary-02b21d0 02b21d0
+#   uv run python tools/canary.py .scratch/harness/probes/canary/code_review_brief_and_reflect.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+code-review 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(리뷰, 서브에이전트)은 하지 않고 본문만 읽는다.
+본문에서 다음 여섯을 각각 글자 그대로 한 문장씩 옮겨라.
+1) 2단계에서 AskUserQuestion의 답을 요구로 옮길 때 무엇을 옮기는지 적은 문장.
+2) 2단계에서 옛 구현을 옮기는 변경일 때 무엇을 적는지 적은 문장.
+3) 4단계에서 diff가 저장소 밖의 문서를 근거로 들 때 브리프에 무엇을 싣는지 적은 문장.
+4) 6단계의 1에서 고치며 새로 쓰는 사실 문장을 어떻게 쓰는지 적은 문장.
+5) 6단계의 2에서 지적을 다른 쪽의 몫으로 보류할 때 무엇을 드는지 적은 문장.
+6) 6단계의 5에서 다음이 커밋일 때 무엇을 하는지 적은 문장.
+본문에 그런 문장이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = [
+    "라벨과 함께 고른 선택지의 설명을 글자 그대로 옮기고",
+    "판정하던 것과 계약을 하나씩 목록으로 적는다",
+    "짧은 발췌와 URL을 두 브리프에 싣는다",
+    "근거(일지, 코드, gh, 상류 소스)를 끝까지 열고 쓴다",
+    "책임을 정한 표준이나 계약",
+    "커밋이 부르는 pre-commit의 결과로 갈음한다",
+]
+source = ".claude/skills/code-review/SKILL.md"
+skill = "code-review"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-02b21d0"
