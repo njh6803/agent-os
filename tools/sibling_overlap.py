@@ -1,4 +1,6 @@
-"""커밋 직전에 이 브랜치가 새로 매긴 번호와 고친 파일을 형제와 대조한다(대기열 48·115).
+"""이 브랜치가 새로 매긴 번호와 고친 파일을 형제와 대조하고 다음 빈 번호를 낸다.
+
+커밋 직전에 대조하고(대기열 48·115), 일지를 쓰기 전에 그 이름의 날짜와 순번을 받는다(대기열 182).
 
 형제는 셋이다. 이미 병합된 `origin/main`, 아직 병합되지 않은 열린 PR의 head,
 아직 커밋되지 않은 같은 저장소의 다른 워크트리다. `origin/main`과 워크트리만 보던 손 대조는
@@ -17,9 +19,12 @@
 
 "새로"는 이 브랜치와 `origin/main`의 merge-base에 없다는 뜻이다. 열린 PR과 워크트리는
 그 merge-base와 `origin/main` 어디에도 없는 번호만 그 형제의 것으로 본다. 그래서 main이
-이미 가진 번호는 main 줄에만 한 번 나온다. 이 브랜치는 작업 트리(커밋하지 않은 변경과
-미추적 파일)를 읽는다. merge-base에서 네 자리 가운데 하나라도 비면 경로가 어긋난 것으로 보고
-2로 끝난다(조용히 겹침 없음이 되지 않게).
+이미 가진 번호는 main 줄에만 한 번 나온다. 이 브랜치의 새 번호에서는 main에 같은 번호·같은
+파일(행)로 이미 든 것도 뺀다. 쌓아 올린 아래 PR이 squash로 병합된 뒤 main을 들이지 않은
+브랜치에서 그 번호는 공유한 이력인데, 새 일지로 세면 이름순 판정이 거짓 1을 내고 main에 있는
+일지를 옮기라고 한다. 헌법 판은 내용을 가를 수 없어 빼지 않는다. 이 브랜치는 작업 트리(커밋하지
+않은 변경과 미추적 파일)를 읽는다. merge-base에서 네 자리 가운데 하나라도 비면 경로가 어긋난 것으로
+보고 2로 끝난다(조용히 겹침 없음이 되지 않게).
 
 열린 PR은 GitHub REST(`gh api repos/<owner>/<repo>/pulls?state=open`)로 읽는다. `origin`이
 github.com이 아니거나 `gh`가 없거나 실패하면 `refs/pull/N/merge`가 있는 PR을 열린 것으로 본다.
@@ -35,12 +40,27 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 코드를 바꾸지 않는다. 형제와 main의 merge-base가 이 클론에 없으면(얕은 클론) 그 형제의 고친
 파일만 "알 수 없다"로 두고 번호는 그대로 대조한다.
 
+다음 빈 번호를 늘 찍는다(대기열 157·182). 일지를 쓰기 전에는 이 브랜치에 새 번호가 없어
+겹침 대조가 아무것도 알리지 못하고, 먼저 쓴 번호는 겹친 뒤에야 옮겨져 그 번호를 든 인용도
+함께 고쳐야 했다. 일지는 오늘 날짜(main에 더 늦은 날짜의 일지가 있으면 그 날짜)의 순번,
+대기열은 행 번호이고, 이 브랜치와 merge-base·main·형제 전체가 쓴 가장 큰 번호의 다음이다. 빈
+사이 번호는 고르지 않는다. 새 일지는 이름순으로 맨 뒤여야 한다(아래).
+
+일지의 이름순 차례도 본다(대기열 175). 다음 세션은 이름순 최신 일지의 "다음"을 읽는다. 이
+브랜치의 새 일지 가운데 이름순 최신 것이 main의 최신 일지보다 앞이면, 지금 병합해도 그 일지는
+최신이 아니라 다음 세션이 그 "다음"을 지나친다. 날짜를 넘긴 세션이 시작한 날짜로 쓴 일지가
+그랬다(일지 2026-10-12-05). 이것은 겹침처럼 1로 끝난다. 열린 PR·워크트리의 일지보다 앞인 것은
+그쪽이 먼저 병합될 때만 문제이고, 그때는 main과의 대조가 잡으므로 알리기만 한다. 그것까지 1로
+끝내면 다음 빈 번호를 받은 형제끼리 서로를 앞질러 옮기기를 되풀이한다.
+
 쓰임: `uv run python tools/sibling_overlap.py [저장소 안의 경로]`. 먼저 `origin`의 main과
-열린 PR의 head를 fetch한다(`origin/main`이 움직인다). 종료 코드는 번호 겹침이 없으면 0,
-있으면 1, 대조를 끝내지 못하면(git 실패, 원격을 읽지 못함, 번호의 자리가 빔) 2다. 겹치면
-이 브랜치가 비켜 간다. 출력의 "옮길 번호"는 겹친 종류(일지는 날짜마다)의 이 브랜치 새 번호
-전부를 차례를 지켜 형제들의 최대값 뒤로 붙인 것이다(일지 2026-10-07-09가 03~07을 05~09로
-옮긴 모양). 헌법 판은 고르지 않는다. 올림의 종류(major·minor·patch)는 바뀐 내용이 정한다.
+열린 PR의 head를 fetch한다(`origin/main`이 움직인다). 종료 코드는 번호 겹침도 main보다 앞선
+새 일지도 없으면 0, 있으면 1, 대조를 끝내지 못하면(git 실패, 원격을 읽지 못함, 번호의 자리가
+빔) 2다. 1이면 이 브랜치가 비켜 간다. 출력의 "옮길 번호"는 겹친 종류(일지는 날짜마다)의 이
+브랜치 새 번호 전부를 차례를 지켜 형제들의 최대값 뒤로 붙인 것이다(일지 2026-10-07-09가
+03~07을 05~09로 옮긴 모양). main보다 앞선 새 일지가 있으면 일지는 날짜마다가 아니라 새 일지
+전부를 다음 빈 일지 번호부터 차례대로 붙인다. 헌법 판은 고르지 않는다. 올림의
+종류(major·minor·patch)는 바뀐 내용이 정한다.
 
 못 보는 것:
 - merge ref로 가릴 때(`gh`를 쓰지 못할 때), 열 때부터 main과 충돌한 PR. 웹 검색 요약이
@@ -54,6 +74,10 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 - 번호를 가리키는 참조("일지 03", "대기열 141" 같은 본문의 인용). 번호를 옮길 때 참조를
   고치는 범위는 `.claude/rules/adr.md`의 번호 항목과 같다.
 - 함께 고친 파일의 어느 줄이 겹치는지. 파일 이름만 견준다.
+- 다음 빈 번호를 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의 형제만 본다. 그 뒤의
+  겹침은 커밋 직전의 대조가 잡는다.
+- 다른 시간대의 세션과 갈리는 "오늘". 오늘은 이 기계의 지역 날짜다. 더 늦은 날짜로 쓴 형제의
+  일지가 먼저 병합되면 main과의 이름순 대조가 잡는다.
 """
 
 from __future__ import annotations
@@ -63,6 +87,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Protocol
 
@@ -122,15 +147,24 @@ class Sibling:
     commit: str
     numbers: Numbers  # 이 형제만 새로 매긴 번호
     changed: frozenset[str] | None  # None 이면 merge-base 가 없어 알 수 없다
+    # 이름순 최신 일지 순번. main 은 가진 일지 전체에서(main 을 이미 들인 브랜치에는 main 의 새
+    # 번호가 없다), 다른 형제는 새로 매긴 일지에서 고른다(main 의 일지를 그 형제의 것으로 되풀이하지
+    # 않게)
+    latest: str | None
 
 
 @dataclass(frozen=True)
 class Survey:
     ours: Numbers  # 이 브랜치가 새로 매긴 번호
     changed: frozenset[str]
-    siblings: list[Sibling]
+    main: Sibling
+    others: list[Sibling]  # 열린 PR 과 형제 워크트리
     taken: list[Numbers]  # 이 브랜치 밖의 모든 자리(merge-base, main, 형제)의 번호 전체
     pulls_from: str  # 열린 PR 을 읽은 길(FROM_GH 또는 FROM_MERGE_REF)
+
+    @property
+    def siblings(self) -> list[Sibling]:
+        return [self.main, *self.others]
 
 
 def read_numbers(
@@ -156,6 +190,17 @@ def fresh(numbers: Numbers, *known: Numbers) -> Numbers:
     return Numbers(journals, adrs, rows, version)
 
 
+def unshared(numbers: Numbers, other: Numbers) -> Numbers:
+    """`other` 와 같은 번호에 같은 파일·같은 행인 것(공유한 이력)을 뺀다.
+
+    헌법 판은 내용을 가를 수 없어 둔다. 같은 판이 공유한 이력인지 따로 올린 겹침인지 모른다.
+    """
+    journals = {k: v for k, v in numbers.journals.items() if other.journals.get(k) != v}
+    adrs = {k: v for k, v in numbers.adrs.items() if other.adrs.get(k) != v}
+    rows = {k: v for k, v in numbers.rows.items() if other.rows.get(k) != v}
+    return Numbers(journals, adrs, rows, numbers.version)
+
+
 def clashes(ours: Numbers, theirs: Numbers) -> list[Clash]:
     """둘 다 새로 매긴 번호 가운데 같은 번호를 다른 것에 쓴 것.
 
@@ -175,6 +220,38 @@ def clashes(ours: Numbers, theirs: Numbers) -> list[Clash]:
     return found
 
 
+def latest_journal(numbers: Numbers) -> str | None:
+    """이름순 최신 일지 순번. 순번은 자리 수가 고정이라 문자열 차례가 이름순이다."""
+    return max(numbers.journals, default=None)
+
+
+def is_behind(ours: Numbers, latest: str | None) -> bool:
+    """이 브랜치의 새 일지 가운데 이름순 최신 것이 `latest` 보다 앞이다.
+
+    같은 순번은 앞이 아니다. 그것은 겹침이다.
+    """
+    mine = latest_journal(ours)
+    return mine is not None and latest is not None and mine < latest
+
+
+def journal_day(today: str, main_latest: str | None) -> str:
+    """새 일지의 날짜. 오늘이되, main 에 더 늦은 날짜의 일지가 있으면 그 날짜다.
+
+    오늘로 쓰면 main 의 최신 일지보다 이름순으로 앞이 된다.
+    """
+    return max(today, main_latest[:10]) if main_latest else today
+
+
+def _top_journal(numbers: list[Numbers], day: str) -> int:
+    return max((int(k[11:]) for n in numbers for k in n.journals if k[:10] == day), default=0)
+
+
+def next_numbers(numbers: list[Numbers], day: str) -> tuple[str, int]:
+    """`numbers` 어디에도 없는 다음 일지 순번(`day` 의 가장 큰 순번 다음)과 다음 대기열 행."""
+    row = max((k for n in numbers for k in n.rows), default=0)
+    return f"{day}-{_top_journal(numbers, day) + 1:02d}", row + 1
+
+
 def _shift(olds: list[int], top: int) -> list[tuple[int, int]]:
     """`olds` 를 차례대로 `top` 뒤에 붙인다. 자리가 그대로인 것은 뺀다."""
     pairs = [(old, top + 1 + i) for i, old in enumerate(sorted(olds))]
@@ -189,10 +266,10 @@ def moves(ours: Numbers, taken: list[Numbers], found: list[Clash]) -> list[Move]
     """
     kinds = {clash.kind for clash in found}
     result: list[Move] = []
-    for date in sorted({clash.key[:10] for clash in found if clash.kind == "일지"}):
-        olds = [int(key[11:]) for key in ours.journals if key[:10] == date]
-        top = max((int(k[11:]) for n in taken for k in n.journals if k[:10] == date), default=0)
-        result += [Move("일지", f"{date}-{a:02d}", f"{date}-{b:02d}") for a, b in _shift(olds, top)]
+    for day in sorted({clash.key[:10] for clash in found if clash.kind == "일지"}):
+        olds = [int(key[11:]) for key in ours.journals if key[:10] == day]
+        top = _top_journal(taken, day)
+        result += [Move("일지", f"{day}-{a:02d}", f"{day}-{b:02d}") for a, b in _shift(olds, top)]
     if "ADR" in kinds:
         top = max((int(k) for n in taken for k in n.adrs), default=0)
         olds = [int(key) for key in ours.adrs]
@@ -201,6 +278,18 @@ def moves(ours: Numbers, taken: list[Numbers], found: list[Clash]) -> list[Move]
         top = max((k for n in taken for k in n.rows), default=0)
         result += [Move("대기열", str(a), str(b)) for a, b in _shift(list(ours.rows), top)]
     return result
+
+
+def behind_moves(ours: Numbers, taken: list[Numbers], day: str) -> list[Move]:
+    """새 일지 전부를 차례대로 `day` 의 형제들의 최대값 뒤로 옮긴다.
+
+    새 일지가 main 의 최신 일지보다 이름순으로 앞일 때의 이동이다. 이때 일지는 날짜 안의 겹침
+    이동(`moves`)을 따로 내지 않는다. 내면 같은 일지를 두 자리로 옮기라고 한다.
+    """
+    top = _top_journal(taken, day)
+    return [
+        Move("일지", old, f"{day}-{top + 1 + i:02d}") for i, old in enumerate(sorted(ours.journals))
+    ]
 
 
 def github_repo(url: str) -> tuple[str, str] | None:
@@ -452,11 +541,14 @@ def survey(root: Path, remote: Remote) -> Survey:
         raise SurveyError(f"merge-base 에서 번호의 자리가 비었다: {', '.join(missing)}")
     main_numbers = numbers_of(Tree(root, main_sha))
     main_changed = _lines(git(root, "diff", "--name-only", base, main_sha))
-    siblings = [Sibling(MAIN, main_sha, fresh(main_numbers, base_numbers), main_changed)]
+    main_new = fresh(main_numbers, base_numbers)
+    main_sibling = Sibling(MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers))
+    others: list[Sibling] = []
     taken = [base_numbers, main_numbers]
 
     def add(label: str, head: str, numbers: Numbers, changed: frozenset[str] | None) -> None:
-        siblings.append(Sibling(label, head, fresh(numbers, base_numbers, main_numbers), changed))
+        new = fresh(numbers, base_numbers, main_numbers)
+        others.append(Sibling(label, head, new, changed, latest_journal(new)))
         taken.append(numbers)
 
     for number, head in remote.pulls.items():
@@ -472,8 +564,9 @@ def survey(root: Path, remote: Remote) -> Survey:
         since = merge_base(root, head, main_sha)
         changed = _worktree_changes(path, since) if since else None
         add(f"워크트리 {path}", head, numbers_of(Disk(path)), changed)
-    ours = fresh(numbers_of(Disk(root)), base_numbers)
-    return Survey(ours, _worktree_changes(root, base), siblings, taken, remote.pulls_from)
+    ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
+    changed = _worktree_changes(root, base)
+    return Survey(ours, changed, main_sibling, others, taken, remote.pulls_from)
 
 
 def findings(result: Survey) -> list[tuple[Sibling, Clash]]:
@@ -507,20 +600,60 @@ def _ours_line(ours: Numbers) -> str:
     return f"이 브랜치의 새 번호: {', '.join(keys)}" if keys else "이 브랜치의 새 번호 없음"
 
 
-def render(result: Survey, found: list[tuple[Sibling, Clash]]) -> str:
+@dataclass(frozen=True)
+class Verdict:
+    """출력과 종료 코드가 함께 읽는 판정. 한 번만 지어 둘이 어긋나지 않게 한다."""
+
+    found: list[tuple[Sibling, Clash]]
+    next_journal: str
+    next_row: int
+    behind: bool  # 이 브랜치의 새 일지가 main 의 최신 일지보다 이름순으로 앞이다
+    shifted: list[Move]
+    later: list[Sibling]  # 이 브랜치의 새 일지보다 이름순으로 뒤인 일지를 새로 매긴 다른 형제
+
+
+def judge(result: Survey, today: str) -> Verdict:
+    found = findings(result)
+    day = journal_day(today, result.main.latest)
+    journal, row = next_numbers([*result.taken, result.ours], day)
+    behind = is_behind(result.ours, result.main.latest)
+    clashed = [clash for _, clash in found]
+    if behind:
+        shifted = behind_moves(result.ours, result.taken, day)
+        shifted += moves(result.ours, result.taken, [c for c in clashed if c.kind != "일지"])
+    else:
+        shifted = moves(result.ours, result.taken, clashed)
+    later = [s for s in result.others if is_behind(result.ours, s.latest)]
+    return Verdict(found, journal, row, behind, shifted, later)
+
+
+def render(result: Survey, verdict: Verdict) -> str:
+    mine = latest_journal(result.ours)
     lines = [
         "형제: " + ", ".join(f"{s.label} {s.commit[:7]}" for s in result.siblings),
         f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
+        f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}",
         _ours_line(result.ours),
     ]
-    if found:
-        lines.append(f"번호 겹침 {len(found)}:")
-        lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in found]
-        shifted = moves(result.ours, result.taken, [clash for _, clash in found])
-        if shifted:
-            lines.append("옮길 번호: " + ", ".join(f"{m.kind} {m.old} → {m.new}" for m in shifted))
+    if verdict.found:
+        lines.append(f"번호 겹침 {len(verdict.found)}:")
+        lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in verdict.found]
     else:
         lines.append("번호 겹침 없음")
+    if verdict.behind:
+        lines.append(
+            f"이 브랜치의 새 일지 {mine} 이 {MAIN} 의 최신 일지 {result.main.latest} 보다"
+            ' 이름순으로 앞이다. 다음 세션이 이름순 최신 일지의 "다음" 을 읽어 이 일지를 지나친다'
+        )
+    if verdict.shifted:
+        moved = ", ".join(f"{m.kind} {m.old} → {m.new}" for m in verdict.shifted)
+        lines.append(f"옮길 번호: {moved}")
+    if verdict.later:
+        lines.append(
+            f"이 브랜치의 새 일지 {mine} 를 이름순으로 앞서는 형제"
+            "(그쪽이 먼저 병합되면 옮긴다, 종료 코드와 무관):"
+        )
+        lines += [f"- {s.label}: {s.latest}" for s in verdict.later]
     shared: list[str] = []
     for sibling in result.siblings:
         if sibling.changed is None:
@@ -535,7 +668,8 @@ def render(result: Survey, found: list[tuple[Sibling, Clash]]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, today: date | None = None) -> int:
+    """`today` 는 시험이 날짜를 고정하는 자리다. 없으면 이 기계의 지역 날짜다."""
     args = sys.argv[1:] if argv is None else argv
     start = Path(args[0]) if args else Path.cwd()
     try:
@@ -546,9 +680,10 @@ def main(argv: list[str] | None = None) -> int:
     except SurveyError as error:
         print(f"형제를 대조하지 못했다. {error}", file=sys.stderr)
         return 2
-    found = findings(result)
-    print(render(result, found))
-    return 1 if found else 0
+    day = today or datetime.now().astimezone().date()  # 이 기계의 시간대
+    verdict = judge(result, day.isoformat())
+    print(render(result, verdict))
+    return 1 if verdict.found or verdict.behind else 0
 
 
 if __name__ == "__main__":

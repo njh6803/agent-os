@@ -9,21 +9,27 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
 from tools.sibling_overlap import (
     Move,
     Numbers,
+    behind_moves,
     clashes,
     fresh,
     gh_pulls,
     github_repo,
+    is_behind,
+    journal_day,
     main,
     moves,
+    next_numbers,
     open_pulls,
     read_numbers,
     remote_head,
+    unshared,
     worktrees,
 )
 
@@ -82,6 +88,24 @@ def test_새_번호는_아는_번호_어디에도_없는_것이다() -> None:
 
     expected = _번호(adrs={"0027": "0027-y.md"}, rows={141: "| 141 | 나 |"})
     assert fresh(theirs, base, main_) == expected
+
+
+def test_공유한_이력은_같은_번호에_같은_파일이나_같은_행이고_헌법_판은_가르지_않는다() -> None:
+    ours = _번호(
+        {"2026-10-07-05": "a.md", "2026-10-07-06": "ours.md"},
+        {"0002": "0002-x.md"},
+        {2: "| 2 | 같다 |", 3: "| 3 | 이쪽 |"},
+        "1.0.1",
+    )
+    main_ = _번호(
+        {"2026-10-07-05": "a.md", "2026-10-07-06": "main.md"},
+        {"0002": "0002-x.md"},
+        {2: "| 2 | 같다 |", 3: "| 3 | 그쪽 |"},
+        "1.0.1",
+    )
+
+    expected = _번호({"2026-10-07-06": "ours.md"}, rows={3: "| 3 | 이쪽 |"}, version="1.0.1")
+    assert unshared(ours, main_) == expected
 
 
 def test_같은_번호에_다른_파일이나_다른_행이나_같은_판이면_겹침이다() -> None:
@@ -152,6 +176,51 @@ def test_옮길_번호는_자리가_그대로인_것을_빼고_ADR은_네_자리
     taken = [_번호(adrs={"0001": "a.md", "0002": "main.md", "0007": "b.md"})]
 
     assert moves(ours, taken, clashes(ours, taken[0])) == [Move("ADR", "0002", "0008")]
+
+
+def test_다음_빈_일지는_그날의_가장_큰_순번_다음이고_대기열은_가장_큰_행_다음이다() -> None:
+    """빈 사이 번호(02~06)는 고르지 않는다. 새 일지는 이름순으로 맨 뒤여야 한다."""
+    numbers = [
+        _번호(
+            {"2026-10-12-01": "a.md", "2026-10-12-07": "b.md", "2026-10-13-02": "c.md"},
+            rows={1: "x", 183: "y"},
+        ),
+        _번호({"2026-10-12-10": "d.md", "2026-10-11-20": "e.md"}, rows={182: "z"}),
+    ]
+
+    assert next_numbers(numbers, "2026-10-12") == ("2026-10-12-11", 184)
+    assert next_numbers(numbers, "2026-10-14") == ("2026-10-14-01", 184)
+    assert next_numbers([], "2026-10-12") == ("2026-10-12-01", 1)
+
+
+def test_새_일지의_날짜는_오늘이되_main에_더_늦은_날짜의_일지가_있으면_그_날짜다() -> None:
+    assert journal_day("2026-10-12", "2026-10-11-01") == "2026-10-12"
+    assert journal_day("2026-10-12", "2026-10-13-02") == "2026-10-13"
+    assert journal_day("2026-10-12", None) == "2026-10-12"
+
+
+def test_새_일지_가운데_이름순_최신_것이_그쪽_최신_일지보다_앞이면_뒤처졌다() -> None:
+    ours = _번호({"2026-10-07-20": "a.md", "2026-10-07-03": "b.md"})
+
+    assert is_behind(ours, "2026-10-11-01")
+    assert not is_behind(ours, "2026-10-07-20")  # 같은 순번은 겹침 대조가 본다
+    assert not is_behind(ours, "2026-10-07-19")  # 03 이 앞이어도 최신 것(20)이 뒤다
+    assert not is_behind(ours, None)
+    assert not is_behind(_번호(), "2026-10-11-01")
+
+
+def test_main보다_앞선_새_일지는_전부_그날의_형제_뒤로_옮긴다() -> None:
+    """일지 2026-10-12-05 의 실제 이동(2026-10-07-20 을 닫는 날로)에 더 이른 새 일지를 더했다."""
+    ours = _번호({"2026-10-07-20": "ours.md", "2026-10-07-03": "ours-early.md"})
+    taken = [
+        _번호({"2026-10-07-03": "pr.md", "2026-10-12-01": "x.md", "2026-10-12-04": "y.md"}),
+        _번호({"2026-10-11-01": "main.md"}),
+    ]
+
+    assert behind_moves(ours, taken, "2026-10-12") == [
+        Move("일지", "2026-10-07-03", "2026-10-12-05"),
+        Move("일지", "2026-10-07-20", "2026-10-12-06"),
+    ]
 
 
 def test_GitHub_원격_URL에서_소유자와_저장소를_읽는다() -> None:
@@ -378,13 +447,19 @@ def test_main이_이_브랜치_뒤에_들인_번호와_겹치면_CLI가_알린�
     _git(pusher, "push", "-q", "origin", "main")
     _커밋한다(work, {"docs/adr/0002-ours.md": "이쪽\n"}, "이쪽")
 
+    before = datetime.now().astimezone().date()
     result = _CLI를_부른다(work)
+    after = datetime.now().astimezone().date()
 
     assert result.returncode == 1, result.stderr
     assert "origin/main ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-main.md" in result.stdout
     # 새 main 위의 PR #9 는 main 의 번호를 되풀이하지 않는다
     assert result.stdout.count("ADR 0002:") == 1
     assert "옮길 번호: ADR 0002 → 0004\n" in result.stdout
+    # 날짜를 주지 않으면 이 기계의 오늘이다(자정을 넘길 수 있어 앞뒤 둘). 임시 저장소에 그날 일지는
+    # 없다
+    lines = {f"다음 빈 번호(형제 포함): 일지 {day}-01, 대기열 2\n" for day in (before, after)}
+    assert any(line in result.stdout for line in lines), result.stdout
 
 
 def test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린다(
@@ -403,6 +478,160 @@ def test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린�
     assert code == 1
     assert f"워크트리 {sibling.resolve()} 일지 2026-10-07-02" in out
     assert f"워크트리 {sibling.resolve()}: {probe}\n" in out
+
+
+def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_번호를_찍는다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 157·182 의 경위: 일지를 쓰기 전의 대조는 "새 번호 없음" 만 내 헛돌았다."""
+    _, work, pusher = 저장소
+    queue = SEED[".scratch/retro-queue.md"]
+    pr5_files = {
+        "docs/journal/2026-10-07-02-pr.md": "그쪽\n",
+        ".scratch/retro-queue.md": queue + "| 2 | 그쪽 |\n",
+    }
+    pr5 = _PR을_민다(pusher, 5, pr5_files)
+    _연다(pusher, 5, pr5)
+    sibling = work.parent / "sibling"
+    _git(work, "worktree", "add", "-q", "-b", "other", str(sibling), "origin/main")
+    sibling_files = {
+        "docs/journal/2026-10-07-03-sibling.md": "형제\n",
+        ".scratch/retro-queue.md": queue + "| 3 | 형제 |\n",
+    }
+    _쓴다(sibling, sibling_files)
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 4\n" in out
+    assert "이 브랜치의 새 번호 없음" in out
+
+    # 받은 번호로 쓰면(next-session 1단계가 안내하는 길) 겹치지도 앞서지도 않는다
+    ours_files = {
+        "docs/journal/2026-10-07-04-ours.md": "이쪽\n",
+        ".scratch/retro-queue.md": queue + "| 4 | 이쪽 |\n",
+    }
+    _쓴다(work, ours_files)
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "번호 겹침 없음" in out
+    assert "앞서는 형제" not in out
+
+
+def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1로_끝나고_닫는_날로_옮긴다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 175 의 경위(일지 2026-10-12-05): 날짜를 넘긴 세션이 시작한 날짜로 일지를 썼다.
+
+    이어서 main 을 들였으면 main 의 일지는 main 의 새 번호가 아니어도 견준다. 같은 일지가 열린
+    PR 과도 겹치면 날짜 안의 겹침 이동은 내지 않는다. 내면 같은 일지를 두 자리로 옮기라고 한다.
+    """
+    _, work, pusher = 저장소
+    _커밋한다(pusher, {"docs/journal/2026-10-11-01-main.md": "main\n"}, "main 이 나아간다")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "pull", "-q", "--ff-only", "origin", "main")
+    queue = SEED[".scratch/retro-queue.md"]
+    ours_files = {
+        "docs/journal/2026-10-07-20-ours.md": "이쪽\n",
+        ".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n",
+    }
+    _쓴다(work, ours_files)
+
+    code = main([str(work)], today=date(2026, 10, 12))
+
+    # 겹침이 없어도 앞선 것만으로 1 이다
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "번호 겹침 없음" in out
+    behind = "이 브랜치의 새 일지 2026-10-07-20 이 origin/main 의 최신 일지 2026-10-11-01 보다"
+    assert behind + " 이름순으로 앞이다" in out
+    assert "옮길 번호: 일지 2026-10-07-20 → 2026-10-12-01\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-12-01, 대기열 3\n" in out
+
+    # 새 main 위에 같은 일지·같은 대기열 행을 가진 PR 이 열린다
+    pr9_files = {
+        "docs/journal/2026-10-07-20-pr9.md": "그쪽\n",
+        ".scratch/retro-queue.md": queue + "| 2 | 그쪽 |\n",
+    }
+    pr9 = _PR을_민다(pusher, 9, pr9_files)
+    _연다(pusher, 9, pr9)
+
+    code = main([str(work)], today=date(2026, 10, 12))
+
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "번호 겹침 2:" in out
+    assert "옮길 번호: 일지 2026-10-07-20 → 2026-10-12-01, 대기열 2 → 3\n" in out
+    # main 의 일지는 main 줄에만 나온다. 그 위의 PR #9 가 되풀이하지 않는다
+    assert "앞서는 형제" not in out
+
+    # "옮길 번호" 대로 옮기면(커밋 전 줄이 안내하는 길) 0 으로 끝난다
+    (work / "docs/journal/2026-10-07-20-ours.md").unlink()
+    moved = {
+        "docs/journal/2026-10-12-01-ours.md": "이쪽\n",
+        ".scratch/retro-queue.md": queue + "| 3 | 이쪽 |\n",
+    }
+    _쓴다(work, moved)
+
+    code = main([str(work)], today=date(2026, 10, 12))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "번호 겹침 없음" in out
+    assert "최신 일지" not in out and "옮길 번호" not in out
+
+
+def test_main에_같은_파일로_이미_든_일지는_새_일지가_아니다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """쌓아 올린 아래 PR 이 squash 로 main 에 들어간 뒤 아직 main 을 들이지 않은 브랜치.
+
+    아래 PR 의 일지·대기열 행은 merge-base 에 없어 이 브랜치의 새 번호로 읽히지만 main 과 같은
+    파일·같은 행이라 공유한 이력이다. 새 일지로 세면 main 의 더 늦은 일지보다 앞이라며 1로 끝나고
+    main 에 이미 있는 일지를 옮기라고 한다(PR 직전 버그 축).
+    """
+    _, work, pusher = 저장소
+    queue = SEED[".scratch/retro-queue.md"] + "| 2 | 아래 PR |\n"
+    below = {"docs/journal/2026-10-07-05-below.md": "아래\n", ".scratch/retro-queue.md": queue}
+    _커밋한다(work, below, "아래 PR")
+    _커밋한다(pusher, below, "아래 PR 을 squash 로 들인다")
+    _커밋한다(pusher, {"docs/journal/2026-10-07-07-main.md": "main\n"}, "main 이 나아간다")
+    _git(pusher, "push", "-q", "origin", "main")
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "최신 일지" not in out and "옮길 번호" not in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-08, 대기열 3\n" in out
+
+
+def test_열린_PR의_일지가_이름순으로_뒤면_알리기만_한다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """그쪽이 먼저 병합되면 main 과의 대조가 잡으므로 종료 코드를 바꾸지 않는다."""
+    _, work, pusher = 저장소
+    pr8 = _PR을_민다(pusher, 8, {"docs/journal/2026-10-07-03-pr.md": "그쪽\n"})
+    _연다(pusher, 8, pr8)
+    queue = SEED[".scratch/retro-queue.md"] + "| 2 | 이쪽 |\n"
+    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n", ".scratch/retro-queue.md": queue})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0
+    # 다음 빈 번호는 이 브랜치의 새 번호도 넘는다
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 3\n" in out
+    ahead = "이 브랜치의 새 일지 2026-10-07-02 를 이름순으로 앞서는 형제"
+    ahead += "(그쪽이 먼저 병합되면 옮긴다, 종료 코드와 무관):\n"
+    assert ahead + "- PR #8: 2026-10-07-03\n" in out
+    assert "origin/main 의 최신 일지" not in out
+    assert "옮길 번호" not in out
 
 
 def test_이_브랜치의_PR과_겹치지_않는_PR은_번호_겹침이_아니고_0으로_끝난다(

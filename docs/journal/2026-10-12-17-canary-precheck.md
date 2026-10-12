@@ -117,7 +117,12 @@ README와 대기열이고, 새 규약을 세운 파일은 없었다(`.claude/age
 PR 리뷰를 반영한 커밋 직전의 대조에서는 대기열 193·194를 PR #187이 먼저 가져가 195·196으로 옮겼다. 그사이 PR #189
 (`chore/perf-review-background-and-triage`)가 열려 `tools/canary.py`·`operations.md`·헌법 README를 함께 고치고 188·190을
 닫는다. 헌법 번호는 그쪽이 3.0.26으로 매겨 겹치지 않았다. origin/main은 `15e41a6`(PR #186)으로 움직였지만 이 브랜치가 고친
-파일과 겹치지 않아 다시 합치지 않았다.
+파일과 겹치지 않아 그때는 다시 합치지 않았다.
+
+claude-review 둘째 회차 뒤 병합하려 하자 PR이 `CONFLICTING`이었다. PR #187(`f5052ed`)이 병합되어 대기열 끝에 193·194를 더했다.
+origin/main을 다시 합쳐 main의 193·194 뒤에 이 브랜치의 195·196을 두었고, 프로브 README는 저절로 합쳐졌다. #187이 고친
+`next-session` 1단계에 일지 번호를 `tools/sibling_overlap.py`의 "다음 빈 번호" 줄에서 받으라는 문장이 섰다. 이 일지의 17은 그
+도구가 옮길 번호로 낸 것이다.
 
 ## PR 직전 보안·버그·성능 축
 
@@ -176,6 +181,5 @@ claude-review가 초록이었다. CodeRabbit은 PR을 연 직후 "manual review 
 ## 다음
 
 - **하네스 chore: 대기열 195.** 회차 다섯이라 결정표의 chore 배치다. 196·191(둘 다 카나리아 문서)을 묶을지는 그 세션이
-  정한다. 188·190은 PR #189(`chore/perf-review-background-and-triage`), 157·175·182는 PR #187
-  (`chore/sibling-overlap-next-numbers`)이 맡아 돌고 있다.
+  정한다. 188·190은 PR #189(`chore/perf-review-background-and-triage`)가 맡아 돌고 있다.
 - 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
