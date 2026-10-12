@@ -170,11 +170,12 @@ def claim_first_notice(key: str) -> bool:
 
     묻기와 기록을 나누지 않는다. `O_EXCL` 생성 하나가 둘을 겸해야, 한 메시지의 병렬 도구 호출에서
     도는 래퍼 둘이 함께 처음이라고 보지 않는다. 디렉터리 자리의 파일은 makedirs 가 FileExistsError
-    로 알리므로 표지가 이미 있는 것과 따로 잡는다."""
+    로 알리므로 표지가 이미 있는 것과 따로 잡는다. 쓸 수 있는 임시 디렉터리 후보가 하나도 없으면
+    `tempfile.gettempdir` 가 FileNotFoundError 를 내므로 그것도 같은 `try` 에 둔다."""
     import tempfile
 
-    directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
     try:
+        directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
         os.makedirs(directory, exist_ok=True)
     except OSError:
         return True

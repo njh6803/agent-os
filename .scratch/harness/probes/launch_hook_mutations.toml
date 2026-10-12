@@ -360,3 +360,16 @@ new = '''    except FileExistsError:
         return True
     try:
 '''
+
+[[mutation]]
+name = "임시 디렉터리를 고르는 실패를 try 밖에 둔다(PR 직전 버그·성능 리뷰)"
+tests = ["tests/tools/test_launch_hook.py", "-k", "임시_디렉터리가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    try:
+        directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
+'''
+new = '''    directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
+    try:
+'''

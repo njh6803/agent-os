@@ -12,11 +12,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import TypedDict
 
 import pytest
-from tools.launch_hook import MODEL_SUFFIX, STATE_DIR
+from tools.launch_hook import MODEL_SUFFIX, STATE_DIR, claim_first_notice
 from tools.run_hooks import ROOT, hook_environment
 
 LAUNCHER = ROOT / "tools" / "launch_hook.py"
@@ -164,6 +165,21 @@ def test_표지를_쓰지_못하면_호출마다_알린다(tmp_path: Path) -> No
 
     for _ in range(2):
         assert _알림(_돌린다(launcher, "hook_없다.py", stdin=payload, temp=tmp_path))
+
+
+def test_쓸_수_있는_임시_디렉터리가_없어도_처음이라고_보고_알린다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """읽기 전용 컨테이너처럼 임시 디렉터리 후보가 모두 막히면 `tempfile.gettempdir` 가
+    FileNotFoundError 를 낸다. 그 예외로 래퍼가 1로 끝나면 알림이 한 번도 나가지 않는다(PR 직전
+    버그·성능 리뷰가 후보를 없는 경로로 바꿔 손으로 재현했다)."""
+
+    def no_usable_temp() -> str:
+        raise FileNotFoundError("No usable temporary directory found")
+
+    monkeypatch.setattr(tempfile, "gettempdir", no_usable_temp)
+
+    assert claim_first_notice("열쇠") is True
 
 
 def test_Stop_에서는_사용자에게만_알리고_대화를_잇지_않는다(tmp_path: Path) -> None:
