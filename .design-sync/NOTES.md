@@ -55,6 +55,10 @@
 
 - 포크 파일은 채점 계약의 일부다. 주석만 고쳐도 다음 driver 실행이 모든 컴포넌트의 채점을 지우고 기본 상한(스토리 6개)으로만
   다시 캡처한다(2026-10-12 셀프 리뷰 뒤 한 번 겪었다). 포크를 고치면 `compare.mjs --max-stories 12` 로 다시 캡처해 다시 채점한다.
+  줄바꿈도 계약의 바이트다. 포크는 작업 트리에서 LF 여야 한다(`git ls-files --eol .design-sync` 의 `w/lf`). 스킬 폴더에서
+  `cp` 로 만든 첫 사본이 CRLF 여서 계약이 CRLF 로 찍혔고, 그대로 두면 LF 로 받은 체크아웃의 첫 동기화가 채점을 모두 지운다.
+  2026-10-12 PR 직전 리뷰가 짚어 LF 로 맞추고 다시 찍었다. 다시 찍을 때 driver 가 `ds-bundle/` 을 새로 지어 이전 캡처가
+  지워지므로, 바이트로 견주려면 driver 전에 `_screenshots/compare/raw/` 를 보관한다.
 - 포크 `overrides/preview-gen-storybook.mjs` 는 2.1.286 의 원본에 globals 감싸기만 더했다. 스킬이 올라가면 원본과 다시
   맞춘다(`[OVERRIDE]` 줄이 빌드 로그에 뜬다). 감싸는 div 의 기본 테마 `muk` 은 `themes.ts` 의 `DEFAULT_THEME` 과 같아야
   한다.

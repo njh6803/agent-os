@@ -9,8 +9,9 @@
 // - "흔한 Tailwind 이름 가운데 … CSS 가 없어" 사이의 백틱 낱말: 반대로 없어야 한다(있으면 규약이 틀렸다).
 // - `--이름` 꼴의 낱말: 앞이 다른 이름 글자가 아닌 `--이름:` 선언이 있어야 한다. "테마의 재료" 문장(원색 토큰)의 것은 쓰지
 //   말라는 예시라 뺀다. 여백 줄의 `-2` 꼴은 `--spacing-2` 로 푼다. `<이름>` 이 든 자리 표시는 통째로 뺀다.
-// - 예시의 `const { … } = window.AgentOsUi` 와 본문의 `AgentOsUi.<이름>`: 번들에 그 이름이 있어야 하고, 컴포넌트는
-//   `components/**/<이름>.d.ts` 도 있어야 한다.
+// - 예시의 `const { … } = window.AgentOsUi` 와 본문의 `AgentOsUi.<이름>`: 번들의 내보내기 블록에 그 이름이 있어야 하고,
+//   컴포넌트는 파일 이름이 정확히 `<이름>.d.ts` 인 파일이 `components/` 아래에 있어야 한다(`IconButton.d.ts` 로 `Button`
+//   이 통과하지 않게).
 // - "`data-theme`(…)" 의 백틱 낱말: `[data-theme=<키>]` 선택자가 있어야 한다.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 
@@ -75,17 +76,20 @@ for (const name of variables) {
 }
 
 const exported = new Set(
-  [...md.matchAll(/AgentOsUi\.([A-Z_][A-Za-z_]*)/g)].map((match) => match[1]),
+  [...md.matchAll(/AgentOsUi\.([A-Z_][A-Za-z0-9_]*)/g)].map((match) => match[1]),
 );
 for (const match of md.matchAll(/const \{([^}]+)\} = window\.AgentOsUi/g)) {
   for (const name of match[1].split(",").map((part) => part.trim()).filter(Boolean)) exported.add(name);
 }
-const dtsFiles = readdirSync(files.components, { recursive: true }).map(String);
+// 번들의 내보내기 블록(`__export(bundle_entry_exports, { 이름: () => … })`)에 든 이름만 `window.AgentOsUi` 에 오른다. 번들은
+// 압축하지 않아 내부 식별자(`var GLYPHS`)도 글자로 남으므로 번들 전체의 낱말로 보면 내보내지 않은 이름이 통과한다.
+const exportBlock = /__export\(bundle_entry_exports, \{([\s\S]*?)\n\s*\}\);/.exec(js)?.[1];
+if (exportBlock === undefined) problems.push("번들에서 내보내기 블록을 찾지 못했다");
+const bundleExports = new Set([...(exportBlock ?? "").matchAll(/^\s*([A-Za-z_$][\w$]*): \(\) =>/gm)].map((match) => match[1]));
+const dtsNames = new Set(readdirSync(files.components, { recursive: true }).map((path) => String(path).split(/[\\/]/).at(-1)));
 for (const name of exported) {
-  if (!new RegExp(`\\b${name}\\b`).test(js)) problems.push(`번들에 없다: ${name}`);
-  if (/^[A-Z][a-z]/.test(name) && !dtsFiles.some((path) => path.endsWith(`${name}.d.ts`))) {
-    problems.push(`컴포넌트 폴더가 없다: ${name}`);
-  }
+  if (!bundleExports.has(name)) problems.push(`번들이 내보내지 않는다: ${name}`);
+  if (/^[A-Z][a-z]/.test(name) && !dtsNames.has(`${name}.d.ts`)) problems.push(`컴포넌트 폴더가 없다: ${name}`);
 }
 
 const themes = /`data-theme`\(([^)]*)\)/.exec(md)?.[1] ?? "";
