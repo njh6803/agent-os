@@ -13,17 +13,11 @@ argument 'origin\\main;.scratch\\retro-queue.md'` 로 끝났다, 2026-10-12 손�
 무엇이 바뀌는지는 `.scratch/harness/probes/msys_pathconv/run.sh` 로 쟀다(이 PC, MSYS 런타임 3.1.7,
 git 2.32.0.windows.2). 일지의 옛 가설(콜론 양쪽에 `/`)은 틀렸다 — `a/b:c/d` 는 바뀌지 않는다.
 판정은 git-for-windows/msys2-runtime 의 `winsup/cygwin/msys2_path_conv.cc` 에 있는
-`find_path_start_and_type` 의 차례를 따른다(그 파일을 마지막으로 고친 main 의 커밋 `a362d1c` 를
-2026-10-12 에 읽었다). 소스와 3.1.7 이 다른 자리(`..:.x` 는 소스대로면 바뀌는데 이 PC 에서는 바뀌지
-않았다)는 잰 것을 따랐다. 차례는 이렇다. `~` 로 시작하거나, 공백·탭·개행, `` ` ``·`'`·`*`·`?`·`[`·
-`]`, `/~`·`::`·`@@`, `:./`·`:../`(git 의 `<rev>:./<경로>`)가 든 인자는 바뀌지 않는다. 남은 것은
-앞에서부터 읽다가 첫 `=` 를 만나면 그 뒤를 처음부터 다시 본다(`x=origin/main:.x`). `-` 로 시작하면
-첫 `:`·`,` 에서도 그렇다(`-Lx:origin/main:.y`·`-x,origin/main:.y` 는 바뀌고 `-Lorigin/main:.x` 는
-그대로다). 첫 `:` 뒤가 `.`·`/` 면 그 앞에 `/`·`\\` 가 있을 때 바뀌고(`//` 는 URL 이라 아니다) 없으면
-그대로다. 다른 글자면 그 뒤에 `=` 가 있을 때만 읽어 간다(`a:b=origin/main:.x` 는 바뀐다). 이
-저장소에서는 점으로 시작하는 경로(`.scratch/`·`.claude/`·`.github/`·`.gitignore`)를 가리킨
-`<rev>:<경로>` 가 그렇다. 판정 표는 tests/tools/test_hook_bash_msys_pathconv.py 가 그 프로브의
-출력을 옮긴다.
+`find_path_start_and_type` 의 차례를 따르고, 그 차례는 `converts` 의 독스트링에 적었다(그 파일을
+마지막으로 고친 main 의 커밋 `a362d1c` 를 2026-10-12 에 읽었다). 소스와 3.1.7 이 다른 자리(`..:.x`
+는 소스대로면 바뀌는데 이 PC 에서는 바뀌지 않았다)는 잰 것을 따랐다. 이 저장소에서는 점으로 시작하는
+경로(`.scratch/`·`.claude/`·`.github/`·`.gitignore`)를 가리킨 `<rev>:<경로>` 가 바뀐다. 판정 표는
+tests/tools/test_hook_bash_msys_pathconv.py 가 그 프로브의 출력을 옮긴다.
 
 MSYS 프로그램에 넘긴 인자는 바뀌지 않아(프로브 B 절의 `/usr/bin/printf`·`/usr/bin/echo`) 명령
 위치의 git 만 본다. 따옴표는 셸이 벗긴 뒤에 바뀌므로(프로브 A 절은 모양을 모두 따옴표로 넘겼다)
@@ -69,8 +63,22 @@ _REDIRECTION = re.compile(r"[<>&]*[<>][<>&]*\|?")
 _PATHCONV_OFF = re.compile(r"\b(?:MSYS_NO_PATHCONV|MSYS2_ARG_CONV_EXCL)=")
 _ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
 _LEADING_WORDS = frozenset(
-    ("!", "{", "if", "then", "else", "elif", "do", "while", "until", "time", "command", "exec")
-    + ("nohup", "env")
+    {
+        "!",
+        "{",
+        "if",
+        "then",
+        "else",
+        "elif",
+        "do",
+        "while",
+        "until",
+        "time",
+        "command",
+        "exec",
+        "nohup",
+        "env",
+    }
 )
 _GIT = re.compile(r"(?:.*[/\\])?git(?:\.exe)?", re.IGNORECASE)
 _SKIP_CHARS = frozenset("`'*?[]")
@@ -90,7 +98,20 @@ class HookPayload(TypedDict, total=False):
 
 
 def converts(argument: str) -> bool:
-    """Git Bash 가 네이티브 프로그램에 넘길 때 이 인자를 경로 목록으로 바꾸는가."""
+    """Git Bash 가 네이티브 프로그램에 넘길 때 이 인자를 경로 목록으로 바꾸는가.
+
+    차례는 MSYS 소스를 따르고 결과는 프로브로 쟀다(모듈 독스트링).
+    1. 공백·탭·개행, `` ` ``·`'`·`*`·`?`·`[`·`]`, `/~`·`::`·`@@`, `:./`·`:../`(git 의
+       `<rev>:./<경로>`)가 든 인자는 바뀌지 않는다.
+    2. `~` 로 시작하면 바뀌지 않는다. `/` 로 시작하면 보지 않는다(소스에서 다른 갈래라 옮기지
+       않았다).
+    3. 앞에서부터 읽다가 첫 `=` 를 만나면 그 뒤를 2부터 다시 본다(`x=origin/main:.x`). `-` 로
+       시작하면 첫 `:`·`,` 에서도 그렇다(`-Lx:origin/main:.y`·`-x,origin/main:.y` 는 바뀌고
+       `-Lorigin/main:.x` 는 그대로다).
+    4. 첫 `:` 뒤가 `.`·`/` 면 그 앞에 `/`·`\\` 가 있을 때 바뀌고(`//` 는 URL 이라 아니다) 없으면
+       그대로다. 다른 글자면 그 뒤에 `=` 가 있을 때만 그 글자를 건너뛰고 읽어 간다
+       (`a:b=origin/main:.x` 는 바뀐다).
+    """
     if any(char.isspace() for char in argument):
         return False
     if any(char in _SKIP_CHARS for char in argument) or any(
