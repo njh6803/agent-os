@@ -1,6 +1,6 @@
 # grilling에 더한 선택지 설명 문단(대기열 101의 "올리기 전", 46의 "옮길 때")이 새 세션에 실리는지.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(02b21d0)이다. 옛 판에는 카나리아가 없다.
-# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 주 체크아웃 밖에 꺼낸다(README `canary/` 행).
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   git worktree add --detach ../../../../agent-canary-02b21d0 02b21d0
 #   uv run python tools/canary.py .scratch/harness/probes/canary/grilling_option_facts.toml <출력 디렉터리>

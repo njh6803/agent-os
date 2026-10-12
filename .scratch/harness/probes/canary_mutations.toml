@@ -1007,3 +1007,92 @@ old = '''
 new = '''
     return problems
 '''
+
+# 대기열 184 — 사전 확인 모드
+
+[[mutation]]
+name = "사전 확인 깃발을 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if len(argv) > 1 and argv[0] == _PREFLIGHT:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "사전 확인이 돌리기 전의 확인을 부르지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            problems = _preflight(spec, _places(spec, base))
+'''
+new = '''
+            problems = []
+'''
+
+[[mutation]]
+name = "사전 확인이 읽지 못한 명세를 실패로 세지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            problems = [f"명세 오류: {error}"]
+'''
+new = '''
+            problems = []
+'''
+
+[[mutation]]
+name = "사전 확인이 첫 실패에서 멈춘다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if problems:
+            failed += 1
+'''
+new = '''
+        if problems:
+            failed += 1
+            break
+'''
+
+[[mutation]]
+name = "사전 확인이 실패에도 0"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return 2 if failed else 0
+'''
+new = '''
+    return 0
+'''
+
+[[mutation]]
+name = "뒤에 둔 깃발을 출력 디렉터리로 삼는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if len(argv) != 2 or any(arg.startswith("--") for arg in argv):
+'''
+new = '''
+    if len(argv) != 2:
+'''
