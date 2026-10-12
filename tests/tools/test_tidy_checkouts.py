@@ -41,6 +41,7 @@ from tools.tidy_checkouts import (
     judge_branch,
     judge_stray,
     lock_pid,
+    long_path,
     looks_text,
     main,
     parse_merged,
@@ -199,6 +200,8 @@ def test_모듈을_읽다_실패하면_볼_수_없는_것으로_돌려준다(
     def failing() -> None:
         raise error
 
+    # CI(우분투)에서도 예외를 삼키는 갈래를 밟도록 윈도로 보이게 한다(PR 직전 버그 리뷰)
+    monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(tidy_checkouts, "_windows_modules", failing, raising=False)
     assert scan_modules() is None
 
@@ -335,6 +338,17 @@ def test_윈도_폴더_아래_모듈의_다른_하드링크_이름은_펼치지_
         found = holders_in(scan_modules(), str(folder), "module")
     assert found is not None
     assert pid not in {holder.pid for holder in found}
+
+
+def test_긴_경로_머리는_절대_경로를_정규화하지_않고_붙인다() -> None:
+    """PR 직전 버그 리뷰. 끝의 점과 장치 이름을 지키고, 네트워크 공유는 `UNC` 머리를 쓴다."""
+    if sys.platform != "win32":
+        assert long_path("/repo/x/trail.") == "/repo/x/trail."
+        return
+    assert long_path("C:/repo/x/trail.") == "\\\\?\\C:\\repo\\x\\trail."
+    assert long_path("C:\\repo\\x\\nul") == "\\\\?\\C:\\repo\\x\\nul"
+    assert long_path("\\\\server\\share\\x") == "\\\\?\\UNC\\server\\share\\x"
+    assert long_path("\\\\?\\C:\\repo\\x") == "\\\\?\\C:\\repo\\x"
 
 
 def test_드라이브_문자가_없는_장치의_매핑_이름은_버린다() -> None:
@@ -645,6 +659,8 @@ _CONTROLS = bytes(range(1, 8)) * 4
         (b"x" * 300 + b"\r\n\0\r\n", False),
         (b"lone\rcr\r\n", False),
         (b"few\r\n" + _CONTROLS, False),
+        # 인쇄 문자 127개와 비인쇄 하나. 끝의 \x1a 를 인쇄로 세면 128개가 되어 텍스트로 갈린다
+        (b"a" * 127 + b"\x01\r\n\x1a", False),
     ],
     ids=[
         "LF",
@@ -655,6 +671,7 @@ _CONTROLS = bytes(range(1, 8)) * 4
         "NUL",
         "홀로_쓰인_CR",
         "비인쇄_비율",
+        "끝의_EOF_는_어느_쪽에도_세지_않는다",
     ],
 )
 def test_블롭_이름은_git_hash_object_와_같은_판별로_낸다(
@@ -1045,6 +1062,49 @@ def test_judge_는_탐침이_남긴_옆_이름을_되돌리면_등록이_다시_
     listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
     restored = next(w for w in listing if w.branch == "chore/lost")
     assert not restored.prunable
+
+
+def _쓴다(path: Path, data: bytes) -> None:
+    """끝에 점이 붙은 이름과 장치 이름(`nul`)도 그대로 만든다. 윈도는 `\\\\?\\` 를 붙여야 한다."""
+    target = "\\\\?\\" + str(path) if sys.platform == "win32" else str(path)
+    with open(target, "wb") as handle:
+        handle.write(data)
+
+
+def test_judge_는_끝에_점이_붙은_이름과_장치_이름을_그대로_읽는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 리뷰. 경로를 정규화하면 윈도에서 `trail.` 을 `trail` 로 읽어, 커밋에 없는 내용이
+    든 폴더를 지울 것으로 냈고 `nul` 은 읽다 막혔다."""
+    stray = _stray(repo)
+    committed = (repo / "README.md").read_bytes()
+    _쓴다(stray / "trail", committed)
+    _쓴다(stray / "trail.", "커밋에 없다\n".encode())
+    _쓴다(stray / "nul", committed)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert "커밋에 없는 파일이 1개 있다: trail." in line
+    target = "\\\\?\\" + str(stray / "trail.") if sys.platform == "win32" else str(stray / "trail.")
+    os.unlink(target)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=_ops({})) == 0
+    assert not stray.exists()
+
+
+def test_judge_는_큰_파일을_덩이로_읽고_줄_끝을_바꾼_이름은_셈하지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PR 직전 버그·성능 리뷰. 상한을 넘는 파일은 통째로 읽지 않는다. 그대로의 이름은 같고, CRLF 로
+    저장한 커밋된 내용은 남는 쪽이다(못 보는 것)."""
+    monkeypatch.setattr(tidy_checkouts, "WHOLE_READ_LIMIT", 2)
+    stray = _stray(repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
+    (stray / "README.md").write_bytes((repo / "README.md").read_bytes().replace(b"\n", b"\r\n"))
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert "README.md" in line
 
 
 def test_judge_는_등록_없는_자리가_링크면_안을_읽지_않고_넘긴다(

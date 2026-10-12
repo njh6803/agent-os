@@ -443,7 +443,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''    try:
-        ops.rename(_long(path), _long(aside))
+        ops.rename(long_path(path), long_path(aside))
     except OSError as error:'''
 new = '''    try:
         pass
@@ -690,8 +690,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    inner = os.path.normcase(os.path.normpath(_without_long_prefix(child)))'''
-new = '''    inner = os.path.normcase(os.path.normpath(child))'''
+old = '''    return os.path.normcase(os.path.normpath(_without_long_prefix(path)))'''
+new = '''    return os.path.normcase(os.path.normpath(path))'''
 
 [[mutation]]
 name = "쥔 프로세스: 읽지 못한 프로세스가 있어도 없다고 단정한다(PR 직전 버그 리뷰)"
@@ -990,7 +990,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if os.path.lexists(_long(folder / ".git")):'''
+old = '''    if os.path.lexists(long_path(folder / ".git")):'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -1146,8 +1146,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if not any(same_path(str(path), str(stray)) for stray in _strays(root, listing)):'''
-new = '''    if False:'''
+old = '''    path = next((stray for stray in _strays(root, listing) if same_path(target, str(stray))), None)'''
+new = '''    path = Path(target)'''
 
 [[mutation]]
 name = "remove-stray: 지우기 전에 다시 판정하지 않는다"
@@ -1178,7 +1178,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, target)) is None:'''
+old = '''    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, str(path))) is None:'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -1234,8 +1234,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        nonprintable -= 1'''
-new = '''        pass'''
+old = '''    nonprintable = counted - 1 if data.endswith(b"\x1a") else counted'''
+new = '''    nonprintable = counted'''
 
 [[mutation]]
 name = "판별: 탭·ESC 를 비인쇄로 센다"
@@ -1286,3 +1286,45 @@ expect = "red"
 file = "tools/tidy_checkouts.py"
 old = '''        if device_path.startswith(device + "\\"):'''
 new = '''        if device_path.startswith(device):'''
+
+# PR 직전 버그·성능 리뷰 반영(일지 2026-10-12-38): 정규화하지 않는 긴 경로, 큰 파일의 덩이 읽기, 끝의 \x1a
+
+[[mutation]]
+name = "long_path: 절대 경로도 abspath 로 정규화한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "끝에_점이_붙은 or 정규화하지_않고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if not os.path.isabs(text):'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "file_blob_ids: 상한을 보지 않고 통째로 읽는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "큰_파일을_덩이로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if size <= WHOLE_READ_LIMIT:'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "file_blob_ids: 덩이로 셈할 때 블롭 머리를 넣지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "큰_파일을_덩이로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        digest = hashlib.sha1(b"blob %d\0" % size, usedforsecurity=False)'''
+new = '''        digest = hashlib.sha1(usedforsecurity=False)'''
+
+[[mutation]]
+name = "판별: 끝의 \\x1a 를 인쇄 문자로 센다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    printable = len(data) - counted - data.count(b"\r") - data.count(b"\n")'''
+new = '''    printable = len(data) - counted - data.count(b"\r") - data.count(b"\n") + data.endswith(b"\x1a")'''

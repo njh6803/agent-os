@@ -149,6 +149,8 @@
   디렉터리를 따르지 않는다고 알고 있어 낡은 경로로 이름을 댈 수 있다(어림, 재지 않았다). 그
   프로세스가 올린 32비트 모듈은 `LIST_MODULES_ALL` 로 함께 읽는다고 알고 있다(어림, 재지 않았다).
 - 윈도 폴더(`SystemRoot`) 아래 모듈의 다른 하드링크 이름. 펼치지 않는다.
+- 등록 없는 폴더에서 `WHOLE_READ_LIMIT`(64MiB)를 넘는 파일의 줄 끝을 바꾼 이름. 덩이로 그대로의
+  이름만 셈해, git 이 텍스트로 넣은 큰 파일은 커밋에 없는 것으로 보여 남는다(안전한 쪽).
 - 드라이브 문자가 없는 장치(네트워크 공유, 문자 없는 마운트 지점)에서 올린 모듈. 매핑 이름을
   드라이브 경로로 바꾸지 못해 버린다.
 - 등록 없는 폴더에서, 같은 내용이 다른 경로로 커밋된 파일과 빈 파일(참조에서 닿는 커밋에 빈 파일이
@@ -238,6 +240,9 @@ _HOLDER_LABELS: dict[HolderKind, str] = {
 # git 의 텍스트 판별에서 비인쇄로 세는 바이트. 32 아래에서 백스페이스·탭·ESC·폼 피드와 CR·LF 를 뺀
 # 것과 DEL 이다(`looks_text`)
 _NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (8, 9, 10, 12, 13, 27))
+# 등록 없는 폴더의 파일을 통째로 읽어 블롭 이름을 셈하는 크기의 상한(바이트). 넘으면 덩이로
+# 읽는다(`file_blob_ids`, PR 직전 버그·성능 리뷰)
+WHOLE_READ_LIMIT = 64 * 1024 * 1024
 # 되돌리기를 다시 시도하기 전에 기다리는 초. 옮기기가 지난 뒤 되돌리기가 `WinError 5` 로 한 번
 # 막혔다(대기열 202). 무엇이 그 틈에 폴더를 쥐었는지는 재지 않았다
 RESTORE_WAITS = (0.2, 0.5, 1.0, 2.0)
@@ -552,7 +557,7 @@ if sys.platform == "win32":
         drive = os.path.splitdrive(_without_long_prefix(path))[0]
         buffer = ctypes.create_unicode_buffer(_LONG_PATH)
         length = ctypes.c_ulong(len(buffer))
-        found = kernel.FindFirstFileNameW(path, 0, ctypes.byref(length), buffer)
+        found = kernel.FindFirstFileNameW(long_path(path), 0, ctypes.byref(length), buffer)
         if found is None or found == _INVALID_HANDLE:
             return []
         names: list[str] = []
@@ -649,12 +654,25 @@ def cwd_holders(folder: Path) -> list[Holder] | None:
     return holders_in(scan_processes(), str(folder))
 
 
-def _long(path: Path) -> str:
-    """윈도에서 MAX_PATH 를 넘는 경로를 파이썬이 다루도록 `\\\\?\\` 를 붙인 절대 경로."""
-    text = os.path.abspath(path)
-    if sys.platform == "win32" and not text.startswith("\\\\?\\"):
-        return "\\\\?\\" + text
-    return text
+def long_path(path: str | os.PathLike[str]) -> str:
+    """윈도에서 MAX_PATH 를 넘는 경로를 파이썬이 다루도록 `\\\\?\\` 를 붙인 절대 경로.
+
+    이미 절대 경로면 정규화하지 않고 구분자만 바꾼다. `os.path.abspath` 는 끝의 점과 공백을 떼고
+    `nul` 같은 장치 이름을 장치로 바꿔, 등록 없는 폴더의 `trail.` 을 `trail` 로 읽고 그 폴더를 지울
+    것으로 냈다(PR 직전 버그 리뷰가 손으로 재현했다). 그래서 `..` 이 든 절대 경로는 받지 않는다
+    (`\\\\?\\` 경로에서 풀리지 않아 OSError 로 멈춘다).
+    """
+    text = os.fspath(path)
+    if sys.platform != "win32":
+        return os.path.abspath(text)
+    if text.startswith("\\\\?\\"):
+        return text
+    if not os.path.isabs(text):
+        text = os.path.abspath(text)
+    text = text.replace("/", "\\")
+    if text.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + text[2:]
+    return "\\\\?\\" + text
 
 
 def _writable_retry(function: Callable[[str], object], target: str, error: BaseException) -> None:
@@ -667,7 +685,7 @@ def _writable_retry(function: Callable[[str], object], target: str, error: BaseE
 
 def delete_path(path: Path) -> None:
     """무시된 항목 하나를 지운다. 링크는 따라가지 않고 링크 자체만 지운다. 막히면 OSError."""
-    target = _long(path)
+    target = long_path(path)
     if os.path.islink(target) or os.path.isjunction(target):
         os.unlink(target)
     elif os.path.isdir(target):
@@ -794,10 +812,17 @@ def dos_path(device_path: str, drives: Mapping[str, str]) -> str | None:
     return None
 
 
+@functools.cache
+def _normalized(path: str) -> str:
+    """견주려고 정규화한 경로. 판정 한 번에 모듈 항목 수만큼의 경로를 워크트리마다 다시 견주므로
+    기억해 둔다(PR 직전 버그·성능 리뷰)."""
+    return os.path.normcase(os.path.normpath(_without_long_prefix(path)))
+
+
 def is_within(child: str, parent: str) -> bool:
     """`child` 가 `parent` 자신이거나 그 아래인지. `x2` 는 `x` 의 아래가 아니다."""
-    inner = os.path.normcase(os.path.normpath(_without_long_prefix(child)))
-    outer = os.path.normcase(os.path.normpath(_without_long_prefix(parent)))
+    inner = _normalized(child)
+    outer = _normalized(parent)
     return inner == outer or inner.startswith(outer.rstrip(os.sep) + os.sep)
 
 
@@ -955,15 +980,14 @@ def judge_stray(
 
 def looks_text(data: bytes) -> bool:
     """git 이 줄 끝을 바꾸는 텍스트로 볼 내용인지. NUL, 홀로 쓰인 CR, 인쇄 문자 128개당 비인쇄 문자
-    하나를 넘는 비율이면 바이너리다. CR·LF 는 어느 쪽에도 세지 않고, 끝의 `\\x1a` 하나는 비인쇄로
-    세지 않는다. git 소스를 읽지 않고 알고 있던 규칙이라(어림) 테스트가 `git hash-object` 와
+    하나를 넘는 비율이면 바이너리다. CR·LF 는 어느 쪽에도 세지 않고, 끝의 `\\x1a` 하나도 어느
+    쪽에도 세지 않는다. git 소스를 읽지 않고 알고 있던 규칙이라(어림) 테스트가 `git hash-object` 와
     견준다."""
     if b"\0" in data or data.count(b"\r") != data.count(b"\r\n"):
         return False
-    nonprintable = len(data) - len(data.translate(None, _NONPRINTABLE))
-    if data.endswith(b"\x1a"):
-        nonprintable -= 1
-    printable = len(data) - nonprintable - data.count(b"\r") - data.count(b"\n")
+    counted = len(data) - len(data.translate(None, _NONPRINTABLE))
+    printable = len(data) - counted - data.count(b"\r") - data.count(b"\n")
+    nonprintable = counted - 1 if data.endswith(b"\x1a") else counted
     return (printable >> 7) >= nonprintable
 
 
@@ -1039,15 +1063,19 @@ def _recreatable_dir(name: str, relative: str) -> bool:
     return name in RECREATABLE_DIRS or relative + "/" in RECREATABLE_PATHS
 
 
-def _walk_stray(folder: Path) -> tuple[list[str], list[str]]:
-    """(파일, 링크)의 상대 경로. 다시 만들 수 있는 폴더는 링크여도 들어가지 않고 건너뛴다.
-    링크(심볼릭 링크, 정션)는 따라가지 않는다. 읽다 막히면 OSError."""
-    files: list[str] = []
+def _walk_stray(folder: Path) -> tuple[list[tuple[str, str]], list[str]]:
+    """((파일의 상대 경로, 그 파일을 열 경로), 링크의 상대 경로). 다시 만들 수 있는 폴더는 링크여도
+    들어가지 않고 건너뛴다. 링크(심볼릭 링크, 정션)는 따라가지 않는다. 읽다 막히면 OSError.
+
+    여는 경로는 `scandir` 가 준 그대로 들고 다닌다. 상대 경로를 다시 이어 붙여 정규화하면 끝에
+    점이 붙은 이름이 점 없는 다른 파일로 읽힌다(`long_path`).
+    """
+    files: list[tuple[str, str]] = []
     links: list[str] = []
-    pending = [""]
+    pending = [("", long_path(folder))]
     while pending:
-        relative = pending.pop()
-        with os.scandir(_long(folder / relative)) as entries:
+        relative, opened = pending.pop()
+        with os.scandir(opened) as entries:
             for entry in entries:
                 child = f"{relative}/{entry.name}" if relative else entry.name
                 linked = entry.is_symlink() or entry.is_junction()
@@ -1057,22 +1085,22 @@ def _walk_stray(folder: Path) -> tuple[list[str], list[str]]:
                 if linked:
                     links.append(child)
                 elif directory:
-                    pending.append(child)
+                    pending.append((child, entry.path))
                 else:
-                    files.append(child)
+                    files.append((child, entry.path))
     return sorted(files), sorted(links)
 
 
 def gather_stray(root: Path, folder: Path, reachable: Callable[[], frozenset[str]]) -> StrayFacts:
     """등록 없는 폴더의 재료. git 은 그 폴더에서 부르지 않는다(`.git` 이 없어 루트에 닿는다).
     `reachable` 은 확인할 파일이 있을 때만 부른다."""
-    if os.path.lexists(_long(folder / ".git")):
+    if os.path.lexists(long_path(folder / ".git")):
         return StrayFacts(has_git=True, error="", links=(), uncommitted=())
     try:
         files, links = _walk_stray(folder)
         named = [
-            (relative, blob_ids(_read_bytes(folder / relative)))
-            for relative in files
+            (relative, file_blob_ids(opened))
+            for relative, opened in files
             if not _recreatable_file(root, folder, relative)
         ]
     except OSError as error:
@@ -1089,9 +1117,17 @@ def _recreatable_file(root: Path, folder: Path, relative: str) -> bool:
     return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)
 
 
-def _read_bytes(path: Path) -> bytes:
-    with open(_long(path), "rb") as handle:
-        return handle.read()
+def file_blob_ids(path: str) -> set[str]:
+    """파일 하나의 `blob_ids`. `WHOLE_READ_LIMIT` 를 넘는 파일은 통째로 읽지 않고 덩이로 그대로의
+    이름만 셈한다. 줄 끝을 바꾼 이름이 빠져, git 이 텍스트로 넣은 큰 파일은 남는 쪽이다."""
+    size = os.stat(path).st_size
+    with open(path, "rb") as handle:
+        if size <= WHOLE_READ_LIMIT:
+            return blob_ids(handle.read())
+        digest = hashlib.sha1(b"blob %d\0" % size, usedforsecurity=False)
+        for chunk in iter(functools.partial(handle.read, 1 << 20), b""):
+            digest.update(chunk)
+    return {digest.hexdigest()}
 
 
 def _place(cwd: Path, git: GitRunner) -> tuple[Path, list[Worktree]]:
@@ -1270,7 +1306,7 @@ def _probe(path: Path, ops: Ops) -> int | None:
         print(f"남겼다 {path.as_posix()} — 탐침 자리 {aside.as_posix()} 가 이미 있다")
         return 1
     try:
-        ops.rename(_long(path), _long(aside))
+        ops.rename(long_path(path), long_path(aside))
     except OSError as error:
         print(
             f"남겼다 {path.as_posix()} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error}). "
@@ -1282,7 +1318,7 @@ def _probe(path: Path, ops: Ops) -> int | None:
         if wait:
             ops.sleep(wait)
         try:
-            ops.rename(_long(aside), _long(path))
+            ops.rename(long_path(aside), long_path(path))
         except OSError as error:
             failures.append(error)
             continue
@@ -1359,8 +1395,9 @@ def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, o
 
 def _remove_stray(root: Path, listing: list[Worktree], target: str, ops: Ops) -> int:
     """등록 없는 폴더 하나를 지운다. 단계의 순서와 종료 코드는 모듈 독스트링의 "등록 없는 폴더"."""
-    path = Path(target)
-    if not any(same_path(str(path), str(stray)) for stray in _strays(root, listing)):
+    # 인자를 그대로 쓰지 않고 목록에서 찾은 폴더를 쓴다. 이후 단계가 같은 자리를 본다
+    path = next((stray for stray in _strays(root, listing) if same_path(target, str(stray))), None)
+    if path is None:
         print(f"남겼다 {target} — {WORKTREES_DIR}/ 바로 아래의 등록 없는 폴더가 아니다")
         return 1
     reachable = _reachable(root, ops.git)
@@ -1369,7 +1406,7 @@ def _remove_stray(root: Path, listing: list[Worktree], target: str, ops: Ops) ->
     stop = _probe(path, ops)
     if stop is not None:
         return stop
-    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, target)) is None:
+    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, str(path))) is None:
         return 1
     try:
         ops.delete(path)
