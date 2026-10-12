@@ -22,7 +22,7 @@
 | docs/constitution/operations.md | 커밋·병합·리뷰·트래커·가드레일을 만질 때 | ADR 뒤 |
 | docs/PRD.md | 범위를 정하거나 스펙이 충돌할 때 | 사용자 승인으로 |
 | CONTEXT.md, docs/adr/ | 용어를 쓰거나 결정을 바꾸기 전 | domain-modeling, 승인 뒤 |
-| CODING_STANDARDS.md | 리뷰 때 | retro가 세 번째 반복에서 승인한 뒤 |
+| CODING_STANDARDS.md | 리뷰 때 | retro가 세 번째 반복에서 더할 때 |
 | .scratch/plan.md, .scratch/<slug>/ | 이어서 할 때, 티켓 시작 전 | to-spec, to-tickets |
 | .scratch/retro-queue.md | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
 | docs/journal/ | 이어서 할 때 끝의 "다음" | 단계를 마칠 때 |
