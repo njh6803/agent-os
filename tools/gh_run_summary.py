@@ -26,6 +26,9 @@ default`(2.1.296)로 Write를 거부시켜 손으로 봤다.
 - 러너가 다시 보여 주는 스크립트 원문(`[36;1m` 머리)도 신호로 보지 않는다.
 - 결과 블록의 옛 모양(`permission_denials_count`, `"subtype": "permission_denied"` 이벤트).
   2.1.292의 로그에 없어 뺐다.
+- 줄이 잘려 닫히지 않은 객체. 실행 38182830347·38189417612 의 로그에서 도구 결과를 든 줄이 닫는
+  따옴표 없이 끊겼다(PR 직전 버그 리뷰가 손으로 봤다, 원인은 모른다). 그 객체는 읽지 못한 것으로
+  세고, 맨 앞의 `{` 가 오면 거기서 새 객체를 연다. 잘린 객체에 든 것(훅, 알림, 결과)은 잃는다.
 
 쓰임: `uv run python tools/gh_run_summary.py 35505690924`. 리뷰 파이프라인의 "코멘트 없는 초록"이
 리뷰를 했는지 안 했는지는 이 요약으로 판정한다(`docs/constitution/operations.md`).
@@ -77,6 +80,10 @@ def _blocks(lines: list[str]) -> Iterator[str | dict[str, Json] | None]:
     buffer: list[str] | None = None
     for raw in lines:
         line = strip_prefix(raw)
+        if buffer is not None and line == "{":
+            # 들여 쓴 객체 안에서는 맨 앞의 `{` 가 나오지 않는다. 앞 객체의 줄이 잘려 닫히지 않았다
+            yield None
+            buffer = None
         if buffer is None:
             if line == "{":
                 buffer = [line]
@@ -195,6 +202,12 @@ def render(summary: Summary) -> str:
     return "\n".join(out)
 
 
+def split_log(text: str) -> list[str]:
+    """개행에서만 나눈다. `splitlines` 는 JSON 이 이스케이프하지 않는 U+2028 에서도 나눠 객체를
+    깬다. 줄 끝의 `\\r` 은 `strip_prefix` 가 걷는다."""
+    return text.split("\n")
+
+
 def fetch_log(run_id: str) -> list[str]:
     """`gh`가 실패하면 CalledProcessError를 올린다. 실패의 형태는 예외 하나다."""
     completed = subprocess.run(
@@ -205,7 +218,7 @@ def fetch_log(run_id: str) -> list[str]:
         errors="replace",
         check=True,
     )
-    return completed.stdout.splitlines()
+    return split_log(completed.stdout)
 
 
 def main(argv: list[str]) -> int:

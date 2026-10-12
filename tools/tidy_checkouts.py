@@ -525,10 +525,18 @@ def same_path(left: str, right: str) -> bool:
     return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
 
 
+def _without_long_prefix(path: str) -> str:
+    """`\\\\?\\UNC\\` 와 `\\\\?\\` 머리를 뗀다. 그 머리째 작업 디렉터리를 옮긴 프로세스는 PEB 에
+    머리가 남는다(PR 직전 버그 리뷰가 손으로 봤다)."""
+    if path.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + path[len("\\\\?\\UNC\\") :]
+    return path.removeprefix("\\\\?\\")
+
+
 def is_within(child: str, parent: str) -> bool:
     """`child` 가 `parent` 자신이거나 그 아래인지. `x2` 는 `x` 의 아래가 아니다."""
-    inner = os.path.normcase(os.path.normpath(child))
-    outer = os.path.normcase(os.path.normpath(parent))
+    inner = os.path.normcase(os.path.normpath(_without_long_prefix(child)))
+    outer = os.path.normcase(os.path.normpath(_without_long_prefix(parent)))
     return inner == outer or inner.startswith(outer.rstrip(os.sep) + os.sep)
 
 
@@ -538,8 +546,9 @@ def describe_holders(holders: Sequence[Holder] | None) -> str:
         return "이 OS 에서는 쥔 프로세스를 찾지 못한다"
     if not holders:
         return (
-            "작업 디렉터리로 쥔 프로세스는 없다. "
-            "그 안의 파일을 열었거나 DLL 을 적재한 프로세스는 이 도구가 대지 못한다"
+            "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"
+            "(다른 사용자, 높은 권한)와 그 안의 파일을 열었거나 DLL 을 적재한 프로세스는 이 도구가"
+            " 대지 못한다"
         )
     names = ", ".join(f"{holder.image or '(이름 모름)'}(pid {holder.pid})" for holder in holders)
     return f"작업 디렉터리로 쥔 프로세스: {names}"

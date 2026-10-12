@@ -679,6 +679,26 @@ file = "tools/tidy_checkouts.py"
 old = '''        return os.path.basename(buffer.value)'''
 new = '''        return ""'''
 
+[[mutation]]
+name = "쥔 프로세스: 작업 디렉터리의 긴 경로 머리를 떼지 않는다(PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "그_아래일_때만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    inner = os.path.normcase(os.path.normpath(_without_long_prefix(child)))'''
+new = '''    inner = os.path.normcase(os.path.normpath(child))'''
+
+[[mutation]]
+name = "쥔 프로세스: 읽지 못한 프로세스가 있어도 없다고 단정한다(PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "볼_수_없는_것을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"'''
+new = '''            "작업 디렉터리로 쥔 프로세스는 없다. 읽지 못한 프로세스"'''
+
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.
 [[mutation]]

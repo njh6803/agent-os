@@ -91,7 +91,7 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 176
 1·Minor 2·Nit 1이었다.
 
 - **고친 것.**
-  - 명세 Major·표준 Minor(겹침): `operations.md`와 헌법 README가 "리뷰의 권한은 `claude_args`만 쥔다"고 적었다.
+  - 명세 Major·표준 Minor(겹침): `operations.md`와 헌법 README가 리뷰의 권한을 `claude_args`만 쥔다고 적었다.
     실행 로그의 init `settingSources`에 `project`가 있어 설정 파일이 실리고 그 권한 규칙도 걸린다. 그 문장을 빼고
     "설정은 실리고 훅만 돌지 못한다"로 고쳤다. "훅이 모두 127"도 로그에 응답이 남은 SessionStart로 좁혔다.
   - 표준 Minor(출력 인자·CQS, 문서화된 표준): `gh_run_summary.py`의 `_blocks`와 읽기 함수 셋이 `summary`를 고쳤다.
@@ -112,3 +112,23 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 176
     훅 단독 실행과 같은 결). 나누면 실행 경로와 테스트 경로의 import가 갈린다.
   - 표준 Nit(Speculative Generality): 리눅스 `/proc` 갈래는 CI 테스트에서만 쓰인다. 윈도 갈래는 CI(우분투)에서 돌지
     않아, 실제 프로세스를 훑는 테스트가 CI에서 도는 유일한 길이라 둔다.
+
+## PR 직전 보안·버그·성능 축
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI는 돌지 않았다. 커밋(`b334852`)과 main 병합
+(`3990f81`) 뒤에 대체 둘을 나란히 돌렸다.
+
+- **보안(`/security-review`).** 식별 단계의 지적이 0건이라 오탐 거르기는 띄우지 않았다. 쥔 프로세스의 이름과 작업
+  디렉터리는 `remove`가 멈출 때의 이유 줄에만 찍히고, 에이전트가 치는 명령(`judge`의 `→` 뒤)은 그것을 쓰지 않는다.
+  프로세스는 `PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ`로만 열고 권한을 올리지 않는다.
+- **버그·성능(`bug-perf-review`).** 턴 한도(60)에서 보고 없이 멈춰, 이어 붙여 보고만 받았다(대기열 169와 같은 일).
+  유효 4, 보류 1, 오탐 9였고 Critical·Major는 없었다. 유효한 넷을 모두 고쳤고 테스트와 변이를 더했다.
+  - Minor: `_blocks`가 잘린 객체(닫는 따옴표 없이 끊긴 도구 결과 줄) 뒤의 멀쩡한 객체까지 삼켰다. 서브에이전트가
+    실행 38182830347·38189417612의 로그에서 손으로 봤다. 맨 앞의 `{`가 오면 앞 버퍼를 읽지 못한 것으로 세고 새로 연다.
+  - Minor: `fetch_log`의 `splitlines()`가 JSON이 이스케이프하지 않는 U+2028 등에서도 줄을 나눴다. `split_log`가
+    개행에서만 나눈다. 테스트 도우미 `event()`도 같은 `splitlines()`를 써서, 새 테스트가 도우미에서 먼저 깨졌다.
+  - Minor: 읽지 못한 프로세스(이 PC에서 약 27%)가 있는데 빈 목록에서 "쥔 프로세스는 없다"고 단정했다. 읽을 수
+    있는 프로세스 가운데에서만 없다고 적는다.
+  - Nit: `\\?\` 머리째 작업 디렉터리를 옮긴 프로세스를 놓쳤다(서브에이전트가 손으로 재현했다). 비교 전에 머리를 뗀다.
+  - 보류, Nit: `cwd_holders`가 OSError 밖의 예외를 내면 이유 문구 없이 트레이스백으로 끝난다. 그런 예외의 구체적인
+    출처를 찾지 못했다.

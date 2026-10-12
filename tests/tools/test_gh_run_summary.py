@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from tools.gh_run_summary import TEXT_WIDTH, Json, main, render, summarize
+from tools.gh_run_summary import TEXT_WIDTH, Json, main, render, split_log, summarize
 
 PREFIX = "claude-review\tRun Claude Code Review\t2026-09-20T10:45:00.0000000Z "
 
@@ -20,7 +20,7 @@ def log(*lines: str) -> list[str]:
 
 def event(payload: dict[str, Json]) -> list[str]:
     """이벤트 하나를 실제 로그처럼 들여 쓴 JSON 줄로 찍는다."""
-    return log(*json.dumps(payload, ensure_ascii=False, indent=2).splitlines())
+    return log(*json.dumps(payload, ensure_ascii=False, indent=2).split("\n"))
 
 
 def result(**fields: Json) -> list[str]:
@@ -154,6 +154,29 @@ def test_JSON_으로_읽지_못한_객체와_닫히지_않은_객체를_센다()
     summary = summarize(lines)
     assert summary.broken == 2
     assert "JSON 으로 읽지 못한 객체 2개" in render(summary)
+
+
+def test_잘린_객체는_뒤의_객체를_삼키지_않는다() -> None:
+    """실행 38182830347 의 로그에서 도구 결과 줄이 닫는 따옴표 없이 끊기고 다음 줄이 `{` 였다."""
+    lines = [
+        *log("{", '  "type": "user",', '  "content": "끊긴 원문'),
+        *result(num_turns=3, permission_denials=[]),
+    ]
+    summary = summarize(lines)
+    assert summary.broken == 1
+    assert summary.results[0] == '"num_turns": 3'
+
+
+def test_로그는_개행에서만_줄을_나눈다() -> None:
+    """JSON 은 U+2028 을 이스케이프하지 않는다. 그 글자에서 줄을 나누면 객체가 깨진다."""
+    separator = chr(0x2028)
+    assistant: dict[str, Json] = {
+        "type": "assistant",
+        "message": {"role": "assistant", "content": [{"type": "text", "text": f"a{separator}b"}]},
+    }
+    summary = summarize(split_log("\n".join(event(assistant))))
+    assert summary.broken == 0
+    assert summary.texts == ["a b"]
 
 
 def test_인자가_없으면_쓰임을_알리고_2를_돌려준다(capsys: pytest.CaptureFixture[str]) -> None:

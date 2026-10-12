@@ -133,6 +133,8 @@ def test_작업_디렉터리가_폴더_자신이거나_그_아래일_때만_쥔_
     folder = "C:/repo/.claude/worktrees/x"
     if sys.platform == "win32":
         assert is_within("c:\\repo\\.claude\\worktrees\\X\\", folder)
+        # 작업 디렉터리를 `\\?\` 머리째 옮긴 프로세스는 PEB 에 그 머리가 남는다(PR 직전 버그 리뷰)
+        assert is_within(r"\\?\C:\repo\.claude\worktrees\x\deep", folder)
     assert is_within("C:/repo/.claude/worktrees/x/", folder)
     assert is_within("C:/repo/.claude/worktrees/x/web/node_modules", folder)
     assert not is_within("C:/repo/.claude/worktrees/x2", folder)
@@ -144,7 +146,10 @@ def test_쥔_프로세스는_이름과_pid_로_적고_못_찾은_것과_볼_수_
     assert describe_holders(found) == (
         "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148), (이름 모름)(pid 7)"
     )
-    assert describe_holders([]).startswith("작업 디렉터리로 쥔 프로세스는 없다")
+    # 읽지 못한 프로세스(다른 사용자, 높은 권한)가 있어 없다고 단정하지 않는다
+    assert describe_holders([]).startswith(
+        "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다"
+    )
     assert describe_holders(None).startswith("이 OS 에서는 쥔 프로세스를 찾지 못한다")
 
 

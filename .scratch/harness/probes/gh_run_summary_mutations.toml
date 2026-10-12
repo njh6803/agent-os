@@ -119,3 +119,25 @@ expect = "red"
 file = "tools/gh_run_summary.py"
 old = '''    return " ".join(text.split())[:TEXT_WIDTH]'''
 new = '''    return text[:TEXT_WIDTH]'''
+
+# PR 직전 버그·성능 리뷰 반영
+
+[[mutation]]
+name = "잘린 객체 뒤의 맨 앞 { 에서 다시 맞추지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "잘린_객체는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''        if buffer is not None and line == "{":'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "로그를 splitlines 로 나눈다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "개행에서만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    return text.split("\n")'''
+new = '''    return text.splitlines()'''
