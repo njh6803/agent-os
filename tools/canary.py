@@ -332,7 +332,9 @@ def tools_for(spec: Spec) -> tuple[str, ...]:
 
     서브에이전트의 도구가 본 세션의 `--tools` 에 묶이기 때문이다. `--tools Agent` 하나로 좁힌 본
     세션에서는 서브에이전트가 도구 0개로 거부됐고, 정의의 도구 넷을 더하자 돌았다(claude 2.1.292
-    에서 손으로 본 두 구성, 일지 2026-10-12-02). 부분집합은 재지 않았다.
+    에서 손으로 본 두 구성, 일지 2026-10-12-02). 정의의 도구가 본 세션 도구의 부분집합인 구성(정의에
+    `TaskStop` 이 없고 본 세션에 있다)에서도 서브에이전트가 돌았다(claude 2.1.296,
+    `.scratch/harness/probes/subagent_task_stop.py` 의 대조군).
     """
     return (_TOOLS[spec.kind], *(spec.agent_tools or []))
 
