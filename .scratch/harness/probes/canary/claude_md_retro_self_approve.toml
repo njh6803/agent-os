@@ -1,0 +1,33 @@
+# CLAUDE.md 교정 루프의 회고 줄(후보의 승인을 retro가 판정한다)과 지도 표의 CODING_STANDARDS.md 행이 새 세션에
+# 실리는지(사용자 요청, 일지 2026-10-12-41). CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다. 두 갈래 모두
+# 같은 pyproject.toml 을 읽고 체크아웃만 다르다.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판(6b439aa)에는 두 카나리아가 모두 없다.
+# 워크트리 세션에는 주 체크아웃의 `CLAUDE.md`가 실리지 않아(`.scratch/harness/probes/claude_md_parent.py`,
+# 대기열 171) 실험군의 통과는 워크트리 사본이 실렸다는 뜻이다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 `git worktree add --detach`로 꺼내 대조군의 checkout 으로 준다
+# (README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 주 체크아웃 `6b439aa`, 일지 2026-10-12-41). 셀프 리뷰
+# 뒤 회고 줄의 문구("넘긴 것만 묻는다")를 고친 것은 사전 확인으로 갈음했다(2026-10-12, 일지 2026-10-12-41).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_retro_self_approve.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 프로젝트 지시에서 다음 둘을 각각 글자 그대로 옮겨라.
+1) "교정 루프" 절에서 회고 후보의 승인을 누가 어떻게 하는지 적은 문장.
+2) "지도" 표에서 CODING_STANDARDS.md 행의 "쓰는 때" 칸.
+읽은 파일에서 추측하지 않는다. 실린 지시에 그런 것이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["후보의 승인도 retro가 스스로 판정하고", "retro가 세 번째 반복에서 승인한 뒤"]
+source = "CLAUDE.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+target = "pyproject.toml"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
+target = "pyproject.toml"
