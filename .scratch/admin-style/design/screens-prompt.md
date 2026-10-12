@@ -6,7 +6,7 @@ Claude Design(claude.ai/design)에서 관리 화면의 화면을 그릴 때 붙�
 
 ## 하는 법
 
-1~5는 사람이 한다. 내려받기(6)부터는 기본으로 명세 세션이 한다(아래 "고른 뒤").
+1의 `/design-sync`는 사람이 시작하는 스킬이다. 2~6의 Claude Design 조작과 내려받기는 기본으로 세션이 내장 브라우저로 한다. 사람은 로그인하고, 보내기와 내려받기마다 허락하고, 4에서 안을 고른다. 세션은 양식이나 프롬프트를 넣은 화면을 찍어 보인 뒤 보내도 되는지 묻는다. 사람이 원하거나 내장 브라우저가 없으면 사람이 2~6을 직접 하고, 내보낸 ZIP을 6의 정해진 자리에 둔다(`kickoff/prompting.md`의 "사람에게 남기는 일은 넷이다" 문단).
 
 그리기는 디자인 시스템의 재탐색(`.scratch/design-system/design/refresh-prompt.md`)이 패키지에 반영되고 `/design-sync`로 다시 올라간 뒤다. 차례는 `.scratch/plan.md`의 design-refresh 행이다.
 
