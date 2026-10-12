@@ -9,8 +9,12 @@ Playwright 의 `list` 리포터, 일지 2026-10-01-01). 색 코드를 넣거나 
 
 from __future__ import annotations
 
+import contextlib
+import os
+import signal
 import subprocess
 import sys
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -21,11 +25,14 @@ from tools.mutate import (
     JudgeName,
     RestoreError,
     SpecError,
+    changed_names,
+    check,
     judge,
     load_spec,
     main,
     measure,
     read_spec,
+    run_command,
     select,
 )
 from tools.run_hooks import hook_environment
@@ -33,7 +40,7 @@ from tools.run_hooks import hook_environment
 _초록 = CommandResult(0, "1 passed in 0.01s\n")
 _빨강 = CommandResult(1, "FAILED tests/test_x.py::test_x - AssertionError\n1 failed in 0.01s\n")
 
-type 러너 = Callable[[Sequence[str], Path], CommandResult]
+type 러너 = Callable[[Sequence[str], Path, int], CommandResult]
 
 
 def _파일을_둔다(root: Path, 상대_경로: str, 내용: bytes) -> Path:
@@ -91,7 +98,7 @@ def test_변이가_든_동안_러너는_바뀐_바이트를_보고_끝나면_원
     path = _파일을_둔다(tmp_path, "src/m.py", 원래)
     본_것: list[bytes] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         본_것.append(path.read_bytes())
         return _빨강 if b"return 2" in path.read_bytes() else _초록
 
@@ -120,7 +127,7 @@ def test_변이한_소스의_바이트코드_캐시는_변이_동안과_되돌�
     이웃 = _파일을_둔다(tmp_path, "src/__pycache__/mm.cpython-312.pyc", b"old")
     변이_동안: list[bool] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" not in path.read_bytes():
             return _초록
         변이_동안.extend(pyc.exists() for pyc in 캐시)
@@ -144,7 +151,7 @@ def test_러너가_예외를_던져도_원래_바이트로_돌아온다(tmp_path
     원래 = b"x = 1\r\n"
     path = _파일을_둔다(tmp_path, "src/m.py", 원래)
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" in path.read_bytes():
             raise KeyboardInterrupt
         return _초록
@@ -160,10 +167,255 @@ def test_러너가_예외를_던져도_원래_바이트로_돌아온다(tmp_path
     assert path.read_bytes() == 원래
 
 
+def test_시간_제한을_넘긴_변이는_오류이고_되돌린_뒤_다음_변이로_간다(tmp_path: Path) -> None:
+    """검사 러너의 변이가 러너→pytest→러너로 되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한
+    줄이 파일에 남았다(대기열 139). 끝나지 않는 변이 하나가 표 전체를 멈추지 않는다."""
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    줄: list[str] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "도는 중\n", timed_out_after=timeout)
+        return _빨강 if b"x = 3" in path.read_bytes() else _초록
+
+    변이 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'expect = "red"', 'expect = "red"\ntimeout = 5'
+    ) + _변이_파일(old="x = 1", new="x = 3").replace('name = "하나"', 'name = "둘"')
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append)
+
+    assert code == 1
+    assert any("어긋남" in 한줄 and "하나" in 한줄 and "5초" in 한줄 for 한줄 in 줄)
+    assert any(한줄.startswith("==") and "둘" in 한줄 for 한줄 in 줄)
+    assert path.read_bytes() == b"x = 1\n"
+
+
+def test_시간_제한을_넘기면_남은_반복을_돌지_않는다(tmp_path: Path) -> None:
+    """끊긴 판정은 이미 기대와 어긋나, 남은 반복은 변이를 든 채 시간만 쓴다(셀프 리뷰)."""
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    변이에서_불린: list[int] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" not in path.read_bytes():
+            return _초록
+        변이에서_불린.append(timeout)
+        return CommandResult(1, "", timed_out_after=timeout)
+
+    변이 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'expect = "red"', 'expect = "red"\nrepeat = 3'
+    )
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert code == 1
+    assert 변이에서_불린 == [600]
+    assert path.read_bytes() == b"x = 1\n"
+
+
+@pytest.mark.parametrize("판정자", ["pytest", "vitest", "playwright", "tsc"])
+def test_시간_제한을_넘긴_결과는_출력이_무엇이든_오류다(판정자: JudgeName) -> None:
+    """끊기 전까지의 출력이 초록이나 빨강으로 읽혀도 끝까지 돌지 않은 판정은 재는 것이 없다."""
+    끊긴 = CommandResult(1, "1 failed, 2 passed\n      Tests  1 failed (3)\n", timed_out_after=9)
+
+    판정 = judge(판정자, 끊긴, "a.ts")
+
+    assert 판정.outcome == "error"
+    assert "9초" in 판정.summary
+
+
+def test_러너는_변이의_시간_제한을_받고_기준선은_같은_짝의_가장_긴_것을_받는다(
+    tmp_path: Path,
+) -> None:
+    """기준선은 러너와 인자의 짝마다 한 번이라 그 짝을 쓰는 변이 가운데 가장 긴 제한을 받는다.
+    적지 않으면 600초다."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    받은: list[int] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        받은.append(timeout)
+        return _초록
+
+    변이 = _변이_파일(old="x = 1", new="x = 2", expect="green").replace(
+        'expect = "green"', 'expect = "green"\ntimeout = 30'
+    ) + _변이_파일(old="x = 1", new="x = 3", expect="green").replace('name = "하나"', 'name = "둘"')
+
+    measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert 받은 == [600, 30, 600]
+
+
+_손자 = """
+import os, pathlib, sys, time
+심장 = pathlib.Path(sys.argv[1])
+심장.with_suffix(".pid").write_text(str(os.getpid()))
+끝 = time.monotonic() + 20  # 아무도 끝내지 못해도 스스로 끝난다
+while time.monotonic() < 끝:
+    with 심장.open("ab") as f:
+        f.write(b".")
+    time.sleep(0.05)
+"""
+
+_자식 = """
+import pathlib, subprocess, sys, time
+심장 = pathlib.Path(sys.argv[2])
+떠난다 = sys.argv[3] == "떠난다"
+따로 = 떠난다 and sys.platform != "win32"  # POSIX: 손자가 제 세션을 따로 연다
+손자 = [sys.executable, "-c", sys.argv[1], sys.argv[2]]
+subprocess.Popen(손자, stdout=sys.stdout, stderr=sys.stderr, start_new_session=따로)
+while not 심장.exists():
+    time.sleep(0.05)
+print("손자가 뛴다", flush=True)
+if 떠난다 and not 따로:
+    sys.exit(0)  # 윈도우: 자식이 먼저 끝나 손자가 고아가 된다
+time.sleep(60)
+"""
+
+
+def _뛰는지(심장: Path) -> bool:
+    크기 = 심장.stat().st_size
+    time.sleep(0.5)
+    return 심장.stat().st_size != 크기
+
+
+def test_실제_러너는_시간_제한을_넘기면_손자_프로세스까지_끝내고_그때까지의_출력을_돌려준다(
+    tmp_path: Path,
+) -> None:
+    """하위 명령이 띄운 프로세스(pytest 가 띄운 러너)가 남으면 그것이 계속 돌고, 출력 파이프를 쥐어
+    결과를 읽는 쪽도 끝나지 않는다(대기열 139). 손자는 자식의 출력 파이프를 물려받아 쥔다."""
+    심장 = tmp_path / "heartbeat"
+    시작 = time.monotonic()
+
+    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 3)
+
+    걸린 = time.monotonic() - 시작
+    assert 결과.timed_out_after == 3
+    assert "손자가 뛴다" in 결과.output
+    assert 걸린 < 8
+    assert 심장.stat().st_size > 0
+    assert not _뛰는지(심장)
+
+
+def test_실제_러너는_프로세스_트리를_끝내지_못해도_자식은_끝낸다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`taskkill` 을 띄우지 못하거나 프로세스 그룹을 끝내지 못한 채 자식이 남으면, 출력을 그만 읽은
+    뒤에도 자식이 끝나기를 기다린다."""
+
+    def 띄우지_못한다(*_: object, **__: object) -> subprocess.CompletedProcess[bytes]:
+        raise OSError("taskkill 을 찾지 못했다")
+
+    def 끝내지_못한다(*_: object) -> None:
+        raise PermissionError
+
+    monkeypatch.setattr(subprocess, "run", 띄우지_못한다)
+    monkeypatch.setattr(os, "killpg", 끝내지_못한다, raising=False)
+    monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
+    시작 = time.monotonic()
+
+    결과 = run_command([sys.executable, "-c", "import time; time.sleep(20)"], tmp_path, 2)
+
+    assert 결과.timed_out_after == 2
+    assert time.monotonic() - 시작 < 8
+
+
+def test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세스까지_끝낸다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """끊긴 실행이 남긴 프로세스는 되돌린 파일 위에서 계속 돈다. 끊는 것은 처음 기다림 하나다.
+    끝내는 쪽(`taskkill`)의 기다림까지 끊으면 끝내지 못한다."""
+    심장 = tmp_path / "heartbeat"
+    원래 = subprocess.Popen[str].communicate
+    끊었다: list[bool] = []
+
+    def 한_번_끊긴다(
+        self: subprocess.Popen[str], 입력: str | None = None, timeout: float | None = None
+    ) -> tuple[str, str]:
+        if 끊었다:
+            return 원래(self, 입력, timeout)
+        while not 심장.exists():
+            time.sleep(0.05)
+        끊었다.append(True)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", 한_번_끊긴다)
+
+    with pytest.raises(KeyboardInterrupt):
+        run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
+
+    assert not _뛰는지(심장)
+
+
+def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_출력은_잠시만_기다린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """윈도우의 `taskkill /T` 는 부모를 따라 찾아 고아를 못 찾고, POSIX 의 프로세스 그룹은 제 세션을
+    연 손자를 담지 않는다(독스트링의 못 보는 것). 남은 손자가 출력 파이프를 쥐어도 기다림은
+    끝난다."""
+    monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
+    심장 = tmp_path / "heartbeat"
+    시작 = time.monotonic()
+
+    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "떠난다"], tmp_path, 3)
+
+    걸린 = time.monotonic() - 시작
+    try:
+        assert 결과.timed_out_after == 3
+        assert "그만 읽었다" in 결과.output
+        assert 걸린 < 8
+        assert _뛰는지(심장)
+    finally:
+        with contextlib.suppress(OSError):  # 스스로 끝났으면 없다
+            os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
+
+
+_그룹을_여는_자식 = """
+import pathlib, subprocess, sys, time
+심장 = pathlib.Path(sys.argv[2])
+손자 = [sys.executable, "-c", sys.argv[1], sys.argv[2]]
+쥘_파이프 = {"stdout": sys.stdout, "stderr": sys.stderr}
+if sys.platform == "win32":
+    subprocess.Popen(손자, **쥘_파이프)
+else:
+    subprocess.Popen(손자, **쥘_파이프, process_group=0)  # 그룹만 따로 연다
+while not 심장.exists():
+    time.sleep(0.05)
+print("손자가 뛴다", flush=True)
+time.sleep(60)
+"""
+
+
+def test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서_남는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`killpg` 는 자식이 이끄는 그룹만 끝내 그룹을 따로 연 손자를 담지 않는다. 윈도우에는 그 그룹이
+    없고 `taskkill /T` 가 부모를 따라 찾아 끝낸다(독스트링의 못 보는 것,
+    `.claude/rules/tools.md`)."""
+    monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
+    심장 = tmp_path / "heartbeat"
+
+    결과 = run_command([sys.executable, "-c", _그룹을_여는_자식, _손자, str(심장)], tmp_path, 3)
+
+    try:
+        assert 결과.timed_out_after == 3
+        assert _뛰는지(심장) == (sys.platform != "win32")
+    finally:
+        with contextlib.suppress(OSError):  # 끝냈거나 스스로 끝났으면 없다
+            os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
+
+
+def test_실제_러너는_시간_안에_끝난_명령의_종료_코드와_출력을_돌려준다(tmp_path: Path) -> None:
+    결과 = run_command(
+        [sys.executable, "-c", "import sys; print('나옴'); sys.exit(3)"], tmp_path, 60
+    )
+
+    assert (결과.exit_code, 결과.timed_out_after) == (3, None)
+    assert "나옴" in 결과.output
+
+
 def _변이면(path: Path, 표지: bytes, 변이: CommandResult) -> 러너:
     """파일에 표지가 있으면(변이가 들었으면) `변이`, 아니면 초록을 내는 러너."""
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         return 변이 if 표지 in path.read_bytes() else _초록
 
     return 러너
@@ -213,7 +465,7 @@ def test_반복하면_매번_기대와_같아야_한다(tmp_path: Path) -> None:
     결과들 = iter([_빨강, _초록, _빨강])
     불린_횟수 = 0
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         nonlocal 불린_횟수
         if b"x = 2" not in path.read_bytes():
             return _초록
@@ -236,7 +488,7 @@ def test_기준선이_초록이_아니면_변이를_넣지_않는다(tmp_path: P
     path = _파일을_둔다(tmp_path, "src/m.py", 원래)
     본_것: list[bytes] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         본_것.append(path.read_bytes())
         return _빨강
 
@@ -253,7 +505,7 @@ def test_기준선이_초록이_아니면_변이를_넣지_않는다(tmp_path: P
     assert any("기준선" in 한줄 for 한줄 in 줄)
 
 
-def _부르면_안_되는_러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+def _부르면_안_되는_러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
     raise AssertionError("변이 파일 오류인데 테스트를 돌렸다")
 
 
@@ -279,11 +531,28 @@ def test_원문이_정확히_한_번이_아니면_아무_파일도_쓰지_않고
     assert 맞는_파일.read_bytes() == b"a = 1\n"
 
 
+@pytest.mark.parametrize(
+    ("old", "기대_코드"),
+    [("x = 1\n", 2), ("x = 1", 0), ("x = 1 + 2\n", 0)],
+    ids=["다음_줄에_닫은_줄의_일부", "같은_줄에_닫은_줄의_일부", "다음_줄에_닫은_온전한_줄"],
+)
+def test_닫는_따옴표를_다음_줄에_두면_그_앞의_줄바꿈도_원문에_든다(
+    tmp_path: Path, old: str, 기대_코드: int
+) -> None:
+    """줄의 일부만 적고 닫는 `'''` 를 다음 줄에 둔 원문 넷이 `--check` 에서 걸렸다(대기열 152)."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1 + 2\n")
+    변이 = _변이_파일(old=old, new="x = 3\n")
+    줄: list[str] = []
+
+    assert check(load_spec(변이), root=tmp_path, out=줄.append) == 기대_코드
+    assert any("원문이 0번 있다" in 한줄 for 한줄 in 줄) == (기대_코드 == 2)
+
+
 def test_한_변이의_편집_여럿은_앞_편집의_결과_위에_차례로_들어간다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
     본_것: list[bytes] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         본_것.append(path.read_bytes())
         return _초록 if len(본_것) == 1 else _빨강
 
@@ -352,13 +621,226 @@ def test_이름으로_고른_변이는_제_러너의_명령으로_돈다(tmp_pat
     변이 = load_spec(_VITEST_러너 + _vitest_변이(name="둘") + _변이_파일(old="x = 1", new="x = 2"))
     불린_것: list[tuple[str, ...]] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         불린_것.append(tuple(argv))
         return CommandResult(0, "      Tests  1 passed (1)\n")
 
     measure(select(변이, ["둘"]), root=tmp_path, runner=러너, out=lambda _: None)
 
     assert 불린_것[0] == ("pnpm", "exec", "vitest", "run", "a.test.ts")
+
+
+def _글자_변이(이름: str, 글자: str, *, expect: str = "red") -> str:
+    """`src/m.py` 의 `글자 = 1` 을 `글자 = 2` 로 바꾸는 변이."""
+    return _변이_파일(old=f"{글자} = 1", new=f"{글자} = 2", expect=expect).replace(
+        'name = "하나"', f'name = "{이름}"'
+    )
+
+
+def _셋() -> str:
+    return _글자_변이("하나", "x") + _글자_변이("둘", "y") + _글자_변이("셋", "z")
+
+
+def test_번호로도_고르고_이름과_섞을_수_있다() -> None:
+    """이름에 공백이 있으면 고를 때 따옴표 인자가 필요한데, 워크트리 가드가 그런 인자를 거부한 적이
+    있어 표 전체를 돌렸다(대기열 193). 번호는 표에 적힌 차례이고 1부터다."""
+    변이 = load_spec(_셋())
+
+    assert [m.name for m in select(변이, ["3", "하나"]).mutation] == ["하나", "셋"]
+    for 틀린 in ("0", "4"):
+        with pytest.raises(SpecError, match=f"표 밖의 번호 {틀린}"):
+            select(변이, [틀린])
+
+
+def test_숫자만인_이름은_번호와_가를_수_없어_변이_파일_오류다() -> None:
+    with pytest.raises(SpecError, match="이름이 숫자뿐이다: 12"):
+        load_spec(_변이_파일(old="x", new="y").replace('name = "하나"', 'name = "12"'))
+
+
+def test_바뀐_변이는_새로_더했거나_그_변이나_그_러너의_무엇이든_달라진_것이다() -> None:
+    """원문이 옮겨 가 고친 것, 기대를 바꾼 것, 러너의 명령을 바꾼 것을 모두 다시 돌린다. 지운 변이는
+    돌릴 것이 없다."""
+    옛 = load_spec(_VITEST_러너 + _vitest_변이(name="러너") + _셋() + _글자_변이("지운", "w"))
+    새 = load_spec(
+        _VITEST_러너.replace('"run"]', '"run", "--bail=1"]')
+        + _vitest_변이(name="러너")
+        + _글자_변이("하나", "x")
+        + _글자_변이("둘", "y").replace("y = 1", "y = 0")
+        + _글자_변이("셋", "z", expect="green")
+        + _글자_변이("넷", "v")
+    )
+
+    assert changed_names(옛, 새) == ["러너", "둘", "셋", "넷"]
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _커밋한_표(tmp_path: Path, 내용: str) -> Path:
+    """`tmp_path` 를 저장소로 만들어 `probes/m_mutations.toml` 에 `내용` 을 커밋한다."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\nz = 1\n")
+    표 = tmp_path / "probes" / "m_mutations.toml"
+    표.parent.mkdir()
+    표.write_text(내용, encoding="utf-8")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "표")
+    return 표
+
+
+def test_since_는_그_커밋의_같은_표와_견주어_바뀌거나_더한_변이만_돌린다(tmp_path: Path) -> None:
+    """원문이 바뀌거나 더한 변이가 2~5개인 판 둘에서도 표 전체(한 번에 29~34분)를 돌렸다(대기열
+    193)."""
+    표 = _커밋한_표(tmp_path, _글자_변이("하나", "x") + _글자_변이("둘", "y"))
+    표.write_text(
+        _글자_변이("하나", "x")
+        + _글자_변이("둘", "y").replace("y = 2", "y = 9")
+        + _글자_변이("셋", "z"),
+        encoding="utf-8",
+    )
+    m = tmp_path / "src/m.py"
+    본_것: list[bytes] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        본_것.append(m.read_bytes())
+        return _초록 if len(본_것) == 1 else _빨강
+
+    줄: list[str] = []
+    code = main([str(표), "--since", "HEAD"], root=tmp_path, runner=러너, out=줄.append)
+
+    assert code == 0, 줄
+    assert 본_것[1:] == [b"x = 1\ny = 9\nz = 1\n", b"x = 1\ny = 1\nz = 2\n"]
+    assert any(한줄.startswith("== 2. 둘:") for 한줄 in 줄)
+    assert any(한줄.startswith("== 3. 셋:") for 한줄 in 줄)
+
+
+def test_since_로_고를_것이_없으면_아무것도_돌리지_않고_2다(tmp_path: Path) -> None:
+    """커밋을 잘못 주어 아무것도 고르지 않은 실행이 0 으로 끝나면 잰 것처럼 보인다."""
+    표 = _커밋한_표(tmp_path, _셋())
+    줄: list[str] = []
+
+    code = main(
+        [str(표), "--since", "HEAD"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("HEAD" in 한줄 and "바뀌거나 더한 변이가 없다" in 한줄 for 한줄 in 줄)
+
+
+def test_못_보는_것_since_는_코드나_시험만_바뀐_판에서_고를_것이_없다(tmp_path: Path) -> None:
+    """`--since` 는 표만 견준다. 코드만 바꿔 둘레가 바뀐 변이도, 시험을 더해 빨개질 수 있는 대조군도
+    고르지 않는다(독스트링의 고르기 문단의 못 보는 것, `.claude/rules/tools.md`)."""
+    표 = _커밋한_표(tmp_path, _셋())
+    (tmp_path / "src/m.py").write_bytes(b"x = 1\ny = 1\nz = 1\nw = 1\n")
+    _파일을_둔다(tmp_path, "tests/test_x.py", b"def test_more() -> None:\n    pass\n")
+    줄: list[str] = []
+
+    code = main(
+        [str(표), "--since", "HEAD"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("바뀌거나 더한 변이가 없다" in 한줄 for 한줄 in 줄)
+
+
+def test_since_의_커밋에_표가_없으면_모두_새로_더한_변이다(tmp_path: Path) -> None:
+    _커밋한_표(tmp_path, _셋())
+    새_표 = tmp_path / "probes" / "new_mutations.toml"
+    새_표.write_text(_셋(), encoding="utf-8")
+    불린_수: list[int] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        불린_수.append(1)
+        return _초록 if len(불린_수) == 1 else _빨강
+
+    code = main([str(새_표), "--since", "HEAD"], root=tmp_path, runner=러너, out=print)
+
+    assert code == 0
+    assert len(불린_수) == 4
+
+
+def test_원문_확인도_since_로_고른_것만_본다(tmp_path: Path) -> None:
+    """코드를 고친 뒤 원문을 고친 변이만 다시 보는 길이다. 옛 프로브의 원문은 썩어도 된다."""
+    표 = _커밋한_표(tmp_path, _글자_변이("하나", "x") + _글자_변이("둘", "y"))
+    (tmp_path / "src/m.py").write_bytes(b"y = 1\nz = 1\n")  # 하나의 원문이 사라졌다
+    표.write_text(
+        _글자_변이("하나", "x") + _글자_변이("둘", "y") + _글자_변이("셋", "z"), encoding="utf-8"
+    )
+    줄: list[str] = []
+
+    code = main(
+        ["--check", str(표), "--since", "HEAD"],
+        root=tmp_path,
+        runner=_부르면_안_되는_러너,
+        out=줄.append,
+    )
+
+    assert code == 0, 줄
+    assert any("변이 1 모두" in 한줄 for 한줄 in 줄)
+
+
+def test_since_의_표가_git_저장소_밖이면_그렇게_알리고_2다(tmp_path: Path) -> None:
+    """저장소가 아닌 것을 커밋을 풀지 못한 것으로 알리면 엉뚱한 커밋을 찾게 된다(PR 직전 버그
+    축)."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\nz = 1\n")
+    경로 = _변이_파일을_쓴다(tmp_path, _셋())
+    줄: list[str] = []
+
+    code = main(
+        [경로, "--since", "HEAD"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("git 저장소 안이 아니다" in 한줄 for 한줄 in 줄), 줄
+
+
+def test_since_의_커밋을_풀지_못하면_2다(tmp_path: Path) -> None:
+    표 = _커밋한_표(tmp_path, _셋())
+    줄: list[str] = []
+
+    code = main(
+        [str(표), "--since", "없는-커밋"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("없는-커밋" in 한줄 and "커밋으로 풀지 못했다" in 한줄 for 한줄 in 줄)
+
+
+def test_출력은_표의_번호를_달고_끝에_다시_돌릴_번호를_낸다(tmp_path: Path) -> None:
+    """고른 뒤에도 번호는 표의 차례다. 어긋난 것만 따옴표 없이 다시 돌린다."""
+    m = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\nz = 1\n")
+    경로 = _변이_파일을_쓴다(tmp_path, _셋())
+    줄: list[str] = []
+
+    code = main([경로, "3", "1"], root=tmp_path, runner=_변이면(m, b"2", _초록), out=줄.append)
+
+    assert code == 1
+    assert any(한줄.startswith("!! 어긋남 — 1. 하나:") for 한줄 in 줄)
+    assert any(한줄.startswith("!! 어긋남 — 3. 셋:") for 한줄 in 줄)
+    assert not any("둘" in 한줄 for 한줄 in 줄)
+    assert 줄[-1] == "다시 돌릴 번호: 1 3"
+
+
+@pytest.mark.parametrize(
+    "argv_끝",
+    [["--since"], ["--since", "--check"], ["--since", "HEAD", "--since", "HEAD~1"]],
+    ids=["커밋이_없다", "커밋_자리에_선택", "두_번"],
+)
+def test_main_은_since_뒤에_커밋이_하나가_아니면_2다(tmp_path: Path, argv_끝: list[str]) -> None:
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    경로 = _변이_파일을_쓴다(tmp_path, _변이_파일(old="x = 1", new="x = 2"))
+    줄: list[str] = []
+
+    code = main([경로, *argv_끝], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+
+    assert code == 2
+    assert any("--since 뒤에는 커밋" in 한줄 for 한줄 in 줄), 줄
 
 
 @pytest.mark.parametrize(
@@ -605,7 +1087,7 @@ def test_러너를_적은_변이는_그_명령에_tests_를_붙여_그_자리에
     _파일을_둔다(tmp_path, "web/m.ts", b"x = 1\n")
     불린_것: list[tuple[tuple[str, ...], Path]] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         불린_것.append((tuple(argv), cwd))
         return CommandResult(0, "      Tests  1 passed (1)\n")
 
@@ -630,7 +1112,7 @@ def test_러너를_적지_않은_변이는_내장_pytest_로_저장소_루트에
     _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
     불린_것: list[tuple[tuple[str, ...], Path]] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         불린_것.append((tuple(argv), cwd))
         return _초록
 
@@ -654,7 +1136,7 @@ def test_처리하지_않은_에러를_기대한_변이는_그것만으로_기�
     처리하지_않은 = CommandResult(1, "      Tests  3 passed (3)\n     Errors  1 error\n")
     변이 = _VITEST_러너 + _vitest_변이().replace('expect = "red"', 'expect = "unhandled"')
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" in path.read_bytes():
             return 처리하지_않은
         return CommandResult(0, "      Tests  3 passed (3)\n")
@@ -720,7 +1202,7 @@ def test_되돌릴_파일은_편집하지_않아도_돌린_뒤에_원래_바이�
     생성물 = _파일을_둔다(tmp_path, "gen/out.ts", b"generated\r\n")
     쓰기_전: list[bytes] = []
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" not in path.read_bytes():
             return _초록
         쓰기_전.append(생성물.read_bytes())
@@ -780,7 +1262,7 @@ def _쓰기를_막는다(
 def _잠그는_러너(잠글_파일: Path, 표지: bytes, monkeypatch: pytest.MonkeyPatch) -> 러너:
     """변이가 든 동안 그 파일의 쓰기를 막아, 되돌리는 쓰기가 `PermissionError` 가 되게 한다."""
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if 표지 not in 잠글_파일.read_bytes():
             return _초록
         _쓰기를_막는다(monkeypatch, 잠글_파일, lambda _: True)
@@ -821,7 +1303,7 @@ def test_변이가_든_동안_다른_쓰기가_들어온_파일은_덮지_않고
     더한 훅 독스트링 한 문장이 그렇게 사라졌다(대기열 77). 나머지 파일은 되돌린다."""
     m, a, 변이 = _두_파일_변이(tmp_path)
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" not in m.read_bytes():
             return _초록
         m.write_bytes(m.read_bytes() + b"# doc\n")  # 도는 동안 편집기가 저장했다
@@ -838,7 +1320,7 @@ def test_되돌릴_파일로_적은_편집_파일은_명령이_고쳐_써도_되
     """`restore` 는 명령이 고쳐 쓰는 파일이다. 그 쓰기는 다른 쓰기와 가를 수 없어 보지 않는다."""
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" not in path.read_bytes():
             return _초록
         path.write_bytes(b"x = 2\n# generated\n")
@@ -1056,7 +1538,7 @@ def test_변이_파일_여럿은_원문_확인에서만_받고_이름과_섞지_
     가 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
     나 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="y = 1", new="y = 2"))
 
-    for argv in ([가, 나], ["--check", 가, 나, "하나"]):
+    for argv in ([가, 나], ["--check", 가, 나, "하나"], ["--check", 가, 나, "--since", "HEAD"]):
         줄: list[str] = []
         code = main(argv, root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
         assert code == 2, argv
@@ -1123,8 +1605,8 @@ def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(
     m, _, 변이 = _두_파일_변이(tmp_path)
     잠그는 = _잠그는_러너(m, b"x = 2", monkeypatch)
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
-        잠그는(argv, cwd)
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        잠그는(argv, cwd, timeout)
         if b"x = 2" in m.read_bytes():
             raise FileNotFoundError("pnpm 이 없다")
         return _초록
@@ -1140,7 +1622,7 @@ def test_main_은_되돌리지_못했을_때_그_전에_난_예외도_알린다(
 def test_main_은_테스트를_돌리지_못하면_3이고_변이는_되돌렸다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
 
-    def 러너(argv: Sequence[str], cwd: Path) -> CommandResult:
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" in path.read_bytes():
             raise FileNotFoundError("python 이 없다")
         return _초록
