@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import ast
 import ctypes
+import hashlib
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Generator, Sequence
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import replace
 from pathlib import Path
 
@@ -23,22 +25,29 @@ from tools.tidy_checkouts import (
     Facts,
     Holder,
     Ops,
+    StrayFacts,
     ToolError,
     Worktree,
+    blob_ids,
+    combine_holders,
     cwd_holders,
     delete_path,
     describe_holders,
+    dos_path,
     hold_for_strangers,
     holders_in,
     is_within,
     judge,
     judge_branch,
+    judge_stray,
     lock_pid,
+    looks_text,
     main,
     parse_merged,
     parse_worktrees,
     process_alive,
     real_git,
+    scan_modules,
     tasklist_has,
     unrecreatable,
 )
@@ -151,11 +160,47 @@ def test_쥔_프로세스는_이름과_pid_로_적고_못_찾은_것과_볼_수_
     assert describe_holders(found) == (
         "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148), (이름 모름)(pid 7)"
     )
-    # 읽지 못한 프로세스(다른 사용자, 높은 권한)가 있어 없다고 단정하지 않는다
-    assert describe_holders([]).startswith(
-        "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다"
-    )
+    # 읽지 못한 프로세스(다른 사용자, 높은 권한)가 있고, 리눅스는 모듈을 보지 않아 한쪽 훑기만으로도
+    # 빈 목록이 온다. 그래서 무엇을 보았는지 단정하지 않는다
+    assert describe_holders([]).startswith("읽을 수 있는 프로세스에서 쥔 것을 찾지 못했다")
     assert describe_holders(None).startswith("쥔 프로세스를 찾지 못했다")
+
+
+def test_모듈을_올린_프로세스는_작업_디렉터리로_쥔_것과_갈라_적는다() -> None:
+    """대기열 201. 다른 워크트리 세션의 pytest 가 하드링크로 같은 `.pyd` 를 올리고 있었다."""
+    found = [Holder(61148, "claude.exe"), Holder(26016, "python.exe", "module")]
+    assert describe_holders(found) == (
+        "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148); "
+        "모듈을 올린 프로세스: python.exe(pid 26016)"
+    )
+    assert describe_holders([Holder(26016, "python.exe", "module")]) == (
+        "모듈을 올린 프로세스: python.exe(pid 26016)"
+    )
+
+
+def test_모듈은_프로세스마다_하나로_모은다() -> None:
+    folder = "C:/repo/.claude/worktrees/x"
+    modules = [
+        (26016, "python.exe", "C:/repo/.claude/worktrees/x/.venv/Lib/a.pyd"),
+        (26016, "python.exe", "C:/repo/.claude/worktrees/x/.venv/Lib/b.pyd"),
+        (26016, "python.exe", "C:/repo/.venv/Lib/a.pyd"),
+        (7, "node.exe", "C:/repo/.claude/worktrees/x2/web/node_modules/a.node"),
+    ]
+    assert holders_in(modules, folder, "module") == [Holder(26016, "python.exe", "module")]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OSError("dll"), AttributeError("K32EnumProcessModulesEx"), ctypes.ArgumentError("bad")],
+)
+def test_모듈을_읽다_실패하면_볼_수_없는_것으로_돌려준다(
+    error: Exception, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def failing() -> None:
+        raise error
+
+    monkeypatch.setattr(tidy_checkouts, "_windows_modules", failing, raising=False)
+    assert scan_modules() is None
 
 
 @pytest.mark.parametrize(
@@ -214,6 +259,92 @@ def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(t
     assert mine, f"자식 pid {pid} 가 없다: {found}"
     assert mine[0].image
     assert os.getpid() not in {holder.pid for holder in found}
+
+
+def _적재할_DLL() -> Path:
+    """복사해 올릴 확장 모듈. 표준 라이브러리의 `.pyd` 다(윈도에서만 부른다)."""
+    found = sorted(Path(sys.base_prefix, "DLLs").glob("*.pyd"))
+    assert found, "표준 라이브러리의 .pyd 를 찾지 못했다"
+    return found[0]
+
+
+@contextmanager
+def _자식_파이썬(code: str) -> Generator[int]:
+    """`code` 를 돈 뒤 기다리는 자식 파이썬을 띄우고 그 실제 파이썬의 pid 를 내준다. uv 의 venv
+    파이썬은 실행기라 `Popen.pid` 가 실제 파이썬이 아니다. 작업 디렉터리는 이 테스트의 것이다."""
+    script = f"import ctypes, os, sys\n{code}\nprint(os.getpid(), flush=True)\nsys.stdin.read()\n"
+    child = subprocess.Popen(
+        [sys.executable, "-c", script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True
+    )
+    assert child.stdin is not None
+    assert child.stdout is not None
+    try:
+        line = child.stdout.readline().strip()
+        assert line.isdigit(), line
+        yield int(line)
+    finally:
+        child.stdin.close()
+        child.wait(timeout=10)
+
+
+def _자식이_올린다(module: Path) -> AbstractContextManager[int]:
+    return _자식_파이썬(f"lib = ctypes.WinDLL({str(module)!r})")
+
+
+@pytest.mark.parametrize("linked", [False, True], ids=["폴더_안_이름", "폴더_밖_하드링크"])
+def test_폴더_아래_모듈을_올린_자식_프로세스를_찾는다(tmp_path: Path, linked: bool) -> None:
+    """대기열 201. 윈도는 올린 모듈의 매핑 이름과 그 파일의 하드링크 이름을 본다. uv 의 `.venv` 는
+    캐시에서 하드링크로 채워져, 다른 체크아웃의 파이썬이 올린 `.pyd` 가 이 폴더의 이름도 막는다.
+    갈래는 `.scratch/harness/probes/module_holder.py` 의 G·E 와 같다. 윈도 밖은 볼 수 없다고
+    돌려준다(적재한 모듈이 지우기를 막지 않는다고 알고 있다)."""
+    if sys.platform != "win32":
+        assert scan_modules() is None
+        return
+    folder = tmp_path / "wt"
+    (folder / "deep").mkdir(parents=True)
+    inside = folder / "deep" / "mod.pyd"
+    outside = tmp_path / "outside.pyd"
+    shutil.copyfile(_적재할_DLL(), outside if linked else inside)
+    if linked:
+        os.link(outside, inside)
+    with _자식이_올린다(outside if linked else inside) as pid:
+        found = holders_in(scan_modules(), str(folder), "module")
+    assert found is not None
+    assert Holder(pid, "python.exe", "module") in found, found
+    assert os.getpid() not in {holder.pid for holder in found}
+
+
+def test_윈도_폴더_아래_모듈의_다른_하드링크_이름은_펼치지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """못 보는 것을 고정한다. `SystemRoot` 아래에서 올린 모듈이 이 폴더의 이름과 같은 파일이어도
+    대지 않는다(지나간다)."""
+    if sys.platform != "win32":
+        assert scan_modules() is None
+        return
+    system = tmp_path / "windows"
+    system.mkdir()
+    folder = tmp_path / "wt"
+    folder.mkdir()
+    loaded = system / "mod.pyd"
+    shutil.copyfile(_적재할_DLL(), loaded)
+    os.link(loaded, folder / "mod.pyd")
+    with _자식이_올린다(loaded) as pid:
+        # 자식이 뜬 뒤에 바꾼다. 자식의 환경에 가짜 SystemRoot 가 들어가지 않게 한다
+        monkeypatch.setenv("SystemRoot", str(system))
+        found = holders_in(scan_modules(), str(folder), "module")
+    assert found is not None
+    assert pid not in {holder.pid for holder in found}
+
+
+def test_드라이브_문자가_없는_장치의_매핑_이름은_버린다() -> None:
+    """못 보는 것을 고정한다. 네트워크 공유(`\\Device\\Mup`)에서 올린 모듈은 경로로 바꾸지
+    못한다."""
+    drives = {"\\Device\\HarddiskVolume2": "C:"}
+    assert dos_path("\\Device\\HarddiskVolume2\\repo\\x.pyd", drives) == "C:\\repo\\x.pyd"
+    assert dos_path("\\Device\\Mup\\server\\share\\x.pyd", drives) is None
+    # 장치 이름의 앞부분만 같은 다른 장치는 그 드라이브가 아니다
+    assert dos_path("\\Device\\HarddiskVolume22\\x.pyd", drives) is None
 
 
 # --- 판정 2: 다시 만들 수 있는 무시된 것 ----------------------------------------------------------
@@ -379,6 +510,24 @@ def test_잠금_pid_가_살아_있으면_쥔_프로세스보다_잠금의_세션
     assert "claude session x" in verdict.reason
 
 
+def test_모듈을_올린_프로세스가_있으면_이름과_pid_를_들어_남긴다() -> None:
+    """대기열 201. 앞지우기가 `.pyd` 에서 막혀 종료 1로 남는 것을 판정에서 미리 남긴다."""
+    held = (Holder(26016, "python.exe", "module"),)
+    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다, held)
+    assert verdict.action == "keep"
+    assert "모듈을 올린 프로세스: python.exe(pid 26016)" in verdict.reason
+
+
+def test_쥔_것을_하나라도_볼_수_있으면_합친다() -> None:
+    cwd = [Holder(1, "claude.exe")]
+    module = [Holder(2, "python.exe", "module")]
+    assert combine_holders(cwd, module) == [*cwd, *module]
+    assert combine_holders(None, module) == module
+    assert combine_holders(cwd, None) == cwd
+    assert combine_holders([], None) == []
+    assert combine_holders(None, None) is None
+
+
 def test_쥔_프로세스를_볼_수_없으면_판정_4의_점유_탐침에_맡긴다() -> None:
     assert judge(_WT, _FACTS, _MERGED, (), _죽었다, None).action == "delete"
 
@@ -420,6 +569,108 @@ def test_체크아웃되지_않은_브랜치는_병합된_PR_머리와_같을_�
     assert judge_branch("chore/x", _HEAD, _MERGED).action == "delete"
     assert judge_branch("chore/x", _OLD, _MERGED).action == "human"
     assert judge_branch("chore/y", _HEAD, _MERGED).action == "keep"
+
+
+# --- 등록 없는 폴더(대기열 148) -------------------------------------------------------------------
+
+_STRAY = "C:/repo/.claude/worktrees/stray"
+_CLEAN_STRAY = StrayFacts(has_git=False, error="", links=(), uncommitted=())
+
+
+def test_등록_없는_폴더는_내용이_모두_커밋에_있으면_지운다() -> None:
+    verdict = judge_stray(_STRAY, _CLEAN_STRAY, ())
+    assert (verdict.action, verdict.path, verdict.branch) == ("delete", _STRAY, None)
+
+
+def test_등록_없는_폴더에_git_이_있으면_사람에게_넘긴다() -> None:
+    """등록이 그 폴더를 잃었을 수 있다(점유 탐침이 옆 이름에 남긴 폴더가 그 모양이다)."""
+    verdict = judge_stray(_STRAY, replace(_CLEAN_STRAY, has_git=True), ())
+    assert verdict.action == "human"
+    assert ".git" in verdict.reason
+
+
+def test_탐침이_옆_이름에_남긴_폴더는_등록이_폴더를_잃었을_때만_되돌릴_자리를_알린다() -> None:
+    aside = "C:/repo/.claude/worktrees/x.tidy-probe"
+    home = "C:/repo/.claude/worktrees/x"
+    verdict = judge_stray(aside, replace(_CLEAN_STRAY, has_git=True), (), home)
+    assert verdict.action == "human"
+    assert home in verdict.reason
+    assert "되돌리면" in verdict.reason
+    unknown = judge_stray(aside, replace(_CLEAN_STRAY, has_git=True), ())
+    assert unknown.action == "human"
+    assert "되돌리면" not in unknown.reason
+
+
+def test_등록_없는_폴더에_커밋에_없는_파일이_있으면_남기고_몇_개를_든다() -> None:
+    files = tuple(f"f{index}.py" for index in range(7))
+    verdict = judge_stray(_STRAY, replace(_CLEAN_STRAY, uncommitted=files), ())
+    assert verdict.action == "keep"
+    assert "커밋에 없는 파일" in verdict.reason
+    assert "f0.py" in verdict.reason
+    assert "f6.py" not in verdict.reason
+    assert "7개" in verdict.reason
+
+
+def test_등록_없는_폴더에_링크가_있으면_남긴다() -> None:
+    verdict = judge_stray(_STRAY, replace(_CLEAN_STRAY, links=("web/linked",)), ())
+    assert verdict.action == "keep"
+    assert "web/linked" in verdict.reason
+
+
+def test_등록_없는_폴더를_읽다_막히면_남긴다() -> None:
+    verdict = judge_stray(_STRAY, replace(_CLEAN_STRAY, error="WinError 5"), ())
+    assert verdict.action == "keep"
+    assert "WinError 5" in verdict.reason
+
+
+def test_등록_없는_폴더를_쥔_프로세스가_있으면_남긴다() -> None:
+    held = (Holder(26016, "python.exe", "module"),)
+    verdict = judge_stray(_STRAY, _CLEAN_STRAY, held)
+    assert verdict.action == "keep"
+    assert "python.exe(pid 26016)" in verdict.reason
+
+
+_CONTROLS = bytes(range(1, 8)) * 4
+
+
+@pytest.mark.parametrize(
+    ("data", "text"),
+    [
+        (b"one\ntwo\n", True),
+        (b"one\r\ntwo\r\n", True),
+        ("한글\r\n".encode(), True),
+        (b"", True),
+        (b"tab\tesc\x1b\r\nend\x1a", True),
+        # 인쇄 문자가 많아 비율로는 텍스트인 내용이다. NUL 하나로 바이너리가 된다
+        (b"x" * 300 + b"\r\n\0\r\n", False),
+        (b"lone\rcr\r\n", False),
+        (b"few\r\n" + _CONTROLS, False),
+    ],
+    ids=[
+        "LF",
+        "CRLF",
+        "한글_CRLF",
+        "빈_내용",
+        "인쇄로_치는_제어_문자",
+        "NUL",
+        "홀로_쓰인_CR",
+        "비인쇄_비율",
+    ],
+)
+def test_블롭_이름은_git_hash_object_와_같은_판별로_낸다(
+    repo: Path, data: bytes, text: bool
+) -> None:
+    """`.gitattributes` 의 `* text=auto eol=lf` 가 있는 저장소에서 git 이 텍스트로 보는 내용은 CRLF
+    를 LF 로 바꾼 이름을, 바이너리로 보는 내용은 그대로의 이름을 낸다. 도구의 판별이 그와 같다."""
+    (repo / ".gitattributes").write_bytes(b"* text=auto eol=lf\n")
+    (repo / "sample.txt").write_bytes(data)
+    expected = _git("hash-object", "sample.txt", cwd=repo)
+    body = data.replace(b"\r\n", b"\n") if text else data
+    assert expected == hashlib.sha1(b"blob %d\0" % len(body) + body).hexdigest()
+    assert looks_text(data) is text
+    assert expected in blob_ids(data)
+    if not text:
+        assert blob_ids(data) == {expected}
 
 
 # --- 앞지우기 -----------------------------------------------------------------------------------
@@ -507,7 +758,8 @@ def repo(tmp_path: Path) -> Path:
     _git("init", "-b", "main", cwd=root)
     ignore = ".venv/\nnode_modules/\n.env\n/.claude/worktrees/\n.claude/settings.local.json\n"
     (root / ".gitignore").write_text(ignore, encoding="utf-8")
-    (root / "README.md").write_text("repo\n", encoding="utf-8")
+    # 윈도의 write_text 는 줄 끝을 CRLF 로 써서, 커밋된 블롭이 core.autocrlf 에 따라 달라진다
+    (root / "README.md").write_bytes(b"repo\n")
     _git("add", ".", cwd=root)
     _git(*_IDENTITY, "commit", "-m", "init", cwd=root)
     return root
@@ -533,11 +785,22 @@ def _registered(root: Path, path: Path) -> bool:
     return any(os.path.samefile(w.path, path) for w in listing if os.path.exists(w.path))
 
 
+def _모듈_없음() -> list[tuple[int, str, str]]:
+    return []
+
+
+def _안_잔다(_seconds: float) -> None:
+    return None
+
+
 def _ops(merged: dict[str, frozenset[str]]) -> Ops:
+    """모듈 훑기는 한 번에 1초 안팎이라(`.scratch/harness/probes/module_holder.py` 에서 0.90~1.22초)
+    가짜로 준다. 실제 훑기는 따로 잰다."""
+
     def merged_source(_root: Path) -> dict[str, frozenset[str]]:
         return merged
 
-    return Ops(merged=merged_source, pid_alive=_죽었다)
+    return Ops(merged=merged_source, pid_alive=_죽었다, modules=_모듈_없음, sleep=_안_잔다)
 
 
 def test_judge_는_지울_후보와_명령을_찍는다(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -552,6 +815,8 @@ def test_judge_는_지울_후보와_명령을_찍는다(repo: Path, capsys: pyte
     assert f'remove "{path.as_posix()}" chore/done {head}' in done
     opened = next(line for line in lines if "/open" in line)
     assert opened.startswith("남긴다")
+    # 등록된 워크트리는 등록 없는 폴더로 다시 찍지 않는다
+    assert not any("등록 없는 폴더" in line for line in lines), out
 
 
 def test_judge_는_실행_중인_세션의_제목을_받는다(
@@ -600,28 +865,251 @@ def test_judge_는_워크트리가_여럿이어도_프로세스를_한_번만_�
     """훑기 한 번이 약 0.1초다(lock_holder.py --folder). 워크트리마다 훑지 않는다."""
     _, first = _add(repo, "one")
     _, second = _add(repo, "two")
-    scans: list[int] = []
+    (repo / ".claude" / "worktrees" / "stray").mkdir()
+    scans: list[str] = []
 
     def processes() -> list[tuple[int, str, str]]:
-        scans.append(1)
+        scans.append("cwd")
+        return []
+
+    def modules() -> list[tuple[int, str, str]]:
+        scans.append("module")
         return []
 
     merged = {"chore/one": frozenset({first}), "chore/two": frozenset({second})}
-    ops = replace(_ops(merged), processes=processes)
+    ops = replace(_ops(merged), processes=processes, modules=modules)
     assert main(["judge"], cwd=repo, ops=ops) == 0
     out = capsys.readouterr().out
-    assert sum(line.startswith("지운다") for line in out.splitlines()) == 2, out
-    assert len(scans) == 1
+    assert sum(line.startswith("지운다") for line in out.splitlines()) == 3, out
+    assert sorted(scans) == ["cwd", "module"]
 
 
-def test_judge_는_등록_없는_워크트리_폴더를_넘긴다(
+def test_judge_는_모듈을_올린_프로세스가_있으면_남긴다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    stray = repo / ".claude" / "worktrees" / "stray"
-    stray.mkdir(parents=True)
+    """대기열 201. 실제 자식 프로세스가 워크트리의 `.venv` 아래 `.pyd` 를 올린다. 윈도 밖은 모듈을
+    보지 않아 지울 후보로 찍는다."""
+    path, head = _add(repo, "done")
+    module = path / ".venv" / "Lib" / "mod.pyd"
+    merged = {"chore/done": frozenset({head})}
+    ops = replace(_ops(merged), modules=scan_modules)
+    if sys.platform != "win32":
+        assert main(["judge"], cwd=repo, ops=ops) == 0
+        assert "지운다" in capsys.readouterr().out
+        return
+    shutil.copyfile(_적재할_DLL(), module)
+    with _자식이_올린다(module) as pid:
+        assert main(["judge"], cwd=repo, ops=ops) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("남긴다"), done
+    assert f"모듈을 올린 프로세스: python.exe(pid {pid})" in done
+
+
+def _stray(repo: Path, name: str = "stray") -> Path:
+    """루트의 커밋과 같은 내용, 다시 만들 수 있는 폴더, 루트와 같은 설정 파일이 든 등록 없는
+    폴더."""
+    stray = repo / ".claude" / "worktrees" / name
+    (stray / ".venv" / "Lib").mkdir(parents=True)
+    (stray / ".venv" / "Lib" / "mod.py").write_text("커밋에 없다", encoding="utf-8")
+    (stray / "web" / "node_modules").mkdir(parents=True)
+    (stray / "web" / "node_modules" / "x.js").write_text("x", encoding="utf-8")
+    (stray / "README.md").write_bytes((repo / "README.md").read_bytes())
+    (repo / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
+    (stray / ".claude").mkdir()
+    (stray / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
+    return stray
+
+
+def _stray_line(out: str) -> str:
+    return next(line for line in out.splitlines() if "/stray" in line)
+
+
+def test_judge_는_내용이_모두_커밋에_있는_등록_없는_폴더를_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+    (repo / ".claude" / "worktrees" / "empty").mkdir()
     assert main(["judge"], cwd=repo, ops=_ops({})) == 0
-    stray_line = next(line for line in capsys.readouterr().out.splitlines() if "stray" in line)
-    assert stray_line.startswith("넘긴다")
+    out = capsys.readouterr().out
+    line = _stray_line(out)
+    assert line.startswith("지운다"), line
+    assert f'remove-stray "{stray.as_posix()}"' in line
+    empty = next(line for line in out.splitlines() if "/empty" in line)
+    assert empty.startswith("지운다"), empty
+
+
+def test_judge_는_CRLF_로_저장한_커밋된_파일을_커밋에_있는_것으로_본다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+    (stray / "README.md").write_bytes((repo / "README.md").read_bytes().replace(b"\n", b"\r\n"))
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
+
+
+@pytest.mark.parametrize(
+    ("relative", "content"),
+    [
+        ("new.py", "새 파일"),
+        ("README.md", "고친 내용"),
+        (".env", "SECRET=x"),
+        (".claude/settings.local.json", '{"permissions": {}}'),
+    ],
+    ids=["새_파일", "고친_파일", "무시된_env", "루트와_다른_설정"],
+)
+def test_judge_는_커밋에_없는_파일이_든_등록_없는_폴더를_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str], relative: str, content: str
+) -> None:
+    stray = _stray(repo)
+    (stray / relative).write_text(content, encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert relative in line
+
+
+def test_judge_는_다른_브랜치에만_있는_내용도_커밋에_있는_것으로_본다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """참조에서 닿는 커밋이면 된다. 병합 전 브랜치의 내용도 그 브랜치가 남아 있으면 되살릴 수
+    있다."""
+    stray = _stray(repo)
+    _git("switch", "-c", "chore/side", cwd=repo)
+    (repo / "side.py").write_text("옆 브랜치\n", encoding="utf-8")
+    _git("add", "side.py", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "side", cwd=repo)
+    _git("switch", "main", cwd=repo)
+    (stray / "side.py").write_text("옆 브랜치\n", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
+
+
+def test_judge_는_리플로그에만_남은_내용을_커밋에_없는_것으로_보고_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것을 고정한다(안전한 쪽). 브랜치를 지우면 그 커밋은 리플로그에만 남는다."""
+    stray = _stray(repo)
+    _git("switch", "-c", "chore/gone", cwd=repo)
+    content = "지운 브랜치\n".encode()
+    (repo / "gone.py").write_bytes(content)
+    _git("add", "gone.py", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "gone", cwd=repo)
+    _git("switch", "main", cwd=repo)
+    _git("branch", "-D", "chore/gone", cwd=repo)
+    (stray / "gone.py").write_bytes(content)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert "gone.py" in line
+
+
+def test_judge_는_다른_경로의_같은_내용과_빈_파일과_실행_비트를_커밋에_있는_것으로_본다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것을 고정한다(지우는 쪽). 내용만 견주므로 경로, 실행 비트는 보지 않고, 참조에서 닿는
+    커밋에 빈 파일이 있으면 새 빈 파일도 커밋에 있는 것으로 본다. 잃는 내용은 없다."""
+    (repo / "empty.txt").write_bytes(b"")
+    _git("add", "empty.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "empty", cwd=repo)
+    stray = _stray(repo)
+    (stray / "moved").mkdir()
+    (stray / "moved" / "readme-copy.md").write_bytes((repo / "README.md").read_bytes())
+    (stray / "new-empty.txt").write_bytes(b"")
+    (stray / "README.md").chmod(0o755)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
+
+
+def test_judge_는_탐침이_남긴_옆_이름을_되돌리면_등록이_다시_맞는다고_알린다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 202 가 남긴 모양. 안내한 길(이름 되돌리기)을 그대로 밟아 등록이 prunable 이 아니게
+    되는지 본다."""
+    path, _ = _add(repo, "lost")
+    aside = path.with_name("lost.tidy-probe")
+    os.rename(path, aside)
+    # 원래 이름의 등록이 없는 옆 이름은 되돌릴 자리를 알리지 않는다
+    unknown = path.with_name("unknown.tidy-probe")
+    unknown.mkdir()
+    (unknown / ".git").write_text("gitdir: C:/nowhere\n", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out
+    line = next(line for line in out.splitlines() if "lost.tidy-probe" in line)
+    assert line.startswith("넘긴다"), line
+    assert f"{path.as_posix()} 의 등록이 폴더를 잃었다" in line
+    other = next(line for line in out.splitlines() if "unknown.tidy-probe" in line)
+    assert other.startswith("넘긴다"), other
+    # 임시 경로에 시험 이름이 들어가므로 이유 부분만 본다
+    assert "되돌리면" not in other.split(" — ", 1)[1]
+    os.rename(aside, path)
+    listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
+    restored = next(w for w in listing if w.branch == "chore/lost")
+    assert not restored.prunable
+
+
+def test_judge_는_등록_없는_자리가_링크면_안을_읽지_않고_넘긴다(
+    tmp_path: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "new.py").write_text("커밋에 없다", encoding="utf-8")
+    holder = repo / ".claude" / "worktrees"
+    holder.mkdir(parents=True)
+    _link(holder / "stray", outside)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("넘긴다"), line
+    assert "링크" in line
+    # 안이 비어 지울 것으로 보일 자리여도 링크면 remove-stray 가 받지 않는다
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    _link(holder / "linked-empty", empty)
+    for name in ("stray", "linked-empty"):
+        assert main(["remove-stray", (holder / name).as_posix()], cwd=repo, ops=_ops({})) == 1
+        assert os.path.lexists(holder / name)
+    assert (outside / "new.py").exists()
+
+
+def test_judge_는_그_안의_파일만_연_프로세스를_보지_못하고_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것을 고정한다. 작업 디렉터리도 모듈도 아니고 파일을 열기만 한 프로세스는 판정 3을
+    지난다(`lock_holder.py` 의 C). 윈도에서는 `remove` 의 탐침이 막는다."""
+    path, head = _add(repo, "done")
+    opened = path / ".venv" / "Lib" / "mod.py"
+    merged = {"chore/done": frozenset({head})}
+    ops = replace(_ops(merged), modules=scan_modules)
+    with _자식_파이썬(f"handle = open({str(opened)!r}, encoding='utf-8')"):
+        assert main(["judge"], cwd=repo, ops=ops) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("지운다"), done
+
+
+def test_judge_는_git_이_있는_등록_없는_폴더를_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+    (stray / ".git").write_text("gitdir: C:/nowhere\n", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("넘긴다"), line
+    assert "remove-stray" not in line
+
+
+def test_judge_는_등록_없는_폴더의_링크를_따라가지_않고_남긴다(
+    tmp_path: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    _link(stray / "linked", outside)
+    # 다시 만들 수 있는 폴더 이름의 링크는 지울 때 링크 자체만 지워져 따지지 않는다
+    _link(stray / "web" / ".next", outside)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert "linked" in line
+    assert ".next" not in line
 
 
 def test_judge_는_체크아웃되지_않은_병합된_브랜치를_찍는다(
@@ -828,24 +1316,198 @@ def test_remove_는_judge_뒤에_작업_디렉터리_주인이_생기면_앞지�
     assert done.locked == "claude session done (pid 999999)"
 
 
-def test_remove_는_이름을_되돌리지_못하면_3으로_멈춘다(repo: Path) -> None:
+def test_remove_는_이름을_끝내_되돌리지_못하면_다시_시도한_뒤_3으로_멈춘다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     path, head = _add(repo, "done")
     calls: list[str] = []
+    slept: list[float] = []
 
-    def once(src: str, dst: str) -> None:
+    def stuck(src: str, dst: str) -> None:
         calls.append(dst)
-        if len(calls) == 2:
-            raise PermissionError(13, "액세스가 거부되었습니다")
+        if len(calls) >= 2:
+            raise PermissionError(5, "액세스가 거부되었습니다")
         os.rename(src, dst)
 
-    ops = replace(_ops({"chore/done": frozenset({head})}), rename=once)
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=stuck, sleep=slept.append)
     try:
         assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 3
     finally:
         aside = Path(calls[0])
         if aside.exists():
             os.rename(aside, path)
+    out = capsys.readouterr().out
+    assert "멈췄다" in out
+    assert f"{len(calls) - 1}번" in out
+    assert len(calls) - 1 == len(slept) + 1 > 2
     assert _git("branch", "--list", "chore/done", cwd=repo) != ""
+
+
+def test_remove_는_되돌리기가_한_번_막혀도_다시_시도해_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 202. 옮기기가 지난 뒤 되돌리기가 `WinError 5` 로 한 번 막혀 폴더가 옆 이름에
+    남았다."""
+    path, head = _add(repo, "done")
+    calls: list[str] = []
+    slept: list[float] = []
+
+    def once(src: str, dst: str) -> None:
+        calls.append(dst)
+        if len(calls) == 2:
+            raise PermissionError(5, "액세스가 거부되었습니다")
+        os.rename(src, dst)
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=once, sleep=slept.append)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 0
+    assert len(calls) == 3
+    assert len(slept) == 1
+    assert "다시 시도" in capsys.readouterr().out
+    assert not path.exists()
+    assert not Path(calls[0]).exists()
+
+
+def test_remove_는_앞지우기_직전에_모듈을_올린_프로세스가_있으면_멈춘다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 201. 탐침은 지나고(적재한 모듈은 이름 바꾸기를 막지 않는다) 앞지우기가 `.pyd` 에서
+    막히던 자리를, 다시 거르기가 이름과 pid 를 들어 멈춘다."""
+    path, head = _add(repo, "done")
+    module = str(path / ".venv" / "Lib" / "mod.pyd")
+
+    def modules() -> list[tuple[int, str, str]]:
+        return [(26016, "python.exe", module)]
+
+    def refuse(_target: Path) -> None:
+        raise AssertionError("앞지우기에 닿았다")
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), modules=modules, delete=refuse)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    out = capsys.readouterr().out
+    assert "앞지우기 직전에 다시 판정했다" in out
+    assert "모듈을 올린 프로세스: python.exe(pid 26016)" in out
+    assert (path / ".venv" / "Lib" / "mod.py").exists()
+    assert _registered(repo, path)
+
+
+# --- remove-stray(대기열 148) ---------------------------------------------------------------------
+
+
+def test_remove_stray_는_내용이_모두_커밋에_있는_등록_없는_폴더를_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=_ops({})) == 0
+    assert "지웠다" in capsys.readouterr().out
+    assert not stray.exists()
+    assert (repo / "README.md").exists()
+
+
+def test_remove_stray_는_등록된_워크트리를_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`.git` 재판정도 1을 내므로 이유 문구로 자리 가드가 막았는지 본다."""
+    path, _ = _add(repo, "done")
+    assert main(["remove-stray", path.as_posix()], cwd=repo, ops=_ops({})) == 1
+    assert "등록 없는 폴더가 아니다" in capsys.readouterr().out
+    assert (path / ".git").exists()
+    assert _registered(repo, path)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    ["src", ".claude/worktrees/stray/deep", "../outside"],
+    ids=["루트_안", "더_깊이", "루트_밖"],
+)
+def test_remove_stray_는_워크트리_자리_바로_아래가_아니면_지우지_않는다(
+    repo: Path, relative: str
+) -> None:
+    target = (repo / relative).resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    assert main(["remove-stray", target.as_posix()], cwd=repo, ops=_ops({})) == 1
+    assert target.exists()
+
+
+def test_remove_stray_는_git_이_있거나_커밋에_없는_파일이_있으면_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """후보가 아니면 탐침(폴더 이름 바꾸기)도 하지 않는다. 지우기 직전의 재판정과 따로 잰다."""
+    stray = _stray(repo)
+    (stray / "new.py").write_text("x", encoding="utf-8")
+    renamed: list[str] = []
+
+    def spy(src: str, dst: str) -> None:
+        renamed.append(dst)
+        os.rename(src, dst)
+
+    ops = replace(_ops({}), rename=spy)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
+    assert "지우기 전에 다시 판정했다: 등록 없는 폴더에 커밋에 없는 파일" in capsys.readouterr().out
+    other = _stray(repo, "other")
+    (other / ".git").write_text("gitdir: C:/nowhere\n", encoding="utf-8")
+    assert main(["remove-stray", other.as_posix()], cwd=repo, ops=ops) == 1
+    assert "지우기 전에 다시 판정했다: 등록 없는 폴더인데 .git 이 있다" in capsys.readouterr().out
+    assert renamed == []
+    assert (stray / "README.md").exists()
+    assert (other / "README.md").exists()
+
+
+def test_remove_stray_는_탐침_뒤에_생긴_파일이_있으면_멈춘다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+
+    def rename_then_write(src: str, dst: str) -> None:
+        os.rename(src, dst)
+        if Path(dst).name == "stray":
+            (stray / "late.py").write_text("늦게 생겼다", encoding="utf-8")
+
+    ops = replace(_ops({}), rename=rename_then_write)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
+    assert "late.py" in capsys.readouterr().out
+    assert (stray / "late.py").exists()
+    assert (stray / ".venv" / "Lib" / "mod.py").exists()
+
+
+def test_remove_stray_는_쥔_프로세스가_있으면_멈춘다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+
+    def modules() -> list[tuple[int, str, str]]:
+        return [(26016, "python.exe", str(stray / ".venv" / "Lib" / "mod.pyd"))]
+
+    ops = replace(_ops({}), modules=modules)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
+    assert "python.exe(pid 26016)" in capsys.readouterr().out
+    assert (stray / "README.md").exists()
+
+
+def test_remove_stray_는_탐침이_막히면_손대지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+
+    def held(_src: str, _dst: str) -> None:
+        raise PermissionError(32, "다른 프로세스가 파일을 사용 중이기 때문에")
+
+    ops = replace(_ops({}), rename=held)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
+    assert "다른 프로세스가 쥐고 있다" in capsys.readouterr().out
+    assert (stray / "README.md").exists()
+
+
+def test_remove_stray_는_지우다_막히면_1로_끝난다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stray = _stray(repo)
+
+    def blocked(_target: Path) -> None:
+        raise PermissionError(5, "액세스가 거부되었습니다")
+
+    ops = replace(_ops({}), delete=blocked)
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
+    assert "지우다 막혔다" in capsys.readouterr().out
 
 
 def test_remove_는_앞지우기가_막히면_등록과_git_을_남기고_1로_끝난다(repo: Path) -> None:

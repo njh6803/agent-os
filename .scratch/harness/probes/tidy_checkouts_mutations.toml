@@ -242,14 +242,14 @@ old = '''    if tip not in heads:'''
 new = '''    if False:'''
 
 [[mutation]]
-name = "등록 없는 폴더를 넘기지 않는다"
-tests = ["tests/tools/test_tidy_checkouts.py", "-k", "등록_없는"]
+name = "등록 없는 폴더: 등록된 워크트리도 등록 없는 폴더로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "지울_후보와_명령을 or remove_stray_는_등록된"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        if not any(same_path(str(stray), path) for path in registered):'''
-new = '''        if False:'''
+old = '''        if path.is_dir() and not any(same_path(str(path), wt.path) for wt in listing)'''
+new = '''        if path.is_dir()'''
 
 [[mutation]]
 name = "gh 출력: 배열인지 보지 않는다"
@@ -443,7 +443,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''    try:
-        rename(_long(path), _long(aside))
+        ops.rename(_long(path), _long(aside))
     except OSError as error:'''
 new = '''    try:
         pass
@@ -456,12 +456,12 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            f"되돌리지 못했다: {error}"
-        )
-        return 3'''
-new = '''            f"되돌리지 못했다: {error}"
-        )
-        return 1'''
+old = '''        f"{len(failures)}번 시도했다: {failures[-1]}"
+    )
+    return 3'''
+new = '''        f"{len(failures)}번 시도했다: {failures[-1]}"
+    )
+    return 1'''
 
 [[mutation]]
 name = "remove: 앞지우기를 하지 않는다"
@@ -470,8 +470,12 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    for entry in entries:'''
-new = '''    for entry in ():'''
+old = '''    for entry in entries:
+        try:
+            delete(path / entry)'''
+new = '''    for entry in ():
+        try:
+            delete(path / entry)'''
 
 [[mutation]]
 name = "remove: 앞지우기가 막혀도 git 으로 간다"
@@ -546,11 +550,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    stop = _probe(Path(wt.path), ops.rename, ops.processes)
+old = '''    stop = _probe(Path(wt.path), ops)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    stop = _probe(Path(wt.path), ops.rename, ops.processes)
+    stop = _probe(Path(wt.path), ops)
 '''
 
 [[mutation]]
@@ -567,11 +571,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    holders = holders_in(ops.processes(), wt.path)
+old = '''    holders = holders_now(ops, wt.path)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    holders = holders_in(ops.processes(), wt.path)
+    holders = holders_now(ops, wt.path)
 '''
 
 [[mutation]]
@@ -615,7 +619,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            f"{describe_holders(holders_in(processes(), str(path)))}"'''
+old = '''            f"{describe_holders(holders_now(ops, str(path)))}"'''
 new = '''            ""'''
 
 [[mutation]]
@@ -626,7 +630,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''    aside = path.with_name(path.name + PROBE_SUFFIX)'''
-new = '''    processes()
+new = '''    ops.processes()
     aside = path.with_name(path.name + PROBE_SUFFIX)'''
 
 [[mutation]]
@@ -696,18 +700,20 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"'''
-new = '''            "작업 디렉터리로 쥔 프로세스는 없다. 읽지 못한 프로세스"'''
+old = '''            "읽을 수 있는 프로세스에서 쥔 것을 찾지 못했다. 이 도구는 작업 디렉터리와 (윈도에서) "'''
+new = '''            "쥔 프로세스는 없다. 이 도구는 작업 디렉터리와 (윈도에서) "'''
 
 [[mutation]]
 name = "쥔 프로세스: ctypes 쪽 예외를 볼 수 없는 것으로 돌리지 않는다(PR #182 claude-review)"
-tests = ["tests/tools/test_tidy_checkouts.py", "-k", "읽다_실패하면"]
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "프로세스를_읽다_실패하면"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):'''
-new = '''    except OSError:'''
+old = '''        return _process_cwds()
+    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):'''
+new = '''        return _process_cwds()
+    except OSError:'''
 
 # 대기열 186(chore/cwd-owner-and-review-turns): 판정 3이 작업 디렉터리로 쥔 프로세스를 주인으로 본다
 
@@ -718,8 +724,12 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if holders:'''
-new = '''    if False:'''
+old = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
+new = '''    if False:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
 
 [[mutation]]
 name = "판정 3: 잠금이 없을 때만 쥔 프로세스를 본다(죽은 잠금은 풀고 지운다)"
@@ -728,8 +738,12 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if holders:'''
-new = '''    if holders and pid is None:'''
+old = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
+new = '''    if holders and pid is None:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
 
 [[mutation]]
 name = "판정 3: 살아 있는 잠금보다 쥔 프로세스를 먼저 본다"
@@ -757,8 +771,12 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if holders:'''
-new = '''    if holders or holders is None:'''
+old = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
+new = '''    if holders or holders is None:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
 
 [[mutation]]
 name = "judge: 프로세스를 워크트리마다 훑는다"
@@ -767,17 +785,17 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            holders_in(processes, wt.path),'''
-new = '''            holders_in(ops.processes(), wt.path),'''
+old = '''            holders_from(processes, modules, wt.path),'''
+new = '''            holders_from(ops.processes(), modules, wt.path),'''
 
 [[mutation]]
 name = "judge: 훑은 프로세스를 판정에 넘기지 않는다"
-tests = ["tests/tools/test_tidy_checkouts.py", "-k", "제목_모를_세션이_돌아도_남긴다"]
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "제목_모를_세션이_돌아도_남긴다 or judge_는_모듈을_올린"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            holders_in(processes, wt.path),'''
+old = '''            holders_from(processes, modules, wt.path),'''
 new = '''            (),'''
 
 [[mutation]]
@@ -802,13 +820,13 @@ new = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직�
 
 [[mutation]]
 name = "holders_in: 폴더 밖을 작업 디렉터리로 쥔 프로세스도 고른다"
-tests = ["tests/tools/test_tidy_checkouts.py", "-k", "폴더_안을_작업_디렉터리로"]
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "폴더_안을_작업_디렉터리로 or 프로세스마다_하나로"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    return [Holder(pid, image) for pid, image, cwd in processes if is_within(cwd, folder)]'''
-new = '''    return [Holder(pid, image) for pid, image, cwd in processes]'''
+old = '''        if pid not in found and is_within(path, folder):'''
+new = '''        if pid not in found:'''
 
 [[mutation]]
 name = "holders_in: 볼 수 없었던 것을 빈 목록으로 돌린다"
@@ -819,10 +837,10 @@ expect = "red"
 file = "tools/tidy_checkouts.py"
 old = '''    if processes is None:
         return None
-    return [Holder'''
+    found: dict[int, Holder] = {}'''
 new = '''    if processes is None:
         return []
-    return [Holder'''
+    found: dict[int, Holder] = {}'''
 
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.
@@ -835,3 +853,436 @@ expect = "green"
 file = "tools/tidy_checkouts.py"
 old = '''    if any(wt.branch == branch for wt in listing):'''
 new = '''    if False:'''
+
+# 대기열 201(chore/tidy-checkouts-locks-and-leftovers): 판정 3과 다시 거르기가 그 폴더 아래 모듈을 올린 프로세스를 본다.
+# 실제 훑기를 보는 테스트는 윈도에서만 빨갛다.
+
+[[mutation]]
+name = "모듈: 매핑 이름을 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "모듈을_올린_자식_프로세스를 or judge_는_모듈을_올린"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            path = dos_path(buffer.value, drives)'''
+new = '''            path = None'''
+
+[[mutation]]
+name = "모듈: 장치 경로를 드라이브 경로로 바꾸지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "모듈을_올린_자식_프로세스를 or 드라이브_문자가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            return drive + device_path[len(device) :]'''
+new = '''            return device_path'''
+
+[[mutation]]
+name = "모듈: 다른 하드링크 이름을 펼치지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "폴더_밖_하드링크"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''                names[path] = [] if is_within(path, system) else _link_names(kernel, path)'''
+new = '''                names[path] = []'''
+
+[[mutation]]
+name = "모듈: ctypes 쪽 예외를 볼 수 없는 것으로 돌리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "모듈을_읽다_실패하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return _windows_modules()
+    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):'''
+new = '''        return _windows_modules()
+    except OSError:'''
+
+[[mutation]]
+name = "모듈: 모듈을 올린 것을 작업 디렉터리로 쥔 것과 갈라 적지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "갈라_적는다 or 모듈을_올린_프로세스가_있으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    "module": "모듈을 올린 프로세스",'''
+new = '''    "module": "작업 디렉터리로 쥔 프로세스",'''
+
+[[mutation]]
+name = "모듈: 둘 중 하나만 볼 수 없어도 볼 수 없다고 한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "하나라도_볼_수_있으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if cwd is None and module is None:'''
+new = '''    if cwd is None or module is None:'''
+
+[[mutation]]
+name = "judge: 모듈을 훑지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "judge_는_모듈을_올린 or 한_번만_훑는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    modules = ops.modules()'''
+new = '''    modules = None'''
+
+[[mutation]]
+name = "judge: 모듈을 워크트리마다 훑는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "한_번만_훑는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            holders_from(processes, modules, wt.path),'''
+new = '''            holders_from(processes, ops.modules(), wt.path),'''
+
+[[mutation]]
+name = "remove: 다시 거르기와 탐침의 이유가 모듈을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞지우기_직전에_모듈을_올린 or remove_stray_는_쥔_프로세스가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return holders_from(ops.processes(), ops.modules(), folder)'''
+new = '''    return holders_from(ops.processes(), None, folder)'''
+
+# 대기열 202: 점유 탐침이 되돌리기를 다시 시도한다
+
+[[mutation]]
+name = "탐침: 되돌리기를 다시 시도하지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "한_번_막혀도_다시_시도해"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    for wait in (0.0, *RESTORE_WAITS):'''
+new = '''    for wait in (0.0,):'''
+
+[[mutation]]
+name = "탐침: 다시 시도하기 전에 기다리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "한_번_막혀도_다시_시도해 or 끝내_되돌리지_못하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            ops.sleep(wait)'''
+new = '''            pass'''
+
+[[mutation]]
+name = "탐침: 다시 시도해 되돌린 것을 알리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "한_번_막혀도_다시_시도해"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if failures:'''
+new = '''        if False:'''
+
+# 대기열 148: 등록 없는 폴더를 내용으로 가르고 remove-stray 로 지운다
+
+[[mutation]]
+name = "등록 없는 폴더: .git 을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "git_이_있는_등록_없는 or git_이_있거나_커밋에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if os.path.lexists(_long(folder / ".git")):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "등록 없는 폴더: 커밋에 없는 파일을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "커밋에_없는_파일이_든"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    uncommitted = tuple(relative for relative, ids in named if ids.isdisjoint(known))'''
+new = '''    uncommitted = tuple(relative for relative, ids in named if False)'''
+
+[[mutation]]
+name = "등록 없는 폴더: CRLF 로 저장한 텍스트를 LF 로 바꿔 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "CRLF"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if b"\r\n" in data and looks_text(data):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "등록 없는 폴더: 바이너리도 줄 끝을 바꿔 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if b"\r\n" in data and looks_text(data):'''
+new = '''    if b"\r\n" in data:'''
+
+[[mutation]]
+name = "등록 없는 폴더: 링크를 링크로 보지 않고 따라 들어간다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크를_따라가지_않고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''                if linked:
+                    links.append(child)'''
+new = '''                if False:
+                    links.append(child)'''
+
+[[mutation]]
+name = "등록 없는 폴더: 다시 만들 수 있는 폴더에도 들어간다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "내용이_모두_커밋에_있는_등록_없는 or 링크를_따라가지_않고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''                if directory and _recreatable_dir(entry.name, child):'''
+new = '''                if False:'''
+
+[[mutation]]
+name = "등록 없는 폴더: 루트와 같은 설정 파일도 커밋에 없는 것으로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "내용이_모두_커밋에_있는_등록_없는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)'''
+new = '''    return False'''
+
+[[mutation]]
+name = "등록 없는 폴더: 루트와 다른 설정 파일도 지운다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "루트와_다른_설정"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)'''
+new = '''    return relative == SETTINGS'''
+
+[[mutation]]
+name = "등록 없는 폴더: 참조 전부가 아니라 HEAD 에서 닿는 것만 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다른_브랜치에만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    listed = _checked(git, ["rev-list", "--all", "--objects"], root)'''
+new = '''    listed = _checked(git, ["rev-list", "HEAD", "--objects"], root)'''
+
+[[mutation]]
+name = "judge_stray: .git 이 있어도 넘기지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "등록_없는_폴더에_git_이 or 탐침이_옆_이름에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.has_git:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "judge_stray: 탐침이 남긴 옆 이름에 되돌릴 자리를 알리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "탐침이_옆_이름에 or 옆_이름을_되돌리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if orphan_home is not None:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "judge_stray: 읽다 막혀도 지운다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "읽다_막히면_남긴다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.error:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "judge_stray: 링크가 있어도 지운다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크가_있으면_남긴다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.links:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "judge_stray: 커밋에 없는 파일이 있어도 지운다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "몇_개를_든다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.uncommitted:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "judge_stray: 쥔 프로세스가 있어도 지운다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "등록_없는_폴더를_쥔_프로세스가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    return verdict("delete", "등록 없는 폴더")'''
+new = '''    if False:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    return verdict("delete", "등록 없는 폴더")'''
+
+[[mutation]]
+name = "remove-stray: 그 자리가 등록 없는 폴더인지 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "바로_아래가_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if not any(same_path(str(path), str(stray)) for stray in _strays(root, listing)):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "remove-stray: 지우기 전에 다시 판정하지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "git_이_있거나_커밋에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if _still_stray(root, path, reachable, "지우기 전에", ()) is None:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "remove-stray: 점유 탐침을 거치지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "remove_stray_는_탐침이_막히면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    stop = _probe(path, ops)
+    if stop is not None:
+        return stop'''
+new = ''''''
+
+[[mutation]]
+name = "remove-stray: 지우기 직전에 다시 판정하지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "탐침_뒤에_생긴 or remove_stray_는_쥔_프로세스가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, target)) is None:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "remove-stray: 지우다 막혀도 0으로 끝낸다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "지우다_막히면_1로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            "커밋에 있는 것이다"
+        )
+        return 1'''
+new = '''            "커밋에 있는 것이다"
+        )
+        return 0'''
+
+# 셀프 리뷰 반영(일지 2026-10-12-38): git 의 텍스트 판별, 옆 이름의 등록 확인, 링크인 자리, 장치 이름의 경계
+
+[[mutation]]
+name = "판별: 홀로 쓰인 CR 을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if b"\0" in data or data.count(b"\r") != data.count(b"\r\n"):'''
+new = '''    if b"\0" in data:'''
+
+[[mutation]]
+name = "판별: NUL 을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if b"\0" in data or data.count(b"\r") != data.count(b"\r\n"):'''
+new = '''    if data.count(b"\r") != data.count(b"\r\n"):'''
+
+[[mutation]]
+name = "판별: 비인쇄 문자의 비율을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return (printable >> 7) >= nonprintable'''
+new = '''    return True'''
+
+[[mutation]]
+name = "판별: 끝의 \\x1a 도 비인쇄로 센다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        nonprintable -= 1'''
+new = '''        pass'''
+
+[[mutation]]
+name = "판별: 탭·ESC 를 비인쇄로 센다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "블롭_이름은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''_NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (8, 9, 10, 12, 13, 27))'''
+new = '''_NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (10, 13))'''
+
+[[mutation]]
+name = "옆 이름: 원래 이름의 등록을 보지 않고 되돌릴 자리를 알린다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "옆_이름을_되돌리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return home.as_posix() if registered and not os.path.lexists(home) else None'''
+new = '''    return home.as_posix()'''
+
+[[mutation]]
+name = "judge: 등록 없는 자리가 링크여도 안을 읽는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "자리가_링크면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if _is_link(place):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "remove-stray: 링크인 자리도 받는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "자리가_링크면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return [path for path in _unregistered(root, listing) if not _is_link(path)]'''
+new = '''    return list(_unregistered(root, listing))'''
+
+[[mutation]]
+name = "모듈: 장치 이름의 앞부분만 같은 다른 장치도 그 드라이브로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "드라이브_문자가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if device_path.startswith(device + "\\"):'''
+new = '''        if device_path.startswith(device):'''
