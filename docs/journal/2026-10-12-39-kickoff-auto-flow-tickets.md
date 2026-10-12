@@ -154,6 +154,19 @@ should-fix와 nit은 이 세션이 판단해 명세에 반영했다. 고친 자�
   - 02의 "인용 대조가 초록"은 그 도구가 늘 0으로 끝나 잴 수 없다. 경고 0건으로 고쳤다.
   - Nit: 01의 훅이 커밋 유무를 브랜치가 보호 브랜치일 때만 읽게 했다.
 
+## PR 리뷰
+
+PR #203을 열고(`51c8d80`, main을 합친 커밋) 체크 일곱(CI 잡 다섯과 claude-review, CodeRabbit)이 모두 `pass`가 된 뒤 두
+봇을 읽었다.
+
+- claude-review: 지적 없음. 바뀐 파일이 모두 문서라 경계 축은 해당 없음이고, ADR 0028의 포인터와 티켓의 막음이 일관된다고
+  적었다.
+- CodeRabbit: 시간당 한도로 돌지 않았다("Review rate limited", `@coderabbitai review`도 같은 답). 이 PR의 보안·버그 축은 PR
+  본문 체크리스트에 적은 PR 직전 리뷰(`/security-review`, `bug-perf-review`)가 대신한다(`docs/constitution/operations.md`
+  리뷰 파이프라인). 반영할 지적이 없어 수정 커밋도 없다.
+
+병합은 워크트리의 길로 한다(`next-session` "워크트리에서 병합할 때"). 주 체크아웃 미갱신: 루트는 main.
+
 ## 쓴 것
 
 - **명세** `.scratch/kickoff-auto-flow/spec.md`에 검토와 셀프 리뷰를 반영했다.
