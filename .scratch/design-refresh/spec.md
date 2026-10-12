@@ -167,7 +167,7 @@ Status: ready-for-agent
 
 - **고르는 법.** `data-density`의 값은 `compact`(촘촘)와 `regular`(보통)이고, 테마·모드와 같은 요소에 단다. 속성이 없으면 화면 폭 768px 이상에서 촘촘, 미만에서 보통이다. 모드가 속성이 없으면 시스템 설정을 따르는 것과 같은 모양이다. 관리 화면은 아무것도 달지 않고(ADR 0026 이력의 "관리 화면은 폭 768px 이상에서 촘촘, 미만에서 보통"), 위젯은 호스트(페이지 안)와 iframe 문서의 `html`에 `regular`를 단다(같은 이력의 "위젯은 보통"). 위젯이 빠뜨리면 페이지 안 위젯이 사이트의 넓은 창에서 촘촘해진다. 그것을 막는 일은 web-widget이다.
 - **값.** 촘촘은 `--body-size` 14px, `--body-lh` 20px, `--table-size` 13px, `--table-lh` 18px, `--mono-size` 13px, `--row-h` 36px, `--control-h` 32px이다. 보통은 15px, 22px, 14px, 20px, 14px, 44px, 40px이다. 변수 이름은 디자인 파일이 쓴 CSS 변수 그대로다.
-- **선택자.** 보통의 값은 `:root, :host`와 `[data-density="regular"]`·`:host([data-density="regular"])`에, 촘촘의 값은 `[data-density="compact"]`·`:host([data-density="compact"])`와 `@media (width >= 768px)` 아래의 `:root:not([data-density])`·`:host(:not([data-density]))`에 둔다. 값이 `var()`가 아닌 글자 그대로라 쓰임새 토큰처럼 요소마다 다시 선언할 일이 없고 물려받는다. 속성이 없는 안쪽 요소는 바깥 요소의 밀도를 따른다.
+- **선택자.** 보통의 값은 `:root, :host`와 `[data-density="regular"]`·`:host([data-density="regular"])`에, 촘촘의 값은 `[data-density="compact"]`·`:host([data-density="compact"])`와 `@media (width >= 768px)` 아래의 `:root:not([data-density])`·`:host(:not([data-density]))`에 둔다. 값이 `var()`가 아닌 글자 그대로라 쓰임새 토큰처럼 요소마다 다시 선언할 일이 없고 물려받는다. 그래서 light DOM에서 속성이 없는 안쪽 요소는 바깥 요소의 밀도를 따른다. shadow 호스트는 다르다. 디자인 토큰 CSS가 `:host`와 `:host(:not([data-density]))`에 값을 다시 선언하므로, 자기 속성이 없는 호스트는 바깥의 밀도를 물려받지 않고 화면 폭을 따른다(선택자를 읽은 어림이고 재지 않았다). 위젯이 호스트마다 `regular`를 다는 까닭이다.
 - **유틸리티.** `@theme inline`이 `--text-body: var(--body-size)`와 그 `--line-height`, `--text-table`, `--text-mono`(줄 높이는 `--table-lh`. 디자인 파일의 코드 칸이 "mono / table-lh"다), `--spacing-control: var(--control-h)`, `--spacing-row: var(--row-h)`를 둔다. 그래서 `text-body`, `text-table`, `text-mono`, `h-control`, `size-control`, `h-row`가 밀도를 따른다. 이 별칭은 inline이라 CSS 변수로 나오지 않는다(둘째 2026-10-12 이력). Claude Design의 디자인 에이전트가 인라인 `style`에 쓸 것은 원천인 밀도 변수(`--body-size` 등)이고, 밀도 선택자에서 늘 나온다.
 - **화면 중단점은 하나다.** 밀도의 미디어 조건은 `wide:`와 같은 768px이고 새 중단점을 두지 않는다. 판정 스토리 Responsive가 보는 시트의 px 조건은 지금처럼 `(width >= 360px)`과 `(width >= 768px)` 둘이다.
 - **Storybook.** globals에 `density`(`auto` 기본 | `compact` | `regular`)를 더한다. `auto`이면 속성을 두지 않는다. 데코레이터와 shadow 틀이 테마·모드처럼 문서 뿌리나 호스트에 단다 (명세가 정했다. 지금 `mode`의 `system`과 같은 모양이다).
@@ -203,7 +203,7 @@ Status: ready-for-agent
 
 - **글꼴과 굵기.** 한글은 Noto Sans KR 400·500·600, 고정폭은 Noto Sans Mono 400·500이다. 고정폭 500은 승인 묻기의 도구 이름(`font-medium`)이다.
 - **패키지.** `@fontsource/noto-sans-mono` 5.3.0을 `packages/ui`의 `dependencies`에 더하고 `@fontsource/jetbrains-mono`와 `@ibm/plex-mono`를 뺀다. 글꼴 CSS는 Noto Sans KR처럼 굵기 CSS 둘(`400.css`, `500.css`)을 `@import`하고, IBM split 파일의 `@font-face` 열 개를 지운다. `web/pnpm-workspace.yaml`의 `allowBuilds`에서 `@ibm/plex-mono` 줄을 빼고 머리 주석을 고친다.
-- **잰 것.** `@fontsource/noto-sans-mono` 5.3.0은 OFL-1.1이고 저작권 줄에 예약 글꼴 이름이 없으며, 설치 때 도는 스크립트가 없어 `allowBuilds`에 더할 것이 없다. 굵기 CSS는 `@font-face` 7개(라틴, 키릴, 그리스, 베트남어 서브셋)이고 `local()`이 없으며 `url()`이 모두 `./files/`의 있는 파일을 가리킨다. Noto Sans KR과 같은 모양이다(`font.mjs`). google/fonts 사본(`ofl/notosansmono/OFL.txt`)의 머리에도 예약 글꼴 이름이 없다(WebFetch로 손으로 봤다). ADR 0026 이력이 "들이는 기능이 확인한다"로 넘긴 예약 글꼴 이름과 서브셋은 이것으로 닫혔다.
+- **잰 것.** `@fontsource/noto-sans-mono` 5.3.0은 OFL-1.1이고 저작권 줄에 예약 글꼴 이름이 없으며, 설치 때 도는 스크립트가 없어 `allowBuilds`에 더할 것이 없다. 굵기 CSS는 `@font-face` 7개(라틴, 키릴, 그리스, 베트남어 서브셋)이고 `local()`이 없으며 `url()`이 모두 `./files/`의 있는 파일을 가리킨다. Noto Sans KR과 같은 모양이다(`font.mjs`). google/fonts 사본(`ofl/notosansmono/OFL.txt`)의 머리에도 예약 글꼴 이름이 없다(원문을 `curl`로 받아 머리 줄을 손으로 봤다). ADR 0026 이력이 "들이는 기능이 확인한다"로 넘긴 예약 글꼴 이름과 서브셋은 이것으로 닫혔다.
 - **한글은 덮지 않는다.** 고정폭 글꼴 스택은 `"Noto Sans Mono", ui-monospace, monospace`이고, 고정폭 칸의 한글은 지금 JetBrains Mono·IBM Plex Mono 때처럼 대체 글꼴로 그린다 (명세가 정했다. 스택에 Noto Sans KR을 넣으면 한글은 고르지만 고정폭이 아니다. 디자인 파일 스크립트의 `MONO`도 같은 스택이다. 그 파일의 디자인 토큰 JSON의 `font.mono`에는 `ui-monospace`가 없다).
 - **양.** 테마 하나의 글꼴로 위젯의 대화 문장을 그릴 때 받는 양(옛 측정은 14파일, 약 150KB)은 고정폭이 바뀌어 달라진다. web-widget이 예산을 볼 때 다시 잰다. 그 행에 적었다.
 - **재지 않은 것.** Noto Sans Mono의 CSS를 Vite(Storybook)와 Next가 실제 파일로 내는지는 재지 않았다(어림: 낸다). 같은 Fontsource 모양(`./files/` 상대 경로, `local()` 없음)의 Noto Sans KR은 둘 다 냈다(design-system 프로브 `tokens/measure.mjs`). 그래서 새 결정을 낳지 않는다고 보고 넘긴다. 판정 스토리 Fonts가 다섯 벌(Noto Sans KR 셋, Noto Sans Mono 둘)의 적재와 굵기를 본다.
@@ -233,7 +233,7 @@ Status: ready-for-agent
 8. **스위치(`Switch`).** 트랙 40×24px(`switch-w`·`switch-h`), 손잡이 20px(`switch-knob`)과 안쪽 띄움 2px(`switch-inset`), 모서리 `full`, 글자와 사이 8px. 꺼짐은 트랙 `border-control`에 손잡이 `bg-raised`, 켜짐은 트랙 `accent`에 손잡이 `on-accent`이고, 상태 글(켜짐·꺼짐)은 `text-muted`다. 올림은 트랙 위에 `bg-active`를 겹친다. 쓸 수 없음은 트랙 `bg-disabled`, 손잡이 `text-disabled`다. 줄의 최소 높이(`row-touch`)는 뺀다. 누르는 곳은 여전히 라벨 전체다. props는 그대로다.
 9. **알림(`Alert`).** **바탕을 칠하지 않는다.** `bg-raised` 바탕에 `border` 테두리, 모서리 `l`, 안쪽 위아래 12px·좌우 16px, 아이콘 20px(`danger`·`warning`·`info`), 아이콘과 글 사이 12px, 제목 `text`, 본문 `text-muted`, 제목과 본문 사이 4px. 역할(실패만 `role="alert"`)과 `actions`·`onClose`는 그대로다. 닫기는 작은 아이콘 버튼(28px)이다. 디자인 파일의 알림에는 닫기가 없지만 지금 계약이라 남긴다.
 
-**위험 버튼의 누름 (사용자가 골랐다).** 디자인 파일의 상태 표는 보조·위험 버튼의 누름을 `bg-active`로 적었다. 그 위의 `danger` 글자는 다크에서 테마 넷 모두 4.5:1에 못 미쳤다(`bg` 위 4.05~4.09, `bg-raised` 위 3.67~3.69, `contrast.mjs`의 "바꾸기 전" 묶음). 위험 버튼의 누름만 `bg-selected`로 두면 여덟 벌 모두 넘고(가장 낮은 값은 녹청 다크의 카드 안 4.51), 올림(`bg-hover`)과 여전히 다르다. 보조 버튼의 누름은 `bg-active` 그대로다(가장 낮은 값 9.33).
+**위험 버튼의 누름 (사용자가 골랐다).** 디자인 파일의 상태 표는 보조·위험 버튼의 누름을 `bg-active`로 적었다. 그 위의 `danger` 글자는 다크에서 테마 넷 모두 4.5:1에 못 미쳤다(`bg` 위 4.05~4.09, `bg-raised` 위 3.67~3.69, `contrast.mjs`의 "바꾸기 전" 묶음). 위험 버튼의 누름만 `bg-selected`로 두면 여덟 벌 모두 넘고(가장 낮은 값은 녹청 다크의 카드 안 4.507), 올림(`bg-hover`)과 여전히 다르다. 보조 버튼의 누름은 `bg-active` 그대로다(가장 낮은 값 9.33). **남긴 위험**: 4.507은 기준과 0.01도 떨어지지 않았고, 반올림해 겹친 값이다(아래 "반투명 바탕의 명암비"). 판정은 디자인 파일과 같은 셈이라 정해진 값으로 지나지만, 브라우저가 실제로 겹친 픽셀이 한 단위만 달라도 그 자리는 기준 아래일 수 있다(어림). 누름은 잠깐이고 다크·카드 안·녹청이 겹친 한 자리다. 다시 고르면 사용자의 결정이다.
 
 ### 판정 스토리와 판정 함수 (명세가 정했다)
 
@@ -242,15 +242,20 @@ Status: ready-for-agent
   - 디자인 파일의 35개: `text`와 `text-muted`, 그리고 상태 넷(`danger`, `warning`, `success`, `info`)을 바탕 넷(`bg`, `bg-raised`, `bg`에 겹친 `bg-selected`, `bg-raised`에 겹친 `bg-hover`)과 맞댄 24개(4.5). `accent`를 `bg`, `bg-raised`, `bg-raised`에 겹친 `bg-hover`와 맞댄 3개(4.5). `on-accent`/`accent` 1개(4.5). `focus-ring`과 `border-control`을 `bg`·`bg-raised`와 맞댄 4개(3). `on-primary`를 `primary`·`primary-hover`·`primary-active`와 맞댄 3개(4.5).
   - 컴포넌트의 8개: `text`를 `bg`에 겹친 `bg-hover`·`bg-active`, `bg-raised`에 겹친 `bg-active`와 맞댄 3개(4.5. 보조 버튼과 투명 아이콘 버튼의 올림·누름). `danger`를 `bg`에 겹친 `bg-hover`, `bg-raised`에 겹친 `bg-selected`와 맞댄 2개(4.5. 위험 버튼의 올림과 카드 안의 누름. `bg` 위의 누름은 디자인 파일의 짝에 있다). `text-muted`를 `bg`·`bg-raised`에 겹친 `bg-active`와 맞댄 2개(3. 진행 막대의 채움과 트랙). `bg-raised`/`border-control` 1개(3. 꺼진 스위치의 손잡이와 트랙).
   - 기준이 없는 것: `border`(장식), `text-disabled`·`bg-disabled`(쓸 수 없음). 디자인 파일도 뺐다.
-  - 여덟 벌 모두 넘었다(`contrast.mjs`의 "디자인 파일"과 "컴포넌트" 묶음). 가장 낮은 값은 디자인 파일의 짝에서 녹청 라이트의 `border-control`/`bg` 3.14, 컴포넌트의 짝에서 녹청 라이트의 꺼진 스위치 3.35와 녹청 다크의 카드 안 위험 버튼 누름 4.51이다. 브라우저의 계산값으로 다시 재는 것이 Matrix다.
-- **반투명 바탕의 명암비.** 짝의 바탕 쪽은 쓰임새 토큰 하나이거나 [반투명 토큰, 그 아래 바탕]이다. 판정 함수가 반투명 색을 그 아래 바탕에 알파로 겹친 색으로 명암비를 잰다. 디자인 파일 스크립트의 `over`와 같은 셈이고 `contrast.mjs`가 그것으로 디자인 파일의 표와 소수 둘째 자리까지 맞았다. 기준 미달의 메시지는 지금처럼 테마, 모드, 짝, 잰 값, 기준을 든다. 음성 사례(`contrastRatio`의 21과 1, 기준 미달 짝의 메시지)에 겹친 바탕의 사례 하나를 더한다.
+  - 여덟 벌 모두 넘었다(`contrast.mjs`의 "디자인 파일"과 "컴포넌트" 묶음). 가장 낮은 값은 디자인 파일의 짝에서 녹청 라이트의 `border-control`/`bg` 3.14, 컴포넌트의 짝에서 녹청 라이트의 꺼진 스위치 3.35와 녹청 다크의 카드 안 위험 버튼 누름 4.507이다(반올림에 기댄다. 아래 "반투명 바탕의 명암비"). 브라우저의 계산값으로 다시 재는 것이 Matrix다.
+- **반투명 바탕의 명암비.** 짝의 바탕 쪽은 쓰임새 토큰 하나이거나 [반투명 토큰, 그 아래 바탕]이다. 판정 함수가 반투명 색을 그 아래 바탕에 알파로 겹치고, **채널마다 0~255의 정수로 반올림한** 색으로 명암비를 잰다. 디자인 파일 스크립트의 `over`와 같은 셈이고(그 함수는 hex를 돌려주어 반올림한다), `contrast.mjs`가 그것으로 디자인 파일의 표 44행과 소수 둘째 자리까지 맞았다. 반올림은 판정의 일부다. 반올림 없이 겹치면 녹청 다크의 카드 안 위험 버튼 누름이 4.494로 뒤집힌다(`contrast.mjs`. 43개 × 여덟 벌 가운데 뒤집히는 자리는 그 하나다). 기준 미달의 메시지는 지금처럼 테마, 모드, 짝, 잰 값, 기준을 든다. 음성 사례(`contrastRatio`의 21과 1, 기준 미달 짝의 메시지)에 겹친 바탕의 사례 하나를 더한다.
+- **판정은 놓인 바탕 위의 한 겹까지다.** 반투명이 두 겹 겹치는 자리는 짝에 넣지 않는다. 표의 행 올림(`bg-hover`) 안에 놓인 위험 버튼을 올리거나 누르면 다크에서 테마 넷 모두 기준 아래다(올림 4.296~4.314, 누름 3.748~3.764, `contrast.mjs`의 "두 겹" 묶음). 패키지의 컴포넌트에는 그런 배치가 없고, 표는 관리 화면의 것이다. 그 배치를 쓰는 admin-style이 보고, 그 행에 적었다.
 - **Density.** 새 판정 스토리다. `data-density`가 `compact`와 `regular`인 요소에서 밀도 변수 일곱이 디자인 파일의 값이고, 그 안의 `h-control`·`text-body`·`text-table`·`text-mono`·`h-row`의 계산값이 그 값을 따른다. 속성이 없을 때 화면 폭을 따르는 것은 스토리 테스트가 창의 폭을 바꾸지 못해 사진 비교의 Playwright가 본다(아래).
 - **Fonts.** 다섯 벌(Noto Sans KR 400·500·600, Noto Sans Mono 400·500)의 적재와 굵기를 본다.
 - **ThemeTokensEmitted, RemFree, Responsive**는 그대로 돈다. ThemeTokensEmitted의 표본 이름(`--text-title`, `--spacing-8`, `--radius-s`)은 그대로 있다.
 - **ShadowRoot.** 표본의 테마를 기본 테마로 바꾸고 밀도도 단다. 문서 쪽과 shadow 호스트가 같은 `data-density`를 달아 높이까지 맞댄다.
 - **계산값으로 가를 수 없는 짝이 바뀐다.** 계산값을 맞대는 단언은 맞대는 쓰임새 토큰이 이웃 쓰임새 토큰과 다른 값인 벌에서 잰다(`web-design.md`). 여덟 벌 가운데 한 벌이라도 같은 원색을 가리키는 짝은 12개다(`same-values.mjs`).
   - 여덟 벌 모두 같은 것은 `accent`와 `focus-ring` 하나라 값으로 가를 수 없다. 그래서 지금 공문에서 포커스 링을 재던 판정 스토리와 `web-design.md`의 그 문장은 빠진다.
-  - 나머지는 값이 다른 벌에서 잰다. 컴포넌트 판정에 걸리는 것은 다음이다. `bg-raised`와 `on-accent`는 라이트 넷에서 같아, 스위치 손잡이의 꺼짐과 켜짐은 다크에서 가른다. `primary`는 녹청·쪽빛에서 `text`와, 군청·자초에서 `accent`와 같아 주 버튼의 바탕은 두 갈래를 하나씩 잰다. `border-control`과 `text-disabled`는 라이트 넷에서, `border`와 `bg-disabled`는 다크 넷에서, `bg-active`와 `shadow-color`는 라이트 넷에서 같다.
+  - 나머지 열하나는 값이 다른 벌에서 잰다. 모두 컴포넌트 판정에 걸릴 수 있다.
+    - 스위치의 손잡이: `bg-raised`와 `on-accent`는 라이트 넷에서 같아, 꺼짐과 켜짐은 다크에서 가른다.
+    - 주 버튼의 바탕: `primary`는 녹청·쪽빛에서 `text`와, 군청·자초에서 `accent`·`focus-ring`과 같다. 두 갈래를 하나씩 잰다. `primary-active`는 녹청·쪽빛 다크에서 `text-muted`와 같다.
+    - 주 버튼의 글자: `on-primary`는 라이트 넷에서 `bg-raised`·`on-accent`와, 군청·자초 다크에서 `on-accent`와, 녹청·쪽빛 다크에서 `bg`와 같다. 그래서 한 벌로는 `on-accent`와 `bg`를 함께 가를 수 없다. `on-accent`와는 녹청·쪽빛 다크에서, `bg`와는 그 밖의 벌에서 나눠 잰다.
+    - 쓸 수 없음과 그림자: `border-control`과 `text-disabled`는 라이트 넷에서, `border`와 `bg-disabled`는 다크 넷에서, `bg-active`와 `shadow-color`는 라이트 넷에서 같다.
   - 기본 테마가 아닌 테마에서 재는 스토리는 지금처럼 `judgment`를 단다.
 
 ### 사진 비교 (사용자가 밀도 둘을 골랐다. 모양은 명세가 정했다)

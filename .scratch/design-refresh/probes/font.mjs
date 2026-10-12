@@ -21,6 +21,10 @@ if (work === undefined || work.startsWith("--")) {
 }
 const versionIndex = args.indexOf("--version");
 const version = versionIndex === -1 ? "5.3.0" : args[versionIndex + 1];
+if (version === undefined || version.startsWith("--")) {
+  console.error("--version 뒤에 판이 없다. 사용: node .scratch/design-refresh/probes/font.mjs <작업 폴더> [--version 5.3.0]");
+  process.exit(2);
+}
 
 const PACKAGES = [
   { name: "@fontsource/noto-sans-mono", version, weights: ["400", "500"] },
@@ -30,10 +34,11 @@ const PACKAGES = [
 function fetchPackage({ name, version: v }) {
   const dir = resolve(work, name.replace("/", "__"));
   mkdirSync(dir, { recursive: true });
-  // Windows 의 npm 은 .cmd 라 셸로 부른다. 넘기는 값은 이 파일의 상수와 인자의 경로뿐이다. npm 의 notice 는 stderr 라 버린다.
+  // Windows 의 npm 은 .cmd 라 셸로 부른다. 넘기는 값은 이 파일의 상수와 인자의 경로뿐이다. npm 의 notice 와 오류는
+  // stderr 로 그대로 흘려, 받지 못했을 때(오프라인, 없는 판) 까닭이 보이게 한다.
   const out = execSync(`npm pack ${name}@${v} --pack-destination "${dir}"`, {
     encoding: "utf-8",
-    stdio: ["ignore", "pipe", "ignore"],
+    stdio: ["ignore", "pipe", "inherit"],
   });
   const tarball = out.trim().split(/\r?\n/).pop();
   execFileSync("tar", ["-xzf", tarball], { cwd: dir });
