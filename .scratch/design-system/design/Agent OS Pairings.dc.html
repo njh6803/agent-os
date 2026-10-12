@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Sans+Mono:wght@400;500&amp;display=swap">
+<style>
+html, body { margin: 0; padding: 0; background: #E6E6E6; -webkit-font-smoothing: antialiased; }
+a { color: #2451CC; }
+a:hover { color: #1A3D9E; }
+</style>
+</helmet>
+<div style="min-height: 100vh; padding: 56px; box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif; color: #171717;">
+<section data-screen-label="1차 조합" style="display: flex; flex-direction: column; gap: 28px;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 880px;">
+    <div style="font-size: 13px; font-weight: 600; color: #575757;">1차</div>
+    <div style="font-size: 28px; font-weight: 600; letter-spacing: -0.01em;">Agent OS — 색·글꼴·밀도 네 조합</div>
+    <div style="font-size: 14px; line-height: 22px; color: #3D3D3D; text-wrap: pretty;">네 조합 모두 같은 규칙을 따른다: 바탕은 무채색, 강조색은 선택·링크·포커스에만, 색은 상태에만 쓴다. ID와 시각은 고정폭으로 쓴다. 명암비는 실제 색값으로 계산했다(글자 4.5:1, 포커스·컨트롤 3:1). 글꼴은 네 안 모두 같다: 한글·본문은 Noto Sans KR, 고정폭은 Noto Sans Mono. 조합마다 달라지는 것은 회색의 색조, 강조색, 주 버튼 처리, 밀도이고, 각 안의 설명 맨 앞에 적었다.</div>
+    <div style="font-size: 13px; line-height: 20px; color: #575757; text-wrap: pretty;">변경 1 · 2026-10-12: 네 안의 한글·본문 글꼴을 Noto Sans KR(Google Fonts, OFL 1.1, 동적 서브셋)로 통일했다. 굵기는 안마다 쓰던 400·500·600을 그대로 쓴다(Noto Sans KR에 모두 있음). 고정폭 글꼴, 색, 밀도, 주 버튼 처리는 바꾸지 않았다. 1d는 한글과 고정폭이 더는 같은 가족이 아니어서 이름을 ‘넉넉’으로 바꿨다.</div>
+    <div style="font-size: 13px; line-height: 20px; color: #575757; text-wrap: pretty;">변경 2 · 2026-10-12: 네 안의 고정폭 글꼴을 Noto Sans Mono(Google Fonts, OFL 1.1)로 통일했다. 굵기는 안마다 쓰던 단계를 그대로 쓴다: 1a·1c·1d는 400·500, 1b는 400 한 굵기(Noto Sans Mono에 모두 있음). 색, 밀도, 주 버튼 처리는 바꾸지 않았다. 글꼴이 같아졌으므로 안마다 다른 점을 설명 맨 앞에 적었다.</div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start;">
+    <sc-for list="{{ options }}" as="o" hint-placeholder-count="4">
+      <div id="{{ o.id }}" style="width: 760px; flex: none; background: {{ o.L.raised }}; border: 1px solid #CFCFCF; font-family: {{ o.sans }}; color: {{ o.L.text }}; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column;">
+
+        <div style="padding: 28px 32px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600; line-height: 1; padding: 5px 7px; background: #111111; color: #FFFFFF; border-radius: 3px;">{{ o.id }}</span>
+            <span style="font-size: 22px; font-weight: 600; letter-spacing: -0.01em;">{{ o.name }}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 500;">{{ o.pair }}</div>
+          <div style="font-size: 13px; line-height: 20px; color: {{ o.L.muted }}; text-wrap: pretty;">{{ o.line }}</div>
+        </div>
+
+        <div style="padding: 24px 32px 28px; border-top: 1px solid {{ o.L.border }}; display: flex; flex-direction: column; gap: 20px;">
+          <div style="font-size: 12px; font-weight: 600; color: {{ o.L.muted }};">글꼴</div>
+          <div style="display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-size: 18px; font-weight: 600;">{{ o.kr }}</div>
+              <div style="font-family: {{ o.mono }}; font-size: 11px; line-height: 16px; color: {{ o.L.muted }};">{{ o.krMeta }}</div>
+              <div style="font-family: {{ o.mono }}; font-size: 11px; line-height: 16px; color: {{ o.L.muted }};">{{ o.krSrc }}</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="font-family: {{ o.mono }}; font-size: 16px; line-height: 27px; font-weight: {{ o.monoTitleW }};">{{ o.monoName }}</div>
+              <div style="font-family: {{ o.mono }}; font-size: 11px; line-height: 16px; color: {{ o.L.muted }};">{{ o.monoMeta }}</div>
+              <div style="font-family: {{ o.mono }}; font-size: 11px; line-height: 16px; color: {{ o.L.muted }};">{{ o.monoSrc }}</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ o.krWeights }}" as="w" hint-placeholder-count="3">
+              <div style="display: flex; align-items: baseline; gap: 16px;">
+                <span style="font-family: {{ o.mono }}; font-size: 11px; width: 32px; flex: none; color: {{ o.L.muted }};">{{ w.n }}</span>
+                <span style="font-size: 24px; line-height: 34px; font-weight: {{ w.n }}; letter-spacing: -0.01em;">에이전트 실행을 승인합니다 Run 0123</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid {{ o.L.border }};">
+            <div style="display: flex; align-items: baseline; gap: 16px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 72px; flex: none; color: {{ o.L.muted }};">{{ o.dd.titleSpec }}</span>
+              <span style="font-size: {{ o.dd.title }}; font-weight: 600;">멈춘 실행 3건</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 16px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 72px; flex: none; color: {{ o.L.muted }};">{{ o.dd.bodySpec }}</span>
+              <span style="font-size: {{ o.dd.body }}; line-height: {{ o.dd.lh }}; text-wrap: pretty;">운영자가 승인하면 에이전트가 다음 단계로 넘어갑니다. 거부하면 실행이 끝나고 사유가 기록됩니다.</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 16px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 72px; flex: none; color: {{ o.L.muted }};">{{ o.dd.smallSpec }}</span>
+              <span style="font-size: {{ o.dd.small }}; color: {{ o.L.muted }};">마지막 갱신 <span style="font-family: {{ o.mono }};">14:05:12</span></span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 16px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 72px; flex: none; color: {{ o.L.muted }};">{{ o.dd.monoSpec }}</span>
+              <span style="display: flex; flex-direction: column; gap: 4px; font-family: {{ o.mono }}; font-size: {{ o.dd.mono }};">
+                <span>run_01J9Z4K7QX  2026-10-12T14:03:27.418+09:00</span>
+                <span style="color: {{ o.L.muted }};">0O 1lI| 5S 8B {} [] =&gt; != 38,000</span>
+              </span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 16px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 72px; flex: none; color: {{ o.L.muted }};">섞어 쓰기</span>
+              <span style="font-size: {{ o.dd.body }}; line-height: {{ o.dd.lh }};">실행 <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }};">run_7Hk2Qp9x</span>이(가) <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }};">14:03:27</span>에 멈췄습니다.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 24px 32px 28px; border-top: 1px solid {{ o.L.border }}; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; font-weight: 600; color: {{ o.L.muted }};">색 · 원색</div>
+          <sc-for list="{{ o.mainRamps }}" as="r" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-family: {{ o.mono }}; font-size: 11px; width: 64px; flex: none; color: {{ o.L.muted }};">{{ r.name }}</span>
+              <div style="display: flex; gap: 2px;">
+                <sc-for list="{{ r.steps }}" as="s" hint-placeholder-count="13">
+                  <div style="width: 44px; height: 36px; background: {{ s.hex }}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); display: flex; align-items: flex-end; padding: 3px 4px; box-sizing: border-box;">
+                    <span style="font-family: {{ o.mono }}; font-size: 10px; line-height: 1; color: {{ s.fg }};">{{ s.k }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-family: {{ o.mono }}; font-size: 11px; width: 64px; flex: none; color: {{ o.L.muted }};">상태</span>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <sc-for list="{{ o.statusRamps }}" as="r" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-family: {{ o.mono }}; font-size: 10px; color: {{ o.L.muted }};">{{ r.name }}</span>
+                  <div style="display: flex; gap: 2px;">
+                    <sc-for list="{{ r.steps }}" as="s" hint-placeholder-count="2">
+                      <div style="width: 44px; height: 36px; background: {{ s.hex }}; display: flex; align-items: flex-end; padding: 3px 4px; box-sizing: border-box;">
+                        <span style="font-family: {{ o.mono }}; font-size: 10px; line-height: 1; color: {{ s.fg }};">{{ s.k }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 24px 32px 28px; border-top: 1px solid {{ o.L.border }}; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 12px; font-weight: 600; color: {{ o.L.muted }};">색 · 쓰임새</div>
+          <sc-if value="{{ o.showC }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size: 12px; line-height: 18px; color: {{ o.L.muted }}; text-wrap: pretty;">명암비는 라이트 · 다크 순서이고, 바탕과 올라온 바탕 중 낮은 쪽 값이다. 글자는 4.5:1, 포커스·컨트롤 테두리는 3:1, 선택 바탕은 그 위의 글자·흐린 글자 기준이다.</div>
+          </sc-if>
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: grid; grid-template-columns: {{ o.semCols }}; gap: 12px; padding-bottom: 6px; font-size: 11px; font-weight: 600; color: {{ o.L.muted }};">
+              <span>이름</span><span>라이트</span><span>다크</span>
+              <sc-if value="{{ o.showC }}" hint-placeholder-val="{{ true }}"><span>명암비</span></sc-if>
+            </div>
+            <sc-for list="{{ o.tokens }}" as="t" hint-placeholder-count="14">
+              <div style="display: grid; grid-template-columns: {{ o.semCols }}; gap: 12px; align-items: center; min-height: 32px; padding: 4px 0; box-sizing: border-box; border-top: 1px solid {{ o.L.border }}; font-size: 12px;">
+                <div style="display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; min-width: 0;">
+                  <span style="font-weight: 500;">{{ t.ko }}</span>
+                  <span style="font-family: {{ o.mono }}; font-size: 11px; color: {{ o.L.muted }};">{{ t.code }}</span>
+                  <sc-if value="{{ t.added }}"><span style="font-size: 10px; line-height: 14px; color: {{ o.L.muted }}; border: 1px solid {{ o.L.border }}; padding: 0 4px; border-radius: 3px;">추가</span></sc-if>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="width: 16px; height: 16px; flex: none; background: {{ t.lHex }}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.14); border-radius: 3px;"></span>
+                  <span style="font-family: {{ o.mono }}; font-size: 11px;">{{ t.lRef }}</span>
+                  <span style="font-family: {{ o.mono }}; font-size: 11px; color: {{ o.L.muted }};">{{ t.lHex }}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="width: 16px; height: 16px; flex: none; background: {{ t.dHex }}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.14); border-radius: 3px;"></span>
+                  <span style="font-family: {{ o.mono }}; font-size: 11px;">{{ t.dRef }}</span>
+                  <span style="font-family: {{ o.mono }}; font-size: 11px; color: {{ o.L.muted }};">{{ t.dHex }}</span>
+                </div>
+                <sc-if value="{{ o.showC }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; flex-direction: column; line-height: 15px;">
+                    <span style="font-family: {{ o.mono }}; font-size: 11px;">{{ t.ratioTxt }}</span>
+                    <span style="font-size: 11px; color: {{ t.passColor }};">{{ t.passTxt }}</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding: 24px 32px 28px; border-top: 1px solid {{ o.L.border }}; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: {{ o.L.muted }};">밀도 · {{ o.dd.label }}</span>
+            <span style="font-size: 11px; color: {{ o.L.muted }};">단위 px</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 12px;">
+            <sc-for list="{{ o.densList }}" as="x" hint-placeholder-count="7">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 11px; color: {{ o.L.muted }};">{{ x.k }}</span>
+                <span style="font-family: {{ o.mono }}; font-size: 14px;">{{ x.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-for list="{{ o.modes }}" as="m" hint-placeholder-count="2">
+          <div style="background: {{ m.bg }}; color: {{ m.text }}; padding: 24px 32px 32px; border-top: 1px solid {{ m.border }}; display: flex; flex-direction: column; gap: 16px; font-size: {{ o.dd.body }}; line-height: {{ o.dd.lh }}; font-variant-numeric: tabular-nums;">
+            <div style="font-size: 12px; line-height: 16px; font-weight: 600; color: {{ m.muted }};">컴포넌트 · {{ m.label }}</div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+              <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.primaryBg }}; color: {{ m.primaryFg }}; border: 1px solid {{ m.primaryBg }}; font-weight: 500; cursor: pointer;">승인</span>
+              <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.raised }}; color: {{ m.text }}; border: 1px solid {{ m.border }}; font-weight: 500; cursor: pointer;">거부</span>
+              <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.raised }}; color: {{ m.danger }}; border: 1px solid {{ m.border }}; font-weight: 500; cursor: pointer;">실행 중지</span>
+              <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.bg }}; color: {{ m.muted }}; border: 1px solid {{ m.border }}; font-weight: 500; cursor: not-allowed;">비활성</span>
+              <span style="color: {{ m.acc }}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0 4px;">로그 전체 보기</span>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+              <sc-for list="{{ m.badges }}" as="b" hint-placeholder-count="5">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: {{ o.dd.small }}; font-weight: 500; color: {{ b.color }};">
+                  <span style="width: 6px; height: 6px; border-radius: 3px; background: {{ b.color }};"></span>{{ b.label }}
+                </span>
+              </sc-for>
+            </div>
+
+            <div style="background: {{ m.raised }}; border: 1px solid {{ m.border }}; border-radius: {{ o.dd.radius }}; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: {{ o.tableCols }}; gap: 12px; align-items: center; height: {{ o.dd.row }}; padding: 0 12px; font-size: {{ o.dd.small }}; font-weight: 500; color: {{ m.muted }};">
+                <span></span><span>실행 ID</span><span>에이전트</span><span>상태</span><span>시작</span><span style="text-align: right;">소요</span>
+              </div>
+              <sc-for list="{{ m.rows }}" as="r" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: {{ o.tableCols }}; gap: 12px; align-items: center; height: {{ o.dd.row }}; padding: 0 12px; border-top: 1px solid {{ m.border }}; background: {{ r.bg }}; cursor: pointer;">
+                  <span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 3px; border: 1px solid {{ r.chkBorder }}; background: {{ r.chkBg }}; display: flex; align-items: center; justify-content: center;">
+                    <sc-if value="{{ r.sel }}"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.2 4.1 7.2 8 2.8" stroke="{{ m.on }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                  </span>
+                  <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.id }}</span>
+                  <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.agent }}</span>
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: {{ o.dd.small }}; font-weight: 500; color: {{ r.color }}; white-space: nowrap;">
+                    <span style="width: 6px; height: 6px; border-radius: 3px; background: {{ r.color }}; flex: none;"></span>{{ r.status }}
+                  </span>
+                  <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; color: {{ m.muted }};">{{ r.start }}</span>
+                  <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; color: {{ m.muted }}; text-align: right;">{{ r.dur }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: grid; grid-template-columns: minmax(0,5fr) minmax(0,7fr); gap: 16px; align-items: start;">
+              <div style="background: {{ m.raised }}; border: 1px solid {{ m.border }}; border-radius: {{ o.dd.radius }}; overflow: hidden;">
+                <div style="display: flex; align-items: center; height: {{ o.dd.row }}; padding: 0 12px; font-weight: 600;">플러그인</div>
+                <sc-for list="{{ m.plugins }}" as="p" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-top: 1px solid {{ m.border }};">
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                      <span style="font-weight: 500;">{{ p.name }}</span>
+                      <span style="font-size: {{ o.dd.small }}; line-height: 1.4; color: {{ m.muted }};">{{ p.desc }}</span>
+                    </div>
+                    <span style="width: 32px; height: 18px; flex: none; box-sizing: border-box; border-radius: 9px; padding: 2px; background: {{ p.track }}; display: flex; justify-content: {{ p.justify }}; cursor: pointer;">
+                      <span style="width: 14px; height: 14px; border-radius: 7px; background: {{ p.knob }};"></span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="background: {{ m.raised }}; border: 1px solid {{ m.border }}; border-radius: {{ o.dd.radius }}; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: {{ o.dd.small }}; font-weight: 500; color: {{ m.warning }};"><span style="width: 6px; height: 6px; border-radius: 3px; background: {{ m.warning }};"></span>승인 대기</span>
+                  <span style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; color: {{ m.muted }};">run_7Hk2Qp9x</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: {{ o.dd.title }}; line-height: 1.4; font-weight: 600;">환불 처리 에이전트가 결정을 기다립니다</span>
+                  <span style="color: {{ m.muted }};">다음 도구 호출 전에 멈췄습니다.</span>
+                </div>
+                <div style="background: {{ m.bg }}; border: 1px solid {{ m.border }}; border-radius: {{ o.dd.radius }}; padding: 10px 12px; font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; line-height: 1.6; white-space: pre; overflow: hidden;">payments.refund({
+  order_id: "ord_20261012_0448",
+  amount: 38000,
+  currency: "KRW"
+})</div>
+                <div style="font-family: {{ o.mono }}; font-size: {{ o.dd.mono }}; color: {{ m.muted }};">요청 14:03:27 · 대기 12:08</div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <span style="font-size: {{ o.dd.small }}; font-weight: 500;">거부 사유</span>
+                  <div style="display: flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 10px; box-sizing: border-box; background: {{ m.raised }}; border: 1px solid {{ m.ctl }}; border-radius: {{ o.dd.radius }}; outline: 2px solid {{ m.focus }}; outline-offset: 2px;">
+                    <span>금액 확인 필요</span><span style="width: 1px; height: 1.1em; margin-left: 1px; background: {{ m.text }};"></span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px; padding-top: 4px;">
+                  <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.primaryBg }}; color: {{ m.primaryFg }}; border: 1px solid {{ m.primaryBg }}; font-weight: 500; cursor: pointer;">승인</span>
+                  <span style="display: inline-flex; align-items: center; height: {{ o.dd.ctl }}; padding: 0 {{ o.dd.pad }}; box-sizing: border-box; border-radius: {{ o.dd.radius }}; background: {{ m.raised }}; color: {{ m.text }}; border: 1px solid {{ m.border }}; font-weight: 500; cursor: pointer;">거부</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+
+      </div>
+    </sc-for>
+  </div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;둘 다&quot;,&quot;라이트&quot;,&quot;다크&quot;],&quot;default&quot;:&quot;둘 다&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;보기&quot;},&quot;unifyDensity&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;보기&quot;},&quot;showContrast&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;보기&quot;}}">
+const lum = h => { const n = h.replace('#', ''); const c = [0, 2, 4].map(i => parseInt(n.substr(i, 2), 16) / 255).map(v => v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+
+const DENS = {
+  normal:  { label: '보통',     title: 18, body: 14, lh: 20, small: 12, mono: 13, row: 36, ctl: 32, radius: 6, mobile: 44, pad: 12 },
+  compact: { label: '조밀',     title: 16, body: 13, lh: 18, small: 12, mono: 12, row: 32, ctl: 28, radius: 4, mobile: 44, pad: 10 },
+  dense:   { label: '아주 조밀', title: 16, body: 13, lh: 18, small: 12, mono: 11, row: 28, ctl: 26, radius: 2, mobile: 44, pad: 8 },
+  roomy:   { label: '넉넉',     title: 20, body: 14, lh: 22, small: 13, mono: 13, row: 40, ctl: 36, radius: 6, mobile: 48, pad: 14 },
+};
+
+const OPTS = [
+  { id: '1a', name: '기본기', pair: 'Noto Sans KR + Noto Sans Mono',
+    line: '무채색 회색 · 코발트 강조 · 주 버튼 강조색 · 밀도 보통. 가장 무난하고 위젯으로 그대로 옮기기 쉽다.',
+    sans: "'Noto Sans KR', sans-serif", mono: "'Noto Sans Mono', 'Noto Sans KR', ui-monospace, monospace",
+    kr: 'Noto Sans KR', krW: [400, 500, 600], krSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    monoName: 'Noto Sans Mono', monoTitleW: 500, monoMeta: '400 · 500 · OFL 1.1', monoSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    dens: 'normal', primary: 'accent', accName: 'cobalt', infoName: 'cyan',
+    g: { 0: '#FFFFFF', 50: '#F6F6F6', 100: '#EDEDED', 200: '#E0E0E0', 300: '#C2C2C2', 400: '#8A8A8A', 500: '#6B6B6B', 600: '#575757', 700: '#3D3D3D', 800: '#2A2A2A', 850: '#1E1E1E', 900: '#171717', 950: '#101010' },
+    a: { 50: '#EEF2FD', 300: '#8AA6FF', 600: '#2451CC', 900: '#161E36', 950: '#0A1638' },
+    r: { 300: '#FF8A80', 700: '#C42A1F' }, y: { 300: '#E8B256', 700: '#8C5800' }, n: { 300: '#5CC98A', 700: '#1B7A3D' }, i: { 300: '#5DC0DD', 700: '#0A6886' } },
+  { id: '1b', name: '스위스', pair: 'Noto Sans KR + Noto Sans Mono',
+    line: '아주 옅은 청회색 · 석유색 강조 · 주 버튼 먹색 · 밀도 조밀. 강조가 선택·링크·포커스에만 보여 상태색이 가장 잘 읽힌다.',
+    sans: "'Noto Sans KR', sans-serif", mono: "'Noto Sans Mono', 'Noto Sans KR', ui-monospace, monospace",
+    kr: 'Noto Sans KR', krW: [400, 500, 600], krSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    monoName: 'Noto Sans Mono', monoTitleW: 400, monoMeta: '400 한 굵기 · OFL 1.1', monoSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    dens: 'compact', primary: 'ink', accName: 'petrol', infoName: 'blue',
+    g: { 0: '#FFFFFF', 50: '#F5F6F8', 100: '#ECEEF1', 200: '#DFE2E7', 300: '#C1C6CD', 400: '#868D96', 500: '#666C74', 600: '#535960', 700: '#3A3F45', 800: '#292D32', 850: '#1D2024', 900: '#16181B', 950: '#0F1113' },
+    a: { 50: '#E6F2F3', 300: '#5EC3CE', 600: '#0A6A77', 900: '#0E2427', 950: '#04272B' },
+    r: { 300: '#FF8C84', 700: '#BF2A26' }, y: { 300: '#E5B357', 700: '#895700' }, n: { 300: '#5FC88B', 700: '#1C7440' }, i: { 300: '#86AAFF', 700: '#2457C0' } },
+  { id: '1c', name: '계기판', pair: 'Noto Sans KR + Noto Sans Mono',
+    line: '무채색 회색 · 보라 강조 · 주 버튼 강조색 · 밀도 아주 조밀(반경 2). ID·시각·수치·코드를 모두 고정폭으로 써서 기계 같은 인상이고, 한 화면에 행이 가장 많이 들어간다.',
+    sans: "'Noto Sans KR', sans-serif", mono: "'Noto Sans Mono', 'Noto Sans KR', ui-monospace, monospace",
+    kr: 'Noto Sans KR', krW: [400, 500, 600], krSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    monoName: 'Noto Sans Mono', monoTitleW: 500, monoMeta: '400 · 500 · OFL 1.1', monoSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    dens: 'dense', primary: 'accent', accName: 'violet', infoName: 'blue',
+    g: { 0: '#FFFFFF', 50: '#F4F4F4', 100: '#EBEBEB', 200: '#DDDDDD', 300: '#BFBFBF', 400: '#858585', 500: '#6B6B6B', 600: '#525252', 700: '#383838', 800: '#282828', 850: '#1C1C1C', 900: '#141414', 950: '#0C0C0C' },
+    a: { 50: '#F1ECFC', 300: '#B39CFF', 600: '#6236C4', 900: '#1F1834', 950: '#1C0D47' },
+    r: { 300: '#FF8A7F', 700: '#BF281E' }, y: { 300: '#E7B252', 700: '#875600' }, n: { 300: '#5BC787', 700: '#1A7339' }, i: { 300: '#80B0FF', 700: '#1D5EB7' } },
+  { id: '1d', name: '넉넉', pair: 'Noto Sans KR + Noto Sans Mono',
+    line: '아주 옅은 따뜻한 회색 · 남색 강조 · 주 버튼 먹색 · 밀도 넉넉. 모바일과 위젯에 유리하다.',
+    sans: "'Noto Sans KR', sans-serif", mono: "'Noto Sans Mono', 'Noto Sans KR', ui-monospace, monospace",
+    kr: 'Noto Sans KR', krW: [400, 500, 600], krSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    monoName: 'Noto Sans Mono', monoTitleW: 500, monoMeta: '400 · 500 · OFL 1.1', monoSrc: 'Google Fonts · 동적 서브셋(unicode-range)',
+    dens: 'roomy', primary: 'ink', accName: 'navy', infoName: 'cyan',
+    g: { 0: '#FFFFFF', 50: '#F7F7F5', 100: '#EEEDEA', 200: '#E2E1DD', 300: '#C5C3BE', 400: '#8B8984', 500: '#6E6C67', 600: '#575551', 700: '#3E3C39', 800: '#2D2C2A', 850: '#201F1D', 900: '#191817', 950: '#121211' },
+    a: { 50: '#ECF1F9', 300: '#90B0F0', 600: '#1F4E9E', 900: '#18202E', 950: '#0C1F45' },
+    r: { 300: '#FF8F85', 700: '#BD2C22' }, y: { 300: '#E6B45C', 700: '#895800' }, n: { 300: '#66C68E', 700: '#20743F' }, i: { 300: '#62BED6', 700: '#0C6981' } },
+];
+
+const REF = {
+  L: { bg: ['g', 50], raised: ['g', 0], text: ['g', 900], muted: ['g', 500], border: ['g', 200], ctl: ['g', 400], acc: ['a', 600], on: ['g', 0], sel: ['a', 50], danger: ['r', 700], warning: ['y', 700], success: ['n', 700], info: ['i', 700], focus: ['a', 600] },
+  D: { bg: ['g', 950], raised: ['g', 850], text: ['g', 100], muted: ['g', 400], border: ['g', 800], ctl: ['g', 500], acc: ['a', 300], on: ['a', 950], sel: ['a', 900], danger: ['r', 300], warning: ['y', 300], success: ['n', 300], info: ['i', 300], focus: ['a', 300] },
+};
+
+const TOK = [
+  ['bg', '바탕', 'bg', 'surf'], ['raised', '올라온 바탕', 'bg-raised', 'surf'], ['text', '글자', 'text', 'text'], ['muted', '흐린 글자', 'text-muted', 'text'],
+  ['border', '테두리', 'border', 'deco'], ['acc', '강조', 'accent', 'text'], ['on', '강조 위 글자', 'on-accent', 'on'],
+  ['danger', '위험', 'danger', 'text'], ['warning', '경고', 'warning', 'text'], ['success', '성공', 'success', 'text'], ['info', '정보', 'info', 'text'],
+  ['focus', '포커스 링', 'focus-ring', 'ui'], ['ctl', '컨트롤 테두리', 'border-control', 'ui', true], ['sel', '선택 바탕', 'bg-selected', 'sel', true],
+];
+
+const RUNS = [
+  { id: 'run_7Hk2Qp9x', agent: '환불 처리', tone: 'warning', status: '승인 대기', start: '14:03:27', dur: '12:08', sel: true },
+  { id: 'run_7Hk2Mc4r', agent: '문의 분류', tone: 'info', status: '실행 중', start: '14:01:55', dur: '03:41' },
+  { id: 'run_7Hk2Ja0e', agent: '재고 동기화', tone: 'danger', status: '실패', start: '13:58:12', dur: '00:47' },
+  { id: 'run_7Hk2Fz8t', agent: '문서 요약', tone: 'success', status: '완료', start: '13:52:30', dur: '01:16' },
+  { id: 'run_7Hk2Bq1w', agent: '주간 보고 작성', tone: 'muted', status: '취소됨', start: '13:40:09', dur: '00:05' },
+];
+const PLUGINS = [
+  { name: '웹 검색', desc: '공개 웹 페이지를 읽습니다', on: true },
+  { name: '메일 발송', desc: '에이전트가 메일을 보냅니다', on: false },
+  { name: '결제', desc: '환불·결제 API를 호출합니다', on: true },
+];
+const BADGES = [['warning', '승인 대기'], ['info', '실행 중'], ['danger', '실패'], ['success', '완료'], ['muted', '취소됨']];
+
+const px = n => n + 'px';
+const fg = h => lum(h) > 0.3 ? '#111111' : '#FFFFFF';
+
+function build(o, mode, unify, showC) {
+  const ramps = { g: ['gray', o.g], a: [o.accName, o.a], r: ['red', o.r], y: ['amber', o.y], n: ['green', o.n], i: [o.infoName, o.i] };
+  const resolve = (k, s) => s === 0 && k === 'g' ? o.g[0] : ramps[k][1][s];
+  const mk = key => { const m = {}; for (const t in REF[key]) { const [k, s] = REF[key][t]; m[t] = resolve(k, s); } return m; };
+  const L = mk('L'), D = mk('D');
+  const refTxt = (key, t) => { const [k, s] = REF[key][t]; return ramps[k][0] + '.' + s; };
+  const rat = (kind, t, m) => {
+    if (kind === 'text') return Math.min(ratio(m[t], m.bg), ratio(m[t], m.raised));
+    if (kind === 'on') return ratio(m.on, m.acc);
+    if (kind === 'ui') return Math.min(ratio(m[t], m.bg), ratio(m[t], m.raised));
+    if (kind === 'sel') return Math.min(ratio(m.text, m.sel), ratio(m.muted, m.sel));
+    return null;
+  };
+  const tokens = TOK.map(([t, ko, code, kind, added]) => {
+    const l = rat(kind, t, L), d = rat(kind, t, D), thr = kind === 'ui' ? 3 : 4.5;
+    let ratioTxt = '—', passTxt = '', ok = true;
+    if (kind === 'deco') { ratioTxt = '장식'; passTxt = '기준 없음'; }
+    else if (l != null) { ratioTxt = l.toFixed(2) + ' · ' + d.toFixed(2); ok = l >= thr && d >= thr; passTxt = ok ? (thr === 3 ? '3:1 통과' : 'AA 통과') : '미달'; }
+    return { ko, code, added: !!added, lHex: L[t], dHex: D[t], lRef: refTxt('L', t), dRef: refTxt('D', t), ratioTxt, passTxt, passColor: ok ? L.muted : L.danger };
+  });
+  const dn = unify ? DENS.normal : DENS[o.dens];
+  const dd = {
+    label: dn.label, title: px(dn.title), body: px(dn.body), lh: px(dn.lh), small: px(dn.small), mono: px(dn.mono), row: px(dn.row), ctl: px(dn.ctl), radius: px(dn.radius), pad: px(dn.pad),
+    titleSpec: dn.title + ' · 600', bodySpec: dn.body + ' / ' + dn.lh, smallSpec: dn.small + ' · 흐림', monoSpec: dn.mono + ' 고정폭',
+  };
+  const densList = [['본문', dn.body + '/' + dn.lh], ['보조', '' + dn.small], ['고정폭', '' + dn.mono], ['표 행', '' + dn.row], ['컨트롤', '' + dn.ctl], ['반경', '' + dn.radius], ['모바일 행', '' + dn.mobile]].map(([k, v]) => ({ k, v }));
+  const mode2 = (m, label) => {
+    const tone = t => m[t];
+    return Object.assign({}, m, {
+      label,
+      primaryBg: o.primary === 'accent' ? m.acc : m.text,
+      primaryFg: o.primary === 'accent' ? m.on : m.raised,
+      badges: BADGES.map(([t, l]) => ({ label: l, color: tone(t) })),
+      rows: RUNS.map(r => ({ ...r, sel: !!r.sel, color: tone(r.tone), bg: r.sel ? m.sel : 'transparent', chkBg: r.sel ? m.acc : m.raised, chkBorder: r.sel ? m.acc : m.ctl })),
+      plugins: PLUGINS.map(p => ({ ...p, track: p.on ? m.acc : m.ctl, knob: p.on ? m.on : m.raised, justify: p.on ? 'flex-end' : 'flex-start' })),
+    });
+  };
+  const modes = [];
+  if (mode !== '다크') modes.push(mode2(L, '라이트'));
+  if (mode !== '라이트') modes.push(mode2(D, '다크'));
+  const steps = obj => Object.keys(obj).map(Number).sort((x, y) => x - y).map(k => ({ k: '' + k, hex: obj[k], fg: fg(obj[k]) }));
+  return {
+    id: o.id, name: o.name, pair: o.pair, line: o.line, sans: o.sans, mono: o.mono,
+    kr: o.kr, krMeta: o.krW.join(' · ') + ' · OFL 1.1', krSrc: o.krSrc, krWeights: o.krW.map(n => ({ n })),
+    monoName: o.monoName, monoTitleW: o.monoTitleW, monoMeta: o.monoMeta, monoSrc: o.monoSrc,
+    L, D, tokens, dd, densList, modes, showC,
+    semCols: showC ? 'minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr) 92px' : 'minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr)',
+    tableCols: '14px 116px minmax(0,1fr) 80px 76px 48px',
+    mainRamps: [{ name: 'gray', steps: steps(o.g) }, { name: o.accName, steps: steps(o.a) }],
+    statusRamps: [['red', o.r], ['amber', o.y], ['green', o.n], [o.infoName, o.i]].map(([name, obj]) => ({ name, steps: steps(obj) })),
+  };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? '둘 다';
+    const unify = this.props.unifyDensity ?? false;
+    const showC = this.props.showContrast ?? true;
+    return { options: OPTS.map(o => build(o, mode, unify, showC)) };
+  }
+}
+</script>
+</body>
+</html>
