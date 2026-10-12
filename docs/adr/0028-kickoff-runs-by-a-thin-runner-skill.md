@@ -38,11 +38,14 @@ date: 2026-10-12
 
 원격에 기대지 않는 사람 몫은 0단계 앞의 **준비**에 모은다. 무엇을 만들지, `gh` 로그인, 공개와 비공개, 비공개면 Actions 분량,
 CodeRabbit CLI 로그인과 좌석이다. 공개 여부는 7단계의 `.coderabbit.yaml`과 8단계의 보호 브랜치가 기대므로 가장 먼저 정한다.
-원격이나 첫 PR에 기대는 것(시크릿 등록, CodeRabbit App, 보호 브랜치, 첫 PR의 Claude 코멘트)과 하네스가 다 깔린 뒤의
-`/context` 실측은 그 단계에서 멈춘다. Actions 분량은 런북 1단계에서 사람이 Billing 화면을 보던 것을 준비에서 세션이
-`gh api users/<user>/settings/billing/usage`로 읽는다. 이 명령은 달마다 저장소별로 쓴 분을 내고(`repositoryName` 필드가 있어
-비공개 저장소의 분만 더할 수 있다) 옛 `settings/billing/actions`는 410이다(2026-10-12 손으로 봤다). Billing 화면의 Included
-usage와 같은 값인지는 재지 않았다.
+원격이나 첫 PR에 기대는 것(시크릿 등록, CodeRabbit App, 보호 브랜치, 첫 PR의 Claude 코멘트)은 그 단계에서 멈추고,
+하네스가 다 깔린 뒤의 `/context` 실측은 8단계 끝, 9단계로 넘기기 전에 멈춘다. 공개 여부를 정하는 플랜 확인
+(`gh api user --jq .plan.name`)도 준비로 온다. Actions 분량은 런북 1단계에서 사람이 Billing 화면을 보던 것을 준비에서
+세션이 `gh api users/<login>/settings/billing/usage`로 읽는다. `<login>`은 `gh api user --jq .login`이다(git의 사용자 이름과
+다를 수 있다). 이 명령은 달마다, 저장소마다 쓴 분과 저장 용량 행을 내고 옛 `settings/billing/actions`는 410이다. 응답 헤더가
+요구하는 범위는 `user`다(2026-10-12 손으로 봤다). 기본 범위로 막 로그인한 토큰으로는 재지 않았고, 막히면
+`gh auth refresh -s user`가 사람 몫으로 더해진다. 응답에는 저장소의 공개 여부와 한도가 없어, 이번 달·분 단위·비공개 저장소로
+거르는 법은 명세가 정한다. Billing 화면의 Included usage와 같은 값인지는 재지 않았다.
 
 ## 배치와 진행
 
@@ -82,11 +85,15 @@ usage와 같은 값인지는 재지 않았다.
   설정이 없으면 `master`가 되어 훅은 막지 않지만 8단계의 보호와 런북 전체가 main을 가정한다. 그래서 1단계의 `git init`에
   `-b main`을 붙이고, 훅은 커밋이 하나도 없는 저장소(`git rev-parse --verify HEAD`가 실패)에서 막지 않는다. 훅이 막는 사고(다른
   세션이 체크아웃을 main으로 옮긴 뒤의 커밋)는 커밋이 없는 저장소에서 일어나지 않는다. 첫 킥오프는 이 훅이 생기기 전이었다.
-  훅의 테스트와 `tools/hook_payloads.toml`의 사례, 독스트링의 "언제나 실수다", 런북 7단계의 훅 설명을 함께 고친다. agent-os의
+  훅의 테스트와 `tools/hook_payloads.toml`의 사례, 독스트링의 "언제나 실수다", 런북 7단계의 훅 설명을 함께 고친다. 훅 러너
+  `tools/run_hooks.py`의 `main` 픽스처는 `git init -b main`만 한 빈 저장소라, 표의 main 위 커밋 deny 사례가 침묵이 되지 않게
+  그 픽스처에 커밋 하나를 두고 빈 저장소 사례는 따로 둔다. agent-os의
   다른 문서가 쓰는 "main 위 커밋은 훅이 막는다"는 커밋이 있는 이 저장소에서 그대로 참이다.
 - **ADR 0005.** Consequences의 "원격 생성과 시크릿 등록은 사람이 한다"에서 원격 생성은 세션이 허락을 받아 한다. 시크릿 등록은
   그대로 사람이다. 같은 절의 "런북 1단계의 플랜 확인에 남은 분량도 포함한다"는 준비의 명령 확인으로 옮긴다.
-- **런북.** 머리의 첫 시작 한 줄, 준비 절, 단계마다의 사람 몫 줄, 1단계의 Billing 화면 확인을 준비로, 1단계의 `git init -b main`,
+- **런북.** 머리의 첫 시작 한 줄, 준비 절, 단계마다의 사람 몫 줄, 1단계의 플랜 확인과 Billing 화면 확인을 준비로, 1단계의
+  `git init -b main`, 1단계의 폴더 만들기와 "이 디렉터리에서 Claude Code를 연다"(세션은 이미 새 프로젝트 폴더에서 열려 있다),
+  8단계 `gh repo create`의 `--private`을 준비에서 정한 공개 여부로,
   에이전트 규칙 3의 "결정만 번호 붙여 묻는다"를 선택 화면으로, "어디에 무엇이 사는가"의 전역 스킬 행, 마지막 절의 예외다.
   CodeRabbit CLI를 설치하는 단계는 런북에 없어 준비 절이 그 확인을 든다. 1단계의 일지 이름 규칙(`<날짜>-01-kickoff.md`)은 첫
   킥오프의 실제 이름(`2026-09-19-kickoff.md`)과 다르다. `kickoff/facts.md`에 billing API의 확인일을 적는다.
