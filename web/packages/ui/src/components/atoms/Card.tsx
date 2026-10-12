@@ -1,30 +1,20 @@
-// 카드(디자인 파일 02.8 표면 · 카드). 플러그인 하나, 실행 하나처럼 한 대상을 올라온 면(`raised`, `divider` 테두리,
-// 10px 모서리)에 묶는다. 그림자는 단계 넷(`"0"` 은 없음)이고 안의 줄 사이는 8px 이다. 카드 전체를 누르는 곳으로
-// 만들지 않는다. 누르는 곳은 안의 버튼과 링크다.
+// 카드(재탐색 디자인 파일 2.8). 플러그인 하나, 실행 하나처럼 한 대상을 올라온 면(`raised`, `divider` 테두리,
+// 10px 모서리)에 묶는다. 그림자 없이 바탕과 테두리로 서고, 안의 줄 사이는 8px 이다. 카드 전체를 누르는 곳으로
+// 만들지 않는다. 누르는 곳은 안의 버튼과 링크다. 그림자가 없는 것은 재탐색의 모양이고, 색과 모서리는 아직 첫 탐색
+// 디자인 파일의 값이다(재탐색은 `border` 테두리, 12px 모서리).
 import type { ReactNode } from "react";
 import type { NativeProps } from "../../props";
 
 export type CardElement = "div" | "section" | "article";
-export const CARD_ELEVATIONS = ["0", "1", "2", "3"] as const;
-export type CardElevation = (typeof CARD_ELEVATIONS)[number];
 export type CardPadding = "3" | "4";
 
 const BASE = "flex flex-col gap-2 rounded-l border border-divider bg-raised text-text";
-
-// `"0"` 은 그림자 유틸리티를 두지 않아 `box-shadow` 가 `none` 이다.
-const ELEVATION_CLASS = {
-  "0": "",
-  "1": " shadow-1",
-  "2": " shadow-2",
-  "3": " shadow-3",
-} satisfies Record<CardElevation, string>;
 
 const PADDING_CLASS = { "3": "p-3", "4": "p-4" } satisfies Record<CardPadding, string>;
 
 interface CardOwnProps {
   /** 감싸는 요소. */
   as?: CardElement;
-  elevation?: CardElevation;
   padding?: CardPadding;
   children: ReactNode;
 }
@@ -35,15 +25,9 @@ interface CardOwnProps {
 // 제네릭은 타입 단언 없이 넘기기 어렵다(원칙 III).
 export type CardProps = CardOwnProps & NativeProps<"div", keyof CardOwnProps>;
 
-export function Card({
-  as: Element = "div",
-  elevation = "1",
-  padding = "4",
-  children,
-  ...rest
-}: CardProps) {
+export function Card({ as: Element = "div", padding = "4", children, ...rest }: CardProps) {
   return (
-    <Element {...rest} className={`${BASE} ${PADDING_CLASS[padding]}${ELEVATION_CLASS[elevation]}`}>
+    <Element {...rest} className={`${BASE} ${PADDING_CLASS[padding]}`}>
       {children}
     </Element>
   );

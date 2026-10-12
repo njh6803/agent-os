@@ -1,5 +1,8 @@
 /// <reference path="./lucide-icons.d.ts" />
-// 아이콘(디자인 파일 02.9). Lucide 의 모양을 24 격자에 선 1.75(14·16px 은 2)로 그리고 색은 놓인 곳의 글자 색이다.
+// 아이콘(재탐색 디자인 파일 2.9). Lucide 의 모양을 크기와 상관없이 화면의 1.5px 선으로 그리고 색은 놓인 곳의 글자
+// 색이다. `nonScalingStroke` 가 그린 요소마다 `vector-effect: non-scaling-stroke` 를 달아 `strokeWidth` 가 화면의 px
+// 가 된다. `absoluteStrokeWidth` 는 `size` prop 으로 나누는데 여기는 크기를 클래스로 주어 맞지 않는다(lucide-react
+// 1.51.0 의 `dist/esm/shared/src/build/buildLucideIconNode.mjs`).
 // import 는 아이콘 하나짜리 서브패스다(ADR 0024. 세트를 통째로 import 하는 것은 ESLint 가 막는다).
 import Check from "lucide-react/dist/esm/icons/check";
 import CircleCheck from "lucide-react/dist/esm/icons/circle-check";
@@ -43,21 +46,17 @@ const GLYPHS = {
 export type IconName = keyof typeof GLYPHS;
 export const ICON_NAMES = Object.keys(GLYPHS).filter((name): name is IconName => name in GLYPHS);
 
-export const ICON_SIZES = ["14", "16", "20", "24"] as const;
+export const ICON_SIZES = ["14", "16", "20"] as const;
 export type IconSize = (typeof ICON_SIZES)[number];
 
 const SIZE_CLASS = {
   "14": "size-icon-xs",
   "16": "size-icon-s",
   "20": "size-icon-m",
-  "24": "size-icon-l",
 } satisfies Record<IconSize, string>;
 
-// 24 격자에서의 선 굵기. 작은 둘은 굵게 두어 줄였을 때 흐려지지 않는다.
-const STROKE_WIDTH = { "14": 2, "16": 2, "20": 1.75, "24": 1.75 } satisfies Record<
-  IconSize,
-  number
->;
+// 화면의 px(디자인 파일의 `icon-stroke`). 그린 요소에 `nonScalingStroke` 와 함께 둔다.
+const STROKE_WIDTH = 1.5;
 
 interface IconOwnProps {
   name: IconName;
@@ -78,18 +77,23 @@ export function Icon({ name, size = "20", label = null, ...rest }: IconProps) {
       {...rest}
       {...naming}
       className={`${SIZE_CLASS[size]} shrink-0`}
-      strokeWidth={STROKE_WIDTH[size]}
+      strokeWidth={STROKE_WIDTH}
+      nonScalingStroke
     />
   );
 }
 
-/** 불러오는 중의 도는 표시. 놓인 곳의 글자 색이고 움직임 줄이기 설정이면 멈춘다. 컴포넌트 안에서만 쓴다. */
+/**
+ * 불러오는 중의 도는 표시. 아이콘과 같은 선이고 놓인 곳의 글자 색이며 움직임 줄이기 설정이면 멈춘다. 컴포넌트 안에서만
+ * 쓴다.
+ */
 export function Spinner({ size }: { size: IconSize }) {
   return (
     <LoaderCircle
       aria-hidden
       className={`${SIZE_CLASS[size]} shrink-0 animate-spin motion-reduce:animate-none`}
-      strokeWidth={STROKE_WIDTH[size]}
+      strokeWidth={STROKE_WIDTH}
+      nonScalingStroke
     />
   );
 }

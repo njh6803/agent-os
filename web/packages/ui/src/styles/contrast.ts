@@ -39,7 +39,9 @@ export type ContrastPair = readonly [SemanticToken, SemanticToken, number];
 
 // 디자인 파일이 재는 짝(대응표에서 기준이 있는 열과 상태용 토큰)에 컴포넌트가 쓰는데 디자인 파일이 재지 않은 짝(알림
 // 제목과 그 안 버튼의 포커스 링, 진행 막대와 트랙)을 더했다. 성공 톤의 알림은 없어 `success-tint` 위의 제목 짝은 두지
-// 않는다. 쓸 수 없음(`disabled-*`)은 명암비 기준의 대상이 아니다(design-system 명세의 "명암비 짝 43개").
+// 않는다. 쓸 수 없음(`disabled-*`)은 명암비 기준의 대상이 아니다(design-system 명세의 "명암비 짝 43개"). 진행 막대의
+// 채움이 `muted` 하나가 되어(design-refresh 티켓 02) 끝의 `accent`·`danger` 를 `tint` 와 맞댄 짝은 쓰는 컴포넌트가
+// 없다. 지금 채움과 트랙의 짝은 위의 `muted`/`tint`(4.5)다.
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...(["text", "muted", "accent", "danger", "warning", "success", "info"] as const).flatMap(
     (name): ContrastPair[] => [

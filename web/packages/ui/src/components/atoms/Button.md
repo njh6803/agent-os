@@ -11,4 +11,4 @@
 - 오류 상태는 없습니다. 실패는 알림으로 알립니다.
 - 불러오는 중에는 글자 자리를 그대로 두고 그 가운데에 도는 표시를 그립니다. 너비가 바뀌지 않고 이름도 그대로입니다.
 
-출처: 디자인 파일 v3의 02.1 버튼(`.scratch/design-system/design/`).
+출처: 재탐색 디자인 파일의 2.1 버튼(`.scratch/design-system/design/Agent OS Design System.dc.html`).

@@ -1,4 +1,6 @@
-// 버튼(디자인 파일 02.1). 변형 셋(주·보조·위험), 크기 둘(40·32px). 클래스는 쓰임새 토큰과 공통 크기의 유틸리티만 쓴다.
+// 버튼(재탐색 디자인 파일 2.1). 변형 셋(주·보조·위험)이고 크기는 고르지 않는다(높이 40px). 크기를 고르지 않는
+// 것은 재탐색의 모양이고, 변형의 색과 치수는 아직 첫 탐색 디자인 파일의 값이다. 클래스는 쓰임새 토큰과 공통 크기의
+// 유틸리티만 쓴다.
 // 상태마다 클래스를 고른다. 쓸 수 없음과 불러오는 중에는 올림·누름의 클래스를 두지 않는다. 불러오는 중은 `disabled`
 // 가 아니어서 `disabled:` 변형으로는 그 상태의 올림·누름을 끌 수 없다.
 //
@@ -7,20 +9,12 @@
 // (디자인 파일은 도는 표시를 글자 앞에 그렸는데, 아이콘이 없는 버튼은 그만큼 넓어진다).
 import type { MouseEvent } from "react";
 import type { NativeProps } from "../../props";
-import { Icon, Spinner, type IconName, type IconSize } from "./Icon";
+import { Icon, Spinner, type IconName } from "./Icon";
 
 export type ButtonVariant = "primary" | "secondary" | "danger";
-export type ButtonSize = "m" | "s";
 
 const BASE =
-  "relative inline-flex items-center justify-center whitespace-nowrap rounded-m border font-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
-
-const SIZE_CLASS = {
-  m: "h-control-m px-4 text-body",
-  s: "h-control-s px-3 text-small",
-} satisfies Record<ButtonSize, string>;
-
-const ICON_SIZE = { m: "20", s: "16" } satisfies Record<ButtonSize, IconSize>;
+  "relative inline-flex h-control-m items-center justify-center whitespace-nowrap rounded-m border px-4 text-body font-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
 const VARIANT_CLASS = {
   primary: "border-transparent bg-accent text-on-accent",
@@ -41,7 +35,6 @@ interface ButtonOwnProps {
   /** 글자. 동사로 짧게. */
   children: string;
   variant?: ButtonVariant;
-  size?: ButtonSize;
   /** 글자 앞 아이콘. */
   icon?: IconName;
   loading?: boolean;
@@ -56,7 +49,6 @@ export type ButtonProps = ButtonOwnProps &
 export function Button({
   children,
   variant = "primary",
-  size = "m",
   icon,
   loading = false,
   disabled = false,
@@ -82,15 +74,15 @@ export function Button({
       aria-busy={loading || undefined}
       aria-disabled={loading || undefined}
       onClick={press}
-      className={`${BASE} ${SIZE_CLASS[size]} ${state}`}
+      className={`${BASE} ${state}`}
     >
       <span className={`inline-flex items-center gap-2${loading ? " opacity-0" : ""}`}>
-        {icon === undefined ? null : <Icon name={icon} size={ICON_SIZE[size]} />}
+        {icon === undefined ? null : <Icon name={icon} />}
         {children}
       </span>
       {loading ? (
         <span className="absolute inset-0 flex items-center justify-center">
-          <Spinner size={ICON_SIZE[size]} />
+          <Spinner size="20" />
         </span>
       ) : null}
     </button>

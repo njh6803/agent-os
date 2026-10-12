@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { colorsOf, semanticColor } from "../../storybook/expect";
 import { Button } from "./Button";
-import { CARD_ELEVATIONS, Card } from "./Card";
+import { Card } from "./Card";
 import { StatusBadge } from "./StatusBadge";
 
 const meta = {
@@ -22,19 +22,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** 제목 "결제 환불" 을 담은 카드. 카드는 제목의 부모다. */
-function cardOf(canvasElement: HTMLElement, title = "결제 환불"): HTMLElement {
+function cardOf(canvasElement: HTMLElement): HTMLElement {
   const heading = Array.from(canvasElement.querySelectorAll("h2")).find(
-    (element) => element.textContent === title,
+    (element) => element.textContent === "결제 환불",
   );
   const card = heading?.parentElement;
   if (card === null || card === undefined) {
-    throw new Error(`제목이 "${title}" 인 카드가 없다`);
+    throw new Error('제목이 "결제 환불" 인 카드가 없다');
   }
   return card;
 }
 
 export const Default: Story = {
-  name: "기본 카드는 div 이고 raised 바탕에 divider 테두리, 10px 모서리, 16px 여백, 그림자가 있다",
+  name: "기본 카드는 div 이고 그림자 없이 raised 바탕에 divider 테두리, 10px 모서리, 16px 여백으로 선다",
   play: async ({ canvasElement }) => {
     const card = cardOf(canvasElement);
     const style = getComputedStyle(card);
@@ -49,7 +49,7 @@ export const Default: Story = {
       radius: style.borderTopLeftRadius,
       padding: style.paddingTop,
     }).toEqual({ border: "1px", radius: "10px", padding: "16px" });
-    await expect(style.boxShadow).not.toBe("none");
+    await expect(style.boxShadow).toBe("none");
   },
 };
 
@@ -65,29 +65,9 @@ export const Section: Story = {
 
 export const Article: Story = {
   name: "as 가 article 이면 글 한 편의 역할로 찾힌다",
-  args: { as: "article", elevation: "2" },
+  args: { as: "article" },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole("article")).toBe(cardOf(canvasElement));
-  },
-};
-
-export const Elevations: Story = {
-  name: "elevation 0 은 그림자가 없고 1·2·3 은 있다",
-  render: (args) => (
-    <div className="flex flex-col gap-4">
-      {CARD_ELEVATIONS.map((elevation) => (
-        <Card key={elevation} {...args} elevation={elevation}>
-          <h2 className="text-heading text-text">{`그림자 ${elevation}`}</h2>
-        </Card>
-      ))}
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const shadows = CARD_ELEVATIONS.map(
-      (elevation) => getComputedStyle(cardOf(canvasElement, `그림자 ${elevation}`)).boxShadow,
-    );
-    await expect(shadows.map((shadow) => shadow === "none")).toEqual([true, false, false, false]);
-    await expect(new Set(shadows).size).toBe(CARD_ELEVATIONS.length);
   },
 };
 

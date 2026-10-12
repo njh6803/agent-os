@@ -26,9 +26,7 @@ type Story = StoryObj<typeof meta>;
 
 const ACTIONS = (
   <>
-    <Button variant="secondary" size="s">
-      다시 실행
-    </Button>
+    <Button variant="secondary">다시 실행</Button>
     <a href="#runs" className="text-small text-text underline">
       실행 보기
     </a>
@@ -209,11 +207,7 @@ export const WithActionsAndClose: Story = {
     tone: "warning",
     title: "결제 환불 플러그인이 꺼짐입니다",
     children: "켜기 전에는 환불 요청에 출력이 나오지 않습니다.",
-    actions: (
-      <Button variant="secondary" size="s">
-        켜기
-      </Button>
-    ),
+    actions: <Button variant="secondary">켜기</Button>,
     onClose: fn(),
   },
   play: async ({ canvas }) => {

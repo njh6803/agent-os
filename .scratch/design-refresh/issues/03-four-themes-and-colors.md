@@ -34,8 +34,8 @@
 - [ ] **버튼.** 주는 `primary`/`on-primary`, 올림 `primary-hover`, 누름 `primary-active`다. 보조는 바탕 없이 `border` 테두리와 `text` 글자이고 올림 `bg-hover`, 누름 `bg-active`다. 위험은 바탕 없이 `border` 테두리와 `danger` 글자이고 올림 `bg-hover`, 누름 `bg-selected`다(사용자가 골랐다). 쓸 수 없음은 `bg-disabled` 바탕과 테두리, `text-disabled` 글자다
 - [ ] **아이콘 버튼.** 투명은 바탕 없이 `text-muted` 아이콘이고 올림 `bg-hover`·`text`, 누름 `bg-active`·`text`다. 주는 버튼의 주와 같고, 보조는 버튼의 보조와 같다(명세가 정했다). 쓸 수 없음은 투명이면 `text-disabled` 아이콘만, 주·보조면 `bg-disabled`·`text-disabled`다
 - [ ] **상태 배지.** 바탕을 칠하지 않는다. 테두리는 `border`이고, 글자와 아이콘은 일시정지 `warning`, 끝남 `success`, 실패 `danger`, 결말 없음 `text-muted`다. 스토리가 `background-color`가 투명이고 테두리가 `border`인지 본다
-- [ ] **진행 표시.** 트랙은 `bg-active`, 채움과 값 모름의 도는 표시는 `text-muted`다
-- [ ] **카드.** 바탕 `bg-raised`, 테두리 `border`다
+- [ ] **진행 표시.** 트랙은 `bg-active`, 채움과 값 모름의 도는 표시는 `text-muted`다 (02 메모: 명세 "컴포넌트 아홉"의 5와 디자인 파일의 상태 표는 이름도 `text-muted`로 적었는데 이 줄에는 없다. 02는 채움을 지금의 `muted`로, 값 모름의 도는 표시를 progressbar 요소의 `text-muted`로 칠했고, 이름은 값을 알 때와 모를 때 모두 지금의 `text-small text-text` 그대로 두었다. 명암비 짝의 `accent`/`tint`·`danger`/`tint`(진행 막대와 트랙)는 쓰는 컴포넌트가 없어졌다)
+- [ ] **카드.** 바탕 `bg-raised`, 테두리 `border`다 (02 메모: 버튼·카드·진행 표시의 머리 주석(`Button.tsx`, `Card.tsx`, `Progress.tsx`)이 색과 치수가 아직 첫 탐색 디자인 파일의 값이라고 적었다. 색을 옮기면 그 말에서 색을 걷는다)
 - [ ] **글 입력.** 기본은 `bg-raised`·`border-control`·`text`이고 자리 글자 `text-muted`, 올림에 테두리 `text-muted`다. 쓸 수 없음은 `bg-disabled`·`text-disabled`와 테두리 `border`, 오류는 테두리 `danger`와 칸 아래 `danger` 글이다
 - [ ] **스위치.** 꺼짐은 트랙 `border-control`에 손잡이 `bg-raised`, 켜짐은 트랙 `accent`에 손잡이 `on-accent`이고 상태 글은 `text-muted`다. 올림은 트랙 위에 `bg-active`를 겹친다. 쓸 수 없음은 트랙 `bg-disabled`, 손잡이 `text-disabled`다
 - [ ] **알림.** 상태색으로 바탕을 칠하지 않는다. 바탕은 중립의 `bg-raised`이고 `border` 테두리, 아이콘 `danger`·`warning`·`info`, 제목 `text`, 본문 `text-muted`다. 스토리가 바탕이 `bg-raised`이고 테두리가 `border`인지 본다
