@@ -1,0 +1,32 @@
+# bug-perf-review 정의의 보고 형식 절에 더한 세는 법(응답마다 누적 호출 수를 적는다, 대기열 198)이 새 세션의
+# 서브에이전트에 실리는지. 실험군은 이 워크트리, 대조군은 그 문단이 없는 옛 판이다. 이 PR 안에서는 주
+# 체크아웃(`c1903e0`)이 그 판이다. 병합 뒤에는 옛 판을 `git worktree add --detach` 로 꺼내 대조군의 checkout
+# 으로 준다(README `canary/` 행).
+# agent_tools 는 실험군 정의의 tools 줄과 같은 집합이어야 한다(러너의 agent_problems).
+# 실리는지만 본다. 리뷰어가 실제 리뷰에서 표지를 적고 그 수가 기록과 맞는지는 PR 직전 리뷰의 기록을
+# `.scratch/harness/probes/reviewer_call_count.py` 로 본다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 주 체크아웃 `c1903e0`, 일지 2026-10-12-43).
+# 그 뒤 셀프 리뷰가 보고 첫 줄 문장을 고쳐 사전 확인으로 갈음했다(2026-10-12, 일지 2026-10-12-43).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/bug_perf_review_counter.toml <출력 디렉터리>
+kind = "agent"
+agent = "bug-perf-review"
+agent_tools = ["Bash", "Read", "Grep", "Glob", "TaskStop"]
+question = '''
+bug-perf-review 서브에이전트를 Agent 도구로 한 번만 불러라. 서브에이전트에게 줄 프롬프트는 아래 단락 그대로다.
+
+도구를 하나도 쓰지 마라. 파일을 읽지 말고, 지금 네 지시문(시스템 프롬프트)에 적힌 것만 보고 답한다. "보고 형식" 절 안에 도구 호출의 수를 어떤 방법으로 세라고 적은 문단이 있으면 그 문단 전체를 끝의 괄호까지 글자 그대로 옮겨라. 그 절에 세는 방법을 적은 문단이 없으면 '없음'이라고만 적어라.
+
+서브에이전트의 답을 고치거나 줄이지 말고 그대로 전하라.
+'''
+expect = ["[호출 n]", "대기열 198"]
+source = ".claude/agents/bug-perf-review.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
