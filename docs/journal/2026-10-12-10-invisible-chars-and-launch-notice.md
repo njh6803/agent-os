@@ -176,7 +176,7 @@ CodeRabbit은 요청 뒤 `02b21d0..ea7d602`(그때의 HEAD)를 보고 지적이 
 
 기존 행에 회차를 더한 것:
 
-- **177(4회차).** 첫 턴의 `tidy-checkouts`가 워크트리 둘을 "다른 프로세스가 쥐고 있다"(WinError 32)에서 멈췄고 쥔
+- **177(5회차. 같은 날 main의 일지 07도 한 회차를 더해 합칠 때 둘을 묶었다).** 첫 턴의 `tidy-checkouts`가 워크트리 둘을 "다른 프로세스가 쥐고 있다"(WinError 32)에서 멈췄고 쥔
   프로세스를 대지 못했다. 그 행은 다른 세션(`chore/run-summary-and-lock-holder`, PR #182)이 맡고 있다.
 - **180(2회차).** 셀프 리뷰 뒤 검증 명령 전부를 손으로 돌리고 곧바로 커밋해, pre-commit이 같은 것을 다시 돌렸다(첫 커밋의
   pre-commit 출력에서 pytest 228초, web verify 171초).
