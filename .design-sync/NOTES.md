@@ -1,7 +1,9 @@
 # design-sync notes — @agent-os/ui
 
 `web/packages/ui` 를 Claude Design 프로젝트 "Agent OS 디자인 시스템"(config 의 `projectId`)에 올린다. 첫 동기화는
-2026-10-12, Claude Code 2.1.286 의 번들 스킬이다. 패키지와 결정의 배경은 ADR 0025·0026.
+2026-10-12, Claude Code 2.1.286 의 번들 스킬이다. 패키지와 결정의 배경은 ADR 0025·0026. 첫 프로젝트가 화면을 그릴
+계정과 다른 계정에 올라갔다고 사용자가 알려, 같은 날 사용자가 다시 로그인한 계정에 새로 만들고 같은 빌드를 다시 올렸다(소스가
+같아 채점은 이어 썼다, 일지 2026-10-12-11).
 
 ## 돌리는 법
 
@@ -11,6 +13,10 @@
   react·react-dom 이 있다.
 - 변환기 의존성: `.ds-sync/` 에 `npm i esbuild ts-morph @types/react playwright@1.63.0`. Playwright 를 저장소의 판(1.63.0)에
   맞춰야 이미 깔린 chromium-1243 을 다시 받지 않는다.
+- 목록 타일: driver 뒤에 `.design-sync/thumbnail.html` 을 `ds-bundle/` 에 복사한다(빌드가 `ds-bundle/` 을 지우고 새로 짓는다,
+  `package-build.mjs`). `DesignSync` 의 `finalize_plan` writes 에 `thumbnail.html` 과 `_ds_needs_recompile` 을 넣고, 둘을
+  올린 뒤 프로젝트를 한 번 연다. 변환기의 삭제 목록은 `components/` 경로만 내므로(`lib/remote-diff.mjs` 를 읽었다) 다시
+  동기화해도 지워지지 않는다. 새 프로젝트에 올릴 때와 이 파일을 고쳤을 때만 올린다.
 
 ## 고친 것
 
@@ -53,6 +59,15 @@
 
 ## Re-sync risks
 
+- 목록 타일은 프로젝트 뿌리의 `thumbnail.html` 에서 나오는 것으로 보인다. 앱의 기본 디자인 시스템 다섯은 앱이 가진
+  `thumbnail.html` 을 작은 창으로 그린다(Modernist 의 것을 읽었다). 이 프로젝트는 같은 짜임의 파일과 마커를 올리고 다시 연 뒤
+  서버의 썸네일 이미지가 생겼고, 그 그림이 이 파일과 같았다. 올리기 전에 연 때는 없었다. 한 번 본 것이다(2026-10-12 내장
+  브라우저에서 손으로 봤다, 일지 2026-10-12-11). 파일을 고쳐 다시 올리면 이미지가 바뀌는지는 아직 보지 못했다. `<html>` 과
+  띠의 테마 키는 글자로 들었다. 기본 테마나 테마 목록이 바뀌면 고쳐 다시 올린다.
+- config 의 `projectId` 가 `get_project` 에서 `404` 이고 `list_projects`(쓸 수 있는 것만 보인다)에 없으면, 프로젝트가
+  지워졌거나 다른 계정으로 로그인했을 수 있다. 2026-10-12 에는 다른 계정이었다(사용자가 알렸다). 새 프로젝트를 만들기 전에
+  사람에게 지금 로그인한 계정이 그리는 계정인지 묻는다. 목록에 프로젝트가 있으면 그 owner 를 함께 보인다
+  (`docs/agents/issue-tracker.md` 화면 디자인 절).
 - 포크 파일은 채점 계약의 일부다. 주석만 고쳐도 다음 driver 실행이 모든 컴포넌트의 채점을 지우고 기본 상한(스토리 6개)으로만
   다시 캡처한다(2026-10-12 셀프 리뷰 뒤 한 번 겪었다). 포크를 고치면 `compare.mjs --max-stories 12` 로 다시 캡처해 다시 채점한다.
   줄바꿈도 계약의 바이트다. 포크는 작업 트리에서 LF 여야 한다(`git ls-files --eol .design-sync` 의 `w/lf`). 스킬 폴더에서

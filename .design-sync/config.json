@@ -1,6 +1,6 @@
 {
   "pkg": "@agent-os/ui",
-  "projectId": "47b7547e-5594-4fee-a2d8-1f9b3f4e4825",
+  "projectId": "0a8386b7-e775-4145-97db-16d4de3a59c5",
   "shape": "storybook",
   "storybookConfigDir": "web/packages/ui/.storybook",
   "storybookStatic": ".design-sync/sb-reference",

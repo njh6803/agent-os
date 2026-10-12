@@ -38,7 +38,7 @@
 
 ## 체크리스트
 
-<!-- 실제로 실행한 것만 체크한다. 안 돌렸으면 비워 두고 이유를 한 줄 적는다 -->
+<!-- 실제로 실행한 것만 체크한다. 커밋의 pre-commit이 돌린 검사도 실행이고, 그 출력에서 Skipped인 검사는 실행이 아니다(CLAUDE.md 검증 명령 절). 안 돌렸으면 비워 두고 이유를 한 줄 적는다 -->
 
 - [ ] `uv run ruff check . && uv run ruff format --check .`
 - [ ] `uv run pyright`
