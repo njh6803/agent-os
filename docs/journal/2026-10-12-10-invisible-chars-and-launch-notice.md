@@ -103,7 +103,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 52�
   - 명세 Nit: 대기열 두 행의 승인 기록을 닫힘 문구가 덮었다. 선례(158행)대로 승인 뒤에 닫힘을 붙였다.
 - **남긴 것.** `claim_first_notice`의 CQS(표준 Nit)는 `O_EXCL` 하나가 묻기와 기록을 겸해야 병렬 호출이 함께 처음이 되지
   않는다는 근거를 독스트링에 둔다. `payload_strings`가 `.items()`의 AttributeError로 객체가 아닌 페이로드를 가르는 것(Nit)은
-  고치기 전 `notice`의 모양을 옮긴 것이다. `invisibles_in`이 시험에서만 불리는 것(냄새)은 정의를 시험하는 표면이라 두었다.
+  고치기 전 `notice`의 모양을 옮긴 것이다. `invisibles_in`이 시험에서만 불리는 것(냄새)은 정의를 시험하는 표면이라 두었다가,
+  PR 리뷰가 다시 짚어 걷어 냈다(아래 PR 리뷰 반영 절).
 - **다시 돌린 것.** 위 검증 명령, 훅 러너(71건 어긋남 0), 변이 표 셋의 원문 확인이 초록이었다. `uv run pytest -q`는
   1944 passed(7 deselected)였다. 반영은 시험 하나의 이름을 바꾸고 단언을 더한 것이라 시험 수는 같다.
 
@@ -130,3 +131,24 @@ pre-commit이 모두 초록이었다.
     저하 경로에서만 일어난다. 매치가 아주 많은 파일(홀로 선 CR 100만 개)에서 검사와 훅이 목록 전체를 짓는다. 실제로 드물다.
   - 오탐으로 둔 것 가운데 셋을 적는다. 리뷰어가 무작위 문자열 약 6만 개로 줄·열 계산을 순진한 구현과 대조해 불일치가 0이었다.
     병렬 호출의 `O_EXCL`이 원자적이다. 시그니처를 바꾼 `problems_in`의 호출부는 하나다.
+
+## PR 리뷰 반영
+
+PR [njh6803/agent-os#179](https://github.com/njh6803/agent-os/pull/179). 첫 푸시(`ea7d602`)에서 CI 일곱이 초록이었다.
+
+> 사용자: "CI 끝났어"
+
+CodeRabbit은 요청 뒤 `02b21d0..ea7d602`(그때의 HEAD)를 보고 지적이 없었다("No actionable comments"). 그 시간의 포함 리뷰
+한도를 다 썼다고 적었다. claude-review 1회차는 Critical·Major 없이 Minor 둘·Nit 둘이었다. 이 봇의 첫 리뷰라 지적마다
+판단했다.
+
+- 고친 것(Minor): `invisibles_in`이 시험에서만 불린다. 셀프 리뷰 표준 축도 같은 것을 짚었다. 함수를 걷어 내고 시험 넷이
+  실제 경로인 `problems_in(…, ".py")`를 거치게 했다. 정의 시험은 `.py`와 `.md` 두 모드를 함께 견주게 됐고, 스윕 글에서
+  NUL을 뺐다(이진 판정). 검사 변이 표 서른여섯을 다시 돌려 모두 기대대로였다.
+- 그대로 둔 것(이유는 PR 코멘트에): `claim_first_notice`의 CQS(Minor)는 `O_EXCL` 하나가 묻기와 기록을 겸해야 병렬 호출이
+  함께 처음이 되지 않는다. `payload_strings`의 AttributeError(Nit)는 `isinstance(data, dict)`로 좁히면 pyright strict가
+  원소를 Unknown으로 봐 우회 없이는 지나지 못한다. `tests/` 아래 임시 프로브(`object`로 받아 `isinstance`로 좁히고 키·값도
+  `isinstance`로 거른 판)를 pyright 1.1.414에 손으로 물으니 `data.items()`의 키와 값이 `reportUnknownVariableType`이었고,
+  프로브는 지웠다(일지 2026-10-12-05에서도 같은 일을 겪었다). 힌트를 `" U+"` 포함으로
+  가르는 것(Nit)은 이 PR 전부터의 코드다.
+- CodeRabbit은 한도를 다 썼고 이 반영은 시험 정리라 다시 요청하지 않았다.

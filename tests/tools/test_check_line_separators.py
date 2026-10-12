@@ -18,7 +18,6 @@ from pathlib import Path
 import pytest
 from tools.check_line_separators import (
     ROOT,
-    invisibles_in,
     is_text,
     main,
     problems_in,
@@ -72,7 +71,7 @@ def test_보이지_않는_공백과_서식_문자를_줄과_열로_잡는다() -
         f"x{ZERO_WIDTH_SPACE}{RIGHT_TO_LEFT_OVERRIDE}\n{BOM}y\n"
     )
 
-    assert invisibles_in(text) == [
+    assert problems_in(text.encode(), ".py") == [
         "1:2: U+00A0 NO-BREAK SPACE",
         "2:4: U+3000 IDEOGRAPHIC SPACE",
         "3:2: U+200B ZERO WIDTH SPACE",
@@ -82,25 +81,26 @@ def test_보이지_않는_공백과_서식_문자를_줄과_열로_잡는다() -
 
 
 def test_한글과_ASCII_공백은_보이지_않는_문자가_아니다() -> None:
-    assert invisibles_in("# 한글 주석\n\tx = '가 나'  # 끝\n") == []
+    assert problems_in("# 한글 주석\n\tx = '가 나'  # 끝\n".encode(), ".py") == []
 
 
 def test_보이지_않는_문자의_정의는_ASCII_밖의_Zs_와_Cf_다() -> None:
-    """모든 코드 포인트를 한 줄에 하나씩 두고 훑는다. 줄 구분 문자는 따로 센다. CR 은 뒤에 LF 가
-    와 줄 끝이 되므로 여기서는 잡히지 않는다(홀로 선 CR 은 위 시험)."""
-    points = [point for point in range(0x110000) if point != 0x0A and not 0xD800 <= point <= 0xDFFF]
-    text = "\n".join(chr(point) for point in points)
+    """모든 코드 포인트를 한 줄에 하나씩 두고 `.py` 와 `.md` 로 훑는다. CR 은 뒤에 LF 가 와 줄
+    끝이 되므로 여기서는 잡히지 않는다(홀로 선 CR 은 위 시험). NUL 이 들면 이진으로 본다."""
+    points = [p for p in range(0x110000) if p not in (0x00, 0x0A) and not 0xD800 <= p <= 0xDFFF]
+    data = "\n".join(chr(point) for point in points).encode()
     invisible = {
         point
         for point in points
         if point > 0x7F and unicodedata.category(chr(point)) in {"Zs", "Cf"}
     }
+    separators = {0x85, 0x2028, 0x2029}
 
     def codes(found: list[str]) -> set[int]:
         return {int(item.split(" U+", 1)[1].split(" ", 1)[0], 16) for item in found}
 
-    assert codes(invisibles_in(text)) == invisible
-    assert codes(separators_in(text)) == {0x85, 0x2028, 0x2029}
+    assert codes(problems_in(data, ".py")) == invisible | separators
+    assert codes(problems_in(data, ".md")) == separators
     assert {0x00A0, 0x00AD, 0x200B, 0x200D, 0x202E, 0x2066, 0x3000, 0xFEFF} <= invisible
     # 독스트링의 못 보는 것(Mn 인 이체 선택자 U+FE0F, 탭·개행·CR·U+0085 밖의 Cc)은 위 두 등식이
     # 고정한다. 검사가 그 문자를 잡게 바뀌면 등식이 깨진다.
@@ -134,7 +134,6 @@ def test_이스케이프로_쓴_것은_잡지_않는다() -> None:
 
     assert "\\u2028" in source
     assert separators_in(source) == []
-    assert invisibles_in(source) == []
     assert problems_in(source.encode("utf-8"), ".py") == []
 
 

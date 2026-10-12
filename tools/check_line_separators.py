@@ -135,12 +135,6 @@ def separators_in(text: str) -> list[str]:
     return _report(text, _SEPARATOR)
 
 
-def invisibles_in(text: str) -> list[str]:
-    """ASCII 밖의 Zs·Cf 문자의 자리. 항목의 모양은 `separators_in` 과 같다."""
-    invisible = _invisible_class(text)
-    return [] if invisible is None else _report(text, re.compile(invisible))
-
-
 def problems_in(data: bytes, suffix: str) -> list[str]:
     """확장자가 `suffix` 인 파일 하나의 어긋남. 텍스트가 아니면 비고, UTF-8 이 아니면 그 자체가
     어긋남이다. 보이지 않는 문자는 `SOURCE_SUFFIXES` 에서만 보고 줄 구분 문자와 자리 순으로
