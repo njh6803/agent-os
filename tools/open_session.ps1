@@ -5,16 +5,21 @@
 # `send`: 딥링크 `claude://code/new?q=<프롬프트>`로 프롬프트가 채워진 새 세션 화면을 열고 접근성
 # 트리(UI Automation)의 "보내기"를 호출한다. `split`: 사이드바 행 메뉴 "다음에서 열기 → 분할 보기".
 # 왜 이 둘인지(자동 제출 파라미터가 없고 배치 도구가 거부한다)와 실측은 일지 2026-09-21 open-session.
+# 지시문에 `모델: <모델 메뉴의 이름> / <low|medium|high|xhigh|max>` 줄이 있으면 보내기 전에 입력창의 모델과 노력을 그대로
+# 고르고(`Set-ComposerModel`), 보낸 뒤 새 세션 화면의 모델과 노력 기본값을 고르기 전으로 되돌린다(`Restore-DraftDefaults`).
 #
 # 사용:
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <절대경로> -PromptFile <파일>
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <세션 제목>
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action focus -Title <세션 제목>   (이미 패널에 있을 때)
+#   pwsh -NoProfile -File tools/open_session.ps1 -Action defaults -Model <모델 메뉴의 이름> -Effort <레벨>   (기본값 복구)
 param(
-    [Parameter(Mandatory)] [ValidateSet('send', 'split', 'focus')] [string] $Action,
+    [Parameter(Mandatory)] [ValidateSet('send', 'split', 'focus', 'defaults')] [string] $Action,
     [string] $Folder,
     [string] $PromptFile,
     [string] $Title,
+    [string] $Model,
+    [string] $Effort,
     # 사이드바 행이 새 제목으로 갱신되는 데 몇 초 걸린다. 넉넉히 둔다. `focus` 는 새 세션이 첫 턴에
     # 스스로 이름을 붙일 때까지 기다리므로 스킬이 더 늘려 준다.
     [int] $TimeoutSec = 30
@@ -38,6 +43,9 @@ public static class OpenSessionPower {
 $Auto = [System.Windows.Automation.AutomationElement]
 $Scope = [System.Windows.Automation.TreeScope]
 $Types = [System.Windows.Automation.ControlType]
+# 지시문의 모델 줄대로 고르기 전 새 세션 화면에 있던 모델과 노력 슬라이더 칸. 보낸 뒤 Restore-DraftDefaults 가 되돌린다.
+$script:DraftModel = $null
+$script:DraftEffortStep = $null
 
 function Get-ClaudeWindow {
     $root = $Auto::RootElement
@@ -101,6 +109,9 @@ function Send-Prompt {
         $firstLine = $startLine
         "start=$($startLine.Substring(0, $startLine.IndexOf(' 를 읽어')))"
     }
+    # 모델 줄은 쏘기 전에 읽는다. 읽을 수 없는 줄이면 여기서 멈춰 세션이 생기지 않는다.
+    $pick = Read-ModelLine $prompt
+    if (-not $pick) { 'model=unset 지시문에 모델 줄이 없어 입력창에 있던 값으로 연다' }
     # `folder`를 실으면 앱이 외부에서 온 폴더로 보고(`src=external`) 신뢰를 다시 묻고, 그 대화상자를
     # 거치면 폴더가 떨어져 스크래치 워크스페이스로 열린다(실측 9). 폴더는 싣지 않는다. 앱은 마지막
     # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 그것이 루트다. 맞는지는 스킬이
@@ -172,6 +183,18 @@ function Send-Prompt {
     # 그 상태에서 "빈 입력창이 없다"를 성공으로 치면 확인이 공허해진다(PR #33 리뷰). 못 찾으면 멈춘다.
     $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
 
+    # 모델 줄은 아래 `held=` 보다 먼저 고른다. `held=` 면 사람이 첫 글자만 고쳐 보내므로, 그때도 첫 턴이 줄의 값으로 돈다.
+    # 고르다 멈추거나 `held=` 로 멈추면 이 스크립트가 보내지 않아 기본값을 되돌릴 때가 없다. 사람이 보낸 뒤 칠 복구를 남긴다.
+    if ($pick) {
+        try { Set-ComposerModel $win $box $pick }
+        catch {
+            if ($script:DraftModel) { "restore=필요: 새 세션 화면의 기본값이 바뀌었을 수 있다. 사람이 보낸 뒤 $(Get-RepairHint)" }
+            throw
+        }
+        # 메뉴를 여닫는 키가 입력창에 닿지 않았는지 본다. 지시문이 바뀌었으면 보내지 않는다.
+        if (-not (Test-Needle (Get-EditValue $box) $needle)) { throw '모델을 고르는 사이 입력창의 지시문이 바뀌었다. 보내지 않았다. 사람이 입력창을 본다.' }
+    }
+
     # 앱은 링크로 온 슬래시 명령을 그대로 실행하지 않는다. 첫 `/` 를 전각 `／`(U+FF0F)로 바꿔 넣어,
     # 그대로 보내면 명령이 아니라 글자가 된다 — `/implement` 가 사용자 호출로 먹지 않는다(2026-09-23 실측,
     # 입력창의 값 첫 글자가 U+FF0F). 스크립트는 되돌려 넣지 않는다. 어디서 왔는지 모르는 링크가 명령을
@@ -180,9 +203,10 @@ function Send-Prompt {
     # 저장소의 스킬 파일뿐이다. 그렇게 옮긴 것은 여기 오지 않으므로, 여기 걸리는 것은 옮기지 못한 슬래시
     # 명령뿐이다(스킬 파일이 없다).
     # 보내기를 누르지 않고 멈춘다. 스킬이 사람에게 부탁하고 턴을 끝낸다.
-    $value = try { $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { '' }
+    $value = Get-EditValue $box
     if ($value -and [int][char]$value[0] -eq 0xFF0F) {
         "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다(옮기지 못한 슬래시 명령). 사람이 / 로 고쳐 보낸다"
+        if ($pick) { "restore=필요: 사람이 보낸 뒤 $(Get-RepairHint)" }
         return
     }
 
@@ -192,6 +216,7 @@ function Send-Prompt {
         try { -not (Test-Needle ($box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) $needle) } catch { $false }
     } '제출된 뒤 비워진 입력창(요소를 못 읽으면 비운 것으로 치지 않는다)' 10 | Out-Null
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
+    if ($pick) { Restore-DraftDefaults $win }
 }
 
 function Get-RuntimeKey($el) {
@@ -255,6 +280,194 @@ function Find-EnabledSendButton($win) {
     if ($buttons.Count -gt 1) { throw "활성 보내기 버튼이 $($buttons.Count)개다. 다른 패널의 입력창에도 글이 있다. 사람이 판단한다." }
     if ($buttons.Count -eq 1) { return $buttons[0] }
     return $null
+}
+
+# 지시문의 `모델:` 줄(`모델: <모델 메뉴의 이름> / <레벨>`)을 읽는다. 줄이 없으면 $null 이고 입력창에 있던 값으로 연다.
+# 줄이 있는데 읽을 수 없으면 쏘기 전에 멈춘다. 틀린 줄을 건너뛰고 열면 지시문이 정한 것과 다른 모델로 첫 턴이 돈다.
+# 레벨은 API 이름 그대로 소문자이고, 칸은 입력창 노력 슬라이더의 위치다. 앱 2.19675.0.0 에서 0~4 칸의 이름이 낮음·중간·
+# 높음·엑스트라·최대였고 여섯째 칸(5)은 레벨이 아닌 `Ultracode` 라 고르지 않는다(.scratch/harness/probes/composer_effort_labels.ps1,
+# 2026-10-12). 0·1·2·4 는 그 칸으로 연 시험 세션의 get_session 이 low·medium·high·max 였고, 3 은 엑스트라로 연 세션의
+# get_session 이 xhigh 였다(손으로 봤다).
+# 줄 머리에서 시작하는 줄만 본다. 지시문 형식은 불릿이나 인용 없이 줄 머리이고, 다른 칸의 글 속 `모델:` 은 줄이 아니다.
+# 결정표의 칸(`Opus 5.5 / xhigh`)을 그대로 옮긴 줄도 읽도록 백틱을 벗긴다(hook_prompt_directive 가 `브랜치:` 값에서 하는 것과 같다).
+function Get-EffortSteps { return @('low', 'medium', 'high', 'xhigh', 'max') }
+
+# 노력 버튼에 보이는 칸의 이름(앱 2.19675.0.0, 한국어). 버튼은 이름 뒤에 덧붙임이 붙을 수 있다(`최대 3.5× 이상 사용량`).
+# Get-EffortSteps 와 차례가 같다. 고른 뒤 버튼이 이 이름을 보이는지 보고, 고르기 전의 값을 이 이름으로 읽는다.
+function Get-EffortLabels { return @('낮음', '중간', '높음', '엑스트라', '최대') }
+
+function Read-ModelLine([string] $prompt) {
+    $steps = Get-EffortSteps
+    $lines = @($prompt -split "`r?`n" | Where-Object { $_.StartsWith('모델:') })
+    if ($lines.Count -eq 0) { return $null }
+    if ($lines.Count -gt 1) { throw "모델: 줄이 $($lines.Count)개다. 지시문 하나에 하나만 둔다." }
+    $form = "형식은 '모델: <모델 메뉴의 이름> / <$($steps -join '|')>' 다"
+    $line = $lines[0].Replace('`', '')
+    if ($line -cnotmatch '^모델:(?<model>[^/]*)/\s*(?<effort>[A-Za-z]+)(?![A-Za-z])') { throw "모델: 줄을 읽지 못했다('$($lines[0])'). $form." }
+    $model = $Matches['model'].Trim()
+    $effort = $Matches['effort']
+    if (-not $model) { throw "모델: 줄에 모델 이름이 없다('$($lines[0])'). $form." }
+    if ($steps -cnotcontains $effort) { throw "모델: 줄의 레벨 '$effort' 를 모른다. $form." }
+    return [pscustomobject]@{ Model = $model; Effort = $effort; Step = [array]::IndexOf($steps, $effort) }
+}
+
+# 지시문 입력창과 같은 입력창 묶음의 버튼(`모델: …`, `노력: …`). 분할 보기면 패널마다 입력창이 있어 창 전체에서 찾으면 다른
+# 세션의 버튼을 누른다. 입력창에서 위로 올라가며 그 이름의 버튼이 처음 보이는 조상에서 하나일 때만 돌려준다.
+function Find-ComposerButton($box, [string] $prefix) {
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $buttonCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    $node = $box
+    for ($i = 0; $i -lt 20 -and $node; $i++) {
+        $node = $walker.GetParent($node)
+        if (-not $node) { break }
+        $hits = @($node.FindAll($Scope::Descendants, $buttonCond) | Where-Object { try { $_.Current.Name.StartsWith($prefix) } catch { $false } })
+        if ($hits.Count -gt 1) { throw "지시문 입력창 가까이에 '$prefix' 버튼이 $($hits.Count)개다. 어느 것이 새 세션의 것인지 가를 수 없다." }
+        if ($hits.Count -eq 1) { return $hits[0] }
+    }
+    return $null
+}
+
+function Test-ButtonShows($button, [string] $label) {
+    try { $name = $button.Current.Name } catch { return $false }
+    return [bool]($name -ceq $label -or $name.StartsWith("$label "))
+}
+
+# 노력 버튼이 보이는 칸. 이름이 Get-EffortLabels 밖이면(Ultracode, 앱이 바꾼 이름) $null 이다.
+function Get-EffortButtonStep($button) {
+    $labels = Get-EffortLabels
+    for ($i = 0; $i -lt $labels.Count; $i++) { if (Test-ButtonShows $button "노력: $($labels[$i])") { return $i } }
+    return $null
+}
+
+function Get-EditValue($el) {
+    try { return $el.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { return '' }
+}
+
+# 모델 메뉴의 항목은 RadioButton 이고 기본값이면 이름 뒤에 표시가 붙는다(`Sonnet 5.5 기본값`, 2026-10-12 손으로 봤다,
+# .scratch/harness/probes/composer_menu_tree.ps1). 그래서 이름이 같거나 이름 뒤에 공백이 오는 것을 고른다. 메뉴와 아래의
+# 노력 슬라이더는 입력창 묶음이 아니라 창 전체에서 찾는다. 한 번에 하나만 열려 있고, 방금 연 것이 그것이다.
+function Find-ModelItem($win, [string] $model) {
+    $radioCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::RadioButton)
+    return @($win.FindAll($Scope::Descendants, $radioCond) | Where-Object { try { $n = $_.Current.Name; $n -ceq $model -or $n.StartsWith("$model ") } catch { $false } }) | Select-Object -First 1
+}
+
+# 입력창 묶음의 모델 버튼이 그 모델을 보이게 한다. 이미 그 모델이면 메뉴를 열지 않는다. 바꾼 뒤 버튼 이름으로 맞았는지 본다.
+function Select-ComposerModelItem($win, $box, [string] $model) {
+    $label = "모델: $model"
+    $button = Wait-For { Find-ComposerButton $box '모델:' } '입력창의 모델 버튼' 5
+    if (Test-ButtonShows $button $label) { return }
+    Press-Element $button | Out-Null
+    $item = Wait-For { Find-ModelItem $win $model } "모델 메뉴의 '$model'" 5
+    if (-not $item.Current.IsEnabled) {
+        [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+        throw "모델 메뉴의 '$($item.Current.Name)'가 비활성이다. 사람이 메뉴를 보고 판단한다."
+    }
+    Press-Element $item | Out-Null
+    Wait-For { $b = Find-ComposerButton $box '모델:'; if ($b -and (Test-ButtonShows $b $label)) { $b } } "'$label' 로 바뀐 모델 버튼" 5 | Out-Null
+}
+
+# 지시문의 모델 줄대로 새 세션 입력창의 모델과 노력을 고른다. 딥링크는 모델을 싣지 못하고(앱의 `code/new` 처리기는
+# q·prompt·folder·file 과 SSH 인자만 읽는다, 앱 2.19675.0.0 번들을 읽었다), 보낸 뒤 바꾸는 도구는 다음 턴부터라 첫 턴에 늦다.
+# 모델을 먼저 고른다. 모델을 바꾸면 노력이 그 모델의 값으로 바뀔 수 있다. 모델은 버튼 이름으로, 노력은 슬라이더 칸과 버튼
+# 이름으로 맞았는지 보고, 아니면 보내지 않고 멈춘다. 앱이 칸의 뜻을 바꾸면 이름이 어긋나 여기서 멈춘다. 메뉴는 Esc 로
+# 닫는다. 고속 모드 체크박스와 슬라이더의 여섯째 칸은 건드리지 않는다.
+# 새 세션 화면의 모델과 노력은 앱이 다음 새 세션 화면의 기본값으로 기억하고, 노력은 보내지 않고 옮기기만 해도 남는다
+# (.scratch/harness/probes/composer_effort_labels.ps1 로 손으로 봤다, 2026-10-12). 그래서 고르기 전의 값을 버튼 이름으로 먼저
+# 읽어 두고 보낸 뒤 Restore-DraftDefaults 가 되돌린다. 사람이 다음에 직접 여는 세션이 지시문의 값으로 열리지 않게 한다.
+function Set-ComposerModel($win, $box, $pick) {
+    $button = Wait-For { Find-ComposerButton $box '모델:' } '지시문 입력창의 모델 버튼' 5
+    $effortButton = Wait-For { Find-ComposerButton $box '노력:' } '지시문 입력창의 노력 버튼' 5
+    $script:DraftModel = $button.Current.Name.Substring('모델:'.Length).Trim()
+    $script:DraftEffortStep = Get-EffortButtonStep $effortButton
+    $before = if ($null -eq $script:DraftEffortStep) { "$($effortButton.Current.Name)(되돌리지 않는다)" } else { (Get-EffortSteps)[$script:DraftEffortStep] }
+
+    Select-ComposerModelItem $win $box $pick.Model
+    "model=$($pick.Model) 원래 $script:DraftModel"
+
+    $effortButton = Wait-For { Find-ComposerButton $box '노력:' } '지시문 입력창의 노력 버튼' 5
+    $moved = Move-EffortSlider $win $effortButton $pick.Step
+    if ($pick.Step -gt $moved.Max) { throw "노력 슬라이더의 끝이 $($moved.Max) 칸이라 '$($pick.Effort)'($($pick.Step)) 를 고를 수 없다. 보내지 않았다." }
+    if ($moved.After -ne $pick.Step) { throw "노력 슬라이더가 $($moved.After) 칸이다('$($pick.Effort)' 는 $($pick.Step) 칸). 보내지 않았다." }
+    $label = "노력: $((Get-EffortLabels)[$pick.Step])"
+    Wait-For { $b = Find-ComposerButton $box '노력:'; if ($b -and (Test-ButtonShows $b $label)) { $b } } "'$label' 를 보이는 노력 버튼(보내지 않았다)" 5 | Out-Null
+    "effort=$($pick.Effort) 원래 $before"
+}
+
+# 노력 메뉴를 열어 슬라이더를 칸으로 옮기고 닫는다. 웹 슬라이더라 값은 사람의 조작과 같은 키로 옮긴다. 처음으로 간 뒤 칸
+# 수만큼 오른쪽. 칸이 슬라이더의 끝을 넘으면 옮기지 않는다. 옮기기 전과 뒤의 칸, 끝 칸을 돌려준다.
+function Move-EffortSlider($win, $button, [int] $step) {
+    Press-Element $button | Out-Null
+    $sliderCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Slider)
+    $slider = Wait-For { $win.FindFirst($Scope::Descendants, $sliderCond) } '노력 슬라이더' 5
+    $range = $slider.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+    $before = [int]$range.Current.Value
+    $max = [int]$range.Current.Maximum
+    if ($step -le $max) {
+        $slider.SetFocus()
+        Start-Sleep -Milliseconds 200
+        [System.Windows.Forms.SendKeys]::SendWait('{HOME}')
+        Start-Sleep -Milliseconds 300
+        for ($i = 0; $i -lt $step; $i++) { [System.Windows.Forms.SendKeys]::SendWait('{RIGHT}'); Start-Sleep -Milliseconds 250 }
+    }
+    $after = [int]$range.Current.Value
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 400
+    return [pscustomobject]@{ Before = $before; After = $after; Max = $max }
+}
+
+# 표지 글이 든 새 세션 화면을 연다. 보내지 않는 화면이라 그 입력창의 버튼만 움직이고, 끝나면 Clear-PromptBox 로 표지를 지운다.
+function Open-MarkerDraft($win, [string] $purpose) {
+    $marker = "open-session-$purpose-$(Get-Date -Format HHmmssfff)"
+    Start-Process ('claude://code/new?q=' + [uri]::EscapeDataString($marker))
+    return Wait-For { Find-PromptBox $win $marker } "표지('$marker')가 든 새 세션 입력창" 10
+}
+
+function Clear-PromptBox($box) {
+    $box.SetFocus()
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait('^a')
+    [System.Windows.Forms.SendKeys]::SendWait('{DELETE}')
+    Start-Sleep -Milliseconds 200
+}
+
+# 새 세션 화면의 기본값을 고르기 전으로 돌리는 사람의 길. 원래 노력이 Get-EffortLabels 밖이면 스크립트가 고르지 않는
+# 칸이라(Ultracode) 명령 대신 화면에서 고르라고 한다.
+function Get-RepairHint {
+    if ($null -eq $script:DraftEffortStep) { return "새 세션 화면에서 모델을 '$script:DraftModel' 로, 노력을 원래 값으로 고른다" }
+    return "친다: pwsh -NoProfile -File tools/open_session.ps1 -Action defaults -Model '$script:DraftModel' -Effort $((Get-EffortSteps)[$script:DraftEffortStep])"
+}
+
+# 보낸 뒤 새 세션 화면의 모델과 노력 기본값을 고르기 전으로 되돌린다(Set-ComposerModel 의 주석). 세션은 이미 열렸으므로
+# 실패해도 멈추지 않고 사람의 길(Get-RepairHint)을 한 줄로 남긴다. 표지 화면은 스킬의 5단계(split·focus)가 새 세션으로 덮는다.
+# 원래 노력이 목록 밖이면 모델만 되돌린다.
+function Restore-DraftDefaults($win) {
+    if (-not $script:DraftModel) { return }
+    $got = $null
+    try {
+        $box = Open-MarkerDraft $win 'restore'
+        try {
+            Select-ComposerModelItem $win $box $script:DraftModel
+            if ($null -ne $script:DraftEffortStep) {
+                $button = Wait-For { Find-ComposerButton $box '노력:' } '되돌릴 화면의 노력 버튼' 5
+                $got = (Move-EffortSlider $win $button $script:DraftEffortStep).After
+            }
+        } finally { Clear-PromptBox $box }
+    } catch {
+        return "restore=실패: $($_.Exception.Message) 사람이 $(Get-RepairHint)"
+    }
+    if ($null -eq $script:DraftEffortStep) { return "restored=$script:DraftModel. 원래 노력은 스크립트가 고르지 않는 칸이라 두었다. 사람이 $(Get-RepairHint)" }
+    if ($got -ne $script:DraftEffortStep) { return "restore=실패: 노력 슬라이더가 $got 칸이다(원래 $script:DraftEffortStep). 사람이 $(Get-RepairHint)" }
+    return "restored=$script:DraftModel / $((Get-EffortSteps)[$script:DraftEffortStep])"
+}
+
+# 새 세션 화면의 모델과 노력 기본값을 맞춘다. 되돌리기가 실패했을 때의 복구다. 표지 화면을 열어 고르고 표지를 지운다.
+function Set-Defaults {
+    if (-not $Model -or -not $Effort) { throw 'defaults 에는 -Model 과 -Effort 가 필요하다.' }
+    $pick = Read-ModelLine "모델: $Model / $Effort"
+    $win = Get-ClaudeWindow
+    $box = Open-MarkerDraft $win 'defaults'
+    try { Set-ComposerModel $win $box $pick } finally { Clear-PromptBox $box }
+    "defaults=$Model / $Effort"
 }
 
 function Split-Session {
@@ -410,4 +623,5 @@ switch ($Action) {
     'send' { Send-Prompt }
     'split' { Split-Session }
     'focus' { Focus-Session }
+    'defaults' { Set-Defaults }
 }
