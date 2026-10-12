@@ -181,6 +181,16 @@ CodeRabbit은 요청 뒤 "Review rate limited"로 건너뛰었다(무료 OSS 한
 - 그대로 둔 것(이유는 PR 코멘트에): `survey` 안의 `add`가 바깥 목록을 고치는 모양(Nit)은 이 PR 전부터의 것이다.
   `Sibling.latest`의 이름(Nit)은 리뷰도 작성자 재량이라 했고, 셀프 리뷰에서 남긴 이유와 같다.
 
+> 사용자: "CI 끝났어" (2회차 뒤)
+
+2회차(`0a18c3f`)는 CI 일곱이 초록이었고 CodeRabbit은 다시 한도에 걸렸다. claude-review는 Critical·Major 없이 Minor 둘·Nit
+하나였고, 둘째 회차의 기준대로 고치지 않고 지적마다 보류 이유를 PR 코멘트에 남겼다. `Sibling.latest`의 두 범위(Minor)는
+1회차 Nit이 Minor로 오른 것이다. `render`가 문구에 쓸 `latest_journal(result.ours)`를 다시 구하는 것(Minor)은 판정이 아니라
+표시할 값이다. 모듈 독스트링의 절 순서(Nit)는 읽는 순서의 문제다.
+
+그 사이 main이 `15e41a6`(#186, 관리 화면 디자인 문서)으로 움직여 PR이 `BEHIND`가 되어 네 번째로 합쳤다. 문서만 들어와
+충돌 없이 합쳐졌고(`KICKOFF.md`의 이 브랜치 문장은 남았다), 합친 뒤의 대조는 겹침 없이 0이었다.
+
 ## 회고
 
 후보 둘을 냈고 둘 다 승인됐다. 둘 다 이 PR에서 반영하지 않고 대기열로 갔다.
