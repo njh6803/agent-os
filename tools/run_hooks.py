@@ -15,7 +15,7 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열넷 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열다섯 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
 않는다), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고 그 위에 푸시하지 않은 커밋이
 하나 있는 작업 브랜치 저장소), `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와
@@ -24,6 +24,8 @@ assistant 기록이 있는 트랜스크립트 — 첫 턴과 그 반례), `${MID
 `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글 줄이 넘친 `long.py` 와 짧은 `short.py`),
 `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이 저장소의 파일에 기대를 걸지 않는다),
 `${RAW_SEPARATOR}`(날것 U+2028 이 든 파일 — 표에는 그 문자를 둘 수 없다),
+`${INVISIBLE_DIR}`(날것 U+00A0 이 든 `nbsp.py`, 날것 U+3000 이 든 한국어 `notes.md`, 표 안에 홀로 선
+CR 이 든 `lone-cr.md`, 줄 끝이 CRLF 인 `crlf.md`),
 `${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것),
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
 네트워크 없이 곧 실패한다). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서
@@ -422,7 +424,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든 대화(`_MIDTURN_RECORDS`)다.
     ruff 프로젝트 하나는
     줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
-    밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나를 둔다. 일지 둘은 "다음" 절을 채운 뒤의
+    밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md` 와
+    CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
     모양이고, 하나만 회고 절이 있다.
     """
     main_repo = scratch / "on-main"
@@ -462,6 +465,18 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     # 이스케이프가 아니라 chr() 다. 편집 도구가 이스케이프를 날것으로 바꾼다(대기열 160).
     raw_separator = scratch / "raw-separator.py"
     raw_separator.write_text(f'TEXT = "a{chr(0x2028)}b"\n', encoding="utf-8", newline="\n")
+    # 줄바꿈 없는 공백은 `.py` 에서만 알리고, 한국어 문서의 전각 공백은 알리지 않는다. 홀로 선 CR 은
+    # 어느 파일에서나 알리고 CRLF 의 CR 은 알리지 않는다(대기열 52).
+    invisible = scratch / "invisible"
+    invisible.mkdir()
+    cr = chr(0x0D)
+    for name, text in (
+        ("nbsp.py", f"x = 1{chr(0xA0)}\n"),
+        ("notes.md", f"가{chr(0x3000)}나\n"),
+        ("lone-cr.md", f"| a |{cr}| b |\n"),
+        ("crlf.md", f"| a |{cr}\n| b |{cr}\n"),
+    ):
+        (invisible / name).write_text(text, encoding="utf-8", newline="\n")
     journals = scratch / "docs" / "journal"
     journals.mkdir(parents=True)
     closing = "## 다음\n\n- web-admin의 04가 다음이다.\n"
@@ -481,6 +496,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "RUFF_PROJECT": ruff_project.as_posix(),
         "LOOSE_PY": loose.as_posix(),
         "RAW_SEPARATOR": raw_separator.as_posix(),
+        "INVISIBLE_DIR": invisible.as_posix(),
         "OPEN_JOURNAL": open_journal.as_posix(),
         "CLOSED_JOURNAL": closed_journal.as_posix(),
         "BROKEN_WEB": _broken_web(scratch).as_posix(),
