@@ -31,5 +31,6 @@
 | [0025](0025-design-system-source-is-code.md) | 디자인 시스템은 코드가 원천이고 Claude Design은 탐색과 화면을 맡는다 | accepted | 2026-10-03 |
 | [0026](0026-design-system-is-one-package-judged-by-storybook.md) | 디자인 시스템은 `packages/ui` 하나에 px 디자인 토큰과 두 테마를 두고, Storybook과 컨테이너 안의 사진으로 판정한다 | accepted | 2026-10-06 |
 | [0027](0027-workflow-hardening-is-judged-by-zizmor.md) | 워크플로 하드닝은 zizmor가 판정하고, 판은 uv 개발 의존성이 고정한다 | accepted | 2026-10-07 |
+| [0028](0028-kickoff-runs-by-a-thin-runner-skill.md) | 킥오프는 런북을 읽는 얇은 진행 스킬이 순서대로 진행하고 사람 몫에서 멈춘다 | accepted | 2026-10-12 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
