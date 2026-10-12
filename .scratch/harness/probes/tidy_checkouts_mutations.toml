@@ -546,11 +546,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    stop = _probe(Path(wt.path), ops.rename)
+old = '''    stop = _probe(Path(wt.path), ops.rename, ops.holders)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    stop = _probe(Path(wt.path), ops.rename)
+    stop = _probe(Path(wt.path), ops.rename, ops.holders)
 '''
 
 [[mutation]]
@@ -605,6 +605,79 @@ expect = "red"
 file = "tools/tidy_checkouts.py"
 old = '''    if verdict.action in ("delete", "hold") and any(map(_SHELL_UNSAFE.search, names)):'''
 new = '''    if False:'''
+
+# 대기열 177(chore/run-summary-and-lock-holder): 점유 탐침이 막히면 쥔 프로세스를 이유에 붙인다
+
+[[mutation]]
+name = "쥔 프로세스: 탐침이 막혀도 이유에 붙이지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "쥔_프로세스를_이유에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            f"{describe_holders(holders(path))}"'''
+new = '''            ""'''
+
+[[mutation]]
+name = "쥔 프로세스: 탐침이 지나도 프로세스를 훑는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "탐침이_지나면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    aside = path.with_name(path.name + PROBE_SUFFIX)'''
+new = '''    holders(path)
+    aside = path.with_name(path.name + PROBE_SUFFIX)'''
+
+[[mutation]]
+name = "쥔 프로세스: 이름 앞부분만 같은 폴더도 아래로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "그_아래일_때만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return inner == outer or inner.startswith(outer.rstrip(os.sep) + os.sep)'''
+new = '''    return inner.startswith(outer)'''
+
+[[mutation]]
+name = "쥔 프로세스: 폴더 자신을 작업 디렉터리로 쥔 것을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "그_아래일_때만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return inner == outer or inner.startswith(outer.rstrip(os.sep) + os.sep)'''
+new = '''    return inner.startswith(outer.rstrip(os.sep) + os.sep)'''
+
+[[mutation]]
+name = "쥔 프로세스: 못 찾은 것과 볼 수 없는 것을 가르지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "볼_수_없는_것을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders is None:'''
+new = '''    if not holders:'''
+
+[[mutation]]
+name = "쥔 프로세스: 윈도에서 PEB 의 작업 디렉터리를 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "쥔_자식_프로세스를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''                cwd = _peb_cwd(kernel, ntdll, handle)'''
+new = '''                cwd = None'''
+
+[[mutation]]
+name = "쥔 프로세스: 윈도에서 실행 파일 이름을 적지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "쥔_자식_프로세스를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return os.path.basename(buffer.value)'''
+new = '''        return ""'''
 
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.

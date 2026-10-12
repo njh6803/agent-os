@@ -19,11 +19,15 @@ from pathlib import Path
 import pytest
 from tools.tidy_checkouts import (
     Facts,
+    Holder,
     Ops,
     ToolError,
     Worktree,
+    cwd_holders,
     delete_path,
+    describe_holders,
     hold_for_strangers,
+    is_within,
     judge,
     judge_branch,
     lock_pid,
@@ -123,6 +127,55 @@ def test_tasklist_의_CSV_에서_pid_칸만_본다() -> None:
     assert tasklist_has(output, 29908)
     assert not tasklist_has(output, 2990)
     assert not tasklist_has("정보: 지정된 조건에 맞는 작업이 실행되고 있지 않습니다.\n", 29908)
+
+
+def test_작업_디렉터리가_폴더_자신이거나_그_아래일_때만_쥔_것으로_본다() -> None:
+    folder = "C:/repo/.claude/worktrees/x"
+    if sys.platform == "win32":
+        assert is_within("c:\\repo\\.claude\\worktrees\\X\\", folder)
+    assert is_within("C:/repo/.claude/worktrees/x/", folder)
+    assert is_within("C:/repo/.claude/worktrees/x/web/node_modules", folder)
+    assert not is_within("C:/repo/.claude/worktrees/x2", folder)
+    assert not is_within("C:/repo/.claude/worktrees", folder)
+
+
+def test_쥔_프로세스는_이름과_pid_로_적고_못_찾은_것과_볼_수_없는_것을_가른다() -> None:
+    found = [Holder(61148, "claude.exe"), Holder(7, "")]
+    assert describe_holders(found) == (
+        "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148), (이름 모름)(pid 7)"
+    )
+    assert describe_holders([]).startswith("작업 디렉터리로 쥔 프로세스는 없다")
+    assert describe_holders(None).startswith("이 OS 에서는 쥔 프로세스를 찾지 못한다")
+
+
+def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(tmp_path: Path) -> None:
+    """CI(우분투)는 `/proc` 로, 윈도는 PEB 로 읽는다. 다른 OS 는 볼 수 없다고 돌려준다."""
+    folder = tmp_path / "wt"
+    (folder / "deep").mkdir(parents=True)
+    script = "import sys\nprint('ready', flush=True)\nsys.stdin.read()\n"
+    child = subprocess.Popen(
+        [sys.executable, "-c", script],
+        cwd=folder / "deep",
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    assert child.stdin is not None
+    assert child.stdout is not None
+    try:
+        assert child.stdout.readline().strip() == "ready"
+        found = cwd_holders(folder)
+        if sys.platform not in ("win32", "linux"):
+            assert found is None
+            return
+        assert found is not None
+        mine = [holder for holder in found if holder.pid == child.pid]
+        assert mine, f"자식 pid {child.pid} 가 없다: {found}"
+        assert mine[0].image
+        assert os.getpid() not in {holder.pid for holder in found}
+    finally:
+        child.stdin.close()
+        child.wait(timeout=10)
 
 
 # --- 판정 2: 다시 만들 수 있는 무시된 것 ----------------------------------------------------------
@@ -588,6 +641,43 @@ def test_remove_는_이름_바꾸기가_막히면_손대지_않는다(repo: Path
     assert (path / ".venv" / "Lib" / "mod.py").exists()
     assert (path / ".git").exists()
     assert _registered(repo, path)
+
+
+def test_remove_는_이름_바꾸기가_막히면_쥔_프로세스를_이유에_적는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 177. 남은 워크트리는 데스크톱 앱이 띄운 `claude.exe` 가 작업 디렉터리로 쥐었다."""
+    path, head = _add(repo, "done")
+    asked: list[Path] = []
+
+    def held(_src: str, _dst: str) -> None:
+        raise PermissionError(32, "다른 프로세스가 파일을 사용 중이기 때문에")
+
+    def holders(folder: Path) -> list[Holder]:
+        asked.append(folder)
+        return [Holder(61148, "claude.exe")]
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=held, holders=holders)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    out = capsys.readouterr().out
+    assert "다른 프로세스가 쥐고 있다" in out
+    assert "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148)" in out
+    assert len(asked) == 1
+    assert os.path.samefile(asked[0], path)
+
+
+def test_remove_는_탐침이_지나면_쥔_프로세스를_찾지_않는다(repo: Path) -> None:
+    """프로세스를 훑는 것은 막혔을 때만이다. 지나간 지우기에 그 시간을 더하지 않는다."""
+    path, head = _add(repo, "done")
+    asked: list[Path] = []
+
+    def holders(folder: Path) -> list[Holder]:
+        asked.append(folder)
+        return []
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), holders=holders)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 0
+    assert asked == []
 
 
 def test_remove_는_이름을_되돌리지_못하면_3으로_멈춘다(repo: Path) -> None:

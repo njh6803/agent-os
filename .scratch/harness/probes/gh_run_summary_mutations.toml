@@ -1,0 +1,121 @@
+# chore/run-summary-and-lock-holder 의 실행 로그 요약 변이(대기열 176). 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/gh_run_summary_mutations.toml
+# tools/gh_run_summary.py 의 이벤트 읽기와 신호 거르기를 하나씩 꺼서 그것을 지키는 테스트가 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "JSON 객체를 읽지 않고 줄로만 본다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "턴수와_비용과"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''            if line == "{":'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "거부 키가 없는 것과 0건을 가르지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "턴수와_비용과"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    if denials is None:'''
+new = '''    if not denials:'''
+
+[[mutation]]
+name = "결과 블록의 거부 배열을 읽지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "도구별로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    if not isinstance(denials, list):
+        return None'''
+new = '''    if True:
+        return None'''
+
+[[mutation]]
+name = "성공한 훅도 찍는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "훅_응답의_오류는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    if outcome == "success":
+        return None'''
+new = '''    if outcome == "never":
+        return None'''
+
+[[mutation]]
+name = "훅 오류의 stderr 를 통째로 싣는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "훅_응답의_오류는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    first = stderr.strip().splitlines()[0] if isinstance(stderr, str) and stderr.strip() else ""'''
+new = '''    first = stderr if isinstance(stderr, str) else ""'''
+
+[[mutation]]
+name = "알림을 따로 찍지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "알림은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''        elif block.get("type") == "system" and block.get("subtype") == "notification":'''
+new = '''        elif False:'''
+
+[[mutation]]
+name = "러너의 오류 줄 대신 옛 패턴 ::error 를 본다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "러너의_오류_줄은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    re.compile(r"^##\[(warning|error)\]"),'''
+new = '''    re.compile(r"::warning|::error"),'''
+
+[[mutation]]
+name = "스크립트 원문 표시 줄을 거르지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "스크립트_원문은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''            if not SCRIPT_ECHO.match(block) and any(p.search(block) for p in SIGNAL_PATTERNS):'''
+new = '''            if any(p.search(block) for p in SIGNAL_PATTERNS):'''
+
+[[mutation]]
+name = "닫히지 않은 객체를 세지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "닫히지_않은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    if buffer is not None:
+        yield None'''
+new = '''    if buffer is not None:
+        pass'''
+
+[[mutation]]
+name = "읽지 못한 객체를 세지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "닫히지_않은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''        yield parsed if isinstance(parsed, dict) else None'''
+new = '''        if isinstance(parsed, dict):
+            yield parsed'''
+
+[[mutation]]
+name = "Claude 의 말을 한 줄로 접지 않는다"
+tests = ["tests/tools/test_gh_run_summary.py", "-k", "한_줄로_접고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/gh_run_summary.py"
+old = '''    return " ".join(text.split())[:TEXT_WIDTH]'''
+new = '''    return text[:TEXT_WIDTH]'''
