@@ -194,6 +194,15 @@ old = '''    if _git(where, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit
 new = '''    if False:'''
 
 [[mutation]]
+name = "저장소 밖의 표를 커밋을 풀지 못한 것으로 알린다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if inside.returncode != 0 or inside.stdout.strip() != "true":'''
+new = '''    if False:'''
+
+[[mutation]]
 name = "고를 것이 없어도 돌린다"
 tests = ["tests/tools/test_mutate.py"]
 expect = "red"

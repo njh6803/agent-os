@@ -785,6 +785,21 @@ def test_원문_확인도_since_로_고른_것만_본다(tmp_path: Path) -> None
     assert any("변이 1 모두" in 한줄 for 한줄 in 줄)
 
 
+def test_since_의_표가_git_저장소_밖이면_그렇게_알리고_2다(tmp_path: Path) -> None:
+    """저장소가 아닌 것을 커밋을 풀지 못한 것으로 알리면 엉뚱한 커밋을 찾게 된다(PR 직전 버그
+    축)."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\nz = 1\n")
+    경로 = _변이_파일을_쓴다(tmp_path, _셋())
+    줄: list[str] = []
+
+    code = main(
+        [경로, "--since", "HEAD"], root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append
+    )
+
+    assert code == 2
+    assert any("git 저장소 안이 아니다" in 한줄 for 한줄 in 줄), 줄
+
+
 def test_since_의_커밋을_풀지_못하면_2다(tmp_path: Path) -> None:
     표 = _커밋한_표(tmp_path, _셋())
     줄: list[str] = []

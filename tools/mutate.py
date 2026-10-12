@@ -99,7 +99,8 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
    띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로 판정한 뒤 남은
    반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가 러너→pytest→러너로
    되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열 139). 기다리는
-   동안 Ctrl+C 가 나도 띄운 프로세스까지 끝낸 뒤 되돌린다.
+   동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤 되돌린다.
+   윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
 4. 종료 코드: 모두 기대대로면 0, 어긋나거나(시간 제한을 넘긴 것 포함) 기준선이 초록이 아니면 1,
    변이 파일을 읽지 못했거나 틀렸거나 고른 것이 없으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지
    못했거나 되돌리지 못했으면 3.
@@ -493,9 +494,13 @@ def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def changed_since(path: Path, spec: Spec, ref: str) -> list[str]:
-    """`ref` 커밋에 있던 같은 표와 견주어 새로 더했거나 달라진 변이의 이름(`changed`). 그 커밋에
-    표가 없으면 모두다. 표가 든 저장소에서 `ref` 를 커밋으로 풀지 못하면 `SpecError`."""
+    """`ref` 커밋에 있던 같은 표와 견주어 새로 더했거나 달라진 변이의 이름(`changed_names`). 그
+    커밋에 표가 없으면 모두다. 표가 git 저장소 밖에 있거나 그 저장소에서 `ref` 를 커밋으로 풀지
+    못하면 `SpecError`."""
     where = path.resolve().parent
+    inside = _git(where, "rev-parse", "--is-inside-work-tree")
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise SpecError(f"--since {ref}: 표가 든 {where} 가 git 저장소 안이 아니다")
     if _git(where, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode != 0:
         raise SpecError(f"--since {ref}: {where} 의 저장소에서 커밋으로 풀지 못했다")
     shown = _git(where, "show", f"{ref}:./{path.name}")
@@ -746,10 +751,11 @@ def _drain(process: subprocess.Popen[str]) -> str:
 def run_command(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
     """셸을 거치지 않는다. 윈도우의 `pnpm.CMD` 처럼 PATHEXT 로 찾는 이름은 `shutil.which` 가 풀고,
     그런 배치 파일은 cmd.exe 가 돌린다(독스트링의 못 보는 것). 시간 제한을 넘기거나 기다리는 동안
-    예외(Ctrl+C)가 나면 자식이 띄운 프로세스까지 끝낸다(`_kill_tree`)."""
+    예외(`KeyboardInterrupt` 등)가 올라오면 자식이 띄운 프로세스까지 끝낸다(`_kill_tree`)."""
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUTF8": "1"}
-    # `with` 로 열지 않는다. 그만 읽은 파이프를 닫으면 윈도우에서는 그 파이프를 읽던 스레드가 끝날
-    # 때까지(남은 손자가 끝날 때까지) 닫기가 막혔다. 다 읽은 파이프는 `communicate` 가 닫는다
+    # `with` 로 열지 않는다. 그만 읽은 뒤 `with` 를 빠져나오면(파이프를 닫고 자식을 기다린다) 이
+    # 윈도우 에서 남은 손자가 끝날 때까지 멈췄다(`test_못_보는_것_고아가_…`). 다 읽은 파이프는
+    # `communicate` 가 닫는다
     process = subprocess.Popen(
         [shutil.which(argv[0]) or argv[0], *argv[1:]],
         cwd=cwd,
