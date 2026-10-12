@@ -10,20 +10,24 @@
 - 응답: 그 호출을 담은 assistant 메시지 id 의 수. 한 응답에서 도구를 여럿 나란히 부르면 호출이
   응답보다 많다. 호출이 많은 다섯 기록이 정확히 60응답(정의의 `maxTurns: 60`)에서 멈춰 `maxTurns`
   가 이 단위를 센다고 본다. 멈춘 까닭은 기록에 없어 어림이다.
-- 표지: 응답의 텍스트에 적은 `[호출 n]`(정의의 보고 형식 절, 대기열 198). 표지를 단 응답 수, n 이
-  그 응답까지의 실제 누적 호출 수와 다른 응답 수, 마지막 n.
-- 자기 셈: 보고에서 "도구 호출" 이나 "호출" 뒤에 수가 든 첫 문장. 80자에서 자른다. 보고 원문
-  전체는 찍지 않는다. 수를 적지 않은 보고는 빈칸이다.
+- 표지: 응답의 텍스트에 적은 `[호출 n]`(정의의 보고 형식 절, 대기열 198). 표지를 단 응답 수,
+  증분 어긋남(직전 응답의 표지에서 늘어난 수가 그 응답의 호출 수와 다른 응답 수. 한 번 틀린 셈이
+  뒤로 이어져도 한 번만 센다. 직전 응답에 표지가 없으면 그 응답은 보지 않는다), 표지가 있는 마지막
+  응답의 n 과 그 응답까지의 실제 누적 수.
+- 보고 n: 보고에 적은 첫 `[호출 n]` 의 n(정의가 보고 첫 줄에 적게 한다). 실제 호출 수와 견준다.
+- 자기 셈: 보고에서 "도구 호출" 이나 "호출" 뒤에 수가 든 첫 문장. 표지 전의 옛 보고를 읽으려는
+  것이다. 80자에서 자른다. 보고 원문 전체는 찍지 않는다. 수를 적지 않은 보고는 빈칸이다.
 
 보고는 `SubagentHandback` 의 메시지다. 그 호출이 없는 기록(2026-10-07 의 옛 회차, 다른 프로브가
 `claude -p` 로 띄운 회차)은 마지막 텍스트가 보고라, 표지가 하나도 없는 기록만 마지막 텍스트로
-대신한다. 표지가 있는 기록은 응답마다
-텍스트가 있어, 대신하면 아직 돌고 있는 리뷰도 보고가 있는 것으로 센다.
+대신한다. 표지가 있는 기록은 응답마다 텍스트가 있어, 대신하면 아직 돌고 있는 리뷰도 보고가 있는
+것으로 센다.
 
 측정의 표지는 호출이 하나 이상이고 보고가 있는 것이다. 호출이 0 인 기록(도구를 쓰지 말라고 한
 카나리아 질문)은 리뷰가 아니라 세지 않고 수만 찍는다. 호출은 있는데 보고가 없는 기록(아직 돌고
-있거나 보고 전에 끊겼다)은 측정이 아니라고 따로 찍고, 하나라도 있으면 1 로 끝난다. 실제 리뷰가
-아닌 측정(다른 프로브가 띄운 회차)도 찍힌다. 시각과 브랜치로 가른다.
+있거나 보고 전에 끊겼다)은 측정이 아니라고 따로 찍는다. 그런 기록이 하나라도 있거나 측정이 하나도
+없으면(창이 비었다, 저장소 폴더 이름이 다르다) 1 로 끝난다. 실제 리뷰가 아닌 측정(다른 프로브가
+띄운 회차)도 찍힌다. 시각과 브랜치로 가른다.
 
 못 보는 것.
 - 그 회차에 어느 판의 정의가 실렸는지. 기록에는 서브에이전트의 지시문이 없다. 표지가 없는 회차는
@@ -67,8 +71,10 @@ class Record:
     calls: int
     responses: int
     marked: int
-    mismatched: int
+    step_mismatched: int
     last_marker: int | None
+    last_marker_actual: int | None
+    report_n: int | None
     report: str
 
 
@@ -144,16 +150,26 @@ def read_record(path: Path) -> Record:
                     if message_id not in response_ids:
                         response_ids.append(message_id)
                     calls_at[message_id] = calls
-    marked = mismatched = 0
+    marked = step_mismatched = 0
     last_marker: int | None = None
+    last_marker_actual: int | None = None
+    previous_marker: int | None = 0
+    previous_calls = 0
     for message_id in response_ids:
         found = [int(m) for t in texts.get(message_id, []) for m in MARKER.findall(t)]
-        if not found:
-            continue
-        marked += 1
-        last_marker = found[-1]
-        if last_marker != calls_at[message_id]:
-            mismatched += 1
+        actual = calls_at[message_id]
+        if found:
+            marked += 1
+            marker = found[-1]
+            if previous_marker is not None and marker - previous_marker != actual - previous_calls:
+                step_mismatched += 1
+            last_marker, last_marker_actual = marker, actual
+            previous_marker = marker
+        else:
+            previous_marker = None
+        previous_calls = actual
+    report = report or ("" if marked else last_text)
+    report_markers = MARKER.findall(report)
     return Record(
         agent_id=path.stem,
         events=events,
@@ -162,9 +178,11 @@ def read_record(path: Path) -> Record:
         calls=calls,
         responses=len(response_ids),
         marked=marked,
-        mismatched=mismatched,
+        step_mismatched=step_mismatched,
         last_marker=last_marker,
-        report=report or ("" if marked else last_text),
+        last_marker_actual=last_marker_actual,
+        report_n=int(report_markers[0]) if report_markers else None,
+        report=report,
     )
 
 
@@ -205,10 +223,12 @@ def main() -> int:
         marker = (
             "표지 없음"
             if r.marked == 0
-            else f"표지 {r.marked}(어긋남 {r.mismatched}, 마지막 {r.last_marker})"
+            else f"표지 {r.marked}(증분 어긋남 {r.step_mismatched},"
+            f" 마지막 {r.last_marker}/실제 {r.last_marker_actual})"
         )
+        report_n = "" if r.report_n is None else f" 보고 n {r.report_n}"
         print(
-            f"{r.started[:16]} {r.branch} 호출 {r.calls} 응답 {r.responses} {marker}"
+            f"{r.started[:16]} {r.branch} 호출 {r.calls} 응답 {r.responses} {marker}{report_n}"
             f' 자기 셈 "{self_count(r.report)}"'
         )
     print(f"측정 {len(measured)}, 도구 0회라 세지 않음 {len(no_tools)}, 보고 없음 {len(no_report)}")
@@ -217,7 +237,9 @@ def main() -> int:
             f"보고 없음(측정 아님, 돌고 있거나 끊겼다): {r.started[:16]} {r.branch}"
             f" {r.agent_id} 호출 {r.calls}"
         )
-    return 1 if no_report else 0
+    if not measured:
+        print("측정이 하나도 없다. 창이나 저장소 폴더 이름(REPO_FOLDER)을 본다")
+    return 1 if no_report or not measured else 0
 
 
 if __name__ == "__main__":
