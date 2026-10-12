@@ -1,0 +1,244 @@
+# tools/hook_bash_cd_outside.py 의 판정을 하나씩 깨서 tests/tools/test_hook_bash_cd_outside.py 가
+# 빨개지는지 본다(대기열 123). 사용: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+
+[[mutation]]
+name = "남은 워크트리 폴더 모양을 세지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+            and parts[end - 3].lower() == ".claude"
+'''
+new = '''
+            and parts[end - 3].lower() == ".claude-not"
+'''
+
+[[mutation]]
+name = "서브셸과 명령 치환 안의 cd 도 센다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+            out.append("_" if depth or in_backtick else char)
+'''
+new = '''
+            out.append(char)
+'''
+
+[[mutation]]
+name = "파이프의 한 단도 센다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if separator in _PIPES or before in _PIPES or index in background:
+'''
+new = '''
+        if index in background:
+'''
+
+[[mutation]]
+name = "백그라운드도 센다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if separator in _PIPES or before in _PIPES or index in background:
+'''
+new = '''
+        if separator in _PIPES or before in _PIPES:
+'''
+
+[[mutation]]
+name = "주석을 가리지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        elif char == "#" and (index == 0 or text[index - 1].isspace() or text[index - 1] in ";&|("):
+'''
+new = '''
+        elif False:
+'''
+
+[[mutation]]
+name = "세미콜론 바로 뒤의 샵을 주석으로 읽지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        elif char == "#" and (index == 0 or text[index - 1].isspace() or text[index - 1] in ";&|("):
+'''
+new = '''
+        elif char == "#" and (index == 0 or text[index - 1].isspace()):
+'''
+
+[[mutation]]
+name = "heredoc 본문을 가리지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+            kept.append(" " * len(body))
+'''
+new = '''
+            kept.append(body)
+'''
+
+[[mutation]]
+name = "인자를 가린 문자열에서 꺼낸다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        steps.append(_step(verb.group(1), source[verb.end() : end]))
+'''
+new = '''
+        steps.append(_step(verb.group(1), masked[verb.end() : end]))
+'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if place is None or place.lower() != own.lower():
+'''
+new = '''
+        if place is None or place != own:
+'''
+
+[[mutation]]
+name = "상대 경로를 언제나 처음 자리에서 푼다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        current = None if target in (None, "-") else resolve(target, current, home)
+'''
+new = '''
+        current = None if target in (None, "-") else resolve(target, start, home)
+'''
+
+[[mutation]]
+name = "cwd 가 체크아웃 밖이어도 판정한다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+    if own is None:
+        return None
+'''
+new = '''
+    if own is None:
+        own = ""
+'''
+
+[[mutation]]
+name = "&& 목록이 & 로 끝나도 앞 조각을 센다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if separator in _LIST_JOINERS:
+            continue
+'''
+new = '''
+        if separator in _PIPES:
+            continue
+'''
+
+[[mutation]]
+name = "here-string 을 heredoc 으로 읽는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+new = '''
+_HEREDOC_OPENER = re.compile(r"<<(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+
+[[mutation]]
+name = "heredoc 구분자를 식별자로만 받는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+new = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+'''
+
+[[mutation]]
+name = "산술의 왼쪽 밀기를 heredoc 으로 읽는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if before.count("((") <= before.count("))"):
+'''
+new = '''
+        if True:
+'''
+
+[[mutation]]
+name = "인용 없는 eval 을 벗기지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+|builtin|command|eval)(?=\s)"
+'''
+new = '''
+|builtin|command)(?=\s)"
+'''
+
+[[mutation]]
+name = "명령 앞의 리다이렉션을 벗기지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+    r"|[A-Za-z_][A-Za-z0-9_]*=\S*(?=\s)|\d*(?:[<>]{1,2}|&>)&?\s*[^\s<>&;|]+(?=\s))*"
+'''
+new = '''
+    r"|[A-Za-z_][A-Za-z0-9_]*=\S*(?=\s))*"
+'''
