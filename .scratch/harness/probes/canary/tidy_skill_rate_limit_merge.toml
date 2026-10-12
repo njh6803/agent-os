@@ -1,0 +1,25 @@
+# tidy-checkouts에 더한 주 체크아웃의 워크트리 병합 길(대기열 165)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-35).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_rate_limit_merge.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+tidy-checkouts 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문에서 두 구절을 각각 글자 그대로 옮겨라.
+1. "부르는 곳" 절의 첫 항목에서, `/git-pr-merge` 대신 다른 길로 병합했을 때 루트가 어떻게 되는지 적은 문장.
+2. 순서 2의 "다른 브랜치다" 갈래의 마지막 문장.
+본문에 그런 것이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["루트는 병합된 브랜치에 남아 있고", "그 스킬 대신 워크트리의 병합 길로 병합했으면"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
