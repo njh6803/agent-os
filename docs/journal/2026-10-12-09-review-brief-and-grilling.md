@@ -90,8 +90,9 @@ Critical·Major는 없었다.
   - [표준 Nit, smell Divergent Change] 보류 규칙이 6단계의 2와 4에 흩어졌다. 151의 "어디로"가 6단계의 2라 두고 4에서 2를
     가리키게 이었다.
   - [표준 Nit] 156 문장의 "권한 분류기"는 대기열 156 행이 원천이라 두었다.
-  - [표준 Nit] 갈음의 전제(훅 설치, `SKIP`·`--no-verify` 없음). `--no-verify`는 이미 금지이고 훅이 없는 저장소는
-    `operations.md`가 결함으로 본다. `SKIP`은 쓰는 일이 드물어 문장을 늘리지 않았다.
+  - [표준 Nit] 갈음의 전제(훅 설치, `SKIP`·`--no-verify` 없음). `--no-verify`는 Claude Code의 기본 지시가 금지하고(저장소
+    문서와 도구에는 그 금지가 없다. `git grep`으로 봤다) 훅이 없는 저장소는 `operations.md`가 결함으로 본다. `SKIP`은 쓰는
+    일이 드물어 이때는 두었고, 뒤의 PR 직전 리뷰에서 `Skipped` 문장으로 들어갔다.
   - [표준 Nit] PR 템플릿의 "실제로 실행한 것만 체크한다"와 `kickoff/claude-md-template.md`는 새 규칙과 어긋나지 않아 두었다.
 
 ## 검사
@@ -123,3 +124,51 @@ CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 돌렸다(�
     않아 검사에는 영향이 없다(그 독스트링을 읽었다).
   - 남겼다: `git commit`이 3~4분이라 Bash 도구의 기본 시간 제한에 걸리고, 백그라운드 커밋 중의 편집은 pre-commit의
     스태시 복원에 지워질 수 있다는 지적. 이 PR 전에도 모든 커밋이 같은 pre-commit을 돌았으므로 새로 생긴 위험이 아니다.
+
+## PR
+
+[njh6803/agent-os#180](https://github.com/njh6803/agent-os/pull/180). 첫 푸시(`8cdf1b2`)의 CI는 python·web·e2e·visual·verify가
+초록이었다. CodeRabbit은 자동 리뷰와 `@coderabbitai review` 요청 모두 한도("Review rate limited")로 리뷰 없이 끝났다. 이
+PR의 보안·버그·성능 축은 위 PR 직전 절의 대체 둘이다. claude-review는 첫 회차에 Minor 셋·Nit 하나를 냈다.
+
+- **고친 것.** 6단계의 5에 남은 과거형 보고("한 번 더 돌았다")를 근거 한 문장으로 줄였다(Minor). `CLAUDE.md` 게이트 문장의
+  세 겹 괄호를 문장 넷으로 풀었다(Minor의 가독성 부분). 카나리아 조각은 그대로이고, `claude_md_precommit_gate.toml`을 한 번
+  더 돌려 통과 4였다(대조군 "없음").
+- **보류(PR 코멘트에 이유).** 갈음의 전제(훅 설치, `--no-verify`)를 `CLAUDE.md`에 넣는 것(Minor의 나머지)은 `--no-verify`를
+  Claude Code의 기본 지시가 이미 금지해 모델이 따르는 기본값이고(저장소 문서에는 없다), 훅 미설치는 `operations.md`가
+  결함으로 다뤄, 매 세션 실리는 줄을 늘리지 않았다. 프로브 README `canary/` 셀의 비대(Minor)는 리뷰어도 후속으로 충분하다고 했다. 두 스킬의 중복(Nit)은 PR 본문의
+  이유 그대로다.
+
+## 회고
+
+후보 넷을 냈고 넷 모두 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "169에 3회차 (Recommended),카나리아 사전 확인 모드 (Recommended),프로브 README 셀 정리,123에 회차"
+
+1. **`bug-perf-review`가 60턴 한도에서 보고 없이 멈췄다 → 대기열 169에 3회차.** 위 PR 직전 절이다. 이어 불러 본 것만으로
+   보고를 받았다. 회차 3이라 chore 배치 조건에 닿는다.
+2. **카나리아를 첫 통과 뒤 문구만 고칠 때마다 다시 돌렸다 → 대기열 184(새 행, 1회차).** 열 번을 돌려 `claude -p`를 40번
+   불렀고 그중 28번이 재확인이었다. 러너에는 `claude` 없이 사전 확인만 도는 모드가 없다(`tools/canary.py`의 `main`을 읽었다).
+3. **프로브 README `canary/` 셀이 수천 자가 됐다 → 대기열 185(새 행, 1회차).** claude-review 1회차의 Minor였다.
+4. **`cd`가 셸의 작업 폴더를 스크래치패드로 옮겼다 → 대기열 123에 3회차.** 카나리아 출력을 읽으려고 친 `cd <tasks> && grep`
+   뒤로 작업 폴더가 바뀌어 워크트리로 되돌아왔다. 가드 거부는 없었다. 일지 2026-10-12-06에 이은 둘째 스크래치패드 변형이고,
+   123의 형제 체크아웃 변형과 같은 행으로 셌다. 회차 3이라 그 행의 "어디로"대로 훅 후보다.
+
+일지에만 남기는 것:
+
+- 이 PR이 더한 규칙들이 같은 세션 안에서 일했다. 명세 브리프에 경로 대신 본문을 붙였고(156), WAI-ARIA 주장은 원문을 받아
+  대조했으며(156·151), 일지에 쓴 "progressbar 절에는 MUST NOT이 없다"와 "`--no-verify`는 커밋 규약이 막는다"를 근거를 끝까지
+  열어 봤다(154). 앞의 것은 맞았고 뒤의 것은 틀려 고쳤다(저장소에는 그 금지가 없고 Claude Code의 기본 지시에만 있다).
+- WebFetch가 WAI-ARIA 1.2 전문을 잘라 절을 찾지 못했다. `curl`로 스크래치패드에 받아 태그를 걷고 문장을 뽑았다.
+- 중간 문장 하나를 영어로 써 훅이 짚었다. 판정 명령(`tools/sibling_overlap.py`)을 파이프로 쳐 훅이 짚었다.
+- 형제 워크트리(`admin-style-spec`)가 일지 07을 먼저 써서 `tools/sibling_overlap.py`의 옮길 번호대로 09로 옮겼다.
+- CodeRabbit은 PR을 연 직후 "manual review required for this OSS repository"로 건너뛰었다가, 끝에는 한도로 바뀌었다.
+
+## 다음
+
+- **하네스 chore: 대기열 169·123.** 둘 다 회차 3이다. 169는 `.claude/agents/bug-perf-review.md`의 보고 절, 123은 워크트리
+  밖 `cd`를 막거나 알리는 훅이다(자리는 그 행대로 그 세션이 정한다). 같은 때 184·185(카나리아 사전 확인 모드와 프로브 README
+  셀)을 묶을지도 그 세션이 정한다. 52·174는 #179가, 176·177·178은 #182가 맡았다. 41·100·165는 ADR이 들어 따로 간다.
+- 대조군 옛 판 워크트리 `C:/project/agent-canary-02b21d0`은 병합 뒤 이 세션이 걷는다. 가드가 거부하면 `tidy-checkouts`에
+  넘긴다(분리 HEAD라 사람에게 넘어간다).
+- 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
