@@ -343,6 +343,57 @@ def test_복구_안내는_원래_값으로_돌리는_명령이다() -> None:
     )
 
 
+# 보내기 전에 멈춘 길(`held=`, 고르기·보내기·제출 확인의 실패)이 함께 쓰는 복구 줄. 고르기 전에
+# 멈췄으면 $draft 가 없다.
+_PENDING_RESTORE = """
+$draft = $null
+if ($null -ne $given.model) {
+    $draft = [pscustomobject]@{ Model = $given.model; EffortStep = [int]$given.step }
+}
+$pick = [pscustomobject]@{ Model = $given.pick_model; Effort = ''; Step = [int]$given.pick_step }
+$line = Get-PendingRestoreLine $draft $pick
+if ($null -eq $line) { '(없음)' } else { $line }
+"""
+
+_PENDING_RESTORE_FUNCTIONS = (
+    "Get-EffortSteps,Get-RepairHint,Test-DraftChanged,Get-PendingRestoreLine"
+)
+
+
+@pytest.mark.parametrize(
+    ("model", "pick_model"),
+    [
+        (None, "Sonnet 5.5"),  # 원래 값을 읽기 전에 멈췄다
+        ("Sonnet 5.5", "Sonnet 5.5"),  # 고른 값이 원래 값과 같다
+    ],
+)
+def test_보내기_전에_멈춰도_기본값이_그대로면_복구를_남기지_않는다(
+    model: str | None, pick_model: str
+) -> None:
+    given: dict[str, object] = {"model": model, "step": 3, "pick_model": pick_model, "pick_step": 3}
+    completed = _call(_PENDING_RESTORE_FUNCTIONS, _PENDING_RESTORE, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "(없음)"
+
+
+def test_보내기_전에_멈추면_바뀐_기본값을_되돌리는_명령을_남긴다() -> None:
+    given: dict[str, object] = {
+        "model": "Opus 5.5",
+        "step": 3,
+        "pick_model": "Sonnet 5.5",
+        "pick_step": 2,
+    }
+    completed = _call(_PENDING_RESTORE_FUNCTIONS, _PENDING_RESTORE, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == (
+        "restore=필요: 새 세션 화면의 기본값이 바뀌었을 수 있다. 사람이 보낸 뒤"
+        " 친다: pwsh -NoProfile -File tools/open_session.ps1 -Action defaults"
+        " -Model 'Opus 5.5' -Effort xhigh"
+    )
+
+
 def test_원래_노력이_목록_밖이면_복구_안내는_화면에서_고르라고_한다() -> None:
     completed = _call(
         "Get-EffortSteps,Get-RepairHint", _REPAIR_HINT, {"model": "Opus 5.5", "step": None}
