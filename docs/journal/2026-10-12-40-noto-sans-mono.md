@@ -74,6 +74,14 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 origin/ma
 고쳤다. 오탐 열 줄(글꼴 변수의 상속, `firstFamily`의 자르기, 변이의 원문 등)은 따라가 보니 문제가 아니었다. 보류 하나는 병합
 직전의 `plan.md` 판정이라 그때 한다.
 
+## PR 리뷰
+
+PR #204. CI 여섯(python, web, e2e, visual, verify, claude-review)이 초록이었다. claude-review는 지적 없음이었고 유지보수성과
+경계를 본 범위를 적었다. CodeRabbit은 첫 리뷰부터 "Review rate limited"로 리뷰 없이 `pass`였고, 보안·버그 축은 PR 직전 리뷰의
+대체 둘을 PR 체크리스트에 적은 것이 대체다(`operations.md` 초록 착시 목록). 그 사이 main에 PR #201이 병합되어 `BEHIND`가
+되었고, 브랜치 보호가 최신화를 요구해(`strict: true`) 다시 합쳤다. 병합 직전 판정: origin/main의 `plan.md` design-refresh 행이
+`todo`였고 02가 아직 병합되지 않아, 이 PR이 `in-progress`로 바꾸고 프론티어 문장을 고쳤다.
+
 ## 회고
 
 후보 하나를 냈고 승인됐다.

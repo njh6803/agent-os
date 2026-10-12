@@ -19,5 +19,5 @@
 - [x] **헌법.** `docs/constitution/tech.md` 웹 행의 글꼴 줄과 글꼴 패키지, `allowBuilds`의 문장을 새 글꼴로 고친다. 같은 행의 테마 문장("색과 글꼴의 한 벌로 다섯")은 이 티켓에서 "글꼴"이 거짓이 되므로 "색의 한 벌로 다섯"으로 고치고, 수와 이름은 03이 고친다. `docs/constitution/README.md`의 버전을 patch로 올린다
 - [x] **함께 고칠 문장.** 옛 글꼴의 말(`JetBrains Mono`, `IBM Plex`, `plex-mono`, `jetbrains-mono`)이 살아 있는 문서와 코드에서 0인지 본다. 기록(일지, 지난 명세와 티켓, ADR의 지난 이력, 헌법 README의 지난 판 기록, 디자인 파일 v3와 첫 탐색 프롬프트)은 제외한다(명세의 잔존 grep 절). `.design-sync/`(NOTES 등)는 동기화와 함께 05가 고친다. 코드 주석에서 테마마다 고정폭이 다르다는 문장(글꼴 CSS의 머리 주석, 테마 목록의 머리 주석이 든 "고정폭 글꼴")도 고친다
 - [x] **원칙 III.** 판정 스토리를 고칠 때 `as`·`any`·`!` 없이 쓴다
-- [ ] **이 기능의 첫 병합인지는 병합 직전에 판정한다.** `git fetch` 뒤 `origin/main`의 `.scratch/plan.md`에서 design-refresh 행이 아직 `todo`이면(02가 먼저 병합되지 않았으면) 이 PR이 `in-progress`로 바꾼다
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이고 사진 비교 명령도 로컬에서 초록이다. web 파일만 바꾸므로 LLM 테스트는 돌리지 않는다
+- [x] **이 기능의 첫 병합인지는 병합 직전에 판정한다.** `git fetch` 뒤 `origin/main`의 `.scratch/plan.md`에서 design-refresh 행이 아직 `todo`이면(02가 먼저 병합되지 않았으면) 이 PR이 `in-progress`로 바꾼다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이고 사진 비교 명령도 로컬에서 초록이다. web 파일만 바꾸므로 LLM 테스트는 돌리지 않는다
