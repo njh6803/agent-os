@@ -3,6 +3,7 @@
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 셋이다. 규칙 파일의 첫 제목, 항목마다 할 일의 조각, 놓치는 것을 단언하는 조각. 질문은 바뀐 본문을
 # 드러내지 않게 항목과 테스트를 잇는 문장들을 통째로 옮기게 한다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-21).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_unseen_pinned.toml <출력 디렉터리>
 kind = "rule"
 question = '''
