@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import statistics
@@ -247,15 +248,38 @@ def plan(rows: list[Row]) -> int:
     return 0
 
 
-def done_keys() -> set[tuple[int, int]]:
+def context_keys(anchors: list[Row]) -> dict[str, str]:
+    """판정자가 본 앞부분의 열쇠. 기준 티켓 열 개(PR 번호)와 `CLAUDE.md`의 해시다. `collect.py`를
+    다시 돌려 비용 순위가 바뀌면 기준이 달라지고, `CLAUDE.md`가 바뀌면 앞부분이 달라진다. 그런
+    기록끼리 섞지 않는다."""
+    prs = ",".join(sorted(str(int(num(r, "pr"))) for r in anchors))
+    return {
+        "anchors_key": hashlib.sha256(prs.encode()).hexdigest()[:12],
+        "claude_md_key": hashlib.sha256(claude_md().encode("utf-8")).hexdigest()[:12],
+    }
+
+
+def read_results() -> list[dict[str, Json]]:
+    """줄은 `\\n`으로만 가른다. `splitlines`는 답 안의 U+2028 같은 문자에서도 갈라 기록 하나를 둘로
+    쪼갠다."""
     if not RESULTS.exists():
-        return set()
-    keys: set[tuple[int, int]] = set()
-    for line in RESULTS.read_text(encoding="utf-8").splitlines():
-        o = json.loads(line)
-        if o.get("measured"):
-            keys.add((int(o["pr"]), int(o["round"])))
-    return keys
+        return []
+    lines = RESULTS.read_text(encoding="utf-8").split("\n")
+    return [o for o in (json.loads(ln) for ln in lines if ln.strip()) if isinstance(o, dict)]
+
+
+def same_context(o: dict[str, Json], keys: dict[str, str]) -> bool:
+    """열쇠가 없는 기록은 첫 실행(2026-10-13)의 것이다. 그때의 기준 티켓과 `CLAUDE.md` 판은 README
+    결과 절에 있다."""
+    return all(o.get(k) in (None, v) for k, v in keys.items())
+
+
+def done_keys(keys: dict[str, str]) -> set[tuple[int, int]]:
+    return {
+        (int(str(o["pr"])), int(str(o["round"])))
+        for o in read_results()
+        if o.get("measured") and same_context(o, keys)
+    }
 
 
 def run(rows: list[Row], limit: int | None) -> int:
@@ -269,7 +293,8 @@ def run(rows: list[Row], limit: int | None) -> int:
         {"type": "text", "text": claude_md()},
         {"type": "text", "text": anchors_block(anchors), "cache_control": {"type": "ephemeral"}},
     ]
-    done = done_keys()
+    keys = context_keys(anchors)
+    done = done_keys(keys)
     failed = 0
     called = 0
     for rnd in range(1, REPEATS + 1):
@@ -288,6 +313,7 @@ def run(rows: list[Row], limit: int | None) -> int:
                 "model": MODEL,
                 "effort": EFFORT,
                 "sdk": anthropic.__version__,
+                **keys,
             }
             try:
                 resp = client.messages.create(
@@ -341,10 +367,18 @@ def score(rows: list[Row]) -> int:
     적었으면 그것이 `MODEL`인 것. 응답한 모델을 적기 전의 판(`served_model` 없음)이 쓴 회차는 그
     수를 따로 찍는다."""
     answers: dict[int, list[dict[str, Json]]] = {}
-    not_measured = 0
+    pop = population(rows)
+    anchors, targets = split(pop)
+    keys = context_keys(anchors)
+    failed_keys: set[tuple[int, int]] = set()
+    measured_keys: set[tuple[int, int]] = set()
     without_model = 0
-    for line in RESULTS.read_text(encoding="utf-8").splitlines() if RESULTS.exists() else []:
-        o = json.loads(line)
+    other_context = 0
+    for o in read_results():
+        if not same_context(o, keys):
+            other_context += 1
+            continue
+        key = (int(str(o["pr"])), int(str(o["round"])))
         served = o.get("served_model")
         ok = (
             o.get("measured")
@@ -353,12 +387,13 @@ def score(rows: list[Row]) -> int:
             and (served is None or str(served).startswith(MODEL))
         )
         if ok:
-            answers.setdefault(int(o["pr"]), []).append(o)
+            answers.setdefault(key[0], []).append(o)
+            measured_keys.add(key)
             without_model += 1 if served is None else 0
         else:
-            not_measured += 1
-    pop = population(rows)
-    _, targets = split(pop)
+            failed_keys.add(key)
+    # 다시 돌아 측정이 된 회차의 앞선 실패는 세지 않는다
+    not_measured = len(failed_keys - measured_keys)
     complete = [r for r in targets if len(answers.get(int(num(r, "pr")), [])) >= REPEATS]
     if len(complete) < 3:
         print(f"세 회차가 모두 측정인 대상이 {len(complete)}개다", file=sys.stderr)
@@ -406,6 +441,7 @@ def score(rows: list[Row]) -> int:
     lines = [
         f"대상 {len(complete)}(세 회차 모두 측정), 측정이 아닌 회차 {not_measured}",
         f"응답한 모델을 적기 전의 판이 쓴 측정 회차 {without_model}",
+        f"기준 티켓이나 CLAUDE.md 가 지금과 달라 뺀 기록 {other_context}",
         f"시간 가운데 값 대 실제 턴 시간: ρ = {rho if rho is None else round(rho, 3)}",
         f"부트스트랩 {RESAMPLES}회 90% 구간 {ci_s}(뺀 회차 {skipped})",
         f"사전 지표의 |ρ| 가운데 가장 큰 것: {best[0]} {best[1]:.3f}",

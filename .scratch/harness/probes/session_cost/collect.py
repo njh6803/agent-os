@@ -169,6 +169,7 @@ class Rec:
     results: list[tuple[str, bool, bool]] = field(default_factory=list)  # (id, 오류, 훅 막음)
     denial: str = ""
     turn_duration_ms: int = 0
+    queued_human: bool = False  # 턴 도중에 사람이 친 메시지(`queued_command` 첨부). 트리거가 아니다
 
 
 @dataclass
@@ -258,6 +259,30 @@ def _scan_file(s: Scan, f: Path, sub: bool, root: str, seen_uuid: set[str]) -> N
             _scan_record(s, o, sub, root, seen_uuid)
 
 
+def _scan_queued(
+    s: Scan, o: dict[str, Json], sid: str, ts: str, root: str, seen_uuid: set[str]
+) -> None:
+    """턴 도중에 사람이 친 메시지는 `user` 기록 없이 `queued_command` 첨부로만 남기도
+    한다(2026-10-13 기록을 손으로
+    봤다: 사람이 친 것으로 보이는 31건 가운데 26건). 사전 등록의 트리거가 아니어서 사람 개입에 넣지
+    않고 탐색 칸으로 센다."""
+    a = o.get("attachment")
+    if not isinstance(a, dict) or a.get("type") != "queued_command":
+        return
+    origin = a.get("origin")
+    if not isinstance(origin, dict) or origin.get("kind") != "human":
+        return
+    uuid = o.get("uuid")
+    if isinstance(uuid, str):
+        if uuid in seen_uuid:
+            return
+        seen_uuid.add(uuid)
+    cwd = norm(str(o.get("cwd") or ""))
+    in_repo = cwd == root or cwd.startswith(root + "/")
+    branch = str(o.get("gitBranch") or "")
+    s.recs[sid].append(Rec(ts=ts, kind="other", branch=branch, in_repo=in_repo, queued_human=True))
+
+
 def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: set[str]) -> None:
     t = o.get("type")
     sid = o.get("sessionId")
@@ -270,6 +295,9 @@ def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: s
             s.cost_state[sid] = o
         return
     ts = o.get("timestamp")
+    if t == "attachment" and not sub and isinstance(sid, str) and isinstance(ts, str):
+        _scan_queued(s, o, sid, ts, root, seen_uuid)
+        return
     if (
         t not in ("assistant", "user", "system")
         or not isinstance(sid, str)
@@ -597,6 +625,7 @@ class Acc:
     human_nondirective: int = 0
     interrupts: int = 0
     ask_user: int = 0
+    queued_human: int = 0
     tool_errors: int = 0
     hook_blocks: int = 0
     denials: Counter[str] = field(default_factory=Counter)
@@ -628,6 +657,18 @@ def _nodes(obj: Json, key: str) -> list[dict[str, Json]]:
     return [n for n in nodes if isinstance(n, dict)] if isinstance(nodes, list) else []
 
 
+def truncated_connections(pr: dict[str, Json]) -> list[str]:
+    """`totalCount`보다 받은 노드가 적은 연결의 이름. `PR_QUERY`의 `first:` 상한에 잘린 것이다.
+    잘리면 PR 뒤 커밋과 심각도가 덜 세어지므로 meta 에 적는다(2026-10-13 캐시에는 없었다)."""
+    cut: list[str] = []
+    for key in ("commits", "comments", "reviews", "reviewThreads"):
+        conn = pr.get(key)
+        total = conn.get("totalCount") if isinstance(conn, dict) else None
+        if isinstance(total, int) and total > len(_nodes(pr, key)):
+            cut.append(key)
+    return cut
+
+
 def review_stats(pr: dict[str, Json]) -> tuple[int, Counter[str]]:
     """사람(PR 작성자)이 아닌 계정의 코멘트·리뷰·인라인 코멘트 수와 그 본문의 심각도 표지."""
     human = _author(pr)
@@ -639,7 +680,14 @@ def review_stats(pr: dict[str, Json]) -> tuple[int, Counter[str]]:
         for c in _nodes(th, "comments"):
             if _author(c) != human:
                 bodies.append(str(c.get("body") or ""))
-    bodies = [b for b in bodies if b.strip() and not RATE_LIMIT_NOTICE.search(b)]
+    # 한도 알림은 그 말을 들고 심각도 표지가 없는 본문이다. 한도를 다룬 코드에 단 실제 지적이 "rate
+    # limited"라는 말을 든다고 버리지 않는다(PR 직전 버그·성능 리뷰가 캐시에서 PR #24·#146의 Minor
+    # 둘이 빠진 것을 찾았다).
+    bodies = [
+        b
+        for b in bodies
+        if b.strip() and not (RATE_LIMIT_NOTICE.search(b) and not SEVERITY.search(b))
+    ]
     sev: Counter[str] = Counter()
     for b in bodies:
         for m in SEVERITY.finditer(b):
@@ -725,6 +773,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                     a.hook_blocks += 1 if hook else 0
                 if r.denial:
                     a.denials[r.denial] += 1
+                a.queued_human += 1 if r.queued_human else 0
 
     # 첫 사람 트리거가 지시문이 아니면 그것은 과제 진술이라 개입에서 뺀다
     for a in accs.values():
@@ -800,6 +849,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
             runs_by_branch[str(r.get("headBranch") or "")].append(r)
 
     rows: list[dict[str, Json]] = []
+    truncated: dict[int, list[str]] = {}
     window_start = s.first_ts
     for branch, cands in sorted(by_branch.items(), key=lambda kv: str(primary(kv[0])["createdAt"])):
         pr = primary(branch)
@@ -821,6 +871,9 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                 base = str(pn[0].get("oid") or "")
             if base and not git.has(base):
                 base = git.main_before(str(commit_list[0].get("committedDate")))
+        cut = truncated_connections(pr)
+        if cut:
+            truncated[num] = cut
         bot_comments, sev = review_stats(pr)
         branch_runs = [
             r
@@ -902,6 +955,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                 "human_nondirective": a.human_nondirective,
                 "interrupts": a.interrupts,
                 "ask_user": a.ask_user,
+                "queued_human": a.queued_human,
                 "tool_errors": a.tool_errors,
                 "hook_blocks": a.hook_blocks,
                 "denials": dict(a.denials),
@@ -918,6 +972,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
     meta.update(
         {
             "cost_sub_partial": round(sub_partial_cost, 2),
+            "truncated_connections": {str(k): v for k, v in truncated.items()},
             "window_start": window_start,
             "first_directive": first_directive,
             "branches_without_pr": {b: n for b, n in no_pr.most_common() if not skip.match(b)},

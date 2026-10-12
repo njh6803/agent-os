@@ -379,6 +379,8 @@ def report(meta: dict[str, Json], rows: list[Row]) -> tuple[str, bool]:
         f"(이 저장소 비용 ${val(meta, 'cost_in_repo'):.0f})"
     )
     out.append(f"- 저장소 밖 기록의 비용 ${val(meta, 'cost_outside_repo'):.0f}")
+    cut = json.dumps(meta.get("truncated_connections"), ensure_ascii=False)
+    out.append(f"- GraphQL 상한에 잘린 연결(PR 번호: 연결): {cut}")
     no_pr = json.dumps(meta.get("branches_without_pr"), ensure_ascii=False)
     out.append(f"- PR을 찾지 못한 브랜치 이름: {no_pr}")
     out.append(
@@ -435,7 +437,14 @@ def report(meta: dict[str, Json], rows: list[Row]) -> tuple[str, bool]:
     out.append(explore(others, "directive_features", DIRECTIVE_KEYS))
     out += ["", "## 재작업과 지연된 실패 (탐색)", ""]
     keys = ["commits_after_pr", "ci_failures", "followup_mentions", "retro_rows", "reverts"]
-    keys += ["diagnosing_bugs", "tool_errors", "hook_blocks", "ask_user", "interrupts"]
+    keys += [
+        "diagnosing_bugs",
+        "tool_errors",
+        "hook_blocks",
+        "ask_user",
+        "interrupts",
+        "queued_human",
+    ]
     out.append(table(["합", "값"], [[k, f"{sum(num(r, k) for r in pop):.0f}"] for k in keys]))
     turn = sum(num(r, "turn_min") for r in pop)
     tail = sum(num(r, "trailing_min") for r in pop)
