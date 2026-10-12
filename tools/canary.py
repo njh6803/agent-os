@@ -936,7 +936,7 @@ def main(
     out: Callable[[str], None] = print,
 ) -> int:
     base = cwd if cwd is not None else Path.cwd()
-    if argv[:1] == [_PREFLIGHT] and len(argv) > 1:
+    if len(argv) > 1 and argv[0] == _PREFLIGHT:
         return _preflight_only(argv[1:], base, out)
     # 깃발을 뒤에 두거나 잘못 쓰면 출력 디렉터리로 삼아 `claude` 를 돌린다. 그 전에 막는다.
     if len(argv) != 2 or any(arg.startswith("--") for arg in argv):

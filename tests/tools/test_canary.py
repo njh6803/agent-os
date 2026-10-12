@@ -1318,20 +1318,37 @@ def _사전_확인(tmp_path: Path, *명세들: Path) -> tuple[int, list[str], _�
 
 
 def test_사전_확인은_claude를_띄우지_않고_출력도_남기지_않으며_통과하면_0이다(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """출력 디렉터리는 프로세스의 작업 폴더 기준이라 그 자리도 `tmp_path` 로 옮겨 트리 전체를
+    견준다."""
+    monkeypatch.chdir(tmp_path)
     spec_path = tmp_path / "canary.toml"
     spec_path.write_text(_스킬_명세, encoding="utf-8")
     _스킬_체크아웃(tmp_path, "새")
     _스킬_체크아웃(tmp_path, "옛")
-    before = sorted(path.name for path in tmp_path.iterdir())
+    before = sorted(tmp_path.rglob("*"))
 
     code, printed, 가짜 = _사전_확인(tmp_path, spec_path)
 
     assert code == 0
     assert 가짜.호출 == []
-    assert sorted(path.name for path in tmp_path.iterdir()) == before
+    assert sorted(tmp_path.rglob("*")) == before
     assert any("[통과]" in line and "canary.toml" in line for line in printed)
+
+
+def test_사전_확인은_인자가_튜플이어도_돈다(tmp_path: Path) -> None:
+    """`main` 은 `Sequence[str]` 를 받는다. 리스트만 깃발로 알아보면 튜플은 사용법으로 떨어진다."""
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    printed: list[str] = []
+
+    code = main(("--preflight", str(spec_path)), cwd=tmp_path, runner=_가짜({}), out=printed.append)
+
+    assert code == 0
+    assert any("[통과]" in line for line in printed)
 
 
 def test_사전_확인은_명세마다_판정하고_하나라도_어긋나면_2다(tmp_path: Path) -> None:
