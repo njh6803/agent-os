@@ -1,6 +1,7 @@
 # `.claude/rules/tests.md` 의 llm 마커 항목에 더한 두 문장(트레이스를 `tmp_path` 아래에 남긴다, 실행 끝의 토큰
 # 합계는 그 아래만 센다, 대기열 113)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지.
 # 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-07, 이 PC, claude 2.1.292, 일지 2026-10-07-19).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tests_rule_llm_tokens.toml <출력 디렉터리>
 kind = "rule"
 question = '''

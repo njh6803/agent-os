@@ -2,6 +2,7 @@
 # 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 두 카나리아가 모두 없다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의
 # checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 주 체크아웃의 옛 판 `0c72596`, 일지 2026-10-12-14).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_cwd_owner.toml <출력 디렉터리>
 kind = "skill"
