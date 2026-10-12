@@ -130,3 +130,64 @@ CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 나란히 �
 - 훅 비용: 래퍼를 거쳐 한 번에 첫 판 201~240ms, 셀프 리뷰 반영 뒤 221~353ms, PR 직전 리뷰 반영 뒤 261~641ms
   (`msys_pathconv/time_hook.sh`. 셋째 판은 다른 세션들이 돌던 때라 흔들렸다). `Bash` 매처의 PreToolUse
   훅이 다섯이 되고, `Bash|PowerShell`·`Bash|Grep`·매처 없는 것까지 Bash 호출 하나에 붙는 PreToolUse 훅은 아홉이다.
+- 그 뒤의 커밋들도 pre-commit이 모두 통과였다. 병합 커밋 `60863f2`와 `b44af60`은 스테이지된 `.py`가 없어 ruff 둘이
+  `Skipped`였고, 같은 `.py` 상태에서 병합 직후 손으로 쳐 초록이었다. 둘째 커밋은 프로브 README의 코드 스팬 안 `>|`가 표의 칸을
+  갈라 표 검사(pytest의 저장소 상태 테스트)에 한 번 막혔고, `\|`로 고쳐 다시 커밋했다.
+
+## PR
+
+[njh6803/agent-os#195](https://github.com/njh6803/agent-os/pull/195). 첫 푸시(`b44af60`)의 CI는 claude-review·e2e·python·web이
+초록이었다. `visual`은 2단계 "Initialize containers"(Playwright 이미지를 받아 컨테이너를 띄우는 단계)에서 18분 넘게 멈췄다. 같은
+시간대 다른 실행 일곱의 `visual`은 2분 5초~2분 43초였고(`gh api`로 잡의 시작·끝 시각을 읽었다) 체크아웃도 시작하지 않은
+단계라 이 PR의 코드와는 무관한 것으로 본다(어림). `ci.yml`의 잡에는 `timeout-minutes`가 없어 기본값 360분까지 매달릴 수
+있었다. 사용자에게 알리고 그 실행을 취소했다.
+
+> 사용자: "visual은 원래 이렇게 오래 걸려?" / "진행"
+
+CodeRabbit은 PR을 연 직후 "manual review required for this OSS repository"로 건너뛰었고, `@coderabbitai review` 요청에는 한도
+("Review rate limited")로 리뷰 없이 끝났다. 이 PR의 보안·버그·성능 축은 위 PR 직전 절의 대체 둘이다.
+
+claude-review 첫 회차는 Critical·Major 없이 Minor 셋과 Nit 둘이었다. 첫 회차라 지적마다 판단했다.
+
+- 고쳤다: [Minor] `converts`가 상태 기계인데 판정 차례가 모듈 독스트링에만 있었다. 차례를 함수 독스트링으로 옮겼다. [Nit]
+  `_LEADING_WORDS`의 튜플 잇기를 집합 하나로 바꿨다(커밋 `7b29900`, 동작은 같다).
+- 두었다: [Minor] 모듈 독스트링의 근거 이력(프로브, 소스 커밋, 일지)을 밖으로 옮기라는 것. `docs/agents/issue-tracker.md`가
+  근거를 드는 자리에서 프로브를 파일 이름으로 가리키라 하고 옆 훅들도 같은 모양이다. 판정 규칙은 위처럼 함수로 옮겼다.
+- 두었다: [Minor] `hook_bash_cd_outside`와 heredoc 판정이 어긋나지 않는지 보는 교차 테스트. `.claude/rules/tools.md`가 그
+  중복을 훅 단독 실행 결정의 비용으로 받아들였고, 교차 테스트는 두 훅의 비공개 함수에 닿아 따로 정할 일이다.
+- 두었다: [Nit] `.claude/rules/tools.md` 훅 시간 항목에 새 훅의 값을 더하라는 것. 최근 훅(`hook_bash_cd_outside`)도 값을 프로브
+  README에만 적었고, rules를 바꾸면 새 세션에서 불러 보는 확인이 든다.
+
+반영한 뒤 origin/main(`29e5180`, PR #194)을 다시 합쳤다. 저절로 합쳐졌고, main의 일지 28은 이 일지 30보다 앞이라 번호는
+그대로다.
+
+## 회고
+
+후보 셋을 냈고 하나가 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "CI 잡 시간 제한 (Recommended)"
+
+1. **CI 잡에 시간 제한이 없다 → 대기열 204(새 행, 1회차).** 위 PR 절의 `visual`이 컨테이너 초기화에서 18분 넘게 멈췄다.
+   `ci.yml` 잡마다 `timeout-minutes`를 둔다.
+
+기각한 것:
+
+- Bash를 파싱하는 훅의 "못 보는 것"을 셸 문법 갈래 목록(heredoc·주석·리다이렉션·프로세스 치환·변수·줄 잇기·산술·백틱)으로
+  `.claude/rules/tools.md`에서 점검하게 하기. 이 훅은 셀프 리뷰에서 넷, PR 직전 리뷰에서 둘이 더 나왔고 일지 2026-10-12-15의
+  `hook_bash_cd_outside`도 그랬다(2회차).
+- 회고가 대기열 행의 원인·조건은 잰 뒤에 적고 회차는 여러 말로 일지를 훑어 세게 하기(retro 5단계). 대기열 195의 "콜론 양쪽에
+  `/`"는 재지 않은 조건이었고, 회차는 "Windows 경로로 바꿔"로 적힌 일지 2026-10-11-01을 빠뜨렸다.
+
+일지에만 남기는 것:
+
+- 중간 문장을 영어로 써 훅이 여섯 번 짚었다.
+- 셀프 리뷰 반영에서 구현을 먼저 고치고 테스트를 뒤에 더했다(원칙 II). 새 테스트의 빨강은 반영 전 행동으로 되돌린 변이
+  ("(옛 판정)" 다섯)로 뒤늦게 봤다.
+- 워크트리 가드가 `uv run python -c "…"`와 `xargs`로 이은 명령을 거부했다(알려진 함정이라 스크래치 파일로 돌렸다).
+- 표 검사가 코드 스팬 안의 `|`를 pre-commit에서야 잡아 4분 남짓의 검사를 한 번 더 돌렸다.
+
+## 다음
+
+- **하네스 chore: 대기열 201·202.** `tools/tidy_checkouts.py`의 `.pyd` 삭제 거부(201, 5회차)와 점유 탐침의 되돌리기
+  재시도(202)다. 204(`ci.yml` 시간 제한)를 묶을지는 그 세션이 정한다. 196은 PR #196(`chore/canary-results-in-specs`)이 맡았다.
+- 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
