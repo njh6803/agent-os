@@ -40,6 +40,16 @@ def test_한글은_폭_2로_세어_줄_길이를_넘긴_행과_폭을_알린다(
     assert "폭 2" in context
 
 
+def test_주석과_독스트링을_감는_명령을_그_파일_경로와_함께_알린다(tmp_path: Path) -> None:
+    """손으로 다시 감기가 세션마다 거듭돼 감기 도구를 두었다(대기열 112)."""
+    path = _ruff_설정_아래에_쓴다(tmp_path, LONG)
+
+    context = context_for("Edit", str(path))
+
+    assert context is not None
+    assert f'uv run python tools/rewrap_comments.py "{path}"' in context
+
+
 def test_폭이_줄_길이에_꼭_차는_한글_줄은_침묵한다(tmp_path: Path) -> None:
     assert context_for("Write", str(_ruff_설정_아래에_쓴다(tmp_path, FULL))) is None
 
