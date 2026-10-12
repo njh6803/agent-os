@@ -128,6 +128,17 @@ PR [#196](https://github.com/njh6803/agent-os/pull/196). 열기 전에 origin/ma
 `tests/test_journal_names.py`를 다시 쳐 통과였다. CodeRabbit은 PR을 연 직후 "manual review required for this OSS
 repository"로 건너뛰어 `@coderabbitai review`를 남겼다.
 
+- **CodeRabbit.** 첫 요청은 "Review rate limited"였고, 회고 커밋(`efec32e`) 뒤의 둘째 요청은 "Review finished"라 답했지만
+  리뷰와 코멘트가 없었다. 리뷰가 없어 회차로 세지 않았고, 보안·버그·성능 축은 PR 직전 대체 둘의 결과다.
+- **claude-review 1회차(`f22eb86`).** 지적 없음.
+- **병합 직전의 main.** CI를 기다리는 사이 PR #193(`c30cd25`, 변이 도구의 시간 제한과 고르기)이 병합되어 PR이 `CONFLICTING`이
+  됐고, `efec32e`의 `gh pr checks`에는 CodeRabbit 줄 말고 검사가 붙지 않았다. 합치자 대기열 끝에서 글자 충돌이 났다. main의 203 뒤에 이 브랜치의 205·206을 두었다.
+  프로브 README는 저절로 합쳐졌고 main이 고친 행은 변이 표 다섯이라 `canary/` 행과 겹치지 않았다. #193이 바꾼 파일 가운데
+  이 브랜치가 이름으로 드는 것은 그 둘뿐이고, 새로 따를 규약은 없었다. 병합 커밋 `244d1f3`의 pre-commit은 모두 통과였다.
+- **스킬 목록.** 사용자가 CI가 끝났다고 알린 메시지와 함께 스킬 목록에 워크트리 사본이 경로를 단 이름
+  (`.claude/worktrees/canary-results-in-specs:<스킬>`)으로 새로 나타났다. 일지 27이 본 모양과 같이 PR을 연 뒤에 났다(대기열
+  189의 자료).
+
 ## 회고
 
 일지의 "다음"을 쓴 편집에 훅이 계기를 넣어 돌렸고, PR #196을 연 뒤 CI를 기다리며 사용자에게 물었다. 후보 둘을 냈고 둘 다
