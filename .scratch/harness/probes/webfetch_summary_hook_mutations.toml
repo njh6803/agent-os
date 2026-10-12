@@ -1,0 +1,148 @@
+# tools/hook_webfetch_summary.py(대기열 209)의 판정과 배선을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/webfetch_summary_hook_mutations.toml
+# 끝의 하나는 대조군이다. 리다이렉트만으로는 code 판정을 잡지 못한다(안내문의 bytes 가 결과와 같다).
+
+[[mutation]]
+name = "code 를 보지 않는다(404 를 요약으로 읽는다)"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not 200 <= code < 300:
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "2xx 를 200 하나로 좁혔다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not 200 <= code < 300:'''
+new = '''    if code != 200:'''
+
+[[mutation]]
+name = "통과를 가르지 않는다(본문 그대로에도 알린다)"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if len(result.encode("utf-8")) == size:
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "UTF-8 바이트가 아니라 글자 수로 댄다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if len(result.encode("utf-8")) == size:'''
+new = '''    if len(result) == size:'''
+
+[[mutation]]
+name = "도구 이름으로 거르지 않는다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if payload.get("tool_name") != TOOL:
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "결과 객체가 없으면 침묵한다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not isinstance(response, dict):
+        return _UNSIZED
+'''
+new = '''    if not isinstance(response, dict):
+        return None
+'''
+
+[[mutation]]
+name = "code 의 타입을 보지 않는다(문자열 404 를 2xx 로 읽어 수를 들어 알린다, 셀프 리뷰 표준 축)"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not isinstance(code, int) or not isinstance(size, int) or not isinstance(result, str):
+        return _UNSIZED
+    if not 200 <= code < 300:'''
+new = '''    if not isinstance(size, int) or not isinstance(result, str):
+        return _UNSIZED
+    if isinstance(code, int) and not 200 <= code < 300:'''
+
+[[mutation]]
+name = "bytes·result 의 타입을 보지 않는다(문자열 bytes 에 수를 들어 알린다)"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not isinstance(code, int) or not isinstance(size, int) or not isinstance(result, str):
+        return _UNSIZED
+    if not 200 <= code < 300:
+        return None
+    if len(result.encode("utf-8")) == size:'''
+new = '''    if not isinstance(code, int):
+        return _UNSIZED
+    if not 200 <= code < 300:
+        return None
+    if len(str(result).encode("utf-8")) == size:'''
+
+[[mutation]]
+name = "요약 문장에 받은 바이트를 들지 않는다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''받은 본문({size}바이트)을'''
+new = '''받은 본문을'''
+
+[[mutation]]
+name = "답한 글자 수를 줄였다고 쓴다(옛 문구, PR 직전 버그·성능 리뷰)"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''{chars}자로 답했다. '''
+new = '''{chars}자로 줄였다. '''
+
+[[mutation]]
+name = "매처를 WebSearch 까지 넓혔다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''"matcher": "WebFetch",'''
+new = '''"matcher": "WebFetch|WebSearch",'''
+
+[[mutation]]
+name = "대조군: 404 와 2xx 밖의 테스트를 빼면 code 판정이 없어도 리다이렉트 테스트만으로는 초록이다"
+tests = ["tests/tools/test_hook_webfetch_summary.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_webfetch_summary.py"
+old = '''    if not 200 <= code < 300:
+        return None
+'''
+new = '''
+'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_webfetch_summary.py"
+old = '''    assert context_for(_페이로드(NOT_FOUND)) is None'''
+new = '''    assert NOT_FOUND'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_webfetch_summary.py"
+old = '''    for code in (403, 500, 503):
+        assert context_for(_페이로드({**SUMMARY, "code": code})) is None, code'''
+new = '''    assert SUMMARY'''
