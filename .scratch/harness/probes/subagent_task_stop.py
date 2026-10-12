@@ -10,8 +10,9 @@ Glob)에는 `TaskStop` 이 없어 작업 ID 로 멈출 도구가 없다.
 
 갈래 둘이다. 실험군은 이 도구를 부른 체크아웃(새 정의: 문단과 `TaskStop`), 대조군은 둘째 인자의
 체크아웃이고 기본은 주 체크아웃(`../../..`)이다. 이 프로브의 PR 이 병합된 뒤에는 주 체크아웃도 새
-정의라, 옛 판을 `git worktree add --detach` 로 꺼내 둘째 인자로 준다. 두 갈래의 정의 파일이 같으면
-대조가 없으므로 돌리지 않고 2 로 끝난다(PR 직전 리뷰가 짚었다). 회차마다 카나리아
+정의라, 옛 판을 `git worktree add --detach` 로 꺼내 둘째 인자로 준다. 대조군 정의에 `TaskStop` 이
+있거나 실험군 정의에 없으면 대조가 없으므로 돌리지 않고 2 로 끝난다(PR 직전 리뷰와 PR 리뷰가
+짚었다). 회차마다 카나리아
 명령(`--setting-sources project,local --strict-mcp-config --model sonnet`)에
 `--tools Agent,Bash,Read,Grep,Glob,TaskStop` 을 주어 띄운다. 서브에이전트의 도구는 본 세션의
 `--tools` 에 묶이므로(`tools/canary.py` 의 `tools_for`) 두 갈래가 같은 도구를 갖고, 다른 것은
@@ -23,8 +24,9 @@ approval" 로 막혔다.
 
 stream-json 에는 서브에이전트의 도구 호출과 결과가 `parent_tool_use_id` 를 달고 실린다(앞쪽 실행에서
 빠지는 것은 서브에이전트의 마지막 글이다, `tools/canary.py` 독스트링). 회차는 셋이 모두 맞을 때만
-측정이다. 본 세션이 답을 냈고, `bug-perf-review` 를 부른 Agent 호출이 있고, 서브에이전트의 Bash
-결과가 "moved to the background" 를 담았다. 마지막이 이 프로브의 전제다. 승인 거부처럼 명령이 돌지
+측정이다. 본 세션이 답을 냈고, `bug-perf-review` 를 부른 Agent 호출이 있고, 그 호출에 딸린
+(`parent_tool_use_id` 가 그 호출의 ID 인) Bash 결과가 "moved to the background" 를 담았다. 다른
+서브에이전트의 호출과 결과는 세지 않는다. 마지막이 이 프로브의 전제다. 승인 거부처럼 명령이 돌지
 않은 회차는 멈출 것이 없어 측정이 아니다. 회차마다 본 세션의 도구와 호출, 서브에이전트의 호출과
 결과 앞부분을 찍는다. `TaskStop` 을 부를지는 단언하지 않고 본 것을 찍는다.
 
@@ -42,7 +44,7 @@ stream-json 에는 서브에이전트의 도구 호출과 결과가 `parent_tool
 `claude` CLI 와 인증이 든다. 회차는 실험군 셋, 대조군 하나이고 회차마다 sonnet 세션 둘(본 세션과
 서브에이전트)이다. 회차마다 stream-json 을 출력 디렉터리에 남긴다. 종료 코드: 0 모든 회차가
 측정이다, 1 측정이 아닌 회차가 있다(제한 시간 600초를 넘긴 것 포함), 2 인자가 하나나 둘이 아니거나,
-갈래의 정의 파일이 없거나, 두 갈래의 정의 파일이 같다.
+갈래의 정의 파일이 없거나, 대조가 없다(위).
 """
 
 import json
@@ -60,7 +62,7 @@ EXPERIMENT, CONTROL = "워크트리", "대조군"
 RUNS = {EXPERIMENT: 3, CONTROL: 1}
 DEFAULT_CONTROL = Path("../../..")
 SAME = (
-    "두 갈래의 정의 파일이 같아 대조가 없다. "
+    f"{CONTROL}: 정의에 TaskStop 이 있어 대조가 없다. "
     "옛 판을 git worktree add --detach 로 꺼내 둘째 인자로 준다"
 )
 SLOW = 'uv run python -c "import time; time.sleep(120)"'
@@ -175,8 +177,10 @@ def result_text(block: dict[str, object]) -> str:
 
 
 def read_run(raw: str) -> Run:
+    """서브에이전트의 호출과 결과는 `bug-perf-review` 를 부른 Agent 호출에 딸린 것만 센다."""
     seen = Run()
     names: dict[str, str] = {}
+    targets: set[str] = set()
     for event in events(raw):
         kind = event.get("type")
         if kind == "system" and event.get("subtype") == "init":
@@ -185,7 +189,10 @@ def read_run(raw: str) -> Run:
         if kind == "result":
             ok = event.get("subtype") == "success" and not event.get("is_error")
             seen.answer = str(event.get("result")) if ok else None
-        inside = event.get("parent_tool_use_id") is not None
+        parent = event.get("parent_tool_use_id")
+        if parent is not None and str(parent) not in targets:
+            continue  # 다른 서브에이전트의 것
+        inside = parent is not None
         for block in blocks(event):
             if block.get("type") == "tool_use":
                 name = str(block.get("name"))
@@ -195,6 +202,8 @@ def read_run(raw: str) -> Run:
                     subagent = as_dict(block.get("input")).get("subagent_type")
                     if subagent is not None:
                         seen.agent_types.append(str(subagent))
+                    if subagent == AGENT:
+                        targets.add(str(block.get("id")))
                     continue
                 seen.sub_names.append(name)
                 shown = json.dumps(block.get("input"), ensure_ascii=False)[:200]
@@ -215,7 +224,8 @@ def tools_line(definition: Path) -> str:
 
 
 def arm_problems(places: dict[str, Path]) -> list[str]:
-    """돌리기 전에 막을 것. 갈래의 정의 파일이 없거나, 두 갈래의 정의가 같아 대조가 없다."""
+    """돌리기 전에 막을 것. 갈래의 정의 파일이 없거나, 실험군 정의에 `TaskStop` 이 없거나, 대조군
+    정의에 있다. 바이트가 다른 것만으로는 둘 다 새 판일 수 있어 대조가 되지 않는다(PR 리뷰)."""
     missing = [
         f"{name}: 정의가 없다: {place / DEFINITION}"
         for name, place in places.items()
@@ -223,9 +233,12 @@ def arm_problems(places: dict[str, Path]) -> list[str]:
     ]
     if missing:
         return missing
-    if len({(place / DEFINITION).read_bytes() for place in places.values()}) == 1:
-        return [SAME]
-    return []
+    found: list[str] = []
+    if "TaskStop" not in (places[EXPERIMENT] / DEFINITION).read_text(encoding="utf-8"):
+        found.append(f"{EXPERIMENT}: 정의에 TaskStop 이 없다")
+    if "TaskStop" in (places[CONTROL] / DEFINITION).read_text(encoding="utf-8"):
+        found.append(SAME)
+    return found
 
 
 def main(out: Path, control: Path) -> int:
