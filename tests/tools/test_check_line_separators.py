@@ -1,8 +1,10 @@
-"""tools/check_line_separators.py. 날것 U+2028·U+2029·U+0085 를 잡는 검사(대기열 22).
+"""tools/check_line_separators.py. 날것 U+2028·U+2029·U+0085 와 홀로 선 CR 을 잡고(대기열 22·52),
+`.py` 에서는 보이지 않는 공백·서식 문자도 잡는 검사(대기열 52).
 
 이 파일은 그 문자를 `chr()` 로 만든다. 역슬래시-u 이스케이프로 쓰면 편집 도구가 날것으로 저장할 수
 있고(PR #58, 그리고 이 검사를 쓰던 2026-09-28 세션에서 다시), 그러면 검사가 이 파일을 잡는다.
-고정하는 것은 셋을 잡는 것, 이스케이프 여섯 글자는 잡지 않는 것, 줄 번호를 개행으로만 세는 것.
+고정하는 것은 그 문자들을 잡는 것, 이스케이프 여섯 글자는 잡지 않는 것, 줄 번호를 개행으로만 세는
+것, CRLF 의 CR 은 줄 끝이라 잡지 않는 것, 보이지 않는 문자는 `.py` 에서만 잡는 것.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -25,6 +28,12 @@ from tools.check_line_separators import (
 LINE_SEPARATOR = chr(0x2028)
 PARAGRAPH_SEPARATOR = chr(0x2029)
 NEXT_LINE = chr(0x0085)
+CR = chr(0x0D)
+NO_BREAK_SPACE = chr(0x00A0)
+IDEOGRAPHIC_SPACE = chr(0x3000)
+ZERO_WIDTH_SPACE = chr(0x200B)
+RIGHT_TO_LEFT_OVERRIDE = chr(0x202E)
+BOM = chr(0xFEFF)
 
 
 def test_날것_줄_구분_문자_셋을_줄과_열로_잡는다() -> None:
@@ -45,20 +54,94 @@ def test_줄_번호는_개행으로만_센다() -> None:
     ]
 
 
+def test_홀로_선_CR_은_잡고_CRLF_의_CR_은_줄_끝이라_잡지_않는다() -> None:
+    """도구 호출의 역슬래시-r 이 날것 CR 로 바뀌어 `.md` 표에 들었다(일지 2026-09-29-05). 표
+    밖이면 조용히 줄을 가른다. 파일 끝의 CR 도 뒤에 LF 가 없으니 홀로 선 것이다."""
+    text = f"a{CR}\nb{CR}c\nd{CR}"
+
+    assert separators_in(text) == [
+        "2:2: U+000D CARRIAGE RETURN",
+        "3:2: U+000D CARRIAGE RETURN",
+    ]
+
+
+def test_보이지_않는_공백과_서식_문자를_줄과_열로_잡는다() -> None:
+    text = (
+        f"a{NO_BREAK_SPACE}b\n# 가{IDEOGRAPHIC_SPACE}나\n"
+        f"x{ZERO_WIDTH_SPACE}{RIGHT_TO_LEFT_OVERRIDE}\n{BOM}y\n"
+    )
+
+    assert problems_in(text.encode(), ".py") == [
+        "1:2: U+00A0 NO-BREAK SPACE",
+        "2:4: U+3000 IDEOGRAPHIC SPACE",
+        "3:2: U+200B ZERO WIDTH SPACE",
+        "3:3: U+202E RIGHT-TO-LEFT OVERRIDE",
+        "4:1: U+FEFF ZERO WIDTH NO-BREAK SPACE",
+    ]
+
+
+def test_한글과_ASCII_공백은_보이지_않는_문자가_아니다() -> None:
+    assert problems_in("# 한글 주석\n\tx = '가 나'  # 끝\n".encode(), ".py") == []
+
+
+def test_보이지_않는_문자의_정의는_ASCII_밖의_Zs_와_Cf_다() -> None:
+    """모든 코드 포인트를 한 줄에 하나씩 두고 `.py` 와 `.md` 로 훑는다. CR 은 뒤에 LF 가 와 줄
+    끝이 되므로 여기서는 잡히지 않는다(홀로 선 CR 은 위 시험). NUL 이 들면 이진으로 본다."""
+    points = [p for p in range(0x110000) if p not in (0x00, 0x0A) and not 0xD800 <= p <= 0xDFFF]
+    data = "\n".join(chr(point) for point in points).encode()
+    invisible = {
+        point
+        for point in points
+        if point > 0x7F and unicodedata.category(chr(point)) in {"Zs", "Cf"}
+    }
+    separators = {0x85, 0x2028, 0x2029}
+
+    def codes(found: list[str]) -> set[int]:
+        return {int(item.split(" U+", 1)[1].split(" ", 1)[0], 16) for item in found}
+
+    assert codes(problems_in(data, ".py")) == invisible | separators
+    assert codes(problems_in(data, ".md")) == separators
+    assert {0x00A0, 0x00AD, 0x200B, 0x200D, 0x202E, 0x2066, 0x3000, 0xFEFF} <= invisible
+    # 독스트링의 못 보는 것(Mn 인 이체 선택자 U+FE0F, 탭·개행·CR·U+0085 밖의 Cc)은 위 두 등식이
+    # 고정한다. 검사가 그 문자를 잡게 바뀌면 등식이 깨진다.
+    assert unicodedata.category(chr(0xFE0F)) == "Mn"
+
+
+def test_보이지_않는_문자는_py_에서만_잡고_줄_구분_문자는_어디서나_잡는다() -> None:
+    """한국어 문서의 전각 공백은 정당할 수 있다(대기열 52의 범위). 확장자가 대문자인 파이썬
+    파일은 못 본다(독스트링의 못 보는 것)."""
+    data = f"가{IDEOGRAPHIC_SPACE}나\n다{LINE_SEPARATOR}\n".encode()
+
+    assert problems_in(data, ".py") == [
+        "1:2: U+3000 IDEOGRAPHIC SPACE",
+        "2:2: U+2028 LINE SEPARATOR",
+    ]
+    assert problems_in(data, ".md") == ["2:2: U+2028 LINE SEPARATOR"]
+    assert problems_in(data, ".PY") == ["2:2: U+2028 LINE SEPARATOR"]
+
+
+def test_파일_머리의_BOM_은_py_에서도_인코딩_표지라_잡지_않는다() -> None:
+    """머리 뒤의 U+FEFF 는 이스케이프가 날것이 된 것이다."""
+    assert problems_in(b"\xef\xbb\xbf" + b"x = 1\n", ".py") == []
+    assert problems_in(f"x = '{BOM}'\n".encode(), ".py") == [
+        "1:6: U+FEFF ZERO WIDTH NO-BREAK SPACE"
+    ]
+
+
 def test_이스케이프로_쓴_것은_잡지_않는다() -> None:
     """소스에 역슬래시-u 여섯 글자로 쓴 것이 맞는 꼴이다."""
-    source = 'text = "\\u2028\\u2029\\x85"\n'
+    source = 'text = "\\u2028\\u2029\\x85\\u00a0\\u3000\\r"\n'
 
     assert "\\u2028" in source
     assert separators_in(source) == []
-    assert problems_in(source.encode("utf-8")) == []
+    assert problems_in(source.encode("utf-8"), ".py") == []
 
 
 def test_NUL_이_있는_파일은_텍스트가_아니라_보지_않는다() -> None:
     binary = b"PNG\0\0\0" + LINE_SEPARATOR.encode("utf-8")
 
     assert not is_text(binary)
-    assert problems_in(binary) == []
+    assert problems_in(binary, ".py") == []
 
 
 def test_이진_판정의_경계는_git_과_같은_8000_바이트다() -> None:
@@ -71,12 +154,15 @@ def test_UTF_8_BOM_은_열로_세지_않는다() -> None:
     """편집기는 BOM 을 보이지 않는다. 첫 줄의 열이 하나 밀리면 둘째 줄과 기준이 갈린다."""
     data = b"\xef\xbb\xbf" + f"a{LINE_SEPARATOR}b\nc{LINE_SEPARATOR}d\n".encode()
 
-    assert problems_in(data) == ["1:2: U+2028 LINE SEPARATOR", "2:2: U+2028 LINE SEPARATOR"]
+    assert problems_in(data, ".txt") == [
+        "1:2: U+2028 LINE SEPARATOR",
+        "2:2: U+2028 LINE SEPARATOR",
+    ]
 
 
 def test_BOM_뒤의_무효_바이트는_파일의_바이트_자리로_알린다() -> None:
     """utf-8-sig 는 BOM 을 떼고 센다. 알리는 자리는 파일 기준이어야 편집기에서 찾는다."""
-    problems = problems_in(b"\xef\xbb\xbf\xff")
+    problems = problems_in(b"\xef\xbb\xbf\xff", ".txt")
 
     assert len(problems) == 1
     assert "바이트 3)" in problems[0]
@@ -84,7 +170,7 @@ def test_BOM_뒤의_무효_바이트는_파일의_바이트_자리로_알린다(
 
 def test_UTF_8_로_읽히지_않는_텍스트_파일은_어긋남이다() -> None:
     """판정할 수 없는 파일을 조용히 통과시키지 않는다."""
-    problems = problems_in("한글".encode("cp949"))
+    problems = problems_in("한글".encode("cp949"), ".txt")
 
     assert len(problems) == 1
     assert "UTF-8" in problems[0]
@@ -152,13 +238,33 @@ def test_날것_문자가_있는_파일이_섞이면_실패한다(tmp_path: Path
     assert main([clean, dirty]) == 1
 
 
+def test_파일마다_확장자로_보이지_않는_문자의_범위를_가른다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = tmp_path / "code.py"
+    code.write_text(f"x = 1{NO_BREAK_SPACE}\n", encoding="utf-8", newline="\n")
+    doc = tmp_path / "doc.md"
+    doc.write_text(f"가{IDEOGRAPHIC_SPACE}나\n", encoding="utf-8", newline="\n")
+
+    assert main([doc], root=tmp_path) == 0
+    assert main([code, doc], root=tmp_path) == 1
+    assert capsys.readouterr().out.splitlines()[0] == "code.py:1:6: U+00A0 NO-BREAK SPACE"
+
+
 def test_CLI_진입점이_인자로_받은_파일의_날것_문자를_출력한다(tmp_path: Path) -> None:
     """pre-commit 이 부르는 진입점 그대로 — 파일 경로를 인자로 받는다(tests.md)."""
     dirty = tmp_path / "dirty.py"
     dirty.write_text(f'x = "a{LINE_SEPARATOR}b"\n', encoding="utf-8", newline="\n")
+    invisible = tmp_path / "invisible.py"
+    invisible.write_text(f"x = 1{ZERO_WIDTH_SPACE}\n", encoding="utf-8", newline="\n")
 
     process = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "check_line_separators.py"), str(dirty)],
+        [
+            sys.executable,
+            str(ROOT / "tools" / "check_line_separators.py"),
+            str(dirty),
+            str(invisible),
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -169,4 +275,5 @@ def test_CLI_진입점이_인자로_받은_파일의_날것_문자를_출력한�
 
     assert process.returncode == 1
     assert "dirty.py:1:7: U+2028 LINE SEPARATOR" in process.stdout
+    assert "invisible.py:1:6: U+200B ZERO WIDTH SPACE" in process.stdout
     assert "chr(0x2028)" in process.stdout

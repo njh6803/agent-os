@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 
@@ -291,6 +291,30 @@ hook = "hook_line_separators.py"
 expect = "silent"
 note = "그 문자를 chr() 로 다루는 검사 자신의 Edit — 이 저장소의 파일이고 날것 문자는 없다"
 payload = { tool_name = "Edit", tool_input = { file_path = "${ROOT}/tools/check_line_separators.py", new_string = "chr(0x2028): \"LINE SEPARATOR\"," } }
+
+[[case]]
+hook = "hook_line_separators.py"
+expect = "context"
+note = "Write 가 이스케이프를 날것 줄바꿈 없는 공백(U+00A0)으로 저장한 파이썬 파일(대기열 52)"
+payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/nbsp.py", content = "x = 1" } }
+
+[[case]]
+hook = "hook_line_separators.py"
+expect = "silent"
+note = "전각 공백(U+3000)이 든 한국어 문서 — 보이지 않는 문자는 .py 에서만 알린다(대기열 52의 범위)"
+payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/notes.md", content = "가 나" } }
+
+[[case]]
+hook = "hook_line_separators.py"
+expect = "context"
+note = "도구 호출의 역슬래시-r 이 날것 CR 로 바뀌어 든 마크다운 표(대기열 52, 일지 2026-09-29-05)"
+payload = { tool_name = "Edit", tool_input = { file_path = "${INVISIBLE_DIR}/lone-cr.md", new_string = "| a | b |" } }
+
+[[case]]
+hook = "hook_line_separators.py"
+expect = "silent"
+note = "줄 끝이 CRLF 인 마크다운 — LF 앞의 CR 은 줄 끝이다"
+payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/crlf.md", content = "| a |" } }
 
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]

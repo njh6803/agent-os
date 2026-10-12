@@ -12,11 +12,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import TypedDict
 
 import pytest
-from tools.launch_hook import MODEL_SUFFIX
+from tools.launch_hook import MODEL_SUFFIX, STATE_DIR, claim_first_notice
 from tools.run_hooks import ROOT, hook_environment
 
 LAUNCHER = ROOT / "tools" / "launch_hook.py"
@@ -33,15 +34,26 @@ class _Notice(TypedDict, total=False):
     hookSpecificOutput: _Specific
 
 
-def _돌린다(*argv: str, stdin: bytes = b"") -> subprocess.CompletedProcess[bytes]:
+def _돌린다(
+    *argv: str, stdin: bytes = b"", temp: Path | None = None
+) -> subprocess.CompletedProcess[bytes]:
+    """`temp` 를 주면 자식의 임시 디렉터리를 거기로 돌린다. 세션이 든 페이로드는 래퍼가 표지를
+    남기므로, 실제 임시 디렉터리에 남기면 다음 실행의 첫 호출이 조용해진다."""
+    env = hook_environment()
+    if temp is not None:
+        env.update({name: str(temp) for name in ("TMPDIR", "TEMP", "TMP")})
     return subprocess.run(
         [sys.executable, *argv],
         input=stdin,
         capture_output=True,
-        env=hook_environment(),
+        env=env,
         check=False,
         timeout=60,
     )
+
+
+def _페이로드(event: str = "PostToolUse", **fields: str) -> bytes:
+    return json.dumps({"hook_event_name": event, **fields}).encode()
 
 
 def _래퍼_사본을_둔다(directory: Path) -> str:
@@ -81,6 +93,93 @@ def test_훅_파일이_없으면_막지_않고_모델과_사용자에게_알린�
     # 가른다
     assert to_model == to_user + MODEL_SUFFIX
     assert MODEL_SUFFIX.strip() not in to_user
+
+
+def test_같은_세션의_같은_훅은_첫_알림만_내고_뒤는_조용히_지나간다(tmp_path: Path) -> None:
+    """다시 연 워크트리 세션에서 주 체크아웃에 없는 새 훅을 래퍼가 Write·Edit 마다 알려 같은 문단이
+    약 마흔 번 컨텍스트에 쌓였다(대기열 174, 일지 2026-10-12-05). 알림은 꺼진 훅의 일을 챙기게
+    해 주므로 없애지 않고 한 번만 낸다."""
+    launcher = _래퍼_사본을_둔다(tmp_path)
+    payload = _페이로드(session_id="세션-1")
+
+    first = _알림(_돌린다(launcher, "hook_없다.py", stdin=payload, temp=tmp_path))
+    again = _돌린다(launcher, "hook_없다.py", stdin=payload, temp=tmp_path)
+
+    assert "hook_없다.py" in _모델이_받는_문구(first)
+    assert again.returncode == 0
+    assert again.stdout == b""
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"session_id": "세션-2"},
+        {"session_id": "세션-1", "agent_id": "에이전트-1"},
+        {"session_id": "세션-1", "event": "PreToolUse"},
+    ],
+    ids=["다른 세션", "서브에이전트", "다른 이벤트"],
+)
+def test_세션이나_에이전트나_이벤트가_다르면_다시_알린다(
+    tmp_path: Path, fields: dict[str, str]
+) -> None:
+    """서브에이전트는 세션 ID 가 같아도 컨텍스트가 따로다(입력에 `agent_id` 가 온다,
+    tools/hook_midturn_korean.py). Stop 처럼 사용자에게만 가는 이벤트에서 먼저 알렸으면 모델은 아직
+    모르므로 이벤트도 가른다."""
+    launcher = _래퍼_사본을_둔다(tmp_path)
+    _알림(_돌린다(launcher, "hook_없다.py", stdin=_페이로드(session_id="세션-1"), temp=tmp_path))
+    other = _알림(_돌린다(launcher, "hook_없다.py", stdin=_페이로드(**fields), temp=tmp_path))
+
+    assert "hook_없다.py" in other.get("systemMessage", "")
+
+
+def test_훅이_다르면_같은_세션에서도_다시_알린다(tmp_path: Path) -> None:
+    launcher = _래퍼_사본을_둔다(tmp_path)
+    payload = _페이로드(session_id="세션-1")
+    _알림(_돌린다(launcher, "hook_가.py", stdin=payload, temp=tmp_path))
+
+    other = _알림(_돌린다(launcher, "hook_나.py", stdin=payload, temp=tmp_path))
+
+    assert "hook_나.py" in other.get("systemMessage", "")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [b'{"hook_event_name": "PostToolUse"}', b'{"session_id": 7}', b'{"session_id": ""}', b"[1]"],
+    ids=["세션 없음", "문자열 아닌 세션", "빈 세션", "목록"],
+)
+def test_세션을_모르면_호출마다_알린다(tmp_path: Path, payload: bytes) -> None:
+    """한 번으로 셀 열쇠가 없다. 조용히 지나가는 것보다 되풀이가 낫다. 러너(tools/run_hooks.py)의
+    알림 판정도 세션 없는 페이로드라 커밋마다 같은 출력을 본다."""
+    launcher = _래퍼_사본을_둔다(tmp_path)
+
+    for _ in range(2):
+        assert _알림(_돌린다(launcher, "hook_없다.py", stdin=payload, temp=tmp_path))
+
+
+def test_표지를_쓰지_못하면_호출마다_알린다(tmp_path: Path) -> None:
+    """표지 디렉터리 자리에 파일이 있으면 makedirs 가 FileExistsError 를 낸다. 그것을 '이미
+    알렸다' 로 읽으면 한 번도 알리지 않고 지나간다."""
+    launcher = _래퍼_사본을_둔다(tmp_path)
+    (tmp_path / STATE_DIR).write_text("디렉터리가 아니다", encoding="utf-8")
+    payload = _페이로드(session_id="세션-1")
+
+    for _ in range(2):
+        assert _알림(_돌린다(launcher, "hook_없다.py", stdin=payload, temp=tmp_path))
+
+
+def test_쓸_수_있는_임시_디렉터리가_없어도_처음이라고_보고_알린다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """읽기 전용 컨테이너처럼 임시 디렉터리 후보가 모두 막히면 `tempfile.gettempdir` 가
+    FileNotFoundError 를 낸다. 그 예외로 래퍼가 1로 끝나면 알림이 한 번도 나가지 않는다(PR 직전
+    버그·성능 리뷰가 후보를 없는 경로로 바꿔 손으로 재현했다)."""
+
+    def no_usable_temp() -> str:
+        raise FileNotFoundError("No usable temporary directory found")
+
+    monkeypatch.setattr(tempfile, "gettempdir", no_usable_temp)
+
+    assert claim_first_notice("열쇠") is True
 
 
 def test_Stop_에서는_사용자에게만_알리고_대화를_잇지_않는다(tmp_path: Path) -> None:
