@@ -1,4 +1,4 @@
-# 2026-10-12 (03) 카나리아 러너의 에이전트 갈래와 상위 폴더 CLAUDE.md 확인
+# 2026-10-12 (06) 카나리아 러너의 에이전트 갈래와 상위 폴더 CLAUDE.md 확인
 
 next-session 지시문으로 연 새 세션이다. 대기열 153(`tools/canary.py`의 에이전트 갈래)과 171(대조군 위치 사전 확인)을
 `chore/canary-agent-arm` 한 PR로 반영하고, 갈래가 서면 손으로 지은 `spec_reviewer_agent.py`를 명세 하나로 대신한다.
@@ -135,7 +135,7 @@ CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 나란히 �
 - 프로브 README의 `canary/`·`canary_mutations.toml` 행과 새 `claude_md_parent.py` 행.
 - `docs/constitution/operations.md` 환경 규약 상세: 카나리아 항목(러너가 서브에이전트를 본다, 명령의 도구, 대조군 안내)과
   모드 표의 `claude -p` 행.
-- `.scratch/retro-queue.md`: 153·171 닫힘.
+- `.scratch/retro-queue.md`: 153·171 닫힘, 회고의 새 행 176·177·178.
 
 ## 검사
 
@@ -144,3 +144,51 @@ CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 나란히 �
   인자로 넘겨 초록이었다. 경고 다섯은 기존 conftest 테스트의 pytest-asyncio 설정 안내다.
 - 변이: `canary_mutations.toml` 예순여덟 모두 기대대로.
 - 실제 실행: `spec_reviewer_agent.toml` 통과 4, `claude_md_parent.py` 여덟 회차 모두 측정(위 절).
+
+## PR
+
+[njh6803/agent-os#178](https://github.com/njh6803/agent-os/pull/178). 첫 푸시(`12b3a5f`)의 CI는 python·web·e2e·visual·verify가
+초록이었다. CodeRabbit은 PR을 연 직후 요청했으나 한도("Review rate limited")로 리뷰 없이 끝났다. 이 PR의 보안·버그·성능
+축은 위 PR 직전 절의 대체 둘이다. claude-review는 첫 회차에 Minor 셋·Nit 하나를 냈다.
+
+- **고친 것.** rule 명세에도 상위 폴더 확인이 걸리는지 보는 테스트가 없었다(Minor). 도구 비교 메시지가 순서를 따지지
+  않는다는 것을 드러내지 않았다(Nit).
+- **보류(PR 코멘트에 이유).** `read_facts`의 분기를 작은 함수로 나누기(Minor)는 두 분기가 호출 목록과 Agent 호출 id의
+  짝을 함께 써 상태 객체가 새로 들고, 변이 원문 다섯이 그 줄에 걸려 있어 두었다. `_frontmatter` 손 파서(Minor)는 이미 한
+  곳에만 있고 남긴 위험에 적었다.
+
+일지 번호를 03에서 06으로 옮겼다. 작업하는 동안 main에 05(`rewrap-and-separator-hook`)가 병합돼, 이름순 "최신 일지"를
+따르면 이 일지의 "다음"을 지나친다. 인용 일곱(도구 독스트링 둘, 대기열 둘, README 셋)을 함께 고쳤다.
+
+## 회고
+
+후보 셋을 냈고 셋 모두 승인됐다. 이 PR에서는 반영하지 않았다.
+
+> 사용자(질문에 답): "1 탐침의 대조 갈래,2 커밋 직전 검증 중복,3 옮김의 옛 판정 대조"
+
+1. **탐침이 고른 해석에 양성 대조와 경쟁 가설을 가르는 갈래가 없었다 → 대기열 176(새 행, 1회차).** `claude_md_parent.py`의
+   첫 판은 상위 파일이 실리면 옮긴다는 대조가 없어 스스로 `하위`를 더했고, 둘째 판은 "주 워크트리 루트를 건너뛴다"와
+   "같은 자리의 자기 파일이 가린다"를 가르지 못한 채 건너뛰기 규칙으로 일반화했다가 표준 축이 잡았다. 144의 가족이다.
+2. **커밋 직전에 손으로 친 전체 검증을 pre-commit이 그대로 다시 돌았다 → 대기열 177(새 행, 1회차).** pre-commit의
+   `tools/run_checks.py`가 pytest·pyright·lint-imports·web-verify를 돌아 약 3~4분이 겹쳤다. `CLAUDE.md`의 게이트 문장은
+   "다섯은 손으로 치는 것, 여섯은 pre-commit"이라 그 겹침을 드러내지 않는다.
+3. **옮기는 변경에서 넓힌 판정이 옛 경우까지 풀었고, 명세 축 요구에 넣은 옛 판정 목록이 그것을 잡았다 → 대기열 178(새 행,
+   1회차, 효과의 근거).** 지운 탐침의 판정을 하나하나 대조하라는 요구가 Major를 잡았다.
+
+일지에만 남기는 것:
+
+- 일지 번호를 옮긴 것(위 PR 절)은 대기열 175(날짜를 넘긴 세션)와 원인이 다르지만, 그 행의 처방(새 일지가 main·형제의 최신
+  일지보다 이름순으로 앞이면 알린다)이 이것도 잡는다. 회차로 더할지는 175를 닫는 세션이 정한다.
+- 워크트리 가드가 `git config …; grep …` 복합 명령을 거부했다(환경 함정의 알려진 모양). 하나씩 쳤다.
+- `cd <스크래치패드> && …`가 셸의 작업 폴더를 옮겨, 다음 명령 전에 워크트리로 되돌렸다(대기열 123과 같은 기전).
+- 중간 문장과 마지막 답을 영어로 써 훅이 세 번 짚었다.
+- 첫 턴의 `tidy-checkouts`에서 지울 후보 둘이 다른 프로세스가 쥔 폴더와 `.pyd` 접근 거부로 남았다.
+
+## 다음
+
+- **하네스 chore: 대기열 46·101·151·154·156·177·178.** `code-review` 스킬(2·4·6단계)의 열린 행이 여섯이라 chore 배치
+  조건이고, 101(3회차)은 `grilling` 스킬이다. 177은 `CLAUDE.md` 게이트 문장도 고친다. 17·41(ADR 필요)은 ADR 초안으로 따로
+  간다. 52·174는 `chore/invisible-chars-and-launch-notice` 세션이 맡았다.
+- 대조군 옛 판 워크트리 `C:/project/agent-canary-58969f7`은 병합 뒤 이 세션이 걷는다. 가드가 거부하면 `tidy-checkouts`에
+  넘긴다(분리 HEAD라 사람에게 넘어간다).
+- 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.

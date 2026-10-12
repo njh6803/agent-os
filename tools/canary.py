@@ -391,7 +391,7 @@ def _where(error: ValidationError) -> str:
 
 def _canonical(name: str) -> str:
     """init 은 Agent 를 옛 이름 Task 로 찍었다(claude 2.1.292 의 원본에서 손으로 봤다, 일지
-    2026-10-12-02·03). 호출 블록은 Agent 였지만 같은 것으로 읽는다."""
+    2026-10-12-02·06). 호출 블록은 Agent 였지만 같은 것으로 읽는다."""
     return "Agent" if name == "Task" else name
 
 
@@ -523,7 +523,7 @@ def _agent_reasons(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[s
     한다. 새 에이전트라 옛 사본에 정의가 없는 대조군은 부르지 않아도 된다. 돈 근거는 띄운 방식마다
     다르다. 앞쪽 실행은 서브에이전트의 마지막 텍스트 답이 stream-json 에 찍히지 않아 결과의
     `status: completed` 가, 백그라운드 실행은 결과가 `async_launched` 라 서브에이전트의 assistant
-    이벤트가 근거다(claude 2.1.292 에서 손으로 봤다, 일지 2026-10-12-02·03).
+    이벤트가 근거다(claude 2.1.292 에서 손으로 봤다, 일지 2026-10-12-02·06).
     """
     reasons: list[str] = []
     call = _agent_call(str(spec.agent))
@@ -563,7 +563,8 @@ def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
     if facts.tools is None:
         reasons.append("init 이벤트가 없다. 세션이 시작되지 않았다")
     elif sorted(facts.tools) != sorted(tools):
-        reasons.append(f"도구가 {', '.join(tools)} 가 아니다: {', '.join(facts.tools) or '없음'}")
+        seen = ", ".join(facts.tools) or "없음"
+        reasons.append(f"도구가 {', '.join(tools)} 가 아니다(순서는 따지지 않는다): {seen}")
     if facts.servers:
         reasons.append(f"MCP 서버가 실렸다: {', '.join(facts.servers)}")
     if facts.malformed:

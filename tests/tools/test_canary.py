@@ -1010,6 +1010,19 @@ def test_상위_폴더의_CLAUDE_md에_카나리아가_있으면_갈래마다_�
     assert all(str(tmp_path / "CLAUDE.md") in problem for problem in problems)
 
 
+def test_규칙_명세도_같은_체크아웃의_두_갈래에_상위_폴더_확인을_건다(tmp_path: Path) -> None:
+    """확인은 kind 와 무관하다. 규칙의 대조군은 실험군과 같은 체크아웃이라 같은 상위 파일이
+    실린다."""
+    spec = load_spec(_규칙_명세)
+    (tmp_path / "CLAUDE.md").write_text("`tools/`의 식별자는 영문이다\n", encoding="utf-8")
+    checkout = tmp_path / "저장소"
+    checkout.mkdir()
+
+    problems = ancestor_problems(spec, {"실험군": checkout, "대조군": checkout})
+
+    assert [problem.split(":", 1)[0] for problem in problems] == ["실험군", "대조군"]
+
+
 def test_상위_폴더의_CLAUDE_md에_카나리아가_없으면_알리지_않는다(tmp_path: Path) -> None:
     spec = load_spec(_스킬_명세)
     (tmp_path / "CLAUDE.md").write_text("다른 지시\n", encoding="utf-8")
