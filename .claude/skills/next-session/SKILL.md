@@ -20,13 +20,13 @@ PR을 열거나 병합하면 다음 작업의 지시문을 낸다(`docs/constitu
 
 워크트리 세션은 다른 체크아웃을 바꾸지 않는다. 앱의 워크트리 가드가 Bash 도구에서 주 체크아웃을 당기는 `git -C <루트> pull`을 거부한 것이(일지 2026-10-02-06·2026-10-03-02) 그 경계다. 주 체크아웃을 당기거나 다른 워크트리를 지우는 일은 주 체크아웃 세션의 `tidy-checkouts`에 넘긴다. 이 세션이 여는 새 세션이 보통 `EnterWorktree` 전의 첫 턴에 그 주 체크아웃 세션이다(4). 셸에서 `git -C <루트>`로 대신 당기는 길은 쓰지 않는다. 가드를 돌아가는 길이다. 워크트리의 기준은 `origin/main`이다(`CLAUDE.md` 환경 함정).
 
-1. **확인.** `gh pr view --json mergeable,mergeStateStatus,baseRefName,headRefOid`가 병합할 수 있다고 하고(`UNKNOWN`이면 다시 본다), base가 main이고, `gh pr checks`에 실패가 없고(claude-review가 계정의 주간 사용량 한도로만 빨가면 실패로 세지 않고 기다리지 않는다. 알아보는 법과 PR 코멘트에 남길 것은 `docs/constitution/operations.md` 리뷰 파이프라인 3), `headRefOid`가 `git rev-parse HEAD`와 같다. pending이면 1단계대로 기다리지 않고 턴을 끝낸다.
+1. **확인.** `gh pr view --json mergeable,mergeStateStatus,baseRefName,headRefOid`가 병합할 수 있다고 하고(`UNKNOWN`이면 다시 본다), base가 main이고, `gh pr checks`에 실패가 없고(claude-review가 계정의 주간 사용량 한도로만 빨가면 실패로 세지 않고 기다리지 않는다. 그때 `mergeStateStatus`가 `UNSTABLE`이어도 병합할 수 있다는 값이다. 알아보는 법과 PR 코멘트에 남길 것은 `docs/constitution/operations.md` 리뷰 파이프라인 3), `headRefOid`가 `git rev-parse HEAD`와 같다. pending이면 1단계대로 기다리지 않고 턴을 끝낸다.
 2. **병합.** `gh pr merge <번호> --squash --match-head-commit <HEAD>`. `--delete-branch`는 쓰지 않는다 — 병합 뒤 작업 폴더에서 `git checkout main`을 쳐서, main이 어디에도 체크아웃되어 있지 않으면 이 워크트리가 main을 가져가 주 체크아웃이 main으로 돌아가지 못하고, 주 체크아웃이 main이면 실패해 원격 삭제를 건너뛴다(대기열 39, 2026-10-05 워크트리 감사). 사용자 수준 `/git-pr-merge`가 이 플래그를 쓰므로 워크트리에서는 그 스킬을 부르지 않는다.
 3. **원격 정리.** `git push origin --delete <브랜치>`, `git fetch origin`.
 4. **주 체크아웃은 새 세션에 넘긴다.** 당기지 않고 병합된 워크트리도 지우지 않는다. `git worktree list`의 첫 줄로 루트의 브랜치를 보고, 보고와 일지에 `주 체크아웃 미갱신: 루트는 <브랜치>` 한 줄을 남긴다. 새 세션을 열면 3단계대로 지시문의 "확인할 선행 조건"과 "어디서" 줄에 적고, 그 세션이 워크트리에 들어가기 전에 Skill 도구로 `tidy-checkouts`를 돈다(나란히 여는 묶음이면 첫 세션만). 무엇을 당기고 지우는지는 그 스킬이 정한다. 새 세션을 열지 않으면(결정표의 "이 세션") 미갱신은 다음에 새 세션을 열 때까지 남고, 그때 3단계가 다시 적는다. 다만 훅 래퍼(`tools/launch_hook.py`)를 들이거나 옮긴 PR이면 병합 직후 당겨야 하므로(`.claude/rules/tools.md`) 기다리지 않고, 보고의 그 한 줄에 사람이 주 체크아웃 세션에서 `/tidy-checkouts`를 쳐 달라는 부탁을 붙인다. 당겨지기 전에는 새 세션과 훅이 주 체크아웃의 옛 하네스로 돈다(`docs/constitution/operations.md` 환경 규약 상세의 모드 표).
 5. **이어 갈 때.** 다음 브랜치는 `git switch -c <다음 브랜치> origin/main`으로 딴다. squash된 옛 브랜치 위에서 따면 병합된 커밋을 다시 싣는다. `/git-branch`의 `git checkout main`은 루트가 main이면 실패하고, main이 어디에도 없으면 이 워크트리가 main을 가져간다.
 
-끝: PR이 병합됐고, 원격 브랜치가 없고, 미갱신 한 줄이 보고에 있다.
+끝: PR이 병합됐고, 원격 브랜치가 없고, 4를 거쳤으면 미갱신 한 줄이 보고에 있다.
 
 ## 다음 작업 결정표
 

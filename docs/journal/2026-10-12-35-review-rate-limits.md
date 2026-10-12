@@ -101,3 +101,28 @@ PR 하나로 묶었다.
 165는 기다린다였다.
 
 > 사용자: (고른 것) "승인한다 (Recommended)" — "초안 그대로 확정하고 커밋·PR로 진행한다. ADR 끝에 이력 승인 날짜를 한 줄 더한다."
+
+## 커밋과 main 받기
+
+`5d27a6b`의 pre-commit은 모두 통과였다(ruff 둘은 `.py`가 없어 `Skipped`라 손으로 쳐 통과). 인용 대조 경고 넷은 헌법
+README 11행의 원래 인용 둘과, 이 일지가 옮긴 도구 출력과 고치기 전 문구다. 그 뒤 origin/main이 `bb14aae`(PR #197, 킥오프
+자동 진행 명세)로 움직였다. 바뀐 파일 가운데 이 브랜치가 이름으로 드는 것은 대기열뿐이었고, 합치자 대기열 끝에서 글자
+충돌이 났다. 이 브랜치가 닫은 206 뒤에 main의 207을 두었다(`e231075`, pre-commit 통과).
+
+## PR 직전 보안·버그·성능 축
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI는 돌지 않았다. origin/main을 합친 뒤 대체 둘을 나란히
+돌렸다. 기준은 `bb14aae`다.
+
+- **보안(`/security-review`).** 지적 없음. 이번에는 커밋 목록에 이 브랜치의 커밋 둘만 들었다. 206에서 정한 순서(합친 뒤에
+  돌린다)대로 돌렸기 때문이다. 식별 서브태스크는 새 병합 길이 `--admin`과 직접 푸시를 쓰지 않아 필수 검사 `verify`를
+  건너뛰지 않는 것과, 카나리아 명세의 `question`이 셸을 거치지 않고 stdin으로만 가는 것을 코드로 봤다.
+- **버그·성능(`bug-perf-review`).** 셋이었고 모두 고쳤다.
+  - 보류로 온 것: claude-review만 빨간 PR의 `mergeStateStatus`를 스킬이 말하지 않아, `CLEAN`이 아닌 값을 만난 세션이 멈출
+    수 있다. `gh api graphql`로 GitHub 스키마의 `MergeStateStatus`를 읽으니 `UNSTABLE`이 "Mergeable with non-passing commit
+    status."였다. "워크트리에서 병합할 때" 1과 `operations.md` 리뷰 파이프라인 3에 적었다. 이 저장소에서 그 값을 본 적은 없다.
+  - 유효: 카나리아 항목의 `claude -p "reply with OK"`가 맨 호출이라 사용자 전역 Stop 훅이 실리고, 따옴표 인자는 워크트리
+    가드가 거부할 수 있다. 러너와 같은 플래그를 붙이고 질문을 파일과 `<`로 넘기게 고쳤다.
+  - 유효(Nit): "워크트리에서 병합할 때"의 "끝:"이 미갱신 한 줄을 늘 요구해, 주 체크아웃에서 1~3만 탄 길로는 채울 수 없었다.
+    "4를 거쳤으면"으로 좁혔다.
+  - next-session 본문을 다시 고쳤으므로 카나리아 명세 둘의 사전 확인으로 갈음했다(통과 2).
