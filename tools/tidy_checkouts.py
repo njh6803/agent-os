@@ -46,12 +46,13 @@
   점유 탐침에 맡긴다.
   제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 후보를 모두 넘긴다. 그
   세션이 어느 워크트리에 있는지 알 수 없다(일지 2026-10-06-03). 사람이 그 세션이 후보에 없다고
-  답하면 부르는 쪽이 `remove` 를 부른다. `remove` 의 재판정은 세션도 쥔 프로세스도 보지 않는다.
+  답하면 부르는 쪽이 `remove` 를 부른다. `remove` 의 재판정은 세션을 보지 않고, 쥔 프로세스는
+  앞지우기 직전에만 다시 본다(판정 4의 2).
 체크아웃되지 않은 로컬 브랜치는 판정 1만 본다. `.claude/worktrees/` 아래인데 등록이 없는 폴더는
 넘긴다. 그 안에서 친 git 은 루트에 닿는다.
 
 판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션과 쥔 프로세스는 빼고. 쥔 프로세스는
-윈도에서 1의 탐침이 다시 막는다) 브랜치와 HEAD 가 인자와 같을 때만, 아래 순서로 지운다.
+1의 탐침과 2의 다시 거르기가 본다) 브랜치와 HEAD 가 인자와 같을 때만, 아래 순서로 지운다.
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
    `Permission denied`·`Invalid argument` 로 지우다 만 폴더를 남긴다(`.scratch/harness/probes/
@@ -65,7 +66,9 @@
    데스크톱 앱이었고, 그 세션들은 `list_sessions` 에서 `isRunning` 이 아니었다(손으로 봤다,
    `Get-CimInstance Win32_Process` 와 `list_sessions`, 일지 2026-10-12-08).
 2. 다시 거르기. 판정 1~3을 한 번 더 내고, 지울 무시된 항목도 그때 읽는다. 판정 뒤에 생긴 `.env` 나
-   새 파일을 앞지우기가 지우지 않게 한다. 어긋나면 아무것도 바꾸지 않고 멈춘다.
+   새 파일을 앞지우기가 지우지 않게 한다. 이때는 프로세스를 한 번 훑어 쥔 프로세스도 본다. 리눅스의
+   탐침은 작업 디렉터리를 보지 못해, `judge` 뒤에 들어온 주인은 여기서 잡는다(PR #184 리뷰).
+   어긋나면 아무것도 바꾸지 않고 멈춘다.
 3. 죽은 잠금을 푼다. 1·2가 막히면 잠금도 그대로 남도록 그 뒤다.
 4. 앞지우기. 2가 읽은 무시된 항목을 이 도구가 git 보다 먼저 지운다. 막히면 멈춘다. 등록과
    `.git` 파일은 남는다(프로브의 F). 워크트리 밖의 하드링크 이름으로 같은 DLL 을 적재한 프로세스는
@@ -88,8 +91,8 @@
   띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
 - 맥과 리눅스의 점유. 재지 않았다. 그 OS 는 열린 파일과 작업 디렉터리가 이름 바꾸기를 막지 않는
   것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다. 리눅스에서 작업 디렉터리로 쥔 것은
-  `judge` 를 친 때 쥐고 있었으면 판정 3이 남긴다. 그 뒤 `remove` 전에 들어온 것은 윈도 밖에서
-  아무도 보지 못한다(PR 직전 버그 리뷰). 위의 탐침과 git 사이의 틈과 같은 결이다.
+  판정 3과 판정 4의 2가 남긴다. 2 뒤에 들어온 것은 위의 탐침과 git 사이의 틈과 같은 결로 보지
+  못한다.
 - 작업 디렉터리 말고 다른 것으로 쥔 프로세스. 그 안의 파일을 연 프로세스(`lock_holder.py` 의 C)는
   판정 3을 지나고, `remove` 에서 이름 바꾸기를 막아도 "작업 디렉터리로 쥔 것은 없다"로 적힌다.
 - 열 수 없는 프로세스의 작업 디렉터리. 2026-10-12 에 이 PC 의 프로세스 672개 중 493개를 읽었다
@@ -413,7 +416,8 @@ def scan_processes() -> list[ProcessCwd] | None:
     """프로세스마다 (pid, 실행 파일 이름, 작업 디렉터리). 이 OS 에서 볼 수 없거나 읽다 실패하면
     None.
 
-    `judge` 는 한 번에 한 번(판정 3), `remove` 는 점유 탐침이 막힌 뒤에만(판정 4의 1) 부른다.
+    `judge` 는 한 번에 한 번(판정 3) 부른다. `remove` 는 점유 탐침이 막히면 이유를 대려고(판정 4의
+    1), 지나가면 앞지우기 직전의 다시 거르기에서(판정 4의 2) 한 번 부른다.
     """
     try:
         return _process_cwds()
@@ -789,13 +793,16 @@ def _remove(
         print(f"남겼다 {target} — judge 뒤에 바뀌었다: 지금 {wt.branch} {wt.head}")
         return 1
     merged = ops.merged(root)
-    if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
+    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:
         return 1
     stop = _probe(Path(wt.path), ops.rename, ops.processes)
     if stop is not None:
         return stop
-    # 판정 뒤에 생긴 것(`.env`, 새 파일)을 앞지우기가 지우지 않게, 지울 목록을 다시 판정해 읽는다
-    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+    # 판정 뒤에 생긴 것(`.env`, 새 파일, 작업 디렉터리 주인)을 앞지우기가 지우지 않게, 쥔
+    # 프로세스까지 다시 판정해 지울 목록을 읽는다. 리눅스의 탐침은 작업 디렉터리를 보지 못한다(PR
+    # #184 리뷰)
+    holders = holders_in(ops.processes(), wt.path)
+    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)
     if again is None:
         return 1
     verdict, facts = again
@@ -807,11 +814,16 @@ def _remove(
 
 
 def _still_candidate(
-    root: Path, wt: Worktree, merged: Mapping[str, frozenset[str]], ops: Ops, moment: str
+    root: Path,
+    wt: Worktree,
+    merged: Mapping[str, frozenset[str]],
+    ops: Ops,
+    moment: str,
+    holders: Sequence[Holder] | None,
 ) -> tuple[Verdict, Facts] | None:
-    """판정 1~3(세션과 쥔 프로세스는 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
+    """판정 1~3(세션은 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
     facts = gather(root, wt, ops.git)
-    verdict = judge(wt, facts, merged, (), ops.pid_alive, ())
+    verdict = judge(wt, facts, merged, (), ops.pid_alive, holders)
     if verdict.action != "delete":
         print(f"남겼다 {wt.path} — {moment} 다시 판정했다: {verdict.reason}")
         return None
@@ -825,7 +837,8 @@ def _probe(
 ) -> int | None:
     """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 되돌리지 못하면 3.
 
-    막혔을 때만 쥔 프로세스를 찾는다. 프로세스를 훑는 시간을 지나간 지우기에 더하지 않는다.
+    막혔을 때만 쥔 프로세스를 찾아 이유에 붙인다. 지나간 지우기는 앞지우기 직전의 다시 거르기에서
+    한 번 훑는다(판정 4의 2).
     """
     aside = path.with_name(path.name + PROBE_SUFFIX)
     if os.path.lexists(aside):

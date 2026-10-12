@@ -409,7 +409,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
+old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:
         return 1
 '''
 new = '''    pass
@@ -529,7 +529,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")'''
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)'''
 new = '''    again = (Verdict("delete", wt.path, "", wt.branch, wt.head), gather(root, wt, ops.git))'''
 
 [[mutation]]
@@ -567,11 +567,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+old = '''    holders = holders_in(ops.processes(), wt.path)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+    holders = holders_in(ops.processes(), wt.path)
 '''
 
 [[mutation]]
@@ -781,14 +781,24 @@ old = '''            holders_in(processes, wt.path),'''
 new = '''            (),'''
 
 [[mutation]]
-name = "remove: 다시 판정할 때 프로세스를 훑는다"
+name = "remove: 탐침 앞의 재판정에서도 훑는다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "탐침이_지나면"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    verdict = judge(wt, facts, merged, (), ops.pid_alive, ())'''
-new = '''    verdict = judge(wt, facts, merged, (), ops.pid_alive, holders_in(ops.processes(), wt.path))'''
+old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:'''
+new = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", holders_in(ops.processes(), wt.path)) is None:'''
+
+[[mutation]]
+name = "remove: 앞지우기 직전의 다시 거르기가 쥔 프로세스를 보지 않는다(PR #184 리뷰)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "주인이_생기면_앞지우기_전에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)'''
+new = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", ())'''
 
 [[mutation]]
 name = "holders_in: 폴더 밖을 작업 디렉터리로 쥔 프로세스도 고른다"

@@ -790,9 +790,9 @@ def test_remove_는_이름_바꾸기가_막히면_쥔_프로세스를_이유에_
     assert len(scans) == 1
 
 
-def test_remove_는_탐침이_지나면_쥔_프로세스를_찾지_않는다(repo: Path) -> None:
-    """프로세스를 훑는 것은 막혔을 때만이다. 지나간 지우기에 그 시간을 더하지 않는다. 다시 판정할
-    때도 훑지 않는다(판정 4의 2. 쥔 프로세스는 윈도에서 1의 탐침이 다시 막는다)."""
+def test_remove_는_탐침이_지나면_앞지우기_직전에만_한_번_훑는다(repo: Path) -> None:
+    """탐침은 막혔을 때만 훑고, 지나간 지우기는 앞지우기 직전의 다시 거르기에서 한 번 훑는다(판정
+    4의 2). 탐침 앞의 재판정은 훑지 않는다."""
     path, head = _add(repo, "done")
     scans: list[int] = []
 
@@ -802,7 +802,30 @@ def test_remove_는_탐침이_지나면_쥔_프로세스를_찾지_않는다(rep
 
     ops = replace(_ops({"chore/done": frozenset({head})}), processes=processes)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 0
-    assert scans == []
+    assert len(scans) == 1
+
+
+def test_remove_는_judge_뒤에_작업_디렉터리_주인이_생기면_앞지우기_전에_멈춘다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR #184 리뷰. 리눅스의 탐침은 작업 디렉터리를 보지 못해, `judge` 뒤에 들어온 주인은 앞지우기
+    직전의 다시 거르기가 잡는다. 죽은 잠금도 풀지 않는다."""
+    path, head = _add(repo, "done")
+    _git("worktree", "lock", "--reason", "claude session done (pid 999999)", str(path), cwd=repo)
+
+    def processes() -> list[tuple[int, str, str]]:
+        return [(61148, "claude.exe", str(path))]
+
+    ops = replace(_ops({"chore/done": frozenset({head})}), processes=processes)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    out = capsys.readouterr().out
+    assert "앞지우기 직전에 다시 판정했다" in out
+    assert "claude.exe(pid 61148)" in out
+    assert (path / ".venv" / "Lib" / "mod.py").exists()
+    assert _registered(repo, path)
+    listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
+    done = next(w for w in listing if w.branch == "chore/done")
+    assert done.locked == "claude session done (pid 999999)"
 
 
 def test_remove_는_이름을_되돌리지_못하면_3으로_멈춘다(repo: Path) -> None:
