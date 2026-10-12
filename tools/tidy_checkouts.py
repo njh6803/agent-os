@@ -45,7 +45,15 @@
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
    `Permission denied`·`Invalid argument` 로 지우다 만 폴더를 남긴다(`.scratch/harness/probes/
-   worktree_occupancy.py` 의 B·C). 막히면 아무것도 바꾸지 않고 멈춘다.
+   worktree_occupancy.py` 의 B·C). 막히면 아무것도 바꾸지 않고 멈추고, 그 폴더나 그 아래를 작업
+   디렉터리로 쥔 프로세스의 이름과 pid 를 이유에 붙인다(대기열 177). 윈도는 프로세스마다 PEB 의
+   작업 디렉터리를, 리눅스는 `/proc/<pid>/cwd` 를 읽는다. 2026-10-12 에 DELETE 권한으로 열리지
+   않던(공유 위반) 워크트리 셋은 모두 `claude.exe` 가 그 루트를 작업 디렉터리로 쥐었다. Restart
+   Manager 는 폴더를 받지 않고 작업 디렉터리를 보지 못한다. 그중 한 워크트리의 파일 4만여 개를
+   5000개 덩이로 등록하면 209초였고 덩이 일부는 오류 29 로 실패했으며, 쥔 `claude.exe` 대신 다른
+   프로세스를 댔다(여기까지 `.scratch/harness/probes/lock_holder.py`). 그 `claude.exe` 셋의 부모는
+   데스크톱 앱이었고, 그 세션들은 `list_sessions` 에서 `isRunning` 이 아니었다(손으로 봤다,
+   `Get-CimInstance Win32_Process` 와 `list_sessions`, 일지 2026-10-12-08).
 2. 다시 거르기. 판정 1~3을 한 번 더 내고, 지울 무시된 항목도 그때 읽는다. 판정 뒤에 생긴 `.env` 나
    새 파일을 앞지우기가 지우지 않게 한다. 어긋나면 아무것도 바꾸지 않고 멈춘다.
 3. 죽은 잠금을 푼다. 1·2가 막히면 잠금도 그대로 남도록 그 뒤다.
@@ -69,6 +77,13 @@
 - 세션이 쓰던 워크트리인지. 제목과 잠금으로만 가린다(판정 3).
 - 맥과 리눅스의 점유. 재지 않았다. 그 OS 는 열린 파일과 작업 디렉터리가 이름 바꾸기를 막지 않는
   것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다.
+- 작업 디렉터리 말고 다른 것으로 쥔 프로세스의 이름. 그 안의 파일을 연 프로세스
+  (`lock_holder.py` 의 C)는 이름 바꾸기를 막아도 "쥔 프로세스는 없다"로 적힌다.
+- 열 수 없는 프로세스의 작업 디렉터리. 2026-10-12 에 이 PC 의 프로세스 672개 중 493개를 읽었다
+  (`lock_holder.py --folder`). 읽지 못한 것은 건너뛴다. 그것이 무엇인지(다른 사용자, 높은 권한)는
+  재지 않았다.
+- 32비트 프로세스. 건너뛰지 않고 64비트 PEB 를 읽는데, 그 사본은 32비트 코드가 바꾼 작업
+  디렉터리를 따르지 않는다고 알고 있어 낡은 경로로 이름을 댈 수 있다(어림, 재지 않았다).
 
 종료 코드. `judge`: 0 찍었다, 2 인자가 틀렸거나 주 체크아웃이 아니다, 3 git 이나 gh 가 실패했다.
 `remove`·`remove-branch`: 0 지웠다. 1 망가뜨린 것 없이 멈췄다. 아무것도 바꾸지 않았거나(1·2에서
@@ -82,6 +97,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import ctypes
 import json
 import os
 import re
@@ -97,6 +113,7 @@ from typing import Literal
 type Action = Literal["delete", "keep", "human", "hold"]
 type GitRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+type ProcessCwd = tuple[int, str, str]  # (pid, 실행 파일 이름, 작업 디렉터리)
 
 COMMAND = "uv run python tools/tidy_checkouts.py"
 WORKTREES_DIR = ".claude/worktrees"
@@ -176,6 +193,14 @@ class Verdict:
     unlock: bool = False
 
 
+@dataclass(frozen=True)
+class Holder:
+    """워크트리 폴더를 작업 디렉터리로 쥔 프로세스. `image` 는 실행 파일 이름이다(모르면 "")."""
+
+    pid: int
+    image: str
+
+
 # --- 바깥을 부르는 것 ---------------------------------------------------------------------------
 
 
@@ -232,6 +257,164 @@ def process_alive(pid: int) -> bool:
     return True
 
 
+def _linux_cwds() -> list[ProcessCwd]:
+    """`/proc/<pid>/cwd` 를 읽는다. 읽을 수 없는 프로세스(다른 사용자의 것)는 건너뛴다."""
+    found: list[ProcessCwd] = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{entry}/cwd")
+        except OSError:
+            continue
+        try:
+            image = os.path.basename(os.readlink(f"/proc/{entry}/exe"))
+        except OSError:
+            image = ""
+        found.append((int(entry), image, cwd))
+    return found
+
+
+if sys.platform == "win32":
+    _QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
+    _VM_READ = 0x0010  # PROCESS_VM_READ
+    # x64 의 자리: PEB.ProcessParameters, 그 안의 CurrentDirectory.DosPath(UNICODE_STRING)
+    _PEB_PARAMS = 0x20
+    _PARAMS_CWD = 0x38
+
+    class _BasicInformation(ctypes.Structure):
+        """PROCESS_BASIC_INFORMATION. `peb` 가 그 프로세스 안의 PEB 주소다."""
+
+        _fields_ = [
+            ("exit_status", ctypes.c_void_p),
+            ("peb", ctypes.c_void_p),
+            ("affinity", ctypes.c_void_p),
+            ("priority", ctypes.c_void_p),
+            ("pid", ctypes.c_void_p),
+            ("parent", ctypes.c_void_p),
+        ]
+
+    def _windows_api() -> tuple[ctypes.WinDLL, ctypes.WinDLL]:
+        """핸들과 포인터가 64비트에서 잘리지 않게 원형을 적은 kernel32 와 ntdll."""
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        ntdll = ctypes.WinDLL("ntdll")
+        dword, handle, pointer = ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p
+        kernel.OpenProcess.restype = handle
+        kernel.OpenProcess.argtypes = [dword, ctypes.c_int, dword]
+        kernel.CloseHandle.argtypes = [handle]
+        kernel.ReadProcessMemory.argtypes = [
+            handle,
+            pointer,
+            pointer,
+            ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_size_t),
+        ]
+        kernel.QueryFullProcessImageNameW.argtypes = [
+            handle,
+            dword,
+            ctypes.c_wchar_p,
+            ctypes.POINTER(dword),
+        ]
+        kernel.K32EnumProcesses.argtypes = [ctypes.POINTER(dword), dword, ctypes.POINTER(dword)]
+        ntdll.NtQueryInformationProcess.argtypes = [handle, ctypes.c_int, pointer, dword, pointer]
+        return kernel, ntdll
+
+    def _windows_pids(kernel: ctypes.WinDLL) -> list[int]:
+        size = 1024
+        while True:
+            array = (ctypes.c_ulong * size)()
+            used = ctypes.c_ulong()
+            if not kernel.K32EnumProcesses(array, ctypes.sizeof(array), ctypes.byref(used)):
+                return []
+            count = used.value // ctypes.sizeof(ctypes.c_ulong)
+            if count < size:
+                return list(array[:count])
+            size *= 2
+
+    def _read_memory(kernel: ctypes.WinDLL, handle: int, address: int, size: int) -> bytes | None:
+        buffer = ctypes.create_string_buffer(size)
+        got = ctypes.c_size_t()
+        if not kernel.ReadProcessMemory(handle, address, buffer, size, ctypes.byref(got)):
+            return None
+        return buffer.raw if got.value == size else None
+
+    def _peb_cwd(kernel: ctypes.WinDLL, ntdll: ctypes.WinDLL, handle: int) -> str | None:
+        info = _BasicInformation()
+        size = ctypes.sizeof(info)
+        status = ntdll.NtQueryInformationProcess(handle, 0, ctypes.byref(info), size, None)
+        peb = info.peb
+        if status != 0 or not isinstance(peb, int):
+            return None
+        raw = _read_memory(kernel, handle, peb + _PEB_PARAMS, 8)
+        if raw is None:
+            return None
+        raw = _read_memory(kernel, handle, int.from_bytes(raw, "little") + _PARAMS_CWD, 16)
+        if raw is None:
+            return None
+        length = int.from_bytes(raw[0:2], "little")
+        buffer = int.from_bytes(raw[8:16], "little")
+        if length == 0 or buffer == 0:
+            return None
+        text = _read_memory(kernel, handle, buffer, length)
+        return text.decode("utf-16-le", errors="replace") if text is not None else None
+
+    def _image_name(kernel: ctypes.WinDLL, handle: int) -> str:
+        buffer = ctypes.create_unicode_buffer(1024)
+        size = ctypes.c_ulong(len(buffer))
+        if not kernel.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+            return ""
+        return os.path.basename(buffer.value)
+
+    def _windows_cwds() -> list[ProcessCwd] | None:
+        """프로세스마다 PEB 의 작업 디렉터리를 읽는다. 열지 못하는 프로세스는 건너뛴다.
+
+        x64 의 자리만 안다. 32비트 파이썬이면 None 이다.
+        """
+        if ctypes.sizeof(ctypes.c_void_p) != 8:
+            return None
+        kernel, ntdll = _windows_api()
+        found: list[ProcessCwd] = []
+        for pid in _windows_pids(kernel):
+            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, False, pid)
+            if not handle:
+                continue
+            try:
+                cwd = _peb_cwd(kernel, ntdll, handle)
+                if cwd is not None:
+                    found.append((pid, _image_name(kernel, handle), cwd))
+            finally:
+                kernel.CloseHandle(handle)
+        return found
+
+
+def _process_cwds() -> list[ProcessCwd] | None:
+    """프로세스마다 (pid, 실행 파일 이름, 작업 디렉터리). 이 OS 에서 볼 수 없으면 None."""
+    if sys.platform == "win32":
+        return _windows_cwds()
+    if sys.platform == "linux":
+        return _linux_cwds()
+    return None
+
+
+def cwd_holders(folder: Path) -> list[Holder] | None:
+    """작업 디렉터리가 `folder` 이거나 그 아래인 프로세스. 이 OS 에서 볼 수 없거나 읽다 실패하면
+    None.
+
+    점유 탐침이 막힌 뒤에만 부른다(판정 4의 1). 지울지를 가르지 않고 남긴 이유에 이름만 붙인다.
+    """
+    try:
+        processes = _process_cwds()
+    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):
+        # DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지 못했다. 진단을 읽다
+        # 난 실패가 판정 4의 1의 이유 줄을 지우지 않게 볼 수 없는 것으로 돌려준다(PR #182
+        # claude-review)
+        return None
+    if processes is None:
+        return None
+    target = str(folder)
+    return [Holder(pid, image) for pid, image, cwd in processes if is_within(cwd, target)]
+
+
 def _long(path: Path) -> str:
     """윈도에서 MAX_PATH 를 넘는 경로를 파이썬이 다루도록 `\\\\?\\` 를 붙인 절대 경로."""
     text = os.path.abspath(path)
@@ -271,6 +454,7 @@ class Ops:
     pid_alive: Callable[[int], bool] = process_alive
     rename: Callable[[str, str], None] = os.rename
     delete: Callable[[Path], None] = delete_path
+    holders: Callable[[Path], list[Holder] | None] = cwd_holders
 
 
 # --- 읽기 ---------------------------------------------------------------------------------------
@@ -343,6 +527,35 @@ def unrecreatable(ignored: Sequence[str], settings_same: bool) -> list[str]:
 
 def same_path(left: str, right: str) -> bool:
     return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
+
+
+def _without_long_prefix(path: str) -> str:
+    """`\\\\?\\UNC\\` 와 `\\\\?\\` 머리를 뗀다. 그 머리째 작업 디렉터리를 옮긴 프로세스는 PEB 에
+    머리가 남는다(PR 직전 버그 리뷰가 손으로 봤다)."""
+    if path.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + path[len("\\\\?\\UNC\\") :]
+    return path.removeprefix("\\\\?\\")
+
+
+def is_within(child: str, parent: str) -> bool:
+    """`child` 가 `parent` 자신이거나 그 아래인지. `x2` 는 `x` 의 아래가 아니다."""
+    inner = os.path.normcase(os.path.normpath(_without_long_prefix(child)))
+    outer = os.path.normcase(os.path.normpath(_without_long_prefix(parent)))
+    return inner == outer or inner.startswith(outer.rstrip(os.sep) + os.sep)
+
+
+def describe_holders(holders: Sequence[Holder] | None) -> str:
+    """남긴 이유에 붙일 쥔 프로세스. 못 찾은 것(빈 목록)과 볼 수 없는 것(None)을 가른다."""
+    if holders is None:
+        return "쥔 프로세스를 찾지 못했다(이 OS 에서 볼 수 없거나 프로세스를 읽다 실패했다)"
+    if not holders:
+        return (
+            "읽을 수 있는 프로세스 가운데 작업 디렉터리로 쥔 것은 없다. 읽지 못한 프로세스"
+            "(다른 사용자, 높은 권한)와 그 안의 파일을 열었거나 DLL 을 적재한 프로세스는 이 도구가"
+            " 대지 못한다"
+        )
+    names = ", ".join(f"{holder.image or '(이름 모름)'}(pid {holder.pid})" for holder in holders)
+    return f"작업 디렉터리로 쥔 프로세스: {names}"
 
 
 # --- 판정 ---------------------------------------------------------------------------------------
@@ -545,7 +758,7 @@ def _remove(
     merged = ops.merged(root)
     if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
         return 1
-    stop = _probe(Path(wt.path), ops.rename)
+    stop = _probe(Path(wt.path), ops.rename, ops.holders)
     if stop is not None:
         return stop
     # 판정 뒤에 생긴 것(`.env`, 새 파일)을 앞지우기가 지우지 않게, 지울 목록을 다시 판정해 읽는다
@@ -572,8 +785,15 @@ def _still_candidate(
     return verdict, facts
 
 
-def _probe(path: Path, rename: Callable[[str, str], None]) -> int | None:
-    """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 되돌리지 못하면 3."""
+def _probe(
+    path: Path,
+    rename: Callable[[str, str], None],
+    holders: Callable[[Path], list[Holder] | None],
+) -> int | None:
+    """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 되돌리지 못하면 3.
+
+    막혔을 때만 쥔 프로세스를 찾는다. 프로세스를 훑는 시간을 지나간 지우기에 더하지 않는다.
+    """
     aside = path.with_name(path.name + PROBE_SUFFIX)
     if os.path.lexists(aside):
         print(f"남겼다 {path.as_posix()} — 탐침 자리 {aside.as_posix()} 가 이미 있다")
@@ -582,7 +802,8 @@ def _probe(path: Path, rename: Callable[[str, str], None]) -> int | None:
         rename(_long(path), _long(aside))
     except OSError as error:
         print(
-            f"남겼다 {path.as_posix()} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error})"
+            f"남겼다 {path.as_posix()} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error}). "
+            f"{describe_holders(holders(path))}"
         )
         return 1
     try:

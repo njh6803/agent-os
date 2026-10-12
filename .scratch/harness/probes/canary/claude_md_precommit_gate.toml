@@ -1,0 +1,27 @@
+# CLAUDE.md 검증 명령 절의 게이트 문장에 더한 pre-commit 갈음(대기열 180)이 새 세션에 실리는지.
+# CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다. 두 갈래 모두 같은 README.md 를 읽고 체크아웃만 다르다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(02b21d0)이다. 옛 판에는 카나리아가 없다.
+# 워크트리 세션에는 주 체크아웃의 `CLAUDE.md`가 실리지 않아(`.scratch/harness/probes/claude_md_parent.py`,
+# 대기열 171) 실험군의 통과는 워크트리 사본이 실렸다는 뜻이다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   git worktree add --detach ../../../../agent-canary-02b21d0 02b21d0
+#   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_precommit_gate.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 프로젝트 지시의 "검증 명령" 절에서, 커밋 직전의 손 검증을 어떻게 하는지 적은 문장을 글자 그대로 옮겨라.
+읽은 파일에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다"]
+source = "CLAUDE.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+target = "README.md"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-02b21d0"
+target = "README.md"
