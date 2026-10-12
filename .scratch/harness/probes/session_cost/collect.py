@@ -993,6 +993,7 @@ def build_meta(
     ratios: list[float] = []
     price_out: list[str] = []
     positions: dict[str, list[float]] = defaultdict(list)
+    pairs = 0  # 단가 대조에 든 모델·세션 쌍. 자리를 셀 수 없는 쌍도 든다
     for sid, cs in s.cost_state.items():
         total = cs.get("totalCostUSD")
         if isinstance(total, float | int) and total > 0 and sid in session_cost:
@@ -1006,7 +1007,13 @@ def build_meta(
             if bounds is None or not isinstance(usd, float | int) or usd < 0.01:
                 continue
             lo, hi = bounds
-            positions[model].append((float(usd) - lo) / (hi - lo) if hi > lo else float(usd) / lo)
+            pairs += 1
+            # 토큰 없이 요금만 든 항목(웹 검색만)은 두 끝이 0이라 자리를 셀 수 없다. 자리는 건너뛰고
+            # 밖 판정은 한다(PR #209 CodeRabbit)
+            if hi > lo:
+                positions[model].append((float(usd) - lo) / (hi - lo))
+            elif lo > 0:
+                positions[model].append(float(usd) / lo)
             if not (lo * 0.99 - 1e-6 <= float(usd) <= hi * 1.01 + 1e-6):
                 price_out.append(f"{sid[:8]} {model} {usd:.4f} ∉ [{lo:.4f}, {hi:.4f}]")
     in_window = [r for r in rows if r["in_window"] and r["merged"]]
@@ -1034,7 +1041,7 @@ def build_meta(
         "merged_prs_without_responses": unattributed_prs,
         "cost_state_ratio": {"n": len(ratios), "deciles": q(ratios)},
         "price_check": {
-            "pairs": sum(len(v) for v in positions.values()),
+            "pairs": pairs,
             "positions": {m: {"n": len(v), "deciles": q(v)} for m, v in positions.items()},
             "outside_bounds": price_out[:50],
             "outside_count": len(price_out),
