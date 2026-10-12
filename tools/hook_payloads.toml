@@ -236,7 +236,7 @@ env = { MSYSTEM = "MINGW64" }
 [[case]]
 hook = "hook_bash_msys_pathconv.py"
 expect = "silent"
-note = "변환을 끈 우회 — 이 훅을 만든 세션이 안내를 정하기 전에 친 명령(일지 2026-10-12-26). 일지 2026-10-07-12 는 git show 를 같은 식으로 돌렸다"
+note = "변환을 끈 우회 — 이 훅을 만든 세션이 안내를 정하기 전에 친 명령(일지 2026-10-12-30). 일지 2026-10-07-12 는 git show 를 같은 식으로 돌렸다"
 payload = { tool_name = "Bash", tool_input = { command = "MSYS_NO_PATHCONV=1 git rev-parse --verify origin/main:.scratch/retro-queue.md" } }
 env = { MSYSTEM = "MINGW64" }
 

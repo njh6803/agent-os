@@ -5,7 +5,8 @@
 # A. 모양마다 기본 셸과 `MSYS_NO_PATHCONV=1` 아래에서 네이티브 프로그램(uv 가 띄운 python)이 받은 인자.
 #    한 호출에 모두 넘긴다. 변환은 인자마다 따로 일어난다. A2 는 탭과 개행이 든 모양이다.
 # B. 같은 모양을 MSYS 프로그램(/usr/bin/printf, /usr/bin/echo)에 넘긴 것.
-# C. git 이 실제로 실패하는지와 우회 셋이 지나가는지. 종료 코드를 찍는다.
+# C. git 이 실제로 실패하는지와 우회 셋이 지나가는지. 종료 코드를 찍는다. 기본 git show 의 오류에
+#    바뀐 인자가 없으면(다른 까닭의 실패) 1로 끝난다.
 set -u
 # 윈도 경로(C:/…)로 둔다. `/c/…` 로 부르면 MSYS_NO_PATHCONV=1 아래에서 파이썬이 argv.py 를 못 찾는다.
 here=$(cd "$(dirname "$0")" && pwd -W)
@@ -107,9 +108,18 @@ echo "== B. MSYS 프로그램(/usr/bin/printf, /usr/bin/echo). 모양 | 받은 �
   'a/b:c/d' 'a/b:c/d'
 /usr/bin/echo "origin/main:.scratch/retro-queue.md|$(/usr/bin/echo 'origin/main:.scratch/retro-queue.md')"
 
-echo "== C. git rev-parse --verify --quiet 의 종료 코드"
-git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' > /dev/null
-echo "기본: $?"
+echo "== C. git 의 종료 코드. 기본 git show 는 실패의 까닭(바뀐 인자)이 오류에 있는지도 본다"
+show_error=$(git show 'origin/main:.scratch/retro-queue.md' 2>&1 > /dev/null)
+echo "git show 기본: $?"
+case $show_error in
+  *"origin\\main;.scratch\\retro-queue.md"*) ;;
+  *)
+    echo "실패: git show 의 오류에 바뀐 인자가 없다. 다른 까닭으로 실패했다: $show_error" >&2
+    exit 1
+    ;;
+esac
+quiet_output=$(git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' 2>&1)
+echo "rev-parse --verify --quiet 기본: $?, 출력 ${#quiet_output}자"
 MSYS_NO_PATHCONV=1 git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' > /dev/null
 echo "MSYS_NO_PATHCONV=1: $?"
 MSYS2_ARG_CONV_EXCL='*' git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' > /dev/null
