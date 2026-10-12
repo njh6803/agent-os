@@ -600,42 +600,60 @@ def _ours_line(ours: Numbers) -> str:
     return f"이 브랜치의 새 번호: {', '.join(keys)}" if keys else "이 브랜치의 새 번호 없음"
 
 
-def render(result: Survey, found: list[tuple[Sibling, Clash]], today: str) -> str:
+@dataclass(frozen=True)
+class Verdict:
+    """출력과 종료 코드가 함께 읽는 판정. 한 번만 지어 둘이 어긋나지 않게 한다."""
+
+    found: list[tuple[Sibling, Clash]]
+    next_journal: str
+    next_row: int
+    behind: bool  # 이 브랜치의 새 일지가 main 의 최신 일지보다 이름순으로 앞이다
+    shifted: list[Move]
+    later: list[Sibling]  # 이 브랜치의 새 일지보다 이름순으로 뒤인 일지를 새로 매긴 다른 형제
+
+
+def judge(result: Survey, today: str) -> Verdict:
+    found = findings(result)
     day = journal_day(today, result.main.latest)
     journal, row = next_numbers([*result.taken, result.ours], day)
-    mine = latest_journal(result.ours)
     behind = is_behind(result.ours, result.main.latest)
-    lines = [
-        "형제: " + ", ".join(f"{s.label} {s.commit[:7]}" for s in result.siblings),
-        f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
-        f"다음 빈 번호(형제 포함): 일지 {journal}, 대기열 {row}",
-        _ours_line(result.ours),
-    ]
-    if found:
-        lines.append(f"번호 겹침 {len(found)}:")
-        lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in found]
-    else:
-        lines.append("번호 겹침 없음")
-    if behind:
-        lines.append(
-            f"이 브랜치의 새 일지 {mine} 이 {MAIN} 의 최신 일지 {result.main.latest} 보다"
-            ' 이름순으로 앞이다. 다음 세션이 이름순 최신 일지의 "다음" 을 읽어 이 일지를 지나친다'
-        )
     clashed = [clash for _, clash in found]
     if behind:
         shifted = behind_moves(result.ours, result.taken, day)
         shifted += moves(result.ours, result.taken, [c for c in clashed if c.kind != "일지"])
     else:
         shifted = moves(result.ours, result.taken, clashed)
-    if shifted:
-        lines.append("옮길 번호: " + ", ".join(f"{m.kind} {m.old} → {m.new}" for m in shifted))
     later = [s for s in result.others if is_behind(result.ours, s.latest)]
-    if later:
+    return Verdict(found, journal, row, behind, shifted, later)
+
+
+def render(result: Survey, verdict: Verdict) -> str:
+    mine = latest_journal(result.ours)
+    lines = [
+        "형제: " + ", ".join(f"{s.label} {s.commit[:7]}" for s in result.siblings),
+        f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
+        f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}",
+        _ours_line(result.ours),
+    ]
+    if verdict.found:
+        lines.append(f"번호 겹침 {len(verdict.found)}:")
+        lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in verdict.found]
+    else:
+        lines.append("번호 겹침 없음")
+    if verdict.behind:
+        lines.append(
+            f"이 브랜치의 새 일지 {mine} 이 {MAIN} 의 최신 일지 {result.main.latest} 보다"
+            ' 이름순으로 앞이다. 다음 세션이 이름순 최신 일지의 "다음" 을 읽어 이 일지를 지나친다'
+        )
+    if verdict.shifted:
+        moved = ", ".join(f"{m.kind} {m.old} → {m.new}" for m in verdict.shifted)
+        lines.append(f"옮길 번호: {moved}")
+    if verdict.later:
         lines.append(
             f"이 브랜치의 새 일지 {mine} 를 이름순으로 앞서는 형제"
             "(그쪽이 먼저 병합되면 옮긴다, 종료 코드와 무관):"
         )
-        lines += [f"- {s.label}: {s.latest}" for s in later]
+        lines += [f"- {s.label}: {s.latest}" for s in verdict.later]
     shared: list[str] = []
     for sibling in result.siblings:
         if sibling.changed is None:
@@ -662,10 +680,10 @@ def main(argv: list[str] | None = None, today: date | None = None) -> int:
     except SurveyError as error:
         print(f"형제를 대조하지 못했다. {error}", file=sys.stderr)
         return 2
-    found = findings(result)
     day = today or datetime.now().astimezone().date()  # 이 기계의 시간대
-    print(render(result, found, day.isoformat()))
-    return 1 if found or is_behind(result.ours, result.main.latest) else 0
+    verdict = judge(result, day.isoformat())
+    print(render(result, verdict))
+    return 1 if verdict.found or verdict.behind else 0
 
 
 if __name__ == "__main__":

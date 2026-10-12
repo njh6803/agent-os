@@ -1,7 +1,7 @@
 # tools/sibling_overlap.py(대기열 115·157·175·182)를 하나씩 깨는 변이.
-#   PYTHONUTF8=1 timeout 2400 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
-# 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초, 번마다
-# 33~55초였다(2026-10-12, 일지 2026-10-12-16).
+#   PYTHONUTF8=1 timeout 3600 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
+# 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
+# 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16).
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -210,8 +210,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if found or is_behind(result.ours, result.main.latest) else 0'''
-new = '''    return 1 if is_behind(result.ours, result.main.latest) else 0'''
+old = '''    return 1 if verdict.found or verdict.behind else 0'''
+new = '''    return 1 if verdict.behind else 0'''
 
 # 공유한 이력(PR 직전 버그 축: 쌓아 올린 아래 PR 이 squash 로 main 에 든 뒤)
 
@@ -288,8 +288,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if found or is_behind(result.ours, result.main.latest) else 0'''
-new = '''    return 1 if found else 0'''
+old = '''    return 1 if verdict.found or verdict.behind else 0'''
+new = '''    return 1 if verdict.found else 0'''
 
 [[mutation]]
 name = "뒤처짐을 가장 이른 새 일지로 가린다"
