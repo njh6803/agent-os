@@ -8,15 +8,18 @@
 작업을 남긴 채 보고했다. 본 세션이 멈췄다(그 기록을 읽었다). 옛 정의의 도구(Bash, Read, Grep,
 Glob)에는 `TaskStop` 이 없어 작업 ID 로 멈출 도구가 없다.
 
-갈래 둘이다. 실험군은 이 도구를 부른 체크아웃(새 정의: 문단과 `TaskStop`), 대조군은 주 체크아웃
-(`../../..`, 병합 전이면 옛 정의)이다. 회차마다 카나리아 명령(`--setting-sources project,local
---strict-mcp-config --model sonnet`)에 `--tools Agent,Bash,Read,Grep,Glob,TaskStop` 을 주어 띄운다.
-서브에이전트의 도구는 본 세션의 `--tools` 에 묶이므로(`tools/canary.py` 의 `tools_for`) 두 갈래가
-같은 도구를 갖고, 다른 것은 정의뿐이다. 본 세션에는 서브에이전트를 한 번 부르게 하고,
-서브에이전트에게는 리뷰 대신 120초 걸리는 명령을 Bash 시간 제한 3초로 한 번 치고 보고하게 한다.
-멈추라는 말도, 보고 전에 할 일을 묻는 말도 질문에 없다. 그 느린 명령 하나만 `--allowed-tools` 로
-허용한다. `-p` 에는 승인할 사람이 없고 프로젝트 설정에 허용 규칙이 없어, 허용이 없던 첫 실행은 네
-회차 모두 Bash 가 "This command requires approval" 로 막혔다.
+갈래 둘이다. 실험군은 이 도구를 부른 체크아웃(새 정의: 문단과 `TaskStop`), 대조군은 둘째 인자의
+체크아웃이고 기본은 주 체크아웃(`../../..`)이다. 이 프로브의 PR 이 병합된 뒤에는 주 체크아웃도 새
+정의라, 옛 판을 `git worktree add --detach` 로 꺼내 둘째 인자로 준다. 두 갈래의 정의 파일이 같으면
+대조가 없으므로 돌리지 않고 2 로 끝난다(PR 직전 리뷰가 짚었다). 회차마다 카나리아
+명령(`--setting-sources project,local --strict-mcp-config --model sonnet`)에
+`--tools Agent,Bash,Read,Grep,Glob,TaskStop` 을 주어 띄운다. 서브에이전트의 도구는 본 세션의
+`--tools` 에 묶이므로(`tools/canary.py` 의 `tools_for`) 두 갈래가 같은 도구를 갖고, 다른 것은
+정의뿐이다. 본 세션에는 서브에이전트를 한 번 부르게 하고, 서브에이전트에게는 리뷰 대신 120초 걸리는
+명령을 Bash 시간 제한 3초로 한 번 치고 보고하게 한다. 멈추라는 말도, 보고 전에 할 일을 묻는 말도
+질문에 없다. 그 느린 명령 하나만 `--allowed-tools` 로 허용한다. `-p` 에는 승인할 사람이 없고
+프로젝트 설정에 허용 규칙이 없어, 허용이 없던 첫 실행은 네 회차 모두 Bash 가 "This command requires
+approval" 로 막혔다.
 
 stream-json 에는 서브에이전트의 도구 호출과 결과가 `parent_tool_use_id` 를 달고 실린다(앞쪽 실행에서
 빠지는 것은 서브에이전트의 마지막 글이다, `tools/canary.py` 독스트링). 회차는 셋이 모두 맞을 때만
@@ -26,17 +29,20 @@ stream-json 에는 서브에이전트의 도구 호출과 결과가 `parent_tool
 결과 앞부분을 찍는다. `TaskStop` 을 부를지는 단언하지 않고 본 것을 찍는다.
 
 못 보는 것.
-- 멈춘 뒤 그 프로세스가 실제로 죽었는지. 도구 결과의 말을 믿는다.
+- 멈춘 뒤 그 프로세스가 실제로 죽었는지. 도구 결과의 말을 믿는다. PR 직전 리뷰어가 손으로 한 번
+  봤다(프로브 README 의 이 행).
 - 서브에이전트가 정의를 어느 체크아웃의 사본에서 실었는지. 대조군의 답으로 가른다(대기열 189).
 - 문단과 도구 가운데 무엇이 멈추게 했는지. 대조군은 둘이 함께 다르다.
-- 실제 리뷰 중에(도구 호출 40번 예산과 함께) 지키는지. PR 직전 리뷰에서 본다.
+- 실제 리뷰 중에(도구 호출 40번 예산과 함께) 지키는지. 이 프로브의 PR 직전 리뷰에서 한 번
+  지켰다(일지 2026-10-12-18).
 - `timeout` 을 주지 않은 호출(기본 시간 제한)과 다른 OS 에서 Bash 가 같이 옮기는지.
 
 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-`uv run python .scratch/harness/probes/subagent_task_stop.py <출력 디렉터리>`. `claude` CLI 와
-인증이 든다. 회차는 실험군 셋, 대조군 하나이고 회차마다 sonnet 세션 둘(본 세션과 서브에이전트)이다.
-회차마다 stream-json 을 출력 디렉터리에 남긴다. 종료 코드: 0 모든 회차가 측정이다, 1 측정이 아닌
-회차가 있다(제한 시간 600초를 넘긴 것 포함), 2 인자가 하나가 아니거나 갈래의 정의 파일이 없다.
+`uv run python .scratch/harness/probes/subagent_task_stop.py <출력 디렉터리> [대조군 체크아웃]`.
+`claude` CLI 와 인증이 든다. 회차는 실험군 셋, 대조군 하나이고 회차마다 sonnet 세션 둘(본 세션과
+서브에이전트)이다. 회차마다 stream-json 을 출력 디렉터리에 남긴다. 종료 코드: 0 모든 회차가
+측정이다, 1 측정이 아닌 회차가 있다(제한 시간 600초를 넘긴 것 포함), 2 인자가 하나나 둘이 아니거나,
+갈래의 정의 파일이 없거나, 두 갈래의 정의 파일이 같다.
 """
 
 import json
@@ -50,7 +56,13 @@ from pathlib import Path
 
 AGENT = "bug-perf-review"
 DEFINITION = Path(".claude/agents/bug-perf-review.md")
-ARMS = {"워크트리": (Path("."), 3), "주-체크아웃": (Path("../../.."), 1)}
+EXPERIMENT, CONTROL = "워크트리", "대조군"
+RUNS = {EXPERIMENT: 3, CONTROL: 1}
+DEFAULT_CONTROL = Path("../../..")
+SAME = (
+    "두 갈래의 정의 파일이 같아 대조가 없다. "
+    "옛 판을 git worktree add --detach 로 꺼내 둘째 인자로 준다"
+)
 SLOW = 'uv run python -c "import time; time.sleep(120)"'
 MOVED = "moved to the background"
 QUESTION = f"""bug-perf-review 서브에이전트를 Agent 도구로 한 번만 불러라. 끝날 때까지 기다린다
@@ -202,17 +214,31 @@ def tools_line(definition: Path) -> str:
     return next((line for line in lines if line.startswith("tools:")), "tools 줄 없음")
 
 
-def main(out: Path) -> int:
+def arm_problems(places: dict[str, Path]) -> list[str]:
+    """돌리기 전에 막을 것. 갈래의 정의 파일이 없거나, 두 갈래의 정의가 같아 대조가 없다."""
+    missing = [
+        f"{name}: 정의가 없다: {place / DEFINITION}"
+        for name, place in places.items()
+        if not (place / DEFINITION).is_file()
+    ]
+    if missing:
+        return missing
+    if len({(place / DEFINITION).read_bytes() for place in places.values()}) == 1:
+        return [SAME]
+    return []
+
+
+def main(out: Path, control: Path) -> int:
     root = Path.cwd()
-    places = {name: (root / where).resolve() for name, (where, _) in ARMS.items()}
+    places = {EXPERIMENT: root.resolve(), CONTROL: (root / control).resolve()}
+    problems = arm_problems(places)
+    if problems:
+        print("\n".join(problems))
+        return 2
     for name, place in places.items():
-        definition = place / DEFINITION
-        if not definition.is_file():
-            print(f"{name}: 정의가 없다: {definition}")
-            return 2
-        print(f"{name}: {place} 의 정의 {tools_line(definition)}")
+        print(f"{name}: {place} 의 정의 {tools_line(place / DEFINITION)}")
     out.mkdir(parents=True, exist_ok=True)
-    jobs = [(name, index) for name, (_, times) in ARMS.items() for index in range(1, times + 1)]
+    jobs = [(name, index) for name, times in RUNS.items() for index in range(1, times + 1)]
     with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
         raws = list(pool.map(lambda job: run(places[job[0]]), jobs))
     invalid = 0
@@ -233,7 +259,8 @@ def main(out: Path) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         print(__doc__)
         raise SystemExit(2)
-    raise SystemExit(main(Path(sys.argv[1])))
+    control = Path(sys.argv[2]) if len(sys.argv) == 3 else DEFAULT_CONTROL
+    raise SystemExit(main(Path(sys.argv[1]), control))
