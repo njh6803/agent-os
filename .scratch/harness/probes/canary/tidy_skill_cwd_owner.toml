@@ -1,0 +1,23 @@
+# tidy-checkouts 스킬 3의 판정 3 요약에 더한 구절(작업 디렉터리로 쥔 프로세스, 대기열 186)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판(0c72596)에는 두 카나리아가 모두 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의
+# checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_cwd_owner.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+tidy-checkouts 스킬을 Skill 도구로 불러 본문을 읽어라. 3의 첫 문단에서 판정 3을 줄인 구절, 곧 "판정 3은"으로
+시작해 "없는지"와 그 뒤의 괄호가 닫힐 때까지를 글자 그대로 옮겨라. 본문에 그런 구절이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["그 폴더를 작업 디렉터리로 쥔 프로세스", "이름과 pid를 들어 남기고"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

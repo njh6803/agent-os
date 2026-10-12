@@ -13,7 +13,8 @@ import ctypes
 import os
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from tools.tidy_checkouts import (
     delete_path,
     describe_holders,
     hold_for_strangers,
+    holders_in,
     is_within,
     judge,
     judge_branch,
@@ -177,14 +179,13 @@ def test_프로세스를_읽다_실패하면_볼_수_없는_것으로_돌려준�
     assert cwd_holders(Path("C:/repo/.claude/worktrees/x")) is None
 
 
-def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(tmp_path: Path) -> None:
-    """CI(우분투)는 `/proc` 로, 윈도는 PEB 로 읽는다. 다른 OS 는 볼 수 없다고 돌려준다."""
-    folder = tmp_path / "wt"
-    (folder / "deep").mkdir(parents=True)
+@contextmanager
+def _자식이_쥔다(folder: Path) -> Generator[int]:
+    """`folder` 를 작업 디렉터리로 쥔 자식 파이썬을 띄우고, 준비되면 그 pid 를 내준다."""
     script = "import sys\nprint('ready', flush=True)\nsys.stdin.read()\n"
     child = subprocess.Popen(
         [sys.executable, "-c", script],
-        cwd=folder / "deep",
+        cwd=folder,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True,
@@ -193,18 +194,26 @@ def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(t
     assert child.stdout is not None
     try:
         assert child.stdout.readline().strip() == "ready"
-        found = cwd_holders(folder)
-        if sys.platform not in ("win32", "linux"):
-            assert found is None
-            return
-        assert found is not None
-        mine = [holder for holder in found if holder.pid == child.pid]
-        assert mine, f"자식 pid {child.pid} 가 없다: {found}"
-        assert mine[0].image
-        assert os.getpid() not in {holder.pid for holder in found}
+        yield child.pid
     finally:
         child.stdin.close()
         child.wait(timeout=10)
+
+
+def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(tmp_path: Path) -> None:
+    """CI(우분투)는 `/proc` 로, 윈도는 PEB 로 읽는다. 다른 OS 는 볼 수 없다고 돌려준다."""
+    folder = tmp_path / "wt"
+    (folder / "deep").mkdir(parents=True)
+    with _자식이_쥔다(folder / "deep") as pid:
+        found = cwd_holders(folder)
+    if sys.platform not in ("win32", "linux"):
+        assert found is None
+        return
+    assert found is not None
+    mine = [holder for holder in found if holder.pid == pid]
+    assert mine, f"자식 pid {pid} 가 없다: {found}"
+    assert mine[0].image
+    assert os.getpid() not in {holder.pid for holder in found}
 
 
 # --- 판정 2: 다시 만들 수 있는 무시된 것 ----------------------------------------------------------
@@ -257,26 +266,26 @@ def test_같은_이름의_파일은_다시_만들_수_있는_폴더가_아니다
 
 
 def test_모두_맞으면_지운다() -> None:
-    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다)
+    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다, ())
     assert verdict.action == "delete"
     assert (verdict.branch, verdict.head, verdict.unlock) == ("chore/x", _HEAD, False)
 
 
 def test_prunable_은_사람에게_넘긴다() -> None:
-    verdict = judge(replace(_WT, prunable=True), _FACTS, _MERGED, (), _죽었다)
+    verdict = judge(replace(_WT, prunable=True), _FACTS, _MERGED, (), _죽었다, ())
     assert verdict.action == "human"
     assert "prunable" in verdict.reason
 
 
 def test_폴더가_없으면_사람에게_넘긴다() -> None:
-    assert judge(_WT, replace(_FACTS, exists=False), _MERGED, (), _죽었다).action == "human"
+    assert judge(_WT, replace(_FACTS, exists=False), _MERGED, (), _죽었다, ()).action == "human"
 
 
 def test_git_이_다른_저장소를_읽으면_사람에게_넘긴다() -> None:
-    root = judge(_WT, replace(_FACTS, toplevel="C:/repo"), _MERGED, (), _죽었다)
+    root = judge(_WT, replace(_FACTS, toplevel="C:/repo"), _MERGED, (), _죽었다, ())
     assert root.action == "human"
     assert "C:/repo" in root.reason
-    assert judge(_WT, replace(_FACTS, toplevel=None), _MERGED, (), _죽었다).action == "human"
+    assert judge(_WT, replace(_FACTS, toplevel=None), _MERGED, (), _죽었다, ()).action == "human"
 
 
 def test_toplevel_은_구분자와_대소문자를_가리지_않고_견준다() -> None:
@@ -284,52 +293,54 @@ def test_toplevel_은_구분자와_대소문자를_가리지_않고_견준다() 
         facts = replace(_FACTS, toplevel="C:/repo/.claude/worktrees/x/")
     else:
         facts = replace(_FACTS, toplevel="c:\\repo\\.claude\\worktrees\\X")
-    assert judge(_WT, facts, _MERGED, (), _죽었다).action == "delete"
+    assert judge(_WT, facts, _MERGED, (), _죽었다, ()).action == "delete"
 
 
 def test_분리_HEAD_는_사람에게_넘긴다() -> None:
-    assert judge(replace(_WT, branch=None), _FACTS, _MERGED, (), _죽었다).action == "human"
+    assert judge(replace(_WT, branch=None), _FACTS, _MERGED, (), _죽었다, ()).action == "human"
 
 
 def test_병합된_PR_이_없으면_남긴다() -> None:
-    verdict = judge(_WT, _FACTS, {}, (), _죽었다)
+    verdict = judge(_WT, _FACTS, {}, (), _죽었다, ())
     assert verdict.action == "keep"
     assert "병합된 PR" in verdict.reason
 
 
 def test_병합된_PR_의_머리가_브랜치_끝과_다르면_사람에게_넘긴다() -> None:
-    verdict = judge(_WT, _FACTS, {"chore/x": frozenset({_OLD})}, (), _죽었다)
+    verdict = judge(_WT, _FACTS, {"chore/x": frozenset({_OLD})}, (), _죽었다, ())
     assert verdict.action == "human"
 
 
 def test_바뀐_파일이_있으면_남긴다() -> None:
-    assert judge(_WT, replace(_FACTS, status="?? new.py\0"), _MERGED, (), _죽었다).action == "keep"
+    assert (
+        judge(_WT, replace(_FACTS, status="?? new.py\0"), _MERGED, (), _죽었다, ()).action == "keep"
+    )
 
 
 def test_status_가_경고를_내면_남긴다() -> None:
     warned = replace(_FACTS, status_err="warning: could not open directory 'x/': Filename too long")
-    assert judge(_WT, warned, _MERGED, (), _죽었다).action == "keep"
+    assert judge(_WT, warned, _MERGED, (), _죽었다, ()).action == "keep"
 
 
 def test_다시_만들_수_없는_무시된_것이_있으면_남긴다() -> None:
-    verdict = judge(_WT, replace(_FACTS, ignored=(".venv/", ".env")), _MERGED, (), _죽었다)
+    verdict = judge(_WT, replace(_FACTS, ignored=(".venv/", ".env")), _MERGED, (), _죽었다, ())
     assert verdict.action == "keep"
     assert ".env" in verdict.reason
 
 
 def test_설정_파일이_루트와_다르면_남긴다() -> None:
     facts = replace(_FACTS, ignored=(".claude/settings.local.json",), settings_same=False)
-    assert judge(_WT, facts, _MERGED, (), _죽었다).action == "keep"
+    assert judge(_WT, facts, _MERGED, (), _죽었다, ()).action == "keep"
 
 
 def test_그_브랜치가_제목인_세션이_돌면_남긴다() -> None:
-    verdict = judge(_WT, _FACTS, _MERGED, ("chore/x",), _죽었다)
+    verdict = judge(_WT, _FACTS, _MERGED, ("chore/x",), _죽었다, ())
     assert verdict.action == "keep"
 
 
 def test_잠금_pid_가_살아_있으면_남긴다() -> None:
     locked = replace(_WT, locked="claude session x (pid 7)")
-    verdict = judge(locked, _FACTS, _MERGED, (), _살았다)
+    verdict = judge(locked, _FACTS, _MERGED, (), _살았다, ())
     assert verdict.action == "keep"
     assert "7" in verdict.reason
     assert "claude session x" in verdict.reason
@@ -337,24 +348,71 @@ def test_잠금_pid_가_살아_있으면_남긴다() -> None:
 
 def test_잠금_pid_가_죽었으면_풀고_지운다() -> None:
     locked = replace(_WT, locked="claude session x (pid 7)")
-    verdict = judge(locked, _FACTS, _MERGED, (), _죽었다)
+    verdict = judge(locked, _FACTS, _MERGED, (), _죽었다, ())
     assert (verdict.action, verdict.unlock) == ("delete", True)
 
 
 def test_잠금_사유에_pid_가_없으면_사람에게_넘긴다() -> None:
-    assert judge(replace(_WT, locked=""), _FACTS, _MERGED, (), _죽었다).action == "human"
+    assert judge(replace(_WT, locked=""), _FACTS, _MERGED, (), _죽었다, ()).action == "human"
+
+
+_CLAUDE = (Holder(61148, "claude.exe"),)
+
+
+def test_작업_디렉터리로_쥔_프로세스가_있으면_이름과_pid_를_들어_남긴다() -> None:
+    """대기열 186. 쉬는 세션은 `isRunning` 이 아니어도 앱이 띄운 `claude.exe` 가 그 루트를 쥔다."""
+    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다, _CLAUDE)
+    assert verdict.action == "keep"
+    assert "claude.exe(pid 61148)" in verdict.reason
+
+
+def test_작업_디렉터리로_쥔_프로세스가_있으면_죽은_잠금도_풀지_않고_남긴다() -> None:
+    locked = replace(_WT, locked="claude session x (pid 7)")
+    verdict = judge(locked, _FACTS, _MERGED, (), _죽었다, _CLAUDE)
+    assert (verdict.action, verdict.unlock) == ("keep", False)
+
+
+def test_잠금_pid_가_살아_있으면_쥔_프로세스보다_잠금의_세션을_이유로_든다() -> None:
+    locked = replace(_WT, locked="claude session x (pid 61148)")
+    verdict = judge(locked, _FACTS, _MERGED, (), _살았다, _CLAUDE)
+    assert verdict.action == "keep"
+    assert "claude session x" in verdict.reason
+
+
+def test_쥔_프로세스를_볼_수_없으면_판정_4의_점유_탐침에_맡긴다() -> None:
+    assert judge(_WT, _FACTS, _MERGED, (), _죽었다, None).action == "delete"
+
+
+def test_제목_모를_세션이_돌아도_작업_디렉터리로_쥔_워크트리는_넘기지_않고_남긴다() -> None:
+    """2026-10-12 의 모양. 넘기면 사람에게 승인을 물어도 `remove` 의 탐침에서 막힐 뿐이다."""
+    held = judge(_WT, _FACTS, _MERGED, (), _죽었다, _CLAUDE)
+    assert hold_for_strangers([held], ("앱이 지은 이름",), {"main", "chore/x"}) == [held]
+
+
+def test_폴더_안을_작업_디렉터리로_쥔_프로세스만_고른다() -> None:
+    processes = [
+        (1, "claude.exe", "C:/repo/.claude/worktrees/x"),
+        (2, "python.exe", "C:/repo/.claude/worktrees/x/web"),
+        (3, "claude.exe", "C:/repo/.claude/worktrees/x2"),
+        (4, "claude.exe", "C:/repo"),
+    ]
+    assert holders_in(processes, "C:/repo/.claude/worktrees/x") == [
+        Holder(1, "claude.exe"),
+        Holder(2, "python.exe"),
+    ]
+    assert holders_in(None, "C:/repo/.claude/worktrees/x") is None
 
 
 def test_제목이_어느_브랜치와도_맞지_않는_세션이_돌면_지울_것을_사람에게_넘긴다() -> None:
-    delete = judge(_WT, _FACTS, _MERGED, (), _죽었다)
-    keep = judge(_WT, _FACTS, {}, (), _죽었다)
+    delete = judge(_WT, _FACTS, _MERGED, (), _죽었다, ())
+    keep = judge(_WT, _FACTS, {}, (), _죽었다, ())
     held = hold_for_strangers([delete, keep], ("앱이 지은 이름",), {"main", "chore/x"})
     assert [verdict.action for verdict in held] == ["hold", "keep"]
     assert "앱이 지은 이름" in held[0].reason
 
 
 def test_제목이_체크아웃된_브랜치면_다른_워크트리는_그대로다() -> None:
-    delete = judge(_WT, _FACTS, _MERGED, (), _죽었다)
+    delete = judge(_WT, _FACTS, _MERGED, (), _죽었다, ())
     assert hold_for_strangers([delete], ("main",), {"main", "chore/x"}) == [delete]
 
 
@@ -519,6 +577,43 @@ def test_judge_는_제목_모를_세션_때문에_넘긴_후보에_명령을_붙
     assert f'승인하면 → uv run python tools/tidy_checkouts.py remove "{path.as_posix()}"' in done
 
 
+def test_judge_는_작업_디렉터리로_쥔_프로세스가_있으면_제목_모를_세션이_돌아도_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 186. 실제 자식 프로세스로 잰다. CI(우분투)는 `/proc` 로, 윈도는 PEB 로 읽는다."""
+    path, head = _add(repo, "done")
+    merged = {"chore/done": frozenset({head})}
+    with _자식이_쥔다(path) as pid:
+        assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=_ops(merged)) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
+    if sys.platform not in ("win32", "linux"):
+        assert done.startswith("넘긴다")
+        return
+    assert done.startswith("남긴다"), done
+    assert f"(pid {pid})" in done
+    assert "remove" not in done
+
+
+def test_judge_는_워크트리가_여럿이어도_프로세스를_한_번만_훑는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """훑기 한 번이 약 0.1초다(lock_holder.py --folder). 워크트리마다 훑지 않는다."""
+    _, first = _add(repo, "one")
+    _, second = _add(repo, "two")
+    scans: list[int] = []
+
+    def processes() -> list[tuple[int, str, str]]:
+        scans.append(1)
+        return []
+
+    merged = {"chore/one": frozenset({first}), "chore/two": frozenset({second})}
+    ops = replace(_ops(merged), processes=processes)
+    assert main(["judge"], cwd=repo, ops=ops) == 0
+    out = capsys.readouterr().out
+    assert sum(line.startswith("지운다") for line in out.splitlines()) == 2, out
+    assert len(scans) == 1
+
+
 def test_judge_는_등록_없는_워크트리_폴더를_넘긴다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -677,36 +772,37 @@ def test_remove_는_이름_바꾸기가_막히면_쥔_프로세스를_이유에_
 ) -> None:
     """대기열 177. 남은 워크트리는 데스크톱 앱이 띄운 `claude.exe` 가 작업 디렉터리로 쥐었다."""
     path, head = _add(repo, "done")
-    asked: list[Path] = []
+    scans: list[int] = []
 
     def held(_src: str, _dst: str) -> None:
         raise PermissionError(32, "다른 프로세스가 파일을 사용 중이기 때문에")
 
-    def holders(folder: Path) -> list[Holder]:
-        asked.append(folder)
-        return [Holder(61148, "claude.exe")]
+    def processes() -> list[tuple[int, str, str]]:
+        scans.append(1)
+        return [(61148, "claude.exe", str(path)), (7, "python.exe", str(repo))]
 
-    ops = replace(_ops({"chore/done": frozenset({head})}), rename=held, holders=holders)
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=held, processes=processes)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
     out = capsys.readouterr().out
     assert "다른 프로세스가 쥐고 있다" in out
     assert "작업 디렉터리로 쥔 프로세스: claude.exe(pid 61148)" in out
-    assert len(asked) == 1
-    assert os.path.samefile(asked[0], path)
+    assert "pid 7" not in out
+    assert len(scans) == 1
 
 
 def test_remove_는_탐침이_지나면_쥔_프로세스를_찾지_않는다(repo: Path) -> None:
-    """프로세스를 훑는 것은 막혔을 때만이다. 지나간 지우기에 그 시간을 더하지 않는다."""
+    """프로세스를 훑는 것은 막혔을 때만이다. 지나간 지우기에 그 시간을 더하지 않는다. 다시 판정할
+    때도 훑지 않는다(판정 4의 2. 쥔 프로세스는 윈도에서 1의 탐침이 다시 막는다)."""
     path, head = _add(repo, "done")
-    asked: list[Path] = []
+    scans: list[int] = []
 
-    def holders(folder: Path) -> list[Holder]:
-        asked.append(folder)
+    def processes() -> list[tuple[int, str, str]]:
+        scans.append(1)
         return []
 
-    ops = replace(_ops({"chore/done": frozenset({head})}), holders=holders)
+    ops = replace(_ops({"chore/done": frozenset({head})}), processes=processes)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 0
-    assert asked == []
+    assert scans == []
 
 
 def test_remove_는_이름을_되돌리지_못하면_3으로_멈춘다(repo: Path) -> None:

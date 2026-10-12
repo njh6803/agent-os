@@ -34,14 +34,24 @@
   `claude session <이름> (pid <N>)` 모양이고 그 pid 가 살아 있으면 남긴다. 죽었으면 `remove` 가 풀고
   지운다. 사유가 다른 모양이면 넘긴다. 잠금이 없다고 주인이 없는 것은 아니다. `git worktree add` 로
   판 워크트리와 `EnterWorktree(path)` 로 들어간 워크트리는 잠기지 않는다(일지 2026-10-06-04).
+  잠금 다음에는 그 폴더나 그 아래를 작업 디렉터리로 쥔 프로세스를 보고, 있으면 이름과 pid 를
+  들어 남긴다(대기열 186). 쉬는 세션은 `isRunning` 이 아니라 제목으로 잡히지 않는데, 데스크톱 앱이
+  `--resume` 으로 띄운 그 세션의 `claude.exe` 가 워크트리 루트를 쥐고 있었다(판정 4의 1의 근거).
+  이 단계가 없던 판은 그 워크트리를 지운다(또는 아래처럼 넘긴다)로 내고 `remove` 의 점유 탐침에서야
+  막혔다. 2026-10-12 에 작업 디렉터리로 쥐여 있던 셋 중 둘은 그 판이 제목 모를 세션 때문에 넘겨
+  사람에게 승인을 물었고, 하나는 판정 2가 먼저 남겼다. 이 판으로 같은 자리를 다시 판정하니 그 둘을
+  `claude.exe` 의 pid 를 들어 남겼다(일지 2026-10-12-14). 프로세스는 `judge` 한 번에 한 번 훑는다.
+  그 세션에서 `lock_holder.py --folder` 가 프로세스 720개 중 539개의 작업 디렉터리를 0.11초 안에
+  읽었다. 볼 수 없으면(윈도·리눅스 밖의 OS, 32비트 파이썬, 읽다 실패) 이 단계를 건너뛰고 판정 4의
+  점유 탐침에 맡긴다.
   제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 후보를 모두 넘긴다. 그
   세션이 어느 워크트리에 있는지 알 수 없다(일지 2026-10-06-03). 사람이 그 세션이 후보에 없다고
-  답하면 부르는 쪽이 `remove` 를 부른다. `remove` 는 세션을 보지 않는다.
+  답하면 부르는 쪽이 `remove` 를 부른다. `remove` 의 재판정은 세션도 쥔 프로세스도 보지 않는다.
 체크아웃되지 않은 로컬 브랜치는 판정 1만 본다. `.claude/worktrees/` 아래인데 등록이 없는 폴더는
 넘긴다. 그 안에서 친 git 은 루트에 닿는다.
 
-판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션은 빼고) 브랜치와 HEAD 가 인자와 같을 때만,
-아래 순서로 지운다.
+판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션과 쥔 프로세스는 빼고. 쥔 프로세스는
+윈도에서 1의 탐침이 다시 막는다) 브랜치와 HEAD 가 인자와 같을 때만, 아래 순서로 지운다.
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
    `Permission denied`·`Invalid argument` 로 지우다 만 폴더를 남긴다(`.scratch/harness/probes/
@@ -74,11 +84,13 @@
 - 앞지우기 뒤에 남은 추적 파일을 다른 프로세스가 워크트리 밖의 하드링크 이름으로 적재한 것.
   추적 파일은 하드링크가 아니라 드물다.
 - 탐침과 git 사이에 새로 생긴 점유와 파일. 다시 거른 뒤 git 이 지울 때까지의 틈이다.
-- 세션이 쓰던 워크트리인지. 제목과 잠금으로만 가린다(판정 3).
+- 세션이 쓰던 워크트리인지. 제목, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의 CLI 를
+  띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
 - 맥과 리눅스의 점유. 재지 않았다. 그 OS 는 열린 파일과 작업 디렉터리가 이름 바꾸기를 막지 않는
-  것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다.
-- 작업 디렉터리 말고 다른 것으로 쥔 프로세스의 이름. 그 안의 파일을 연 프로세스
-  (`lock_holder.py` 의 C)는 이름 바꾸기를 막아도 "쥔 프로세스는 없다"로 적힌다.
+  것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다. 리눅스에서 작업 디렉터리로 쥔 것은
+  판정 3이 남긴다.
+- 작업 디렉터리 말고 다른 것으로 쥔 프로세스. 그 안의 파일을 연 프로세스(`lock_holder.py` 의 C)는
+  판정 3을 지나고, `remove` 에서 이름 바꾸기를 막아도 "작업 디렉터리로 쥔 것은 없다"로 적힌다.
 - 열 수 없는 프로세스의 작업 디렉터리. 2026-10-12 에 이 PC 의 프로세스 672개 중 493개를 읽었다
   (`lock_holder.py --folder`). 읽지 못한 것은 건너뛴다. 그것이 무엇인지(다른 사용자, 높은 권한)는
   재지 않았다.
@@ -396,23 +408,30 @@ def _process_cwds() -> list[ProcessCwd] | None:
     return None
 
 
-def cwd_holders(folder: Path) -> list[Holder] | None:
-    """작업 디렉터리가 `folder` 이거나 그 아래인 프로세스. 이 OS 에서 볼 수 없거나 읽다 실패하면
+def scan_processes() -> list[ProcessCwd] | None:
+    """프로세스마다 (pid, 실행 파일 이름, 작업 디렉터리). 이 OS 에서 볼 수 없거나 읽다 실패하면
     None.
 
-    점유 탐침이 막힌 뒤에만 부른다(판정 4의 1). 지울지를 가르지 않고 남긴 이유에 이름만 붙인다.
+    `judge` 는 한 번에 한 번(판정 3), `remove` 는 점유 탐침이 막힌 뒤에만(판정 4의 1) 부른다.
     """
     try:
-        processes = _process_cwds()
+        return _process_cwds()
     except (OSError, AttributeError, ValueError, ctypes.ArgumentError):
-        # DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지 못했다. 진단을 읽다
-        # 난 실패가 판정 4의 1의 이유 줄을 지우지 않게 볼 수 없는 것으로 돌려준다(PR #182
-        # claude-review)
+        # DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지 못했다. 읽다 난
+        # 실패가 판정과 이유 줄을 지우지 않게 볼 수 없는 것으로 돌려준다(PR #182 claude-review)
         return None
+
+
+def holders_in(processes: Sequence[ProcessCwd] | None, folder: str) -> list[Holder] | None:
+    """작업 디렉터리가 `folder` 이거나 그 아래인 프로세스. 볼 수 없었으면(None) None."""
     if processes is None:
         return None
-    target = str(folder)
-    return [Holder(pid, image) for pid, image, cwd in processes if is_within(cwd, target)]
+    return [Holder(pid, image) for pid, image, cwd in processes if is_within(cwd, folder)]
+
+
+def cwd_holders(folder: Path) -> list[Holder] | None:
+    """한 폴더만 볼 때. 훑기와 거르기를 한 번에 한다(프로브 `lock_holder.py` 가 부른다)."""
+    return holders_in(scan_processes(), str(folder))
 
 
 def _long(path: Path) -> str:
@@ -454,7 +473,7 @@ class Ops:
     pid_alive: Callable[[int], bool] = process_alive
     rename: Callable[[str, str], None] = os.rename
     delete: Callable[[Path], None] = delete_path
-    holders: Callable[[Path], list[Holder] | None] = cwd_holders
+    processes: Callable[[], list[ProcessCwd] | None] = scan_processes
 
 
 # --- 읽기 ---------------------------------------------------------------------------------------
@@ -567,8 +586,10 @@ def judge(
     merged: Mapping[str, frozenset[str]],
     running: Sequence[str],
     alive: Callable[[int], bool],
+    holders: Sequence[Holder] | None,
 ) -> Verdict:
-    """워크트리 하나의 판정. 순서와 근거는 모듈 독스트링."""
+    """워크트리 하나의 판정. 순서와 근거는 모듈 독스트링. `holders` 는 그 폴더를 작업 디렉터리로
+    쥔 프로세스이고, 볼 수 없었으면 None 이다."""
 
     def verdict(action: Action, reason: str) -> Verdict:
         return Verdict(action, wt.path, reason, wt.branch, wt.head)
@@ -595,13 +616,15 @@ def judge(
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
     if wt.branch in running:
         return verdict("keep", "그 브랜치가 제목인 세션이 돈다")
-    if wt.locked is None:
-        return verdict("delete", "")
-    pid = lock_pid(wt.locked)
-    if pid is None:
+    pid = None if wt.locked is None else lock_pid(wt.locked)
+    if wt.locked is not None and pid is None:
         return verdict("human", f"잠금 사유에 pid 가 없다: {wt.locked or '(사유 없음)'}")
-    if alive(pid):
+    if pid is not None and alive(pid):
         return verdict("keep", f"잠금 pid {pid} 가 살아 있다. 그 세션: {wt.locked}")
+    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:
+        return verdict("delete", "")
     dead = f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다"
     return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=True)
 
@@ -720,8 +743,17 @@ def _render(verdict: Verdict, prefix: str, command: str) -> str:
 def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops: Ops) -> int:
     merged = ops.merged(root)
     others = [wt for wt in listing[1:] if not wt.bare]
+    processes = ops.processes()
     verdicts = [
-        judge(wt, gather(root, wt, ops.git), merged, running, ops.pid_alive) for wt in others
+        judge(
+            wt,
+            gather(root, wt, ops.git),
+            merged,
+            running,
+            ops.pid_alive,
+            holders_in(processes, wt.path),
+        )
+        for wt in others
     ]
     checked_out = {wt.branch for wt in listing if wt.branch is not None}
     for verdict in hold_for_strangers(verdicts, running, checked_out):
@@ -758,7 +790,7 @@ def _remove(
     merged = ops.merged(root)
     if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
         return 1
-    stop = _probe(Path(wt.path), ops.rename, ops.holders)
+    stop = _probe(Path(wt.path), ops.rename, ops.processes)
     if stop is not None:
         return stop
     # 판정 뒤에 생긴 것(`.env`, 새 파일)을 앞지우기가 지우지 않게, 지울 목록을 다시 판정해 읽는다
@@ -776,9 +808,9 @@ def _remove(
 def _still_candidate(
     root: Path, wt: Worktree, merged: Mapping[str, frozenset[str]], ops: Ops, moment: str
 ) -> tuple[Verdict, Facts] | None:
-    """판정 1~3(세션 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
+    """판정 1~3(세션과 쥔 프로세스는 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
     facts = gather(root, wt, ops.git)
-    verdict = judge(wt, facts, merged, (), ops.pid_alive)
+    verdict = judge(wt, facts, merged, (), ops.pid_alive, ())
     if verdict.action != "delete":
         print(f"남겼다 {wt.path} — {moment} 다시 판정했다: {verdict.reason}")
         return None
@@ -788,7 +820,7 @@ def _still_candidate(
 def _probe(
     path: Path,
     rename: Callable[[str, str], None],
-    holders: Callable[[Path], list[Holder] | None],
+    processes: Callable[[], list[ProcessCwd] | None],
 ) -> int | None:
     """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 되돌리지 못하면 3.
 
@@ -803,7 +835,7 @@ def _probe(
     except OSError as error:
         print(
             f"남겼다 {path.as_posix()} — 다른 프로세스가 쥐고 있다(이름 바꾸기가 막혔다: {error}). "
-            f"{describe_holders(holders(path))}"
+            f"{describe_holders(holders_in(processes(), str(path)))}"
         )
         return 1
     try:

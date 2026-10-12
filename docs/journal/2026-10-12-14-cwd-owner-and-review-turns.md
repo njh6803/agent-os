@@ -1,0 +1,127 @@
+# 2026-10-12 (14) 판정 3이 작업 디렉터리로 쥔 프로세스를 주인으로 보고, 버그·성능 리뷰가 턴 한도 전에 보고한다
+
+next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 186·169를 닫는다. 세션은 주 체크아웃에서 열렸고,
+지시문대로 `tidy-checkouts`를 먼저 돈 뒤 `EnterWorktree(name=cwd-owner-and-review-turns)`로 들어가
+`origin/main`(`0c72596`)에서 `chore/cwd-owner-and-review-turns`를 땄다. 순번은 14다. 처음에는 PR #180의 09와
+PR #183의 11을 보고 12로 썼으나, 커밋 직전의 `tools/sibling_overlap.py`가 형제 워크트리
+`sibling-overlap-next-numbers`의 12와 겹친다고 알려 그 도구가 고른 14로 옮겼다.
+
+## 계기
+
+> 사용자: "대기열 186·169를 한 chore PR로 반영한다. 186은 직전 PR(#182)과 같은 도구의 판정 3이고, 169는 3회차다"
+
+## 첫 턴의 tidy-checkouts
+
+- **루트.** main이고 깨끗했다. `6ba3781`에서 `0c72596`으로 당겼다. 스킬 파일은 바뀌지 않았다.
+- **지운 것.** 없다. `지운다` 판정이 하나도 나오지 않았다.
+- **남긴 것.** 잠금 pid가 살아 있는 다섯, 병합된 PR이 없는 넷, 다시 만들 수 없는 `grep.exe.stackdump`가 든
+  `canary-spec-pipeline-followup`, 병합된 PR이 없는 로컬 브랜치 열여덟.
+- **사람에게 넘긴 것.** 분리 HEAD 넷, prunable 하나, PR 머리가 다른 `skill-check-and-retro-section`, 등록 없는 폴더
+  여섯, 그리고 실행 중인 세션 `docs/admin-style-spec`의 제목이 체크아웃된 어느 브랜치와도 맞지 않아 보류된 셋
+  (`review-workflow-guards`, `rewrap-and-separator-hook`, `spec-pipeline-and-pytest-ids`). 지시문대로 답을 기다리지
+  않았다.
+
+## 186을 잰 것
+
+일지 08의 "다음"이 짚은 셋이 이번 정리에도 남아 있었다. 판정 뒤에 `lock_holder.py --folder`로 다시 읽었다.
+
+- 프로세스 720개 중 539개의 작업 디렉터리를 0.11초에 읽었다.
+- `review-workflow-guards`, `rewrap-and-separator-hook`, `canary-spec-pipeline-followup`은 DELETE 열기가 공유
+  위반(32)이었고 `cwd_holders`가 폴더마다 `claude.exe` 하나씩(pid 61148, 60020, 58268)을 댔다. 그 셋은 06:34에
+  데스크톱 앱이 `--resume`으로 띄운 2.1.286 CLI였다(손으로 봤다, `Get-CimInstance Win32_Process`). 그 세션들은
+  `list_sessions`에서 `isRunning`이 아니었다. 일지 08이 잰 셋과 시각이 같다.
+- `spec-pipeline-and-pytest-ids`는 열렸고 쥔 프로세스가 없었다(음성 대조).
+- 그런데 옛 `judge`는 앞의 둘을 `넘긴다`로 내고 이유에 "제목이 체크아웃된 어느 브랜치와도 맞지 않는 세션이
+  돈다: docs/admin-style-spec"를 적었다. 사람에게 승인을 물어도 `remove`의 점유 탐침에서 막힐 뿐인 후보다.
+  셋째는 판정 2(`grep.exe.stackdump`)가 먼저 남겼다. 이것이 행의 모양 그대로였다.
+- 고친 뒤, 이 워크트리의 새 도구를 주 체크아웃을 루트로 삼아 불렀다(스크래치 스크립트가 `main(["judge", …],
+  cwd=C:/project/agent)`를 부른다. `judge`는 읽기만 한다). 실행 중 세션은 `docs/admin-style-spec`과
+  `chore/worktree-cd-hook`이었다. 앞의 둘은 `남긴다`가 되었고 이유는 "작업 디렉터리로 쥔 프로세스:
+  claude.exe(pid 61148). 그 프로세스가 끝나야 지운다"(60020도 같은 모양)였다. 쥔 것이 없는
+  `spec-pipeline-and-pytest-ids`는 그대로 `넘긴다`였다(음성 대조).
+
+## 169: 무엇을 세는가
+
+행은 "일정 수의 도구 호출"이라고만 적었다. 서브에이전트는 자기 턴 수를 보지 못하지만, 자기가 부른 도구는
+트랜스크립트에 남아 셀 수 있다. 그래서 턴이 아니라 도구 호출을 센다. 한도는 정의의 `maxTurns: 60`이고, 잰
+것은 일지 08의 한 회차(도구 78번에 60턴)뿐이다. 그 비율이면 40번은 약 31턴이라 트리아지와 보고에 20턴 넘게
+남는다. 40은 그렇게 고른 값이고 재지 않았다. 일지 08의 "다음"은 손 재현(로그 받기, 자식 파이썬 띄우기)의
+상한을 따로 둘지 물었다. 재현도 같은 예산에서 세게 하고, 예산에 닿으면 재현하지 않은 지적을 `보류`로 두게 했다.
+한 줄로 두 가지를 다 다루려는 것이다.
+
+## 바꾼 것
+
+- `tools/tidy_checkouts.py`(186): `scan_processes`(훑기, 읽다 난 예외를 None으로), `holders_in`(거르기),
+  `cwd_holders`(둘을 잇는 것, 프로브가 부른다). `Ops`의 이음매를 폴더별 `holders`에서 목록 한 번의 `processes`로
+  바꿨다. `judge`가 여섯째 인자로 쥔 프로세스를 받아, 판정 3에서 살아 있는 잠금 다음에 보고 이름과 pid를 들어
+  남긴다. `_judge_all`은 판정 한 번에 한 번 훑고, `remove`의 재판정은 `()`를 넘겨 점유 탐침에 맡긴다. 독스트링의
+  판정 3, 판정 4 머리, "못 보는 것".
+- `.claude/skills/tidy-checkouts/SKILL.md`(186): 3의 판정 3 요약.
+- `.claude/agents/bug-perf-review.md`(169): 보고 절 첫 문단.
+- `.scratch/retro-queue.md`: 186·169를 닫았다.
+- 테스트, 변이 표(아홉 더하고 원문 넷을 고쳤다), 카나리아 명세 둘(새로), 프로브 README.
+
+## 잔존 grep
+
+`ops.holders`, `Ops.holders`, `holders=holders`, `제목과 잠금으로만`, `(세션은 빼고)`, `살아 있는 잠금 pid가 없는지`,
+`판정 3`을 md·py·toml·json에서 찾았다. 살아 있는 문서의 옛 서술은 고친 `tidy-checkouts` 스킬 3의 요약 하나였다.
+`next-session` 3단계와 `tidy-checkouts` 2·"부르는 곳"의 판정 3은 제목과 잠금의 맥락이라 여전히 참이다.
+`KICKOFF.md`의 "세션 목록 도구(`list_sessions`)가 없는 환경이면 판정 3을 기계로 볼 수 없으니"는 이 PR 전에도
+잠금 pid를 기계로 봤으니 이 PR이 새로 틀리게 만든 문장이 아니라 두었다.
+
+## 검사
+
+- 검증 명령(셀프 리뷰 전): `uv run pytest -q` 2029 통과(7 deselected), `ruff check`·`ruff format --check`,
+  `pyright`, `lint-imports`, `pnpm -C web verify`(28파일 357개)가 모두 초록이다. 이 워크트리에는 web 의존성이 없어
+  `pnpm -C web install --frozen-lockfile`을 먼저 쳤다.
+- 변이: `tidy_checkouts_mutations.toml` 일흔넷 모두 기대대로. 셀프 리뷰로 테스트의 자식 프로세스 띄우기를 도우미로
+  묶은 뒤 그 테스트를 쓰는 넷을 이름으로 골라 다시 돌려 넷 모두 기대대로.
+- 첫 커밋의 pre-commit에서 pyright가 셀프 리뷰로 더한 테스트 도우미를 막았다. `@contextmanager`에 `->
+  Iterator[int]`를 단 것이 폐기된 모양(`reportDeprecated`)이었다. 손으로 친 pyright는 도우미를 더하기 전이라 보지
+  못했다. `Generator[int]`로 고쳤다. 같은 실행의 인용 대조가 이 일지의 따옴표 셋을 경고해(막지 않는다) 원문으로
+  바꾸거나 따옴표를 뗐다.
+- 카나리아(claude 2.1.296, 대조군은 주 체크아웃의 옛 판 `0c72596`): `tidy_skill_cwd_owner.toml` 통과 4,
+  `bug_perf_review_budget.toml` 통과 4. 실험군 셋은 새 구절과 새 문단을 옮겼고, 대조군은 옛 구절과 "없음"이었다.
+
+## 셀프 리뷰
+
+`/code-review`(기준 `0c72596`, 수정 7·미추적 3, 커밋 0). 명세는 대기열 186·169 행(닫기 전 원문)과 지시문,
+일지 08의 "다음"이고, 이 세션이 한 것(이음매를 바꾼 것, 판정 3 안의 순서)은 리뷰어 참고로 갈라 넘겼다. 두 축 모두
+Critical·Major는 없었다. 표준 축은 Minor 7(origin/main이 움직인 것 포함)·Nit 1과 smell 셋, 명세 축은 Minor 4·Nit 3이었다.
+
+- **고친 것.**
+  - 표준·명세 Minor(겹침): 프로브 README의 변이 행이 "예순넷"에 머물렀다. 일흔셋과 186의 묶음, 결과, 이 일지를
+    더했다. `lock_holder.py` 행에는 새로 근거로 든 자리 둘(판정 3의 훑기 시간, 한 번만 훑는 테스트)과 이 세션의 결과를
+    더했다.
+  - 명세 Minor: 새 `judge`를 실제 워크트리에 돌린 기록이 없었다. 위 "186을 잰 것"의 마지막 항목으로 쟀다.
+  - 표준·명세 Minor·Nit(겹침): `bug-perf-review`의 새 문단이 "세 줄 안에 요약"과 "'이슈 없음'과 … 파일 수만"과
+    부딪혔다. 따라가지 못한 파일은 요약에 적고, 예산에 닿아 멈췄으면 어느 쪽이든 한 줄 더한다고 고쳤다.
+  - 표준·명세 Minor: 판정 3 끝에서 `remove`가 세션도 쥔 프로세스도 다시 보지 않는다고 한 문장은 닫힌 주장이었고
+    (탐침은 막히면 훑는다), 판정 4 머리에서 쥔 프로세스를 1의 탐침이 다시 본다고 한 문장은 보편 주장이었다(리눅스의
+    탐침은 작업 디렉터리를 보지 못한다). 앞의 것은 `remove`의 재판정으로, 뒤의 것은 윈도에서 탐침이 다시 막는다로
+    좁혔다. 테스트 독스트링도 같다.
+  - 표준·명세 Minor·Nit: "못 보는 것"의 따옴표 인용이 실제 문구와 달랐다. "작업 디렉터리로 쥔 것은 없다"로 고쳤다.
+    일지의 인용도 출력 원문으로 바꿨다.
+  - 표준 Nit: "그런 셋 중 둘"의 셋째는 판정 2가 먼저 남겼고, "볼 수 없으면(맥, …)"은 윈도·리눅스 밖의 모든 OS다.
+    둘 다 고쳤다. 독스트링의 두 수(720/539와 672/493)가 어느 측정인지도 문장에서 가렸다.
+  - 표준 smell(Duplicated Code, Minor): 자식 프로세스를 띄우는 테스트 코드가 두 번 나왔다. 컨텍스트 관리자
+    `_자식이_쥔다`로 묶었다.
+- **남긴 것.**
+  - 표준 smell(Data Clumps, Nit): `judge`의 주인 신호 셋(`running`, `alive`, `holders`). 출처가 다른 셋(앱의 세션,
+    잠금 pid, 프로세스 표)이고 `remove`의 재판정은 그중 둘을 비운다. 묶으면 비우는 쪽이 새 타입을 지어야 한다.
+  - 표준 smell(Primitive Obsession, Nit): `ProcessCwd` 튜플. PR #182에서 claude-review가 같은 자리를 짚었고 작성자
+    재량으로 남겼다(일지 08). 플랫폼 갈래 셋이 내는 안쪽 값이다. 테스트의 `scans.append(1)` 세 번도 두었다.
+  - 명세 Nit: 스킬 요약의 "그 폴더를"은 코드의 "그 폴더나 그 아래"보다 좁다. 원천은 독스트링이고 요약은 그것을
+    가리킨다. 카나리아도 그 문구로 쟀다.
+  - 명세 Nit: 행은 `cwd_holders`로 판정한다고 적었고 구현은 `scan_processes`와 `holders_in`으로 나눴다. 같은 계산을
+    판정 한 번에 한 번으로 끌어올린 것이라 닫힘 메모에 적었다.
+- **origin/main이 움직였다(표준 Minor).** 리뷰하는 동안 PR #180·#183이 병합되어 대기열 169가 4회차(일지 09)가 되고
+  프로브 README의 카나리아 칸이 바뀌었다. 커밋 뒤 main을 합치며 맞춘다(아래 검사에 이어 적는다).
+
+## PR 직전 보안·버그·성능 축
+
+## PR 리뷰
+
+## 회고
+
+## 다음
