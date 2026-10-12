@@ -4,7 +4,7 @@ description: "Turn the current conversation into a spec and publish it to the pr
 disable-model-invocation: true
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 다섯을 더했다. 첫머리의 새 세션 맥락(대기열 103), 3단계의 측정 규칙(대기열 38, 측정이 가는 범위는 61)과 명세를 쓴 뒤의 차례(대기열 105·126), Implementation Decisions 의 경로 규칙을 저장소 관행에 맞춘 것(대기열 30), Out of Scope 의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 다섯을 더했다. 첫머리의 새 세션 맥락(대기열 103), 3단계의 측정 규칙(대기열 38, 측정이 가는 범위는 61)과 명세를 쓴 뒤의 차례(대기열 105·126·207), Implementation Decisions 의 경로 규칙을 저장소 관행에 맞춘 것(대기열 30), Out of Scope 의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
@@ -24,7 +24,7 @@ Check with the user that these seams match their expectations.
 
    명세가 측정을 다음 단계에 넘기려 하면("구현 티켓이 잰다", "실패한다면 무엇을 할지는 이력으로 제안한다") 그 결과가 새 결정을 낳을 수 있는지 먼저 본다. 낳을 수 있으면 그 자리에서 잰다. 설계의 ADR이 넘긴 측정도 명세가 받는 자리에서 잰다. 넘기면 티켓이 구현 도중 ADR 승인을 기다리며 멈춘다(대기열 38, 두 번 다 명세 검토가 재고서야 ADR 이력이 됐다). 명세가 재거나 설계에서 받아 쓰는 측정은 명세의 범위까지 간다. 그것을 쓰는 코드가 타입 검사와 실행을 지나는 데까지, 명세가 받을 입력 전부(상류를 IPv4와 `::1`로 받으면 둘 다)까지, 설치할 판으로 잰다. 설계의 측정이 그만큼 가지 않았으면 그 자리에서 다시 잰다(대기열 61). 프로브를 두는 자리와 근거 문장의 종류(쟀다, 손으로 봤다, 코드를 읽었다, 어림, 웹 요약)는 `docs/agents/issue-tracker.md`의 프로브와 근거 절이다.
 
-   명세를 쓴 뒤의 차례는 셀프 리뷰(`/code-review`) 반영, 서두의 수 세기, ADR 초안·이력의 승인, 커밋이다. 서두에 적은 수(넘겨받은 것, 사용자가 고른 것, 정한 것, 이력, 거절의 수)는 리뷰를 반영한 뒤 본문의 표시를 다시 세어 고친다. 리뷰가 본문을 고쳐 서두와 어긋난 일이 두 명세에서 되풀이됐고, 묶음 표시("상한 묶음의 하나")는 기계가 세지 못한다(대기열 105). 승인의 차례는 `CLAUDE.md` 작업 규약 5다(대기열 126).
+   명세를 쓴 뒤의 차례는 셀프 리뷰(`/code-review`) 반영, 서두의 수 세기, ADR 초안·이력의 승인, 커밋이다. 서두에 적은 수(넘겨받은 것, 사용자가 고른 것, 정한 것, 이력, 거절의 수)는 병합 전에 본문을 고치는 반영마다 본문의 표시를 다시 세어 고친다. 셀프 리뷰 반영만이 아니라 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)와 PR 봇 회차(같은 절 3)의 반영도 그 반영이다. 리뷰가 본문을 고쳐 서두와 어긋난 일이 두 명세에서 되풀이됐고, 묶음 표시("상한 묶음의 하나")는 기계가 세지 못한다(대기열 105). 셀프 리뷰 뒤에만 다시 센 명세에서는 PR 직전 리뷰의 반영이 표시를 늘려 PR 봇이 어긋남을 짚었다(대기열 207). 승인의 차례는 `CLAUDE.md` 작업 규약 5다(대기열 126).
 
 <spec-template>
 
