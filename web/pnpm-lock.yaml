@@ -111,15 +111,12 @@ importers:
 
   packages/ui:
     dependencies:
-      '@fontsource/jetbrains-mono':
-        specifier: 5.3.0
-        version: 5.3.0
       '@fontsource/noto-sans-kr':
         specifier: 5.3.0
         version: 5.3.0
-      '@ibm/plex-mono':
-        specifier: 2.5.0
-        version: 2.5.0
+      '@fontsource/noto-sans-mono':
+        specifier: 5.3.0
+        version: 5.3.0
       lucide-react:
         specifier: 1.51.0
         version: 1.51.0(@types/react@19.3.0)(react@19.3.0)
@@ -508,11 +505,11 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fontsource/jetbrains-mono@5.3.0':
-    resolution: {integrity: sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A==}
-
   '@fontsource/noto-sans-kr@5.3.0':
     resolution: {integrity: sha512-/JnpTjaCOXW7xUoqOyCVYSr05VOkDy5Yla9O+WAEiS7u+yYLsmHoqj6v1W0bf91G8G3XA2+NnRS3CX2Tf/FVZg==}
+
+  '@fontsource/noto-sans-mono@5.3.0':
+    resolution: {integrity: sha512-DPZ+/Ng9HP5UKiALCKtoeGfA7zJzEjHFB/18OU/c3+4I9zZ3eMVAuFZb0SqzT89Yj7KNhJFYnYjyDaVKhdRuUg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -533,13 +530,6 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
-
-  '@ibm/plex-mono@2.5.0':
-    resolution: {integrity: sha512-STBJIPxPomOYPmBMO7z5TKPJUotAF9u3gAUumTqVgwgrAO+K4FRNh0MlhsoJjKhJKsMbBJR10/bk4inkj/wc1w==}
-
-  '@ibm/telemetry-js@1.11.0':
-    resolution: {integrity: sha512-RO/9j+URJnSfseWg9ZkEX9p+a3Ousd33DBU7rOafoZB08RqdzxFVYJ2/iM50dkBuD0o7WX7GYt1sLbNgCoE+pA==}
-    hasBin: true
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -3483,9 +3473,9 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@fontsource/jetbrains-mono@5.3.0': {}
-
   '@fontsource/noto-sans-kr@5.3.0': {}
+
+  '@fontsource/noto-sans-mono@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -3502,12 +3492,6 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
-
-  '@ibm/plex-mono@2.5.0':
-    dependencies:
-      '@ibm/telemetry-js': 1.11.0
-
-  '@ibm/telemetry-js@1.11.0': {}
 
   '@img/colour@1.1.0':
     optional: true
