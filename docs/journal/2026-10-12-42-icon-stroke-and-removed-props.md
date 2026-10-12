@@ -117,3 +117,16 @@ Major가 없었다.
 - `uv run pytest -q` 2197 통과(7 deselected). ruff 둘, pyright, `lint-imports` 초록.
 - `pnpm -C web verify` 초록(Vitest 28파일 352개). 사진 비교 `pnpm -C web visual`은 `--update-snapshots=all` 갱신 뒤 77개 통과.
 - 리뷰를 반영한 뒤 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음한다(`CLAUDE.md` 검증 명령 절).
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 커밋 뒤에 나란히 돌렸다. 그 사이 main에 #199가 들어와 PR 양식과
+next-session 스킬을 바꿨으므로 PR 전에 main을 이 브랜치에 병합했다(파일은 겹치지 않았다).
+
+- `/security-review`: 발견 없음. 바뀐 것이 prop과 토큰을 걷은 React 컴포넌트, 계산값만 읽는 스토리 도우미, 신뢰하는 로컬 도구가
+  읽는 TOML이었다.
+- `bug-perf-review`: 유효 1, 오탐 9. 유효한 것은 값 모름 스토리가 도는 표시의 `getBoundingClientRect().right`로 사이 8px를
+  쟀다는 것이다. 회전 중인 svg의 외접 사각형은 각도마다 달라, play가 회전이 진행된 뒤에 재면 빨개진다(서브에이전트가 같은
+  모양을 Chromium에 띄워 마운트 직후 8, 137ms 간격으로 4.70·5.92를 쟀다고 보고했다. 나는 다시 재지 않았다). 회전과 무관한
+  이름의 자리(이름의 왼쪽 − progressbar의 왼쪽 = 도는 표시 16 + 사이 8)로 바꾸고, 그 스토리를 겨누는 변이 넷(3~6번)을 다시
+  돌려 모두 빨강을 봤다.

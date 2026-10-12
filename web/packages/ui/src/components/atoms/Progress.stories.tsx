@@ -74,8 +74,10 @@ export const Indeterminate: Story = {
     }).toEqual({ width: "16px", color: semanticColor(spinner, "muted"), animation: "spin" });
     const strokes = strokesOf(spinner);
     await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
-    const gap = name.getBoundingClientRect().left - spinner.getBoundingClientRect().right;
-    await expect(gap).toBe(8);
+    // 도는 표시의 getBoundingClientRect 는 회전한 상자의 외접 사각형이라 각도마다 달라진다. 회전과 무관한 이름의 자리로
+    // 잰다. 이름은 progressbar 의 왼쪽에서 도는 표시(16px)와 사이(8px)만큼 떨어진다.
+    const offset = name.getBoundingClientRect().left - progressbar.getBoundingClientRect().left;
+    await expect(offset).toBe(16 + 8);
   },
 };
 
