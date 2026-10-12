@@ -3,7 +3,7 @@
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 164를 닫는다. PR #173이 claude-review 워크플로의 코멘트 0개
 가드를 바꿨는데, PR 템플릿은 그 가드의 허용 경로 밖이라 #173에 실을 수 없어 이 PR로 따로 왔다. 이 PR은
 `claude-code-review.yml`을 바꾸지 않으므로, #173이 바꾼 프롬프트(5·6단계)와 권한 규칙(`--allowedTools`·`--disallowedTools`)으로
-claude-review가 처음 도는 PR이기도 하다. 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
+claude-review가 도는 PR이기도 하다. 지시문은 처음 도는 PR이라고 했으나 #174가 먼저 돌았다(아래 PR 리뷰 절). 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
 `EnterWorktree(name=pr-template-review-guard)`로 들어가 `origin/main`(`2a3964f`, #173)에서 `chore/pr-template-review-guard`를 땄다.
 순번은 04다. 처음에는 01로 썼으나 커밋 전의 `tools/sibling_overlap.py`가 워크트리 `admin-style-design`도 01을 쓴다고 알려
 그 도구가 고른 04로 옮겼다.
@@ -109,8 +109,14 @@ PR #176(커밋 둘, `397e474`).
   러너에 uv가 없다. #173 전의 #172 실행에도 SessionStart가 같은 127로 끝났으니 #173이 만든 것이 아니다. #172에는
   `stop-hook-error` 알림이 없었고 그 까닭은 재지 않았다. 127은 막는 코드(2)가 아니어서 훅이 지나가고, 리뷰의 권한은 훅이
   아니라 `claude_args`가 쥐므로 이 실행의 결과에 미친 것은 알림 한 줄이다.
-- **CodeRabbit.** PR을 연 직후 "Review limit reached"였고 `@coderabbitai review` 요청도 "Review rate limited"로 끝났다.
-  이 PR의 보안·버그·성능 축은 위 PR 직전 대체 둘이 대신한다(`operations.md` 리뷰 파이프라인).
+- **CodeRabbit.** PR을 연 직후 "Review limit reached"였고 `@coderabbitai review` 요청도 두 번 "Review rate limited"로
+  끝났다. 셋째 요청(`8449276`)에서 리뷰가 돌아 Minor 하나를 냈다. 이 일지의 첫 문단이 이 PR을 claude-review가 처음 도는
+  PR이라고 적어 아래 #174의 실행과 어긋났다. 맞아서 고쳤다(1회차).
+- **claude-review 2·3회차.** 2회차(`06b42c7`)는 Nit 하나였다. 템플릿 37행이 길고 가드 서술은 `operations.md`에 있으니
+  그쪽을 가리키라는 것인데, `operations.md`에는 그 서술이 없어 전제가 맞지 않았다. 둘째 회차의 Nit이라 보류 이유를 PR
+  코멘트로 남겼다. 3회차(`8449276`, main을 두 번째로 병합한 뒤)는 지적 없음이었다.
+- **main 병합 둘.** PR을 연 뒤 #175·#177, 이어 #174가 병합되어 대기열 끝 행이 두 번 충돌했다. 두 번 모두 main의 행을
+  먼저, 이 브랜치의 176~178을 뒤에 두었다.
 
 ## 회고
 
