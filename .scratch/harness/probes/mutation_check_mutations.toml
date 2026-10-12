@@ -50,8 +50,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''    if more_tables and (not checking or len(more_tables) != len(names)):'''
-new = '''    if more_tables and len(more_tables) != len(names):'''
+old = '''    if more_tables and (not checking or len(more_tables) != len(picks) or since is not None):'''
+new = '''    if more_tables and (len(more_tables) != len(picks) or since is not None):'''
 
 [[mutation]]
 name = "표 여럿에 이름을 섞어도 받는다"
@@ -59,8 +59,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''    if more_tables and (not checking or len(more_tables) != len(names)):'''
-new = '''    if more_tables and not checking:'''
+old = '''    if more_tables and (not checking or len(more_tables) != len(picks) or since is not None):'''
+new = '''    if more_tables and (not checking or since is not None):'''
 
 [[mutation]]
 name = "표 하나의 원문 확인은 옛 길로 경로 없이 알린다"
@@ -68,8 +68,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''    if checking and len(more_tables) == len(names):'''
-new = '''    if checking and more_tables and len(more_tables) == len(names):'''
+old = '''    if args.checking and not args.picks and args.since is None:'''
+new = '''    if args.checking and len(args.tables) > 1 and not args.picks and args.since is None:'''
 
 [[mutation]]
 name = "출력을 UTF-8 로 다시 열지 않는다"

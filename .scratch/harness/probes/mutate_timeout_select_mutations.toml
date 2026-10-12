@@ -1,0 +1,286 @@
+# tools/mutate.py 의 변이마다 시간 제한(대기열 139)과 번호·--since 로 고르기(대기열 193)에서 규칙 하나씩을
+# 뺀다. 새 시험은 없는 이름의 import(수집 오류)로만 빨갰거나 구현 뒤에 더해 빨강을 본 적이 없어 행동의
+# 빨강을 여기서 본다.
+# 도구가 자기 자신을 고친다(돌고 있는 프로세스는 이미 읽은 원본으로 돈다).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_timeout_select_mutations.toml
+# POSIX 의 프로세스 그룹 끝내기(`os.killpg`)는 이 윈도우에서 돌지 않아 변이로 재지 못한다. CI 의 리눅스
+# pytest 가 그 길로 실제 러너 시험을 돈다.
+
+[[mutation]]
+name = "시간 제한을 넘긴 결과를 오류로 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    if result.timed_out_after is not None:
+        return Verdict("error",'''
+new = '''
+    if False:
+        return Verdict("error",'''
+
+[[mutation]]
+name = "변이의 시간 제한을 러너에 넘기지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''mutation.tests, mutation.timeout, runner)'''
+new = '''mutation.tests, DEFAULT_TIMEOUT, runner)'''
+
+[[mutation]]
+name = "기준선이 같은 짝의 첫 변이의 제한을 받는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        baselines[key] = max(baselines.get(key, 0), m.timeout)'''
+new = '''        baselines.setdefault(key, m.timeout)'''
+
+[[mutation]]
+name = "시간 제한을 넘겨도 남은 반복을 돈다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            if result.timed_out_after is not None:
+                break'''
+new = '''
+            if False:
+                break'''
+
+[[mutation]]
+name = "기본 시간 제한이 600 초가 아니다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''DEFAULT_TIMEOUT = 600  #'''
+new = '''DEFAULT_TIMEOUT = 900  #'''
+
+[[mutation]]
+name = "윈도우에서 자식만 끝내고 손자를 남긴다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''["taskkill", "/F", "/T", "/PID", str(process.pid)]'''
+new = '''["taskkill", "/F", "/PID", str(process.pid)]'''
+
+[[mutation]]
+name = "프로세스 트리를 끝내지 못하면 자식도 남긴다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            os.killpg(process.pid, signal.SIGKILL)
+    process.kill()
+'''
+new = '''
+            os.killpg(process.pid, signal.SIGKILL)
+'''
+
+[[mutation]]
+name = "끝낸 뒤 출력 파이프가 닫힐 때까지 끝없이 기다린다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        stdout, stderr = process.communicate(timeout=_DRAIN_SECONDS)'''
+new = '''        stdout, stderr = process.communicate()'''
+
+[[mutation]]
+name = "그만 읽은 출력 파이프를 닫는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+        output = _drain(process)
+'''
+new = '''
+        output = _drain(process)
+        process.__exit__(None, None, None)
+'''
+
+[[mutation]]
+name = "끊긴 기다림에서 프로세스를 끝내지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    except BaseException:
+        _kill_tree(process)
+        raise
+'''
+new = '''
+    except BaseException:
+        raise
+'''
+
+[[mutation]]
+name = "번호를 이름으로 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if _NUMBER.fullmatch(pick):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "번호 0 을 받는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            if 1 <= int(pick) <= len(spec.mutation):'''
+new = '''            if 0 <= int(pick) <= len(spec.mutation):'''
+
+[[mutation]]
+name = "번호를 0 부터 센다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''                chosen.add(spec.mutation[int(pick) - 1].name)'''
+new = '''                chosen.add(spec.mutation[int(pick) % len(spec.mutation)].name)'''
+
+[[mutation]]
+name = "숫자뿐인 이름을 받는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if numeric:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "바뀐 변이에서 러너의 변화를 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if before.get(m.name) != m or old_runners.get(m.runner) != new_runners.get(m.runner)'''
+new = '''        if before.get(m.name) != m'''
+
+[[mutation]]
+name = "바뀐 변이에 새로 더한 것을 넣지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if before.get(m.name) != m or old_runners.get(m.runner) != new_runners.get(m.runner)'''
+new = '''        if (m.name in before and before[m.name] != m) or old_runners.get(m.runner) != new_runners.get(m.runner)'''
+
+[[mutation]]
+name = "그 커밋에 표가 없으면 아무것도 고르지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        return [m.name for m in spec.mutation]'''
+new = '''        return []'''
+
+[[mutation]]
+name = "커밋을 풀지 못해도 표가 없는 것으로 본다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if _git(where, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode != 0:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "저장소 밖의 표를 커밋을 풀지 못한 것으로 알린다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if inside.returncode != 0 or inside.stdout.strip() != "true":'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "고를 것이 없어도 돌린다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if not fresh and not args.picks:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "원문 확인이 --since 를 버리고 표 전체를 본다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if args.checking and not args.picks and args.since is None:'''
+new = '''    if args.checking and not args.picks:'''
+
+[[mutation]]
+name = "변이 파일 여럿과 --since 를 섞어도 받는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if more_tables and (not checking or len(more_tables) != len(picks) or since is not None):'''
+new = '''    if more_tables and (not checking or len(more_tables) != len(picks)):'''
+
+[[mutation]]
+name = "--since 를 두 번 받는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if value.startswith("--") or rest.count("--since") > 1:'''
+new = '''        if value.startswith("--"):'''
+
+[[mutation]]
+name = "--since 뒤의 빈자리나 선택을 커밋으로 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if value.startswith("--") or rest.count("--since") > 1:'''
+new = '''        if rest.count("--since") > 1:'''
+
+[[mutation]]
+name = "출력에 번호를 달지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            f"{head} {numbers[mutation.name]}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
+new = '''            f"{head} {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
+
+[[mutation]]
+name = "번호를 고른 것 안의 차례로 단다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))'''
+new = '''        return measure(selected, root=root, runner=runner, out=out)'''
+
+[[mutation]]
+name = "다시 돌릴 번호를 내지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        out(f"다시 돌릴 번호: {' '.join(str(numbers[name]) for name in mismatched)}")'''
+new = '''        pass'''
+
+# 못 보는 것을 고정한 시험(`.claude/rules/tools.md`)을 뒤집는다. 표만 견주지 않고 모두 고르면 코드만 바뀐 판도
+# 고를 것이 생긴다.
+[[mutation]]
+name = "--since 가 표를 견주지 않고 모두 고른다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if before.get(m.name) != m or old_runners.get(m.runner) != new_runners.get(m.runner)'''
+new = '''        if True'''
