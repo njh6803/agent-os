@@ -3,23 +3,30 @@
 러너는 가짜다. 이벤트는 2026-10-07 에 손으로 돌린 카나리아 둘(claude 2.1.291, `--output-format
 stream-json --verbose`, 규칙은 `--tools Read`, 스킬은 `--tools Skill`)의 모양을 따른다. init
 의 `tools`·`mcp_servers`, assistant 의 `tool_use`(`Read` 의 `file_path`, `Skill` 의 `skill`),
-스킬 본문이 실린 user 의 `Base directory for this skill:` 줄, 마지막 `result` 다. `claude` 를
+스킬 본문이 실린 user 의 `Base directory for this skill:` 줄, 마지막 `result` 다. 에이전트
+갈래의 이벤트는 2026-10-12 에 손으로 돌린 spec-reviewer 탐침(claude 2.1.292, 일지
+2026-10-12-02)이 본 것을 따른다. init 의 `agents` 와 `Task` 로 찍힌 Agent, 서브에이전트의
+`parent_tool_use_id`, Agent 결과의 `tool_use_result`(`status`, `totalToolUseCount`)다. `claude` 를
 하위 프로세스로 부르는 실제 러너는 실제 실행으로 확인한다(`.claude/rules/tests.md`).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from tools.canary import (
+    AgentOutcome,
     Facts,
     RunResult,
     SpecError,
+    agent_problems,
+    ancestor_problems,
     command,
     judge,
     load_spec,
@@ -73,20 +80,23 @@ def _줄(event: dict[str, object]) -> str:
     return json.dumps(event, ensure_ascii=False)
 
 
-def _init(tools: Sequence[str] = ("Read",), servers: Sequence[str] = ()) -> str:
+def _init(
+    tools: Sequence[str] = ("Read",), servers: Sequence[str] = (), agents: Sequence[str] = ()
+) -> str:
     return _줄(
         {
             "type": "system",
             "subtype": "init",
             "tools": list(tools),
             "mcp_servers": [{"name": name, "status": "connected"} for name in servers],
+            "agents": list(agents),
         }
     )
 
 
-def _도구(name: str, arguments: dict[str, object]) -> str:
-    block: dict[str, object] = {"type": "tool_use", "name": name, "input": arguments}
-    return _줄({"type": "assistant", "message": {"content": [block]}})
+def _도구(name: str, arguments: dict[str, object], call_id: str = "toolu_0") -> str:
+    block: dict[str, object] = {"type": "tool_use", "id": call_id, "name": name, "input": arguments}
+    return _줄({"type": "assistant", "message": {"content": [block]}, "parent_tool_use_id": None})
 
 
 def _읽기(path: Path | str) -> str:
@@ -250,6 +260,7 @@ def test_init의_도구와_서버_Read와_Skill_호출_스킬_위치_답을_뽑�
         skill_dirs=(str(tmp_path / ".claude" / "skills" / "tidy-checkouts"),),
         answer="EnterWorktree",
         error=None,
+        calls=("Read", "Skill"),
     )
 
 
@@ -572,6 +583,487 @@ def test_규칙_대상_파일이_없으면_알린다(tmp_path: Path) -> None:
     assert any("없다" in problem for problem in target_problems(spec, spec.arm[1], tmp_path))
 
 
+# 에이전트 갈래
+
+_에이전트_명세 = """
+kind = "agent"
+agent = "spec-reviewer"
+agent_tools = ["Read", "Grep"]
+question = "spec-reviewer 를 Agent 로 한 번 불러 체크리스트 6번의 끝 문장을 옮기게 하라."
+expect = ["이음매로 잰다"]
+source = ".claude/agents/spec-reviewer.md"
+
+[[arm]]
+name = "새"
+role = "experiment"
+checkout = "새"
+
+[[arm]]
+name = "옛"
+role = "control"
+checkout = "옛"
+"""
+
+_부른_id = "toolu_agent"
+
+
+def _에이전트_부름(name: str = "Agent") -> str:
+    arguments: dict[str, object] = {"subagent_type": "spec-reviewer", "prompt": "옮겨라"}
+    return _도구(name, arguments, _부른_id)
+
+
+def _에이전트_결과(outcome: object, call_id: str = _부른_id) -> str:
+    block = {
+        "type": "tool_result",
+        "tool_use_id": call_id,
+        "content": [{"type": "text", "text": "끝"}],
+    }
+    event: dict[str, object] = {
+        "type": "user",
+        "message": {"content": [block]},
+        "parent_tool_use_id": None,
+        "tool_use_result": outcome,
+    }
+    return _줄(event)
+
+
+def _끝남(tool_uses: int | None = 0, status: str = "completed") -> dict[str, object]:
+    outcome: dict[str, object] = {"status": status, "agentType": "spec-reviewer"}
+    if tool_uses is not None:
+        outcome["totalToolUseCount"] = tool_uses
+    return outcome
+
+
+def _서브(*blocks: dict[str, object]) -> str:
+    """서브에이전트의 assistant 이벤트. 본 세션의 Agent 호출 id 를 `parent_tool_use_id` 로 단다."""
+    return _줄(
+        {"type": "assistant", "message": {"content": list(blocks)}, "parent_tool_use_id": _부른_id}
+    )
+
+
+def _글(text: str) -> dict[str, object]:
+    return {"type": "text", "text": text}
+
+
+def _서브_읽기() -> dict[str, object]:
+    return {"type": "tool_use", "id": "toolu_sub", "name": "Read", "input": {"file_path": "x.md"}}
+
+
+def _에이전트_사실(**바꿀: object) -> Facts:
+    facts = replace(
+        _사실(tools=("Agent", "Read", "Grep"), answer="> 6. **이음매로 잰다**."),
+        agents=("spec-reviewer", "Explore"),
+        calls=("Agent(spec-reviewer)",),
+        outcomes=(AgentOutcome("spec-reviewer", "completed", 0),),
+    )
+    return replace(facts, **바꿀)
+
+
+def _에이전트_판정(facts: Facts, checkout: Path, 갈래: int = 0) -> list[str]:
+    spec = load_spec(_에이전트_명세)
+    return judge(spec, spec.arm[갈래], facts, checkout)
+
+
+def test_에이전트_명세를_읽는다() -> None:
+    spec = load_spec(_에이전트_명세)
+
+    assert (spec.kind, spec.agent, spec.agent_tools) == ("agent", "spec-reviewer", ["Read", "Grep"])
+
+
+@pytest.mark.parametrize("뺄_줄", ['agent = "spec-reviewer"\n', 'agent_tools = ["Read", "Grep"]\n'])
+def test_에이전트_명세에_에이전트나_그_도구가_없으면_명세_오류다(뺄_줄: str) -> None:
+    with pytest.raises(SpecError, match="agent_tools"):
+        load_spec(_에이전트_명세.replace(뺄_줄, ""))
+
+
+@pytest.mark.parametrize("도구", ['["Agent", "Read"]', '["Task"]', "[]", '[""]'])
+def test_에이전트_도구가_비었거나_Agent를_넣으면_명세_오류다(도구: str) -> None:
+    """agent_tools 는 정의의 도구다. 본 세션의 Agent 는 러너가 더한다."""
+    with pytest.raises(SpecError, match="agent_tools"):
+        load_spec(_에이전트_명세.replace('["Read", "Grep"]', 도구))
+
+
+def test_에이전트_갈래에_대상이나_스킬을_주면_명세_오류다() -> None:
+    with pytest.raises(SpecError, match="target"):
+        load_spec(
+            _에이전트_명세.replace('checkout = "옛"', 'checkout = "옛"\ntarget = "README.md"')
+        )
+    with pytest.raises(SpecError, match="skill"):
+        load_spec(_에이전트_명세.replace('kind = "agent"', 'kind = "agent"\nskill = "x"'))
+
+
+@pytest.mark.parametrize("명세", [_규칙_명세, _스킬_명세])
+@pytest.mark.parametrize("칸", ['agent = "x"', 'agent_tools = ["Read"]'])
+def test_규칙과_스킬_명세에_에이전트_칸을_주면_명세_오류다(명세: str, 칸: str) -> None:
+    with pytest.raises(SpecError, match="kind 가 agent"):
+        load_spec(명세.replace("\n[[arm]]", f"\n{칸}\n\n[[arm]]", 1))
+
+
+def test_에이전트_명령은_Agent와_정의의_도구로_좁힌다() -> None:
+    """본 세션을 Agent 하나로 좁히자 서브에이전트가 도구 0개로 거부됐다(일지 2026-10-12-02)."""
+    args = command(load_spec(_에이전트_명세))
+
+    assert args[args.index("--tools") + 1] == "Agent,Read,Grep"
+    assert "--strict-mcp-config" in args
+
+
+def test_본_세션의_호출과_서브에이전트의_이벤트를_가른다() -> None:
+    """서브에이전트의 Read 는 본 세션의 읽기가 아니다. init 은 Agent 를 옛 이름 Task 로 찍는다."""
+    lines = [
+        _init(("Task", "Read", "Grep"), agents=("spec-reviewer", "Explore")),
+        _에이전트_부름(),
+        _서브(_글("읽겠다"), _서브_읽기()),
+        _서브(_글("이음매로 잰다")),
+        _에이전트_결과(_끝남(1)),
+        _결과("이음매로 잰다"),
+    ]
+
+    facts = read_facts(lines)
+
+    assert facts.tools == ("Agent", "Read", "Grep")
+    assert facts.agents == ("spec-reviewer", "Explore")
+    assert facts.calls == ("Agent(spec-reviewer)",)
+    assert facts.reads == ()
+    assert (facts.sub_turns, facts.sub_calls) == (2, ("Read",))
+    assert facts.outcomes == (AgentOutcome("spec-reviewer", "completed", 1),)
+    assert facts.answer == "이음매로 잰다"
+
+
+def test_Task로_찍힌_호출도_Agent로_읽는다() -> None:
+    facts = read_facts([_init(("Task",)), _에이전트_부름("Task"), _에이전트_결과(_끝남())])
+
+    assert facts.calls == ("Agent(spec-reviewer)",)
+    assert facts.outcomes == (AgentOutcome("spec-reviewer", "completed", 0),)
+
+
+def test_에이전트_결과가_문자열이면_오류로_남긴다() -> None:
+    """도구 0개로 거부된 회차의 모양이다. 완료가 아니므로 돈 근거가 되지 않는다."""
+    거부 = "Agent 'spec-reviewer' would be spawned with zero tools — refusing."
+
+    facts = read_facts([_init(("Task",)), _에이전트_부름(), _에이전트_결과(거부)])
+
+    assert len(facts.outcomes) == 1
+    assert facts.outcomes[0].status.startswith("오류") and "zero tools" in facts.outcomes[0].status
+    assert facts.malformed == ()
+
+
+@pytest.mark.parametrize(
+    "결과", [None, {"status": 3}, {"status": "completed", "totalToolUseCount": "많이"}]
+)
+def test_에이전트_결과의_모양이_어긋나면_그_줄을_남긴다(결과: object) -> None:
+    facts = read_facts([_init(("Task",)), _에이전트_부름(), _에이전트_결과(결과)])
+
+    assert facts.outcomes == ()
+    assert [line.split("번째", 1)[0] for line in facts.malformed] == ["3"]
+
+
+def test_거부된_회차의_넘긴_프롬프트는_서브에이전트가_돈_근거가_아니다(tmp_path: Path) -> None:
+    """첫 판의 거짓 통과 자리다. 프롬프트는 `parent_tool_use_id` 를 단 user 이벤트로 찍혔다."""
+    넘긴_프롬프트: dict[str, object] = {
+        "type": "user",
+        "message": {"content": "옮겨라"},
+        "parent_tool_use_id": _부른_id,
+    }
+    거부 = "Agent 'spec-reviewer' would be spawned with zero tools — refusing."
+    lines = [
+        _init(("Task", "Read", "Grep"), agents=("spec-reviewer",)),
+        _에이전트_부름(),
+        _줄(넘긴_프롬프트),
+        _에이전트_결과(거부),
+        _결과("> 6. 이음매로 잰다"),
+    ]
+
+    facts = read_facts(lines)
+
+    assert facts.sub_turns == 0
+    assert any("근거" in reason for reason in _에이전트_판정(facts, tmp_path))
+
+
+def test_결과_이벤트가_둘이면_답은_마지막_것이다() -> None:
+    """백그라운드로 띄우면 본 세션이 먼저 한 번 답하고, 서브에이전트가 끝난 뒤 다시 답한다."""
+    lines = [
+        _init(("Task", "Read", "Grep"), agents=("spec-reviewer",)),
+        _에이전트_부름(),
+        _에이전트_결과(_끝남(None, "async_launched")),
+        _결과("아직 끝나지 않아 답이 없다"),
+        _서브(_글("이음매로 잰다")),
+        _결과("이음매로 잰다"),
+    ]
+
+    assert read_facts(lines).answer == "이음매로 잰다"
+
+
+def test_에이전트가_아닌_도구의_결과는_보지_않는다(tmp_path: Path) -> None:
+    """규칙 회차의 Read 결과는 어떤 모양이든 사실도 어긋난 줄도 아니다."""
+    읽은_결과 = _에이전트_결과("파일 내용", call_id="toolu_0")
+
+    facts = read_facts([_init(), _읽기(tmp_path / "a.py"), 읽은_결과, _결과("없음")])
+
+    assert facts.outcomes == ()
+    assert facts.malformed == ()
+
+
+def test_에이전트_실험군이_앞쪽으로_돌아_도구_없이_카나리아를_답하면_통과다(tmp_path: Path) -> None:
+    """앞쪽 실행은 서브에이전트의 마지막 텍스트 답이 찍히지 않아 결과의 상태가 근거다."""
+    assert _에이전트_판정(_에이전트_사실(), tmp_path) == []
+
+
+def test_에이전트_실험군이_백그라운드로_돌아_도구_없이_답하면_통과다(tmp_path: Path) -> None:
+    """백그라운드면 결과는 async_launched 이고 서브에이전트의 assistant 이벤트가 근거다."""
+    launched = (AgentOutcome("spec-reviewer", "async_launched", None),)
+
+    assert _에이전트_판정(_에이전트_사실(outcomes=launched, sub_turns=1), tmp_path) == []
+
+
+def test_init의_도구는_Agent와_그_도구여야_하고_순서는_따지지_않는다(tmp_path: Path) -> None:
+    assert _에이전트_판정(_에이전트_사실(tools=("Grep", "Agent", "Read")), tmp_path) == []
+    reasons = _에이전트_판정(_에이전트_사실(tools=("Agent", "Read")), tmp_path)
+    assert any("도구가" in reason for reason in reasons)
+
+
+@pytest.mark.parametrize(
+    "outcomes",
+    [
+        (),
+        (AgentOutcome("spec-reviewer", "오류: zero tools — refusing", None),),
+        (AgentOutcome("spec-reviewer", "failed", 0),),
+        (AgentOutcome("spec-reviewer", "async_launched", None),),
+        (AgentOutcome("Explore", "completed", 0),),
+    ],
+)
+def test_서브에이전트가_돈_근거가_없으면_실패다(
+    tmp_path: Path, outcomes: tuple[AgentOutcome, ...]
+) -> None:
+    """넘긴 프롬프트만 찍히고 서브에이전트가 돌지 않으면 도구 판정이 비어 통과할 수 있다."""
+    reasons = _에이전트_판정(_에이전트_사실(outcomes=outcomes, sub_turns=0), tmp_path)
+
+    assert any("근거" in reason for reason in reasons)
+
+
+@pytest.mark.parametrize(
+    "바꿀",
+    [
+        {"sub_turns": 1, "sub_calls": ("Read",)},
+        {"outcomes": (AgentOutcome("spec-reviewer", "completed", 1),)},
+        {"outcomes": (AgentOutcome("spec-reviewer", "completed", None),)},
+    ],
+)
+def test_서브에이전트가_도구를_부르면_실패다(tmp_path: Path, 바꿀: dict[str, object]) -> None:
+    """정의를 읽어 옮긴 답은 실린 지시가 아니다. 앞쪽 실행은 결과의 도구 횟수로만 보인다."""
+    reasons = _에이전트_판정(_에이전트_사실(**바꿀), tmp_path)
+
+    assert any("도구를 불렀다" in reason for reason in reasons)
+
+
+@pytest.mark.parametrize(
+    "calls", [("Agent(spec-reviewer)", "Read"), ("Agent(Explore)", "Agent(spec-reviewer)")]
+)
+def test_본_세션이_그_에이전트를_부르는_것_밖의_도구를_쓰면_실패다(
+    tmp_path: Path, calls: tuple[str, ...]
+) -> None:
+    """본 세션이나 다른 서브에이전트가 정의를 읽어 옮겨도 카나리아는 맞는다(일지 2026-10-12-02)."""
+    reasons = _에이전트_판정(_에이전트_사실(calls=calls), tmp_path)
+
+    assert any("밖의" in reason for reason in reasons)
+
+
+@pytest.mark.parametrize("calls", [(), ("Agent(spec-reviewer)", "Agent(spec-reviewer)")])
+def test_그_에이전트를_한_번_부르지_않으면_실패다(tmp_path: Path, calls: tuple[str, ...]) -> None:
+    reasons = _에이전트_판정(_에이전트_사실(calls=calls), tmp_path)
+
+    assert any("한 번" in reason for reason in reasons)
+
+
+def test_실험군_init에_그_에이전트가_없으면_실패다(tmp_path: Path) -> None:
+    reasons = _에이전트_판정(_에이전트_사실(agents=("Explore",)), tmp_path)
+
+    assert any("agents" in reason for reason in reasons)
+
+
+def test_사본에_정의가_없는_대조군은_그_에이전트를_부르지_않아도_된다(tmp_path: Path) -> None:
+    """새 서브에이전트는 옛 사본에 없다(대기열 153 의 첫 사건)."""
+    facts = _에이전트_사실(agents=("Explore",), calls=(), outcomes=(), answer="없음")
+
+    assert _에이전트_판정(facts, tmp_path, 갈래=1) == []
+
+
+def test_사본에_정의가_있는_대조군은_그_에이전트가_실려_돌아야_한다(tmp_path: Path) -> None:
+    """정의가 있는데 실리지 않은 대조군이 부르지 않고 "없음"만 답하면 질문을 시험하지 못한다."""
+    옛 = _에이전트_체크아웃(tmp_path, "옛")
+    facts = _에이전트_사실(agents=("Explore",), calls=(), outcomes=(), answer="없음")
+
+    reasons = _에이전트_판정(facts, 옛, 갈래=1)
+
+    assert any("agents" in reason for reason in reasons)
+    assert any("한 번" in reason for reason in reasons)
+    assert any("근거" in reason for reason in reasons)
+
+
+def test_대조군도_그_에이전트가_실렸으면_한_번_불러_돌아야_한다(tmp_path: Path) -> None:
+    """옛 정의가 실린 대조군은 서브에이전트가 옛 지시로 답해야 질문이 흘리지 않았다는 뜻이 선다."""
+    reasons = _에이전트_판정(_에이전트_사실(calls=(), outcomes=(), answer="없음"), tmp_path, 갈래=1)
+
+    assert any("한 번" in reason for reason in reasons)
+    assert any("근거" in reason for reason in reasons)
+
+
+def test_대조군도_본_세션이_에이전트_밖의_도구를_쓰면_실패다(tmp_path: Path) -> None:
+    facts = _에이전트_사실(agents=(), calls=("Read",), outcomes=(), answer="없음")
+
+    assert any("밖의" in reason for reason in _에이전트_판정(facts, tmp_path, 갈래=1))
+
+
+def test_에이전트_대조군_답에_카나리아가_있으면_실패다(tmp_path: Path) -> None:
+    assert any("대조군" in reason for reason in _에이전트_판정(_에이전트_사실(), tmp_path, 갈래=1))
+
+
+_정의 = (
+    "---\nname: spec-reviewer\ndescription: 검토한다\ntools: Read, Grep\n---\n\n6. 이음매로 잰다.\n"
+)
+
+
+def _에이전트_체크아웃(root: Path, 이름: str, 정의: str | None = _정의) -> Path:
+    checkout = root / 이름
+    folder = checkout / ".claude" / "agents"
+    folder.mkdir(parents=True)
+    if 정의 is not None:
+        (folder / "spec-reviewer.md").write_text(정의, encoding="utf-8")
+    return checkout
+
+
+def test_에이전트_정의가_명세와_맞으면_알리지_않고_도구_순서는_따지지_않는다(
+    tmp_path: Path,
+) -> None:
+    spec = load_spec(_에이전트_명세)
+    places = {
+        "새": _에이전트_체크아웃(tmp_path, "새", _정의.replace("Read, Grep", "Grep, Read")),
+        "옛": _에이전트_체크아웃(tmp_path, "옛", None),
+    }
+
+    assert agent_problems(spec, places) == []
+
+
+@pytest.mark.parametrize(
+    ("바꿀", "표지"),
+    [
+        (("name: spec-reviewer", "name: other"), "name"),
+        (("tools: Read, Grep", "tools: Read"), "tools"),
+        (("tools: Read, Grep\n", ""), "tools"),
+        (("---\nname", "name"), "머리말"),
+    ],
+)
+def test_에이전트_실험군_정의가_명세와_다르면_알린다(
+    tmp_path: Path, 바꿀: tuple[str, str], 표지: str
+) -> None:
+    """정의와 명세가 어긋나면 회차가 헛돈다. 돌리기 전에 막는다."""
+    spec = load_spec(_에이전트_명세)
+    places = {
+        "새": _에이전트_체크아웃(tmp_path, "새", _정의.replace(*바꿀, 1)),
+        "옛": _에이전트_체크아웃(tmp_path, "옛", None),
+    }
+
+    assert any(p.startswith("새") and 표지 in p for p in agent_problems(spec, places))
+
+
+def test_대조군의_정의는_보지_않는다(tmp_path: Path) -> None:
+    """옛 사본의 정의는 없거나 달라도 된다. 실렸는지는 init 의 agents 로 판정이 가른다."""
+    spec = load_spec(_에이전트_명세)
+    places = {
+        "새": _에이전트_체크아웃(tmp_path, "새"),
+        "옛": _에이전트_체크아웃(tmp_path, "옛", _정의.replace("Read, Grep", "Bash")),
+    }
+
+    assert agent_problems(spec, places) == []
+
+
+# 상위 폴더의 CLAUDE.md(대기열 171)
+
+
+def _절대_gitdir(gitdir: Path, checkout: Path) -> str:
+    return gitdir.as_posix()
+
+
+def _상대_gitdir(gitdir: Path, checkout: Path) -> str:
+    return Path(os.path.relpath(gitdir, checkout)).as_posix()
+
+
+def _연결된_워크트리(main_root: Path, 이름: str, 가리킴: Callable[[Path, Path], str]) -> Path:
+    """`git worktree add` 가 남기는 모양. `.git` 은 주 저장소 안의 워크트리 자리를 가리킨다."""
+    gitdir = main_root / ".git" / "worktrees" / 이름
+    gitdir.mkdir(parents=True)
+    checkout = main_root / ".claude" / "worktrees" / 이름
+    checkout.mkdir(parents=True)
+    (checkout / ".git").write_text(f"gitdir: {가리킴(gitdir, checkout)}\n", encoding="utf-8")
+    return checkout
+
+
+def test_상위_폴더의_CLAUDE_md에_카나리아가_있으면_갈래마다_알린다(tmp_path: Path) -> None:
+    """상위 폴더의 CLAUDE.md 도 세션에 실린다(claude_md_parent.py). 대조군이면 답을 흘리고,
+    실험군이면 통과가 그 파일에서 왔을 수 있다."""
+    spec = load_spec(_스킬_명세)
+    (tmp_path / "CLAUDE.md").write_text("`EnterWorktree` 를 먼저 부른다\n", encoding="utf-8")
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    problems = ancestor_problems(spec, places)
+
+    assert [problem.split(":", 1)[0] for problem in problems] == ["새", "옛"]
+    assert all(str(tmp_path / "CLAUDE.md") in problem for problem in problems)
+
+
+def test_규칙_명세도_같은_체크아웃의_두_갈래에_상위_폴더_확인을_건다(tmp_path: Path) -> None:
+    """확인은 kind 와 무관하다. 규칙의 대조군은 실험군과 같은 체크아웃이라 같은 상위 파일이
+    실린다."""
+    spec = load_spec(_규칙_명세)
+    (tmp_path / "CLAUDE.md").write_text("`tools/`의 식별자는 영문이다\n", encoding="utf-8")
+    checkout = tmp_path / "저장소"
+    checkout.mkdir()
+
+    problems = ancestor_problems(spec, {"실험군": checkout, "대조군": checkout})
+
+    assert [problem.split(":", 1)[0] for problem in problems] == ["실험군", "대조군"]
+
+
+def test_상위_폴더의_CLAUDE_md에_카나리아가_없으면_알리지_않는다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+    (tmp_path / "CLAUDE.md").write_text("다른 지시\n", encoding="utf-8")
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    assert ancestor_problems(spec, places) == []
+
+
+@pytest.mark.parametrize("가리킴", [_절대_gitdir, _상대_gitdir])
+def test_연결된_워크트리는_주_워크트리_루트의_CLAUDE_md를_건너뛰고_그_위는_본다(
+    tmp_path: Path, 가리킴: Callable[[Path, Path], str]
+) -> None:
+    """근거는 claude_md_parent.py 다."""
+    spec = load_spec(_스킬_명세)
+    주 = tmp_path / "agent"
+    주.mkdir()
+    (주 / "CLAUDE.md").write_text("`EnterWorktree`\n", encoding="utf-8")
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _연결된_워크트리(주, "옛", 가리킴)}
+
+    assert ancestor_problems(spec, places) == []
+
+    (tmp_path / "CLAUDE.md").write_text("`EnterWorktree`\n", encoding="utf-8")
+    problems = ancestor_problems(spec, places)
+
+    assert any(p.startswith("옛") and str(tmp_path / "CLAUDE.md") in p for p in problems)
+    assert not any(str(주 / "CLAUDE.md") in problem for problem in problems)
+
+
+def test_워크트리가_아닌_하위_폴더는_주_저장소의_CLAUDE_md도_본다(tmp_path: Path) -> None:
+    """git 루트에서 멈추지 않는다(claude_md_parent.py)."""
+    spec = load_spec(_스킬_명세)
+    주 = tmp_path / "agent"
+    (주 / ".git").mkdir(parents=True)
+    (주 / "CLAUDE.md").write_text("`EnterWorktree`\n", encoding="utf-8")
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(주, "옛")}
+
+    problems = ancestor_problems(spec, places)
+
+    assert any(p.startswith("옛") and str(주 / "CLAUDE.md") in p for p in problems)
+
+
 # 실행
 
 
@@ -793,3 +1285,60 @@ def test_인자가_둘이_아니면_사용법을_알리고_2다(tmp_path: Path, 
 
     assert main(argv, cwd=tmp_path, runner=_가짜({}), out=printed.append) == 2
     assert printed != []
+
+
+def _에이전트_회차(답: str, agents: Sequence[str] = ("spec-reviewer",)) -> list[str]:
+    return [
+        _init(("Task", "Read", "Grep"), agents=agents),
+        _에이전트_부름(),
+        _에이전트_결과(_끝남()),
+        _결과(답),
+    ]
+
+
+def _에이전트_실행(tmp_path: Path, 정의: str = _정의) -> tuple[int, list[str], _가짜]:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_에이전트_명세, encoding="utf-8")
+    _에이전트_체크아웃(tmp_path, "새", 정의)
+    _에이전트_체크아웃(tmp_path, "옛", None)
+    회차들 = {"새": _에이전트_회차("6. 이음매로 잰다."), "옛": _에이전트_회차("없음", agents=())}
+    가짜 = _가짜(회차들)
+    printed: list[str] = []
+    code = main(
+        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+    )
+    return code, printed, 가짜
+
+
+def test_에이전트_명세를_끝까지_돌린다(tmp_path: Path) -> None:
+    code, printed, 가짜 = _에이전트_실행(tmp_path)
+
+    assert code == 0
+    assert [args[args.index("--tools") + 1] for args, _, _ in 가짜.호출] == ["Agent,Read,Grep"] * 4
+    assert any("통과 4" in line for line in printed)
+
+
+def test_에이전트_정의가_어긋나면_돌리지_않고_2다(tmp_path: Path) -> None:
+    code, printed, 가짜 = _에이전트_실행(tmp_path, _정의.replace("Read, Grep", "Read"))
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("tools" in line for line in printed)
+
+
+def test_상위_폴더에_카나리아가_있으면_돌리지_않고_2다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    (tmp_path / "CLAUDE.md").write_text("`EnterWorktree` 를 먼저 부른다\n", encoding="utf-8")
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+    )
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("상위 폴더" in line for line in printed)
