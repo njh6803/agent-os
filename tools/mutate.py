@@ -6,20 +6,41 @@
 지나갔다. pytest 밖의 명령(Vitest, Playwright, tsc)도 돈다. web 티켓 03~08이 같은 규약의 JS 러너를
 저마다 지었고 첫 판정이 틀렸다(대기열 59, tsc 의 종료 코드 2를 빨강으로, TS1360 을 문법 오류로).
 
-사용: PYTHONUTF8=1 uv run python tools/mutate.py <변이 파일.toml> [이름 ...] [--check]
+사용: PYTHONUTF8=1 uv run python tools/mutate.py <변이 파일.toml> [이름|번호 ...] [--since <커밋>]
+          [--check]
       uv run python tools/mutate.py --check <변이 파일.toml> <변이 파일.toml> ...
 LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/mutate.py …` 이고 tests 에
-`-m llm` 을 넣는다. 이름을 주면 그 변이만 돈다. `--check` 는 원문만 본다 — 명령을 돌리지 않고, 고른
-변이마다 원문이 파일에 정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을 모두
-알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
-파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름을 섞지 않는다. 이름 없이 주면 줄마다 그
-파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. pre-commit 이 커밋에 든 변이
-표(`_mutations.toml`)를 이 모양으로 넘긴다 — 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
-표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 옛 표는 보지 않는다. 옛 프로브의
-원문은 코드가 바뀌면 썩어도 되고, 다시 돌리거나 고쳐 커밋할 때 이 확인이 알린다.
+`-m llm` 을 넣는다. `--check` 는 원문만 본다 — 명령을 돌리지 않고, 고른 변이마다 원문이 파일에
+정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을 모두 알린다. 코드를 고친 뒤 다른
+변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이 파일 여럿(`.toml` 로 끝나는
+인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고 주면 줄마다 그 파일의 경로가
+붙고 읽지 못한 파일이 있어도 나머지를 본다. pre-commit 이 커밋에 든 변이 표(`_mutations.toml`)를 이
+모양으로 넘긴다 — 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한 표의 원문이 사라진 일이
+있었다(대기열 92). 커밋에 들지 않은 옛 표는 보지 않는다. 옛 프로브의 원문은 코드가 바뀌면 썩어도
+되고, 다시 돌리거나 고쳐 커밋할 때 이 확인이 알린다.
+
+고르기. 이름, 번호, `--since <커밋>` 으로 고르고 함께 주면 합친다. 아무것도 주지 않으면 전부다.
+번호는 표에 적힌 차례(1부터)이고, 출력의 줄 머리와 어긋났을 때의 마지막 줄(`다시 돌릴 번호`)에
+찍힌다. 이름은 공백이 들어 따옴표 인자가 필요한데 워크트리 가드가 그런 인자를 거부한 적이 있어,
+고를 때는 번호나 `--since` 를 쓴다(대기열 193). 그래서 이름을 숫자로만 짓지 않는다. `--since` 는
+그 커밋에 있던 같은 표와 견주어 새로 더했거나 무엇이든(원문, 기대, 시험, 시간 제한, 그 변이가 쓰는
+러너) 달라진 변이를 고른다. 그 커밋에 표가 없으면 모두 새것이다. 고를 것이 없으면 아무것도 돌리지
+않고 2로 끝난다. 잘못 준 커밋이 0 으로 끝나면 잰 것처럼 보이기 때문이다. 줄 커밋은 그 표를
+마지막으로 돌린 커밋이다(일지의 검사 절에 적어 둔다). 이 브랜치가 더하거나 고친 변이만 보려면
+`origin/main` 이다. 커밋한 표를 다른 워크트리에서 돌리며 `HEAD` 를 주면 표가 같아 고를 것이 없다.
+언제 전체를 돌리나: 시험을 고치거나 지웠으면 전체, 시험을 더하기만 했거나 코드만 바꿨으면 고른
+것(원문을 고쳤거나 더한 변이)이다. 견주는 쪽은 그 표를 마지막으로 돌린 판이다. 시험을 더해서는
+빨갛던 변이가 초록이 되지 않지만, 고치거나 지우면 다른 변이를 잡던 단언이 사라질 수 있다. 시험을
+고친 판에서 그런 일을 전체 실행이 잡았다(일지 2026-10-12-16의 둘째 판). 못 보는 것: 코드만 바꾼
+판에서 원문이 그대로인 변이도 둘레의 코드가 바뀌어 결과가 달라질 수 있다. 시험을 더하면 초록을
+기대한 변이(대조군)가 빨개질 수 있다(일지 2026-10-12-23, `mutate_restore` 표). 고른 것만 돌리면 둘
+다 보지 못한다.
 
 변이 파일은 TOML 이다. 원문은 리터럴 여러 줄 문자열(`'''`)로 적으면 이스케이프가 없다. 여는 `'''`
-바로 뒤의 줄바꿈은 TOML 이 버린다. 아래 예시는 네 칸 들여쓴 채라 옮길 때 그 네 칸을 걷어 낸다.
+바로 뒤의 줄바꿈은 TOML 이 버리지만 닫는 `'''` 앞의 줄바꿈은 원문에 든다. 그래서 닫는 `'''` 를 다음
+줄에 두는 원문은 마지막 줄을 줄 끝까지 온전히 적고, 줄의 일부만 적을 때는 닫는 `'''` 를 같은 줄에
+둔다(줄의 일부만 적은 원문 넷이 `--check` 에서 걸렸다, 대기열 152). 아래 예시는 네 칸 들여쓴 채라
+옮길 때 그 네 칸을 걷어 낸다.
 
     [runner.vitest]                      # 선택. 이름은 마음대로이고 pytest 만 내장이라 못 쓴다
     command = ["pnpm", "exec", "vitest", "run"]
@@ -32,6 +53,7 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
     tests = ["tests/core/test_run.py"]   # 명령 뒤에 붙는다. -k(pytest), -t(vitest)로 좁힌다
     expect = "red"                       # red, green, 또는 unhandled(vitest 판정만)
     repeat = 1                           # 선택. 매번 기대와 같아야 한다
+    timeout = 600                        # 선택. 한 번 돌리는 시간 제한(초). 기본 600
     # diagnostic_in = "clients.test-d.ts"   tsc 판정이면 반드시. 빨강이 날 파일
     # restore = ["web/gen/openapi.ts"]      선택. 명령이 고쳐 쓸 수 있어 되돌릴 파일
 
@@ -67,15 +89,20 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
    자리와 되돌릴 파일이 저장소 안에 있는지 본다. 하나라도 틀리면 아무 파일도 쓰지 않고 끝낸다.
-2. 러너와 인자의 짝마다 변이 없이 한 번씩 돌린다(기준선). 초록이 아니면 변이를 넣지 않는다. 기준선이
-   빨간데 변이가 빨가면 그 빨강은 아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서
-   본다.
+2. 러너와 인자의 짝마다 변이 없이 한 번씩 돌린다(기준선). 시간 제한은 그 짝을 쓰는 변이 가운데
+   가장 긴 것이다. 초록이 아니면 변이를 넣지 않는다. 기준선이 빨간데 변이가 빨가면 그 빨강은
+   아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서 본다.
 3. 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어 돌린 뒤 `finally` 에서 그 바이트를
    그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지 본다. 다르면 변이가 든 동안 다른
    쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열 77). 되돌릴 파일(`restore`)은
-   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다.
-4. 종료 코드: 모두 기대대로면 0, 어긋나거나 기준선이 초록이 아니면 1, 변이 파일을 읽지 못했거나
-   틀렸으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지 못했거나 되돌리지 못했으면 3.
+   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 명령 한 번이 시간 제한(`timeout`)을 넘기면 그 명령이
+   띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로 판정한 뒤 남은
+   반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가 러너→pytest→러너로
+   되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열 139). 기다리는
+   동안 Ctrl+C 가 나도 띄운 프로세스까지 끝낸 뒤 되돌린다.
+4. 종료 코드: 모두 기대대로면 0, 어긋나거나(시간 제한을 넘긴 것 포함) 기준선이 초록이 아니면 1,
+   변이 파일을 읽지 못했거나 틀렸거나 고른 것이 없으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지
+   못했거나 되돌리지 못했으면 3.
 
 제자리가 아닌 실행. 변이는 이 도구가 든 체크아웃을 고친다. 도는 동안(web 변이 수십 개는 40분이
 넘는다) 그 체크아웃을 고치거나 소스를 읽는 리뷰를 띄우면 변이된 소스를 본다. 그래서 잴 코드를
@@ -84,8 +111,11 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 않는다(2026-10-01 13초, 일지 2026-10-01-01). `.env` 는 추적하지 않으므로 LLM 변이면 새 워크트리에
 복사한다. 변이가 끝나면 지우는 워크트리라 사본이 남지 않는다. 남겨 두고 일하는 워크트리는 사본을
 만들지 않고 `--env-file` 로 주 체크아웃의 것을 읽는다(operations.md LLM 테스트). 에이전트의
-명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다. 도는 동안 변이한 파일을 고치면(되돌릴 파일로
-적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어 낸다.
+명령 상한(10분)을 넘는 실행은 백그라운드로 돌린다. 바깥에서 이 도구를 죽이는 것(셸의 `timeout`
+명령, 백그라운드 실행의 상한)은 아래 못 보는 것의 강제 종료라 되돌림이 돌지 않을 수 있다. 시간은
+변이마다의 `timeout` 으로 걸고, 바깥의 상한은 표 전체보다 넉넉히 준다. 도는 동안 변이한 파일을
+고치면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어
+낸다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -109,6 +139,11 @@ lastfailed 에 남지 않게 한다.
 - 앞 파일의 변이 쓰기가 실패해 변이를 쓰지 못한 파일이면, 처음 읽은 뒤 되돌리기까지. 쓴 변이
   바이트가 없어 보지 않는다.
 
+시간 제한으로 끝내는 프로세스는 윈도우에서 `taskkill /T` 가 부모를 따라 찾은 것이고, POSIX 에서는
+자식이 이끄는 프로세스 그룹이다. 부모가 먼저 끝나 고아가 된 손자(윈도우)와 제 세션이나 프로세스
+그룹을 따로 연 손자(POSIX)는 남는다. 남은 것이 출력 파이프를 쥐면 끊은 뒤 10초만 출력을 기다리고
+그만 읽는다. 이 판단은 윈도우 10(19045)의 `taskkill` 과 CPython 3.12.10 위에서 시험으로 봤다.
+
 원문의 줄 끝은 파일과 같아야 한다 — 변이 파일의 `\\n` 은 CRLF 파일에서 맞지 않는다. vitest 의 skip
 은 세지 않는다. `-t` 로 좁히면 고르지 않은 테스트가 skipped 로 세어져 `it.skip` 과 가를 수 없다. tsc
 의 빨강은 진단이 난 파일만 본다. 변이가 낸 문법 오류가 적은 파일까지 번져도 빨강이다. 윈도우에서
@@ -123,14 +158,16 @@ lastfailed 에 남지 않게 한다.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tomllib
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -138,6 +175,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_TIMEOUT = 600  # 명령 한 번의 시간 제한(초). 변이마다 `timeout` 으로 바꾼다
+_DRAIN_SECONDS = 10  # 끊은 뒤 출력 파이프가 닫히기를 기다리는 시간
+_KILL_SECONDS = 30  # 윈도우의 `taskkill` 을 기다리는 시간
 
 type Outcome = Literal["green", "red", "unhandled", "error"]
 type JudgeName = Literal["pytest", "vitest", "playwright", "tsc"]
@@ -159,6 +199,7 @@ _PLAYWRIGHT_COUNT = re.compile(
 )
 _PLAYWRIGHT_FAILED = re.compile(r"\s*\d+ failed\s*")
 _TSC_DIAGNOSTIC = re.compile(r"(\S+)\((\d+),(\d+)\): error (TS\d+)")
+_NUMBER = re.compile(r"[0-9]+")
 
 
 class SpecError(Exception):
@@ -194,6 +235,7 @@ class Mutation(_Model):
     diagnostic_in: str | None = None
     restore: list[str] = Field(default_factory=list[str])
     repeat: int = Field(default=1, ge=1)
+    timeout: int = Field(default=DEFAULT_TIMEOUT, ge=1)
     edit: list[Edit] = Field(min_length=1)
 
 
@@ -211,10 +253,13 @@ _BUILTIN: dict[str, RunnerSpec] = {
 
 @dataclass(frozen=True)
 class CommandResult:
-    """명령 한 번의 결과. 출력은 stdout 뒤에 stderr 를 이은 것이다."""
+    """명령 한 번의 결과. 출력은 stdout 뒤에 stderr 를 이은 것이다. 시간 제한을 넘겨 끊었으면
+    `timed_out_after` 가 그 제한(초)이고 출력은 끊을 때까지 읽은 것이다. 끊은 뒤에도 출력 파이프가
+    닫히지 않아 그만 읽었으면 출력 대신 그 안내 한 줄이다."""
 
     exit_code: int
     output: str
+    timed_out_after: int | None = None
 
     @property
     def plain(self) -> str:
@@ -231,7 +276,7 @@ class Verdict:
     failed: tuple[str, ...] = ()
 
 
-type Runner = Callable[[Sequence[str], Path], CommandResult]
+type Runner = Callable[[Sequence[str], Path, int], CommandResult]  # 명령, 자리, 시간 제한(초)
 
 
 def _last_line(text: str, exit_code: int) -> str:
@@ -314,7 +359,10 @@ def _judge_tsc(exit_code: int, text: str, diagnostic_in: str | None) -> Verdict:
 
 
 def judge(kind: JudgeName, result: CommandResult, diagnostic_in: str | None = None) -> Verdict:
-    """명령의 결과를 초록, 빨강, 처리하지 않은 에러, 오류로 가른다. 색 코드는 벗기고 읽는다."""
+    """명령의 결과를 초록, 빨강, 처리하지 않은 에러, 오류로 가른다. 색 코드는 벗기고 읽는다. 시간
+    제한을 넘겨 끊은 결과는 끊기 전의 출력이 무엇이든 오류다."""
+    if result.timed_out_after is not None:
+        return Verdict("error", f"시간 제한 {result.timed_out_after}초를 넘겨 끊었다")
     text = result.plain
     match kind:
         case "pytest":
@@ -363,6 +411,9 @@ def load_spec(text: str) -> Spec:
     repeated = sorted({name for name in names if names.count(name) > 1})
     if repeated:
         raise SpecError(f"이름이 겹친다: {', '.join(repeated)}. 이름으로 골라 다시 돌린다")
+    numeric = [name for name in names if _NUMBER.fullmatch(name)]
+    if numeric:
+        raise SpecError(f"이름이 숫자뿐이다: {', '.join(numeric)}. 번호와 가를 수 없다")
     problems = _pairing_problems(spec)
     if problems:
         raise SpecError("\n".join(problems))
@@ -377,15 +428,87 @@ def read_spec(path: Path) -> Spec:
     return load_spec(text)
 
 
-def select(spec: Spec, names: Sequence[str]) -> Spec:
-    """이름으로 고른다. 이름이 없으면 전부다. 러너 표는 그대로 둔다."""
-    if not names:
+def select(spec: Spec, picks: Sequence[str]) -> Spec:
+    """이름이나 번호(표에 적힌 차례, 1부터)로 고른다. 없으면 전부다. 고른 것은 표의 차례로 돌고 러너
+    표는 그대로 둔다."""
+    if not picks:
         return spec
     known = {m.name for m in spec.mutation}
-    unknown = [name for name in names if name not in known]
-    if unknown:
-        raise SpecError(f"변이 파일에 없는 이름: {', '.join(unknown)}")
-    return Spec(runner=spec.runner, mutation=[m for m in spec.mutation if m.name in names])
+    chosen: set[str] = set()
+    unknown: list[str] = []
+    outside: list[str] = []
+    for pick in picks:
+        if _NUMBER.fullmatch(pick):
+            if 1 <= int(pick) <= len(spec.mutation):
+                chosen.add(spec.mutation[int(pick) - 1].name)
+            else:
+                outside.append(pick)
+        elif pick in known:
+            chosen.add(pick)
+        else:
+            unknown.append(pick)
+    problems = [f"변이 파일에 없는 이름: {', '.join(unknown)}"] if unknown else []
+    if outside:
+        problems.append(f"표 밖의 번호 {', '.join(outside)} (이 표는 1~{len(spec.mutation)})")
+    if problems:
+        raise SpecError("\n".join(problems))
+    return Spec(runner=spec.runner, mutation=[m for m in spec.mutation if m.name in chosen])
+
+
+def _numbers(spec: Spec) -> dict[str, int]:
+    """이름마다 표에 적힌 차례(1부터). 고를 때와 출력의 줄 머리가 쓴다."""
+    return {m.name: at for at, m in enumerate(spec.mutation, 1)}
+
+
+def _labelled(names: Sequence[str], numbers: Mapping[str, int]) -> str:
+    return ", ".join(f"{numbers[name]}. {name}" for name in names)
+
+
+def changed_names(old: Spec, new: Spec) -> list[str]:
+    """`new` 의 변이 가운데 `old` 에 없거나 달라진 것의 이름, 표의 차례대로. 변이의 무엇이든(원문,
+    기대, 시험, 시간 제한) 다르거나 그 변이가 쓰는 러너의 명령·자리·판정이 다르면 달라진 것이다."""
+    before = {m.name: m for m in old.mutation}
+    old_runners, new_runners = _runners(old), _runners(new)
+    return [
+        m.name
+        for m in new.mutation
+        if before.get(m.name) != m or old_runners.get(m.runner) != new_runners.get(m.runner)
+    ]
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise SpecError(f"git {args[0]} 를 돌리지 못했다: {error}") from error
+
+
+def changed_since(path: Path, spec: Spec, ref: str) -> list[str]:
+    """`ref` 커밋에 있던 같은 표와 견주어 새로 더했거나 달라진 변이의 이름(`changed`). 그 커밋에
+    표가 없으면 모두다. 표가 든 저장소에서 `ref` 를 커밋으로 풀지 못하면 `SpecError`."""
+    where = path.resolve().parent
+    if _git(where, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode != 0:
+        raise SpecError(f"--since {ref}: {where} 의 저장소에서 커밋으로 풀지 못했다")
+    shown = _git(where, "show", f"{ref}:./{path.name}")
+    if shown.returncode != 0:
+        return [m.name for m in spec.mutation]
+    try:
+        old = load_spec(shown.stdout)
+    except SpecError as error:
+        raise SpecError(
+            f"--since {ref}: 그 커밋의 표를 지금의 도구로 읽지 못했다."
+            f" 번호나 이름으로 고른다\n{error}"
+        ) from error
+    return changed_names(old, spec)
 
 
 def _inside(root: Path, relative: str) -> Path | None:
@@ -453,10 +576,10 @@ def _drop_bytecode(path: Path) -> None:
 
 
 def _invoke(
-    root: Path, spec: Spec, name: str, tests: Sequence[str], runner: Runner
+    root: Path, spec: Spec, name: str, tests: Sequence[str], timeout: int, runner: Runner
 ) -> CommandResult:
     command = _runners(spec)[name]
-    return runner([*command.command, *tests], root / command.cwd)
+    return runner([*command.command, *tests], root / command.cwd, timeout)
 
 
 class _WrittenMeanwhile(Exception):
@@ -500,10 +623,13 @@ def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> 
             _drop_bytecode(path)
             if path not in rewritable:
                 written[path] = mutated
-        return [
-            _invoke(root, spec, mutation.runner, mutation.tests, runner)
-            for _ in range(mutation.repeat)
-        ]
+        results: list[CommandResult] = []
+        for _ in range(mutation.repeat):
+            result = _invoke(root, spec, mutation.runner, mutation.tests, mutation.timeout, runner)
+            results.append(result)
+            if result.timed_out_after is not None:
+                break  # 끊긴 판정은 이미 기대와 어긋나, 남은 반복은 변이를 든 채 시간만 쓴다
+        return results
     finally:
         _restore(root, mutation.name, held, written)
 
@@ -530,13 +656,28 @@ def check(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
     return 0
 
 
-def measure(spec: Spec, *, root: Path, runner: Runner, out: Callable[[str], None]) -> int:
-    """기준선을 재고 변이를 하나씩 넣어 돌린다. 모두 기대대로면 0, 아니면 1."""
+def measure(
+    spec: Spec,
+    *,
+    root: Path,
+    runner: Runner,
+    out: Callable[[str], None],
+    numbers: Mapping[str, int] | None = None,
+) -> int:
+    """기준선을 재고 변이를 하나씩 넣어 돌린다. 모두 기대대로면 0, 아니면 1. `numbers` 는 줄 머리에
+    다는 표의 번호이고, 없으면 `spec` 안의 차례다."""
     _validate(root, spec)
+    if numbers is None:
+        numbers = _numbers(spec)
 
+    # 기준선은 러너와 인자의 짝마다 한 번이고, 그 짝을 쓰는 변이 가운데 가장 긴 제한을 받는다
+    baselines: dict[tuple[str, tuple[str, ...]], int] = {}
+    for m in spec.mutation:
+        key = (m.runner, tuple(m.tests))
+        baselines[key] = max(baselines.get(key, 0), m.timeout)
     baseline_green = True
-    for name, tests in dict.fromkeys((m.runner, tuple(m.tests)) for m in spec.mutation):
-        result = _invoke(root, spec, name, tests, runner)
+    for (name, tests), timeout in baselines.items():
+        result = _invoke(root, spec, name, tests, timeout, runner)
         verdict = judge(_runners(spec)[name].judge, result)
         out(f"기준선 {' '.join((name, *tests))}: {_LABELS[verdict.outcome]} — {verdict.summary}")
         if verdict.outcome != "green":
@@ -555,35 +696,81 @@ def measure(spec: Spec, *, root: Path, runner: Runner, out: Callable[[str], None
         matched = all(verdict.outcome == mutation.expect for _, verdict in judged)
         head = "==" if matched else "!! 어긋남 —"
         out(
-            f"{head} {mutation.name}: 기대 {_LABELS[mutation.expect]}, 결과 {outcomes}"
-            f" — {judged[-1][1].summary}"
+            f"{head} {numbers[mutation.name]}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"
+            f" 결과 {outcomes} — {judged[-1][1].summary}"
         )
         _details(judged, out)
         if not matched:
             mismatched.append(mutation.name)
 
     if mismatched:
-        out(f"변이 {len(spec.mutation)} 중 어긋남 {len(mismatched)}: {', '.join(mismatched)}")
+        labels = _labelled(mismatched, numbers)
+        out(f"변이 {len(spec.mutation)} 중 어긋남 {len(mismatched)}: {labels}")
+        out(f"다시 돌릴 번호: {' '.join(str(numbers[name]) for name in mismatched)}")
         return 1
     out(f"변이 {len(spec.mutation)} 모두 기대대로")
     return 0
 
 
-def run_command(argv: Sequence[str], cwd: Path) -> CommandResult:
+def _kill_tree(process: subprocess.Popen[str]) -> None:
+    """자식과 그 자식이 띄운 프로세스를 끝낸다. 윈도우는 `taskkill /T` 가 부모를 따라 찾고, POSIX 는
+    자식이 이끄는 프로세스 그룹을 끝낸다(못 보는 것은 모듈 독스트링). `taskkill` 을 띄우지 못했거나
+    시간을 넘겼어도, 그룹을 끝내지 못했어도 자식은 끝낸다."""
+    if sys.platform == "win32":
+        with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                capture_output=True,
+                check=False,
+                timeout=_KILL_SECONDS,
+            )
+    else:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(process.pid, signal.SIGKILL)
+    process.kill()
+
+
+def _drain(process: subprocess.Popen[str]) -> str:
+    """끊은 뒤 남은 출력. 끝내지 못한 프로세스가 출력 파이프를 쥐고 있으면 `_DRAIN_SECONDS` 뒤에
+    그만 읽는다."""
+    try:
+        stdout, stderr = process.communicate(timeout=_DRAIN_SECONDS)
+    except subprocess.TimeoutExpired:
+        return (
+            f"(출력 파이프가 {_DRAIN_SECONDS}초 안에 닫히지 않아 그만 읽었다."
+            " 끝내지 못한 프로세스가 남았을 수 있다)"
+        )
+    return stdout + stderr
+
+
+def run_command(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
     """셸을 거치지 않는다. 윈도우의 `pnpm.CMD` 처럼 PATHEXT 로 찾는 이름은 `shutil.which` 가 풀고,
-    그런 배치 파일은 cmd.exe 가 돌린다(독스트링의 못 보는 것)."""
+    그런 배치 파일은 cmd.exe 가 돌린다(독스트링의 못 보는 것). 시간 제한을 넘기거나 기다리는 동안
+    예외(Ctrl+C)가 나면 자식이 띄운 프로세스까지 끝낸다(`_kill_tree`)."""
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUTF8": "1"}
-    completed = subprocess.run(
+    # `with` 로 열지 않는다. 그만 읽은 파이프를 닫으면 윈도우에서는 그 파이프를 읽던 스레드가 끝날
+    # 때까지(남은 손자가 끝날 때까지) 닫기가 막혔다. 다 읽은 파이프는 `communicate` 가 닫는다
+    process = subprocess.Popen(
         [shutil.which(argv[0]) or argv[0], *argv[1:]],
         cwd=cwd,
         env=env,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
-        check=False,
+        start_new_session=True,  # POSIX 에서 자식이 제 프로세스 그룹을 이끈다. 윈도우는 무시한다
     )
-    return CommandResult(completed.returncode, completed.stdout + completed.stderr)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_tree(process)
+        output = _drain(process)
+        return CommandResult(process.wait(), output, timed_out_after=timeout)
+    except BaseException:
+        _kill_tree(process)
+        raise
+    return CommandResult(process.returncode, stdout + stderr)
 
 
 def _check_files(paths: Sequence[str], *, root: Path, out: Callable[[str], None]) -> int:
@@ -603,6 +790,64 @@ def _check_files(paths: Sequence[str], *, root: Path, out: Callable[[str], None]
     return code
 
 
+class _UsageError(Exception):
+    """인자를 잘못 줬다. 아무 파일도 읽기 전에 난다."""
+
+
+@dataclass(frozen=True)
+class _Args:
+    """가른 인자. `tables` 의 첫째가 돌리거나 볼 변이 파일이고, 여럿은 `--check` 에서만 온다."""
+
+    checking: bool
+    tables: list[str]
+    picks: list[str]  # 이름이나 번호
+    since: str | None
+
+
+def _parse(argv: Sequence[str]) -> _Args:
+    """인자를 가른다. 틀렸으면 알릴 말을 든 `_UsageError`."""
+    checking = "--check" in argv
+    rest = [arg for arg in argv if arg != "--check"]
+    since: str | None = None
+    if "--since" in rest:
+        at = rest.index("--since")
+        value = rest[at + 1] if at + 1 < len(rest) else "--"
+        if value.startswith("--") or rest.count("--since") > 1:
+            raise _UsageError("--since 뒤에는 커밋(브랜치, 태그, 해시) 하나를 한 번만 준다")
+        since = value
+        rest = rest[:at] + rest[at + 2 :]
+    flags = [arg for arg in rest if arg.startswith("--")]
+    if flags:
+        raise _UsageError(
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 와 --since <커밋> 이다"
+        )
+    if not rest:
+        raise _UsageError(__doc__ or "")
+    spec_path, *picks = rest
+    more_tables = [pick for pick in picks if pick.endswith(".toml")]
+    if more_tables and (not checking or len(more_tables) != len(picks) or since is not None):
+        raise _UsageError(
+            "변이 파일 여럿은 --check 로만 받고 이름·번호·--since 와 섞지 않는다."
+            " 변이는 표 하나씩 돌린다"
+        )
+    if more_tables:
+        return _Args(checking, [spec_path, *more_tables], [], since)
+    return _Args(checking, [spec_path], picks, since)
+
+
+def _since_picks(spec: Spec, args: _Args) -> list[str]:
+    """`--since` 가 고른 이름. 주지 않았으면 없다. 이름·번호도 없이 고른 것이 없으면
+    `SpecError` — 잘못 준 커밋이 0 으로 끝나면 잰 것처럼 보인다."""
+    if args.since is None:
+        return []
+    fresh = changed_since(Path(args.tables[0]), spec, args.since)
+    if not fresh and not args.picks:
+        raise SpecError(
+            f"--since {args.since}: 그 커밋 뒤로 바뀌거나 더한 변이가 없다. 돌릴 것이 없다"
+        )
+    return fresh
+
+
 def main(
     argv: Sequence[str],
     *,
@@ -610,27 +855,23 @@ def main(
     runner: Runner = run_command,
     out: Callable[[str], None] = print,
 ) -> int:
-    checking = "--check" in argv
-    rest = [arg for arg in argv if arg != "--check"]
-    flags = [arg for arg in rest if arg.startswith("--")]
-    if flags:
-        out(f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 하나다")
-        return 2
-    if not rest:
-        out(__doc__ or "")
-        return 2
-    spec_path, *names = rest
-    more_tables = [name for name in names if name.endswith(".toml")]
-    if more_tables and (not checking or len(more_tables) != len(names)):
-        out("변이 파일 여럿은 --check 로만 받고 이름과 섞지 않는다. 변이는 표 하나씩 돌린다")
-        return 2
-    if checking and len(more_tables) == len(names):
-        return _check_files([spec_path, *more_tables], root=root, out=out)
     try:
-        spec = select(read_spec(Path(spec_path)), names)
-        if checking:
-            return check(spec, root=root, out=out)
-        return measure(spec, root=root, runner=runner, out=out)
+        args = _parse(argv)
+    except _UsageError as error:
+        out(str(error))
+        return 2
+    if args.checking and not args.picks and args.since is None:
+        return _check_files(args.tables, root=root, out=out)
+    try:
+        spec = read_spec(Path(args.tables[0]))
+        fresh = _since_picks(spec, args)
+        if args.since is not None:
+            listed = f" — {_labelled(fresh, _numbers(spec))}" if fresh else ""
+            out(f"--since {args.since}: 바뀌거나 더한 변이 {len(fresh)}{listed}")
+        selected = select(spec, [*args.picks, *fresh])
+        if args.checking:
+            return check(selected, root=root, out=out)
+        return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))
     except SpecError as error:
         out(f"변이 파일 오류(아무 파일도 쓰지 않았다): {error}")
         return 2

@@ -93,10 +93,12 @@ new = '''
             held.setdefault(path, files[path][0])
             if path not in rewritable:'''
 
-# 위 변이를, 쓰다 만 앞부분을 남기지 않는 리뷰 전의 테스트로 잰다. 그 테스트로는 지나간다.
+# 위 변이를, 쓰다 만 앞부분을 남기지 않는 리뷰 전의 테스트로 잰다. 그 테스트로는 지나간다. 같은 PR #115 의
+# 리뷰 반영이 더한 `test_못_보는_것_앞_파일의_변이_쓰기가_실패하면_…` 도 처음부터 쥐지 않는 것을 잡아, 파일
+# 전체로 재면 빨갛다(2026-10-12, 일지 2026-10-12-23). 그래서 그 테스트 하나만 고른다.
 [[mutation]]
 name = "쓰기에 성공한 파일만 쥔다(앞부분 없는 테스트)"
-tests = ["tests/tools/test_mutate.py"]
+tests = ["tests/tools/test_mutate.py", "-k", "변이를_쓰지_못한_파일은"]
 expect = "green"
 
 [[mutation.edit]]

@@ -1,5 +1,5 @@
 # tools/sibling_overlap.py(대기열 115·157·175·182)를 하나씩 깨는 변이.
-#   PYTHONUTF8=1 timeout 3600 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
 # 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16).
 
