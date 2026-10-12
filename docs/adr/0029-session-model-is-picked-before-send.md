@@ -45,7 +45,9 @@ Chrome으로 갈 뻔했다(키 가드가 멈췄다. `foreground_window.ps1`로 �
 `claude-haiku-5-5`·`low`, `claude-sonnet-5-5`·`medium`, `claude-haiku-5-5`·`high`, `claude-sonnet-5-5`·`max`,
 `claude-haiku-5-5`·`medium`, `claude-opus-5-5`·`xhigh`, `claude-sonnet-5-5`·`high`였다. 넷째는 셀프 리뷰를 반영한 판이고,
 다섯째부터는 키를 패턴으로 바꾼 판이다. 다섯째는 메모장을 앞에 둔 채 시작했다. 일곱째는 분할 보기에서 돌렸고, 옆 패널에 열린 다른
-세션의 `get_session`은 전후 모두 `claude-opus-5-5`·`xhigh`였다(입력창에서 위로 올라가 그 입력창 묶음의 버튼만 고른다).
+세션의 `get_session`은 전후 모두 `claude-opus-5-5`·`xhigh`였다(입력창에서 위로 올라가 그 입력창 묶음의 버튼만 고른다). PR 봇
+리뷰를 반영해 원래 값을 스크립트 변수 대신 인자로 넘기게 고친 판으로 여덟째(`Haiku 5.5 / high`)를 돌렸고, `get_session`이
+`claude-haiku-5-5`·`high`, 되돌리기가 `Opus 5.5 / xhigh`였다.
 
 ## 기본값을 되돌리는 까닭
 

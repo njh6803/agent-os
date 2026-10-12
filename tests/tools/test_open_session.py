@@ -235,7 +235,10 @@ def _decision_table_model_cells() -> list[str]:
         for line in _NEXT_SESSION.read_text(encoding="utf-8").splitlines()
         if line.startswith("| ")
     ]
-    header = next(row for row in rows if "| 모델 |" in row)
+    header = next((row for row in rows if "| 모델 |" in row), None)
+    assert header, (
+        f'{_NEXT_SESSION} 에서 머리 칸에 "모델"이 든 표를 찾지 못했다. 결정표의 열 이름이 바뀌었나'
+    )
     column = [cell.strip() for cell in header.strip("|").split("|")].index("모델")
     cells: list[str] = []
     for row in rows[rows.index(header) + 2 :]:
@@ -287,11 +290,45 @@ def test_노력_버튼의_이름에서_칸을_읽는다(name: str, step: str) ->
     assert completed.stdout.strip() == step
 
 
-_REPAIR_HINT = """
-$script:DraftModel = $given.model
-$script:DraftEffortStep = if ($null -eq $given.step) { $null } else { [int]$given.step }
-Get-RepairHint
+# 고르기 전의 값(Read-DraftDefaults 가 돌려주는 모양)을 받아 쓰는 순수 함수들.
+_DRAFT = """
+$step = if ($null -eq $given.step) { $null } else { [int]$given.step }
+$draft = [pscustomobject]@{ Model = $given.model; EffortStep = $step; EffortLabel = '' }
 """
+
+_REPAIR_HINT = _DRAFT + "Get-RepairHint $draft\n"
+
+_DRAFT_CHANGED = (
+    _DRAFT
+    + """
+$pick = [pscustomobject]@{ Model = $given.pick_model; Effort = ''; Step = [int]$given.pick_step }
+"$(Test-DraftChanged $draft $pick)"
+"""
+)
+
+
+@pytest.mark.parametrize(
+    ("model", "step", "pick_model", "pick_step", "changed"),
+    [
+        ("Opus 5.5", 3, "Opus 5.5", 3, "False"),  # 같으면 되돌릴 것이 없다
+        ("Opus 5.5", 3, "Sonnet 5.5", 3, "True"),
+        ("Opus 5.5", 3, "Opus 5.5", 2, "True"),
+        ("Opus 5.5", None, "Opus 5.5", 3, "True"),  # 원래 노력이 목록 밖이면 고른 칸과 다르다
+    ],
+)
+def test_고른_값이_원래_값과_다를_때만_기본값이_바뀐_것으로_친다(
+    model: str, step: int | None, pick_model: str, pick_step: int, changed: str
+) -> None:
+    given: dict[str, object] = {
+        "model": model,
+        "step": step,
+        "pick_model": pick_model,
+        "pick_step": pick_step,
+    }
+    completed = _call("Test-DraftChanged", _DRAFT_CHANGED, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == changed
 
 
 def test_복구_안내는_원래_값으로_돌리는_명령이다() -> None:

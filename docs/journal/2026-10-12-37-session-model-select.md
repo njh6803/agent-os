@@ -97,6 +97,13 @@ PR #197은 그 브랜치의 세션이 연 것이다. 현재 헤드 `5a2ed6d`의 
   - 다섯째 시험(`Haiku 5.5 / medium`)은 메모장을 앞에 둔 채 시작해 `restored=Opus 5.5 / xhigh`로 끝났다. 여섯째(`Opus 5.5 / xhigh`)는 `restored=바뀐 것 없음`이었다. 두 세션의 `get_session`이 줄과 같았다. 같은 시각 다른 세션이 연 티켓 세션 둘(`feature/01`, `feature/02`)은 13:33에 만들어져 겹치지 않았다.
 - 분할 보기 지적(보류)은 손으로 돌려 닫았다. 창이 분할 보기(왼쪽 여섯째 시험 세션, 오른쪽 `docs/kickoff-auto-flow-tickets`)일 때 일곱째 시험(`Sonnet 5.5 / high`)을 돌렸다. 새 세션은 `claude-sonnet-5-5`·`high`였고, 오른쪽 세션의 `get_session`은 전후 모두 `claude-opus-5-5`·`xhigh`였다. 자기 입력창 묶음에 버튼이 없는 경우는 새 세션 화면에서 본 적이 없어 가드를 넣지 않았다. 되돌리기 화면이 왼쪽 패널에 남아 이 세션을 `-Action focus`로 불러왔다.
 
+## PR 리뷰 반영
+
+PR #201. CI 초록. CodeRabbit은 시간당 한도로 리뷰하지 않았다(회차로 세지 않는다). claude-review 첫 회차는 Critical·Major 0, Minor 넷, Nit 하나.
+
+- 고쳤다: `Clear-PromptBox`의 명령·질의 섞임(`Test-PromptBoxEmpty`로 나눴다). `$script:Draft*` 숨은 공유 상태(고르기 전에 `Read-DraftDefaults`로 읽은 객체를 `Set-ComposerModel`·`Restore-DraftDefaults`·`Get-RepairHint`에 넘기고, 다른지는 `Test-DraftChanged`가 본다. 고르다 던져도 catch가 그 객체를 쓴다). 결정표 테스트가 표 머리가 없을 때 까닭 없이 끝나던 것. `Test-DraftChanged` 테스트 넷을 더해 36 passed. 여덟째 시험(`Haiku 5.5 / high`)이 `claude-haiku-5-5`·`high`, `restored=Opus 5.5 / xhigh`였다.
+- 두었다: `Send-Prompt`의 try 본문을 함수로 빼기. 이 스크립트는 출력 줄(`held=`, `sent=`)이 스킬과의 약속이라 함수로 빼면 출력 줄과 반환값이 한 줄기에 섞인다. `CONTEXT.md`에 "지시문"·"모델 줄"·"결정표"를 올리기. 하네스의 말은 `CONTEXT.md`에 넣지 않는다(ADR 0028). 둘 다 PR 코멘트에 이유를 남겼다.
+
 ## 회고
 
 후보 넷을 냈고 셋이 승인됐다.
