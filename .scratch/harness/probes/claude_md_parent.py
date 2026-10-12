@@ -33,9 +33,11 @@
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -121,6 +123,17 @@ def layout(root: Path) -> dict[str, Path]:
     return {"안쪽": inner, "둥지": nest, "빈칸": empty, "하위": sub, "바깥": outer, "옆": side}
 
 
+def remove_tree(root: Path) -> None:
+    """임시 디렉터리를 지운다. 윈도에서는 `.git/objects` 의 읽기 전용 파일이 지우기를 막아, 쓰기를
+    풀고 한 번 더 지운다. 그래도 남으면 경로를 찍는다(남은 것에는 `.git` 만 있다)."""
+
+    def writable_retry(function: Callable[[str], object], path: str, _error: BaseException) -> None:
+        os.chmod(path, stat.S_IWRITE)
+        function(path)
+
+    shutil.rmtree(root, onexc=writable_retry)
+
+
 def ancestors_with_instructions(path: Path) -> list[Path]:
     return [parent / "CLAUDE.md" for parent in path.parents if (parent / "CLAUDE.md").is_file()]
 
@@ -150,7 +163,10 @@ def facts(raw: str) -> tuple[int, str | None]:
     for line in raw.splitlines():
         if not line.lstrip().startswith("{"):
             continue
-        event = json.loads(line)
+        try:
+            event = json.loads(line)
+        except ValueError:  # 제한 시간에 끊기면 마지막 줄이 잘린다
+            continue
         if event.get("type") == "assistant":
             content = event.get("message", {}).get("content", [])
             calls += sum(1 for block in content if block.get("type") == "tool_use")
@@ -174,7 +190,10 @@ def main(out: Path) -> int:
         with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
             raws = list(pool.map(lambda job: run(places[job[0]]), jobs))
     finally:
-        shutil.rmtree(root, ignore_errors=True)
+        try:
+            remove_tree(root)
+        except OSError as error:
+            print(f"임시 디렉터리를 다 지우지 못했다: {root} ({error})")
     invalid = 0
     for (name, index), raw in zip(jobs, raws, strict=True):
         (out / f"{name}-{index}.jsonl").write_text(raw, encoding="utf-8", newline="\n")

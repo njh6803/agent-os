@@ -106,6 +106,24 @@ smell 다섯이었다.
     옮기지 않았다.
   - [명세 4] 171의 확인을 실험군까지 넓힌 것은 PR 본문에 적는다.
 
+## PR 직전 보안·버그·성능 축
+
+CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 나란히 돌렸다(커밋 `5fda82f` 기준, `origin/main` `67dbb4a`
+위로 리베이스한 뒤).
+
+- **보안(`/security-review`).** 지적 없음. 명세의 `agent_tools`는 리스트 인자로 넘어가 셸을 거치지 않고, 상위 폴더와
+  `.git` 파일 읽기는 로컬 판정에만 쓰이며, 넓힌 `--tools`에도 권한 모드를 바꾸는 플래그가 없다.
+- **버그·성능(`bug-perf-review`).** 유효 둘·보류 하나였고 둘을 고쳤다. 둘 다 탐침 `claude_md_parent.py`의 것이다.
+  - 제한 시간에 끊겨 마지막 줄이 잘리면 `facts()`가 `JSONDecodeError`로 죽었다. 그 줄을 건너뛰게 했다.
+  - 윈도에서 `rmtree(ignore_errors=True)`가 `.git/objects`의 읽기 전용 파일을 지우지 못해 임시 디렉터리 셋이 남았다(안에는
+    `.git`만 남아 측정에 섞이지는 않았다). 쓰기를 풀고 다시 지우게 했고, 고친 함수로 남은 셋을 지웠다(손으로 봤다).
+  - 보류: `_frontmatter`가 BOM이 붙은 정의, `tools:` 아래의 YAML 목록, 따옴표 값을 받지 않는다. 거짓 통과가 아니라 돌리기
+    전에 종료 2로 막는 쪽이고, Claude Code가 그 모양들을 받는지 재지 않았다.
+
+리베이스는 `origin/main`의 #174(주석 감기 도구와 줄 구분 문자 훅)와 #177을 들였고,
+충돌은 프로브 README와 대기열의 표 끝 두 곳(서로 다른 행을 더함)이었다. 그 PR들이 바꾼 규약 파일 가운데 이 브랜치가
+따를 것은 `.claude/rules/tools.md`의 훅 시간 항목뿐이고 이 브랜치는 훅을 더하지 않았다.
+
 ## 바꾼 것
 
 - `tools/canary.py`: 에이전트 갈래, 상위 폴더 `CLAUDE.md` 사전 확인(`ancestor_problems`), 요약 줄의 호출과 서브에이전트,
