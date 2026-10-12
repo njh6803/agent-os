@@ -3,13 +3,18 @@ name: grilling
 description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)의 텍스트 라운드 형식을 `AskUserQuestion` 라운드로 바꿨다. 사용자가 설계 인터뷰에서 UI로 고르는 선택지와 추천을 요청했는데 그 선호가 일지에만 있어서, 이 스킬의 텍스트 형식을 따른 세션이 같은 라운드를 UI로 다시 올렸다(일지 2026-09-22-07, 2026-09-24-03, 2026-09-26-06, 대기열 27). 사실을 찾는 서브에이전트의 보고를 근거의 종류로 가르고 조합은 소비 지점까지 재게 하는 문단을 더했다(대기열 45·61). 호출 곁 본문에 처음 나오는 기술 개념의 풀이를 두는 자리를 더했다. 풀이의 원천은 `CLAUDE.md` 원칙이다(대기열 114). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)의 텍스트 라운드 형식을 `AskUserQuestion` 라운드로 바꿨다. 사용자가 설계 인터뷰에서 UI로 고르는 선택지와 추천을 요청했는데 그 선호가 일지에만 있어서, 이 스킬의 텍스트 형식을 따른 세션이 같은 라운드를 UI로 다시 올렸다(일지 2026-09-22-07, 2026-09-24-03, 2026-09-26-06, 대기열 27). 사실을 찾는 서브에이전트의 보고를 근거의 종류로 가르고 조합은 소비 지점까지 재게 하는 문단을 더했다(대기열 45·61). 호출 곁 본문에 처음 나오는 기술 개념의 풀이를 두는 자리를 더했다. 풀이의 원천은 `CLAUDE.md` 원칙이다(대기열 114). 선택지 설명의 사실을 올리기 전에 대 보고, 답을 옮길 때 설명까지 옮기는 문단을 더했다(대기열 101·46). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
 Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round. Then wait for the user's answers before the next round.
 
 라운드는 `AskUserQuestion` 도구로 올린다. 결정 하나가 질문 하나다. 질문마다 네가 추천할 답을 먼저 고르고, 그 선택지를 첫 자리로 옮겨 라벨 끝에 "(Recommended)"를 붙인다. 선택지마다 설명에 그것을 고르면 무엇이 정해지는지 적는다. 한 호출에 넷까지 들어가므로 frontier가 넷을 넘으면 같은 라운드를 호출 여럿으로 잇달아 올린다. 질문 문장은 호출 안에만 쓴다. 호출 곁의 본문에는 선택지가 담지 못하는 것, 곧 네가 찾은 사실과 추천의 근거, 질문에 처음 나오는 기술 개념의 풀이(`CLAUDE.md` 원칙)만 쓴다.
+
+결정의 조건은 라벨이 아니라 선택지의 설명에 있다.
+
+- **올리기 전.** 설명에 넣는 사실(지금 코드가 무엇을 하는지, 도구가 언제 무엇을 읽는지, 판정자가 막는지, 선례)은 지금 코드와 판정자(린터, 타입 검사, 훅)에 대 본다. 선례를 들면 반대 방향의 선례도 찾는다. 확인하지 못한 사실은 설명에 어림이라고 적는다. 설명의 사실을 대 보지 않은 일이 세 세션에서 있었다. 저장소의 주석이 이미 반박한 전제(헤더가 시작 때 읽힌다), 반대 방향의 선례를 빠뜨린 트레이스 형식, 지금 코드에 대 보지 않은 anyio 5의 변경, 지금 화면과 다른 설명(걸린 시간), ESLint가 막는 인라인 스크립트다(대기열 101).
+- **옮길 때.** 답을 다른 자리(일지의 `> 사용자:` 인용, 명세, ADR, 리뷰 브리프)로 옮길 때는 라벨과 함께 고른 선택지의 설명을 글자 그대로 옮기고, 요약을 확인받은 질문이면 그 요약도 옮긴다. 라벨만 넘긴 명세에서 리뷰가 설명과 요약에 있던 결정을 범위 넘침으로 냈다(대기열 46).
 
 Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 

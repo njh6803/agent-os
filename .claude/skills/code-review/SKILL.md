@@ -3,7 +3,7 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 목록(대기열 20, 15회차. 근거 문장의 종류는 대기열 45, 목록 모양은 대기열 76, 부르는 쪽의 길은 대기열 60, 잔존을 세는 문서는 대기열 87), 6단계 4의 받는 쪽 확인(대기열 3). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 목록(대기열 20, 15회차. 근거 문장의 종류는 대기열 45, 목록 모양은 대기열 76, 부르는 쪽의 길은 대기열 60, 잔존을 세는 문서는 대기열 87), 6단계 4의 받는 쪽 확인(대기열 3), 2단계의 사용자 답과 옮기는 변경의 옛 판정(대기열 46·181), 4단계의 외부 근거 발췌(대기열 156), 6단계 1의 고친 문장의 근거(대기열 154), 2와 4의 보류·넘김의 책임 근거(대기열 151), 5의 pre-commit 갈음(대기열 180). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
@@ -40,6 +40,11 @@ Look for the originating spec, in this order:
 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
 티켓 없이 사용자 요청을 명세로 쓸 때는 **요구**와 **리뷰어 참고**를 다른 절로 적는다. 참고 절에는 "요구가 아니다 — 빠뜨렸다고 내지 마라"를 붙인다. 가르지 않으면 명세 축이 "이 세션이 한 것" 목록을 요구로 읽어 표준 축이 지우라고 한 문장을 누락으로 낸다(대기열 26).
+
+명세가 티켓이든 사용자 요청이든 요구에 넣는 것이 둘 더 있다.
+
+- **사용자의 답.** `AskUserQuestion`의 답은 라벨과 함께 고른 선택지의 설명을 글자 그대로 옮기고, 요약을 확인받은 질문이면 그 요약도 옮긴다. 결정의 조건은 설명과 요약에 있다. 라벨만 넘기자 명세 축이 설명과 공유 이해 요약에 있던 결정 셋을 범위 넘침으로 냈고, "거절은 429"로 줄여 옮기자 설명의 "요청 크기 초과는 기존 422"가 빠져 Major가 났다(대기열 46).
+- **옮기는 변경의 옛 판정.** 손으로 지은 스크립트를 도구나 명세로 대신하는 것처럼 옛 구현을 옮기는 변경이면, 옛 구현이 판정하던 것과 계약을 하나씩 목록으로 적는다. 새 경우를 받으려고 넓힌 판정이 옛 경우까지 풀었는지를 명세 축이 그 목록으로 잡는다(대기열 181).
 
 ### 3. Identify the standards sources
 
@@ -88,6 +93,8 @@ If the diff touches no source file (no `*.py` under `src/`, `tests/`, `tools/`; 
   8. **기점.** 변경을 세는 기점은 날짜가 아니라 커밋이다.
   9. **부르는 쪽의 길.** 독스트링·메모가 부르는 쪽에 안내하는 길(닫기, 취소, 재시도)은 테스트가 그 길을 그대로 밟는지 본다. 안내한 호출로 실제로 닫히거나 끊기는지, 기다리는 도중에 불러도 그런지 잰다.
 
+- diff가 저장소 밖의 문서(공식 문서, 표준, 상류 소스)를 근거로 들면 그 절의 짧은 발췌와 URL을 두 브리프에 싣는다. 본 세션이 받아 둔 사본을 두 축이 읽으려 하자 권한 분류기가 거부해, 둘 다 그 근거를 대조 불가로 남겼다(대기열 156).
+
 **Spec sub-agent prompt** should include:
 
 - The diff command, the untracked file list, and the commit list.
@@ -108,13 +115,13 @@ End with a one-line summary: total findings per axis, and the worst issue _withi
 
 보고로 끝내지 않는다. 주 용도가 커밋 전 셀프 리뷰이고 다음 단계가 커밋이므로, 그 사이가 여기다. 심각도의 원천은 `CODING_STANDARDS.md`다.
 
-1. **고친다.** 문서화된 표준 위반, 명세의 누락·부분 구현, 요청하지 않은 범위 추가는 고친다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다.
-2. **근거를 먼저 본다.** 지적이 불분명하거나 기술적으로 맞지 않아 보이면 그대로 구현하지 않는다. 코드와 명세에서 근거를 확인한 뒤 수정 여부를 정한다. 서브에이전트 둘은 격리된 컨텍스트에서 diff와 표준 문서만 봤고 ADR도 주변 코드도 모른다. 특히 smell baseline은 스스로 judgement call이라고 말하는 휴리스틱이라, 포트와 어댑터의 간접층이 Middle Man으로, 원칙 IV가 요구하는 경계가 Speculative Generality로 보인다. 오탐을 그대로 고치면 수정이 원칙을 깬다. 봇의 초록을 믿지 않는 것과 같은 이유로 봇의 빨강도 그대로 믿지 않는다(`docs/constitution/operations.md` 리뷰 파이프라인). PR 직전 축의 트리아지에 대응하는 것이 이 단계다.
+1. **고친다.** 문서화된 표준 위반, 명세의 누락·부분 구현, 요청하지 않은 범위 추가는 고친다. Critical·Major는 커밋 전에 고친다. 건너뛰지 않는다. 고치며 새로 쓰는 사실 문장은 그 근거(일지, 코드, `gh`, 상류 소스)를 끝까지 열고 쓴다. 근거를 끝까지 열지 않고 쓴 새 문장이 두 번 틀렸고, 두 번 모두 다른 리뷰가 잡았다(대기열 154).
+2. **근거를 먼저 본다.** 지적이 불분명하거나 기술적으로 맞지 않아 보이면 그대로 구현하지 않는다. 코드와 명세에서 근거를 확인한 뒤 수정 여부를 정한다. 서브에이전트 둘은 격리된 컨텍스트에서 diff와 표준 문서만 봤고 ADR도 주변 코드도 모른다. 특히 smell baseline은 스스로 judgement call이라고 말하는 휴리스틱이라, 포트와 어댑터의 간접층이 Middle Man으로, 원칙 IV가 요구하는 경계가 Speculative Generality로 보인다. 오탐을 그대로 고치면 수정이 원칙을 깬다. 봇의 초록을 믿지 않는 것과 같은 이유로 봇의 빨강도 그대로 믿지 않는다(`docs/constitution/operations.md` 리뷰 파이프라인). PR 직전 축의 트리아지에 대응하는 것이 이 단계다. 지적을 쓰는 쪽(부르는 쪽)이나 다른 층의 몫으로 보고 보류하려면 그 책임을 정한 표준이나 계약(WAI-ARIA 같은 명세, ADR, 포트의 독스트링)을 근거로 든다. 들 수 없으면 고친다. 근거 없이 쓰는 쪽의 몫으로 둔 `aria-valuenow` 범위를 PR 봇이 다시 냈는데, WAI-ARIA 1.2는 범위 밖의 값을 무효로 정해 두어 그 속성을 다는 컴포넌트의 몫이었다(`https://www.w3.org/TR/wai-aria-1.2/#aria-valuenow`, 대기열 151).
 3. **먼저 묻는다.** 수정 방법이 아키텍처 결정이거나 계약(`sdk/`, `openapi.json`, 헌법)에 닿으면 고치기 전에 사용자 판단을 받고, ADR이 필요한지 같이 묻는다(`CLAUDE.md` 작업 규약 5).
-4. **남긴다.** Minor·Nit과 근거를 보고 보류한 지적은 별도 티켓이나 회고 후보로 빼고 이유를 한 줄 남긴다. 판단 항목만으로 커밋을 막지 않는다. 다른 층이나 다음 티켓에 넘기는 것("HTTP 층에서 재확인")은 **받는 쪽**(그 티켓의 수용 기준, `plan.md`의 그 기능 행)에 적고, 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 미루는 쪽은 적지만 받는 쪽이 읽는다는 보장이 없고, 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
-5. **다시 돌린다.** 고쳤으면 `CLAUDE.md`의 검증 명령을 모두 다시 돌린다. 전체 리뷰는 다시 돌리지 않는다.
+4. **남긴다.** Minor·Nit과 근거를 보고 보류한 지적은 별도 티켓이나 회고 후보로 빼고 이유를 한 줄 남긴다. 판단 항목만으로 커밋을 막지 않는다. 다른 층이나 다음 티켓에 넘기는 것("HTTP 층에서 재확인")은 2의 책임 근거를 들어 **받는 쪽**(그 티켓의 수용 기준, `plan.md`의 그 기능 행)에 적고, 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 미루는 쪽은 적지만 받는 쪽이 읽는다는 보장이 없고, 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
+5. **다시 돌린다.** 고쳤으면 `CLAUDE.md`의 검증 명령을 모두 다시 돌린다. 다음이 커밋이면 그중 손으로 치는 다섯은 커밋이 부르는 pre-commit의 결과로 갈음한다. pre-commit이 같은 명령을 돌아, 손으로 친 것이 커밋 직전에 한 번 더 돌았다(무엇이 갈음되는지는 `CLAUDE.md` 검증 명령 절, 대기열 180). 전체 리뷰는 다시 돌리지 않는다.
 
-보고 끝에 세 줄을 더한다. 고친 것, 남긴 것과 이유, 다시 돌린 명령과 결과.
+보고 끝에 세 줄을 더한다. 고친 것, 남긴 것과 이유, 다시 돌린 명령과 결과(pre-commit으로 갈음하면 그렇게 적는다).
 
 ## Why two axes
 
