@@ -35,7 +35,7 @@
   프로젝트의 문서가 아니라(`README.md`) 이 저장소의 다음 화면(web-widget)이 따를 규약은 이 절에 있어야 한다. 킥오프에 과정을
   더해 달라는 요청을 이 저장소의 규약에도 적용한 것은 이 세션의 판단이다.
 - **계획** `.scratch/plan.md`에 design-refresh 행을 더하고, admin-style과 web-widget의 Blocked by에 그것을 더했다. 프론티어 문단과
-  admin-style 행에서 옛 상태("막힌 것이 없다", "다음은 Claude Design에서 화면을 그리는 것")를 지난 일로 고쳤다.
+  admin-style 행에서 옛 상태(둘 다 막힌 것이 없다, 다음은 화면을 그리는 것이다)를 지난 일로 고쳤다.
 - **NOTES** #183에서 보류한 claude-review의 Minor를 고쳤다. owner를 보이는 것은 화면 디자인 절의 규약이 아니라 도구 설명에
   기댄 권고라고 갈라 적었다.
 
