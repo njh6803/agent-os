@@ -269,8 +269,8 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
-        if "--check" in argv:
-            return check(spec, root=root, out=out)
+        if args.checking:
+            return check(selected, root=root, out=out)
 '''
 new = '''
 '''
@@ -292,8 +292,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''dict.fromkeys((m.runner, tuple(m.tests)) for m in spec.mutation)'''
-new = '''dict.fromkeys((m.runner, ()) for m in spec.mutation)'''
+old = '''        key = (m.runner, tuple(m.tests))'''
+new = '''        key = (m.runner, ())'''
 
 [[mutation]]
 name = "러너의 자리가 아니라 루트에서 돈다"
@@ -302,8 +302,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''return runner([*command.command, *tests], root / command.cwd)'''
-new = '''return runner([*command.command, *tests], root)'''
+old = '''return runner([*command.command, *tests], root / command.cwd, timeout)'''
+new = '''return runner([*command.command, *tests], root, timeout)'''
 
 [[mutation]]
 name = "모르는 선택을 변이 이름으로 넘긴다"
@@ -314,8 +314,9 @@ expect = "red"
 file = "tools/mutate.py"
 old = '''
     if flags:
-        out(f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 하나다")
-        return 2
+        raise _UsageError(
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 와 --since <커밋> 이다"
+        )
 '''
 new = '''
 '''
@@ -339,11 +340,11 @@ expect = "red"
 file = "tools/mutate.py"
 old = '''
     if not rest:
-        out(__doc__ or "")
+        raise _UsageError(__doc__ or "")
 '''
 new = '''
     if not argv:
-        out(__doc__ or "")
+        raise _UsageError(__doc__ or "")
 '''
 
 [[mutation]]
