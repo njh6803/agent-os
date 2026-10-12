@@ -1,0 +1,531 @@
+# tools/hook_bash_msys_pathconv.py 의 판정을 하나씩 깨서 tests/tools/test_hook_bash_msys_pathconv.py 가
+# 빨개지는지 본다(대기열 195). 사용: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+
+[[mutation]]
+name = "공백이 든 인자도 바꾼다고 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+'''
+new = '''
+    if argument[:1] in ("~", "/"):
+'''
+
+[[mutation]]
+name = "~ 로 시작해도 바꾼다고 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+'''
+new = '''
+    if argument[:1] == "/" or any(char.isspace() for char in argument):
+'''
+
+[[mutation]]
+name = "/ 로 시작하는 인자도 같은 차례로 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+'''
+new = '''
+    if argument[:1] == "~" or any(char.isspace() for char in argument):
+'''
+
+[[mutation]]
+name = "건너뛰는 글자를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_CHARS = frozenset("`'*?[]")
+'''
+new = '''
+_SKIP_CHARS = frozenset("*[]")
+'''
+
+[[mutation]]
+name = "글롭 글자를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_CHARS = frozenset("`'*?[]")
+'''
+new = '''
+_SKIP_CHARS = frozenset("`'?")
+'''
+
+[[mutation]]
+name = "/~ 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./", ":../")
+'''
+new = '''
+_SKIP_PARTS = ("::", "@@", ":./", ":../")
+'''
+
+[[mutation]]
+name = ":: 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./", ":../")
+'''
+new = '''
+_SKIP_PARTS = ("/~", "@@", ":./", ":../")
+'''
+
+[[mutation]]
+name = "@@ 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./", ":../")
+'''
+new = '''
+_SKIP_PARTS = ("/~", "::", ":./", ":../")
+'''
+
+[[mutation]]
+name = "git 의 <rev>:./<경로> 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./", ":../")
+'''
+new = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":../")
+'''
+
+[[mutation]]
+name = "git 의 <rev>:../<경로> 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./", ":../")
+'''
+new = '''
+_SKIP_PARTS = ("/~", "::", "@@", ":./")
+'''
+
+[[mutation]]
+name = "= 뒤를 다시 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        if char == "=" or (dashed and char in ":,"):
+'''
+new = '''
+        if dashed and char in ":,":
+'''
+
+[[mutation]]
+name = "- 머리의 : 와 , 뒤를 다시 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        if char == "=" or (dashed and char in ":,"):
+'''
+new = '''
+        if char == "=":
+'''
+
+[[mutation]]
+name = "콜론 뒤 = 를 따라가지 않는다(옛 판정)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+            if "=" not in argument[index + 1 :]:
+'''
+new = '''
+            if True:
+'''
+
+[[mutation]]
+name = "오른쪽이 / 로 시작하는 것을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+            if argument[index + 1] in "./":
+'''
+new = '''
+            if argument[index + 1] == ".":
+'''
+
+[[mutation]]
+name = "URL 도 바꾼다고 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+                return has_slashes and argument[index + 1 : index + 3] != "//"
+'''
+new = '''
+                return has_slashes
+'''
+
+[[mutation]]
+name = "왼쪽에 슬래시가 없어도 바꾼다고 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+                return has_slashes and argument[index + 1 : index + 3] != "//"
+'''
+new = '''
+                return argument[index + 1 : index + 3] != "//"
+'''
+
+[[mutation]]
+name = "왼쪽의 역슬래시를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        if char in "/\\":
+'''
+new = '''
+        if char == "/":
+'''
+
+[[mutation]]
+name = "변환을 끈 명령도 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if _PATHCONV_OFF.search(command):
+'''
+new = '''
+    if _PATHCONV_OFF.search(command) and False:
+'''
+
+[[mutation]]
+name = "줄 잇기를 잇지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    source = "\n".join(_without_heredoc_bodies(command.replace("\\\n", " ")))
+'''
+new = '''
+    source = "\n".join(_without_heredoc_bodies(command))
+'''
+
+[[mutation]]
+name = "개행을 늘리지 않아 주석이 경계를 먹는다(옛 판정)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    source = source.replace("\n", "\n\n")
+'''
+new = '''
+    source = source
+'''
+
+[[mutation]]
+name = "개행으로 조각을 가르지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_PUNCTUATION = "();<>|&\n"
+'''
+new = '''
+_PUNCTUATION = "();<>|&"
+'''
+
+[[mutation]]
+name = "연산자로 조각을 가르지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+            else:
+                segments.append([])
+'''
+new = '''
+            else:
+                pass
+'''
+
+[[mutation]]
+name = "리다이렉션도 조각을 가른다(옛 판정)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+            elif _REDIRECTION.fullmatch(token):
+'''
+new = '''
+            elif False:
+'''
+
+[[mutation]]
+name = "리다이렉션 앞의 fd 숫자를 빼지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+                if segments[-1] and segments[-1][-1].isdigit():
+'''
+new = '''
+                if False:
+'''
+
+[[mutation]]
+name = "따옴표를 풀지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    lexer = shlex.shlex(source, posix=True, punctuation_chars=_PUNCTUATION)
+'''
+new = '''
+    lexer = shlex.shlex(source, posix=False, punctuation_chars=_PUNCTUATION)
+'''
+
+[[mutation]]
+name = "# 를 주석으로 읽지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    lexer.whitespace_split = True
+'''
+new = '''
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+'''
+
+[[mutation]]
+name = "heredoc 본문을 벗기지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        opener = _heredoc_opener(line)
+'''
+new = '''
+        opener = None
+'''
+
+[[mutation]]
+name = "산술 안의 << 도 heredoc 으로 읽는다(옛 판정)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        if before.count("((") <= before.count("))"):
+'''
+new = '''
+        if True:
+'''
+
+[[mutation]]
+name = "here-string 을 heredoc 으로 읽는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+new = '''
+_HEREDOC_OPENER = re.compile(r"<<(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+
+[[mutation]]
+name = "명령 앞의 낱말을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        segment[index] in _LEADING_WORDS or _ASSIGNMENT.match(segment[index])
+'''
+new = '''
+        _ASSIGNMENT.match(segment[index])
+'''
+
+[[mutation]]
+name = "환경변수 대입을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        segment[index] in _LEADING_WORDS or _ASSIGNMENT.match(segment[index])
+'''
+new = '''
+        segment[index] in _LEADING_WORDS
+'''
+
+[[mutation]]
+name = "git 이 아닌 명령의 인자도 본다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if index == len(segment) or _GIT.fullmatch(segment[index]) is None:
+'''
+new = '''
+    if index == len(segment):
+'''
+
+[[mutation]]
+name = "경로로 부른 git 을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_GIT = re.compile(r"(?:.*[/\\])?git(?:\.exe)?", re.IGNORECASE)
+'''
+new = '''
+_GIT = re.compile(r"git")
+'''
+
+[[mutation]]
+name = "Git Bash 가 아닌 자리에서도 알린다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    return os_name == "nt" or "MSYSTEM" in environ
+'''
+new = '''
+    return True
+'''
+
+[[mutation]]
+name = "안내가 체인 앞에 붙이라고 한다(옛 문구)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+        " 아니다). 결과가 실패나 '없음'이면 이 때문일 수 있다. 그 git 바로 앞에"
+'''
+new = '''
+        " 아니다). 결과가 실패나 '없음'이면 이 때문일 수 있다. 명령 앞에"
+'''
+
+[[mutation]]
+name = "settings.json 이 PowerShell 에도 건다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_msys_pathconv.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+'''
+new = '''
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_msys_pathconv.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_bash_msys_pathconv.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+'''
