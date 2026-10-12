@@ -66,6 +66,14 @@
   확인이 모두 지났다. ruff 둘은 `.py`가 없어 `Skipped`였고, 리뷰 뒤에 `.py`를 바꾸지 않아 리뷰 전에 손으로 친 초록이 그대로다.
   사진 비교도 다시 돌려 82개 모두 초록이었다.
 
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 origin/main을 합친 뒤에 돌렸다. `/security-review`는 발견이
+없었다(새 의존성은 판이 고정이고 생명주기 스크립트가 없으며, 글꼴 CSS는 `./files/`만 가리킨다). `bug-perf-review`는 유효 Minor
+하나를 냈다. design-system 프로브 README의 `ui_mutations.toml` 행이 "변이 표 37개"라 이 브랜치가 더한 하나를 세지 않았다. 38개로
+고쳤다. 오탐 열 줄(글꼴 변수의 상속, `firstFamily`의 자르기, 변이의 원문 등)은 따라가 보니 문제가 아니었다. 보류 하나는 병합
+직전의 `plan.md` 판정이라 그때 한다.
+
 ## 회고
 
 후보 하나를 냈고 승인됐다.
