@@ -158,7 +158,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if alive(pid):'''
+old = '''    if pid is not None and alive(pid):'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -409,7 +409,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에") is None:
+old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:
         return 1
 '''
 new = '''    pass
@@ -529,7 +529,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")'''
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)'''
 new = '''    again = (Verdict("delete", wt.path, "", wt.branch, wt.head), gather(root, wt, ops.git))'''
 
 [[mutation]]
@@ -546,11 +546,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    stop = _probe(Path(wt.path), ops.rename, ops.holders)
+old = '''    stop = _probe(Path(wt.path), ops.rename, ops.processes)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    stop = _probe(Path(wt.path), ops.rename, ops.holders)
+    stop = _probe(Path(wt.path), ops.rename, ops.processes)
 '''
 
 [[mutation]]
@@ -567,11 +567,11 @@ new = ''''''
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+old = '''    holders = holders_in(ops.processes(), wt.path)
 '''
 new = '''    if not _unlock(root, wt, ops.git):
         return 1
-    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에")
+    holders = holders_in(ops.processes(), wt.path)
 '''
 
 [[mutation]]
@@ -615,7 +615,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            f"{describe_holders(holders(path))}"'''
+old = '''            f"{describe_holders(holders_in(processes(), str(path)))}"'''
 new = '''            ""'''
 
 [[mutation]]
@@ -626,7 +626,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''    aside = path.with_name(path.name + PROBE_SUFFIX)'''
-new = '''    holders(path)
+new = '''    processes()
     aside = path.with_name(path.name + PROBE_SUFFIX)'''
 
 [[mutation]]
@@ -708,6 +708,121 @@ expect = "red"
 file = "tools/tidy_checkouts.py"
 old = '''    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):'''
 new = '''    except OSError:'''
+
+# 대기열 186(chore/cwd-owner-and-review-turns): 판정 3이 작업 디렉터리로 쥔 프로세스를 주인으로 본다
+
+[[mutation]]
+name = "판정 3: 작업 디렉터리로 쥔 프로세스를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "작업_디렉터리로_쥔_프로세스가 or 쥔_워크트리는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "판정 3: 잠금이 없을 때만 쥔 프로세스를 본다(죽은 잠금은 풀고 지운다)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "죽은_잠금도_풀지_않고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders:'''
+new = '''    if holders and pid is None:'''
+
+[[mutation]]
+name = "판정 3: 살아 있는 잠금보다 쥔 프로세스를 먼저 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "쥔_프로세스보다_잠금의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is None:'''
+new = '''    if pid is None:'''
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if pid is not None and alive(pid):'''
+new = '''    if holders:
+        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    if pid is not None and alive(pid):'''
+
+[[mutation]]
+name = "판정 3: 쥔 프로세스를 볼 수 없으면 남긴다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "볼_수_없으면_판정_4의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if holders:'''
+new = '''    if holders or holders is None:'''
+
+[[mutation]]
+name = "judge: 프로세스를 워크트리마다 훑는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "한_번만_훑는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            holders_in(processes, wt.path),'''
+new = '''            holders_in(ops.processes(), wt.path),'''
+
+[[mutation]]
+name = "judge: 훑은 프로세스를 판정에 넘기지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "제목_모를_세션이_돌아도_남긴다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            holders_in(processes, wt.path),'''
+new = '''            (),'''
+
+[[mutation]]
+name = "remove: 탐침 앞의 재판정에서도 훑는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "탐침이_지나면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:'''
+new = '''    if _still_candidate(root, wt, merged, ops, "지우기 전에", holders_in(ops.processes(), wt.path)) is None:'''
+
+[[mutation]]
+name = "remove: 앞지우기 직전의 다시 거르기가 쥔 프로세스를 보지 않는다(PR #184 리뷰)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "주인이_생기면_앞지우기_전에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)'''
+new = '''    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", ())'''
+
+[[mutation]]
+name = "holders_in: 폴더 밖을 작업 디렉터리로 쥔 프로세스도 고른다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "폴더_안을_작업_디렉터리로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return [Holder(pid, image) for pid, image, cwd in processes if is_within(cwd, folder)]'''
+new = '''    return [Holder(pid, image) for pid, image, cwd in processes]'''
+
+[[mutation]]
+name = "holders_in: 볼 수 없었던 것을 빈 목록으로 돌린다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "폴더_안을_작업_디렉터리로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if processes is None:
+        return None
+    return [Holder'''
+new = '''    if processes is None:
+        return []
+    return [Holder'''
 
 # 초록 기대. 체크아웃된 브랜치는 git 이 `branch -D` 를 스스로 거부해(워크트리에 체크아웃돼 있다) 이 가드를
 # 빼도 1로 끝난다. 가드는 메시지를 위해 둔다.
