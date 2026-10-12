@@ -9,8 +9,10 @@
 //    자리다.
 // 값은 `design.mjs` 의 `readRefresh()` 가 돌려주는 디자인 토큰 JSON 에서 읽는다. 브라우저는 그 web 폴더의 `playwright` 가
 // 깐 chromium 이다(없으면 `pnpm -C web exec playwright install chromium`).
-// 측정의 표지: 1) 은 `getPropertyValue` 가 넣은 hex 를 그대로 돌려주고 계산값이 `rgba(` 로 시작한 회차, 2) 는 칠한 픽셀이 아래
-// 바탕과 다른 회차(반투명이 실제로 칠해졌다)만 측정으로 센다. 표지가 없는 회차가 하나라도 있으면 종료 코드가 1이다.
+// 측정의 표지: 1) 은 `getPropertyValue` 가 넣은 hex 를 그대로 돌려주고 계산값의 RGB 와 알파(소수 둘째 자리)가 그 hex 와 맞는
+// 회차, 2) 는 스크린샷이 1×1·깊이 8·RGB(A)·인터레이스 없음의 PNG 이고 칠한 픽셀이 아래 바탕과 다른 회차(반투명이 실제로
+// 칠해졌다)만 측정으로 센다. 표지가 없는 회차가 하나라도 있거나, 측정한 회차가 기대(직렬화 7, 픽셀 16)보다 적으면 종료
+// 코드가 1이다.
 // stdout 은 1) 의 hex 마다 계산값과 사용자 정의 속성 값, 2) 의 자리마다 칠한 RGB와 명암비, 판정(반올림)과 반올림 없는 값,
 // 그리고 chromium 판이다.
 
@@ -51,20 +53,43 @@ function semanticHex(theme, mode) {
   );
 }
 
-/** 1×1 PNG 의 첫 화소 RGB. 화소가 하나라 어느 필터든 원래 바이트가 그대로다(왼쪽과 위가 0). */
+/**
+ * 1×1 PNG 의 첫 화소 RGB. 화소가 하나라 어느 필터든 원래 바이트가 그대로다(왼쪽과 위가 0). 그 읽기는 폭·높이 1, 깊이 8,
+ * 색 유형 2(RGB)나 6(RGBA), 인터레이스 없음일 때만 맞아, 머리(IHDR)가 그렇지 않으면 `null` 을 돌려준다(측정 아님).
+ */
 function firstPixel(png) {
   const idat = [];
+  let header = null;
   for (let at = 8; at < png.length; at += 12 + png.readUInt32BE(at)) {
     const size = png.readUInt32BE(at);
-    if (png.toString("ascii", at + 4, at + 8) === "IDAT") idat.push(png.subarray(at + 8, at + 8 + size));
+    const type = png.toString("ascii", at + 4, at + 8);
+    if (type === "IHDR") header = png.subarray(at + 8, at + 8 + size);
+    if (type === "IDAT") idat.push(png.subarray(at + 8, at + 8 + size));
   }
+  const plain =
+    header !== null &&
+    header.readUInt32BE(0) === 1 &&
+    header.readUInt32BE(4) === 1 &&
+    header[8] === 8 &&
+    (header[9] === 2 || header[9] === 6) &&
+    header[12] === 0;
+  if (!plain) return null;
   const raw = inflateSync(Buffer.concat(idat));
   return [raw[1], raw[2], raw[3]];
+}
+
+/** `rgba(r, g, b, a)` 계산값을 수 넷으로. 그 꼴이 아니면 `null`. */
+function parseRgba(text) {
+  const match = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(text);
+  return match === null ? null : match.slice(1).map(Number);
 }
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 64, height: 64 }, deviceScaleFactor: 1 });
 let unmeasured = 0;
+// 기대하는 회차의 수. 디자인 토큰 JSON 이 비어 오면 아무것도 재지 않고 0으로 끝나지 않게 센다.
+const EXPECTED = { overlays: 7, pixels: 16 };
+const done = { overlays: 0, pixels: 0 };
 
 console.log("1) 직렬화");
 const overlays = Object.values(tokens.theme.nokcheong.primitive.overlay).map((hex) => hex.toLowerCase());
@@ -79,8 +104,17 @@ for (const hex of overlays) {
     el.remove();
     return out;
   }, hex);
-  const measured = custom.toLowerCase() === hex && computed.startsWith("rgba(");
-  if (!measured) unmeasured += 1;
+  // 계산값의 RGB 와 알파(소수 둘째 자리)가 넣은 hex 와 맞아야 측정이다. 8자리를 읽지 못한 브라우저의 초기값
+  // `rgba(0, 0, 0, 0)` 이 `rgba(` 로 시작한다는 것만으로 지나지 않게 한다.
+  const parsed = parseRgba(computed);
+  const alpha = Math.round((parseInt(hex.slice(7, 9), 16) / 255) * 100) / 100;
+  const measured =
+    custom.toLowerCase() === hex &&
+    parsed !== null &&
+    rgbOf(hex).every((v, i) => parsed[i] === v) &&
+    parsed[3] === alpha;
+  if (measured) done.overlays += 1;
+  else unmeasured += 1;
   console.log(`  ${hex} 계산값 ${computed} 사용자 정의 속성 ${custom}${measured ? "" : " (측정 아님)"}`);
 }
 
@@ -106,8 +140,14 @@ for (const theme of Object.keys(tokens.theme)) {
     for (const [label, inner] of INNERS) {
       await page.setContent(`<body style="margin:0">${box(hex[base], box(hex["bg-selected"], inner))}</body>`);
       const painted = firstPixel(await page.screenshot({ clip: { x: 40, y: 40, width: 1, height: 1 } }));
+      if (painted === null) {
+        unmeasured += 1;
+        console.log(`    ${label}: 측정 아님(스크린샷이 1×1·깊이 8·RGB(A)·인터레이스 없음의 PNG 가 아니다)`);
+        continue;
+      }
       const measured = painted.some((v, i) => v !== below[i]);
-      if (!measured) unmeasured += 1;
+      if (measured) done.pixels += 1;
+      else unmeasured += 1;
       console.log(
         `    ${label}: 칠한 ${painted.join(",")} ${ratio(text, painted).toFixed(3)}` +
           `${measured ? "" : " (측정 아님: 아래 바탕과 같다)"}`,
@@ -118,6 +158,12 @@ for (const theme of Object.keys(tokens.theme)) {
 
 console.log(`chromium ${browser.version()}`);
 await browser.close();
+for (const [what, expected] of Object.entries(EXPECTED)) {
+  if (done[what] !== expected) {
+    console.log(`측정한 ${what} 회차 ${String(done[what])}, 기대 ${String(expected)}`);
+    process.exitCode = 1;
+  }
+}
 if (unmeasured > 0) {
   console.log(`측정이 아닌 회차 ${String(unmeasured)}`);
   process.exitCode = 1;
