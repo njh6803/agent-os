@@ -1,4 +1,4 @@
-# 2026-10-12 (17) 카나리아 사전 확인 모드, 프로브 README `canary/` 행 정리, 못 보는 것의 테스트 고정
+# 2026-10-12 (21) 카나리아 사전 확인 모드, 프로브 README `canary/` 행 정리, 못 보는 것의 테스트 고정
 
 next-session 지시문으로 연 새 세션이다. 대기열 184·185를 `chore/canary-precheck` 한 PR로 반영하고, 187을 묶을지는 이
 세션이 정한다. 세션은 주 체크아웃에서 열려 `tidy-checkouts`로 루트를 당긴 뒤(`bd72bae`→`a76107e`) `EnterWorktree`로 새
@@ -121,8 +121,17 @@ PR 리뷰를 반영한 커밋 직전의 대조에서는 대기열 193·194를 PR
 
 claude-review 둘째 회차 뒤 병합하려 하자 PR이 `CONFLICTING`이었다. PR #187(`f5052ed`)이 병합되어 대기열 끝에 193·194를 더했다.
 origin/main을 다시 합쳐 main의 193·194 뒤에 이 브랜치의 195·196을 두었고, 프로브 README는 저절로 합쳐졌다. #187이 고친
-`next-session` 1단계에 일지 번호를 `tools/sibling_overlap.py`의 "다음 빈 번호" 줄에서 받으라는 문장이 섰다. 이 일지의 17은 그
-도구가 옮길 번호로 낸 것이다.
+`next-session` 1단계에 일지 번호를 `tools/sibling_overlap.py`의 "다음 빈 번호" 줄에서 받으라는 문장이 섰다. 그때의 17은 그
+도구가 옮길 번호로 낸 것이었다.
+
+그 CI가 초록이 된 뒤 다시 `CONFLICTING`이었다. PR #189(`a8e349c`)가 병합되어 `tools/canary.py`·`operations.md`·
+`bug_perf_review_budget.toml`은 다른 덩어리라 저절로 합쳐졌고, 대기열과 헌법 README가 충돌했다. 대기열은 187을 이 브랜치,
+188·190을 main의 닫힘으로, 189는 main이 더한 2회차로 두고 끝에 195·196 뒤로 main의 197~199를 이었다. 헌법 README는 main의
+3.0.26 줄("3.0.25는 … 비워 두었다"를 포함)을 두고 3.0.24 앞에 이 브랜치의 3.0.25 문단을 넣었다(3.0.19의 선례). #189는
+`bug_perf_review_budget.toml`의 `agent_tools`에 `TaskStop`을 더하고 정의 대조만 다시 봤다. 그래서 프로브 README의 그 명세
+결과에 그 한 마디를 더했다. 이 합침 뒤의 `tools/sibling_overlap.py`는 main의 일지 18과 형제 워크트리의 19·20을 보고, 17이
+이름순으로 그 뒤에 서지 못한다며(대기열 175, #187이 더한 판정) 21로 옮기라고 냈다. 그대로 옮기고 프로브 README와 대기열의
+인용 일곱을 고쳤다. 같은 출력의 "헌법 3.0.26 겹침"은 병합을 커밋하기 전이라 main의 판이 이 브랜치의 새 번호로 잡힌 것이다.
 
 ## PR 직전 보안·버그·성능 축
 
@@ -181,5 +190,5 @@ claude-review가 초록이었다. CodeRabbit은 PR을 연 직후 "manual review 
 ## 다음
 
 - **하네스 chore: 대기열 195.** 회차 다섯이라 결정표의 chore 배치다. 196·191(둘 다 카나리아 문서)을 묶을지는 그 세션이
-  정한다. 188·190은 PR #189(`chore/perf-review-background-and-triage`)가 맡아 돌고 있다.
+  정한다.
 - 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
