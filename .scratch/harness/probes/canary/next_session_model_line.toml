@@ -1,0 +1,24 @@
+# next-session 지시문 형식에 더한 "모델" 줄과 결정표의 "모델" 칸(ADR 0029)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-37).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_model_line.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 지시문 형식 코드 블록에서 "브랜치:"로 시작하는 줄 바로 다음 줄을 글자 그대로 옮기고,
+다음 작업 결정표에서 "작업을 마치지 못한 채 끊는다" 행의 맨 끝 칸을 글자 그대로 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["<low|medium|high|xhigh|max>", "남은 것이 PR 반영·병합뿐이면"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

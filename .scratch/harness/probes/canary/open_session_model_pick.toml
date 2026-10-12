@@ -1,0 +1,24 @@
+# open-session에 더한 모델 고르기의 출력 표지와 버린 길(ADR 0029)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-37). 같은 날 스킬 문구를 고친 뒤 사전 확인으로 갈음했다(같은 일지).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/open_session_model_pick.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+open-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 3단계에서 지시문에 모델 줄이 있을 때 sent= 뒤에 온다고 적은 출력 표지를 글자 그대로 옮기고,
+"하지 않는 것" 표에서 start_session으로 여는 것을 하지 않는 행의 오른쪽 칸을 글자 그대로 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["restored=<모델> / <레벨>", "같거나 싼 모델"]
+source = ".claude/skills/open-session/SKILL.md"
+skill = "open-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
