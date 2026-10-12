@@ -59,6 +59,8 @@ from typing import Literal, TypedDict
 Verb = Literal["cd", "pushd", "popd"]
 # (동사, 대상). 대상은 인자 그대로이고, 인자 없는 cd 는 `~`, 풀 수 없으면 None 이다.
 Step = tuple[Verb, str | None]
+# `_VERB` 가 잡은 낱말을 `Verb` 로 좁힌다.
+_VERBS: dict[str, Verb] = {"cd": "cd", "pushd": "pushd", "popd": "popd"}
 
 _MENTION = re.compile(r"(?<![\w-])(?:cd|pushd|popd)(?![\w-])")
 # here-string `<<<` 은 heredoc 이 아니다. 잡으면 뒤의 줄을 본문으로 지운다. 구분자는 식별자 밖의
@@ -176,7 +178,7 @@ def _backgrounded(segments: list[tuple[int, int, str]]) -> set[int]:
 
 
 def _step(word: str, arguments: str) -> Step:
-    verb = _verb(word)
+    verb = _VERBS[word]
     if verb == "popd":
         return (verb, None)
     try:
@@ -194,12 +196,6 @@ def _step(word: str, arguments: str) -> Step:
     if _UNRESOLVABLE.search(target) or (verb == "pushd" and target.startswith("+")):
         return (verb, None)
     return (verb, target)
-
-
-def _verb(word: str) -> Verb:
-    if word == "pushd":
-        return "pushd"
-    return "popd" if word == "popd" else "cd"
 
 
 def _masked(text: str) -> str:
