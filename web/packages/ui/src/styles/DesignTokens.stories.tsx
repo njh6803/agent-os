@@ -1,4 +1,4 @@
-// 디자인 토큰의 판정 스토리. 열 벌(테마 다섯 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 일곱 벌, rem 0,
+// 디자인 토큰의 판정 스토리. 열 벌(테마 다섯 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 다섯 벌, rem 0,
 // `@theme` 토큰이 모두 CSS 변수로 나오는 것, shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
 // 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB), 테마 사이의 차이, 명암비로 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -122,27 +122,36 @@ const FONT_FACES = [
   ["Noto Sans KR", 400, "가"],
   ["Noto Sans KR", 500, "가"],
   ["Noto Sans KR", 600, "가"],
-  ["JetBrains Mono", 400, "a"],
-  ["JetBrains Mono", 500, "a"],
-  ["IBM Plex Mono", 400, "a"],
-  ["IBM Plex Mono", 500, "a"],
+  ["Noto Sans Mono", 400, "a"],
+  ["Noto Sans Mono", 500, "a"],
 ] as const;
 
 export const Fonts: Story = {
-  name: "글꼴 일곱 벌이 모두 적재된다",
+  name: "글꼴 다섯 벌이 모두 적재되고 본문과 고정폭이 그 글꼴로 그려진다",
   render: () => (
-    <div className="flex flex-col gap-4">
-      {THEMES.map(({ key, name }) => (
-        <div key={key} data-theme={key} className="bg-bg p-4 text-text">
-          <p className="font-sans text-body">{name}: 승인을 기다리고 있습니다.</p>
-          <p className="font-sans text-body font-mid">허가하거나 거부해 주세요.</p>
-          <p className="font-sans text-body font-strong">실행이 실패했습니다.</p>
-          <p className="font-mono text-code font-medium">payments.refund</p>
-        </div>
-      ))}
+    <div className="flex flex-col gap-2 bg-bg p-4 text-text">
+      <p data-sample="sans" className="font-sans text-body font-regular">
+        승인을 기다리고 있습니다.
+      </p>
+      <p className="font-sans text-body font-medium">허가하거나 거부해 주세요.</p>
+      <p className="font-sans text-body font-strong">실행이 실패했습니다.</p>
+      <p data-sample="mono" className="font-mono text-code font-regular">
+        payments.refund(amount=1200)
+      </p>
+      <p className="font-mono text-code font-medium">payments.refund</p>
     </div>
   ),
-  play: async () => {
+  play: async ({ canvasElement }) => {
+    // 적재는 글꼴 이름만 본다. 글꼴 변수가 비거나 다른 이름이면 적재는 초록이어도 그림은 대체 글꼴이라 계산값도 본다.
+    const firstFamily = (selector: string): string =>
+      getComputedStyle(element(canvasElement, selector))
+        .fontFamily.split(",")[0]
+        ?.trim()
+        .replace(/^"|"$/g, "") ?? "";
+    await expect({
+      sans: firstFamily("[data-sample=sans]"),
+      mono: firstFamily("[data-sample=mono]"),
+    }).toEqual({ sans: "Noto Sans KR", mono: "Noto Sans Mono" });
     // 그 굵기의 글꼴이 없으면 브라우저는 가장 가까운 굵기를 받아도 `loaded` 로 답한다. 받은 글꼴의 굵기까지 본다.
     const missing: string[] = [];
     for (const [family, weight, sample] of FONT_FACES) {

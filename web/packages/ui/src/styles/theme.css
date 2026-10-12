@@ -7,7 +7,8 @@
  *   기본값을 비우므로 `text-base`·`rounded` 같은 익숙한 클래스는 아무 CSS 도 만들지 않는다. 그 실수는 스토리 테스트가
  *   잡는다(미리보기의 afterEach). `static` 이라 이 블록의 토큰은 소스가 쓰지 않아도 모두 CSS 변수로 낸다. 쓰인 것만
  *   내자 /design-sync 가 Claude Design 에 올린 CSS 에 `--text-title` 같은 변수가 없었다(판정 스토리 ThemeTokensEmitted).
- * - @theme inline 에는 테마나 모드마다 바뀌는 CSS 변수를 읽는 것(쓰임새 26개, 글꼴, 중간 굵기)을 둔다.
+ * - @theme inline 에는 테마나 모드마다 바뀌거나 감싼 요소가 다시 정할 수 있는 CSS 변수를 읽는 것(쓰임새 26개,
+ *   글꼴, 중간 굵기)을 둔다.
  * - 원색 토큰(--gray-500 등)과 쓰임새 토큰(--bg 등)은 @theme 밖의 CSS 변수라 유틸리티가 없다. 원색은 테마마다,
  *   쓰임새는 테마나 모드를 다는 요소마다 다시 선언한다. 사용자 정의 속성의 var() 는 선언한 요소에서 풀리므로, 쓰임새를
  *   :root 에만 두면 안쪽 요소의 data-theme 이 바꾼 원색을 다시 읽지 않는다.
@@ -109,6 +110,16 @@
 }
 
 @layer theme {
+  /*
+   * 글꼴 변수는 테마와 무관해 뿌리에 한 번 둔다(ADR 0026 의 셋째 2026-10-12 이력). 값이 var() 가 아니라 안쪽 요소와
+   * 테마를 단 요소가 그대로 물려받는다. 고정폭 칸의 한글은 덮지 않고 대체 글꼴로 그린다. 유틸리티가 이 둘을 inline 으로
+   * 읽으므로, 페이지 안 위젯은 감싼 요소에서 둘을 사이트 문서에 등록한 이름으로 다시 정할 수 있다(그 코드는 web-widget).
+   */
+  :root,
+  :host {
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "Noto Sans Mono", ui-monospace, monospace;
+  }
   :root,
   :host,
   [data-theme="muk"],
@@ -179,8 +190,6 @@
     --info-800: #003c4d;
     --info-900: #002633;
     --info-950: #001720;
-    --sans: "Noto Sans KR", system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, monospace;
     --weight-mid: 600;
   }
   [data-theme="cheongnok"],
@@ -251,8 +260,6 @@
     --info-800: #00346b;
     --info-900: #002148;
     --info-950: #00132f;
-    --sans: "Noto Sans KR", system-ui, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, monospace;
     --weight-mid: 500;
   }
   [data-theme="gongmun"],
@@ -323,8 +330,6 @@
     --info-800: #003958;
     --info-900: #00243a;
     --info-950: #001625;
-    --sans: "Noto Sans KR", system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, monospace;
     --weight-mid: 600;
   }
   [data-theme="hwangto"],
@@ -395,8 +400,6 @@
     --info-800: #003763;
     --info-900: #002242;
     --info-950: #00142b;
-    --sans: "Noto Sans KR", system-ui, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, monospace;
     --weight-mid: 600;
   }
   [data-theme="jadu"],
@@ -467,8 +470,6 @@
     --info-800: #0e3468;
     --info-900: #062046;
     --info-950: #03132d;
-    --sans: "Noto Sans KR", system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, monospace;
     --weight-mid: 500;
   }
   :root,

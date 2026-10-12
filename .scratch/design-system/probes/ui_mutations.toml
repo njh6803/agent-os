@@ -182,15 +182,30 @@ new = '''
 '''
 
 [[mutation]]
-name = "JetBrains Mono 500 을 싣지 않으면 Fonts 가 빨갛다(가까운 400 이 loaded 로 답해도)"
+name = "Noto Sans Mono 500 을 싣지 않으면 Fonts 가 빨갛다(가까운 400 이 loaded 로 답해도)"
 runner = "stories"
-tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "글꼴 일곱"]
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "글꼴 다섯"]
 expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/fonts.css"
 old = '''
-@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/noto-sans-mono/500.css";
+'''
+new = '''
+'''
+
+# design-refresh 티켓 01 이 더했다. 글꼴 파일은 그대로 적재되어 적재의 단언은 초록이고, 계산값의 단언만 빨갛다.
+[[mutation]]
+name = "뿌리의 --mono 가 없으면 고정폭 칸이 대체 글꼴로 그려져 Fonts 가 빨갛다"
+runner = "stories"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "글꼴 다섯"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    --mono: "Noto Sans Mono", ui-monospace, monospace;
 '''
 new = '''
 '''
