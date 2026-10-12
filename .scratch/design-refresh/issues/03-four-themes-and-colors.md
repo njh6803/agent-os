@@ -1,6 +1,6 @@
 # 03: 테마 넷과 색 — 녹청이 기본이 되고 컴포넌트 아홉이 새 색으로 그려진다
 
-**What to build:** 위젯과 관리 화면이 `@agent-os/ui`에서 테마 넷(군청 `guncheong`, 녹청 `nokcheong`(기본), 자초 `jacho`, 쪽빛 `jjokbit`) 가운데 하나를 `data-theme`으로 고른다. 테마는 색만 바꾸고, 쓰임새 토큰 23개가 디자인 파일과 같은 이름(`bg-raised`, `text-muted`, `bg-selected` 등)으로 풀린다. 컴포넌트 아홉이 새 상태 표의 색으로 그려진다. 상태 배지와 알림은 바탕을 칠하지 않고 테두리와 아이콘으로 가른다. 보조·위험 버튼은 바탕 없이 테두리로 서고, 위험 버튼을 누르면 `bg-selected`가 깔린다. 주 버튼은 녹청과 쪽빛에서 먹색, 군청과 자초에서 강조색이다. 판정 스토리 Matrix가 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과, 반투명 바탕을 겹쳐 잰 명암비 짝 43개를 본다. 사진의 정답이 녹청의 라이트·다크로 다시 선다. 크기와 모서리는 아직 지금의 디자인 토큰이다(04).
+**What to build:** 위젯과 관리 화면이 `@agent-os/ui`에서 테마 넷(군청 `guncheong`, 녹청 `nokcheong`(기본), 자초 `jacho`, 쪽빛 `jjokbit`) 가운데 하나를 `data-theme`으로 고른다. 테마는 색만 바꾸고, 쓰임새 토큰 23개가 디자인 파일과 같은 이름(`bg-raised`, `text-muted`, `bg-selected` 등)으로 풀린다. 컴포넌트 아홉이 새 상태 표의 색으로 그려진다. 상태 배지와 알림은 상태색으로 바탕을 칠하지 않고 테두리와 아이콘으로 가른다(배지는 투명, 알림은 중립의 `bg-raised`). 보조·위험 버튼은 바탕 없이 테두리로 서고, 위험 버튼을 누르면 `bg-selected`가 깔린다. 주 버튼은 녹청과 쪽빛에서 먹색, 군청과 자초에서 강조색이다. 판정 스토리 Matrix가 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과, 반투명 바탕을 겹쳐 잰 명암비 짝 43개를 본다. 사진의 정답이 녹청의 라이트·다크로 다시 선다. 크기와 모서리는 아직 지금의 디자인 토큰이다(04).
 
 01과 02 뒤에 돈다. 쓰임새 토큰의 이름을 바꾸는 순간 아홉 컴포넌트의 스토리가 모두 빨개지고(afterEach의 클래스 판정, 스토리 도우미), 옛 칠한 모양(`bg-tint`, `bg-*-tint`, `accent-hover`, `divider`, `border-hover`)은 옮길 새 이름이 없다. 그래서 이 티켓은 아홉의 색 모양까지 한 번에 옮긴다(명세 Further Notes의 2026-10-12 명세 검토 blocker와 to-tickets 주석). 04를 막는다. 헌법(`docs/constitution/tech.md`)을 바꾸는 티켓이 그 기능의 첫 티켓이 아닌 예외다. 웹 행의 테마 문장은 테마가 넷이 되는 이 티켓에서야 거짓이 되고, 이 티켓이 04·05를 막으므로 헌법을 바꾸는 티켓이 그 뒤의 티켓보다 먼저 선다는 규약의 뜻은 지킨다(design-system 티켓 02의 선례).
 
@@ -38,7 +38,7 @@
 - [ ] **카드.** 바탕 `bg-raised`, 테두리 `border`다
 - [ ] **글 입력.** 기본은 `bg-raised`·`border-control`·`text`이고 자리 글자 `text-muted`, 올림에 테두리 `text-muted`다. 쓸 수 없음은 `bg-disabled`·`text-disabled`와 테두리 `border`, 오류는 테두리 `danger`와 칸 아래 `danger` 글이다
 - [ ] **스위치.** 꺼짐은 트랙 `border-control`에 손잡이 `bg-raised`, 켜짐은 트랙 `accent`에 손잡이 `on-accent`이고 상태 글은 `text-muted`다. 올림은 트랙 위에 `bg-active`를 겹친다. 쓸 수 없음은 트랙 `bg-disabled`, 손잡이 `text-disabled`다
-- [ ] **알림.** 바탕을 칠하지 않는다. `bg-raised` 바탕에 `border` 테두리, 아이콘 `danger`·`warning`·`info`, 제목 `text`, 본문 `text-muted`다. 스토리가 바탕이 `bg-raised`이고 테두리가 `border`인지 본다
+- [ ] **알림.** 상태색으로 바탕을 칠하지 않는다. 바탕은 중립의 `bg-raised`이고 `border` 테두리, 아이콘 `danger`·`warning`·`info`, 제목 `text`, 본문 `text-muted`다. 스토리가 바탕이 `bg-raised`이고 테두리가 `border`인지 본다
 - [ ] **포커스 링.** 모든 조작의 포커스 링 색은 `focus-ring`(`outline-focus-ring`)이다
 
 ### 계산값 단언
