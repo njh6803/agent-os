@@ -274,7 +274,7 @@ Status: ready-for-agent
 
 - **이 PR이 고친 것.** `CONTEXT.md`(밀도를 세우고 테마의 뜻을 "색의 한 벌"로), `.scratch/plan.md`의 design-refresh·admin-style·web-widget 행(명세의 자리와 넘기는 것)과 프론티어 문장, `.scratch/design-system/design/README.md`(새 파일을 읽는 길), `.scratch/design-system/probes/README.md`(`design.mjs`의 `--refresh`), `kickoff/prompting.md`(보여 주기용 미리보기의 자리).
 - **컴포넌트마다의 쓰는 법 `<Name>.md`(아홉).** `/design-sync`가 그 파일을 컴포넌트의 설명으로 올려 Claude Design의 디자인 에이전트가 읽는다(ADR 0026 디자인 문서 절). 아홉 모두 출처를 디자인 파일 v3에서 재탐색 파일로 바꾸고, 새 모양과 어긋나는 문장을 고친다. 지금 어긋나는 것은 진행 표시의 위험 톤, 카드의 그림자 단계, 아이콘의 선 굵기와 24px다.
-- **`.claude/rules/web-design.md`.** 판정하는 것(여덟 벌, 밀도, 글꼴 다섯), 사진(녹청, 밀도 둘), 컴포넌트 공통의 props 문장("props 표(디자인 파일 05절)가 계약의 최소다"를 "props는 지금 코드가 계약이고 재탐색 디자인 파일의 props 표는 초안이다"로), 포커스 링과 쓸 수 없음의 클래스 이름, 계산값을 가를 수 없는 짝, 아이콘의 선(1.5px), 그림자(떠 있는 것에만), 보여 주기용 스토리를 두는 법과 동기화에서 판정용 스토리를 빼는 목록.
+- **`.claude/rules/web-design.md`.** 판정하는 것(여덟 벌, 밀도, 글꼴 다섯), 사진(녹청, 밀도 둘), 컴포넌트 공통의 props 문장("props 표(디자인 파일 05절)가 계약의 최소다"를, props는 지금 코드가 계약이고 재탐색 디자인 파일의 props 표는 초안이라는 뜻으로), 포커스 링과 쓸 수 없음의 클래스 이름, 계산값을 가를 수 없는 짝, 아이콘의 선(1.5px), 그림자(떠 있는 것에만), 보여 주기용 스토리를 두는 법과 동기화에서 판정용 스토리를 빼는 목록.
 - **`docs/constitution/tech.md`** 웹 행의 테마("색과 글꼴의 한 벌로 다섯"을 "색의 한 벌로 넷"), 글꼴 줄과 패키지, `allowBuilds`의 문장. 헌법 버전은 `docs/constitution/README.md`에서 patch로 올린다.
 - **코드 주석.** 디자인 토큰 CSS와 글꼴 CSS, 테마 목록, Storybook 미리보기 설정의 본체, 사진 비교의 머리 주석이 든 먹·다섯·글꼴 셋·`muk`.
 - **`.scratch/admin-style/design/screens-prompt.md`.** 기본 테마 "먹", 테마 다섯의 이름, 배치와 밀도의 수치를 새 결정으로(재탐색 프롬프트의 "고른 뒤" 4).
