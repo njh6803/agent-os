@@ -1,4 +1,4 @@
-# 대기열 160. tools/hook_line_separators.py 의 규칙 하나씩을 뺀 변이.
+# 대기열 160·52. tools/hook_line_separators.py 의 규칙 하나씩을 뺀 변이.
 # 변이마다 빨개져야 할 테스트 하나로 `-k` 를 좁힌다. 엉뚱한 테스트의 빨강이 기대와 맞지 않게 하기 위해서다
 # (docs/agents/issue-tracker.md 프로브와 근거 절, 대기열 144).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/line_separators_hook_mutations.toml
@@ -24,10 +24,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_line_separators.py"
 old = '''
-    for lineno, line in enumerate(text.split("\n"), 1):
+        newlines = text.count(_LF, scanned, start)
 '''
 new = '''
-    for lineno, line in enumerate(text.splitlines(), 1):
+        newlines = len(text[scanned:start].splitlines()) - 1 if scanned < start else 0
 '''
 
 [[mutation]]
@@ -38,10 +38,24 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_line_separators.py"
 old = '''
-        for column, character in enumerate(line, 1):
+        yield line, start - line_start + 1, match.group()
 '''
 new = '''
-        for column, character in enumerate(line):
+        yield line, start - line_start, match.group()
+'''
+
+[[mutation]]
+name = "둘째 줄부터도 열을 파일 머리에서 센다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "줄과_열을_알린다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+            line_start = text.rfind(_LF, scanned, start) + 1
+'''
+new = '''
+            pass
 '''
 
 [[mutation]]
@@ -155,8 +169,95 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_line_separators.py"
 old = '''
-        "필요하면 chr(0x2028) 처럼 만들고, 문서에는 이스케이프 대신 `U+2028` 로 적는다. 커밋 전 "
+        "있다(대기열 22·52·160). 소스에 그 문자가 필요하면 chr(0x2028) 처럼 만들고, 문서에는 "
 '''
 new = '''
-        "필요하면 문서에는 이스케이프 대신 `U+2028` 로 적는다. 커밋 전 "
+        "있다(대기열 22·52·160). 소스에 그 문자가 필요하면 문서에는 "
+'''
+
+# 대기열 52: 홀로 선 CR 과 `.py` 의 보이지 않는 공백·서식 문자
+
+[[mutation]]
+name = "홀로 선 CR 을 보지 않는다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "홀로_선_CR"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+    CR: "CARRIAGE RETURN",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "CRLF 의 CR 도 알린다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "홀로_선_CR"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+    re.escape(each) + (f"(?!{_LF})" if each == CR else "") for each in SEPARATORS
+'''
+new = '''
+    re.escape(each) for each in SEPARATORS
+'''
+
+[[mutation]]
+name = "보이지 않는 문자를 .py 밖에서도 알린다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "py_에서만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+    invisible = _invisible_class(text) if suffix in SOURCE_SUFFIXES else None
+'''
+new = '''
+    invisible = _invisible_class(text)
+'''
+
+[[mutation]]
+name = "서식 문자(Cf)를 보지 않는다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "커밋_전_검사와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+INVISIBLE_CATEGORIES = frozenset({"Zs", "Cf"})
+'''
+new = '''
+INVISIBLE_CATEGORIES = frozenset({"Zs"})
+'''
+
+[[mutation]]
+name = "ASCII 공백도 보이지 않는 문자로 본다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "줄_구분_문자가_없으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+        each for each in set(text) if ord(each) > 0x7F and _invisible_name(each) is not None
+'''
+new = '''
+        each for each in set(text) if _invisible_name(each) is not None
+'''
+
+[[mutation]]
+name = "보이지 않는 문자의 처방을 알리지 않는다"
+tests = ["tests/tools/test_hook_line_separators.py", "-k", "py_에서만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_line_separators.py"
+old = '''
+        "이스케이프 대신 `U+2028` 로 적는다. 필요 없는 문자면 지우거나 공백은 ASCII 공백으로, 홀로 "
+        "선 CR 은 개행으로 바꾼다. 커밋 전 `tools/check_line_separators.py` 가 막으니 지금 고친다."
+'''
+new = '''
+        "이스케이프 대신 `U+2028` 로 적는다. "
+        "커밋 전 `tools/check_line_separators.py` 가 막으니 지금 고친다."
 '''

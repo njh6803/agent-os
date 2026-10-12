@@ -131,8 +131,83 @@ tests = ["tests/tools/test_check_line_separators.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/check_line_separators.py"
-old = '    for lineno, line in enumerate(text.split("\n"), 1):'
-new = "    for lineno, line in enumerate(text.splitlines(), 1):"
+old = "        newlines = text.count(_LF, scanned, start)"
+new = "        newlines = len(text[scanned:start].splitlines()) - 1 if scanned < start else 0"
+
+[[mutation]]
+name = "줄 구분: 열을 0부터 센다"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = "        yield line, start - line_start + 1, match.group()"
+new = "        yield line, start - line_start, match.group()"
+
+[[mutation]]
+name = "줄 구분: 둘째 줄부터도 열을 파일 머리에서 센다"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = "            line_start = text.rfind(_LF, scanned, start) + 1"
+new = "            pass"
+
+[[mutation]]
+name = "줄 구분: 홀로 선 CR 을 보지 않는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = '''
+    CR: "CARRIAGE RETURN",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "줄 구분: CRLF 의 CR 도 잡는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = '    re.escape(each) + (f"(?!{_LF})" if each == CR else "") for each in SEPARATORS'
+new = "    re.escape(each) for each in SEPARATORS"
+
+[[mutation]]
+name = "보이지 않는 문자: .py 밖에서도 잡는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = "    invisible = _invisible_class(text) if suffix in SOURCE_SUFFIXES else None"
+new = "    invisible = _invisible_class(text)"
+
+[[mutation]]
+name = "보이지 않는 문자: 서식 문자(Cf)를 보지 않는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = 'INVISIBLE_CATEGORIES = frozenset({"Zs", "Cf"})'
+new = 'INVISIBLE_CATEGORIES = frozenset({"Zs"})'
+
+[[mutation]]
+name = "보이지 않는 문자: ASCII 공백도 잡는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = "        each for each in set(text) if ord(each) > 0x7F and _invisible_name(each) is not None"
+new = "        each for each in set(text) if _invisible_name(each) is not None"
+
+[[mutation]]
+name = "보이지 않는 문자: 파일의 확장자를 넘기지 않는다(대기열 52)"
+tests = ["tests/tools/test_check_line_separators.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/check_line_separators.py"
+old = "    return problems_in(data, path.suffix)"
+new = '    return problems_in(data, "")'
 
 [[mutation]]
 name = "줄 구분: 이진 파일도 본다"

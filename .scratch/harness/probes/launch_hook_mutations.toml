@@ -1,5 +1,6 @@
-# tools/launch_hook.py(대기열 91)의 지나가기와 위임, 지나갈 때의 알림(대기열 93), 그리고 tools/run_hooks.py 가
-# 그 래퍼로 띄우고 등록 모양과 이벤트마다의 알림을 판정하는 배선을 하나씩 빼는 변이.
+# tools/launch_hook.py(대기열 91)의 지나가기와 위임, 지나갈 때의 알림(대기열 93)과 그 알림을 세션마다 한 번만
+# 내는 것(대기열 174), 그리고 tools/run_hooks.py 가 그 래퍼로 띄우고 등록 모양과 이벤트마다의 알림을 판정하는
+# 배선을 하나씩 빼는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/launch_hook_mutations.toml
 
 [[mutation]]
@@ -110,9 +111,10 @@ tests = ["tests/tools/test_launch_hook.py", "tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/launch_hook.py"
-old = '''        sys.stdout.buffer.write(notice(reason, sys.stdin.buffer.read()).encode("utf-8"))
+old = '''            sys.stdout.buffer.write(notice(reason, strings).encode("utf-8"))
 '''
-new = ''
+new = '''            pass
+'''
 
 [[mutation]]
 name = "Stop 에서도 모델에게 알려 대화를 잇는다"
@@ -175,13 +177,13 @@ old = '''    except (ValueError, AttributeError):'''
 new = '''    except ValueError:'''
 
 [[mutation]]
-name = "문자열인지 보지 않고 이벤트 집합에 묻는다"
+name = "문자열인지 보지 않고 이벤트 집합과 열쇠에 쓴다"
 tests = ["tests/tools/test_launch_hook.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/launch_hook.py"
-old = '''    if isinstance(event, str) and event in CONTEXT_EVENTS:'''
-new = '''    if event in CONTEXT_EVENTS:'''
+old = '''        return {key: value for key, value in data.items() if isinstance(value, str)}'''
+new = '''        return {key: value for key, value in data.items()}'''
 
 [[mutation]]
 name = "러너가 systemMessage 하나를 notice 로 읽지 않는다"
@@ -277,3 +279,97 @@ expect = "red"
 file = "tools/launch_hook.py"
 old = '''세션에서 /tidy-checkouts)'''
 new = '''세션에서 /next-session)'''
+
+# 대기열 174: 지나갈 때의 알림을 세션·에이전트·이벤트·이유마다 한 번만
+
+[[mutation]]
+name = "호출마다 알린다(174 전)"
+tests = ["tests/tools/test_launch_hook.py", "-k", "첫_알림만"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''        if key is None or claim_first_notice(key):'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "표지가 이미 있어도 처음이라고 본다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "첫_알림만"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    except FileExistsError:
+        return False
+'''
+new = '''    except FileExistsError:
+        return True
+'''
+
+[[mutation]]
+name = "서브에이전트를 가르지 않는다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "에이전트나_이벤트가"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''strings.get("agent_id", "")'''
+new = '''""'''
+
+[[mutation]]
+name = "이벤트를 가르지 않는다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "에이전트나_이벤트가"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''strings.get("hook_event_name", ""), reason)'''
+new = '''"", reason)'''
+
+[[mutation]]
+name = "이유(훅)를 가르지 않는다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "훅이_다르면"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''strings.get("hook_event_name", ""), reason)'''
+new = '''strings.get("hook_event_name", ""))'''
+
+[[mutation]]
+name = "세션을 모르는 호출을 한 열쇠로 묶는다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "세션을_모르면"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    session = strings.get("session_id")
+    if not session:
+        return None
+'''
+new = '''    session = strings.get("session_id", "")
+'''
+
+[[mutation]]
+name = "표지 디렉터리 자리의 파일을 이미 알린 것으로 읽는다"
+tests = ["tests/tools/test_launch_hook.py", "-k", "표지를_쓰지_못하면"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    except OSError:
+        return True
+    try:
+'''
+new = '''    except FileExistsError:
+        return False
+    except OSError:
+        return True
+    try:
+'''
+
+[[mutation]]
+name = "임시 디렉터리를 고르는 실패를 try 밖에 둔다(PR 직전 버그·성능 리뷰)"
+tests = ["tests/tools/test_launch_hook.py", "-k", "임시_디렉터리가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/launch_hook.py"
+old = '''    try:
+        directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
+'''
+new = '''    directory = os.path.join(tempfile.gettempdir(), STATE_DIR)
+    try:
+'''
