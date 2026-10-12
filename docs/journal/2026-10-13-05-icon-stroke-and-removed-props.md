@@ -1,4 +1,4 @@
-# 2026-10-12 (42) design-refresh 02: 아이콘의 선을 화면 1.5px로 하고 디자인이 없앤 prop 넷을 뺀다
+# 2026-10-13 (05) design-refresh 02: 아이콘의 선을 화면 1.5px로 하고 디자인이 없앤 prop 넷을 뺀다
 
 ## 계기
 
@@ -142,7 +142,13 @@ PR #205. CI 일곱이 모두 초록이었다(python, web, e2e, visual, verify, c
   리뷰 파이프라인).
 - **claude-review.** 두 회차에 Minor 넷·Nit 둘, Critical·Major 없음. 모두 `.design-sync/`(사용 규약의 `elevation`과
   `shadow-1`~`shadow-3`, NOTES의 `CARD_ELEVATIONS`)와 `theme.css`의 `--shadow-color`였다. 앞의 셋은 티켓 02가 05로 넘긴 자리이고
-  05의 잔존 grep이 받는다. `--shadow-color`는 04의 `float`가 읽는다. 지적마다 보류 이유를 PR 코멘트에 남겼다.
+  05의 잔존 grep이 받는다. `--shadow-color`는 04의 `float`가 읽는다. 지적마다 보류 이유를 PR 코멘트에 남겼다. 3·4회차도 같은
+  지적을 되풀이했고 Critical·Major는 없었다.
+- **병합 전의 main 따라잡기.** 일지를 커밋한 뒤 형제 01(#204)이 먼저 병합되어 `theme.css` 머리 주석 한 줄에서 충돌했다. 01이 넓힌
+  문장에서 이 PR이 뺀 "그림자"만 걷어 합쳤다. 이어 #202와 #206이 대기열 끝에 행을 더해 두 번 충돌했고, 213·214·215를 번호순으로
+  남겼다. 충돌 중에는 GitHub가 CI를 시작하지 않았다. 마지막에는 #203이 일지 `2026-10-13-01`을 먼저 병합해, 이름순 최신이 되도록 이
+  일지를 `2026-10-12-42`에서 `tools/sibling_overlap.py`가 알려 준 `2026-10-13-05`로 옮기고 그 번호를 든 인용 넷을 고쳤다. 병합
+  커밋마다 pre-commit 전체가 지났고, 01을 합친 상태에서 `pnpm -C web visual`도 77개 통과했다.
 
 ## 회고
 
@@ -161,6 +167,6 @@ PR #205. CI 일곱이 모두 초록이었다(python, web, e2e, visual, verify, c
 
 ## 다음
 
-- design-refresh 티켓 03. 01(PR #204)과 02 가운데 나중에 병합한 세션이 지시문을 낸다. 03 티켓에 02의 메모 둘(진행 표시 줄,
-  카드 줄)이 있다.
+- design-refresh 티켓 03. 01(PR #204)이 먼저 병합되어, 02를 병합한 이 세션이 지시문을 내고 새 세션을 연다. 03 티켓에 02의
+  메모 둘(진행 표시 줄, 카드 줄)이 있다.
 - 주 체크아웃 미갱신: 루트는 main. 다음 새 세션이 `tidy-checkouts`로 당긴다.
