@@ -37,9 +37,9 @@ next-session 지시문으로 연 새 세션이다. 대기열 123(워크트리 �
   `.git` 없는 폴더에서는 루트에 조용히 닿는다. `.claude/rules/tools.md`의 "실패가 조용하고 패턴이 고정된 것"의 예외를
   가드 없는 쪽에 넓힌 판단이다.
 - **넷을 함께.** `.claude/settings.json`의 PreToolUse Bash 묶음에 래퍼 모양으로 등록했다. 테스트
-  `tests/tools/test_hook_bash_cd_outside.py`(27개), `tools/hook_payloads.toml`의 사례 넷(막기 둘은 06-11·12-09의 모양,
+  `tests/tools/test_hook_bash_cd_outside.py`(31개), `tools/hook_payloads.toml`의 사례 넷(막기 둘은 06-11·12-09의 모양,
   침묵 둘은 이 세션이 tidy-checkouts 3에서 친 명령의 모양과 서브셸 안의 cd), 변이 표
-  `.scratch/harness/probes/cd_outside_hook_mutations.toml`(열넷), 시간 프로브 `cd_outside_hook_time.sh`와 그 README 행이다.
+  `.scratch/harness/probes/cd_outside_hook_mutations.toml`(열일곱), 시간 프로브 `cd_outside_hook_time.sh`와 그 README 행이다.
 - `KICKOFF.md`의 훅 목록에 한 줄을 더했고, 대기열 123을 닫았다.
 
 훅 시간은 등록 모양으로 첫 판 234~299ms, 셀프 리뷰 반영 뒤 244~319ms였다(시간 프로브, 이 PC, 워크트리). 같은 날 다른 훅의
@@ -54,8 +54,8 @@ next-session 지시문으로 연 새 세션이다. 대기열 123(워크트리 �
 
 `/code-review`(base `bd72bae`, 수정 5·미추적 4·커밋 0). `.py`가 있어 두 축 모두 기본 모델이었다. 명세는 사용자 요청, 대기열 123
 행, 일지 09의 회고 4와 "다음", `.claude/rules/tools.md`의 새 훅 의무를 요구로, 184·185를 묶지 않은 결정과 막기를 고른
-까닭을 참고로 붙였다. 브리프를 쓰다가 내 문장 셋을 먼저 고쳤다(사건 수 "세 번", 영어 안내를 번역해 넣은 따옴표, 테스트
-독스트링의 "tidy-checkouts 판정 4 앞"). 표준 축은 Minor 4·Nit 1과 smell 하나, 명세 축은 Minor 4·Nit 1이었다. Critical·Major는
+까닭을 참고로 붙였다. 브리프를 쓰다가 내 문장 셋을 먼저 고쳤다(사건 수를 세 번으로 적은 것, 영어 안내를 번역해 넣은 따옴표, 테스트
+독스트링이 근거를 tidy-checkouts의 판정 4로 든 것). 표준 축은 Minor 4·Nit 1과 smell 하나, 명세 축은 Minor 4·Nit 1이었다. Critical·Major는
 없었다.
 
 - **고친 것.**
@@ -93,4 +93,30 @@ next-session 지시문으로 연 새 세션이다. 대기열 123(워크트리 �
   `lint-imports`, 지침 검사 초록. `tools/run_hooks.py`는 훅 페이로드 75건 어긋남 0, 표의 빈자리 0이었다.
 - 변이: 첫 판 열, 셀프 리뷰 반영 뒤 열넷 모두 기대대로(`tools/mutate.py`). 첫 판의 변이를 짜다가 `(cd /c/x && ls)`는 깊이
   판정 없이도 `(`가 명령 위치를 가려 초록인 것을 보고, 서브셸 안의 둘째 명령으로 선 cd를 테스트에 더했다.
-- 셀프 리뷰 반영 뒤의 검증은 커밋의 pre-commit으로 갈음한다(결과는 아래 PR 절).
+- 셀프 리뷰 반영 뒤에는 손으로 다시 치지 않고 커밋 `dcc3cdc`의 pre-commit으로 갈음했다. ruff 둘과 검사 러너의
+  여덟(zizmor, 지침 검사, lint-imports, 타입 우회 검사, pyright, 훅 러너, web-verify, pytest)이 모두 통과였고 러너는
+  315초였다. 표·줄 구분 문자·변이 표·커밋 메시지 검사도 통과였다. 인용 대조가 이 일지의 따옴표 하나(지운 옛 문구)를
+  알려 따옴표를 풀었다.
+- 커밋 뒤 origin/main(PR #183)을 합쳤다. 겹치는 파일은 없었다.
+
+## PR 직전 보안·버그·성능 축
+
+CodeRabbit CLI는 이번에도 `Seat: not assigned`라 대체 둘을 돌렸다(커밋 `4248c2e` 기준).
+
+- **보안(`/security-review`).** 발견 없음. 훅은 명령을 읽기만 하고 실행하지 않으며, 파일 시스템 호출은 읽기 전용
+  `os.path.exists` 하나다. 윈도의 네트워크 경로 조회로 로그인 해시가 새는 길은 `normalize`가 역슬래시와 겹 슬래시를 로컬
+  경로로 바꿔 닿지 않는다(하위 작업이 손으로 봤다). 이유 문장은 `json.dumps`로 직렬화돼 판정을 바꾸지 못한다.
+- **버그·성능(`bug-perf-review`).** 도구 호출 약 40번에서 스스로 보고를 냈다. 유효 다섯(Minor 셋, Nit 둘)이었다.
+  - 고쳤다(Minor): heredoc 여는 표지를 줄에서 날것으로 찾아, 구분자에 식별자 밖의 글자가 들거나(`END-OF-FILE`)
+    `<<\EOF`로 쓴 heredoc을 못 알아봐 본문의 cd를 셌고, 산술 `$((1 << n))`을 여는 표지로 읽어 뒤 줄의 cd를 놓쳤다.
+    구분자를 넓히고 `(( … ))` 안의 `<<`를 건너뛰게 했다. 테스트를 먼저 써서 빨강을 보고 고쳤다.
+  - 고쳤다(Nit): `;` 바로 뒤의 `#`도 주석으로 읽는다. 주석 속 작은따옴표가 인용을 열어 뒤의 cd를 가렸다.
+  - "못 보는 것"에 적었다: 같은 줄의 따옴표 안에 든 `<<`(이 저장소에서 흔한 `"$(cat <<'EOF'`와 줄 단위로 가르지
+    못한다), 파이프의 한 단이 된 묶음 `{ cd …; } | cat`(거짓 양성), `time -p cd`(Nit).
+  - 동작을 두고 적었다(Minor): 체크아웃 안의 중첩 저장소로 가는 cd도 다른 체크아웃으로 막는다. 그 안에 머문 셸의 git은
+    그 저장소를 겨누기 때문이다. 독스트링에 적고 테스트로 고정했다.
+  - 남겼다(Minor): cd 단계마다 조상을 경로 깊이만큼 조회해 깊이의 제곱으로 느려진다. 리뷰어가 손으로 재기로 하위로
+    들어가는 cd 800단계가 3.5초였고, 정상 명령은 빠르다. 20초를 넘으면 시간 제한으로 막지 않고 지나간다.
+  - 같은 heredoc 표지 정규식이 다른 훅(`hook_bash_heredoc` 등)에도 복사돼 있다. 그쪽은 이 PR 밖이라 두었다.
+  - 리뷰어의 압력 시험 프로세스 하나가 백그라운드에 남아 있어 멈췄다.
+- 반영 뒤 변이 열일곱이 모두 기대대로였다.

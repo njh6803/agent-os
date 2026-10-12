@@ -19,6 +19,8 @@ Bash 도구의 작업 폴더는 호출 사이에 이어진다. `cd` 로 다른 �
 다른 자리에서 돌고, `&&` 중간이 실패하면 돌아오는 `cd` 가 돌지 않는다. 체크아웃은 가장 가까운 조상
 중 `.claude/worktrees/<이름>` 이거나 `.git` 이 있는 폴더다. 앞의 것은 `.git` 이 없어도 따로
 센다(지우다 만 폴더). git 을 부르지 않는다 — 그 폴더에서 부른 git 은 주 체크아웃을 루트로 읽는다.
+체크아웃 안의 중첩 저장소(`.git` 이 있는 하위 폴더)도 다른 체크아웃으로 센다. 그 안에 머문 셸의 git
+은 그 저장소를 겨눈다.
 역슬래시와 슬래시, 대소문자(윈도의 경로는 가리지 않는다), Git Bash 의 `/c/…` 표기는 같은 자리로
 본다. `CLAUDE_PROJECT_DIR` 은 쓰지 않는다. 워크트리 세션에서는 주 체크아웃을
 가리킨다(.claude/rules/tools.md).
@@ -35,8 +37,10 @@ Bash 도구의 작업 폴더는 호출 사이에 이어진다. `cd` 로 다른 �
 링크, 인용 안에서 도는 `eval "cd …"`, 스크립트 파일 안의 cd, 함수 본문의 cd(한 줄 정의
 `f() { cd …; }` 와 `function` 정의는 세지 않아 그 함수를 부르면 놓치고, 여러 줄 정의는 부르지 않아도
 센다), `case` 갈래 안의 cd 와 짝 없는 `)` 뒤의 깊이, `$'…'` 안의 이스케이프된 작은따옴표 뒤,
-백그라운드로 돈 묶음 `{ cd …; } &`(센다 — 거짓 양성), PowerShell 의 `Set-Location`(이 훅은 Bash
-매처다. 여섯 사건이 모두 Bash 였다). 이 훅이 보지 못한 길로 이미 다른 체크아웃에 들어간 세션은
+백그라운드로 돈 묶음 `{ cd …; } &` 과 파이프의 한 단이 된 묶음 `{ cd …; } | cat`(센다 — 거짓 양성),
+옵션이 붙은 `time -p cd …`, 같은 줄의 따옴표 안에 든 `<<`(heredoc 으로 읽어 뒤의 줄을 지운다. 이
+저장소에서 흔한 `"$(cat <<'EOF'` 와 줄 단위로 가르지 못한다), PowerShell 의 `Set-Location`(이 훅은
+Bash 매처다. 여섯 사건이 모두 Bash 였다). 이 훅이 보지 못한 길로 이미 다른 체크아웃에 들어간 세션은
 돌아오는 cd 도 막힌다. 그 세션의 체크아웃을 몰라서다. 워크트리 세션은 `EnterWorktree(path)` 로
 돌아오고(이유 문장이 안내한다), 주 체크아웃 세션이 워크트리로 밀려났으면 cd 로 돌아올 길이 없다.
 """
@@ -57,8 +61,9 @@ Verb = Literal["cd", "pushd", "popd"]
 Step = tuple[Verb, str | None]
 
 _MENTION = re.compile(r"(?<![\w-])(?:cd|pushd|popd)(?![\w-])")
-# here-string `<<<` 은 heredoc 이 아니다. 잡으면 뒤의 줄을 본문으로 지운다.
-_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+# here-string `<<<` 은 heredoc 이 아니다. 잡으면 뒤의 줄을 본문으로 지운다. 구분자는 식별자 밖의
+# 글자(`END-OF-FILE`)와 역슬래시 인용(`<<\EOF`)도 받는다. 못 알아보면 본문의 cd 를 센다.
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
 # 파이프라인을 가르는 것과 파이프 한 단을 가르는 것. `2>&1`·`&>` 의 & 와 `>|` 의 | 는
 # 리다이렉션이다.
 _SEPARATOR = re.compile(r"\|\||&&|;;|\|&|[;\n]|(?<![<>&])&(?![&>])|(?<![>|])\|(?![|&])")
@@ -210,7 +215,7 @@ def _masked(text: str) -> str:
             index = _blank(out, index, _double_quote_end(text, index))
         elif char == "\\" and index + 1 < len(text):
             index = _blank(out, index, index + 2)
-        elif char == "#" and (index == 0 or text[index - 1].isspace()):
+        elif char == "#" and (index == 0 or text[index - 1].isspace() or text[index - 1] in ";&|("):
             close = text.find("\n", index)
             index = _blank(out, index, len(text) if close < 0 else close)
         else:
@@ -277,7 +282,7 @@ def _without_heredoc_bodies(command: str) -> list[str]:
         line = lines[index]
         kept.append(line)
         index += 1
-        opener = _HEREDOC_OPENER.search(line)
+        opener = _heredoc_opener(line)
         if opener is None:
             continue
         strips_tabs = opener.group(1) == "-"
@@ -291,6 +296,15 @@ def _without_heredoc_bodies(command: str) -> list[str]:
                 break
             kept.append(" " * len(body))
     return kept
+
+
+def _heredoc_opener(line: str) -> re.Match[str] | None:
+    """줄에서 heredoc 을 여는 첫 표지. 산술 `(( … ))` 안의 `<<`(왼쪽 밀기)는 아니다."""
+    for opener in _HEREDOC_OPENER.finditer(line):
+        before = line[: opener.start()]
+        if before.count("((") <= before.count("))"):
+            return opener
+    return None
 
 
 def deny_reason(command: str, cwd: str, home: str) -> str | None:

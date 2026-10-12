@@ -65,10 +65,24 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_cd_outside.py"
 old = '''
-        elif char == "#" and (index == 0 or text[index - 1].isspace()):
+        elif char == "#" and (index == 0 or text[index - 1].isspace() or text[index - 1] in ";&|("):
 '''
 new = '''
         elif False:
+'''
+
+[[mutation]]
+name = "세미콜론 바로 뒤의 샵을 주석으로 읽지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        elif char == "#" and (index == 0 or text[index - 1].isspace() or text[index - 1] in ";&|("):
+'''
+new = '''
+        elif char == "#" and (index == 0 or text[index - 1].isspace()):
 '''
 
 [[mutation]]
@@ -167,10 +181,38 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_cd_outside.py"
 old = '''
-_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
 '''
 new = '''
-_HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+_HEREDOC_OPENER = re.compile(r"<<(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+
+[[mutation]]
+name = "heredoc 구분자를 식별자로만 받는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+'''
+new = '''
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+'''
+
+[[mutation]]
+name = "산술의 왼쪽 밀기를 heredoc 으로 읽는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if before.count("((") <= before.count("))"):
+'''
+new = '''
+        if True:
 '''
 
 [[mutation]]

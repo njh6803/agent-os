@@ -87,6 +87,23 @@ def test_here_string_은_heredoc_이_아니다() -> None:
     assert cd_steps("grep x <<< bar\ncd /c/x") == [("cd", "/c/x")]
 
 
+def test_산술의_왼쪽_밀기는_heredoc_이_아니다() -> None:
+    """`$((1 << n))` 의 `<< n` 을 여는 표지로 읽으면 뒤의 줄을 지운다(PR 직전 리뷰가 잡았다)."""
+    assert cd_steps("echo $((1 << n))\ncd /c/x") == [("cd", "/c/x")]
+    assert cd_steps("(( x <<= 2 ))\ncd /c/x") == [("cd", "/c/x")]
+
+
+def test_식별자_밖의_구분자와_역슬래시_구분자도_heredoc_이다() -> None:
+    """못 알아보면 본문의 cd 를 명령으로 센다(PR 직전 리뷰가 잡았다)."""
+    assert cd_steps("cat > f.sh <<'END-OF-FILE'\ncd /c/x\nEND-OF-FILE") == []
+    assert cd_steps("cat <<\\EOF\ncd /c/x\nEOF") == []
+
+
+def test_세미콜론_바로_뒤의_샵도_주석이다() -> None:
+    """주석 속 작은따옴표가 인용을 열면 뒤의 cd 를 가린다(PR 직전 리뷰가 잡았다)."""
+    assert cd_steps("ls;# it's\ncd /c/x") == [("cd", "/c/x")]
+
+
 def test_인자_없는_cd_와_되돌리기와_pushd_를_가린다() -> None:
     assert cd_steps("cd") == [("cd", "~")]
     assert cd_steps("cd -") == [("cd", "-")]
@@ -129,6 +146,16 @@ def test_가장_가까운_체크아웃을_고른다(자리: dict[str, str]) -> N
     assert checkout_of(자리["mine"] + "/not/yet") == 자리["mine"]
     assert checkout_of(자리["main"] + "/docs") == 자리["main"]
     assert checkout_of(자리["scratch"]) is None
+
+
+def test_체크아웃_안의_중첩_저장소는_다른_체크아웃이다(자리: dict[str, str]) -> None:
+    """그 안에 머문 셸의 git 은 바깥 체크아웃이 아니라 그 저장소를 겨눈다."""
+    nested = Path(자리["mine"]) / "probe-repo"
+    (nested / ".git").mkdir(parents=True)
+
+    reason = _막는_이유("cd probe-repo", 자리["mine"], 자리)
+
+    assert _다른_체크아웃(nested.as_posix()) in reason
 
 
 def test_git_없는_워크트리_폴더도_따로_센다(자리: dict[str, str]) -> None:
