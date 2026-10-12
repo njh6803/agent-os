@@ -3,12 +3,14 @@
 - A_payload: 탐침 훅이 받은 입력마다 이벤트·도구 이름, 입력 키, `tool_response` 의 키와 타입, code,
   bytes, 결과의 글자·UTF-8 바이트 수와 bytes 와의 일치를 찍는다. 세 주소가 모두 찍혔고, 본문 통과
   문서는 200 에 일치, 요약 문서는 200 에 불일치, 리다이렉트 주소는 3xx 일 때 측정이다.
-- B_summary·C_passthrough: 같은 호출의 탐침 기록(요약이었는지 통과였는지), 스트림 전체에 훅의 첫
-  문장(`tools/hook_webfetch_summary.py` 의 `LEAD`)이 있는지, 모델의 마지막 답을 찍는다. B 는
-  요약이고 답이 그 문장을 옮겼을 때, C 는 통과이고 스트림에 그 문장이 없으며 답이 '알림 없음' 일 때
-  기대대로다. 탐침 기록이 없거나 그 호출이 요약·통과가 아니었으면 측정이 아니다.
+- B_summary·C_passthrough: 같은 호출의 탐침 기록(요약이었는지 통과였는지)과 모델의 마지막 답을
+  찍는다. B 는 요약이고 답이 훅의 첫 문장(`tools/hook_webfetch_summary.py` 의 `LEAD`)을 옮겼을 때,
+  C 는 통과이고 답이 그 문장 없이 '알림 없음' 일 때 기대대로다. 탐침 기록이 없거나 그 호출이
+  요약·통과가 아니었으면 측정이 아니다. stream-json 에는 훅의 additionalContext 가 실리지 않는다(B
+  의 스트림에서 그 문장은 모델의 답에만 있었다, 일지 2026-10-13-03). 그래서 스트림이 아니라 답으로
+  판정한다.
 
-측정이 아닌 변형이나 기대와 다른 변형이 하나라도 있으면 1로 끝난다.
+측정이 아닌 변형, 기대와 다른 변형, 모르는 변형 이름이 하나라도 있으면 1로 끝난다.
 돌리는 법:
 `uv run python .scratch/harness/probes/webfetch_payload/summarize.py <출력 디렉터리> [변형 ...]`.
 """
@@ -26,6 +28,7 @@ SUMMARIZED = "https://code.claude.com/docs/en/hooks"
 REDIRECTED = "https://docs.claude.com/en/docs/claude-code/hooks"
 RESPONSE_KEYS = ["bytes", "code", "codeText", "durationMs", "result", "url"]
 NO_NOTICE = "알림 없음"
+VARIANTS = ("A_payload", "B_summary", "C_passthrough")
 
 
 def read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -96,14 +99,8 @@ def check_payload(out: Path) -> list[str]:
 def check_notice(out: Path, name: str, lead: str) -> list[str]:
     summary = name == "B_summary"
     entries = read_jsonl(out / f"{name}_posttool.jsonl")
-    stream_text = (
-        (out / f"{name}.jsonl").read_text(encoding="utf-8", errors="replace")
-        if (out / f"{name}.jsonl").exists()
-        else ""
-    )
     answer = final_answer(read_jsonl(out / f"{name}.jsonl"))
-    in_stream = lead in stream_text
-    print(f"{name} 탐침 기록 {len(entries)}건, 스트림에 훅 첫 문장 {in_stream}\n  답 {answer!r}")
+    print(f"{name} 탐침 기록 {len(entries)}건\n  답 {answer!r}")
     if len(entries) != 1:
         return [f"{name}: 측정 아님 — WebFetch 의 PostToolUse 기록이 {len(entries)}건이다"]
     equal = response_of(entries[0]).get("utf8_equals_bytes")
@@ -111,7 +108,7 @@ def check_notice(out: Path, name: str, lead: str) -> list[str]:
         return [f"{name}: 측정 아님 — 그 호출이 {'요약' if summary else '통과'}가 아니었다"]
     if summary and lead not in answer:
         return [f"{name}: 답이 훅의 첫 문장을 옮기지 않았다"]
-    if not summary and (in_stream or NO_NOTICE not in answer):
+    if not summary and (lead in answer or NO_NOTICE not in answer):
         return [f"{name}: 통과에 훅이 알렸거나 답이 '{NO_NOTICE}' 가 아니다"]
     return []
 
@@ -121,8 +118,8 @@ def main() -> int:
     if isinstance(stream, io.TextIOWrapper):
         stream.reconfigure(encoding="utf-8")
     out = Path(sys.argv[1])
-    variants = sys.argv[2:] or ["A_payload", "B_summary", "C_passthrough"]
-    problems: list[str] = []
+    variants = sys.argv[2:] or list(VARIANTS)
+    problems = [f"모르는 변형 {name} — 재지 않았다" for name in variants if name not in VARIANTS]
     if "A_payload" in variants:
         problems += check_payload(out)
     notice_variants = [name for name in variants if name in ("B_summary", "C_passthrough")]

@@ -9,7 +9,9 @@
 
 갈래는 훅의 `context_for` 로 가른다. 판정을 여기서 다시 짓지 않는다 — 훅이 바뀌면 독스트링이
 근거로 드는 수도 따라 바뀌어야 한다. 침묵한 것은 code 가 2xx 밖이면 그 code, 아니면 본문 통과다.
-알린 것은 수를 든 문장이면 요약, 수 없는 문장이면 모양이 다른 결과 객체다. 통과와 요약은 한 줄씩
+알린 것은 수를 든 문장이면 요약, 수 없는 문장이면 모양이 다른 결과 객체다. 통과와 요약이 둘 다
+있고 통과의 가장 낮은 비가 요약의 가장 높은 비보다 클 때만 0으로 끝난다(훅 독스트링이 근거로 드는
+틈). 통과와 요약은 한 줄씩
 비율(결과 글자 수 / bytes), 글자 수, UTF-8 바이트 수, bytes, 주소로 찍는다. 결과의 내용은 찍지
 않는다. 결과 객체가 있는 기록이 하나도 없으면 측정이 아니라 1로 끝난다. 읽기만 한다.
 돌리는 법: 저장소 루트에서 `PYTHONUTF8=1 uv run python
@@ -72,7 +74,7 @@ def kind_of(fields: dict[str, object]) -> str:
     code = fields.get("code")
     if context is None:
         return f"code {code}" if isinstance(code, int) and not 200 <= code < 300 else "통과"
-    return "요약" if context.startswith(LEAD) and "바이트를" in context else "모양이 다른 결과 객체"
+    return "요약" if context.startswith(LEAD) and "바이트)" in context else "모양이 다른 결과 객체"
 
 
 def main() -> int:
@@ -118,9 +120,14 @@ def main() -> int:
     for kind, ratio, chars, encoded, size, url in sorted(rows, key=lambda row: (row[0], -row[1])):
         print(f"{kind} 비율 {ratio} 결과 {chars}자 {encoded}바이트 bytes {size} {url}")
     print(f"WebFetch 호출 {len(calls)}건, 결과 기록 {len(seen)}건: {dict(sorted(tally.items()))}")
-    measured = sum(count for kind, count in tally.items() if kind in ("통과", "요약"))
-    if not measured:
-        print("[문제] 측정 아님 — 결과 객체가 있는 2xx 기록이 없다")
+    ratios = {kind: [row[1] for row in rows if row[0] == kind] for kind in ("통과", "요약")}
+    if not ratios["통과"] or not ratios["요약"]:
+        print("[문제] 측정 아님 — 통과와 요약 가운데 한 무리가 없어 두 무리의 틈을 보지 못한다")
+        return 1
+    lowest, highest = min(ratios["통과"]), max(ratios["요약"])
+    print(f"통과의 가장 낮은 비 {lowest}, 요약의 가장 높은 비 {highest}")
+    if highest >= lowest:
+        print("[문제] 두 무리의 비가 겹친다 — 훅 독스트링의 근거(틈이 있다)가 서지 않는다")
         return 1
     return 0
 

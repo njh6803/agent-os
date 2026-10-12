@@ -486,7 +486,7 @@ payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 
 # --- hook_webfetch_summary (PostToolUse WebFetch) ---
 # 앞의 셋은 실제 결과 객체다. 요약과 301 은 webfetch_payload/run.sh 의 A(Claude Code 2.1.296), 404 는 트랜스크립트 10389e93.
 # 본문을 그대로 돌려준 실제 결과는 3만 바이트가 넘는 남의 문서 본문이라 옮기지 않는다. 넷째는 수만 맞춘 글로 래퍼를 거친
-# 그 갈래를 보고, 실제 입력은 같은 프로브의 C 가 본다(세션의 스트림에 훅 문장이 없었다).
+# 그 갈래를 보고, 실제 입력은 같은 프로브의 C 가 본다(세션의 모델이 알림이 없다고 답했다).
 [[case]]
 hook = "hook_webfetch_summary.py"
 expect = "context"

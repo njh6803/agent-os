@@ -94,7 +94,7 @@ class _Settings(TypedDict, total=False):
     hooks: dict[str, list[_HookGroup]]
 
 
-def test_요약_결과는_받은_바이트와_줄인_글자_수를_들어_알린다() -> None:
+def test_요약_결과는_받은_바이트와_답한_글자_수를_들어_알린다() -> None:
     context = context_for(_페이로드(SUMMARY))
 
     assert context is not None
@@ -103,6 +103,15 @@ def test_요약_결과는_받은_바이트와_줄인_글자_수를_들어_알린
     assert f"{len(SUMMARY_RESULT)}자" in context
     assert "curl" in context
     assert "docs/agents/issue-tracker.md" in context
+
+
+def test_답이_본문보다_길어도_줄였다고_하지_않는다() -> None:
+    """작은 페이지에 설명을 물으면 답이 본문보다 길 수 있다(PR 직전 버그·성능 리뷰)."""
+    context = context_for(_페이로드({**SUMMARY, "bytes": 200, "result": "가" * 600}))
+
+    assert context is not None
+    assert "200바이트" in context and "600자" in context
+    assert "줄였" not in context
 
 
 def test_본문을_그대로_돌려준_결과는_침묵한다() -> None:
