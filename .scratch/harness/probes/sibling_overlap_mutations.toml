@@ -1,7 +1,7 @@
 # tools/sibling_overlap.py(대기열 115·157·175·182)를 하나씩 깨는 변이.
 #   PYTHONUTF8=1 timeout 2400 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
-# 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 서른여덟이 1468초, 번마다
-# 32~53초였다(2026-10-12, 일지 2026-10-12-12).
+# 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초, 번마다
+# 33~55초였다(2026-10-12, 일지 2026-10-12-16).
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -127,8 +127,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    ours = fresh(numbers_of(Disk(root)), base_numbers)'''
-new = '''    ours = fresh(numbers_of(Tree(root, "HEAD")), base_numbers)'''
+old = '''    ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)'''
+new = '''    ours = unshared(fresh(numbers_of(Tree(root, "HEAD")), base_numbers), main_numbers)'''
 
 [[mutation]]
 name = "푸시 전의 새 커밋 위에 있는 이 브랜치 자신의 PR 도 형제로 본다"
@@ -212,6 +212,44 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''    return 1 if found or is_behind(result.ours, result.main.latest) else 0'''
 new = '''    return 1 if is_behind(result.ours, result.main.latest) else 0'''
+
+# 공유한 이력(PR 직전 버그 축: 쌓아 올린 아래 PR 이 squash 로 main 에 든 뒤)
+
+[[mutation]]
+name = "main 에 같은 파일로 이미 든 번호를 이 브랜치의 새 번호에서 빼지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)'''
+new = '''    ours = fresh(numbers_of(Disk(root)), base_numbers)'''
+
+[[mutation]]
+name = "공유한 일지를 번호만으로 가린다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    journals = {k: v for k, v in numbers.journals.items() if other.journals.get(k) != v}'''
+new = '''    journals = {k: v for k, v in numbers.journals.items() if k not in other.journals}'''
+
+[[mutation]]
+name = "공유한 대기열 행을 빼지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    rows = {k: v for k, v in numbers.rows.items() if other.rows.get(k) != v}'''
+new = '''    rows = dict(numbers.rows)'''
+
+[[mutation]]
+name = "같은 헌법 판을 공유한 이력으로 보고 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return Numbers(journals, adrs, rows, numbers.version)'''
+new = '''    return Numbers(journals, adrs, rows, None if numbers.version == other.version else numbers.version)'''
 
 # 다음 빈 번호(대기열 157·182)
 

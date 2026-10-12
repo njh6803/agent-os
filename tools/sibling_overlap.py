@@ -19,9 +19,12 @@
 
 "새로"는 이 브랜치와 `origin/main`의 merge-base에 없다는 뜻이다. 열린 PR과 워크트리는
 그 merge-base와 `origin/main` 어디에도 없는 번호만 그 형제의 것으로 본다. 그래서 main이
-이미 가진 번호는 main 줄에만 한 번 나온다. 이 브랜치는 작업 트리(커밋하지 않은 변경과
-미추적 파일)를 읽는다. merge-base에서 네 자리 가운데 하나라도 비면 경로가 어긋난 것으로 보고
-2로 끝난다(조용히 겹침 없음이 되지 않게).
+이미 가진 번호는 main 줄에만 한 번 나온다. 이 브랜치의 새 번호에서는 main에 같은 번호·같은
+파일(행)로 이미 든 것도 뺀다. 쌓아 올린 아래 PR이 squash로 병합된 뒤 main을 들이지 않은
+브랜치에서 그 번호는 공유한 이력인데, 새 일지로 세면 이름순 판정이 거짓 1을 내고 main에 있는
+일지를 옮기라고 한다. 헌법 판은 내용을 가를 수 없어 빼지 않는다. 이 브랜치는 작업 트리(커밋하지
+않은 변경과 미추적 파일)를 읽는다. merge-base에서 네 자리 가운데 하나라도 비면 경로가 어긋난 것으로
+보고 2로 끝난다(조용히 겹침 없음이 되지 않게).
 
 열린 PR은 GitHub REST(`gh api repos/<owner>/<repo>/pulls?state=open`)로 읽는다. `origin`이
 github.com이 아니거나 `gh`가 없거나 실패하면 `refs/pull/N/merge`가 있는 PR을 열린 것으로 본다.
@@ -185,6 +188,17 @@ def fresh(numbers: Numbers, *known: Numbers) -> Numbers:
     adrs = {k: v for k, v in numbers.adrs.items() if all(k not in n.adrs for n in known)}
     rows = {k: v for k, v in numbers.rows.items() if all(k not in n.rows for n in known)}
     return Numbers(journals, adrs, rows, version)
+
+
+def unshared(numbers: Numbers, other: Numbers) -> Numbers:
+    """`other` 와 같은 번호에 같은 파일·같은 행인 것(공유한 이력)을 뺀다.
+
+    헌법 판은 내용을 가를 수 없어 둔다. 같은 판이 공유한 이력인지 따로 올린 겹침인지 모른다.
+    """
+    journals = {k: v for k, v in numbers.journals.items() if other.journals.get(k) != v}
+    adrs = {k: v for k, v in numbers.adrs.items() if other.adrs.get(k) != v}
+    rows = {k: v for k, v in numbers.rows.items() if other.rows.get(k) != v}
+    return Numbers(journals, adrs, rows, numbers.version)
 
 
 def clashes(ours: Numbers, theirs: Numbers) -> list[Clash]:
@@ -550,7 +564,7 @@ def survey(root: Path, remote: Remote) -> Survey:
         since = merge_base(root, head, main_sha)
         changed = _worktree_changes(path, since) if since else None
         add(f"워크트리 {path}", head, numbers_of(Disk(path)), changed)
-    ours = fresh(numbers_of(Disk(root)), base_numbers)
+    ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
     changed = _worktree_changes(root, base)
     return Survey(ours, changed, main_sibling, others, taken, remote.pulls_from)
 

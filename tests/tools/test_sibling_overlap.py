@@ -29,6 +29,7 @@ from tools.sibling_overlap import (
     open_pulls,
     read_numbers,
     remote_head,
+    unshared,
     worktrees,
 )
 
@@ -87,6 +88,24 @@ def test_새_번호는_아는_번호_어디에도_없는_것이다() -> None:
 
     expected = _번호(adrs={"0027": "0027-y.md"}, rows={141: "| 141 | 나 |"})
     assert fresh(theirs, base, main_) == expected
+
+
+def test_공유한_이력은_같은_번호에_같은_파일이나_같은_행이고_헌법_판은_가르지_않는다() -> None:
+    ours = _번호(
+        {"2026-10-07-05": "a.md", "2026-10-07-06": "ours.md"},
+        {"0002": "0002-x.md"},
+        {2: "| 2 | 같다 |", 3: "| 3 | 이쪽 |"},
+        "1.0.1",
+    )
+    main_ = _번호(
+        {"2026-10-07-05": "a.md", "2026-10-07-06": "main.md"},
+        {"0002": "0002-x.md"},
+        {2: "| 2 | 같다 |", 3: "| 3 | 그쪽 |"},
+        "1.0.1",
+    )
+
+    expected = _번호({"2026-10-07-06": "ours.md"}, rows={3: "| 3 | 이쪽 |"}, version="1.0.1")
+    assert unshared(ours, main_) == expected
 
 
 def test_같은_번호에_다른_파일이나_다른_행이나_같은_판이면_겹침이다() -> None:
@@ -564,6 +583,32 @@ def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1�
     assert code == 0, out
     assert "번호 겹침 없음" in out
     assert "최신 일지" not in out and "옮길 번호" not in out
+
+
+def test_main에_같은_파일로_이미_든_일지는_새_일지가_아니다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """쌓아 올린 아래 PR 이 squash 로 main 에 들어간 뒤 아직 main 을 들이지 않은 브랜치.
+
+    아래 PR 의 일지·대기열 행은 merge-base 에 없어 이 브랜치의 새 번호로 읽히지만 main 과 같은
+    파일·같은 행이라 공유한 이력이다. 새 일지로 세면 main 의 더 늦은 일지보다 앞이라며 1로 끝나고
+    main 에 이미 있는 일지를 옮기라고 한다(PR 직전 버그 축).
+    """
+    _, work, pusher = 저장소
+    queue = SEED[".scratch/retro-queue.md"] + "| 2 | 아래 PR |\n"
+    below = {"docs/journal/2026-10-07-05-below.md": "아래\n", ".scratch/retro-queue.md": queue}
+    _커밋한다(work, below, "아래 PR")
+    _커밋한다(pusher, below, "아래 PR 을 squash 로 들인다")
+    _커밋한다(pusher, {"docs/journal/2026-10-07-07-main.md": "main\n"}, "main 이 나아간다")
+    _git(pusher, "push", "-q", "origin", "main")
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "최신 일지" not in out and "옮길 번호" not in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-08, 대기열 3\n" in out
 
 
 def test_열린_PR의_일지가_이름순으로_뒤면_알리기만_한다(
