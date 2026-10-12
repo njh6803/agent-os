@@ -1,0 +1,29 @@
+/* tailwind.mjs 가 컴파일하는 입력. 명세의 밀도 별칭(@theme inline)과 지금 [data-ui-root] 규칙의 모양을 줄인 것이다. */
+@import "tailwindcss" source(none);
+@theme static {
+  --*: initial;
+  --text-title: 24px;
+  --spacing-4: 16px;
+}
+@theme inline {
+  --text-body: var(--body-size);
+  --text-body--line-height: var(--body-lh);
+  --spacing-control: var(--control-h);
+}
+@layer theme {
+  :root,
+  :host {
+    --body-size: 15px;
+    --body-lh: 22px;
+    --control-h: 40px;
+    --gray-0: #ffffff;
+    --overlay-black-40: #00000066;
+    --overlay-white-10: #ffffff1a;
+  }
+}
+@layer base {
+  [data-ui-root] {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+}
