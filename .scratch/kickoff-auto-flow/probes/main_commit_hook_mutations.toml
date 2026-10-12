@@ -1,0 +1,145 @@
+# 티켓 01(`hook_git_main_commit` 의 첫 커밋)의 변이 표. 지키는 동작이 틀려서 빨개진 것을 본 적이 없는
+# 테스트가 빨강을 볼 수 있는지 잰다. 다른 까닭으로만 빨갰던 것(커밋 없는 main 의 침묵은 import 의 수집
+# 오류, 러너의 main 픽스처 둘은 자리표시자 키 없음, 커밋 있는 main 의 deny 는 막는 이유의 문구)과
+# 처음부터 초록이던 가드 다섯(orphan main, 커밋 유무의 `GIT_DIR`, 작업 브랜치에서 읽지 않기, 커밋
+# 명령이 아니면 git 을 띄우지 않기, git 이 없을 때)이다. 가드 하나에 변이 하나를 겨누고 그 테스트만
+# 돌린다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/kickoff-auto-flow/probes/main_commit_hook_mutations.toml
+
+[[mutation]]
+name = "커밋의 유무를 보지 않는다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_커밋이_없는_저장소의_main_에서는_첫_커밋을_막지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    if reason is None or not head_has_commit(cwd):
+'''
+new = '''
+    if reason is None:
+'''
+
+[[mutation]]
+name = "커밋이 늘 없다고 본다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_커밋이_하나_있는_저장소의_main_에서는_막는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    return result is not None and result.returncode == 0
+'''
+new = '''
+    return False
+'''
+
+[[mutation]]
+name = "HEAD 가 아니라 저장소의 모든 참조로 커밋을 센다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_다른_브랜치에_커밋이_있어도_main_이_아직_커밋을_가리키지_않으면_막지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    result = _git(["rev-parse", "--verify", "HEAD"], cwd)
+    return result is not None and result.returncode == 0
+'''
+new = '''
+    result = _git(["rev-list", "--max-count=1", "--all"], cwd)
+    return result is not None and result.returncode == 0 and bool(result.stdout.strip())
+'''
+
+[[mutation]]
+name = "커밋의 유무를 환경 그대로 읽는다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_커밋의_유무를_읽을_때도_환경의_GIT_DIR_을_무시한다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    result = _git(["rev-parse", "--verify", "HEAD"], cwd)
+'''
+new = '''
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"], cwd=cwd, capture_output=True, text=True
+    )
+'''
+
+[[mutation]]
+name = "작업 브랜치에서도 커밋의 유무를 읽는다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_작업_브랜치에서는_커밋의_유무를_읽지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    reason = deny_reason(current_branch(cwd))
+    if reason is None or not head_has_commit(cwd):
+'''
+new = '''
+    committed = head_has_commit(cwd)
+    reason = deny_reason(current_branch(cwd))
+    if reason is None or not committed:
+'''
+
+[[mutation]]
+name = "커밋 명령인지 보기 전에 브랜치를 읽는다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_커밋_명령이_아니면_git_을_띄우지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    if not commits_in(command):
+        return None
+    reason = deny_reason(current_branch(cwd))
+'''
+new = '''
+    branch = current_branch(cwd)
+    if not commits_in(command):
+        return None
+    reason = deny_reason(branch)
+'''
+
+[[mutation]]
+name = "git 을 띄우지 못하면 커밋이 있다고 본다"
+tests = ["tests/tools/test_hook_git_main_commit.py::test_git_을_띄우지_못하면_HEAD_에_커밋이_없다고_본다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_git_main_commit.py"
+old = '''
+    return result is not None and result.returncode == 0
+'''
+new = '''
+    return result is None or result.returncode == 0
+'''
+
+[[mutation]]
+name = "러너의 main 픽스처에 커밋을 두지 않는다"
+tests = ["tests/tools/test_run_hooks.py::test_main_저장소_둘은_커밋의_유무로_갈린다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''
+        ["git", "-C", str(main_repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+'''
+new = '''
+        ["git", "-C", str(main_repo), "status", "--short"],
+'''
+
+[[mutation]]
+name = "러너의 빈 main 픽스처가 커밋 있는 저장소를 가리킨다"
+tests = ["tests/tools/test_run_hooks.py::test_main_저장소_둘은_커밋의_유무로_갈린다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''
+    empty_main_repo = scratch / "on-empty-main"
+'''
+new = '''
+    empty_main_repo = scratch / "on-main"
+'''
