@@ -669,8 +669,10 @@ def measure(
     out: Callable[[str], None],
     numbers: Mapping[str, int] | None = None,
 ) -> int:
-    """기준선을 재고 변이를 하나씩 넣어 돌린다. 모두 기대대로면 0, 아니면 1. `numbers` 는 줄 머리에
-    다는 표의 번호이고, 없으면 `spec` 안의 차례다."""
+    """기준선을 재고 변이를 하나씩 넣어 돌린다. 모두 기대대로면 0, 아니면 1. `numbers` 는 줄 머리와
+    `다시 돌릴 번호` 에 다는 표의 번호이고, 없으면 `spec` 안의 차례다. 그래서 `select` 로 좁힌
+    `spec` 을 넘기는 쪽은 원본 표의 번호(`_numbers(원본)`)를 함께 넘긴다. 넘기지 않으면 번호가
+    원본과 어긋나 다시 돌릴 번호가 다른 변이를 가리킨다(`main` 이 그렇게 넘긴다)."""
     _validate(root, spec)
     if numbers is None:
         numbers = _numbers(spec)
