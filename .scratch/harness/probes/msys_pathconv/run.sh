@@ -73,6 +73,9 @@ shapes=(
   '-Lx:origin/main:.y'
   '-x,origin/main:.y'
   'origin/main:.gitignore'
+  '+//:/'
+  '%//:/'
+  '@/a:.b'
 )
 
 echo "== A. 네이티브(uv → python). 모양 | 기본 | MSYS_NO_PATHCONV=1"
@@ -86,6 +89,14 @@ for column in "$default" "$disabled"; do
     exit 1
   fi
 done
+# 변환이 실제로 일어났다는 전제. Git Bash 가 아닌 bash(WSL 등)면 두 열이 같아 아무것도 재지 못한다.
+case $(printf '%s\n' "$default" | head -1) in
+  *';'*) ;;
+  *)
+    echo "실패: 첫 모양이 바뀌지 않았다. Git Bash(MSYS) 가 아닌 셸이다" >&2
+    exit 1
+    ;;
+esac
 paste -d '|' <(printf '%s\n' "${shapes[@]}") <(printf '%s\n' "$default") <(printf '%s\n' "$disabled")
 
 echo "== A2. 네이티브. 탭과 개행이 든 모양(A 의 표에 두면 줄이 갈린다). 받은 것을 차례로"

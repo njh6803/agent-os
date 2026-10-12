@@ -10,6 +10,7 @@ import json
 from typing import TypedDict
 
 import pytest
+import tools.hook_bash_msys_pathconv as hook
 from tools.hook_bash_msys_pathconv import context_for, converted_arguments, converts, under_msys
 from tools.run_hooks import SETTINGS, registration_command
 
@@ -90,6 +91,7 @@ PROBED: list[tuple[str, bool]] = [
     ("-Lx:origin/main:.y", True),
     ("-x,origin/main:.y", True),
     ("origin/main:.gitignore", True),
+    ("@/a:.b", True),
     ("see\torigin/main:.x", False),
     ("see\norigin/main:.x", False),
 ]
@@ -106,6 +108,34 @@ def test_슬래시로_시작하는_인자는_보지_않는다() -> None:
     `/` 로 시작하는 인자는 소스에서 다른 갈래라 옮기지 않았다. git 의 `<rev>:<경로>` 꼴이 아니다.
     """
     assert converts("/c/project:/d/x") is False
+
+
+def test_머리_글자_뒤가_슬래시_둘인_인자는_바뀐다고_잘못_본다() -> None:
+    """거짓 양성이다. 프로브에서 `+//:/`·`%//:/` 는 그대로였다.
+
+    MSYS 는 머리 글자를 건너뛰고 `/` 로 시작하는 갈래로 보는데 그 갈래를 옮기지 않았다.
+    """
+    assert converts("+//:/") is True
+    assert converts("%//:/") is True
+
+
+def test_등호가_수천_개여도_예외_없이_끝까지_본다() -> None:
+    """MSYS 는 `=` 마다 뒤를 다시 본다. 재귀로 옮기면 천 개쯤에서 한도를 넘었다(PR 직전 리뷰)."""
+    assert converts("=" * 5000) is False
+    assert converts("a=" * 3000 + "origin/main:.x") is True
+    assert converts("-x," * 3000 + "origin/main:.x") is True
+
+
+def test_콜론이나_git이_없는_명령은_낱말로_나누지_않는다(monkeypatch: pytest.MonkeyPatch) -> None:
+    """모든 Bash 호출에 붙는 훅이다. shlex 는 긴 낱말에 제곱 시간이 들어 미리 거른다."""
+
+    def no_split(command: str) -> list[list[str]]:
+        raise AssertionError(f"나누지 말아야 할 명령을 나눴다: {command}")
+
+    monkeypatch.setattr(hook, "_segments", no_split)
+    assert converted_arguments("ls -la tools") == []
+    assert converted_arguments("git status --short") == []
+    assert converted_arguments('python -c "print(1)" origin/main:.x') == []
 
 
 def test_사건의_명령에서_바뀌는_인자를_찾는다() -> None:
@@ -151,6 +181,7 @@ def test_명령_치환과_줄_잇기와_git_경로도_본다() -> None:
 def test_리다이렉션은_조각을_가르지_않고_대상과_fd만_뺀다() -> None:
     expected = ["origin/main:.x"]
     assert converted_arguments("git show > out.txt origin/main:.x") == expected
+    assert converted_arguments("git show >| out.txt origin/main:.x") == expected
     assert converted_arguments("git show 2>/dev/null origin/main:.x") == expected
     assert converted_arguments("2>/dev/null git show origin/main:.x") == expected
 
@@ -209,6 +240,11 @@ def test_다른_명령을_거쳐_부른_git은_보지_않는다() -> None:
 def test_같은_줄의_따옴표_안에_든_왼쪽_화살표_둘_뒤의_줄은_보지_않는다() -> None:
     """거짓 음성이다. 따옴표 안의 `<<` 를 heredoc 으로 읽어 뒤의 줄을 지운다."""
     assert converted_arguments('echo "a << b"\ngit show origin/main:.x') == []
+
+
+def test_프로세스_치환_뒤의_인자는_보지_않는다() -> None:
+    """거짓 음성이다. `<(` 의 괄호가 조각을 가른다."""
+    assert converted_arguments("git diff <(echo x) origin/main:.x") == []
 
 
 def test_변수가_든_인자는_보지_않는다() -> None:

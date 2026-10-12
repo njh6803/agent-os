@@ -1,7 +1,8 @@
 #!/bin/sh
 # hook_bash_msys_pathconv 한 번의 시간을 등록 모양(tools/launch_hook.py 를 거쳐)으로 잰다(대기열 195).
 # 입력은 둘이다. git 이 아닌 흔한 Bash 명령(침묵)과, 바뀔 인자가 든 git(알림)이다. 일곱 번씩 밀리초와
-# 그 실행이 알렸는지(출력에 additionalContext 가 있는지)를 찍는다. 기대와 다르면 1로 끝난다.
+# 그 실행이 알렸는지(출력에 additionalContext 가 있는지)를 찍는다. 기대와 다르면 1로 끝난다. 훅은
+# 윈도이거나 MSYSTEM 이 있을 때만 알리므로 Git Bash 에서 돌린다. 리눅스·맥에서는 알림 사례가 1로 끝난다.
 # 돌리는 법: 저장소 루트에서 `sh .scratch/harness/probes/msys_pathconv/time_hook.sh`.
 set -eu
 root=$(cd "$(dirname "$0")/../../../.." && pwd)

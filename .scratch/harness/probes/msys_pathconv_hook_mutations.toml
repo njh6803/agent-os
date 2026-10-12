@@ -9,10 +9,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+    if any(char.isspace() for char in argument):
 '''
 new = '''
-    if argument[:1] in ("~", "/"):
+    if False:
 '''
 
 [[mutation]]
@@ -23,10 +23,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+    while argument[start : start + 1] not in ("~", "/"):
 '''
 new = '''
-    if argument[:1] == "/" or any(char.isspace() for char in argument):
+    while argument[start : start + 1] not in ("/",):
 '''
 
 [[mutation]]
@@ -37,10 +37,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-    if argument[:1] in ("~", "/") or any(char.isspace() for char in argument):
+    while argument[start : start + 1] not in ("~", "/"):
 '''
 new = '''
-    if argument[:1] == "~" or any(char.isspace() for char in argument):
+    while argument[start : start + 1] not in ("~",):
 '''
 
 [[mutation]]
@@ -149,10 +149,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-        if char == "=" or (dashed and char in ":,"):
+            if char == "=" or (dashed and char in ":,"):
 '''
 new = '''
-        if dashed and char in ":,":
+            if dashed and char in ":,":
 '''
 
 [[mutation]]
@@ -163,10 +163,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-        if char == "=" or (dashed and char in ":,"):
+            if char == "=" or (dashed and char in ":,"):
 '''
 new = '''
-        if char == "=":
+            if char == "=":
 '''
 
 [[mutation]]
@@ -177,10 +177,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-            if "=" not in argument[index + 1 :]:
+                if last_equals <= index:
 '''
 new = '''
-            if True:
+                if True:
 '''
 
 [[mutation]]
@@ -191,10 +191,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-            if argument[index + 1] in "./":
+                if argument[index + 1] in "./":
 '''
 new = '''
-            if argument[index + 1] == ".":
+                if argument[index + 1] == ".":
 '''
 
 [[mutation]]
@@ -205,10 +205,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-                return has_slashes and argument[index + 1 : index + 3] != "//"
+                    return has_slashes and argument[index + 1 : index + 3] != "//"
 '''
 new = '''
-                return has_slashes
+                    return has_slashes
 '''
 
 [[mutation]]
@@ -219,10 +219,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-                return has_slashes and argument[index + 1 : index + 3] != "//"
+                    return has_slashes and argument[index + 1 : index + 3] != "//"
 '''
 new = '''
-                return argument[index + 1 : index + 3] != "//"
+                    return argument[index + 1 : index + 3] != "//"
 '''
 
 [[mutation]]
@@ -233,10 +233,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-        if char in "/\\":
+            if char in "/\\":
 '''
 new = '''
-        if char == "/":
+            if char == "/":
 '''
 
 [[mutation]]
@@ -247,10 +247,53 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-    if _PATHCONV_OFF.search(command):
+    if ":" not in command or "git" not in command.lower() or _PATHCONV_OFF.search(command):
 '''
 new = '''
-    if _PATHCONV_OFF.search(command) and False:
+    if ":" not in command or "git" not in command.lower():
+'''
+
+[[mutation]]
+name = "콜론과 git 이 없는 명령도 낱말로 나눈다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+    if ":" not in command or "git" not in command.lower() or _PATHCONV_OFF.search(command):
+'''
+new = '''
+    if _PATHCONV_OFF.search(command):
+'''
+
+[[mutation]]
+name = "= 뒤를 재귀로 다시 본다(옛 판정)"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+                start = index + 1
+                break
+'''
+new = '''
+                return converts(argument[index + 1 :])
+'''
+
+[[mutation]]
+name = ">| 를 리다이렉션으로 보지 않는다"
+tests = ["tests/tools/test_hook_bash_msys_pathconv.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_msys_pathconv.py"
+old = '''
+_REDIRECTION = re.compile(r"[<>&]*[<>][<>&]*\|?")
+'''
+new = '''
+_REDIRECTION = re.compile(r"[<>&]*[<>][<>&]*")
 '''
 
 [[mutation]]
