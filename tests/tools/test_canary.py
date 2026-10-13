@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import replace
@@ -28,9 +30,11 @@ from tools.canary import (
     agent_problems,
     ancestor_problems,
     command,
+    head_commit,
     judge,
     load_spec,
     main,
+    mixed_none,
     prompt_for,
     read_facts,
     run_claude,
@@ -366,6 +370,53 @@ def test_대조군_답에_카나리아가_있으면_실패다(tmp_path: Path) ->
     facts = _사실(reads=(str(tmp_path / "README.md"),))
 
     assert any("대조군" in reason for reason in _규칙_판정(facts, tmp_path, 갈래=1))
+
+
+# "없음" 섞임(대기열 212)
+
+
+def _섞임(답: str | None, 갈래: int = 0, 명세: str = _규칙_명세) -> bool:
+    spec = load_spec(명세)
+    return mixed_none(spec, spec.arm[갈래], _사실(answer=답))
+
+
+@pytest.mark.parametrize(
+    "답",
+    [
+        "1. 없음\n2. 식별자는 영문, 문자열은 한국어",
+        "**없음**. 다만 다른 절에 `식별자는 영문`이 있다",
+    ],
+)
+def test_카나리아를_모두_담은_실험군_답에_없음이_섞이면_표시한다(답: str) -> None:
+    assert _섞임(답)
+
+
+@pytest.mark.parametrize("답", ["식별자는 영문, 문자열은 한국어", "없음", "**없음**\n"])
+def test_없음이_섞이지_않았거나_답_전체가_없음이면_표시하지_않는다(답: str) -> None:
+    """답 전체가 "없음"이면 판정이 실패로 센다. 표시는 통과 가운데 섞인 것만 가린다."""
+    assert not _섞임(답)
+
+
+def test_대조군의_없음과_답이_없는_회차는_표시하지_않는다() -> None:
+    assert not _섞임("1. 없음\n2. 옛 지시", 갈래=1)
+    assert not _섞임(None)
+
+
+def test_카나리아_안의_없음은_섞임으로_보지_않는다() -> None:
+    명세 = _규칙_명세.replace('expect = ["식별자는 영문"]', 'expect = ["지적 `없음`"]')
+
+    assert not _섞임("리뷰는 `지적 없음`으로 닫는다", 명세=명세)
+    assert _섞임("1. 없음\n2. 리뷰는 지적 없음으로 닫는다", 명세=명세)
+
+
+def test_없다_같은_다른_꼴은_섞임으로_보지_않고_지나간다() -> None:
+    """못 보는 것: 글자 "없음"만 본다. 한 물음에 "없다"고 답한 회차는 표시하지 않는다."""
+    assert not _섞임("1. 그런 문장은 없다\n2. 식별자는 영문")
+
+
+def test_옮긴_본문에_든_없음도_표시한다() -> None:
+    """거짓 양성: 물음에 "없음"이라 답하지 않고 본문을 옮겼어도 그 본문에 "없음"이 들면 표시한다."""
+    assert _섞임("식별자는 영문이고, 예외가 없음을 확인한다")
 
 
 @pytest.mark.parametrize(
@@ -1099,8 +1150,26 @@ def _스킬_회차(checkout: Path, 답: str) -> list[str]:
     return [_init(("Skill",)), _스킬_부름("tidy-checkouts"), _스킬_본문(folder), _결과(답)]
 
 
+class _가짜_커밋:
+    """체크아웃 폴더 이름마다 부를 때마다 차례로 커밋을 돌려준다. 다 쓰면 마지막 것을 되풀이한다."""
+
+    def __init__(self, 커밋들: dict[str, list[str | None]]) -> None:
+        self.커밋들 = 커밋들
+        self.부른_수: dict[str, int] = {}
+
+    def __call__(self, checkout: Path) -> str | None:
+        차례 = self.부른_수.get(checkout.name, 0)
+        self.부른_수[checkout.name] = 차례 + 1
+        커밋들 = self.커밋들[checkout.name]
+        return 커밋들[min(차례, len(커밋들) - 1)]
+
+
 def _스킬_실행(
-    tmp_path: Path, 새_답: str, 옛_답: str, exit_code: int = 0
+    tmp_path: Path,
+    새_답: str,
+    옛_답: str,
+    exit_code: int = 0,
+    commit: _가짜_커밋 | None = None,
 ) -> tuple[int, list[str], _가짜]:
     spec_path = tmp_path / "canary.toml"
     spec_path.write_text(_스킬_명세, encoding="utf-8")
@@ -1109,7 +1178,11 @@ def _스킬_실행(
     가짜 = _가짜({"새": _스킬_회차(새, 새_답), "옛": _스킬_회차(옛, 옛_답)}, exit_code)
     printed: list[str] = []
     code = main(
-        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+        [str(spec_path), str(tmp_path / "out")],
+        cwd=tmp_path,
+        runner=가짜,
+        out=printed.append,
+        commit=commit or _가짜_커밋({"새": ["aaa1111"], "옛": ["bbb2222"]}),
     )
     return code, printed, 가짜
 
@@ -1137,10 +1210,162 @@ def test_모두_통과하면_0이고_갈래마다_회차를_돌려_원본을_남
 
 
 def test_하나라도_실패하면_1이고_그_회차와_이유를_찍는다(tmp_path: Path) -> None:
-    code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "EnterWorktree")
+    code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "옛 줄\nEnterWorktree 를 부른다")
 
     assert code == 1
     assert any("옛" in line and "대조군" in line for line in printed)
+    assert "    EnterWorktree 를 부른다" in printed
+
+
+def test_답은_자르지_않고_줄마다_들여_찍는다(tmp_path: Path) -> None:
+    긴_줄 = "EnterWorktree 보다 먼저 " + "가" * 300
+
+    code, printed, _ = _스킬_실행(tmp_path, f"1. 없음\n\n2. {긴_줄}", "없음")
+
+    assert code == 0
+    assert printed.count(f"    2. {긴_줄}") == 3
+    assert printed.count("    1. 없음") == 3
+    assert printed.count("    없음") == 1
+    assert not any("…" in line for line in printed)
+
+
+def test_없음이_섞인_통과는_판정_줄과_요약에_표시하되_종료_코드는_0이다(tmp_path: Path) -> None:
+    code, printed, _ = _스킬_실행(tmp_path, "1. 없음\n2. EnterWorktree", "없음")
+
+    assert code == 0
+    marked = [line for line in printed if line.startswith('[통과·"없음" 섞임]')]
+    assert len(marked) == 3
+    assert all("새(실험군)" in line for line in marked)
+    assert any(line.startswith('통과 4 · 실패 0 · "없음" 섞인 통과 3') for line in printed)
+
+
+def test_섞이지_않은_통과와_실패한_회차는_표시하지_않고_요약에_섞임_0을_찍는다(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "깨끗").mkdir()
+    (tmp_path / "실패").mkdir()
+    _, 깨끗한, _ = _스킬_실행(tmp_path / "깨끗", "EnterWorktree", "없음")
+    code, 실패한, _ = _스킬_실행(tmp_path / "실패", "1. 없음\n2. 사람이 친다", "없음")
+
+    assert code == 1
+    for printed in (깨끗한, 실패한):
+        assert not any("섞임]" in line for line in printed)
+        assert any('"없음" 섞인 통과 0' in line for line in printed)
+
+
+def _판정_줄(printed: list[str], 갈래: str) -> list[str]:
+    return [line for line in printed if line.startswith("[") and f"{갈래}(" in line]
+
+
+def test_갈래마다_체크아웃의_커밋을_회차_줄과_요약에_찍는다(tmp_path: Path) -> None:
+    code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "없음")
+
+    assert code == 0
+    assert len(_판정_줄(printed, "새")) == 3
+    assert all(line.endswith(" · 커밋 aaa1111") for line in _판정_줄(printed, "새"))
+    assert [line.endswith(" · 커밋 bbb2222") for line in _판정_줄(printed, "옛")] == [True]
+    assert "갈래: 새(실험군) 커밋 aaa1111 · 옛(대조군) 커밋 bbb2222" in printed
+
+
+def test_도는_동안_커밋이_움직이면_앞뒤를_찍는다(tmp_path: Path) -> None:
+    commit = _가짜_커밋({"새": ["aaa1111"], "옛": ["bbb2222", "ccc3333"]})
+
+    _, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "없음", commit=commit)
+
+    moved = "커밋 bbb2222 → ccc3333(도는 동안 움직였다)"
+    assert [line.endswith(moved) for line in _판정_줄(printed, "옛")] == [True]
+    assert f"갈래: 새(실험군) 커밋 aaa1111 · 옛(대조군) {moved}" in printed
+    assert commit.부른_수 == {"새": 2, "옛": 2}
+
+
+@pytest.mark.parametrize(
+    ("앞뒤", "적힌"),
+    [
+        ([None], "커밋 모름"),
+        ([None, "ccc3333"], "커밋 모름 → ccc3333(한쪽을 읽지 못해 움직였는지 모른다)"),
+        (["bbb2222", None], "커밋 bbb2222 → 모름(한쪽을 읽지 못해 움직였는지 모른다)"),
+    ],
+)
+def test_커밋을_읽지_못하면_모른다고_찍고_한쪽만_읽었으면_움직였다고_하지_않는다(
+    tmp_path: Path, 앞뒤: list[str | None], 적힌: str
+) -> None:
+    commit = _가짜_커밋({"새": ["aaa1111"], "옛": 앞뒤})
+
+    _, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "없음", commit=commit)
+
+    assert [line.endswith(f" · {적힌}") for line in _판정_줄(printed, "옛")] == [True]
+    assert f"갈래: 새(실험군) 커밋 aaa1111 · 옛(대조군) {적힌}" in printed
+
+
+def test_빈_답은_비었다고_찍는다(tmp_path: Path) -> None:
+    code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "")
+
+    assert code == 0
+    assert printed.count("  답: (비었다)") == 1
+
+
+def _저장소(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`tmp_path/repo` 에 빈 저장소를 만든다. `tmp_path` 위의 저장소는 git 이 찾지 않게 막는다."""
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    return repo
+
+
+def test_HEAD_커밋은_git의_짧은_꼴이고_하위_폴더는_그_저장소의_것이며_저장소_밖은_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """실제 git 으로 잰다. 못 보는 것: 커밋하지 않은 변경이 있어도 `HEAD` 만 찍는다."""
+    repo = _저장소(tmp_path, monkeypatch)
+    (repo / "a.md").write_bytes(b"a\n")
+    _git(repo, "add", ".")
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-m", "a")
+    short = _git(repo, "rev-parse", "--short", "HEAD")
+    (repo / "a.md").write_bytes(b"b\n")
+    (repo / "하위").mkdir()
+    빈 = tmp_path / "빈"
+    빈.mkdir()
+
+    assert head_commit(repo) == short
+    assert head_commit(repo / "하위") == short
+    assert head_commit(빈) is None
+    assert head_commit(tmp_path / "없는") is None
+
+
+def test_커밋이_없는_저장소의_커밋은_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert head_commit(_저장소(tmp_path, monkeypatch)) is None
+
+
+def test_git을_띄우지_못하면_커밋은_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def 없는_곳(name: str) -> str:
+        return str(tmp_path / f"없는-{name}")
+
+    monkeypatch.setattr(shutil, "which", 없는_곳)
+
+    assert head_commit(tmp_path) is None
+
+
+def test_git이_제한_시간을_넘기면_커밋은_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def 멈춘_git(args: Sequence[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        raise subprocess.TimeoutExpired(args, 30.0)
+
+    monkeypatch.setattr(subprocess, "run", 멈춘_git)
+
+    assert head_commit(tmp_path) is None
+
+
+def _git(cwd: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True, encoding="utf-8"
+    )
+    return result.stdout.strip()
 
 
 def test_claude가_0이_아닌_코드로_끝나면_그_회차는_실패다(tmp_path: Path) -> None:
