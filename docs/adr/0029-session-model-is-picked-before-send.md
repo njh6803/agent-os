@@ -108,7 +108,7 @@ Chrome으로 갈 뻔했다(키 가드가 멈췄다. `foreground_window.ps1`로 �
 ### 2026-10-13 첫 스윕은 구현과 하네스에서 xhigh와 medium을 브랜치 이름으로 갈라 연다
 
 소급 측정(`.scratch/harness/probes/session_cost/`)과 지표 문서(`docs/model-selection.md`) 뒤에, 위 "바꾸는 절차"의 스윕을
-설계하고 지표 문서 4절의 "아직 정하지 않은 것"을 정했다(일지 2026-10-13-19).
+설계하고 지표 문서 4절의 "아직 정하지 않은 것"을 정했다(일지 2026-10-13-23).
 
 **구현과 하네스 두 종류에서, 지시문으로 연 브랜치를 이름으로 갈라 절반은 지금 칸인 `Opus 5.5 / xhigh`로, 절반은
 `Opus 5.5 / medium`으로 연다. `next-session` 3단계는 결정표 칸이 `Opus 5.5 / xhigh`인 지시문을 쓸 때
