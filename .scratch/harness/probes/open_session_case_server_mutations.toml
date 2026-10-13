@@ -1,0 +1,78 @@
+# tests/tools/test_open_session.py 의 `_call` 이 사례를 나르는 pwsh 서버의 규약을 변이로 본다(여덟).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_case_server_mutations.toml
+# 규약은 ADR 0030 이력 2026-10-13 "시간 문턱에 닿아 사례를 pwsh 하나에 묶기로 했다"의 "구현에서 할 것"이다.
+# 규칙 하나를 빼면 그 규약을 재는 시험이 빨개야 한다. 시간 제한 자체를 빼는 변이는
+# open_session_regression_mutations.toml 의 "시간 제한 없이 pwsh 를 기다린다"다.
+
+[[mutation]]
+name = "서버를 다시 쓰지 않고 사례마다 띄운다"
+tests = ["tests/tools/test_open_session.py", "-k", "서버_하나를_같이"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "alive = self._proc is not None and self._proc.poll() is None"
+new = "alive = False"
+
+[[mutation]]
+name = "시간 제한을 넘긴 서버를 끝내지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "서버를_새로_띄워"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "            except queue.Empty:\n                self._kill(proc)\n"
+new = "            except queue.Empty:\n"
+
+[[mutation]]
+name = "경고를 출력에 합치지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "출력에_차례대로_합친다"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "        $command.MergeMyResults($resultTypes::Warning, $resultTypes::Output)\n"
+new = ""
+
+[[mutation]]
+name = "정보 스트림을 출력에 합치지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "출력에_차례대로_합친다"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "        $command.MergeMyResults($resultTypes::Information, $resultTypes::Output)\n"
+new = ""
+
+[[mutation]]
+name = "사례가 새로 둔 환경 변수를 지우지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "환경_변수와_전역_변수"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "if (-not $saved.Contains($key)) {"
+new = "if ($false) {"
+
+[[mutation]]
+name = "오류 스트림의 기록으로 실패를 정하지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "오류_스트림에_기록이"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "$failed = $errors.Count -gt 0 -or $null -ne $terminating"
+new = "$failed = $null -ne $terminating"
+
+[[mutation]]
+name = "답 표지를 줄 머리에서만 찾는다"
+tests = ["tests/tools/test_open_session.py", "-k", "줄바꿈_없이_콘솔에"]
+expect = "red"
+timeout = 180
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "at = line.find(_REPLY)"
+new = "at = 0 if line.startswith(_REPLY) else -1"
+
+[[mutation]]
+name = "사례가 바꾸거나 지운 환경 변수를 되돌리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "건드린_서버의_환경_변수"]
+expect = "red"
+[[mutation.edit]]
+file = "tests/tools/test_open_session.py"
+old = "if ($now[$key] -cne $saved[$key]) {"
+new = "if ($false) {"
