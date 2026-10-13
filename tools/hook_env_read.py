@@ -530,11 +530,20 @@ def _without_heredoc_bodies(command: str) -> list[str]:
     return kept
 
 
+# 막기는 호출 단위라 같은 호출에 묶은 편집도 돌지 않는다. 편집과 `.env` 글자가 든 검색을 한
+# 호출에 묶었다가 편집이 빠질 뻔했다(대기열 111, 일지 2026-10-06-02).
+WHOLE_CALL_NOTE = (
+    " 이 Bash 호출 전체가 돌지 않았다. 편집 같은 다른 명령을 묶었으면 그것만 따로 다시 친다"
+    "(대기열 111)."
+)
+
+
 def reason_for(tool_name: str, tool_input: ToolInput, cwd: str | None = None) -> str | None:
     if tool_name == "Grep":
         return deny_reason_for_grep_tool(tool_input.get("path"), tool_input.get("glob"))
     command = tool_input.get("command")
-    return deny_reason_for_command(command, cwd) if command is not None else None
+    reason = deny_reason_for_command(command, cwd) if command is not None else None
+    return None if reason is None else reason + WHOLE_CALL_NOTE
 
 
 def main() -> int:
