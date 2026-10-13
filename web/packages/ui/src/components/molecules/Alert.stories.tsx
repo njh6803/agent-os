@@ -33,7 +33,10 @@ const ACTIONS = (
   </>
 );
 
-/** 알림의 톤이 칠한 것. 바탕, 아이콘(모양과 색), 제목과 본문의 글자색이다. */
+/**
+ * 알림이 칠한 것. 바탕은 톤과 무관한 `bg-raised` 이고 테두리는 `border` 다. 톤은 아이콘(모양과 색)만 가르고, 제목과
+ * 본문의 글자색은 `text`·`text-muted` 다.
+ */
 async function expectTone(
   alert: HTMLElement,
   tone: AlertTone,
@@ -45,23 +48,25 @@ async function expectTone(
   const scope = within(alert);
   await expect({
     background: colorsOf(alert).background,
+    border: colorsOf(alert).border,
     icon: svg === null ? null : getComputedStyle(svg).color,
     shape: svg?.innerHTML,
     hidden: svg?.getAttribute("aria-hidden"),
     title: getComputedStyle(scope.getByText(title)).color,
     body: getComputedStyle(scope.getByText(body)).color,
   }).toEqual({
-    background: semanticColor(alert, `${tone}-tint`),
+    background: semanticColor(alert, "bg-raised"),
+    border: semanticColor(alert, "border"),
     icon: semanticColor(alert, tone),
     shape: iconShape(icon),
     hidden: "true",
     title: semanticColor(alert, "text"),
-    body: semanticColor(alert, "muted"),
+    body: semanticColor(alert, "text-muted"),
   });
 }
 
 export const Danger: Story = {
-  name: "실패 알림은 role=alert 이고 danger-tint 바탕에 danger 색 circle-x 아이콘이며 제목은 text, 본문은 muted 다",
+  name: "실패 알림은 role=alert 이고 bg-raised 바탕에 border 테두리, danger 색 circle-x 아이콘이며 제목은 text, 본문은 text-muted 다",
   args: { tone: "danger" },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const alert = canvas.getByRole("alert");
@@ -82,7 +87,7 @@ export const Danger: Story = {
 };
 
 export const Warning: Story = {
-  name: "경고 알림은 role=status 이고 warning-tint 바탕에 warning 색 triangle-alert 아이콘이다",
+  name: "경고 알림은 role=status 이고 bg-raised 바탕에 warning 색 triangle-alert 아이콘이다",
   args: {
     tone: "warning",
     title: "결제 환불 플러그인이 꺼짐입니다",
@@ -101,7 +106,7 @@ export const Warning: Story = {
 };
 
 export const Info: Story = {
-  name: "톤을 고르지 않으면 정보 알림이고 role=status 에 info-tint 바탕, info 색 info 아이콘이다",
+  name: "톤을 고르지 않으면 정보 알림이고 role=status 에 bg-raised 바탕, info 색 info 아이콘이다",
   args: {
     title: "이 대화는 30일 동안 보관됩니다",
     children: "운영자가 품질 확인을 위해 볼 수 있습니다.",
@@ -152,7 +157,7 @@ export const WithClose: Story = {
     });
     await expect(colorsOf(close)).toMatchObject({
       background: TRANSPARENT,
-      text: semanticColor(close, "muted"),
+      text: semanticColor(close, "text-muted"),
     });
     await userEvent.click(close);
     await expect(args.onClose).toHaveBeenCalledOnce();
@@ -221,7 +226,7 @@ export const WithActionsAndClose: Story = {
 };
 
 export const DangerDark: Story = {
-  name: "다크 모드의 실패 알림도 danger-tint 바탕에 danger 아이콘, text 제목, muted 본문이다",
+  name: "다크 모드의 실패 알림도 bg-raised 바탕에 border 테두리, danger 아이콘, text 제목, text-muted 본문이다",
   args: { tone: "danger", actions: ACTIONS, onClose: fn() },
   globals: { mode: "dark" },
   play: async ({ canvas }) => {
@@ -257,13 +262,10 @@ export const NarrowColumn: Story = {
   },
 };
 
-// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이다. 기본 테마가 아닌 테마에서 값을 재는 판정 스토리라 사진에서
-// 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
+// 녹청에서 `focus-ring` 은 `accent` 와 같은 값이라 그 둘은 가르지 못하지만 `text-muted`·`border` 와는 가른다.
 export const CloseFocus: Story = {
-  name: "Tab 은 알림을 건너 닫기 버튼에 오고 그 바깥에 focus 색의 실선 테두리가 그려진다",
-  tags: ["judgment"],
+  name: "Tab 은 알림을 건너 닫기 버튼에 오고 그 바깥에 focus-ring 색의 2px 실선이 2px 떨어져 그려진다",
   args: { onClose: fn() },
-  globals: { theme: "gongmun" },
   play: async ({ canvas, userEvent }) => {
     const close = canvas.getByRole("button", { name: "닫기" });
     await userEvent.tab();

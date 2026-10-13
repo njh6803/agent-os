@@ -23,11 +23,13 @@ function partsOf(progressbar: HTMLElement): { track: Element; bar: Element } {
 }
 
 export const Determinate: Story = {
-  name: "값이 있으면 label 이 이름이고 aria-valuenow·aria-valuemax 가 있으며 막대가 그 비율만큼 muted 로 찬다",
+  name: "값이 있으면 label 이 text-muted 의 이름이고 aria-valuenow·aria-valuemax 가 있으며 bg-active 트랙에 막대가 그 비율만큼 text-muted 로 찬다",
   args: { value: 2, max: 3 },
   play: async ({ canvas }) => {
     const progressbar = canvas.getByRole("progressbar", { name: "3단계 중 2단계" });
-    await expect(canvas.getByText("3단계 중 2단계")).toBeVisible();
+    const name = canvas.getByText("3단계 중 2단계");
+    await expect(name).toBeVisible();
+    await expect(getComputedStyle(name).color).toBe(semanticColor(name, "text-muted"));
     await expect({
       now: progressbar.getAttribute("aria-valuenow"),
       max: progressbar.getAttribute("aria-valuemax"),
@@ -36,9 +38,9 @@ export const Determinate: Story = {
     const trackStyle = getComputedStyle(track);
     await expect({ height: trackStyle.height, background: trackStyle.backgroundColor }).toEqual({
       height: "6px",
-      background: semanticColor(track, "tint"),
+      background: semanticColor(track, "bg-active"),
     });
-    await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "muted"));
+    await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "text-muted"));
     const ratio = bar.getBoundingClientRect().width / track.getBoundingClientRect().width;
     await expect(Math.abs(ratio - 2 / 3)).toBeLessThan(0.01);
     await expect(getComputedStyle(bar).animationName).toBe("none");
@@ -46,7 +48,7 @@ export const Determinate: Story = {
 };
 
 export const Indeterminate: Story = {
-  name: "값을 모르면 aria-valuenow 가 없고 트랙 대신 muted 의 16px 도는 표시와 이름을 8px 사이로 보인다",
+  name: "값을 모르면 aria-valuenow 가 없고 트랙 대신 text-muted 의 16px 도는 표시와 이름을 8px 사이로 보인다",
   // value 를 넘기지 않는다. 기본값이 null(값 모름)이다.
   args: { label: "단계를 세는 중" },
   play: async ({ canvas }) => {
@@ -66,12 +68,13 @@ export const Indeterminate: Story = {
     }
     await expect(name.textContent).toBe("단계를 세는 중");
     await expect(canvas.getByText("단계를 세는 중")).toBeVisible();
+    await expect(getComputedStyle(name).color).toBe(semanticColor(name, "text-muted"));
     const style = getComputedStyle(spinner);
     await expect({
       width: style.width,
       color: style.color,
       animation: style.animationName,
-    }).toEqual({ width: "16px", color: semanticColor(spinner, "muted"), animation: "spin" });
+    }).toEqual({ width: "16px", color: semanticColor(spinner, "text-muted"), animation: "spin" });
     const strokes = strokesOf(spinner);
     await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
     // 도는 표시의 getBoundingClientRect 는 회전한 상자의 외접 사각형이라 각도마다 달라진다. 회전과 무관한 이름의 자리로
@@ -125,8 +128,9 @@ export const OutOfRange: Story = {
   },
 };
 
+// `bg-active` 는 라이트에서 `shadow-color` 와 같은 값이라 다크에서도 잰다.
 export const DeterminateDark: Story = {
-  name: "다크 모드에서도 트랙은 tint, 막대는 muted 다",
+  name: "다크 모드에서도 트랙은 bg-active, 막대는 text-muted 다",
   args: { value: 2, max: 3 },
   globals: { mode: "dark" },
   play: async ({ canvas }) => {
@@ -135,6 +139,6 @@ export const DeterminateDark: Story = {
     await expect({
       track: getComputedStyle(track).backgroundColor,
       bar: getComputedStyle(bar).backgroundColor,
-    }).toEqual({ track: semanticColor(track, "tint"), bar: semanticColor(bar, "muted") });
+    }).toEqual({ track: semanticColor(track, "bg-active"), bar: semanticColor(bar, "text-muted") });
   },
 };

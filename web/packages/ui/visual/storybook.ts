@@ -57,7 +57,7 @@ export function photographedStories(): StoryEntry[] {
     .filter((entry) => !entry.tags.includes(JUDGMENT_TAG));
 }
 
-/** 스토리가 globals 로 모드를 정하지 않았을 때 찍는 모드. 테마는 기본 테마(먹)다(ADR 0026 의 2026-10-06 이력). */
+/** 스토리가 globals 로 모드를 정하지 않았을 때 찍는 모드. 테마는 기본 테마(녹청)다(ADR 0026 의 2026-10-06 이력). */
 export const MODES = ["light", "dark"] as const;
 export type Mode = (typeof MODES)[number];
 
@@ -69,7 +69,7 @@ export interface Globals {
 }
 
 /** 기본 테마의 그 모드로 문서에 그리는 globals. */
-export function muk(mode: Mode): Globals {
+export function inDefaultTheme(mode: Mode): Globals {
   return { theme: DEFAULT_THEME, mode, shadow: "off" };
 }
 
