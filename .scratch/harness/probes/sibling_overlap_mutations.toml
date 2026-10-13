@@ -2,7 +2,7 @@
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
 # 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16). 예순둘로 늘린 뒤에는 3757초(번마다
-# 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-25). 그 뒤 더한 둘은
+# 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-30). 그 뒤 더한 둘은
 # `--since` 로 골라 돌렸다.
 
 [[mutation]]
@@ -317,8 +317,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers), main_numbers.version'''
-new = '''        MAIN, main_sha, main_new, main_changed, latest_journal(main_new), main_numbers.version'''
+old = '''        latest=latest_journal(main_numbers),'''
+new = '''        latest=latest_journal(main_new),'''
 
 [[mutation]]
 name = "다른 형제의 최신 일지를 main 이 가진 일지에서도 고른다"
@@ -326,8 +326,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        others.append(Sibling(label, head, new, changed, latest_journal(new), new.version, closed))'''
-new = '''        others.append(Sibling(label, head, new, changed, latest_journal(numbers), new.version, closed))'''
+old = '''                latest=latest_journal(new),'''
+new = '''                latest=latest_journal(numbers),'''
 
 [[mutation]]
 name = "main 보다 앞선 새 일지를 옮기지 않는다"
@@ -539,8 +539,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers), main_numbers.version'''
-new = '''        MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers), main_new.version'''
+old = '''        version=main_numbers.version,'''
+new = '''        version=main_new.version,'''
 
 [[mutation]]
 name = "다른 형제의 판을 가진 판 전체에서 고른다"
@@ -548,8 +548,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        others.append(Sibling(label, head, new, changed, latest_journal(new), new.version, closed))'''
-new = '''        others.append(Sibling(label, head, new, changed, latest_journal(new), numbers.version, closed))'''
+old = '''                version=new.version,'''
+new = '''                version=numbers.version,'''
 
 [[mutation]]
 name = "가장 높은 헌법 판을 찍지 않는다"

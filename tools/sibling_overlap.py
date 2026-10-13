@@ -44,7 +44,7 @@ HEAD가 닫힌 PR의 head와 같은 형제 워크트리는 커밋하지 않은 �
 파일)만 고친 파일로 견주고, 형제 줄에서는 그 수만 접어 찍는다(대기열 194). 함께 고친 파일 서른여덟
 줄 가운데 서른다섯 줄이 형제 워크트리의 것이라 열린 PR의 줄이 묻혔다(일지 2026-10-13-18). 이 판을
 들일 때 같은 꼴로 다시 친 대조에서는 형제 워크트리의 줄 서른일곱 가운데 서른여섯이 PR이 닫힌
-워크트리의 것이었다(손으로 봤다, 일지 2026-10-13-25). 그 커밋은 이미 병합됐거나, 병합 없이 닫혀
+워크트리의 것이었다(손으로 봤다, 일지 2026-10-13-30). 그 커밋은 이미 병합됐거나, 병합 없이 닫혀
 앞으로도 병합되지 않아 충돌 후보가 아니다. 그래서 병합과 닫힘을 가리지 않는다. 닫힌 PR은 열린
 PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열린 PR이 아닌 것이다. 병합 여부를
 따로 물으면 `gh api …/pulls?state=closed --paginate`가 2.2~3.5초, `gh pr list --state merged`가
@@ -626,7 +626,12 @@ def survey(root: Path, remote: Remote) -> Survey:
     main_changed = _lines(git(root, "diff", "--name-only", base, main_sha))
     main_new = fresh(main_numbers, base_numbers)
     main_sibling = Sibling(
-        MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers), main_numbers.version
+        label=MAIN,
+        commit=main_sha,
+        numbers=main_new,
+        changed=main_changed,
+        latest=latest_journal(main_numbers),
+        version=main_numbers.version,
     )
     others: list[Sibling] = []
     taken = [base_numbers, main_numbers]
@@ -639,7 +644,17 @@ def survey(root: Path, remote: Remote) -> Survey:
         closed: int | None = None,
     ) -> None:
         new = fresh(numbers, base_numbers, main_numbers)
-        others.append(Sibling(label, head, new, changed, latest_journal(new), new.version, closed))
+        others.append(
+            Sibling(
+                label=label,
+                commit=head,
+                numbers=new,
+                changed=changed,
+                latest=latest_journal(new),
+                version=new.version,
+                closed=closed,
+            )
+        )
         taken.append(numbers)
 
     for number, head in remote.pulls.items():
