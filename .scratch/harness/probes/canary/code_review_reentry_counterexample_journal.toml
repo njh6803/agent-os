@@ -1,0 +1,32 @@
+# code-review 4단계의 갈래 밟기(대기열 229), 6단계 1의 반례 일반화(대기열 213), 6단계 끝의 일지 옮기기(대기열 244)가 새 세션에 실리는지.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(2d593dd)이다. 옛 판에는 카나리아가 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `2d593dd`, 일지 2026-10-13-57). 셀프 리뷰 반영으로 본문 문구와 셋째 `expect`를 고친 뒤 같은 날 사전 확인으로 갈음했다(일지 2026-10-13-57).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   git worktree add --detach ../../../../agent-canary-2d593dd 2d593dd
+#   uv run python tools/canary.py .scratch/harness/probes/canary/code_review_reentry_counterexample_journal.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+code-review 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(리뷰, 서브에이전트)은 하지 않고 본문만 읽는다.
+본문에서 다음 셋을 각각 글자 그대로 한 문장씩 옮겨라.
+1) 4단계에서 diff가 에이전트가 따르는 절차를 바꿀 때 두 브리프에 붙여 넣는 문단 가운데, 어떤 갈래를 밟아 보는지 적은 문장.
+2) 6단계의 1에서 지적이 닫힌 목록의 반례일 때 목록을 어떻게 고치는지 적은 문장.
+3) 6단계 끝에서 리뷰 보고를 일지에 언제 옮기는지 적은 문장.
+본문에 그런 문장이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = [
+    "절차의 중간으로 들어오는 갈래",
+    "거르려는 성질을 일반 조항으로 적고",
+    "보고는 받은 턴에 일지에 옮긴다",
+]
+source = ".claude/skills/code-review/SKILL.md"
+skill = "code-review"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-2d593dd"
