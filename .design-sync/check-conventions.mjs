@@ -12,11 +12,26 @@
 // - 예시의 `const { … } = window.AgentOsUi` 와 본문의 `AgentOsUi.<이름>`: 번들의 내보내기 블록에 그 이름이 있어야 하고,
 //   컴포넌트는 파일 이름이 정확히 `<이름>.d.ts` 인 파일이 `components/` 아래에 있어야 한다(`IconButton.d.ts` 로 `Button`
 //   이 통과하지 않게).
-// - "`data-theme`(…)" 의 백틱 낱말: `[data-theme=<키>]` 선택자가 있어야 한다.
+// - "`data-theme`(…)" 와 "`data-density`(…)" 의 백틱 낱말: `[data-theme=<키>]`·`[data-density=<키>]` 선택자가 있어야 한다.
+//
+// 규약 밖에서 함께 보는 것 둘(design-refresh 티켓 05. 규칙은 NOTES 의 "카드에 올리는 스토리"와 "기초 카드"):
+// - 빼는 목록. 참조 Storybook 의 색인(`cfg.storybookStatic` 의 `index.json`)에서 컴포넌트 스토리(제목의 마지막 토막이
+//   `cfg.titleMap` 에서 null 이 아닌 것)를 모아, 태그 `showcase` 가 없는 스토리는 모두 그 컴포넌트의
+//   `cfg.overrides.<Name>.skip` 에 있어야 하고, 빼는 목록의 id 는 모두 그 컴포넌트의 지금 있는 변형 스토리여야 하며,
+//   컴포넌트마다 `showcase` 스토리가 하나 이상 있어야 한다. 빼는 목록은 스토리 id 라 스토리를 더하거나 이름을 바꾸면
+//   조용히 어긋난다.
+// - 기초 카드와 목록 타일. 폴더 넷(`FOUNDATIONS`)이 모두 있고, `.design-sync/foundations/<폴더>/` 마다 HTML 이 하나이고 첫 줄이 `<!-- @dsCard group="…" -->`
+//   이어야 한다. 카드와 `thumbnail.html` 이 읽는 `var(--이름)`·`data-value="--이름"` 은 빌드 CSS 에 선언이 있어야 하고
+//   (이름이 바뀌면 풀리지 않아 조용히 빈 칸이 된다), `data-theme`·`data-density` 의 값은 선택자가 있어야 한다. 그리고
+//   `ds-bundle/` 에 같은 내용으로 복사되어 있어야 한다.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 const files = {
   md: ".design-sync/conventions.md",
+  config: ".design-sync/config.json",
+  foundations: ".design-sync/foundations",
+  thumbnail: ".design-sync/thumbnail.html",
   css: "ds-bundle/_ds_bundle.css",
   js: "ds-bundle/_ds_bundle.js",
   components: "ds-bundle/components",
@@ -33,7 +48,7 @@ const problems = [];
 
 const ticks = (text) => [...text.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-// 선택자의 클래스 글자(`hover\:bg-tint`, `w-3\/10`)가 있고 바로 뒤가 이름 글자가 아니어야 한다. `.flex` 가 `.flex-col`
+// 선택자의 클래스 글자(`hover\:bg-bg-hover`, `w-3\/10`)가 있고 바로 뒤가 이름 글자가 아니어야 한다. `.flex` 가 `.flex-col`
 // 안에서, `.border` 가 `.border-border` 안에서 맞지 않게 한다.
 const hasClass = (name) => {
   const selector = `.${name.replace(/[:/.[\]%]/g, (char) => `\\${char}`)}`;
@@ -92,11 +107,87 @@ for (const name of exported) {
   if (/^[A-Z][a-z]/.test(name) && !dtsNames.has(`${name}.d.ts`)) problems.push(`컴포넌트 폴더가 없다: ${name}`);
 }
 
-const themes = /`data-theme`\(([^)]*)\)/.exec(md)?.[1] ?? "";
-for (const key of ticks(themes).filter((token) => /^[a-z]+$/.test(token))) {
-  if (!css.includes(`[data-theme="${key}"]`) && !css.includes(`[data-theme=${key}]`)) {
-    problems.push(`테마 선택자가 없다: ${key}`);
+const hasSelector = (attribute, key) =>
+  css.includes(`[${attribute}="${key}"]`) || css.includes(`[${attribute}=${key}]`);
+for (const attribute of ["data-theme", "data-density"]) {
+  const keys = new RegExp(`\`${attribute}\`\\(([^)]*)\\)`).exec(md)?.[1] ?? "";
+  for (const key of ticks(keys).filter((token) => /^[a-z]+$/.test(token))) {
+    if (!hasSelector(attribute, key)) problems.push(`${attribute} 선택자가 없다: ${key}`);
   }
+}
+
+// 빼는 목록. 변환기는 제목의 마지막 토막을 공백 없이 컴포넌트 이름으로 본다(`titleMap` 의 키도 그 꼴이다).
+const SHOWCASE_TAG = "showcase";
+const config = JSON.parse(readFileSync(files.config, "utf8"));
+const indexPath = join(config.storybookStatic ?? "", "index.json");
+if (!existsSync(indexPath)) {
+  console.error(`읽을 파일이 없다(참조 Storybook 을 먼저 짓는다): ${indexPath}`);
+  process.exit(2);
+}
+const index = JSON.parse(readFileSync(indexPath, "utf8"));
+const titleMap = config.titleMap ?? {};
+const overrides = config.overrides ?? {};
+const storiesByComponent = new Map();
+for (const entry of Object.values(index.entries ?? {})) {
+  if (entry.type !== "story") continue;
+  const name = String(entry.title).split("/").at(-1).replace(/\s+/g, "");
+  if (titleMap[name] === null) continue;
+  if (!storiesByComponent.has(name)) storiesByComponent.set(name, []);
+  storiesByComponent.get(name).push(entry);
+}
+let skipped = 0;
+for (const [name, stories] of storiesByComponent) {
+  const skip = new Set(overrides[name]?.skip ?? []);
+  skipped += skip.size;
+  const showcase = stories.filter((story) => story.tags.includes(SHOWCASE_TAG));
+  if (showcase.length === 0) problems.push(`보여 주기용 스토리가 없다: ${name}`);
+  for (const story of stories) {
+    if (!story.tags.includes(SHOWCASE_TAG) && !skip.has(story.id)) {
+      problems.push(`변형 스토리가 빼는 목록에 없다: ${name} ${story.id}`);
+    }
+  }
+  const ids = new Map(stories.map((story) => [story.id, story]));
+  for (const id of skip) {
+    const story = ids.get(id);
+    if (story === undefined) problems.push(`빼는 목록의 스토리가 없다: ${name} ${id}`);
+    else if (story.tags.includes(SHOWCASE_TAG)) problems.push(`보여 주기용 스토리를 뺀다: ${name} ${id}`);
+  }
+}
+for (const name of Object.keys(overrides)) {
+  if (!storiesByComponent.has(name)) problems.push(`빼는 목록의 컴포넌트가 색인에 없다: ${name}`);
+}
+
+// 기초 카드와 목록 타일.
+const DSCARD = /^<!--\s*@dsCard\s+group="[^"]*"[^>]*-->/;
+// 기초 카드 넷(NOTES 의 "기초 카드"). 폴더가 빠지거나 이름이 바뀌면 그 카드가 조용히 빠진 채 올라간다.
+const FOUNDATIONS = ["colors", "density", "spacing", "type"];
+const folders = readdirSync(files.foundations, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+for (const name of FOUNDATIONS) {
+  if (!folders.some((folder) => folder.name === name)) problems.push(`기초 카드 폴더가 없다: ${name}`);
+}
+const cards = [];
+for (const folder of folders) {
+  const htmls = readdirSync(join(files.foundations, folder.name)).filter((file) => file.endsWith(".html"));
+  if (htmls.length !== 1) problems.push(`기초 카드 폴더의 HTML 이 하나가 아니다: ${folder.name} (${htmls.length})`);
+  for (const file of htmls) {
+    const path = join(files.foundations, folder.name, file);
+    const text = readFileSync(path, "utf8");
+    if (!DSCARD.test(text.split("\n", 1)[0])) problems.push(`첫 줄이 @dsCard 가 아니다: ${path}`);
+    cards.push({ path, text, copy: join("ds-bundle", "foundations", folder.name, file) });
+  }
+}
+cards.push({ path: files.thumbnail, text: readFileSync(files.thumbnail, "utf8"), copy: join("ds-bundle", "thumbnail.html") });
+const cardVariables = new Set();
+for (const { path, text, copy } of cards) {
+  for (const [, name] of text.matchAll(/var\(\s*(--[a-z][a-z0-9-]*)/g)) cardVariables.add(name);
+  for (const [, name] of text.matchAll(/data-value="(--[a-z][a-z0-9-]*)"/g)) cardVariables.add(name);
+  for (const [, attribute, key] of text.matchAll(/(data-theme|data-density)="([a-z]+)"/g)) {
+    if (!hasSelector(attribute, key)) problems.push(`${attribute} 선택자가 없다: ${key} (${path})`);
+  }
+  if (!existsSync(copy) || readFileSync(copy, "utf8") !== text) problems.push(`ds-bundle 에 복사되지 않았다: ${path} → ${copy}`);
+}
+for (const name of cardVariables) {
+  if (!new RegExp(`(?<![a-z0-9-])${escapeRegExp(name)}\\s*:`).test(css)) problems.push(`카드의 변수가 없다: ${name}`);
 }
 
 if (problems.length > 0) {
@@ -104,5 +195,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  `규약의 이름이 모두 빌드에 있다: 클래스 ${present?.split(/\s+/).filter(Boolean).length ?? 0}, 변수 ${variables.size}, 내보내기 ${exported.size}`,
+  `규약의 이름이 모두 빌드에 있다: 클래스 ${present?.split(/\s+/).filter(Boolean).length ?? 0}, 변수 ${variables.size}, 내보내기 ${exported.size}. ` +
+    `빼는 목록이 맞다: 컴포넌트 ${storiesByComponent.size}, 뺀 스토리 ${skipped}. 카드 ${cards.length}개의 변수 ${cardVariables.size}이 빌드에 있다`,
 );

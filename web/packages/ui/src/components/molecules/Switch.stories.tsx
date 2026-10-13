@@ -251,3 +251,16 @@ export const Focus: Story = {
     await expect(focusRingOf(track)).toEqual(expectedFocusRing(track));
   },
 };
+
+/** 보여 주기용(`showcase`). 플러그인 목록의 줄마다 놓인 스위치다. 줄마다 플러그인 하나를 켜고 끈다. */
+export const ShowcasePluginRows: Story = {
+  name: "쓰임: 플러그인 줄의 스위치",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex flex-col gap-3" style={{ width: 320 }}>
+      <Switch label="calc" checked onChange={() => {}} />
+      <Switch label="support-bot" checked={false} onChange={() => {}} />
+      <Switch label="filesystem" checked disabled />
+    </div>
+  ),
+};

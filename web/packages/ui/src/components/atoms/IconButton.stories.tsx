@@ -224,3 +224,18 @@ export const Focus: Story = {
     await expect(focusRingOf(button)).toEqual(expectedFocusRing(button));
   },
 };
+
+/** 보여 주기용(`showcase`). 위젯의 대화 입력 끝에 놓인 보내기다. 글자 없이 아이콘 하나가 그 줄의 동작이다. */
+export const ShowcaseWidgetSend: Story = {
+  name: "쓰임: 위젯 대화 입력 끝의 보내기",
+  tags: ["showcase"],
+  render: () => (
+    <div
+      className="flex items-center justify-between gap-3 rounded-m border border-border-control bg-bg-raised px-3 py-2"
+      style={{ width: 320 }}
+    >
+      <span className="text-body text-text-muted">질문을 적습니다</span>
+      <IconButton icon="send" label="보내기" />
+    </div>
+  ),
+};
