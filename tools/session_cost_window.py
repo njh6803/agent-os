@@ -58,8 +58,10 @@ def in_window(ts: str, since: datetime | None) -> bool:
 
 @dataclass(frozen=True)
 class TurnHead:
-    """턴 하나의 머리. `branch`가 비면 귀속하지 못한 턴이다. `trigger`는 `collect.py`의
-    `classify_trigger` 값(human, auto, interrupt)이거나 첫 기록이 트리거가 아닌 턴의 `start`다."""
+    """턴 하나의 머리. `branch`가 비면 귀속하지 못한 턴이다. `trigger`는 `collect.py`의 `turns_of`가
+    넣는 넷 가운데 하나다. `human`·`auto`·`interrupt`는 턴을 연 기록의 `classify_trigger` 값이고,
+    `start`는 세션의 첫 기록이 트리거가 아니어서 트리거 없이 연 첫 턴이다. 이 파일은 `human`만
+    가리고 나머지는 같게 다룬다."""
 
     start: str
     branch: str

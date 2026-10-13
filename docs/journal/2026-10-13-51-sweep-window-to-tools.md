@@ -68,6 +68,17 @@
 - 다시 돌린 것: 변이 둘(창 도구, 판정 도구)과 옮기기 전후 비교 두 갈래. 손으로 치는 검증 다섯은 커밋의 pre-commit으로
   갈음한다.
 
+## PR 리뷰
+
+PR #229. CodeRabbit은 두 번 모두 무료 한도에 걸려 리뷰하지 않았다. 그 사이 main에 PR #228이 들어와 충돌해(대기열 끝 행)
+main을 합쳤다. claude-review 두 회차는 동작 변화를 찾지 못했다.
+
+- 첫 회차 Minor(`TurnHead.trigger`의 값이 독스트링에서 읽히지 않는다)는 넷(`human`·`auto`·`interrupt`·`start`)을 적어
+  고쳤다. `Literal`로 좁히는 것은 `collect.py`의 `Turn.trigger`부터 좁혀야 해 하지 않았다. 첫 회차 Nit 둘(별칭, 독스트링의
+  출처 인용)은 보류했다. 별칭은 `collect.py`의 다른 함수가 그 이름으로 쓰고, 출처 인용은 근거를 적는 이 저장소의 관례다.
+- 둘째 회차는 Minor(`parse_ts`가 판정 도구와 같은 본문)와 Nit(`human_nondirective`의 `first`를 따로 받음)뿐이라 규약대로
+  보류 이유를 PR 코멘트에 남겼다.
+
 ## 회고
 
 후보 넷: 승인 둘, 기각 둘, 넘김 없음.
