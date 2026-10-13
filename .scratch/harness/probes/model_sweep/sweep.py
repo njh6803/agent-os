@@ -267,7 +267,9 @@ UNMERGED = "병합만 빠짐"  # 사전 등록의 표지: 닫혔거나 열린 �
 OTHER_DROP = "그 밖에 빠짐"  # 병합됐지만 기한 뒤, main 밖, 귀속 응답·비용 없음
 RENAMED = "브랜치 줄과 PR 머리가 다름"
 MODEL_OFF = "모델 줄이 배정과 다름"
-MARKS = [UNMERGED, OTHER_DROP, RENAMED, MODEL_OFF]
+# 탐색 표지: 창 앞 기록이 잘려 다시 여는 지시문이 첫 트리거로 보였을 수 있다(PR 직전 버그 리뷰)
+EARLY_PR = "PR이 스윕 시작 전에 열림"
+MARKS = [UNMERGED, OTHER_DROP, RENAMED, MODEL_OFF, EARLY_PR]
 
 
 @dataclass
@@ -297,6 +299,9 @@ def split_arms(rows: list[Row], kind: str) -> Split:
             marks[RENAMED] += 1
         if not (line_of(r, "model_line") or "").startswith(assigned):
             marks[MODEL_OFF] += 1
+        created = stamp(r, "created")
+        if created is not None and created < parse_ts(SWEEP_START):
+            marks[EARLY_PR] += 1
         if merged_in_time(r):
             s.arms[assigned].append(r)
         elif r.get("state") != "MERGED":

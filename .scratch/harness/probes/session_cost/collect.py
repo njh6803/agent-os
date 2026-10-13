@@ -48,7 +48,7 @@ import subprocess
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from costs import Json, Usage, cost, cost_state_bounds
@@ -747,7 +747,11 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         return (merged or cands)[-1]
 
     print("트랜스크립트를 읽는다…", file=sys.stderr)
-    s = scan(args.projects, root, parse_ts(args.since) if args.since else None)
+    since = parse_ts(args.since) if args.since else None
+    if since is not None and since.tzinfo is None:
+        # 시각대 없는 값은 UTC로 본다. 그대로 두면 기록의 aware 시각과 견줄 때 TypeError가 난다
+        since = since.replace(tzinfo=UTC)
+    s = scan(args.projects, root, since)
     accs: dict[str, Acc] = defaultdict(Acc)
     session_turns: dict[str, list[Turn]] = {}
     unattributed = 0.0
