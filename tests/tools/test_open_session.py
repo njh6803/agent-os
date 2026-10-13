@@ -728,11 +728,11 @@ def test_첫_줄의_스킬_명령은_그_스킬_파일을_읽으라는_한_줄�
 @pytest.mark.parametrize(
     ("line", "has_root"),
     [
-        ("/to-spec x", True),  # 그 스킬 파일이 없다
-        # 이름은 소문자 kebab 이다. 대소문자를 가리지 않는 파일 시스템(윈도)에서도 옮기지 않는다
-        ("/Implement x", True),
-        ("/../../docs x", True),  # `.claude/skills/` 밖의 SKILL.md 를 가리키지 못한다
-        ("/implement x", False),  # 연 저장소를 모르면 표지를 실을 수 없다
+        pytest.param("/to-spec x", True, id="스킬_파일이_없다"),
+        # 대소문자를 가리지 않는 파일 시스템(윈도)에서도 옮기지 않는다
+        pytest.param("/Implement x", True, id="이름은_소문자_kebab"),
+        pytest.param("/../../docs x", True, id="스킬_폴더_밖을_가리킨다"),
+        pytest.param("/implement x", False, id="연_저장소를_모른다"),
     ],
 )
 def test_이_저장소의_스킬_파일을_가리킬_수_없는_첫_줄은_그대로_둔다(

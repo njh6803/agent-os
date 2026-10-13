@@ -34,7 +34,7 @@ date: 2026-10-13
   - 환경 변수는 runspace 사이에 샌다. 환경을 바꾸는 사례(위의 같은 이름 함수처럼 `APPDATA`를 돌리는 본문)는 묶지 않거나 앞뒤로 되돌린다.
   - 사례마다 pytest의 사례로 빨강이 남아야 한다. 남으면 위 결정(시험 사례는 pytest의 사례 하나다)을 바꾸지 않는다. 남지 않으면 `Invoke-Pester`를 거부한 까닭과 같은 대가이므로 그때 다시 정한다.
 - **pwsh 전제를 적는다.** `tech.md`의 테스트 행, `operations.md` 가드레일의 기계마다 까는 것(chromium 옆), `README.md`의 시작 절, `.pre-commit-config.yaml` 머리의 준비 목록이다. 헌법 버전은 patch다. 게이트 수와 손으로 치는 검증 명령은 그대로다.
-- **못 보는 것.** 판을 고정하지 않으므로 pwsh 7의 판 사이의 동작 차이는 그 판이 CI나 이 PC에 들어온 뒤에야 본다. Windows PowerShell 5.1에서의 동작은 보지 않는다(스킬은 `pwsh`로 부른다). 접근성 트리와 앱의 동작은 시험 밖이고 실제 실행으로만 본다. 같은 이름 함수로 가짜를 주는 길은 Windows에서만 쟀다. 그 길로 쓴 시험이 ubuntu 러너에서도 같은지는 그 시험을 들일 때 CI가 처음 본다.
+- **못 보는 것.** 판을 고정하지 않으므로 pwsh 7의 판 사이의 동작 차이는 그 판이 CI나 이 PC에 들어온 뒤에야 본다. Windows PowerShell 5.1에서의 동작은 보지 않는다(스킬은 `pwsh`로 부른다). 접근성 트리와 앱의 동작은 시험 밖이고 실제 실행으로만 본다. 같은 이름 함수로 가짜를 주는 길은 Windows에서만 쟀다. 그 길로 쓴 시험이 ubuntu 러너에서도 같은지는 그 시험을 들일 때 CI가 처음 본다. (바뀜: 이력 2026-10-13 "대기열 17의 남은 몫을 이 이음매로 들였다")
 - 대기열 17의 남은 몫은 이 이음매로 따로 간다. `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, `-TimeoutSec`처럼 스킬이 넘긴 인자가 실제로 먹는지의 시험, `Get-AppQuitMarker`의 선택을 순수 함수로 떼어 재는 것이다. 지금의 `_call`은 pwsh에 시간 제한을 두지 않아, 대기 루프를 부르는 시험이 회귀로 끝나지 않으면 pytest가 멈춘다. 그런 시험을 들일 때 `_call`에 시간 제한을 단다. (바뀜: 이력 2026-10-13 "대기열 17의 남은 몫을 이 이음매로 들였다") 같은 파일의 대기열 18(`stale=` 경로)도 그 판정을 떼면 같은 이음매로 잴 수 있다.
 
 ## 이력
@@ -53,8 +53,10 @@ date: 2026-10-13
 - **같은 이름 함수의 가짜를 시험에 처음 썼다.** 그 시험은 행을 찾는 함수가 UIAutomation 조건을 만드는 `New-Object`를 같은
   이름의 함수로 가리고, `$Auto`·`$Types`·`$Scope`의 정적 멤버를 클래스로 흉내 낸다. UIAutomation 타입은 Windows의 pwsh에도
   `Add-Type` 전에는 없어서(`.scratch/harness/probes/quit_marker_real_app.ps1`의 `uia-before=absent`) 두 플랫폼에서 같은
-  가짜로 돈다. ubuntu 러너의 결과는 이 브랜치의 PR CI가 본다. 이 시험은 본문이 `$TimeoutSec`을 정의하므로, 스킬과 복구
-  안내의 명령 줄이 넘기는 `-<이름>`이 스크립트의 인자인지는 따로 AST로 대 본다.
+  가짜로 돈다. ubuntu 러너에서도 돌았다. PR #215의 CI 실행 38339943172의 `python` 잡이 이 시험과 아래 껍질 시험을 포함해
+  2355개를 통과했다. `gh run view --job 115108438226 --log`의 요약 줄(2355 passed, 7 deselected)과, 로컬의
+  `pytest --collect-only -m llm`이 모은 7개에 이 파일의 시험이 없다는 것을 손으로 봤다. 이 시험은 본문이 `$TimeoutSec`을
+  정의하므로, 스킬과 복구 안내의 명령 줄이 넘기는 `-<이름>`이 스크립트의 인자인지는 따로 AST로 대 본다.
 - **선택을 순수 함수로 뗐다.** 주 프로세스의 선택은 `Find-MainStart`, 로그 파일의 선택은 `Select-QuitLogs`다. 프로세스와
   파일을 찾는 껍질 `Get-AppQuitMarker`는 그 둘에 이어 주는지만 시험한다. 프로세스와 파일 시스템의 cmdlet(`Get-CimInstance`,
   `Get-ChildItem`, `Test-Path`, `Get-Item`, `Get-Content`)을 모두 같은 이름의 함수로 가려, 껍질이 만든 속성 이름이 선택이
