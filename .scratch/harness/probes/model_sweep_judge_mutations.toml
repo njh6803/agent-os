@@ -474,6 +474,48 @@ file = "tools/model_sweep_judge.py"
 old = '''JUDGE_AT = END_AT + timedelta(days=7)'''
 new = '''JUDGE_AT = END_AT + timedelta(days=6)'''
 
+# --- 소급 측정 표지의 이름(failed_names) ---
+
+[[mutation]]
+name = "NaN 값을 통과로"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''if not float(value) <= float(limit)]'''
+new = '''if float(value) > float(limit)]'''
+
+[[mutation]]
+name = "문턱과 같은 값을 넘었다고"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''if not float(value) <= float(limit)]'''
+new = '''if not float(value) < float(limit)]'''
+
+[[mutation]]
+name = "넷째 칸 글자로 고름"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    names = [name for name, value, limit, _ in marker_rows if not float(value) <= float(limit)]
+'''
+new = '''    names = [row[0] for row in marker_rows if row[3] == "넘는다"]
+'''
+
+[[mutation]]
+name = "반올림으로 못 고르면 빈 목록"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    return names or [ROUNDED_OVER]
+'''
+new = '''    return names
+'''
+
 # --- tools/model_sweep.py ---
 
 [[mutation]]

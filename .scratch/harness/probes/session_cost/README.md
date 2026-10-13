@@ -31,7 +31,7 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/cache_read_fit.p
 ```
 
 `collect.py`는 `gh` 인증과 이 저장소의 원격이 든다. `--since <ISO 시각>`은 집계의 창이다. 기록은 모두 읽어
-브랜치의 첫 사람 트리거를 정하고, 비용·턴·표지만 그 시각 뒤로 센다(레벨 스윕의 판정이 쓴다. 자세한 것은 `collect.py` 독스트링). `judge.py run`은 `anthropic` SDK를
+브랜치의 첫 사람 트리거를 정하고, 비용·턴·표지만 그 시각 뒤로 센다(레벨 스윕의 판정이 쓴다. 자세한 것은 `collect.py` 독스트링, 창의 순수 함수는 `tools/session_cost_window.py`). `judge.py run`은 `anthropic` SDK를
 `uv run --with anthropic==1.7.0`으로 받고 `ANTHROPIC_API_KEY`가 든다(워크트리에서는 `--env-file ../../../.env`). 판을
 고정하지 않으면 실행마다 최신 판을 받아 기록의 기준이 바뀐다. 모델 판정 실험은 `pytest`의 `llm` 마커 테스트로
 두지 않았다. 통과·실패를 단언하는 테스트가 아니라 결과를 내는 측정이고, 기본 실행에서 돌지 않는다는 성질은 `run`이

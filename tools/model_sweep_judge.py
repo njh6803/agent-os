@@ -22,7 +22,8 @@
    따로 센다(그 브랜치는 비용·턴이 창 안 몫만 든다, `collect.py --since`).
 4. 판정하지 않는 조건(`blocking_reasons`). 한 갈래라도 모집단이 n_k 미만이다, 배정된 모델·레벨이 본
    세션 비용의 최대인 브랜치가 80% 미만이다, 도구의 `SWEPT`에서 빠졌다(사람이 멈췄다), 소급 측정의
-   표지 넷 가운데 문턱을 넘은 것이 있다.
+   표지 넷 가운데 문턱을 넘은 것이 있다. 그 이름은 `failed_names`가 표지 표에서
+   고른다(`sweep.py`에서 옮겼다, PR #224 claude-review).
 5. 주된 판정(`lower_verdict`, `verdicts`)은 비용(본 세션과 서브에이전트의 합)의 기하평균 비, 재작업
    점수, 사람 개입으로 "레벨을 내린다"인지 본다. 되풀이 둘(본 세션 비용만, 사람 개입에
    `queued_human`을 더한 것)이 주된 판정과 다르면 "<무엇>에 따라 갈린다"를 붙인다. 4에 걸린 종류는
@@ -206,6 +207,20 @@ def blocking_reasons(
         reasons.append("사람이 스윕을 멈췄다(도구의 SWEPT 에서 빠졌다)")
     reasons.extend(f"소급 측정의 판정하지 않는 조건에 걸렸다: {name}" for name in failed_markers)
     return reasons
+
+
+ROUNDED_OVER = "표지 넷 가운데 문턱을 넘은 것이 있다(위 표의 값은 반올림했다)"
+
+
+def failed_names(marker_rows: Sequence[Sequence[str]]) -> list[str]:
+    """소급 측정 `analyze.markers`가 통과가 아니라고 한 표(이름, 값, 문턱, 넘는가)에서 판정을 막는
+    표지의 이름(`blocking_reasons`의 `failed_markers`). 표의 넷째 칸 글자가 아니라 값 칸과 문턱
+    칸을 다시 견줘 `analyze.markers`의 통과 조건(값이 문턱 이하)이 깨진 것을 고른다. 값이 NaN이면
+    견줄 수 없어 깨진 것으로 든다(셀프 리뷰 명세 축). 값 칸은 소수 셋째 자리로 반올림되어 문턱 바로
+    위의 값은 이름을 못 고를 수 있어, 그때는 이름 대신 그 뜻(`ROUNDED_OVER`)을 넘긴다(PR #224
+    claude-review). 통과한 표를 넘기지 않는 것은 부르는 쪽(`sweep.py`)이 한다."""
+    names = [name for name, value, limit, _ in marker_rows if not float(value) <= float(limit)]
+    return names or [ROUNDED_OVER]
 
 
 # --- 주된 판정과 되풀이 ---------------------------------------------------------------------------
