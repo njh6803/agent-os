@@ -122,3 +122,27 @@ export const AllDark: Story = {
     }
   },
 };
+
+/** 실행 목록 표본. 상태 넷이 한 번씩 나온다. */
+const RUNS = [
+  { id: "run_7f3a", status: "paused" },
+  { id: "run_7f39", status: "done" },
+  { id: "run_7f38", status: "failed" },
+  { id: "run_7f37", status: "no-outcome" },
+] as const satisfies readonly { id: string; status: StatusBadgeStatus }[];
+
+/** 보여 주기용(`showcase`). 실행 목록에서 상태 넷을 배지로 가른다. 색이 아니라 아이콘과 글자가 상태를 말한다. */
+export const ShowcaseRunList: Story = {
+  name: "쓰임: 실행 목록의 배지 넷",
+  tags: ["showcase"],
+  render: () => (
+    <ul className="flex flex-col gap-2 text-text" style={{ width: 240 }}>
+      {RUNS.map(({ id, status }) => (
+        <li key={id} className="flex items-center justify-between gap-4">
+          <span className="font-mono text-mono">{id}</span>
+          <StatusBadge status={status} />
+        </li>
+      ))}
+    </ul>
+  ),
+};

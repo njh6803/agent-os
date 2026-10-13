@@ -1,0 +1,67 @@
+<!-- @dsCard group="Type" -->
+<!doctype html>
+<html lang="ko" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<title>글자</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+html, body { margin: 0; }
+body {
+  padding: 24px; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: var(--body-size); line-height: var(--body-lh);
+}
+h1 { margin: 0 0 4px; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--font-weight-semibold); }
+h2 { margin: 24px 0 8px; font-size: var(--body-size); line-height: var(--body-lh); font-weight: var(--font-weight-semibold); }
+p.lead { margin: 0; color: var(--text-muted); }
+code, .value { font-family: var(--mono); font-size: var(--mono-size); line-height: var(--table-lh); }
+.value, .label { color: var(--text-muted); }
+.label { font-size: var(--text-small); line-height: var(--text-small--line-height); }
+.row { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.meta { display: flex; flex-direction: column; gap: 2px; }
+.weights { display: flex; gap: 24px; font-size: var(--body-size); line-height: var(--body-lh); }
+</style>
+</head>
+<body>
+<h1>글자</h1>
+<p class="lead">글꼴은 모든 테마가 Noto Sans KR 과 Noto Sans Mono 를 쓴다. 본문, 표, 고정폭의 크기는 밀도가 고른다.</p>
+<div class="row">
+  <div class="meta"><code>title</code><span class="label">제목</span><span class="value" data-value="--text-title"></span></div>
+  <div style="font-family: var(--sans); font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight)">실행이 승인을 기다립니다 Agent OS</div>
+</div>
+<div class="row">
+  <div class="meta"><code>body</code><span class="label">본문 · 밀도를 따른다</span><span class="value" data-value="--body-size"></span></div>
+  <div style="font-family: var(--sans); font-size: var(--body-size); line-height: var(--body-lh); font-weight: var(--font-weight-regular)">실행이 승인을 기다립니다 Agent OS</div>
+</div>
+<div class="row">
+  <div class="meta"><code>table</code><span class="label">표 · 밀도를 따른다</span><span class="value" data-value="--table-size"></span></div>
+  <div style="font-family: var(--sans); font-size: var(--table-size); line-height: var(--table-lh); font-weight: var(--font-weight-regular)">실행이 승인을 기다립니다 Agent OS</div>
+</div>
+<div class="row">
+  <div class="meta"><code>mono</code><span class="label">고정폭 · 밀도를 따른다</span><span class="value" data-value="--mono-size"></span></div>
+  <div style="font-family: var(--mono); font-size: var(--mono-size); line-height: var(--table-lh); font-weight: var(--font-weight-regular)">run_7f3a payments.refund 14:02:31</div>
+</div>
+<div class="row">
+  <div class="meta"><code>small</code><span class="label">작은 글자</span><span class="value" data-value="--text-small"></span></div>
+  <div style="font-family: var(--sans); font-size: var(--text-small); line-height: var(--text-small--line-height); font-weight: var(--text-small--font-weight)">실행이 승인을 기다립니다 Agent OS</div>
+</div>
+<div class="row">
+  <div class="meta"><code>badge</code><span class="label">배지</span><span class="value" data-value="--text-badge"></span></div>
+  <div style="font-family: var(--sans); font-size: var(--text-badge); line-height: var(--text-badge--line-height); font-weight: var(--text-badge--font-weight)">실행이 승인을 기다립니다 Agent OS</div>
+</div>
+<h2>굵기</h2>
+<div class="weights">
+  <span style="font-weight: var(--font-weight-regular)">regular 보통</span>
+  <span style="font-weight: var(--font-weight-medium)">medium 중간</span>
+  <span style="font-weight: var(--font-weight-semibold)">semibold 굵게</span>
+</div>
+<h2>글꼴</h2>
+<div class="row"><code>sans</code><div style="font-family: var(--sans)">가나다 Agent OS 0123</div></div>
+<div class="row"><code>mono</code><div style="font-family: var(--mono)">run_7f3a 0123 {"id": 1}</div></div>
+<script>
+for (const el of document.querySelectorAll("[data-value]")) {
+  el.textContent = getComputedStyle(el).getPropertyValue(el.dataset.value).trim();
+}
+</script>
+</body>
+</html>

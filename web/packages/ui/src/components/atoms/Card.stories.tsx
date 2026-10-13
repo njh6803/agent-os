@@ -118,3 +118,26 @@ export const NarrowSlot: Story = {
     await expect(badge.getBoundingClientRect().width).toBeLessThan(card.clientWidth / 2);
   },
 };
+
+/** 보여 주기용(`showcase`). 카드 안의 실행 요약이다. 머리(실행 ID와 상태)는 쓰는 쪽이 children 으로 짓는다. */
+export const ShowcaseRunSummary: Story = {
+  name: "쓰임: 카드 안의 실행 요약",
+  tags: ["showcase"],
+  render: () => (
+    <div style={{ width: 360 }}>
+      <Card as="article">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-mono text-mono text-text">run_7f3a</span>
+            <StatusBadge status="paused" />
+          </div>
+          <p className="text-body text-text">
+            <span className="font-mono text-mono font-medium">payments.refund</span>의 승인을
+            기다립니다.
+          </p>
+          <p className="text-small text-text-muted">에이전트 support-bot, 14:02 시작</p>
+        </div>
+      </Card>
+    </div>
+  ),
+};

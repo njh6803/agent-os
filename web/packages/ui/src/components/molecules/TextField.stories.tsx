@@ -373,3 +373,27 @@ export const NarrowColumn: Story = {
     );
   },
 };
+
+/** 보여 주기용(`showcase`). 거부 사유와 채널 토큰이다. 거부 사유는 반드시 적어야 하고, 비면 오류를 보인다. */
+export const ShowcaseDecisionAndToken: Story = {
+  name: "쓰임: 거부 사유와 채널 토큰",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex flex-col gap-4" style={{ width: 360 }}>
+      <TextField
+        variant="multi"
+        label="거부 사유"
+        value=""
+        placeholder="예: 환불 금액이 주문 금액보다 큽니다"
+        error="거부 사유를 적어야 거부할 수 있습니다"
+        onChange={() => {}}
+      />
+      <TextField
+        label="채널 토큰"
+        value=""
+        help="이 탭에만 남고 서버의 구성은 바꾸지 않습니다"
+        onChange={() => {}}
+      />
+    </div>
+  ),
+};
