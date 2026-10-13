@@ -5,7 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from tools.hook_bash_cd_outside import cd_steps, checkout_of, deny_reason, normalize, resolve
+from tools.hook_bash_cd_outside import (
+    cd_steps,
+    checkout_of,
+    deny_reason,
+    normalize,
+    resolve,
+    subfolder_notice,
+)
 
 
 def _저장소(path: Path) -> Path:
@@ -279,3 +286,73 @@ def test_cwd_의_역슬래시_표기도_같은_자리로_본다(자리: dict[str
 
     assert deny_reason(f"cd {자리['mine']}/web", cwd, 자리["scratch"]) is None
     assert _다른_체크아웃(자리["main"]) in _막는_이유(f"cd {자리['main']}", cwd, 자리)
+
+
+def _알리는_문장(command: str, cwd: str, 자리: dict[str, str]) -> str:
+    notice = subfolder_notice(command, cwd, 자리["scratch"])
+    assert notice is not None
+    return notice
+
+
+def test_하위_폴더로_옮기면_알린다(자리: dict[str, str]) -> None:
+    """대기열 225 의 셋째 사건(일지 2026-10-13-22)의 모양이다. 폴더는 없어도 판정한다."""
+    command = "cd web/packages/ui/src/components && ls"
+
+    notice = _알리는_문장(command, 자리["mine"], 자리)
+
+    assert f"{자리['mine']}/web/packages/ui/src/components" in notice
+    assert "-C" in notice
+
+
+def test_절대_경로로_하위_폴더에_들어가도_알린다(자리: dict[str, str]) -> None:
+    assert subfolder_notice(f"cd {자리['mine']}/web", 자리["mine"], 자리["scratch"]) is not None
+
+
+def test_주_체크아웃_세션의_하위_폴더도_알린다(자리: dict[str, str]) -> None:
+    """워크트리 폴더도 주 체크아웃의 하위 폴더지만 그것은 다른 체크아웃이라 막는 판정이 본다."""
+    assert subfolder_notice("cd docs", 자리["main"], 자리["scratch"]) is not None
+
+
+def test_들렀다_돌아와도_알린다(자리: dict[str, str]) -> None:
+    """`&&` 중간이 실패하면 돌아오는 cd 가 돌지 않는다. `;` 로 이어 늘 돌아오는 것도 알린다(거짓
+    양성, 독스트링의 못 보는 것)."""
+    assert subfolder_notice("cd web && pnpm verify && cd ..", 자리["mine"], 자리["scratch"])
+    assert subfolder_notice("cd web; pnpm verify; cd ..", 자리["mine"], 자리["scratch"])
+
+
+def test_루트로_옮기는_cd_는_알리지_않는다(자리: dict[str, str]) -> None:
+    mine, scratch = 자리["mine"], 자리["scratch"]
+
+    assert subfolder_notice(f"cd {mine} && uv run pytest -q", mine, scratch) is None
+    assert subfolder_notice("cd ..", f"{mine}/web", scratch) is None
+    assert subfolder_notice(f"cd {mine.upper()}", mine, scratch) is None
+
+
+def test_작업_폴더를_남기지_않는_하위_폴더_cd_는_알리지_않는다(자리: dict[str, str]) -> None:
+    mine, scratch = 자리["mine"], 자리["scratch"]
+
+    assert subfolder_notice("(cd web && pnpm verify)", mine, scratch) is None
+    assert subfolder_notice("pnpm -C web verify", mine, scratch) is None
+    assert subfolder_notice("cd web | cat", mine, scratch) is None
+
+
+def test_막는_cd_가_있으면_알리지_않는다(자리: dict[str, str]) -> None:
+    """막는 이유가 하나 있으면 그것만 낸다. 하위 폴더에 들렀다 밖으로 나가도 그렇다."""
+    command = f"cd web && cd {자리['scratch']}"
+
+    assert subfolder_notice(command, 자리["mine"], 자리["scratch"]) is None
+    assert deny_reason(command, 자리["mine"], 자리["scratch"]) is not None
+
+
+def test_이미_하위_폴더에_있는_셸은_cd_가_없으면_알리지_않는다(자리: dict[str, str]) -> None:
+    """못 보는 것: 앞 호출에서 이미 옮겨진 자리는 cd 가 없는 명령에서 알리지 않는다."""
+    assert subfolder_notice("ls", f"{자리['mine']}/web", 자리["scratch"]) is None
+
+
+def test_풀_수_없는_하위_폴더_cd_는_알리지_않는다(자리: dict[str, str]) -> None:
+    """못 보는 것: 변수가 든 대상(`cd "$X"`)은 풀지 않는다."""
+    assert subfolder_notice('cd "$X"', 자리["mine"], 자리["scratch"]) is None
+
+
+def test_체크아웃_밖의_cwd_에서는_알리지_않는다(자리: dict[str, str]) -> None:
+    assert subfolder_notice("cd sub", 자리["scratch"], 자리["scratch"]) is None
