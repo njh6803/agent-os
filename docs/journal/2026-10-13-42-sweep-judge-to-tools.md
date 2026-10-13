@@ -1,4 +1,4 @@
-# 2026-10-13 (36) 레벨 스윕의 판정 함수를 tools/로 옮겨 pytest로 고정
+# 2026-10-13 (42) 레벨 스윕의 판정 함수를 tools/로 옮겨 pytest로 고정
 
 브랜치 `chore/sweep-judge-to-tools`, 워크트리 `.claude/worktrees/sweep-judge-to-tools`. 일지 2026-10-13-33 "다음"의 판정 전
 후보다. 이 세션도 레벨 스윕의 갈래다(지시문의 모델 줄 `Opus 5.5 / xhigh. 레벨 스윕의 갈래`).
@@ -121,6 +121,11 @@ PR #224. CI 초록. CodeRabbit은 무료 OSS 한도(`Review limit reached`, 다�
 - 두었다(PR 코멘트에 이유): [Nit] `print_header`와 `input_blockers`가 사전 등록 해시를 저마다 읽는 것. 같은 프로세스에서
   같은 파일을 읽어 어긋날 길이 없고, 넘기려면 두 함수에 인자를 더해야 한다. [Nit] `tools/` 안의 교차 import를 가르는 규칙
   문장. 리뷰도 두 번째 사례에서 남길 만하다고 했다.
+- 둘째 회차는 Critical·Major 없이 Minor 셋(`failed_names`의 시험, `lower_verdict`가 판정과 문장을 함께 돌려줌, 통계 사본의
+  대조 장치), Nit 셋(별칭 `tool`, 얼린 dataclass의 `dict`·`list` 필드, 헬퍼 이름)이었다. 고치지 않고 PR 코멘트에 보류
+  이유를 남겼다(`next-session` 1단계). `failed_names`의 보류 이유는 아래 "다음"의 "남은 틈" 항목 그대로다(대기열 234).
+- 병합 직전에 main에 #223·#226이 들어와 PR이 충돌했다. 충돌은 대기열 표 끝의 행 순서뿐이었다(이 브랜치의 234와 main의
+  235~238). 일지는 형제 대조가 알린 대로 36에서 42로 옮기고 대기열 234의 인용을 고쳤다.
 
 ## 회고
 
