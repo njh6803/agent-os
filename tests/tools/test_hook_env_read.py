@@ -204,6 +204,16 @@ def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> No
     assert reason_for("Bash", {}) is None
 
 
+def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린다() -> None:
+    """편집과 검색을 한 호출에 묶었다가 검색이 막혀 편집도 돌지 않았다(대기열 111)."""
+    bash = reason_for("Bash", {"command": "sed -i s/a/b/ f.md && cat .env"})
+    assert bash is not None
+    assert "호출 전체가 돌지 않았다" in bash
+    grep = reason_for("Grep", {"path": ".env"})
+    assert grep is not None
+    assert "호출 전체가 돌지 않았다" not in grep
+
+
 @pytest.mark.parametrize(
     "명령",
     [
