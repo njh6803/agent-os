@@ -4,7 +4,7 @@
 
 결정 기준일 2026-09-19, 마지막 갱신 2026-09-28. 결정: mattpocock 스킬 유지, superpowers 비활성, 교정 루프는 retro 스킬의 계기 자동 회고(10단계), 지침은 한국어. 스킬(`.claude/skills/`)과 교정 루프 문단(`CLAUDE.md`)은 모두 프로젝트 레벨에 둔다. 전역에는 프로젝트와 무관한 개인 워크플로 스킬(git-*, jira-*)만 남기고, 프로젝트가 관리하는 스킬의 전역 사본은 두지 않는다.
 
-전제 셋. 무엇을 만들지 안다(모르면 `/grill-me`로 브레인스토밍부터 하고 이 런북은 그 뒤에 시작한다). 원격은 GitHub이고 `gh`가 있다(GitLab이면 1·8·9단계의 `gh` 명령, `tools/hook_pr_next_session.py`의 정규식과 MCP 도구 이름, 전역 `git-pr*` 스킬, Claude Code Review 워크플로를 대체해야 한다 — 이 런북은 그 길을 적지 않는다). 하네스 런타임은 파이썬이다(훅·검사·pre-commit·변이 도구가 파이썬 스크립트다. 파이썬 프로젝트가 아니어도 개발 도구로 파이썬 하나와 uv를 두면 그대로 돈다. 7단계).
+전제 셋. 무엇을 만들지 안다(준비가 처음에 묻고, 모르면 거기서 브레인스토밍부터 한다). 원격은 GitHub이고 `gh`가 있다(GitLab이면 1·8·9단계의 `gh` 명령, `tools/hook_pr_next_session.py`의 정규식과 MCP 도구 이름, 전역 `git-pr*` 스킬, Claude Code Review 워크플로를 대체해야 한다 — 이 런북은 그 길을 적지 않는다). 하네스 런타임은 파이썬이다(훅·검사·pre-commit·변이 도구가 파이썬 스크립트다. 파이썬 프로젝트가 아니어도 개발 도구로 파이썬 하나와 uv를 두면 그대로 돈다. 7단계).
 
 ## 순서의 원칙: 되돌리기 비용이 큰 것부터
 
@@ -50,19 +50,64 @@
 
 1. **사용자가 경험에서 제안한 것은 판단해서 자리에 넣는다.** "그 내용이 어딘가에 있다"는 "행동이 일어나는 자리에 있다"가 아니다. 지침의 값은 로드 시점이 정한다. 3단계의 표로 자리를 정해 넣고, 거부는 이유를 일지에 남긴다. "이미 있음", "나중에"로 넘기지 않는다.
 2. **옆 프로젝트의 원재료를 가리키면 원문을 읽는다.** 요약하지 말고 항목별로 채택·수정 채택·거부를 근거와 함께 보고한 뒤, 채택한 것은 그 자리에서 넣는다. 원재료: `ai-agent-platform/docs/setup-playbook.md`, `docs/setup-prompts/01~09`, `AGENTS.md`, `.claude/rules/`.
-3. **결정은 사용자 것, 사실 조사는 에이전트 것.** 사용자에게 파일을 열어 확인하라고 하지 않는다. 서브에이전트로 조사하고, 결정만 번호 붙여 묻는다.
-4. **일지를 1단계에서 만들고 매 단계 적는다.** 사용자 프롬프트 원문(결정·방향 전환·설계 질문), 벗어난 점, 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것". 이 두 절이 `/retro`의 입력이다.
+3. **결정은 사용자 것, 사실 조사는 에이전트 것.** 사용자에게 파일을 열어 확인하라고 하지 않는다. 서브에이전트로 조사하고, 결정만 추천을 맨 앞에 둔 선택 화면(Claude Code는 `AskUserQuestion`)으로 묻는다.
+4. **일지를 준비에서 만들고 매 단계 적는다.** 사용자 프롬프트 원문(결정·방향 전환·설계 질문), 벗어난 점, 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것". 이 두 절이 `/retro`의 입력이다.
 5. **하네스를 바꾸면 실행으로 확인하고, 새 검사는 변이로 빨강을 본다.** 파일이 그럴듯한 것은 확인이 아니다. 스크립트를 셸 체인으로 돌릴 때는 실패 시 멈추게 한다(`|| exit 1`). 커밋 전에 `git show --stat`으로 내용을 본다.
 6. **한 파일에 모으지 않는다.** 헌법은 처음부터 셋(원칙·스택·운영), 디렉터리 규칙은 `.claude/rules/`+`paths`, 트리는 README, 미래 배치와 범위는 `.scratch/plan.md`. `@` 임포트는 원칙 하나뿐.
 7. **옆 프로젝트의 구성을 옮기기 전에 이 계정·플랜에서 실측한다.** CodeRabbit PR 리뷰는 무료 플랜의 비공개 저장소에서 요약만 남기고 초록이었고, 보호 브랜치는 403이었다. 플랜 차이 없이 옮겨 PR 둘(#3·#4)로 되돌렸다. 도구를 켜기 전에 요금·플랜 조건을 보고, 문서에 없으면 작은 PR 하나로 실측한 뒤 채택한다. 일지 "CodeRabbit App".
 8. **결정을 바꾸면 옛 표현을 grep해 잔존을 0으로 만든다.** "원격·PR은 첫날부터"로 바꾸고도 `skillOverrides`의 git-pr 셋을 끈 채 두었다. 규약 4가 있는데도 놓쳤다. 옛 낱말(도구 이름, 개수, 담당)을 저장소 전체에서 찾고 셀프 리뷰에도 같은 grep을 시킨다. 규약 4에 넣었다. 일지 "번복".
 9. **확인 안 한 사실은 추정이라고 적는다.** "설치하면 14일 체험이 켜진다"를 요금 페이지 문구에서 추정해 사실처럼 썼고 실제는 Free였다. 실측한 것에만 "실측"을 붙인다. 일지 "CodeRabbit App".
 
+## 준비
+
+새 프로젝트 폴더를 만들고 그 폴더에서 Claude Code 세션을 연다. 준비는 그 세션에서 시작한다. 원격에 기대지 않는 사람 몫(무엇을 만드나, 도구와 `gh` 로그인, 저장소의 주인과 이름, 공개 여부, CodeRabbit CLI 로그인)을 여기서 먼저 모은다. 8단계까지 가서 흩어진 자리마다 사람을 불러내지 않기 위해서다. 공개 여부는 7단계의 `.coderabbit.yaml`과 8단계의 보호 브랜치가 기대므로 0단계 전에 정한다(agent-os ADR 0028).
+
+**일지.** `docs/journal/<날짜>-01-kickoff.md`(agent-os의 첫 일지 `2026-09-19-kickoff.md`는 이 규칙 전의 이름이다)를 지금 만든다. `docs/`도 이때 생긴다. 준비의 결정부터 적을 곳이 있게 하기 위해서다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 선택 화면에서 고른 것은 질문과 고른 선택지의 설명을 같은 인용으로, 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 뒤의 일지도 `docs/journal/<날짜>-<NN>-<슬러그>.md`이고 `NN`은 그날의 순번이다. 같은 날 세션 둘이 쓰면 순번이 갈라 준다.
+
+**무엇을 만드나.** 만들 것을 한두 문장으로 정한다.
+
+사람 몫(결정): 무엇을 만드나. 이 세션의 선택 화면에서 한두 문장으로 답하거나, 아직 모르면 브레인스토밍부터 한다고 고른다.
+
+브레인스토밍을 고르면 세션은 런북 저장소의 `.claude/skills/grilling/SKILL.md`를 Read로 읽어 따르고, 그 사본이 가리키는 agent-os 고유의 참조(그 저장소의 `CLAUDE.md`, 이슈 트래커, 대기열)는 따르지 않는다. 이 시점에는 새 프로젝트의 스킬이 아직 없고, 0단계를 마친 기계에는 전역 grilling도 없다(0단계가 백업 폴더로 옮긴다).
+
+**도구.** 세션이 `git`, `gh`, `uv`, `npx`, `coderabbit`의 `--version`을 친다. 2단계가 `npx`를, 7단계가 `uv`와 파이썬을 쓰므로 그 단계에서 막히기 전에 본다. CodeRabbit CLI를 설치하는 단계는 이 런북에 없어 여기서 본다. 설치 길은 OS마다 달라 이 런북이 갖지 않는다.
+
+사람 몫(사람만): `--version`이 실패한 도구를 이 기계에 설치한다(없는 도구가 있을 때만). 확인: 그 도구의 `--version`
+
+**`gh` 로그인과 `user` 범위.** 세션이 `gh auth status`를 본다. 로그인한 활성 계정이 있고, 그 계정의 `Token scopes` 줄에 따옴표로 싼 낱말 `'user'`가 있으면 된 것이다. 글자 `user`만 찾으면 `'read:user'`나 `'user:email'`도 맞고, 계정이 여럿이면 활성 계정이 아닌 줄에서 맞을 수 있다. `user` 범위는 아래 Actions 사용량을 읽는 데 든다. `gh auth login`의 브라우저 흐름은 `user`를 청하지 않으므로(`kickoff/facts.md`) 로그인할 때 `-s user`로 함께 받는다. 그러면 브라우저 승인이 한 번으로 끝난다.
+
+사람 몫(사람만): 터미널에서, 로그인이 안 돼 있으면 `gh auth login -s user`를, 로그인했는데 범위에 `user`가 없으면 `gh auth refresh -h github.com -s user`를 친다(둘 가운데 하나일 때만). `user`는 프로필 쓰기까지 주는 넓은 범위이고, 나중에 `gh auth refresh -h github.com -r user`로 뺄 수 있다. 확인: `gh auth status`의 활성 계정과, 그 계정의 `Token scopes`에 따옴표로 싼 낱말 `'user'`
+
+**주인과 이름.** 세션이 `gh api user --jq .login`과 `gh api user/orgs --jq '.[].login'`으로 후보를 보인다. 개인 계정의 `<login>`은 git의 사용자 이름과 다를 수 있다. 선택 화면의 선택지는 넷까지라, 후보가 넷을 넘으면 개인 계정과 조직 셋을 보이고 나머지는 직접 입력으로 받는다.
+
+사람 몫(결정): 저장소의 주인(개인 계정이나 조직)과 저장소 이름.
+
+**플랜과 Actions 사용량.** 공개 여부를 묻기 전에 세션이 읽어 선택 화면의 설명에 넣는다. Actions 무료 분량은 계정 단위라 다른 비공개 저장소가 써 버리면 이 저장소의 잡이 시작조차 안 되고, CI가 게이트라 병합도 막힌다(agent-os PR #10 실측. 주석은 결제 실패를 말하지만 원인은 분량 소진이었다). 공개 저장소는 무제한이다. Claude 리뷰 한 번이 1~10분을 쓴다.
+
+- 플랜: 개인이면 `gh api user --jq .plan.name`, 조직이면 `gh api orgs/<org> --jq .plan.name`이다. 조직의 전체 정보는 조직 소유자이고 classic 토큰에 `admin:org`가 있어야 보인다(GitHub REST orgs 문서). 킥오프는 그 범위를 받지 않는다. 조직 전체를 관리하는 범위라 플랜 하나를 읽는 값으로는 너무 크다. 그래서 조직의 플랜은 대개 빌 것이다(어림. 문서는 전체 정보를 말하고 `plan` 필드를 지목하지 않는다). 비면 플랜을 모르는 채로 묻는다.
+- 사용량: 개인이면 `gh api "users/<login>/settings/billing/usage?year=<UTC 연>&month=<UTC 월>"`, 조직이면 같은 쿼리로 `organizations/<org>/settings/billing/usage`다. 조직의 길은 그 조직의 관리자만 부를 수 있다. 경로와 범위의 확인일은 `kickoff/facts.md`다.
+- 거르기: 항목에서 `product`가 `actions`이고 `unitType`이 `Minutes`인 것만 고른다. `repositoryName`은 주인 없이 이름만 오므로, `gh repo list <주인> --json name,visibility --limit 1000` 한 번으로 받은 목록과 이름으로 맞춘다. 저장소마다 부르면 그 수만큼 하위 프로세스가 돈다. `PRIVATE`인 저장소의 `quantity`만 `sku`(`Actions Linux`, `Actions Windows` 등)마다 더해 보인다. Windows와 macOS의 배수를 재지 않았으므로 `sku`끼리는 더하지 않는다. 목록에 없는 이름(지운 저장소 등)은 "알 수 없음"으로 따로 보인다. 무료 분량(월 2,000분)은 `kickoff/facts.md`의 값을 함께 보인다.
+- 읽지 못하면(조직의 관리자가 아니다, 다른 종류의 토큰이다) 사용량 없이 공개 여부를 묻고, 설명에 읽지 못한 이유를 적는다.
+
+**커밋되는 billing 값.** 일지는 8단계의 첫 커밋으로 원격에 올라가고, 새 저장소는 공개를 추천받는다. 그래서 일지에는 플랜, 공개 여부, 비공개 저장소 Actions 분의 `sku`마다 합계만 적는다. 다른 저장소의 이름과 금액은 적지 않는다. 일지의 `> 사용자:` 인용이 선택 화면의 설명을 옮길 때도 저장소 이름은 "저장소 N개"로 바꿔 적는다.
+
+**공개 여부.** 선택 화면의 설명에 플랜, 위의 비공개 사용량, 그리고 이 갈림을 넣는다. 무료(`free`)이고 비공개면 보호 브랜치와 룰셋이 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 그러면 처음부터 `/git-pr-merge`가 게이트이고 CodeRabbit은 CLI만 쓴다. 공개면 Actions가 무제한이고 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다. 추천은 무료 플랜이면 공개다. 유료이거나 플랜을 모르면 추천 없이 두 갈래를 모두 설명한다. 조직의 플랜은 대개 비어 모르는 쪽이 되고, 조직 저장소의 공개는 그 조직의 코드 공개 결정이라 세션이 추천할 근거도 없다.
+
+사람 몫(결정): 저장소를 공개로 둘지 비공개로 둘지. 이 답이 7단계의 `.coderabbit.yaml`, 8단계의 `gh repo create`와 main 보호를 가른다.
+
+사람 몫(사람만): github.com에서 그 조직의 Billing 화면을 보거나 조직 소유자에게 물어, 이번 달 남은 Actions 분량을 이 세션에 알린다(주인이 조직이고, 위에서 사용량을 읽지 못했고, 비공개를 골랐을 때만). 확인: 없음 — 화면의 값은 사람이 알린다
+
+**CodeRabbit.** 세션이 `coderabbit auth status`를 본다. 출력에 `Seat` 줄이 있으면 로그인한 것으로 보고, 그 값을 일지에 적는다. 로그인한 출력의 모양은 agent-os의 명세가 손으로 봤고(CLI 0.7.5, `User info`와 `Review access` 두 절이고 `Seat` 줄은 뒤의 절에 있다) 로그인하지 않은 출력은 보지 못했다. 그래서 이 판단은 그 모양에 기댄다. 그 줄은 `Seat`과 콜론 사이에 공백이 여럿이라(`Seat         : not assigned`) 글자 그대로의 `Seat:`이 아니라 줄 머리의 `Seat`, 공백, 콜론, 값의 모양으로 찾는다. `not assigned`는 실패가 아니다. `not assigned`면 유료 구독 없이는 CLI 축이 비어 있다(agent-os 2026-09-23 실측. 좌석 배정에는 활성 유료 구독이 필요하다, `kickoff/facts.md`). 그러면 PR 직전 리뷰가 대체 경로로 간다(9단계 7). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
+
+사람 몫(사람만): 터미널에서 `coderabbit auth login`을 친다(로그인이 안 돼 있을 때만). 확인: `coderabbit auth status`에 `Seat` 줄
+
 ## 0단계. 한 번만 하는 전역 준비
 
-프로젝트마다 반복하지 않는다. 기계마다 한 번이다 — agent-os의 기계에서는 2026-09-19에 했고, 새 기계에서만 다시 한다.
+프로젝트마다 반복하지 않는다. 기계마다 한 번이다 — agent-os의 기계에서는 2026-09-19에 했고, 새 기계에서만 다시 한다. 이 단계의 일은 모두 저장소 밖(이 기계의 Claude Code 전체)에 닿아 하기 전에 허락을 받는다.
 
 1. superpowers 비활성화 (되돌리려면 `enable`).
+
+사람 몫(허락): 이 기계의 전역 플러그인 superpowers를 `claude plugin disable superpowers@claude-plugins-official`로 끈다(켜져 있을 때만).
 
 ```bash
 claude plugin disable superpowers@claude-plugins-official
@@ -70,39 +115,43 @@ claude plugin disable superpowers@claude-plugins-official
 
 2. 전역 스킬 정리. grill-with-docs, domain-modeling, grilling, grill-me는 프로젝트 레벨로 옮길 것이므로 전역 복사본을 백업 폴더로 이동한다. git-*, jira-* 같은 개인 워크플로 스킬은 남긴다.
 
+사람 몫(허락): 이 기계의 전역 스킬 넷을 아래 명령 `mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills/grilling ~/.claude/skills/grill-me ~/.claude/skills-backup/`로 백업 폴더에 옮긴다. `~/.claude/skills/`에 없는 것은 명령에서 뺀다(넷 가운데 하나라도 있을 때만).
+
 ```bash
 mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills/grilling ~/.claude/skills/grill-me ~/.claude/skills-backup/
 ```
 
 전역 `~/.claude/CLAUDE.md`는 비워 둔다. 교정 루프 문단은 3단계에서 프로젝트 `CLAUDE.md`에 넣는다.
 
+사람 몫(허락): 이 기계의 전역 `~/.claude/CLAUDE.md`를 `cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.md.bak && : > ~/.claude/CLAUDE.md`로 사본을 남기고 비운다. 허락을 묻는 설명에 지금 내용을 보인다(비어 있지 않을 때만).
+
 ## 1단계. 저장소 만들기
 
 ```bash
-mkdir my-project && cd my-project && git init && mkdir docs
+git init -b main
 ```
 
-`.gitignore`는 스캐폴딩 때 프레임워크가 만들거나 에이전트에게 맡긴다. 워크트리를 쓸 것이면 `/.claude/worktrees/`를 처음부터 넣는다(클론마다 다른 `.git/info/exclude`에만 있으면 새 클론에서 사본이 검사와 `git add -A`에 섞인다). 이 디렉터리에서 Claude Code를 연다.
+`-b main`은 기본 브랜치 설정이 없는 기계에서도 main으로 시작하게 한다. 8단계의 보호와 이 런북 전체가 main을 가정한다. 폴더와 세션은 준비에서 열었고 `docs/`는 일지와 함께 생겼다.
 
-원격을 만들기 전에 플랜을 본다. 8단계의 보호 브랜치와 봇 경로가 여기서 갈린다.
+사람 몫(결정): 이 프로젝트에서 워크트리를 쓸지. 아래 `.gitignore`와 7단계에서 복사하는 `tidy-checkouts`가 이 답을 쓴다.
 
-```bash
-gh api user --jq .plan.name
-```
+`.gitignore`는 스캐폴딩 때 프레임워크가 만들거나 에이전트에게 맡긴다. 워크트리를 쓸 것이면 `/.claude/worktrees/`를 처음부터 넣는다(클론마다 다른 `.git/info/exclude`에만 있으면 새 클론에서 사본이 검사와 `git add -A`에 섞인다).
 
-Billing & plans의 Included usage도 본다. Actions 무료 분량은 계정 단위 월 2,000분이라 다른 비공개 저장소가 써 버리면 이 저장소의 잡이 시작조차 안 되고, CI가 게이트라 병합도 막힌다(agent-os PR #10 실측. 주석은 결제 실패를 말하지만 원인은 분량 소진이었다). 공개 저장소는 무제한이다. Claude 리뷰 한 번이 1~10분을 쓴다. `free`이고 비공개로 갈 거면 보호 브랜치와 룰셋은 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 처음부터 `/git-pr-merge`를 게이트로, CodeRabbit은 CLI-only로 간다. 공개 저장소면 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다.
-
-`docs/journal/<날짜>-01-kickoff.md`를 지금 만든다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 뒤의 일지도 `docs/journal/<날짜>-<NN>-<슬러그>.md`이고 `NN`은 그날의 순번이다. 같은 날 세션 둘이 쓰면 순번이 갈라 준다.
+원격의 공개 여부는 준비에서 정했다. 8단계의 보호 브랜치와 봇 경로가 그 답으로 갈린다(준비의 "공개 여부").
 
 ## 2단계. 스킬을 프로젝트 레벨로 설치
 
 설치기는 기본이 프로젝트 레벨(`.claude/skills/`)이다. Windows에서는 심링크 대신 복사(`--copy`)를 쓴다. 이름은 공백으로 나열하고, 오류가 나면 `-s`를 스킬마다 반복한다.
 
+`tdd`가 부르는 `codebase-design` 스킬은 아래 목록에 없다 — 시임 어휘가 필요하면 목록에 더해 함께 설치하고, 아니면 설치한 뒤 `tdd` 사본에서 그 문장을 지우고 센티널을 붙인다(agent-os는 아직 어느 쪽도 하지 않았다).
+
+사람 몫(결정): `codebase-design`을 함께 설치할지, 설치하지 않고 `tdd` 사본에서 그 문장을 지우고 센티널을 붙일지.
+
 ```bash
 npx skills@latest add mattpocock/skills -a claude-code --copy -y -s grill-me grill-with-docs grilling domain-modeling setup-matt-pocock-skills to-spec to-tickets implement tdd code-review diagnosing-bugs writing-for-agents retro
 ```
 
-`--copy`는 Windows 전용이다(심링크 대신 복사). 다른 OS는 빼도 된다. `tdd`가 부르는 `codebase-design` 스킬은 이 목록에 없다 — 시임 어휘가 필요하면 함께 설치하고, 아니면 `tdd` 사본에서 그 문장을 지우고 센티널을 붙인다(agent-os는 아직 어느 쪽도 하지 않았다).
+`--copy`는 Windows 전용이다(심링크 대신 복사). 다른 OS는 빼도 된다.
 
 | 스킬 | 역할 | 단계 |
 |---|---|---|
@@ -132,6 +181,8 @@ grill-me도 설치기에 있다(`skills/productivity/grill-me`, 2026-04부터). 
 
 ## 3단계. CLAUDE.md 생성
 
+사람 몫: 없음
+
 `/init`으로 만든 뒤 `kickoff/claude-md-template.md`의 모양으로 줄인다. setup 스킬이 이 파일에 `## Agent skills` 블록을 추가하므로 setup보다 먼저 만든다. 이 단계는 뒤의 산출물에 기대는 자리가 둘이다 — `@` 임포트 대상은 5단계가 만들고 검증 명령은 7단계가 채운다. 그 전까지 `@` 줄은 주석으로 두고 검증 명령 칸은 비워 둔다. 훅 등록과 빨강 확인은 7단계다(pre-commit이 있어야 한다). 교정 루프 절은 템플릿 그대로 복사한다. 규칙이 아니라 규칙을 만드는 절차이므로 "규칙 없음" 원칙과 충돌하지 않는다.
 
 지침의 자리는 로드 시점이 정한다. 로드 시점은 넷이다 — 항상(CLAUDE.md, `@` 임포트, `paths` 없는 rules, 모델이 부를 수 있는 스킬의 description, 자동 메모리 `MEMORY.md`의 앞부분, 켜 둔 MCP 서버의 도구 이름과 서버 지침), 해당 파일을 Read 도구로 열 때(`paths` 있는 rules와 하위 디렉터리의 `CLAUDE.md`. Bash `cat`·`sed`로 읽으면 안 실린다), 필요하다고 판단할 때(skill 본문. 한 번 부르면 이후 턴 내내 남는다), 사건이 일어날 때(훅의 계기 문장). 마크다운 링크는 로드되지 않는다. 파일을 쪼개도 임포트하면 분량은 같다. 분류 표는 위 템플릿의 교정 루프 절이고, 남길 항목은 "이 줄을 지우면 실수하게 되나"로 거른다. 강제가 필요한 것은 문서가 아니라 훅이다.
@@ -149,11 +200,15 @@ grill-me도 설치기에 있다(`skills/productivity/grill-me`, 2026-04부터). 
 
 산출물: `docs/agents/issue-tracker.md`, `docs/agents/domain.md`, `CLAUDE.md`의 `## Agent skills` 블록. 쓰기 전에 초안을 보여 주니 한국어로 고쳐서 승인한다.
 
+사람 몫(결정): 위의 이슈 트래커와 도메인 문서의 모양, 그리고 산출물 초안의 승인. setup 스킬이 글로 물어도 이 세션의 선택 화면으로 묻는다.
+
 로컬 마크다운을 골랐으면 `docs/agents/issue-tracker.md`에 두 가지를 더한다. `Status:` 값(`ready-for-agent`, `in-progress`, `done`, `wontfix`)과 "전체 계획" 절(`.scratch/plan.md`가 기능 목록·`Blocked by`·`Status`를 갖고, 프론티어만 병렬, 계약 변경 티켓이 첫 blocker). 그리고 `.scratch/plan.md` 첫 판을 만든다. 슬라이스와 기능(slug), 의존, 상태. 헌법의 "첫 슬라이스와 비목표"는 헌법이 아니라 여기 산다.
 
 ## 5단계. 헌법
 
 헌법 전에 제품 의도 한 장(`docs/PRD.md`)을 쓴다. 누구의 어떤 문제를 왜 푸는가, 무엇을 만들고 무엇을 안 만드는가, 성공의 정의, 스펙이 충돌할 때의 우선순위. 40줄 안팎. 설계 문서는 "어떻게"만 담으므로 이것이 없으면 스펙끼리 충돌할 때 기준이 없다(ai-agent-platform은 설계 spec 7개에 PRD 0개였다). 이 시점이 가장 싸다.
+
+사람 몫(결정): PRD의 내용과 이 단계 헌법 인터뷰의 결정들, 그리고 인터뷰에서 나온 ADR 초안의 승인. grill-me가 글로 물어도 이 세션의 선택 화면으로 묻는다.
 
 Spec Kit 템플릿을 내려받아 채운다. Spec Kit 자체는 설치하지 않는다. Spec Kit의 specify, clarify, plan, tasks, implement, analyze는 2단계에서 설치한 to-spec, to-tickets, implement, code-review와 1:1로 겹쳐서 둘 다 깔면 실행기가 둘이 된다. mattpocock에 없는 것은 헌법뿐이고, 헌법 스킬이 하는 인터뷰는 grill-me가 대신한다. 반대로 Spec Kit 파이프라인을 쓰고 싶으면 to-spec, to-tickets, implement, code-review를 빼고 `specify init --integration claude`로 대체한다. 어느 쪽이든 파이프라인은 한 벌만.
 
@@ -199,6 +254,8 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 
 규칙은 강제력이 가장 높은 층에 둔다. 타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰. 오른쪽으로 갈수록 비용이 자릿수로 커진다. 린터가 잡는 규칙을 지침에 쓰지 않고, 거짓 양성이 많은 규칙을 하드 게이트로 만들지 않는다(`disable`이 관례가 되면 옆의 살아 있는 규칙까지 죽는다). 리뷰 관점은 4개 이하로 둔다. 길어지면 아무도 안 읽는다. 선행 프로젝트에서 검증된 판단 기준 목록이 있으면 첫날 씨앗으로 넣어도 되지만, 그 목록은 사람이 고른다. 씨앗은 새 프로젝트의 회고 후보가 아니라서 retro의 판정을 거치지 않는다.
 
+사람 몫(결정): 선행 프로젝트의 판단 기준을 첫날 씨앗으로 넣을지와, 넣으면 어느 항목을 넣을지(그 목록이 있을 때만).
+
 ## 7단계. 스캐폴딩과 검증 명령
 
 에이전트에게 "헌법대로 골격을 만들어라"라고 시킨다. 프레임워크 생성기(`create-next-app` 같은 것)는 에이전트가 돌린다. 종료 조건은 세 명령이 실제로 통과하는 것이다.
@@ -208,6 +265,8 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 타입체크 명령 1개 (해당 언어면)
 
 통과한 명령을 `CLAUDE.md`의 검증 명령 칸에 적는다. 이때 아래 파일들을 런북 저장소에서 복사한다. **파일마다 바꿀 자리가 다르다** — 각 항목 끝의 괄호가 그것이고, "검증 명령과 층 이름만"이 아니다.
+
+사람 몫(결정): 복사 목록의 조건부 항목. 답변 언어가 한국어인가(`hook_stop_korean`, `hook_midturn_korean`), claude.ai 클라우드 세션을 쓰는가(`hook_session_web_deps`). OS와 원격은 세션이 스스로 안다.
 
 하네스 런타임부터 적는다. 훅과 그 실행 래퍼, 검사와 훅 러너, 변이 도구, pre-commit은 파이썬이고 훅은 `uv run --project "${CLAUDE_PROJECT_DIR}" --no-sync python "${CLAUDE_PROJECT_DIR}/tools/launch_hook.py" <훅>.py`로 돈다(`--project`가 빠지면 저장소 밖에서 시스템 파이썬으로 돈다). 래퍼 `tools/launch_hook.py`는 훅 파일이 없으면 막지 않고 지나가게 하고, 지나갈 때 사용자와 모델에게 알린다(Stop·SubagentStop은 모델에게 알리면 대화가 이어져 사용자에게만). 알림은 세션·에이전트·이벤트·훅마다 처음 한 번만 낸다 — 호출마다 내자 다시 연 워크트리 세션에서 같은 문단이 Write·Edit마다 약 마흔 번 컨텍스트에 쌓였다(agent-os, 2026-10-12). 훅 경로를 바로 부르면 파일이 없을 때 파이썬이 2로 끝나고, PreToolUse에서 2는 막기라 그 매처의 모든 호출이 막힌다(agent-os, 2026-10-02. 새 훅을 등록한 워크트리 세션이 다시 시작되며 `${CLAUDE_PROJECT_DIR}`이 그 파일이 없는 주 체크아웃을 가리켰다). 파이썬 프로젝트가 아니면 개발 도구로 uv와 파이썬 하나를 두면 그대로 돈다 — uv는 pyproject가 없는 폴더에서도 시스템 파이썬으로 돌았다(2026-09-28 실측). 훅(`hook_*.py`)은 표준 라이브러리만 쓴다. 러너·변이 도구(pydantic)와 OpenAPI 내보내기(앱 의존성)는 프로젝트 venv에서 돈다.
 
@@ -246,11 +305,27 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 
 디렉터리별 규칙 파일을 `.claude/rules/<dir>.md`로 만든다. 헌법 인터뷰에서 나온 디렉터리 한정 결정이 내용이고 `paths` 프론트매터가 필수다. 각 파일 첫머리에 원천(코드·테스트 또는 ADR·명세)을 적고 "코드와 다르면 코드를 고치거나 ADR을 남긴다"를 둔다. 코드 독스트링과 같은 문장을 되풀이하지 않는다 — 결정과 ADR 번호는 rules에, 논증은 코드에(agent-os는 다섯 쌍이 글자 그대로 중복되어 있었다). 린터가 판정하는 것(import 경계)은 도구 설정을 가리키기만 한다.
 
-선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. 같은 파일의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적어 매 세션 컨텍스트와 오트리거를 줄인다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)은 `skillOverrides`로 끌 수 없으니(부록 C) 안 쓰면 `/plugin`으로 플러그인째 끈다. 안 쓰는 MCP 서버와 같은 서버 두 벌도 `/mcp`로 끈다. 끈 전후는 `/context`로 잰다. 언어 서버 바이너리는 따로 설치해야 한다.
+선택: 스택이 정해졌으면 LSP 플러그인을 프로젝트 스코프로 설치한다. `.claude/settings.json`의 `enabledPlugins`에 기록되어 저장소와 함께 간다. `--scope project`여도 플러그인 캐시는 사용자 폴더에 있어 저장소 밖에 닿는다.
+
+사람 몫(허락): 그 언어의 LSP 플러그인을 `claude plugin install typescript-lsp@claude-plugins-official --scope project`로 설치한다. 플러그인 이름은 그 프로젝트의 언어로 바꾼다(스택이 정해졌을 때만).
 
 ```bash
 claude plugin install typescript-lsp@claude-plugins-official --scope project
 ```
+
+언어 서버 바이너리는 따로 설치해야 한다. 설치 길은 OS와 언어마다 달라 이 런북이 갖지 않는다.
+
+사람 몫(사람만): 그 플러그인이 부르는 언어 서버 바이너리를 이 기계에 설치한다(LSP 플러그인을 설치했을 때만). 확인: 그 바이너리의 `--version`
+
+안 쓰는 전역 스킬, 플러그인, MCP 서버를 꺼서 매 세션 컨텍스트와 오트리거를 줄인다. 끈 전후는 `/context`로 잰다. `/context`, `/plugin`, `/mcp`는 대화형 화면과 내장 명령이라 사람이 친다.
+
+사람 몫(사람만): 끄기 전에 이 세션의 입력창에 `/context`를 친다(아래에서 끌 전역 스킬, 플러그인, MCP 서버가 있을 때만). 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
+
+`.claude/settings.json`의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적는다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)은 `skillOverrides`로 끌 수 없으니(부록 C) 안 쓰면 `/plugin`으로 플러그인째 끈다. 안 쓰는 MCP 서버와 같은 서버 두 벌도 `/mcp`로 끈다.
+
+사람 몫(사람만): 안 쓰는 플러그인과 MCP 서버를 이 세션의 `/plugin`·`/mcp` 화면에서 끈다(끌 것이 있을 때만). 확인: 없음 — 대화형 화면이다
+
+사람 몫(사람만): 끈 뒤에 다시 `/context`를 친다(끈 것이 있을 때만). 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
 
 ## 8단계. 첫 커밋
 
@@ -260,28 +335,45 @@ git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코�
 
 포함: `.claude/skills/`, `.claude/settings.json`(있으면), `CLAUDE.md`, `CODING_STANDARDS.md`, `docs/`, `.github/`, `tools/`, 골격.
 
-첫 커밋 뒤 원격을 만들고 푸시한다. 그다음부터는 브랜치 → `/git-pr` → CI 초록 → `/git-pr-merge`(squash)다.
+첫 커밋 뒤 원격을 만들고 푸시한다. 주인과 이름, 공개 여부(`--public`이나 `--private`)는 준비에서 정한 것이다. 그다음부터는 브랜치 → `/git-pr` → CI 초록 → `/git-pr-merge`(squash)다.
+
+사람 몫(허락): GitHub에 저장소를 만들고 첫 커밋을 푸시한다. 칠 명령은 `gh repo create <owner>/<repo> --<공개 여부> --source=. --push`이고, 자리표시자는 준비에서 정한 주인과 이름, `public`이나 `private`로 채운다.
 
 ```bash
-gh repo create <owner>/<repo> --private --source=. --push
+gh repo create <owner>/<repo> --<공개 여부> --source=. --push
 ```
 
 main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 강제 푸시·삭제 금지. PR 필수는 두지 않는다 — main에 닿는 커밋을 거르는 것은 필수 검사다. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 관리자 우회는 사람의 토큰으로 도는 에이전트에게도 열려 있고(`gh pr merge --admin`, main 직접 푸시), 로컬 훅은 커밋만 막는다(GitHub 문서상의 동작이고 agent-os는 재지 않았다). 그래서 병합은 체크를 먼저 보는 `/git-pr-merge`로만 한다(워크트리에서는 그 스킬이 main을 가로채므로, 같은 체크를 본 뒤 `--delete-branch` 없이 병합하는 next-session "워크트리에서 병합할 때"의 길로). 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
+
+사람 몫(결정): 혼자인지 팀인지. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더하고 관리자 우회를 끈다.
+
+사람 몫(허락): `gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input tools/protection.json`으로 main을 보호한다(공개 저장소이거나 유료 플랜일 때만. 무료 플랜의 비공개 저장소는 403이다).
 
 ```bash
 gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input tools/protection.json
 ```
 
-1단계 갈림길이 `free`+비공개였으면 이 절은 생략하고 `/git-pr-merge`가 게이트다. 고른 것을 `operations.md` 가드레일 절에 적는다. 나중에 공개로 바꾸면 그날 보호를 건다(agent-os는 셋째 날 공개 전환 뒤 걸었다). 상세는 `kickoff/pitfalls.md`·`kickoff/facts.md`.
+준비에서 무료 플랜에 비공개를 골랐으면 이 보호는 생략하고 `/git-pr-merge`가 게이트다. 고른 것을 `operations.md` 가드레일 절에 적는다. 나중에 공개로 바꾸면 그날 보호를 건다(agent-os는 셋째 날 공개 전환 뒤 걸었다). 상세는 `kickoff/pitfalls.md`·`kickoff/facts.md`.
 
-봇 리뷰의 전제 둘은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다.
+봇 리뷰의 전제 둘은 사람이 한다. 에이전트는 토큰과 시크릿을 다루지 않는다. 하나는 저장소 시크릿이다. 다른 하나인 CodeRabbit CLI 로그인과 좌석 확인은 원격에 기대지 않아 준비에서 했다(준비의 "CodeRabbit").
 
-1. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 넣는다. 에이전트는 `gh secret list`로 이름과 시각만 확인한다.
-2. 로컬에서 `coderabbit auth login`. `coderabbit auth status`의 `Seat:`를 본다. `not assigned`면 유료 구독 없이는 CLI 축이 비어 있다(agent-os 2026-09-23 실측. 좌석 배정에는 활성 유료 구독이 필요하다). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
+사람 몫(사람만): `claude setup-token`으로 토큰을 만들어 이 저장소의 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`으로 넣는다. 자리는 GitHub 저장소의 Settings → Secrets and variables → Actions이거나, 터미널의 `gh secret set CLAUDE_CODE_OAUTH_TOKEN`이다. 확인: `gh secret list`에 그 이름과 넣은 시각. 에이전트는 이름과 시각만 본다
 
 CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 때만 설치한다. 공개라도 별이 10개 미만이면 자동 리뷰가 없고 PR마다 `@coderabbitai review`로 부른다(agent-os PR #12·#43 실측, 2026-09-21·22. OSS PR 리뷰 상한은 별 수에 따라 시간당 1~10회이고 별이 적으면 하한 쪽이다). 비공개 저장소에 무료 플랜이면 설치해도 Walkthrough 요약만 남고 체크는 `pass`다(agent-os PR #2 실측, 2026-09-20). 플랜·요금 사실의 확인일은 `kickoff/facts.md`에 모아 둔다. 설치 여부는 PR의 `coderabbitai[bot]` 코멘트로만 확인할 수 있고 설치 목록 API는 앱 토큰이 필요해 `gh`로는 403이다. 체험은 자동으로 켜지지 않고 시트는 대시보드 team-management에서 사람이 할당한다.
 
+사람 몫(사람만): 브라우저에서 CodeRabbit에 GitHub 계정으로 로그인하고, 이 저장소에 CodeRabbit GitHub App을 설치한다(공개 저장소이거나 CodeRabbit 유료 플랜일 때만). 확인: 없음 — 설치 여부는 PR의 `coderabbitai[bot]` 코멘트로만 보이고 이 자리에는 PR이 아직 없다. 첫 PR을 연 뒤 그 코멘트로 대 본다
+
+사람 몫(허락): 첫 PR을 연다. 작업 브랜치를 `git push -u origin <브랜치>`로 푸시하고 `/git-pr`로 연다. 이 허락은 병합까지 그 브랜치에 다시 푸시하는 것도 덮는다.
+
+사람 몫(허락): 첫 PR에 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit 리뷰를 부른다(App을 설치했고, 공개 저장소이고, 별이 10개 미만일 때만).
+
 첫 PR에서 Claude Code Review가 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다.
+
+하네스가 다 깔린 이 자리에서 항상 로드 분량을 잰다. 줄 수는 대리 지표일 뿐이다(3단계).
+
+사람 몫(사람만): 이 세션의 입력창에 `/context`를 친다. 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
+
+사람 몫(허락): 첫 PR을 `/git-pr-merge`(`gh pr merge --squash --delete-branch`)로 병합한다. 그 스킬이 CI를 먼저 보고, 빨가면 병합하지 않고 그 실패를 고친다.
 
 ## 9단계. 첫 기능
 
@@ -299,7 +391,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 4. `/to-tickets` 로 수직 슬라이스 티켓. 원격 트래커면 4단계에서 적은 흐름대로 발행한다.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다. 이 티켓의 몫만 쓴다.
 6. 커밋 전 `/code-review`. 범위(미커밋·미추적까지)와 반영 규칙(Critical·Major는 커밋 전에, 근거를 먼저, 보류는 티켓이나 회고 후보로)은 사본 6단계가 원천이다.
-7. PR 직전 `coderabbit-review` 서브에이전트. 좌석이 있을 때만이다(8단계). CLI가 못 돌면(미설치, 로그인·좌석 없음, 한도 초과) 내장 `/security-review`(보안)와 `bug-perf-review` 서브에이전트(버그·성능)를 나란히 돌린다.
+7. PR 직전 `coderabbit-review` 서브에이전트. 좌석이 있을 때만이다(준비). CLI가 못 돌면(미설치, 로그인·좌석 없음, 한도 초과) 내장 `/security-review`(보안)와 `bug-perf-review` 서브에이전트(버그·성능)를 나란히 돌린다.
 8. `/git-pr`로 PR. 별이 10개 미만인 공개 저장소는 `gh pr comment <번호> --body "@coderabbitai review"`로 부른다. 봇 둘과 CI의 역할 분담, 코멘트 0개인 초록을 읽는 법은 `operations.md` 리뷰 파이프라인이 원천이다. `/git-pr-feedback`으로 반영하고 `/git-pr-merge`로 squash 병합한다. 반영과 병합은 PR을 연 세션이 하고, 병합 뒤는 10단계다.
 
 ## 10단계. 세션 마감
@@ -324,9 +416,9 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 - [ ] `.claude/settings.json`에 훅 등록과 `permissions.deny`(`.env`). 훅마다 `tools/hook_payloads.toml`에 발동·침묵 사례가 있고 `uv run python tools/run_hooks.py`와 `uv run pytest tests/tools`가 초록 (7)
 - [ ] PR 템플릿, commit-msg 훅(빨강 확인), 지침 검사(상수를 이 프로젝트에 맞춤), CI 워크플로, `.coderabbit.yaml`, Claude Code Review 워크플로, 서브에이전트 셋, `.claude/rules/` 디렉터리별 규칙과 `tools.md`, `.scratch/retro-queue.md`, README의 원천 표 (7)
 - [ ] 첫 커밋 완료. 원격 생성과 푸시, 첫 PR이 CI를 통과. main 보호를 걸었거나(`tools/protection.json`) free+비공개라 `/git-pr-merge` 게이트를 `operations.md`에 적었다 (8)
-- [ ] 봇 전제 둘(`CLAUDE_CODE_OAUTH_TOKEN` 시크릿, CLI 로그인과 `Seat:` 확인). 첫 PR에서 Claude 코멘트 확인. CodeRabbit App은 공개 저장소나 유료일 때만 (8)
-- [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판 (1·4)
-- [ ] `/context` 실측값을 일지나 ADR에 기록 (10)
+- [ ] 봇 전제 둘(`CLAUDE_CODE_OAUTH_TOKEN` 시크릿, CLI 로그인과 `Seat:` 확인). 첫 PR에서 Claude 코멘트 확인. CodeRabbit App은 공개 저장소나 유료일 때만 (준비·8)
+- [ ] `docs/journal/` 첫 파일과 기록 규칙, `.scratch/plan.md` 첫 판 (준비·4)
+- [ ] `/context` 실측값을 일지나 ADR에 기록 (8)
 
 ## 부록
 
