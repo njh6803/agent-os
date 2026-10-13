@@ -1,0 +1,28 @@
+# next-session 3단계가 주 체크아웃 미갱신일 때 워크트리 사본의 병합 절을 Read로 여는 까닭(대기열 189)을 적은 문장이
+# 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이
+# 없다. 병합 뒤에 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의 checkout 으로 준다
+# (spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 주 체크아웃 `4814568`, 일지 2026-10-13-59).
+#   셀프 리뷰가 그 문장의 계기 구절을 고친 뒤와, PR 리뷰 첫 회차가 그 구절을 줄인 뒤에는 사전 확인(`--preflight`)으로
+#   갈음했다(2026-10-13, 같은 일지).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_worktree_copy_read.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 하나를 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+순서의 3단계에서 "확인할 선행 조건" 칸에 적으라는 병합 문장(워크트리 사본의 next-session 병합 절을 Read로 열어
+따른다는 문장)을 찾고, 그 뒤 두 문장 안에서 왜 Skill 도구가 아니라 Read로 여는지 까닭을 적은 문장을 글자 그대로
+옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["끼어들어 기댈 수 없으므로 Read로 연다"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
