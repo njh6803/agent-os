@@ -150,6 +150,19 @@ CodeRabbit CLI는 좌석이 없어(운영 리뷰 파이프라인 2) 대체 둘�
 - 커밋 셋(기능, main 병합, 리뷰 반영)의 pre-commit이 손으로 치는 다섯을 다시 돌려 모두 지났다. ruff는 `.py`가 없어 `Skipped`였고
   손으로 쳐 초록이었다.
 
+## PR 리뷰
+
+PR #216. CI 여섯(python, web, e2e, visual, verify, claude-review)이 초록이었다.
+
+- **CodeRabbit.** `@coderabbitai review`를 두 번(PR을 연 직후, 회고를 푸시한 뒤) 요청했고 두 번 모두 "Review rate limited"였다.
+  이 PR의 어느 커밋도 CodeRabbit의 리뷰를 받지 않았다. 보안·버그·성능 축은 PR 직전의 대체 둘이 `9bed2ef`까지 덮었고, 그 뒤의
+  일지·대기열 커밋은 그 축으로 다시 보지 않았다. 덮인 것과 빈 것을 PR 코멘트에 적고 기다리지 않았다.
+- **claude-review.** 첫 회차는 지적 없음, 둘째 회차는 Minor 1·Nit 2이고 Critical·Major는 없었다. `semanticColor` 독스트링에서
+  한계 문장의 자리, `DangerInCardDark`의 DOM 구조 기대기, `CONTRAST_PAIRS`의 앞뒤 출처를 배열로 가르지 않은 것이다. 둘째 회차라
+  고치지 않고 지적마다 보류 이유를 PR 코멘트에 남겼다.
+- **병합 전의 main 따라잡기.** 병합하려 하자 main에 #214가 들어와 있어 보호 규칙(`strict`)이 막았다. 겹치는 파일이 없어 합치고 다시
+  푸시했다. 그 일지(`2026-10-13-20`)는 이 일지보다 이름순으로 앞이라 번호를 옮기지 않았다.
+
 ## 회고
 
 후보 일곱을 냈다. 승인 둘, 기각 다섯, 넘김 없음. 이 PR은 티켓 PR이라 승인한 둘은 반영하지 않고 대기열에 두었다.
