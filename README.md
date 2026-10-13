@@ -64,8 +64,8 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
-tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), 레벨 스윕의 갈래(model_sweep)
-kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 템플릿과 부록. 이 프로젝트의 문서가 아니다
+tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), 레벨 스윕의 갈래(model_sweep), PR 검사의 대기(wait_ci)
+kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 진행 규율(runner.md, /kickoff가 읽는다), 템플릿, 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
 openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```

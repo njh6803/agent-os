@@ -34,9 +34,10 @@ def test_검사_러너도_게이트다() -> None:
 
 
 def test_형제_번호_대조도_게이트다() -> None:
-    """번호가 겹치거나 새 일지가 main 의 최신 일지보다 이름순으로 앞이면 1로 끝나는 판정이다.
+    """번호가 겹치거나, 새 일지가 main 의 최신 일지보다 이름순으로 앞이거나, 헌법 파일을 고치고 판을
+    올리지 않았으면 1로 끝나는 판정이다.
 
-    대기열 115·175.
+    대기열 115·175·224.
     """
     assert is_gate("uv run python tools/sibling_overlap.py")
     assert len(warnings_for("uv run python tools/sibling_overlap.py | head -5")) == 1

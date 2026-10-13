@@ -1,0 +1,29 @@
+# next-session 1단계를 하위 번호 항목 넷으로 나눈 것(대기열 218)과 결정표에 둔 하네스 chore PR 뒤의 줄(대기열 221)이
+# 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 두 카나리아가
+# 모두 없다. 병합 뒤에 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의 checkout 으로 준다
+# (spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 주 체크아웃 `f9f88bf`, 일지 2026-10-13-35). 같은 때 1단계 구절을 쥔
+#   카나리아 셋(next_session_bot_rounds·rate_limit_merge·number_body_batch)도 실험군은 이 워크트리, 대조군은 옛 판
+#   `4d34bee`(`git worktree add --detach`)로 돌려 모두 통과 4였다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_step1_split_chore_row.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 둘을 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+1. 순서의 1단계 머리(굵은 제목 바로 뒤)에서, 그 단계 아래에 무엇이 몇 개 있고 어떻게 거치는지 적은 문장을 글자 그대로
+   옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
+2. "다음 작업 결정표"에서 맨 앞 칸(열 머리글이 "지금(병합 뒤)"인 칸)이 하네스 chore PR을 병합한 뒤를 말하는 줄을 찾아,
+   그 칸에 든 글 전체를 글자 그대로 옮겨라. 그런 줄이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["아래 넷을 차례로 거친다", "그 PR이 든 주제가 남지 않았다"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
