@@ -33,7 +33,7 @@ awk 류의 첫 위치 인자는 패턴이라 파일로 보지 않는다(`grep .e
 `time`·`nohup`·`builtin`)는 경로를 벗긴 이름으로 찾고(`/usr/bin/env`), 그 뒤의 옵션과 옵션 값까지
 getopt 처럼 벗긴다(`-n5`, `-iu root`, `--user root`). 같은 프로브에서 권한 규칙이
 래퍼(`env`·`command`·`nice`·`timeout`)를 벗겨 대 봤다. 이 훅은 래퍼 뒤의 옵션을 명령 이름으로 읽어
-`nice -n5 cat .env`·`command -p cat .env`·`env -i cat .env` 를 지나보냈다(일지 2026-10-13-63 의
+`nice -n5 cat .env`·`command -p cat .env`·`env -i cat .env` 를 지나보냈다(일지 2026-10-13-67 의
 세션이 스크래치 스크립트로 찍어 봤고, 그 입력은 지금 tests/tools 가 고정한다). `command -v`·`-V` 는
 명령을 찾기만 해 막지 않는다.
 못 보는 것: 변수 간접 참조(`for f in .env*; do cat "$f"`), 다른 명령이 넘긴 인자(`ls -a | xargs

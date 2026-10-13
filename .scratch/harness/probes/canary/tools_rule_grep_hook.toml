@@ -1,8 +1,8 @@
 # `.claude/rules/tools.md` 의 훅별 시간 항목에 더한 Grep 문장(대기열 145, `hook_grep_omitted` 와 그 시간)이
-# `paths` 에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-13-63).
+# `paths` 에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-13-67).
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 셋이다. 규칙 파일의 첫 제목, 훅 이름, 새로 잰 시간의 범위.
-# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 일지 2026-10-13-63).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 일지 2026-10-13-67).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_grep_hook.toml <출력 디렉터리>
 kind = "rule"
 question = '''
