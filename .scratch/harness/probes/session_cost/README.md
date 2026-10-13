@@ -16,7 +16,8 @@
 | `collect.py` | 트랜스크립트, `gh`(PR의 GraphQL 한 묶음과 워크플로 실행 목록), `git`(merge-base 판본의 티켓)을 읽어 브랜치마다 한 행을 `branches.json`에 쓴다. `gh` 응답은 `cache/`(커밋하지 않는다)에 두고 다시 돌 때 치지 않는다. `--refresh`로 다시 받는다 |
 | `analyze.py` | `branches.json`만 읽어 측정 표지, 양성 대조, 기준선, 사전 등록한 가설의 판정, 탐색 표를 찍는다. 사전 등록 절의 SHA-256이 `analyze.py`의 `PREREG_SHA256`과 다르면 판정하지 않는다 |
 | `judge.py` | 모델 판정 실험. `plan`은 호출 수와 금액 어림만 찍고, `run --yes`가 API를 부른다. `score`가 순위와 보정을 낸다 |
-| `costs.py` | 단가표와 응답 하나의 API 환산 비용. 셋이 같이 쓴다 |
+| `costs.py` | 단가표와 응답 하나의 API 환산 비용. 위의 셋과 `cache_read_fit.py`가 같이 쓴다 |
+| `cache_read_fit.py` | 단가표의 모델마다 캐시 읽기 배수 후보(입력의 0.025·0.05·0.1배) 가운데 어느 것이 `cost-state`의 금액과 맞는지 센다. 단가표를 공식 가격표와 Claude Code의 셈 둘에 대 보는 데 쓴다(`docs/model-selection.md`의 다시 재는 절차) |
 | `branches.json` | `collect.py`의 출력. 수와 이름(브랜치, PR 제목, 티켓 경로)만 있고 프롬프트와 티켓 본문은 없다 |
 | `judge_results.jsonl` | `judge.py run`의 응답. 다시 돌 때 API를 치지 않고 `score`를 낸다 |
 
@@ -26,6 +27,7 @@
 PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/collect.py
 PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/analyze.py
 PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/judge.py plan
+PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/cache_read_fit.py
 ```
 
 `collect.py`는 `gh` 인증과 이 저장소의 원격이 든다. `judge.py run`은 `anthropic` SDK를
@@ -316,3 +318,31 @@ GraphQL 상한(`first: 100`)에 잘린 연결은 없었다.
 담고, 나란히 돈 세션을 겹쳐 더한다. `cost-state` 대조는 그 기록이 남은 세션만이고, 다시 시작한 세션은 뒤 프로세스의 몫만
 든다. 웹 검색 요금은 비용에 들지 않는다. 사람 개입은 턴 도중의 사람 메시지(위 `queued_human`)를 세지 않아 그만큼 적다. ④의
 스윕이 사람 개입을 쓸 때는 그 칸을 더할지 정한다.
+
+### 2026-10-13 캐시 읽기 단가 대조
+
+지표 문서(`docs/model-selection.md`)를 쓰며 `costs.py`의 단가를 공식 가격표(`curl`로 받은
+`platform.claude.com/docs/en/about-claude/pricing.md`, 2026-10-13)와 대 보니 `claude-sonnet-5-5`의 캐시 읽기가 달랐다.
+가격표는 입력의 0.05배($0.10)이고 `costs.py`는 0.1배($0.20)다. 나머지 모델은 같았다. 어느 쪽이 Claude Code의 셈인지
+`cache_read_fit.py`로 갈랐다. 트랜스크립트는 첫 실행과 같은 폴더를 이날 다시 읽었고 `cost-state`가 있는 세션은 679개, 모델·세션
+쌍은 743개로 첫 실행의 단가 대조와 같다. 이 프로브는 시간 창 없이 그때의 트랜스크립트를 읽어, 기록이 쌓이면 아래 수가 바뀐다.
+다시 내는 것은 어느 배수가 맞는지의 판정이다. 같은 날 셀프 리뷰 뒤에 다시 돌리자 세션 687개, `claude-sonnet-5-5` 558쌍 가운데
+0.1배 안이 557이었다. 판정 칸(쌍의 95% 이상을 담는 배수가 하나뿐인지)과 종료 코드는 셀프 리뷰 뒤에 더했고, 그 판에서 여섯 모델 모두
+"표와 같다"로 0으로 끝났다.
+
+| 모델 | 쌍 | 표의 배수 | 0.025배 안 | 0.05배 안 | 0.1배 안 | 캐시 읽기 몫 중앙값 |
+|---|---|---|---|---|---|---|
+| claude-opus-5-5 | 92 | 0.05 | 1 | 92 | 0 | 0.571 |
+| claude-fable-5-1 | 12 | 0.025 | 12 | 2 | 2 | 0.256 |
+| claude-sonnet-5-5 | 550 | 0.1 | 97 | 234 | 549 | 0.049 |
+| claude-opus-5 | 1 | 0.1 | 0 | 0 | 1 | 0.871 |
+| claude-sonnet-5 | 29 | 0.1 | 12 | 20 | 29 | 0.292 |
+| claude-haiku-4-5 | 59 | 0.1 | 19 | 22 | 59 | 0.088 |
+
+Claude Code는 `claude-sonnet-5-5`의 캐시 읽기를 0.1배로 셈했다(550쌍 가운데 549, 0.05배면 234). 그래서 `costs.py`는 Claude
+Code의 셈과 맞고 공식 가격표와는 다르다. 첫 실행의 결론은 바뀌지 않는다고 본다. 이 저장소의 `claude-sonnet-5-5` 쌍은 캐시 읽기
+몫의 중앙값이 0.049라(서브에이전트와 카나리아로 보인다, 어림) 단가를 반으로 내리면 중앙값의 쌍에서 그 금액이 약 2.5% 준다(중앙값에서
+셈한 값). 기준선 표는 본 세션 비용의 90% 이상이 `claude-opus-5-5`인 브랜치라 닿지 않는다. 반대로 본 세션 전체를 Sonnet 5.5로
+돌리는 스윕에서는 캐시 읽기 몫이 `claude-opus-5-5`(0.571)와 비슷하다면 어느 단가를 쓰느냐로 그 갈래의 비용이 약 3할 갈린다(어림).
+웹 검색 요금(건당 $0.01)을 빼고 대 보니 첫 실행에서 두 끝 밖이던 `claude-haiku-4-5` 둘이 안으로 들었다. 표의 배수에서 밖으로
+남은 쌍은 `claude-sonnet-5-5` 하나다.

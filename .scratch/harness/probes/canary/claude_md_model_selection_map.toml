@@ -1,0 +1,29 @@
+# CLAUDE.md 지도 표의 `docs/model-selection.md` 행(읽는 때)이 새 세션에 실리는지(일지 2026-10-13-11).
+# CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다(claude_md_skill_after_merge.toml 과 같은 모양). 두 갈래 모두
+# 같은 pyproject.toml 을 읽고 체크아웃만 다르다.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 그 행이 없다. 워크트리 세션에는 주
+# 체크아웃의 `CLAUDE.md`가 실리지 않아(`.scratch/harness/probes/claude_md_parent.py`, 대기열 171) 실험군의 통과는
+# 워크트리 사본이 실렸다는 뜻이다. 병합 뒤에는 옛 판을 `git worktree add --detach`로 꺼내 대조군의 checkout 으로 준다
+# (README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 주 체크아웃 `132da91`, 일지 2026-10-13-11).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_model_selection_map.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 프로젝트 지시의 "지도" 표에서 `docs/model-selection.md` 행의 "읽는 때" 칸을 글자 그대로 옮겨라.
+읽은 파일에서 추측하지 않는다. 실린 지시에 그런 행이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["결정표의 모델 칸을 바꾸려 할 때"]
+source = "CLAUDE.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+target = "pyproject.toml"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
+target = "pyproject.toml"
