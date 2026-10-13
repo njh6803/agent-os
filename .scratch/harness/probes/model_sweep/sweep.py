@@ -267,7 +267,7 @@ UNMERGED = "병합만 빠짐"  # 사전 등록의 표지: 닫혔거나 열린 �
 OTHER_DROP = "그 밖에 빠짐"  # 병합됐지만 기한 뒤, main 밖, 귀속 응답·비용 없음
 RENAMED = "브랜치 줄과 PR 머리가 다름"
 MODEL_OFF = "모델 줄이 배정과 다름"
-# 탐색 표지: 창 앞 기록이 잘려 다시 여는 지시문이 첫 트리거로 보였을 수 있다(PR 직전 버그 리뷰)
+# 탐색 표지: 스윕 시작 전에 PR을 연 브랜치는 비용·턴이 창 안 몫만 든다(collect.py --since)
 EARLY_PR = "PR이 스윕 시작 전에 열림"
 MARKS = [UNMERGED, OTHER_DROP, RENAMED, MODEL_OFF, EARLY_PR]
 

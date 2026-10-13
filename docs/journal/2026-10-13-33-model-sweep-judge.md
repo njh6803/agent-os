@@ -21,7 +21,8 @@
   claude-review 둘째 회차에서 보류한 Minor(종류 목록이 도구와 프로브 두 곳에 있다)를 이것으로 닫았다. 프로브는 이제 종류를
   도구에서 가져온다. 사전 등록 절은 해시로 고정되어 있어 거기서 읽은 값도 바뀌지 않는다.
 - `collect.py`: 첫 사람 트리거 시각(`first_human_at`)과, 그 트리거가 지시문이면 `모델:`·`브랜치:` 줄 값
-  그대로(`directive_features`의 `model_line`·`branch_line`)를 남긴다. `--since`를 주면 그 시각 전의 기록을 읽지 않는다. 사전
+  그대로(`directive_features`의 `model_line`·`branch_line`)를 남긴다. `--since`는 비용·턴·표지를 그 시각 뒤로만 세는 창이다(처음에는 창 앞 기록을 아예 읽지 않았는데 PR 리뷰에서
+  고쳤다, 아래). 사전
   등록의 판정하지 않는 조건이 "스윕 기간의 기록"의 표지 넷이라서다. 시각이 없는 `cost-state`는 창 안에 기록이 있는 세션의
   것만 남기므로 단가 대조에는 창 앞의 몫이 섞인다. meta에 `since`와 자기 SHA-256을 남긴다.
 - `sweep.py judge`: 두 사전 등록의 해시, 판정 시점(2026-12-15 0시 UTC), 입력의 `since`(PR #217의 병합 시각), 종류 정의의
@@ -100,6 +101,14 @@ Nit 하나였다.
   이고, 테스트가 `.scratch` 모듈을 들이면 pyright가 그 import를 풀지 못한다. 판정 함수를 `tools/`로 옮기는 것이 길이지만
   판정은 한 번 도는 측정이라 지금은 합성 입력으로 손으로 돌린 것(위 확인 절)으로 갈음한다.
 
+CodeRabbit은 한도가 풀린 뒤 첫 리뷰에서 Major 하나를 냈다. PR 직전 버그 리뷰에서 보류한 그것이다. `--since`가 창 앞
+기록을 아예 버려, 스윕 전에 시작한 브랜치는 창 안의 다시 여는 지시문이 첫 사람 트리거로 보일 수 있었다. 고쳤다: 기록은
+창과 관계없이 모두 읽어 턴·귀속과 첫 사람 트리거를 정하고, 비용·턴·개입·meta의 표지만 창 안으로 센다. 창 없는 실행은 10월
+13일 전에 병합된 브랜치 207개에서 수치와 첫 트리거 시각이 이전 출력과 같았고, 창을 준 실행에서
+`chore/open-session-regression-tests`(스윕 전 시작)의 첫 트리거가 창 앞 시각과 표지 없는 지시문으로 나와 모집단에서
+빠졌다(스크래치 스크립트로 두 출력을 대조해 손으로 봤다). 탐색 표지 "PR이 스윕 시작 전에 열림"은 이제 비용·턴이 창 안
+몫만 든 브랜치를 뜻한다.
+
 claude-review 둘째 회차는 Minor 하나, Nit 둘이었고 Critical·Major가 없어 고치지 않고 PR 코멘트에 보류 이유를 남겼다
 (`next-session` 1단계). CodeRabbit은 다시 요청한 것도 `Review rate limited`였다.
 
@@ -128,7 +137,7 @@ claude-review 둘째 회차는 Minor 하나, Nit 둘이었고 Critical·Major가
 
 - 레벨 스윕의 판정은 2026-12-15 0시(UTC) 뒤에 한 번이다. 명령은 스윕 프로브 README의 둘(`collect.py --refresh --since …`,
   `sweep.py judge`)이고, 판정의 입력 `branches.json`도 커밋한다. 결과는 ADR 0029 이력 초안으로 올려 승인받는다. 출력의 탐색
-  표지 "PR이 스윕 시작 전에 열림"이 0이 아니면 그 행이 창 앞 기록이 잘린 브랜치인지 먼저 본다(이 일지 PR 직전 리뷰).
+  표지 "PR이 스윕 시작 전에 열림"이 0이 아니면 그 행은 비용·턴이 창 안 몫만 든 브랜치다.
 - 판정 전 후보: 판정 함수(`split_arms`, `lower_verdict`, `blocking_reasons`, `verdicts`)를 `tools/`로 옮겨 pytest로 고정한다.
   PR #220 claude-review 두 회차가 짚었다. 옮길 때 같은 PR 둘째 회차의 보류 둘(불리언 인자 `stopped`·`markers_ok`, `BASE`
   이름)도 함께 푼다.
