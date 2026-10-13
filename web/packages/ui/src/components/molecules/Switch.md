@@ -12,4 +12,4 @@
 - 오류와 불러오는 중은 없습니다. 바꾸지 못하면 쓰는 쪽이 되돌리고 알림으로 알립니다.
 - `checked`를 넘기지 않으면 꺼짐에서 시작해 누를 때마다 스스로 바뀝니다.
 
-출처: 디자인 파일 v3의 02.4 스위치(`.scratch/design-system/design/`).
+출처: 재탐색 디자인 파일의 2.4 스위치(`.scratch/design-system/design/Agent OS Design System.dc.html`).

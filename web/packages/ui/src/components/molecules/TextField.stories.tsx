@@ -64,12 +64,12 @@ export const Single: Story = {
       note: null,
     });
     await expect(colorsOf(input)).toEqual({
-      background: semanticColor(input, "raised"),
+      background: semanticColor(input, "bg-raised"),
       text: semanticColor(input, "text"),
-      border: hoverAwareColor(input, "border", "border-hover"),
+      border: hoverAwareColor(input, "border-control", "text-muted"),
     });
     await expect(getComputedStyle(input, "::placeholder").color).toBe(
-      semanticColor(input, "muted"),
+      semanticColor(input, "text-muted"),
     );
     // 라벨은 칸 밖에 늘 보이는 글자이고 이름은 자리 글자가 아니라 라벨에서 온다.
     const label = canvas.getByText("플러그인 이름");
@@ -93,9 +93,9 @@ export const Multi: Story = {
     }).toEqual({ tag: "TEXTAREA", rows: "3", resize: "vertical" });
     await expect(Number.parseFloat(style.height)).toBeGreaterThanOrEqual(88);
     await expect(colorsOf(textarea)).toEqual({
-      background: semanticColor(textarea, "raised"),
+      background: semanticColor(textarea, "bg-raised"),
       text: semanticColor(textarea, "text"),
-      border: hoverAwareColor(textarea, "border", "border-hover"),
+      border: hoverAwareColor(textarea, "border-control", "text-muted"),
     });
   },
 };
@@ -123,7 +123,7 @@ export const Typing: Story = {
 };
 
 export const WithHelp: Story = {
-  name: "도움말은 칸 아래에 muted 글자로 보이고 aria-describedby 로 이어진다",
+  name: "도움말은 칸 아래에 text-muted 글자로 보이고 aria-describedby 로 이어진다",
   render: (args) => (
     <div className="flex flex-col gap-4">
       <TextField {...args} help="목록에 보이는 이름입니다." />
@@ -144,7 +144,7 @@ export const WithHelp: Story = {
       const note = noteOf(field);
       await expect(note?.textContent).toBe(help);
       await expect(note === null ? null : getComputedStyle(note).color).toBe(
-        semanticColor(field, "muted"),
+        semanticColor(field, "text-muted"),
       );
       await expect(note?.querySelector("svg")).toBeNull();
       await expect(field.getAttribute("aria-invalid")).toBeNull();
@@ -192,7 +192,7 @@ export const WithError: Story = {
 };
 
 export const Optional: Story = {
-  name: "선택이면 라벨 옆에 muted 글자로 '선택'이 보이고 이름에도 든다",
+  name: "선택이면 라벨 옆에 text-muted 글자로 '선택'이 보이고 이름에도 든다",
   render: (args) => (
     <div className="flex flex-col gap-4">
       <TextField {...args} optional />
@@ -208,14 +208,14 @@ export const Optional: Story = {
       );
       await expect(mark?.checkVisibility()).toBe(true);
       await expect(mark === undefined ? null : getComputedStyle(mark).color).toBe(
-        semanticColor(field, "muted"),
+        semanticColor(field, "text-muted"),
       );
     }
   },
 };
 
 export const Disabled: Story = {
-  name: "쓸 수 없으면 글을 넣지 못하고 disabled-surface 바탕, divider 테두리, disabled-text 글자와 라벨이며 도움말은 muted 로 남는다",
+  name: "쓸 수 없으면 글을 넣지 못하고 bg-disabled 바탕, border 테두리, text-disabled 글자와 라벨이며 도움말은 text-muted 로 남는다",
   render: (args) => (
     <div className="flex flex-col gap-4">
       <TextField {...args} value="주문 조회" help="목록에 보이는 이름입니다." disabled />
@@ -231,12 +231,12 @@ export const Disabled: Story = {
   play: async ({ args, canvasElement, userEvent }) => {
     for (const name of ["플러그인 이름", "거부 사유"]) {
       const field = fieldNamed(canvasElement, name);
-      const disabledText = semanticColor(field, "disabled-text");
+      const disabledText = semanticColor(field, "text-disabled");
       await expect(field.disabled).toBe(true);
       await expect(colorsOf(field)).toEqual({
-        background: semanticColor(field, "disabled-surface"),
+        background: semanticColor(field, "bg-disabled"),
         text: disabledText,
-        border: semanticColor(field, "divider"),
+        border: semanticColor(field, "border"),
       });
       const label = field.labels?.[0];
       await expect(label === undefined ? null : getComputedStyle(label).color).toBe(disabledText);
@@ -244,36 +244,42 @@ export const Disabled: Story = {
       await expect(getComputedStyle(field, "::placeholder").color).toBe(disabledText);
       await userEvent.type(field, "가");
     }
-    // 도움말은 쓸 수 없는 조작 요소가 아니라 명암비의 예외가 아니다. 그대로 muted 로 읽힌다.
+    // 도움말은 쓸 수 없는 조작 요소가 아니라 명암비의 예외가 아니다. 그대로 text-muted 로 읽힌다.
     const help = noteOf(fieldNamed(canvasElement, "플러그인 이름"));
     await expect(help === null ? null : getComputedStyle(help).color).toBe(
-      semanticColor(canvasElement, "muted"),
+      semanticColor(canvasElement, "text-muted"),
     );
     await expect(fieldNamed(canvasElement, "플러그인 이름").value).toBe("주문 조회");
     await expect(args.onChange).not.toHaveBeenCalled();
   },
 };
 
+// `text-disabled` 는 라이트에서 `border-control` 과 같은 값이라 다크에서도 잰다. 테두리의 `border` 는 다크에서
+// `bg-disabled` 와 같아 라이트(Disabled)가 가른다.
+export const DisabledDark: Story = {
+  ...Disabled,
+  name: "다크 모드의 쓸 수 없는 글 입력도 bg-disabled 바탕, border 테두리, text-disabled 글자와 라벨이다",
+  globals: { mode: "dark" },
+};
+
+// `border-control` 은 라이트에서 `text-disabled` 와 같은 값이라 다크에서도 잰다.
 export const SingleDark: Story = {
-  name: "다크 모드의 글 입력도 raised 바탕에 border 테두리, text 글자다",
+  name: "다크 모드의 글 입력도 bg-raised 바탕에 border-control 테두리, text 글자다",
   globals: { mode: "dark" },
   play: async ({ canvasElement }) => {
     const input = fieldNamed(canvasElement, "플러그인 이름");
     await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
     await expect(colorsOf(input)).toEqual({
-      background: semanticColor(input, "raised"),
+      background: semanticColor(input, "bg-raised"),
       text: semanticColor(input, "text"),
-      border: hoverAwareColor(input, "border", "border-hover"),
+      border: hoverAwareColor(input, "border-control", "text-muted"),
     });
   },
 };
 
-// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이다. 기본 테마가 아닌 테마에서 값을 재는 판정 스토리라 사진에서
-// 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
+// 녹청에서 `focus-ring` 은 `accent` 와 같은 값이라 그 둘은 가르지 못하지만 `border-control`·`text` 와는 가른다.
 export const Focus: Story = {
-  name: "Tab 으로 포커스하면 focus 색의 실선 테두리가 바깥에 그려지고 글을 넣는 동안 남는다",
-  tags: ["judgment"],
-  globals: { theme: "gongmun" },
+  name: "Tab 으로 포커스하면 focus-ring 색의 2px 실선이 2px 바깥에 그려지고 글을 넣는 동안 남는다",
   play: async ({ canvasElement, userEvent }) => {
     const input = fieldNamed(canvasElement, "플러그인 이름");
     await userEvent.tab();

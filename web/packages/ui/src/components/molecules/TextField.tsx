@@ -1,9 +1,10 @@
-// 글 입력(디자인 파일 02.3). 라벨이 칸 위에 늘 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러 줄).
+// 글 입력(재탐색 디자인 파일 2.3). 라벨이 칸 위에 늘 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러
+// 줄). 색은 재탐색의 상태 표이고 치수는 아직 첫 탐색 디자인 파일의 값이다(design-refresh 티켓 04 가 옮긴다).
 // 클래스는 쓰임새 토큰과 공통 크기의 유틸리티만 쓰고 상태마다 고른다. 쓸 수 없음과 오류에는 올림의 클래스를 두지 않는다.
 // 누름과 불러오는 중은 디자인 파일의 상태 표가 두지 않았다.
 //
 // 라벨은 `<label for>` 로 칸에 잇는다. 도움말을 라벨 안에 두면 이름에 섞이고 `aria-describedby` 로 한 번 더 읽힌다.
-// 오류가 있으면 그 글이 도움말의 자리를 차지한다(디자인 파일 02.3 의 오류 상태 그림). "선택"은 공백 하나 뒤의
+// 오류가 있으면 그 글이 도움말의 자리를 차지한다(첫 탐색 디자인 파일 02.3 의 오류 상태 그림). "선택"은 공백 하나 뒤의
 // inline-block 이다. 접근 이름 계산은 inline 이 아닌 자식의 앞뒤에만 공백을 넣어, 그냥 붙이자 이름이 "플러그인
 // 이름선택"이었다. 나머지 속성은 칸(`<input>`, `<textarea>`)에 넘긴다(`props.ts`). 그래서 props 는 변형마다 그 요소의
 // 기본 속성을 받는 유니온이다.
@@ -49,7 +50,7 @@ export type TextFieldProps =
   | (MultiOwnProps & NativeProps<"textarea", keyof MultiOwnProps | Decided>);
 
 const CONTROL =
-  "block w-full min-w-0 rounded-m border text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+  "block w-full min-w-0 rounded-m border text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
 const SIZE_CLASS = {
   single: "h-control-m px-3",
@@ -58,21 +59,21 @@ const SIZE_CLASS = {
 
 type State = "live" | "invalid" | "disabled";
 
-// 쓸 수 없음은 자리 글자도 disabled-text 다. muted 로 두자 다크에서 넣은 글보다 밝아 쓸 수 있는 칸처럼 보였다.
+// 쓸 수 없음은 자리 글자도 text-disabled 다. 흐린 글자로 두자 다크에서 넣은 글보다 밝아 쓸 수 있는 칸처럼 보였다.
 const STATE_CLASS = {
-  live: "border-border bg-raised text-text placeholder:text-muted hover:border-border-hover",
-  invalid: "border-danger bg-raised text-text placeholder:text-muted",
+  live: "border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted",
+  invalid: "border-danger bg-bg-raised text-text placeholder:text-text-muted",
   disabled:
-    "cursor-not-allowed border-divider bg-disabled-surface text-disabled-text placeholder:text-disabled-text",
+    "cursor-not-allowed border-border bg-bg-disabled text-text-disabled placeholder:text-text-disabled",
 } satisfies Record<State, string>;
 
-// 칸 아래 한 줄(도움말이나 오류)의 색. 오류 아이콘은 이 색을 그대로 받는다. 쓸 수 없어도 도움말은 muted 다. 디자인
-// 파일은 disabled-text 로 그렸지만, 도움말은 쓸 수 없는 조작 요소도 그 라벨도 아니라 명암비의 예외가 아니다(axe 가
-// 3.28:1 로 실패시켰다).
+// 칸 아래 한 줄(도움말이나 오류)의 색. 오류 아이콘은 이 색을 그대로 받는다. 쓸 수 없어도 도움말은 text-muted 다. 첫
+// 탐색 디자인 파일은 쓸 수 없음의 글자색으로 그렸지만, 도움말은 쓸 수 없는 조작 요소도 그 라벨도 아니라 명암비의 예외가
+// 아니다(axe 가 3.28:1 로 실패시켰다).
 const NOTE_COLOR = {
-  live: "text-muted",
+  live: "text-text-muted",
   invalid: "text-danger",
-  disabled: "text-muted",
+  disabled: "text-text-muted",
 } satisfies Record<State, string>;
 
 export function TextField({
@@ -123,12 +124,12 @@ export function TextField({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className={`text-small ${disabled ? "text-disabled-text" : "text-text"}`}>
+      <label htmlFor={id} className={`text-small ${disabled ? "text-text-disabled" : "text-text"}`}>
         {label}
         {optional ? (
           <>
             {" "}
-            <span className="inline-block font-regular text-muted">선택</span>
+            <span className="inline-block font-regular text-text-muted">선택</span>
           </>
         ) : null}
       </label>
