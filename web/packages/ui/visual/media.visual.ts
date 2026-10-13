@@ -1,9 +1,11 @@
-// 미디어 특성(prefers-color-scheme, prefers-reduced-motion)을 바꿔 가며 같은 정적 빌드를 연다. 사진은 Playwright 가
-// 움직임을 멈춰 찍어 움직임 줄이기를 가르지 못한다(design-system 명세의 사진 비교 게이트). 시스템 모드와 속성 없는 문서·
-// 호스트는 명세의 스토리 13 이다. 쓰임새 토큰의 기대값은 디자인 파일이 아니라 같은 빌드에서 기본 테마의 `data-theme` 과
-// `data-mode` 를 단 요소로 읽는다. 선례는 측정 tokens/measure.mjs 의 switch 와 motion 이다.
+// 미디어 특성(prefers-color-scheme, prefers-reduced-motion, 창의 폭)을 바꿔 가며 같은 정적 빌드를 연다. 사진은
+// Playwright 가 움직임을 멈춰 찍어 움직임 줄이기를 가르지 못한다(design-system 명세의 사진 비교 게이트). 시스템 모드와
+// 속성 없는 문서·호스트는 명세의 스토리 13 이고, 속성 없는 밀도는 design-refresh 명세의 "사진 비교"의 미디어 특성이다.
+// 스토리 테스트의 창은 1200×900 으로 고정이라 창의 폭은 여기서 바꾼다. 쓰임새 토큰과 밀도 변수의 기대값은 디자인 파일이
+// 아니라 같은 빌드에서 그 `data-theme`·`data-mode`·`data-density` 를 단 요소로 읽는다. 선례는 측정
+// tokens/measure.mjs 의 switch 와 motion 이다.
 import type { Locator, Page } from "@playwright/test";
-import { DEFAULT_THEME, type ThemeKey } from "../src/themes.ts";
+import { DEFAULT_THEME, type Density, type ThemeKey } from "../src/themes.ts";
 import { MODES, expect, inDefaultTheme, test, type Mode } from "./storybook.ts";
 
 // 속성을 지우는 사례가 그리는 표본. 판정 스토리가 아니고 globals 로 테마·모드를 정하지 않은 스토리다.
@@ -30,23 +32,30 @@ async function background(target: Locator): Promise<string> {
   return value;
 }
 
-/** 문서에 그 테마의 `data-theme` 과 `data-mode` 를 단 요소를 하나 두고 그 값들을 읽은 뒤 걷는다. */
+/** 탐침에 다는 data 속성. 주지 않은 것은 달지 않는다. */
+interface ProbeData {
+  readonly theme?: ThemeKey;
+  readonly mode?: Mode;
+  readonly density?: Density;
+}
+
+/** 문서에 그 data 속성들을 단 요소를 하나 두고 그 값들을 읽은 뒤 걷는다. */
 async function probeTokens(
   page: Page,
-  theme: ThemeKey,
-  mode: Mode,
+  { theme, mode, density }: ProbeData,
   names: readonly string[],
 ): Promise<string[]> {
-  await page.evaluate(
-    ([key, value]) => {
-      const probe = document.createElement("div");
-      probe.dataset["visualProbe"] = "";
-      probe.dataset["theme"] = key;
-      probe.dataset["mode"] = value;
-      document.body.append(probe);
-    },
-    [theme, mode] as const,
+  const entries = Object.entries({ theme, mode, density }).flatMap(([name, value]) =>
+    value === undefined ? [] : [[name, value] as const],
   );
+  await page.evaluate((data) => {
+    const probe = document.createElement("div");
+    probe.dataset["visualProbe"] = "";
+    for (const [name, value] of data) {
+      probe.dataset[name] = value;
+    }
+    document.body.append(probe);
+  }, entries);
   const probe = page.locator("[data-visual-probe]");
   const values = await tokens(probe, names);
   await probe.evaluate((element) => {
@@ -57,8 +66,17 @@ async function probeTokens(
 
 /** 기본 테마의 그 모드로 단 탐침의 `--bg`. */
 async function defaultBackground(page: Page, mode: Mode): Promise<string> {
-  const [value = ""] = await probeTokens(page, DEFAULT_THEME, mode, ["--bg"]);
+  const [value = ""] = await probeTokens(page, { theme: DEFAULT_THEME, mode }, ["--bg"]);
   return value;
+}
+
+/** 미리보기는 디자인 토큰 CSS 를 문서에 전역으로 싣는다. shadow 안의 값이 shadow 의 시트에서만 오는지 보려고 끈다. */
+async function disableDocumentSheets(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const sheet of document.styleSheets) {
+      sheet.disabled = true;
+    }
+  });
 }
 
 test("시스템 모드에서 문서 뿌리의 --bg 가 시스템의 라이트·다크를 따라 기본 테마의 그 모드 값이다", async ({
@@ -68,7 +86,12 @@ test("시스템 모드에서 문서 뿌리의 --bg 가 시스템의 라이트·�
   const seen: string[] = [];
   for (const scheme of MODES) {
     await page.emulateMedia({ colorScheme: scheme });
-    await storybook.open(SAMPLE, { ...inDefaultTheme(scheme), mode: "system" });
+    await storybook.open(SAMPLE, {
+      theme: DEFAULT_THEME,
+      mode: "system",
+      density: "auto",
+      shadow: "off",
+    });
     const expected = await defaultBackground(page, scheme);
     expect(await background(page.locator("html")), scheme).toBe(expected);
     seen.push(expected);
@@ -84,7 +107,12 @@ test("문서 뿌리에서 데코레이터가 단 data-theme·data-mode 를 지�
   for (const scheme of MODES) {
     await page.emulateMedia({ colorScheme: scheme });
     // 지우기 전의 값이 기대값과 달라야 지운 효과를 본다. 다른 테마에 시스템과 반대 모드를 단다.
-    await storybook.open(SAMPLE, { theme: OTHER_THEME, mode: OPPOSITE[scheme], shadow: "off" });
+    await storybook.open(SAMPLE, {
+      theme: OTHER_THEME,
+      mode: OPPOSITE[scheme],
+      density: "auto",
+      shadow: "off",
+    });
     const expected = await defaultBackground(page, scheme);
     expect(await background(root), `${scheme} 지우기 전`).not.toBe(expected);
     await root.evaluate((element) => {
@@ -104,16 +132,16 @@ test("shadow 호스트에서 data-theme·data-mode 를 지우면 문서의 시�
   const wrapper = host.locator("[data-ui-root]");
   for (const scheme of MODES) {
     await page.emulateMedia({ colorScheme: scheme });
-    await storybook.open(SAMPLE, { theme: OTHER_THEME, mode: OPPOSITE[scheme], shadow: "on" });
+    await storybook.open(SAMPLE, {
+      theme: OTHER_THEME,
+      mode: OPPOSITE[scheme],
+      density: "auto",
+      shadow: "on",
+    });
     // 기대값은 문서의 시트를 끄기 전에 읽는다. 끈 뒤에는 문서의 요소에 쓰임새 토큰이 없다.
     const expected = await defaultBackground(page, scheme);
-    // 미리보기는 디자인 토큰 CSS 를 문서에 전역으로 싣는다. shadow 안의 값이 shadow 의 시트에서만 오는지 보려고 문서의
-    // 시트를 모두 끈다(ADR 0026, 측정 tokens/measure.mjs 의 switch).
-    await page.evaluate(() => {
-      for (const sheet of document.styleSheets) {
-        sheet.disabled = true;
-      }
-    });
+    // ADR 0026, 측정 tokens/measure.mjs 의 switch.
+    await disableDocumentSheets(page);
     expect(await background(wrapper), `${scheme} 지우기 전`).not.toBe(expected);
     await host.evaluate((element) => {
       element.removeAttribute("data-theme");
@@ -133,19 +161,73 @@ test("시스템 모드의 군청은 문서 뿌리와 shadow 호스트 모두 시
   const seen: string[] = [];
   for (const scheme of MODES) {
     await page.emulateMedia({ colorScheme: scheme });
-    await storybook.open(SAMPLE, { theme: OTHER_THEME, mode: "system", shadow: "on" });
-    const expected = await probeTokens(page, OTHER_THEME, scheme, PRIMARY);
-    expect(await tokens(page.locator("html"), PRIMARY), `${scheme} 문서 뿌리`).toEqual(expected);
-    // shadow 안의 값이 shadow 의 시트에서만 오는지 보려고 문서의 시트를 모두 끈다(위 shadow 사례와 같다).
-    await page.evaluate(() => {
-      for (const sheet of document.styleSheets) {
-        sheet.disabled = true;
-      }
+    await storybook.open(SAMPLE, {
+      theme: OTHER_THEME,
+      mode: "system",
+      density: "auto",
+      shadow: "on",
     });
+    const expected = await probeTokens(page, { theme: OTHER_THEME, mode: scheme }, PRIMARY);
+    expect(await tokens(page.locator("html"), PRIMARY), `${scheme} 문서 뿌리`).toEqual(expected);
+    await disableDocumentSheets(page);
     expect(await tokens(wrapper, PRIMARY), `${scheme} shadow 호스트`).toEqual(expected);
     seen.push(expected.join(" "));
   }
   expect(new Set(seen).size, "라이트와 다크의 주 버튼 묶음이 다르다").toBe(2);
+});
+
+// 속성이 없을 때의 밀도는 창의 폭을 따른다. 768px(`wide:` 와 같은 중단점) 이상에서 촘촘, 미만에서 보통이다. 관리 화면
+// (데스크톱과 휴대폰)과 `regular` 를 빠뜨린 위젯 호스트의 자리다. 기대값은 같은 빌드에서 그 밀도를 단 탐침이다. 미디어
+// 규칙은 촘촘의 값 일곱을 다시 적은 블록이라 일곱을 모두 맞댄다.
+const VIEWPORTS = [
+  { width: 1280, height: 800, density: "compact" },
+  { width: 375, height: 812, density: "regular" },
+] as const satisfies readonly { width: number; height: number; density: Density }[];
+
+const DENSITY_VARIABLES = [
+  "--body-size",
+  "--body-lh",
+  "--table-size",
+  "--table-lh",
+  "--mono-size",
+  "--row-h",
+  "--control-h",
+] as const;
+
+test("data-density 가 없는 문서 뿌리와 shadow 호스트는 창의 폭 1280px 에서 촘촘, 375px 에서 보통의 밀도 변수를 받는다", async ({
+  page,
+  storybook,
+}) => {
+  const host = page.locator("[data-shadow-frame]");
+  const wrapper = host.locator("[data-ui-root]");
+  const seen: string[] = [];
+  for (const { width, height, density } of VIEWPORTS) {
+    await page.setViewportSize({ width, height });
+    await storybook.open(SAMPLE, {
+      theme: DEFAULT_THEME,
+      mode: "light",
+      density: "auto",
+      shadow: "on",
+    });
+    expect(
+      [
+        await page.locator("html").getAttribute("data-density"),
+        await host.getAttribute("data-density"),
+      ],
+      "밀도 속성이 없다",
+    ).toEqual([null, null]);
+    const expected = await probeTokens(page, { density }, DENSITY_VARIABLES);
+    expect(
+      await tokens(page.locator("html"), DENSITY_VARIABLES),
+      `${String(width)}px 문서 뿌리`,
+    ).toEqual(expected);
+    await disableDocumentSheets(page);
+    expect(await tokens(wrapper, DENSITY_VARIABLES), `${String(width)}px shadow 호스트`).toEqual(
+      expected,
+    );
+    seen.push(expected.join(" "));
+  }
+  expect(new Set(seen).size, "촘촘과 보통의 밀도 변수가 다르다").toBe(2);
 });
 
 interface Motion {
@@ -183,7 +265,7 @@ for (const { story, what, target, animation } of SPINNERS) {
       ["reduce", "none"],
     ] as const) {
       await page.emulateMedia({ reducedMotion });
-      await storybook.open(story, inDefaultTheme("light"));
+      await storybook.open(story, inDefaultTheme("light", "regular"));
       const moving = target(page);
       await expect(moving, reducedMotion).toHaveCount(1);
       expect(

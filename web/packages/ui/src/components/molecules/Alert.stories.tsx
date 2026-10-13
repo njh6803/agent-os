@@ -65,8 +65,42 @@ async function expectTone(
   });
 }
 
+/**
+ * 알림의 치수. 모서리 12px, 안쪽 위아래 12px·좌우 16px, 아이콘 20px, 아이콘과 글 사이 12px, 제목과 본문 사이 4px 이다.
+ * 제목(600)과 본문은 본문 글자라 밀도를 따른다. 그 크기는 놓인 자리의 밀도 변수와 맞댄다.
+ */
+async function expectAlertSize(alert: HTMLElement, title: string, body: string): Promise<void> {
+  const scope = within(alert);
+  const style = getComputedStyle(alert);
+  const svg = alert.querySelector("svg");
+  const titleElement = scope.getByText(title);
+  const bodyElement = scope.getByText(body);
+  const font = (target: Element): string => {
+    const { fontSize, lineHeight } = getComputedStyle(target);
+    return `${fontSize}/${lineHeight}`;
+  };
+  const bodySize = `${style.getPropertyValue("--body-size").trim()}/${style.getPropertyValue("--body-lh").trim()}`;
+  await expect({
+    radius: style.borderTopLeftRadius,
+    padding: `${style.paddingTop} ${style.paddingLeft}`,
+    gap: style.columnGap,
+    icon: svg === null ? null : getComputedStyle(svg).width,
+    titleGap: bodyElement.getBoundingClientRect().top - titleElement.getBoundingClientRect().bottom,
+    title: `${font(titleElement)} ${getComputedStyle(titleElement).fontWeight}`,
+    body: font(bodyElement),
+  }).toEqual({
+    radius: "12px",
+    padding: "12px 16px",
+    gap: "12px",
+    icon: "20px",
+    titleGap: 4,
+    title: `${bodySize} 600`,
+    body: bodySize,
+  });
+}
+
 export const Danger: Story = {
-  name: "실패 알림은 role=alert 이고 bg-raised 바탕에 border 테두리, danger 색 circle-x 아이콘이며 제목은 text, 본문은 text-muted 다",
+  name: "실패 알림은 role=alert 이고 bg-raised 바탕에 border 테두리, danger 색 circle-x 아이콘이며 제목은 text, 본문은 text-muted 이고 모서리 12px, 안쪽 12·16px 이다",
   args: { tone: "danger" },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const alert = canvas.getByRole("alert");
@@ -74,6 +108,11 @@ export const Danger: Story = {
       alert,
       "danger",
       "circle-x",
+      "실행이 실패했습니다",
+      "payments.refund가 30초 안에 끝나지 않았습니다.",
+    );
+    await expectAlertSize(
+      alert,
       "실행이 실패했습니다",
       "payments.refund가 30초 안에 끝나지 않았습니다.",
     );
@@ -152,8 +191,8 @@ export const WithClose: Story = {
     const close = within(canvas.getByRole("status")).getByRole("button", { name: "닫기" });
     const style = getComputedStyle(close);
     await expect({ width: style.width, height: style.height }).toEqual({
-      width: "32px",
-      height: "32px",
+      width: "28px",
+      height: "28px",
     });
     await expect(colorsOf(close)).toMatchObject({
       background: TRANSPARENT,

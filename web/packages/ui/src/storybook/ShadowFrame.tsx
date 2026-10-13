@@ -1,10 +1,10 @@
 // 스토리를 shadow root 안에 그리는 틀. 위젯의 페이지 안 번들(Shadow DOM 커스텀 요소, ADR 0024)과 같은 자리를 미리
-// 본다. 테마와 모드는 호스트의 data-theme·data-mode 로 주고, 그림은 감싼 요소(`data-ui-root`) 안에 둔다.
-// on 은 보정 시트(shadowSheets)까지, raw 는 디자인 토큰 CSS 의 시트만 넣는다.
+// 본다. 테마, 모드, 밀도는 호스트의 data-theme·data-mode·data-density 로 주고, 그림은 감싼 요소(`data-ui-root`) 안에
+// 둔다. on 은 보정 시트(shadowSheets)까지, raw 는 디자인 토큰 CSS 의 시트만 넣는다.
 import { useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { UI_ROOT_ATTRIBUTE, shadowSheets } from "../styles/shadow";
-import type { Mode, ThemeKey } from "../themes";
+import type { Density, Mode, ThemeKey } from "../themes";
 
 export const SHADOW_MODES = ["on", "raw"] as const;
 export type ShadowMode = (typeof SHADOW_MODES)[number];
@@ -32,10 +32,12 @@ export interface ShadowFrameProps {
   theme: ThemeKey;
   /** null 이면 data-mode 를 두지 않아 시스템 설정을 따른다. */
   mode: Mode | null;
+  /** null 이면 data-density 를 두지 않아 화면 폭을 따른다. 바깥의 밀도를 물려받지 않는다. */
+  density: Density | null;
   children: ReactNode;
 }
 
-export function ShadowFrame({ shadow, css, theme, mode, children }: ShadowFrameProps) {
+export function ShadowFrame({ shadow, css, theme, mode, density, children }: ShadowFrameProps) {
   const [wrapper, setWrapper] = useState<HTMLElement | null>(null);
   const attach = useCallback(
     (host: HTMLDivElement | null) => {
@@ -50,7 +52,13 @@ export function ShadowFrame({ shadow, css, theme, mode, children }: ShadowFrameP
     [shadow, css],
   );
   return (
-    <div ref={attach} data-theme={theme} data-mode={mode ?? undefined} data-shadow-frame={shadow}>
+    <div
+      ref={attach}
+      data-theme={theme}
+      data-mode={mode ?? undefined}
+      data-density={density ?? undefined}
+      data-shadow-frame={shadow}
+    >
       {wrapper === null ? null : createPortal(children, wrapper)}
     </div>
   );

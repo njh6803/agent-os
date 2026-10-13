@@ -23,7 +23,7 @@ function partsOf(progressbar: HTMLElement): { track: Element; bar: Element } {
 }
 
 export const Determinate: Story = {
-  name: "값이 있으면 label 이 text-muted 의 이름이고 aria-valuenow·aria-valuemax 가 있으며 bg-active 트랙에 막대가 그 비율만큼 text-muted 로 찬다",
+  name: "값이 있으면 label 이 text-muted 의 이름이고 aria-valuenow·aria-valuemax 가 있으며 높이 4px 의 둥근 bg-active 트랙에 막대가 그 비율만큼 text-muted 로 찬다",
   args: { value: 2, max: 3 },
   play: async ({ canvas }) => {
     const progressbar = canvas.getByRole("progressbar", { name: "3단계 중 2단계" });
@@ -36,8 +36,13 @@ export const Determinate: Story = {
     }).toEqual({ now: "2", max: "3" });
     const { track, bar } = partsOf(progressbar);
     const trackStyle = getComputedStyle(track);
-    await expect({ height: trackStyle.height, background: trackStyle.backgroundColor }).toEqual({
-      height: "6px",
+    await expect({
+      height: trackStyle.height,
+      radius: trackStyle.borderTopLeftRadius,
+      background: trackStyle.backgroundColor,
+    }).toEqual({
+      height: "4px",
+      radius: "999px",
       background: semanticColor(track, "bg-active"),
     });
     await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "text-muted"));
@@ -48,7 +53,7 @@ export const Determinate: Story = {
 };
 
 export const Indeterminate: Story = {
-  name: "값을 모르면 aria-valuenow 가 없고 트랙 대신 text-muted 의 16px 도는 표시와 이름을 8px 사이로 보인다",
+  name: "값을 모르면 aria-valuenow 가 없고 트랙 대신 한 바퀴 0.8초로 도는 text-muted 의 16px 표시와 이름을 8px 사이로 보인다",
   // value 를 넘기지 않는다. 기본값이 null(값 모름)이다.
   args: { label: "단계를 세는 중" },
   play: async ({ canvas }) => {
@@ -74,7 +79,13 @@ export const Indeterminate: Story = {
       width: style.width,
       color: style.color,
       animation: style.animationName,
-    }).toEqual({ width: "16px", color: semanticColor(spinner, "text-muted"), animation: "spin" });
+      duration: style.animationDuration,
+    }).toEqual({
+      width: "16px",
+      color: semanticColor(spinner, "text-muted"),
+      animation: "spin",
+      duration: "0.8s",
+    });
     const strokes = strokesOf(spinner);
     await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
     // 도는 표시의 getBoundingClientRect 는 회전한 상자의 외접 사각형이라 각도마다 달라진다. 회전과 무관한 이름의 자리로
