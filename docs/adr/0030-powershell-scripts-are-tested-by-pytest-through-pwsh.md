@@ -34,5 +34,40 @@ date: 2026-10-13
   - 환경 변수는 runspace 사이에 샌다. 환경을 바꾸는 사례(위의 같은 이름 함수처럼 `APPDATA`를 돌리는 본문)는 묶지 않거나 앞뒤로 되돌린다.
   - 사례마다 pytest의 사례로 빨강이 남아야 한다. 남으면 위 결정(시험 사례는 pytest의 사례 하나다)을 바꾸지 않는다. 남지 않으면 `Invoke-Pester`를 거부한 까닭과 같은 대가이므로 그때 다시 정한다.
 - **pwsh 전제를 적는다.** `tech.md`의 테스트 행, `operations.md` 가드레일의 기계마다 까는 것(chromium 옆), `README.md`의 시작 절, `.pre-commit-config.yaml` 머리의 준비 목록이다. 헌법 버전은 patch다. 게이트 수와 손으로 치는 검증 명령은 그대로다.
-- **못 보는 것.** 판을 고정하지 않으므로 pwsh 7의 판 사이의 동작 차이는 그 판이 CI나 이 PC에 들어온 뒤에야 본다. Windows PowerShell 5.1에서의 동작은 보지 않는다(스킬은 `pwsh`로 부른다). 접근성 트리와 앱의 동작은 시험 밖이고 실제 실행으로만 본다. 같은 이름 함수로 가짜를 주는 길은 Windows에서만 쟀다. 그 길로 쓴 시험이 ubuntu 러너에서도 같은지는 그 시험을 들일 때 CI가 처음 본다.
-- 대기열 17의 남은 몫은 이 이음매로 따로 간다. `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, `-TimeoutSec`처럼 스킬이 넘긴 인자가 실제로 먹는지의 시험, `Get-AppQuitMarker`의 선택을 순수 함수로 떼어 재는 것이다. 지금의 `_call`은 pwsh에 시간 제한을 두지 않아, 대기 루프를 부르는 시험이 회귀로 끝나지 않으면 pytest가 멈춘다. 그런 시험을 들일 때 `_call`에 시간 제한을 단다. 같은 파일의 대기열 18(`stale=` 경로)도 그 판정을 떼면 같은 이음매로 잴 수 있다.
+- **못 보는 것.** 판을 고정하지 않으므로 pwsh 7의 판 사이의 동작 차이는 그 판이 CI나 이 PC에 들어온 뒤에야 본다. Windows PowerShell 5.1에서의 동작은 보지 않는다(스킬은 `pwsh`로 부른다). 접근성 트리와 앱의 동작은 시험 밖이고 실제 실행으로만 본다. 같은 이름 함수로 가짜를 주는 길은 Windows에서만 쟀다. 그 길로 쓴 시험이 ubuntu 러너에서도 같은지는 그 시험을 들일 때 CI가 처음 본다. (바뀜: 이력 2026-10-13 "대기열 17의 남은 몫을 이 이음매로 들였다")
+- 대기열 17의 남은 몫은 이 이음매로 따로 간다. `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, `-TimeoutSec`처럼 스킬이 넘긴 인자가 실제로 먹는지의 시험, `Get-AppQuitMarker`의 선택을 순수 함수로 떼어 재는 것이다. 지금의 `_call`은 pwsh에 시간 제한을 두지 않아, 대기 루프를 부르는 시험이 회귀로 끝나지 않으면 pytest가 멈춘다. 그런 시험을 들일 때 `_call`에 시간 제한을 단다. (바뀜: 이력 2026-10-13 "대기열 17의 남은 몫을 이 이음매로 들였다") 같은 파일의 대기열 18(`stale=` 경로)도 그 판정을 떼면 같은 이음매로 잴 수 있다.
+
+## 이력
+
+### 2026-10-13 대기열 17의 남은 몫을 이 이음매로 들였다
+
+결정은 그대로다. 위 Consequences의 마지막 항목이 남긴 몫을 `chore/open-session-regression-tests`가 들였다(일지
+2026-10-13-26). `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, 스킬이 넘긴 인자가 먹는지의 시험,
+`Get-AppQuitMarker`에서 뗀 선택 둘과 그 껍질의 시험이다. 변이 스물다섯이 모두 빨개졌다
+(`.scratch/harness/probes/open_session_regression_mutations.toml`). 대기열 18은 들이지 않았다. 판정을 떼면 이 이음매로
+잴 수 있지만(위 본문), 그 행이 묻는 것은 실제 실행에서 `stale=`가 찍히는지다(대기열 18 행).
+
+- **`_call`의 시간 제한.** `Focus-Session`이 스킬이 넘긴 `-TimeoutSec`만큼 행을 기다리는지 보는 시험이 실제 대기 루프
+  (`Wait-For`)를 1초 돈다. 그래서 `_call`에 60초 시간 제한을 달았고, 넘으면 그 사례가 실패로 끝난다. 대기 루프를 끝나지
+  않게 바꾼 변이가 이 길로 60초에 빨개졌다(위 변이 파일의 11번째).
+- **같은 이름 함수의 가짜를 시험에 처음 썼다.** 그 시험은 행을 찾는 함수가 UIAutomation 조건을 만드는 `New-Object`를 같은
+  이름의 함수로 가리고, `$Auto`·`$Types`·`$Scope`의 정적 멤버를 클래스로 흉내 낸다. UIAutomation 타입은 Windows의 pwsh에도
+  `Add-Type` 전에는 없어서(`.scratch/harness/probes/quit_marker_real_app.ps1`의 `uia-before=absent`) 두 플랫폼에서 같은
+  가짜로 돈다. ubuntu 러너에서도 돌았다. PR #215의 CI 실행 38339943172의 `python` 잡이 이 시험과 아래 껍질 시험을 포함해
+  2355개를 통과했다. `gh run view --job 115108438226 --log`의 요약 줄(2355 passed, 7 deselected)과, 로컬의
+  `pytest --collect-only -m llm`이 모은 7개에 이 파일의 시험이 없다는 것을 손으로 봤다. 이 시험은 본문이 `$TimeoutSec`을
+  정의하므로, 스킬과 복구 안내의 명령 줄이 넘기는 `-<이름>`이 스크립트의 인자인지는 따로 AST로 대 본다.
+- **선택을 순수 함수로 뗐다.** 주 프로세스의 선택은 `Find-MainStart`, 로그 파일의 선택은 `Select-QuitLogs`다. 프로세스와
+  파일을 찾는 껍질 `Get-AppQuitMarker`는 그 둘에 이어 주는지만 시험한다. 프로세스와 파일 시스템의 cmdlet(`Get-CimInstance`,
+  `Get-ChildItem`, `Test-Path`, `Get-Item`, `Get-Content`)을 모두 같은 이름의 함수로 가려, 껍질이 만든 속성 이름이 선택이
+  읽는 이름과 갈리면 빨개진다(PR 직전 버그·성능 리뷰). 가짜 없는 껍질은 프로브 둘로 다시 돌렸다. `pwsh_test_seam.py`의 같은
+  이름 함수 갈래는 기대대로였고, `quit_marker_real_app.ps1`은 이 PC의 실제 앱에서 MSIX 설치의 `main.log` 하나를 읽고 표지
+  없이 1.24초에 끝났다.
+- **시간.** 시험 파일의 사례가 39개에서 66개가 됐고, 아래 시간은 65개일 때 쟀다(그 뒤 껍질 시험 하나를 더했다).
+  `.scratch/harness/probes/open_session_test_time.py`로 main의 옛
+  파일과 번갈아 네 회차를 재니 옛 파일은 42.27~44.78초, 새 파일은 77.75~105.52초로 비가 1.75~2.37이었다. 다른 세션이 도는
+  부하 아래였다(`Win32_Processor`의 `LoadPercentage` 평균 72%를 손으로 한 번 봤다). 그 사이 `--durations`로 손으로 돌린 새
+  파일은 69.70초였고, 시간 제한을 재는 사례(3.08초)와 focus 둘(2.18초, 1.58초) 밖의 사례는 1초 안팎이었다. 유휴 상태의
+  값은 재지 않아, 위 Consequences가 묶을지를 정하는 문턱(사례 36개에 약 30초의 두 배)을 넘었는지는 정하지 못했다. 사례
+  하나를 위 수(약 0.83초)로 치면 66개에 55초쯤이고 느린 사례 셋이 몇 초를 더해 문턱 언저리다(어림이다). 그래서 묶을지는
+  이 브랜치에서 정하지 않고, 유휴 상태에서 이 프로브를 돌린 뒤 정한다.
