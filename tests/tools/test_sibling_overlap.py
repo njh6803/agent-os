@@ -482,10 +482,16 @@ def test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """열 때부터 충돌한 PR 처럼 merge ref 가 없어도, gh 가 열려 있다고 하면 대조한다."""
+    """열 때부터 충돌한 PR 처럼 merge ref 가 없어도, gh 가 열려 있다고 하면 대조한다.
+
+    그 PR 의 head 에 선 형제 워크트리도 닫힌 PR 의 것으로 접지 않는다(대기열 194).
+    """
     _, work, pusher = 저장소
-    pr6 = _PR을_민다(pusher, 6, {"docs/adr/0002-pr.md": "그쪽\n"})
-    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    pr6 = _PR을_민다(pusher, 6, {"docs/adr/0002-pr.md": "그쪽\n", "README.md": "그쪽\n"})
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n", "README.md": "이쪽\n"})
+    _git(work, "fetch", "-q", "origin", "refs/pull/6/head")
+    sibling = work.parent / "pr6"
+    _git(work, "worktree", "add", "-q", "-b", "pr6", str(sibling), pr6)
 
     def 깃허브다(url: str) -> tuple[str, str]:
         return ("o", "r")
@@ -502,6 +508,8 @@ def test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다(
     assert code == 1
     assert "열린 PR 을 읽은 길: gh api\n" in out
     assert "PR #6 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr.md" in out
+    assert f"- 워크트리 {sibling.resolve()}: README.md\n" in out
+    assert "닫힌 워크트리" not in out
 
 
 def test_main이_이_브랜치_뒤에_들인_번호와_겹치면_CLI가_알린다(
@@ -583,6 +591,22 @@ def test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견�
     assert f"- 워크트리 {later.resolve()}: CLAUDE.md, README.md\n" in out
     assert f"- 워크트리 {behind.resolve()}: README.md\n" in out
     assert "- PR #5: README.md\n" in out
+
+
+def test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 205 의 길: 받은 번호로 만든 일지 파일은 PR 이 닫힌 워크트리에 있어도 찬 번호다."""
+    _, work, _ = 저장소
+    closed = _워크트리의_PR을_민다(work, "closed", 3, {"README.md": "병합\n"})
+    _쓴다(closed, {"docs/journal/2026-10-07-02-closed.md": "형제\n"})
+    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert f"워크트리 {closed.resolve()}(PR #3 닫힘) 일지 2026-10-07-02" in out
 
 
 def test_형제가_쓴_가장_높은_헌법_판과_그_자리를_찍는다(

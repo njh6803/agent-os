@@ -59,7 +59,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 194
   안내 줄, 판 줄, 판을 올리지 않은 헌법 파일 줄, 종료 코드, 독스트링(동작 넷, 종료 코드, 못 보는 것 셋 더하고 둘 고침).
 - `tests/tools/test_sibling_overlap.py`: 순수 셋(닫힌 PR, 가장 높은 판, 판을 올리지 않은 파일), 통합 셋(194·199·224), 다음 빈 번호
   시험에 220·199 단언. `SEED`에 `operations.md`.
-- `.scratch/harness/probes/sibling_overlap_mutations.toml`: 원문이 바뀐 다섯을 고치고 변이 스물을 더해 예순둘. 프로브 README의 그 행.
+- `.scratch/harness/probes/sibling_overlap_mutations.toml`: 원문이 바뀐 다섯을 고치고 변이 스물둘을 더해 예순넷(둘은 PR 직전
+  버그 축 반영). 프로브 README의 그 행.
 - `.scratch/harness/probes/sibling_overlap_merge_cost.sh`(새 프로브)와 프로브 README 행.
 - `CLAUDE.md` 커밋 전 줄, `tools/hook_bash_gate_pipe.py`와 그 시험의 독스트링, `KICKOFF.md`의 도구 설명.
 - `.scratch/retro-queue.md`: 194·199·220·224를 닫았다.
@@ -97,4 +98,32 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 194
   Generality). 접는 표지와 그 PR을 한 필드로 두는 값이 작아 두었다. `journal[:10]`·`journal[11:]` 자르기와
   `tuple[str, list[str]]`(Primitive Obsession)은 모듈이 이미 쓰는 꼴이라 이 PR에서 타입으로 올리지 않았다.
 
-다시 돌린 것: 테스트 54 통과, ruff 둘, pyright, 변이 원문 확인. 손으로 치는 게이트 다섯은 커밋의 pre-commit으로 갈음한다.
+다시 돌린 것: 테스트 54 통과, ruff 둘, pyright, 변이 원문 확인. 손으로 치는 게이트 다섯은 커밋 `516bb13`의 pre-commit이
+`Skipped` 없이 모두 통과해 갈음했다(pytest 402.1초, web-verify 178.2초). 첫 커밋 시도는 게이트가 모두 통과한 뒤 commit-msg
+단계에서 제목 76자가 72자 상한에 걸려 막혀, 제목을 줄여 게이트를 한 번 더 돌았다(대기열 222의 모양).
+
+## PR 직전 보안·버그·성능 축
+
+커밋 뒤 origin/main(#214·#216·#217)을 보통의 merge로 들였다. 대기열이 충돌해, main의 224 행이 merge-base와 같은 것을 스크립트로
+확인한 뒤 이 브랜치의 닫힌 224를 두고 main의 225·226·228을 이었다. 합친 커밋들이 `next-session`과 `open-session` 스킬을
+바꿔, 병합 절차는 디스크의 `next-session`을 Read로 열어 따른다. 병합 커밋 `443bac7`의 pre-commit은 스테이지된 `.py`가 없어 ruff
+둘과 변이 표 확인이 `Skipped`였고, 그 셋은 손으로 쳐서 초록이었다. 합친 뒤의 형제 대조는 겹침이 없었고, 열린 PR #215가 일지
+26을 들고 있어 그쪽이 먼저 병합되면 이 일지 25를 옮긴다. CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 돌렸다.
+
+- 보안(`/security-review`, 합친 뒤): 지적 없음. 서브태스크가 새 하위 프로세스 호출(인자 목록, 셸 없음, 값은 로컬 워크트리 목록),
+  원격이 정할 수 있는 `ls-remote` 출력의 쓰임(번호는 정수, SHA는 대조에만), 판 문자열(정규식을 지난 값), 프로브 sh(입력은 자신의
+  origin URL과 CLI 인자)를 보고 후보를 내지 않아 오탐 거르기는 돌지 않았다.
+- 버그·성능(`bug-perf-review`, 마지막 표지 `[호출 37]`): 유효 넷(Minor 셋, Nit 하나), 보류 하나. Minor 셋은 고치는 값이 작아 PR을
+  열기 전에 고쳤다.
+  - 고쳤다: 접힌 워크트리의 번호는 접지 않고 대조한다는 독스트링 문장을 고정한 시험과 변이가 없었다. 접힌 워크트리의 미추적
+    일지와 같은 순번을 쓰면 겹침으로 1이 되는 시험과, 그 워크트리의 번호를 비우는 변이를 더했다.
+  - 고쳤다: gh 경로에서 merge ref 없는 열린 PR(충돌 PR)의 head에 선 워크트리가 접히지 않는 배선을 통합 시험이 보지 않았다. gh
+    경로 시험에 그 워크트리를 더하고, 닫힌 PR을 merge ref로 가리는 변이를 더했다.
+  - 고쳤다: 프로브의 github.com 가드가 매치하지 못한 URL을 그대로 내 지나갔고, 점이 든 저장소 이름도 놓쳤다. `.git`을 먼저 떼고
+    매치할 때만 찍게(`sed -n …p`) 고쳐 URL 넷으로 손으로 봤다.
+  - 남겼다(Nit): merge ref 경로의 라벨이 충돌 PR도 "닫힘"이라 적는다. 독스트링의 못 보는 것에 있고 그 경로는 gh를 못 쓸 때뿐이다.
+    PR 체크리스트에 적는다.
+  - 보류: merge ref 경로에서 막 연 PR이 merge ref가 생기기 전이면 닫힌 것으로 읽힐 수 있다. 재려면 임시 PR이 든다. PR 체크리스트에
+    적는다.
+- 반영 뒤: 테스트 36 통과. 시험은 더하기만 했으므로 변이는 `--since HEAD`로 고른 새 둘을 돌려 모두 기대대로였다. 고친 프로브를
+  다시 돌려 가드를 지나 측정이 도는 것을 봤다.

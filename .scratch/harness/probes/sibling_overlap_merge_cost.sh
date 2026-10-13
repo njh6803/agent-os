@@ -14,8 +14,9 @@ set -u
 scratch="${1:?임시 디렉터리를 준다}"
 mkdir -p "$scratch"
 url=$(git remote get-url origin)
-repo=$(printf '%s' "$url" | sed -E 's#.*github\.com[:/]([^/]+/[^/.]+)(\.git)?/?$#\1#')
-case "$repo" in */*) ;; *) echo "origin 이 github.com 이 아니다: $url" >&2; exit 2 ;; esac
+# 매치하지 못하면 아무것도 내지 않는다(`-n` 과 `p`). 점이 든 저장소 이름도 받는다
+repo=$(printf '%s' "${url%.git}" | sed -nE 's#^.*github\.com[:/]([^/]+/[^/]+)/?$#\1#p')
+[ -n "$repo" ] || { echo "origin 이 github.com 이 아니다: $url" >&2; exit 2; }
 ms() { date +%s%3N; }
 missed=0
 

@@ -2,7 +2,8 @@
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
 # 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16). 예순둘로 늘린 뒤에는 3757초(번마다
-# 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-25).
+# 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-25). 그 뒤 더한 둘은
+# `--since` 로 골라 돌렸다.
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -455,6 +456,24 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''        if match is None or match.group(2) != "head":'''
 new = '''        if match is None:'''
+
+[[mutation]]
+name = "PR 이 닫힌 워크트리의 번호를 대조에서 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            add(label, head, numbers, _worktree_changes(path, head), closed)'''
+new = '''            add(label, head, Numbers({}, {}, {}, None), _worktree_changes(path, head), closed)'''
+
+[[mutation]]
+name = "gh api 가 열렸다고 한 PR 도 merge ref 가 없으면 닫힌 PR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))'''
+new = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, open_pulls(listing)))'''
 
 [[mutation]]
 name = "형제 줄에서 PR 이 닫힌 워크트리를 접지 않는다"
