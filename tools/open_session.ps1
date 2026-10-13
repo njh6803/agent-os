@@ -662,26 +662,46 @@ function Find-QuitMarker([string[]] $Lines, [datetime] $Since) {
     return $null
 }
 
-# 도는 앱의 주 프로세스가 선 뒤에 끝내기 표지가 있으면 그 줄, 없으면 null 이다. 주 프로세스나 로그를 못 찾으면 null 이다
-# (판정하지 못하면 막지 않는다. 판정 중의 예외는 부르는 쪽이 `quitcheck=` 로 남기고 지나간다). 주 프로세스는
-# `app\Claude.exe` 가운데 `--type=` 이 없는 가장 오래된 것이다. 딥링크마다 잠깐 뜨는 두 번째 인스턴스도 같은 모양이지만 더
-# 늦게 선다. 같은 이름의 CLI(`claude.exe`)는 경로가 다르다. 로그는 MSIX 설치(`Packages\Claude_*`)와 일반 설치
-# (`%APPDATA%\Claude`) 가운데 가장 최근에 쓰인 곳이다. 표지가 돌림 파일로 밀렸을 수 있어 `main1.log` 도 읽되, 주 프로세스가
-# 서기 전에 마지막으로 쓰인 돌림 파일은 볼 것이 없어 건너뛴다(10MB 인 그 파일까지 읽으면 판정 전체가 2.66초였다, 셀프 리뷰).
-function Get-AppQuitMarker {
-    $main = @(Get-CimInstance Win32_Process -Filter "Name = 'Claude.exe'" -ErrorAction SilentlyContinue |
+# 도는 앱의 주 프로세스가 선 시각. 주 프로세스는 `app\Claude.exe` 가운데 `--type=` 이 없는 가장 오래된 것이다. 딥링크마다
+# 잠깐 뜨는 두 번째 인스턴스도 같은 모양이지만 더 늦게 선다. 같은 이름의 CLI(`claude.exe`)는 경로가 다르다. 없으면 null 이다.
+# 시각을 모르는 앱 프로세스가 하나라도 있으면 정렬이 그것을 맨 앞에 두어 null 이다. 어느 것이 먼저 섰는지 모르면 두 번째 인스턴스를
+# 고를 수 있어 판정하지 않는다. 순수하다. 프로세스는 `Get-AppQuitMarker` 가 찾아 넘긴다.
+function Find-MainStart($Processes) {
+    $main = @($Processes |
         Where-Object { $_.ExecutablePath -match '\\app(-[\d.]+)?\\Claude\.exe$' -and $_.CommandLine -notmatch '--type=' } |
         Sort-Object CreationDate)
-    if ($main.Count -eq 0 -or $null -eq $main[0].CreationDate) { return $null }
-    $started = $main[0].CreationDate
+    if ($main.Count -eq 0) { return $null }
+    return $main[0].CreationDate
+}
+
+# 끝내기 표지를 찾을 로그 파일. 후보 폴더마다 `main.log`(Main)와 그 옆 돌림 파일 `main1.log`(Rotated)의 경로와 마지막으로
+# 쓰인 시각(MainWritten·RotatedWritten, 없는 파일이면 null)을 받아, `main.log` 가 가장 최근에 쓰인 폴더의 두 파일 가운데
+# 주 프로세스가 선 뒤($Since)에 쓰인 것을 앞선 줄이 든 돌림 파일부터 준다. 표지가 돌림 파일로 밀렸을 수 있어 그것도 읽되, 서기
+# 전에 마지막으로 쓰인 돌림 파일은 볼 것이 없어 건너뛴다(10MB 인 그 파일까지 읽으면 판정 전체가 2.66초였다, 셀프 리뷰).
+# `main.log` 가 없는 폴더는 고르지 않는다. 순수하다. 파일은 `Get-AppQuitMarker` 가 찾아 넘긴다.
+function Select-QuitLogs($Dirs, [datetime] $Since) {
+    $latest = @($Dirs | Where-Object { $null -ne $_.MainWritten } | Sort-Object MainWritten -Descending) | Select-Object -First 1
+    if ($null -eq $latest) { return }
+    if ($null -ne $latest.RotatedWritten -and $latest.RotatedWritten -ge $Since) { $latest.Rotated }
+    if ($latest.MainWritten -ge $Since) { $latest.Main }
+}
+
+# 도는 앱의 주 프로세스가 선 뒤에 끝내기 표지가 있으면 그 줄, 없으면 null 이다. 주 프로세스나 로그를 못 찾으면 null 이다
+# (판정하지 못하면 막지 않는다. 판정 중의 예외는 부르는 쪽이 `quitcheck=` 로 남기고 지나간다). 로그의 후보 폴더는 MSIX
+# 설치(`Packages\Claude_*`)와 일반 설치(`%APPDATA%\Claude`)다. 무엇을 고를지는 `Find-MainStart`·`Select-QuitLogs` 가 정하고,
+# 여기서는 프로세스와 파일을 찾아 넘긴다.
+function Get-AppQuitMarker {
+    $started = Find-MainStart @(Get-CimInstance Win32_Process -Filter "Name = 'Claude.exe'" -ErrorAction SilentlyContinue)
+    if ($null -eq $started) { return $null }
     $dirs = @(Get-ChildItem -Path "$env:LOCALAPPDATA\Packages" -Directory -Filter 'Claude_*' -ErrorAction SilentlyContinue |
         ForEach-Object { Join-Path $_.FullName 'LocalCache\Local\Claude\logs' }) + @("$env:APPDATA\Claude\logs")
-    $logs = @($dirs | ForEach-Object { Join-Path $_ 'main.log' } | Where-Object { Test-Path -LiteralPath $_ } |
-        Sort-Object { (Get-Item -LiteralPath $_).LastWriteTime } -Descending)
-    if ($logs.Count -eq 0) { return $null }
-    $files = @((Join-Path (Split-Path $logs[0]) 'main1.log'), $logs[0]) |
-        Where-Object { (Test-Path -LiteralPath $_) -and (Get-Item -LiteralPath $_).LastWriteTime -ge $started }
-    $lines = foreach ($file in $files) { Get-Content -LiteralPath $file -Encoding UTF8 }
+    $writtenAt = { param($path) if (Test-Path -LiteralPath $path) { (Get-Item -LiteralPath $path).LastWriteTime } }
+    $logs = foreach ($dir in $dirs) {
+        $log = Join-Path $dir 'main.log'
+        $rotated = Join-Path $dir 'main1.log'
+        [pscustomobject]@{ Main = $log; MainWritten = & $writtenAt $log; Rotated = $rotated; RotatedWritten = & $writtenAt $rotated }
+    }
+    $lines = foreach ($file in (Select-QuitLogs @($logs) $started)) { Get-Content -LiteralPath $file -Encoding UTF8 }
     return Find-QuitMarker @($lines) $started
 }
 
