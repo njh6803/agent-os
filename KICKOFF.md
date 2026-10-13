@@ -123,7 +123,7 @@ mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claud
 
 전역 `~/.claude/CLAUDE.md`는 비워 둔다. 교정 루프 문단은 3단계에서 프로젝트 `CLAUDE.md`에 넣는다.
 
-사람 몫(허락): 이 기계의 전역 `~/.claude/CLAUDE.md`를 `: > ~/.claude/CLAUDE.md`로 비운다. 허락을 묻는 설명에 지금 내용을 보인다(비어 있지 않을 때만).
+사람 몫(허락): 이 기계의 전역 `~/.claude/CLAUDE.md`를 `cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.md.bak && : > ~/.claude/CLAUDE.md`로 사본을 남기고 비운다. 허락을 묻는 설명에 지금 내용을 보인다(비어 있지 않을 때만).
 
 ## 1단계. 저장소 만들기
 

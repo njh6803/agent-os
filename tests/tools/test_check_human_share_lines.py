@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -195,6 +196,14 @@ def test_목록_인용_표_강조_표지를_붙인_사람_몫_줄을_잡는다()
         assert problems_in(text) == [f"{_줄_번호(text, 줄)}: {표지_모양}"], 줄
 
 
+def test_구분선처럼_긴_별표나_밑줄_줄도_곧바로_판정한다() -> None:
+    """강조 표지를 1칸·2칸으로 나누는 길을 모두 되짚으면 36자에서 수 초가 걸린다(PR 직전 리뷰)."""
+    본문 = f"{맞는_줄}\n\n{'*' * 36}\n\n{'_' * 36}x"
+    started = time.perf_counter()
+    assert problems_in(_런북(바꿈={"4단계": 본문})) == []
+    assert time.perf_counter() - started < 1.0
+
+
 def test_확인이_없는_사람만_줄을_잡는다() -> None:
     for 줄 in (
         "사람 몫(사람만): 로그인한다.",
@@ -223,6 +232,12 @@ def test_틸드_펜스_안의_줄은_세지_않는다() -> None:
 def test_4중_백틱_안의_3중_백틱은_펜스를_닫지_않는다() -> None:
     text = _런북(바꿈={"2단계": "````markdown\n```\n사람 몫(결정): 펜스 안이다.\n````"})
     assert problems_in(text) == [_빈_절(text, "2단계. 스킬")]
+
+
+def test_다른_문자나_정보_문자열이나_네_칸_들여쓰기의_줄은_펜스를_닫지_않는다() -> None:
+    for 가짜 in ("~~~", "```bash", "    ```"):
+        text = _런북(바꿈={"2단계": f"```\n{가짜}\n사람 몫(결정): 펜스 안이다.\n```"})
+        assert problems_in(text) == [_빈_절(text, "2단계. 스킬")], 가짜
 
 
 def test_닫히지_않은_펜스를_잡는다() -> None:
@@ -280,6 +295,20 @@ def test_못_보는_것_목록_항목_안에_들여_쓴_사람_몫_줄은_세지
 
     text = _런북(바꿈={"7단계": 들여_쓴_줄})
     assert problems_in(text) == [_빈_절(text, "7단계. 골격")]
+
+
+def test_못_보는_것_한_칸에서_세_칸_들여_쓴_최상위_사람_몫_줄은_세지도_보지도_않는다() -> None:
+    """목록 문맥을 따라가지 않아 목록 항목의 이어짐과 가르지 못한다."""
+    들여_쓴_줄 = " 사람 몫(사람만): 한 칸 들여 썼고 확인이 없다."
+    assert problems_in(_런북(바꿈={"7단계": f"{맞는_줄}\n\n{들여_쓴_줄}"})) == []
+
+    text = _런북(바꿈={"7단계": 들여_쓴_줄})
+    assert problems_in(text) == [_빈_절(text, "7단계. 골격")]
+
+
+def test_못_보는_것_펜스_안의_사람_몫_줄은_같은_절에_다른_줄이_있으면_지나간다() -> None:
+    본문 = f"{맞는_줄}\n\n```bash\n사람 몫(사람만): 펜스 안이고 확인이 없다.\n```"
+    assert problems_in(_런북(바꿈={"8단계": 본문})) == []
 
 
 def test_못_보는_것_목록_항목에_빈_줄_없이_붙은_첫_칸의_줄은_목록_안이어도_센다() -> None:

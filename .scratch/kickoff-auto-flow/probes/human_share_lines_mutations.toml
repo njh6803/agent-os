@@ -2,8 +2,8 @@
 # 빨강은 import 의 수집 오류뿐이라, 지키는 동작이 틀려서 빨개진 것을 본 적이 없다. 명세 "사람 몫 검사"의
 # 1~6, 펜스의 CommonMark 규칙 넷(틸드, 길이, 정보 문자열의 백틱, 들여쓰기 세 칸), 근사 모양의 공백과
 # 내용, CLI 의 인자, 그리고 못 보는 것 하나(들여 쓴 줄을 세지 않는다)에 변이 하나씩을 겨누고 그 가드의
-# 테스트만 돌린다. 끝의 넷은 셀프 리뷰 뒤에 더한 것(표지를 붙인 사람 몫 줄, 머리가 없을 때의 조기 반환)을
-# 겨눈다.
+# 테스트만 돌린다. 끝의 여덟은 리뷰 뒤에 더한 것을 겨눈다. 셀프 리뷰 뒤의 넷은 표지를 붙인 사람 몫 줄과
+# 머리가 없을 때의 조기 반환, PR 직전 리뷰 뒤의 넷은 강조 표지의 소유 한정과 닫는 펜스의 조건 셋이다.
 # 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/kickoff-auto-flow/probes/human_share_lines_mutations.toml
 
 [[mutation]]
@@ -362,7 +362,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/check_human_share_lines.py"
 old = '''
-    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}|_{1,2})+사람\s*몫"
+    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}+|_{1,2}+)+사람\s*몫"
 '''
 new = '''
     r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*)+사람\s*몫"
@@ -376,10 +376,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/check_human_share_lines.py"
 old = '''
-    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}|_{1,2})+사람\s*몫"
+    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}+|_{1,2}+)+사람\s*몫"
 '''
 new = '''
-    r"(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}|_{1,2})+사람\s*몫"
+    r"(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}+|_{1,2}+)+사람\s*몫"
 '''
 
 [[mutation]]
@@ -395,4 +395,61 @@ old = '''
 '''
 new = '''
         found.append((0, _NO_SECTIONS))
+'''
+
+[[mutation]]
+name = "강조 표지의 소유 한정을 뗀다"
+tests = ["tests/tools/test_check_human_share_lines.py::test_구분선처럼_긴_별표나_밑줄_줄도_곧바로_판정한다"]
+expect = "red"
+timeout = 300
+
+[[mutation.edit]]
+file = "tools/check_human_share_lines.py"
+old = '''
+    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}+|_{1,2}+)+사람\s*몫"
+'''
+new = '''
+    r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+|>[ \t]*|\|[ \t]*|\*{1,2}|_{1,2})+사람\s*몫"
+'''
+
+[[mutation]]
+name = "다른 문자의 펜스 줄도 길이만 맞으면 닫는다"
+tests = ["tests/tools/test_check_human_share_lines.py::test_다른_문자나_정보_문자열이나_네_칸_들여쓰기의_줄은_펜스를_닫지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_human_share_lines.py"
+old = '''
+    return closing is not None and closing.group(1).startswith(fence)
+'''
+new = '''
+    return closing is not None and len(closing.group(1)) >= len(fence)
+'''
+
+[[mutation]]
+name = "닫는 줄 뒤의 정보 문자열을 허용한다"
+tests = ["tests/tools/test_check_human_share_lines.py::test_다른_문자나_정보_문자열이나_네_칸_들여쓰기의_줄은_펜스를_닫지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_human_share_lines.py"
+old = '''
+_CLOSING = re.compile(r" {0,3}(`{3,}|~{3,})[ \t]*")
+'''
+new = '''
+_CLOSING = re.compile(r" {0,3}(`{3,}|~{3,}).*")
+'''
+
+[[mutation]]
+name = "닫는 줄의 들여쓰기 칸 수를 보지 않는다"
+tests = ["tests/tools/test_check_human_share_lines.py::test_다른_문자나_정보_문자열이나_네_칸_들여쓰기의_줄은_펜스를_닫지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/check_human_share_lines.py"
+old = '''
+_CLOSING = re.compile(r" {0,3}(`{3,}|~{3,})[ \t]*")
+'''
+new = '''
+_CLOSING = re.compile(r" *(`{3,}|~{3,})[ \t]*")
 '''
