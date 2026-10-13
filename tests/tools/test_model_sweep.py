@@ -25,6 +25,7 @@ from tools.model_sweep import (
     kind,
     main,
     prereg_kinds,
+    prereg_section,
     sweep_problems,
 )
 
@@ -82,8 +83,21 @@ def test_기간이_끝난_날부터는_갈래가_없다() -> None:
 
 
 def _prereg_section() -> str:
-    text = _PREREG.read_text(encoding="utf-8")
-    return text.split("<!-- 사전 등록 시작 -->", 1)[1].split("<!-- 사전 등록 끝 -->", 1)[0]
+    section = prereg_section(_PREREG.read_text(encoding="utf-8"))
+    assert section, f"{_PREREG} 에 사전 등록 절이 없다"
+    return section
+
+
+def test_사전_등록_절은_두_표지_사이의_글이다() -> None:
+    text = "앞\n<!-- 사전 등록 시작 -->\n절\n<!-- 사전 등록 끝 -->\n뒤"
+    assert prereg_section(text) == "\n절\n"
+
+
+@pytest.mark.parametrize(
+    "text", ["<!-- 사전 등록 시작 -->만 있다", "<!-- 사전 등록 끝 -->만 있다", "표지가 없다"]
+)
+def test_사전_등록_표지가_하나라도_없으면_빈_절이다(text: str) -> None:
+    assert prereg_section(text) == ""
 
 
 def test_사전_등록이_도구의_갈래_값을_이름으로_든다() -> None:
@@ -123,15 +137,18 @@ def test_멈춰서_빠진_종류는_어긋남이_아니다() -> None:
 
 
 @pytest.mark.parametrize(
-    "swept",
+    ("swept", "changed"),
     [
-        {"구현": ("feature/",), "하네스": ("chore/",)},  # 접두사를 줄였다
-        {"구현": ("feature/",), "하네스": ("chore/", "claude/"), "수정": ("fix/",)},  # 더했다
-        {"구현": ("feat/",)},  # 바꿨다
+        ({"구현": ("feature/",), "하네스": ("chore/",)}, "하네스"),
+        ({"구현": ("feature/",), "하네스": ("chore/", "claude/"), "수정": ("fix/",)}, "수정"),
+        ({"구현": ("feat/",)}, "구현"),
     ],
+    ids=["접두사를_줄임", "종류를_더함", "접두사를_바꿈"],
 )
-def test_빠지는_것_밖의_차이를_잡는다(swept: dict[str, tuple[str, ...]]) -> None:
-    assert sweep_problems(swept, _REGISTERED) != []
+def test_빠지는_것_밖의_차이를_잡는다(swept: dict[str, tuple[str, ...]], changed: str) -> None:
+    problems = sweep_problems(swept, _REGISTERED)
+    assert len(problems) == 1
+    assert problems[0].startswith(f"SWEPT 의 {changed}{swept[changed]} ")
 
 
 def test_종류는_주어진_표로도_가른다() -> None:
