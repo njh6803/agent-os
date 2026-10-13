@@ -40,11 +40,37 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 코드를 바꾸지 않는다. 형제와 main의 merge-base가 이 클론에 없으면(얕은 클론) 그 형제의 고친
 파일만 "알 수 없다"로 두고 번호는 그대로 대조한다.
 
+HEAD가 닫힌 PR의 head와 같은 형제 워크트리는 커밋하지 않은 변경(그 HEAD 뒤의 변경과 미추적
+파일)만 고친 파일로 견주고, 형제 줄에서는 그 수만 접어 찍는다(대기열 194). 함께 고친 파일 서른여덟
+줄 가운데 서른다섯 줄이 형제 워크트리의 것이라 열린 PR의 줄이 묻혔다(일지 2026-10-13-18). 이 판을
+들일 때 같은 꼴로 다시 친 대조에서는 형제 워크트리의 줄 서른일곱 가운데 서른여섯이 PR이 닫힌
+워크트리의 것이었다(손으로 봤다, 일지 2026-10-13-25). 그 커밋은 이미 병합됐거나, 병합 없이 닫혀
+앞으로도 병합되지 않아 충돌 후보가 아니다. 그래서 병합과 닫힘을 가리지 않는다. 닫힌 PR은 열린
+PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열린 PR이 아닌 것이다. 병합 여부를
+따로 물으면 `gh api …/pulls?state=closed --paginate`가 2.2~3.5초, `gh pr list --state merged`가
+1.6~2.0초를 더 썼고, 그 `ls-remote`는 0.6~0.7초였다(2026-10-13 이 저장소의 PR 217개에서 세 번씩,
+`.scratch/harness/probes/sibling_overlap_merge_cost.sh`). 병합 없이 닫힌 PR은 그때 0개였다.
+번호는 접지 않고 그대로 대조한다.
+
 다음 빈 번호를 늘 찍는다(대기열 157·182). 일지를 쓰기 전에는 이 브랜치에 새 번호가 없어
 겹침 대조가 아무것도 알리지 못하고, 먼저 쓴 번호는 겹친 뒤에야 옮겨져 그 번호를 든 인용도
 함께 고쳐야 했다. 일지는 오늘 날짜(main에 더 늦은 날짜의 일지가 있으면 그 날짜)의 순번,
 대기열은 행 번호이고, 이 브랜치와 merge-base·main·형제 전체가 쓴 가장 큰 번호의 다음이다. 빈
-사이 번호는 고르지 않는다. 새 일지는 이름순으로 맨 뒤여야 한다(아래).
+사이 번호는 고르지 않는다. 새 일지는 이름순으로 맨 뒤여야 한다(아래). 이 브랜치에 새 일지가
+없으면 그 번호로 바로 머리 한 줄 일지 파일을 만들라는 안내를 붙인다(대기열 220). 형제의 이
+대조는 디스크의 일지 파일로 찬 번호를 보므로, 받은 번호를 파일 없이 두는 동안 형제가 같은 번호를
+받아 갔다(대기열 205). 그 안내가 `next-session` 1단계에만 있었는데, 그 스킬은 보통 PR을 열거나
+병합한 뒤에 실려 번호를 받는 때에 읽히지 않을 수 있다.
+
+형제가 쓴 가장 높은 헌법 판도 늘 찍는다(대기열 199). 판을 올리기 전의 대조는 겹침을 알리지
+못해, 올린 뒤 다시 친 대조가 형제가 먼저 매긴 같은 판을 알렸다. main은 가진 판, 다른 형제는
+새로 매긴 판이 후보이고, 판은 글자가 아니라 수로 견준다. 다음 판은 고르지 않는다(아래).
+
+헌법 파일(`principles.md`·`tech.md`·`operations.md`)을 merge-base 뒤에 고쳤는데 이 브랜치가
+판을 새로 매기지 않았으면 알린다(대기열 224). `principles.md` 거버넌스는 원칙 변경을 major, 절
+추가를 minor, 문구 수정을 patch로 올리고, 판을 올리지 않은 변경은 뒤에 소급했다. 2.4.0과 2.5.1이
+그런 PR 열셋을 묶었고(`docs/constitution/README.md`), `operations.md`를 고치고 올리지 않은 것을 셀프
+리뷰가 잡았다(일지 2026-10-13-18).
 
 일지의 이름순 차례도 본다(대기열 175). 다음 세션은 이름순 최신 일지의 "다음"을 읽는다. 이
 브랜치의 새 일지 가운데 이름순 최신 것이 main의 최신 일지보다 앞이면, 지금 병합해도 그 일지는
@@ -54,19 +80,27 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 끝내면 다음 빈 번호를 받은 형제끼리 서로를 앞질러 옮기기를 되풀이한다.
 
 쓰임: `uv run python tools/sibling_overlap.py [저장소 안의 경로]`. 먼저 `origin`의 main과
-열린 PR의 head를 fetch한다(`origin/main`이 움직인다). 종료 코드는 번호 겹침도 main보다 앞선
-새 일지도 없으면 0, 있으면 1, 대조를 끝내지 못하면(git 실패, 원격을 읽지 못함, 번호의 자리가
-빔) 2다. 1이면 이 브랜치가 비켜 간다. 출력의 "옮길 번호"는 겹친 종류(일지는 날짜마다)의 이
-브랜치 새 번호 전부를 차례를 지켜 형제들의 최대값 뒤로 붙인 것이다(일지 2026-10-07-09가
-03~07을 05~09로 옮긴 모양). main보다 앞선 새 일지가 있으면 일지는 날짜마다가 아니라 새 일지
-전부를 다음 빈 일지 번호부터 차례대로 붙인다. 헌법 판은 고르지 않는다. 올림의
-종류(major·minor·patch)는 바뀐 내용이 정한다.
+열린 PR의 head를 fetch한다(`origin/main`이 움직인다). 종료 코드는 번호 겹침도, main보다 앞선
+새 일지도, 판을 올리지 않고 고친 헌법 파일도 없으면 0, 있으면 1, 대조를 끝내지 못하면(git 실패,
+원격을 읽지 못함, 번호의 자리가 빔) 2다. 1이면 출력대로 고친다. 겹쳤거나 앞섰으면 이 브랜치가
+비켜 간다. 출력의 "옮길 번호"는 겹친 종류(일지는 날짜마다)의 이 브랜치 새 번호 전부를 차례를
+지켜 형제들의 최대값 뒤로 붙인 것이다(일지 2026-10-07-09가 03~07을 05~09로 옮긴 모양). main보다
+앞선 새 일지가 있으면 일지는 날짜마다가 아니라 새 일지 전부를 다음 빈 일지 번호부터 차례대로
+붙인다. 헌법 판은 고르지 않는다. 올림의 종류(major·minor·patch)는 바뀐 내용이 정하고, 형제가 쓴
+가장 높은 판보다 높으면 된다.
 
 못 보는 것:
 - merge ref로 가릴 때(`gh`를 쓰지 못할 때), 열 때부터 main과 충돌한 PR. 웹 검색 요약이
   그런 PR에는 merge ref가 없고 merge ref는 GitHub이 문서로 약속하지 않은 기능이라고 했다
   (drone 포럼 글, 원문은 이 컨테이너의 egress가 막아 열지 못했다). 재지 않았다. 재려면 이
-  저장소에 충돌하는 PR을 하나 열어야 한다.
+  저장소에 충돌하는 PR을 하나 열어야 한다. 그 PR의 head에 있는 워크트리는 닫힌 PR의 것으로 접혀
+  커밋한 변경을 견주지 않는다.
+- PR이 닫힌 워크트리 가운데 HEAD가 그 head와 다른 것. head 뒤에 커밋을 더한 워크트리는 새 일이라
+  접지 않는 것이 맞지만, head까지 따라가지 않은(head의 조상에 남은) 워크트리도 접지 않아 이미
+  병합된 커밋이 함께 고친 파일에 나온다.
+- 헌법 판을 merge-base의 판에서 바꿨는지만 본다. 그보다 낮게 고쳐도, 올림의 종류가 바뀐 내용에
+  맞지 않아도(원칙을 바꾸고 patch로 올려도) 지나간다. 헌법 README의 판 줄 밖 문장(색인)과 세 파일
+  밖의 새 헌법 파일은 고쳐도 알리지 않는다.
 - 푸시했지만 PR을 열지 않은 브랜치, 다른 기계·다른 클라우드 세션의 커밋하지 않은 변경.
 - main을 이미 들여 작업 트리 안에서 같은 번호가 둘이 된 것. 둘 다 merge-base에 있거나 merge-base에
   든 번호와 같아 "새로"가 아니다. 일지는 `tests/test_journal_names.py`, ADR은
@@ -74,8 +108,10 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 - 번호를 가리키는 참조("일지 03", "대기열 141" 같은 본문의 인용). 번호를 옮길 때 참조를
   고치는 범위는 `.claude/rules/adr.md`의 번호 항목과 같다.
 - 함께 고친 파일의 어느 줄이 겹치는지. 파일 이름만 견준다.
-- 다음 빈 번호를 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의 형제만 본다. 그 뒤의
-  겹침은 커밋 직전의 대조가 잡는다.
+- 다음 빈 번호나 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의
+  형제만 본다. 그 뒤의 겹침은 커밋 직전의 대조가 잡는다. 이 브랜치의 판이 형제가 쓴 판보다 낮은
+  것은 그 줄에 찍히기만 하고 종료 코드를 바꾸지 않는다. 그 형제가 판을 새로 올렸으면 둘이 같은 판
+  줄을 고쳐, 나중에 병합하는 쪽에서 글자 충돌로 드러난다.
 - 다른 시간대의 세션과 갈리는 "오늘". 오늘은 이 기계의 지역 날짜다. 더 늦은 날짜로 쓴 형제의
   일지가 먼저 병합되면 main과의 이름순 대조가 잡는다.
 """
@@ -86,6 +122,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
@@ -98,6 +135,10 @@ JOURNAL_DIR = "docs/journal"
 ADR_DIR = "docs/adr"
 QUEUE = ".scratch/retro-queue.md"
 CONSTITUTION = "docs/constitution/README.md"
+# 판을 올려야 하는 헌법 파일. 어느 변경이든 판을 올린다(`principles.md` 거버넌스의 semver)
+CONSTITUTION_TEXTS = frozenset(
+    f"docs/constitution/{name}.md" for name in ("principles", "tech", "operations")
+)
 
 JOURNAL_NAME = re.compile(r"^(\d{4}-\d{2}-\d{2}-\d{2})-.+\.md$")
 ADR_NAME = re.compile(r"^(\d{4})-.+\.md$")
@@ -151,6 +192,10 @@ class Sibling:
     # 번호가 없다), 다른 형제는 새로 매긴 일지에서 고른다(main 의 일지를 그 형제의 것으로 되풀이하지
     # 않게)
     latest: str | None
+    # 가장 높은 헌법 판의 후보. `latest` 와 같은 까닭으로 main 은 가진 판, 다른 형제는 새로 매긴 판
+    version: str | None
+    # HEAD 가 닫힌 PR 의 head 인 워크트리면 그 PR 번호. `changed` 는 커밋하지 않은 변경뿐이다
+    closed: int | None = None
 
 
 @dataclass(frozen=True)
@@ -292,6 +337,24 @@ def behind_moves(ours: Numbers, taken: list[Numbers], day: str) -> list[Move]:
     ]
 
 
+def _version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def highest_version(held: Sequence[tuple[str, str | None]]) -> tuple[str, list[str]] | None:
+    """(자리, 판) 가운데 가장 높은 판과 그 판을 쓴 자리 전부. 판은 글자가 아니라 수로 견준다."""
+    versions = [version for _, version in held if version is not None]
+    if not versions:
+        return None
+    top = max(versions, key=_version_key)
+    return top, [label for label, version in held if version == top]
+
+
+def unbumped(changed: frozenset[str], ours: Numbers) -> list[str]:
+    """이 브랜치가 판을 새로 매기지 않았는데 고친 헌법 파일."""
+    return [] if ours.version is not None else sorted(changed & CONSTITUTION_TEXTS)
+
+
 def github_repo(url: str) -> tuple[str, str] | None:
     """원격 URL 이 github.com 의 것이면 (owner, repo)."""
     match = GITHUB_URL.search(url.strip())
@@ -323,6 +386,24 @@ def open_pulls(listing: str) -> dict[int, str]:
         else:
             merges.add(number)
     return {number: heads[number] for number in sorted(merges) if number in heads}
+
+
+def closed_heads(listing: str, pulls: dict[int, str]) -> dict[str, int]:
+    """`git ls-remote` 의 `refs/pull/*/head` 줄에서 열린 PR(`pulls`)이 아닌 PR 의 head → 번호.
+
+    열린 PR 의 head 와 같은 커밋은 뺀다. 한 커밋을 head 로 든 닫힌 PR 이 여럿이면 큰 번호다.
+    """
+    opened = set(pulls.values())
+    found: dict[str, int] = {}
+    for line in listing.splitlines():
+        sha, _, ref = line.partition("\t")
+        match = PULL_REF.match(ref.strip())
+        if match is None or match.group(2) != "head":
+            continue
+        number, sha = int(match.group(1)), sha.strip()
+        if number not in pulls and sha not in opened:
+            found[sha] = max(number, found.get(sha, 0))
+    return found
 
 
 def remote_head(listing: str, branch: str) -> str | None:
@@ -493,15 +574,16 @@ FROM_MERGE_REF = "merge ref"
 
 @dataclass(frozen=True)
 class Remote:
-    """원격에서 읽은 것. 열린 PR(번호 → head), 그것을 읽은 길, 이 브랜치의 원격 커밋."""
+    """원격에서 읽은 것. 열린 PR(번호 → head), 그것을 읽은 길, 이 브랜치의 원격 커밋, 닫힌 PR."""
 
     pulls: dict[int, str]
     pulls_from: str  # FROM_GH 또는 FROM_MERGE_REF
     own_head: str | None
+    closed: dict[str, int]  # 닫힌 PR 의 head → 번호
 
 
 def read_remote(root: Path) -> Remote:
-    """열린 PR 과 이 브랜치의 원격 커밋을 읽는다. 로컬의 ref 는 움직이지 않는다."""
+    """열린 PR, 이 브랜치의 원격 커밋, 닫힌 PR 의 head 를 읽는다. 로컬의 ref 는 움직이지 않는다."""
     branch = current_branch(root)
     patterns = ["refs/pull/*/head", "refs/pull/*/merge"]
     patterns += [f"refs/heads/{branch}"] if branch else []
@@ -512,7 +594,8 @@ def read_remote(root: Path) -> Remote:
         pulls, pulls_from = gh_pulls(from_gh), FROM_GH
     else:
         pulls, pulls_from = open_pulls(listing), FROM_MERGE_REF
-    return Remote(pulls, pulls_from, remote_head(listing, branch) if branch else None)
+    own = remote_head(listing, branch) if branch else None
+    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))
 
 
 def fetch(root: Path, pulls: dict[int, str]) -> None:
@@ -542,13 +625,21 @@ def survey(root: Path, remote: Remote) -> Survey:
     main_numbers = numbers_of(Tree(root, main_sha))
     main_changed = _lines(git(root, "diff", "--name-only", base, main_sha))
     main_new = fresh(main_numbers, base_numbers)
-    main_sibling = Sibling(MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers))
+    main_sibling = Sibling(
+        MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers), main_numbers.version
+    )
     others: list[Sibling] = []
     taken = [base_numbers, main_numbers]
 
-    def add(label: str, head: str, numbers: Numbers, changed: frozenset[str] | None) -> None:
+    def add(
+        label: str,
+        head: str,
+        numbers: Numbers,
+        changed: frozenset[str] | None,
+        closed: int | None = None,
+    ) -> None:
         new = fresh(numbers, base_numbers, main_numbers)
-        others.append(Sibling(label, head, new, changed, latest_journal(new)))
+        others.append(Sibling(label, head, new, changed, latest_journal(new), new.version, closed))
         taken.append(numbers)
 
     for number, head in remote.pulls.items():
@@ -561,9 +652,15 @@ def survey(root: Path, remote: Remote) -> Survey:
         path = Path(location).resolve()
         if path == root or not path.is_dir():
             continue
+        numbers = numbers_of(Disk(path))
+        if (closed := remote.closed.get(head)) is not None:
+            # 커밋한 변경은 병합됐거나 앞으로 병합되지 않아 충돌 후보가 아니다(대기열 194)
+            label = f"워크트리 {path}(PR #{closed} 닫힘)"
+            add(label, head, numbers, _worktree_changes(path, head), closed)
+            continue
         since = merge_base(root, head, main_sha)
         changed = _worktree_changes(path, since) if since else None
-        add(f"워크트리 {path}", head, numbers_of(Disk(path)), changed)
+        add(f"워크트리 {path}", head, numbers, changed)
     ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
     changed = _worktree_changes(root, base)
     return Survey(ours, changed, main_sibling, others, taken, remote.pulls_from)
@@ -610,6 +707,8 @@ class Verdict:
     behind: bool  # 이 브랜치의 새 일지가 main 의 최신 일지보다 이름순으로 앞이다
     shifted: list[Move]
     later: list[Sibling]  # 이 브랜치의 새 일지보다 이름순으로 뒤인 일지를 새로 매긴 다른 형제
+    top_version: tuple[str, list[str]] | None  # 형제가 쓴 가장 높은 헌법 판과 그 자리
+    unbumped: list[str]  # 판을 올리지 않고 고친 헌법 파일
 
 
 def judge(result: Survey, today: str) -> Verdict:
@@ -624,22 +723,55 @@ def judge(result: Survey, today: str) -> Verdict:
     else:
         shifted = moves(result.ours, result.taken, clashed)
     later = [s for s in result.others if is_behind(result.ours, s.latest)]
-    return Verdict(found, journal, row, behind, shifted, later)
+    top = highest_version([(s.label, s.version) for s in result.siblings])
+    return Verdict(
+        found, journal, row, behind, shifted, later, top, unbumped(result.changed, result.ours)
+    )
+
+
+def _siblings_line(siblings: list[Sibling]) -> str:
+    shown = [f"{s.label} {s.commit[:7]}" for s in siblings if s.closed is None]
+    if folded := sum(1 for s in siblings if s.closed is not None):
+        shown.append(f"PR 이 닫힌 워크트리 {folded}곳(커밋하지 않은 변경만 견준다)")
+    return "형제: " + ", ".join(shown)
+
+
+def _reserve_line(journal: str) -> str:
+    """받은 일지 번호로 바로 파일을 만들라는 안내(대기열 205·220)."""
+    return (
+        f"일지를 쓸 세션이면 다른 일보다 먼저 {JOURNAL_DIR}/{journal}-<슬러그>.md 를 머리 한 줄"
+        f"(# {journal[:10]} ({journal[11:]}) <제목>)로 만든다. 형제의 이 대조는 디스크의 일지"
+        " 파일로 찬 번호를 본다"
+    )
 
 
 def render(result: Survey, verdict: Verdict) -> str:
     mine = latest_journal(result.ours)
     lines = [
-        "형제: " + ", ".join(f"{s.label} {s.commit[:7]}" for s in result.siblings),
+        _siblings_line(result.siblings),
         f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
         f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}",
-        _ours_line(result.ours),
     ]
+    if not result.ours.journals:
+        lines.append(_reserve_line(verdict.next_journal))
+    if verdict.top_version:
+        version, labels = verdict.top_version
+        lines.append(
+            f"형제가 쓴 가장 높은 헌법 판: {version}({', '.join(labels)})."
+            " 판을 올리면 이보다 높게 고른다"
+        )
+    lines.append(_ours_line(result.ours))
     if verdict.found:
         lines.append(f"번호 겹침 {len(verdict.found)}:")
         lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in verdict.found]
     else:
         lines.append("번호 겹침 없음")
+    if verdict.unbumped:
+        lines.append(
+            f"헌법 파일을 고치고 판을 올리지 않았다: {', '.join(verdict.unbumped)}."
+            " 위의 가장 높은 판보다 높게 올린다(원칙 변경은 major, 절 추가는 minor,"
+            " 문구 수정은 patch)"
+        )
     if verdict.behind:
         lines.append(
             f"이 브랜치의 새 일지 {mine} 이 {MAIN} 의 최신 일지 {result.main.latest} 보다"
@@ -683,7 +815,7 @@ def main(argv: list[str] | None = None, today: date | None = None) -> int:
     day = today or datetime.now().astimezone().date()  # 이 기계의 시간대
     verdict = judge(result, day.isoformat())
     print(render(result, verdict))
-    return 1 if verdict.found or verdict.behind else 0
+    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0
 
 
 if __name__ == "__main__":
