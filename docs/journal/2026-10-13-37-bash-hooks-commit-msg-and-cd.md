@@ -37,7 +37,7 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
 
 `/code-review`(기점 `d280aa6`, 커밋 없음, 수정 아홉과 미추적 다섯)를 두 축으로 돌렸다.
 
-- **표준 축(Major급).** 첫 판의 독스트링이 "막는 자리를 앞당길 뿐 새로 막는 것이 없다"고 했는데, 리뷰어가 임시 저장소에서 git과
+- **표준 축(Major급).** 첫 판의 독스트링은 막는 자리를 앞당길 뿐 새로 막는 것은 없다고 했는데, 리뷰어가 임시 저장소에서 git과
   훅을 직접 돌려 반례 다섯을 냈다. `-F bad -F good`(git은 마지막 `-F`를 쓴다), `--squash=HEAD -F bad`(제목이 `squash! `로 시작해
   commit-msg가 통과시킨다), 같은 명령에서 먼저 쓰는 파일(옛 내용으로 막는다), `-e -F`, commit-msg 훅이 없는 저장소다. 명세 축은
   `SKIP=commit-msg`와 다른 저장소, 브랜치에서 바꾼 판정 스크립트를 더 냈다. 막는 훅의 거짓 양성은 비용이 커서 모두 판정에서 뺐다.
@@ -56,6 +56,23 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
 - **표준 축(판단).** cd 훅이 막는 판정을 두 번 돌고 이름 없는 4-튜플을 넘기던 것을 `decision` 한 번과 `Destination`으로 묶었다.
   하위 폴더 알림의 실제 침묵 입력(하위 폴더에 남은 셸이 루트로 돌아오는 `cd`)을 페이로드 표에 더했다.
 - **남긴 것.** `_native`·`resolve`가 cd 훅과 겹치는 것은 훅끼리 import하지 않는 규약의 비용이라 두었다.
+
+## PR 직전 리뷰
+
+첫 커밋 `52eb4a4` 뒤에 돌렸다. `coderabbit auth status`가 `Seat : not assigned`라 대체 둘을 돌렸다.
+
+- **`bug-perf-review`(버그·성능).** Minor 다섯, Critical·Major 없음. 다섯 모두 고쳤다.
+  - 같은 명령에서 쓰는 파일을 글자 그대로 견줘 `> ./m.txt`와 `-F m.txt`를 다른 파일로 봤다. 정규화한 경로로 견준다.
+  - `git commit -F f && rm f`를 건너뛰었다. 커밋 뒤의 명령은 커밋이 읽는 내용을 바꾸지 않으므로 커밋 앞의 명령만 본다.
+  - `--dry-run`(그리고 `--help`·`-h`)은 커밋하지 않는데 막았다. 보지 않는다.
+  - heredoc 본문의 `git commit -F` 줄을 커밋으로 읽었다. 본문 줄을 비운다. 그 덕에 본문의 작은따옴표가 파싱을 깨던 못 보는 것도
+    사라졌다.
+  - 앞 명령의 `export SKIP=commit-msg`와 `git -c core.hooksPath=…`를 보지 않았다. 둘 다 보지 않는 커밋으로 더했다. 앞 호출에서
+    `export`한 `SKIP`은 여전히 모른다(못 보는 것, 거짓 양성).
+- **내장 `/security-review`(보안).** 식별 서브태스크가 하나를 냈다. 이 훅은 커밋하는 저장소의 판정 스크립트를 권한 확인 전에
+  띄우는데, 그 저장소가 이 프로젝트인지 보지 않는다(Medium, 신뢰도 7). 거르기 서브태스크는 거짓 양성(신뢰도 3)으로 판정했다.
+  공격자가 이 개인 훅을 알고 그 저장소에서 `-F` 커밋이 제안되어야 하며, 그런 저장소에서는 이미 테스트 등으로 그 코드를 돌린다는
+  것이다. 신뢰도 8 미만이라 보고에서 뺐다. 고치지 않았고, 신뢰 경계로 훅 독스트링과 PR 본문의 남긴 위험에 적었다.
 
 ## 바꾼 것
 
@@ -77,9 +94,11 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
 - `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`(0 errors): 리뷰 반영 뒤 초록. `uv run lint-imports`, 지침
   검사, 타입 우회 검사는 리뷰 전 판에서 초록.
 - `uv run python tools/run_hooks.py`: 리뷰 반영 뒤 페이로드 87건, 어긋남 0.
-- 변이 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/bash_hooks_commit_msg_cd_mutations.toml`: 리뷰 반영 뒤
-  열일곱 모두 기대대로(중간에 `-m`의 값 하나가 초록이라 시험 입력을 고쳤다).
-- 시간 프로브: 출력이 모두 기대대로, `commit` 글자 없음 178~217ms, `-F` 없는 커밋 182~244ms, 맞는 제목 275~293ms, 긴 제목
-  277~361ms와 한 번 593ms.
+- 변이 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/bash_hooks_commit_msg_cd_mutations.toml`: 셀프 리뷰
+  반영 뒤 열일곱 모두 기대대로(중간에 `-m`의 값 하나가 초록이라 시험 입력을 고쳤다), PR 직전 리뷰 반영 뒤 스물셋 모두 기대대로.
+- 시간 프로브(PR 직전 리뷰 반영 뒤): 출력이 모두 기대대로, `commit` 글자 없음 210~225ms, `-F` 없는 커밋 199~219ms, 맞는 제목
+  302~375ms, 긴 제목 281~314ms.
+- 첫 커밋 `52eb4a4`의 pre-commit: 모두 Passed(pytest 453.3초, web-verify 251.0초). 인용 대조가 이 일지의 따옴표 하나(지운 첫 판
+  독스트링의 문장)를 경고해 따옴표를 뗐다.
 - 새 훅이 실제 세션에서 도는지는 워크트리 세션의 훅으로 볼 수 없다(주 체크아웃의 파일이 돈다, `.claude/rules/tools.md`). 병합 뒤
   주 체크아웃을 당긴 세션에서 처음 돈다.

@@ -117,12 +117,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_bash_commit_msg.py"
-old = '''
-_LONG_UNJUDGED = frozenset({"--no-verify", "--edit", "--squash", "--fixup", "--cleanup"})
-'''
-new = '''
-_LONG_UNJUDGED = frozenset({"--edit", "--squash", "--fixup", "--cleanup"})
-'''
+old = '''{"--no-verify", "--edit",'''
+new = '''{"--edit",'''
 
 [[mutation]]
 name = "SKIP 대입을 보지 않는다"
@@ -132,7 +128,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_commit_msg.py"
 old = '''
-        if name == "SKIP" and "commit-msg" in value.split(","):
+        if _is_skip_commit_msg(words[index]):
 '''
 new = '''
         if False:
@@ -174,7 +170,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_commit_msg.py"
 old = '''
-        if any(message.file in other for other in others):
+        if any(_same_path(word) == written for other in before for word in other):
 '''
 new = '''
         if False:
@@ -188,7 +184,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_commit_msg.py"
 old = '''
-        if any(other and other[0] in _DIRECTORY_CHANGERS for other in commands[:index]):
+        if any(other and other[0] in _DIRECTORY_CHANGERS for other in before):
 '''
 new = '''
         if False:
@@ -234,4 +230,88 @@ old = '''
 '''
 new = '''
             timeout=None,
+'''
+
+[[mutation]]
+name = "커밋 뒤의 명령도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        before = commands[:index]
+'''
+new = '''
+        before = commands[:index] + commands[index + 1 :]
+'''
+
+[[mutation]]
+name = "파일을 글자 그대로 견준다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(_same_path(word) == written for other in before for word in other):
+'''
+new = '''
+        if any(word == message.file for other in before for word in other):
+'''
+
+[[mutation]]
+name = "heredoc 본문을 남긴다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            kept.append("")
+'''
+new = '''
+            kept.append(body)
+'''
+
+[[mutation]]
+name = "dry-run 과 help 도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    {"--no-verify", "--edit", "--squash", "--fixup", "--cleanup", "--dry-run", "--help"}
+'''
+new = '''
+    {"--no-verify", "--edit", "--squash", "--fixup", "--cleanup"}
+'''
+
+[[mutation]]
+name = "hooksPath 를 바꾼 커밋도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            if option == "-c" and words[index].lower().startswith("core.hookspath="):
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "앞 명령의 export SKIP 을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(_skips_commit_msg(other) for other in before):
+'''
+new = '''
+        if False:
 '''

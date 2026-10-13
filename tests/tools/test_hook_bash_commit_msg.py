@@ -117,6 +117,12 @@ def test_git_을_다른_이름으로_부르면_찾지_않는다() -> None:
         "git commit --squash=HEAD -F msg.txt",
         "git commit --fixup HEAD -F msg.txt",
         "git commit --cleanup=verbatim -F msg.txt",
+        "git commit --dry-run -F msg.txt",
+        "git commit --help -F msg.txt",
+        "git commit -h -F msg.txt",
+        "git -c core.hooksPath=/dev/null commit -F msg.txt",
+        "export SKIP=commit-msg && git commit -F msg.txt",
+        "SKIP=commit-msg; git commit -F msg.txt",
     ],
 )
 def test_메시지가_파일_그대로가_아니거나_훅을_건너뛰는_커밋은_보지_않는다(command: str) -> None:
@@ -129,16 +135,39 @@ def test_같은_명령에서_쓰는_파일은_보지_않는다() -> None:
     assert _파일들("cp a.txt msg.txt; git commit -F msg.txt") == []
 
 
+def test_철자가_달라도_같은_경로면_같은_파일이다() -> None:
+    """PR 직전 버그 리뷰가 잡았다. 글자 그대로 견주면 옛 내용으로 막는다."""
+    assert _파일들("printf x > ./msg.txt && git commit -F msg.txt") == []
+    assert _파일들("printf x > msg.txt && git commit -F ./msg.txt") == []
+
+
+def test_커밋_뒤의_명령은_보지_않는다() -> None:
+    """뒤의 명령은 커밋이 읽는 내용을 바꾸지 않는다. 흔한 `&& rm <파일>` 도 판정한다."""
+    assert _파일들("git commit -F msg.txt && rm msg.txt") == ["msg.txt"]
+
+
 def test_앞에_cd_가_있으면_보지_않는다() -> None:
     """못 보는 것: 상대 경로가 어디서 풀릴지 모른다."""
     assert _파일들("cd sub && git commit -F msg.txt") == []
     assert _파일들("git commit -F msg.txt && cd sub") == ["msg.txt"]
 
 
-def test_heredoc_본문의_작은따옴표는_shlex_가_거절해_찾지_않는다() -> None:
-    """못 보는 것: 짝 없는 따옴표와 heredoc 본문의 작은따옴표."""
+def test_heredoc_본문은_명령으로_읽지_않는다() -> None:
+    """본문의 `git commit -F` 줄은 커밋이 아니고, 본문의 작은따옴표도 파싱을 깨지 않는다."""
+    assert _파일들("cat > run.sh <<EOF\ngit commit -F m.txt\nEOF") == []
+    assert _파일들("git commit -F msg.txt\ncat <<EOF\ndon't\nEOF") == ["msg.txt"]
+
+
+def test_짝_없는_따옴표는_shlex_가_거절해_찾지_않는다() -> None:
+    """못 보는 것: 짝 없는 따옴표."""
     assert _파일들("git commit -F 'msg.txt") == []
-    assert _파일들("git commit -F msg.txt\ncat <<EOF\ndon't\nEOF") == []
+
+
+def test_env_로_부르거나_앞_호출에서_export_한_SKIP_은_모른다() -> None:
+    """못 보는 것: `env … git` 은 git 을 다른 이름으로 부르는 것이라 지나간다. 앞 호출에서 export 한
+    `SKIP` 은 이 명령에 없어 판정한다(거짓 양성)."""
+    assert _파일들("env SKIP=commit-msg git commit -F msg.txt") == []
+    assert _파일들("git commit -F msg.txt") == ["msg.txt"]
 
 
 def test_파일을_cwd_에서_푼다(tmp_path: Path) -> None:

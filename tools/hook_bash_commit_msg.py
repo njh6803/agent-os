@@ -13,29 +13,37 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 막는 것은 commit-msg 훅이 같은 파일을 거절할 커밋으로 좁힌다. 막는 훅은 지침으로 적은 뒤에도
 어겨진 것이 확인된 뒤에만 더한다는 규약(.claude/rules/tools.md)을 이 훅은 새 금지로 읽지 않는다 —
 막는 자리를 앞당길 뿐이어야 한다. 그래서 git 이 그 파일을 그대로 메시지로 쓰지 않거나 commit-msg
-판정이 돌지 않을 수 있는 커밋은 보지 않는다. `--no-verify`·`-n`과 앞의 대입 `SKIP=…commit-msg…`(훅을
-건너뛴다), `-e`·`--edit`(편집
-뒤의 메시지가 판정된다), `--squash`·`--fixup`(git 이 제목에 접두를 붙여 통과 접두에 든다),
-`--cleanup`(정리 방식에 따라 판정이 보는 첫 줄이 달라진다), `-F -`, 같은 명령의 다른 단순 명령에도
-그 파일 인자가 나오는 것(먼저 쓰는 파일이라 PreToolUse 에서는 없거나 옛 내용이다), 커밋 앞에
-`cd`·`pushd` 가 있는 것(상대 경로가 어디서 풀릴지 모른다)이다. `-F` 가 여럿이면 git 처럼 마지막 것만
-본다. 판정 스크립트는 커밋하는 저장소의 것이다. 커밋 폴더(`cwd` 와 `git -C`)의 가장 가까운 `.git`
-조상이 그 루트이고, 루트의 `.pre-commit-config.yaml` 이 `tools/check_commit_msg.py` 를 부르고 그
-파일이 있을 때만 판정한다. 판정은 옮겨 적지 않고 그 스크립트를 자식 프로세스로 띄워 받는다. 같은
-판정이 정의로 서고, 훅끼리 import 하지 않는 규약(.claude/rules/tools.md)도 지킨다. 워크트리
-세션에서는 훅 파일이 주 체크아웃의 것이어도 판정은 그 워크트리의 스크립트가 한다.
+판정이 돌지 않을 수 있는 커밋은 보지 않는다. `--no-verify`·`-n`, 커밋 앞의 대입이나 앞 명령의
+`export` 로 준 `SKIP=…commit-msg…`, `git -c core.hooksPath=…`(훅을 건너뛰거나 바꾼다), `-e`·`--edit`
+(편집 뒤의 메시지가 판정된다), `--squash`·`--fixup`(git 이 제목에 접두를 붙여 통과 접두에 든다),
+`--cleanup`(정리 방식에 따라 판정이 보는 첫 줄이 달라진다), `--dry-run`·`--help`·`-h`(커밋하지
+않는다), `-F -`, 커밋 앞의 단순 명령에 그 파일 인자가 나오는 것(먼저 쓰는 파일이라 PreToolUse 에서는
+없거나 옛 내용이다. `./m.txt` 와 `m.txt` 처럼 철자가 달라도 같은 경로면 같다고 본다. 커밋 뒤의
+`&& rm <파일>` 은 커밋이 읽는 내용을 바꾸지 않아 보지 않는다), 커밋 앞에 `cd`·`pushd` 가 있는
+것(상대 경로가 어디서 풀릴지 모른다)이다. `-F` 가 여럿이면 git 처럼 마지막 것만 본다. 판정
+스크립트는 커밋하는 저장소의 것이다. 커밋 폴더(`cwd` 와 `git -C`)의 가장 가까운 `.git` 조상이 그
+루트이고, 루트의 `.pre-commit-config.yaml` 이 `tools/check_commit_msg.py` 를 부르고 그 파일이 있을
+때만 판정한다. 판정은 옮겨 적지 않고 그 스크립트를 자식 프로세스로 띄워 받는다. 같은 판정이 정의로
+서고, 훅끼리 import 하지 않는 규약(.claude/rules/tools.md)도 지킨다. 워크트리 세션에서는 훅 파일이
+주 체크아웃의 것이어도 판정은 그 워크트리의 스크립트가 한다.
 
 찾는 것. 명령을 shlex 로 낱말로 나누고 제어 연산자(`&&`, `;`, `|`, 줄바꿈 등)에서 가른 단순
 명령마다, 앞의 변수 대입을 벗긴 첫 낱말이 `git` 이고 전역 옵션 뒤의 하위 명령이 `commit` 이면 그
 인자에서 `-F <파일>`·`-F<파일>`·`--file <파일>`·`--file=<파일>`·묶은 짧은 옵션(`-aF <파일>`)을
 찾는다. 값을 받는 다른 옵션(`-m`, `-c`, `-C`, `-t`, `--author` 등)의 값은 건너뛰고, `--` 뒤는 보지
-않는다. 줄 끝 역슬래시로 이은 줄은 한 줄로 본다. 파일은 커밋 폴더에서 풀고, `~` 와 Git Bash 의
-`/c/…` 표기를 받는다.
+않는다. 줄 끝 역슬래시로 이은 줄은 한 줄로 보고, heredoc 본문 줄은 비운다(본문의 `git commit` 은
+명령이 아니다). 파일은 커밋 폴더에서 풀고, `~` 와 Git Bash 의 `/c/…` 표기를 받는다.
 
 못 보는 것(모두 지나간다): `-F -`(heredoc 이나 파이프로 넘긴 메시지)와 `-m` 의 메시지, 위에서 보지
-않는다고 적은 커밋, 변수·치환이 든 경로, shlex 가 거절하는 명령(짝 없는 따옴표. heredoc 본문의
-작은따옴표도 그렇다), `git` 을 다른 이름으로 부르는 것(`command git`, 전체 경로). 자식이 시간
-제한(10초)을 넘기거나 판정 문장 없이 끝나도 지나간다.
+않는다고 적은 커밋, 변수·치환이 든 경로, shlex 가 거절하는 명령(짝 없는 따옴표), `git` 을 다른
+이름으로 부르는 것(`command git`, `env … git`, 전체 경로). 자식이 시간 제한(10초)을 넘기거나 판정
+문장 없이 끝나도 지나간다. 앞 호출에서 `export` 한 `SKIP` 은 모른다 — 그 셸에서 커밋하면 commit-msg
+훅이 돌지 않는데도 막는다(거짓 양성).
+
+판정 스크립트를 실행하는 신뢰 경계. 커밋하는 저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를
+권한 확인 전에 띄운다. PR 직전 보안 리뷰가 후보로 냈고 거르기에서 하드닝 부족으로 판정됐다(그
+저장소를 고르고 거기서 `-F` 커밋을 제안해야 하고, 그런 저장소에서는 테스트 등으로 이미 그 코드를
+돌린다). 일지 2026-10-13-37.
 """
 
 from __future__ import annotations
@@ -61,9 +69,14 @@ _GLOBAL_WITH_VALUE = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--names
 _SHORT_WITH_VALUE = frozenset("mcCtF")
 # 값을 붙여서만 받는 짧은 옵션(`-S[<keyid>]`, `-u[<mode>]`). 그 뒤의 글자는 값이다.
 _SHORT_WITH_ATTACHED = frozenset("Su")
-# 이 짧은 옵션이 있으면 보지 않는다(독스트링). `-n` 은 `--no-verify`, `-e` 는 `--edit` 다.
-_SHORT_UNJUDGED = frozenset("ne")
-_LONG_UNJUDGED = frozenset({"--no-verify", "--edit", "--squash", "--fixup", "--cleanup"})
+# 이 짧은 옵션이 있으면 보지 않는다(독스트링). `-n` 은 `--no-verify`, `-e` 는 `--edit`, `-h` 는
+# 도움말이다.
+_SHORT_UNJUDGED = frozenset("neh")
+_LONG_UNJUDGED = frozenset(
+    {"--no-verify", "--edit", "--squash", "--fixup", "--cleanup", "--dry-run", "--help"}
+)
+# here-string `<<<` 은 heredoc 이 아니다. tools/hook_bash_cd_outside.py 와 같은 모양이다.
+_HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
 _LONG_WITH_VALUE = frozenset(
     {
         "--message",
@@ -106,7 +119,8 @@ class MessageFile(NamedTuple):
 def message_files(command: str) -> list[MessageFile]:
     """판정할 `git commit` 마다 마지막 `-F`·`--file` 의 파일 인자. 보지 않는 커밋은 뺀다."""
     # 줄 끝 역슬래시는 줄을 잇는다. 그대로 두면 shlex 가 이스케이프된 줄바꿈을 값으로 읽는다.
-    lexer = shlex.shlex(command.replace("\\\n", " "), posix=True, punctuation_chars=";&|()<>\n")
+    source = "\n".join(_without_heredoc_bodies(command.replace("\\\n", " ")))
+    lexer = shlex.shlex(source, posix=True, punctuation_chars=";&|()<>\n")
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -125,20 +139,69 @@ def message_files(command: str) -> list[MessageFile]:
         message = _commit_message(words)
         if message is None:
             continue
-        others = commands[:index] + commands[index + 1 :]
-        if any(other and other[0] in _DIRECTORY_CHANGERS for other in commands[:index]):
+        # 커밋보다 앞의 명령만 본다. 뒤의 명령(`&& rm <파일>`)은 커밋이 읽는 내용을 바꾸지 않는다.
+        before = commands[:index]
+        if any(other and other[0] in _DIRECTORY_CHANGERS for other in before):
             continue
-        if any(message.file in other for other in others):
+        if any(_skips_commit_msg(other) for other in before):
+            continue
+        written = _same_path(message.file)
+        if any(_same_path(word) == written for other in before for word in other):
             continue
         found.append(message)
     return found
 
 
+def _same_path(word: str) -> str:
+    """같은 파일을 가리키는 철자(`./m.txt`, `m.txt`, `/c/x`, `C:\\x`)를 하나로 고른다."""
+    return posixpath.normpath(_native(word))
+
+
+def _skips_commit_msg(words: list[str]) -> bool:
+    """`SKIP=…commit-msg…` 만 대입하거나 `export` 하는 명령인가. 그 뒤의 커밋은 commit-msg 를
+    건너뛴다."""
+    names = words[1:] if words and words[0] == "export" else words
+    return (
+        bool(names)
+        and all(_ASSIGNMENT.match(word) for word in names)
+        and any(_is_skip_commit_msg(word) for word in names)
+    )
+
+
+def _is_skip_commit_msg(word: str) -> bool:
+    name, _, value = word.partition("=")
+    return name == "SKIP" and "commit-msg" in value.split(",")
+
+
+def _without_heredoc_bodies(command: str) -> list[str]:
+    """heredoc 본문 줄을 비운다. 본문의 `git commit …` 은 명령이 아니고, 본문의 작은따옴표는
+    shlex 가 거절한다."""
+    lines = command.split("\n")
+    kept: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        kept.append(line)
+        index += 1
+        opener = _HEREDOC_OPENER.search(line)
+        if opener is None:
+            continue
+        strips_tabs = opener.group(1) == "-"
+        terminator = opener.group(3)
+        while index < len(lines):
+            body = lines[index]
+            index += 1
+            if (body.lstrip("\t") if strips_tabs else body) == terminator:
+                kept.append(body)
+                break
+            kept.append("")
+    return kept
+
+
 def _commit_message(words: list[str]) -> MessageFile | None:
     index = 0
     while index < len(words) and _ASSIGNMENT.match(words[index]):
-        name, _, value = words[index].partition("=")
-        if name == "SKIP" and "commit-msg" in value.split(","):
+        if _is_skip_commit_msg(words[index]):
             return None
         index += 1
     if index >= len(words) or words[index] != "git":
@@ -151,6 +214,9 @@ def _commit_message(words: list[str]) -> MessageFile | None:
         if option in _GLOBAL_WITH_VALUE and index < len(words):
             if option == "-C":
                 directory = posixpath.join(directory, words[index]) if directory else words[index]
+            # 훅 폴더를 바꾸면 commit-msg 훅이 돌지 않을 수 있다.
+            if option == "-c" and words[index].lower().startswith("core.hookspath="):
+                return None
             index += 1
     if index >= len(words) or words[index] != "commit":
         return None
