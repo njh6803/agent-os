@@ -74,3 +74,18 @@
 돌렸다. `next_session_model_sweep.toml`은 통과 4, 섞임 0. `open_session_model_source.toml`은 통과 4였지만 실험군 한 회차가
 괄호를 인용하고도 "없음"이라 답해 섞임 1이었다. 질문의 자리("모델" 줄 바로 뒤의 괄호)를 내용(어디서 옮긴 값인지 적은 괄호)으로
 고쳐 다시 돌리자 통과 4, 섞임 0이었다. 두 대조군 모두 주 체크아웃 `c342d15`다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다. 보안(`/security-review`)은 발견 없음. 브랜치 이름 인자는 해시와
+`startswith`에만 닿고 출력은 상수 셋이라 `Read-ModelLine`을 조종할 길이 없다고 봤다. 버그·성능(`bug-perf-review`)은 유효 둘,
+오탐·없음 다섯이었고 둘 다 PR 전에 고쳤다.
+
+- [Major] `tools/model_sweep.py`가 한글 `스윕 밖`을 환경의 인코딩으로 찍어, `PYTHONUTF8`이 없는 윈도 파이프에서는 cp949로
+  나갔다. 그러면 CLI 테스트가 깨지고, `next-session`이 그 값을 `스윕 밖`이 아닌 것으로 읽을 수 있다. 테스트가 자식 환경에서
+  `PYTHONUTF8`과 `PYTHONIOENCODING`을 빼고 부르게 고쳐 빨강(`0xbd` 디코드 실패)을 본 뒤, 다른 도구처럼 진입에서 stdout과
+  stderr를 UTF-8로 다시 설정했다.
+- [Minor] 기간이 끝났다는 stderr 안내를 받는 쪽이 `next-session`에 없었다. 3단계에 그 문장을 사용자 보고에 옮기라는 문장을
+  더했다. 문구만 고쳐 카나리아는 사전 확인으로 갈음했다(같은 PR, 같은 claude 판, 본문만, 명세 그대로).
+- 오탐으로 둔 것 가운데 하나: 새 카나리아 둘은 병합 뒤 대조군(주 체크아웃)도 같은 문장을 가져 가르는 힘을 잃는다. 기존
+  카나리아가 이미 같은 한계다.

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import timedelta
@@ -106,7 +107,10 @@ def test_main은_인자가_브랜치_하나가_아니면_2로_끝난다(
     assert "쓰는 법" in captured.err
 
 
-def test_CLI로_부르면_스윕_밖인_브랜치에_스윕_밖을_찍는다() -> None:
+def test_CLI로_부르면_스윕_밖인_브랜치에_스윕_밖을_UTF8로_찍는다() -> None:
+    # next-session 이 도는 셸이나 pre-commit 에 PYTHONUTF8 이 있다고 가정하지 않는다
+    # (.claude/rules/tools.md). 없으면 윈도의 파이프는 cp949 라 한글이 깨진다.
+    env = {k: v for k, v in os.environ.items() if k not in {"PYTHONUTF8", "PYTHONIOENCODING"}}
     completed = subprocess.run(
         [sys.executable, str(_ROOT / "tools" / "model_sweep.py"), "docs/model-sweep-design"],
         capture_output=True,
@@ -114,6 +118,7 @@ def test_CLI로_부르면_스윕_밖인_브랜치에_스윕_밖을_찍는다() -
         encoding="utf-8",
         check=False,
         cwd=_ROOT,
+        env=env,
     )
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == OUTSIDE

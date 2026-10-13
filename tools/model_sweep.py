@@ -14,12 +14,16 @@
 못 보는 것: 그 브랜치를 지시문으로 여는지, 결정표 칸이 무엇인지는 모른다. 부르는 쪽이 칸이 `BASE`일
 때만 부른다. 이름을 갈래를 보고 바꿨는지도 모른다.
 
+stdout과 stderr는 UTF-8로 찍는다. 부르는 셸에 `PYTHONUTF8`이 있다고 가정하지 않는다(윈도의 파이프는
+cp949라 `스윕 밖`이 깨진다).
+
 종료 코드: 0 갈래나 `스윕 밖`을 찍었다, 2 인자가 브랜치 하나가 아니다.
 """
 
 from __future__ import annotations
 
 import hashlib
+import io
 import sys
 from datetime import UTC, date, datetime
 
@@ -63,4 +67,7 @@ def main(argv: list[str] | None = None, today: date | None = None) -> int:
 
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     sys.exit(main())
