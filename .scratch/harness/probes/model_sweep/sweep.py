@@ -449,9 +449,12 @@ def file_digest(path: Path) -> str:
 
 
 def head_commit() -> str:
-    out = subprocess.run(
-        ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
-    )
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
+        )
+    except OSError:
+        return "알 수 없음"
     return out.stdout.strip() or "알 수 없음"
 
 
@@ -464,8 +467,41 @@ VERSIONED = [
 ]
 
 
-def judge(path: Path, today: date, synthetic_run: bool) -> int:
-    """`synthetic_run`은 `--today`를 준 실행이다. meta의 `synthetic`이 참인 입력만 받는다."""
+def input_blockers(
+    meta: dict[str, analyze.Json],
+    rows: list[Row],
+    registered: dict[str, tuple[str, ...]],
+    today: date | None,
+) -> list[str]:
+    """갈래를 견주기 전에 막는 조건. `today`는 `--today`로 준 날짜이고, 없으면 오늘(UTC)이다.
+    `--today`는 meta의 `synthetic`이 참인 합성 입력과만 짝을 이룬다."""
+    blockers = [why for intact, why in (preregistration(), analyze.preregistration()) if not intact]
+    if meta.get("since") != SWEEP_START:
+        blockers.append(f"입력의 since({meta.get('since')})가 스윕 시작 {SWEEP_START} 이 아니다")
+    if (today is not None) != (meta.get("synthetic") is True):
+        blockers.append(
+            "--today 는 meta 의 synthetic 이 참인 합성 입력에만, 합성 입력은 --today 로만 받는다"
+        )
+    day = today if today is not None else datetime.now(UTC).date()
+    if datetime.combine(day, time(), UTC) < JUDGE_AT:
+        blockers.append(f"판정 시점({JUDGE_AT.isoformat()}) 전이다")
+    return blockers + kind_problems(rows, registered)
+
+
+def print_header(path: Path, meta: dict[str, analyze.Json], today: date | None) -> None:
+    print("# 레벨 스윕 판정")
+    print()
+    print(f"- {preregistration()[1]}")
+    print(f"- 소급 측정: {analyze.preregistration()[1]}")
+    versions = ", ".join(f"{f.name} {file_digest(f)}" for f in VERSIONED)
+    print(f"- 판(SHA-256 앞 12자리): HEAD {head_commit()}, {versions}")
+    written = str(meta.get("collect_sha256") or "없음")[:12]
+    day = f"{today}(--today)" if today is not None else str(datetime.now(UTC).date())
+    print(f"- 입력: {path}(since {meta.get('since')}, 쓴 collect.py {written}), 날짜 {day}")
+
+
+def judge(path: Path, today: date | None) -> int:
+    """`today`는 `--today`로 준 날짜다(합성 입력에만)."""
     if not path.exists():
         print(f"{path} 이 없다. collect.py --since {SWEEP_START} 를 먼저 돌린다", file=sys.stderr)
         return 2
@@ -474,28 +510,9 @@ def judge(path: Path, today: date, synthetic_run: bool) -> int:
     if not isinstance(meta, dict) or not isinstance(rows, list):
         print(f"{path} 에 meta 나 branches 가 없다", file=sys.stderr)
         return 2
-    intact, why = preregistration()
-    intact_cost, why_cost = analyze.preregistration()
     registered = tool.prereg_kinds(section(README.read_text(encoding="utf-8")))
-    blockers = [] if intact else [why]
-    blockers += [] if intact_cost else [why_cost]
-    if meta.get("since") != SWEEP_START:
-        blockers.append(f"입력의 since({meta.get('since')})가 스윕 시작 {SWEEP_START} 이 아니다")
-    if synthetic_run != (meta.get("synthetic") is True):
-        blockers.append(
-            "--today 는 meta 의 synthetic 이 참인 합성 입력에만, 합성 입력은 --today 로만 받는다"
-        )
-    if datetime.combine(today, time(), UTC) < JUDGE_AT:
-        blockers.append(f"판정 시점({JUDGE_AT.isoformat()}) 전이다")
-    blockers += kind_problems(rows, registered)
-    print("# 레벨 스윕 판정")
-    print()
-    print(f"- {why}")
-    print(f"- 소급 측정: {why_cost}")
-    versions = ", ".join(f"{f.name} {file_digest(f)}" for f in VERSIONED)
-    print(f"- 판(SHA-256 앞 12자리): HEAD {head_commit()}, {versions}")
-    written = str(meta.get("collect_sha256") or "없음")[:12]
-    print(f"- 입력: {path}(since {meta.get('since')}, 쓴 collect.py {written}), 날짜 {today}")
+    blockers = input_blockers(meta, rows, registered, today)
+    print_header(path, meta, today)
     if blockers:
         print()
         for b in blockers:
@@ -532,8 +549,7 @@ def main() -> int:
     if args.command == "population":
         return population(args.branches)
     if args.command == "judge":
-        today = args.today or datetime.now(UTC).date()
-        return judge(args.branches, today, synthetic_run=args.today is not None)
+        return judge(args.branches, args.today)
     return prereg()
 
 

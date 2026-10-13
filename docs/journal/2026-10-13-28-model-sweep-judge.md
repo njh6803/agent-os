@@ -87,3 +87,15 @@ CodeRabbit CLI는 유료 좌석이 없어 구조적으로 비어 있어(`operati
     지시문이 첫 사람 트리거로 보일 수 있다. 사전 등록은 다시 여는 지시문에도 표지를 적게 하므로 일어날 수 있는 길이지만,
     가르려면 브랜치마다 창 앞 기록의 유무를 귀속까지 해야 해 값이 크다. 대신 판정 출력에 탐색 표지 칸 "PR이 스윕 시작 전에
     열림"을 더해(합성 입력으로 셈해지는 것을 봤다) 그런 행이 있는지 판정 때 본다. PR 없이 시작한 브랜치는 이 칸이 못 본다.
+
+## PR 리뷰 반영
+
+PR #220. CI 초록. CodeRabbit은 무료 OSS 한도(`Review limit reached`)로 리뷰를 내지 못했다. claude-review 첫 회차는 Minor 셋,
+Nit 하나였다.
+
+- 고쳤다: `judge()`가 입력 읽기·차단 조건·출력을 한 함수에서 하던 것(차단 조건을 `input_blockers`, 머리를 `print_header`로
+  냈다), `--today`를 줬는지를 불리언 인자로 따로 넘기던 것(`today: date | None` 하나로), `head_commit()`이 git이 없으면
+  `FileNotFoundError`로 판정 전체를 죽이던 것. 합성 입력의 판정 경로와 실제 자료의 판정 시점 거부를 다시 돌려 이전과 같았다.
+- 두었다(PR 코멘트에 이유): 판정 경로에 pytest가 없다. 프로브는 ruff만 보고 pyright·pytest 밖에 둔다는 관례(`docs/agents/issue-tracker.md`)
+  이고, 테스트가 `.scratch` 모듈을 들이면 pyright가 그 import를 풀지 못한다. 판정 함수를 `tools/`로 옮기는 것이 길이지만
+  판정은 한 번 도는 측정이라 지금은 합성 입력으로 손으로 돌린 것(위 확인 절)으로 갈음한다.
