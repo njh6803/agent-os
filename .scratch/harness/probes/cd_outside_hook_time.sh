@@ -1,7 +1,8 @@
 #!/bin/sh
 # hook_bash_cd_outside 한 번의 시간을 등록 모양(tools/launch_hook.py 를 거쳐)으로 잰다(대기열 123).
 # 입력은 둘이다. cd 가 없어 정규식 하나로 끝나는 Bash 명령과, 저장소 루트에서 하위 폴더로 옮겨 조상의
-# `.git` 을 찾는 cd(침묵)다. 일곱 번씩 밀리초를 찍는다.
+# `.git` 을 찾는 cd 다. 뒤의 것은 잴 때(2026-10-12) 침묵이었고 대기열 225 뒤로는 알린다. 출력은
+# 단언하지 않는다. 일곱 번씩 밀리초를 찍는다.
 # 돌리는 법: 저장소 루트에서 `sh .scratch/harness/probes/cd_outside_hook_time.sh`.
 set -eu
 root=$(cd "$(dirname "$0")/../../.." && pwd)

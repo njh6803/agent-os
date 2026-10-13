@@ -230,6 +230,32 @@ expect = "silent"
 note = "서브셸 안의 cd 는 작업 폴더를 남기지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "(cd ${MAIN_REPO} && git log --oneline -3)" }, cwd = "${WORK_REPO}" }
 
+[[case]]
+hook = "hook_bash_cd_outside.py"
+expect = "context"
+note = "같은 체크아웃의 하위 폴더로 — 일지 2026-10-13-22 의 모양(대기열 225)"
+payload = { tool_name = "Bash", tool_input = { command = "cd web/packages/ui/src/components && ls" }, cwd = "${WORK_REPO}" }
+
+[[case]]
+hook = "hook_bash_cd_outside.py"
+expect = "silent"
+note = "하위 폴더에 남은 셸이 루트로 돌아온다 — 그 사건 셋째에 절대 경로로 되돌린 모양"
+payload = { tool_name = "Bash", tool_input = { command = "cd ${WORK_REPO} && git status --short" }, cwd = "${WORK_REPO}/web/packages/ui/src/components" }
+
+# --- hook_bash_commit_msg (PreToolUse Bash) ---
+# ${COMMIT_MSGS} 는 commit-msg 판정을 부르는 저장소이고 두 파일은 제목만 다르다. 긴 것은 일지 2026-10-13-30 의 76자를 흉내 낸다.
+[[case]]
+hook = "hook_bash_commit_msg.py"
+expect = "deny"
+note = "제목이 72자를 넘는 메시지 파일 — 대기열 222 의 셋째 사건의 모양"
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+
+[[case]]
+hook = "hook_bash_commit_msg.py"
+expect = "silent"
+note = "제목이 맞는 메시지 파일 — 그 사건 뒤 고쳐 친 커밋의 모양"
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/good-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+
 # --- hook_bash_msys_pathconv (PreToolUse Bash) ---
 # 훅은 윈도이거나 `MSYSTEM` 이 있을 때만 알린다. 리눅스 CI 에서도 판정을 돌리려고 모든 사례에 넣는다.
 [[case]]
