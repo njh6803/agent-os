@@ -88,6 +88,21 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다. 보안(`/secu
   것을 독스트링에 적었다. 표의 Sonnet 5.5 단가를 공식 가격표 값으로 바꿔 돌리면 1로 끝나는 것을 손으로 봤다.
 - [Nit] 문서의 "비용 중앙값 $30~45"가 3절 표(문서 종류 $2.4, 구현 $45.5)와 맞지 않았다. "문서 종류를 뺀 종류의 $30~46"으로.
 
+## PR 리뷰 반영
+
+PR #212. CI 초록. 두 봇 모두 첫 회차였고 Critical·Major는 없었다.
+
+- 고쳤다
+  - [CodeRabbit Minor] `cache_read_fit.py`가 Haiku 5.5의 긴 프롬프트 기록에도 짧은 프롬프트의 단가로 경계를 셈한다. `cost-state`는
+    세션의 합이라 요청마다의 단가 구간을 가를 수 없어, 그 모델(`LENGTH_PRICED`)은 판정하지 않는다.
+  - [CodeRabbit Minor] 모든 모델의 쌍이 다섯보다 적으면 판정이 없는데도 0으로 끝났다. 판정한 모델이 없으면 2.
+  - [claude-review Minor] 판정의 두 `if`가 `code`와 `mark`를 따로 정했다. 한 분기로 합쳤다.
+  - [claude-review Minor] `C--project-agent` 접두사가 이 PC의 저장소 경로에 묶인 것을 독스트링에 적었다(`collect.py`의
+    `PROJECT_PREFIX`와 같다).
+  - 네 갈래(기본 0, 표의 Sonnet 5.5 단가를 공식 값으로 바꾼 것 1, 판정 없음 2, 길이 단가 모델 제외 0)를 스크래치 스크립트로 손으로 봤다.
+- 두었다(PR 코멘트에 이유): [claude-review Nit] `latest_cost_states`와 `collect.py` 스캔의 중복, 3절이 프로브 결과 표를 옮긴 것.
+  둘 다 셀프 리뷰에서 같은 판단을 했다(위 셀프 리뷰 절).
+
 ## 회고
 
 후보 다섯, 승인 둘(하나는 이 세션에서 반영, 하나는 대기열 223), 기각 셋, 넘김 없음.
