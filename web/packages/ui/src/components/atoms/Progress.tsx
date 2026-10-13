@@ -1,6 +1,9 @@
-// 진행 표시(디자인 파일 02.7). 실행이 단계를 밟는 동안 몇째인지 보인다. 보이는 이름 아래 6px 트랙(`tint`)에 막대
-// (`accent`, 실패하면 `danger`)를 그린다. 값을 모르면 `aria-valuenow` 를 두지 않고 막대가 자리를 옮겨 다니며, 움직임
-// 줄이기 설정이면 멈춘다.
+// 진행 표시(재탐색 디자인 파일 2.7). 실행이 단계를 밟는 동안 몇째인지 보인다. 값을 알면 보이는 이름 아래 6px
+// 트랙(`tint`)에 막대(`muted`)를 그린다. 값을 모르면 `aria-valuenow` 를 두지 않고, 끝을 모르는 막대를 채우는 대신
+// 트랙 없이 16px 의 도는 표시(`muted`)와 이름을 사이 8px 로 한 줄에 놓는다. 도는 표시는 움직임 줄이기 설정이면 멈춘다.
+// 그 한 줄은 이름 한 줄의 높이라 막대가 있는 모양보다 낮다. 값을 알게 되면 이름 아래 사이와 트랙만큼(14px) 자라고,
+// 그 자리를 미리 비워 두지 않는다(디자인 파일이 막대와 회전을 다른 모양으로 그린다). 트랙의 높이와 색은 아직 첫
+// 탐색 디자인 파일의 값이다(재탐색은 4px 의 `bg-active` 트랙).
 //
 // `<progress>` 가 아니라 `<div role="progressbar">` 다(공통의 "브라우저 기본 요소" 문장의 예외. design-system 명세의
 // 컴포넌트 공통 절 주석). 이름은 보이는 글자와 같은 `aria-label` 이다. WAI-ARIA 가 progressbar 의 자식을 꾸밈(children
@@ -8,17 +11,7 @@
 // 최소값은 0 으로 두고(`aria-valuemin` 을 받지 않는다. progressbar 의 기본이 0 이다) 막대는 자른 값을 `max` 로 나눈
 // 비율이다(아래 `clamp`).
 import type { NativeProps } from "../../props";
-
-export type ProgressTone = "accent" | "danger";
-
-const BAR_CLASS = { accent: "bg-accent", danger: "bg-danger" } satisfies Record<
-  ProgressTone,
-  string
->;
-
-// 값을 모르는 막대는 트랙의 30% 이고 `progress` 움직임이 left 를 옮긴다. 움직임이 멈추면(줄이기, 사진) 디자인 파일의
-// 정지 그림처럼 가운데(35%)에 선다. 왼쪽에 서면 값이 30% 인 막대와 구분되지 않는다.
-const INDETERMINATE_CLASS = "left-7/20 w-3/10 animate-progress motion-reduce:animate-none";
+import { Spinner } from "./Icon";
 
 interface ProgressOwnProps {
   /** null 이면 값 모름(불러오는 중). 기본 null. */
@@ -30,7 +23,6 @@ interface ProgressOwnProps {
   max?: number;
   /** 보이는 이름이자 접근 이름. 몇 단계 중 몇째인지 글로 적는다. */
   label: string;
-  tone?: ProgressTone;
 }
 
 export type ProgressProps = ProgressOwnProps &
@@ -54,25 +46,9 @@ function clamp(value: number, max: number): number {
   return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
 
-export function Progress({
-  value = null,
-  max = 1,
-  label,
-  tone = "accent",
-  ...rest
-}: ProgressProps) {
+export function Progress({ value = null, max = 1, label, ...rest }: ProgressProps) {
   const now = value === null ? null : clamp(value, max);
-  const bar =
-    now === null ? (
-      <div
-        className={`absolute inset-y-0 rounded-full ${BAR_CLASS[tone]} ${INDETERMINATE_CLASS}`}
-      />
-    ) : (
-      <div
-        className={`absolute inset-y-0 left-0 rounded-full ${BAR_CLASS[tone]}`}
-        style={{ width: `${String(max > 0 ? (now / max) * 100 : 0)}%` }}
-      />
-    );
+  const name = <span className="text-small text-text">{label}</span>;
   return (
     <div
       {...rest}
@@ -80,10 +56,24 @@ export function Progress({
       aria-label={label}
       aria-valuenow={now ?? undefined}
       aria-valuemax={Math.max(max, 0)}
-      className="flex flex-col gap-2"
+      className={now === null ? "flex items-center gap-2 text-muted" : "flex flex-col gap-2"}
     >
-      <span className="text-small text-text">{label}</span>
-      <div className="relative h-progress overflow-hidden rounded-full bg-tint">{bar}</div>
+      {now === null ? (
+        <>
+          <Spinner size="16" />
+          {name}
+        </>
+      ) : (
+        <>
+          {name}
+          <div className="relative h-progress overflow-hidden rounded-full bg-tint">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-muted"
+              style={{ width: `${String(max > 0 ? (now / max) * 100 : 0)}%` }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 // 컴포넌트 props 의 공통 모양(design-system 티켓 01 이 정하고 03·04 가 따른다).
 //
-// - 디자인 파일 05절의 props 표가 계약의 최소다. 표의 이름은 표의 타입으로 받는다. 그 이름이 요소의 기본 속성과
-//   겹치면(버튼의 `onClick: () => void`, `children: string`, 알림의 `title`, 글 입력·스위치의 `onChange(value)`) 기본
-//   속성의 타입을 지우고 표의 타입이 이긴다.
-// - 표에 없는 기본 속성(`aria-*`, `id`, `name`, `data-*`, `ref` 등)은 `NativeProps<요소, 표의 이름 | 컴포넌트가 정하는
-//   이름>` 으로 받아 그 요소에 그대로 넘긴다. `className` 과 `style` 은 받지 않는다(ADR 0026: 소비자가 클래스로 모양을
+// - 지금 코드의 props 가 계약이다. 재탐색 디자인 파일 5.2절의 props 표는 초안이라 따르지 않고, 디자인이 없앤 모양을
+//   고르던 prop 만 뺀다(design-refresh 명세의 "컴포넌트 아홉"). props 의 이름이 요소의 기본 속성과 겹치면(버튼의
+//   `onClick: () => void`, `children: string`, 알림의 `title`, 글 입력·스위치의 `onChange(value)`) 기본 속성의 타입을
+//   지우고 props 의 타입이 이긴다.
+// - props 에 없는 기본 속성(`aria-*`, `id`, `name`, `data-*`, `ref` 등)은 `NativeProps<요소, props 의 이름 | 컴포넌트가
+//   정하는 이름>` 으로 받아 그 요소에 그대로 넘긴다. `className` 과 `style` 은 받지 않는다(ADR 0026: 소비자가 클래스로 모양을
 //   덮는 길을 두지 않는다).
 // - 컴포넌트가 스스로 정하는 속성(아이콘 버튼의 `aria-label`·`title`, 불러오는 중의 `aria-busy`·`aria-disabled`)도 빼서
 //   쓰는 쪽이 덮지 못하게 한다.

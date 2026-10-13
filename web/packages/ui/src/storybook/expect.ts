@@ -56,9 +56,37 @@ export function expectedFocusRing(element: Element): FocusRing {
   return { style: "solid", width: "2px", offset: "2px", color: semanticColor(element, "focus") };
 }
 
+/** 아이콘이 그린 요소(선) 하나의 계산된 `vector-effect` 와 `stroke-width`. */
+interface Stroke {
+  effect: string;
+  width: string;
+}
+
+/** 아이콘의 선. 그린 요소마다 `vector-effect` 가 `non-scaling-stroke` 라 크기와 상관없이 화면의 1.5px 이다. */
+export const SCREEN_STROKE: Stroke = { effect: "non-scaling-stroke", width: "1.5px" };
+
+/**
+ * svg 가 그린 요소마다의 선. 그린 요소가 없으면 던진다. 스토리는 이 목록을 자기 길이만큼의 `SCREEN_STROKE` 와 맞대는데,
+ * 빈 목록은 그 기대(빈 목록)에 늘 맞기 때문이다.
+ */
+export function strokesOf(svg: Element): Stroke[] {
+  const strokes = Array.from(
+    svg.querySelectorAll("path, circle, ellipse, line, rect, polyline, polygon"),
+    (shape) => {
+      const style = getComputedStyle(shape);
+      return { effect: style.vectorEffect, width: style.strokeWidth };
+    },
+  );
+  if (strokes.length === 0) {
+    throw new Error("svg 에 그린 요소가 없다");
+  }
+  return strokes;
+}
+
 /**
  * 그 이름의 아이콘 모양(svg 안쪽의 마크업). 그린 svg 의 `innerHTML` 과 견줘 어느 아이콘인지 클래스가 아니라 모양으로
- * 본다. 크기와 선 굵기는 svg 자신의 속성이라 모양에 들지 않는다. 문서에 붙이지 않은 요소에 그렸다가 걷는다.
+ * 본다. 크기와 선 굵기는 svg 자신의 속성이라 모양에 들지 않는다. 그린 요소마다 붙는 `vector-effect` 는 모양에 들므로,
+ * 기대 모양도 컴포넌트가 쓰는 같은 `Icon` 으로 그린다. 문서에 붙이지 않은 요소에 그렸다가 걷는다.
  * `react-dom/server` 를 쓰지 않는 것은 스토리 테스트가 처음 보는 의존성을 Vite 가 도중에 최적화하며 테스트를 다시
  * 불러와서다(첫 실행에서 "Vite unexpectedly reloaded a test" 로 파일 하나가 빨갰다).
  */

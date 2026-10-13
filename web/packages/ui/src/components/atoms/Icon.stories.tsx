@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
+import { SCREEN_STROKE, strokesOf } from "../../storybook/expect";
 import { ICON_NAMES, ICON_SIZES, Icon } from "./Icon";
 
 const meta = {
@@ -35,7 +36,7 @@ export const Labelled: Story = {
 };
 
 export const Sizes: Story = {
-  name: "크기 넷의 폭이 14·16·20·24px 이고 작은 둘의 선이 더 굵다",
+  name: "크기 셋의 폭이 14·16·20px 이고 그린 요소마다 선이 크기와 상관없이 화면의 1.5px 이다",
   render: (args) => (
     <div className="flex items-center gap-4 text-text">
       {ICON_SIZES.map((size) => (
@@ -45,44 +46,39 @@ export const Sizes: Story = {
   ),
   play: async ({ canvasElement }) => {
     const svgs = Array.from(canvasElement.querySelectorAll("svg"));
-    await expect(svgs.map((svg) => getComputedStyle(svg).width)).toEqual([
-      "14px",
-      "16px",
-      "20px",
-      "24px",
-    ]);
-    await expect(svgs.map((svg) => svg.getAttribute("stroke-width"))).toEqual([
-      "2",
-      "2",
-      "1.75",
-      "1.75",
-    ]);
+    await expect(svgs.map((svg) => getComputedStyle(svg).width)).toEqual(["14px", "16px", "20px"]);
+    for (const svg of svgs) {
+      const strokes = strokesOf(svg);
+      await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
+    }
   },
 };
 
 export const AllNames: Story = {
-  name: "열여섯 이름이 모두 선이 있는 그림으로 그려진다",
+  name: "열여섯 이름이 모두 화면 1.5px 의 선으로 그려진다",
   render: (args) => (
     <ul className="flex flex-wrap gap-4 text-text">
       {ICON_NAMES.map((name) => (
         <li key={name} className="flex flex-col items-center gap-1 text-caption">
-          <Icon {...args} name={name} size="24" />
+          <Icon {...args} name={name} />
           {name}
         </li>
       ))}
     </ul>
   ),
   play: async ({ canvasElement }) => {
-    const drawn = Array.from(
-      canvasElement.querySelectorAll("svg"),
-      (svg) => svg.querySelectorAll("path, circle, line, rect, polyline, polygon").length > 0,
-    );
-    await expect(drawn).toEqual(ICON_NAMES.map(() => true));
+    const svgs = Array.from(canvasElement.querySelectorAll("svg"));
+    await expect(svgs).toHaveLength(ICON_NAMES.length);
+    for (const svg of svgs) {
+      // strokesOf 는 그린 요소가 없으면 던진다.
+      const strokes = strokesOf(svg);
+      await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
+    }
   },
 };
 
 export const AllNamesDark: Story = {
   ...AllNames,
-  name: "다크 모드에서도 열여섯 이름이 그려진다",
+  name: "다크 모드에서도 열여섯 이름이 화면 1.5px 의 선으로 그려진다",
   globals: { mode: "dark" },
 };
