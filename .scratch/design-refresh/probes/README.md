@@ -13,6 +13,7 @@ node .scratch/design-refresh/probes/same-values.mjs
 node .scratch/design-refresh/probes/font.mjs <작업 폴더>
 node .scratch/design-refresh/probes/chromium.mjs [web 폴더]
 node .scratch/design-refresh/probes/tailwind.mjs [web 폴더]
+node .scratch/design-refresh/probes/shadow.mjs [web 폴더]
 ```
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
@@ -25,6 +26,9 @@ node .scratch/design-refresh/probes/tailwind.mjs [web 폴더]
 | `icon_props_mutations.toml` | 티켓 02의 변이 표 여덟. 구현 전에 빨갛던 스토리에서도 앞 단언이 먼저 실패해 가려진 뒤 단언(아이콘의 화면 1.5px 선, 값 모름 진행 표시의 도는 표시의 선·크기·색·이름과의 사이)과, 겨누는 자리를 옮긴 사진 비교의 움직임 줄이기 사례(줄이기가 없을 때 돌고 줄이기에서 멈춘다)를 겨눈다. 변이마다 그 단언이 재는 값 하나만 바꾸고 그 단언이 든 스토리나 사례 하나로 좁혀(`-t`, `-g`) 그것이 빨개지는지 본다. 한 스토리 안의 어느 단언이 실패했는지는 가르지 않는다. `tools/mutate.py`로 돈다 | 티켓 02의 수용 기준(아이콘의 단언, 값 모름 진행 표시, 움직임 줄이기 사례) | 사진 변이 둘은 Docker와 판을 고정한 이미지 | lucide-react 1.51.0, Vitest 5.0.2(Storybook 10.6 스토리 테스트, Chromium), Playwright 1.63.0 이미지(`web/tools/visual.ts`의 `IMAGE`). 결과는 일지 2026-10-13-10 |
 | `theme_colors_mutations.toml` | 티켓 03의 변이 표 마흔하나. 구현 전의 스토리는 새 쓰임새 토큰이 없어 첫 계산값 도우미 호출에서 던져, 색을 맞대는 단언 하나하나의 빨강을 보지 못했다. 판정 함수(겹친 색의 반올림, 겹친 바탕의 메시지, 메시지의 내려 적은 값), Matrix(테마 블록의 모서리, 반투명의 형식, 겹친 바탕의 짝, 테마 목록의 순서, 군청·자초의 주 버튼 덮기), ShadowRoot(`:host` 짝의 덮기), 스토리 도우미의 탐침 자리, 컴포넌트 아홉의 색, 사진 비교의 누름(계산 바탕, 칠한 픽셀의 명암비와 측정의 표지, 상호작용 루프의 모드 가드), 미디어 특성의 시스템 모드(군청의 시스템 다크 덮기와 shadow 호스트 짝)를 겨눈다. 계산값으로 가를 수 없는 짝은 같은 값인 벌을 대조군(초록), 다른 벌을 시험(빨강)으로 둔다. 누름 변이는 정답 사진을 모두 다시 쓰는 갱신으로 돌려 사진과 따로 그 단언이 잡는지 본다. 변이마다 그 단언이 든 스토리나 사진 사례 하나로 좁힌다(`-t`, `-g`). `tools/mutate.py`로 돈다 | 티켓 03의 수용 기준(판정 함수와 Matrix, 계산값 단언, 위험 버튼의 누름) | 사진 변이 일곱은 Docker와 판을 고정한 이미지 | Vitest 5.0.2(Storybook 10.6 스토리 테스트, Chromium), Playwright 1.63.0 이미지(`web/tools/visual.ts`의 `IMAGE`). 결과는 일지 2026-10-13-22 |
 | `canary/web_design_colors.toml` | 티켓 03이 고친 `.claude/rules/web-design.md`의 네 문장(판정하는 벌, 사진의 기본 테마, 보조·위험 버튼의 누름, 기본 테마가 아닌 테마에서 재는 스토리)이 `paths` 안의 파일을 Read로 열 때 새 `claude -p` 세션에 실리는지. `tools/canary.py`로 돈다 | 티켓 03의 수용 기준(고친 rules의 확인) | `claude` | 머리 주석의 `# 최신 결과:` 줄 |
+| `density_sizes_mutations.toml` | 티켓 04의 변이 표 스물넷. 구현 전의 스토리는 밀도 변수와 새 치수가 없어 스토리마다 첫 단언에서 빨갰으므로, 그 뒤 단언과 구현 뒤에 쓴 단언을 겨눈다. 밀도 선택자(보통, 촘촘, 호스트의 촘촘 짝), 감싼 요소가 밀도의 별칭을 `var()`로 읽는 것(Density와 ShadowRoot 각각), 테마 블록이 밀도 변수를 다시 정하는 것, 고정폭의 줄 높이, 밀도의 미디어 조건, shadow 틀과 데코레이터가 밀도를 다는 것, 그림자의 색(모드와 무관한 색은 빨강, `@theme static`으로 옮기는 것은 초록의 대조군), 컴포넌트의 치수 여덟(버튼 굵기, 배지 안쪽, 여러 줄 입력의 최소 높이, 글 입력의 라벨 사이와 굵기, 스위치 사이, 알림 제목의 크기와 본문과의 사이), 사진 루프의 밀도 가드, 미디어 특성의 창 폭 사례(문서 뿌리와 shadow 호스트의 미디어 규칙, 미디어 블록의 값 하나)다. 변이마다 그 단언이 든 스토리나 사진 사례 하나로 좁힌다(`-t`, `-g`). `tools/mutate.py`로 돈다 | 티켓 04의 수용 기준(Density, ShadowRoot, 컴포넌트 아홉의 치수, 사진 비교의 밀도와 미디어 특성) | 사진 변이 넷은 Docker와 판을 고정한 이미지 | Vitest 5.0.2(Storybook 10.6 스토리 테스트, Chromium), Playwright 1.63.0 이미지(`web/tools/visual.ts`의 `IMAGE`). 결과는 일지 2026-10-13-54 |
+| `shadow.mjs` | 떠 있는 것의 그림자 `--shadow-float`를 `@theme static`과 `@theme inline`에 둘 때 Tailwind가 내는 `.shadow-float` 규칙과 뿌리의 `--shadow-float` 선언을 컴파일해 본다. 두 블록의 규칙이 같은지 낸다. 갈래마다 `.shadow-float` 규칙과 그 안의 `box-shadow`가 있는 회차만 측정으로 센다 | 디자인 토큰 CSS(`theme.css`)의 그림자 주석, 변이 표의 그림자 대조군 | `pnpm -C web install`이 깔린 web 폴더(인자) | `@tailwindcss/node` 4.3.3 |
+| `canary/web_design_density.toml` | 티켓 04가 고친 `.claude/rules/web-design.md`의 네 문장(판정하는 것의 밀도, 사진의 밀도 둘, 관리 화면과 위젯의 밀도, 그림자는 떠 있는 것에만)이 `paths` 안의 파일을 Read로 열 때 새 `claude -p` 세션에 실리는지. `tools/canary.py`로 돈다 | 티켓 04의 수용 기준(고친 rules의 확인) | `claude` | 머리 주석의 `# 최신 결과:` 줄 |
 | `canary/web_design_props_icon_card.toml` | 티켓 02가 고친 `.claude/rules/web-design.md`의 세 문장(props의 계약, 아이콘의 선과 크기, 카드의 그림자)이 `paths` 안의 파일을 Read로 열 때 새 `claude -p` 세션에 실리는지. `tools/canary.py`로 돈다 | 티켓 02의 수용 기준(고친 rules의 확인) | `claude` | 머리 주석의 `# 최신 결과:` 줄 |
 
 ## 2026-10-12 결과
@@ -52,3 +56,8 @@ node .scratch/design-refresh/probes/tailwind.mjs [web 폴더]
 ## 2026-10-13 티켓 03 결과
 
 - 칠한 픽셀(사진 비교 `web/packages/ui/visual/stories.visual.ts` 의 누름 단언): 사진 비교의 Linux 컨테이너(Playwright 1.63.0 이미지)에서 녹청 다크의 카드 안 위험 버튼을 실제 마우스로 누르고 버튼 왼쪽 테두리 안 4px·세로 가운데의 1×1 화소를 읽자 `#2e3133`(46,49,51)이었고 `danger`(`#fa695e`)와의 명암비는 4.520이었다. 판정(반올림한 `#2f3133`, 4.507)보다 한 채널이 한 단위 어둡고, 이 기계(Windows)의 Chromium 이 글자가 든 상자에서 칠한 값(`chromium.mjs` 2)과 같다. 값은 그 단언의 기준을 잠깐 99로 올려 실패 메시지에서 읽었고(기준은 4.5로 되돌렸다), 측정의 표지(읽은 화소가 아래 카드 바탕과 다르다)는 지났다.
+
+## 2026-10-13 티켓 04 결과
+
+- 그림자(`shadow.mjs`): `@theme static`과 `@theme inline` 모두 `.shadow-float`가 `--tw-shadow: 0 8px 24px var(--tw-shadow-color, var(--shadow-color)), 0 1px 2px var(--tw-shadow-color, var(--shadow-color))`로 같은 규칙을 냈다. Tailwind가 그림자 값을 유틸리티에 풀어 써 색은 놓인 요소에서 풀린다. 다른 것은 static만 뿌리에 `--shadow-float` 선언을 낸다는 것이다(`@tailwindcss/node` 4.3.3). 티켓 04는 처음에 static이면 유틸리티가 뿌리의 모드로 풀린 색을 받는다고 어림했고, 그렇게 옮긴 변이(`density_sizes_mutations.toml`의 10)가 초록으로 어긋나 이 프로브로 갈랐다.
+- 변이(`density_sizes_mutations.toml`): 스물넷 모두 기대대로였다. 결과와 돌린 판은 일지 2026-10-13-54의 "검사"다.

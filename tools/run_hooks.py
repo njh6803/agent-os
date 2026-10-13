@@ -15,11 +15,12 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여섯 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여덟 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(임시 저장소 둘. 앞은 커밋이 하나 있는 main, 뒤는 커밋이 없는 작업
 브랜치다 — 이 저장소의 브랜치에 기대를 걸지 않는다), `${EMPTY_MAIN_REPO}`(커밋이 하나도 없는 main 의
 임시 저장소 — 새 프로젝트의 첫 커밋 자리), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고
-그 위에 푸시하지 않은 커밋이 하나 있는 작업 브랜치 저장소),
+그 위에 푸시하지 않은 커밋이 하나 있는 작업 브랜치 저장소), `${BEHIND_REPO}`(임시 bare 저장소를
+origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진 저장소),
 `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
 `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글
@@ -29,8 +30,10 @@ pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘�
 안에 홀로 선 CR 이 든 `lone-cr.md`, 줄 끝이 CRLF 인 `crlf.md`),
 `${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것),
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
-네트워크 없이 곧 실패한다). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서
-벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
+네트워크 없이 곧 실패한다), `${COMMIT_MSGS}`(commit-msg 판정을 부르는 pre-commit 설정과 그 판정
+스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
+`good-subject.txt` 의 커밋 메시지 파일). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다.
+위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
 deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
 (`additionalContext`), silent(종료 0, 출력 없음). `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
@@ -59,6 +62,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -430,7 +434,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
     밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md` 와
     CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
-    모양이고, 하나만 회고 절이 있다.
+    모양이고, 하나만 회고 절이 있다. 커밋 메시지 파일 둘은 제목만 다르다.
     """
     main_repo = scratch / "on-main"
     empty_main_repo = scratch / "on-empty-main"
@@ -496,12 +500,33 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     open_journal.write_text(f"# 일지\n\n## 한 것\n\n- 04\n\n{closing}", encoding="utf-8")
     closed_journal = journals / "2026-10-01-02-closed.md"
     closed_journal.write_text(f"# 일지\n\n## 회고\n\n- 62(새로)\n\n{closing}", encoding="utf-8")
+    # 제목 76자와 맞는 제목. commit-msg 훅의 상한은 72자다(tools/check_commit_msg.py). 그 판정을
+    # 부르는 pre-commit 설정과 판정 스크립트의 사본을 둔 저장소다 — 훅은 커밋하는 저장소의 판정만
+    # 쓴다.
+    commit_msgs = scratch / "commit-msgs"
+    subprocess.run(
+        ["git", "init", "-q", "-b", "chore/x", str(commit_msgs)],
+        check=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
+    (commit_msgs / "tools").mkdir()
+    shutil.copy(ROOT / "tools" / "check_commit_msg.py", commit_msgs / "tools")
+    (commit_msgs / ".pre-commit-config.yaml").write_text(
+        "entry: uv run python tools/check_commit_msg.py\n", encoding="utf-8"
+    )
+    for name, subject in (
+        ("long-subject.txt", "chore: " + "가" * 69),
+        ("good-subject.txt", "chore: 커밋 메시지 제목을 먼저 대 본다"),
+    ):
+        (commit_msgs / name).write_text(f"{subject}\n\n본문\n", encoding="utf-8")
     return {
         "ROOT": ROOT.as_posix(),
         "MAIN_REPO": main_repo.as_posix(),
         "EMPTY_MAIN_REPO": empty_main_repo.as_posix(),
         "WORK_REPO": work_repo.as_posix(),
         "UNPUSHED_REPO": unpushed_repo.as_posix(),
+        "BEHIND_REPO": _behind_repository(scratch).as_posix(),
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
@@ -513,6 +538,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "OPEN_JOURNAL": open_journal.as_posix(),
         "CLOSED_JOURNAL": closed_journal.as_posix(),
         "BROKEN_WEB": _broken_web(scratch).as_posix(),
+        "COMMIT_MSGS": commit_msgs.as_posix(),
     }
 
 
@@ -561,6 +587,36 @@ def _unpushed_repository(scratch: Path) -> Path:
         ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
         ["git", "-C", str(repo), "push", "-q", "-u", "origin", "chore/x"],
         ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "unpushed"],
+    ]
+    for command in commands:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            env=hook_environment(),
+            timeout=DEFAULT_HOOK_TIMEOUT,
+        )
+    return repo
+
+
+def _behind_repository(scratch: Path) -> Path:
+    """작업 브랜치 `chore/x` 가 origin/main 보다 한 커밋 뒤처진 저장소.
+
+    origin 은 같은 `scratch` 의 bare 저장소다. 네트워크와 이 저장소의 원격에 기대지 않는다.
+    """
+    origin = scratch / "behind-origin.git"
+    repo = scratch / "behind"
+    commands = [
+        ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+        ["git", "init", "-q", "-b", "main", str(repo)],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+        ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+        ["git", "-C", str(repo), "switch", "-q", "-c", "chore/x"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "work"],
+        ["git", "-C", str(repo), "switch", "-q", "main"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "ahead"],
+        ["git", "-C", str(repo), "push", "-q", "origin", "main"],
+        ["git", "-C", str(repo), "switch", "-q", "chore/x"],
     ]
     for command in commands:
         subprocess.run(

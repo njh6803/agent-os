@@ -28,7 +28,6 @@ export const Primary: Story = {
   play: async ({ args, canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "승인" });
     await expect(button.getAttribute("type")).toBe("button");
-    await expect(getComputedStyle(button).height).toBe("40px");
     await expect(colorsOf(button)).toMatchObject({
       background: semanticColor(button, "primary"),
       text: semanticColor(button, "on-primary"),
@@ -93,6 +92,49 @@ export const DangerInCardDark: Story = {
   },
 };
 
+/**
+ * 버튼의 치수. 높이와 글자 크기는 밀도를 따르고, 안쪽 좌우 12px, 모서리 8px, 굵기 500, 아이콘 16px, 아이콘과 글자 사이
+ * 8px 은 밀도와 상관없다.
+ */
+async function expectButtonSize(button: HTMLElement, height: string, fontSize: string) {
+  const style = getComputedStyle(button);
+  const svg = button.querySelector("svg");
+  const content = svg?.parentElement ?? null;
+  await expect({
+    height: style.height,
+    padding: `${style.paddingLeft} ${style.paddingRight}`,
+    radius: style.borderTopLeftRadius,
+    font: `${style.fontSize} ${style.fontWeight}`,
+    icon: svg === null ? null : getComputedStyle(svg).width,
+    gap: content === null ? null : getComputedStyle(content).columnGap,
+  }).toEqual({
+    height,
+    padding: "12px 12px",
+    radius: "8px",
+    font: `${fontSize} 500`,
+    icon: "16px",
+    gap: "8px",
+  });
+}
+
+export const Compact: Story = {
+  name: "촘촘 밀도의 버튼은 높이 32px 에 14px·500 글자이고 안쪽 좌우 12px, 모서리 8px, 16px 아이콘과 글자 사이가 8px 이다",
+  args: { icon: "check" },
+  globals: { density: "compact" },
+  play: async ({ canvas }) => {
+    await expectButtonSize(canvas.getByRole("button", { name: "승인" }), "32px", "14px");
+  },
+};
+
+export const Regular: Story = {
+  name: "보통 밀도의 버튼은 높이 40px 에 15px·500 글자이고 나머지 치수는 촘촘과 같다",
+  args: { icon: "check" },
+  globals: { density: "regular" },
+  play: async ({ canvas }) => {
+    await expectButtonSize(canvas.getByRole("button", { name: "승인" }), "40px", "15px");
+  },
+};
+
 export const WithIcon: Story = {
   name: "아이콘은 글자 앞에 있고 이름에 들지 않는다",
   args: { icon: "check" },
@@ -127,7 +169,14 @@ export const Loading: Story = {
     await expect(colorsOf(busy)).toEqual(colorsOf(idle));
     await expect(busy.getBoundingClientRect().width).toBe(idle.getBoundingClientRect().width);
     const spinner = busy.querySelector("svg");
-    await expect(spinner === null ? null : getComputedStyle(spinner).animationName).toBe("spin");
+    await expect(
+      spinner === null
+        ? null
+        : {
+            animation: getComputedStyle(spinner).animationName,
+            width: getComputedStyle(spinner).width,
+          },
+    ).toEqual({ animation: "spin", width: "16px" });
     await userEvent.click(busy);
     await expect(args.onClick).not.toHaveBeenCalled();
     busy.focus();

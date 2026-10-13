@@ -27,3 +27,11 @@ export const DEFAULT_THEME: ThemeKey = "nokcheong";
 export const MODES = ["light", "dark"] as const;
 
 export type Mode = (typeof MODES)[number];
+
+/**
+ * `data-density` 의 값. 촘촘(compact)과 보통(regular)이고 테마·모드와 같은 요소에 단다. 속성이 없으면 화면 폭 768px
+ * 이상에서 촘촘, 미만에서 보통이다(ADR 0026 의 2026-10-12 이력). 관리 화면은 달지 않고 위젯은 보통을 단다.
+ */
+export const DENSITIES = ["compact", "regular"] as const;
+
+export type Density = (typeof DENSITIES)[number];

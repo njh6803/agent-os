@@ -1,4 +1,5 @@
-"""PreToolUse 훅(Bash). 셸의 작업 폴더를 지금 체크아웃 밖으로 옮기는 `cd` 를 막는다.
+"""PreToolUse 훅(Bash). 셸의 작업 폴더를 지금 체크아웃 밖으로 옮기는 `cd` 를 막고, 같은 체크아웃의
+하위 폴더로 옮기는 `cd` 는 알린다.
 
 Bash 도구의 작업 폴더는 호출 사이에 이어진다. `cd` 로 다른 체크아웃이나 스크래치패드에 들어가면 그
 뒤의 상대 경로와 git 이 그 자리에 닿는다. 워크트리 세션의 일지에 여섯 번 있다. 주 체크아웃으로
@@ -14,13 +15,21 @@ Bash 도구의 작업 폴더는 호출 사이에 이어진다. `cd` 로 다른 �
 워크트리 폴더로 cd 하지 않는다)도 주 체크아웃 세션에서 도는 스킬의 것이다. 경로를 인자로 주는 대안이
 있어 막는 값은 다시 치는 한 번이다.
 
+하위 폴더로 옮기는 `cd` 는 막지 않고 알린다(additionalContext, 대기열 225). `cd web/packages/ui/src/
+components && …` 가 작업 폴더를 같은 워크트리의 하위 폴더로 옮겨 다음 호출의 상대 경로가 그
+자리에서 풀렸다. 세 번(일지 2026-10-12-36, 2026-10-13-10, 2026-10-13-22) 있었고 셋째에야 알아채
+절대 경로로 되돌렸다. 밖으로 옮기는 것과 달리 git 은 여전히 제 체크아웃에 닿고, 한 호출 안에서
+그 자리에 머무는 것은 정당한 쓰임이라(`cd web && pnpm …`) 막지 않는다. 거짓 양성의 비용은 문장
+하나다. 막는 이유가 있으면 그것만 낸다.
+
 판정. 명령 위치의 `cd`·`pushd`·`popd` 를 차례로 따라가며 페이로드의 `cwd` 에서 대상을 푼다. 풀린
 자리 하나라도 `cwd` 가 든 체크아웃 밖이면 막는다. 마지막 자리만 보지 않는다 — 들른 사이의 명령이
 다른 자리에서 돌고, `&&` 중간이 실패하면 돌아오는 `cd` 가 돌지 않는다. 체크아웃은 가장 가까운 조상
 중 `.claude/worktrees/<이름>` 이거나 `.git` 이 있는 폴더다. 앞의 것은 `.git` 이 없어도 따로
 센다(지우다 만 폴더). git 을 부르지 않는다 — 그 폴더에서 부른 git 은 주 체크아웃을 루트로 읽는다.
 체크아웃 안의 중첩 저장소(`.git` 이 있는 하위 폴더)도 다른 체크아웃으로 센다. 그 안에 머문 셸의 git
-은 그 저장소를 겨눈다.
+은 그 저장소를 겨눈다. 막을 자리가 없으면 같은 길로 풀린 자리 하나라도 그 체크아웃의 루트가 아니면
+알린다. 들렀다 돌아오는 `cd web && … && cd ..` 도 알린다 — 중간이 실패하면 돌아오지 않는다.
 역슬래시와 슬래시, 대소문자(윈도의 경로는 가리지 않는다), Git Bash 의 `/c/…` 표기는 같은 자리로
 본다. `CLAUDE_PROJECT_DIR` 은 쓰지 않는다. 워크트리 세션에서는 주 체크아웃을
 가리킨다(.claude/rules/tools.md).
@@ -43,6 +52,9 @@ Bash 도구의 작업 폴더는 호출 사이에 이어진다. `cd` 로 다른 �
 Bash 매처다. 여섯 사건이 모두 Bash 였다). 이 훅이 보지 못한 길로 이미 다른 체크아웃에 들어간 세션은
 돌아오는 cd 도 막힌다. 그 세션의 체크아웃을 몰라서다. 워크트리 세션은 `EnterWorktree(path)` 로
 돌아오고(이유 문장이 안내한다), 주 체크아웃 세션이 워크트리로 밀려났으면 cd 로 돌아올 길이 없다.
+하위 폴더 알림이 못 보는 것: `;` 로 이어 늘 돌아오는 `cd web; …; cd ..`(그래도 알린다 — 거짓
+양성), 앞 호출에서 이미 하위 폴더로 옮겨진 셸(`cwd` 가 하위 폴더여도 `cd` 가 없는 명령에는 알리지
+않는다), 위의 못 보는 것과 같은 풀 수 없는 대상(`cd "$X"`).
 """
 
 from __future__ import annotations
@@ -54,7 +66,7 @@ import re
 import shlex
 import sys
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, NamedTuple, TypedDict
 
 Verb = Literal["cd", "pushd", "popd"]
 # (동사, 대상). 대상은 인자 그대로이고, 인자 없는 cd 는 `~`, 풀 수 없으면 None 이다.
@@ -303,37 +315,80 @@ def _heredoc_opener(line: str) -> re.Match[str] | None:
     return None
 
 
-def deny_reason(command: str, cwd: str, home: str) -> str | None:
-    """`cwd` 가 든 체크아웃 밖으로 작업 폴더를 옮기면 막는 이유, 아니면 None.
+class Destination(NamedTuple):
+    """`cd` 하나가 옮긴 자리. `place` 는 그 자리가 든 체크아웃이고 없으면 None 이다."""
 
-    `home` 은 인자 없는 `cd` 와 `~` 의 자리다."""
-    if _MENTION.search(command) is None:
-        return None
+    shown: str
+    path: str
+    place: str | None
+
+
+def decision(command: str, cwd: str, home: str) -> tuple[Literal["deny", "context"], str] | None:
+    """막으면 `("deny", 이유)`, 하위 폴더로 옮기면 `("context", 알림)`, 아니면 None.
+
+    풀린 자리 하나라도 `cwd` 가 든 체크아웃 밖이면 막는다. 막을 자리가 없고 하나라도 그
+    체크아웃의 루트가 아니면 알린다. `home` 은 인자 없는 `cd` 와 `~` 의 자리다."""
     start = normalize(cwd)
-    own = None if start is None else checkout_of(start)
-    if own is None:
+    own = None if start is None or _MENTION.search(command) is None else checkout_of(start)
+    if start is None or own is None:
         return None
-    # `cd -` 와 `popd` 는 모르는 자리로 둔다. 밖으로 나가는 첫 자리에서 이미 막으므로 그 둘이 돌아갈
-    # 곳은 안이거나 모르는 자리다. 판정은 바뀌지 않고 뒤의 상대 경로만 판정하지 않게 된다.
-    current: str | None = start
-    for verb, target in cd_steps(command):
-        current = None if target in (None, "-") else resolve(target, current, home)
-        if current is None:
-            continue
-        place = checkout_of(current)
-        if place is None or place.lower() != own.lower():
-            return _reason(f"{verb} {target}", current, own, place)
+    destinations = _destinations(command, start, home)
+    for destination in destinations:
+        if destination.place is None or destination.place.lower() != own.lower():
+            return ("deny", _reason(destination, own))
+    for destination in destinations:
+        if destination.path.lower() != own.lower():
+            return ("context", _subfolder_notice(destination, own))
     return None
 
 
-def _reason(shown: str, destination: str, own: str, place: str | None) -> str:
+def deny_reason(command: str, cwd: str, home: str) -> str | None:
+    """`cwd` 가 든 체크아웃 밖으로 작업 폴더를 옮기면 막는 이유, 아니면 None."""
+    found = decision(command, cwd, home)
+    return found[1] if found is not None and found[0] == "deny" else None
+
+
+def subfolder_notice(command: str, cwd: str, home: str) -> str | None:
+    """`cwd` 가 든 체크아웃 안의 하위 폴더(루트가 아닌 자리)로 작업 폴더를 옮기면 알리는 문장,
+    아니면 None. 막는 이유가 있으면 None 이다 — 막는 것만 낸다."""
+    found = decision(command, cwd, home)
+    return found[1] if found is not None and found[0] == "context" else None
+
+
+def _destinations(command: str, start: str, home: str) -> list[Destination]:
+    """`start` 에서 차례로 풀린 자리들."""
+    # `cd -` 와 `popd` 는 모르는 자리로 둔다. 밖으로 나가는 첫 자리에서 이미 막으므로 그 둘이 돌아갈
+    # 곳은 안이거나 모르는 자리다. 판정은 바뀌지 않고 뒤의 상대 경로만 판정하지 않게 된다.
+    found: list[Destination] = []
+    current: str | None = start
+    for verb, target in cd_steps(command):
+        current = None if target in (None, "-") else resolve(target, current, home)
+        if current is not None:
+            found.append(Destination(f"{verb} {target}", current, checkout_of(current)))
+    return found
+
+
+def _subfolder_notice(destination: Destination, own: str) -> str:
+    return (
+        f"`{destination.shown}` 가 셸의 작업 폴더를 체크아웃 루트({own})에서 하위 폴더"
+        f" `{destination.path}` 로"
+        " 옮긴다. Bash 의 작업 폴더는 다음 호출로 이어져, 그 뒤 명령의 상대 경로가 그 하위 폴더에서"
+        " 풀린다(대기열 225 — 셋째 사건에서야 알아채 절대 경로로 되돌렸다). 폴더를 인자로 주거나"
+        " (`pnpm -C <폴더>`, `uv run --directory <폴더>`, `git -C <폴더>`, `ls <경로>`), 서브셸"
+        " `( cd <폴더> && … )` 로 가둔다. 이미 옮겼으면 다음 호출에서 루트의 절대 경로로 돌아온다."
+    )
+
+
+def _reason(destination: Destination, own: str) -> str:
+    place = destination.place
     where = "체크아웃 밖" if place is None else f"다른 체크아웃({place})"
     return (
-        f"`{shown}` 가 셸의 작업 폴더를 지금 작업 폴더가 든 체크아웃({own})에서 {where}의"
-        f" `{destination}` 로 옮긴다. Bash 의 작업 폴더는 다음 호출로 이어져 그 뒤의 상대 경로와"
-        " git 이 그 자리에 닿는다(대기열 123 — 워크트리 세션에서는 그 뒤 모든 명령을 앱의 가드가"
-        " 거부했고, `.git` 없는 폴더의 git 은 주 체크아웃에 닿는다). 옮기지 말고 경로를 인자로"
-        " 준다(`ls <경로>`, `grep … <경로>`, Read 도구). 여러 명령이 그 자리에서 돌아야 하면"
+        f"`{destination.shown}` 가 셸의 작업 폴더를 지금 작업 폴더가 든 체크아웃({own})에서"
+        f" {where}의 `{destination.path}` 로 옮긴다. Bash 의 작업 폴더는 다음 호출로 이어져"
+        " 그 뒤의 상대 경로와 git 이 그 자리에 닿는다(대기열 123 — 워크트리 세션에서는 그 뒤"
+        " 모든 명령을 앱의 가드가 거부했고, `.git` 없는 폴더의 git 은 주 체크아웃에 닿는다)."
+        " 옮기지 말고 경로를 인자로 준다(`ls <경로>`, `grep … <경로>`, Read 도구). 여러 명령이"
+        " 그 자리에서 돌아야 하면"
         " 스크립트 파일로 써서 경로로 부른다. 다른 워크트리에서 일하려는 것이면, 또는 워크트리"
         " 세션이 이미 다른 체크아웃으로 밀려나 제 워크트리로 돌아가려는 것이면"
         " `EnterWorktree(path)` 로 옮긴다."
@@ -347,20 +402,19 @@ def main() -> int:
     cwd = payload.get("cwd")
     if command is None or cwd is None:
         return 0
-    reason = deny_reason(command, cwd, str(Path.home()))
-    if reason is None:
+    found = decision(command, cwd, str(Path.home()))
+    if found is None:
         return 0
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
-        )
-    )
+    kind, text = found
+    if kind == "deny":
+        output = {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": text,
+        }
+    else:
+        output = {"hookEventName": "PreToolUse", "additionalContext": text}
+    print(json.dumps({"hookSpecificOutput": output}))
     return 0
 
 

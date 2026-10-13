@@ -1,6 +1,7 @@
 // 알림(재탐색 디자인 파일 2.6). 화면이나 영역 전체에 걸린 일을 아이콘과 제목, 본문으로 알린다. 톤 셋(실패·경고·정보,
 // 기본 정보). 상태색으로 바탕을 칠하지 않는다. 바탕은 톤과 무관한 `bg-raised` 에 `border` 테두리이고, 톤은 아이콘의
-// 모양과 색이 가른다. 치수는 아직 첫 탐색 디자인 파일의 값이다(design-refresh 티켓 04 가 옮긴다). 실패만
+// 모양과 색이 가른다. 치수는 재탐색의 해부도다(모서리 12px, 안쪽 위아래 12px·좌우 16px, 아이콘 20px, 아이콘과 글 사이
+// 12px, 제목과 본문 사이 4px). 제목(600)과 본문은 디자인 파일의 표본처럼 본문 글자라 밀도를 따른다. 실패만
 // `role="alert"` 로 화면 읽기 프로그램을 끊고, 경고와 정보는 `role="status"` 라 읽던 글을 끊지 않는다. 알림 자체는
 // 누르는 곳이 아니고 포커스를 받지 않는다. 그래서 상호작용 상태가 없고, 닫기 버튼(투명·작은 아이콘 버튼)이 아이콘
 // 버튼의 상태를 따른다. 제목이 표의 `title` 이라 요소의 `title` 속성(툴팁)은 받지 않는다(`props.ts`).
@@ -56,18 +57,17 @@ export function Alert({
         <Icon name={ICON[tone]} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="flex flex-col">
-          <p className="text-small font-semibold">{title}</p>
-          {children === null ? null : (
-            <div className="text-small font-regular text-text-muted">{children}</div>
-          )}
+        <div className="flex flex-col gap-1">
+          <p className="text-body font-semibold">{title}</p>
+          {children === null ? null : <div className="text-body text-text-muted">{children}</div>}
         </div>
         {actions === null ? null : (
           <div className="flex flex-wrap items-center gap-3">{actions}</div>
         )}
       </div>
       {onClose === null ? null : (
-        // 32px 버튼이 20px 제목 줄보다 높아 위아래로 4px 씩 내밀고, 오른쪽 여백을 8px 로 줄인다.
+        // 28px 버튼이 제목 줄보다 높아, 위아래 여백을 4px 씩 당겨 줄 높이를 늘리지 않고 오른쪽 여백을 8px 로 줄인다. 버튼은
+        // 촘촘의 제목 줄(20px)에서 위아래로 4px 씩, 보통(22px)에서 위로 4px·아래로 2px 내민다.
         <span className="-my-1 -mr-2 shrink-0">
           <IconButton icon="x" label="닫기" size="s" onClick={onClose} />
         </span>

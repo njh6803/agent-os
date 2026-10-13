@@ -11,7 +11,7 @@ const meta = {
   args: {
     children: (
       <>
-        <h2 className="text-heading text-text">결제 환불</h2>
+        <h2 className="text-body font-semibold text-text">결제 환불</h2>
         <p className="text-body text-text-muted">환불 요청을 결제 서비스에 넘깁니다.</p>
       </>
     ),
@@ -34,7 +34,7 @@ function cardOf(canvasElement: HTMLElement): HTMLElement {
 }
 
 export const Default: Story = {
-  name: "기본 카드는 div 이고 그림자 없이 bg-raised 바탕에 border 테두리, 10px 모서리, 16px 여백으로 선다",
+  name: "기본 카드는 div 이고 그림자 없이 bg-raised 바탕에 border 테두리, 12px 모서리, 16px 여백으로 선다",
   play: async ({ canvasElement }) => {
     const card = cardOf(canvasElement);
     const style = getComputedStyle(card);
@@ -48,7 +48,7 @@ export const Default: Story = {
       border: style.borderTopWidth,
       radius: style.borderTopLeftRadius,
       padding: style.paddingTop,
-    }).toEqual({ border: "1px", radius: "10px", padding: "16px" });
+    }).toEqual({ border: "1px", radius: "12px", padding: "16px" });
     await expect(style.boxShadow).toBe("none");
   },
 };
@@ -91,7 +91,7 @@ export const NarrowSlot: Story = {
     children: (
       <>
         <StatusBadge status="paused" />
-        <h2 className="text-heading text-text">결제 환불을 승인할까요</h2>
+        <h2 className="text-body font-semibold text-text">결제 환불을 승인할까요</h2>
         <p className="text-body text-text-muted">
           주문 2024-1187의 결제 32,000원을 환불합니다. 승인하면 결제 서비스에 요청을 넘기고 되돌릴
           수 없습니다.

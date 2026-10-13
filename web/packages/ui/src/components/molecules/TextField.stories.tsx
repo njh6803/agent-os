@@ -43,7 +43,7 @@ function noteOf(field: Control): HTMLElement | null {
 // 기본 그림의 스토리(Single, Multi)는 글을 넣지 않는다. 글 칸은 어떻게 포커스되든 :focus-visible 이라 글을 넣고
 // 끝나는 play 는 칸에 링을 남긴다. 글을 넣는 확인은 Typing 이 한다.
 export const Single: Story = {
-  name: "한 줄 글 입력은 라벨로 찾히는 높이 40px 의 칸이고 자리 글자는 라벨을 대신하지 않는다",
+  name: "한 줄 글 입력은 라벨로 찾히는 칸이고 자리 글자는 라벨을 대신하지 않는다",
   play: async ({ canvas, canvasElement }) => {
     const input = canvas.getByLabelText("플러그인 이름");
     await expect(input).toBe(fieldNamed(canvasElement, "플러그인 이름"));
@@ -51,14 +51,12 @@ export const Single: Story = {
     await expect({
       tag: input.tagName,
       type: input.getAttribute("type"),
-      height: getComputedStyle(input).height,
       placeholder: input.getAttribute("placeholder"),
       invalid: input.getAttribute("aria-invalid"),
       note: input.getAttribute("aria-describedby"),
     }).toEqual({
       tag: "INPUT",
       type: "text",
-      height: "40px",
       placeholder: "예: 주문 조회",
       invalid: null,
       note: null,
@@ -80,7 +78,7 @@ export const Single: Story = {
 };
 
 export const Multi: Story = {
-  name: "여러 줄 글 입력은 textarea 이고 높이가 88px 이상이며 세로로만 늘어난다",
+  name: "여러 줄 글 입력은 textarea 이고 높이를 줄 수 셋과 안쪽 위아래 8px 이 정하며 세로로만 늘어난다",
   args: { variant: "multi", label: "거부 사유", placeholder: "예: 금액을 먼저 확인해 주세요" },
   play: async ({ canvas, canvasElement }) => {
     const textarea = fieldNamed(canvasElement, "거부 사유");
@@ -90,13 +88,74 @@ export const Multi: Story = {
       tag: textarea.tagName,
       rows: textarea.getAttribute("rows"),
       resize: style.resize,
-    }).toEqual({ tag: "TEXTAREA", rows: "3", resize: "vertical" });
-    await expect(Number.parseFloat(style.height)).toBeGreaterThanOrEqual(88);
+      padding: `${style.paddingTop} ${style.paddingRight} ${style.paddingBottom} ${style.paddingLeft}`,
+      radius: style.borderTopLeftRadius,
+    }).toEqual({
+      tag: "TEXTAREA",
+      rows: "3",
+      resize: "vertical",
+      padding: "8px 12px 8px 12px",
+      radius: "8px",
+    });
+    // 최소 높이 없이 줄 수가 높이를 정한다. 줄 셋과 안쪽 위아래, 테두리 위아래다(상자의 크기는 border-box).
+    const lines = 3 * Number.parseFloat(style.lineHeight);
+    await expect(Number.parseFloat(style.height)).toBe(lines + 8 * 2 + 1 * 2);
     await expect(colorsOf(textarea)).toEqual({
       background: semanticColor(textarea, "bg-raised"),
       text: semanticColor(textarea, "text"),
       border: hoverAwareColor(textarea, "border-control", "text-muted"),
     });
+  },
+};
+
+/**
+ * 한 줄 칸과 라벨, 도움말의 치수. 칸의 높이와 글자 크기는 밀도를 따르고, 안쪽 좌우 12px, 모서리 8px, 라벨과 칸 사이
+ * 8px, 칸과 도움말 사이 4px, 라벨의 12/16px·500 은 밀도와 상관없다.
+ */
+async function expectFieldSize(canvasElement: HTMLElement, height: string, fontSize: string) {
+  const input = fieldNamed(canvasElement, "플러그인 이름");
+  const label = input.labels?.[0];
+  const note = noteOf(input);
+  if (label === undefined || note === null) {
+    throw new Error("라벨과 도움말이 없다");
+  }
+  const style = getComputedStyle(input);
+  const labelStyle = getComputedStyle(label);
+  const box = input.getBoundingClientRect();
+  await expect({
+    height: style.height,
+    padding: `${style.paddingLeft} ${style.paddingRight}`,
+    radius: style.borderTopLeftRadius,
+    fontSize: style.fontSize,
+    label: `${labelStyle.fontSize}/${labelStyle.lineHeight} ${labelStyle.fontWeight}`,
+    labelGap: box.top - label.getBoundingClientRect().bottom,
+    noteGap: note.getBoundingClientRect().top - box.bottom,
+  }).toEqual({
+    height,
+    padding: "12px 12px",
+    radius: "8px",
+    fontSize,
+    label: "12px/16px 500",
+    labelGap: 8,
+    noteGap: 4,
+  });
+}
+
+export const Compact: Story = {
+  name: "촘촘 밀도의 한 줄 칸은 높이 32px 에 14px 글자이고 안쪽 좌우 12px, 모서리 8px, 라벨과 사이 8px, 도움말과 사이 4px 이다",
+  args: { help: "목록에 보이는 이름입니다." },
+  globals: { density: "compact" },
+  play: async ({ canvasElement }) => {
+    await expectFieldSize(canvasElement, "32px", "14px");
+  },
+};
+
+export const Regular: Story = {
+  name: "보통 밀도의 한 줄 칸은 높이 40px 에 15px 글자이고 나머지 치수는 촘촘과 같다",
+  args: { help: "목록에 보이는 이름입니다." },
+  globals: { density: "regular" },
+  play: async ({ canvasElement }) => {
+    await expectFieldSize(canvasElement, "40px", "15px");
   },
 };
 
