@@ -1,4 +1,4 @@
-# 2026-10-13 (51) collect.py --since 창 로직을 tools/로 옮겨 pytest로 고정
+# 2026-10-13 (56) collect.py --since 창 로직을 tools/로 옮겨 pytest로 고정
 
 브랜치 `chore/sweep-window-to-tools`, 워크트리 `.claude/worktrees/sweep-window-to-tools`. 일지 2026-10-13-42 "다음"의 판정 전
 후보다. 이 세션도 레벨 스윕의 갈래다(지시문의 모델 줄 `Opus 5.5 / medium. 레벨 스윕의 갈래`).
@@ -40,7 +40,7 @@
   칸(`collect_sha256`, 새 `window_sha256`)만 빼고 같은 것을 봤다.
 - 첫 커밋의 pre-commit 열여섯이 모두 통과했다(Skipped 없음). PR 직전에 `origin/main`(PR #225·#218·#227)으로 리베이스하며
   `.scratch/retro-queue.md` 238 행이 충돌해 두 쪽 회차를 합쳤다. `git rebase --continue`는 pre-commit을 돌리지 않아, 합친
-  상태의 검사는 일지 번호를 46에서 51로 옮긴 둘째 커밋의 pre-commit으로 봤다(main에 일지 47이 들어와 46이 이름순으로 앞섰다).
+  상태의 검사는 일지 번호를 46에서 51로 옮긴 둘째 커밋(병합 직전 main에 일지 54가 들어와 다시 56으로 옮겼다)의 pre-commit으로 봤다(main에 일지 47이 들어와 46이 이름순으로 앞섰다).
 - `sweep.py prereg`와 `analyze.preregistration()`으로 두 사전 등록 절의 해시가 그대로인 것을 봤다. `sweep.py population`도
   0으로 끝났다.
 
