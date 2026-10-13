@@ -2,7 +2,13 @@
 
 원본은 이 파일(`C:/project/agent/KICKOFF.md`, 원격 `github.com/njh6803/agent-os`)이다. 새 프로젝트는 그 저장소를 clone해 두고 이 파일과 `kickoff/`(템플릿·부록)와 7단계의 복사 목록을 상대 경로로 가져와 시작하고, 런북을 고칠 일이 생기면 여기를 고친 뒤 복사본에 반영한다. 아래에서 "런북 저장소"는 그 clone이다. **이 판을 처음부터 끝까지 실행한 것은 첫 프로젝트(agent-os, 2026-09-19) 한 번이고 그 뒤의 수정은 실행으로 검증되지 않았다.** 두 번째 프로젝트의 실행이 이 판의 검증이다. 어긋나면 내 실수로 읽지 말고 이 원본을 고친다.
 
-결정 기준일 2026-09-19, 마지막 갱신 2026-09-28. 결정: mattpocock 스킬 유지, superpowers 비활성, 교정 루프는 retro 스킬의 계기 자동 회고(10단계), 지침은 한국어. 스킬(`.claude/skills/`)과 교정 루프 문단(`CLAUDE.md`)은 모두 프로젝트 레벨에 둔다. 전역에는 프로젝트와 무관한 개인 워크플로 스킬(git-*, jira-*)만 남기고, 프로젝트가 관리하는 스킬의 전역 사본은 두지 않는다.
+**시작.** 처음 쓰는 기계면 이 런북 저장소를 clone한다. 새 프로젝트 폴더를 만들어 그 폴더에서 Claude Code 세션을 열고, 아래 한 줄의 `<clone>`을 그 clone의 절대 경로(슬래시. agent-os의 기계면 `C:/project/agent`)로 바꿔 붙여 넣는다. 세션이 진행 규율 `kickoff/runner.md`를 읽고, 사용자 레벨 스킬 `/kickoff`를 만들 허락을 물은 뒤 같은 세션에서 `/kickoff`를 치게 한다. 그 뒤로는(이미 `/kickoff`가 있는 기계면 처음부터) 새 프로젝트 폴더의 세션에서 한 줄 대신 `/kickoff`로 시작하고, 끊기거나 압축된 뒤에도 `/kickoff`로 잇는다. 진행은 그 폴더의 `.scratch/kickoff.md`에 남는다.
+
+```text
+`<clone>/kickoff/runner.md`를 Read 도구로 읽고 그대로 따른다.
+```
+
+결정 기준일 2026-09-19, 마지막 갱신 2026-10-13. 결정: mattpocock 스킬 유지, superpowers 비활성, 교정 루프는 retro 스킬의 계기 자동 회고(10단계), 지침은 한국어. 스킬(`.claude/skills/`)과 교정 루프 문단(`CLAUDE.md`)은 모두 프로젝트 레벨에 둔다. 전역에는 프로젝트와 무관한 개인 워크플로 스킬(git-*, jira-*)과 킥오프 진행 스킬 `kickoff`만 남기고, 프로젝트가 관리하는 스킬의 전역 사본은 두지 않는다.
 
 전제 셋. 무엇을 만들지 안다(준비가 처음에 묻고, 모르면 거기서 브레인스토밍부터 한다). 원격은 GitHub이고 `gh`가 있다(GitLab이면 1·8·9단계의 `gh` 명령, `tools/hook_pr_next_session.py`의 정규식과 MCP 도구 이름, 전역 `git-pr*` 스킬, Claude Code Review 워크플로를 대체해야 한다 — 이 런북은 그 길을 적지 않는다). 하네스 런타임은 파이썬이다(훅·검사·pre-commit·변이 도구가 파이썬 스크립트다. 파이썬 프로젝트가 아니어도 개발 도구로 파이썬 하나와 uv를 두면 그대로 돈다. 7단계).
 
@@ -27,7 +33,7 @@
 | 위치 | 내용 | 이유 |
 |---|---|---|
 | `~/.claude/CLAUDE.md` (전역. Windows는 `C:/Users/<user>/.claude/CLAUDE.md`) | 비워 둔다 | 교정 루프 문단은 `CODING_STANDARDS.md`와 `/retro`를 가리키므로, 그것들이 없는 다른 프로젝트에 새면 안 된다 |
-| `~/.claude/skills/` (전역) | 프로젝트와 무관한 개인 워크플로 스킬만(git-*, jira-*). 프로젝트가 안 쓰는 것은 그 프로젝트의 `skillOverrides`로 끈다 | 전역은 같은 이름의 프로젝트 스킬을 이기므로, 프로젝트가 관리하는 스킬(grilling 등)의 전역 사본을 두면 `npx skills update` 뒤 낡은 전역이 조용히 이긴다 |
+| `~/.claude/skills/` (전역) | 프로젝트와 무관한 개인 워크플로 스킬(git-*, jira-*)과 `kickoff`(런북 clone의 진행 규율 `kickoff/runner.md`를 가리키는 짧은 스킬. 진행 규율의 시작 확인이 만든다)만. 프로젝트가 안 쓰는 것은 그 프로젝트의 `skillOverrides`로 끈다 | 전역은 같은 이름의 프로젝트 스킬을 이기므로, 프로젝트가 관리하는 스킬(grilling 등)의 전역 사본을 두면 `npx skills update` 뒤 낡은 전역이 조용히 이긴다 |
 | `.claude/skills/` (프로젝트) | mattpocock 엔지니어링 스킬 전부 + grill-me | git에 커밋, 프로젝트마다 버전 고정. `skills-lock.json`이 출처와 해시를 기록 |
 | `.claude/settings.json` (프로젝트) | `enabledPlugins`(LSP 등 프로젝트 플러그인), `skillOverrides`(이 프로젝트가 안 쓰는 전역 스킬을 `"off"`), `hooks`(훅의 등록. 훅 파일만 복사하면 아무것도 발동하지 않는다), `permissions.deny`(`.env`의 Read·Edit 거부) | 저장소와 함께 간다 |
 | `CLAUDE.md` (프로젝트) | 다른 파일을 가리키는 포인터, 검증 명령, 교정 루프 문단 | 규칙은 여기 쓰지 않는다. 교정 루프는 규칙이 아니라 규칙을 만드는 절차다 |
@@ -62,7 +68,9 @@
 
 새 프로젝트 폴더를 만들고 그 폴더에서 Claude Code 세션을 연다. 준비는 그 세션에서 시작한다. 원격에 기대지 않는 사람 몫(무엇을 만드나, 도구와 `gh` 로그인, 저장소의 주인과 이름, 공개 여부, CodeRabbit CLI 로그인)을 여기서 먼저 모은다. 8단계까지 가서 흩어진 자리마다 사람을 불러내지 않기 위해서다. 공개 여부는 7단계의 `.coderabbit.yaml`과 8단계의 보호 브랜치가 기대므로 0단계 전에 정한다(agent-os ADR 0028).
 
-**일지.** `docs/journal/<날짜>-01-kickoff.md`(agent-os의 첫 일지 `2026-09-19-kickoff.md`는 이 규칙 전의 이름이다)를 지금 만든다. `docs/`도 이때 생긴다. 준비의 결정부터 적을 곳이 있게 하기 위해서다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 선택 화면에서 고른 것은 질문과 고른 선택지의 설명을 같은 인용으로, 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 뒤의 일지도 `docs/journal/<날짜>-<NN>-<슬러그>.md`이고 `NN`은 그날의 순번이다. 같은 날 세션 둘이 쓰면 순번이 갈라 준다.
+**진행 파일.** 첫 일로 `kickoff/progress-template.md`에서 새 프로젝트의 진행 파일 `.scratch/kickoff.md`를 만든다. `.scratch/`도 이때 생긴다. 단계마다의 상태와 사람 몫의 대기·끝남·건너뜀이 여기 남고, `/kickoff`가 이 파일의 첫 미완 단계부터 잇는다. 칸과 상태의 뜻은 그 템플릿이, 채우는 법은 진행 규율(`kickoff/runner.md`)이 원천이다.
+
+**일지.** 이어서 `docs/journal/<날짜>-01-kickoff.md`(agent-os의 첫 일지 `2026-09-19-kickoff.md`는 이 규칙 전의 이름이다)를 만든다. `docs/`도 이때 생긴다. 준비의 결정부터 적을 곳이 있게 하기 위해서다. 머리말에 기록 규칙을 적는다. 결정·방향 전환·설계 질문에 해당하는 사용자 프롬프트는 `> 사용자:` 인용으로 원문 그대로(오타도 고치지 않는다), 선택 화면에서 고른 것은 질문과 고른 선택지의 설명을 같은 인용으로, 단순 조작 지시는 제외, 에이전트의 말은 옮기지 않고 세션 끝에 "추천과 결정이 갈린 곳"과 "에이전트가 번복하거나 고친 것"만 한 줄씩. 뒤의 일지도 `docs/journal/<날짜>-<NN>-<슬러그>.md`이고 `NN`은 그날의 순번이다. 같은 날 세션 둘이 쓰면 순번이 갈라 준다.
 
 **무엇을 만드나.** 만들 것을 한두 문장으로 정한다.
 
@@ -89,7 +97,7 @@
 - 거르기: 항목에서 `product`가 `actions`이고 `unitType`이 `Minutes`인 것만 고른다. `repositoryName`은 주인 없이 이름만 오므로, `gh repo list <주인> --json name,visibility --limit 1000` 한 번으로 받은 목록과 이름으로 맞춘다. 저장소마다 부르면 그 수만큼 하위 프로세스가 돈다. `PRIVATE`인 저장소의 `quantity`만 `sku`(`Actions Linux`, `Actions Windows` 등)마다 더해 보인다. Windows와 macOS의 배수를 재지 않았으므로 `sku`끼리는 더하지 않는다. 목록에 없는 이름(지운 저장소 등)은 "알 수 없음"으로 따로 보인다. 무료 분량(월 2,000분)은 `kickoff/facts.md`의 값을 함께 보인다.
 - 읽지 못하면(조직의 관리자가 아니다, 다른 종류의 토큰이다) 사용량 없이 공개 여부를 묻고, 설명에 읽지 못한 이유를 적는다.
 
-**커밋되는 billing 값.** 일지는 8단계의 첫 커밋으로 원격에 올라가고, 새 저장소는 공개를 추천받는다. 그래서 일지에는 플랜, 공개 여부, 비공개 저장소 Actions 분의 `sku`마다 합계만 적는다. 다른 저장소의 이름과 금액은 적지 않는다. 일지의 `> 사용자:` 인용이 선택 화면의 설명을 옮길 때도 저장소 이름은 "저장소 N개"로 바꿔 적는다.
+**커밋되는 billing 값.** 진행 파일과 일지는 8단계의 첫 커밋으로 원격에 올라가고, 새 저장소는 공개를 추천받는다. 그래서 두 파일에는 플랜, 공개 여부, 비공개 저장소 Actions 분의 `sku`마다 합계만 적는다. 진행 파일에서는 "준비에서 정한 것" 표가 그 값을 받는다. 다른 저장소의 이름과 금액은 적지 않는다. 일지의 `> 사용자:` 인용이 선택 화면의 설명을 옮길 때도 저장소 이름은 "저장소 N개"로 바꿔 적는다.
 
 **공개 여부.** 선택 화면의 설명에 플랜, 위의 비공개 사용량, 그리고 이 갈림을 넣는다. 무료(`free`)이고 비공개면 보호 브랜치와 룰셋이 403이고 CodeRabbit PR 리뷰는 요약만 남는다. 그러면 처음부터 `/git-pr-merge`가 게이트이고 CodeRabbit은 CLI만 쓴다. 공개면 Actions가 무제한이고 둘 다 무료로 풀린다. agent-os는 이것을 PR을 열고 나서 알아 PR 넷을 되돌리는 데 썼다. 추천은 무료 플랜이면 공개다. 유료이거나 플랜을 모르면 추천 없이 두 갈래를 모두 설명한다. 조직의 플랜은 대개 비어 모르는 쪽이 되고, 조직 저장소의 공개는 그 조직의 코드 공개 결정이라 세션이 추천할 근거도 없다.
 
@@ -97,7 +105,7 @@
 
 사람 몫(사람만): github.com에서 그 조직의 Billing 화면을 보거나 조직 소유자에게 물어, 이번 달 남은 Actions 분량을 이 세션에 알린다(주인이 조직이고, 위에서 사용량을 읽지 못했고, 비공개를 골랐을 때만). 확인: 없음 — 화면의 값은 사람이 알린다
 
-**CodeRabbit.** 세션이 `coderabbit auth status`를 본다. 출력에 `Seat` 줄이 있으면 로그인한 것으로 보고, 그 값을 일지에 적는다. 로그인한 출력의 모양은 agent-os의 명세가 손으로 봤고(CLI 0.7.5, `User info`와 `Review access` 두 절이고 `Seat` 줄은 뒤의 절에 있다) 로그인하지 않은 출력은 보지 못했다. 그래서 이 판단은 그 모양에 기댄다. 그 줄은 `Seat`과 콜론 사이에 공백이 여럿이라(`Seat         : not assigned`) 글자 그대로의 `Seat:`이 아니라 줄 머리의 `Seat`, 공백, 콜론, 값의 모양으로 찾는다. `not assigned`는 실패가 아니다. `not assigned`면 유료 구독 없이는 CLI 축이 비어 있다(agent-os 2026-09-23 실측. 좌석 배정에는 활성 유료 구독이 필요하다, `kickoff/facts.md`). 그러면 PR 직전 리뷰가 대체 경로로 간다(9단계 7). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
+**CodeRabbit.** 세션이 `coderabbit auth status`를 본다. 출력에 `Seat` 줄이 있으면 로그인한 것으로 보고, 그 값을 진행 파일의 "준비에서 정한 것"과 일지에 적는다. 로그인한 출력의 모양은 agent-os의 명세가 손으로 봤고(CLI 0.7.5, `User info`와 `Review access` 두 절이고 `Seat` 줄은 뒤의 절에 있다) 로그인하지 않은 출력은 보지 못했다. 그래서 이 판단은 그 모양에 기댄다. 그 줄은 `Seat`과 콜론 사이에 공백이 여럿이라(`Seat         : not assigned`) 글자 그대로의 `Seat:`이 아니라 줄 머리의 `Seat`, 공백, 콜론, 값의 모양으로 찾는다. `not assigned`는 실패가 아니다. `not assigned`면 유료 구독 없이는 CLI 축이 비어 있다(agent-os 2026-09-23 실측. 좌석 배정에는 활성 유료 구독이 필요하다, `kickoff/facts.md`). 그러면 PR 직전 리뷰가 대체 경로로 간다(9단계 7). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
 
 사람 몫(사람만): 터미널에서 `coderabbit auth login`을 친다(로그인이 안 돼 있을 때만). 확인: `coderabbit auth status`에 `Seat` 줄
 
@@ -120,6 +128,8 @@ claude plugin disable superpowers@claude-plugins-official
 ```bash
 mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills/grilling ~/.claude/skills/grill-me ~/.claude/skills-backup/
 ```
+
+3. 사용자 레벨 진행 스킬 `~/.claude/skills/kickoff/SKILL.md`. `/kickoff`가 런북 clone의 진행 규율을 읽게 하는 짧은 스킬이고 원문은 `kickoff/skill-template.md`다. 진행 규율의 시작 확인이 허락을 받아 이미 만들었으므로 여기서는 묻지 않고, 진행 파일 사람 몫 표의 `시작` 행을 0단계 행의 메모에 옮긴다. 이 clone을 가리키면 끝남이고, 시작에서 만들기를 건너뛰었거나 다른 clone을 가리킨 채 두었으면 건너뜀과 그 이유다. 건너뛴 것은 8단계 끝에서 다시 묻는다. 진행 규율 없이 이 런북을 사람이 몰아 돌리면 진행 파일도 이 스킬도 없으니, 쓰려면 여기서 그 원문의 `<clone>`을 이 clone의 절대 경로(슬래시)로 바꿔 그 자리에 만든다.
 
 전역 `~/.claude/CLAUDE.md`는 비워 둔다. 교정 루프 문단은 3단계에서 프로젝트 `CLAUDE.md`에 넣는다.
 
@@ -321,21 +331,25 @@ claude plugin install typescript-lsp@claude-plugins-official --scope project
 
 사람 몫(사람만): 끄기 전에 이 세션의 입력창에 `/context`를 친다(아래에서 끌 전역 스킬, 플러그인, MCP 서버가 있을 때만). 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
 
-`.claude/settings.json`의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적는다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)은 `skillOverrides`로 끌 수 없으니(부록 C) 안 쓰면 `/plugin`으로 플러그인째 끈다. 안 쓰는 MCP 서버와 같은 서버 두 벌도 `/mcp`로 끈다.
+`.claude/settings.json`의 `skillOverrides`에 이 프로젝트가 안 쓰는 전역 스킬(jira-* 등. git-pr*는 PR 흐름이 쓰므로 끄지 않는다)을 `"off"`로 적는다. `kickoff`도 끄지 않는다. 끄면 이 프로젝트에서 `/kickoff`로 이을 수 없다. 이름이 같은 플러그인 스킬(`coderabbit:code-review` 등)은 `skillOverrides`로 끌 수 없으니(부록 C) 안 쓰면 `/plugin`으로 플러그인째 끈다. 안 쓰는 MCP 서버와 같은 서버 두 벌도 `/mcp`로 끈다.
 
 사람 몫(사람만): 안 쓰는 플러그인과 MCP 서버를 이 세션의 `/plugin`·`/mcp` 화면에서 끈다(끌 것이 있을 때만). 확인: 없음 — 대화형 화면이다
 
 사람 몫(사람만): 끈 뒤에 다시 `/context`를 친다(끈 것이 있을 때만). 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
 
-## 8단계. 첫 커밋
+## 8단계. 첫 커밋과 첫 PR
+
+첫 커밋은 main 위에서 한다. 7단계가 등록한 `hook_git_main_commit`은 커밋이 하나도 없는 저장소의 첫 커밋을 지나가게 한다. 진행 파일과 일지도 이 커밋에 든다.
 
 ```bash
 git add -A && git commit -m "chore: 하네스 킥오프 (헌법, CLAUDE.md, 코딩 표준, 스킬)"
 ```
 
-포함: `.claude/skills/`, `.claude/settings.json`(있으면), `CLAUDE.md`, `CODING_STANDARDS.md`, `docs/`, `.github/`, `tools/`, 골격.
+포함: `.claude/skills/`, `.claude/settings.json`(있으면), `CLAUDE.md`, `CODING_STANDARDS.md`, `docs/`(일지), `.scratch/`(진행 파일, `plan.md`, 대기열), `.github/`, `tools/`, 골격.
 
-첫 커밋 뒤 원격을 만들고 푸시한다. 주인과 이름, 공개 여부(`--public`이나 `--private`)는 준비에서 정한 것이다. 그다음부터는 브랜치 → `/git-pr` → CI 초록 → `/git-pr-merge`(squash)다.
+첫 커밋 뒤에는 main 위의 커밋을 그 훅이 막는다. 그래서 그 뒤에 바뀐 진행 파일과 일지는 `chore/kickoff` 브랜치의 첫 PR이 싣는다. 차례는 아래 1~6이다. 그다음 기능부터는 브랜치 → `/git-pr` → CI 초록 → `/git-pr-merge`(squash)다.
+
+**1. 원격과 보호, 봇의 전제.** 첫 커밋 뒤 원격을 만들고 푸시한다. 주인과 이름, 공개 여부(`--public`이나 `--private`)는 준비에서 정한 것이다.
 
 사람 몫(허락): GitHub에 저장소를 만들고 첫 커밋을 푸시한다. 칠 명령은 `gh repo create <owner>/<repo> --<공개 여부> --source=. --push`이고, 자리표시자는 준비에서 정한 주인과 이름, `public`이나 `private`로 채운다.
 
@@ -363,17 +377,35 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 사람 몫(사람만): 브라우저에서 CodeRabbit에 GitHub 계정으로 로그인하고, 이 저장소에 CodeRabbit GitHub App을 설치한다(공개 저장소이거나 CodeRabbit 유료 플랜일 때만). 확인: 없음 — 설치 여부는 PR의 `coderabbitai[bot]` 코멘트로만 보이고 이 자리에는 PR이 아직 없다. 첫 PR을 연 뒤 그 코멘트로 대 본다
 
-사람 몫(허락): 첫 PR을 연다. 작업 브랜치를 `git push -u origin <브랜치>`로 푸시하고 `/git-pr`로 연다. 이 허락은 병합까지 그 브랜치에 다시 푸시하는 것도 덮는다.
+**2. 첫 PR.** `git switch -c chore/kickoff`로 브랜치를 따서, 첫 커밋 뒤에 바뀐 진행 파일과 일지를 커밋한다.
+
+사람 몫(허락): 첫 PR을 연다. `chore/kickoff` 브랜치를 `git push -u origin chore/kickoff`로 푸시하고 `/git-pr`로 연다. 이 허락은 병합까지 그 브랜치에 다시 푸시하는 것도 덮는다.
+
+PR을 열면 7단계가 복사한 `hook_pr_next_session`이 next-session을 지금 돌리라는 계기를 넣는다. 그 스킬의 1단계는 병합까지 가므로 첫 PR에서는 따르지 않는다. next-session은 아래 6의 병합 뒤에 읽는다.
+
+**3. CI와 봇.** CI와 Claude Code Review를 본다. Claude Code Review가 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다. CI가 빨가면 고쳐 같은 브랜치에 푸시한다.
 
 사람 몫(허락): 첫 PR에 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit 리뷰를 부른다(App을 설치했고, 공개 저장소이고, 별이 10개 미만일 때만).
 
-첫 PR에서 Claude Code Review가 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다.
+1의 App 줄에서 "했다"를 골랐으면 여기서 PR의 `coderabbitai[bot]` 코멘트로 대 본다. CI와 Claude Code Review가 끝나고 CodeRabbit을 불렀으면 그 리뷰까지 끝났는데 그 코멘트가 없으면, 무엇이 없는지 보이고 App 줄을 다시 묻는다(설치를 다시 본다 / 건너뛴다).
 
-하네스가 다 깔린 이 자리에서 항상 로드 분량을 잰다. 줄 수는 대리 지표일 뿐이다(3단계).
+**4. 마무리 확인.** 하네스가 다 깔린 이 자리에서 항상 로드 분량을 잰다. 줄 수는 대리 지표일 뿐이다(3단계).
 
 사람 몫(사람만): 이 세션의 입력창에 `/context`를 친다. 확인: 세션이 대화에 들어온 출력을 읽어 일지에 적는다
 
+준비부터 여기까지 건너뛴 사람 몫을 진행 파일에서 모아 보인다.
+
+사람 몫(결정): 건너뛴 사람 몫을 지금 할지. "지금 한다"를 고르면 그 줄마다 갈래대로 다시 묻는다(건너뛴 것이 있을 때만).
+
+그 뒤 아래 첫날 종료 체크리스트를 진행 파일과 대조해 보인다.
+
+**5. 회고.** 일지의 `## 다음`을 9단계 1(`/grill-with-docs`로 첫 기능의 설계 인터뷰)로 적고, 새 프로젝트의 `retro` 스킬 파일(`.claude/skills/retro/SKILL.md`)을 Read로 읽어 따른다(10단계). 회고가 끝나면 진행 파일의 8단계를 끝남으로 적고, 회고가 바꾼 일지와 대기열과 함께 커밋해 같은 브랜치에 푸시한다. 끝남을 회고 뒤에 적는 것은 회고 도중에 끊겨도 다음 `/kickoff`가 회고로 돌아오게 하기 위해서다. 병합 뒤에는 main에 커밋할 수 없으므로 회고는 여기서 끝낸다.
+
+**6. 병합.** 회고까지 실은 첫 PR을 병합한다.
+
 사람 몫(허락): 첫 PR을 `/git-pr-merge`(`gh pr merge --squash --delete-branch`)로 병합한다. 그 스킬이 CI를 먼저 보고, 빨가면 병합하지 않고 그 실패를 고친다.
+
+병합 뒤 새 프로젝트의 `next-session` 스킬 파일을 Read로 읽어 따라 9단계 1의 지시문을 낸다. Windows 데스크톱 앱이면 `open-session`이 새 세션을 열고, 다른 OS면 사람이 그 지시문을 새 세션에 붙여 넣는다.
 
 ## 9단계. 첫 기능
 
@@ -406,7 +438,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 각 항목 끝의 괄호는 산출 단계다.
 
-- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 안 쓰는 전역 스킬은 `skillOverrides`로, 안 쓰는 플러그인과 MCP 서버는 `/plugin`·`/mcp`로 꺼짐 (0·7)
+- [ ] superpowers 비활성, 전역 CLAUDE.md 비어 있음, 프로젝트가 관리하는 스킬의 전역 사본 없음, 사용자 레벨 진행 스킬 `~/.claude/skills/kickoff/SKILL.md`가 이 런북 clone을 가리킴, 안 쓰는 전역 스킬은 `skillOverrides`로, 안 쓰는 플러그인과 MCP 서버는 `/plugin`·`/mcp`로 꺼짐 (0·7)
 - [ ] `npx skills ls`의 목록이 2단계 설치 목록 + 7단계에서 더한 스킬(next-session, open-session, tidy-checkouts)과 같다 (2·7)
 - [ ] `CLAUDE.md`: 레이어 역할, 지도(언제 읽나), 검증 명령, 작업 규약, 교정 루프와 로드 시점 표, 환경 함정. `@` 임포트는 principles.md 하나 (3)
 - [ ] `docs/agents/issue-tracker.md`에 4단계에서 고른 트래커의 흐름 기록 (4)
@@ -424,6 +456,9 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 런북 저장소의 `kickoff/` 아래에 있다. 새 프로젝트도 clone 한 런북 저장소에서 상대 경로로 읽는다.
 
+- `kickoff/runner.md` — 진행 규율. `/kickoff`와 머리의 첫 시작 한 줄이 이것을 읽게 하고, 세션이 이대로 준비부터 8단계까지 차례로 진행하며 사람 몫 줄에서 멈춘다. 순서, 멈출 자리, 선택 화면, 진행 기록만 갖는다.
+- `kickoff/skill-template.md` — 사용자 레벨 스킬 `kickoff`의 원문. 진행 규율의 시작 확인이 자리표시자 `<clone>`을 그 기계의 clone 경로로 바꿔 `~/.claude/skills/kickoff/SKILL.md`로 만든다.
+- `kickoff/progress-template.md` — 진행 파일 `.scratch/kickoff.md`의 모양. 준비의 첫 일로 복사한다.
 - `kickoff/claude-md-template.md` — 3단계 CLAUDE.md 템플릿.
 - `kickoff/pitfalls.md` — 부록 A. 세팅 중 실제로 걸린 함정. 조용히 통과하는 것을 시끄럽게 만든 기록.
 - `kickoff/prompting.md` — 부록 B. 세팅 프롬프트와 스킬·서브에이전트를 쓸 때. 디자인 탐색 프롬프트가 담을 것과 참고 디자인 조사도 여기다.
@@ -431,4 +466,4 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 ## 세 번째 프로젝트가 끝나면
 
-이 런북을 세 번 돌린 뒤 매번 같은 곳을 손봤다면 그 부분만 본인 스킬로 만든다. 그 전에는 도구를 만들지 않는다. 다만 7단계의 복사 목록이 첫 주에 다섯 번 늘었으므로, 두 번째 프로젝트에서 그 목록을 매니페스트 파일(경로 | 바꿀 자리 | 확인법)로 굳히는 것은 도구가 아니라 목록이라 이 규칙과 충돌하지 않는다. 킥오프를 순서대로 진행하는 얇은 진행 스킬도 이 규칙의 예외다. 단계의 내용은 이 런북에 두고 스킬은 순서, 멈출 자리, 선택 화면, 진행 기록만 갖는다(agent-os ADR 0028. 아직 구현 전이고, 이 런북의 단계는 지금도 사람이 하나씩 시켜 진행한다).
+이 런북을 세 번 돌린 뒤 매번 같은 곳을 손봤다면 그 부분만 본인 스킬로 만든다. 그 전에는 도구를 만들지 않는다. 다만 7단계의 복사 목록이 첫 주에 다섯 번 늘었으므로, 두 번째 프로젝트에서 그 목록을 매니페스트 파일(경로 | 바꿀 자리 | 확인법)로 굳히는 것은 도구가 아니라 목록이라 이 규칙과 충돌하지 않는다. 킥오프를 순서대로 진행하는 얇은 진행 스킬도 이 규칙의 예외다. 단계의 내용은 이 런북에 두고 스킬은 순서, 멈출 자리, 선택 화면, 진행 기록만 갖는다(agent-os ADR 0028, 진행 규율은 `kickoff/runner.md`).
