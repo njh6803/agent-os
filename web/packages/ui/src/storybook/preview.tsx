@@ -1,6 +1,6 @@
 // 미리보기 설정의 본체(`@agent-os/ui/storybook`). 패키지의 `.storybook/preview.tsx` 가 디자인 토큰 CSS 와 글꼴 CSS 를
 // 실은 뒤 이것을 부른다. 앱의 Storybook 도 자기 CSS 를 실은 뒤 같은 것을 부른다(ADR 0026 의 2026-10-07 이력).
-// - globals 셋: theme(테마 목록, 기본 먹), mode(system 기본 | light | dark. system 이면 속성을 두지 않는다),
+// - globals 셋: theme(테마 목록, 기본 녹청), mode(system 기본 | light | dark. system 이면 속성을 두지 않는다),
 //   shadow(off | on | raw). 데코레이터가 문서 뿌리나 shadow 호스트에 단다. globals 는 `Record<string, unknown>` 으로
 //   받아 비교로 좁힌다(원칙 III. Storybook 의 Globals 는 값이 any 다).
 // - axe(addon-a11y)의 위반은 스토리 테스트를 실패시킨다.

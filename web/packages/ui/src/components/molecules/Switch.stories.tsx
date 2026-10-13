@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import {
+  TRANSPARENT,
   colorsOf,
   expectedFocusRing,
   focusRingOf,
-  hoverAwareColor,
   semanticColor,
 } from "../../storybook/expect";
 import { Switch } from "./Switch";
@@ -21,7 +21,9 @@ type Story = StoryObj<typeof meta>;
 interface Parts {
   /** `role="switch"` 인 입력 요소. 트랙으로 그린다. */
   track: HTMLInputElement;
-  /** 트랙 위의 손잡이. */
+  /** 올림에서 트랙 위에 겹치는 면. 트랙 바로 뒤에 있다. */
+  overlay: HTMLElement;
+  /** 트랙과 겹치는 면 위의 손잡이. 트랙을 감싼 요소의 마지막 자식이다. */
   knob: HTMLElement;
   /** 라벨 아래의 상태 글(켜짐·꺼짐). */
   stateText: HTMLElement;
@@ -30,18 +32,21 @@ interface Parts {
 }
 
 function partsOf(track: HTMLElement): Parts {
-  const knob = track.nextElementSibling;
+  const overlay = track.nextElementSibling;
+  const knob = track.parentElement?.lastElementChild;
   const row = track.closest("label");
   const stateText = row === null ? null : stateTextOf(row);
   if (
     !(track instanceof HTMLInputElement) ||
+    !(overlay instanceof HTMLElement) ||
     !(knob instanceof HTMLElement) ||
+    overlay === knob ||
     row === null ||
     stateText === null
   ) {
-    throw new Error("스위치의 트랙, 손잡이, 라벨, 상태 글이 없다");
+    throw new Error("스위치의 트랙, 겹치는 면, 손잡이, 라벨, 상태 글이 없다");
   }
-  return { track, knob, stateText, row };
+  return { track, overlay, knob, stateText, row };
 }
 
 function stateTextOf(row: HTMLLabelElement): HTMLElement | null {
@@ -52,19 +57,27 @@ function stateTextOf(row: HTMLLabelElement): HTMLElement | null {
   );
 }
 
-/** 상태마다 맞댈 계산값. 트랙의 바탕과 테두리, 손잡이의 바탕, 라벨과 상태 글의 색이다. */
-function switchColors({ track, knob, stateText, row }: Parts) {
+/**
+ * 상태마다 맞댈 계산값. 트랙의 바탕, 겹치는 면의 바탕, 손잡이의 바탕, 라벨과 상태 글의 색이다. 겹치는 면은 라벨이
+ * `:hover` 일 때만 칠해진다(`hoverAwareColor` 의 까닭과 같이, 스토리 테스트의 포인터가 라벨 위에 머물 수 있다).
+ */
+function switchColors({ track, overlay, knob, stateText, row }: Parts) {
   return {
     track: colorsOf(track).background,
-    border: colorsOf(track).border,
+    overlay: colorsOf(overlay).background,
     knob: getComputedStyle(knob).backgroundColor,
     label: getComputedStyle(row).color,
     state: getComputedStyle(stateText).color,
   };
 }
 
+/** 겹치는 면의 기대 색. 라벨이 `:hover` 면 `bg-active`, 아니면 투명이다. */
+function expectedOverlay({ overlay, row }: Parts): string {
+  return row.matches(":hover") ? semanticColor(overlay, "bg-active") : TRANSPARENT;
+}
+
 export const Off: Story = {
-  name: "꺼진 스위치는 raised 트랙에 border 테두리와 muted 손잡이이고 상태 글이 꺼짐이며 누르면 onChange 가 true 를 받고 넘긴 꺼짐에 남는다",
+  name: "꺼진 스위치는 border-control 트랙에 bg-raised 손잡이이고 상태 글이 꺼짐이며 누르면 onChange 가 true 를 받고 넘긴 꺼짐에 남는다",
   args: { checked: false },
   play: async ({ args, canvas, userEvent }) => {
     const parts = partsOf(canvas.getByRole("switch", { name: "결제 환불" }));
@@ -79,11 +92,11 @@ export const Off: Story = {
       state: "꺼짐",
     });
     await expect(switchColors(parts)).toEqual({
-      track: semanticColor(track, "raised"),
-      border: hoverAwareColor(row, "border", "border-hover"),
-      knob: semanticColor(track, "muted"),
+      track: semanticColor(track, "border-control"),
+      overlay: expectedOverlay(parts),
+      knob: semanticColor(track, "bg-raised"),
       label: semanticColor(track, "text"),
-      state: semanticColor(track, "muted"),
+      state: semanticColor(track, "text-muted"),
     });
     // 트랙 36×20px, 손잡이 12px 이 왼쪽에서 4px, 누르는 곳(라벨 전체)은 높이 48px 이상이다.
     const trackBox = track.getBoundingClientRect();
@@ -119,8 +132,8 @@ export const On: Story = {
       state: "켜짐",
     });
     await expect(switchColors(parts)).toMatchObject({
-      track: hoverAwareColor(parts.row, "accent", "accent-hover"),
-      border: hoverAwareColor(parts.row, "accent", "accent-hover"),
+      track: semanticColor(track, "accent"),
+      overlay: expectedOverlay(parts),
       knob: semanticColor(track, "on-accent"),
     });
     // 손잡이는 오른쪽에서 4px 이다.
@@ -149,9 +162,7 @@ export const Toggle: Story = {
       state: "켜짐",
     });
     await expect(args.onChange).toHaveBeenLastCalledWith(true);
-    await expect(colorsOf(track).background).toBe(
-      hoverAwareColor(parts.row, "accent", "accent-hover"),
-    );
+    await expect(colorsOf(track).background).toBe(semanticColor(track, "accent"));
     await userEvent.click(canvas.getByText("켜짐"));
     await expect({
       checked: parts.track.checked,
@@ -166,7 +177,7 @@ export const Toggle: Story = {
 };
 
 export const Disabled: Story = {
-  name: "쓸 수 없는 스위치는 눌러도 바뀌지 않고 disabled-surface 트랙과 divider 테두리, disabled-text 손잡이와 글자다",
+  name: "쓸 수 없는 스위치는 눌러도 바뀌지 않고 bg-disabled 트랙, text-disabled 손잡이와 글자이며 겹치는 면이 투명하다",
   render: (args) => (
     <div className="flex flex-col">
       <Switch {...args} disabled />
@@ -180,11 +191,11 @@ export const Disabled: Story = {
     ] as const) {
       const parts = partsOf(canvas.getByRole("switch", { name }));
       const { track } = parts;
-      const disabledText = semanticColor(track, "disabled-text");
+      const disabledText = semanticColor(track, "text-disabled");
       await expect(track.disabled).toBe(true);
       await expect(switchColors(parts)).toEqual({
-        track: semanticColor(track, "disabled-surface"),
-        border: semanticColor(track, "divider"),
+        track: semanticColor(track, "bg-disabled"),
+        overlay: TRANSPARENT,
         knob: disabledText,
         label: disabledText,
         state: disabledText,
@@ -196,27 +207,42 @@ export const Disabled: Story = {
   },
 };
 
-export const OnDark: Story = {
-  name: "다크 모드의 켜진 스위치도 accent 트랙에 on-accent 손잡이다",
-  args: { checked: true, label: "주문 조회" },
+// `text-disabled` 는 라이트에서 `border-control` 과 같은 값이라 다크에서도 잰다.
+export const DisabledDark: Story = {
+  ...Disabled,
+  name: "다크 모드의 쓸 수 없는 스위치도 bg-disabled 트랙, text-disabled 손잡이와 글자다",
   globals: { mode: "dark" },
+};
+
+// 꺼짐의 손잡이(`bg-raised`)와 켜짐의 손잡이(`on-accent`)는 라이트 넷에서 같은 값이라 다크에서 가른다.
+export const BothDark: Story = {
+  name: "다크 모드의 꺼진 스위치는 border-control 트랙에 bg-raised 손잡이, 켜진 스위치는 accent 트랙에 on-accent 손잡이다",
+  globals: { mode: "dark" },
+  render: (args) => (
+    <div className="flex flex-col">
+      <Switch {...args} checked={false} />
+      <Switch {...args} label="주문 조회" checked />
+    </div>
+  ),
   play: async ({ canvas }) => {
-    const parts = partsOf(canvas.getByRole("switch", { name: "주문 조회" }));
+    const off = partsOf(canvas.getByRole("switch", { name: "결제 환불" }));
+    const on = partsOf(canvas.getByRole("switch", { name: "주문 조회" }));
     await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
-    await expect(switchColors(parts)).toMatchObject({
-      track: hoverAwareColor(parts.row, "accent", "accent-hover"),
-      knob: semanticColor(parts.track, "on-accent"),
+    await expect(switchColors(off)).toMatchObject({
+      track: semanticColor(off.track, "border-control"),
+      knob: semanticColor(off.track, "bg-raised"),
+    });
+    await expect(switchColors(on)).toMatchObject({
+      track: semanticColor(on.track, "accent"),
+      knob: semanticColor(on.track, "on-accent"),
     });
   },
 };
 
-// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이다. 기본 테마가 아닌 테마에서 값을 재는 판정 스토리라 사진에서
-// 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
+// 녹청에서 `focus-ring` 은 `accent`(켜진 트랙)와 같은 값이라 그 둘은 가르지 못하지만 `border-control`·`text` 와는 가른다.
 export const Focus: Story = {
-  name: "Tab 으로 포커스하면 트랙 바깥에 focus 색의 실선 테두리가 그려진다",
-  tags: ["judgment"],
+  name: "Tab 으로 포커스하면 트랙 바깥에 focus-ring 색의 2px 실선이 2px 떨어져 그려진다",
   args: { checked: true },
-  globals: { theme: "gongmun" },
   play: async ({ canvas, userEvent }) => {
     const track = canvas.getByRole("switch", { name: "결제 환불" });
     await userEvent.tab();
