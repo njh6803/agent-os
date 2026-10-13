@@ -420,6 +420,25 @@ def test_푸시하지_않은_커밋이_있는_저장소를_만든다(tmp_path: P
     assert ancestor.returncode == 0
 
 
+def test_main_저장소_둘은_커밋의_유무로_갈린다(tmp_path: Path) -> None:
+    """`${MAIN_REPO}` 는 커밋이 하나 있는 main 이고 `${EMPTY_MAIN_REPO}` 는 커밋이 없는 main 이다.
+
+    hook_git_main_commit 의 deny 사례와 첫 커밋 침묵 사례가 기대는 모양이다. 빈 저장소의 main
+    이면 그 훅이 침묵해 deny 사례가 어긋난다.
+    """
+    replacements = create_fixtures(tmp_path)
+
+    def git(name: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-C", replacements[name], *args], capture_output=True, text=True, check=False
+        )
+
+    for name in ("MAIN_REPO", "EMPTY_MAIN_REPO"):
+        assert git(name, "branch", "--show-current").stdout.strip() == "main"
+    assert git("MAIN_REPO", "rev-parse", "--verify", "HEAD").returncode == 0
+    assert git("EMPTY_MAIN_REPO", "rev-parse", "--verify", "HEAD").returncode != 0
+
+
 def test_등록된_이벤트와_다른_훅은_실제로_돌려도_어긋남이다(tmp_path: Path) -> None:
     replacements = create_fixtures(tmp_path)
     deny = Case(
