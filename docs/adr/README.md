@@ -33,5 +33,6 @@
 | [0027](0027-workflow-hardening-is-judged-by-zizmor.md) | 워크플로 하드닝은 zizmor가 판정하고, 판은 uv 개발 의존성이 고정한다 | accepted | 2026-10-07 |
 | [0028](0028-kickoff-runs-by-a-thin-runner-skill.md) | 킥오프는 런북을 읽는 얇은 진행 스킬이 순서대로 진행하고 사람 몫에서 멈춘다 | accepted | 2026-10-12 |
 | [0029](0029-session-model-is-picked-before-send.md) | 새 세션의 모델과 추론 레벨은 지시문이 정하고 open-session이 보내기 전에 입력창에서 고른다 | accepted | 2026-10-12 |
+| [0030](0030-powershell-scripts-are-tested-by-pytest-through-pwsh.md) | `tools/`의 PowerShell 스크립트는 pytest가 pwsh로 함수를 떼어 시험하고, Pester는 들이지 않는다 | accepted | 2026-10-13 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
