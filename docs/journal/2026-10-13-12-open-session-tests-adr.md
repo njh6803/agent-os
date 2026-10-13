@@ -1,4 +1,4 @@
-# 2026-10-13 (08) open_session.ps1 회귀 시험의 길(ADR 0030, 대기열 17)
+# 2026-10-13 (12) open_session.ps1 회귀 시험의 길(ADR 0030, 대기열 17)
 
 ## 계기
 
@@ -119,6 +119,14 @@ PR [#211](https://github.com/njh6803/agent-os/pull/211)(`fd5b923`까지). 연 �
 - **claude-review 첫 회차.** Minor 둘과 Nit 하나를 냈고 모두 반영했다. PR 본문이 `_call`의 시간 제한을 "고쳤다"로 셌던
   것을 보류로 바로잡았고(일지도 같이), `test_open_session.py`의 `_call` 옆에 프로브가 그 이름들에 기댄다는 주석을 두었으며,
   ADR Consequences의 조건 셋을 목록으로 나눴다. `tests/` 영역이 늘어 #207의 새 규약대로 푸시 전에 PR 본문부터 고쳤다.
+  반영 커밋은 `2fb97f6`이고 pre-commit의 검사가 모두 통과했다.
+- **둘째 회차(`2fb97f6`).** CI가 모두 초록이었다. CodeRabbit은 다시 "Review rate limited"였다. claude-review는
+  Critical·Major·Minor 0건이고 Nit 하나(ADR 첫 단락에 결정 문장이 늦게 나온다)를 냈다. 둘째 회차라 고치지 않고 PR
+  코멘트에 보류 이유를 남겼다.
+- **다시 합치기와 일지 번호.** 그 사이 main에 #210과 #205가 병합돼 PR이 `BEHIND`였다. `git merge origin/main`으로 충돌
+  없이 합친 뒤의 `sibling_overlap.py`가 1로 끝났다. 이 일지(처음 이름 08)가 main의 최신 일지 10보다 이름순으로 앞서,
+  다음 세션이 이름순 최신의 "다음"만 읽으면 이 일지를 지나친다. 출력의 "옮길 번호"대로 12로 옮기고 대기열 17·222 행과
+  PR 본문의 옛 번호를 고쳤다. 커밋 메시지(`43467a5`·`fd5b923`·`2fb97f6`)의 옛 번호는 기록이라 두었다.
 
 ## 회고
 
