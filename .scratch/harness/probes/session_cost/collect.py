@@ -24,6 +24,15 @@
 담는지, 그리고 드물게 남은 `turn_duration` 기록(Claude Code가 잰 턴 시간)이 이 파일이 잰 턴 시간과
 맞는지 찍는다.
 
+레벨 스윕(`../model_sweep/`)을 위해 둘을 더 남긴다. 브랜치의 첫 사람 트리거
+시각(`first_human_at`)과, 그 트리거가 지시문이면 줄 머리의 `모델:`·`브랜치:` 줄
+값(`directive_features`의 `model_line`·`branch_line`, 줄 값 그대로)이다. `--since`를 주면 그 시각
+전의 기록을 읽지 않아, 행과 meta가 그 뒤의 기록으로 셈해진다. 예외는 시각이 없는 `cost-state`다. 창
+안에 기록이 있는 세션의 것만 남기지만 그 세션의 창 앞 몫까지 들어, 단가 대조와 `cost_state_ratio`는
+창 앞의 몫이 섞인다. 단가 대조는 한 기록 안의 토큰과 금액을 대 보는 것이라 그래도 어긋나지 않는다.
+meta에는 `since`와 이 파일의 SHA-256(`collect_sha256`)을 남겨, 판정 스크립트가 어느 창을 어느 판으로
+모았는지 본다.
+
 돌리는 법은 README. 종료 코드: 0 썼다, 2 `gh`·`git`을 부르지 못했다.
 """
 
@@ -31,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import hashlib
 import json
 import re
 import statistics
@@ -233,10 +243,11 @@ class Scan:
     unknown_models: Counter[str] = field(default_factory=Counter)
     first_ts: str = ""
     last_ts: str = ""
+    since: datetime | None = None  # 이 시각 전의 기록은 읽지 않는다(`--since`)
 
 
-def scan(projects: Path, root: str) -> Scan:
-    s = Scan()
+def scan(projects: Path, root: str, since: datetime | None = None) -> Scan:
+    s = Scan(since=since)
     seen_uuid: set[str] = set()
     dirs = sorted(p for p in projects.iterdir() if p.is_dir() and p.name.startswith(PROJECT_PREFIX))
     for d in dirs:
@@ -244,6 +255,12 @@ def scan(projects: Path, root: str) -> Scan:
             _scan_file(s, f, "subagents" in f.parts, root, seen_uuid)
     for recs in s.recs.values():
         recs.sort(key=lambda r: r.ts)
+    if since is not None:
+        # `cost-state`에는 시각이 없다. 창 안에 기록이 있는 세션의 것만 단가 대조와 몫에 남긴다.
+        # 창 앞에서 시작한 세션의 것은 창 앞의 몫까지 들지만, 단가 대조는 한 기록 안의 토큰과 금액을
+        # 대 보는 것이라 그 몫이 섞여도 어긋나지 않는다.
+        live = set(s.recs) | {m.session for m in s.msgs.values()}
+        s.cost_state = {sid: cs for sid, cs in s.cost_state.items() if sid in live}
     return s
 
 
@@ -295,6 +312,8 @@ def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: s
             s.cost_state[sid] = o
         return
     ts = o.get("timestamp")
+    if s.since is not None and (not isinstance(ts, str) or parse_ts(ts) < s.since):
+        return
     if t == "attachment" and not sub and isinstance(sid, str) and isinstance(ts, str):
         _scan_queued(s, o, sid, ts, root, seen_uuid)
         return
@@ -533,6 +552,17 @@ def ticket_features(text: str, filename: str) -> dict[str, Json]:
     return feats
 
 
+def directive_line(text: str, label: str) -> str | None:
+    """지시문의 줄 머리 `<label>:` 줄의 값. 지시문이 아니거나 그 줄이 없으면 None.
+
+    레벨 스윕의 모집단(`모델:` 줄의 표지)과 배정(`브랜치:` 줄)을 세는 데 쓴다(스윕 프로브의 사전
+    등록). 값을 감싼 백틱은 벗긴다."""
+    if DIRECTIVE_MARK not in text:
+        return None
+    m = re.search(rf"^{label}:[ \t]*(.*?)[ \t]*$", text, re.MULTILINE)
+    return m.group(1).strip("`") if m else None
+
+
 def directive_features(text: str) -> dict[str, Json]:
     feats = common_features(text)
     read = re.search(r"읽을 것:\s*(.+)", text)
@@ -540,6 +570,8 @@ def directive_features(text: str) -> dict[str, Json]:
     feats.update(
         {
             "directive": DIRECTIVE_MARK in text,
+            "model_line": directive_line(text, "모델"),
+            "branch_line": directive_line(text, "브랜치"),
             "read_refs": len(re.findall(r"[\w./-]+\.(?:md|py|ps1|toml|json)", read.group(1)))
             if read
             else 0,
@@ -715,7 +747,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         return (merged or cands)[-1]
 
     print("트랜스크립트를 읽는다…", file=sys.stderr)
-    s = scan(args.projects, root)
+    s = scan(args.projects, root, parse_ts(args.since) if args.since else None)
     accs: dict[str, Acc] = defaultdict(Acc)
     session_turns: dict[str, list[Turn]] = {}
     unattributed = 0.0
@@ -964,6 +996,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                 "ticket": ticket_path,
                 "ticket_features": tfeats,
                 "directive_features": dfeats,
+                "first_human_at": a.first_human[0] if a.first_human else None,
             }
         )
 
@@ -973,6 +1006,8 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         {
             "cost_sub_partial": round(sub_partial_cost, 2),
             "truncated_connections": {str(k): v for k, v in truncated.items()},
+            "since": args.since,
+            "collect_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "window_start": window_start,
             "first_directive": first_directive,
             "branches_without_pr": {b: n for b, n in no_pr.most_common() if not skip.match(b)},
@@ -1058,6 +1093,10 @@ def main() -> int:
     p.add_argument("--cache", type=Path, default=HERE / "cache")
     p.add_argument("--out", type=Path, default=HERE / "branches.json")
     p.add_argument("--refresh", action="store_true", help="gh 응답을 다시 받는다")
+    p.add_argument(
+        "--since",
+        help="이 시각(ISO 8601, UTC) 전의 기록은 읽지 않는다. 스윕 기간만 모을 때 쓴다",
+    )
     args = p.parse_args()
     try:
         data = build(args)

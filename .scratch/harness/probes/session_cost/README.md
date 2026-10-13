@@ -18,7 +18,7 @@
 | `judge.py` | 모델 판정 실험. `plan`은 호출 수와 금액 어림만 찍고, `run --yes`가 API를 부른다. `score`가 순위와 보정을 낸다 |
 | `costs.py` | 단가표와 응답 하나의 API 환산 비용. 위의 셋과 `cache_read_fit.py`가 같이 쓴다 |
 | `cache_read_fit.py` | 단가표의 모델마다 캐시 읽기 배수 후보(입력의 0.025·0.05·0.1배) 가운데 어느 것이 `cost-state`의 금액과 맞는지 센다. 단가표를 공식 가격표와 Claude Code의 셈 둘에 대 보는 데 쓴다(`docs/model-selection.md`의 다시 재는 절차) |
-| `branches.json` | `collect.py`의 출력. 수와 이름(브랜치, PR 제목, 티켓 경로)만 있고 프롬프트와 티켓 본문은 없다 |
+| `branches.json` | `collect.py`의 출력. 수와 이름(브랜치, PR 제목, 티켓 경로), 첫 사람 트리거 시각(`first_human_at`), 그 트리거가 지시문이면 `모델:`·`브랜치:` 줄 값(`directive_features`의 `model_line`·`branch_line`)만 있고 프롬프트와 티켓 본문은 없다. 이 세 칸은 레벨 스윕의 판정(`../model_sweep/`)이 쓴다. 커밋한 것은 2026-10-13의 실행이라 세 칸이 없다 |
 | `judge_results.jsonl` | `judge.py run`의 응답. 다시 돌 때 API를 치지 않고 `score`를 낸다 |
 
 돌리는 법(워크트리 루트에서, 트랜스크립트는 `~/.claude/projects/`):
@@ -30,7 +30,8 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/judge.py plan
 PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/cache_read_fit.py
 ```
 
-`collect.py`는 `gh` 인증과 이 저장소의 원격이 든다. `judge.py run`은 `anthropic` SDK를
+`collect.py`는 `gh` 인증과 이 저장소의 원격이 든다. `--since <ISO 시각>`을 주면 그 전의 기록을 읽지 않는다(레벨 스윕이
+스윕 기간만 모을 때 쓴다). `judge.py run`은 `anthropic` SDK를
 `uv run --with anthropic==1.7.0`으로 받고 `ANTHROPIC_API_KEY`가 든다(워크트리에서는 `--env-file ../../../.env`). 판을
 고정하지 않으면 실행마다 최신 판을 받아 기록의 기준이 바뀐다. 모델 판정 실험은 `pytest`의 `llm` 마커 테스트로
 두지 않았다. 통과·실패를 단언하는 테스트가 아니라 결과를 내는 측정이고, 기본 실행에서 돌지 않는다는 성질은 `run`이
