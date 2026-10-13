@@ -1,13 +1,19 @@
-// 디자인 토큰의 판정 스토리. 열 벌(테마 다섯 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 다섯 벌, rem 0,
+// 디자인 토큰의 판정 스토리. 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 다섯 벌, rem 0,
 // `@theme` 토큰이 모두 CSS 변수로 나오는 것, shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
-// 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB), 테마 사이의 차이, 명암비로 본다.
+// 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB, 반투명은 #RRGGBBAA), 테마 사이의 차이, 명암비로 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
 import { Button } from "../components/atoms/Button";
 import { ShadowFrame } from "../storybook/ShadowFrame";
 import { sheetsDefining } from "../testing";
-import { MODES, THEMES } from "../themes";
-import { CONTRAST_PAIRS, SEMANTIC_TOKENS, contrastFailures } from "./contrast";
+import { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeKey } from "../themes";
+import {
+  CONTRAST_PAIRS,
+  SEMANTIC_TOKENS,
+  TRANSLUCENT_TOKENS,
+  contrastFailures,
+  type SemanticToken,
+} from "./contrast";
 import themeCss from "./theme.css?inline";
 import themeSource from "./theme.css?raw";
 
@@ -39,8 +45,43 @@ function allRules(sheet: CSSStyleSheet): CSSRule[] {
   );
 }
 
+// 테마가 바꾸지 않는 것의 표본. 테마 블록이 글꼴이나 크기를 다시 정하면 여덟 벌의 값이 갈린다.
+const THEME_FREE = ["--sans", "--mono", "--radius-m"] as const;
+
+// 주 버튼이 강조색인 테마. 나머지는 글자색을 뒤집은 먹색이다(ADR 0026 의 셋째 2026-10-12 이력).
+const ACCENT_PRIMARY: readonly ThemeKey[] = ["guncheong", "jacho"];
+
+/**
+ * 한 벌의 주 버튼 묶음이 그 테마의 갈래인지. 강조색 갈래는 `primary` 가 `accent` 와, 먹색 갈래는 `text` 와 같고, 다크의
+ * `on-primary` 는 강조색 갈래에서 `on-accent`, 먹색 갈래에서 `bg` 와 같다(라이트는 두 갈래 모두 `bg-raised` 와 같은
+ * 흰색이라 가르지 않는다). 이웃 토큰과 맞대므로 디자인 파일을 읽지 않는다. 어긋나면 메시지 하나씩이다.
+ */
+function primaryBranchFailures(
+  at: string,
+  key: ThemeKey,
+  dark: boolean,
+  value: (name: string) => string,
+): string[] {
+  const accent = ACCENT_PRIMARY.includes(key);
+  const expected: [string, string][] = [["primary", accent ? "accent" : "text"]];
+  if (dark) {
+    expected.push(["on-primary", accent ? "on-accent" : "bg"]);
+  }
+  return expected
+    .filter(([name, twin]) => value(name).toLowerCase() !== value(twin).toLowerCase())
+    .map(
+      ([name, twin]) => `${at} --${name} "${value(name)}" 가 --${twin} "${value(twin)}" 와 다르다`,
+    );
+}
+
+/** 쓰임새 토큰의 형식. 반투명 넷은 알파까지 든 hex 8자리다. */
+function wellFormed(name: SemanticToken, value: string): boolean {
+  const translucent: readonly string[] = TRANSLUCENT_TOKENS;
+  return (translucent.includes(name) ? /^#[0-9a-f]{8}$/i : /^#[0-9a-f]{6}$/i).test(value);
+}
+
 export const Matrix: Story = {
-  name: "열 벌 모두 쓰임새 토큰 26개가 #RRGGBB 로 풀리고 명암비 짝 43개가 기준을 넘는다",
+  name: "여덟 벌 모두 쓰임새 토큰 23개가 풀리고 명암비 짝 43개가 기준을 넘으며 주 버튼이 테마의 갈래이고 글꼴과 모서리는 테마마다 같다",
   render: () => (
     <div data-sample="matrix" className="bg-bg p-4 text-text">
       테마 표
@@ -50,7 +91,9 @@ export const Matrix: Story = {
     const target = element(canvasElement, "[data-sample=matrix]");
     const malformed: string[] = [];
     const failures: string[] = [];
+    const branches: string[] = [];
     const accents = new Map<string, Set<string>>(MODES.map((mode) => [mode, new Set<string>()]));
+    const themeFree = new Map<string, Set<string>>(THEME_FREE.map((name) => [name, new Set()]));
     for (const { key } of THEMES) {
       for (const mode of MODES) {
         target.dataset["theme"] = key;
@@ -58,23 +101,46 @@ export const Matrix: Story = {
         const style = getComputedStyle(target);
         const value = (name: string): string => style.getPropertyValue(`--${name}`).trim();
         for (const name of SEMANTIC_TOKENS) {
-          if (!/^#[0-9a-f]{6}$/i.test(value(name))) {
+          if (!wellFormed(name, value(name))) {
             malformed.push(`${key}/${mode} --${name} "${value(name)}"`);
           }
         }
         accents.get(mode)?.add(value("accent").toLowerCase());
+        for (const name of THEME_FREE) {
+          themeFree.get(name)?.add(style.getPropertyValue(name).trim());
+        }
+        branches.push(...primaryBranchFailures(`${key}/${mode}`, key, mode === "dark", value));
         if (malformed.length === 0) {
           failures.push(...contrastFailures(key, mode, value));
         }
       }
+      // 모드 속성이 없으면 시스템 설정을 따른다. 그 갈래(`@media (prefers-color-scheme: …)` 안의 덮기)도 본다.
+      delete target.dataset["mode"];
+      const style = getComputedStyle(target);
+      branches.push(
+        ...primaryBranchFailures(`${key}/system`, key, style.colorScheme === "dark", (name) =>
+          style.getPropertyValue(`--${name}`).trim(),
+        ),
+      );
     }
-    await expect([SEMANTIC_TOKENS.length, CONTRAST_PAIRS.length]).toEqual([26, 43]);
+    await expect([SEMANTIC_TOKENS.length, CONTRAST_PAIRS.length]).toEqual([23, 43]);
+    await expect({ keys: THEMES.map(({ key }) => key), default: DEFAULT_THEME }).toEqual({
+      keys: ["guncheong", "nokcheong", "jacho", "jjokbit"],
+      default: "nokcheong",
+    });
     await expect(malformed).toEqual([]);
     await expect(failures).toEqual([]);
+    await expect(branches).toEqual([]);
     await expect(Object.fromEntries([...accents].map(([mode, set]) => [mode, set.size]))).toEqual({
       light: THEMES.length,
       dark: THEMES.length,
     });
+    // 여덟 벌이 한 값이고 그 값이 비지 않았다.
+    await expect(
+      Object.fromEntries(
+        [...themeFree].map(([name, set]) => [name, set.size === 1 && !set.has("")]),
+      ),
+    ).toEqual({ "--sans": true, "--mono": true, "--radius-m": true });
   },
 };
 
@@ -134,7 +200,7 @@ export const Fonts: Story = {
         승인을 기다리고 있습니다.
       </p>
       <p className="font-sans text-body font-medium">허가하거나 거부해 주세요.</p>
-      <p className="font-sans text-body font-strong">실행이 실패했습니다.</p>
+      <p className="font-sans text-body font-semibold">실행이 실패했습니다.</p>
       <p data-sample="mono" className="font-mono text-code font-regular">
         payments.refund(amount=1200)
       </p>
@@ -285,42 +351,75 @@ const SHADOW_SAMPLE = (
   </>
 );
 
+// 문서 쪽과 shadow 쪽에 같이 다는 테마와 모드. 기본 테마 라이트에 더해, 주 버튼을 덮는 `:host(…)` 짝을 지나는 군청
+// 다크를 둔다. 군청 다크의 버튼 바탕은 그 덮기가 있어야 문서 쪽과 같다.
+const SHADOW_PAIRS = [
+  [DEFAULT_THEME, "light"],
+  ["guncheong", "dark"],
+] as const satisfies readonly (readonly [ThemeKey, Mode])[];
+
 export const ShadowRoot: Story = {
-  name: "shadow 안의 계산값이 문서와 같고 사이트의 * 규칙이 감싼 요소 안에 닿지 않는다",
+  name: "shadow 안의 계산값이 기본 테마 라이트와 군청 다크 모두 문서와 같고 사이트의 * 규칙이 감싼 요소 안에 닿지 않는다",
   render: () => (
     <div className="flex flex-col gap-4">
-      <div data-sample="document" data-theme="muk" data-mode="light" data-ui-root="">
-        {SHADOW_SAMPLE}
-      </div>
-      <ShadowFrame shadow="on" css={themeCss} theme="muk" mode="light">
-        {SHADOW_SAMPLE}
-      </ShadowFrame>
+      {SHADOW_PAIRS.map(([theme, mode]) => (
+        <div key={theme} data-pair={theme} className="flex flex-col gap-4">
+          <div
+            data-sample="document"
+            data-theme={theme}
+            data-mode={mode}
+            data-ui-root=""
+            className="bg-bg"
+          >
+            {SHADOW_SAMPLE}
+          </div>
+          <ShadowFrame shadow="on" css={themeCss} theme={theme} mode={mode}>
+            {SHADOW_SAMPLE}
+          </ShadowFrame>
+        </div>
+      ))}
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const host = element(canvasElement, "[data-shadow-frame]");
-    await waitFor(() => expect(host.shadowRoot?.querySelector("button")).not.toBeNull());
-    const shadow = host.shadowRoot;
-    if (shadow === null) {
-      throw new Error("shadow root 가 없다");
+    const pairs = SHADOW_PAIRS.map(([theme]) => {
+      const pair = element(canvasElement, `[data-pair=${theme}]`);
+      return {
+        theme,
+        document: element(pair, "[data-sample=document]"),
+        host: element(pair, "[data-shadow-frame]"),
+      };
+    });
+    const roots = new Map<string, ParentNode>();
+    for (const { theme, host } of pairs) {
+      await waitFor(() => expect(host.shadowRoot?.querySelector("button")).not.toBeNull());
+      if (host.shadowRoot === null) {
+        throw new Error(`shadow root 가 없다: ${theme}`);
+      }
+      roots.set(theme, host.shadowRoot);
     }
     // 문서 쪽을 먼저 읽는다. 미리보기가 디자인 토큰 CSS 를 전역으로 실어, 그대로 두면 문서의 @property 등록과 :root
     // 변수가 shadow 안에 닿아 보정 없이도 같아 보인다(ADR 0026). 그래서 문서의 시트를 모두 끄고 shadow 를 읽는다.
-    const expected = computed(element(canvasElement, "[data-sample=document]"));
+    const expected = Object.fromEntries(
+      pairs.map(({ theme, document: sample }) => [theme, computed(sample)]),
+    );
     const sheets = Array.from(document.styleSheets);
     const before = sheets.map((sheet) => sheet.disabled);
     const site = document.createElement("style");
     site.textContent = SITE_RULE;
+    const shadowValues = (): Record<string, Record<string, string>> =>
+      Object.fromEntries([...roots].map(([theme, root]) => [theme, computed(root)]));
     try {
       for (const sheet of sheets) {
         sheet.disabled = true;
       }
-      const isolated = computed(shadow);
+      const isolated = shadowValues();
       document.head.append(site);
-      const underSite = computed(shadow);
+      const underSite = shadowValues();
       await expect(isolated).toEqual(expected);
       await expect(underSite).toEqual(expected);
-      await expect(getComputedStyle(host).fontFamily).toBe("serif");
+      for (const { host } of pairs) {
+        await expect(getComputedStyle(host).fontFamily).toBe("serif");
+      }
     } finally {
       site.remove();
       sheets.forEach((sheet, index) => {

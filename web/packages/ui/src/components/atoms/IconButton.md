@@ -10,4 +10,4 @@
 - 기본은 투명입니다. 올리면 옅은 면이 깔립니다.
 - 불러오는 중에는 아이콘 자리에 도는 표시를 두고 이름은 그대로입니다.
 
-출처: 디자인 파일 v3의 02.2 아이콘 버튼(`.scratch/design-system/design/`).
+출처: 재탐색 디자인 파일의 2.2 아이콘 버튼(`.scratch/design-system/design/Agent OS Design System.dc.html`).

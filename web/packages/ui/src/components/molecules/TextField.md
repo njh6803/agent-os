@@ -13,4 +13,4 @@
 - 여러 줄은 세로로만 늘어나고 처음 줄 수는 `rows`(기본 3)입니다.
 - 누름과 불러오는 중의 상태는 없습니다.
 
-출처: 디자인 파일 v3의 02.3 글 입력(`.scratch/design-system/design/`).
+출처: 재탐색 디자인 파일의 2.3 글 입력(`.scratch/design-system/design/Agent OS Design System.dc.html`).

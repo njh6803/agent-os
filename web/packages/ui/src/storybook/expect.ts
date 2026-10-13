@@ -4,15 +4,33 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { Icon, type IconName } from "../components/atoms/Icon";
 
-/** 요소에서 풀린 쓰임새 토큰 `--<name>` 의 값(#RRGGBB)을 getComputedStyle 의 색 모양(`rgb(r, g, b)`)으로 돌려준다. */
+/**
+ * 대상이 놓인 부모의 범위에서 풀린 쓰임새 토큰 `--<name>` 의 색을 getComputedStyle 의 색 모양으로 돌려준다(불투명은
+ * `rgb(r, g, b)`, 반투명은 `rgba(r, g, b, a)`). 대상 바로 앞에 `background-color: var(--<name>)` 을 둔 숨은 탐침 요소를
+ * 잠깐 붙여 그 계산값을 읽는다. 대상 자신이 `data-theme`·`data-mode` 를 달면 그 범위는 보지 못한다. 브라우저가 대상의 색을 직렬화하는 것과 같은 길이라 hex 를 손으로 바꾸며 생기는 알파 자릿수의
+ * 차이가 없다. 쓰임새 토큰은 테마나 모드를 다는 요소마다 다시 선언되어, 같은 부모(같은 테마·모드, 같은 shadow root)에
+ * 두어야 대상과 같은 값으로 풀린다. 문서 뿌리에 붙인 탐침은 다른 범위의 값으로 풀려 두 범위가 같은 값일 때만 조용히
+ * 맞는다. 토큰이 `#RRGGBB` 나 `#RRGGBBAA` 로 풀리지 않으면 던진다.
+ */
 export function semanticColor(element: Element, name: string): string {
-  const hex = getComputedStyle(element).getPropertyValue(`--${name}`).trim();
-  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  if (match === null) {
-    throw new Error(`--${name} 이 #RRGGBB 로 풀리지 않았다: "${hex}"`);
+  const parent = element.parentNode;
+  if (parent === null) {
+    throw new Error(`--${name} 을 잴 자리가 없다: 대상이 문서에 붙지 않았다`);
   }
-  const [, red = "", green = "", blue = ""] = match;
-  return `rgb(${[red, green, blue].map((channel) => String(Number.parseInt(channel, 16))).join(", ")})`;
+  const probe = document.createElement("span");
+  probe.hidden = true;
+  probe.style.backgroundColor = `var(--${name})`;
+  parent.insertBefore(probe, element);
+  try {
+    const style = getComputedStyle(probe);
+    const hex = style.getPropertyValue(`--${name}`).trim();
+    if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(hex)) {
+      throw new Error(`--${name} 이 #RRGGBB 나 #RRGGBBAA 로 풀리지 않았다: "${hex}"`);
+    }
+    return style.backgroundColor;
+  } finally {
+    probe.remove();
+  }
 }
 
 /** 배경색, 글자색, 테두리색을 한 번에. 상태마다 쓰임새 토큰과 맞댄다. */
@@ -51,9 +69,14 @@ export function focusRingOf(element: Element): FocusRing {
   };
 }
 
-/** 그려야 할 포커스 링. `focus` 쓰임새 토큰으로 2px 실선을 2px 띄운다. */
+/** 그려야 할 포커스 링. `focus-ring` 쓰임새 토큰으로 2px 실선을 2px 띄운다. */
 export function expectedFocusRing(element: Element): FocusRing {
-  return { style: "solid", width: "2px", offset: "2px", color: semanticColor(element, "focus") };
+  return {
+    style: "solid",
+    width: "2px",
+    offset: "2px",
+    color: semanticColor(element, "focus-ring"),
+  };
 }
 
 /** 아이콘이 그린 요소(선) 하나의 계산된 `vector-effect` 와 `stroke-width`. */

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { colorsOf, semanticColor } from "../../storybook/expect";
+import { TRANSPARENT, colorsOf, semanticColor } from "../../storybook/expect";
 import { STATUS_BADGE_STATUSES, StatusBadge, type StatusBadgeStatus } from "./StatusBadge";
 
 const meta = {
@@ -12,28 +12,36 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 상태마다 배지가 적을 용어집의 말과 글자색·바탕색의 쓰임새 토큰. */
+/** 상태마다 배지가 적을 용어집의 말과 글자·아이콘의 쓰임새 토큰. */
 const EXPECTED = {
-  paused: { text: "일시정지", foreground: "warning", surface: "warning-tint" },
-  done: { text: "끝남", foreground: "success", surface: "success-tint" },
-  failed: { text: "실패", foreground: "danger", surface: "danger-tint" },
-  "no-outcome": { text: "결말 없음", foreground: "muted", surface: "tint" },
-} satisfies Record<StatusBadgeStatus, { text: string; foreground: string; surface: string }>;
+  paused: { text: "일시정지", foreground: "warning" },
+  done: { text: "끝남", foreground: "success" },
+  failed: { text: "실패", foreground: "danger" },
+  "no-outcome": { text: "결말 없음", foreground: "text-muted" },
+} satisfies Record<StatusBadgeStatus, { text: string; foreground: string }>;
 
-/** 그 상태의 배지 하나의 글자, 숨은 아이콘, 쓰임새 토큰의 글자색과 바탕색, 높이를 본다. */
+/**
+ * 그 상태의 배지 하나의 글자, 숨은 아이콘, 높이와 색을 본다. 바탕은 칠하지 않고(투명) 테두리는 `border` 이며, 글자와
+ * 아이콘이 상태의 쓰임새 토큰이다.
+ */
 async function expectBadge(canvasElement: HTMLElement, status: StatusBadgeStatus): Promise<void> {
-  const { text, foreground, surface } = EXPECTED[status];
+  const { text, foreground } = EXPECTED[status];
   const badge = Array.from(canvasElement.querySelectorAll("span")).find(
     (span) => span.textContent === text,
   );
   if (badge === undefined) {
     throw new Error(`글자가 "${text}" 인 배지가 없다`);
   }
-  await expect(badge.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
-  await expect(colorsOf(badge)).toMatchObject({
-    background: semanticColor(badge, surface),
+  const icon = badge.querySelector("svg");
+  await expect(icon?.getAttribute("aria-hidden")).toBe("true");
+  await expect(colorsOf(badge)).toEqual({
+    background: TRANSPARENT,
     text: semanticColor(badge, foreground),
+    border: semanticColor(badge, "border"),
   });
+  await expect(icon === null ? null : getComputedStyle(icon).color).toBe(
+    semanticColor(badge, foreground),
+  );
   await expect(getComputedStyle(badge).height).toBe("24px");
 }
 
@@ -47,14 +55,14 @@ const renderAll: Story["render"] = (args) => (
 );
 
 export const Paused: Story = {
-  name: "일시정지 배지는 warning-tint 바탕에 warning 글자로 일시정지라 적고 아이콘은 숨는다",
+  name: "일시정지 배지는 바탕 없이 border 테두리에 warning 글자로 일시정지라 적고 아이콘은 숨는다",
   play: async ({ canvasElement }) => {
     await expectBadge(canvasElement, "paused");
   },
 };
 
 export const Done: Story = {
-  name: "끝남 배지는 success-tint 바탕에 success 글자로 끝남이라 적는다",
+  name: "끝남 배지는 바탕 없이 border 테두리에 success 글자로 끝남이라 적는다",
   args: { status: "done" },
   play: async ({ canvasElement }) => {
     await expectBadge(canvasElement, "done");
@@ -62,7 +70,7 @@ export const Done: Story = {
 };
 
 export const Failed: Story = {
-  name: "실패 배지는 danger-tint 바탕에 danger 글자로 실패라 적는다",
+  name: "실패 배지는 바탕 없이 border 테두리에 danger 글자로 실패라 적는다",
   args: { status: "failed" },
   play: async ({ canvasElement }) => {
     await expectBadge(canvasElement, "failed");
@@ -70,7 +78,7 @@ export const Failed: Story = {
 };
 
 export const NoOutcome: Story = {
-  name: "결말 없음 배지는 tint 바탕에 muted 글자로 결말 없음이라 적는다",
+  name: "결말 없음 배지는 바탕 없이 border 테두리에 text-muted 글자로 결말 없음이라 적는다",
   args: { status: "no-outcome" },
   play: async ({ canvasElement }) => {
     await expectBadge(canvasElement, "no-outcome");

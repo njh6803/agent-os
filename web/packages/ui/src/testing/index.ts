@@ -1,6 +1,9 @@
 // 디자인 시스템의 판정 함수(`@agent-os/ui/testing`). 스토리의 play 와 미리보기의 afterEach 가 실제 chromium 에서
 // 부른다. 의존성이 없고 진입점 `.` 에 넣지 않는다(design-system 명세의 "Storybook과 판정 함수").
-// - contrastRatio: WCAG 2.2 의 대비. 쓰임새 토큰의 계산값(#RRGGBB)을 받는다.
+// - contrastRatio: WCAG 2.2 의 대비. 불투명한 쓰임새 토큰의 계산값(#RRGGBB)을 받는다.
+// - composite: 반투명 쓰임새 토큰(#RRGGBBAA)을 그 아래 바탕에 겹친 색. 채널마다 0~255 의 정수로 반올림한 #rrggbb 를
+//   돌려준다. 반올림은 판정의 일부다. 디자인 파일 스크립트의 `over` 와 같은 셈이고(design-refresh 명세의 "반투명 바탕의
+//   명암비"), 녹청 다크의 카드 안 위험 버튼 누름은 반올림하면 4.507, 하지 않으면 4.494 다.
 // - sheetsDefining: 디자인 토큰 CSS 의 시트만 고른다. Storybook 자신의 시트를 뺀다.
 // - classesWithoutRules: 그린 요소의 class 낱말 가운데 그것을 고르는 규칙이 시트에 하나도 없는 것. Tailwind 의 기본
 //   테마를 비우면 `text-base` 같은 익숙한 클래스가 오류 없이 아무 CSS 도 만들지 않는다(ADR 0026).
@@ -10,12 +13,33 @@ type Channels = readonly [number, number, number];
 
 /** WCAG 2.2 의 대비. 인자는 `#RRGGBB` 이고 대소문자를 가리지 않는다. */
 export function contrastRatio(a: string, b: string): number {
-  const first = luminance(hexChannels(a));
-  const second = luminance(hexChannels(b));
+  const first = luminance(opaqueChannels(a));
+  const second = luminance(opaqueChannels(b));
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-function hexChannels(hex: string): Channels {
+/**
+ * `top` 을 불투명한 `bottom`(`#RRGGBB`)에 알파로 겹친 색. `top` 은 `#RRGGBB` 이거나 `#RRGGBBAA` 이고, 불투명이면 그
+ * 색이다. 채널마다 0~255 의 정수로 반올림한 소문자 `#rrggbb` 를 돌려준다.
+ */
+export function composite(top: string, bottom: string): string {
+  const match = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(top.trim());
+  if (match === null) {
+    throw new Error(`#RRGGBB 나 #RRGGBBAA 가 아니다: "${top}"`);
+  }
+  const [, color = "", alphaHex = "ff"] = match;
+  const alpha = Number.parseInt(alphaHex, 16) / 255;
+  const above = opaqueChannels(`#${color}`);
+  const below = opaqueChannels(bottom);
+  return `#${above
+    .map((channel, index) => {
+      const mixed = Math.round(channel * alpha + (below[index] ?? 0) * (1 - alpha));
+      return mixed.toString(16).padStart(2, "0");
+    })
+    .join("")}`;
+}
+
+function opaqueChannels(hex: string): Channels {
   const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
   if (match === null) {
     throw new Error(`#RRGGBB 가 아니다: "${hex}"`);
