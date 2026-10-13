@@ -129,8 +129,7 @@
   /*
    * 떠 있는 것(위젯 창, 메뉴)에만 쓰는 그림자. 유틸리티는 값을 그 자리에 풀어 써 색(모드마다 다르다)을 놓인 요소에서
    * 읽는다(판정 스토리 FloatShadow). static 에 두어도 유틸리티는 같고, 다른 것은 뿌리에 `--shadow-float` 선언이 나오는
-   * 것이다(design-refresh 프로브 `shadow.mjs`). 그 변수를 `var()` 로 읽는 자리는 밀도의 별칭처럼 뿌리의 모드로 풀린
-   * 색을 받을 것이라(어림) 선언을 내지 않는 inline 에 둔다.
+   * 것이다(design-refresh 프로브 `shadow.mjs`). 밀도의 별칭처럼 뿌리에 선언을 내지 않으려고 inline 에 둔다.
    */
   --shadow-float: 0 8px 24px var(--shadow-color), 0 1px 2px var(--shadow-color);
 }
@@ -173,6 +172,10 @@
     --row-h: 36px;
     --control-h: 32px;
   }
+  /*
+   * 위 촘촘 블록과 같은 값이다. 선택자를 미디어 조건 안팎으로 나눠 한 블록에 둘 수 없어 두 벌이다. 어긋나면 사진 비교의
+   * 미디어 특성 사례(창 1280px 에서 밀도 변수 일곱을 촘촘 탐침과 맞댄다)가 빨갛다.
+   */
   @media (width >= 768px) {
     :root:not([data-density]),
     :host(:not([data-density])) {
