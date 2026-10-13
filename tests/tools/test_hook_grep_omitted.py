@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import json
+
 from tools.hook_grep_omitted import LEAD, MARKER, TOOL, HookPayload, ToolInput, context_for
 from tools.run_hooks import registered_matchers
 
@@ -46,6 +48,23 @@ def test_디렉터리를_훑은_결과의_생략된_일치_줄을_수와_자리�
         assert place in context, place
     assert "fixture\\lines.txt:1" not in context
     assert "`-n`" not in context
+    assert "limit 에 1" in context
+
+
+def test_입력이_객체가_아니어도_터지지_않고_결과로_알린다() -> None:
+    """PostToolUse 의 예외는 지나가지만 알림이 빠진다. 실제 Grep 은 객체를 주지만 모양에 기대지
+    않는다."""
+    payload: HookPayload = json.loads(
+        json.dumps(
+            {
+                "tool_name": TOOL,
+                "tool_input": None,
+                "tool_response": {"mode": "content", "content": DIRECTORY_CONTENT},
+            }
+        )
+    )
+
+    assert context_for(payload) is not None
 
 
 def test_파일_하나를_줄_번호와_훑으면_자리에_입력의_경로를_붙인다() -> None:
@@ -94,6 +113,7 @@ def test_열_개가_넘으면_앞의_열_자리만_들고_나머지는_수로_�
     assert "big.txt:10" in context
     assert "big.txt:11" not in context
     assert "외 2개" in context
+    assert "나머지는 위 결과" in context
 
 
 def test_Grep이_아닌_도구와_content가_없는_결과는_보지_않는다() -> None:

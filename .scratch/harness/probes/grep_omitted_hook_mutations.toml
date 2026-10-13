@@ -78,6 +78,24 @@ new = '''
 '''
 
 [[mutation]]
+name = "입력이 객체인지 보지 않는다(tool_input 이 null 이면 터진다, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''    path = tool_input.get("path") if isinstance(tool_input, dict) else None'''
+new = '''    path = payload["tool_input"].get("path")'''
+
+[[mutation]]
+name = "Read 안내에서 limit 을 뺐다(offset 부터 2000줄을 싣는다, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''offset 에 그 줄 번호, limit 에 1 을"'''
+new = '''offset 에 그 줄 번호를"'''
+
+[[mutation]]
 name = "알림에 생략된 줄의 수를 들지 않는다"
 tests = ["tests/tools/test_hook_grep_omitted.py"]
 expect = "red"

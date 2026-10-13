@@ -68,11 +68,29 @@ tests = ["tests/tools/test_hook_env_read.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_env_read.py"
-old = '''            if word == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
+old = '''            if wrapper == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
                 return []
 '''
 new = '''
 '''
+
+[[mutation]]
+name = "경로가 붙은 래퍼를 이름으로 찾지 않는다(`/usr/bin/env`, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''        wrapper = _command_name(word)'''
+new = '''        wrapper = word'''
+
+[[mutation]]
+name = "env 의 -a 를 값 옵션에서 뺐다(argv0 를 명령으로 읽는다, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''"--chdir", "-a", "--argv0"}'''
+new = '''"--chdir"}'''
 
 [[mutation]]
 name = "timeout 의 시간을 벗기지 않는다"
@@ -80,7 +98,7 @@ tests = ["tests/tools/test_hook_env_read.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_env_read.py"
-old = '''        if word == "timeout":
+old = '''        if wrapper == "timeout":
             index += 1  # 시간
 '''
 new = '''
@@ -92,7 +110,7 @@ tests = ["tests/tools/test_hook_env_read.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_env_read.py"
-old = '''    "env": frozenset({"-u", "--unset", "-C", "--chdir"}),
+old = '''    "env": frozenset({"-u", "--unset", "-C", "--chdir", "-a", "--argv0"}),
 '''
 new = '''
 '''
@@ -116,11 +134,17 @@ old = '''        "nice --adjustment 5 cat .env",
         "sudo -iu root cat .env",
         "sudo -uroot cat .env",
         "sudo --user root cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
+        "env -a x cat .env",
+        "env --argv0 x cat .env",
         "exec -a x cat .env",
 '''
 new = '''        "timeout 5 column .env",
         "env -i cat .env",
         "sudo -uroot cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
 '''
 [[mutation.edit]]
 file = "tests/tools/test_hook_env_read.py"

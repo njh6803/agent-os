@@ -90,6 +90,10 @@ def test_env_를_읽는_명령을_막는다(명령: str) -> None:
         "sudo -iu root cat .env",
         "sudo -uroot cat .env",
         "sudo --user root cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
+        "env -a x cat .env",
+        "env --argv0 x cat .env",
         "exec -a x cat .env",
         "time -p cat .env",
         "command nice timeout 5 rev .env",
@@ -267,6 +271,7 @@ def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> No
         "cat C:\\Users\\me\\.env",
         "env -S 'cat .env'",
         "stdbuf -o0 cat .env",
+        "sudo --us root cat .env",
     ],
 )
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(명령: str) -> None:

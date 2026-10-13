@@ -30,19 +30,21 @@ awk 류의 첫 위치 인자는 패턴이라 파일로 보지 않는다(`grep .e
 읽는 명령의 목록(`READERS`)에는 Claude Code 가 묻지 않고 돌린 `column`·`rev` 도 든다(대기열 162.
 `.scratch/harness/probes/review_git_read.py` 가 glob 경로로 `.git/config` 를 읽거나 권한 단계를
 지난 명령이다, 일지 2026-10-07-21). 명령 앞의 래퍼(`sudo`·`command`·`env`·`nice`·`timeout`·`exec`·
-`time`·`nohup`·`builtin`)는 그 뒤의 옵션과 옵션 값까지 getopt 처럼 벗긴다(`-n5`, `-iu root`,
-`--user root`). 같은 프로브에서 권한 규칙이 래퍼(`env`·`command`·`nice`·`timeout`)를 벗겨 대 봤다.
-이 훅은 래퍼 뒤의 옵션을 명령 이름으로 읽어 `nice -n5 cat .env`·`command -p cat .env`·`env -i cat
-.env` 를 지나보냈다(일지 2026-10-13-63 의 세션이 스크래치 스크립트로 찍어 봤고, 그 입력은 지금
-tests/tools 가 고정한다). `command -v`·`-V` 는 명령을 찾기만 해 막지 않는다.
+`time`·`nohup`·`builtin`)는 경로를 벗긴 이름으로 찾고(`/usr/bin/env`), 그 뒤의 옵션과 옵션 값까지
+getopt 처럼 벗긴다(`-n5`, `-iu root`, `--user root`). 같은 프로브에서 권한 규칙이
+래퍼(`env`·`command`·`nice`·`timeout`)를 벗겨 대 봤다. 이 훅은 래퍼 뒤의 옵션을 명령 이름으로 읽어
+`nice -n5 cat .env`·`command -p cat .env`·`env -i cat .env` 를 지나보냈다(일지 2026-10-13-63 의
+세션이 스크래치 스크립트로 찍어 봤고, 그 입력은 지금 tests/tools 가 고정한다). `command -v`·`-V` 는
+명령을 찾기만 해 막지 않는다.
 못 보는 것: 변수 간접 참조(`for f in .env*; do cat "$f"`), 다른 명령이 넘긴 인자(`ls -a | xargs
 cat`), 언어 안의 읽기(`python -c "open('.env')"`), `cp .env x` 뒤의 `cat x`, `uv run --env-file
 .env` 뒤의 `printenv`(그 명령은 LLM 테스트의 사전이라 막지 않는다), `.env` 가 없는 하위 디렉터리를
 훑는 `grep -r x sub/`, 백슬래시 경로(`C:\\x\\.env` — shlex 가 이스케이프로 읽는다), 래퍼 스크립트
 안의 읽기, 위 목록 밖의 래퍼(`stdbuf -o0 cat .env`)와 명령을 문자열 하나로 받는 래퍼
-(`env -S 'cat .env'`), PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고
-`[IO.File]::ReadAllText` 같은 읽기는 지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀
-파일(사용자 설정의 env 값 등).
+(`env -S 'cat .env'`), 래퍼의 긴 옵션을 줄여 쓴 꼴(`sudo --us root cat .env` — getopt_long 은
+모호하지 않은 머리를 받지만 이 훅은 표에 적은 이름 그대로만 값 옵션으로 본다), PowerShell 도구(권한
+deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고 `[IO.File]::ReadAllText` 같은 읽기는
+지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등).
 에이전트 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건
 개발용 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
@@ -105,7 +107,7 @@ _WRAPPERS: dict[str, frozenset[str]] = {
             "--chroot",
         }
     ),  # fmt: skip
-    "env": frozenset({"-u", "--unset", "-C", "--chdir"}),
+    "env": frozenset({"-u", "--unset", "-C", "--chdir", "-a", "--argv0"}),
     "exec": frozenset({"-a"}),
     "nice": frozenset({"-n", "--adjustment"}),
     "timeout": frozenset({"-k", "-s", "--kill-after", "--signal"}),
@@ -288,24 +290,25 @@ def _segment_reason(words: list[str], inputs: list[str], cwd: str | None) -> str
 
 
 def _strip_prefix(words: list[str]) -> list[str]:
-    """명령 자리 앞의 예약어·환경변수 대입·래퍼와 그 옵션을 벗긴다. `command -v`·`-V` 는 명령을
-    찾기만 하고 돌리지 않아 빈 목록이다."""
+    """명령 자리 앞의 예약어·환경변수 대입·래퍼와 그 옵션을 벗긴다. 래퍼는 경로를 벗긴 이름으로
+    찾는다(`/usr/bin/env`). `command -v`·`-V` 는 명령을 찾기만 하고 돌리지 않아 빈 목록이다."""
     index = 0
     while index < len(words):
         word = words[index]
         if word in _RESERVED or _ASSIGNMENT.match(word):
             index += 1
             continue
-        value_options = _WRAPPERS.get(word)
+        wrapper = _command_name(word)
+        value_options = _WRAPPERS.get(wrapper)
         if value_options is None:
             break
         index += 1
         while index < len(words) and words[index].startswith("-"):
             option = words[index]
-            if word == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
+            if wrapper == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
                 return []
             index += _option_width(option, value_options)
-        if word == "timeout":
+        if wrapper == "timeout":
             index += 1  # 시간
     return words[index:]
 

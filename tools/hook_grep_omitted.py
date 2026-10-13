@@ -84,17 +84,24 @@ def context_for(payload: HookPayload) -> str | None:
     content = response.get("content") if isinstance(response, dict) else None
     if not isinstance(content, str):
         return None
-    places = omitted_places(content, payload.get("tool_input", {}).get("path"))
+    tool_input = payload.get("tool_input")
+    path = tool_input.get("path") if isinstance(tool_input, dict) else None
+    places = omitted_places(content, path)
     if not places:
         return None
     shown = ", ".join(place or "(자리 모름)" for place in places[:SHOWN])
-    rest = f" 외 {len(places) - SHOWN}개" if len(places) > SHOWN else ""
+    rest = (
+        f" 외 {len(places) - SHOWN}개(나머지는 위 결과의 같은 표지 줄)"
+        if len(places) > SHOWN
+        else ""
+    )
     numbered = any(place.rsplit(":", 1)[-1].isdigit() for place in places)
     retry = "" if numbered else " 줄 번호가 없으니 `-n` 을 켜고 다시 부른다."
     return (
         f"{LEAD}. 긴 일치 줄 {len(places)}개가 `{MARKER}` 로만 나왔다: {shown}{rest}."
         " 그 줄은 패턴에 맞았지만 내용은 보이지 않았다. 잔존을 세거나 일치를 하나씩 판정하는"
-        f" 중이면 그 줄을 따로 열어 본다(Read 도구에 그 줄 번호를 offset 으로 준다).{retry}"
+        " 중이면 그 줄을 따로 열어 본다(Read 도구의 offset 에 그 줄 번호, limit 에 1 을"
+        f" 준다).{retry}"
     )
 
 
