@@ -52,9 +52,16 @@ def git(*args: str) -> str:
     return completed.stdout
 
 
-def conflicted_files(merge_sha: str) -> list[str]:
-    """합치기 커밋의 두 부모를 다시 합쳐 충돌 표지가 든 파일을 낸다. 없으면 빈 목록."""
-    parents = git("rev-list", "--parents", "-n", "1", merge_sha).split()[1:]
+def conflicted_files(merge_sha: str) -> list[str] | None:
+    """합치기 커밋의 두 부모를 다시 합쳐 충돌 표지가 든 파일을 낸다. 없으면 빈 목록.
+
+    강제 푸시로 PR head 에서 닿지 않는 커밋이면 받지 못해 None 이다.
+    """
+    try:
+        listed = git("rev-list", "--parents", "-n", "1", merge_sha)
+    except subprocess.CalledProcessError:
+        return None
+    parents = listed.split()[1:]
     if len(parents) != 2:
         return []
     ours, theirs = parents
@@ -115,10 +122,14 @@ def main(argv: list[str]) -> int:
                 kind = "첫 푸시"
             elif headline.get(sha, "").startswith("Merge"):
                 files = conflicted_files(sha)
-                kind = "합치기(충돌)" if files else "합치기(뒤처짐만)"
-                hot.update(files)
-                if files:
+                if files is None:
+                    kind = "합치기(판정 못 함)"
+                elif files:
+                    kind = "합치기(충돌)"
+                    hot.update(files)
                     notes.append(f"{sha[:7]} {' '.join(files)}")
+                else:
+                    kind = "합치기(뒤처짐만)"
             else:
                 kind = "수정"
             seen.add(sha)

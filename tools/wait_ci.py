@@ -9,7 +9,7 @@ Bash 도구의 `run_in_background`로 띄운다. 그 도구는 띄운 명령이 
 구독은 PR을 연 지 5~9분 뒤에 생겨 그 전에 끝난 것은 알림이 없었고(대기열 37의 4회차), 푸시 한 번에
 CI(`verify`)는 2.5~3.5분이었다. 첫 푸시의 완료는 대개 구독 전이다. 앱 지침은 세션이 CI를
 스케줄하거나 `gh`로 폴링하지 말라고 하는데, 이 도구는 그 지침과 어긋난다. 사용자가 자동 대기를
-요청해 들였다(일지 2026-10-13-34). 앱의 감시가 초록 완료로도 깨우게 되면 이 도구를 걷어 낸다.
+요청해 들였다(일지 2026-10-13-38). 앱의 감시가 초록 완료로도 깨우게 되면 이 도구를 걷어 낸다.
 
 CodeRabbit의 상태. 첫 검사가 시작한 지 0~4초 안에 리뷰 없이 `success`와 설명 `Review skipped: …`를
 달고, `@coderabbitai review`를 남기면 `pending`(`Review in progress`)을 거쳐 `success`로 끝난다. PR
@@ -21,7 +21,10 @@ CodeRabbit의 상태. 첫 검사가 시작한 지 0~4초 안에 리뷰 없이 `s
 
 판정. `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`과 그 헤드의 combined
 status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명)를
-`interval`초마다 읽는다.
+`interval`초마다 읽는다. gh 호출 하나는 `GH_TIMEOUT`초에서 끊고 조회 실패로 센다. 멈춘 gh는
+돌아오지 않아 대기의 시간 제한에도 걸리지 않는다(PR 직전 버그 리뷰). StatusContext의 상태는
+설명과 같은 combined status에서 읽는다. 따로 읽은 롤업은 시각이 달라, 롤업의 건너뜀 SUCCESS와
+combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
 - PR 헤드가 로컬 `HEAD`(`--head`로 바꾼다)와 다르면 기다린다. 푸시 직후에는 PR이 옛 헤드를
   가리켜, 옛 헤드의 초록을 보고 끝나면 초록 착시다. 처음부터 다른 채 `head_grace`초가 지나면
   기다릴 수 없다고 끝나고(푸시하지 않았거나 다른 커밋을 푸시했다), 같다가 바뀌면 새 푸시라 곧바로
@@ -29,8 +32,11 @@ status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마�
 - 기대 이름(`EXPECTED`, `--expect`로 바꾼다)이 모두 나타났고, 나타난 검사가 모두 끝났고, 설명이
   `UNREQUESTED_PREFIX`로 시작하는 상태가 없으면 끝이다. 나타난 것만 보면 푸시 직후의 빈 목록이나
   아직 붙지 않은 검사 앞에서 끝났다고 한다. `verify`는 CI 잡을 모으는 잡이다.
-- 나머지가 다 끝났는데 건너뜀 상태가 남았으면 리뷰를 요청하지 않은 것이라 기다리지 않는다.
-  건너뜀에서 `Review in progress`까지는 위 헤드들에서 7~40초였고(같은 프로브), CI는 그보다 길다.
+- 나머지가 다 끝났는데 대기를 띄운 지 `request_grace`초(90)가 지나도 건너뜀 상태가 남았으면 리뷰를
+  요청하지 않은 것이라 기다리지 않는다. 건너뜀에서 `Review in progress`까지는 위 헤드들에서
+  7~40초였고(같은 프로브), 요청하고 곧바로 다시 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있다.
+- 나머지가 다 끝났고 실패가 있으면 리뷰 요청을 기다리지 않고 실패로 끝난다. 고쳐서 다시 푸시할
+  헤드라 요청은 한도만 쓴다.
 - 충돌이면 기다리지 않는다. 충돌한 PR에는 `pull_request` 워크플로가 돌지 않고(일지 2026-10-12-34),
   끝난 검사가 있어도 main을 합쳐야 병합할 수 있다.
 - 끝난 검사의 결과가 `PASSING`이면 통과, 그 밖은 실패다. 같은 이름이 둘이면 끝나지 않은 쪽,
@@ -44,7 +50,10 @@ status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마�
 못 보는 것.
 - 기대 이름 밖에서 늦게 붙는 검사. 다른 검사가 다 끝난 뒤에 나타나면 그 전에 끝났다고 한다.
 - 이름이 바뀐 기대 검사. 끝내 나타나지 않아 시간 초과로 끝나고, 출력에 빠진 이름을 적는다.
-- 요청이 늦게 닿은 리뷰. 나머지 검사가 끝날 때까지 건너뜀 상태면 요청이 없다고 끝난다.
+- 요청이 늦게 닿은 리뷰. 나머지 검사가 끝나고 요청 유예가 지날 때까지 건너뜀 상태면 요청이 없다고
+  끝난다.
+- 충돌은 한 번의 조회로 판정한다. 충돌을 풀고 푸시한 직후의 조회가 옛 헤드 기준의 `CONFLICTING`을
+  읽는지는 재지 않았다. 틀리면 대기를 한 번 더 띄운다.
 - 리뷰 코멘트의 내용과, claude-review가 계정 한도로 빨간 것과 진짜 실패의 차이. 끝났다는 것만
   알리고, 나머지는 깨어난 세션이 읽는다(`docs/constitution/operations.md` 리뷰 파이프라인 3).
 - 같은 이름의 재실행. 실패 뒤 다시 돌아 통과한 검사가 옛 실패와 함께 남으면 실패로 든다.
@@ -75,6 +84,8 @@ PASSING = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
 PENDING_STATES = frozenset({"PENDING", "EXPECTED"})
 # 리뷰를 요청받기 전의 CodeRabbit 상태 설명. 상태는 SUCCESS 라 결과만 보면 끝난 것으로 읽힌다.
 UNREQUESTED_PREFIX = "Review skipped"
+# gh 호출 하나의 시간 제한(초). 멈춘 gh 는 돌아오지 않아 대기의 시간 제한에도 걸리지 않는다.
+GH_TIMEOUT = 60.0
 
 EXIT_PASSED = 0
 EXIT_FAILED = 1
@@ -116,6 +127,7 @@ class Options:
     timeout: float
     interval: float
     head_grace: float
+    request_grace: float
     max_fetch_errors: int
 
 
@@ -151,12 +163,18 @@ def parse_snapshot(payload: Json) -> Snapshot:
             continue
         name, result = _result(check)
         checks[name] = _worse(checks[name], result) if name in checks else result
+    # StatusContext 의 상태는 설명과 같은 combined status 에서 읽는다. 롤업은 따로 읽어 시각이
+    # 달라, 롤업의 건너뜀 SUCCESS 와 combined 의 Review in progress 가 함께 오면 통과로 읽힌다.
     statuses = payload.get("statuses")
-    notes = {
-        _text(status.get("context")): _text(status.get("description"))
-        for status in (statuses if isinstance(statuses, list) else [])
-        if isinstance(status, dict)
-    }
+    notes: dict[str, str] = {}
+    for status in statuses if isinstance(statuses, list) else []:
+        if not isinstance(status, dict):
+            continue
+        name = _text(status.get("context"))
+        state = _text(status.get("state")).upper()
+        notes[name] = _text(status.get("description"))
+        if state:
+            checks[name] = None if state in PENDING_STATES else state
     return Snapshot(
         head=_text(payload.get("headRefOid")),
         conflicting=payload.get("mergeable") == "CONFLICTING",
@@ -201,12 +219,15 @@ def _settle(
     lines = _report(number, snapshot)
     if snapshot.conflicting:
         return EXIT_FAILED, [*lines, "끝: 충돌. main 을 합치고 푸시한 뒤 다시 띄운다"]
-    if verdict.done and verdict.failed:
+    settled = not verdict.pending and not verdict.missing
+    # 실패가 있으면 리뷰 요청을 기다리지 않는다. 고쳐서 다시 푸시할 헤드라 요청은 한도만 쓴다.
+    if settled and verdict.failed:
         return EXIT_FAILED, [*lines, f"끝: 실패 {', '.join(verdict.failed)}"]
     if verdict.done:
         notes = "".join(f". {name}: {note}" for name, note in sorted(snapshot.notes.items()))
         return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}"]
-    if not verdict.pending and not verdict.missing:
+    # 요청 직후에 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있어 요청 유예를 둔다.
+    if settled and elapsed >= options.request_grace:
         names = ", ".join(verdict.unrequested)
         return EXIT_CANNOT_WAIT, [
             *lines,
@@ -273,10 +294,17 @@ def wait(
 def _gh(*args: str) -> Json:
     try:
         completed = subprocess.run(
-            ["gh", *args], capture_output=True, encoding="utf-8", check=False
+            ["gh", *args],
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=GH_TIMEOUT,
         )
-    except FileNotFoundError as error:
-        raise FetchError(f"gh 를 찾지 못했다: {error}") from error
+    except subprocess.TimeoutExpired as error:
+        raise FetchError(f"gh 가 {GH_TIMEOUT:.0f}초 안에 돌아오지 않았다") from error
+    except OSError as error:
+        raise FetchError(f"gh 를 띄우지 못했다: {error}") from error
     if completed.returncode != 0:
         raise FetchError(completed.stderr.strip() or f"gh 종료 코드 {completed.returncode}")
     try:
@@ -323,8 +351,16 @@ def main(argv: list[str] | None = None) -> int:
     expect_arg: list[str] | None = args.expect
     timeout_minutes: float = args.timeout
     interval: float = args.interval
-    if not number.isdigit():
+    # isdigit 만으로는 '²' 같은 비ASCII 숫자가 지나가 gh 실패 세 번 뒤에야 끝난다.
+    if not (number.isascii() and number.isdigit()):
         print(f"끝: PR 번호가 숫자가 아니다: {number}")
+        return EXIT_USAGE
+    if interval <= 0 or timeout_minutes <= 0:
+        print(f"끝: --interval 과 --timeout 은 0보다 커야 한다: {interval}, {timeout_minutes}")
+        return EXIT_USAGE
+    # PR 헤드는 40자 SHA 라 짧은 SHA 는 끝내 같지 않고 헤드 유예 뒤에 끝난다.
+    if head_arg is not None and len(head_arg) != 40:
+        print(f"끝: --head 는 40자 SHA 로 준다: {head_arg}")
         return EXIT_USAGE
     if head_arg is None:
         try:
@@ -337,6 +373,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout=timeout_minutes * 60,
         interval=interval,
         head_grace=120.0,
+        request_grace=90.0,
         max_fetch_errors=3,
     )
     code, lines = wait(number, head_arg, options, fetch_pr, time.sleep, time.monotonic)

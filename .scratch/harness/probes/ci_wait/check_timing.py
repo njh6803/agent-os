@@ -59,7 +59,11 @@ def minutes(start: str, end: str) -> str:
 
 
 def coderabbit_history(head: str) -> list[tuple[str, str, str]]:
-    """헤드의 CodeRabbit 상태를 오래된 것부터 (상태, 설명, 시각)으로 낸다."""
+    """헤드의 CodeRabbit 상태를 오래된 것부터 (상태, 설명, 시각)으로 낸다.
+
+    API 는 최신 것부터 준다. 시각으로 다시 정렬하면 같은 초의 두 상태가 뒤집힐 수 있어 뒤집기만
+    한다.
+    """
     statuses = gh("api", f"repos/{{owner}}/{{repo}}/commits/{head}/statuses")
     rows = [s for s in statuses if isinstance(s, dict)] if isinstance(statuses, list) else []
     history = [
@@ -67,7 +71,7 @@ def coderabbit_history(head: str) -> list[tuple[str, str, str]]:
         for s in rows
         if text(s.get("context")) == "CodeRabbit"
     ]
-    return sorted(history, key=lambda row: row[2])
+    return list(reversed(history))
 
 
 def main(argv: list[str]) -> int:
@@ -106,7 +110,12 @@ def main(argv: list[str]) -> int:
             ends[name] = end
         draft = " draft" if payload.get("isDraft") is True else ""
         print(f"#{number}{draft} 첫 시작 {start[11:19] or '…'} {' '.join(cells)}")
-        history = coderabbit_history(text(payload.get("headRefOid")))
+        try:
+            history = coderabbit_history(text(payload.get("headRefOid")))
+        except RuntimeError as error:
+            print(f"    CodeRabbit 상태 이력을 읽지 못함: {error}")
+            unread.append(number)
+            continue
         print("    CodeRabbit " + " → ".join(f"{s}:{d}@{t[11:19]}" for s, d, t in history))
         if not history:
             missing.append(number)

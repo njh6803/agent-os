@@ -3,13 +3,14 @@
 검사 조각은 `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`의 실제 모양을 따른다
 (PR #215·#219, 2026-10-13). 진행 중인 CheckRun도 `completedAt`이 `0001-01-01T00:00:00Z`로 차 있다.
 `statuses`는 `fetch_pr`가 헤드의 combined
-status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`) 에서 옮겨 붙이는 칸이고, 설명 문구는 PR
-#196~#220의 CodeRabbit 상태 이력에 나온 그대로다
-(`.scratch/harness/probes/ci_wait/check_timing.py`).
+status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`) 에서 옮겨 붙이는 칸이다. 항목마다
+`context`, 소문자 `state`, `description`이 있다(PR #220에서 봤다). 설명 문구는 PR #196~#220의
+CodeRabbit 상태 이력에 나온 그대로다 (`.scratch/harness/probes/ci_wait/check_timing.py`).
 """
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 
 import pytest
@@ -19,9 +20,11 @@ from tools.wait_ci import (
     EXIT_PASSED,
     EXIT_TIMED_OUT,
     EXIT_USAGE,
+    GH_TIMEOUT,
     FetchError,
     Json,
     Options,
+    fetch_pr,
     judge,
     main,
     parse_snapshot,
@@ -52,9 +55,15 @@ def context(name: str, state: str) -> Json:
     return {"__typename": "StatusContext", "context": name, "state": state}
 
 
-def coderabbit(state: str = "SUCCESS", description: str = COMPLETED) -> list[Json]:
-    """롤업의 CodeRabbit 칸과 combined status 의 그 설명을 함께 낸다."""
-    return [context("CodeRabbit", state), {"context": "CodeRabbit", "description": description}]
+def coderabbit(
+    state: str = "SUCCESS", description: str = COMPLETED, rollup_state: str | None = None
+) -> list[Json]:
+    """롤업의 CodeRabbit 칸과 combined status 의 그 항목을 함께 낸다.
+
+    rollup_state 를 주면 롤업만 그 상태로 둔다. 두 조회가 다른 시각의 것일 때다.
+    """
+    combined: Json = {"context": "CodeRabbit", "state": state.lower(), "description": description}
+    return [context("CodeRabbit", rollup_state or state), combined]
 
 
 def payload(*checks: Json, head: str = HEAD, mergeable: str = "MERGEABLE") -> Json:
@@ -113,6 +122,20 @@ def test_리뷰를_요청하기_전의_건너뜀_상태는_SUCCESS여도_끝나�
     assert not verdict.done
     assert verdict.unrequested == ("CodeRabbit",)
     assert verdict.pending == ()
+
+
+def test_StatusContext의_상태는_설명과_같은_combined_status에서_읽는다() -> None:
+    # 롤업과 combined status 는 따로 읽어 시각이 다르다. 롤업이 건너뜀의 SUCCESS 를 보는 사이
+    # combined status 가 이미 진행 중이면, 롤업을 믿으면 통과로 끝난다(PR 직전 버그 리뷰).
+    snapshot = parse_snapshot(
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit(state="PENDING", description="Review in progress", rollup_state="SUCCESS"),
+        )
+    )
+    assert snapshot.checks["CodeRabbit"] is None
+    assert not judge(snapshot, EXPECTED).done
 
 
 @pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
@@ -177,6 +200,7 @@ def options(**overrides: float) -> Options:
         timeout=overrides.get("timeout", 600.0),
         interval=overrides.get("interval", 30.0),
         head_grace=overrides.get("head_grace", 120.0),
+        request_grace=overrides.get("request_grace", 60.0),
         max_fetch_errors=3,
     )
 
@@ -202,7 +226,7 @@ def test_끝나지_않았으면_간격만큼_자고_다시_본다() -> None:
 
 
 def test_한도에_걸린_리뷰는_통과로_끝나되_끝_줄에_적는다() -> None:
-    # PR #196~#220의 마지막 헤드 스물셋 가운데 스물하나가 요청 뒤 몇 초 만에 이 상태였다.
+    # PR #196~#219의 마지막 헤드에서 요청 스물둘 가운데 스물하나가 몇 초 만에 이 상태였다.
     script = Script(green(description=RATE_LIMITED))
     code, out = waited(script)
     assert code == EXIT_PASSED
@@ -228,12 +252,44 @@ def test_리뷰가_요청되면_건너뜀에서_진행을_거쳐_끝날_때까�
     assert script.sleeps == [30.0, 30.0]
 
 
-def test_나머지가_끝났는데_리뷰가_요청되지_않았으면_기다릴_수_없다() -> None:
+def test_나머지가_끝났는데_리뷰가_요청되지_않았으면_요청_유예_뒤에_기다릴_수_없다() -> None:
     # PR #208·#214의 마지막 헤드는 요청이 없어 건너뜀 상태에 머물렀다.
     script = Script(green(description=SKIPPED))
     code, out = waited(script)
     assert code == EXIT_CANNOT_WAIT
     assert "@coderabbitai review" in out.splitlines()[-1]
+    assert script.sleeps == [30.0, 30.0]
+
+
+def test_요청_직후에_다시_띄우면_건너뜀이_진행으로_바뀌기를_유예_안에서_기다린다() -> None:
+    # 건너뜀에서 Review in progress 까지 7~40초였다. 요청하고 곧바로 띄운 대기의 첫 조회는
+    # 아직 건너뜀을 볼 수 있다(PR 직전 버그 리뷰).
+    script = Script(
+        green(description=SKIPPED),
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit(state="PENDING", description="Review in progress"),
+        ),
+        green(),
+    )
+    code, _ = waited(script)
+    assert code == EXIT_PASSED
+    assert script.sleeps == [30.0, 30.0]
+
+
+def test_실패가_있으면_리뷰가_요청되지_않았어도_실패로_곧바로_끝난다() -> None:
+    # 고쳐서 다시 푸시할 헤드에 리뷰를 요청하면 한도만 쓴다.
+    script = Script(
+        payload(
+            run("verify", conclusion="FAILURE"),
+            run("claude-review"),
+            *coderabbit(description=SKIPPED),
+        )
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1].startswith("끝: 실패 verify")
     assert script.sleeps == []
 
 
@@ -343,9 +399,48 @@ def test_gh가_연달아_실패하면_기다릴_수_없다() -> None:
     assert len(script.fetched) == 3
 
 
-def test_PR_번호가_숫자가_아니면_끝_줄을_찍고_2로_끝난다(
-    capsys: pytest.CaptureFixture[str],
+def test_gh_호출이_멈추면_시간_제한으로_끊고_조회_실패로_센다(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    code = main(["abc"])
+    # 멈춘 gh 는 subprocess.run 에서 돌아오지 않아 대기의 시간 제한에도 걸리지 않는다
+    # (PR 직전 버그 리뷰). 호출 하나에 시간 제한을 두고, 넘기면 연속 실패로 센다.
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, GH_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+    with pytest.raises(FetchError):
+        fetch_pr("221")
+    assert seen == [GH_TIMEOUT]
+
+
+def test_gh를_띄우지_못하면_조회_실패로_센다(monkeypatch: pytest.MonkeyPatch) -> None:
+    def denied(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise PermissionError(args[0])
+
+    monkeypatch.setattr(subprocess, "run", denied)
+    with pytest.raises(FetchError):
+        fetch_pr("221")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["abc"],
+        ["²"],  # isdigit 은 참이지만 gh 가 받지 못한다
+        ["221", "--interval", "0"],
+        ["221", "--head", "abc1234"],  # 짧은 SHA 는 PR 헤드와 끝내 같지 않다
+    ],
+)
+def test_인자가_잘못되면_gh를_부르기_전에_끝_줄을_찍고_2로_끝난다(
+    argv: list[str], capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def forbidden(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise AssertionError(f"부르지 않아야 한다: {args}")
+
+    monkeypatch.setattr(subprocess, "run", forbidden)
+    code = main(argv)
     assert code == EXIT_USAGE
     assert capsys.readouterr().out.splitlines()[-1].startswith("끝:")

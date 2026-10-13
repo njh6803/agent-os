@@ -50,7 +50,102 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''    if not verdict.pending and not verdict.missing:'''
+old = '''    if settled and elapsed >= options.request_grace:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "요청 유예 없이 건너뜀을 곧바로 요청 없음으로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청_직후에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if settled and elapsed >= options.request_grace:'''
+new = '''    if settled:'''
+
+[[mutation]]
+name = "실패가 있어도 리뷰 요청을 먼저 기다린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청되지_않았어도_실패로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if settled and verdict.failed:'''
+new = '''    if verdict.done and verdict.failed:'''
+
+[[mutation]]
+name = "StatusContext 의 상태를 롤업에서만 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "같은_combined_status에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if state:
+            checks[name] = None if state in PENDING_STATES else state'''
+new = '''        if False:
+            checks[name] = None if state in PENDING_STATES else state'''
+
+[[mutation]]
+name = "gh 호출에 시간 제한을 두지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "호출이_멈추면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            timeout=GH_TIMEOUT,
+'''
+new = ''''''
+
+[[mutation]]
+name = "멈춘 gh 를 조회 실패로 바꾸지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "호출이_멈추면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    except subprocess.TimeoutExpired as error:'''
+new = '''    except ZeroDivisionError as error:'''
+
+[[mutation]]
+name = "gh 를 못 찾은 것만 조회 실패로 바꾼다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "띄우지_못하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    except OSError as error:
+        raise FetchError'''
+new = '''    except FileNotFoundError as error:
+        raise FetchError'''
+
+[[mutation]]
+name = "비ASCII 숫자를 PR 번호로 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if not (number.isascii() and number.isdigit()):'''
+new = '''    if not number.isdigit():'''
+
+[[mutation]]
+name = "0 이하의 간격과 시간 제한을 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if interval <= 0 or timeout_minutes <= 0:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "짧은 SHA 를 --head 로 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if head_arg is not None and len(head_arg) != 40:'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -167,7 +262,7 @@ new = '''        return EXIT_PASSED, [*lines, f"모두 통과{notes}"]'''
 
 [[mutation]]
 name = "숫자 아닌 PR 번호를 stderr 로만 알린다"
-tests = ["tests/tools/test_wait_ci.py", "-k", "숫자가_아니면"]
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
 expect = "red"
 
 [[mutation.edit]]
