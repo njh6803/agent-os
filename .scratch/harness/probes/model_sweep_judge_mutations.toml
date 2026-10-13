@@ -1,0 +1,497 @@
+# tools/model_sweep_judge.py 의 판정 조건과 고정값을 하나씩 비튼 변이. 모두 빨강을 기대한다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/model_sweep_judge_mutations.toml
+
+# --- 표지 모집단 ---
+
+[[mutation]]
+name = "종류를 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''
+        row.get("kind") == kind
+        and directive(row)
+'''
+new = '''
+        directive(row)
+'''
+
+[[mutation]]
+name = "지시문을 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''
+        and directive(row)
+        and model is not None
+'''
+new = '''
+        and model is not None
+'''
+
+[[mutation]]
+name = "표지를 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and SWEEP_MARK in model
+'''
+new = '''        and model != ""
+'''
+
+[[mutation]]
+name = "끝에 시작한 트리거를 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and first < END_AT
+'''
+new = '''        and first <= END_AT
+'''
+
+[[mutation]]
+name = "기한에 병합된 것을 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and merged < JUDGE_AT
+'''
+new = '''        and merged <= JUDGE_AT
+'''
+
+[[mutation]]
+name = "main 밖을 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and row.get("base_ref") == "main"
+'''
+new = ""
+
+[[mutation]]
+name = "귀속 응답 없는 것을 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and num(row, "msgs_main") + num(row, "msgs_sub") > 0
+'''
+new = ""
+
+[[mutation]]
+name = "비용 없는 것을 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        and num(row, "cost") > 0
+    )
+'''
+new = '''    )
+'''
+
+# --- 배정과 표지 ---
+
+[[mutation]]
+name = "PR 머리로 배정"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        assigned = tool.arm(branch_line)
+'''
+new = '''        assigned = tool.arm(str(r.get("branch")))
+'''
+
+[[mutation]]
+name = "실제로 돈 모델로 배정"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        assigned = tool.arm(branch_line)
+'''
+new = '''        actual = (a for a, rec in ARM_RECORD.items() if rec == r.get("top_model_effort"))
+        assigned = next(actual, tool.arm(branch_line))
+'''
+
+[[mutation]]
+name = "브랜치 줄 없는 지시문을 세지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''
+            no_branch += 1
+            continue
+'''
+new = '''
+            continue
+'''
+
+[[mutation]]
+name = "이름이 다른 것을 세지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if branch_line != r.get("branch"):
+'''
+new = '''        if branch_line == r.get("branch") and False:
+'''
+
+[[mutation]]
+name = "모델 줄이 다른 것을 세지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if not (line_of(r, "model_line") or "").startswith(assigned):
+'''
+new = '''        if not (line_of(r, "model_line") or "").startswith("Opus"):
+'''
+
+[[mutation]]
+name = "스윕 시작에 열린 PR을 이르다고 셈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if created is not None and created < SWEEP_START_AT:
+'''
+new = '''        if created is not None and created <= SWEEP_START_AT:
+'''
+
+[[mutation]]
+name = "닫힌 PR을 그 밖에 빠짐으로"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        elif r.get("state") != "MERGED":
+'''
+new = '''        elif r.get("state") == "OPEN":
+'''
+
+# --- 판정하지 않는 조건 ---
+
+[[mutation]]
+name = "n_k 하나 모자람을 들임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if n < N_K[kind]:
+'''
+new = '''        if n < N_K[kind] - 1:
+'''
+
+[[mutation]]
+name = "몫 80퍼센트를 막음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if share < TOP_SHARE_MIN:
+'''
+new = '''        if share <= TOP_SHARE_MIN:
+'''
+
+[[mutation]]
+name = "멈춘 종류를 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    if kind not in swept:
+'''
+new = '''    if kind not in swept and False:
+'''
+
+[[mutation]]
+name = "소급 측정 표지를 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    reasons.extend(f"소급 측정의 판정하지 않는 조건에 걸렸다: {name}" for name in failed_markers)
+'''
+new = ""
+
+# --- 주된 판정과 되풀이 ---
+
+[[mutation]]
+name = "구간이 아니라 점 추정으로 내림"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    ok = hi < 1 and rework_c <= rework_q3 and int_c <= int_b + 1
+'''
+new = '''    ok = ratio < 1 and rework_c <= rework_q3 and int_c <= int_b + 1
+'''
+
+[[mutation]]
+name = "재작업 3사분위와 같으면 막음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    ok = hi < 1 and rework_c <= rework_q3 and int_c <= int_b + 1
+'''
+new = '''    ok = hi < 1 and rework_c < rework_q3 and int_c <= int_b + 1
+'''
+
+[[mutation]]
+name = "개입에 1을 더하지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    ok = hi < 1 and rework_c <= rework_q3 and int_c <= int_b + 1
+'''
+new = '''    ok = hi < 1 and rework_c <= rework_q3 and int_c <= int_b
+'''
+
+[[mutation]]
+name = "3사분위 대신 중앙값"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    return statistics.quantiles(values, n=4, method="inclusive")[2]
+'''
+new = '''    return statistics.quantiles(values, n=4, method="inclusive")[1]
+'''
+
+[[mutation]]
+name = "기준 갈래가 하나면 3사분위를 셀 수 없음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        return values[0] if values else math.nan
+'''
+new = '''        return math.nan
+'''
+
+[[mutation]]
+name = "비용 0을 빼지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    cc = [cost(r) for r in comp if cost(r) > 0]
+'''
+new = '''    cc = [cost(r) for r in comp if cost(r) >= 0]
+'''
+
+[[mutation]]
+name = "시드를 고정하지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+repeat = 3
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    rng = random.Random(SEED)
+'''
+new = '''    rng = random.Random()
+'''
+
+[[mutation]]
+name = "백분위 자리를 바꿈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    return s[int(0.05 * (len(s) - 1))], s[int(0.95 * (len(s) - 1))]
+'''
+new = '''    return s[int(0.025 * (len(s) - 1))], s[int(0.975 * (len(s) - 1))]
+'''
+
+[[mutation]]
+name = "기준 갈래를 다시 뽑지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        gb = geomean([rng.choice(base) for _ in base])
+'''
+new = '''        gb = geomean(base)
+'''
+
+[[mutation]]
+name = "갈림을 거꾸로 붙임"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''results[1:], strict=True) if ok != results[0]'''
+new = '''results[1:], strict=True) if ok == results[0]'''
+
+[[mutation]]
+name = "본 세션 비용 되풀이가 합 비용을 셈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    ("되풀이: 본 세션 비용만", main_cost, interventions, "본 세션 비용만으로 셈한 판정"),
+'''
+new = '''    ("되풀이: 본 세션 비용만", total_cost, interventions, "본 세션 비용만으로 셈한 판정"),
+'''
+
+[[mutation]]
+name = "판정하지 않는 조건의 줄에 탐색을 붙이지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        return KindJudgment(split, reasons, [EXPLORATORY + line for line in runs], NO_JUDGMENT)
+'''
+new = '''        return KindJudgment(split, reasons, runs, NO_JUDGMENT)
+'''
+
+[[mutation]]
+name = "판정하지 않는 조건에도 판정을 냄"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        return KindJudgment(split, reasons, [EXPLORATORY + line for line in runs], NO_JUDGMENT)
+'''
+new = '''        return KindJudgment(split, reasons, [EXPLORATORY + line for line in runs], verdict)
+'''
+
+# --- 입력의 조건 ---
+
+[[mutation]]
+name = "since를 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    if meta.get("since") != SWEEP_START:
+'''
+new = '''    if meta.get("since") is None:
+'''
+
+[[mutation]]
+name = "today 짝을 한쪽만 봄"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    if (today is not None) != (meta.get("synthetic") is True):
+'''
+new = '''    if today is not None and meta.get("synthetic") is not True:
+'''
+
+[[mutation]]
+name = "today를 판정 시점에 쓰지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    day = today if today is not None else now
+'''
+new = '''    day = now
+'''
+
+[[mutation]]
+name = "판정 시점을 끝으로"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    if datetime.combine(day, time(), UTC) < JUDGE_AT:
+'''
+new = '''    if datetime.combine(day, time(), UTC) < END_AT:
+'''
+
+[[mutation]]
+name = "사전 등록의 종류인데 접두사가 없는 행을 넘김"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''        if (mine is not None or listed) and mine != collected:
+'''
+new = '''        if mine is not None and mine != collected:
+'''
+
+[[mutation]]
+name = "도구의 SWEPT를 대 보지 않음"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''    problems = [f"도구의 {p}" for p in tool.sweep_problems(swept, registered)]
+'''
+new = '''    problems: list[str] = []
+'''
+
+# --- 고정값 ---
+
+[[mutation]]
+name = "n_k를 바꿈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''N_K = {"구현": 27, "하네스": 25}'''
+new = '''N_K = {"구현": 26, "하네스": 25}'''
+
+[[mutation]]
+name = "비교 갈래의 기록 레벨을 바꿈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''tool.COMPARISON: "claude-opus-5-5/medium"}'''
+new = '''tool.COMPARISON: "claude-opus-5-5/high"}'''
+
+[[mutation]]
+name = "부트스트랩 횟수를 바꿈"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''SEED, RESAMPLES = 0, 2000'''
+new = '''SEED, RESAMPLES = 0, 1000'''
+
+[[mutation]]
+name = "판정 시점을 하루 당김"
+tests = ["tests/tools/test_model_sweep_judge.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep_judge.py"
+old = '''JUDGE_AT = END_AT + timedelta(days=7)'''
+new = '''JUDGE_AT = END_AT + timedelta(days=6)'''
+
+# --- tools/model_sweep.py ---
+
+[[mutation]]
+name = "끝 표지 없이도 절을 냄"
+tests = ["tests/tools/test_model_sweep.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep.py"
+old = '''    if PREREG_START not in text or PREREG_END not in text:
+'''
+new = '''    if PREREG_START not in text:
+'''
+
+[[mutation]]
+name = "어긋난 종류의 이름을 빼고 알림"
+tests = ["tests/tools/test_model_sweep.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/model_sweep.py"
+old = '''        f"SWEPT 의 {name}{prefixes} 이 사전 등록의 {registered.get(name)} 과 다르다"'''
+new = '''        f"SWEPT 의 {prefixes} 이 사전 등록의 {registered.get(name)} 과 다르다"'''

@@ -1,0 +1,28 @@
+# next-session 1단계의 봇 회차(검사가 pending이면 tools/wait_ci.py 를 백그라운드로 띄운다, 일지 2026-10-13-38)가 새
+# 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 두 카나리아가
+# 모두 없다(그 판은 pending 이면 "끝나면 알려 달라"는 한 줄을 남겼다). 병합 뒤에 다시 돌리려면 옛 판을
+# `git worktree add --detach` 로 꺼내 대조군의 checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 실험군 `2ba0509`, 대조군 주 체크아웃 `d280aa6`, 일지
+#   2026-10-13-38). 대조군은 1에 "없음"과 옛 문장("끝나면 알려 달라"), 2에 "없음"을 답했다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_ci_wait.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 둘을 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+1. 순서의 1단계 아래 "봇 회차" 항목에서, PR 상태를 한 번 읽었는데 pending일 때 띄우는 명령을 백틱 안의 글자 그대로
+   옮겨라. 그런 명령이 없으면 "없음"이라고만 답하라.
+2. 같은 항목에서, 그 명령이 끝날 때 찍는 통과 줄이 CodeRabbit에 대해 함께 적는 두 상태의 설명 문구를 백틱 안의 글자
+   그대로 옮겨라. 그런 문구가 없으면 "없음"이라고만 답하라.
+'''
+expect = ["uv run python tools/wait_ci.py <번호>", "Review rate limited"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
