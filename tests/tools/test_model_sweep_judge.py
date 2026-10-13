@@ -27,6 +27,7 @@ from tools.model_sweep_judge import (
     OTHER_DROP,
     RENAMED,
     RESAMPLES,
+    ROUNDED_OVER,
     SEED,
     SWEEP_MARK,
     SWEEP_START,
@@ -37,6 +38,7 @@ from tools.model_sweep_judge import (
     Row,
     blocking_reasons,
     boot_geomean_ratio,
+    failed_names,
     input_problems,
     interventions,
     judge_kind,
@@ -278,6 +280,42 @@ def test_소급_측정의_표지가_문턱을_넘으면_그_표지를_들어_판
     assert blocking_reasons("구현", s, ["usage 없는 응답의 몫"], SWEPT) == [
         "소급 측정의 판정하지 않는 조건에 걸렸다: usage 없는 응답의 몫"
     ]
+
+
+def _표지(name: str, value: str, limit: str) -> list[str]:
+    """`analyze.markers`의 표 한 행(이름, 소수 셋째 자리 값, 문턱, 넘는가)."""
+    return [name, value, limit, "넘는다" if float(value) > float(limit) else "안"]
+
+
+def test_값이_문턱을_넘은_표지의_이름만_고른다() -> None:
+    rows = [
+        _표지("usage 없는 응답의 몫", "0.020", "0.01"),
+        _표지("귀속되지 않은 비용의 몫", "0.100", "0.2"),
+        _표지("귀속된 응답이 없는 병합 PR의 몫", "0.300", "0.2"),
+    ]
+    assert failed_names(rows) == ["usage 없는 응답의 몫", "귀속된 응답이 없는 병합 PR의 몫"]
+
+
+def test_값이_문턱과_같은_표지는_통과다() -> None:
+    rows = [
+        _표지("귀속되지 않은 비용의 몫", "0.200", "0.2"),
+        _표지("usage 없는 응답의 몫", "0.011", "0.01"),
+    ]
+    assert failed_names(rows) == ["usage 없는 응답의 몫"]
+
+
+def test_값이_NaN인_표지는_견줄_수_없어_든다() -> None:
+    rows = [
+        _표지("귀속되지 않은 비용의 몫", "0.100", "0.2"),
+        ["단가 대조에서 두 끝 밖인 쌍의 몫", "nan", "0.05", "안"],
+    ]
+    assert failed_names(rows) == ["단가 대조에서 두 끝 밖인 쌍의 몫"]
+
+
+def test_반올림으로_이름을_못_고르면_그_뜻을_넘긴다() -> None:
+    # 문턱 0.01 바로 위의 0.0104는 표에 0.010으로 찍혀 값 칸으로는 넘지 않는다
+    rows = [_표지("usage 없는 응답의 몫", "0.010", "0.01")]
+    assert failed_names(rows) == [ROUNDED_OVER]
 
 
 # --- 주된 판정과 되풀이 ---------------------------------------------------------------------------
