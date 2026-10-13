@@ -43,7 +43,7 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 판정 스크립트를 실행하는 신뢰 경계. 커밋하는 저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를
 권한 확인 전에 띄운다. PR 직전 보안 리뷰가 후보로 냈고 거르기에서 하드닝 부족으로 판정됐다(그
 저장소를 고르고 거기서 `-F` 커밋을 제안해야 하고, 그런 저장소에서는 테스트 등으로 이미 그 코드를
-돌린다). 일지 2026-10-13-37.
+돌린다). 일지 2026-10-13-43.
 """
 
 from __future__ import annotations
@@ -77,17 +77,16 @@ _LONG_UNJUDGED = frozenset(
 )
 # here-string `<<<` 은 heredoc 이 아니다. tools/hook_bash_cd_outside.py 와 같은 모양이다.
 _HEREDOC_OPENER = re.compile(r"(?<!<)<<(?!<)(-?)\s*\\?(['\"]?)([^\s;&|<>()'\"\\]+)\2")
+# 값을 다음 낱말로 받는 긴 옵션. 값을 받아도 `_LONG_UNJUDGED` 에 든 것(`--fixup` 등)은 거기서 먼저
+# 판정을 접으므로 여기 두지 않는다.
 _LONG_WITH_VALUE = frozenset(
     {
         "--message",
         "--reuse-message",
         "--reedit-message",
-        "--fixup",
-        "--squash",
         "--author",
         "--date",
         "--template",
-        "--cleanup",
         "--trailer",
         "--pathspec-from-file",
     }

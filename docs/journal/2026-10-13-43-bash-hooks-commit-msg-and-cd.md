@@ -1,9 +1,9 @@
-# 2026-10-13 (37) Bash 훅 둘: 커밋 메시지 제목을 먼저 대 보고, 하위 폴더 cd 를 알린다
+# 2026-10-13 (43) Bash 훅 둘: 커밋 메시지 제목을 먼저 대 보고, 하위 폴더 cd 를 알린다
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222·225를 한 PR로 닫는다. 둘 다 `tools/`의 Bash PreToolUse 훅이다.
 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
 `EnterWorktree(name=bash-hooks-commit-msg-and-cd)`로 들어가 `origin/main`(`d280aa6`)에서
-`chore/bash-hooks-commit-msg-and-cd`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 37이다.
+`chore/bash-hooks-commit-msg-and-cd`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 37이었고, 병합 직전에 main이 움직여 43으로 옮겼다.
 
 > 사용자: "대기열 222·225를 한 PR로 반영한다(tools/의 Bash PreToolUse 훅: 커밋 메시지 파일의 제목을 commit-msg 판정으로 먼저 대 보기, 체크아웃 안 하위 폴더로 옮기는 cd도 알리기). 두 행의 "어디로" 칸이 원천이다"
 
@@ -74,6 +74,16 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
   공격자가 이 개인 훅을 알고 그 저장소에서 `-F` 커밋이 제안되어야 하며, 그런 저장소에서는 이미 테스트 등으로 그 코드를 돌린다는
   것이다. 신뢰도 8 미만이라 보고에서 뺐다. 고치지 않았고, 신뢰 경계로 훅 독스트링과 PR 본문의 남긴 위험에 적었다.
 
+## PR 봇
+
+[PR #225](https://github.com/njh6803/agent-os/pull/225)의 첫 푸시(`a649927`)에서 CI 여섯이 모두 초록이었다. CodeRabbit은 무료 리뷰
+한도에 걸려 리뷰하지 않았다(`@coderabbitai review`도 한도로 거절). claude-review의 첫 회차는 Minor 하나와 Nit 둘을 냈다.
+
+- Nit(`_LONG_WITH_VALUE`의 `--fixup`·`--squash`·`--cleanup`은 `_LONG_UNJUDGED`가 먼저 접어 닿지 않는다): 뺐다.
+- Minor(테스트가 `decision`이 아니라 투영 둘을 잰다): 보류했다. 투영은 `decision`의 결과를 고르는 한 줄이고, `main`의 실제 출력은
+  `tools/run_hooks.py`의 cd 훅 사례 여섯이 잰다.
+- Nit(`deny_reason`의 추상화 수준이 섞였다): 보류했다. 리뷰어도 아직 읽을 만하다고 했다.
+
 ## 바꾼 것
 
 - `tools/hook_bash_commit_msg.py`(새 훅)와 `tests/tools/test_hook_bash_commit_msg.py`.
@@ -102,3 +112,32 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
   독스트링의 문장)를 경고해 따옴표를 뗐다.
 - 새 훅이 실제 세션에서 도는지는 워크트리 세션의 훅으로 볼 수 없다(주 체크아웃의 파일이 돈다, `.claude/rules/tools.md`). 병합 뒤
   주 체크아웃을 당긴 세션에서 처음 돈다.
+- 둘째 커밋 `a649927`의 pre-commit: 모두 Passed(pytest 364.2초). PR의 CI 여섯도 초록이었다.
+
+## 회고
+
+후보 일곱, 승인 둘, 기각 다섯, 넘김 없음.
+
+1. **승인, 대기열 239(새로).** 막는 훅이 하류 판정(git, commit-msg 훅)을 앞당길 뿐이라고 첫 판 독스트링에 적으면서, 하류가 입력을
+   바꾸거나 판정을 건너뛰는 길을 나열하지 않았다. 셀프 리뷰가 여섯, PR 직전 리뷰가 다섯 더 찾았다. 사건이 있고, 행동이 일어나는
+   자리(`.claude/rules/tools.md`의 막는 훅 항목)에 더하는 문장이며, PR 하나로 되돌릴 수 있다. 이 PR의 범위를 넓히지 않으려고
+   대기열에 두었다.
+2. **승인, 대기열 223에 3회차.** 시간 프로브 `commit_msg_hook/time_hook.py`의 첫 판이 출력의 표지를 단언하지 않아, 래퍼가 훅을
+   못 찾고 지나가도 수가 찍혔다(셀프 리뷰 두 축이 잡았다). 223과 같은 모양이다. 프로브 규칙이 `docs/agents/issue-tracker.md`에만
+   있어 프로브를 쓰는 자리에 실리지 않는다.
+3. **기각.** 도구 호출 사이 문장을 영어로 쓴 것(여러 번)은 `hook_midturn_korean`이 잡았다.
+4. **기각.** 일지에 지운 첫 판 독스트링의 문장을 따옴표로 옮긴 것은 인용 대조가 잡았다.
+5. **기각.** 마지막 `-F`만 보게 바꾼 뒤 `-m` 변이를 가린 약한 시험 입력은 `tools/mutate.py`가 잡았다.
+6. **기각.** `$(git merge-base …)`를 든 복합 git 명령이 워크트리 가드에 거부됐다. `CLAUDE.md` 환경 함정에 이미 있다.
+7. **기각.** 84줄 heredoc으로 변이 표에 덧붙이려다 `hook_bash_heredoc`이 막았다. 훅이 설계대로 잡았다.
+
+## 다음
+
+- **이 PR 뒤의 다음 작업은 대기열 223이다.** 223이 이 PR에서 3회차가 되어 결정표의 chore 배치 조건을 채운다. 열린 항목 가운데
+  회차 3 이상은 189·217·223이고, 189와 217은 "어디로" 칸이 먼저 잴 것을 요구한다.
+- **그다음 후보는 훅 묶음이다.** 130·145·162·216은 모두 `tools/hook_payloads.toml`·`tools/run_hooks.py` 둘레라 "대상 파일이 같은
+  항목 셋 이상" 조건을 채운다. 72도 같은 표를 건드리지만, 행이 "가르는 법은 반영 때 정한다"는 설계 몫을 남겨 그 묶음에서 뺐다.
+- **새 훅 `hook_bash_commit_msg`는 병합 뒤 주 체크아웃을 당긴 세션에서 처음 돈다.** 그 세션이 `git commit -F`로 커밋할 때 막혀야 할
+  제목에서 막히는지, 지나가야 할 커밋을 막지 않는지 처음 볼 수 있다. 막히면 그 명령의 모양을 일지에 남긴다.
+- **claude-review가 보류된 지적 둘**(cd 훅 테스트가 투영을 재는 것, `deny_reason` 분리)은 PR 코멘트에 이유를 남겼다. 다음에 두
+  훅을 고칠 때 함께 본다.
