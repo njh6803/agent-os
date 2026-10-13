@@ -1135,10 +1135,24 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-        rest = rest.replace(_flat(canary), " ")
+        rest = rest.replace(canary, " ")
 '''
 new = '''
         rest = rest
+'''
+
+[[mutation]]
+name = "카나리아를 긴 것부터 지우지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    for canary in sorted((_flat(c) for c in spec.expect), key=len, reverse=True):
+'''
+new = '''
+    for canary in (_flat(c) for c in spec.expect):
 '''
 
 [[mutation]]
@@ -1223,6 +1237,20 @@ old = '''
 '''
 new = '''
         return ["  답:"]
+'''
+
+[[mutation]]
+name = "공백뿐인 답을 비었다고 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if not facts.answer.strip():
+'''
+new = '''
+    if not lines:
 '''
 
 [[mutation]]

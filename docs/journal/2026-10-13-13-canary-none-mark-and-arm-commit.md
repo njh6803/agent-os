@@ -51,8 +51,8 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 212
 ## 바꾼 것
 
 - `tools/canary.py`: `mixed_none`, `head_commit`, `_Verdict`, 판정 줄·답·`갈래:` 줄·집계의 출력, 독스트링의 판정·출력·못 보는 것.
-- `tests/tools/test_canary.py`: 섞임 판정 여섯, 출력 넷, 커밋 셋, `head_commit` 넷. 실패 회차 테스트에 답 줄 단언 하나.
-- `.scratch/harness/probes/canary_mutations.toml`: 변이 스물셋(212 열하나, 219 열둘)을 더해 아흔일곱. 프로브 README의 그 행.
+- `tests/tools/test_canary.py`: 섞임 판정 일곱, 출력 다섯, 커밋 셋, `head_commit` 넷. 실패 회차 테스트에 답 줄 단언 하나.
+- `.scratch/harness/probes/canary_mutations.toml`: 변이 스물다섯(212 열셋, 219 열둘)을 더해 아흔아홉. 프로브 README의 그 행.
 - `docs/constitution/operations.md`: 카나리아 항목의 두 구절. `docs/constitution/README.md`: 3.0.31.
 - `.scratch/retro-queue.md`: 212·219를 닫았다.
 
@@ -96,4 +96,24 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 212
   회차마다 커밋을 읽지 않는다는 구조의 서술이라, 회차를 늘려도 단언할 출력이 같다.
 
 다시 돌린 것: 테스트 167 통과, ruff, pyright. 테스트를 고쳤으므로 변이 표 전체를 다시 돌려 아흔일곱 모두 기대대로였다(새
-둘과 원문을 고친 둘도 빨강). 손으로 치는 게이트 다섯은 커밋의 pre-commit으로 갈음한다.
+둘과 원문을 고친 둘도 빨강). 손으로 치는 게이트 다섯은 커밋 `39d579f`의 pre-commit이 모두 통과해 갈음했다(`Skipped` 없음,
+pytest 368.1초, web-verify 218.4초).
+
+## PR 직전 보안·버그·성능 축
+
+커밋 뒤 origin/main(#209·#210·#205)을 보통의 merge로 들였다. 충돌은 없었고, 합친 커밋들이 바꾼 스킬은 없었다. CodeRabbit
+CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assigned`) 대체 둘을 돌렸다(`docs/constitution/operations.md` 리뷰
+파이프라인).
+
+- 보안(`/security-review`, 합친 뒤): 지적 없음. 서브태스크가 `head_commit`의 인자 리스트(셸 없음, `-C` 뒤의 절대 경로),
+  새로 찍는 출력(답은 이전부터 원본에 저장됐다), 파싱(바뀌지 않았다)을 보고 후보를 내지 않아 오탐 거르기는 돌지 않았다.
+- 버그·성능(`bug-perf-review`, 마지막 표지 `[호출 36]`): 유효 셋, 모두 Minor. 셋 다 고치는 값이 작아 PR을 열기 전에 고쳤다.
+  - 고쳤다: `mixed_none`이 카나리아를 명세 순서대로 지워, 짧은 카나리아가 긴 카나리아 안에 있으면 긴 것이 깨져 그 안의
+    "없음"이 남아 거짓 섞임이 났다. 긴 것부터 지운다. 테스트와 변이.
+  - 고쳤다: 커밋이 `모름`인 옛 판 대조군을 문서가 다루지 않아, `# 최신 결과:` 줄에 커밋을 지어 적을 길이 열려 있었다.
+    `operations.md`와 헌법 README의 3.0.31 문장에 `모름`도 다시 돌린다고 더했다.
+  - 고쳤다: 공백뿐인 답을 `(비었다)`로 찍지 않았다. `strip()`으로 판단한다. 테스트와 변이.
+  - 오탐으로 본 것: `head_commit`의 Windows 길(실제 git 테스트 넷), 커밋을 두 번 읽는 비용, 회차와 커밋 읽기의 시점, 출력
+    인코딩(`__main__`이 UTF-8로 고정), 테스트의 `GIT_DIR`(conftest가 벗긴다).
+- 반영 뒤: 테스트 169 통과. 테스트는 더하기만 하고 코드를 바꿨으므로 변이는 `--since HEAD`로 고른 셋(긴 것부터, 공백뿐인 답,
+  원문이 바뀐 카나리아 안의 "없음")을 돌려 모두 기대대로였다. 게이트는 둘째 커밋의 pre-commit으로 갈음한다.

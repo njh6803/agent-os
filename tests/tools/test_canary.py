@@ -409,6 +409,14 @@ def test_카나리아_안의_없음은_섞임으로_보지_않는다() -> None:
     assert _섞임("1. 없음\n2. 리뷰는 지적 없음으로 닫는다", 명세=명세)
 
 
+def test_한_카나리아가_다른_카나리아를_품어도_긴_것부터_지워_섞임으로_보지_않는다() -> None:
+    명세 = _규칙_명세.replace(
+        'expect = ["식별자는 영문"]', 'expect = ["식별자는 영문", "식별자는 영문, 지적 없음"]'
+    )
+
+    assert not _섞임("식별자는 영문, 지적 없음", 명세=명세)
+
+
 def test_없다_같은_다른_꼴은_섞임으로_보지_않고_지나간다() -> None:
     """못 보는 것: 글자 "없음"만 본다. 한 물음에 "없다"고 답한 회차는 표시하지 않는다."""
     assert not _섞임("1. 그런 문장은 없다\n2. 식별자는 영문")
@@ -1299,6 +1307,13 @@ def test_커밋을_읽지_못하면_모른다고_찍고_한쪽만_읽었으면_�
 
 def test_빈_답은_비었다고_찍는다(tmp_path: Path) -> None:
     code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "")
+
+    assert code == 0
+    assert printed.count("  답: (비었다)") == 1
+
+
+def test_공백뿐인_답도_비었다고_찍는다(tmp_path: Path) -> None:
+    code, printed, _ = _스킬_실행(tmp_path, "EnterWorktree", "  \n \n")
 
     assert code == 0
     assert printed.count("  답: (비었다)") == 1

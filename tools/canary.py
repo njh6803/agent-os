@@ -550,8 +550,9 @@ def mixed_none(spec: Spec, arm: Arm, facts: Facts) -> bool:
     if arm.role != "experiment" or facts.answer is None or _says_none(facts.answer):
         return False
     rest = _flat(facts.answer)
-    for canary in spec.expect:
-        rest = rest.replace(_flat(canary), " ")
+    # 긴 것부터 지운다. 짧은 카나리아가 긴 카나리아 안에 있으면 먼저 지운 짧은 것이 긴 것을 깬다
+    for canary in sorted((_flat(c) for c in spec.expect), key=len, reverse=True):
+        rest = rest.replace(canary, " ")
     return _NONE_ANSWER in rest
 
 
@@ -918,7 +919,7 @@ def _answer_lines(facts: Facts) -> list[str]:
     if facts.answer is None:
         return []
     lines = facts.answer.splitlines()
-    if not lines:
+    if not facts.answer.strip():
         return ["  답: (비었다)"]
     return ["  답:", *(f"    {line}" if line.strip() else "" for line in lines)]
 
