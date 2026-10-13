@@ -1,0 +1,317 @@
+# tools/hook_bash_cd_outside.py 의 하위 폴더 알림(대기열 225)과 tools/hook_bash_commit_msg.py(대기열
+# 222)의 판정을 하나씩 깨서 그 테스트가 빨개지는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+
+[[mutation]]
+name = "하위 폴더를 알리지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if destination.path.lower() != own.lower():
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "하위 폴더 판정이 대소문자를 가린다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if destination.path.lower() != own.lower():
+'''
+new = '''
+        if destination.path != own:
+'''
+
+[[mutation]]
+name = "막는 자리를 넘기고 알림으로 간다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+            return ("deny", _reason(destination, own))
+'''
+new = '''
+            break
+'''
+
+[[mutation]]
+name = "줄바꿈을 명령의 경계로 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    lexer.whitespace = " \t\r"
+'''
+new = '''
+    lexer.whitespace = " \t\r\n"
+'''
+
+[[mutation]]
+name = "줄 끝 역슬래시를 잇지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''command.replace("\\\n", " ")'''
+new = '''command'''
+
+[[mutation]]
+name = "git 의 -C 폴더를 잇지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+                directory = posixpath.join(directory, words[index]) if directory else words[index]
+'''
+new = '''
+                pass
+'''
+
+[[mutation]]
+name = "표준 입력의 -F - 도 파일로 센다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    if file is None or file == "-":
+'''
+new = '''
+    if file is None:
+'''
+
+[[mutation]]
+name = "옵션 끝 표지 뒤도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if word == "--":
+'''
+new = '''
+        if word == "--never":
+'''
+
+[[mutation]]
+name = "no-verify 커밋도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''{"--no-verify", "--edit",'''
+new = '''{"--edit",'''
+
+[[mutation]]
+name = "SKIP 대입을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if _is_skip_commit_msg(words[index]):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "-m 의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+_SHORT_WITH_VALUE = frozenset("mcCtF")
+'''
+new = '''
+_SHORT_WITH_VALUE = frozenset("cCtF")
+'''
+
+[[mutation]]
+name = "F 가 여럿이면 첫 것을 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+                if flag == "F" and value:
+'''
+new = '''
+                if flag == "F" and value and file is None:
+'''
+
+[[mutation]]
+name = "같은 명령에서 쓰는 파일도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(_same_path(word) == written for other in before for word in other):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "앞의 cd 를 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(other and other[0] in _DIRECTORY_CHANGERS for other in before):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "pre-commit 설정을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        return checker if CHECKER in config and os.path.isfile(checker) else None
+'''
+new = '''
+        return checker if os.path.isfile(checker) else None
+'''
+
+[[mutation]]
+name = "판정 문장을 버린다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    if result.returncode != 1:
+'''
+new = '''
+    if result.returncode != 99:
+'''
+
+[[mutation]]
+name = "시간 제한을 넘겨도 판정 문장을 받는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            timeout=timeout,
+'''
+new = '''
+            timeout=None,
+'''
+
+[[mutation]]
+name = "커밋 뒤의 명령도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        before = commands[:index]
+'''
+new = '''
+        before = commands[:index] + commands[index + 1 :]
+'''
+
+[[mutation]]
+name = "파일을 글자 그대로 견준다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(_same_path(word) == written for other in before for word in other):
+'''
+new = '''
+        if any(word == message.file for other in before for word in other):
+'''
+
+[[mutation]]
+name = "heredoc 본문을 남긴다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            kept.append("")
+'''
+new = '''
+            kept.append(body)
+'''
+
+[[mutation]]
+name = "dry-run 과 help 도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    {"--no-verify", "--edit", "--squash", "--fixup", "--cleanup", "--dry-run", "--help"}
+'''
+new = '''
+    {"--no-verify", "--edit", "--squash", "--fixup", "--cleanup"}
+'''
+
+[[mutation]]
+name = "hooksPath 를 바꾼 커밋도 본다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            if option == "-c" and words[index].lower().startswith("core.hookspath="):
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "앞 명령의 export SKIP 을 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if any(_skips_commit_msg(other) for other in before):
+'''
+new = '''
+        if False:
+'''

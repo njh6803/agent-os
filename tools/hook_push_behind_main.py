@@ -10,7 +10,7 @@ main 합치기의 수는 `.scratch/harness/probes/ci_wait/runs_per_pr.py` 가 �
 훅과 도구 실행 사이에 없어, 알림은 푸시가 나간 뒤에야 읽힌다(훅 실행 순서에서 끌어낸 판단이고 재지
 않았다). 커밋 뒤의 PostToolUse 에 알리는 판은 이 저장소의 커밋이 pre-commit 때문에 백그라운드로 돌아
 커밋이 도는 동안 알림이 와서 접었다(셀프 리뷰 명세 축). 같은 처지였던 대기열
-86(`hook_pr_head_sync`)과 같이 사용자가 막기를 골랐다(일지 2026-10-13-44).
+86(`hook_pr_head_sync`)과 같이 사용자가 막기를 골랐다(일지 2026-10-13-50).
 
 판정. 명령 위치의 `git push`(`git -C <경로>`, `git -c <설정>`, `git --no-pager` 를 앞에 둔 것 포함.
 hook_git_main_commit 과 같은 정규식과 인용 자리표시자 `_`)가 있고, 지우는 푸시(`--delete`, `-d`,
@@ -180,7 +180,7 @@ def reason_text(count: int) -> str:
         "합치고(충돌이면 풀고) CLAUDE.md 의 검증 명령과 `uv run python tools/sibling_overlap.py` "
         "를 지난 뒤 다시 푸시한다. 충돌 없는 합치기에는 pre-commit 이 돌지 않는다. 일부러 뒤처진 "
         f"채 푸시하려면 Bash 에서 `{BYPASS}=1 git push …`, PowerShell 에서 "
-        f"`$env:{BYPASS}='1'; git push …` 로 친다(일지 2026-10-13-44)."
+        f"`$env:{BYPASS}='1'; git push …` 로 친다(일지 2026-10-13-50)."
     )
 
 
