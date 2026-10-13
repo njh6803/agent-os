@@ -94,6 +94,17 @@ issue-tracker 줄은 Read 계기만 적었다. ADR 0004 이력과 `README.md`의
   pre-commit 설정이 그 스크립트를 부를 때만이라 보통은 그 커밋이 어차피 돌릴 스크립트지만, 신뢰하지 않는 저장소에 커밋을 시도만
   해도 돈다(코드를 읽었다). 이 PR의 범위가 아니라 후속으로 넘긴다(아래 "다음").
 
+## PR 봇
+
+PR #230. 첫 푸시(`e1b94b3`)에서 검사는 모두 통과했고, CodeRabbit은 `@coderabbitai review`를 남겼는데도 "Review rate limited"였다.
+보안·버그·성능 축은 위 PR 직전 리뷰가 대신한다.
+
+- claude-review 첫 회차: Critical·Major 없음, Minor 하나와 Nit 하나.
+  - 고쳤다(Minor): issue-tracker의 가리키는 줄이 "Read로 열 때 실린다"만 적어, 이 PR이 새로 쓴 문장인데 읽는 사람은 Write로 새
+    프로브를 만들 때는 안 실린다고 받는다. 손으로 본 Write 갈래와 대기열 247을 그 줄에 더했다.
+  - 보류(Nit): 규칙 첫 항목 끝의 마침표. 옮겨 온 목록의 항목이 모두 마침표 없이 끝나는 꼴이라 한 항목만 고치면 어긋난다. PR
+    코멘트에 이유를 남겼다.
+
 ## 바꾼 것
 
 - `.claude/rules/probes.md`(새 파일, `paths: .scratch/**/probes/**`): issue-tracker에서 옮긴 항목 넷과 머리 문단.
