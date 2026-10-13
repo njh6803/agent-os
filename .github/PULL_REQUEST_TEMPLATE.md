@@ -34,7 +34,7 @@
 - [ ] `web/` — 판정자 설정(`web/eslint.config.mjs`)을 바꿨으면 `web/eslint.config.test.ts`에 위반 사례를 더했는가, 경로에 기대는 규칙을 경로와 무관하게 썼는가, 새 tsconfig는 기준 tsconfig를 extends하는가
 - [ ] `.claude/`, `tools/`, `.pre-commit-config.yaml` — 하네스 (실제 실행으로 확인했는가, 새 검사는 `tools/mutate.py`로 변이를 넣어 빨강을 봤는가, 이 검사가 **못 보는 것**을 어디에 적었고 그 주장을 쟀는가, 훅은 `tools/hook_payloads.toml`에 발동 페이로드와 발동하지 말아야 할 **실제** 입력을 더했는가(`tools/run_hooks.py`가 pre-commit에서 돈다), 구조가 바뀌었으면 README 트리도 갱신했는가)
 - [ ] `docs/`, `CLAUDE.md`, `CONTEXT.md`, `CODING_STANDARDS.md` — 지침·헌법·ADR (원천 하나, CLAUDE.md 200줄 이하)
-- [ ] `.github/` — 워크플로 (`claude-code-review.yml`을 바꾸면 별도 PR로 먼저 병합. 그 PR은 claude-review가 건너뛰므로 CodeRabbit 코멘트와 셀프 리뷰를 손으로 본다. 그 PR에서 코멘트 0개 가드(`Fail when Claude left no comment` 스텝)는 코멘트를 세지 않는 대신, 그 파일과 그 스텝이 허용한 경로(일지·대기열 등. 원천은 그 스텝의 패턴) 밖의 파일이 함께 실리면 실패한다. 그래서 그 워크플로의 동작을 서술한 문서 가운데 허용 경로 밖의 것(이 템플릿, `operations.md` 등)은 그 PR이 병합된 뒤 따로 고친다. 다른 워크플로만 바꾼 PR은 리뷰가 돌고 가드가 코멘트를 센다. `operations.md` 리뷰 파이프라인)
+- [ ] `.github/` — 워크플로 (`claude-code-review.yml`을 바꾸면 별도 PR로 먼저 병합. 그 PR은 claude-review가 건너뛰므로 CodeRabbit 코멘트와 셀프 리뷰를 손으로 본다. 그 PR에서 코멘트 0개 가드(`Fail when Claude left no comment` 스텝)는 코멘트를 세지 않는 대신, 그 파일과 그 스텝이 허용한 경로(일지·대기열 등. 원천은 그 스텝의 패턴) 밖의 파일이 함께 실리면 실패한다. 그래서 그 워크플로의 동작을 서술한 문서 가운데 허용 경로 밖의 것(이 템플릿, `operations.md` 등)은 그 PR이 병합된 뒤 따로 고친다. 다른 워크플로만 바꾼 PR은 리뷰가 돌고 가드가 코멘트를 센다. `operations.md` 리뷰 파이프라인). 필수 검사 `verify`의 판정을 바꿨으면 draft 동안 빨강이어야 하는 경우를 실험 커밋으로, 다시 돌린 시도를 `gh run rerun --failed`로 실제 실행해 봤는가(`operations.md` 가드레일)
 
 ## 체크리스트
 
