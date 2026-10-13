@@ -1,4 +1,4 @@
-# 2026-10-13 (60) 회차 감시 행 여섯의 자리를 사다리로 정한다
+# 2026-10-13 (64) 회차 감시 행 여섯의 자리를 사다리로 정한다
 
 브랜치 `chore/third-recurrence-rules`, 워크트리 `.claude/worktrees/third-recurrence-rules`. 레벨 스윕의 갈래다(지시문의 모델 줄
 `Opus 5.5 / medium. 레벨 스윕의 갈래`).
