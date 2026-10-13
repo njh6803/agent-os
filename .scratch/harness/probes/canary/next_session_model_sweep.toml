@@ -1,0 +1,23 @@
+# next-session 3단계에 더한 레벨 스윕의 갈래 고르기(ADR 0029 이력 2026-10-13)가 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 그 문장이 없다.
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 일지 2026-10-13-19).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_model_sweep.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 "순서" 3단계에서, 결정표의 "모델" 칸이 특정한 값일 때 브랜치 이름을 정한 뒤 치라는
+명령이 있으면 그 명령을 글자 그대로 옮겨라. 본문에 그런 명령이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["tools/model_sweep.py"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

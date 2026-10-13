@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from tools import model_sweep
+
 SCRIPT = Path(__file__).parents[2] / "tools" / "open_session.ps1"
 
 # 스크립트에서 이름으로 함수 하나만 떼어 정의하고, 뒤에 붙인 본문이 그 함수를 부른다. 스크립트
@@ -263,6 +265,22 @@ def test_이_저장소의_결정표_모델_칸은_스크립트가_읽는다() ->
     assert completed.returncode == 0, completed.stderr
     read = completed.stdout.strip().splitlines()
     assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == cells
+
+
+def test_레벨_스윕의_갈래_값은_스크립트가_읽는다() -> None:
+    # next-session 3단계가 결정표 칸 대신 tools/model_sweep.py 의 값을 모델 줄에 옮긴다(ADR 0029
+    # 이력).
+    arms = list(model_sweep.ARMS)
+
+    completed = _call(
+        "Get-EffortSteps,Read-ModelLine",
+        _MODEL_LINES,
+        {"prompts": [f"모델: {arm}. 레벨 스윕의 갈래" for arm in arms]},
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    read = completed.stdout.strip().splitlines()
+    assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == arms
 
 
 # 노력 버튼의 이름(앱 2.19675.0.0, 한국어)에서 칸을 읽는다. 버튼은 이름 뒤에 덧붙임이 붙을 수 있다.
