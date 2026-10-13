@@ -71,7 +71,11 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   대조군(새 에이전트)은 부르지 않아도 된다.
 - 실험군: 답이 "없음"이 아니고 카나리아를 모두 담았다. "없음"은 바뀐 본문이 실리지 않았다는 뜻이고,
   대조군과 같은 답이면 확인이 빈 것이지 통과가 아니다. 결과 이벤트가 둘이면(백그라운드로 띄운
-  서브에이전트가 끝난 뒤 본 세션이 다시 답한다) 답은 마지막 것이다.
+  서브에이전트가 끝난 뒤 본 세션이 다시 답한다) 답은 마지막 것이다. 통과한 답에 카나리아 밖의
+  "없음"이 섞였으면 통과로 세되 따로 표시한다(`mixed_none`). 물음이 여럿인 명세에서 한 물음에
+  "없음"이라 답하고 다른 물음에서 카나리아를 옮긴 회차라, 질문이 묻는 자리나 본문 문장의 자리가
+  모호하다는 신호다. 답을 잘라 찍던 동안에는 이것을 보려고 세 세션이 원본을 스크래치 스크립트로
+  열었다(대기열 212).
 - 대조군: 답에 카나리아가 하나도 없다. "없음"이든 옛 줄이든 된다. 카나리아가 있으면 질문이 답을
   흘렸거나 대조군이 새 사본이다.
 카나리아 대조는 백틱과 `*` 를 걷고 공백을 하나로 모은 뒤의 부분 문자열이다. 돌리기 전에 아래를 보고
@@ -84,6 +88,14 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 모델이 부르지 못하는 스킬(`disable-model-invocation: true`)은 질문 머리에 슬래시 명령으로 넣고
 `skill` 을 주지 않는다. 그 본문은 프롬프트에 펼쳐져 Skill 호출도 자리 줄도 남기지 않는다
 (claude 2.1.291 에서 `/grill-me` 로 손으로 봤다, 일지 2026-10-07-02).
+
+출력. 회차마다 판정 줄(`[통과]`·`[통과·"없음" 섞임]`·`[실패]` 가운데 하나, 갈래, 회차, 그 갈래
+체크아웃의 커밋), 실패 이유, 뽑은 사실 한 줄, 자르지 않은 답(줄마다 네 칸 들여)을 찍고, 끝에
+갈래마다의 커밋과 집계를 찍는다. 커밋은 체크아웃을 담은 저장소의 `HEAD` 를 짧은 꼴로 줄인
+것이다(`head_commit`). 체크아웃이 저장소의 하위 폴더면 그 저장소의 커밋이고, git 저장소 밖이거나
+읽지 못하면 "모름"이다. 돌리기 전과 뒤에 한 번씩 읽어 둘 다 읽었고 다르면 도는 동안 움직였다고,
+하나만 읽었으면 움직였는지 모른다고 앞뒤를 함께 적는다. 커밋을 찍지 않던 동안에는 실행 사이에 다른
+세션이 주 체크아웃을 당긴 것을 모른 채 대조군의 커밋을 틀리게 적었다(대기열 219).
 
 못 보는 것.
 - 규칙이 실렸다는 흔적은 stream-json 에 없다(claude 2.1.291 에서 손으로 봤다, 일지
@@ -109,6 +121,11 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   `CLAUDE.md` 는 본다.
 - `--preflight` 는 원천이 실리는지 재지 않는다. 원천의 머리말(규칙의 `paths` 등)이 실험군의 대상을
   덮지 않아도 지나간다. 실린다는 근거는 같은 명세가 앞서 `claude` 로 통과한 것뿐이다.
+- "없음" 섞임은 글자 "없음"만 찾는다. 한 물음에 "없다"처럼 다른 꼴로 답한 회차는 표시하지 않는다.
+  반대로 물음에 "없음"이라 답하지 않았어도 옮긴 본문에 "없음"이 들면 표시한다. 빼는 것은 카나리아
+  안의 "없음"뿐이다. 표시는 답을 읽어 보라는 신호이지 판정이 아니다.
+- 커밋하지 않은 변경. 갈래마다 `HEAD` 만 찍어, 실험군 사본이 커밋 전이면 찍힌 커밋에는 바뀐 본문이
+  없다. 도는 동안 커밋이 움직였으면 앞뒤를 찍지만, 회차마다 어느 판을 읽었는지는 모른다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
 3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다.
@@ -141,8 +158,9 @@ _DEFAULT_RUNS: dict[Role, int] = {"experiment": 3, "control": 1}
 _ROLE_NAMES: dict[Role, str] = {"experiment": "실험군", "control": "대조군"}
 _SKILL_DIR = re.compile(r"^Base directory for this skill:\s*(.+?)\s*$", re.MULTILINE)
 _NONE_NOISE = re.compile(r"[\s`*_\"'“”‘’.。!]")
-_ANSWER_WIDTH = 160
+_NONE_ANSWER = "없음"
 _TIMEOUT_SECONDS = 600.0  # 회차 하나의 제한 시간
+_GIT_TIMEOUT_SECONDS = 30.0  # 커밋 하나를 읽는 제한 시간
 _TIMED_OUT = 124  # GNU timeout 의 관례
 _PREFLIGHT = "--preflight"
 
@@ -269,6 +287,7 @@ class RunResult:
 
 
 type Runner = Callable[[Sequence[str], Path, str], RunResult]
+type CommitReader = Callable[[Path], str | None]
 
 
 class _Block(TypedDict, total=False):
@@ -519,7 +538,22 @@ def _flat(text: str) -> str:
 
 
 def _says_none(answer: str) -> bool:
-    return _NONE_NOISE.sub("", answer) == "없음"
+    return _NONE_NOISE.sub("", answer) == _NONE_ANSWER
+
+
+def mixed_none(spec: Spec, arm: Arm, facts: Facts) -> bool:
+    """실험군 답에 카나리아 밖의 "없음"이 섞였는지.
+
+    답 전체가 "없음"이면 판정이 실패로 세므로 섞임이 아니다. 카나리아를 모두 담았는지는 보지 않고,
+    통과한 회차에만 표시하는 것은 부르는 쪽(`_verdict`)이 정한다.
+    """
+    if arm.role != "experiment" or facts.answer is None or _says_none(facts.answer):
+        return False
+    rest = _flat(facts.answer)
+    # 긴 것부터 지운다. 짧은 카나리아가 긴 카나리아 안에 있으면 먼저 지운 짧은 것이 긴 것을 깬다
+    for canary in sorted((_flat(c) for c in spec.expect), key=len, reverse=True):
+        rest = rest.replace(canary, " ")
+    return _NONE_ANSWER in rest
 
 
 def _same_place(path: str, expected: Path, checkout: Path) -> bool:
@@ -826,6 +860,24 @@ def run_claude(
     return RunResult(completed.returncode, _text(completed.stdout), _text(completed.stderr))
 
 
+def head_commit(checkout: Path) -> str | None:
+    """체크아웃을 담은 저장소의 `HEAD` 커밋(짧은 꼴). 하위 폴더면 그 저장소의 것이다.
+
+    git 저장소 밖이거나, 커밋이 없거나, git 을 띄우지 못했거나, 제한 시간을 넘기면 None 이다.
+    """
+    git = shutil.which("git") or "git"
+    try:
+        completed = subprocess.run(
+            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            check=False,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return _text(completed.stdout).strip() if completed.returncode == 0 else None
+
+
 @dataclass(frozen=True)
 class _Job:
     arm: Arm
@@ -833,10 +885,46 @@ class _Job:
     checkout: Path
 
 
+@dataclass(frozen=True)
+class _Verdict:
+    """회차 하나의 판정.
+
+    `reasons` 가 비면 통과다. `mixed_none` 은 통과한 실험군 답에 "없음"이 섞였다는 뜻이다.
+    """
+
+    facts: Facts
+    reasons: list[str]
+    mixed_none: bool
+
+
+def _commit_text(before: str | None, after: str | None) -> str:
+    """갈래 체크아웃의 커밋. 돌리기 전과 뒤가 다르면 앞뒤를 함께 적는다.
+
+    둘 다 읽었을 때만 움직였다고 적는다. 하나를 읽지 못했으면 움직였는지 모른다.
+    """
+    if before == after:
+        return f"커밋 {before or '모름'}"
+    pair = f"{before or '모름'} → {after or '모름'}"
+    if before is None or after is None:
+        return f"커밋 {pair}(한쪽을 읽지 못해 움직였는지 모른다)"
+    return f"커밋 {pair}(도는 동안 움직였다)"
+
+
+def _arm_label(arm: Arm) -> str:
+    return f"{arm.name}({_ROLE_NAMES[arm.role]})"
+
+
+def _answer_lines(facts: Facts) -> list[str]:
+    """답을 자르지 않고 줄마다 네 칸 들여 찍는다. 답이 없으면 실패 이유가 오류를 이미 적었다."""
+    if facts.answer is None:
+        return []
+    lines = facts.answer.splitlines()
+    if not facts.answer.strip():
+        return ["  답: (비었다)"]
+    return ["  답:", *(f"    {line}" if line.strip() else "" for line in lines)]
+
+
 def _summary(facts: Facts) -> str:
-    answer = " ".join((facts.answer or facts.error or "").split())
-    if len(answer) > _ANSWER_WIDTH:
-        answer = answer[:_ANSWER_WIDTH] + "…"
     reads = ", ".join(Path(path).name for path in facts.reads) or "-"
     skills = ", ".join(facts.skills) or "-"
     tools = ", ".join(facts.tools) if facts.tools is not None else "init 없음"
@@ -846,7 +934,7 @@ def _summary(facts: Facts) -> str:
         agent = f" · 서브에이전트 {seen or '결과 없음'}, {facts.sub_turns}턴"
     return (
         f"도구 {tools} · 서버 {len(facts.servers)} · 읽음 {reads} · 스킬 {skills}"
-        f" · 호출 {', '.join(facts.calls) or '-'}{agent} · 답: {answer}"
+        f" · 호출 {', '.join(facts.calls) or '-'}{agent}"
     )
 
 
@@ -901,33 +989,35 @@ def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult
         return list(pool.map(run, jobs))
 
 
-def _verdict(spec: Spec, job: _Job, result: RunResult) -> tuple[Facts, list[str]]:
-    """회차 하나의 사실과 실패 이유. 이유가 비면 통과다."""
+def _verdict(spec: Spec, job: _Job, result: RunResult) -> _Verdict:
+    """회차 하나의 사실과 실패 이유, 통과했는데 "없음"이 섞였는지."""
     facts = read_facts(result.stdout.splitlines())
     reasons = judge(spec, job.arm, facts, job.checkout)
     if result.exit_code != 0:
         last = (result.stderr.strip().splitlines() or ["stderr 없음"])[-1]
         reasons.append(f"claude 가 종료 코드 {result.exit_code} 로 끝났다: {last}")
-    return facts, reasons
+    return _Verdict(facts, reasons, not reasons and mixed_none(spec, job.arm, facts))
 
 
 def _record(
     job: _Job,
     result: RunResult,
-    verdict: tuple[Facts, list[str]],
+    verdict: _Verdict,
+    commit: str,
     output: Path,
     out: Callable[[str], None],
 ) -> None:
-    """회차 하나의 원본을 남기고 판정을 찍는다."""
-    facts, reasons = verdict
+    """회차 하나의 원본을 남기고 판정을 찍는다. `commit` 은 `_commit_text` 의 글이다."""
     stem = f"{job.arm.name}-{job.index}"
     (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
     (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
-    label = f"{job.arm.name}({_ROLE_NAMES[job.arm.role]}) {job.index}/{job.arm.times}"
-    out(f"[{'실패' if reasons else '통과'}] {label}")
-    for reason in reasons:
+    mark = "실패" if verdict.reasons else '통과·"없음" 섞임' if verdict.mixed_none else "통과"
+    out(f"[{mark}] {_arm_label(job.arm)} {job.index}/{job.arm.times} · {commit}")
+    for reason in verdict.reasons:
         out(f"  - {reason}")
-    out(f"  {_summary(facts)}")
+    out(f"  {_summary(verdict.facts)}")
+    for line in _answer_lines(verdict.facts):
+        out(line)
 
 
 def main(
@@ -936,6 +1026,7 @@ def main(
     cwd: Path | None = None,
     runner: Runner = run_claude,
     out: Callable[[str], None] = print,
+    commit: CommitReader = head_commit,
 ) -> int:
     base = cwd if cwd is not None else Path.cwd()
     if len(argv) > 1 and argv[0] == _PREFLIGHT:
@@ -965,20 +1056,26 @@ def main(
     except OSError as error:
         out(f"출력 디렉터리를 만들지 못했다(아무것도 돌리지 않았다): {error}")
         return 3
+    before = {arm.name: commit(places[arm.name]) for arm in spec.arm}
     try:
         results = _run_all(spec, jobs, runner)
     except OSError as error:
         out(f"claude 를 띄우지 못했다(원본을 남기지 않았다): {error}")
         return 3
+    commits = {
+        arm.name: _commit_text(before[arm.name], commit(places[arm.name])) for arm in spec.arm
+    }
     verdicts = [_verdict(spec, job, result) for job, result in zip(jobs, results, strict=True)]
     try:
         for job, result, verdict in zip(jobs, results, verdicts, strict=True):
-            _record(job, result, verdict, output, out)
+            _record(job, result, verdict, commits[job.arm.name], output, out)
     except OSError as error:
         out(f"원본을 쓰지 못했다(판정을 끝까지 찍지 못했다): {error}")
         return 3
-    failed = sum(1 for _, reasons in verdicts if reasons)
-    out(f"통과 {len(jobs) - failed} · 실패 {failed}. 원본은 {output}")
+    out("갈래: " + " · ".join(f"{_arm_label(arm)} {commits[arm.name]}" for arm in spec.arm))
+    failed = sum(1 for verdict in verdicts if verdict.reasons)
+    mixed = sum(1 for verdict in verdicts if verdict.mixed_none)
+    out(f'통과 {len(jobs) - failed} · 실패 {failed} · "없음" 섞인 통과 {mixed}. 원본은 {output}')
     return 1 if failed else 0
 
 
