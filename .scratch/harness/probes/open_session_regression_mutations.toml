@@ -118,8 +118,8 @@ tests = ["tests/tools/test_open_session.py", "-k", "끝나지_않는_pwsh"]
 expect = "red"
 [[mutation.edit]]
 file = "tests/tools/test_open_session.py"
-old = "            timeout=timeout,\n"
-new = ""
+old = "self._lines.get(timeout=max(0.0, deadline - time.monotonic()))"
+new = "self._lines.get()"
 
 [[mutation]]
 name = "주 프로세스를 경로로 가리지 않는다"
