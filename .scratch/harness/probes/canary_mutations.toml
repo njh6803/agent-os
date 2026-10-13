@@ -1,4 +1,4 @@
-# tools/canary.py 의 명세 검사와 판정 규칙을 하나씩 끈 변이. 모두 빨강이 기대다.
+# tools/canary.py 의 명세 검사와 판정 규칙, 출력을 하나씩 끈 변이. 모두 빨강이 기대다.
 # 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/canary_mutations.toml
 
 [[mutation]]
@@ -1095,4 +1095,362 @@ old = '''
 '''
 new = '''
     if len(argv) != 2:
+'''
+
+# 대기열 212: 통과한 실험군 답의 "없음" 섞임 표시와 자르지 않은 답
+
+[[mutation]]
+name = "통과한 실험군의 없음 섞임을 표시하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return _Verdict(facts, reasons, not reasons and mixed_none(spec, job.arm, facts))
+'''
+new = '''
+    return _Verdict(facts, reasons, False)
+'''
+
+[[mutation]]
+name = "실패한 회차에도 없음 섞임을 표시한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return _Verdict(facts, reasons, not reasons and mixed_none(spec, job.arm, facts))
+'''
+new = '''
+    return _Verdict(facts, reasons, mixed_none(spec, job.arm, facts))
+'''
+
+[[mutation]]
+name = "카나리아 안의 없음도 섞임으로 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        rest = rest.replace(canary, " ")
+'''
+new = '''
+        rest = rest
+'''
+
+[[mutation]]
+name = "카나리아를 긴 것부터 지우지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    for canary in sorted((_flat(c) for c in spec.expect), key=len, reverse=True):
+'''
+new = '''
+    for canary in (_flat(c) for c in spec.expect):
+'''
+
+[[mutation]]
+name = "대조군의 없음도 섞임으로 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if arm.role != "experiment" or facts.answer is None or _says_none(facts.answer):
+'''
+new = '''
+    if facts.answer is None or _says_none(facts.answer):
+'''
+
+[[mutation]]
+name = "답 전체가 없음이어도 섞임으로 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if arm.role != "experiment" or facts.answer is None or _says_none(facts.answer):
+'''
+new = '''
+    if arm.role != "experiment" or facts.answer is None:
+'''
+
+[[mutation]]
+name = "답이 없는 회차를 섞임 판정에서 거르지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if arm.role != "experiment" or facts.answer is None or _says_none(facts.answer):
+'''
+new = '''
+    if arm.role != "experiment" or _says_none(facts.answer):
+'''
+
+[[mutation]]
+name = "섞인 통과를 판정 줄에 표시하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    mark = "실패" if verdict.reasons else '통과·"없음" 섞임' if verdict.mixed_none else "통과"
+'''
+new = '''
+    mark = "실패" if verdict.reasons else "통과"
+'''
+
+[[mutation]]
+name = "요약에 섞인 통과를 세지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    mixed = sum(1 for verdict in verdicts if verdict.mixed_none)
+'''
+new = '''
+    mixed = 0
+'''
+
+[[mutation]]
+name = "빈 답을 비었다고 찍지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        return ["  답: (비었다)"]
+'''
+new = '''
+        return ["  답:"]
+'''
+
+[[mutation]]
+name = "공백뿐인 답을 비었다고 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if not facts.answer.strip():
+'''
+new = '''
+    if not lines:
+'''
+
+[[mutation]]
+name = "답을 다시 자른다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return ["  답:", *(f"    {line}" if line.strip() else "" for line in lines)]
+'''
+new = '''
+    return ["  답:", *(f"    {line[:160]}" if line.strip() else "" for line in lines)]
+'''
+
+[[mutation]]
+name = "답을 찍지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    for line in _answer_lines(verdict.facts):
+'''
+new = '''
+    for line in ():
+'''
+
+# 대기열 219: 갈래마다 체크아웃의 커밋
+
+[[mutation]]
+name = "판정 줄에 커밋을 찍지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    out(f"[{mark}] {_arm_label(job.arm)} {job.index}/{job.arm.times} · {commit}")
+'''
+new = '''
+    out(f"[{mark}] {_arm_label(job.arm)} {job.index}/{job.arm.times}")
+'''
+
+[[mutation]]
+name = "요약에 갈래의 커밋을 찍지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    out("갈래: " + " · ".join(f"{_arm_label(arm)} {commits[arm.name]}" for arm in spec.arm))
+'''
+new = '''
+    pass
+'''
+
+[[mutation]]
+name = "돌리기 전의 커밋을 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    before = {arm.name: commit(places[arm.name]) for arm in spec.arm}
+'''
+new = '''
+    before = {arm.name: None for arm in spec.arm}
+'''
+
+[[mutation]]
+name = "돈 뒤의 커밋을 다시 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        arm.name: _commit_text(before[arm.name], commit(places[arm.name])) for arm in spec.arm
+'''
+new = '''
+        arm.name: _commit_text(before[arm.name], before[arm.name]) for arm in spec.arm
+'''
+
+[[mutation]]
+name = "움직인 커밋의 앞만 적는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if before == after:
+'''
+new = '''
+    if True:
+'''
+
+[[mutation]]
+name = "읽지 못한 커밋을 모름으로 적지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        return f"커밋 {before or '모름'}"
+'''
+new = '''
+        return f"커밋 {before}"
+'''
+
+[[mutation]]
+name = "한쪽만 읽어도 움직였다고 적는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if before is None or after is None:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "git 이 실패해도 출력을 커밋으로 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return _text(completed.stdout).strip() if completed.returncode == 0 else None
+'''
+new = '''
+    return _text(completed.stdout).strip()
+'''
+
+[[mutation]]
+name = "커밋을 짧은 꼴로 줄이지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
+'''
+new = '''
+            [git, "-C", str(checkout), "rev-parse", "HEAD"],
+'''
+
+[[mutation]]
+name = "커밋을 체크아웃이 아닌 작업 폴더에서 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
+'''
+new = '''
+            [git, "rev-parse", "--short", "HEAD"],
+'''
+
+[[mutation]]
+name = "git 을 띄우지 못하면 예외를 올린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+'''
+new = '''
+    except subprocess.TimeoutExpired:
+        return None
+'''
+
+[[mutation]]
+name = "git 의 제한 시간 넘김을 그대로 올린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+'''
+new = '''
+    except OSError:
+        return None
 '''
