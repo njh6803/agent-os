@@ -14,27 +14,50 @@ const OTHER_THEME: ThemeKey = "guncheong";
 
 const OPPOSITE: Readonly<Record<Mode, Mode>> = { light: "dark", dark: "light" };
 
-function background(target: Locator): Promise<string> {
-  return target.evaluate((element) => getComputedStyle(element).getPropertyValue("--bg").trim());
+// 주 버튼 묶음. 군청·자초는 시스템 모드에서도 `@media (prefers-color-scheme: …)` 안의 덮기로 강조색 갈래가 된다.
+const PRIMARY = ["--primary", "--on-primary", "--primary-hover", "--primary-active"] as const;
+
+/** 요소에서 풀린 사용자 정의 속성들의 값. */
+function tokens(target: Locator, names: readonly string[]): Promise<string[]> {
+  return target.evaluate(
+    (element, list) => list.map((name) => getComputedStyle(element).getPropertyValue(name).trim()),
+    [...names],
+  );
 }
 
-/** 문서에 기본 테마의 `data-theme` 과 `data-mode` 를 단 요소를 하나 두고 그 `--bg` 를 읽은 뒤 걷는다. */
-async function defaultBackground(page: Page, mode: Mode): Promise<string> {
+async function background(target: Locator): Promise<string> {
+  const [value = ""] = await tokens(target, ["--bg"]);
+  return value;
+}
+
+/** 문서에 그 테마의 `data-theme` 과 `data-mode` 를 단 요소를 하나 두고 그 값들을 읽은 뒤 걷는다. */
+async function probeTokens(
+  page: Page,
+  theme: ThemeKey,
+  mode: Mode,
+  names: readonly string[],
+): Promise<string[]> {
   await page.evaluate(
-    ([theme, value]) => {
+    ([key, value]) => {
       const probe = document.createElement("div");
       probe.dataset["visualProbe"] = "";
-      probe.dataset["theme"] = theme;
+      probe.dataset["theme"] = key;
       probe.dataset["mode"] = value;
       document.body.append(probe);
     },
-    [DEFAULT_THEME, mode] as const,
+    [theme, mode] as const,
   );
   const probe = page.locator("[data-visual-probe]");
-  const value = await background(probe);
+  const values = await tokens(probe, names);
   await probe.evaluate((element) => {
     element.remove();
   });
+  return values;
+}
+
+/** 기본 테마의 그 모드로 단 탐침의 `--bg`. */
+async function defaultBackground(page: Page, mode: Mode): Promise<string> {
+  const [value = ""] = await probeTokens(page, DEFAULT_THEME, mode, ["--bg"]);
   return value;
 }
 
@@ -98,6 +121,31 @@ test("shadow 호스트에서 data-theme·data-mode 를 지우면 문서의 시�
     });
     expect(await background(wrapper), `${scheme} 지운 뒤`).toBe(expected);
   }
+});
+
+// 스토리 테스트는 시스템 모드를 바꾸지 못해(판정 스토리 Matrix 는 라이트에서만 본다) 시스템 다크의 덮기와 shadow 호스트의
+// 시스템 모드 짝은 여기서 본다. 기대값은 같은 빌드에서 그 모드를 명시한 탐침이다.
+test("시스템 모드의 군청은 문서 뿌리와 shadow 호스트 모두 시스템 라이트·다크마다 주 버튼 묶음이 그 모드를 명시한 군청과 같다", async ({
+  page,
+  storybook,
+}) => {
+  const wrapper = page.locator("[data-shadow-frame]").locator("[data-ui-root]");
+  const seen: string[] = [];
+  for (const scheme of MODES) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await storybook.open(SAMPLE, { theme: OTHER_THEME, mode: "system", shadow: "on" });
+    const expected = await probeTokens(page, OTHER_THEME, scheme, PRIMARY);
+    expect(await tokens(page.locator("html"), PRIMARY), `${scheme} 문서 뿌리`).toEqual(expected);
+    // shadow 안의 값이 shadow 의 시트에서만 오는지 보려고 문서의 시트를 모두 끈다(위 shadow 사례와 같다).
+    await page.evaluate(() => {
+      for (const sheet of document.styleSheets) {
+        sheet.disabled = true;
+      }
+    });
+    expect(await tokens(wrapper, PRIMARY), `${scheme} shadow 호스트`).toEqual(expected);
+    seen.push(expected.join(" "));
+  }
+  expect(new Set(seen).size, "라이트와 다크의 주 버튼 묶음이 다르다").toBe(2);
 });
 
 interface Motion {

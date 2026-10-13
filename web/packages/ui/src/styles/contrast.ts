@@ -117,10 +117,10 @@ export function contrastFailures(
   return pairs.flatMap(([foreground, background, minimum]) => {
     const behind = surfaceColor(background);
     const ratio = contrastRatio(composite(value(foreground), behind), behind);
+    // 잰 값은 두 자리로 내려 적는다. 반올림하면 4.497 이 "4.50 < 4.5" 로 찍혀 메시지가 기준을 넘은 것처럼 읽힌다.
+    const shown = (Math.floor(ratio * 100) / 100).toFixed(2);
     return ratio < minimum
-      ? [
-          `${theme}/${mode} ${foreground}/${surfaceName(background)} ${ratio.toFixed(2)} < ${String(minimum)}`,
-        ]
+      ? [`${theme}/${mode} ${foreground}/${surfaceName(background)} ${shown} < ${String(minimum)}`]
       : [];
   });
 }

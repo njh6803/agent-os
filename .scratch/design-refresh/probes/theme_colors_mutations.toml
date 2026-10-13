@@ -43,6 +43,17 @@ old = '''composite(value(surface[0]), value(surface[1]))'''
 new = '''value(surface[1])'''
 
 [[mutation]]
+name = "메시지의 값을 반올림하면 기준 미달 짝의 메시지가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/testing/Checks.stories.tsx", "-t", "기준 미달 짝의 메시지가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''    const shown = (Math.floor(ratio * 100) / 100).toFixed(2);'''
+new = '''    const shown = ratio.toFixed(2);'''
+
+[[mutation]]
 name = "테마 블록이 모서리를 다시 정하면 Matrix 가 빨갛다"
 runner = "storybook"
 tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "여덟 벌 모두"]
@@ -510,4 +521,41 @@ old = '''
 new = '''
       await openInDefault(storybook, page, story, mode);
       shot.push(mode);
+'''
+
+[[mutation]]
+name = "군청·자초의 시스템 다크 덮기를 지우면 시스템 모드의 문서 뿌리가 빨갛다"
+runner = "visual"
+tests = ["-g", "시스템 모드의 군청은"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  @media (prefers-color-scheme: dark) {
+    [data-theme="guncheong"]:not([data-mode]),
+    [data-theme="jacho"]:not([data-mode]),
+'''
+new = '''
+  @media (prefers-color-scheme: dark) {
+'''
+
+[[mutation]]
+name = "군청의 shadow 호스트 시스템 다크 짝을 지우면 시스템 모드의 shadow 호스트가 빨갛다"
+runner = "visual"
+tests = ["-g", "시스템 모드의 군청은"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    :host([data-theme="guncheong"]:not([data-mode])),
+    :host([data-theme="jacho"]:not([data-mode])) {
+      --primary: var(--accent-400);
+'''
+new = '''
+    :host([data-theme="jacho"]:not([data-mode])) {
+      --primary: var(--accent-400);
 '''

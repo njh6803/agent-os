@@ -58,8 +58,9 @@ export const KnownContrast: Story = {
   },
 };
 
+// 겹친 바탕의 짝은 1.476 이라 메시지가 두 자리로 내려 적는 것(1.47)을 반올림(1.48)과 가른다.
 export const FailingPair: Story = {
-  name: "기준 미달 짝의 메시지가 테마·모드·짝을 들고 겹친 바탕은 위에서 아래로 적는다",
+  name: "기준 미달 짝의 메시지가 테마·모드·짝과 내려 적은 값을 들고 겹친 바탕은 위에서 아래로 적는다",
   render: () => <p>기준 미달 짝</p>,
   play: async () => {
     const values: Readonly<Record<string, string>> = {
@@ -75,7 +76,7 @@ export const FailingPair: Story = {
       contrastFailures("nokcheong", "dark", (name) => values[name] ?? "", pairs),
     ).toEqual([
       "nokcheong/dark text/bg 1.26 < 4.5",
-      "nokcheong/dark text/bg-selected+bg 1.48 < 4.5",
+      "nokcheong/dark text/bg-selected+bg 1.47 < 4.5",
     ]);
   },
 };

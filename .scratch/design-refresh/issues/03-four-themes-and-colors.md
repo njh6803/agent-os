@@ -72,7 +72,7 @@
 
 ### 이 티켓이 정한 것
 
-근거와 고른 까닭은 일지 2026-10-13-15다.
+근거와 고른 까닭은 일지 2026-10-13-22다.
 
 1. **도우미의 이름은 그대로 `semanticColor(element, name)`이고, 탐침은 대상 바로 앞의 숨은 형제다.** 대상의 부모(`parentNode`, shadow root이면 그 root)에 `hidden`인 `<span>`을 대상 바로 앞에 끼우고 `background-color: var(--<name>)`을 둔 뒤 그 계산값을 돌려주고 걷는다. 토큰이 `#RRGGBB`나 `#RRGGBBAA`로 풀리지 않으면 던진다. 대상 자신이나 안쪽에 두지 않은 것은 `<input>`처럼 자식을 둘 수 없는 대상이 있고 React가 그리는 자식 사이에 끼면 다음 그림과 어긋날 수 있어서다. 형제는 대상과 같은 부모에서 쓰임새 토큰을 물려받는다. 사진 비교의 누름 탐침도 같은 자리(`element.before`)다. 이 성질은 판정의 음성 사례 HelperScope가 지킨다.
 2. **군청·자초의 덮기는 옛 디자인 토큰 CSS의 테마 예외 블록과 같은 꼴의 넷이다.** `[data-theme="guncheong"][data-mode="light"]`·`[data-theme="jacho"][data-mode="light"]`와 그 `:host(…)` 짝, `@media (prefers-color-scheme: light)` 안의 `[data-theme="…"]:not([data-mode])`와 `:host([data-theme="…"]:not([data-mode]))` 짝이고, 다크도 같은 꼴이다. 두 테마를 한 블록의 선택자 목록에 함께 둔다. 라이트의 `on-primary`는 먹색 갈래와 같은 `gray-0`이라 덮지 않는다. 판정 스토리 Matrix가 명시 모드 여덟 벌과 시스템 라이트 넷에서 테마마다 주 버튼의 갈래를 이웃 토큰(`accent`나 `text`, 다크의 `on-accent`나 `bg`)과 맞대고, ShadowRoot가 군청 다크의 `:host` 짝을 문서 쪽과 맞댄다(셀프 리뷰가 덮기를 지워도 초록이라고 짚었다).
