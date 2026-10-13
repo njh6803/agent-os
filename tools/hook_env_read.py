@@ -27,11 +27,20 @@ Bash 에서 막는 모양 셋.
 토큰은 shlex 로 나눈다 — 인용 안의 `|` 는 분리자가 아니고 `cat ".env"` 의 인자는 보인다. grep·sed·
 awk 류의 첫 위치 인자는 패턴이라 파일로 보지 않는다(`grep .env .gitignore` 는 `.gitignore` 를 읽는
 것이다). 리다이렉션 대상은 인자가 아니다(`cat x > .env` 는 쓰기다).
+읽는 명령의 목록(`READERS`)에는 Claude Code 가 묻지 않고 돌린 `column`·`rev` 도 든다(대기열 162.
+`.scratch/harness/probes/review_git_read.py` 가 glob 경로로 `.git/config` 를 읽거나 권한 단계를
+지난 명령이다, 일지 2026-10-07-21). 명령 앞의 래퍼(`sudo`·`command`·`env`·`nice`·`timeout`·`exec`·
+`time`·`nohup`·`builtin`)는 그 뒤의 옵션과 옵션 값까지 getopt 처럼 벗긴다(`-n5`, `-iu root`,
+`--user root`). 같은 프로브에서 권한 규칙이 래퍼(`env`·`command`·`nice`·`timeout`)를 벗겨 대 봤다.
+이 훅은 래퍼 뒤의 옵션을 명령 이름으로 읽어 `nice -n5 cat .env`·`command -p cat .env`·`env -i cat
+.env` 를 지나보냈다(일지 2026-10-13-63 의 세션이 스크래치 스크립트로 찍어 봤고, 그 입력은 지금
+tests/tools 가 고정한다). `command -v`·`-V` 는 명령을 찾기만 해 막지 않는다.
 못 보는 것: 변수 간접 참조(`for f in .env*; do cat "$f"`), 다른 명령이 넘긴 인자(`ls -a | xargs
 cat`), 언어 안의 읽기(`python -c "open('.env')"`), `cp .env x` 뒤의 `cat x`, `uv run --env-file
 .env` 뒤의 `printenv`(그 명령은 LLM 테스트의 사전이라 막지 않는다), `.env` 가 없는 하위 디렉터리를
 훑는 `grep -r x sub/`, 백슬래시 경로(`C:\\x\\.env` — shlex 가 이스케이프로 읽는다), 래퍼 스크립트
-안의 읽기, PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고
+안의 읽기, 위 목록 밖의 래퍼(`stdbuf -o0 cat .env`)와 명령을 문자열 하나로 받는 래퍼
+(`env -S 'cat .env'`), PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고
 `[IO.File]::ReadAllText` 같은 읽기는 지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀
 파일(사용자 설정의 env 값 등).
 에이전트 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건
@@ -52,7 +61,7 @@ READERS = frozenset(
     {
         "cat", "tac", "head", "tail", "less", "more", "bat",
         "grep", "egrep", "fgrep", "rg", "ag", "ack",
-        "sed", "awk", "gawk", "cut", "tr", "sort", "uniq", "nl",
+        "sed", "awk", "gawk", "cut", "tr", "sort", "uniq", "nl", "column", "rev",
         "strings", "xxd", "od", "hexdump", "base64",
         "diff", "cmp", "comm", "paste",
         "source", ".",
@@ -65,7 +74,46 @@ ALLOWED_ENV_FILES = frozenset({".env.example"})
 _RESERVED = frozenset(
     {"if", "then", "else", "elif", "fi", "do", "done", "while", "until", "for", "{", "}", "!"}
 )
-_WRAPPERS = frozenset({"sudo", "command", "exec", "time", "nohup", "env", "builtin"})
+# 명령 자리 앞의 래퍼와, 그 뒤 옵션 가운데 값을 하나 더 먹는 것. 옵션 낱말은 getopt 처럼 읽는다
+# (`_option_width`). `timeout` 은 옵션 뒤의 시간 하나를 더 먹는다.
+_WRAPPERS: dict[str, frozenset[str]] = {
+    "sudo": frozenset(
+        {
+            "-u",
+            "-g",
+            "-C",
+            "-D",
+            "-h",
+            "-p",
+            "-r",
+            "-t",
+            "-U",
+            "-T",
+            "-c",
+            "-R",
+            "--user",
+            "--group",
+            "--close-from",
+            "--chdir",
+            "--host",
+            "--prompt",
+            "--role",
+            "--type",
+            "--other-user",
+            "--command-timeout",
+            "--login-class",
+            "--chroot",
+        }
+    ),  # fmt: skip
+    "env": frozenset({"-u", "--unset", "-C", "--chdir"}),
+    "exec": frozenset({"-a"}),
+    "nice": frozenset({"-n", "--adjustment"}),
+    "timeout": frozenset({"-k", "-s", "--kill-after", "--signal"}),
+    "time": frozenset({"-o", "-f", "--output", "--format"}),
+    "command": frozenset(),
+    "nohup": frozenset(),
+    "builtin": frozenset(),
+}
 _ROOTISH = frozenset({".", "./", "..", "../"})
 # `.env`, `.env.local`, `../.env`, `$PWD/.env`, `C:/x/.env`. `.envrc`·`config.env` 는 아니다.
 _ENV_FILE = re.compile(r"(?<![\w.-])(?:[\w.:~${}-]+/)*(\.env(?:\.[\w-]+)?)(?![\w.-])", re.I)
@@ -240,22 +288,38 @@ def _segment_reason(words: list[str], inputs: list[str], cwd: str | None) -> str
 
 
 def _strip_prefix(words: list[str]) -> list[str]:
-    """명령 자리 앞의 예약어·환경변수 대입·래퍼를 벗긴다."""
+    """명령 자리 앞의 예약어·환경변수 대입·래퍼와 그 옵션을 벗긴다. `command -v`·`-V` 는 명령을
+    찾기만 하고 돌리지 않아 빈 목록이다."""
     index = 0
     while index < len(words):
         word = words[index]
-        if word in _RESERVED or word in _WRAPPERS or _ASSIGNMENT.match(word):
+        if word in _RESERVED or _ASSIGNMENT.match(word):
             index += 1
-        elif word == "timeout":
-            index += 1
-            while index < len(words) and words[index].startswith("-"):  # `-k 3`, `--foreground`
-                index += 2 if words[index] in {"-k", "-s", "--kill-after", "--signal"} else 1
-            index += 1  # 시간
-        elif word == "nice":
-            index += 3 if index + 1 < len(words) and words[index + 1] == "-n" else 1
-        else:
+            continue
+        value_options = _WRAPPERS.get(word)
+        if value_options is None:
             break
+        index += 1
+        while index < len(words) and words[index].startswith("-"):
+            option = words[index]
+            if word == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
+                return []
+            index += _option_width(option, value_options)
+        if word == "timeout":
+            index += 1  # 시간
     return words[index:]
+
+
+def _option_width(option: str, value_options: frozenset[str]) -> int:
+    """래퍼의 옵션 낱말 하나가 먹는 낱말 수. 짧은 옵션 묶음은 getopt 처럼 읽는다 — 값을 먹는 글자가
+    나오면 그 뒤의 글자가 값이고(`-n5`, `-uroot`), 뒤가 비었으면 다음 낱말이 값이다(`-iu root`)."""
+    if option.startswith("--"):
+        return 2 if option in value_options else 1
+    letters = option[1:]
+    for index, letter in enumerate(letters):
+        if f"-{letter}" in value_options:
+            return 1 if letters[index + 1 :] else 2
+    return 1
 
 
 def _command_name(word: str) -> str:

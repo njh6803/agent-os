@@ -1,8 +1,9 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
+# 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
 [[case]]
@@ -40,6 +41,18 @@ hook = "hook_env_read.py"
 expect = "silent"
 note = "Grep 도구의 하위 경로"
 payload = { tool_name = "Grep", tool_input = { pattern = "KEY", path = "src" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "deny"
+note = "Claude Code 가 묻지 않고 돌린 읽기 명령의 glob 읽기를 래퍼 옵션 뒤에 둔 모양(대기열 162, review_git_read.py 의 `column .gi*/config` 를 .env 로)"
+payload = { tool_name = "Bash", tool_input = { command = "nice -n5 column -t .e*" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "silent"
+note = "래퍼 `command` 의 -v 는 명령을 찾기만 하고 돌리지 않는다 — 찾을 이름 뒤에 .env 가 있어도 읽지 않는다"
+payload = { tool_name = "Bash", tool_input = { command = "command -v column .env" } }
 
 # --- hook_git_main_commit (PreToolUse Bash|PowerShell) ---
 [[case]]
@@ -425,8 +438,16 @@ payload = { prompt = ".claude/skills/implement/SKILL.md 를 참고해 구현한�
 [[case]]
 hook = "hook_prompt_directive.py"
 expect = "context"
-note = "워크트리에서 병합한 세션의 지시문 — 주 체크아웃 미갱신이라 워크트리 전에 tidy-checkouts(묶음의 첫 세션). 러너는 결과의 종류만 대조하고 계기의 내용은 tests/tools 가 본다"
+note = "워크트리에서 병합한 세션의 지시문 — 주 체크아웃 미갱신이라 워크트리 전에 tidy-checkouts(묶음의 첫 세션). 옛 훅도 context 라 contains 가 그 계기를 가른다(대기열 130)"
+contains = ["Skill 도구로 `tidy-checkouts` 를 돈다", "`tidy-checkouts` 를 돈 뒤 다른 일보다 먼저"]
 payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다\n브랜치: chore/x\n확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session \"워크트리에서 병합할 때\"를 Read로 열어 따른다\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "context"
+note = "같은 묶음의 둘째 세션 — 미갱신이어도 tidy-checkouts 는 첫 세션만 돈다"
+contains = ["첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다", "제목을 바꾼 뒤 다른 일보다 먼저"]
+payload = { prompt = "다음 작업: 기능 y\n다음 단계: 구현\n어디서: 새 세션. 나란히 여는 2 중 2. EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다\n브랜치: chore/y\n확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session \"워크트리에서 병합할 때\"를 Read로 열어 따른다\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 
 [[case]]
 hook = "hook_prompt_directive.py"
@@ -557,6 +578,22 @@ hook = "hook_webfetch_summary.py"
 expect = "silent"
 note = "본문을 그대로 돌려준 결과 — 손으로 지은 본문(53자, UTF-8 73바이트)으로 수만 맞췄다"
 payload = { tool_name = "WebFetch", tool_input = { url = "https://code.claude.com/docs/en/large-codebases.md", prompt = "이 페이지의 첫 제목을 그대로 옮긴다" }, tool_response = { bytes = 73, code = 200, codeText = "OK", result = "# Set up Claude Code in a monorepo\n\n대시 — 와 한글이 든 본문.\n", durationMs = 624, url = "https://code.claude.com/docs/en/large-codebases.md" } }
+
+# --- hook_grep_omitted (PostToolUse Grep) ---
+# 발동의 결과 객체는 grep_omitted/run.py 의 A(Claude Code 2.1.296)가 받은 것에서 content 의 500자 줄 둘을 뺐다(수는 그대로).
+# 침묵의 content 는 이 훅을 만든 세션이 Grep 도구로 받은 출력이고(경로만 줄였다), 나머지 칸은 A 의 모양을 따랐다.
+[[case]]
+hook = "hook_grep_omitted.py"
+expect = "context"
+note = "디렉터리를 -n 으로 훑어 501자 줄 둘과 2000자 줄이 표지로 나왔다"
+contains = ["3개", "fixture\\lines.txt:3", "fixture\\wide.txt:1"]
+payload = { tool_name = "Grep", tool_input = { pattern = "PROBE", path = "C:/scratch/grep_probe/fixture", output_mode = "content", "-n" = true }, tool_response = { mode = "content", numFiles = 0, filenames = [], content ="fixture\\korean.txt:2:[Omitted long matching line]\nfixture\\lines.txt:1:PROBE short\nfixture\\lines.txt:3:[Omitted long matching line]\nfixture\\wide.txt:1:[Omitted long matching line]", numLines = 6, totalLines = 6 } }
+
+[[case]]
+hook = "hook_grep_omitted.py"
+expect = "silent"
+note = "짧은 일치 줄 양옆의 600자 문맥 줄만 생략됐다 — 일치를 숨기지 않는다"
+payload = { tool_name = "Grep", tool_input = { pattern = "PROBE short", path = "C:/scratch/omit", output_mode = "content", "-C" = 1 }, tool_response = { mode = "content", numFiles = 0, filenames = [], content = "C:\\scratch\\omit\\ctx.txt-1-[Omitted long context line]\nC:\\scratch\\omit\\ctx.txt:2:PROBE short\nC:\\scratch\\omit\\ctx.txt-3-[Omitted long context line]", numLines = 3, totalLines = 3 } }
 
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.

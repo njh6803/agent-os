@@ -25,9 +25,12 @@ from tools.run_hooks import (
     hook_environment,
     launch_argv,
     load_cases,
+    message_of,
+    missing_fragments,
     notice_outcome,
     outcome_of,
     registered_hooks,
+    registered_matchers,
     registration_command,
     run_case,
     run_notices,
@@ -91,6 +94,66 @@ def test_표의_기대는_넷_중_하나여야_한다(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="expect"):
         load_cases(table)
+
+
+def test_침묵_사례에는_찾을_문장이_없어_contains_를_받지_않는다(tmp_path: Path) -> None:
+    table = tmp_path / "t.toml"
+    table.write_text(
+        '[[case]]\nhook = "hook_env_read.py"\nexpect = "silent"\ncontains = ["x"]\n'
+        'payload = { tool_name = "Bash" }\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="contains"):
+        load_cases(table)
+
+
+def test_훅이_내는_문장은_JSON_을_풀어_읽고_종료_2_면_stderr_다() -> None:
+    """훅은 `json.dumps` 의 기본값으로 한글을 이스케이프해 낸다. 날것 stdout 에서는 찾지 못한다."""
+    deny = json.dumps(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": "`.env` 는 비밀이다",
+            }
+        }
+    )
+    context = json.dumps(
+        {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "회고를 돈다"}}
+    )
+    block = json.dumps({"decision": "block", "reason": "한국어로 답한다"})
+
+    assert "비밀" not in deny
+    assert "`.env` 는 비밀이다" in message_of(0, deny, "")
+    assert "회고를 돈다" in message_of(0, context, "")
+    assert "한국어로 답한다" in message_of(0, block, "")
+    assert message_of(2, "", "막는 이유\n") == "막는 이유\n"
+    assert message_of(0, "not json", "") == ""
+
+
+def test_찾을_문장_가운데_훅의_문장에_없는_것을_돌려준다() -> None:
+    assert missing_fragments(
+        "tidy-checkouts 를 먼저 돈다", ["tidy-checkouts", "EnterWorktree"]
+    ) == ["EnterWorktree"]
+    assert missing_fragments("아무 문장", []) == []
+
+
+def test_기대한_판정이어도_찾을_문장이_빠지면_어긋남이다(tmp_path: Path) -> None:
+    """옛 훅도 같은 종류의 결과를 내면 판정만으로는 새 동작을 가르지 못한다(대기열 130)."""
+    replacements = create_fixtures(tmp_path)
+    registration = Registration("PreToolUse", 20)
+    payload: dict[str, JsonValue] = {"tool_name": "Bash", "tool_input": {"command": "cat .env"}}
+    found = Case(hook="hook_env_read.py", expect="deny", payload=payload, contains=[".env.example"])
+    absent = Case(hook="hook_env_read.py", expect="deny", payload=payload, contains=["없는 문구"])
+
+    found_result = run_case(found, replacements, registration)
+    absent_result = run_case(absent, replacements, registration)
+
+    assert found_result.ok
+    assert absent_result.outcome == "deny"
+    assert absent_result.missing == ("없는 문구",)
+    assert not absent_result.ok
 
 
 def test_표가_가리키는_훅_파일은_있어야_한다(tmp_path: Path) -> None:
@@ -157,6 +220,26 @@ def test_래퍼를_거치지_않거나_모양이_다른_등록은_거절한다(t
             registered_hooks(settings)
 
 
+def test_훅_이름과_이벤트로_등록의_매처를_돌려준다(tmp_path: Path) -> None:
+    """매처가 없는 묶음은 빈 문자열이다. 그 이벤트에 등록되지 않은 훅은 빈 목록이다(대기열 216)."""
+    settings = tmp_path / "settings.json"
+    entry: dict[str, JsonValue] = {"command": _REGISTERED_X}
+    other: dict[str, JsonValue] = {"command": registration_command("hook_y.py")}
+    groups: dict[str, JsonValue] = {
+        "PreToolUse": [
+            {"matcher": "Bash", "hooks": [entry, other]},
+            {"matcher": "Grep", "hooks": [other]},
+            {"hooks": [entry]},
+        ]
+    }
+    settings.write_text(json.dumps({"hooks": groups}), encoding="utf-8")
+
+    assert registered_matchers("hook_x.py", "PreToolUse", settings) == ["Bash", ""]
+    assert registered_matchers("hook_y.py", "PreToolUse", settings) == ["Bash", "Grep"]
+    assert registered_matchers("hook_z.py", "PreToolUse", settings) == []
+    assert registered_matchers("hook_x.py", "PostToolUse", settings) == []
+
+
 def test_러너가_띄우는_인자는_등록_명령에서_루트만_바꾼_것이다() -> None:
     root = Path("/r o/agent")
 
@@ -215,6 +298,21 @@ def test_이_저장소의_표는_등록된_훅마다_발동과_침묵이_있다(
 
     assert registered
     assert coverage_gaps(load_cases(PAYLOADS), registered) == []
+
+
+def test_이_저장소의_표에서_contains_를_단_사례는_지금_훅의_문장에_조각이_모두_있다(
+    tmp_path: Path,
+) -> None:
+    """pre-commit 의 러너가 모든 사례를 돌리지만, 조각을 단 사례만 여기서도 돌려 변이가 겨눌 자리를
+    둔다. 조각을 단 사례가 없으면 범위가 빈 것이라 실패한다."""
+    cases = [case for case in load_cases(PAYLOADS) if case.contains]
+    registrations = registered_hooks()
+    replacements = create_fixtures(tmp_path)
+
+    results = [run_case(case, replacements, registrations[case.hook]) for case in cases]
+
+    assert cases
+    assert [(r.case.note, r.outcome, r.missing) for r in results if not r.ok] == []
 
 
 def test_등록된_훅을_표에서_빼면_빈자리를_잡는다() -> None:

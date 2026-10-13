@@ -1,0 +1,116 @@
+# tools/hook_grep_omitted.py(대기열 145)의 판정과 배선을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/grep_omitted_hook_mutations.toml
+# 끝의 하나는 대조군이다. 디렉터리를 훑은 결과에는 경로가 붙어 있어 입력의 경로를 붙이는 갈래를 재지 못한다.
+# 첫 판의 대조군은 시험 하나의 단언만 뺐는데, 셀프 리뷰 뒤 더한 표지 그대로인 줄의 시험도 경로를 재 빨개졌다.
+
+[[mutation]]
+name = "생략된 문맥 줄도 센다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''        if line != MARKER and not line.endswith(":" + MARKER):
+            continue
+        place = line.removesuffix(MARKER).removesuffix(":")'''
+new = '''        context = "[Omitted long context line]"
+        if line != MARKER and not line.endswith(":" + MARKER) and not line.endswith(context):
+            continue
+        place = line.removesuffix(MARKER).removesuffix(context).removesuffix(":")'''
+
+[[mutation]]
+name = "표지 그대로인 줄(파일 하나를 -n 없이 훑었다)을 세지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''        if line != MARKER and not line.endswith(":" + MARKER):'''
+new = '''        if not line.endswith(":" + MARKER):'''
+
+[[mutation]]
+name = "파일 하나를 훑은 결과의 줄 번호에 입력의 경로를 붙이지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''        if path and (not place or place.isdigit()):
+            place = f"{path}:{place}" if place else path
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "자리를 열 개로 자르지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''    shown = ", ".join(place or "(자리 모름)" for place in places[:SHOWN])'''
+new = '''    shown = ", ".join(place or "(자리 모름)" for place in places)'''
+
+[[mutation]]
+name = "줄 번호가 있어도 -n 을 켜라고 한다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''    retry = "" if numbered else " 줄 번호가 없으니 `-n` 을 켜고 다시 부른다."'''
+new = '''    retry = " 줄 번호가 없으니 `-n` 을 켜고 다시 부른다." if numbered or True else ""'''
+
+[[mutation]]
+name = "줄 번호가 없어도 -n 을 켜라고 하지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''    retry = "" if numbered else " 줄 번호가 없으니 `-n` 을 켜고 다시 부른다."'''
+new = '''    retry = ""'''
+
+[[mutation]]
+name = "도구 이름으로 거르지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''    if payload.get("tool_name") != TOOL:
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "알림에 생략된 줄의 수를 들지 않는다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''긴 일치 줄 {len(places)}개가'''
+new = '''긴 일치 줄이'''
+
+[[mutation]]
+name = "매처를 Grep|Glob 으로 넓혔다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''"matcher": "Grep",'''
+new = '''"matcher": "Grep|Glob",'''
+
+[[mutation]]
+name = "대조군: 파일 하나를 훑은 테스트 둘의 경로 단언을 빼면 입력의 경로를 붙이지 않아도 초록이다"
+tests = ["tests/tools/test_hook_grep_omitted.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_grep_omitted.py"
+old = '''        if path and (not place or place.isdigit()):
+            place = f"{path}:{place}" if place else path
+'''
+new = '''
+'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_grep_omitted.py"
+old = '''    assert "C:/scratch/omit/lens.txt:11" in context'''
+new = '''    assert context'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_grep_omitted.py"
+old = '''    assert "C:/scratch/omit/lens.txt" in context'''
+new = '''    assert context'''
