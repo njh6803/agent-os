@@ -10,18 +10,22 @@ main 합치기의 수는 `.scratch/harness/probes/ci_wait/runs_per_pr.py` 가 �
 훅과 도구 실행 사이에 없어, 알림은 푸시가 나간 뒤에야 읽힌다(훅 실행 순서에서 끌어낸 판단이고 재지
 않았다). 커밋 뒤의 PostToolUse 에 알리는 판은 이 저장소의 커밋이 pre-commit 때문에 백그라운드로 돌아
 커밋이 도는 동안 알림이 와서 접었다(셀프 리뷰 명세 축). 같은 처지였던 대기열
-86(`hook_pr_head_sync`)과 같이 사용자가 막기를 골랐다(일지 2026-10-13-40).
+86(`hook_pr_head_sync`)과 같이 사용자가 막기를 골랐다(일지 2026-10-13-44).
 
 판정. 명령 위치의 `git push`(`git -C <경로>`, `git -c <설정>`, `git --no-pager` 를 앞에 둔 것 포함.
 hook_git_main_commit 과 같은 정규식과 인용 자리표시자 `_`)가 있고, 지우는 푸시(`--delete`, `-d`,
 `:<브랜치>`)가 아니고, 명령에 `PUSH_BEHIND_OK` 가 없으면 잰다. 페이로드의 `cwd` 에서 지금 브랜치를
 읽고(main 이거나 detached HEAD 면 재지 않는다), `git fetch -q origin main` 으로 origin/main 을
 갱신한 뒤 `git rev-list --count HEAD..origin/main` 이 1 이상이면 막는다. git 은 저장소를 가리키는
-`GIT_*` 를 벗기고 호출마다 시간 제한을 둔다. 셋의 합(18초)에 기동 시간을 더해도 등록의 20초 안이다.
+`GIT_*` 를 벗기고 호출마다 시간 제한을 둔다. fetch 는 출력을 버려 손자 프로세스가 살아 있어도
+제한에서 끊긴다(`quiet_git`). 셋의 합(18초)에 기동 시간을 더해도 등록의 20초 안이다.
 넘기거나 git 이 실패하면 막지 않는다(fail-open — 안전장치가 아니라 CI 한 번을 아끼는 장치다).
 
 못 보는 것.
 - 래퍼 뒤의 푸시(`bash -c "git push"`)와 큰따옴표 안의 치환(`"$(git push)"`).
+- PowerShell 의 제어 블록(`if ($?) { git push }`)과 접두 명령(`time git push`) 뒤의 푸시. 조각 앞을
+  벗기는 규칙이 그 모양을 모른다. 막지 않는다.
+- `--tags` 만 올리는 푸시. 브랜치를 올리지 않아 CI 를 다시 돌리지 않는데도 잰다(탈출구로 지나간다).
 - `cd <다른 저장소> && git push` 와 `git -C <다른 저장소> push`. 그 저장소가 아니라 페이로드의 `cwd`
   로 잰다(hook_git_main_commit 과 같은 한계).
 - 원격 이름이 origin 이 아니거나 기본 브랜치가 main 이 아닌 저장소. 재지 않는다.
@@ -47,7 +51,9 @@ BYPASS = "PUSH_BEHIND_OK"
 
 # hook_git_main_commit 의 _GIT_COMMIT 과 같은 모양이다(PR #91 리뷰). `git push-x` 같은 이름은 뺀다.
 _GIT_PUSH = re.compile(r"git\s+(?:(?:-C|-c)\s+\S+\s+|--no-pager\s+)*push(?![\w-])")
-_DELETION = re.compile(r"\s(?:--delete|-d)(?:\s|$)|\s:\S")
+# `--delete`, 합친 것을 포함한 짧은 옵션의 `d`(`-d`, `-fd`), 지우기 refspec(`:<브랜치>`).
+# `HEAD:main` 처럼 콜론 앞에 글자가 있는 refspec 은 공백 바로 뒤가 아니라 잡지 않는다.
+_DELETION = re.compile(r"\s(?:--delete|-[A-Za-z]*d[A-Za-z]*)(?:\s|$)|\s:\S")
 # 아래 넷은 hook_git_main_commit 의 것과 같다. 훅은 단독 실행 스크립트라 서로 import 하지 않는다.
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
@@ -68,7 +74,7 @@ class HookPayload(TypedDict, total=False):
 
 def checks_push(command: str) -> bool:
     """잴 푸시인가. 명령 위치의 `git push` 가 있고, 지우는 푸시가 아니고, 탈출구가 없다."""
-    joined = _QUOTED.sub("_", "\n".join(_without_heredoc_bodies(command)))
+    joined = _QUOTED.sub(_placeholder, "\n".join(_without_heredoc_bodies(command)))
     if BYPASS in joined:
         return False
     for piece in _SEPARATOR.split(joined):
@@ -76,6 +82,11 @@ def checks_push(command: str) -> bool:
         if _GIT_PUSH.match(segment) and not _DELETION.search(segment):
             return True
     return False
+
+
+def _placeholder(quoted: re.Match[str]) -> str:
+    """인용 구간의 자리표시자. 인용한 지우기 refspec(`":old"`)은 머리의 콜론을 남긴다."""
+    return ":_" if quoted.group(0)[1:2] == ":" else "_"
 
 
 def _without_heredoc_bodies(command: str) -> list[str]:
@@ -99,22 +110,53 @@ def _without_heredoc_bodies(command: str) -> list[str]:
     return kept
 
 
+def _environment() -> dict[str, str]:
+    """저장소를 가리키는 `GIT_*` 를 벗기고, 자격 증명을 묻느라 멈추지 않게 한다."""
+    environment = {k: v for k, v in os.environ.items() if k not in _REPO_LOCATION_VARS}
+    environment["GIT_TERMINAL_PROMPT"] = "0"
+    return environment
+
+
 def run_git(cwd: str, timeout: float, *args: str) -> str | None:
     """git 의 표준 출력. 실패하거나 띄우지 못하거나 시간을 넘기면 None."""
-    environment = {k: v for k, v in os.environ.items() if k not in _REPO_LOCATION_VARS}
     try:
         result = subprocess.run(
             ["git", *args],
             cwd=cwd,
-            env=environment,
+            env=_environment(),
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
             timeout=timeout,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def quiet_git(cwd: str, timeout: float, *args: str) -> bool:
+    """출력을 버리고 git 이 성공했는지만 낸다.
+
+    fetch 처럼 손자 프로세스(`git-remote-https`, `ssh`)를 띄우는 호출에 쓴다. 출력을 붙잡으면
+    kill 뒤에도 손자가 쥔 파이프가 닫히기를 기다려 시간 제한이 늦게 끝난다. 윈도에서 2초 제한이
+    12초 자는 손자가 끝난 뒤에야 돌아왔다(멈춘 fetch 시험과
+    `.scratch/harness/probes/push_behind_hook_mutations.toml` 의 "fetch 의 출력을 붙잡는다").
+    """
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            env=_environment(),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
 
 
 def behind_count(cwd: str) -> int | None:
@@ -125,7 +167,7 @@ def behind_count(cwd: str) -> int | None:
     branch = run_git(cwd, GIT_TIMEOUT, "symbolic-ref", "--quiet", "--short", "HEAD")
     if branch is None or branch == "main":
         return None
-    if run_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main") is None:
+    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main"):
         return None
     count = run_git(cwd, GIT_TIMEOUT, "rev-list", "--count", "HEAD..origin/main")
     return int(count) if count is not None and count.isdigit() else None
@@ -137,7 +179,8 @@ def reason_text(count: int) -> str:
         "main 을 합쳐야 해서, 지금 푸시하면 CI 가 한 번 더 돈다. `git merge origin/main` 으로 "
         "합치고(충돌이면 풀고) CLAUDE.md 의 검증 명령과 `uv run python tools/sibling_overlap.py` "
         "를 지난 뒤 다시 푸시한다. 충돌 없는 합치기에는 pre-commit 이 돌지 않는다. 일부러 뒤처진 "
-        f"채 푸시하려면 `{BYPASS}=1 git push …` 로 친다(일지 2026-10-13-40)."
+        f"채 푸시하려면 Bash 에서 `{BYPASS}=1 git push …`, PowerShell 에서 "
+        f"`$env:{BYPASS}='1'; git push …` 로 친다(일지 2026-10-13-44)."
     )
 
 

@@ -20,7 +20,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    joined = _QUOTED.sub("_", "\n".join(_without_heredoc_bodies(command)))'''
+old = '''    joined = _QUOTED.sub(_placeholder, "\n".join(_without_heredoc_bodies(command)))'''
 new = '''    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)))'''
 
 [[mutation]]
@@ -72,9 +72,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    if run_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main") is None:
+old = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main"):
         return None'''
-new = '''    if run_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main") is None:
+new = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main"):
         pass'''
 
 [[mutation]]
@@ -84,9 +84,13 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''            timeout=timeout,
+old = '''            errors="replace",
+            check=False,
+            timeout=timeout,
 '''
-new = ''''''
+new = '''            errors="replace",
+            check=False,
+'''
 
 [[mutation]]
 name = "뒤처지지 않아도 막는다"
@@ -118,8 +122,77 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''        f"채 푸시하려면 `{BYPASS}=1 git push …` 로 친다(일지 2026-10-13-40)."'''
-new = '''        "채 푸시하려면 사람에게 묻는다(일지 2026-10-13-40)."'''
+old = '''        f"채 푸시하려면 Bash 에서 `{BYPASS}=1 git push …`, PowerShell 에서 "
+        f"`$env:{BYPASS}='1'; git push …` 로 친다(일지 2026-10-13-44)."
+'''
+new = '''        "채 푸시하려면 사람에게 묻는다(일지 2026-10-13-44)."
+'''
+
+[[mutation]]
+name = "막는 이유에서 PowerShell 탈출구를 뺀다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "합치는_길과_탈출구를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''        f"`$env:{BYPASS}='1'; git push …` 로 친다(일지 2026-10-13-44)."'''
+new = '''        "로 친다(일지 2026-10-13-44)."'''
+
+[[mutation]]
+name = "인용한 지우기 refspec 의 콜론을 버린다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    return ":_" if quoted.group(0)[1:2] == ":" else "_"'''
+new = '''    return "_"'''
+
+[[mutation]]
+name = "합친 짧은 옵션의 d 를 모른다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''_DELETION = re.compile(r"\s(?:--delete|-[A-Za-z]*d[A-Za-z]*)(?:\s|$)|\s:\S")'''
+new = '''_DELETION = re.compile(r"\s(?:--delete|-d)(?:\s|$)|\s:\S")'''
+
+[[mutation]]
+name = "fetch 의 출력을 붙잡는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "멈춘_fetch는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+'''
+new = '''            capture_output=True,
+'''
+
+[[mutation]]
+name = "저장소를 가리키는 GIT_* 를 벗기지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "자격_증명을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    environment = {k: v for k, v in os.environ.items() if k not in _REPO_LOCATION_VARS}
+'''
+new = '''    environment = dict(os.environ)
+'''
+
+[[mutation]]
+name = "자격 증명 프롬프트를 끄지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "자격_증명을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    environment["GIT_TERMINAL_PROMPT"] = "0"
+'''
+new = ''''''
 
 # 대조군. 이유의 둘째 문장은 사람 말이고 판정이 아니어서 시험이 묶지 않는다.
 [[mutation]]
