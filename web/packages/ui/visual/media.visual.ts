@@ -104,16 +104,17 @@ interface Motion {
 
 const SPINNER = (page: Page): Locator => page.locator("[aria-busy=true] svg");
 
-// 움직이는 표시를 그리는 컴포넌트마다 그 상태의 스토리 하나. 불러오는 중인 버튼과 아이콘 버튼의 도는 표시, 값 모름
-// 진행 막대(트랙 안의 막대)다. 같은 컴포넌트의 다른 스토리(제출 버튼, 실패 톤)는 같은 클래스라 더 보지 않는다.
+// 움직이는 표시를 그리는 컴포넌트마다 그 상태의 스토리 하나. 불러오는 중인 버튼과 아이콘 버튼의 도는 표시, 값을
+// 모르는 진행 표시의 도는 표시(progressbar 의 첫 자식)다. 같은 컴포넌트의 다른 스토리(제출 버튼)는 같은 클래스라 더
+// 보지 않는다.
 const SPINNERS: readonly Motion[] = [
   { story: "atoms-button--loading", what: "도는 표시", target: SPINNER, animation: "spin" },
   { story: "atoms-iconbutton--loading", what: "도는 표시", target: SPINNER, animation: "spin" },
   {
     story: "atoms-progress--indeterminate",
-    what: "값 모름 진행 막대",
-    target: (page) => page.locator("[role=progressbar]:not([aria-valuenow]) > div > div"),
-    animation: "progress",
+    what: "값 모름 진행 표시의 도는 표시",
+    target: (page) => page.locator("[role=progressbar]:not([aria-valuenow]) > svg"),
+    animation: "spin",
   },
 ];
 
