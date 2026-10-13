@@ -32,7 +32,9 @@
 파일을 읽은 데서 왔을 수 있다), 서브에이전트가 도구를 불렀거나, Skill 을 부르지 않았거나, Agent
 결과가 없거나, 첫 턴에 기준 폴더 줄이 없거나 `EnterWorktree` 가 오류였으면 그 턴은 측정이 아니라고
 찍는다. 기대를 단언하지 않고 본 것을 찍는다. 결과 이벤트는 `type` 이 첫 키가 아니라 줄을 풀어서
-알아본다.
+알아본다. Skill 결과가 오류면 `오류` 로 찍어 `다시 싣지 않음` 과 가르고, Agent 결과가 오류면 답한
+것으로 세지 않는다. 한 갈래가 OSError 로 죽으면 그 갈래의 원본은 `probe_error` 한 줄이고 다른 갈래의
+원본은 남는다.
 
 못 보는 것: 데스크톱 앱의 세션은 재지 않는다(이 프로브는 `claude` CLI 다). 목록의 변화는 모델의
 답이라 모델이 옮기지 않은 이름은 보이지 않는다. 5초 안에 오지 않는 늦은 다시 읽기는 놓친다. 갈래마다
@@ -224,14 +226,18 @@ def drive(branch: str, outer: Path, inner: Path) -> str:
     deadline = time.monotonic() + TIMEOUT
 
     def send_and_wait(text: str) -> bool:
-        stdin.write(user_line(text))
-        stdin.flush()
+        try:
+            stdin.write(user_line(text))
+            stdin.flush()
+        except OSError:  # 결과 전에 끝난 claude 는 파이프를 닫는다
+            return False
         while (left := deadline - time.monotonic()) > 0:
             try:
                 line = pending.get(timeout=min(left, 5))
             except queue.Empty:
                 continue
             if line is None:
+                pending.put(None)  # 끝의 배출이 같은 표지를 기다린다
                 return False
             lines.append(line)
             if event_type(line) == "result":
@@ -263,15 +269,33 @@ def drive(branch: str, outer: Path, inner: Path) -> str:
                 turn()
             time.sleep(SETTLE)
     finally:
-        stdin.close()
+        try:
+            stdin.close()
+        except OSError:
+            pass
         try:
             process.wait(timeout=60)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
-    while (line := pending.get()) is not None:
+    # 손자가 stdout 을 쥐고 남으면 EOF 가 오지 않으므로 배출에도 제한 시간을 둔다.
+    while True:
+        try:
+            line = pending.get(timeout=10)
+        except queue.Empty:
+            break
+        if line is None:
+            break
         lines.append(line)
     return "".join(lines)
+
+
+def drive_safely(branch: str, outer: Path, inner: Path) -> str:
+    """한 갈래가 예외로 죽어도 다른 갈래의 원본을 잃지 않게, 예외를 원본의 한 줄로 바꾼다."""
+    try:
+        return drive(branch, outer, inner)
+    except OSError as error:
+        return json.dumps({"type": "probe_error", "error": repr(error)}, ensure_ascii=False) + "\n"
 
 
 def event_type(line: str) -> str | None:
@@ -295,6 +319,8 @@ class Turn:
     skill_marks: list[str] = field(default_factory=list)
     agent_marks: list[str] = field(default_factory=list)
     agent_answered: bool = False
+    agent_errors: int = 0
+    skill_errors: int = 0
     edit_errors: int = 0
     edits: list[tuple[str, str]] = field(default_factory=list)  # (file_path, new_string)
     answer: str | None = None
@@ -351,9 +377,13 @@ def turns_of(raw: str) -> list[Turn]:
                     turn.skill_marks += marks_in(text, SKILL_MARKS)
                 if isinstance(block, dict) and block.get("type") == "tool_result":
                     name = names.get(block.get("tool_use_id", ""), "")
-                    if name == "Agent":
+                    if name == "Agent" and block.get("is_error"):
+                        turn.agent_errors += 1
+                    elif name == "Agent":
                         turn.agent_answered = True
                         turn.agent_marks += marks_in(text, AGENT_MARKS)
+                    if name == "Skill" and block.get("is_error"):
+                        turn.skill_errors += 1
                     if name == "EnterWorktree":
                         turn.worktree_error = bool(block.get("is_error"))
                     if name == "Edit" and block.get("is_error"):
@@ -402,7 +432,7 @@ def main(out: Path) -> int:
     try:
         places = {branch: layout(roots[branch]) for branch in BRANCHES}
         with ThreadPoolExecutor(max_workers=len(BRANCHES)) as pool:
-            raws = list(pool.map(lambda branch: drive(branch, *places[branch]), BRANCHES))
+            raws = list(pool.map(lambda branch: drive_safely(branch, *places[branch]), BRANCHES))
     finally:
         for root in roots.values():
             try:
@@ -413,6 +443,8 @@ def main(out: Path) -> int:
         (out / f"{branch}.jsonl").write_text(raw, encoding="utf-8", newline="\n")
     invalid = 0
     for branch, raw in zip(BRANCHES, raws, strict=True):
+        if event_type(raw.splitlines()[-1] if raw else "") == "probe_error":
+            print(f"[무효] {branch} 갈래가 예외로 끝났다: {raw.splitlines()[-1]}")
         turns = turns_of(raw)
         expected = 3 if branch == "안편집" else 2
         if len(turns) < expected:
@@ -430,7 +462,9 @@ def main(out: Path) -> int:
             valid = measured(turn, first=index == 0)
             invalid += not valid
             dirs = ["주" if "worktrees" not in d else "안" for d in turn.skill_dirs]
-            dirs += ["다시 싣지 않음"] * (turn.tools.count("Skill") - len(turn.skill_dirs))
+            dirs += ["오류"] * turn.skill_errors
+            reused = turn.tools.count("Skill") - len(turn.skill_dirs) - turn.skill_errors
+            dirs += ["다시 싣지 않음"] * reused
             print(
                 f"[{'측정' if valid else '무효'}] {branch}-{index + 1} 도구 {turn.tools} "
                 f"서브 도구 {turn.sub_tools} · 스킬 기준 폴더 {dirs} 표지 {turn.skill_marks} · "
