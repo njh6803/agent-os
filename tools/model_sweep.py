@@ -8,8 +8,8 @@
 - 종류: `feature/`는 구현, `chore/`와 `claude/`는 하네스다(소급 측정 사전 등록의 브랜치 종류).
   스윕을 멈춘 종류는 `SWEPT`에서 뺀다.
 - 갈래: 이름을 UTF-8로 인코딩한 바이트의 SHA-256 첫 바이트가 짝수면 `BASE`, 홀수면 `COMPARISON`.
-- 기간: `END`(UTC 날짜, 사전 등록의 끝) 전날까지. 그날부터는 `스윕 밖`을 찍고, stderr로 기간이
-  끝났고 판정은 그 7일 뒤라고 알린다.
+- 기간: `END`(UTC 날짜, 사전 등록의 끝) 전날까지. 그날부터는 `스윕 밖`을 찍고, 스윕하는 종류의
+  브랜치면 stderr로 기간이 끝났고 판정은 그 7일 뒤라고 알린다.
 
 못 보는 것: 그 브랜치를 지시문으로 여는지, 결정표 칸이 무엇인지는 모른다. 부르는 쪽이 칸이 `BASE`일
 때만 부른다. 이름을 갈래를 보고 바꿨는지도 모른다.
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None, today: date | None = None) -> int:
         return 2
     now = today if today is not None else datetime.now(UTC).date()
     value = assign(args[0], now)
-    if value is None and now >= END and SWEPT:
+    if now >= END and kind(args[0]) is not None:
         notice = f"스윕 기간이 {END.isoformat()}에 끝났다. 결정표 칸을 그대로 쓴다."
         print(f"{notice} 판정은 그 7일 뒤에 {PREREG} 대로 한다", file=sys.stderr)
     print(value if value is not None else OUTSIDE)

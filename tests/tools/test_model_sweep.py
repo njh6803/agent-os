@@ -97,6 +97,15 @@ def test_main은_기간이_끝났으면_stderr로도_알린다(capsys: pytest.Ca
     assert "model_sweep/README.md" in captured.err
 
 
+def test_main은_기간이_끝나도_스윕하지_않는_종류에는_알리지_않는다(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["docs/model-sweep-design"], today=END) == 0
+    captured = capsys.readouterr()
+    assert captured.out == f"{OUTSIDE}\n"
+    assert captured.err == ""
+
+
 @pytest.mark.parametrize("argv", [[], ["feature/01-a", "feature/02-b"]])
 def test_main은_인자가_브랜치_하나가_아니면_2로_끝난다(
     argv: list[str], capsys: pytest.CaptureFixture[str]
