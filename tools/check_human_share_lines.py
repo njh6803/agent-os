@@ -53,7 +53,12 @@ from __future__ import annotations
 import io
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
+
+# 줄 하나의 갈래. 앞의 넷은 사람 몫 줄이고, `근사`와 `표지`는 사람 몫으로 세지 않고 잡는 모양이다.
+Kind = Literal["결정", "허락", "사람만", "없음", "근사", "표지"]
 
 ROOT = Path(__file__).resolve().parent.parent
 KICKOFF = ROOT / "KICKOFF.md"
@@ -63,6 +68,7 @@ NONE_LINE = "사람 몫: 없음"
 _SECTION = re.compile(r"## (?:(준비)(?=[\s.]|$)|([0-8]단계)\.)")
 _BOUNDARY = re.compile(r" {0,3}#{1,2}(?:[ \t]|$)")
 _SHARE = re.compile(r"사람 몫\((결정|허락|사람만)\): \S")
+_SHARE_KINDS: dict[str, Kind] = {"결정": "결정", "허락": "허락", "사람만": "사람만"}
 _NEAR = re.compile(r"사람\s*몫")
 # 강조 표지는 소유 한정(`{1,2}+`)이다. 그냥 `{1,2}`면 `*`나 `_`만 길게 이어진 줄(구분선)을
 # 1칸·2칸으로 나누는 길을 모두 되짚는다. 30자 안팎에서 1초에 가까웠고 글자마다 늘었다(PR 직전 리뷰가
@@ -161,19 +167,73 @@ def _heading_problems(headings: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return found
 
 
-def _kind(line: str) -> str | None:
-    """사람 몫 줄의 갈래(`결정`, `허락`, `사람만`, `없음`), 근사 모양이면 `근사`, 표지를 붙였으면
-    `표지`, 아니면 None."""
+def _kind(line: str) -> Kind | None:
+    """줄의 갈래. 사람 몫 줄도 근사 모양도 표지를 붙인 줄도 아니면 None."""
     if line.rstrip() == NONE_LINE:
         return "없음"
     share = _SHARE.match(line)
     if share is not None:
-        return share.group(1)
+        return _SHARE_KINDS[share.group(1)]
     if _NEAR.match(line):
         return "근사"
     if _MARKED.match(line):
         return "표지"
     return None
+
+
+@dataclass
+class _Section:
+    """열 절 하나. `lines`는 그 절에서 갈래가 있는 줄(근사·표지 포함)의 (줄 번호, 줄, 갈래)다."""
+
+    heading: int
+    key: str
+    lines: list[tuple[int, str, Kind]] = field(default_factory=list[tuple[int, str, Kind]])
+
+
+def _sections_of(
+    kept: list[tuple[int, str]],
+) -> tuple[list[_Section], list[tuple[int, str, Kind]]]:
+    """펜스 밖의 줄을 열 절로 나눈다. 열 절 밖에서 갈래가 있는 줄은 둘째 목록에 든다."""
+    sections: list[_Section] = []
+    outside: list[tuple[int, str, Kind]] = []
+    current: _Section | None = None
+    for number, line in kept:
+        if _BOUNDARY.match(line):
+            key = _section_key(line)
+            current = None
+            if key is not None:
+                current = _Section(number, key)
+                sections.append(current)
+            continue
+        kind = _kind(line)
+        if kind is None:
+            continue
+        (outside if current is None else current.lines).append((number, line, kind))
+    return sections, outside
+
+
+def _line_problem(line: str, kind: Kind, *, inside: bool) -> str | None:
+    """줄 하나의 어긋남. `inside`는 그 줄이 열 절 안에 있는가다."""
+    if kind == "근사":
+        return _NEAR_SHAPE
+    if kind == "표지":
+        return _MARKED_SHAPE
+    if not inside:
+        return _OUTSIDE
+    if kind == "사람만" and _CONFIRM.search(line) is None:
+        return _NO_CONFIRM
+    return None
+
+
+def _section_problems(section: _Section) -> list[tuple[int, str]]:
+    """절 하나의 사람 몫 줄 수와 `사람 몫: 없음`의 유일성. 근사·표지 줄은 사람 몫으로 세지
+    않는다."""
+    shares = [(number, kind) for number, _, kind in section.lines if kind not in ("근사", "표지")]
+    if not shares:
+        return [(section.heading, f"이 절에 사람 몫 줄이 없다 — `{_label(section.key)}`")]
+    if len(shares) > 1:
+        return [(number, _NONE_NOT_ALONE) for number, kind in shares if kind == "없음"]
+    return []
 
 
 def problems_in(text: str) -> list[str]:
@@ -187,34 +247,15 @@ def problems_in(text: str) -> list[str]:
         found.append((0, _NO_SECTIONS))
         return [f"{number}: {reason}" for number, reason in sorted(found)]
     found.extend(_heading_problems(headings))
-    sections: list[tuple[int, str, list[tuple[int, str]]]] = []
-    current: list[tuple[int, str]] | None = None
-    for number, line in kept:
-        if _BOUNDARY.match(line):
-            key = _section_key(line)
-            current = None
-            if key is not None:
-                current = []
-                sections.append((number, key, current))
-            continue
-        kind = _kind(line)
-        if kind is None:
-            continue
-        if kind == "근사":
-            found.append((number, _NEAR_SHAPE))
-        elif kind == "표지":
-            found.append((number, _MARKED_SHAPE))
-        elif current is None:
-            found.append((number, _OUTSIDE))
-        else:
-            if kind == "사람만" and _CONFIRM.search(line) is None:
-                found.append((number, _NO_CONFIRM))
-            current.append((number, kind))
-    for heading, key, shares in sections:
-        if not shares:
-            found.append((heading, f"이 절에 사람 몫 줄이 없다 — `{_label(key)}`"))
-        elif len(shares) > 1:
-            found.extend((number, _NONE_NOT_ALONE) for number, kind in shares if kind == "없음")
+    sections, outside = _sections_of(kept)
+    placed = [(entry, False) for entry in outside]
+    placed += [(entry, True) for section in sections for entry in section.lines]
+    for (number, line, kind), inside in placed:
+        reason = _line_problem(line, kind, inside=inside)
+        if reason is not None:
+            found.append((number, reason))
+    for section in sections:
+        found.extend(_section_problems(section))
     return [f"{number}: {reason}" for number, reason in sorted(found)]
 
 

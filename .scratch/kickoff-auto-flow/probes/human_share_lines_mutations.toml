@@ -174,10 +174,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/check_human_share_lines.py"
 old = '''
-        if not shares:
+    if not shares:
 '''
 new = '''
-        if False:
+    if False:
 '''
 
 [[mutation]]
@@ -188,10 +188,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/check_human_share_lines.py"
 old = '''
-        elif len(shares) > 1:
+    if len(shares) > 1:
 '''
 new = '''
-        elif False:
+    if False:
 '''
 
 [[mutation]]
@@ -244,10 +244,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/check_human_share_lines.py"
 old = '''
-            if kind == "사람만" and _CONFIRM.search(line) is None:
+    if kind == "사람만" and _CONFIRM.search(line) is None:
 '''
 new = '''
-            if False:
+    if False:
 '''
 
 [[mutation]]

@@ -153,3 +153,22 @@ PR 직전 리뷰를 반영한 커밋 `2abb3af` 뒤에 origin/main이 `5d4b4e0`(#
     골랐으므로 명세를 고치지 않는다.
 - 반영한 판에서 테스트 41개가 초록이고, 변이 표를 전체로 다시 돌려 기준선 스물여섯이 초록, 변이 서른하나가 모두 기대대로
   빨강이었다. 소유 한정을 뗀 변이는 시간 단언으로 빨개졌고 11.1초 걸렸다.
+
+## PR 리뷰
+
+PR [njh6803/agent-os#214](https://github.com/njh6803/agent-os/pull/214). 첫 푸시(`3911ead`)에서 CI 다섯(python, web, e2e, visual,
+verify)이 초록이었다.
+
+- CodeRabbit: 자동 리뷰는 별이 10개 미만이라 건너뛰었고, 손으로 부른 `@coderabbitai review`는 "Review limit reached"(다음 리뷰는 3분
+  뒤)로 리뷰하지 않았다. 이 회차의 보안·버그 축은 PR 직전 리뷰(`/security-review`, `bug-perf-review`)가 대체한다. 반영 커밋을 푸시한
+  뒤 다시 부른다.
+- claude-review 첫 회차: Critical·Major 없이 Minor 둘과 Nit 둘. 첫 회차라 지적마다 판단했다.
+  - Minor: `problems_in`이 펜스 결과 받기, 머리 검사, 절 나누기, 줄 판정, 절 집계를 한 함수에서 해 추상화 수준이 섞인다 → 절 나누기
+    (`_sections_of`), 줄 하나의 판정(`_line_problem`), 절의 집계(`_section_problems`)로 뺐다. 동작은 그대로다.
+  - Minor: `_kind`가 갈래를 맨 문자열로 돌려주고 호출부가 같은 리터럴을 비교해 오타가 조용히 빠진다 → `Kind = Literal[...]`로 묶었다.
+    pyright strict가 갈래 밖의 비교를 잡는다. `_SHARE`의 그룹은 사전으로 `Kind`에 옮긴다(`cast` 없이).
+  - Nit: `_kind`의 독스트링이 반환값 다섯을 나열한다 → `Kind`가 그 설명을 맡아 독스트링을 줄였다.
+  - Nit: `sections_in`은 테스트만 쓰는 공개 함수다 → 둔다. 티켓이 "훑은 절이 열이라는 단언"을 요구했고(`.claude/rules/tests.md`의 범위
+    단언), `problems_in`의 출력은 어긋남만 내서 절을 몇 개 훑었는지 말하지 않는다. PR 코멘트에 이유를 남긴다.
+- 옮긴 코드에 맞춰 변이 표의 원문 셋(절 집계 둘, 사람만 줄의 확인)을 새 들여쓰기로 고쳤다. 코드를 옮겼으므로 전체를 다시 돌려 기준선
+  스물여섯이 초록, 변이 서른하나가 모두 기대대로 빨강이었다.
