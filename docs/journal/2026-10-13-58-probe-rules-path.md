@@ -1,8 +1,9 @@
-# 2026-10-13 (52) 프로브 규칙을 프로브 파일을 여는 자리로 옮긴다
+# 2026-10-13 (58) 프로브 규칙을 프로브 파일을 여는 자리로 옮긴다
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 223을 닫는다. 세션은 주 체크아웃에서 열렸고, 지시문대로
 `tidy-checkouts`를 먼저 돈 뒤 `EnterWorktree(name=probe-rules-path)`로 들어가 `origin/main`(`4814568`)에서
-`chore/probe-rules-path`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 52다.
+`chore/probe-rules-path`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 52였다. PR을 열기 전에 main이 일지 54를
+병합해 이름순 차례를 지키려고 57로 옮겼고, 그 대조를 다시 치는 사이 형제 워크트리가 57을 먼저 받아 58로 옮겼다.
 
 > 사용자: "대기열 223을 반영한다(.claude/rules/에 paths: .scratch/**/probes/** 규칙을 두고 issue-tracker "프로브와 근거"의 탐침 항목을 그 자리로 옮기거나 가리킨다, 카나리아로 실리는지 본다). 그 행의 "어디로" 칸이 원천이다"
 
@@ -73,7 +74,71 @@ issue-tracker 줄은 Read 계기만 적었다. ADR 0004 이력과 `README.md`의
   디렉터리)에서 짓는 프로브에는 규칙이 실리지 않아, issue-tracker의 가리키는 줄에 그때는 규칙 파일을 Read로 열라고 더했다.
 - 고쳤다(Nit): issue-tracker 줄의 "그 파일의 머리"를 `probes.md`로, 일지의 인용 서술을 실제 인용 꼴(spec-reviewer는 파일만,
   웹 요약 훅은 "절" 없이)로.
-- 보류(Minor, 표준 축): "새 프로브는 Write로 만들어지는데 Write로는 규칙이 실리지 않는다(ADR 0004)". 위 Write 갈래에서 claude
+- 보류(Minor, 표준 축): 새 프로브는 Write로 만들어지는데 ADR 0004 이력대로면 Write로는 규칙이 실리지 않는다는 지적. 위 Write 갈래에서 claude
   2.1.296은 실렸다. 리뷰어는 그 관찰을 받지 못했다. 규칙 머리의 "Read로 여는 자리"만 "여는 자리(`paths`)"로 넓혔다.
 - 보류(Nit, 명세 축): 기능마다의 프로브 README가 머리에 둔 "규약은 issue-tracker" 줄. 그 절이 다시 `probes.md`를 가리키고, 그 README를
   Read하면 규칙이 실려 거짓이 아니다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 CLI 축은 돌지 못했다. 첫 커밋(`5dc2851`) 뒤 origin/main(`2d593dd`)을 합치고
+(`4012990`, 충돌 없음) 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 취약점 없음. 식별 서브태스크가 후보를 내지 않아 거르기 서브태스크는 띄우지 않았다. 카나리아 명세가 닿는
+  `tools/canary.py`의 실행 길(인자 목록, `shell=True` 없음, `rule`은 `--tools Read`)을 따라갔다.
+- `bug-perf-review`: 유효 Nit 하나, 보류 Minor 하나, 오탐 여섯. Nit("그 절에 있는 동안"이 옮긴 뒤에는 지금도 그 절에 있다고
+  읽힌다)은 "있던 동안"으로 고치고 사전 확인(통과 1)으로 다시 갈음했다. Minor는 셀프 리뷰가 보류한 Write 계기와 같은 지적이다.
+  변이 명세 셋은 `tools/mutate.py --check`가 통과했다고 그 리뷰가 적었다.
+- 같은 무렵 데스크톱 앱의 백그라운드 보안 검토가 이 브랜치가 고치지 않은 `tools/hook_bash_commit_msg.py`(#225)를 짚었다. 그 훅은
+  커밋 대상 저장소의 `tools/check_commit_msg.py`를 PreToolUse에서, 사람이 그 Bash 명령을 승인하기 전에 실행한다. 그 저장소의
+  pre-commit 설정이 그 스크립트를 부를 때만이라 보통은 그 커밋이 어차피 돌릴 스크립트지만, 신뢰하지 않는 저장소에 커밋을 시도만
+  해도 돈다(코드를 읽었다). 이 PR의 범위가 아니라 후속으로 넘긴다(아래 "다음").
+
+## 바꾼 것
+
+- `.claude/rules/probes.md`(새 파일, `paths: .scratch/**/probes/**`): issue-tracker에서 옮긴 항목 넷과 머리 문단.
+- `docs/agents/issue-tracker.md`: 프로브와 근거 절의 항목 넷을 가리키는 한 줄로 바꿨다.
+- `CODING_STANDARDS.md`: 실패를 기대하는 테스트 줄의 "탐침 쪽은"을 새 자리로.
+- `.scratch/harness/probes/{llm_tokens,line_separators_hook,rewrap_comments}_mutations.toml`: 머리 주석의 가리키는 자리.
+- `.scratch/harness/probes/canary/probes_rule.toml`(새 파일): 카나리아 명세.
+- `.scratch/retro-queue.md`: 223 행을 닫았다.
+
+## 검사
+
+- 손으로 친 다섯: `uv run pytest -q`는 2594 통과, 7 deselect(`llm` 마커)였다. ruff check·format, pyright(0 errors), lint-imports(계약
+  다섯 유지), 지침 검사가 모두 통과했다.
+- 첫 커밋의 pre-commit은 모든 검사가 Passed였다(pytest 514.1초, web-verify 379.5초). 인용 대조가 일지에서 경고 둘을 냈다. 하나는 ADR
+  0004의 그 문장이 원문에서 줄이 접혀 있던 것이고, 다른 하나는 리뷰 지적을 풀어 쓴 문장에 따옴표를 붙인 것이라 따옴표를 뗐다.
+- 그 커밋은 일지 2026-10-13-47의 "다음"이 볼 것으로 남긴 새 훅 `hook_bash_commit_msg`가 `git commit -F <파일>`에서 처음 돈 사례다.
+  제목이 판정을 지나 막지 않았다. 막혀야 할 제목으로는 보지 않았다.
+- 카나리아 `probes_rule.toml`: 통과 4, 그 뒤 머리 문단만 여러 번 고쳐 마지막 고침 뒤의 사전 확인(통과 1)으로
+  갈음했다.
+
+## 회고
+
+후보 다섯, 승인 둘(하나는 넘겨 사용자가 승인했다), 기각 셋.
+
+1. **넘김 → 사용자 승인, 대기열 247.** ADR 0004 이력과 `README.md`가 `paths` 규칙은 Read로 열 때만 실린다고 적는데, 이 세션의
+   Write 갈래(claude 2.1.296)에서는 Write로 새 파일을 만들 때도 실렸다. 그것을 재려고 `tools/canary.py`에 없는 갈래를 스크래치
+   스크립트와 손 명령으로 돌렸다. ADR 이력을 고치는 일이라 넘겼다. 층은 커밋한 측정(카나리아의 새 갈래)과 그 뒤의 ADR 이력이다.
+
+   > 사용자: "대기열에 올린다 (Recommended)"
+
+2. **승인, 대기열 246.** `tools/hook_bash_commit_msg.py`가 커밋 대상 저장소의 판정 스크립트를 사람의 승인 전에 실행한다. 사건은
+   이 세션에서 백그라운드 보안 검토가 짚은 것이다. 층은 그 훅의 코드와 시험(고침이라 사건 하나로 반영한다)이고, PR 하나로 되돌릴
+   수 있다. 이 PR의 범위(문서와 규칙)가 아니라 대기열에 둔다.
+3. **기각.** 규칙 머리의 경위 문장이 처음에 네 회차를 모두 "표지 없이 0으로 끝냈다", "그 절을 읽은 세션"으로 넓게 적었다. 한
+   번은 리뷰 전에 이 세션이, 나머지는 셀프 리뷰 표준 축이 잡았다. code-review의 주장 검증 목록(닫힌 주장)이 이미 잡는다.
+4. **기각.** 항목을 옮긴 스크래치 스크립트가 `Path.write_text`로 issue-tracker를 CRLF로 바꿨다. git이 스테이지할 때 경고를 내며 LF로
+   되돌리고, 바로 알아채 한 명령으로 고쳤다. 이미 있는 장치가 잡는다.
+5. **기각.** origin/main을 합칠 때 커밋하지 않은 일지 수정을 `git stash push -m`으로 비켰다. 표지를 달고 SHA로 되살려 다른 세션의
+   항목과 섞이지 않았다. 앞서 커밋했으면 필요 없던 단계지만 비용은 명령 넷이고, 공유 stash의 안전한 쓰임은 세션 환경 안내에 있다.
+
+## 다음
+
+- **223의 효과는 다음에 새 프로브를 쓰는 세션에서 처음 본다.** 그 세션의 셀프 리뷰가 다시 표지 없는 첫 판을 잡으면 223의
+  5회차다. 지침으로 옮긴 뒤에도 어겨진 것이니 `CLAUDE.md` 교정 루프대로 계기 훅(예: `.scratch/**/probes/**`에 Write할 때
+  표지 항목을 짚는 PostToolUse)을 후보로 올린다.
+- **이 PR 뒤의 다음 작업은 일지 2026-10-13-47 "다음"의 훅 묶음(130·145·162·216)이다.** 넷 다 아직 열려 있다. 새로 든
+  246(`hook_bash_commit_msg`의 보안 고침)은 대상 파일이 달라 그 묶음의 조건에 들지 않지만, 같은 `tools/` 훅 둘레라 그 세션이
+  함께 볼지 정한다. 247은 ADR 이력 초안과 사용자 승인이 들어 따로 간다.
