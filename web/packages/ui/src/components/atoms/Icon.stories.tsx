@@ -82,3 +82,21 @@ export const AllNamesDark: Story = {
   name: "다크 모드에서도 열여섯 이름이 화면 1.5px 의 선으로 그려진다",
   globals: { mode: "dark" },
 };
+
+/** 보여 주기용(`showcase`). 관리 화면 탐색 항목 앞의 아이콘이다. 글자와 함께 놓여 꾸밈이므로 숨는다. */
+export const ShowcaseNavItems: Story = {
+  name: "쓰임: 탐색 항목 앞의 아이콘",
+  tags: ["showcase"],
+  render: () => (
+    <ul className="flex flex-col gap-2 text-body text-text">
+      <li className="flex items-center gap-2">
+        <Icon name="plug" size="16" />
+        플러그인
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="list" size="16" />
+        실행
+      </li>
+    </ul>
+  ),
+};
