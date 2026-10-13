@@ -63,6 +63,8 @@ class NotMeasured(Exception):
 
 
 def _load_seam() -> ModuleType:
+    # 시험 모듈이 `tools` 를 import 한다. pytest 는 `pythonpath` 설정으로 루트를 넣는다.
+    sys.path.insert(0, str(ROOT))
     spec = importlib.util.spec_from_file_location("open_session_seam", TEST_FILE)
     if spec is None or spec.loader is None:
         raise SystemExit(f"{TEST_FILE} 를 불러오지 못했다")
@@ -245,6 +247,9 @@ if ($null -eq $found) { '(없음)' } else { $found }
 "filter=$global:cimFilter"
 """
 
+# `Get-AppQuitMarker` 와 그것이 부르는 순수 함수. 그 함수의 선택을 떼어 낸 뒤(대기열 17) 목록이
+# 늘었다.
+_SHADOW_FUNCTIONS = "Find-QuitMarker,Find-MainStart,Select-QuitLogs,Get-AppQuitMarker"
 _APP = r"C:\Program Files\WindowsApps\Claude_1.0.0.0_x64__test\app\Claude.exe"
 _MARKER = "beforeQuitForUpdate handler fired, going down for update"
 _FILTER = "filter=Name = 'Claude.exe'"
@@ -268,7 +273,7 @@ def shadow_branch(seam: ModuleType) -> list[str]:
         }
         for name, (processes, want) in branches.items():
             given = {"processes": processes, "local": str(local), "roaming": str(roaming)}
-            done = seam._call("Find-QuitMarker,Get-AppQuitMarker", _SHADOW, given)
+            done = seam._call(_SHADOW_FUNCTIONS, _SHADOW, given)
             got = done.stdout.strip().splitlines()
             if done.returncode != 0 or got != want:
                 raise NotMeasured(f"shadow {name}: {got!r} {done.stderr.strip()}")
