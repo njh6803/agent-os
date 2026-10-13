@@ -14,7 +14,9 @@
 - batched: 같은 사례 여럿을 pwsh 하나에서 차례로 부른다(`_MODEL_LINES`, 결정표 대조 테스트의 본문).
 - runspace: 같은 사례 여럿을 pwsh 하나에서 사례마다 새 runspace 로 부른다. 앞 사례가 전역에 둔 값이
   다음 사례에 보이면 `leaked` 를 낸다. 대조군은 같은 글을 바깥과 같은 runspace 에서 부르고, 둘째
-  사례부터 모두 `leaked` 를 내야 한다(누수를 알아보는 장치가 도는지의 양성 대조).
+  사례부터 모두 `leaked` 를 내야 한다(누수를 알아보는 장치가 도는지의 양성 대조). 앞 사례가 바꾼
+  환경 변수가 보이면 `env-leaked` 를 따로 낸다. 환경 변수는 프로세스에 하나라 새 runspace 에서도
+  둘째 사례부터 모두 보여야 한다(PR 직전 버그·성능 리뷰가 손으로 본 것을 이 갈래가 다시 낸다).
 - shadow: 시험 본문이 `Get-CimInstance` 와 같은 이름의 함수를 정의하면, AST 에서 떼어 낸
   `Get-AppQuitMarker` 가 그 함수를 부르는지. 가짜가 주 프로세스를 줄 때만 표지 줄이 나와야 하고,
   렌더러만 줄 때와 아무것도 주지 않을 때는 없어야 한다. 세 갈래는 가짜가 주는 프로세스만 다르므로
@@ -23,8 +25,9 @@
   본다. 로그 폴더는 `APPDATA`·`LOCALAPPDATA` 를 임시 폴더로 돌려 준다.
 
 모든 사례는 출력이 기대한 글자와 같은지까지 본다. 같지 않은 갈래는 측정으로 세지 않고 종료 코드를
-1로 둔다. 시간은 그 회차의 벽시계 초다. 사례의 수(36)는 테스트 파일의 사례 수에 맞췄지만 모두
-`Read-ModelLine` 의 정상 사례라, 실패를 단언하는 사례(종료 코드·stderr)를 묶는 값은 재지 않는다.
+1로 둔다. 시간은 그 회차의 벽시계 초다. 사례의 수(36)는 이 프로브를 지을 때(`185fe61`) 테스트 파일의
+사례 수에 맞췄지만 모두 `Read-ModelLine` 의 정상 사례라, 실패를 단언하는 사례(종료 코드·stderr)를
+묶는 값은 재지 않는다.
 
 돌리는 법: 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/harness/probes/pwsh_test_seam.py`.
 pwsh(PowerShell 7)가 PATH 에 있어야 하고, shadow 갈래가 Windows 경로를 쓰므로 Windows 에서 돈다.
@@ -35,6 +38,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import statistics
 import subprocess
 import sys
@@ -156,7 +160,9 @@ $texts = foreach ($name in 'Get-EffortSteps', 'Read-ModelLine') {
 $case = @'
 $leak = Get-Variable -Scope Global -Name seamLeak -ErrorAction SilentlyContinue
 if ($null -ne $leak) { 'leaked' }
+if ($env:SEAM_ENV_LEAK) { 'env-leaked' }
 $global:seamLeak = 1
+$env:SEAM_ENV_LEAK = '1'
 $found = Read-ModelLine $args[0]
 "$($found.Model)|$($found.Effort)|$($found.Step)"
 '@
@@ -186,23 +192,36 @@ def _runspace(prompts: list[str], mode: str) -> tuple[float, subprocess.Complete
     return time.perf_counter() - started, done
 
 
-def runspace_branch(prompts: list[str], expected: list[str]) -> list[str]:
-    elapsed, done = _runspace(prompts, "new")
+_MARKS = ("leaked", "env-leaked")
+
+
+def _split_marks(done: subprocess.CompletedProcess[str]) -> tuple[list[str], int, int]:
+    """사례의 결과 줄, 전역 누수 수, 환경 변수 누수 수."""
     lines = done.stdout.strip().splitlines()
-    if done.returncode != 0 or lines != expected:
-        leaked = sum(line == "leaked" for line in lines)
-        raise NotMeasured(f"runspace(leaked={leaked}): {lines[:3]!r} {done.stderr.strip()}")
-    _, control = _runspace(prompts, "current")
-    control_lines = control.stdout.strip().splitlines()
-    control_leaked = sum(line == "leaked" for line in control_lines)
-    if control.returncode != 0 or control_leaked != len(prompts) - 1:
+    results = [line for line in lines if line not in _MARKS]
+    return results, lines.count("leaked"), lines.count("env-leaked")
+
+
+def runspace_branch(prompts: list[str], expected: list[str]) -> list[str]:
+    # 둘째 사례부터 모두 보여야 하는 누수의 수다.
+    every = len(prompts) - 1
+    elapsed, done = _runspace(prompts, "new")
+    results, leaked, env_leaked = _split_marks(done)
+    if done.returncode != 0 or results != expected or leaked != 0 or env_leaked != every:
         raise NotMeasured(
-            f"runspace 대조군(leaked={control_leaked}): {control_lines[:3]!r} "
+            f"runspace(leaked={leaked}, env_leaked={env_leaked}): {results[:3]!r} "
+            f"{done.stderr.strip()}"
+        )
+    _, control = _runspace(prompts, "current")
+    control_results, control_leaked, _ = _split_marks(control)
+    if control.returncode != 0 or control_results != expected or control_leaked != every:
+        raise NotMeasured(
+            f"runspace 대조군(leaked={control_leaked}): {control_results[:3]!r} "
             f"{control.stderr.strip()}"
         )
     return [
         f"runspace n={len(prompts)} total={elapsed:.2f}s per_case={elapsed / len(prompts):.2f}s "
-        f"leaked=0 control_leaked={control_leaked}"
+        f"leaked=0 env_leaked={env_leaked} control_leaked={control_leaked}"
     ]
 
 
@@ -257,6 +276,9 @@ def shadow_branch(seam: ModuleType) -> list[str]:
 
 
 def main() -> int:
+    if shutil.which("pwsh") is None:
+        print("pwsh 가 PATH 에 없다. 이 프로브는 PowerShell 7 로 잰다", file=sys.stderr)
+        return 1
     seam = _load_seam()
     prompts, expected = _cases(seam.DIRECTIVE)
     branches: list[Callable[[], list[str]]] = [
