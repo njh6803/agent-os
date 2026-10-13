@@ -129,7 +129,7 @@ claude plugin disable superpowers@claude-plugins-official
 mkdir -p ~/.claude/skills-backup && mv ~/.claude/skills/grill-with-docs ~/.claude/skills/domain-modeling ~/.claude/skills/grilling ~/.claude/skills/grill-me ~/.claude/skills-backup/
 ```
 
-3. 사용자 레벨 진행 스킬 `~/.claude/skills/kickoff/SKILL.md`. `/kickoff`가 런북 clone의 진행 규율을 읽게 하는 짧은 스킬이고 원문은 `kickoff/skill-template.md`다. 진행 규율의 시작 확인이 허락을 받아 이미 만들었으므로 여기서는 묻지 않고, 진행 파일 사람 몫 표의 `시작` 행을 0단계 행의 메모에 옮긴다. 이 clone을 가리키면 끝남이고, 시작에서 만들기를 건너뛰었거나 다른 clone을 가리킨 채 두었으면 건너뜀과 그 이유다. 건너뛴 것은 8단계 끝에서 다시 묻는다.
+3. 사용자 레벨 진행 스킬 `~/.claude/skills/kickoff/SKILL.md`. `/kickoff`가 런북 clone의 진행 규율을 읽게 하는 짧은 스킬이고 원문은 `kickoff/skill-template.md`다. 진행 규율의 시작 확인이 허락을 받아 이미 만들었으므로 여기서는 묻지 않고, 진행 파일 사람 몫 표의 `시작` 행을 0단계 행의 메모에 옮긴다. 이 clone을 가리키면 끝남이고, 시작에서 만들기를 건너뛰었거나 다른 clone을 가리킨 채 두었으면 건너뜀과 그 이유다. 건너뛴 것은 8단계 끝에서 다시 묻는다. 진행 규율 없이 이 런북을 사람이 몰아 돌리면 진행 파일도 이 스킬도 없으니, 쓰려면 여기서 그 원문의 `<clone>`을 이 clone의 절대 경로(슬래시)로 바꿔 그 자리에 만든다.
 
 전역 `~/.claude/CLAUDE.md`는 비워 둔다. 교정 루프 문단은 3단계에서 프로젝트 `CLAUDE.md`에 넣는다.
 
@@ -381,6 +381,8 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 사람 몫(허락): 첫 PR을 연다. `chore/kickoff` 브랜치를 `git push -u origin chore/kickoff`로 푸시하고 `/git-pr`로 연다. 이 허락은 병합까지 그 브랜치에 다시 푸시하는 것도 덮는다.
 
+PR을 열면 7단계가 복사한 `hook_pr_next_session`이 next-session을 지금 돌리라는 계기를 넣는다. 그 스킬의 1단계는 병합까지 가므로 첫 PR에서는 따르지 않는다. next-session은 아래 6의 병합 뒤에 읽는다.
+
 **3. CI와 봇.** CI와 Claude Code Review를 본다. Claude Code Review가 실제로 코멘트를 남기는지 본다. 코멘트 없는 초록은 전제가 빠진 것이다. Claude Code Review는 지적이 없을 때 코멘트를 안 남기고 초록이 되기도 하므로(agent-os 실측, 4턴 실행) 워크플로에 `show_full_output: true`를 켜 두고 로그로 실행 내용을 확인한다. CI가 빨가면 고쳐 같은 브랜치에 푸시한다.
 
 사람 몫(허락): 첫 PR에 `gh pr comment <번호> --body "@coderabbitai review"`로 CodeRabbit 리뷰를 부른다(App을 설치했고, 공개 저장소이고, 별이 10개 미만일 때만).
@@ -397,7 +399,7 @@ CodeRabbit GitHub App은 공개 저장소이거나 CodeRabbit 유료 플랜일 �
 
 그 뒤 아래 첫날 종료 체크리스트를 진행 파일과 대조해 보인다.
 
-**5. 회고.** 진행 파일의 8단계를 끝남으로, 일지의 `## 다음`을 9단계 1(`/grill-with-docs`로 첫 기능의 설계 인터뷰)로 적는다. 그 뒤 새 프로젝트의 `retro` 스킬 파일(`.claude/skills/retro/SKILL.md`)을 Read로 읽어 따른다(10단계). 회고가 바꾼 일지와 대기열까지 커밋해 같은 브랜치에 푸시한다. 병합 뒤에는 main에 커밋할 수 없으므로 회고는 여기서 끝낸다.
+**5. 회고.** 일지의 `## 다음`을 9단계 1(`/grill-with-docs`로 첫 기능의 설계 인터뷰)로 적고, 새 프로젝트의 `retro` 스킬 파일(`.claude/skills/retro/SKILL.md`)을 Read로 읽어 따른다(10단계). 회고가 끝나면 진행 파일의 8단계를 끝남으로 적고, 회고가 바꾼 일지와 대기열과 함께 커밋해 같은 브랜치에 푸시한다. 끝남을 회고 뒤에 적는 것은 회고 도중에 끊겨도 다음 `/kickoff`가 회고로 돌아오게 하기 위해서다. 병합 뒤에는 main에 커밋할 수 없으므로 회고는 여기서 끝낸다.
 
 **6. 병합.** 회고까지 실은 첫 PR을 병합한다.
 
