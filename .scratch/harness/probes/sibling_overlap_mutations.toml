@@ -1,7 +1,9 @@
-# tools/sibling_overlap.py(대기열 115·157·175·182)를 하나씩 깨는 변이.
+# tools/sibling_overlap.py(대기열 115·157·175·182·194·199·220·224)를 하나씩 깨는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
-# 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16).
+# 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16). 예순둘로 늘린 뒤에는 3757초(번마다
+# 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-30). 그 뒤 더한 둘은
+# `--since` 로 골라 돌렸다.
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -172,8 +174,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        add(f"워크트리 {path}", head, numbers_of(Disk(path)), changed)'''
-new = '''        add(f"워크트리 {path}", head, numbers_of(Tree(root, head)), changed)'''
+old = '''        numbers = numbers_of(Disk(path))'''
+new = '''        numbers = numbers_of(Tree(root, head))'''
 
 [[mutation]]
 name = "얕은 클론에서 merge-base 가 없는 형제 하나로 대조 전체가 멈춘다"
@@ -210,8 +212,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if verdict.found or verdict.behind else 0'''
-new = '''    return 1 if verdict.behind else 0'''
+old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
+new = '''    return 1 if verdict.behind or verdict.unbumped else 0'''
 
 # 공유한 이력(PR 직전 버그 축: 쌓아 올린 아래 PR 이 squash 로 main 에 든 뒤)
 
@@ -288,8 +290,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if verdict.found or verdict.behind else 0'''
-new = '''    return 1 if verdict.found else 0'''
+old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
+new = '''    return 1 if verdict.found or verdict.unbumped else 0'''
 
 [[mutation]]
 name = "뒤처짐을 가장 이른 새 일지로 가린다"
@@ -315,8 +317,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    main_sibling = Sibling(MAIN, main_sha, main_new, main_changed, latest_journal(main_numbers))'''
-new = '''    main_sibling = Sibling(MAIN, main_sha, main_new, main_changed, latest_journal(main_new))'''
+old = '''        latest=latest_journal(main_numbers),'''
+new = '''        latest=latest_journal(main_new),'''
 
 [[mutation]]
 name = "다른 형제의 최신 일지를 main 이 가진 일지에서도 고른다"
@@ -324,8 +326,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        others.append(Sibling(label, head, new, changed, latest_journal(new)))'''
-new = '''        others.append(Sibling(label, head, new, changed, latest_journal(numbers)))'''
+old = '''                latest=latest_journal(new),'''
+new = '''                latest=latest_journal(numbers),'''
 
 [[mutation]]
 name = "main 보다 앞선 새 일지를 옮기지 않는다"
@@ -389,3 +391,209 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''    later = [s for s in result.others if is_behind(result.ours, s.latest)]'''
 new = '''    later: list[Sibling] = []'''
+
+# PR 이 닫힌 형제 워크트리(대기열 194)
+
+[[mutation]]
+name = "PR 이 닫힌 워크트리도 merge-base 뒤의 커밋을 견준다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if (closed := remote.closed.get(head)) is not None:'''
+new = '''        if (closed := remote.closed.get(head)) is not None and False:'''
+
+[[mutation]]
+name = "PR 이 닫힌 워크트리의 커밋하지 않은 변경을 버린다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            add(label, head, numbers, _worktree_changes(path, head), closed)'''
+new = '''            add(label, head, numbers, frozenset(), closed)'''
+
+[[mutation]]
+name = "닫힌 PR 을 읽지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))'''
+new = '''    return Remote(pulls, pulls_from, own, {})'''
+
+[[mutation]]
+name = "열린 PR 의 head 와 같은 커밋도 닫힌 PR 의 것으로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if number not in pulls and sha not in opened:'''
+new = '''        if number not in pulls:'''
+
+[[mutation]]
+name = "head 가 움직인 열린 PR 을 닫힌 PR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if number not in pulls and sha not in opened:'''
+new = '''        if sha not in opened:'''
+
+[[mutation]]
+name = "한 커밋의 닫힌 PR 이 여럿이면 나중에 읽은 번호를 쓴다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            found[sha] = max(number, found.get(sha, 0))'''
+new = '''            found[sha] = number'''
+
+[[mutation]]
+name = "merge ref 줄도 닫힌 PR 의 head 로 읽는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if match is None or match.group(2) != "head":'''
+new = '''        if match is None:'''
+
+[[mutation]]
+name = "PR 이 닫힌 워크트리의 번호를 대조에서 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            add(label, head, numbers, _worktree_changes(path, head), closed)'''
+new = '''            add(label, head, Numbers({}, {}, {}, None), _worktree_changes(path, head), closed)'''
+
+[[mutation]]
+name = "gh api 가 열렸다고 한 PR 도 merge ref 가 없으면 닫힌 PR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))'''
+new = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, open_pulls(listing)))'''
+
+[[mutation]]
+name = "형제 줄에서 PR 이 닫힌 워크트리를 접지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    shown = [f"{s.label} {s.commit[:7]}" for s in siblings if s.closed is None]'''
+new = '''    shown = [f"{s.label} {s.commit[:7]}" for s in siblings]'''
+
+[[mutation]]
+name = "형제 줄에 접은 워크트리의 수를 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if folded := sum(1 for s in siblings if s.closed is not None):'''
+new = '''    if folded := 0:'''
+
+# 받은 일지 번호로 바로 파일을 만들라는 안내(대기열 220)
+
+[[mutation]]
+name = "다음 빈 일지 번호에 파일 안내를 붙이지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if not result.ours.journals:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "이 브랜치에 새 일지가 있어도 파일 안내를 붙인다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if not result.ours.journals:'''
+new = '''    if True:'''
+
+# 형제가 쓴 가장 높은 헌법 판(대기열 199)
+
+[[mutation]]
+name = "헌법 판을 글자로 견준다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    top = max(versions, key=_version_key)'''
+new = '''    top = max(versions)'''
+
+[[mutation]]
+name = "가장 높은 판을 쓴 자리를 하나만 든다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return top, [label for label, version in held if version == top]'''
+new = '''    return top, [label for label, version in held if version == top][:1]'''
+
+[[mutation]]
+name = "main 의 판을 main 이 새로 매긴 판에서만 고른다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        version=main_numbers.version,'''
+new = '''        version=main_new.version,'''
+
+[[mutation]]
+name = "다른 형제의 판을 가진 판 전체에서 고른다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''                version=new.version,'''
+new = '''                version=numbers.version,'''
+
+[[mutation]]
+name = "가장 높은 헌법 판을 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if verdict.top_version:'''
+new = '''    if False:'''
+
+# 판을 올리지 않고 고친 헌법 파일(대기열 224)
+
+[[mutation]]
+name = "판을 올렸어도 고친 헌법 파일을 알린다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return [] if ours.version is not None else sorted(changed & CONSTITUTION_TEXTS)'''
+new = '''    return sorted(changed & CONSTITUTION_TEXTS)'''
+
+[[mutation]]
+name = "헌법 README 도 판을 올려야 하는 파일로 본다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    f"docs/constitution/{name}.md" for name in ("principles", "tech", "operations")'''
+new = '''    f"docs/constitution/{name}.md" for name in ("principles", "tech", "operations", "README")'''
+
+[[mutation]]
+name = "판을 올리지 않은 헌법 파일을 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if verdict.unbumped:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "판을 올리지 않고 헌법 파일을 고쳐도 0 으로 끝난다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
+new = '''    return 1 if verdict.found or verdict.behind else 0'''
