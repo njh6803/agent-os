@@ -489,6 +489,21 @@ expect = "silent"
 note = "문자열 안의 gh pr merge"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }
 
+# --- hook_push_behind_main (PreToolUse Bash|PowerShell) ---
+# 둘 다 origin 이 임시 bare 저장소라 네트워크와 이 저장소의 브랜치에 기대지 않는다. 침묵은 같은 뒤처진 저장소에서
+# 지우는 푸시라, 뒤처짐이 아니라 명령 판정에서 걸러지는 것을 본다.
+[[case]]
+hook = "hook_push_behind_main.py"
+expect = "deny"
+note = "origin/main 보다 한 커밋 뒤처진 작업 브랜치의 첫 푸시 — 이 세션이 PR 을 열 때 친 모양"
+payload = { tool_name = "Bash", tool_input = { command = "git push -u origin chore/x" }, cwd = "${BEHIND_REPO}" }
+
+[[case]]
+hook = "hook_push_behind_main.py"
+expect = "silent"
+note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 뒤처진 저장소에서도 막지 않는다"
+payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
+
 # --- hook_webfetch_summary (PostToolUse WebFetch) ---
 # 앞의 셋은 실제 결과 객체다. 요약과 301 은 webfetch_payload/run.sh 의 A(Claude Code 2.1.296), 404 는 트랜스크립트 10389e93.
 # 본문을 그대로 돌려준 실제 결과는 3만 바이트가 넘는 남의 문서 본문이라 옮기지 않는다. 넷째는 수만 맞춘 글로 래퍼를 거친

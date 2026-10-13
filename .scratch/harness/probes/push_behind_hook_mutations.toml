@@ -1,0 +1,133 @@
+# chore/push-behind-notice 의 푸시 전 뒤처짐 훅 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/push_behind_hook_mutations.toml
+# tools/hook_push_behind_main.py 의 명령 판정과 뒤처짐 판정을 하나씩 깨서 그것을 지키는 테스트가 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "git 앞의 -C·-c·--no-pager 를 모른다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "명령_위치의_git_push는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''_GIT_PUSH = re.compile(r"git\s+(?:(?:-C|-c)\s+\S+\s+|--no-pager\s+)*push(?![\w-])")'''
+new = '''_GIT_PUSH = re.compile(r"git\s+push(?![\w-])")'''
+
+[[mutation]]
+name = "인용을 자리표시자가 아니라 빈칸으로 바꾼다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "명령_위치의_git_push는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    joined = _QUOTED.sub("_", "\n".join(_without_heredoc_bodies(command)))'''
+new = '''    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)))'''
+
+[[mutation]]
+name = "지우는 푸시도 잰다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''        if _GIT_PUSH.match(segment) and not _DELETION.search(segment):'''
+new = '''        if _GIT_PUSH.match(segment):'''
+
+[[mutation]]
+name = "탈출구를 보지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if BYPASS in joined:
+        return False'''
+new = '''    if False:
+        return False'''
+
+[[mutation]]
+name = "명령 위치가 아니라 명령 어디서든 git push 를 찾는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''        if _GIT_PUSH.match(segment) and not _DELETION.search(segment):'''
+new = '''        if _GIT_PUSH.search(segment) and not _DELETION.search(segment):'''
+
+[[mutation]]
+name = "main 위에서도 잰다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "main_위에서는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if branch is None or branch == "main":'''
+new = '''    if branch is None:'''
+
+[[mutation]]
+name = "fetch 가 실패해도 옛 origin/main 으로 잰다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "fetch가_실패하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if run_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main") is None:
+        return None'''
+new = '''    if run_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main") is None:
+        pass'''
+
+[[mutation]]
+name = "git 호출에 시간 제한을 두지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "시간을_넘기면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''            timeout=timeout,
+'''
+new = ''''''
+
+[[mutation]]
+name = "뒤처지지 않아도 막는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "뒤처지지_않았거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    return reason_text(count) if count else None'''
+new = '''    return reason_text(count) if count is not None else None'''
+
+[[mutation]]
+name = "잴 푸시가 아니어도 git 을 부른다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "git을_부르지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if not checks_push(command):
+        return None
+    count'''
+new = '''    checks_push(command)
+    count'''
+
+[[mutation]]
+name = "막는 이유에서 탈출구를 뺀다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "합치는_길과_탈출구를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''        f"채 푸시하려면 `{BYPASS}=1 git push …` 로 친다(일지 2026-10-13-40)."'''
+new = '''        "채 푸시하려면 사람에게 묻는다(일지 2026-10-13-40)."'''
+
+# 대조군. 이유의 둘째 문장은 사람 말이고 판정이 아니어서 시험이 묶지 않는다.
+[[mutation]]
+name = "이유의 둘째 문장을 바꾼다(대조군)"
+tests = ["tests/tools/test_hook_push_behind_main.py"]
+expect = "green"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''지금 푸시하면 CI 가 한 번 더 돈다'''
+new = '''지금 푸시하면 CI 를 다시 돈다'''
