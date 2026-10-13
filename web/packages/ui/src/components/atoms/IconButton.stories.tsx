@@ -18,17 +18,26 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** 아이콘 버튼의 치수. 크기 `size` 의 정사각형이고 모서리 8px, 아이콘 16px 이다. */
+async function expectIconButtonSize(button: HTMLElement, size: string) {
+  const style = getComputedStyle(button);
+  const svg = button.querySelector("svg");
+  await expect({
+    width: style.width,
+    height: style.height,
+    radius: style.borderTopLeftRadius,
+    icon: svg === null ? null : getComputedStyle(svg).width,
+  }).toEqual({ width: size, height: size, radius: "8px", icon: "16px" });
+}
+
 export const Ghost: Story = {
-  name: "투명 아이콘 버튼은 label 이 이름과 title 이고 바탕 없이 text-muted 로 그린 40px 정사각형이다",
+  name: "투명 아이콘 버튼은 label 이 이름과 title 이고 바탕 없이 text-muted 로 그린다",
   play: async ({ args, canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "보내기" });
-    const style = getComputedStyle(button);
     await expect({
       title: button.getAttribute("title"),
       type: button.getAttribute("type"),
-      width: style.width,
-      height: style.height,
-    }).toEqual({ title: "보내기", type: "button", width: "40px", height: "40px" });
+    }).toEqual({ title: "보내기", type: "button" });
     await expect(colorsOf(button)).toMatchObject({
       background: TRANSPARENT,
       text: semanticColor(button, "text-muted"),
@@ -66,17 +75,28 @@ export const Secondary: Story = {
   },
 };
 
+export const Compact: Story = {
+  name: "촘촘 밀도의 아이콘 버튼은 32px 정사각형에 모서리 8px, 아이콘 16px 이다",
+  globals: { density: "compact" },
+  play: async ({ canvas }) => {
+    await expectIconButtonSize(canvas.getByRole("button", { name: "보내기" }), "32px");
+  },
+};
+
+export const Regular: Story = {
+  name: "보통 밀도의 아이콘 버튼은 40px 정사각형에 모서리 8px, 아이콘 16px 이다",
+  globals: { density: "regular" },
+  play: async ({ canvas }) => {
+    await expectIconButtonSize(canvas.getByRole("button", { name: "보내기" }), "40px");
+  },
+};
+
+// 작은 크기는 밀도를 따르지 않는다. 디자인 파일이 코드 칸 머리에 쓰는 크기이고 알림의 닫기도 이것이다.
 export const Small: Story = {
-  name: "작은 아이콘 버튼은 32px 정사각형이고 아이콘이 16px 이다",
+  name: "작은 아이콘 버튼은 28px 정사각형에 모서리 8px, 아이콘 16px 이다",
   args: { size: "s", icon: "x", label: "닫기" },
   play: async ({ canvas }) => {
-    const button = canvas.getByRole("button", { name: "닫기" });
-    const svg = button.querySelector("svg");
-    await expect({
-      width: getComputedStyle(button).width,
-      height: getComputedStyle(button).height,
-      icon: svg === null ? null : getComputedStyle(svg).width,
-    }).toEqual({ width: "32px", height: "32px", icon: "16px" });
+    await expectIconButtonSize(canvas.getByRole("button", { name: "닫기" }), "28px");
   },
 };
 
@@ -85,25 +105,33 @@ export const Loading: Story = {
   args: { variant: "primary", loading: true },
   play: async ({ args, canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "보내기" });
+    const style = getComputedStyle(button);
     await expect({
       busy: button.getAttribute("aria-busy"),
       ariaDisabled: button.getAttribute("aria-disabled"),
       disabled: button.hasAttribute("disabled"),
       title: button.getAttribute("title"),
-      width: getComputedStyle(button).width,
+      square: style.width === style.height,
     }).toEqual({
       busy: "true",
       ariaDisabled: "true",
       disabled: false,
       title: "보내기",
-      width: "40px",
+      square: true,
     });
     await expect(colorsOf(button)).toMatchObject({
       background: semanticColor(button, "primary"),
       text: semanticColor(button, "on-primary"),
     });
     const spinner = button.querySelector("svg");
-    await expect(spinner === null ? null : getComputedStyle(spinner).animationName).toBe("spin");
+    await expect(
+      spinner === null
+        ? null
+        : {
+            animation: getComputedStyle(spinner).animationName,
+            width: getComputedStyle(spinner).width,
+          },
+    ).toEqual({ animation: "spin", width: "16px" });
     await userEvent.click(button);
     await expect(args.onClick).not.toHaveBeenCalled();
     await expect(document.activeElement).toBe(button);

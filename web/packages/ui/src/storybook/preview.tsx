@@ -1,8 +1,9 @@
 // 미리보기 설정의 본체(`@agent-os/ui/storybook`). 패키지의 `.storybook/preview.tsx` 가 디자인 토큰 CSS 와 글꼴 CSS 를
 // 실은 뒤 이것을 부른다. 앱의 Storybook 도 자기 CSS 를 실은 뒤 같은 것을 부른다(ADR 0026 의 2026-10-07 이력).
-// - globals 셋: theme(테마 목록, 기본 녹청), mode(system 기본 | light | dark. system 이면 속성을 두지 않는다),
-//   shadow(off | on | raw). 데코레이터가 문서 뿌리나 shadow 호스트에 단다. globals 는 `Record<string, unknown>` 으로
-//   받아 비교로 좁힌다(원칙 III. Storybook 의 Globals 는 값이 any 다).
+// - globals 넷: theme(테마 목록, 기본 녹청), mode(system 기본 | light | dark. system 이면 속성을 두지 않는다),
+//   density(auto 기본 | compact | regular. auto 면 속성을 두지 않아 화면 폭을 따른다), shadow(off | on | raw).
+//   데코레이터가 문서 뿌리나 shadow 호스트에 단다. globals 는 `Record<string, unknown>` 으로 받아 비교로 좁힌다(원칙
+//   III. Storybook 의 Globals 는 값이 any 다).
 // - axe(addon-a11y)의 위반은 스토리 테스트를 실패시킨다.
 // - afterEach 가 모든 스토리의 그림에서 규칙 없는 클래스와 임의값을 찾아 있으면 실패시킨다. 그래서 컴포넌트를 더하는
 //   티켓은 판정 스토리를 고치지 않아도 판정된다. 판정하는 것은 문서에 그린 그림이다(shadow 가 off 인 기본 globals).
@@ -12,7 +13,14 @@
 //   스토리가 끈다). 스토리 파일의 `tags` 에는 글자 그대로 적는다. Storybook 의 색인이 정적으로 읽어 상수를 받지 않는다.
 import type { Decorator, Preview } from "@storybook/react-vite";
 import { arbitraryClasses, classesWithoutRules, sheetsDefining } from "../testing";
-import { DEFAULT_THEME, THEMES, type Mode, type ThemeKey } from "../themes";
+import {
+  DEFAULT_THEME,
+  DENSITIES,
+  THEMES,
+  type Density,
+  type Mode,
+  type ThemeKey,
+} from "../themes";
 import { SHADOW_MODES, ShadowFrame, type ShadowMode } from "./ShadowFrame";
 
 export const PLANTED_TAG = "planted";
@@ -23,6 +31,12 @@ const MODE_ITEMS = [
   { value: "dark", title: "다크" },
 ] as const;
 
+const DENSITY_ITEMS = [
+  { value: "auto", title: "화면 폭" },
+  { value: "compact", title: "촘촘" },
+  { value: "regular", title: "보통" },
+] as const;
+
 function themeOf(globals: Record<string, unknown>): ThemeKey {
   return THEMES.find((theme) => theme.key === globals["theme"])?.key ?? DEFAULT_THEME;
 }
@@ -30,6 +44,19 @@ function themeOf(globals: Record<string, unknown>): ThemeKey {
 function modeOf(globals: Record<string, unknown>): Mode | null {
   const value = globals["mode"];
   return value === "light" || value === "dark" ? value : null;
+}
+
+function densityOf(globals: Record<string, unknown>): Density | null {
+  return DENSITIES.find((density) => density === globals["density"]) ?? null;
+}
+
+/** 값이 null 이면 그 속성을 지우고, 아니면 단다. */
+function setOrRemoveAttribute(element: Element, name: string, value: string | null): void {
+  if (value === null) {
+    element.removeAttribute(name);
+  } else {
+    element.setAttribute(name, value);
+  }
 }
 
 function shadowOf(globals: Record<string, unknown>): ShadowMode | null {
@@ -64,12 +91,8 @@ export function storyPreview(shadowCss: string): Preview {
   const withTheme: Decorator = (Story, context) => {
     const root = document.documentElement;
     root.dataset["theme"] = themeOf(context.globals);
-    const mode = modeOf(context.globals);
-    if (mode === null) {
-      delete root.dataset["mode"];
-    } else {
-      root.dataset["mode"] = mode;
-    }
+    setOrRemoveAttribute(root, "data-mode", modeOf(context.globals));
+    setOrRemoveAttribute(root, "data-density", densityOf(context.globals));
     return <Story />;
   };
 
@@ -84,6 +107,7 @@ export function storyPreview(shadowCss: string): Preview {
         css={shadowCss}
         theme={themeOf(context.globals)}
         mode={modeOf(context.globals)}
+        density={densityOf(context.globals)}
       >
         <Story />
       </ShadowFrame>
@@ -92,7 +116,7 @@ export function storyPreview(shadowCss: string): Preview {
 
   return {
     parameters: { a11y: { test: "error" } },
-    initialGlobals: { theme: DEFAULT_THEME, mode: "system", shadow: "off" },
+    initialGlobals: { theme: DEFAULT_THEME, mode: "system", density: "auto", shadow: "off" },
     globalTypes: {
       theme: {
         description: "테마(data-theme)",
@@ -105,6 +129,11 @@ export function storyPreview(shadowCss: string): Preview {
       mode: {
         description: "모드(data-mode). 시스템이면 속성을 두지 않는다",
         toolbar: { title: "모드", items: [...MODE_ITEMS], dynamicTitle: true },
+      },
+      density: {
+        description:
+          "밀도(data-density). 화면 폭이면 속성을 두지 않아 768px 이상에서 촘촘, 미만에서 보통이다",
+        toolbar: { title: "밀도", items: [...DENSITY_ITEMS], dynamicTitle: true },
       },
       shadow: {
         description:

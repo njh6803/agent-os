@@ -98,7 +98,7 @@ export const Off: Story = {
       label: semanticColor(track, "text"),
       state: semanticColor(track, "text-muted"),
     });
-    // 트랙 36×20px, 손잡이 12px 이 왼쪽에서 4px, 누르는 곳(라벨 전체)은 높이 48px 이상이다.
+    // 트랙 40×24px 의 둥근 면에 손잡이 20px 이 왼쪽 위에서 2px 띄워 놓이고, 글자와 트랙 사이는 8px 이다.
     const trackBox = track.getBoundingClientRect();
     const knobBox = knob.getBoundingClientRect();
     await expect({
@@ -106,8 +106,9 @@ export const Off: Story = {
       knob: [knobBox.width, knobBox.height],
       left: knobBox.left - trackBox.left,
       top: knobBox.top - trackBox.top,
-    }).toEqual({ track: [36, 20], knob: [12, 12], left: 4, top: 4 });
-    await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+      radius: getComputedStyle(track).borderTopLeftRadius,
+      gap: getComputedStyle(row).columnGap,
+    }).toEqual({ track: [40, 24], knob: [20, 20], left: 2, top: 2, radius: "999px", gap: "8px" });
     // 상태 글은 checked 와 같은 뜻이라 화면 읽기 프로그램에서 숨는다. 이름은 라벨 하나다.
     await expect(stateText.closest("[aria-hidden=true]")).not.toBeNull();
     await userEvent.click(track);
@@ -136,8 +137,8 @@ export const On: Story = {
       overlay: expectedOverlay(parts),
       knob: semanticColor(track, "on-accent"),
     });
-    // 손잡이는 오른쪽에서 4px 이다.
-    await expect(track.getBoundingClientRect().right - knob.getBoundingClientRect().right).toBe(4);
+    // 손잡이는 오른쪽에서 2px 이다.
+    await expect(track.getBoundingClientRect().right - knob.getBoundingClientRect().right).toBe(2);
     await userEvent.click(track);
     await expect(args.onChange).toHaveBeenCalledOnce();
     await expect(args.onChange).toHaveBeenCalledWith(false);

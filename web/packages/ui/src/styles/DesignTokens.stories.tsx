@@ -1,12 +1,23 @@
-// 디자인 토큰의 판정 스토리. 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과 명암비, 기준 폭 둘, 글꼴 다섯 벌, rem 0,
-// `@theme` 토큰이 모두 CSS 변수로 나오는 것, shadow root 의 계산값을 실제 chromium 에서 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
+// 디자인 토큰의 판정 스토리. 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과 명암비, 밀도 두 벌, 기준 폭 둘, 글꼴 다섯 벌,
+// rem 0, `@theme` 토큰이 모두 CSS 변수로 나오는 것, 떠 있는 것의 그림자, shadow root 의 계산값을 실제 chromium 에서
+// 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
 // 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB, 반투명은 #RRGGBBAA), 테마 사이의 차이, 명암비로 본다.
+// 밀도 변수는 디자인 파일의 값 그대로라 그 값과 맞댄다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
 import { Button } from "../components/atoms/Button";
 import { ShadowFrame } from "../storybook/ShadowFrame";
+import { semanticColor } from "../storybook/expect";
 import { sheetsDefining } from "../testing";
-import { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeKey } from "../themes";
+import {
+  DEFAULT_THEME,
+  DENSITIES,
+  MODES,
+  THEMES,
+  type Density as DensityKey,
+  type Mode,
+  type ThemeKey,
+} from "../themes";
 import {
   CONTRAST_PAIRS,
   SEMANTIC_TOKENS,
@@ -144,6 +155,133 @@ export const Matrix: Story = {
   },
 };
 
+// 밀도 변수 일곱의 값(디자인 파일의 밀도 두 벌, design-refresh 명세의 "밀도").
+const DENSITY_VALUES = {
+  compact: {
+    "--body-size": "14px",
+    "--body-lh": "20px",
+    "--table-size": "13px",
+    "--table-lh": "18px",
+    "--mono-size": "13px",
+    "--row-h": "36px",
+    "--control-h": "32px",
+  },
+  regular: {
+    "--body-size": "15px",
+    "--body-lh": "22px",
+    "--table-size": "14px",
+    "--table-lh": "20px",
+    "--mono-size": "14px",
+    "--row-h": "44px",
+    "--control-h": "40px",
+  },
+} as const satisfies Record<DensityKey, Record<string, string>>;
+
+const DENSITY_VARIABLES = Object.keys(DENSITY_VALUES.compact);
+
+const OPPOSITE_DENSITY: Readonly<Record<DensityKey, DensityKey>> = {
+  compact: "regular",
+  regular: "compact",
+};
+
+/** 요소에서 풀린 밀도 변수 일곱. */
+function densityVariables(target: Element): Record<string, string> {
+  const style = getComputedStyle(target);
+  return Object.fromEntries(
+    DENSITY_VARIABLES.map((name) => [name, style.getPropertyValue(name).trim()]),
+  );
+}
+
+/** 밀도를 따르는 유틸리티 다섯과 감싼 요소가 풀린 계산값. */
+function densityUtilities(sample: HTMLElement): Record<string, string> {
+  const style = (part: string): CSSStyleDeclaration =>
+    getComputedStyle(element(sample, `[data-part=${part}]`));
+  return {
+    control: style("control").height,
+    body: `${style("body").fontSize}/${style("body").lineHeight}`,
+    table: `${style("table").fontSize}/${style("table").lineHeight}`,
+    mono: `${style("mono").fontSize}/${style("mono").lineHeight}`,
+    row: style("row").height,
+    wrapper: `${style("wrapper").fontSize}/${style("wrapper").lineHeight}`,
+  };
+}
+
+/** 그 밀도의 변수 값에서 나와야 할 유틸리티와 감싼 요소의 계산값. 고정폭의 줄 높이는 표의 줄 높이다. */
+function expectedUtilities(density: DensityKey): Record<string, string> {
+  const value = DENSITY_VALUES[density];
+  return {
+    control: value["--control-h"],
+    body: `${value["--body-size"]}/${value["--body-lh"]}`,
+    table: `${value["--table-size"]}/${value["--table-lh"]}`,
+    mono: `${value["--mono-size"]}/${value["--table-lh"]}`,
+    row: value["--row-h"],
+    wrapper: `${value["--body-size"]}/${value["--body-lh"]}`,
+  };
+}
+
+// 표본마다 반대 밀도의 조상 안에 둔다. 스토리 테스트의 창(1200×900)에서 속성이 없는 문서 뿌리는 촘촘이라, 뿌리에서
+// 물려받기만 해도 맞는 자리를 피한다(design-refresh 명세의 Density 주석). 감싼 요소(`data-ui-root`)도 넣는다. 그 규칙이
+// 밀도의 별칭을 `var()` 로 읽으면 별칭이 뿌리에 선언으로 나오고(design-refresh 프로브 `tailwind.mjs`) 뿌리의 밀도로
+// 풀린 값이 물려져 보통 표본이 빨갛다(design-refresh 변이 표 `density_sizes_mutations.toml`).
+export const Density: Story = {
+  name: "data-density 가 촘촘과 보통이면 밀도 변수 일곱이 디자인 파일의 값이고 유틸리티와 감싼 요소가 그 값을 따르며 여덟 벌에서 같다",
+  render: () => (
+    <div className="flex flex-col gap-4 bg-bg p-4 text-text">
+      {DENSITIES.map((density) => (
+        <div key={density} data-density={OPPOSITE_DENSITY[density]}>
+          <div data-sample={density} data-density={density} className="flex flex-col gap-2">
+            <div data-part="control" className="h-control bg-bg-raised" />
+            <p data-part="body" className="text-body">
+              승인을 기다리고 있습니다.
+            </p>
+            <p data-part="table" className="text-table">
+              실행 2024-1187
+            </p>
+            <p data-part="mono" className="font-mono text-mono">
+              run_01JA7Q2W0D
+            </p>
+            <div data-part="row" className="h-row bg-bg-raised" />
+            <div data-part="wrapper" data-ui-root="">
+              감싼 요소
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const measured: Record<string, unknown> = {};
+    const expected: Record<string, unknown> = {};
+    const themed: string[] = [];
+    for (const density of DENSITIES) {
+      const sample = element(canvasElement, `[data-sample=${density}]`);
+      measured[density] = {
+        variables: densityVariables(sample),
+        utilities: densityUtilities(sample),
+      };
+      expected[density] = {
+        variables: DENSITY_VALUES[density],
+        utilities: expectedUtilities(density),
+      };
+      // 테마와 모드는 밀도를 바꾸지 않는다. 테마 블록이 밀도 변수를 다시 정하면 여덟 벌의 값이 갈린다.
+      for (const { key } of THEMES) {
+        for (const mode of MODES) {
+          sample.dataset["theme"] = key;
+          sample.dataset["mode"] = mode;
+          const variables = densityVariables(sample);
+          if (JSON.stringify(variables) !== JSON.stringify(DENSITY_VALUES[density])) {
+            themed.push(`${density} ${key}/${mode} ${JSON.stringify(variables)}`);
+          }
+        }
+      }
+      delete sample.dataset["theme"];
+      delete sample.dataset["mode"];
+    }
+    await expect(measured).toEqual(expected);
+    await expect(themed).toEqual([]);
+  },
+};
+
 export const Responsive: Story = {
   name: "기준 폭 둘이 359px 과 360px 사이와 시트의 조건 둘에서 갈린다",
   render: () => (
@@ -201,10 +339,10 @@ export const Fonts: Story = {
       </p>
       <p className="font-sans text-body font-medium">허가하거나 거부해 주세요.</p>
       <p className="font-sans text-body font-semibold">실행이 실패했습니다.</p>
-      <p data-sample="mono" className="font-mono text-code font-regular">
+      <p data-sample="mono" className="font-mono text-mono font-regular">
         payments.refund(amount=1200)
       </p>
-      <p className="font-mono text-code font-medium">payments.refund</p>
+      <p className="font-mono text-mono font-medium">payments.refund</p>
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -271,6 +409,39 @@ export const ThemeTokensEmitted: Story = {
       expect.arrayContaining(["--text-title", "--spacing-8", "--radius-s"]),
     );
     await expect(unresolved).toEqual([]);
+  },
+};
+
+// 떠 있는 것(위젯 창, 메뉴)의 그림자 `float`. 그림자 색(`--shadow-color`)이 모드마다 달라, 유틸리티가 그 색을 놓인
+// 요소에서 읽어야 한다. 모드마다 하나씩 그려 뿌리와 다른 모드에서도 그 자리의 색인지 본다. 그림자 색을 모드와 무관한
+// 값으로 두면 빨갛다(design-refresh 변이 표 `density_sizes_mutations.toml`).
+export const FloatShadow: Story = {
+  name: "떠 있는 것의 그림자 float 는 두 겹이고 색이 놓인 자리의 모드의 shadow-color 다",
+  render: () => (
+    <div className="flex gap-4">
+      {MODES.map((mode) => (
+        <div key={mode} data-mode={mode} className="bg-bg p-6 text-text">
+          <div data-sample={mode} className="rounded-l bg-bg-raised p-4 shadow-float">
+            위젯 창
+          </div>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const shadows = MODES.map((mode) => {
+      const sample = element(canvasElement, `[data-sample=${mode}]`);
+      const color = semanticColor(sample, "shadow-color");
+      return {
+        actual: getComputedStyle(sample).boxShadow,
+        expected: `${color} 0px 8px 24px 0px, ${color} 0px 1px 2px 0px`,
+      };
+    });
+    // 계산값에는 Tailwind 가 앞에 두는 투명한 고리 그림자들이 붙는다. 끝의 두 겹을 본다.
+    for (const { actual, expected } of shadows) {
+      await expect(actual.endsWith(expected), `${actual} 의 끝이 ${expected}`).toBe(true);
+    }
+    await expect(new Set(shadows.map(({ expected }) => expected)).size).toBe(MODES.length);
   },
 };
 
@@ -358,8 +529,15 @@ const SHADOW_PAIRS = [
   ["guncheong", "dark"],
 ] as const satisfies readonly (readonly [ThemeKey, Mode])[];
 
+// 문서 뿌리(globals)와 표본 양쪽의 밀도. 표본이 뿌리와 같으면 뿌리에서 물려받은 값으로도 맞아, 감싼 요소가 밀도의 별칭을
+// 뿌리에서 풀린 값으로 받는 것을 가린다(design-refresh 명세의 ShadowRoot 주석). shadow 호스트가 촘촘이면 문서의 시트를
+// 끈 뒤 `:host([data-density="compact"])` 만이 그 값을 준다.
+const SHADOW_ROOT_DENSITY: DensityKey = "regular";
+const SHADOW_SAMPLE_DENSITY: DensityKey = "compact";
+
 export const ShadowRoot: Story = {
-  name: "shadow 안의 계산값이 기본 테마 라이트와 군청 다크 모두 문서와 같고 사이트의 * 규칙이 감싼 요소 안에 닿지 않는다",
+  name: "shadow 안의 계산값이 기본 테마 라이트와 군청 다크 모두 문서와 같고 뿌리와 다른 밀도의 크기이며 사이트의 * 규칙이 감싼 요소 안에 닿지 않는다",
+  globals: { density: SHADOW_ROOT_DENSITY },
   render: () => (
     <div className="flex flex-col gap-4">
       {SHADOW_PAIRS.map(([theme, mode]) => (
@@ -368,12 +546,19 @@ export const ShadowRoot: Story = {
             data-sample="document"
             data-theme={theme}
             data-mode={mode}
+            data-density={SHADOW_SAMPLE_DENSITY}
             data-ui-root=""
             className="bg-bg"
           >
             {SHADOW_SAMPLE}
           </div>
-          <ShadowFrame shadow="on" css={themeCss} theme={theme} mode={mode}>
+          <ShadowFrame
+            shadow="on"
+            css={themeCss}
+            theme={theme}
+            mode={mode}
+            density={SHADOW_SAMPLE_DENSITY}
+          >
             {SHADOW_SAMPLE}
           </ShadowFrame>
         </div>
@@ -402,6 +587,24 @@ export const ShadowRoot: Story = {
     const expected = Object.fromEntries(
       pairs.map(({ theme, document: sample }) => [theme, computed(sample)]),
     );
+    // 문서 쪽이 표본의 밀도로 그려졌다. 양쪽이 같은 틀린 값이면 아래 맞댐은 지나므로 크기를 값으로도 본다. 호스트의
+    // 속성도 본다. 창(1200px)에서는 속성이 없는 호스트도 촘촘이라, 틀이 밀도를 빠뜨려도 값은 맞는다.
+    await expect(densityVariables(document.documentElement)["--control-h"]).toBe(
+      DENSITY_VALUES[SHADOW_ROOT_DENSITY]["--control-h"],
+    );
+    await expect(pairs.map(({ host }) => host.dataset["density"])).toEqual(
+      pairs.map(() => SHADOW_SAMPLE_DENSITY),
+    );
+    const sampleValue = DENSITY_VALUES[SHADOW_SAMPLE_DENSITY];
+    for (const values of Object.values(expected)) {
+      await expect({
+        text: `${values["text font-size"] ?? ""}/${values["text line-height"] ?? ""}`,
+        button: values["button height"],
+      }).toEqual({
+        text: `${sampleValue["--body-size"]}/${sampleValue["--body-lh"]}`,
+        button: sampleValue["--control-h"],
+      });
+    }
     const sheets = Array.from(document.styleSheets);
     const before = sheets.map((sheet) => sheet.disabled);
     const site = document.createElement("style");

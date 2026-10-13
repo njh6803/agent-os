@@ -1,7 +1,8 @@
 // 사진 비교(design-system 명세의 "사진 비교 게이트", ADR 0026). 판정 스토리를 뺀 패키지의 스토리를 기본 테마(녹청)의
-// 라이트·다크로 찍어 커밋한 정답 사진과 비교한다(판정 스토리는 storybook.ts 가 뺀다). 새 스토리는 저절로 찍히고, 정답
-// 사진이 없으면 실패한다. 정답 사진의 이름은 `<스토리 id>-<모드>.png`, 실제 입력의 상태는 `<스토리 id>-<모드>-<상태>.png`
-// 다. 스토리가 globals 로 모드를 정했으면 그 모드만 찍는다(일반 루프와 상호작용 루프 모두).
+// 라이트·다크 × 밀도 둘(촘촘, 보통)로 찍어 커밋한 정답 사진과 비교한다(판정 스토리는 storybook.ts 가 뺀다). 새 스토리는
+// 저절로 찍히고, 정답 사진이 없으면 실패한다. 정답 사진의 이름은 `<스토리 id>-<모드>-<밀도>.png`, 실제 입력의 상태는
+// `<스토리 id>-<모드>-<밀도>-<상태>.png` 다. 스토리가 globals 로 모드나 밀도를 정했으면 그 값만 찍는다(일반 루프와
+// 상호작용 루프 모두). 밀도는 globals 로 문서 뿌리에 달아, 창의 폭(480px)이 아니라 그 값으로 그린다.
 //
 // 누름은 스토리 테스트의 userEvent 가 `:active` 를 걸지 못해(ADR 0026 의 넷째 2026-10-06 이력) 여기서만 잰다. 보조·위험
 // 버튼은 실제 마우스로 누른 순간의 계산 바탕이 그 쓰임새 토큰이고, 녹청 다크의 카드 안 위험 버튼은 칠한 픽셀과 글자의
@@ -9,7 +10,7 @@
 import { inflateSync } from "node:zlib";
 import type { Locator, Page } from "@playwright/test";
 import { contrastRatio } from "../src/testing/index.ts";
-import { DEFAULT_THEME } from "../src/themes.ts";
+import { DEFAULT_THEME, DENSITIES, type Density } from "../src/themes.ts";
 import {
   MODES,
   expect,
@@ -24,17 +25,23 @@ async function shoot(page: Page, name: string): Promise<void> {
   await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true });
 }
 
+/** 찍는 차례. 모드 둘 × 밀도 둘이고, 이름은 `<모드>-<밀도>` 다. */
+const TURNS = MODES.flatMap((mode) =>
+  DENSITIES.map((density) => ({ mode, density, name: `${mode}-${density}` })),
+);
+
 /**
- * 기본 테마의 그 모드로 스토리를 연다. 스토리가 globals 로 다른 테마를 정했으면 실패한다. 사진은 기본 테마만 찍는다
- * (ADR 0026 의 2026-10-06 이력). 그런 스토리는 `judgment` 태그를 달아 사진에서 뺀다.
+ * 기본 테마의 그 모드와 밀도로 스토리를 연다. 스토리가 globals 로 다른 테마를 정했으면 실패한다. 사진은 기본 테마만
+ * 찍는다(ADR 0026 의 2026-10-06 이력). 그런 스토리는 `judgment` 태그를 달아 사진에서 뺀다.
  */
 async function openInDefault(
   storybook: Storybook,
   page: Page,
   id: string,
   mode: Mode,
+  density: Density,
 ): Promise<void> {
-  await storybook.open(id, inDefaultTheme(mode));
+  await storybook.open(id, inDefaultTheme(mode, density));
   expect(
     await page.evaluate(() => document.documentElement.dataset["theme"]),
     "기본 테마가 아닌 테마를 정한 스토리는 judgment 태그를 단다",
@@ -42,28 +49,32 @@ async function openInDefault(
 }
 
 /**
- * 그려진 모드. 스토리가 globals 로 모드를 정했으면 그 값이 URL 의 값을 이겨 요청한 모드와 다르다. 그 차례는 같은 그림이라
- * 찍지 않는다.
+ * 요청한 모드와 밀도로 그려졌는지. 스토리가 globals 로 모드나 밀도를 정했으면 그 값이 URL 의 값을 이겨 요청한 값과
+ * 다르다. 그 차례는 다른 차례와 같은 그림이라 찍지 않는다. 가드가 없으면 같은 그림이 다른 이름으로도 찍혀 정답이 겹친다.
  */
-async function renderedMode(page: Page): Promise<string | undefined> {
-  return page.evaluate(() => document.documentElement.dataset["mode"]);
+async function renderedAs(page: Page, mode: Mode, density: Density): Promise<boolean> {
+  const rendered = await page.evaluate(() => ({
+    mode: document.documentElement.dataset["mode"],
+    density: document.documentElement.dataset["density"],
+  }));
+  return rendered.mode === mode && rendered.density === density;
 }
 
 for (const story of photographedStories()) {
-  test(`${story.id} 를 기본 테마의 그려진 모드마다 찍은 사진이 정답과 같다`, async ({
+  test(`${story.id} 를 기본 테마의 그려진 모드와 밀도마다 찍은 사진이 정답과 같다`, async ({
     page,
     storybook,
   }) => {
-    const shot: Mode[] = [];
-    for (const mode of MODES) {
-      await openInDefault(storybook, page, story.id, mode);
-      if ((await renderedMode(page)) !== mode) {
+    const shot: string[] = [];
+    for (const { mode, density, name } of TURNS) {
+      await openInDefault(storybook, page, story.id, mode, density);
+      if (!(await renderedAs(page, mode, density))) {
         continue;
       }
-      await shoot(page, `${story.id}-${mode}`);
-      shot.push(mode);
+      await shoot(page, `${story.id}-${name}`);
+      shot.push(name);
     }
-    expect(shot, "찍은 모드").not.toEqual([]);
+    expect(shot, "찍은 차례").not.toEqual([]);
   });
 }
 
@@ -169,7 +180,9 @@ async function matches(target: Locator, selector: string): Promise<boolean> {
 /**
  * 대상의 계산 바탕과, 대상 바로 앞에 `background-color: var(--<token>)` 을 둔 숨은 탐침의 계산 바탕. 탐침을 같은 부모에
  * 두는 까닭은 스토리 도우미 `semanticColor`(src/storybook/expect.ts)와 같다. 토큰이 hex 로 풀리지 않으면 던진다. 없는
- * 토큰의 탐침은 투명이라 투명한 대상과 조용히 맞기 때문이다.
+ * 토큰의 탐침은 투명이라 투명한 대상과 조용히 맞기 때문이다. hex 의 자릿수는 3·4·6·8 을 모두 받는다. `optimize` 가
+ * `#00000066` 을 `#0006` 으로 줄였고(design-refresh 프로브 `tailwind.mjs`), `@tailwindcss/vite` 는 정적 빌드 때 그것을
+ * 부른다(design-refresh 명세 검토가 설치본을 읽었다).
  */
 async function backgrounds(
   target: Locator,
@@ -191,8 +204,8 @@ async function backgrounds(
       probe.remove();
     }
   }, token);
-  if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(measured.hex)) {
-    throw new Error(`--${token} 이 #RRGGBB 나 #RRGGBBAA 로 풀리지 않았다: "${measured.hex}"`);
+  if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(measured.hex)) {
+    throw new Error(`--${token} 이 hex 로 풀리지 않았다: "${measured.hex}"`);
   }
   return { actual: measured.actual, expected: measured.expected };
 }
@@ -275,25 +288,25 @@ async function pressedPixel(
 
 for (const { story, target, states, pressSurface, pressContrast } of INTERACTIONS) {
   const names = states.map((state) => STATE_NAMES[state]).join("·");
-  test(`${story} 를 실제 입력의 ${names}로 찍은 사진이 기본 테마의 그려진 모드마다 정답과 같다`, async ({
+  test(`${story} 를 실제 입력의 ${names}로 찍은 사진이 기본 테마의 그려진 모드와 밀도마다 정답과 같다`, async ({
     page,
     storybook,
   }) => {
-    const shot: Mode[] = [];
-    for (const mode of MODES) {
-      // 스토리가 globals 로 모드를 정했으면 다른 모드를 요청한 차례는 같은 그림이라 찍지 않는다. 가드가 없으면 같은 다크
-      // 그림이 `-light-` 이름으로도 찍혀 정답이 겹친다.
-      await openInDefault(storybook, page, story, mode);
-      if ((await renderedMode(page)) !== mode) {
+    const shot: string[] = [];
+    for (const { mode, density, name } of TURNS) {
+      // 스토리가 globals 로 모드나 밀도를 정했으면 다른 값을 요청한 차례는 같은 그림이라 찍지 않는다. 가드가 없으면 같은
+      // 다크 그림이 `-light-` 이름으로도 찍혀 정답이 겹친다.
+      await openInDefault(storybook, page, story, mode, density);
+      if (!(await renderedAs(page, mode, density))) {
         continue;
       }
-      shot.push(mode);
+      shot.push(name);
       const element = target(page);
       // 실제 입력이 그 상태를 걸었는지 먼저 본다. 걸리지 않은 채 찍으면 상태 없는 사진이 조용히 정답이 된다.
       if (states.includes("hover")) {
         await element.hover();
         expect(await matches(element, ":hover"), "올림").toBe(true);
-        await shoot(page, `${story}-${mode}-hover`);
+        await shoot(page, `${story}-${name}-hover`);
       }
       if (states.includes("press")) {
         await element.hover();
@@ -312,7 +325,7 @@ for (const { story, target, states, pressSurface, pressContrast } of INTERACTION
             pressContrast,
           );
         }
-        await shoot(page, `${story}-${mode}-press`);
+        await shoot(page, `${story}-${name}-press`);
         await page.mouse.up();
       }
       if (states.includes("focus")) {
@@ -322,9 +335,9 @@ for (const { story, target, states, pressSurface, pressContrast } of INTERACTION
         await page.keyboard.press("Tab");
         await expect(element).toBeFocused();
         expect(await matches(element, ":focus-visible"), "키보드 포커스").toBe(true);
-        await shoot(page, `${story}-${mode}-focus`);
+        await shoot(page, `${story}-${name}-focus`);
       }
     }
-    expect(shot, "찍은 모드").not.toEqual([]);
+    expect(shot, "찍은 차례").not.toEqual([]);
   });
 }
