@@ -111,6 +111,23 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히
   깨지는 환경이 없다는 것을 들었다. 선택으로 `-c commit.gpgsign=false`를 픽스처와 테스트의 작성자 인자에 더하는 방어를 들었다. 전역
   서명 설정이 있는 환경에서는 옛 픽스처도 함께 깨지므로 이 PR의 노출이 아니라 두었다.
 
+## PR 리뷰
+
+PR #210을 열고(`a64f6a5`) 체크 일곱(CI 잡 다섯과 claude-review, CodeRabbit)이 모두 `pass`가 된 뒤 두 봇을 읽었다.
+
+- CodeRabbit: PR 전체(`132da91`~`a64f6a5`)를 보고 "No actionable comments"였다. 처음 체크는 "Review skipped: manual review required"였고
+  `@coderabbitai review` 요청 뒤에 리뷰가 끝났다.
+- claude-review(첫 회차): Critical·Major 없이 Minor 둘과 Nit 하나다.
+  - Minor: `deny_reason`의 문구("커밋이 있는 저장소에서 …")가 `HEAD`의 커밋 유무를 모른 채 그 전제에 기대고, 전제는 `reason_at`의
+    호출 순서에만 있다. 문구는 그 전제를 적은 규칙이라 단독으로 불러도 거짓은 아니지만, `deny_reason`의 독스트링이 커밋 명령인지만
+    부르는 쪽이 본다고 적고 있었다. 독스트링에 두 전제를 모두 적었다.
+  - Minor: 러너 픽스처 테스트가 훅의 행동이 아니라 픽스처의 모양을 잰다. 두었다. 같은 파일의 선례
+    (`test_푸시하지_않은_커밋이_있는_저장소를_만든다`)와 같은 모양이고, 티켓이 러너 픽스처를 바꾸면 `test_run_hooks.py`가 초록이기를
+    요구하며, 러너는 pre-commit에서만 돌아 pytest가 같은 깨짐을 더 일찍 잡는다. 이유를 PR 코멘트에 남겼다.
+  - Nit: 두 거름 테스트의 monkeypatch 호출 세기는 구현 결합이다. 리뷰어도 PR 본문의 이유로 의도된 절충이라 보아 두었다.
+
+병합은 워크트리의 길로 한다(`next-session` "워크트리에서 병합할 때"). 주 체크아웃 미갱신: 루트는 main.
+
 ## 에이전트가 번복하거나 고친 것
 
 - git이 없을 때의 테스트를 처음에는 없는 작업 폴더로 썼다. 티켓의 상황(git이 없다)과 다르고 커밋이 있는 저장소를 읽지 않아 거짓을

@@ -120,7 +120,9 @@ def head_has_commit(cwd: str | None) -> bool:
 
 
 def deny_reason(branch: str | None) -> str | None:
-    """보호 브랜치면 막는 이유, 아니면 None. 커밋 명령인지는 부르는 쪽이 먼저 본다."""
+    """보호 브랜치면 막는 이유, 아니면 None. 브랜치만 보고, 커밋 명령인지와 `HEAD` 에 커밋이
+    있는지는 부르는 쪽(`reason_at`)이 본다. 문구의 "커밋이 있는 저장소에서" 는 그 전제를 적은
+    규칙이다."""
     if branch not in PROTECTED:
         return None
     return (
