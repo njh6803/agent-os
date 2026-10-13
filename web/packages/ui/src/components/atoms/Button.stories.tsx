@@ -297,3 +297,34 @@ export const NarrowRow: Story = {
     await expect(row instanceof HTMLElement && row.scrollWidth <= row.clientWidth).toBe(true);
   },
 };
+
+/** 보여 주기용(`showcase`). 승인 묻기의 버튼 쌍이다. "거부"(보조)가 먼저, "승인"(주)이 나중이다. */
+export const ShowcaseApprovalPair: Story = {
+  name: "쓰임: 승인 묻기의 버튼 쌍",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex flex-col gap-3">
+      <p className="text-body text-text">
+        <span className="font-mono text-mono font-medium">payments.refund</span>를 실행할까요
+      </p>
+      <div className="flex gap-2">
+        <Button variant="secondary">거부</Button>
+        <Button>승인</Button>
+      </div>
+    </div>
+  ),
+};
+
+/** 보여 주기용(`showcase`). 관리 화면의 다른 동작이다. 읽는 화면의 새로 고침은 불러오는 중이고, 설정의 토큰 지우기는 위험 버튼이다. */
+export const ShowcaseAdminActions: Story = {
+  name: "쓰임: 새로 고침과 토큰 지우기",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex gap-2">
+      <Button variant="secondary" loading>
+        새로 고침
+      </Button>
+      <Button variant="danger">토큰 지우기</Button>
+    </div>
+  ),
+};

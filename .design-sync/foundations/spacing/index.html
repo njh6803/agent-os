@@ -1,0 +1,55 @@
+<!-- @dsCard group="Spacing" -->
+<!doctype html>
+<html lang="ko" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<title>간격과 모서리</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+html, body { margin: 0; }
+body {
+  padding: 24px; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: var(--body-size); line-height: var(--body-lh);
+}
+h1 { margin: 0 0 4px; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--font-weight-semibold); }
+h2 { margin: 24px 0 8px; font-size: var(--body-size); line-height: var(--body-lh); font-weight: var(--font-weight-semibold); }
+p.lead { margin: 0; color: var(--text-muted); }
+code, .value { font-family: var(--mono); font-size: var(--mono-size); line-height: var(--table-lh); }
+.value, .label { color: var(--text-muted); }
+.label { font-size: var(--text-small); line-height: var(--text-small--line-height); }
+.row { display: grid; grid-template-columns: 168px 64px 1fr; gap: 12px; align-items: center; padding: 6px 0; }
+.bar { height: 16px; background: var(--accent); border-radius: var(--radius-s); }
+.boxes { display: flex; gap: 24px; flex-wrap: wrap; }
+.box { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.box i { width: 72px; height: 72px; background: var(--bg-raised); border: 1px solid var(--border-control); }
+</style>
+</head>
+<body>
+<h1>간격과 모서리</h1>
+<p class="lead">간격은 Tailwind 의 숫자 뜻을 지킨다(p-4 가 16px). 모서리는 s·m·l·full 이다. 길이는 모두 px 이다.</p>
+<h2>간격</h2>
+<div class="row"><code>spacing-1</code><span class="value" data-value="--spacing-1"></span><div class="bar" style="width: var(--spacing-1)"></div></div>
+<div class="row"><code>spacing-2</code><span class="value" data-value="--spacing-2"></span><div class="bar" style="width: var(--spacing-2)"></div></div>
+<div class="row"><code>spacing-3</code><span class="value" data-value="--spacing-3"></span><div class="bar" style="width: var(--spacing-3)"></div></div>
+<div class="row"><code>spacing-4</code><span class="value" data-value="--spacing-4"></span><div class="bar" style="width: var(--spacing-4)"></div></div>
+<div class="row"><code>spacing-6</code><span class="value" data-value="--spacing-6"></span><div class="bar" style="width: var(--spacing-6)"></div></div>
+<div class="row"><code>spacing-8</code><span class="value" data-value="--spacing-8"></span><div class="bar" style="width: var(--spacing-8)"></div></div>
+<h2>모서리</h2>
+<div class="boxes">
+  <div class="box"><i style="border-radius: var(--radius-s)"></i><code>radius-s</code><span class="value" data-value="--radius-s"></span></div>
+  <div class="box"><i style="border-radius: var(--radius-m)"></i><code>radius-m</code><span class="value" data-value="--radius-m"></span></div>
+  <div class="box"><i style="border-radius: var(--radius-l)"></i><code>radius-l</code><span class="value" data-value="--radius-l"></span></div>
+  <div class="box"><i style="border-radius: var(--radius-full)"></i><code>radius-full</code><span class="value" data-value="--radius-full"></span></div>
+</div>
+<h2>틀</h2>
+<div class="row"><code>spacing-nav</code><span class="value" data-value="--spacing-nav"></span><span class="label">옆 탐색의 폭</span></div>
+<div class="row"><code>spacing-nav-item</code><span class="value" data-value="--spacing-nav-item"></span><span class="label">탐색 항목의 높이</span></div>
+<div class="row"><code>spacing-top-bar</code><span class="value" data-value="--spacing-top-bar"></span><span class="label">768px 미만의 위 막대 높이</span></div>
+<div class="row"><code>spacing-control-s</code><span class="value" data-value="--spacing-control-s"></span><span class="label">작은 조작의 높이</span></div>
+<script>
+for (const el of document.querySelectorAll("[data-value]")) {
+  el.textContent = getComputedStyle(el).getPropertyValue(el.dataset.value).trim();
+}
+</script>
+</body>
+</html>

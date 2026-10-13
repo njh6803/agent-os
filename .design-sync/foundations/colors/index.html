@@ -1,0 +1,105 @@
+<!-- @dsCard group="Colors" -->
+<!doctype html>
+<html lang="ko" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<title>색</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+html, body { margin: 0; }
+body {
+  padding: 24px; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: var(--body-size); line-height: var(--body-lh);
+}
+h1 { margin: 0 0 4px; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--font-weight-semibold); }
+h2 { margin: 24px 0 8px; font-size: var(--body-size); line-height: var(--body-lh); font-weight: var(--font-weight-semibold); }
+p.lead { margin: 0; color: var(--text-muted); }
+code, .value { font-family: var(--mono); font-size: var(--mono-size); line-height: var(--table-lh); }
+.value, .label { color: var(--text-muted); }
+.label { font-size: var(--text-small); line-height: var(--text-small--line-height); }
+.panel { padding: 16px; margin-top: 16px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-l); }
+.panel h2 { margin-top: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; }
+.sw { display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; align-items: center; }
+.sw i { grid-row: span 2; width: 28px; height: 28px; border-radius: var(--radius-s); border: 1px solid var(--border); }
+.theme { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.theme strong { min-width: 88px; font-weight: var(--font-weight-medium); }
+.chips, .ramp { display: flex; gap: 4px; }
+.chips i { width: 28px; height: 28px; border-radius: var(--radius-full); border: 1px solid var(--border); }
+.ramp i { flex: 1; height: 24px; border-radius: var(--radius-s); }
+.ramp-row { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 12px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>색</h1>
+<p class="lead">쓰임새 토큰 23개가 테마와 모드마다 원색 토큰을 가리킨다. 화면은 쓰임새 토큰만 쓰고 원색 토큰은 테마의 재료다.</p>
+<section class="panel" data-mode="light"><h2>쓰임새 · 녹청 라이트</h2><div class="grid">
+<div class="sw"><i style="background: var(--bg)"></i><code>bg</code><span class="value" data-value="--bg"></span></div>
+<div class="sw"><i style="background: var(--bg-raised)"></i><code>bg-raised</code><span class="value" data-value="--bg-raised"></span></div>
+<div class="sw"><i style="background: var(--text)"></i><code>text</code><span class="value" data-value="--text"></span></div>
+<div class="sw"><i style="background: var(--text-muted)"></i><code>text-muted</code><span class="value" data-value="--text-muted"></span></div>
+<div class="sw"><i style="background: var(--border)"></i><code>border</code><span class="value" data-value="--border"></span></div>
+<div class="sw"><i style="background: var(--accent)"></i><code>accent</code><span class="value" data-value="--accent"></span></div>
+<div class="sw"><i style="background: var(--on-accent)"></i><code>on-accent</code><span class="value" data-value="--on-accent"></span></div>
+<div class="sw"><i style="background: var(--danger)"></i><code>danger</code><span class="value" data-value="--danger"></span></div>
+<div class="sw"><i style="background: var(--warning)"></i><code>warning</code><span class="value" data-value="--warning"></span></div>
+<div class="sw"><i style="background: var(--success)"></i><code>success</code><span class="value" data-value="--success"></span></div>
+<div class="sw"><i style="background: var(--info)"></i><code>info</code><span class="value" data-value="--info"></span></div>
+<div class="sw"><i style="background: var(--focus-ring)"></i><code>focus-ring</code><span class="value" data-value="--focus-ring"></span></div>
+<div class="sw"><i style="background: var(--border-control)"></i><code>border-control</code><span class="value" data-value="--border-control"></span></div>
+<div class="sw"><i style="background: var(--primary)"></i><code>primary</code><span class="value" data-value="--primary"></span></div>
+<div class="sw"><i style="background: var(--on-primary)"></i><code>on-primary</code><span class="value" data-value="--on-primary"></span></div>
+<div class="sw"><i style="background: var(--primary-hover)"></i><code>primary-hover</code><span class="value" data-value="--primary-hover"></span></div>
+<div class="sw"><i style="background: var(--primary-active)"></i><code>primary-active</code><span class="value" data-value="--primary-active"></span></div>
+<div class="sw"><i style="background: var(--bg-hover)"></i><code>bg-hover</code><span class="value" data-value="--bg-hover"></span></div>
+<div class="sw"><i style="background: var(--bg-active)"></i><code>bg-active</code><span class="value" data-value="--bg-active"></span></div>
+<div class="sw"><i style="background: var(--bg-selected)"></i><code>bg-selected</code><span class="value" data-value="--bg-selected"></span></div>
+<div class="sw"><i style="background: var(--text-disabled)"></i><code>text-disabled</code><span class="value" data-value="--text-disabled"></span></div>
+<div class="sw"><i style="background: var(--bg-disabled)"></i><code>bg-disabled</code><span class="value" data-value="--bg-disabled"></span></div>
+<div class="sw"><i style="background: var(--shadow-color)"></i><code>shadow-color</code><span class="value" data-value="--shadow-color"></span></div>
+</div></section>
+<section class="panel" data-mode="dark"><h2>쓰임새 · 녹청 다크</h2><div class="grid">
+<div class="sw"><i style="background: var(--bg)"></i><code>bg</code><span class="value" data-value="--bg"></span></div>
+<div class="sw"><i style="background: var(--bg-raised)"></i><code>bg-raised</code><span class="value" data-value="--bg-raised"></span></div>
+<div class="sw"><i style="background: var(--text)"></i><code>text</code><span class="value" data-value="--text"></span></div>
+<div class="sw"><i style="background: var(--text-muted)"></i><code>text-muted</code><span class="value" data-value="--text-muted"></span></div>
+<div class="sw"><i style="background: var(--border)"></i><code>border</code><span class="value" data-value="--border"></span></div>
+<div class="sw"><i style="background: var(--accent)"></i><code>accent</code><span class="value" data-value="--accent"></span></div>
+<div class="sw"><i style="background: var(--on-accent)"></i><code>on-accent</code><span class="value" data-value="--on-accent"></span></div>
+<div class="sw"><i style="background: var(--danger)"></i><code>danger</code><span class="value" data-value="--danger"></span></div>
+<div class="sw"><i style="background: var(--warning)"></i><code>warning</code><span class="value" data-value="--warning"></span></div>
+<div class="sw"><i style="background: var(--success)"></i><code>success</code><span class="value" data-value="--success"></span></div>
+<div class="sw"><i style="background: var(--info)"></i><code>info</code><span class="value" data-value="--info"></span></div>
+<div class="sw"><i style="background: var(--focus-ring)"></i><code>focus-ring</code><span class="value" data-value="--focus-ring"></span></div>
+<div class="sw"><i style="background: var(--border-control)"></i><code>border-control</code><span class="value" data-value="--border-control"></span></div>
+<div class="sw"><i style="background: var(--primary)"></i><code>primary</code><span class="value" data-value="--primary"></span></div>
+<div class="sw"><i style="background: var(--on-primary)"></i><code>on-primary</code><span class="value" data-value="--on-primary"></span></div>
+<div class="sw"><i style="background: var(--primary-hover)"></i><code>primary-hover</code><span class="value" data-value="--primary-hover"></span></div>
+<div class="sw"><i style="background: var(--primary-active)"></i><code>primary-active</code><span class="value" data-value="--primary-active"></span></div>
+<div class="sw"><i style="background: var(--bg-hover)"></i><code>bg-hover</code><span class="value" data-value="--bg-hover"></span></div>
+<div class="sw"><i style="background: var(--bg-active)"></i><code>bg-active</code><span class="value" data-value="--bg-active"></span></div>
+<div class="sw"><i style="background: var(--bg-selected)"></i><code>bg-selected</code><span class="value" data-value="--bg-selected"></span></div>
+<div class="sw"><i style="background: var(--text-disabled)"></i><code>text-disabled</code><span class="value" data-value="--text-disabled"></span></div>
+<div class="sw"><i style="background: var(--bg-disabled)"></i><code>bg-disabled</code><span class="value" data-value="--bg-disabled"></span></div>
+<div class="sw"><i style="background: var(--shadow-color)"></i><code>shadow-color</code><span class="value" data-value="--shadow-color"></span></div>
+</div></section>
+<h2>테마 넷 · 강조, 주 버튼, 바탕, 글자, 흐린 글자</h2>
+<div class="theme" data-theme="guncheong" data-mode="light"><strong>군청</strong> <code>guncheong</code><div class="chips"><i title="accent" style="background: var(--accent)"></i><i title="primary" style="background: var(--primary)"></i><i title="bg" style="background: var(--bg)"></i><i title="text" style="background: var(--text)"></i><i title="text-muted" style="background: var(--text-muted)"></i></div></div>
+<div class="theme" data-theme="nokcheong" data-mode="light"><strong>녹청(기본)</strong> <code>nokcheong</code><div class="chips"><i title="accent" style="background: var(--accent)"></i><i title="primary" style="background: var(--primary)"></i><i title="bg" style="background: var(--bg)"></i><i title="text" style="background: var(--text)"></i><i title="text-muted" style="background: var(--text-muted)"></i></div></div>
+<div class="theme" data-theme="jacho" data-mode="light"><strong>자초</strong> <code>jacho</code><div class="chips"><i title="accent" style="background: var(--accent)"></i><i title="primary" style="background: var(--primary)"></i><i title="bg" style="background: var(--bg)"></i><i title="text" style="background: var(--text)"></i><i title="text-muted" style="background: var(--text-muted)"></i></div></div>
+<div class="theme" data-theme="jjokbit" data-mode="light"><strong>쪽빛</strong> <code>jjokbit</code><div class="chips"><i title="accent" style="background: var(--accent)"></i><i title="primary" style="background: var(--primary)"></i><i title="bg" style="background: var(--bg)"></i><i title="text" style="background: var(--text)"></i><i title="text-muted" style="background: var(--text-muted)"></i></div></div>
+<h2>원색 · 녹청</h2>
+<div class="ramp-row"><code>gray</code><div class="ramp"><i title="gray-0" style="background: var(--gray-0)"></i><i title="gray-50" style="background: var(--gray-50)"></i><i title="gray-100" style="background: var(--gray-100)"></i><i title="gray-200" style="background: var(--gray-200)"></i><i title="gray-300" style="background: var(--gray-300)"></i><i title="gray-400" style="background: var(--gray-400)"></i><i title="gray-500" style="background: var(--gray-500)"></i><i title="gray-600" style="background: var(--gray-600)"></i><i title="gray-700" style="background: var(--gray-700)"></i><i title="gray-800" style="background: var(--gray-800)"></i><i title="gray-850" style="background: var(--gray-850)"></i><i title="gray-900" style="background: var(--gray-900)"></i><i title="gray-950" style="background: var(--gray-950)"></i></div></div>
+<div class="ramp-row"><code>accent</code><div class="ramp"><i title="accent-50" style="background: var(--accent-50)"></i><i title="accent-100" style="background: var(--accent-100)"></i><i title="accent-200" style="background: var(--accent-200)"></i><i title="accent-300" style="background: var(--accent-300)"></i><i title="accent-400" style="background: var(--accent-400)"></i><i title="accent-500" style="background: var(--accent-500)"></i><i title="accent-600" style="background: var(--accent-600)"></i><i title="accent-700" style="background: var(--accent-700)"></i><i title="accent-800" style="background: var(--accent-800)"></i><i title="accent-900" style="background: var(--accent-900)"></i><i title="accent-950" style="background: var(--accent-950)"></i></div></div>
+<div class="ramp-row"><code>danger</code><div class="ramp"><i title="danger-50" style="background: var(--danger-50)"></i><i title="danger-100" style="background: var(--danger-100)"></i><i title="danger-200" style="background: var(--danger-200)"></i><i title="danger-300" style="background: var(--danger-300)"></i><i title="danger-400" style="background: var(--danger-400)"></i><i title="danger-500" style="background: var(--danger-500)"></i><i title="danger-600" style="background: var(--danger-600)"></i><i title="danger-700" style="background: var(--danger-700)"></i><i title="danger-800" style="background: var(--danger-800)"></i><i title="danger-900" style="background: var(--danger-900)"></i><i title="danger-950" style="background: var(--danger-950)"></i></div></div>
+<div class="ramp-row"><code>warning</code><div class="ramp"><i title="warning-50" style="background: var(--warning-50)"></i><i title="warning-100" style="background: var(--warning-100)"></i><i title="warning-200" style="background: var(--warning-200)"></i><i title="warning-300" style="background: var(--warning-300)"></i><i title="warning-400" style="background: var(--warning-400)"></i><i title="warning-500" style="background: var(--warning-500)"></i><i title="warning-600" style="background: var(--warning-600)"></i><i title="warning-700" style="background: var(--warning-700)"></i><i title="warning-800" style="background: var(--warning-800)"></i><i title="warning-900" style="background: var(--warning-900)"></i><i title="warning-950" style="background: var(--warning-950)"></i></div></div>
+<div class="ramp-row"><code>success</code><div class="ramp"><i title="success-50" style="background: var(--success-50)"></i><i title="success-100" style="background: var(--success-100)"></i><i title="success-200" style="background: var(--success-200)"></i><i title="success-300" style="background: var(--success-300)"></i><i title="success-400" style="background: var(--success-400)"></i><i title="success-500" style="background: var(--success-500)"></i><i title="success-600" style="background: var(--success-600)"></i><i title="success-700" style="background: var(--success-700)"></i><i title="success-800" style="background: var(--success-800)"></i><i title="success-900" style="background: var(--success-900)"></i><i title="success-950" style="background: var(--success-950)"></i></div></div>
+<div class="ramp-row"><code>info</code><div class="ramp"><i title="info-50" style="background: var(--info-50)"></i><i title="info-100" style="background: var(--info-100)"></i><i title="info-200" style="background: var(--info-200)"></i><i title="info-300" style="background: var(--info-300)"></i><i title="info-400" style="background: var(--info-400)"></i><i title="info-500" style="background: var(--info-500)"></i><i title="info-600" style="background: var(--info-600)"></i><i title="info-700" style="background: var(--info-700)"></i><i title="info-800" style="background: var(--info-800)"></i><i title="info-900" style="background: var(--info-900)"></i><i title="info-950" style="background: var(--info-950)"></i></div></div>
+<div class="ramp-row"><code>overlay</code><div class="ramp"><i title="overlay-black-4" style="background: var(--overlay-black-4)"></i><i title="overlay-black-7" style="background: var(--overlay-black-7)"></i><i title="overlay-black-12" style="background: var(--overlay-black-12)"></i><i title="overlay-black-40" style="background: var(--overlay-black-40)"></i><i title="overlay-white-6" style="background: var(--overlay-white-6)"></i><i title="overlay-white-10" style="background: var(--overlay-white-10)"></i><i title="overlay-white-16" style="background: var(--overlay-white-16)"></i></div></div>
+<script>
+for (const el of document.querySelectorAll("[data-value]")) {
+  el.textContent = getComputedStyle(el).getPropertyValue(el.dataset.value).trim();
+}
+</script>
+</body>
+</html>

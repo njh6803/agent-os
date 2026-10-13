@@ -1,19 +1,20 @@
 <!doctype html>
-<html lang="ko" data-theme="muk" data-mode="light">
+<html lang="ko" data-theme="nokcheong" data-mode="light">
 <head>
 <meta charset="utf-8" />
 <title>Agent OS 디자인 시스템 — thumbnail</title>
 <link rel="stylesheet" href="styles.css" />
 <style>
 /* Claude Design 목록 타일의 원본. 크기는 기본 디자인 시스템(Modernist)의 thumbnail.html 과 같은 1280×854 다.
-   변환기가 만들지 않는 파일이라 .design-sync/ 에 두고 손으로 올린다(NOTES). 왼쪽은 기본 테마(먹)의 강조색 바탕에
-   이름, 오른쪽 띠는 나머지 테마 넷의 강조색이다. 띠의 칸마다 data-theme 과 data-mode 를 달아 쓰임새 토큰 --accent 가
-   그 테마의 라이트로 다시 풀린다. data-mode 가 없으면 시스템이 다크를 고를 때 띠만 다크 색이 된다. */
+   변환기가 만들지 않는 파일이라 .design-sync/ 에 두고 손으로 올린다(NOTES). 왼쪽은 기본 테마(녹청)의 강조색 바탕에
+   이름, 오른쪽 띠는 나머지 테마 셋의 강조색이다. 띠의 칸마다 data-theme 과 data-mode 를 달아 쓰임새 토큰 --accent 가
+   그 테마의 라이트로 다시 풀린다. data-mode 가 없으면 시스템이 다크를 고를 때 띠만 다크 색이 된다. 값은 글자로 적지
+   않고 CSS 변수로만 읽는다(사용 규약의 검사기가 이름을 빌드 CSS 와 맞댄다). */
 html, body { height: 100%; }
 body { margin: 0; display: flex; background: var(--accent); }
 .mark { flex: 1; display: flex; align-items: flex-end; padding: 56px; overflow: hidden; }
 .mark h1 {
-  margin: 0; color: var(--on-accent); font-family: var(--sans); font-weight: var(--font-weight-strong);
+  margin: 0; color: var(--on-accent); font-family: var(--sans); font-weight: var(--font-weight-semibold);
   font-size: 140px; line-height: 0.94; letter-spacing: -4px; white-space: nowrap;
 }
 .strip { width: 25%; display: flex; flex-direction: column; }
@@ -23,10 +24,9 @@ body { margin: 0; display: flex; background: var(--accent); }
 <body>
 <div class="mark"><h1>Agent OS</h1></div>
 <aside class="strip">
-<i data-theme="cheongnok" data-mode="light"></i>
-<i data-theme="gongmun" data-mode="light"></i>
-<i data-theme="hwangto" data-mode="light"></i>
-<i data-theme="jadu" data-mode="light"></i>
+<i data-theme="guncheong" data-mode="light"></i>
+<i data-theme="jacho" data-mode="light"></i>
+<i data-theme="jjokbit" data-mode="light"></i>
 </aside>
 </body>
 </html>
