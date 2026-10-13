@@ -1,0 +1,243 @@
+# tools/session_cost_window.py 의 창 조건을 하나씩 비튼 변이. 모두 빨강을 기대한다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/session_cost_window_mutations.toml
+
+# --- 창 ---
+
+[[mutation]]
+name = "창의 시작 시각을 창 밖으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    return since is None or parse_ts(ts) >= since
+'''
+new = '''    return since is None or parse_ts(ts) > since
+'''
+
+[[mutation]]
+name = "창이 없으면 아무것도 세지 않음"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    return since is None or parse_ts(ts) >= since
+'''
+new = '''    return since is not None and parse_ts(ts) >= since
+'''
+
+[[mutation]]
+name = "시각대 없는 창을 그대로 둠"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    return since.replace(tzinfo=UTC) if since.tzinfo is None else since
+'''
+new = '''    return since
+'''
+
+[[mutation]]
+name = "빈 창 값을 읽으려 함"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    if not value:
+        return None
+'''
+new = '''    if value is None:
+        return None
+'''
+
+# --- 첫 사람 트리거와 첫 지시문 ---
+
+[[mutation]]
+name = "사람이 아닌 턴도 첫 트리거로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        if not t.branch or t.trigger != "human":
+'''
+new = '''        if not t.branch:
+'''
+
+[[mutation]]
+name = "귀속되지 않은 턴도 첫 트리거로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        if not t.branch or t.trigger != "human":
+'''
+new = '''        if t.trigger != "human":
+'''
+
+[[mutation]]
+name = "시작이 같으면 뒤의 턴을 첫 트리거로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        if old is None or t.start < old[0]:
+'''
+new = '''        if old is None or t.start <= old[0]:
+'''
+
+[[mutation]]
+name = "첫 사람 트리거를 창 안에서만 봄"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        if not t.branch or t.trigger != "human":
+'''
+new = '''        if not t.branch or t.trigger != "human" or t.start < "2026-10-13T04:11:21":
+'''
+
+[[mutation]]
+name = "첫 지시문을 창 앞까지 봄"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    starts = [t.start for t in turns if t.directive and in_window(t.start, since)]
+'''
+new = '''    starts = [t.start for t in turns if t.directive]
+'''
+
+[[mutation]]
+name = "첫 지시문에서 귀속되지 않은 턴을 뺌"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    starts = [t.start for t in turns if t.directive and in_window(t.start, since)]
+'''
+new = '''    starts = [t.start for t in turns if t.branch and t.directive and in_window(t.start, since)]
+'''
+
+[[mutation]]
+name = "콜론 없는 표지도 지시문으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        return self.trigger == "human" and DIRECTIVE_MARK in self.text
+'''
+new = '''        return self.trigger == "human" and "다음 작업" in self.text
+'''
+
+[[mutation]]
+name = "사람이 아닌 턴의 표지도 지시문으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        return self.trigger == "human" and DIRECTIVE_MARK in self.text
+'''
+new = '''        return DIRECTIVE_MARK in self.text
+'''
+
+# --- 사람 개입 ---
+
+[[mutation]]
+name = "창 앞의 사람 턴도 개입으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        1 for t in turns if t.trigger == "human" and not t.directive and in_window(t.start, since)
+'''
+new = '''        1 for t in turns if t.trigger == "human" and not t.directive
+'''
+
+[[mutation]]
+name = "지시문 턴도 개입으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        1 for t in turns if t.trigger == "human" and not t.directive and in_window(t.start, since)
+'''
+new = '''        1 for t in turns if t.trigger == "human" and in_window(t.start, since)
+'''
+
+[[mutation]]
+name = "사람이 아닌 턴도 개입으로"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        1 for t in turns if t.trigger == "human" and not t.directive and in_window(t.start, since)
+'''
+new = '''        1 for t in turns if not t.directive and in_window(t.start, since)
+'''
+
+[[mutation]]
+name = "창 앞의 첫 트리거도 뺌"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    if first is not None and DIRECTIVE_MARK not in first[1] and in_window(first[0], since):
+'''
+new = '''    if first is not None and DIRECTIVE_MARK not in first[1]:
+'''
+
+[[mutation]]
+name = "지시문인 첫 트리거도 뺌"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    if first is not None and DIRECTIVE_MARK not in first[1] and in_window(first[0], since):
+'''
+new = '''    if first is not None and in_window(first[0], since):
+'''
+
+[[mutation]]
+name = "첫 트리거를 빼지 않음"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''        n -= 1
+'''
+new = '''        n -= 0
+'''
+
+[[mutation]]
+name = "개입이 0 밑으로 내려감"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    return max(0, n)
+'''
+new = '''    return n
+'''
+
+# --- cost-state ---
+
+[[mutation]]
+name = "창이 없어도 기록 없는 세션의 cost-state를 버림"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    if since is None:
+        return set(sessions)
+'''
+new = ""
+
+[[mutation]]
+name = "기록이 모두 창 안이어야 남김"
+tests = ["tests/tools/test_session_cost_window.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/session_cost_window.py"
+old = '''    return {sid for sid in sessions if any(in_window(ts, since) for ts in stamps.get(sid, ()))}
+'''
+new = '''    return {sid for sid in sessions if all(in_window(ts, since) for ts in stamps.get(sid, ()))}
+'''

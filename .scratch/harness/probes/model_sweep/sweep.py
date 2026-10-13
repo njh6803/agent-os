@@ -22,8 +22,10 @@ pytest가 고정한다. 이 파일은 그 앞뒤를 한다. 두 사전 등록 �
 참인 입력에만 받고, 그런 입력은 실제 판정에 받지 않는다. `collect.py`는 그 칸을 쓰지 않는다.
 
 판은 판정할 때 체크아웃에 있는 파일들(`collect.py`, `costs.py`, `analyze.py`, `sweep.py`,
-`tools/model_sweep.py`, `tools/model_sweep_judge.py`)의 해시와, 입력을 쓴 `collect.py`가 meta에 남긴
-자기 해시(`collect_sha256`)를 함께 찍는다. 둘이 다르면 입력을 쓴 뒤 모으는 코드가 바뀐 것이다.
+`tools/model_sweep.py`, `tools/model_sweep_judge.py`, `tools/session_cost_window.py`)의 해시와,
+입력을 쓴 `collect.py`가 meta에 남긴 자기 해시(`collect_sha256`)와 창 도구의 해시(`window_sha256`)를
+함께 찍는다. 같은 파일의 두 해시가 다르면 입력을 쓴 뒤 모으는 코드가 바뀐 것이다. `costs.py`는
+meta에 해시가 없어 입력 시점의 판과 견주지 못한다.
 
 못 보는 것: `branches.json`은 2026-10-12까지 병합된 브랜치라 그 뒤의 처리량은 보지
 않는다(`population`). 주마다의 수는 병합 시각(UTC)의 ISO 주로 셈하고 첫 주와 마지막 주는 일부만
@@ -195,6 +197,7 @@ VERSIONED = [
     HERE / "sweep.py",
     ROOT / "tools" / "model_sweep.py",
     ROOT / "tools" / "model_sweep_judge.py",
+    ROOT / "tools" / "session_cost_window.py",
 ]
 
 
@@ -211,16 +214,6 @@ def input_blockers(
     return blockers + sweep_judge.kind_problems(rows, registered, tool.SWEPT)
 
 
-def failed_names(marker_rows: list[list[str]]) -> list[str]:
-    """`analyze.markers`가 통과가 아니라고 한 표에서 판정을 막는 표지의 이름. 표의 넷째 칸 글자가
-    아니라 값 칸과 문턱 칸을 다시 견줘 `analyze.markers`의 통과 조건(값이 문턱 이하)이 깨진 것을
-    고른다. 값이 NaN이면 견줄 수 없어 깨진 것으로 든다(셀프 리뷰 명세 축). 값 칸은 소수 셋째 자리로
-    반올림되어 문턱 바로 위의 값은 이름을 못 고를 수 있어, 그때는 이름 대신 그 뜻을 넘긴다(PR #224
-    claude-review)."""
-    names = [name for name, value, limit, _ in marker_rows if not float(value) <= float(limit)]
-    return names or ["표지 넷 가운데 문턱을 넘은 것이 있다(위 표의 값은 반올림했다)"]
-
-
 def print_header(path: Path, meta: dict[str, analyze.Json], today: date | None) -> None:
     print("# 레벨 스윕 판정")
     print()
@@ -229,8 +222,12 @@ def print_header(path: Path, meta: dict[str, analyze.Json], today: date | None) 
     versions = ", ".join(f"{f.name} {file_digest(f)}" for f in VERSIONED)
     print(f"- 판(SHA-256 앞 12자리): HEAD {head_commit()}, {versions}")
     written = str(meta.get("collect_sha256") or "없음")[:12]
+    written_window = str(meta.get("window_sha256") or "없음")[:12]
     day = f"{today}(--today)" if today is not None else str(datetime.now(UTC).date())
-    print(f"- 입력: {path}(since {meta.get('since')}, 쓴 collect.py {written}), 날짜 {day}")
+    print(
+        f"- 입력: {path}(since {meta.get('since')}, 쓴 collect.py {written}, "
+        f"session_cost_window.py {written_window}), 날짜 {day}"
+    )
 
 
 def kind_lines(kind: str, result: sweep_judge.KindJudgment) -> list[str]:
@@ -279,7 +276,7 @@ def judge(path: Path, today: date | None) -> int:
     print("## 소급 측정의 표지 넷(스윕 기간)")
     print()
     print(analyze.table(["표지", "값", "문턱", "넘는가"], marker_rows))
-    failed = [] if markers_ok else failed_names(marker_rows)
+    failed = [] if markers_ok else sweep_judge.failed_names(marker_rows)
     summary: list[str] = []
     for kind in registered:
         result = sweep_judge.judge_kind(kind, rows, failed, tool.SWEPT)
