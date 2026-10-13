@@ -129,7 +129,7 @@ while ($null -ne ($line = $in.ReadLine())) {
                 }
             }
             foreach ($key in @($saved.Keys)) {
-                if ($now[$key] -ne $saved[$key]) {
+                if ($now[$key] -cne $saved[$key]) {
                     [Environment]::SetEnvironmentVariable($key, $saved[$key])
                 }
             }
@@ -171,6 +171,8 @@ class ServerCall:
             "OPEN_SESSION_REPLY": REPLY,
             **self._server_env,
         }
+        if self._stderr is not None:
+            self._stderr.close()
         self._stderr = tempfile.TemporaryFile()
         proc = subprocess.Popen(
             ["pwsh", "-NoProfile", "-NonInteractive", "-Command", _SERVER],
@@ -229,6 +231,7 @@ class ServerCall:
                 line = self._lines.get(timeout=max(0.0, deadline - time.monotonic()))
             except queue.Empty:
                 proc.kill()
+                proc.wait()
                 self._proc = None
                 pytest.fail(
                     f"pwsh 가 {limit:g}초 안에 끝나지 않았다. "
@@ -237,10 +240,13 @@ class ServerCall:
             if line is None:
                 self._proc = None
                 pytest.fail(f"pwsh 서버가 끝났다: {''.join(noise)}{self._server_stderr()}")
-            if line.startswith(REPLY):
+            # 본문이 줄바꿈 없이 콘솔에 쓰면 답 표지가 그 줄 가운데에 붙는다(PR 직전 리뷰).
+            at = line.find(REPLY)
+            if at >= 0:
+                noise.append(line[:at])
                 break
             noise.append(line)
-        reply = json.loads(line.removeprefix(REPLY))
+        reply = json.loads(line[at + len(REPLY) :])
         return subprocess.CompletedProcess(
             args=["pwsh-server", function],
             returncode=int(reply["code"]),
@@ -307,6 +313,7 @@ _MUST_MATCH: list[Request] = [
     # 빨갰다. 서버는 오류 스트림에 남은 기록으로 정한다.
     ("잡은 종료 오류", "", "try { throw 'x' } catch { 'caught' }", {}),
     ("호스트 출력의 차례", "", "'a'\nWrite-Host 'hosted'\n'b'", {}),
+    ("줄바꿈 없는 콘솔 출력", "", "[Console]::Out.Write('partial')\n'after'", {}),
     ("여러 줄과 끝 공백", "", "'a  '\n''\n'b'", {}),
     ("한글과 전각 슬래시", "Normalize-Slash", "Normalize-Slash $given.text", {"text": "／한글"}),
     ("given 의 null 과 중첩", "", '"[$($given.a)]"\n$given.b.c', {"a": None, "b": {"c": "x"}}),
@@ -319,6 +326,11 @@ _MAY_DIFFER: list[Request] = [
     ("앞 문장의 종료하지 않는 오류", "", "Write-Error 'soft'\n'after'", {}),
     # 지금의 `_call` 은 콘솔 호스트가 경고 앞에 지역화된 머리를 붙인다.
     ("경고", "", "'a'\nWrite-Warning 'warn'\n'b'", {}),
+    # 아래 셋은 PR 직전 버그·성능 리뷰가 짚었다. 서버판은 정보 스트림을 선호도와 무관하게 합치고,
+    # 콘솔의 오류 쓰기는 서버 프로세스의 stderr 로 가며, 종료 코드는 `$LASTEXITCODE` 를 보지 않는다.
+    ("정보 스트림", "", "Write-Information 'info'\n'after'", {}),
+    ("콘솔 오류에 직접 쓰기", "", "[Console]::Error.WriteLine('direct')\n'after'", {}),
+    ("마지막 네이티브 명령의 실패", "", "'before'\ncmd /c exit 3", {}),
 ]
 
 
