@@ -211,15 +211,14 @@ def input_blockers(
     return blockers + sweep_judge.kind_problems(rows, registered, tool.SWEPT)
 
 
-def failed_markers(meta: dict[str, analyze.Json]) -> list[str]:
-    """소급 측정의 표지 넷 가운데 판정을 막는 것의 이름. 막는지는 `analyze.markers`의 통과 여부(모든
-    값이 문턱 이하)가 정하고, 이름은 표의 넷째 칸이 "넘는다"인 표지다. 값이 NaN이면 그 칸이
-    "안"인데도 통과가 아니어서, 그때는 이름 대신 그 뜻을 넘긴다(셀프 리뷰 명세 축)."""
-    marker_rows, markers_ok = analyze.markers(meta)
-    if markers_ok:
-        return []
-    names = [row[0] for row in marker_rows if row[3] == "넘는다"]
-    return names or ["문턱과 견줄 수 없는 값(NaN)이 있다"]
+def failed_names(marker_rows: list[list[str]]) -> list[str]:
+    """`analyze.markers`가 통과가 아니라고 한 표에서 판정을 막는 표지의 이름. 표의 넷째 칸 글자가
+    아니라 값 칸과 문턱 칸을 다시 견줘 `analyze.markers`의 통과 조건(값이 문턱 이하)이 깨진 것을
+    고른다. 값이 NaN이면 견줄 수 없어 깨진 것으로 든다(셀프 리뷰 명세 축). 값 칸은 소수 셋째 자리로
+    반올림되어 문턱 바로 위의 값은 이름을 못 고를 수 있어, 그때는 이름 대신 그 뜻을 넘긴다(PR #224
+    claude-review)."""
+    names = [name for name, value, limit, _ in marker_rows if not float(value) <= float(limit)]
+    return names or ["표지 넷 가운데 문턱을 넘은 것이 있다(위 표의 값은 반올림했다)"]
 
 
 def print_header(path: Path, meta: dict[str, analyze.Json], today: date | None) -> None:
@@ -275,12 +274,12 @@ def judge(path: Path, today: date | None) -> int:
         for b in blockers:
             print(f"- 판정하지 않는다: {b}")
         return 1
-    marker_rows, _ = analyze.markers(meta)
+    marker_rows, markers_ok = analyze.markers(meta)
     print()
     print("## 소급 측정의 표지 넷(스윕 기간)")
     print()
     print(analyze.table(["표지", "값", "문턱", "넘는가"], marker_rows))
-    failed = failed_markers(meta)
+    failed = [] if markers_ok else failed_names(marker_rows)
     summary: list[str] = []
     for kind in registered:
         result = sweep_judge.judge_kind(kind, rows, failed, tool.SWEPT)
