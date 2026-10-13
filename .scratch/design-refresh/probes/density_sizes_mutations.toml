@@ -1,0 +1,353 @@
+# design-refresh 티켓 04 의 변이 표. 구현 전의 스토리는 밀도 변수와 새 치수가 없어 스토리마다 첫 단언에서 빨갰으므로, 그
+# 뒤 단언(감싼 요소의 별칭, 여덟 벌에서 같은 밀도 변수, 호스트의 밀도 짝, 그림자의 색 등)과 구현 뒤에 쓴 단언(ShadowRoot 의
+# 호스트 속성)은 빨강을 본 적이 없다. 사진 비교의 밀도 가드와 미디어 특성의 창 폭 사례도 그렇다. 변이마다 그 단언이 재는
+# 선택자나 값 하나만 바꾸고 그 단언이 든 스토리나 사진 사례 하나로 좁혀(`-t`, 사진은 `-g`) 그것이 빨개지는지 본다. 한
+# 스토리 안의 어느 단언이 실패했는지는 판정이 가르지 않는다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-refresh/probes/density_sizes_mutations.toml [번호 ...]
+# visual 러너는 Docker 와 판을 고정한 이미지가 있어야 하고 정적 빌드부터 다시 짓는다.
+
+[runner.storybook]
+command = ["pnpm", "exec", "vitest", "run", "--project", "storybook"]
+cwd = "web"
+judge = "vitest"
+
+[runner.visual]
+command = ["pnpm", "-C", "web", "visual"]
+judge = "playwright"
+
+# --- 밀도 선택자와 Density -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "촘촘 선택자를 빼면 보통 조상 안의 촘촘 표본이 Density 에서 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "data-density 가 촘촘과 보통이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  [data-density="compact"],
+  :host([data-density="compact"]) {
+'''
+new = '''
+  :host([data-density="compact"]) {
+'''
+
+[[mutation]]
+name = "보통 선택자를 빼면 촘촘 조상 안의 보통 표본이 Density 에서 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "data-density 가 촘촘과 보통이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  [data-density="regular"],
+'''
+new = ""
+
+[[mutation]]
+name = "감싼 요소가 별칭을 var() 로 읽으면 Density 의 보통 표본이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "data-density 가 촘촘과 보통이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    font-size: var(--body-size);
+'''
+new = '''
+    font-size: var(--text-body);
+'''
+
+[[mutation]]
+name = "테마 블록이 밀도 변수를 다시 정하면 Density 의 여덟 벌이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "data-density 가 촘촘과 보통이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  [data-theme="guncheong"],
+  :host([data-theme="guncheong"]) {
+'''
+new = '''
+  [data-theme="guncheong"],
+  :host([data-theme="guncheong"]) {
+    --control-h: 40px;
+'''
+
+[[mutation]]
+name = "고정폭의 줄 높이를 본문의 줄 높이로 두면 Density 가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "data-density 가 촘촘과 보통이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''  --text-mono--line-height: var(--table-lh);'''
+new = '''  --text-mono--line-height: var(--body-lh);'''
+
+[[mutation]]
+name = "밀도의 미디어 조건이 기준 폭과 다르면 Responsive 가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "기준 폭 둘이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''  @media (width >= 768px) {'''
+new = '''  @media (width >= 1024px) {'''
+
+# --- ShadowRoot ------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "감싼 요소가 별칭을 var() 로 읽으면 ShadowRoot 의 문서 쪽이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "shadow 안의 계산값이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    font-size: var(--body-size);
+'''
+new = '''
+    font-size: var(--text-body);
+'''
+
+[[mutation]]
+name = "호스트의 촘촘 짝을 빼면 ShadowRoot 의 shadow 쪽이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "shadow 안의 계산값이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  [data-density="compact"],
+  :host([data-density="compact"]) {
+'''
+new = '''
+  [data-density="compact"] {
+'''
+
+[[mutation]]
+name = "shadow 틀이 호스트에 밀도를 달지 않으면 ShadowRoot 가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "shadow 안의 계산값이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/storybook/ShadowFrame.tsx"
+old = '''
+      data-density={density ?? undefined}
+'''
+new = ""
+
+# --- 그림자 ----------------------------------------------------------------------------------------------------
+
+# 대조군. 처음에는 빨강을 기대했는데 초록이었다. Tailwind 가 그림자 값을 유틸리티에 풀어 써 두 블록의 `.shadow-float`
+# 규칙이 같고, 다른 것은 뿌리에 `--shadow-float` 선언이 나오는지뿐이다(같은 폴더의 `shadow.mjs`).
+[[mutation]]
+name = "그림자를 @theme static 으로 옮겨도 유틸리티가 같아 FloatShadow 는 초록이다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "떠 있는 것의 그림자"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  --shadow-float: 0 8px 24px var(--shadow-color), 0 1px 2px var(--shadow-color);
+'''
+new = ""
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  --container-wide: 360px;
+'''
+new = '''
+  --container-wide: 360px;
+  --shadow-float: 0 8px 24px var(--shadow-color), 0 1px 2px var(--shadow-color);
+'''
+
+[[mutation]]
+name = "그림자 색을 모드와 무관한 원색으로 두면 FloatShadow 가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "떠 있는 것의 그림자"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  --shadow-float: 0 8px 24px var(--shadow-color), 0 1px 2px var(--shadow-color);
+'''
+new = '''
+  --shadow-float: 0 8px 24px var(--overlay-black-12), 0 1px 2px var(--overlay-black-12);
+'''
+
+# --- 미리보기와 컴포넌트 ---------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "데코레이터가 문서 뿌리에 밀도를 달지 않으면 보통 밀도의 버튼이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "보통 밀도의 버튼은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/storybook/preview.tsx"
+old = '''
+    setOrRemoveAttribute(root, "data-density", densityOf(context.globals));
+'''
+new = ""
+
+[[mutation]]
+name = "버튼의 굵기를 600 으로 두면 촘촘 밀도의 버튼이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "촘촘 밀도의 버튼은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Button.tsx"
+old = '''rounded-m border px-3 text-body font-medium'''
+new = '''rounded-m border px-3 text-body font-semibold'''
+
+[[mutation]]
+name = "상태 배지의 안쪽 왼쪽을 오른쪽과 같게 두면 배지가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/StatusBadge.stories.tsx", "-t", "일시정지 배지는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/StatusBadge.tsx"
+old = '''bg-transparent pr-2 pl-badge-start text-badge'''
+new = '''bg-transparent px-2 text-badge'''
+
+[[mutation]]
+name = "여러 줄 칸에 최소 높이를 두면 Multi 가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "여러 줄 글 입력은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''  multi: "resize-y px-3 py-2",'''
+new = '''  multi: "min-h-nav resize-y px-3 py-2",'''
+
+[[mutation]]
+name = "라벨과 칸 사이를 도움말과 같게 두면 촘촘 밀도의 글 입력이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "촘촘 밀도의 한 줄 칸은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''      <div className="flex min-w-0 flex-col gap-2">'''
+new = '''      <div className="flex min-w-0 flex-col gap-1">'''
+
+[[mutation]]
+name = "라벨의 500 을 빼면 촘촘 밀도의 글 입력이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/TextField.stories.tsx", "-t", "촘촘 밀도의 한 줄 칸은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/TextField.tsx"
+old = '''          className={`text-small font-medium ${disabled'''
+new = '''          className={`text-small ${disabled'''
+
+[[mutation]]
+name = "스위치의 글자와 트랙 사이를 12px 로 두면 꺼진 스위치가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/Switch.stories.tsx", "-t", "꺼진 스위치는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Switch.tsx"
+old = '''const ROW = "flex items-center justify-between gap-2";'''
+new = '''const ROW = "flex items-center justify-between gap-3";'''
+
+[[mutation]]
+name = "알림의 제목을 작은 글자로 두면 실패 알림이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "실패 알림은 role=alert"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''<p className="text-body font-semibold">{title}</p>'''
+new = '''<p className="text-small font-semibold">{title}</p>'''
+
+[[mutation]]
+name = "알림의 제목과 본문 사이를 없애면 실패 알림이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/molecules/Alert.stories.tsx", "-t", "실패 알림은 role=alert"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/molecules/Alert.tsx"
+old = '''        <div className="flex flex-col gap-1">'''
+new = '''        <div className="flex flex-col">'''
+
+# --- 사진 비교 -------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "사진 루프가 밀도로 거르지 않으면 촘촘을 정한 스토리가 보통 이름으로 찍혀 빨갛다"
+runner = "visual"
+tests = ["-g", "atoms-button--compact 를 기본 테마의"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/stories.visual.ts"
+old = '''  return rendered.mode === mode && rendered.density === density;'''
+new = '''  return rendered.mode === mode;'''
+
+[[mutation]]
+name = "속성 없는 문서 뿌리의 촘촘 미디어 규칙을 빼면 창 폭 사례가 빨갛다"
+runner = "visual"
+tests = ["-g", "data-density 가 없는 문서 뿌리와"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    :root:not([data-density]),
+    :host(:not([data-density])) {
+'''
+new = '''
+    :host(:not([data-density])) {
+'''
+
+[[mutation]]
+name = "속성 없는 호스트의 촘촘 미디어 짝을 빼면 창 폭 사례가 빨갛다"
+runner = "visual"
+tests = ["-g", "data-density 가 없는 문서 뿌리와"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    :root:not([data-density]),
+    :host(:not([data-density])) {
+'''
+new = '''
+    :root:not([data-density]) {
+'''
+
+[[mutation]]
+name = "속성 없는 촘촘 미디어 블록의 행 높이만 틀리면 창 폭 사례가 빨갛다"
+runner = "visual"
+tests = ["-g", "data-density 가 없는 문서 뿌리와"]
+expect = "red"
+timeout = 900
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''      --row-h: 36px;'''
+new = '''      --row-h: 44px;'''

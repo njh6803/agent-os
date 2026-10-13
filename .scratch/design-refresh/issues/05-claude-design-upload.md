@@ -30,7 +30,7 @@
 
 ### 사용 규약, 변환기 포크, NOTES
 
-- [ ] **사용 규약 `.design-sync/conventions.md`.** 테마 키 넷과 기본 녹청, 밀도와 그 변수(인라인 `style`에는 원천인 `--body-size` 등을 쓴다), 이미 있는 클래스와 변수의 목록, 예시를 새 결정으로 고친다. 검사기 `.design-sync/check-conventions.mjs`가 읽는 문장 모양을 바꾸면 검사기도 고친다
+- [ ] **사용 규약 `.design-sync/conventions.md`.** 테마 키 넷과 기본 녹청, 밀도와 그 변수(인라인 `style`에는 원천인 `--body-size` 등을 쓴다), 이미 있는 클래스와 변수의 목록, 예시를 새 결정으로 고친다. 검사기 `.design-sync/check-conventions.mjs`가 읽는 문장 모양을 바꾸면 검사기도 고친다 (04 메모: 지금 규약은 이미 걷힌 이름을 든다. 04가 걷은 것은 `text-heading`, `text-caption`, `text-code`, `control-m`, `row-touch`, `field-multi`이고, `shadow-1`~`3`, `font-strong` 등은 02·03이 걷었다. 04가 더한 이름은 글자 `text-badge`·`text-table`·`text-mono`, 높이 `h-control`·`size-control`·`h-row`, 틀 `w-nav`·`h-nav-item`·`h-top-bar`, 부품 치수(`switch-knob`, `switch-inset`, `badge`, `badge-start`), 그림자 `shadow-float`이다. `size-control-s`는 값이 32px에서 28px로 바뀌었다. 밀도를 따르는 다섯과 그림자는 `@theme inline`이라, CSS가 `var()`로 읽지 않는 한 CSS 변수로 나오지 않는다. 규약의 변수 목록에는 원천인 밀도 변수 일곱을 든다)
 - [ ] **변환기 포크.** 기본 테마(`muk`)를 녹청으로 바꾸고, 스토리의 밀도 globals를 테마·모드처럼 감싸는 요소로 옮긴다. 포크를 고치면 다음 동기화가 모든 컴포넌트를 다시 채점한다(`.design-sync/NOTES.md`의 Re-sync risks). 설정의 `libOverrides` 설명 문장도 고친다
 - [ ] **NOTES.** 옛 테마와 글꼴의 문장, 빼는 목록의 규칙, 기초 카드의 자리를 고친다
 

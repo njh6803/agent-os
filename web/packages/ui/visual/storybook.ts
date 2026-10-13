@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 import { test as base, expect, type Page } from "@playwright/test";
-import { DEFAULT_THEME, type ThemeKey } from "../src/themes.ts";
+import { DEFAULT_THEME, type Density, type ThemeKey } from "../src/themes.ts";
 
 const SITE = join(import.meta.dirname, "..", "storybook-static");
 export const ORIGIN = "http://storybook.invalid";
@@ -65,12 +65,14 @@ export type Mode = (typeof MODES)[number];
 export interface Globals {
   readonly theme: ThemeKey;
   readonly mode: Mode | "system";
+  /** auto 면 속성을 두지 않아 창의 폭을 따른다. */
+  readonly density: Density | "auto";
   readonly shadow: "off" | "on";
 }
 
-/** 기본 테마의 그 모드로 문서에 그리는 globals. */
-export function inDefaultTheme(mode: Mode): Globals {
-  return { theme: DEFAULT_THEME, mode, shadow: "off" };
+/** 기본 테마의 그 모드와 밀도로 문서에 그리는 globals. */
+export function inDefaultTheme(mode: Mode, density: Density): Globals {
+  return { theme: DEFAULT_THEME, mode, density, shadow: "off" };
 }
 
 export interface Storybook {
@@ -100,8 +102,8 @@ function renderFinished(): boolean {
   );
 }
 
-async function open(page: Page, id: string, { theme, mode, shadow }: Globals) {
-  const query = `theme:${theme};mode:${mode};shadow:${shadow}`;
+async function open(page: Page, id: string, { theme, mode, density, shadow }: Globals) {
+  const query = `theme:${theme};mode:${mode};density:${density};shadow:${shadow}`;
   await page.goto(`${ORIGIN}/iframe.html?id=${id}&viewMode=story&globals=${query}`);
   // Storybook 10.6.1 의 렌더 단계는 playing → played → completing → completed → afterEach → finished 다(설치본의
   // preview 런타임을 읽었다). 그리다 예외가 나도 finished 로 끝나고 오류 화면을 띄운다.
