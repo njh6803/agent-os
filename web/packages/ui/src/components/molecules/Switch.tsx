@@ -1,7 +1,7 @@
-// 스위치(재탐색 디자인 파일 2.4). 누르는 즉시 적용되는 켜짐·꺼짐이다. `<label>` 전체가 누르는 곳이고(높이 `row-touch`
-// 이상), 그 안에 라벨과 상태 글(켜짐·꺼짐), 트랙으로 그리는 `<input type="checkbox" role="switch">` 와 손잡이가 있다.
-// 오류와 불러오는 중은 없다(바꾸지 못하면 쓰는 쪽이 되돌리고 알림으로 알린다). 색은 재탐색의 상태 표이고 치수는 아직
-// 첫 탐색 디자인 파일의 값이다(design-refresh 티켓 04 가 옮긴다).
+// 스위치(재탐색 디자인 파일 2.4). 누르는 즉시 적용되는 켜짐·꺼짐이다. `<label>` 전체가 누르는 곳이고, 그 안에 라벨과
+// 상태 글(켜짐·꺼짐), 트랙으로 그리는 `<input type="checkbox" role="switch">` 와 손잡이가 있다. 오류와 불러오는 중은
+// 없다(바꾸지 못하면 쓰는 쪽이 되돌리고 알림으로 알린다). 색과 치수는 재탐색의 상태 표와 해부도이고 밀도와 상관없다
+// (트랙 40×24px, 손잡이 20px 과 안쪽 띄움 2px, 둥근 모서리, 글자와 트랙 사이 8px). 줄의 최소 높이는 두지 않는다.
 //
 // 올림은 라벨 전체의 상태라 라벨의 group 을 보고, 트랙 위에 반투명 `bg-active` 를 겹친다. 트랙(입력 요소)의 바탕은 한
 // 색이라 겹칠 면을 트랙과 손잡이 사이에 따로 둔다. 누름은 디자인 파일의 상태 표가 두지 않았다. 상태마다 클래스를 고르고
@@ -33,7 +33,7 @@ export type SwitchProps = SwitchOwnProps &
 
 type State = "off" | "on" | "disabled";
 
-const ROW = "flex min-h-row-touch items-center justify-between gap-3";
+const ROW = "flex items-center justify-between gap-2";
 
 const TRACK =
   "block h-switch-h w-switch-w appearance-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
@@ -73,7 +73,7 @@ export function Switch({ label, checked, disabled = false, onChange, ...rest }: 
         </span>
         <span
           aria-hidden
-          className={`text-small font-regular ${disabled ? "text-text-disabled" : "text-text-muted"}`}
+          className={`text-small ${disabled ? "text-text-disabled" : "text-text-muted"}`}
         >
           {on ? "켜짐" : "꺼짐"}
         </span>
@@ -96,7 +96,7 @@ export function Switch({ label, checked, disabled = false, onChange, ...rest }: 
           className={`pointer-events-none absolute inset-0 rounded-full ${OVERLAY_CLASS[state]}`}
         />
         <span
-          className={`pointer-events-none absolute top-1 size-3 rounded-full ${on ? "right-1" : "left-1"} ${KNOB_COLOR[state]}`}
+          className={`pointer-events-none absolute top-switch-inset size-switch-knob rounded-full ${on ? "right-switch-inset" : "left-switch-inset"} ${KNOB_COLOR[state]}`}
         />
       </span>
     </label>
