@@ -1,10 +1,12 @@
 // 판정 함수의 음성 사례. 판정이 늘 지나도 초록이 되지 않게, 심은 클래스와 기준 미달 짝을 판정이 실제로 잡는지 본다
 // (design-system 명세 스토리 29~33). 심은 것을 그리므로 afterEach 의 클래스 판정(planted 태그)과 axe 에서 빠진다.
+// 컴포넌트 스토리의 계산값 도우미가 조용히 맞지 않는지도 여기서 본다(HelperScope).
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
+import { colorsOf, semanticColor } from "../storybook/expect";
 import { judgeClasses } from "../storybook/preview";
 import { contrastFailures, type ContrastPair } from "../styles/contrast";
-import { arbitraryClasses, classesWithoutRules, contrastRatio, sheetsDefining } from ".";
+import { arbitraryClasses, classesWithoutRules, composite, contrastRatio, sheetsDefining } from ".";
 
 // 태그는 글자 그대로 적는다(태그 둘은 storybook/preview.tsx 머리). Storybook 의 색인이 정적으로 읽는다.
 const meta = {
@@ -57,13 +59,80 @@ export const KnownContrast: Story = {
 };
 
 export const FailingPair: Story = {
-  name: "기준 미달 짝의 메시지가 테마·모드·짝을 든다",
+  name: "기준 미달 짝의 메시지가 테마·모드·짝을 들고 겹친 바탕은 위에서 아래로 적는다",
   render: () => <p>기준 미달 짝</p>,
   play: async () => {
-    const values: Readonly<Record<string, string>> = { text: "#777777", bg: "#888888" };
-    const pairs: readonly ContrastPair[] = [["text", "bg", 4.5]];
+    const values: Readonly<Record<string, string>> = {
+      text: "#777777",
+      bg: "#888888",
+      "bg-selected": "#ffffff1a",
+    };
+    const pairs: readonly ContrastPair[] = [
+      ["text", "bg", 4.5],
+      ["text", ["bg-selected", "bg"], 4.5],
+    ];
     await expect(
-      contrastFailures("cheongnok", "dark", (name) => values[name] ?? "", pairs),
-    ).toEqual(["cheongnok/dark text/bg 1.26 < 4.5"]);
+      contrastFailures("nokcheong", "dark", (name) => values[name] ?? "", pairs),
+    ).toEqual([
+      "nokcheong/dark text/bg 1.26 < 4.5",
+      "nokcheong/dark text/bg-selected+bg 1.48 < 4.5",
+    ]);
+  },
+};
+
+// 녹청 다크의 카드 안 위험 버튼 누름(design-refresh 명세의 "반투명 바탕의 명암비"). 반투명 `bg-selected` 를 `bg-raised` 에
+// 겹친 색은 채널마다 반올림해 #2f3133 이고 `danger` 와 4.507 이다. 반올림 없이 재면 4.494 로 기준 아래라, 반올림이 판정의
+// 일부라는 것을 이 사례가 잡는다. 내림(#2e3133)은 4.520 으로 지나므로 겹친 색도 본다. 값은 디자인 토큰 JSON 의 것이다.
+export const LayeredSurface: Story = {
+  name: "반투명 바탕은 아래 바탕에 겹쳐 채널마다 반올림한 색으로 잰다",
+  render: () => <p>겹친 바탕</p>,
+  play: async () => {
+    const values: Readonly<Record<string, string>> = {
+      danger: "#fa695e",
+      "bg-raised": "#171a1c",
+      "bg-selected": "#ffffff1a",
+    };
+    await expect(composite("#ffffff1a", "#171a1c")).toBe("#2f3133");
+    await expect(composite("#FA695E", "#171a1c")).toBe("#fa695e");
+    await expect(contrastRatio("#fa695e", "#2f3133").toFixed(3)).toBe("4.507");
+    await expect(
+      contrastFailures("nokcheong", "dark", (name) => values[name] ?? "", [
+        ["danger", ["bg-selected", "bg-raised"], 4.5],
+      ]),
+    ).toEqual([]);
+  },
+};
+
+// 스토리 도우미 `semanticColor` 는 대상과 같은 부모 안의 탐침으로 잰다. 쓰임새 토큰은 테마나 모드를 다는 요소마다 다시
+// 선언되어, 문서 뿌리에 붙인 탐침은 뿌리의 값을 읽는다. 그러면 뿌리와 다른 테마·모드 안의 대상을 재는 스토리는 두
+// 범위에서 같은 값으로 풀리는 토큰에서만 맞고 나머지에서는 엉뚱한 값과 견준다(design-refresh 티켓 03 의 계산값 단언).
+export const HelperScope: Story = {
+  name: "스토리 도우미는 대상이 놓인 테마·모드에서 풀린 쓰임새 토큰으로 재고 반투명도 받는다",
+  render: () => (
+    <div data-theme="guncheong" data-mode="dark" className="flex gap-2">
+      <span data-sample="primary" className="bg-primary text-on-primary">
+        주
+      </span>
+      <span data-sample="selected" className="bg-bg-selected text-text">
+        고름
+      </span>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const sample = (name: string): Element => {
+      const found = canvasElement.querySelector(`[data-sample=${name}]`);
+      if (found === null) {
+        throw new Error(`표본이 없다: ${name}`);
+      }
+      return found;
+    };
+    const primary = sample("primary");
+    const selected = sample("selected");
+    await expect(colorsOf(primary).background).toBe(semanticColor(primary, "primary"));
+    await expect(semanticColor(primary, "primary")).not.toBe(
+      semanticColor(canvasElement, "primary"),
+    );
+    await expect(colorsOf(selected).background).toBe(semanticColor(selected, "bg-selected"));
+    await expect(semanticColor(selected, "bg-selected")).toMatch(/^rgba\(/);
   },
 };

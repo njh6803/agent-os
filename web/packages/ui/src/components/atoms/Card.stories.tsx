@@ -12,7 +12,7 @@ const meta = {
     children: (
       <>
         <h2 className="text-heading text-text">결제 환불</h2>
-        <p className="text-body text-muted">환불 요청을 결제 서비스에 넘깁니다.</p>
+        <p className="text-body text-text-muted">환불 요청을 결제 서비스에 넘깁니다.</p>
       </>
     ),
   },
@@ -34,15 +34,15 @@ function cardOf(canvasElement: HTMLElement): HTMLElement {
 }
 
 export const Default: Story = {
-  name: "기본 카드는 div 이고 그림자 없이 raised 바탕에 divider 테두리, 10px 모서리, 16px 여백으로 선다",
+  name: "기본 카드는 div 이고 그림자 없이 bg-raised 바탕에 border 테두리, 10px 모서리, 16px 여백으로 선다",
   play: async ({ canvasElement }) => {
     const card = cardOf(canvasElement);
     const style = getComputedStyle(card);
     await expect(card.tagName).toBe("DIV");
     await expect(colorsOf(card)).toEqual({
-      background: semanticColor(card, "raised"),
+      background: semanticColor(card, "bg-raised"),
       text: semanticColor(card, "text"),
-      border: semanticColor(card, "divider"),
+      border: semanticColor(card, "border"),
     });
     await expect({
       border: style.borderTopWidth,
@@ -72,14 +72,14 @@ export const Article: Story = {
 };
 
 export const DefaultDark: Story = {
-  name: "다크 모드의 카드도 raised 바탕에 divider 테두리다",
+  name: "다크 모드의 카드도 bg-raised 바탕에 border 테두리다",
   globals: { mode: "dark" },
   play: async ({ canvasElement }) => {
     await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
     const card = cardOf(canvasElement);
     await expect(colorsOf(card)).toMatchObject({
-      background: semanticColor(card, "raised"),
-      border: semanticColor(card, "divider"),
+      background: semanticColor(card, "bg-raised"),
+      border: semanticColor(card, "border"),
     });
   },
 };
@@ -92,7 +92,7 @@ export const NarrowSlot: Story = {
       <>
         <StatusBadge status="paused" />
         <h2 className="text-heading text-text">결제 환불을 승인할까요</h2>
-        <p className="text-body text-muted">
+        <p className="text-body text-text-muted">
           주문 2024-1187의 결제 32,000원을 환불합니다. 승인하면 결제 서비스에 요청을 넘기고 되돌릴
           수 없습니다.
         </p>

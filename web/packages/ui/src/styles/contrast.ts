@@ -1,13 +1,16 @@
 // 판정 스토리 Matrix 가 보는 쓰임새 토큰과 명암비 짝. 패키지 밖으로 내보내지 않는다.
-import { contrastRatio } from "../testing";
+import { composite, contrastRatio } from "../testing";
 import type { Mode } from "../themes";
 
-/** 쓰임새 토큰 26개. 컴포넌트는 이것의 유틸리티(`bg-bg`, `text-muted` 등)만 쓴다. */
+/**
+ * 쓰임새 토큰 23개. 이름은 디자인 파일 그대로이고, 그림자 하나만 코드에서 `shadow-color` 다(design-refresh 명세의 "색 —
+ * 쓰임새 토큰"). 컴포넌트는 앞의 22개의 유틸리티(`bg-bg-raised`, `text-text-muted` 등)만 쓴다.
+ */
 export const SEMANTIC_TOKENS = [
   "bg",
-  "raised",
+  "bg-raised",
   "text",
-  "muted",
+  "text-muted",
   "border",
   "accent",
   "on-accent",
@@ -15,74 +18,93 @@ export const SEMANTIC_TOKENS = [
   "warning",
   "success",
   "info",
-  "focus",
-  "tint",
-  "tint-hover",
-  "tint-press",
-  "accent-hover",
-  "accent-press",
-  "border-hover",
-  "danger-tint",
-  "danger-tint-press",
-  "warning-tint",
-  "success-tint",
-  "info-tint",
-  "disabled-surface",
-  "disabled-text",
-  "divider",
+  "focus-ring",
+  "border-control",
+  "primary",
+  "on-primary",
+  "primary-hover",
+  "primary-active",
+  "bg-hover",
+  "bg-active",
+  "bg-selected",
+  "text-disabled",
+  "bg-disabled",
+  "shadow-color",
 ] as const;
 
 export type SemanticToken = (typeof SEMANTIC_TOKENS)[number];
 
-/** 글자 쪽, 바탕 쪽, 기준. */
-export type ContrastPair = readonly [SemanticToken, SemanticToken, number];
+/** 반투명 쓰임새 토큰. 값은 `#RRGGBBAA` 이고 명암비는 그 아래 바탕에 겹쳐 잰다. */
+export const TRANSLUCENT_TOKENS = [
+  "bg-hover",
+  "bg-active",
+  "bg-selected",
+  "shadow-color",
+] as const satisfies readonly SemanticToken[];
 
-// 디자인 파일이 재는 짝(대응표에서 기준이 있는 열과 상태용 토큰)에 컴포넌트가 쓰는데 디자인 파일이 재지 않은 짝(알림
-// 제목과 그 안 버튼의 포커스 링, 진행 막대와 트랙)을 더했다. 성공 톤의 알림은 없어 `success-tint` 위의 제목 짝은 두지
-// 않는다. 쓸 수 없음(`disabled-*`)은 명암비 기준의 대상이 아니다(design-system 명세의 "명암비 짝 43개"). 진행 막대의
-// 채움이 `muted` 하나가 되어(design-refresh 티켓 02) 끝의 `accent`·`danger` 를 `tint` 와 맞댄 짝은 쓰는 컴포넌트가
-// 없다. 지금 채움과 트랙의 짝은 위의 `muted`/`tint`(4.5)다.
+/** 짝의 바탕 쪽. 쓰임새 토큰 하나이거나 [반투명 쓰임새 토큰, 그 아래 불투명한 바탕]이다. */
+export type Surface = SemanticToken | readonly [SemanticToken, SemanticToken];
+
+/** 글자 쪽, 바탕 쪽, 기준. */
+export type ContrastPair = readonly [SemanticToken, Surface, number];
+
+// 바탕 넷. 놓인 바탕 둘과, 그 위에 반투명을 한 겹 겹친 것 둘이다. 판정은 놓인 바탕 위의 한 겹까지다(명세의 "판정은 놓인
+// 바탕 위의 한 겹까지다").
+const SURFACES: readonly Surface[] = [
+  "bg",
+  "bg-raised",
+  ["bg-selected", "bg"],
+  ["bg-hover", "bg-raised"],
+];
+
+// 짝 43개(design-refresh 명세의 "명암비 짝 43개"). 앞의 35개는 디자인 파일 스크립트가 재는 짝을 편 것이고, 뒤의 8개는
+// 컴포넌트가 쓰는데 디자인 파일이 재지 않은 짝이다. `border`(장식)와 쓸 수 없음(`text-disabled`, `bg-disabled`)은 명암비
+// 기준의 대상이 아니다.
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
-  ...(["text", "muted", "accent", "danger", "warning", "success", "info"] as const).flatMap(
-    (name): ContrastPair[] => [
-      [name, "bg", 4.5],
-      [name, "raised", 4.5],
-    ],
+  ...(["text", "text-muted"] as const).flatMap((name) =>
+    SURFACES.map((surface): ContrastPair => [name, surface, 4.5]),
   ),
-  ...(["border", "focus"] as const).flatMap((name): ContrastPair[] => [
-    [name, "bg", 3],
-    [name, "raised", 3],
+  ...(["bg", "bg-raised", ["bg-hover", "bg-raised"]] as const).map((surface): ContrastPair => [
+    "accent",
+    surface,
+    4.5,
   ]),
   ["on-accent", "accent", 4.5],
-  ["text", "tint", 4.5],
-  ["muted", "tint", 4.5],
-  ["text", "tint-hover", 4.5],
-  ["text", "tint-press", 4.5],
-  ["on-accent", "accent-hover", 4.5],
-  ["on-accent", "accent-press", 4.5],
-  ["border-hover", "bg", 3],
-  ["border-hover", "raised", 3],
-  ["danger", "danger-tint", 4.5],
-  ["muted", "danger-tint", 4.5],
-  ["danger", "danger-tint-press", 4.5],
-  ["warning", "warning-tint", 4.5],
-  ["muted", "warning-tint", 4.5],
-  ["success", "success-tint", 4.5],
-  ["info", "info-tint", 4.5],
-  ["muted", "info-tint", 4.5],
-  ["text", "danger-tint", 4.5],
-  ["text", "warning-tint", 4.5],
-  ["text", "info-tint", 4.5],
-  ["focus", "danger-tint", 3],
-  ["focus", "warning-tint", 3],
-  ["focus", "info-tint", 3],
-  ["accent", "tint", 3],
-  ["danger", "tint", 3],
+  ...(["danger", "warning", "success", "info"] as const).flatMap((name) =>
+    SURFACES.map((surface): ContrastPair => [name, surface, 4.5]),
+  ),
+  ...(["focus-ring", "border-control"] as const).flatMap((name): ContrastPair[] => [
+    [name, "bg", 3],
+    [name, "bg-raised", 3],
+  ]),
+  ...(["primary", "primary-hover", "primary-active"] as const).map((surface): ContrastPair => [
+    "on-primary",
+    surface,
+    4.5,
+  ]),
+  // 보조 버튼과 투명 아이콘 버튼의 올림·누름. 바탕이 없어 놓인 바탕이 비친다.
+  ["text", ["bg-hover", "bg"], 4.5],
+  ["text", ["bg-active", "bg"], 4.5],
+  ["text", ["bg-active", "bg-raised"], 4.5],
+  // 위험 버튼의 올림과 카드 안의 누름. `bg` 위의 누름은 위 디자인 파일의 짝에 있다.
+  ["danger", ["bg-hover", "bg"], 4.5],
+  ["danger", ["bg-selected", "bg-raised"], 4.5],
+  // 진행 막대의 채움과 트랙. 글자가 아니라 3 이다.
+  ["text-muted", ["bg-active", "bg"], 3],
+  ["text-muted", ["bg-active", "bg-raised"], 3],
+  // 꺼진 스위치의 손잡이와 트랙. 명암비는 대칭이라 위 `border-control`/`bg-raised` 와 같은 측정이지만 스위치의 뜻으로 둔다.
+  ["bg-raised", "border-control", 3],
 ];
+
+/** 바탕 쪽의 이름. 겹친 바탕은 위에서 아래로 `+` 로 잇는다. */
+function surfaceName(surface: Surface): string {
+  return typeof surface === "string" ? surface : surface.join("+");
+}
 
 /**
  * 한 벌(테마·모드)의 쓰임새 토큰 값으로 기준에 못 미치는 짝마다 메시지 하나. 메시지는 테마, 모드, 짝, 잰 값, 기준을
- * 든다. `value` 는 그 쓰임새 토큰의 계산값(#RRGGBB)을 돌려준다.
+ * 든다. `value` 는 그 쓰임새 토큰의 계산값(`#RRGGBB`, 반투명은 `#RRGGBBAA`)을 돌려준다. 반투명은 아래 바탕에 겹쳐 채널마다
+ * 반올림한 색으로 잰다(`composite`).
  */
 export function contrastFailures(
   theme: string,
@@ -90,10 +112,15 @@ export function contrastFailures(
   value: (name: SemanticToken) => string,
   pairs: readonly ContrastPair[] = CONTRAST_PAIRS,
 ): string[] {
+  const surfaceColor = (surface: Surface): string =>
+    typeof surface === "string" ? value(surface) : composite(value(surface[0]), value(surface[1]));
   return pairs.flatMap(([foreground, background, minimum]) => {
-    const ratio = contrastRatio(value(foreground), value(background));
+    const behind = surfaceColor(background);
+    const ratio = contrastRatio(composite(value(foreground), behind), behind);
     return ratio < minimum
-      ? [`${theme}/${mode} ${foreground}/${background} ${ratio.toFixed(2)} < ${String(minimum)}`]
+      ? [
+          `${theme}/${mode} ${foreground}/${surfaceName(background)} ${ratio.toFixed(2)} < ${String(minimum)}`,
+        ]
       : [];
   });
 }

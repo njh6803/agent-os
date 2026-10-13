@@ -1,19 +1,23 @@
 /*
  * 디자인 토큰 CSS(`@agent-os/ui/theme.css`). 디자인 토큰의 값은 이 파일 한 자리에만 있다(ADR 0025·0026).
- * 처음 값은 디자인 파일 v3(.scratch/design-system/design/)에서 .scratch/design-system/probes/tokens/design.mjs 가
- * 뽑은 그대로이고, 그 뒤의 원천은 이 파일이다. 디자인을 바꾸면 Claude Design 에서 다시 내보내고 차이를 여기 옮긴다.
+ * 처음 값은 디자인 파일(.scratch/design-system/design/)에서 .scratch/design-system/probes/tokens/design.mjs 가 뽑은
+ * 그대로이고, 그 뒤의 원천은 이 파일이다. 색(원색 토큰, 쓰임새 대응, 주 버튼의 갈래)은 재탐색 디자인 파일(`--refresh`)의
+ * 값이고, 크기는 아직 첫 탐색 디자인 파일의 값이다(design-refresh 티켓 04 가 옮긴다). 디자인을 바꾸면 Claude Design
+ * 에서 다시 내보내고 차이를 여기 옮긴다.
  *
  * - @theme 에는 값이 글자 그대로인 것(길이, 글자, 모서리, 굵기, 기준 폭, 움직임)을 둔다. `--*: initial` 로 Tailwind 의
  *   기본값을 비우므로 `text-base`·`rounded` 같은 익숙한 클래스는 아무 CSS 도 만들지 않는다. 그 실수는 스토리 테스트가
  *   잡는다(미리보기의 afterEach). `static` 이라 이 블록의 토큰은 소스가 쓰지 않아도 모두 CSS 변수로 낸다. 쓰인 것만
  *   내자 /design-sync 가 Claude Design 에 올린 CSS 에 `--text-title` 같은 변수가 없었다(판정 스토리 ThemeTokensEmitted).
- * - @theme inline 에는 테마나 모드마다 바뀌거나 감싼 요소가 다시 정할 수 있는 CSS 변수를 읽는 것(쓰임새 26개,
- *   글꼴, 중간 굵기)을 둔다.
- * - 원색 토큰(--gray-500 등)과 쓰임새 토큰(--bg 등)은 @theme 밖의 CSS 변수라 유틸리티가 없다. 원색은 테마마다,
- *   쓰임새는 테마나 모드를 다는 요소마다 다시 선언한다. 사용자 정의 속성의 var() 는 선언한 요소에서 풀리므로, 쓰임새를
- *   :root 에만 두면 안쪽 요소의 data-theme 이 바꾼 원색을 다시 읽지 않는다.
+ * - @theme inline 에는 테마나 모드마다 바뀌거나 감싼 요소가 다시 정할 수 있는 CSS 변수를 읽는 것(쓰임새 22개의 색과
+ *   글꼴)을 둔다. 쓰임새의 이름은 디자인 파일 그대로라 `bg-bg-raised`, `text-text-muted` 처럼 머리가 겹치는 클래스가
+ *   생긴다. 그림자 색(`--shadow-color`, 디자인 파일의 `shadow`)은 색 유틸리티가 없다.
+ * - 원색 토큰(--gray-500 등)과 쓰임새 토큰(--bg 등)은 @theme 밖의 CSS 변수라 유틸리티가 없다. 원색은 테마마다(반투명
+ *   `overlay` 일곱은 테마와 무관해 뿌리에 한 번), 쓰임새는 테마나 모드를 다는 요소마다 다시 선언한다. 사용자 정의 속성의
+ *   var() 는 선언한 요소에서 풀리므로, 쓰임새를 :root 에만 두면 안쪽 요소의 data-theme 이 바꾼 원색을 다시 읽지 않는다.
  * - 고르는 것: data-theme(테마 키)과 data-mode(light, dark)를 같은 요소에 단다. 모드가 없으면 prefers-color-scheme 을
- *   따르고, 속성이 없는 문서와 호스트는 먹(muk)이다. shadow 안에서는 :host(…) 로 호스트를 본다.
+ *   따르고, 속성이 없는 문서와 호스트는 녹청(nokcheong)이다. shadow 안에서는 :host(…) 로 호스트를 본다. 테마는 색만
+ *   바꾼다. 테마 블록에는 원색과 그 테마가 덮는 쓰임새 대응만 있다.
  * - 글꼴 파일은 여기 없다. 글꼴 CSS(`./fonts.css`)는 자기 문서에 선언하는 쪽만 따로 들인다. 페이지 안 번들(Vite
  *   라이브러리 모드)이 이 파일과 함께 들이면 글꼴이 모두 data URL 로 박힌다(.scratch/design-system/probes/tokens/libmode.mjs).
  * - 길이는 모두 px 이고 rem 이 없다(ADR 0026). 판정 스토리가 CSSOM 으로 본다.
@@ -34,8 +38,11 @@
   --text-body--line-height: 24px;
   --text-small: 13px;
   --text-small--line-height: 20px;
+  --text-small--font-weight: 400;
+  /* 04 가 걷을 때까지 남는다. 굵기는 04 에서 상태 배지가 받을 `badge` 의 500 이다. */
   --text-caption: 12px;
   --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
   --text-code: 13px;
   --text-code--line-height: 20px;
   --spacing-1: 4px;
@@ -53,10 +60,10 @@
   --radius-m: 6px;
   --radius-l: 10px;
   --radius-full: 999px;
+  /* 굵기는 테마가 바꾸지 않는다. 500 은 승인 묻기의 도구 이름(고정폭 500)에 쓴다. */
   --font-weight-regular: 400;
-  /* 테마와 무관한 500. 승인 묻기의 도구 이름(고정폭 500)에 쓴다. 테마마다의 중간 굵기는 아래 `mid` 다. */
   --font-weight-medium: 500;
-  --font-weight-strong: 600;
+  --font-weight-semibold: 600;
   --breakpoint-wide: 768px;
   --container-wide: 360px;
   --spacing-0: 0px;
@@ -75,9 +82,9 @@
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-raised: var(--raised);
+  --color-bg-raised: var(--bg-raised);
   --color-text: var(--text);
-  --color-muted: var(--muted);
+  --color-text-muted: var(--text-muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
@@ -85,28 +92,21 @@
   --color-warning: var(--warning);
   --color-success: var(--success);
   --color-info: var(--info);
-  --color-focus: var(--focus);
-  --color-tint: var(--tint);
-  --color-tint-hover: var(--tint-hover);
-  --color-tint-press: var(--tint-press);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-press: var(--accent-press);
-  --color-border-hover: var(--border-hover);
-  --color-danger-tint: var(--danger-tint);
-  --color-danger-tint-press: var(--danger-tint-press);
-  --color-warning-tint: var(--warning-tint);
-  --color-success-tint: var(--success-tint);
-  --color-info-tint: var(--info-tint);
-  --color-disabled-surface: var(--disabled-surface);
-  --color-disabled-text: var(--disabled-text);
-  --color-divider: var(--divider);
+  --color-focus-ring: var(--focus-ring);
+  --color-border-control: var(--border-control);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
+  --color-bg-selected: var(--bg-selected);
+  --color-text-disabled: var(--text-disabled);
+  --color-bg-disabled: var(--bg-disabled);
   --font-sans: var(--sans);
   --font-mono: var(--mono);
   --default-font-family: var(--sans);
   --default-mono-font-family: var(--mono);
-  --font-weight-mid: var(--weight-mid);
-  --text-small--font-weight: var(--weight-mid);
-  --text-caption--font-weight: var(--weight-mid);
 }
 
 @layer theme {
@@ -120,421 +120,366 @@
     --sans: "Noto Sans KR", system-ui, sans-serif;
     --mono: "Noto Sans Mono", ui-monospace, monospace;
   }
+  /* 반투명 원색 `overlay`(뒤 숫자는 불투명도 %). 값이 테마마다 같아 뿌리에 한 번 두고 물려받는다. */
+  :root,
+  :host {
+    --overlay-black-4: #0000000a;
+    --overlay-black-7: #00000012;
+    --overlay-black-12: #0000001f;
+    --overlay-black-40: #00000066;
+    --overlay-white-6: #ffffff0f;
+    --overlay-white-10: #ffffff1a;
+    --overlay-white-16: #ffffff29;
+  }
+  /*
+   * 원색 토큰. 테마마다 다 적는다(같은 값이어도 테마 하나를 읽으면 그 값이 다 보이게). 기본 테마의 블록이 앞이다.
+   * `:root` 와 `[data-theme="…"]` 는 특정성이 같아 뒤에 오는 블록이 이긴다.
+   */
   :root,
   :host,
-  [data-theme="muk"],
-  :host([data-theme="muk"]) {
-    --gray-50: #fafafa;
-    --gray-100: #f4f3f3;
-    --gray-200: #e7e6e5;
-    --gray-300: #d2d1cf;
-    --gray-400: #b2b1ae;
-    --gray-500: #888682;
-    --gray-600: #65635f;
-    --gray-700: #4f4d4a;
-    --gray-800: #373533;
-    --gray-900: #222120;
-    --gray-950: #141412;
-    --accent-50: #f7faff;
-    --accent-100: #edf4ff;
-    --accent-200: #d9e7ff;
-    --accent-300: #b9d2ff;
-    --accent-400: #86b1ff;
-    --accent-500: #4e82e6;
-    --accent-600: #285cc2;
-    --accent-700: #1745a0;
-    --accent-800: #092e78;
-    --accent-900: #031c51;
-    --accent-950: #021035;
-    --danger-50: #fff8f7;
-    --danger-100: #ffefed;
-    --danger-200: #ffddd9;
-    --danger-300: #ffbfb6;
-    --danger-400: #ff8b7f;
-    --danger-500: #de4e46;
-    --danger-600: #b7191c;
-    --danger-700: #94000c;
-    --danger-800: #6a0006;
-    --danger-900: #470002;
-    --danger-950: #2e0001;
-    --warning-50: #fff9f3;
-    --warning-100: #fcf2e6;
-    --warning-200: #f8e2cb;
-    --warning-300: #efca9f;
-    --warning-400: #dca564;
-    --warning-500: #b87505;
-    --warning-600: #8a5600;
-    --warning-700: #6c4300;
-    --warning-800: #4c2e00;
-    --warning-900: #321c00;
-    --warning-950: #1f1000;
-    --success-50: #f5fcf6;
-    --success-100: #ebf7ed;
-    --success-200: #d6eeda;
-    --success-300: #b3debb;
-    --success-400: #83c390;
-    --success-500: #479b5d;
-    --success-600: #137738;
-    --success-700: #005e28;
-    --success-800: #00421a;
-    --success-900: #002a0e;
-    --success-950: #001a06;
-    --info-50: #f4fcff;
-    --info-100: #e9f6fb;
-    --info-200: #d1ebf6;
-    --info-300: #abd9ec;
-    --info-400: #75bdd9;
-    --info-500: #2b93b5;
-    --info-600: #006e8c;
-    --info-700: #00566e;
-    --info-800: #003c4d;
-    --info-900: #002633;
-    --info-950: #001720;
-    --weight-mid: 600;
+  [data-theme="nokcheong"],
+  :host([data-theme="nokcheong"]) {
+    --gray-0: #ffffff;
+    --gray-50: #f4f8fb;
+    --gray-100: #ecf1f3;
+    --gray-200: #e1e5e8;
+    --gray-300: #9b9fa1;
+    --gray-400: #898d8f;
+    --gray-500: #606466;
+    --gray-600: #4f5355;
+    --gray-700: #3d4042;
+    --gray-800: #2b2e30;
+    --gray-850: #202325;
+    --gray-900: #171a1c;
+    --gray-950: #0f1214;
+    --accent-50: #eefaf9;
+    --accent-100: #daf3f2;
+    --accent-200: #b8e5e4;
+    --accent-300: #89cccb;
+    --accent-400: #5caeae;
+    --accent-500: #2d8a8a;
+    --accent-600: #056868;
+    --accent-700: #005353;
+    --accent-800: #004141;
+    --accent-900: #002b2b;
+    --accent-950: #001b1b;
+    --danger-50: #fef4f3;
+    --danger-100: #ffe6e3;
+    --danger-200: #fecdc7;
+    --danger-300: #ffa196;
+    --danger-400: #fa695e;
+    --danger-500: #d33b36;
+    --danger-600: #ac0311;
+    --danger-700: #8b010b;
+    --danger-800: #6f0006;
+    --danger-900: #4b0003;
+    --danger-950: #330001;
+    --warning-50: #fff5ea;
+    --warning-100: #fee9d1;
+    --warning-200: #fad3a8;
+    --warning-300: #e9b271;
+    --warning-400: #cf903e;
+    --warning-500: #a96b00;
+    --warning-600: #7f4f00;
+    --warning-700: #653e00;
+    --warning-800: #503000;
+    --warning-900: #351e00;
+    --warning-950: #231200;
+    --success-50: #edfbef;
+    --success-100: #daf5de;
+    --success-200: #b7eac0;
+    --success-300: #87d297;
+    --success-400: #5ab571;
+    --success-500: #2a904b;
+    --success-600: #006e30;
+    --success-700: #005724;
+    --success-800: #01451b;
+    --success-900: #002d0f;
+    --success-950: #001d07;
+    --info-50: #f2f7fe;
+    --info-100: #e2eefe;
+    --info-200: #c3ddff;
+    --info-300: #91c1ff;
+    --info-400: #5da0f5;
+    --info-500: #337bd0;
+    --info-600: #0859ac;
+    --info-700: #00468c;
+    --info-800: #003670;
+    --info-900: #00234d;
+    --info-950: #001535;
   }
-  [data-theme="cheongnok"],
-  :host([data-theme="cheongnok"]) {
-    --gray-50: #f9fafa;
-    --gray-100: #f2f4f4;
-    --gray-200: #e4e7e8;
-    --gray-300: #cdd2d4;
-    --gray-400: #abb2b5;
-    --gray-500: #7f888b;
-    --gray-600: #5c6568;
-    --gray-700: #474e52;
-    --gray-800: #303639;
-    --gray-900: #1e2224;
-    --gray-950: #111416;
-    --accent-50: #f4fcfb;
-    --accent-100: #e8f7f6;
-    --accent-200: #d0edeb;
-    --accent-300: #a8ddd9;
-    --accent-400: #6ec2bd;
-    --accent-500: #109a94;
-    --accent-600: #00736e;
-    --accent-700: #005956;
-    --accent-800: #003f3c;
-    --accent-900: #002826;
-    --accent-950: #001817;
-    --danger-50: #fff8f8;
-    --danger-100: #ffefee;
-    --danger-200: #ffddda;
-    --danger-300: #ffbeb8;
-    --danger-400: #ff8a82;
-    --danger-500: #de4e4b;
-    --danger-600: #b71824;
-    --danger-700: #940014;
-    --danger-800: #6a000b;
-    --danger-900: #470005;
-    --danger-950: #2e0002;
-    --warning-50: #fff9f3;
-    --warning-100: #fdf1e6;
-    --warning-200: #f9e2cc;
-    --warning-300: #f2c8a1;
-    --warning-400: #dfa367;
-    --warning-500: #bc7315;
-    --warning-600: #8e5300;
-    --warning-700: #6f4000;
-    --warning-800: #4f2c00;
-    --warning-900: #341b00;
-    --warning-950: #210f00;
-    --success-50: #f6fcf6;
-    --success-100: #ecf7ec;
-    --success-200: #d8edd8;
-    --success-300: #b7ddb7;
-    --success-400: #8ac28b;
-    --success-500: #529955;
-    --success-600: #27762f;
-    --success-700: #135d1d;
-    --success-800: #03420e;
-    --success-900: #002b06;
-    --success-950: #001a03;
-    --info-50: #f7faff;
-    --info-100: #ecf4ff;
-    --info-200: #d6e8ff;
-    --info-300: #b3d4ff;
-    --info-400: #83b4f3;
-    --info-500: #4a88d4;
-    --info-600: #2063b0;
-    --info-700: #0c4c91;
-    --info-800: #00346b;
-    --info-900: #002148;
-    --info-950: #00132f;
-    --weight-mid: 500;
+  [data-theme="guncheong"],
+  :host([data-theme="guncheong"]) {
+    --gray-0: #ffffff;
+    --gray-50: #f7f7f7;
+    --gray-100: #f0f0f0;
+    --gray-200: #e4e4e4;
+    --gray-300: #9e9e9e;
+    --gray-400: #8c8c8c;
+    --gray-500: #636363;
+    --gray-600: #525252;
+    --gray-700: #404040;
+    --gray-800: #2e2e2e;
+    --gray-850: #232323;
+    --gray-900: #191919;
+    --gray-950: #121212;
+    --accent-50: #f4f7fe;
+    --accent-100: #e5edff;
+    --accent-200: #ccdafe;
+    --accent-300: #a2bcff;
+    --accent-400: #7598ff;
+    --accent-500: #496cef;
+    --accent-600: #2d49c9;
+    --accent-700: #1f34ac;
+    --accent-800: #16258e;
+    --accent-900: #0b1366;
+    --accent-950: #05064b;
+    --danger-50: #fef4f3;
+    --danger-100: #ffe6e3;
+    --danger-200: #fecdc7;
+    --danger-300: #ffa196;
+    --danger-400: #fa695e;
+    --danger-500: #d33b36;
+    --danger-600: #ac0311;
+    --danger-700: #8b010b;
+    --danger-800: #6f0006;
+    --danger-900: #4b0003;
+    --danger-950: #330001;
+    --warning-50: #fff5ea;
+    --warning-100: #fee9d1;
+    --warning-200: #fad3a8;
+    --warning-300: #e9b271;
+    --warning-400: #cf903e;
+    --warning-500: #a96b00;
+    --warning-600: #7f4f00;
+    --warning-700: #653e00;
+    --warning-800: #503000;
+    --warning-900: #351e00;
+    --warning-950: #231200;
+    --success-50: #edfbef;
+    --success-100: #daf5de;
+    --success-200: #b7eac0;
+    --success-300: #87d297;
+    --success-400: #5ab571;
+    --success-500: #2a904b;
+    --success-600: #006e30;
+    --success-700: #005724;
+    --success-800: #01451b;
+    --success-900: #002d0f;
+    --success-950: #001d07;
+    --info-50: #ecf9fe;
+    --info-100: #d8f2fb;
+    --info-200: #b3e4f4;
+    --info-300: #81cae1;
+    --info-400: #51acc7;
+    --info-500: #1988a3;
+    --info-600: #00657c;
+    --info-700: #005063;
+    --info-800: #023f4e;
+    --info-900: #002934;
+    --info-950: #001a22;
   }
-  [data-theme="gongmun"],
-  :host([data-theme="gongmun"]) {
-    --gray-50: #fafafb;
-    --gray-100: #f3f3f4;
-    --gray-200: #e5e6e8;
-    --gray-300: #cfd1d4;
-    --gray-400: #aeb1b6;
-    --gray-500: #82868c;
-    --gray-600: #5f6469;
-    --gray-700: #4a4d52;
-    --gray-800: #333639;
-    --gray-900: #202225;
-    --gray-950: #121416;
-    --accent-50: #f8faff;
-    --accent-100: #eef4ff;
-    --accent-200: #dae7ff;
-    --accent-300: #bad1ff;
-    --accent-400: #8ab0fe;
-    --accent-500: #5682e1;
-    --accent-600: #325cbd;
-    --accent-700: #21469c;
-    --accent-800: #122e74;
-    --accent-900: #081d4f;
-    --accent-950: #041033;
-    --danger-50: #fff8f7;
-    --danger-100: #ffefed;
-    --danger-200: #ffddd9;
-    --danger-300: #ffbfb6;
-    --danger-400: #ff8b7f;
-    --danger-500: #de4e46;
-    --danger-600: #b7191c;
-    --danger-700: #94000c;
-    --danger-800: #6a0006;
-    --danger-900: #470002;
-    --danger-950: #2e0001;
-    --warning-50: #fff9f5;
-    --warning-100: #fff0e9;
-    --warning-200: #ffdfcf;
-    --warning-300: #fec2a4;
-    --warning-400: #ef996c;
-    --warning-500: #cd6423;
-    --warning-600: #9f4500;
-    --warning-700: #7d3500;
-    --warning-800: #592300;
-    --warning-900: #3b1500;
-    --warning-950: #260a00;
-    --success-50: #f5fcf6;
-    --success-100: #ebf7ed;
-    --success-200: #d6eeda;
-    --success-300: #b3debb;
-    --success-400: #83c390;
-    --success-500: #479b5d;
-    --success-600: #137738;
-    --success-700: #005e28;
-    --success-800: #00421a;
-    --success-900: #002a0e;
-    --success-950: #001a06;
-    --info-50: #f6fbff;
-    --info-100: #eaf5fe;
-    --info-200: #d3eafb;
-    --info-300: #aed7f5;
-    --info-400: #7bb9e5;
-    --info-500: #3a8ec4;
-    --info-600: #006a9d;
-    --info-700: #00537c;
-    --info-800: #003958;
-    --info-900: #00243a;
-    --info-950: #001625;
-    --weight-mid: 600;
+  [data-theme="jacho"],
+  :host([data-theme="jacho"]) {
+    --gray-0: #ffffff;
+    --gray-50: #f7f7f7;
+    --gray-100: #f0f0f0;
+    --gray-200: #e4e4e4;
+    --gray-300: #9e9e9e;
+    --gray-400: #8c8c8c;
+    --gray-500: #636363;
+    --gray-600: #525252;
+    --gray-700: #404040;
+    --gray-800: #2e2e2e;
+    --gray-850: #232323;
+    --gray-900: #191919;
+    --gray-950: #121212;
+    --accent-50: #fcf3ff;
+    --accent-100: #f8e5fe;
+    --accent-200: #f2cafe;
+    --accent-300: #e2a1f6;
+    --accent-400: #c77bdf;
+    --accent-500: #a353ba;
+    --accent-600: #803197;
+    --accent-700: #6a1d7e;
+    --accent-800: #551167;
+    --accent-900: #3a0448;
+    --accent-950: #270032;
+    --danger-50: #fef4f3;
+    --danger-100: #ffe6e3;
+    --danger-200: #fecdc7;
+    --danger-300: #ffa196;
+    --danger-400: #fa695e;
+    --danger-500: #d33b36;
+    --danger-600: #ac0311;
+    --danger-700: #8b010b;
+    --danger-800: #6f0006;
+    --danger-900: #4b0003;
+    --danger-950: #330001;
+    --warning-50: #fff5ea;
+    --warning-100: #fee9d1;
+    --warning-200: #fad3a8;
+    --warning-300: #e9b271;
+    --warning-400: #cf903e;
+    --warning-500: #a96b00;
+    --warning-600: #7f4f00;
+    --warning-700: #653e00;
+    --warning-800: #503000;
+    --warning-900: #351e00;
+    --warning-950: #231200;
+    --success-50: #edfbef;
+    --success-100: #daf5de;
+    --success-200: #b7eac0;
+    --success-300: #87d297;
+    --success-400: #5ab571;
+    --success-500: #2a904b;
+    --success-600: #006e30;
+    --success-700: #005724;
+    --success-800: #01451b;
+    --success-900: #002d0f;
+    --success-950: #001d07;
+    --info-50: #f2f7fe;
+    --info-100: #e0efff;
+    --info-200: #c0defe;
+    --info-300: #89c3fe;
+    --info-400: #51a3f3;
+    --info-500: #1f7dcf;
+    --info-600: #025da1;
+    --info-700: #014981;
+    --info-800: #003968;
+    --info-900: #002546;
+    --info-950: #001730;
   }
-  [data-theme="hwangto"],
-  :host([data-theme="hwangto"]) {
-    --gray-50: #fafaf9;
-    --gray-100: #f4f3f2;
-    --gray-200: #e8e6e3;
-    --gray-300: #d4d0cc;
-    --gray-400: #b5b0aa;
-    --gray-500: #8b857e;
-    --gray-600: #68625b;
-    --gray-700: #514c45;
-    --gray-800: #39352f;
-    --gray-900: #24211d;
-    --gray-950: #151311;
-    --accent-50: #fff9f5;
-    --accent-100: #fef1e8;
-    --accent-200: #fae1d0;
-    --accent-300: #f3c6a9;
-    --accent-400: #e1a174;
-    --accent-500: #be7034;
-    --accent-600: #974c00;
-    --accent-700: #773a00;
-    --accent-800: #542700;
-    --accent-900: #381800;
-    --accent-950: #240d00;
-    --danger-50: #fff8f9;
-    --danger-100: #ffeff1;
-    --danger-200: #ffdce1;
-    --danger-300: #ffbcc7;
-    --danger-400: #fc88a0;
-    --danger-500: #db4b71;
-    --danger-600: #b4144e;
-    --danger-700: #91003b;
-    --danger-800: #670028;
-    --danger-900: #450018;
-    --danger-950: #2d000d;
-    --warning-50: #fdfaf2;
-    --warning-100: #f8f3e6;
-    --warning-200: #f0e5cb;
-    --warning-300: #e3cfa1;
-    --warning-400: #cbae66;
-    --warning-500: #a5810e;
-    --warning-600: #7b5f00;
-    --warning-700: #614900;
-    --warning-800: #443300;
-    --warning-900: #2c2000;
-    --warning-950: #1b1200;
-    --success-50: #f7fcf5;
-    --success-100: #eef6ea;
-    --success-200: #dcecd4;
-    --success-300: #bfdbb1;
-    --success-400: #96bf80;
-    --success-500: #649646;
-    --success-600: #40731a;
-    --success-700: #2d5a05;
-    --success-800: #1d3f00;
-    --success-900: #102900;
-    --success-950: #071900;
-    --info-50: #f6fbff;
-    --info-100: #ebf5ff;
-    --info-200: #d6e9fc;
-    --info-300: #b4d5f8;
-    --info-400: #85b6e9;
-    --info-500: #4c8ac8;
-    --info-600: #2266a4;
-    --info-700: #0e4f86;
-    --info-800: #003763;
-    --info-900: #002242;
-    --info-950: #00142b;
-    --weight-mid: 600;
+  [data-theme="jjokbit"],
+  :host([data-theme="jjokbit"]) {
+    --gray-0: #ffffff;
+    --gray-50: #faf7f3;
+    --gray-100: #f2f0ec;
+    --gray-200: #e7e4e0;
+    --gray-300: #a19e9a;
+    --gray-400: #8e8c88;
+    --gray-500: #65635f;
+    --gray-600: #54524f;
+    --gray-700: #423f3c;
+    --gray-800: #302d2b;
+    --gray-850: #252220;
+    --gray-900: #1b1916;
+    --gray-950: #13110f;
+    --accent-50: #f1f7ff;
+    --accent-100: #e0efff;
+    --accent-200: #c2defe;
+    --accent-300: #8dc2fe;
+    --accent-400: #62a2e9;
+    --accent-500: #397dc4;
+    --accent-600: #125ca1;
+    --accent-700: #004885;
+    --accent-800: #00386b;
+    --accent-900: #002448;
+    --accent-950: #001632;
+    --danger-50: #fef4f3;
+    --danger-100: #ffe6e3;
+    --danger-200: #fecdc7;
+    --danger-300: #ffa196;
+    --danger-400: #fa695e;
+    --danger-500: #d33b36;
+    --danger-600: #ac0311;
+    --danger-700: #8b010b;
+    --danger-800: #6f0006;
+    --danger-900: #4b0003;
+    --danger-950: #330001;
+    --warning-50: #fff5ea;
+    --warning-100: #fee9d1;
+    --warning-200: #fad3a8;
+    --warning-300: #e9b271;
+    --warning-400: #cf903e;
+    --warning-500: #a96b00;
+    --warning-600: #7f4f00;
+    --warning-700: #653e00;
+    --warning-800: #503000;
+    --warning-900: #351e00;
+    --warning-950: #231200;
+    --success-50: #edfbef;
+    --success-100: #daf5de;
+    --success-200: #b7eac0;
+    --success-300: #87d297;
+    --success-400: #5ab571;
+    --success-500: #2a904b;
+    --success-600: #006e30;
+    --success-700: #005724;
+    --success-800: #01451b;
+    --success-900: #002d0f;
+    --success-950: #001d07;
+    --info-50: #ecf9fe;
+    --info-100: #d8f2fb;
+    --info-200: #b3e4f4;
+    --info-300: #81cae1;
+    --info-400: #51acc7;
+    --info-500: #1988a3;
+    --info-600: #00657c;
+    --info-700: #005063;
+    --info-800: #023f4e;
+    --info-900: #002934;
+    --info-950: #001a22;
   }
-  [data-theme="jadu"],
-  :host([data-theme="jadu"]) {
-    --gray-50: #fafafb;
-    --gray-100: #f4f3f4;
-    --gray-200: #e7e6e8;
-    --gray-300: #d2d0d4;
-    --gray-400: #b2b0b6;
-    --gray-500: #88848c;
-    --gray-600: #656269;
-    --gray-700: #4e4c52;
-    --gray-800: #363439;
-    --gray-900: #222124;
-    --gray-950: #141316;
-    --accent-50: #fbf9ff;
-    --accent-100: #f6f0ff;
-    --accent-200: #ede0fd;
-    --accent-300: #dcc5f9;
-    --accent-400: #c29feb;
-    --accent-500: #9a6dca;
-    --accent-600: #7847a6;
-    --accent-700: #5f3388;
-    --accent-800: #442064;
-    --accent-900: #2c1243;
-    --accent-950: #1b092b;
-    --danger-50: #fff8f8;
-    --danger-100: #ffeff0;
-    --danger-200: #ffdcde;
-    --danger-300: #ffbdc1;
-    --danger-400: #fe8894;
-    --danger-500: #dd4b62;
-    --danger-600: #b6143f;
-    --danger-700: #92002e;
-    --danger-800: #69001e;
-    --danger-900: #460011;
-    --danger-950: #2e0008;
-    --warning-50: #fff9f2;
-    --warning-100: #fcf2e6;
-    --warning-200: #f7e3ca;
-    --warning-300: #eeca9f;
-    --warning-400: #daa663;
-    --warning-500: #b67700;
-    --warning-600: #885700;
-    --warning-700: #6b4300;
-    --warning-800: #4b2e00;
-    --warning-900: #311d00;
-    --warning-950: #1f1000;
-    --success-50: #f4fcf8;
-    --success-100: #eaf7ef;
-    --success-200: #d2eede;
-    --success-300: #addfc3;
-    --success-400: #77c49c;
-    --success-500: #2e9c6c;
-    --success-600: #00764c;
-    --success-700: #005c3b;
-    --success-800: #004128;
-    --success-900: #002a18;
-    --success-950: #001a0d;
-    --info-50: #f7faff;
-    --info-100: #edf4ff;
-    --info-200: #d8e8ff;
-    --info-300: #b7d3fc;
-    --info-400: #8ab3ef;
-    --info-500: #5587d0;
-    --info-600: #2f62ac;
-    --info-700: #1e4b8d;
-    --info-800: #0e3468;
-    --info-900: #062046;
-    --info-950: #03132d;
-    --weight-mid: 500;
-  }
+  /*
+   * 쓰임새 대응(design-refresh 명세의 "색 — 쓰임새 토큰"). 주 버튼(`primary` 묶음)은 기본 테마(녹청)의 먹색 갈래이고,
+   * 강조색 갈래의 테마는 아래에서 덮는다. 나머지 열아홉은 네 테마가 같다.
+   */
   :root,
   :host,
   [data-theme],
   [data-mode] {
     color-scheme: light;
-    --bg: var(--gray-100);
-    --raised: var(--gray-50);
+    --bg: var(--gray-50);
+    --bg-raised: var(--gray-0);
     --text: var(--gray-900);
-    --muted: var(--gray-600);
-    --border: var(--gray-500);
+    --text-muted: var(--gray-500);
+    --border: var(--gray-200);
     --accent: var(--accent-600);
-    --on-accent: var(--gray-50);
+    --on-accent: var(--gray-0);
     --danger: var(--danger-600);
     --warning: var(--warning-600);
     --success: var(--success-600);
     --info: var(--info-600);
-    --focus: var(--accent-600);
-    --tint: var(--gray-200);
-    --tint-hover: var(--gray-300);
-    --tint-press: var(--gray-400);
-    --accent-hover: var(--accent-700);
-    --accent-press: var(--accent-800);
-    --border-hover: var(--gray-600);
-    --danger-tint: var(--danger-100);
-    --danger-tint-press: var(--danger-200);
-    --warning-tint: var(--warning-100);
-    --success-tint: var(--success-100);
-    --info-tint: var(--info-100);
-    --disabled-surface: var(--gray-200);
-    --disabled-text: var(--gray-500);
-    --divider: var(--gray-200);
-    --shadow-color: color-mix(in srgb, var(--gray-900) 14%, transparent);
+    --focus-ring: var(--accent-600);
+    --border-control: var(--gray-400);
+    --primary: var(--gray-900);
+    --on-primary: var(--gray-0);
+    --primary-hover: var(--gray-800);
+    --primary-active: var(--gray-700);
+    --bg-hover: var(--overlay-black-4);
+    --bg-active: var(--overlay-black-12);
+    --bg-selected: var(--overlay-black-7);
+    --text-disabled: var(--gray-400);
+    --bg-disabled: var(--gray-100);
+    --shadow-color: var(--overlay-black-12);
   }
   [data-mode="dark"],
   :host([data-mode="dark"]) {
     color-scheme: dark;
     --bg: var(--gray-950);
-    --raised: var(--gray-900);
-    --text: var(--gray-50);
-    --muted: var(--gray-400);
-    --border: var(--gray-500);
+    --bg-raised: var(--gray-900);
+    --text: var(--gray-100);
+    --text-muted: var(--gray-300);
+    --border: var(--gray-800);
     --accent: var(--accent-400);
     --on-accent: var(--accent-950);
     --danger: var(--danger-400);
     --warning: var(--warning-400);
     --success: var(--success-400);
     --info: var(--info-400);
-    --focus: var(--accent-400);
-    --tint: var(--gray-800);
-    --tint-hover: var(--gray-700);
-    --tint-press: var(--gray-600);
-    --accent-hover: var(--accent-300);
-    --accent-press: var(--accent-200);
-    --border-hover: var(--gray-400);
-    --danger-tint: var(--danger-900);
-    --danger-tint-press: var(--danger-800);
-    --warning-tint: var(--warning-900);
-    --success-tint: var(--success-900);
-    --info-tint: var(--info-900);
-    --disabled-surface: var(--gray-800);
-    --disabled-text: var(--gray-500);
-    --divider: var(--gray-800);
-    --shadow-color: color-mix(in srgb, color-mix(in srgb, var(--gray-950), black) 70%, transparent);
+    --focus-ring: var(--accent-400);
+    --border-control: var(--gray-400);
+    --primary: var(--gray-100);
+    --on-primary: var(--gray-950);
+    --primary-hover: var(--gray-200);
+    --primary-active: var(--gray-300);
+    --bg-hover: var(--overlay-white-6);
+    --bg-active: var(--overlay-white-16);
+    --bg-selected: var(--overlay-white-10);
+    --text-disabled: var(--gray-600);
+    --bg-disabled: var(--gray-800);
+    --shadow-color: var(--overlay-black-40);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-mode]),
@@ -542,62 +487,70 @@
     [data-theme]:not([data-mode]) {
       color-scheme: dark;
       --bg: var(--gray-950);
-      --raised: var(--gray-900);
-      --text: var(--gray-50);
-      --muted: var(--gray-400);
-      --border: var(--gray-500);
+      --bg-raised: var(--gray-900);
+      --text: var(--gray-100);
+      --text-muted: var(--gray-300);
+      --border: var(--gray-800);
       --accent: var(--accent-400);
       --on-accent: var(--accent-950);
       --danger: var(--danger-400);
       --warning: var(--warning-400);
       --success: var(--success-400);
       --info: var(--info-400);
-      --focus: var(--accent-400);
-      --tint: var(--gray-800);
-      --tint-hover: var(--gray-700);
-      --tint-press: var(--gray-600);
-      --accent-hover: var(--accent-300);
-      --accent-press: var(--accent-200);
-      --border-hover: var(--gray-400);
-      --danger-tint: var(--danger-900);
-      --danger-tint-press: var(--danger-800);
-      --warning-tint: var(--warning-900);
-      --success-tint: var(--success-900);
-      --info-tint: var(--info-900);
-      --disabled-surface: var(--gray-800);
-      --disabled-text: var(--gray-500);
-      --divider: var(--gray-800);
-      --shadow-color: color-mix(
-        in srgb,
-        color-mix(in srgb, var(--gray-950), black) 70%,
-        transparent
-      );
+      --focus-ring: var(--accent-400);
+      --border-control: var(--gray-400);
+      --primary: var(--gray-100);
+      --on-primary: var(--gray-950);
+      --primary-hover: var(--gray-200);
+      --primary-active: var(--gray-300);
+      --bg-hover: var(--overlay-white-6);
+      --bg-active: var(--overlay-white-16);
+      --bg-selected: var(--overlay-white-10);
+      --text-disabled: var(--gray-600);
+      --bg-disabled: var(--gray-800);
+      --shadow-color: var(--overlay-black-40);
     }
   }
-  [data-theme="gongmun"][data-mode="light"],
-  :host([data-theme="gongmun"][data-mode="light"]) {
-    --accent: var(--accent-700);
-    --focus: var(--warning-600);
-    --accent-hover: var(--accent-800);
-    --accent-press: var(--accent-900);
+  /*
+   * 주 버튼이 강조색인 테마(군청, 자초). 테마와 모드를 함께 든 선택자라 위의 대응보다 특정성이 높거나, 같으면 뒤에 와서
+   * 이긴다. 라이트의 `on-primary` 는 먹색 갈래와 같은 `gray-0` 이라 덮지 않는다.
+   */
+  [data-theme="guncheong"][data-mode="light"],
+  [data-theme="jacho"][data-mode="light"],
+  :host([data-theme="guncheong"][data-mode="light"]),
+  :host([data-theme="jacho"][data-mode="light"]) {
+    --primary: var(--accent-600);
+    --primary-hover: var(--accent-700);
+    --primary-active: var(--accent-800);
   }
   @media (prefers-color-scheme: light) {
-    [data-theme="gongmun"]:not([data-mode]),
-    :host([data-theme="gongmun"]:not([data-mode])) {
-      --accent: var(--accent-700);
-      --focus: var(--warning-600);
-      --accent-hover: var(--accent-800);
-      --accent-press: var(--accent-900);
+    [data-theme="guncheong"]:not([data-mode]),
+    [data-theme="jacho"]:not([data-mode]),
+    :host([data-theme="guncheong"]:not([data-mode])),
+    :host([data-theme="jacho"]:not([data-mode])) {
+      --primary: var(--accent-600);
+      --primary-hover: var(--accent-700);
+      --primary-active: var(--accent-800);
     }
   }
-  [data-theme="gongmun"][data-mode="dark"],
-  :host([data-theme="gongmun"][data-mode="dark"]) {
-    --focus: var(--warning-400);
+  [data-theme="guncheong"][data-mode="dark"],
+  [data-theme="jacho"][data-mode="dark"],
+  :host([data-theme="guncheong"][data-mode="dark"]),
+  :host([data-theme="jacho"][data-mode="dark"]) {
+    --primary: var(--accent-400);
+    --on-primary: var(--accent-950);
+    --primary-hover: var(--accent-300);
+    --primary-active: var(--accent-200);
   }
   @media (prefers-color-scheme: dark) {
-    [data-theme="gongmun"]:not([data-mode]),
-    :host([data-theme="gongmun"]:not([data-mode])) {
-      --focus: var(--warning-400);
+    [data-theme="guncheong"]:not([data-mode]),
+    [data-theme="jacho"]:not([data-mode]),
+    :host([data-theme="guncheong"]:not([data-mode])),
+    :host([data-theme="jacho"]:not([data-mode])) {
+      --primary: var(--accent-400);
+      --on-primary: var(--accent-950);
+      --primary-hover: var(--accent-300);
+      --primary-active: var(--accent-200);
     }
   }
 }
