@@ -13,7 +13,7 @@ uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`pnpm -C web visual`, `web/packages/ui`를 건드렸을 때)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다.
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`pnpm -C web visual`, `web/packages/ui`를 건드렸을 때)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030).
 
 ## 구조
 
@@ -101,6 +101,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 | 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |
+| 모델·추론 레벨의 근거(공식 자료, 이 저장소의 측정, 다시 재는 절차) | `docs/model-selection.md` | 작업과 모델의 짝은 `next-session` 결정표, 결정과 칸을 바꾸는 규칙은 ADR 0029 |
 | 판단 기준(리뷰) | `CODING_STANDARDS.md` | 더할지는 retro 스킬 4단계가 판정 |
 | 리뷰 파이프라인(누가 언제 무엇을) | `docs/constitution/operations.md` | 봇 설정은 `.coderabbit.yaml`과 `.github/workflows/claude-code-review.yml`. 기준은 CODING_STANDARDS |
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 Read 도구로 열 때만 실림 |

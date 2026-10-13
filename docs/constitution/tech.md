@@ -8,7 +8,7 @@
 | 패키지 관리 | uv, 단일 패키지, src 레이아웃 |
 | 린트·포맷 | ruff |
 | 타입 | pyright strict |
-| 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007. HTTP 표면은 `httpx`의 `AsyncClient`와 `ASGITransport`로 민다(dev 전용, ADR 0010의 2026-09-22 이력). 채널 스트림의 수명만 같은 앱을 ASGI로 직접 부르는 둘째 구동자로 잰다(예외의 범위는 `.claude/rules/http.md`) |
+| 테스트 | pytest, import 모드 importlib. 비동기 테스트는 pytest-asyncio `asyncio_mode = "auto"`이고 `RuntimeWarning`을 에러로 올린다. ADR 0007. HTTP 표면은 `httpx`의 `AsyncClient`와 `ASGITransport`로 민다(dev 전용, ADR 0010의 2026-09-22 이력). 채널 스트림의 수명만 같은 앱을 ASGI로 직접 부르는 둘째 구동자로 잰다(예외의 범위는 `.claude/rules/http.md`). `tools/`의 PowerShell 스크립트는 pytest가 그 AST에서 뗀 함수를 PowerShell 7(`pwsh`)로 불러 시험한다. 그래서 `uv run pytest -q`는 PATH의 `pwsh`를 전제하고, 없으면 실패한다. pwsh의 판은 고정하지 않고 Pester는 들이지 않는다. ADR 0030 |
 | 경계 | import-linter |
 | 워크플로 감사 | zizmor. uv의 dev 의존성이고 판은 `uv.lock`이 고정한다. 옵션은 `--offline --strict-collection --config .github/zizmor.yml`이고 저장소 루트를 돌며 페르소나는 기본값이다. 설정을 명시하는 것은 자동 탐색이 워크트리에서 주 체크아웃의 설정을 찾기 때문이다. 정책은 `actions/` 조직의 액션만 ref 고정을 허용하고 나머지는 커밋 해시로 고정한다. ADR 0027 |
 | 런타임 의존성 | core: `langchain-core`, `pydantic`, `anyio`. adapters: `langchain-anthropic`, `langchain-mcp-adapters`. server: `fastapi`, `uvicorn`. 최종 사용자의 서명 토큰 검증은 `pyjwt[crypto]`이고 RS256 하나로 고정한다(ADR 0023. end-user-channel 티켓 01이 직접 의존으로 선언했고 `mcp`가 기대던 것과 같은 판이라 락의 패키지와 판은 바뀌지 않았다). `anyio`는 core의 실행 타임아웃과 채널의 실행 수명이 그 취소 범위에 직접 기대 선언하고 major 4로 묶는다 — 5는 실행 타임아웃의 테스트와 측정을 다시 돌린 뒤에 들인다(ADR 0014의 2026-10-06 이력. 전이 의존성으로 오던 것과 같은 판이라 락의 판은 바뀌지 않았다). anthropic SDK와 mcp는 이들 뒤에서 온다(mcp는 어댑터가 정하는 1.x). `langgraph`는 pyright strict 마찰로 2026-09-21에 뺐다. ADR 0001과 그 이력 |
