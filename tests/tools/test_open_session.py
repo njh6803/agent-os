@@ -49,6 +49,9 @@ if ($null -eq $found) { '(없음)' } else { "$($found.Model)|$($found.Effort)|$(
 """
 
 
+# 이음매의 값을 재는 프로브 .scratch/harness/probes/pwsh_test_seam.py 가 이 `_call` 과 이 파일의
+# `_MODEL_LINE`·`_MODEL_LINES`·`DIRECTIVE`·`NOISE`·`MAIN_STARTED` 를 이름으로 불러 쓴다(ADR 0030).
+# 이름을 바꾸면 그 프로브도 함께 고친다.
 def _call(function: str, body: str, given: dict[str, object]) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(
