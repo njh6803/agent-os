@@ -62,3 +62,14 @@
   `channel/http/end_user.py`를 열어 `channel.md`의 새 문장이, Skill 도구로 부른 `tidy-checkouts`에 새 행이 실린 것을 같은 식으로
   봤다.
 - 셀프 리뷰를 반영한 뒤의 검증 명령은 커밋의 pre-commit으로 갈음한다(결과는 PR 본문).
+
+## PR 리뷰
+
+PR #233. PR 직전 리뷰는 CodeRabbit 좌석이 없어(`Seat: not assigned`) 대체 둘을 돌렸고 둘 다 0건이었다(`/security-review`,
+`bug-perf-review`). PR 봇의 CodeRabbit은 무료 한도로 리뷰가 없었다. claude-review 첫 회차는 Minor 하나와 Nit 둘이었다.
+
+- 고쳤다(Minor): `channel.md`와 `core.md`가 같은 규칙과 사건을 두 번 적었다. 본문과 사건은 `core.md`에 두고 `channel.md`는
+  행동 문장 하나와 포인터로 줄였다. 채널 파일을 열 때도 행동 문장은 실린다.
+- 고쳤다(Nit): `channel.md`의 새 항목에 이웃 항목처럼 굵은 머리 문장을 달았다.
+- 남겼다(Nit): 거부 문구의 "(대기열 111)". 같은 훅의 다른 거부 문구도 "(대기열 43)"을 싣는 관례이고, 모델이 그 번호로
+  대기열의 사건을 찾아갈 수 있다.
