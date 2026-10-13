@@ -205,7 +205,7 @@ function Send-Prompt {
 
     # 모델 줄은 아래 `held=` 보다 먼저 고른다. `held=` 면 사람이 첫 글자만 고쳐 보내므로, 그때도 첫 턴이 줄의 값으로 돈다.
     # 고른 뒤 `sent=` 전에 멈추면(고르기·보내기 버튼·제출 확인의 실패, `held=`) 이 스크립트가 되돌릴 때가 없다. 기본값이 바뀌었으면
-    # 사람이 보낸 뒤(제출 확인의 시간 초과면 이미 보냈을 수 있다) 칠 복구를 남긴다(PR 직전 버그·성능 리뷰).
+    # 사람이 보낸 뒤(제출 확인의 시간 초과면 이미 보냈을 수 있다) 칠 복구를 남긴다(PR 직전 버그·성능 리뷰, Get-PendingRestoreLine).
     $draft = $null
     try {
         if ($pick) {
@@ -226,7 +226,7 @@ function Send-Prompt {
         $value = Get-EditValue $box
         if ($value -and [int][char]$value[0] -eq 0xFF0F) {
             "held=$(Get-Date -Format HH:mm:ss.fff) 입력창의 첫 글자가 U+FF0F 다(옮기지 못한 슬래시 명령). 사람이 / 로 고쳐 보낸다"
-            if ($draft -and (Test-DraftChanged $draft $pick)) { "restore=필요: 사람이 보낸 뒤 $(Get-RepairHint $draft)" }
+            Get-PendingRestoreLine $draft $pick
             return
         }
 
@@ -236,7 +236,7 @@ function Send-Prompt {
             try { -not (Test-Needle ($box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) $needle) } catch { $false }
         } '제출된 뒤 비워진 입력창(요소를 못 읽으면 비운 것으로 치지 않는다)' 10 | Out-Null
     } catch {
-        if ($draft -and (Test-DraftChanged $draft $pick)) { "restore=필요: 새 세션 화면의 기본값이 바뀌었을 수 있다. 사람이 보낸 뒤 $(Get-RepairHint $draft)" }
+        Get-PendingRestoreLine $draft $pick
         throw
     }
     "sent=$(Get-Date -Format HH:mm:ss.fff) via $how"
@@ -415,6 +415,13 @@ function Test-DraftChanged($draft, $pick) {
     return [bool](($draft.Model -cne $pick.Model) -or ($draft.EffortStep -ne $pick.Step))
 }
 
+# 고른 뒤 `sent=` 전에 멈춘 길(`held=`, 고르기·보내기 버튼·제출 확인의 실패)이 남기는 복구 줄. 원래 값을 읽기 전($draft 없음)이나
+# 고른 값이 원래 값과 같으면 기본값이 그대로라 아무것도 내지 않는다. 두 길이 같은 조건과 문장을 쓰도록 여기 한 곳에 둔다.
+function Get-PendingRestoreLine($draft, $pick) {
+    if (-not $draft -or -not (Test-DraftChanged $draft $pick)) { return }
+    return "restore=필요: 새 세션 화면의 기본값이 바뀌었을 수 있다. 사람이 보낸 뒤 $(Get-RepairHint $draft)"
+}
+
 # 지시문의 모델 줄대로 새 세션 입력창의 모델과 노력을 고른다. 딥링크는 모델을 싣지 못하고(앱의 `code/new` 처리기는
 # q·prompt·folder·file 과 SSH 인자만 읽는다, 앱 2.19675.0.0 번들을 읽었다), 보낸 뒤 바꾸는 도구는 다음 턴부터라 첫 턴에 늦다.
 # 모델을 먼저 고른다. 모델을 바꾸면 노력이 그 모델의 값으로 바뀔 수 있다. 모델은 버튼 이름으로, 노력은 슬라이더 칸과 버튼
@@ -438,8 +445,8 @@ function Set-ComposerModel($win, $box, $pick, $draft) {
 }
 
 # 노력 메뉴를 펼쳐 슬라이더를 칸으로 옮기고 접는다. 칸은 RangeValue 의 값 설정으로 옮긴다. 웹 슬라이더지만 값을 받았고 버튼
-# 이름도 따라 바뀌었다(composer_patterns.ps1, 2026-10-12). 칸이 슬라이더의 끝을 넘으면 옮기지 않는다. 옮기기 전과 뒤의 칸,
-# 끝 칸을 돌려준다. 중간에 멈춰도 메뉴는 접는다.
+# 이름도 따라 바뀌었다(composer_patterns.ps1, 2026-10-12). 칸이 슬라이더의 끝을 넘으면 옮기지 않는다. 옮긴 뒤의 칸과 끝 칸을
+# 돌려준다. 원래 칸은 부르는 쪽이 Read-DraftDefaults 로 먼저 읽는다. 중간에 멈춰도 메뉴는 접는다.
 function Move-EffortSlider($win, $button, [int] $step) {
     $opened = Invoke-PatternTimed $button 'expand'
     if ($opened -ne 'ok') { throw "노력 메뉴를 펼치지 못했다($opened)." }
@@ -447,7 +454,6 @@ function Move-EffortSlider($win, $button, [int] $step) {
         $sliderCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Slider)
         $slider = Wait-For { $win.FindFirst($Scope::Descendants, $sliderCond) } '노력 슬라이더' 5
         $range = $slider.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
-        $before = [int]$range.Current.Value
         $max = [int]$range.Current.Maximum
         if ($step -le $max) { $range.SetValue($step); Start-Sleep -Milliseconds 500 }
         $after = [int]$range.Current.Value
@@ -455,7 +461,7 @@ function Move-EffortSlider($win, $button, [int] $step) {
         Invoke-PatternTimed $button 'collapse' | Out-Null
         Start-Sleep -Milliseconds 300
     }
-    return [pscustomobject]@{ Before = $before; After = $after; Max = $max }
+    return [pscustomobject]@{ After = $after; Max = $max }
 }
 
 # 표지 글이 든 새 세션 화면을 연다. 보내지 않는 화면이라 그 입력창의 버튼만 움직이고, 끝나면 Clear-PromptBox 로 표지를 지운다.
