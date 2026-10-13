@@ -420,6 +420,23 @@ def test_푸시하지_않은_커밋이_있는_저장소를_만든다(tmp_path: P
     assert ancestor.returncode == 0
 
 
+def test_origin_main보다_한_커밋_뒤처진_저장소를_만든다(tmp_path: Path) -> None:
+    """`${BEHIND_REPO}` 는 main 이 아닌 작업 브랜치이고 origin/main 에 HEAD 에 없는 커밋이 하나다.
+
+    hook_push_behind_main 의 deny 사례가 기대는 모양이다.
+    """
+    repo = create_fixtures(tmp_path)["BEHIND_REPO"]
+
+    def git_line(*args: str) -> str:
+        result = subprocess.run(
+            ["git", "-C", repo, *args], check=True, capture_output=True, text=True
+        )
+        return result.stdout.strip()
+
+    assert git_line("symbolic-ref", "--short", "HEAD") == "chore/x"
+    assert git_line("rev-list", "--count", "HEAD..origin/main") == "1"
+
+
 def test_main_저장소_둘은_커밋의_유무로_갈린다(tmp_path: Path) -> None:
     """`${MAIN_REPO}` 는 커밋이 하나 있는 main 이고 `${EMPTY_MAIN_REPO}` 는 커밋이 없는 main 이다.
 

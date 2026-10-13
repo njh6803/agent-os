@@ -18,7 +18,7 @@ limited`(한도 초과, 리뷰 없음)나 `Review completed`로 끝난다. 롤�
 
 판정. `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`과 그 헤드의 combined
 status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명)를
-`interval`초마다 읽는다. gh 호출 하나는 `GH_TIMEOUT`초에서 끊고 조회 실패로 센다. 멈춘 gh는
+`interval`초마다 읽는다. gh와 git 호출 하나는 `CALL_TIMEOUT`초에서 끊고 실패로 센다. 멈춘 호출은
 돌아오지 않아 대기의 시간 제한에도 걸리지 않는다(PR 직전 버그 리뷰). StatusContext의 상태는
 설명과 같은 combined status에서 읽는다. 따로 읽은 롤업은 시각이 달라, 롤업의 건너뜀 SUCCESS와
 combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
@@ -82,8 +82,9 @@ PASSING = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
 PENDING_STATES = frozenset({"PENDING", "EXPECTED"})
 # 리뷰를 요청받기 전의 CodeRabbit 상태 설명. 상태는 SUCCESS 라 결과만 보면 끝난 것으로 읽힌다.
 UNREQUESTED_PREFIX = "Review skipped"
-# gh 호출 하나의 시간 제한(초). 멈춘 gh 는 돌아오지 않아 대기의 시간 제한에도 걸리지 않는다.
-GH_TIMEOUT = 60.0
+# 외부 명령(gh, git) 하나의 시간 제한(초). 멈춘 호출은 돌아오지 않아 대기의 시간 제한에도 걸리지
+# 않는다.
+CALL_TIMEOUT = 60.0
 
 EXIT_PASSED = 0
 EXIT_FAILED = 1
@@ -297,10 +298,10 @@ def _gh(*args: str) -> Json:
             encoding="utf-8",
             errors="replace",
             check=False,
-            timeout=GH_TIMEOUT,
+            timeout=CALL_TIMEOUT,
         )
     except subprocess.TimeoutExpired as error:
-        raise FetchError(f"gh 가 {GH_TIMEOUT:.0f}초 안에 돌아오지 않았다") from error
+        raise FetchError(f"gh 가 {CALL_TIMEOUT:.0f}초 안에 돌아오지 않았다") from error
     except OSError as error:
         raise FetchError(f"gh 를 띄우지 못했다: {error}") from error
     if completed.returncode != 0:
@@ -329,7 +330,7 @@ def local_head() -> str:
         capture_output=True,
         encoding="utf-8",
         check=True,
-        timeout=GH_TIMEOUT,
+        timeout=CALL_TIMEOUT,
     )
     return completed.stdout.strip()
 

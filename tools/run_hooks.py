@@ -15,11 +15,12 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열일곱 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여덟 — `${ROOT}`(저장소 루트),
 `${MAIN_REPO}`·`${WORK_REPO}`(임시 저장소 둘. 앞은 커밋이 하나 있는 main, 뒤는 커밋이 없는 작업
 브랜치다 — 이 저장소의 브랜치에 기대를 걸지 않는다), `${EMPTY_MAIN_REPO}`(커밋이 하나도 없는 main 의
 임시 저장소 — 새 프로젝트의 첫 커밋 자리), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고
-그 위에 푸시하지 않은 커밋이 하나 있는 작업 브랜치 저장소),
+그 위에 푸시하지 않은 커밋이 하나 있는 작업 브랜치 저장소), `${BEHIND_REPO}`(임시 bare 저장소를
+origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진 저장소),
 `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
 `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글
@@ -525,6 +526,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "EMPTY_MAIN_REPO": empty_main_repo.as_posix(),
         "WORK_REPO": work_repo.as_posix(),
         "UNPUSHED_REPO": unpushed_repo.as_posix(),
+        "BEHIND_REPO": _behind_repository(scratch).as_posix(),
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
@@ -585,6 +587,36 @@ def _unpushed_repository(scratch: Path) -> Path:
         ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
         ["git", "-C", str(repo), "push", "-q", "-u", "origin", "chore/x"],
         ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "unpushed"],
+    ]
+    for command in commands:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            env=hook_environment(),
+            timeout=DEFAULT_HOOK_TIMEOUT,
+        )
+    return repo
+
+
+def _behind_repository(scratch: Path) -> Path:
+    """작업 브랜치 `chore/x` 가 origin/main 보다 한 커밋 뒤처진 저장소.
+
+    origin 은 같은 `scratch` 의 bare 저장소다. 네트워크와 이 저장소의 원격에 기대지 않는다.
+    """
+    origin = scratch / "behind-origin.git"
+    repo = scratch / "behind"
+    commands = [
+        ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+        ["git", "init", "-q", "-b", "main", str(repo)],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+        ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+        ["git", "-C", str(repo), "switch", "-q", "-c", "chore/x"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "work"],
+        ["git", "-C", str(repo), "switch", "-q", "main"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "ahead"],
+        ["git", "-C", str(repo), "push", "-q", "origin", "main"],
+        ["git", "-C", str(repo), "switch", "-q", "chore/x"],
     ]
     for command in commands:
         subprocess.run(
