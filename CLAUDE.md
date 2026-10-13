@@ -32,6 +32,7 @@
 | `docs/PRD.md` | 범위를 정하거나 스펙이 충돌할 때 | 사용자 승인으로 |
 | `CONTEXT.md` | 용어를 쓰거나 새 개념이 나올 때 | domain-modeling 스킬이 |
 | `docs/adr/` | 결정을 바꾸기 전, 그 영역을 처음 만질 때 | 아키텍처 결정 뒤 초안을 보여주고 승인 |
+| `docs/model-selection.md` | 결정표의 모델 칸을 바꾸려 할 때, 새 모델이 나왔을 때 | 공식 원문을 다시 대 보거나 다시 잰 뒤 |
 | `CODING_STANDARDS.md` | code-review 때 | retro가 세 번째 반복에서 더할 때 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
 | `.scratch/retro-queue.md` | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
