@@ -2,7 +2,7 @@
 # 그림자)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(CLAUDE.md 작업 규약 3).
 # 실험군은 규칙의 paths 안(web/packages/ui/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다. 실험군의 파일은
 # 고친 문장을 담지 않은 것을 골랐다(props.ts 머리 주석과 Icon.md 에는 비슷한 문장이 있다).
-# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-13-05).
+# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-13-10).
 # 돌리는 법: uv run python tools/canary.py .scratch/design-refresh/probes/canary/web_design_props_icon_card.toml <출력 디렉터리>
 kind = "rule"
 question = '''
