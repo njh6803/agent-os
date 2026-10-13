@@ -20,7 +20,7 @@
 //   `cfg.overrides.<Name>.skip` 에 있어야 하고, 빼는 목록의 id 는 모두 그 컴포넌트의 지금 있는 변형 스토리여야 하며,
 //   컴포넌트마다 `showcase` 스토리가 하나 이상 있어야 한다. 빼는 목록은 스토리 id 라 스토리를 더하거나 이름을 바꾸면
 //   조용히 어긋난다.
-// - 기초 카드와 목록 타일. `.design-sync/foundations/<폴더>/` 마다 HTML 이 하나이고 첫 줄이 `<!-- @dsCard group="…" -->`
+// - 기초 카드와 목록 타일. 폴더 넷(`FOUNDATIONS`)이 모두 있고, `.design-sync/foundations/<폴더>/` 마다 HTML 이 하나이고 첫 줄이 `<!-- @dsCard group="…" -->`
 //   이어야 한다. 카드와 `thumbnail.html` 이 읽는 `var(--이름)`·`data-value="--이름"` 은 빌드 CSS 에 선언이 있어야 하고
 //   (이름이 바뀌면 풀리지 않아 조용히 빈 칸이 된다), `data-theme`·`data-density` 의 값은 선택자가 있어야 한다. 그리고
 //   `ds-bundle/` 에 같은 내용으로 복사되어 있어야 한다.
@@ -159,8 +159,14 @@ for (const name of Object.keys(overrides)) {
 
 // 기초 카드와 목록 타일.
 const DSCARD = /^<!--\s*@dsCard\s+group="[^"]*"[^>]*-->/;
+// 기초 카드 넷(NOTES 의 "기초 카드"). 폴더가 빠지거나 이름이 바뀌면 그 카드가 조용히 빠진 채 올라간다.
+const FOUNDATIONS = ["colors", "density", "spacing", "type"];
+const folders = readdirSync(files.foundations, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+for (const name of FOUNDATIONS) {
+  if (!folders.some((folder) => folder.name === name)) problems.push(`기초 카드 폴더가 없다: ${name}`);
+}
 const cards = [];
-for (const folder of readdirSync(files.foundations, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+for (const folder of folders) {
   const htmls = readdirSync(join(files.foundations, folder.name)).filter((file) => file.endsWith(".html"));
   if (htmls.length !== 1) problems.push(`기초 카드 폴더의 HTML 이 하나가 아니다: ${folder.name} (${htmls.length})`);
   for (const file of htmls) {

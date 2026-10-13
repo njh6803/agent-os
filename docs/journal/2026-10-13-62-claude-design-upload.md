@@ -71,6 +71,17 @@
 `pnpm -C web visual` 107 통과(Docker), 컴포넌트 스토리 88 통과, 검사기와 그 변이 열 초록. 반영 전에 `uv run pytest -q` 2632 통과,
 ruff 둘·pyright·`lint-imports`가 0으로 끝났다. 파이썬 파일은 바꾸지 않았다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
 
+## PR 직전 리뷰
+
+CodeRabbit은 좌석이 없었다(`coderabbit auth status`의 `Seat: not assigned`). 그래서 대체 둘을 돌렸다.
+
+- **내장 `/security-review`**(커밋하고 origin/main을 합친 뒤): 발견 없음. 카드 스크립트는 `textContent`에 계산값만 넣고, 포크의
+  밀도는 두 값만 지나며, 검사기와 프로브는 저장소 안의 파일만 읽고 셸이 없다.
+- **`bug-perf-review` 서브에이전트**: Major 이상 없음, Minor 둘을 반영했다. 검사기가 있는 폴더만 세어 기초 카드 폴더가 원본과
+  사본에서 함께 사라지면 통과했다. 그래서 기대하는 폴더 넷(`FOUNDATIONS`)을 상수로 들고 빠진 것을 내게 했고, 그 변이를 프로브에
+  더해 열하나가 모두 기대대로였다. 프로브의 임시 폴더 정리에 재시도(`maxRetries: 3`)를 더했다. 원문이 LF에 기대는 것은 줄 구분
+  문자 검사가 지키므로 두었다.
+
 ## 회고
 
 후보 다섯, 승인 셋(이 세션에서 반영 하나, 대기열 둘), 기각 둘, 넘김 없음.

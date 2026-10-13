@@ -68,6 +68,12 @@ const MUTATIONS = [
     expect: "기초 카드 폴더의 HTML 이 하나가 아니다: colors (2)",
   },
   {
+    name: "기초 카드 폴더 하나를 원본과 사본에서 함께 지운다",
+    removeDirs: [".design-sync/foundations/density", "ds-bundle/foundations/density"],
+    edits: [],
+    expect: "기초 카드 폴더가 없다: density",
+  },
+  {
     name: "목록 타일이 없는 테마를 단다",
     edits: [[".design-sync/thumbnail.html", 'data-theme="jacho"', 'data-theme="jadu"']],
     copyThumb: true,
@@ -91,6 +97,7 @@ for (const mutation of MUTATIONS) {
   try {
     for (const input of INPUTS) cpSync(input, join(dir, input), { recursive: true });
     if (mutation.extraFile !== undefined) writeFileSync(join(dir, mutation.extraFile[0]), mutation.extraFile[1]);
+    for (const removed of mutation.removeDirs ?? []) rmSync(join(dir, removed), { recursive: true });
     for (const [file, oldText, newText, mode] of mutation.edits) {
       const path = join(dir, file);
       const text = readFileSync(path, "utf8");
@@ -114,7 +121,8 @@ for (const mutation of MUTATIONS) {
     console.log(`${ok ? "맞다" : "어긋난다"}  ${mutation.name}  (종료 ${result.status})`);
     if (!ok) console.log(output.trim().split("\n").map((line) => `    ${line}`).join("\n"));
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    // 윈도에서 백신·색인기가 파일을 잡으면 EBUSY 로 던질 수 있어 몇 번 다시 시도한다(force 는 그것을 막지 않는다).
+    rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
   }
 }
 console.log(failed === 0 ? `변이 ${MUTATIONS.length - 1}개가 모두 기대대로다` : `어긋난 것 ${failed}`);
