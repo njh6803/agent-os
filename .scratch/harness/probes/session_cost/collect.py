@@ -29,12 +29,16 @@
 값(`directive_features`의 `model_line`·`branch_line`, 줄 값 그대로)이다. `--since`는 집계의 창이다.
 기록은 창과 관계없이 모두 읽어 턴·귀속과 브랜치의 첫 사람 트리거(그 시각과 지시문)를 정하고, 비용,
 턴과 개입, meta의 표지는 창 안의 응답과 창 안에서 시작한 턴으로만 셈한다. 그래서 창 앞에서 시작한
-브랜치는 첫 트리거가 창 앞이고 비용은 창 안 몫만 든다. 예외는 시각이 없는 `cost-state`다. 창 안에
+브랜치는 첫 트리거가 창 앞이고 비용은 창 안 몫만 든다. 창 안의 판정, 첫 사람 트리거, 첫 지시문,
+사람 개입, 남길 `cost-state` 세션은 `tools/session_cost_window.py`의 순수 함수가 정하고
+`tests/tools/`의 pytest가 고정한다. 이 파일은 기록을 읽고 턴을 지어 그 함수에 넘기고, 턴과 응답을
+어느 시각으로 창에 거는지(그 도구의 독스트링)를 맡는다. 예외는 시각이 없는 `cost-state`다. 창 안에
 기록이 있는 세션의 것만 남기지만 그 세션의 창 앞 몫까지 들어, 단가 대조와 `cost_state_ratio`는 창
 앞의 몫이 섞인다(그 비의 분자인 세션 비용도 세션 전체로 셈한다). 단가 대조는 한 기록 안의 토큰과
 금액을 대 보는 것이라 그래도 어긋나지 않는다.
-meta에는 `since`와 이 파일의 SHA-256(`collect_sha256`)을 남겨, 판정 스크립트가 어느 창을 어느 판으로
-모았는지 본다.
+meta에는 `since`와 이 파일의 SHA-256(`collect_sha256`), 창 도구 `tools/session_cost_window.py`의
+SHA-256(`window_sha256`)을 남겨, 판정 스크립트가 어느 창을 어느 판으로 모았는지 본다. 단가표
+`costs.py`의 해시는 남기지 않는다.
 
 돌리는 법은 README. 종료 코드: 0 썼다, 2 `gh`·`git`을 부르지 못했다.
 """
@@ -51,16 +55,19 @@ import subprocess
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from costs import Json, Usage, cost, cost_state_bounds
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[3]))
+from tools import session_cost_window as window  # noqa: E402
+
 PROJECTS = Path.home() / ".claude" / "projects"
 PROJECT_PREFIX = "C--project-agent"
 
-DIRECTIVE_MARK = "다음 작업:"
+DIRECTIVE_MARK = window.DIRECTIVE_MARK
 INTERRUPT_MARK = "[Request interrupted"
 COMPACT_MARK = "This session is being continued"
 HOOK_BLOCK = re.compile(r"hook error|PreToolUse:\w+ hook", re.IGNORECASE)
@@ -92,8 +99,7 @@ def run(cmd: list[str], cwd: Path | None = None) -> str:
     return out.stdout
 
 
-def parse_ts(ts: str) -> datetime:
-    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+parse_ts = window.parse_ts
 
 
 def seconds(a: str, b: str) -> float:
@@ -249,7 +255,7 @@ class Scan:
     since: datetime | None = None  # 집계의 창(`--since`). 기록은 창과 관계없이 모두 읽는다
 
     def in_window(self, ts: str) -> bool:
-        return self.since is None or parse_ts(ts) >= self.since
+        return window.in_window(ts, self.since)
 
 
 def scan(projects: Path, root: str, since: datetime | None = None) -> Scan:
@@ -261,12 +267,16 @@ def scan(projects: Path, root: str, since: datetime | None = None) -> Scan:
             _scan_file(s, f, "subagents" in f.parts, root, seen_uuid)
     for recs in s.recs.values():
         recs.sort(key=lambda r: r.ts)
+    # `cost-state`에는 시각이 없다. 창 안에 기록이 있는 세션의 것만 단가 대조와 몫에 남긴다. 창
+    # 앞에서 시작한 세션의 것은 창 앞의 몫까지 들지만, 단가 대조는 한 기록 안의 토큰과 금액을 대
+    # 보는 것이라 그 몫이 섞여도 어긋나지 않는다.
     if since is not None:
-        # `cost-state`에는 시각이 없다. 창 안에 기록이 있는 세션의 것만 단가 대조와 몫에 남긴다.
-        # 창 앞에서 시작한 세션의 것은 창 앞의 몫까지 들지만, 단가 대조는 한 기록 안의 토큰과 금액을
-        # 대 보는 것이라 그 몫이 섞여도 어긋나지 않는다.
-        live = {sid for sid, recs in s.recs.items() if any(s.in_window(r.ts) for r in recs)}
-        live |= {m.session for m in s.msgs.values() if s.in_window(m.ts)}
+        stamps: dict[str, list[str]] = defaultdict(list)
+        for sid, recs in s.recs.items():
+            stamps[sid].extend(r.ts for r in recs)
+        for m in s.msgs.values():
+            stamps[m.session].append(m.ts)
+        live = window.cost_state_sessions(s.cost_state, stamps, since)
         s.cost_state = {sid: cs for sid, cs in s.cost_state.items() if sid in live}
     return s
 
@@ -752,17 +762,14 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         return (merged or cands)[-1]
 
     print("트랜스크립트를 읽는다…", file=sys.stderr)
-    since = parse_ts(args.since) if args.since else None
-    if since is not None and since.tzinfo is None:
-        # 시각대 없는 값은 UTC로 본다. 그대로 두면 기록의 aware 시각과 견줄 때 TypeError가 난다
-        since = since.replace(tzinfo=UTC)
+    since = window.parse_since(args.since)
     s = scan(args.projects, root, since)
     accs: dict[str, Acc] = defaultdict(Acc)
     session_turns: dict[str, list[Turn]] = {}
     unattributed = 0.0
     outside = 0.0
     control: list[tuple[float, float]] = []
-    first_directive = ""
+    heads: list[window.TurnHead] = []
 
     no_pr: Counter[str] = Counter()
     for sid, recs in s.recs.items():
@@ -774,21 +781,17 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         session_turns[sid] = turns
         for t in turns:
             first_rec = t.recs[0]
+            heads.append(window.TurnHead(t.start, t.branch, t.trigger, first_rec.text))
             # `--since`의 창은 집계에만 건다. 턴과 귀속, 브랜치의 첫 사람 트리거(모집단과 배정의
-            # 재료)는 창 앞 기록까지 본다(PR #220 CodeRabbit)
+            # 재료)는 창 앞 기록까지 본다(PR #220 CodeRabbit, `tools/session_cost_window.py`)
             in_win = s.in_window(t.start)
-            is_directive = t.trigger == "human" and DIRECTIVE_MARK in first_rec.text
             if in_win:
                 for r in t.recs:
                     if r.turn_duration_ms:
                         control.append((r.turn_duration_ms / 1000, seconds(t.start, t.end)))
-                if is_directive and (not first_directive or t.start < first_directive):
-                    first_directive = t.start
             if not t.branch:
                 continue
             a = accs[t.branch]
-            if t.trigger == "human" and (a.first_human is None or t.start < a.first_human[0]):
-                a.first_human = (t.start, first_rec.text)
             if not in_win:
                 continue
             a.sessions.add(sid)
@@ -804,7 +807,6 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
             a.wait_s += wait
             if t.trigger == "human":
                 a.human_turns += 1
-                a.human_nondirective += 0 if is_directive else 1
                 if "/diagnosing-bugs" in first_rec.text[:200]:
                     a.skills[DIAG_SKILL] += 1
             elif t.trigger == "interrupt":
@@ -822,11 +824,17 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                     a.denials[r.denial] += 1
                 a.queued_human += 1 if r.queued_human else 0
 
-    # 첫 사람 트리거가 지시문이 아니면 그것은 과제 진술이라 개입에서 뺀다. 창 앞의 것은 세지 않았다
-    for a in accs.values():
-        first = a.first_human
-        if first is not None and DIRECTIVE_MARK not in first[1] and s.in_window(first[0]):
-            a.human_nondirective = max(0, a.human_nondirective - 1)
+    first_directive = window.first_directive(heads, since)
+    for branch, first in window.first_humans(heads).items():
+        accs[branch].first_human = first
+    heads_by_branch: dict[str, list[window.TurnHead]] = defaultdict(list)
+    for h in heads:
+        heads_by_branch[h.branch].append(h)
+    # 첫 사람 트리거가 지시문이 아니면 과제 진술이라 개입에서 뺀다. 창 앞의 것은 세지 않았다
+    for branch, a in accs.items():
+        a.human_nondirective = window.human_nondirective(
+            heads_by_branch[branch], a.first_human, since
+        )
 
     turn_starts = {sid: [parse_ts(t.start) for t in ts] for sid, ts in session_turns.items()}
     msg_branch: dict[str, str] = {}
@@ -1026,6 +1034,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
             "truncated_connections": {str(k): v for k, v in truncated.items()},
             "since": args.since,
             "collect_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "window_sha256": hashlib.sha256(Path(window.__file__).read_bytes()).hexdigest(),
             "window_start": window_start,
             "first_directive": first_directive,
             "branches_without_pr": {b: n for b, n in no_pr.most_common() if not skip.match(b)},
