@@ -1,18 +1,7 @@
 // `@agent-os/ui` 의 진입점. 앱은 이 파일과 `./theme.css`, `./fonts.css`, `./testing`, `./storybook`(앱의 Storybook 이
 // 나눠 쓰는 미리보기)을 패키지 이름으로 import 한다.
-export {
-  Button,
-  type ButtonProps,
-  type ButtonSize,
-  type ButtonVariant,
-} from "./components/atoms/Button";
-export {
-  Card,
-  type CardElement,
-  type CardElevation,
-  type CardPadding,
-  type CardProps,
-} from "./components/atoms/Card";
+export { Button, type ButtonProps, type ButtonVariant } from "./components/atoms/Button";
+export { Card, type CardElement, type CardPadding, type CardProps } from "./components/atoms/Card";
 export { Icon, type IconName, type IconProps, type IconSize } from "./components/atoms/Icon";
 export {
   IconButton,
@@ -20,7 +9,7 @@ export {
   type IconButtonSize,
   type IconButtonVariant,
 } from "./components/atoms/IconButton";
-export { Progress, type ProgressProps, type ProgressTone } from "./components/atoms/Progress";
+export { Progress, type ProgressProps } from "./components/atoms/Progress";
 export {
   StatusBadge,
   type StatusBadgeProps,

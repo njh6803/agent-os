@@ -1,0 +1,146 @@
+# design-refresh 티켓 02 의 변이 표. 구현 전에 빨갛던 스토리도 앞 단언이 먼저 실패해 뒤 단언의 빨강을 보지
+# 못했다(아이콘의 폭 셋 뒤의 선, 값 모름 진행 표시의 구조 뒤의 크기·색·사이·선). 사진 비교의 움직임 줄이기 사례는
+# 겨누는 자리를 새 도는 표시로 옮긴 뒤 아직 빨강을 보지 않았다. 변이마다 그 단언이 든 스토리 하나로 좁혀(`-t`,
+# 사진은 `-g`) 그 스토리가 빨개지는지 본다. 한 스토리 안의 어느 단언이 실패했는지는 판정이 가르지 않는다. 변이는 그
+# 단언이 재는 값 하나만 바꾸고, 기준선에서는 같은 스토리의 다른 단언이 모두 지난다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-refresh/probes/icon_props_mutations.toml [번호 ...]
+# visual 러너는 Docker 와 판을 고정한 이미지가 있어야 하고 정적 빌드부터 다시 짓는다. 움직임 사례는 사진이 아니라
+# 계산값을 보므로 정답 사진과 상관없이 기준선이 초록이다.
+
+[runner.storybook]
+command = ["pnpm", "exec", "vitest", "run", "--project", "storybook"]
+cwd = "web"
+judge = "vitest"
+
+[runner.visual]
+command = ["pnpm", "-C", "web", "visual"]
+judge = "playwright"
+
+# --- 아이콘의 선 -------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "아이콘에서 nonScalingStroke 를 빼면 크기 셋의 선이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Icon.stories.tsx", "-t", "크기 셋의 폭이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Icon.tsx"
+old = '''
+      className={`${SIZE_CLASS[size]} shrink-0`}
+      strokeWidth={STROKE_WIDTH}
+      nonScalingStroke
+'''
+new = '''
+      className={`${SIZE_CLASS[size]} shrink-0`}
+      strokeWidth={STROKE_WIDTH}
+'''
+
+[[mutation]]
+name = "선을 2 로 두면 열여섯 이름의 선이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Icon.stories.tsx", "-t", "열여섯 이름이 모두"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Icon.tsx"
+old = '''
+const STROKE_WIDTH = 1.5;
+'''
+new = '''
+const STROKE_WIDTH = 2;
+'''
+
+# --- 값 모름 진행 표시 ---------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "도는 표시에서 nonScalingStroke 를 빼면 값 모름 진행 표시의 선이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "값을 모르면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Icon.tsx"
+old = '''
+      className={`${SIZE_CLASS[size]} shrink-0 animate-spin motion-reduce:animate-none`}
+      strokeWidth={STROKE_WIDTH}
+      nonScalingStroke
+'''
+new = '''
+      className={`${SIZE_CLASS[size]} shrink-0 animate-spin motion-reduce:animate-none`}
+      strokeWidth={STROKE_WIDTH}
+'''
+
+[[mutation]]
+name = "값 모름의 도는 표시를 20px 로 그리면 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "값을 모르면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+          <Spinner size="16" />
+'''
+new = '''
+          <Spinner size="20" />
+'''
+
+[[mutation]]
+name = "값 모름의 줄에서 muted 를 빼면 도는 표시의 색이 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "값을 모르면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''"flex items-center gap-2 text-muted"'''
+new = '''"flex items-center gap-2"'''
+
+[[mutation]]
+name = "도는 표시와 이름 사이를 4px 로 두면 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/components/atoms/Progress.stories.tsx", "-t", "값을 모르면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''"flex items-center gap-2 text-muted"'''
+new = '''"flex items-center gap-1 text-muted"'''
+
+# --- 움직임 줄이기 (사진 비교의 미디어 특성 테스트) ------------------------------------------------------------------
+
+[[mutation]]
+name = "값 모름의 도는 표시를 멈춘 아이콘으로 바꾸면 줄이기가 없을 때의 움직임이 빨갛다"
+runner = "visual"
+tests = ["-g", "atoms-progress--indeterminate 의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+import { Spinner } from "./Icon";
+'''
+new = '''
+import { Icon } from "./Icon";
+'''
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Progress.tsx"
+old = '''
+          <Spinner size="16" />
+'''
+new = '''
+          <Icon name="list" size="16" />
+'''
+
+[[mutation]]
+name = "도는 표시에서 움직임 줄이기를 빼면 값 모름 진행 표시의 줄이기 사례가 빨갛다"
+runner = "visual"
+tests = ["-g", "atoms-progress--indeterminate 의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/components/atoms/Icon.tsx"
+old = '''shrink-0 animate-spin motion-reduce:animate-none`}'''
+new = '''shrink-0 animate-spin`}'''

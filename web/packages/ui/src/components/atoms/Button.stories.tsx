@@ -53,16 +53,6 @@ export const Danger: Story = {
   },
 };
 
-export const Small: Story = {
-  name: "작은 버튼의 높이는 32px 이다",
-  args: { size: "s" },
-  play: async ({ canvas }) => {
-    await expect(getComputedStyle(canvas.getByRole("button", { name: "승인" })).height).toBe(
-      "32px",
-    );
-  },
-};
-
 export const WithIcon: Story = {
   name: "아이콘은 글자 앞에 있고 이름에 들지 않는다",
   args: { icon: "check" },
@@ -73,15 +63,6 @@ export const WithIcon: Story = {
     // 아이콘과 글자가 같은 자리에 있고 아이콘이 첫째다.
     await expect(svg?.parentElement?.firstChild).toBe(svg);
     await expect(svg?.parentElement?.textContent).toBe("승인");
-  },
-};
-
-export const SmallWithIcon: Story = {
-  name: "작은 버튼의 아이콘은 16px 이다",
-  args: { size: "s", icon: "send", children: "보내기" },
-  play: async ({ canvas }) => {
-    const svg = canvas.getByRole("button", { name: "보내기" }).querySelector("svg");
-    await expect(svg === null ? null : getComputedStyle(svg).width).toBe("16px");
   },
 };
 
@@ -206,7 +187,7 @@ export const NarrowRow: Story = {
         거부
       </Button>
       <Button {...args} icon="check" />
-      <Button {...args} variant="danger" size="s">
+      <Button {...args} variant="danger">
         실행 지우기
       </Button>
     </div>

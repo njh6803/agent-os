@@ -15,17 +15,18 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열다섯 — `${ROOT}`(저장소 루트),
-`${MAIN_REPO}`·`${WORK_REPO}`(main 과 작업 브랜치의 임시 저장소 — 이 저장소의 브랜치에 기대를 걸지
-않는다), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고 그 위에 푸시하지 않은 커밋이
-하나 있는 작업 브랜치 저장소), `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와
-assistant 기록이 있는 트랜스크립트 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간
-문장 뒤의 호출이 든 트랜스크립트), `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc),
-`${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글 줄이 넘친 `long.py` 와 짧은 `short.py`),
-`${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이 저장소의 파일에 기대를 걸지 않는다),
-`${RAW_SEPARATOR}`(날것 U+2028 이 든 파일 — 표에는 그 문자를 둘 수 없다),
-`${INVISIBLE_DIR}`(날것 U+00A0 이 든 `nbsp.py`, 날것 U+3000 이 든 한국어 `notes.md`, 표 안에 홀로 선
-CR 이 든 `lone-cr.md`, 줄 끝이 CRLF 인 `crlf.md`),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여섯 — `${ROOT}`(저장소 루트),
+`${MAIN_REPO}`·`${WORK_REPO}`(임시 저장소 둘. 앞은 커밋이 하나 있는 main, 뒤는 커밋이 없는 작업
+브랜치다 — 이 저장소의 브랜치에 기대를 걸지 않는다), `${EMPTY_MAIN_REPO}`(커밋이 하나도 없는 main 의
+임시 저장소 — 새 프로젝트의 첫 커밋 자리), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고
+그 위에 푸시하지 않은 커밋이 하나 있는 작업 브랜치 저장소),
+`${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
+— 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
+`${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글
+줄이 넘친 `long.py` 와 짧은 `short.py`), `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이
+저장소의 파일에 기대를 걸지 않는다), `${RAW_SEPARATOR}`(날것 U+2028 이 든 파일 — 표에는 그 문자를 둘
+수 없다), `${INVISIBLE_DIR}`(날것 U+00A0 이 든 `nbsp.py`, 날것 U+3000 이 든 한국어 `notes.md`, 표
+안에 홀로 선 CR 이 든 `lone-cr.md`, 줄 끝이 CRLF 인 `crlf.md`),
 `${OPEN_JOURNAL}`·`${CLOSED_JOURNAL}`(쓰기 뒤의 임시 일지 — 회고 절이 없는 것과 있는 것),
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
 네트워크 없이 곧 실패한다). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서
@@ -125,6 +126,8 @@ REPO_LOCATION_VARS = (
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
     "GIT_PREFIX",
 )
+# 임시 저장소에 커밋을 만들 때 명령에 주는 작성자. 작성자 설정이 없는 환경에서도 돈다.
+_IDENTITY = ("-c", "user.name=run_hooks", "-c", "user.email=run_hooks@localhost")
 
 
 class Case(BaseModel):
@@ -419,24 +422,33 @@ def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
 def create_fixtures(scratch: Path) -> dict[str, str]:
     """자리표시자가 가리킬 것들을 `scratch` 에 만들고 그 값을 돌려준다.
 
-    임시 저장소(main, 작업 브랜치, 푸시하지 않은 커밋이 있는 작업 브랜치와 그 upstream 인 bare
-    저장소)는 `GIT_*` 를 벗긴 환경으로 만든다. 트랜스크립트 하나는 assistant 기록이 있는 파일로
-    두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든 대화(`_MIDTURN_RECORDS`)다.
-    ruff 프로젝트 하나는
+    임시 저장소(커밋이 하나 있는 main, 커밋이 없는 main, 작업 브랜치, 푸시하지 않은 커밋이 있는
+    작업 브랜치와 그 upstream 인 bare 저장소, 어긋난 잠금 파일의 `web/` 을 든 저장소)는 `GIT_*` 를
+    벗긴 환경으로 만들고, 커밋은 작성자를 명령에 준다(`_IDENTITY`). 트랜스크립트 하나는 assistant
+    기록이 있는 파일로 두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든
+    대화(`_MIDTURN_RECORDS`)다. ruff 프로젝트 하나는
     줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
     밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md` 와
     CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
     모양이고, 하나만 회고 절이 있다.
     """
     main_repo = scratch / "on-main"
+    empty_main_repo = scratch / "on-empty-main"
     work_repo = scratch / "on-topic"
-    for path, branch in ((main_repo, "main"), (work_repo, "chore/x")):
+    for path, branch in ((main_repo, "main"), (empty_main_repo, "main"), (work_repo, "chore/x")):
         subprocess.run(
             ["git", "init", "-q", "-b", branch, str(path)],
             check=True,
             env=hook_environment(),
             timeout=DEFAULT_HOOK_TIMEOUT,
         )
+    subprocess.run(
+        ["git", "-C", str(main_repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
     unpushed_repo = _unpushed_repository(scratch)
     used_transcript = scratch / "transcript-used.jsonl"
     used_transcript.write_text(
@@ -487,6 +499,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     return {
         "ROOT": ROOT.as_posix(),
         "MAIN_REPO": main_repo.as_posix(),
+        "EMPTY_MAIN_REPO": empty_main_repo.as_posix(),
         "WORK_REPO": work_repo.as_posix(),
         "UNPUSHED_REPO": unpushed_repo.as_posix(),
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
@@ -541,14 +554,13 @@ def _unpushed_repository(scratch: Path) -> Path:
     """
     origin = scratch / "origin.git"
     repo = scratch / "unpushed"
-    identity = ["-c", "user.name=run_hooks", "-c", "user.email=run_hooks@localhost"]
     commands = [
         ["git", "init", "-q", "--bare", "-b", "chore/x", str(origin)],
         ["git", "init", "-q", "-b", "chore/x", str(repo)],
-        ["git", "-C", str(repo), *identity, "commit", "-q", "--allow-empty", "-m", "pushed"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "pushed"],
         ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
         ["git", "-C", str(repo), "push", "-q", "-u", "origin", "chore/x"],
-        ["git", "-C", str(repo), *identity, "commit", "-q", "--allow-empty", "-m", "unpushed"],
+        ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "unpushed"],
     ]
     for command in commands:
         subprocess.run(
