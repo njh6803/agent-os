@@ -305,6 +305,91 @@ def test_읽을_로그는_가장_최근_폴더에서_주_프로세스가_선_뒤
     assert completed.stdout.strip() == files
 
 
+# 껍질(`Get-AppQuitMarker`)이 찾은 프로세스와 파일을 선택 둘에 잇는지. 껍질이 만든 속성 이름이
+# 선택이 읽는 이름과 갈리면 판정이 늘 null 이라 가드가 조용히 꺼진다(PR 직전 버그·성능 리뷰).
+# 프로세스와 파일 시스템은 같은 이름의 함수로 가린다. `Join-Path` 의 구분자가 플랫폼마다 달라 경로는
+# `\` 로 맞춰 대 본다.
+_SHELL = (
+    _AT
+    + r"""
+$global:read = @()
+$files = @{}
+foreach ($f in $given.files) { $files[$f.path] = $f }
+function Get-CimInstance {
+    [CmdletBinding()] param($ClassName, $Filter)
+    foreach ($p in $given.processes) {
+        $created = & $at $p.created
+        [pscustomobject]@{
+            ExecutablePath = $p.path; CommandLine = $p.command; CreationDate = $created
+        }
+    }
+}
+function Get-ChildItem {
+    [CmdletBinding()] param($Path, [switch] $Directory, $Filter)
+    foreach ($name in $given.packages) { [pscustomobject]@{ FullName = "$Path\$name" } }
+}
+function Test-Path {
+    param([string] $LiteralPath)
+    $files.ContainsKey($LiteralPath.Replace('/', '\'))
+}
+function Get-Item {
+    param([string] $LiteralPath)
+    [pscustomobject]@{ LastWriteTime = & $at $files[$LiteralPath.Replace('/', '\')].written }
+}
+function Get-Content {
+    param([string] $LiteralPath, $Encoding)
+    $key = $LiteralPath.Replace('/', '\')
+    $global:read += $key
+    $files[$key].lines
+}
+$env:LOCALAPPDATA = 'local'
+$env:APPDATA = 'roaming'
+$found = Get-AppQuitMarker
+foreach ($file in $global:read) { "read=$file" }
+"marker=$(if ($null -eq $found) { '(없음)' } else { $found })"
+"""
+)
+
+_SHELL_FUNCTIONS = "Find-QuitMarker,Find-MainStart,Select-QuitLogs,Get-AppQuitMarker"
+
+_MSIX_LOGS = r"local\Packages\Claude_test\LocalCache\Local\Claude\logs"
+
+
+def test_껍질은_찾은_프로세스와_로그를_선택에_이어_가장_이른_표지를_준다() -> None:
+    rotated_marker = "[CCD] CLI exit before update: 2 of 2 exited within 1591ms"
+    files = [
+        {  # MSIX 설치의 돌림 파일. 주 프로세스가 선 뒤에 쓰였고 앞선 표지가 들었다
+            "path": rf"{_MSIX_LOGS}\main1.log",
+            "written": "2026-09-29 11:00:00",
+            "lines": [f"2026-09-29 10:59:00 [info] {rotated_marker}"],
+        },
+        {  # 가장 최근에 쓰인 main.log
+            "path": rf"{_MSIX_LOGS}\main.log",
+            "written": "2026-09-29 12:30:00",
+            "lines": [*NOISE, "2026-09-29 12:19:28 [info] beforeQuitForUpdate handler fired"],
+        },
+        {  # 일반 설치의 main.log. 더 일찍 쓰여 읽지 않는다
+            "path": r"roaming\Claude\logs\main.log",
+            "written": "2026-09-29 12:00:00",
+            "lines": ["2026-09-29 11:30:00 [info] Session stop before update took 1591ms"],
+        },
+    ]
+    given: dict[str, object] = {
+        "processes": _processes(_MSIX_APP),
+        "packages": ["Claude_test"],
+        "files": files,
+    }
+
+    completed = _call(_SHELL_FUNCTIONS, _SHELL, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip().splitlines() == [
+        rf"read={_MSIX_LOGS}\main1.log",
+        rf"read={_MSIX_LOGS}\main.log",
+        f"marker=2026-09-29 10:59:00 {rotated_marker}",
+    ]
+
+
 # 지시문의 `모델:` 줄. 줄 머리에서 시작하고(지시문 형식은 불릿이나 인용 없이 줄 머리다), 모델 메뉴의
 # 이름과 레벨을 `/` 로 가른다. 칸은 입력창 노력 슬라이더의 위치다
 # (.scratch/harness/probes/composer_effort_labels.ps1).
