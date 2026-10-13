@@ -1,9 +1,9 @@
-# 2026-10-13 (43) Bash 훅 둘: 커밋 메시지 제목을 먼저 대 보고, 하위 폴더 cd 를 알린다
+# 2026-10-13 (47) Bash 훅 둘: 커밋 메시지 제목을 먼저 대 보고, 하위 폴더 cd 를 알린다
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222·225를 한 PR로 닫는다. 둘 다 `tools/`의 Bash PreToolUse 훅이다.
 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
 `EnterWorktree(name=bash-hooks-commit-msg-and-cd)`로 들어가 `origin/main`(`d280aa6`)에서
-`chore/bash-hooks-commit-msg-and-cd`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 37이었고, 병합 직전에 main이 움직여 43으로 옮겼다.
+`chore/bash-hooks-commit-msg-and-cd`를 땄다. 일지 번호는 `tools/sibling_overlap.py`가 준 37이었고, 병합 직전에 main이 두 번 움직여 43, 47로 옮겼다.
 
 > 사용자: "대기열 222·225를 한 PR로 반영한다(tools/의 Bash PreToolUse 훅: 커밋 메시지 파일의 제목을 commit-msg 판정으로 먼저 대 보기, 체크아웃 안 하위 폴더로 옮기는 cd도 알리기). 두 행의 "어디로" 칸이 원천이다"
 
@@ -113,7 +113,7 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 222
 - 새 훅이 실제 세션에서 도는지는 워크트리 세션의 훅으로 볼 수 없다(주 체크아웃의 파일이 돈다, `.claude/rules/tools.md`). 병합 뒤
   주 체크아웃을 당긴 세션에서 처음 돈다.
 - 둘째 커밋 `a649927`의 pre-commit: 모두 Passed(pytest 364.2초). PR의 CI 여섯도 초록이었다.
-- 병합 직전 main(`1fb0fde`)이 움직여 `tools/sibling_overlap.py`가 겹침을 알렸다. 일지 37→43, 대기열 235→239로 옮기고 main을
+- 병합 직전 main(`1fb0fde`)이 움직여 `tools/sibling_overlap.py`가 겹침을 알렸다. 일지 37→43(뒤에 47), 대기열 235→239로 옮기고 main을
   합쳤다. 충돌은 대기열 표와 프로브 README 표의 끝에 양쪽이 더한 행, 그리고 main이 3회차로 올린 223뿐이었다.
 
 ## 회고
