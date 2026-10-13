@@ -59,7 +59,7 @@ export const AllNames: Story = {
   render: (args) => (
     <ul className="flex flex-wrap gap-4 text-text">
       {ICON_NAMES.map((name) => (
-        <li key={name} className="flex flex-col items-center gap-1 text-caption">
+        <li key={name} className="flex flex-col items-center gap-1 text-small">
           <Icon {...args} name={name} />
           {name}
         </li>

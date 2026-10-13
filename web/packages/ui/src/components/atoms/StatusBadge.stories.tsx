@@ -21,8 +21,9 @@ const EXPECTED = {
 } satisfies Record<StatusBadgeStatus, { text: string; foreground: string }>;
 
 /**
- * 그 상태의 배지 하나의 글자, 숨은 아이콘, 높이와 색을 본다. 바탕은 칠하지 않고(투명) 테두리는 `border` 이며, 글자와
- * 아이콘이 상태의 쓰임새 토큰이다.
+ * 그 상태의 배지 하나의 글자, 숨은 아이콘, 치수와 색을 본다. 바탕은 칠하지 않고(투명) 테두리는 `border` 이며, 글자와
+ * 아이콘이 상태의 쓰임새 토큰이다. 치수는 밀도와 상관없다(높이 22px, 안쪽 왼쪽 6px·오른쪽 8px, 아이콘과 글자 사이
+ * 4px, 아이콘 14px, 모서리 4px, 글자 12/16px·500).
  */
 async function expectBadge(canvasElement: HTMLElement, status: StatusBadgeStatus): Promise<void> {
   const { text, foreground } = EXPECTED[status];
@@ -42,7 +43,22 @@ async function expectBadge(canvasElement: HTMLElement, status: StatusBadgeStatus
   await expect(icon === null ? null : getComputedStyle(icon).color).toBe(
     semanticColor(badge, foreground),
   );
-  await expect(getComputedStyle(badge).height).toBe("24px");
+  const style = getComputedStyle(badge);
+  await expect({
+    height: style.height,
+    padding: `${style.paddingLeft} ${style.paddingRight}`,
+    gap: style.columnGap,
+    radius: style.borderTopLeftRadius,
+    font: `${style.fontSize}/${style.lineHeight} ${style.fontWeight}`,
+    icon: icon === null ? null : getComputedStyle(icon).width,
+  }).toEqual({
+    height: "22px",
+    padding: "6px 8px",
+    gap: "4px",
+    radius: "4px",
+    font: "12px/16px 500",
+    icon: "14px",
+  });
 }
 
 /** 넷을 한 줄에 그린다. */

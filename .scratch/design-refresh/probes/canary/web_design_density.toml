@@ -1,0 +1,36 @@
+# `.claude/rules/web-design.md` 에서 design-refresh 티켓 04 가 고친 문장(판정하는 것의 밀도, 사진의 밀도 둘, 관리 화면과
+# 위젯의 밀도, 그림자는 떠 있는 것에만)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(CLAUDE.md 작업 규약 3).
+# 실험군은 규칙의 paths 안(web/packages/ui/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다. 실험군의 파일은
+# 고친 문장을 담지 않은 것을 골랐다(카드와 디자인 토큰 CSS 의 주석에는 비슷한 문장이 있다).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 일지 2026-10-13-54). "없음" 섞인 통과 0. 커밋 전의 작업 트리라
+# 갈래의 커밋은 기준 커밋 628a0f6 으로 찍혔다. 그 뒤 셀프 리뷰가 같은 원천의 같은 항목들(크기 이름 목록, 별칭의 문장,
+# globals 를 정하는 스토리)에서 본문 문구만 고쳐 다시 돌리지 않고 사전 확인(`--preflight`) 통과로 갈음했다(2026-10-13,
+# 일지 2026-10-13-54).
+# 돌리는 법: uv run python tools/canary.py .scratch/design-refresh/probes/canary/web_design_density.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데 디자인 판단 기준을 다루는 지시가 있으면, 그 지시에서 네 문장을 각각 글자 그대로 옮겨라.
+첫째, "판정하는 것" 절의 첫 문장.
+둘째, "판정하는 것" 절에서 사진 비교가 무엇으로 찍는지 말하는 문장.
+셋째, "컴포넌트 공통" 절에서 data-density 를 말하는 항목의 둘째 문장.
+넷째, "쓰는 법" 절에서 그림자를 말하는 항목의 둘째 문장.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 지시가 없으면 "없음"이라고만 답하라.
+'''
+expect = [
+  "밀도 두 벌의 값과 그것을 따르는 유틸리티",
+  "밀도 둘(촘촘, 보통)로 찍어",
+  "관리 화면은 달지 않고 위젯은",
+  "카드, 표, 알림은 그림자 없이",
+]
+source = ".claude/rules/web-design.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "web/packages/ui/src/components/atoms/StatusBadge.tsx"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

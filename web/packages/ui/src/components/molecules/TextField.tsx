@@ -1,5 +1,7 @@
 // 글 입력(재탐색 디자인 파일 2.3). 라벨이 칸 위에 늘 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러
-// 줄). 색은 재탐색의 상태 표이고 치수는 아직 첫 탐색 디자인 파일의 값이다(design-refresh 티켓 04 가 옮긴다).
+// 줄). 색과 치수는 재탐색의 상태 표와 해부도다. 한 줄 칸의 높이와 칸의 글자 크기는 밀도를 따르고(촘촘 32px·14px, 보통
+// 40px·15px), 여러 줄 칸의 높이는 줄 수(`rows`)가 정한다. 안쪽 좌우 12px, 여러 줄의 안쪽 위아래 8px, 모서리 8px,
+// 라벨과 칸 사이 8px, 칸과 도움말 사이 4px 이다. 라벨은 작은 글자 500, 도움말과 오류는 작은 글자다.
 // 클래스는 쓰임새 토큰과 공통 크기의 유틸리티만 쓰고 상태마다 고른다. 쓸 수 없음과 오류에는 올림의 클래스를 두지 않는다.
 // 누름과 불러오는 중은 디자인 파일의 상태 표가 두지 않았다.
 //
@@ -53,8 +55,8 @@ const CONTROL =
   "block w-full min-w-0 rounded-m border text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
 const SIZE_CLASS = {
-  single: "h-control-m px-3",
-  multi: "min-h-field-multi resize-y px-3 py-2",
+  single: "h-control px-3",
+  multi: "resize-y px-3 py-2",
 } satisfies Record<TextFieldVariant, string>;
 
 type State = "live" | "invalid" | "disabled";
@@ -122,23 +124,26 @@ export function TextField({
     );
   }
 
+  // 라벨과 칸 사이(8px)와 칸과 도움말 사이(4px)가 달라 라벨과 칸을 한 묶음으로 둔다. "선택"은 라벨의 500 을 덮어 400 이다.
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className={`text-small ${disabled ? "text-text-disabled" : "text-text"}`}>
-        {label}
-        {optional ? (
-          <>
-            {" "}
-            <span className="inline-block font-regular text-text-muted">선택</span>
-          </>
-        ) : null}
-      </label>
-      {field}
-      {note === null ? null : (
-        <p
-          id={noteId}
-          className={`flex items-center gap-1 text-small font-regular ${NOTE_COLOR[state]}`}
+      <div className="flex min-w-0 flex-col gap-2">
+        <label
+          htmlFor={id}
+          className={`text-small font-medium ${disabled ? "text-text-disabled" : "text-text"}`}
         >
+          {label}
+          {optional ? (
+            <>
+              {" "}
+              <span className="inline-block font-regular text-text-muted">선택</span>
+            </>
+          ) : null}
+        </label>
+        {field}
+      </div>
+      {note === null ? null : (
+        <p id={noteId} className={`flex items-center gap-1 text-small ${NOTE_COLOR[state]}`}>
           {error === null ? null : <Icon name="circle-x" size="14" />}
           {note}
         </p>
