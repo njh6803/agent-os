@@ -42,7 +42,7 @@ date: 2026-10-13
 ### 2026-10-13 대기열 17의 남은 몫을 이 이음매로 들였다
 
 결정은 그대로다. 위 Consequences의 마지막 항목이 남긴 몫을 `chore/open-session-regression-tests`가 들였다(일지
-2026-10-13-21). `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, 스킬이 넘긴 인자가 먹는지의 시험,
+2026-10-13-26). `Normalize-Slash`·`Test-Needle`·`Convert-StartLine`의 시험, 스킬이 넘긴 인자가 먹는지의 시험,
 `Get-AppQuitMarker`에서 뗀 선택 둘과 그 껍질의 시험이다. 변이 스물다섯이 모두 빨개졌다
 (`.scratch/harness/probes/open_session_regression_mutations.toml`). 대기열 18은 들이지 않았다. 판정을 떼면 이 이음매로
 잴 수 있지만(위 본문), 그 행이 묻는 것은 실제 실행에서 `stale=`가 찍히는지다(대기열 18 행).
