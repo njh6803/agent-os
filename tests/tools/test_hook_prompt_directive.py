@@ -148,12 +148,11 @@ def test_스킬_이름이_케밥_하나가_아니면_읽을_경로를_만들지_
 # 저장소를 표지로 든다. 상대 경로라 저장소가 아닌 폴더에서는 파일을 못 찾아 멈추고, 표지로 훅이
 # 폴더를 가른다.
 ROOT = "C:\\project\\agent"
-OPEN_SESSION = Path(__file__).parents[2] / "tools" / "open_session.ps1"
 
 
 def _opened(root: str = ROOT, skill: str = "implement") -> str:
-    """Convert-StartLine 이 만드는 모양의 첫 줄로 DIRECTIVE 를 연다. 모양의 원천은 ps1 이다(아래
-    대조)."""
+    """Convert-StartLine 이 만드는 모양의 첫 줄로 DIRECTIVE 를 연다. 모양의 원천은 ps1 이고, 그
+    함수를 pwsh 로 불러 이 훅에 넘기는 대조는 tests/tools/test_open_session.py 에 있다."""
     first = (
         f".claude/skills/{skill}/SKILL.md 를 읽어 그대로 따른다. "
         f"이 세션을 연 저장소는 `{root}`이고 "
@@ -214,26 +213,6 @@ def test_옮기지_않은_첫_줄이나_지시문이_아니면_막지_않는다(
     )
     for prompt in (DIRECTIVE, DIRECTIVE.replace("／", "/", 1), not_directive):
         assert block_reason_for(prompt, "D:\\elsewhere") is None
-
-
-def test_open_session_스크립트가_만드는_첫_줄을_훅이_알아본다() -> None:
-    """문구의 원천은 ps1 이고 훅은 그것을 글자로 파싱한다. 고정 머리 뒤만 갈리면 훅이 막지만
-    (fail-closed), 머리까지 바뀌면 조용히 지나가므로 한 체크아웃 안의 두 문구 대조는 여기서
-    잡는다(체크아웃 사이는 못 잡는다)."""
-    source = OPEN_SESSION.read_text(encoding="utf-8")
-    marker = next(line for line in source.splitlines() if "이 세션을 연 저장소는" in line)
-    template = marker.split('return "', 1)[1].split('".TrimEnd()', 1)[0]
-    first = (
-        template.replace("``", "`")
-        .replace("$skill", ".claude/skills/implement/SKILL.md")
-        .replace("$root", ROOT)
-        .replace("$rest", "x")
-    )
-    assert "$" not in first
-    prompt = DIRECTIVE.replace(DIRECTIVE.splitlines()[0], first, 1)
-
-    assert block_reason_for(prompt, ROOT) is None
-    assert block_reason_for(prompt, "D:\\elsewhere") is not None
 
 
 def test_스킬_파일로_시작하는데_연_저장소_표지를_못_읽으면_막는다() -> None:
