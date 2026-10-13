@@ -13,9 +13,12 @@
 단가로 셈한 캐시 읽기가 `costUSD`에서 차지하는 몫의 중앙값을 함께 찍는다. 그런 쌍이 많아 둘 이상의
 후보가 95%를 넘으면 그 모델은 "가르지 못함"이다.
 
-종료 코드: 0은 모든 모델의 판정이 표의 배수와 같다. 1은 판정이 표와 다르거나, 맞는 배수가 없거나,
-가르지 못한 모델이 있다(그 모델은 측정이 아니다). 2는 `cost-state` 쌍이 하나도 없다(트랜스크립트를
-찾지 못했다).
+쌍이 `MIN_PAIRS`보다 적은 모델은 "쌍이 적다"로 찍고 판정하지 않는다. 후보는 세 배수뿐이라, 표의
+배수가 그 밖인 모델이 생기면 늘 "맞는 배수 없음"이다. 그때는 후보를 더한다.
+
+종료 코드: 0은 판정한 모델의 판정이 모두 표의 배수와 같다. 1은 판정이 표와 다르거나, 맞는 배수가
+없거나, 가르지 못한 모델이 있다(그 모델은 측정이 아니다). 2는 트랜스크립트 폴더가 없거나 단가표의
+모델이 든 `cost-state` 쌍이 하나도 없다.
 
 못 보는 것: `cost-state`는 Claude Code의 셈이지 청구서가 아니다. 그래서 이 대조는 단가표가 Claude
 Code와 같은지를 볼 뿐, 실제로 청구된 금액과 같은지는 보지 않는다. 다시 시작한 세션은 뒤 프로세스의
@@ -42,6 +45,7 @@ PREFIX = "C--project-agent"
 MULTIPLIERS = (0.025, 0.05, 0.1)
 WEB_SEARCH_USD = 0.01
 FIT_SHARE = 0.95
+MIN_PAIRS = 5
 
 
 def _num(v: Json) -> float:
@@ -94,6 +98,9 @@ def verdict(n: int, counts: list[int]) -> float | str:
 
 
 def main() -> int:
+    if not PROJECTS.is_dir():
+        print(f"트랜스크립트 폴더가 없다: {PROJECTS}")
+        return 2
     states = latest_cost_states(PROJECTS)
     by_model: dict[str, list[dict[str, Json]]] = {}
     for o in states:
@@ -121,10 +128,16 @@ def main() -> int:
             for mu in pairs
         ]
         table = round(p.cache_read / p.input, 3)
-        v = verdict(len(pairs), counts)
-        if v != table:
-            code = 1
-        mark = "표와 같다" if v == table else (f"{v}배, 표와 다르다" if isinstance(v, float) else v)
+        if len(pairs) < MIN_PAIRS:
+            mark = f"쌍이 적다({MIN_PAIRS}보다 적어 판정하지 않는다)"
+        else:
+            v = verdict(len(pairs), counts)
+            if v != table:
+                code = 1
+            if v == table:
+                mark = "표와 같다"
+            else:
+                mark = f"{v}배, 표와 다르다" if isinstance(v, float) else v
         print(
             f"| {model} | {len(pairs)} | {table} | "
             + " | ".join(str(c) for c in counts)
