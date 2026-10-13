@@ -1,7 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
-import { TRANSPARENT, colorsOf, semanticColor } from "../../storybook/expect";
+import {
+  TRANSPARENT,
+  colorsOf,
+  expectedFocusRing,
+  focusRingOf,
+  semanticColor,
+} from "../../storybook/expect";
 import { Button } from "./Button";
+import { Card } from "./Card";
 
 const meta = {
   title: "atoms/Button",
@@ -12,16 +19,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// 주 버튼의 바탕(`primary`)은 녹청에서 `text` 와, 군청에서 `accent` 와 같은 값이다. 녹청(이 스토리)과 군청
+// (PrimaryGuncheong)에서 하나씩 잰다. 글자(`on-primary`)는 녹청 라이트에서 `bg` 와, 녹청 다크(PrimaryDark)에서 `on-accent`
+// 와 가른다(design-refresh 명세의 "계산값으로 가를 수 없는 짝").
 export const Primary: Story = {
-  name: "주 버튼은 이름으로 찾히고 기본 type 이 button 이며 누르면 onClick 이 한 번 불린다",
+  name: "주 버튼은 이름으로 찾히고 기본 type 이 button 이며 primary 바탕에 on-primary 글자이고 누르면 onClick 이 한 번 불린다",
   args: { variant: "primary" },
   play: async ({ args, canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "승인" });
     await expect(button.getAttribute("type")).toBe("button");
     await expect(getComputedStyle(button).height).toBe("40px");
     await expect(colorsOf(button)).toMatchObject({
-      background: semanticColor(button, "accent"),
-      text: semanticColor(button, "on-accent"),
+      background: semanticColor(button, "primary"),
+      text: semanticColor(button, "on-primary"),
     });
     await userEvent.click(button);
     await expect(args.onClick).toHaveBeenCalledOnce();
@@ -29,27 +39,57 @@ export const Primary: Story = {
 };
 
 export const Secondary: Story = {
-  name: "보조 버튼은 tint 바탕에 text 글자다",
+  name: "보조 버튼은 바탕 없이 border 테두리에 text 글자다",
   args: { variant: "secondary", children: "거부" },
   play: async ({ canvas }) => {
     const button = canvas.getByRole("button", { name: "거부" });
-    await expect(colorsOf(button)).toMatchObject({
-      background: semanticColor(button, "tint"),
+    await expect(colorsOf(button)).toEqual({
+      background: TRANSPARENT,
       text: semanticColor(button, "text"),
+      border: semanticColor(button, "border"),
     });
   },
 };
 
 export const Danger: Story = {
-  name: "위험 버튼은 raised 바탕에 danger 글자와 테두리다",
+  name: "위험 버튼은 바탕 없이 border 테두리에 danger 글자다",
   args: { variant: "danger", children: "실행 지우기" },
   play: async ({ canvas }) => {
     const button = canvas.getByRole("button", { name: "실행 지우기" });
     await expect(colorsOf(button)).toEqual({
-      background: semanticColor(button, "raised"),
+      background: TRANSPARENT,
       text: semanticColor(button, "danger"),
-      border: semanticColor(button, "danger"),
+      border: semanticColor(button, "border"),
     });
+  },
+};
+
+// 위험 버튼의 누름(`bg-selected`)이 기준과 가장 가까운 자리다(녹청 다크의 카드 안 4.507, design-refresh 명세의 "위험 버튼의
+// 누름"). 스토리 테스트의 userEvent 는 `:active` 를 걸지 못해, 사진 비교가 실제 마우스로 누르고 그 바탕과 칠한 픽셀을 잰다.
+export const DangerInCardDark: Story = {
+  name: "다크 모드의 카드 안 위험 버튼도 바탕 없이 카드의 bg-raised 가 비치고 danger 글자다",
+  args: { variant: "danger", children: "실행 지우기" },
+  globals: { mode: "dark" },
+  render: (args) => (
+    <Card>
+      <p className="text-body text-text">실행 2024-1187</p>
+      <div className="flex">
+        <Button {...args} />
+      </div>
+    </Card>
+  ),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole("button", { name: "실행 지우기" });
+    const card = button.closest("div")?.parentElement;
+    await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
+    await expect(colorsOf(button)).toEqual({
+      background: TRANSPARENT,
+      text: semanticColor(button, "danger"),
+      border: semanticColor(button, "border"),
+    });
+    await expect(card === null || card === undefined ? null : colorsOf(card).background).toBe(
+      semanticColor(button, "bg-raised"),
+    );
   },
 };
 
@@ -117,7 +157,7 @@ export const LoadingSubmit: Story = {
 };
 
 export const Disabled: Story = {
-  name: "쓸 수 없는 버튼은 눌러도 onClick 이 불리지 않고 disabled-surface·disabled-text 로 칠한다",
+  name: "쓸 수 없는 버튼은 눌러도 onClick 이 불리지 않고 bg-disabled 바탕과 테두리, text-disabled 글자다",
   render: (args) => (
     <div className="flex gap-2">
       <Button {...args} variant="primary" disabled />
@@ -127,11 +167,12 @@ export const Disabled: Story = {
   ),
   play: async ({ args, canvas, userEvent }) => {
     const buttons = canvas.getAllByRole("button", { name: "승인" });
+    await expect(buttons.length).toBe(3);
     for (const button of buttons) {
       await expect(colorsOf(button)).toEqual({
-        background: semanticColor(button, "disabled-surface"),
-        text: semanticColor(button, "disabled-text"),
-        border: TRANSPARENT,
+        background: semanticColor(button, "bg-disabled"),
+        text: semanticColor(button, "text-disabled"),
+        border: semanticColor(button, "bg-disabled"),
       });
       await userEvent.click(button);
     }
@@ -139,43 +180,53 @@ export const Disabled: Story = {
   },
 };
 
+// `text-disabled` 는 라이트에서 `border-control` 과 같은 값이라 다크에서도 잰다. `bg-disabled` 와 `border` 는 다크에서 같아
+// 라이트(Disabled)가 가른다.
+export const DisabledDark: Story = {
+  ...Disabled,
+  name: "다크 모드의 쓸 수 없는 버튼도 bg-disabled 바탕과 테두리, text-disabled 글자다",
+  globals: { mode: "dark" },
+};
+
 export const PrimaryDark: Story = {
-  name: "다크 모드의 주 버튼도 accent 바탕에 on-accent 글자다",
+  name: "다크 모드의 주 버튼도 primary 바탕에 on-primary 글자다",
   args: { variant: "primary" },
   globals: { mode: "dark" },
   play: async ({ canvas }) => {
     const button = canvas.getByRole("button", { name: "승인" });
     await expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
     await expect(colorsOf(button)).toMatchObject({
-      background: semanticColor(button, "accent"),
-      text: semanticColor(button, "on-accent"),
+      background: semanticColor(button, "primary"),
+      text: semanticColor(button, "on-primary"),
     });
   },
 };
 
-// 공문에서 잰다. 먹은 focus 와 accent 가 같은 색이라 링이 accent 를 읽어도 지난다. 기본 테마가 아닌 테마에서 값을 재는
-// 판정 스토리라 사진에서 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
-export const Focus: Story = {
-  name: "Tab 으로 포커스하면 focus 색의 실선 테두리가 바깥에 그려진다",
+// 군청은 주 버튼을 강조색으로 칠하는 갈래라 `primary` 가 `text` 와 다르다. 기본 테마가 아닌 테마에서 값을 재는 판정
+// 스토리라 사진에서 뺀다(사진은 기본 테마만 찍는다, ADR 0026 의 2026-10-06 이력).
+export const PrimaryGuncheong: Story = {
+  name: "군청의 주 버튼도 primary 바탕에 on-primary 글자다",
   tags: ["judgment"],
+  args: { variant: "primary" },
+  globals: { theme: "guncheong" },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole("button", { name: "승인" });
+    await expect(colorsOf(button)).toMatchObject({
+      background: semanticColor(button, "primary"),
+      text: semanticColor(button, "on-primary"),
+    });
+  },
+};
+
+// 녹청에서 `focus-ring` 은 `accent` 와 같은 값이라 그 둘은 가르지 못하지만 `primary`(= `text`)·`border` 와는 가른다.
+export const Focus: Story = {
+  name: "Tab 으로 포커스하면 focus-ring 색의 2px 실선이 2px 바깥에 그려진다",
   args: { variant: "danger" },
-  globals: { theme: "gongmun" },
   play: async ({ canvas, userEvent }) => {
     const button = canvas.getByRole("button", { name: "승인" });
     await userEvent.tab();
     await expect(document.activeElement).toBe(button);
-    const style = getComputedStyle(button);
-    await expect({
-      style: style.outlineStyle,
-      width: style.outlineWidth,
-      offset: style.outlineOffset,
-      color: style.outlineColor,
-    }).toEqual({
-      style: "solid",
-      width: "2px",
-      offset: "2px",
-      color: semanticColor(button, "focus"),
-    });
+    await expect(focusRingOf(button)).toEqual(expectedFocusRing(button));
   },
 };
 

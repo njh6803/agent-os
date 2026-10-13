@@ -1,14 +1,14 @@
-// 카드(재탐색 디자인 파일 2.8). 플러그인 하나, 실행 하나처럼 한 대상을 올라온 면(`raised`, `divider` 테두리,
+// 카드(재탐색 디자인 파일 2.8). 플러그인 하나, 실행 하나처럼 한 대상을 올라온 면(`bg-raised`, `border` 테두리,
 // 10px 모서리)에 묶는다. 그림자 없이 바탕과 테두리로 서고, 안의 줄 사이는 8px 이다. 카드 전체를 누르는 곳으로
-// 만들지 않는다. 누르는 곳은 안의 버튼과 링크다. 그림자가 없는 것은 재탐색의 모양이고, 색과 모서리는 아직 첫 탐색
-// 디자인 파일의 값이다(재탐색은 `border` 테두리, 12px 모서리).
+// 만들지 않는다. 누르는 곳은 안의 버튼과 링크다. 모서리는 아직 첫 탐색 디자인 파일의 값이다(재탐색은 12px,
+// design-refresh 티켓 04 가 옮긴다).
 import type { ReactNode } from "react";
 import type { NativeProps } from "../../props";
 
 export type CardElement = "div" | "section" | "article";
 export type CardPadding = "3" | "4";
 
-const BASE = "flex flex-col gap-2 rounded-l border border-divider bg-raised text-text";
+const BASE = "flex flex-col gap-2 rounded-l border border-border bg-bg-raised text-text";
 
 const PADDING_CLASS = { "3": "p-3", "4": "p-4" } satisfies Record<CardPadding, string>;
 
