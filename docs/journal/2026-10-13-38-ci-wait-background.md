@@ -118,3 +118,17 @@ CodeRabbit CLI는 `Seat: not assigned`라 돌지 못해 대체 둘을 돌렸다.
 병합 기차를 만드는 것이다. 뒤의 것은 `GITHUB_TOKEN`이 일으킨 이벤트가 새 워크플로 실행을 만들지 않아(내려받은 문서)
 사람이 만든 토큰이 필요하다. 어느 쪽도 `retro-queue.md` 충돌은 풀지 못한다. 앞의 것을 추천했고, 비용을 원문으로 확인하는
 ADR 초안을 별도 세션 카드로 제안했다.
+
+## PR
+
+PR #223을 열고 `@coderabbitai review`를 남긴 뒤 상태를 한 번 읽었다. 검사 다섯이 pending, CodeRabbit은 `Review skipped`
+(pass)였고 `verify`는 아직 목록에 없었다. 1단계의 바뀐 문장대로 `uv run python tools/wait_ci.py 223`을 Bash 도구의
+`run_in_background`로 띄우고 턴을 끝냈다.
+
+- **자동 대기의 첫 실제 사용.** 사람의 메시지 없이 도구의 종료(코드 0)가 세션을 다시 불렀다. 마지막 줄은 `끝: 모두 통과.
+  CodeRabbit: Review completed`였고, 이번에는 CodeRabbit이 한도에 걸리지 않고 리뷰를 마쳤다.
+- **봇 1회차.** CodeRabbit Minor 하나(`runs_per_pr.py`가 `git fetch`·`gh run list`의 실패를 PR 단위로 잡지 않는다)를
+  고쳤다. claude-review는 Minor 둘·Nit 둘이었다. 독스트링의 수치가 프로브·일지와 겹친다는 Minor는 수치를 프로브로 돌려
+  고쳤고, `local_head()`의 git 호출에 시간 제한이 없다는 Nit은 시험과 변이 둘을 더해 고쳤다. "자기를 되풀이한다"가 재귀로
+  읽힌다는 Nit은 이 "자기"가 잠자기라 "PR 읽기와 잠자기"로 풀었다. `_settle`의 `None`이 "더 기다림"을 뜻하는 Minor는
+  리뷰어도 지금 고칠 필요가 없다고 해 보류하고 PR 코멘트에 이유를 남겼다.

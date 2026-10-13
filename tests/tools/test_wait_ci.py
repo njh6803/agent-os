@@ -425,6 +425,23 @@ def test_gh를_띄우지_못하면_조회_실패로_센다(monkeypatch: pytest.M
         fetch_pr("221")
 
 
+def test_로컬_HEAD를_읽는_git이_멈추면_끝_줄을_찍고_기다릴_수_없다(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # claude-review 가 짚었다. gh 에만 시간 제한을 두면 git 이 멈출 때 대기가 시작도 못 한다.
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, GH_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+    code = main(["221"])
+    assert code == EXIT_CANNOT_WAIT
+    assert seen == [GH_TIMEOUT]
+    assert capsys.readouterr().out.splitlines()[-1].startswith("끝:")
+
+
 @pytest.mark.parametrize(
     "argv",
     [

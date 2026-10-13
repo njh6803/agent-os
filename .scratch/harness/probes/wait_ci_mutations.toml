@@ -270,6 +270,29 @@ file = "tools/wait_ci.py"
 old = '''        print(f"끝: PR 번호가 숫자가 아니다: {number}")'''
 new = '''        print(f"PR 번호가 숫자가 아니다: {number}", file=sys.stderr)'''
 
+[[mutation]]
+name = "로컬 HEAD 를 읽는 git 에 시간 제한을 두지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "로컬_HEAD를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        check=True,
+        timeout=GH_TIMEOUT,
+'''
+new = '''        check=True,
+'''
+
+[[mutation]]
+name = "멈춘 git 을 기다릴 수 없음으로 바꾸지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "로컬_HEAD를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        except (OSError, subprocess.SubprocessError) as error:'''
+new = '''        except (OSError, subprocess.CalledProcessError) as error:'''
+
 # 대조군. 진행 중 표기는 깨어난 세션이 읽는 사람 말이고 판정이 아니어서 시험이 묶지 않는다.
 [[mutation]]
 name = "진행 중 표기를 바꾼다(대조군)"

@@ -6,18 +6,15 @@ Bash 도구의 `run_in_background`로 띄운다. 그 도구는 띄운 명령이 
 
 왜 앱의 감시로 안 되나. 앱의 PR 감시(auto_fix)가 세션을 깨우는 계기로 도구 설명이 드는 것은 CI
 실패, 충돌, 리뷰 코멘트이고 초록 완료는 들지 않는다(같은 날 읽은 `set_monitor` 도구 설명). PR
-구독은 PR을 연 지 5~9분 뒤에 생겨 그 전에 끝난 것은 알림이 없었고(대기열 37의 4회차), 푸시 한 번에
-CI(`verify`)는 2.5~3.5분이었다. 첫 푸시의 완료는 대개 구독 전이다. 앱 지침은 세션이 CI를
-스케줄하거나 `gh`로 폴링하지 말라고 하는데, 이 도구는 그 지침과 어긋난다. 사용자가 자동 대기를
-요청해 들였다(일지 2026-10-13-38). 앱의 감시가 초록 완료로도 깨우게 되면 이 도구를 걷어 낸다.
+구독은 연 지 몇 분 뒤에 생겨 그 전에 끝난 첫 푸시의 CI는 알림이 없었다(대기열 37의 4회차). 앱 지침은
+세션이 CI를 스케줄하거나 `gh`로 폴링하지 말라고 하는데, 이 도구는 그 지침과 어긋난다. 사용자가 자동
+대기를 요청해 들였다(일지 2026-10-13-38). 앱의 감시가 초록 완료로도 깨우게 되면 이 도구를 걷어 낸다.
 
-CodeRabbit의 상태. 첫 검사가 시작한 지 0~4초 안에 리뷰 없이 `success`와 설명 `Review skipped: …`를
-달고, `@coderabbitai review`를 남기면 `pending`(`Review in progress`)을 거쳐 `success`로 끝난다. PR
-#196~#219의 마지막 헤드에서 요청 스물둘 가운데 스물하나는 몇 초 만에 `Review rate limited`(한도
-초과, 리뷰 없음)였고 #215 하나가 `Review completed`(7.7분)였으며, 요청이 없던 둘(#208·#214)은
-건너뜀에 머물렀다. 같은 날 앞선 실행에서 #220의 앞 헤드는 11.0분에 `Review completed`였다. 롤업의
-상태만 보면 셋 다 SUCCESS라 설명을 함께 읽는다. 수치와 이력은
-`.scratch/harness/probes/ci_wait/check_timing.py`가 다시 낸다(열린 PR의 행은 새 푸시로 바뀐다).
+CodeRabbit의 상태. 푸시마다 리뷰 없이 `success`와 설명 `Review skipped: …`를 먼저 달고,
+`@coderabbitai review`를 남기면 `pending`(`Review in progress`)을 거쳐 `success`의 `Review rate
+limited`(한도 초과, 리뷰 없음)나 `Review completed`로 끝난다. 롤업의 상태만 보면 셋 다 SUCCESS라
+설명을 함께 읽는다. 시간과 빈도는 `.scratch/harness/probes/ci_wait/check_timing.py`와 그 README 행이
+원천이다.
 
 판정. `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`과 그 헤드의 combined
 status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명)를
@@ -33,8 +30,9 @@ combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
   `UNREQUESTED_PREFIX`로 시작하는 상태가 없으면 끝이다. 나타난 것만 보면 푸시 직후의 빈 목록이나
   아직 붙지 않은 검사 앞에서 끝났다고 한다. `verify`는 CI 잡을 모으는 잡이다.
 - 나머지가 다 끝났는데 대기를 띄운 지 `request_grace`초(90)가 지나도 건너뜀 상태가 남았으면 리뷰를
-  요청하지 않은 것이라 기다리지 않는다. 건너뜀에서 `Review in progress`까지는 위 헤드들에서
-  7~40초였고(같은 프로브), 요청하고 곧바로 다시 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있다.
+  요청하지 않은 것이라 기다리지 않는다. 요청이 닿아 `Review in progress`가 되기까지 수십 초가
+  걸려(같은 프로브), 요청하고 곧바로 다시 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있다.
+  `verify`는 needs가 끝난 뒤에야 롤업에 나타났다(PR #223에서 `gh pr checks`로 손으로 봤다).
 - 나머지가 다 끝났고 실패가 있으면 리뷰 요청을 기다리지 않고 실패로 끝난다. 고쳐서 다시 푸시할
   헤드라 요청은 한도만 쓴다.
 - 충돌이면 기다리지 않는다. 충돌한 PR에는 `pull_request` 워크플로가 돌지 않고(일지 2026-10-12-34),
@@ -256,7 +254,7 @@ def wait(
     sleep: Callable[[float], None],
     clock: Callable[[], float],
 ) -> tuple[int, list[str]]:
-    """검사가 끝날 때까지 읽고 자기를 되풀이한다. 종료 코드와 찍을 줄을 낸다."""
+    """검사가 끝날 때까지 PR 읽기와 `interval`초 잠자기를 되풀이한다. 종료 코드와 찍을 줄을 낸다."""
     started = clock()
     errors: list[str] = []
     seen_head = False
@@ -327,7 +325,11 @@ def fetch_pr(number: str) -> Json:
 
 def local_head() -> str:
     completed = subprocess.run(
-        ["git", "rev-parse", "HEAD"], capture_output=True, encoding="utf-8", check=True
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True,
+        encoding="utf-8",
+        check=True,
+        timeout=GH_TIMEOUT,
     )
     return completed.stdout.strip()
 
@@ -365,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
     if head_arg is None:
         try:
             head_arg = local_head()
-        except (OSError, subprocess.CalledProcessError) as error:
+        except (OSError, subprocess.SubprocessError) as error:
             print(f"끝: 로컬 HEAD 를 읽지 못했다: {error}. `--head` 로 준다")
             return EXIT_CANNOT_WAIT
     options = Options(

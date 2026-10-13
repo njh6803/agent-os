@@ -90,25 +90,30 @@ def main(argv: list[str]) -> int:
             continue
         if not isinstance(pr, dict):
             continue
-        git("fetch", "-q", "origin", f"pull/{number}/head")
         branch = text(pr.get("headRefName"))
+        try:
+            git("fetch", "-q", "origin", f"pull/{number}/head")
+            runs = gh(
+                "run",
+                "list",
+                "--workflow",
+                "ci",
+                "--branch",
+                branch,
+                "--event",
+                "pull_request",
+                "--limit",
+                "100",
+                "--json",
+                "headSha,conclusion,createdAt",
+            )
+        except (subprocess.CalledProcessError, RuntimeError) as error:
+            print(f"#{number} 읽지 못함: {error}")
+            unread.append(number)
+            continue
         raw = pr.get("commits")
         commits = [c for c in raw if isinstance(c, dict)] if isinstance(raw, list) else []
         headline = {text(c.get("oid")): text(c.get("messageHeadline")) for c in commits}
-        runs = gh(
-            "run",
-            "list",
-            "--workflow",
-            "ci",
-            "--branch",
-            branch,
-            "--event",
-            "pull_request",
-            "--limit",
-            "100",
-            "--json",
-            "headSha,conclusion,createdAt",
-        )
         runs_list = [r for r in runs if isinstance(r, dict)] if isinstance(runs, list) else []
         runs_list.sort(key=lambda r: text(r.get("createdAt")))
         kinds: Counter[str] = Counter()
