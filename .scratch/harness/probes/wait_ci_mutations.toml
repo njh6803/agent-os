@@ -1,0 +1,305 @@
+# chore/ci-wait-background 의 PR 검사 대기 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/wait_ci_mutations.toml
+# tools/wait_ci.py 의 판정과 대기 루프를 하나씩 깨서 그것을 지키는 테스트가 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "기대 이름이 빠져도 끝났다고 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "기대한_이름이_빠졌으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    missing = tuple(name for name in expected if name not in snapshot.checks)'''
+new = '''    missing: tuple[str, ...] = ()'''
+
+[[mutation]]
+name = "진행 중인 CheckRun 을 끝난 것으로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "진행_중인_CheckRun"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if _text(check.get("status")) != "COMPLETED":'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "StatusContext 의 PENDING 을 끝난 것으로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "StatusContext의_PENDING"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        return _text(check.get("context")), None if state in PENDING_STATES else state'''
+new = '''        return _text(check.get("context")), state'''
+
+[[mutation]]
+name = "리뷰 요청 전의 건너뜀 상태를 끝난 것으로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청하기_전의_건너뜀"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''if note.startswith(UNREQUESTED_PREFIX)'''
+new = '''if False'''
+
+[[mutation]]
+name = "리뷰가 요청되지 않아도 시간 초과까지 기다린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청되지_않았으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if settled and elapsed >= options.request_grace:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "요청 유예 없이 건너뜀을 곧바로 요청 없음으로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청_직후에"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if settled and elapsed >= options.request_grace:'''
+new = '''    if settled:'''
+
+[[mutation]]
+name = "실패가 있어도 리뷰 요청을 먼저 기다린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "요청되지_않았어도_실패로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if settled and verdict.failed:'''
+new = '''    if verdict.done and verdict.failed:'''
+
+[[mutation]]
+name = "StatusContext 의 상태를 롤업에서만 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "같은_combined_status에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if state:
+            checks[name] = None if state in PENDING_STATES else state'''
+new = '''        if False:
+            checks[name] = None if state in PENDING_STATES else state'''
+
+[[mutation]]
+name = "gh 호출에 시간 제한을 두지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "호출이_멈추면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            timeout=GH_TIMEOUT,
+'''
+new = ''''''
+
+[[mutation]]
+name = "멈춘 gh 를 조회 실패로 바꾸지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "호출이_멈추면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    except subprocess.TimeoutExpired as error:'''
+new = '''    except ZeroDivisionError as error:'''
+
+[[mutation]]
+name = "gh 를 못 찾은 것만 조회 실패로 바꾼다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "띄우지_못하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    except OSError as error:
+        raise FetchError'''
+new = '''    except FileNotFoundError as error:
+        raise FetchError'''
+
+[[mutation]]
+name = "비ASCII 숫자를 PR 번호로 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if not (number.isascii() and number.isdigit()):'''
+new = '''    if not number.isdigit():'''
+
+[[mutation]]
+name = "0 이하의 간격과 시간 제한을 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if interval <= 0 or timeout_minutes <= 0:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "짧은 SHA 를 --head 로 받는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if head_arg is not None and len(head_arg) != 40:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "건너뛴 검사와 중립을 실패로 센다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "건너뛴_검사와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''PASSING = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})'''
+new = '''PASSING = frozenset({"SUCCESS"})'''
+
+[[mutation]]
+name = "같은 이름이면 나중 것을 든다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "같은_이름이_둘이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        checks[name] = _worse(checks[name], result) if name in checks else result'''
+new = '''        checks[name] = result'''
+
+[[mutation]]
+name = "PR 헤드를 로컬 HEAD 와 대지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "PR_헤드가_로컬_HEAD로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if snapshot.head == head:'''
+new = '''            if True:'''
+
+[[mutation]]
+name = "헤드 유예를 두 배로 늘린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "유예를_넘겨도"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            elif elapsed >= options.head_grace:'''
+new = '''            elif elapsed >= options.head_grace * 2:'''
+
+[[mutation]]
+name = "기다리던 헤드가 바뀌어도 유예까지 기다린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "헤드가_바뀌면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            elif seen_head:'''
+new = '''            elif False:'''
+
+[[mutation]]
+name = "충돌이어도 남은 검사를 기다리거나 통과로 끝낸다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "충돌이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if snapshot.conflicting:
+        return EXIT_FAILED'''
+new = '''    if False:
+        return EXIT_FAILED'''
+
+[[mutation]]
+name = "시간 제한을 두 배로 늘린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "시간_제한을_넘기면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''    if elapsed < options.timeout:'''
+new = '''    if elapsed < options.timeout * 2:'''
+
+[[mutation]]
+name = "gh 실패 한 번에 끝낸다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한_번_실패하면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if len(errors) >= options.max_fetch_errors:'''
+new = '''            if errors:'''
+
+[[mutation]]
+name = "gh 실패를 연달아 세지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "사이에_성공이"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            errors.clear()'''
+new = '''            pass'''
+
+[[mutation]]
+name = "통과 줄에 상태의 설명을 붙이지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도에_걸린"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        notes = "".join(f". {name}: {note}" for name, note in sorted(snapshot.notes.items()))'''
+new = '''        notes = ""'''
+
+[[mutation]]
+name = "끝 줄의 접두를 뺀다"
+tests = ["tests/tools/test_wait_ci.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}"]'''
+new = '''        return EXIT_PASSED, [*lines, f"모두 통과{notes}"]'''
+
+[[mutation]]
+name = "숫자 아닌 PR 번호를 stderr 로만 알린다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "인자가_잘못되면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        print(f"끝: PR 번호가 숫자가 아니다: {number}")'''
+new = '''        print(f"PR 번호가 숫자가 아니다: {number}", file=sys.stderr)'''
+
+[[mutation]]
+name = "로컬 HEAD 를 읽는 git 에 시간 제한을 두지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "로컬_HEAD를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        check=True,
+        timeout=GH_TIMEOUT,
+'''
+new = '''        check=True,
+'''
+
+[[mutation]]
+name = "멈춘 git 을 기다릴 수 없음으로 바꾸지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "로컬_HEAD를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        except (OSError, subprocess.SubprocessError) as error:'''
+new = '''        except (OSError, subprocess.CalledProcessError) as error:'''
+
+# 대조군. 진행 중 표기는 깨어난 세션이 읽는 사람 말이고 판정이 아니어서 시험이 묶지 않는다.
+[[mutation]]
+name = "진행 중 표기를 바꾼다(대조군)"
+tests = ["tests/tools/test_wait_ci.py"]
+expect = "green"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''{'진행 중' if result is None else result}'''
+new = '''{'pending' if result is None else result}'''

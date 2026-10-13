@@ -1,16 +1,21 @@
 """tools/open_session.ps1 회귀 시험의 이음매(ADR 0030)를 받치는 수.
 
-지금의 이음매는 `tests/tools/test_open_session.py` 의 `_call` 이다. pytest 가 사례마다 pwsh 를
-띄우고, 스크립트의 AST 에서 이름으로 고른 함수만 정의한 뒤 본문을 돌린다. 이 프로브는 그 이음매가
-치르는 값과 Pester 없이 할 수 있는 것을 잰다. per_call·batched·shadow 갈래는 그 `_call` 을 그대로
-부르고, startup·runspace 갈래는 `_call` 이 늘 앞에 붙이는 AST 추출을 빼야 해서 pwsh 를 직접 띄운다.
-시험 모듈의 비공개 이름(`_call`, `_MODEL_LINE`, `_MODEL_LINES`, `DIRECTIVE`, `NOISE`,
-`MAIN_STARTED`)에 기대므로 그 이름이 바뀌면 이 프로브는 AttributeError 로 멈춘다.
+지금의 이음매는 `tests/tools/test_open_session.py` 의 `_call` 이다. pytest 가 pwsh 하나를 서버로
+띄워 두고, 사례마다 그 안의 새 runspace 에서 스크립트의 AST 에서 이름으로 고른 함수만 정의한 뒤
+본문을 돌린다(ADR 0030 이력 2026-10-13 "시간 문턱에 닿아 사례를 pwsh 하나에 묶기로 했다"). 이
+프로브를 지을 때(`185fe61`)의 `_call` 은 사례마다 pwsh 를 띄웠고, 아래 갈래의 설명과 README 행의
+값은 서버판이라고 적지 않은 것이면 그 판의 것이다. 이 프로브는 그 이음매가 치르는 값과 Pester 없이
+할 수 있는 것을 잰다. per_call·batched·shadow 갈래는 그 `_call` 을 그대로 부르고, startup·runspace
+갈래는 `_call` 이 늘 앞에 붙이는 AST 추출을 빼야 해서 pwsh 를 직접 띄운다. 시험 모듈의 비공개
+이름(`_call`, `_MODEL_LINE`, `_MODEL_LINES`, `DIRECTIVE`, `NOISE`, `MAIN_STARTED`)에 기대므로 그
+이름이 바뀌면 이 프로브는 AttributeError 로 멈춘다.
 
 갈래:
 - env: pwsh 판과 pwsh 가 보는 Pester 모듈(판과 자리).
 - startup: 글자 `up` 만 내는 명령으로 pwsh 를 띄우는 데 드는 초. 그 글자가 나온 회차만 센다.
-- per_call: 지금의 이음매로 `Read-ModelLine` 사례 하나를 부르는 데 드는 초. 사례마다 pwsh 하나다.
+- per_call: 지금의 이음매로 `Read-ModelLine` 사례 하나를 부르는 데 드는 초. 서버판에서는 서버에
+  보내는 요청 하나이고, 첫 사례만 서버를 띄우는 시간을 함께 낸다(중앙값을 쓴다). 앞의 판에서는
+  사례마다 pwsh 하나였다.
 - batched: 같은 사례 여럿을 pwsh 하나에서 차례로 부른다(`_MODEL_LINES`, 결정표 대조 테스트의 본문).
 - runspace: 같은 사례 여럿을 pwsh 하나에서 사례마다 새 runspace 로 부른다. 앞 사례가 전역에 둔 값이
   다음 사례에 보이면 `leaked` 를 낸다. 대조군은 같은 글을 바깥과 같은 runspace 에서 부르고, 둘째

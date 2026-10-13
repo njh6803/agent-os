@@ -10,10 +10,15 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import re
 import subprocess
-from collections.abc import Mapping, Sequence
+import tempfile
+import threading
+import time
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
+from typing import IO
 
 import pytest
 from tools.hook_prompt_directive import block_reason_for
@@ -22,24 +27,101 @@ from tools import model_sweep
 
 SCRIPT = Path(__file__).parents[2] / "tools" / "open_session.ps1"
 
-# 스크립트에서 이름으로 함수 하나만 떼어 정의하고, 뒤에 붙인 본문이 그 함수를 부른다. 이름이 비면
-# 아무 함수도 떼지 않고 본문은 `$ast` 만 본다. 스크립트 전체를 돌리면 창을 찾고 딥링크를 쏜다. pwsh
-# 는 파이프로 가는 출력을 콘솔 코드 페이지(윈도에서 cp949)로 쓴다. UTF-8 로 고정한다(2026-09-30
-# 실측, 고정하지 않으면 한글 에러가 풀리지 않아 stderr 가 사라졌다).
-_LOAD = """
+# 사례를 나르는 pwsh 서버. 스크립트의 AST 를 한 번 파싱하고, 요청마다 새 runspace 에서 이름으로 고른
+# 함수만 정의하고 `$given` 을 만든 뒤 본문을 돈다. 이름이 비면 아무 함수도 떼지 않고 본문은 `$ast`
+# 만 본다. 스크립트 전체를 돌리면 창을 찾고 딥링크를 쏜다. 요청과 답은 한 줄짜리 JSON 이고, 답 줄은
+# 표지로 시작해 본문이 콘솔에 직접 쓴 글과 가른다. 경고·정보(`Write-Host`) 스트림은 출력에 합쳐
+# 차례를 지킨다. 종료 코드는 종료 오류가 났거나 오류 스트림에 기록이 남았으면 1이다. runspace 의
+# `HadErrors` 는 잡은 종료 오류에도 참이라 쓰지 않는다. 사례가 바꾼 환경 변수는 사례 뒤에 되돌린다.
+# 환경 변수는 프로세스에 하나라 runspace 가 가르지 못한다. 원형과 그 측정은
+# .scratch/harness/probes/pwsh_case_server.py 다(ADR 0030 이력 2026-10-13). pwsh 는 파이프로 가는
+# 출력을 콘솔 코드 페이지(윈도에서 cp949)로 쓴다. UTF-8 로 고정한다(2026-09-30 실측, 고정하지 않으면
+# 한글 에러가 풀리지 않아 stderr 가 사라졌다).
+#
+# 사례마다 pwsh 를 띄우던 앞의 이음매와 갈리는 것이 다섯 있고(프로브의 `contract` 갈래) 맞추지
+# 않는다. 경고에는 콘솔 호스트의 머리(`경고: `)가 붙지 않는다. 앞 문장의 종료하지 않는 오류도
+# 1로 끝난다(앞의 것은 마지막 문장만 봐서 0이었다). 정보 스트림은 출력에 나온다(앞의 것은
+# 숨겼다). 콘솔의 오류에 직접 쓴 글은 사례의 stderr 에 없다(서버 프로세스의 stderr 로 간다).
+# 마지막 문장이 실패한 네이티브 명령이어도 0으로 끝난다(`$LASTEXITCODE` 를 보지 않는다).
+# 스크립트에는 `Write-Warning`·`Write-Information`·`[Console]::Error`·네이티브 명령의 종료 코드를
+# 보는 곳이 없고 오류는 모두 `throw` 다.
+_SERVER_SCRIPT = r"""
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-$PSStyle.OutputRendering = 'PlainText'
 $language = 'System.Management.Automation.Language'
 $ast = ("$language.Parser" -as [type])::ParseFile($env:OPEN_SESSION_SCRIPT, [ref]$null, [ref]$null)
 $definition = "$language.FunctionDefinitionAst" -as [type]
-foreach ($name in $env:OPEN_SESSION_FUNCTION -split ',' | Where-Object { $_ }) {
-    $isTarget = { param($node) $node -is $definition -and $node.Name -eq $name }.GetNewClosure()
-    $fn = $ast.Find($isTarget, $true)
-    if ($null -eq $fn) { throw "$name 가 스크립트에 없다" }
-    . ([scriptblock]::Create($fn.Extent.Text))
+$resultTypes = [System.Management.Automation.Runspaces.PipelineResultTypes]
+$in = [Console]::In
+$out = [Console]::Out
+while ($null -ne ($line = $in.ReadLine())) {
+    $req = $line | ConvertFrom-Json
+    $saved = [Environment]::GetEnvironmentVariables()
+    $results = [System.Collections.Generic.List[psobject]]::new()
+    $terminating = $null
+    $rs = [runspacefactory]::CreateRunspace()
+    $ps = [powershell]::Create()
+    try {
+        $rs.Open()
+        $ps.Runspace = $rs
+        $rs.SessionStateProxy.SetVariable('ast', $ast)
+        $rs.SessionStateProxy.SetVariable('givenJson', $req.given)
+        $texts = foreach ($name in $req.function -split ',' | Where-Object { $_ }) {
+            $isTarget = {
+                param($node) $node -is $definition -and $node.Name -eq $name
+            }.GetNewClosure()
+            $fn = $ast.Find($isTarget, $true)
+            if ($null -eq $fn) { throw "$name 가 스크립트에 없다" }
+            $fn.Extent.Text
+        }
+        $script = @(
+            "`$PSStyle.OutputRendering = 'PlainText'"
+            $texts
+            '$given = $givenJson | ConvertFrom-Json'
+            $req.body
+        ) -join "`n"
+        $command = [System.Management.Automation.Runspaces.Command]::new($script, $true)
+        $command.MergeMyResults($resultTypes::Warning, $resultTypes::Output)
+        $command.MergeMyResults($resultTypes::Information, $resultTypes::Output)
+        [void]$ps.Commands.AddCommand($command)
+        [void]$ps.AddCommand('Out-String').AddParameter('Stream')
+        [void]$ps.Invoke($null, $results)
+    } catch {
+        $e = $_.Exception
+        $wrapped = $e -is [System.Management.Automation.MethodInvocationException]
+        if ($wrapped -and $e.InnerException) {
+            $e = $e.InnerException
+        }
+        $terminating = $e.Message
+    } finally {
+        $errors = @($ps.Streams.Error | ForEach-Object { $_.ToString() })
+        $ps.Dispose()
+        $rs.Dispose()
+        $now = [Environment]::GetEnvironmentVariables()
+        foreach ($key in @($now.Keys)) {
+            if (-not $saved.Contains($key)) {
+                [Environment]::SetEnvironmentVariable($key, $null)
+            }
+        }
+        foreach ($key in @($saved.Keys)) {
+            if ($now[$key] -cne $saved[$key]) {
+                [Environment]::SetEnvironmentVariable($key, $saved[$key])
+            }
+        }
+    }
+    $failed = $errors.Count -gt 0 -or $null -ne $terminating
+    if ($null -ne $terminating) { $errors += $terminating }
+    $reply = [ordered]@{
+        code = if ($failed) { 1 } else { 0 }
+        stdout = ($results | ForEach-Object { "$_`n" }) -join ''
+        stderr = $errors -join "`n"
+    }
+    $json = $reply | ConvertTo-Json -Compress -EscapeHandling EscapeNonAscii
+    $out.WriteLine($env:OPEN_SESSION_REPLY + $json)
+    $out.Flush()
 }
-$given = $env:OPEN_SESSION_ARGS | ConvertFrom-Json
 """
+
+_REPLY = "@@reply "
 
 # 시험 본문이 받은 시각 글(`yyyy-MM-dd HH:mm:ss`)을 시각으로 바꾼다. null 이면 null 이다.
 _AT = """
@@ -64,45 +146,244 @@ if ($null -eq $found) { '(없음)' } else { "$($found.Model)|$($found.Effort)|$(
 """
 
 
-# pwsh 하나에 주는 시간. 대기 루프(`Wait-For`)를 부르는 사례가 회귀로 끝나지 않아도 pytest 가
-# 멈추지 않고 그 사례가 빨개진다(ADR 0030). 사례 하나는 1초 안팎이고, 가장 긴 사례(이 시간 제한을
-# 3초로 재는 사례)도 몇 초다.
+# 사례 하나에 주는 시간. 서버를 띄우는 시간도 든다. 대기 루프(`Wait-For`)를 부르는 사례가 회귀로
+# 끝나지 않아도 pytest 가 멈추지 않고 그 사례가 빨개진다(ADR 0030). 사례 하나는 1초 안팎이고, 가장
+# 긴 사례(이 시간 제한을 3초로 재는 사례)도 몇 초다.
 _TIMEOUT_SEC = 60.0
+
+
+class _PwshServer:
+    """`_SERVER_SCRIPT` 를 띄운 pwsh 하나. 첫 요청과 서버가 끝난 뒤의 요청이 새로 띄운다.
+
+    시간 제한을 넘기면 서버를 끝내고 그 사례를 실패로 끝낸다. 다음 사례가 서버를 새로 띄운다.
+    서버는 띄울 때의 환경을 한 번 물려받으므로, 시험이 파이썬 쪽에서 바꾼 환경 변수는 사례에 닿지
+    않는다. 이 파일의 시험은 환경을 본문의 `$env:` 로만 바꾼다. 요청마다 서버의 managed 메모리가 약
+    1.3MB씩 남는다(PR 직전 리뷰어가 300요청으로 손으로 쟀고 원인은 가르지 못했다, ADR 0030 이력).
+    서버는 pytest 세션 하나만큼 살고, 요청은 이 모듈의 사례 수(백 안쪽)다.
+    """
+
+    def __init__(self) -> None:
+        self._proc: subprocess.Popen[str] | None = None
+        self._lines: queue.Queue[str | None] = queue.Queue()
+        self._stderr: IO[bytes] | None = None
+
+    def _start(self) -> subprocess.Popen[str]:
+        if self._stderr is not None:
+            self._stderr.close()
+        self._stderr = tempfile.TemporaryFile()
+        try:
+            proc = subprocess.Popen(
+                ["pwsh", "-NoProfile", "-NonInteractive", "-Command", _SERVER_SCRIPT],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=self._stderr,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env={
+                    **os.environ,
+                    "OPEN_SESSION_SCRIPT": str(SCRIPT),
+                    "OPEN_SESSION_REPLY": _REPLY,
+                },
+            )
+        except FileNotFoundError:
+            pytest.fail("pwsh 가 없다. 이 테스트는 PowerShell 7 로 스크립트의 함수를 부른다")
+        lines: queue.Queue[str | None] = queue.Queue()
+        stdout = proc.stdout
+        assert stdout is not None
+
+        # 서버가 끝나 EOF 가 오면 이 스레드가 파이프를 닫는다(닫지 않으면 ResourceWarning 이 난다).
+        def pump() -> None:
+            with stdout:
+                for line in stdout:
+                    lines.put(line)
+            lines.put(None)
+
+        threading.Thread(target=pump, daemon=True).start()
+        self._proc, self._lines = proc, lines
+        return proc
+
+    def _server_stderr(self) -> str:
+        if self._stderr is None:
+            return ""
+        self._stderr.seek(0)
+        return self._stderr.read().decode("utf-8", "replace")[-2000:]
+
+    def _kill(self, proc: subprocess.Popen[str]) -> None:
+        proc.kill()
+        proc.wait()
+        self._proc = None
+        # 쓰기가 깨진 뒤의 stdin 에는 보내지 못한 버퍼가 남는다. 지금 닫지 않으면 GC 가 닫으며 다시
+        # 써서 던지고, 그 예외는 unraisable 경고(pytest 설정에서 에러)로 엉뚱한 사례를 빨갛게 한다.
+        if proc.stdin is not None:
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
+
+    def _send(self, line: str) -> None:
+        # 앞 사례 뒤에 서버가 끝났는데 `poll` 이 아직 모르면 쓰기가 깨진다. 그때 한 번 새로 띄운다.
+        for attempt in range(2):
+            alive = self._proc is not None and self._proc.poll() is None
+            proc = self._proc if alive and self._proc is not None else self._start()
+            stdin = proc.stdin
+            assert stdin is not None
+            try:
+                stdin.write(line)
+                stdin.flush()
+                return
+            except OSError:
+                self._kill(proc)
+                if attempt:
+                    raise
+
+    def call(
+        self, function: str, body: str, given: dict[str, object], timeout: float
+    ) -> subprocess.CompletedProcess[str]:
+        deadline = time.monotonic() + timeout
+        request = {"function": function, "body": body, "given": json.dumps(given)}
+        self._send(json.dumps(request) + "\n")
+        proc = self._proc
+        assert proc is not None
+        noise: list[str] = []
+        while True:
+            try:
+                line = self._lines.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty:
+                self._kill(proc)
+                pytest.fail(
+                    f"pwsh 가 {timeout:g}초 안에 끝나지 않았다. "
+                    "대기 루프가 끝나지 않는 회귀일 수 있다"
+                )
+            if line is None:
+                self._kill(proc)
+                pytest.fail(f"pwsh 서버가 끝났다: {''.join(noise)}{self._server_stderr()}")
+            # 본문이 줄바꿈 없이 콘솔에 쓰면 답 표지가 그 줄 가운데에 붙는다.
+            at = line.find(_REPLY)
+            if at >= 0:
+                noise.append(line[:at])
+                break
+            noise.append(line)
+        reply = json.loads(line[at + len(_REPLY) :])
+        return subprocess.CompletedProcess(
+            args=["pwsh", function],
+            returncode=int(reply["code"]),
+            stdout="".join(noise) + str(reply["stdout"]),
+            stderr=str(reply["stderr"]),
+        )
+
+    def close(self) -> None:
+        proc = self._proc
+        self._proc = None
+        if proc is not None and proc.stdin is not None:
+            proc.stdin.close()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        if self._stderr is not None:
+            self._stderr.close()
+            self._stderr = None
+
+
+_SERVER = _PwshServer()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _close_server() -> Iterator[None]:
+    yield
+    _SERVER.close()
 
 
 # 이음매의 값을 재는 프로브 .scratch/harness/probes/pwsh_test_seam.py 가 이 `_call` 과 이 파일의
 # `_MODEL_LINE`·`_MODEL_LINES`·`DIRECTIVE`·`NOISE`·`MAIN_STARTED` 를 이름으로 불러 쓴다(ADR 0030).
-# 이름을 바꾸면 그 프로브도 함께 고친다.
+# 사례를 묶는 길을 잰 .scratch/harness/probes/pwsh_case_server.py 는 이 `_call` 과 `_TIMEOUT_SEC` 을
+# 이름으로 불러 쓰고 바꿔친다. 이름을 바꾸면 두 프로브도 함께 고친다.
 def _call(
     function: str, body: str, given: dict[str, object], timeout: float = _TIMEOUT_SEC
 ) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["pwsh", "-NoProfile", "-NonInteractive", "-Command", _LOAD + body],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env={
-                **os.environ,
-                "OPEN_SESSION_SCRIPT": str(SCRIPT),
-                "OPEN_SESSION_FUNCTION": function,
-                "OPEN_SESSION_ARGS": json.dumps(given),
-            },
-            check=False,
-            timeout=timeout,
-        )
-    except FileNotFoundError:
-        pytest.fail("pwsh 가 없다. 이 테스트는 PowerShell 7 로 스크립트의 함수를 부른다")
-    except subprocess.TimeoutExpired:
-        pytest.fail(
-            f"pwsh 가 {timeout:g}초 안에 끝나지 않았다. 대기 루프가 끝나지 않는 회귀일 수 있다"
-        )
+    return _SERVER.call(function, body, given, timeout)
 
 
 def test_끝나지_않는_pwsh_는_기다리지_않고_그_사례를_실패로_끝낸다() -> None:
     with pytest.raises(pytest.fail.Exception, match="3초 안에 끝나지 않았다"):
         _call("", "Start-Sleep -Seconds 30", {}, timeout=3)
+
+
+# 아래는 `_call` 이 사례를 나르는 pwsh 서버의 규약이다(ADR 0030 이력 2026-10-13 "시간 문턱에 닿아
+# 사례를 pwsh 하나에 묶기로 했다"). 서버의 수명과 재기동은 본문의 `$PID` 로 본다.
+def _pid() -> str:
+    completed = _call("", "$PID", {})
+    assert completed.returncode == 0, completed.stderr
+    pid = completed.stdout.strip()
+    assert pid.isdigit(), pid
+    return pid
+
+
+def test_사례들은_pwsh_서버_하나를_같이_쓴다() -> None:
+    assert _pid() == _pid()
+
+
+def test_시간_제한을_넘기면_서버를_새로_띄워_다음_사례가_돈다() -> None:
+    before = _pid()
+    with pytest.raises(pytest.fail.Exception, match="3초 안에 끝나지 않았다"):
+        _call("", "Start-Sleep -Seconds 30", {}, timeout=3)
+    assert _pid() not in ("", before)
+
+
+def test_서버가_사례_도중에_끝나면_그_사례만_실패하고_다음_사례가_돈다() -> None:
+    with pytest.raises(pytest.fail.Exception, match="pwsh 서버가 끝났다"):
+        _call("", "[Environment]::Exit(3)", {})
+    assert _call("", "'ok'", {}).stdout.strip() == "ok"
+
+
+def test_잡은_종료_오류는_실패가_아니다() -> None:
+    completed = _call("", "try { throw 'x' } catch { 'caught' }", {})
+    assert (completed.returncode, completed.stdout.strip()) == (0, "caught"), completed.stderr
+
+
+def test_오류_스트림에_기록이_남으면_실패하고_오류를_차례대로_낸다() -> None:
+    completed = _call("", "Write-Error 'e1'\n'mid'\nWrite-Error 'e2'", {})
+    assert completed.returncode == 1
+    assert completed.stdout.strip() == "mid"
+    assert 0 <= completed.stderr.find("e1") < completed.stderr.find("e2")
+
+
+def test_출력_뒤의_종료_오류는_앞의_출력을_남기고_실패한다() -> None:
+    completed = _call("", "'before'\nthrow 'boom'", {})
+    assert completed.returncode == 1
+    assert completed.stdout.strip() == "before"
+    assert "boom" in completed.stderr
+
+
+def test_경고와_정보와_호스트_출력을_출력에_차례대로_합친다() -> None:
+    body = "'a'\nWrite-Host 'hosted'\nWrite-Warning 'warn'\nWrite-Information 'info'\n'b'"
+    completed = _call("", body, {})
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.split() == ["a", "hosted", "warn", "info", "b"]
+
+
+def test_사례가_바꾼_환경_변수와_전역_변수는_다음_사례에_보이지_않는다() -> None:
+    _call("", "$env:OPEN_SESSION_LEAK_PROBE = 'x'\n$global:leakProbe = 'x'", {})
+    seen = _call("", '"[$env:OPEN_SESSION_LEAK_PROBE][$global:leakProbe]"', {})
+    assert seen.stdout.strip() == "[][]"
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["$env:OPEN_SESSION_SCRIPT = 'changed'", "Remove-Item Env:OPEN_SESSION_SCRIPT"],
+    ids=["값을_바꾼다", "지운다"],
+)
+def test_사례가_건드린_서버의_환경_변수는_다음_사례에서_원래_값이다(change: str) -> None:
+    _call("", change, {})
+    assert _call("", "$env:OPEN_SESSION_SCRIPT", {}).stdout.strip() == str(SCRIPT)
+
+
+def test_줄바꿈_없이_콘솔에_쓴_글도_사례의_출력으로_돌아온다() -> None:
+    completed = _call("", "[Console]::Out.Write('partial')\n'after'", {})
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "partialafter"
 
 
 # 앱의 주 프로세스가 선 시각. 실제 사건(2026-09-29)의 모양이다.

@@ -18,9 +18,11 @@ from tools.sibling_overlap import (
     Numbers,
     behind_moves,
     clashes,
+    closed_heads,
     fresh,
     gh_pulls,
     github_repo,
+    highest_version,
     is_behind,
     journal_day,
     main,
@@ -29,6 +31,7 @@ from tools.sibling_overlap import (
     open_pulls,
     read_numbers,
     remote_head,
+    unbumped,
     unshared,
     worktrees,
 )
@@ -252,6 +255,62 @@ def test_열린_PR은_merge_ref가_있는_PR이다() -> None:
     assert remote_head(listing, "topic") is None
 
 
+def test_닫힌_PR은_head_ref가_있고_열린_PR이_아닌_것이다() -> None:
+    """열린 PR 의 head 와 같은 커밋은 뺀다. 한 커밋을 head 로 든 닫힌 PR 이 여럿이면 큰 번호다."""
+    listing = "\n".join(
+        [
+            "aaa\trefs/pull/157/head",
+            "bbb\trefs/pull/158/head",
+            "bbb\trefs/pull/158/merge",
+            "bbb\trefs/pull/150/head",
+            "ccc\trefs/pull/160/head",
+            "ccc\trefs/pull/159/head",
+            "ddd\trefs/pull/161/merge",
+            "eee\trefs/heads/main",
+            # ls-remote 와 gh api 사이에 head 가 움직인 열린 PR. 번호로 뺀다
+            "ggg\trefs/pull/162/head",
+        ]
+    )
+
+    assert closed_heads(listing, {158: "bbb", 162: "fff"}) == {"aaa": 157, "ccc": 160}
+
+
+def test_가장_높은_헌법_판은_글자가_아니라_수로_견주고_그_판을_쓴_자리를_모두_든다() -> None:
+    held = [("origin/main", "3.0.9"), ("PR #5", "3.0.10"), ("워크트리", None), ("PR #6", "3.0.10")]
+
+    assert highest_version(held) == ("3.0.10", ["PR #5", "PR #6"])
+    assert highest_version([("origin/main", "3.0.9"), ("PR #5", "2.10.0")]) == (
+        "3.0.9",
+        ["origin/main"],
+    )
+    assert highest_version([("PR #5", None)]) is None
+
+
+def test_판을_올리지_않고_고친_헌법_파일은_원칙_스택_운영의_셋이다() -> None:
+    """헌법 README(판 줄과 색인)와 셋 밖의 새 파일은 보지 않는다(못 보는 것)."""
+    changed = frozenset(
+        {
+            "docs/constitution/operations.md",
+            "docs/constitution/tech.md",
+            "docs/constitution/README.md",
+            "docs/constitution/new.md",
+            "CLAUDE.md",
+        }
+    )
+
+    assert unbumped(changed, _번호()) == [
+        "docs/constitution/operations.md",
+        "docs/constitution/tech.md",
+    ]
+    assert unbumped(changed, _번호(version="3.0.32")) == []
+    principles = frozenset({"docs/constitution/principles.md"})
+    assert unbumped(principles, _번호()) == ["docs/constitution/principles.md"]
+    # 올림의 종류는 보지 않는다. 원칙을 바꾸고 patch 로 올려도 지나간다(못 보는 것)
+    assert unbumped(principles, _번호(version="3.0.32")) == []
+    readme_only = frozenset({"docs/constitution/README.md", "docs/constitution/new.md"})
+    assert unbumped(readme_only, _번호()) == []
+
+
 def test_워크트리_목록은_bare와_사라진_것을_빼고_경로와_HEAD를_준다() -> None:
     porcelain = "\n".join(
         [
@@ -316,6 +375,7 @@ SEED = {
     "docs/adr/README.md": "색인\n",
     ".scratch/retro-queue.md": QUEUE_HEAD + "| 1 | 씨앗 |\n",
     "docs/constitution/README.md": _헌법("1.0.0"),
+    "docs/constitution/operations.md": "운영\n",
     "README.md": "읽어 보기\n",
     "CLAUDE.md": "지침\n",
 }
@@ -353,6 +413,15 @@ def _PR을_민다(pusher: Path, number: int, files: dict[str, str]) -> str:
 def _연다(cwd: Path, number: int, sha: str) -> None:
     """GitHub 이 열린 PR 에 두는 merge ref 를 흉내 낸다. 판정에는 있는지만 쓰인다."""
     _git(cwd, "push", "-q", "origin", f"{sha}:refs/pull/{number}/merge")
+
+
+def _워크트리의_PR을_민다(work: Path, name: str, number: int, files: dict[str, str]) -> Path:
+    """origin/main 위의 형제 워크트리에 커밋해 `refs/pull/<번호>/head` 로 민다. merge ref 없이."""
+    path = work.parent / name
+    _git(work, "worktree", "add", "-q", "-b", name, str(path), "origin/main")
+    sha = _커밋한다(path, files, f"PR {number}")
+    _git(path, "push", "-q", "origin", f"{sha}:refs/pull/{number}/head")
+    return path
 
 
 def _CLI를_부른다(work: Path) -> subprocess.CompletedProcess[str]:
@@ -413,10 +482,16 @@ def test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """열 때부터 충돌한 PR 처럼 merge ref 가 없어도, gh 가 열려 있다고 하면 대조한다."""
+    """열 때부터 충돌한 PR 처럼 merge ref 가 없어도, gh 가 열려 있다고 하면 대조한다.
+
+    그 PR 의 head 에 선 형제 워크트리도 닫힌 PR 의 것으로 접지 않는다(대기열 194).
+    """
     _, work, pusher = 저장소
-    pr6 = _PR을_민다(pusher, 6, {"docs/adr/0002-pr.md": "그쪽\n"})
-    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    pr6 = _PR을_민다(pusher, 6, {"docs/adr/0002-pr.md": "그쪽\n", "README.md": "그쪽\n"})
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n", "README.md": "이쪽\n"})
+    _git(work, "fetch", "-q", "origin", "refs/pull/6/head")
+    sibling = work.parent / "pr6"
+    _git(work, "worktree", "add", "-q", "-b", "pr6", str(sibling), pr6)
 
     def 깃허브다(url: str) -> tuple[str, str]:
         return ("o", "r")
@@ -433,6 +508,8 @@ def test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다(
     assert code == 1
     assert "열린 PR 을 읽은 길: gh api\n" in out
     assert "PR #6 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr.md" in out
+    assert f"- 워크트리 {sibling.resolve()}: README.md\n" in out
+    assert "닫힌 워크트리" not in out
 
 
 def test_main이_이_브랜치_뒤에_들인_번호와_겹치면_CLI가_알린다(
@@ -480,6 +557,127 @@ def test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린�
     assert f"워크트리 {sibling.resolve()}: {probe}\n" in out
 
 
+def test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견주고_형제_줄에서_접는다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 194: squash 병합 뒤 남은 워크트리가 "함께 고친 파일" 을 채워 열린 PR 의 줄을 묻었다.
+
+    임시 원격은 github.com 이 아니라 열린 PR 을 merge ref 로 가린다. 그래서 merge ref 없이 민 PR 이
+    닫힌 PR 이다. 열 때부터 충돌해 merge ref 가 없는 열린 PR 의 워크트리도 접는다(못 보는 것).
+    """
+    _, work, pusher = 저장소
+    _쓴다(work, {"README.md": "이쪽\n", "CLAUDE.md": "이쪽 지침\n"})
+    merged = _워크트리의_PR을_민다(work, "merged", 3, {"README.md": "병합\n"})
+    dirty = _워크트리의_PR을_민다(work, "dirty", 4, {"CLAUDE.md": "병합\n"})
+    _쓴다(dirty, {"README.md": "커밋하지 않았다\n"})
+    # 닫힌 PR 의 head 뒤에 커밋을 더한 워크트리는 접지 않는다. HEAD 가 같을 때만 접는다
+    later = _워크트리의_PR을_민다(work, "later", 6, {"README.md": "닫힌 뒤\n"})
+    _커밋한다(later, {"CLAUDE.md": "더 했다\n"}, "닫힌 뒤의 커밋")
+    # head 까지 따라가지 않은 워크트리도 접지 않는다. 병합된 커밋이 나온다(못 보는 것)
+    behind = _워크트리의_PR을_민다(work, "behind", 7, {"README.md": "앞 커밋\n"})
+    pr7 = _커밋한다(behind, {"CLAUDE.md": "뒤 커밋\n"}, "PR 7 의 둘째 커밋")
+    _git(behind, "push", "-q", "origin", f"+{pr7}:refs/pull/7/head")
+    _git(behind, "reset", "-q", "--hard", "HEAD~1")
+    pr5 = _PR을_민다(pusher, 5, {"README.md": "열림\n"})
+    _연다(pusher, 5, pr5)
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert ", PR 이 닫힌 워크트리 2곳(커밋하지 않은 변경만 견준다)\n" in out
+    assert str(merged.resolve()) not in out
+    assert f"- 워크트리 {dirty.resolve()}(PR #4 닫힘): README.md\n" in out
+    assert f"- 워크트리 {later.resolve()}: CLAUDE.md, README.md\n" in out
+    assert f"- 워크트리 {behind.resolve()}: README.md\n" in out
+    assert "- PR #5: README.md\n" in out
+
+
+def test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 205 의 길: 받은 번호로 만든 일지 파일은 PR 이 닫힌 워크트리에 있어도 찬 번호다."""
+    _, work, _ = 저장소
+    closed = _워크트리의_PR을_민다(work, "closed", 3, {"README.md": "병합\n"})
+    _쓴다(closed, {"docs/journal/2026-10-07-02-closed.md": "형제\n"})
+    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert f"워크트리 {closed.resolve()}(PR #3 닫힘) 일지 2026-10-07-02" in out
+
+
+def test_형제가_쓴_가장_높은_헌법_판과_그_자리를_찍는다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 199: 판을 올리기 전의 대조는 겹침을 못 알려, 올린 뒤에야 형제의 판과 겹친 것을 알았다.
+
+    판은 고르지 않는다. 올림의 종류는 바뀐 내용이 정한다. 형제 워크트리는 커밋하지 않은 판도 본다.
+    """
+    _, work, pusher = 저장소
+    pr5 = _PR을_민다(pusher, 5, {"docs/constitution/README.md": _헌법("1.0.10")})
+    _연다(pusher, 5, pr5)
+    sibling = work.parent / "sibling"
+    _git(work, "worktree", "add", "-q", "-b", "other", str(sibling), "origin/main")
+    _쓴다(sibling, {"docs/constitution/README.md": _헌법("1.0.9")})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "형제가 쓴 가장 높은 헌법 판: 1.0.10(PR #5). 판을 올리면 이보다 높게 고른다\n" in out
+
+    _쓴다(sibling, {"docs/constitution/README.md": _헌법("1.1.0")})
+    # 이 브랜치의 판이 형제의 판보다 낮아도 찍기만 한다(못 보는 것). 같은 판만 겹침이다
+    _쓴다(work, {"docs/constitution/README.md": _헌법("1.0.11")})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert f"형제가 쓴 가장 높은 헌법 판: 1.1.0(워크트리 {sibling.resolve()})." in out
+    assert "이 브랜치의 새 번호: 헌법 1.0.11" in out
+
+
+def test_헌법_파일을_고치고_판을_올리지_않으면_1로_끝나고_올리면_0이다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 224: `operations.md` 를 고치고 판을 올리지 않은 것을 셀프 리뷰가 잡았다.
+
+    헌법 파일은 어느 변경이든 판을 올린다(원칙 변경은 major, 절 추가는 minor, 문구 수정은 patch).
+    """
+    _, work, _ = 저장소
+    _쓴다(work, {"docs/constitution/operations.md": "고친 운영\n"})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "번호 겹침 없음" in out
+    unbumped_line = "헌법 파일을 고치고 판을 올리지 않았다: docs/constitution/operations.md."
+    assert unbumped_line in out
+    assert "옮길 번호" not in out
+
+    _쓴다(work, {"docs/constitution/README.md": _헌법("1.0.1")})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "판을 올리지 않았다" not in out
+
+    # 바꿨는지만 본다. merge-base 의 판보다 낮게 고쳐도 지나간다(못 보는 것)
+    _쓴다(work, {"docs/constitution/README.md": _헌법("0.9.0")})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "판을 올리지 않았다" not in out
+
+
 def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_번호를_찍는다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -506,6 +704,11 @@ def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_�
     assert code == 0
     assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 4\n" in out
     assert "이 브랜치의 새 번호 없음" in out
+    # 대기열 220: 번호를 받는 자리에서 바로 파일을 만들라고 한다. 그 안내가 next-session 에만 있었다
+    reserve = "일지를 쓸 세션이면 다른 일보다 먼저 docs/journal/2026-10-07-04-<슬러그>.md 를"
+    assert reserve in out
+    # 대기열 199: 판을 올리기 전에도 찍는다. 형제가 판을 올리지 않았으면 main 의 판이다
+    assert "형제가 쓴 가장 높은 헌법 판: 1.0.0(origin/main)." in out
 
     # 받은 번호로 쓰면(next-session 1단계가 안내하는 길) 겹치지도 앞서지도 않는다
     ours_files = {
@@ -520,6 +723,8 @@ def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_�
     assert code == 0, out
     assert "번호 겹침 없음" in out
     assert "앞서는 형제" not in out
+    # 이 브랜치에 새 일지가 생기면 그 안내는 내지 않는다
+    assert "일지를 쓸 세션이면" not in out
 
 
 def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1로_끝나고_닫는_날로_옮긴다(
