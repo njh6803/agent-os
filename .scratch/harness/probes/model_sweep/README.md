@@ -9,15 +9,26 @@
 
 | 파일 | 하는 일 |
 |---|---|
-| `sweep.py` | `population`은 소급 측정의 `branches.json`만 읽어 종류마다 지시문으로 열린 브랜치의 수, 무리마다의 σ(로그 비용)와 n_k, 주마다의 처리량과 비용 중앙값을 찍는다. `prereg`는 아래 사전 등록 절의 SHA-256이 `PREREG_SHA256`과 같은지 본다. 판정 명령은 스윕이 끝날 때 더한다 |
+| `sweep.py` | `population`은 소급 측정의 `branches.json`만 읽어 종류마다 지시문으로 열린 브랜치의 수, 무리마다의 σ(로그 비용)와 n_k, 주마다의 처리량과 비용 중앙값을 찍는다. `prereg`는 아래 사전 등록 절의 SHA-256이 `PREREG_SHA256`과 같은지 본다. `judge`는 스윕 기간만 모은 `branches.json`으로 종류마다 판정한다(두 사전 등록의 해시 대조, 표지 모집단, 배정대로 가른 갈래, 표지 셋, 되풀이 둘, 판정하지 않는 조건). 순서와 못 보는 것은 독스트링 |
 
 갈래를 고르는 것은 이 프로브가 아니라 하네스 도구 `tools/model_sweep.py`다(`next-session` 3단계가 부른다).
+판정도 배정(`arm`)과 스윕하는 종류(`SWEPT`, 사전 등록 절에서 읽는 `prereg_kinds`와 대 본다)를 그 도구에서
+가져온다. 도구의 `SWEPT`에서 빠진 종류는 사람이 멈춘 것으로 보고 "결론 없음"을 적는다.
 
 돌리는 법(워크트리 루트에서):
 
 ```bash
 PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py population
 PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py prereg
+```
+
+판정은 2026-12-15 0시(UTC) 뒤에 한 번 친다. 그 전에는 `judge`가 갈래를 견주지 않고 1로 끝난다. 스윕 기간의 자료는
+스윕을 연 PR #217의 병합 시각부터 모은다(`sweep.py`의 `SWEEP_START`). `--today`는 합성 입력으로 판정 경로를 돌려 볼
+때만 쓴다.
+
+```bash
+PYTHONUTF8=1 uv run python .scratch/harness/probes/session_cost/collect.py --refresh --since 2026-10-13T04:11:21Z --out .scratch/harness/probes/model_sweep/branches.json
+PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --branches .scratch/harness/probes/model_sweep/branches.json
 ```
 
 ## 사전 등록

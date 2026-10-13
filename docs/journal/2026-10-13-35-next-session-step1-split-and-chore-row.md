@@ -1,4 +1,4 @@
-# 2026-10-13 (32) next-session 1단계를 하위 항목으로 나누고 결정표에 하네스 chore 뒤의 줄을 둔다
+# 2026-10-13 (35) next-session 1단계를 하위 항목으로 나누고 결정표에 하네스 chore 뒤의 줄을 둔다
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 218·221을 한 PR로 닫는다. 둘 다 `.claude/skills/next-session/SKILL.md`다.
 세션은 주 체크아웃에서 열렸고, 지시문대로 `tidy-checkouts`를 먼저 돈 뒤
@@ -83,6 +83,14 @@ PR #222를 열고 `@coderabbitai review`를 남겼다. 상태를 한 번 읽으�
   - Minor(새 줄의 괄호가 위 줄과 겹친다): 위의 `ready-for-agent` 줄 둘은 "같은 기능"이 조건이라 하네스 chore PR에는 맞지 않는다.
     괄호가 그 틈을 메운다.
   - Nit(남긴 위험): 같은 주제가 남은 chore PR은 새 줄에 맞지 않고 아래로 내려가므로 위험은 그대로다.
+
+> 사용자: "CI 끝났어"
+
+- 둘째 푸시(`baaebfd`) 뒤 PR이 `CONFLICTING`이었고 검사는 CodeRabbit 줄 하나뿐이었다. 그사이 main이 #220을 들여 대기열 끝에 232를
+  더했다. 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라며 거부해 `git merge --no-overwrite-ignore origin/main`을 쳤고,
+  대기열의 충돌은 두 행(232, 233)을 모두 살려 풀었다.
+- #220이 일지 `2026-10-13-33`을 들여, 형제 대조가 미리 알린 대로 이 일지(그때 32)가 이름순으로 앞섰다. 대조가 준 번호대로 35로
+  옮기고 이 브랜치의 인용 여덟(대기열 셋, 카나리아 넷, 일지 머리)을 고쳤다.
 
 ## 회고
 
