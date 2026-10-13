@@ -92,7 +92,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''            timeout=GH_TIMEOUT,
+old = '''            timeout=CALL_TIMEOUT,
 '''
 new = ''''''
 
@@ -278,7 +278,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/wait_ci.py"
 old = '''        check=True,
-        timeout=GH_TIMEOUT,
+        timeout=CALL_TIMEOUT,
 '''
 new = '''        check=True,
 '''

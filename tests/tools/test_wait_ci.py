@@ -15,12 +15,12 @@ from collections.abc import Callable
 
 import pytest
 from tools.wait_ci import (
+    CALL_TIMEOUT,
     EXIT_CANNOT_WAIT,
     EXIT_FAILED,
     EXIT_PASSED,
     EXIT_TIMED_OUT,
     EXIT_USAGE,
-    GH_TIMEOUT,
     FetchError,
     Json,
     Options,
@@ -408,12 +408,12 @@ def test_gh_호출이_멈추면_시간_제한으로_끊고_조회_실패로_센�
 
     def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(kwargs.get("timeout"))
-        raise subprocess.TimeoutExpired(args, GH_TIMEOUT)
+        raise subprocess.TimeoutExpired(args, CALL_TIMEOUT)
 
     monkeypatch.setattr(subprocess, "run", stuck)
     with pytest.raises(FetchError):
         fetch_pr("221")
-    assert seen == [GH_TIMEOUT]
+    assert seen == [CALL_TIMEOUT]
 
 
 def test_gh를_띄우지_못하면_조회_실패로_센다(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -433,12 +433,12 @@ def test_로컬_HEAD를_읽는_git이_멈추면_끝_줄을_찍고_기다릴_수_
 
     def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(kwargs.get("timeout"))
-        raise subprocess.TimeoutExpired(args, GH_TIMEOUT)
+        raise subprocess.TimeoutExpired(args, CALL_TIMEOUT)
 
     monkeypatch.setattr(subprocess, "run", stuck)
     code = main(["221"])
     assert code == EXIT_CANNOT_WAIT
-    assert seen == [GH_TIMEOUT]
+    assert seen == [CALL_TIMEOUT]
     assert capsys.readouterr().out.splitlines()[-1].startswith("끝:")
 
 
