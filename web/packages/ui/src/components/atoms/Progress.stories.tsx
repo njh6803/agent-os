@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { semanticColor } from "../../storybook/expect";
+import { SCREEN_STROKE, semanticColor, strokesOf } from "../../storybook/expect";
 import { Progress } from "./Progress";
 
 const meta = {
@@ -23,7 +23,7 @@ function partsOf(progressbar: HTMLElement): { track: Element; bar: Element } {
 }
 
 export const Determinate: Story = {
-  name: "값이 있으면 label 이 이름이고 aria-valuenow·aria-valuemax 가 있으며 막대가 그 비율만큼 accent 로 찬다",
+  name: "값이 있으면 label 이 이름이고 aria-valuenow·aria-valuemax 가 있으며 막대가 그 비율만큼 muted 로 찬다",
   args: { value: 2, max: 3 },
   play: async ({ canvas }) => {
     const progressbar = canvas.getByRole("progressbar", { name: "3단계 중 2단계" });
@@ -38,32 +38,16 @@ export const Determinate: Story = {
       height: "6px",
       background: semanticColor(track, "tint"),
     });
-    await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "accent"));
+    await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "muted"));
     const ratio = bar.getBoundingClientRect().width / track.getBoundingClientRect().width;
     await expect(Math.abs(ratio - 2 / 3)).toBeLessThan(0.01);
     await expect(getComputedStyle(bar).animationName).toBe("none");
   },
 };
 
-export const DeterminateDanger: Story = {
-  name: "실패 톤의 막대는 danger 로 차고 max 가 없으면 끝 값이 1 이다",
-  args: { value: 0.5, label: "2단계에서 실패", tone: "danger" },
-  play: async ({ canvas }) => {
-    const progressbar = canvas.getByRole("progressbar", { name: "2단계에서 실패" });
-    await expect({
-      now: progressbar.getAttribute("aria-valuenow"),
-      max: progressbar.getAttribute("aria-valuemax"),
-    }).toEqual({ now: "0.5", max: "1" });
-    const { track, bar } = partsOf(progressbar);
-    await expect(getComputedStyle(bar).backgroundColor).toBe(semanticColor(bar, "danger"));
-    const ratio = bar.getBoundingClientRect().width / track.getBoundingClientRect().width;
-    await expect(Math.abs(ratio - 0.5)).toBeLessThan(0.01);
-  },
-};
-
 export const Indeterminate: Story = {
-  name: "값을 모르면 aria-valuenow 가 없고 막대가 progress 움직임으로 옮겨 다닌다",
-  // value 를 넘기지 않는다. 기본값이 null(값 모름)이다(디자인 파일 05절의 props 표).
+  name: "값을 모르면 aria-valuenow 가 없고 트랙 대신 muted 의 16px 도는 표시와 이름을 8px 사이로 보인다",
+  // value 를 넘기지 않는다. 기본값이 null(값 모름)이다.
   args: { label: "단계를 세는 중" },
   play: async ({ canvas }) => {
     const progressbar = canvas.getByRole("progressbar", { name: "단계를 세는 중" });
@@ -71,27 +55,29 @@ export const Indeterminate: Story = {
       hasNow: progressbar.hasAttribute("aria-valuenow"),
       max: progressbar.getAttribute("aria-valuemax"),
     }).toEqual({ hasNow: false, max: "1" });
-    const { bar } = partsOf(progressbar);
-    const style = getComputedStyle(bar);
-    await expect({ animation: style.animationName, background: style.backgroundColor }).toEqual({
-      animation: "progress",
-      background: semanticColor(bar, "accent"),
-    });
-  },
-};
-
-export const IndeterminateDanger: Story = {
-  name: "값을 모르는 실패 톤의 막대도 danger 로 옮겨 다닌다",
-  args: { value: null, label: "멈춘 단계를 찾는 중", tone: "danger" },
-  play: async ({ canvas }) => {
-    const progressbar = canvas.getByRole("progressbar", { name: "멈춘 단계를 찾는 중" });
-    await expect(progressbar.hasAttribute("aria-valuenow")).toBe(false);
-    const { bar } = partsOf(progressbar);
-    const style = getComputedStyle(bar);
-    await expect({ animation: style.animationName, background: style.backgroundColor }).toEqual({
-      animation: "progress",
-      background: semanticColor(bar, "danger"),
-    });
+    // 도는 표시가 먼저, 이름이 나중이고 트랙은 없다.
+    await expect(Array.from(progressbar.children, (child) => child.tagName.toLowerCase())).toEqual([
+      "svg",
+      "span",
+    ]);
+    const [spinner, name] = progressbar.children;
+    if (spinner === undefined || name === undefined) {
+      throw new Error("도는 표시와 이름이 없다");
+    }
+    await expect(name.textContent).toBe("단계를 세는 중");
+    await expect(canvas.getByText("단계를 세는 중")).toBeVisible();
+    const style = getComputedStyle(spinner);
+    await expect({
+      width: style.width,
+      color: style.color,
+      animation: style.animationName,
+    }).toEqual({ width: "16px", color: semanticColor(spinner, "muted"), animation: "spin" });
+    const strokes = strokesOf(spinner);
+    await expect(strokes).toEqual(strokes.map(() => SCREEN_STROKE));
+    // 도는 표시의 getBoundingClientRect 는 회전한 상자의 외접 사각형이라 각도마다 달라진다. 회전과 무관한 이름의 자리로
+    // 잰다. 이름은 progressbar 의 왼쪽에서 도는 표시(16px)와 사이(8px)만큼 떨어진다.
+    const offset = name.getBoundingClientRect().left - progressbar.getBoundingClientRect().left;
+    await expect(offset).toBe(16 + 8);
   },
 };
 
@@ -140,7 +126,7 @@ export const OutOfRange: Story = {
 };
 
 export const DeterminateDark: Story = {
-  name: "다크 모드에서도 트랙은 tint, 막대는 accent 다",
+  name: "다크 모드에서도 트랙은 tint, 막대는 muted 다",
   args: { value: 2, max: 3 },
   globals: { mode: "dark" },
   play: async ({ canvas }) => {
@@ -149,6 +135,6 @@ export const DeterminateDark: Story = {
     await expect({
       track: getComputedStyle(track).backgroundColor,
       bar: getComputedStyle(bar).backgroundColor,
-    }).toEqual({ track: semanticColor(track, "tint"), bar: semanticColor(bar, "accent") });
+    }).toEqual({ track: semanticColor(track, "tint"), bar: semanticColor(bar, "muted") });
   },
 };
