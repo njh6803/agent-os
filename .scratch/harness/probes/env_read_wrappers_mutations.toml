@@ -1,0 +1,160 @@
+# tools/hook_env_read.py 의 읽기 명령 둘과 래퍼 옵션 벗기기(대기열 162)를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/env_read_wrappers_mutations.toml
+# 끝의 하나는 대조군이다. 래퍼 옵션의 값을 벗기지 않아도, 값이 붙은 모양(`-n5`)만 시험하면 초록이다.
+
+[[mutation]]
+name = "column 을 읽는 명령에서 뺐다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''"nl", "column", "rev",'''
+new = '''"nl", "rev",'''
+
+[[mutation]]
+name = "rev 를 읽는 명령에서 뺐다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''"nl", "column", "rev",'''
+new = '''"nl", "column",'''
+
+[[mutation]]
+name = "래퍼 뒤의 옵션을 벗기지 않는다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''        while index < len(words) and words[index].startswith("-"):'''
+new = '''        while False:'''
+
+[[mutation]]
+name = "래퍼 옵션의 값을 벗기지 않는다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''            index += _option_width(option, value_options)'''
+new = '''            index += 1'''
+
+[[mutation]]
+name = "짧은 옵션 묶음을 낱말 그대로만 대 본다(`-iu root` 의 값을 놓친다)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''    letters = option[1:]
+    for index, letter in enumerate(letters):
+        if f"-{letter}" in value_options:
+            return 1 if letters[index + 1 :] else 2
+    return 1'''
+new = '''    return 2 if option in value_options else 1'''
+
+[[mutation]]
+name = "긴 옵션의 값을 벗기지 않는다(`--user root`)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''        return 2 if option in value_options else 1
+    letters = option[1:]'''
+new = '''        return 1
+    letters = option[1:]'''
+
+[[mutation]]
+name = "command -v 를 명령을 돌리는 것으로 본다(거짓 양성)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''            if wrapper == "command" and not option.startswith("--") and set(option) & {"v", "V"}:
+                return []
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "경로가 붙은 래퍼를 이름으로 찾지 않는다(`/usr/bin/env`, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''        wrapper = _command_name(word)'''
+new = '''        wrapper = word'''
+
+[[mutation]]
+name = "env 의 -a 를 값 옵션에서 뺐다(argv0 를 명령으로 읽는다, PR 직전 버그 리뷰)"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''"--chdir", "-a", "--argv0"}'''
+new = '''"--chdir"}'''
+
+[[mutation]]
+name = "timeout 의 시간을 벗기지 않는다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''        if wrapper == "timeout":
+            index += 1  # 시간
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "env 를 래퍼에서 뺐다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''    "env": frozenset({"-u", "--unset", "-C", "--chdir", "-a", "--argv0"}),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "대조군: 값을 따로 받는 래퍼 옵션의 시험을 빼면 값을 벗기지 않아도 초록이다"
+tests = ["tests/tools/test_hook_env_read.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_env_read.py"
+old = '''            index += _option_width(option, value_options)'''
+new = '''            index += 1'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_env_read.py"
+old = '''        "nice --adjustment 5 cat .env",
+        "timeout 5 column .env",
+        "timeout -s KILL 5 rev .env",
+        "env -i cat .env",
+        "env -u HOME cat .env",
+        "sudo -u root cat .env",
+        "sudo -iu root cat .env",
+        "sudo -uroot cat .env",
+        "sudo --user root cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
+        "env -a x cat .env",
+        "env --argv0 x cat .env",
+        "exec -a x cat .env",
+'''
+new = '''        "timeout 5 column .env",
+        "env -i cat .env",
+        "sudo -uroot cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
+'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_env_read.py"
+old = '''        "timeout -k 3 5 cat .env",
+'''
+new = '''
+'''
+[[mutation.edit]]
+file = "tests/tools/test_hook_env_read.py"
+old = '''        "nice -n 10 cat .env",
+'''
+new = '''
+'''

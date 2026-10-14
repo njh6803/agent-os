@@ -7,12 +7,9 @@
 from __future__ import annotations
 
 import json
-from typing import TypedDict
 
 from tools.hook_webfetch_summary import LEAD, TOOL, HookPayload, context_for
-from tools.run_hooks import SETTINGS, registration_command
-
-HOOK_COMMAND = registration_command("hook_webfetch_summary.py")
+from tools.run_hooks import registered_matchers
 
 # 프로브 A 의 둘째 호출(https://code.claude.com/docs/en/hooks, Claude Code 2.1.296).
 SUMMARY_RESULT = (
@@ -78,20 +75,6 @@ def _본문_그대로(body: str) -> dict[str, object]:
         "durationMs": 624,
         "url": "https://code.claude.com/docs/en/large-codebases.md",
     }
-
-
-# 매처를 읽는 모양. test_hook_pr_next_session 과 같은 까닭으로 도구의 표면을 넓히지 않는다.
-class _HookEntry(TypedDict, total=False):
-    command: str
-
-
-class _HookGroup(TypedDict, total=False):
-    matcher: str
-    hooks: list[_HookEntry]
-
-
-class _Settings(TypedDict, total=False):
-    hooks: dict[str, list[_HookGroup]]
 
 
 def test_요약_결과는_받은_바이트와_답한_글자_수를_들어_알린다() -> None:
@@ -230,11 +213,4 @@ def test_WebFetch가_아닌_도구는_보지_않는다() -> None:
 
 def test_settings의_매처는_훅이_아는_도구_하나다() -> None:
     """매처를 넓히면 훅이 이름으로 걸러 조용히 지나가고, 이름을 바꾸면 등록이 훅을 걸지 않는다."""
-    settings: _Settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
-    matchers = [
-        group.get("matcher", "")
-        for group in settings.get("hooks", {}).get("PostToolUse", [])
-        if any(entry.get("command") == HOOK_COMMAND for entry in group.get("hooks", []))
-    ]
-
-    assert matchers == [TOOL]
+    assert registered_matchers("hook_webfetch_summary.py", "PostToolUse") == [TOOL]

@@ -2,28 +2,8 @@
 
 from __future__ import annotations
 
-import json
-from typing import TypedDict
-
 from tools.hook_pr_next_session import MCP_TOOLS, SHELL_TOOLS, action_for, context_for
-from tools.run_hooks import SETTINGS, registration_command
-
-HOOK_COMMAND = registration_command("hook_pr_next_session.py")
-
-
-# 매처를 읽는 모양. 같은 스키마가 tools/check_instructions.py 와 tools/run_hooks.py 에 비공개로
-# 있고, run_hooks 의 것은 매처를 읽지 않는다. 테스트 하나를 위해 도구의 표면을 넓히지 않는다.
-class _HookEntry(TypedDict, total=False):
-    command: str
-
-
-class _HookGroup(TypedDict, total=False):
-    matcher: str
-    hooks: list[_HookEntry]
-
-
-class _Settings(TypedDict, total=False):
-    hooks: dict[str, list[_HookGroup]]
+from tools.run_hooks import registered_matchers
 
 
 def test_gh_pr_create는_PR을_여는_명령이다() -> None:
@@ -68,12 +48,7 @@ def test_settings의_매처와_훅이_아는_도구가_같다() -> None:
 
     tools/run_hooks.py 는 훅을 이름으로 부르므로 매처를 보지 않는다.
     """
-    settings: _Settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
-    matchers = [
-        group.get("matcher", "")
-        for group in settings.get("hooks", {}).get("PostToolUse", [])
-        if any(entry.get("command") == HOOK_COMMAND for entry in group.get("hooks", []))
-    ]
+    matchers = registered_matchers("hook_pr_next_session.py", "PostToolUse")
 
     assert len(matchers) == 1
     assert set(matchers[0].split("|")) == SHELL_TOOLS | set(MCP_TOOLS)
