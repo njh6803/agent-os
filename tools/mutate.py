@@ -45,7 +45,9 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
     [runner.vitest]                      # 선택. 이름은 마음대로이고 pytest 만 내장이라 못 쓴다
     command = ["pnpm", "exec", "vitest", "run"]
     cwd = "web"                          # 저장소 루트 기준. 기본은 루트
-    judge = "vitest"                     # pytest, vitest, playwright, tsc
+    judge = "vitest"                     # pytest, vitest, playwright, tsc, exit
+    # red_exit = 1                          exit 판정이면 반드시(1 이상). 빨강으로 읽을 종료 코드
+    # baseline_output = ["검사 12"]          선택. 기준선 출력에 있어야 할 표지
 
     [[mutation]]
     name = "꺼짐을 깨짐 앞에"
@@ -55,6 +57,7 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
     repeat = 1                           # 선택. 매번 기대와 같아야 한다
     timeout = 600                        # 선택. 한 번 돌리는 시간 제한(초). 기본 600
     # diagnostic_in = "clients.test-d.ts"   tsc 판정이면 반드시. 빨강이 날 파일
+    # expect_output = ["이름이 없다: a"]      선택. 매 반복의 출력에 있어야 할 표지
     # restore = ["web/gen/openapi.ts"]      선택. 명령이 고쳐 쓸 수 있어 되돌릴 파일
 
     [[mutation.edit]]                    # 여럿이면 차례로 들어간다
@@ -85,6 +88,16 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
   어긋남이 TS1360 이다). 빨강은 `diagnostic_in` 파일에서 난 진단이고, 그 파일 밖에서만 나면 오류다.
   `diagnostic_in` 은 진단 경로의 꼬리로 맞춘다. 이름만 적으면 다른 디렉터리의 같은 이름
   (`index.ts`)도 맞으니, 이름이 겹치면 디렉터리까지 적는다.
+- exit: 종료 코드로만 말하는 명령(node 검사기)이다. 0 은 초록, 러너의 `red_exit` 는 빨강,
+  나머지(읽을 파일이 없다는 2 따위)는 오류다. 검사기 변이를 따로 짓던 프로브를 표로 옮기려고
+  더했다(대기열 253).
+
+표지(`expect_output`, `baseline_output`). 판정이 기대와 맞아도 엉뚱한 까닭의 빨강일 수 있다
+(`.claude/rules/probes.md` 의 표지 항목). 그래서 변이마다 출력에 있어야 할 문구를 적을 수 있고, 색
+코드를 벗긴 출력에서 매 반복 찾는다. 하나라도 없으면 `표지 없음: …` 줄과 출력의 끝을 내고 어긋남으로
+센다. 러너의 `baseline_output` 은 기준선에서 같은 일을 한다. 없으면 기준선은 초록이 아니다. 종료
+코드 0 만으로는 아무것도 읽지 않고 끝난 검사기와 가를 수 없다. 빈 문자열은 어느 출력에나 있어 변이
+파일 오류다.
 
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
@@ -92,15 +105,19 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 2. 러너와 인자의 짝마다 변이 없이 한 번씩 돌린다(기준선). 시간 제한은 그 짝을 쓰는 변이 가운데
    가장 긴 것이다. 초록이 아니면 변이를 넣지 않는다. 기준선이 빨간데 변이가 빨가면 그 빨강은
    아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서 본다.
-3. 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어 돌린 뒤 `finally` 에서 그 바이트를
-   그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지 본다. 다르면 변이가 든 동안 다른
-   쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열 77). 되돌릴 파일(`restore`)은
-   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 명령 한 번이 시간 제한(`timeout`)을 넘기면 그 명령이
-   띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로 판정한 뒤 남은
-   반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가 러너→pytest→러너로
-   되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열 139). 기다리는
-   동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤 되돌린다.
-   윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
+3. 빨강을 기대한 pytest 판정의 변이는 인자 끝에 `-x` 를 붙여 첫 실패에서 멈춘다. 빨강은 실패
+   하나로 정해지고 `-x` 도 종료 코드 1 이라 판정이 같다. 기준선과 초록·오류를 볼 변이는 끝까지 돈다.
+   sibling_overlap 표본 여섯이 446초에서 163초가 됐고 판정이 같았다(대기열 231,
+   `.scratch/harness/probes/mutate_231/`). 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어
+   돌린 뒤 `finally` 에서 그 바이트를 그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지
+   본다. 다르면 변이가 든 동안 다른 쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열
+   77). 되돌릴 파일(`restore`)은 명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 명령 한 번이 시간
+   제한(`timeout`)을 넘기면 그 명령이 띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이
+   무엇이든 오류로 판정한 뒤 남은 반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의
+   변이가 러너→pytest→러너로 되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에
+   남았다(대기열 139). 기다리는 동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운
+   프로세스까지 끝낸 뒤 되돌린다. 윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은
+   그 예외를 넣는다).
 4. 종료 코드: 모두 기대대로면 0, 어긋나거나(시간 제한을 넘긴 것 포함) 기준선이 초록이 아니면 1,
    변이 파일을 읽지 못했거나 틀렸거나 고른 것이 없으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지
    못했거나 되돌리지 못했으면 3.
@@ -149,7 +166,10 @@ lastfailed 에 남지 않게 한다.
 은 세지 않는다. `-t` 로 좁히면 고르지 않은 테스트가 skipped 로 세어져 `it.skip` 과 가를 수 없다. tsc
 의 빨강은 진단이 난 파일만 본다. 변이가 낸 문법 오류가 적은 파일까지 번져도 빨강이다. 윈도우에서
 `pnpm.CMD` 같은 배치 파일은 cmd.exe 가 돌려 인자의 `&`·`%`·`^` 가 해석될 수 있다. 좁힌 선택이 비면
-기준선이 오류로 잡는다(통과가 없다).
+기준선이 오류로 잡는다(통과가 없다). 표지는 출력 어디서든 부분 문자열로 찾는다. 다른 까닭의
+실패가 같은 문구를 찍으면(같은 이름의 다른 검사) 표지가 있는 것으로 센다. `-x` 로 멈춘 변이는
+빨간 시험을 첫 하나만 보인다. 그 변이가 빨갛게 할 시험이 몇인지, 뒤의 시험이 표지를 찍었을지는 남지
+않는다.
 
 판정은 출력의 요약 문구에 기댄다. 초록과 빨강을 읽는 문구(vitest 의 `Tests` 줄, playwright 의
 `N passed`·`N failed`, tsc 의 진단 줄)가 도구의 판에서 바뀌면 오류로 기운다. 초록이나 빨강을
@@ -181,7 +201,7 @@ _DRAIN_SECONDS = 10  # 끊은 뒤 출력 파이프가 닫히기를 기다리는 
 _KILL_SECONDS = 30  # 윈도우의 `taskkill` 을 기다리는 시간
 
 type Outcome = Literal["green", "red", "unhandled", "error"]
-type JudgeName = Literal["pytest", "vitest", "playwright", "tsc"]
+type JudgeName = Literal["pytest", "vitest", "playwright", "tsc", "exit"]
 
 _LABELS: dict[Outcome, str] = {
     "green": "초록",
@@ -226,6 +246,8 @@ class RunnerSpec(_Model):
     command: list[str] = Field(min_length=1)
     cwd: str = "."
     judge: JudgeName
+    red_exit: int | None = Field(default=None, ge=1)  # exit 판정만. 빨강으로 읽을 종료 코드
+    baseline_output: list[str] = Field(default_factory=list[str])  # 기준선 출력에 있어야 할 표지
 
 
 class Mutation(_Model):
@@ -234,6 +256,7 @@ class Mutation(_Model):
     tests: list[str] = Field(default_factory=list[str])
     expect: Literal["red", "green", "unhandled"]
     diagnostic_in: str | None = None
+    expect_output: list[str] = Field(default_factory=list[str])  # 매 반복의 출력에 있어야 할 표지
     restore: list[str] = Field(default_factory=list[str])
     repeat: int = Field(default=1, ge=1)
     timeout: int = Field(default=DEFAULT_TIMEOUT, ge=1)
@@ -359,9 +382,20 @@ def _judge_tsc(exit_code: int, text: str, diagnostic_in: str | None) -> Verdict:
     return Verdict("red" if hit else "error", summary, tuple(line for _, line in diagnostics))
 
 
-def judge(kind: JudgeName, result: CommandResult, diagnostic_in: str | None = None) -> Verdict:
+def _judge_exit(exit_code: int, text: str, red_exit: int | None) -> Verdict:
+    outcome: Outcome = "green" if exit_code == 0 else "red" if exit_code == red_exit else "error"
+    return Verdict(outcome, _last_line(text, exit_code))
+
+
+def judge(
+    kind: JudgeName,
+    result: CommandResult,
+    diagnostic_in: str | None = None,
+    *,
+    red_exit: int | None = None,
+) -> Verdict:
     """명령의 결과를 초록, 빨강, 처리하지 않은 에러, 오류로 가른다. 색 코드는 벗기고 읽는다. 시간
-    제한을 넘겨 끊은 결과는 끊기 전의 출력이 무엇이든 오류다."""
+    제한을 넘겨 끊은 결과는 끊기 전의 출력이 무엇이든 오류다. `red_exit` 는 exit 판정만 쓴다."""
     if result.timed_out_after is not None:
         return Verdict("error", f"시간 제한 {result.timed_out_after}초를 넘겨 끊었다")
     text = result.plain
@@ -374,6 +408,8 @@ def judge(kind: JudgeName, result: CommandResult, diagnostic_in: str | None = No
             return _judge_playwright(result.exit_code, text)
         case "tsc":
             return _judge_tsc(result.exit_code, text, diagnostic_in)
+        case "exit":
+            return _judge_exit(result.exit_code, text, red_exit)
 
 
 def _runners(spec: Spec) -> dict[str, RunnerSpec]:
@@ -388,6 +424,15 @@ def _pairing_problems(spec: Spec) -> list[str]:
         for name in spec.runner
         if name in _BUILTIN
     ]
+    for name, command in spec.runner.items():
+        if command.judge == "exit" and command.red_exit is None:
+            problems.append(
+                f"러너 {name}: exit 판정은 red_exit(빨강으로 읽을 종료 코드)가 있어야 한다"
+            )
+        if command.judge != "exit" and command.red_exit is not None:
+            problems.append(f"러너 {name}: red_exit 는 exit 판정만 쓴다(이 러너는 {command.judge})")
+        if "" in command.baseline_output:
+            problems.append(f"러너 {name}: baseline_output 에 빈 표지가 있다. 어느 출력에나 있다")
     runners = _runners(spec)
     for m in spec.mutation:
         if m.runner not in runners:
@@ -398,6 +443,8 @@ def _pairing_problems(spec: Spec) -> list[str]:
             problems.append(f"{m.name}: tsc 판정은 diagnostic_in(빨강이 날 파일)이 있어야 한다")
         if kind != "tsc" and m.diagnostic_in is not None:
             problems.append(f"{m.name}: diagnostic_in 은 tsc 판정만 쓴다(이 러너는 {kind})")
+        if "" in m.expect_output:
+            problems.append(f"{m.name}: expect_output 에 빈 표지가 있다. 어느 출력에나 있다")
         if m.expect == "unhandled" and kind != "vitest":
             problems.append(f"{m.name}: expect unhandled 는 vitest 판정만 쓴다(이 러너는 {kind})")
     return problems
@@ -467,7 +514,8 @@ def _labelled(names: Sequence[str], numbers: Mapping[str, int]) -> str:
 
 def changed_names(old: Spec, new: Spec) -> list[str]:
     """`new` 의 변이 가운데 `old` 에 없거나 달라진 것의 이름, 표의 차례대로. 변이의 무엇이든(원문,
-    기대, 시험, 시간 제한) 다르거나 그 변이가 쓰는 러너의 명령·자리·판정이 다르면 달라진 것이다."""
+    기대, 표지, 시험, 시간 제한) 다르거나 그 변이가 쓰는 러너의 명령·자리·판정·빨강 코드·기준선
+    표지가 다르면 달라진 것이다."""
     before = {m.name: m for m in old.mutation}
     old_runners, new_runners = _runners(old), _runners(new)
     return [
@@ -629,8 +677,11 @@ def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> 
             if path not in rewritable:
                 written[path] = mutated
         results: list[CommandResult] = []
+        tests = mutation.tests
+        if mutation.expect == "red" and _runners(spec)[mutation.runner].judge == "pytest":
+            tests = [*tests, "-x"]  # 빨강은 실패 하나로 정해진다(독스트링의 하는 일 3)
         for _ in range(mutation.repeat):
-            result = _invoke(root, spec, mutation.runner, mutation.tests, mutation.timeout, runner)
+            result = _invoke(root, spec, mutation.runner, tests, mutation.timeout, runner)
             results.append(result)
             if result.timed_out_after is not None:
                 break  # 끊긴 판정은 이미 기대와 어긋나, 남은 반복은 변이를 든 채 시간만 쓴다
@@ -639,12 +690,25 @@ def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> 
         _restore(root, mutation.name, held, written)
 
 
-def _details(judged: Sequence[tuple[CommandResult, Verdict]], out: Callable[[str], None]) -> None:
-    """빨간 테스트의 이름, 그리고 빨강도 초록도 아니면 출력의 끝."""
+def _missing(result: CommandResult, markers: Sequence[str]) -> list[str]:
+    """색 코드를 벗긴 출력에 없는 표지."""
+    text = result.plain
+    return [marker for marker in markers if marker not in text]
+
+
+def _details(
+    judged: Sequence[tuple[CommandResult, Verdict]],
+    out: Callable[[str], None],
+    markers: Sequence[str] = (),
+) -> None:
+    """빨간 테스트의 이름, 그리고 빨강도 초록도 아니거나 표지가 없으면 출력의 끝."""
     for name in dict.fromkeys(name for _, verdict in judged for name in verdict.failed):
         out(f"   {name}")
     for result, verdict in judged:
-        if verdict.outcome in ("error", "unhandled"):
+        missing = _missing(result, markers)
+        if missing:
+            out(f"   표지 없음: {', '.join(missing)}")
+        if verdict.outcome in ("error", "unhandled") or missing:
             for line in result.plain.splitlines()[-10:]:
                 out(f"   | {line}")
 
@@ -684,10 +748,16 @@ def measure(
         baselines[key] = max(baselines.get(key, 0), m.timeout)
     baseline_green = True
     for (name, tests), timeout in baselines.items():
+        command = _runners(spec)[name]
         result = _invoke(root, spec, name, tests, timeout, runner)
-        verdict = judge(_runners(spec)[name].judge, result)
-        out(f"기준선 {' '.join((name, *tests))}: {_LABELS[verdict.outcome]} — {verdict.summary}")
-        if verdict.outcome != "green":
+        verdict = judge(command.judge, result, red_exit=command.red_exit)
+        missing = _missing(result, command.baseline_output)
+        absent = f" — 표지 없음: {', '.join(missing)}" if missing else ""
+        out(
+            f"기준선 {' '.join((name, *tests))}: {_LABELS[verdict.outcome]}"
+            f" — {verdict.summary}{absent}"
+        )
+        if verdict.outcome != "green" or missing:
             _details([(result, verdict)], out)
             baseline_green = False
     if not baseline_green:
@@ -696,17 +766,26 @@ def measure(
 
     mismatched: list[str] = []
     for mutation in spec.mutation:
-        kind = _runners(spec)[mutation.runner].judge
+        command = _runners(spec)[mutation.runner]
         results = _run_mutated(root, spec, mutation, runner)
-        judged = [(result, judge(kind, result, mutation.diagnostic_in)) for result in results]
+        judged = [
+            (
+                result,
+                judge(command.judge, result, mutation.diagnostic_in, red_exit=command.red_exit),
+            )
+            for result in results
+        ]
         outcomes = ", ".join(_LABELS[verdict.outcome] for _, verdict in judged)
-        matched = all(verdict.outcome == mutation.expect for _, verdict in judged)
+        matched = all(
+            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)
+            for result, verdict in judged
+        )
         head = "==" if matched else "!! 어긋남 —"
         out(
             f"{head} {numbers[mutation.name]}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"
             f" 결과 {outcomes} — {judged[-1][1].summary}"
         )
-        _details(judged, out)
+        _details(judged, out, mutation.expect_output)
         if not matched:
             mismatched.append(mutation.name)
 

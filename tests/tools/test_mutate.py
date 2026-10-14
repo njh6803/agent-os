@@ -114,6 +114,69 @@ def test_변이가_든_동안_러너는_바뀐_바이트를_보고_끝나면_원
     assert code == 0
 
 
+def test_빨강을_기대한_pytest_변이만_첫_실패에서_멈춘다(tmp_path: Path) -> None:
+    """빨강은 실패 하나로 정해져 나머지 시험은 시간만 쓴다. sibling_overlap 표본 여섯이 446초에서
+    163초가 됐고 판정은 같았다(대기열 231). 기준선과 초록을 기대한 변이는 모든 시험이 지나야 해
+    끝까지 돈다."""
+    _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\n")
+    변이 = _변이_파일(old="x = 1", new="x = 2") + _변이_파일(
+        old="y = 1", new="y = 2", expect="green"
+    ).replace('name = "하나"', 'name = "둘"')
+    받은: list[list[str]] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        받은.append(list(argv))
+        return _빨강 if "-x" in argv else _초록
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert code == 0
+    assert [argv[-2:] for argv in 받은] == [
+        ["no:cacheprovider", "tests/test_x.py"],
+        ["tests/test_x.py", "-x"],
+        ["no:cacheprovider", "tests/test_x.py"],
+    ]
+
+
+def test_pytest_밖의_판정은_첫_실패에서_멈추는_인자를_받지_않는다(tmp_path: Path) -> None:
+    """`-x` 는 pytest 의 인자다. vitest 에 넘기면 모르는 선택이다."""
+    _파일을_둔다(tmp_path, "web/m.ts", b"x = 1\n")
+    받은: list[list[str]] = []
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        받은.append(list(argv))
+        return CommandResult(0, "      Tests  1 passed (1)\n")
+
+    measure(
+        load_spec(_VITEST_러너 + _vitest_변이()), root=tmp_path, runner=러너, out=lambda _: None
+    )
+
+    assert all("-x" not in argv for argv in 받은)
+
+
+def test_못_보는_것_첫_실패에서_멈춘_변이는_빨간_시험을_하나만_보인다(tmp_path: Path) -> None:
+    """`-x` 뒤의 시험은 돌지 않아, 그 변이가 빨갛게 할 시험이 몇인지 출력에 남지 않는다. 실제
+    pytest 로 본다."""
+    _파일을_둔다(tmp_path, "v.txt", b"1")
+    _파일을_둔다(
+        tmp_path,
+        "test_two.py",
+        b"from pathlib import Path\n"
+        b"V = Path(__file__).with_name('v.txt').read_text()\n"
+        b"def test_a(): assert V == '1'\n"
+        b"def test_b(): assert V == '1'\n",
+    )
+    변이 = _변이_파일(old="1", new="2", file="v.txt").replace("tests/test_x.py", "test_two.py")
+    줄: list[str] = []
+
+    code = measure(load_spec(변이), root=tmp_path, runner=run_command, out=줄.append)
+
+    assert code == 0
+    assert any("1 failed" in 한줄 for 한줄 in 줄 if 한줄.startswith("=="))
+    assert "   test_two.py::test_a" in 줄
+    assert "   test_two.py::test_b" not in 줄
+
+
 def test_변이한_소스의_바이트코드_캐시는_변이_동안과_되돌린_뒤에_없다(tmp_path: Path) -> None:
     """캐시는 소스의 수정 시각(초)과 크기로만 맞춰 본다. 같은 크기의 변이가 같은 초에 쓰이면 원래
     바이트코드가 그대로 돌고, 거꾸로 변이 동안 생긴 캐시가 남으면 되돌린 원본이 변이된 바이트코드로
@@ -212,7 +275,7 @@ def test_시간_제한을_넘기면_남은_반복을_돌지_않는다(tmp_path: 
     assert path.read_bytes() == b"x = 1\n"
 
 
-@pytest.mark.parametrize("판정자", ["pytest", "vitest", "playwright", "tsc"])
+@pytest.mark.parametrize("판정자", ["pytest", "vitest", "playwright", "tsc", "exit"])
 def test_시간_제한을_넘긴_결과는_출력이_무엇이든_오류다(판정자: JudgeName) -> None:
     """끊기 전까지의 출력이 초록이나 빨강으로 읽혀도 끝까지 돌지 않은 판정은 재는 것이 없다."""
     끊긴 = CommandResult(1, "1 failed, 2 passed\n      Tests  1 failed (3)\n", timed_out_after=9)
@@ -265,6 +328,7 @@ subprocess.Popen(손자, stdout=sys.stdout, stderr=sys.stderr, start_new_session
 while not 심장.exists():
     time.sleep(0.05)
 print("손자가 뛴다", flush=True)
+심장.with_suffix(".printed").touch()
 if 떠난다 and not 따로:
     sys.exit(0)  # 윈도우: 자식이 먼저 끝나 손자가 고아가 된다
 time.sleep(60)
@@ -277,22 +341,69 @@ def _뛰는지(심장: Path) -> bool:
     return 심장.stat().st_size != 크기
 
 
+def _첫_기다림을_끊는다(
+    monkeypatch: pytest.MonkeyPatch,
+    끊는_예외: Callable[[subprocess.Popen[str], float], BaseException],
+    준비됐다: Callable[[subprocess.Popen[str]], bool] = lambda _: True,
+) -> None:
+    """실제 러너의 첫 기다림(`communicate`)을 `준비됐다` 가 참이 된 뒤 `끊는_예외` 로 끊는다. 뒤의
+    기다림(끊은 뒤 남은 출력을 읽는 것, `taskkill` 을 기다리는 것)은 그대로 둔다. 그것까지 끊으면
+    끝내지 못한다. 시간 제한이 실제로 지나기를 기다리던 판은 시험 한 번 13초 가운데 10초를 썼고,
+    부하에서 기동이 3초를 넘기면 손자가 뛰기 전에 끊겨 거짓 빨강이 날 수 있었다(대기열 203). 준비를
+    30초 넘게 기다리면 그대로 끊어 시험이 단언에서 실패하게 둔다."""
+    원래 = subprocess.Popen[str].communicate
+    끊었다: list[bool] = []
+
+    def 한_번_끊긴다(
+        self: subprocess.Popen[str], 입력: str | None = None, timeout: float | None = None
+    ) -> tuple[str, str]:
+        if 끊었다:
+            return 원래(self, 입력, timeout)
+        끝 = time.monotonic() + 30
+        while not 준비됐다(self) and time.monotonic() < 끝:
+            time.sleep(0.05)
+        끊었다.append(True)
+        raise 끊는_예외(self, timeout or 0)
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", 한_번_끊긴다)
+
+
+def _시간_제한(process: subprocess.Popen[str], timeout: float) -> BaseException:
+    return subprocess.TimeoutExpired(process.args, timeout)
+
+
+def _Ctrl_C(process: subprocess.Popen[str], timeout: float) -> BaseException:
+    return KeyboardInterrupt()
+
+
 def test_실제_러너는_시간_제한을_넘기면_손자_프로세스까지_끝내고_그때까지의_출력을_돌려준다(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """하위 명령이 띄운 프로세스(pytest 가 띄운 러너)가 남으면 그것이 계속 돌고, 출력 파이프를 쥐어
     결과를 읽는 쪽도 끝나지 않는다(대기열 139). 손자는 자식의 출력 파이프를 물려받아 쥔다."""
     심장 = tmp_path / "heartbeat"
+    _첫_기다림을_끊는다(monkeypatch, _시간_제한, lambda _: 심장.with_suffix(".printed").exists())
     시작 = time.monotonic()
 
-    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 3)
+    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
 
     걸린 = time.monotonic() - 시작
-    assert 결과.timed_out_after == 3
+    assert 결과.timed_out_after == 60
     assert "손자가 뛴다" in 결과.output
     assert 걸린 < 8
     assert 심장.stat().st_size > 0
     assert not _뛰는지(심장)
+
+
+def test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다(tmp_path: Path) -> None:
+    """다른 실제 러너 시험은 첫 기다림에 시간 제한을 넣어, 시간 제한을 기다림에 넘기는 배관은 이
+    시험만 잰다. 자식이 20초를 자므로 기동이 늦어도 1초 제한은 늘 먼저 온다."""
+    시작 = time.monotonic()
+
+    결과 = run_command([sys.executable, "-c", "import time; time.sleep(20)"], tmp_path, 1)
+
+    assert 결과.timed_out_after == 1
+    assert time.monotonic() - 시작 < 8
 
 
 def test_실제_러너는_프로세스_트리를_끝내지_못해도_자식은_끝낸다(
@@ -310,34 +421,21 @@ def test_실제_러너는_프로세스_트리를_끝내지_못해도_자식은_�
     monkeypatch.setattr(subprocess, "run", 띄우지_못한다)
     monkeypatch.setattr(os, "killpg", 끝내지_못한다, raising=False)
     monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
+    _첫_기다림을_끊는다(monkeypatch, _시간_제한)
     시작 = time.monotonic()
 
-    결과 = run_command([sys.executable, "-c", "import time; time.sleep(20)"], tmp_path, 2)
+    결과 = run_command([sys.executable, "-c", "import time; time.sleep(20)"], tmp_path, 60)
 
-    assert 결과.timed_out_after == 2
+    assert 결과.timed_out_after == 60
     assert time.monotonic() - 시작 < 8
 
 
 def test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세스까지_끝낸다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """끊긴 실행이 남긴 프로세스는 되돌린 파일 위에서 계속 돈다. 끊는 것은 처음 기다림 하나다.
-    끝내는 쪽(`taskkill`)의 기다림까지 끊으면 끝내지 못한다."""
+    """끊긴 실행이 남긴 프로세스는 되돌린 파일 위에서 계속 돈다. 끊는 것은 처음 기다림 하나다."""
     심장 = tmp_path / "heartbeat"
-    원래 = subprocess.Popen[str].communicate
-    끊었다: list[bool] = []
-
-    def 한_번_끊긴다(
-        self: subprocess.Popen[str], 입력: str | None = None, timeout: float | None = None
-    ) -> tuple[str, str]:
-        if 끊었다:
-            return 원래(self, 입력, timeout)
-        while not 심장.exists():
-            time.sleep(0.05)
-        끊었다.append(True)
-        raise KeyboardInterrupt
-
-    monkeypatch.setattr(subprocess.Popen, "communicate", 한_번_끊긴다)
+    _첫_기다림을_끊는다(monkeypatch, _Ctrl_C, lambda _: 심장.with_suffix(".printed").exists())
 
     with pytest.raises(KeyboardInterrupt):
         run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
@@ -350,16 +448,23 @@ def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_�
 ) -> None:
     """윈도우의 `taskkill /T` 는 부모를 따라 찾아 고아를 못 찾고, POSIX 의 프로세스 그룹은 제 세션을
     연 손자를 담지 않는다(독스트링의 못 보는 것). 남은 손자가 출력 파이프를 쥐어도 기다림은
-    끝난다."""
+    끝난다. 윈도우에서는 자식이 끝나 손자가 고아가 된 뒤에 끊는다. 그 전에 끊으면 `taskkill /T` 가
+    자식을 따라 손자를 찾는다."""
     monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
     심장 = tmp_path / "heartbeat"
+
+    def 고아가_됐다(process: subprocess.Popen[str]) -> bool:
+        찍었다 = 심장.with_suffix(".printed").exists()
+        return 찍었다 and (sys.platform != "win32" or process.poll() is not None)
+
+    _첫_기다림을_끊는다(monkeypatch, _시간_제한, 고아가_됐다)
     시작 = time.monotonic()
 
-    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "떠난다"], tmp_path, 3)
+    결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "떠난다"], tmp_path, 60)
 
     걸린 = time.monotonic() - 시작
     try:
-        assert 결과.timed_out_after == 3
+        assert 결과.timed_out_after == 60
         assert "그만 읽었다" in 결과.output
         assert 걸린 < 8
         assert _뛰는지(심장)
@@ -380,6 +485,7 @@ else:
 while not 심장.exists():
     time.sleep(0.05)
 print("손자가 뛴다", flush=True)
+심장.with_suffix(".printed").touch()
 time.sleep(60)
 """
 
@@ -392,11 +498,12 @@ def test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서
     `.claude/rules/tools.md`)."""
     monkeypatch.setattr("tools.mutate._DRAIN_SECONDS", 1)
     심장 = tmp_path / "heartbeat"
+    _첫_기다림을_끊는다(monkeypatch, _시간_제한, lambda _: 심장.with_suffix(".printed").exists())
 
-    결과 = run_command([sys.executable, "-c", _그룹을_여는_자식, _손자, str(심장)], tmp_path, 3)
+    결과 = run_command([sys.executable, "-c", _그룹을_여는_자식, _손자, str(심장)], tmp_path, 60)
 
     try:
-        assert 결과.timed_out_after == 3
+        assert 결과.timed_out_after == 60
         assert _뛰는지(심장) == (sys.platform != "win32")
     finally:
         with contextlib.suppress(OSError):  # 끝냈거나 스스로 끝났으면 없다
@@ -1146,6 +1253,179 @@ def test_처리하지_않은_에러를_기대한_변이는_그것만으로_기�
     assert code == 0
     assert any("처리하지 않은 에러" in 한줄 for 한줄 in 줄)
     assert any(한줄.startswith("   |") and "Errors  1 error" in 한줄 for 한줄 in 줄)
+
+
+_EXIT_러너 = """
+[runner.checker]
+command = ["node", "check.mjs"]
+judge = "exit"
+red_exit = 1
+"""
+
+
+def _exit_변이(*, 줄: str = "") -> str:
+    return f"""
+[[mutation]]
+name = "하나"
+runner = "checker"
+expect = "red"
+{줄}
+[[mutation.edit]]
+file = "m.json"
+old = 'x = 1'
+new = 'x = 2'
+"""
+
+
+@pytest.mark.parametrize(
+    ("결과", "판정"),
+    [
+        (CommandResult(0, "모두 맞다\n"), "green"),
+        (CommandResult(1, "이름이 없다: a\n"), "red"),
+        (CommandResult(2, "읽을 파일이 없다\n"), "error"),
+        (CommandResult(1, "", timed_out_after=5), "error"),
+    ],
+    ids=["0", "빨강_코드", "다른_코드", "시간_제한"],
+)
+def test_종료_코드_판정은_0_이면_초록_적은_코드면_빨강_나머지는_오류다(
+    결과: CommandResult, 판정: str
+) -> None:
+    """종료 코드로 말하는 검사기(node 검사기)는 그 도구의 판정이 없어 변이를 따로 지었다(대기열
+    253). 읽을 파일이 없다는 2 를 빨강으로 세면 아무것도 재지 않은 변이가 기대와 맞는다."""
+    판정_하나 = judge("exit", 결과, red_exit=1)
+
+    assert 판정_하나.outcome == 판정
+    if 결과.timed_out_after is None:
+        assert 판정_하나.summary == 결과.output.strip()
+
+
+def test_표지를_적은_변이는_기대대로여도_출력에_표지가_없으면_어긋난다(tmp_path: Path) -> None:
+    """빨강만 보면 엉뚱한 까닭의 빨강도 기대와 맞는다(`.claude/rules/probes.md` 의 표지 항목).
+    스토리 변이는 실패한 스토리를 셀 뿐 afterEach 의 빨강과 axe 의 빨강을 가르지 못했다(대기열
+    253). 표지는 색 코드를 벗긴 출력에서 찾는다."""
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    줄: list[str] = []
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["이름이 없다: a", "둘째 표지"]')
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "\x1b[31m이름이 없다: a\x1b[0m\n다른 까닭\n")
+        return CommandResult(0, "모두 맞다\n")
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append)
+
+    assert code == 1
+    assert any(한줄.startswith("!! 어긋남") and "빨강" in 한줄 for 한줄 in 줄)
+    assert any("표지 없음" in 한줄 and "둘째 표지" in 한줄 for 한줄 in 줄)
+    assert not any("표지 없음" in 한줄 and "이름이 없다" in 한줄 for 한줄 in 줄)
+    assert any(한줄.startswith("   |") and "다른 까닭" in 한줄 for 한줄 in 줄)
+    assert path.read_bytes() == b"x = 1\n"
+
+
+def test_표지가_모두_있으면_기대대로다(tmp_path: Path) -> None:
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["이름이 없다: a"]')
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "이름이 없다: a\n")
+        return CommandResult(0, "모두 맞다\n")
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None) == 0
+
+
+def test_못_보는_것_표지는_다른_까닭의_줄에_든_같은_문구로도_맞는다(tmp_path: Path) -> None:
+    """표지는 부분 문자열로 찾아 출력의 어느 줄에 있든 맞는다(독스트링의 못 보는 것)."""
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["이름이 없다: a"]')
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "다른 검사: 이름이 없다: ab\n")
+        return CommandResult(0, "모두 맞다\n")
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None) == 0
+
+
+def test_반복하는_변이는_매번_표지가_있어야_한다(tmp_path: Path) -> None:
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["표지"]\nrepeat = 2')
+    출력 = iter(["표지\n", "다른 것\n"])
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, next(출력))
+        return CommandResult(0, "모두 맞다\n")
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None) == 1
+
+
+def test_기준선의_표지가_출력에_없으면_기준선은_초록이_아니고_변이를_넣지_않는다(
+    tmp_path: Path,
+) -> None:
+    """종료 코드 0 만으로는 검사기가 아무것도 읽지 않고 끝난 것과 가를 수 없다. 옮겨 온 검사기
+    프로브도 기준선의 집계 줄을 봤다."""
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    줄: list[str] = []
+    변이_동안: list[bool] = []
+    변이 = _EXIT_러너 + 'baseline_output = ["집계 줄"]\n' + _exit_변이()
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        변이_동안.append(b"x = 2" in path.read_bytes())
+        return CommandResult(0, "아무것도 읽지 않았다\n")
+
+    code = measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append)
+
+    assert code == 1
+    assert 변이_동안 == [False]
+    assert any(한줄.startswith("기준선") and "표지 없음" in 한줄 for 한줄 in 줄)
+    assert any("집계 줄" in 한줄 for 한줄 in 줄)
+
+
+def test_기준선의_표지가_있으면_변이로_간다(tmp_path: Path) -> None:
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    변이 = _EXIT_러너 + 'baseline_output = ["집계 줄"]\n' + _exit_변이()
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "이름이 없다\n")
+        return CommandResult(0, "집계 줄: 9\n")
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None) == 0
+
+
+def test_표지가_바뀌면_바뀐_변이다() -> None:
+    옛 = load_spec(_EXIT_러너 + _exit_변이(줄='expect_output = ["가"]'))
+    새_변이 = load_spec(_EXIT_러너 + _exit_변이(줄='expect_output = ["나"]'))
+    새_러너 = load_spec(
+        _EXIT_러너 + 'baseline_output = ["집계"]\n' + _exit_변이(줄='expect_output = ["가"]')
+    )
+
+    assert changed_names(옛, 새_변이) == ["하나"]
+    assert changed_names(옛, 새_러너) == ["하나"]
+
+
+@pytest.mark.parametrize(
+    ("변이", "문구"),
+    [
+        (_EXIT_러너.replace("red_exit = 1\n", "") + _exit_변이(), "red_exit"),
+        (_VITEST_러너 + "red_exit = 1\n" + _vitest_변이(), "red_exit"),
+        (_EXIT_러너.replace("red_exit = 1", "red_exit = 0") + _exit_변이(), "red_exit"),
+        (_EXIT_러너 + _exit_변이(줄='expect_output = [""]'), "expect_output"),
+        (_EXIT_러너 + 'baseline_output = [""]\n' + _exit_변이(), "baseline_output"),
+    ],
+    ids=["빨강_코드가_없다", "빨강_코드는_exit_만", "빨강_코드가_0", "빈_표지", "빈_기준선_표지"],
+)
+def test_종료_코드_판정과_표지의_짝이_틀리면_변이_파일_오류다(변이: str, 문구: str) -> None:
+    """빈 표지는 어느 출력에나 있어 아무것도 가르지 않는다."""
+    with pytest.raises(SpecError, match=문구):
+        load_spec(변이)
 
 
 @pytest.mark.parametrize(

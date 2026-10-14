@@ -1,7 +1,7 @@
-// 사용 규약 검사기(.design-sync/check-conventions.mjs)의 티켓 05 판정(빼는 목록, 기초 카드와 목록 타일, data-density)이
-// 빨개지는 것을 변이로 본다. tools/mutate.py 의 판정(pytest, vitest, playwright, tsc)에는 종료 코드로 말하는 node 검사기가
-// 없어 여기 따로 둔다. 저장소의 파일은 고치지 않는다. 검사기가 읽는 입력을 임시 폴더에 복사하고, 변이마다 새 사본을 고쳐
-// 그 폴더를 작업 디렉터리로 검사기를 돌린다.
+// 사용 규약 검사기(.design-sync/check-conventions.mjs)의 티켓 05 판정 가운데, 파일을 만들거나 지우는 변이 둘을 본다.
+// 나머지 아홉은 원문 치환이라 tools/mutate.py 의 표 checker_mutations.toml 로 옮겼다(대기열 253). 이 둘은 원문
+// 치환으로 표현하지 못해 여기 남는다. 저장소의 파일은 고치지 않는다. 검사기가 읽는 입력을 임시 폴더에 복사하고,
+// 변이마다 새 사본을 고쳐 그 폴더를 작업 디렉터리로 검사기를 돌린다.
 //
 // 사용(저장소 뿌리에서, 변환기와 참조 Storybook 을 돌리고 카드를 ds-bundle/ 에 복사한 뒤):
 //   node .scratch/design-refresh/probes/checker_mutations.mjs
@@ -30,38 +30,6 @@ const INPUTS = [
 const MUTATIONS = [
   { name: "기준선", edits: [], expect: null, marker: "빼는 목록이 맞다: 컴포넌트 9" },
   {
-    name: "변형 스토리 하나를 빼는 목록에서 걷는다",
-    edits: [[".design-sync/config.json", '        "atoms-button--narrow-row"\n', ""], [".design-sync/config.json", '"atoms-button--focus",', '"atoms-button--focus"']],
-    expect: "변형 스토리가 빼는 목록에 없다: Button atoms-button--narrow-row",
-  },
-  {
-    name: "빼는 목록에 없는 스토리 id 를 든다",
-    edits: [[".design-sync/config.json", '"atoms-card--default",', '"atoms-card--default",\n        "atoms-card--gone",']],
-    expect: "빼는 목록의 스토리가 없다: Card atoms-card--gone",
-  },
-  {
-    name: "보여 주기용 스토리를 빼는 목록에 든다",
-    edits: [[".design-sync/config.json", '"atoms-icon--decorative",', '"atoms-icon--decorative",\n        "atoms-icon--showcase-nav-items",']],
-    expect: "보여 주기용 스토리를 뺀다: Icon atoms-icon--showcase-nav-items",
-  },
-  {
-    name: "컴포넌트의 보여 주기용 태그를 모두 걷는다",
-    edits: [[".design-sync/sb-reference/index.json", '"showcase"]', '"other"]', "all"]],
-    expect: "보여 주기용 스토리가 없다: Button",
-  },
-  {
-    name: "기초 카드가 없는 변수를 읽는다",
-    edits: [[".design-sync/foundations/spacing/index.html", "var(--radius-s)", "var(--radius-xs)"]],
-    copyCard: "spacing",
-    expect: "카드의 변수가 없다: --radius-xs",
-  },
-  {
-    name: "기초 카드의 첫 줄이 @dsCard 가 아니다",
-    edits: [[".design-sync/foundations/type/index.html", '<!-- @dsCard group="Type" -->\n', ""]],
-    copyCard: "type",
-    expect: "첫 줄이 @dsCard 가 아니다",
-  },
-  {
     name: "기초 카드 폴더에 HTML 이 둘이다",
     extraFile: [".design-sync/foundations/colors/extra.html", "<!-- @dsCard group=\"Colors\" -->\n"],
     edits: [],
@@ -72,22 +40,6 @@ const MUTATIONS = [
     removeDirs: [".design-sync/foundations/density", "ds-bundle/foundations/density"],
     edits: [],
     expect: "기초 카드 폴더가 없다: density",
-  },
-  {
-    name: "목록 타일이 없는 테마를 단다",
-    edits: [[".design-sync/thumbnail.html", 'data-theme="jacho"', 'data-theme="jadu"']],
-    copyThumb: true,
-    expect: "data-theme 선택자가 없다: jadu",
-  },
-  {
-    name: "카드를 ds-bundle 에 복사하지 않았다",
-    edits: [[".design-sync/foundations/density/index.html", "<h1>", "<h1 data-x>"]],
-    expect: "ds-bundle 에 복사되지 않았다",
-  },
-  {
-    name: "규약이 없는 밀도 키를 든다",
-    edits: [[".design-sync/conventions.md", "`data-density`(`compact` 촘촘", "`data-density`(`dense` 촘촘"]],
-    expect: "data-density 선택자가 없다: dense",
   },
 ];
 

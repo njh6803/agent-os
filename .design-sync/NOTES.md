@@ -36,7 +36,8 @@
   목록에 있고, 목록의 id 는 모두 지금 있는 변형 스토리이며, 컴포넌트마다 보여 주기용 스토리가 하나 이상이다. 검사기가
   참조 Storybook 의 `index.json`(`cfg.storybookStatic`)으로 이 셋을 본다. CI 에는 두지 않는다(design-refresh 명세의
   이음매 절, 새 이음매를 더하지 않는다). 그래서 어긋남은 동기화 때 잡힌다. 검사기의 판정이 빨개지는 것은
-  `.scratch/design-refresh/probes/checker_mutations.mjs` 가 잰다.
+  `.scratch/design-refresh/probes/checker_mutations.toml`(`tools/mutate.py` 의 표)과, 파일을 만들거나 지우는 변이
+  둘은 같은 자리의 `checker_mutations.mjs` 가 잰다.
 
 ## 기초 카드
 
@@ -93,7 +94,7 @@
 - 다시 동기화할 때 고쳐 쓰지 않고 이름만 다시 검증한다. 클래스 목록은 소스가 클래스를 더하거나 빼면 바뀐다. 검증은
   `node .design-sync/check-conventions.mjs` 이고, 무엇을 어떻게 읽는지는 그 머리 주석이 원천이다. 규약의 문장 모양을
   바꾸면 검사기도 함께 고친다(2026-10-12 변이 넷으로 잡히는 것을 봤다: 없는 클래스, 없다고 적은 클래스, 없는 변수, 없는
-  컴포넌트. 2026-10-13 에 더한 빼는 목록·기초 카드·밀도 키의 판정은 `checker_mutations.mjs` 가 잰다).
+  컴포넌트. 2026-10-13 에 더한 빼는 목록·기초 카드·밀도 키의 판정은 `checker_mutations.toml` 과 `.mjs` 가 잰다).
 - 2026-10-13 에 새 결정(테마 넷과 녹청 기본, 밀도와 그 변수, 새 클래스와 변수)으로 고쳐 썼다. 밀도를 따르는 클래스
   (`text-body`, `h-control` 등)는 `@theme inline` 의 별칭이라 클래스는 있어도 CSS 변수로는 나오지 않는다. 그래서 인라인
   `style` 의 변수 목록에는 원천인 밀도 변수 일곱을 든다.
