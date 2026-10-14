@@ -1074,8 +1074,8 @@ tests = ["tests/tools/test_sibling_overlap.py", "-k", "대기열_행이_겹쳐�
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    trees = [Tree(root, commit) for commit in (base, main_sha) if commit is not None]'''
-new = '''    trees = [Tree(root, commit) for commit in (base,) if commit is not None]'''
+old = '''    kept = _kept_lines(root, (result.base, result.main.commit), result.changed)'''
+new = '''    kept = _kept_lines(root, (result.base,), result.changed)'''
 
 [[mutation]]
 name = "헌법 README 가 main 과 같아도 판을 이 브랜치의 것으로 센다"

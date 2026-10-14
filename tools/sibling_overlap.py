@@ -318,6 +318,7 @@ class Survey:
     pulls_from: str  # 열린 PR 을 읽은 길(FROM_GH 또는 FROM_MERGE_REF)
     harness: list[str]  # 이 브랜치가 고친 하네스 파일 가운데 지금 있는 것
     specs: dict[str, str | None]  # 카나리아 명세 → 그 `source`
+    base: str  # 이 브랜치와 main 의 merge-base. `--move` 가 둘 줄도 이 판에서 읽는다
 
     @property
     def siblings(self) -> list[Sibling]:
@@ -1024,6 +1025,7 @@ def survey(root: Path, remote: Remote) -> Survey:
         remote.pulls_from,
         harness,
         canary_sources(root),
+        base,
     )
 
 
@@ -1263,10 +1265,11 @@ def _check(start: Path, day: str) -> tuple[Survey, Verdict]:
     return result, judge(result, day)
 
 
-def _kept_lines(root: Path, main_sha: str, paths: Iterable[str]) -> dict[str, frozenset[str]]:
-    """파일마다 merge-base 와 main 의 판에 있는 줄(줄 끝의 CR 은 뺀다). 그 판에 없으면 빈 집합."""
-    base = merge_base(root, "HEAD", main_sha)
-    trees = [Tree(root, commit) for commit in (base, main_sha) if commit is not None]
+def _kept_lines(
+    root: Path, commits: Sequence[str], paths: Iterable[str]
+) -> dict[str, frozenset[str]]:
+    """파일마다 `commits` 의 판에 있는 줄(줄 끝의 CR 은 뺀다). 그 판에 없으면 빈 집합."""
+    trees = [Tree(root, commit) for commit in commits]
     return {
         path: frozenset(line.rstrip("\r") for tree in trees for line in tree.text(path).split("\n"))
         for path in paths
@@ -1281,7 +1284,7 @@ def _move_and_check(start: Path, day: str) -> tuple[Survey, Verdict]:
     if not verdict.shifted:
         print("옮길 번호가 없어 옮기지 않았다")
         return result, verdict
-    kept = _kept_lines(root, result.main.commit, result.changed)
+    kept = _kept_lines(root, (result.base, result.main.commit), result.changed)
     plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)
     apply_moves(root, plan)
     print(_moved_line(verdict.shifted, plan))

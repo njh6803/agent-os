@@ -258,7 +258,24 @@ CodeRabbit CLI가 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히
 합치기를 커밋한 뒤 친 대조는 main이 그새 `2026-10-15-01`까지 가져가 이 일지를 `2026-10-15-05`로 옮기라고 했다. `--move`로
 옮겼고 다시 친 대조는 0이었다. 이번에는 사용자 프롬프트 인용이 그대로였다. 대신 위 옮기기 절의 두 문장이 첫 옮기기 때의 번호
 `2026-10-14-04`를 적은 기록인데 새 번호로 바뀌어, 손으로 되돌렸다. 같은 꼴이면 뜻을 가리지 않고 옮기는 것은 독스트링의 못 보는
-것이다.
+것이다. 커밋(`f396361`) 뒤 #239가 들어와 충돌 없이 합쳤고, 대조는 0이었다.
+
+## PR 리뷰
+
+[njh6803/agent-os#242](https://github.com/njh6803/agent-os/pull/242)를 열고 마지막 푸시 뒤에 `@coderabbitai review`를 남겼다.
+`tools/wait_ci.py`가 검사 일곱 모두 통과로 끝났다.
+
+- **CodeRabbit: 리뷰 없음.** 무료 OSS 한도에 걸렸다(`Review rate limited`, 요약 코멘트가 "Review limit reached"). 보안·버그 축은 PR
+  본문의 PR 직전 리뷰(`/security-review`, `bug-perf-review`)가 대체한다(`operations.md` 리뷰 파이프라인).
+- **claude-review 첫 회차: Critical·Major 0, Minor 3, Nit 2.** 첫 회차라 지적마다 판단했다.
+  - 고쳤다(Minor): `_kept_lines`가 `survey`가 이미 구한 merge-base를 다시 구했다. `Survey`에 `base`를 실어 한 번만 구한다. 원문이
+    옮겨 간 변이 114와 같은 호출 자리의 113을 다시 돌려 빨강이다.
+  - 보류(Minor): 옮기기 쪽을 별도 모듈로 가르기. 변이 116개의 원문 파일이 갈리는 큰 이동이라 후속 몫이다.
+  - 보류(Minor): `_undo`가 되돌리기와 남은 것 목록을 겸한다(CQS). 호출부가 하나이고 그 반환값으로 늘 예외를 올린다. 구조를 바꾸면
+    변이 93~96의 원문이 옮겨 간다.
+  - 보류(Nit): `_move_and_check`만 `print`한다. 출력 위치만의 문제다.
+  - 이미 있음(Nit): `adr` 갈래가 날짜의 연도에도 걸리는 순서 의존. `_CITATIONS` 위 주석이 "같은 자리에서는 앞 갈래가 이긴다(일지
+    순번이 ADR 파일 이름 꼴보다 먼저다)"로 적어 두었다.
 
 ## 회고
 
@@ -288,7 +305,8 @@ CodeRabbit CLI가 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히
 
 ## 다음
 
-- **헌법 판 고침과 옮기기를 커밋하고 PR을 연다.** main이 빠르게 움직이므로 커밋 직전에 `git fetch`로 다시 보고, 움직였으면
-  합친 뒤 `tools/sibling_overlap.py`를 다시 친다.
+- **PR 리뷰 반영을 푸시하고 둘째 회차를 본 뒤 워크트리 길로 병합한다.** 둘째 회차부터는 Critical·Major만 고친다.
+- `tools/sibling_overlap.py`의 옮기기 쪽을 별도 모듈로 가르는 것과 `_undo`의 CQS는 claude-review가 짚고 보류했다(PR 코멘트).
+  같은 도구의 대기열 254(없는 일지를 가리키는 인용)를 다룰 때 함께 볼 만하다.
 - **카나리아 대조군 사본** `C:/project/agent-canary-55ba299`(분리 HEAD로 등록한 워크트리)가 남아 있다. 병합 뒤 카나리아를 다시 돌릴
   일이 없으면 지운다.
