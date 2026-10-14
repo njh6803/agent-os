@@ -3,7 +3,8 @@
 `web/packages/ui` 를 Claude Design 프로젝트 "Agent OS 디자인 시스템"(config 의 `projectId`)에 올린다. 첫 동기화는
 2026-10-12, Claude Code 2.1.286 의 번들 스킬이다. 패키지와 결정의 배경은 ADR 0025·0026. 첫 프로젝트가 화면을 그릴
 계정과 다른 계정에 올라갔다고 사용자가 알려, 같은 날 사용자가 다시 로그인한 계정에 새로 만들고 같은 빌드를 다시 올렸다(소스가
-같아 채점은 이어 썼다, 일지 2026-10-12-11).
+같아 채점은 이어 썼다, 일지 2026-10-12-11). 2026-10-14 에 design-refresh 의 디자인 시스템을 Claude Code 2.1.295 의 번들
+스킬로 다시 올렸다(일지 2026-10-15-01).
 
 ## 돌리는 법
 
@@ -16,7 +17,10 @@
 - 목록 타일: driver 뒤에 `.design-sync/thumbnail.html` 을 `ds-bundle/` 에 복사한다(빌드가 `ds-bundle/` 을 지우고 새로 짓는다,
   `package-build.mjs`). `DesignSync` 의 `finalize_plan` writes 에 `thumbnail.html` 과 `_ds_needs_recompile` 을 넣고, 둘을
   올린 뒤 프로젝트를 한 번 연다. 변환기의 삭제 목록은 `components/` 경로만 내므로(`lib/remote-diff.mjs` 를 읽었다) 다시
-  동기화해도 지워지지 않는다. 새 프로젝트에 올릴 때와 이 파일을 고쳤을 때만 올린다.
+  동기화해도 지워지지 않는다. 새 프로젝트에 올릴 때와 이 파일을 고쳤을 때만 올린다. 고쳐 올릴 때는 서버가 만든 이미지
+  `.thumbnail` 도 `finalize_plan` 의 `deletes` 에 넣어 지운다. 두지 않으면 타일이 옛 그림 그대로다(아래 Re-sync risks).
+  스킬은 재동기화의 삭제 목록을 `upload.deletePaths` 에서 그대로 옮기라고 하지만, `.thumbnail` 은 변환기가 짓지 않고 서버가
+  만든 파일이라 그 diff 에 보이지 않는다. 그래서 이 하나는 손으로 넣는다(2026-10-14 사용자가 골랐다).
 - 기초 카드: driver 뒤에 `.design-sync/foundations/` 를 통째로 `ds-bundle/foundations/` 에 복사하고(목록 타일과 같은 이유),
   `finalize_plan` writes 에 `foundations/**/*.html` 을 넣는다. 카드를 고쳤을 때와 새 프로젝트에 올릴 때 올린다.
 - 사용 규약 검사: 복사까지 마친 뒤 `node .design-sync/check-conventions.mjs`. 규약의 이름, 빼는 목록, 기초 카드와 목록
@@ -30,7 +34,9 @@
 - 빼는 법은 `cfg.overrides.<Name>.skip` 의 스토리 id 다. 변환기가 그 목록을 미리보기 격자와 스토리 조각에서 뺀다
   (2.1.286 의 `lib/emit.mjs` 의 `visibleStoryIds` 와 `lib/preview-gen-storybook.mjs` 를 읽었고, 2026-10-13 그 판의 변환기를
   로컬에서 돌려 생성된 미리보기 `.design-sync/.cache/previews/*.tsx` 의 내보내기가 보여 주기용 11개뿐인 것을 손으로
-  봤다). `cfg.titleMap` 의 null 은 판정 스토리 파일(진입점, 판정,
+  봤다). 채점도 그 목록을 따른다. 2026-10-14 재동기화의 드라이버 로그(`[COMPARE]` 줄의 grade keys)와 시트에 아홉
+  컴포넌트의 보여 주기용 11개만 있었다.
+  `cfg.titleMap` 의 null 은 판정 스토리 파일(진입점, 판정,
   판정의 음성 사례)을 통째로 빼고, 컴포넌트 스토리 파일 안의 `judgment` 스토리는 빼는 목록이 뺀다.
 - 규칙: 컴포넌트 스토리를 더하거나 이름을 바꾸면 빼는 목록도 고친다. 보여 주기용 태그가 없는 컴포넌트 스토리는 모두 빼는
   목록에 있고, 목록의 id 는 모두 지금 있는 변형 스토리이며, 컴포넌트마다 보여 주기용 스토리가 하나 이상이다. 검사기가
@@ -44,7 +50,11 @@
 - 넷이고 폴더마다 HTML 하나다: `foundations/colors`(Colors. 쓰임새 토큰의 녹청 라이트·다크, 테마 넷, 녹청의 원색),
   `foundations/type`(Type. 글자 단계, 굵기, 글꼴 둘), `foundations/spacing`(Spacing. 간격, 모서리, 틀),
   `foundations/density`(Density. 밀도 두 벌). 첫 줄이 `<!-- @dsCard group="…" -->` 다. 변환기의 자체 검사가 폴더마다 첫
-  `@dsCard` HTML 하나를 고르기 때문에 카드마다 폴더를 따로 둔다(`lib/emit.mjs` 의 주석).
+  `@dsCard` HTML 하나를 고르기 때문에 카드마다 폴더를 따로 둔다(`lib/emit.mjs` 의 주석). 2026-10-14 재동기화의 첫
+  업로드 뒤 디자인 시스템 창이 넷을 그룹 `Colors`·`Density`·`Spacing`·`Type` 아래에 모았고, 카드 이름은 파일 이름을 따라
+  모두 `index` 로 보였다(컴포넌트 카드는 `Button.html` 이라 "Button" 이다). 아직 열린 문제다. 파일 이름을 바꾸면 고쳐질
+  것으로 보지만 재지 않았다. 검사기는 폴더마다 HTML 이 하나인지만 보고 이름을 가리지 않는다. 파일 이름 `index.html` 을 든
+  자리는 티켓 05 의 "정한 것" 3 과 프로브 `.scratch/design-refresh/probes/checker_mutations.mjs` 이니 함께 고친다.
 - 값은 글자로 적지 않는다(ADR 0026 "디자인 토큰의 값은 코드에만"). 색과 길이는 `var(--이름)` 으로 칠하고, 칸에 보이는
   값은 카드 끝의 작은 스크립트가 그 요소의 계산값을 읽어 채운다(`data-value="--이름"`). 밀도를 따르는 글자와 높이는
   별칭(`--text-body`)이 아니라 원천인 밀도 변수(`--body-size`)로 읽는다. 별칭은 `@theme inline` 이라 CSS 변수로 나오지
@@ -74,8 +84,13 @@
   가 없다). 실어도 그 경로는 initialGlobals 만 넘긴다 → `preview-gen-storybook.mjs` 를 포크(`cfg.libOverrides`)해 스토리의
   globals 를 `data-theme`/`data-mode`/`data-density` 를 단 감싸는 div(바탕 `var(--bg)`, 글자 `var(--text)`, 여백 16px)로
   옮긴다. 디자인 토큰이 `[data-theme]`·`[data-mode]` 요소마다 쓰임새를, `[data-density]` 요소마다 밀도 변수를 다시 선언해
-  그 안만 그렇게 그린다. 밀도는 2026-10-13(design-refresh 티켓 05)에 더했다. 지금 카드에 오르는 보여 주기용 스토리는
-  globals 를 정하지 않아 감싸기가 돌지 않지만, globals 를 정한 보여 주기용 스토리를 더할 때를 위해 남긴다.
+  그 안만 그렇게 그린다. 밀도는 2026-10-13(design-refresh 티켓 05)에 더했다.
+- [GENERAL] 다크 설정의 브라우저에서 컴포넌트 카드의 본문 글자가 흰 바탕 위에서 거의 보이지 않았다 → 카드의 스토리가
+  globals 를 정하지 않아 감싸는 요소가 없었고, `data-mode` 가 없으면 쓰임새 토큰이 보는 사람의 시스템 설정(다크)을 따라
+  글자색이 밝아지는데 카드 바탕은 앱이 칠한 흰색이다 → 포크가 globals 없는 스토리도 `data-theme="nokcheong"`·
+  `data-mode="light"` 로 감싸고 글자색을 그 안에서 `var(--text)` 로 다시 푼다(여백과 바탕은 더하지 않는다). 2026-10-14
+  재동기화의 첫 업로드 뒤 내장 브라우저에서 그 탭의 색 설정을 다크와 라이트로 에뮬레이트하며 손으로 봤다. compare 의 chromium 은 라이트라 두 쪽이 같아 보여
+  잡지 못한다. 기초 카드와 목록 타일이 `data-mode` 를 다는 것과 같은 까닭이다.
 - 글꼴: 패키지 `build` 의 `dist/theme.css` 에는 `@font-face` 가 없다(글꼴 CSS 는 따로 있다). 변환기가 `_ds_bundle.css` 를
   찾지 못해 참조 Storybook 의 컴파일된 CSS 로 대신하고(`[CSS_FROM_STORYBOOK]`), 거기서 `@font-face`(2026-10-13 로컬
   빌드에서 386개, Noto Sans KR 과 Noto Sans Mono)와 woff2·woff 파일을 `fonts/` 로 옮긴다. 그래서 `[FONT_MISSING]` 이 없다. 패키지 `build`
@@ -104,13 +119,24 @@
 - 목록 타일은 프로젝트 뿌리의 `thumbnail.html` 에서 나오는 것으로 보인다. 앱의 기본 디자인 시스템 다섯은 앱이 가진
   `thumbnail.html` 을 작은 창으로 그린다(Modernist 의 것을 읽었다). 이 프로젝트는 같은 짜임의 파일과 마커를 올리고 다시 연 뒤
   서버의 썸네일 이미지가 생겼고, 그 그림이 이 파일과 같았다. 올리기 전에 연 때는 없었다. 한 번 본 것이다(2026-10-12 내장
-  브라우저에서 손으로 봤다, 일지 2026-10-12-11). 파일을 고쳐 다시 올리면 이미지가 바뀌는지는 아직 보지 못했다. 2026-10-13
-  에 녹청으로 다시 그렸으니 다음 동기화가 그것을 처음 본다. `<html>` 과 띠의 테마 키는 글자로 들었다(검사기가 선택자와
-  맞댄다). 기본 테마나 테마 목록이 바뀌면 고쳐 다시 올린다.
-- 빼는 목록을 채점(Storybook 과 카드의 비교)도 따르는지, 컴포넌트 폴더 밖의 `@dsCard` 카드(`foundations/`)를 디자인
-  시스템 창이 모으는지는 재지 않았다. 다음 동기화가 처음 보고 여기와 일지에 적는다. 그리고 2026-10-13 에 손에 있던 변환기는
-  2.1.286 판(다른 워크트리의 무시된 사본)이고 Claude Code 는 2.1.296 이었다. 다음 동기화가 풀어 놓는 판의 `lib/emit.mjs`
-  에서 `overrides.<Name>.skip` 과 `cardByDir` 이 그대로인지 다시 읽는다.
+  브라우저에서 손으로 봤다, 일지 2026-10-12-11). 2026-10-14 에 녹청으로 다시 그린 파일을 올리고 프로젝트를 연 뒤에도
+  이미지는 옛 그림(띠 넷)이었다. 이미지의 URL 시각은 연 순간으로 바뀌었지만 그림은 같았다. 원격 `.thumbnail` 을 지우고 다시
+  연 뒤에야 새 그림(녹청, 띠 셋)이 생겼다. 서버가 `.thumbnail` 이 없을 때만 `thumbnail.html` 을 그리는 것으로 보인다(그날 내장
+  브라우저에서 이미지 URL 을 열어 손으로 봤다). `<html>` 과 띠의 테마 키는 글자로 들었다(검사기가 선택자와 맞댄다). 기본
+  테마나 테마 목록이 바뀌면 고쳐 다시 올리고 `.thumbnail` 을 지운다.
+- 빼는 목록을 채점도 따르는 것은 2026-10-14 에 봤다(위 "카드에 올리는 스토리"). 컴포넌트 폴더 밖의 `@dsCard`
+  카드(`foundations/`)도 그날 처음 올렸고 디자인 시스템 창이 모았다(위 "기초 카드"). 변환기는 스킬 판마다 다시
+  비교한다. 2026-10-14 에 덮어쓰기 전의 2.1.286 사본(무시된 `.ds-sync/`)을 세션 스크래치에 보관하고 2.1.295 스킬 폴더와
+  `diff -rq` 로 견줬다(`node_modules`·`package*.json` 제외). `lib/` 는 다른 파일이 없었고, 다른 것은 셋이었다. 캡처 서버
+  `storybook/http-serve.mjs` 가 HTML·JS 에 `charset=utf-8` 을 붙인 것, 새 `package-capture.mjs`, `non-storybook/SKILL.md`
+  다. 그 사본은 커밋하지 않아 다시 볼 수 없다. 다음 판에서도 `lib/emit.mjs` 의 `overrides.<Name>.skip` 과 `cardByDir`,
+  포크의 원본 `lib/preview-gen-storybook.mjs` 를 먼저 비교한다.
+- 원격 `fonts/` 에 옛 고정폭 글꼴(IBM Plex Mono 10개, JetBrains Mono 18개)이 남아 있다. 새 빌드는 Noto Sans Mono 만
+  내고 `fonts/fonts.css` 도 그것만 가리켜 화면에는 영향이 없다. 드라이버의 `upload.deletePaths` 가 `components/` 경로만
+  비교해 비어 있었고, 스킬이 재동기화의 삭제 목록을 손으로 짓지 말라고 해 2026-10-14 에 지우지 않았다. 지우려면 사람이
+  승인한 `finalize_plan` 의 `deletes` 에 그 경로를 들어야 한다.
+- Alert 는 `cfg.overrides.Alert.cardMode: "column"` 이다. 2026-10-14 validate 가 보여 주기용 스토리 둘이 격자 칸보다
+  넓다고(`[GRID_OVERFLOW] wide`) 알렸다. 표시 키라 채점에 들지 않는다.
 - config 의 `projectId` 가 `get_project` 에서 `404` 이고 `list_projects`(쓸 수 있는 것만 보인다)에 없으면, 프로젝트가
   지워졌거나 다른 계정으로 로그인했을 수 있다. 2026-10-12 에는 다른 계정이었다(사용자가 알렸다). 새 프로젝트를 만들기 전에
   사람에게 지금 로그인한 계정이 그리는 계정인지 묻는다. 두 계정이 같아야 한다는 규약은 `docs/agents/issue-tracker.md` 화면
@@ -122,15 +148,18 @@
   `cp` 로 만든 첫 사본이 CRLF 여서 계약이 CRLF 로 찍혔고, 그대로 두면 LF 로 받은 체크아웃의 첫 동기화가 채점을 모두 지운다.
   2026-10-12 PR 직전 리뷰가 짚어 LF 로 맞추고 다시 찍었다. 다시 찍을 때 driver 가 `ds-bundle/` 을 새로 지어 이전 캡처가
   지워지므로, 바이트로 견주려면 driver 전에 `_screenshots/compare/raw/` 를 보관한다.
-- 포크 `overrides/preview-gen-storybook.mjs` 는 2.1.286 의 원본에 globals 감싸기만 더했다. 스킬이 올라가면 원본과 다시
+- 포크 `overrides/preview-gen-storybook.mjs` 는 2.1.286 의 원본(2.1.295 도 같다)에 감싸는 요소 하나만 더했다. globals 를
+  정한 스토리는 그 값으로, 정하지 않은 스토리는 기본 테마·라이트로 감싼다(위 "고친 것"의 둘). 스킬이 올라가면 원본과 다시
   맞춘다(`[OVERRIDE]` 줄이 빌드 로그에 뜬다). 감싸는 div 의 기본 테마 `nokcheong` 과 밀도 값 둘은 `themes.ts` 의
-  `DEFAULT_THEME`·`DENSITIES` 와 같아야 한다. 2026-10-13 에 포크를 고쳤으므로 다음 동기화는 모든 컴포넌트를 다시 채점한다.
+  `DEFAULT_THEME`·`DENSITIES` 와 같아야 한다. 라이트 고정은 `themes.ts` 에 짝이 없다(패키지는 모드가 없으면 시스템을
+  따른다). 2026-10-14 동기화가 2026-10-13 의 포크 변경 뒤에 한 번, 그날 고친 포크 뒤에 한 번 아홉 컴포넌트를 모두
+  다시 채점했다(아래 "채점").
 - `story-constants.js` 는 스토리가 컴포넌트 모듈에서 함께 import 하는 상수를 손으로 든다. 스토리가 새 상수를 쓰면
   미리보기가 `.map` of undefined 로 깨지고 validate 의 `[RENDER]` 가 잡는다.
 - `esbuild-paths.json` 은 lucide-react 의 exports 맵 부재에 기댄다. lucide-react 가 exports 맵을 들이거나 아이콘 파일이
   `.js` 가 되면 지워도 된다.
-- 첫 동기화의 채점(아래 "채점")은 변형 스토리를 카드에 올리던 때의 것이다. 이제 카드에는 보여 주기용 스토리만 오르고
-  그 스토리에는 play 가 없다.
+- 카드에는 보여 주기용 스토리만 오르고 그 스토리에는 play 가 없다. 2026-10-12 첫 동기화의 채점(아래 "채점")은 변형
+  스토리를 올리던 때의 것이라 지금 카드의 근거가 아니다. 지금의 근거는 2026-10-14 채점이다.
 - 글꼴은 참조 Storybook 의 컴파일된 CSS 에서 온다(`[CSS_FROM_STORYBOOK]`). 변환기는 `build` 가 낸 `dist/theme.css` 를
   쓰지 않는다. 고르는 CSS 는 JS 가 import 한 CSS, `cfg.cssEntry`, `dist/styles.css`·`dist/style.css` 같은 정해진 이름뿐이다
   (`package-build.mjs`). 패키지 JS 가 CSS 를 import 하거나 그 이름의 CSS 가 생기면 변환기가 그것을 고르고 글꼴이 빠질 수
@@ -144,3 +173,10 @@
   흉내 내면 카드가 포커스 상태로 보인다). 감싸는 div 때문에 다크와 기본이 아닌 테마의 스토리는 미리보기에서 여백 16px 의
   칠한 상자로 보이고 Storybook 은 문서 전체를 칠했다. 틀의 차이라 `match` 로 두었다. 이 스토리들은 이제 빼는 목록에
   들어 카드에 오르지 않는다.
+- 2026-10-14 재동기화: 보여 주기용 11개를 모두 `match` 로 매겼다. 스토리가 하나나 둘이라 한 장씩 모두 보았고 Button 과
+  StatusBadge 는 raw 쌍도 열었다. 글꼴(Noto Sans KR, Noto Sans Mono), 녹청 색, 구성이 같고 차이는 틀뿐이다(미리보기는
+  여백 24px 의 흰 칸, 참조는 `var(--bg)` 바탕). 올린 뒤 다크 설정에서 카드 글자가 흐린 것을 보고 포크를 고쳐(위 "고친
+  것") 아홉을 다시 캡처해 다시 모두 `match` 로 매겼다. 라이트에서 그린 시트 아홉은 앞의 판과 눈으로 같아 보였다(바이트
+  비교는 하지 않았다. 앞의 캡처를 보관하지 않았다). 마지막 드라이버 실행에서 아홉 모두 `carried forward` 였다. 다시 올린
+  뒤 다크 설정의 앱에서 Button 과 StatusBadge 카드의 글자가 진하게 보이는 것을 손으로 봤고, 나머지 일곱은 다크에서 열어
+  보지 않았다. 창의 목록에는 컴포넌트 아홉(atoms 여섯, molecules 셋)이 모두 있었다.

@@ -1,0 +1,32 @@
+# `.claude/rules/tools.md` 에 더한 셋(하네스의 쓰는 쪽과 받는 쪽 항목, 클라우드 세션의 gh 항목, 막는 훅 항목 바로 뒤의
+# 하류 판정 항목)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(대기열 128·141·239, 일지 2026-10-14-07).
+# 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 셋이고, 셋 다 그 항목에만 있고 이 체크아웃의 `CLAUDE.md`·`README.md`·헌법 원칙에는 없는 글이다(grep 으로
+#   셌다). `open_session.ps1` 은 대조군이 읽는 `README.md` 에 있어 카나리아로 쓰지 않았다.
+# 최신 결과: 통과 4(2026-10-14, 이 PC, claude 2.1.296, origin/main 7eebfd7 을 합치며 막는 훅 문장을 넓힌 작업 트리 —
+#   러너가 찍은 커밋은 d212931f, 일지 2026-10-14-07). PR 봇 리뷰를 반영해 원천의 문구와 항목 경계만 고친 판은
+#   2026-10-14 에 --preflight 로 갈음했다(일지 2026-10-14-07).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_writer_receiver_cloud_gh_downstream.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데에서 셋을 찾아 답하라. 읽은 파일의 코드에서 추측하지 않는다.
+1. 하네스의 쓰는 쪽과 받는 쪽을 함께 바꿀 때를 말하는 항목이 있으면, 그 항목이 주 체크아웃의 옛 사본으로 든 첫 턴
+   훅의 이름을 백틱 안의 글자 그대로 옮겨라. 그런 항목이 없으면 "없음"이라고만 답하라.
+2. 클라우드 세션에서 `gh` 가 어떻게 실패하는지 적은 항목이 있으면, 그 항목이 옮긴 오류 문구를 백틱 안의 글자 그대로
+   옮겨라. 그런 항목이 없으면 "없음"이라고만 답하라.
+3. 하류 판정을 앞당길 뿐이라고 주장하는 막는 훅에 대한 문장이 있으면, 그 문장이 괄호 안에 나열한 거짓 양성 반례를
+   모두 글자 그대로 옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["hook_prompt_directive", "GraphQL is not available", "--dry-run"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
