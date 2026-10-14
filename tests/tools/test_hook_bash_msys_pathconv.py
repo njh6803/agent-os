@@ -6,30 +6,10 @@
 
 from __future__ import annotations
 
-import json
-from typing import TypedDict
-
 import pytest
 import tools.hook_bash_msys_pathconv as hook
 from tools.hook_bash_msys_pathconv import context_for, converted_arguments, converts, under_msys
-from tools.run_hooks import SETTINGS, registration_command
-
-HOOK_COMMAND = registration_command("hook_bash_msys_pathconv.py")
-
-
-# 매처를 읽는 모양. tests/tools/test_hook_pr_next_session.py 와 같은 까닭으로 여기 따로 둔다.
-class _HookEntry(TypedDict, total=False):
-    command: str
-
-
-class _HookGroup(TypedDict, total=False):
-    matcher: str
-    hooks: list[_HookEntry]
-
-
-class _Settings(TypedDict, total=False):
-    hooks: dict[str, list[_HookGroup]]
-
+from tools.run_hooks import registered_matchers
 
 PROBED: list[tuple[str, bool]] = [
     ("origin/main:.scratch/retro-queue.md", True),
@@ -290,11 +270,4 @@ def test_윈도이거나_MSYSTEM이_있을_때만_Git_Bash로_본다() -> None:
 
 def test_PowerShell_도구는_보지_않는다() -> None:
     """거짓 음성이다. settings.json 이 이 훅을 Bash 매처에만 건다."""
-    settings: _Settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
-    matchers = [
-        group.get("matcher", "")
-        for group in settings.get("hooks", {}).get("PreToolUse", [])
-        if any(entry.get("command") == HOOK_COMMAND for entry in group.get("hooks", []))
-    ]
-
-    assert matchers == ["Bash"]
+    assert registered_matchers("hook_bash_msys_pathconv.py", "PreToolUse") == ["Bash"]
