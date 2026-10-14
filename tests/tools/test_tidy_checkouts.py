@@ -1770,6 +1770,50 @@ def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_�
     assert _git("branch", "--list", "ahead", cwd=repo) != ""
 
 
+def test_judge_는_git_없는_prunable_폴더의_분리_HEAD_가_origin_main_에_없으면_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 리뷰(Major). 지우다 만 폴더의 등록도 그 커밋의 마지막 참조일 수 있다."""
+    path, _ = _add_detached(repo, "half")
+    (path / "only.txt").write_text("x", encoding="utf-8")
+    _git("add", "only.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-q", "-m", "origin/main 에 없는 커밋", cwd=path)
+    head = _git("rev-parse", "HEAD", cwd=path)
+    (path / ".git").unlink()
+    (path / "only.txt").unlink()
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/half" in line)
+    assert line.startswith("넘긴다"), line
+    assert "origin/main 에 없다" in line
+    assert main(["remove", path.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 1
+    assert _registered(repo, path)
+    assert _git("cat-file", "-t", head, cwd=repo) == "commit"
+
+
+def test_휴지통_자리가_링크면_읽지도_옮기지도_지우지도_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 보안 리뷰(Medium). 휴지통 자리를 다른 폴더로 가는 정션으로 바꿔 두면 `empty-trash` 가
+    링크 너머의 내용을 지웠다(리뷰가 재현했다)."""
+    victim = repo.parent / "victim"
+    (victim / "docs").mkdir(parents=True)
+    (victim / "docs" / "secret.txt").write_text("남아야 한다", encoding="utf-8")
+    path, head = _add(repo, "done")
+    _link(repo / ".claude" / "worktrees" / ".tidy-trash", victim)
+    merged = {"chore/done": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    out = capsys.readouterr().out
+    assert "휴지통 자리가 링크거나 폴더가 아니다" in out
+    assert "secret" not in out and "docs" not in out.split("휴지통")[1]
+    assert main(["empty-trash"], cwd=repo, ops=_ops(merged)) == 1
+    assert "휴지통 자리가 링크" in capsys.readouterr().out
+    assert main(["remove", path.as_posix(), "chore/done", head], cwd=repo, ops=_ops(merged)) == 1
+    assert "휴지통 자리가 링크" in capsys.readouterr().out
+    assert (path / ".venv").exists()
+    assert _registered(repo, path)
+    assert (victim / "docs" / "secret.txt").read_text(encoding="utf-8") == "남아야 한다"
+
+
 def test_judge_는_휴지통을_등록_없는_폴더로_찍지_않고_남은_것을_알린다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

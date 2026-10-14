@@ -58,7 +58,7 @@
 - `RECREATABLE_PATHS`에 `/design-sync` 산출물 넷과 소급 측정 캐시, `RECREATABLE_SUFFIXES`에 `.stackdump`.
   `.claude/plans/`는 첫 판에 넣었다가 셀프 리뷰로 뺐다(아래).
 - `remove-stray`도 폴더째 휴지통으로 옮긴 뒤 지운다. `_move_whole`로 지우다 만 폴더와 공유한다.
-- 변이 표 `tidy_checkouts_mutations.toml`: 옮겨 간 원문 서른을 고치고 열하나를 더했다(131).
+- 변이 표 `tidy_checkouts_mutations.toml`: 옮겨 간 원문 서른을 고치고 열셋을 더했다(133).
 - 문서: 스킬 3단계의 판정 요약과 명령 목록, 하지 않는 것 표. `operations.md`의 `UV_LINK_MODE` 항목에 판정 3이 모듈을
   보지 않는다는 것(헌법 3.0.36). 프로브 README 행 셋과 `.claude/rules/tools.md`의 gh 문장. 카나리아 명세
   `tidy_skill_stray_and_modules.toml`의 기대 구절(사전 확인 통과 1). 대기열 258 닫힘.
@@ -140,12 +140,41 @@ int`, `_judge_all`의 Divergent Change.
 
 다시 돌린 명령: 커밋의 pre-commit으로 갈음한다(결과는 아래 "검사").
 
+## PR 직전
+
+CodeRabbit CLI는 `Plan: Free`(일지 2026-10-14-02와 같다)라 대체 둘을 나란히 돌렸다.
+
+- **`bug-perf-review`**: 유효 3(Major 1, Minor 1, Nit 1), 보류 1, 오탐 7.
+  - **Major(고쳤다)**: `.git` 없는 prunable 폴더(지우다 만 폴더)의 분리 HEAD 는 `origin/main` 포함 여부를 보지 않고 `지운다`로
+    나가, `_remove_dead`가 등록을 걷으면 그 커밋이 참조를 잃는다(리뷰가 임시 저장소에서 `fsck --unreachable`로 재현했다).
+    셀프 리뷰가 고친 "폴더 없는 분리 HEAD"와 같은 모양이고 그때 지우다 만 폴더 갈래를 빠뜨렸다. `gather`의 prunable 갈래가
+    `contained`를 싣고, `judge`가 prunable·폴더 없음 두 갈래 앞에서 분리 HEAD 의 `contained`를 먼저 본다. 통합 테스트 하나.
+  - Minor(고쳤다, 문서): "막힌 파일만 휴지통에 남는다"는 사실과 다르다. `shutil.rmtree`는 처음 막힌 파일에서 멈춰 아직 돌지
+    않은 형제도 남는다(리뷰가 파일 여덟 중 셋째를 연 채 재현해 다섯이 남았다). 독스트링 둘을 "지우다 막힌 것은 남는다"와
+    그 설명으로 고쳤다. 다음 `empty-trash`가 이어 지우므로 정확성 문제는 아니다.
+  - Nit(고쳤다): 독스트링 판정 4의 4의 휴지통 이름 규약이 첫 판(`--`·`__`)으로 남아 있었다.
+  - 보류(Nit): `_windows_cwds`가 `K32EnumProcesses`나 모든 `OpenProcess`가 실패하면 빈 목록을 돌려 "읽을 수 있었다"로 세어진다.
+    권한이 제한된 윈도 환경의 이야기이고 실제 가능한지 재지 않았다. 그 환경이 나면 그때 자기 pid 가 없는 빈 목록을 None 으로
+    보는 길을 본다.
+  - 오탐 7: `trash_slot` 번호 붙이기의 경쟁(같은 워크트리는 탐침의 옆 이름이 먼저 막는다), `_move_aside` 중간 막힘(의도된
+    동작), `flatten`/`unflatten` 역산(어긋나는 입력이 없다), `functools.cache`의 예외(동작 차이 없음), 분리 HEAD 마다의
+    `merge-base`(가볍다), `for-each-ref --merged`(git 2.7부터), `_trash_entries`의 파일 항목(`delete_path`가 처리한다).
+- **`/security-review`**: 발견 1(Medium, 신뢰도 8), 해당 없음 6.
+  - **Medium(고쳤다)**: 휴지통 자리 `.claude/worktrees/.tidy-trash`가 정션·심볼릭 링크면 `_trash_entries`가 링크 너머의 항목을
+    읽고 `empty-trash`가 그 내용을 지운다(리뷰가 정션으로 재현했다. 등록 없는 폴더에는 같은 가드 `_is_link`가 있었는데 휴지통에는
+    빠졌다). `trash_dir`이 자리가 링크거나 폴더가 아니면 None 을 돌려주고, `judge`·`empty-trash`는 넘기며, `_move_aside`·
+    `_move_whole`은 옮기지 않고 멈춘다(종료 1). 정션 너머의 파일이 남는 것을 테스트가 고정한다.
+  - 해당 없음: 찍은 명령의 주입(`_SHELL_UNSAFE`가 `restore`도 거르고 `.detached`는 브랜치 이름이 될 수 없다), 휴지통 이름의 경로
+    탈출(`/`가 `%2F`로 바뀐다), `restore`(등록과 원래 이름의 부재를 본다), `remove-stray`·`_remove_dead`(안쪽 링크를 따라가지
+    않는다), 브랜치 삭제(보호 브랜치·체크아웃된 브랜치·재판정), 제목 모를 세션 완화(설계 판단).
+- 반영 뒤 `uv run pytest -q tests/tools/test_tidy_checkouts.py` 154 passed. 변이 표에 둘을 더해 133(아래 "검사").
+
 ## 검사
 
 - 커밋 `eaa736bd`의 pre-commit으로 갈음했다. ruff 둘, 병렬 검사(lint-imports, check-instructions, zizmor, check-type-escapes,
   pyright, run-hooks, web-verify, pytest) 모두 Passed(271.75초). 표·줄 구분 문자·변이 표 원문 대조·커밋 메시지 Passed. 인용
   대조는 이 일지의 줄 셋을 짚어 따옴표를 뗐다(둘째 커밋).
-- 변이 `tidy_checkouts_mutations.toml` 131 모두 기대대로(셀프 리뷰 반영 뒤 다시 돌렸다. 새로 더한 열하나도 빨강).
+- 변이 `tidy_checkouts_mutations.toml` 131 모두 기대대로(셀프 리뷰 반영 뒤 다시 돌렸다. 새로 더한 열하나도 빨강). PR 직전 리뷰 반영 뒤 둘을 더해 133 모두 기대대로(셋째 커밋 전에 다시 돌렸다).
 - 카나리아 `tidy_skill_stray_and_modules.toml` `--preflight` 통과 1(claude 는 돌리지 않았다).
 - **실제 정리(커밋 뒤, 이 세션이 주 체크아웃에서 도구로 돌렸다).** `judge`(실행 중 세션 제목 다섯)가 찍은 명령 122개를 Bash
   호출 하나에 하나씩 쳤다. 워크트리 `remove` 61(분리 HEAD 셋과 `.git` 없는 prunable 폴더 하나 포함), `remove-branch` 60,
