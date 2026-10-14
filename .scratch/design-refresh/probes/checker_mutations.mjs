@@ -5,10 +5,10 @@
 //
 // 사용(저장소 뿌리에서, 변환기와 참조 Storybook 을 돌리고 카드를 ds-bundle/ 에 복사한 뒤):
 //   node .scratch/design-refresh/probes/checker_mutations.mjs
-// 기준선(변이 없음)은 0 과 검사기의 집계 줄이, 변이마다 1 과 기대한 메시지가 나와야 한다. 원문을 찾지 못하면 던진다.
+// 기준선(변이 없음)은 0 과 검사기의 집계 줄이, 변이마다 1 과 기대한 메시지가 나와야 한다.
 // 하나라도 어긋나면 1 로 끝난다.
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,19 +26,17 @@ const INPUTS = [
   "ds-bundle/thumbnail.html",
 ];
 
-/** 변이: 이름, 고칠 파일과 원문·새 글, 기대한 메시지의 조각. edits 가 비면 기준선이다. */
+/** 변이: 이름, 만들 파일이나 지울 폴더, 기대한 메시지의 조각. expect 가 null 이면 기준선이다. */
 const MUTATIONS = [
-  { name: "기준선", edits: [], expect: null, marker: "빼는 목록이 맞다: 컴포넌트 9" },
+  { name: "기준선", expect: null, marker: "빼는 목록이 맞다: 컴포넌트 9" },
   {
     name: "기초 카드 폴더에 HTML 이 둘이다",
     extraFile: [".design-sync/foundations/colors/extra.html", "<!-- @dsCard group=\"Colors\" -->\n"],
-    edits: [],
     expect: "기초 카드 폴더의 HTML 이 하나가 아니다: colors (2)",
   },
   {
     name: "기초 카드 폴더 하나를 원본과 사본에서 함께 지운다",
     removeDirs: [".design-sync/foundations/density", "ds-bundle/foundations/density"],
-    edits: [],
     expect: "기초 카드 폴더가 없다: density",
   },
 ];
@@ -50,18 +48,6 @@ for (const mutation of MUTATIONS) {
     for (const input of INPUTS) cpSync(input, join(dir, input), { recursive: true });
     if (mutation.extraFile !== undefined) writeFileSync(join(dir, mutation.extraFile[0]), mutation.extraFile[1]);
     for (const removed of mutation.removeDirs ?? []) rmSync(join(dir, removed), { recursive: true });
-    for (const [file, oldText, newText, mode] of mutation.edits) {
-      const path = join(dir, file);
-      const text = readFileSync(path, "utf8");
-      if (!text.includes(oldText)) throw new Error(`${mutation.name}: 원문이 없다 ${file}: ${oldText}`);
-      writeFileSync(path, mode === "all" ? text.replaceAll(oldText, newText) : text.replace(oldText, newText));
-    }
-    // 카드 변수·첫 줄·선택자 변이는 복사 판정에 먼저 걸리지 않게 ds-bundle 사본도 같이 고친다.
-    if (mutation.copyCard !== undefined) {
-      const card = `foundations/${mutation.copyCard}/index.html`;
-      cpSync(join(dir, ".design-sync", card), join(dir, "ds-bundle", card));
-    }
-    if (mutation.copyThumb === true) cpSync(join(dir, ".design-sync/thumbnail.html"), join(dir, "ds-bundle/thumbnail.html"));
     const result = spawnSync(process.execPath, [".design-sync/check-conventions.mjs"], { cwd: dir, encoding: "utf8" });
     const output = `${result.stdout}${result.stderr}`;
     // 기준선도 종료 코드만 보지 않고 검사기의 집계 줄(빼는 목록을 센 표지)을 본다. 변이는 기대한 메시지가 표지다.

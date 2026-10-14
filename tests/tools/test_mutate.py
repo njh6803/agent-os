@@ -115,9 +115,8 @@ def test_변이가_든_동안_러너는_바뀐_바이트를_보고_끝나면_원
 
 
 def test_빨강을_기대한_pytest_변이만_첫_실패에서_멈춘다(tmp_path: Path) -> None:
-    """빨강은 실패 하나로 정해져 나머지 시험은 시간만 쓴다. sibling_overlap 표본 여섯이 446초에서
-    163초가 됐고 판정은 같았다(대기열 231). 기준선과 초록을 기대한 변이는 모든 시험이 지나야 해
-    끝까지 돈다."""
+    """빨강은 실패 하나로 정해져 나머지 시험은 시간만 쓴다(대기열 231, 측정은 도구의 독스트링).
+    기준선과 초록을 기대한 변이는 모든 시험이 지나야 해 끝까지 돈다."""
     _파일을_둔다(tmp_path, "src/m.py", b"x = 1\ny = 1\n")
     변이 = _변이_파일(old="x = 1", new="x = 2") + _변이_파일(
         old="y = 1", new="y = 2", expect="green"
@@ -138,20 +137,90 @@ def test_빨강을_기대한_pytest_변이만_첫_실패에서_멈춘다(tmp_pat
     ]
 
 
-def test_pytest_밖의_판정은_첫_실패에서_멈추는_인자를_받지_않는다(tmp_path: Path) -> None:
-    """`-x` 는 pytest 의 인자다. vitest 에 넘기면 모르는 선택이다."""
-    _파일을_둔다(tmp_path, "web/m.ts", b"x = 1\n")
+@pytest.mark.parametrize(
+    "러너_표",
+    [
+        _VITEST_러너,
+        '[runner.vitest]\ncommand = ["uv", "run", "python", "tools/run_hooks.py"]\n'
+        'judge = "pytest"\n',
+    ],
+    ids=["vitest", "pytest_판정을_빌린_명령"],
+)
+def test_표의_러너는_첫_실패에서_멈추는_인자를_받지_않는다(tmp_path: Path, 러너_표: str) -> None:
+    """`-x` 는 pytest 의 인자다. vitest 에 넘기면 모르는 선택이고, pytest 판정을 빌린 명령(훅
+    러너)도 pytest 가 아니다."""
+    path = _파일을_둔다(tmp_path, "web/m.ts", b"x = 1\n")
+    _파일을_둔다(tmp_path, "tools/run_hooks.py", b"")
     받은: list[list[str]] = []
 
     def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         받은.append(list(argv))
-        return CommandResult(0, "      Tests  1 passed (1)\n")
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "      Tests  1 failed (1)\n1 failed\n")
+        return CommandResult(0, "      Tests  1 passed (1)\n1 passed\n")
 
-    measure(
-        load_spec(_VITEST_러너 + _vitest_변이()), root=tmp_path, runner=러너, out=lambda _: None
-    )
+    measure(load_spec(러너_표 + _vitest_변이()), root=tmp_path, runner=러너, out=lambda _: None)
 
+    assert len(받은) == 2
     assert all("-x" not in argv for argv in 받은)
+
+
+_뒤가_다른_시험 = (
+    b"import time\n"
+    b"from pathlib import Path\n"
+    b"V = Path(__file__).with_name('v.txt').read_text()\n"
+    b"def test_a(): assert V == '1'\n"
+    b"def test_b():\n"
+    b"    if V != '1':\n"
+    b"        print('MARKER-B')\n"
+    b"        time.sleep(60)\n"
+    b"    assert V == '1'\n"
+)
+
+
+def test_못_보는_것_첫_실패에서_멈춘_변이는_뒤의_시험만_찍는_표지를_놓쳐_어긋난다(
+    tmp_path: Path,
+) -> None:
+    """뒤의 시험(test_b)만 찍는 표지는 `-x` 가 그 시험을 돌리지 않아 없다. 실제 pytest 로 본다."""
+    _파일을_둔다(tmp_path, "v.txt", b"1")
+    _파일을_둔다(tmp_path, "test_two.py", _뒤가_다른_시험)
+    변이 = (
+        _변이_파일(old="1", new="2", file="v.txt")
+        .replace("tests/test_x.py", "test_two.py")
+        .replace('expect = "red"', 'expect = "red"\nexpect_output = ["MARKER-B"]')
+    )
+    줄: list[str] = []
+
+    code = measure(load_spec(변이), root=tmp_path, runner=run_command, out=줄.append)
+
+    assert code == 1
+    assert any("표지 없음" in 한줄 and "MARKER-B" in 한줄 for 한줄 in 줄)
+
+
+def test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_멈춰_빨강이다(tmp_path: Path) -> None:
+    """끝까지 돌았다면 test_b 가 60초를 자 시간 제한(20초)을 넘긴 오류였을 변이다. 실제 pytest 로
+    본다."""
+    _파일을_둔다(tmp_path, "v.txt", b"1")
+    _파일을_둔다(tmp_path, "test_two.py", _뒤가_다른_시험)
+    변이 = (
+        _변이_파일(old="1", new="2", file="v.txt")
+        .replace("tests/test_x.py", "test_two.py")
+        .replace('expect = "red"', 'expect = "red"\ntimeout = 20')
+    )
+    시작 = time.monotonic()
+
+    code = measure(load_spec(변이), root=tmp_path, runner=run_command, out=lambda _: None)
+
+    assert code == 0
+    assert time.monotonic() - 시작 < 20
+
+
+def test_못_보는_것_exit_판정은_잡히지_않은_예외의_1_도_빨강이다() -> None:
+    """node 는 잡히지 않은 예외에도 1 로 끝난다. 변이가 입력을 깨 검사기가 던진 것도 빨강이라,
+    까닭은 표지가 가른다."""
+    던짐 = CommandResult(1, "SyntaxError: Unexpected token } in JSON at position 10\n")
+
+    assert judge("exit", 던짐, red_exit=1).outcome == "red"
 
 
 def test_못_보는_것_첫_실패에서_멈춘_변이는_빨간_시험을_하나만_보인다(tmp_path: Path) -> None:
@@ -1310,7 +1379,7 @@ def test_표지를_적은_변이는_기대대로여도_출력에_표지가_없�
 
     def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" in path.read_bytes():
-            return CommandResult(1, "\x1b[31m이름이 없다: a\x1b[0m\n다른 까닭\n")
+            return CommandResult(1, "\x1b[31m이름이 없다:\x1b[0m a\n다른 까닭\n")
         return CommandResult(0, "모두 맞다\n")
 
     code = measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append)
@@ -1354,7 +1423,7 @@ def test_반복하는_변이는_매번_표지가_있어야_한다(tmp_path: Path
     path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
     _파일을_둔다(tmp_path, "check.mjs", b"")
     변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["표지"]\nrepeat = 2')
-    출력 = iter(["표지\n", "다른 것\n"])
+    출력 = iter(["다른 것\n", "표지\n"])  # 빠진 회차가 마지막이면 마지막만 봐도 잡힌다
 
     def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if b"x = 2" in path.read_bytes():
@@ -1385,6 +1454,7 @@ def test_기준선의_표지가_출력에_없으면_기준선은_초록이_아�
     assert 변이_동안 == [False]
     assert any(한줄.startswith("기준선") and "표지 없음" in 한줄 for 한줄 in 줄)
     assert any("집계 줄" in 한줄 for 한줄 in 줄)
+    assert "   | 아무것도 읽지 않았다" in 줄  # 초록이어도 표지가 없으면 출력의 끝을 보인다
 
 
 def test_기준선의_표지가_있으면_변이로_간다(tmp_path: Path) -> None:

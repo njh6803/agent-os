@@ -146,7 +146,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '        if mutation.expect == "red" and _runners(spec)[mutation.runner].judge == "pytest":'
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
 new = '        if False:'
 
 [[mutation]]
@@ -156,15 +156,25 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '        if mutation.expect == "red" and _runners(spec)[mutation.runner].judge == "pytest":'
-new = '        if _runners(spec)[mutation.runner].judge == "pytest":'
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
+new = '        if mutation.runner in _BUILTIN:'
 
 [[mutation]]
-name = "pytest 밖의 판정에도 첫 실패에서 멈추는 인자를 붙인다"
+name = "표의 러너에도 첫 실패에서 멈추는 인자를 붙인다"
 tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '        if mutation.expect == "red" and _runners(spec)[mutation.runner].judge == "pytest":'
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
 new = '        if mutation.expect == "red":'
+
+[[mutation]]
+name = "초록인 기준선의 표지가 없어도 출력의 끝을 보이지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            _details([(result, verdict)], out, command.baseline_output)"
+new = "            _details([(result, verdict)], out)"

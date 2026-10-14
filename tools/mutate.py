@@ -105,9 +105,11 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 2. 러너와 인자의 짝마다 변이 없이 한 번씩 돌린다(기준선). 시간 제한은 그 짝을 쓰는 변이 가운데
    가장 긴 것이다. 초록이 아니면 변이를 넣지 않는다. 기준선이 빨간데 변이가 빨가면 그 빨강은
    아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서 본다.
-3. 빨강을 기대한 pytest 판정의 변이는 인자 끝에 `-x` 를 붙여 첫 실패에서 멈춘다. 빨강은 실패
-   하나로 정해지고 `-x` 도 종료 코드 1 이라 판정이 같다. 기준선과 초록·오류를 볼 변이는 끝까지 돈다.
-   sibling_overlap 표본 여섯이 446초에서 163초가 됐고 판정이 같았다(대기열 231,
+3. 빨강을 기대한 내장 pytest 러너의 변이는 인자 끝에 `-x` 를 붙여 첫 실패에서 멈춘다. 빨강은 실패
+   하나로 정해지고 `-x` 도 종료 코드 1 이라 판정이 같다. 기준선과 초록을 기대한 변이는 끝까지 돈다.
+   표의 러너는 pytest 판정을 빌려도 pytest 가 아닐 수 있어(`tools/run_hooks.py`) 붙이지 않는다.
+   sibling_overlap 표본 여섯을 이 규칙 전의 도구로 표에 `-x` 를 적어(기준선에도 붙었다) 견주니
+   변이 몫이 약 351초에서 79초가 됐고 판정이 같았다(대기열 231,
    `.scratch/harness/probes/mutate_231/`). 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어
    돌린 뒤 `finally` 에서 그 바이트를 그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지
    본다. 다르면 변이가 든 동안 다른 쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열
@@ -168,8 +170,10 @@ lastfailed 에 남지 않게 한다.
 `pnpm.CMD` 같은 배치 파일은 cmd.exe 가 돌려 인자의 `&`·`%`·`^` 가 해석될 수 있다. 좁힌 선택이 비면
 기준선이 오류로 잡는다(통과가 없다). 표지는 출력 어디서든 부분 문자열로 찾는다. 다른 까닭의
 실패가 같은 문구를 찍으면(같은 이름의 다른 검사) 표지가 있는 것으로 센다. `-x` 로 멈춘 변이는
-빨간 시험을 첫 하나만 보인다. 그 변이가 빨갛게 할 시험이 몇인지, 뒤의 시험이 표지를 찍었을지는 남지
-않는다.
+빨간 시험을 첫 하나만 보인다. 그 변이가 빨갛게 할 시험이 몇인지는 남지 않고, 뒤의 시험만 찍는 표지는
+없어 어긋남으로 센다. 뒤의 시험이 걸려 끝까지 돌면 시간 제한을 넘겼을 변이도 첫 실패에서 멈춰
+빨강이다. exit 판정은 종료 코드만 본다. node 는 잡히지 않은 예외에도 1 로 끝나, 변이가 입력을 깨
+검사기가 던진 것도 `red_exit = 1` 의 빨강이다. 그런 변이는 표지로 까닭을 가른다.
 
 판정은 출력의 요약 문구에 기댄다. 초록과 빨강을 읽는 문구(vitest 의 `Tests` 줄, playwright 의
 `N passed`·`N failed`, tsc 의 진단 줄)가 도구의 판에서 바뀌면 오류로 기운다. 초록이나 빨강을
@@ -678,7 +682,7 @@ def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> 
                 written[path] = mutated
         results: list[CommandResult] = []
         tests = mutation.tests
-        if mutation.expect == "red" and _runners(spec)[mutation.runner].judge == "pytest":
+        if mutation.expect == "red" and mutation.runner in _BUILTIN:
             tests = [*tests, "-x"]  # 빨강은 실패 하나로 정해진다(독스트링의 하는 일 3)
         for _ in range(mutation.repeat):
             result = _invoke(root, spec, mutation.runner, tests, mutation.timeout, runner)
@@ -758,7 +762,7 @@ def measure(
             f" — {verdict.summary}{absent}"
         )
         if verdict.outcome != "green" or missing:
-            _details([(result, verdict)], out)
+            _details([(result, verdict)], out, command.baseline_output)
             baseline_green = False
     if not baseline_green:
         out("기준선이 초록이 아니라 변이를 넣지 않았다. 빨간 기준선 위의 빨강은 재는 것이 없다")
