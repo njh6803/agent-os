@@ -10,7 +10,8 @@
     "jira-test": "off"
   },
   "env": {
-    "PYTHONUTF8": "1"
+    "PYTHONUTF8": "1",
+    "UV_LINK_MODE": "copy"
   },
   "permissions": {
     "deny": [
@@ -92,6 +93,16 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_webfetch_summary.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_grep_omitted.py",
             "timeout": 20
           }
         ]
