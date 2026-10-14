@@ -5,7 +5,7 @@
 # 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-30). 그 뒤 더한 둘은
 # `--since` 로 골라 돌렸다. 대기열 235·249·251 로 더한 스물여덟은 그 셋의 시험만 `-k` 로 고르고, 코드가
 # 옮겨 가 원문을 고친 넷과 함께 `--since origin/main` 으로 돌렸다. 기준선 둘이 77초, 변이 서른둘이
-# 630초(고른 시험 9~22초, 전체 시험 60~76초)였다(2026-10-13, 일지 2026-10-14-04). 셀프 리뷰와 반박
+# 630초(고른 시험 9~22초, 전체 시험 60~76초)였다(2026-10-13, 일지 2026-10-15-05). 셀프 리뷰와 반박
 # 검증으로 열을 더한 뒤 같은 `--since origin/main` 이 고른 마흔둘은 기준선 셋이 194초, 변이가 1017초(고른
 # 시험 12~29초, 전체 시험 73~102초)였다(2026-10-14). 그 가운데 82는 원문을 옮길 때 `new` 의 들여쓰기를
 # 두고 와 IndentationError 로 어긋났고, 고쳐 다시 돌린 값을 더했다. 그 뒤 인용 블록을 두는 갈래로
@@ -14,7 +14,8 @@
 # 골라 돌렸다(기준선 둘 66초, 변이 157초, 2026-10-14). PR 직전 버그 축을 반영하며 더한 일곱(108~114),
 # 원문이 옮겨 간 73·74, 둘레 코드가 바뀐 75~88·93~104를 `--since HEAD` 와 번호로 골라 돌렸다(기준선
 # 다섯 41초, 변이 서른다섯 411초, 2026-10-15). 그 가운데 95는 되쓰기 전의 읽기 확인이 빈 옛 자리를
-# 걸러 초록이었고, 옛 자리에 다른 것이 든 시험을 더해 다시 돌려 빨강이었다.
+# 걸러 초록이었고, 옛 자리에 다른 것이 든 시험을 더해 다시 돌려 빨강이었다. 합치기 중의 헌법 판을
+# 고치며 더한 둘(115·116)은 번호로 골라 돌렸다(기준선 둘 76초, 변이 83초, 2026-10-15).
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -1075,3 +1076,21 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''    trees = [Tree(root, commit) for commit in (base, main_sha) if commit is not None]'''
 new = '''    trees = [Tree(root, commit) for commit in (base,) if commit is not None]'''
+
+[[mutation]]
+name = "헌법 README 가 main 과 같아도 판을 이 브랜치의 것으로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "main이_올린_헌법_판"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if CONSTITUTION not in changed:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "헌법 README 를 고쳤어도 판을 이 브랜치의 것으로 세지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if CONSTITUTION not in changed:'''
+new = '''    if True:'''

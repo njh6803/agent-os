@@ -447,7 +447,7 @@ def test_옮길_번호대로_인용을_한_번에_바꾼다() -> None:
 
 def test_인용_블록의_줄은_원문이라_옮기지_않는다() -> None:
     """일지는 사용자 프롬프트를 원문으로 인용한다(`> 사용자:`). 이 브랜치를 옮긴 첫 `--move` 가 그
-    원문의 일지 번호를 새 번호로 바꿨다(일지 2026-10-14-04). 못 보는 것: `>` 없이 이어지는 줄은
+    원문의 일지 번호를 새 번호로 바꿨다(일지 2026-10-15-05). 못 보는 것: `>` 없이 이어지는 줄은
     인용 블록이어도 옮긴다."""
     plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05"), Move("대기열", "2", "3")])
     text = (
@@ -540,7 +540,7 @@ def test_옮기기는_이_브랜치가_고친_글만_고치고_이름을_바꾸�
 
 
 def test_옮길_자리가_다른_옮길_파일이면_그_파일을_먼저_옮긴다(tmp_path: Path) -> None:
-    """반박 검증(일지 2026-10-14-04): 같은 슬러그의 사슬 02-x, 03-x 를 03, 04 로 옮길 때 03-x 를
+    """반박 검증(일지 2026-10-15-05): 같은 슬러그의 사슬 02-x, 03-x 를 03, 04 로 옮길 때 03-x 를
     "이미 무엇이 있다" 로 거절했다."""
     journals = {f"2026-10-07-0{n}": f"2026-10-07-0{n}-x.md" for n in (2, 3)}
     for name in journals.values():
@@ -572,7 +572,7 @@ def test_옮길_자리가_다른_옮길_파일이면_그_파일을_먼저_옮긴
 
 
 def test_심볼릭_링크는_따라가_쓰지_않는다(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """반박 검증(일지 2026-10-14-04): 이 브랜치의 변경에 든 링크를 따라가 저장소 밖의 파일을 고쳤다.
+    """반박 검증(일지 2026-10-15-05): 이 브랜치의 변경에 든 링크를 따라가 저장소 밖의 파일을 고쳤다.
 
     링크를 만드는 권한이 없는 윈도에서도 돌도록 `is_symlink` 를 바꿔 끼운다.
     """
@@ -1444,7 +1444,7 @@ def test_합치기를_커밋하기_전에도_main이_들여온_파일은_이_브
 ) -> None:
     """main 을 합치다 충돌을 풀고 커밋하기 전에 친 대조가, merge-base 가 옛 자리라 main 이 고친
     규칙을 이 브랜치의 카나리아 누락으로, main 만 고친 파일을 함께 고친 파일로 알렸다(일지
-    2026-10-14-04). 이 브랜치가 고친 스킬은 그대로 센다. 못 보는 것: 이 브랜치가 고쳤어도 main 과
+    2026-10-15-05). 이 브랜치가 고친 스킬은 그대로 센다. 못 보는 것: 이 브랜치가 고쳤어도 main 과
     내용이 같아진 파일은 세지 않는다."""
     rule, same = ".claude/rules/x.md", ".claude/rules/y.md"
     spec = f'kind = "skill"\nsource = "{SKILL}"\n'
@@ -1469,6 +1469,27 @@ def test_합치기를_커밋하기_전에도_main이_들여온_파일은_이_브
     assert rule not in out
     assert same not in out
     assert "- origin/main: README.md\n" in out
+
+
+def test_합치기를_커밋하기_전에도_main이_올린_헌법_판은_이_브랜치의_판이_아니다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """main 을 합치고 커밋하기 전에 친 대조가 main 이 올린 판을 이 브랜치의 새 판으로 읽어 main 과
+    같은 판으로 겹쳤다고 1로 끝났다(일지 2026-10-15-05). 헌법 README 가 main 과 같으면 판은 main
+    에서 들어온 것이다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"README.md": "이 브랜치\n"}, "이 브랜치")
+    _커밋한다(pusher, {"docs/constitution/README.md": _헌법("1.0.1")}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "merge", "-q", "--no-commit", "--no-ff", "origin/main")
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "번호 겹침 없음" in out
 
 
 def test_합치다_대기열_행이_겹쳐도_옮기기는_main의_행을_둔다(

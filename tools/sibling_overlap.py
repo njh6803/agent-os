@@ -44,7 +44,9 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 고친 파일 가운데 main 과 내용이 다른 것과 미추적 파일이다. main 을 합치다 충돌을 풀고 커밋하기
 전에는 merge-base 가 옛 자리에 머물러, merge-base 와의 차이만 세면 main 이 들여온 파일이 모두
 섞인다. 그 상태에서 친 대조가 main 의 규칙과 스킬을 카나리아 누락으로 알리고 1로 끝났다(일지
-2026-10-14-04).
+2026-10-15-05). 헌법 README 가 이 브랜치가 고친 파일이 아니면 디스크의 판도 이 브랜치의 새 판으로
+세지 않는다. 같은 상태에서 main 이 올린 판을 이 브랜치의 판으로 읽어 main 과 같은 판으로 겹쳤다고
+1로 끝났다.
 
 HEAD가 닫힌 PR의 head와 같은 형제 워크트리는 커밋하지 않은 변경(그 HEAD 뒤의 변경과 미추적
 파일)만 고친 파일로 견주고, 형제 줄에서는 그 수만 접어 찍는다(대기열 194). 함께 고친 파일 서른여덟
@@ -94,7 +96,7 @@ PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열
 돌리지 않은 채 셀프 리뷰 두 축과 PR 직전 리뷰를 지났고, 회고에서 그 절을 다시 읽다 찾았다(일지
 2026-10-13-38). 헌법 판처럼 커밋 전에 고칠 누락이라 이것도 1로 끝난다. 다만 계정 한도로 카나리아를
 돌리지 못하면 결과 줄을 고칠 수 없다. 그 갈래는 같은 절의 계정 한도 항목대로 사전 확인만 돌리고 이
-알림이 남은 채 커밋한다고 출력이 함께 말한다(셀프 리뷰 명세 축, 일지 2026-10-14-04).
+알림이 남은 채 커밋한다고 출력이 함께 말한다(셀프 리뷰 명세 축, 일지 2026-10-15-05).
 
 `--move` 는 "옮길 번호" 를 실제로 옮긴다(대기열 249). 형제가 더 높은 번호를 들고 먼저 병합해, 한
 세션에서 받은 번호를 두 번 옮기고 그때마다 그 번호의 인용(다섯에서 아홉)을 손으로 고쳤다(일지
@@ -104,7 +106,7 @@ NNNN` 과 목록 속 `·NNNN`, ADR 의 파일 이름(`NNNN-…`)과 색인의 `[
 대기열 파일의 행 머리(`| N |`)다. ADR 의 꼴은 `.claude/rules/adr.md` 의 번호 항목과 같다. 모든 꼴을
 한 번에 바꿔, 차례대로 옮기는 사슬(03→05, 05→07)의 03 이 07 까지 가지 않는다. 인용 블록(`>` 로
 시작하는 줄)은 옮기지 않는다. 일지는 사용자 프롬프트를 원문으로 인용하는데(`> 사용자:`), 이
-브랜치의 일지를 옮긴 첫 실행이 그 원문의 일지 번호까지 바꿨다(일지 2026-10-14-04). merge-base 나
+브랜치의 일지를 옮긴 첫 실행이 그 원문의 일지 번호까지 바꿨다(일지 2026-10-15-05). merge-base 나
 main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 같은 번호는 상대를 가리킨다
 (`.claude/rules/adr.md`). main 을 합치다 같은 번호의 대기열 행 둘을 남긴 채 옮기면 main 의 행
 머리까지 바뀌었다(PR 직전 버그 축). BOM 으로 시작하는 파일은 BOM 을 떼고 바꾼 뒤 다시 붙인다. UTF-8
@@ -348,7 +350,8 @@ def fresh(numbers: Numbers, *known: Numbers) -> Numbers:
 def unshared(numbers: Numbers, other: Numbers) -> Numbers:
     """`other` 와 같은 번호에 같은 파일·같은 행인 것(공유한 이력)을 뺀다.
 
-    헌법 판은 내용을 가를 수 없어 둔다. 같은 판이 공유한 이력인지 따로 올린 겹침인지 모른다.
+    헌법 판은 판 줄로는 가를 수 없어 둔다. 같은 판이 공유한 이력인지 따로 올린 겹침인지는 헌법
+    README 가 main 과 같은지로 `survey` 가 가른다.
     """
     journals = {k: v for k, v in numbers.journals.items() if other.journals.get(k) != v}
     adrs = {k: v for k, v in numbers.adrs.items() if other.adrs.get(k) != v}
@@ -553,7 +556,7 @@ def plan_moves(
     디스크는 읽기만 한다. 옮길 자리에 무엇이 있거나 파일을 읽지 못하면 MoveError 다. 옮길 자리가
     이 브랜치의 다른 옮길 파일이면(같은 슬러그의 사슬) 그 파일을 먼저 옮기는 차례로 둔다. 심볼릭
     링크는 따라가 쓰지 않는다. 반박 검증에서 저장소 밖을 가리키는 링크를 따라가 밖의 파일을
-    고쳤다(일지 2026-10-14-04). `kept` 는 파일마다 두는 줄이다(`rewrite`).
+    고쳤다(일지 2026-10-15-05). `kept` 는 파일마다 두는 줄이다(`rewrite`).
     """
     plan = renumber(shifted)
     renames: list[tuple[str, str]] = []
@@ -611,7 +614,7 @@ def apply_moves(root: Path, plan: MovePlan) -> None:
 
     도중에 멈추면 바꾼 이름과 쓴 글을 거꾸로 되돌린다. 되돌리지 않고 다시 치면 이미 옮긴 인용이
     차례대로 옮기는 사슬(03→05, 05→06)을 따라 한 번 더 옮겨진다(셀프 리뷰 표준 축, 일지
-    2026-10-14-04). 다 되돌렸으면 MoveError, 되돌리지 못한 것이 있으면 StuckMoveError 다.
+    2026-10-15-05). 다 되돌렸으면 MoveError, 되돌리지 못한 것이 있으면 StuckMoveError 다.
     """
     written: list[str] = []
     renamed: list[tuple[str, str]] = []
@@ -890,7 +893,7 @@ def _own_changes(root: Path, base: str, main_sha: str) -> frozenset[str]:
 
     main 과 같은 파일은 main 이 들여온 것이다. 합치기를 커밋하기 전에는 merge-base 가 옛 자리에
     머물러 main 이 고친 파일이 모두 섞였고, 카나리아 누락이 main 의 규칙과 스킬을 알렸다(일지
-    2026-10-14-04).
+    2026-10-15-05).
     """
     since_base = _lines(git(root, "diff", "--name-only", base))
     unlike_main = _lines(git(root, "diff", "--name-only", main_sha))
@@ -1008,6 +1011,9 @@ def survey(root: Path, remote: Remote) -> Survey:
         add(f"워크트리 {path}", head, numbers, changed)
     ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
     changed = _own_changes(root, base, main_sha)
+    if CONSTITUTION not in changed:
+        # 판 줄이 main 과 같다. 합치기를 커밋하기 전에는 main 이 올린 판이 디스크에 있다
+        ours = Numbers(ours.journals, ours.adrs, ours.rows, None)
     harness = [path for path in harness_files(changed) if (root / path).is_file()]
     return Survey(
         ours,
