@@ -10,7 +10,8 @@
     "jira-test": "off"
   },
   "env": {
-    "PYTHONUTF8": "1"
+    "PYTHONUTF8": "1",
+    "UV_LINK_MODE": "copy"
   },
   "permissions": {
     "deny": [
