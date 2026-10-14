@@ -104,3 +104,21 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 203
 `origin/main`이 `7eebfd7`·`54eb5be`(PR #235·#237)로 나가 있었다. 앱의 `sync_with_base_branch`는 이 워크트리가 앱이 만든 것이 아니라며
 거절해 `git merge --no-edit origin/main`으로 합쳤고 충돌은 없었다. main이 바꾼 `.claude/rules/tools.md`는 Grep 훅의 시간 기록뿐이라
 이 브랜치의 판단에 닿지 않았다. 하네스 README는 main이 더한 행과 겹치지 않는 자리에 두 행을 더했다.
+
+## PR 직전 보안·버그·성능 축
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해, 규약대로 `/security-review`와 `bug-perf-review`를
+나란히 돌렸다. 두 축 모두 범위는 origin/main을 합친 뒤의 `54eb5be8...HEAD`다. `/security-review`의 커밋 목록에는 그사이 main에
+들어간 #238이 섞여 서브태스크에 넘길 범위를 손으로 좁혔다.
+
+- **보안.** 발견 없음. 새 `-x`는 인자 리스트의 상수이고 셸을 거치지 않으며, 표지는 부분 문자열 비교뿐이고, 편집·되돌리기 경로는
+  바뀌지 않았다.
+- **버그·성능.** Critical·Major 없이 Minor 다섯이었다.
+  - 고친 것: `measure.sh`의 `sed`가 표의 `tests` 줄 모양이 바뀌어 아무것도 바꾸지 못해도 같은 조건을 두 번 재고 0으로 끝났다.
+    `-x`를 적은 표가 원본과 같으면 1로 끝나게 했다. 지금 표는 지나가고 줄 모양이 다른 표는 막히는 것을 스크래치의
+    `guard_check.sh`로 봤다. 결과 디렉터리를 절대 경로로 바꾸고(`cd` 뒤에 상대 경로가 임시 워크트리 안으로 풀렸다),
+    `uv sync` 실패에서 멈추며, `231_wall.txt`를 매번 비운다.
+  - 남긴 것: 실제 프로세스 시험의 `< 8`(부하에서 `taskkill`이 느리면 거짓 빨강)은 이 세션에서 그 상황을 겪고 사용자가 상한을
+    넓히지 않고 환경을 고치기로 골랐다. 새 실제 pytest 시험의 `< 20`은 정상일 때 pytest 기동 두 번(이 PC에서 약 2초)이라 여유가
+    크고, 시험을 고치면 `mutate.py`를 재는 표 전체(약 45분)를 다시 돌려야 해서 두었다. `checker_mutations.toml`이 추적하지 않는
+    생성물을 읽어 그것이 없는 체크아웃의 `check-mutations`가 막는 것은 표 머리 주석에 적은 그대로다.
