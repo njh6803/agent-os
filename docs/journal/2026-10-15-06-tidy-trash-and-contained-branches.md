@@ -95,7 +95,8 @@ contained 브랜치를 지우는 것은 요구(`worktree-*`)보다 넓다, 옆 �
 워크트리 79·브랜치 132·`worktree-*` 53·분리 HEAD 일곱·변이 131·148 passed 모두 재현했고, "일곱 중 셋 살아 있음"과
 "일곱 중 여섯 끝남"이 충돌한다고 했다.
 
-표준 축(Major 2, Minor 6): **Major** "git 은 브랜치 이름으로 `@` 하나를 허락하지 않는다"가 거짓(`git branch @`가 종료 0).
+표준 축(Major 2, Minor 6): **Major** 첫 판 독스트링의 주장(git 은 브랜치 이름으로 `@` 하나를 허락하지 않는다)이 거짓(`git
+branch @`가 종료 0).
 **Major** 같은 수치 충돌. Minor: `module_holder.py`는 지우기만 재고 이름 바꾸기는 재지 않는데 이름 바꾸기의 근거로
 인용했다, "앞지우기" 잔존(독스트링 둘, 변이 이름 다섯, 테스트 이름·독스트링, README "(표는 백스물)", `tools.md`의
 "`remove-stray`는 gh를 부르지 않는다" 닫힌 주장), 못 보는 것 두 항목(`origin_of`, `origin/main` 부재)에 테스트가 없다,
@@ -114,7 +115,7 @@ int`, `_judge_all`의 Divergent Change.
   적었다).
 - `.claude/plans/`를 다시 만들 수 없는 것으로 되돌렸다. 그 때문에 워크트리 둘(`confident-wright-2d3ebf`,
   `elegant-dijkstra-aaddb9`)이 남는다. 사람이 계획 파일을 보고 지운다.
-- 옆 이름이 남은 등록은 "남긴다(되돌린다 줄의 restore 가 되돌린다)"로 한 줄만 사람에게 가게 했다.
+- 옆 이름이 남은 등록은 남긴다 줄(되돌린다 줄의 restore 가 되돌린다는 이유)로 찍어 한 줄만 사람에게 가게 했다.
 - 휴지통 자리 이름을 `<이름>~~<flatten(경로)>~<번호>`로 바꾸고 `flatten`/`unflatten`(`%`→`%25`, `/`→`%2F`)으로
   `__pycache__`가 되돌아오게 했다. 테스트가 네 경로와 번호 붙은 자리를 되돌린다. 남은 어긋남(`~~`가 든 이름, `~숫자`로
   끝나는 경로)은 못 보는 것에 적었다.
@@ -122,8 +123,8 @@ int`, `_judge_all`의 Divergent Change.
 - 이름 바꾸기의 근거를 `lock_holder.py` G·`worktree_occupancy.py` E로, 지우기가 막히는 근거를 `module_holder.py` G·E로
   갈라 적었다(두 곳).
 - "앞지우기" 잔존을 살아 있는 문서에서 걷었다(독스트링 둘, 변이 이름, 테스트 이름·독스트링, README 세 행과 "(표는
-  백서른하나)", `tools.md`의 gh 문장을 "`gh_merged_heads`를 부르지 않는 하위 명령"으로). 독스트링 판정 4의 4의 "2026-10-15
-  까지는 제자리에서 지웠는데(앞지우기)"는 옛 용어를 설명하는 자리라 두었다.
+  백서른하나)", `tools.md`의 gh 문장을 `gh_merged_heads`를 부르지 않는 하위 명령으로 세는 것으로). 독스트링 판정 4의 4가
+  2026-10-15 까지는 제자리에서 지웠다(앞지우기)고 적은 자리는 옛 용어를 설명하는 자리라 두었다.
 - `restore`·`empty-trash`의 실패 단언에 까닭 문구를 더했다.
 - `_judge_all`의 모듈 훑기를 `functools.cache(ops.modules)`로 한 번만 하게 했다.
 
@@ -141,11 +142,44 @@ int`, `_judge_all`의 Divergent Change.
 
 ## 검사
 
-(커밋 뒤에 적는다)
+- 커밋 `eaa736bd`의 pre-commit으로 갈음했다. ruff 둘, 병렬 검사(lint-imports, check-instructions, zizmor, check-type-escapes,
+  pyright, run-hooks, web-verify, pytest) 모두 Passed(271.75초). 표·줄 구분 문자·변이 표 원문 대조·커밋 메시지 Passed. 인용
+  대조는 이 일지의 줄 셋을 짚어 따옴표를 뗐다(둘째 커밋).
+- 변이 `tidy_checkouts_mutations.toml` 131 모두 기대대로(셀프 리뷰 반영 뒤 다시 돌렸다. 새로 더한 열하나도 빨강).
+- 카나리아 `tidy_skill_stray_and_modules.toml` `--preflight` 통과 1(claude 는 돌리지 않았다).
+- **실제 정리(커밋 뒤, 이 세션이 주 체크아웃에서 도구로 돌렸다).** `judge`(실행 중 세션 제목 다섯)가 찍은 명령 122개를 Bash
+  호출 하나에 하나씩 쳤다. 워크트리 `remove` 61(분리 HEAD 셋과 `.git` 없는 prunable 폴더 하나 포함), `remove-branch` 60,
+  `restore` 1. 모두 종료 0이고 `휴지통에 남았다` 줄은 한 번도 나오지 않았다(다른 세션의 테스트가 돌지 않는 때였다).
+  둘째 `judge`가 되돌린 워크트리 하나와 걷은 등록의 브랜치 하나를 더 찍어 쳤다. 결과: 등록 워크트리 79개 → 17개(주 체크아웃
+  포함), 로컬 브랜치 132개 → 14개, 휴지통 비어 있음. 남은 워크트리 16은 실행 중·열린 PR 의 세션 다섯, 작업 디렉터리를 쥔
+  프로세스가 있는 셋(`claude.exe`, 다른 세션의 `tail.exe`·`grep.exe`), `.claude/plans/`가 든 둘, PR 없는 `web-widget-spec`,
+  병합된 PR 머리와 끝이 다른 `skill-check-and-retro-section`, 커밋이 `origin/main`에 없는 분리 HEAD `mrun2~4`다.
+
+## 회고
+
+후보 여섯. 승인 하나, 기각 다섯, 넘김 없음.
+
+1. `judge`가 같은 이유·같은 pid 로 워크트리 55개를 남겨도 줄마다 찍기만 해, 쌓이는 것을 사람이 보기 전까지 아무도 몰랐고
+   원인(다른 워크트리의 pytest·pre-commit)은 `Get-CimInstance Win32_Process`를 손으로 쳐야 알았다 — 승인. 사건: 이 세션의
+   첫 `judge`(남긴다 65 가운데 55가 같은 pid 일곱). 층: 도구(`judge` 끝에 남긴 이유별 수의 요약 줄, 쥔 프로세스에 명령줄).
+   되돌림: PR 하나. 이 세션에서 반영하지 않아 대기열 263.
+2. 스크래치 패치 스크립트가 파이썬 기본 줄 끝으로 도구 파일과 변이 표를 CRLF 로 써서 `mutate.py --check`가 원문 31개를
+   못 찾았다 — 기각. 그 검사가 잡았고 비용은 한 번의 되돌림이다. 커밋에서는 `.gitattributes`가 LF 로 맞춘다.
+3. 저장소 전체 `grep -rn`이 `.claude/worktrees/` 아래 70개 워크트리의 `node_modules`를 훑어 두 번 120초를 넘겼다 — 기각. 이
+   세션이 그 워크트리를 지웠고(79 → 17), 대기열 47이 같은 사건을 이미 닫았다.
+4. 폴더 없는 등록을 걷는 길이 `origin/main`에 없는 분리 HEAD 의 커밋을 매달리게 하는 것을 구현이 놓치고 셀프 리뷰 명세
+   축이 임시 저장소 재현으로 잡았다 — 기각. `.claude/rules/tools.md`의 "지우는 도구는 반박해 본다"가 있고 리뷰 파이프라인이
+   잡았다. 구현 쪽에서 미리 반박하지 않은 것은 같은 규칙의 1회차다.
+5. `/code-review`의 122개 삭제 명령을 한 메시지에 열 안팎씩 나란히 보내 종료 1·3 없이 끝났다. 스킬 3의 2는 "묶어 치지
+   않는다"만 적어 나란히 치는 것이 되는지 말하지 않는다 — 기각. git 참조 잠금 충돌을 재지 않은 채 한 번 지난 것이고,
+   느슨하게 하는 쪽이라 사건이 쌓이면 넘긴다.
+6. 일지에 내 문장을 따옴표로 적어 인용 대조 경고 셋이 나고 둘째 커밋이 필요했다 — 기각. 경고만 내는 검사가 뜻대로 잡았다.
 
 ## 다음
 
-- 이 PR 을 병합한 뒤 주 체크아웃에서 `tidy-checkouts`를 돌려 후보를 실제로 지운다(이 세션이 병합 전에 도구로 먼저 돌린
-  결과는 "검사"에 적는다).
+- 이 PR 을 병합한 뒤 주 체크아웃을 당긴다. 후보는 이 세션이 이미 지웠으므로(위 "검사") 그 뒤의 `tidy-checkouts`는 이 PR 의
+  워크트리(없다. 주 체크아웃에서 딴 브랜치다)와 그 사이 병합된 형제의 워크트리를 본다.
 - `mrun2~4`(모델 스윕의 스크래치 워크트리, 커밋이 `origin/main`에 없다)와 `skill-check-and-retro-section`(병합된 PR 머리와
-  끝이 다르다), `.claude/plans/`가 든 워크트리 둘은 사람이 본다.
+  끝이 다르다), `.claude/plans/`가 든 워크트리 둘(`confident-wright-2d3ebf`, `elegant-dijkstra-aaddb9`)은 사람이 본다.
+- 다른 세션의 `tail.exe`·`grep.exe`가 작업 디렉터리로 쥔 워크트리 둘(`04-density-and-common-sizes`, `operations-env-facts`)은
+  그 프로세스가 끝난 뒤의 정리가 지운다.
