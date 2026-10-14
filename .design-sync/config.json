@@ -9,7 +9,7 @@
   "tsconfig": "../../../.design-sync/esbuild-paths.json",
   "extraEntries": ["../../../.design-sync/story-constants.js"],
   "libOverrides": {
-    "preview-gen-storybook.mjs": "스토리의 globals(theme·mode·density)를 data-theme/data-mode/data-density 를 단 감싸는 요소로 옮긴다. 원본 compose 는 globals 를 비워 첫 동기화에서 다크와 기본이 아닌 테마의 스토리가 라이트·기본 테마로 그려졌다. 밀도도 같은 길로 옮긴다"
+    "preview-gen-storybook.mjs": "스토리의 globals(theme·mode·density)를 data-theme/data-mode/data-density 를 단 감싸는 요소로 옮긴다. 원본 compose 는 globals 를 비워 첫 동기화에서 다크와 기본이 아닌 테마의 스토리가 라이트·기본 테마로 그려졌다. 밀도도 같은 길로 옮긴다. globals 없는 스토리도 기본 테마·라이트로 감싸, 다크 설정의 브라우저에서 카드 글자가 흰 바탕 위에 밝게 칠해지지 않게 한다"
   },
   "guidelinesGlob": ["../../../.claude/rules/web-design.md"],
   "readmeHeader": ".design-sync/conventions.md",
@@ -91,6 +91,7 @@
       ]
     },
     "Alert": {
+      "cardMode": "column",
       "skip": [
         "molecules-alert--danger",
         "molecules-alert--warning",
