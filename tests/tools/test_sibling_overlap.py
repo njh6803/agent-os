@@ -1330,6 +1330,38 @@ def test_바꾼_스킬의_카나리아_명세를_고치지_않으면_1로_끝나
     assert "카나리아 명세를" not in out
 
 
+def test_합치기를_커밋하기_전에도_main이_들여온_파일은_이_브랜치의_변경이_아니다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """main 을 합치다 충돌을 풀고 커밋하기 전에 친 대조가, merge-base 가 옛 자리라 main 이 고친
+    규칙을 이 브랜치의 카나리아 누락으로, main 만 고친 파일을 함께 고친 파일로 알렸다(일지
+    2026-10-14-04). 이 브랜치가 고친 스킬은 그대로 센다. 못 보는 것: 이 브랜치가 고쳤어도 main 과
+    내용이 같아진 파일은 세지 않는다."""
+    rule, same = ".claude/rules/x.md", ".claude/rules/y.md"
+    spec = f'kind = "skill"\nsource = "{SKILL}"\n'
+    seed = {**SEED, SKILL: "옛 본문\n", rule: "옛 규칙\n", same: "옛\n", CANARY: spec}
+    _, work, pusher = _원격과_클론(tmp_path, seed)
+    ours = {SKILL: "새 본문\n", "README.md": "이 브랜치\n", same: "같은 고침\n"}
+    _커밋한다(work, ours, "이 브랜치")
+    theirs = {rule: "main 의 규칙\n", "README.md": "main\n", "CLAUDE.md": "main\n"}
+    _커밋한다(pusher, {**theirs, same: "같은 고침\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # README.md 가 충돌한다
+    _쓴다(work, {"README.md": "둘 다\n"})
+    _git(work, "add", "README.md")
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert f"- {SKILL}: x.toml\n" in out
+    assert rule not in out
+    assert same not in out
+    assert "- origin/main: README.md\n" in out
+
+
 def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:

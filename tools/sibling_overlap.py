@@ -40,6 +40,12 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 코드를 바꾸지 않는다. 형제와 main의 merge-base가 이 클론에 없으면(얕은 클론) 그 형제의 고친
 파일만 "알 수 없다"로 두고 번호는 그대로 대조한다.
 
+이 브랜치가 고친 파일(함께 고친 파일, 헌법 판, 카나리아, `--move` 가 쓰는 것)은 merge-base 뒤에
+고친 파일 가운데 main 과 내용이 다른 것과 미추적 파일이다. main 을 합치다 충돌을 풀고 커밋하기
+전에는 merge-base 가 옛 자리에 머물러, merge-base 와의 차이만 세면 main 이 들여온 파일이 모두
+섞인다. 그 상태에서 친 대조가 main 의 규칙과 스킬을 카나리아 누락으로 알리고 1로 끝났다(일지
+2026-10-14-04).
+
 HEAD가 닫힌 PR의 head와 같은 형제 워크트리는 커밋하지 않은 변경(그 HEAD 뒤의 변경과 미추적
 파일)만 고친 파일로 견주고, 형제 줄에서는 그 수만 접어 찍는다(대기열 194). 함께 고친 파일 서른여덟
 줄 가운데 서른다섯 줄이 형제 워크트리의 것이라 열린 PR의 줄이 묻혔다(일지 2026-10-13-18). 이 판을
@@ -149,6 +155,8 @@ NNNN` 과 목록 속 `·NNNN`, ADR 의 파일 이름(`NNNN-…`)과 색인의 `[
   `SKILL.md` 밖 파일, 훅 설정(`.claude/settings.json`)은 보지 않는다. 읽지 못한 명세(TOML 오류,
   글자가 아닌 `source`)는 원천이 없는 것으로 보아, 그 명세만 고친 하네스 파일도 알린다.
 - 함께 고친 파일의 어느 줄이 겹치는지. 파일 이름만 견준다.
+- 이 브랜치가 고쳤어도 main 과 내용이 같아진 파일(main 의 같은 변경을 손으로 옮긴 것). 이 브랜치가
+  고친 파일로 세지 않는다.
 - 다음 빈 번호나 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의
   형제만 본다. 그 뒤의 겹침은 커밋 직전의 대조가 잡는다. 이 브랜치의 판이 형제가 쓴 판보다 낮은
   것은 그 줄에 찍히기만 하고 종료 코드를 바꾸지 않는다. 그 형제가 판을 새로 올렸으면 둘이 같은 판
@@ -851,6 +859,19 @@ def _worktree_changes(path: Path, since: str) -> frozenset[str]:
     return _lines(tracked) | _lines(untracked)
 
 
+def _own_changes(root: Path, base: str, main_sha: str) -> frozenset[str]:
+    """이 작업 트리가 merge-base 뒤에 고친 파일 가운데 main 과 내용이 다른 것. 미추적 파일을 더한다.
+
+    main 과 같은 파일은 main 이 들여온 것이다. 합치기를 커밋하기 전에는 merge-base 가 옛 자리에
+    머물러 main 이 고친 파일이 모두 섞였고, 카나리아 누락이 main 의 규칙과 스킬을 알렸다(일지
+    2026-10-14-04).
+    """
+    since_base = _lines(git(root, "diff", "--name-only", base))
+    unlike_main = _lines(git(root, "diff", "--name-only", main_sha))
+    untracked = _lines(git(root, "ls-files", "--others", "--exclude-standard"))
+    return (since_base & unlike_main) | untracked
+
+
 FROM_GH = "gh api"
 FROM_MERGE_REF = "merge ref"
 
@@ -960,7 +981,7 @@ def survey(root: Path, remote: Remote) -> Survey:
         changed = _worktree_changes(path, since) if since else None
         add(f"워크트리 {path}", head, numbers, changed)
     ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
-    changed = _worktree_changes(root, base)
+    changed = _own_changes(root, base, main_sha)
     harness = [path for path in harness_files(changed) if (root / path).is_file()]
     return Survey(
         ours,
