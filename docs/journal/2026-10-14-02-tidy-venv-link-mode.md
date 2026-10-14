@@ -58,7 +58,7 @@ python`의 `os.environ`을 찍게 하고, stream-json의 `tool_result`에서 표
 ### 카나리아
 
 `implement_uv_sync_timeout.toml`. 첫 판은 실험군 1/3이 "없음"으로 답해 실패 1, "없음" 섞인 통과 1이었다. 질문이
-"다음 문장이 시간 제한을 말하지 않으면 없음"이라는 조건부 판단을 시켜서다. 이어지는 두 문장을 판단 없이
+다음 문장이 시간 제한을 말하지 않으면 "없음"이라 답하라는 조건부 판단을 시켜서다. 이어지는 두 문장을 판단 없이
 옮기게 고친 둘째 판은 통과 4(claude 2.1.296, 갈래 모두 `5f72cdbb`).
 
 ### 셀프 리뷰가 부른 측정 둘(손으로 봤다)
@@ -109,6 +109,23 @@ python`의 `os.environ`을 찍게 하고, stream-json의 `tool_result`에서 표
 
 다시 돌린 명령: 커밋의 pre-commit으로 갈음한다(결과는 커밋 뒤 아래 "검사"에 적는다).
 
+## PR 직전
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 발견 없음. 바뀐 코드는 env 한 줄, 리스트 인자로만 띄우고 자기 임시 폴더만 지우는 프로브, 독스트링이다.
+- `bug-perf-review`: 유효 1, 보류 2, 오탐 4, Critical·Major 없음.
+  - 유효(Minor): 프로브가 첫 자식의 `spawn` 뒤 `relative_to`를 `try` 밖에서 불러, 거기서 예외가 나면 `.pyd`를 쥔 자식이
+    stdin을 기다린 채 남고 임시 폴더가 알림 없이 남는다. `relative_to`를 `try` 안으로 옮겼다. `spawn` 자신이 실패하면
+    자식은 이미 끝난 뒤라 그대로 뒀다.
+  - 보류(Minor): Bash의 시간 제한에 걸린 명령이 죽지 않고 백그라운드로 넘어가면, 다시 친 uv와 같은 `.venv`에 함께 깐다.
+    회복 측정은 프로세스 트리를 죽인 경우다. operations.md에 넘어간 작업이 끝난 뒤에 다시 치라고 적고 함께 까는 경우는
+    재지 않았다고 적었다.
+  - 보류(Minor): 클라우드 SessionStart의 `uv run pre-commit install`이 복사로 `.venv`를 채운다. 리눅스에서 재지
+    않았다. 아래 "다음"에 병합 뒤 확인으로 둔다.
+  - 오탐: hard 갈래가 하드링크인지 단언하지 않는다(pid 단언이 거짓 통과를 막는다), copy의 빈 목록이 흔들린다, 지운
+    `.pyd`를 복구하지 않는다(`--reinstall-package`가 한다), 런처 때문에 pid가 틀린다(자식이 `os.getpid()`를 찍는다).
+
 ## 남은 위험
 
 - pnpm의 `node_modules`도 하드링크이고 이 반영으로 풀리지 않는다. 앞선 judge 한 번에서 `node.exe`·`esbuild.exe`가
@@ -120,7 +137,10 @@ python`의 `os.environ`을 찍게 하고, stream-json의 `tool_result`에서 표
 ## 검사
 
 `uv run pytest -q` 2663 passed, 7 deselected. `ruff check`, `ruff format --check`, `pyright`(0 errors),
-`lint-imports` 모두 종료 0.
+`lint-imports` 모두 종료 0. `pnpm -C web verify` 종료 0. 셀프 리뷰 반영 뒤에는 커밋 `1617cb3d`의 pre-commit으로
+갈음했다. ruff 둘, 병렬 검사(zizmor, check-instructions, lint-imports, check-type-escapes, pyright, run-hooks,
+web-verify, pytest), 표·줄 구분 문자, 커밋 메시지가 Passed였다. 변이 표 확인은 커밋에 표가 없어 Skipped였다(이
+PR은 변이 표를 고치지 않는다). 인용 대조가 이 일지의 줄 하나를 짚어 따옴표를 뗐다.
 
 ## 회고
 
@@ -142,4 +162,6 @@ python`의 `os.environ`을 찍게 하고, stream-json의 `tool_result`에서 표
 
 - 병합하고 주 체크아웃을 당긴 뒤 처음 여는 데스크톱 앱 세션에서 `echo "$UV_LINK_MODE"`가 `copy`인지 본다. 이
   세션은 `claude -p`로만 봤다.
+- 다음 클라우드 세션의 시작에서 SessionStart 훅(`hook_session_web_deps`)이 제한 안에 끝나는지 본다. 복사 동기화가
+  더해졌다.
 - pnpm 쪽은 대기열 258.

@@ -130,8 +130,8 @@ def main() -> int:
                 f" 링크>1 {linked}개 {mib(linked_bytes)}"
             )
         child, pid, module = spawn(venvs["other"])
-        relative = module.relative_to(venvs["other"])
         try:
+            relative = module.relative_to(venvs["other"])
             for name in ("hard", "copy"):
                 print(f"  {relative} nlink {name}={os.stat(venvs[name] / relative).st_nlink}")
             started = time.perf_counter()
