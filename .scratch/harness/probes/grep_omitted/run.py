@@ -7,13 +7,13 @@
 양쪽이다(500자까지 그대로, 501자부터 표지). 한글 줄은 문턱이 바이트가 아니라 글자 수인지 가른다.
 - A_payload: 탐침 훅(`dump_posttool.py`)만 붙이고 `fixture/` 를 content 모드로 한 번 훑는다. 훅이
   받은 `tool_response` 의 키와 타입, 표지가 어느 키에 몇 번 실렸는지, 그 줄에 파일 경로와 줄 번호가
-  붙는지 본다. 기록이 하나이고 그 호출이 지시한 패턴·경로의 content 모드일 때 측정이다. 500자 줄
-  둘(영문, 한글)이 그대로 실리고 표지가 셋(501자 줄 둘과 2000자 줄)이면 기대대로다.
+  붙는지 본다. 기록이 하나이고 그 호출이 지시한 패턴·경로의 content 모드일 때 측정이다(B·C 도
+  같다). 500자 줄 둘(영문, 한글)이 그대로 실리고 표지가 셋(501자 줄 둘과 2000자 줄)이면 기대대로다.
 - B_notice: 등록 모양(래퍼를 거쳐)의 실제 훅과 탐침 훅을 붙이고 같은 호출을 한 뒤, 그 호출에 붙어
-  온 훅 알림의 첫 문장을 묻는다. 탐침 기록에 표지가 있을 때 측정이고, 답이 훅의 첫 문장(`LEAD`)을
-  옮기면 닿은 것이다.
-- C_control: B 의 대조군. 짧은 줄만 맞는 패턴(`PROBE short`)이다. 탐침 기록에 일치가 있고 표지가
-  없을 때 측정이고, 답이 그 문장 없이 '알림 없음' 이면 기대대로다.
+  온 훅 알림의 첫 문장을 묻는다. 탐침 기록이 지시한 호출이고 표지가 있을 때 측정이고, 답이 훅의
+  첫 문장(`LEAD`)을 옮기면 닿은 것이다.
+- C_control: B 의 대조군. 짧은 줄만 맞는 패턴(`PROBE short`)이다. 탐침 기록이 지시한 호출이고
+  일치가 있고 표지가 없을 때 측정이고, 답이 그 문장 없이 '알림 없음' 이면 기대대로다.
 stream-json 에는 훅의 additionalContext 가 실리지 않으므로(`webfetch_payload/` 의 B) 모델의 답으로
 판정한다.
 
@@ -157,6 +157,22 @@ def marker_total(entry: dict[str, object]) -> int:
     return response_text(entry).count(MARKER)
 
 
+def call_problem(name: str, entry: dict[str, object], fixture: Path, pattern: str) -> str | None:
+    """기록이 지시한 Grep 호출(PostToolUse, content 모드, 그 패턴, `fixture/` 경로)이 아니면 까닭.
+
+    지시와 다른 호출의 결과로도 표지와 답의 조건이 맞을 수 있어, 세 변형 모두 먼저 본다."""
+    tool_input = entry.get("tool_input")
+    fields = tool_input if isinstance(tool_input, dict) else {}
+    mode, got, path = fields.get("output_mode"), fields.get("pattern"), fields.get("path")
+    if entry.get("hook_event_name") != "PostToolUse" or entry.get("tool_name") != "Grep":
+        return f"{name}: 측정 아님 — 이벤트·도구가 다르다"
+    if mode != "content":
+        return f"{name}: 측정 아님 — content 모드가 아니었다({mode})"
+    if got != pattern or not isinstance(path, str) or Path(path) != fixture:
+        return f"{name}: 측정 아님 — 지시한 호출이 아니었다(pattern {got!r}, path {path!r})"
+    return None
+
+
 def check_payload(out: Path, fixture: Path) -> list[str]:
     entries = read_jsonl(out / "A_payload_posttool.jsonl")
     for entry in entries:
@@ -176,15 +192,9 @@ def check_payload(out: Path, fixture: Path) -> list[str]:
     if len(entries) != 1:
         return [f"A: 측정 아님 — Grep 의 PostToolUse 기록이 {len(entries)}건이다"]
     entry = entries[0]
-    tool_input = entry.get("tool_input")
-    fields = tool_input if isinstance(tool_input, dict) else {}
-    mode, pattern, path = fields.get("output_mode"), fields.get("pattern"), fields.get("path")
-    if entry.get("hook_event_name") != "PostToolUse" or entry.get("tool_name") != "Grep":
-        return ["A: 측정 아님 — 이벤트·도구가 다르다"]
-    if mode != "content":
-        return [f"A: 측정 아님 — content 모드가 아니었다({mode})"]
-    if pattern != "PROBE" or not isinstance(path, str) or Path(path) != fixture:
-        return [f"A: 측정 아님 — 지시한 호출이 아니었다(pattern {pattern!r}, path {path!r})"]
+    wrong_call = call_problem("A", entry, fixture, "PROBE")
+    if wrong_call:
+        return [wrong_call]
     text = response_text(entry)
     at_limit = (("영문", AT_LIMIT), ("한글", KOREAN_AT_LIMIT))
     missing = [name for name, line in at_limit if line not in text]
@@ -195,7 +205,7 @@ def check_payload(out: Path, fixture: Path) -> list[str]:
     return []
 
 
-def check_notice(out: Path, name: str, lead: str) -> list[str]:
+def check_notice(out: Path, name: str, lead: str, fixture: Path) -> list[str]:
     notice = name == "B_notice"
     entries = read_jsonl(out / f"{name}_posttool.jsonl")
     answer = final_answer(read_jsonl(out / f"{name}.jsonl"))
@@ -205,6 +215,9 @@ def check_notice(out: Path, name: str, lead: str) -> list[str]:
     )
     if len(entries) != 1:
         return [f"{name}: 측정 아님 — Grep 의 PostToolUse 기록이 {len(entries)}건이다"]
+    wrong_call = call_problem(name, entries[0], fixture, "PROBE" if notice else SHORT)
+    if wrong_call:
+        return [wrong_call]
     markers = marker_total(entries[0])
     if notice and markers == 0:
         return [f"{name}: 측정 아님 — 그 호출의 결과에 표지가 없었다"]
@@ -259,7 +272,7 @@ def main() -> int:
         from tools.hook_grep_omitted import LEAD
 
         for name in notice_variants:
-            problems += check_notice(out, name, LEAD)
+            problems += check_notice(out, name, LEAD, fixture)
     for problem in problems:
         print(f"[문제] {problem}")
     print(f"변형 {len(variants)}개, 문제 {len(problems)}건.")

@@ -26,6 +26,8 @@
 - 줄의 내용이 `:` 와 표지로 끝나는 일치. 문서가 그 표지를 인용한 줄이면 내용이 보이는데도 생략으로
   센다(거짓 양성).
 - content 가 아닌 모드(files_with_matches, count). 줄을 내지 않아 생략도 없다.
+- 경로가 `:숫자` 로 끝나는 파일을 `-n` 없이 훑은 결과. 그 끝을 줄 번호로 읽어 `-n` 을 켜라는 문장을
+  빼먹는다(거짓 음성. 알림 자체는 나간다).
 - 표지 문구나 결과 객체의 키가 바뀐 판. 그러면 침묵한다.
 - 생략된 줄을 무엇에 쓰는지. 잔존을 세는 중인지 보지 않고 생략마다 알린다.
 - Bash 의 `grep`·`rg`. 매처 밖이라 이 훅에 오지 않는다(그 출력이 긴 줄을 어떻게 내는지는 재지
@@ -56,7 +58,9 @@ class ToolInput(TypedDict, total=False):
 class HookPayload(TypedDict, total=False):
     """Claude Code 가 stdin 으로 주는 훅 입력 중 이 훅이 읽는 부분.
 
-    결과 객체는 값을 읽은 뒤 좁히려고 `dict[str, object]` 로 적는다."""
+    `ToolInput` 은 실제 Grep 입력의 모양을 닮게 적되 훅이 읽는 것은 `path` 뿐이다(`pattern`·
+    `output_mode` 는 시험이 실제 입력을 흉내 내려고 쓴다). 결과 객체는 값을 읽은 뒤 좁히려고
+    `dict[str, object]` 로 적는다."""
 
     tool_name: str
     tool_input: ToolInput

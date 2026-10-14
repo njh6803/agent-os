@@ -140,6 +140,19 @@ PR #235(커밋 둘과 origin/main 병합 둘, 헤드 `4eb1d42`). 마지막 푸�
 - **CodeRabbit.** "Review rate limited"로 초록이고 리뷰는 없다. 보안·버그 축은 PR 체크리스트에 적은 PR 직전 리뷰 둘의
   결과가 대신한다(`operations.md` 리뷰 파이프라인의 초록 착시 목록).
 
+두 번째 회차(origin/main의 #236을 합쳐 헤드 `bed38fe`로 푸시한 뒤 `@coderabbitai review`). 검사 일곱이 모두 초록이었고
+CodeRabbit이 리뷰를 냈다.
+
+- **CodeRabbit, Minor 하나(반영).** 프로브 `grep_omitted/run.py`의 B·C 판정이 A와 달리 기록된 `tool_input`(패턴·경로·모드)을
+  보지 않아, 지시와 다른 Grep 호출의 결과로도 표지와 답의 조건이 맞으면 측정으로 셌다. `.claude/rules/probes.md` 첫 항목
+  (재려는 상황이 실제로 났다는 표지까지 단언한다)이 요구하는 것이라 옳은 지적이었다. A의 검증을 `call_problem`으로 빼
+  세 변형이 함께 쓰게 했다. 가짜 기록 여섯(B·C 각각 맞는 호출, 다른 패턴, 다른 경로)으로 판정이 기대대로 갈리는 것을 확인했다.
+- **claude-review, Minor 하나와 Nit 둘.** Nit 둘은 반영했다. `ToolInput`이 훅이 읽지 않는 키를 든 것은 독스트링에 시험이
+  실제 입력을 흉내 내려는 것이라고 적었고, 경로가 `:숫자`로 끝나는 파일을 `-n` 없이 훑으면 줄 번호로 읽는 거짓 음성은 "못 보는 것"에
+  적고 시험 하나로 고정했다. Minor(`hook_env_read.py`의 `sudo` 옵션 집합이 `# fmt: skip`의 세로 나열)는 반영하지 않았다.
+  같은 파일의 `READERS`·`_RG_VALUE_OPTIONS`도 같은 모양이라 파일 안에서는 일관되고, 상수를 둘로 쪼개는 일은 판정 로직을 건드릴
+  위험에 비해 얻는 것이 없다.
+
 ## 검사
 
 - 셀프 리뷰 전에 손으로 친 것: `uv run pytest -q`는 2700 통과, 7 deselect(`llm` 마커)였다(674초). ruff check·format,

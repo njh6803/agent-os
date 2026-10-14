@@ -95,6 +95,16 @@ def test_파일_하나를_줄_번호_없이_훑으면_줄이_표지_그대로이
     assert "`-n`" in context
 
 
+def test_경로가_숫자로_끝나는_파일을_줄_번호_없이_훑으면_n을_켜라는_말만_빠진다() -> None:
+    """못 보는 것: 끝의 `:12` 를 줄 번호로 읽는다(거짓 음성). 알림과 자리는 나간다."""
+    context = context_for(_페이로드(f"MARK400 x\n{MARKER}", path="C:/scratch/omit/log:12"))
+
+    assert context is not None
+    assert context.startswith(LEAD)
+    assert "C:/scratch/omit/log" in context
+    assert "`-n`" not in context
+
+
 def test_생략된_문맥_줄만_있으면_일치를_숨기지_않아_침묵한다() -> None:
     assert context_for(_페이로드(CONTEXT_ONLY)) is None
 
