@@ -1,4 +1,4 @@
-# 2026-10-14 (03) mutate.py 의 종료 코드 판정과 표지, 첫 실패에서 멈추기, 실제 러너 시험
+# 2026-10-15 (02) mutate.py 의 종료 코드 판정과 표지, 첫 실패에서 멈추기, 실제 러너 시험
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 203·231·253을 한 PR로 닫는다. 대상은
 `tools/mutate.py`와 그 시험이다. 앞 세션이 워크트리 `.claude/worktrees/mutate-batch`에 커밋하지 않은 시험 변경(203의
@@ -122,3 +122,9 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
     넓히지 않고 환경을 고치기로 골랐다. 새 실제 pytest 시험의 `< 20`은 정상일 때 pytest 기동 두 번(이 PC에서 약 2초)이라 여유가
     크고, 시험을 고치면 `mutate.py`를 재는 표 전체(약 45분)를 다시 돌려야 해서 두었다. `checker_mutations.toml`이 추적하지 않는
     생성물을 읽어 그것이 없는 체크아웃의 `check-mutations`가 막는 것은 표 머리 주석에 적은 그대로다.
+
+둘째 합치기(PR 직전): main에 #238(`.claude/rules/tools.md`)과 #239(design-sync 갱신, `.design-sync/config.json`·`NOTES.md`)가 더
+들어와 다시 합쳤고 충돌은 없었다. `sibling_overlap`이 이 일지가 main의 최신 일지 2026-10-15-01보다 이름순으로 앞선다고 알려
+2026-10-14-03에서 2026-10-15-02로 옮기고, 옛 번호를 가리킨 인용 여덟을 고쳤다. #239가 `config.json`을 바꿔 검사기 표의 원문을
+`--check`로 다시 보니 아홉 모두 한 번씩 있었고, 이 워크트리의 생성물 사본으로 돌린 검사기 기준선도 같은 집계 줄로 초록이었다.
+변이 자체는 다시 돌리지 않았다.
