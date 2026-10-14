@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -25,11 +26,13 @@ import pytest
 from tools.canary import (
     AgentOutcome,
     Facts,
+    GitView,
     RunResult,
     SpecError,
     agent_problems,
     ancestor_problems,
     command,
+    git_view,
     head_commit,
     judge,
     load_spec,
@@ -40,6 +43,7 @@ from tools.canary import (
     run_claude,
     source_problems,
     target_problems,
+    view_problems,
 )
 
 _규칙_명세 = '''
@@ -1123,6 +1127,223 @@ def test_워크트리가_아닌_하위_폴더는_주_저장소의_CLAUDE_md도_�
     assert any(p.startswith("옛") and str(주 / "CLAUDE.md") in p for p in problems)
 
 
+# 세션에 실리는 git 상태
+
+
+def _커밋(repo: Path, 제목: str) -> None:
+    identity = ("-c", "user.name=t", "-c", "user.email=t@example.com")
+    _git(repo, *identity, "commit", "-q", "--allow-empty", "-m", 제목)
+
+
+def test_git_상태는_바뀐_경로와_지금_브랜치와_최근_커밋_다섯의_제목이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """실제 git 으로 잰다. 추적하지 않는 폴더는 세션의 블록처럼 폴더 이름만 든다
+    (`canary_git_status.py`). 이름을 바꾼 것의 앞뒤 둘과 따옴표·8진 이스케이프 없는 한글 경로는
+    세션이 보는 꼴을 재지 않고 더 막는 쪽으로 고른 것이다(러너 독스트링의 못 보는 것)."""
+    repo = _저장소(tmp_path, monkeypatch)
+    (repo / "고칠.md").write_text("처음\n", encoding="utf-8")
+    (repo / "옮길.md").write_text("옮긴다\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _커밋(repo, "제목 c1")
+    _git(repo, "switch", "-q", "-c", "chore/표지-브랜치")
+    for 차례 in range(2, 8):
+        _커밋(repo, f"제목 c{차례}")
+    (repo / "고칠.md").write_text("고침\n", encoding="utf-8")
+    _git(repo, "mv", "옮길.md", "옮긴.md")
+    (repo / "추적하지_않는.md").write_text("새\n", encoding="utf-8")
+    (repo / "새_폴더").mkdir()
+    (repo / "새_폴더" / "안쪽.md").write_text("안\n", encoding="utf-8")
+
+    view = git_view(repo)
+
+    assert view is not None
+    assert sorted(view.paths) == sorted(
+        ["고칠.md", "옮긴.md", "옮길.md", "추적하지_않는.md", "새_폴더/"]
+    )
+    assert view.branch == "chore/표지-브랜치"
+    assert view.subjects == ("제목 c7", "제목 c6", "제목 c5", "제목 c4", "제목 c3")
+
+
+def test_저장소_밖의_git_상태는_비었다(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """세션의 컨텍스트에도 git 상태 블록이 없다(`canary_git_status.py` 의 보통 폴더)."""
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    밖 = tmp_path / "밖"
+    밖.mkdir()
+    (밖 / "EnterWorktree.md").write_text("새\n", encoding="utf-8")
+
+    assert git_view(밖) == GitView()
+
+
+def test_커밋이_없는_저장소는_제목이_없고_분리_HEAD는_브랜치가_없다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _저장소(tmp_path, monkeypatch)
+    (repo / "새.md").write_text("새\n", encoding="utf-8")
+
+    빈 = git_view(repo)
+    _git(repo, "add", ".")
+    _커밋(repo, "첫")
+    _git(repo, "switch", "-q", "--detach")
+    분리 = git_view(repo)
+
+    assert 빈 is not None
+    assert 빈.paths == ("새.md",)
+    assert 빈.subjects == ()
+    assert 분리 == GitView((), "", ("첫",))
+
+
+@pytest.mark.parametrize("멈출_명령", ["status", "branch", "log"])
+def test_git이_하나라도_제한_시간을_넘기면_git_상태는_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 멈출_명령: str
+) -> None:
+    def 멈추는_git(args: Sequence[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        if args[3] == 멈출_명령:  # git -C <체크아웃> <명령>
+            raise subprocess.TimeoutExpired(args, 30.0)
+        return subprocess.CompletedProcess(args, 0, b"", b"")
+
+    monkeypatch.setattr(subprocess, "run", 멈추는_git)
+
+    assert git_view(tmp_path) is None
+
+
+def test_git을_띄우지_못하면_git_상태는_None이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def 없는_곳(name: str) -> str:
+        return str(tmp_path / f"없는-{name}")
+
+    monkeypatch.setattr(shutil, "which", 없는_곳)
+
+    assert git_view(tmp_path) is None
+
+
+class _가짜_상태:
+    """체크아웃 폴더 이름마다 정한 git 상태를 돌려주고 읽은 폴더를 적는다."""
+
+    def __init__(self, 상태들: dict[str, GitView | None]) -> None:
+        self.상태들 = 상태들
+        self.읽은: list[str] = []
+
+    def __call__(self, checkout: Path) -> GitView | None:
+        self.읽은.append(checkout.name)
+        return self.상태들[checkout.name]
+
+
+_훅_명세 = _스킬_명세.replace('expect = ["EnterWorktree"]', 'expect = ["`hook_push_behind_main`"]')
+
+
+@pytest.mark.parametrize(
+    ("상태", "자리"),
+    [
+        (GitView(paths=("README.md", "tools/hook_push_behind_main.py")), "바뀐 경로"),
+        (GitView(branch="chore/hook_push_behind_main"), "브랜치"),
+        (
+            GitView(subjects=("chore: 다른 것", "feat: hook_push_behind_main 을 더한다")),
+            "커밋 제목",
+        ),
+    ],
+)
+def test_세션에_실리는_git_상태에_카나리아가_있으면_그_갈래와_자리를_알린다(
+    tmp_path: Path, 상태: GitView, 자리: str
+) -> None:
+    """대기열 243 의 사건: 커밋하지 않은 훅 파일의 이름이 대조군 답에 샜다. 백틱은 걷고 견준다."""
+    spec = load_spec(_훅_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    problems = view_problems(spec, places, _가짜_상태({"새": GitView(), "옛": 상태}))
+
+    assert len(problems) == 1
+    assert problems[0].startswith("옛: ")
+    assert f"git 상태의 {자리} " in problems[0]
+    assert "hook_push_behind_main" in problems[0]
+
+
+def test_git_상태에_카나리아가_없으면_알리지_않는다(tmp_path: Path) -> None:
+    spec = load_spec(_훅_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+    상태 = GitView(("tools/hook_env_read.py",), "chore/push", ("feat: 훅을 더한다",))
+
+    assert view_problems(spec, places, _가짜_상태({"새": 상태, "옛": 상태})) == []
+
+
+def test_git_상태를_읽지_못하면_확인이_비지_않게_그_갈래를_막는다(tmp_path: Path) -> None:
+    spec = load_spec(_훅_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+
+    problems = view_problems(spec, places, _가짜_상태({"새": GitView(), "옛": None}))
+
+    assert len(problems) == 1
+    assert problems[0].startswith("옛: ")
+    assert "읽지 못했다" in problems[0]
+
+
+def test_같은_체크아웃의_git_상태는_한_번만_읽고_갈래마다_알린다(tmp_path: Path) -> None:
+    spec = load_spec(_규칙_명세)
+    places = {"실험군": tmp_path, "대조군": tmp_path}
+    상태 = _가짜_상태({tmp_path.name: GitView(paths=("식별자는 영문.md",))})
+
+    problems = view_problems(spec, places, 상태)
+
+    assert 상태.읽은 == [tmp_path.name]
+    assert [problem.split(":")[0] for problem in problems] == ["실험군", "대조군"]
+
+
+def test_체크아웃이_없는_갈래의_git_상태는_읽지_않는다(tmp_path: Path) -> None:
+    spec = load_spec(_훅_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": tmp_path / "옛"}
+    상태 = _가짜_상태({"새": GitView()})
+
+    assert view_problems(spec, places, 상태) == []
+    assert 상태.읽은 == ["새"]
+
+
+@pytest.mark.parametrize("명세", [_규칙_명세, _스킬_명세, _에이전트_명세])
+def test_git_상태는_명세의_종류와_상관없이_갈래마다_본다(tmp_path: Path, 명세: str) -> None:
+    """못 보는 것. 스킬·서브에이전트 명령의 세션에 실리는지는 재지 않았고 규칙 명령과 같다고 보고
+    본다."""
+    spec = load_spec(명세)
+    places: dict[str, Path] = {}
+    for arm in spec.arm:
+        places[arm.name] = tmp_path / f"갈래-{len(places)}"
+        places[arm.name].mkdir()
+    상태 = GitView(paths=(f"{spec.expect[0]}.md",))
+
+    problems = view_problems(spec, places, lambda _: 상태)
+
+    assert [problem.split(":")[0] for problem in problems] == [arm.name for arm in spec.arm]
+
+
+def test_주_브랜치와_git_사용자_이름은_견주지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """못 보는 것(지나간다). 세션의 블록에는 둘도 실리지만(`canary_git_status.py`) 읽지 않는다."""
+    repo = _저장소(tmp_path, monkeypatch)
+    _git(repo, "config", "user.name", "사용자-표지")
+    _커밋(repo, "첫")
+    _git(repo, "branch", "주가지-표지")
+    _git(repo, "switch", "-q", "-c", "feat/다른")
+    spec = load_spec(_스킬_명세.replace('["EnterWorktree"]', '["사용자-표지", "주가지-표지"]'))
+
+    problems = view_problems(spec, {"새": repo, "옛": repo}, git_view)
+
+    assert problems == []
+
+
+def test_세션이_자를_만큼_긴_상태도_끝까지_견주어_막는다(tmp_path: Path) -> None:
+    """못 보는 것(막는다). 세션은 긴 상태를 자르지만 이 확인은 자르지 않는다."""
+    spec = load_spec(_훅_명세)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": _스킬_체크아웃(tmp_path, "옛")}
+    긴_경로들 = tuple(f"web/src/긴-폴더-{차례:03d}/파일.ts" for 차례 in range(200))
+    상태 = GitView(paths=(*긴_경로들, "tools/hook_push_behind_main.py"))
+
+    problems = view_problems(spec, places, _가짜_상태({"새": GitView(), "옛": 상태}))
+
+    assert sum(len(path) for path in 상태.paths) > 2000
+    assert len(problems) == 1
+    assert "tools/hook_push_behind_main.py" in problems[0]
+
+
 # 실행
 
 
@@ -1519,7 +1740,18 @@ def test_claude가_제한_시간을_넘기면_그_회차는_0이_아닌_코드�
     assert "시간" in result.stderr
 
 
-@pytest.mark.parametrize("argv", [[], ["a.toml"], ["a.toml", "out", "더"], ["--preflight"]])
+@pytest.mark.parametrize(
+    "argv",
+    [
+        [],
+        ["a.toml"],
+        ["a.toml", "out", "더"],
+        ["--preflight"],
+        ["--control-commit", "abc1234", "a.toml"],
+        ["--control-commit", "a.toml", "out"],
+        ["a.toml", "out", "--control-commit", "abc1234"],
+    ],
+)
 def test_인자가_맞지_않으면_사용법을_알리고_2다(tmp_path: Path, argv: list[str]) -> None:
     printed: list[str] = []
 
@@ -1554,11 +1786,13 @@ def test_깃발을_뒤에_두면_출력_디렉터리로_삼지_않고_사용법�
 # 사전 확인
 
 
-def _사전_확인(tmp_path: Path, *명세들: Path) -> tuple[int, list[str], _가짜]:
+def _사전_확인(
+    tmp_path: Path, *명세들: Path, view: Callable[[Path], GitView | None] = git_view
+) -> tuple[int, list[str], _가짜]:
     가짜 = _가짜({})
     printed: list[str] = []
     argv = ["--preflight", *(str(path) for path in 명세들)]
-    return main(argv, cwd=tmp_path, runner=가짜, out=printed.append), printed, 가짜
+    return main(argv, cwd=tmp_path, runner=가짜, out=printed.append, view=view), printed, 가짜
 
 
 def test_사전_확인은_claude를_띄우지_않고_출력도_남기지_않으며_통과하면_0이다(
@@ -1694,3 +1928,457 @@ def test_상위_폴더에_카나리아가_있으면_돌리지_않고_2다(tmp_pa
     assert code == 2
     assert 가짜.호출 == []
     assert any("상위 폴더" in line for line in printed)
+
+
+def test_세션에_실리는_git_상태에_카나리아가_있으면_돌리지_않고_2다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    상태 = _가짜_상태({"새": GitView(), "옛": GitView(paths=("EnterWorktree.md",))})
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")],
+        cwd=tmp_path,
+        runner=가짜,
+        out=printed.append,
+        view=상태,
+    )
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("git 상태" in line and "EnterWorktree.md" in line for line in printed)
+    assert not (tmp_path / "out").exists()
+
+
+def test_사전_확인도_git_상태를_본다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    _스킬_체크아웃(tmp_path, "새")
+    _스킬_체크아웃(tmp_path, "옛")
+    상태 = _가짜_상태({"새": GitView(branch="feat/EnterWorktree"), "옛": GitView()})
+
+    code, printed, 가짜 = _사전_확인(tmp_path, spec_path, view=상태)
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("[실패]" in line for line in printed)
+    assert any("브랜치 feat/EnterWorktree" in line for line in printed)
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--preflight", "a.toml", "--out"],
+        ["--preflight", "--control-commit", "-x", "a.toml"],
+        ["--preflight", "--control-commit", "abc1234"],
+        ["--preflight", "a.toml", "--control-commit", "abc1234"],
+    ],
+)
+def test_사전_확인에_깃발을_섞거나_자리를_틀리면_명세로_읽지_않고_사용법을_알린다(
+    tmp_path: Path, argv: list[str]
+) -> None:
+    printed: list[str] = []
+
+    assert main(argv, cwd=tmp_path, runner=_가짜({}), out=printed.append) == 2
+    assert any("사용:" in line for line in printed)
+    assert not any("사전 확인 통과" in line for line in printed)
+
+
+def test_상태는_돌리기_전에_체크아웃마다_한_번만_읽는다(tmp_path: Path) -> None:
+    """못 보는 것. 회차가 도는 동안(출력 디렉터리를 만든 뒤 등)의 변화는 다시 읽지 않는다."""
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    새 = _스킬_체크아웃(tmp_path, "새")
+    옛 = _스킬_체크아웃(tmp_path, "옛")
+    상태 = _가짜_상태({"새": GitView(), "옛": GitView()})
+    가짜 = _가짜({"새": _스킬_회차(새, "EnterWorktree"), "옛": _스킬_회차(옛, "없음")})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")],
+        cwd=tmp_path,
+        runner=가짜,
+        out=printed.append,
+        view=상태,
+    )
+
+    assert code == 0
+    assert len(가짜.호출) == 4
+    assert 상태.읽은 == ["새", "옛"]
+
+
+# 대조군 커밋
+
+
+_대조군_커밋_명세 = """
+kind = "skill"
+question = "tidy-checkouts 스킬을 불러 부르는 곳 절의 도구 이름을 옮겨라. 없으면 \\"없음\\"."
+expect = ["EnterWorktree"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "새"
+role = "experiment"
+
+[[arm]]
+name = "옛"
+role = "control"
+checkout = "없는-옛-판"
+"""
+
+
+def _두_판_저장소(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, str, str]:
+    """옛 판(카나리아 없음)과 새 판(카나리아 있음)을 차례로 커밋한 저장소와 두 커밋."""
+    repo = _저장소(tmp_path, monkeypatch)
+    skill = repo / ".claude" / "skills" / "tidy-checkouts" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text(_옛_본문, encoding="utf-8")
+    _git(repo, "add", ".")
+    _커밋(repo, "옛 판")
+    옛 = _git(repo, "rev-parse", "HEAD")
+    skill.write_text(_새_본문, encoding="utf-8")
+    _git(repo, "add", ".")
+    _커밋(repo, "새 판")
+    return repo, 옛, _git(repo, "rev-parse", "HEAD")
+
+
+def _정한_임시(monkeypatch: pytest.MonkeyPatch, 자리: Path) -> list[str]:
+    """`tempfile.mkdtemp` 가 `자리` 를 만들어 돌려주게 한다. 받은 prefix 를 적는다."""
+    받은: list[str] = []
+
+    def 만든다(prefix: str | None = None, **_: object) -> str:
+        받은.append(prefix or "")
+        자리.mkdir()
+        return str(자리)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", 만든다)
+    return 받은
+
+
+class _사본을_읽는_가짜:
+    """회차마다 그 체크아웃의 스킬 사본을 읽어 답하고, 돌던 때의 자리·본문·브랜치를 적는다."""
+
+    def __init__(self) -> None:
+        self.본_것: list[tuple[Path, str, str]] = []
+
+    def __call__(self, args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        본문 = (cwd / ".claude" / "skills" / "tidy-checkouts" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.본_것.append((cwd, 본문, _git(cwd, "branch", "--show-current")))
+        답 = "EnterWorktree" if "EnterWorktree" in 본문 else "없음"
+        return RunResult(0, "\n".join(_스킬_회차(cwd, 답)) + "\n", "")
+
+
+def _대조군_커밋_실행(
+    tmp_path: Path, repo: Path, 커밋: str, runner: Callable[[Sequence[str], Path, str], RunResult]
+) -> tuple[int, list[str]]:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_대조군_커밋_명세, encoding="utf-8")
+    printed: list[str] = []
+    argv = ["--control-commit", 커밋, str(spec_path), str(tmp_path / "out")]
+    return main(argv, cwd=repo, runner=runner, out=printed.append), printed
+
+
+def _워크트리들(repo: Path) -> list[str]:
+    listed = _git(repo, "worktree", "list", "--porcelain")
+    return [
+        line.removeprefix("worktree ")
+        for line in listed.splitlines()
+        if line.startswith("worktree ")
+    ]
+
+
+def test_대조군_커밋을_임시_워크트리로_꺼내_대조군만_돌리고_끝나면_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """실제 git 으로 잰다. 명세의 대조군 `checkout` 은 없는 폴더라 쓰였으면 돌리기 전에 막힌다.
+
+    대조군 회차는 옛 판의 사본을 분리 HEAD 로 읽고, 실험군 회차는 부른 체크아웃을 읽는다. 끝나면
+    워크트리 등록과 폴더, 그것을 담은 임시 폴더가 모두 없고 브랜치도 늘지 않는다.
+    """
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    받은 = _정한_임시(monkeypatch, 임시)
+    브랜치들 = _git(repo, "branch", "--format=%(refname:short)")
+    가짜 = _사본을_읽는_가짜()
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛[:7], 가짜)
+
+    assert code == 0
+    assert 받은 == ["canary-control-"]
+    대조군 = [(cwd, 본문, 브랜치) for cwd, 본문, 브랜치 in 가짜.본_것 if cwd != repo]
+    assert 대조군 == [(임시 / 옛[:7], _옛_본문, "")]
+    assert sorted(본문 for cwd, 본문, _ in 가짜.본_것 if cwd == repo) == [_새_본문] * 3
+    assert not 임시.exists()
+    assert _워크트리들(repo) == [_git(repo, "rev-parse", "--show-toplevel")]
+    assert _git(repo, "branch", "--format=%(refname:short)") == 브랜치들
+    assert any(line.startswith(f"대조군 체크아웃: {임시 / 옛[:7]}") for line in printed)
+    짧은 = _git(repo, "rev-parse", "--short", 옛)
+    assert any(line.startswith("갈래: ") and f"옛(대조군) 커밋 {짧은}" in line for line in printed)
+
+
+def test_꺼낸_대조군만_걷고_부른_체크아웃과_다른_워크트리의_커밋하지_않은_파일은_남긴다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """지우는 길의 반박(`.claude/rules/tools.md`). 회차 세션이 꺼낸 자리에 추적하지 않는 파일과
+    `.venv` 를 남겨도 `--force` 가 그 자리만 걷고, 부른 체크아웃과 같은 저장소의 다른 워크트리는
+    건드리지 않는다."""
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    (repo / "고치던.md").write_text("커밋하지 않았다\n", encoding="utf-8")
+    옆 = tmp_path / "옆"
+    _git(repo, "worktree", "add", "-q", "--detach", str(옆), 옛)
+    (옆 / "옆에서_고치던.md").write_text("커밋하지 않았다\n", encoding="utf-8")
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    읽는_가짜 = _사본을_읽는_가짜()
+
+    def 흘리는_가짜(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd != repo:
+            (cwd / "세션이_남긴.md").write_text("남김\n", encoding="utf-8")
+            (cwd / ".venv" / "Lib").mkdir(parents=True)
+            (cwd / ".venv" / "Lib" / "모듈.pyd").write_bytes(b"x")
+        return 읽는_가짜(args, cwd, stdin)
+
+    code, _ = _대조군_커밋_실행(tmp_path, repo, 옛, 흘리는_가짜)
+
+    assert code == 0
+    assert not 임시.exists()
+    assert (repo / "고치던.md").read_text(encoding="utf-8") == "커밋하지 않았다\n"
+    assert (옆 / "옆에서_고치던.md").read_text(encoding="utf-8") == "커밋하지 않았다\n"
+    assert len(_워크트리들(repo)) == 2
+
+
+def test_돌리기_전_확인에서_막혀도_꺼낸_대조군을_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """대조군으로 새 판을 주면 대조군 사본의 원천에 카나리아가 있어 돌리지 않는다."""
+    repo, _, 새 = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    가짜 = _사본을_읽는_가짜()
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 새, 가짜)
+
+    assert code == 2
+    assert 가짜.본_것 == []
+    assert any("대조군 사본의 원천" in line for line in printed)
+    assert not 임시.exists()
+    assert len(_워크트리들(repo)) == 1
+
+
+def test_claude를_띄우지_못해도_꺼낸_대조군을_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+
+    def 없는_claude(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        raise FileNotFoundError("claude 없음")
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 없는_claude)
+
+    assert code == 3
+    assert any("claude 없음" in line for line in printed)
+    assert not 임시.exists()
+    assert len(_워크트리들(repo)) == 1
+
+
+def test_꺼낸_대조군을_걷지_못하면_자리와_걷는_명령을_찍고_종료_코드는_판정대로다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """회차 도중 그 워크트리를 잠가 `git worktree remove --force` 한 번이 거부하게 한다.
+
+    찍은 안내(잠겼으면 `--force` 를 두 번, 그다음 임시 폴더를 지운다)를 그대로 밟아 걷힌다.
+    """
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    읽는_가짜 = _사본을_읽는_가짜()
+
+    def 잠그는_가짜(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd != repo:
+            _git(repo, "worktree", "lock", str(cwd))
+        return 읽는_가짜(args, cwd, stdin)
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 잠그는_가짜)
+    자리 = 임시 / 옛[:7]
+    남은 = 자리.exists()
+    _git(repo, "worktree", "remove", "--force", "--force", str(자리))
+    임시.rmdir()
+
+    assert code == 0
+    assert 남은
+    assert len(_워크트리들(repo)) == 1
+    assert any(
+        line.startswith(f"임시 워크트리를 걷지 못했다: {자리}")
+        and f"git worktree remove --force {자리}" in line
+        and "--force 를 두 번" in line
+        and f"{임시} 를 지운다" in line
+        and "주 체크아웃 세션" in line
+        for line in printed
+    )
+
+
+@pytest.mark.parametrize("커밋", ["0000000", "없는-커밋"])
+def test_대조군_커밋을_찾지_못하면_아무것도_만들지_않고_2다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 커밋: str
+) -> None:
+    repo, _, _ = _두_판_저장소(tmp_path, monkeypatch)
+    받은 = _정한_임시(monkeypatch, tmp_path / "임시")
+    가짜 = _사본을_읽는_가짜()
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 커밋, 가짜)
+
+    assert code == 2
+    assert 받은 == []
+    assert 가짜.본_것 == []
+    assert any("찾지 못했다" in line and 커밋 in line for line in printed)
+
+
+@pytest.mark.parametrize("커밋", ["-x", "--all"])
+def test_대조군_커밋이_깃발처럼_보이면_git에_넘기지_않고_사용법을_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 커밋: str
+) -> None:
+    repo, _, _ = _두_판_저장소(tmp_path, monkeypatch)
+    받은 = _정한_임시(monkeypatch, tmp_path / "임시")
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 커밋, _사본을_읽는_가짜())
+
+    assert code == 2
+    assert 받은 == []
+    assert any("사용:" in line for line in printed)
+
+
+def test_꺼낼_자리에_이미_무엇이_있으면_지우지_않고_3이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """git 이 거부한 자리는 이 도구가 꺼낸 것인지 몰라 건드리지 않는다."""
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+
+    def 차_있는_자리(prefix: str | None = None, **_: object) -> str:
+        (임시 / 옛[:7]).mkdir(parents=True)
+        (임시 / 옛[:7] / "사람의.md").write_text("지우면 안 된다\n", encoding="utf-8")
+        return str(임시)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", 차_있는_자리)
+    가짜 = _사본을_읽는_가짜()
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 가짜)
+
+    assert code == 3
+    assert 가짜.본_것 == []
+    assert (임시 / 옛[:7] / "사람의.md").read_text(encoding="utf-8") == "지우면 안 된다\n"
+    assert any("꺼내지 못했다" in line for line in printed)
+    assert any(line.startswith(f"임시 폴더 {임시} 가 남았다") for line in printed)
+    assert len(_워크트리들(repo)) == 1
+
+
+def test_꺼내기가_제한_시간을_넘기면_반쯤_꺼낸_자리를_걷고_3이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """git 을 가짜로 둔다. 제한 시간을 넘긴 add 가 자리를 반쯤 만들고, 러너는 그 자리를 걷는다."""
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    부른: list[list[str]] = []
+    sha = "abcdef0123456789abcdef0123456789abcdef01"
+
+    def 가짜_git(args: Sequence[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        부른.append(list(args[3:]))
+        if "add" in args:
+            (임시 / sha[:7] / "반쯤").mkdir(parents=True)
+            raise subprocess.TimeoutExpired(args, 300.0)
+        if "remove" in args:
+            shutil.rmtree(임시 / sha[:7])
+        return subprocess.CompletedProcess(args, 0, f"{sha}\n".encode(), b"")
+
+    monkeypatch.setattr(subprocess, "run", 가짜_git)
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_대조군_커밋_명세, encoding="utf-8")
+    printed: list[str] = []
+    argv = ["--control-commit", "abcdef0", str(spec_path), str(tmp_path / "out")]
+
+    code = main(argv, cwd=tmp_path, runner=_사본을_읽는_가짜(), out=printed.append)
+
+    assert code == 3
+    자리 = str(임시 / sha[:7])
+    긴_경로 = ["-c", "core.longpaths=true", "worktree"]
+    assert [*긴_경로, "add", "--detach", 자리, sha] in 부른
+    assert [*긴_경로, "remove", "--force", "--force", 자리] in 부른
+    assert not 임시.exists()
+    assert any("제한 시간" in line for line in printed)
+
+
+@pytest.mark.parametrize(
+    ("판", "기대", "표지"), [("옛", 0, "[통과]"), ("새", 2, "대조군 사본의 원천")]
+)
+def test_사전_확인도_대조군_커밋을_꺼내_보고_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 판: str, 기대: int, 표지: str
+) -> None:
+    """커밋 대조군으로 통과한 명세를 문구만 고친 뒤 갈음하는 길. 명세의 대조군 `checkout` 은 없는
+    폴더라, 인자 없이는 "체크아웃이 없다"로 막힌다."""
+    repo, 옛, 새 = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_대조군_커밋_명세, encoding="utf-8")
+    가짜 = _가짜({})
+    printed: list[str] = []
+    argv = ["--preflight", "--control-commit", 옛 if 판 == "옛" else 새, str(spec_path)]
+
+    code = main(argv, cwd=repo, runner=가짜, out=printed.append)
+
+    assert code == 기대
+    assert 가짜.호출 == []
+    assert any(표지 in line for line in printed)
+    assert any(line.startswith(f"대조군 체크아웃: {임시}") for line in printed)
+    assert not 임시.exists()
+    assert len(_워크트리들(repo)) == 1
+    assert not (tmp_path / "out").exists()
+
+
+def test_강제로_끝난_실행은_꺼낸_대조군을_걷지_못하고_시작_줄이_그_자리를_찍는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """못 보는 것(지나간다). 꺼낸 뒤 하위 프로세스가 `os._exit` 로 끝나면 kill 처럼 걷는 길이 돌지
+    않아 자리와 등록이 남는다. 시작 줄이 그 자리를 찍는다."""
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    script = tmp_path / "끊김.py"
+    script.write_text(
+        "import os, sys, tempfile\n"
+        "from pathlib import Path\n"
+        f"sys.path.insert(0, {str(Path(__file__).resolve().parents[2])!r})\n"
+        "from tools.canary import control_checkout\n"
+        f"tempfile.mkdtemp = lambda prefix=None: Path({str(임시)!r}).mkdir() or {str(임시)!r}\n"
+        f"with control_checkout(Path({str(repo)!r}), {옛!r}, print):\n"
+        "    sys.stdout.flush()\n"
+        "    os._exit(0)\n",
+        encoding="utf-8",
+    )
+    environment = {**os.environ, "PYTHONUTF8": "1"}
+
+    done = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+        timeout=120,
+        env=environment,
+    )
+    자리 = 임시 / 옛[:7]
+    남은 = 자리.exists()
+    등록 = len(_워크트리들(repo))
+    _git(repo, "worktree", "remove", "--force", str(자리))
+
+    assert done.returncode == 0, done.stderr
+    assert f"대조군 체크아웃: {자리}" in done.stdout
+    assert 남은
+    assert 등록 == 2

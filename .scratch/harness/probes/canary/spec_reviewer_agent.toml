@@ -3,14 +3,12 @@
 # (대기열 153). 질문은 그 스크립트의 것과 글자가 같다.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(58969f7)이다. 옛 판에는 카나리아가 없고, 옛 정의의
 # tools 줄은 새 판과 같아 대조군에서도 서브에이전트가 돈다.
-# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다. 대조군이 같은 58969f7 인 다른 명세 넷과 같은 자리를
-# 쓴다(README `canary/` 행).
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.292, 대조군 `58969f7`, 일지 2026-10-12-06).
 # 이 명세가 대신한 `spec_reviewer_agent.py` 는 지웠고 마지막 판은
 #   git show 7a9e58f:.scratch/harness/probes/canary/spec_reviewer_agent.py
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   git worktree add --detach ../../../../agent-canary-58969f7 58969f7
-#   uv run python tools/canary.py .scratch/harness/probes/canary/spec_reviewer_agent.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 58969f7 .scratch/harness/probes/canary/spec_reviewer_agent.toml <출력 디렉터리>
 kind = "agent"
 agent = "spec-reviewer"
 agent_tools = ["Read", "Grep", "Glob", "Bash"]
