@@ -126,6 +126,14 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`
   - 오탐: hard 갈래가 하드링크인지 단언하지 않는다(pid 단언이 거짓 통과를 막는다), copy의 빈 목록이 흔들린다, 지운
     `.pyd`를 복구하지 않는다(`--reinstall-package`가 한다), 런처 때문에 pid가 틀린다(자식이 `os.getpid()`를 찍는다).
 
+## PR 리뷰
+
+[njh6803/agent-os#237](https://github.com/njh6803/agent-os/pull/237). 푸시 전 origin/main이 한 커밋 앞서(#235) 합쳤고
+`.scratch/retro-queue.md`의 216·217 행이 충돌해 main의 216 닫힘과 이 브랜치의 217 닫힘을 남겼다. CI 넷과 claude-review가
+초록이고 claude-review는 지적 없음(유지보수성·경계 축). CodeRabbit은 무료 OSS 한도로 리뷰하지 않아(`Review rate
+limited`), 보안·버그 축은 위 "PR 직전"의 대체 둘이 덮는다고 PR 코멘트에 남겼다. 병합은 워크트리 길로 한다.
+주 체크아웃은 이 세션이 당기지 않는다(다음 새 세션의 `tidy-checkouts` 몫).
+
 ## 남은 위험
 
 - pnpm의 `node_modules`도 하드링크이고 이 반영으로 풀리지 않는다. 앞선 judge 한 번에서 `node.exe`·`esbuild.exe`가
