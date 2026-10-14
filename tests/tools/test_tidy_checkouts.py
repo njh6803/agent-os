@@ -297,8 +297,8 @@ def _자식이_올린다(module: Path) -> AbstractContextManager[int]:
 @pytest.mark.parametrize("linked", [False, True], ids=["폴더_안_이름", "폴더_밖_하드링크"])
 def test_폴더_아래_모듈을_올린_자식_프로세스를_찾는다(tmp_path: Path, linked: bool) -> None:
     """대기열 201. 윈도는 올린 모듈의 매핑 이름과 그 파일의 하드링크 이름을 본다. uv 의 `.venv` 는
-    캐시에서 하드링크로 채워져, 다른 체크아웃의 파이썬이 올린 `.pyd` 가 이 폴더의 이름도 막는다.
-    갈래는 `.scratch/harness/probes/module_holder.py` 의 G·E 와 같다. 윈도 밖은 볼 수 없다고
+    기본으로 캐시에서 하드링크로 채워져, 다른 체크아웃의 파이썬이 올린 `.pyd` 가 이 폴더의 이름도
+    막는다. 갈래는 `.scratch/harness/probes/module_holder.py` 의 G·E 와 같다. 윈도 밖은 볼 수 없다고
     돌려준다(적재한 모듈이 지우기를 막지 않는다고 알고 있다)."""
     if sys.platform != "win32":
         assert scan_modules() is None
@@ -744,8 +744,9 @@ def test_앞지우기는_파일_하나도_지운다(tmp_path: Path) -> None:
 
 
 def test_도구는_표준_라이브러리만_import_한다() -> None:
-    """uv 의 `.venv` 는 캐시에서 하드링크로 채워져, 도구가 서드파티 확장 모듈(pydantic 의 `.pyd`)을
-    싣으면 지울 워크트리의 같은 파일을 도구 자신이 쥔다(프로브의 E 갈래)."""
+    """uv 의 `.venv` 는 기본으로 캐시에서 하드링크로 채워져(Claude 세션은 복사다, 대기열 217),
+    도구가 서드파티 확장 모듈(pydantic 의 `.pyd`)을 싣으면 지울 워크트리의 같은 파일을 도구 자신이
+    쥔다(프로브의 E 갈래)."""
     tree = ast.parse(_TOOL.read_text(encoding="utf-8"))
     modules: set[str] = set()
     for node in ast.walk(tree):
