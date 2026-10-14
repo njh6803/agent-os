@@ -11,7 +11,10 @@
 # 두고 와 IndentationError 로 어긋났고, 고쳐 다시 돌린 값을 더했다. 그 뒤 인용 블록을 두는 갈래로
 # 더한 둘(103·104)과 원문이 옮겨 간 79는 번호로 골라 돌렸다(2026-10-14). 합치기를 커밋하기 전의
 # 대조를 고치며 더한 셋(105~107)과, 이 브랜치 쪽 계산에서 빠져 형제 쪽에만 걸리게 된 12도 번호로
-# 골라 돌렸다(기준선 둘 66초, 변이 157초, 2026-10-14).
+# 골라 돌렸다(기준선 둘 66초, 변이 157초, 2026-10-14). PR 직전 버그 축을 반영하며 더한 일곱(108~114),
+# 원문이 옮겨 간 73·74, 둘레 코드가 바뀐 75~88·93~104를 `--since HEAD` 와 번호로 골라 돌렸다(기준선
+# 다섯 41초, 변이 서른다섯 411초, 2026-10-15). 그 가운데 95는 되쓰기 전의 읽기 확인이 빈 옛 자리를
+# 걸러 초록이었고, 옛 자리에 다른 것이 든 시험을 더해 다시 돌려 빨강이었다.
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -686,10 +689,10 @@ tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return (QUEUE_CITATION if path == QUEUE else CITATION).sub(swap, text)'''
+old = '''    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
 new = '''    for old, new in plan.journals.items():
         text = text.replace(old, new)
-    return (QUEUE_CITATION if path == QUEUE else CITATION).sub(swap, text)'''
+    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
 
 [[mutation]]
 name = "대기열 행의 머리를 모든 파일에서 바꾼다"
@@ -697,8 +700,8 @@ tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return (QUEUE_CITATION if path == QUEUE else CITATION).sub(swap, text)'''
-new = '''    return QUEUE_CITATION.sub(swap, text)'''
+old = '''    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
+new = '''    pattern = QUEUE_CITATION'''
 
 [[mutation]]
 name = "일지 머리 줄을 옮기지 않는다"
@@ -1007,3 +1010,68 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''    return (since_base & unlike_main) | untracked'''
 new = '''    return since_base & unlike_main'''
+
+[[mutation]]
+name = "쓰기를 마친 파일만 되돌릴 목록에 올린다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "쓰다_멈춘 or 열지도_못한 or 되돌리"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            written.append(path)
+            (root / path).write_bytes(text.encode("utf-8"))'''
+new = '''            (root / path).write_bytes(text.encode("utf-8"))
+            written.append(path)'''
+
+[[mutation]]
+name = "이미 옛 바이트인 파일도 되쓴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "쓰다_멈춘 or 열지도_못한 or 되돌리"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            if (root / path).read_bytes() != plan.originals[path]:'''
+new = '''            if True:'''
+
+[[mutation]]
+name = "BOM 을 떼지 않아 머리 줄을 옮기지 못한다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "BOM으로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    bom = BOM if text.startswith(BOM) else ""'''
+new = '''    bom = ""'''
+
+[[mutation]]
+name = "merge-base 나 main 에 있는 줄도 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "글자_그대로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
+new = '''        pattern.sub(swap, line) for line in lines'''
+
+[[mutation]]
+name = "줄 끝의 CR 을 떼지 않고 둘 줄과 견준다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "글자_그대로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
+new = '''        line if line in kept else pattern.sub(swap, line) for line in lines'''
+
+[[mutation]]
+name = "옮기기가 둘 줄을 넘기지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "대기열_행이_겹쳐도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)'''
+new = '''    plan = plan_moves(root, result.ours, verdict.shifted, result.changed)'''
+
+[[mutation]]
+name = "main 의 판을 둘 줄에서 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "대기열_행이_겹쳐도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    trees = [Tree(root, commit) for commit in (base, main_sha) if commit is not None]'''
+new = '''    trees = [Tree(root, commit) for commit in (base,) if commit is not None]'''

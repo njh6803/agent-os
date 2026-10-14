@@ -104,8 +104,11 @@ NNNN` 과 목록 속 `·NNNN`, ADR 의 파일 이름(`NNNN-…`)과 색인의 `[
 대기열 파일의 행 머리(`| N |`)다. ADR 의 꼴은 `.claude/rules/adr.md` 의 번호 항목과 같다. 모든 꼴을
 한 번에 바꿔, 차례대로 옮기는 사슬(03→05, 05→07)의 03 이 07 까지 가지 않는다. 인용 블록(`>` 로
 시작하는 줄)은 옮기지 않는다. 일지는 사용자 프롬프트를 원문으로 인용하는데(`> 사용자:`), 이
-브랜치의 일지를 옮긴 첫 실행이 그 원문의 일지 번호까지 바꿨다(일지 2026-10-14-04). UTF-8 로 읽지
-못하는 파일은 두고, 옮길 자리에 무엇이 있으면 아무것도 고치지 않고 2로 끝난다. 고치다 멈추면
+브랜치의 일지를 옮긴 첫 실행이 그 원문의 일지 번호까지 바꿨다(일지 2026-10-14-04). merge-base 나
+main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 같은 번호는 상대를 가리킨다
+(`.claude/rules/adr.md`). main 을 합치다 같은 번호의 대기열 행 둘을 남긴 채 옮기면 main 의 행
+머리까지 바뀌었다(PR 직전 버그 축). BOM 으로 시작하는 파일은 BOM 을 떼고 바꾼 뒤 다시 붙인다. UTF-8
+로 읽지 못하는 파일은 두고, 옮길 자리에 무엇이 있으면 아무것도 고치지 않고 2로 끝난다. 고치다 멈추면
 고친 것을 거꾸로 되돌리고 2로 끝난다. 되돌리지 못한 것이 있으면 그것을 들고 `--move` 를 다시 치지
 말라고 한다(다시 치면 이미 옮긴 인용이 사슬을 따라 한 번 더 옮겨진다). 글을 먼저 고치고 이름을
 바꾸며 인덱스는 건드리지 않는다. 그래서 출력은 이름을 바꾼 파일을 `옛 → 새` 로 따로 찍고, 옛 이름의
@@ -146,8 +149,9 @@ NNNN` 과 목록 속 `·NNNN`, ADR 의 파일 이름(`NNNN-…`)과 색인의 `[
 - `--move` 가 옮기지 못하는 인용. 줄인 꼴("일지 03"), 꼴의 낱말 없이 든 번호("새로 연 것은
   250·251"), 커밋 메시지와 PR 본문, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
   파일(따라가 쓰지 않는다)은 그대로다. 인용 블록에서 `>` 없이 이어지는 줄은 옮긴다. 거꾸로 같은
-  꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다. 형제의 같은 번호를 가리킨 인용도,
-  merge-base 에 있던 줄도 옮긴다.
+  꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다. 이 브랜치가 더하거나 고친 줄에서 형제의
+  같은 번호를 가리킨 인용도 옮긴다. 거꾸로 이 브랜치의 번호를 가리켰어도 merge-base 나 main 의 판에
+  같은 글자의 줄이 있으면 둔다.
 - 인덱스. 대조는 작업 트리를 읽으므로, `--move` 뒤 옛 이름의 지움을 스테이지하지 않고 커밋해 옛
   일지가 커밋에 남아도 0으로 끝난다.
 - 카나리아 명세가 고친 단락을 묻는지. 그 하네스 파일을 원천으로 든 명세 하나를 이 브랜치가
@@ -219,6 +223,7 @@ _CITATIONS = (
 CITATION = re.compile(_CITATIONS, re.MULTILINE)
 # 대기열 행의 머리. 일지의 다른 표에도 같은 꼴이 있어 대기열 파일에서만 바꾼다
 QUEUE_CITATION = re.compile(_CITATIONS + r"|^\| (?P<row>\d+) \|", re.MULTILINE)
+BOM = chr(0xFEFF)
 
 NETWORK_TIMEOUT = 120
 LOCAL_TIMEOUT = 30
@@ -496,9 +501,14 @@ def renumber(shifted: Iterable[Move]) -> Renumber:
     return Renumber(by_kind["일지"], by_kind["ADR"], by_kind["대기열"])
 
 
-def rewrite(text: str, plan: Renumber, path: str) -> str:
+def rewrite(text: str, plan: Renumber, path: str, kept: frozenset[str] = frozenset()) -> str:
     """`plan` 의 옛 번호를 든 인용을 한 번에 새 번호로 바꾼다. `path` 가 대기열 파일이면 행의
-    머리도 바꾼다. 인용 블록(`>` 로 시작하는 줄)은 다른 데서 옮겨 온 원문이라 둔다."""
+    머리도 바꾼다. 인용 블록(`>` 로 시작하는 줄)은 다른 데서 옮겨 온 원문이라 둔다.
+
+    `kept` 와 글자가 같은 줄(줄 끝의 CR 은 빼고 견준다)도 둔다. merge-base 나 main 의 판에 있던
+    줄의 같은 번호는 상대를 가리킨다(`.claude/rules/adr.md`). BOM 은 떼고 바꾼 뒤 다시 붙인다.
+    BOM 이 `^` 를 막아 일지 머리 줄만 옛 번호에 남았다(PR 직전 버그 축).
+    """
 
     def swap(match: re.Match[str]) -> str:
         found = match.groupdict()
@@ -516,7 +526,12 @@ def rewrite(text: str, plan: Renumber, path: str) -> str:
         row = found.get("row")
         return f"| {plan.rows[row]} |" if row is not None and row in plan.rows else match[0]
 
-    return (QUEUE_CITATION if path == QUEUE else CITATION).sub(swap, text)
+    pattern = QUEUE_CITATION if path == QUEUE else CITATION
+    bom = BOM if text.startswith(BOM) else ""
+    lines = text[len(bom) :].split("\n")
+    return bom + "\n".join(
+        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines
+    )
 
 
 @dataclass(frozen=True)
@@ -527,14 +542,18 @@ class MovePlan:
 
 
 def plan_moves(
-    root: Path, ours: Numbers, shifted: Sequence[Move], changed: Iterable[str]
+    root: Path,
+    ours: Numbers,
+    shifted: Sequence[Move],
+    changed: Iterable[str],
+    kept: Mapping[str, frozenset[str]] | None = None,
 ) -> MovePlan:
     """옮길 번호대로 바꿀 파일 이름과, `changed` 가운데 인용을 고칠 파일의 글을 짓는다.
 
     디스크는 읽기만 한다. 옮길 자리에 무엇이 있거나 파일을 읽지 못하면 MoveError 다. 옮길 자리가
     이 브랜치의 다른 옮길 파일이면(같은 슬러그의 사슬) 그 파일을 먼저 옮기는 차례로 둔다. 심볼릭
     링크는 따라가 쓰지 않는다. 반박 검증에서 저장소 밖을 가리키는 링크를 따라가 밖의 파일을
-    고쳤다(일지 2026-10-14-04).
+    고쳤다(일지 2026-10-14-04). `kept` 는 파일마다 두는 줄이다(`rewrite`).
     """
     plan = renumber(shifted)
     renames: list[tuple[str, str]] = []
@@ -560,7 +579,8 @@ def plan_moves(
             continue  # 글이 아니다
         except OSError as error:
             raise MoveError(f"{path} 를 읽지 못했다({error}). 아무것도 고치지 않았다") from error
-        if (changed_text := rewrite(text, plan, path)) != text:
+        lines = (kept or {}).get(path, frozenset())
+        if (changed_text := rewrite(text, plan, path, lines)) != text:
             texts[path] = changed_text
             originals[path] = raw
     return MovePlan(vacating_first(renames), texts, originals)
@@ -597,8 +617,9 @@ def apply_moves(root: Path, plan: MovePlan) -> None:
     renamed: list[tuple[str, str]] = []
     try:
         for path, text in plan.texts.items():
-            (root / path).write_bytes(text.encode("utf-8"))
+            # 쓰기 전에 올린다. `write_bytes` 는 먼저 비우고 써서, 쓰다 멈춘 파일도 되돌릴 것이다
             written.append(path)
+            (root / path).write_bytes(text.encode("utf-8"))
         for source, target in plan.renames:
             (root / source).rename(root / target)
             renamed.append((source, target))
@@ -614,7 +635,11 @@ def apply_moves(root: Path, plan: MovePlan) -> None:
 def _undo(
     root: Path, plan: MovePlan, written: list[str], renamed: list[tuple[str, str]]
 ) -> list[str]:
-    """바꾼 이름을 거꾸로 되돌리고 쓴 글을 옛 바이트로 되쓴다. 되돌리지 못한 것을 돌려준다."""
+    """바꾼 이름을 거꾸로 되돌리고 쓴 글을 옛 바이트로 되쓴다. 되돌리지 못한 것을 돌려준다.
+
+    이미 옛 바이트인 파일(열지도 못하고 멈춘 파일)은 되쓰지 않는다. 되쓰다 또 실패해 되돌리지 못한
+    것으로 들면 `--move` 를 다시 치지 말라는 거짓 할 일이 나간다.
+    """
     left: list[str] = []
     stuck: set[str] = set()
     for source, target in reversed(renamed):
@@ -628,7 +653,8 @@ def _undo(
             left.append(path)  # 옛 이름으로 돌아오지 않아 그 자리에 쓰면 사본이 생긴다
             continue
         try:
-            (root / path).write_bytes(plan.originals[path])
+            if (root / path).read_bytes() != plan.originals[path]:
+                (root / path).write_bytes(plan.originals[path])
         except OSError:
             left.append(path)
     return left
@@ -1231,6 +1257,16 @@ def _check(start: Path, day: str) -> tuple[Survey, Verdict]:
     return result, judge(result, day)
 
 
+def _kept_lines(root: Path, main_sha: str, paths: Iterable[str]) -> dict[str, frozenset[str]]:
+    """파일마다 merge-base 와 main 의 판에 있는 줄(줄 끝의 CR 은 뺀다). 그 판에 없으면 빈 집합."""
+    base = merge_base(root, "HEAD", main_sha)
+    trees = [Tree(root, commit) for commit in (base, main_sha) if commit is not None]
+    return {
+        path: frozenset(line.rstrip("\r") for tree in trees for line in tree.text(path).split("\n"))
+        for path in paths
+    }
+
+
 def _move_and_check(start: Path, day: str) -> tuple[Survey, Verdict]:
     """대조하고, 옮길 번호가 있으면 옮긴 뒤 다시 대조한다."""
     root, remote = _prepare(start)
@@ -1239,7 +1275,8 @@ def _move_and_check(start: Path, day: str) -> tuple[Survey, Verdict]:
     if not verdict.shifted:
         print("옮길 번호가 없어 옮기지 않았다")
         return result, verdict
-    plan = plan_moves(root, result.ours, verdict.shifted, result.changed)
+    kept = _kept_lines(root, result.main.commit, result.changed)
+    plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)
     apply_moves(root, plan)
     print(_moved_line(verdict.shifted, plan))
     result = survey(root, remote)

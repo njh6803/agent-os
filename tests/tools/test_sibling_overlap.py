@@ -485,7 +485,8 @@ def test_옮기기는_이_브랜치가_고친_글만_고치고_이름을_바꾸�
         journal: "# 2026-10-07 (03) 이쪽\r\nADR 0002, 대기열 2\r\n",
         "docs/adr/0002-ours.md": "번호 없는 글\n",
         ".scratch/retro-queue.md": "| 1 | 씨앗 |\n| 2 | 이쪽 |\n",
-        # 이 브랜치가 고친 파일은 merge-base 에 있던 줄도 옮긴다(못 보는 것). 파일째 읽는다
+        # 둘 줄(`kept`)을 주지 않으면 merge-base 에 있던 줄도 옮긴다. CLI 는 merge-base 와 main 의
+        # 줄을 준다
         "docs/notes.md": "merge-base 에 있던 줄의 대기열 2\n이 브랜치가 더한 줄\n",
         "README.md": "대기열 2\n",
     }
@@ -636,6 +637,114 @@ def test_되돌리지_못하면_남은_것을_든다(tmp_path: Path, monkeypatch
     assert not (tmp_path / "a.md").exists()
     assert (tmp_path / "a2.md").read_bytes() == "a 의 새 글\n".encode()
     assert (tmp_path / "b.md").read_bytes() == plan.originals["b.md"]
+
+
+def test_되돌리지_못한_파일의_옛_자리에_다른_것이_있어도_덮지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """옛 자리가 비었으면 읽기가 실패해 되쓰지 않지만, 같은 슬러그의 사슬에서는 다른 옮길 파일이
+    그 자리에 있을 수 있다. 그 위에 옛 바이트를 쓰면 남의 글을 덮는다."""
+    plan = _옮길_파일들(tmp_path)
+    real = Path.rename
+    calls: list[str] = []
+    other = "a.md 자리에 든 다른 파일\n".encode()
+
+    def 처음만_되고_옛_자리가_찬다(self: Path, target: Path) -> Path:
+        calls.append(self.name)
+        if len(calls) > 1:
+            if self.name == "a2.md":
+                (tmp_path / "a.md").write_bytes(other)
+            raise PermissionError(f"{self.name} 을 쥔 프로세스가 있다")
+        return real(self, target)
+
+    monkeypatch.setattr(Path, "rename", 처음만_되고_옛_자리가_찬다)
+
+    with pytest.raises(StuckMoveError):
+        apply_moves(tmp_path, plan)
+
+    assert (tmp_path / "a.md").read_bytes() == other
+    assert (tmp_path / "a2.md").read_bytes() == "a 의 새 글\n".encode()
+
+
+def test_쓰다_멈춘_파일도_옛_바이트로_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PR 직전 버그 축의 Major: `write_bytes` 는 파일을 먼저 비우고 쓰는데, 쓰기를 마친 파일만
+    되돌려 쓰다 멈춘 파일은 잘린 채 남고 "모두 되돌렸다" 로 끝났다. 미추적 파일이면 git 으로도
+    되돌릴 수 없다."""
+    plan = _옮길_파일들(tmp_path)
+    real = Path.write_bytes
+    failed: list[str] = []
+
+    def b_는_쓰다_멈춘다(self: Path, data: bytes) -> int:
+        if self.name == "b.md" and not failed:
+            failed.append(self.name)
+            real(self, data[:2])
+            raise OSError(28, "디스크가 찼다")
+        return real(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", b_는_쓰다_멈춘다)
+
+    with pytest.raises(MoveError, match="모두 되돌렸다") as raised:
+        apply_moves(tmp_path, plan)
+
+    assert failed == ["b.md"]
+    assert not isinstance(raised.value, StuckMoveError)
+    for name in ("a.md", "b.md"):
+        assert (tmp_path / name).read_bytes() == plan.originals[name]
+
+
+def test_열지도_못한_파일은_되쓰지_않아_남은_것으로_들지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """쓰기 전에 되돌릴 목록에 올리므로, 열지도 못한 파일(그대로다)을 되쓰다 또 실패해 되돌리지
+    못한 것으로 들면 안 된다."""
+    plan = _옮길_파일들(tmp_path)
+    real = Path.write_bytes
+
+    def b_는_열지_못한다(self: Path, data: bytes) -> int:
+        if self.name == "b.md":
+            raise PermissionError("b.md 를 쥔 프로세스가 있다")
+        return real(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", b_는_열지_못한다)
+
+    with pytest.raises(MoveError, match="모두 되돌렸다") as raised:
+        apply_moves(tmp_path, plan)
+
+    assert not isinstance(raised.value, StuckMoveError)
+    for name in ("a.md", "b.md"):
+        assert (tmp_path / name).read_bytes() == plan.originals[name]
+
+
+def test_BOM으로_시작하는_일지도_머리_줄을_옮기고_BOM을_지킨다() -> None:
+    """PR 직전 버그 축: BOM 이 `^` 를 막아 파일 이름과 본문 인용은 옮기고 머리 줄만 옛 번호에
+    남았다."""
+    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05")])
+    bom = chr(0xFEFF)
+    text = f"{bom}# 2026-10-07 (03) 제목\r\n2026-10-07-03\r\n"
+
+    assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == (
+        f"{bom}# 2026-10-07 (05) 제목\r\n2026-10-07-05\r\n"
+    )
+
+
+def test_merge_base나_main에_글자_그대로_있는_줄은_옮기지_않는다() -> None:
+    """PR 직전 버그 축: main 을 합치다 같은 대기열 행 번호의 두 행을 남긴 채 옮기면 main 의 행
+    머리와 색인 행까지 옮겨졌다. main 에 이미 있던 같은 번호의 참조는 상대를 가리킨다
+    (`.claude/rules/adr.md`). 그 줄을 이 브랜치가 고쳤으면 글자가 달라져 옮긴다."""
+    plan = renumber([Move("대기열", "256", "259"), Move("ADR", "0027", "0028")])
+    main_row, main_index = "| 256 | main 의 행 |", "- [0027](0027-sibling.md) 형제"
+    kept = frozenset({"| 255 | 씨앗 |", main_row, main_index})
+    queue = f"| 255 | 씨앗 |\r\n{main_row}\r\n| 256 | 이쪽 행, ADR 0027 |\r\n"
+    index = f"{main_index}\n- [0027](0027-ours.md) 이쪽\n- [0027](0027-sibling.md) 형제(고침)\n"
+
+    assert rewrite(queue, plan, QUEUE, kept) == (
+        f"| 255 | 씨앗 |\r\n{main_row}\r\n| 259 | 이쪽 행, ADR 0028 |\r\n"
+    )
+    assert rewrite(index, plan, "docs/adr/README.md", kept) == (
+        f"{main_index}\n- [0028](0028-ours.md) 이쪽\n- [0028](0028-sibling.md) 형제(고침)\n"
+    )
 
 
 def test_되돌리지_못하면_move_를_다시_치지_말라고_한다(
@@ -1360,6 +1469,32 @@ def test_합치기를_커밋하기_전에도_main이_들여온_파일은_이_브
     assert rule not in out
     assert same not in out
     assert "- origin/main: README.md\n" in out
+
+
+def test_합치다_대기열_행이_겹쳐도_옮기기는_main의_행을_둔다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 축: 양쪽이 같은 번호의 행을 더해 충돌을 풀고 두 행을 남긴 채 `--move` 를 치면
+    main 의 행 머리까지 옮겨졌다. merge-base 와 main 의 판에 글자 그대로 있는 줄은 둔다."""
+    queue = SEED[QUEUE]
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    ours = {QUEUE: queue + "| 2 | 이쪽 |\n", "docs/notes.md": "대기열 2를 본다\n"}
+    _커밋한다(work, ours, "이 브랜치")
+    _커밋한다(pusher, {QUEUE: queue + "| 2 | main |\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # 대기열 끝이 충돌한다
+    _쓴다(work, {QUEUE: queue + "| 2 | main |\n| 2 | 이쪽 |\n"})
+    _git(work, "add", QUEUE)
+
+    code = main([str(work), "--move"])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "옮겼다: 대기열 2 → 3" in out
+    assert (work / QUEUE).read_text(encoding="utf-8") == queue + "| 2 | main |\n| 3 | 이쪽 |\n"
+    assert (work / "docs/notes.md").read_text(encoding="utf-8") == "대기열 3를 본다\n"
 
 
 def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한다(
