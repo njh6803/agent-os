@@ -312,3 +312,39 @@ export const CloseFocus: Story = {
     await expect(focusRingOf(close)).toEqual(expectedFocusRing(close));
   },
 };
+
+/** 보여 주기용(`showcase`). 실행 실패 알림이다. 실행 보기를 동작으로 들고 닫을 수 있다. */
+export const ShowcaseRunFailed: Story = {
+  name: "쓰임: 실행 실패 알림",
+  tags: ["showcase"],
+  render: () => (
+    <div style={{ width: 480 }}>
+      <Alert
+        tone="danger"
+        title="실행이 실패했습니다"
+        actions={
+          <a href="#runs" className="text-small text-text underline">
+            실행 보기
+          </a>
+        }
+        onClose={() => {}}
+      >
+        payments.refund가 30초 안에 끝나지 않았습니다.
+      </Alert>
+    </div>
+  ),
+};
+
+/** 보여 주기용(`showcase`). 경고와 정보 알림이다. 화면을 물들이지 않고 아이콘의 색과 모양으로 가른다. */
+export const ShowcaseNotices: Story = {
+  name: "쓰임: 경고와 정보 알림",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex flex-col gap-3" style={{ width: 480 }}>
+      <Alert tone="warning" title="결정을 기다리는 실행이 3개입니다">
+        실행 목록에서 일시정지한 실행을 열어 승인하거나 거부합니다.
+      </Alert>
+      <Alert tone="info" title="플러그인 목록을 새로 읽었습니다" />
+    </div>
+  ),
+};

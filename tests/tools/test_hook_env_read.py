@@ -67,6 +67,62 @@ def test_env_를_읽는_명령을_막는다(명령: str) -> None:
     assert ".env.example" in reason
 
 
+@pytest.mark.parametrize(
+    "명령",
+    [
+        "column .env",
+        "column -t -s = .env",
+        "column .e*",
+        "rev .env",
+        "rev .e*",
+        "command column .env",
+        "command -p cat .env",
+        "nice rev .env",
+        "nice -n5 cat .env",
+        "nice -5 cat .env",
+        "nice --adjustment=5 cat .env",
+        "nice --adjustment 5 cat .env",
+        "timeout 5 column .env",
+        "timeout -s KILL 5 rev .env",
+        "env -i cat .env",
+        "env -u HOME cat .env",
+        "sudo -u root cat .env",
+        "sudo -iu root cat .env",
+        "sudo -uroot cat .env",
+        "sudo --user root cat .env",
+        "/usr/bin/env cat .env",
+        "/usr/bin/time -v cat .env",
+        "env -a x cat .env",
+        "env --argv0 x cat .env",
+        "exec -a x cat .env",
+        "time -p cat .env",
+        "command nice timeout 5 rev .env",
+    ],
+)
+def test_묻지_않고_도는_읽기_명령과_옵션이_붙은_래퍼도_막는다(명령: str) -> None:
+    """Claude Code 가 묻지 않고 돌린 읽기 명령 가운데 `column`·`rev` 가 빠져 있었다. 권한 규칙은
+    래퍼(`command`·`env`·`nice`·`timeout`)를 벗겨 대 보는데, 이 훅은 래퍼 뒤의 옵션을 명령으로
+    읽었다(대기열 162, 일지 2026-10-07-21 의 `review_git_read.py`)."""
+    reason = deny_reason_for_command(명령)
+
+    assert reason is not None
+    assert ".env.example" in reason
+
+
+def test_래퍼를_벗겨도_읽지_않는_명령은_막지_않는다() -> None:
+    for 명령 in (
+        "command -v cat",
+        "command -v cat .env",
+        "command -V cat .env",
+        "column -t notes.txt",
+        "rev notes.txt",
+        "timeout 5 ls -la .env",
+        "nice -n 5 stat .env",
+        "env -i FOO=1 printenv FOO",
+    ):
+        assert deny_reason_for_command(명령) is None, 명령
+
+
 def test_입력_리다이렉션도_읽기다() -> None:
     assert deny_reason_for_command("while read l; do echo $l; done < .env") is not None
     assert deny_reason_for_command('echo "$(< .env)"') is not None
@@ -204,6 +260,16 @@ def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> No
     assert reason_for("Bash", {}) is None
 
 
+def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린다() -> None:
+    """편집과 검색을 한 호출에 묶었다가 검색이 막혀 편집도 돌지 않았다(대기열 111)."""
+    bash = reason_for("Bash", {"command": "sed -i s/a/b/ f.md && cat .env"})
+    assert bash is not None
+    assert "호출 전체가 돌지 않았다" in bash
+    grep = reason_for("Grep", {"path": ".env"})
+    assert grep is not None
+    assert "호출 전체가 돌지 않았다" not in grep
+
+
 @pytest.mark.parametrize(
     "명령",
     [
@@ -213,6 +279,9 @@ def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> No
         "cp .env copy.txt",
         "grep -rn KEY sub/",
         "cat C:\\Users\\me\\.env",
+        "env -S 'cat .env'",
+        "stdbuf -o0 cat .env",
+        "sudo --us root cat .env",
     ],
 )
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(명령: str) -> None:

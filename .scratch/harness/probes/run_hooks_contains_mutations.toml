@@ -1,0 +1,95 @@
+# tools/run_hooks.py 의 contains 대조(대기열 130)를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/run_hooks_contains_mutations.toml
+# 끝의 하나는 대조군이다. 표에서 contains 를 빼면, 미갱신 계기를 뺀 옛 지시문 훅도 판정만으로는 표를 지난다.
+
+[[mutation]]
+name = "contains 를 대조하지 않는다(판정만 본다)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        return self.outcome == self.case.expect and not self.missing'''
+new = '''        return self.outcome == self.case.expect'''
+
+[[mutation]]
+name = "JSON 을 풀지 않고 날것 stdout 에서 찾는다(이스케이프한 한글을 못 찾는다)"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if returncode == 2:
+        return stderr
+    try:
+        output = _HookOutput.model_validate_json(stdout.strip())
+    except ValidationError:
+        return ""
+'''
+new = '''    if returncode == 2:
+        return stderr
+    return stdout
+'''
+
+[[mutation]]
+name = "종료 2 의 stderr 를 보지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if returncode == 2:
+        return stderr
+    try:
+        output = _HookOutput.model_validate_json(stdout.strip())'''
+new = '''    try:
+        output = _HookOutput.model_validate_json(stdout.strip())'''
+
+[[mutation]]
+name = "deny 의 이유를 문장에 넣지 않는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        texts += [specific.additionalContext, specific.permissionDecisionReason]'''
+new = '''        texts += [specific.additionalContext]'''
+
+[[mutation]]
+name = "침묵 사례의 contains 를 받는다"
+tests = ["tests/tools/test_run_hooks.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        if case.expect == "silent" and case.contains:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "지시문 훅이 미갱신에서 tidy-checkouts 를 먼저 돌라고 하지 않는다(옛 훅) — 표의 조각이 잡는다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "contains_를_단_사례"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    if stale:
+        context += _TIDY_FIRST if tidies else _TIDY_LATER
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "대조군: 표에서 지시문 사례의 contains 를 빼면 옛 지시문 훅도 표를 지난다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "contains_를_단_사례"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    if stale:
+        context += _TIDY_FIRST if tidies else _TIDY_LATER
+'''
+new = '''
+'''
+[[mutation.edit]]
+file = "tools/hook_payloads.toml"
+old = '''contains = ["Skill 도구로 `tidy-checkouts` 를 돈다", "`tidy-checkouts` 를 돈 뒤 다른 일보다 먼저"]
+'''
+new = ''''''
+[[mutation.edit]]
+file = "tools/hook_payloads.toml"
+old = '''contains = ["첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다", "제목을 바꾼 뒤 다른 일보다 먼저"]
+'''
+new = ''''''

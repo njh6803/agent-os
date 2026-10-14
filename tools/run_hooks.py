@@ -35,7 +35,12 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `good-subject.txt` 의 커밋 메시지 파일). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다.
 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
 deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
-(`additionalContext`), silent(종료 0, 출력 없음). `hookSpecificOutput` 을 내는 훅은
+(`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
+문장(`message_of` — JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두
+들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵
+사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를
+재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을 재는지 표지만 단다.
+`hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
@@ -51,8 +56,11 @@ deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2
 턴이라는 축을 반례가 보지 못했다).
 못 보는 것: Claude Code 가 실제로 주는 페이로드 모양과 표가 다른 것(표는 손으로 쓴다 — 런타임 입력
 계약은 검증하지 않는다), settings.json 의 매처(어느 도구에 걸리는지는 등록이 정하고 러너는 훅을
-이름으로 부른다), 등록 명령을 돌리는 셸(러너는 셸 없이 띄워 `${CLAUDE_PROJECT_DIR}` 의 전개와 따옴표
-처리를 재지 않는다), 훅이 쓰는 시간(제한을 넘기는지만 본다).
+이름으로 부른다. 훅이 아는 도구와 매처가 같은지는 그 훅의 테스트가 `registered_matchers` 로 본다),
+등록 명령을 돌리는 셸(러너는 셸 없이 띄워 `${CLAUDE_PROJECT_DIR}` 의 전개와 따옴표
+처리를 재지 않는다), 훅이 쓰는 시간(제한을 넘기는지만 본다), 침묵 사례가 새 동작을 가르는지(침묵에는
+조각을 달 수 없어, 옛 훅도 침묵하는 사례는 판정만으로 지난다. 미갱신 지시문의 둘째 턴 사례가 그렇다
+— 그 축은 그 훅의 tests/tools 가 본다).
 """
 
 from __future__ import annotations
@@ -136,12 +144,14 @@ _IDENTITY = ("-c", "user.name=run_hooks", "-c", "user.email=run_hooks@localhost"
 
 class Case(BaseModel):
     """표의 한 줄. `hook` 은 tools/ 아래 파일 이름, `payload` 는 stdin 에 넣을 JSON, `env` 는
-    자식 환경에 덧씌울 값이다."""
+    자식 환경에 덧씌울 값이다. `contains` 는 훅이 낸 문장(`message_of`)에 모두 들어야 하는 조각이다
+    — 판정의 종류만 대조하면 옛 훅도 같은 종류를 내 새 동작을 가르지 못한다(대기열 130)."""
 
     hook: str
     expect: Expectation
     payload: dict[str, JsonValue]
     env: dict[str, str] = {}
+    contains: list[str] = []
     note: str = ""
 
 
@@ -152,11 +162,13 @@ class _Table(BaseModel):
 class _HookSpecific(BaseModel):
     hookEventName: str
     permissionDecision: str | None = None
+    permissionDecisionReason: str | None = None
     additionalContext: str | None = None
 
 
 class _HookOutput(BaseModel):
     decision: str | None = None
+    reason: str | None = None
     additionalContext: str | None = None
     systemMessage: str | None = None
     hookSpecificOutput: _HookSpecific | None = None
@@ -168,6 +180,7 @@ class _HookEntry(BaseModel):
 
 
 class _HookGroup(BaseModel):
+    matcher: str = ""
     hooks: list[_HookEntry]
 
 
@@ -185,13 +198,16 @@ class Registration:
 
 @dataclass(frozen=True)
 class Result:
+    """`missing` 은 `contains` 가운데 훅의 문장에 없던 조각이다."""
+
     case: Case
     outcome: str
     output: str
+    missing: tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
-        return self.outcome == self.case.expect
+        return self.outcome == self.case.expect and not self.missing
 
 
 def expected_notice(event: str) -> str:
@@ -218,7 +234,8 @@ class NoticeResult:
 
 
 def load_cases(path: Path = PAYLOADS) -> list[Case]:
-    """표를 읽는다. 기대가 넷 밖이거나 훅 파일이 없으면 ValueError."""
+    """표를 읽는다. 기대가 넷 밖이거나, 훅 파일이 없거나, 침묵 사례에 `contains` 가 있으면
+    ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
     try:
         table = _Table.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
     except ValidationError as error:
@@ -226,6 +243,8 @@ def load_cases(path: Path = PAYLOADS) -> list[Case]:
     for case in table.case:
         if not (ROOT / "tools" / case.hook).is_file():
             raise ValueError(f"tools/{case.hook} 이 없다")
+        if case.expect == "silent" and case.contains:
+            raise ValueError(f"{case.hook} 의 침묵 사례에 contains 가 있다: {case.note}")
     return table.case
 
 
@@ -236,9 +255,8 @@ def registered_hooks(settings_path: Path = SETTINGS) -> dict[str, Registration]:
     세션이 띄우는 것을 재지 않는다. 훅 하나가 이벤트 둘에 등록되어도 ValueError — 훅은
     `hookEventName` 하나를 내므로 대조할 수 없다.
     """
-    settings = _Settings.model_validate_json(settings_path.read_text(encoding="utf-8"))
     registrations: dict[str, Registration] = {}
-    for event, groups in settings.hooks.items():
+    for event, groups in _read_settings(settings_path).hooks.items():
         for group in groups:
             for entry in group.hooks:
                 matched = _REGISTRATION_PATTERN.fullmatch(entry.command)
@@ -252,6 +270,26 @@ def registered_hooks(settings_path: Path = SETTINGS) -> dict[str, Registration]:
                     raise ValueError(f"{hook} 이 {previous.event} 와 {event} 둘에 등록됐다")
                 registrations[hook] = Registration(event, entry.timeout)
     return registrations
+
+
+def registered_matchers(hook: str, event: str, settings_path: Path = SETTINGS) -> list[str]:
+    """`.claude/settings.json` 의 `event` 에서 훅 하나가 든 묶음의 매처들. 매처가 없는 묶음은 빈
+    문자열이고, 그 이벤트에 없으면 빈 목록이다.
+
+    러너는 훅을 이름으로 부르므로 매처를 대조하지 않는다. 훅이 아는 도구와 매처가 같은지는 훅의
+    테스트가 이 함수로 본다(대기열 216 — 그 전에는 매처를 읽는 스키마가 테스트 세 곳에 복사됐다).
+    이벤트를 받는 것은 그 사본들이 이벤트까지 대 봤기 때문이다.
+    """
+    command = registration_command(hook)
+    return [
+        group.matcher
+        for group in _read_settings(settings_path).hooks.get(event, [])
+        if any(entry.command == command for entry in group.hooks)
+    ]
+
+
+def _read_settings(settings_path: Path) -> _Settings:
+    return _Settings.model_validate_json(settings_path.read_text(encoding="utf-8"))
 
 
 def coverage_gaps(cases: list[Case], registered: Collection[str]) -> list[str]:
@@ -321,7 +359,41 @@ def outcome_of(returncode: int, stdout: str, event: str) -> str:
     return "output"
 
 
+def message_of(returncode: int, stdout: str, stderr: str) -> str:
+    """훅이 사람이나 모델에게 낸 문장. 종료 2 면 stderr 이고, 아니면 stdout 의 JSON 에서
+    `additionalContext`(두 자리), `permissionDecisionReason`, `reason`, `systemMessage` 를 줄로
+    잇는다. JSON 이 아니거나 비었으면 빈 문자열이다.
+
+    날것 stdout 에서 찾지 않는다. 훅은 `json.dumps` 의 기본값으로 한글을 `\\uXXXX` 로 이스케이프해
+    내므로 한국어 조각이 날것에는 없다."""
+    if returncode == 2:
+        return stderr
+    try:
+        output = _HookOutput.model_validate_json(stdout.strip())
+    except ValidationError:
+        return ""
+    texts = [output.additionalContext, output.reason, output.systemMessage]
+    specific = output.hookSpecificOutput
+    if specific is not None:
+        texts += [specific.additionalContext, specific.permissionDecisionReason]
+    return "\n".join(text for text in texts if text)
+
+
+def missing_fragments(message: str, fragments: list[str]) -> list[str]:
+    """`fragments` 가운데 `message` 에 없는 것. 차례는 표에 적힌 대로다."""
+    return [fragment for fragment in fragments if fragment not in message]
+
+
 type Judge = Callable[[int, str, str], str]
+
+
+@dataclass(frozen=True)
+class _Launched:
+    """자식 하나를 돌린 결과. `output` 은 어긋날 때 찍을 날것, `message` 는 `message_of` 다."""
+
+    outcome: str
+    output: str
+    message: str
 
 
 def notice_outcome(returncode: int, stdout: str, event: str) -> str:
@@ -373,8 +445,8 @@ def _launch(
     registration: Registration,
     judge: Judge = outcome_of,
     env: dict[str, str] | None = None,
-) -> tuple[str, str]:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌려 (판정, 출력). 넘기면 판정 `timeout`.
+) -> _Launched:
+    """자식 하나를 등록의 모양과 시간 제한으로 돌린다. 넘기면 판정 `timeout` 이다.
 
     `env` 는 `hook_environment()` 위에 덧씌운다."""
     try:
@@ -388,18 +460,22 @@ def _launch(
             timeout=registration.timeout,
         )
     except subprocess.TimeoutExpired:
-        return "timeout", f"{registration.timeout}초 안에 끝나지 않았다"
+        return _Launched("timeout", f"{registration.timeout}초 안에 끝나지 않았다", "")
     stdout = process.stdout.decode("utf-8", "replace")
     stderr = process.stderr.decode("utf-8", "replace")
     outcome = judge(process.returncode, stdout, registration.event)
-    return outcome, (stdout or stderr).strip()
+    message = message_of(process.returncode, stdout, stderr)
+    return _Launched(outcome, (stdout or stderr).strip(), message)
 
 
 def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정한다. 넘기면 어긋남 `timeout`."""
+    """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정하고 `contains` 를 대 본다. 넘기면 어긋남
+    `timeout` 이다."""
     payload = substitute(case.payload, replacements)
     env = {key: _replace(value, replacements) for key, value in case.env.items()}
-    return Result(case, *_launch(case.hook, payload, registration, env=env))
+    launched = _launch(case.hook, payload, registration, env=env)
+    missing = tuple(missing_fragments(launched.message, case.contains))
+    return Result(case, launched.outcome, launched.output, missing)
 
 
 def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
@@ -414,13 +490,11 @@ def run_notices(registrations: dict[str, Registration]) -> list[NoticeResult]:
     by_event: dict[str, Registration] = {}
     for registration in registrations.values():
         by_event.setdefault(registration.event, registration)
-    return [
-        NoticeResult(
-            event,
-            *_launch(ABSENT_HOOK, {"hook_event_name": event}, registration, notice_outcome),
-        )
-        for event, registration in sorted(by_event.items())
-    ]
+    results: list[NoticeResult] = []
+    for event, registration in sorted(by_event.items()):
+        launched = _launch(ABSENT_HOOK, {"hook_event_name": event}, registration, notice_outcome)
+        results.append(NoticeResult(event, launched.outcome, launched.output))
+    return results
 
 
 def create_fixtures(scratch: Path) -> dict[str, str]:
@@ -647,7 +721,10 @@ def main() -> int:
         mark = "ok  " if result.ok else "FAIL"
         note = f" — {result.case.note}" if result.case.note else ""
         expect, actual = result.case.expect, result.outcome
-        print(f"[{mark}] {result.case.hook:<28} 기대 {expect:<7} 실제 {actual}{note}")
+        fragments = f" 조각 {len(result.case.contains)}" if result.case.contains else ""
+        print(f"[{mark}] {result.case.hook:<28} 기대 {expect:<7} 실제 {actual}{fragments}{note}")
+        if result.missing:
+            print(f"       문장에 없는 조각: {', '.join(result.missing)}")
         if not result.ok:
             print(f"       출력: {result.output[:200]}")
     for notice in notices:

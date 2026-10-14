@@ -22,17 +22,19 @@ import { exportName } from '../../.ds-sync/lib/common.mjs';
 
 // agent-os fork (cfg.libOverrides): the stock compose() hands decorators an
 // empty `globals`, and this repo's stories pick dark mode / a non-default
-// theme with story-level `globals: { mode, theme }` that the project
-// decorator applies to <html>. Previews have no project decorators, so those
-// 14 stories rendered light/muk. The fork merges meta+story globals into ctx
-// and wraps the story in an element carrying data-theme/data-mode - the
-// design tokens redeclare on any [data-theme]/[data-mode] element, so the
-// subtree renders in that theme/mode without touching sibling cells of the
-// grid card. The `common.mjs` import is repointed at the staged scripts
-// (`../../.ds-sync/lib/`) because a fork loads from `.design-sync/overrides/`.
-// The default theme `muk` and the light/dark check mirror
-// `web/packages/ui/src/themes.ts` (`DEFAULT_THEME`, `MODES`) - keep them in
-// step. Everything else is the stock 2.1.286 module.
+// theme / a density with story-level `globals: { mode, theme, density }` that
+// the project decorator applies to <html>. Previews have no project
+// decorators, so those stories rendered light / default density. The fork
+// merges meta+story globals into ctx and wraps the story in an element
+// carrying data-theme/data-mode/data-density - the design tokens redeclare
+// the semantic colors on any [data-theme]/[data-mode] element and the density
+// variables on any [data-density] element, so the subtree renders that way
+// without touching sibling cells of the grid card. The `common.mjs` import is
+// repointed at the staged scripts (`../../.ds-sync/lib/`) because a fork loads
+// from `.design-sync/overrides/`. The default theme `nokcheong` and the
+// light/dark and compact/regular checks mirror
+// `web/packages/ui/src/themes.ts` (`DEFAULT_THEME`, `MODES`, `DENSITIES`) -
+// keep them in step. Everything else is the stock 2.1.286 module.
 
 // The composeStories-equivalent embedded in every wrapper. Storybook
 // semantics, minimally: merged args (meta <- story), render precedence
@@ -79,10 +81,12 @@ const COMPOSE = `function compose(S: any, key: string) {
   }, render);
   const theme = typeof globals.theme === 'string' ? globals.theme : null;
   const mode = globals.mode === 'light' || globals.mode === 'dark' ? globals.mode : null;
-  if (theme === null && mode === null) return decorated;
+  const density = globals.density === 'compact' || globals.density === 'regular' ? globals.density : null;
+  if (theme === null && mode === null && density === null) return decorated;
   return () => React.createElement('div', {
-    'data-theme': theme ?? 'muk',
+    'data-theme': theme ?? 'nokcheong',
     ...(mode === null ? {} : { 'data-mode': mode }),
+    ...(density === null ? {} : { 'data-density': density }),
     style: { background: 'var(--bg)', color: 'var(--text)', padding: '16px' },
   }, decorated());
 }`;

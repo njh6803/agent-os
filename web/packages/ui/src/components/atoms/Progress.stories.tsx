@@ -153,3 +153,15 @@ export const DeterminateDark: Story = {
     }).toEqual({ track: semanticColor(track, "bg-active"), bar: semanticColor(bar, "text-muted") });
   },
 };
+
+/** 보여 주기용(`showcase`). 끝을 알면 막대이고, 모델의 응답처럼 끝을 모르면 도는 표시다. */
+export const ShowcaseRunSteps: Story = {
+  name: "쓰임: 단계를 아는 진행과 응답 기다리기",
+  tags: ["showcase"],
+  render: () => (
+    <div className="flex flex-col gap-4" style={{ width: 320 }}>
+      <Progress value={2} max={3} label="3단계 중 2단계" />
+      <Progress value={null} label="모델의 응답을 기다립니다" />
+    </div>
+  ),
+};
