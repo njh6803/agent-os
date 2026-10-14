@@ -29,12 +29,18 @@ import { exportName } from '../../.ds-sync/lib/common.mjs';
 // carrying data-theme/data-mode/data-density - the design tokens redeclare
 // the semantic colors on any [data-theme]/[data-mode] element and the density
 // variables on any [data-density] element, so the subtree renders that way
-// without touching sibling cells of the grid card. The `common.mjs` import is
+// without touching sibling cells of the grid card. A story without those
+// globals is wrapped too, in the default theme and light mode with the text
+// color re-resolved there (no padding or background, so the layout is the
+// same): with no data-mode the tokens follow the viewer's system setting, and
+// in a dark-mode browser the product card painted dark-mode text on its white
+// background (2026-10-14). The `common.mjs` import is
 // repointed at the staged scripts (`../../.ds-sync/lib/`) because a fork loads
 // from `.design-sync/overrides/`. The default theme `nokcheong` and the
 // light/dark and compact/regular checks mirror
 // `web/packages/ui/src/themes.ts` (`DEFAULT_THEME`, `MODES`, `DENSITIES`) -
-// keep them in step. Everything else is the stock 2.1.286 module.
+// keep them in step. Everything else is the stock 2.1.286 module (2.1.295
+// ships the same bytes).
 
 // The composeStories-equivalent embedded in every wrapper. Storybook
 // semantics, minimally: merged args (meta <- story), render precedence
@@ -82,7 +88,13 @@ const COMPOSE = `function compose(S: any, key: string) {
   const theme = typeof globals.theme === 'string' ? globals.theme : null;
   const mode = globals.mode === 'light' || globals.mode === 'dark' ? globals.mode : null;
   const density = globals.density === 'compact' || globals.density === 'regular' ? globals.density : null;
-  if (theme === null && mode === null && density === null) return decorated;
+  if (theme === null && mode === null && density === null) {
+    return () => React.createElement('div', {
+      'data-theme': 'nokcheong',
+      'data-mode': 'light',
+      style: { color: 'var(--text)' },
+    }, decorated());
+  }
   return () => React.createElement('div', {
     'data-theme': theme ?? 'nokcheong',
     ...(mode === null ? {} : { 'data-mode': mode }),
