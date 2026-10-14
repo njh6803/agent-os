@@ -3,7 +3,7 @@ name: code-review
 description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 목록(대기열 20, 15회차. 근거 문장의 종류는 대기열 45·124, 목록 모양은 대기열 76, 부르는 쪽의 길은 대기열 60, 잔존을 세는 문서는 대기열 87), 6단계 4의 받는 쪽 확인(대기열 3), 2단계의 사용자 답과 옮기는 변경의 옛 판정(대기열 46·181), 4단계의 외부 근거 발췌(대기열 156), 6단계 1의 고친 문장의 근거(대기열 154), 2와 4의 보류·넘김의 책임 근거(대기열 151), 5의 pre-commit 갈음(대기열 180), 4단계 두 브리프의 갈래 밟기(대기열 229), 6단계 1의 반례를 일반 조항으로 올리기(대기열 213), 6단계 끝의 보고를 받은 턴에 일지로 옮기기(대기열 244). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)에 더한 것: 4단계의 sonnet 규칙(일지 2026-09-20 첫 회고), 1단계의 미커밋·미추적 범위와 5단계의 범위 한 줄, 6단계의 반영(일지 2026-09-21 리뷰 반영 루프), 2단계의 요구·참고 가름(대기열 26), 4단계 두 브리프의 주장 검증 목록(대기열 20, 15회차. 근거 문장의 종류는 대기열 45·124, 목록 모양은 대기열 76, 부르는 쪽의 길은 대기열 60, 잔존을 세는 문서는 대기열 87), 6단계 4의 받는 쪽 확인(대기열 3), 2단계의 사용자 답과 옮기는 변경의 옛 판정(대기열 46·181), 4단계의 외부 근거 발췌(대기열 156), 6단계 1의 고친 문장의 근거(대기열 154), 2와 4의 보류·넘김의 책임 근거(대기열 151), 5의 pre-commit 갈음(대기열 180), 4단계 두 브리프의 갈래 밟기(대기열 229), 6단계 1의 반례를 일반 조항으로 올리기(대기열 213), 6단계 끝의 보고를 받은 턴에 일지로 옮기기(대기열 244)와 그 번호 받기의 2 갈래를 도구의 `할 일:` 줄로 줄이기(대기열 251). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
@@ -126,7 +126,7 @@ End with a one-line summary: total findings per axis, and the worst issue _withi
 
 보고 끝에 세 줄을 더한다. 고친 것, 남긴 것과 이유, 다시 돌린 명령과 결과(pre-commit으로 갈음하면 그렇게 적고, 결과는 커밋 뒤 일지와 PR 본문에 적는다).
 
-자기 작업을 리뷰해 일지를 쓰는 세션이면, 보고는 받은 턴에 일지에 옮긴다. 세 줄 가운데 고친 것과 남긴 것은 지적마다 판정한 턴에, 다시 돌린 명령의 결과는 그 명령이 끝난 턴에 옮긴다(pre-commit으로 갈음하면 위 괄호대로 커밋 뒤에). PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 보고와 반영도 같다. 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py`의 `다음 빈 번호` 줄에서 번호를 받아 머리 한 줄 파일을 먼저 만든다(`next-session` 1단계 4의 번호 받기와 같은 길이다). 도구가 형제를 대조하지 못해 2로 끝나 그 줄이 없으면 번호를 손으로 고르지 않는다. 오류의 원인을 고쳐 다시 칠 때까지 보고는 스크래치 파일에 옮겨 두고, 번호를 받으면 일지로 옮긴다. 옮기기를 미룬 세션은 컨텍스트 압축 뒤 요약에 요지만 남아, PR 직전 리뷰 절을 쓰느라 서브에이전트 보고를 트랜스크립트에서 스크립트 둘로 네 번 뒤졌다(대기열 244).
+자기 작업을 리뷰해 일지를 쓰는 세션이면, 보고는 받은 턴에 일지에 옮긴다. 세 줄 가운데 고친 것과 남긴 것은 지적마다 판정한 턴에, 다시 돌린 명령의 결과는 그 명령이 끝난 턴에 옮긴다(pre-commit으로 갈음하면 위 괄호대로 커밋 뒤에). PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 보고와 반영도 같다. 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py`의 `다음 빈 번호` 줄에서 번호를 받아 머리 한 줄 파일을 먼저 만든다(`next-session` 1단계 4의 번호 받기와 같은 길이다). 도구가 2로 끝나 그 줄이 없으면 stderr의 `할 일:` 줄을 따른다. 옮기기를 미룬 세션은 컨텍스트 압축 뒤 요약에 요지만 남아, PR 직전 리뷰 절을 쓰느라 서브에이전트 보고를 트랜스크립트에서 스크립트 둘로 네 번 뒤졌다(대기열 244).
 
 ## Why two axes
 
