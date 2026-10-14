@@ -1,0 +1,28 @@
+# implement 첫 문단에 더한 구절(새 워크트리의 첫 `uv sync` 는 복사로 채워 2분을 넘길 수 있으니 시간 제한을 늘리거나
+# 백그라운드로 친다, 대기열 217)이 새 세션에 실리는지. implement 는 모델이 부르지 못하는 스킬이라 질문 머리에 슬래시
+# 명령으로 넣는다. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 카나리아가
+# 없다. 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의
+# checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-14, 이 PC, claude 2.1.296, 대조군 주 체크아웃의 옛 판 `5f72cdbb`, 일지 2026-10-14-02).
+# 첫 판의 질문은 다음 문장이 시간 제한을 말하지 않으면 "없음"이라 답하게 해, 실험군 한 회차가 "없음"으로 답했다.
+# 이어지는 두 문장을 판단 없이 옮기게 고쳤다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/implement_uv_sync_timeout.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+/implement
+위에 실린 스킬 본문이 시키는 일(브랜치, 워크트리, 구현)은 하지 않는다. 본문만 보고 답한다.
+첫 문단에서 "새 워크트리에 들어가면"으로 시작하는 문장을 찾아, 그 문장 뒤에 이어지는 두 문장을 글자 그대로 옮겨라.
+판단이나 설명은 덧붙이지 않는다. 본문에 "새 워크트리에 들어가면"으로 시작하는 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["600000으로 주거나 백그라운드로 돌린다"]
+source = ".claude/skills/implement/SKILL.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

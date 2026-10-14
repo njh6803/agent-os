@@ -50,16 +50,21 @@
   `worktree_occupancy.py` 의 E) 판정 4의 1을 지나고, 앞지우기가 그 파일에서 `WinError 5` 로
   막힌다(`.scratch/harness/probes/module_holder.py` 의 G·E). 프로세스마다 올린 모듈의 매핑
   이름(`GetMappedFileNameW`)과 그 파일의 다른 하드링크 이름(`FindFirstFileNameW`)을 폴더와 견주므로,
-  워크트리 밖 이름으로 올린 것(E)도 잡는다. uv 의 `.venv` 와 pnpm 의 `node_modules` 는 모듈 파일
-  다수를 하드링크로 채워, 다른 체크아웃의 파이썬이나 node 가 올린 모듈이 이 워크트리의 같은 파일을
-  막는다. 2026-10-12 에 옆 이름에 남은 `spec-pipeline-and-pytest-ids.tidy-probe` 의 `.venv` 와
-  `node_modules` 에서 모듈을 올린 프로세스(`module_holder.py --folder` 가 pid 를 댔다) 가운데
-  파이썬은 다른 워크트리의 `.venv` 에서 돈 pytest 와 명령줄이 `-mpre_commit hook-impl` 인 것이었고
-  (그 명령줄은 `Get-CimInstance Win32_Process` 로 손으로 봤다, 일지 2026-10-12-38), 나머지는 실행
-  파일 이름이 `node.exe`·`esbuild.exe` 였다. 그 파일들의 링크 수는 30~38 이었다. `remove` 가 그
-  폴더의 `.pyd` 에서 다섯 번 막힌 때에 무엇이 쥐었는지는 재지 않았다. 모듈은 `judge` 한 번에 한 번
-  훑는다. 그 프로브의 `--folder` 에서 프로세스 770~771개, 항목 3만여 개에 0.90~1.22초, 갈래에서
-  0.94~1.03초였다. 윈도 밖은 보지 않는다. 그 OS 는 적재한 파일도 지울 수 있는 것으로 알고
+  워크트리 밖 이름으로 올린 것(E)도 잡는다. uv 의 `.venv` 와 pnpm 의 `node_modules` 는 기본으로 모듈
+  파일 다수를 캐시에서 하드링크로 채워, 다른 체크아웃의 파이썬이나 node 가 올린 모듈이 이 워크트리의
+  같은 파일을 막는다. 2026-10-13 에 이 판정이 병합된 워크트리 대부분을 같은 pid 몇으로 남겼다(대기열
+  217). 그래서 Claude 세션의 uv 는 설정 `env` 의 `UV_LINK_MODE=copy` 로 패키지를 복사로 깐다.
+  복사 `.venv` 는 다른 `.venv` 의 파이썬이 올린 모듈에 잡히지 않고 그 파일이 지워졌으며, 자기
+  `.venv` 에서 띄운 파이썬은 여전히 잡혔다(`.scratch/harness/probes/venv_link_mode.py`, 세 번). 그
+  값 전에 깐 패키지와 사용자 터미널의 uv 가 깐 패키지, pnpm 의 `node_modules` 는 하드링크로 남아 이
+  판정이 그대로 본다. 2026-10-12 에 옆 이름에 남은 `spec-pipeline-and-pytest-ids.tidy-probe`
+  의 `.venv` 와 `node_modules` 에서 모듈을 올린 프로세스(`module_holder.py --folder` 가 pid 를 댔다)
+  가운데 파이썬은 다른 워크트리의 `.venv` 에서 돈 pytest 와 명령줄이 `-mpre_commit hook-impl` 인
+  것이었고 (그 명령줄은 `Get-CimInstance Win32_Process` 로 손으로 봤다, 일지 2026-10-12-38),
+  나머지는 실행 파일 이름이 `node.exe`·`esbuild.exe` 였다. 그 파일들의 링크 수는 30~38 이었다.
+  `remove` 가 그 폴더의 `.pyd` 에서 다섯 번 막힌 때에 무엇이 쥐었는지는 재지 않았다. 모듈은 `judge`
+  한 번에 한 번 훑는다. 그 프로브의 `--folder` 에서 프로세스 770~771개, 항목 3만여 개에 0.90~1.22초,
+  갈래에서 0.94~1.03초였다. 윈도 밖은 보지 않는다. 그 OS 는 적재한 파일도 지울 수 있는 것으로 알고
   있다(어림).
   제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 워크트리 후보를 모두
   넘긴다. 그 세션이 어느 워크트리에 있는지 알 수 없다(일지 2026-10-06-03). 등록 없는 폴더는 넘기지
@@ -97,9 +102,9 @@
    이름 바꾸기를 지나는데 git 은 지우다 만 폴더를 남긴다(프로브의 E). 2가 그런 프로세스를 남기므로
    여기서 막히는 것은 2가 보지 못한 것(2 뒤에 올린 모듈, 열 수 없는 프로세스가 올린 모듈, 윈도 폴더
    아래 모듈의 다른 이름, 연 파일)이다. 2026-10-07 에 `mutate-restore-guard` 가 `Invalid argument`
-   로 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-15). `.venv` 가 하드링크라(판정 3)
-   이 도구 자신이 서드파티 확장 모듈을 올리면 지울 워크트리의 같은 파일을 쥐므로, 이 도구는 표준
-   라이브러리만 쓴다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만 지운다.
+   로 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-15). `.venv` 가 하드링크일 수
+   있어(판정 3) 이 도구 자신이 서드파티 확장 모듈을 올리면 지울 워크트리의 같은 파일을 쥐므로, 이
+   도구는 표준 라이브러리만 쓴다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만 지운다.
 5. `git worktree remove <경로>`. git 2.32 는 지우다 실패해도 등록을 지우고(`.scratch/harness/probes/
    worktree_longpath.py`), 그 폴더의 `.git` 파일도 지운다(`worktree_occupancy.py` 의 B·C·E).
 6. `git branch -D <브랜치>`. squash 병합이라 `-d` 는 병합을 알아보지 못한다.
