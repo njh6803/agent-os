@@ -6,24 +6,35 @@
 
 사용(주 체크아웃에서):
     uv run python tools/tidy_checkouts.py judge [--running "<세션 제목>" ...]
-    uv run python tools/tidy_checkouts.py remove "<경로>" <브랜치> <HEAD>
+    uv run python tools/tidy_checkouts.py remove "<경로>" <브랜치|.detached> <HEAD>
     uv run python tools/tidy_checkouts.py remove-branch <브랜치> <커밋>
     uv run python tools/tidy_checkouts.py remove-stray "<경로>"
+    uv run python tools/tidy_checkouts.py restore "<경로>.tidy-probe"
+    uv run python tools/tidy_checkouts.py empty-trash
 
 `--running` 은 `list_sessions` 에서 이 세션을 뺀 `isRunning` 세션의 제목이다. 도구는 앱의 세션을
-보지 못해 부르는 쪽이 넘긴다. `judge` 는 줄마다 `지운다`·`남긴다`·`넘긴다`(사람에게)와 이유를 찍고,
-지울 것에는 부를 `remove`·`remove-branch`·`remove-stray` 명령을 붙인다. 경로나 브랜치 이름에 셸이 풀
-수 있는 글자가 들었으면 명령 없이 넘긴다. git 은 모두 `core.longpaths=true` 로 친다
-(스킬 머리 문단).
+보지 못해 부르는 쪽이 넘긴다. `judge` 는 줄마다 `지운다`·`남긴다`·`넘긴다`(사람에게)·`되돌린다`와
+이유를 찍고, 지울 것에는 부를 `remove`·`remove-branch`·`remove-stray` 명령을, 되돌릴 것에는
+`restore` 를 붙인다. 끝에 휴지통(`TRASH_DIR`)에 남은 것이 있으면 항목마다 쥔 프로세스와 함께 찍고
+`empty-trash` 를 붙인다. 경로나 브랜치 이름에 셸이 풀 수 있는 글자가 들었으면 명령 없이 넘긴다.
+git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 
 판정. 워크트리마다 아래 순서로 보고 처음 어긋난 것을 이유로 찍는다. 모두 맞아야 지운다.
-- 자리. 등록이 `prunable` 이거나 폴더가 없거나, 그 폴더에서 `git rev-parse --show-toplevel` 이 그
-  경로가 아니면 사람에게 넘긴다. `.git` 파일이 없는 폴더에서 친 git 은 루트 저장소에 닿아, 그
-  status 는 루트의 것이다(대기열 135, 일지 2026-10-07-03).
-- 판정 1, 병합됐다. 분리 HEAD 면 넘긴다. 병합된 PR 중 머리 브랜치 이름이 같은 것의 `headRefOid` 가
-  브랜치 끝(그 워크트리의 HEAD)과 같아야 한다. 이름이 같은 PR 이 없으면 남기고, 있는데 머리가 다르면
-  넘긴다. 이름만 보면 포크의 같은 이름 브랜치를 잡으므로 머리를 견준다. squash 라 `git log` 로는
-  가르지 못하고, 브랜치 끝이 `origin/main` 의 조상인 것으로도 판정하지 않는다. 막 따고 커밋하지 않은
+- 자리. 폴더가 없으면(등록이 `prunable` 이든 아니든) 잃을 것이 없어 지운다. `remove` 가 등록만
+  걷는다(git 2.32 의 `worktree remove` 는 폴더가 없으면 종료 0으로 등록을 걷는다. 임시 저장소에서
+  손으로 봤다, 일지 2026-10-15-06). 다만 옆 이름(`.tidy-probe`)에 폴더가 남아 있으면 되돌릴 일이라
+  넘기고, 그 옆 이름 폴더에 `restore` 를 찍는다. 등록이 `prunable` 인데 폴더가 있으면 `.git` 이
+  있을 때는 넘기고, 없을 때는 지우다 만 폴더라 아래 "등록 없는 폴더"의 판정으로 내용을 가른다
+  (`_judge_all`). git 은 폴더가 있는 채로는 그 등록을 걷지 않아(`validation failed`, 손으로 봤다),
+  `remove` 가 폴더를 휴지통으로 옮긴 뒤 등록을 걷는다. 그 폴더에서 친 git 은 루트 저장소에 닿아
+  status 를 쓸 수 없다(대기열 135, 일지 2026-10-07-03). 폴더가 있는데 `git rev-parse
+  --show-toplevel` 이 그 경로가 아니면 사람에게 넘긴다.
+- 판정 1, 병합됐다. 분리 HEAD 는 그 커밋이 `origin/main` 에서 닿을 때만 다음 판정으로 가고(잃는
+  것이 없다. 2026-10-15 에 모델 스윕과 옛 세션의 분리 HEAD 일곱이 넘겨진 채 남아 있었다), 아니면
+  넘긴다. 브랜치는 병합된 PR 중 머리 브랜치 이름이 같은 것의 `headRefOid` 가 브랜치 끝(그 워크트리의
+  HEAD)과 같아야 한다. 이름이 같은 PR 이 없으면 남기고, 있는데 머리가 다르면 넘긴다. 이름만 보면
+  포크의 같은 이름 브랜치를 잡으므로 머리를 견준다. squash 라 `git log` 로는 가르지 못하고,
+  체크아웃된 브랜치는 끝이 `origin/main` 의 조상인 것으로도 판정하지 않는다. 막 따고 커밋하지 않은
   브랜치도 조상이다(일지 2026-10-05-05). 병합된 PR 은 `gh pr list` 한 번에 최근 1000개를 읽는다.
   그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한 쪽).
 - 판정 2, 깨끗하다. `status --porcelain --untracked-files=all` 의 stdout 과 stderr 가 모두 비어야
@@ -39,43 +50,39 @@
   들어 남긴다(대기열 186). 쉬는 세션은 `isRunning` 이 아니라 제목으로 잡히지 않는데, 데스크톱 앱이
   `--resume` 으로 띄운 그 세션의 `claude.exe` 가 워크트리 루트를 쥐고 있었다(판정 4의 1의 근거).
   이 단계가 없던 판은 그 워크트리를 지운다(또는 아래처럼 넘긴다)로 내고 `remove` 의 점유 탐침에서야
-  막혔다. 2026-10-12 에 작업 디렉터리로 쥐여 있던 셋 중 둘은 그 판이 제목 모를 세션 때문에 넘겨
-  사람에게 승인을 물었고, 하나는 판정 2가 먼저 남겼다. 이 판으로 같은 자리를 다시 판정하니 그 둘을
-  `claude.exe` 의 pid 를 들어 남겼다(일지 2026-10-12-14). 프로세스는 `judge` 한 번에 한 번 훑는다.
-  그 세션에서 `lock_holder.py --folder` 가 프로세스 720개 중 539개의 작업 디렉터리를 0.11초 안에
-  읽었다. 볼 수 없으면(윈도·리눅스 밖의 OS, 32비트 파이썬, 읽다 실패) 이 단계를 건너뛰고 판정 4의
-  점유 탐침에 맡긴다.
-  작업 디렉터리 다음에는 그 폴더 아래 파일을 모듈로 올린 프로세스를 보고, 있으면 이름과 pid 를
-  들어 남긴다(대기열 201). 올린 모듈은 이름 바꾸기를 막지 않아(`lock_holder.py` 의 G,
-  `worktree_occupancy.py` 의 E) 판정 4의 1을 지나고, 앞지우기가 그 파일에서 `WinError 5` 로
-  막힌다(`.scratch/harness/probes/module_holder.py` 의 G·E). 프로세스마다 올린 모듈의 매핑
-  이름(`GetMappedFileNameW`)과 그 파일의 다른 하드링크 이름(`FindFirstFileNameW`)을 폴더와 견주므로,
-  워크트리 밖 이름으로 올린 것(E)도 잡는다. uv 의 `.venv` 와 pnpm 의 `node_modules` 는 기본으로 모듈
-  파일 다수를 캐시에서 하드링크로 채워, 다른 체크아웃의 파이썬이나 node 가 올린 모듈이 이 워크트리의
-  같은 파일을 막는다. 2026-10-13 에 이 판정이 병합된 워크트리 대부분을 같은 pid 몇으로 남겼다(대기열
-  217). 그래서 Claude 세션의 uv 는 설정 `env` 의 `UV_LINK_MODE=copy` 로 패키지를 복사로 깐다.
-  복사 `.venv` 는 다른 `.venv` 의 파이썬이 올린 모듈에 잡히지 않고 그 파일이 지워졌으며, 자기
-  `.venv` 에서 띄운 파이썬은 여전히 잡혔다(`.scratch/harness/probes/venv_link_mode.py`, 세 번). 그
-  값 전에 깐 패키지와 사용자 터미널의 uv 가 깐 패키지, pnpm 의 `node_modules` 는 하드링크로 남아 이
-  판정이 그대로 본다. 2026-10-12 에 옆 이름에 남은 `spec-pipeline-and-pytest-ids.tidy-probe`
-  의 `.venv` 와 `node_modules` 에서 모듈을 올린 프로세스(`module_holder.py --folder` 가 pid 를 댔다)
-  가운데 파이썬은 다른 워크트리의 `.venv` 에서 돈 pytest 와 명령줄이 `-mpre_commit hook-impl` 인
-  것이었고 (그 명령줄은 `Get-CimInstance Win32_Process` 로 손으로 봤다, 일지 2026-10-12-38),
-  나머지는 실행 파일 이름이 `node.exe`·`esbuild.exe` 였다. 그 파일들의 링크 수는 30~38 이었다.
-  `remove` 가 그 폴더의 `.pyd` 에서 다섯 번 막힌 때에 무엇이 쥐었는지는 재지 않았다. 모듈은 `judge`
-  한 번에 한 번 훑는다. 그 프로브의 `--folder` 에서 프로세스 770~771개, 항목 3만여 개에 0.90~1.22초,
-  갈래에서 0.94~1.03초였다. 윈도 밖은 보지 않는다. 그 OS 는 적재한 파일도 지울 수 있는 것으로 알고
-  있다(어림).
-  제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 워크트리 후보를 모두
-  넘긴다. 그 세션이 어느 워크트리에 있는지 알 수 없다(일지 2026-10-06-03). 등록 없는 폴더는 넘기지
-  않는다. git 으로 일할 수 없는 자리라 세션이 쓰는 워크트리가 아니고, 그 자리를 작업 디렉터리로 쥔
-  세션은 위의 훑기가 잡는다. 사람이 그 세션이 후보에 없다고 답하면 부르는 쪽이 `remove` 를 부른다.
-  `remove` 의 재판정은 세션을 보지 않고, 쥔 프로세스는 앞지우기 직전에만 다시 본다(판정 4의 2).
-체크아웃되지 않은 로컬 브랜치는 판정 1만 본다. `.claude/worktrees/` 아래인데 등록이 없는 폴더는
-아래 "등록 없는 폴더"로 가른다.
+  막혔다(일지 2026-10-12-14). 프로세스는 `judge` 한 번에 한 번 훑는다. 그 세션에서
+  `lock_holder.py --folder` 가 프로세스 720개 중 539개의 작업 디렉터리를 0.11초 안에 읽었다. 볼 수
+  없으면(윈도·리눅스 밖의 OS, 32비트 파이썬, 읽다 실패) 이 단계를 건너뛰고 판정 4의 점유 탐침에
+  맡긴다.
+  그 폴더 아래 파일을 모듈로 올린 프로세스(대기열 201)는 이 판정이 보지 않는다. 2026-10-15 까지는
+  보고 남겼는데, uv 의 `.venv` 와 pnpm 의 `node_modules` 가 기본으로 모듈 파일 다수를 캐시에서
+  하드링크로 채워(Claude 세션의 uv 는 `UV_LINK_MODE=copy` 로 복사다, 대기열 217) 다른 워크트리에서
+  도는 pytest·pre-commit·esbuild 가 병합된 워크트리 55개를 한꺼번에 남겼고, 그 프로세스 일곱 중
+  다섯은 판정이 끝난 몇 분 뒤 이미 끝나 있었다(남은 둘은 pre-commit 과 다른 워크트리 `.venv` 의
+  pytest. `Get-CimInstance Win32_Process` 로 손으로 봤다, 일지 2026-10-15-06). 올린 모듈은 이름
+  바꾸기를 막지 않으므로(`lock_holder.py` 의 G, `worktree_occupancy.py` 의 E. 지우기가 막히는 것은
+  `module_holder.py` 의 G·E) 판정 4가 그 폴더를 휴지통으로 옮긴 뒤 지우고, 지우다 막힌 것은 휴지통에
+  남긴다(판정 4의 4·7). 모듈 훑기(`scan_modules`. 매핑 이름
+  `GetMappedFileNameW` 와 그 파일의 다른 하드링크 이름 `FindFirstFileNameW`, 프로세스 770여 개에
+  0.90~1.22초)는 등록 없는 폴더와 휴지통의 쥔 프로세스를 대는 데만 쓴다. 윈도 밖은 보지 않는다. 그
+  OS 는 적재한 파일도 지울 수 있는 것으로 알고 있다(어림).
+  제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면, 프로세스의 작업 디렉터리를 읽을
+  수 없는 OS 에서만 지울 워크트리 후보를 모두 넘긴다(그 세션이 어느 워크트리에 있는지 알 수 없다,
+  일지 2026-10-06-03). 읽을 수 있으면 넘기지 않는다. 2026-10-15 에 실행 중 세션 다섯(`EnterWorktree`
+  로 들어간 것 포함)의 `claude.exe` 가 모두 그 워크트리를 작업 디렉터리로 쥐고 있어 위의 훑기가
+  잡았다(일지 2026-10-15-06). 그 전에는 제목이 브랜치가 아닌 세션 하나가 돌면 후보 전부가 넘겨졌고,
+  새 세션의 첫 턴은 답을 기다리지 않아 아무것도 지워지지 않았다. 등록 없는 폴더는 넘기지 않는다.
+  사람이 그 세션이 후보에 없다고 답하면 부르는 쪽이 `remove` 를 부른다. `remove` 의 재판정은 세션을
+  보지 않고, 쥔 프로세스는 옮기기 직전에만 다시 본다(판정 4의 2).
+체크아웃되지 않은 로컬 브랜치는 판정 1을 보고, 병합된 PR 이 없어도 끝이 `origin/main` 에서 닿으면
+지운다(잃는 것은 이름뿐이다. `EnterWorktree` 가 만들고 세션이 떠난 `worktree-*` 브랜치 53개가 PR
+없이 남아 있었다, 일지 2026-10-15-06). `main`·`master` 는 지우지 않는다(루트가 다른 브랜치에 있을
+때 체크아웃되지 않은 브랜치로 보인다). `.claude/worktrees/` 아래인데 등록이 없는 폴더는 아래 "등록
+없는 폴더"로 가른다.
 
 판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션과 쥔 프로세스는 빼고. 쥔 프로세스는
-1의 탐침과 2의 다시 거르기가 본다) 브랜치와 HEAD 가 인자와 같을 때만, 아래 순서로 지운다.
+1의 탐침과 2의 다시 거르기가 본다) 브랜치(분리 HEAD 는 `.detached`)와 HEAD 가 인자와 같을 때만, 아래
+순서로 지운다. 폴더가 없으면 등록만 걷고 끝난다(자리 판정).
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
    `Permission denied`·`Invalid argument` 로 지우다 만 폴더를 남긴다(`.scratch/harness/probes/
@@ -92,22 +99,32 @@
    2026-10-12 에 옮기기는 지났는데 되돌리기가 `WinError 5` 로 한 번 막혀 폴더가 옆 이름에 남고
    등록이 폴더를 잃었다(대기열 202, 일지 2026-10-12-28). 그 틈에 무엇이 폴더를 쥐었는지는 재지
    않았다.
-2. 다시 거르기. 판정 1~3을 한 번 더 내고, 지울 무시된 항목도 그때 읽는다. 판정 뒤에 생긴 `.env` 나
-   새 파일을 앞지우기가 지우지 않게 한다. 이때는 프로세스를 한 번 훑어 쥔 프로세스(작업 디렉터리와
-   모듈)도 본다. 리눅스의 탐침은 작업 디렉터리를, 윈도의 탐침은 올린 모듈을 보지 못해, `judge` 뒤에
-   들어온 주인은 여기서 잡는다(PR #184 리뷰, 대기열 201). 어긋나면 아무것도 바꾸지 않고 멈춘다.
+2. 다시 거르기. 판정 1~3을 한 번 더 내고, 옮길 무시된 항목도 그때 읽는다. 판정 뒤에 생긴 `.env` 나
+   새 파일을 옮기지 않게 한다. 이때는 프로세스를 한 번 훑어 작업 디렉터리로 쥔 프로세스도 본다.
+   리눅스의 탐침은 작업 디렉터리를 보지 못해, `judge` 뒤에 들어온 주인은 여기서 잡는다(PR #184
+   리뷰). 어긋나면 아무것도 바꾸지 않고 멈춘다.
 3. 죽은 잠금을 푼다. 1·2가 막히면 잠금도 그대로 남도록 그 뒤다.
-4. 앞지우기. 2가 읽은 무시된 항목을 이 도구가 git 보다 먼저 지운다. 막히면 멈춘다. 등록과
-   `.git` 파일은 남는다(프로브의 F). 워크트리 밖의 하드링크 이름으로 같은 DLL 을 적재한 프로세스는
-   이름 바꾸기를 지나는데 git 은 지우다 만 폴더를 남긴다(프로브의 E). 2가 그런 프로세스를 남기므로
-   여기서 막히는 것은 2가 보지 못한 것(2 뒤에 올린 모듈, 열 수 없는 프로세스가 올린 모듈, 윈도 폴더
-   아래 모듈의 다른 이름, 연 파일)이다. 2026-10-07 에 `mutate-restore-guard` 가 `Invalid argument`
-   로 `yaml` 의 `.pyd` 에서 멈췄다(손으로 봤다, 일지 2026-10-07-15). `.venv` 가 하드링크일 수
-   있어(판정 3) 이 도구 자신이 서드파티 확장 모듈을 올리면 지울 워크트리의 같은 파일을 쥐므로, 이
-   도구는 표준 라이브러리만 쓴다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만 지운다.
+4. 옮기기. 2가 읽은 무시된 항목을 휴지통(`TRASH_DIR` 아래 `<워크트리 이름>~~<상대 경로>`. 경로의
+   `%` 는 `%25`, `/` 는 `%2F` 로 바꾸고, 겹치면 `~<번호>` 를 붙인다. `trash_slot`·`origin_of`)으로
+   이름 바꾸기 한다. 휴지통 자리가 링크거나 폴더가 아니면 옮기지 않고 멈춘다(종료 1). 2026-10-15
+   까지는 제자리에서 지웠는데(앞지우기), 다른 체크아웃의 프로세스가 하드링크 이름으로 올린
+   `.pyd`·`.node` 하나에서 `WinError 5` 로 막혀 워크트리가 남았다(2026-10-07 에
+   `mutate-restore-guard` 가 `yaml` 의 `.pyd` 에서, 일지 2026-10-07-15). 올린 모듈은 그 파일이 든
+   폴더의 이름 바꾸기를 막지 않으므로(프로브의 E·G) 옮기기는 지나고, git 은 무시된 항목이 없는
+   워크트리를 지운다. 옮기다 막히면 멈추고(종료 1), 먼저 옮긴 것은 휴지통에서 지운다. 등록과 `.git`
+   파일은 남는다. 이 도구 자신이 서드파티 확장 모듈을 올리면 옮긴 뒤 지우기에서 같은 파일을 쥐므로
+   표준 라이브러리만 쓴다.
 5. `git worktree remove <경로>`. git 2.32 는 지우다 실패해도 등록을 지우고(`.scratch/harness/probes/
    worktree_longpath.py`), 그 폴더의 `.git` 파일도 지운다(`worktree_occupancy.py` 의 B·C·E).
-6. `git branch -D <브랜치>`. squash 병합이라 `-d` 는 병합을 알아보지 못한다.
+6. `git branch -D <브랜치>`. squash 병합이라 `-d` 는 병합을 알아보지 못한다. 분리 HEAD 는 건너뛴다.
+7. 휴지통 지우기. 옮긴 항목을 지운다. 링크(심볼릭 링크, 정션)는 따라가지 않고 링크 자체만 지운다.
+   한 항목 안에서 파일 하나가 막히면 `shutil.rmtree` 가 그 자리에서 멈춰 아직 돌지 않은 형제도
+   남는다(PR 직전 버그 리뷰가 파일 여덟 중 셋째를 연 채 재현해 다섯이 남았다). 막힌 항목은 쥔
+   프로세스(작업 디렉터리와 모듈)를 들어 찍고 남긴다. 휴지통 자리 자신이 링크면 안을 읽지 않고
+   넘긴다(`trash_dir`). 종료 코드는 바뀌지 않는다.
+   워크트리와 브랜치는 이미 없다. 다음 `judge` 가 휴지통을 찍고 `empty-trash` 가 다시 지운다. 실제
+   자식 파이썬이 `.venv` 아래 `.pyd` 를 올린 채로 워크트리와 브랜치가 지워지고 `.venv` 만 그 pid 와
+   함께 휴지통에 남았으며, 자식이 끝난 뒤 `empty-trash` 가 비웠다(테스트, 윈도).
 
 등록 없는 폴더(`remove-stray`, 대기열 148). `.claude/worktrees/` 바로 아래인데 등록이 없는 폴더다.
 지우다 실패한 `git worktree remove` 가 등록과 `.git` 파일만 지우고 남긴 폴더와 빈 폴더가 쌓였다
@@ -131,12 +148,27 @@
   파일, 고친 파일, `.env`)이 하나라도 있으면 남긴다.
 - 쥔 프로세스(판정 3의 작업 디렉터리와 모듈)가 있으면 남긴다.
 `remove-stray` 는 그 자리가 `.claude/worktrees/` 바로 아래의 등록 없는 폴더인지 다시 보고, 판정을
-다시 내고, 판정 4의 1의 탐침을 거쳐, 쥔 프로세스까지 넣어 다시 판정한 뒤 폴더째 지운다(링크는
-따라가지 않는다). git 은 그 폴더에서 부르지 않는다.
+다시 내고, 판정 4의 1의 탐침을 거쳐, 쥔 프로세스까지 넣어 다시 판정한 뒤 폴더째 휴지통으로 옮기고
+지운다(판정 4의 7. 링크는 따라가지 않는다). git 은 그 폴더에서 부르지 않는다. 휴지통(`TRASH_DIR`)
+자신은 등록 없는 폴더로 보지 않는다.
+옆 이름(`.tidy-probe`)에 `.git` 과 함께 남은 폴더는 원래 이름의 등록이 폴더를 잃은 채 남아 있으면
+`restore` 가 그 이름으로 되돌린다. 등록이 없거나 원래 이름에 무엇이 있으면 되돌리지 않는다.
 
 못 보는 것.
-- 앞지우기 뒤에 남은 추적 파일을 다른 프로세스가 워크트리 밖의 하드링크 이름으로 적재한 것.
+- 옮긴 뒤에 남은 추적 파일을 다른 프로세스가 워크트리 밖의 하드링크 이름으로 적재한 것.
   추적 파일은 하드링크가 아니라 드물다.
+- 휴지통 항목을 쥔 프로세스의 매핑 이름은 옮기기 전 이름이다(윈도의 `GetMappedFileNameW`. 옮긴 뒤
+  휴지통 자리로 견주니 빈 목록이었다, 테스트). 그래서 휴지통 자리와 그 항목이 옮겨지기 전 자리
+  (`origin_of`. 자리 이름에서 거꾸로 셈한 어림이고 `WORKTREES_DIR` 아래였다고 본다) 둘로 견준다.
+  워크트리가 다른 자리에 있었으면 쥔 프로세스를 대지 못하고 찾지 못했다고 적는다. 지우기 자체는
+  막히면 남으므로 안전한 쪽이다.
+- 체크아웃되지 않은 브랜치가 `origin/main` 에 든 것은 그 이름이 아직 쓰일 예정이었어도 지운다.
+  잃는 것은 이름이고 커밋은 `origin/main` 에 있다.
+- `origin/main` 이 없는 저장소(얕은 클론, 클라우드 세션, 원격 없는 임시 저장소)에서는 어느 커밋도
+  `origin/main` 에 닿지 않는 것으로 보여, 분리 HEAD 와 PR 없는 브랜치가 모두 남는다(안전한 쪽).
+  이유 줄은 `origin/main 에 없다` 라고만 적는다.
+- 휴지통 자리 이름의 역산(`origin_of`)은 이름에 `~~` 가 든 워크트리와 `~<숫자>` 로 끝나는 상대
+  경로에서 어긋나 쥔 프로세스를 옛 자리로 찾지 못한다. 지우기는 그대로 막혀 남으니 안전한 쪽이다.
 - 탐침과 git 사이에 새로 생긴 점유와 파일. 다시 거른 뒤 git 이 지울 때까지의 틈이다.
 - 세션이 쓰던 워크트리인지. 제목, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의 CLI 를
   띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
@@ -167,13 +199,18 @@
   그대로의 이름만 셈해 남긴다(안전한 쪽).
 
 종료 코드. `judge`: 0 찍었다, 2 인자가 틀렸거나 주 체크아웃이 아니다, 3 git 이나 gh 가 실패했다.
-`remove`·`remove-branch`: 0 지웠다. 1 망가뜨린 것 없이 멈췄다. 아무것도 바꾸지 않았거나(1·2에서
-멈췄다), 죽은 잠금을 풀고 다시 만들 수 있는 것만 지웠거나(4에서 멈췄다. 등록과 `.git` 이 남는다),
-워크트리는 지웠는데 브랜치가 남았다(6).
+`remove`·`remove-branch`: 0 지웠다(휴지통에 남은 것이 있으면 그 줄을 함께 찍는다). 1 망가뜨린 것
+없이 멈췄다. 아무것도 바꾸지 않았거나(1·2에서 멈췄다), 죽은 잠금을 풀고 다시 만들 수 있는 것 일부를
+휴지통으로 옮겼거나(4에서 멈췄다. 등록과 `.git` 이 남고 옮긴 것은 휴지통에서 지웠다), 워크트리는
+지웠는데 브랜치가 남았다(6).
 다음 후보로 가도 된다. 2 인자가 틀렸거나 주 체크아웃이 아니다. 3 멈추고 사람에게 넘긴다. 지우다 만
 폴더나 옆 이름에 남은 폴더가 생겼을 수 있거나, git·gh 를 부르지 못했다.
-`remove-stray`: 0 지웠다. 1 망가뜨린 것 없이 멈췄다. 아무것도 바꾸지 않았거나, 지우다 막혀 다시
-만들 수 있거나 커밋에 있는 것만 지웠다. 2·3 은 `remove` 와 같다.
+`remove-stray`: 0 워크트리 자리에서 치웠다(휴지통에 남은 것이 있으면 그 줄을 함께 찍는다). 1
+망가뜨린 것 없이 멈췄다(아무것도 바꾸지 않았다). 2·3 은 `remove` 와 같다.
+`restore`: 0 되돌렸다. 1 되돌리지 않았다(옆 이름이 아니다, 등록이 없다, 원래 이름에 무엇이 있다,
+막혔다). 2 는 `remove` 와 같다.
+`empty-trash`: 0 휴지통이 비었다. 1 남은 것이 있다(항목마다 쥔 프로세스를 찍었다). 2 는 `remove` 와
+같다.
 """
 
 from __future__ import annotations
@@ -197,7 +234,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
-type Action = Literal["delete", "keep", "human", "hold"]
+type Action = Literal["delete", "keep", "human", "hold", "restore"]
 type GitRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 type ProcessPath = tuple[int, str, str]  # (pid, 실행 파일 이름, 작업 디렉터리나 모듈의 경로)
@@ -205,8 +242,16 @@ type HolderKind = Literal["cwd", "module"]
 
 COMMAND = "uv run python tools/tidy_checkouts.py"
 WORKTREES_DIR = ".claude/worktrees"
+# 옆으로 옮겨 둔 무시된 항목이 쌓이는 자리. `WORKTREES_DIR` 바로 아래라 등록 없는 폴더 목록에서 뺀다
+TRASH_DIR = WORKTREES_DIR + "/.tidy-trash"
 SETTINGS = ".claude/settings.local.json"
 PROBE_SUFFIX = ".tidy-probe"
+# 분리 HEAD 워크트리의 `remove` 인자. git 은 점으로 시작하는 브랜치 이름을 허락하지 않는다
+# (`git check-ref-format --branch .detached` 가 128. 한 글자 `@` 는 이 PC 의 git 2.32 가 허락했다,
+# 표준 축 리뷰가 임시 저장소에서 봤다). 셸이 풀 수 있는 글자(`_SHELL_UNSAFE`)도 들지 않는다
+DETACHED = ".detached"
+# 지우지 않는 브랜치. 루트가 다른 브랜치에 있을 때 `main` 이 체크아웃되지 않은 브랜치로 보인다
+PROTECTED_BRANCHES = frozenset({"main", "master"})
 MERGED_LIMIT = 1000
 RECREATABLE_DIRS = frozenset(
     {
@@ -225,8 +270,23 @@ RECREATABLE_DIRS = frozenset(
     }
 )
 RECREATABLE_FILES = frozenset({"next-env.d.ts"})
-# 이름이 흔해 자리째로 본다. `.gitignore` 가 앵커를 붙인 디자인 시스템 패키지의 빌드다(ADR 0026)
-RECREATABLE_PATHS = frozenset({"web/packages/ui/dist/", "web/packages/ui/storybook-static/"})
+# Git Bash 의 grep·sh 가 죽으며 남기는 덤프(루트 `.gitignore` 의 `*.stackdump`)
+RECREATABLE_SUFFIXES = (".stackdump",)
+# 이름이 흔해 자리째로 본다. 디자인 시스템 패키지의 빌드와 `/design-sync` 의 산출물(ADR 0026. 판정의
+# 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json` 이다), 소급 측정 프로브의 gh 응답 캐시(결과는
+# `branches.json` 에 커밋한다). 모두 루트 `.gitignore` 가 앵커를 붙여 무시한다. 플랜 모드의 계획
+# 파일 `.claude/plans/` 는 산출물이 아니라 세션의 계획 원문이라 넣지 않는다(명세 축 리뷰)
+RECREATABLE_PATHS = frozenset(
+    {
+        "web/packages/ui/dist/",
+        "web/packages/ui/storybook-static/",
+        ".ds-sync/",
+        "ds-bundle/",
+        ".design-sync/sb-reference/",
+        ".design-sync/.cache/",
+        ".scratch/harness/probes/session_cost/cache/",
+    }
+)
 
 _LOCK_PID = re.compile(r"^claude session \S+ \(pid (\d+)\)$")
 # 찍은 명령을 에이전트가 셸에 그대로 친다. git 은 브랜치 이름에 `$`·`;`·`(`·백틱을 허락해, 그런
@@ -237,6 +297,7 @@ _ACTIONS: dict[Action, str] = {
     "keep": "남긴다",
     "human": "넘긴다",
     "hold": "넘긴다",
+    "restore": "되돌린다",
 }
 _HOLDER_LABELS: dict[HolderKind, str] = {
     "cwd": "작업 디렉터리로 쥔 프로세스",
@@ -271,7 +332,9 @@ class Worktree:
 
 @dataclass(frozen=True)
 class Facts:
-    """판정 2와 자리 판정의 재료. 자리가 어긋나면 status 를 읽지 않아 빈 값이다."""
+    """판정 2와 자리 판정의 재료. 자리가 어긋나면 status 를 읽지 않아 빈 값이다. `aside` 는 점유
+    탐침의 옆 이름 폴더가 있다는 뜻이고, `contained` 는 HEAD 가 `origin/main` 에서 닿는다는 뜻이다
+    (분리 HEAD 에서만 읽는다)."""
 
     exists: bool
     toplevel: str | None
@@ -279,6 +342,9 @@ class Facts:
     status_err: str
     ignored: tuple[str, ...]
     settings_same: bool
+    aside: bool = False
+    contained: bool = False
+    has_git: bool = True
 
 
 @dataclass(frozen=True)
@@ -620,7 +686,7 @@ def scan_processes() -> list[ProcessPath] | None:
     None.
 
     `judge` 는 한 번에 한 번(판정 3) 부른다. `remove` 는 점유 탐침이 막히면 이유를 대려고(판정 4의
-    1), 지나가면 앞지우기 직전의 다시 거르기에서(판정 4의 2) 한 번 부른다.
+    1), 지나가면 옮기기 직전의 다시 거르기에서(판정 4의 2) 한 번 부른다.
     """
     try:
         return _process_cwds()
@@ -790,7 +856,11 @@ def unrecreatable(ignored: Sequence[str], settings_same: bool) -> list[str]:
         if entry.endswith("/"):
             if name in RECREATABLE_DIRS or entry in RECREATABLE_PATHS:
                 continue
-        elif name in RECREATABLE_FILES or (entry == SETTINGS and settings_same):
+        elif (
+            name in RECREATABLE_FILES
+            or name.endswith(RECREATABLE_SUFFIXES)
+            or (entry == SETTINGS and settings_same)
+        ):
             continue
         kept.append(entry)
     return kept
@@ -881,19 +951,37 @@ def judge(
     def verdict(action: Action, reason: str) -> Verdict:
         return Verdict(action, wt.path, reason, wt.branch, wt.head)
 
-    if wt.prunable:
-        return verdict("human", "등록이 prunable 이다. 지우다 만 폴더일 수 있다")
-    if not facts.exists:
-        return verdict("human", "등록은 있는데 폴더가 없다")
+    if wt.prunable or not facts.exists:
+        if facts.exists and facts.has_git:
+            return verdict("human", "등록이 prunable 인데 폴더에 .git 이 있다. 사람이 본다")
+        if wt.branch is None and not facts.contained:
+            # 등록이 그 커밋의 마지막 참조일 수 있다. 걷으면 커밋이 매달린다(명세 축 리뷰가 폴더
+            # 없는 경우를, PR 직전 버그 리뷰가 지우다 만 폴더의 경우를 임시 저장소에서 재현했다,
+            # 일지 2026-10-15-06)
+            reason = "분리 HEAD 이고 그 커밋이 origin/main 에 없다. 등록을 걷지 않는다"
+            return verdict("human", reason)
+        if facts.exists:
+            # 지우다 만 폴더다. 부르는 쪽이 등록 없는 폴더의 판정으로 내용을 가른다
+            return verdict("delete", "등록이 prunable 이고 폴더에 .git 이 없다")
+        if facts.aside:
+            reason = "폴더가 옆 이름(.tidy-probe)에 남았다. 되돌린다 줄의 restore 가 되돌린다"
+            return verdict("keep", reason)
+        if wt.locked is not None:
+            return verdict("human", f"폴더가 없는데 등록이 잠겨 있다: {wt.locked or '(사유 없음)'}")
+        return verdict("delete", "폴더가 없고 등록만 남았다. remove 가 등록을 걷는다")
     if facts.toplevel is None or not same_path(facts.toplevel, wt.path):
         return verdict("human", f"그 폴더의 git 이 다른 저장소({facts.toplevel})를 읽는다")
-    if wt.branch is None or wt.head is None:
-        return verdict("human", "분리 HEAD 다")
-    heads = merged.get(wt.branch)
-    if not heads:
-        return verdict("keep", "병합된 PR 이 없다")
-    if wt.head not in heads:
-        return verdict("human", "병합된 PR 의 머리와 브랜치 끝이 다르다")
+    if wt.head is None:
+        return verdict("human", "HEAD 를 읽지 못했다")
+    if wt.branch is None:
+        if not facts.contained:
+            return verdict("human", "분리 HEAD 이고 그 커밋이 origin/main 에 없다")
+    else:
+        heads = merged.get(wt.branch)
+        if not heads:
+            return verdict("keep", "병합된 PR 이 없다")
+        if wt.head not in heads:
+            return verdict("human", "병합된 PR 의 머리와 브랜치 끝이 다르다")
     if facts.status:
         return verdict("keep", "바뀐 파일이 있다")
     if facts.status_err:
@@ -910,8 +998,9 @@ def judge(
         return verdict("keep", f"잠금 pid {pid} 가 살아 있다. 그 세션: {wt.locked}")
     if holders:
         return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
+    note = "분리 HEAD 이고 그 커밋이 origin/main 에 있다" if wt.branch is None else ""
     if pid is None:
-        return verdict("delete", "")
+        return verdict("delete", note)
     dead = f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다"
     return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=True)
 
@@ -919,7 +1008,9 @@ def judge(
 def hold_for_strangers(
     verdicts: Sequence[Verdict], running: Sequence[str], checked_out: set[str]
 ) -> list[Verdict]:
-    """제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 것을 넘긴다."""
+    """제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 것을 넘긴다.
+    부르는 쪽(`_judge_all`)은 프로세스의 작업 디렉터리를 읽었을 때 이 함수를 부르지 않는다.
+    세션의 `claude.exe` 가 그 워크트리를 작업 디렉터리로 쥐어 판정 3이 이름으로 남긴다."""
     strangers = [title for title in running if title not in checked_out]
     if not strangers:
         return list(verdicts)
@@ -929,11 +1020,19 @@ def hold_for_strangers(
     ]
 
 
-def judge_branch(branch: str, tip: str, merged: Mapping[str, frozenset[str]]) -> Verdict:
-    """체크아웃되지 않은 로컬 브랜치의 판정 1."""
+def judge_branch(
+    branch: str, tip: str, merged: Mapping[str, frozenset[str]], contained: bool = False
+) -> Verdict:
+    """체크아웃되지 않은 로컬 브랜치의 판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서
+    닿는다는 뜻이다. 병합된 PR 이 없어도 그러면 지운다. 잃는 것은 이름뿐이다."""
+    if branch in PROTECTED_BRANCHES:
+        return Verdict("keep", branch, "지우지 않는 브랜치다", branch, tip)
     heads = merged.get(branch)
     if not heads:
-        return Verdict("keep", branch, "병합된 PR 이 없다", branch, tip)
+        if contained:
+            return Verdict("delete", branch, "커밋이 모두 origin/main 에 있다", branch, tip)
+        reason = "병합된 PR 이 없고 origin/main 에 없는 커밋이 있다"
+        return Verdict("keep", branch, reason, branch, tip)
     if tip not in heads:
         return Verdict("human", branch, "병합된 PR 의 머리와 브랜치 끝이 다르다", branch, tip)
     return Verdict("delete", branch, "", branch, tip)
@@ -963,12 +1062,10 @@ def judge_stray(
         return Verdict(action, path, reason)
 
     if facts.has_git:
-        reason = "등록 없는 폴더인데 .git 이 있다. 어느 등록이 이 폴더를 잃었을 수 있다"
         if orphan_home is not None:
-            reason = (
-                f"점유 탐침이 옆 이름에 남긴 폴더이고 {orphan_home} 의 등록이 폴더를 잃었다. 그"
-                " 이름으로 되돌리면 등록이 다시 맞는다"
-            )
+            reason = f"점유 탐침이 옆 이름에 남긴 폴더이고 {orphan_home} 의 등록이 폴더를 잃었다"
+            return verdict("restore", reason)
+        reason = "등록 없는 폴더인데 .git 이 있다. 어느 등록이 이 폴더를 잃었을 수 있다"
         return verdict("human", reason)
     if facts.error:
         return verdict("keep", f"등록 없는 폴더를 읽다 막혔다: {facts.error}")
@@ -1032,10 +1129,22 @@ def _misplaced(*, exists: bool, toplevel: str | None) -> Facts:
     )
 
 
+def contains(root: Path, commit: str, git: GitRunner) -> bool:
+    """`commit` 이 `origin/main` 에서 닿는지. `origin/main` 이 없으면 닿지 않는 것으로 본다."""
+    return git(["merge-base", "--is-ancestor", commit, "origin/main"], root).returncode == 0
+
+
 def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
     path = Path(wt.path)
+    # 분리 HEAD 는 폴더가 없어도 본다. 등록을 걷기 전에 그 커밋이 origin/main 에 있는지 알아야 한다
+    contained = wt.branch is None and wt.head is not None and contains(root, wt.head, git)
     if not path.is_dir():
-        return _misplaced(exists=False, toplevel=None)
+        aside = os.path.lexists(path.with_name(path.name + PROBE_SUFFIX))
+        missing = _misplaced(exists=False, toplevel=None)
+        return replace(missing, aside=aside, contained=contained)
+    if wt.prunable:
+        dead = _misplaced(exists=True, toplevel=None)
+        return replace(dead, has_git=(path / ".git").exists(), contained=contained)
     top = git(["rev-parse", "--show-toplevel"], path)
     toplevel = top.stdout.strip() if top.returncode == 0 else None
     if toplevel is None or not same_path(toplevel, wt.path):
@@ -1054,6 +1163,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
         status_err=status_err,
         ignored=ignored,
         settings_same=settings_same,
+        contained=contained,
     )
 
 
@@ -1154,10 +1264,13 @@ def _unregistered(root: Path, listing: Sequence[Worktree]) -> list[Path]:
     holder = root / WORKTREES_DIR
     if not holder.is_dir():
         return []
+    trash = root / TRASH_DIR
     return sorted(
         path
         for path in holder.iterdir()
-        if path.is_dir() and not any(same_path(str(path), wt.path) for wt in listing)
+        if path.is_dir()
+        and not same_path(str(path), str(trash))
+        and not any(same_path(str(path), wt.path) for wt in listing)
     )
 
 
@@ -1180,7 +1293,8 @@ def _orphan_home(stray: Path, listing: Sequence[Worktree]) -> str | None:
 
 
 def _render_worktree(verdict: Verdict) -> str:
-    command = f'{COMMAND} remove "{verdict.path}" {verdict.branch} {verdict.head}'
+    branch = DETACHED if verdict.branch is None else verdict.branch
+    command = f'{COMMAND} remove "{verdict.path}" {branch} {verdict.head}'
     return _render(verdict, "", command)
 
 
@@ -1190,6 +1304,8 @@ def _render_branch(verdict: Verdict) -> str:
 
 
 def _render_stray(verdict: Verdict) -> str:
+    if verdict.action == "restore":
+        return _render(verdict, "", f'{COMMAND} restore "{verdict.path}"')
     return _render(verdict, "", f'{COMMAND} remove-stray "{verdict.path}"')
 
 
@@ -1197,12 +1313,12 @@ def _render(verdict: Verdict, prefix: str, command: str) -> str:
     """판정 한 줄. `prefix` 는 라벨 앞에 붙는 말이다(브랜치 줄은 `브랜치를 `)."""
     label = prefix + _ACTIONS[verdict.action]
     names = (verdict.path, verdict.branch or "", verdict.head or "")
-    if verdict.action in ("delete", "hold") and any(map(_SHELL_UNSAFE.search, names)):
+    if verdict.action in ("delete", "hold", "restore") and any(map(_SHELL_UNSAFE.search, names)):
         hand_off = prefix + "넘긴다"
         return f"{hand_off} {verdict.path} — 셸이 풀 수 있는 글자가 든 이름이라 명령을 찍지 않는다"
     if verdict.action == "hold":
         return f"{label} {verdict.path} — {verdict.reason}. 승인하면 → {command}"
-    if verdict.action != "delete":
+    if verdict.action not in ("delete", "restore"):
         return f"{label} {verdict.path} — {verdict.reason}"
     note = f" ({verdict.reason})" if verdict.reason else ""
     return f"{label} {verdict.path}{note} → {command}"
@@ -1213,42 +1329,178 @@ def _reachable(root: Path, git: GitRunner) -> Callable[[], frozenset[str]]:
     return functools.cache(lambda: reachable_objects(root, git))
 
 
+def _contained_branches(root: Path, git: GitRunner) -> frozenset[str]:
+    """끝이 `origin/main` 에서 닿는 로컬 브랜치. `origin/main` 이 없으면 빈 집합이다."""
+    args = ["for-each-ref", "--merged", "origin/main", "--format=%(refname:short)", "refs/heads"]
+    listed = git(args, root)
+    if listed.returncode != 0:
+        return frozenset()
+    return frozenset(line for line in listed.stdout.splitlines() if line)
+
+
 def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops: Ops) -> int:
     merged = ops.merged(root)
     others = [wt for wt in listing[1:] if not wt.bare]
     processes = ops.processes()
-    modules = ops.modules()
-    verdicts = [
-        judge(
-            wt,
-            gather(root, wt, ops.git),
-            merged,
-            running,
-            ops.pid_alive,
-            holders_from(processes, modules, wt.path),
-        )
-        for wt in others
-    ]
-    checked_out = {wt.branch for wt in listing if wt.branch is not None}
-    for verdict in hold_for_strangers(verdicts, running, checked_out):
-        print(_render_worktree(verdict))
     reachable = _reachable(root, ops.git)
+    # 모듈 훑기는 한 번에 1초 안팎이라 처음 필요할 때 한 번만 한다(등록 없는 폴더와 휴지통)
+    modules = functools.cache(ops.modules)
+    verdicts: list[Verdict] = []
+    for wt in others:
+        facts = gather(root, wt, ops.git)
+        verdict = judge(wt, facts, merged, running, ops.pid_alive, holders_in(processes, wt.path))
+        if _dead(wt, facts):
+            # 지우다 만 폴더. 내용은 등록 없는 폴더의 판정으로 가르고, 명령은 워크트리의 것이다
+            holders = holders_from(processes, modules(), wt.path)
+            inner = judge_stray(wt.path, gather_stray(root, Path(wt.path), reachable), holders)
+            if inner.action != "delete":
+                verdict = replace(inner, branch=wt.branch, head=wt.head)
+        verdicts.append(verdict)
+    checked_out = {wt.branch for wt in listing if wt.branch is not None}
+    # 빈 목록은 읽지 못한 것으로 본다. 훑기가 됐으면 이 도구 자신의 파이썬이 들어 비지 않는다
+    # (윈도의 `K32EnumProcesses` 실패와 모든 `OpenProcess` 실패가 빈 목록을 돌려준다, PR #243
+    # CodeRabbit)
+    held = verdicts if processes else hold_for_strangers(verdicts, running, checked_out)
+    for verdict in held:
+        print(_render_worktree(verdict))
     for place in _unregistered(root, listing):
         path = place.as_posix()
         if _is_link(place):
             print(f"넘긴다 {path} — 등록 없는 자리가 링크다. 안을 읽지 않는다")
             continue
         facts = gather_stray(root, place, reachable)
-        holders = holders_from(processes, modules, path)
+        holders = holders_from(processes, modules(), path)
         print(_render_stray(judge_stray(path, facts, holders, _orphan_home(place, listing))))
     refs = _checked(
         ops.git, ["for-each-ref", "refs/heads", "--format=%(refname:short) %(objectname)"], root
     )
+    contained = _contained_branches(root, ops.git)
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
         if branch and branch not in checked_out:
-            print(_render_branch(judge_branch(branch, tip, merged)))
+            print(_render_branch(judge_branch(branch, tip, merged, branch in contained)))
+    if trash_dir(root) is None:
+        print(_trash_refused(root))
+    leftovers = _trash_entries(root)
+    for entry in leftovers:
+        holders = combine_holders(
+            holders_from(processes, modules(), str(entry)),
+            holders_from(processes, modules(), origin_of(root, entry)),
+        )
+        print(f"휴지통에 남았다 {entry.as_posix()} — {describe_holders(holders)}")
+    if leftovers:
+        print(f"휴지통을 비운다 → {COMMAND} empty-trash")
     return 0
+
+
+def trash_dir(root: Path) -> Path | None:
+    """휴지통 자리. 그 자리가 링크(심볼릭 링크, 정션)거나 폴더가 아닌 것이면 None. 링크 너머를
+    휴지통으로 읽으면 `empty-trash` 가 링크 너머의 내용을 지운다(PR 직전 보안 리뷰가 정션으로
+    재현했다, 일지 2026-10-15-06). 등록 없는 폴더의 링크 처리와 같다."""
+    trash = root / TRASH_DIR
+    if _is_link(trash) or (os.path.lexists(trash) and not trash.is_dir()):
+        return None
+    return trash
+
+
+def _trash_entries(root: Path) -> list[Path]:
+    """휴지통 바로 아래의 항목. 이전 `remove` 가 옮겨 두고 지우지 못한 것이다. 자리가 링크면
+    읽지 않는다(빈 목록)."""
+    trash = trash_dir(root)
+    if trash is None or not trash.is_dir():
+        return []
+    return sorted(trash.iterdir())
+
+
+TRASH_REFUSED = "휴지통 자리가 링크거나 폴더가 아니다. 안을 읽지 않는다"
+
+
+def _trash_refused(root: Path) -> str:
+    return f"넘긴다 {(root / TRASH_DIR).as_posix()} — {TRASH_REFUSED}"
+
+
+def flatten(relative: str) -> str:
+    """워크트리 안 상대 경로를 휴지통 자리 이름의 한 토막으로. `%` 를 `%25` 로, `/` 를 `%2F` 로 바꿔
+    `unflatten` 이 되돌릴 수 있다(`__pycache__` 처럼 `_` 가 든 이름이 `__` 치환과 섞이지 않는다)."""
+    return relative.rstrip("/").replace("%", "%25").replace("/", "%2F")
+
+
+def unflatten(flat: str) -> str:
+    return flat.replace("%2F", "/").replace("%25", "%")
+
+
+def trash_slot(root: Path, name: str, entry: str) -> Path:
+    """`entry`(워크트리 안 상대 경로)를 옮겨 둘 휴지통 자리 `<워크트리 이름>~~<flatten(entry)>`.
+    같은 자리가 있으면 `~<번호>` 를 붙인다."""
+    base = root / TRASH_DIR / f"{name}~~{flatten(entry)}"
+    slot = base
+    counter = 1
+    while os.path.lexists(slot):
+        slot = base.with_name(f"{base.name}~{counter}")
+        counter += 1
+    return slot
+
+
+def _move_aside(
+    root: Path, path: Path, entries: Sequence[str], rename: Callable[[str, str], None]
+) -> tuple[list[Path], bool]:
+    """옮기기. 무시된 항목을 휴지통으로 이름 바꾸기 한다. 막히면 그 자리에서 멈추고 (옮긴 것,
+    False) 를 돌려준다(막힌 항목과 그 뒤는 워크트리에 남는다). 올린 모듈은 이름 바꾸기를 막지
+    않아(`lock_holder.py` 의 G, `worktree_occupancy.py` 의 E) 제자리 지우기가 막히던 자리
+    (`module_holder.py` 의 G·E)를 지난다."""
+    if not _ensure_trash(root):
+        print(f"남겼다 {path.as_posix()} — {TRASH_REFUSED}")
+        return [], False
+    moved: list[Path] = []
+    for entry in entries:
+        source = path / entry.rstrip("/")
+        if not os.path.lexists(source):
+            continue
+        slot = trash_slot(root, path.name, entry)
+        try:
+            rename(long_path(source), long_path(slot))
+        except OSError as error:
+            print(
+                f"남겼다 {path.as_posix()} — 다시 만들 수 있는 {entry} 를 휴지통으로 옮기다 "
+                f"막혔다({error}). 등록과 .git 은 남았다. 먼저 옮긴 것은 휴지통에서 지운다"
+            )
+            return moved, False
+        moved.append(slot)
+    return moved, True
+
+
+def origin_of(root: Path, slot: Path) -> str:
+    """휴지통 항목이 옮겨지기 전에 있던 자리(어림). 자리 이름은 `trash_slot` 의 것이다. 워크트리가
+    `WORKTREES_DIR` 아래였다고 보고, 이름에 `~~` 가 든 워크트리와 `~<숫자>` 로 끝나는 경로는
+    어긋난다 (못 보는 것). 올린 모듈의 매핑 이름은 옮기기 전 이름으로 남아(윈도의
+    `GetMappedFileNameW`. 옮긴 뒤의 시험이 쥔 pid 를 대지 못했다, 일지 2026-10-15-06) 쥔 프로세스를
+    그 이름으로도 찾는다."""
+    name, _, flat = slot.name.partition("~~")
+    flat = re.sub(r"~\d+$", "", flat)
+    return (root / WORKTREES_DIR / name / unflatten(flat)).as_posix()
+
+
+def _empty(entries: Sequence[Path], ops: Ops, root: Path) -> list[Path]:
+    """휴지통 항목을 지운다. 막힌 것은 쥔 프로세스를 들어 찍고 남긴다. 프로세스는 처음 막혔을 때
+    한 번 훑는다. 쥔 프로세스는 지금 자리와 옮기기 전 자리(`origin_of`) 둘로 찾는다."""
+    left: list[Path] = []
+    scanned: tuple[list[ProcessPath] | None, list[ProcessPath] | None] | None = None
+    for entry in entries:
+        try:
+            ops.delete(entry)
+        except OSError as error:
+            if scanned is None:
+                scanned = (ops.processes(), ops.modules())
+            holders = combine_holders(
+                holders_from(scanned[0], scanned[1], str(entry)),
+                holders_from(scanned[0], scanned[1], origin_of(root, entry)),
+            )
+            print(
+                f"휴지통에 남았다 {entry.as_posix()} — 지우다 막혔다({error}). "
+                f"{describe_holders(holders)}. 다음 judge 가 다시 본다"
+            )
+            left.append(entry)
+    return left
 
 
 def _remove(
@@ -1259,28 +1511,90 @@ def _remove(
     if wt is None:
         print(f"남겼다 {target} — 등록된 워크트리가 아니다")
         return 1
-    if (wt.branch, wt.head) != (branch, head):
+    wanted = None if branch == DETACHED else branch
+    if (wt.branch, wt.head) != (wanted, head):
         print(f"남겼다 {target} — judge 뒤에 바뀌었다: 지금 {wt.branch} {wt.head}")
         return 1
     merged = ops.merged(root)
-    if _still_candidate(root, wt, merged, ops, "지우기 전에", ()) is None:
+    first = _still_candidate(root, wt, merged, ops, "지우기 전에", ())
+    if first is None:
         return 1
+    if not first[1].exists:
+        return _drop_registration(root, wt, ops.git)
+    if _dead(wt, first[1]):
+        return _remove_dead(root, wt, ops)
     stop = _probe(Path(wt.path), ops)
     if stop is not None:
         return stop
-    # 판정 뒤에 생긴 것(`.env`, 새 파일, 작업 디렉터리 주인, 모듈을 올린 프로세스)을 앞지우기가
-    # 지우지 않게, 쥔 프로세스까지 다시 판정해 지울 목록을 읽는다. 리눅스의 탐침은 작업 디렉터리를,
-    # 윈도의 탐침은 올린 모듈을 보지 못한다(PR #184 리뷰, 대기열 201)
-    holders = holders_now(ops, wt.path)
-    again = _still_candidate(root, wt, merged, ops, "앞지우기 직전에", holders)
+    # 판정 뒤에 생긴 것(`.env`, 새 파일, 작업 디렉터리 주인)을 옮기지 않게, 쥔 프로세스까지 다시
+    # 판정해 옮길 목록을 읽는다. 리눅스의 탐침은 작업 디렉터리를 보지 못한다(PR #184 리뷰)
+    holders = holders_in(ops.processes(), wt.path)
+    again = _still_candidate(root, wt, merged, ops, "옮기기 직전에", holders)
     if again is None:
         return 1
     verdict, facts = again
     if verdict.unlock and not _unlock(root, wt, ops.git):
         return 1
-    if not _pre_delete(Path(wt.path), facts.ignored, ops.delete):
+    moved, done = _move_aside(root, Path(wt.path), facts.ignored, ops.rename)
+    if not done:
+        _empty(moved, ops, root)
         return 1
-    return _git_remove(root, wt.path, branch, ops.git)
+    code = _git_remove(root, wt.path, wanted, ops.git)
+    _empty(moved, ops, root)
+    return code
+
+
+def _dead(wt: Worktree, facts: Facts) -> bool:
+    """등록은 prunable 인데 `.git` 없는 폴더가 남은 것(지우다 만 폴더)."""
+    return wt.prunable and facts.exists and not facts.has_git
+
+
+def _remove_dead(root: Path, wt: Worktree, ops: Ops) -> int:
+    """지우다 만 폴더를 등록 없는 폴더처럼 판정해 휴지통으로 옮기고 등록을 걷는다. git 은 폴더가
+    있는 채로는 prunable 등록을 걷지 않는다(`validation failed`, 임시 저장소에서 손으로 봤다)."""
+    path = Path(wt.path)
+    reachable = _reachable(root, ops.git)
+    if _still_stray(root, path, reachable, "등록을 걷기 전에", ()) is None:
+        return 1
+    moved = _move_whole(root, path, reachable, ops)
+    if isinstance(moved, int):
+        return moved
+    code = _drop_registration(root, wt, ops.git)
+    _empty([moved], ops, root)
+    return code
+
+
+def _move_whole(
+    root: Path, path: Path, reachable: Callable[[], frozenset[str]], ops: Ops
+) -> Path | int:
+    """등록 없는 폴더(또는 지우다 만 폴더)를 탐침과 재판정을 거쳐 폴더째 휴지통으로 옮긴다. 옮긴
+    자리를 돌려주고, 멈추면 종료 코드를 돌려준다."""
+    stop = _probe(path, ops)
+    if stop is not None:
+        return stop
+    if _still_stray(root, path, reachable, "옮기기 직전에", holders_now(ops, str(path))) is None:
+        return 1
+    if not _ensure_trash(root):
+        print(f"남겼다 {path.as_posix()} — {TRASH_REFUSED}")
+        return 1
+    slot = trash_slot(root, path.name, "")
+    try:
+        ops.rename(long_path(path), long_path(slot))
+    except OSError as error:
+        print(f"남겼다 {path.as_posix()} — 휴지통으로 옮기다 막혔다({error})")
+        return 1
+    return slot
+
+
+def _drop_registration(root: Path, wt: Worktree, git: GitRunner) -> int:
+    """폴더가 없는 등록을 걷는다. git 2.32 의 `worktree remove` 는 폴더가 없으면 등록만 걷는다
+    (임시 저장소에서 손으로 봤다, 일지 2026-10-15-06). 브랜치는 다음 `judge` 가 본다."""
+    removed = git(["worktree", "remove", wt.path], root)
+    if removed.returncode != 0:
+        print(f"남겼다 {wt.path} — git worktree remove: {removed.stderr.strip()}")
+        return 1
+    print(f"걷었다 {wt.path} 의 등록. 브랜치 {wt.branch or '(분리 HEAD)'} 는 다음 judge 가 본다")
+    return 0
 
 
 def _still_candidate(
@@ -1303,7 +1617,7 @@ def _still_candidate(
 def _probe(path: Path, ops: Ops) -> int | None:
     """점유 탐침. 지나면 None, 막히면 1(바꾼 것 없음), 끝내 되돌리지 못하면 3.
 
-    막혔을 때만 쥔 프로세스를 찾아 이유에 붙인다. 지나간 지우기는 앞지우기 직전의 다시 거르기에서
+    막혔을 때만 쥔 프로세스를 찾아 이유에 붙인다. 지나간 지우기는 옮기기 직전의 다시 거르기에서
     한 번 훑는다(판정 4의 2). 되돌리기는 `RESTORE_WAITS` 만큼 기다리며 다시 시도한다(대기열 202).
     """
     aside = path.with_name(path.name + PROBE_SUFFIX)
@@ -1348,21 +1662,7 @@ def _unlock(root: Path, wt: Worktree, git: GitRunner) -> bool:
     return True
 
 
-def _pre_delete(path: Path, entries: Sequence[str], delete: Callable[[Path], None]) -> bool:
-    """앞지우기. 막히면 그 자리에서 멈추고 False. 등록과 `.git` 은 남는다."""
-    for entry in entries:
-        try:
-            delete(path / entry)
-        except OSError as error:
-            print(
-                f"남겼다 {path.as_posix()} — 다시 만들 수 있는 {entry} 를 지우다 막혔다({error}). "
-                "등록과 .git 은 남았다"
-            )
-            return False
-    return True
-
-
-def _git_remove(root: Path, path: str, branch: str, git: GitRunner) -> int:
+def _git_remove(root: Path, path: str, branch: str | None, git: GitRunner) -> int:
     removed = git(["worktree", "remove", path], root)
     if removed.returncode != 0:
         print(
@@ -1370,6 +1670,9 @@ def _git_remove(root: Path, path: str, branch: str, git: GitRunner) -> int:
             f"{removed.stderr.strip()}. 등록과 .git 파일이 지워졌을 수 있다"
         )
         return 3
+    if branch is None:
+        print(f"지웠다 {path} (분리 HEAD)")
+        return 0
     deleted = git(["branch", "-D", branch], root)
     if deleted.returncode != 0:
         print(f"지웠다 {path}, 브랜치는 남았다 — git branch -D: {deleted.stderr.strip()}")
@@ -1386,7 +1689,7 @@ def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, o
     if current.returncode != 0 or current.stdout.strip() != tip:
         print(f"남겼다 {branch} — judge 뒤에 바뀌었다: 지금 {current.stdout.strip() or '없음'}")
         return 1
-    verdict = judge_branch(branch, tip, ops.merged(root))
+    verdict = judge_branch(branch, tip, ops.merged(root), contains(root, tip, ops.git))
     if verdict.action != "delete":
         print(f"남겼다 {branch} — 다시 판정했다: {verdict.reason}")
         return 1
@@ -1408,21 +1711,58 @@ def _remove_stray(root: Path, listing: list[Worktree], target: str, ops: Ops) ->
     reachable = _reachable(root, ops.git)
     if _still_stray(root, path, reachable, "지우기 전에", ()) is None:
         return 1
-    stop = _probe(path, ops)
-    if stop is not None:
-        return stop
-    if _still_stray(root, path, reachable, "지우기 직전에", holders_now(ops, str(path))) is None:
+    moved = _move_whole(root, path, reachable, ops)
+    if isinstance(moved, int):
+        return moved
+    left = _empty([moved], ops, root)
+    print(f"지웠다 {path.as_posix()}" + (" (휴지통에 일부가 남았다)" if left else ""))
+    return 0
+
+
+def _restore(root: Path, listing: list[Worktree], target: str, ops: Ops) -> int:
+    """점유 탐침이 옆 이름에 남긴 폴더를 원래 이름으로 되돌린다. 원래 이름의 등록이 폴더를 잃은
+    채 남아 있을 때만이다."""
+    aside = Path(target)
+    if not aside.name.endswith(PROBE_SUFFIX) or not aside.is_dir():
+        print(f"남겼다 {target} — {PROBE_SUFFIX} 로 끝나는 폴더가 아니다")
+        return 1
+    home = aside.with_name(aside.name.removesuffix(PROBE_SUFFIX))
+    if not any(same_path(str(home), wt.path) for wt in listing[1:]):
+        print(f"남겼다 {target} — {home.as_posix()} 의 등록이 없다")
+        return 1
+    if os.path.lexists(home):
+        print(f"남겼다 {target} — {home.as_posix()} 가 이미 있다")
         return 1
     try:
-        ops.delete(path)
+        ops.rename(long_path(aside), long_path(home))
     except OSError as error:
-        print(
-            f"남겼다 {path.as_posix()} — 지우다 막혔다({error}). 남은 것은 다시 만들 수 있거나 "
-            "커밋에 있는 것이다"
-        )
+        print(f"남겼다 {target} — 되돌리다 막혔다({error})")
         return 1
-    print(f"지웠다 {path.as_posix()}")
+    print(f"되돌렸다 {home.as_posix()}. 다음 judge 가 다시 본다")
     return 0
+
+
+def _ensure_trash(root: Path) -> bool:
+    """휴지통 폴더를 만든다. 그 자리가 링크거나 폴더가 아니면 만들지 않고 False."""
+    if trash_dir(root) is None:
+        return False
+    (root / TRASH_DIR).mkdir(parents=True, exist_ok=True)
+    return True
+
+
+def _empty_trash(root: Path, ops: Ops) -> int:
+    if trash_dir(root) is None:
+        print(_trash_refused(root))
+        return 1
+    entries = _trash_entries(root)
+    if not entries:
+        print("휴지통이 비어 있다")
+        return 0
+    left = _empty(entries, ops, root)
+    for entry in entries:
+        if entry not in left:
+            print(f"지웠다 {entry.as_posix()}")
+    return 1 if left else 0
 
 
 def _still_stray(
@@ -1457,6 +1797,9 @@ def _parser() -> argparse.ArgumentParser:
     branch.add_argument("tip")
     stray = commands.add_parser("remove-stray", help="등록 없는 워크트리 폴더 하나를 지운다")
     stray.add_argument("path")
+    restore = commands.add_parser("restore", help="탐침이 옆 이름에 남긴 폴더를 되돌린다")
+    restore.add_argument("path")
+    commands.add_parser("empty-trash", help="휴지통에 남은 것을 지운다")
     return parser
 
 
@@ -1482,6 +1825,10 @@ def main(
             return _remove(root, listing, args.path, args.branch, args.head, tools)
         if command == "remove-stray":
             return _remove_stray(root, listing, args.path, tools)
+        if command == "restore":
+            return _restore(root, listing, args.path, tools)
+        if command == "empty-trash":
+            return _empty_trash(root, tools)
         return _remove_branch(root, listing, args.branch, args.tip, tools)
     except ToolError as error:
         print(error, file=sys.stderr)
