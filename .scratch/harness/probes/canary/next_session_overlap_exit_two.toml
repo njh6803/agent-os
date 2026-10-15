@@ -1,11 +1,10 @@
 # next-session 1단계 4(일지)의 번호 받기에 더한 2 갈래 문장(번호 대조 도구의 `할 일:` 줄을 따른다, 대기열 251)이 새 세션에 실리는지.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(55ba299)이다. 옛 판에는 그 갈래가 없다.
-# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `55ba299`, 실험군은 `55ba299` 위의 커밋 전 변경, 일지 2026-10-15-15).
 #   셀프 리뷰 반영(문장을 "날짜가 오늘이 아닐 수 있다" 뒤로 옮겼다)은 같은 날 사전 확인으로 갈음했다(일지 2026-10-15-15).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   git worktree add --detach ../../../../agent-canary-55ba299 55ba299
-#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_overlap_exit_two.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 55ba299 .scratch/harness/probes/canary/next_session_overlap_exit_two.toml <출력 디렉터리>
 kind = "skill"
 question = '''
 next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.

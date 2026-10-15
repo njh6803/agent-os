@@ -9,8 +9,16 @@
 세 번 손으로 지었고, 뒤의 두 번은 판정이 거짓 통과 자리를 다시 열거나 새로 냈다(대기열 153, 일지
 2026-10-11-01·2026-10-12-02).
 
-사용: uv run python tools/canary.py <명세.toml> <출력 디렉터리>
-      uv run python tools/canary.py --preflight <명세.toml> [<명세.toml> ...]
+사용: uv run python tools/canary.py [--control-commit <커밋>] <명세.toml> <출력 디렉터리>
+      uv run python tools/canary.py --preflight [--control-commit <커밋>] <명세.toml> ...
+
+`--control-commit` 은 대조군 갈래의 `checkout` 칸 대신 그 커밋을 시스템 임시 디렉터리 아래 임시
+워크트리(`git worktree add --detach`)로 꺼내 대조군의 체크아웃으로 쓰고, 끝나면 걷는다
+(`control_checkout`). 대조군이 둘 이상이면 모두 그 자리다. 커밋은 이 도구를 부른 폴더의 저장소에서
+찾는다. 대조군이 주 체크아웃인 명세는 그 PR 이 병합되면 대조군이 새 사본이라, 이 인자 없이는 옛 판을
+손으로 꺼내고 대조군만 바꾼 명세 사본을 스크래치에 지어 다시 돌렸다(대기열 233). `--preflight` 와
+함께 주면 꺼낸 자리로 돌리기 전의 확인만 하고 걷는다. 커밋 대조군으로 통과한 명세를 문구만 고친 뒤
+갈음할 때 쓴다.
 
 `--preflight` 는 `claude` 를 띄우지 않고 명세마다 돌리기 전의 확인(`_preflight`, 판정 목록 아래
 문단)만 돌며 출력 디렉터리도 쓰지 않는다. 한 번 통과한 명세의 원천에서 문구만 고친 뒤 다시 돌리는
@@ -83,7 +91,10 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 실험군 사본의 원천(`source`)에 카나리아가 모두 있고, 실험군과 체크아웃이 다른 대조군 사본에는 하나도
 없다(대기열 133). 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로 잘못 읽는다. agent 명세면 실험군
 사본의 정의가 `name` 과 `tools` 줄로 명세와 맞는다(`agent_problems`). 갈래 세션에 함께 실리는
-상위 폴더의 `CLAUDE.md` 에 카나리아가 없다(`ancestor_problems`, 대기열 171).
+상위 폴더의 `CLAUDE.md` 에 카나리아가 없다(`ancestor_problems`, 대기열 171). 갈래 세션의 컨텍스트에
+실리는 git 상태(`git status --porcelain` 의 경로, 지금 브랜치, 최근 커밋 다섯의 제목)에 카나리아가
+없다(`view_problems`, 대기열 243). git 을 띄우지 못했으면 이 확인이 빈 채 지나가지 않게 그 갈래를
+막는다.
 
 모델이 부르지 못하는 스킬(`disable-model-invocation: true`)은 질문 머리에 슬래시 명령으로 넣고
 `skill` 을 주지 않는다. 그 본문은 프롬프트에 펼쳐져 Skill 호출도 자리 줄도 남기지 않는다
@@ -126,9 +137,25 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   안의 "없음"뿐이다. 표시는 답을 읽어 보라는 신호이지 판정이 아니다.
 - 커밋하지 않은 변경. 갈래마다 `HEAD` 만 찍어, 실험군 사본이 커밋 전이면 찍힌 커밋에는 바뀐 본문이
   없다. 도는 동안 커밋이 움직였으면 앞뒤를 찍지만, 회차마다 어느 판을 읽었는지는 모른다.
+- git 상태 블록의 나머지와 그 모양. 주 브랜치 이름과 git 사용자 이름도 실리지만 견주지 않는다.
+  상태는 돌리기 전에 한 번 읽어, 그 뒤(출력 디렉터리를 만든 뒤 등)의 변화는 보지 않는다. 세션은 긴
+  상태를 자른다(셀프 리뷰의 서브에이전트가 자기 컨텍스트의 블록이 2천 자를 넘어 잘렸다고 보고했다,
+  일지 2026-10-15-19). 이 확인은 자르지 않고 모두 견주어, 세션이 보지 못한 경로로도 막는다. 이름을
+  바꾼 줄의 앞뒤 둘과 한글 경로를 세션이 어떤 꼴로 보는지도 재지 않았다. 여기서는 둘 다 견주고
+  한글은 이스케이프 없이 견주어, 달라도 더 막는 쪽이다. 규칙 명령(`--tools Read`) 밖의 세션(스킬,
+  서브에이전트)에 git 상태가 실리는지도 재지 않았고 같다고 보고 본다.
+- 강제로 끝난 실행. `--control-commit` 으로 꺼낸 뒤 프로세스가 kill 되거나 꺼내는 도중
+  끊기면(Ctrl+C) 걷는 길이 돌지 않아 임시 워크트리나 그 폴더가 남는다. 꺼내기 전에 찍는 시작
+  줄(`대조군 체크아웃:`)이 그 자리를 알리고, 남은 등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게
+  넘긴다. 꺼내기가 제한 시간을 넘겼을 때 git 이 띄운 손자 프로세스가 출력 파이프를 쥐었다면 그것이
+  끝날 때까지 돌아오지 않는다(`.claude/rules/tools.md` 의 출력을 붙잡은 호출). 로컬 체크아웃이라
+  끝나기는 하고, 꺼내기가 제한 시간을 넘기는 경우를 재지 않았다.
 
-종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(아무것도 돌리지 않았다),
-3 `claude` 를 띄우지 못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다.
+종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(`--control-commit` 의 커밋을
+찾지 못한 것 포함, 아무것도 돌리지 않았다), 3 `claude` 를 띄우지 못했거나 대조군 커밋을 꺼내지
+못했거나(임시 폴더를 만들지 못한 것 포함) 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다. 꺼낸
+대조군을 걷지 못하거나 안의 링크를 끊지 못해 걷지 않았으면 그 자리와 걷는 법을 찍되 종료 코드는
+판정대로다.
 `--preflight` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다.
 """
 
@@ -141,9 +168,11 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypedDict
@@ -160,9 +189,11 @@ _SKILL_DIR = re.compile(r"^Base directory for this skill:\s*(.+?)\s*$", re.MULTI
 _NONE_NOISE = re.compile(r"[\s`*_\"'“”‘’.。!]")
 _NONE_ANSWER = "없음"
 _TIMEOUT_SECONDS = 600.0  # 회차 하나의 제한 시간
-_GIT_TIMEOUT_SECONDS = 30.0  # 커밋 하나를 읽는 제한 시간
+_GIT_TIMEOUT_SECONDS = 30.0  # 커밋이나 상태 하나를 읽는 제한 시간
+_WORKTREE_TIMEOUT_SECONDS = 300.0  # 대조군 워크트리 하나를 꺼내거나 걷는 제한 시간
 _TIMED_OUT = 124  # GNU timeout 의 관례
 _PREFLIGHT = "--preflight"
+_CONTROL_COMMIT = "--control-commit"
 
 
 class SpecError(Exception):
@@ -723,7 +754,10 @@ def source_problems(spec: Spec, places: dict[str, Path]) -> list[str]:
                 found = ", ".join(present)
                 problems.append(
                     f"{arm.name}: 대조군 사본의 원천 {spec.source} 에 카나리아가 있다: {found}. "
-                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다"
+                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다. 그 PR 이 "
+                    "병합된 뒤 다시 돌리는 것이면 바뀌기 전 커밋을 --control-commit <커밋> "
+                    "으로 준다(커밋은 명세 머리 주석이 적고, 없으면 그 명세를 들인 커밋의 "
+                    "부모다. 프로브 README `canary/` 행)"
                 )
     return problems
 
@@ -860,22 +894,128 @@ def run_claude(
     return RunResult(completed.returncode, _text(completed.stdout), _text(completed.stderr))
 
 
+def _git(
+    checkout: Path, *args: str, timeout: float = _GIT_TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess[bytes] | None:
+    """`git -C <checkout>` 을 한 번 띄운다. 띄우지 못했거나 제한 시간을 넘기면 None 이다."""
+    git = shutil.which("git") or "git"
+    try:
+        return subprocess.run(
+            [git, "-C", str(checkout), *args], capture_output=True, check=False, timeout=timeout
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 def head_commit(checkout: Path) -> str | None:
     """체크아웃을 담은 저장소의 `HEAD` 커밋(짧은 꼴). 하위 폴더면 그 저장소의 것이다.
 
     git 저장소 밖이거나, 커밋이 없거나, git 을 띄우지 못했거나, 제한 시간을 넘기면 None 이다.
     """
-    git = shutil.which("git") or "git"
-    try:
-        completed = subprocess.run(
-            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            check=False,
-            timeout=_GIT_TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.TimeoutExpired):
+    completed = _git(checkout, "rev-parse", "--short", "HEAD")
+    if completed is None or completed.returncode != 0:
         return None
-    return _text(completed.stdout).strip() if completed.returncode == 0 else None
+    return _text(completed.stdout).strip()
+
+
+@dataclass(frozen=True)
+class GitView:
+    """갈래 세션의 컨텍스트에 실리는 git 상태 가운데 카나리아와 견주는 것(대기열 243).
+
+    `paths` 는 `git status --porcelain` 의 경로(이름을 바꾼 것은 앞뒤 둘), `branch` 는 지금 브랜치
+    (분리 HEAD 면 빈 글), `subjects` 는 최근 커밋 다섯의 제목이다. 저장소 밖이면 모두 비었다.
+    """
+
+    paths: tuple[str, ...] = ()
+    branch: str = ""
+    subjects: tuple[str, ...] = ()
+
+    def entries(self) -> list[tuple[str, str]]:
+        """(자리, 글) 의 목록. 자리는 문제 메시지에 그대로 들어간다."""
+        return [
+            *(("바뀐 경로", path) for path in self.paths),
+            *([("브랜치", self.branch)] if self.branch else []),
+            *(("커밋 제목", subject) for subject in self.subjects),
+        ]
+
+
+type ViewReader = Callable[[Path], GitView | None]
+
+
+def _porcelain_paths(data: bytes) -> tuple[str, ...]:
+    """`git status --porcelain -z` 의 경로들. 이름을 바꾸거나 복사한 줄은 다음 조각이 옛 경로다."""
+    chunks = _text(data).split("\0")
+    paths: list[str] = []
+    index = 0
+    while index < len(chunks):
+        entry = chunks[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        paths.append(entry[3:])
+        if {"R", "C"} & set(entry[:2]) and index < len(chunks):
+            paths.append(chunks[index])
+            index += 1
+    return tuple(paths)
+
+
+def git_view(checkout: Path) -> GitView | None:
+    """세션에 실리는 체크아웃의 git 상태. git 을 띄우지 못했거나 제한 시간을 넘기면 None 이다.
+
+    claude 2.1.299 에서 규칙 카나리아 명령(`--tools Read`)으로 띄운 세션의 컨텍스트에는 지금 브랜치,
+    짧은 꼴의 상태(추적하지 않는 폴더는 폴더 이름만), 최근 커밋 다섯의 짧은 커밋과 제목이 실렸고,
+    git 저장소가 아닌 폴더에는 실리지 않았다(`.scratch/harness/probes/canary_git_status.py`). 그래서
+    `git status` 가 0 이 아닌 코드로 끝나면(저장소 밖) 빈 것을 준다. 커밋이 없어 `git log` 가
+    실패하면 제목이 없다.
+    """
+    status = _git(checkout, "status", "--porcelain", "-z")
+    if status is None:
+        return None
+    if status.returncode != 0:
+        return GitView()
+    branch = _git(checkout, "branch", "--show-current")
+    log = _git(checkout, "log", "-n", "5", "--format=%s")
+    if branch is None or log is None:
+        return None
+    return GitView(
+        _porcelain_paths(status.stdout),
+        _text(branch.stdout).strip() if branch.returncode == 0 else "",
+        tuple(_text(log.stdout).splitlines()) if log.returncode == 0 else (),
+    )
+
+
+def view_problems(spec: Spec, places: dict[str, Path], view: ViewReader) -> list[str]:
+    """갈래 세션에 실리는 git 상태에 카나리아가 있으면 그 문제들(대기열 243).
+
+    대조군이면 답이 그 블록에서 흘러나오고, 실험군이면 통과가 실린 본문이 아니라 그 블록에서 왔을 수
+    있다. 커밋하지 않은 훅 파일의 이름을 카나리아로 고른 대조군이 셋 모두 "없음"이라 답하고도 설명에
+    그 이름을 적어 실패로 판정됐다(일지 2026-10-13-50). 체크아웃이 없는 갈래는 `_preflight` 가 따로
+    알린다. 같은 체크아웃은 한 번만 읽는다.
+    """
+    seen: dict[str, GitView | None] = {}
+    problems: list[str] = []
+    for arm in spec.arm:
+        checkout = places[arm.name]
+        if not checkout.is_dir():
+            continue
+        key = _place_key(checkout)
+        if key not in seen:
+            seen[key] = view(checkout)
+        current = seen[key]
+        if current is None:
+            problems.append(
+                f"{arm.name}: 체크아웃 {checkout} 의 git 상태를 읽지 못했다"
+                "(git 을 띄우지 못했거나 제한 시간을 넘겼다)"
+            )
+            continue
+        for canary in spec.expect:
+            for where, text in current.entries():
+                if _flat(canary) in _flat(text):
+                    problems.append(
+                        f"{arm.name}: 카나리아 {canary} 가 세션에 실리는 git 상태의 {where} "
+                        f"{text} 에 있다. 답이 그 블록에서 올 수 있다"
+                    )
+    return problems
 
 
 @dataclass(frozen=True)
@@ -938,10 +1078,10 @@ def _summary(facts: Facts) -> str:
     )
 
 
-def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
+def _preflight(spec: Spec, places: dict[str, Path], view: ViewReader) -> list[str]:
     """돌리기 전에 막을 문제들. 갈래의 체크아웃이 없거나, rule 갈래의 대상 파일이 어긋났거나,
     원천 사본이 갈래와 맞지 않거나, 실험군의 서브에이전트 정의가 명세와 다르거나, 상위 폴더의
-    `CLAUDE.md` 에 카나리아가 있다."""
+    `CLAUDE.md` 나 세션에 실리는 git 상태에 카나리아가 있다."""
     problems = [
         f"{arm.name}: 체크아웃 {places[arm.name]} 이 없다"
         for arm in spec.arm
@@ -952,15 +1092,206 @@ def _preflight(spec: Spec, places: dict[str, Path]) -> list[str]:
     ]
     problems += source_problems(spec, places)
     problems += agent_problems(spec, places)
-    return problems + ancestor_problems(spec, places)
+    problems += ancestor_problems(spec, places)
+    return problems + view_problems(spec, places, view)
 
 
-def _places(spec: Spec, base: Path) -> dict[str, Path]:
-    return {arm.name: Path(os.path.abspath(base / arm.checkout)) for arm in spec.arm}
+def _places(spec: Spec, base: Path, control: Path | None = None) -> dict[str, Path]:
+    """갈래마다의 체크아웃. `control` 을 주면 대조군 갈래는 명세의 `checkout` 대신 그 자리다."""
+    return {
+        arm.name: control
+        if control is not None and arm.role == "control"
+        else Path(os.path.abspath(base / arm.checkout))
+        for arm in spec.arm
+    }
 
 
-def _preflight_only(paths: Sequence[str], base: Path, out: Callable[[str], None]) -> int:
-    """`--preflight`. 명세마다 돌리기 전의 확인만 돈다. 하나가 어긋나도 나머지를 마저 본다."""
+class CheckoutError(Exception):
+    """대조군 커밋을 임시 워크트리로 꺼내지 못했다. `code` 는 `main` 의 종료 코드다."""
+
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _last_line(data: bytes) -> str:
+    return (_text(data).strip().splitlines() or ["stderr 없음"])[-1]
+
+
+def _worktree(base: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
+    """`git worktree` 를 긴 경로를 켜고 한 번 띄운다. 체크아웃 하나를 쓰거나 지워 제한 시간이
+    길다."""
+    return _git(
+        base, "-c", "core.longpaths=true", "worktree", *args, timeout=_WORKTREE_TIMEOUT_SECONDS
+    )
+
+
+def _unlink(path: str) -> bool:
+    """링크 하나를 링크만 지운다. 가리키는 폴더나 파일은 건드리지 않는다.
+
+    윈도의 junction 도 `os.unlink` 가 링크만 지웠다(파이썬 3.12, 테스트가 junction 으로 고정한다).
+    """
+    try:
+        os.unlink(path)
+    except OSError:
+        return False
+    return True
+
+
+def _cut_links(folder: Path) -> list[str]:
+    """`folder` 아래의 심볼릭 링크와 junction 을 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더를
+    준다.
+
+    git 2.32 의 `git worktree remove --force` 는 꺼낸 자리 안의 junction 을 따라가 그 바깥 폴더의
+    파일까지 지웠다(PR 직전 bug-perf-review 가 임시 저장소에서 손으로 봤고, 이 저장소의 테스트가
+    같은 입력을 고정한다, 일지 2026-10-15-19). 링크 안으로는 내려가지 않는다.
+    """
+    left: list[str] = []
+    pending = [folder]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError:
+            left.append(str(current))
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                if not _unlink(entry.path):
+                    left.append(entry.path)
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(Path(entry.path))
+    return left
+
+
+def _registered(base: Path, place: Path) -> bool | None:
+    """`place` 가 아직 git 워크트리로 등록돼 있는지. 목록을 읽지 못하면 None 이다."""
+    listed = _worktree(base, "list", "--porcelain")
+    if listed is None or listed.returncode != 0:
+        return None
+    key = _place_key(place)
+    return any(
+        _place_key(line.removeprefix("worktree ")) == key
+        for line in _text(listed.stdout).splitlines()
+        if line.startswith("worktree ")
+    )
+
+
+_FORCE = ("--force",)
+_FORCE_LOCKED = ("--force", "--force")  # 잠긴 워크트리도 걷는다
+
+
+def _leftover_message(
+    base: Path, place: Path, removed: subprocess.CompletedProcess[bytes] | None
+) -> str:
+    """걷기 뒤 임시 폴더가 남았을 때의 알림. 등록이 남았는지에 따라 걷는 법을 가른다.
+
+    git 2.32 는 폴더를 다 지우지 못해도 등록을 먼저 지웠다(PR 직전 bug-perf-review 가 손으로 봤다).
+    등록이 걷힌 폴더에 `git worktree remove` 를 치면 `is not a working tree` 로 끝나고, 그 폴더는
+    `tidy-checkouts` 도 보지 않는다.
+    """
+    if removed is None:
+        reason = "제한 시간을 넘겼거나 git 을 띄우지 못했다"
+    elif removed.returncode != 0:
+        reason = _last_line(removed.stderr)
+    else:
+        reason = "git 은 걷었다고 했지만 폴더가 남았다"
+    head = f"임시 워크트리를 다 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
+    if _registered(base, place) is False:
+        return (
+            f"{head}{place.parent} 를 지운다. git 등록은 걷혔고 폴더만 남았다(안의 링크는 이미 "
+            "끊었다)"
+        )
+    return (
+        f"{head}git worktree remove --force {place} 로 걷고(잠겼으면 --force 를 두 번 준다) "
+        f"{place.parent} 를 지운다. 워크트리 세션에서는 앱의 가드가 다른 체크아웃의 지우기를 "
+        "거부할 수 있어 주 체크아웃 세션에서 친다"
+    )
+
+
+def _remove_checkout(
+    base: Path, place: Path, out: Callable[[str], None], force: Sequence[str] = _FORCE
+) -> None:
+    """`control_checkout` 이 꺼낸 임시 워크트리와 그것을 담은 임시 폴더를 걷는다.
+
+    `force` 는 `git worktree remove` 에 줄 깃발이다. `--force` 는 회차 세션이 그 안에 남긴 것(훅이
+    만든 `.venv` 등)까지 지운다. 이 도구가 방금 `mkdtemp` 로 만든 폴더 아래에 꺼낸 것이라 사람의
+    파일이 없다. 다만 그 안의 링크는 git 이 따라가 바깥을 지울 수 있어 먼저 링크만
+    끊고(`_cut_links`), 끊지 못한 것이 남으면 걷지 않고 알린다. 제한 시간을 넘겨 죽은 꺼내기는
+    잠금을 남겼을 수 있어 `_FORCE_LOCKED` 를 준다(git 이 꺼내는 동안 잠근다는 것은 재지 않은
+    어림이다). 걷지 못하면 그 자리와 걷는 법을 찍고 넘어간다(`_leftover_message`). 종료 코드는
+    부르는 쪽이 정하고, 남은 등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게 넘긴다.
+    """
+    left = _cut_links(place)
+    if left:
+        out(
+            f"임시 워크트리를 걷지 않았다: {place}. 안의 링크를 끊지 못해(또는 폴더를 읽지 못해) "
+            f"git 이 그 링크를 따라가 바깥을 지울 수 있다: {', '.join(left[:3])}. 그 링크를 링크만 "
+            f"지운 뒤 git worktree remove --force {place} 로 걷고 {place.parent} 를 지운다"
+        )
+        return
+    removed = _worktree(base, "remove", *force, str(place))
+    with suppress(OSError):
+        place.parent.rmdir()
+    if place.parent.exists():
+        out(_leftover_message(base, place, removed))
+
+
+@contextmanager
+def control_checkout(base: Path, commit: str, out: Callable[[str], None]) -> Generator[Path]:
+    """`commit` 을 시스템 임시 디렉터리 아래 임시 워크트리로 꺼내 그 자리를 주고, 끝나면 걷는다.
+
+    대조군이 주 체크아웃인 명세는 그 PR 이 병합되면 대조군이 새 사본이 되어, 옛 판을 손으로 꺼내고
+    대조군만 바꾼 명세 사본을 스크래치에 지어 다시 돌렸다(대기열 233, 일지 2026-10-13-35).
+    워크트리는 `base` 를 담은 저장소의 것이다. 커밋을 찾지 못하면 종료 코드 2, 꺼내지 못하면 3 의
+    `CheckoutError` 다.
+    """
+    found = _git(base, "rev-parse", "--verify", "--quiet", f"{commit}^{{commit}}")
+    if found is None:
+        raise CheckoutError("git 을 띄우지 못했거나 제한 시간을 넘겼다", 3)
+    if found.returncode != 0:
+        raise CheckoutError(f"커밋 {commit} 을 {base} 의 저장소에서 찾지 못했다", 2)
+    sha = _text(found.stdout).strip()
+    try:
+        parent = Path(tempfile.mkdtemp(prefix="canary-control-"))
+    except OSError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
+    place = parent / sha[:7]
+    # 꺼내는 도중 끊겨도 남은 자리를 알 수 있게 꺼내기 전에 찍는다.
+    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼낸다. 끝나면 걷는다)")
+    added = _worktree(base, "add", "--detach", str(place), sha)
+    if added is None:
+        # 제한 시간을 넘겼으면 git 이 반쯤 꺼낸 등록이 남았을 수 있다. 그 자리는 git 만 만든다.
+        if place.exists():
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
+        else:
+            with suppress(OSError):
+                parent.rmdir()
+        raise CheckoutError("git worktree add 가 제한 시간을 넘겼거나 git 을 띄우지 못했다", 3)
+    if added.returncode != 0:
+        # git 이 거부했으면 그 자리가 이 도구가 꺼낸 워크트리인지 모른다. 지우지 않고 알린다.
+        with suppress(OSError):
+            parent.rmdir()
+        if parent.exists():
+            out(f"임시 폴더 {parent} 가 남았다. 이 도구가 꺼낸 것인지 몰라 지우지 않았다")
+        raise CheckoutError(f"git worktree add 가 실패했다: {_last_line(added.stderr)}", 3)
+    try:
+        yield place
+    finally:
+        _remove_checkout(base, place, out)
+
+
+def _preflight_only(
+    paths: Sequence[str],
+    base: Path,
+    out: Callable[[str], None],
+    view: ViewReader,
+    control: Path | None,
+) -> int:
+    """`--preflight`. 명세마다 돌리기 전의 확인만 돈다. 하나가 어긋나도 나머지를 마저 본다.
+
+    `control` 은 `--control-commit` 으로 꺼낸 대조군 자리다(`_places`).
+    """
     failed = 0
     for name in paths:
         try:
@@ -968,7 +1299,7 @@ def _preflight_only(paths: Sequence[str], base: Path, out: Callable[[str], None]
         except SpecError as error:
             problems = [f"명세 오류: {error}"]
         else:
-            problems = _preflight(spec, _places(spec, base))
+            problems = _preflight(spec, _places(spec, base, control), view)
         out(f"[{'실패' if problems else '통과'}] {name}")
         for problem in problems:
             out(f"  {problem}")
@@ -1027,25 +1358,80 @@ def main(
     runner: Runner = run_claude,
     out: Callable[[str], None] = print,
     commit: CommitReader = head_commit,
+    view: ViewReader = git_view,
 ) -> int:
     base = cwd if cwd is not None else Path.cwd()
-    if len(argv) > 1 and argv[0] == _PREFLIGHT:
-        return _preflight_only(argv[1:], base, out)
-    # 깃발을 뒤에 두거나 잘못 쓰면 출력 디렉터리로 삼아 `claude` 를 돌린다. 그 전에 막는다.
-    if len(argv) != 2 or any(arg.startswith("--") for arg in argv):
+    args = list(argv)
+    preflight = bool(args) and args[0] == _PREFLIGHT
+    if preflight:
+        args = args[1:]
+    control_commit: str | None = None
+    if len(args) >= 2 and args[0] == _CONTROL_COMMIT:
+        control_commit, args = args[1], args[2:]
+    # 깃발을 뒤에 두거나 잘못 쓰면 출력 디렉터리나 명세로 삼는다. 그 전에 막는다.
+    # `-` 로 시작하는 커밋은 git 이 깃발로 읽는다.
+    if (
+        (not args if preflight else len(args) != 2)
+        or any(arg.startswith("--") for arg in args)
+        or (control_commit is not None and control_commit.startswith("-"))
+    ):
         out(__doc__ or "")
         return 2
+    if preflight:
+        return _with_control(
+            base,
+            control_commit,
+            out,
+            lambda control: _preflight_only(args, base, out, view, control),
+        )
     try:
-        spec = read_spec(Path(argv[0]))
+        spec = read_spec(Path(args[0]))
     except SpecError as error:
         out(f"명세 오류(아무것도 돌리지 않았다): {error}")
         return 2
-    output = Path(argv[1])
-    places = _places(spec, base)
+    output = Path(args[1])
+    return _with_control(
+        base,
+        control_commit,
+        out,
+        lambda control: _run(spec, output, _places(spec, base, control), runner, out, commit, view),
+    )
+
+
+def _with_control(
+    base: Path,
+    control_commit: str | None,
+    out: Callable[[str], None],
+    body: Callable[[Path | None], int],
+) -> int:
+    """`control_commit` 이 있으면 그 커밋을 꺼낸 자리로, 없으면 None 으로 `body` 를 부른다.
+
+    꺼내지 못하면 `body` 를 부르지 않고 `CheckoutError` 의 종료 코드를 낸다.
+    """
+    if control_commit is None:
+        return body(None)
+    try:
+        with control_checkout(base, control_commit, out) as place:
+            return body(place)
+    except CheckoutError as error:
+        out(f"대조군 커밋을 꺼내지 못했다(아무것도 돌리지 않았다): {error}")
+        return error.code
+
+
+def _run(
+    spec: Spec,
+    output: Path,
+    places: dict[str, Path],
+    runner: Runner,
+    out: Callable[[str], None],
+    commit: CommitReader,
+    view: ViewReader,
+) -> int:
+    """돌리기 전의 확인을 거쳐 모든 회차를 돌리고 판정을 찍는다. 종료 코드는 `main` 의 것이다."""
     jobs = [
         _Job(arm, index, places[arm.name]) for arm in spec.arm for index in range(1, arm.times + 1)
     ]
-    problems = _preflight(spec, places)
+    problems = _preflight(spec, places, view)
     if problems:
         out("명세 오류(아무것도 돌리지 않았다):")
         for problem in problems:

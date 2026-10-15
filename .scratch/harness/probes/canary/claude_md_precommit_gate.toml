@@ -5,8 +5,7 @@
 # 대기열 171) 실험군의 통과는 워크트리 사본이 실렸다는 뜻이다.
 # 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 `02b21d0`, 일지 2026-10-12-09).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   git worktree add --detach ../../../../agent-canary-02b21d0 02b21d0
-#   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_precommit_gate.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 02b21d0 .scratch/harness/probes/canary/claude_md_precommit_gate.toml <출력 디렉터리>
 kind = "rule"
 question = '''
 Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
