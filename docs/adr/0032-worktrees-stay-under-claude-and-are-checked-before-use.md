@@ -1,0 +1,27 @@
+---
+status: accepted
+date: 2026-10-15
+---
+
+# 워크트리는 `.claude/worktrees/`에 두고, 들어가기 전에 목록으로 자리를 확인하며, 정리는 `tidy-checkouts`가 맡는다
+
+외부에서 가져온 워크트리 운영 규칙안(기본 경로 `.worktrees/<slug>`, 만들기 전 `git worktree list --porcelain` 확인, 세션 소유권 확인, 강제 제거와 `prune` 금지, 앱이 관리하는 워크트리는 앱의 지원 기능으로 정리)을 이 저장소의 현재 방식과 항목마다 견주었다(2026-10-15 세션). 정리 순서, 소유권 판정, 강제 제거와 `prune` 금지는 이미 `tidy-checkouts`가 같은 방향으로 더 엄격하게 하고 있었다. 달랐던 것은 셋이다. 첫째, 위치가 `.claude/worktrees/`라는 것이다. 둘째, 들어가기 전의 확인이 `next-session` 3단계의 한 문장(이미 있는 브랜치는 `git worktree list`에서 체크아웃된 자리를 찾아 들어간다)에 그치고, 그 자리를 쓰는 세션을 보는 단계가 없으며 새 브랜치로 `EnterWorktree(name)`을 칠 때는 확인이 없다는 것이다. 셋째, 앱의 정리 기능을 쓰라는 규칙안이 `tidy-checkouts`의 금지 표(앱의 `clean_up_worktrees`를 쓰지 않고 이 스킬의 3으로 지운다는 행)와 부딪친다는 것이다.
+
+**위치는 `.claude/worktrees/<이름>` 그대로 둔다. `EnterWorktree`를 치기 직전에 `git worktree list --porcelain`을 쳐서, 같은 브랜치가 체크아웃된 워크트리가 있으면 새로 만들지 않고 그 자리로 들어가고, 경로 이름만 같고 브랜치가 다르면 이름을 바꾼다. 그 브랜치를 제목으로 한 실행 중 세션(이 세션 제외)이 있으면 들어가지 않고 사람에게 넘긴다. `locked` 줄은 막는 이유로 쓰지 않는다. 정리는 `tidy-checkouts`가 하고, 앱이 표지(`claude-desktop-worktree`)를 단 워크트리는 앱의 정리에 맡길 수 있다. 이 저장소의 워크트리에는 그 표지가 없으므로 지금은 모두 `tidy-checkouts`의 몫이고, 앱의 `clean_up_worktrees`는 쓰지 않는다.**
+
+**확인이 막는 것과 막지 않는 것.** git은 같은 브랜치를 워크트리 둘에 체크아웃하게 두지 않고 같은 경로에 두 번째 워크트리를 만들지도 못하게 한다. 임시 저장소에서 두 번째 `git worktree add`가 각각 `'feat' is already checked out at …`와 `'../wt-a' already exists`로 git 종료 코드 128을 냈다(`.scratch/harness/probes/worktree_duplicate_checkout.sh`, git 2.32.0.windows.2). 그래서 목록 확인의 몫은 중복 생성을 막는 것이 아니다. 그 자리를 쓰는 다른 세션이 있는지 보고, 있으면 들어가기 전에 멈추는 것이다. 같은 워크트리를 에이전트 둘이 함께 고치지 않는다는 규칙은 이미 "티켓마다 워크트리 하나"(`operations.md` 브랜치와 병합)와 `tidy-checkouts`의 판정 3(제목이 그 브랜치인 실행 중 세션, 살아 있는 잠금 pid, 그 폴더를 작업 디렉터리로 쥔 프로세스)이 지키지만, 들어가는 쪽에서 같은 것을 보는 단계는 없었다. 세션에 대상 브랜치와 경로를 남기는 일은 이미 되어 있다. 브랜치 이름이 세션 제목이고(`open-session`), 워크트리 잠금 사유에 `EnterWorktree`의 `<이름>`이 들어간다(`next-session` 3단계).
+
+## Considered Options
+
+- **기본 경로를 `.worktrees/<slug>`로 옮긴다.** 거부했다. 첫째, `EnterWorktree`는 새 워크트리를 `.claude/worktrees/` 안에 만들고, 이미 워크트리에 있는 세션이 `path`로 옮겨 갈 때도 그 아래의 것만 받는다(도구 설명을 읽었다). 새로 만드는 위치는 우리가 정하는 값이 아니다. 둘째, 같은 경로를 `tools/tidy_checkouts.py`와 그 시험(`tests/tools/test_tidy_checkouts.py`만 29줄), 휴지통 위치, `tools/check_instructions.py`, 훅(`tools/hook_bash_cd_outside.py`), `operations.md`와 스킬 여럿이 전제한다. 이 결정을 들이기 전의 작업 트리에서 `.claude/worktrees`가 든 줄이 저널과 `.scratch`를 뺀 14개 파일에 57줄이었다(Grep으로 셌다). 얻는 것은 폴더 이름 하나인데 바뀌는 것은 정리 도구의 판정 기준이다.
+- **이 저장소의 워크트리 전부를 앱의 정리에 맡긴다.** 거부했다. `clean_up_worktrees`는 30·60·90일 넘게 쓰지 않은 세션의 워크트리만 지워(도구 설명을 읽었다) 병합 직후의 정리에 맞지 않는다. 앱 자신의 정리는 표지가 있고 잠금과 `.worktree-keep`이 없고 24시간 바뀌지 않은 깨끗한 워크트리만 지우며 브랜치는 남긴다. 이 저장소의 워크트리에는 그 표지가 없어 2026-10-05까지 앱이 지운 것이 없었다(`tidy-checkouts` 3, 앱 로그를 읽었다). 앱의 정리는 병합 여부를 보지 않으므로 병합 전 워크트리를 지울 수 있는 길을 열게 된다. 표지가 있는 워크트리만 앱에 맡기는 예외는 받아들였다.
+- **`locked` 줄이 있으면 들어가지 않는다.** 거부했다. `EnterWorktree`가 만든 워크트리는 그 세션의 pid로 잠긴다. 이 결정을 쓰는 세션의 워크트리도 `git worktree list --porcelain`에서 `locked claude session <이름> (pid …)`로 나왔다(손으로 봤다). 그러면 끊긴 뒤나 컨텍스트 압축 뒤에 자기 워크트리로 다시 들어오는 세션이 자기 잠금에 막힌다. `tools/tidy_checkouts.py`의 판정 3은 살아 있는 pid의 잠금만 주인으로 보고 죽은 pid의 잠금은 `remove`가 풀고 지운다(코드를 읽었다). 같은 신호를 두 문서가 다르게 판정하게 된다. 세션이 쓰는지는 제목으로 본다.
+- **목록 확인을 훅으로 강제한다.** 거부했다. git이 중복 생성을 이미 막으므로 훅이 판정할 몫은 "그 자리를 쓰는 세션이 있는가"뿐이다. 그 답은 앱의 세션 목록(`list_sessions`)에서 오는데 훅은 그것을 부를 수 없다. 판정 도구가 없는 확인은 지침에 둔다(`CLAUDE.md`의 강제력 순서). 같은 일로 망가진 사례가 쌓이면 그때 훅 후보로 올린다.
+- **확인을 `next-session` 3단계의 워크트리 문장과 첫 턴 훅(`tools/hook_prompt_directive.py`)에도 넣는다.** 이번 범위에서는 하지 않았다. 그 문장은 훅의 문구와 시험이 글자로 기대고 있어, 바꾸면 코드와 시험을 함께 고쳐야 한다. 대신 확인은 `operations.md`의 새 항목과 `implement` 스킬에 둔다.
+
+## Consequences
+
+- **지침 자리.** 원천은 `operations.md` 브랜치와 병합의 새 항목 둘(위치와 사전 확인, 정리)이고, `implement` 스킬은 `EnterWorktree`를 치기 직전에 그 항목을 가리킨다. `tidy-checkouts`는 앱 자신의 정리 문단에 이 결정으로 가는 문장을, 금지 표의 `clean_up_worktrees` 행에 ADR 번호를 더한다. 코드와 시험은 바꾸지 않는다.
+- **헌법 버전은 patch(3.0.37)다.** 원칙의 내용도, 게이트 수도, 손으로 치는 검증 명령도 바뀌지 않는다. 이 ADR은 2026-10-15에 사용자가 승인했다.
+- **못 보는 것.** 세션이 제목으로 브랜치를 알리지 않으면(사람이 제목을 바꾼 세션, 예를 들어 작업 내용을 제목으로 쓴 세션) 이 확인은 그 세션을 거르지 못한다. 그 경우는 `tidy-checkouts`의 판정 3이 지울 때 뒤에서 잡는다. `list_sessions`를 쓰지 못하는 서브에이전트(`open-session` 스킬이 적은 한계)는 세션 확인을 건너뛰고 목록만 본다. 첫 턴 훅과 `next-session`의 워크트리 문장은 이 확인을 모른 채 바로 `EnterWorktree`를 시키므로, `implement`를 거치지 않는 시작 프롬프트(`/grill-with-docs`, `/to-spec` 등)로 연 새 세션은 이 확인을 거치지 않는다. 앱의 `EnterWorktree`가 내부에서 어떤 점검을 하는지는 읽지 못했다. 목록 확인을 하지 않아 실제로 세션이 부딪친 사례가 있었는지는 일지를 전부 읽어 확인하지 않았다. 이 결정은 규칙안과 현재 방식의 비교에서 나왔고 사고에서 나오지 않았다.
+- **표지가 있는 워크트리.** `tidy-checkouts`의 판정은 아직 표지를 보지 않는다. 표지가 있는 워크트리를 처음 보는 세션이 `.scratch/retro-queue.md`에 판정 3에 표지를 넣는 후보를 올린다. 그때까지 이 예외는 적용할 대상이 없다.
