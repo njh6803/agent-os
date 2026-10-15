@@ -54,7 +54,7 @@ jobs:
       - run: uv run lint-imports
       - run: sudo sysctl -w kernel.core_pattern=/tmp/core.%e.%p
       - run: |
-          ulimit -c unlimited
+          ulimit -c unlimited || echo "::warning::ulimit -c 를 올리지 못해 코어가 남지 않는다."
           uv run pytest -q
       - run: uv run python tools/check_instructions.py
       - run: uv run python tools/check_type_escapes.py

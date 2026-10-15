@@ -77,3 +77,48 @@ base `804373a2`, 바뀐 파일 둘(`ci.yml`, 프로브 README), 미추적 하나
 
 다시 돌린 명령: 프로브 재실행(40/40 측정), `uv run ruff check` 프로브(통과), zizmor(`No findings`). 나머지 검증
 명령은 커밋의 pre-commit으로 갈음한다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat : not assigned`라 돌지 못했다. 대신 내장 `/security-review`와
+`bug-perf-review` 서브에이전트를 돌렸다. 범위는 origin/main(`df705c17`)을 합친 뒤의 `git diff --merge-base
+origin/main`이다.
+
+보안: 신뢰도 8 이상의 취약점은 없었다. 코어 덤프와 gdb 출력에 비밀이 실릴 길(잡 env에 `secrets.*` 없음,
+`persist-credentials: false`, `GITHUB_TOKEN`이 pytest에 가지 않음, gdb는 `bt`와 라이브러리 표만), 포크 PR의 권한
+상승, 주입을 차례로 봤다. 앞으로 이 잡의 env에 비밀을 넣으면 코어 출력의 범위를 다시 따져야 한다는 참고가 붙었다.
+
+버그·성능:
+- Minor: 기본 셸이 `bash -e`라 코어 하드 한도가 낮은 러너에서는 `ulimit -c unlimited`가 실패해 pytest가 돌지 않는다.
+  → 고쳤다. 실패하면 경고를 찍고 pytest를 그대로 돈다.
+- Minor: 프로브가 `check=True`와 `capture_output=True`라 gh 오류에서 stderr 없이 트레이스백만 낸다. → 고쳤다.
+  `GH_HOST=invalid.example`로 돌려 gh의 stderr를 담고 1로 끝나는 것을 손으로 봤다.
+- Minor: `ulimit`이 pytest의 자식에게 상속돼 파이썬 아닌 프로세스의 코어도 남고 gdb가 엉뚱한 실행 파일로 연다.
+  → 남긴다. 셀프 리뷰의 판단과 같다. 코어 이름으로 거르면 정작 `core.pytest.*`를 놓친다.
+- Minor: 실패 스텝의 apt가 실패해도 잡은 이미 실패다. → 남긴다. 결과가 같다.
+- Nit: 시간 제한으로 취소된 잡은 `failure()`가 거짓이라 멈춘 프로세스의 스택이 남지 않는다. → 남긴다. 대기열
+  36은 충돌의 단서를 겨냥했고, 멈춘 잡의 진단은 이 PR의 범위가 아니다.
+- Nit: 시간 제한 값, verify 5분, 프로브의 모집단. → 문제없다는 확인이었다.
+
+다시 돌린 명령: 프로브(40/40 측정, 창이 옮겨 최대는 python 3.0분, web 2.3분, e2e 1.6분, visual 4.7분, verify
+0.7분. 제한은 여전히 모두 네 배 이상이다), zizmor(`No findings`). 나머지는 커밋의 pre-commit으로 갈음한다.
+
+## 회고
+
+후보 넷, 승인 하나, 기각 셋, 넘김 없음.
+
+- 승인(대기열 280): 실행 중인 CI에서 끝난 python 잡의 로그를 받으려다 세 번 실패했다(`gh api`의 `--output` 없음,
+  이스케이프 문자 거부, `gh run view --log`는 실행이 끝나야 준다). 사건이 이 세션에 있고, 도구(`tools/gh_run_summary.py`)
+  층에서 고칠 수 있으며, PR 하나로 되돌릴 수 있다. 이 세션의 범위가 아니라 대기열에 둔다.
+- 기각: 첫 충돌 실험이 대기열 36이 겨냥한 상황(종료 중 충돌)이 아니라 테스트 도중의 충돌이어서 CI를 한 번 더
+  돌렸다. `.claude/rules/probes.md` 첫 항목(탐침은 재려는 상황이 그 회차에 실제로 났다는 표지까지 본다)이 이미 잡는
+  모양이다.
+- 기각: 워크트리 가드가 `gh`와 `$(...)`·`until`이 섞인 대기 명령을 거부했다. `CLAUDE.md` 환경 함정(명령은 하나씩,
+  긴 입력은 파일로)이 이미 있고, 그대로 스크립트 파일로 옮겨 지나갔다.
+- 기각: 세션이 길어져 main이 두 번 움직이고 일지 번호를 옮겨야 했다. `tools/sibling_overlap.py --move`가 이미 처리했다.
+
+## 다음
+
+대기열 72·232·262(대상 파일이 `tools/hook_payloads.toml`인 열린 행, 모두 ADR 불필요)를 chore 한 PR로 반영한다.
+`tools/mutate.py`를 든 열린 행(259·264·265·267)은 `chore/mutate-buffer-eol-and-restore-retry` 워크트리가 들고 있는
+것으로 보여 고르지 않았다.

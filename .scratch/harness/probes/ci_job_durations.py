@@ -23,9 +23,10 @@ JOBS = ("python", "web", "e2e", "visual", "verify")
 
 
 def gh(*args: str) -> str:
-    return subprocess.run(
-        ["gh", *args], check=True, capture_output=True, text=True, encoding="utf-8"
-    ).stdout
+    done = subprocess.run(["gh", *args], capture_output=True, text=True, encoding="utf-8")
+    if done.returncode != 0:
+        sys.exit(f"gh {' '.join(args)} 가 {done.returncode} 로 끝났다: {done.stderr.strip()}")
+    return done.stdout
 
 
 def ts(s: str) -> datetime:
