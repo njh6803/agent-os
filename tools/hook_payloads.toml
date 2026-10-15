@@ -595,6 +595,21 @@ expect = "silent"
 note = "짧은 일치 줄 양옆의 600자 문맥 줄만 생략됐다 — 일치를 숨기지 않는다"
 payload = { tool_name = "Grep", tool_input = { pattern = "PROBE short", path = "C:/scratch/omit", output_mode = "content", "-C" = 1 }, tool_response = { mode = "content", numFiles = 0, filenames = [], content = "C:\\scratch\\omit\\ctx.txt-1-[Omitted long context line]\nC:\\scratch\\omit\\ctx.txt:2:PROBE short\nC:\\scratch\\omit\\ctx.txt-3-[Omitted long context line]", numLines = 3, totalLines = 3 } }
 
+# --- hook_grill_design_check (PreToolUse Skill) ---
+# 두 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "context"
+note = "모델이 설계 인터뷰 요청에 grill-with-docs 를 부른다"
+contains = ["설계 인터뷰가 맞는지", "grilling", "domain-modeling"]
+payload = { tool_name = "Skill", tool_input = { skill = "grill-with-docs", args = "admin-foo" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "silent"
+note = "라우터가 이어 부르는 grilling 은 같은 알림을 두 번 받지 않는다"
+payload = { tool_name = "Skill", tool_input = { skill = "grilling", args = "admin-foo" } }
+
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.
 [[case]]
