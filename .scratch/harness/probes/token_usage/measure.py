@@ -24,9 +24,9 @@ README의 실행 기록이다. `compactions`만 시간 인자가 없고 나머�
   `cmd_rereads` 독스트링).
 
 표지: 하위 명령마다 재려는 것을 하나도 읽지 못하면 측정이 아니라고 보고 2로 끝난다.
-`split`·`simulate`· `reads`는 모델 호출(usage가 든 assistant 기록), `idle`은 메인 세션의 모델 호출과
-백그라운드로 띄운 `wait_ci`, `compactions`는 압축 경계, `plugins`는 Skill 호출과 메인 세션의 첫 스킬
-목록, `rereads`는 Read 결과다.
+`simulate`·`reads`는 모델 호출(usage가 든 assistant 기록), `split`은 단가표 안의 모델 호출,
+`idle`은 단가표 안의 메인 세션 모델 호출과 백그라운드로 띄운 `wait_ci`, `compactions`는 압축 경계,
+`plugins`는 Skill 호출과 메인 세션의 첫 스킬 목록, `rereads`는 Read 결과다.
 
 못 보는 것:
 - 세션 기록에는 계정이 없다. 여러 계정의 세션이 섞여도 가르지 못한다.
@@ -112,6 +112,15 @@ def ctx_of(u: dict) -> int:
     )
 
 
+def time_of(d: dict) -> datetime | None:
+    """기록의 시각. 읽지 못하거나 시간대가 없으면(창의 시각과 견주지 못한다) None이다."""
+    try:
+        t = datetime.fromisoformat(str(d.get("timestamp", "")).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo is not None else None
+
+
 def calls(p: Path, seen: set[str], cutoff: datetime | None) -> Iterator[tuple[dict, dict]]:
     """파일 안의 모델 호출을 (기록, usage)로, 처음 나온 순서대로 낸다.
 
@@ -148,11 +157,8 @@ def calls(p: Path, seen: set[str], cutoff: datetime | None) -> Iterator[tuple[di
     for mid in order:
         d = first[mid]
         if cutoff is not None:
-            try:
-                when = datetime.fromisoformat(str(d.get("timestamp", "")).replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if when < cutoff:
+            when = time_of(d)
+            if when is None or when < cutoff:
                 continue
         seen.add(mid)
         merged = dict(d)
@@ -233,7 +239,7 @@ def cmd_split(hours: float) -> None:
             by_project[project_of(p)] += c
             if sub_type:
                 by_type[sub_type] += c
-    require(n, "모델 호출")
+    require(n - unknown, "단가표 안의 모델 호출")
     total = sum(by_kind.values()) or 1.0
     print(f"최근 {hours:g}시간, 모델 호출 {n:,}회(단가표 밖 {unknown}회), 환산 비용 ${total:,.2f}")
     share_table("메인 세션과 서브에이전트", by_kind, total)
@@ -251,21 +257,26 @@ def cmd_idle(hours: float) -> None:
     total = rewrite_cost = wake_cost = 0.0
     wakes: list[tuple[float, int, bool]] = []
     ci_launch = 0
-    n = 0
+    n = unknown = 0
     for p in recent_files(hours):
         if is_sub(p):
             continue
         prev: datetime | None = None
         waiting = False
         for d, u in calls(p, seen, cutoff):
+            t = time_of(d)
+            if t is None:  # 창으로 거른 `calls`가 이미 뺀다
+                continue
             n += 1
             model = str(d["message"].get("model"))
             us = costs.Usage.of(u)
-            c = costs.cost(model, us) or 0.0
+            priced = costs.cost(model, us)
+            if priced is None:
+                unknown += 1
+            c = priced or 0.0
             total += c
             w5 += us.write_5m
             w1 += us.write_1h
-            t = datetime.fromisoformat(str(d["timestamp"]).replace("Z", "+00:00"))
             ctx = ctx_of(u)
             rewrote = (us.write_5m + us.write_1h) > ctx * 0.5
             if prev is not None and ctx > 50000:
@@ -289,9 +300,12 @@ def cmd_idle(hours: float) -> None:
                     if "wait_ci" in str(inp.get("command", "")) and inp.get("run_in_background"):
                         waiting = True
                         ci_launch += 1
-    require(n, "메인 세션의 모델 호출")
+    require(n - unknown, "단가표 안의 메인 세션 모델 호출")
     require(ci_launch, "백그라운드로 띄운 wait_ci")
-    print(f"최근 {hours:g}시간 메인 세션, 모델 호출 {n:,}회, 환산 비용 ${total:,.2f}")
+    print(
+        f"최근 {hours:g}시간 메인 세션, 모델 호출 {n:,}회(단가표 밖 {unknown}회),"
+        f" 환산 비용 ${total:,.2f}"
+    )
     print(
         "\n| 직전 호출과의 간격 | 호출(세션 컨텍스트 5만 초과) | 절반 이상을 다시 쓴 호출 | 비율 |"
     )
@@ -344,7 +358,7 @@ def cmd_simulate(hours: float) -> None:
     cutoff = cutoff_of(hours)
     seen: set[str] = set()
     per_session: list[list[int]] = []
-    started_before = 0
+    started_before = unreadable_start = 0
     for p in recent_files(hours):
         if is_sub(p):
             continue
@@ -352,7 +366,11 @@ def cmd_simulate(hours: float) -> None:
         pairs = [(d, c) for d, c in pairs if c > 0]
         if len(pairs) < 2:
             continue
-        start = datetime.fromisoformat(str(pairs[0][0].get("timestamp", "")).replace("Z", "+00:00"))
+        # `calls`는 cutoff가 없으면 시각을 읽지 않는다. 못 읽는 세션은 빼고 그 수를 적는다.
+        start = time_of(pairs[0][0])
+        if start is None:
+            unreadable_start += 1
+            continue
         if start < cutoff:
             started_before += 1
             continue
@@ -362,7 +380,8 @@ def cmd_simulate(hours: float) -> None:
     firsts = sorted(c[0] for c in per_session)
     print(
         f"최근 {hours:g}시간에 시작한 메인 세션 {len(per_session)}개"
-        f"(창 앞에서 시작한 {started_before}개 뺌), 압축하지 않을 때 읽는 합 {actual:,} 토큰"
+        f"(창 앞에서 시작한 {started_before}개, 첫 호출의 시각을 못 읽은 {unreadable_start}개 뺌),"
+        f" 압축하지 않을 때 읽는 합 {actual:,} 토큰"
     )
     q = statistics.quantiles(firsts, n=4)
     print(f"시작 컨텍스트: 중앙값 {statistics.median(firsts):,.0f}, 사분위 {q[0]:,.0f}~{q[2]:,.0f}")
