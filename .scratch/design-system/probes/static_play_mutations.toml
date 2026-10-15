@@ -1,0 +1,101 @@
+# 대기열 149 의 변이 표. 사진 비교의 정적 빌드에서 play 의 `userEvent` 가 비어 있는 것을 고정한 테스트
+# (web/packages/ui/visual/storybook.visual.ts 의 둘째 테스트)가, play 가 첫 `userEvent` 를 지나는 판을 잡는지 본다. 단언은 셋이고
+# 까닭(보안 맥락이 아니고 clipboard 가 없다), 표지(콘솔의 `.type is not a function`), 그림(Typing 의 두 칸이 비었다)
+# 차례다. 1은 출처를 보안 맥락으로 바꿔 까닭이, 2·3은 clipboard 를 심어 Storybook 이 `userEvent` 를 채우게 한 뒤 앞
+# 단언을 걷어 표지와 그림이 각각 빨개지는지 본다. 2·3은 Storybook 이 clipboard 없이도 `userEvent` 를 채우게 바뀐 판을
+# 흉내 낸다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-system/probes/static_play_mutations.toml [번호 ...]
+# visual 러너는 변이마다 정적 빌드를 다시 지어 Docker 컨테이너에서 storybook.visual.ts 만 돈다. Docker 와 판을 고정한
+# 이미지가 있어야 한다.
+# 표지는 그 단언이 실패할 때만 출력에 나오는 문구다. 맨 "주문 조회"는 호출 기록의 `placeholder="예: 주문 조회"` 에도,
+# 맨 "콘솔의 오류"는 실패 줄의 위 두 줄까지 보이는 코드 조각에 그 단언 줄이 들 수 있어, 고른 단언이 실패했다는 표지가
+# 되지 못한다(셀프 리뷰가 짚었고, 2·3을 손으로 넣어 실패 출력을 봤다).
+
+[runner.visual]
+command = ["pnpm", "-C", "web", "visual"]
+judge = "playwright"
+
+[[mutation]]
+name = "출처를 보안 맥락으로 바꾸면 까닭의 단언이 빨갛다"
+runner = "visual"
+tests = ["storybook.visual.ts"]
+expect = "red"
+expect_output = ['"secure": true']
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.ts"
+old = '''
+export const ORIGIN = "http://storybook.invalid";
+'''
+new = '''
+export const ORIGIN = "https://storybook.invalid";
+'''
+
+[[mutation]]
+name = "clipboard 를 심어 userEvent 가 채워지면 까닭을 걷어도 표지의 단언이 빨갛다"
+runner = "visual"
+tests = ["storybook.visual.ts"]
+expect = "red"
+expect_output = ["Error: 콘솔의 오류"]
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.visual.ts"
+old = '''
+  // Typing 의 play 는 칸을 찾은 뒤 처음 하는 일이 `userEvent.type` 이다.
+'''
+new = '''
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: {}, configurable: true });
+  });
+  // Typing 의 play 는 칸을 찾은 뒤 처음 하는 일이 `userEvent.type` 이다.
+'''
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.visual.ts"
+old = '''
+  expect(
+    await page.evaluate(() => ({
+      secure: window.isSecureContext,
+      clipboard: typeof navigator.clipboard,
+    })),
+  ).toEqual({ secure: false, clipboard: "undefined" });
+'''
+new = ""
+
+[[mutation]]
+name = "clipboard 를 심어 userEvent 가 채워지면 까닭과 표지를 걷어도 그림의 단언이 빨갛다"
+runner = "visual"
+tests = ["storybook.visual.ts"]
+expect = "red"
+expect_output = ['Received: "주문 조회"']
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.visual.ts"
+old = '''
+  // Typing 의 play 는 칸을 찾은 뒤 처음 하는 일이 `userEvent.type` 이다.
+'''
+new = '''
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: {}, configurable: true });
+  });
+  // Typing 의 play 는 칸을 찾은 뒤 처음 하는 일이 `userEvent.type` 이다.
+'''
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.visual.ts"
+old = '''
+  expect(
+    await page.evaluate(() => ({
+      secure: window.isSecureContext,
+      clipboard: typeof navigator.clipboard,
+    })),
+  ).toEqual({ secure: false, clipboard: "undefined" });
+'''
+new = ""
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/storybook.visual.ts"
+old = '''
+  expect(errors, "콘솔의 오류").toContainEqual(expect.stringMatching(/\.type is not a function/));
+'''
+new = ""
