@@ -6,6 +6,8 @@
 # -Behind 면 노력 항목에 포커스를 준 뒤 메모장을 띄워 앞에 두고 키를 넣는다. Claude 창이 뒤에 있을 때 그 키가 하위 메뉴를 여는지
 # 본다. 키를 넣기 전 줄이 foreground-is-claude=False 인 회차만 그 조건의 측정이고, 아니면 1로 끝난다. 끝에 띄운 메모장만 닫는다.
 # PostMessage 는 받는 창의 메시지 큐에 넣는 Win32 호출이라 메모장에 닿는지는 재지 않는다.
+# 알려진 결함: 시간을 넘긴 잡도 Remove-Job -Force 로 지워, 펼치기가 멈추면 8초 제한이 걸리지 않는다. 다시 쓸 때
+# tools/open_session.ps1 의 Invoke-PatternTimed 처럼 고친다(.claude/rules/tools.md, 대기열 282).
 # 쓰는 법: pwsh -NoProfile -File .scratch/harness/probes/composer_menu_tree.ps1 [-Effort [-Behind]]
 param([switch] $Effort, [switch] $Behind)
 $ErrorActionPreference = 'Stop'
