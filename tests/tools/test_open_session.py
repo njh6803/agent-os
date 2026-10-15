@@ -870,6 +870,51 @@ def test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그
     assert completed.stdout.strip() == shows
 
 
+# 접근성 패턴 호출을 제한 시간에 끊는다. 가짜 요소의 GetCurrentPattern 이 멈춘 호출을 흉내 낸다.
+# 멈춘 호출의 스레드 잡을 지우면(Remove-Job -Force) 그 호출이 끝날 때까지 기다려 제한 시간이 걸리지
+# 않았다(PR 직전 버그·성능 리뷰).
+_PATTERN_TIMED = r"""
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+if (-not ('OpenSessionFakeElement' -as [type])) {
+    Add-Type -TypeDefinition @'
+public class OpenSessionFakePattern { public void Expand() {} }
+public class OpenSessionFakeElement {
+    public int DelayMs;
+    public object GetCurrentPattern(object pattern) {
+        System.Threading.Thread.Sleep(DelayMs);
+        return new OpenSessionFakePattern();
+    }
+}
+'@
+}
+$element = New-Object OpenSessionFakeElement
+$element.DelayMs = [int]$given.delay_ms
+$watch = [System.Diagnostics.Stopwatch]::StartNew()
+$got = Invoke-PatternTimed $element 'expand' 1
+"$got|$($watch.ElapsedMilliseconds)|$([int]$script:HungCalls)"
+"""
+
+
+@pytest.mark.parametrize(
+    ("delay_ms", "got", "hung"),
+    [
+        (0, "ok", 0),
+        (3000, "expand-hung", 1),  # 제한 시간 1초를 넘겨 멈춘 호출
+    ],
+)
+def test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다(
+    delay_ms: int, got: str, hung: int
+) -> None:
+    completed = _call("Invoke-PatternTimed", _PATTERN_TIMED, {"delay_ms": delay_ms})
+
+    assert completed.returncode == 0, completed.stderr
+    result, elapsed, counted = completed.stdout.strip().split("|")
+    assert result == got
+    assert int(elapsed) < 2500  # 멈춘 호출의 3초를 기다리지 않는다
+    assert int(counted) == hung
+
+
 # 고르기 전의 값(Read-DraftDefaults 가 돌려주는 모양)을 받아 쓰는 순수 함수들.
 _DRAFT = """
 $step = if ($null -eq $given.step) { $null } else { [int]$given.step }

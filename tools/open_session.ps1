@@ -63,7 +63,13 @@ function Get-ClaudeWindow {
 # Claude 창 핸들에 PostMessage 로 넣는 키로 연다(Open-EffortSubmenu). 그 키는 앞에 있는 창이 아니라 그 핸들로만 간다.
 # 펼치기는 돌아오지 않은 적이 있어(일지 2026-09-21 open-session, 사이드바 행) 스레드 잡 안에서 8초 제한으로 부른다.
 # 입력창의 모델 버튼에서는 돌아왔다(.scratch/harness/probes/composer_patterns.ps1, 2026-10-12·2026-10-16).
-function Invoke-PatternTimed($el, [string] $action) {
+# 시간을 넘긴 잡은 지우지 않고 남긴다. 멈춘 스레드 잡의 Remove-Job -Force 는 그 호출이 끝날 때까지 기다려 제한 시간이 걸리지
+# 않았다. 남긴 스레드는 pwsh 가 끝날 때도 기다리므로 $script:HungCalls 로 세어 두고, 스크립트 끝(Invoke-Action)이 출력을 마친 뒤
+# 프로세스를 끝낸다. 멈춘 호출을 15초 잠으로 흉내 내고 제한을 2초로 둔 .scratch/harness/probes/hung_thread_job.ps1 에서, 지우는
+# 모양은 15.1초에 돌아왔고, 남기는 모양은 2.1초에 돌아왔지만 프로세스가 15.7초에 끝났으며, 끝내는 모양은 3초 안에 출력과 종료
+# 코드(던졌으면 1)를 남기고 끝났다(2026-10-16).
+$script:HungCalls = 0
+function Invoke-PatternTimed($el, [string] $action, [int] $timeoutSec = 8) {
     $job = Start-ThreadJob -ArgumentList $el, $action -ScriptBlock {
         param($e, $a)
         switch ($a) {
@@ -73,8 +79,11 @@ function Invoke-PatternTimed($el, [string] $action) {
         }
         'ok'
     }
+    if (-not (Wait-Job $job -Timeout $timeoutSec)) {
+        $script:HungCalls++
+        return "$action-hung"
+    }
     try {
-        if (-not (Wait-Job $job -Timeout 8)) { return "$action-hung" }
         $out = Receive-Job $job -ErrorAction SilentlyContinue -ErrorVariable failed
         if ($failed) { return "$action-error: $($failed[0])" }
         return $out
@@ -445,8 +454,9 @@ function Select-ComposerEffortItem($win, $box, [int] $step) {
     try {
         $trigger = Wait-For { Find-EffortSubmenu $win } "모델 메뉴의 '노력' 항목" 5
         Open-EffortSubmenu $win $trigger
-        # 열렸는지를 항목보다 먼저 본다. 열리지 않은 것(창이 뒤에 있다)과 그 모델의 메뉴에 그 칸이 없는 것을 가른다.
-        Wait-For { Test-Expanded $trigger } '열린 노력 하위 메뉴(Claude 창이 앞에 있어야 열린다)' 3 | Out-Null
+        # 열렸는지를 항목보다 먼저 본다. 열리지 않은 것(창이 뒤에 있다)과 그 모델의 메뉴에 그 칸이 없는 것을 가른다. 항목은 매번
+        # 다시 찾는다. 다시 그려져 낡은 요소는 상태를 읽지 못해 열린 메뉴를 놓친다.
+        Wait-For { $t = Find-EffortSubmenu $win; if ($t -and (Test-Expanded $t)) { $t } } '열린 노력 하위 메뉴(Claude 창이 앞에 있어야 열린다)' 3 | Out-Null
         Select-MenuRadio $win $label '노력 메뉴'
     } catch {
         if ($trigger -and (Test-Expanded $trigger)) { Invoke-PatternTimed $trigger 'collapse' | Out-Null }
@@ -483,8 +493,12 @@ function Open-EffortSubmenu($win, $trigger) {
     $trigger.SetFocus()
     Start-Sleep -Milliseconds 300
     $window = [IntPtr]$win.Current.NativeWindowHandle
-    [OpenSessionKeys]::PostMessage($window, $WM_KEYDOWN, [IntPtr]$VK_RIGHT, [IntPtr]$downInfo) | Out-Null
-    [OpenSessionKeys]::PostMessage($window, $WM_KEYUP, [IntPtr]$VK_RIGHT, [IntPtr]$upInfo) | Out-Null
+    # 핸들이 0이면 PostMessage 는 부른 스레드의 큐에 넣고 참을 낸다. 받는 창이 더 높은 권한이면(UIPI) 거짓을 낸다. 둘 다 창이 뒤에
+    # 있다는 안내로 잘못 읽히지 않게 여기서 멈춘다.
+    if ($window -eq [IntPtr]::Zero) { throw 'Claude 창의 핸들을 읽지 못해 노력 하위 메뉴를 열 키를 넣지 못했다.' }
+    $down = [OpenSessionKeys]::PostMessage($window, $WM_KEYDOWN, [IntPtr]$VK_RIGHT, [IntPtr]$downInfo)
+    $up = [OpenSessionKeys]::PostMessage($window, $WM_KEYUP, [IntPtr]$VK_RIGHT, [IntPtr]$upInfo)
+    if (-not ($down -and $up)) { throw "Claude 창에 노력 하위 메뉴를 열 키를 넣지 못했다(PostMessage down=$down up=$up. 앱이 더 높은 권한으로 돌면 그렇다)." }
 }
 
 # 새 세션 입력창에 지금 있는 모델과 노력(앱이 기억한 새 세션 화면의 기본값). 고르기 전에 읽어 두고, 보낸 뒤
@@ -768,10 +782,24 @@ function Get-AppQuitMarker {
     return Find-QuitMarker @($lines) $started
 }
 
+# 스크립트의 끝. 멈춘 접근성 호출이 남았으면(Invoke-PatternTimed 의 주석) pwsh 가 그 스레드를 기다려 끝나지 않는다. 출력과 오류
+# 문구를 낸 뒤 프로세스를 끝낸다. 남은 호출이 없으면 여느 때처럼 끝나고 오류도 그대로 던진다.
+function Invoke-Action([scriptblock] $run) {
+    try { & $run }
+    catch {
+        if ($script:HungCalls -eq 0) { throw }
+        [Console]::Error.WriteLine("$($_.Exception.Message) (멈춘 접근성 호출 $script:HungCalls 개가 남아 프로세스를 끝낸다)")
+        [Environment]::Exit(1)
+    }
+    if ($script:HungCalls -gt 0) { [Environment]::Exit(0) }
+}
+
 Wake-Display
-switch ($Action) {
-    'send' { Send-Prompt }
-    'split' { Split-Session }
-    'focus' { Focus-Session }
-    'defaults' { Set-Defaults }
+Invoke-Action {
+    switch ($Action) {
+        'send' { Send-Prompt }
+        'split' { Split-Session }
+        'focus' { Focus-Session }
+        'defaults' { Set-Defaults }
+    }
 }

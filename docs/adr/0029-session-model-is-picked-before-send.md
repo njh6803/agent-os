@@ -226,7 +226,8 @@ Chrome으로 갈 뻔했다(키 가드가 멈췄다. `foreground_window.ps1`로 �
 고친 판으로 `모델: Haiku 5.5 / low` 줄이 든 시험 지시문을 한 번 보냈다(2026-10-16 00:55 KST). 기본값이 `Opus 5.5 / 엑스트라`인
 화면이라 모델과 노력을 모두 바꾸고 되돌리는 길을 밟는다. 출력은 `model=Haiku 5.5 원래 Opus 5.5`, `effort=low 원래 xhigh`,
 `sent=… via invoke`, `restored=Opus 5.5 / xhigh`였고, 그 세션의 `get_session`이 `claude-haiku-5-5`·`low`, 뒤에 연 표지
-화면의 기본값이 `Opus 5.5 빠름 엑스트라`(고속 모드는 그 전부터 켜져 있었다)였다. 첫 줄이 `idle=660s`라 사람이 지켜봤는지는 모른다.
+화면의 기본값이 `Opus 5.5 빠름 엑스트라`였다. 고속 모드는 보내기 전 00:49의 `composer_effort_labels.ps1` 회차에서도 켜져
+있었다(스크립트는 고르기 전의 `빠름`을 진행 줄에 찍지 않는다). 첫 줄이 `idle=660s`라 사람이 지켜봤는지는 모른다.
 
 결과:
 

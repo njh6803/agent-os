@@ -98,3 +98,16 @@ Minor 넷, Nit 둘, 냄새 넷(모두 Nit), 커밋 전 절차 하나. 판정:
 바꿔 있어(PR #244) 커밋한 뒤 origin/main을 합쳤고(충돌 없음), 스킬 3단계의 괄호를 묻는 새 명세
 `canary/open_session_effort_errors.toml`을 그 도구로 돌렸다. 통과 4, "없음" 섞임 0(실험군 커밋 `f1fc7126`, 대조군 주
 체크아웃 `df705c17`은 옛 "슬라이더" 목록을 옮겼다, claude 2.1.300). 그 뒤 `sibling_overlap.py`는 0으로 끝났다.
+
+## PR 직전
+
+CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히 돌렸다. 커밋하고 origin/main을 합친 뒤다.
+
+- `/security-review`: 발견 없음. PostMessage는 고정된 키를 정해진 핸들에만 넣고, 지시문이 고를 수 있는 값이 없으며, `SendKeys`를 없앤 것은 위험을 줄였다고 했다.
+- `bug-perf-review`: 16건(유효 5, 보류 4, 오탐 7), Critical·Major 없음.
+  - 유효 Minor `Invoke-PatternTimed`의 8초 제한이 멈춘 호출에서 걸리지 않는다(`finally`의 `Remove-Job -Force`가 그 호출을 기다린다). 고쳤다. 시간을 넘긴 잡은 지우지 않고 `$script:HungCalls`로 세며, 스크립트 끝의 `Invoke-Action`이 멈춘 호출이 남았으면 출력과 오류 문구를 낸 뒤 `[Environment]::Exit`로 끝낸다. 남기기만 하면 pwsh가 그 스레드를 기다려 끝나지 않는 것을 새 프로브 `hung_thread_job.ps1`로 쟀다. 시험(가짜 요소가 3초 멈추고 제한 1초)을 먼저 빨갛게 본 뒤 고쳤다.
+  - 유효 Nit 넷 가운데 둘을 고쳤다. PostMessage의 반환값과 0 핸들을 보고 멈춘다. ADR의 "고속 모드는 그 전부터 켜져 있었다"에 근거(00:49 회차)를 달았다.
+  - 남긴 유효 Nit 둘: 노력이 없는 모델을 고르면 "글이 적다" 오류가 "버튼을 찾지 못했다"로 가려진다(그런 모델을 못 봤고 보내기 전에 멈춘다). 프로브 넷의 뒷정리(`Timed`의 같은 `Remove-Job`, 중간에 던지면 기본값·표지·메모장이 남는다, `composer_patterns.ps1 -Background`가 창이 뒤에 없던 회차를 종료 코드로 가르지 않는다)는 손으로 돌리는 진단이라 두고 PR 체크리스트에 적는다.
+  - 보류에서 고친 것: 열린 하위 메뉴를 기다릴 때 항목을 매번 다시 찾는다(낡은 요소면 열린 메뉴를 놓친다).
+  - 보류로 둔 것: `SetFocus`·`FindAll`의 시간 제한(실제 멈춤을 재지 못했다), 펼치기 실패 뒤 접기 결과의 알림, 분할 보기에서 창 전체로 찾는 메뉴 항목(고른 뒤 입력창 묶음의 버튼 글을 대 보므로 틀리게 고르면 보내기 전에 멈춘다).
+- 다시 돈 것: `tests/tools/test_open_session.py` 92 passed. 바뀐 길을 세션을 만들지 않는 `-Action defaults`로 실제 앱에서 두 번 밟았다(`Opus 5.5 / high`로 바꾸고 `xhigh`로 되돌렸다, 둘 다 종료 0).
