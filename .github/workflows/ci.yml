@@ -7,6 +7,11 @@
 # 워크플로 하드닝은 zizmor 가 판정한다(ADR 0027, 설정은 .github/zizmor.yml). 빠뜨리면 artipacked 가, 서드파티 액션을 해시
 # 대신 태그로 가져오면 unpinned-uses 가 python 잡을 빨갛게 한다. 자격 증명이 필요한 잡이 생기면 그 체크아웃 줄에
 # `# zizmor: ignore[artipacked]` 와 까닭을 함께 둔다.
+# 잡마다 timeout-minutes 를 둔다. 없으면 기본값 360분까지 매달린다. PR #195 의 visual 잡이 컨테이너 초기화에서 18분
+# 넘게 멈췄다(대기열 204). 컨테이너 초기화도 잡의 스텝이라 잡의 제한에 든다고 본다(어림). 값은 최근 성공 실행의 잡별
+# 최대의 네 배 이상이다. 그 수치는 .scratch/harness/probes/ci_job_durations.py 가 내고, 잰 결과는 같은 폴더 README 의
+# 그 프로브 행에 둔다. 캐시를 놓친 설치가 얼마나 더 걸리는지는 재지 않은 어림의 여유다. 잡이 자라 제한에 닿으면 그
+# 프로브를 다시 돌려 값을 고친다.
 name: ci
 
 on:
@@ -22,10 +27,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 인터프리터가 충돌해도 단서를 남긴다(대기열 36). PR #78 의 첫 실패 로그는 "545 passed" 뒤 종료 코드 139 뿐이었다.
+  # pytest 의 faulthandler 는 세션이 끝나며 꺼지므로 PYTHONFAULTHANDLER 로 종료 중 충돌의 파이썬 쪽 스택을 찍고, 코어를
+  # 남겨 실패하면 gdb 로 C 스택을 찍는다. core_pattern 은 시스템 전역이라 앞 스텝에서 바꾸고, ulimit -c 는 셸마다라
+  # pytest 를 돌리는 그 스텝 안에서 건다. 일부러 충돌시켜 손으로 봤다(일지 2026-10-16-14). 종료 중 충돌은 파이썬 스택과 C
+  # 스택이 둘 다 남았고, 테스트 도중의 충돌은 C 스택만 남았다(파이썬 스택은 pytest 가 붙잡은 stderr 에 갇힌 것으로
+  # 본다. 어림). 코어 이름은 core.pytest.<pid> 였다. %e 가 스크립트 이름이 되므로 코어를 이름으로 거르지 않는다.
   python:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
+      PYTHONFAULTHANDLER: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,11 +52,29 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pyright
       - run: uv run lint-imports
-      - run: uv run pytest -q
+      - run: sudo sysctl -w kernel.core_pattern=/tmp/core.%e.%p
+      - run: |
+          ulimit -c unlimited || echo "::warning::ulimit -c 를 올리지 못해 코어가 남지 않는다."
+          uv run pytest -q
       - run: uv run python tools/check_instructions.py
       - run: uv run python tools/check_type_escapes.py
       - run: uv run python tools/run_hooks.py
       - run: uv run zizmor --offline --strict-collection --config .github/zizmor.yml .
+      - if: failure()
+        run: |
+          shopt -s nullglob
+          cores=(/tmp/core.*)
+          if [ ${#cores[@]} -eq 0 ]; then
+            echo "코어 덤프가 없다."
+            exit 0
+          fi
+          command -v gdb > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q gdb; }
+          python=$(readlink -f .venv/bin/python)
+          for core in "${cores[@]}"; do
+            echo "::group::$core"
+            gdb -batch -ex bt -ex "info sharedlibrary" "$python" "$core"
+            echo "::endgroup::"
+          done
 
   # web 워크스페이스. pnpm 판은 web/package.json 의 packageManager 가 정하고, 스토어를 락파일로 캐시한다.
   # verify 의 test 단계가 디자인 시스템의 스토리 테스트를 실제 chromium 에서 돌아(ADR 0026) 그 전에 브라우저를 깐다.
@@ -51,6 +82,7 @@ jobs:
   # 브라우저가 없으면 스토리 테스트는 건너뛰지 않고 실패한다.
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -82,6 +114,7 @@ jobs:
   # 시스템 의존성은 캐시에 들지 않아 매번 깐다. 브라우저가 없으면 e2e 는 건너뛰지 않고 실패한다.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
     steps:
@@ -121,6 +154,7 @@ jobs:
   # 테스트는 정적 빌드 밖으로 나간 요청이 하나라도 있으면 실패한다. 실패하면 실제 사진·정답·차이 그림을 아티팩트로 남긴다.
   visual:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host
@@ -157,6 +191,7 @@ jobs:
     if: always()
     needs: [python, web, e2e, visual]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       actions: read
     steps:
