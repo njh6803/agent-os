@@ -1,0 +1,32 @@
+# `.claude/rules/web-design.md` 에 더한 문장들(대기열 149·226)이 그 규칙의 `paths`(`web/packages/ui/**`,
+# `web/apps/*/components/**`) 가운데 앞의 것에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-16-19). 149는 사진 비교
+# 문단 끝의 사진이 play 맥락의 `userEvent` 전 그림이라는 문장들, 226은 컴포넌트 공통의 디자인 토큰 CSS 대응·덮기 항목이다.
+# 실험군은 규칙의 paths 안(패키지의 컴포넌트 파일), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 셋이다. 규칙 파일의 첫 제목, 149 문장들이 사진에 남길 상태를 그리라는 조각, 226 항목 끝의 출처.
+# 149 의 테스트 파일 경로는 세션에 실리는 git 상태의 바뀐 경로에도 있어 카나리아로 쓰지 않는다(사전 확인이 막았다).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 규칙을 커밋하기 전의 워크트리 사본, 일지 2026-10-16-19).
+# 그 뒤 셀프 리뷰가 두 문장의 본문만 고쳐 사전 확인으로 갈음했다(2026-10-16, 일지 2026-10-16-19).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/web_design_rule_userevent_and_overrides.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데 다음 두 문장을 찾아라.
+(가) Storybook 사진 비교의 사진에 play 함수로 넣은 글이 들지 않는다고 적은 문장. 그 바로 뒤에 사진에 남길 상태를
+무엇으로 그리라는 문장이 이어진다.
+(나) 디자인 토큰 CSS의 덮기 블록을 지워도 모든 판정이 초록이었던 사건을 든 문장.
+둘 다 있으면 그 문장들이 든 지시 파일의 첫 `#` 제목, (가) 뒤 문장에서 넣은 글을 무엇으로 그리라는 괄호 안의 조각,
+(나)가 끝에 괄호로 단 출처를 각각 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["디자인 판단 기준", "넣은 글은 `value`", "대기열 226"]
+source = ".claude/rules/web-design.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "web/packages/ui/src/components/atoms/Button.tsx"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
