@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -58,6 +60,30 @@ IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@localhost")
             "origin",
             ("chore/x",),
             id="값을_먹는_긴_옵션",
+        ),
+        pytest.param(
+            "git push --recurse-submodules check origin --delete chore/x",
+            "origin",
+            ("chore/x",),
+            id="recurse_submodules_의_값",
+        ),
+        pytest.param(
+            "git push --recurse check origin --delete chore/x",
+            "origin",
+            ("chore/x",),
+            id="recurse_submodules_줄임의_값",
+        ),
+        pytest.param(
+            "git push --recurse-submodules=check origin --delete chore/x",
+            "origin",
+            ("chore/x",),
+            id="recurse_submodules_의_붙은_값",
+        ),
+        pytest.param(
+            "git push --signed origin --delete chore/x",
+            "origin",
+            ("chore/x",),
+            id="값을_붙여서만_받는_옵션",
         ),
         pytest.param(
             "git push https://github.com/o/r.git --delete chore/x",
@@ -148,6 +174,77 @@ def test_지우지_않는_푸시와_푸시가_아닌_명령은_대상이_없다(
 def test_못_보는_것_래퍼와_prune_과_REST_는_지나간다(명령: str) -> None:
     """거짓 음성이다. 독스트링의 못 보는 것에 적은 길이다."""
     assert deletions(명령) == []
+
+
+# `git push -h` 의 옵션 줄. 네 칸 들여쓴 `-` 로 시작하고 설명과는 두 칸 이상 띄운다.
+_도움말_옵션_줄 = re.compile(r"^ {4}(-\S.*?)(?: {2,}|$)", re.MULTILINE)
+
+
+def _도움말이_적는_옵션() -> list[tuple[str, bool]]:
+    """이 기계의 `git push -h` 가 적는 옵션 낱말과, 그것이 다음 낱말을 값으로 먹는지. 값이 띄어
+    쓴 `<…>`·`(…)` 이면 먹고, `[=…]` 이면 `=` 로만 받는다. `--[no-]` 꼴은 부정도 낸다(값을 먹지
+    않는다)."""
+    environment = {**os.environ, "LC_ALL": "C", "LANGUAGE": "C"}
+    result = subprocess.run(
+        ["git", "push", "-h"],
+        capture_output=True,
+        env=environment,
+        timeout=30,
+        check=False,
+    )
+    text = (result.stdout + result.stderr).decode("utf-8", "replace").replace("\r\n", "\n")
+    found: list[tuple[str, bool]] = []
+    for spec in _도움말_옵션_줄.findall(text):
+        takes = " <" in spec or " (" in spec
+        found += [(f"-{short}", takes) for short in re.findall(r"(?<![\w-])-(\w)\b", spec)]
+        for negatable, name in re.findall(r"--(\[no-\])?([a-z0-9][a-z0-9-]*)", spec):
+            found.append((f"--{name}", takes))
+            if negatable:
+                found.append((f"--no-{name}", False))
+    return found
+
+
+def test_git_push_도움말의_옵션이_먹는_낱말을_git_처럼_가른다() -> None:
+    """대기열 296. 옵션 표는 git 의 옵션 목록을 손으로 옮긴 것이라, 값을 먹는 옵션을 먹지 않는다고
+    적으면 그 값을 원격으로 읽어 지우는 푸시를 놓친다(`--recurse-submodules` 칸이 그랬다). 표에 없는
+    옵션은 git 이 거절할 푸시로 보고 지나간다. 이 기계의 git 이 적는 옵션마다 값을 하나 끼운
+    지우는 푸시에서 원격과 브랜치를 git 처럼 가르는지 본다. 다른 판의 git 이 더한 옵션은 그 git 에서
+    이 시험이 빨개진다. 낱말을 가르는 것만 본다. `--all`·`--mirror`·`--tags` 는 git 이 `--delete` 와
+    함께 거절하는데 이 훅은 지우는 푸시로 읽는다(아래 못 보는 것 시험)."""
+    options = _도움말이_적는_옵션()
+    words = {word for word, _ in options}
+    assert {"--delete", "-d", "--recurse-submodules", "-o", "--force-with-lease"} <= words
+
+    wrong: list[str] = []
+    for word, takes in options:
+        command = f"git push {word}{' v' if takes else ''} origin --delete chore/x"
+        expected = [] if word in ("-n", "--dry-run") else [Deletion("origin", ("chore/x",))]
+        if deletions(command) != expected:
+            wrong.append(f"{word}(값을 먹는다: {takes})")
+    assert wrong == []
+
+
+def test_못_보는_것_표에_없는_긴_옵션은_지나간다() -> None:
+    """거짓 음성이다. git 이 옵션을 더해 표가 낡으면 그 옵션이 든 지우는 푸시를 git 이 거절할 푸시로
+    본다. 위의 도움말 시험은 그 옵션을 아는 git 에서만 빨개진다."""
+    assert deletions("git push --some-future-option origin --delete chore/x") == []
+
+
+def test_못_보는_것_값을_먹는_새_짧은_옵션의_값은_원격으로_읽는다() -> None:
+    """거짓 음성이다. 짧은 옵션은 표 없이 `-o` 하나만 값을 먹는다고 본다. git 이 값을 먹는 짧은
+    옵션을 더하면 그 값이 원격이 되고, 그 원격 이름을 풀지 못해 묻지 않고 지나간다."""
+    assert deletions("git push -X v origin --delete chore/x") == [
+        Deletion("v", ("origin", "chore/x"))
+    ]
+
+
+@pytest.mark.parametrize("옵션", ["--all", "--mirror", "--tags"])
+def test_못_보는_것_git_이_거절하는_조합도_지우는_푸시로_읽는다(옵션: str) -> None:
+    """거짓 양성이다. git 은 `--delete` 와 이 옵션을 함께 쓴 푸시를 거절한다(git 2.32 의 임시
+    저장소에서 손으로 봤다). 이 훅은 그 조합을 보지 않아, 열린 PR 의 머리면 막는다."""
+    assert deletions(f"git push {옵션} origin --delete chore/x") == [
+        Deletion("origin", ("chore/x",))
+    ]
 
 
 def test_github_원격만_owner_와_repo_를_낸다() -> None:

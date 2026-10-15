@@ -20,12 +20,15 @@ import pytest
 from tools.hook_journal_retro import (
     CLOSING_HEADING,
     NUMBER_LEAD,
+    JournalNumbers,
     Overlap,
+    Unreadable,
     context_for,
     created_journal,
     is_journal,
     number_context,
     read_journal,
+    read_numbers,
     run_overlap,
     section_body,
 )
@@ -225,6 +228,23 @@ def test_새_일지를_만든_Write_만_순번을_대_본다() -> None:
     assert not created_journal("Write", "C:\\x\\docs\\adr\\0034-x.md", {"type": "create"})
     assert not created_journal("Write", NEW, None)
     assert not created_journal("Write", NEW, {})
+
+
+def test_도구_출력에서_다음_빈_번호와_새_번호와_옮길_번호를_읽는다() -> None:
+    """대기열 296. 출력 파싱을 순번 판정과 문장 조립에서 떼어 낸 함수다. 두 줄 가운데 하나를 읽지
+    못하면 그 까닭을 돌려준다."""
+    moves = "옮길 번호: 일지 2026-10-07-03 → 2026-10-07-05, 대기열 280 → 282\n"
+
+    assert read_numbers(_output("2026-10-07-06") + moves) == JournalNumbers(
+        "2026-10-07-06", frozenset({"2026-10-07-03"}), {"2026-10-07-03": "2026-10-07-05"}
+    )
+    assert read_numbers(_output("2026-10-07-04", None)) == JournalNumbers(
+        "2026-10-07-04", frozenset(), {}
+    )
+    assert read_numbers("번호 겹침 없음\n") == Unreadable("출력에서 다음 빈 번호를 읽지 못했다")
+    assert read_numbers(_output("2026-10-07-04").splitlines()[0]) == Unreadable(
+        "출력에서 이 브랜치의 새 번호를 읽지 못했다"
+    )
 
 
 def test_다음_빈_번호의_바로_앞_순번이면_알리지_않는다() -> None:
