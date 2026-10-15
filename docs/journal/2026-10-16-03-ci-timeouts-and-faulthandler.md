@@ -103,6 +103,16 @@ origin/main`이다.
 다시 돌린 명령: 프로브(40/40 측정, 창이 옮겨 최대는 python 3.0분, web 2.3분, e2e 1.6분, visual 4.7분, verify
 0.7분. 제한은 여전히 모두 네 배 이상이다), zizmor(`No findings`). 나머지는 커밋의 pre-commit으로 갈음한다.
 
+## PR 봇 회차
+
+PR #241, 헤드 `4e3db3cd`. 검사는 모두 초록이었고 CodeRabbit은 한도에 걸려 리뷰하지 않았다(`Review rate limited`).
+claude-review 첫 회차:
+- Minor: `ci.yml` 머리 주석이 프로브 결과 수치를 프로브 README 행과 두 곳에 적었다. → 고쳤다. 주석에는 규칙(네 배
+  이상)과 프로브 경로만 두고 수치는 README 행에 맡겼다.
+- Nit: python 잡 주석이 지워진 임시 커밋의 PR 번호를 근거로 든다. → 고쳤다. 이 일지 번호를 댄다.
+- Nit: `timeout-minutes: 15`가 세 잡에 반복된다. → 남긴다. 리뷰어도 머리 주석이 근거를 한 곳에서 대 지금은 허용
+  범위라고 했다. PR 코멘트로 이유를 남겼다.
+
 ## 회고
 
 후보 넷, 승인 하나, 기각 셋, 넘김 없음.
