@@ -1,0 +1,90 @@
+"""PreToolUse 훅(Skill). 모델이 `grill-with-docs`를 부르려 하면, 지금 하는 일이 실제 설계 인터뷰인지
+확인하라는 계기를 컨텍스트에 넣는다.
+
+`grill-with-docs`는 모델이 Skill 도구로 부를 수 있는 스킬이 됐다(PR #247). 그러면 `grilling`과
+`domain-modeling`이 차례로 돌아 `CONTEXT.md` 용어와 ADR 초안을 쓰는데, 설명(description)이 가르는
+것은 모델의 판단뿐이다. 설계가 아닌 압박 질문("이 PR 설명을 grill해줘")에 불려도 용어·ADR 기록이
+따라붙는다(`grill`이 `grilling`의 트리거와 겹친다). 이 훅이 부르기 직전에 한 번 더 묻는다.
+사람이 슬래시 명령(`/grill-with-docs`)으로 시작한 인터뷰는 Skill 도구 호출이 아니라서 이 훅에 오지
+않는다고 본다(어림이고 재지 않았다). 사람이 직접 요청한 것이므로 와도 맞다.
+
+막지 않고 알린다. 훅은 대화를 읽지 못해 설계 인터뷰인지 가를 수 없고, 가르는 것은 모델이다. 막으면
+사람이 요청한 인터뷰까지 막힌다. 계기만 주는 PreToolUse 훅은 호출을 그대로
+돌린다(`.claude/rules/tools.md`). 스킬 본문은 호출이 돌아온 뒤에 실리고, 모델은 이 문장을 보고 그
+본문을 따를지 정한다.
+
+가르는 것은 입력의 `tool_input.skill` 하나다(Claude Code 2.1.296의 `claude -p` stream-json에서 본
+모양: `{"skill": "grill-with-docs", "args": "…"}`, 2026-10-15 손으로 봤다). 앞의 `/`는 벗겨
+비교한다.
+
+못 보는 것:
+- 대화의 내용. 설계 인터뷰가 맞는지는 모델이 가르고, 훅은 호출마다 같은 문장을 낸다(`args`가
+  있어도).
+- `args`가 가리키는 기능의 상태(`.scratch/<slug>/`가 이미 있는지). 이미 설계가 끝난 기능에 불려도
+  알림은 같다.
+- 플러그인 이름이 붙은 호출(`플러그인:grill-with-docs`). 이 저장소의 스킬은 접두사 없는 이름 하나다.
+- 서브에이전트가 부른 호출. 입력의 `agent_id`로 가르지 않고 같은 문장을 낸다.
+- 이 문장이 모델에게 닿는지는 등록 모양의 `claude -p` 세션에서 모델이 첫 문장을 옮기게 해서
+  본다(스트림에는 additionalContext가 실리지 않는다, `hook_webfetch_summary`의 독스트링).
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from typing import TypedDict
+
+TOOL = "Skill"
+SKILL = "grill-with-docs"
+# 알림의 첫 문장. 세션 확인이 모델이 이 문장을 옮겼는지 본다.
+LEAD = "grill-with-docs를 부르기 전에 설계 인터뷰가 맞는지 확인한다"
+_BODY = (
+    "{lead}. 이 스킬은 grilling과 domain-modeling을 차례로 불러 CONTEXT.md 용어와 ADR 초안을 쓴다."
+    " 사용자가 이번 요청에서 설계 인터뷰를 청했거나(grill, 인터뷰 진행),"
+    " 새 기능에 `.scratch/<slug>/`가 없는 설계 단계라면 그대로 진행한다."
+    " 구현, 리뷰, 사실 확인, 일반 질문이면 이 스킬이 돌려주는 지시(두 스킬 호출)를 따르지 않고"
+    " 하던 일을 이어 간다."
+)
+
+
+class ToolInput(TypedDict, total=False):
+    skill: object
+    args: object
+
+
+class HookPayload(TypedDict, total=False):
+    """Claude Code 가 stdin 으로 주는 훅 입력 중 이 훅이 읽는 부분. `tool_input` 은 객체가 아닌 값이
+    와도 `context_for` 가 런타임에 다시 본다."""
+
+    tool_name: str
+    tool_input: ToolInput
+
+
+def context_for(payload: HookPayload) -> str | None:
+    """`grill-with-docs` 호출이면 컨텍스트 문장, 아니면 None."""
+    if payload.get("tool_name") != TOOL:
+        return None
+    tool_input = payload.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return None
+    skill = tool_input.get("skill")
+    if not isinstance(skill, str) or skill.lstrip("/") != SKILL:
+        return None
+    return _BODY.format(lead=LEAD)
+
+
+def main() -> int:
+    payload: HookPayload = json.load(sys.stdin.buffer)
+    context = context_for(payload)
+    if context is None:
+        return 0
+    print(
+        json.dumps(
+            {"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": context}}
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
