@@ -10,6 +10,8 @@ Playwright 의 `list` 리포터, 일지 2026-10-01-01). 색 코드를 넣거나 
 from __future__ import annotations
 
 import contextlib
+import errno
+import json
 import os
 import signal
 import subprocess
@@ -20,9 +22,11 @@ from pathlib import Path
 
 import pytest
 from tools.mutate import (
+    RESTORE_WAITS,
     ROOT,
     CommandResult,
     JudgeName,
+    Judging,
     RestoreError,
     SpecError,
     changed_names,
@@ -220,7 +224,7 @@ def test_못_보는_것_exit_판정은_잡히지_않은_예외의_1_도_빨강�
     까닭은 표지가 가른다."""
     던짐 = CommandResult(1, "SyntaxError: Unexpected token } in JSON at position 10\n")
 
-    assert judge("exit", 던짐, red_exit=1).outcome == "red"
+    assert judge(Judging("exit", red_exit=1), 던짐).outcome == "red"
 
 
 def test_못_보는_것_첫_실패에서_멈춘_변이는_빨간_시험을_하나만_보인다(tmp_path: Path) -> None:
@@ -349,7 +353,7 @@ def test_시간_제한을_넘긴_결과는_출력이_무엇이든_오류다(판�
     """끊기 전까지의 출력이 초록이나 빨강으로 읽혀도 끝까지 돌지 않은 판정은 재는 것이 없다."""
     끊긴 = CommandResult(1, "1 failed, 2 passed\n      Tests  1 failed (3)\n", timed_out_after=9)
 
-    판정 = judge(판정자, 끊긴, "a.ts")
+    판정 = judge(Judging(판정자, diagnostic_in="a.ts"), 끊긴)
 
     assert 판정.outcome == "error"
     assert "9초" in 판정.summary
@@ -724,6 +728,62 @@ def test_닫는_따옴표를_다음_줄에_두면_그_앞의_줄바꿈도_원문
     assert any("원문이 0번 있다" in 한줄 for 한줄 in 줄) == (기대_코드 == 2)
 
 
+@pytest.mark.parametrize(
+    ("내용", "원문", "까닭"),
+    [
+        (
+            b"a = 1\r\nb = 2\r\n",
+            r"a = 1\nb = 2",
+            "줄 끝이 다르다(파일은 CRLF 뿐이다, 줄 끝을 맞추면 1번)",
+        ),
+        (
+            b"a = 1\nb = 2\n",
+            r"a = 1\r\nb = 2",
+            "줄 끝이 다르다(파일은 LF 뿐이다, 줄 끝을 맞추면 1번)",
+        ),
+        (
+            b"a = 1\r\nb = 2\nc = 3\r\n",
+            r"a = 1\r\nb = 2\r\n",
+            "줄 끝이 다르다(파일은 CRLF 와 LF 가 섞였다, 줄 끝을 맞추면 1번)",
+        ),
+        (
+            b"a = 1\r\nb = 2\r\na = 1\r\nb = 2\r\n",
+            r"a = 1\nb = 2",
+            "줄 끝이 다르다(파일은 CRLF 뿐이다, 줄 끝을 맞추면 2번)",
+        ),
+        (b"a = 1\r\nb = 2\r\n", r"a = 1\nc = 2", None),
+    ],
+    ids=[
+        "파일이_CRLF",
+        "파일이_LF",
+        "줄_끝이_섞였다",
+        "줄_끝을_맞추면_두_번",
+        "줄_끝을_맞춰도_없다",
+    ],
+)
+def test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다(
+    tmp_path: Path, 내용: bytes, 원문: str, 까닭: str | None
+) -> None:
+    """패치 스크립트의 `Path.write_text` 가 윈도우에서 도구를 CRLF 로 바꿔 써, 원문 스무 개 남짓이
+    "0번 있다" 고만 나왔다. 줄 끝이 까닭이라는 것은 HEAD 사본과 견주고서야 알았다(대기열 264). git
+    은 커밋에서 LF 로 고쳐 diff 에 보이지 않았다. 줄 끝이 섞인 파일과 줄 끝을 맞추면 두 번인 원문도
+    문구가 참이어야 한다(셀프 리뷰 표준 축)."""
+    _파일을_둔다(tmp_path, "src/m.py", 내용)
+    변이 = (
+        _변이_파일(old="x", new="y")
+        .replace("old = '''x'''", f'old = "{원문}"')
+        .replace("new = '''y'''", 'new = "z"')
+    )
+    줄: list[str] = []
+
+    assert check(load_spec(변이), root=tmp_path, out=줄.append) == 2
+    assert any("원문이 0번 있다" in 한줄 for 한줄 in 줄), 줄
+    if 까닭 is None:
+        assert not any("줄 끝이 다르다" in 한줄 for 한줄 in 줄), 줄
+    else:
+        assert any(까닭 in 한줄 for 한줄 in 줄), 줄
+
+
 def test_한_변이의_편집_여럿은_앞_편집의_결과_위에_차례로_들어간다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
     본_것: list[bytes] = []
@@ -1033,7 +1093,7 @@ def test_main_은_since_뒤에_커밋이_하나가_아니면_2다(tmp_path: Path
 )
 def test_pytest_의_종료_코드와_요약으로_판정한다(결과: CommandResult, 판정: str) -> None:
     """skip 이 섞인 초록은 초록이 아니다(원칙 II). 재지 않은 테스트가 있다."""
-    assert judge("pytest", 결과).outcome == 판정
+    assert judge(Judging("pytest"), 결과).outcome == 판정
 
 
 def test_빨간_테스트의_노드_아이디를_짧은_요약에서_읽는다() -> None:
@@ -1045,7 +1105,7 @@ def test_빨간_테스트의_노드_아이디를_짧은_요약에서_읽는다()
         "1 failed, 1 error in 0.10s\n",
     )
 
-    assert judge("pytest", 결과).failed == ("tests/a.py::test_x[1]", "tests/b.py::test_y")
+    assert judge(Judging("pytest"), 결과).failed == ("tests/a.py::test_x[1]", "tests/b.py::test_y")
 
 
 _VITEST_실패 = """
@@ -1127,11 +1187,11 @@ def test_vitest_는_실패한_테스트가_셀_때만_빨강이다(결과: Comma
     """종료 코드는 실패와 수집 오류와 처리하지 않은 에러가 모두 1 이다. 수집 오류(파일 단위의
     FAIL)가 하나라도 있으면 다른 파일의 실패가 있어도 오류다 — 깨진 파일이 재지 않은 테스트를
     남겼다. `-t` 로 좁히면 나머지가 skipped 로 세어지므로 skip 은 오류가 아니다(못 보는 것)."""
-    assert judge("vitest", 결과).outcome == 판정
+    assert judge(Judging("vitest"), 결과).outcome == 판정
 
 
 def test_vitest_의_빨간_테스트는_FAIL_줄에서_읽는다() -> None:
-    assert judge("vitest", CommandResult(1, _VITEST_실패)).failed == (
+    assert judge(Judging("vitest"), CommandResult(1, _VITEST_실패)).failed == (
         "|node| packages/api-client/src/p.test.ts > 실패 한다",
     )
 
@@ -1180,14 +1240,29 @@ def test_tsc_는_적은_파일에서_진단이_날_때만_빨강이다(
 ) -> None:
     """tsc 의 종료 코드는 문법 오류와 타입 에러가 같고(2), 오류 번호로도 가를 수 없다(`satisfies` 의
     어긋남이 TS1360 이다). 그래서 빨강은 변이가 적은 파일의 진단이다(대기열 59의 첫 판정)."""
-    assert judge("tsc", 결과, 자리).outcome == 판정
+    assert judge(Judging("tsc", diagnostic_in=자리), 결과).outcome == 판정
 
 
 def test_tsc_의_진단은_빨간_목록에_든다() -> None:
-    assert judge("tsc", CommandResult(2, _TSC_진단), "stream.ts").failed == (
+    판정 = judge(Judging("tsc", diagnostic_in="stream.ts"), CommandResult(2, _TSC_진단))
+
+    assert 판정.failed == (
         "packages/api-client/src/clients.test-d.ts(12,3): error TS2578",
         "packages/api-client/src/stream.ts(40,1): error TS1360",
     )
+
+
+def test_tsc_러너의_변이는_변이에_적은_진단_자리로_판정한다(tmp_path: Path) -> None:
+    """진단 자리는 변이에, 판정은 러너에 적혀 측정이 둘을 묶어 넘긴다(PR #240 claude-review 의 판정
+    인자 묶기). 기준선은 진단이 없어 초록이다."""
+    path = _파일을_둔다(tmp_path, "web/m.ts", b"x = 1\n")
+    변이 = _VITEST_러너.replace('judge = "vitest"', 'judge = "tsc"') + _vitest_변이(
+        줄='diagnostic_in = "stream.ts"'
+    )
+
+    러너 = _변이면(path, b"x = 2", CommandResult(2, _TSC_진단))
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=lambda _: None) == 0
 
 
 _PLAYWRIGHT_실패 = """
@@ -1215,11 +1290,11 @@ _PLAYWRIGHT_실패 = """
 )
 def test_playwright_는_실패한_테스트가_셀_때만_빨강이다(결과: CommandResult, 판정: str) -> None:
     """`--grep` 은 고르지 않은 테스트를 skip 으로 세지 않으므로 skip 은 pytest 처럼 오류다."""
-    assert judge("playwright", 결과).outcome == 판정
+    assert judge(Judging("playwright"), 결과).outcome == 판정
 
 
 def test_playwright_의_빨간_테스트는_실패_요약_아래에서_읽는다() -> None:
-    assert judge("playwright", CommandResult(1, _PLAYWRIGHT_실패)).failed == (
+    assert judge(Judging("playwright"), CommandResult(1, _PLAYWRIGHT_실패)).failed == (
         "[chromium] › e2e/decision.spec.ts:10:5 › 결정 › 꺼짐이 버튼을 막는다",
     )
 
@@ -1254,7 +1329,7 @@ def test_요약_문구가_바뀌면_읽는_문구는_오류로_기울고_거르�
 ) -> None:
     """도구의 판이 문구를 바꾼 모양을 흉내 낸다. 독스트링의 못 보는 것이 이 여섯이다(셀프 리뷰가
     "빨강으로 기울지는 않는다"의 반례 둘을 찾았다)."""
-    assert judge(판정자, 결과, "clients.test-d.ts").outcome == 판정
+    assert judge(Judging(판정자, diagnostic_in="clients.test-d.ts"), 결과).outcome == 판정
 
 
 def test_러너를_적은_변이는_그_명령에_tests_를_붙여_그_자리에서_돈다(tmp_path: Path) -> None:
@@ -1361,7 +1436,7 @@ def test_종료_코드_판정은_0_이면_초록_적은_코드면_빨강_나머�
 ) -> None:
     """종료 코드로 말하는 검사기(node 검사기)는 그 도구의 판정이 없어 변이를 따로 지었다(대기열
     253). 읽을 파일이 없다는 2 를 빨강으로 세면 아무것도 재지 않은 변이가 기대와 맞는다."""
-    판정_하나 = judge("exit", 결과, red_exit=1)
+    판정_하나 = judge(Judging("exit", red_exit=1), 결과)
 
     assert 판정_하나.outcome == 판정
     if 결과.timed_out_after is None:
@@ -1590,9 +1665,10 @@ def _쓰기를_막는다(
     막을_때: Callable[[bytes], bool],
     *,
     남는_앞부분: int = 0,
+    번호: int = errno.EACCES,
 ) -> None:
     """그 파일에 `막을_때` 가 참인 바이트를 쓰면 앞의 `남는_앞부분` 바이트만 쓰고(0 이면 아무것도
-    쓰지 않고) `PermissionError` 를 낸다.
+    쓰지 않고) 오류 번호가 `번호` 인 `OSError` 를 낸다. 기본은 `PermissionError` 다.
 
     권한(`chmod` 읽기 전용)으로 막으면 root(uid 0)는 쓰기가 통해, 클라우드 컨테이너에서 되돌림 실패
     테스트 셋이 빨갰다(대기열 80, `.scratch/harness/probes/mutate_as_root.sh`).
@@ -1603,14 +1679,16 @@ def _쓰기를_막는다(
         if self.resolve() == 막을_파일.resolve() and 막을_때(data):
             if 남는_앞부분:
                 원래_쓰기(self, data[:남는_앞부분])
-            raise PermissionError(13, "쓰기를 막았다", str(self))
+            raise OSError(번호, "쓰기를 막았다", str(self))
         return 원래_쓰기(self, data)
 
     monkeypatch.setattr(Path, "write_bytes", 막힌_쓰기)
 
 
 def _잠그는_러너(잠글_파일: Path, 표지: bytes, monkeypatch: pytest.MonkeyPatch) -> 러너:
-    """변이가 든 동안 그 파일의 쓰기를 막아, 되돌리는 쓰기가 `PermissionError` 가 되게 한다."""
+    """변이가 든 동안 그 파일의 쓰기를 막아, 되돌리는 쓰기가 `PermissionError` 가 되게 한다. 다시
+    시도하는 수는 그대로 두고 기다림만 없앤다."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", tuple(0.0 for _ in RESTORE_WAITS))
 
     def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
         if 표지 not in 잠글_파일.read_bytes():
@@ -1646,6 +1724,168 @@ def test_되돌리지_못한_파일이_있으면_RestoreError_이고_나머지�
 
     assert a.read_bytes() == b"a = 1\n"
     assert m.read_bytes() == b"x = 2\n"
+
+
+def _처음_몇_번만(횟수: int, 막을_바이트: bytes) -> tuple[Callable[[bytes], bool], list[bytes]]:
+    """`막을_바이트` 를 쓰는 처음 `횟수` 번만 참인 판정과, 참이었던 바이트의 기록."""
+    막은: list[bytes] = []
+
+    def 막을_때(data: bytes) -> bool:
+        if data != 막을_바이트 or len(막은) >= 횟수:
+            return False
+        막은.append(data)
+        return True
+
+    return 막을_때, 막은
+
+
+def test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """변이 87번째를 되돌리는 쓰기가 `[Errno 22] Invalid argument` 로 한 번 막혀 종료 3으로 멈추고
+    변이가 도구 파일에 남았다(대기열 267). 무엇이 그 틈에 파일을 쥐었는지는 재지 않았다."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.2, 0.2, 0.2))
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    막을_때, 막은 = _처음_몇_번만(2, b"x = 1\n")
+    _쓰기를_막는다(monkeypatch, path, 막을_때, 번호=errno.EINVAL)
+    줄: list[str] = []
+    시작 = time.monotonic()
+
+    code = measure(
+        load_spec(_변이_파일(old="x = 1", new="x = 2")),
+        root=tmp_path,
+        runner=_변이면(path, b"x = 2", _빨강),
+        out=줄.append,
+    )
+
+    assert code == 0
+    assert path.read_bytes() == b"x = 1\n"
+    assert len(막은) == 2
+    # 시계의 해상도(이 PC 15.6ms)를 두고 0.2초 두 번보다 낮게 잡는다
+    assert time.monotonic() - 시작 >= 0.3  # 막힐 때마다 기다렸다
+    # 무엇이 그 틈에 파일을 쥐는지 다음에 잴 흔적
+    assert any(
+        "src/m.py — 2번 막혔다가 지났다" in 한줄 and "Errno 22" in 한줄 and "쓰기를 막았다" in 한줄
+        for 한줄 in 줄
+    ), 줄
+
+
+def test_되돌리다_막혀_앞부분만_쓴_파일은_다시_쓸_때_다른_쓰기로_보지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """다른 쓰기는 처음 읽은 바이트로 한 번만 본다. 쓰다 막힌 뒤의 파일은 이 도구가 쓴 앞부분이라,
+    다시 쓸 때마다 보면 일시적인 막힘이 덮지 않는 실패가 된다."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.0,))
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    막을_때, 막은 = _처음_몇_번만(1, b"x = 1\n")
+    _쓰기를_막는다(monkeypatch, path, 막을_때, 남는_앞부분=2, 번호=errno.EINVAL)
+
+    code = measure(
+        load_spec(_변이_파일(old="x = 1", new="x = 2")),
+        root=tmp_path,
+        runner=_변이면(path, b"x = 2", _빨강),
+        out=lambda _: None,
+    )
+
+    assert code == 0
+    assert 막은 == [b"x = 1\n"]
+    assert path.read_bytes() == b"x = 1\n"
+
+
+def test_못_보는_것_되돌리는_쓰기를_다시_시도하는_사이에_든_다른_쓰기는_덮는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """다른 쓰기는 처음 읽은 바이트로 한 번만 보므로, 쓰기가 막혀 기다리는 사이에 든 쓰기는 다시 쓸
+    때 사라진다(독스트링의 못 보는 것, 셀프 리뷰 명세 축)."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.0,))
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    끼운_뒤: list[bytes] = []
+
+    def 다른_쓰기를_끼우고_한_번_막는다(data: bytes) -> bool:
+        if data != b"x = 1\n" or 끼운_뒤:
+            return False
+        with path.open("ab") as f:  # 기다리는 사이 편집기가 저장했다
+            f.write(b"# doc\n")
+        끼운_뒤.append(path.read_bytes())
+        return True
+
+    _쓰기를_막는다(monkeypatch, path, 다른_쓰기를_끼우고_한_번_막는다, 번호=errno.EINVAL)
+
+    code = measure(
+        load_spec(_변이_파일(old="x = 1", new="x = 2")),
+        root=tmp_path,
+        runner=_변이면(path, b"x = 2", _빨강),
+        out=lambda _: None,
+    )
+
+    assert code == 0
+    assert 끼운_뒤 == [b"x = 2\n# doc\n"]
+    assert path.read_bytes() == b"x = 1\n"
+
+
+def test_되돌리는_쓰기가_끝내_막히면_기다림_수보다_한_번_더_시도하고_멈춘다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.0, 0.0))
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    막을_때, 막은 = _처음_몇_번만(99, b"x = 1\n")
+    _쓰기를_막는다(monkeypatch, path, 막을_때, 번호=errno.EINVAL)
+
+    with pytest.raises(RestoreError, match=r"src/m.py \(3번 막혔다: .*쓰기를 막았다"):
+        measure(
+            load_spec(_변이_파일(old="x = 1", new="x = 2")),
+            root=tmp_path,
+            runner=_변이면(path, b"x = 2", _빨강),
+            out=lambda _: None,
+        )
+
+    assert len(막은) == 3
+    assert path.read_bytes() == b"x = 2\n"
+
+
+def test_막혔다가_지난_줄은_모두_되쓴_뒤에_내서_출력이_끊겨도_남은_파일을_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """출력이 줄 버퍼라 닫힌 파이프(`| head`)의 쓰기 오류가 그 줄을 내는 자리에서 난다. 되쓰는
+    도중에 내면 뒤 파일이 변이된 채 남고, `main` 은 "변이는 되돌렸다" 고 거짓으로 알린다(PR 직전
+    버그 리뷰)."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.0,))
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    막을_때, _ = _처음_몇_번만(1, b"x = 1\n")
+    _쓰기를_막는다(monkeypatch, m, 막을_때, 번호=errno.EINVAL)
+
+    def 끊긴_출력(줄: str) -> None:
+        if 줄.startswith("되돌리기:"):
+            raise BrokenPipeError(32, "파이프가 닫혔다")
+
+    with pytest.raises(BrokenPipeError):
+        measure(load_spec(변이), root=tmp_path, runner=_변이면(m, b"x = 2", _빨강), out=끊긴_출력)
+
+    assert m.read_bytes() == b"x = 1\n"
+    assert a.read_bytes() == b"a = 1\n"
+
+
+def test_되쓰는_동안_끊겨도_남은_파일을_마저_되쓰고_끊긴_파일을_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """다시 시도하며 기다리는 동안(최대 3.7초) Ctrl+C 가 오면 뒤 파일을 되쓰지 않고 목록도 없이
+    끝났다(PR 직전 버그 리뷰). 변이가 도구 파일에 남는 것은 대기열 267 이 막으려던 것이다."""
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    _쓰기를_막는다(monkeypatch, m, lambda data: data == b"x = 1\n", 번호=errno.EINVAL)
+
+    def 기다리다_끊긴다(_: float) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(time, "sleep", 기다리다_끊긴다)
+
+    # 놓친 Ctrl+C 는 pytest 전체를 멈추므로 함께 잡아 무엇이 나왔는지 단언한다
+    with pytest.raises((RestoreError, KeyboardInterrupt)) as 잡힌:
+        measure(load_spec(변이), root=tmp_path, runner=_변이면(m, b"x = 2", _빨강), out=print)
+
+    assert isinstance(잡힌.value, RestoreError), repr(잡힌.value)
+    assert "src/m.py (되쓰는 동안 끊겼다)" in str(잡힌.value)
+    assert m.read_bytes() == b"x = 2\n"
+    assert a.read_bytes() == b"a = 1\n"
 
 
 def test_변이가_든_동안_다른_쓰기가_들어온_파일은_덮지_않고_알린다(tmp_path: Path) -> None:
@@ -1793,6 +2033,7 @@ def test_원문만_보면_명령을_돌리지_않고_틀린_원문을_모두_알
     assert any("둘:" in 한줄 and "0번" in 한줄 for 한줄 in 줄)
     assert any("셋:" in 한줄 and "2번" in 한줄 for 한줄 in 줄)
     assert not any("하나:" in 한줄 for 한줄 in 줄)
+    assert not any("줄 끝이 다르다" in 한줄 for 한줄 in 줄)  # 두 번인 원문은 줄 끝 탓이 아니다
     # pre-commit 이 표 하나만 넘겨도 어느 표가 틀렸는지 보인다
     assert all(한줄.startswith(f"{경로}: ") for 한줄 in 줄)
 
@@ -1928,6 +2169,76 @@ def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다
     assert done.returncode == 2, done.stderr.decode("utf-8", "replace")
     assert "틀린 — 표" in stdout
     assert 틀린 in stdout
+
+
+_신호를_기다린다 = """
+import pathlib, sys, time
+신호 = pathlib.Path(sys.argv[1])
+끝 = time.monotonic() + 15
+while not 신호.exists():
+    if time.monotonic() > 끝:
+        신호.with_suffix(".late").touch()
+        break
+    time.sleep(0.05)
+sys.exit(1)
+"""
+
+
+def test_출력을_파이프로_받아도_도는_동안_줄마다_내보낸다(tmp_path: Path) -> None:
+    """파이프와 파일은 블록 버퍼라, 출력을 파일로 돌린 실행은 도는 동안 로그가 비고 끊으면 결과가
+    사라졌다(대기열 259). 둘째 기준선은 첫 기준선 줄을 읽은 뒤에야 끝나, 도구가 그 줄을 쥐고 있으면
+    기다리다 늦음 표지를 남긴다. 둘째 기준선이 빨개 변이는 들지 않고, 들어도 원문과 같은
+    바이트다."""
+    신호 = tmp_path / "go"
+    기다림 = tmp_path / "wait.py"
+    기다림.write_text(_신호를_기다린다, encoding="utf-8")
+    파이썬 = json.dumps(sys.executable)
+    변이 = "".join(
+        f"""
+[runner.{이름}]
+command = {명령}
+judge = "exit"
+red_exit = 1
+
+[[mutation]]
+name = "{이름}"
+runner = "{이름}"
+expect = "red"
+
+[[mutation.edit]]
+file = "{_이_도구}"
+old = "ROOT = Path(__file__).resolve().parent.parent"
+new = "ROOT = Path(__file__).resolve().parent.parent"
+"""
+        for 이름, 명령 in [
+            ("fast", f'[{파이썬}, "-c", "pass"]'),
+            ("slow", f"[{파이썬}, {json.dumps(str(기다림))}, {json.dumps(str(신호))}]"),
+        ]
+    )
+    표 = _표를_쓴다(tmp_path, "pipe_mutations.toml", 변이)
+    환경 = hook_environment()
+    환경.pop("PYTHONUNBUFFERED", None)
+
+    with subprocess.Popen(
+        [sys.executable, _이_도구, 표],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=환경,
+    ) as process:
+        assert process.stdout is not None
+        첫_줄 = process.stdout.readline().decode("utf-8")
+        신호.touch()
+        나머지, stderr = process.communicate(timeout=60)
+
+    출력 = (첫_줄 + 나머지.decode("utf-8"), stderr.decode("utf-8", "replace"))
+    assert 첫_줄.startswith("기준선 fast: 초록"), 출력
+    assert not 신호.with_suffix(".late").exists()
+    # 종료 1 의 까닭: 둘째 기준선이 빨개 변이를 넣지 않았다(도구가 죽은 1 이 아니다)
+    assert process.returncode == 1, 출력
+    assert "기준선 slow: 빨강" in 출력[0], 출력
+    assert "기준선이 초록이 아니라 변이를 넣지 않았다" in 출력[0], 출력
+    assert 출력[1] == "", 출력
 
 
 def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(
