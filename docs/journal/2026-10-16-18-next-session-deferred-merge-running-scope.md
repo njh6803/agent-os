@@ -132,8 +132,19 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 일지에만 남기는 것: 커밋마다 pre-commit의 pytest가 약 7~8분 돌아 커밋 셋에 20분 넘게 들었다. 문서만 바뀐 커밋에도 저장소 상태
 시험이 pytest 안에서 돌아 줄이면 가드레일을 좁히는 것이고, 해가 난 사건이 없어 후보로 올리지 않았다.
 
+## PR 봇 리뷰
+
+- **첫 회차(`6da5cd25`).** 검사는 모두 통과했다. CodeRabbit은 한도에 걸려 리뷰하지 않았고, 이 PR의 스킬 파일은 `.coderabbit.yaml`의
+  경로 거르기(`!.claude/skills/**`)로 빠진다. claude-review는 Minor 둘, Nit 하나였다. Minor 둘(1단계의 2 문단과 2단계 문단을
+  하위 항목이나 불릿으로 나누기)은 이 PR 전부터 긴 문단이고 나누면 다른 카나리아 명세의 자리도 움직여 뒤로 넘겼다. 이 PR이 세운
+  1단계의 2대로 아래 "다음"에 적고 이 일지만 푸시했다. Nit(카나리아 3번이 굵은 문장의 앞부분만 본다)은 의도한 결합이라 두었다.
+  판정은 PR 코멘트에 남겼다.
+
 ## 다음
 
-다음 작업은 이 PR 병합 뒤 `next-session` 2단계가 결정표로 정한다. 이 PR이 연 대기열은 287·288이다. 이 PR이 남긴 위험(PR도 없이
+다음 작업은 이 PR 병합 뒤 `next-session` 2단계가 결정표로 정한다. 이 PR이 연 대기열은 287·288이다. PR #256 claude-review가 짚고
+뒤로 넘긴 일이 하나 있다. `next-session` 1단계의 2(봇 회차) 문단과 2단계의 실행 중 세션 확인 문단을 하위 항목이나 불릿으로 나누고,
+4단계의 재확인이 가리키는 2단계의 대상에 이름을 붙인다. 그 문단을 묻는 카나리아 명세(`next_session_bot_rounds.toml`,
+`next_session_ci_wait.toml`, `next_session_deferred_merge_running_scope.toml` 등)의 질문 자리를 함께 맞추고 다시 돌린다. 이 PR이 남긴 위험(PR도 없이
 턴 사이에 멈춘 세션은 2단계의 확인에 보이지 않는다, 압축 뒤 2·4단계 문장이 빠질 수 있다, 검색 색인이 새로 연 세션을 얼마나 빨리
 싣는지 재지 않았다)은 위 PR 직전 리뷰 절에 있다.
