@@ -872,10 +872,20 @@ def test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그
 
 # 접근성 패턴 호출을 제한 시간에 끊는다. 가짜 요소의 GetCurrentPattern 이 멈춘 호출을 흉내 낸다.
 # 멈춘 호출의 스레드 잡을 지우면(Remove-Job -Force) 그 호출이 끝날 때까지 기다려 제한 시간이 걸리지
-# 않았다(PR 직전 버그·성능 리뷰).
+# 않았다(PR 직전 버그·성능 리뷰). 스레드 잡은 패턴 식별자를 형식 이름으로 찾는다. 윈도에는 그
+# 어셈블리가 있고, CI 의 리눅스 pwsh 에는 없어(`Cannot find path ... UIAutomationClient.dll`) 같은
+# 이름의 대역 형식을 정의한다. 시험이 보는 것은 시간이지 패턴이 아니다.
 _PATTERN_TIMED = r"""
-Add-Type -AssemblyName UIAutomationClient
-Add-Type -AssemblyName UIAutomationTypes
+if (-not ('System.Windows.Automation.ExpandCollapsePattern' -as [type])) {
+    try { Add-Type -AssemblyName UIAutomationClient -ErrorAction Stop } catch { }
+}
+if (-not ('System.Windows.Automation.ExpandCollapsePattern' -as [type])) {
+    Add-Type -TypeDefinition @'
+namespace System.Windows.Automation {
+    public class ExpandCollapsePattern { public static object Pattern = null; }
+}
+'@
+}
 if (-not ('OpenSessionFakeElement' -as [type])) {
     Add-Type -TypeDefinition @'
 public class OpenSessionFakePattern { public void Expand() {} }

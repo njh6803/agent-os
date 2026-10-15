@@ -111,3 +111,7 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히
   - 보류에서 고친 것: 열린 하위 메뉴를 기다릴 때 항목을 매번 다시 찾는다(낡은 요소면 열린 메뉴를 놓친다).
   - 보류로 둔 것: `SetFocus`·`FindAll`의 시간 제한(실제 멈춤을 재지 못했다), 펼치기 실패 뒤 접기 결과의 알림, 분할 보기에서 창 전체로 찾는 메뉴 항목(고른 뒤 입력창 묶음의 버튼 글을 대 보므로 틀리게 고르면 보내기 전에 멈춘다).
 - 다시 돈 것: `tests/tools/test_open_session.py` 92 passed. 바뀐 길을 세션을 만들지 않는 `-Action defaults`로 실제 앱에서 두 번 밟았다(`Opus 5.5 / high`로 바꾸고 `xhigh`로 되돌렸다, 둘 다 종료 0).
+
+## PR 검사
+
+PR #250의 첫 회차에서 CodeRabbit(`Review completed`)·claude-review·e2e·visual·web은 초록이었고 `python`과 그에 걸린 `verify`가 빨갰다. 리눅스 러너의 pwsh에는 `UIAutomationClient` 어셈블리가 없어, 새 시험 둘(`test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다`)이 `Cannot find path ... UIAutomationClient.dll`로 실패했다(2 failed, 2850 passed). 시험 본문이 진짜 어셈블리를 먼저 부르고(`-ErrorAction Stop`을 잡는다), 형식이 없으면 같은 이름의 대역 형식(`ExpandCollapsePattern.Pattern`)을 정의하게 고쳤다. 스크립트는 그대로다. 윈도의 pwsh는 그 형식을 처음부터 찾아 대역 길을 밟지 않는다. 그래서 그 길의 두 전제를 따로 쟀다. Add-Type으로 정의한 형식을 스레드 잡 안에서 이름으로 찾았고, 시험 서버는 `-ErrorAction Stop`으로 잡은 `Add-Type -AssemblyName` 오류를 실패로 세지 않았다(종료 0). 리눅스에서 실제로 통하는지는 다음 CI가 판정한다.
