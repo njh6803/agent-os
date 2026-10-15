@@ -328,8 +328,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''if verdict.outcome in ("error", "unhandled"):'''
-new = '''if verdict.outcome == "error":'''
+old = '''if verdict.outcome in ("error", "unhandled") or missing:'''
+new = '''if verdict.outcome == "error" or missing:'''
 
 [[mutation]]
 name = "--check 만 주면 변이 파일 없이 넘어간다"

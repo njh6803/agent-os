@@ -25,8 +25,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''mutation.tests, mutation.timeout, runner)'''
-new = '''mutation.tests, DEFAULT_TIMEOUT, runner)'''
+old = '''tests, mutation.timeout, runner)'''
+new = '''tests, DEFAULT_TIMEOUT, runner)'''
 
 [[mutation]]
 name = "기준선이 같은 짝의 첫 변이의 제한을 받는다"

@@ -1,8 +1,8 @@
 # design-refresh 티켓 05 의 변이 표. 보여 주기용 스토리(태그 `showcase`)는 단언이 없어 처음부터 초록이었다. 그 스토리도
 # 미리보기의 afterEach(규칙 없는 클래스와 임의값)와 axe 를 지나는지, 보여 주기용 스토리 하나에 규칙 없는 클래스나 접근
-# 이름 없는 조작을 넣어 그 스토리로 좁힌 실행이 빨개지는지 본다. tools/mutate.py 의 vitest 판정은 실패한 스토리를 세고
-# 실패의 까닭(afterEach 의 "디자인 토큰에 없는 클래스" 메시지, axe 의 위반)은 가르지 않는다. 변이가 겨눈 한 줄 밖에
-# 바뀐 것이 없고 그 스토리에는 단언(play)이 없어 다른 까닭이 남지 않는다는 것은 어림이다.
+# 이름 없는 조작을 넣어 그 스토리로 좁힌 실행이 빨개지는지 본다. vitest 판정은 실패한 스토리를 셀 뿐이라, 실패의 까닭은
+# 변이마다의 표지(`expect_output`)가 본다(대기열 253). afterEach 는 그 메시지와 클래스 이름을, axe 는 위반 문구와 규칙
+# 문서의 주소(`label` 규칙)를 찍는다. 2026-10-14 에 변이를 넣은 실제 출력에서 골랐다(일지 2026-10-15-13).
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-refresh/probes/showcase_mutations.toml [번호 ...]
 
 [runner.storybook]
@@ -15,6 +15,7 @@ name = "보여 주기용 스토리에 규칙 없는 클래스를 그리면 after
 runner = "storybook"
 tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "쓰임: 승인 묻기의 버튼 쌍"]
 expect = "red"
+expect_output = ["디자인 토큰에 없는 클래스를 그렸다: 규칙 없는 클래스 text-base"]
 
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.stories.tsx"
@@ -32,6 +33,7 @@ name = "보여 주기용 스토리의 스위치에 접근 이름이 없으면 ax
 runner = "storybook"
 tests = ["packages/ui/src/components/molecules/Switch.stories.tsx", "-t", "쓰임: 플러그인 줄의 스위치"]
 expect = "red"
+expect_output = ["to have no violations", "/label?application=axeAPI"]
 
 [[mutation.edit]]
 file = "web/packages/ui/src/components/molecules/Switch.stories.tsx"
