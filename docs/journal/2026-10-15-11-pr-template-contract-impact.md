@@ -34,8 +34,8 @@
   계약에 실린다)와, 이 줄 밖의 `admin/`·`channel/http/` 라우트나 `sdk/`의 이벤트 모델도 `openapi.json`을 바꾼다는 것을 묻고
   `.claude/rules/http.md`를 가리킨다.
 - `.claude/skills/next-session/SKILL.md` 1단계: PR을 연 뒤 범위를 넓히는 커밋 전에 고칠 PR 본문 칸에 "계약 영향"을 더했다.
-- `KICKOFF.md`의 PR 템플릿 항목: 절 목록(계약 영향, 그리고 전부터 빠져 있던 리뷰어 참고), 칸을 둔 까닭, 바꿀 곳(77행 중
-  약 20행)을 맞췄다. 옛 행 수 67은 이 변경 전에도 71로 어긋나 있었다.
+- `KICKOFF.md`의 PR 템플릿 항목: 절 목록(계약 영향, 그리고 전부터 빠져 있던 리뷰어 참고), 칸을 둔 까닭, 바꿀 곳(약 20행)을
+  맞췄다. 옛 행 수 67은 이 변경 전에도 71로 어긋나 있었다. 전체 행 수는 회고에서 뺐다(회고 1).
 - 카나리아 명세 `.scratch/harness/probes/canary/next_session_pr_body_contract_impact.toml`.
 
 ## 셀프 리뷰
@@ -69,6 +69,17 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`, Plan: Free) 돌지 못�
   머리 주석이라 카나리아는 다시 돌리지 않았다. 오탐은 계약 영향 칸이 없는 옛 PR에서 1단계를 따를 때의 어긋남(절을 파싱하는
   곳이 없다), "약 20행"의 어림, 셀프 리뷰 절의 범위가 최종 diff와 다른 것(그 시점의 스냅숏이다), HTML 주석의 깨짐이다.
 
+## PR 리뷰
+
+PR #248. 헤드 `090e095`에서 검사 7건(`verify`, `python`, `web`, `e2e`, `visual`, `claude-review`, CodeRabbit)이 모두
+통과했다(`tools/wait_ci.py`).
+
+- claude-review: 지적 없음. 계약 영향 칸이 정의를 다시 적지 않고 작업 규약 2를 가리키는 것, 꼬리표가 계약 셋을 넓히지 않는
+  것, PR 본문의 "계약 영향: 없음"이 diff와 맞는 것을 짚었다.
+- CodeRabbit PR 봇: `@coderabbitai review` 요청이 시간당 한도에 걸려(`Review rate limited`) 리뷰가 없다. 보안·버그 축은 PR
+  직전의 대체 둘(위 절)이 PR 체크리스트에 적힌 것으로 갈음하고 병합은 기다리지 않는다(`docs/constitution/operations.md` 리뷰
+  파이프라인).
+
 ## 검사
 
 - 카나리아 `next_session_pr_body_contract_impact.toml`: 통과 4(claude 2.1.300). 실험군(커밋 전 워크트리) 셋은 칸 넷을,
@@ -76,3 +87,32 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`, Plan: Free) 돌지 못�
 - 첫 커밋 `4e343e72`의 pre-commit: 지침 검사, zizmor, `lint-imports`, 타입 우회 검사, `pyright`, `run-hooks`, `web-verify`,
   `pytest`, 표 검사, 줄 구분 문자 검사, 인용 대조(경고 없음), 커밋 메시지 검사 통과. `ruff` 둘과 변이 표 검사는 대상 파일이
   없어 Skipped였고, `ruff` 둘은 손으로 쳐서 통과했다(`All checks passed!`, `639 files already formatted`).
+- 둘째 커밋 `090e0955`의 pre-commit도 같은 검사가 통과했다(`ruff` 둘과 변이 표 검사는 같은 까닭으로 Skipped).
+- 이 커밋(회고 반영)의 pre-commit 결과는 PR 코멘트에 남긴다.
+
+## 회고
+
+후보 다섯. 승인 둘, 기각 셋, 넘김 없음.
+
+1. `KICKOFF.md` PR 템플릿 항목의 "N행 중 약 M행"이 템플릿의 행 수를 옮겨 적은 캐시라 낡는다 — 승인, 이 세션에서 반영.
+   사건: 옛 줄의 67이 이 PR 전부터 71과 어긋나 있었고, 이 PR 안에서도 78·76·77로 세 번 고쳐 썼다. 층: 틀린 사실의 고침이라
+   그 자리에서 뺀다. `wc -l` 한 번으로 알 수 있는 값이다. 되돌림: PR 하나. KICKOFF에서 이 꼴은 그 줄 하나뿐이었다(grep).
+   "약 20행"만 남겼다.
+2. 카나리아 명세 머리에 병합 뒤 다시 돌리는 길을 빠뜨렸다 — 승인, 대기열 270. 사건: PR 직전 `bug-perf-review`의 Nit이고,
+   같은 디렉터리 `next_session_*.toml` 아홉 가운데 넷도 그 문장이 없다(그 리뷰의 `git grep`). 층: 명세마다 적는 지침이 아니라
+   그 길이 필요해지는 순간에 러너가 내는 문구다. `source_problems`는 대조군 사본에 카나리아가 있으면 진단만 하고 처방이 없다.
+   되돌림: PR 하나. 도구와 시험이 따라 이 PR에 넣지 않았다.
+3. `claude-code-review.yml`의 경계 축이 `sdk` 계약의 동반 수정만 보고 HTTP 계약은 보지 않는다 — 기각. 셀프 리뷰 두 축이
+   짚었지만 사건이 없다. `openapi.json`을 바꾼 PR 열하나에서 계약의 동반 수정을 놓친 사례를 찾은 것이 아니라, 체크할 칸이
+   없었다는 틈이다. 최신성과 생성 클라이언트는 pytest와 web verify가 이미 막는다. PR 본문의 남긴 위험에 적었다.
+4. 첫 판의 계약 영향 칸이 인증·CORS를 넣어 작업 규약 2를 말없이 넓혔고, 일지에 옛 행 수를 세지 않고 적었다 — 기각. 셀프
+   리뷰가 잡았고, 근거 문장은 이미 `docs/agents/issue-tracker.md`의 근거 절이 "재지 않은 수는 재고 나서 적는다"로 다룬다.
+5. 계약 셋을 열거한 사본들(`CLAUDE.md`, `docs/agents/issue-tracker.md`, `code-review`·`retro` 스킬)이 어긋나지 않게 하는 검사 —
+   기각. 사본끼리 어긋난 사건이 없다. 이번 틈은 템플릿이 정의를 반영하지 않은 것이고, 템플릿은 이제 정의를 가리키기만 한다.
+
+## 다음
+
+- 이 PR 병합 뒤 주 체크아웃을 당기고 병합된 워크트리를 지우는 일은 주 체크아웃 세션의 `tidy-checkouts`가 한다.
+- 대기열 270(`tools/canary.py`의 대조군 문구에 처방)이 열려 있다. 같은 파일의 열린 항목과 묶을 수 있는지는 대기열을 본다.
+- 사용자가 물은 to-tickets의 `**근거:**` 줄은 넣지 않기로 답했다. 근거 문단이 빠진 티켓에서 무언가를 놓친 사건이 나면 그때
+  후보로 올린다.
