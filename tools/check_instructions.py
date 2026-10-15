@@ -48,6 +48,7 @@ MAX_LINES = 200
 ALLOWED_IMPORTS = ["@docs/constitution/principles.md"]
 PATCHED_SKILLS = (
     "code-review",
+    "grill-with-docs",
     "grilling",
     "implement",
     "retro",
