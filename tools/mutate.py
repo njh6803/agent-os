@@ -31,7 +31,10 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 언제 전체를 돌리나: 시험을 고치거나 지웠으면 전체, 시험을 더하기만 했거나 코드만 바꿨으면 고른
 것(원문을 고쳤거나 더한 변이)이다. 견주는 쪽은 그 표를 마지막으로 돌린 판이다. 시험을 더해서는
 빨갛던 변이가 초록이 되지 않지만, 고치거나 지우면 다른 변이를 잡던 단언이 사라질 수 있다. 시험을
-고친 판에서 그런 일을 전체 실행이 잡았다(일지 2026-10-12-16의 둘째 판). 못 보는 것: 코드만 바꾼
+고친 판에서 그런 일을 전체 실행이 잡았다(일지 2026-10-12-16의 둘째 판). 전체 실행은 셀프 리뷰와
+PR 직전 리뷰(보안·버그·성능)를 반영해 커밋한 뒤에 한 번 돈다. 리뷰가 시험을 고치면 그 전의 실행은
+옛 시험을 잰 것이라, 리뷰 전에 띄운 묶음을 멈추고 다시 돌렸다(셀프 리뷰 전에 약 15분, 대기열 265.
+PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 못 보는 것: 코드만 바꾼
 판에서 원문이 그대로인 변이도 둘레의 코드가 바뀌어 결과가 달라질 수 있다. 시험을 더하면 초록을
 기대한 변이(대조군)가 빨개질 수 있다(일지 2026-10-12-29, `mutate_restore` 표). 고른 것만 돌리면 둘
 다 보지 못한다.
@@ -114,12 +117,16 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 4. 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어 돌린 뒤 `finally` 에서 그 바이트를
    그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지 본다. 다르면 변이가 든 동안 다른
    쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열 77). 되돌릴 파일(`restore`)은
-   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 명령 한 번이 시간 제한(`timeout`)을 넘기면 그 명령이
-   띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로 판정한 뒤 남은
-   반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가 러너→pytest→러너로
-   되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열 139). 기다리는
-   동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤 되돌린다.
-   윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
+   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 되돌리는 읽기와 쓰기가 `OSError` 로 막히면 각각
+   `RESTORE_WAITS`(합 3.7초) 동안 기다리며 다시 시도한다. 변이 87번째를 되돌리는 쓰기가 `[Errno 22]
+   Invalid argument` 로 한 번 막혀 3으로 멈추고 변이가 도구 파일에 남았다(대기열 267, 일지
+   2026-10-15-06). 다른 쓰기는 처음 읽은 바이트로 한 번만 본다. 되쓰는 동안 끊겨도(Ctrl+C) 그 파일을
+   남은 파일로 적고 나머지 파일을 마저 되쓴 뒤 3으로 멈춘다. 명령 한 번이 시간 제한(`timeout`)을
+   넘기면 그 명령이 띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로
+   판정한 뒤 남은 반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가
+   러너→pytest→러너로 되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열
+   139). 기다리는 동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤
+   되돌린다. 윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
 5. 종료 코드: 모두 기대대로면 0, 어긋나거나(시간 제한을 넘긴 것 포함) 기준선이 초록이 아니면 1,
    변이 파일을 읽지 못했거나 틀렸거나 고른 것이 없으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지
    못했거나 되돌리지 못했으면 3.
@@ -135,7 +142,9 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 명령, 백그라운드 실행의 상한)은 아래 못 보는 것의 강제 종료라 되돌림이 돌지 않을 수 있다. 시간은
 변이마다의 `timeout` 으로 걸고, 바깥의 상한은 표 전체보다 넉넉히 준다. 도는 동안 변이한 파일을
 고치면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어
-낸다.
+낸다. 백그라운드로 띄운 표 묶음을 `TaskStop` 으로 멈추면 윈도우에서 묶음을 돌리던 셸 스크립트와 그
+아래 프로세스가 남아 다음 표를 이어 돌았다(일지 2026-10-15-13·2026-10-16-07). 멈춘 뒤 명령줄로 남은
+프로세스를 찾아 `taskkill /T` 로 끝내고, 임시 워크트리에 변이가 남았는지 `git status` 로 본다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -150,12 +159,14 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 lastfailed 에 남지 않게 한다.
 
 못 보는 것: 프로세스가 강제로 죽으면(`finally` 가 돌지 않으면) 되돌리지 못한다. 되돌리는 쓰기가
-실패하거나(파일이 잠겼다) 다른 쓰기가 들어왔으면 나머지 파일은 되돌리고 남은 파일을 알린다. 세 경우
+다시 시도해도 막히거나(파일이 잠겼다) 다른 쓰기가 들어왔으면 나머지 파일은 되돌리고 남은 파일을
+알린다. 세 경우
 모두 `git diff` 로 본다. 되돌릴 파일(`restore`, 편집한 파일을 함께 적은 것 포함)에 든 다른 쓰기는
 명령의 쓰기와 가를 수 없어 덮는다. 편집한 파일을 읽은 뒤 쓰기까지의 틈에 든 쓰기도 덮는다. 틈은
 다음과 같다.
 - 원래 바이트를 읽고 변이를 쓰기까지.
-- 되돌리기 전에 읽어 보고 다시 쓰기까지.
+- 되돌리기 전에 읽어 보고 다시 쓰기까지. 쓰기가 막혀 다시 시도하면 그 기다림(최대 3.7초)만큼
+  길어진다.
 - 앞 파일의 변이 쓰기가 실패해 변이를 쓰지 못한 파일이면, 처음 읽은 뒤 되돌리기까지. 쓴 변이
   바이트가 없어 보지 않는다.
 
@@ -164,7 +175,11 @@ lastfailed 에 남지 않게 한다.
 그룹을 따로 연 손자(POSIX)는 남는다. 남은 것이 출력 파이프를 쥐면 끊은 뒤 10초만 출력을 기다리고
 그만 읽는다. 이 판단은 윈도우 10(19045)의 `taskkill` 과 CPython 3.12.10 위에서 시험으로 봤다.
 
-원문의 줄 끝은 파일과 같아야 한다 — 변이 파일의 `\\n` 은 CRLF 파일에서 맞지 않는다. vitest 의 skip
+원문의 줄 끝은 파일과 같아야 한다 — 변이 파일의 `\\n` 은 CRLF 파일에서 맞지 않는다. 0번인 원문이
+줄 끝을 맞춘 바이트에서 찾히면, 변이 파일 오류와 `--check` 가 "줄 끝이 다르다" 와 함께 파일의 줄
+끝과 줄 끝을 맞춘 횟수를 덧붙인다. 패치 스크립트의
+`Path.write_text` 가 윈도우에서 도구를 CRLF 로 바꿔 써 원문 스무 개 남짓이 0번으로만 나왔고, git 은
+커밋에서 LF 로 고쳐 diff 로는 보이지 않았다(대기열 264). vitest 의 skip
 은 세지 않는다. `-t` 로 좁히면 고르지 않은 테스트가 skipped 로 세어져 `it.skip` 과 가를 수 없다. tsc
 의 빨강은 진단이 난 파일만 본다. 변이가 낸 문법 오류가 적은 파일까지 번져도 빨강이다. 윈도우에서
 `pnpm.CMD` 같은 배치 파일은 cmd.exe 가 돌려 인자의 `&`·`%`·`^` 가 해석될 수 있다. 좁힌 선택이 비면
@@ -191,8 +206,9 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 import tomllib
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -203,6 +219,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_TIMEOUT = 600  # 명령 한 번의 시간 제한(초). 변이마다 `timeout` 으로 바꾼다
 _DRAIN_SECONDS = 10  # 끊은 뒤 출력 파이프가 닫히기를 기다리는 시간
 _KILL_SECONDS = 30  # 윈도우의 `taskkill` 을 기다리는 시간
+# 되돌리는 읽기·쓰기를 다시 시도하기 전에 기다리는 초. `tools/tidy_checkouts.py` 의 같은 이름을
+# 따랐다. 변이를 되돌리는 쓰기가 `[Errno 22] Invalid argument` 로 한 번 막혔고(대기열 267), 무엇이
+# 그 틈에 파일을 쥐었는지는 재지 않았다
+RESTORE_WAITS = (0.2, 0.5, 1.0, 2.0)
 
 type Outcome = Literal["green", "red", "unhandled", "error"]
 type JudgeName = Literal["pytest", "vitest", "playwright", "tsc", "exit"]
@@ -391,19 +411,24 @@ def _judge_exit(exit_code: int, text: str, red_exit: int | None) -> Verdict:
     return Verdict(outcome, _last_line(text, exit_code))
 
 
-def judge(
-    kind: JudgeName,
-    result: CommandResult,
-    diagnostic_in: str | None = None,
-    *,
-    red_exit: int | None = None,
-) -> Verdict:
+@dataclass(frozen=True)
+class Judging:
+    """판정 하나와 그 판정만 쓰는 인자. `diagnostic_in` 은 tsc, `red_exit` 는 exit 판정만 쓰고, 그
+    짝은 변이 파일을 읽을 때 본다. 인자가 변이(`diagnostic_in`)와 러너(`red_exit`)에 흩어져 있어
+    `_judging_for` 한 곳에서 묶고, 측정의 단계들은 묶음 하나만 넘긴다(PR #240 claude-review)."""
+
+    kind: JudgeName
+    diagnostic_in: str | None = None
+    red_exit: int | None = None
+
+
+def judge(judging: Judging, result: CommandResult) -> Verdict:
     """명령의 결과를 초록, 빨강, 처리하지 않은 에러, 오류로 가른다. 색 코드는 벗기고 읽는다. 시간
-    제한을 넘겨 끊은 결과는 끊기 전의 출력이 무엇이든 오류다. `red_exit` 는 exit 판정만 쓴다."""
+    제한을 넘겨 끊은 결과는 끊기 전의 출력이 무엇이든 오류다."""
     if result.timed_out_after is not None:
         return Verdict("error", f"시간 제한 {result.timed_out_after}초를 넘겨 끊었다")
     text = result.plain
-    match kind:
+    match judging.kind:
         case "pytest":
             return _judge_pytest(result.exit_code, text)
         case "vitest":
@@ -411,9 +436,9 @@ def judge(
         case "playwright":
             return _judge_playwright(result.exit_code, text)
         case "tsc":
-            return _judge_tsc(result.exit_code, text, diagnostic_in)
+            return _judge_tsc(result.exit_code, text, judging.diagnostic_in)
         case "exit":
-            return _judge_exit(result.exit_code, text, red_exit)
+            return _judge_exit(result.exit_code, text, judging.red_exit)
 
 
 def _runners(spec: Spec) -> dict[str, RunnerSpec]:
@@ -421,8 +446,14 @@ def _runners(spec: Spec) -> dict[str, RunnerSpec]:
     return {**_BUILTIN, **spec.runner}
 
 
-def _pairing_problems(spec: Spec) -> list[str]:
-    """러너와 판정의 짝. 파일을 보지 않는다."""
+def _judging_for(command: RunnerSpec, mutation: Mutation | None = None) -> Judging:
+    """러너의 판정과 그 판정이 쓰는 인자. 기준선은 변이가 없어 진단 자리도 없다."""
+    diagnostic_in = mutation.diagnostic_in if mutation is not None else None
+    return Judging(command.judge, diagnostic_in, command.red_exit)
+
+
+def _runner_problems(spec: Spec) -> list[str]:
+    """변이 파일의 러너마다 이름과 판정의 짝. 파일을 보지 않는다."""
     problems = [
         f"러너 이름 {name} 는 내장이다. 다른 이름을 쓴다"
         for name in spec.runner
@@ -437,6 +468,12 @@ def _pairing_problems(spec: Spec) -> list[str]:
             problems.append(f"러너 {name}: red_exit 는 exit 판정만 쓴다(이 러너는 {command.judge})")
         if "" in command.baseline_output:
             problems.append(f"러너 {name}: baseline_output 에 빈 표지가 있다. 어느 출력에나 있다")
+    return problems
+
+
+def _mutation_problems(spec: Spec) -> list[str]:
+    """변이마다 러너와 판정의 짝. 파일을 보지 않는다."""
+    problems: list[str] = []
     runners = _runners(spec)
     for m in spec.mutation:
         if m.runner not in runners:
@@ -466,7 +503,7 @@ def load_spec(text: str) -> Spec:
     numeric = [name for name in names if _NUMBER.fullmatch(name)]
     if numeric:
         raise SpecError(f"이름이 숫자뿐이다: {', '.join(numeric)}. 번호와 가를 수 없다")
-    problems = _pairing_problems(spec)
+    problems = [*_runner_problems(spec), *_mutation_problems(spec)]
     if problems:
         raise SpecError("\n".join(problems))
     return spec
@@ -591,12 +628,29 @@ def _mutated(root: Path, mutation: Mutation) -> dict[Path, tuple[bytes, bytes]]:
         old = edit.old.encode("utf-8")
         count = current.count(old)
         if count != 1:
+            hint = _eol_hint(current, old) if count == 0 else ""
             raise SpecError(
                 f"{mutation.name}: {edit.file} 에 원문이 {count}번 있다. 정확히 한 번이어야 한다"
-                " (줄 끝과 들여쓰기까지 바이트로 맞춘다)"
+                f" (줄 끝과 들여쓰기까지 바이트로 맞춘다){hint}"
             )
         files[path] = (original, current.replace(old, edit.new.encode("utf-8")))
     return files
+
+
+def _eol_hint(data: bytes, old: bytes) -> str:
+    """0번인 원문이 줄 끝을 맞춘 바이트에서 찾히면 덧붙일 까닭, 아니면 빈 문자열. 파일의 줄 끝과
+    줄 끝을 맞추면 몇 번인지를 함께 적어, 줄 끝이 섞인 파일이나 두 번 찾히는 원문에서도 참이다."""
+
+    def lf(raw: bytes) -> bytes:
+        return raw.replace(b"\r\n", b"\n")
+
+    found = lf(data).count(lf(old))
+    if not found:
+        return ""
+    crlf = data.count(b"\r\n")
+    bare = data.count(b"\n") - crlf
+    ending = "CRLF 와 LF 가 섞였다" if crlf and bare else "CRLF 뿐이다" if crlf else "LF 뿐이다"
+    return f". 줄 끝이 다르다(파일은 {ending}, 줄 끝을 맞추면 {found}번)"
 
 
 def _file_problems(root: Path, spec: Spec) -> list[str]:
@@ -633,9 +687,8 @@ def _drop_bytecode(path: Path) -> None:
 
 
 def _invoke(
-    root: Path, spec: Spec, name: str, tests: Sequence[str], timeout: int, runner: Runner
+    root: Path, command: RunnerSpec, tests: Sequence[str], timeout: int, runner: Runner
 ) -> CommandResult:
-    command = _runners(spec)[name]
     return runner([*command.command, *tests], root / command.cwd, timeout)
 
 
@@ -643,31 +696,72 @@ class _WrittenMeanwhile(Exception):
     """변이가 든 동안 다른 쓰기가 들어와, 파일이 쓴 변이 바이트가 아니다."""
 
 
-def _restore_file(path: Path, original: bytes, written: bytes | None) -> None:
+def _retrying[T](action: Callable[[], T], blocked: Callable[[OSError], None]) -> T:
+    """`OSError` 로 막히면 그 오류를 `blocked` 에 알리고 `RESTORE_WAITS` 의 초만큼 기다려 다시
+    부른다. 끝내 막히면 마지막 `OSError` 를 낸다."""
+    for wait in RESTORE_WAITS:
+        try:
+            return action()
+        except OSError as error:
+            blocked(error)
+            time.sleep(wait)
+    return action()
+
+
+def _restore_file(
+    path: Path, original: bytes, written: bytes | None, blocked: Callable[[OSError], None]
+) -> None:
     """원래 바이트를 되쓴다. 쓴 변이 바이트(`written`)가 있는데 파일이 그것과 다르면 덮지 않고
-    `_WrittenMeanwhile`."""
-    if written is not None and path.read_bytes() != written:
+    `_WrittenMeanwhile`. 읽기와 쓰기는 막히면 다시 시도한다(`_retrying`). 다른 쓰기는 처음 읽은
+    바이트로 한 번만 본다. 쓰다 막힌 뒤의 파일은 이 쓰기가 남긴 앞부분이라, 다시 볼 때마다 다른
+    쓰기로 읽힌다."""
+    if written is not None and _retrying(path.read_bytes, blocked) != written:
         raise _WrittenMeanwhile
-    path.write_bytes(original)
+    _retrying(lambda: path.write_bytes(original), blocked)
     _drop_bytecode(path)
 
 
-def _restore(root: Path, name: str, held: dict[Path, bytes], written: dict[Path, bytes]) -> None:
-    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`."""
+def _restore(
+    root: Path,
+    name: str,
+    held: dict[Path, bytes],
+    written: dict[Path, bytes],
+    out: Callable[[str], None],
+) -> None:
+    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`. 막혔다가 지난 파일은 처음
+    막힌 까닭을 남긴다. 무엇이 그 틈에 파일을 쥐는지 다음에 잴 흔적이다(대기열 267). 그 줄은 모두
+    되쓴 뒤에 낸다. 출력이 줄 버퍼라 닫힌 파이프의 쓰기 오류가 그 자리에서 나, 되쓰는 도중에 내면
+    남은 파일을 되쓰지 못한다(PR 직전 버그 리뷰). 되쓰는 동안 끊겨도(Ctrl+C) 그 파일을 남은 파일로
+    적고 나머지를 마저 되쓴다."""
     stuck: list[str] = []
+    passed: list[str] = []
     for path, original in held.items():
         relative = path.relative_to(root.resolve()).as_posix()
+        blocked: list[OSError] = []
         try:
-            _restore_file(path, original, written.get(path))
+            _restore_file(path, original, written.get(path), blocked.append)
         except _WrittenMeanwhile:
             stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
         except OSError as error:
-            stuck.append(f"{relative} ({error})")
+            stuck.append(f"{relative} ({len(blocked) + 1}번 막혔다: {error})")
+        except KeyboardInterrupt:
+            stuck.append(f"{relative} (되쓰는 동안 끊겼다)")
+        else:
+            if blocked:
+                passed.append(
+                    f"{relative} — {len(blocked)}번 막혔다가 지났다. 처음 막힌 까닭 {blocked[0]}"
+                )
     if stuck:
-        raise RestoreError(f"{name}: {', '.join(stuck)}")
+        later = f". 막혔다가 지난 파일: {', '.join(passed)}" if passed else ""
+        raise RestoreError(f"{name}: {', '.join(stuck)}{later}")
+    for line in passed:
+        out(f"되돌리기: {line}")
 
 
-def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> list[CommandResult]:
+def _run_mutated(
+    root: Path, command: RunnerSpec, mutation: Mutation, runner: Runner, out: Callable[[str], None]
+) -> list[CommandResult]:
+    """변이를 넣고 반복마다 돌린 결과. 되돌리기를 다시 시도했으면 그 줄을 `out` 에 낸다."""
     files = _mutated(root, mutation)
     rewritable = [(root / relative).resolve() for relative in mutation.restore]
     held = {path: original for path, (original, _) in files.items()}
@@ -685,13 +779,13 @@ def _run_mutated(root: Path, spec: Spec, mutation: Mutation, runner: Runner) -> 
         if mutation.expect == "red" and mutation.runner in _BUILTIN:
             tests = [*tests, "-x"]  # 빨강은 실패 하나로 정해진다(독스트링의 하는 일 3)
         for _ in range(mutation.repeat):
-            result = _invoke(root, spec, mutation.runner, tests, mutation.timeout, runner)
+            result = _invoke(root, command, tests, mutation.timeout, runner)
             results.append(result)
             if result.timed_out_after is not None:
                 break  # 끊긴 판정은 이미 기대와 어긋나, 남은 반복은 변이를 든 채 시간만 쓴다
         return results
     finally:
-        _restore(root, mutation.name, held, written)
+        _restore(root, mutation.name, held, written, out)
 
 
 def _missing(result: CommandResult, markers: Sequence[str]) -> list[str]:
@@ -700,21 +794,96 @@ def _missing(result: CommandResult, markers: Sequence[str]) -> list[str]:
     return [marker for marker in markers if marker not in text]
 
 
-def _details(
-    judged: Sequence[tuple[CommandResult, Verdict]],
-    out: Callable[[str], None],
-    markers: Sequence[str] = (),
-) -> None:
+@dataclass(frozen=True)
+class _Run:
+    """명령 한 번의 결과, 그 판정, 출력에 없는 표지."""
+
+    result: CommandResult
+    verdict: Verdict
+    missing: tuple[str, ...]
+
+
+def _run_of(result: CommandResult, judging: Judging, markers: Sequence[str]) -> _Run:
+    return _Run(result, judge(judging, result), tuple(_missing(result, markers)))
+
+
+def _marker_note(missing: Sequence[str]) -> str:
+    return f"표지 없음: {', '.join(missing)}"
+
+
+def _details(runs: Sequence[_Run], out: Callable[[str], None]) -> None:
     """빨간 테스트의 이름, 그리고 빨강도 초록도 아니거나 표지가 없으면 출력의 끝."""
-    for name in dict.fromkeys(name for _, verdict in judged for name in verdict.failed):
+    for name in dict.fromkeys(name for run in runs for name in run.verdict.failed):
         out(f"   {name}")
-    for result, verdict in judged:
-        missing = _missing(result, markers)
-        if missing:
-            out(f"   표지 없음: {', '.join(missing)}")
-        if verdict.outcome in ("error", "unhandled") or missing:
-            for line in result.plain.splitlines()[-10:]:
+    for run in runs:
+        if run.missing:
+            out(f"   {_marker_note(run.missing)}")
+        if run.verdict.outcome in ("error", "unhandled") or run.missing:
+            for line in run.result.plain.splitlines()[-10:]:
                 out(f"   | {line}")
+
+
+def _baseline_runs(
+    root: Path, spec: Spec, runners: Mapping[str, RunnerSpec], runner: Runner
+) -> Iterator[tuple[str, _Run]]:
+    """러너와 인자의 짝마다 변이 없이 한 번씩 돌린 결과(기준선)와 그 짝의 이름. 짝 하나를 돌릴
+    때마다 내놓아 부르는 쪽이 그 줄을 바로 낸다."""
+    # 기준선은 러너와 인자의 짝마다 한 번이고, 그 짝을 쓰는 변이 가운데 가장 긴 제한을 받는다
+    baselines: dict[tuple[str, tuple[str, ...]], int] = {}
+    for m in spec.mutation:
+        key = (m.runner, tuple(m.tests))
+        baselines[key] = max(baselines.get(key, 0), m.timeout)
+    for (name, tests), timeout in baselines.items():
+        command = runners[name]
+        result = _invoke(root, command, tests, timeout, runner)
+        yield (
+            " ".join((name, *tests)),
+            _run_of(result, _judging_for(command), command.baseline_output),
+        )
+
+
+def _baseline_ok(run: _Run) -> bool:
+    """기준선이 초록이고 표지가 모두 있다."""
+    return run.verdict.outcome == "green" and not run.missing
+
+
+def _report_baseline(label: str, run: _Run, out: Callable[[str], None]) -> None:
+    absent = f" — {_marker_note(run.missing)}" if run.missing else ""
+    out(f"기준선 {label}: {_LABELS[run.verdict.outcome]} — {run.verdict.summary}{absent}")
+    if not _baseline_ok(run):
+        _details([run], out)
+
+
+def _mutation_runs(
+    root: Path, mutation: Mutation, command: RunnerSpec, runner: Runner, out: Callable[[str], None]
+) -> list[_Run]:
+    """변이 하나를 넣어 돌린 반복마다의 결과."""
+    judging = _judging_for(command, mutation)
+    return [
+        _run_of(result, judging, mutation.expect_output)
+        for result in _run_mutated(root, command, mutation, runner, out)
+    ]
+
+
+def _matched(mutation: Mutation, runs: Sequence[_Run]) -> bool:
+    """매 반복이 기대와 같고 표지가 모두 있다."""
+    return all(run.verdict.outcome == mutation.expect and not run.missing for run in runs)
+
+
+def _report_mutation(
+    number: int,
+    mutation: Mutation,
+    runs: Sequence[_Run],
+    matched: bool,
+    out: Callable[[str], None],
+) -> None:
+    outcomes = ", ".join(_LABELS[run.verdict.outcome] for run in runs)
+    head = "==" if matched else "!! 어긋남 —"
+    out(
+        f"{head} {number}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"
+        f" 결과 {outcomes} — {runs[-1].verdict.summary}"
+    )
+    _details(runs, out)
 
 
 def check(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
@@ -744,52 +913,20 @@ def measure(
     _validate(root, spec)
     if numbers is None:
         numbers = _numbers(spec)
-
-    # 기준선은 러너와 인자의 짝마다 한 번이고, 그 짝을 쓰는 변이 가운데 가장 긴 제한을 받는다
-    baselines: dict[tuple[str, tuple[str, ...]], int] = {}
-    for m in spec.mutation:
-        key = (m.runner, tuple(m.tests))
-        baselines[key] = max(baselines.get(key, 0), m.timeout)
-    baseline_green = True
-    for (name, tests), timeout in baselines.items():
-        command = _runners(spec)[name]
-        result = _invoke(root, spec, name, tests, timeout, runner)
-        verdict = judge(command.judge, result, red_exit=command.red_exit)
-        missing = _missing(result, command.baseline_output)
-        absent = f" — 표지 없음: {', '.join(missing)}" if missing else ""
-        out(
-            f"기준선 {' '.join((name, *tests))}: {_LABELS[verdict.outcome]}"
-            f" — {verdict.summary}{absent}"
-        )
-        if verdict.outcome != "green" or missing:
-            _details([(result, verdict)], out, command.baseline_output)
-            baseline_green = False
-    if not baseline_green:
+    runners = _runners(spec)
+    baselines: list[_Run] = []
+    for label, run in _baseline_runs(root, spec, runners, runner):
+        _report_baseline(label, run, out)
+        baselines.append(run)
+    if not all(_baseline_ok(run) for run in baselines):
         out("기준선이 초록이 아니라 변이를 넣지 않았다. 빨간 기준선 위의 빨강은 재는 것이 없다")
         return 1
 
     mismatched: list[str] = []
     for mutation in spec.mutation:
-        command = _runners(spec)[mutation.runner]
-        results = _run_mutated(root, spec, mutation, runner)
-        judged = [
-            (
-                result,
-                judge(command.judge, result, mutation.diagnostic_in, red_exit=command.red_exit),
-            )
-            for result in results
-        ]
-        outcomes = ", ".join(_LABELS[verdict.outcome] for _, verdict in judged)
-        matched = all(
-            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)
-            for result, verdict in judged
-        )
-        head = "==" if matched else "!! 어긋남 —"
-        out(
-            f"{head} {numbers[mutation.name]}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"
-            f" 결과 {outcomes} — {judged[-1][1].summary}"
-        )
-        _details(judged, out, mutation.expect_output)
+        runs = _mutation_runs(root, mutation, runners[mutation.runner], runner, out)
+        matched = _matched(mutation, runs)
+        _report_mutation(numbers[mutation.name], mutation, runs, matched, out)
         if not matched:
             mismatched.append(mutation.name)
 
@@ -978,7 +1115,9 @@ def main(
 
 if __name__ == "__main__":
     # pre-commit 훅 환경에 PYTHONUTF8 이 있다고 가정하지 않는다. 없으면 윈도우의 파이프는 cp949 다.
+    # 파이프와 파일은 블록 버퍼라, 출력을 파일로 돌린 실행은 도는 동안 로그가 비고 끊으면 결과가
+    # 사라졌다(대기열 259). 그래서 줄마다 내보낸다
     stream = sys.stdout
     if isinstance(stream, io.TextIOWrapper):
-        stream.reconfigure(encoding="utf-8")
+        stream.reconfigure(encoding="utf-8", line_buffering=True)
     raise SystemExit(main(sys.argv[1:]))
