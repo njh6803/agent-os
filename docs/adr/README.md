@@ -34,6 +34,7 @@
 | [0028](0028-kickoff-runs-by-a-thin-runner-skill.md) | 킥오프는 런북을 읽는 얇은 진행 스킬이 순서대로 진행하고 사람 몫에서 멈춘다 | accepted | 2026-10-12 |
 | [0029](0029-session-model-is-picked-before-send.md) | 새 세션의 모델과 추론 레벨은 지시문이 정하고 open-session이 보내기 전에 입력창에서 고른다 | accepted | 2026-10-12 |
 | [0030](0030-powershell-scripts-are-tested-by-pytest-through-pwsh.md) | `tools/`의 PowerShell 스크립트는 pytest가 pwsh로 함수를 떼어 시험하고, Pester는 들이지 않는다 | accepted | 2026-10-13 |
+| [0031](0031-failed-run-carries-a-runtime-failure-cause.md) | 실패한 실행은 런타임이 정한 실패 원인을 들고 최종 사용자 항목에도 싣는다 | accepted | 2026-10-15 |
 | [0032](0032-worktrees-stay-under-claude-and-are-checked-before-use.md) | 워크트리는 `.claude/worktrees/`에 두고, 들어가기 전에 목록으로 자리를 확인하며, 정리는 `tidy-checkouts`가 맡는다 | accepted | 2026-10-15 |
 | [0033](0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md) | 세션 컨텍스트는 단계 경계의 인계와 40만 자동 압축 창으로 묶고, 토큰 사용은 사용량 장부에서 만든 일간 보고서로 지켜본다 | accepted | 2026-10-15 |
 
