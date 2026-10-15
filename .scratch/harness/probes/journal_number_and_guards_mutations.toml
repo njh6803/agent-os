@@ -168,8 +168,10 @@ tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_push_delete_open_pr.py"
-old = '''    text = "\n".join(_without_heredoc_bodies(command))'''
-new = '''    text = command'''
+old = '''    text = "\n".join(_without_heredoc_bodies(command))
+    text = re.sub(r"\\\r?\n", " ", text).replace("\n", " ; ")'''
+new = '''    text = command
+    text = re.sub(r"\\\r?\n", " ", text).replace("\n", " ; ")'''
 
 [[mutation]]
 name = "포크의 같은 이름 브랜치는 이 원격의 PR 머리가 아니다"
@@ -277,8 +279,8 @@ tests = ["tests/tools/test_hook_user_settings_read.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_user_settings_read.py"
-old = '''        if leaf is None or fnmatch.fnmatch(name, leaf):'''
-new = '''        if leaf is not None and fnmatch.fnmatch(name, leaf):'''
+old = '''        if glob is None or any(fnmatch.fnmatch(name, leaf) for leaf in leaves):'''
+new = '''        if glob is not None and any(fnmatch.fnmatch(name, leaf) for leaf in leaves):'''
 
 [[mutation]]
 name = "재귀 검색은 대상을 품은 폴더면 막는다"
@@ -324,3 +326,96 @@ expect = "red"
 file = "tools/hook_user_settings_read.py"
 old = '''    return module.normcase(module.normpath(path))'''
 new = '''    return module.normpath(path)'''
+
+# --- PR 직전 리뷰 반영(버그 축, 보안 축) ---
+[[mutation]]
+name = "shlex 의 주석을 끄고 줄마다의 주석만 뺀다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''    lexer.commenters = ""'''
+new = '''    pass'''
+
+[[mutation]]
+name = "주석을 뺀 글도 읽는다(푸시 훅, 콜론이 든 꼬리 주석)"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''    for text in (command, _without_comments(command)):'''
+new = '''    for text in (command,):'''
+
+[[mutation]]
+name = "주석을 빼지 않은 글도 읽는다(푸시 훅, 인용이 어긋난 주석 판정)"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''    for text in (command, _without_comments(command)):'''
+new = '''    for text in (_without_comments(command),):'''
+
+[[mutation]]
+name = "복합문 예약어 뒤의 푸시도 읽는다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''    while index < len(words) and (_ASSIGNMENT.match(words[index]) or words[index] in _RESERVED):'''
+new = '''    while index < len(words) and _ASSIGNMENT.match(words[index]):'''
+
+[[mutation]]
+name = "URL 이나 경로로 적은 원격에는 접속하지 않는다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''        return None
+    url = _run(["git", "remote", "get-url", remote], cwd, URL_TIMEOUT, deadline)'''
+new = '''        return remote
+    url = _run(["git", "remote", "get-url", remote], cwd, URL_TIMEOUT, deadline)'''
+
+[[mutation]]
+name = "내용을 내지 않는 Grep 은 지나간다"
+tests = ["tests/tools/test_hook_user_settings_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_user_settings_read.py"
+old = '''    if tool_input.get("output_mode") != "content":'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "Grep 의 glob 중괄호를 펼친다"
+tests = ["tests/tools/test_hook_user_settings_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_user_settings_read.py"
+old = '''    leaves = [] if glob is None else _braces(glob.replace("\\", "/").rsplit("/", 1)[-1])'''
+new = '''    leaves = [] if glob is None else [glob.replace("\\", "/").rsplit("/", 1)[-1]]'''
+
+[[mutation]]
+name = "주석을 뺀 글도 본다(설정 훅, 주석 속 따옴표)"
+tests = ["tests/tools/test_hook_user_settings_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_user_settings_read.py"
+old = '''    for text in (_without_comments(command), command, command.replace("`", "")):'''
+new = '''    for text in (command, command.replace("`", "")):'''
+
+[[mutation]]
+name = "주석을 빼지 않은 글도 본다(설정 훅, 이스케이프)"
+tests = ["tests/tools/test_hook_user_settings_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_user_settings_read.py"
+old = '''    for text in (_without_comments(command), command, command.replace("`", "")):'''
+new = '''    for text in (_without_comments(command),):'''
+
+[[mutation]]
+name = "백틱을 지운 글도 본다(설정 훅, PowerShell 이스케이프)"
+tests = ["tests/tools/test_hook_user_settings_read.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_user_settings_read.py"
+old = '''    for text in (_without_comments(command), command, command.replace("`", "")):'''
+new = '''    for text in (_without_comments(command), command):'''

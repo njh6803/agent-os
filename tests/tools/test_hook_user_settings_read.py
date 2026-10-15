@@ -106,7 +106,9 @@ def test_CLAUDE_CONFIG_DIR_의_설정도_막는다() -> None:
         pytest.param("C:\\Users\\u\\.claude", None, True, id="설정_폴더_glob_없이"),
         pytest.param("C:\\Users\\u", None, True, id="홈_glob_없이"),
         pytest.param("C:\\Users", "*.json", True, id="홈의_위"),
+        pytest.param("C:\\Users\\u\\.claude", "**/*.{md,json}", True, id="중괄호_glob"),
         pytest.param("C:\\Users\\u", "*.py", False, id="다른_확장자"),
+        pytest.param("C:\\Users\\u\\.claude", "*.{md,py}", False, id="중괄호_다른_확장자"),
         pytest.param(f"{PROJECT}\\.claude", "*.json", False, id="프로젝트"),
         pytest.param(PROJECT, None, False, id="저장소"),
     ],
@@ -115,10 +117,24 @@ def test_Grep_도구는_경로나_glob_이_사용자_설정에_닿으면_막는�
     경로: str, glob: str | None, 막는다: bool
 ) -> None:
     """git 저장소가 아닌 폴더에서 Grep 도구는 glob 없이도 숨김 파일을 읽었다(셀프 리뷰 표준 축이
-    가짜 파일로 손으로 봤다). 그래서 대상을 품은 폴더면 glob 이 없어도 막는다."""
-    tool_input: ToolInput = {"path": 경로} if glob is None else {"path": 경로, "glob": glob}
+    가짜 파일로 손으로 봤다). 그래서 대상을 품은 폴더면 glob 이 없어도 막는다. glob 의 중괄호는
+    ripgrep 처럼 펼친다(PR 직전 버그 축)."""
+    tool_input: ToolInput = {"path": 경로, "output_mode": "content"}
+    if glob is not None:
+        tool_input["glob"] = glob
 
     assert (reason_for("Grep", tool_input, _windows()) is not None) is 막는다
+
+
+@pytest.mark.parametrize("출력", [None, "files_with_matches", "count"])
+def test_내용을_내지_않는_Grep_은_지나간다(출력: str | None) -> None:
+    """Grep 도구의 기본 출력은 파일 이름(`files_with_matches`)이다. 이름과 수는 비밀을 내지 않는다
+    (PR 직전 버그 축)."""
+    tool_input: ToolInput = {"path": "C:\\Users\\u\\.claude.json"}
+    if 출력 is not None:
+        tool_input["output_mode"] = 출력
+
+    assert reason_for("Grep", tool_input, _windows()) is None
 
 
 @pytest.mark.parametrize(
@@ -140,6 +156,9 @@ def test_Grep_도구는_경로나_glob_이_사용자_설정에_닿으면_막는�
         pytest.param("rg KEY ~/.claude", id="rg_설정_폴더"),
         pytest.param("grep -rn KEY ~/.claude/", id="grep_재귀_설정_폴더"),
         pytest.param("grep -R KEY ~", id="grep_재귀_홈"),
+        pytest.param("cat ~/.claude.json # 키를 본다", id="대상_뒤의_꼬리_주석"),
+        pytest.param('cat "a\\" # " ~/.claude.json', id="인용_안_이스케이프_뒤의_샵"),
+        pytest.param("# it's the key\ncat ~/.claude.json", id="주석_속_따옴표"),
     ],
 )
 def test_Bash_로_사용자_설정을_출력하면_막는다(명령: str) -> None:
@@ -161,6 +180,7 @@ def test_Bash_로_사용자_설정을_출력하면_막는다(명령: str) -> Non
         pytest.param("$s = Get-Content ~\\.claude\\settings.json -Raw", id="변수에_담기"),
         pytest.param('powershell -Command "Get-Content ~\\.claude.json"', id="셸_래퍼"),
         pytest.param('Get-Content -Path "C:\\Users\\u\\.claude.json"', id="인용_경로"),
+        pytest.param("Get-Content `#x ~\\.claude.json", id="백틱으로_이스케이프한_샵"),
     ],
 )
 def test_PowerShell_로_사용자_설정을_출력하면_막는다(명령: str) -> None:
@@ -180,10 +200,19 @@ def test_PowerShell_로_사용자_설정을_출력하면_막는다(명령: str) 
         pytest.param("cat > x.md <<'EOF'\ncat ~/.claude.json\nEOF", id="heredoc_본문"),
         pytest.param("rg KEY src/ tests/", id="저장소_안_재귀_검색"),
         pytest.param("grep KEY ~/.claude", id="재귀_아닌_grep_의_폴더"),
+        pytest.param("# cat ~/.claude.json\nls", id="주석_줄"),
     ],
 )
 def test_키만_보거나_출력하지_않는_명령은_지나간다(명령: str) -> None:
     assert reason_for("Bash", {"command": 명령}, _windows()) is None
+
+
+def test_못_보는_것_꼬리_주석의_대상_경로는_막는다() -> None:
+    """거짓 양성이다. 주석을 뺀 글과 빼지 않은 글을 둘 다 보아, 셸의 이스케이프로 주석이 아닌 자리를
+    주석으로 버리지 않는다(PR 직전 보안 리뷰)."""
+    command = "sed -n 1p docs/x.md | head # ~/.claude/settings.json"
+
+    assert reason_for("Bash", {"command": command}, _windows()) is not None
 
 
 def test_모르는_변수의_대상은_홈의_경로로_키_명령을_준다() -> None:

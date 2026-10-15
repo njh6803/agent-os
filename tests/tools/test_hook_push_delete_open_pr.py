@@ -87,11 +87,24 @@ def test_지우는_푸시를_git_처럼_읽는다(명령: str, 원격: str, 브�
         pytest.param(
             "git push --dry-run --no-dry-run origin --delete chore/x", id="dry_run_을_거둔다"
         ),
+        pytest.param("# 정리\ngit push origin --delete chore/x", id="앞의_주석_줄"),
+        pytest.param("git push origin --delete chore/x # 병합 뒤", id="꼬리_주석"),
+        pytest.param("git push origin --delete chore/x # see: #252", id="콜론이_든_꼬리_주석"),
+        pytest.param(
+            'echo "a\\" # "; git push origin --delete chore/x', id="인용_안_이스케이프_뒤의_샵"
+        ),
+        pytest.param("echo ${#a}; git push origin --delete chore/x", id="낱말_안의_샵"),
+        pytest.param("if true; then git push origin --delete chore/x; fi", id="then_뒤"),
+        pytest.param("for b in x; do git push origin --delete chore/x; done", id="do_뒤"),
+        pytest.param("{ git push origin --delete chore/x; }", id="중괄호_뒤"),
+        pytest.param("! git push origin --delete chore/x", id="느낌표_뒤"),
     ],
 )
 def test_묶은_명령_속의_지우는_푸시도_읽는다(명령: str) -> None:
-    """사건은 병합과 지우기를 한 번에 나란히 보낸 것이다(대기열 262, 일지 2026-10-15-01)."""
-    assert deletions(명령) == [Deletion("origin", ("chore/x",))]
+    """사건은 병합과 지우기를 한 번에 나란히 보낸 것이다(대기열 262, 일지 2026-10-15-01). 주석을
+    빼지 않은 글도 함께 읽어, 꼬리 주석의 낱말이 지울 ref 로 든 지우기가 하나 더 나올 수 있다. 막는
+    판정에는 해가 없다(그 낱말의 열린 PR 은 없다)."""
+    assert Deletion("origin", ("chore/x",)) in deletions(명령)
 
 
 @pytest.mark.parametrize(
@@ -196,6 +209,18 @@ def test_열린_PR_의_머리를_지우는_푸시를_막는다(tmp_path: Path) -
     assert "#7" in reason
     assert "chore/x" in reason
     assert "gh api repos/<owner>/<repo>/pulls/7" in reason
+
+
+def test_못_보는_것_URL_이나_경로로_적은_원격은_묻지_않고_지나간다(tmp_path: Path) -> None:
+    """거짓 음성이다. 명령 글의 주소로 훅이 권한 판정 전에 접속하면, 사용자가 그 호출을 거부해도
+    요청이 이미 나간다(PR 직전 보안 리뷰가 로컬 HTTP 서버로 재현했다). 그래서 이름으로 준 원격만
+    `git remote get-url` 로 풀어 묻는다. 여기서는 열린 PR 이 있는 원격을 경로로 적어도 지나간다."""
+    repo = _repository(tmp_path, merge_ref=True)
+    origin = (tmp_path / "origin.git").as_posix()
+
+    assert deletions(f"git push {origin} --delete chore/x") == [Deletion(origin, ("chore/x",))]
+    assert reason_for(f"git push {origin} --delete chore/x", str(repo)) is None
+    assert reason_for("git push origin --delete chore/x", str(repo)) is not None
 
 
 def test_시간_예산을_다_쓰면_묻지_않고_지나간다(tmp_path: Path) -> None:

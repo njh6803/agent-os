@@ -6,11 +6,14 @@
 한 번에 보내면 지나간다. 계기(`additionalContext`)만 주는 PreToolUse 훅은 명령을 그대로 돌리므로
 막는다(`.claude/rules/tools.md`). 병합이 끝난 PR 은 열린 PR 이 아니라 지나간다.
 
-판정. 명령을 제어 연산자(`;`·`&&`·`||`·`|`·`&`·줄바꿈)로 가르고, 조각마다 shlex 로 나눈 낱말에서
-리다이렉션(`> 파일`, `2>&1`, `>log`)과 환경 대입(`X=1`)을 벗긴 뒤 `git` 과 그 전역 옵션(`-C <경로>`,
-`-c <설정>`, `--no-pager` 등) 다음의 `push` 를 찾는다. 리다이렉션은 셸이 먹어 git 이 보지 못한다.
-벗기지 않던 첫 판은 `> C:\\log.txt` 의 대상을 지울 ref 로 읽어 git 이 거절할 푸시로 보고
-지나갔다(셀프 리뷰 명세 축). git 이 읽는 그대로 지울 브랜치를 읽는다.
+판정. 명령은 주석(인용 밖 낱말 머리의 `#` 부터 줄 끝)을 뺀 글과 빼지 않은 글을 둘 다 읽어
+합친다(이 훅의 주석 판정이 셸의 이스케이프와 인용을 다 따르지 못해 한쪽만 읽으면 지우는 푸시를 숨길
+수 있다, `deletions`). 글마다 제어 연산자(`;`·`&&`·`||`·`|`·`&`· 줄바꿈)로 가르고, 조각마다 shlex 로
+나눈 낱말에서 리다이렉션(`> 파일`, `2>&1`, `>log`), 환경 대입(`X=1`), 복합문의
+예약어(`then`·`do`·`{`·`!` 등)를 벗긴 뒤 `git` 과 그 전역 옵션(`-C <경로>`, `-c <설정>`,
+`--no-pager` 등) 다음의 `push` 를 찾는다. 리다이렉션은 셸이 먹어 git 이 보지 못한다. 벗기지 않던 첫
+판은 `> C:\\log.txt` 의 대상을 지울 ref 로 읽어 git 이 거절할 푸시로 보고 지나갔다(셀프 리뷰 명세
+축). git 이 읽는 그대로 지울 브랜치를 읽는다.
 - 지우기 모드. `--delete`, 그 모호하지 않은 머리(`--de`·`--del` 등. git 의 parse-options 가 받는다),
   짧은 옵션 `-d` 와 그것이 든 묶음(`-fd`). 옵션은 refspec 뒤에 와도 된다. 첫 위치 인자가 원격이고
   나머지가 지울 ref 다. `refs/heads/` 는 벗기고, 다른 `refs/`(태그)는 브랜치가 아니라 뺀다.
@@ -21,10 +24,12 @@
 - 건너뛰는 길. `--dry-run`(머리 줄임, `-n` 과 그것이 든 묶음 포함)이면 지우지 않아 지나간다. 뒤의
   `--no-dry-run`·`--no-delete` 는 앞의 것을 거둔다(git 의 parse-options 는 뒤의 것이 이긴다). 모호한
   긴 옵션 머리(`--d`)는 git 이 거절해 지나간다. 지울 ref 가 없으면 git 이 거절해 지나간다.
-그 뒤 지울 브랜치마다 열린 PR 을 찾는다. 원격이 이름이면 페이로드의 `cwd` 에서 `git remote get-url`
-로 URL 을 읽는다. github.com 이면 `gh api repos/<owner>/<repo>/pulls?state=open` 의 REST 로 열린 PR
-의 머리(이 저장소의 브랜치만. 포크의 같은 이름은 지워도 닫히지 않는다)를 읽는다. 클라우드 세션에서도
-REST 는 열린다(`.claude/rules/tools.md`). gh 가 없거나 실패하거나 github.com 이 아니면
+그 뒤 지울 브랜치마다 열린 PR 을 찾는다. 원격은 이름으로 준 것만 페이로드의 `cwd` 에서 `git remote
+get-url` 로 URL 을 읽는다. URL 이나 경로로 적은 원격은 묻지 않고 지나간다. 명령 글의 주소로 접속하면
+권한 판정 전에 그 호스트로 요청이 나가기 때문이다(`_remote_url`, PR 직전 보안 리뷰). github.com 이면
+`gh api repos/<owner>/<repo>/pulls?state=open` 의 REST 로 열린 PR 의 머리(이 저장소의 브랜치만.
+포크의 같은 이름은 지워도 닫히지 않는다)를 읽는다. 클라우드 세션에서도 REST 는
+열린다(`.claude/rules/tools.md`). gh 가 없거나 실패하거나 github.com 이 아니면
 `git ls-remote <원격>` 의 `refs/pull/N/head` 가 그 브랜치의 끝과 같고 `refs/pull/N/merge` 가 있는 PR
 을 열린 것으로 본다(`tools/sibling_overlap.py` 와 같은 길. 그 도구의 독스트링이 2026-10-07 클라우드
 컨테이너에서 손으로 본 것으로, merge ref 는 열린 PR 에만 있었다). git 과 gh 는 저장소를 가리키는
@@ -45,7 +50,9 @@ REST(`gh api`)로 적는다. `gh pr view`· `gh pr close` 는 GraphQL 이라 클
 - git 이 아닌 길의 지우기. `gh api -X DELETE …/git/refs/heads/<브랜치>`, GitHub 웹, MCP 도구.
   `gh pr merge --delete-branch` 는 병합한 뒤에만 지워 대상이 아니다.
 - `git -C <다른 저장소> push` 와 `cd <다른 저장소> && git push`. 원격 이름은 페이로드의 `cwd` 에서
-  푼다(hook_push_behind_main 과 같은 한계). URL 로 준 원격은 그대로 읽는다.
+  푼다(hook_push_behind_main 과 같은 한계).
+- URL 이나 경로로 적은 원격(`git push https://github.com/o/r.git --delete x`). 묻지 않아 그 열린 PR
+  을 놓친다.
 - 원격을 읽지 못하거나(오프라인) 시간을 넘기는 것, merge ref 가 없는 열린 PR(gh 를 쓰지 못할 때,
   `tools/sibling_overlap.py` 의 못 보는 것). 막지 않는다.
 - gh 를 쓰지 못하는 길은 PR 의 머리를 브랜치 이름이 아니라 커밋으로 대 본다. 열린 PR 의 머리와 같은
@@ -76,6 +83,8 @@ BUDGET = 15.0
 
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
+# 명령 자리 앞에 올 수 있는 셸 예약어. `fi`·`done`·`}` 는 `;` 뒤 제 조각이라 여기 없어도 된다.
+_RESERVED = frozenset({"if", "then", "else", "elif", "do", "while", "until", "{", "!"})
 _GITHUB_URL = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 _PULL_REF = re.compile(r"^refs/pull/(\d+)/(head|merge)$")
 _GH_JQ = r'.[] | "\(.number)\t\(.head.repo.full_name // "")\t\(.head.ref)"'
@@ -136,23 +145,32 @@ class Deletion(NamedTuple):
 
 
 def deletions(command: str) -> list[Deletion]:
-    """명령 안의 지우는 `git push` 들. 지우지 않거나 git 이 거절할 푸시는 뺀다."""
+    """명령 안의 지우는 `git push` 들. 지우지 않거나 git 이 거절할 푸시는 뺀다.
+
+    주석을 뺀 글과 빼지 않은 글을 둘 다 읽어 합친다. 이 훅의 주석 판정은 셸의 이스케이프와 인용을 다
+    따르지 못해, 셸이 명령으로 읽는 자리를 주석으로 버리면 지우는 푸시를 숨길 수 있다(PR 직전 보안
+    리뷰가 설정 훅에서 짚은 것과 같은 꼴). 빼지 않은 글만 읽으면 꼬리 주석의 낱말이 지울 ref 로
+    들어가, 콜론이 든 주석(`# see: x`)에서 git 이 거절할 푸시로 보고 지나간다."""
     found: list[Deletion] = []
-    for words in _segments(command):
-        push = _push_arguments(words)
-        if push is None:
-            continue
-        deletion = _deletion(push)
-        if deletion is not None:
-            found.append(deletion)
+    for text in (command, _without_comments(command)):
+        for words in _segments(text):
+            push = _push_arguments(words)
+            deletion = None if push is None else _deletion(push)
+            if deletion is not None and deletion not in found:
+                found.append(deletion)
     return found
 
 
 def _segments(command: str) -> list[list[str]]:
-    """제어 연산자로 가른 조각마다의 낱말. heredoc 본문과 리다이렉션은 뺀다."""
+    """제어 연산자로 가른 조각마다의 낱말. heredoc 본문과 리다이렉션은 뺀다.
+
+    shlex 의 주석(`commenters` 의 기본값 `#`)은 끈다. 줄바꿈을 ` ; ` 로 바꾼 뒤라 주석이 글 끝까지
+    이어져, 앞 줄의 주석 하나가 뒤의 지우는 푸시를 삼켰다(PR 직전 버그 축). 주석은 부르는 쪽이
+    `_without_comments` 로 뺀 글을 따로 넘긴다(`deletions`)."""
     text = "\n".join(_without_heredoc_bodies(command))
     text = re.sub(r"\\\r?\n", " ", text).replace("\n", " ; ")
     lexer = shlex.shlex(text, posix=True, punctuation_chars=True)
+    lexer.commenters = ""
     lexer.whitespace_split = True
     try:
         tokens = list(lexer)
@@ -177,6 +195,28 @@ def _segments(command: str) -> list[list[str]]:
     return [segment for segment in segments if segment]
 
 
+def _without_comments(text: str) -> str:
+    """인용 밖에서 낱말 머리의 `#` 부터 그 줄 끝까지를 뺀다. `${#a}`·`a#b` 처럼 낱말 안의 `#` 는
+    둔다."""
+    kept: list[str] = []
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if quote is not None:
+            if char == quote:
+                quote = None
+        elif char in "'\"":
+            quote = char
+        elif char == "#" and (index == 0 or text[index - 1] in " \t\n;&|()"):
+            end = text.find("\n", index)
+            index = len(text) if end < 0 else end
+            continue
+        kept.append(char)
+        index += 1
+    return "".join(kept)
+
+
 def _without_heredoc_bodies(command: str) -> list[str]:
     lines = command.splitlines()
     kept: list[str] = []
@@ -199,9 +239,10 @@ def _without_heredoc_bodies(command: str) -> list[str]:
 
 
 def _push_arguments(words: list[str]) -> list[str] | None:
-    """조각이 `git [전역 옵션] push …` 이면 push 뒤의 낱말, 아니면 None."""
+    """조각이 `git [전역 옵션] push …` 이면 push 뒤의 낱말, 아니면 None. 앞의 환경 대입과
+    복합문의 예약어(`then`·`do`·`{`·`!` 등)는 벗긴다."""
     index = 0
-    while index < len(words) and _ASSIGNMENT.match(words[index]):
+    while index < len(words) and (_ASSIGNMENT.match(words[index]) or words[index] in _RESERVED):
         index += 1
     if index >= len(words) or _command_name(words[index]) != "git":
         return None
@@ -365,8 +406,14 @@ def _run(command: list[str], cwd: str | None, timeout: float, deadline: float) -
 
 
 def _remote_url(remote: str, cwd: str | None, deadline: float) -> str | None:
-    if any(char in remote for char in "/:\\") or remote == ".":
-        return remote  # 이름이 아니라 URL 이나 경로다
+    """이름으로 준 원격의 URL. URL 이나 경로로 적은 원격은 None 이다(묻지 않는다).
+
+    명령 글의 주소로 접속하면 이 훅이 권한 판정보다 먼저 그 호스트에 요청을 보내, 사용자가 그
+    호출을 거부해도 주소에 담은 데이터가 이미 나간다. 윈도의 `//호스트/공유` 는 SMB 접속도 띄울 수
+    있다(PR 직전 보안 리뷰가 로컬 HTTP 서버로 재현했다). 이름으로 준 원격을 남의 주소로 바꾸려면
+    `git remote add`·`set-url` 이 먼저 권한 판정을 거친다."""
+    if any(char in remote for char in "/:\\@") or remote == ".":
+        return None
     url = _run(["git", "remote", "get-url", remote], cwd, URL_TIMEOUT, deadline)
     return url.strip() if url else None
 
