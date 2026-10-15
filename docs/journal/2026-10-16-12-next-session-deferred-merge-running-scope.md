@@ -64,8 +64,9 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 234
   - 고친 것: 위의 카나리아 파싱, '뿐', 가운뎃점이라는 보편 주장과 손으로 본 범위. 갈래 밟기의 다섯(앞부분 일치, 2단계와 4단계의
     틈, 다 빠지거나 조건이 깨질 때 표를 다시 보기, 일지 수정의 푸시와 압축 뒤에 놓치는 일, 자기 세션 제외)은 위 판에 모두 들었다.
     1단계의 "끝:"에 뒤로 넘긴 일이 병합된 일지 "다음"에 있는지를 더했고, 2단계에 도구가 이 세션을 빼고 찾는다고 적었다.
-  - 고친 것: "다음 세션은 PR 코멘트는 읽지 않아"는 PR 반영을 잇는 세션에는 틀리다. 병합 뒤의 지시문을 짓는 쪽으로 좁혔다.
-  - 남긴 것: 형제 명세의 "병합 뒤 `--control-commit`" 머리말은 프로브 README의 `canary/` 행이 원천이라 명세에 옮기지 않았다.
+  - 고친 것: 다음 세션은 PR 코멘트를 읽지 않는다는 첫 판의 까닭은 PR 반영을 잇는 세션에는 틀리다. 병합 뒤의 지시문을 짓는 쪽으로
+    좁혔다.
+  - 남긴 것: 형제 명세에 있는, 병합 뒤에는 `--control-commit`으로 다시 돌린다는 머리말은 프로브 README의 `canary/` 행이 원천이라 명세에 옮기지 않았다.
     실행 중 세션 거르기가 2단계(시작 프롬프트)와 `open-session` 1단계(제목)로 갈린 것(Shotgun Surgery 판단)은 둘이 거르는 것이
     다르다. 제목은 같은 브랜치를, 시작 프롬프트는 같은 대기열 행을 거른다. 2단계 문단에 사건 이력이 쌓인 것(Divergent Change
     판단)은 이 저장소가 까닭을 그 자리에 두는 관례라 두었다.
@@ -75,6 +76,11 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 234
 - `uv run pytest -q`: 2863 통과, 7 선택 밖(`-m llm`), skip 없음(첫 판에서 돌렸다).
 - `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run lint-imports`: 모두 초록(첫 판에서 손으로 쳤다).
 - `uv run python tools/canary.py --preflight <명세>`: 통과(고친 뒤).
+- 첫 커밋(`87b080d7`)의 pre-commit: 병렬 검사 여덟(zizmor, lint-imports, 지침, 타입 우회, pyright, 훅 러너, web verify, pytest)과
+  표·줄 구분 문자 검사가 통과했다. ruff 둘과 변이 표는 대상 파일이 없어 `Skipped`이고 ruff는 위에서 손으로 쳤다. 인용 대조 경고
+  둘(리뷰 보고를 풀어 쓴 말에 붙인 따옴표)은 따옴표를 뗐다.
+- 카나리아 `next_session_deferred_merge_running_scope.toml`: 통과 4(claude 2.1.300, 실험군 `87b080d7`, 대조군 주 체크아웃
+  `9116978f`). 대조군은 1·4·5에 "없음", 2·3에 옛 판의 다른 문장을 옮겼다.
 - `uv run python tools/sibling_overlap.py`: 커밋 전 대조는 처음에 `refs/pull/253/head`를 받지 못해 2로 끝났다. `git ls-remote`에
   브랜치만 있었고 잠시 뒤 그 ref가 생겼다. 다시 치니 PR #253(`docs/token-usage-spec`, 이 세션이 번호를 받은 뒤 열렸다)이 같은
   일지 번호 10을 들어 `--move`로 12로 옮겼다.
