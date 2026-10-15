@@ -34,6 +34,14 @@
 - 이 세션이 연 PR만 안다. 앞 세션이 PR을 연 브랜치의 커밋은 "PR을 열기 전"으로 센다.
 - 글자 수는 토큰이 아니다. 한국어와 코드는 글자당 토큰이 달라 무게의 몫은 어림이다.
 - 단가표에 없는 모델의 호출은 비용에서 빠지고 그 수를 따로 찍는다.
+- 겹친 사본은 경로 정렬로 앞의 것(주 폴더의 것)을 읽는다. 2026-10-16 PR 직전 버그 리뷰가 겹친
+  15쌍에서 워크트리 폴더의 사본이 모두 주 폴더 사본의 바이트 접두인 것을 봤다. 응답 ID는 한 파일
+  안에서만 거르므로, 포크한 세션이 복사해 온 응답은 두 세션에서 모두 센다(같은 리뷰가 7일에 약
+  0.6%로 셌다).
+- 세션이 쓰는 도중이라 줄바꿈 없이 잘린 마지막 줄은 읽지 않고 넘긴다. 그 밖의 깨진 줄은 예외로
+  끝난다.
+- "문턱을 넘은 호출에서 그 경계까지"의 호출 수는 문턱을 넘은 호출 자신부터 센다. 그 호출이 경계를
+  냈으면 1이다.
 """
 
 from __future__ import annotations
@@ -75,10 +83,18 @@ costs = _load_costs()
 
 
 def records(p: Path) -> Iterator[dict]:
+    """기록 한 줄씩. 줄바꿈 없이 잘린 마지막 줄(쓰는 도중의 세션)만 넘기고 나머지 깨진 줄은
+    예외다."""
     with open(p, encoding="utf-8", errors="replace") as fh:
         for line in fh:
-            if line.strip():
+            if not line.strip():
+                continue
+            try:
                 yield json.loads(line)
+            except json.JSONDecodeError:
+                if line.endswith("\n"):
+                    raise
+                return
 
 
 def blocks_of(d: dict) -> list[dict]:
