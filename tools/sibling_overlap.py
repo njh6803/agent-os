@@ -80,6 +80,19 @@ PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열
 그런 PR 열셋을 묶었고(`docs/constitution/README.md`), `operations.md`를 고치고 올리지 않은 것을 셀프
 리뷰가 잡았다(일지 2026-10-13-18).
 
+main 이 이 브랜치 몫으로 비워 둔 헌법 판은 이 브랜치가 올린 판으로 센다(대기열 279). 함께 돌던
+형제가 이 브랜치가 매긴 판을 건너뛰어 더 높은 판으로 먼저 병합하면, 그 형제는 헌법 README 의 이력에
+"<판>은 함께 돌던 형제 브랜치(<백틱으로 감싼 이 브랜치의 이름>)가 먼저 매겨 비워 두었다" 를 적는다.
+그 뒤 main 을 합친 이 브랜치는 판 줄을 main 의 판으로 두고 비워 둔 판의 이력 문단을 더한다. 그 판
+줄은 합치기를 커밋한 뒤 merge-base 와 같아 판을 올리지 않고 헌법 파일을 고쳤다고 1로 끝났고(합칠
+때마다, 두 번. 일지 2026-10-15-19), 합친 main 이 판 줄을 바꿨으면 커밋하기 전에는 main 과 같아 main
+과 같은 판으로 겹쳤다고 1로 끝난다. 그래서 판 줄이 merge-base 나 main 의 것이고 헌법 README 를
+고쳤을 때, main 의 이력이 지금 브랜치의 이름으로 비워 둔 판에 이 브랜치가 이력 문단을 더했으면 그
+판을 이 브랜치의 새 판으로 센다. 이력 문단은 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지이고,
+main 의 이력에 같은 글의 문단이 없으면 더한 것이다. 비워 둔 문장으로 시작하는 문단은 더한 것으로
+세지 않는다. 그 문장은 다른 판의 문단 중간에 끼어(헌법 README 의 3.0.36) 그 뒤의 다른 판 본문까지 한
+문단으로 묶여, 그 본문만 고쳐도 더한 것으로 셌다(셀프 리뷰 표준 축).
+
 일지의 이름순 차례도 본다(대기열 175). 다음 세션은 이름순 최신 일지의 "다음"을 읽는다. 이
 브랜치의 새 일지 가운데 이름순 최신 것이 main의 최신 일지보다 앞이면, 지금 병합해도 그 일지는
 최신이 아니라 다음 세션이 그 "다음"을 지나친다. 날짜를 넘긴 세션이 시작한 날짜로 쓴 일지가
@@ -97,6 +110,21 @@ PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열
 2026-10-13-38). 헌법 판처럼 커밋 전에 고칠 누락이라 이것도 1로 끝난다. 다만 계정 한도로 카나리아를
 돌리지 못하면 결과 줄을 고칠 수 없다. 그 갈래는 같은 절의 계정 한도 항목대로 사전 확인만 돌리고 이
 알림이 남은 채 커밋한다고 출력이 함께 말한다(셀프 리뷰 명세 축, 일지 2026-10-15-15).
+
+이 브랜치가 더한 줄의 일지 인용도 본다(대기열 254). 이 브랜치가 고친 파일에서 merge-base 와 main 의
+판에 글자 그대로 있는 줄을 뺀 줄의 `일지 YYYY-MM-DD-NN`(목록 꼴 `일지 A·B` 는 번호 하나하나)이
+merge-base, main, 형제(열린 PR, 형제 워크트리의 커밋하지 않은 일지까지), 이 브랜치의 작업 트리
+어디에도 없는 일지 순번을 가리키면 알린다. 번호를 이 도구로 받기 전에 짐작한 번호를 런북 파일에
+적었다가 손으로 고쳤고(일지 2026-10-13-66), 짐작한 번호(60)를 카나리아 명세에 인용한 채 셀프
+리뷰까지 갔다(일지 2026-10-13-67). 뒤의 것은 그때 열린 PR #233 의 일지 번호와 같아 이 판정도
+지나갔을 것이고(못 보는 것의 뜻이 다른 일지), 그 PR 이 번호를 64로 옮긴 뒤에야 없는 번호가 되어
+걸린다. 판을 올리지 않은 헌법 파일처럼 커밋 전에 고칠 것이라 1로 끝난다. 인용 블록(`>` 로 시작하는
+줄)은 사용자 프롬프트의 원문이고, 코드 스팬과 펜스 안은 옮기기 전의 옛 번호를 적은 기록이나 도구의
+출력이라 보지 않는다. `origin/main`(`df705c17`)의 추적 파일 전체에서 `일지` 인용의 번호 1389 가운데
+없는 번호는 일곱이었다. 코드 스팬 둘과 인용 블록 하나를 빼면 일지가 큰따옴표 안에 옮긴 도구 출력
+하나와 이 도구의 시험 데이터 셋이 남았고, 모두 main 의 줄이라 이 판정에 걸리지
+않는다(`.scratch/harness/probes/journal_cite_scan.py`). 줄을 가르는 git 호출은 없는 번호가 든
+파일에서만 친다.
 
 `--move` 는 "옮길 번호" 를 실제로 옮긴다(대기열 249). 형제가 더 높은 번호를 들고 먼저 병합해, 한
 세션에서 받은 번호를 두 번 옮기고 그때마다 그 번호의 인용(다섯에서 아홉)을 손으로 고쳤다(일지
@@ -123,8 +151,9 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 
 쓰임: `uv run python tools/sibling_overlap.py [저장소 안의 경로] [--move]`. 먼저 `origin`의 main과
 열린 PR의 head를 fetch한다(`origin/main`이 움직인다). 종료 코드는 번호 겹침도, main보다 앞선
-새 일지도, 판을 올리지 않고 고친 헌법 파일도, 카나리아 명세를 고치지 않고 바꾼 하네스 파일도
-없으면 0, 있으면 1, 대조나 옮기기를 끝내지 못하면(git 실패, 원격을 읽지 못함, 번호의 자리가 빔,
+새 일지도, 판을 올리지 않고 고친 헌법 파일도, 카나리아 명세를 고치지 않고 바꾼 하네스 파일도,
+어디에도 없는 일지 번호를 가리킨 인용도 없으면 0, 있으면 1, 대조나 옮기기를 끝내지 못하면(git 실패,
+원격을 읽지 못함, 번호의 자리가 빔,
 옮길 자리에 무엇이 있음, 인자가 틀림) 2다. 1이면 출력대로 고친다. 겹쳤거나 앞섰으면 이 브랜치가
 비켜 간다. 출력의 "옮길 번호"는 겹친 종류(일지는 날짜마다)의 이 브랜치 새 번호 전부를 차례를
 지켜 형제들의 최대값 뒤로 붙인 것이다(일지 2026-10-07-09가 03~07을 05~09로 옮긴 모양). main보다
@@ -144,6 +173,15 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 - 헌법 판을 merge-base의 판에서 바꿨는지만 본다. 그보다 낮게 고쳐도, 올림의 종류가 바뀐 내용에
   맞지 않아도(원칙을 바꾸고 patch로 올려도) 지나간다. 헌법 README의 판 줄 밖 문장(색인)과 세 파일
   밖의 새 헌법 파일은 고쳐도 알리지 않는다.
+- main 이 비워 둔 헌법 판은 위의 꼴 그대로 적은 문장만 읽는다. 지금 브랜치의 이름이 그 문장의 이름과
+  다르면(이름을 바꿔 달았거나 분리 HEAD) 판을 올리지 않은 것으로 본다. 이 브랜치가 문단을 더하지
+  않고 비워 둔 문장을 그 꼴이 깨지게 고쳐도 그 판의 문단을 더한 것으로 센다.
+- 일지 인용 가운데 `일지` 낱말 없이 든 번호, 목록의 줄인 꼴(`일지 2026-10-13-66·67` 의 67), 코드
+  스팬·펜스·인용 블록 안의 인용, merge-base 나 main 의 판에 글자 그대로 있는 줄(옮겨 오거나 되돌린
+  줄), 지운 파일과 UTF-8 로 읽지 못하는 파일, 커밋 메시지와 PR 본문의 인용. 번호가 있으면 뜻이 다른
+  일지를 가리켜도
+  지나간다. 거꾸로 일부러 없는 번호를 쓴 시험 데이터(문자열)도 인용으로 읽어 알린다. 그래서 이
+  도구의 시험은 임시 저장소에 없고 이 저장소에 있는 번호를 쓴다.
 - 푸시했지만 PR을 열지 않은 브랜치, 다른 기계·다른 클라우드 세션의 커밋하지 않은 변경.
 - main을 이미 들여 작업 트리 안에서 같은 번호가 둘이 된 것. 둘 다 merge-base에 있거나 merge-base에
   든 번호와 같아 "새로"가 아니다. 일지는 `tests/test_journal_names.py`, ADR은
@@ -151,9 +189,11 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 - `--move` 가 옮기지 못하는 인용. 줄인 꼴("일지 03"), 꼴의 낱말 없이 든 번호("새로 연 것은
   250·251"), 커밋 메시지와 PR 본문, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
   파일(따라가 쓰지 않는다)은 그대로다. 인용 블록에서 `>` 없이 이어지는 줄은 옮긴다. 거꾸로 같은
-  꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다. 이 브랜치가 더하거나 고친 줄에서 형제의
-  같은 번호를 가리킨 인용도 옮긴다. 거꾸로 이 브랜치의 번호를 가리켰어도 merge-base 나 main 의 판에
-  같은 글자의 줄이 있으면 둔다.
+  꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다. 코드 스팬과 펜스 안도 옮긴다. 파일 이름
+  인용(`docs/journal/…`)이 대개 그 안에 있어서다. 그래서 없는 일지 인용 판정이 옛 번호의 기록 자리로
+  안내한 코드 스팬도, 그 안의 번호가 이 브랜치의 지금 번호이면 옮긴다. 이 브랜치가 더하거나 고친
+  줄에서 형제의 같은 번호를 가리킨 인용도 옮긴다. 거꾸로 이 브랜치의 번호를 가리켰어도 merge-base 나
+  main 의 판에 같은 글자의 줄이 있으면 둔다.
 - 인덱스. 대조는 작업 트리를 읽으므로, `--move` 뒤 옛 이름의 지움을 스테이지하지 않고 커밋해 옛
   일지가 커밋에 남아도 0으로 끝난다.
 - 카나리아 명세가 고친 단락을 묻는지. 그 하네스 파일을 원천으로 든 명세 하나를 이 브랜치가
@@ -179,8 +219,8 @@ import shutil
 import subprocess
 import sys
 import tomllib
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import NoReturn, Protocol
@@ -205,6 +245,16 @@ PULL_REF = re.compile(r"^refs/pull/(\d+)/(head|merge)$")
 GITHUB_URL = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 GH_PULL = re.compile(r"^(\d+) ([0-9a-f]{40})$")
 GH_JQ = r'.[] | "\(.number) \(.head.sha)"'
+
+# 일지 인용. 목록 꼴(`일지 A·B`)의 번호를 함께 잡는다(대기열 254)
+JOURNAL_CITE = re.compile(r"일지 (\d{4}-\d{2}-\d{2}-\d{2}(?:·\d{4}-\d{2}-\d{2}-\d{2})*)(?!\d)")
+CODE_SPAN = re.compile(r"`[^`\n]+`")
+FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+# main 의 헌법 이력이 함께 돌던 형제 브랜치 몫으로 비워 둔 판(대기열 279)과 이력 문단의 머리
+RESERVED = re.compile(
+    r"(?<![\d.])(\d+\.\d+\.\d+)[은는] 함께 돌던 형제 브랜치\(`([^`]+)`\)가 먼저 매겨 비워 두었다"
+)
+HISTORY_HEAD = re.compile(r"(?<![\d.])(\d+\.\d+\.\d+)[은는] ")
 
 CANARY_SPECS = ".scratch/**/probes/canary/*.toml"
 # 새 `claude -p` 세션에서 불러 보는 하네스 파일(`docs/constitution/operations.md` 환경 규약 상세)
@@ -235,14 +285,15 @@ SHALLOW_HINT = "얕은 클론이면 `git fetch --unshallow origin` 뒤 다시 �
 USAGE = (
     "이 브랜치가 새로 매긴 번호(일지 순번, ADR, 대기열 행, 헌법 판)와 고친 파일을 형제(origin/main,"
     " 열린 PR, 형제 워크트리)와 대조하고 다음 빈 번호를 낸다. 바꾼 하네스 파일의 카나리아 명세를"
-    " 고치지 않았으면 알린다. 먼저 origin 의 main 과 열린 PR 의 head 를 fetch 한다. 판정의 근거와"
-    " 못 보는 것은 이 파일의 독스트링에 있다."
+    " 고치지 않았거나, 이 브랜치가 더한 줄의 일지 인용이 어디에도 없는 번호를 가리키면 알린다."
+    " 먼저 origin 의 main 과 열린 PR 의 head 를 fetch 한다. 판정의 근거와 못 보는 것은 이 파일의"
+    " 독스트링에 있다."
 )
 EXITS = (
     "종료 코드: 0 고칠 것이 없다(함께 고친 파일과 앞서는 형제는 알리기만 한다). 1 출력대로"
     " 고친다(번호 겹침, main 보다 앞선 새 일지, 판을 올리지 않고 고친 헌법 파일, 카나리아 명세를"
-    " 고치지 않고 바꾼 하네스 파일). 2 대조하거나 옮기지 못했거나 인자가 틀렸다(stderr 의 할 일을"
-    " 따른다)."
+    " 고치지 않고 바꾼 하네스 파일, 어디에도 없는 일지 번호를 가리킨 인용). 2 대조하거나 옮기지"
+    " 못했거나 인자가 틀렸다(stderr 의 할 일을 따른다)."
 )
 # 2로 끝날 때 stderr 에 함께 싣는 할 일(대기열 251)
 ON_FAILURE = (
@@ -319,6 +370,10 @@ class Survey:
     harness: list[str]  # 이 브랜치가 고친 하네스 파일 가운데 지금 있는 것
     specs: dict[str, str | None]  # 카나리아 명세 → 그 `source`
     base: str  # 이 브랜치와 main 의 merge-base. `--move` 가 둘 줄도 이 판에서 읽는다
+    # main 의 헌법 이력이 이 브랜치 몫으로 비워 둔 판으로 `ours.version` 을 채웠으면 그 판
+    reserved: str | None
+    # 이 브랜치가 고친 파일 → 이 브랜치가 더한 줄에서 어디에도 없는 일지 번호를 가리킨 인용의 번호
+    dangling: list[tuple[str, list[str]]]
 
     @property
     def siblings(self) -> list[Sibling]:
@@ -462,6 +517,66 @@ def highest_version(held: Sequence[tuple[str, str | None]]) -> tuple[str, list[s
         return None
     top = max(versions, key=_version_key)
     return top, [label for label, version in held if version == top]
+
+
+def history_entries(text: str) -> frozenset[tuple[str, str]]:
+    """헌법 README 의 이력 문단. 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지의 (판, 글)."""
+    heads = list(HISTORY_HEAD.finditer(text))
+    ends = [head.start() for head in heads[1:]] + [len(text)]
+    return frozenset(
+        (head[1], text[head.start() : end].strip()) for head, end in zip(heads, ends, strict=True)
+    )
+
+
+def reserved_version(branch: str | None, main_text: str, ours_text: str) -> str | None:
+    """main 의 헌법 이력(`main_text`)이 `branch` 몫으로 비워 둔 판 가운데, 이 브랜치의 헌법
+    README(`ours_text`)가 그 판의 이력 문단을 더한 것. 둘 이상이면 가장 높은 판이다. 분리 HEAD
+    (`branch` 가 None)의 몫은 없다. 비워 둔 문장으로 시작하는 문단은 더한 문단이 아니다. 그 문장은
+    다른 판의 문단 중간에 끼어, 그 뒤의 다른 판 본문까지 한 문단으로 묶인다(헌법 README 의
+    3.0.36)."""
+    reserved = {version for version, owner in RESERVED.findall(main_text) if owner == branch}
+    added = {
+        version
+        for version, entry in history_entries(ours_text) - history_entries(main_text)
+        if RESERVED.match(entry) is None
+    }
+    return max(reserved & added, key=_version_key, default=None)
+
+
+def dangling_cites(
+    text: str, known: Collection[str], kept: frozenset[str] = frozenset()
+) -> list[str]:
+    """`text` 의 일지 인용 가운데 `known` 에 없는 일지 순번. 나온 차례로 한 번씩 든다.
+
+    인용 블록(`>` 로 시작하는 줄)은 사용자 프롬프트의 원문이고, 코드 스팬과 펜스 안은 옮기기 전의
+    옛 번호를 적은 기록이나 도구의 출력이라 보지 않는다. 펜스는 여는 줄과 같은 글자로 같거나 더
+    길게 닫고, 닫지 않으면 끝까지 간다. `kept` 와 글자가 같은 줄(줄 끝의 CR 은 빼고 견준다)은
+    merge-base 나 main 의 판에 있던 줄이라 보지 않는다(`rewrite` 와 같다).
+    """
+    found: list[str] = []
+    fence: str | None = None
+    for line in text.split("\n"):
+        bare = line.rstrip("\r")
+        mark = FENCE.match(bare)
+        if fence is not None:
+            if (
+                mark is not None
+                and mark[1][0] == fence[0]
+                and len(mark[1]) >= len(fence)
+                and not bare[mark.end() :].strip()
+            ):
+                fence = None
+            continue
+        if mark is not None:
+            fence = mark[1]
+            continue
+        if bare in kept or bare.startswith(">"):
+            continue
+        for cite in JOURNAL_CITE.finditer(CODE_SPAN.sub("", bare)):
+            for key in cite[1].split("·"):
+                if key not in known and key not in found:
+                    found.append(key)
+    return found
 
 
 def unbumped(changed: frozenset[str], ours: Numbers) -> list[str]:
@@ -902,6 +1017,32 @@ def _own_changes(root: Path, base: str, main_sha: str) -> frozenset[str]:
     return (since_base & unlike_main) | untracked
 
 
+def dangling_files(
+    root: Path, commits: Sequence[str], changed: Iterable[str], known: Collection[str]
+) -> list[tuple[str, list[str]]]:
+    """`changed` 의 파일마다, `commits` 의 판에 글자 그대로 있는 줄을 뺀 줄에서 `known` 에 없는
+    일지 순번을 가리킨 인용(`dangling_cites`).
+
+    줄을 가르는 git 호출은 없는 번호가 든 파일에서만 친다. 지운 파일과 UTF-8 로 읽지 못하는 파일은
+    두고 넘어간다.
+    """
+    found: list[tuple[str, list[str]]] = []
+    for path in sorted(changed):
+        file = root / path
+        if not file.is_file():
+            continue
+        try:
+            text = file.read_bytes().decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not dangling_cites(text, known):
+            continue
+        kept = _kept_lines(root, commits, [path])[path]
+        if numbers := dangling_cites(text, known, kept):
+            found.append((path, numbers))
+    return found
+
+
 FROM_GH = "gh api"
 FROM_MERGE_REF = "merge ref"
 
@@ -1010,12 +1151,23 @@ def survey(root: Path, remote: Remote) -> Survey:
         since = merge_base(root, head, main_sha)
         changed = _worktree_changes(path, since) if since else None
         add(f"워크트리 {path}", head, numbers, changed)
-    ours = unshared(fresh(numbers_of(Disk(root)), base_numbers), main_numbers)
+    disk = numbers_of(Disk(root))
+    ours = unshared(fresh(disk, base_numbers), main_numbers)
     changed = _own_changes(root, base, main_sha)
+    reserved: str | None = None
     if CONSTITUTION not in changed:
         # 판 줄이 main 과 같다. 합치기를 커밋하기 전에는 main 이 올린 판이 디스크에 있다
-        ours = Numbers(ours.journals, ours.adrs, ours.rows, None)
+        ours = replace(ours, version=None)
+    elif ours.version in (None, main_numbers.version):
+        # 판 줄은 merge-base 나 main 의 것이다. main 이 이 브랜치 몫으로 비워 둔 판에 이력 문단을
+        # 더했으면 그 판으로 올린 것이다(대기열 279)
+        main_text = Tree(root, main_sha).text(CONSTITUTION)
+        disk_text = Disk(root).text(CONSTITUTION)
+        reserved = reserved_version(current_branch(root), main_text, disk_text)
+        if reserved is not None:
+            ours = replace(ours, version=reserved)
     harness = [path for path in harness_files(changed) if (root / path).is_file()]
+    known = {key for numbers in [*taken, disk] for key in numbers.journals}
     return Survey(
         ours,
         changed,
@@ -1026,6 +1178,8 @@ def survey(root: Path, remote: Remote) -> Survey:
         harness,
         canary_sources(root),
         base,
+        reserved,
+        dangling_files(root, (base, main_sha), changed, known),
     )
 
 
@@ -1074,10 +1228,13 @@ class Verdict:
     unbumped: list[str]  # 판을 올리지 않고 고친 헌법 파일
     # 카나리아 명세를 고치지 않고 바꾼 하네스 파일과 그 파일을 원천으로 든 명세
     uncanaried: list[tuple[str, list[str]]]
+    # 이 브랜치가 더한 줄에서 어디에도 없는 일지 번호를 가리킨 인용(파일, 번호)
+    dangling: list[tuple[str, list[str]]]
 
     @property
     def code(self) -> int:
-        return 1 if self.found or self.behind or self.unbumped or self.uncanaried else 0
+        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling
+        return 1 if fix else 0
 
 
 def judge(result: Survey, today: str) -> Verdict:
@@ -1103,6 +1260,7 @@ def judge(result: Survey, today: str) -> Verdict:
         top,
         unbumped(result.changed, result.ours),
         uncanaried(result.harness, result.changed, result.specs),
+        result.dangling,
     )
 
 
@@ -1139,6 +1297,11 @@ def render(result: Survey, verdict: Verdict) -> str:
             " 판을 올리면 이보다 높게 고른다"
         )
     lines.append(_ours_line(result.ours))
+    if result.reserved:
+        lines.append(
+            f"올린 판으로 센 헌법 {result.reserved}: {MAIN} 의 이력이 이 브랜치 몫으로 비워 둔"
+            " 판이고, 이 브랜치가 그 판의 이력 문단을 더했다"
+        )
     if verdict.found:
         lines.append(f"번호 겹침 {len(verdict.found)}:")
         lines += [f"- {s.label} {c.kind} {c.key}: {_describe(c)}" for s, c in verdict.found]
@@ -1161,6 +1324,15 @@ def render(result: Survey, verdict: Verdict) -> str:
         for path, specs in verdict.uncanaried:
             names = ", ".join(PurePosixPath(spec).name for spec in specs) or "명세 없음"
             lines.append(f"- {path}: {names}")
+    if verdict.dangling:
+        lines.append(
+            "어디에도 없는 일지 번호를 가리킨 인용(main, 형제, 이 브랜치 어디에도 그 일지 파일이"
+            " 없다). 가리키려던 일지의 실제 번호로 고친다. 아직 만들지 않은 이 브랜치의 일지면 위의"
+            " 다음 빈 번호로 일지 파일을 먼저 만들고 그 번호를 든다. 옮기기 전의 옛 번호처럼 일부러"
+            " 없는 번호를 적은 기록이면 코드 스팬(``)에 넣고, 일부러 없는 번호를 쓴 시험 데이터면"
+            " 시험이 바뀌지 않게 백틱을 넣지 말고 저장소에 있는 일지 번호로 바꾼다:"
+        )
+        lines += [f"- {path}: {', '.join(numbers)}" for path, numbers in verdict.dangling]
     if verdict.behind:
         lines.append(
             f"이 브랜치의 새 일지 {mine} 이 {MAIN} 의 최신 일지 {result.main.latest} 보다"

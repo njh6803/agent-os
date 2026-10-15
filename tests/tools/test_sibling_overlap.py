@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from tools.sibling_overlap import (
+    CONSTITUTION,
     JOURNAL_DIR,
     ON_FAILURE,
     ON_STUCK,
@@ -31,6 +32,8 @@ from tools.sibling_overlap import (
     canary_sources,
     clashes,
     closed_heads,
+    dangling_cites,
+    dangling_files,
     fresh,
     gh_pulls,
     github_repo,
@@ -46,6 +49,7 @@ from tools.sibling_overlap import (
     read_numbers,
     remote_head,
     renumber,
+    reserved_version,
     rewrite,
     unbumped,
     uncanaried,
@@ -411,6 +415,130 @@ def test_카나리아_명세의_원천을_읽고_읽지_못한_명세는_원천�
     }
 
 
+# 아래 시험들이 없는 번호로 쓰는 일지 인용은 임시 저장소에는 없고 이 저장소에는 있는 번호다. 이
+# 파일의 새 줄도 커밋 전의 이 도구가 대조한다(대기열 254)
+
+
+def test_없는_일지_번호를_가리킨_인용을_나온_차례로_한_번씩_든다() -> None:
+    """대기열 254: 짐작한 일지 번호를 카나리아 명세에 인용해 없는 일지를 가리킨 채 셀프 리뷰까지
+    갔다(일지 2026-10-13-67). 목록 꼴(`·`)의 번호도 하나씩 본다."""
+    text = (
+        "일지 2026-10-07-05를 본다(일지 2026-10-07-01·2026-10-07-04)\r\n"
+        "다시 일지 2026-10-07-05, 그리고 새 일지 2026-10-07-02\n"
+    )
+
+    # 있는 번호는 뜻이 다른 일지를 가리켜도 지나간다(못 보는 것)
+    known = {"2026-10-07-01", "2026-10-07-02"}
+    assert dangling_cites(text, known) == ["2026-10-07-05", "2026-10-07-04"]
+
+
+def test_인용_블록과_코드와_merge_base나_main에_있던_줄의_일지_인용은_보지_않는다() -> None:
+    """인용 블록은 사용자 프롬프트의 원문이고, 코드 스팬과 펜스는 옮기기 전의 옛 번호를 적은
+    기록이나 도구의 출력이다. merge-base 나 main 의 판에 글자 그대로 있는 줄은 이 브랜치가 더한 줄이
+    아니다. 펜스는 여는 줄과 같은 글자로 같거나 더 길게 닫고, 닫지 않으면 끝까지 간다."""
+    text = (
+        '> 사용자: "일지 2026-10-07-03의 다음부터"\n'
+        "처음 받은 `일지 2026-10-07-04` 를 옮겼다\r\n"
+        "````\n"
+        "옮길 번호: 일지 2026-10-07-05 → 2026-10-07-06\n"
+        "```\n"
+        "일지 2026-10-07-03 은 더 짧은 펜스 줄 뒤에도 펜스 안이다\n"
+        "````` 뒤에 글이 붙은 줄은 닫지 않는다\n"
+        "~~~~\n"
+        "일지 2026-10-07-07 은 아직 펜스 안이다\n"
+        "`````\n"
+        "옛 줄의 일지 2026-10-07-08\r\n"
+        "~~~\n"
+        "일지 2026-10-07-09\n"
+    )
+
+    assert dangling_cites(text, set(), frozenset({"옛 줄의 일지 2026-10-07-08"})) == []
+    # 둘 줄이 아니면 펜스 밖의 같은 줄은 든다
+    assert dangling_cites(text, set()) == ["2026-10-07-08"]
+
+
+def test_낱말_없이_든_번호와_목록의_줄인_꼴은_보지_않고_시험_데이터의_번호는_든다() -> None:
+    """못 보는 것. "일지" 낱말 없이 든 번호, 목록의 줄인 꼴(`·05`), 코드 스팬에 넣은 인용은
+    지나간다. 거꾸로 일부러 없는 번호를 쓴 시험 데이터(문자열)도 인용으로 읽어 든다."""
+    text = (
+        "처음 2026-10-07-03 을 받았다. 일지 2026-10-07-01·05 를 본다. `일지 2026-10-07-04`\n"
+        '    assert "일지 2026-10-07-06" in out\n'
+    )
+
+    assert dangling_cites(text, {"2026-10-07-01"}) == ["2026-10-07-06"]
+
+
+def test_지운_파일과_UTF_8로_읽지_못하는_파일의_일지_인용은_보지_않는다(tmp_path: Path) -> None:
+    """못 보는 것. 고친 파일 목록에 있어도 디스크에 없거나 글이 아니면 넘어간다. 줄을 가를 판이
+    없으면 git 을 부르지 않는다."""
+    (tmp_path / "a.md").write_bytes("일지 2026-10-07-05\n".encode("cp949"))
+    _쓴다(tmp_path, {"b.md": "일지 2026-10-07-05\n"})
+
+    found = dangling_files(tmp_path, (), ["a.md", "b.md", "gone.md"], {"2026-10-07-01"})
+
+    assert found == [("b.md", ["2026-10-07-05"])]
+
+
+RESERVED_MAIN = (
+    "1.0.2는 스택의 문구다. 1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
+    " 1.0.0은 처음이다."
+)
+
+
+def _이력(version: str, history: str) -> str:
+    return _헌법(version) + f"\n{history}\n"
+
+
+def test_main이_이_브랜치_몫으로_비워_둔_판에_이력_문단을_더했으면_그_판이다() -> None:
+    """대기열 279: main 이 이 브랜치 몫으로 비워 둔 판(3.0.35)을 판 줄을 main 그대로 둔 이
+    브랜치에서 알아보지 못해, 합칠 때마다 판을 올리지 않았다고 1로 끝났다(일지 2026-10-15-19). 이력
+    문단은 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지다."""
+    main_text = _이력("1.0.2", RESERVED_MAIN)
+    ours = _이력("1.0.2", RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은"))
+
+    assert reserved_version("topic", main_text, ours) == "1.0.1"
+    # 다른 브랜치 몫이거나 분리 HEAD 면 올리지 않은 것이다
+    assert reserved_version("other", main_text, ours) is None
+    assert reserved_version(None, main_text, ours) is None
+    # 그 판의 이력 문단을 더하지 않았으면 올리지 않은 것이다
+    assert reserved_version("topic", main_text, main_text) is None
+    # 비워 두지 않은 판에 더한 문단은 이 판정 밖이다(판 줄로 본다)
+    other = _이력("1.0.2", RESERVED_MAIN.replace("1.0.0은", "1.0.3은 운영의 문구다. 1.0.0은"))
+    assert reserved_version("topic", main_text, other) is None
+    # 문단은 다음 판 머리에서 끝난다. 그 판의 문단이 main 에 이미 있으면 뒤의 문단만 고쳐도 더한
+    # 것이 아니다
+    done = RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은")
+    later = done.replace("처음이다", "처음의 판이다")
+    assert reserved_version("topic", _이력("1.0.2", done), _이력("1.0.2", later)) is None
+    # 둘 이상이면 가장 높은 판이다
+    reserve = "1.0.3은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
+    twice = RESERVED_MAIN.replace("1.0.2는", f"1.0.4는 X다. {reserve} 1.0.2는")
+    both = twice.replace("1.0.0은", "1.0.3은 A다. 1.0.1은 B다. 1.0.0은")
+    assert reserved_version("topic", _이력("1.0.4", twice), _이력("1.0.4", both)) == "1.0.3"
+
+
+def test_비워_둔_문장_뒤에_이어진_다른_판의_본문만_고치면_더한_것이_아니다() -> None:
+    """셀프 리뷰 표준 축: 헌법 README 에서 비워 둔 문장은 3.0.36 문단 중간에 끼어, 그 뒤의 3.0.36
+    본문까지 한 문단으로 묶인다. 그 본문 한 낱말만 고쳐도 3.0.35 문단을 더한 것으로 셌다."""
+    tail = "1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다. 1.0.2의 본문이 잇는다."
+    main_text = _이력("1.0.2", f"1.0.2는 스택의 문구다. {tail} 1.0.0은 처음이다.")
+    ours = main_text.replace("본문이 잇는다", "본문을 고쳤다")
+
+    assert reserved_version("topic", main_text, ours) is None
+
+
+def test_비워_둔_판은_그_꼴의_문장만_읽고_그_문장을_깨뜨려_고쳐도_더한_것으로_센다() -> None:
+    """못 보는 것. 다른 꼴로 적은 예약은 읽지 않는다. 이 브랜치가 문단을 더하지 않고 비워 둔 문장을
+    그 꼴이 깨지게 고쳐도 그 판의 문단을 더한 것으로 센다."""
+    main_text = _이력("1.0.2", RESERVED_MAIN)
+    reworded = _이력("1.0.2", RESERVED_MAIN.replace("먼저 매겨", "앞서 매겨"))
+
+    assert reserved_version("topic", main_text, reworded) == "1.0.1"
+    loose = _이력("1.0.2", "1.0.2는 스택의 문구다. 1.0.1은 형제 `topic` 몫으로 비웠다.")
+    ours = loose.replace("1.0.1은 형제", "1.0.1은 운영의 문구다. 1.0.1은 형제")
+    assert reserved_version("topic", loose, ours) is None
+
+
 def test_옮길_번호대로_인용을_한_번에_바꾼다() -> None:
     """대기열 249. 차례대로 옮기는 사슬(03→05, 05→07)도 한 번에 바꿔 03 이 07 까지 가지 않는다."""
     plan = renumber(
@@ -473,6 +601,17 @@ def test_줄인_인용과_조사는_옮기지_않고_같은_꼴이면_다른_뜻
 
     assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == (
         "일지 03, 새로 연 것은 2·5다. 대기열 3를 연다. 형제의 일지 2026-10-07-05 과 겹쳤다\n"
+    )
+
+
+def test_옮기기는_코드_스팬과_펜스_안의_같은_꼴도_옮긴다() -> None:
+    """못 보는 것. 파일 이름 인용(`docs/journal/…`)이 대개 코드 스팬 안에 있어 그 자리도 옮긴다.
+    그래서 없는 일지 인용 판정이 기록의 자리로 안내한 코드 스팬 안의 이 브랜치 번호도 옮긴다."""
+    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05")])
+    text = "`docs/journal/2026-10-07-03-a.md`, 처음 `일지 2026-10-07-03`\n```\n2026-10-07-03\n```\n"
+
+    assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == (
+        "`docs/journal/2026-10-07-05-a.md`, 처음 `일지 2026-10-07-05`\n```\n2026-10-07-05\n```\n"
     )
 
 
@@ -1584,3 +1723,125 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
     out = capsys.readouterr().out
     assert code == 0, out
     assert out.startswith("옮길 번호가 없어 옮기지 않았다\n")
+
+
+def test_이_브랜치가_더한_줄의_일지_인용이_어디에도_없는_번호면_1로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 254: `sibling_overlap.py` 를 치기 전에 짐작한 일지 번호를 인용했고 손으로 고쳤다(일지
+    2026-10-13-66). main 에 있던 줄의 없는 번호는 이 브랜치가 더한 것이 아니라 알리지 않는다. 형제의
+    일지는 커밋하지 않았어도 있는 번호다. 출력이 안내하는 길(다음 빈 번호로 일지 파일을 먼저
+    만든다)을 밟으면 지나간다."""
+    old = "옛 줄의 일지 2026-10-07-09\n"
+    _, work, _ = _원격과_클론(tmp_path, {**SEED, "docs/notes.md": old})
+    ours = "docs/journal/2026-10-07-02-ours.md"
+    # 커밋 메시지의 인용은 보지 않는다(못 보는 것)
+    journal = {ours: "# 2026-10-07 (02) 이쪽\n\n일지 2026-10-07-02를 쓴다\n"}
+    _커밋한다(work, journal, "일지 2026-10-07-08 을 본다")
+    _쓴다(work, {"docs/notes.md": old + "일지 2026-10-07-05와 일지 2026-10-07-01을 본다\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "번호 겹침 없음" in out
+    assert "어디에도 없는 일지 번호를 가리킨 인용" in out
+    assert "- docs/notes.md: 2026-10-07-05\n" in out
+    assert "- docs/journal/" not in out
+    assert "2026-10-07-08" not in out
+
+    sibling = work.parent / "sibling"
+    _git(work, "worktree", "add", "-q", "-b", "other", str(sibling), "origin/main")
+    _쓴다(sibling, {"docs/journal/2026-10-07-05-sibling.md": "형제\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "어디에도 없는 일지" not in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06," in out
+
+    # 아직 만들지 않은 일지를 받은 번호로 먼저 인용하면 알리고, 그 번호로 파일을 만들면 지나간다
+    notes = (work / "docs/notes.md").read_text(encoding="utf-8")
+    _쓴다(work, {"docs/notes.md": notes + "다음은 일지 2026-10-07-06에 쓴다\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "- docs/notes.md: 2026-10-07-06\n" in out
+
+    _쓴다(work, {"docs/journal/2026-10-07-06-next.md": "# 2026-10-07 (06) 다음\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "어디에도 없는 일지" not in out
+
+
+def test_합치는_도중_main에서_들어온_줄의_일지_인용은_이_브랜치가_더한_줄이_아니다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 명세 축: merge-base 에 없고 main 에만 있는 줄을 빼는 것을 고정한 시험이 없었다.
+    main 을 합치다 충돌을 풀고 커밋하기 전에는 merge-base 가 옛 자리라, main 이 더한 줄이 이
+    브랜치가 고친 파일에 섞인다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    main_line = "main 이 옮겨 적은 옛 일지 2026-10-07-09\n"
+    _커밋한다(pusher, {"docs/notes.md": main_line}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # 둘 다 더한 docs/notes.md 가 충돌한다
+    assert _git(work, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    _쓴다(work, {"docs/notes.md": main_line + "이쪽\n"})
+    _git(work, "add", "docs/notes.md")
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "어디에도 없는 일지" not in out
+
+
+def test_main이_이_브랜치_몫으로_비워_둔_헌법_판에_이력을_더했으면_판을_올린_것이다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 279: #243 이 3.0.35 를 이 브랜치 몫으로 비워 두었는데, 판 줄을 main 그대로 둔 이
+    브랜치에 합칠 때마다 "헌법 파일을 고치고 판을 올리지 않았다" 로 1을 냈다(일지 2026-10-15-19).
+    합치기를 커밋하기 전(판 줄이 main 과 같다)과 뒤(판 줄이 merge-base 와 같다)가 모두 그렇다."""
+    seed = {**SEED, CONSTITUTION: _이력("1.0.0", "1.0.0은 처음이다.")}
+    _, work, pusher = _원격과_클론(tmp_path, seed)
+    ours = {
+        "docs/constitution/operations.md": "고친 운영\n",
+        CONSTITUTION: _이력("1.0.1", "1.0.1은 운영의 문구다. 1.0.0은 처음이다."),
+    }
+    _커밋한다(work, ours, "이 브랜치")
+    _커밋한다(pusher, {CONSTITUTION: _이력("1.0.2", RESERVED_MAIN)}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # 판 줄과 이력이 충돌한다
+    assert _git(work, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    merged = RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은")
+    _쓴다(work, {CONSTITUTION: _이력("1.0.2", merged)})
+    _git(work, "add", CONSTITUTION)
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호: 헌법 1.0.1\n" in out
+    assert "올린 판으로 센 헌법 1.0.1: origin/main 의 이력이 이 브랜치 몫으로 비워 둔 판" in out
+    assert "번호 겹침 없음" in out
+
+    _git(work, "commit", "-q", "--no-edit")
+    assert len(_git(work, "rev-list", "--parents", "-n", "1", "HEAD").split()) == 3  # 합치기 커밋
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "판을 올리지 않았다" not in out
+    assert "이 브랜치의 새 번호: 헌법 1.0.1\n" in out
