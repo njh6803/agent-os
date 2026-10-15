@@ -19,9 +19,9 @@
 `:grill-with-docs`가 붙은 것이다. 워크트리 세션은 이 저장소의 스킬을 뒤의 꼴
 (`.claude/worktrees/<이름>:grill-with-docs`)로도 부른다. 첫 판은 앞의 꼴만 봐 뒤의 꼴을
 놓친다(대기열 284). `grill-with-docs`를 뒤의 꼴로 부른 사건은 아직 없다. 그 꼴이 흔하다는 근거는
-다른 스킬의 수다. 인계 훅 명세(2026-10-16)가 그날까지 7일의 메인 세션에서 `code-review`를 뒤의 꼴로
-부른 것을 21회로 셌다(스크래치 스크립트로 손으로 셌다). 인계 훅 명세
-(`.scratch/token-usage/spec.md`의 "인계 훅")가 `code-review`를 가르는 판정과 같다. 명세의
+다른 스킬의 수다. 인계 훅 명세(`.scratch/token-usage/spec.md`의 "인계 훅", 2026-10-16)가 그날까지
+7일의 메인 세션에서 `code-review`를 뒤의 꼴로 부른 것을 21회로 셌고(스크래치 스크립트로 손으로
+셌다), 이 판정은 그 명세가 `code-review`를 가르는 판정과 같다. 명세의
 "`.claude`로 시작하는 경로"는 경로의 첫 토막으로 읽는다. 접두가 `.claude` 자체이거나 `.claude/`·
 `.claude\\`로 시작해야 하고, `.claudeX`·`.claude-plugin`은 그 폴더가 아니다(PR 직전 버그 축).
 플러그인 이름이 붙은 호출(`플러그인:grill-with-docs`)과 `.claude` 밖의 경로 접두(다른 폴더의 스킬)는

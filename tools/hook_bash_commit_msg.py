@@ -1,6 +1,10 @@
 """PreToolUse 훅(Bash). `git commit -F <파일>` 의 메시지를 그 저장소의 commit-msg 판정으로 먼저 대
 보고, 걸리면 커밋을 막는다.
 
+막는 대상은 실수로 내는 길(commit-msg 가 거절할 메시지 파일로 하는 커밋)이다. 일부러 하는
+우회(`-m`·heredoc 의 `-F -`, `--no-verify`, `git` 을 다른 이름으로 부르기)는 막지 않는다 — 막는
+자리를 앞당길 뿐이라 commit-msg 단계가 그대로 판정하거나 건너뛴다. 아래 못 보는 것에 든다.
+
 커밋 메시지 형식(제목 72자 등)은 pre-commit 의 commit-msg 단계(`tools/check_commit_msg.py`)가
 판정한다. 그 단계는 pre-commit 단계의 검사가 모두 끝난 뒤라, 제목 하나 때문에 약 7~8분의 게이트를
 한 번 더 돌았다. 세 번(일지 2026-10-13-06 의 484초, 2026-10-13-12·2026-10-13-30 의 약 7분)
@@ -48,22 +52,19 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 
 판정 스크립트를 실행하는 신뢰 경계. 판정 스크립트는 이 훅의 저장소의 것만 띄운다. 이 훅은 권한
 확인 전에 돌아, 띄우는 스크립트는 사용자가 그 Bash 명령을 승인하기 전에 돈다. 첫 판은 커밋하는
-저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를 띄웠다. PR 직전 보안 리뷰가 후보로 냈을 때는
-하드닝 부족으로 거르고(일지 2026-10-13-47) 데스크톱 앱의 백그라운드 보안 검토가 다시 짚어
-막았다(신뢰하지 않는 저장소에 커밋을 시도만 해도 돈다, 대기열 246). 이 훅의 저장소는 이 훅 파일이 든
-체크아웃(래퍼가 `runpy` 로 띄워도 `__file__` 은 그 파일이다)의 공통 git 폴더에서 git 을 띄우지 않고
-읽는다. 그 체크아웃의 `.git` 이 폴더면 그것이, 파일이면 `gitdir:` 이 가리키는 폴더의 `commondir` 가
-공통 폴더다. 그 체크아웃 자신, 이름이 `.git` 인 공통 폴더의 부모(주 체크아웃), 공통 폴더의
-`worktrees/<이름>/gitdir` 이 가리키는 `.git` 의 부모(등록된 워크트리)가 이 훅의 저장소다. 경로는
-심볼릭 링크와 대소문자를 풀어(`realpath`, `normcase`) 견준다. 판정은 양쪽을 다 대 본다. 커밋 폴더의
-`.git` 만 읽고 등록에서 거꾸로 대 보지 않으면, `.git` 파일이 이 저장소의 워크트리 관리 폴더를
+저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를 띄웠다(대기열 246). 이 훅의 저장소는 이 훅
+파일이 든 체크아웃(래퍼가 `runpy` 로 띄워도 `__file__` 은 그 파일이다)의 공통 git 폴더에서 git 을
+띄우지 않고 읽는다. 그 체크아웃의 `.git` 이 폴더면 그것이, 파일이면 `gitdir:` 이 가리키는 폴더의
+`commondir` 가 공통 폴더다. 그 체크아웃 자신, 이름이 `.git` 인 공통 폴더의 부모(주 체크아웃), 공통
+폴더의 `worktrees/<이름>/gitdir` 이 가리키는 `.git` 의 부모(등록된 워크트리)가 이 훅의 저장소다.
+경로는 심볼릭 링크와 대소문자를 풀어(`realpath`, `normcase`) 견준다. 판정은 양쪽을 다 대 본다. 커밋
+폴더의 `.git` 만 읽고 등록에서 거꾸로 대 보지 않으면, `.git` 파일이 이 저장소의 워크트리 관리 폴더를
 가리키게 지은 폴더를 이 저장소로 읽는다. 거꾸로 등록의 `gitdir` 만 믿으면, 워크트리 폴더를 git 없이
-지운 뒤 남은 등록의 자리에 새로 만든 저장소를 이 저장소로 읽는다(PR 직전 버그 축이 재현했다). 그래서
-등록된 워크트리는 그 `.git` 파일의 `gitdir:` 이 다시 그 등록을 가리킬 때만 센다. 커밋 폴더의 조상을
-거슬러 오를 때 드라이브 문자만 남은 자리는 `C:/` 로 맞춘다. `C:` 는 윈도에서 현재 폴더 기준이라
-존재 확인과 판정 스크립트는 드라이브 루트를, 경계 판정과 설정 읽기는 훅의 현재 폴더를 보게 된다(PR
-직전 보안 리뷰. 드라이브 루트에 파일을 심을 수 있는 사람이 전제라 취약점으로는 걸렀고 정확성으로
-고쳤다).
+지운 뒤 남은 등록의 자리에 새로 만든 저장소를 이 저장소로 읽는다. 그래서 등록된 워크트리는 그
+`.git` 파일의 `gitdir:` 이 다시 그 등록을 가리킬 때만 센다. 커밋 폴더의 조상을 거슬러 오를 때
+드라이브 문자만 남은 자리는 `C:/` 로 맞춘다. `C:` 는 윈도에서 현재 폴더 기준이라 그대로 두면 존재
+확인과 판정 스크립트는 드라이브 루트를, 경계 판정과 설정 읽기는 훅의 현재 폴더를 본다. 경위는 일지
+2026-10-13-47 과 2026-10-16-27.
 """
 
 from __future__ import annotations
@@ -382,7 +383,7 @@ def ancestors(directory: str) -> list[str]:
     return found
 
 
-def checker_for(directory: str, own: str) -> str | None:
+def checker_for(directory: str, *, own: str) -> str | None:
     """`directory` 에서 커밋하면 commit-msg 단계가 돌릴 판정 스크립트. 그 저장소가 `own`(이 훅이
     든 체크아웃)의 저장소가 아니거나, 그 저장소의 pre-commit 설정이 그것을 부르지 않거나 파일이
     없으면 None."""
@@ -419,7 +420,7 @@ def problems_of(path: str, checker: str, timeout: float = CHECK_TIMEOUT) -> list
     return result.stdout.decode("utf-8", "replace").splitlines()
 
 
-def deny_reason(command: str, cwd: str, home: str, own: str) -> str | None:
+def deny_reason(command: str, cwd: str, home: str, *, own: str) -> str | None:
     """판정할 커밋의 메시지 파일이 그 저장소의 commit-msg 판정에 걸리면 막는 이유, 아니면 None.
     `own` 은 이 훅이 든 체크아웃이고, 그 저장소 밖의 커밋은 판정하지 않는다."""
     if "commit" not in command:
@@ -429,7 +430,7 @@ def deny_reason(command: str, cwd: str, home: str, own: str) -> str | None:
         path = None if directory is None else resolve(message.file, directory, home)
         if directory is None or path is None or not os.path.isfile(path):
             continue
-        checker = checker_for(directory, own)
+        checker = checker_for(directory, own=own)
         problems = [] if checker is None else problems_of(path, checker)
         if problems:
             return (
@@ -448,7 +449,7 @@ def main() -> int:
     cwd = payload.get("cwd")
     if command is None or cwd is None:
         return 0
-    reason = deny_reason(command, cwd, str(Path.home()), HOOK_CHECKOUT)
+    reason = deny_reason(command, cwd, str(Path.home()), own=HOOK_CHECKOUT)
     if reason is None:
         return 0
     output = {

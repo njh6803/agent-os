@@ -214,9 +214,9 @@ def test_판정_스크립트는_커밋하는_저장소의_것이다(tmp_path: Pa
     (repo / "sub").mkdir()
     bare = _저장소(tmp_path / "bare", commit_msg_hook=False)
 
-    assert checker_for((repo / "sub").as_posix(), repo.as_posix()) == _판정(repo)
-    assert checker_for(bare.as_posix(), bare.as_posix()) is None
-    assert checker_for((tmp_path / "nowhere").as_posix(), repo.as_posix()) is None
+    assert checker_for((repo / "sub").as_posix(), own=repo.as_posix()) == _판정(repo)
+    assert checker_for(bare.as_posix(), own=bare.as_posix()) is None
+    assert checker_for((tmp_path / "nowhere").as_posix(), own=repo.as_posix()) is None
 
 
 def test_이_훅의_저장소는_주_체크아웃과_등록된_워크트리다(tmp_path: Path) -> None:
@@ -226,8 +226,8 @@ def test_이_훅의_저장소는_주_체크아웃과_등록된_워크트리다(t
     worktree = _워크트리(main, main / ".claude" / "worktrees" / "wt")
     (main / "sub").mkdir()
 
-    assert checker_for(worktree.as_posix(), main.as_posix()) == _판정(worktree)
-    assert checker_for((main / "sub").as_posix(), worktree.as_posix()) == _판정(main)
+    assert checker_for(worktree.as_posix(), own=main.as_posix()) == _판정(worktree)
+    assert checker_for((main / "sub").as_posix(), own=worktree.as_posix()) == _판정(main)
 
 
 def test_이_훅의_저장소_밖이면_판정_스크립트를_고르지_않는다(tmp_path: Path) -> None:
@@ -237,8 +237,8 @@ def test_이_훅의_저장소_밖이면_판정_스크립트를_고르지_않는�
     other = _git_저장소(tmp_path / "other")
     nested = _git_저장소(main / "vendor" / "lib")
 
-    assert checker_for(other.as_posix(), main.as_posix()) is None
-    assert checker_for(nested.as_posix(), main.as_posix()) is None
+    assert checker_for(other.as_posix(), own=main.as_posix()) is None
+    assert checker_for(nested.as_posix(), own=main.as_posix()) is None
 
 
 def test_등록되지_않은_폴더의_git_파일이_이_저장소를_가리켜도_밖이다(tmp_path: Path) -> None:
@@ -250,7 +250,7 @@ def test_등록되지_않은_폴더의_git_파일이_이_저장소를_가리켜�
     admin = (main / ".git" / "worktrees" / "wt").as_posix()
     (fake / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
 
-    assert checker_for(fake.as_posix(), main.as_posix()) is None
+    assert checker_for(fake.as_posix(), own=main.as_posix()) is None
 
 
 def test_지운_워크트리의_남은_등록_자리에_새로_만든_저장소는_밖이다(tmp_path: Path) -> None:
@@ -259,12 +259,12 @@ def test_지운_워크트리의_남은_등록_자리에_새로_만든_저장소�
     버그 축이 재현했다)."""
     main = _git_저장소(tmp_path / "agent")
     worktree = _워크트리(main, tmp_path / "wt")
-    assert checker_for(worktree.as_posix(), main.as_posix()) == _판정(worktree)
+    assert checker_for(worktree.as_posix(), own=main.as_posix()) == _판정(worktree)
 
     shutil.rmtree(worktree)
     _git_저장소(worktree)
 
-    assert checker_for(worktree.as_posix(), main.as_posix()) is None
+    assert checker_for(worktree.as_posix(), own=main.as_posix()) is None
 
 
 def test_지운_워크트리_자리의_git_파일이_다른_저장소를_가리키면_밖이다(tmp_path: Path) -> None:
@@ -277,7 +277,7 @@ def test_지운_워크트리_자리의_git_파일이_다른_저장소를_가리�
     _판정_파일(worktree)
     (worktree / ".git").write_text(f"gitdir: {(other / '.git').as_posix()}\n", encoding="utf-8")
 
-    assert checker_for(worktree.as_posix(), main.as_posix()) is None
+    assert checker_for(worktree.as_posix(), own=main.as_posix()) is None
 
 
 def test_드라이브_루트까지_같은_절대_경로로_거슬러_올라간다() -> None:
@@ -298,9 +298,9 @@ def test_못_보는_것_separate_git_dir_저장소의_워크트리에서는_주_
     _판정_파일(main)
     worktree = _워크트리(main, tmp_path / "sepwt")
 
-    assert checker_for(main.as_posix(), worktree.as_posix()) is None
-    assert checker_for(worktree.as_posix(), main.as_posix()) == _판정(worktree)
-    assert checker_for(main.as_posix(), main.as_posix()) == _판정(main)
+    assert checker_for(main.as_posix(), own=worktree.as_posix()) is None
+    assert checker_for(worktree.as_posix(), own=main.as_posix()) == _판정(worktree)
+    assert checker_for(main.as_posix(), own=main.as_posix()) == _판정(main)
 
 
 def test_이_훅의_체크아웃에_git_이_없으면_모든_저장소가_밖이다(tmp_path: Path) -> None:
@@ -309,7 +309,7 @@ def test_이_훅의_체크아웃에_git_이_없으면_모든_저장소가_밖이
     loose = tmp_path / "loose"
     loose.mkdir()
 
-    assert checker_for(repo.as_posix(), loose.as_posix()) is None
+    assert checker_for(repo.as_posix(), own=loose.as_posix()) is None
 
 
 def test_판정은_commit_msg_훅과_같다(저장소: str) -> None:
@@ -333,7 +333,7 @@ def test_판정_문장_없이_끝나거나_시간을_넘기면_지나간다(tmp_
 
 
 def test_제목이_걸리는_커밋을_막는다(저장소: str) -> None:
-    reason = deny_reason("git commit -F long.txt", 저장소, _HOME, 저장소)
+    reason = deny_reason("git commit -F long.txt", 저장소, _HOME, own=저장소)
 
     assert reason is not None
     assert "76자 > 72자" in reason
@@ -343,9 +343,9 @@ def test_제목이_걸리는_커밋을_막는다(저장소: str) -> None:
 def test_절대_경로와_C_로_가리킨_파일도_막는다(저장소: str, tmp_path: Path) -> None:
     outside = tmp_path.as_posix()
 
-    assert deny_reason(f"git -C {저장소} commit -F {저장소}/long.txt", outside, _HOME, 저장소)
-    assert deny_reason(f"git -C {저장소}/sub commit -F long.txt", outside, _HOME, 저장소)
-    assert deny_reason("git -C sub commit -F long.txt", 저장소, _HOME, 저장소)
+    assert deny_reason(f"git -C {저장소} commit -F {저장소}/long.txt", outside, _HOME, own=저장소)
+    assert deny_reason(f"git -C {저장소}/sub commit -F long.txt", outside, _HOME, own=저장소)
+    assert deny_reason("git -C sub commit -F long.txt", 저장소, _HOME, own=저장소)
 
 
 def test_이_저장소의_커밋은_밖의_메시지_파일도_판정한다(저장소: str, tmp_path: Path) -> None:
@@ -355,23 +355,25 @@ def test_이_저장소의_커밋은_밖의_메시지_파일도_판정한다(저�
     scratch.mkdir()
     (scratch / "msg.txt").write_text(f"{_긴_제목}\n", encoding="utf-8")
 
-    assert deny_reason(f"git commit -F {scratch.as_posix()}/msg.txt", 저장소, _HOME, 저장소)
+    assert deny_reason(f"git commit -F {scratch.as_posix()}/msg.txt", 저장소, _HOME, own=저장소)
 
 
 def test_제목이_맞으면_지나간다(저장소: str) -> None:
-    assert deny_reason("git commit -F good.txt", 저장소, _HOME, 저장소) is None
-    assert deny_reason("git commit -F long.txt -F good.txt", 저장소, _HOME, 저장소) is None
+    assert deny_reason("git commit -F good.txt", 저장소, _HOME, own=저장소) is None
+    assert deny_reason("git commit -F long.txt -F good.txt", 저장소, _HOME, own=저장소) is None
 
 
 def test_commit_msg_판정이_없는_저장소는_지나간다(tmp_path: Path) -> None:
     bare = _저장소(tmp_path / "bare", commit_msg_hook=False)
     (bare / "long.txt").write_text(f"{_긴_제목}\n", encoding="utf-8")
 
-    assert deny_reason("git commit -F long.txt", bare.as_posix(), _HOME, bare.as_posix()) is None
+    assert (
+        deny_reason("git commit -F long.txt", bare.as_posix(), _HOME, own=bare.as_posix()) is None
+    )
 
 
 def test_파일이_없으면_지나간다(저장소: str) -> None:
-    assert deny_reason("git commit -F none.txt", 저장소, _HOME, 저장소) is None
+    assert deny_reason("git commit -F none.txt", 저장소, _HOME, own=저장소) is None
 
 
 def test_이_훅의_저장소_밖의_커밋은_판정_스크립트를_띄우지_않고_지나간다(tmp_path: Path) -> None:
@@ -387,8 +389,10 @@ def test_이_훅의_저장소_밖의_커밋은_판정_스크립트를_띄우지_
     )
     (other / "msg.txt").write_text(f"{_긴_제목}\n", encoding="utf-8")
 
-    assert deny_reason("git commit -F msg.txt", other.as_posix(), _HOME, main.as_posix()) is None
+    assert (
+        deny_reason("git commit -F msg.txt", other.as_posix(), _HOME, own=main.as_posix()) is None
+    )
     assert not ran.exists()
     # 대조: 그 저장소가 이 훅의 저장소면 띄워 표지를 남기고 막는다
-    assert deny_reason("git commit -F msg.txt", other.as_posix(), _HOME, other.as_posix())
+    assert deny_reason("git commit -F msg.txt", other.as_posix(), _HOME, own=other.as_posix())
     assert ran.exists()
