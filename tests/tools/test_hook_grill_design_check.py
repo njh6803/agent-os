@@ -50,6 +50,15 @@ def test_다른_자리의_같은_이름은_지나간다() -> None:
     assert context_for(_호출(".claude/worktrees/x:grilling")) is None
 
 
+def test_경로_접두는_claude_폴더_자체이거나_그_아래다() -> None:
+    """`.claude` 로 시작하는 다른 이름(`.claudeX`, `.claude-plugin`)은 그 폴더가 아니다(PR 직전 버그
+    축). 윈도 구분자도 받는다."""
+    assert context_for(_호출(".claude:grill-with-docs")) is not None
+    assert context_for(_호출(".claude\\worktrees\\x:grill-with-docs")) is not None
+    assert context_for(_호출(".claudeX:grill-with-docs")) is None
+    assert context_for(_호출(".claude-plugin:grill-with-docs")) is None
+
+
 def test_Skill이_아닌_도구는_보지_않는다() -> None:
     assert context_for(_호출(SKILL, tool="Read")) is None
 

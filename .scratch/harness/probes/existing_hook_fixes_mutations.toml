@@ -56,7 +56,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_commit_msg.py"
 old = '''
-            roots.append(os.path.dirname(os.path.join(admin, name, target)))
+            roots.append(worktree)
 '''
 new = '''
             pass
@@ -136,7 +136,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_grill_design_check.py"
 old = '''
-    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+    return skill == SKILL and (not colon or in_folder)
 '''
 new = '''
     return skill == SKILL and not colon
@@ -150,7 +150,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_grill_design_check.py"
 old = '''
-    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+    return skill == SKILL and (not colon or in_folder)
 '''
 new = '''
     return skill == SKILL
@@ -164,10 +164,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_grill_design_check.py"
 old = '''
-    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+    return skill == SKILL and (not colon or in_folder)
 '''
 new = '''
-    return (not colon and skill == SKILL) or (bool(colon) and prefix.startswith(PATH_PREFIX))
+    return (not colon and skill == SKILL) or (bool(colon) and in_folder)
 '''
 
 [[mutation]]
@@ -316,4 +316,65 @@ old = '''
 '''
 new = '''
         return _move_notice(name, current, moved)
+'''
+
+# 아래 넷은 PR 직전 리뷰를 반영하며 더한 판정이다(일지 2026-10-16-23 PR 직전 리뷰).
+
+[[mutation]]
+name = "246 등록된 워크트리의 git 파일을 거꾸로 대 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    dot_git = os.path.join(entry, target)
+    back = _read(dot_git)
+'''
+new = '''
+    dot_git = os.path.join(entry, target)
+    return os.path.dirname(dot_git)
+    back = _read(dot_git)
+'''
+
+[[mutation]]
+name = "246 거꾸로 가리킨 곳이 이 등록인지 견주지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    return os.path.dirname(dot_git) if _canonical(linked) == _canonical(entry) else None
+'''
+new = '''
+    return os.path.dirname(dot_git)
+'''
+
+[[mutation]]
+name = "246 드라이브 문자만 남은 자리를 맞추지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        found.append(f"{root}/" if _DRIVE_ONLY.match(root) else root)
+'''
+new = '''
+        found.append(root)
+'''
+
+[[mutation]]
+name = "284 claude 로 시작하는 다른 이름도 그 폴더로 본다"
+tests = ["tests/tools/test_hook_grill_design_check.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_grill_design_check.py"
+old = '''
+    in_folder = prefix == PATH_PREFIX or prefix.startswith(_PATH_PREFIXES)
+'''
+new = '''
+    in_folder = prefix.startswith(PATH_PREFIX)
 '''

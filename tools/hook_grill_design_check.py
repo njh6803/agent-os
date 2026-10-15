@@ -21,9 +21,11 @@
 놓친다(대기열 284). `grill-with-docs`를 뒤의 꼴로 부른 사건은 아직 없다. 그 꼴이 흔하다는 근거는
 다른 스킬의 수다. 인계 훅 명세(2026-10-16)가 그날까지 7일의 메인 세션에서 `code-review`를 뒤의 꼴로
 부른 것을 21회로 셌다(스크래치 스크립트로 손으로 셌다). 인계 훅 명세
-(`.scratch/token-usage/spec.md`의 "인계 훅")가 `code-review`를 가르는 판정과 같다. 플러그인 이름이
-붙은 호출(`플러그인:grill-with-docs`)과 `.claude`로 시작하지 않는 경로 접두(다른 폴더의 스킬)는 이
-저장소의 grill-with-docs가 아니라 지나간다.
+(`.scratch/token-usage/spec.md`의 "인계 훅")가 `code-review`를 가르는 판정과 같다. 명세의
+"`.claude`로 시작하는 경로"는 경로의 첫 토막으로 읽는다. 접두가 `.claude` 자체이거나 `.claude/`·
+`.claude\\`로 시작해야 하고, `.claudeX`·`.claude-plugin`은 그 폴더가 아니다(PR 직전 버그 축).
+플러그인 이름이 붙은 호출(`플러그인:grill-with-docs`)과 `.claude` 밖의 경로 접두(다른 폴더의 스킬)는
+이 저장소의 grill-with-docs가 아니라 지나간다.
 
 못 보는 것:
 - 대화의 내용. 설계 인터뷰가 맞는지는 모델이 가르고, 훅은 호출마다 같은 문장을 낸다(`args`가
@@ -44,7 +46,9 @@ from typing import TypedDict
 TOOL = "Skill"
 SKILL = "grill-with-docs"
 # 워크트리 세션이 이 저장소의 스킬 앞에 붙이는 경로 접두의 머리(`.claude/worktrees/<이름>:`).
+# `.claude` 폴더 자체이거나 그 아래만 받는다. `.claudeX` 는 그 폴더가 아니다.
 PATH_PREFIX = ".claude"
+_PATH_PREFIXES = (f"{PATH_PREFIX}/", f"{PATH_PREFIX}\\")
 # 알림의 첫 문장. 세션 확인이 모델이 이 문장을 옮겼는지 본다.
 LEAD = "grill-with-docs를 부르기 전에 설계 인터뷰가 맞는지 확인한다"
 _BODY = (
@@ -83,10 +87,11 @@ def context_for(payload: HookPayload) -> str | None:
 
 
 def is_this_skill(name: str) -> bool:
-    """이 저장소의 `grill-with-docs` 인가. 그대로의 이름이거나 `.claude` 로 시작하는 경로 접두에
-    `:grill-with-docs` 가 붙은 것이다."""
+    """이 저장소의 `grill-with-docs` 인가. 그대로의 이름이거나, `.claude` 폴더 자체나 그 아래를
+    가리키는 경로 접두에 `:grill-with-docs` 가 붙은 것이다."""
     prefix, colon, skill = name.rpartition(":")
-    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+    in_folder = prefix == PATH_PREFIX or prefix.startswith(_PATH_PREFIXES)
+    return skill == SKILL and (not colon or in_folder)
 
 
 def main() -> int:

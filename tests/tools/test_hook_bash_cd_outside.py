@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 
 import pytest
@@ -367,7 +368,19 @@ def test_이미_하위_폴더에_있는_셸이_다른_하위_폴더로_옮기면
     reason = _하위_폴더_이유("cd ../docs", f"{mine}/web", 자리)
 
     assert f"지금 작업 폴더 `{mine}/web`" in reason
-    assert f"`cd {mine}`" in reason
+    assert f"`cd {shlex.quote(mine)}`" in reason
+
+
+def test_루트로_돌아오는_cd_는_셸이_읽는_꼴로_적는다(tmp_path: Path) -> None:
+    """루트에 공백이 있으면 안내대로 친 `cd` 가 실패하지 않게 인용한다(PR 직전 버그 축)."""
+    root = _저장소(tmp_path / "a b")
+    scratch = tmp_path / "scratchpad"
+    scratch.mkdir()
+
+    reason = deny_reason("cd ../docs", f"{root.as_posix()}/web", scratch.as_posix())
+
+    assert reason is not None
+    assert f"`cd '{root.as_posix()}'`" in reason
 
 
 def test_루트에서_옮기면_루트에서_옮긴다고_적는다(자리: dict[str, str]) -> None:

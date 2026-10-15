@@ -11,6 +11,7 @@ import pytest
 from tools.check_commit_msg import problems_for
 from tools.hook_bash_commit_msg import (
     MessageFile,
+    ancestors,
     checker_for,
     deny_reason,
     message_files,
@@ -250,6 +251,56 @@ def test_등록되지_않은_폴더의_git_파일이_이_저장소를_가리켜�
     (fake / ".git").write_text(f"gitdir: {admin}\n", encoding="utf-8")
 
     assert checker_for(fake.as_posix(), main.as_posix()) is None
+
+
+def test_지운_워크트리의_남은_등록_자리에_새로_만든_저장소는_밖이다(tmp_path: Path) -> None:
+    """워크트리 폴더를 git 없이 지우면 등록(`worktrees/<이름>/gitdir`)이 남는다. 그 자리에 새로 만든
+    저장소는 이 저장소가 아니다. 등록된 워크트리의 `.git` 이 그 등록을 다시 가리킬 때만 센다(PR 직전
+    버그 축이 재현했다)."""
+    main = _git_저장소(tmp_path / "agent")
+    worktree = _워크트리(main, tmp_path / "wt")
+    assert checker_for(worktree.as_posix(), main.as_posix()) == _판정(worktree)
+
+    shutil.rmtree(worktree)
+    _git_저장소(worktree)
+
+    assert checker_for(worktree.as_posix(), main.as_posix()) is None
+
+
+def test_지운_워크트리_자리의_git_파일이_다른_저장소를_가리키면_밖이다(tmp_path: Path) -> None:
+    """남은 등록이 가리키는 자리에 `.git` 파일이 있어도, 그 파일이 이 등록이 아니라 다른 저장소를
+    가리키면 이 저장소가 아니다."""
+    main = _git_저장소(tmp_path / "agent")
+    worktree = _워크트리(main, tmp_path / "wt")
+    other = _git_저장소(tmp_path / "other")
+    shutil.rmtree(worktree)
+    _판정_파일(worktree)
+    (worktree / ".git").write_text(f"gitdir: {(other / '.git').as_posix()}\n", encoding="utf-8")
+
+    assert checker_for(worktree.as_posix(), main.as_posix()) is None
+
+
+def test_드라이브_루트까지_같은_절대_경로로_거슬러_올라간다() -> None:
+    """드라이브 문자만 남은 `C:` 는 윈도에서 현재 폴더 기준이다. `C:/` 로 맞춰야 존재 확인, 경계
+    판정, 설정 읽기, 판정 스크립트가 같은 자리를 본다(PR 직전 보안 리뷰)."""
+    assert ancestors("C:/a/b") == ["C:/a/b", "C:/a", "C:/"]
+    assert ancestors("/a/b/") == ["/a/b", "/a", "/"]
+
+
+def test_못_보는_것_separate_git_dir_저장소의_워크트리에서는_주_체크아웃이_밖이다(
+    tmp_path: Path,
+) -> None:
+    """거짓 음성이다. 공통 폴더의 이름이 `.git` 이 아니라 그 부모를 주 체크아웃으로 세지 않는다.
+    반대로 주 체크아웃에 든 훅은 자신과 등록된 워크트리를 안다(PR 직전 버그 축)."""
+    main = tmp_path / "sepmain"
+    _git("init", "-q", "--separate-git-dir", str(tmp_path / "sep.gitdir"), str(main))
+    _git("-C", str(main), "commit", "-q", "--allow-empty", "-m", "init")
+    _판정_파일(main)
+    worktree = _워크트리(main, tmp_path / "sepwt")
+
+    assert checker_for(main.as_posix(), worktree.as_posix()) is None
+    assert checker_for(worktree.as_posix(), main.as_posix()) == _판정(worktree)
+    assert checker_for(main.as_posix(), main.as_posix()) == _판정(main)
 
 
 def test_이_훅의_체크아웃에_git_이_없으면_모든_저장소가_밖이다(tmp_path: Path) -> None:

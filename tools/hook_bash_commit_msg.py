@@ -42,7 +42,9 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 문장 없이 끝나도 지나간다. 앞 호출에서 `export` 한 `SKIP` 은 모른다 — 그 셸에서 커밋하면 commit-msg
 훅이 돌지 않는데도 막는다(거짓 양성). 이 훅의 저장소 밖에서 하는 커밋(다른 프로젝트, 이 체크아웃
 안에 든 중첩 저장소)과, 이 훅이 든 체크아웃의 `.git` 을 읽지 못해 이 훅의 저장소를 모를 때의 커밋은
-그 저장소에 commit-msg 판정이 있어도 판정하지 않는다.
+그 저장소에 commit-msg 판정이 있어도 판정하지 않는다. `--separate-git-dir` 로 만든 저장소의
+워크트리에 이 훅이 들면 주 체크아웃의 커밋도 밖으로 본다(공통 폴더의 이름이 `.git` 이 아니라 그
+부모를 주 체크아웃으로 세지 않는다 — 거짓 음성).
 
 판정 스크립트를 실행하는 신뢰 경계. 판정 스크립트는 이 훅의 저장소의 것만 띄운다. 이 훅은 권한
 확인 전에 돌아, 띄우는 스크립트는 사용자가 그 Bash 명령을 승인하기 전에 돈다. 첫 판은 커밋하는
@@ -53,9 +55,15 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 읽는다. 그 체크아웃의 `.git` 이 폴더면 그것이, 파일이면 `gitdir:` 이 가리키는 폴더의 `commondir` 가
 공통 폴더다. 그 체크아웃 자신, 이름이 `.git` 인 공통 폴더의 부모(주 체크아웃), 공통 폴더의
 `worktrees/<이름>/gitdir` 이 가리키는 `.git` 의 부모(등록된 워크트리)가 이 훅의 저장소다. 경로는
-심볼릭 링크와 대소문자를 풀어(`realpath`, `normcase`) 견준다. 커밋 폴더의 `.git` 만 읽고 등록에서
-거꾸로 대 보지 않으면, `.git` 파일이 이 저장소의 워크트리 관리 폴더를 가리키게 지은 폴더를 이
-저장소로 읽는다.
+심볼릭 링크와 대소문자를 풀어(`realpath`, `normcase`) 견준다. 판정은 양쪽을 다 대 본다. 커밋 폴더의
+`.git` 만 읽고 등록에서 거꾸로 대 보지 않으면, `.git` 파일이 이 저장소의 워크트리 관리 폴더를
+가리키게 지은 폴더를 이 저장소로 읽는다. 거꾸로 등록의 `gitdir` 만 믿으면, 워크트리 폴더를 git 없이
+지운 뒤 남은 등록의 자리에 새로 만든 저장소를 이 저장소로 읽는다(PR 직전 버그 축이 재현했다). 그래서
+등록된 워크트리는 그 `.git` 파일의 `gitdir:` 이 다시 그 등록을 가리킬 때만 센다. 커밋 폴더의 조상을
+거슬러 오를 때 드라이브 문자만 남은 자리는 `C:/` 로 맞춘다. `C:` 는 윈도에서 현재 폴더 기준이라
+존재 확인과 판정 스크립트는 드라이브 루트를, 경계 판정과 설정 읽기는 훅의 현재 폴더를 보게 된다(PR
+직전 보안 리뷰. 드라이브 루트에 파일을 심을 수 있는 사람이 전제라 취약점으로는 걸렀고 정확성으로
+고쳤다).
 """
 
 from __future__ import annotations
@@ -108,6 +116,7 @@ _LONG_WITH_VALUE = frozenset(
 _DIRECTORY_CHANGERS = frozenset({"cd", "pushd", "popd"})
 _UNRESOLVABLE = re.compile(r"[$`*?\[]")
 _MSYS_DRIVE = re.compile(r"^/([A-Za-z])(?=/|$)")
+_DRIVE_ONLY = re.compile(r"^[A-Za-z]:$")
 _ABSOLUTE = re.compile(r"^(?:/|[A-Za-z]:/)")
 
 
@@ -340,24 +349,49 @@ def repository_roots(checkout: str) -> frozenset[str]:
     except OSError:
         names = []
     for name in names:
-        target = _read(os.path.join(admin, name, "gitdir"))
-        if target:
-            roots.append(os.path.dirname(os.path.join(admin, name, target)))
+        worktree = _linked_worktree(os.path.join(admin, name))
+        if worktree is not None:
+            roots.append(worktree)
     return frozenset(_canonical(root) for root in roots)
+
+
+def _linked_worktree(entry: str) -> str | None:
+    """등록 `entry`(`worktrees/<이름>`)의 워크트리 폴더. 그 폴더의 `.git` 파일이 다시 이 등록을
+    가리킬 때만이다. 워크트리 폴더를 git 없이 지우면 등록이 남아, 같은 자리에 새로 만든 저장소를 이
+    저장소로 읽는다(PR 직전 버그 축)."""
+    target = _read(os.path.join(entry, "gitdir"))
+    if not target:
+        return None
+    dot_git = os.path.join(entry, target)
+    back = _read(dot_git)
+    if back is None or not back.startswith("gitdir:"):
+        return None
+    linked = os.path.join(os.path.dirname(dot_git), back.removeprefix("gitdir:").strip())
+    return os.path.dirname(dot_git) if _canonical(linked) == _canonical(entry) else None
+
+
+def ancestors(directory: str) -> list[str]:
+    """`directory` 와 그 조상들, 가까운 것부터. 드라이브 문자만 남은 자리는 `C:/` 로 맞춘다.
+    `C:` 는 윈도에서 현재 폴더 기준이라, 그대로 두면 존재 확인과 판정 스크립트(`C:/…`)는 드라이브
+    루트를, 경계 판정과 설정 읽기는 현재 폴더를 본다(PR 직전 보안 리뷰)."""
+    parts = directory.rstrip("/").split("/")
+    found: list[str] = []
+    for end in range(len(parts), 0, -1):
+        root = "/".join(parts[:end]) or "/"
+        found.append(f"{root}/" if _DRIVE_ONLY.match(root) else root)
+    return found
 
 
 def checker_for(directory: str, own: str) -> str | None:
     """`directory` 에서 커밋하면 commit-msg 단계가 돌릴 판정 스크립트. 그 저장소가 `own`(이 훅이
     든 체크아웃)의 저장소가 아니거나, 그 저장소의 pre-commit 설정이 그것을 부르지 않거나 파일이
     없으면 None."""
-    parts = directory.rstrip("/").split("/")
-    for end in range(len(parts), 0, -1):
-        root = "/".join(parts[:end]) or "/"
-        if not os.path.exists(f"{root}/.git"):
+    for root in ancestors(directory):
+        if not os.path.exists(posixpath.join(root, ".git")):
             continue
         if _canonical(root) not in repository_roots(own):
             return None
-        checker = f"{root}/{CHECKER}"
+        checker = posixpath.join(root, CHECKER)
         try:
             config = Path(root, PRE_COMMIT_CONFIG).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):

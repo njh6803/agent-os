@@ -384,7 +384,8 @@ def _subfolder_reason(destination: Destination, own: str, start: str) -> str:
     if moved:
         text += (
             " 상대 경로는 지금 작업 폴더에서 풀리니,"
-            f" 먼저 `cd {own}` 으로 루트에 돌아오거나(이 `cd` 는 지나간다) 절대 경로를 준다."
+            f" 먼저 `cd {shlex.quote(own)}` 으로 루트에 돌아오거나(이 `cd` 는 지나간다) 절대 경로를"
+            " 준다."
         )
     return text
 
