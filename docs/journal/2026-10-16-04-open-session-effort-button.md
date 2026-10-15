@@ -115,3 +115,13 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히
 ## PR 검사
 
 PR #250의 첫 회차에서 CodeRabbit(`Review completed`)·claude-review·e2e·visual·web은 초록이었고 `python`과 그에 걸린 `verify`가 빨갰다. 리눅스 러너의 pwsh에는 `UIAutomationClient` 어셈블리가 없어, 새 시험 둘(`test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다`)이 `Cannot find path ... UIAutomationClient.dll`로 실패했다(2 failed, 2850 passed). 시험 본문이 진짜 어셈블리를 먼저 부르고(`-ErrorAction Stop`을 잡는다), 형식이 없으면 같은 이름의 대역 형식(`ExpandCollapsePattern.Pattern`)을 정의하게 고쳤다. 스크립트는 그대로다. 윈도의 pwsh는 그 형식을 처음부터 찾아 대역 길을 밟지 않는다. 그래서 그 길의 두 전제를 따로 쟀다. Add-Type으로 정의한 형식을 스레드 잡 안에서 이름으로 찾았고, 시험 서버는 `-ErrorAction Stop`으로 잡은 `Add-Type -AssemblyName` 오류를 실패로 세지 않았다(종료 0). 리눅스에서 실제로 통하는지는 다음 CI가 판정한다.
+
+## PR 리뷰
+
+첫 회차(헤드 `a232a40`).
+
+- CodeRabbit: 고칠 지적 없음. 보안 구조 평가가 Low 우려 하나를 남겼다. 시간을 넘긴 고르기 호출이 나중에 끝나 기본값을 바꿀 수 있다는 것이다. 그 경우 고른 값이 원래 값과 다르면 보내기 전에 `restore=필요` 줄이 사람의 복구 명령을 남기고, 프로세스는 바로 끝난다. 앱 쪽에 이미 건너간 호출을 멈출 길은 없어 PR 코멘트에 이유를 남기고 두었다.
+- claude-review: Minor 셋, Nit 둘, Critical·Major 없음.
+  - 고친 것: catch가 낡을 수 있는 `$trigger`로 `Test-Expanded`를 부르던 것(다시 찾는다, 찾다 던져도 원래 오류를 가리지 않는다), lParam 리터럴(반복 횟수·스캔 코드·비트로 조립하고 값이 옛 리터럴과 같은지 봤다), 함수 순서(부르는 함수 셋을 위로).
+  - 둔 것: 두 고르기 함수의 골격 중복(셀프 리뷰와 같은 판단), `Invoke-Action`의 종료 경로가 프로브로만 확인된 것(시험 서버 안에서 `[Environment]::Exit`를 부르면 서버가 끝난다).
+- 바꾼 길은 `-Action defaults`로 다시 밟았다(`high`로 바꾸고 `xhigh`로 되돌림, 둘 다 종료 0).

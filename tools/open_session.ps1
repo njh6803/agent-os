@@ -442,30 +442,6 @@ function Select-ComposerModelItem($win, $box, [string] $model) {
     Wait-For { Find-ComposerShowing $box -Model $model } "'$model' 을 보이는 모델 버튼" 5 | Out-Null
 }
 
-# 입력창 묶음의 모델 버튼이 그 노력 칸을 보이게 한다. 노력은 모델 메뉴 안의 `노력 <이름>` 하위 메뉴의 항목이다(앱 2.37337.1.0).
-# 이미 그 칸이면 메뉴를 열지 않는다. 바꾼 뒤 버튼의 글로 맞았는지 본다. 칸이 그 모델의 메뉴에 없으면 항목을 찾지 못해 멈춘다.
-function Select-ComposerEffortItem($win, $box, [int] $step) {
-    $label = (Get-EffortLabels)[$step]
-    $button = Wait-For { Find-ComposerButton $box '모델:' } '입력창의 모델 버튼' 5
-    if ((Read-ComposerButton $button).EffortLabel -ceq $label) { return }
-    $opened = Invoke-PatternTimed $button 'expand'
-    if ($opened -ne 'ok') { throw "모델 메뉴를 펼치지 못했다($opened)." }
-    $trigger = $null
-    try {
-        $trigger = Wait-For { Find-EffortSubmenu $win } "모델 메뉴의 '노력' 항목" 5
-        Open-EffortSubmenu $win $trigger
-        # 열렸는지를 항목보다 먼저 본다. 열리지 않은 것(창이 뒤에 있다)과 그 모델의 메뉴에 그 칸이 없는 것을 가른다. 항목은 매번
-        # 다시 찾는다. 다시 그려져 낡은 요소는 상태를 읽지 못해 열린 메뉴를 놓친다.
-        Wait-For { $t = Find-EffortSubmenu $win; if ($t -and (Test-Expanded $t)) { $t } } '열린 노력 하위 메뉴(Claude 창이 앞에 있어야 열린다)' 3 | Out-Null
-        Select-MenuRadio $win $label '노력 메뉴'
-    } catch {
-        if ($trigger -and (Test-Expanded $trigger)) { Invoke-PatternTimed $trigger 'collapse' | Out-Null }
-        Invoke-PatternTimed $button 'collapse' | Out-Null
-        throw
-    }
-    Wait-For { Find-ComposerShowing $box -EffortLabel $label } "'$label' 을 보이는 모델 버튼" 5 | Out-Null
-}
-
 function Test-Expanded($el) {
     try { return [bool]($el.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Current.ExpandCollapseState -eq 'Expanded') } catch { return $false }
 }
@@ -487,9 +463,11 @@ function Open-EffortSubmenu($win, $trigger) {
     $WM_KEYDOWN = 0x0100
     $WM_KEYUP = 0x0101
     $VK_RIGHT = 0x27
-    # lParam: 반복 횟수 1, 스캔 코드 0x4D(16~23비트), 확장 키(24비트). 뗄 때는 이전 상태·전이 비트(30·31)를 더한다.
-    $downInfo = 0x014D0001
-    $upInfo = [int64]0xC14D0001
+    # lParam: 반복 횟수(0~15비트), 스캔 코드(16~23비트), 확장 키(24비트). 뗄 때는 이전 상태(30비트)와 전이(31비트)를 더한다.
+    $repeat = 1
+    $scanCode = 0x4D
+    $downInfo = [int64]$repeat -bor ([int64]$scanCode -shl 16) -bor (1L -shl 24)
+    $upInfo = $downInfo -bor (1L -shl 30) -bor (1L -shl 31)
     $trigger.SetFocus()
     Start-Sleep -Milliseconds 300
     $window = [IntPtr]$win.Current.NativeWindowHandle
@@ -499,6 +477,31 @@ function Open-EffortSubmenu($win, $trigger) {
     $down = [OpenSessionKeys]::PostMessage($window, $WM_KEYDOWN, [IntPtr]$VK_RIGHT, [IntPtr]$downInfo)
     $up = [OpenSessionKeys]::PostMessage($window, $WM_KEYUP, [IntPtr]$VK_RIGHT, [IntPtr]$upInfo)
     if (-not ($down -and $up)) { throw "Claude 창에 노력 하위 메뉴를 열 키를 넣지 못했다(PostMessage down=$down up=$up. 앱이 더 높은 권한으로 돌면 그렇다)." }
+}
+
+# 입력창 묶음의 모델 버튼이 그 노력 칸을 보이게 한다. 노력은 모델 메뉴 안의 `노력 <이름>` 하위 메뉴의 항목이다(앱 2.37337.1.0).
+# 이미 그 칸이면 메뉴를 열지 않는다. 바꾼 뒤 버튼의 글로 맞았는지 본다. 칸이 그 모델의 메뉴에 없으면 항목을 찾지 못해 멈춘다.
+function Select-ComposerEffortItem($win, $box, [int] $step) {
+    $label = (Get-EffortLabels)[$step]
+    $button = Wait-For { Find-ComposerButton $box '모델:' } '입력창의 모델 버튼' 5
+    if ((Read-ComposerButton $button).EffortLabel -ceq $label) { return }
+    $opened = Invoke-PatternTimed $button 'expand'
+    if ($opened -ne 'ok') { throw "모델 메뉴를 펼치지 못했다($opened)." }
+    try {
+        $trigger = Wait-For { Find-EffortSubmenu $win } "모델 메뉴의 '노력' 항목" 5
+        Open-EffortSubmenu $win $trigger
+        # 열렸는지를 항목보다 먼저 본다. 열리지 않은 것(창이 뒤에 있다)과 그 모델의 메뉴에 그 칸이 없는 것을 가른다. 항목은 매번
+        # 다시 찾는다. 다시 그려져 낡은 요소는 상태를 읽지 못해 열린 메뉴를 놓친다.
+        Wait-For { $t = Find-EffortSubmenu $win; if ($t -and (Test-Expanded $t)) { $t } } '열린 노력 하위 메뉴(Claude 창이 앞에 있어야 열린다)' 3 | Out-Null
+        Select-MenuRadio $win $label '노력 메뉴'
+    } catch {
+        # 접을 하위 메뉴 항목도 다시 찾는다(위와 같은 까닭). 찾다 던져도 원래 오류를 가리지 않는다.
+        $open = try { Find-EffortSubmenu $win } catch { $null }
+        if ($open -and (Test-Expanded $open)) { Invoke-PatternTimed $open 'collapse' | Out-Null }
+        Invoke-PatternTimed $button 'collapse' | Out-Null
+        throw
+    }
+    Wait-For { Find-ComposerShowing $box -EffortLabel $label } "'$label' 을 보이는 모델 버튼" 5 | Out-Null
 }
 
 # 새 세션 입력창에 지금 있는 모델과 노력(앱이 기억한 새 세션 화면의 기본값). 고르기 전에 읽어 두고, 보낸 뒤
