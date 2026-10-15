@@ -174,35 +174,68 @@ new = '''
         _retrying(lambda: path.write_bytes(original), blocked)'''
 
 [[mutation]]
-name = "다시 시도해 지난 막힘을 알리지 않는다"
+name = "막혔다가 지난 파일을 알리지 않는다"
 tests = ["tests/tools/test_mutate.py"]
 expect = "red"
-expect_output = ["test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다", "3번째에 지났다"]
+expect_output = ["test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다", "2번 막혔다가 지났다"]
 
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
-            if blocked:
-                out(
-                    f"되돌리기를 다시 시도해 {len(blocked) + 1}번째에 지났다: {relative}"
-                    f" — 처음 막힌 까닭 {blocked[0]}"
-                )
+    for line in passed:
+        out(f"되돌리기: {line}")
 '''
 new = '''
-            if blocked:
-                pass
+    for line in passed:
+        pass
 '''
 
 [[mutation]]
-name = "끝내 막혔을 때 시도한 수를 적지 않는다"
+name = "끝내 막혔을 때 막힌 수를 적지 않는다"
 tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 expect_output = ["test_되돌리는_쓰기가_끝내_막히면_기다림_수보다_한_번_더_시도하고_멈춘다"]
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            stuck.append(f"{relative} ({len(blocked) + 1}번 시도했다: {error})")'''
+old = '''            stuck.append(f"{relative} ({len(blocked) + 1}번 막혔다: {error})")'''
 new = '''            stuck.append(f"{relative} ({error})")'''
+
+# 아래 둘은 PR 직전 버그 리뷰가 짚은 길이다. 줄 버퍼라 닫힌 파이프의 쓰기 오류가 줄을 내는 자리에서 나고, 다시
+# 시도하며 기다리는 동안 Ctrl+C 가 온다.
+[[mutation]]
+name = "막혔다가 지난 줄을 되쓰는 도중에 낸다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_막혔다가_지난_줄은_모두_되쓴_뒤에_내서_출력이_끊겨도_남은_파일을_되돌린다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+                passed.append(
+                    f"{relative} — {len(blocked)}번 막혔다가 지났다. 처음 막힌 까닭 {blocked[0]}"
+                )
+'''
+new = '''
+                out(
+                    f"되돌리기: {relative} — {len(blocked)}번 막혔다가 지났다. 처음 막힌 까닭 {blocked[0]}"
+                )
+'''
+
+[[mutation]]
+name = "되쓰는 동안 끊기면 남은 파일을 되쓰지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되쓰는_동안_끊겨도_남은_파일을_마저_되쓰고_끊긴_파일을_알린다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+        except KeyboardInterrupt:
+            stuck.append(f"{relative} (되쓰는 동안 끊겼다)")
+'''
+new = '''
+'''
 
 [[mutation]]
 name = "측정이 변이의 진단 자리를 판정에 넘기지 않는다"

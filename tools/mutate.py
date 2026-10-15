@@ -116,16 +116,16 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 4. 변이마다 원래 바이트(되돌릴 파일 포함)를 쥐고 변이를 넣어 돌린 뒤 `finally` 에서 그 바이트를
    그대로 쓴다. 쓰기 전에 편집한 파일이 쓴 변이 바이트 그대로인지 본다. 다르면 변이가 든 동안 다른
    쓰기(편집기, 다른 세션)가 들어온 것이라 덮지 않고 알린다(대기열 77). 되돌릴 파일(`restore`)은
-   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 되돌리는 읽기와 쓰기가 `OSError` 로 막히면
+   명령이 고쳐 쓰는 파일이라 보지 않고 쓴다. 되돌리는 읽기와 쓰기가 `OSError` 로 막히면 각각
    `RESTORE_WAITS`(합 3.7초) 동안 기다리며 다시 시도한다. 변이 87번째를 되돌리는 쓰기가 `[Errno 22]
    Invalid argument` 로 한 번 막혀 3으로 멈추고 변이가 도구 파일에 남았다(대기열 267, 일지
-   2026-10-15-06). 다른 쓰기는
-   처음 읽은 바이트로 한 번만 본다. 명령 한 번이 시간 제한(`timeout`)을 넘기면 그 명령이
-   띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로 판정한 뒤 남은
-   반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가 러너→pytest→러너로
-   되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열 139). 기다리는
-   동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤 되돌린다.
-   윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
+   2026-10-15-06). 다른 쓰기는 처음 읽은 바이트로 한 번만 본다. 되쓰는 동안 끊겨도(Ctrl+C) 그 파일을
+   남은 파일로 적고 나머지 파일을 마저 되쓴 뒤 3으로 멈춘다. 명령 한 번이 시간 제한(`timeout`)을
+   넘기면 그 명령이 띄운 프로세스까지 끝내고(못 보는 것은 아래), 끊기 전의 출력이 무엇이든 오류로
+   판정한 뒤 남은 반복(`repeat`)을 건너뛰고 되돌려 다음 변이로 간다. 검사 러너의 변이가
+   러너→pytest→러너로 되풀이하며 10분 넘게 돌았고, 손으로 죽이자 변이된 한 줄이 파일에 남았다(대기열
+   139). 기다리는 동안 예외(Ctrl+C 의 `KeyboardInterrupt`)가 올라와도 띄운 프로세스까지 끝낸 뒤
+   되돌린다. 윈도우에서 실제 Ctrl+C 가 그 기다림을 끊는지는 재지 않았다(시험은 그 예외를 넣는다).
 5. 종료 코드: 모두 기대대로면 0, 어긋나거나(시간 제한을 넘긴 것 포함) 기준선이 초록이 아니면 1,
    변이 파일을 읽지 못했거나 틀렸거나 고른 것이 없으면 2(아무 파일도 쓰지 않았다), 테스트를 돌리지
    못했거나 되돌리지 못했으면 3.
@@ -725,9 +725,13 @@ def _restore(
     written: dict[Path, bytes],
     out: Callable[[str], None],
 ) -> None:
-    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`. 다시 시도해 지났으면 처음
-    막힌 까닭을 한 줄 낸다. 무엇이 그 틈에 파일을 쥐는지 다음에 잴 흔적이다(대기열 267)."""
+    """쥔 파일을 모두 되쓰고, 남은 파일이 있으면 그 뒤에 `RestoreError`. 막혔다가 지난 파일은 처음
+    막힌 까닭을 남긴다. 무엇이 그 틈에 파일을 쥐는지 다음에 잴 흔적이다(대기열 267). 그 줄은 모두
+    되쓴 뒤에 낸다. 출력이 줄 버퍼라 닫힌 파이프의 쓰기 오류가 그 자리에서 나, 되쓰는 도중에 내면
+    남은 파일을 되쓰지 못한다(PR 직전 버그 리뷰). 되쓰는 동안 끊겨도(Ctrl+C) 그 파일을 남은 파일로
+    적고 나머지를 마저 되쓴다."""
     stuck: list[str] = []
+    passed: list[str] = []
     for path, original in held.items():
         relative = path.relative_to(root.resolve()).as_posix()
         blocked: list[OSError] = []
@@ -736,15 +740,19 @@ def _restore(
         except _WrittenMeanwhile:
             stuck.append(f"{relative} (변이가 든 동안 다른 쓰기가 들어와 덮지 않았다)")
         except OSError as error:
-            stuck.append(f"{relative} ({len(blocked) + 1}번 시도했다: {error})")
+            stuck.append(f"{relative} ({len(blocked) + 1}번 막혔다: {error})")
+        except KeyboardInterrupt:
+            stuck.append(f"{relative} (되쓰는 동안 끊겼다)")
         else:
             if blocked:
-                out(
-                    f"되돌리기를 다시 시도해 {len(blocked) + 1}번째에 지났다: {relative}"
-                    f" — 처음 막힌 까닭 {blocked[0]}"
+                passed.append(
+                    f"{relative} — {len(blocked)}번 막혔다가 지났다. 처음 막힌 까닭 {blocked[0]}"
                 )
     if stuck:
-        raise RestoreError(f"{name}: {', '.join(stuck)}")
+        later = f". 막혔다가 지난 파일: {', '.join(passed)}" if passed else ""
+        raise RestoreError(f"{name}: {', '.join(stuck)}{later}")
+    for line in passed:
+        out(f"되돌리기: {line}")
 
 
 def _run_mutated(

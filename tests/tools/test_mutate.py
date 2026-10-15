@@ -1765,7 +1765,7 @@ def test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_�
     assert time.monotonic() - 시작 >= 0.3  # 막힐 때마다 기다렸다
     # 무엇이 그 틈에 파일을 쥐는지 다음에 잴 흔적
     assert any(
-        "3번째에 지났다: src/m.py" in 한줄 and "Errno 22" in 한줄 and "쓰기를 막았다" in 한줄
+        "src/m.py — 2번 막혔다가 지났다" in 한줄 and "Errno 22" in 한줄 and "쓰기를 막았다" in 한줄
         for 한줄 in 줄
     ), 줄
 
@@ -1831,7 +1831,7 @@ def test_되돌리는_쓰기가_끝내_막히면_기다림_수보다_한_번_더
     막을_때, 막은 = _처음_몇_번만(99, b"x = 1\n")
     _쓰기를_막는다(monkeypatch, path, 막을_때, 번호=errno.EINVAL)
 
-    with pytest.raises(RestoreError, match=r"src/m.py \(3번 시도했다: .*쓰기를 막았다"):
+    with pytest.raises(RestoreError, match=r"src/m.py \(3번 막혔다: .*쓰기를 막았다"):
         measure(
             load_spec(_변이_파일(old="x = 1", new="x = 2")),
             root=tmp_path,
@@ -1841,6 +1841,51 @@ def test_되돌리는_쓰기가_끝내_막히면_기다림_수보다_한_번_더
 
     assert len(막은) == 3
     assert path.read_bytes() == b"x = 2\n"
+
+
+def test_막혔다가_지난_줄은_모두_되쓴_뒤에_내서_출력이_끊겨도_남은_파일을_되돌린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """출력이 줄 버퍼라 닫힌 파이프(`| head`)의 쓰기 오류가 그 줄을 내는 자리에서 난다. 되쓰는
+    도중에 내면 뒤 파일이 변이된 채 남고, `main` 은 "변이는 되돌렸다" 고 거짓으로 알린다(PR 직전
+    버그 리뷰)."""
+    monkeypatch.setattr("tools.mutate.RESTORE_WAITS", (0.0,))
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    막을_때, _ = _처음_몇_번만(1, b"x = 1\n")
+    _쓰기를_막는다(monkeypatch, m, 막을_때, 번호=errno.EINVAL)
+
+    def 끊긴_출력(줄: str) -> None:
+        if 줄.startswith("되돌리기:"):
+            raise BrokenPipeError(32, "파이프가 닫혔다")
+
+    with pytest.raises(BrokenPipeError):
+        measure(load_spec(변이), root=tmp_path, runner=_변이면(m, b"x = 2", _빨강), out=끊긴_출력)
+
+    assert m.read_bytes() == b"x = 1\n"
+    assert a.read_bytes() == b"a = 1\n"
+
+
+def test_되쓰는_동안_끊겨도_남은_파일을_마저_되쓰고_끊긴_파일을_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """다시 시도하며 기다리는 동안(최대 3.7초) Ctrl+C 가 오면 뒤 파일을 되쓰지 않고 목록도 없이
+    끝났다(PR 직전 버그 리뷰). 변이가 도구 파일에 남는 것은 대기열 267 이 막으려던 것이다."""
+    m, a, 변이 = _두_파일_변이(tmp_path)
+    _쓰기를_막는다(monkeypatch, m, lambda data: data == b"x = 1\n", 번호=errno.EINVAL)
+
+    def 기다리다_끊긴다(_: float) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(time, "sleep", 기다리다_끊긴다)
+
+    # 놓친 Ctrl+C 는 pytest 전체를 멈추므로 함께 잡아 무엇이 나왔는지 단언한다
+    with pytest.raises((RestoreError, KeyboardInterrupt)) as 잡힌:
+        measure(load_spec(변이), root=tmp_path, runner=_변이면(m, b"x = 2", _빨강), out=print)
+
+    assert isinstance(잡힌.value, RestoreError), repr(잡힌.value)
+    assert "src/m.py (되쓰는 동안 끊겼다)" in str(잡힌.value)
+    assert m.read_bytes() == b"x = 2\n"
+    assert a.read_bytes() == b"a = 1\n"
 
 
 def test_변이가_든_동안_다른_쓰기가_들어온_파일은_덮지_않고_알린다(tmp_path: Path) -> None:
@@ -2184,11 +2229,16 @@ new = "ROOT = Path(__file__).resolve().parent.parent"
         assert process.stdout is not None
         첫_줄 = process.stdout.readline().decode("utf-8")
         신호.touch()
-        _, stderr = process.communicate(timeout=60)
+        나머지, stderr = process.communicate(timeout=60)
 
-    assert 첫_줄.startswith("기준선 fast: 초록"), (첫_줄, stderr.decode("utf-8", "replace"))
+    출력 = (첫_줄 + 나머지.decode("utf-8"), stderr.decode("utf-8", "replace"))
+    assert 첫_줄.startswith("기준선 fast: 초록"), 출력
     assert not 신호.with_suffix(".late").exists()
-    assert process.returncode == 1
+    # 종료 1 의 까닭: 둘째 기준선이 빨개 변이를 넣지 않았다(도구가 죽은 1 이 아니다)
+    assert process.returncode == 1, 출력
+    assert "기준선 slow: 빨강" in 출력[0], 출력
+    assert "기준선이 초록이 아니라 변이를 넣지 않았다" in 출력[0], 출력
+    assert 출력[1] == "", 출력
 
 
 def test_main_은_되돌리지_못하면_3이고_git_diff_를_가리킨다(
