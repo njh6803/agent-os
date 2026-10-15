@@ -273,8 +273,9 @@ payload = { tool_name = "Bash", tool_input = { command = "(cd ${MAIN_REPO} && gi
 
 [[case]]
 hook = "hook_bash_cd_outside.py"
-expect = "context"
-note = "같은 체크아웃의 하위 폴더로 — 일지 2026-10-13-22 의 모양(대기열 225)"
+expect = "deny"
+contains = ["하위 폴더", "대기열 225·252"]
+note = "같은 체크아웃의 하위 폴더로 — 일지 2026-10-13-22 의 모양(대기열 225). 알림 뒤에도 되풀이돼 막는다(대기열 252)"
 payload = { tool_name = "Bash", tool_input = { command = "cd web/packages/ui/src/components && ls" }, cwd = "${WORK_REPO}" }
 
 [[case]]
@@ -284,18 +285,25 @@ note = "하위 폴더에 남은 셸이 루트로 돌아온다 — 그 사건 셋
 payload = { tool_name = "Bash", tool_input = { command = "cd ${WORK_REPO} && git status --short" }, cwd = "${WORK_REPO}/web/packages/ui/src/components" }
 
 # --- hook_bash_commit_msg (PreToolUse Bash) ---
-# ${COMMIT_MSGS} 는 commit-msg 판정을 부르는 저장소이고 두 파일은 제목만 다르다. 긴 것은 일지 2026-10-13-30 의 76자를 흉내 낸다.
+# ${COMMIT_MSGS} 는 commit-msg 판정을 부르는 이 저장소 밖의 저장소이고 두 파일은 제목만 다르다. 긴 것은 일지 2026-10-13-30 의 76자를 흉내 낸다.
+# 훅은 이 저장소(${ROOT})의 커밋만 판정한다(대기열 246). 커밋은 ${ROOT} 에서 하고 메시지 파일만 그 저장소의 것을 쓴다.
 [[case]]
 hook = "hook_bash_commit_msg.py"
 expect = "deny"
 note = "제목이 72자를 넘는 메시지 파일 — 대기열 222 의 셋째 사건의 모양"
-payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${ROOT}" }
 
 [[case]]
 hook = "hook_bash_commit_msg.py"
 expect = "silent"
 note = "제목이 맞는 메시지 파일 — 그 사건 뒤 고쳐 친 커밋의 모양"
-payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/good-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/good-subject.txt" }, cwd = "${ROOT}" }
+
+[[case]]
+hook = "hook_bash_commit_msg.py"
+expect = "silent"
+note = "이 저장소 밖에서 같은 파일로 커밋한다 — 그 저장소의 판정 스크립트를 띄우지 않는다(대기열 246)"
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${COMMIT_MSGS}" }
 
 # --- hook_bash_msys_pathconv (PreToolUse Bash) ---
 # 훅은 윈도이거나 `MSYSTEM` 이 있을 때만 알린다. 리눅스 CI 에서도 판정을 돌리려고 모든 사례에 넣는다.
@@ -613,6 +621,13 @@ payload = { tool_name = "PowerShell", tool_input = { command = "git push origin 
 
 [[case]]
 hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7"]
+note = "원격 앞에 `=` 없이 쓴 --recurse-submodules — git 이 다음 낱말을 값으로 먹는다(대기열 296. 첫 판은 그 값을 원격으로 읽어 지나갔다)"
+payload = { tool_name = "Bash", tool_input = { command = "git push --recurse-submodules check origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
 expect = "silent"
 note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 열린 PR 이 없다"
 payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
@@ -662,7 +677,9 @@ note = "짧은 일치 줄 양옆의 600자 문맥 줄만 생략됐다 — 일치
 payload = { tool_name = "Grep", tool_input = { pattern = "PROBE short", path = "C:/scratch/omit", output_mode = "content", "-C" = 1 }, tool_response = { mode = "content", numFiles = 0, filenames = [], content = "C:\\scratch\\omit\\ctx.txt-1-[Omitted long context line]\nC:\\scratch\\omit\\ctx.txt:2:PROBE short\nC:\\scratch\\omit\\ctx.txt-3-[Omitted long context line]", numLines = 3, totalLines = 3 } }
 
 # --- hook_grill_design_check (PreToolUse Skill) ---
-# 두 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).
+# 첫째와 셋째 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).
+# 경로 접두의 둘은 대기열 284 의 꼴이다. 넷째(silent)는 트랜스크립트의 Skill 입력에 실제로 있던 이름이고, 둘째(context)는 그 꼴에
+# 이 스킬 이름을 넣어 지었다(grill-with-docs 를 그 꼴로 부른 기록은 없다). 다섯째(플러그인 접두)도 지은 입력이다. 그 이름의 플러그인 스킬은 없다.
 [[case]]
 hook = "hook_grill_design_check.py"
 expect = "context"
@@ -672,9 +689,28 @@ payload = { tool_name = "Skill", tool_input = { skill = "grill-with-docs", args 
 
 [[case]]
 hook = "hook_grill_design_check.py"
+expect = "context"
+note = "워크트리 세션이 경로 접두를 붙여 부른다(대기열 284)"
+contains = ["설계 인터뷰가 맞는지"]
+payload = { tool_name = "Skill", tool_input = { skill = ".claude/worktrees/admin-foo-design:grill-with-docs", args = "admin-foo" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
 expect = "silent"
 note = "라우터가 이어 부르는 grilling 은 같은 알림을 두 번 받지 않는다"
 payload = { tool_name = "Skill", tool_input = { skill = "grilling", args = "admin-foo" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "silent"
+note = "워크트리 세션이 경로 접두로 부른 다른 스킬 — 트랜스크립트에 있던 이름"
+payload = { tool_name = "Skill", tool_input = { skill = ".claude/worktrees/harness-audit:code-review" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "silent"
+note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아니다(대기열 284)"
+payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.

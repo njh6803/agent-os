@@ -19,8 +19,12 @@
   나머지가 지울 ref 다. `refs/heads/` 는 벗기고, 다른 `refs/`(태그)는 브랜치가 아니라 뺀다.
 - 지우기 refspec. 지우기 모드가 아니어도 `:<브랜치>`·`+:<브랜치>` 는 지운다. `:` 만은 맞는 것을 모두
   올리는 것이라 지우기가 아니다.
-- 값을 먹는 옵션(`-o`, `--push-option`, `--receive-pack`, `--exec`, `--repo`)의 값은 위치 인자가
-  아니다. `--` 뒤는 모두 위치 인자다.
+- 값을 먹는 옵션(`-o`, `--push-option`, `--receive-pack`, `--exec`, `--repo`,
+  `--recurse-submodules`)의 값은 위치 인자가 아니다. `=` 로만 값을 받는 옵션(`--signed`,
+  `--force-with-lease`)은 다음 낱말을 먹지 않는다. 값을 먹는지는 `git push -h` 가 적는 꼴(띄어 쓴
+  `<…>`·`(…)` 이면 먹고 `[=…]` 이면 먹지 않는다)과 같고, 시험이 이 기계의 git 과 대 본다. 첫 판은
+  `--recurse-submodules` 를 먹지 않는다고 적어 그 값을 원격으로 읽었다(대기열 296). `--` 뒤는 모두
+  위치 인자다.
 - 건너뛰는 길. `--dry-run`(머리 줄임, `-n` 과 그것이 든 묶음 포함)이면 지우지 않아 지나간다. 뒤의
   `--no-dry-run`·`--no-delete` 는 앞의 것을 거둔다(git 의 parse-options 는 뒤의 것이 이긴다). 모호한
   긴 옵션 머리(`--d`)는 git 이 거절해 지나간다. 지울 ref 가 없으면 git 이 거절해 지나간다.
@@ -46,6 +50,15 @@ REST(`gh api`)로 적는다. `gh pr view`· `gh pr close` 는 GraphQL 이라 클
 못 보는 것.
 - 래퍼 뒤의 푸시(`bash -c "git push …"`, `env git push`, `sudo`)와 별칭(`git p`), PowerShell 의
   백틱 줄 이어 쓰기(줄바꿈에서 명령이 갈린다).
+- git 이 더한 옵션. 긴 옵션 표(`_PUSH_LONG`)는 git 의 옵션 목록을 손으로 옮긴 것이라 git 이 옵션을
+  더하면 조용히 낡는다(PR #257 claude-review 넷째 회차). 표에 없는 긴 옵션이 든 지우는 푸시는 git 이
+  거절할 푸시로 보고 지나간다(거짓 음성). 짧은 옵션은 표 없이 `-o` 하나만 값을 먹는다고 보므로, git
+  이 값을 먹는 짧은 옵션을 더하면 그 값을 원격으로 읽는다. 표를 대 보는 시험은 그 옵션을 아는 git
+  에서 돌 때만 빨개진다.
+- git 이 거절하는 옵션의 조합. `--delete` 와 `--all`·`--mirror`·`--tags` 를 함께 쓴 푸시를 git 은
+  `--delete is incompatible with --all, --mirror and --tags` 로 거절하는데(git 2.32 의 임시
+  저장소에서 손으로 봤다), 이 훅은 그 조합을 보지 않고 지우는 푸시로 읽어 열린 PR 의 머리면
+  막는다(거짓 양성). git 이 어차피 거절하는 명령이라 막는 값은 이유 문장 하나다.
 - `--prune`·`--mirror` 가 지우는 브랜치. 무엇이 지워질지 원격과 로컬을 견줘야 안다.
 - git 이 아닌 길의 지우기. `gh api -X DELETE …/git/refs/heads/<브랜치>`, GitHub 웹, MCP 도구.
   `gh pr merge --delete-branch` 는 병합한 뒤에만 지워 대상이 아니다.
@@ -93,7 +106,9 @@ _GIT_VALUE_OPTIONS = frozenset(
     {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env", "--super-prefix"}
 )
 # `git push` 의 긴 옵션과 다음 낱말을 값으로 먹는지. 머리 줄임은 이 표에서 모호하지 않을 때만 받는다
-# (git 의 parse-options 와 같다). `no-` 꼴은 git 이 스스로 지어 받는 부정이다.
+# (git 의 parse-options 와 같다). `no-` 꼴은 git 이 스스로 지어 받는 부정이다. git 의 옵션 목록을
+# 손으로 옮긴 표라 git 이 옵션을 더하면 낡는다(독스트링의 못 보는 것). 칸은 시험이 이 기계의
+# `git push -h` 와 맞춘다.
 _PUSH_LONG: dict[str, bool] = {
     "all": False,
     "branches": False,
@@ -115,7 +130,9 @@ _PUSH_LONG: dict[str, bool] = {
     "quiet": False,
     "verbose": False,
     "progress": False,
-    "recurse-submodules": False,
+    # `=` 없이 쓰면 다음 낱말을 값으로 먹는다(git 이 그 낱말을 모드로 읽어 `bad recurse-submodules
+    # argument` 를 낸다, 대기열 296). `signed`·`force-with-lease` 는 `=` 로만 받는다
+    "recurse-submodules": True,
     "verify": False,
     "ipv4": False,
     "ipv6": False,

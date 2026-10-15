@@ -37,10 +37,10 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
 네트워크 없이 곧 실패한다), `${COMMIT_MSGS}`(commit-msg 판정을 부르는 pre-commit 설정과 그 판정
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
-`good-subject.txt` 의 커밋 메시지 파일). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다.
-위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
-deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
-(`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
+`good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다). 사례의 `env`
+는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로
+준다. 기대는 넷. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+context (`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
 문장(`message_of` — JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두
 들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵
 사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를
@@ -581,8 +581,9 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     closed_journal = journals / "2026-10-01-02-closed.md"
     closed_journal.write_text(f"# 일지\n\n## 회고\n\n- 62(새로)\n\n{closing}", encoding="utf-8")
     # 제목 76자와 맞는 제목. commit-msg 훅의 상한은 72자다(tools/check_commit_msg.py). 그 판정을
-    # 부르는 pre-commit 설정과 판정 스크립트의 사본을 둔 저장소다 — 훅은 커밋하는 저장소의 판정만
-    # 쓴다.
+    # 부르는 pre-commit 설정과 판정 스크립트의 사본을 둔 저장소다. 훅은 커밋하는 저장소의 판정만
+    # 쓰고, 이 저장소 밖이라 그 판정은 띄우지 않는다(대기열 246). 표는 이 저장소에서 커밋하는
+    # 사례에 이 파일들을 메시지로 쓴다.
     commit_msgs = scratch / "commit-msgs"
     subprocess.run(
         ["git", "init", "-q", "-b", "chore/x", str(commit_msgs)],

@@ -1,0 +1,319 @@
+# 대기열 246·252·284·296 의 판정을 하나씩 깨서 그 테스트가 빨개지는지 본다.
+# 246 tools/hook_bash_commit_msg.py(이 훅의 저장소 밖이면 판정 스크립트를 띄우지 않는다),
+# 252 tools/hook_bash_cd_outside.py(하위 폴더로 옮기는 cd 를 막는다),
+# 284 tools/hook_grill_design_check.py(워크트리 경로 접두가 붙은 이름도 받는다),
+# 296 tools/hook_push_delete_open_pr.py(값을 먹는 긴 옵션 표)와 tools/hook_journal_retro.py(출력 파싱을 뗀 순번 대조).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+
+[[mutation]]
+name = "246 커밋 저장소가 이 훅의 저장소인지 보지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if _canonical(root) not in repository_roots(own):
+            return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "246 등록에서 거꾸로 대 보지 않고 공통 폴더만 견준다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        if _canonical(root) not in repository_roots(own):
+'''
+new = '''
+        common = _common_dir(root)
+        if common is None or _canonical(common) != _canonical(_common_dir(own) or own):
+'''
+
+[[mutation]]
+name = "246 주 체크아웃을 이 훅의 저장소에 넣지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+        roots.append(os.path.dirname(common))
+'''
+new = '''
+        pass
+'''
+
+[[mutation]]
+name = "246 등록된 워크트리를 이 훅의 저장소에 넣지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+            roots.append(os.path.dirname(os.path.join(admin, name, target)))
+'''
+new = '''
+            pass
+'''
+
+[[mutation]]
+name = "246 견주기 전에 경로를 고르지 않는다"
+tests = ["tests/tools/test_hook_bash_commit_msg.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_commit_msg.py"
+old = '''
+    return os.path.normcase(os.path.realpath(path))
+'''
+new = '''
+    return path
+'''
+
+[[mutation]]
+name = "252 하위 폴더를 막지 않는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if destination.path.lower() != own.lower():
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "252 하위 폴더 판정이 대소문자를 가린다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if destination.path.lower() != own.lower():
+'''
+new = '''
+        if destination.path != own:
+'''
+
+[[mutation]]
+name = "252 밖의 이유보다 하위 폴더의 이유를 먼저 낸다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+    for destination in destinations:
+        if destination.place is None or destination.place.lower() != own.lower():
+            return _reason(destination, own)
+    for destination in destinations:
+        if destination.path.lower() != own.lower():
+            return _subfolder_reason(destination, own, start)
+'''
+new = '''
+    for destination in destinations:
+        if destination.path.lower() != own.lower() and destination.place is not None:
+            if destination.place.lower() == own.lower():
+                return _subfolder_reason(destination, own, start)
+        if destination.place is None or destination.place.lower() != own.lower():
+            return _reason(destination, own)
+'''
+
+[[mutation]]
+name = "284 경로 접두가 붙은 이름을 받지 않는다"
+tests = ["tests/tools/test_hook_grill_design_check.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_grill_design_check.py"
+old = '''
+    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+'''
+new = '''
+    return skill == SKILL and not colon
+'''
+
+[[mutation]]
+name = "284 접두가 무엇이든 받는다"
+tests = ["tests/tools/test_hook_grill_design_check.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_grill_design_check.py"
+old = '''
+    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+'''
+new = '''
+    return skill == SKILL
+'''
+
+[[mutation]]
+name = "284 접두 뒤의 이름을 가리지 않는다"
+tests = ["tests/tools/test_hook_grill_design_check.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_grill_design_check.py"
+old = '''
+    return skill == SKILL and (not colon or prefix.startswith(PATH_PREFIX))
+'''
+new = '''
+    return (not colon and skill == SKILL) or (bool(colon) and prefix.startswith(PATH_PREFIX))
+'''
+
+[[mutation]]
+name = "296 recurse-submodules 가 값을 먹지 않는다(첫 판)"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''
+    "recurse-submodules": True,
+'''
+new = '''
+    "recurse-submodules": False,
+'''
+
+[[mutation]]
+name = "296 signed 가 다음 낱말을 값으로 먹는다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''
+    "signed": False,
+'''
+new = '''
+    "signed": True,
+'''
+
+[[mutation]]
+name = "296 긴 옵션의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''
+            if _PUSH_LONG.get(name) and "=" not in word:
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "296 옮길 번호 줄을 읽지 않는다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+    for line in MOVES_LINE.findall(stdout):
+'''
+new = '''
+    for line in MOVES_LINE.findall(""):
+'''
+
+[[mutation]]
+name = "296 새 번호에 없는 순번도 바로 다음이면 지나간다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+        current in numbers.fresh
+        and current[:10] == following[:10]
+'''
+new = '''
+        current[:10] == following[:10]
+'''
+
+[[mutation]]
+name = "296 다른 날의 순번도 바로 다음으로 본다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+        and current[:10] == following[:10]
+'''
+new = '''
+'''
+
+# 아래 둘은 cd_outside_hook_mutations.toml 의 같은 이름 변이를 지금 원문으로 고쳐 다시 적은 것이다(옛 표의 것은 그대로다). 그 표의 원문은
+# 이 PR 전부터 코드에 없었고, 이 PR 이 그 판정을 든 함수(deny_reason)를 다시 짰다.
+
+[[mutation]]
+name = "252 밖의 판정이 대소문자를 가린다(옛 표에서 다시 적음)"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+        if destination.place is None or destination.place.lower() != own.lower():
+'''
+new = '''
+        if destination.place is None or destination.place != own:
+'''
+
+[[mutation]]
+name = "252 cwd 가 체크아웃 밖이어도 판정한다(옛 표에서 다시 적음)"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+    if start is None or own is None:
+        return None
+'''
+new = '''
+    if start is None:
+        return None
+    own = own or ""
+'''
+
+# 아래 둘은 셀프 리뷰를 반영하며 더한 판정이다(일지 2026-10-16-23 셀프 리뷰).
+
+[[mutation]]
+name = "252 이미 옮겨진 셸에서도 루트에서 옮긴다고 적는다"
+tests = ["tests/tools/test_hook_bash_cd_outside.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_bash_cd_outside.py"
+old = '''
+    moved = start.lower() != own.lower()
+'''
+new = '''
+    moved = False
+'''
+
+[[mutation]]
+name = "296 옮길 번호에 든 순번에 --move 를 들지 않는다"
+tests = ["tests/tools/test_hook_journal_retro.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_journal_retro.py"
+old = '''
+        return _move_notice(name, current, moved) + MOVE_NOTE
+'''
+new = '''
+        return _move_notice(name, current, moved)
+'''

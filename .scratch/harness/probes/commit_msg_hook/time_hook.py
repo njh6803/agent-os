@@ -1,11 +1,15 @@
 """tools/hook_bash_commit_msg.py 를 등록 모양(래퍼)으로 띄워 걸린 시간을 잰다(대기열 222).
 
-갈래 넷: `commit` 이라는 글자가 없는 명령(정규식 전에 끝난다), `commit` 이 들었지만 `-F` 가 없는
-커밋(shlex 로 나눠 보고 끝난다), `-F` 의 파일이 맞는 제목(자식 판정이 뜨고 지나간다), 긴 제목(자식
-판정이 뜨고 막는다). 커밋은 commit-msg 판정을 부르는 임시 저장소에서 친다. 갈래마다 기대한 출력
-(긴 제목은 deny, 나머지는 침묵)이 아니면 수를 찍지 않고 1로 끝난다 — 래퍼가 훅을 못 찾고 지나간
-호출을 측정으로 세지 않는다. 저장소 루트에서
-`uv run python .scratch/harness/probes/commit_msg_hook/time_hook.py` 로 돌린다.
+갈래 다섯: `commit` 이라는 글자가 없는 명령(정규식 전에 끝난다), `commit` 이 들었지만 `-F` 가 없는
+커밋(shlex 로 나눠 보고 끝난다), `-F` 의 파일이 맞는 제목(이 훅의 저장소를 읽고 자식 판정이 뜨고
+지나간다), 긴 제목(같은 길로 막는다), 이 저장소 밖의 긴 제목(이 훅의 저장소를 읽고 자식 없이
+지나간다). 앞의 넷은 이 저장소(루트)에서 커밋하고 메시지 파일은 임시 폴더의 것을 쓴다. 훅은 이 훅의
+저장소의 커밋만 판정한다(대기열 246). 그 저장소를 읽는 길은 등록된 워크트리마다 파일 하나를
+읽는다(코드를 읽은 것이고, 워크트리 수를 바꿔 재지는 않았다).
+다섯째는 commit-msg 판정을 부르는 임시 저장소에서 친다. 갈래마다 기대한 출력(긴 제목은 deny,
+나머지는 침묵)이 아니면 수를 찍지 않고 1로 끝난다 — 래퍼가 훅을 못 찾고 지나간 호출을 측정으로
+세지 않는다. 저장소 루트에서 `uv run python .scratch/harness/probes/commit_msg_hook/time_hook.py` 로
+돌린다.
 """
 
 from __future__ import annotations
@@ -54,13 +58,15 @@ def main() -> int:
         )
         (repo / "good.txt").write_text("chore: 맞는 제목\n", encoding="utf-8")
         (repo / "long.txt").write_text("chore: " + "가" * 69 + "\n", encoding="utf-8")
-        for label, command, expected in (
-            ("커밋 글자 없음", "uv run pytest -q", "silent"),
-            ("-F 없는 커밋", "git commit --amend --no-edit", "silent"),
-            ("맞는 제목", "git commit -F good.txt", "silent"),
-            ("긴 제목", "git commit -F long.txt", "deny"),
+        good, long = (repo / "good.txt").as_posix(), (repo / "long.txt").as_posix()
+        for label, command, cwd, expected in (
+            ("커밋 글자 없음", "uv run pytest -q", ROOT, "silent"),
+            ("-F 없는 커밋", "git commit --amend --no-edit", ROOT, "silent"),
+            ("맞는 제목", f"git commit -F {good}", ROOT, "silent"),
+            ("긴 제목", f"git commit -F {long}", ROOT, "deny"),
+            ("저장소 밖의 긴 제목", "git commit -F long.txt", repo, "silent"),
         ):
-            runs = [launch(command, repo) for _ in range(ROUNDS)]
+            runs = [launch(command, cwd) for _ in range(ROUNDS)]
             outcomes = {outcome for _, outcome in runs}
             if outcomes != {expected}:
                 print(f"{label}: 기대 {expected}, 실제 {sorted(outcomes)}")

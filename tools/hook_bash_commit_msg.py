@@ -22,10 +22,12 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 `&& rm <파일>` 은 커밋이 읽는 내용을 바꾸지 않아 보지 않는다), 커밋 앞에 `cd`·`pushd` 가 있는
 것(상대 경로가 어디서 풀릴지 모른다)이다. `-F` 가 여럿이면 git 처럼 마지막 것만 본다. 판정
 스크립트는 커밋하는 저장소의 것이다. 커밋 폴더(`cwd` 와 `git -C`)의 가장 가까운 `.git` 조상이 그
-루트이고, 루트의 `.pre-commit-config.yaml` 이 `tools/check_commit_msg.py` 를 부르고 그 파일이 있을
-때만 판정한다. 판정은 옮겨 적지 않고 그 스크립트를 자식 프로세스로 띄워 받는다. 같은 판정이 정의로
-서고, 훅끼리 import 하지 않는 규약(.claude/rules/tools.md)도 지킨다. 워크트리 세션에서는 훅 파일이
-주 체크아웃의 것이어도 판정은 그 워크트리의 스크립트가 한다.
+루트이고, 그 루트가 이 훅의 저장소(아래 신뢰 경계)에 들고, 루트의 `.pre-commit-config.yaml` 이
+`tools/check_commit_msg.py` 를 부르고 그 파일이 있을 때만 판정한다. 메시지 파일이 어디 있는지는
+가르지 않는다(스크래치패드의 파일로 이 저장소에서 커밋해도 판정한다). 판정은 옮겨 적지 않고 그
+스크립트를 자식 프로세스로 띄워 받는다. 같은 판정이 정의로 서고, 훅끼리 import 하지 않는
+규약(.claude/rules/tools.md)도 지킨다. 워크트리 세션에서는 훅 파일이 주 체크아웃의 것이어도 판정은
+그 워크트리의 스크립트가 한다.
 
 찾는 것. 명령을 shlex 로 낱말로 나누고 제어 연산자(`&&`, `;`, `|`, 줄바꿈 등)에서 가른 단순
 명령마다, 앞의 변수 대입을 벗긴 첫 낱말이 `git` 이고 전역 옵션 뒤의 하위 명령이 `commit` 이면 그
@@ -38,12 +40,22 @@ Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2
 않는다고 적은 커밋, 변수·치환이 든 경로, shlex 가 거절하는 명령(짝 없는 따옴표), `git` 을 다른
 이름으로 부르는 것(`command git`, `env … git`, 전체 경로). 자식이 시간 제한(10초)을 넘기거나 판정
 문장 없이 끝나도 지나간다. 앞 호출에서 `export` 한 `SKIP` 은 모른다 — 그 셸에서 커밋하면 commit-msg
-훅이 돌지 않는데도 막는다(거짓 양성).
+훅이 돌지 않는데도 막는다(거짓 양성). 이 훅의 저장소 밖에서 하는 커밋(다른 프로젝트, 이 체크아웃
+안에 든 중첩 저장소)과, 이 훅이 든 체크아웃의 `.git` 을 읽지 못해 이 훅의 저장소를 모를 때의 커밋은
+그 저장소에 commit-msg 판정이 있어도 판정하지 않는다.
 
-판정 스크립트를 실행하는 신뢰 경계. 커밋하는 저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를
-권한 확인 전에 띄운다. PR 직전 보안 리뷰가 후보로 냈고 거르기에서 하드닝 부족으로 판정됐다(그
-저장소를 고르고 거기서 `-F` 커밋을 제안해야 하고, 그런 저장소에서는 테스트 등으로 이미 그 코드를
-돌린다). 일지 2026-10-13-47.
+판정 스크립트를 실행하는 신뢰 경계. 판정 스크립트는 이 훅의 저장소의 것만 띄운다. 이 훅은 권한
+확인 전에 돌아, 띄우는 스크립트는 사용자가 그 Bash 명령을 승인하기 전에 돈다. 첫 판은 커밋하는
+저장소가 이 프로젝트가 아니어도 그 저장소의 스크립트를 띄웠다. PR 직전 보안 리뷰가 후보로 냈을 때는
+하드닝 부족으로 거르고(일지 2026-10-13-47) 데스크톱 앱의 백그라운드 보안 검토가 다시 짚어
+막았다(신뢰하지 않는 저장소에 커밋을 시도만 해도 돈다, 대기열 246). 이 훅의 저장소는 이 훅 파일이 든
+체크아웃(래퍼가 `runpy` 로 띄워도 `__file__` 은 그 파일이다)의 공통 git 폴더에서 git 을 띄우지 않고
+읽는다. 그 체크아웃의 `.git` 이 폴더면 그것이, 파일이면 `gitdir:` 이 가리키는 폴더의 `commondir` 가
+공통 폴더다. 그 체크아웃 자신, 이름이 `.git` 인 공통 폴더의 부모(주 체크아웃), 공통 폴더의
+`worktrees/<이름>/gitdir` 이 가리키는 `.git` 의 부모(등록된 워크트리)가 이 훅의 저장소다. 경로는
+심볼릭 링크와 대소문자를 풀어(`realpath`, `normcase`) 견준다. 커밋 폴더의 `.git` 만 읽고 등록에서
+거꾸로 대 보지 않으면, `.git` 파일이 이 저장소의 워크트리 관리 폴더를 가리키게 지은 폴더를 이
+저장소로 읽는다.
 """
 
 from __future__ import annotations
@@ -61,6 +73,8 @@ from typing import NamedTuple, TypedDict
 CHECKER = "tools/check_commit_msg.py"
 PRE_COMMIT_CONFIG = ".pre-commit-config.yaml"
 CHECK_TIMEOUT = 10.0
+# 이 훅 파일이 든 체크아웃. 이 훅의 저장소를 여기서 읽는다(독스트링의 신뢰 경계).
+HOOK_CHECKOUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _CONTROL = re.compile(r"^[;&|()<>\n]+$")
 _ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 # git 의 전역 옵션 가운데 값을 다음 낱말로 받는 것.
@@ -284,14 +298,65 @@ def resolve(path: str, cwd: str, home: str) -> str | None:
     return posixpath.normpath(f"{_native(cwd)}/{text}")
 
 
-def checker_for(directory: str) -> str | None:
-    """`directory` 에서 커밋하면 commit-msg 단계가 돌릴 판정 스크립트. 그 저장소의 pre-commit
-    설정이 그것을 부르지 않거나 파일이 없으면 None."""
+def _canonical(path: str) -> str:
+    """견주려고 고른 경로. 심볼릭 링크와 윈도의 짧은 이름, 대소문자를 푼다."""
+    return os.path.normcase(os.path.realpath(path))
+
+
+def _read(path: str) -> str | None:
+    try:
+        return Path(path).read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _common_dir(checkout: str) -> str | None:
+    """`checkout` 의 공통 git 폴더. `.git` 이 폴더면 그것, 파일이면 `gitdir:` 이 가리키는 폴더의
+    `commondir`(없으면 그 폴더)다. 읽지 못하면 None."""
+    dot_git = os.path.join(checkout, ".git")
+    if os.path.isdir(dot_git):
+        return dot_git
+    text = _read(dot_git)
+    if text is None or not text.startswith("gitdir:"):
+        return None
+    gitdir = os.path.join(checkout, text.removeprefix("gitdir:").strip())
+    common = _read(os.path.join(gitdir, "commondir"))
+    return gitdir if common is None else os.path.join(gitdir, common)
+
+
+def repository_roots(checkout: str) -> frozenset[str]:
+    """`checkout` 이 든 저장소의 체크아웃들(그 자신, 주 체크아웃, 등록된 워크트리). `_canonical` 로
+    고른 경로이고, `checkout` 의 `.git` 을 읽지 못하면 빈다."""
+    common = _common_dir(checkout)
+    if common is None:
+        return frozenset()
+    common = os.path.normpath(common)
+    roots = [checkout]
+    if os.path.basename(common) == ".git":
+        roots.append(os.path.dirname(common))
+    admin = os.path.join(common, "worktrees")
+    try:
+        names = os.listdir(admin)
+    except OSError:
+        names = []
+    for name in names:
+        target = _read(os.path.join(admin, name, "gitdir"))
+        if target:
+            roots.append(os.path.dirname(os.path.join(admin, name, target)))
+    return frozenset(_canonical(root) for root in roots)
+
+
+def checker_for(directory: str, own: str) -> str | None:
+    """`directory` 에서 커밋하면 commit-msg 단계가 돌릴 판정 스크립트. 그 저장소가 `own`(이 훅이
+    든 체크아웃)의 저장소가 아니거나, 그 저장소의 pre-commit 설정이 그것을 부르지 않거나 파일이
+    없으면 None."""
     parts = directory.rstrip("/").split("/")
     for end in range(len(parts), 0, -1):
         root = "/".join(parts[:end]) or "/"
         if not os.path.exists(f"{root}/.git"):
             continue
+        if _canonical(root) not in repository_roots(own):
+            return None
         checker = f"{root}/{CHECKER}"
         try:
             config = Path(root, PRE_COMMIT_CONFIG).read_text(encoding="utf-8")
@@ -320,8 +385,9 @@ def problems_of(path: str, checker: str, timeout: float = CHECK_TIMEOUT) -> list
     return result.stdout.decode("utf-8", "replace").splitlines()
 
 
-def deny_reason(command: str, cwd: str, home: str) -> str | None:
-    """판정할 커밋의 메시지 파일이 그 저장소의 commit-msg 판정에 걸리면 막는 이유, 아니면 None."""
+def deny_reason(command: str, cwd: str, home: str, own: str) -> str | None:
+    """판정할 커밋의 메시지 파일이 그 저장소의 commit-msg 판정에 걸리면 막는 이유, 아니면 None.
+    `own` 은 이 훅이 든 체크아웃이고, 그 저장소 밖의 커밋은 판정하지 않는다."""
     if "commit" not in command:
         return None
     for message in message_files(command):
@@ -329,7 +395,7 @@ def deny_reason(command: str, cwd: str, home: str) -> str | None:
         path = None if directory is None else resolve(message.file, directory, home)
         if directory is None or path is None or not os.path.isfile(path):
             continue
-        checker = checker_for(directory)
+        checker = checker_for(directory, own)
         problems = [] if checker is None else problems_of(path, checker)
         if problems:
             return (
@@ -348,7 +414,7 @@ def main() -> int:
     cwd = payload.get("cwd")
     if command is None or cwd is None:
         return 0
-    reason = deny_reason(command, cwd, str(Path.home()))
+    reason = deny_reason(command, cwd, str(Path.home()), HOOK_CHECKOUT)
     if reason is None:
         return 0
     output = {
