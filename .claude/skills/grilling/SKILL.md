@@ -3,7 +3,7 @@ name: grilling
 description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
 ---
 
-<!-- 프로젝트 사본. 원본(mattpocock/skills)의 텍스트 라운드 형식을 `AskUserQuestion` 라운드로 바꿨다. 사용자가 설계 인터뷰에서 UI로 고르는 선택지와 추천을 요청했는데 그 선호가 일지에만 있어서, 이 스킬의 텍스트 형식을 따른 세션이 같은 라운드를 UI로 다시 올렸다(일지 2026-09-22-07, 2026-09-24-03, 2026-09-26-06, 대기열 27). 사실을 찾는 서브에이전트의 보고를 근거의 종류로 가르고 조합은 소비 지점까지 재게 하는 문단을 더했다(대기열 45·61, 웹 요약은 124). 호출 곁 본문에 처음 나오는 기술 개념의 풀이를 두는 자리를 더했다. 풀이의 원천은 `CLAUDE.md` 원칙이다(대기열 114). 선택지 설명의 사실을 올리기 전에 대 보고, 답을 옮길 때 설명까지 옮기는 문단을 더했다(대기열 101·46). 질문과 선택지를 쉬운 말로 쓰는 문장과, 쉬운 말에서도 사실을 빼지 않고 명세·ADR에는 용어집의 말로 옮기는 문장을 더했다. 코드 이름으로 쓴 라운드를 사용자가 고르지 못했다(일지 2026-10-15-07). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
+<!-- 프로젝트 사본. 원본(mattpocock/skills)의 텍스트 라운드 형식을 `AskUserQuestion` 라운드로 바꿨다. 사용자가 설계 인터뷰에서 UI로 고르는 선택지와 추천을 요청했는데 그 선호가 일지에만 있어서, 이 스킬의 텍스트 형식을 따른 세션이 같은 라운드를 UI로 다시 올렸다(일지 2026-09-22-07, 2026-09-24-03, 2026-09-26-06, 대기열 27). 사실을 찾는 서브에이전트의 보고를 근거의 종류로 가르고 조합은 소비 지점까지 재게 하는 문단을 더했다(대기열 45·61, 웹 요약은 124). 호출 곁 본문에 처음 나오는 기술 개념의 풀이를 두는 자리를 더했다. 풀이의 원천은 `CLAUDE.md` 원칙이다(대기열 114). 선택지 설명의 사실을 올리기 전에 대 보고, 답을 옮길 때 설명까지 옮기는 문단을 더했다(대기열 101·46). 질문과 선택지를 쉬운 말로 쓰는 문장과, 쉬운 말에서도 사실을 빼지 않고 명세·ADR에는 용어집의 말로 옮기는 문장을 더했다. 코드 이름으로 쓴 라운드를 사용자가 고르지 못했다(일지 2026-10-15-14). 이 주석이 `tools/check_instructions.py`의 센티널이라 지우면 검사가 빨강이 된다. -->
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
