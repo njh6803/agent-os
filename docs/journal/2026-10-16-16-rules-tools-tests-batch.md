@@ -76,3 +76,33 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 278
   오탐 하나: 카나리아 질문이 항목의 문구를 따라 하는 것은 답을 흘리는 것이 아니라고 닫았다.
 - 고친 뒤 카나리아 둘(`tools_rule_thread_job_and_links.toml`, `tidy_skill_link_input.toml`)은 원천 본문만 고쳤고 `expect`와 카나리아의
   자리가 그대로라 `--preflight`(통과 2)로 갈음했다(operations.md 카나리아 항목의 네 조건).
+
+## 회고
+
+후보 일곱, 승인 0, 기각 일곱, 넘김 없음.
+
+1. **기각.** 대기열 278·282 행의 "어디로" 칸이 없는 선례(`tools/tidy_checkouts.py`의 `_cut_links`)와 틀린 수("프로브 넷")를 적었다.
+   사건은 있으나, 반영하는 세션이 근거를 열어 바로잡았고 셀프 리뷰 두 축도 같은 주장을 쟀다. 저장소에 해가 남지 않았다.
+2. **기각.** 첫 판에서 `tidy-checkouts` 스킬 표의 같은 입력 예를 거짓이 아니라며 두었다. `CLAUDE.md` 작업 규약 4와 셀프 리뷰 표준
+   축이 이미 잡는다. 설계대로 잡혔다.
+3. **기각.** rules에 적은 "다시 쓸 때 고친다"가 그 프로브를 열 때 실리지 않는 자리였다. `CLAUDE.md`의 로드 시점 표가 이미 말하고,
+   명세 축이 잡았다.
+4. **기각.** 카나리아 1번에 흔한 pwsh API(`[Environment]::Exit`)를 골라 사전 지식으로 맞힐 수 있었다. 같은 명세의 둘째 카나리아가
+   판별했고 셀프 리뷰 뒤 바꿨다. 비용이 남지 않았다.
+5. **기각.** 스레드 잡 항목이 오류를 던지는 길을 빠뜨렸고, 스킬 표의 "세 번"이 다른 도구의 사건까지 셌다. PR 직전 `bug-perf-review`가
+   잡았다. 파이프라인이 설계대로 돈 것이다.
+6. **기각.** 셸의 `for` 반복문과 변수 인자를 워크트리 가드가 두 번 거부했다. `CLAUDE.md` 환경 함정에 이미 있다. Edit 도구로 바꿨다.
+7. **기각.** 커밋 제목이 76자라 `hook_bash_commit_msg`가 pre-commit 전에 막았다. 막는 훅이 설계대로 게이트 한 바퀴를 아꼈다.
+
+## PR 봇
+
+- [PR #255](https://github.com/njh6803/agent-os/pull/255). 검사 여섯(python, web, e2e, visual, verify, claude-review)이 모두 초록이었다.
+- claude-review는 rules의 선례(`delete_path`, `_cut_links`, `Invoke-PatternTimed`, `_PATTERN_TIMED`, `_FOCUS`)를 코드로 맞춰 보고 지적 없음.
+- CodeRabbit은 `Review rate limited`라 리뷰가 없었다. 회차로 세지 않는다.
+
+## 다음
+
+- `skill-check-and-retro-section` 워크트리는 병합된 PR의 머리와 브랜치 끝이 달라 `tidy-checkouts`가 사람에게 넘겼다. 이 세션은 보지 않았다.
+- 휴지통(`.claude/worktrees/.tidy-trash/`)의 `.venv` 넷은 python.exe 셋이 모듈을 올려 남았다. 다음 `tidy-checkouts`가 다시 비운다.
+- 진단 프로브 셋(`composer_*.ps1`)의 지우는 모양은 머리 주석대로 다시 쓸 때 고친다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 다음 새 세션의 `tidy-checkouts`가 당긴다.
