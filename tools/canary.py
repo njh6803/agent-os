@@ -144,16 +144,18 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   바꾼 줄의 앞뒤 둘과 한글 경로를 세션이 어떤 꼴로 보는지도 재지 않았다. 여기서는 둘 다 견주고
   한글은 이스케이프 없이 견주어, 달라도 더 막는 쪽이다. 규칙 명령(`--tools Read`) 밖의 세션(스킬,
   서브에이전트)에 git 상태가 실리는지도 재지 않았고 같다고 보고 본다.
-- 강제로 끝난 실행. `--control-commit` 으로 꺼낸 뒤 프로세스가 kill 되면 걷는 길이 돌지 않아 임시
-  워크트리가 남는다. 시작 줄(`대조군 체크아웃:`)이 그 자리를 찍고, 남은 등록은 `tidy-checkouts` 가
-  분리 HEAD 로 사람에게 넘긴다. 꺼내기가 제한 시간을 넘겼을 때 git 이 띄운 손자 프로세스가 출력
-  파이프를 쥐었다면 그것이 끝날 때까지 돌아오지 않는다(`.claude/rules/tools.md` 의 출력을 붙잡은
-  호출). 로컬 체크아웃이라 끝나기는 하고, 꺼내기가 제한 시간을 넘기는 경우를 재지 않았다.
+- 강제로 끝난 실행. `--control-commit` 으로 꺼낸 뒤 프로세스가 kill 되거나 꺼내는 도중
+  끊기면(Ctrl+C) 걷는 길이 돌지 않아 임시 워크트리나 그 폴더가 남는다. 꺼내기 전에 찍는 시작
+  줄(`대조군 체크아웃:`)이 그 자리를 알리고, 남은 등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게
+  넘긴다. 꺼내기가 제한 시간을 넘겼을 때 git 이 띄운 손자 프로세스가 출력 파이프를 쥐었다면 그것이
+  끝날 때까지 돌아오지 않는다(`.claude/rules/tools.md` 의 출력을 붙잡은 호출). 로컬 체크아웃이라
+  끝나기는 하고, 꺼내기가 제한 시간을 넘기는 경우를 재지 않았다.
 
 종료 코드: 0 모두 통과, 1 실패한 회차가 있다, 2 명세나 인자가 틀렸다(`--control-commit` 의 커밋을
 찾지 못한 것 포함, 아무것도 돌리지 않았다), 3 `claude` 를 띄우지 못했거나 대조군 커밋을 꺼내지
-못했거나 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다. 꺼낸 대조군을 걷지 못하면 그 자리와
-걷는 명령을 찍되 종료 코드는 판정대로다.
+못했거나(임시 폴더를 만들지 못한 것 포함) 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다. 꺼낸
+대조군을 걷지 못하거나 안의 링크를 끊지 못해 걷지 않았으면 그 자리와 걷는 법을 찍되 종료 코드는
+판정대로다.
 `--preflight` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다.
 """
 
@@ -1121,33 +1123,103 @@ def _worktree(base: Path, *args: str) -> subprocess.CompletedProcess[bytes] | No
     )
 
 
+def _unlink(path: str) -> bool:
+    """링크 하나를 링크만 지운다. 가리키는 폴더나 파일은 건드리지 않는다.
+
+    윈도의 junction 도 `os.unlink` 가 링크만 지웠다(파이썬 3.12, 테스트가 junction 으로 고정한다).
+    """
+    try:
+        os.unlink(path)
+    except OSError:
+        return False
+    return True
+
+
+def _cut_links(folder: Path) -> list[str]:
+    """`folder` 아래의 심볼릭 링크와 junction 을 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더를
+    준다.
+
+    git 2.32 의 `git worktree remove --force` 는 꺼낸 자리 안의 junction 을 따라가 그 바깥 폴더의
+    파일까지 지웠다(PR 직전 bug-perf-review 가 임시 저장소에서 손으로 봤고, 이 저장소의 테스트가
+    같은 입력을 고정한다, 일지 2026-10-15-04). 링크 안으로는 내려가지 않는다.
+    """
+    left: list[str] = []
+    pending = [folder]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError:
+            left.append(str(current))
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                if not _unlink(entry.path):
+                    left.append(entry.path)
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(Path(entry.path))
+    return left
+
+
+def _registered(base: Path, place: Path) -> bool | None:
+    """`place` 가 아직 git 워크트리로 등록돼 있는지. 목록을 읽지 못하면 None 이다."""
+    listed = _worktree(base, "list", "--porcelain")
+    if listed is None or listed.returncode != 0:
+        return None
+    key = _place_key(place)
+    return any(
+        _place_key(line.removeprefix("worktree ")) == key
+        for line in _text(listed.stdout).splitlines()
+        if line.startswith("worktree ")
+    )
+
+
 def _remove_checkout(
     base: Path, place: Path, out: Callable[[str], None], *, locked: bool = False
 ) -> None:
     """`control_checkout` 이 꺼낸 임시 워크트리와 그것을 담은 임시 폴더를 걷는다.
 
     `--force` 는 회차 세션이 그 안에 남긴 것(훅이 만든 `.venv` 등)까지 지운다. 이 도구가 방금
-    `mkdtemp` 로 만든 폴더 아래에 꺼낸 것이라 사람의 파일이 없다. `locked` 면 `--force` 를 두 번 줘
-    잠긴 워크트리도 걷는다. 제한 시간을 넘겨 죽은 꺼내기만 준다(git 이 꺼내는 동안 잠금을 남긴다는
-    것은 재지 않은 어림이다). 걷지 못하면 그 자리와 걷는 법을 찍고 넘어간다. 종료 코드는 부르는 쪽이
-    정하고, 남은 등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게 넘긴다.
+    `mkdtemp` 로 만든 폴더 아래에 꺼낸 것이라 사람의 파일이 없다. 다만 그 안의 링크는 git 이 따라가
+    바깥을 지울 수 있어 먼저 링크만 끊고(`_cut_links`), 끊지 못한 것이 남으면 걷지 않고 알린다.
+    `locked` 면 `--force` 를 두 번 줘 잠긴 워크트리도 걷는다. 제한 시간을 넘겨 죽은 꺼내기만
+    준다(git 이 꺼내는 동안 잠금을 남긴다는 것은 재지 않은 어림이다). 걷지 못하면 그 자리와 걷는
+    법을 찍고 넘어간다. git 2.32 는 폴더를 다 지우지 못해도 등록을 먼저 지워(PR 직전 bug-perf-review
+    가 손으로 봤다), 등록이 남았는지에 따라 걷는 법을 가른다. 종료 코드는 부르는 쪽이 정하고, 남은
+    등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게 넘긴다. 등록 없이 남은 폴더는 그 도구가 보지
+    않는다.
     """
+    left = _cut_links(place)
+    if left:
+        out(
+            f"임시 워크트리를 걷지 않았다: {place}. 안의 링크를 끊지 못해(또는 폴더를 읽지 못해) "
+            f"git 이 그 링크를 따라가 바깥을 지울 수 있다: {', '.join(left[:3])}. 그 링크를 링크만 "
+            f"지운 뒤 git worktree remove --force {place} 로 걷고 {place.parent} 를 지운다"
+        )
+        return
     removed = _worktree(base, "remove", "--force", *(["--force"] if locked else []), str(place))
     with suppress(OSError):
         place.parent.rmdir()
-    if place.parent.exists():
-        if removed is None:
-            reason = "제한 시간을 넘겼거나 git 을 띄우지 못했다"
-        elif removed.returncode != 0:
-            reason = _last_line(removed.stderr)
-        else:
-            reason = "git 은 걷었다고 했지만 폴더가 남았다"
+    if not place.parent.exists():
+        return
+    if removed is None:
+        reason = "제한 시간을 넘겼거나 git 을 띄우지 못했다"
+    elif removed.returncode != 0:
+        reason = _last_line(removed.stderr)
+    else:
+        reason = "git 은 걷었다고 했지만 폴더가 남았다"
+    head = f"임시 워크트리를 다 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
+    if _registered(base, place) is False:
         out(
-            f"임시 워크트리를 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
-            f"git worktree remove --force {place} 로 걷고(잠겼으면 --force 를 두 번 준다) "
-            f"{place.parent} 를 지운다. 워크트리 세션에서는 앱의 가드가 다른 체크아웃의 지우기를 "
-            "거부할 수 있어 주 체크아웃 세션에서 친다"
+            f"{head}{place.parent} 를 지운다. git 등록은 걷혔고 폴더만 남았다(안의 링크는 이미 "
+            "끊었다)"
         )
+        return
+    out(
+        f"{head}git worktree remove --force {place} 로 걷고(잠겼으면 --force 를 두 번 준다) "
+        f"{place.parent} 를 지운다. 워크트리 세션에서는 앱의 가드가 다른 체크아웃의 지우기를 "
+        "거부할 수 있어 주 체크아웃 세션에서 친다"
+    )
 
 
 @contextmanager
@@ -1165,8 +1237,13 @@ def control_checkout(base: Path, commit: str, out: Callable[[str], None]) -> Gen
     if found.returncode != 0:
         raise CheckoutError(f"커밋 {commit} 을 {base} 의 저장소에서 찾지 못했다", 2)
     sha = _text(found.stdout).strip()
-    parent = Path(tempfile.mkdtemp(prefix="canary-control-"))
+    try:
+        parent = Path(tempfile.mkdtemp(prefix="canary-control-"))
+    except OSError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
     place = parent / sha[:7]
+    # 꺼내는 도중 끊겨도 남은 자리를 알 수 있게 꺼내기 전에 찍는다.
+    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼낸다. 끝나면 걷는다)")
     added = _worktree(base, "add", "--detach", str(place), sha)
     if added is None:
         # 제한 시간을 넘겼으면 git 이 반쯤 꺼낸 등록이 남았을 수 있다. 그 자리는 git 만 만든다.
@@ -1183,7 +1260,6 @@ def control_checkout(base: Path, commit: str, out: Callable[[str], None]) -> Gen
         if parent.exists():
             out(f"임시 폴더 {parent} 가 남았다. 이 도구가 꺼낸 것인지 몰라 지우지 않았다")
         raise CheckoutError(f"git worktree add 가 실패했다: {_last_line(added.stderr)}", 3)
-    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼냈다. 끝나면 걷는다)")
     try:
         yield place
     finally:

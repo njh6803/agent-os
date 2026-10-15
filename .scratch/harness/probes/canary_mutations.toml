@@ -1866,10 +1866,12 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    if place.parent.exists():
+    if not place.parent.exists():
+        return
 '''
 new = '''
-    if False:
+    if True:
+        return
 '''
 
 [[mutation]]
@@ -1880,7 +1882,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼냈다. 끝나면 걷는다)")
+    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼낸다. 끝나면 걷는다)")
 '''
 new = '''
 '''
@@ -1911,4 +1913,109 @@ old = '''
 '''
 new = '''
             problems = _preflight(spec, _places(spec, base), view)
+'''
+
+[[mutation]]
+name = "걷기 전에 링크를 끊지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    left = _cut_links(place)
+'''
+new = '''
+    left: list[str] = []
+'''
+
+[[mutation]]
+name = "끊지 못한 링크가 남아도 걷는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    left = _cut_links(place)
+    if left:
+'''
+new = '''
+    left = _cut_links(place)
+    if False:
+'''
+
+[[mutation]]
+name = "링크 안으로 내려간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if entry.is_symlink() or entry.is_junction():
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "읽지 못한 폴더를 지나간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        except OSError:
+            left.append(str(current))
+            continue
+'''
+new = '''
+        except OSError:
+            continue
+'''
+
+[[mutation]]
+name = "등록이 없어도 git worktree remove 를 안내한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if _registered(base, place) is False:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "등록 목록의 자리를 견주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        _place_key(line.removeprefix("worktree ")) == key
+'''
+new = '''
+        False
+'''
+
+[[mutation]]
+name = "임시 폴더를 만들지 못한 것을 종료 3 으로 내지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except OSError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
+'''
+new = '''
+    except ValueError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
 '''

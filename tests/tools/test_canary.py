@@ -32,6 +32,7 @@ from tools.canary import (
     agent_problems,
     ancestor_problems,
     command,
+    control_checkout,
     git_view,
     head_commit,
     judge,
@@ -2216,7 +2217,7 @@ def test_꺼낸_대조군을_걷지_못하면_자리와_걷는_명령을_찍고_
     assert 남은
     assert len(_워크트리들(repo)) == 1
     assert any(
-        line.startswith(f"임시 워크트리를 걷지 못했다: {자리}")
+        line.startswith(f"임시 워크트리를 다 걷지 못했다: {자리}")
         and f"git worktree remove --force {자리}" in line
         and "--force 를 두 번" in line
         and f"{임시} 를 지운다" in line
@@ -2382,3 +2383,217 @@ def test_강제로_끝난_실행은_꺼낸_대조군을_걷지_못하고_시작_
     assert f"대조군 체크아웃: {자리}" in done.stdout
     assert 남은
     assert 등록 == 2
+
+
+def _바깥_링크(링크: Path, 대상: Path) -> None:
+    """`링크` 에 `대상` 폴더를 가리키는 링크를 만든다. 윈도는 권한 없이 만들 수 있는 junction
+    이다."""
+    링크.parent.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "win32":
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(링크), str(대상)], check=True, capture_output=True
+        )
+    else:
+        링크.symlink_to(대상, target_is_directory=True)
+
+
+def _바깥_폴더(tmp_path: Path) -> Path:
+    바깥 = tmp_path / "바깥"
+    (바깥 / "sub").mkdir(parents=True)
+    (바깥 / "precious.txt").write_text("남는다\n", encoding="utf-8")
+    (바깥 / "sub" / "deep.txt").write_text("남는다\n", encoding="utf-8")
+    return 바깥
+
+
+def test_꺼낸_대조군_안의_링크는_링크만_끊고_바깥_파일은_남긴다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """지우는 길의 반박. PR 직전 bug-perf-review 가 꺼낸 자리 안의 junction 을 git 2.32 의
+    `git worktree remove --force` 가 따라가 바깥 파일을 지우는 것을 재현했다(일지 2026-10-15-04)."""
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    바깥 = _바깥_폴더(tmp_path)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    읽는_가짜 = _사본을_읽는_가짜()
+
+    def 링크를_거는_가짜(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd != repo:
+            _바깥_링크(cwd / "node_modules", 바깥)
+            _바깥_링크(cwd / ".venv" / "Lib" / "깊은", 바깥)
+        return 읽는_가짜(args, cwd, stdin)
+
+    code, _ = _대조군_커밋_실행(tmp_path, repo, 옛, 링크를_거는_가짜)
+
+    assert code == 0
+    assert (바깥 / "precious.txt").read_text(encoding="utf-8") == "남는다\n"
+    assert (바깥 / "sub" / "deep.txt").read_text(encoding="utf-8") == "남는다\n"
+    assert not 임시.exists()
+    assert len(_워크트리들(repo)) == 1
+
+
+def test_꺼낸_대조군_안의_링크를_끊지_못하면_걷지_않고_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """끊지 못한 링크가 남으면 git 이 그것을 따라갈 수 있어 `--force` 를 치지 않는다."""
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    바깥 = _바깥_폴더(tmp_path)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    링크 = 임시 / 옛[:7] / "node_modules"
+    읽는_가짜 = _사본을_읽는_가짜()
+    진짜_unlink = os.unlink
+    진짜_rmdir = os.rmdir
+
+    def 막는_unlink(path: str, *, dir_fd: int | None = None) -> None:
+        if Path(path) == 링크:
+            raise PermissionError(f"쥐고 있다: {path}")
+        진짜_unlink(path, dir_fd=dir_fd)
+
+    def 막는_rmdir(path: str, *, dir_fd: int | None = None) -> None:
+        if Path(path) == 링크:
+            raise PermissionError(f"쥐고 있다: {path}")
+        진짜_rmdir(path, dir_fd=dir_fd)
+
+    def 링크를_거는_가짜(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd != repo:
+            _바깥_링크(cwd / "node_modules", 바깥)
+            monkeypatch.setattr(os, "unlink", 막는_unlink)
+            monkeypatch.setattr(os, "rmdir", 막는_rmdir)
+        return 읽는_가짜(args, cwd, stdin)
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 링크를_거는_가짜)
+    monkeypatch.undo()
+    남은 = (임시 / 옛[:7]).exists()
+    등록 = len(_워크트리들(repo))
+    if sys.platform == "win32":
+        os.rmdir(링크)
+    else:
+        os.unlink(링크)
+    _git(repo, "worktree", "remove", "--force", str(임시 / 옛[:7]))
+
+    assert code == 0
+    assert 남은
+    assert 등록 == 2
+    assert (바깥 / "precious.txt").read_text(encoding="utf-8") == "남는다\n"
+    assert any(
+        line.startswith(f"임시 워크트리를 걷지 않았다: {임시 / 옛[:7]}") and str(링크) in line
+        for line in printed
+    )
+
+
+@pytest.mark.parametrize("등록", [True, False])
+def test_걷기에_실패하면_등록이_남았는지에_따라_걷는_법을_가른다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 등록: bool
+) -> None:
+    """git 2.32 는 폴더 지우기에 실패해도 등록을 먼저 지워, 등록 없는 폴더에 `git worktree remove`
+    를 치면 `is not a working tree` 로 끝났다(PR 직전 bug-perf-review). git 을 가짜로 둔다."""
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    sha = "abcdef0123456789abcdef0123456789abcdef01"
+    자리 = 임시 / sha[:7]
+
+    def 가짜_git(args: Sequence[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        if "add" in args:
+            자리.mkdir(parents=True)
+            return subprocess.CompletedProcess(args, 0, b"", b"")
+        if "remove" in args:
+            return subprocess.CompletedProcess(args, 1, b"", b"error: Permission denied\n")
+        if "list" in args:
+            줄들 = [f"worktree {tmp_path.as_posix()}", ""]
+            if 등록:
+                줄들 += [f"worktree {자리.as_posix()}", "detached", ""]
+            return subprocess.CompletedProcess(args, 0, "\n".join(줄들).encode(), b"")
+        return subprocess.CompletedProcess(args, 0, f"{sha}\n".encode(), b"")
+
+    monkeypatch.setattr(subprocess, "run", 가짜_git)
+    printed: list[str] = []
+
+    with control_checkout(tmp_path, "abcdef0", printed.append):
+        pass
+
+    남김 = [line for line in printed if line.startswith(f"임시 워크트리를 다 걷지 못했다: {자리}")]
+    assert len(남김) == 1
+    if 등록:
+        assert f"git worktree remove --force {자리}" in 남김[0]
+    else:
+        assert "git worktree remove" not in 남김[0]
+        assert "등록은 걷혔고" in 남김[0]
+        assert f"{임시} 를 지운다" in 남김[0]
+
+
+def test_꺼내는_도중_끊겨도_자리는_꺼내기_전에_찍는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """못 보는 것(지나간다). 꺼내는 도중 Ctrl+C 로 끊기면 걷는 길이 돌지 않는다. 자리는 그 전에
+    찍혔다."""
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    부른: list[list[str]] = []
+    sha = "abcdef0123456789abcdef0123456789abcdef01"
+
+    def 가짜_git(args: Sequence[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        부른.append(list(args[3:]))
+        if "add" in args:
+            raise KeyboardInterrupt
+        return subprocess.CompletedProcess(args, 0, f"{sha}\n".encode(), b"")
+
+    monkeypatch.setattr(subprocess, "run", 가짜_git)
+    printed: list[str] = []
+
+    with pytest.raises(KeyboardInterrupt), control_checkout(tmp_path, "abcdef0", printed.append):
+        pass
+
+    assert printed == [f"대조군 체크아웃: {임시 / sha[:7]}(커밋 abcdef0 을 꺼낸다. 끝나면 걷는다)"]
+    assert not any("remove" in call for call in 부른)
+
+
+def test_임시_폴더를_만들지_못하면_돌리지_않고_3이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+
+    def 못_만든다(prefix: str | None = None, **_: object) -> str:
+        raise PermissionError("임시 디렉터리에 쓸 수 없다")
+
+    monkeypatch.setattr(tempfile, "mkdtemp", 못_만든다)
+    가짜 = _사본을_읽는_가짜()
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 가짜)
+
+    assert code == 3
+    assert 가짜.본_것 == []
+    assert any("임시 폴더를 만들지 못했다" in line for line in printed)
+
+
+def test_꺼낸_대조군_안의_폴더를_읽지_못하면_링크를_모르니_걷지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
+    임시 = tmp_path / "임시"
+    _정한_임시(monkeypatch, 임시)
+    막힌 = 임시 / 옛[:7] / "막힌"
+    읽는_가짜 = _사본을_읽는_가짜()
+    진짜_scandir = os.scandir
+
+    def 막는_scandir(path: str | Path) -> object:
+        if Path(path) == 막힌:
+            raise PermissionError(f"읽을 수 없다: {path}")
+        return 진짜_scandir(path)
+
+    def 막는_가짜(args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd != repo:
+            막힌.mkdir()
+            monkeypatch.setattr(os, "scandir", 막는_scandir)
+        return 읽는_가짜(args, cwd, stdin)
+
+    code, printed = _대조군_커밋_실행(tmp_path, repo, 옛, 막는_가짜)
+    monkeypatch.undo()
+    남은 = (임시 / 옛[:7]).exists()
+    _git(repo, "worktree", "remove", "--force", str(임시 / 옛[:7]))
+
+    assert code == 0
+    assert 남은
+    assert any(
+        line.startswith(f"임시 워크트리를 걷지 않았다: {임시 / 옛[:7]}") and str(막힌) in line
+        for line in printed
+    )

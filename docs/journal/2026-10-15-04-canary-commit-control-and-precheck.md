@@ -38,7 +38,7 @@
   끝에서 끝까지, 걷기 실패는 회차 도중 `git worktree lock`으로 만든다) 테스트를 더했다.
 - `.scratch/harness/probes/canary_git_status.py`와 README 행: 243의 전제를 쟀다(아래).
 - `.scratch/harness/probes/canary_mutations.toml`: 옛 코드를 가리키던 변이 여섯의 원문을 고치고 새 변이 스물아홉을
-  더했다. 셀프 리뷰 반영으로 둘을 더해 모두 백서른이다.
+  더했다. 셀프 리뷰 반영으로 둘을, PR 직전 리뷰 반영으로 일곱을 더해 모두 백서른일곱이다.
 - `docs/constitution/operations.md` 카나리아 항목의 대조군 줄과 계정 한도 줄을 `--control-commit`으로 고치고 헌법 판을
   올렸다. 243은 러너가 막는 기계 판정이라 operations.md에 적지 않았다(교정 루프의 "린터가 잡는 것을 지침에 적지
   않고").
@@ -152,3 +152,51 @@
 tests/tools/test_canary.py` 0 errors, `uv run ruff check`(바뀐 `.py` 셋) 통과. `tools/mutate.py`로 이 PR이 더하거나 고친
 서른넷(69·70·74, 100~130)이 모두 기대대로. 전체 검증 다섯은 커밋의 pre-commit으로 갈음한다(결과는 커밋 뒤 아래
 "검사"에 적는다). 반영 도중 origin/main이 둘(#238, #239) 앞서 다시 합쳤고 충돌은 없었다.
+
+## PR 직전
+
+커밋 `3a0475cd`(origin/main `983bf491`을 합친 뒤). CodeRabbit CLI는 `coderabbit auth status`가 `Plan: Free`,
+`Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 발견 없음. 하위 프로세스는 모두 리스트 인자이고, `--control-commit`의 값은 `-`로 시작하면 막히며
+  `rev-parse --verify <커밋>^{commit}`에만 들어가고 `worktree add`에는 git이 낸 SHA와 `mkdtemp`의 경로가 들어간다.
+  기준에 못 미쳐 뺀 후보는 옛 커밋의 프로젝트 훅이 돈다(소유자 저장소라 신뢰 수준이 같다), 여러 사용자가 쓰는 `/tmp`의
+  상위 `CLAUDE.md`(이 PC는 사용자마다의 `%TEMP%`이고 카나리아 세션에 내보낼 도구가 없다), 물려받은 `GIT_*`(정확성)다.
+- `bug-perf-review`: 유효 3, 보류 2, 오탐 여섯 줄.
+  - Major(유효): 꺼낸 워크트리 안에 바깥 폴더를 가리키는 junction이 생기면 `git worktree remove --force`가 그 링크를
+    따라가 바깥 파일을 지운다. 리뷰어가 임시 저장소에서 `control_checkout` 안에 `mklink /J`를 만들고 나와 바깥의
+    `precious.txt`와 `sub/deep.txt`가 사라지는 것을 손으로 봤다(git 2.32.0.windows.2). 걷기는 성공으로 끝나 알림이 없다.
+    판정: 고친다. git에 맡기기 전에 꺼낸 자리 아래의 심볼릭 링크와 junction을 링크만 끊고, 끊지 못한 링크가 남으면 걷지
+    않고 알린다. 이 입력을 시험으로 고정한다.
+  - Minor(유효): git 2.32는 폴더 지우기가 실패해도 등록을 먼저 지워, 폴더만 남은 채 안내대로 `git worktree remove
+    --force`를 치면 `is not a working tree`(128)로 끝나고, 등록이 없어 `tidy-checkouts`도 넘겨받지 못한다(리뷰어가 끝에
+    점이 붙은 폴더로 대신 재현했다). 판정: 고친다. 걷기에 실패하면 등록이 남았는지 보고 안내를 가른다.
+  - Minor(보류): `add` 도중 Ctrl+C면 정리가 돌지 않고 자리도 찍히지 않는다(코드를 읽었다). 판정: 자리를 찍는 줄을
+    꺼내기 전으로 옮긴다. 정리는 못 보는 것의 강제로 끝난 실행에 넣는다.
+  - Nit(유효): `mkdtemp`가 `OSError`를 내면 트레이스백과 종료 1로 끝나 종료 코드 표(꺼내지 못함은 3)와 어긋난다. 판정:
+    고친다.
+  - Nit(유효, 값 낮음): `--preflight`에 명세 N개를 주면 같은 체크아웃의 git을 N번 읽고(이 워크트리에서 0.15초, 27개면 약
+    8초, 리뷰어가 손으로 쟀다), 명세가 모두 깨져 있어도 워크트리를 먼저 꺼낸다. 판정: 둔다. 사전 확인은 사람이 한 번 치는
+    명령이라 몇 초이고, 명세를 다 읽은 뒤 꺼내도록 바꾸면 구조가 커진다. PR 체크리스트에 적는다.
+  - 보류: 실제 저장소로 꺼내기 시간과 제한 시간 갈래를 재지 않았다. 독스트링이 이미 재지 않았다고 적는다.
+  - 오탐: 인자 해석의 순서·깃발 같은 커밋·빈 명세 목록, 명세 읽기 실패가 꺼내기 전에 끝남, `rmdir`은 빈 폴더만, git이
+    거부한 자리를 지우지 않음, 제한 시간 갈래가 등록 없는 폴더를 지우지 않음, `_porcelain_paths`의 R/C·공백·한글·`->`,
+    새 git 호출의 제한 시간, `tidy-checkouts`가 분리 HEAD를 지우지 않음. 테스트는 212개 34초(실제 git 워크트리 시험은
+    개당 0.6~1.2초)였다.
+
+PR 직전 반영(테스트를 먼저 쓰고 빨강을 본 뒤 고쳤다):
+- Major: `_cut_links`가 `git worktree remove` 전에 꺼낸 자리 아래의 심볼릭 링크와 junction을 링크만 끊는다. 끊지 못한
+  링크나 읽지 못한 폴더가 남으면 걷지 않고 알린다. 새 테스트(윈도는 `mklink /J`, 그 밖은 심볼릭 링크)는 고치기 전
+  코드에서 바깥의 `precious.txt`가 실제로 지워져 빨강이었다(이 PC, git 2.32). 처음에는 `os.unlink`가 못 지우면
+  `os.rmdir`로 넘어가게 지었는데, 그 갈래를 끈 변이가 초록이었다. 파이썬 3.12의 `os.unlink`가 junction도 링크만 지워
+  그 갈래가 쓰이지 않아 지웠다.
+- Minor: 걷기에 실패하면 `git worktree list --porcelain`으로 등록이 남았는지 보고, 남았으면 `git worktree remove
+  --force`를, 걷혔으면 폴더만 지우라고 안내한다(가짜 git으로 두 갈래를 고정).
+- Minor(보류였던 것): 시작 줄을 꺼내기 전에 찍는다. 꺼내는 도중 끊겨도 자리를 안다(가짜 git의 `KeyboardInterrupt`로
+  고정). 못 보는 것의 강제로 끝난 실행에 Ctrl+C를 더했다.
+- Nit: `mkdtemp`의 `OSError`를 `CheckoutError`(종료 3)로 바꿨다.
+- 남긴 것: `--preflight`가 명세마다 git을 다시 읽는 것과 명세가 모두 깨져도 먼저 꺼내는 것. 위 판정대로 PR 체크리스트에
+  적는다.
+- 다시 돌린 명령: `uv run pytest -q tests/tools/test_canary.py` 219 passed, ruff·pyright 통과. 원문을 고친 변이 둘(127·128)과
+  새 변이로 열을 돌려 아홉이 기대대로, 하나(`rmdir` 갈래)가 초록이었고, 갈래와 변이를 지운 뒤 링크 쪽 넷(131~134)이 모두
+  기대대로였다. 변이는 모두 백서른일곱이다. 전체 검증은 다음 커밋의 pre-commit으로 갈음한다.
