@@ -4,10 +4,11 @@
 // - 스토리를 열면 렌더가 끝날 때까지(play 와, play 가 지났으면 afterEach 의 클래스 판정과 axe) 기다린다. 정적 빌드도
 //   play 를 돌리므로 그 전에 찍으면 그림이 그 순간에 달린다. 다만 play 의 `userEvent` 는 빈 객체다. Storybook 10.6.1 은
 //   `navigator.clipboard` 가 있을 때만 그것을 채우는데(설치본 `dist/csf/index.js` 의 enhanceContext), 이 출처는 보안
-//   맥락이 아니라 clipboard 가 없다. 그래서 `userEvent` 를 부르는 play 는 첫 호출에서 TypeError 로 멈추고(프로브
-//   .scratch/design-system/probes/static_play.mjs) 사진은 그 전의 그림이다. play 가 그렇게 멈추면 afterEach 도 돌지
+//   맥락이 아니라 clipboard 가 없다. 그래서 그 `userEvent` 를 부르는 play 는 늦어도 첫 호출에서 TypeError 로
+//   멈추고(프로브 .scratch/design-system/probes/static_play.mjs) 사진은 그 전의 그림이다. play 가 그렇게 멈추면 afterEach 도 돌지
 //   않는다(설치본 `dist/preview/runtime.js` 가 errored 단계에서 건너뛴다. 코드를 읽었다). 클래스 판정과 axe 는 스토리
-//   테스트가 보고, 실제 입력의 상태는 stories.visual.ts 의 INTERACTIONS 가 찍는다.
+//   테스트가 보고, 실제 입력의 상태는 stories.visual.ts 의 INTERACTIONS 가 찍는다. `userEvent` 가 빈 것은
+//   storybook.visual.ts 가 고정한다.
 // - 판정 스토리(태그 `judgment`)는 색인에서 뺀다. 태그는 정적 빌드의 `index.json` 항목에 그대로 실린다. 기본 테마가
 //   아닌 테마에서 값을 재는 스토리도 그 태그를 단다(사진은 기본 테마만, ADR 0026 의 2026-10-06 이력).
 import { existsSync, readFileSync, statSync } from "node:fs";
