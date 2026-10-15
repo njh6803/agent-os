@@ -619,6 +619,21 @@ def test_대조군_메시지는_카나리아가_바뀐_본문에만_있는_글�
     assert any(p.startswith("옛") and "바뀐 본문에만" in p for p in problems)
 
 
+def test_대조군_사본에_카나리아가_있으면_병합_뒤_다시_돌리는_처방을_붙인다(tmp_path: Path) -> None:
+    """대기열 270. 진단만 하던 메시지에 바뀌기 전 커밋을 `--control-commit` 으로 주라는 처방을
+    붙인다."""
+    spec = load_spec(_스킬_명세)
+    새판 = _스킬_체크아웃(tmp_path, "새판", _새_본문)
+    places = {"새": _스킬_체크아웃(tmp_path, "새"), "옛": 새판}
+
+    problems = source_problems(spec, places)
+
+    assert len(problems) == 1
+    assert problems[0].startswith("옛: ")
+    assert "--control-commit <커밋>" in problems[0]
+    assert "README `canary/` 행" in problems[0]
+
+
 def test_skill을_주지_않은_슬래시_명령_명세도_원천을_본다(tmp_path: Path) -> None:
     """대기열 133의 사건이 난 길이다. 본문이 프롬프트에 펼쳐지는 스킬도 원천은 파일에 있다."""
     spec = load_spec(_스킬_명세.replace('skill = "tidy-checkouts"\n', ""))

@@ -754,7 +754,10 @@ def source_problems(spec: Spec, places: dict[str, Path]) -> list[str]:
                 found = ", ".join(present)
                 problems.append(
                     f"{arm.name}: 대조군 사본의 원천 {spec.source} 에 카나리아가 있다: {found}. "
-                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다"
+                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다. 그 PR 이 "
+                    "병합된 뒤 다시 돌리는 것이면 바뀌기 전 커밋을 --control-commit <커밋> "
+                    "으로 준다(커밋은 명세 머리 주석이 적고, 없으면 그 명세를 들인 커밋의 "
+                    "부모다. 프로브 README `canary/` 행)"
                 )
     return problems
 
