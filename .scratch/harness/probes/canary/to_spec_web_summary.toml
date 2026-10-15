@@ -1,11 +1,10 @@
 # to-spec 3단계의 근거 문장 종류에 더한 웹 요약(대기열 124)이 새 세션에 실리는지.
 # to-spec 은 모델이 부르지 못하는 스킬이라 질문 머리에 슬래시 명령으로 넣는다.
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(a8e349c)이다. 옛 판에는 카나리아가 없다.
-# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 대조군 `a8e349c`, 일지 2026-10-12-27).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   git worktree add --detach ../../../../agent-canary-a8e349c a8e349c
-#   uv run python tools/canary.py .scratch/harness/probes/canary/to_spec_web_summary.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit a8e349c .scratch/harness/probes/canary/to_spec_web_summary.toml <출력 디렉터리>
 kind = "skill"
 question = '''
 /to-spec
