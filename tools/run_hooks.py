@@ -15,7 +15,12 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여덟 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물둘 — `${ROOT}`(저장소 루트),
+`${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
+날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
+두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
+저장소), `${OPEN_PR_REPO}`(임시 bare 저장소를 origin 으로 두고 그 `chore/x` 끝을 머리로 둔 PR 7 의
+`refs/pull/7/head`·`merge` 가 있는 저장소),
 `${MAIN_REPO}`·`${WORK_REPO}`(임시 저장소 둘. 앞은 커밋이 하나 있는 main, 뒤는 커밋이 없는 작업
 브랜치다 — 이 저장소의 브랜치에 기대를 걸지 않는다), `${EMPTY_MAIN_REPO}`(커밋이 하나도 없는 main 의
 임시 저장소 — 새 프로젝트의 첫 커밋 자리), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고
@@ -77,6 +82,7 @@ import tempfile
 import tomllib
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -594,8 +600,13 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         ("good-subject.txt", "chore: 커밋 메시지 제목을 먼저 대 본다"),
     ):
         (commit_msgs / name).write_text(f"{subject}\n\n본문\n", encoding="utf-8")
+    today = datetime.now().astimezone().date().isoformat()
     return {
         "ROOT": ROOT.as_posix(),
+        "USER_HOME": Path.home().as_posix(),
+        "TODAY": today,
+        "NUMBERED_REPO": _numbered_repository(scratch, today).as_posix(),
+        "OPEN_PR_REPO": _open_pr_repository(scratch).as_posix(),
         "MAIN_REPO": main_repo.as_posix(),
         "EMPTY_MAIN_REPO": empty_main_repo.as_posix(),
         "WORK_REPO": work_repo.as_posix(),
@@ -670,6 +681,87 @@ def _unpushed_repository(scratch: Path) -> Path:
             env=hook_environment(),
             timeout=DEFAULT_HOOK_TIMEOUT,
         )
+    return repo
+
+
+def _git_commands(commands: list[list[str]]) -> None:
+    for command in commands:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            env=hook_environment(),
+            timeout=DEFAULT_HOOK_TIMEOUT,
+        )
+
+
+def _numbered_repository(scratch: Path, today: str) -> Path:
+    """`journal_repository` 위에, 작업 트리에 커밋하지 않은 새 일지 둘(같은 순번 01, 다음 빈 순번
+    02)을 둔 저장소."""
+    repo = journal_repository(scratch / "numbered", today)
+    for number, slug in (("01", "x"), ("02", "y")):
+        journal = repo / "docs" / "journal" / f"{today}-{number}-{slug}.md"
+        journal.write_text(f"# {today} ({number}) {slug}\n", encoding="utf-8")
+    return repo
+
+
+def journal_repository(where: Path, today: str) -> Path:
+    """`where/repo` 에 origin/main 이 오늘 날짜의 01 일지를 들고, 작업 브랜치 `chore/x` 가 그 위인
+    저장소를 짓는다. 훅의 순번 대조를 재는 픽스처다(페이로드 표, `tests/tools/`, 프로브가 함께
+    쓴다).
+
+    origin 은 `where/origin.git` 의 bare 저장소다. main 에는 ADR·대기열 행·헌법 판도 둔다.
+    `tools/sibling_overlap.py` 는 merge-base 에서 네 자리 가운데 하나라도 비면 2로 끝난다.
+    """
+    origin = where / "origin.git"
+    repo = where / "repo"
+    _git_commands(
+        [
+            ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+            ["git", "init", "-q", "-b", "main", str(repo)],
+        ]
+    )
+    files = {
+        f"docs/journal/{today}-01-main.md": f"# {today} (01) main\n",
+        "docs/adr/0001-x.md": "# 0001\n",
+        ".scratch/retro-queue.md": "| 1 | x |\n",
+        "docs/constitution/README.md": "**Version**: 1.0.0\n",
+    }
+    for name, text in files.items():
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        (repo / name).write_text(text, encoding="utf-8")
+    _git_commands(
+        [
+            ["git", "-C", str(repo), "add", "-A"],
+            ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "-m", "main"],
+            ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+            ["git", "-C", str(repo), "push", "-q", "origin", "main"],
+            ["git", "-C", str(repo), "switch", "-q", "-c", "chore/x"],
+        ]
+    )
+    return repo
+
+
+def _open_pr_repository(scratch: Path) -> Path:
+    """origin 의 `chore/x` 끝을 머리로 둔 열린 PR 7 의 ref(`refs/pull/7/head`·`merge`)가 있는
+    저장소.
+
+    origin 은 같은 `scratch` 의 bare 저장소다. github.com 이 아니라 훅은 gh 대신 `git ls-remote`
+    로 열린 PR 을 가린다. 네트워크에 기대지 않는다.
+    """
+    origin = scratch / "open-pr-origin.git"
+    repo = scratch / "open-pr"
+    _git_commands(
+        [
+            ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+            ["git", "init", "-q", "-b", "chore/x", str(repo)],
+            ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "x"],
+            ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+            ["git", "-C", str(repo), "push", "-q", "origin", "chore/x"],
+            ["git", "-C", str(origin), "update-ref", "refs/pull/7/head", "refs/heads/chore/x"],
+            ["git", "-C", str(origin), "update-ref", "refs/pull/7/merge", "refs/heads/chore/x"],
+        ]
+    )
     return repo
 
 
