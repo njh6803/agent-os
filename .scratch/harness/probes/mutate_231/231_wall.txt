@@ -1,0 +1,2 @@
+full exit 0 wall 446s
+x exit 0 wall 163s

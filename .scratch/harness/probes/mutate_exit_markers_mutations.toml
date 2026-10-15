@@ -1,0 +1,180 @@
+# tools/mutate.py 의 종료 코드 판정과 출력의 표지(대기열 253), 빨강을 기대한 pytest 변이의 `-x`(대기열 231)에서
+# 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py 를 빨갛게 해야 한다. 도구가 자기 자신을 고치므로 분리 임시
+# 워크트리에서 그 워크트리의 도구로 돌린다(tools/mutate.py 의 제자리가 아닌 실행).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_exit_markers_mutations.toml [번호 ...]
+
+[[mutation]]
+name = "exit 판정이 빨강 코드를 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = 'outcome: Outcome = "green" if exit_code == 0 else "red" if exit_code == red_exit else "error"'
+new = 'outcome: Outcome = "green" if exit_code == 0 else "red"'
+
+[[mutation]]
+name = "exit 판정이 0 을 초록으로 읽지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = 'outcome: Outcome = "green" if exit_code == 0 else "red" if exit_code == red_exit else "error"'
+new = 'outcome: Outcome = "red" if exit_code == red_exit else "error"'
+
+[[mutation]]
+name = "judge 가 exit 판정에 빨강 코드를 넘기지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            return _judge_exit(result.exit_code, text, red_exit)"
+new = "            return _judge_exit(result.exit_code, text, None)"
+
+[[mutation]]
+name = "exit 판정에 빨강 코드가 없어도 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if command.judge == "exit" and command.red_exit is None:'
+new = '        if command.judge == "exit" and command.red_exit is None and False:'
+
+[[mutation]]
+name = "다른 판정에 빨강 코드가 있어도 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if command.judge != "exit" and command.red_exit is not None:'
+new = '        if command.judge != "exit" and command.red_exit is not None and False:'
+
+[[mutation]]
+name = "기준선의 빈 표지를 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if "" in command.baseline_output:'
+new = '        if "" in command.baseline_output and False:'
+
+[[mutation]]
+name = "변이의 빈 표지를 읽는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if "" in m.expect_output:'
+new = '        if "" in m.expect_output and False:'
+
+[[mutation]]
+name = "표지를 색 코드가 든 출력에서 찾는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    """색 코드를 벗긴 출력에 없는 표지."""
+    text = result.plain
+'''
+new = '''
+    """색 코드를 벗긴 출력에 없는 표지."""
+    text = result.output
+'''
+
+[[mutation]]
+name = "변이의 표지가 판정에 들지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)"
+new = "            verdict.outcome == mutation.expect"
+
+[[mutation]]
+name = "표지를 마지막 반복에서만 본다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)"
+new = "            verdict.outcome == mutation.expect and not _missing(judged[-1][0], mutation.expect_output)"
+
+[[mutation]]
+name = "기준선의 표지를 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "        if verdict.outcome != \"green\" or missing:"
+new = "        if verdict.outcome != \"green\":"
+
+[[mutation]]
+name = "없는 표지를 알리지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            out(f\"   표지 없음: {', '.join(missing)}\")"
+new = "            pass"
+
+[[mutation]]
+name = "표지가 없어도 출력의 끝을 보이지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if verdict.outcome in ("error", "unhandled") or missing:'
+new = '        if verdict.outcome in ("error", "unhandled"):'
+
+[[mutation]]
+name = "빨강을 기대한 pytest 변이에 첫 실패에서 멈추는 인자를 붙이지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
+new = '        if False:'
+
+[[mutation]]
+name = "초록을 기대한 변이에도 첫 실패에서 멈추는 인자를 붙인다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
+new = '        if mutation.runner in _BUILTIN:'
+
+[[mutation]]
+name = "표의 러너에도 첫 실패에서 멈추는 인자를 붙인다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '        if mutation.expect == "red" and mutation.runner in _BUILTIN:'
+new = '        if mutation.expect == "red":'
+
+[[mutation]]
+name = "초록인 기준선의 표지가 없어도 출력의 끝을 보이지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            _details([(result, verdict)], out, command.baseline_output)"
+new = "            _details([(result, verdict)], out)"
