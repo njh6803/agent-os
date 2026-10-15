@@ -35,5 +35,6 @@
 | [0029](0029-session-model-is-picked-before-send.md) | 새 세션의 모델과 추론 레벨은 지시문이 정하고 open-session이 보내기 전에 입력창에서 고른다 | accepted | 2026-10-12 |
 | [0030](0030-powershell-scripts-are-tested-by-pytest-through-pwsh.md) | `tools/`의 PowerShell 스크립트는 pytest가 pwsh로 함수를 떼어 시험하고, Pester는 들이지 않는다 | accepted | 2026-10-13 |
 | [0031](0031-failed-run-carries-a-runtime-failure-cause.md) | 실패한 실행은 런타임이 정한 실패 원인을 들고 최종 사용자 항목에도 싣는다 | accepted | 2026-10-15 |
+| [0032](0032-worktrees-stay-under-claude-and-are-checked-before-use.md) | 워크트리는 `.claude/worktrees/`에 두고, 들어가기 전에 목록으로 자리를 확인하며, 정리는 `tidy-checkouts`가 맡는다 | accepted | 2026-10-15 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
