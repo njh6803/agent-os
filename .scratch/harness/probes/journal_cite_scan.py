@@ -43,8 +43,14 @@ def _git(*args: str) -> str:
 
 
 def blobs(commit: str) -> dict[str, bytes]:
-    """커밋의 추적 파일 경로 → 내용. `git cat-file --batch` 한 번으로 읽는다."""
-    paths = [line for line in _git("ls-tree", "-r", "--name-only", commit).splitlines() if line]
+    """커밋의 추적 파일 경로 → 내용. `git cat-file --batch` 한 번으로 읽는다.
+
+    경로 목록은 `-z` 로 받아 git 이 따옴표로 감싸는 이름도 그대로 둔다. 응답은 경로마다 머리 줄
+    (`<sha> <종류> <크기>`, 없으면 `<이름> missing`) 뒤에 본문과 줄바꿈이다. blob 이 아닌 객체(하위
+    모듈의 커밋)도 본문을 건너뛴다. 건너뛰지 않으면 그 뒤 경로를 조용히 잃었다(PR 직전 버그 축).
+    """
+    listing = _git("ls-tree", "-r", "-z", "--name-only", commit)
+    paths = [path for path in listing.split("\0") if path]
     request = "".join(f"{commit}:{path}\n" for path in paths).encode("utf-8")
     raw = subprocess.run(
         ["git", "cat-file", "--batch"], cwd=ROOT, input=request, capture_output=True, check=True
@@ -55,10 +61,11 @@ def blobs(commit: str) -> dict[str, bytes]:
         end = raw.index(b"\n", at)
         header = raw[at:end].split()
         at = end + 1
-        if len(header) != 3 or header[1] != b"blob":
-            continue  # 하위 모듈이나 없는 것
+        if len(header) != 3:
+            continue  # 없는 것은 본문이 없다
         size = int(header[2])
-        found[path] = raw[at : at + size]
+        if header[1] == b"blob":
+            found[path] = raw[at : at + size]
         at += size + 1
     return found
 

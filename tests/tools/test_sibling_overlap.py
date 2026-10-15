@@ -39,6 +39,7 @@ from tools.sibling_overlap import (
     github_repo,
     harness_files,
     highest_version,
+    history_entries,
     is_behind,
     journal_day,
     main,
@@ -515,6 +516,13 @@ def test_main이_이_브랜치_몫으로_비워_둔_판에_이력_문단을_더�
     twice = RESERVED_MAIN.replace("1.0.2는", f"1.0.4는 X다. {reserve} 1.0.2는")
     both = twice.replace("1.0.0은", "1.0.3은 A다. 1.0.1은 B다. 1.0.0은")
     assert reserved_version("topic", _이력("1.0.4", twice), _이력("1.0.4", both)) == "1.0.3"
+
+
+def test_판_머리가_없는_README는_이력_문단도_비워_둔_판도_없다() -> None:
+    """PR 직전 버그 축: 이 브랜치가 헌법 README 를 지웠거나 비우면 이력 문단을 가르다 ValueError 가
+    나, 도구가 트레이스백과 함께 1(출력대로 고친다)로 끝났다."""
+    assert history_entries("") == frozenset()
+    assert reserved_version("topic", _이력("1.0.2", RESERVED_MAIN), "") is None
 
 
 def test_비워_둔_문장_뒤에_이어진_다른_판의_본문만_고치면_더한_것이_아니다() -> None:

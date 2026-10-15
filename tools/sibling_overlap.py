@@ -520,8 +520,13 @@ def highest_version(held: Sequence[tuple[str, str | None]]) -> tuple[str, list[s
 
 
 def history_entries(text: str) -> frozenset[tuple[str, str]]:
-    """헌법 README 의 이력 문단. 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지의 (판, 글)."""
+    """헌법 README 의 이력 문단. 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지의 (판, 글).
+
+    판 머리가 없는 글(지웠거나 비운 README)은 빈 집합이다.
+    """
     heads = list(HISTORY_HEAD.finditer(text))
+    if not heads:
+        return frozenset()
     ends = [head.start() for head in heads[1:]] + [len(text)]
     return frozenset(
         (head[1], text[head.start() : end].strip()) for head, end in zip(heads, ends, strict=True)
@@ -570,7 +575,8 @@ def dangling_cites(
         if mark is not None:
             fence = mark[1]
             continue
-        if bare in kept or bare.startswith(">"):
+        # "일지" 가 없는 줄은 정규식을 돌리지 않는다. 큰 미추적 파일도 이 판정이 통째로 읽는다
+        if "일지" not in bare or bare in kept or bare.startswith(">"):
             continue
         for cite in JOURNAL_CITE.finditer(CODE_SPAN.sub("", bare)):
             for key in cite[1].split("·"):
