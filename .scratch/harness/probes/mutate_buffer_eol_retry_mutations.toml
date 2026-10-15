@@ -1,0 +1,227 @@
+# tools/mutate.py 의 줄 버퍼(대기열 259), 원문이 0번일 때 줄 끝의 까닭(대기열 264), 되돌리기의 재시도와 그 흔적
+# (대기열 267), 판정 인자 묶기(PR #240 claude-review 의 보류)에서 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py
+# 를 빨갛게 해야 하고, 빨간 시험의 이름을 표지로 본다. 내장 pytest 러너는 빨강을 기대한 변이에 `-x` 를 붙여 첫 실패
+# 하나만 보이므로, 표지는 그 변이가 빨갛게 할 시험 가운데 파일 순서로 첫 것이다. 도구가 자기 자신을 고치므로 분리 임시
+# 워크트리에서 그 워크트리의 도구로 돌린다(tools/mutate.py 의 제자리가 아닌 실행).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_buffer_eol_retry_mutations.toml [번호 ...]
+
+[[mutation]]
+name = "출력을 줄마다 내보내지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_출력을_파이프로_받아도_도는_동안_줄마다_내보낸다", '.with_suffix(".late")']
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        stream.reconfigure(encoding="utf-8", line_buffering=True)'''
+new = '''        stream.reconfigure(encoding="utf-8")'''
+
+[[mutation]]
+name = "원문이 0번일 때 줄 끝을 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[파일이_CRLF]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            hint = _eol_hint(current, old) if count == 0 else ""'''
+new = '''            hint = ""'''
+
+[[mutation]]
+name = "두 번인 원문에도 줄 끝의 까닭을 붙인다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문만_보면_명령을_돌리지_않고_틀린_원문을_모두_알린다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            hint = _eol_hint(current, old) if count == 0 else ""'''
+new = '''            hint = _eol_hint(current, old)'''
+
+[[mutation]]
+name = "파일의 줄 끝을 보지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[파일이_LF]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    ending = "CRLF 와 LF 가 섞였다" if crlf and bare else "CRLF 뿐이다" if crlf else "LF 뿐이다"'''
+new = '''    ending = "CRLF 뿐이다"'''
+
+[[mutation]]
+name = "섞인 줄 끝을 한쪽으로 센다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[줄_끝이_섞였다]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''"CRLF 와 LF 가 섞였다" if crlf and bare else'''
+new = '''"CRLF 와 LF 가 섞였다" if False else'''
+
+[[mutation]]
+name = "줄 끝을 맞춘 횟수를 한 번으로 적는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[줄_끝을_맞추면_두_번]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    found = lf(data).count(lf(old))'''
+new = '''    found = min(lf(data).count(lf(old)), 1)'''
+
+[[mutation]]
+name = "원문의 줄 끝을 맞추지 않고 찾는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[파일이_LF]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    found = lf(data).count(lf(old))'''
+new = '''    found = lf(data).count(old)'''
+
+[[mutation]]
+name = "파일의 줄 끝을 맞추지 않고 찾는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧붙인다[파일이_CRLF]"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    found = lf(data).count(lf(old))'''
+new = '''    found = data.count(lf(old))'''
+
+[[mutation]]
+name = "되돌리기를 다시 시도하지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    for wait in RESTORE_WAITS:
+        try:
+            return action()
+        except OSError as error:
+            blocked(error)
+            time.sleep(wait)
+    return action()
+'''
+new = '''
+    return action()
+'''
+
+[[mutation]]
+name = "기다리지 않고 다시 시도한다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다", ">= 0.3"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            time.sleep(wait)'''
+new = '''            pass'''
+
+# 시도가 하나 모자라면, 기다림을 하나만 둔 앞의 시험(앞부분만 쓴 파일)이 다시 시도하지 못해 먼저 빨개진다(셀프 리뷰
+# 표준 축이 첫 판의 표지를 짚었다). 뒤의 `끝내_막히면` 도 빨갛지만 `-x` 라 보이지 않는다.
+[[mutation]]
+name = "끝내 막히면 기다림 수만큼만 시도한다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리다_막혀_앞부분만_쓴_파일은_다시_쓸_때_다른_쓰기로_보지_않는다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    for wait in RESTORE_WAITS:'''
+new = '''    for wait in RESTORE_WAITS[:-1]:'''
+
+[[mutation]]
+name = "다시 시도할 때마다 다른 쓰기를 본다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리다_막혀_앞부분만_쓴_파일은_다시_쓸_때_다른_쓰기로_보지_않는다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    if written is not None and _retrying(path.read_bytes, blocked) != written:
+        raise _WrittenMeanwhile
+    _retrying(lambda: path.write_bytes(original), blocked)
+'''
+new = '''
+    def write() -> None:
+        if written is not None and path.read_bytes() != written:
+            raise _WrittenMeanwhile
+        path.write_bytes(original)
+
+    _retrying(write, blocked)
+'''
+
+[[mutation]]
+name = "끝내 막힌 쓰기를 삼킨다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리지_못한_파일이_있으면_RestoreError_이고_나머지는_되돌린다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    _retrying(lambda: path.write_bytes(original), blocked)'''
+new = '''
+    with contextlib.suppress(OSError):
+        _retrying(lambda: path.write_bytes(original), blocked)'''
+
+[[mutation]]
+name = "다시 시도해 지난 막힘을 알리지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리는_쓰기가_잠깐_막히면_기다렸다가_다시_써서_되돌린다", "3번째에 지났다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+            if blocked:
+                out(
+                    f"되돌리기를 다시 시도해 {len(blocked) + 1}번째에 지났다: {relative}"
+                    f" — 처음 막힌 까닭 {blocked[0]}"
+                )
+'''
+new = '''
+            if blocked:
+                pass
+'''
+
+[[mutation]]
+name = "끝내 막혔을 때 시도한 수를 적지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_되돌리는_쓰기가_끝내_막히면_기다림_수보다_한_번_더_시도하고_멈춘다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            stuck.append(f"{relative} ({len(blocked) + 1}번 시도했다: {error})")'''
+new = '''            stuck.append(f"{relative} ({error})")'''
+
+[[mutation]]
+name = "측정이 변이의 진단 자리를 판정에 넘기지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_tsc_러너의_변이는_변이에_적은_진단_자리로_판정한다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    return Judging(command.judge, diagnostic_in, command.red_exit)'''
+new = '''    return Judging(command.judge, None, command.red_exit)'''
+
+[[mutation]]
+name = "측정이 러너의 빨강 코드를 판정에 넘기지 않는다"
+tests = ["tests/tools/test_mutate.py"]
+expect = "red"
+expect_output = ["test_표지가_모두_있으면_기대대로다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    return Judging(command.judge, diagnostic_in, command.red_exit)'''
+new = '''    return Judging(command.judge, diagnostic_in, None)'''

@@ -253,8 +253,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            f"{head} {numbers[mutation.name]}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
-new = '''            f"{head} {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
+old = '''        f"{head} {number}. {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
+new = '''        f"{head} {mutation.name}: 기대 {_LABELS[mutation.expect]},"'''
 
 [[mutation]]
 name = "번호를 고른 것 안의 차례로 단다"

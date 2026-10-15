@@ -30,7 +30,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "            return _judge_exit(result.exit_code, text, red_exit)"
+old = "            return _judge_exit(result.exit_code, text, judging.red_exit)"
 new = "            return _judge_exit(result.exit_code, text, None)"
 
 [[mutation]]
@@ -96,8 +96,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)"
-new = "            verdict.outcome == mutation.expect"
+old = "    return all(run.verdict.outcome == mutation.expect and not run.missing for run in runs)"
+new = "    return all(run.verdict.outcome == mutation.expect for run in runs)"
 
 [[mutation]]
 name = "표지를 마지막 반복에서만 본다"
@@ -106,8 +106,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "            verdict.outcome == mutation.expect and not _missing(result, mutation.expect_output)"
-new = "            verdict.outcome == mutation.expect and not _missing(judged[-1][0], mutation.expect_output)"
+old = "    return all(run.verdict.outcome == mutation.expect and not run.missing for run in runs)"
+new = "    return all(run.verdict.outcome == mutation.expect and not runs[-1].missing for run in runs)"
 
 [[mutation]]
 name = "기준선의 표지를 보지 않는다"
@@ -116,8 +116,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "        if verdict.outcome != \"green\" or missing:"
-new = "        if verdict.outcome != \"green\":"
+old = "    return run.verdict.outcome == \"green\" and not run.missing"
+new = "    return run.verdict.outcome == \"green\""
 
 [[mutation]]
 name = "없는 표지를 알리지 않는다"
@@ -126,7 +126,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "            out(f\"   표지 없음: {', '.join(missing)}\")"
+old = "            out(f\"   {_marker_note(run.missing)}\")"
 new = "            pass"
 
 [[mutation]]
@@ -136,8 +136,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '        if verdict.outcome in ("error", "unhandled") or missing:'
-new = '        if verdict.outcome in ("error", "unhandled"):'
+old = '        if run.verdict.outcome in ("error", "unhandled") or run.missing:'
+new = '        if run.verdict.outcome in ("error", "unhandled"):'
 
 [[mutation]]
 name = "빨강을 기대한 pytest 변이에 첫 실패에서 멈추는 인자를 붙이지 않는다"
@@ -176,5 +176,5 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = "            _details([(result, verdict)], out, command.baseline_output)"
-new = "            _details([(result, verdict)], out)"
+old = "        _details([run], out)"
+new = "        _details([_Run(run.result, run.verdict, ())], out)"
