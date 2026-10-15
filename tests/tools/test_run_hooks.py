@@ -535,6 +535,39 @@ def test_origin_main보다_한_커밋_뒤처진_저장소를_만든다(tmp_path:
     assert git_line("rev-list", "--count", "HEAD..origin/main") == "1"
 
 
+def test_일지_번호_저장소는_main_의_01_과_커밋하지_않은_새_일지_둘을_든다(tmp_path: Path) -> None:
+    """`${NUMBERED_REPO}` 는 hook_journal_retro 의 순번 대조 사례가 기대는 모양이다. main 과 같은
+    순번 01 은 발동, 다음 빈 순번 02 는 침묵이다."""
+    replacements = create_fixtures(tmp_path)
+    repo, today = replacements["NUMBERED_REPO"], replacements["TODAY"]
+
+    def git_lines(*args: str) -> list[str]:
+        result = subprocess.run(
+            ["git", "-C", repo, *args], check=True, capture_output=True, text=True
+        )
+        return result.stdout.split()
+
+    assert git_lines("ls-tree", "--name-only", "origin/main", "docs/journal/") == [
+        f"docs/journal/{today}-01-main.md"
+    ]
+    assert sorted(git_lines("ls-files", "--others", "docs/journal/")) == [
+        f"docs/journal/{today}-01-x.md",
+        f"docs/journal/{today}-02-y.md",
+    ]
+
+
+def test_열린_PR_저장소는_origin_에_브랜치_끝을_머리로_둔_PR_의_ref_를_든다(tmp_path: Path) -> None:
+    """`${OPEN_PR_REPO}` 는 hook_push_delete_open_pr 의 deny 사례가 기대는 모양이다."""
+    repo = create_fixtures(tmp_path)["OPEN_PR_REPO"]
+    result = subprocess.run(
+        ["git", "-C", repo, "ls-remote", "origin"], check=True, capture_output=True, text=True
+    )
+    refs = dict(line.split("\t")[::-1] for line in result.stdout.splitlines())
+
+    assert refs["refs/pull/7/head"] == refs["refs/heads/chore/x"]
+    assert "refs/pull/7/merge" in refs
+
+
 def test_main_저장소_둘은_커밋의_유무로_갈린다(tmp_path: Path) -> None:
     """`${MAIN_REPO}` 는 커밋이 하나 있는 main 이고 `${EMPTY_MAIN_REPO}` 는 커밋이 없는 main 이다.
 

@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
@@ -53,6 +53,34 @@ hook = "hook_env_read.py"
 expect = "silent"
 note = "래퍼 `command` 의 -v 는 명령을 찾기만 하고 돌리지 않는다 — 찾을 이름 뒤에 .env 가 있어도 읽지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "command -v column .env" } }
+
+# --- hook_user_settings_read (PreToolUse Bash|PowerShell|Read|Grep) ---
+# 대상의 경로만 풀고 파일은 열지 않는다. 사용자 설정을 읽지 않고도 판정이 갈린다.
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "deny"
+contains = ["키 이름만"]
+note = "사용자 설정의 Read — update-config 가 사용자 범위에서 여는 자리"
+payload = { tool_name = "Read", tool_input = { file_path = "${USER_HOME}/.claude/settings.json" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "deny"
+contains = ["호출 전체가 돌지 않았다"]
+note = "설정의 한 갈래를 통째로 출력(대기열 272. 사건의 명령은 공개 저장소라 일지가 적지 않아 같은 꼴로 재구성)"
+payload = { tool_name = "PowerShell", tool_input = { command = "Get-Content $HOME\\.claude\\settings.json -Raw | ConvertFrom-Json | Select-Object -ExpandProperty env" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "silent"
+note = "update-config 가 이 저장소에서 여는 프로젝트 설정(반례 축)"
+payload = { tool_name = "Read", tool_input = { file_path = "${ROOT}/.claude/settings.json" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "silent"
+note = "막을 때 안내하는 키 이름 명령(keys_command 의 꼴)"
+payload = { tool_name = "Bash", tool_input = { command = "uv run python -c \"import json, pathlib; d = json.loads(pathlib.Path('${USER_HOME}/.claude/settings.json').read_text(encoding='utf-8')); print({k: sorted(v)[:20] if isinstance(v, dict) else type(v).__name__ for k, v in d.items()})\"" } }
 
 # --- hook_git_main_commit (PreToolUse Bash|PowerShell) ---
 [[case]]
@@ -353,6 +381,21 @@ expect = "silent"
 note = "다른 절을 적어 넣고 '다음' 절은 그대로 옮긴 Edit(대기열 62)"
 payload = { tool_name = "Edit", tool_input = { file_path = "${OPEN_JOURNAL}", old_string = "## 다음\n\n- web-admin의 04가 다음이다.", new_string = "## 한 것\n\n- 04\n\n## 다음\n\n- web-admin의 04가 다음이다." } }
 
+# 순번 대조(대기열 232). 결과(tool_response)는 journal_number_hook/run.py 의 A 가 잰 새 파일 Write 의 모양이다(claude 2.1.300).
+# 그 결과의 originalFile 은 null 인데 TOML 에 null 이 없어 뺐다. 훅은 type 만 읽는다. 저장소는 origin 이 임시 bare 저장소라 네트워크에 기대지 않는다.
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "context"
+contains = ["다음 빈 번호와 다르다", "옮길 번호는"]
+note = "main(merge-base)에 이미 있는 순번으로 새 일지를 만든 Write — 도구가 새 번호로 세지 않아 겹침으로도 알리지 않는 갈래(셀프 리뷰에서 실제 도구로 돈 테스트가 잡았다)"
+payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n", structuredPatch = [], userModified = false } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "다음 빈 순번으로 새 일지를 만든 Write — 도구에서 번호를 받고 만든 세션의 입력"
+payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n", structuredPatch = [], userModified = false } }
+
 # --- hook_ruff_line_width (PostToolUse Write|Edit) ---
 [[case]]
 hook = "hook_ruff_line_width.py"
@@ -549,6 +592,29 @@ payload = { tool_name = "Bash", tool_input = { command = "git push -u origin cho
 hook = "hook_push_behind_main.py"
 expect = "silent"
 note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 뒤처진 저장소에서도 막지 않는다"
+payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
+
+# --- hook_push_delete_open_pr (PreToolUse Bash|PowerShell) ---
+# origin 이 임시 bare 저장소라 훅은 gh 대신 ls-remote 의 merge ref 로 열린 PR 을 가린다. 네트워크에 기대지 않는다.
+# 침묵은 병합이 끝난 뒤의 실제 지우기다. 그 원격에는 PR 의 ref 가 없다.
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7", "pulls/7 -f state=closed"]
+note = "병합과 한 묶음으로 보낸 원격 브랜치 지우기(대기열 262, 일지 2026-10-15-01 의 꼴. 번호와 커밋은 재구성)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr merge 7 --squash --match-head-commit abc && git push origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7"]
+note = "PowerShell 의 지우기 refspec — 매처의 둘째 도구"
+payload = { tool_name = "PowerShell", tool_input = { command = "git push origin :chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "silent"
+note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 열린 PR 이 없다"
 payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
 
 # --- hook_webfetch_summary (PostToolUse WebFetch) ---
