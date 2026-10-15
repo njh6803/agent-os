@@ -21,11 +21,17 @@
 
 <!-- 이 PR이 하지 않은 것, 다음 티켓으로 미룬 것, 확신이 없는 판단. 없으면 "없음" -->
 
+### 계약 영향
+
+<!-- 계약(CLAUDE.md 작업 규약 2)에 닿지 않았으면 "없음".
+     닿았으면 어느 계약의 무엇이 바뀌었는지, 그 때문에 함께 바꾼 것(ADR, `schema_version`, 다시 뽑은 `openapi.json`과 생성 클라이언트, 헌법 판), 이 변경을 기다리는 티켓을 적는다 -->
+
 ## 변경된 영역
 
 <!-- 실제로 바뀐 경로만 체크한다. 괄호는 그 영역을 바꿀 때 같이 확인할 것 -->
 
 - [ ] `src/agent_os/sdk/` — 계약 (디스크 형식이 바뀌면 `schema_version`과 ADR, 플러그인이 보는 표면이 바뀌면 ADR)
+- [ ] `openapi.json`, `src/agent_os/server.py`, `src/agent_os/http/` — 계약(`openapi.json`)과 그것을 만드는 HTTP 표면 (`openapi.json`의 diff가 의도한 변경뿐인가. 모델 독스트링과 `operation_id`가 계약에 실린다. 이 줄 밖의 `admin/`·`channel/http/` 라우트나 `sdk/`의 이벤트 모델을 바꿔도 `openapi.json`이 바뀐다. 규칙은 `.claude/rules/http.md`)
 - [ ] `src/agent_os/core/` — 포트 다섯 밖의 새 포트가 없는가, 프로바이더 import가 없는가
 - [ ] `src/agent_os/channel/`, `admin/` — 서로 import하지 않는가, 조립은 `main`·`server`인가
 - [ ] `src/agent_os/adapters/` — 포트를 상속하지 않고 시그니처로 만족하는가
