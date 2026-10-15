@@ -129,7 +129,7 @@ def test_Grep_도구는_경로나_glob_이_사용자_설정에_닿으면_막는�
 @pytest.mark.parametrize("출력", [None, "files_with_matches", "count"])
 def test_내용을_내지_않는_Grep_은_지나간다(출력: str | None) -> None:
     """Grep 도구의 기본 출력은 파일 이름(`files_with_matches`)이다. 이름과 수는 비밀을 내지 않는다
-    (PR 직전 버그 축)."""
+    (PR 직전 버그 축). 정규식으로 값을 맞혀 보는 길도 그래서 지나간다(못 보는 것)."""
     tool_input: ToolInput = {"path": "C:\\Users\\u\\.claude.json"}
     if 출력 is not None:
         tool_input["output_mode"] = 출력

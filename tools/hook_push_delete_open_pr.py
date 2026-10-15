@@ -144,6 +144,15 @@ class Deletion(NamedTuple):
     branches: tuple[str, ...]
 
 
+class PushWords(NamedTuple):
+    """push 뒤의 낱말을 git 처럼 읽은 것. 지우기·시험 실행 옵션과, 옵션이 아닌 낱말(원격과
+    refspec)."""
+
+    delete: bool
+    dry_run: bool
+    positionals: list[str]
+
+
 def deletions(command: str) -> list[Deletion]:
     """명령 안의 지우는 `git push` 들. 지우지 않거나 git 이 거절할 푸시는 뺀다.
 
@@ -271,6 +280,26 @@ def _long_option(word: str) -> str | None:
 
 def _deletion(args: list[str]) -> Deletion | None:
     """push 뒤의 낱말에서 지울 브랜치. 지우지 않거나 git 이 거절하면 None."""
+    words = _push_words(args)
+    if words is None:
+        return None
+    delete, dry_run, positionals = words
+    if dry_run or not positionals:
+        return None
+    remote, refspecs = positionals[0], positionals[1:]
+    if delete:
+        if not refspecs or any(":" in refspec for refspec in refspecs):
+            return None  # git 이 거절한다
+        names = [_branch(refspec) for refspec in refspecs]
+    else:
+        names = [_colon_target(refspec) for refspec in refspecs]
+    branches = tuple(name for name in names if name)
+    return Deletion(remote, branches) if branches else None
+
+
+def _push_words(args: list[str]) -> PushWords | None:
+    """push 뒤의 낱말을 옵션(긴 이름과 그 줄임, 묶음 `-fd`, 값을 먹는 옵션)과 나머지로 가른다.
+    git 이 거절하는 긴 옵션(표에 없거나 모호한 줄임)이 있으면 None."""
     delete = dry_run = False
     positionals: list[str] = []
     index = 0
@@ -300,17 +329,7 @@ def _deletion(args: list[str]) -> Deletion | None:
                 dry_run = dry_run or letter == "n"
             continue
         positionals.append(word)
-    if dry_run or not positionals:
-        return None
-    remote, refspecs = positionals[0], positionals[1:]
-    if delete:
-        if not refspecs or any(":" in refspec for refspec in refspecs):
-            return None  # git 이 거절한다
-        names = [_branch(refspec) for refspec in refspecs]
-    else:
-        names = [_colon_target(refspec) for refspec in refspecs]
-    branches = tuple(name for name in names if name)
-    return Deletion(remote, branches) if branches else None
+    return PushWords(delete, dry_run, positionals)
 
 
 def _colon_target(refspec: str) -> str | None:
