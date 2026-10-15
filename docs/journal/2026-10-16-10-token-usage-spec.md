@@ -146,3 +146,21 @@
 
 푸시하기 전에 origin/main(`9116978`)을 한 번 더 합쳤다. main이 일지 2026-10-16-07을 먼저 가져가 이 일지가 이름순으로 앞서게 되어,
 `tools/sibling_overlap.py --move`로 05를 10으로 옮기고 명세·ADR·이 일지의 인용을 고쳤다.
+
+## PR 리뷰 반영
+
+PR #253을 열고 `@coderabbitai review`를 남겼다. 검사는 모두 통과했고 CodeRabbit은 `Review rate limited`였다. claude-review 첫
+회차는 경계 지적 없이 Minor 셋과 Nit 둘이었다. 첫 회차라 지적마다 판단했다.
+
+- [Minor] 프로브의 `Boundary.candidate`(불리언 칸)가 `CODING_STANDARDS.md`의 불리언 플래그에 걸린다. 고쳤다. 후보 경계를
+  이름 있는 종류(`SELF_REVIEW`, `CANDIDATE_KINDS`)로 가른다.
+- [Minor] `report_results`가 표를 찍으면서 결과 수를 돌려준다(명령과 질의). 고쳤다. 표지 판정은 `cmd_results`가 결과 수를
+  직접 센다.
+- [Minor] `scan_results` 안의 `close`가 바깥 상태를 바꾼다. 프로브라 두고, 보고서 도구로 옮길 때 값으로 바꾼다고 명세의 273
+  절에 적었다.
+- [Nit] ADR 0033 본문 포인터가 다음 문장과 한 줄에 있다. 두었다. 포인터는 그 문장 마침표 바로 뒤라는 `.claude/rules/adr.md`의
+  모양이고, 마크다운은 목록 항목 안의 줄을 한 문단으로 그려 줄을 나눠도 보이는 모양이 같다.
+- [Nit] `records`의 `dict`에 타입 인자가 없다. 두었다. 프로브는 pyright의 판정 밖이고, 보고서 도구로 옮길 때 대기열 273이
+  타입을 채운다.
+
+고친 프로브는 `boundaries 24`·`results 24`로 다시 돌려 0으로 끝났다. 판정은 그대로라 README의 수(17:14 UTC 실행)는 바뀌지 않는다.

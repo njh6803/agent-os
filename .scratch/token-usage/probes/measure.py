@@ -262,7 +262,7 @@ def describe_spread(values: list[int]) -> str:
     return f"중앙값 {q[49]:,.0f}, 90% {q[89]:,.0f}, 99% {q[98]:,.0f}, 최대 {max(values):,}"
 
 
-def report_results(label: str, scans: list[SessionScan]) -> int:
+def report_results(label: str, scans: list[SessionScan]) -> None:
     results = [r for s in scans for r in s.results]
     total_weight = sum(s.total_weight for s in scans) or 1.0
     print(f"\n## {label}: 세션 {len(scans)}개, 결과 {len(results):,}개")
@@ -296,18 +296,18 @@ def report_results(label: str, scans: list[SessionScan]) -> int:
                 f"| {len({i for i, _ in over}):,} "
                 f"| {sum(r.weight for _, r in over) / total_weight:.2%} |"
             )
-    return len(results)
 
 
 def cmd_results(hours: float) -> None:
     """범위 없이 받은 결과만 문턱과 견준다(범위를 준 읽기에는 알릴 까닭이 없다)."""
     mains = [scan_results(p) for p in session_files(hours)]
     subs = [scan_results(p) for p in subagent_files(hours)]
-    print(f"최근 {hours:g}시간(파일 수정 시각), 이 저장소")
-    n = report_results("메인 세션", mains) + report_results("서브에이전트", subs)
-    if n == 0:
+    if sum(len(s.results) for s in mains + subs) == 0:
         print("표지 없음: Read·Bash·PowerShell 결과를 하나도 읽지 못했다. 측정이 아니다.")
         raise SystemExit(2)
+    print(f"최근 {hours:g}시간(파일 수정 시각), 이 저장소")
+    report_results("메인 세션", mains)
+    report_results("서브에이전트", subs)
 
 
 @dataclass
@@ -317,11 +317,15 @@ class Call:
     cost: float | None
 
 
+SELF_REVIEW = "셀프 리뷰 시작"
+# ADR 0033 본문의 경계에 없던 후보. `cmd_boundaries`가 이것을 빼고 넣은 두 규칙을 견준다.
+CANDIDATE_KINDS = frozenset({SELF_REVIEW})
+
+
 @dataclass
 class Boundary:
     kind: str
     at_call: int
-    candidate: bool
 
 
 def scan_boundaries(p: Path) -> tuple[list[Call], list[Boundary]]:
@@ -347,7 +351,7 @@ def scan_boundaries(p: Path) -> tuple[list[Call], list[Boundary]]:
                 inp = b.get("input") if isinstance(b.get("input"), dict) else {}
                 command = str(inp.get("command", ""))
                 if name == "Skill" and is_self_review(str(inp.get("skill", ""))):
-                    marks.append(Boundary("셀프 리뷰 시작", len(calls), candidate=True))
+                    marks.append(Boundary(SELF_REVIEW, len(calls)))
                 elif name.endswith("create_pull_request"):
                     pending[str(b.get("id"))] = "pr"
                 elif name in ("Bash", "PowerShell") and PR_CREATE.search(command):
@@ -363,11 +367,11 @@ def scan_boundaries(p: Path) -> tuple[list[Call], list[Boundary]]:
                 if what is None or b.get("is_error") is True:
                     continue
                 if what == "pr":
-                    marks.append(Boundary("PR 열기", len(calls), candidate=False))
+                    marks.append(Boundary("PR 열기", len(calls)))
                     pr_opened = True
                 else:
                     label = "커밋(이 세션이 PR을 연 뒤)" if pr_opened else "커밋(PR을 열기 전)"
-                    marks.append(Boundary(label, len(calls), candidate=False))
+                    marks.append(Boundary(label, len(calls)))
     return calls, marks
 
 
@@ -446,7 +450,7 @@ def cmd_boundaries(hours: float) -> None:
         if cross is None:
             not_crossed += 1
             continue
-        adr.append(outcome_of(calls, [b for b in marks if not b.candidate], cross))
+        adr.append(outcome_of(calls, [b for b in marks if b.kind not in CANDIDATE_KINDS], cross))
         with_candidate.append(outcome_of(calls, marks, cross))
     if calls_n == 0 or marks_n == 0:
         print("표지 없음: 메인 세션의 모델 호출이나 단계 경계를 하나도 읽지 못했다. 측정이 아니다.")
