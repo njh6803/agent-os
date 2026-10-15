@@ -13,8 +13,8 @@ README의 실행 기록이다. `compactions`만 시간 인자가 없고 나머�
   나눈다.
 - `idle <시간>`: 직전 모델 호출과의 간격별로 세션 컨텍스트 절반 이상을 캐시에 다시 쓴 비율, 캐시
   쓰기의 TTL 갈래, `tools/wait_ci.py`를 백그라운드로 띄운 뒤 깨어난 호출.
-- `simulate <시간>`: 자동 압축 지점을 낮췄다면 메인 세션이 읽은 컨텍스트가 얼마나 줄었을지(어림,
-  가정은 `_simulate` 독스트링)와 시작 컨텍스트의 분포.
+- `simulate <시간>`: 자동 압축 지점을 낮췄다면 메인 세션이 읽은 세션 컨텍스트가 얼마나
+  줄었을지(어림, 가정은 `_simulate` 독스트링)와 시작 컨텍스트의 분포.
 - `compactions`: 기록 전체에서 실제로 일어난 압축의 전후.
 - `reads <시간>`: 메인 세션 컨텍스트에 들어온 항목을 "글자 수 × 그 뒤 실려 간 호출 수"로 무게를 매겨
   구성 요소별로 나누고, 무게가 큰 Read 파일과 Bash 명령을 든다.
@@ -292,7 +292,9 @@ def cmd_idle(hours: float) -> None:
     require(n, "메인 세션의 모델 호출")
     require(ci_launch, "백그라운드로 띄운 wait_ci")
     print(f"최근 {hours:g}시간 메인 세션, 모델 호출 {n:,}회, 환산 비용 ${total:,.2f}")
-    print("\n| 직전 호출과의 간격 | 호출(컨텍스트 5만 초과) | 절반 이상을 다시 쓴 호출 | 비율 |")
+    print(
+        "\n| 직전 호출과의 간격 | 호출(세션 컨텍스트 5만 초과) | 절반 이상을 다시 쓴 호출 | 비율 |"
+    )
     print("|---|--:|--:|--:|")
     for lo, hi in buckets:
         a, r = stat[lo]
@@ -306,18 +308,18 @@ def cmd_idle(hours: float) -> None:
     if wakes:
         gaps = sorted(g for g, _, _ in wakes)
         print(f"- 대기 중앙값 {statistics.median(gaps):.1f}분, 최대 {gaps[-1]:.1f}분")
-        print(f"- 컨텍스트 절반 이상을 다시 쓴 호출 {sum(1 for _, _, r in wakes if r)}회")
+        print(f"- 세션 컨텍스트 절반 이상을 다시 쓴 호출 {sum(1 for _, _, r in wakes if r)}회")
         print(f"- 깨어난 호출의 비용 ${wake_cost:,.2f} ({wake_cost / total:.2%})")
 
 
 def _simulate(
     per_session: list[list[int]], threshold: int, summary: int, reread: int
 ) -> tuple[int, int]:
-    """압축 지점이 threshold였다면 읽은 컨텍스트 합과 압축 횟수.
+    """압축 지점이 threshold였다면 읽은 세션 컨텍스트 합과 압축 횟수.
 
-    가정(어림): 호출마다 늘어난 양은 압축 뒤에도 같다. 압축 뒤 컨텍스트는 세션의 첫 컨텍스트에
-    요약(summary)과 다시 읽기(reread)를 더한 것이다. 압축 호출은 그때의 컨텍스트를 한 번 더 읽는다.
-    실제 기록에서 절반 아래로 줄어든 자리는 증가를 0으로 둔다.
+    가정(어림): 호출마다 늘어난 양은 압축 뒤에도 같다. 압축 뒤 세션 컨텍스트는 시작 컨텍스트에
+    요약(summary)과 다시 읽기(reread)를 더한 것이다. 압축 호출은 그때의 세션 컨텍스트를 한 번 더
+    읽는다. 실제 기록에서 절반 아래로 줄어든 자리는 증가를 0으로 둔다.
     """
     total = comps = 0
     for ctxs in per_session:
@@ -364,7 +366,7 @@ def cmd_simulate(hours: float) -> None:
     )
     q = statistics.quantiles(firsts, n=4)
     print(f"시작 컨텍스트: 중앙값 {statistics.median(firsts):,.0f}, 사분위 {q[0]:,.0f}~{q[2]:,.0f}")
-    print("\n| 자동 압축 지점 | 압축 횟수 | 세션당 | 읽은 컨텍스트 절감률 |")
+    print("\n| 자동 압축 지점 | 압축 횟수 | 세션당 | 읽은 세션 컨텍스트 절감률 |")
     print("|--:|--:|--:|--:|")
     for t in (150_000, 200_000, 300_000, 400_000, 500_000):
         total, comps = _simulate(per_session, t, 20_000, 30_000)
@@ -465,7 +467,7 @@ def cmd_compactions() -> None:
         "계기",
         "압축 전",
         "요약 글자",
-        "압축 뒤 첫 컨텍스트",
+        "압축 뒤 첫 세션 컨텍스트",
         "뒤 호출",
         "뒤 30호출 Read",
         "다시 읽기",
@@ -536,7 +538,7 @@ def _flush(
 
 
 def cmd_reads(hours: float) -> None:
-    """무게 = 글자 수 × 그 항목이 들어온 뒤 실려 간 호출 수. 컨텍스트가 직전의 절반 아래로 줄면
+    """무게 = 글자 수 × 그 항목이 들어온 뒤 실려 간 호출 수. 세션 컨텍스트가 직전의 절반 아래로 줄면
     거기서 끊는다."""
     cutoff = time.time() - hours * 3600
     weight: dict[str, float] = defaultdict(float)
@@ -691,9 +693,9 @@ def cmd_rereads(hours: float) -> None:
 
     다시 읽기 후보: 같은 경로를 같은 범위(offset, limit)로, 또는 전체를 이미 읽었는데 다시 읽은 것.
     그 사이에 Edit·Write·NotebookEdit로 그 파일을 고쳤거나, 압축이 있었거나, 작업 트리를 바꾸는 git
-    명령 (pull, merge, checkout 등)이 돌았으면 세지 않는다. 낭비라는 판정이 아니다. 긴 컨텍스트에서
-    앞의 내용을 정확히 짚으려고 다시 읽는 것도 여기 든다. git 밖의 Bash(sed, 스크립트)로 바뀐 파일은
-    보지 못해 후보를 많게 셀 수 있다.
+    명령 (pull, merge, checkout 등)이 돌았으면 세지 않는다. 낭비라는 판정이 아니다. 긴 세션
+    컨텍스트에서 앞의 내용을 정확히 짚으려고 다시 읽는 것도 여기 든다. git 밖의 Bash(sed,
+    스크립트)로 바뀐 파일은 보지 못해 후보를 많게 셀 수 있다.
     """
     cut = time.time() - hours * 3600
     total = dup = reads = dups = git_resets = 0
