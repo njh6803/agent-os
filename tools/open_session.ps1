@@ -38,6 +38,9 @@ public static class OpenSessionPower {
     // 실패하면 -1. GetLastInputInfo 는 실패를 예외가 아니라 false 로 알린다.
     public static long IdleSeconds() { var l = new LastInput(); l.cbSize = (uint)Marshal.SizeOf(l); if (!GetLastInputInfo(ref l)) { return -1; } return ((uint)Environment.TickCount - l.dwTime) / 1000; }
 }
+public static class OpenSessionKeys {
+    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+}
 '@
 
 $Auto = [System.Windows.Automation.AutomationElement]
@@ -54,12 +57,19 @@ function Get-ClaudeWindow {
     return $found[0]
 }
 
-# 모델 고르기와 되돌리기는 키를 쓰지 않고 접근성 패턴(펼치기, 항목 선택, 값 설정)만 쓴다. 키는 앞에 있는 창으로 간다. 사람이
-# 다른 앱을 쓰는 동안 Claude 창의 요소에 SetFocus 를 해도 Claude 창은 앞으로 오지 않았다(Chrome 이 앞에 있을 때
-# .scratch/harness/probes/foreground_window.ps1 로 손으로 봤다, 2026-10-12). 패턴은 창이 뒤에 있어도 그 요소에 닿는다.
+# 모델 고르기와 되돌리기는 앞에 있는 창으로 가는 키(SendKeys)를 쓰지 않는다. 사람이 다른 앱을 쓰는 동안 Claude 창의 요소에
+# SetFocus 를 해도 Claude 창은 앞으로 오지 않았다(Chrome 이 앞에 있을 때 .scratch/harness/probes/foreground_window.ps1 로
+# 손으로 봤다, 2026-10-12). 그래서 접근성 패턴(펼치기, 항목 선택, 값 설정)을 쓰고, 패턴으로 열리지 않는 노력 하위 메뉴 하나만
+# Claude 창 핸들에 PostMessage 로 넣는 키로 연다(Open-EffortSubmenu). 그 키는 앞에 있는 창이 아니라 그 핸들로만 간다.
 # 펼치기는 돌아오지 않은 적이 있어(일지 2026-09-21 open-session, 사이드바 행) 스레드 잡 안에서 8초 제한으로 부른다.
-# 입력창의 모델·노력 버튼에서는 돌아왔다(.scratch/harness/probes/composer_patterns.ps1, 2026-10-12).
-function Invoke-PatternTimed($el, [string] $action) {
+# 입력창의 모델 버튼에서는 돌아왔다(.scratch/harness/probes/composer_patterns.ps1, 2026-10-12·2026-10-16).
+# 시간을 넘긴 잡은 지우지 않고 남긴다. 멈춘 스레드 잡의 Remove-Job -Force 는 그 호출이 끝날 때까지 기다려 제한 시간이 걸리지
+# 않았다. 남긴 스레드는 pwsh 가 끝날 때도 기다리므로 $script:HungCalls 로 세어 두고, 스크립트 끝(Invoke-Action)이 출력을 마친 뒤
+# 프로세스를 끝낸다. 멈춘 호출을 15초 잠으로 흉내 내고 제한을 2초로 둔 .scratch/harness/probes/hung_thread_job.ps1 에서, 지우는
+# 모양은 15.1초에 돌아왔고, 남기는 모양은 2.1초에 돌아왔지만 프로세스가 15.7초에 끝났으며, 끝내는 모양은 3초 안에 출력과 종료
+# 코드(던졌으면 1)를 남기고 끝났다(2026-10-16).
+$script:HungCalls = 0
+function Invoke-PatternTimed($el, [string] $action, [int] $timeoutSec = 8) {
     $job = Start-ThreadJob -ArgumentList $el, $action -ScriptBlock {
         param($e, $a)
         switch ($a) {
@@ -69,8 +79,11 @@ function Invoke-PatternTimed($el, [string] $action) {
         }
         'ok'
     }
+    if (-not (Wait-Job $job -Timeout $timeoutSec)) {
+        $script:HungCalls++
+        return "$action-hung"
+    }
     try {
-        if (-not (Wait-Job $job -Timeout 8)) { return "$action-hung" }
         $out = Receive-Job $job -ErrorAction SilentlyContinue -ErrorVariable failed
         if ($failed) { return "$action-error: $($failed[0])" }
         return $out
@@ -308,17 +321,42 @@ function Find-EnabledSendButton($win) {
 
 # 지시문의 `모델:` 줄(`모델: <모델 메뉴의 이름> / <레벨>`)을 읽는다. 줄이 없으면 $null 이고 입력창에 있던 값으로 연다.
 # 줄이 있는데 읽을 수 없으면 쏘기 전에 멈춘다. 틀린 줄을 건너뛰고 열면 지시문이 정한 것과 다른 모델로 첫 턴이 돈다.
-# 레벨은 API 이름 그대로 소문자이고, 칸은 입력창 노력 슬라이더의 위치다. 앱 2.19675.0.0 에서 0~4 칸의 이름이 낮음·중간·
-# 높음·엑스트라·최대였고 여섯째 칸(5)은 레벨이 아닌 `Ultracode` 라 고르지 않는다(.scratch/harness/probes/composer_effort_labels.ps1,
-# 2026-10-12). 0·1·2·4 는 그 칸으로 연 시험 세션의 get_session 이 low·medium·high·max 였고, 3 은 엑스트라로 연 세션의
-# get_session 이 xhigh 였다(손으로 봤다).
+# 레벨은 API 이름 그대로 소문자이고, 칸은 입력창 노력 칸의 차례다. 앱 2.19675.0.0 에서는 노력 슬라이더였고 0~4 칸의 이름이
+# 낮음·중간·높음·엑스트라·최대, 여섯째 칸(5)은 레벨이 아닌 `Ultracode` 였다. 0·1·2·4 는 그 칸으로 연 시험 세션의
+# get_session 이 low·medium·high·max 였고, 3 은 엑스트라로 연 세션의 get_session 이 xhigh 였다(손으로 봤다, 2026-10-12).
+# 앱 2.37337.1.0 에서는 슬라이더가 모델 메뉴 안의 노력 하위 메뉴가 되었고, 항목의 차례와 덧붙임을 뗀 이름은 같다(낮음, 중간 추천,
+# 높음, 엑스트라, 최대 3.5× 이상 사용량, Ultracode. .scratch/harness/probes/composer_effort_labels.ps1, 2026-10-16). Ultracode 는
+# 고르지 않는다.
 # 줄 머리에서 시작하는 줄만 본다. 지시문 형식은 불릿이나 인용 없이 줄 머리이고, 다른 칸의 글 속 `모델:` 은 줄이 아니다.
 # 결정표의 칸(`Opus 5.5 / xhigh`)을 그대로 옮긴 줄도 읽도록 백틱을 벗긴다(hook_prompt_directive 가 `브랜치:` 값에서 하는 것과 같다).
 function Get-EffortSteps { return @('low', 'medium', 'high', 'xhigh', 'max') }
 
-# 노력 버튼에 보이는 칸의 이름(앱 2.19675.0.0, 한국어). 버튼은 이름 뒤에 덧붙임이 붙을 수 있다(`최대 3.5× 이상 사용량`).
-# Get-EffortSteps 와 차례가 같다. 고른 뒤 버튼이 이 이름을 보이는지 보고, 고르기 전의 값을 이 이름으로 읽는다.
+# 노력 칸의 이름(앱 2.37337.1.0, 한국어). Get-EffortSteps 와 차례가 같다. 입력창의 모델 버튼은 이 이름을 자식 Text 로 보이고
+# (Split-ComposerTexts), 노력 하위 메뉴의 항목은 이름 뒤에 덧붙임이 붙을 수 있다(`중간 추천`, `최대 3.5× 이상 사용량`).
 function Get-EffortLabels { return @('낮음', '중간', '높음', '엑스트라', '최대') }
+
+# 노력 칸 이름의 차례. 목록 밖이면(Ultracode, 앱이 바꾼 이름) $null 이고, 그 칸은 스크립트가 고르지도 되돌리지도 않는다.
+function Get-EffortLabelStep([string] $label) {
+    $i = [array]::IndexOf((Get-EffortLabels), $label)
+    if ($i -lt 0) { return $null }
+    return $i
+}
+
+# 입력창의 `모델:` 버튼 하나가 모델과 노력을 함께 보인다(앱 2.37337.1.0). 이름은 `최대` 칸에서 `모델: Opus 5.5 최대 3.5× 이상
+# 사용량` 이라 이름으로는 모델과 노력을 가르지 못하고, 자식 Text 가 [모델, 공백, 노력] 이다(composer_effort_labels.ps1,
+# 2026-10-16). 고속 모드가 켜지면 그 사이에 `빠름` 이 들었다(composer_menu_tree.ps1, 같은 날). 그래서 공백이 아닌 첫 글을 모델로,
+# 마지막 글을 노력으로 읽는다. 둘보다 적으면 앱이 모양을 바꾼 것이라 멈춘다. 보내기 전에 멈춰 사람이 값을 맞춰 보낸다. 마지막 글이
+# 노력 칸이 아니면(Ultracode, 노력이 없는 모양) Get-EffortLabelStep 이 $null 을 내어 그 칸은 되돌리지 않는다.
+function Split-ComposerTexts([string[]] $texts) {
+    $parts = @($texts | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
+    if ($parts.Count -lt 2) { throw "모델 버튼의 글이 [모델, 노력] 보다 적다([$($texts -join '|')]). 앱이 입력창의 모양을 바꿨다." }
+    return [pscustomobject]@{ Model = $parts[0]; EffortLabel = $parts[-1] }
+}
+
+# 메뉴 항목의 이름이 그 칸인지. 이름이 같거나 이름 뒤에 공백과 덧붙임이 온다(`Sonnet 5.5 기본값`, `중간 추천`).
+function Test-NameShows([string] $name, [string] $label) {
+    return [bool]($name -and ($name -ceq $label -or $name.StartsWith("$label ", [StringComparison]::Ordinal)))
+}
 
 function Read-ModelLine([string] $prompt) {
     $steps = Get-EffortSteps
@@ -335,7 +373,7 @@ function Read-ModelLine([string] $prompt) {
     return [pscustomobject]@{ Model = $model; Effort = $effort; Step = [array]::IndexOf($steps, $effort) }
 }
 
-# 지시문 입력창과 같은 입력창 묶음의 버튼(`모델: …`, `노력: …`). 분할 보기면 패널마다 입력창이 있어 창 전체에서 찾으면 다른
+# 지시문 입력창과 같은 입력창 묶음의 버튼(`모델: …`). 분할 보기면 패널마다 입력창이 있어 창 전체에서 찾으면 다른
 # 세션의 버튼을 누른다. 입력창에서 위로 올라가며 그 이름의 버튼이 처음 보이는 조상에서 하나일 때만 돌려준다.
 function Find-ComposerButton($box, [string] $prefix) {
     $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
@@ -351,61 +389,132 @@ function Find-ComposerButton($box, [string] $prefix) {
     return $null
 }
 
-function Test-ButtonShows($button, [string] $label) {
-    try { $name = $button.Current.Name } catch { return $false }
-    return [bool]($name -ceq $label -or $name.StartsWith("$label "))
-}
-
-# 노력 버튼이 보이는 칸. 이름이 Get-EffortLabels 밖이면(Ultracode, 앱이 바꾼 이름) $null 이다.
-function Get-EffortButtonStep($button) {
-    $labels = Get-EffortLabels
-    for ($i = 0; $i -lt $labels.Count; $i++) { if (Test-ButtonShows $button "노력: $($labels[$i])") { return $i } }
-    return $null
-}
-
 function Get-EditValue($el) {
     try { return $el.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { return '' }
 }
 
-# 모델 메뉴의 항목은 RadioButton 이고 기본값이면 이름 뒤에 표시가 붙는다(`Sonnet 5.5 기본값`, 2026-10-12 손으로 봤다,
-# .scratch/harness/probes/composer_menu_tree.ps1). 그래서 이름이 같거나 이름 뒤에 공백이 오는 것을 고른다. 메뉴와 아래의
-# 노력 슬라이더는 입력창 묶음이 아니라 창 전체에서 찾는다. 한 번에 하나만 열려 있고, 방금 연 것이 그것이다.
-function Find-ModelItem($win, [string] $model) {
-    $radioCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::RadioButton)
-    return @($win.FindAll($Scope::Descendants, $radioCond) | Where-Object { try { $n = $_.Current.Name; $n -ceq $model -or $n.StartsWith("$model ") } catch { $false } }) | Select-Object -First 1
+# 입력창 묶음의 모델 버튼이 지금 보이는 모델과 노력. 자식 Text 로 읽는다(Split-ComposerTexts 의 주석).
+function Read-ComposerButton($button) {
+    $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
+    return Split-ComposerTexts @($button.FindAll($Scope::Children, $textCond) | ForEach-Object { $_.Current.Name })
 }
 
-# 입력창 묶음의 모델 버튼이 그 모델을 보이게 한다. 이미 그 모델이면 메뉴를 열지 않는다. 바꾼 뒤 버튼 이름으로 맞았는지 본다.
+# 입력창 묶음의 모델 버튼이 -Model 이나 -EffortLabel 로 준 것을 보이면 그 버튼, 아니면 $null. 주지 않은 쪽은 보지 않는다.
+# Wait-For 가 부른다. 버튼을 못 읽는 것은 아직 다시 그려지는 중일 수 있어 맞지 않는 것으로 친다.
+function Find-ComposerShowing($box, [string] $Model, [string] $EffortLabel) {
+    $button = Find-ComposerButton $box '모델:'
+    if (-not $button) { return $null }
+    try { $read = Read-ComposerButton $button } catch { return $null }
+    if ($Model -and $read.Model -cne $Model) { return $null }
+    if ($EffortLabel -and $read.EffortLabel -cne $EffortLabel) { return $null }
+    return $button
+}
+
+# 모델 메뉴와 노력 하위 메뉴의 항목은 RadioButton 이고 이름 뒤에 덧붙임이 붙을 수 있다(`Sonnet 5.5 기본값`, `중간 추천`,
+# .scratch/harness/probes/composer_menu_tree.ps1). 그래서 Test-NameShows 로 고른다. 메뉴는 입력창 묶음이 아니라 창 전체에서
+# 찾는다. 한 번에 하나만 열려 있고, 방금 연 것이 그것이다.
+function Find-MenuRadio($win, [string] $label) {
+    $radioCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::RadioButton)
+    return @($win.FindAll($Scope::Descendants, $radioCond) | Where-Object { try { Test-NameShows $_.Current.Name $label } catch { $false } }) | Select-Object -First 1
+}
+
+# 펼친 메뉴의 항목을 고른다. 모델 항목을 고르면 모델 메뉴가, 노력 항목을 고르면 하위 메뉴와 모델 메뉴가 함께 스스로 닫혔다
+# (composer_patterns.ps1·composer_effort_labels.ps1 의 menu-open-after-select·model-menu-state-after 줄, 2026-10-16).
+function Select-MenuRadio($win, [string] $label, [string] $what) {
+    $item = Wait-For { Find-MenuRadio $win $label } "${what}의 '$label'" 5
+    if (-not $item.Current.IsEnabled) { throw "${what}의 '$($item.Current.Name)'가 비활성이다. 사람이 메뉴를 보고 판단한다." }
+    $chosen = Invoke-PatternTimed $item 'select'
+    if ($chosen -ne 'ok') { throw "${what}의 '$label'을 고르지 못했다($chosen)." }
+}
+
+# 입력창 묶음의 모델 버튼이 그 모델을 보이게 한다. 이미 그 모델이면 메뉴를 열지 않는다. 바꾼 뒤 버튼의 글로 맞았는지 본다.
 function Select-ComposerModelItem($win, $box, [string] $model) {
-    $label = "모델: $model"
     $button = Wait-For { Find-ComposerButton $box '모델:' } '입력창의 모델 버튼' 5
-    if (Test-ButtonShows $button $label) { return }
+    if ((Read-ComposerButton $button).Model -ceq $model) { return }
     $opened = Invoke-PatternTimed $button 'expand'
     if ($opened -ne 'ok') { throw "모델 메뉴를 펼치지 못했다($opened)." }
-    # 메뉴를 연 뒤 멈추면 메뉴가 열린 채 남는다. 닫고 던진다. 항목을 고르면 메뉴는 스스로 닫혔다(composer_patterns.ps1).
-    try {
-        $item = Wait-For { Find-ModelItem $win $model } "모델 메뉴의 '$model'" 5
-        if (-not $item.Current.IsEnabled) { throw "모델 메뉴의 '$($item.Current.Name)'가 비활성이다. 사람이 메뉴를 보고 판단한다." }
-        $chosen = Invoke-PatternTimed $item 'select'
-        if ($chosen -ne 'ok') { throw "모델 메뉴의 '$model'을 고르지 못했다($chosen)." }
-    } catch {
+    # 메뉴를 연 뒤 멈추면 메뉴가 열린 채 남는다. 닫고 던진다.
+    try { Select-MenuRadio $win $model '모델 메뉴' }
+    catch {
         Invoke-PatternTimed $button 'collapse' | Out-Null
         throw
     }
-    Wait-For { $b = Find-ComposerButton $box '모델:'; if ($b -and (Test-ButtonShows $b $label)) { $b } } "'$label' 로 바뀐 모델 버튼" 5 | Out-Null
+    Wait-For { Find-ComposerShowing $box -Model $model } "'$model' 을 보이는 모델 버튼" 5 | Out-Null
+}
+
+function Test-Expanded($el) {
+    try { return [bool]($el.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Current.ExpandCollapseState -eq 'Expanded') } catch { return $false }
+}
+
+function Find-EffortSubmenu($win) {
+    $menuItemCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::MenuItem)
+    return @($win.FindAll($Scope::Descendants, $menuItemCond) | Where-Object { try { $_.Current.Name.StartsWith('노력', [StringComparison]::Ordinal) } catch { $false } }) | Select-Object -First 1
+}
+
+# 노력 하위 메뉴는 펼치기 패턴으로 열리지 않는다. 펼치기는 돌아오지만 상태가 Collapsed 로 남고 새 요소가 0개였다
+# (composer_menu_tree.ps1 -Effort 의 `after expand-pattern` 줄, 2026-10-16). 그래서 그 항목에 포커스를 준 뒤 → 키를 PostMessage 로
+# Claude 창 핸들에 넣는다. SendKeys 는 앞에 있는 창으로 가지만 PostMessage 는 "지정한 창을 만든 스레드의 메시지 큐"에 넣는
+# Win32 호출이라(learn.microsoft.com 의 PostMessageW 문서 원문을 받아 대 봤다, 2026-10-16) 다른 앱으로 가지 않는다.
+# Claude 창이 앞에 없으면 하위 메뉴가 열리지 않았다. 메모장을 앞에 둔 composer_menu_tree.ps1 -Effort -Behind 한 회차였고, 같은
+# 고속 모드 화면에서 창이 앞에 있던 회차는 열렸다. 모델 메뉴를 펼치면 앱이 창을 스스로 앞으로 올렸다(메모장을 앞에 둔
+# composer_patterns.ps1 -Background 에서 첫 펼치기 직후의 `after-expand` 줄이 True, 2026-10-16 한 회차). 열리지 않으면 부르는
+# 쪽이 열린 하위 메뉴를 기다리다 멈추고 보내지 않는다.
+function Open-EffortSubmenu($win, $trigger) {
+    $WM_KEYDOWN = 0x0100
+    $WM_KEYUP = 0x0101
+    $VK_RIGHT = 0x27
+    # lParam: 반복 횟수(0~15비트), 스캔 코드(16~23비트), 확장 키(24비트). 뗄 때는 이전 상태(30비트)와 전이(31비트)를 더한다.
+    $repeat = 1
+    $scanCode = 0x4D
+    $downInfo = [int64]$repeat -bor ([int64]$scanCode -shl 16) -bor (1L -shl 24)
+    $upInfo = $downInfo -bor (1L -shl 30) -bor (1L -shl 31)
+    $trigger.SetFocus()
+    Start-Sleep -Milliseconds 300
+    $window = [IntPtr]$win.Current.NativeWindowHandle
+    # 핸들이 0이면 PostMessage 는 부른 스레드의 큐에 넣고 참을 낸다. 받는 창이 더 높은 권한이면(UIPI) 거짓을 낸다. 둘 다 창이 뒤에
+    # 있다는 안내로 잘못 읽히지 않게 여기서 멈춘다.
+    if ($window -eq [IntPtr]::Zero) { throw 'Claude 창의 핸들을 읽지 못해 노력 하위 메뉴를 열 키를 넣지 못했다.' }
+    $down = [OpenSessionKeys]::PostMessage($window, $WM_KEYDOWN, [IntPtr]$VK_RIGHT, [IntPtr]$downInfo)
+    $up = [OpenSessionKeys]::PostMessage($window, $WM_KEYUP, [IntPtr]$VK_RIGHT, [IntPtr]$upInfo)
+    if (-not ($down -and $up)) { throw "Claude 창에 노력 하위 메뉴를 열 키를 넣지 못했다(PostMessage down=$down up=$up. 앱이 더 높은 권한으로 돌면 그렇다)." }
+}
+
+# 입력창 묶음의 모델 버튼이 그 노력 칸을 보이게 한다. 노력은 모델 메뉴 안의 `노력 <이름>` 하위 메뉴의 항목이다(앱 2.37337.1.0).
+# 이미 그 칸이면 메뉴를 열지 않는다. 바꾼 뒤 버튼의 글로 맞았는지 본다. 칸이 그 모델의 메뉴에 없으면 항목을 찾지 못해 멈춘다.
+function Select-ComposerEffortItem($win, $box, [int] $step) {
+    $label = (Get-EffortLabels)[$step]
+    $button = Wait-For { Find-ComposerButton $box '모델:' } '입력창의 모델 버튼' 5
+    if ((Read-ComposerButton $button).EffortLabel -ceq $label) { return }
+    $opened = Invoke-PatternTimed $button 'expand'
+    if ($opened -ne 'ok') { throw "모델 메뉴를 펼치지 못했다($opened)." }
+    try {
+        $trigger = Wait-For { Find-EffortSubmenu $win } "모델 메뉴의 '노력' 항목" 5
+        Open-EffortSubmenu $win $trigger
+        # 열렸는지를 항목보다 먼저 본다. 열리지 않은 것(창이 뒤에 있다)과 그 모델의 메뉴에 그 칸이 없는 것을 가른다. 항목은 매번
+        # 다시 찾는다. 다시 그려져 낡은 요소는 상태를 읽지 못해 열린 메뉴를 놓친다.
+        Wait-For { $t = Find-EffortSubmenu $win; if ($t -and (Test-Expanded $t)) { $t } } '열린 노력 하위 메뉴(Claude 창이 앞에 있어야 열린다)' 3 | Out-Null
+        Select-MenuRadio $win $label '노력 메뉴'
+    } catch {
+        # 접을 하위 메뉴 항목도 다시 찾는다(위와 같은 까닭). 찾다 던져도 원래 오류를 가리지 않는다.
+        $open = try { Find-EffortSubmenu $win } catch { $null }
+        if ($open -and (Test-Expanded $open)) { Invoke-PatternTimed $open 'collapse' | Out-Null }
+        Invoke-PatternTimed $button 'collapse' | Out-Null
+        throw
+    }
+    Wait-For { Find-ComposerShowing $box -EffortLabel $label } "'$label' 을 보이는 모델 버튼" 5 | Out-Null
 }
 
 # 새 세션 입력창에 지금 있는 모델과 노력(앱이 기억한 새 세션 화면의 기본값). 고르기 전에 읽어 두고, 보낸 뒤
-# Restore-DraftDefaults 가 이 값으로 되돌린다. 노력의 칸은 버튼 이름으로 읽고, 이름이 Get-EffortLabels 밖이면(Ultracode)
+# Restore-DraftDefaults 가 이 값으로 되돌린다. 노력의 칸은 모델 버튼의 글로 읽고, 이름이 Get-EffortLabels 밖이면(Ultracode)
 # 칸은 $null 이고 되돌리지 않는다. 고르기를 시작하기 전에 따로 읽는 것은, 고르다 던져도 부르는 쪽이 원래 값을 알아야
 # 사람에게 복구를 남길 수 있어서다.
 function Read-DraftDefaults($box) {
     $button = Wait-For { Find-ComposerButton $box '모델:' } '지시문 입력창의 모델 버튼' 5
-    $effortButton = Wait-For { Find-ComposerButton $box '노력:' } '지시문 입력창의 노력 버튼' 5
+    $read = Read-ComposerButton $button
     return [pscustomobject]@{
-        Model = $button.Current.Name.Substring('모델:'.Length).Trim()
-        EffortStep = Get-EffortButtonStep $effortButton
-        EffortLabel = $effortButton.Current.Name
+        Model = $read.Model
+        EffortStep = Get-EffortLabelStep $read.EffortLabel
+        EffortLabel = $read.EffortLabel
     }
 }
 
@@ -423,45 +532,21 @@ function Get-PendingRestoreLine($draft, $pick) {
 }
 
 # 지시문의 모델 줄대로 새 세션 입력창의 모델과 노력을 고른다. 딥링크는 모델을 싣지 못하고(앱의 `code/new` 처리기는
-# q·prompt·folder·file 과 SSH 인자만 읽는다, 앱 2.19675.0.0 번들을 읽었다), 보낸 뒤 바꾸는 도구는 다음 턴부터라 첫 턴에 늦다.
-# 모델을 먼저 고른다. 모델을 바꾸면 노력이 그 모델의 값으로 바뀔 수 있다. 모델은 버튼 이름으로, 노력은 슬라이더 칸과 버튼
-# 이름으로 맞았는지 보고, 아니면 보내지 않고 멈춘다. 앱이 칸의 뜻을 바꾸면 이름이 어긋나 여기서 멈춘다. 키 없이 패턴만
-# 쓴다(Invoke-PatternTimed 의 주석). 고속 모드 체크박스와 슬라이더의 여섯째 칸은 건드리지 않는다.
+# q·prompt·folder·file 과 SSH 인자만 읽는다, 앱 2.19675.0.0 번들을 읽었다. 2.37337.1.0 은 그 밖에 출처를 적는 source 를 더 읽는다),
+# 보낸 뒤 바꾸는 도구는 다음 턴부터라 첫 턴에 늦다.
+# 모델을 먼저 고른다. 모델을 바꾸면 노력이 그 모델의 값으로 바뀔 수 있다. 모델과 노력은 입력창의 모델 버튼이 보이는 글로
+# 맞았는지 보고, 아니면 보내지 않고 멈춘다. 앱이 칸의 이름을 바꾸면 항목을 찾지 못해 여기서 멈춘다. 앞에 있는 창으로 가는
+# 키는 쓰지 않는다(Invoke-PatternTimed 의 주석). 고속 모드 체크박스와 노력 메뉴의 Ultracode 칸은 건드리지 않는다.
 # 새 세션 화면의 모델과 노력은 앱이 다음 새 세션 화면의 기본값으로 기억하고, 노력은 보내지 않고 옮기기만 해도 남는다
-# (.scratch/harness/probes/composer_effort_labels.ps1 로 손으로 봤다, 2026-10-12). 그래서 부르는 쪽이 고르기 전의 값을
-# Read-DraftDefaults 로 읽어 두고 보낸 뒤 Restore-DraftDefaults 가 되돌린다. $draft 는 진행 줄에 원래 값을 적는 데만 쓴다.
+# (.scratch/harness/probes/composer_effort_labels.ps1 로 손으로 봤다, 2026-10-12, 슬라이더였던 앱 2.19675.0.0). 그래서 부르는
+# 쪽이 고르기 전의 값을 Read-DraftDefaults 로 읽어 두고 보낸 뒤 Restore-DraftDefaults 가 되돌린다. $draft 는 진행 줄에 원래
+# 값을 적는 데만 쓴다.
 function Set-ComposerModel($win, $box, $pick, $draft) {
     Select-ComposerModelItem $win $box $pick.Model
     "model=$($pick.Model) 원래 $($draft.Model)"
-
-    $effortButton = Wait-For { Find-ComposerButton $box '노력:' } '지시문 입력창의 노력 버튼' 5
-    $moved = Move-EffortSlider $win $effortButton $pick.Step
-    if ($pick.Step -gt $moved.Max) { throw "노력 슬라이더의 끝이 $($moved.Max) 칸이라 '$($pick.Effort)'($($pick.Step)) 를 고를 수 없다. 보내지 않았다." }
-    if ($moved.After -ne $pick.Step) { throw "노력 슬라이더가 $($moved.After) 칸이다('$($pick.Effort)' 는 $($pick.Step) 칸). 보내지 않았다." }
-    $label = "노력: $((Get-EffortLabels)[$pick.Step])"
-    Wait-For { $b = Find-ComposerButton $box '노력:'; if ($b -and (Test-ButtonShows $b $label)) { $b } } "'$label' 를 보이는 노력 버튼(보내지 않았다)" 5 | Out-Null
+    Select-ComposerEffortItem $win $box $pick.Step
     $before = if ($null -eq $draft.EffortStep) { "$($draft.EffortLabel)(되돌리지 않는다)" } else { (Get-EffortSteps)[$draft.EffortStep] }
     "effort=$($pick.Effort) 원래 $before"
-}
-
-# 노력 메뉴를 펼쳐 슬라이더를 칸으로 옮기고 접는다. 칸은 RangeValue 의 값 설정으로 옮긴다. 웹 슬라이더지만 값을 받았고 버튼
-# 이름도 따라 바뀌었다(composer_patterns.ps1, 2026-10-12). 칸이 슬라이더의 끝을 넘으면 옮기지 않는다. 옮긴 뒤의 칸과 끝 칸을
-# 돌려준다. 원래 칸은 부르는 쪽이 Read-DraftDefaults 로 먼저 읽는다. 중간에 멈춰도 메뉴는 접는다.
-function Move-EffortSlider($win, $button, [int] $step) {
-    $opened = Invoke-PatternTimed $button 'expand'
-    if ($opened -ne 'ok') { throw "노력 메뉴를 펼치지 못했다($opened)." }
-    try {
-        $sliderCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Slider)
-        $slider = Wait-For { $win.FindFirst($Scope::Descendants, $sliderCond) } '노력 슬라이더' 5
-        $range = $slider.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
-        $max = [int]$range.Current.Maximum
-        if ($step -le $max) { $range.SetValue($step); Start-Sleep -Milliseconds 500 }
-        $after = [int]$range.Current.Value
-    } finally {
-        Invoke-PatternTimed $button 'collapse' | Out-Null
-        Start-Sleep -Milliseconds 300
-    }
-    return [pscustomobject]@{ After = $after; Max = $max }
 }
 
 # 표지 글이 든 새 세션 화면을 연다. 보내지 않는 화면이라 그 입력창의 버튼만 움직이고, 끝나면 Clear-PromptBox 로 표지를 지운다.
@@ -500,16 +585,12 @@ function Get-RepairHint($draft) {
 # 세션으로 덮는다. 원래 노력이 목록 밖이면 모델만 되돌린다. 고른 값이 원래 값과 같았으면 화면을 열지 않는다.
 function Restore-DraftDefaults($win, $draft, $pick) {
     if (-not (Test-DraftChanged $draft $pick)) { return 'restored=바뀐 것 없음(고른 값이 원래 값과 같았다)' }
-    $got = $null
     $left = ''
     try {
         $box = Open-MarkerDraft $win 'restore'
         try {
             Select-ComposerModelItem $win $box $draft.Model
-            if ($null -ne $draft.EffortStep) {
-                $button = Wait-For { Find-ComposerButton $box '노력:' } '되돌릴 화면의 노력 버튼' 5
-                $got = (Move-EffortSlider $win $button $draft.EffortStep).After
-            }
+            if ($null -ne $draft.EffortStep) { Select-ComposerEffortItem $win $box $draft.EffortStep }
         } finally {
             Clear-PromptBox $box
             $left = Get-LeftoverNote $box
@@ -518,7 +599,6 @@ function Restore-DraftDefaults($win, $draft, $pick) {
         return "restore=실패: $($_.Exception.Message) 사람이 $(Get-RepairHint $draft)"
     }
     if ($null -eq $draft.EffortStep) { return "restored=$($draft.Model). 원래 노력은 스크립트가 고르지 않는 칸이라 두었다. 사람이 $(Get-RepairHint $draft)$left" }
-    if ($got -ne $draft.EffortStep) { return "restore=실패: 노력 슬라이더가 $got 칸이다(원래 $($draft.EffortStep)). 사람이 $(Get-RepairHint $draft)$left" }
     return "restored=$($draft.Model) / $((Get-EffortSteps)[$draft.EffortStep])$left"
 }
 
@@ -705,10 +785,24 @@ function Get-AppQuitMarker {
     return Find-QuitMarker @($lines) $started
 }
 
+# 스크립트의 끝. 멈춘 접근성 호출이 남았으면(Invoke-PatternTimed 의 주석) pwsh 가 그 스레드를 기다려 끝나지 않는다. 출력과 오류
+# 문구를 낸 뒤 프로세스를 끝낸다. 남은 호출이 없으면 여느 때처럼 끝나고 오류도 그대로 던진다.
+function Invoke-Action([scriptblock] $run) {
+    try { & $run }
+    catch {
+        if ($script:HungCalls -eq 0) { throw }
+        [Console]::Error.WriteLine("$($_.Exception.Message) (멈춘 접근성 호출 $script:HungCalls 개가 남아 프로세스를 끝낸다)")
+        [Environment]::Exit(1)
+    }
+    if ($script:HungCalls -gt 0) { [Environment]::Exit(0) }
+}
+
 Wake-Display
-switch ($Action) {
-    'send' { Send-Prompt }
-    'split' { Split-Session }
-    'focus' { Focus-Session }
-    'defaults' { Set-Defaults }
+Invoke-Action {
+    switch ($Action) {
+        'send' { Send-Prompt }
+        'split' { Split-Session }
+        'focus' { Focus-Session }
+        'defaults' { Set-Defaults }
+    }
 }

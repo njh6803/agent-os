@@ -1,0 +1,64 @@
+# open_session.ps1 의 모델 버튼 읽기(`Split-ComposerTexts`, `Get-EffortLabelStep`)와 메뉴 항목 대조(`Test-NameShows`)의 테스트가
+# 무엇을 재는지 변이로 본다(여섯). 앱 2.37337.1.0 에서 노력이 모델 버튼 하나로 합쳐진 뒤의 판이다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_composer_mutations.toml
+# 테스트는 파워셸 AST 에서 함수를 떼어 pwsh 로 부른다(tests/tools/test_open_session.py). 규칙 하나를 빼면 빨강이어야 한다.
+
+[[mutation]]
+name = "둘째 글을 노력으로 읽는다(고속 모드의 빠름을 노력으로 본다)"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_모델_버튼의_자식_글에서_모델과_노력을_읽는다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    return [pscustomobject]@{ Model = $parts[0]; EffortLabel = $parts[-1] }"
+new = "    return [pscustomobject]@{ Model = $parts[0]; EffortLabel = $parts[1] }"
+
+[[mutation]]
+name = "글이 하나여도 읽는다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_모델_버튼의_자식_글이_둘보다_적으면_멈춘다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    if ($parts.Count -lt 2) { throw"
+new = "    if ($parts.Count -lt 1) { throw"
+
+[[mutation]]
+name = "공백 글을 거르지 않는다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_모델_버튼의_자식_글이_둘보다_적으면_멈춘다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    $parts = @($texts | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })"
+new = "    $parts = @($texts | Where-Object { $_ } | ForEach-Object { $_ })"
+
+[[mutation]]
+name = "모르는 노력 이름에도 칸을 낸다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_모델_버튼의_자식_글에서_모델과_노력을_읽는다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    if ($i -lt 0) { return $null }"
+new = "    if ($false) { return $null }"
+
+[[mutation]]
+name = "메뉴 항목 이름 뒤의 공백을 보지 않는다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그_칸이다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '$name.StartsWith("$label ", [StringComparison]::Ordinal)'
+new = '$name.StartsWith("$label", [StringComparison]::Ordinal)'
+
+[[mutation]]
+name = "메뉴 항목 이름의 대소문자를 가리지 않는다"
+tests = ["tests/tools/test_open_session.py"]
+expect = "red"
+expect_output = ["test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그_칸이다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = "    return [bool]($name -and ($name -ceq $label -or"
+new = "    return [bool]($name -and ($name -eq $label -or"
