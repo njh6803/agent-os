@@ -2,7 +2,7 @@
 # ADR 0032 의 근거. 같은 브랜치나 같은 경로로 워크트리를 한 번 더 만들면 git 이 막는지 임시 저장소에서 잰다.
 # 쓰는 법: sh worktree_duplicate_checkout.sh <임시 폴더의 절대 경로>
 # 이 스크립트는 인자 폴더를 지우고 다시 만든다. 그래서 인자를 검사한다.
-#   - 절대 경로(`/…` 또는 `C:/…`)가 아니면 지우지 않고 종료 2 로 멈춘다.
+#   - 절대 경로(`/…`, 또는 Windows 계열 셸에서 `C:/…`)가 아니면 지우지 않고 종료 2 로 멈춘다.
 #   - 이미 있는 폴더는 비어 있거나 이 스크립트가 심은 표지 파일(.worktree_duplicate_checkout_probe)이 있을 때만 지운다.
 #     아니면 종료 2 로 멈춘다. 저장소 루트나 홈 같은 폴더는 표지가 없어 지워지지 않는다.
 # 종료 코드: 0 이면 두 거부가 모두 기대한 문구와 git 종료 코드 128 로 났다. 1 이면 문구나 종료 코드가 달랐다(측정이 아니다).
@@ -16,7 +16,14 @@ base="${1:-}"
 marker=".worktree_duplicate_checkout_probe"
 
 case "$base" in
-  /*|[A-Za-z]:[/\\]*) ;;
+  /*) ;;
+  [A-Za-z]:[/\\]*)
+    # 드라이브 문자 경로는 Windows 계열 셸에서만 절대 경로다. POSIX 에서는 현재 폴더 아래의 상대 경로다.
+    case "$(uname -s 2>/dev/null || :)" in
+      CYGWIN*|MINGW*|MSYS*) ;;
+      *) echo "인자가 절대 경로가 아니다: 아무것도 하지 않았다" >&2; exit 2 ;;
+    esac
+    ;;
   *) echo "인자가 절대 경로가 아니다: 아무것도 하지 않았다" >&2; exit 2 ;;
 esac
 if [ -e "$base" ]; then
@@ -30,7 +37,7 @@ if [ -e "$base" ]; then
   fi
 fi
 
-rm -rf -- "$base"
+rm -rf -- "$base" || exit 9
 mkdir -p -- "$base" || exit 9
 cd "$base" || exit 9
 : > "$marker"
