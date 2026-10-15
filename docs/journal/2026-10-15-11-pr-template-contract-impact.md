@@ -57,7 +57,22 @@ Critical·Major가 없었다.
   동반 수정만 보고 HTTP 계약은 보지 않는다는 것(두 축)은 그 워크플로 파일을 별도 PR로 먼저 병합해야 해서 이 PR에 넣지
   않았다.
 
+## PR 직전
+
+CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`, Plan: Free) 돌지 못했다. origin/main이 기준 `0c12284`에서 움직이지 않아
+합칠 것 없이 대체 둘을 돌렸다.
+
+- `/security-review`: 발견 0건. 실행되는 코드 변경이 없고, 새 카나리아 명세를 읽는 `tools/canary.py`는 strict 모델로
+  검증하며 `shell=True` 없이 인자 리스트로 `claude`를 띄운다.
+- `bug-perf-review`: Nit 1건 유효, 오탐 4건. 카나리아 명세 머리에 병합 뒤 다시 돌리는 길(옛 판을
+  `git worktree add --detach`로 꺼내 대조군으로 준다)이 없었다. 같은 디렉터리의 다른 명세처럼 한 문장을 더했다. 칸이 아니라
+  머리 주석이라 카나리아는 다시 돌리지 않았다. 오탐은 계약 영향 칸이 없는 옛 PR에서 1단계를 따를 때의 어긋남(절을 파싱하는
+  곳이 없다), "약 20행"의 어림, 셀프 리뷰 절의 범위가 최종 diff와 다른 것(그 시점의 스냅숏이다), HTML 주석의 깨짐이다.
+
 ## 검사
 
 - 카나리아 `next_session_pr_body_contract_impact.toml`: 통과 4(claude 2.1.300). 실험군(커밋 전 워크트리) 셋은 칸 넷을,
   대조군(주 체크아웃, `0c12284`)은 옛 칸 셋을 옮겼다. 사전 확인(`--preflight`)도 통과했다.
+- 첫 커밋 `4e343e72`의 pre-commit: 지침 검사, zizmor, `lint-imports`, 타입 우회 검사, `pyright`, `run-hooks`, `web-verify`,
+  `pytest`, 표 검사, 줄 구분 문자 검사, 인용 대조(경고 없음), 커밋 메시지 검사 통과. `ruff` 둘과 변이 표 검사는 대상 파일이
+  없어 Skipped였고, `ruff` 둘은 손으로 쳐서 통과했다(`All checks passed!`, `639 files already formatted`).
