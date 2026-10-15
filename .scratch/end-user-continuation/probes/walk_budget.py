@@ -25,8 +25,9 @@
 공백이 대조군과 같은 크기면 막지 않은 것이고, 대조군의 공백이 왜 그 크기인지(타이머의 눈금 등)는
 가르지 않는다.
 
-측정의 표지는 둘이다. 거슬러 읽기가 모은 교환 수가 그 경우의 기대값과 같다. 박동이 창 앞에서
-뛰었다. 표지가 없는 회차는 측정이 아니라 따로 세고, 하나라도 있으면 종료 코드가 1이다.
+측정의 표지는 셋이다. 거슬러 읽기가 모은 교환 수가 그 경우의 기대값과 같다. 박동이 창 앞에서
+뛰었다. 루프 자리에서는 읽는 창 안에 박동이 없다(양성 대조가 섰다). 표지가 없는 회차는 측정이 아니라
+따로 세고, 하나라도 있으면 종료 코드가 1이다.
 
     PYTHONUTF8=1 uv run python .scratch/end-user-continuation/probes/walk_budget.py
 
@@ -198,7 +199,6 @@ async def _settle(heartbeat: Heartbeat) -> None:
 
 
 type Gather = Callable[[], Gathered]
-type Place = Callable[[Gather], Awaitable[Gathered]]
 
 
 async def _on_loop(gather: Gather) -> Gathered:
@@ -211,18 +211,31 @@ async def _on_thread(gather: Gather) -> Gathered:
     return await anyio.to_thread.run_sync(gather)
 
 
-PLACES: tuple[tuple[str, Place], ...] = (("루프", _on_loop), ("스레드", _on_thread))
+@dataclass(frozen=True)
+class Place:
+    """거슬러 읽기를 부르는 자리. 양성 대조인 자리는 읽는 동안 박동이 없어야 측정이다."""
+
+    name: str
+    call: Callable[[Gather], Awaitable[Gathered]]
+    positive_control: bool
+
+
+PLACES = (
+    Place("루프", _on_loop, positive_control=True),
+    Place("스레드", _on_thread, positive_control=False),
+)
 
 
 async def _walk(heartbeat: Heartbeat, place: Place, gather: Gather, case: Case) -> Walk:
     """거슬러 읽기 한 번을 그 자리에서 돌려 잰다."""
     await _settle(heartbeat)
     began = time.perf_counter()
-    gathered = await place(gather)
+    gathered = await place.call(gather)
     ended = time.perf_counter()
     await _settle(heartbeat)
     longest, inside, beat_before = heartbeat.gap_around(began, ended)
-    measured = beat_before and len(gathered.runs) == case.expected_exchanges
+    control_held = not place.positive_control or inside == 0
+    measured = beat_before and control_held and len(gathered.runs) == case.expected_exchanges
     return Walk(ended - began, longest, inside, measured)
 
 
@@ -257,7 +270,7 @@ async def main() -> int:
         )
         print("|---|---|---|---|---|---|---|---|---|")
         for case in CASES:
-            for place_name, place in PLACES:
+            for place in PLACES:
                 first: list[Walk] = []
                 second: list[Walk] = []
                 for _ in range(ROUNDS):
@@ -277,7 +290,7 @@ async def main() -> int:
                         continue
                     print(
                         f"| {case.name} | {case.runs:,} | {case.prompt_chars:,} "
-                        f"| {place_name} | {label} "
+                        f"| {place.name} | {label} "
                         f"| {_span([w.seconds * 1000 for w in good])} "
                         f"| {_span([w.seconds * 1000 / case.runs for w in good])} "
                         f"| {_span([w.longest_gap * 1000 for w in good])} "
