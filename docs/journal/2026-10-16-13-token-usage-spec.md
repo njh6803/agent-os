@@ -1,4 +1,4 @@
-# 2026-10-16 (10) 토큰 사용 명세
+# 2026-10-16 (13) 토큰 사용 명세
 
 `next-session` 지시문(기능 token-usage, 명세 단계)으로 연 새 세션이다. 주 체크아웃 미갱신이라 `tidy-checkouts`를 먼저 돌고
 `EnterWorktree`(이름 `token-usage-spec`)로 들어가 브랜치를 `docs/token-usage-spec`으로 바꿨다. `to-spec` 스킬을 따라 ADR
@@ -145,7 +145,7 @@
   - 수의 대조(명세·ADR·README가 프로브 결과와 같은지)와 서두의 수는 맞았다.
 
 푸시하기 전에 origin/main(`9116978`)을 한 번 더 합쳤다. main이 일지 2026-10-16-07을 먼저 가져가 이 일지가 이름순으로 앞서게 되어,
-`tools/sibling_overlap.py --move`로 05를 10으로 옮기고 명세·ADR·이 일지의 인용을 고쳤다.
+`tools/sibling_overlap.py --move`로 05를 10으로 옮기고 명세·ADR·이 일지의 인용을 고쳤다. 단계를 닫는 커밋 뒤에 main이 일지 2026-10-16-11을 또 먼저 병합해 10을 13으로 한 번 더 옮겼다.
 
 ## PR 리뷰 반영
 
