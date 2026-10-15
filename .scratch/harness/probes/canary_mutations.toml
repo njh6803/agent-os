@@ -1802,10 +1802,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    removed = _worktree(base, "remove", "--force", *(["--force"] if locked else []), str(place))
+_FORCE = ("--force",)
 '''
 new = '''
-    removed = _worktree(base, "remove", *(["--force"] if locked else []), str(place))
+_FORCE: tuple[str, ...] = ()
 '''
 
 [[mutation]]
@@ -1834,11 +1834,11 @@ expect = "red"
 file = "tools/canary.py"
 old = '''
         if place.exists():
-            _remove_checkout(base, place, out, locked=True)
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
 '''
 new = '''
         if False:
-            _remove_checkout(base, place, out, locked=True)
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
 '''
 
 [[mutation]]
@@ -1866,12 +1866,12 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    if not place.parent.exists():
-        return
+    if place.parent.exists():
+        out(_leftover_message(base, place, removed))
 '''
 new = '''
-    if True:
-        return
+    if False:
+        out(_leftover_message(base, place, removed))
 '''
 
 [[mutation]]
@@ -1895,7 +1895,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-            _remove_checkout(base, place, out, locked=True)
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
 '''
 new = '''
             _remove_checkout(base, place, out)

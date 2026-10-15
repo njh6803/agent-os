@@ -205,3 +205,34 @@ PR 직전 반영(테스트를 먼저 쓰고 빨강을 본 뒤 고쳤다):
   매기며 3.0.35를 이 브랜치 몫으로 비워 두었다고 적어 두어, main의 줄을 살리고 이 브랜치의 3.0.35 문단을 `3.0.34는` 앞에
   끼웠다. 형제 대조가 최신 일지(2026-10-15-06)보다 이름순으로 앞선다고 해 일지를 2026-10-15-04에서 08로 옮겼다(그 앞에
   2026-10-14-05에서 04로 한 번 옮겼다).
+- 합친 뒤 `tools/sibling_overlap.py`가 "헌법 파일을 고치고 판을 올리지 않았다"로 1을 냈다. 판 줄이 main의 3.0.36 그대로라서다.
+  같은 모양의 선례(#169, 비워 둔 3.0.19를 쓰고 판 줄은 3.0.20)와 main이 적어 둔 문장을 따라 고치지 않았다. 도구가 비워 둔
+  판을 알아보지 못하는 거짓 양성으로 보고 회고 후보로 넘긴다(아래 회고).
+
+## PR 리뷰
+
+[njh6803/agent-os#244](https://github.com/njh6803/agent-os/pull/244). 첫 푸시(`55ec04fa`) 뒤 `@coderabbitai review`를 남기고
+`tools/wait_ci.py`로 기다렸다. 검사 다섯(python, web, e2e, visual, verify)이 초록이었다.
+
+- CodeRabbit(첫 회차): 지적 없음(`No actionable comments`). 검토 범위가 `55d20524`부터 `55ec04fa`까지라 현재 HEAD까지다.
+- claude-review(첫 회차): 경계 축은 해당 없음, Critical·Major 없음.
+  - Minor(고친다): `_remove_checkout(..., *, locked: bool = False)`가 `CODING_STANDARDS.md`의 "불리언 플래그 인자를 만들지
+    않는다"에 걸린다. 호출부가 `git worktree remove`에 줄 깃발 묶음(`_FORCE`, 제한 시간 갈래는 `_FORCE_LOCKED`)을 넘기게
+    했다.
+  - Minor(고친다): `_remove_checkout`에 링크 끊기, git 호출, `rmdir`, 등록 조회, 안내 조립이 섞였다. 폴더가 남았을 때의
+    등록 조회와 안내를 `_leftover_message`로 떼었다.
+  - Nit(둔다): `_unlink`가 지우면서 성공 여부를 돌려주는 것(CQS). 리뷰어도 호출부가 반환값을 반드시 써 실패가 묻히지
+    않는다고 봤다. 지우는 일과 실패 수집이 한 자리에 있어야 끊지 못한 링크를 빠뜨리지 않는다.
+  - Nit(둔다): `main`의 인자 해석. 깃발이 하나 더 늘면 따로 뺀다(리뷰어의 조건과 같다).
+- 반영 뒤 `uv run pytest -q tests/tools/test_canary.py` 219 passed, ruff·pyright 통과. 원문이 바뀐 변이 넷(123·125·127·129)을
+  고치고 지우는 길의 일곱(123·125·127·129·131·132·135)이 모두 기대대로였다.
+
+## 검사
+
+셀프 리뷰 전에 손으로 `uv run pytest -q` 2744 passed, 7 deselected(경고 다섯은 `tests/test_conftest.py`가 띄우는 안쪽
+pytest의 기존 `asyncio_default_fixture_loop_scope` 경고), `ruff check`·`ruff format --check`·`pyright`(0 errors)·
+`lint-imports`(5 kept) 종료 0, `pnpm -C web verify` 종료 0(28 files, 380 tests)이었다. 그 뒤 커밋 `3a0475cd`·`6a3c30e3`과
+합치기 커밋 `55ec04fa`의 pre-commit에서 ruff 둘, 병렬 검사(check-instructions, zizmor, lint-imports, check-type-escapes,
+pyright, run-hooks, web-verify, pytest), 표·줄 구분 문자, 변이 표, 인용, 커밋 메시지가 Passed였다. 합치기 커밋의 변이 표
+확인만 표가 없어 Skipped였고 직전 커밋에서 Passed였다. PR의 CI 다섯(python, web, e2e, visual, verify)도 초록이었다. LLM
+테스트가 지나는 코드는 건드리지 않았다. 이 일지를 담은 마지막 커밋의 pre-commit 결과는 PR 코멘트에 적는다.

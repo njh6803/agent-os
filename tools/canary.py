@@ -1174,20 +1174,50 @@ def _registered(base: Path, place: Path) -> bool | None:
     )
 
 
+_FORCE = ("--force",)
+_FORCE_LOCKED = ("--force", "--force")  # 잠긴 워크트리도 걷는다
+
+
+def _leftover_message(
+    base: Path, place: Path, removed: subprocess.CompletedProcess[bytes] | None
+) -> str:
+    """걷기 뒤 임시 폴더가 남았을 때의 알림. 등록이 남았는지에 따라 걷는 법을 가른다.
+
+    git 2.32 는 폴더를 다 지우지 못해도 등록을 먼저 지웠다(PR 직전 bug-perf-review 가 손으로 봤다).
+    등록이 걷힌 폴더에 `git worktree remove` 를 치면 `is not a working tree` 로 끝나고, 그 폴더는
+    `tidy-checkouts` 도 보지 않는다.
+    """
+    if removed is None:
+        reason = "제한 시간을 넘겼거나 git 을 띄우지 못했다"
+    elif removed.returncode != 0:
+        reason = _last_line(removed.stderr)
+    else:
+        reason = "git 은 걷었다고 했지만 폴더가 남았다"
+    head = f"임시 워크트리를 다 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
+    if _registered(base, place) is False:
+        return (
+            f"{head}{place.parent} 를 지운다. git 등록은 걷혔고 폴더만 남았다(안의 링크는 이미 "
+            "끊었다)"
+        )
+    return (
+        f"{head}git worktree remove --force {place} 로 걷고(잠겼으면 --force 를 두 번 준다) "
+        f"{place.parent} 를 지운다. 워크트리 세션에서는 앱의 가드가 다른 체크아웃의 지우기를 "
+        "거부할 수 있어 주 체크아웃 세션에서 친다"
+    )
+
+
 def _remove_checkout(
-    base: Path, place: Path, out: Callable[[str], None], *, locked: bool = False
+    base: Path, place: Path, out: Callable[[str], None], force: Sequence[str] = _FORCE
 ) -> None:
     """`control_checkout` 이 꺼낸 임시 워크트리와 그것을 담은 임시 폴더를 걷는다.
 
-    `--force` 는 회차 세션이 그 안에 남긴 것(훅이 만든 `.venv` 등)까지 지운다. 이 도구가 방금
-    `mkdtemp` 로 만든 폴더 아래에 꺼낸 것이라 사람의 파일이 없다. 다만 그 안의 링크는 git 이 따라가
-    바깥을 지울 수 있어 먼저 링크만 끊고(`_cut_links`), 끊지 못한 것이 남으면 걷지 않고 알린다.
-    `locked` 면 `--force` 를 두 번 줘 잠긴 워크트리도 걷는다. 제한 시간을 넘겨 죽은 꺼내기만
-    준다(git 이 꺼내는 동안 잠금을 남긴다는 것은 재지 않은 어림이다). 걷지 못하면 그 자리와 걷는
-    법을 찍고 넘어간다. git 2.32 는 폴더를 다 지우지 못해도 등록을 먼저 지워(PR 직전 bug-perf-review
-    가 손으로 봤다), 등록이 남았는지에 따라 걷는 법을 가른다. 종료 코드는 부르는 쪽이 정하고, 남은
-    등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게 넘긴다. 등록 없이 남은 폴더는 그 도구가 보지
-    않는다.
+    `force` 는 `git worktree remove` 에 줄 깃발이다. `--force` 는 회차 세션이 그 안에 남긴 것(훅이
+    만든 `.venv` 등)까지 지운다. 이 도구가 방금 `mkdtemp` 로 만든 폴더 아래에 꺼낸 것이라 사람의
+    파일이 없다. 다만 그 안의 링크는 git 이 따라가 바깥을 지울 수 있어 먼저 링크만
+    끊고(`_cut_links`), 끊지 못한 것이 남으면 걷지 않고 알린다. 제한 시간을 넘겨 죽은 꺼내기는
+    잠금을 남겼을 수 있어 `_FORCE_LOCKED` 를 준다(git 이 꺼내는 동안 잠근다는 것은 재지 않은
+    어림이다). 걷지 못하면 그 자리와 걷는 법을 찍고 넘어간다(`_leftover_message`). 종료 코드는
+    부르는 쪽이 정하고, 남은 등록은 `tidy-checkouts` 가 분리 HEAD 로 사람에게 넘긴다.
     """
     left = _cut_links(place)
     if left:
@@ -1197,29 +1227,11 @@ def _remove_checkout(
             f"지운 뒤 git worktree remove --force {place} 로 걷고 {place.parent} 를 지운다"
         )
         return
-    removed = _worktree(base, "remove", "--force", *(["--force"] if locked else []), str(place))
+    removed = _worktree(base, "remove", *force, str(place))
     with suppress(OSError):
         place.parent.rmdir()
-    if not place.parent.exists():
-        return
-    if removed is None:
-        reason = "제한 시간을 넘겼거나 git 을 띄우지 못했다"
-    elif removed.returncode != 0:
-        reason = _last_line(removed.stderr)
-    else:
-        reason = "git 은 걷었다고 했지만 폴더가 남았다"
-    head = f"임시 워크트리를 다 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
-    if _registered(base, place) is False:
-        out(
-            f"{head}{place.parent} 를 지운다. git 등록은 걷혔고 폴더만 남았다(안의 링크는 이미 "
-            "끊었다)"
-        )
-        return
-    out(
-        f"{head}git worktree remove --force {place} 로 걷고(잠겼으면 --force 를 두 번 준다) "
-        f"{place.parent} 를 지운다. 워크트리 세션에서는 앱의 가드가 다른 체크아웃의 지우기를 "
-        "거부할 수 있어 주 체크아웃 세션에서 친다"
-    )
+    if place.parent.exists():
+        out(_leftover_message(base, place, removed))
 
 
 @contextmanager
@@ -1248,7 +1260,7 @@ def control_checkout(base: Path, commit: str, out: Callable[[str], None]) -> Gen
     if added is None:
         # 제한 시간을 넘겼으면 git 이 반쯤 꺼낸 등록이 남았을 수 있다. 그 자리는 git 만 만든다.
         if place.exists():
-            _remove_checkout(base, place, out, locked=True)
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
         else:
             with suppress(OSError):
                 parent.rmdir()
