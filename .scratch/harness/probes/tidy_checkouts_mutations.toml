@@ -1377,8 +1377,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if not strangers or processes_seen:'''
-new = '''    if not strangers:'''
+old = '''    held = verdicts if processes else hold_for_strangers(verdicts, running, checked_out)'''
+new = '''    held = hold_for_strangers(verdicts, running, checked_out)'''
 
 [[mutation]]
 name = "휴지통: 등록 없는 폴더로 본다"

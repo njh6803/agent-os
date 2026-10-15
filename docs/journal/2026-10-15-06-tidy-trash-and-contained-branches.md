@@ -1,4 +1,4 @@
-# 2026-10-15 (02) 워크트리가 쌓이는 원인을 고친다: 휴지통으로 옮기고, origin/main 에 든 것을 지운다
+# 2026-10-15 (06) 워크트리가 쌓이는 원인을 고친다: 휴지통으로 옮기고, origin/main 에 든 것을 지운다
 
 ## 계기
 
@@ -169,12 +169,29 @@ CodeRabbit CLI는 `Plan: Free`(일지 2026-10-14-02와 같다)라 대체 둘을 
     않는다), 브랜치 삭제(보호 브랜치·체크아웃된 브랜치·재판정), 제목 모를 세션 완화(설계 판단).
 - 반영 뒤 `uv run pytest -q tests/tools/test_tidy_checkouts.py` 154 passed. 변이 표에 둘을 더해 133(아래 "검사").
 
+## PR 리뷰
+
+[njh6803/agent-os#243](https://github.com/njh6803/agent-os/pull/243). 첫 푸시(`cc93e459`)에 CI 다섯과 claude-review가 초록,
+CodeRabbit은 `Review completed`(Merge Risk Low). 첫 회차라 Minor·Nit도 지적마다 판단했다.
+
+CodeRabbit(Minor 3, 모두 고쳤다): 일지 제목의 순번이 파일명과 다르다(`(02)`→`(06)`. 형제와 겹쳐 번호를 옮기며 제목을
+빠뜨렸다). 독스트링 둘이 분리 HEAD 인자를 `@`로 적었다(`.detached`로. 스킬이 따르는 계약이라 문서대로 치면 종료 1로 멈춘다).
+윈도의 `K32EnumProcesses` 실패와 모든 `OpenProcess` 실패가 빈 목록을 돌려주어 "읽을 수 있었다"로 세어진다(PR 직전 버그
+리뷰가 보류한 것과 같은 지적. 빈 목록을 읽지 못한 것으로 보게 했다. 훑기가 됐으면 이 도구 자신의 파이썬이 들어 비지 않는다.
+테스트가 빈 목록이면 넘기고 자기 pid 하나면 지운다로 찍는 것을 본다).
+
+claude-review(Minor 3, Nit 1): `hold_for_strangers(processes_seen)`과 `judge_branch(contained)`가 불리언 플래그다 — 앞의 것은
+인자를 빼고 부르는 쪽이 가르게 고쳤고, 뒤의 것은 `settings_same`과 같은 판정 재료라 두었다(PR 코멘트). `_move_whole -> Path |
+int`과 `_move_aside -> tuple[list[Path], bool]`의 실패 표현이 다르다 — 두었다. 결과형을 하나 더 짓는 값이 읽는 값보다 크고 도구
+전체의 모양이라 이 PR 범위 밖이다(PR 코멘트). `_trash_refused(root)[4:]` 슬라이스 — 이유 문구를 상수 `TRASH_REFUSED`로 빼
+고쳤다. Nit(모듈 독스트링이 길고 판정·옮기기·휴지통·복구를 한 모듈이 가진다)은 리뷰도 후속으로 두었다.
+
 ## 검사
 
 - 커밋 `eaa736bd`의 pre-commit으로 갈음했다. ruff 둘, 병렬 검사(lint-imports, check-instructions, zizmor, check-type-escapes,
   pyright, run-hooks, web-verify, pytest) 모두 Passed(271.75초). 표·줄 구분 문자·변이 표 원문 대조·커밋 메시지 Passed. 인용
   대조는 이 일지의 줄 셋을 짚어 따옴표를 뗐다(둘째 커밋).
-- 변이 `tidy_checkouts_mutations.toml` 131 모두 기대대로(셀프 리뷰 반영 뒤 다시 돌렸다. 새로 더한 열하나도 빨강). PR 직전 리뷰 반영 뒤 둘을 더해 133 모두 기대대로(셋째 커밋 전에 다시 돌렸다).
+- 변이 `tidy_checkouts_mutations.toml` 131 모두 기대대로(셀프 리뷰 반영 뒤 다시 돌렸다. 새로 더한 열하나도 빨강). PR 직전 리뷰 반영 뒤 둘을 더해 133 모두 기대대로(셋째 커밋 전에 다시 돌렸다). 봇 첫 회차 반영 뒤에도 133 모두 기대대로(넷째 커밋 전. 그 첫 실행은 회고 7의 되돌리기 실패로 종료 3이었고 변이를 걷어 낸 뒤 다시 돌린 결과다).
 - 카나리아 `tidy_skill_stray_and_modules.toml` `--preflight` 통과 1(claude 는 돌리지 않았다).
 - **실제 정리(커밋 뒤, 이 세션이 주 체크아웃에서 도구로 돌렸다).** `judge`(실행 중 세션 제목 다섯)가 찍은 명령 122개를 Bash
   호출 하나에 하나씩 쳤다. 워크트리 `remove` 61(분리 HEAD 셋과 `.git` 없는 prunable 폴더 하나 포함), `remove-branch` 60,
@@ -186,12 +203,12 @@ CodeRabbit CLI는 `Plan: Free`(일지 2026-10-14-02와 같다)라 대체 둘을 
 
 ## 회고
 
-후보 여섯. 승인 하나, 기각 다섯, 넘김 없음.
+후보 일곱. 승인 둘, 기각 다섯, 넘김 없음(일곱째는 PR 리뷰 반영 뒤에 더했다).
 
 1. `judge`가 같은 이유·같은 pid 로 워크트리 55개를 남겨도 줄마다 찍기만 해, 쌓이는 것을 사람이 보기 전까지 아무도 몰랐고
    원인(다른 워크트리의 pytest·pre-commit)은 `Get-CimInstance Win32_Process`를 손으로 쳐야 알았다 — 승인. 사건: 이 세션의
    첫 `judge`(남긴다 65 가운데 55가 같은 pid 일곱). 층: 도구(`judge` 끝에 남긴 이유별 수의 요약 줄, 쥔 프로세스에 명령줄).
-   되돌림: PR 하나. 이 세션에서 반영하지 않아 대기열 263.
+   되돌림: PR 하나. 이 세션에서 반영하지 않아 대기열 266.
 2. 스크래치 패치 스크립트가 파이썬 기본 줄 끝으로 도구 파일과 변이 표를 CRLF 로 써서 `mutate.py --check`가 원문 31개를
    못 찾았다 — 기각. 그 검사가 잡았고 비용은 한 번의 되돌림이다. 커밋에서는 `.gitattributes`가 LF 로 맞춘다.
 3. 저장소 전체 `grep -rn`이 `.claude/worktrees/` 아래 70개 워크트리의 `node_modules`를 훑어 두 번 120초를 넘겼다 — 기각. 이
@@ -203,6 +220,11 @@ CodeRabbit CLI는 `Plan: Free`(일지 2026-10-14-02와 같다)라 대체 둘을 
    않는다"만 적어 나란히 치는 것이 되는지 말하지 않는다 — 기각. git 참조 잠금 충돌을 재지 않은 채 한 번 지난 것이고,
    느슨하게 하는 쪽이라 사건이 쌓이면 넘긴다.
 6. 일지에 내 문장을 따옴표로 적어 인용 대조 경고 셋이 나고 둘째 커밋이 필요했다 — 기각. 경고만 내는 검사가 뜻대로 잡았다.
+7. `tools/mutate.py`가 변이 87번째를 되돌리는 `write_bytes`에서 `[Errno 22] Invalid argument`로 한 번 막혀 종료 3으로 멈추고
+   변이(`if False:`)가 도구 파일에 남았다 — 승인. 사건: 이 세션의 넷째 변이 실행(앞의 셋은 같은 PC에서 지났다. 백신이나 다른
+   프로세스가 막 쓴 파일을 잠깐 쥔 것으로 보이나 재지 않았다). 층: 도구(`_restore_file`이 `tidy_checkouts.py`의 `RESTORE_WAITS`처럼
+   잠깐 기다려 다시 쓴다). 되돌림: PR 하나. 이 세션에서 반영하지 않아 대기열 267. 남은 변이는 `git diff`로 걷어 냈고 그
+   테스트가 다시 초록인 것을 본 뒤 표 전체를 다시 돌렸다(아래 "검사").
 
 ## 다음
 

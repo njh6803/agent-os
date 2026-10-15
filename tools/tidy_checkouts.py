@@ -6,7 +6,7 @@
 
 사용(주 체크아웃에서):
     uv run python tools/tidy_checkouts.py judge [--running "<세션 제목>" ...]
-    uv run python tools/tidy_checkouts.py remove "<경로>" <브랜치|@> <HEAD>
+    uv run python tools/tidy_checkouts.py remove "<경로>" <브랜치|.detached> <HEAD>
     uv run python tools/tidy_checkouts.py remove-branch <브랜치> <커밋>
     uv run python tools/tidy_checkouts.py remove-stray "<경로>"
     uv run python tools/tidy_checkouts.py restore "<경로>.tidy-probe"
@@ -81,7 +81,7 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 없는 폴더"로 가른다.
 
 판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션과 쥔 프로세스는 빼고. 쥔 프로세스는
-1의 탐침과 2의 다시 거르기가 본다) 브랜치(분리 HEAD 는 `@`)와 HEAD 가 인자와 같을 때만, 아래
+1의 탐침과 2의 다시 거르기가 본다) 브랜치(분리 HEAD 는 `.detached`)와 HEAD 가 인자와 같을 때만, 아래
 순서로 지운다. 폴더가 없으면 등록만 걷고 끝난다(자리 판정).
 1. 점유 탐침. 워크트리 폴더를 옆 이름으로 바꿨다가 되돌린다. 윈도에서 그 아래를 작업 디렉터리로
    쥔 프로세스나 그 안의 파일을 연 프로세스가 있으면 이름 바꾸기가 막힌다. 그대로 지우면 git 은
@@ -1006,16 +1006,13 @@ def judge(
 
 
 def hold_for_strangers(
-    verdicts: Sequence[Verdict],
-    running: Sequence[str],
-    checked_out: set[str],
-    processes_seen: bool = False,
+    verdicts: Sequence[Verdict], running: Sequence[str], checked_out: set[str]
 ) -> list[Verdict]:
     """제목이 체크아웃된 어느 브랜치와도 맞지 않는 실행 중 세션이 있으면 지울 것을 넘긴다.
-    프로세스의 작업 디렉터리를 읽을 수 있었으면(`processes_seen`) 넘기지 않는다. 세션의
-    `claude.exe` 가 그 워크트리를 작업 디렉터리로 쥐어 판정 3이 이름으로 남긴다."""
+    부르는 쪽(`_judge_all`)은 프로세스의 작업 디렉터리를 읽었을 때 이 함수를 부르지 않는다.
+    세션의 `claude.exe` 가 그 워크트리를 작업 디렉터리로 쥐어 판정 3이 이름으로 남긴다."""
     strangers = [title for title in running if title not in checked_out]
-    if not strangers or processes_seen:
+    if not strangers:
         return list(verdicts)
     reason = f"제목이 체크아웃된 어느 브랜치와도 맞지 않는 세션이 돈다: {', '.join(strangers)}"
     return [
@@ -1360,7 +1357,11 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
                 verdict = replace(inner, branch=wt.branch, head=wt.head)
         verdicts.append(verdict)
     checked_out = {wt.branch for wt in listing if wt.branch is not None}
-    for verdict in hold_for_strangers(verdicts, running, checked_out, processes is not None):
+    # 빈 목록은 읽지 못한 것으로 본다. 훑기가 됐으면 이 도구 자신의 파이썬이 들어 비지 않는다
+    # (윈도의 `K32EnumProcesses` 실패와 모든 `OpenProcess` 실패가 빈 목록을 돌려준다, PR #243
+    # CodeRabbit)
+    held = verdicts if processes else hold_for_strangers(verdicts, running, checked_out)
+    for verdict in held:
         print(_render_worktree(verdict))
     for place in _unregistered(root, listing):
         path = place.as_posix()
@@ -1411,9 +1412,11 @@ def _trash_entries(root: Path) -> list[Path]:
     return sorted(trash.iterdir())
 
 
+TRASH_REFUSED = "휴지통 자리가 링크거나 폴더가 아니다. 안을 읽지 않는다"
+
+
 def _trash_refused(root: Path) -> str:
-    place = (root / TRASH_DIR).as_posix()
-    return f"넘긴다 {place} — 휴지통 자리가 링크거나 폴더가 아니다. 안을 읽지 않는다"
+    return f"넘긴다 {(root / TRASH_DIR).as_posix()} — {TRASH_REFUSED}"
 
 
 def flatten(relative: str) -> str:
@@ -1446,7 +1449,7 @@ def _move_aside(
     않아(`lock_holder.py` 의 G, `worktree_occupancy.py` 의 E) 제자리 지우기가 막히던 자리
     (`module_holder.py` 의 G·E)를 지난다."""
     if not _ensure_trash(root):
-        print(f"남겼다 {path.as_posix()} — {_trash_refused(root)[4:]}")
+        print(f"남겼다 {path.as_posix()} — {TRASH_REFUSED}")
         return [], False
     moved: list[Path] = []
     for entry in entries:
@@ -1572,7 +1575,7 @@ def _move_whole(
     if _still_stray(root, path, reachable, "옮기기 직전에", holders_now(ops, str(path))) is None:
         return 1
     if not _ensure_trash(root):
-        print(f"남겼다 {path.as_posix()} — {_trash_refused(root)[4:]}")
+        print(f"남겼다 {path.as_posix()} — {TRASH_REFUSED}")
         return 1
     slot = trash_slot(root, path.name, "")
     try:

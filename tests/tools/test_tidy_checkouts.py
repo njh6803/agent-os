@@ -632,8 +632,6 @@ def test_제목이_어느_브랜치와도_맞지_않는_세션이_돌면_프로�
     held = hold_for_strangers([delete, keep], ("앱이 지은 이름",), {"main", "chore/x"})
     assert [verdict.action for verdict in held] == ["hold", "keep"]
     assert "앱이 지은 이름" in held[0].reason
-    seen = hold_for_strangers([delete, keep], ("앱이 지은 이름",), {"main", "chore/x"}, True)
-    assert seen == [delete, keep]
 
 
 def test_제목이_체크아웃된_브랜치면_다른_워크트리는_그대로다() -> None:
@@ -960,13 +958,24 @@ def test_judge_는_프로세스를_못_볼_때_제목_모를_세션_때문에_�
 def test_judge_는_프로세스를_볼_수_있으면_제목_모를_세션이_돌아도_지울_후보로_찍는다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """2026-10-15. 세션은 작업 디렉터리로 잡힌다. 제목으로는 넘기지 않는다."""
+    """2026-10-15. 세션은 작업 디렉터리로 잡힌다. 제목으로는 넘기지 않는다. 빈 목록은 읽지 못한
+    것으로 본다(윈도의 프로세스 열거 실패가 빈 목록이다, PR #243 CodeRabbit). 훑기가 됐으면 이
+    도구 자신의 파이썬이 들어 비지 않는다."""
     _, head = _add(repo, "done")
     merged = {"chore/done": frozenset({head})}
-    ops = replace(_ops(merged), processes=_모듈_없음)
+
+    def only_me() -> list[tuple[int, str, str]]:
+        return [(os.getpid(), "python.exe", str(repo))]
+
+    ops = replace(_ops(merged), processes=only_me)
     assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=ops) == 0
     done = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
     assert done.startswith("지운다"), done
+    empty = replace(_ops(merged), processes=_모듈_없음)
+    assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=empty) == 0
+    held = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
+    assert held.startswith("넘긴다"), held
+    assert "앱이 지은 이름" in held
 
 
 def test_judge_는_작업_디렉터리로_쥔_프로세스가_있으면_제목_모를_세션이_돌아도_남긴다(
