@@ -2409,7 +2409,7 @@ def test_꺼낸_대조군_안의_링크는_링크만_끊고_바깥_파일은_남
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """지우는 길의 반박. PR 직전 bug-perf-review 가 꺼낸 자리 안의 junction 을 git 2.32 의
-    `git worktree remove --force` 가 따라가 바깥 파일을 지우는 것을 재현했다(일지 2026-10-15-04)."""
+    `git worktree remove --force` 가 따라가 바깥 파일을 지우는 것을 재현했다(일지 2026-10-15-08)."""
     repo, 옛, _ = _두_판_저장소(tmp_path, monkeypatch)
     바깥 = _바깥_폴더(tmp_path)
     임시 = tmp_path / "임시"
