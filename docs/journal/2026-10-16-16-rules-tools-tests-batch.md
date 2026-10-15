@@ -55,3 +55,24 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. 대기열 278
 **남긴 것.** 표준 축 ④는 rules가 선례를 가리키는 것으로 줄여 남은 겹침이 이유 한 문장뿐이라 두었다.
 **다시 돌린 것.** 사전 확인 통과 3, 실제 실행 셋 모두 통과 4(rules 둘의 대조군은 "없음", 스킬 대조군 주 체크아웃 b4335124는 옛
 줄 `116`을 옮겼다). 손으로 치는 검증 다섯은 커밋의 pre-commit으로 갈음한다.
+
+## 검사
+
+- 첫 판 작업 트리에서 `uv run pytest -q -x`가 2877 passed, 7 deselected였다(파이프를 붙여 친 실행이라 종료 코드는 판정에 쓰지 않았다).
+- 커밋 `8c24f4d5`의 pre-commit: checks, zizmor, check-instructions, lint-imports, check-type-escapes, pyright, run-hooks, web-verify,
+  pytest, markdown tables, line separators, quotes, commit message가 Passed. ruff check·ruff format은 `.py`가 없어 Skipped이고 ruff
+  설정도 바꾸지 않았다. mutation tables도 변이 표가 없어 Skipped다.
+- 커밋 메시지의 첫 제목이 76자라 `hook_bash_commit_msg`가 pre-commit 전에 막았다. 72자 안으로 줄여 다시 쳤다.
+
+## PR 직전 보안·버그·성능 축
+
+- `coderabbit-review`: CLI 0.7.5, 로그인은 됐고 `Seat : not assigned`(Plan Free)라 리뷰를 돌리지 않았다. 그래서 대체 둘을 돌렸다.
+- `/security-review`: 실행되는 코드 변경이 없고(문서, 프로브 머리 주석, 카나리아 명세) 신뢰도 8 이상의 지적이 0건이었다.
+- `bug-perf-review`: Minor 둘, 둘 다 유효로 판정했고 PR을 열기 전에 고쳤다.
+  1. 스레드 잡 항목이 오류를 던지는 길을 적지 않았다. 선례 `Invoke-Action`은 `catch`에서 남긴 잡이 있으면 stderr에 문구를 낸 뒤
+     `Exit(1)`로 끝내고, `hung_thread_job.ps1`도 그 갈래를 잰다. 그 구절을 더했다.
+  2. 스킬 표의 "세 번 모두"가 이 스킬의 길이 아닌 canary 사건(278)까지 셌다. `tidy_checkouts.py`의 `delete_path`는 처음부터 링크를
+     따라가지 않았다. 이 길의 두 번과 canary에서 온 링크 입력을 갈라 적었다.
+  오탐 하나: 카나리아 질문이 항목의 문구를 따라 하는 것은 답을 흘리는 것이 아니라고 닫았다.
+- 고친 뒤 카나리아 둘(`tools_rule_thread_job_and_links.toml`, `tidy_skill_link_input.toml`)은 원천 본문만 고쳤고 `expect`와 카나리아의
+  자리가 그대로라 `--preflight`(통과 2)로 갈음했다(operations.md 카나리아 항목의 네 조건).

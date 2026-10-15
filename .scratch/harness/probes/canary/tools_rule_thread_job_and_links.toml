@@ -5,7 +5,7 @@
 # 첫 판(1의 카나리아가 `[Environment]::Exit`): 통과 4(2026-10-16, 이 PC, claude 2.1.300, 커밋하기 전의 작업 트리. 러너가
 #   찍은 커밋은 b4335124, 일지 2026-10-16-16). 흔한 pwsh API 라 사전 지식으로 맞힐 수 있어 셀프 리뷰 뒤 바꿨다.
 # 최신 결과: 통과 4(2026-10-16, 같은 PC와 판, 셀프 리뷰를 반영한 커밋하기 전의 작업 트리. 러너가 찍은 커밋은 b4335124,
-#   일지 2026-10-16-16).
+#   일지 2026-10-16-16). PR 직전 리뷰 뒤 원천 문구만 고쳐 같은 날 사전 확인으로 갈음했다(일지 2026-10-16-16).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_thread_job_and_links.toml <출력 디렉터리>
 kind = "rule"
 question = '''
