@@ -674,7 +674,7 @@ def test_껍질은_찾은_프로세스와_로그를_선택에_이어_가장_이�
 
 
 # 지시문의 `모델:` 줄. 줄 머리에서 시작하고(지시문 형식은 불릿이나 인용 없이 줄 머리다), 모델 메뉴의
-# 이름과 레벨을 `/` 로 가른다. 칸은 입력창 노력 슬라이더의 위치다
+# 이름과 레벨을 `/` 로 가른다. 칸은 입력창 노력 칸의 차례다
 # (.scratch/harness/probes/composer_effort_labels.ps1).
 DIRECTIVE = """다음 작업: 기능 x. 요약
 다음 단계: 구현
@@ -694,7 +694,7 @@ def test_모델_줄이_없으면_고르지_않는다() -> None:
     ("effort", "step"),
     [("low", 0), ("medium", 1), ("high", 2), ("xhigh", 3), ("max", 4)],
 )
-def test_모델_줄에서_이름과_레벨과_슬라이더_칸을_읽는다(effort: str, step: int) -> None:
+def test_모델_줄에서_이름과_레벨과_노력_칸을_읽는다(effort: str, step: int) -> None:
     prompt = DIRECTIVE.format(model=f"모델: Opus 5.5 / {effort}")
 
     assert _model_line_of(prompt) == f"Opus 5.5|{effort}|{step}"
@@ -721,7 +721,8 @@ def test_결정표_칸을_백틱째_옮긴_줄도_읽는다() -> None:
 @pytest.mark.parametrize(
     ("line", "cause"),
     [
-        ("모델: Opus 5.5 / ultracode", "를 모른다"),  # 슬라이더의 여섯째 칸은 레벨이 아니다
+        # 노력 메뉴의 여섯째 칸(Ultracode)은 레벨이 아니다
+        ("모델: Opus 5.5 / ultracode", "를 모른다"),
         ("모델: Opus 5.5 / High", "를 모른다"),  # 레벨은 API 이름 그대로 소문자다
         ("모델: Opus 5.5", "읽지 못했다"),  # 레벨이 없다
         ("모델:  / high", "모델 이름이 없다"),
@@ -794,32 +795,79 @@ def test_레벨_스윕의_갈래_값은_스크립트가_읽는다() -> None:
     assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == arms
 
 
-# 노력 버튼의 이름(앱 2.19675.0.0, 한국어)에서 칸을 읽는다. 버튼은 이름 뒤에 덧붙임이 붙을 수 있다.
-_EFFORT_BUTTON = """
-$button = [pscustomobject]@{ Current = [pscustomobject]@{ Name = $given.name } }
-$step = Get-EffortButtonStep $button
-if ($null -eq $step) { '(없음)' } else { "$step" }
+# 입력창의 `모델:` 버튼 하나가 모델과 노력을 함께 보인다(앱 2.37337.1.0, 한국어). 이름은 `최대`
+# 칸에서 `모델: Opus 5.5 최대 3.5× 이상 사용량` 이라 이름으로는 가르지 못하고, 자식 Text 가 [모델,
+# 공백, 노력] 이다(composer_effort_labels.ps1, 2026-10-16).
+_COMPOSER_TEXTS = """
+$read = Split-ComposerTexts @($given.texts)
+$step = Get-EffortLabelStep $read.EffortLabel
+"$($read.Model)|$($read.EffortLabel)|$(if ($null -eq $step) { '(없음)' } else { $step })"
 """
+
+_COMPOSER_TEXTS_FUNCTIONS = "Get-EffortLabels,Get-EffortLabelStep,Split-ComposerTexts"
 
 
 @pytest.mark.parametrize(
-    ("name", "step"),
+    ("texts", "read"),
     [
-        ("노력: 낮음", "0"),
-        ("노력: 중간", "1"),
-        ("노력: 엑스트라", "3"),
-        ("노력: 최대 3.5× 이상 사용량", "4"),  # Opus 의 최대 칸은 사용량 덧붙임이 붙는다
-        ("노력: Ultracode", "(없음)"),  # 레벨이 아닌 칸은 되돌리지 않는다
-        ("노력: 높음이", "(없음)"),  # 이름 뒤에 공백 없이 붙은 글은 다른 이름이다
+        (["Opus 5.5", " ", "낮음"], "Opus 5.5|낮음|0"),
+        (["Sonnet 5.5", " ", "중간"], "Sonnet 5.5|중간|1"),
+        (["Opus 5.5", " ", "엑스트라"], "Opus 5.5|엑스트라|3"),
+        (["Opus 5.5", " ", "최대"], "Opus 5.5|최대|4"),  # 버튼 이름의 사용량 덧붙임은 Text 에 없다
+        (["Opus 5.5", "엑스트라"], "Opus 5.5|엑스트라|3"),  # 공백 Text 가 없어도 같다
+        # 고속 모드가 켜지면 모델과 노력 사이에 `빠름` 이 든다(composer_menu_tree.ps1, 2026-10-16)
+        (["Opus 5.5", " ", "빠름", " ", "엑스트라"], "Opus 5.5|엑스트라|3"),
+        # 레벨이 아닌 칸은 되돌리지 않는다
+        (["Opus 5.5", " ", "Ultracode"], "Opus 5.5|Ultracode|(없음)"),
+        (["Opus 5.5", " ", "높음이"], "Opus 5.5|높음이|(없음)"),  # 모르는 이름은 칸이 없다
     ],
 )
-def test_노력_버튼의_이름에서_칸을_읽는다(name: str, step: str) -> None:
-    completed = _call(
-        "Get-EffortLabels,Test-ButtonShows,Get-EffortButtonStep", _EFFORT_BUTTON, {"name": name}
-    )
+def test_모델_버튼의_자식_글에서_모델과_노력을_읽는다(texts: list[str], read: str) -> None:
+    completed = _call(_COMPOSER_TEXTS_FUNCTIONS, _COMPOSER_TEXTS, {"texts": texts})
 
     assert completed.returncode == 0, completed.stderr
-    assert completed.stdout.strip() == step
+    assert completed.stdout.strip() == read
+
+
+@pytest.mark.parametrize(
+    "texts",
+    [
+        ["Opus 5.5"],  # 노력이 없다
+        ["Opus 5.5", " "],
+        [],
+    ],
+)
+def test_모델_버튼의_자식_글이_둘보다_적으면_멈춘다(texts: list[str]) -> None:
+    completed = _call(_COMPOSER_TEXTS_FUNCTIONS, _COMPOSER_TEXTS, {"texts": texts})
+
+    assert completed.returncode != 0
+    assert "모델 버튼의 글" in completed.stderr
+
+
+# 메뉴 항목의 이름은 칸 이름 뒤에 덧붙임이 붙을 수 있다(`Sonnet 5.5 기본값`, `중간 추천`,
+# `최대 3.5× 이상 사용량`).
+_NAME_SHOWS = '"$(Test-NameShows $given.name $given.label)"'
+
+
+@pytest.mark.parametrize(
+    ("name", "label", "shows"),
+    [
+        ("엑스트라", "엑스트라", "True"),
+        ("중간 추천", "중간", "True"),
+        ("최대 3.5× 이상 사용량", "최대", "True"),
+        ("Sonnet 5.5 기본값", "Sonnet 5.5", "True"),
+        ("높음이", "높음", "False"),  # 이름 뒤에 공백 없이 붙은 글은 다른 이름이다
+        ("Opus 5.5", "Opus 5", "False"),
+        ("opus 5.5", "Opus 5.5", "False"),  # 대소문자를 가린다
+    ],
+)
+def test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그_칸이다(
+    name: str, label: str, shows: str
+) -> None:
+    completed = _call("Test-NameShows", _NAME_SHOWS, {"name": name, "label": label})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == shows
 
 
 # 고르기 전의 값(Read-DraftDefaults 가 돌려주는 모양)을 받아 쓰는 순수 함수들.
