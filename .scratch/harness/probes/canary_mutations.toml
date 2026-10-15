@@ -539,10 +539,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다"
+                    "대조군이 새 사본이거나 카나리아가 바뀐 본문에만 있는 글이 아니다. 그 PR 이 "
 '''
 new = '''
-                    "대조군이 새 사본이다"
+                    "대조군이 새 사본이다. 그 PR 이 "
 '''
 
 [[mutation]]
@@ -1002,10 +1002,11 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    return problems + ancestor_problems(spec, places)
+    problems += ancestor_problems(spec, places)
+    return problems + view_problems(spec, places, view)
 '''
 new = '''
-    return problems
+    return problems + view_problems(spec, places, view)
 '''
 
 # 대기열 184 — 사전 확인 모드
@@ -1018,10 +1019,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    if len(argv) > 1 and argv[0] == _PREFLIGHT:
+    preflight = bool(args) and args[0] == _PREFLIGHT
 '''
 new = '''
-    if False:
+    preflight = False
 '''
 
 [[mutation]]
@@ -1032,7 +1033,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-            problems = _preflight(spec, _places(spec, base))
+            problems = _preflight(spec, _places(spec, base, control), view)
 '''
 new = '''
             problems = []
@@ -1091,10 +1092,11 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    if len(argv) != 2 or any(arg.startswith("--") for arg in argv):
+        (not args if preflight else len(args) != 2)
+        or any(arg.startswith("--") for arg in args)
 '''
 new = '''
-    if len(argv) != 2:
+        (not args if preflight else len(args) != 2)
 '''
 
 # 대기열 212: 통과한 실험군 답의 "없음" 섞임 표시와 자르지 않은 답
@@ -1389,9 +1391,13 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    return _text(completed.stdout).strip() if completed.returncode == 0 else None
+    if completed is None or completed.returncode != 0:
+        return None
+    return _text(completed.stdout).strip()
 '''
 new = '''
+    if completed is None:
+        return None
     return _text(completed.stdout).strip()
 '''
 
@@ -1403,10 +1409,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
+    completed = _git(checkout, "rev-parse", "--short", "HEAD")
 '''
 new = '''
-            [git, "-C", str(checkout), "rev-parse", "HEAD"],
+    completed = _git(checkout, "rev-parse", "HEAD")
 '''
 
 [[mutation]]
@@ -1417,10 +1423,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-            [git, "-C", str(checkout), "rev-parse", "--short", "HEAD"],
+            [git, "-C", str(checkout), *args], capture_output=True, check=False, timeout=timeout
 '''
 new = '''
-            [git, "rev-parse", "--short", "HEAD"],
+            [git, *args], capture_output=True, check=False, timeout=timeout
 '''
 
 [[mutation]]
@@ -1453,4 +1459,579 @@ old = '''
 new = '''
     except OSError:
         return None
+'''
+
+[[mutation]]
+name = "git 상태의 카나리아를 알리지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                if _flat(canary) in _flat(text):
+'''
+new = '''
+                if False:
+'''
+
+[[mutation]]
+name = "git 상태를 읽지 못한 갈래를 지나간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if current is None:
+            problems.append(
+                f"{arm.name}: 체크아웃 {checkout} 의 git 상태를 읽지 못했다"
+                "(git 을 띄우지 못했거나 제한 시간을 넘겼다)"
+            )
+            continue
+'''
+new = '''
+        if current is None:
+            continue
+'''
+
+[[mutation]]
+name = "사전 확인이 git 상태를 보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return problems + view_problems(spec, places, view)
+'''
+new = '''
+    return problems
+'''
+
+[[mutation]]
+name = "git 상태의 바뀐 경로를 견주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            *(("바뀐 경로", path) for path in self.paths),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "git 상태의 브랜치를 견주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            *([("브랜치", self.branch)] if self.branch else []),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "git 상태의 커밋 제목을 견주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            *(("커밋 제목", subject) for subject in self.subjects),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "이름을 바꾼 줄의 옛 경로를 따로 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if {"R", "C"} & set(entry[:2]) and index < len(chunks):
+            paths.append(chunks[index])
+            index += 1
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "상태 줄의 머리를 떼지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        paths.append(entry[3:])
+'''
+new = '''
+        paths.append(entry)
+'''
+
+[[mutation]]
+name = "상태를 NUL 로 가르지 않고 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    status = _git(checkout, "status", "--porcelain", "-z")
+'''
+new = '''
+    status = _git(checkout, "status", "--porcelain")
+'''
+
+[[mutation]]
+name = "최근 커밋을 다섯이 아니라 열 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    log = _git(checkout, "log", "-n", "5", "--format=%s")
+'''
+new = '''
+    log = _git(checkout, "log", "-n", "10", "--format=%s")
+'''
+
+[[mutation]]
+name = "저장소 밖을 읽지 못한 것으로 본다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if status.returncode != 0:
+        return GitView()
+'''
+new = '''
+    if status.returncode != 0:
+        return None
+'''
+
+[[mutation]]
+name = "브랜치나 로그의 제한 시간 넘김을 지나간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if branch is None or log is None:
+        return None
+'''
+new = '''
+    if branch is None and log is None:
+        return None
+'''
+
+[[mutation]]
+name = "같은 체크아웃의 git 상태를 갈래마다 다시 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if key not in seen:
+            seen[key] = view(checkout)
+'''
+new = '''
+        if True:
+            seen[key] = view(checkout)
+'''
+
+[[mutation]]
+name = "체크아웃이 없는 갈래의 git 상태도 읽는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if not checkout.is_dir():
+            continue
+        key = _place_key(checkout)
+'''
+new = '''
+        key = _place_key(checkout)
+'''
+
+[[mutation]]
+name = "--control-commit 을 알아보지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if len(args) >= 2 and args[0] == _CONTROL_COMMIT:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "깃발처럼 보이는 커밋을 git 에 넘긴다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        or (control_commit is not None and control_commit.startswith("-"))
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "사전 확인이 명세 없이도 돈다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        (not args if preflight else len(args) != 2)
+'''
+new = '''
+        (False if preflight else len(args) != 2)
+'''
+
+[[mutation]]
+name = "꺼낸 대조군 자리를 쓰지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        lambda control: _run(spec, output, _places(spec, base, control), runner, out, commit, view),
+'''
+new = '''
+        lambda control: _run(spec, output, _places(spec, base), runner, out, commit, view),
+'''
+
+[[mutation]]
+name = "실험군까지 꺼낸 대조군 자리로 바꾼다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if control is not None and arm.role == "control"
+'''
+new = '''
+        if control is not None
+'''
+
+[[mutation]]
+name = "커밋을 찾지 못해도 꺼내려 한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if found.returncode != 0:
+        raise CheckoutError(f"커밋 {commit} 을 {base} 의 저장소에서 찾지 못했다", 2)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "찾지 못한 커밋을 종료 코드 3 으로 낸다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        raise CheckoutError(f"커밋 {commit} 을 {base} 의 저장소에서 찾지 못했다", 2)
+'''
+new = '''
+        raise CheckoutError(f"커밋 {commit} 을 {base} 의 저장소에서 찾지 못했다", 3)
+'''
+
+[[mutation]]
+name = "대조군을 분리 HEAD 로 꺼내라고 하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    added = _worktree(base, "add", "--detach", str(place), sha)
+'''
+new = '''
+    added = _worktree(base, "add", str(place), sha)
+'''
+
+[[mutation]]
+name = "git worktree 에 긴 경로를 켜지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        base, "-c", "core.longpaths=true", "worktree", *args, timeout=_WORKTREE_TIMEOUT_SECONDS
+'''
+new = '''
+        base, "worktree", *args, timeout=_WORKTREE_TIMEOUT_SECONDS
+'''
+
+[[mutation]]
+name = "대조군을 걷을 때 --force 를 주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+_FORCE = ("--force",)
+'''
+new = '''
+_FORCE: tuple[str, ...] = ()
+'''
+
+[[mutation]]
+name = "꺼낸 대조군을 걷지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    try:
+        yield place
+    finally:
+        _remove_checkout(base, place, out)
+'''
+new = '''
+    yield place
+'''
+
+[[mutation]]
+name = "제한 시간을 넘긴 꺼내기를 걷지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if place.exists():
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
+'''
+new = '''
+        if False:
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
+'''
+
+[[mutation]]
+name = "git 이 거부한 자리를 통째로 지운다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        with suppress(OSError):
+            parent.rmdir()
+        if parent.exists():
+            out(f"임시 폴더 {parent} 가 남았다. 이 도구가 꺼낸 것인지 몰라 지우지 않았다")
+'''
+new = '''
+        shutil.rmtree(parent)
+'''
+
+[[mutation]]
+name = "걷지 못한 대조군을 알리지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if place.parent.exists():
+        out(_leftover_message(base, place, removed))
+'''
+new = '''
+    if False:
+        out(_leftover_message(base, place, removed))
+'''
+
+[[mutation]]
+name = "꺼낸 대조군의 자리를 찍지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    out(f"대조군 체크아웃: {place}(커밋 {commit} 을 꺼낸다. 끝나면 걷는다)")
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "제한 시간을 넘긴 꺼내기의 잠긴 워크트리를 걷지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            _remove_checkout(base, place, out, _FORCE_LOCKED)
+'''
+new = '''
+            _remove_checkout(base, place, out)
+'''
+
+[[mutation]]
+name = "사전 확인이 꺼낸 대조군 자리를 쓰지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            problems = _preflight(spec, _places(spec, base, control), view)
+'''
+new = '''
+            problems = _preflight(spec, _places(spec, base), view)
+'''
+
+[[mutation]]
+name = "걷기 전에 링크를 끊지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    left = _cut_links(place)
+'''
+new = '''
+    left: list[str] = []
+'''
+
+[[mutation]]
+name = "끊지 못한 링크가 남아도 걷는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    left = _cut_links(place)
+    if left:
+'''
+new = '''
+    left = _cut_links(place)
+    if False:
+'''
+
+[[mutation]]
+name = "링크 안으로 내려간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            if entry.is_symlink() or entry.is_junction():
+'''
+new = '''
+            if False:
+'''
+
+[[mutation]]
+name = "읽지 못한 폴더를 지나간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        except OSError:
+            left.append(str(current))
+            continue
+'''
+new = '''
+        except OSError:
+            continue
+'''
+
+[[mutation]]
+name = "등록이 없어도 git worktree remove 를 안내한다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if _registered(base, place) is False:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "등록 목록의 자리를 견주지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        _place_key(line.removeprefix("worktree ")) == key
+'''
+new = '''
+        False
+'''
+
+[[mutation]]
+name = "임시 폴더를 만들지 못한 것을 종료 3 으로 내지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    except OSError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
+'''
+new = '''
+    except ValueError as error:
+        raise CheckoutError(f"임시 폴더를 만들지 못했다: {error}", 3) from error
+'''
+
+[[mutation]]
+name = "대조군 메시지에 병합 뒤 다시 돌리는 처방을 붙이지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                    "병합된 뒤 다시 돌리는 것이면 바뀌기 전 커밋을 --control-commit <커밋> "
+                    "으로 준다(커밋은 명세 머리 주석이 적고, 없으면 그 명세를 들인 커밋의 "
+                    "부모다. 프로브 README `canary/` 행)"
+'''
+new = '''
+                    "병합된 뒤의 일이다"
 '''
