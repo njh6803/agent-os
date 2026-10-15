@@ -1,0 +1,26 @@
+# next-session 1단계의 PR 본문 칸 목록에 더한 "계약 영향"이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 카나리아가 없다. 병합 뒤에는
+# 주 체크아웃이 새 사본이라, 다시 돌리려면 옛 판을 `git worktree add --detach` 로 꺼내 대조군의 checkout 으로 준다
+# (spec_reviewer_agent.toml 의 머리말).
+# 최신 결과: 통과 4(2026-10-15, 이 PC, claude 2.1.300, 실험군은 커밋 전의 워크트리, 대조군 옛 판 `0c12284`, 일지 2026-10-15-11).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_pr_body_contract_impact.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 1단계에서 PR을 연 뒤 범위를 넓히는 커밋을 푸시하기 전에 고치라고 한 PR 본문의 칸 이름들을,
+괄호 안에 적힌 그대로(따옴표와 쉼표 포함) 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ['"남긴 위험", "계약 영향"']
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

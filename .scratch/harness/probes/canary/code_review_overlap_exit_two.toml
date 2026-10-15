@@ -1,0 +1,26 @@
+# code-review 6단계 끝의 번호 받기에서, 번호 대조 도구가 2로 끝날 때의 갈래를 도구의 `할 일:` 줄로 줄인 문장(대기열 251)이 새 세션에 실리는지.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(55ba299)이다. 옛 판에는 같은 자리에 2 갈래의 긴 문장이 있고 카나리아는 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 따로 꺼낸다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `55ba299`, 실험군은 `55ba299` 위의 커밋 전 변경, 일지 2026-10-15-15).
+#   첫 판의 질문("처음부터 마침표까지")에 실험군 한 회차가 "없음"을 섞었다가 정정해, 질문을 "그 경우를 다루는 문장 하나"로 고쳐 다시 돌렸다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   git worktree add --detach ../../../../agent-canary-55ba299 55ba299
+#   uv run python tools/canary.py .scratch/harness/probes/canary/code_review_overlap_exit_two.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+code-review 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(리뷰, 서브에이전트)은 하지 않고 본문만 읽는다.
+6단계 끝 문단에서, 일지 번호를 받는 도구가 2로 끝나 번호 줄이 없는 경우를 다루는 문장 하나를 글자 그대로 옮겨라.
+그 경우를 다루는 문장이 본문에 없으면 "없음"이라고만 답하라.
+'''
+expect = ["stderr의 `할 일:` 줄을 따른다"]
+source = ".claude/skills/code-review/SKILL.md"
+skill = "code-review"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-55ba299"

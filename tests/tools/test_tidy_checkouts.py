@@ -48,6 +48,7 @@ from tools.tidy_checkouts import (
     parse_worktrees,
     process_alive,
     real_git,
+    same_path,
     scan_modules,
     tasklist_has,
     unrecreatable,
@@ -382,18 +383,41 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         "web/packages/ui/dist/",
         "web/packages/ui/storybook-static/",
         ".claude/settings.local.json",
+        # 2026-10-15 에 병합된 워크트리 다섯을 남긴 것들. 모두 루트 `.gitignore` 가 산출물·캐시라고
+        # 적은 자리다
+        ".ds-sync/",
+        "ds-bundle/",
+        ".design-sync/sb-reference/",
+        ".design-sync/.cache/",
+        ".scratch/harness/probes/session_cost/cache/",
+        "grep.exe.stackdump",
     ]
     assert unrecreatable(entries, settings_same=True) == []
 
 
 def test_다시_만들_수_없는_무시된_것을_돌려준다() -> None:
-    entries = [".env", "traces/", ".claude/plans/", "web/apps/admin/dist/", ".venv/", "x.pyc"]
+    """자리째로 보는 폴더는 같은 이름이 다른 자리에 있으면 다시 만들 수 없는 것이다. 플랜 모드의
+    계획 파일은 세션의 계획 원문이라 산출물이 아니다."""
+    entries = [
+        ".env",
+        "traces/",
+        ".claude/plans/",
+        ".design-sync/learnings/",
+        "web/.cache/",
+        "web/apps/admin/dist/",
+        ".venv/",
+        "x.pyc",
+        "stackdump",
+    ]
     assert unrecreatable(entries, settings_same=True) == [
         ".env",
         "traces/",
         ".claude/plans/",
+        ".design-sync/learnings/",
+        "web/.cache/",
         "web/apps/admin/dist/",
         "x.pyc",
+        "stackdump",
     ]
 
 
@@ -416,14 +440,43 @@ def test_모두_맞으면_지운다() -> None:
     assert (verdict.branch, verdict.head, verdict.unlock) == ("chore/x", _HEAD, False)
 
 
-def test_prunable_은_사람에게_넘긴다() -> None:
+def test_prunable_인데_폴더가_있으면_git_이_있을_때만_사람에게_넘긴다() -> None:
+    """`.git` 없는 폴더는 지우다 만 폴더라 등록 없는 폴더의 판정으로 내용을 가른다(`_judge_all`)."""
     verdict = judge(replace(_WT, prunable=True), _FACTS, _MERGED, (), _죽었다, ())
     assert verdict.action == "human"
     assert "prunable" in verdict.reason
+    dead = judge(replace(_WT, prunable=True), replace(_FACTS, has_git=False), {}, (), _죽었다, ())
+    assert dead.action == "delete"
+    assert ".git 이 없다" in dead.reason
 
 
-def test_폴더가_없으면_사람에게_넘긴다() -> None:
-    assert judge(_WT, replace(_FACTS, exists=False), _MERGED, (), _죽었다, ()).action == "human"
+def test_폴더가_없으면_등록만_걷도록_지운다() -> None:
+    """2026-10-15 에 폴더 없는 prunable 등록 둘이 사람에게 넘겨진 채 남아 있었다. 폴더가 없으면
+    잃을 것이 없다. 옆 이름(.tidy-probe)에 폴더가 남았으면 되돌릴 일이라 남긴다(되돌린다 줄이
+    따로 찍힌다)."""
+    missing = replace(_FACTS, exists=False, toplevel=None)
+    verdict = judge(replace(_WT, prunable=True), missing, _MERGED, (), _죽었다, ())
+    assert verdict.action == "delete"
+    assert "등록만 남았다" in verdict.reason
+    assert judge(_WT, missing, {}, (), _죽었다, ()).action == "delete"
+    aside = judge(_WT, replace(missing, aside=True), _MERGED, (), _죽었다, ())
+    assert aside.action == "keep"
+    assert "restore" in aside.reason
+
+
+def test_폴더가_없어도_잠긴_등록과_origin_main_에_없는_분리_HEAD_는_사람에게_넘긴다() -> None:
+    """명세 축 리뷰(Critical). 등록이 그 커밋의 마지막 참조일 수 있어 걷으면 커밋이 매달린다.
+    잠금은 이동식 매체를 지키는 수단이라 폴더가 없어도 판정이 남긴다."""
+    missing = replace(_FACTS, exists=False, toplevel=None)
+    detached = replace(_WT, branch=None)
+    outside = judge(detached, missing, {}, (), _죽었다, ())
+    assert outside.action == "human"
+    assert "origin/main 에 없다" in outside.reason
+    inside = judge(detached, replace(missing, contained=True), {}, (), _죽었다, ())
+    assert (inside.action, inside.branch) == ("delete", None)
+    locked = judge(replace(_WT, locked="이동식 매체"), missing, _MERGED, (), _죽었다, ())
+    assert locked.action == "human"
+    assert "잠겨" in locked.reason
 
 
 def test_git_이_다른_저장소를_읽으면_사람에게_넘긴다() -> None:
@@ -441,8 +494,20 @@ def test_toplevel_은_구분자와_대소문자를_가리지_않고_견준다() 
     assert judge(_WT, facts, _MERGED, (), _죽었다, ()).action == "delete"
 
 
-def test_분리_HEAD_는_사람에게_넘긴다() -> None:
-    assert judge(replace(_WT, branch=None), _FACTS, _MERGED, (), _죽었다, ()).action == "human"
+def test_분리_HEAD_는_그_커밋이_origin_main_에_있을_때만_지운다() -> None:
+    """2026-10-15 에 분리 HEAD 워크트리 일곱이 넘겨진 채 남아 있었다. 커밋이 `origin/main` 에
+    있으면 잃을 것이 없다. 깨끗함과 주인 판정은 브랜치 워크트리와 같이 거친다."""
+    detached = replace(_WT, branch=None)
+    outside = judge(detached, _FACTS, _MERGED, (), _죽었다, ())
+    assert outside.action == "human"
+    assert "origin/main 에 없다" in outside.reason
+    inside = judge(detached, replace(_FACTS, contained=True), {}, (), _죽었다, ())
+    assert (inside.action, inside.branch, inside.head) == ("delete", None, _HEAD)
+    assert "origin/main 에 있다" in inside.reason
+    dirty = judge(detached, replace(_FACTS, contained=True, status=" M a"), {}, (), _죽었다, ())
+    assert dirty.action == "keep"
+    held = judge(detached, replace(_FACTS, contained=True), {}, (), _죽었다, _CLAUDE)
+    assert held.action == "keep"
 
 
 def test_병합된_PR_이_없으면_남긴다() -> None:
@@ -524,14 +589,6 @@ def test_잠금_pid_가_살아_있으면_쥔_프로세스보다_잠금의_세션
     assert "claude session x" in verdict.reason
 
 
-def test_모듈을_올린_프로세스가_있으면_이름과_pid_를_들어_남긴다() -> None:
-    """대기열 201. 앞지우기가 `.pyd` 에서 막혀 종료 1로 남는 것을 판정에서 미리 남긴다."""
-    held = (Holder(26016, "python.exe", "module"),)
-    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다, held)
-    assert verdict.action == "keep"
-    assert "모듈을 올린 프로세스: python.exe(pid 26016)" in verdict.reason
-
-
 def test_쥔_것을_하나라도_볼_수_있으면_합친다() -> None:
     cwd = [Holder(1, "claude.exe")]
     module = [Holder(2, "python.exe", "module")]
@@ -566,7 +623,10 @@ def test_폴더_안을_작업_디렉터리로_쥔_프로세스만_고른다() ->
     assert holders_in(None, "C:/repo/.claude/worktrees/x") is None
 
 
-def test_제목이_어느_브랜치와도_맞지_않는_세션이_돌면_지울_것을_사람에게_넘긴다() -> None:
+def test_제목이_어느_브랜치와도_맞지_않는_세션이_돌면_프로세스를_못_볼_때만_넘긴다() -> None:
+    """2026-10-15 에 실행 중인 세션 다섯의 `claude.exe` 가 모두 그 워크트리를 작업 디렉터리로
+    쥐고 있었다(`EnterWorktree` 로 들어간 세션 포함). 그러니 프로세스를 읽을 수 있으면 판정 3이
+    이름으로 남기고, 제목으로 전부 넘기는 것은 읽을 수 없는 OS 에서만 한다."""
     delete = judge(_WT, _FACTS, _MERGED, (), _죽었다, ())
     keep = judge(_WT, _FACTS, {}, (), _죽었다, ())
     held = hold_for_strangers([delete, keep], ("앱이 지은 이름",), {"main", "chore/x"})
@@ -583,6 +643,20 @@ def test_체크아웃되지_않은_브랜치는_병합된_PR_머리와_같을_�
     assert judge_branch("chore/x", _HEAD, _MERGED).action == "delete"
     assert judge_branch("chore/x", _OLD, _MERGED).action == "human"
     assert judge_branch("chore/y", _HEAD, _MERGED).action == "keep"
+
+
+def test_병합된_PR_이_없어도_커밋이_모두_origin_main_에_있는_브랜치는_지운다() -> None:
+    """2026-10-15 에 `EnterWorktree` 가 만든 `worktree-*` 브랜치 53개가 PR 없이 남아 있었다.
+    끝이 `origin/main` 에서 닿으면 잃는 것은 이름뿐이다. `main` 은 루트가 다른 브랜치에 있을 때
+    체크아웃되지 않은 브랜치로 보여도 지우지 않는다."""
+    gone = judge_branch("worktree-x", _HEAD, {}, contained=True)
+    assert gone.action == "delete"
+    assert "origin/main" in gone.reason
+    assert judge_branch("worktree-x", _HEAD, {}, contained=False).action == "keep"
+    assert judge_branch("main", _HEAD, {}, contained=True).action == "keep"
+    assert judge_branch("master", _HEAD, {}, contained=True).action == "keep"
+    # 병합된 PR 의 머리와 다른 끝은 origin/main 에 있어도 사람이 본다
+    assert judge_branch("chore/x", _OLD, _MERGED, contained=True).action == "human"
 
 
 # --- 등록 없는 폴더(대기열 148) -------------------------------------------------------------------
@@ -603,16 +677,17 @@ def test_등록_없는_폴더에_git_이_있으면_사람에게_넘긴다() -> N
     assert ".git" in verdict.reason
 
 
-def test_탐침이_옆_이름에_남긴_폴더는_등록이_폴더를_잃었을_때만_되돌릴_자리를_알린다() -> None:
+def test_탐침이_옆_이름에_남긴_폴더는_등록이_폴더를_잃었을_때만_되돌린다() -> None:
+    """2026-10-15 에 옆 이름에 남은 폴더 하나가 되돌릴 자리만 안내된 채 사흘을 남아 있었다.
+    되돌리기는 `restore` 명령으로 찍는다."""
     aside = "C:/repo/.claude/worktrees/x.tidy-probe"
     home = "C:/repo/.claude/worktrees/x"
     verdict = judge_stray(aside, replace(_CLEAN_STRAY, has_git=True), (), home)
-    assert verdict.action == "human"
+    assert verdict.action == "restore"
     assert home in verdict.reason
-    assert "되돌리면" in verdict.reason
     unknown = judge_stray(aside, replace(_CLEAN_STRAY, has_git=True), ())
     assert unknown.action == "human"
-    assert "되돌리면" not in unknown.reason
+    assert "되돌" not in unknown.reason
 
 
 def test_등록_없는_폴더에_커밋에_없는_파일이_있으면_남기고_몇_개를_든다() -> None:
@@ -690,7 +765,7 @@ def test_블롭_이름은_git_hash_object_와_같은_판별로_낸다(
         assert blob_ids(data) == {expected}
 
 
-# --- 앞지우기 -----------------------------------------------------------------------------------
+# --- 휴지통 지우기(delete_path) --------------------------------------------------------------
 
 
 def _link(link: Path, target: Path) -> None:
@@ -703,7 +778,7 @@ def _link(link: Path, target: Path) -> None:
         link.symlink_to(target, target_is_directory=True)
 
 
-def test_앞지우기는_트리_밖을_가리키는_링크를_따라가지_않는다(tmp_path: Path) -> None:
+def test_휴지통_지우기는_트리_밖을_가리키는_링크를_따라가지_않는다(tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "keep.txt").write_text("남는다", encoding="utf-8")
@@ -716,7 +791,7 @@ def test_앞지우기는_트리_밖을_가리키는_링크를_따라가지_않�
     assert (outside / "keep.txt").read_text(encoding="utf-8") == "남는다"
 
 
-def test_앞지우기는_링크_자체만_지운다(tmp_path: Path) -> None:
+def test_휴지통_지우기는_링크_자체만_지운다(tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "keep.txt").write_text("남는다", encoding="utf-8")
@@ -726,7 +801,7 @@ def test_앞지우기는_링크_자체만_지운다(tmp_path: Path) -> None:
     assert (outside / "keep.txt").exists()
 
 
-def test_앞지우기는_읽기_전용_파일도_지운다(tmp_path: Path) -> None:
+def test_휴지통_지우기는_읽기_전용_파일도_지운다(tmp_path: Path) -> None:
     tree = tmp_path / ".venv"
     tree.mkdir()
     readonly = tree / "locked.txt"
@@ -736,7 +811,7 @@ def test_앞지우기는_읽기_전용_파일도_지운다(tmp_path: Path) -> No
     assert not tree.exists()
 
 
-def test_앞지우기는_파일_하나도_지운다(tmp_path: Path) -> None:
+def test_휴지통_지우기는_파일_하나도_지운다(tmp_path: Path) -> None:
     single = tmp_path / "next-env.d.ts"
     single.write_text("x", encoding="utf-8")
     delete_path(single)
@@ -780,6 +855,8 @@ def repo(tmp_path: Path) -> Path:
     (root / "README.md").write_bytes(b"repo\n")
     _git("add", ".", cwd=root)
     _git(*_IDENTITY, "commit", "-m", "init", cwd=root)
+    # 실제 저장소처럼 `origin/main` 을 둔다. 브랜치와 분리 HEAD 의 판정이 이것을 본다
+    _git("update-ref", "refs/remotes/origin/main", "HEAD", cwd=root)
     return root
 
 
@@ -800,11 +877,28 @@ def _add(root: Path, name: str) -> tuple[Path, str]:
 
 def _registered(root: Path, path: Path) -> bool:
     listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=root) + "\n")
-    return any(os.path.samefile(w.path, path) for w in listing if os.path.exists(w.path))
+    return any(same_path(w.path, str(path)) for w in listing)
 
 
 def _모듈_없음() -> list[tuple[int, str, str]]:
     return []
+
+
+def _볼_수_없다() -> None:
+    """프로세스를 읽을 수 없는 OS 의 훑기."""
+    return None
+
+
+def _add_detached(root: Path, name: str) -> tuple[Path, str]:
+    """분리 HEAD 워크트리. `origin/main` 의 커밋을 가리킨다."""
+    path = root / ".claude" / "worktrees" / name
+    _git("worktree", "add", "--detach", str(path), cwd=root)
+    return path, _git("rev-parse", "HEAD", cwd=path)
+
+
+def _trash(root: Path) -> list[str]:
+    trash = root / ".claude" / "worktrees" / ".tidy-trash"
+    return sorted(p.name for p in trash.iterdir()) if trash.is_dir() else []
 
 
 def _안_잔다(_seconds: float) -> None:
@@ -848,16 +942,40 @@ def test_judge_는_실행_중인_세션의_제목을_받는다(
     )
 
 
-def test_judge_는_제목_모를_세션_때문에_넘긴_후보에_명령을_붙인다(
+def test_judge_는_프로세스를_못_볼_때_제목_모를_세션_때문에_넘긴_후보에_명령을_붙인다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     path, head = _add(repo, "done")
     merged = {"chore/done": frozenset({head})}
-    assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=_ops(merged)) == 0
+    ops = replace(_ops(merged), processes=_볼_수_없다)
+    assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=ops) == 0
     done = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
     assert done.startswith("넘긴다")
     assert "앱이 지은 이름" in done
     assert f'승인하면 → uv run python tools/tidy_checkouts.py remove "{path.as_posix()}"' in done
+
+
+def test_judge_는_프로세스를_볼_수_있으면_제목_모를_세션이_돌아도_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """2026-10-15. 세션은 작업 디렉터리로 잡힌다. 제목으로는 넘기지 않는다. 빈 목록은 읽지 못한
+    것으로 본다(윈도의 프로세스 열거 실패가 빈 목록이다, PR #243 CodeRabbit). 훑기가 됐으면 이
+    도구 자신의 파이썬이 들어 비지 않는다."""
+    _, head = _add(repo, "done")
+    merged = {"chore/done": frozenset({head})}
+
+    def only_me() -> list[tuple[int, str, str]]:
+        return [(os.getpid(), "python.exe", str(repo))]
+
+    ops = replace(_ops(merged), processes=only_me)
+    assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=ops) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
+    assert done.startswith("지운다"), done
+    empty = replace(_ops(merged), processes=_모듈_없음)
+    assert main(["judge", "--running", "앱이 지은 이름"], cwd=repo, ops=empty) == 0
+    held = next(line for line in capsys.readouterr().out.splitlines() if "done" in line)
+    assert held.startswith("넘긴다"), held
+    assert "앱이 지은 이름" in held
 
 
 def test_judge_는_작업_디렉터리로_쥔_프로세스가_있으면_제목_모를_세션이_돌아도_남긴다(
@@ -902,11 +1020,14 @@ def test_judge_는_워크트리가_여럿이어도_프로세스를_한_번만_�
     assert sorted(scans) == ["cwd", "module"]
 
 
-def test_judge_는_모듈을_올린_프로세스가_있으면_남긴다(
+def test_remove_는_모듈을_올린_프로세스가_있어도_옮겨_두고_지우며_휴지통에_남긴다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """대기열 201. 실제 자식 프로세스가 워크트리의 `.venv` 아래 `.pyd` 를 올린다. 윈도 밖은 모듈을
-    보지 않아 지울 후보로 찍는다."""
+    """2026-10-15. 판정 3이 모듈을 올린 프로세스로 병합된 워크트리 55개를 남겼고, 그 프로세스는
+    다른 세션의 pytest·esbuild 처럼 곧 끝나는 것이었다. 실제 자식 프로세스가 워크트리의 `.venv`
+    아래 `.pyd` 를 올린 채로 `judge` 는 지울 후보로 찍고, `remove` 는 `.venv` 를 휴지통으로 옮겨
+    워크트리와 브랜치를 지운 뒤 막힌 `.pyd` 를 쥔 pid 를 들어 남긴다. 자식이 끝난 뒤
+    `empty-trash` 가 비운다. 윈도 밖은 적재한 모듈이 지우기를 막지 않는다."""
     path, head = _add(repo, "done")
     module = path / ".venv" / "Lib" / "mod.pyd"
     merged = {"chore/done": frozenset({head})}
@@ -918,9 +1039,26 @@ def test_judge_는_모듈을_올린_프로세스가_있으면_남긴다(
     shutil.copyfile(_적재할_DLL(), module)
     with _자식이_올린다(module) as pid:
         assert main(["judge"], cwd=repo, ops=ops) == 0
-    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
-    assert done.startswith("남긴다"), done
-    assert f"모듈을 올린 프로세스: python.exe(pid {pid})" in done
+        done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+        assert done.startswith("지운다"), done
+        assert main(["remove", path.as_posix(), "chore/done", head], cwd=repo, ops=ops) == 0
+        out = capsys.readouterr().out
+        assert "휴지통에 남았다" in out
+        assert f"python.exe(pid {pid})" in out
+        assert not path.exists()
+        assert _git("branch", "--list", "chore/done", cwd=repo) == ""
+        assert _trash(repo) == ["done~~.venv"]
+        assert main(["judge"], cwd=repo, ops=ops) == 0
+        listed = capsys.readouterr().out
+        assert "휴지통에 남았다" in listed
+        assert "empty-trash" in listed
+        assert main(["empty-trash"], cwd=repo, ops=ops) == 1
+        blocked = capsys.readouterr().out
+        assert "휴지통에 남았다" in blocked
+        assert f"python.exe(pid {pid})" in blocked
+        assert _trash(repo) == ["done~~.venv"]
+    assert main(["empty-trash"], cwd=repo, ops=ops) == 0
+    assert _trash(repo) == []
 
 
 def _stray(repo: Path, name: str = "stray") -> Path:
@@ -1038,31 +1176,39 @@ def test_judge_는_다른_경로의_같은_내용과_빈_파일과_실행_비트
     assert _stray_line(capsys.readouterr().out).startswith("지운다")
 
 
-def test_judge_는_탐침이_남긴_옆_이름을_되돌리면_등록이_다시_맞는다고_알린다(
+def test_judge_는_탐침이_남긴_옆_이름에_restore_를_찍고_restore_가_등록을_다시_맞춘다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """대기열 202 가 남긴 모양. 안내한 길(이름 되돌리기)을 그대로 밟아 등록이 prunable 이 아니게
+    """대기열 202 가 남긴 모양. 폴더를 잃은 등록은 옆 이름이 있으면 넘기고(되돌릴 일이다),
+    옆 이름 폴더에는 `restore` 명령을 찍는다. 그 명령을 그대로 밟아 등록이 prunable 이 아니게
     되는지 본다."""
     path, _ = _add(repo, "lost")
     aside = path.with_name("lost.tidy-probe")
     os.rename(path, aside)
-    # 원래 이름의 등록이 없는 옆 이름은 되돌릴 자리를 알리지 않는다
+    # 원래 이름의 등록이 없는 옆 이름은 되돌리지 않는다
     unknown = path.with_name("unknown.tidy-probe")
     unknown.mkdir()
     (unknown / ".git").write_text("gitdir: C:/nowhere\n", encoding="utf-8")
     assert main(["judge"], cwd=repo, ops=_ops({})) == 0
     out = capsys.readouterr().out
-    line = next(line for line in out.splitlines() if "lost.tidy-probe" in line)
-    assert line.startswith("넘긴다"), line
-    assert f"{path.as_posix()} 의 등록이 폴더를 잃었다" in line
+    home = next(line for line in out.splitlines() if line.endswith("restore 가 되돌린다"))
+    assert home.startswith("남긴다"), home
+    line = next(
+        line for line in out.splitlines() if "lost.tidy-probe" in line and "restore" in line
+    )
+    assert line.startswith("되돌린다"), line
+    assert f'restore "{aside.as_posix()}"' in line
     other = next(line for line in out.splitlines() if "unknown.tidy-probe" in line)
     assert other.startswith("넘긴다"), other
-    # 임시 경로에 시험 이름이 들어가므로 이유 부분만 본다
-    assert "되돌리면" not in other.split(" — ", 1)[1]
-    os.rename(aside, path)
+    assert main(["restore", unknown.as_posix()], cwd=repo, ops=_ops({})) == 1
+    assert "등록이 없다" in capsys.readouterr().out
+    assert main(["restore", aside.as_posix()], cwd=repo, ops=_ops({})) == 0
+    assert "되돌렸다" in capsys.readouterr().out
     listing = parse_worktrees(_git("worktree", "list", "--porcelain", cwd=repo) + "\n")
     restored = next(w for w in listing if w.branch == "chore/lost")
     assert not restored.prunable
+    assert main(["restore", aside.as_posix()], cwd=repo, ops=_ops({})) == 1
+    assert "끝나는 폴더가 아니다" in capsys.readouterr().out
 
 
 def _쓴다(path: Path, data: bytes) -> None:
@@ -1240,14 +1386,24 @@ def test_살아_있는_pid_와_끝난_pid_를_가른다() -> None:
     assert not process_alive(int(finished.stdout))
 
 
-def test_remove_는_무시된_것을_먼저_지우고_워크트리와_브랜치를_지운다(repo: Path) -> None:
+def test_remove_는_무시된_것을_휴지통으로_옮긴_뒤_워크트리와_브랜치를_지우고_휴지통을_비운다(
+    repo: Path,
+) -> None:
+    """옮기기(이름 바꾸기)는 git 보다 먼저, 휴지통 지우기는 git 보다 뒤다. 탐침의 이름 바꾸기
+    둘(옮기고 되돌리기)이 앞에 있다."""
     path, head = _add(repo, "done")
     order: list[str] = []
     base = Ops()
 
+    def rename(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            order.append(Path(src).name)
+            assert (path / ".git").exists(), "옮기기는 git 보다 먼저다"
+        os.rename(src, dst)
+
     def delete(target: Path) -> None:
-        order.append(target.name)
-        assert (path / ".git").exists(), "앞지우기는 git 보다 먼저다"
+        order.append("delete:" + target.name)
+        assert ".tidy-trash" in str(target), "지우기는 휴지통에서만 한다"
         base.delete(target)
 
     def git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -1255,12 +1411,15 @@ def test_remove_는_무시된_것을_먼저_지우고_워크트리와_브랜치�
             order.append("git")
         return real_git(args, cwd)
 
-    ops = replace(_ops({"chore/done": frozenset({head})}), delete=delete, git=git)
+    merged = {"chore/done": frozenset({head})}
+    ops = replace(_ops(merged), delete=delete, git=git, rename=rename)
     assert main(["remove", path.as_posix(), "chore/done", head], cwd=repo, ops=ops) == 0
     assert sorted(order[:2]) == [".venv", "node_modules"]
-    assert order[2:] == ["git"]
+    assert order[2] == "git"
+    assert sorted(order[3:]) == ["delete:done~~.venv", "delete:done~~node_modules"]
     assert not path.exists()
     assert _git("branch", "--list", "chore/done", cwd=repo) == ""
+    assert _trash(repo) == []
 
 
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:
@@ -1288,7 +1447,7 @@ def test_remove_는_탐침_자리가_이미_있으면_손대지_않는다(
 
 
 def test_remove_는_다시_판정해_어긋나면_손대지_않는다(repo: Path) -> None:
-    """후보가 아니면 탐침(폴더 이름 바꾸기)도 하지 않는다. 앞지우기 직전의 재판정과 따로 잰다."""
+    """후보가 아니면 탐침(폴더 이름 바꾸기)도 하지 않는다. 옮기기 직전의 재판정과 따로 잰다."""
     path, head = _add(repo, "done")
     (path / "new.py").write_text("x", encoding="utf-8")
     renamed: list[str] = []
@@ -1339,8 +1498,8 @@ def test_remove_는_이름_바꾸기가_막히면_쥔_프로세스를_이유에_
     assert len(scans) == 1
 
 
-def test_remove_는_탐침이_지나면_앞지우기_직전에만_한_번_훑는다(repo: Path) -> None:
-    """탐침은 막혔을 때만 훑고, 지나간 지우기는 앞지우기 직전의 다시 거르기에서 한 번 훑는다(판정
+def test_remove_는_탐침이_지나면_옮기기_직전에만_한_번_훑는다(repo: Path) -> None:
+    """탐침은 막혔을 때만 훑고, 지나간 지우기는 옮기기 직전의 다시 거르기에서 한 번 훑는다(판정
     4의 2). 탐침 앞의 재판정은 훑지 않는다."""
     path, head = _add(repo, "done")
     scans: list[int] = []
@@ -1354,7 +1513,7 @@ def test_remove_는_탐침이_지나면_앞지우기_직전에만_한_번_훑는
     assert len(scans) == 1
 
 
-def test_remove_는_judge_뒤에_작업_디렉터리_주인이_생기면_앞지우기_전에_멈춘다(
+def test_remove_는_judge_뒤에_작업_디렉터리_주인이_생기면_옮기기_전에_멈춘다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """PR #184 리뷰. 리눅스의 탐침은 작업 디렉터리를 보지 못해, `judge` 뒤에 들어온 주인은 앞지우기
@@ -1368,7 +1527,7 @@ def test_remove_는_judge_뒤에_작업_디렉터리_주인이_생기면_앞지�
     ops = replace(_ops({"chore/done": frozenset({head})}), processes=processes)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
     out = capsys.readouterr().out
-    assert "앞지우기 직전에 다시 판정했다" in out
+    assert "옮기기 직전에 다시 판정했다" in out
     assert "claude.exe(pid 61148)" in out
     assert (path / ".venv" / "Lib" / "mod.py").exists()
     assert _registered(repo, path)
@@ -1414,6 +1573,9 @@ def test_remove_는_되돌리기가_한_번_막혀도_다시_시도해_지운다
     slept: list[float] = []
 
     def once(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            os.rename(src, dst)
+            return
         calls.append(dst)
         if len(calls) == 2:
             raise PermissionError(5, "액세스가 거부되었습니다")
@@ -1428,27 +1590,254 @@ def test_remove_는_되돌리기가_한_번_막혀도_다시_시도해_지운다
     assert not Path(calls[0]).exists()
 
 
-def test_remove_는_앞지우기_직전에_모듈을_올린_프로세스가_있으면_멈춘다(
+def test_remove_는_모듈을_올린_프로세스를_옮기기_전에_보지_않는다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """대기열 201. 탐침은 지나고(적재한 모듈은 이름 바꾸기를 막지 않는다) 앞지우기가 `.pyd` 에서
-    막히던 자리를, 다시 거르기가 이름과 pid 를 들어 멈춘다."""
+    """대기열 201 의 반대 방향. 올린 모듈은 이름 바꾸기를 막지 않으므로 옮기기 전의 재판정은 모듈을
+    보지 않고, 막히는 것은 휴지통에서 난다(실제 자식 프로세스로 재는 것은 위의 휴지통 시험)."""
     path, head = _add(repo, "done")
     module = str(path / ".venv" / "Lib" / "mod.pyd")
 
     def modules() -> list[tuple[int, str, str]]:
         return [(26016, "python.exe", module)]
 
-    def refuse(_target: Path) -> None:
-        raise AssertionError("앞지우기에 닿았다")
-
-    ops = replace(_ops({"chore/done": frozenset({head})}), modules=modules, delete=refuse)
-    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    ops = replace(_ops({"chore/done": frozenset({head})}), modules=modules)
+    assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 0
     out = capsys.readouterr().out
-    assert "앞지우기 직전에 다시 판정했다" in out
-    assert "모듈을 올린 프로세스: python.exe(pid 26016)" in out
-    assert (path / ".venv" / "Lib" / "mod.py").exists()
+    assert "남겼다" not in out
+    assert not path.exists()
+    assert _trash(repo) == []
+
+
+def test_judge_는_분리_HEAD_가_origin_main_에_있으면_지울_후보로_찍고_remove_가_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """2026-10-15 에 모델 스윕과 옛 세션의 분리 HEAD 워크트리 일곱이 넘겨진 채 남아 있었다."""
+    path, head = _add_detached(repo, "sweep")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/sweep" in line)
+    assert line.startswith("지운다"), line
+    assert f'remove "{path.as_posix()}" .detached {head}' in line
+    assert main(["remove", path.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 0
+    assert "분리 HEAD" in capsys.readouterr().out
+    assert not path.exists()
+    assert not _registered(repo, path)
+
+
+def test_judge_는_분리_HEAD_가_origin_main_에_없으면_사람에게_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path, _ = _add_detached(repo, "sweep")
+    (path / "new.txt").write_text("x", encoding="utf-8")
+    _git("add", "new.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-m", "유일한 커밋", cwd=path)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/sweep" in line)
+    assert line.startswith("넘긴다"), line
+    assert "origin/main 에 없다" in line
+
+
+def test_judge_는_폴더_없는_등록을_지울_후보로_찍고_remove_가_등록을_걷는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """git 2.32 의 `worktree remove` 는 폴더가 없는 등록을 종료 0으로 걷는다(임시 저장소에서
+    손으로 봤다). 브랜치는 남고 다음 `judge` 가 origin/main 에 있는 것으로 지운다."""
+    path, head = _add(repo, "gone")
+    shutil.rmtree(path)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/gone" in line)
+    assert line.startswith("지운다"), line
+    assert "등록만 남았다" in line
+    assert main(["remove", path.as_posix(), "chore/gone", head], cwd=repo, ops=_ops({})) == 0
+    assert "걷었다" in capsys.readouterr().out
+    assert not _registered(repo, path)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    branch = next(line for line in capsys.readouterr().out.splitlines() if "chore/gone" in line)
+    assert branch.startswith("브랜치를 지운다"), branch
+    assert "origin/main" in branch
+
+
+def test_judge_는_git_없는_prunable_폴더를_등록_없는_폴더처럼_판정하고_remove_가_걷는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """2026-10-15 에 `.git` 없이 `web/` 만 남은 prunable 워크트리가 넘겨진 채 남아 있었다. git 은
+    폴더가 있는 채로는 그 등록을 걷지 않아, 폴더를 휴지통으로 옮긴 뒤 걷는다. 커밋에 없는 파일이
+    있으면 남긴다."""
+    path, head = _add(repo, "half")
+    (path / ".git").unlink()
+    (path / "late.py").write_text("커밋에 없다", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/half" in line)
+    assert line.startswith("남긴다"), line
+    assert "late.py" in line
+    (path / "late.py").unlink()
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/half" in line)
+    assert line.startswith("지운다"), line
+    assert f'remove "{path.as_posix()}" chore/half {head}' in line
+    assert main(["remove", path.as_posix(), "chore/half", head], cwd=repo, ops=_ops({})) == 0
+    assert "걷었다" in capsys.readouterr().out
+    assert not path.exists()
+    assert not _registered(repo, path)
+    assert _trash(repo) == []
+
+
+def test_judge_는_폴더_없는_등록의_옆_이름_폴더가_있으면_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path, _ = _add(repo, "lost")
+    os.rename(path, path.with_name("lost.tidy-probe"))
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/lost " in line)
+    assert line.startswith("남긴다"), line
+    assert ".tidy-probe" in line
+
+
+def test_judge_는_폴더_없는_분리_HEAD_등록을_origin_main_에_없으면_넘기고_있으면_걷는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """명세 축 리뷰(Critical). 폴더 없는 등록을 무조건 걷던 첫 판은 `origin/main` 에 없는 커밋의
+    마지막 참조를 걷어 그 커밋이 매달렸다(리뷰가 임시 저장소에서 재현했다). 잠긴 등록도 걷지
+    않는다."""
+    unique, _ = _add_detached(repo, "unique")
+    (unique / "only.txt").write_text("x", encoding="utf-8")
+    _git("add", "only.txt", cwd=unique)
+    _git(*_IDENTITY, "commit", "-q", "-m", "origin/main 에 없는 커밋", cwd=unique)
+    head = _git("rev-parse", "HEAD", cwd=unique)
+    shutil.rmtree(unique)
+    plain, plain_head = _add_detached(repo, "plain")
+    shutil.rmtree(plain)
+    locked, _ = _add(repo, "locked")
+    _git("worktree", "lock", "--reason", "이동식 매체", str(locked), cwd=repo)
+    shutil.rmtree(locked)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out.splitlines()
+    kept = next(line for line in out if "/unique" in line)
+    assert kept.startswith("넘긴다"), kept
+    assert "origin/main 에 없다" in kept
+    gone = next(line for line in out if "/plain" in line)
+    assert gone.startswith("지운다"), gone
+    held = next(line for line in out if "/locked" in line)
+    assert held.startswith("넘긴다"), held
+    assert "잠겨" in held
+    assert main(["remove", unique.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 1
+    assert "origin/main 에 없다" in capsys.readouterr().out
+    assert _registered(repo, unique)
+    assert _git("cat-file", "-t", head, cwd=repo) == "commit"
+    assert main(["remove", plain.as_posix(), ".detached", plain_head], cwd=repo, ops=_ops({})) == 0
+    assert not _registered(repo, plain)
+
+
+def test_origin_main_이_없는_저장소에서는_분리_HEAD_와_PR_없는_브랜치를_모두_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것을 고정한다(얕은 클론, 클라우드 세션, 원격 없는 임시 저장소)."""
+    _git("update-ref", "-d", "refs/remotes/origin/main", cwd=repo)
+    path, _ = _add_detached(repo, "sweep")
+    _git("branch", "worktree-x", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert next(line for line in out if "/sweep" in line).startswith("넘긴다")
+    assert next(line for line in out if "worktree-x" in line).startswith("브랜치를 남긴다")
+    assert path.exists()
+
+
+def test_휴지통_자리_이름은_옛_자리로_되돌릴_수_있다(repo: Path) -> None:
+    """`__pycache__` 처럼 `_` 가 든 이름과 겹쳐 번호가 붙은 자리도 되돌린다."""
+    for relative in ["src/agent_os/__pycache__/", "web/node_modules/", "odd%name/", ".venv/"]:
+        slot = tidy_checkouts.trash_slot(repo, "wt", relative)
+        slot.parent.mkdir(parents=True, exist_ok=True)
+        slot.mkdir()
+        again = tidy_checkouts.trash_slot(repo, "wt", relative)
+        assert again != slot and again.name.endswith("~1")
+        expected = (repo / ".claude" / "worktrees" / "wt" / relative.rstrip("/")).as_posix()
+        assert tidy_checkouts.origin_of(repo, slot) == expected
+        assert tidy_checkouts.origin_of(repo, again) == expected
+
+
+def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_찍고_remove_branch_가_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`EnterWorktree` 가 만들고 세션이 떠난 `worktree-*` 브랜치의 모양."""
+    _git("branch", "worktree-x", cwd=repo)
+    _git("branch", "ahead", cwd=repo)
+    (repo / "more.txt").write_text("x", encoding="utf-8")
+    _git("add", "more.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "main 보다 앞선 커밋", cwd=repo)
+    _git("branch", "-f", "ahead", "HEAD", cwd=repo)
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=repo)
+    tip = _git("rev-parse", "worktree-x", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out
+    gone = next(line for line in out.splitlines() if "worktree-x" in line)
+    assert gone.startswith("브랜치를 지운다"), gone
+    assert f"remove-branch worktree-x {tip}" in gone
+    kept = next(line for line in out.splitlines() if " ahead " in line)
+    assert kept.startswith("브랜치를 남긴다"), kept
+    assert main(["remove-branch", "worktree-x", tip], cwd=repo, ops=_ops({})) == 0
+    assert _git("branch", "--list", "worktree-x", cwd=repo) == ""
+    assert _git("branch", "--list", "ahead", cwd=repo) != ""
+
+
+def test_judge_는_git_없는_prunable_폴더의_분리_HEAD_가_origin_main_에_없으면_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 리뷰(Major). 지우다 만 폴더의 등록도 그 커밋의 마지막 참조일 수 있다."""
+    path, _ = _add_detached(repo, "half")
+    (path / "only.txt").write_text("x", encoding="utf-8")
+    _git("add", "only.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-q", "-m", "origin/main 에 없는 커밋", cwd=path)
+    head = _git("rev-parse", "HEAD", cwd=path)
+    (path / ".git").unlink()
+    (path / "only.txt").unlink()
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/half" in line)
+    assert line.startswith("넘긴다"), line
+    assert "origin/main 에 없다" in line
+    assert main(["remove", path.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 1
     assert _registered(repo, path)
+    assert _git("cat-file", "-t", head, cwd=repo) == "commit"
+
+
+def test_휴지통_자리가_링크면_읽지도_옮기지도_지우지도_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 보안 리뷰(Medium). 휴지통 자리를 다른 폴더로 가는 정션으로 바꿔 두면 `empty-trash` 가
+    링크 너머의 내용을 지웠다(리뷰가 재현했다)."""
+    victim = repo.parent / "victim"
+    (victim / "docs").mkdir(parents=True)
+    (victim / "docs" / "secret.txt").write_text("남아야 한다", encoding="utf-8")
+    path, head = _add(repo, "done")
+    _link(repo / ".claude" / "worktrees" / ".tidy-trash", victim)
+    merged = {"chore/done": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    out = capsys.readouterr().out
+    assert "휴지통 자리가 링크거나 폴더가 아니다" in out
+    assert "secret" not in out and "docs" not in out.split("휴지통")[1]
+    assert main(["empty-trash"], cwd=repo, ops=_ops(merged)) == 1
+    assert "휴지통 자리가 링크" in capsys.readouterr().out
+    assert main(["remove", path.as_posix(), "chore/done", head], cwd=repo, ops=_ops(merged)) == 1
+    assert "휴지통 자리가 링크" in capsys.readouterr().out
+    assert (path / ".venv").exists()
+    assert _registered(repo, path)
+    assert (victim / "docs" / "secret.txt").read_text(encoding="utf-8") == "남아야 한다"
+
+
+def test_judge_는_휴지통을_등록_없는_폴더로_찍지_않고_남은_것을_알린다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    trash = repo / ".claude" / "worktrees" / ".tidy-trash"
+    (trash / "old~~.venv").mkdir(parents=True)
+    (trash / "old~~.venv" / "x.py").write_text("x", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out
+    assert "등록 없는 폴더" not in out
+    assert "휴지통에 남았다" in out
+    assert "empty-trash" in out
+    assert main(["empty-trash"], cwd=repo, ops=_ops({})) == 0
+    assert _trash(repo) == []
+    assert main(["empty-trash"], cwd=repo, ops=_ops({})) == 0
+    assert "비어 있다" in capsys.readouterr().out
 
 
 # --- remove-stray(대기열 148) ---------------------------------------------------------------------
@@ -1558,7 +1947,7 @@ def test_remove_stray_는_탐침이_막히면_손대지_않는다(
     assert (stray / "README.md").exists()
 
 
-def test_remove_stray_는_지우다_막히면_1로_끝난다(
+def test_remove_stray_는_휴지통으로_옮긴_뒤_지우다_막혀도_워크트리_자리에서는_치운다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     stray = _stray(repo)
@@ -1567,21 +1956,38 @@ def test_remove_stray_는_지우다_막히면_1로_끝난다(
         raise PermissionError(5, "액세스가 거부되었습니다")
 
     ops = replace(_ops({}), delete=blocked)
-    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 1
-    assert "지우다 막혔다" in capsys.readouterr().out
+    assert main(["remove-stray", stray.as_posix()], cwd=repo, ops=ops) == 0
+    out = capsys.readouterr().out
+    assert "휴지통에 남았다" in out
+    assert not stray.exists()
+    assert _trash(repo) == ["stray~~"]
 
 
-def test_remove_는_앞지우기가_막히면_등록과_git_을_남기고_1로_끝난다(repo: Path) -> None:
+def test_remove_는_옮기기가_막히면_등록과_git_을_남기고_1로_끝난다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """탐침의 이름 바꾸기는 지나고 휴지통으로 옮기는 이름 바꾸기가 둘째에서 막힌다. 먼저 옮긴 것은
+    휴지통에서 지운다."""
     path, head = _add(repo, "done")
+    moves: list[str] = []
 
-    def blocked(_target: Path) -> None:
-        raise PermissionError(13, "액세스가 거부되었습니다")
+    def rename(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            moves.append(Path(src).name)
+            if len(moves) == 2:
+                raise PermissionError(5, "액세스가 거부되었습니다")
+        os.rename(src, dst)
 
-    ops = replace(_ops({"chore/done": frozenset({head})}), delete=blocked)
+    ops = replace(_ops({"chore/done": frozenset({head})}), rename=rename)
     assert main(["remove", str(path), "chore/done", head], cwd=repo, ops=ops) == 1
+    out = capsys.readouterr().out
+    assert "옮기다 막혔다" in out
     assert (path / ".git").exists()
+    assert (path / moves[1]).exists()
+    assert not (path / moves[0]).exists()
     assert _registered(repo, path)
     assert _git("branch", "--list", "chore/done", cwd=repo) != ""
+    assert _trash(repo) == []
 
 
 def test_remove_는_git_이_지우다_실패하면_브랜치를_남기고_3으로_멈춘다(repo: Path) -> None:
@@ -1619,7 +2025,7 @@ def test_remove_는_탐침이_막히면_죽은_잠금도_풀지_않는다(repo: 
     assert done.locked == "claude session done (pid 999999)"
 
 
-def test_remove_는_앞지우기_직전에_멈추면_죽은_잠금도_풀지_않는다(repo: Path) -> None:
+def test_remove_는_옮기기_직전에_멈추면_죽은_잠금도_풀지_않는다(repo: Path) -> None:
     """PR #163 claude-review: 잠금을 푼 뒤에 재판정이 멈추면 '바꾼 것 없음'이 거짓이 된다."""
     path, head = _add(repo, "done")
     _git("worktree", "lock", "--reason", "claude session done (pid 999999)", str(path), cwd=repo)
@@ -1637,7 +2043,7 @@ def test_remove_는_앞지우기_직전에_멈추면_죽은_잠금도_풀지_않
 
 
 def test_remove_는_판정_뒤에_생긴_무시된_파일을_지우지_않고_멈춘다(repo: Path) -> None:
-    """판정과 앞지우기 사이(탐침 동안)에 `.env` 가 생긴 경우다."""
+    """판정과 옮기기 사이(탐침 동안)에 `.env` 가 생긴 경우다."""
     path, head = _add(repo, "done")
 
     def rename_then_write(src: str, dst: str) -> None:
@@ -1667,7 +2073,12 @@ def test_remove_는_브랜치를_지우지_못하면_워크트리만_지우고_1
 
 
 def test_remove_branch_는_다시_보고_지운다(repo: Path) -> None:
-    _git("branch", "chore/loose", cwd=repo)
+    """브랜치에 origin/main 에 없는 커밋을 둬, 병합된 PR 만으로 지우는 길을 잰다."""
+    _git("switch", "-q", "-c", "chore/loose", cwd=repo)
+    (repo / "loose.txt").write_text("x", encoding="utf-8")
+    _git("add", "loose.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-q", "-m", "origin/main 에 없는 커밋", cwd=repo)
+    _git("switch", "-q", "main", cwd=repo)
     tip = _git("rev-parse", "chore/loose", cwd=repo)
     merged = {"chore/loose": frozenset({tip})}
     # 옛 머리도 병합된 PR 에 있어야 재확인이 판정 1과 따로 잰다

@@ -1,9 +1,21 @@
-# tools/sibling_overlap.py(대기열 115·157·175·182·194·199·220·224)를 하나씩 깨는 변이.
+# tools/sibling_overlap.py(대기열 115·157·175·182·194·199·220·224·235·249·251)를 하나씩 깨는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
 # 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16). 예순둘로 늘린 뒤에는 3757초(번마다
 # 41~112초. 같은 PC에서 다른 세션 둘이 돌았다)였다(2026-10-13, 일지 2026-10-13-30). 그 뒤 더한 둘은
-# `--since` 로 골라 돌렸다.
+# `--since` 로 골라 돌렸다. 대기열 235·249·251 로 더한 스물여덟은 그 셋의 시험만 `-k` 로 고르고, 코드가
+# 옮겨 가 원문을 고친 넷과 함께 `--since origin/main` 으로 돌렸다. 기준선 둘이 77초, 변이 서른둘이
+# 630초(고른 시험 9~22초, 전체 시험 60~76초)였다(2026-10-13, 일지 2026-10-15-15). 셀프 리뷰와 반박
+# 검증으로 열을 더한 뒤 같은 `--since origin/main` 이 고른 마흔둘은 기준선 셋이 194초, 변이가 1017초(고른
+# 시험 12~29초, 전체 시험 73~102초)였다(2026-10-14). 그 가운데 82는 원문을 옮길 때 `new` 의 들여쓰기를
+# 두고 와 IndentationError 로 어긋났고, 고쳐 다시 돌린 값을 더했다. 그 뒤 인용 블록을 두는 갈래로
+# 더한 둘(103·104)과 원문이 옮겨 간 79는 번호로 골라 돌렸다(2026-10-14). 합치기를 커밋하기 전의
+# 대조를 고치며 더한 셋(105~107)과, 이 브랜치 쪽 계산에서 빠져 형제 쪽에만 걸리게 된 12도 번호로
+# 골라 돌렸다(기준선 둘 66초, 변이 157초, 2026-10-14). PR 직전 버그 축을 반영하며 더한 일곱(108~114),
+# 원문이 옮겨 간 73·74, 둘레 코드가 바뀐 75~88·93~104를 `--since HEAD` 와 번호로 골라 돌렸다(기준선
+# 다섯 41초, 변이 서른다섯 411초, 2026-10-15). 그 가운데 95는 되쓰기 전의 읽기 확인이 빈 옛 자리를
+# 걸러 초록이었고, 옛 자리에 다른 것이 든 시험을 더해 다시 돌려 빨강이었다. 합치기 중의 헌법 판을
+# 고치며 더한 둘(115·116)은 번호로 골라 돌렸다(기준선 둘 76초, 변이 83초, 2026-10-15).
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -212,8 +224,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
-new = '''    return 1 if verdict.behind or verdict.unbumped else 0'''
+old = '''        return 1 if self.found or self.behind or self.unbumped or self.uncanaried else 0'''
+new = '''        return 1 if self.behind or self.unbumped or self.uncanaried else 0'''
 
 # 공유한 이력(PR 직전 버그 축: 쌓아 올린 아래 PR 이 squash 로 main 에 든 뒤)
 
@@ -290,8 +302,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
-new = '''    return 1 if verdict.found or verdict.unbumped else 0'''
+old = '''        return 1 if self.found or self.behind or self.unbumped or self.uncanaried else 0'''
+new = '''        return 1 if self.found or self.unbumped or self.uncanaried else 0'''
 
 [[mutation]]
 name = "뒤처짐을 가장 이른 새 일지로 가린다"
@@ -371,8 +383,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    day = today or datetime.now().astimezone().date()  # 이 기계의 시간대'''
-new = '''    day = today or date(2000, 1, 1)'''
+old = '''    day = (today or datetime.now().astimezone().date()).isoformat()  # 이 기계의 시간대'''
+new = '''    day = (today or date(2000, 1, 1)).isoformat()'''
 
 [[mutation]]
 name = "앞서는 형제에 main 도 넣는다"
@@ -595,5 +607,490 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return 1 if verdict.found or verdict.behind or verdict.unbumped else 0'''
-new = '''    return 1 if verdict.found or verdict.behind else 0'''
+old = '''        return 1 if self.found or self.behind or self.unbumped or self.uncanaried else 0'''
+new = '''        return 1 if self.found or self.behind or self.uncanaried else 0'''
+
+# 대기열 235(카나리아 누락), 249(`--move`), 251(도움말과 2의 할 일). 시험은 그 셋의 시험만 고른다
+
+[[mutation]]
+name = "원천으로 든 카나리아 명세를 고쳤어도 알린다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if not any(spec in changed for spec in held):'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "원천이 다른 카나리아 명세를 고쳐도 지나간다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        held = sorted(spec for spec, source in specs.items() if source == path)'''
+new = '''        held = sorted(specs)'''
+
+[[mutation]]
+name = "지운 하네스 파일도 카나리아 누락으로 알린다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    harness = [path for path in harness_files(changed) if (root / path).is_file()]'''
+new = '''    harness = harness_files(changed)'''
+
+[[mutation]]
+name = "스킬 폴더의 SKILL.md 밖 파일도 하네스로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+/SKILL|rules/[^/]+|agents/[^/]+)\.md$")'''
+new = '''HARNESS = re.compile(r"^\.claude/(?:skills/.+|rules/[^/]+|agents/[^/]+)\.md$")'''
+
+[[mutation]]
+name = "카나리아 누락에도 0 으로 끝난다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        return 1 if self.found or self.behind or self.unbumped or self.uncanaried else 0'''
+new = '''        return 1 if self.found or self.behind or self.unbumped else 0'''
+
+[[mutation]]
+name = "카나리아 누락을 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if verdict.uncanaried:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "글자가 아닌 source 도 카나리아 명세의 원천으로 든다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        found[file.relative_to(root).as_posix()] = source if isinstance(source, str) else None'''
+new = '''        found[file.relative_to(root).as_posix()] = None if source is None else str(source)'''
+
+[[mutation]]
+name = "canary 폴더 밖의 TOML 도 카나리아 명세로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''CANARY_SPECS = ".scratch/**/probes/canary/*.toml"'''
+new = '''CANARY_SPECS = ".scratch/**/*.toml"'''
+
+[[mutation]]
+name = "옮길 번호를 차례대로 바꿔 사슬이 두 번 간다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
+new = '''    for old, new in plan.journals.items():
+        text = text.replace(old, new)
+    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
+
+[[mutation]]
+name = "대기열 행의 머리를 모든 파일에서 바꾼다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    pattern = QUEUE_CITATION if path == QUEUE else CITATION'''
+new = '''    pattern = QUEUE_CITATION'''
+
+[[mutation]]
+name = "일지 머리 줄을 옮기지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            return match[0] if new is None else f"# {new[:10]} ({new[11:]})"'''
+new = '''            return match[0]'''
+
+[[mutation]]
+name = "ADR 목록을 통째로만 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            return "·".join(plan.adrs.get(number, number) for number in adrs.split("·"))'''
+new = '''            return plan.adrs.get(adrs, adrs)'''
+
+[[mutation]]
+name = "ADR 파일 이름과 색인의 꼴을 옮기지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            return plan.adrs.get(adr, adr)'''
+new = '''            return adr'''
+
+[[mutation]]
+name = "대기열 목록을 통째로만 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            return "·".join(plan.rows.get(number, number) for number in rows.split("·"))'''
+new = '''            return plan.rows.get(rows, rows)'''
+
+[[mutation]]
+name = "더 긴 수의 앞부분도 일지 순번으로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    r"|(?<!\d)(?P<journal>\d{4}-\d{2}-\d{2}-\d{2})(?!\d)"'''
+new = '''    r"|(?<!\d)(?P<journal>\d{4}-\d{2}-\d{2}-\d{2})"'''
+
+[[mutation]]
+name = "수나 점 뒤의 네 자리도 ADR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    r"|(?<![\w.])(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+new = '''    r"|(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 파일의 글도 고친다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            text = raw.decode("utf-8")'''
+new = '''            text = raw.decode("utf-8", errors="replace")'''
+
+[[mutation]]
+name = "옮길 자리가 차 있어도 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if target not in sources and (root / target).exists():'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "글을 고치지 않고 이름만 바꾼다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            (root / path).write_bytes(text.encode("utf-8"))'''
+new = '''            pass'''
+
+[[mutation]]
+name = "--move 를 받아도 옮기지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    check = _move_and_check if move else _check'''
+new = '''    check = _check'''
+
+[[mutation]]
+name = "옮긴 뒤 다시 대조하지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    print(_moved_line(verdict.shifted, plan))
+    result = survey(root, remote)
+    return result, judge(result, day)'''
+new = '''    print(_moved_line(verdict.shifted, plan))
+    return result, verdict'''
+
+[[mutation]]
+name = "옮길 번호가 없어도 알리지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        print("옮길 번호가 없어 옮기지 않았다")'''
+new = '''        pass'''
+
+[[mutation]]
+name = "옮기지 못해도 0 으로 끝난다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    except MoveError as error:
+        print(f"번호를 옮기지 못했다. {error}", file=sys.stderr)
+        print(ON_FAILURE, file=sys.stderr)
+        return 2'''
+new = '''    except MoveError:
+        return 0'''
+
+[[mutation]]
+name = "--move 안내를 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            "`--move` 를 붙여 다시 치면 이 번호대로 일지·ADR 의 파일 이름과 일지 머리 줄, 이"'''
+new = '''            "다시 치면 이 번호대로 일지·ADR 의 파일 이름과 일지 머리 줄, 이"'''
+
+[[mutation]]
+name = "도움말을 받지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    parser = _Parser(prog="uv run python tools/sibling_overlap.py", description=USAGE, epilog=EXITS)'''
+new = '''    parser = _Parser(prog="uv run python tools/sibling_overlap.py", add_help=False)'''
+
+[[mutation]]
+name = "도움말에 종료 코드를 싣지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    parser = _Parser(prog="uv run python tools/sibling_overlap.py", description=USAGE, epilog=EXITS)'''
+new = '''    parser = _Parser(prog="uv run python tools/sibling_overlap.py", description=USAGE)'''
+
+[[mutation]]
+name = "대조하지 못한 2 에 할 일을 싣지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        print(f"형제를 대조하지 못했다. {error}", file=sys.stderr)
+        print(ON_FAILURE, file=sys.stderr)'''
+new = '''        print(f"형제를 대조하지 못했다. {error}", file=sys.stderr)'''
+
+[[mutation]]
+name = "인자가 틀린 2 에 할 일을 싣지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        self.exit(2, f"인자가 틀렸다: {message}\n{ON_FAILURE}\n")'''
+new = '''        self.exit(2, f"인자가 틀렸다: {message}\n")'''
+
+# 셀프 리뷰(표준 축 Major, 명세 축)와 반박 검증으로 더한 것. 시험은 그 시험까지 넓혀 고른다
+
+[[mutation]]
+name = "옮기다 멈추면 되돌리지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        left = _undo(root, plan, written, renamed)'''
+new = '''        left: list[str] = []'''
+
+[[mutation]]
+name = "되돌리지 못해도 다 되돌린 것으로 낸다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            raise StuckMoveError('''
+new = '''            raise MoveError('''
+
+[[mutation]]
+name = "옛 이름으로 돌아오지 못한 파일의 옛 자리에 글을 쓴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if path in stuck:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "되돌리지 못했어도 원인을 고쳐 다시 치라고 한다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        print(ON_STUCK, file=sys.stderr)'''
+new = '''        print(ON_FAILURE, file=sys.stderr)'''
+
+[[mutation]]
+name = "심볼릭 링크를 따라가 쓴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if file.is_symlink() or not file.is_file():'''
+new = '''        if not file.is_file():'''
+
+[[mutation]]
+name = "자리를 비켜 줄 이름 바꾸기를 먼저 두지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return MovePlan(vacating_first(renames), texts, originals)'''
+new = '''    return MovePlan(renames, texts, originals)'''
+
+[[mutation]]
+name = "다른 옮길 파일의 자리도 차 있다고 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        if target not in sources and (root / target).exists():'''
+new = '''        if (root / target).exists():'''
+
+[[mutation]]
+name = "이름을 바꾼 파일을 따로 찍지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        f"옮겼다: {moved}. 이름을 바꾼 파일: {names}. 인용을 고친 파일: {texts}. 스테이지하지"'''
+new = '''        f"옮겼다: {moved}. 인용을 고친 파일: {texts}. 스테이지하지"'''
+
+[[mutation]]
+name = "스크래치에 둔 것을 일지로 옮기라고 하지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        " 파일로 찬 번호를 본다. 이 대조가 2로 끝난 동안 스크래치 파일에 적어 둔 것이 있으면 만든"'''
+new = '''        " 파일로 찬 번호를 본다. 만든"'''
+
+[[mutation]]
+name = "카나리아를 계정 한도로 돌리지 못하는 갈래를 알리지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            " 한도로 돌리지 못하면 그 절의 계정 한도 항목대로 사전 확인만 돌리고 이 알림이 남은 채"'''
+new = '''            " 한도로 돌리지 못하면 이 알림이 남은 채"'''
+
+[[mutation]]
+name = "인용 블록의 줄도 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "인용"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    r"^(?P<quote>>[^\n]*)"
+    r"|(?<!\d)(?P<journal>'''
+new = '''    r"(?<!\d)(?P<journal>'''
+
+[[mutation]]
+name = "줄 머리가 아닌 > 뒤도 인용 블록으로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "인용"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    r"^(?P<quote>>[^\n]*)"'''
+new = '''    r"(?P<quote>>[^\n]*)"'''
+
+[[mutation]]
+name = "합치기를 커밋하기 전에 main 이 들여온 파일도 이 브랜치의 변경으로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "합치기를_커밋하기_전에도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    changed = _own_changes(root, base, main_sha)'''
+new = '''    changed = _worktree_changes(root, base)'''
+
+[[mutation]]
+name = "main 과 내용이 같은 파일도 이 브랜치의 변경으로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "합치기를_커밋하기_전에도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return (since_base & unlike_main) | untracked'''
+new = '''    return since_base | untracked'''
+
+[[mutation]]
+name = "이 브랜치의 미추적 파일을 고친 파일에 넣지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return (since_base & unlike_main) | untracked'''
+new = '''    return since_base & unlike_main'''
+
+[[mutation]]
+name = "쓰기를 마친 파일만 되돌릴 목록에 올린다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "쓰다_멈춘 or 열지도_못한 or 되돌리"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            written.append(path)
+            (root / path).write_bytes(text.encode("utf-8"))'''
+new = '''            (root / path).write_bytes(text.encode("utf-8"))
+            written.append(path)'''
+
+[[mutation]]
+name = "이미 옛 바이트인 파일도 되쓴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "쓰다_멈춘 or 열지도_못한 or 되돌리"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            if (root / path).read_bytes() != plan.originals[path]:'''
+new = '''            if True:'''
+
+[[mutation]]
+name = "BOM 을 떼지 않아 머리 줄을 옮기지 못한다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "BOM으로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    bom = BOM if text.startswith(BOM) else ""'''
+new = '''    bom = ""'''
+
+[[mutation]]
+name = "merge-base 나 main 에 있는 줄도 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "글자_그대로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
+new = '''        pattern.sub(swap, line) for line in lines'''
+
+[[mutation]]
+name = "줄 끝의 CR 을 떼지 않고 둘 줄과 견준다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "글자_그대로"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
+new = '''        line if line in kept else pattern.sub(swap, line) for line in lines'''
+
+[[mutation]]
+name = "옮기기가 둘 줄을 넘기지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "대기열_행이_겹쳐도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)'''
+new = '''    plan = plan_moves(root, result.ours, verdict.shifted, result.changed)'''
+
+[[mutation]]
+name = "main 의 판을 둘 줄에서 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "대기열_행이_겹쳐도"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    kept = _kept_lines(root, (result.base, result.main.commit), result.changed)'''
+new = '''    kept = _kept_lines(root, (result.base,), result.changed)'''
+
+[[mutation]]
+name = "헌법 README 가 main 과 같아도 판을 이 브랜치의 것으로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "main이_올린_헌법_판"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if CONSTITUTION not in changed:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "헌법 README 를 고쳤어도 판을 이 브랜치의 것으로 세지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    if CONSTITUTION not in changed:'''
+new = '''    if True:'''
