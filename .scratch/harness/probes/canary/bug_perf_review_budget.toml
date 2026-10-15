@@ -1,7 +1,7 @@
 # bug-perf-review 정의의 보고 절에 더한 도구 호출 예산(대기열 169)이 새 세션의 서브에이전트에 실리는지.
 # 실험군은 이 워크트리, 대조군은 169 문단이 없는 옛 판이다. 169 의 PR(#184)에서는 주 체크아웃이 그 옛 판이었다.
-# 그 PR 이 병합된 뒤로는 주 체크아웃에도 카나리아가 있어 러너의 원천 확인이 막으므로, 옛 판을
-# `git worktree add --detach` 로 꺼내 대조군의 checkout 으로 준다(spec_reviewer_agent.toml 의 머리말).
+# 그 PR 이 병합된 뒤로는 주 체크아웃에도 카나리아가 있어 러너의 원천 확인이 막으므로, `# 최신 결과:` 줄의 대조군 커밋을
+# `--control-commit` 으로 준다(README `canary/` 행).
 # agent_tools 는 실험군 정의의 tools 줄과 같은 집합이어야 한다(러너의 agent_problems). 옛 판의 tools 에는 대기열
 # 188 이 더한 TaskStop 이 없지만 본 세션 도구의 부분집합이라 대조군의 서브에이전트도 돈다(subagent_task_stop.py 의
 # 대조군).
