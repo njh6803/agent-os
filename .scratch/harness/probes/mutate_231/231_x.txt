@@ -1,0 +1,14 @@
+기준선 pytest tests/tools/test_sibling_overlap.py -x: 초록 — 36 passed in 61.52s (0:01:01)
+== 1. merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다: 기대 빨강, 결과 빨강 — 1 failed, 14 passed in 0.58s
+   tests/tools/test_sibling_overlap.py::test_열린_PR은_merge_ref가_있는_PR이다
+== 12. 미추적 파일을 고친 파일에 넣지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 22 passed in 13.45s
+   tests/tools/test_sibling_overlap.py::test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린다
+== 23. 겹쳐도 0 으로 끝난다: 기대 빨강, 결과 빨강 — 1 failed, 19 passed in 4.71s
+   tests/tools/test_sibling_overlap.py::test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않는다
+== 34. main 의 최신 일지를 main 이 새로 매긴 일지에서만 고른다: 기대 빨강, 결과 빨강 — 1 failed, 28 passed in 39.68s
+   tests/tools/test_sibling_overlap.py::test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1로_끝나고_닫는_날로_옮긴다
+== 45. 닫힌 PR 을 읽지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 23 passed in 19.46s
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견주고_형제_줄에서_접는다
+== 56. 헌법 판을 글자로 견준다: 기대 빨강, 결과 빨강 — 1 failed, 16 passed in 0.92s
+   tests/tools/test_sibling_overlap.py::test_가장_높은_헌법_판은_글자가_아니라_수로_견주고_그_판을_쓴_자리를_모두_든다
+변이 6 모두 기대대로

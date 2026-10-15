@@ -1,0 +1,24 @@
+기준선 pytest tests/tools/test_sibling_overlap.py: 초록 — 36 passed in 71.99s (0:01:11)
+== 1. merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다: 기대 빨강, 결과 빨강 — 4 failed, 32 passed in 69.73s (0:01:09)
+   tests/tools/test_sibling_overlap.py::test_열린_PR은_merge_ref가_있는_PR이다
+   tests/tools/test_sibling_overlap.py::test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않는다
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견주고_형제_줄에서_접는다
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다
+== 12. 미추적 파일을 고친 파일에 넣지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 35 passed in 58.62s
+   tests/tools/test_sibling_overlap.py::test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린다
+== 23. 겹쳐도 0 으로 끝난다: 기대 빨강, 결과 빨강 — 6 failed, 30 passed in 59.48s
+   tests/tools/test_sibling_overlap.py::test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않는다
+   tests/tools/test_sibling_overlap.py::test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다
+   tests/tools/test_sibling_overlap.py::test_main이_이_브랜치_뒤에_들인_번호와_겹치면_CLI가_알린다
+   tests/tools/test_sibling_overlap.py::test_형제_워크트리의_커밋하지_않은_번호와_겹치면_알린다
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다
+   tests/tools/test_sibling_overlap.py::test_얕은_클론에서_merge_base가_없는_PR은_고친_파일만_알_수_없다
+== 34. main 의 최신 일지를 main 이 새로 매긴 일지에서만 고른다: 기대 빨강, 결과 빨강 — 1 failed, 35 passed in 49.61s
+   tests/tools/test_sibling_overlap.py::test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1로_끝나고_닫는_날로_옮긴다
+== 45. 닫힌 PR 을 읽지 않는다: 기대 빨강, 결과 빨강 — 2 failed, 34 passed in 54.03s
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견주고_형제_줄에서_접는다
+   tests/tools/test_sibling_overlap.py::test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다
+== 56. 헌법 판을 글자로 견준다: 기대 빨강, 결과 빨강 — 2 failed, 34 passed in 58.87s
+   tests/tools/test_sibling_overlap.py::test_가장_높은_헌법_판은_글자가_아니라_수로_견주고_그_판을_쓴_자리를_모두_든다
+   tests/tools/test_sibling_overlap.py::test_형제가_쓴_가장_높은_헌법_판과_그_자리를_찍는다
+변이 6 모두 기대대로
