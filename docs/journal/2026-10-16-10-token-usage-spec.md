@@ -164,3 +164,42 @@ PR #253을 열고 `@coderabbitai review`를 남겼다. 검사는 모두 통과�
   타입을 채운다.
 
 고친 프로브는 `boundaries 24`·`results 24`로 다시 돌려 0으로 끝났다. 판정은 그대로라 README의 수(17:14 UTC 실행)는 바뀌지 않는다.
+
+claude-review 둘째 회차(`3cf84b55`)는 Critical·Major가 없고 Minor 둘(두 스캐너의 응답 거르기가 겹친다, `close`가 바깥 상태를
+바꾼다)과 Nit 둘(표 머리를 두 번에 찍는다, `dict`의 타입 인자)이었다. 둘째 회차라 고치지 않고 PR 코멘트에 이유를 남겼다(앞의
+셋은 보고서 도구로 옮길 때 대기열 273과 명세가 받고, 표 머리는 줄 길이 때문이다). CodeRabbit은 두 헤드 모두
+`Review rate limited`였다.
+
+## 회고
+
+후보 여덟, 승인 둘(대기열 284·285), 넘김 0, 기각 여섯이다.
+
+- **1. `hook_grill_design_check`가 워크트리 세션의 접두 붙은 스킬 이름을 놓친다.** 승인. 사건은 이 세션의 측정이다. 지난 7일
+  이 저장소의 메인 세션에서 `code-review`를 `.claude/worktrees/<이름>:code-review` 모양으로 부른 것이 21회였다(스크래치
+  스크립트로 셌다). 이 세션의 스킬 목록에도 `.claude/worktrees/token-usage-spec:grill-with-docs`가 있었다. 그 훅은 `skill`이
+  글자 그대로 `grill-with-docs`일 때만 계기를 내고, 독스트링의 못 보는 것은 "이 저장소의 스킬은 접두사 없는 이름 하나다"라고
+  적어 사실과 다르다. 훅의 고침 층이고 PR 하나로 되돌릴 수 있다. 대기열 284.
+- **2. 프로브의 첫 판이 불리언 플래그 인자를 썼다.** 승인. 사건은 이 세션이다. `scan_results(p, weigh)`와
+  `report_results(..., weighted)`를 셀프 리뷰 표준 축이, 그것을 고치며 들인 `Boundary.candidate`를 claude-review 첫 회차가
+  잡았다. 규칙은 `CODING_STANDARDS.md`에 있지만 꼴이 고정된 기계적 위반이라 린터 층(ruff의 FBT 규칙)으로 옮긴다. 켜기 전에
+  지금 코드의 위반 수를 재야 한다. 대기열 285.
+- **3. 명세에 원문과 글자가 다른 따옴표 인용 둘을 썼다.** 기각. 커밋의 인용 대조(`tools/check_quotes.py`)가 경고하고, 셀프
+  리뷰 두 축이 잡았다.
+- **4. 프로브가 받은 상태를 제자리에서 바꿨다(`apply_rule`, `close`).** 기각. PR #249의 `_flush`와 같은 모양으로 세 번째지만
+  규칙은 이미 `CODING_STANDARDS.md`에 있고 리뷰가 매번 잡았다. 기계로 가를 꼴이 아니다.
+- **5. ADR의 인계 경계가 늦게 온다는 것을 설계가 아니라 명세에서야 쟀다.** 기각. `to-spec`의 측정 규칙(대기열 38)이 바로 이
+  자리에서 잡게 되어 있고 그대로 잡았다.
+- **6. `open-session`의 기다림을 읽지 않고 새 세션이 늦게 확인할 것이라고 적었다.** 기각. 어림으로 표시했고 명세 축이 잡았다.
+- **7. main이 더 늦은 일지를 먼저 병합해 번호를 옮기느라 커밋과 검사가 한 바퀴 더 돌았다.** 기각. `tools/sibling_overlap.py`가
+  잡고 `--move`가 옮겼다.
+- **8. 파이프 뒤의 pytest, 40줄 넘는 heredoc, 워크트리 가드가 거부한 git 복합 명령.** 기각. 셋 다 훅과 `CLAUDE.md` 환경 함정이
+  그 자리에서 잡았다.
+
+## 다음
+
+- 티켓 단계(`next-session` 결정표의 "`spec.md`는 있고 `issues/`가 없다"). 명세 검토(`spec-reviewer`)부터 돌린 뒤
+  `/to-tickets .scratch/token-usage/spec.md`. 하네스 기능이라 `.scratch/plan.md`에 행이 없다.
+- 티켓을 자를 때 명세 Further Notes의 막는 관계를 따른다. 인계 훅과 그것이 바꾸는 문장(`next-session`,
+  `hook_pr_next_session`의 문장, 운영 문서와 런북의 줄)은 한 티켓이어야 한다.
+- 명세에서 구현이 실제로 재고 맞출 것이 셋 남았다. 큰 결과 알림이 세는 글(줄 번호), 작업 스케줄러의 배터리 설정, 헤드리스
+  세션이 그날의 요약 표지를 가져가는지다.
