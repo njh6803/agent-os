@@ -3,7 +3,7 @@
 # 카나리아가 모두 없다(옛 목록은 슬라이더를 말한다).
 # 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면 `# 최신 결과:` 줄의 대조군 커밋을
 # `--control-commit` 으로 준다(README `canary/` 행).
-# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-16, 이 PC, claude 2.1.300, 대조군 주 체크아웃의 옛 판 `df705c17`, 일지 2026-10-16-04).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-16, 이 PC, claude 2.1.300, 대조군 주 체크아웃의 옛 판 `df705c17`, 일지 2026-10-16-11).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/open_session_effort_errors.toml <출력 디렉터리>
 kind = "skill"
