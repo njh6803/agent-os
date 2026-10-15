@@ -5,6 +5,8 @@
 # 하위 메뉴는 펼치기 패턴으로 열리지 않아(상태가 Collapsed 로 남는다) 그 항목에 포커스를 준 뒤 → 키를 PostMessage 로 Claude 창
 # 핸들에 넣는다. 키는 앞에 있는 창이 아니라 그 핸들로만 간다. Claude 창이 앞에 없으면 열리지 않는다(post_key 줄이 실패를 적는다).
 # `Ultracode` 칸은 레벨이 아니라 고르지 않는다(처음 칸이 그것이면 되돌릴 때만 고른다).
+# 알려진 결함: 시간을 넘긴 잡도 Remove-Job -Force 로 지워, 펼치기나 고르기가 멈추면 8초 제한이 걸리지 않는다. 다시 쓸 때
+# tools/open_session.ps1 의 Invoke-PatternTimed 처럼 고친다(.claude/rules/tools.md, 대기열 282).
 # 쓰는 법: pwsh -NoProfile -File .scratch/harness/probes/composer_effort_labels.ps1 [-Leave <이름>]
 # -Leave 를 주면 처음 칸 대신 그 이름의 칸에 두고 닫는다. 보내지 않은 화면에서 고른 값이 다음 새 세션 화면의 기본값으로 남는지 볼 때 쓴다.
 param([string] $Leave)

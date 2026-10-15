@@ -7,6 +7,8 @@
 # 버튼의 모델과 노력은 이름이 아니라 자식 Text 로 읽는다. `최대` 칸의 버튼 이름에는 `3.5× 이상 사용량` 이 붙지만 Text 는 `최대` 다.
 # -Background 를 주면 표지 화면을 연 뒤 메모장을 띄워 앞에 두고 조작한다(딥링크를 받은 앱은 창을 앞으로 올리므로 순서가
 # 이렇다). 끝에 띄운 메모장만 닫는다. foreground-is-claude 줄이 조작 내내 False 여야 창이 뒤에 있는 조건을 잰 회차다.
+# 알려진 결함: 시간을 넘긴 잡도 Remove-Job -Force 로 지워, 펼치기가 멈추면 8초 제한이 걸리지 않는다. 다시 쓸 때
+# tools/open_session.ps1 의 Invoke-PatternTimed 처럼 고친다(.claude/rules/tools.md, 대기열 282).
 # 쓰는 법: pwsh -NoProfile -File .scratch/harness/probes/composer_patterns.ps1 [-Pick 'Haiku 5.5'] [-Effort '높음'] [-Background]
 param([string] $Pick = 'Haiku 5.5', [string] $Effort = '높음', [switch] $Background)
 $ErrorActionPreference = 'Stop'
