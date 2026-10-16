@@ -21,7 +21,7 @@
 - [x] 명세 Testing Decisions의 큰 결과 훅 항목을 시험으로 고정한다. 문턱의 앞뒤(Read와 셸 각각), 범위를 준 Read, 그림 결과, 저장한 실제 페이로드에서 셈한 글자 수가 그 기록의 `tool_result` 길이에 맞는 것이다
 - [x] `tools/hook_payloads.toml`에 발동(`context`) 하나와 침묵 하나(범위를 준 큰 Read, 또는 문턱 아래 결과)를 실제 입력으로 더한다
 - [x] `additionalContext`가 실제 세션의 모델에게 닿는지 모델이 그 문장을 옮기게 해서 본다(`.claude/rules/tools.md`의 새 훅이 함께 하는 넷)
-- [x] 문턱은 03의 장부(큰 도구 결과)와 같다. 03과 이 티켓 가운데 늦게 병합하는 쪽이 두 문턱이 같은지 보는 시험을 더한다(06이 먼저 병합된다. 03은 02에 막혀 아직 ready-for-agent다. 03 티켓의 "메모(06에서)"로 넘겼다)
+- [x] 문턱은 03의 장부(큰 도구 결과)와 같다. 03과 이 티켓 가운데 늦게 병합하는 쪽이 두 문턱이 같은지 보는 시험을 더한다(06이 먼저 병합되어 03 티켓의 "메모(06에서)"로 넘겼고, 03이 그 시험을 더했다)
 - [x] `tools/mutate.py`로 문턱과 범위 판정을 바꾸면 시험이 빨개지는지 본다
 - [x] Read와 Bash 호출에서 훅이 쓰는 시간을 재서 `.claude/rules/tools.md`의 시간 목록에 더한다. 그 rules를 원천으로 든 카나리아 가운데 바뀐 문장에 닿는 것을 돌려 결과 줄을 고친다(`tools/sibling_overlap.py`가 본다)
 - [x] `KICKOFF.md` 7단계의 `.claude/settings.json` 항목에 이 등록은 새 프로젝트에 복사하지 않는다고 적고, 그 항목이 늘어놓은 PostToolUse 매처를 맞춘다(명세 Out of Scope)
