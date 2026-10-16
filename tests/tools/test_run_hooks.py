@@ -22,6 +22,7 @@ from tools.run_hooks import (
     coverage_gaps,
     create_fixtures,
     expected_notice,
+    fixtures,
     hook_environment,
     launch_argv,
     load_cases,
@@ -307,9 +308,9 @@ def test_이_저장소의_표에서_contains_를_단_사례는_지금_훅의_문
     둔다. 조각을 단 사례가 없으면 범위가 빈 것이라 실패한다."""
     cases = [case for case in load_cases(PAYLOADS) if case.contains]
     registrations = registered_hooks()
-    replacements = create_fixtures(tmp_path)
 
-    results = [run_case(case, replacements, registrations[case.hook]) for case in cases]
+    with fixtures(tmp_path) as replacements:
+        results = [run_case(case, replacements, registrations[case.hook]) for case in cases]
 
     assert cases
     assert [(r.case.note, r.outcome, r.missing) for r in results if not r.ok] == []

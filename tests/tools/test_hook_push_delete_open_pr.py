@@ -91,6 +91,12 @@ IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@localhost")
             ("chore/x",),
             id="원격_URL",
         ),
+        pytest.param(
+            "git push -oh origin --delete chore/x", "origin", ("chore/x",), id="묶음의_o_가_먹은_h"
+        ),
+        pytest.param(
+            "git push -o -h origin --delete chore/x", "origin", ("chore/x",), id="o_의_값인_h"
+        ),
     ],
 )
 def test_지우는_푸시를_git_처럼_읽는다(명령: str, 원격: str, 브랜치: tuple[str, ...]) -> None:
@@ -150,6 +156,12 @@ def test_묶은_명령_속의_지우는_푸시도_읽는다(명령: str) -> None
         pytest.param("cat <<'EOF'\ngit push origin --delete chore/x\nEOF", id="heredoc_본문"),
         pytest.param("git log -- push origin --delete chore/x", id="다른_하위_명령"),
         pytest.param("git push --delete --no-delete origin chore/x", id="delete_를_거둔다"),
+        pytest.param("git push -h origin --delete chore/x", id="도움말"),
+        pytest.param("git push origin --delete chore/x -h", id="뒤의_도움말"),
+        pytest.param("git push -dh origin chore/x", id="묶음의_도움말"),
+        pytest.param("git push --help origin --delete chore/x", id="긴_도움말"),
+        pytest.param("git push origin --delete chore/x --help-all", id="help_all"),
+        pytest.param("git push -o ci.skip -h origin -d chore/x", id="값을_먹은_옵션_뒤의_도움말"),
     ],
 )
 def test_지우지_않는_푸시와_푸시가_아닌_명령은_대상이_없다(명령: str) -> None:
@@ -295,6 +307,55 @@ def _repository(tmp_path: Path, merge_ref: bool) -> Path:
     if merge_ref:
         _git("-C", str(origin), "update-ref", "refs/pull/7/merge", tip)
     return repo
+
+
+@pytest.mark.parametrize(
+    ("args", "outcome"),
+    [
+        pytest.param(["-h", "origin", "--delete", "chore/x"], "usage", id="도움말"),
+        pytest.param(["origin", "--delete", "chore/x", "-h"], "usage", id="뒤의_도움말"),
+        pytest.param(["-dh", "origin", "chore/x"], "usage", id="묶음의_도움말"),
+        pytest.param(["origin", "--delete", "chore/x", "--help-all"], "usage", id="help_all"),
+        pytest.param(["--help", "origin", "--delete", "chore/x"], "git help", id="긴_도움말"),
+        pytest.param(["-oh", "origin", "--delete", "chore/x"], "delete", id="묶음의_o_가_먹은_h"),
+        pytest.param(["-o", "-h", "origin", "--delete", "chore/x"], "delete", id="o_의_값인_h"),
+    ],
+)
+def test_도움말_판정이_실제_git_과_같다(tmp_path: Path, args: list[str], outcome: str) -> None:
+    """대기열 300. `-h` 를 값 없는 옵션으로 넘기던 판은 도움말을 지우는 푸시로 읽었다. 꼴마다 git 을
+    실제로 쳐 origin 의 `chore/x` 가 지워졌는지, 종료 코드, 도움말의 표지와 훅의 판정을 함께 본다.
+    사용법은 129 로 끝나고 하위 명령 바로 뒤의 `--help` 는 `git help` 로 바뀐다. 도움말 페이지를
+    띄우지 않게 `help.format` 을 man 으로, 뷰어를 없는 이름으로 둔다(윈도 git 의 기본 html 은
+    브라우저를 연다)."""
+    repo = _repository(tmp_path, merge_ref=True)
+    origin = tmp_path / "origin.git"
+    _git("-C", str(origin), "config", "receive.advertisePushOptions", "true")
+    environment = {**os.environ, "GIT_TRACE": "1", "LC_ALL": "C", "LANGUAGE": "C"}
+    result = subprocess.run(
+        ["git", "-c", "help.format=man", "-c", "man.viewer=absent-viewer", "push", *args],
+        cwd=repo,
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        check=False,
+    )
+    output = result.stdout + result.stderr
+    probe = ["git", "-C", str(origin), "rev-parse", "-q", "--verify", "refs/heads/chore/x"]
+    remains = subprocess.run(probe, capture_output=True, timeout=30, check=False).returncode == 0
+
+    context = f"{result.returncode} {output[-500:]}"
+    if outcome == "usage":
+        assert (remains, result.returncode) == (True, 129), context
+        assert "usage: git push" in output, context
+    elif outcome == "git help":
+        assert remains, context
+        assert "built-in: git help" in output, context
+    else:
+        assert not remains, context
+    assert (deletions("git push " + " ".join(args)) == []) is (outcome != "delete")
 
 
 def test_열린_PR_의_머리를_지우는_푸시를_막는다(tmp_path: Path) -> None:

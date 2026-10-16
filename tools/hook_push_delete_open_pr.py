@@ -29,6 +29,9 @@
   `<…>`·`(…)` 이면 먹고 `[=…]` 이면 먹지 않는다)과 같고, 시험이 이 기계의 git 과 대 본다. 첫 판은
   `--recurse-submodules` 를 먹지 않는다고 적어 그 값을 원격으로 읽었다(대기열 296). `--` 뒤는 모두
   위치 인자다.
+- 도움말. `-h`(그것이 든 묶음 `-dh` 포함)·`--help`·`--help-all` 이면 git 이 사용법을 내고 끝나
+  지우지 않으므로 지나간다. 값을 먹는 옵션의 값(`-o -h`, 묶음에서 `o` 뒤의 글자)은 도움말이 아니다.
+  첫 판은 `-h` 를 값 없는 옵션으로 넘겨 도움말을 지우는 푸시로 읽었다(대기열 300).
 - 건너뛰는 길. `--dry-run`(머리 줄임, `-n` 과 그것이 든 묶음 포함)이면 지우지 않아 지나간다. 뒤의
   `--no-dry-run`·`--no-delete` 는 앞의 것을 거둔다(git 의 parse-options 는 뒤의 것이 이긴다). 모호한
   긴 옵션 머리(`--d`)는 git 이 거절해 지나간다. 지울 ref 가 없으면 git 이 거절해 지나간다.
@@ -320,7 +323,8 @@ def _deletion(args: list[str]) -> Deletion | None:
 
 def _push_words(args: list[str]) -> PushWords | None:
     """push 뒤의 낱말을 옵션(긴 이름과 그 줄임, 묶음 `-fd`, 값을 먹는 옵션)과 나머지로 가른다.
-    git 이 거절하는 긴 옵션(표에 없거나 모호한 줄임)이 있으면 None."""
+    git 이 푸시하지 않으면 None 이다. 거절하는 긴 옵션(표에 없거나 모호한 줄임. `--help` 도 표에
+    없다)과 도움말 `-h`(묶음 `-dh` 포함)가 그렇다."""
     delete = dry_run = False
     positionals: list[str] = []
     index = 0
@@ -346,6 +350,8 @@ def _push_words(args: list[str]) -> PushWords | None:
                 if letter == "o":
                     index += 0 if letters[position + 1 :] else 1
                     break
+                if letter == "h":
+                    return None  # git 이 사용법을 내고 끝난다(대기열 300)
                 delete = delete or letter == "d"
                 dry_run = dry_run or letter == "n"
             continue
