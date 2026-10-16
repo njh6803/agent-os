@@ -36,7 +36,7 @@ ADR 0033(이력 2026-10-16 "요약은 새 보고서 뒤 처음 시작한 세션�
 
 헤드리스 세션. Claude Code 가 훅 환경에 주는 `CLAUDE_CODE_SESSION_ATTENDED` 가 `0` 이거나,
 `tools/canary.py` 가 띄우는 세션의 환경에 붙인 표지 변수(`HEADLESS_MARKER`)가 있으면 헤드리스로 보고
-계정만 남긴다(`shows_summary`). 둘 다 쓰는 것은 사용자가 골랐다(일지 2026-10-16-58). 앞의 것은
+계정만 남긴다(`shows_summary`). 둘 다 쓰는 것은 사용자가 골랐다(일지 2026-10-16-66). 앞의 것은
 문서에 없는 내부 값이라 판이 바뀌면 이름이 바뀌거나 사라질 수 있고, 그때도 뒤의 것이 카나리아를
 거른다. 그 표지 이름은 카나리아 도구가 따로 적고 시험이 두 이름을 대조한다(훅은 다른 도구를 import
 하지 않는다). 앞의 것은 `.scratch/token-usage/probes/session_start_payload/` 에서 쟀다. 데스크톱

@@ -102,7 +102,7 @@ Bash 에서 띄운 `claude -p`(PATH 의 2.1.300)이고, 대화형 갈래는 터�
 09 가 첫 일간 보고서 뒤에 본다.
 
 셀프 리뷰의 명세 축이 이 내부 값만으로 가르는 것을 명세가 정한 길(카나리아의 표지 변수)을 승인 없이 바꾼 것으로 짚었고,
-사용자가 둘 다 쓰는 길을 골랐다(일지 2026-10-16-58). 그래서 `tools/canary.py` 가 띄우는 세션의 환경에 `AGENT_OS_HEADLESS=1` 을
+사용자가 둘 다 쓰는 길을 골랐다(일지 2026-10-16-66). 그래서 `tools/canary.py` 가 띄우는 세션의 환경에 `AGENT_OS_HEADLESS=1` 을
 붙인다. 그 변수가 `claude -p` 세션의 훅까지 전해지는지는 같은 `run.sh` 를 `AGENT_OS_HEADLESS=1 sh …/run.sh <디렉터리>` 로 돌려
 봤다(`start_marker.jsonl`). 탐침 훅의 `env_values` 에 `AGENT_OS_HEADLESS` 가 `1` 로 들었고 `CLAUDE_CODE_SESSION_ATTENDED` 는 `0`
 이었다. 대화형 갈래는 다시 돌리지 않았다.
