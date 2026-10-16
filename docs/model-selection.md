@@ -16,7 +16,7 @@
 | 지시문으로 여는 새 세션 | 모델과 레벨 | `next-session` 결정표의 "모델" 칸. 지시문의 "모델" 줄로 옮기고 `tools/open_session.ps1`이 보내기 전에 입력창에서 고른다(ADR 0029). 레벨 스윕 동안 칸이 `Opus 5.5 / xhigh`인 구현·하네스 브랜치는 `tools/model_sweep.py`가 내는 갈래다(ADR 0029 이력 2026-10-13) |
 | 사람이 직접 여는 세션 | 모델과 레벨 | 새 세션 화면의 기본값. `open_session.ps1`은 지시문 세션을 연 뒤 그 기본값을 고르기 전의 값으로 되돌린다(ADR 0029) |
 | 프로젝트 서브에이전트 | 모델 | `.claude/agents/*.md`의 `model` 머리. 없으면 세션의 모델을 물려받는다(Claude Code 문서 model-config) |
-| `code-review`의 표준 축 서브에이전트 | 모델 | `.claude/skills/code-review/SKILL.md`. 소스 파일이 없는 변경에서 모델을 내린다 |
+| `code-review`의 표준 축 서브에이전트 | 모델과 노력 | `.claude/skills/code-review/SKILL.md`. 변경 종류와 상관없이 언제나 `sonnet`·`high`다(ADR 0033). 명세 축은 둘 다 받지 않아 세션의 모델을 물려받는다(노력도 물려받는다는 것은 ADR 0033의 어림) |
 | 카나리아 | 모델 | 카나리아 명세의 `model`(기본값은 `tools/canary.py`). 까닭은 `docs/constitution/operations.md` 환경 규약 상세 |
 | PR 봇 claude-review | 모델 | `.github/workflows/claude-code-review.yml`의 `claude_args`. 지금은 `--model`이 없다(워크플로를 읽었다). 어느 모델로 도는지는 실행 로그로 보지 않았다 |
 | 모델 판정 실험 | 판정자의 모델과 레벨 | `.scratch/harness/probes/session_cost/README.md`의 사전 등록. 이미 돌린 실험의 기록이라 모델이 바뀌어도 고치지 않는다 |
