@@ -152,3 +152,9 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 - 큰 결과 알림 훅(PR #278): 범위 없이 읽은 Read 결과가 2만 자를, Bash·PowerShell 결과가 1만 자를 넘으면
   `tools/hook_large_result.py`가 크기와 문턱을 들어 범위를 좁히라고 알린다. 막지 않는다. 훅은 `CLAUDE_PROJECT_DIR`이
   가리키는 주 체크아웃의 사본이 돈다(`.claude/rules/tools.md`).
+- 자동 압축 창(적용 2026-10-16 11:41 UTC, 티켓 08): 사용자 설정에 `autoCompactWindow` 400,000을 뒀다. 인계 훅보다
+  먼저 40만에 닿은 세션이 자동으로 압축된다. 전에는 기본 지점에서 압축됐다. 시각은 적용 직후의 `date -u`다. 저장소
+  밖의 설정이라 병합이나 당기기가 아니라 적용 뒤 새로 연 세션부터 선다고 어림한다. 실제로 서는지는 티켓 09가 본다.
+- 사용자 범위 Playwright(적용 2026-10-16 11:41 UTC, 티켓 08): 사용자 범위 MCP 서버 `playwright`를 지워 플러그인판
+  하나만 실린다. 적용 뒤 새로 연 세션부터 시작 컨텍스트의 지연 도구 목록에서 그 서버의 도구 이름이 빠진다고 어림한다
+  (줄어든 양은 재지 않았다).
