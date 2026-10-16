@@ -105,7 +105,7 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STAND
 
 후보 넷, 승인 하나, 기각 셋, 넘김 없음.
 
-1. **승인, 대기열 311(1회차).** 변이 표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않으면, pre-commit의 변이 표 검사가 커밋에 든
+1. **승인, 대기열 312(1회차).** 변이 표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않으면, pre-commit의 변이 표 검사가 커밋에 든
    표만 보아 지나간다. 이 세션에서 `judge_branch` 호출을 바꾼 커밋이 `tidy_checkouts_mutations.toml`의 원문을 0번으로 만들었고,
    셀프 리뷰 명세 축은 Info로, PR 직전 버그·성능 축은 Major로 냈다. 같은 꼴의 사례가 하나 더 남아 있다
    (`run_checks_mutations.toml`이 가리키는 `tools/hook_bash_gate_pipe.py`의 원문). 꼴이 고정된 기계적 실수라 층은 검사다
@@ -125,13 +125,13 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STAND
 재개 안내가 오면 아래 지시문으로 연다. 고르는 과정에서 둘을 뺐다. 54는 잠근 dev 의존성과 ADR이 필요하다. 308은 대상 파일
 `.claude/settings.json`이 `chore/hooks-push-help-and-commit-lock` 세션이 맡은 293과 같다.
 
-다음 작업: 대기열 31·287·311(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+다음 작업: 대기열 31·287·312(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
 다음 단계: 구현
 어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
-시작 프롬프트: 대기열 31·287·311(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+시작 프롬프트: 대기열 31·287·312(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
 브랜치: chore/pre-commit-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 대기열 31·287·311 행과 그 행이 드는 일지들의 회고 절
+읽을 것: 대기열 31·287·312 행과 그 행이 드는 일지들의 회고 절
 이어받을 상태: 없음
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 토큰 최적화 세션의 재개 안내가 왔는지 본다
 이번 요청 범위: PR과 병합까지
