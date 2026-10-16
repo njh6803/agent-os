@@ -1,0 +1,9 @@
+check-instructions......................Passed (1.2s)
+zizmor..................................Passed (2.0s)
+lint-imports............................Passed (3.2s)
+check-type-escapes......................Passed (4.8s)
+pyright.................................Passed (26.0s)
+run-hooks...............................Passed (73.4s)
+pytest..................................Passed (229.6s)
+web-verify..............................Passed (284.4s)
+{"name": "series1", "seconds": 284.4, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 228.88, "pytest_start": 1792144296.302592, "pytest_end": 1792144525.1817317}

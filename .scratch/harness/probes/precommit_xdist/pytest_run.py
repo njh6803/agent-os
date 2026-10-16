@@ -2,8 +2,8 @@
 
 첫 인자는 `serial`(한 프로세스), 프로세스 수(`8`), `auto` 중 하나이고 둘째 인자는 pytest 의 원본
 출력을 남길 파일이다. 한 줄 요약은 표준 출력과 `<파일>.json` 에 낸다. xdist 는
-`uv run --with pytest-xdist` 의 일회용 환경에만 든다(프로젝트 의존성이 아니다). 처음 한 번은
-내려받는다.
+`uv run --with pytest-xdist` 의 일회용 환경에서 띄운다. 측정 때는 프로젝트 의존성이 아니었고, 구현
+뒤의 확인은 `uv.lock` 의 판을 쓰는 `confirm.py` 가 한다. 처음 한 번은 내려받는다.
 
 표지: 통과 집계 줄(`N passed`)이 있어야 하고, xdist 회차에는 `bringing up nodes` 나
 `created: N/N workers` 줄이 있어야 한다. 하나라도 없으면 그 회차는 측정이 아니므로 종료 코드를 1 로

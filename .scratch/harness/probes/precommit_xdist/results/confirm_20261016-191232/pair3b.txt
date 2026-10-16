@@ -1,0 +1,9 @@
+zizmor..................................Passed (1.7s)
+check-instructions......................Passed (2.0s)
+lint-imports............................Passed (2.1s)
+check-type-escapes......................Passed (6.3s)
+pyright.................................Passed (37.0s)
+run-hooks...............................Passed (142.5s)
+pytest..................................Passed (262.0s)
+web-verify..............................Passed (294.6s)
+{"name": "pair3b", "seconds": 294.6, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 260.8, "pytest_start": 1792146194.2634752, "pytest_end": 1792146455.060434}
