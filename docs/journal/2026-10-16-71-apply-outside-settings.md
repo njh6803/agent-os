@@ -132,7 +132,38 @@ next-session 지시문으로 연 새 세션이다. `token-usage`의 티켓 08(�
     적는다.
 - 다시 돌린 명령: 전체 `uv run pytest -q`가 3427 통과·7 해제(8분 44초, 시험 독스트링을 고치기 전의 판), 고친 뒤
   `tests/tools/test_hook_session_usage.py` 35 통과, `pnpm -C web verify`가 0으로 끝났다(Vitest 파일 28·시험 380 통과).
-  ruff·pyright·lint-imports는 커밋의 pre-commit으로 갈음한다.
+  ruff·pyright·lint-imports는 커밋의 pre-commit으로 갈음한다. 커밋 `f2595c5e`의 pre-commit이 모두 Passed였다(pytest 526초,
+  web-verify 182초를 함께 돌렸다). 인용 대조 경고 둘은 앞 세션이 본 명령 출력(`claude mcp remove`, `scheduler.log`)을 옮긴
+  것이라 저장소에 원문이 없다.
+
+## 인계 (둘째)
+
+- 커밋 `f2595c5e` 직후 세션 컨텍스트 208,649 토큰으로 인계 계기(`커밋 뒤`)가 왔다. 넘겨받은 경계(`셀프 리뷰 직전`)와 달라
+  넘긴다. 이 세션의 제목은 `feature/08-apply-outside-settings`였고 `feature/08-apply-outside-settings (인계함)`으로 바꾼다.
+- 첫 인계에서 새 세션이 앞 세션의 프로세스가 쥔 워크트리 잠금 때문에 `EnterWorktree(path)`에 거부되어 사용자가 앞 세션을
+  닫아야 했다. 지금 잠금 줄은 이미 끝난 그 pid(40312)를 그대로 적고 있고, `EnterWorktree(path)`로 들어온 이 세션은 잠금을
+  새로 걸지 않았다(`git worktree list --porcelain`으로 봤다). 그래서 이번에는 새 세션이 막히지 않을 것으로 어림한다. 첫 인계의
+  막힘은 회고 후보다.
+- 인계 지시문:
+
+  ```text
+  다음 작업: .scratch/token-usage/issues/08-apply-outside-settings.md. 저장소 밖 설정 셋은 적용·확인했고 셀프 리뷰 반영과 커밋까지 마쳤다. 푸시, PR, 병합까지 잇는다
+  다음 단계: 구현
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: /implement .scratch/token-usage/issues/08-apply-outside-settings.md
+  브랜치: feature/08-apply-outside-settings
+  모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+  읽을 것: docs/journal/2026-10-16-71-apply-outside-settings.md 의 "셀프 리뷰"와 "인계 (둘째)"
+  이어받을 상태: 인계: 커밋 뒤. 커밋 f2595c5e까지 셀프 리뷰 반영과 전체 검증(pre-commit 모두 Passed)을 마쳤고 아직 푸시하지 않았다. 남은 단계는 origin/main(#281, df1238cf)을 sync_with_base_branch로 합치기, 푸시, /git-pr로 PR 열기, docs/constitution/operations.md 리뷰 파이프라인, 병합, next-session이다. 일지는 docs/journal/2026-10-16-71-apply-outside-settings.md 이고 이어 쓴다(커밋하지 않은 인계 절이 있다). 셀프 리뷰가 고친 문장(일지 "셀프 리뷰"의 고친 것)은 PR 직전 bug-perf-review에 밀 주장으로 넘긴다. claude-review는 계정의 주간 한도로 2026-10-18 21:00 UTC까지 리뷰를 시작하지 못하므로 그 전에 여는 PR은 리뷰 파이프라인 3대로 기다리지 않고 병합한다
+  확인할 선행 조건: 없음
+  이번 요청 범위: PR과 병합까지
+  ```
+
+- open-session을 부른다 2026-10-16T12:37:30Z
+
+## 이어 받은 세션 (둘째)
+
+새 세션은 `EnterWorktree(path)`로 한 번에 들어왔다. 둘째 인계에서 어림한 대로 잠금에 막히지 않았다.
 
 ## 회고
 
