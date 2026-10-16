@@ -1,4 +1,4 @@
-# 2026-10-16 (46) end-user-continuation 티켓 01: 계약
+# 2026-10-16 (54) end-user-continuation 티켓 01: 계약
 
 일지 2026-10-16-35의 "다음"이 가리킨 새 세션이다. 제목을 브랜치 이름으로 바꾸고, 주 체크아웃이 미갱신이라
 `tidy-checkouts`를 먼저 돌았다(루트를 `dbcdc6d6`에서 `79a23fc7`로 당겼다). 주 체크아웃에서 브랜치를 따지 않고 워크트리
@@ -161,7 +161,9 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
   `test_멈춘_뒤_에이전트의_정리_코드에서_기한이_와도_실패가_덧붙지_않는다`) 둘 다 리뷰가 말한 까닭으로 빨갰다(메시지가
   `ValueError: 정리 코드의 예외`였고, `run_paused` 뒤에 `run_failed`가 붙었다). `_closing`을 예외가 든 갈래와 아닌 갈래로
   나눠 앞의 것에서만 정리의 `Exception`을 버리고, 몸통의 `finally`가 일시정지면 결말 표지를 세우게 고친 뒤 core 테스트
-  241개가 초록이다.
+  241개가 초록이다. 커밋(`1ad678f8`)의 pre-commit은 변이 표가 커밋에 없어 그 검사를 건너뛰었고, `_closing`을 고쳐 표의
+  원문 하나가 사라진 것을 손으로 친 `--check`가 잡았다. 그 원문을 고치고 두 갈래를 겨누는 변이 둘을 더해(표는 열 개)
+  고친 하나와 새 둘, 그리고 번호가 밀린 둘을 돌려 모두 기대대로 빨갰다.
 
 ## 검사
 
@@ -170,3 +172,98 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
   독스트링과 테스트만 고쳤고 그 테스트가 지나는 코드는 그대로다.
 - 셀프 리뷰 전: `uv run pytest -q` 3,133 통과(17분 42초), `pnpm -C web verify` 초록, `uv run pyright` 0, `uv run
   lint-imports` 계약 다섯 유지, `uv run ruff check .`·`ruff format --check .` 초록.
+- 커밋 `2d5f5564`·병합 `7aab2266`·`1ad678f8`의 pre-commit이 손으로 치는 다섯을 모두 돌렸다(`2d5f5564`의 pytest 1,048초,
+  web-verify 274초). 병합 커밋에서는 충돌 파일만 보는 갈래라 ruff가 `Skipped`였다.
+- e2e(`pnpm -C web/apps/admin exec playwright test`): 7 통과(1.3분). PR 직전 리뷰를 반영한 판이다.
+- PR 직전 리뷰가 core의 닫기 갈래를 고쳐 `-m llm`을 다시 돌렸다(`1ad678f8`): 7 통과(224초). LLM 토큰 합계 44,127(입력
+  43,013, 출력 1,114). 트레이스 10개, 모델 호출 23건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
+
+## 회고
+
+`/retro`를 일지 계기 훅이 넣은 계기로 돌렸다. 후보 열넷: 승인 여덟(새 행 다섯, 기존 행의 회차 둘, 형제가 먼저 적은 행
+하나), 기각 여섯, 넘김 없음. 심각도 순이다.
+
+1. **승인 → 대기열 313.** 변이 표지 `["failed"]`(셀프 리뷰 표준 축 Major). pytest가 어느 실패에나 찍는 낱말이라 표지가
+   되지 못했다. `probes.md` 첫 항목(대기열 290)이 선 뒤에 났으므로 지침을 어긴 것이고, 층은 검사다. `tools/mutate.py`는
+   이미 빈 표지를 "어느 출력에나 있다"며 거부하니 그 곁에서 러너의 판정 낱말만으로 된 표지를 거부한다.
+2. **승인 → 새 행 없음.** 소스만 고친 커밋(`1ad678f8`)에서 pre-commit `check-mutations`가 그 소스를 겨누는 이 브랜치의
+   표를 보지 않아, 원문 하나가 사라진 것을 손으로 친 `--check`가 잡았다. 층은 검사(훅이 넘기는 파일)다. 같은 틈을 형제
+   워크트리 `ruff-boolean-trap`의 대기열 312(일지 2026-10-16-48, 아직 main에 없다. 번호는 그쪽 병합 때 바뀔 수 있다)가 먼저 적어 행을 겹쳐 두지 않는다. 그
+   행을 고치는 쪽에 남길 조건: 이 브랜치가 건드리지 않은 옛 표는 썩어도 된다는 결정(대기열 73·92)과 맞추려면 넘기는 표를 그
+   브랜치가 바꾼 것(`git diff --merge-base origin/main`)으로 좁힌다.
+3. **승인 → 대기열 314.** 잔존 grep이 줄이 바뀌는 자리의 옛 말을 놓쳤다(명세 축 Minor 1). 층은 도구다. 글을 폭 100으로
+   감는 규약이라 낱말 둘 이상의 말은 언제든 줄바꿈과 주석 머리를 사이에 둔다.
+4. **승인 → 대기열 315(`CODING_STANDARDS.md` 회차 행, 1회차).** `_closing`이 연 새 await 지점이 붙잡은 실패를 덮는 길과 정한
+   결말 뒤에 실패를 덧붙이는 길을 셀프 리뷰 두 축이 보지 못했고 PR 직전 `bug-perf-review`가 잡았다. 기계가 판정할 모양이 없는
+   판단이라 세 번째 반복에서 표준 줄로 간다.
+5. **승인 → 대기열 316.** adapters 카나리아 실험군 한 회차가 실린 규칙을 지시로 보지 않았다(하네스 확인 절). 층은 도구(질문을
+   조립하는 `tools/canary.py`)다. 한 회차라 질문의 말이 까닭이라는 것은 어림이고, 행에 그렇게 적었다.
+6. **승인 → 대기열 317.** TOML 작은따옴표 문자열의 `\n`이 풀리지 않아 원문이 0번이었는데 도구는 "0번 있다"만 알렸다. 층은
+   도구의 메시지다(줄 끝 힌트, 대기열 264가 선례).
+7. **승인 → 대기열 309에 2회차.** 코드를 고친 커밋의 pre-commit pytest가 1,048초였다. 처방(pytest 안쪽을 줄인다)이 같다.
+8. **승인 → 대기열 238에 11회차.** `tidy-checkouts`가 `skill-check-and-retro-section`을 또 넘겼다(이어받은 것 절). 그 행의
+   여섯 가운데 이번에 남은 것은 그 하나다.
+9. **기각.** 일지 번호를 형제 세션과 다퉈 42에서 46까지 옮겼다. 기존 도구(`tools/sibling_overlap.py --move`, 대기열 48·115)가
+   잡고 옮겼다.
+10. **기각.** 워크트리 가드가 heredoc와 복합 명령을 거부했다. `CLAUDE.md` 환경 함정이 이미 적었고 그대로 따랐다.
+11. **기각.** CodeRabbit CLI 좌석이 없다. `operations.md` 리뷰 파이프라인과 대기열 136이 대체 둘을 정해 두었다.
+12. **기각.** Stop 훅이 영어 산문을 막았다. 훅이 제 몫을 했다.
+13. **기각.** ruff E501이 한글을 폭 2로 셌다. `tools/rewrap_comments.py`(대기열 112)로 감았다.
+14. **기각.** pyright가 인스턴스 속성의 리터럴 타입을 넓혔다. 판정자가 잡았고 환경의 틈이 아니다.
+
+일지에만 남기는 것: 보안 리뷰가 기준 밖으로 둔 "에이전트가 시작 이벤트를 지어내는 길"은 환경이 아니라 제품의 후속이라
+"다음"에 두었다.
+
+## 다음
+
+- **토큰 최적화 대기.** 다른 세션(토큰 최적화 및 일간보고서)이 토큰 사용 티켓 01~09가 끝날 때까지 새 일을 멈춰 달라고
+  했다. 이 PR은 병합까지 마치되, 아래 지시문으로 새 세션을 열지 않는다. 재개 안내가 온 뒤 이 지시문 넷으로 연다.
+- 01 뒤 02·03·05·06이 나란히 돌고, 04는 03 뒤다. 02·03·05와 04는 core 실행 모듈과 그 테스트, `core.md`의 실패 정책
+  항목을 함께 고친다(`plan.md`의 이 기능 행).
+- 티켓 02에 01이 넘긴 메모(`_closing`의 못 보는 것, 일시정지면 세우는 `_settled`, 원인 `None` 단언)가 있다.
+- 보안 리뷰가 기준 밖으로 둔 것(에이전트가 시작 이벤트를 지어내는 길)은 이 변경 전부터 있던 것이다. 다룰 티켓은 아직
+  없다.
+
+다음 작업: .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md. 런타임이 실패한 실행마다 실패 원인을 정해 싣는다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 4 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
+브랜치: feature/02-runtime-names-the-failure-cause
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-16-54-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 03·05·06(.scratch/end-user-continuation/issues/)
+이어받을 상태: 티켓 02 파일의 "01이 넘긴 것" 메모
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+---
+다음 작업: .scratch/end-user-continuation/issues/03-shortcuts-walk-only-that-agent.md. 시작 이벤트에 바로가기를 쓰고 거슬러 읽기가 그 에이전트의 실행만 따라간다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 4 중 2. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/03-shortcuts-walk-only-that-agent.md
+브랜치: feature/03-shortcuts-walk-only-that-agent
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-16-54-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·05·06(.scratch/end-user-continuation/issues/)
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+---
+다음 작업: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md. 최종 사용자 면이 404로 덮는 것을 주인을 확인하기 전의 손상으로 좁힌다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 4 중 3. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md
+브랜치: feature/05-only-pre-owner-damage-is-404
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-16-54-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·06(.scratch/end-user-continuation/issues/)
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+---
+다음 작업: .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md. 관리 화면이 실패 원인을 보이고 바로가기를 링크로 그린다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 4 중 4. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md
+브랜치: feature/06-admin-shows-cause-and-shortcut-links
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-16-54-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지

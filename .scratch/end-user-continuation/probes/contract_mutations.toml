@@ -78,12 +78,47 @@ file = "src/agent_os/core/run.py"
 old = '''
     try:
         yield events
-    finally:
+    except BaseException:
+        if isinstance(events, AsyncGenerator):
+            with suppress(Exception):
+                await events.aclose()
+        raise
+    else:
         if isinstance(events, AsyncGenerator):
             await events.aclose()
 '''
 new = '''
     yield events
+'''
+
+[[mutation]]
+name = "정리 코드의 예외가 붙잡은 실패를 덮는다"
+tests = ["tests/core/test_run.py", "-k", "먼저_붙잡은_실패를"]
+expect = "red"
+expect_output = ["in 'ValueError: 정리 코드의 예외'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            with suppress(Exception):
+                await events.aclose()
+'''
+new = '''
+            await events.aclose()
+'''
+
+[[mutation]]
+name = "멈춘 뒤 결말 표지를 세우지 않는다"
+tests = ["tests/core/test_run.py", "-k", "멈춘_뒤_에이전트의_정리_코드에서"]
+expect = "red"
+expect_output = ["Left contains one more item: 'run_failed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+                    self._settled = self._settled or ctx.paused
+'''
+new = '''
 '''
 
 [[mutation]]
