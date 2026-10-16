@@ -74,7 +74,7 @@ class _SchemaOnlyPlugins:
     def read_disabled(self) -> frozenset[PluginKey]:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 

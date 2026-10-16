@@ -86,7 +86,7 @@ def run_one(check: Check, cwd: Path) -> Outcome:
     executable = shutil.which(check.command[0])
     if executable is None:
         message = f"명령을 찾지 못했다: {check.command[0]}\n".encode()
-        return Outcome(check, False, message, time.monotonic() - start)
+        return Outcome(check, passed=False, output=message, seconds=time.monotonic() - start)
     try:
         process = subprocess.run(
             [executable, *check.command[1:]],
@@ -97,8 +97,13 @@ def run_one(check: Check, cwd: Path) -> Outcome:
         )
     except OSError as error:
         message = f"명령을 띄우지 못했다: {executable}: {error}\n".encode()
-        return Outcome(check, False, message, time.monotonic() - start)
-    return Outcome(check, process.returncode == 0, process.stdout, time.monotonic() - start)
+        return Outcome(check, passed=False, output=message, seconds=time.monotonic() - start)
+    return Outcome(
+        check,
+        passed=process.returncode == 0,
+        output=process.stdout,
+        seconds=time.monotonic() - start,
+    )
 
 
 def status_line(check_id: str, status: str) -> bytes:

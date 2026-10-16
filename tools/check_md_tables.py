@@ -240,7 +240,7 @@ def _first_nonspace(line: str, position: int) -> tuple[int, int]:
     return index, index - position
 
 
-def _html_start(rest: str, in_paragraph: bool) -> int:
+def _html_start(rest: str, *, in_paragraph: bool) -> int:
     for kind, pattern in _HTML_STARTS:
         if pattern.match(rest):
             return kind
@@ -388,7 +388,7 @@ class _Parser:
             elif not indented and (fence := _opens_fence(rest)):
                 self.open(container, lineno, _Block("fence", fence=fence))
                 return
-            elif not indented and (html := _html_start(rest, kind == "paragraph")):
+            elif not indented and (html := _html_start(rest, in_paragraph=kind == "paragraph")):
                 self.open(container, lineno, _Block("html", html_type=html))
                 if _html_ends(rest, html):
                     self.stack.pop()
@@ -406,7 +406,9 @@ class _Parser:
             elif not indented and (footnote := _FOOTNOTE.match(rest)):
                 container = self.open(container, lineno, _Block("footnote"))
                 position = first + footnote.end()
-            elif indent < 4 and (width := self._list_marker(rest, kind == "paragraph")):
+            elif indent < 4 and (
+                width := self._list_marker(rest, interrupts_paragraph=kind == "paragraph")
+            ):
                 after = rest[width:]
                 spaces = min(len(after) - len(after.lstrip(" ")), 6)
                 if spaces >= 5 or spaces < 1 or after.strip(" ") == "":
@@ -418,7 +420,9 @@ class _Parser:
             elif indented and not maybe_lazy and not blank:
                 self.open(container, lineno, _Block("icode"))
                 return
-            elif kind == "paragraph" and self._try_header(container, lineno, rest, indented):
+            elif kind == "paragraph" and self._try_header(
+                container, lineno, rest, indented=indented
+            ):
                 return
             elif kind == "table" and not indented and not blank:
                 table = self.stack[container].table
@@ -468,7 +472,7 @@ class _Parser:
         self.stack.append(_Block("paragraph", lines=[(lineno, line[first:])]))
 
     @staticmethod
-    def _list_marker(rest: str, interrupts_paragraph: bool) -> int:
+    def _list_marker(rest: str, *, interrupts_paragraph: bool) -> int:
         """목록 표식의 폭. 표식이 아니면 0. 문단을 끊을 때는 1 로 시작하고 내용이 있어야 한다."""
         marker = _LIST_MARKER.match(rest)
         # 표식 뒤는 스페이스나 줄 끝이어야 한다. \v·\f 는 여백이 아니다(`-\v|` 는 cmark 에서
@@ -481,7 +485,7 @@ class _Parser:
                 return 0
         return marker.end()
 
-    def _try_header(self, container: int, lineno: int, rest: str, indented: bool) -> bool:
+    def _try_header(self, container: int, lineno: int, rest: str, *, indented: bool) -> bool:
         """문단의 마지막 줄을 머리 행으로, 이 줄을 구분 행으로 표를 연다. 열었으면 True.
 
         True 는 "이 줄을 소비했다"는 뜻이라 `feed` 가 거기서 멈춘다. 명령과 질의가 한 몸인 것은

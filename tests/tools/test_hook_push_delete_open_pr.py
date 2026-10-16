@@ -279,7 +279,7 @@ def _git(*args: str) -> str:
     return result.stdout.strip()
 
 
-def _repository(tmp_path: Path, merge_ref: bool) -> Path:
+def _repository(tmp_path: Path, *, merge_ref: bool) -> Path:
     """origin(bare)에 `chore/x` 와 그 끝을 머리로 둔 PR 7 의 ref 가 있는 저장소. `chore/same` 은
     같은 커밋을, `chore/other` 는 그 위의 다른 커밋을 끝으로 둔다."""
     origin, repo = tmp_path / "origin.git", tmp_path / "repo"
@@ -367,10 +367,10 @@ def test_대시로_시작하는_브랜치의_열린_PR_도_막는다(tmp_path: P
     ],
 )
 def test_열린_PR_이_없거나_원격을_읽지_못하면_지나간다(
-    tmp_path: Path, merge_ref: bool, 명령: str
+    tmp_path: Path, *, merge_ref: bool, 명령: str
 ) -> None:
     """없는 원격은 푸시 자신도 실패하므로 막지 않는다(fail-open)."""
-    repo = _repository(tmp_path, merge_ref)
+    repo = _repository(tmp_path, merge_ref=merge_ref)
 
     assert reason_for(명령, str(repo)) is None
 
