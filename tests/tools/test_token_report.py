@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
+from tools.hook_large_result import READ_LIMIT, SHELL_LIMIT, HookPayload, context_for
 from tools.token_report import folder_name_of, main, main_checkout
 
 OPUS = "claude-opus-5-5"
@@ -1199,6 +1200,59 @@ def test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다
     assert t.돌린다("daily") == 0
     large = t.칸(SID_A, "large")
     assert [(r["id"], r["chars"]) for r in large] == [("t6", 20_001), ("t7", 10_001)]
+
+
+def _큰_결과_훅_입력(tool: str, inp: dict[str, object], chars: int) -> HookPayload:
+    """큰 결과 알림 훅이 받는 PostToolUse 입력. 훅이 셈하는 글자 수가 `chars`가 되게 짓는다. Read는
+    한 줄 본문에 줄 번호 접두 `1\\t`(2자)가 붙는다(그 훅의 `numbered_chars`). 훅처럼 JSON에서 읽어
+    타입 밖의 값(`offset: null`)도 넣는다."""
+    if tool == "Read":
+        response: Rec = {"type": "text", "file": {"content": "o" * (chars - 2), "startLine": 1}}
+    else:
+        response = {"stdout": "o" * chars, "stderr": ""}
+    raw: Rec = {"tool_name": tool, "tool_input": inp, "tool_response": response}
+    payload: HookPayload = json.loads(json.dumps(raw))
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("tool", "limit"),
+    [("Read", READ_LIMIT), ("Bash", SHELL_LIMIT), ("PowerShell", SHELL_LIMIT)],
+    ids=["Read", "Bash", "PowerShell"],
+)
+def test_같은_크기의_결과를_큰_결과_알림_훅과_같이_판정한다(
+    tmp_path: Path, tool: str, limit: int
+) -> None:
+    """06(큰 결과 알림 훅)이 먼저 병합되어, 두 문턱이 같은지 보는 시험을 이 티켓이 더한다(06 티켓).
+    문턱은 훅의 상수에서 받아 어느 한쪽의 값만 바꿔도 빨개진다. 값만 대지 않고 문턱 그 자리, 한
+    글자 위, 범위를 준 Read(`offset`만, `limit`만, 정수가 아닌 값)를 두 쪽에 넣어 비교(초과)와
+    범위 판정까지 견준다. 장부는 기록 본문을, 훅은 구조화된 출력을 세는데 두 셈이 같은 값을 내는지는
+    06의 프로브가 실제 페이로드로 봤다(03 티켓의 "메모(06에서)")."""
+    target: dict[str, object] = {"file_path": "a.py"} if tool == "Read" else {"command": "ls"}
+    cases: list[tuple[int, dict[str, object], bool]] = [(limit, {}, False), (limit + 1, {}, True)]
+    if tool == "Read":
+        ranged: list[tuple[int, dict[str, object], bool]] = [
+            (limit + 1, {"offset": 1}, False),
+            (limit + 1, {"limit": 100}, False),
+            (limit + 1, {"offset": None}, False),
+            (limit + 1, {"limit": None}, False),
+            (limit + 1, {"offset": True, "limit": "1"}, False),
+        ]
+        cases += ranged
+    t = _판(tmp_path)
+    recs: list[Rec] = []
+    for i, (chars, ranges, _) in enumerate(cases):
+        at = f"2026-10-15T00:0{i}:00Z"
+        use = 도구(f"t{i}", tool, **target, **ranges)
+        recs += [응답(f"m{i}", at, 입력=1, content=[use]), 결과(at, f"t{i}", "o" * chars)]
+    메인(t.projects, SID_A, recs)
+    assert t.돌린다("daily") == 0
+    ledger = [r["id"] for r in t.칸(SID_A, "large")]
+    expected = [large for _, _, large in cases]
+
+    assert [f"t{i}" in ledger for i in range(len(cases))] == expected, "장부의 판정"
+    hook = [context_for(_큰_결과_훅_입력(tool, target | r, c)) is not None for c, r, _ in cases]
+    assert hook == expected, "훅의 판정"
 
 
 def test_7절은_40만을_넘은_세션과_자동_압축_직전의_세션_컨텍스트를_든다(tmp_path: Path) -> None:

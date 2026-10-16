@@ -42,5 +42,5 @@
 
 ### 메모(06에서)
 
-- 06의 문턱은 `tools/hook_large_result.py`의 `READ_LIMIT`·`SHELL_LIMIT`이다. 06이 먼저 병합되면 두 문턱이 같은지 보는 시험은 이 티켓이 더한다.
+- 06의 문턱은 `tools/hook_large_result.py`의 `READ_LIMIT`·`SHELL_LIMIT`이다. 06이 먼저 병합되어 두 문턱이 같은지 보는 시험은 이 티켓이 더했다(`test_같은_크기의_결과를_큰_결과_알림_훅과_같이_판정한다`). 범위 판정도 훅과 같은 규칙(키가 있으면 범위를 준 것)으로 맞췄다.
 - 06의 프로브(`.scratch/token-usage/probes/large_result/`)에서 Read·Bash·PowerShell의 기록 `tool_result` 본문 길이는 훅의 셈과 같았다. 다른 것은 3만 자를 넘어 파일로 옮겨진 셸 출력 하나다. 그 기록 본문은 `<persisted-output>`으로 싼 경로와 미리보기(2323자)라 문턱에 걸리지 않는다. 장부가 기록 본문을 세면 그 결과는 큰 도구 결과에 들지 않는다

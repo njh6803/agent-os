@@ -94,8 +94,9 @@
 - 11절: 메인 세션의 호출당 평균 세션 컨텍스트와 캐시 읽기의 몫(캐시 읽기 / 입력·캐시 읽기·캐시
   쓰기의 합).
 - 12절: 큰 도구 결과는 범위(`offset`·`limit`) 없는 Read가 2만 자, Bash·PowerShell이 1만 자를 넘은
-  결과다(`LARGE`, 큰 결과 알림 훅과 같은 문턱). 글자는 기록의 `tool_result` 본문 글자 수다. 모델이
-  받은 글이라 Read는 줄 번호가 붙은 글이고, 글이 아닌 결과(그림)는 0이다. 대상은 Read면 파일
+  결과다(`LARGE`, 큰 결과 알림 훅과 같은 문턱. 범위는 그 훅처럼 키가 있으면 준 것이다). 글자는
+  기록의 `tool_result` 본문 글자 수다. 모델이 받은 글이라 Read는 줄 번호가 붙은 글이고, 글이 아닌
+  결과(그림)는 0이다. 대상은 Read면 파일
   경로이고 Bash·PowerShell이면 프로그램 이름(`program_of`)뿐이다. 명령 속 비밀이 지우지 않는 장부에
   남지 않게 하기 위해서다. 상위 다섯은 무게(글자 × 그 뒤 실려 간 호출 수, 다음 압축 경계에서
   끊는다) 순이다. 셋 이상의 세션이 읽은 파일은 워크트리 접두를 벗긴 경로(`file_key_of`)로 묶는다.
@@ -197,7 +198,8 @@ START_SPIKE = 1.1
 MIN_DAYS = 4
 OVER_CONTEXT = 400_000
 IDLE_S = 3600
-# 큰 도구 결과의 문턱(글자). 큰 결과 알림 훅(티켓 06)과 같은 값이다.
+# 큰 도구 결과의 문턱(글자). 큰 결과 알림 훅(`tools/hook_large_result.py`의 `READ_LIMIT`·
+# `SHELL_LIMIT`)과 같은 값이고, 같은 크기의 결과로 두 쪽의 판정을 견주는 시험이 있다.
 LARGE = {"Read": 20_000, "Bash": 10_000, "PowerShell": 10_000}
 TOP = 5
 TOP_BRANCHES = 10
@@ -1112,6 +1114,12 @@ def _range_of(inp: dict[str, Json]) -> tuple[int | None, int | None]:
     return _opt_int(inp.get("offset")), _opt_int(inp.get("limit"))
 
 
+def _ranged(inp: dict[str, Json]) -> bool:
+    """Read에 범위를 줬는가. 큰 결과 알림 훅과 같이 `offset`·`limit` 키가 있으면 값이 정수가
+    아니어도 준 것으로 본다."""
+    return "offset" in inp or "limit" in inp
+
+
 def carried_of(
     entered: Sequence[tuple[int, int]], cuts: Sequence[tuple[int, int]], end: int
 ) -> list[int]:
@@ -1223,7 +1231,7 @@ class _ToolScan:
             path = (_str(use.input.get("file_path")) or "").replace("\\", "/")
             self.reads.append(FileRead(tid, at, path, chars, use.again))
             self.seen.setdefault(_path_key(use.input), set()).add(_range_of(use.input))
-            if _range_of(use.input) == (None, None) and chars > LARGE["Read"]:
+            if not _ranged(use.input) and chars > LARGE["Read"]:
                 self.pending.append((rec.line, self.calls, Large(tid, at, "Read", chars, path, 0)))
         elif use.name in SHELLS:
             if chars > LARGE[use.name]:

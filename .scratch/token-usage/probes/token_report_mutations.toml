@@ -205,8 +205,8 @@ expect = "red"
 expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''            if _range_of(use.input) == (None, None) and chars > LARGE["Read"]:'''
-new = '''            if _range_of(use.input) == (None, None) and chars >= LARGE["Read"]:'''
+old = '''            if not _ranged(use.input) and chars > LARGE["Read"]:'''
+new = '''            if not _ranged(use.input) and chars >= LARGE["Read"]:'''
 
 [[mutation]]
 name = "범위를 준 Read도 큰 결과로 센다"
@@ -215,7 +215,7 @@ expect = "red"
 expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''            if _range_of(use.input) == (None, None) and chars > LARGE["Read"]:'''
+old = '''            if not _ranged(use.input) and chars > LARGE["Read"]:'''
 new = '''            if chars > LARGE["Read"]:'''
 
 [[mutation]]
@@ -227,6 +227,48 @@ expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결�
 file = "tools/token_report.py"
 old = '''            if chars > LARGE[use.name]:'''
 new = '''            if chars >= LARGE[use.name]:'''
+
+# 장부의 `LARGE` 값은 위 시험과 PowerShell 비밀 시험이 위아래로 묶는다. 아래 둘은 훅과의 대조만이
+# 잡는 것이다(훅 쪽 값만 바꾼 것, 정수가 아닌 범위).
+
+[[mutation]]
+name = "큰 결과 알림 훅의 셸 문턱만 바꾼다"
+tests = ["tests/tools/test_token_report.py", "-k", "큰_결과_알림_훅과"]
+expect = "red"
+expect_output = [
+    "test_같은_크기의_결과를_큰_결과_알림_훅과_같이_판정한다[Bash]",
+    "AssertionError: 장부의 판정",
+]
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''SHELL_LIMIT = 10_000'''
+new = '''SHELL_LIMIT = 12_000'''
+
+[[mutation]]
+name = "장부는 정수인 범위만 범위로 본다"
+tests = ["tests/tools/test_token_report.py", "-k", "큰_결과_알림_훅과"]
+expect = "red"
+expect_output = [
+    "test_같은_크기의_결과를_큰_결과_알림_훅과_같이_판정한다[Read]",
+    "AssertionError: 장부의 판정",
+]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''            if not _ranged(use.input) and chars > LARGE["Read"]:'''
+new = '''            if _range_of(use.input) == (None, None) and chars > LARGE["Read"]:'''
+
+[[mutation]]
+name = "장부는 정수인 limit만 범위로 본다"
+tests = ["tests/tools/test_token_report.py", "-k", "큰_결과_알림_훅과"]
+expect = "red"
+expect_output = [
+    "test_같은_크기의_결과를_큰_결과_알림_훅과_같이_판정한다[Read]",
+    "AssertionError: 장부의 판정",
+]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    return "offset" in inp or "limit" in inp'''
+new = '''    return "offset" in inp or _opt_int(inp.get("limit")) is not None'''
 
 [[mutation]]
 name = "셸 명령 전체를 대상으로 남긴다"
