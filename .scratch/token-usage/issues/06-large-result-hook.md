@@ -13,7 +13,7 @@
 - [ ] PostToolUse에 매처 `Read|Bash|PowerShell`로 래퍼 모양 등록을 더한다
 - [ ] 문턱은 Read 2만 자, Bash·PowerShell 1만 자이고 바꾸지 않는다. Read에 `offset`이나 `limit`을 줬으면 알리지 않는다. 같은 대상이 넘을 때마다 알리고 표지를 두지 않는다
 - [ ] 크기는 모델이 받는 결과의 글자 수다. PostToolUse의 `tool_response`는 도구의 구조화된 출력이라(명세 "크기", 공식 hooks 문서의 PostToolBatch 절), Read는 본문에 줄마다 줄 번호 접두의 글자 수를 더하고 Bash·PowerShell은 출력 칸들의 글자 수를 더한다. 글이 아닌 결과(그림, PDF)는 0자다
-- [ ] 먼저 Read·Bash·PowerShell의 실제 PostToolUse 페이로드를 저장해, 구조화된 출력의 모양과 같은 호출의 기록 `tool_result` 본문 길이를 대 본다. 저장한 원본과 대조 스크립트는 `.scratch/token-usage/probes/`에 커밋하고 README에 줄을 둔다(`.claude/rules/probes.md`, 선례 `.scratch/harness/probes/webfetch_payload/`). 셈과 기록이 다르면 그 차이와 까닭을 일지에 적는다
+- [ ] 먼저 Read·Bash·PowerShell의 실제 PostToolUse 페이로드를 저장해, 구조화된 출력의 모양과 같은 호출의 기록 `tool_result` 본문 길이를 대 본다. 저장한 원본과 대조 스크립트는 `.scratch/token-usage/probes/`에 커밋하고 README에 줄을 둔다(`.claude/rules/probes.md`, 선례 `.scratch/harness/probes/webfetch_payload/`). 대조 표본에는 3만 자를 넘는 Bash 출력 하나를 넣는다(Claude Code가 긴 출력을 자르는 구간이 있으면 거기서 갈린다. 어림). 셈과 기록이 다르면 그 차이와 까닭을 일지에 적는다
 - [ ] 독스트링에 못 보는 것을 적고 항목마다 시험으로 고정한다. 서브에이전트의 `additionalContext`가 그 서브에이전트의 모델에 닿는지(재지 않았다)를 든다
 
 ### 시험과 실행 확인

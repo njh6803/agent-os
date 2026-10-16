@@ -10,7 +10,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] 표의 사례가 `expect = "notice"`를 받는다. 훅이 `systemMessage` 하나만 내면 `notice`로 판정해 맞고, `additionalContext`까지 내면 `context`, 아무것도 내지 않으면 `silent`로 어긋난다. 가짜 훅으로 세 갈래를 `tests/tools/test_run_hooks.py`에 고정한다
+- [ ] 표의 사례가 `expect = "notice"`를 받는다. 지금은 표를 읽는 단계(`Case`의 `Expectation`)에서 거절되므로, 시험은 판정 함수(`outcome_of`, 이미 `notice`를 낸다)만이 아니라 표를 읽고 대조하는 길로 돌린다. 가짜 훅과 `expect = "notice"` 사례 하나를 둔 표에서, 훅이 `systemMessage` 하나만 내면 맞고, `additionalContext`까지 내면 `context`, 아무것도 내지 않으면 `silent`로 어긋난다. 세 갈래를 `tests/tools/test_run_hooks.py`에 고정하고, 고치기 전에 첫 갈래가 빨간 것을 본다
 - [ ] 빈자리 셈이 `notice`를 발동으로 센다. `notice` 사례와 `silent` 사례가 있는 훅은 빈자리가 아니고, `notice` 사례만 있는 훅은 "침묵 사례가 없다"다. 시험으로 고정한다
 - [ ] `notice` 사례에도 `contains`(훅이 낸 문장에 들어야 하는 조각)를 둘 수 있고, 그 문장이 `systemMessage`에서 나온다. 침묵 사례에 `contains`를 둘 수 없다는 검사는 그대로다
 - [ ] 래퍼가 없는 훅을 지나갈 때의 판정(`run_notices`, `NOTICE_ONLY_EVENTS`)은 바뀌지 않는다. 기존 시험이 초록이다

@@ -11,7 +11,7 @@
 ### 훅
 
 - [ ] SessionStart에 매처 `startup|resume|clear|compact|fork`로 래퍼 모양 등록을 더한다(`tools/run_hooks.py`의 `REGISTRATION`)
-- [ ] 매번 계정 기록(`ledger/accounts.jsonl`)에 명세 "계정 기록의 줄"의 모양 그대로 한 줄을 덧붙인다. 계정은 `~/.claude.json`의 `oauthAccount.accountUuid`와 `oauthAccount.emailAddress`이고, 읽지 못하면 두 칸이 `null`이다. 그 파일의 다른 키는 출력하지도 장부에 남기지도 않는다(대기열 272)
+- [ ] 매번 계정 기록(`ledger/accounts.jsonl`)에 명세 "계정 기록의 줄"의 모양 그대로 한 줄을 덧붙인다. 계정은 `~/.claude.json`의 `oauthAccount.accountUuid`와 `oauthAccount.emailAddress`이다. Claude Code가 그 파일을 다시 쓰는 도중이라 읽지 못하면 짧게 기다려 한 번 다시 읽고, 그래도 못 읽으면 두 칸이 `null`이다. 그 파일의 다른 키는 출력하지도 장부에 남기지도 않는다(대기열 272)
 - [ ] 출력 폴더는 `CLAUDE_PROJECT_DIR`의 git 공용 디렉터리의 부모(주 체크아웃) 아래다. 워크트리에서 시작한 세션도 같은 곳에 쓴다
 - [ ] 요약은 `source`가 `startup`이고 요약의 보고서 날짜를 이름으로 한 표지 파일을 `O_EXCL`로 처음 만들었을 때만 `systemMessage`로 보인다. 보고서 날짜는 `summary.txt`의 첫 줄 `보고서 날짜: YYYY-MM-DD`에서 읽는다(명세 "요약 파일". 쓰는 쪽은 02다). 그 줄을 읽지 못하면 요약을 보이지 않는다. `summary.txt`의 수정 시각이 36시간보다 오래됐으면 앞줄을 붙이고 표지 이름에 지역 날짜를 더한다. `summary.txt`가 없으면 침묵이다. 판정은 지금 시각을 인자로 받는 순수 함수다
 - [ ] 헤드리스 세션을 가른다. 먼저 실제 대화형 세션과 `claude -p` 세션의 SessionStart 페이로드를 저장해 가를 칸이 있는지 본다(저장한 원본은 `.scratch/token-usage/probes/`에 커밋한다, `.claude/rules/probes.md`). 칸이 없으면 `tools/canary.py`가 띄우는 세션의 환경에 표지 변수를 주고, 훅은 그 변수가 있으면 요약의 표지를 만들지 않고 계정만 기록한다. 카나리아 밖의 `claude -p`는 못 보는 것이다
@@ -19,7 +19,7 @@
 
 ### 시험과 실행 확인
 
-- [ ] 명세 Testing Decisions의 세션 시작 훅 항목을 시험으로 고정한다. 줄의 모양, `fork`의 계정, 같은 보고서 날짜의 둘째 `startup`은 침묵, 05:00 전에 연 세션이 있었어도 새 요약 뒤의 다음 `startup`은 보임, 낡은 요약의 앞줄과 하루 한 번, 요약 파일이 없으면 침묵, 헤드리스 표지, 두 키 밖을 출력하지 않음이다. 선례는 `tests/tools/test_hook_session_web_deps.py`다
+- [ ] 명세 Testing Decisions의 세션 시작 훅 항목을 시험으로 고정한다. 줄의 모양, `fork`의 계정, 처음에 읽지 못한 `~/.claude.json`의 다시 읽기, 같은 보고서 날짜의 둘째 `startup`은 침묵, 05:00 전에 연 세션이 있었어도 새 요약 뒤의 다음 `startup`은 보임, 낡은 요약의 앞줄과 하루 한 번, 요약 파일이 없으면 침묵, 헤드리스 표지, 두 키 밖을 출력하지 않음이다. 선례는 `tests/tools/test_hook_session_web_deps.py`다
 - [ ] 끝에서 끝까지 하나를 둔다. 훅이 쓴 줄을 `tools/token_report.py`가 읽어 그 세션의 비용이 계정별 절에 그 이메일로 든다
 - [ ] `tools/hook_payloads.toml`에 발동(`notice`) 하나와 침묵 하나를 실제 입력으로 더한다. 사례는 `CLAUDE_PROJECT_DIR`을 임시 저장소 자리표시자로, 홈(`USERPROFILE`·`HOME`)을 `.claude.json`을 둔 임시 폴더로 줘 실제 장부와 표지에 닿지 않게 한다. 필요한 자리표시자를 러너에 더하고, 러너 독스트링의 자리표시자 목록과 수를 고친다(선례 `${BROKEN_WEB}`)
 - [ ] `tools/mutate.py`로 표지 판정과 계정 고르기를 바꾸면 시험이 빨개지는지 본다
