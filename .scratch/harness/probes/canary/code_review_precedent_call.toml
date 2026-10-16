@@ -1,8 +1,9 @@
 # code-review 4단계 주장 검증 목록의 코드의 동작 항목(대기열 305)과 6단계 1의 새 문장을 PR 직전 리뷰에 넘기는 문장(대기열 260)이 새 세션에 실리는지.
-# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(dbcdc6d)이다. 이 PR 안에서는 주 체크아웃이 그 판이다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(dbcdc6d)이다. 처음 돌릴 때 주 체크아웃이 그 판이었다.
+#   주 체크아웃이 앞으로 가도 원천 파일을 바꾸지 않은 동안은 같은 대조군이다. 판을 고정하려면 `--control-commit dbcdc6d` 를 준다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 대조군은 주 체크아웃 `dbcdc6d`, 실험군은 `dbcdc6d` 위의 커밋 전 변경, 일지 2026-10-16-37).
-#   셀프 리뷰 반영(6단계 1 문장의 대상과 근거)은 같은 날 사전 확인으로 갈음했다(일지 2026-10-16-37).
+#   셀프 리뷰 반영(6단계 1 문장의 대상과 근거)과 PR 직전 bug-perf-review 반영(CLI 갈래 문장)은 같은 날 사전 확인으로 갈음했다(일지 2026-10-16-37).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/code_review_precedent_call.toml <출력 디렉터리>
 #   병합 뒤: uv run python tools/canary.py --control-commit dbcdc6d .scratch/harness/probes/canary/code_review_precedent_call.toml <출력 디렉터리>
