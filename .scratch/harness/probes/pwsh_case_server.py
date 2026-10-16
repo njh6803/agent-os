@@ -433,7 +433,7 @@ class NotMeasured(Exception):
     """pytest 가 실패 없이 통과하지 않았거나 표지가 기대와 달라 그 회차가 측정이 아니다."""
 
 
-def _pytest_seconds(command: Sequence[str], marked: bool) -> tuple[int, float]:
+def _pytest_seconds(command: Sequence[str], *, marked: bool) -> tuple[int, float]:
     done = subprocess.run(
         [*command, "-q", "-p", "no:cacheprovider", str(TEST_FILE.relative_to(ROOT))],
         cwd=ROOT,
@@ -465,7 +465,7 @@ def _time(rounds: int) -> int:
         for kind in order:
             command, marked = commands[kind]
             try:
-                cases, seconds = _pytest_seconds(command, marked)
+                cases, seconds = _pytest_seconds(command, marked=marked)
                 shown.append(f"{kind}={cases}개 {seconds:.2f}s")
             except NotMeasured as miss:
                 misses += 1

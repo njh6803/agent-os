@@ -78,7 +78,7 @@ PROBED: list[tuple[str, bool]] = [
 
 
 @pytest.mark.parametrize(("argument", "expected"), PROBED)
-def test_바뀌는지는_프로브가_잰_것과_같다(argument: str, expected: bool) -> None:
+def test_바뀌는지는_프로브가_잰_것과_같다(argument: str, *, expected: bool) -> None:
     assert converts(argument) is expected
 
 

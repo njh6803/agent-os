@@ -336,7 +336,7 @@ class PluginSource(Protocol):
         """
         ...
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         """(종류, 이름) 하나의 켜짐을 쓴다. `enabled` 는 쓸 값이지 동작을 고르는 플래그가 아니다.
 
         부재는 값으로 말한다. 그 자리에 매니페스트 파일이 없으면 쓰지 않고 `absent` 다. 판정 대상은

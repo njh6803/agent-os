@@ -137,8 +137,12 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 
 ### 조건 변경(ADR 0033)
 
-두 갈래의 조건을 바꾸는 것을 한 줄씩 적는다(명세 `.scratch/token-usage/spec.md` "레벨 스윕 기록"). 효과가 서는 때는 병합
-시각이 아니라 주 체크아웃을 당긴 뒤 새로 연 세션부터다(`.claude/rules/tools.md`의 `CLAUDE_PROJECT_DIR`). 병합으로 드는 줄은 그 PR
-번호를, 적용으로 드는 줄은 적용한 시각(UTC)을 적고, 병합 시각은 사람 확인 티켓이 `gh pr view <번호> --json mergedAt`으로
-채운다.
+스윕 기간에 두 갈래의 조건을 함께 바꾸는 것을 한 줄씩 적는다. 효과는 병합 시각이 아니라 주 체크아웃을 당긴 뒤 새로 연
+세션부터 선다. 스킬은 세션을 시작한 체크아웃의 사본이 실리고(`docs/constitution/operations.md` 환경 규약 상세), 지시문
+세션은 주 체크아웃에서 시작한다. 프로젝트 설정도 띄운 자리의 것이 실렸다(플러그인 끄기를 손으로 본 것, 일지 2026-10-16-50).
 
+- 플러그인 끄기(PR #268): 프로젝트 설정의 `enabledPlugins`에서 `document-skills`, `example-skills`, `skill-creator`,
+  `code-review` 플러그인판을 끈다. 모든 호출에 실리는 시작 컨텍스트의 스킬 목록이 줄어든다.
+- 셀프 리뷰 표준 축(PR #268): `code-review`의 표준 축 서브에이전트가 변경 종류와 상관없이 `sonnet`·`high`로 돈다.
+  전에는 `src/`·`tests/`·`tools/` 아래 `*.py`를 건드리지 않은 변경에서만 `sonnet`이었고, 나머지는 세션의 모델을
+  물려받았다. 노력은 어느 쪽도 주지 않았다.

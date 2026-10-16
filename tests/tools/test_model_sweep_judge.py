@@ -340,7 +340,7 @@ def test_비용_비가_1보다_작아도_구간의_위_끝이_1_이상이면_내
 
 
 @pytest.mark.parametrize(("comp_rework", "ok"), [(3, True), (4, False)])
-def test_재작업_중앙값이_기준_3사분위를_넘으면_내리지_않는다(comp_rework: int, ok: bool) -> None:
+def test_재작업_중앙값이_기준_3사분위를_넘으면_내리지_않는다(comp_rework: int, *, ok: bool) -> None:
     base = [_행(f"feature/{i}-기준", cost=40.0 + i, rework=i) for i in range(5)]  # 3사분위 3
     comp = _비용행([20, 21, 22, 23, 24], rework=comp_rework)
     got, detail = lower_verdict(comp, base, total_cost, interventions)
@@ -349,7 +349,9 @@ def test_재작업_중앙값이_기준_3사분위를_넘으면_내리지_않는�
 
 
 @pytest.mark.parametrize(("comp_int", "ok"), [(2, True), (3, False)])
-def test_사람_개입_중앙값이_기준_더하기_1을_넘으면_내리지_않는다(comp_int: int, ok: bool) -> None:
+def test_사람_개입_중앙값이_기준_더하기_1을_넘으면_내리지_않는다(
+    comp_int: int, *, ok: bool
+) -> None:
     base = _비용행([40, 41, 42, 43, 44], interventions=1)
     comp = _비용행([20, 21, 22, 23, 24], interventions=comp_int)
     got, detail = lower_verdict(comp, base, total_cost, interventions)
