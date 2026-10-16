@@ -59,8 +59,8 @@ tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_hooks.py"
-old = '''            launch_argv(hook),'''
-new = '''            ["uv", "run", "--project", str(ROOT), "--no-sync", "python", str(ROOT / "tools" / hook)],'''
+old = '''            launch_argv(hook, root),'''
+new = '''            ["uv", "run", "--project", str(root), "--no-sync", "python", str(root / "tools" / hook)],'''
 
 [[mutation]]
 name = "등록 모양을 앞부분만 맞춘다"
@@ -239,8 +239,8 @@ tests = ["tests/tools/test_run_hooks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_hooks.py"
-old = '''        for event, registration in sorted(by_event.items())'''
-new = '''        for event, registration in sorted(by_event.items())[:1]'''
+old = '''    for event, registration in sorted(by_event.items())'''
+new = '''    for event, registration in sorted(by_event.items())[:1]'''
 
 [[mutation]]
 name = "러너가 알림의 페이로드에 이벤트 이름을 넣지 않는다"
