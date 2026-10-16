@@ -1,0 +1,38 @@
+===== check:api-client =====
+$ node tools/generate-api-client.ts --check
+
+===== lint =====
+$ eslint --max-warnings 0
+
+===== format =====
+$ prettier --check . --ignore-path ../.gitignore --ignore-path .prettierignore
+Checking formatting...
+All matched files use Prettier code style!
+
+===== typecheck =====
+$ tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual
+
+===== test =====
+$ vitest run
+Plugin "vitest:mocks:interceptor" defines Vite-specific hooks (configureServer) in a plugin returned from applyToEnvironment. These hooks will be ignored.
+
+ RUN  v5.0.2 C:/project/agent/.claude/worktrees/precommit-xdist/web
+
+(node:61284) TimeoutNaNWarning: NaN is not a number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:45360) TimeoutNaNWarning: NaN is not a number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:47316) TimeoutNaNWarning: NaN is not a number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  28 passed (28)
+      Tests  380 passed (380)
+   Start at  16:14:49
+   Duration  153.81s (worker 45%, tests 39%, environment 10%, import 3%, setup 2%)
+
+
+===== check:tsconfig =====
+$ node tools/check-tsconfig.ts

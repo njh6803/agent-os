@@ -1,0 +1,9 @@
+check-instructions......................Passed (1.0s)
+zizmor..................................Passed (1.2s)
+lint-imports............................Passed (1.7s)
+check-type-escapes......................Passed (4.8s)
+pyright.................................Passed (27.6s)
+run-hooks...............................Passed (61.4s)
+pytest..................................Passed (197.0s)
+web-verify..............................Passed (215.9s)
+한 바퀴 215.9초 (round_xdist6), pytest 통과 3254 실패 0, 종료 코드 0
