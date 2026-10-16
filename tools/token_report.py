@@ -149,11 +149,14 @@
   본문의 줄 머리에 적힌 `gh pr create`는 센다. `--body '-h'`처럼 값이 `-h`·`--help`·`--dry-run`인
   PR은 놓친다. 장부의 세션 행에 없는 PR(사람이 웹에서 연 것, 장부에 들기 전에 지워진 기록, 다른
   PC)의 브랜치는 "PR 시각 모름"이다. `--head` 없이 기본 브랜치에서 연 PR은 그 기본 브랜치로 센다.
+  머리는 `--head 값`, `--head=값`, `-H 값`만 읽고 붙여 쓴 `-H값`은 놓친다. 붙여 쓴 꼴을 받으면 다른
+  옵션의 값(`--title "-Hotfix: x"`)을 머리로 읽어 지우지 않는 장부에 틀린 브랜치를 남긴다.
 - 사람이 연 세션인지는 기록의 `origin` 칸 하나로 가른다. 터미널의 대화형 `claude`가 그 칸에 무엇을
   남기는지는 보지 않았다(이 PC의 세션은 데스크톱 앱과 헤드리스뿐이었다).
 - 다시 읽기 후보를 가르는 git 명령(`GIT_MUTATION`)은 흔한 것만 본다. `read-tree`, `git.exe`, 별칭,
-  스크립트 안의 git으로 바뀐 파일과 git 밖의 Bash(sed, 스크립트)로 바뀐 파일은 보지 못해 후보를
-  많게 센다. 반대로 커밋 메시지 안의 `git merge` 같은 글자도 걸려 그 뒤의 후보를 적게 센다.
+  스크립트 안의 git, 공백이 든 인용 경로를 준 `-C`(`git -C 'a b' pull`), 값을 띄어 쓴 긴 앞
+  옵션(`git --git-dir x pull`)으로 바뀐 파일과 git 밖의 Bash(sed, 스크립트)로 바뀐 파일은 보지 못해
+  후보를 많게 센다. 반대로 커밋 메시지 안의 `git merge` 같은 글자도 걸려 그 뒤의 후보를 적게 센다.
 - 프로그램 이름은 명령 앞의 대입만 벗긴다. 래퍼(`env`, `sudo`, `uv run`)는 벗기지 않아 그 이름이
   남는다.
 - 셋 이상의 세션이 읽은 파일과 다시 읽기의 파일은 소문자로 바꾼 경로(`file_key_of`)로 적는다.
@@ -221,6 +224,8 @@ SHELLS = frozenset({"Bash", "PowerShell"})
 _SKILL_SOURCE = re.compile(r"- ([\w.-]+):[\w.-]+(?::|$)")
 _ENV_ASSIGNMENT = re.compile(r"[A-Za-z_]\w*=")
 _UNSAFE_ASSIGNMENT = re.compile(r"[$`\\()]")
+_UNSAFE_PS = re.compile(r"@['\"{]|`")
+_LINE_CONTINUATION = re.compile(r"[\\`]\r?\n")
 _PROGRAM = re.compile(r"[\w./\\:+-]+")
 _WORKTREE = re.compile(r"/\.claude/worktrees/[^/]+/")
 GIT_TIMEOUT = 10
@@ -647,8 +652,10 @@ def _stream_of(r: Call | SessionRow | Unreadable) -> StreamKey:
 
 
 def read_ledger_file(path: Path) -> Ledger:
+    """달 파일 하나. 줄은 `\\n`으로만 가른다. `json.dumps(ensure_ascii=False)`는 U+2028 같은 줄 구분
+    문자를 그대로 쓰는데(Read 경로에 들 수 있다) `splitlines()`는 거기서도 갈라 행이 깨진다."""
     out = Ledger()
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():
             continue
         r = _obj(_parse_json(line))
@@ -940,7 +947,10 @@ def human_of(prompt: Prompt | None) -> bool:
     지난 48시간 메인 세션 기록에서 그 칸의 값과 `entrypoint`·`promptSource`, 첫 스킬 목록의 크기만
     커밋하지 않은 스크래치 스크립트로 셌다. 데스크톱 앱에서 사람이나 `open-session`이 연 세션은
     `human`이었고, 헤드리스 `claude -p`와 SDK 세션(카나리아, 프로브)은 `origin`이 없었다.
-    `entrypoint`는 헤드리스 세션도 `claude-desktop`인 것이 많아(물려받는다) 가르지 못했다."""
+    `entrypoint`는 헤드리스 세션도 `claude-desktop`인 것이 많아(물려받는다) 가르지 못했다. 지난
+    7일로 넓혀 판(`version`)과 함께 세니 `human`은 앱이 싣는 판(2.1.286, 2.1.295)에만 있었고, PATH의
+    `claude -p`로 보이는 판(2.1.292, 2.1.296, 2.1.300)과 SDK(2.1.237)에는 없었다. 앱 판인데
+    `origin`이 없던 둘은 첫 입력이 `<system-reminder>`로 시작하는 앱의 자동 세션이었다."""
     return prompt is not None and _obj(prompt.record.get("origin")).get("kind") == "human"
 
 
@@ -983,11 +993,13 @@ def start_parts_of(records: list[Record]) -> StartParts:
 
 def _raw_segments(command: str) -> list[list[str]]:
     """인용 밖의 `;`·`&`·`|`·줄바꿈으로 가른 조각마다 인용 밖 공백으로 가른 낱말. 인용 부호는 낱말에
-    남긴다."""
+    남긴다. 줄 이음(bash의 `\\`, PowerShell의 백틱 뒤 줄바꿈)은 공백으로 이어, 이어진 줄의
+    옵션(`--head`, `--dry-run`)이 같은 조각에 든다. 인용 안의 줄 이음도 잇는데, 인용 안의 글은
+    남기지 않으므로 상관없다."""
     segments: list[list[str]] = [[]]
     word: list[str] = []
     quote: str | None = None
-    for char in command:
+    for char in _LINE_CONTINUATION.sub(" ", command):
         if quote is not None:
             word.append(char)
             if char == quote:
@@ -1038,11 +1050,17 @@ def program_of(command: str) -> str | None:
     낱말이다. 벗기는 선례는 `tools/hook_user_settings_read.py`의 `_strip_prefix`다. 이 장부는 지우지
     않으므로 남길 수 없으면 None으로 둔다. 벗긴 대입에 `$`·백틱·백슬래시·괄호가 있으면(따옴표 없는
     명령 치환 `X=$(echo 비밀) curl`, 이스케이프한 공백 `X=a\\ 비밀 curl`) 낱말 경계를 믿을 수 없어
-    None이다. 남기는 낱말은 인용 부호를 벗기기 전의 것이 영숫자와 `._-/\\:+`로만 되어야 한다.
-    따옴표에서 온 글은 값일 수 있다(`'비밀' | gh auth login --with-token`)."""
+    None이다. 건너뛰는 PowerShell 대입 조각에 here-string 머리(`@'`, `@"`), 해시테이블 머리(`@{`),
+    백틱이 있어도 None이다. here-string 안의 따옴표는 인용을 열고 닫지 않아, 안에 따옴표가 홀수 개면
+    그 뒤 줄(비밀이 홀로 든 줄)을 조각으로 잘못 가르고(PR 직전 보안 리뷰가 함수를 불러 봤다),
+    여러 줄 해시테이블은 다음 줄의 키(`Authorization = …`)를 프로그램으로 읽는다. 남기는 낱말은 인용
+    부호를 벗기기 전의 것이 단어 문자(`\\w`, 한글도 든다)와 `._-/\\:+`로만 되어야 한다. 따옴표에서
+    온 글은 값일 수 있다(`'비밀' | gh auth login --with-token`)."""
     for words in _raw_segments(command):
         rest = list(dropwhile(_ENV_ASSIGNMENT.match, words))
         if any(_UNSAFE_ASSIGNMENT.search(w) for w in words[: len(words) - len(rest)]):
+            return None
+        if rest and _is_ps_assignment(rest) and _UNSAFE_PS.search(" ".join(rest)):
             return None
         if not rest or _is_ps_assignment(rest):
             continue
@@ -1074,8 +1092,6 @@ def pr_head_of(words: list[str]) -> str | None:
             return _branch_of_head(word.removeprefix("--head="))
         if word in ("--head", "-H") and i + 1 < len(words):
             return _branch_of_head(words[i + 1])
-        if word.startswith("-H") and len(word) > 2:
-            return _branch_of_head(word.removeprefix("-H"))
     return None
 
 
@@ -1113,8 +1129,10 @@ def carried_of(
 def compaction_of(d: dict[str, Json], last_context: int | None) -> Compaction:
     """압축 경계 기록 하나. 압축 직전의 세션 컨텍스트는 기록의 `preTokens`(Claude Code가 압축할 때
     센 값)이고, 없으면 그 앞 마지막 모델 호출의 것이다. `preTokens`는 마지막 호출 뒤에 든 도구
-    결과까지 들어 자동 압축 창과 견줄 값이다. 셀프 리뷰의 명세 축이 이 PC의 자동 압축 19건을
-    스크래치 스크립트로 견주니, 둘의 차이는 중앙값 4,374이고 가장 큰 것은 393,461이었다."""
+    결과까지 들어 자동 압축 창과 견줄 값이다. 2026-10-16 셀프 리뷰의 명세 축이 이 PC의 모든
+    프로젝트에서 자동 압축 19건을 스크래치 스크립트로 견주니, 둘의 차이는 중앙값 4,374이고 가장 큰
+    것은 393,461이었다(이 저장소 밖의 폴더). PR 직전 리뷰가 이 저장소 폴더의 20건만 보니
+    `preTokens`가 언제나 컸고 차이의 중앙값은 4,491, 가장 큰 것은 47,045였다."""
     meta = _obj(d.get("compactMetadata"))
     pre = _opt_int(meta.get("preTokens"))
     context = pre if pre is not None else last_context
@@ -1469,7 +1487,7 @@ def read_accounts(path: Path) -> dict[str, str]:
     accounts: dict[str, str] = {}
     if not path.is_file():
         return accounts
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").split("\n"):
         try:
             r = _obj(_parse_json(line))
         except json.JSONDecodeError:

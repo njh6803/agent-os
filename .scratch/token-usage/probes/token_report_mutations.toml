@@ -275,6 +275,28 @@ new = '''    for words in _segments(command):
         rest = list(dropwhile(_ENV_ASSIGNMENT.match, words))'''
 
 [[mutation]]
+name = "here-string이 든 PowerShell 대입 조각도 건너뛴다"
+tests = ["tests/tools/test_token_report.py", "-k", "PowerShell의_변수_대입"]
+expect = "red"
+expect_output = ["test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        if rest and _is_ps_assignment(rest) and _UNSAFE_PS.search(" ".join(rest)):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "장부 달 파일을 splitlines로 읽는다"
+tests = ["tests/tools/test_token_report.py", "-k", "줄_구분_문자"]
+expect = "red"
+expect_output = ["test_경로에_줄_구분_문자가_든_읽기도_장부를_다시_읽을_수_있다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    for line in path.read_text(encoding="utf-8").split("\n"):
+        if not line.strip():'''
+new = '''    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():'''
+
+[[mutation]]
 name = "PowerShell의 변수 대입 조각을 건너뛰지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
@@ -355,14 +377,14 @@ old = '''    context = pre if pre is not None else last_context'''
 new = '''    context = last_context if last_context is not None else pre'''
 
 [[mutation]]
-name = "붙여 쓴 -H 값을 읽지 않는다"
+name = "줄 이음을 잇지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "명령_위치의_gh_pr_create"]
 expect = "red"
 expect_output = ["test_명령_위치의_gh_pr_create만_PR로_센다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''        if word.startswith("-H") and len(word) > 2:'''
-new = '''        if False:'''
+old = '''    for char in _LINE_CONTINUATION.sub(" ", command):'''
+new = '''    for char in command:'''
 
 [[mutation]]
 name = "고친 파일의 옛 읽기를 남긴다"

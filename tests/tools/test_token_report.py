@@ -163,7 +163,8 @@ class 판:
     def 장부(self) -> list[Rec]:
         rows: list[Rec] = []
         for p in sorted((self.out / "ledger").glob("????-??.jsonl")):
-            rows.extend(json.loads(x) for x in p.read_text(encoding="utf-8").splitlines())
+            body = p.read_text(encoding="utf-8")
+            rows.extend(json.loads(x) for x in body.split("\n") if x)
         return rows
 
     def 호출(self) -> list[Rec]:
@@ -1140,6 +1141,15 @@ def test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다(
         ("tp8", "PowerShell", '"tok-s3cr3t" | Set-Content k'),
         ("tp9", "PowerShell", "[Environment]::SetEnvironmentVariable('K','s3cr3t'); tool"),
         ("tpa", "Bash", "sudo curl x"),
+        # here-string 안의 홀수 따옴표가 인용 상태를 흐려 그 뒤 비밀 줄이 조각으로 갈리던 길
+        ("tpb", "PowerShell", "$cfg = @'\n# don't commit\ns3cr3t-key\n'@\nSet-Content .env $cfg"),
+        ("tpc", "PowerShell", '$b = @"\nHe said "hi\ns3cr3t-tok\n"@\ngh x'),
+        # 여러 줄 해시테이블은 다음 줄의 키를 프로그램으로 읽던 길
+        (
+            "tpd",
+            "PowerShell",
+            "$h = @{\nAuthorization = 'Bearer s3cr3t'\n}\nInvoke-RestMethod -H $h",
+        ),
     ]
     recs: list[Rec] = []
     for i, (tid, name, cmd) in enumerate(commands):
@@ -1162,6 +1172,9 @@ def test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다(
         None,
         None,
         "sudo",
+        None,
+        None,
+        None,
     ]
     for p in (t.out / "ledger").iterdir():
         assert "s3cr3t" not in p.read_text(encoding="utf-8"), p
@@ -1335,11 +1348,16 @@ def test_명령_위치의_gh_pr_create만_PR로_센다(tmp_path: Path) -> None:
         "uv run gh pr create --fill",
         "gh pr create --title t --body '-h'",
         "cat <<'EOF'\ngh pr create --fill\nEOF",
+        # 붙여 쓴 -H값은 머리로 읽지 않는다(다른 옵션의 값을 머리로 읽지 않게). 기록의 브랜치로
+        # 센다.
         "gh pr create -Hme:feature/z --fill",
+        # 줄 이음 뒤의 옵션도 같은 조각이다.
+        "gh pr create --title x \\\n  --head feature/c",
+        "gh pr create --fill \\\n  --dry-run",
     ]
     recs: list[Rec] = []
     for i, c in enumerate(commands):
-        at = f"2026-10-15T00:0{i}:00Z"
+        at = f"2026-10-15T00:{i:02}:00Z"
         recs += [
             응답(f"m{i}", at, 입력=1, content=[도구(f"t{i}", "Bash", command=c)]),
             결과(at, f"t{i}", "ok"),
@@ -1349,7 +1367,8 @@ def test_명령_위치의_gh_pr_create만_PR로_센다(tmp_path: Path) -> None:
     assert t.칸(SID_A, "prs") == [
         {"at": "2026-10-15T00:03:00Z", "branch": "feature/a"},
         {"at": "2026-10-15T00:07:00Z", "branch": "feature/a"},
-        {"at": "2026-10-15T00:08:00Z", "branch": "feature/z"},
+        {"at": "2026-10-15T00:08:00Z", "branch": "feature/a"},
+        {"at": "2026-10-15T00:09:00Z", "branch": "feature/c"},
     ]
 
 
@@ -1522,6 +1541,23 @@ def test_작업_트리를_바꾸는_git_명령이나_고친_파일_뒤의_읽기
     uses.append(도구("n1", "NotebookEdit", notebook_path="f.py", new_source="x"))
     t = _다시_읽기_판(tmp_path, uses)
     assert "다시 읽기 후보 0회 0자" in _절(t.일간(), 12)
+
+
+def test_경로에_줄_구분_문자가_든_읽기도_장부를_다시_읽을_수_있다(tmp_path: Path) -> None:
+    # json.dumps(ensure_ascii=False)는 U+2028을 그대로 쓴다. 읽는 쪽이 거기서 줄을 가르면 행이 깨져
+    # 그 뒤 모든 ingest·report가 그 달 파일에서 죽는다(PR 직전 보안 리뷰가 함수를 불러 봤다).
+    t = _판(tmp_path)
+    path = f"a{chr(0x2028)}b.py"
+    recs = [
+        응답("r1", "2026-10-15T00:00:00Z", 입력=1, content=[도구("a", "Read", file_path=path)]),
+        결과("2026-10-15T00:00:01Z", "a", "o" * 10),
+    ]
+    p = 메인(t.projects, SID_A, recs)
+    assert t.돌린다("daily") == 0
+    now = time.time()
+    os.utime(p, (now, now))
+    assert t.돌린다("daily") == 0
+    assert [r["path"] for r in t.칸(SID_A, "reads")] == [path]
 
 
 def test_실패한_Read_뒤의_범위_읽기는_다시_읽기_후보가_아니다(tmp_path: Path) -> None:
