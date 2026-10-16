@@ -237,8 +237,8 @@ CodeRabbit CLI는 좌석이 없었다(`coderabbit auth status`의 `Seat: not ass
 - **내장 `/security-review`**: 발견 없음. 실행되는 코드와 설정이 바뀌지 않았고 비밀값과 개인정보가 없다. 구현 때 지킬 것으로
   런처가 argv를 셸 없이 넘길 것, 런처 경로를 패키지 안에 고정할 것, pid가 아니라 그룹으로 끌 것을 짚었다.
 - **`bug-perf-review` 서브에이전트**: 유효 둘, 보류 둘, 오탐 넷. 넷 다 고치는 값이 작아 PR을 열기 전에 고쳤다.
-  - 유효 Major: Linux 런처 아래에서는 서버 명령이 없을 때의 `FileNotFoundError`가 런처 안에서 나 연결이 닫힌 것으로만 보여, ADR의
-    "서버 기동 실패는 연결 단계의 예외, 그대로다"가 Linux에서 거짓이고 `tests/adapters/test_mcp.py`의 그 테스트가 CI에서만
+  - 유효 Major: Linux 런처 아래에서는 서버 명령이 없을 때의 `FileNotFoundError`가 런처 안에서 나 연결이 닫힌 것으로만 보여, 서버 기동 실패가
+    연결 단계의 예외로 그대로라는 ADR의 문장이 Linux에서 거짓이고 `tests/adapters/test_mcp.py`의 그 테스트가 CI에서만
     빨개진다. ADR에 그 차이와 538개가 Windows의 측정이라는 것을 적고, 그 테스트가 Linux에서도 초록인 길을 명세 몫으로 넘겼다
     (`plan.md` 행에도).
   - 유효 Nit: import-linter 금지 목록은 `langchain_mcp_adapters`를 지우지 않고 `mcp`로 바꾼다고 적었다.
@@ -247,6 +247,18 @@ CodeRabbit CLI는 좌석이 없었다(`coderabbit auth status`의 `Seat: not ass
     시간(유예 5초에 실행마다 서버 수 × 최악)과 두 번째 Ctrl+C나 컨테이너의 강제 종료가 닫기를 끊는 경우를 ADR과 명세 몫에 적었다.
   - 오탐: serve 종료의 취소가 네이티브 취소라는 것(`runs.py`는 anyio 태스크 그룹의 `cancel_scope.cancel()`이다), 결말 뒤 닫기의
     예외에서 서버가 남는다는 것, CLI 서술 오류, 고칠 자리 누락. 서브에이전트가 스스로 오탐으로 판정했다.
+
+## PR 리뷰
+
+PR #266. 첫 푸시(`75f7e90`)에서 CodeRabbit은 OSS 한도에 걸려 리뷰가 없었고(회차로 세지 않는다), claude-review는 Critical·Major
+없이 Nit 하나였다. 검사는 모두 초록이었다.
+
+- Nit: ADR 0034의 "어댑터가 mcp를 직접 쓴다" 항목이 한 문단에 사실을 열 개 가까이 담는다. 리뷰도 작성자 재량이라 했고, 그 사실들은
+  명세가 하나씩 재고 정할 몫이라 명세가 항목으로 나눈다. ADR은 그대로 두고 아래 "다음"에 적었다. 이유를 PR 코멘트에 남겼다.
+- 리뷰가 "구현 티켓에서 볼 것"으로 든 둘(import-linter 금지 목록을 `mcp`로 바꾸기, Linux 런처 아래 서버 기동 실패의 원인)은
+  ADR과 `plan.md` 행에 이미 있다.
+- 같은 커밋에 두 번째 커밋의 인용 대조 경고 둘(ADR의 `pyproject.toml` 주석을 풀어 쓴 따옴표, 위 PR 직전 리뷰 절의 리뷰 요약 따옴표)을
+  따옴표를 떼어 고쳤다.
 
 ## 회고
 
@@ -276,6 +288,8 @@ CodeRabbit CLI는 좌석이 없었다(`coderabbit auth status`의 `Seat: not ass
   모양(감싸는 프로세스 아래에서 입력이 닫혀도 끝나지 않는 서버, 스스로 끝나며 자식을 남기는 서버, 하트비트 파일, 명령줄로 신원을
   확인하는 정리)은 위 "찾은 사실"과 "사고"에 있다. 프로세스를 끄는 탐침은 대기열 307이 반영되기 전이라도 명령줄로 신원을 확인한
   뒤에만 끈다.
+- 명세는 ADR 0034의 "어댑터가 mcp를 직접 쓴다" 항목(픽스처 서버의 변경, 실패 글의 모양, Linux의 서버 기동 실패)을 요구 항목으로
+  나눠 적는다(PR #266 claude-review 첫 회차 Nit).
 - admin-style(그리기 직전 `/design-sync`)도 프론티어다. end-user-continuation은 티켓 단계가 다른 워크트리에서 돈다. web-widget은
   end-user-continuation을 기다린다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 주 체크아웃을 당기지 않는다.
