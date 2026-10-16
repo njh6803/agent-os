@@ -395,7 +395,7 @@ def turns_of(raw: str) -> list[Turn]:
     return turns[:-1]
 
 
-def measured(turn: Turn, first: bool) -> bool:
+def measured(turn: Turn, *, first: bool) -> bool:
     """측정 턴인지. 바뀌지 않은 스킬을 다시 부르면 본문을 다시 싣지 않아(`Launching skill` 만
     온다) 기준 폴더 줄은 첫 턴에만 요구하고, 뒤 턴은 Skill 을 불렀는지만 본다."""
     if first and (turn.worktree_error is not False or not turn.skill_dirs):

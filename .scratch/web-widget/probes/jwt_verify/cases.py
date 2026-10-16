@@ -71,7 +71,9 @@ class Material:
 
 def hmac_material() -> Material:
     secret = secrets.token_bytes(32)
-    return Material(secret, lambda m: hmac.new(secret, m, hashlib.sha256).digest(), False)
+    return Material(
+        secret, lambda m: hmac.new(secret, m, hashlib.sha256).digest(), asymmetric=False
+    )
 
 
 def pem(public: ed25519.Ed25519PublicKey | rsa.RSAPublicKey) -> bytes:
@@ -82,7 +84,7 @@ def pem(public: ed25519.Ed25519PublicKey | rsa.RSAPublicKey) -> bytes:
 
 def ed25519_material() -> Material:
     private = ed25519.Ed25519PrivateKey.generate()
-    return Material(pem(private.public_key()), private.sign, True)
+    return Material(pem(private.public_key()), private.sign, asymmetric=True)
 
 
 def rsa_material() -> Material:
@@ -90,7 +92,7 @@ def rsa_material() -> Material:
     return Material(
         pem(private.public_key()),
         lambda m: private.sign(m, padding.PKCS1v15(), hashes.SHA256()),
-        True,
+        asymmetric=True,
     )
 
 
@@ -170,7 +172,7 @@ def outcome(call: Callable[[], str], invalid: type[Exception]) -> tuple[bool | N
     return accepted, text + (f" [경고: {', '.join(names)}]" if names else "")
 
 
-def mark(accepted: bool | None) -> str:
+def mark(*, accepted: bool | None) -> str:
     return {True: "수락", False: "거부", None: "새어 나옴"}[accepted]
 
 
@@ -251,7 +253,10 @@ def main() -> int:
             accepted, text = outcome(call, invalid)
             if accepted is not want:
                 surprises.append(f"{alg}/{case}")
-            print(f"| {alg} | {pinned} | {case} | {mark(want)} | {mark(accepted)} | {text} |")
+            print(
+                f"| {alg} | {pinned} | {case} | {mark(accepted=want)} "
+                f"| {mark(accepted=accepted)} | {text} |"
+            )
 
     print("\n고정하지 않으면(라이브러리 직접 호출, 서명만)")
     print("\n| 토큰 alg | 허용 목록 | 사례 | 결과 | 원인 |")
@@ -280,7 +285,7 @@ def main() -> int:
                 )
             )
             shown = "기본값" if allowed is None else str(allowed)
-            print(f"| {alg} | {shown} | {case} | {mark(accepted)} | {text} |")
+            print(f"| {alg} | {shown} | {case} | {mark(accepted=accepted)} | {text} |")
 
     print(f"\n기대와 다른 사례: {surprises if surprises else '없음'}")
     return 0

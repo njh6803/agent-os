@@ -220,7 +220,7 @@ class FakePlugins:
             raise PluginError(self._corrupt)
         return self.disabled
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         self.calls += 1
         if not any(row.kind is kind and row.name == name for row in self._rows):
             return "absent"
