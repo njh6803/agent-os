@@ -30,9 +30,9 @@
   읽기만 한다. 세션의 계정은 그 세션 ID의 줄 가운데 `account_uuid`가 `null`이 아닌 마지막 줄의
   이메일이고, 서브에이전트는 부모 세션의 계정이며, 줄이 없으면 "계정 모름"이다.
 - `daily/YYYY-MM-DD.md`: `--today`의 전날까지 최근 7일의 일간 보고서. `report`가 그 7일을 모두 다시
-  만들므로 빠진 날과 지운 폴더가 채워진다. 그 이름 모양의 보통 파일 가운데 최근 일곱 밖의 것만
-  지운다. 링크와 폴더, 이름이 다른 파일은 그대로 두고, `daily`가 링크면 아무것도 하지 않고 2로
-  끝난다.
+  만들므로 빠진 날과 지운 폴더가 채워진다. 그 이름 모양의 보통 파일 가운데 그 7일보다 이른 날의
+  것만 지운다(더 뒤의 `--today`로 만든 것은 남는다). 링크와 폴더, 이름이 다른 파일은 그대로 두고,
+  `daily`가 링크면 아무것도 하지 않고 2로 끝난다.
 - `summary.txt`: 최근 일간 보고서의 요약, 여덟 줄 이하. 첫 줄은 글자 그대로 `보고서 날짜:
   YYYY-MM-DD`이고 세션 시작 훅이 이 줄을 읽는다.
 - `state.json`: 마지막 `ingest`의 시작 시각. `ingest.lock`: 명령이 도는 동안의 잠금 파일. 잠금이
@@ -42,10 +42,12 @@
 행을 새로 읽은 행으로 갈아 끼운다. 새로 읽은 사본에 없는 응답의 옛 행은 남긴다(긴 사본이 지워져
 짧은 사본을 읽은 때). 겹친 사본은 가장 긴 것을 읽는다. 같은 응답 ID가 여러 세션에 있으면 먼저
 시작한 세션의 행만 남긴다. 시작 시각을 모르는 세션(부모 기록이 없는 서브에이전트)이 직전 장부에서
-그 응답을 가졌으면 그대로 갖는다. 다시 읽은 기록의 가장 이른 달의 전달부터 장부를 읽어 견주고,
-`report`는 보고할 날의 앞뒤 하루까지 달 파일을 읽어, 실행마다 시간대 인자가 달라 행이 이웃 달
-파일에 들어도 겹치거나 빠지지 않는다. 기록 파일이 지워져도 그 행은 남는다. 달 파일과 요약 파일은
-임시 파일에 써서 `os.replace`로 바꿔 넣는다. 줄바꿈 없이 잘린 마지막 줄은 세션이 쓰는
+그 응답을 가졌으면 그대로 갖는다. 다시 읽은 기록의 가장 이른 달의 전달부터 장부를 읽어 견준다.
+다시 읽지 않은 행은 읽어 온 달 파일에 그대로 두고 새로 읽은 행만 지금 시간대로 달을 가르며,
+`report`는 보고할 날의 앞뒤 하루까지 달 파일을 읽는다. 그래서 실행마다 시간대 인자가 달라도 행이
+겹치거나 빠지지 않는다. 기록 파일이 지워져도 그 행은 남는다. 세션 기록 폴더가 없으면 장부와
+`state.json`을 건드리지 않고 2로 끝난다(`state.json`을 올리면 그 앞의 기록을 건너뛴다). 달 파일과
+요약 파일은 임시 파일에 써서 `os.replace`로 바꿔 넣는다. 줄바꿈 없이 잘린 마지막 줄은 세션이 쓰는
 도중이라 읽지도 경보에 세지도 않는다. 모델이 `<synthetic>`인 기록은 모델 호출이 아니라 들이지
 않는다.
 
@@ -70,6 +72,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 import io
 import json
 import os
@@ -355,7 +358,10 @@ def discover(projects: Path) -> dict[StreamKey, list[Copy]]:
             for p in folder.glob("*/subagents/agent-*.jsonl")
         ]
         for key, p in paths:
-            st = p.stat()
+            try:
+                st = p.stat()
+            except FileNotFoundError:
+                continue
             found[key].append(Copy(p, folder.name, st.st_size, st.st_mtime))
     return found
 
@@ -516,10 +522,10 @@ def read_stream(key: StreamKey, copy: Copy, agent_type: str | None) -> Ledger:
     if agent is None and stamps:
         out.sessions.append(SessionRow(session, _iso(min(stamps, key=lambda s: s[0])[1])))
     fallback = datetime.fromtimestamp(copy.mtime, UTC)
+    lines = [n for n, _ in stamps]
     for line in sorted(set(bad)):
-        before = [t for n, t in stamps if n < line]
-        after = [t for n, t in stamps if n > line]
-        at = before[-1] if before else (after[0] if after else fallback)
+        i = bisect.bisect_left(lines, line)
+        at = stamps[i - 1][1] if i else (stamps[i][1] if stamps else fallback)
         out.unreadable.append(Unreadable(session, agent, copy.path.name, line, _iso(at)))
     return out
 
@@ -600,14 +606,18 @@ class Lock:
 
 def _owner_rank(
     c: Call, starts: dict[str, str], held: dict[str, StreamKey]
-) -> tuple[int, str, str, str]:
+) -> tuple[int, datetime, str, str]:
     """같은 응답 ID의 행 가운데 남길 것의 순위(작을수록 앞). 시작 모를 세션이 직전 장부에서 그
     응답을 가졌으면 그대로 갖고, 시작을 아는 세션끼리는 이른 쪽이 이기며, 나머지 시작 모를 세션은
     진다."""
-    start = starts.get(c.session)
+    start = _time(starts.get(c.session))
     if start is not None:
         return (1, start, c.session, c.agent or "")
-    return (0 if held.get(c.id) == _stream_of(c) else 2, "", c.session, c.agent or "")
+    rank = 0 if held.get(c.id) == _stream_of(c) else 2
+    return (rank, _NO_TIME, c.session, c.agent or "")
+
+
+_NO_TIME = datetime.min.replace(tzinfo=UTC)
 
 
 def _sorted_rows(rows: Iterable[Call | SessionRow | Unreadable]) -> list[dict[str, Json]]:
@@ -622,6 +632,9 @@ def _sorted_rows(rows: Iterable[Call | SessionRow | Unreadable]) -> list[dict[st
 
 
 def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
+    if not projects.is_dir():
+        # state를 올리면 다음 실행이 그 앞의 기록을 건너뛴다.
+        raise ToolError(f"세션 기록 폴더가 없다: {projects}. 장부와 state.json을 그대로 둔다")
     started = time.time()
     ledger_dir = out / "ledger"
     state_path = out / "state.json"
@@ -638,18 +651,23 @@ def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
     ]
     parents: dict[str, dict[str, str]] = {}
     fresh = Ledger()
+    fresh_keys: set[StreamKey] = set()
     for key in changed:
         copy = longest(streams[key])
         agent_type: str | None = None
-        if key[1] is not None:
-            agent_type = meta_type(copy.path)
-            if agent_type is None and (key[0], None) in streams:
-                if key[0] not in parents:
-                    parent = longest(streams[(key[0], None)])
-                    parents[key[0]] = agent_types(read_records(parent.path)[0])
-                agent_type = parents[key[0]].get(key[1])
-        fresh.extend(read_stream(key, copy, agent_type))
-    fresh_keys = set(changed)
+        try:
+            if key[1] is not None:
+                agent_type = meta_type(copy.path)
+                if agent_type is None and (key[0], None) in streams:
+                    if key[0] not in parents:
+                        parent = longest(streams[(key[0], None)])
+                        parents[key[0]] = agent_types(read_records(parent.path)[0])
+                    agent_type = parents[key[0]].get(key[1])
+            fresh.extend(read_stream(key, copy, agent_type))
+        except FileNotFoundError:
+            # 훑은 뒤 지워진 기록이다. 그 기록의 옛 행은 그대로 둔다.
+            continue
+        fresh_keys.add(key)
     existing = sorted(
         m.group(1)
         for name in (os.listdir(ledger_dir) if ledger_dir.is_dir() else [])
@@ -667,25 +685,29 @@ def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
         load = []
     # 다시 읽은 기록의 옛 행은 새 행으로 갈아 끼우되, 새로 읽은 사본에 없는 응답(긴 사본이 지워져
     # 짧은 사본을 읽었을 때)의 옛 행은 남긴다. 장부는 기록이 지워져도 줄지 않는다.
+    # 다시 읽지 않은 행은 읽어 온 달 파일에 그대로 둔다. 시간대 인자가 바뀌어도 읽지 않은 달 파일로
+    # 옮겨 그 파일을 덮지 않게 하기 위해서다. 새로 읽은 행만 지금 시간대로 달을 가른다.
     fresh_ids = {(_stream_of(c), c.id) for c in fresh.calls}
-    kept = Ledger()
+    placed: list[tuple[str, Call | SessionRow | Unreadable]] = []
     held: dict[str, StreamKey] = {}
     for month in load:
         old = read_ledger_file(ledger_dir / f"{month}.jsonl")
         held.update((c.id, _stream_of(c)) for c in old.calls)
-        kept.calls += [c for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]
-        kept.sessions += [s for s in old.sessions if _stream_of(s) not in fresh_keys]
-        kept.unreadable += [u for u in old.unreadable if _stream_of(u) not in fresh_keys]
-    kept.extend(fresh)
-    starts = {s.session: s.start for s in kept.sessions}
-    owner: dict[str, Call] = {}
-    for c in kept.calls:
-        prev = owner.get(c.id)
-        if prev is None or _owner_rank(c, starts, held) < _owner_rank(prev, starts, held):
-            owner[c.id] = c
+        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]
+        placed += [(month, s) for s in old.sessions if _stream_of(s) not in fresh_keys]
+        placed += [(month, u) for u in old.unreadable if _stream_of(u) not in fresh_keys]
+    placed += [(month_of(_row_time(r), tz), r) for r in fresh_rows]
+    starts = {r.session: r.start for _, r in placed if isinstance(r, SessionRow)}
+    owner: dict[str, tuple[str, Call]] = {}
+    for month, r in placed:
+        if not isinstance(r, Call):
+            continue
+        prev = owner.get(r.id)
+        if prev is None or _owner_rank(r, starts, held) < _owner_rank(prev[1], starts, held):
+            owner[r.id] = (month, r)
     by_month: dict[str, list[Call | SessionRow | Unreadable]] = {m: [] for m in load}
-    for r in [*owner.values(), *kept.sessions, *kept.unreadable]:
-        by_month.setdefault(month_of(_row_time(r), tz), []).append(r)
+    for month, r in [*owner.values(), *((m, r) for m, r in placed if not isinstance(r, Call))]:
+        by_month.setdefault(month, []).append(r)
     for month, rows in sorted(by_month.items()):
         body = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in _sorted_rows(rows))
         write_atomic(ledger_dir / f"{month}.jsonl", body)
@@ -942,14 +964,17 @@ def _months(days: Iterable[date]) -> list[str]:
     return sorted({d.strftime("%Y-%m") for d in days})
 
 
-def prune_daily(daily: Path) -> list[Path]:
-    """그 이름 모양의 보통 파일 가운데 최근 일곱 밖의 것을 지운다. 링크·폴더는 건드리지 않는다."""
-    reports = sorted(
+def prune_daily(daily: Path, keep_from: date) -> list[Path]:
+    """그 이름 모양의 보통 파일 가운데 보고할 7일(`keep_from`부터)보다 이른 날의 것을 지운다.
+    링크·폴더, 그보다 뒤의 날(다른 `--today`로 만든 것)은 건드리지 않는다."""
+    gone = sorted(
         p
         for p in daily.iterdir()
-        if DAILY_NAME.fullmatch(p.name) and not is_link(p) and p.is_file()
+        if DAILY_NAME.fullmatch(p.name)
+        and p.name < f"{keep_from.isoformat()}.md"
+        and not is_link(p)
+        and p.is_file()
     )
-    gone = reports[:-KEEP_DAILY]
     for p in gone:
         p.unlink(missing_ok=True)
     return gone
@@ -970,7 +995,7 @@ def read_session_rows(path: Path) -> list[SessionRow]:
 def report(out: Path, tz: timezone, today: date) -> str:
     daily = out / "daily"
     if is_link(daily):
-        raise ReportError(f"보고서 폴더가 링크라 쓰지도 지우지도 않는다: {daily}")
+        raise ToolError(f"보고서 폴더가 링크라 쓰지도 지우지도 않는다: {daily}")
     last = today - timedelta(days=1)
     window = [last - timedelta(days=i) for i in range(KEEP_DAILY - 1, -1, -1)]
     span = [last - timedelta(days=i) for i in range(KEEP_DAILY + 7)]
@@ -1004,11 +1029,11 @@ def report(out: Path, tz: timezone, today: date) -> str:
         write_atomic(path, render_day(days[d], alarms, starts, tz))
         summary = render_summary(days[d], alarms, path)
     write_atomic(out / "summary.txt", summary)
-    gone = prune_daily(daily)
+    gone = prune_daily(daily, window[0])
     return f"일간 보고서 {len(window)}개를 쓰고 {len(gone)}개를 지웠다: {daily}"
 
 
-class ReportError(Exception):
+class ToolError(Exception):
     pass
 
 
@@ -1083,7 +1108,7 @@ def main(argv: list[str]) -> int:
         print(f"다른 실행이 도는 중이라 멈춘다. 잠금 파일: {e}", file=sys.stderr)
         print("멈춘 실행이 남긴 잠금이면 그 파일을 지우고 다시 돌린다.", file=sys.stderr)
         return 3
-    except ReportError as e:
+    except ToolError as e:
         print(str(e), file=sys.stderr)
         return 2
     return 0

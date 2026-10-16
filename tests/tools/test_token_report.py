@@ -771,6 +771,53 @@ def test_시간대를_바꿔_다시_돌려도_행이_겹치거나_빠지지_않�
     assert "모델 호출 1회, 환산 비용 $4.00" in t.일간("2026-09-30")
 
 
+def test_시간대를_바꾼_증분이_읽지_않은_이웃_달_파일을_덮어쓰지_않는다(tmp_path: Path) -> None:
+    # +09:00에서 8월 1일(UTC 7월 31일 15시)인 A의 행은 8월 파일에 든다. +00:00으로 B만 다시 읽으면
+    # 8월과 9월 파일을 읽는데, 다시 읽지 않은 A의 행을 새 시간대로 7월에 옮겨 쓰면 읽지 않은 7월
+    # 파일(C의 행)을 덮는다.
+    t = _판(tmp_path)
+    a = 메인(t.projects, SID_A, [응답("a1", "2026-07-31T15:30:00Z", 입력=1)])
+    b = 메인(t.projects, SID_B, [응답("b1", "2026-09-15T00:00:00Z", 입력=1)])
+    c = 메인(t.projects, SID_FORK, [응답("c1", "2026-07-10T00:00:00Z", 입력=1)])
+    t.돌린다("ingest")
+    old = time.time() - 3 * 86400
+    for p in (a, c):
+        os.utime(p, (old, old))
+    t.tz = "+00:00"
+    now = time.time()
+    os.utime(b, (now, now))
+    t.돌린다("ingest", today="2026-09-20")
+    assert sorted(str(r["id"]) for r in t.호출()) == ["a1", "b1", "c1"]
+
+
+def test_기록_폴더가_없으면_state를_올리지_않고_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    t = _판(tmp_path)
+    p = 메인(t.projects, SID_A, [응답("m1", "2026-10-15T00:00:00Z", 입력=1)])
+    old = time.time() - 3 * 86400
+    os.utime(p, (old, old))
+    real = t.projects
+    t.projects = tmp_path / "없는 폴더"
+    assert t.돌린다("ingest") == 2
+    assert "세션 기록 폴더가 없다" in capsys.readouterr().err
+    assert not (t.out / "state.json").exists()
+    t.projects = real
+    t.돌린다("ingest")
+    assert [r["id"] for r in t.호출()] == ["m1"]
+
+
+def test_미래_날짜_보고서가_있어도_보고할_7일은_지우지_않는다(tmp_path: Path) -> None:
+    t = _판(tmp_path)
+    daily = t.out / "daily"
+    daily.mkdir(parents=True)
+    (daily / "2026-12-01.md").write_text("", encoding="utf-8")
+    (daily / "2026-10-01.md").write_text("", encoding="utf-8")
+    t.돌린다("report")
+    names = sorted(p.name for p in daily.iterdir())
+    assert names == [*(f"2026-10-{d:02}.md" for d in range(9, 16)), "2026-12-01.md"]
+
+
 def test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든다(tmp_path: Path) -> None:
     t = _판(tmp_path)
     첫 = 응답("m1", "", 입력=1, 출력=1)

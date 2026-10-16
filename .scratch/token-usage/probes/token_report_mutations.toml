@@ -18,7 +18,7 @@ expect = "red"
 expect_output = ["test_포크에_복사된_응답은_먼저_시작한_세션에_한_번만_든다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''        if prev is None or _owner_rank(c, starts, held) < _owner_rank(prev, starts, held):'''
+old = '''        if prev is None or _owner_rank(r, starts, held) < _owner_rank(prev[1], starts, held):'''
 new = '''        if prev is None:'''
 
 [[mutation]]
@@ -28,8 +28,8 @@ expect = "red"
 expect_output = ["test_다시_읽은_기록의_행은_새_값으로_갈아_끼운다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''        kept.calls += [c for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
-new = '''        kept.calls += [c for c in old.calls]'''
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [(month, c) for c in old.calls]'''
 
 [[mutation]]
 name = "다시 읽은 기록의 옛 행을 모두 버린다"
@@ -38,8 +38,44 @@ expect = "red"
 expect_output = ["test_긴_사본이_지워진_뒤_짧은_사본을_다시_읽어도_행이_남는다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''        kept.calls += [c for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
-new = '''        kept.calls += [c for c in old.calls if _stream_of(c) not in fresh_keys]'''
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [(month, c) for c in old.calls if _stream_of(c) not in fresh_keys]'''
+
+[[mutation]]
+name = "다시 읽지 않은 행을 지금 시간대로 달을 다시 가른다"
+tests = ["tests/tools/test_token_report.py", "-k", "이웃_달"]
+expect = "red"
+expect_output = ["test_시간대를_바꾼_증분이_읽지_않은_이웃_달_파일을_덮어쓰지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [
+            (month_of(c.at, tz), c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids
+        ]'''
+
+[[mutation]]
+name = "세션 기록 폴더가 없어도 state를 올린다"
+tests = ["tests/tools/test_token_report.py", "-k", "기록_폴더가_없으면"]
+expect = "red"
+expect_output = ["test_기록_폴더가_없으면_state를_올리지_않고_끝난다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    if not projects.is_dir():
+        # state를'''
+new = '''    if False:
+        # state를'''
+
+[[mutation]]
+name = "보고할 7일보다 뒤의 보고서가 있으면 방금 쓴 것을 지운다"
+tests = ["tests/tools/test_token_report.py", "-k", "미래_날짜"]
+expect = "red"
+expect_output = ["test_미래_날짜_보고서가_있어도_보고할_7일은_지우지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        and p.name < f"{keep_from.isoformat()}.md"
+'''
+new = '''        and p.name not in sorted(x.name for x in daily.iterdir())[-KEEP_DAILY:]
+'''
 
 [[mutation]]
 name = "시작 모를 세션이 직전 장부의 응답을 지키지 않는다"
@@ -48,8 +84,8 @@ expect = "red"
 expect_output = ["test_시작을_모르는_세션끼리_겹친_응답은_먼저_장부에_든_쪽에_남는다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''    return (0 if held.get(c.id) == _stream_of(c) else 2, "", c.session, c.agent or "")'''
-new = '''    return (2, "", c.session, c.agent or "")'''
+old = '''    rank = 0 if held.get(c.id) == _stream_of(c) else 2'''
+new = '''    rank = 2'''
 
 [[mutation]]
 name = "앞선 달 파일의 세션 행을 읽지 않는다"
@@ -133,8 +169,11 @@ expect = "red"
 expect_output = ["test_보관_수를_넘은_보고서는_그_이름_모양의_파일만_지운다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''DAILY_NAME.fullmatch(p.name) and not is_link(p) and p.is_file()'''
-new = '''DAILY_NAME.fullmatch(p.name) and (is_link(p) or p.is_file())'''
+old = '''        and not is_link(p)
+        and p.is_file()
+'''
+new = '''        and (is_link(p) or p.is_file())
+'''
 
 [[mutation]]
 name = "잘린 마지막 줄을 읽지 못한 줄로 센다"
