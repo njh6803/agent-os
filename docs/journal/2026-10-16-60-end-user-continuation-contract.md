@@ -1,4 +1,4 @@
-# 2026-10-16 (56) end-user-continuation 티켓 01: 계약
+# 2026-10-16 (60) end-user-continuation 티켓 01: 계약
 
 일지 2026-10-16-35의 "다음"이 가리킨 새 세션이다. 제목을 브랜치 이름으로 바꾸고, 주 체크아웃이 미갱신이라
 `tidy-checkouts`를 먼저 돌았다(루트를 `dbcdc6d6`에서 `79a23fc7`로 당겼다). 주 체크아웃에서 브랜치를 따지 않고 워크트리
@@ -178,6 +178,30 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 - PR 직전 리뷰가 core의 닫기 갈래를 고쳐 `-m llm`을 다시 돌렸다(`1ad678f8`): 7 통과(224초). LLM 토큰 합계 44,127(입력
   43,013, 출력 1,114). 트레이스 10개, 모델 호출 23건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
 
+## PR과 계약 승인
+
+회고 뒤 main이 거듭 움직여 네 번 합쳤다. 둘째 판은 형제 `chore/ruff-boolean-trap`(ruff FBT를 켰다)이 같은 테스트 파일 셋을
+고친 것을 자동으로 합쳤고, 그 병합 커밋의 pre-commit이 pytest(739초)와 ruff까지 초록이었다. 그 판의 main 최신 일지가 55라 이
+일지를 54에서 56으로 옮겼고, PR을 연 뒤 형제 워크트리 `04-session-start-hook`과 같은 순간에 56에서 58로 옮겨 다시 겹쳐, 59를
+비워 두고 60으로 옮겼다(처음 받은 번호는 46이었다). PR은 [njh6803/agent-os#274](https://github.com/njh6803/agent-os/pull/274)다.
+
+첫 회차(`d899c5e`): 검사 여섯이 모두 초록이었다. claude-review는 지적 없음, CodeRabbit은 `Review rate limited`라 리뷰가
+없다. 그 보안·버그 축은 PR 직전에 돈 대체 둘의 결과가 PR 체크리스트에 있어 그것이 대신한다(`operations.md` 리뷰 파이프라인).
+
+계약(필드 둘, 값 아홉, `operation_id`)과 ADR 0031 이력은 병합 전에 사용자 승인을 받았다(`next-session` 1단계의 3). 값마다의
+뜻과 잡아 주는 것·치르는 값(이름이 계약에 박힌다, 새 필드가 든 트레이스를 옛 판이 거부한다)을 먼저 풀고 물었다. ADR 0031
+이력에 승인을 한 문장으로 적었다.
+
+> 질문: "실패 원인 값 아홉, 칸 이름 둘(cause, shortcuts), 위젯 이어 가기 주소의 이름을 이대로 계약에 싣고 ADR 0031 이력으로
+> 확정할까요?"
+>
+> 사용자: "이대로 승인 (Recommended)"
+
+승인 기록을 담은 넷째 병합 커밋의 첫 시도는 pre-commit pytest의
+`test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세스까지_끝낸다` 하나가 빨개 막혔다(3,281 통과, 1 실패). 이 브랜치가
+건드리지 않은 `tools/mutate.py`의 시험이고, 따로 돌리니 68초에 통과했다. 대기열 306과 같은 증상이라 시험을 고치지 않고 그
+행에 3회차를 더한 뒤 다시 커밋했다.
+
 ## 회고
 
 `/retro`를 일지 계기 훅이 넣은 계기로 돌렸다. 후보 열넷: 승인 여덟(새 행 다섯, 기존 행의 회차 셋), 기각 여섯, 넘김
@@ -230,7 +254,7 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-16-56-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 03·05·06(.scratch/end-user-continuation/issues/)
+읽을 것: docs/journal/2026-10-16-60-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 03·05·06(.scratch/end-user-continuation/issues/)
 이어받을 상태: 티켓 02 파일의 "01이 넘긴 것" 메모
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
@@ -241,7 +265,7 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/03-shortcuts-walk-only-that-agent.md
 브랜치: feature/03-shortcuts-walk-only-that-agent
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-16-56-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·05·06(.scratch/end-user-continuation/issues/)
+읽을 것: docs/journal/2026-10-16-60-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·05·06(.scratch/end-user-continuation/issues/)
 이어받을 상태: 없음
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
@@ -252,7 +276,7 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md
 브랜치: feature/05-only-pre-owner-damage-is-404
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-16-56-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·06(.scratch/end-user-continuation/issues/)
+읽을 것: docs/journal/2026-10-16-60-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·06(.scratch/end-user-continuation/issues/)
 이어받을 상태: 없음
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
@@ -263,7 +287,7 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md
 브랜치: feature/06-admin-shows-cause-and-shortcut-links
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-16-56-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
+읽을 것: docs/journal/2026-10-16-60-end-user-continuation-contract.md 의 "다음", 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
 이어받을 상태: 없음
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지

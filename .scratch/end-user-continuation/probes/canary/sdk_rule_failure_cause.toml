@@ -1,8 +1,8 @@
 # `.claude/rules/sdk.md` 에 더한 항목(시작 이벤트의 바로가기와 실패 이벤트의 실패 원인, 값 집합)이 `paths` 에 맞는
 # 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
 # 실험군은 규칙의 paths 안(src/agent_os/sdk/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-56). 그 뒤 셀프 리뷰가 원천의 본문을 고쳐 같은
-# 날 사전 확인으로 갈음했다(일지 2026-10-16-56).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-60). 그 뒤 셀프 리뷰가 원천의 본문을 고쳐 같은
+# 날 사전 확인으로 갈음했다(일지 2026-10-16-60).
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/sdk_rule_failure_cause.toml <출력 디렉터리>
 kind = "rule"
 question = '''
