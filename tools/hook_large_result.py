@@ -29,6 +29,9 @@
 - 3만 자를 넘는 PowerShell 출력. 프로브에 표본이 없다. Bash 와 같은 키(`persistedOutputPath`)로
   오지 않으면 잘린 `stdout` 을 세어 알리는데, 모델은 미리보기만 받았을 수 있다(거짓 양성).
 - 백그라운드로 돌린 명령의 출력을 다른 도구로 받은 것. 매처 밖이라 이 훅에 오지 않는다.
+- 실패한 명령(종료 코드가 0이 아닌 셸)의 큰 출력. 그 호출이 PostToolUse 가 아니라
+  PostToolUseFailure 로 가면 이 등록에 오지 않는다. 어느 이벤트로 오는지는 재지 않았다. 와도 결과
+  객체에 `stdout` 이 없는 모양이면 0자로 세어 침묵한다.
 - `stdout` 과 `stderr` 가 둘 다 찬 결과의 이음새. 프로브의
   `bash_stderr`(`echo out-line; echo err-line >&2`)에서 Bash 는 stderr 를 stdout 에 합쳐 내고
   `stderr` 칸은 비어 있었다. 둘 다 찬 결과를 모델이 어떤 글로 받는지(사이에 줄바꿈이 드는지)는 보지

@@ -327,14 +327,21 @@ def main() -> int:
     out = Path(args[1]).resolve()
     out.mkdir(parents=True, exist_ok=True)
     fixture = write_fixture(out)
-    run_session(out, fixture)
+    timed_out = False
+    try:
+        run_session(out, fixture)
+    except subprocess.TimeoutExpired:
+        # 세션을 끊은 회차는 측정이 아니다. 모은 기록만 판정해 보이고 저장하지 않는다.
+        timed_out = True
+        print("[문제] claude 세션이 제한 시간을 넘겨 끊겼다 — 측정 아님. 모은 기록만 판정한다")
     target = out / "payloads.jsonl"
     with target.open("w", encoding="utf-8", newline="\n") as file:
         for record in enrich(out):
             file.write(json.dumps(record, ensure_ascii=False) + "\n")
-    if "--save" in args:
+    if "--save" in args and not timed_out:
         shutil.copyfile(target, HERE / "payloads.jsonl")
-    return judge(target)
+    judged = judge(target)
+    return 1 if timed_out else judged
 
 
 if __name__ == "__main__":

@@ -227,6 +227,19 @@ def test_3만_자를_넘는_PowerShell_출력이_저장_키_없이_오면_잘린
     assert context_for(_셸("x" * 30_000, tool="PowerShell")) is not None
 
 
+def test_실패한_명령의_결과가_stdout_없이_오면_0자로_세어_침묵한다() -> None:
+    """실패한 셸의 큰 출력은 못 보는 것이다(거짓 음성). 어느 이벤트로 오는지는 재지 않았다."""
+    payload = _모양_밖(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "uv run pytest"},
+            "tool_response": {"error": "Exit code 1\n" + "x" * 50_000},
+        }
+    )
+
+    assert context_for(payload) is None
+
+
 def test_백그라운드_명령의_출력을_받는_다른_도구는_보지_않는다() -> None:
     payload = _모양_밖(
         {"tool_name": "TaskOutput", "tool_input": {}, "tool_response": {"stdout": "x" * 50_000}}
