@@ -233,10 +233,10 @@ new = '''            return'''
 # 변이 도구는 pytest 를 첫 실패에서 멈추므로 좁히지 않으면 뒤의 시험이 잡는지 보이지 않는다.
 
 [[mutation]]
-name = "CLI: 표지를 지역 날짜로 걸면 05시 뒤의 새 요약을 놓친다"
-tests = ["tests/tools/test_hook_session_usage.py", "-k", "05시"]
+name = "CLI: 표지를 지역 날짜로 걸면 08시 뒤의 새 요약을 놓친다"
+tests = ["tests/tools/test_hook_session_usage.py", "-k", "08시"]
 expect = "red"
-expect_output = ["test_05시_전에_연_세션이_있었어도_새_요약_뒤의_다음_시작은_보인다"]
+expect_output = ["test_08시_전에_연_세션이_있었어도_새_요약_뒤의_다음_시작은_보인다"]
 [[mutation.edit]]
 file = "tools/hook_session_usage.py"
 old = '''        return Notice(f"summary-{report.isoformat()}", body)'''

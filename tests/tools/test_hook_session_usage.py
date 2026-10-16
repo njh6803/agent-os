@@ -223,8 +223,8 @@ SUMMARY = (
     "경보 없음\n"
     "보고서: C:/repo/.scratch/token-report/daily/2026-10-15.md\n"
 )
-# 작업 스케줄러가 05:00 에 요약을 쓴 날의 지역 시각.
-WRITTEN = datetime(2026, 10, 16, 5, 0, tzinfo=KST)
+# 작업 스케줄러가 08:00 에 요약을 쓴 날의 지역 시각.
+WRITTEN = datetime(2026, 10, 16, 8, 0, tzinfo=KST)
 
 
 def test_새_요약은_보고서_날짜를_표지로_그대로_보인다() -> None:
@@ -248,14 +248,14 @@ def test_36시간까지는_낡지_않았고_넘으면_앞줄을_붙여_지역_�
     assert summary_notice(SUMMARY, WRITTEN, WRITTEN + timedelta(hours=36)) == Notice(
         "summary-2026-10-15", SUMMARY.rstrip("\n")
     )
-    now = WRITTEN + timedelta(hours=43, minutes=30)  # 2026-10-18 00:30 KST, UTC 로는 10-17
+    now = WRITTEN + timedelta(hours=40, minutes=30)  # 2026-10-18 00:30 KST, UTC 로는 10-17
 
     notice = summary_notice(SUMMARY, WRITTEN, now)
 
     assert notice is not None
     assert notice.marker == "summary-2026-10-15-stale-2026-10-18"
     first, *rest = notice.message.splitlines()
-    assert "보고서가 43시간째 갱신되지 않았다" in first
+    assert "보고서가 40시간째 갱신되지 않았다" in first
     assert rest == SUMMARY.rstrip("\n").splitlines()
 
 
@@ -321,9 +321,10 @@ def test_시작이_아닌_출처는_요약을_보이지_않고_표지도_가져�
     assert _알림(_훅(repo, home)) == SUMMARY.rstrip("\n")
 
 
-def test_05시_전에_연_세션이_있었어도_새_요약_뒤의_다음_시작은_보인다(tmp_path: Path) -> None:
-    """00:00~04:59 에 연 세션은 전날 이미 본 요약(같은 보고서 날짜)이라 침묵하고, 05:00 의 새
-    요약(다음 보고서 날짜)은 그 뒤 처음 시작한 세션이 본다(ADR 0033 이력 2026-10-16)."""
+def test_08시_전에_연_세션이_있었어도_새_요약_뒤의_다음_시작은_보인다(tmp_path: Path) -> None:
+    """00:00~07:59 에 연 세션은 전날 이미 본 요약(같은 보고서 날짜)이라 침묵하고, 08:00 의 새
+    요약(다음 보고서 날짜)은 그 뒤 처음 시작한 세션이 본다(ADR 0033 이력 2026-10-16, 그때의 시각
+    05:00 을 명세 "작업 스케줄러"가 08:00 으로 바꿨다)."""
     repo = _저장소(tmp_path)
     home = _홈(tmp_path)
     _요약(repo, SUMMARY.replace("2026-10-15", "2026-10-14"))
@@ -332,7 +333,7 @@ def test_05시_전에_연_세션이_있었어도_새_요약_뒤의_다음_시작
     assert _알림(_훅(repo, home, session="자정_뒤")) is None
     _요약(repo)
 
-    assert _알림(_훅(repo, home, session="05시_뒤")) == SUMMARY.rstrip("\n")
+    assert _알림(_훅(repo, home, session="08시_뒤")) == SUMMARY.rstrip("\n")
 
 
 def test_낡은_요약은_앞줄을_붙여_보이고_같은_날의_둘째_시작은_침묵이다(tmp_path: Path) -> None:
