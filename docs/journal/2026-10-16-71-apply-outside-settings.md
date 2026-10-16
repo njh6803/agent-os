@@ -165,6 +165,14 @@ next-session 지시문으로 연 새 세션이다. `token-usage`의 티켓 08(�
 
 새 세션은 `EnterWorktree(path)`로 한 번에 들어왔다. 둘째 인계에서 어림한 대로 잠금에 막히지 않았다.
 
+- `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거부됐다. `git fetch origin main`과 `git merge origin/main`으로
+  손으로 합쳤고 충돌은 없었다(`uv.lock`에 xdist가 더해져 `uv sync`를 쳤다).
+- PR 직전 리뷰: CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다. `/security-review`는 지적 0이다. `bug-perf-review`는
+  밀 주장 넷 중 셋이 맞고, 하나(티켓 08 "보고서 폴더(`daily/`·`weekly/`·4주)")가 부정확하다고 했다. `token_report.py`의
+  `report`가 지우는 것은 `daily/`·`weekly/`의 `stale_reports`뿐이라(코드를 읽었다) 티켓에서 4주를 뺐다. 위 "셀프 리뷰"의
+  인용은 그때 고친 문장의 기록이라 두었다. ADR 0033 이력의 05:00은 보류다: 이력은 기록이고 개정은 사용자 승인이다.
+- 합친 뒤 검증: 전체 `uv run pytest -q`가 3433 통과·7 해제(8분 19초), ruff·pyright·lint-imports 초록.
+
 ## 회고
 
 후보 셋, 승인 0, 기각 셋, 넘김 0이다. 승인할 것이 없어 대기열에 더한 줄이 없다.
