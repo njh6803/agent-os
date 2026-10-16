@@ -14,9 +14,9 @@
 
 한 바퀴(`round`)는 `tools/run_checks.py` 의 `run` 을 부르고, 검사 목록에서 pytest 한 항목만 같은
 명령을 `capture` 로 감싼다. 러너가 통과한 검사의 출력을 버려서, 그 껍질이 pytest 의 원본 출력과
-요약(종료 코드, 집계, 시작과 끝의 벽시계 시각)을 남긴다. 출력은 `results/confirm_<시각>/` 에
-회차마다 `<이름>.txt`(러너의 줄과 요약 한 줄), `<이름>.json`, `<이름>_pytest.txt`,
-`<이름>_pytest.json` 이다.
+요약(종료 코드, 집계, 시작과 끝의 벽시계 시각)을 남긴다. 출력은 `results/confirm_<시각>/`(같은 초에
+부른 다른 호출이 그 이름을 먼저 잡았으면 `confirm_<시각>-<n>/`)에 회차마다 `<이름>.txt`(러너의 줄과
+요약 한 줄), `<이름>.json`, `<이름>_pytest.txt`, `<이름>_pytest.json` 이다.
 
 표지: 러너가 검사 목록의 모든 id 에 결과 줄을 찍었고, 러너의 pytest 명령에 `-n` 이 있고, pytest
 출력에 집계 줄(`N passed`, `N error` 처럼 끝에 걸린 시간이 붙은 줄)과 xdist 가 뜬 줄(`bringing up
@@ -166,9 +166,18 @@ def run_round(folder: Path, name: str) -> int:
 
 
 def new_folder() -> Path:
-    folder = RESULTS / f"confirm_{time.strftime('%Y%m%d-%H%M%S')}"
-    folder.mkdir(parents=True)
-    return folder
+    """부를 때마다 새 폴더. 같은 초에 부른 다른 호출이 이름을 먼저 잡았으면 뒤에 번호를 붙인다."""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    n = 1
+    while True:
+        folder = RESULTS / (f"confirm_{stamp}" if n == 1 else f"confirm_{stamp}-{n}")
+        try:
+            folder.mkdir()
+        except FileExistsError:
+            n += 1
+            continue
+        return folder
 
 
 def round_command(folder: Path, name: str) -> list[str]:
