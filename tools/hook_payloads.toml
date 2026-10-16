@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${USAGE_REPO} ${USAGE_HOME} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | notice | silent. notice 는 사용자에게만 가는 systemMessage 하나다(additionalContext 가 함께 있으면 context). 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
@@ -726,3 +726,29 @@ hook = "hook_session_web_deps.py"
 expect = "silent"
 note = "로컬 세션의 시작(CLAUDE_CODE_REMOTE 없음) — 아무것도 하지 않는다"
 payload = { hook_event_name = "SessionStart", source = "startup", cwd = "${BROKEN_WEB}" }
+
+# --- hook_session_usage (SessionStart startup|resume|clear|compact|fork) ---
+# 러너는 CLAUDE_CODE_SESSION_ATTENDED 를 벗긴다. 사례마다 CLAUDE_PROJECT_DIR 을 ${USAGE_REPO} 로, 홈(USERPROFILE·HOME)을 ${USAGE_HOME} 으로 줘 실제 장부와 요약의 표지, 사람의 .claude.json 에 닿지 않는다.
+# 세 사례가 한 요약을 나눠 쓴다. 헤드리스 사례를 발동 사례 앞에 둔다 — 헤드리스가 표지를 가져가면 발동 사례가 침묵으로 어긋난다.
+# 페이로드의 모양은 .scratch/token-usage/probes/session_start_payload/start.jsonl 이다(헤드리스에는 model 이 없었다).
+[[case]]
+hook = "hook_session_usage.py"
+expect = "silent"
+note = "데스크톱 세션 안에서 띄운 claude -p(카나리아)의 시작 — 계정만 남기고 요약의 표지를 가져가지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "0" }
+payload = { session_id = "66655714-0000-0000-0000-000000000001", transcript_path = "${USAGE_HOME}/66655714-0000-0000-0000-000000000001.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "startup" }
+
+[[case]]
+hook = "hook_session_usage.py"
+expect = "notice"
+contains = ["보고서 날짜:", "경보 없음"]
+note = "새 요약 뒤 처음 시작한 대화형 세션 — 요약을 사람에게만 보인다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
+payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "startup", model = "claude-opus-5-5" }
+
+[[case]]
+hook = "hook_session_usage.py"
+expect = "silent"
+note = "이어 하기 — 계정만 남긴다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
+payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "resume", model = "claude-opus-5-5" }

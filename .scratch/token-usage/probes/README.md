@@ -7,6 +7,10 @@ ADR 0033 본문의 수는 `.scratch/harness/probes/token_usage/`가 냈다.
 |---|---|---|---|
 | `measure.py results <시간>` | 이 저장소의 Read·Bash·PowerShell 결과 글자 수 분포와, 범위 없이 받은 결과가 문턱(1만~4만 자)을 넘은 수·글자의 몫·기록 항목 무게의 몫 | 명세 "큰 결과 알림 훅" | 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/token-usage/probes/measure.py results 168`. 이 PC의 `~/.claude/projects/`(폴더 이름 `C--project-agent`로 시작) |
 | `token_report_mutations.toml` | `tools/token_report.py`(티켓 02)의 겹침 거르기, 응답 ID의 주인 고르기, 증분, 계정 고르기, 보관의 링크, 잘린 줄, synthetic을 하나씩 깨면 시험이 빨개지는지 | 일지 2026-10-16-51 | 저장소 루트에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/token_report_mutations.toml` |
+| `session_start_payload/run.sh <저장소 밖 디렉터리>`, `dump_session_start.py`, `start.jsonl`, `start_marker.jsonl` | SessionStart 훅이 받는 페이로드와 환경의 세션 표지 변수, `~/.claude.json` 의 계정 두 키가 있는지와 환경의 계정 변수가 그 값과 같은지(참거짓만). 갈래는 데스크톱 세션 안에서 띄운 `claude -p` 와 터미널의 대화형 `claude` 다. `start.jsonl` 이 저장한 원본이다. `start_marker.jsonl` 은 카나리아의 헤드리스 표지 `AGENT_OS_HEADLESS=1` 을 앞에 준 헤드리스 갈래의 원본이다 | `tools/hook_session_usage.py` 독스트링의 헤드리스 세션, 티켓 04 의 "이 티켓이 정할 것" 1 | 저장소 루트에서 `sh .scratch/token-usage/probes/session_start_payload/run.sh <저장소 밖 디렉터리>`. 헤드리스 갈래는 haiku 호출 하나를 쓴다. 대화형 갈래는 스크립트가 찍은 명령을 터미널의 저장소 루트에서 띄우고 시작 화면이 뜨면 프롬프트 없이 끈다 |
+| `session_start_payload/cli_attended.py <claude.exe>` | Claude Code 실행 파일에서 훅 환경의 `CLAUDE_CODE_SESSION_ATTENDED` 를 정하는 코드(자식 환경 함수, 그 판정 함수, 훅 명령을 띄우는 자리)의 세 표지 | 위와 같다 | 저장소 루트에서 `uv run python .scratch/token-usage/probes/session_start_payload/cli_attended.py <claude.exe>`. 데스크톱 앱의 CLI 는 그 세션의 `CLAUDE_CODE_EXECPATH` 다 |
+| `session_usage_hook_mutations.toml` | `tools/hook_session_usage.py`(티켓 04)의 표지 판정(보고서 날짜, `O_EXCL`, 36시간 경계, 지역 날짜), 헤드리스·출처 판정, 계정 고르기, 다시 읽기, 출력 폴더와 러너의 헤드리스 변수 벗기기를 하나씩 깨면 시험이 빨개지는지 | 티켓 04 일지 | 저장소 루트에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/session_usage_hook_mutations.toml` |
+| `session_usage_time.py` | 세션 시작 훅 한 번의 시간(등록 모양, 래퍼를 거친다). 이어 하기, 새 요약 뒤의 시작, 같은 요약의 둘째 시작, 읽지 못한 `.claude.json` 의 넷 | `.claude/rules/tools.md` 의 훅 시간 문단 | 저장소 루트에서 `uv run python .scratch/token-usage/probes/session_usage_time.py` |
 | `measure.py boundaries <시간>` | 메인 세션 컨텍스트가 20만을 넘은 뒤 처음 오는 경계의 종류, 그 지점의 세션 컨텍스트, 그 뒤 환산 비용. ADR 0033의 경계(커밋, PR 열기)와 셀프 리뷰 시작을 더한 경계를 견준다 | 명세 Problem Statement와 "인계 훅", ADR 0033 이력 2026-10-16 | 같은 자리에서 `... measure.py boundaries 168`. 단가표는 `.scratch/harness/probes/session_cost/costs.py` |
 
 표지, 판정의 정의(훅보다 넓은 커밋 판정 포함), 못 보는 것은 `measure.py` 독스트링이 원천이다.
@@ -57,3 +61,45 @@ ADR 0033 본문의 수는 `.scratch/harness/probes/token_usage/`가 냈다.
 "그 사이 40만을 넘은 세션"은 지금의 기록(자동 압축 약 96.7만)에서 세션 컨텍스트가 40만을 넘은 것이다. 자동 압축 창을 40만으로
 두면 그 세션은 경계보다 압축이 먼저 온다(어림. 압축 뒤의 경로는 재지 않았다). "그 뒤 비용"은 인계했다면 새 세션이 맡았을
 몫이고, 새 세션에서 얼마가 될지는 재지 않았다.
+
+## 결과: SessionStart 페이로드와 헤드리스 표지 (2026-10-16, 이 PC, 티켓 04)
+
+`session_start_payload/run.sh` 의 두 갈래가 `start.jsonl` 에 한 줄씩 남겼다. 헤드리스 갈래는 데스크톱 세션(앱의 CLI 2.1.295)의
+Bash 에서 띄운 `claude -p`(PATH 의 2.1.300)이고, 대화형 갈래는 터미널 패널의 PowerShell 에서 워크트리 폴더로 띄운 `claude`
+(2.1.300)다. 두 줄 모두 `hook_event_name` 이 `SessionStart`, `source` 가 `startup` 이라 재려는 상황(시작의 훅)이 났다.
+
+| | 헤드리스 | 대화형 | 이 데스크톱 세션의 셸(Bash 도구) |
+|---|---|---|---|
+| 페이로드의 키 | `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`, `hook_event_name`, `source` | 왼쪽과 같고 `model` 이 더 있다 | (재지 않았다) |
+| `CLAUDE_CODE_SESSION_ATTENDED` | `0` | `1` | `1` |
+| `CLAUDE_CODE_ENTRYPOINT` | `claude-desktop`(부모에게서 물려받았다) | `cli` | `claude-desktop` |
+| `CLAUDE_CODE_CHILD_SESSION` | `1` | `1` | `1` |
+| `~/.claude.json` 의 계정 두 키 | 있다 | 있다 | |
+| 환경의 `CLAUDE_CODE_ACCOUNT_UUID`·`CLAUDE_CODE_USER_EMAIL` | 있고 파일의 두 값과 같다 | 없다 | |
+
+셋째 열은 `start.jsonl` 밖이다. 이 세션의 Bash 에서 `printenv <이름>` 으로 이름마다 손으로 봤다. 페이로드에는 대화형을 가를
+칸이 없다. `model` 은 헤드리스에 없었지만 데스크톱 세션(앱이 SDK 로 띄운다)의 페이로드는 재지 못해 그 칸으로 가르지 않았다.
+`CLAUDE_CODE_CHILD_SESSION` 은 훅 자신의 환경이라 언제나 `1` 이다(아래 표지 1).
+
+`cli_attended.py` 는 2.1.295 와 2.1.300 에서 실행 파일의 판 줄과 표지 다섯을 모두 찾아 0으로 끝났다. 첫 판은 표지 셋(1~3)만
+봤고, 셀프 리뷰가 셸 도구 자리와 판정이 읽는 두 값의 출처는 프로브 밖에서 grep 으로만 봤다고 짚어 표지 4·5 와 판 줄을 더했다.
+자식 환경 함수는 `CLAUDE_CODE_SESSION_ATTENDED` 를 판정 함수의 참거짓으로 `"1"`·`"0"` 으로 두고, 훅 명령을 띄우는 자리와
+셸 도구가 명령을 띄우는 자리가 모두 그 함수를 펼친다. 대화형 여부는 시작 인자로, 자식 세션 여부는 시작할 때의 환경
+`CLAUDE_CODE_CHILD_SESSION` 으로 정한다(표지 5). 판정 함수는 `CLAUDE_CODE_SESSION_KIND` 가 `bg`·`daemon`·`daemon-worker` 이거나
+축약된 이름의 함수 하나(2.1.295 의 `eb()`, 2.1.300 의 `L_()`. 무엇인지는 읽지 못했다)가 값을 내면 거짓, 대화형이면
+참, 아니면 시작할 때 `CLAUDE_CODE_CHILD_SESSION` 이 없었고 진입점이 목록(`claude-vscode`, `claude-desktop`,
+`claude-desktop-3p`, `local-agent`, `local_agent`, `remote`, `remote_desktop`, `remote_mobile`, `remote_projects`,
+`remote_cowork`, `ssh-remote`, `claude-in-slack`, `claude_in_slack`, `claude-in-teams`, `claude-coworker`,
+`claude-coworker-terminal`)에 있을 때 참이다.
+
+해석: 헤드리스 갈래는 부모 세션의 `CLAUDE_CODE_CHILD_SESSION` 을 물려받아 자식 세션이라 `0` 이고, 대화형 갈래는 대화형이라
+`1` 이다. 두 갈래가 판정 함수의 셈과 맞는 것이 양성 대조다. 데스크톱 세션의 훅이 받는 값은 훅으로 재지 않았다. 그 세션은
+자식 세션이 아니고 진입점이 `claude-desktop` 이라 셈으로는 `1` 이고, 같은 세션의 셸이 `1` 을 받았다. "훅은 셸과 다른 환경을
+받는다"는 다른 해석은 표지 3·4(훅 명령과 셸 도구의 환경을 같은 함수로 짓는다)가 가른다. 실제 데스크톱 세션에서 요약이 보이는지는 티켓
+09 가 첫 일간 보고서 뒤에 본다.
+
+셀프 리뷰의 명세 축이 이 내부 값만으로 가르는 것을 명세가 정한 길(카나리아의 표지 변수)을 승인 없이 바꾼 것으로 짚었고,
+사용자가 둘 다 쓰는 길을 골랐다(일지 2026-10-16-58). 그래서 `tools/canary.py` 가 띄우는 세션의 환경에 `AGENT_OS_HEADLESS=1` 을
+붙인다. 그 변수가 `claude -p` 세션의 훅까지 전해지는지는 같은 `run.sh` 를 `AGENT_OS_HEADLESS=1 sh …/run.sh <디렉터리>` 로 돌려
+봤다(`start_marker.jsonl`). 탐침 훅의 `env_values` 에 `AGENT_OS_HEADLESS` 가 `1` 로 들었고 `CLAUDE_CODE_SESSION_ATTENDED` 는 `0`
+이었다. 대화형 갈래는 다시 돌리지 않았다.

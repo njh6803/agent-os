@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import JsonValue
+from tools.hook_session_usage import HEADLESS_MARKER
 from tools.run_hooks import (
     PAYLOADS,
     ROOT,
@@ -418,6 +419,63 @@ def test_자식_환경은_러너를_띄운_세션이_클라우드인지_물려�
     monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
 
     assert "CLAUDE_CODE_REMOTE" not in hook_environment().keys()
+
+
+def test_자식_환경은_러너를_띄운_세션이_헤드리스인지_물려주지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`hook_session_usage` 는 `CLAUDE_CODE_SESSION_ATTENDED` 가 `0` 인 세션에서 요약을 보이지
+    않는다. `claude -p` 세션의 커밋에서 러너가 그 값을 물려받으면 발동 사례가 침묵으로 어긋난다.
+    """
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
+    monkeypatch.setenv(HEADLESS_MARKER, "1")
+
+    assert "CLAUDE_CODE_SESSION_ATTENDED" not in hook_environment().keys()
+    assert HEADLESS_MARKER not in hook_environment().keys()
+
+
+def test_사용량_저장소의_요약은_시작한_세션에_한_번_보이고_이어_하기는_침묵이다(
+    tmp_path: Path,
+) -> None:
+    """`${USAGE_REPO}` 와 `${USAGE_HOME}` 이 표의 사례를 실제로 가르고, 장부가 이 저장소가 아니라
+    임시 저장소에 쌓이는지 본다."""
+    replacements = create_fixtures(tmp_path)
+    registration = Registration("SessionStart", 20)
+    env = {
+        "CLAUDE_PROJECT_DIR": "${USAGE_REPO}",
+        "USERPROFILE": "${USAGE_HOME}",
+        "HOME": "${USAGE_HOME}",
+    }
+    start: dict[str, JsonValue] = {
+        "session_id": "s1",
+        "hook_event_name": "SessionStart",
+        "source": "startup",
+    }
+    resume: dict[str, JsonValue] = {**start, "source": "resume"}
+    headless = Case(
+        hook="hook_session_usage.py",
+        expect="silent",
+        payload=start,
+        env={**env, "CLAUDE_CODE_SESSION_ATTENDED": "0"},
+    )
+    shown = Case(
+        hook="hook_session_usage.py",
+        expect="notice",
+        payload=start,
+        env=env,
+        contains=["보고서 날짜:", "경보 없음"],
+    )
+
+    assert run_case(headless, replacements, registration).ok
+    assert run_case(shown, replacements, registration).ok
+    assert run_case(
+        Case(hook="hook_session_usage.py", expect="silent", payload=resume, env=env),
+        replacements,
+        registration,
+    ).ok
+    ledger = Path(replacements["USAGE_REPO"]) / ".scratch" / "token-report" / "ledger"
+    lines = (ledger / "accounts.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["email"] for line in lines] == ["run@hooks"] * 3
 
 
 def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path) -> None:
