@@ -173,7 +173,7 @@ def variant_a(out: Path) -> tuple[bool, bool, str]:
     return ran, ran, f"Write·Edit 결과의 type: {kinds}"
 
 
-def variant_bc(out: Path, name: str, seq: str, expect_notice: bool) -> tuple[bool, bool, str]:
+def variant_bc(out: Path, name: str, seq: str, *, expect_notice: bool) -> tuple[bool, bool, str]:
     where = out / name
     where.mkdir(parents=True, exist_ok=True)
     repo = fixture_repo(where)

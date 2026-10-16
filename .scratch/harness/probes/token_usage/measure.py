@@ -287,7 +287,9 @@ def cmd_idle(hours: float) -> None:
                     stat[lo][1] += 1
                     if lo == 60:
                         # 캐시 쓰기 몫만 단가표의 셈(`costs.cost`)으로 낸다.
-                        writes_only = costs.Usage(0, 0, 0, 0, us.write_5m, us.write_1h, False)
+                        writes_only = costs.Usage(
+                            0, 0, 0, 0, us.write_5m, us.write_1h, thinking_known=False
+                        )
                         rewrite_cost += costs.cost(model, writes_only) or 0.0
                 if waiting and gap > 2:
                     wakes.append((gap, ctx, rewrote))

@@ -94,7 +94,7 @@ _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC = (
 )
 _NOT_POSITIVE_CONCURRENT_RUNS_DIAGNOSTIC = (
     "--end-user-concurrent-runs 는 1 이상의 정수다. 받은 값: {value}\n"
-    "  0 이하면 최종 사용자 경로의 모든 시작과 결정이 429 로 거절된다.\n"
+    "  0 이하면 최종 사용자 경로의 모든 시작·결정·이어 가기가 429 로 거절된다.\n"
     "  빼면 채널의 기본값 {default} 이다."
 )
 
