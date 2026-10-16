@@ -1,0 +1,7 @@
+{"step": "check:api-client", "seconds": 3.1, "returncode": 0, "marked": true}
+{"step": "lint", "seconds": 28.6, "returncode": 0, "marked": true}
+{"step": "format", "seconds": 5.6, "returncode": 0, "marked": true}
+{"step": "typecheck", "seconds": 14.8, "returncode": 0, "marked": true}
+{"step": "test", "seconds": 174.0, "returncode": 0, "marked": true}
+{"step": "check:tsconfig", "seconds": 1.2, "returncode": 0, "marked": true}
+{"step": "합계", "seconds": 227.3}

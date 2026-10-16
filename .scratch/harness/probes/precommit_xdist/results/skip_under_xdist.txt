@@ -1,0 +1,3 @@
+{"run": "serial", "seconds": 7.76, "workers": null, "cpu_count": 16, "missing": []}
+{"run": "xdist2", "seconds": 34.86, "workers": null, "cpu_count": 16, "missing": []}
+{"run": "xdist_auto", "seconds": 42.33, "workers": 16, "cpu_count": 16, "missing": []}
