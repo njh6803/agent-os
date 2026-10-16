@@ -6,10 +6,11 @@
 내려받는다.
 
 표지: 통과 집계 줄(`N passed`)이 있어야 하고, xdist 회차에는 `bringing up nodes` 나
-`created: N/N workers` 줄이 있어야 한다. 프로세스 수를 줬으면 `created` 줄의 수가 같아야 한다.
-하나라도 없으면 그 회차는 측정이 아니므로 종료 코드를 1 로 낸다. 사례가 실패한 것은 측정의 결과라
-종료 코드에 넣지 않고 `failed` 에 센다. `auto` 는 `-q` 를 빼야 xdist 가 `created` 줄을 내서 그
-회차만 `-q` 가 없다.
+`created: N/N workers` 줄이 있어야 한다. 하나라도 없으면 그 회차는 측정이 아니므로 종료 코드를 1 로
+낸다. 프로세스 수는 `auto` 회차만 `created` 줄로 관찰한다. `-q` 가 있으면 xdist 가 그 줄을 내지
+않아서 숫자 회차의 `workers` 는 관찰한 값이 아니라 준 인자다. 그래서 `auto` 만 `-q` 가 없다. 사례가
+실패하거나 skip·error 가 있는 것은 측정의 결과라 종료 코드에 넣지 않고 `failed` 에 센다. 그 회차가
+깨끗했는지(종료 코드 0, skip·error 0)는 저장한 출력에서 `verify_saved_outputs.py` 가 대 본다.
 
 돌리는 법: 저장소 루트에서
 `uv run python .scratch/harness/probes/precommit_xdist/pytest_run.py 8 <출력 파일>`.

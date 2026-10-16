@@ -3,9 +3,11 @@
 
 프로브(`pytest_run.py`, `rounds.py`, `pair.py`, `time_web_steps.py`, `skip_under_xdist.py`)는 실행
 중에 표지를 단언하고 그 결과를 출력에 남긴다. 이 스크립트는 저장한 출력을 다시 읽어 표지가 모두
-있는지, 한 바퀴의 `Passed` 줄 수가 맞는지, 두 벌이 겹쳐 돌았는지를 대 본다. 손으로 돌린 두 출력(한
-프로세스, xdist 8개)과 CI 의 잡 목록은 그 출력의 집계 줄과 시각만 본다. 표지가 하나라도 빠진 회차가
-있으면 종료 코드를 1 로 낸다. 걸린 시간과 통과·실패 수는 대 보지 않고 그대로 찍는다.
+있는지, 한 바퀴의 `Passed` 줄 수가 맞는지, 두 벌이 겹쳐 돌았는지를 대 본다. 프로브가 다시 낸 pytest
+회차는 깨끗한지(종료 코드 0, skip·error 0)도 대 본다. ADR 이 그 회차를 통과로 들기 때문이다. 손으로
+돌린 출력(한 프로세스, xdist 8개, 인터뷰 중 앞 판의 실패 둘)과 CI 의 잡 목록은 그 출력의 집계 줄과
+시각만 본다. 표지가 하나라도 빠졌거나 깨끗하지 않은 회차가 있으면 종료 코드를 1 로 낸다. 걸린 시간은
+대 보지 않고 그대로 찍는다.
 
 돌리는 법: `uv run python .scratch/harness/probes/precommit_xdist/verify_saved_outputs.py`.
 통과한 사례 수 3156 은 손으로 돌린 두 출력을 잰 때(`feb64be1`)의 것이다. 그 뒤 main(`c689c9ce`)은
@@ -68,12 +70,29 @@ def check_patterns(name: str, patterns: tuple[str, ...]) -> list[str]:
     return [p for p in patterns if re.search(p, text, re.MULTILINE) is None]
 
 
+def summary_counts(text: str) -> dict[str, int]:
+    """pytest 의 마지막 집계 줄에서 failed, skipped, error 의 수를 읽는다(없는 말은 0)."""
+    lines = [line for line in text.splitlines() if re.search(r"\d+ passed.* in [\d.]+s", line)]
+    counts = {"failed": 0, "skipped": 0, "error": 0}
+    if lines:
+        for number, word in re.findall(r"(\d+) (failed|skipped|errors?)", lines[-1]):
+            counts[word.removesuffix("s")] = int(number)
+    return counts
+
+
 def check_pytest_row(name: str) -> tuple[list[str], str]:
+    """한 회차의 껍질 행과 원본 출력을 대 본다. 깨끗함(종료 코드 0, skip·error 0)도 본다."""
     row = json.loads(read(f"{name}.json"))
+    counts = summary_counts(read(name))
+    missing = list(row["missing"])
+    if row["returncode"] != 0 or any(counts.values()):
+        missing.append(f"깨끗하지 않다: 종료 코드 {row['returncode']}, {counts}")
     note = (
-        f"{row['seconds']}초, 통과 {row['passed']}, 실패 {row['failed']}, 프로세스 {row['workers']}"
+        f"{row['seconds']}초, 통과 {row['passed']}, 실패 {counts['failed']}, "
+        f"skip {counts['skipped']}, error {counts['error']}, 종료 코드 {row['returncode']}, "
+        f"프로세스 {row['workers']}"
     )
-    return list(row["missing"]), note
+    return missing, note
 
 
 def check_round(label: str, passed_lines: int) -> tuple[list[str], str]:
@@ -97,7 +116,17 @@ def check_pair() -> tuple[list[str], str]:
     parts = []
     for run in runs:
         missing += [f"{run['run']}: {m}" for m in run["missing"]]
-        parts.append(f"{run['run']} {run['start_s']}~{run['end_s']}초 실패 {run['failed']}")
+        text = read(f"pair_{run['run']}_pytest.txt")
+        failed = summary_counts(text)["failed"]
+        parts.append(f"{run['run']} {run['pytest_start_s']}~{run['end_s']}초 실패 {failed}")
+    # 프로브가 낸 판정을 저장한 시각으로 다시 센다. 두 시작이 모두 두 끝보다 앞서야 겹친 것이다.
+    if len(runs) == 2 and max(r["pytest_start_s"] for r in runs) >= min(r["end_s"] for r in runs):
+        missing.append("저장한 시각으로 다시 세니 겹치지 않았다")
+    # ADR 이 두 벌 동시의 실패로 드는 사례다. 두 벌이 모두 통과한 출력으로 바뀌면 ADR 도 고친다.
+    mutate = rf"^FAILED {re.escape(MUTATE)}"
+    texts = [read(f"pair_{name}_pytest.txt") for name in ("a", "b")]
+    if not any(re.search(mutate, text, re.MULTILINE) for text in texts):
+        missing.append("ADR 이 드는 test_mutate 의 실패가 두 벌 어디에도 없다")
     return missing, ", ".join(parts)
 
 
