@@ -16,11 +16,12 @@ import pytest
 from tools.hook_edit_during_commit import (
     Process,
     RunningCommit,
+    argv_from_cmdline,
     checkout_of,
     context_for,
     edited_file,
-    git_directory,
     git_subcommand,
+    parent_from_stat,
     running_commits,
     scan_processes,
 )
@@ -57,36 +58,41 @@ def test_git_의_하위_명령을_전역_옵션_뒤에서_찾는다(
     assert git_subcommand(argv) == subcommand
 
 
+def test_런처는_세지_않고_그_자식인_실제_git_의_작업_디렉터리로_찾는다(tmp_path: Path) -> None:
+    """윈도 git 의 런처(`cmd\\git.exe`)는 띄운 폴더 B 를 작업 디렉터리로 쥔 채 같은 명령 줄로 살고,
+    실제 git 을 자식으로 띄운다. 작업 디렉터리만 본 첫 판은 B 에서 친 `git -C <A> commit` 을 B 의
+    커밋으로도 읽었다(셀프 리뷰 명세 축). 자식 git 을 띄운 git 을 빼면 남는 것은 A 로 옮겨 간 실제
+    git 이다."""
+    main, side = _checkouts(tmp_path)
+    argv = ("git", "-C", "../../..", "commit", "-m", "x")
+    launcher = Process(10, "git.exe", argv, str(side), parent=1)
+    real = Process(11, "git.exe", argv, str(main), parent=10)
+
+    found = running_commits([launcher, real])
+
+    assert found == [RunningCommit(11, str(checkout_of(str(main))))]
+
+
+def test_리눅스의_명령_줄은_빈_낱말을_지킨다() -> None:
+    """빈 낱말을 버리면 `-C` 가 `commit` 을 값으로 먹어 하위 명령을 놓친다(PR 직전
+    `bug-perf-review`)."""
+    argv = argv_from_cmdline(b"git\0-C\0\0commit\0-m\0x\0")
+
+    assert argv == ("git", "-C", "", "commit", "-m", "x")
+    assert git_subcommand(argv) == "commit"
+    assert argv_from_cmdline(b"") == ()
+
+
 @pytest.mark.parametrize(
-    ("argv", "expected"),
+    ("stat", "parent"),
     [
-        pytest.param(["git", "commit"], "here", id="옵션_없음"),
-        pytest.param(["git", "-C", "/abs/a", "commit"], "/abs/a", id="절대_-C"),
-        pytest.param(["git", "-C", "a", "-C", "b", "commit"], "here/a/b", id="차례로_얹는_-C"),
-        pytest.param(["git", "--work-tree=/abs/w", "commit"], "/abs/w", id="붙인_work_tree"),
-        pytest.param(
-            ["git", "-C", "a", "--work-tree", "w", "commit"], "here/a/w", id="-C_뒤의_work_tree"
-        ),
-        pytest.param(["git", "commit", "-C", "HEAD"], "here", id="하위_명령_뒤는_세지_않는다"),
-        pytest.param(["git", "-C"], "here", id="값이_빠진_-C"),
+        pytest.param("4242 (git) S 4200 4242 4200 0 -1", 4200, id="보통"),
+        pytest.param("4242 (my (odd) git) S 4200 4242", 4200, id="이름에_괄호와_공백"),
+        pytest.param("4242 (git)", 0, id="잘린_줄"),
     ],
 )
-def test_git_이_일할_자리는_작업_디렉터리에_C_옵션과_work_tree_를_얹는다(
-    argv: list[str], expected: str
-) -> None:
-    assert Path(git_directory(argv, "here")) == Path(expected)
-
-
-def test_런처가_다른_체크아웃에서_띄운_C_옵션_커밋은_그_자리의_체크아웃이다(tmp_path: Path) -> None:
-    """윈도 git 의 런처(`cmd\\git.exe`)는 띄운 폴더를 작업 디렉터리로 쥔 채 같은 명령 줄로 산다.
-    작업 디렉터리만 본 첫 판은 B 에서 친 `git -C <A> commit` 을 B 의 커밋으로도 읽었다(셀프 리뷰
-    명세 축)."""
-    main, side = _checkouts(tmp_path)
-    launcher = Process(1, "git.exe", ("git", "-C", str(main), "commit", "-m", "x"), str(side))
-
-    found = running_commits([launcher])
-
-    assert [commit.checkout for commit in found] == [checkout_of(str(main))]
+def test_리눅스의_부모_pid_는_이름_칸_뒤에서_센다(stat: str, parent: int) -> None:
+    assert parent_from_stat(stat) == parent
 
 
 def _checkouts(root: Path) -> tuple[Path, Path]:
@@ -211,40 +217,45 @@ def test_못_보는_것_git_이_없는_작업_트리의_커밋은_세지_않는�
     assert context_for(str(file), [RunningCommit(1, str(work))]) is None
 
 
-# 윈도 git 의 런처. PowerShell 의 `git` 이 이것으로 풀리고, 띄운 폴더를 작업 디렉터리로 쥔 채
-# 산다. 없는 기계(리눅스)에서는 그 갈래가 보통 `git` 으로 돈다.
+# 윈도 git 의 런처. 이 PC 에서 세션의 PowerShell 도구가 `git` 을 이것으로 먼저 풀었고, 띄운 폴더를
+# 작업 디렉터리로 쥔 채 실제 git 을 자식으로 띄운다. 런처가 없는 리눅스에서는 그 갈래가 보통
+# `git` 으로 돈다.
 LAUNCHER = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git" / "cmd" / "git.exe"
 
 
 @pytest.mark.parametrize(
-    ("where", "prefix", "executable"),
+    ("where", "prefix", "launcher"),
     [
-        pytest.param("sub", (), "git", id="하위_폴더에서"),
-        pytest.param("outside", ("-C", "{repo}"), "git", id="다른_체크아웃에서_-C"),
+        pytest.param("repo/sub", (), False, id="하위_폴더에서"),
+        pytest.param("outside", ("-C", "{repo}"), False, id="다른_체크아웃에서_-C"),
+        pytest.param("outside/deep", ("-C", "../../repo"), False, id="다른_체크아웃에서_상대_-C"),
         pytest.param(
             "outside",
             ("--git-dir={repo}/.git", "--work-tree={repo}"),
-            "git",
+            False,
             id="다른_체크아웃에서_git_dir_와_work_tree",
         ),
+        pytest.param("outside", ("-C", "{repo}"), True, id="다른_체크아웃에서_런처로_-C"),
         pytest.param(
-            "outside",
-            ("-C", "{repo}"),
-            str(LAUNCHER) if LAUNCHER.exists() else "git",
-            id="다른_체크아웃에서_런처로_-C",
+            "outside/deep", ("-C", "../../repo"), True, id="다른_체크아웃에서_런처로_상대_-C"
         ),
     ],
 )
 def test_어디서_친_커밋이든_그_작업_트리의_체크아웃으로_찾는다(
-    tmp_path: Path, where: str, prefix: tuple[str, ...], executable: str
+    tmp_path: Path, where: str, prefix: tuple[str, ...], launcher: bool
 ) -> None:
     """실제 git 은 작업 디렉터리를 그 작업 트리 안으로 옮긴다. 런처는 띄운 폴더(여기서는 다른
-    체크아웃)에 남으므로 `-C` 를 얹어야 거짓 알림이 나지 않는다(셀프 리뷰 명세 축)."""
+    체크아웃)에 남으므로 세지 않아야 거짓 알림이 나지 않는다(셀프 리뷰 명세 축). 런처에 `-C` 를 얹던
+    판은 실제 git 에도 얹어 상대 경로 `-C` 를 놓쳤다(PR 직전 `bug-perf-review`)."""
+    if launcher and sys.platform == "win32":
+        assert LAUNCHER.exists(), f"런처가 없다: {LAUNCHER}"
+    executable = str(LAUNCHER) if launcher and sys.platform == "win32" else "git"
     repo, outside = tmp_path / "repo", tmp_path / "outside"
     (repo / "sub").mkdir(parents=True)
     git = [executable, "-c", "user.name=t", "-c", "user.email=t@localhost"]
     subprocess.run([*git, "init", "-q", "-b", "main", str(repo)], check=True, timeout=60)
     subprocess.run([*git, "init", "-q", "-b", "main", str(outside)], check=True, timeout=60)
+    (outside / "deep").mkdir()
     subprocess.run(
         [*git, "-C", str(repo), "commit", "-q", "--allow-empty", "-m", "a"], check=True, timeout=60
     )
@@ -257,6 +268,8 @@ def test_어디서_친_커밋이든_그_작업_트리의_체크아웃으로_찾�
         encoding="utf-8",
         newline="\n",
     )
+    # 리눅스 git 은 실행 권한이 없는 훅을 건너뛴다(PR 직전 `bug-perf-review`)
+    (hooks / "pre-commit").chmod(0o755)
     (repo / "f.txt").write_text("x\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True, timeout=60)
     options = [word.format(repo=repo.as_posix()) for word in prefix]
@@ -272,7 +285,7 @@ def test_어디서_친_커밋이든_그_작업_트리의_체크아웃으로_찾�
     ]
     process = subprocess.Popen(
         command,
-        cwd=tmp_path / where if where == "outside" else repo / where,
+        cwd=tmp_path / where,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

@@ -268,45 +268,45 @@ new = '''
 '''
 
 [[mutation]]
-name = "293 커밋의 체크아웃을 작업 디렉터리로만 본다(런처)"
+name = "293 자식 git 을 띄운 런처도 센다"
 tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "런처"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-        checkout = checkout_of(git_directory(process.argv, process.cwd))
+        if process.pid in launchers or git_subcommand(process.argv) != "commit":
 '''
 new = '''
-        checkout = checkout_of(process.cwd)
+        if git_subcommand(process.argv) != "commit":
 '''
 
 [[mutation]]
-name = "293 work-tree 를 얹지 않는다"
-tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "C_옵션과_work_tree"]
+name = "293 리눅스 명령 줄의 빈 낱말을 버린다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "빈_낱말"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-    return os.path.join(directory, work_tree) if work_tree is not None else directory
+    return tuple(part.decode("utf-8", "replace") for part in parts)
 '''
 new = '''
-    return directory
+    return tuple(part.decode("utf-8", "replace") for part in parts if part)
 '''
 
 [[mutation]]
-name = "293 -C 를 차례로 얹지 않고 마지막 것으로 바꾼다"
-tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "C_옵션과_work_tree"]
+name = "293 리눅스 부모 pid 를 이름 칸의 첫 닫는 괄호 뒤에서 센다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "부모_pid"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-                directory = os.path.join(directory, argv[index + 1])
+    fields = stat.rpartition(")")[2].split()
 '''
 new = '''
-                directory = argv[index + 1]
+    fields = stat.partition(")")[2].split()
 '''
 
 [[mutation]]
@@ -351,10 +351,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-        if not is_git(process.image) or git_subcommand(process.argv) != "commit":
+    gits = [process for process in processes if is_git(process.image)]
 '''
 new = '''
-        if git_subcommand(process.argv) != "commit":
+    gits = list(processes)
 '''
 
 [[mutation]]

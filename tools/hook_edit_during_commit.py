@@ -20,18 +20,23 @@ PreToolUse 의 막는 훅으로 올린다. PostToolUse 라 알림은 편집이 �
 판정. 편집한 파일(`file_path`, NotebookEdit 은 `notebook_path`)의 폴더에서 위로 올라가 처음
 `.git`(디렉터리나 워크트리의 파일)이 있는 폴더를 그 체크아웃으로 본다. 프로세스 가운데 이름이
 git 인 것의 명령 줄에서 전역 옵션(`-C <경로>`, `-c <설정>` 등)을 건너뛴 첫 낱말이 `commit` 이면,
-그 작업 디렉터리에 전역 옵션 `-C`(차례로)와 `--work-tree` 를 git 처럼 얹은 자리(`git_directory`)에서
-같은 방법으로 체크아웃을 찾는다. 둘이 같으면 알린다. 주 체크아웃 안의
-워크트리(`.claude/worktrees/<이름>`)는 자기 `.git` 파일이 있어 다른 체크아웃이다. 작업 디렉터리만
-보지 않는 것은 윈도 git 의 런처(`cmd\\git.exe`, PowerShell 의 `git` 이 이것으로 풀린다)가 띄운
-폴더를 작업 디렉터리로 쥔 채 같은 명령 줄로 살아 있어서다. 작업 디렉터리만 본 첫 판은 체크아웃 B
-에서 친 `git -C <A> commit` 을 B 의 커밋으로도 읽었다(셀프 리뷰 명세 축이 재현했다). 실제 git 은
-하위 폴더에서 쳤든 밖에서 `-C`·`--git-dir`·`--work-tree` 로 쳤든 작업 디렉터리를 그 작업 트리 안으로
-옮겼다(tests/tools 의 실제 프로세스 시험, git 2.32). 경로는 `os.path.realpath` 로 펴서 대고,
+그 작업 디렉터리에서 같은 방법으로 체크아웃을 찾는다. 둘이 같으면 알린다. 주 체크아웃 안의
+워크트리(`.claude/worktrees/<이름>`)는 자기 `.git` 파일이 있어 다른 체크아웃이다. 실제 git 은
+하위 폴더에서 쳤든 밖에서 `-C`(상대 경로 포함)·`--git-dir`·`--work-tree` 로 쳤든 작업 디렉터리를 그
+작업 트리 안으로 옮겼다(tests/tools 의 실제 프로세스 시험, git 2.32). 다만 윈도 git 의
+런처(`cmd\\git.exe`)는 띄운 폴더를 작업 디렉터리로 쥔 채 같은 명령 줄로 살아 있다. 이 PC 에서 세션의
+PowerShell 도구는 `git` 을 이 런처로 먼저 풀었고, 런처로 친 `git -C <A> commit` 은 띄운 폴더 B 를
+작업 디렉터리로 쥔 런처와 A 의 실제 git 둘로 보였다(손으로 봤다, 2026-10-16). 작업 디렉터리만 본 첫
+판은 그 커밋을 B 의 커밋으로도 읽었다(셀프 리뷰 명세 축이 재현했다). 그래서 자식 git 을 띄운
+git(런처)은 세지 않는다(`running_commits`). 런처의 작업 디렉터리에 `-C` 를 얹던 둘째 판은 실제 git
+에도 얹어, 이미 옮겨 간 자리에 상대 경로 `-C ../../repo` 를 한 번 더 얹어 놓쳤다(PR 직전
+`bug-perf-review` 가 실제 프로세스로 재현했다). 커밋이 도는 동안의 편집마다 같은 알림을 낸다.
+편집마다 겹치기 때문이다. 경로는 `os.path.realpath` 로 펴서 대고,
 윈도에서는 대소문자를 가리지 않는다. 윈도는 Toolhelp 스냅숏으로 프로세스 이름을 훑고 git 만 열어
 PEB 의 작업 디렉터리와 명령 줄을 읽는다. PEB 를 읽는 자리는 `tools/tidy_checkouts.py` 와 같고, 훅은
 단독 실행 스크립트라 그 모듈을 import 하지 않고 옮겨 적었다(`.claude/rules/tools.md`). 리눅스는
-`/proc/<pid>/` 의 `comm`·`cmdline`·`cwd` 를 읽는다. 읽다 실패하면 알리지 않는다(fail-open).
+`/proc/<pid>/` 의 `comm`·`stat`(부모 pid)·`cmdline`·`cwd` 를 읽는다. 읽다 실패하면 알리지
+않는다(fail-open).
 
 못 보는 것.
 - 커밋이 아닌 검사(`uv run pre-commit run`, `uv run pytest`)가 도는 동안의 편집. git 의 `commit`
@@ -62,12 +67,14 @@ _GIT_VALUE_OPTIONS = frozenset(
 
 
 class Process(NamedTuple):
-    """프로세스 하나. `argv` 는 명령 줄을 나눈 낱말, `cwd` 는 작업 디렉터리다."""
+    """프로세스 하나. `argv` 는 명령 줄을 나눈 낱말, `cwd` 는 작업 디렉터리, `parent` 는 부모
+    pid(모르면 0)다."""
 
     pid: int
     image: str
     argv: tuple[str, ...]
     cwd: str
+    parent: int = 0
 
 
 class RunningCommit(NamedTuple):
@@ -93,28 +100,6 @@ def git_subcommand(argv: Sequence[str]) -> str | None:
             return word
         index += 2 if word in _GIT_VALUE_OPTIONS else 1
     return None
-
-
-def git_directory(argv: Sequence[str], cwd: str) -> str:
-    """git 이 일할 자리. 작업 디렉터리에 전역 옵션 `-C <경로>`(차례로 얹힌다)와
-    `--work-tree`(`=` 로 붙이거나 띄어 쓴다)를 git 처럼 얹는다. 하위 명령에서 멈춘다."""
-    directory, work_tree = cwd, None
-    index = 1
-    while index < len(argv) and argv[index].startswith("-"):
-        word = argv[index]
-        if word.startswith("--work-tree="):
-            work_tree = word.split("=", 1)[1]
-        if word in _GIT_VALUE_OPTIONS:
-            if index + 1 >= len(argv):
-                break
-            if word == "-C":
-                directory = os.path.join(directory, argv[index + 1])
-            elif word == "--work-tree":
-                work_tree = argv[index + 1]
-            index += 2
-            continue
-        index += 1
-    return os.path.join(directory, work_tree) if work_tree is not None else directory
 
 
 def is_git(image: str) -> bool:
@@ -147,12 +132,15 @@ def _same(left: str, right: str) -> bool:
 
 
 def running_commits(processes: Iterable[Process]) -> list[RunningCommit]:
-    """프로세스 가운데 도는 `git commit` 과 그 체크아웃. 체크아웃을 찾지 못한 것은 뺀다."""
+    """프로세스 가운데 도는 `git commit` 과 그 체크아웃. 자식 git 을 띄운 git(런처)과 체크아웃을
+    찾지 못한 것은 뺀다. 런처의 일은 그 자식인 실제 git 이 센다."""
+    gits = [process for process in processes if is_git(process.image)]
+    launchers = {process.parent for process in gits} & {process.pid for process in gits}
     found: list[RunningCommit] = []
-    for process in processes:
-        if not is_git(process.image) or git_subcommand(process.argv) != "commit":
+    for process in gits:
+        if process.pid in launchers or git_subcommand(process.argv) != "commit":
             continue
-        checkout = checkout_of(git_directory(process.argv, process.cwd))
+        checkout = checkout_of(process.cwd)
         if checkout is not None:
             found.append(RunningCommit(process.pid, checkout))
     return found
@@ -195,9 +183,26 @@ def _is_64bit() -> bool:
     return ctypes.sizeof(ctypes.c_void_p) == 8
 
 
+def argv_from_cmdline(raw: bytes) -> tuple[str, ...]:
+    """`/proc/<pid>/cmdline` 의 낱말. 낱말마다 NUL 로 끝나므로 끝의 NUL 하나만 떼고 빈 낱말은
+    지킨다. 빈 낱말을 버리면 `git -C "" commit` 의 `-C` 가 `commit` 을 값으로 먹는다(PR 직전
+    `bug-perf-review`)."""
+    parts = raw.split(b"\0")
+    if parts and parts[-1] == b"":
+        parts.pop()
+    return tuple(part.decode("utf-8", "replace") for part in parts)
+
+
+def parent_from_stat(stat: str) -> int:
+    """`/proc/<pid>/stat` 의 부모 pid. 이름 칸이 괄호 안에 공백을 품을 수 있어 마지막 `)` 뒤에서
+    센다(상태, 부모 pid 차례). 읽지 못하면 0."""
+    fields = stat.rpartition(")")[2].split()
+    return int(fields[1]) if len(fields) > 1 and fields[1].isdigit() else 0
+
+
 def _linux_processes() -> list[Process]:
-    """`/proc/<pid>/` 에서 이름이 git 인 프로세스의 명령 줄과 작업 디렉터리. 읽을 수 없는
-    프로세스(다른 사용자의 것, 그새 끝난 것)는 건너뛴다."""
+    """`/proc/<pid>/` 에서 이름이 git 인 프로세스의 명령 줄, 작업 디렉터리, 부모 pid. 읽을 수
+    없는 프로세스(다른 사용자의 것, 그새 끝난 것)는 건너뛴다."""
     found: list[Process] = []
     for entry in os.listdir("/proc"):
         if not entry.isdigit():
@@ -207,13 +212,14 @@ def _linux_processes() -> list[Process]:
             with open(f"{base}/comm", encoding="utf-8", errors="replace") as comm:
                 if comm.read().strip() != "git":
                     continue
+            with open(f"{base}/stat", encoding="utf-8", errors="replace") as stat:
+                parent = parent_from_stat(stat.read())
             with open(f"{base}/cmdline", "rb") as cmdline:
                 raw = cmdline.read()
             cwd = os.readlink(f"{base}/cwd")
         except OSError:
             continue
-        argv = tuple(part.decode("utf-8", "replace") for part in raw.split(b"\0") if part)
-        found.append(Process(int(entry), "git", argv, cwd))
+        found.append(Process(int(entry), "git", argv_from_cmdline(raw), cwd, parent))
     return found
 
 
@@ -282,19 +288,19 @@ if sys.platform == "win32":
         shell.CommandLineToArgvW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_int)]
         return kernel, ntdll, shell
 
-    def _git_pids(kernel: ctypes.WinDLL) -> list[int]:
-        """Toolhelp 스냅숏에서 실행 파일 이름이 git 인 프로세스."""
+    def _git_pids(kernel: ctypes.WinDLL) -> list[tuple[int, int]]:
+        """Toolhelp 스냅숏에서 실행 파일 이름이 git 인 프로세스의 (pid, 부모 pid)."""
         snapshot = kernel.CreateToolhelp32Snapshot(_SNAPSHOT_PROCESSES, 0)
         if snapshot is None or snapshot == _INVALID_HANDLE:
             return []
-        pids: list[int] = []
+        pids: list[tuple[int, int]] = []
         try:
             entry = _ProcessEntry()
             entry.size = ctypes.sizeof(entry)
             more = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
             while more:
                 if is_git(entry.exe):
-                    pids.append(int(entry.pid))
+                    pids.append((int(entry.pid), int(entry.parent)))
                 more = kernel.Process32NextW(snapshot, ctypes.byref(entry))
         finally:
             kernel.CloseHandle(snapshot)
@@ -349,7 +355,7 @@ if sys.platform == "win32":
             return None
         kernel, ntdll, shell = _windows_api()
         found: list[Process] = []
-        for pid in _git_pids(kernel):
+        for pid, parent in _git_pids(kernel):
             handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, False, pid)
             if not handle:
                 continue
@@ -363,7 +369,7 @@ if sys.platform == "win32":
                 kernel.CloseHandle(handle)
             if cwd is not None and line is not None:
                 argv = tuple(_split_command_line(kernel, shell, line))
-                found.append(Process(pid, "git.exe", argv, cwd))
+                found.append(Process(pid, "git.exe", argv, cwd, parent))
         return found
 
 

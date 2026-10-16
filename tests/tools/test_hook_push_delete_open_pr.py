@@ -181,6 +181,12 @@ def test_지우지_않는_푸시와_푸시가_아닌_명령은_대상이_없다(
         pytest.param("sudo git push origin --delete chore/x", id="sudo"),
         pytest.param("git p origin --delete chore/x", id="별칭"),
         pytest.param("git push origin `\n--delete chore/x", id="PowerShell_백틱_줄_이어_쓰기"),
+        pytest.param("git push origin --delete chore/x <# -h #>", id="블록_주석_속의_도움말"),
+        pytest.param("git push origin --delete chore/x `true -h`", id="백틱_치환_속의_도움말"),
+        pytest.param(
+            "X=\\' git push origin --delete chore/x # -h", id="이스케이프에_속은_꼬리_주석"
+        ),
+        pytest.param("git push origin --delete chore/x <# --x #>", id="블록_주석_속의_긴_옵션"),
     ],
 )
 def test_못_보는_것_래퍼와_prune_과_REST_는_지나간다(명령: str) -> None:
