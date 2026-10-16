@@ -62,6 +62,8 @@ CodeRabbit CLI는 좌석 미배정(`Seat: not assigned`, CLI 0.7.5)으로 돌지
 
 푸시 전에 main에 형제 PR #269(`code-review`의 코드 동작 불러 보기와 새 문장 넘기기)가 병합돼 합쳤다. 충돌은 `code-review` 센티널 주석 한 줄뿐이었다. main 쪽 줄을 살리고 그 안의 "4단계의 sonnet 규칙"만 바뀐 규칙으로 바꿨다. 합친 뒤 옛 규칙 잔존 grep은 명세와 이 티켓뿐이고, 카나리아는 `--preflight --control-commit 30b9f37`로 갈음했다(통과 1). 이 PR이 바꾼 4단계 문단과 `expect`는 그대로다.
 
+봇 지적을 반영한 뒤 푸시 전에 형제 PR #271이 병합돼 한 번 더 합쳤다. 충돌은 `.scratch/retro-queue.md`의 끝 행뿐이었고(이 브랜치의 310, 그쪽의 311) 둘 다 살렸다. 합친 뒤 `sibling_overlap.py`는 번호 겹침 없음, 0으로 끝났다.
+
 ## PR 봇
 
 - CodeRabbit 첫 회차: Trivial 1. 카나리아가 표준 축의 모델 지침도 고정하라는 것이다. 옛 판에도 `model: sonnet`이 있어 그 낱말만으로는 대조군과 가르지 못하므로, `expect`의 첫 조각을 새 문장에만 있는 `` `model: sonnet` and `effort: high` ``로 넓혔다. `expect`만 고쳐 사전 확인으로 갈음했다.
