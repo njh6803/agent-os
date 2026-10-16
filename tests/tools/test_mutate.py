@@ -176,6 +176,7 @@ _뒤가_다른_시험 = (
     b"def test_a(): assert V == '1'\n"
     b"def test_b():\n"
     b"    if V != '1':\n"
+    b"        Path(__file__).with_name('b-ran').touch()\n"
     b"        print('MARKER-B')\n"
     b"        time.sleep(60)\n"
     b"    assert V == '1'\n"
@@ -202,21 +203,25 @@ def test_못_보는_것_첫_실패에서_멈춘_변이는_뒤의_시험만_찍�
 
 
 def test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_멈춰_빨강이다(tmp_path: Path) -> None:
-    """끝까지 돌았다면 test_b 가 60초를 자 시간 제한(20초)을 넘긴 오류였을 변이다. 실제 pytest 로
-    본다."""
+    """끝까지 돌았다면 test_b 가 60초를 자 시간 제한(40초)을 넘긴 오류였을 변이다. 실제 pytest 로
+    본다. 멈춘 것은 test_b 가 자기 전에 남기는 파일이 없는 것으로 본다. 첫 판은 걸린 시간이
+    20초 미만인지 봤는데, 그 안에 기준선과 변이로 pytest 를 두 번 띄우는 시간까지 들어 pytest 두
+    벌을 동시에 돌린 부하 아래에서 20.3초와 21.6초로 빨갰다(ADR 0035의 부딪힘. 한 프로세스로는
+    4.56초, xdist 8개 홀로는 10.60초였다. 원인이 부하의 지연이라는 것은 어림이다). 시간 제한은
+    기동이 늘어도 남게 40초로 두되, test_b 의 60초 잠보다 짧아야 `-x` 가 빠진 변이가 시간 제한에
+    걸려 빨개진다."""
     _파일을_둔다(tmp_path, "v.txt", b"1")
     _파일을_둔다(tmp_path, "test_two.py", _뒤가_다른_시험)
     변이 = (
         _변이_파일(old="1", new="2", file="v.txt")
         .replace("tests/test_x.py", "test_two.py")
-        .replace('expect = "red"', 'expect = "red"\ntimeout = 20')
+        .replace('expect = "red"', 'expect = "red"\ntimeout = 40')
     )
-    시작 = time.monotonic()
 
     code = measure(load_spec(변이), root=tmp_path, runner=run_command, out=lambda _: None)
 
     assert code == 0
-    assert time.monotonic() - 시작 < 20
+    assert not (tmp_path / "b-ran").exists()
 
 
 def test_못_보는_것_exit_판정은_잡히지_않은_예외의_1_도_빨강이다() -> None:

@@ -1,0 +1,8 @@
+{"folder": "C:\\project\\agent\\.claude\\worktrees\\precommit-xdist-runner\\.scratch\\harness\\probes\\precommit_xdist\\results\\confirm_20261016-185135", "cpu_count": 16}
+{"name": "series1", "seconds": 284.4, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 228.88, "pytest_start": 1792144296.302592, "pytest_end": 1792144525.1817317}
+{"name": "series2", "seconds": 270.4, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 220.89, "pytest_start": 1792144581.9809866, "pytest_end": 1792144802.869261}
+{"name": "series3", "seconds": 252.0, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 194.42, "pytest_start": 1792144851.6173186, "pytest_end": 1792145046.0390267}
+{"name": "series4", "seconds": 235.4, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 171.78, "pytest_start": 1792145104.069539, "pytest_end": 1792145275.8508933}
+{"name": "series5", "seconds": 213.5, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 146.68, "pytest_start": 1792145339.865445, "pytest_end": 1792145486.5407982}
+연속 5번: 회차 5, 측정 5, 통과 5, 측정 아님 0
+series_exit=0

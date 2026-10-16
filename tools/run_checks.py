@@ -5,9 +5,15 @@ pre-commit 은 훅을 하나씩 돈다(4.6.2 `commands/run.py` 의 `_run_hooks`)
 ADR 0005 의 2026-10-07 이력). 그래서
 `.pre-commit-config.yaml` 은 이 검사들을 훅 하나로 두고 이 러너가 함께 띄운다. 잰 뒤에 워크플로
 감사(zizmor, ADR 0027)가 더해져 여덟이다. 그 검사는 한 번에 0.3초 남짓이지만, 그 회귀 테스트가
-병목인 pytest 에 1.5~6.7초를 더한다(손으로 봤다). 함께 띄운 벽시계 시간은 다시 재지 않았다. 파일을
-고치는 ruff 둘은 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기
+그때 병목이던 pytest 에 1.5~6.7초를 더한다(손으로 봤다). 함께 띄운 벽시계 시간은 다시 재지 않았다.
+파일을 고치는 ruff 둘은 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기
 하나다. CI 는 잡마다 명령을 직접 돈다(`.github/workflows/ci.yml`).
+
+pytest 는 pytest-xdist 로 논리 CPU 수의 절반만큼 프로세스를 나눠 돈다(ADR 0035). 함께 띄운 뒤에도
+한 프로세스 pytest 가 가장 긴 막대라, 문서만 바꾼 커밋도 약 11.5분 걸렸다(대기열 309). 나누는
+자리는 이 러너뿐이다. 손으로 치는 `uv run pytest`, `tools/mutate.py` 가 띄우는 pytest, LLM
+테스트(`-m llm`), CI 는 한 프로세스로 돈다. 그래서 테스트끼리 부딪혀서 나는 실패는 이 러너에서만
+나고, CI 의 빨강과 따로 읽는다.
 
 통과한 검사는 한 줄을, 실패한 검사는 그 줄 뒤에 모은 출력(stdout 과 stderr)을 끝난 차례로 찍는다.
 하나라도 실패하면 1로 끝난다. pre-commit 의 `SKIP` 을 같은 id 로 읽어, `SKIP=pytest git commit` 이
@@ -23,7 +29,10 @@ ADR 0005 의 2026-10-07 이력). 그래서
 못 보는 것: 검사 하나가 멈추면 러너도 멈춘다(시간 제한이 없다. pre-commit 도 두지 않는다). CPU 가
 넷보다 적은 기계에서 함께 띄운 것이 차례로 돈 것보다 느린지는 재지 않았다. Windows 의
 `pnpm.cmd` 길은 위 실행에서 한 번 봤을 뿐이고, 그 길을 거는 상설 테스트는 없다. CI 는 Linux 에서만
-돈다.
+돈다. 세션 둘이 같은 시각에 커밋하면 pytest 프로세스가 두 배로 떠, 시간에 기댄 사례가 빨개질 수
+있다. 잠금은 두지 않았다(두 벌 동시의 한 바퀴는 `.scratch/harness/probes/precommit_xdist/` 가 잰다).
+절반 규칙은 이 PC(논리 CPU 16, 물리 코어 8)에서만 쟀고, `os.cpu_count()` 가 컨테이너의 CPU 한도를
+반영하는지는 재지 않았다.
 """
 
 from __future__ import annotations
@@ -59,10 +68,18 @@ class Outcome:
     seconds: float
 
 
+def pytest_workers(cpu_count: int | None) -> int:
+    """pytest 를 나눠 돌릴 프로세스 수. 논리 CPU 의 절반이고 1 아래로 내려가지 않는다(ADR 0035).
+
+    `os.cpu_count()` 는 하드웨어 스레드 수라 물리 코어의 두 배일 수 있고, 값을 모르면 None 이다.
+    """
+    return max(1, (cpu_count or 1) // 2)
+
+
 CHECKS: tuple[Check, ...] = (
     Check("pyright", ("uv", "run", "pyright")),
     Check("lint-imports", ("uv", "run", "lint-imports")),
-    Check("pytest", ("uv", "run", "pytest", "-q")),
+    Check("pytest", ("uv", "run", "pytest", "-q", "-n", str(pytest_workers(os.cpu_count())))),
     Check("check-instructions", ("uv", "run", "python", "tools/check_instructions.py")),
     Check("check-type-escapes", ("uv", "run", "python", "tools/check_type_escapes.py")),
     Check("run-hooks", ("uv", "run", "python", "tools/run_hooks.py")),

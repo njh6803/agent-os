@@ -14,7 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tools.run_checks import CHECKS, Check, run, skipped_ids
+import pytest
+from tools.run_checks import CHECKS, Check, pytest_workers, run, skipped_ids
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -39,6 +40,28 @@ def _waits_for(mine: Path, other: Path) -> str:
 def test_SKIP_을_pre_commit_처럼_쉼표로_나누고_공백을_걷는다() -> None:
     assert skipped_ids({"SKIP": " pytest, web-verify ,,"}) == {"pytest", "web-verify"}
     assert skipped_ids({}) == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("cpu_count", "workers"),
+    [(16, 8), (15, 7), (2, 1), (1, 1), (None, 1)],
+)
+def test_pytest_프로세스_수는_논리_CPU_의_절반이고_1_아래로_내려가지_않는다(
+    cpu_count: int | None, workers: int
+) -> None:
+    """ADR 0035. `os.cpu_count()` 는 값을 알아내지 못하면 None 이다."""
+    assert pytest_workers(cpu_count) == workers
+
+
+def test_러너의_pytest_는_계산한_프로세스_수로_나눠_돈다() -> None:
+    """`-n` 은 러너에만 둔다(손으로 치는 pytest, mutate, CI 는 한 프로세스로 둔다는 결정, ADR
+    0035)."""
+    (pytest_check,) = [check for check in CHECKS if check.id == "pytest"]
+    command = pytest_check.command
+
+    assert command[:4] == ("uv", "run", "pytest", "-q")
+    assert "-n" in command
+    assert command[command.index("-n") + 1] == str(pytest_workers(os.cpu_count()))
 
 
 def test_검사를_함께_띄운다(tmp_path: Path) -> None:

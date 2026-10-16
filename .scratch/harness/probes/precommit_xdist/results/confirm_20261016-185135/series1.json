@@ -1,0 +1,1 @@
+{"name": "series1", "seconds": 284.4, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 228.88, "pytest_start": 1792144296.302592, "pytest_end": 1792144525.1817317}
