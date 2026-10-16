@@ -62,6 +62,11 @@ CodeRabbit CLI는 좌석 미배정(`Seat: not assigned`, CLI 0.7.5)으로 돌지
 
 푸시 전에 main에 형제 PR #269(`code-review`의 코드 동작 불러 보기와 새 문장 넘기기)가 병합돼 합쳤다. 충돌은 `code-review` 센티널 주석 한 줄뿐이었다. main 쪽 줄을 살리고 그 안의 "4단계의 sonnet 규칙"만 바뀐 규칙으로 바꿨다. 합친 뒤 옛 규칙 잔존 grep은 명세와 이 티켓뿐이고, 카나리아는 `--preflight --control-commit 30b9f37`로 갈음했다(통과 1). 이 PR이 바꾼 4단계 문단과 `expect`는 그대로다.
 
+## PR 봇
+
+- CodeRabbit 첫 회차: Trivial 1. 카나리아가 표준 축의 모델 지침도 고정하라는 것이다. 옛 판에도 `model: sonnet`이 있어 그 낱말만으로는 대조군과 가르지 못하므로, `expect`의 첫 조각을 새 문장에만 있는 `` `model: sonnet` and `effort: high` ``로 넓혔다. `expect`만 고쳐 사전 확인으로 갈음했다.
+- claude-review 첫 회차: Minor 둘(`PRNUM` 자리표시자, "다음" 절 없음)과 Nit 하나는 이미 뒤 커밋에서 고친 것이었다. 둘째 회차: Minor 하나(티켓의 검증 명령 체크박스). 고치는 값이 작고 같은 푸시에 실려 고쳤다.
+
 ## 다음
 
 - 표준 축이 실제로 `sonnet`·`high`로 돌았는지(보고서 4절)와 넷의 스킬 목록이 0자인지(보고서 9절)는 티켓 09가 본다.
