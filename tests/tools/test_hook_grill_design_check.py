@@ -35,10 +35,28 @@ def test_다른_스킬은_침묵한다() -> None:
         assert context_for(_호출(skill)) is None, skill
 
 
-def test_플러그인_이름이_붙은_호출은_보지_않는다() -> None:
-    """못 보는 것(거짓 음성). 이 저장소의 스킬은 접두사 없는 이름 하나라 `플러그인:이름` 모양은
-    알리지 않고 지나간다."""
+def test_워크트리_세션이_부르는_경로_접두_이름도_알린다() -> None:
+    """대기열 284. 워크트리 세션은 이 저장소의 스킬을 `.claude/worktrees/<이름>:<스킬>` 로 부른다
+    (트랜스크립트의 Skill 입력에서 `code-review`·`next-session` 을 그 꼴로 부른 것을 봤다). 인계 훅
+    명세(`.scratch/token-usage/spec.md`)가 `code-review` 를 가르는 판정과 같다."""
+    assert context_for(_호출(".claude/worktrees/existing-hook-fixes:grill-with-docs")) is not None
+
+
+def test_다른_자리의_같은_이름은_지나간다() -> None:
+    """플러그인 이름(`플러그인:이름`)과 `.claude` 로 시작하지 않는 경로 접두(다른 폴더의 스킬)는 이
+    저장소의 grill-with-docs 가 아니다. 접두가 맞아도 이름이 다르면 지나간다."""
     assert context_for(_호출("some-plugin:grill-with-docs")) is None
+    assert context_for(_호출("web:grill-with-docs")) is None
+    assert context_for(_호출(".claude/worktrees/x:grilling")) is None
+
+
+def test_경로_접두는_claude_폴더_자체이거나_그_아래다() -> None:
+    """`.claude` 로 시작하는 다른 이름(`.claudeX`, `.claude-plugin`)은 그 폴더가 아니다(PR 직전 버그
+    축). 윈도 구분자도 받는다."""
+    assert context_for(_호출(".claude:grill-with-docs")) is not None
+    assert context_for(_호출(".claude\\worktrees\\x:grill-with-docs")) is not None
+    assert context_for(_호출(".claudeX:grill-with-docs")) is None
+    assert context_for(_호출(".claude-plugin:grill-with-docs")) is None
 
 
 def test_Skill이_아닌_도구는_보지_않는다() -> None:

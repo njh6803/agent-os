@@ -117,6 +117,21 @@ class Overlap(NamedTuple):
     stderr: str
 
 
+class JournalNumbers(NamedTuple):
+    """도구 출력에서 읽은 일지 순번들(`YYYY-MM-DD-NN`). 다음 빈 번호, 이 브랜치의 새 번호, 옮길
+    번호(옛 순번 → 새 순번)다."""
+
+    following: str
+    fresh: frozenset[str]
+    moves: dict[str, str]
+
+
+class Unreadable(NamedTuple):
+    """도구 출력에서 일지 순번을 읽지 못한 까닭."""
+
+    reason: str
+
+
 CONTEXT = (
     "docs/journal/ 의 일지를 단계를 닫는 모양으로 갱신했다('다음' 절을 새로 썼다). "
     "retro 스킬의 계기다. 사용자에게 묻지 말고 Skill 도구로 retro 를 지금 돌린다."
@@ -261,6 +276,59 @@ def _unchecked(name: str, reason: str) -> str:
     )
 
 
+def read_numbers(stdout: str) -> JournalNumbers | Unreadable:
+    """도구 출력의 다음 빈 번호·이 브랜치의 새 번호·옮길 번호 줄. 앞의 두 줄 가운데 하나를 읽지
+    못하면 그 까닭이다."""
+    found = NEXT_LINE.search(stdout)
+    if found is None:
+        return Unreadable("출력에서 다음 빈 번호를 읽지 못했다")
+    ours = OURS_LINE.search(stdout)
+    if ours is None:
+        return Unreadable("출력에서 이 브랜치의 새 번호를 읽지 못했다")
+    moves: dict[str, str] = {}
+    for line in MOVES_LINE.findall(stdout):
+        moves.update(JOURNAL_MOVE.findall(line))
+    fresh = frozenset(OURS_JOURNAL.findall(ours.group(1) or ""))
+    return JournalNumbers(found.group(1), fresh, moves)
+
+
+def _is_next(current: str, numbers: JournalNumbers) -> bool:
+    """`current` 가 이 브랜치의 새 번호이고 다음 빈 번호가 같은 날의 바로 다음 순번인가. 새 번호에
+    없으면 merge-base 나 main 의 일지가 이미 쓴 순번이다. 도구는 그것을 새 일지로 세지 않아, 다음 빈
+    번호가 마침 그 바로 다음일 수 있다."""
+    following = numbers.following
+    return (
+        current in numbers.fresh
+        and current[:10] == following[:10]
+        and int(current[11:]) + 1 == int(following[11:])
+    )
+
+
+def _misnamed(name: str, following: str) -> str:
+    return (
+        f"{NUMBER_LEAD} 만든 파일 `{name}` 의 이름이 `YYYY-MM-DD-NN-<슬러그>.md` 꼴이 아니다."
+        f" 다음 빈 번호는 {following} 다. 그 번호로 파일 이름과 머리 줄을 바꾼다(대기열 232)."
+        f" {RENAME_NOTE}"
+    )
+
+
+def _move_notice(name: str, current: str, target: str) -> str:
+    """순번 `current` 로 만든 일지를 `target` 으로 옮기라는 문장."""
+    return (
+        f"{NUMBER_LEAD} 만든 파일은 `{name}`(순번 {current})이고 옮길 번호는 {target} 다."
+        f" 파일 이름의 순번과 머리 줄(`# {target[:10]} ({target[11:]})`)을 {target} 으로"
+        " 바꾸고, 이 순번을 든 인용이 있으면 함께 고친다. 번호는 손으로 고르지"
+        f" 않는다(대기열 232). {RENAME_NOTE}"
+    )
+
+
+# 도구의 옮길 번호에 든 순번이면 `--move` 가 옮긴다
+MOVE_NOTE = (
+    " 형제와 겹쳤거나 main 의 최신 일지보다 이름순으로 앞이라, `"
+    f"{OVERLAP_COMMAND} --move` 가 이름과 머리 줄, 인용을 함께 옮긴다."
+)
+
+
 def number_context(file_path: str, overlap: Overlap | None) -> str | None:
     """새 일지의 순번이 도구의 다음 빈 번호와 다르면 알릴 문장, 같으면 None. 대 보지 못하면 그
     까닭과 칠 명령이다."""
@@ -270,45 +338,19 @@ def number_context(file_path: str, overlap: Overlap | None) -> str | None:
     if overlap.code not in (0, 1):
         first = next((line for line in overlap.stderr.splitlines() if line.strip()), "")
         return _unchecked(name, f"종료 {overlap.code}: {first.strip()}")
-    found = NEXT_LINE.search(overlap.stdout)
-    if found is None:
-        return _unchecked(name, "출력에서 다음 빈 번호를 읽지 못했다")
-    ours = OURS_LINE.search(overlap.stdout)
-    if ours is None:
-        return _unchecked(name, "출력에서 이 브랜치의 새 번호를 읽지 못했다")
-    following = found.group(1)
-    fresh = set(OURS_JOURNAL.findall(ours.group(1) or ""))
+    numbers = read_numbers(overlap.stdout)
+    if isinstance(numbers, Unreadable):
+        return _unchecked(name, numbers.reason)
     key = JOURNAL_KEY.match(name)
-    moves: dict[str, str] = {}
-    for line in MOVES_LINE.findall(overlap.stdout):
-        moves.update(JOURNAL_MOVE.findall(line))
     if key is None:
-        return (
-            f"{NUMBER_LEAD} 만든 파일 `{name}` 의 이름이 `YYYY-MM-DD-NN-<슬러그>.md` 꼴이 아니다."
-            f" 다음 빈 번호는 {following} 다. 그 번호로 파일 이름과 머리 줄을 바꾼다(대기열 232)."
-            f" {RENAME_NOTE}"
-        )
+        return _misnamed(name, numbers.following)
     current = f"{key.group(1)}-{key.group(2)}"
-    moved = moves.get(current)
-    # 새 번호에 없으면 merge-base 나 main 의 일지가 이미 쓴 순번이다. 도구는 그것을 새 일지로 세지
-    # 않아, 다음 빈 번호가 마침 그 바로 다음일 수 있다
-    if moved is None and current in fresh:
-        day, number = following[:10], int(following[11:])
-        if key.group(1) == day and int(key.group(2)) + 1 == number:
-            return None
-    target = moved or following
-    text = (
-        f"{NUMBER_LEAD} 만든 파일은 `{name}`(순번 {current})이고 옮길 번호는 {target} 다."
-        f" 파일 이름의 순번과 머리 줄(`# {target[:10]} ({target[11:]})`)을 {target} 으로"
-        " 바꾸고, 이 순번을 든 인용이 있으면 함께 고친다. 번호는 손으로 고르지"
-        f" 않는다(대기열 232). {RENAME_NOTE}"
-    )
+    moved = numbers.moves.get(current)
     if moved is not None:
-        text += (
-            " 형제와 겹쳤거나 main 의 최신 일지보다 이름순으로 앞이라, `"
-            f"{OVERLAP_COMMAND} --move` 가 이름과 머리 줄, 인용을 함께 옮긴다."
-        )
-    return text
+        return _move_notice(name, current, moved) + MOVE_NOTE
+    if _is_next(current, numbers):
+        return None
+    return _move_notice(name, current, numbers.following)
 
 
 def _resolved(file_path: str, cwd: str | None) -> Path:
