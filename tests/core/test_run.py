@@ -4044,6 +4044,65 @@ async def test_런타임이_멈춘_에이전트의_정리_코드는_실행이_�
     assert "run_finished" not in [e.type for e in events]
 
 
+class MessyCleanupAgent:
+    """지어낸 실패 이벤트를 낸 뒤 끝남을 내려 하고, 정리 코드에서 다른 예외를 낸다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            yield RunFailed(run_id=ctx.run_id, ts=ctx.now(), error=FORGED_ERROR)
+            yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
+        finally:
+            raise ValueError("정리 코드의 예외")
+
+
+async def test_에이전트의_정리_코드가_낸_예외는_먼저_붙잡은_실패를_덮지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """먼저 난 실패가 메시지를 정한다. 런타임이 에이전트의 제너레이터를 그 자리에서 닫는 동안 정리
+    코드가 낸 예외는 뒤따른 것이라 버린다."""
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(MessyCleanupAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    assert FORGED_ERROR in failed.error
+    assert "정리 코드의 예외" not in failed.error
+
+
+class SlowCleanupAfterPauseAgent:
+    """일시정지 신호를 삼키고 끝남을 내려 하며, 정리 코드에서 기한보다 오래 기다린다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            try:
+                await ctx.tool("send", to="bob")
+            except BaseException:
+                pass
+            yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
+        finally:
+            await anyio.sleep(LATE)
+
+
+async def test_멈춘_뒤_에이전트의_정리_코드에서_기한이_와도_실패가_덧붙지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """일시정지가 기록되면 결말이 정해진 것이다. 그 뒤 런타임이 그 자리에서 닫는 에이전트의 정리
+    코드가 기한을 넘겨도 실패를 덧붙이지 않는다 — 덧붙이면 멈춘 실행을 재개할 수 없다."""
+    agent = SlowCleanupAfterPauseAgent()
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(agent)
+
+    events = await _run(
+        agent, model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=SHORT
+    )
+
+    assert [e.type for e in events] == ["run_started", "run_paused"]
+    assert trace.events == events
+
+
 class FailureThenGatedAgent:
     """지어낸 실패 이벤트를 낸 뒤 승인 대상을 부른다. 이 판 전의 런타임은 그 실패를 트레이스에
     그대로 쓰고 승인 대상에서 실행을 멈췄다."""

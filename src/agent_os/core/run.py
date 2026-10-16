@@ -69,7 +69,7 @@ run_failed 를 쓴다. 그래서 요약 중이었어도 같은 메시지이고, 
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator, Mapping, Sequence
-from contextlib import aclosing, asynccontextmanager
+from contextlib import aclosing, asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
 from typing import NoReturn, TypeGuard, assert_never
@@ -741,6 +741,9 @@ class _Body:
                         raise
                 finally:
                     self._paused = ctx.paused
+                    # 일시정지가 기록되면 결말이 정해진 것이다. 에이전트의 정리 코드(`_closing`)가
+                    # 기다리는 동안 기한이 와 이 자리를 예외로 지나가도 실패를 덧붙이지 않는다.
+                    self._settled = self._settled or ctx.paused
                     for pending in ctx.take_events():
                         yield pending
                 # 에이전트의 몫이 끝났다. 여기서부터는 도구 연결의 정리뿐이다. 마지막 이벤트가
@@ -779,10 +782,22 @@ async def _closing(events: AsyncIterator[Event]) -> AsyncGenerator[AsyncIterator
     범위를 쥐고 있으면 그 자리에서 깨진다. 몸통이 안쪽 제너레이터를 `aclosing` 으로 닫는 까닭과
     같다. sdk 의 `BaseAgent.run` 은 `AsyncIterator` 를 돌려준다고만 약속하므로 닫을 것이 있는
     제너레이터일 때만 닫는다.
+
+    먼저 난 것이 이긴다. 런타임이 실패를 들고 나오는 중에 에이전트의 정리 코드가 다른 예외를
+    내면(`finally` 의 예외, `GeneratorExit` 을 잡고 다시 yield) 그 예외는 뒤따른 것이라 버린다 —
+    덮으면 실패의 메시지가 그 정리 코드의 것이 된다. 취소와 일시정지 신호는 `Exception` 이 아니라
+    버리지 않는다. 못 보는 것: 정리 코드가 승인 대상을 부르면 게이트가 그 자리에서 일시정지를
+    기록하므로, 들고 나오던 실패가 있어도 실행은 멈춘 채 끝난다(재개하면 그 실패의 자리에서 다시
+    실패한다).
     """
     try:
         yield events
-    finally:
+    except BaseException:
+        if isinstance(events, AsyncGenerator):
+            with suppress(Exception):
+                await events.aclose()
+        raise
+    else:
         if isinstance(events, AsyncGenerator):
             await events.aclose()
 

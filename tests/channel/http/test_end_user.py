@@ -1999,7 +1999,7 @@ async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_�
 
 async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_CORS_헤더가_붙는다() -> None:
     """페이지 안 위젯이 이어 가기의 에러 봉투도 읽어 404 와 409 를 가를 수
-    있다(end-user-continuation 스토리 11·21. 무엇을 할지는 web-widget 이 정한다). 401 은 인증이,
+    있다(end-user-continuation 스토리 11. 무엇을 할지는 web-widget 이 정한다). 401 은 인증이,
     나머지는 표가 낸다."""
     origin = {"Origin": ORIGIN}
     trace = FakeTrace()
