@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from tools.queue_open_rows import QUEUE, Row, by_target, main, paths_in, read_rows, render
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -248,6 +249,32 @@ def test_main은_인자가_틀리면_2로_끝난다() -> None:
     assert main(["--queue"]) == 2
     assert main(["--모름"]) == 2
     assert main(["--queue", "a.md", "--ref", "HEAD"]) == 2
+
+
+def test_main은_대시로_시작하는_ref를_git에_넘기지_않는다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 리뷰: `--ref --output=<경로>` 는 git 이 옵션으로 읽어 파일을 쓰려 했다.
+
+    git 이 그 경로를 열지 못해도 2로 끝나므로, git 까지 가지 않고 사용법 오류로 막혔는지를 본다.
+    """
+    written = tmp_path / "x"
+    assert main(["--ref", f"--output={written}"]) == 2
+    assert "쓰임:" in capsys.readouterr().err
+    assert not list(tmp_path.iterdir())
+
+
+def test_main은_UTF8이_아닌_대기열이면_2로_끝난다(tmp_path: Path) -> None:
+    """PR 직전 버그 리뷰: 해독 실패가 트레이스백의 1로 끝나 칸 오류와 섞였다."""
+    path = tmp_path / "queue.md"
+    path.write_bytes(queue("| 1 | 일 | `a.md` | 1회차 |").encode("cp949"))
+    assert main(["--queue", str(path)]) == 2
+
+
+def test_닫히지_않은_백틱_뒤의_경로는_세지_않는다() -> None:
+    """못 보는 것."""
+    targets, _ = paths_in("`a/b.md`와 `열림 `c/d.md`")
+    assert targets == ("a/b.md",)
 
 
 def _run(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:

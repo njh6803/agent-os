@@ -33,6 +33,8 @@
   `tools/`와 그 아래 파일)은 다른 대상이다.
 - 결정표의 둘째 조건인 "사용자가 순서를 올린 항목"은 행에 표지가 없어 세지 않는다.
 - 회차를 숫자 아닌 말("세 번째")로만 적은 행은 회차를 모른다고 센다.
+- 어디로 칸의 백틱이 홀수 개면 닫히지 않은 백틱 뒤의 경로를 세지 않는다. 2026-10-16의 대기열에는
+  그런 행이 없다(PR 직전 버그 리뷰가 찾아봤다).
 
 쓰임: `uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>] [--rows]`. 기본은 지금
 폴더의 `.scratch/retro-queue.md`라 저장소 루트에서 친다. `--ref`는 `git show <커밋>:<그 경로>`로
@@ -250,14 +252,16 @@ def main(argv: list[str]) -> int:
             each = True
         elif arg == "--queue" and args and ref is None:
             path = Path(args.pop(0))
-        elif arg == "--ref" and args and path is None:
+        elif arg == "--ref" and args and path is None and not args[0].startswith("-"):
+            # `-` 로 시작하면 git 이 옵션으로 읽는다(`--output=<경로>` 는 파일을 쓴다)
             ref = args.pop(0)
         else:
             sys.stderr.write(USAGE)
             return 2
     try:
         text = read_ref(ref) if ref is not None else (path or QUEUE).read_text(encoding="utf-8")
-    except OSError as error:
+    except (OSError, UnicodeDecodeError) as error:
+        # 해독 실패를 놓치면 트레이스백의 종료 1이 "칸이 넷이 아닌 행" 과 섞인다
         sys.stderr.write(f"대기열을 읽지 못했다: {error}\n")
         return 2
     rows, broken = read_rows(text)

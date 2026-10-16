@@ -205,3 +205,23 @@ expect = "red"
 file = "tools/queue_open_rows.py"
 old = '''    if done.returncode != 0:'''
 new = '''    if False:'''
+
+[[mutation]]
+name = "대시로 시작하는 ref 를 넘긴다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "대시로_시작하는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''path is None and not args[0].startswith("-"):'''
+new = '''path is None:'''
+
+[[mutation]]
+name = "UTF-8 해독 실패를 잡지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "UTF8이_아닌"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    except (OSError, UnicodeDecodeError) as error:'''
+new = '''    except OSError as error:'''
