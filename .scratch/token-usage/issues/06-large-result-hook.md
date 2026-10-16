@@ -23,10 +23,10 @@
 - [x] `additionalContext`가 실제 세션의 모델에게 닿는지 모델이 그 문장을 옮기게 해서 본다(`.claude/rules/tools.md`의 새 훅이 함께 하는 넷)
 - [x] 문턱은 03의 장부(큰 도구 결과)와 같다. 03과 이 티켓 가운데 늦게 병합하는 쪽이 두 문턱이 같은지 보는 시험을 더한다(06이 먼저 병합된다. 03은 02에 막혀 아직 ready-for-agent다. 03 티켓의 "메모(06에서)"로 넘겼다)
 - [x] `tools/mutate.py`로 문턱과 범위 판정을 바꾸면 시험이 빨개지는지 본다
-- [ ] Read와 Bash 호출에서 훅이 쓰는 시간을 재서 `.claude/rules/tools.md`의 시간 목록에 더한다. 그 rules를 원천으로 든 카나리아 가운데 바뀐 문장에 닿는 것을 돌려 결과 줄을 고친다(`tools/sibling_overlap.py`가 본다)
+- [x] Read와 Bash 호출에서 훅이 쓰는 시간을 재서 `.claude/rules/tools.md`의 시간 목록에 더한다. 그 rules를 원천으로 든 카나리아 가운데 바뀐 문장에 닿는 것을 돌려 결과 줄을 고친다(`tools/sibling_overlap.py`가 본다)
 - [x] `KICKOFF.md` 7단계의 `.claude/settings.json` 항목에 이 등록은 새 프로젝트에 복사하지 않는다고 적고, 그 항목이 늘어놓은 PostToolUse 매처를 맞춘다(명세 Out of Scope)
 - [ ] 레벨 스윕 README의 조건 변경 절에 큰 결과 알림 훅 줄을 이 PR 번호로 적는다. 절이 없으면 만들고 절 머리에 효과가 서는 때를 한 번 적는다(명세 "레벨 스윕 기록"). `sweep.py prereg`가 0으로 끝난다
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이다
 
 ### 이 티켓이 정할 것
 
