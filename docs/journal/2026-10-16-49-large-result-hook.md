@@ -1,4 +1,4 @@
-# 2026-10-16 (43) 큰 결과 알림 훅
+# 2026-10-16 (49) 큰 결과 알림 훅
 
 `next-session` 지시문(기능 token-usage, 티켓 06, 나란히 여는 넷 가운데 셋째)으로 연 새 세션이다. 묶음의 첫 세션이
 아니라 `tidy-checkouts`는 돌지 않았고, 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `06-large-result-hook`)로
