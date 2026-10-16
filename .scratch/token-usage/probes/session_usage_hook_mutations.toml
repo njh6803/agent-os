@@ -120,7 +120,7 @@ expect = "red"
 expect_output = ["test_워크트리에서_연_세션도_주_체크아웃의_장부에_쓴다"]
 [[mutation.edit]]
 file = "tools/hook_session_usage.py"
-old = '''    return Path(done.stdout.strip()).parent'''
+old = '''    return common_dir_parent(done.stdout)'''
 new = '''    return Path(project)'''
 
 [[mutation]]
@@ -153,11 +153,11 @@ expect = "red"
 expect_output = ["test_장부를_쓰지_못해도_0으로_끝나고_요약은_따로_보인다"]
 [[mutation.edit]]
 file = "tools/hook_session_usage.py"
-old = '''            os.close(fd)
+old = '''                return
     except OSError:
         return
 '''
-new = '''            os.close(fd)
+new = '''                return
     except KeyError:
         return
 '''
@@ -203,6 +203,31 @@ file = "tools/run_hooks.py"
 old = '''        "AGENT_OS_HEADLESS",
         *REPO_LOCATION_VARS,'''
 new = '''        *REPO_LOCATION_VARS,'''
+
+[[mutation]]
+name = "옛 git 의 상대 경로를 공용 디렉터리로 받는다"
+tests = ["tests/tools/test_hook_session_usage.py", "-k", "절대_경로"]
+expect = "red"
+expect_output = ["test_git_공용_디렉터리는_절대_경로_한_줄일_때만_받는다"]
+[[mutation.edit]]
+file = "tools/hook_session_usage.py"
+old = '''    if len(lines) != 1 or not Path(lines[0]).is_absolute():
+        return None
+    return Path(lines[0]).parent'''
+new = '''    if not lines:
+        return None
+    return Path(lines[-1]).parent'''
+
+[[mutation]]
+name = "사라진 줄을 다시 덧붙이지 않는다"
+tests = ["tests/tools/test_hook_session_usage.py", "-k", "사라졌으면"]
+expect = "red"
+expect_output = ["test_덧붙인_줄이_사라졌으면_다시_덧붙인다"]
+[[mutation.edit]]
+file = "tools/hook_session_usage.py"
+old = '''            if data in _tail(path):
+                return'''
+new = '''            return'''
 
 # 아래는 위 변이 가운데 순수 함수 시험이 먼저 잡는 것을, CLI 를 부르는 시험 하나로 좁혀 그 시험도 잡는지 본다.
 # 변이 도구는 pytest 를 첫 실패에서 멈추므로 좁히지 않으면 뒤의 시험이 잡는지 보이지 않는다.

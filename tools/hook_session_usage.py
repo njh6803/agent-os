@@ -18,8 +18,10 @@ ADR 0033(이력 2026-10-16 "요약은 새 보고서 뒤 처음 시작한 세션�
 출력 폴더. `CLAUDE_PROJECT_DIR`(없으면 페이로드의 `cwd`)의 git 공용 디렉터리의 부모(주 체크아웃)
 아래 `.scratch/token-report/` 다. 워크트리에서 시작한 세션도 같은 곳에 쓴다. git 저장소가 아니면
 아무것도 하지 않는다. `git rev-parse --path-format=absolute` 를 쓰므로 git 2.31 이상이어야
-한다(그보다 낮으면 git 이 실패해 저장소가 아닌 것과 같다. `tools/token_report.py` 도 같은 인자를
-쓴다).
+한다. 그보다 낮으면 git 이 그 옵션을 모르는 인자로 찍고 0 으로 끝나 상대 경로가 함께 나오므로,
+출력이 절대 경로 한 줄이 아니면 저장소가 아닌 것으로 본다(`common_dir_parent`).
+`tools/token_report.py` 의 `main_checkout` 도 같은 인자를 쓰고 그 확인이 없다(티켓 02 의 도구라
+고치지 않았다).
 
 요약. 출처가 `startup` 이고 헤드리스가 아닌 세션에서만 낸다(`shows_summary`). 요약 파일
 `summary.txt` 의 첫 줄 `보고서 날짜: YYYY-MM-DD` 를 읽어, `shown/summary-<보고서 날짜>` 표지를
@@ -64,8 +66,9 @@ ADR 0033(이력 2026-10-16 "요약은 새 보고서 뒤 처음 시작한 세션�
 - PC 가 36시간 넘게 꺼졌다 켜진 날 작업 스케줄러가 돌기 전에 연 첫 세션. 낡았다는 앞줄과 옛 요약을
   보이고 그날의 낡은 요약 표지를 가져간다. 작업이 돈 뒤의 새 요약은 보고서 날짜가 달라 다음 시작이
   본다.
-- 두 세션이 같은 순간에 덧붙인 줄. 줄 하나를 쓰기 하나로 덧붙이지만 윈도의 덧붙이기는 끝으로
-  옮기기와 쓰기가 따로라 줄이 섞일 수 있다(어림, 재지 않았다). 읽는 쪽은 읽지 못한 줄만 건너뛴다.
+- 두 세션이 같은 순간에 덧붙인 줄. 윈도의 덧붙이기는 같은 자리에 덮여 한 줄을 잃을 수 있고, 쓴
+  뒤 끝을 읽어 다시 덧붙이는 것(`append`)도 세 번 모두 덮이면 그 세션은 "계정 모름"이 된다. 덮이며
+  깨진 줄이 남으면 읽는 쪽은 그 줄만 건너뛴다(PR 직전 리뷰의 재현에서는 깨진 줄이 없었다).
 - 표지를 만들지 못한 때(출력 폴더에 쓸 수 없다). 요약을 보이지 않는다. 세션마다 거듭 보이는 것보다
   놓치는 것이 낫다.
 - 장부를 쓰지 못한 때(장부 폴더 자리에 파일이 있는 등). 그 세션의 계정 줄을 남기지 않고 지나가며,
@@ -90,6 +93,9 @@ type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 FORMAT = 1
 GIT_TIMEOUT = 5.0
 RETRY_DELAY = 0.2
+APPEND_TRIES = 3
+# 덧붙인 줄이 남았는지 볼 파일 끝. 한 줄은 수백 바이트이고 함께 시작하는 세션은 많아야 열 남짓이다.
+TAIL_BYTES = 64 * 1024
 SUMMARY_SOURCE = "startup"
 STALE_AFTER = timedelta(hours=36)
 DATE_LINE = re.compile(r"보고서 날짜: ([0-9]{4}-[0-9]{2}-[0-9]{2})")
@@ -159,19 +165,34 @@ def account_line(session: str, source: str | None, account: Account, at: datetim
     return json.dumps(line, ensure_ascii=False)
 
 
-def append(path: Path, line: str) -> None:
-    """`line` 에 줄바꿈을 붙여 쓰기 하나로 덧붙인다. 윈도에서는 `O_BINARY` 로 열어 줄 끝이 LF 다.
-    그것 없이 연 `os.open` 은 윈도의 CRT 가 텍스트 모드로 열어 `\\n` 을 `\\r\\n` 으로 바꿨다(셀프
-    리뷰가 이 PC 에서 바이트로 봤다). 쓰지 못하면 그대로 지나간다 — 세션 시작을 깨지 않는다."""
+def append(path: Path, line: str, write: Callable[[int, bytes], int] = os.write) -> None:
+    """`line` 에 줄바꿈을 붙여 쓰기 하나로 덧붙이고, 파일 끝(`TAIL_BYTES`)에 그 줄이 없으면 다시
+    덧붙인다(`APPEND_TRIES` 번까지). 윈도의 덧붙이기는 끝으로 옮기기와 쓰기가 따로라 함께 시작한
+    세션이 같은 자리에 써 한 줄이 사라졌다(PR 직전 버그 리뷰가 훅 열여섯 개를 한꺼번에 풀어 열 번에
+    160줄 중 4줄을 봤다). 같은 줄이 두 번 들어도 읽는 쪽에는 같다. 윈도에서는 `O_BINARY` 로 열어 줄
+    끝이 LF 다. 그것 없이 연 `os.open` 은 윈도의 CRT 가 텍스트 모드로 열어 `\\n` 을 `\\r\\n` 으로
+    바꿨다(셀프 리뷰가 이 PC 에서 바이트로 봤다). 쓰지 못하면 그대로 지나간다 — 세션 시작을 깨지
+    않는다."""
+    data = (line + "\n").encode("utf-8")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _BINARY)
-        try:
-            os.write(fd, (line + "\n").encode("utf-8"))
-        finally:
-            os.close(fd)
+        for _ in range(APPEND_TRIES):
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _BINARY)
+            try:
+                write(fd, data)
+            finally:
+                os.close(fd)
+            if data in _tail(path):
+                return
     except OSError:
         return
+
+
+def _tail(path: Path) -> bytes:
+    """파일 끝의 `TAIL_BYTES` 바이트."""
+    with path.open("rb") as fh:
+        fh.seek(max(0, path.stat().st_size - TAIL_BYTES))
+        return fh.read()
 
 
 class Notice(NamedTuple):
@@ -253,7 +274,17 @@ def main_checkout(project: str) -> Path | None:
         return None
     if done.returncode != 0:
         return None
-    return Path(done.stdout.strip()).parent
+    return common_dir_parent(done.stdout)
+
+
+def common_dir_parent(stdout: str) -> Path | None:
+    """`git rev-parse --path-format=absolute --git-common-dir` 의 출력에서 공용 디렉터리의 부모.
+    절대 경로 한 줄이 아니면 None 이다. git 2.31 전에는 그 옵션을 모르는 인자로 찍고 0 으로 끝나
+    상대 경로가 함께 나왔다(PR 직전 버그 리뷰가 git 2.32 에 모르는 옵션을 줘 봤다)."""
+    lines = stdout.splitlines()
+    if len(lines) != 1 or not Path(lines[0]).is_absolute():
+        return None
+    return Path(lines[0]).parent
 
 
 def _text(value: object) -> str | None:

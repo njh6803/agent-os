@@ -120,6 +120,8 @@ def main() -> int:
                 after = ledger.read_text(encoding="utf-8").splitlines()
                 account = json.loads(after[-1])["account_uuid"] if after else "없음"
                 grew = len(after) == len(before) + 1 and account == (None if broken else UUID)
+                # 읽지 못한 갈래는 0.2초를 기다렸어야 그 길을 지난 것이다.
+                grew = grew and (not broken or elapsed >= 200)
                 if outcome != expect or marker not in message or not grew:
                     print(f"  어긋남 {name}: 기대 {expect}·{marker!r}, 실제 {outcome}, 줄 {grew}")
                     bad += 1

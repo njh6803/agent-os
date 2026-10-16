@@ -24,7 +24,9 @@ from tools.hook_session_usage import (
     Account,
     Notice,
     account_of,
+    append,
     claim,
+    common_dir_parent,
     read_account,
     shows_summary,
     summary_notice,
@@ -126,6 +128,35 @@ def test_계정_기록_한_줄은_명세의_모양_그대로다(tmp_path: Path) 
     )
     assert matched is not None, line
     assert matched.groups()[1:] == (SID, UUID, EMAIL)
+
+
+def test_git_공용_디렉터리는_절대_경로_한_줄일_때만_받는다() -> None:
+    """git 2.31 전에는 `--path-format` 을 모르는 인자로 찍고 0 으로 끝나, 상대 경로 `.git` 이 함께
+    나온다(PR 직전 버그 리뷰가 git 2.32 에 모르는 옵션을 줘 그 출력을 봤다). 그 부모(`.`)를 쓰면
+    장부가 작업 폴더 아래에 쌓인다."""
+    absolute = Path.cwd().anchor + "repo/.git"
+
+    assert common_dir_parent(absolute + "\n") == Path(absolute).parent
+    assert common_dir_parent("--path-format=absolute\n.git\n") is None
+    assert common_dir_parent(".git\n") is None
+    assert common_dir_parent("") is None
+
+
+def test_덧붙인_줄이_사라졌으면_다시_덧붙인다(tmp_path: Path) -> None:
+    """윈도의 덧붙이기는 끝으로 옮기기와 쓰기가 따로라, 함께 시작한 세션이 같은 자리에 써 한 줄이
+    사라졌다(PR 직전 버그 리뷰가 훅 열여섯 개를 한꺼번에 풀어 열 번에 160줄 중 4줄이 사라진 것을
+    봤다). 첫 쓰기가 남의 줄에 덮인 장면을, 첫 쓰기를 남의 줄로 바꿔 만든다."""
+    path = tmp_path / "accounts.jsonl"
+    writes: list[bytes] = []
+
+    def 덮인다(fd: int, data: bytes) -> int:
+        writes.append(data)
+        return os.write(fd, b'{"other": 1}\n' if len(writes) == 1 else data)
+
+    append(path, '{"mine": 1}', 덮인다)
+
+    assert path.read_bytes() == b'{"other": 1}\n{"mine": 1}\n'
+    assert len(writes) == 2
 
 
 def test_장부의_줄_끝은_윈도에서도_LF다(tmp_path: Path) -> None:
@@ -403,9 +434,10 @@ def test_표지를_만들지_못하면_보이지_않는다(tmp_path: Path) -> No
     assert not claim(tmp_path / "ok" / "summary-2026-10-15")
 
 
-def test_같은_순간에_덧붙여_섞인_줄은_그_줄만_잃는다(tmp_path: Path) -> None:
-    """못 보는 것: 윈도의 덧붙이기는 끝으로 옮기기와 쓰기가 따로라 두 세션의 줄이 섞일 수 있다
-    (어림). 읽는 쪽(`tools/token_report.py`)은 읽지 못한 줄만 건너뛰고 훅은 그 뒤에 줄을 잇는다."""
+def test_같은_순간에_덧붙여_깨진_줄은_그_줄만_잃는다(tmp_path: Path) -> None:
+    """못 보는 것: 함께 시작한 세션이 같은 자리에 덮어 깨진 줄이 남으면 읽는 쪽
+    (`tools/token_report.py`)은 그 줄만 건너뛰고 훅은 그 뒤에 줄을 잇는다. 줄이 통째로 사라지는 길은
+    `append` 가 다시 덧붙인다(위 시험)."""
     repo = _저장소(tmp_path)
     ledger = repo / ".scratch" / "token-report" / "ledger" / "accounts.jsonl"
     ledger.parent.mkdir(parents=True)
