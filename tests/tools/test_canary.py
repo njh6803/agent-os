@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 from tools.canary import (
+    HEADLESS_ENV,
     AgentOutcome,
     Facts,
     GitView,
@@ -46,6 +47,7 @@ from tools.canary import (
     target_problems,
     view_problems,
 )
+from tools.hook_session_usage import HEADLESS_MARKER
 
 _규칙_명세 = '''
 kind = "rule"
@@ -1754,6 +1756,19 @@ def test_claude가_제한_시간을_넘기면_그_회차는_0이_아닌_코드�
 
     assert result.exit_code != 0
     assert "시간" in result.stderr
+
+
+def test_띄운_세션의_환경에_헤드리스_표지를_붙인다(tmp_path: Path) -> None:
+    """세션 시작 훅(`tools/hook_session_usage.py`)이 이 표지가 있는 세션에서 요약의 표지를 가져가지
+    않는다(token-usage 티켓 04, 사용자가 골랐다). 훅은 이 도구를 import 하지 않아 이름을 따로
+    적는다."""
+    읽는_명령 = [sys.executable, "-c", f"import os; print(os.environ.get({HEADLESS_ENV!r}))"]
+
+    result = run_claude(읽는_명령, tmp_path, "")
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.strip() == "1"
+    assert HEADLESS_ENV == HEADLESS_MARKER
 
 
 @pytest.mark.parametrize(
