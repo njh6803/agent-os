@@ -150,7 +150,8 @@ def run_round(folder: Path, name: str) -> int:
     start = time.monotonic()
     code = run_checks.run(tuple(checks), os.environ, ROOT, buffer)
     seconds = round(time.monotonic() - start, 1)
-    text = buffer.getvalue().decode("utf-8", errors="replace")
+    # 러너는 실패한 검사의 출력 바이트를 그대로 옮긴다. `capture` 와 같은 까닭으로 `\r\n` 을 접는다.
+    text = buffer.getvalue().decode("utf-8", errors="replace").replace("\r\n", "\n")
     row = {
         "name": name,
         "seconds": seconds,

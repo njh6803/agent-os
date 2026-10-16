@@ -140,3 +140,101 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
   저장한 출력 11개의 줄 끝을 스크래치 스크립트로 `\n`으로 바로잡았다(파일마다 64줄, 내용은 그대로).
 - 이 실패로 커밋 뒤 경계에 온 것이 아니어서, 함께 온 인계 계기(세션 컨텍스트 약 40만 토큰)는 `next-session` "인계할 때" 1의
   인계하지 않는 때(계기를 낸 명령이 실패했다)로 보고 이 세션에서 이었다.
+- 다시 친 커밋 `fd61175b`의 pre-commit은 `Skipped` 없이 모두 통과했다. 러너는 check-instructions 0.8초, zizmor 1.1초,
+  lint-imports 2.1초, check-type-escapes 5.2초, pyright 28.0초, run-hooks 72.6초, pytest 174.4초, web-verify 227.2초였고,
+  표·줄 구분 문자·변이 표·인용 대조·커밋 메시지도 통과했다. 인용 대조의 경고 둘은 헌법 판 문단의 옛 판 서술에 있던 인용이다
+  (그 문단이 한 줄이라 판을 올리며 줄 전체가 더한 줄로 잡혔다).
+
+## 인계 (커밋 뒤)
+
+`fd61175b`를 커밋한 뒤 인계 계기(세션 컨텍스트 약 42.7만 토큰, 경계 `커밋 뒤`)가 다시 왔고, 이번에는 커밋이 성공해
+`next-session` "인계할 때"의 인계하지 않는 때 넷 가운데 어느 것에도 들지 않았다(요청 범위는 PR과 병합까지, 지시문의
+이어받을 상태는 `인계:`로 시작하지 않고, 이 일지에 `인계 못함` 줄이 없다). 이 세션의 지금 제목은
+`chore/precommit-xdist-runner`이고 넘기며 `chore/precommit-xdist-runner (인계함)`으로 바꾼다. 이 절은 커밋하지 않았다.
+새 세션이 이 파일을 이어 쓰고 커밋한다.
+
+이 세션이 번복하거나 고친 것: `confirm.py`의 표지 조건(문구만 바꿨다가 경계 입력으로 조건을 고쳤다), 저장한 출력의 겹친
+CR(첫 커밋 시도가 막혀 고쳤다). 결정은 모두 ADR 0035 안이고 사용자에게 물은 것은 없다.
+
+남은 단계: origin/main을 합친 뒤 PR 직전 리뷰의 대체 둘(`/security-review`, `bug-perf-review`. CodeRabbit CLI는
+`coderabbit auth status`가 `Seat: not assigned`였다), 그 반영, 이 일지의 PR 직전 리뷰·회고·다음 절, 푸시, PR, 봇 회차,
+병합. `bug-perf-review`에 밀 주장 여섯은 위 셀프 리뷰 절에 있다.
+
+지시문:
+
+```
+다음 작업: 대기열 309, pre-commit의 pytest를 러너에서만 xdist로 나눠 돌린다(ADR 0035의 구현)
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 309(pre-commit이 문서만 바꾼 커밋도 약 11.5분 걸리는 것)를 ADR 0035대로 구현하는 하네스 chore를 chore/precommit-xdist-runner 한 PR로 반영한다
+브랜치: chore/precommit-xdist-runner
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-16-70-precommit-xdist-runner.md(끝의 인계 절은 아직 커밋하지 않았다), docs/adr/0035-precommit-pytest-is-split-by-xdist-in-the-runner.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 fd61175b까지 구현, 셀프 리뷰 반영, ADR 0035 완료 조건 확인(한 바퀴 연속 5번과 두 벌 동시 3번이 모두 통과)을 마쳤다. 아직 푸시하지 않았고 PR도 없다. 남은 단계는 origin/main을 합친 뒤 PR 직전 리뷰 대체 둘(/security-review와 bug-perf-review. CodeRabbit CLI는 Seat: not assigned였다), 반영, 일지의 PR 직전 리뷰·회고·다음 절, 푸시, PR, 봇 회차, 병합이다. bug-perf-review 브리프에 밀 주장 여섯은 일지의 셀프 리뷰 절에 있다. 일지 파일은 docs/journal/2026-10-16-70-precommit-xdist-runner.md이고 끝의 인계 절이 커밋되지 않은 채 워크트리에 있다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-16T10:45:44Z
+
+## 이어받기 (새 세션)
+
+새 세션은 첫 턴 훅대로 제목을 `chore/precommit-xdist-runner`로 바꾼 뒤 `EnterWorktree(path)`로 이 워크트리에 들어가려
+했다. 도구가 `belongs to another running Claude Code session (locked: claude session precommit-xdist-runner (pid
+41220))`로 거부했다. pid 41220은 인계한 앞 세션(제목 `chore/precommit-xdist-runner (인계함)`)의 `claude.exe`였고, 그
+세션은 인계를 마친 뒤에도 `list_sessions`에서 `isRunning`이었다(20초 뒤에 다시 봐도 같았다). 앱이 연 세션은 턴을
+끝내도 프로세스가 남아 잠금의 pid가 살아 있다.
+
+ADR 0032는 `locked` 줄을 막는 이유로 쓰지 않고 세션이 쓰는지를 제목으로 보기로 했고, 앞 세션의 제목은 `(인계함)`이라
+그 확인을 지난다. 그래서 `git worktree unlock`으로 잠금만 풀고 `EnterWorktree(path)`로 들어왔다. 앞 세션은 `next-session`
+"인계할 때" 6대로 다시 깨어나도 일하지 않는다. 이 틈은 회고 후보로 올린다(아래 회고).
+
+origin/main은 `17e80b32`에서 움직이지 않아 합칠 것이 없었고, `sibling_overlap.py`는 번호 겹침 없음이었다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 여전히 `Seat: not assigned`라 대체 둘을 나란히 돌렸다.
+
+- **`/security-review`**: 발견 없음. 식별 서브태스크가 후보를 내지 않아 거르는 서브태스크는 띄우지 않았다. 측정 출력도
+  비밀 모양의 낱말로 찾았지만 나오지 않았다.
+- **`bug-perf-review`**(기준 `17e80b32`, 62개 파일, 호출 40): 유효 2, 보류 1, 오탐 0. 밀 주장 여섯 가운데 다섯은 근거와
+  맞았다.
+  - [Minor·유효] 밀 주장 5(README 변이 표 행의 "첫째가 시간 제한 40초보다 긴 것은 `taskkill`과 출력 배출을 기다리는
+    시간이 붙어서"). 리뷰가 `tools/mutate.py`의 `run_command`로 60초 자는 프로세스를 5초에 끊어 보니 끊은 뒤 붙는
+    시간이 0.6~0.7초였다(리뷰의 스크래치 스크립트, 잴 때의 부하는 모른다). 첫째는 기준선에 40초를 더한 값보다도 15.5초와
+    19.2초 길어 그 서술로 설명되지 않는다. 원인 문장을 "그 까닭은 재지 않았다"로 바꿨고 수는 그대로 뒀다.
+  - [Minor·유효] `confirm.py`의 `run_round`가 러너의 출력을 `\r\n`을 둔 채 텍스트 모드로 써, 첫 커밋 시도를 막은 것과
+    같은 홀로 선 CR이 생긴다. 러너는 실패한 검사의 출력 바이트를 그대로 옮긴다(`tools/run_checks.py`의 `run`). 앞
+    세션은 `capture`만 고쳤다. 가짜 실패 검사 하나만 둔 `run_round`를 불러 고치기 전에 `\r\r\n` 둘을 재현했고,
+    `.replace("\r\n", "\n")`을 더한 뒤 0이 됐다(스크래치 스크립트로 손으로 봤다). 저장한 11회차는 `other_failed`가 비어
+    영향이 없다.
+  - [Minor·보류] `os.cpu_count()`가 컨테이너의 CPU 한도를 반영하지 않으면 클라우드 세션의 러너가 `-n`을 과하게 붙인다.
+    ADR 0035와 러너 독스트링의 못 보는 것에 이미 있고, 클라우드 컨테이너에서 `os.cpu_count()`와
+    `len(os.sched_getaffinity(0))`를 함께 찍어야 닫힌다. 고치지 않고 PR 체크리스트에 판정과 값을 적는다.
+- 리뷰가 시나리오로 따라가 문제없다고 본 것: `pytest_workers`의 경계(`None`·0·1·2·3·-1→1, 15→7, 16→8), xdist가 없는
+  체크아웃(러너의 `uv run`이 개발 그룹을 동기화해 깔고, 동기화를 끈 환경이면 `unrecognized arguments: -n`과 종료 4로
+  뚜렷하게 빨갛다. 손으로 돌리지는 않았다), skip 판정(ADR 0035의 `skip_under_xdist.py` 결과), 두 벌 동시의 출력 경로.
+
+## 회고
+
+후보 셋, 승인 하나, 기각 둘, 넘김 0이다. 사람에게 넘긴 것이 없어 답을 기다리지 않았다.
+
+1. **승인 → 대기열 326.** 인계로 연 새 세션의 `EnterWorktree(path)`가 앞 세션의 살아 있는 pid 잠금에 거부됐다(위
+   "이어받기"). 사건은 이 세션에서 났고, 층은 행동이 일어나는 자리(`next-session` "인계할 때" 4의 열기 직전, 넘기는
+   세션이 자기 잠금을 푼다)의 단계 문장이며, PR 하나로 되돌릴 수 있다. 판정할 검사가 없는 것은 잠금을 풀어야 하는
+   때가 인계라는 절차 안에서만 정해지기 때문이다. 받는 쪽이 남의 잠금을 푸는 상시 규칙은 후보로 내지 않았다. 넘기는
+   쪽이 풀면 원인이 사라지고, 받는 쪽 규칙은 도구의 잠금 거부를 느슨하게 하는 것이라 넘김 몫이다. 이번에는 ADR
+   0032의 제목 판정에 기대 한 번 풀었다. 이 PR의 범위(대기열 309) 밖이고 바꾼 스킬은 새 세션에서 불러 봐야 해서 이
+   세션에서는 반영하지 않는다.
+2. **기각.** `confirm.py`의 `run_round`가 `capture`와 같은 줄 끝 결함을 남겼다(PR 직전 리뷰). 그 결과인 홀로 선 CR이
+   든 파일은 커밋 때 줄 구분 문자 검사(pre-commit의 훅과 pytest의 저장소 상태 테스트)가 이미 막는다. 첫 커밋 시도에서
+   실제로 막았다.
+3. **기각.** 셀프 리뷰를 반영하며 쓴 원인 문장(밀 주장 5)이 근거와 어긋났다. 대기열 260을 닫은 장치(`code-review` 6단계
+   1 끝, 새로 쓴 사실 문장을 PR 직전 리뷰에 밀 주장으로 나열한다)가 의도대로 다음 층에서 잡았다. 이미 있는 지침이
+   잡은 것이다.
+
+## 다음
+
+대기열 309는 이 PR로 닫힌다. 남긴 것은 셋이다. 컨테이너의 CPU 한도와 `os.cpu_count()`는 ADR 0035와 러너 독스트링의
+못 보는 것이고 PR 체크리스트에 보류로 적는다. 시간에 민감한 사례 가운데 `test_filesystem`의 재시도 사례와 대기열
+306은 열린 채다. 인계 잠금은 대기열 326이다.
