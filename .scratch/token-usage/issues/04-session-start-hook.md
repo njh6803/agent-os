@@ -19,7 +19,7 @@
 
 ### 시험과 실행 확인
 
-- [x] 명세 Testing Decisions의 세션 시작 훅 항목을 시험으로 고정한다. 줄의 모양, `fork`의 계정, 처음에 읽지 못한 `~/.claude.json`의 다시 읽기, 같은 보고서 날짜의 둘째 `startup`은 침묵, 05:00 전에 연 세션이 있었어도 새 요약 뒤의 다음 `startup`은 보임, 낡은 요약의 앞줄과 하루 한 번, 요약 파일이 없으면 침묵, 헤드리스 표지, 두 키 밖을 출력하지 않음이다. 선례는 `tests/tools/test_hook_session_web_deps.py`다
+- [x] 명세 Testing Decisions의 세션 시작 훅 항목을 시험으로 고정한다. 줄의 모양, `fork`의 계정, 처음에 읽지 못한 `~/.claude.json`의 다시 읽기, 같은 보고서 날짜의 둘째 `startup`은 침묵, 작업 시각(08:00, 티켓 08이 05:00에서 바꿨다) 전에 연 세션이 있었어도 새 요약 뒤의 다음 `startup`은 보임, 낡은 요약의 앞줄과 하루 한 번, 요약 파일이 없으면 침묵, 헤드리스 표지, 두 키 밖을 출력하지 않음이다. 선례는 `tests/tools/test_hook_session_web_deps.py`다
 - [x] 끝에서 끝까지 하나를 둔다. 훅이 쓴 줄을 `tools/token_report.py`가 읽어 그 세션의 비용이 계정별 절에 그 이메일로 든다
 - [x] `tools/hook_payloads.toml`에 발동(`notice`) 하나와 침묵 하나를 실제 입력으로 더한다. 사례는 `CLAUDE_PROJECT_DIR`을 임시 저장소 자리표시자로, 홈(`USERPROFILE`·`HOME`)을 `.claude.json`을 둔 임시 폴더로 줘 실제 장부와 표지에 닿지 않게 한다. 필요한 자리표시자를 러너에 더하고, 러너 독스트링의 자리표시자 목록과 수를 고친다(선례 `${BROKEN_WEB}`)
 - [x] `tools/mutate.py`로 표지 판정과 계정 고르기를 바꾸면 시험이 빨개지는지 본다
