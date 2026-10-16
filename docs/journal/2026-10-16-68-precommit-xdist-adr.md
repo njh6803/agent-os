@@ -1,4 +1,4 @@
-# 2026-10-16 (64) pre-commit의 pytest를 xdist로 나눠 돌리는 결정
+# 2026-10-16 (68) pre-commit의 pytest를 xdist로 나눠 돌리는 결정
 
 주 체크아웃의 세션에서 시작했고, 사용자의 질문 하나가 설계 인터뷰(`grill-with-docs`)로 이어졌다. 산출물은 ADR 0035(사용자가
 승인해 `accepted`)와 그 근거인 측정 프로브다. 구현은 워크트리 세션이 이어 간다. 브랜치는 `docs/precommit-xdist-adr`(워크트리
