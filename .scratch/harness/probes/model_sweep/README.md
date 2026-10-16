@@ -134,3 +134,11 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
   기간을 8주로 둔 것은 처리량이 주마다 크게 흔들려서다(구현 14에서 8).
 - 주마다의 비용 중앙값이 3주 사이에 두 배 가까이 움직였다. 지난 기록을 기준 갈래로 쓰면 시기의 효과가 레벨의 효과와
   섞이므로 두 갈래를 같은 기간에 나란히 돌린다.
+
+### 조건 변경(ADR 0033)
+
+두 갈래의 조건을 바꾸는 것을 한 줄씩 적는다(명세 `.scratch/token-usage/spec.md` "레벨 스윕 기록"). 효과가 서는 때는 병합
+시각이 아니라 주 체크아웃을 당긴 뒤 새로 연 세션부터다(`.claude/rules/tools.md`의 `CLAUDE_PROJECT_DIR`). 병합으로 드는 줄은 그 PR
+번호를, 적용으로 드는 줄은 적용한 시각(UTC)을 적고, 병합 시각은 사람 확인 티켓이 `gh pr view <번호> --json mergedAt`으로
+채운다.
+

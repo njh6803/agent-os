@@ -6,6 +6,9 @@ ADR 0033 본문의 수는 `.scratch/harness/probes/token_usage/`가 냈다.
 | 프로브 | 무엇을 재나 | 근거로 드는 곳 | 다시 돌 때 |
 |---|---|---|---|
 | `measure.py results <시간>` | 이 저장소의 Read·Bash·PowerShell 결과 글자 수 분포와, 범위 없이 받은 결과가 문턱(1만~4만 자)을 넘은 수·글자의 몫·기록 항목 무게의 몫 | 명세 "큰 결과 알림 훅" | 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/token-usage/probes/measure.py results 168`. 이 PC의 `~/.claude/projects/`(폴더 이름 `C--project-agent`로 시작) |
+| `handoff_reach.py <밖 폴더> <주 체크아웃>` | 문턱을 낮춘 인계 훅 사본의 additionalContext 가 `claude -p` 모델에게 닿는지(A, 대조군 B), 기본 권한 모드의 워크트리 세션이 주 체크아웃과 자기 체크아웃의 스킬 파일을 Read 할 때 거부되는지(C, 양성 대조 D). 탐침 훅이 실제 입력을 남긴다 | `tools/hook_handoff.py` 독스트링(`skill_for`), `tools/hook_payloads.toml` 의 인계 훅 사례, 일지 2026-10-16-57 | 워크트리 루트에서 `uv run python .scratch/token-usage/probes/handoff_reach.py <저장소 밖 폴더> <주 체크아웃>`. `claude` CLI 와 인증, sonnet 세션 넷 |
+| `handoff_time.py` | 인계 훅 둘의 한 번 시간을 등록 모양으로, 약 32MB 트랜스크립트에서 갈래 넷 다섯 번씩 | `.claude/rules/tools.md` 의 훅 시간 문단 | 저장소 루트에서 `uv run python .scratch/token-usage/probes/handoff_time.py` |
+| `handoff_hook_mutations.toml` | 인계 훅 둘의 경계 판정·문턱·셈·표지와 `hook_pr_next_session` 문장을 바꾸면 시험이 빨개지는지 | 티켓 05 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/handoff_hook_mutations.toml` |
 | `measure.py boundaries <시간>` | 메인 세션 컨텍스트가 20만을 넘은 뒤 처음 오는 경계의 종류, 그 지점의 세션 컨텍스트, 그 뒤 환산 비용. ADR 0033의 경계(커밋, PR 열기)와 셀프 리뷰 시작을 더한 경계를 견준다 | 명세 Problem Statement와 "인계 훅", ADR 0033 이력 2026-10-16 | 같은 자리에서 `... measure.py boundaries 168`. 단가표는 `.scratch/harness/probes/session_cost/costs.py` |
 
 표지, 판정의 정의(훅보다 넓은 커밋 판정 포함), 못 보는 것은 `measure.py` 독스트링이 원천이다.
