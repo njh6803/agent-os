@@ -60,6 +60,35 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STAND
   `enter_worktree_loading.py`의 `measured(first)`, 테스트 도우미 `_repository(merge_ref)`). 셋은 측정을 남긴 프로브의 코드라
   쪼개면 근거 코드가 바뀌고, 하나는 픽스처의 단계를 고른다. 새 표준 줄이 앞으로의 코드에 적용된다.
 - [Info, 명세] `.scratch/harness/probes/tidy_checkouts_mutations.toml`의 변이 원문(`judge_branch(..., contains(root, tip, ops.git))`)이
-  이제 코드에 없다. `tools/mutate.py` 독스트링이 옛 프로브의 원문은 코드가 바뀌면 썩어도 된다고 적어 두었다.
+  이제 코드에 없다. `tools/mutate.py` 독스트링이 옛 프로브의 원문은 코드가 바뀌면 썩어도 된다고 적어 두었다며 두었다. 이 판정은
+  틀렸고 PR 직전 버그·성능 축이 Major로 다시 내어 고쳤다(아래).
 
 ## 검사
+
+- 커밋 `f27b5a72`의 pre-commit이 모두 통과했다. ruff check·format, check-instructions, lint-imports, zizmor,
+  check-type-escapes, pyright, run-hooks, web-verify(268.8초), pytest(761.7초), 마크다운 표, 줄 구분 문자, 커밋 메시지다. 변이
+  표 검사는 커밋에 든 변이 표가 없어 Skipped였다. 인용 대조 경고 셋은 이 일지가 고치기 전의 옛 문장을 인용한 둘과 ADR 0013의
+  기존 인용 하나라 두었다.
+- 고치기 전의 판으로 `uv run pytest -q`를 손으로 한 번 돌려 3108 통과, 7 제외였다.
+- 어댑터(`adapters/filesystem.py`)를 건드려 `uv run --env-file ../../../.env pytest -m llm`을 돌렸다. 7 통과.
+  LLM 토큰 합계 41,191(입력 40,186, 출력 1,005). 트레이스 9개, 모델 호출 21건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
+
+## PR 직전 보안·버그·성능 축
+
+`coderabbit auth status`가 `Seat : not assigned`라 CLI 대신 내장 `/security-review`와 `bug-perf-review`를 돌렸다. origin/main이
+기점에서 움직이지 않아 합칠 것이 없었다.
+
+- **보안.** 신뢰도 8 이상인 지적은 없다. `admin/http.py`의 `enabled=body.enabled`가 본문 값을 그대로 넘기는 것,
+  `_INHERIT_HANDLE`이 argtypes `c_int`에서 0이 되어 옛 리터럴과 같은 것, `jwt_verify/cases.py`의 `asymmetric=` 셋이 옛 위치 값과
+  같은 것을 확인했다.
+- **버그·성능.** 유효 2, 오탐 0. 시그니처를 바꾼 함수의 호출부가 위치 인자로 남은 곳은 없었고(`.scratch`·`tools`·`tests`·
+  `.claude`를 grep), pytest가 `*` 뒤 매개변수를 매개변수화와 픽스처 둘 다로 넣는 것(124건)과 285 닫힘 칸의 수를 다시 쟀다.
+  - [Major] 고쳤다. `.scratch/harness/probes/tidy_checkouts_mutations.toml`의 변이 "remove-branch: 다시 판정하지 않는다"의
+    원문이 바뀐 `judge_branch(..., contains(...))` 호출을 가리켜 `tools/mutate.py --check`가 2로 끝났다. pre-commit의 변이 표
+    검사는 커밋에 든 표만 보아 지나갔다. `old`·`new`를 `contained=contains(...)`로 고쳐 133 모두 통과했다. 셀프 리뷰는 같은
+    자리를 "옛 원문은 썩어도 된다"는 Info로 넘겼는데, 원문 하나가 0번이면 표 전체가 돌지 않는다. 바뀐 파일을 가리키는 다른
+    변이 표 열 개도 `--check`로 봤고, 실패는 이 브랜치가 건드리지 않은 `tools/hook_bash_gate_pipe.py`를 가리키는
+    `run_checks_mutations.toml`의 "게이트 목록에서 검사 러너를 뺀다" 하나였다(기존 문제라 두었다).
+  - [Minor] 고쳤다. 표준 줄의 "`bool`로 주석한 위치 매개변수"가 실제 규칙보다 좁았다. 주석 없이 불리언 기본값만 있어도
+    FBT002가 막는다. 새 문장: "ruff FBT는 주석에 `bool`이 든 위치 매개변수, 불리언 기본값이 붙은 위치 매개변수, 호출에 위치로
+    넘긴 `True`/`False` 리터럴만 막는다."
