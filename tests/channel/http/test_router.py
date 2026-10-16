@@ -1803,6 +1803,7 @@ EXISTING_COMPONENTS = frozenset(
         "ConversationSummarized",
         "ErrorCode",
         "ErrorEnvelope",
+        "FailureCause",
         "Health",
         "Json",
         "LlmCalled",
@@ -1856,6 +1857,7 @@ END_USER_OPERATIONS = (
     ("/end-user/runs", "post"),
     ("/end-user/runs/{run_id}/approval", "post"),
     ("/end-user/runs/{run_id}/subscription", "get"),
+    ("/end-user/runs/{run_id}/continuation", "post"),
 )
 # 최종 사용자 면이 계약에 더한 컴포넌트. 항목 유니온과 멤버 일곱, 그리고 프레임에 `id` 를 싣는
 # 모양의 대가로 FastAPI 가 남기는 고아 `ServerSentEvent` 하나다(ADR 0023, 명세의 프레임 절).
@@ -1969,7 +1971,7 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
 
 def test_409_는_채널_라우트에만_있다() -> None:
     """대상의 상태나 주체가 요청을 허락하지 않는 것(재개 불가, 꺼짐, 다른 주체, 이어 갈 수 없음)을
-    만나는 것은 실행을 일으키거나 가리키는 라우트뿐이다 — 운영자 채널의 셋과 최종 사용자 면의 셋.
+    만나는 것은 실행을 일으키거나 가리키는 라우트뿐이다 — 운영자 채널의 셋과 최종 사용자 면의 넷.
     관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진 것을 거부하지 않는다."""
     paths = _app().openapi()["paths"]
 
@@ -2284,7 +2286,7 @@ def test_이어_가기_라우트가_지은_operation_id_와_봉투_에러_문서
 
 
 def test_공유_409_설명은_모든_채널_라우트에서_같고_상태와_주체를_함께_말한다() -> None:
-    """운영자 채널의 셋과 최종 사용자 면의 셋이 같은 설명을 나눠 쓴다. 최종 사용자 면의 꺼짐은
+    """운영자 채널의 셋과 최종 사용자 면의 넷이 같은 설명을 나눠 쓴다. 최종 사용자 면의 꺼짐은
     메시지만 고정 문구이고 설명은 공유 설명 그대로다(ADR 0017 이력)."""
     paths = _app().openapi()["paths"]
 

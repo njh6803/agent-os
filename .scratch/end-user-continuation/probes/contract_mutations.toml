@@ -1,0 +1,166 @@
+# 티켓 01(계약)의 변이 표. 구현 뒤에 쓴 테스트가 빨강을 볼 수 있는지 본다 — sdk 필드를 먼저 넣고 쓴
+# JSONL 옛 줄의 읽기, 실패 항목의 원인 키가 없어 빨갛던 최종 사용자 사례(지어낸 실패, 이어 가기의
+# 타임아웃), 투영의 원인, 에이전트의 제너레이터를 닫는 자리, api-client 의 경로 목록이다. 빨강의 판정은
+# `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/contract_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.tsc]
+command = ["pnpm", "exec", "tsc", "--noEmit", "-p", "packages/api-client"]
+cwd = "web"
+judge = "tsc"
+
+[[mutation]]
+name = "옛 줄의 실패 원인에 기본값이 없다"
+tests = ["tests/adapters/test_jsonl.py", "-k", "옛_줄은_원인과"]
+expect = "red"
+expect_output = ["missing (run_failed.cause): Field required"]
+
+[[mutation.edit]]
+file = "src/agent_os/sdk/events.py"
+old = '    cause: FailureCause | None = None'
+new = '    cause: FailureCause | None'
+
+[[mutation]]
+name = "옛 줄의 바로가기에 기본값이 없다"
+tests = ["tests/adapters/test_jsonl.py", "-k", "옛_줄은_원인과"]
+expect = "red"
+expect_output = ["missing (run_started.shortcuts): Field required"]
+
+[[mutation.edit]]
+file = "src/agent_os/sdk/events.py"
+old = '    shortcuts: Mapping[AgentName, RunId] | None = None'
+new = '    shortcuts: Mapping[AgentName, RunId] | None'
+
+[[mutation]]
+name = "에이전트가 낸 실패 이벤트가 통과한다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "지어낸_실패는"]
+expect = "red"
+expect_output = ["'run_id': 'run-1', 'cause': 'conversation_summary'}"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        case RunFailed(error=error):
+            raise RuntimeError(f"에이전트는 실패 이벤트를 낼 수 없다: {error}")
+'''
+new = '''
+        case RunFailed():
+            return
+'''
+
+[[mutation]]
+name = "재생 구간에서 에이전트가 낸 실패 이벤트가 통과한다"
+tests = ["tests/core/test_run.py", "-k", "재생_구간에서_에이전트가_실패"]
+expect = "red"
+expect_output = ["first extra item: 'tool_called'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        case RunFailed(error=error):
+            raise RuntimeError(f"에이전트는 실패 이벤트를 낼 수 없다: {error}")
+'''
+new = '''
+        case RunFailed():
+            return
+'''
+
+[[mutation]]
+name = "에이전트의 제너레이터를 닫지 않는다"
+tests = ["tests/core/test_run.py", "-k", "정리_코드는"]
+expect = "red"
+expect_output = ["where False = <tests.core.test_run.ClosingAgent object at"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    try:
+        yield events
+    except BaseException:
+        if isinstance(events, AsyncGenerator):
+            with suppress(Exception):
+                await events.aclose()
+        raise
+    else:
+        if isinstance(events, AsyncGenerator):
+            await events.aclose()
+'''
+new = '''
+    yield events
+'''
+
+[[mutation]]
+name = "정리 코드의 예외가 붙잡은 실패를 덮는다"
+tests = ["tests/core/test_run.py", "-k", "먼저_붙잡은_실패를"]
+expect = "red"
+expect_output = ["in 'ValueError: 정리 코드의 예외'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            with suppress(Exception):
+                await events.aclose()
+'''
+new = '''
+            await events.aclose()
+'''
+
+[[mutation]]
+name = "멈춘 뒤 결말 표지를 세우지 않는다"
+tests = ["tests/core/test_run.py", "-k", "멈춘_뒤_에이전트의_정리_코드에서"]
+expect = "red"
+expect_output = ["Left contains one more item: 'run_failed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+                    self._settled = self._settled or ctx.paused
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "최종 사용자 경로가 이어 가기에 타임아웃을 넘기지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "이어_가기도_조립이_넘긴_타임아웃"]
+expect = "red"
+expect_output = ["(1, 'progress') != (1, 'failed')"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            previous_run=previous_run,
+            visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds,
+'''
+new = '''
+            previous_run=previous_run,
+            visible_agents=user.site.agents,
+            timeout_seconds=run_timeout_seconds if previous_run is None else None,
+'''
+
+[[mutation]]
+name = "투영이 실패 원인을 옮기지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "트레이스의_원인을_그대로"]
+expect = "red"
+expect_output = ["'cause': None} != {'type': 'failed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/items.py"
+old = '            return FailedItem(message=FAILED_MESSAGE, run_id=run_id, cause=cause)'
+new = '            return FailedItem(message=FAILED_MESSAGE, run_id=run_id, cause=None)'
+
+[[mutation]]
+name = "관리 클라이언트가 최종 사용자의 이어 가기 경로를 안다"
+runner = "tsc"
+expect = "red"
+diagnostic_in = "src/clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = '''
+  | "/end-user/runs/{run_id}/subscription"
+  | "/end-user/runs/{run_id}/continuation";'''
+new = '''
+  | "/end-user/runs/{run_id}/subscription";'''
