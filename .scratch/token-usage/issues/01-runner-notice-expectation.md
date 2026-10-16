@@ -4,7 +4,7 @@
 
 새 훅 둘보다 앞선 사전 정비다. 이 티켓은 훅을 더하지 않는다.
 
-근거는 `.scratch/token-usage/spec.md`의 "이음매"(훅 항목)와 Testing Decisions의 훅 항목이다. 명세 검토의 막는 지적(B1)에서 왔고, 사용자가 인계 훅을 둘로 나누기를 골랐다(일지 2026-10-16-34).
+근거는 `.scratch/token-usage/spec.md`의 "이음매"(훅 항목)와 Testing Decisions의 훅 항목이다. 명세 검토의 막는 지적(B1)에서 왔고, 사용자가 인계 훅을 둘로 나누기를 골랐다(일지 2026-10-16-38).
 
 **Blocked by:** None (can start immediately)
 

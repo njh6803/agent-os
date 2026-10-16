@@ -4,13 +4,13 @@
 
 계기를 쓰는 쪽(훅 둘, `hook_pr_next_session`의 문장)과 받는 쪽(`next-session`의 인계 줄)은 이 티켓의 한 PR로 병합한다(명세가 정했다).
 
-근거는 `.scratch/token-usage/spec.md`의 "인계 훅", "`next-session`의 인계", "인계가 바꾸는 문장", "레벨 스윕 기록", Testing Decisions의 훅·계기 도달·스킬 항목이다. 결정은 ADR 0033 본문과 두 2026-10-16 이력이고, 경계 셋과 훅 둘은 사용자가 골랐다(일지 2026-10-16-13, 2026-10-16-34).
+근거는 `.scratch/token-usage/spec.md`의 "인계 훅", "`next-session`의 인계", "인계가 바꾸는 문장", "레벨 스윕 기록", Testing Decisions의 훅·계기 도달·스킬 항목이다. 결정은 ADR 0033 본문과 두 2026-10-16 이력이고, 경계 셋과 훅 둘은 사용자가 골랐다(일지 2026-10-16-13, 2026-10-16-38).
 
 **Blocked by:** 01(러너가 `notice`를 받는다)
 
 **Status:** ready-for-agent
 
-이 티켓은 헌법(`docs/constitution/operations.md`)에 닿지만 다른 티켓을 막지 않는다. 다른 티켓이 그 문장과 판에 기대지 않고, 헌법 판 patch는 ADR 0033이 2026-10-15에 승인받았다(Consequences "헌법 판"). 병합 때 따로 묻지 않는다(명세 Further Notes, 티켓 분할 승인 일지 2026-10-16-34).
+이 티켓은 헌법(`docs/constitution/operations.md`)에 닿지만 다른 티켓을 막지 않는다. 다른 티켓이 그 문장과 판에 기대지 않고, 헌법 판 patch는 ADR 0033이 2026-10-15에 승인받았다(Consequences "헌법 판"). 병합 때 따로 묻지 않는다(명세 Further Notes, 티켓 분할 승인 일지 2026-10-16-38).
 
 ### 훅 둘
 
