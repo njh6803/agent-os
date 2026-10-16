@@ -33,9 +33,21 @@
   - 명세 축: 카나리아가 명세 축 문장을 고정하지 않았다. 질문에 명세 축 문장을 더하고 `expect`에 `Give the Spec sub-agent neither`를 더해 다시 돌렸다. 통과 4였다.
   - Nit: 일지의 "없음2"는 오타가 아니라 질문이 정한 표지라서, 표지라고 밝혔다.
 - 남긴 것과 이유
-  - README의 `PR #PRNUM`: PR을 연 뒤 번호로 바꾼다(아래 "다음").
+  - README의 `PR #PRNUM`: PR을 연 뒤 268로 바꿨다.
   - `docs/model-selection.md` 새 칸 "모델과 노력"과 같은 표의 "모델과 레벨"의 낱말 차이: 티켓이 "모델과 노력"으로 정했다.
   - `KICKOFF.md` 38행·334행이 `enabledPlugins`의 `false`로 플러그인을 끄는 길을 아직 적지 않은 것: 티켓은 305행만 고치라고 했다. 런북은 사람이 직접 겪은 것으로 만들어 간다는 방침이라, retro 후보로 넘긴다.
   - Agent 도구가 `effort`를 받지 못하는 환경의 갈래: 이 세션의 도구는 받는다. 실제로 `sonnet`·`high`로 돌았는지는 티켓 09가 보고서 4절로 본다.
   - 같은 규칙이 다섯 자리에 적힌 것(Shotgun Surgery 판단 항목): 티켓이 정한 자리다.
 - 다시 돌린 명령: `sweep.py prereg` 0, 카나리아 통과 4. 나머지 검증 명령은 커밋의 pre-commit으로 갈음한다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석 미배정(`Seat: not assigned`, CLI 0.7.5)으로 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `bug-perf-review`: 유효 1, 오탐 5. 유효는 README의 `PR #PRNUM` 자리표시자다(Minor). PR을 연 직후 268로 바꿨다. 오탐으로 판정한 것은 다섯이다. 이름이 같은 프로젝트 `code-review` 스킬이 꺼질 위험, 카나리아 거짓 통과, 옛 규칙 잔존, `effort`를 받지 못하는 환경, 주 체크아웃의 옛 사본 갈래다.
+- `/security-review`: 지적 없음. 설정 변경은 `enabledPlugins`에 `false`를 더한 것뿐이고 `permissions`·`hooks`는 그대로다.
+
+## 다음
+
+- 표준 축이 실제로 `sonnet`·`high`로 돌았는지(보고서 4절)와 넷의 스킬 목록이 0자인지(보고서 9절)는 티켓 09가 본다.
+- `KICKOFF.md` 38행·334행에 프로젝트 `enabledPlugins`의 `false`로 플러그인을 끄는 길을 적을지는 retro 후보다(셀프 리뷰 절의 남긴 것).
