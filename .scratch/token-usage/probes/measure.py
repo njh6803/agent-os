@@ -391,7 +391,7 @@ def outcome_of(calls: list[Call], marks: list[Boundary], cross: int) -> Outcome:
     first = next((b for b in marks if b.at_call > cross), None)
     if first is None:
         rest = sum(c.cost or 0.0 for c in calls[cross:])
-        return Outcome("넘은 뒤 경계가 없었다", rest, None, None, False)
+        return Outcome("넘은 뒤 경계가 없었다", rest, None, None, over_400k_first=False)
     return Outcome(
         first.kind,
         sum(c.cost or 0.0 for c in calls[first.at_call :]),

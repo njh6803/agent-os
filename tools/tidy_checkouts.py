@@ -447,6 +447,7 @@ def _linux_cwds() -> list[ProcessPath]:
 if sys.platform == "win32":
     _QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
     _VM_READ = 0x0010  # PROCESS_VM_READ
+    _INHERIT_HANDLE = False  # bInheritHandle. 자식 프로세스에 핸들을 물려주지 않는다
     # x64 의 자리: PEB.ProcessParameters, 그 안의 CurrentDirectory.DosPath(UNICODE_STRING)
     _PEB_PARAMS = 0x20
     _PARAMS_CWD = 0x38
@@ -565,7 +566,7 @@ if sys.platform == "win32":
         kernel, ntdll = _windows_api()
         found: list[ProcessPath] = []
         for pid in _windows_pids(kernel):
-            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, False, pid)
+            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, _INHERIT_HANDLE, pid)
             if not handle:
                 continue
             try:
@@ -651,7 +652,7 @@ if sys.platform == "win32":
         drives = _drives(kernel)
         loaded: list[tuple[int, str, str]] = []
         for pid in _windows_pids(kernel):
-            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, False, pid)
+            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, _INHERIT_HANDLE, pid)
             if not handle:
                 continue
             try:
@@ -848,7 +849,7 @@ def tasklist_has(output: str, pid: int) -> bool:
     return any(len(row) >= 2 and row[1] == str(pid) for row in csv.reader(output.splitlines()))
 
 
-def unrecreatable(ignored: Sequence[str], settings_same: bool) -> list[str]:
+def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
     """`status --ignored` 의 `!!` 항목 중 다시 만들 수 없는 것. 디렉터리는 `/` 로 끝난다."""
     kept: list[str] = []
     for entry in ignored:
@@ -986,7 +987,7 @@ def judge(
         return verdict("keep", "바뀐 파일이 있다")
     if facts.status_err:
         return verdict("keep", f"git status 가 경고를 냈다: {facts.status_err.strip()[:120]}")
-    extra = unrecreatable(facts.ignored, facts.settings_same)
+    extra = unrecreatable(facts.ignored, settings_same=facts.settings_same)
     if extra:
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
     if wt.branch in running:
@@ -1021,7 +1022,7 @@ def hold_for_strangers(
 
 
 def judge_branch(
-    branch: str, tip: str, merged: Mapping[str, frozenset[str]], contained: bool = False
+    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool = False
 ) -> Verdict:
     """체크아웃되지 않은 로컬 브랜치의 판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서
     닿는다는 뜻이다. 병합된 PR 이 없어도 그러면 지운다. 잃는 것은 이름뿐이다."""
@@ -1378,7 +1379,7 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
         if branch and branch not in checked_out:
-            print(_render_branch(judge_branch(branch, tip, merged, branch in contained)))
+            print(_render_branch(judge_branch(branch, tip, merged, contained=branch in contained)))
     if trash_dir(root) is None:
         print(_trash_refused(root))
     leftovers = _trash_entries(root)
@@ -1689,7 +1690,7 @@ def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, o
     if current.returncode != 0 or current.stdout.strip() != tip:
         print(f"남겼다 {branch} — judge 뒤에 바뀌었다: 지금 {current.stdout.strip() or '없음'}")
         return 1
-    verdict = judge_branch(branch, tip, ops.merged(root), contains(root, tip, ops.git))
+    verdict = judge_branch(branch, tip, ops.merged(root), contained=contains(root, tip, ops.git))
     if verdict.action != "delete":
         print(f"남겼다 {branch} — 다시 판정했다: {verdict.reason}")
         return 1

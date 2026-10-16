@@ -46,7 +46,7 @@ def longest_heredoc(command: str) -> int:
         terminator = match.group(3)
         body = 0
         index += 1
-        while index < len(lines) and not _closes(lines[index], terminator, strips_tabs):
+        while index < len(lines) and not _closes(lines[index], terminator, strips_tabs=strips_tabs):
             body += 1
             index += 1
         longest = max(longest, body)
@@ -54,7 +54,7 @@ def longest_heredoc(command: str) -> int:
     return longest
 
 
-def _closes(line: str, terminator: str, strips_tabs: bool) -> bool:
+def _closes(line: str, terminator: str, *, strips_tabs: bool) -> bool:
     candidate = line.lstrip("\t") if strips_tabs else line
     return candidate == terminator
 

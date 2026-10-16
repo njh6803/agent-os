@@ -242,7 +242,7 @@ LAUNCHER = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git" / "c
     ],
 )
 def test_어디서_친_커밋이든_그_작업_트리의_체크아웃으로_찾는다(
-    tmp_path: Path, where: str, prefix: tuple[str, ...], launcher: bool
+    tmp_path: Path, where: str, prefix: tuple[str, ...], *, launcher: bool
 ) -> None:
     """실제 git 은 작업 디렉터리를 그 작업 트리 안으로 옮긴다. 런처는 띄운 폴더(여기서는 다른
     체크아웃)에 남으므로 세지 않아야 거짓 알림이 나지 않는다(셀프 리뷰 명세 축). 런처에 `-C` 를 얹던

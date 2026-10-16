@@ -1138,7 +1138,7 @@ def test_첫_줄의_스킬_명령은_그_스킬_파일을_읽으라는_한_줄�
     ],
 )
 def test_이_저장소의_스킬_파일을_가리킬_수_없는_첫_줄은_그대로_둔다(
-    skills_root: Path, line: str, has_root: bool
+    skills_root: Path, line: str, *, has_root: bool
 ) -> None:
     assert _start_line(line, str(skills_root) if has_root else "") == line
 

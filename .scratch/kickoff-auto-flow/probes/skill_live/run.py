@@ -100,7 +100,7 @@ def write_skill(root: Path, name: str, marker: str) -> None:
     )
 
 
-def classify(observation: Observation, name: str, marker: str, file_existed: bool) -> str:
+def classify(observation: Observation, name: str, marker: str, *, file_existed: bool) -> str:
     """부르기 턴 하나를 표지로 가른다. 표지가 한쪽으로 모이지 않으면 측정이 아니다."""
     skills = observation.init_skills
     replayed = observation.replayed
@@ -224,7 +224,7 @@ def converse(
             process.stdin.flush()
             observation = _observe(lines, log)
             if turn.text == f"/{name}":
-                verdict = classify(observation, name, marker, file_existed)
+                verdict = classify(observation, name, marker, file_existed=file_existed)
             else:
                 verdict = NOT_A_CALL
             results.append(TurnResult(turn.label, verdict, observation.result))

@@ -227,6 +227,7 @@ if sys.platform == "win32":
     _SNAPSHOT_PROCESSES = 0x2  # TH32CS_SNAPPROCESS
     _QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
     _VM_READ = 0x0010  # PROCESS_VM_READ
+    _INHERIT_HANDLE = False  # bInheritHandle. 자식 프로세스에 핸들을 물려주지 않는다
     # x64 의 자리: PEB.ProcessParameters, 그 안의 CurrentDirectory.DosPath 와 CommandLine(둘 다
     # UNICODE_STRING)
     _PEB_PARAMS = 0x20
@@ -356,7 +357,7 @@ if sys.platform == "win32":
         kernel, ntdll, shell = _windows_api()
         found: list[Process] = []
         for pid, parent in _git_pids(kernel):
-            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, False, pid)
+            handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, _INHERIT_HANDLE, pid)
             if not handle:
                 continue
             try:
