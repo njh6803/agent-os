@@ -8,7 +8,7 @@
 
 **Blocked by:** 01(러너가 `notice`를 받는다)
 
-**Status:** ready-for-agent
+**Status:** done
 
 이 티켓은 헌법(`docs/constitution/operations.md`)에 닿지만 다른 티켓을 막지 않는다. 다른 티켓이 그 문장과 판에 기대지 않고, 헌법 판 patch는 ADR 0033이 2026-10-15에 승인받았다(Consequences "헌법 판"). 병합 때 따로 묻지 않는다(명세 Further Notes, 티켓 분할 승인 일지 2026-10-16-38).
 
