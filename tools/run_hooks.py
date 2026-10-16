@@ -17,7 +17,7 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물넷 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물다섯 — `${ROOT}`(저장소 루트),
 `${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
 날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
 두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
@@ -40,11 +40,13 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 네트워크 없이 곧 실패한다), `${COMMIT_MSGS}`(commit-msg 판정을 부르는 pre-commit 설정과 그 판정
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
 `good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다),
+`${COMMITTING_REPO}`(안에 연결된 워크트리 `.claude/worktrees/side` 를 둔 임시 저장소. 러너가 도는
+동안 그 워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 돈다, `committing_repository`),
 `${USAGE_REPO}`(`.scratch/token-report/summary.txt` 에 방금 쓴 요약을 둔 임시 저장소 — 사용량 장부와
 요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
-`.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다). 사례의 `env`
-는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로
-준다. 기대는 다섯. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+`.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다). 사례의 `env` 는 자리표시자를 바꾼
+뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 다섯.
+deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
 context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는 `systemMessage` 하나.
 `additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료 0, 출력 없음).
 사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼 additionalContext·이유·
@@ -85,8 +87,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -817,6 +821,77 @@ def _open_pr_repository(scratch: Path) -> Path:
     return repo
 
 
+@contextmanager
+def fixtures(scratch: Path) -> Generator[dict[str, str]]:
+    """자리표시자 전부의 값. `create_fixtures` 에 커밋이 도는 동안만 있는 `${COMMITTING_REPO}`
+    (`committing_repository`)를 더한다. 표의 사례를 돌리는 쪽(러너, tests/tools)은 이것을 쓴다."""
+    with committing_repository(scratch) as committing:
+        yield create_fixtures(scratch) | {"COMMITTING_REPO": committing.as_posix()}
+
+
+@contextmanager
+def committing_repository(scratch: Path) -> Generator[Path]:
+    """`scratch/committing` 저장소 안에 연결된 워크트리 `.claude/worktrees/side` 를 두고, 그
+    워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 도는 동안 저장소 루트를 내준다.
+
+    이 저장소의 주 체크아웃과 그 안의 워크트리와 같은 자리다. 훅은 `release` 파일이 생길 때까지
+    기다리고(최대 10분), 나갈 때 그 파일을 만들어 커밋이 끝나기를 기다린다. 못 끝내면 죽인다.
+    `hook_edit_during_commit` 의 발동(워크트리의 파일)과 침묵(그 폴더 아래에서 커밋이 도는 주
+    체크아웃의 파일)을 표와 tests/tools 가 함께 잰다. 사용자 설정의 `core.hooksPath` 가 훅을 다른
+    데로 돌리지 않게 커밋에 그 값을 준다.
+    """
+    root = scratch / "committing"
+    side = root / ".claude" / "worktrees" / "side"
+    started = scratch / "committing-started"
+    release = scratch / "committing-release"
+    _git_commands(
+        [
+            ["git", "init", "-q", "-b", "main", str(root)],
+            ["git", "-C", str(root), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+            ["git", "-C", str(root), "worktree", "add", "-q", "-b", "side", str(side)],
+        ]
+    )
+    hooks = root / ".git" / "hooks"
+    hooks.mkdir(exist_ok=True)
+    (hooks / "pre-commit").write_text(
+        "#!/bin/sh\n"
+        f': > "{started.as_posix()}"\n'
+        "i=0\n"
+        f'while [ ! -f "{release.as_posix()}" ] && [ "$i" -lt 6000 ]; do\n'
+        "  sleep 0.1\n"
+        "  i=$((i + 1))\n"
+        "done\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (hooks / "pre-commit").chmod(0o755)
+    (side / "tracked.txt").write_text("x\n", encoding="utf-8")
+    _git_commands([["git", "-C", str(side), "add", "tracked.txt"]])
+    command = ["git", "-c", f"core.hooksPath={hooks.as_posix()}", *_IDENTITY, "commit", "-q"]
+    process = subprocess.Popen(
+        [*command, "-m", "x"],
+        cwd=side,
+        env=hook_environment(),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + DEFAULT_HOOK_TIMEOUT
+        while not started.exists():
+            if process.poll() is not None or time.monotonic() > deadline:
+                raise RuntimeError("pre-commit 훅에 멈춘 커밋을 띄우지 못했다")
+            time.sleep(0.05)
+        yield root
+    finally:
+        release.write_text("", encoding="utf-8")
+        try:
+            process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+
+
 def _behind_repository(scratch: Path) -> Path:
     """작업 브랜치 `chore/x` 가 origin/main 보다 한 커밋 뒤처진 저장소.
 
@@ -855,8 +930,7 @@ def main() -> int:
     registrations = registered_hooks()
     gaps = coverage_gaps(cases, registrations)
     runnable = [case for case in cases if case.hook in registrations]
-    with tempfile.TemporaryDirectory() as scratch:
-        replacements = create_fixtures(Path(scratch))
+    with tempfile.TemporaryDirectory() as scratch, fixtures(Path(scratch)) as replacements:
         results = [run_case(case, replacements, registrations[case.hook]) for case in runnable]
     notices = run_notices(registrations)
     failures = [result for result in results if not result.ok]

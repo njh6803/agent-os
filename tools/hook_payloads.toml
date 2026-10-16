@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${USAGE_REPO} ${USAGE_HOME} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${COMMITTING_REPO} ${USAGE_REPO} ${USAGE_HOME} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | notice | silent. notice 는 사용자에게만 가는 systemMessage 하나다(additionalContext 가 함께 있으면 context). 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
@@ -461,12 +461,36 @@ expect = "silent"
 note = "줄 끝이 CRLF 인 마크다운 — LF 앞의 CR 은 줄 끝이다"
 payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/crlf.md", content = "| a |" } }
 
+# --- hook_edit_during_commit (PostToolUse Write|Edit|NotebookEdit) ---
+# 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
+# 침묵은 같은 저장소의 주 체크아웃 파일이다. 커밋하는 워크트리가 그 폴더 아래에 있어도 다른 체크아웃이다.
+[[case]]
+hook = "hook_edit_during_commit.py"
+expect = "context"
+contains = ["git commit", "대기열 293"]
+note = "커밋이 도는 워크트리의 파일을 고쳤다(대기열 293. 일지 2026-10-16-21 은 이 꼴로 커밋이 실패했다)"
+payload = { hook_event_name = "PostToolUse", tool_name = "Edit", tool_input = { file_path = "${COMMITTING_REPO}/.claude/worktrees/side/tracked.txt", old_string = "x", new_string = "y" }, cwd = "${COMMITTING_REPO}/.claude/worktrees/side" }
+
+[[case]]
+hook = "hook_edit_during_commit.py"
+expect = "silent"
+note = "그 폴더 아래 워크트리에서 커밋이 도는 주 체크아웃의 파일을 썼다 — 이 저장소의 주 체크아웃과 .claude/worktrees 의 자리"
+payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${COMMITTING_REPO}/notes.md", content = "메모\n" }, cwd = "${COMMITTING_REPO}" }
+
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]
 hook = "hook_prompt_directive.py"
 expect = "context"
-note = "next-session 지시문이 첫 메시지(트랜스크립트가 아직 없다)"
+contains = ["대기열 72", "`다음 작업:`"]
+note = "next-session 지시문이 첫 메시지(트랜스크립트가 아직 없다). 시작 프롬프트 줄 없이 지시문만 붙여 넣은 꼴이라 손으로 연 세션이다"
 payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "context"
+contains = ["대기열 72", "`/implement`"]
+note = "사람이 반각 `/implement` 첫 줄로 붙여 넣은 지시문 — open-session 이면 스킬 파일 문장으로 옮겼을 것이다(대기열 72)"
+payload = { prompt = "/implement .scratch/x/issues/01-x.md\n\n다음 작업: .scratch/x/issues/01-x.md\n다음 단계: 구현\n어디서: 새 세션\n시작 프롬프트: /implement .scratch/x/issues/01-x.md\n브랜치: feature/01-x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 
 [[case]]
 hook = "hook_prompt_directive.py"
@@ -602,6 +626,12 @@ expect = "silent"
 note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 뒤처진 저장소에서도 막지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
 
+[[case]]
+hook = "hook_push_behind_main.py"
+expect = "silent"
+note = "셀프 리뷰의 명세 축 리뷰어가 확인하려고 친 도움말 — 뒤처진 저장소에서도 푸시하지 않는다(대기열 300, 일지 2026-10-16-27)"
+payload = { tool_name = "Bash", tool_input = { command = "git push -h" }, cwd = "${BEHIND_REPO}" }
+
 # --- hook_push_delete_open_pr (PreToolUse Bash|PowerShell) ---
 # origin 이 임시 bare 저장소라 훅은 gh 대신 ls-remote 의 merge ref 로 열린 PR 을 가린다. 네트워크에 기대지 않는다.
 # 침묵은 병합이 끝난 뒤의 실제 지우기다. 그 원격에는 PR 의 ref 가 없다.
@@ -631,6 +661,12 @@ hook = "hook_push_delete_open_pr.py"
 expect = "silent"
 note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 열린 PR 이 없다"
 payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "silent"
+note = "열린 PR 의 머리를 지우는 꼴에 도움말을 붙였다 — git 이 사용법을 내고 끝나 지우지 않는다(대기열 300)"
+payload = { tool_name = "Bash", tool_input = { command = "git push -h origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
 
 # --- hook_webfetch_summary (PostToolUse WebFetch) ---
 # 앞의 셋은 실제 결과 객체다. 요약과 301 은 webfetch_payload/run.sh 의 A(Claude Code 2.1.296), 404 는 트랜스크립트 10389e93.

@@ -92,6 +92,16 @@
         ]
       },
       {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_edit_during_commit.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
         "matcher": "Bash|PowerShell|mcp__plugin_github_github__create_pull_request|mcp__plugin_github_github__merge_pull_request|mcp__github__create_pull_request|mcp__github__merge_pull_request",
         "hooks": [
           {

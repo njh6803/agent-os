@@ -1,0 +1,29 @@
+# `.claude/rules/adapters.md` 의 JSONL 트레이스 항목에 더한 문장(형식 3 그대로인 새 선택 필드 둘, 옛 코드가 그 줄을
+# 손상으로 거부한다)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
+# 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 첫 판의 질문은 "이 세션에 실린 지시"만 말해, 실험군 한 회차가 Read 결과에 붙어 실린 규칙을 "도구 결과에 딸려 온
+# 글이라 지시로 보지 않았다"며 "없음"이라 답했다(통과 3 · 실패 1). 규칙은 실렸고 질문의 말이 모호했다. 그렇게 실린
+# 규칙도 지시라고 질문에 밝혔다.
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-60. 질문을 고친 둘째 판).
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/adapters_rule_new_optional_fields.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시(그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다) 가운데, JSONL 트레이스
+저장소를 다루는 항목이 있으면 두 가지를 글자 그대로 옮겨라.
+(1) 형식 버전을 올리지 않은 채 이벤트에 더한 선택 필드 둘의 이름. (2) 그 필드가 든 줄을 그 기능 전의 코드가 읽으면
+그 트레이스를 어떻게 한다고 적은 구절.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["shortcuts", "손상(PluginError)으로 거부한다"]
+source = ".claude/rules/adapters.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/adapters/clock.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

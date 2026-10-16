@@ -365,8 +365,18 @@
       },
       "FailedItem": {
         "additionalProperties": false,
-        "description": "실행이 실패로 끝났다. 고정 문구와 실행 식별자를 든다.",
+        "description": "실행이 실패로 끝났다. 고정 문구와 실행 식별자와 실패 원인(없으면 null)을 든다.",
         "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureCause"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "message": {
             "title": "Message",
             "type": "string"
@@ -385,10 +395,25 @@
         "required": [
           "type",
           "message",
-          "run_id"
+          "run_id",
+          "cause"
         ],
         "title": "FailedItem",
         "type": "object"
+      },
+      "FailureCause": {
+        "enum": [
+          "conversation_summary",
+          "timeout",
+          "tool_connection",
+          "model_call",
+          "tool_failure",
+          "loop_limit",
+          "resume_mismatch",
+          "agent_code",
+          "other"
+        ],
+        "type": "string"
       },
       "FinishedItem": {
         "additionalProperties": false,
@@ -783,8 +808,18 @@
       },
       "RunFailed": {
         "additionalProperties": false,
-        "description": "실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다.",
+        "description": "실행이 실패로 끝났다. error 는 내용, cause 는 실패 원인(없으면 null)이다. 런타임이 낸다.",
         "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureCause"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "error": {
             "title": "Error",
             "type": "string"
@@ -809,7 +844,8 @@
           "run_id",
           "ts",
           "type",
-          "error"
+          "error",
+          "cause"
         ],
         "title": "RunFailed",
         "type": "object"
@@ -928,7 +964,7 @@
       },
       "RunStarted": {
         "additionalProperties": false,
-        "description": "실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다.",
+        "description": "실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기(없으면 null)를 든다. 런타임이 낸다.",
         "properties": {
           "agent": {
             "title": "Agent",
@@ -957,6 +993,20 @@
             "title": "Run Id",
             "type": "string"
           },
+          "shortcuts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortcuts"
+          },
           "ts": {
             "format": "date-time",
             "title": "Ts",
@@ -976,7 +1026,8 @@
           "agent",
           "request",
           "principal",
-          "previous_run"
+          "previous_run",
+          "shortcuts"
         ],
         "title": "RunStarted",
         "type": "object"
@@ -1695,6 +1746,136 @@
           }
         },
         "summary": "서명한 최종 사용자의 멈춘 실행에 결정 하나를 내고 결정 항목부터 흘린다"
+      }
+    },
+    "/end-user/runs/{run_id}/continuation": {
+      "post": {
+        "operationId": "continue_end_user_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/EndUserItem"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "있지만 상태나 주체가 요청을 허락하지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 포인트(파이썬 len)로 세고 상한의 기본값은 20,000자다"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다",
+            "headers": {
+              "Retry-After": {
+                "description": "다시 보내도 되기까지의 초. 1 이상의 정수다",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "서명한 최종 사용자의 끝난 실행을 이어 가는 새 실행을 일으켜 그 항목을 흘린다"
       }
     },
     "/end-user/runs/{run_id}/subscription": {
