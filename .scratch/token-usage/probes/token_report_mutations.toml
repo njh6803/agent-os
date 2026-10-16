@@ -16,7 +16,10 @@ new = '''    return min(copies, key=lambda c: (c.size, c.folder))'''
 name = "같은 응답 ID를 먼저 들어온 행에 남긴다"
 tests = ["tests/tools/test_token_report.py", "-k", "포크에_복사된"]
 expect = "red"
-expect_output = ["test_포크에_복사된_응답은_먼저_시작한_세션에_한_번만_든다"]
+expect_output = [
+    "test_포크에_복사된_응답은_먼저_시작한_세션에_한_번만_든다",
+    "AssertionError: 포크의 응답 주인",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if prev is None or _owner_rank(r, starts, held) < _owner_rank(prev[1], starts, held):'''
@@ -58,7 +61,10 @@ new = '''        placed += [
 name = "세션 기록 폴더가 없어도 state를 올린다"
 tests = ["tests/tools/test_token_report.py", "-k", "기록_폴더가_없으면"]
 expect = "red"
-expect_output = ["test_기록_폴더가_없으면_state를_올리지_않고_끝난다"]
+expect_output = [
+    "test_기록_폴더가_없으면_state를_올리지_않고_끝난다",
+    "AssertionError: 기록 폴더 없는 ingest의 종료 코드",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    if not projects.is_dir():
@@ -92,7 +98,10 @@ new = '''    rank = 2'''
 name = "앞선 달 파일의 세션 행을 읽지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_앞선_달에_시작한_세션도_시작_시각이_보인다"]
+expect_output = [
+    "test_앞선_달에_시작한_세션도_시작_시각이_보인다",
+    "AssertionError: 앞선 달 세션의 시작 시각",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        elif month < wanted[0]:'''
@@ -102,7 +111,10 @@ new = '''        elif month < "0000":'''
 name = "첫 줄에 시각이 없으면 다음 줄의 시각을 쓰지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든다"]
+expect_output = [
+    "test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든다",
+    "AssertionError: 다음 줄 시각으로 든 응답",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if seen.at is None:
@@ -114,7 +126,10 @@ new = ''''''
 name = "증분 없이 언제나 모두 다시 읽는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
+expect_output = [
+    "test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다",
+    "AssertionError: 한 시간 전보다 앞선 파일을 다시 읽지 않음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if since is None or any(c.mtime > since for c in copies)'''
@@ -124,7 +139,10 @@ new = '''        if True'''
 name = "증분의 한 시간 여유를 빼고 뒤로 민다"
 tests = ["tests/tools/test_token_report.py", "-k", "지난_실행"]
 expect = "red"
-expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
+expect_output = [
+    "test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다",
+    "AssertionError: 한 시간 여유 안의 파일을 다시 읽음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    return None if last is None else last.timestamp() - 3600'''
@@ -134,7 +152,10 @@ new = '''    return None if last is None else last.timestamp() + 3600'''
 name = "계정은 그 세션의 첫 줄이다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+expect_output = [
+    "test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다",
+    "AssertionError: null이 아닌 마지막 계정",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            accounts[sid] = _str(r.get("email")) or uuid'''
@@ -144,7 +165,10 @@ new = '''            accounts.setdefault(sid, _str(r.get("email")) or uuid)'''
 name = "null 줄이 앞의 계정을 덮는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+expect_output = [
+    "test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다",
+    "AssertionError: null이 아닌 마지막 계정",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            accounts[sid] = _str(r.get("email")) or uuid'''
@@ -156,7 +180,10 @@ new = '''            accounts[sid] = _str(r.get("email")) or uuid
 name = "서브에이전트가 부모의 계정을 받지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+expect_output = [
+    "test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다",
+    "AssertionError: null이 아닌 마지막 계정",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        self.accounts.setdefault(accounts.get(c.session, UNKNOWN_ACCOUNT), Tally()).add(cost)'''
@@ -167,7 +194,10 @@ new = '''        who = accounts.get(c.session, UNKNOWN_ACCOUNT) if c.agent is No
 name = "보관을 넘은 보고서를 지울 때 링크를 가리지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_보관_수를_넘은_보고서는_그_이름_모양의_파일만_지운다"]
+expect_output = [
+    "test_보관_수를_넘은_보고서는_그_이름_모양의_파일만_지운다",
+    "AssertionError: 보관을 넘은 링크를 지우지 않음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''and not is_link(p) and p.is_file()'''
@@ -177,7 +207,10 @@ new = '''and (is_link(p) or p.is_file())'''
 name = "잘린 마지막 줄을 읽지 못한 줄로 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_잘린_마지막_줄은_경보_없이_넘기고_깨진_줄은_경보다"]
+expect_output = [
+    "test_잘린_마지막_줄은_경보_없이_넘기고_깨진_줄은_경보다",
+    "AssertionError: 잘린 마지막 줄은 경보 없음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    parts.pop()
@@ -190,7 +223,10 @@ new = '''    if parts[-1] == b"":
 name = "synthetic 기록을 들인다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_synthetic_기록은_장부에도_경보에도_들지_않는다"]
+expect_output = [
+    "test_synthetic_기록은_장부에도_경보에도_들지_않는다",
+    "AssertionError: synthetic 기록은 장부에 없음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    if not isinstance(u, dict) or _str(m.get("model")) == "<synthetic>":'''
@@ -202,7 +238,10 @@ new = '''    if not isinstance(u, dict):'''
 name = "Read 문턱과 같은 글자도 큰 결과로 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다"]
+expect_output = [
+    "test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다",
+    "AssertionError: 문턱까지와 범위를 준 결과는 큰 결과 아님",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            if not _ranged(use.input) and chars > LARGE["Read"]:'''
@@ -212,7 +251,10 @@ new = '''            if not _ranged(use.input) and chars >= LARGE["Read"]:'''
 name = "범위를 준 Read도 큰 결과로 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다"]
+expect_output = [
+    "test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다",
+    "AssertionError: 문턱까지와 범위를 준 결과는 큰 결과 아님",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            if not _ranged(use.input) and chars > LARGE["Read"]:'''
@@ -222,7 +264,10 @@ new = '''            if chars > LARGE["Read"]:'''
 name = "셸 문턱과 같은 글자도 큰 결과로 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다"]
+expect_output = [
+    "test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다",
+    "AssertionError: 문턱까지와 범위를 준 결과는 큰 결과 아님",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            if chars > LARGE[use.name]:'''
@@ -274,7 +319,10 @@ new = '''    return "offset" in inp or _opt_int(inp.get("limit")) is not None'''
 name = "셸 명령 전체를 대상으로 남긴다"
 tests = ["tests/tools/test_token_report.py", "-k", "Bash의_큰_결과"]
 expect = "red"
-expect_output = ["test_Bash의_큰_결과는_프로그램_이름만_남고_명령의_비밀은_장부에_없다"]
+expect_output = [
+    "test_Bash의_큰_결과는_프로그램_이름만_남고_명령의_비밀은_장부에_없다",
+    "AssertionError: Bash 장부에 비밀이 남았다",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''                large = Large(tid, at, use.name, chars, program_of(command), 0)'''
@@ -284,7 +332,10 @@ new = '''                large = Large(tid, at, use.name, chars, command, 0)'''
 name = "명령 앞의 환경 대입을 벗기지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "Bash의_큰_결과"]
 expect = "red"
-expect_output = ["test_Bash의_큰_결과는_프로그램_이름만_남고_명령의_비밀은_장부에_없다"]
+expect_output = [
+    "test_Bash의_큰_결과는_프로그램_이름만_남고_명령의_비밀은_장부에_없다",
+    "AssertionError: Bash 큰 결과의 대상은 프로그램 이름",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        rest = list(dropwhile(_ENV_ASSIGNMENT.match, words))
@@ -296,7 +347,10 @@ new = '''        rest = words
 name = "낱말 경계를 믿을 수 없는 대입도 벗긴다"
 tests = ["tests/tools/test_token_report.py", "-k", "PowerShell의_변수_대입"]
 expect = "red"
-expect_output = ["test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다"]
+expect_output = [
+    "test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다",
+    "AssertionError: PowerShell 큰 결과의 대상",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if any(_UNSAFE_ASSIGNMENT.search(w) for w in words[: len(words) - len(rest)]):
@@ -308,7 +362,10 @@ new = '''        if False:
 name = "따옴표에서 온 첫 낱말을 프로그램 이름으로 남긴다"
 tests = ["tests/tools/test_token_report.py", "-k", "PowerShell의_변수_대입"]
 expect = "red"
-expect_output = ["test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다"]
+expect_output = [
+    "test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다",
+    "AssertionError: PowerShell 큰 결과의 대상",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    for words in _raw_segments(command):
@@ -320,7 +377,10 @@ new = '''    for words in _segments(command):
 name = "here-string이 든 PowerShell 대입 조각도 건너뛴다"
 tests = ["tests/tools/test_token_report.py", "-k", "PowerShell의_변수_대입"]
 expect = "red"
-expect_output = ["test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다"]
+expect_output = [
+    "test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다",
+    "AssertionError: PowerShell 큰 결과의 대상",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if rest and _is_ps_assignment(rest) and _UNSAFE_PS.search(" ".join(rest)):'''
@@ -330,7 +390,10 @@ new = '''        if False:'''
 name = "장부 달 파일을 splitlines로 읽는다"
 tests = ["tests/tools/test_token_report.py", "-k", "줄_구분_문자"]
 expect = "red"
-expect_output = ["test_경로에_줄_구분_문자가_든_읽기도_장부를_다시_읽을_수_있다"]
+expect_output = [
+    "test_경로에_줄_구분_문자가_든_읽기도_장부를_다시_읽을_수_있다",
+    "JSONDecodeError: Unterminated string",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    for line in path.read_text(encoding="utf-8").split("\n"):
@@ -342,7 +405,10 @@ new = '''    for line in path.read_text(encoding="utf-8").splitlines():
 name = "PowerShell의 변수 대입 조각을 건너뛰지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다"]
+expect_output = [
+    "test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다",
+    "AssertionError: PowerShell 큰 결과의 대상",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if not rest or _is_ps_assignment(rest):'''
@@ -352,7 +418,10 @@ new = '''        if not rest:'''
 name = "실려 간 호출을 압축 경계에서 끊지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든다"]
+expect_output = [
+    "test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든다",
+    "AssertionError: 큰 결과의 실려 간 호출",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        stop = cuts[i][1] if i < len(cuts) else end'''
@@ -412,7 +481,10 @@ new = '''git(?:\s+-[cC]\s+\S+)*'''
 name = "압축 직전 값에 마지막 호출을 먼저 쓴다"
 tests = ["tests/tools/test_token_report.py", "-k", "7절은"]
 expect = "red"
-expect_output = ["test_7절은_40만을_넘은_세션과_자동_압축_직전의_세션_컨텍스트를_든다"]
+expect_output = [
+    "test_7절은_40만을_넘은_세션과_자동_압축_직전의_세션_컨텍스트를_든다",
+    "AssertionError: 자동 압축 직전의 세션 컨텍스트",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    context = pre if pre is not None else last_context'''
@@ -422,7 +494,10 @@ new = '''    context = last_context if last_context is not None else pre'''
 name = "줄 이음을 잇지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "명령_위치의_gh_pr_create"]
 expect = "red"
-expect_output = ["test_명령_위치의_gh_pr_create만_PR로_센다"]
+expect_output = [
+    "test_명령_위치의_gh_pr_create만_PR로_센다",
+    "AssertionError: 명령 위치의 gh pr create만 PR",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    for char in _LINE_CONTINUATION.sub(" ", command):'''
@@ -442,7 +517,10 @@ new = '''            pass'''
 name = "압축 경계에서 다시 읽기의 기억을 비우지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_압축_뒤의_읽기는_다시_읽기_후보가_아니다"]
+expect_output = [
+    "test_압축_뒤의_읽기는_다시_읽기_후보가_아니다",
+    "AssertionError: 압축 뒤의 읽기는 다시 읽기 아님",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            self.seen.clear()
@@ -463,7 +541,10 @@ new = '''HANDOFF = re.compile(r"^없는 머리:", re.MULTILINE)'''
 name = "첫 호출 뒤의 첨부도 시작 구성에 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든다"]
+expect_output = [
+    "test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든다",
+    "AssertionError: 첫 호출 전의 시작 구성",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if _usage_of(rec.data) is not None:
@@ -475,7 +556,10 @@ new = '''        if _usage_of(rec.data) is not None:
 name = "스킬 목록의 이어지는 줄을 프로젝트·내장으로 센다"
 tests = ["tests/tools/test_token_report.py", "-k", "9절은_시작"]
 expect = "red"
-expect_output = ["test_9절은_시작_컨텍스트와_출처별_스킬_목록을_든다"]
+expect_output = [
+    "test_9절은_시작_컨텍스트와_출처별_스킬_목록을_든다",
+    "AssertionError: 9절의 출처별 스킬 목록",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if line.startswith("- "):'''
@@ -485,7 +569,10 @@ new = '''        if True:'''
 name = "prompt_snapshot도 시작 구성의 그 밖에 센다"
 tests = ["tests/tools/test_token_report.py", "-k", "9절은_시작"]
 expect = "red"
-expect_output = ["test_9절은_시작_컨텍스트와_출처별_스킬_목록을_든다"]
+expect_output = [
+    "test_9절은_시작_컨텍스트와_출처별_스킬_목록을_든다",
+    "AssertionError: 9절의 출처별 스킬 목록",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        elif kind != "prompt_snapshot":'''
@@ -495,7 +582,10 @@ new = '''        else:'''
 name = "실패한 Read도 읽기로 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_실패한_Read_뒤의_범위_읽기는_다시_읽기_후보가_아니다"]
+expect_output = [
+    "test_실패한_Read_뒤의_범위_읽기는_다시_읽기_후보가_아니다",
+    "AssertionError: 실패한 Read 뒤의 범위 읽기",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if use.name == "Read" and not ok:'''
@@ -515,7 +605,10 @@ new = '''    path = _str(inp.get("file_path")) or ""'''
 name = "사람이 연 세션을 origin으로 가르지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "헤드리스"]
 expect = "red"
-expect_output = ["test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적는다"]
+expect_output = [
+    "test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적는다",
+    "AssertionError: 사람이 연 세션만의 중앙값",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    return prompt is not None and _obj(prompt.record.get("origin")).get("kind") == "human"'''
@@ -525,7 +618,10 @@ new = '''    return prompt is not None'''
 name = "PR의 브랜치에 head 인자를 쓰지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "head_인자"]
 expect = "red"
-expect_output = ["test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운다"]
+expect_output = [
+    "test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운다",
+    "AssertionError: gh의 --head가 PR의 브랜치",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''                self.prs.append(PrOpen(at, pr_head_of(words) or use.branch))'''
@@ -535,7 +631,10 @@ new = '''                self.prs.append(PrOpen(at, use.branch))'''
 name = "gh pr create의 명령 위치를 보지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "명령_위치의_gh_pr_create"]
 expect = "red"
-expect_output = ["test_명령_위치의_gh_pr_create만_PR로_센다"]
+expect_output = [
+    "test_명령_위치의_gh_pr_create만_PR로_센다",
+    "AssertionError: 명령 위치의 gh pr create만 PR",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if rest[:3] == ["gh", "pr", "create"]:'''
@@ -545,7 +644,10 @@ new = '''        if "gh pr create" in " ".join(rest):'''
 name = "PR을 만들지 않는 --help를 가리지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "명령_위치의_gh_pr_create"]
 expect = "red"
-expect_output = ["test_명령_위치의_gh_pr_create만_PR로_센다"]
+expect_output = [
+    "test_명령_위치의_gh_pr_create만_PR로_센다",
+    "AssertionError: 명령 위치의 gh pr create만 PR",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            return None if NOT_RUN & set(rest) else rest'''
@@ -555,7 +657,10 @@ new = '''            return rest'''
 name = "MCP의 head를 쓰지 않는다"
 tests = ["tests/tools/test_token_report.py", "-k", "head_인자"]
 expect = "red"
-expect_output = ["test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운다"]
+expect_output = [
+    "test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운다",
+    "AssertionError: MCP의 head가 PR의 브랜치",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            self.prs.append(PrOpen(at, _branch_of_head(head) if head else use.branch))'''
@@ -577,7 +682,10 @@ new = '''            if words is not None:'''
 name = "포크에 복사된 도구 결과를 두 번 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_포크에_복사된_도구_결과와_압축은_한_번만_센다"]
+expect_output = [
+    "test_포크에_복사된_도구_결과와_압축은_한_번만_센다",
+    "AssertionError: 포크에 복사된 큰 결과는 한 번",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            if ("large", x.id) not in seen:'''
@@ -587,7 +695,10 @@ new = '''            if True:'''
 name = "포크에 복사된 압축을 두 번 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_포크에_복사된_도구_결과와_압축은_한_번만_센다"]
+expect_output = [
+    "test_포크에_복사된_도구_결과와_압축은_한_번만_센다",
+    "AssertionError: 포크에 복사된 압축은 한 번",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''            if ("compaction", c.id) not in seen:'''
@@ -597,7 +708,10 @@ new = '''            if True:'''
 name = "9절이 헤드리스 세션도 센다"
 tests = ["tests/tools/test_token_report.py", "-k", "헤드리스"]
 expect = "red"
-expect_output = ["test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적는다"]
+expect_output = [
+    "test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적는다",
+    "AssertionError: 사람이 연 세션만의 중앙값",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    values = [s.context for s in p.starts if s.human]'''
@@ -607,7 +721,10 @@ new = '''    values = [s.context for s in p.starts]'''
 name = "9절이 다른 저장소의 세션도 센다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_9절은_이_저장소와_그_워크트리의_세션만_센다"]
+expect_output = [
+    "test_9절은_이_저장소와_그_워크트리의_세션만_센다",
+    "AssertionError: 이 저장소 세션만의 9절",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        if s is None or local_date(s.start, tz) < since or not is_repo_folder(c.project, repo):'''
@@ -647,7 +764,10 @@ new = '''        self.cache_read += 0'''
 name = "40만 경보를 내지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_40만을_넘은_세션이_있으면_경보"]
+expect_output = [
+    "test_40만을_넘은_세션이_있으면_경보",
+    "AssertionError: 40만 경보",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    if day.over:'''
@@ -667,7 +787,10 @@ new = '''START_SPIKE = 1.0'''
 name = "시작 컨텍스트를 넷보다 적은 날과도 견준다"
 tests = ["tests/tools/test_token_report.py", "-k", "넷보다_적으면_시작"]
 expect = "red"
-expect_output = ["test_시작한_세션이_있던_날이_넷보다_적으면_시작_컨텍스트를_비교하지_않는다"]
+expect_output = [
+    "test_시작한_세션이_있던_날이_넷보다_적으면_시작_컨텍스트를_비교하지_않는다",
+    "StatisticsError: no median for empty data",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    if today is not None and len(started) < MIN_DAYS:'''
@@ -679,7 +802,10 @@ new = '''    if False:'''
 name = "끝나지 않은 주의 주간 보고서를 낸다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_주가_끝난_다음_날_주간_보고서가_난다"]
+expect_output = [
+    "test_주가_끝난_다음_날_주간_보고서가_난다",
+    "AssertionError: 끝나지 않은 주의 주간 보고서 없음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    sunday = last - timedelta(days=last.isoweekday() % 7)'''
@@ -689,7 +815,10 @@ new = '''    sunday = last + timedelta(days=7 - last.isoweekday())'''
 name = "53주를 따로 묶는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_53주가_있는_해는_마지막_묶음에_53주를_넣는다"]
+expect_output = [
+    "test_53주가_있는_해는_마지막_묶음에_53주를_넣는다",
+    "AssertionError: 53주는 마지막 묶음",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    g = min((week - 1) // 4, 12)'''
@@ -699,7 +828,10 @@ new = '''    g = (week - 1) // 4'''
 name = "주간을 최근 넷보다 많이 남긴다"
 tests = ["tests/tools/test_token_report.py", "-k", "주간은_최근_넷만"]
 expect = "red"
-expect_output = ["test_주간은_최근_넷만_남고_4주_요약은_지우지_않는다"]
+expect_output = [
+    "test_주간은_최근_넷만_남고_4주_요약은_지우지_않는다",
+    "AssertionError: 주간은 최근 넷",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''        *stale_reports(out / WEEKLY, f"{week_name_of(plan.weeks[0])}.md", WEEKLY_NAME),
@@ -710,7 +842,10 @@ new = ''''''
 name = "주간·4주 폴더가 링크인지 보지 않는다"
 tests = ["tests/tools/test_token_report.py"]
 expect = "red"
-expect_output = ["test_보고서_폴더가_링크면_쓰지도_지우지도_않는다[weekly]"]
+expect_output = [
+    "test_보고서_폴더가_링크면_쓰지도_지우지도_않는다[weekly]",
+    "AssertionError: 링크 폴더의 report 종료 코드",
+]
 [[mutation.edit]]
 file = "tools/token_report.py"
 old = '''    linked = [f for f in (out / DAILY, out / WEEKLY, out / FOUR_WEEKS) if is_link(f)]'''

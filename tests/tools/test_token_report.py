@@ -362,11 +362,11 @@ def test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않�
     old = time.time() - 2 * 3600
     os.utime(p, (old, old))
     t.돌린다("ingest")
-    assert [r["id"] for r in t.호출()] == ["m1"]
+    assert [r["id"] for r in t.호출()] == ["m1"], "한 시간 전보다 앞선 파일을 다시 읽지 않음"
     now = time.time()
     os.utime(p, (now, now))
     t.돌린다("ingest")
-    assert [r["id"] for r in t.호출()] == ["m1", "m2"]
+    assert [r["id"] for r in t.호출()] == ["m1", "m2"], "한 시간 여유 안의 파일을 다시 읽음"
 
 
 def test_full은_state를_무시하고_계정_기록을_남긴다(tmp_path: Path) -> None:
@@ -397,7 +397,7 @@ def test_포크에_복사된_응답은_먼저_시작한_세션에_한_번만_든
     assert sorted((str(r["id"]), str(r["session"])) for r in t.호출()) == [
         ("m1", SID_A),
         ("m2", SID_FORK),
-    ]
+    ], "포크의 응답 주인"
     before = t.장부_바이트()
     t.돌린다("ingest", "--full")
     assert t.장부_바이트() == before
@@ -414,7 +414,7 @@ def test_synthetic_기록은_장부에도_경보에도_들지_않는다(tmp_path
         ],
     )
     assert t.돌린다("daily") == 0
-    assert [r["id"] for r in t.호출()] == ["m1"]
+    assert [r["id"] for r in t.호출()] == ["m1"], "synthetic 기록은 장부에 없음"
     assert "경보 없음" in t.요약()
 
 
@@ -422,7 +422,7 @@ def test_잘린_마지막_줄은_경보_없이_넘기고_깨진_줄은_경보다
     t = _판(tmp_path)
     메인(t.projects, SID_A, [응답("m1", "2026-10-15T00:00:00Z", 입력=1)], 끝='{"type": "assis')
     assert t.돌린다("daily") == 0
-    assert "경보 없음" in t.요약()
+    assert "경보 없음" in t.요약(), "잘린 마지막 줄은 경보 없음"
     p = t.projects / FOLDER / f"{SID_B}.jsonl"
     p.parent.mkdir(parents=True, exist_ok=True)
     body = json.dumps(응답("m2", "2026-10-15T00:00:00Z", 입력=1)) + "\n깨진 줄\n"
@@ -526,7 +526,7 @@ def test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부�
     )
     assert t.돌린다("daily") == 0
     report = t.일간()
-    assert "| a@example.com | 8.00 | 80.0% | 2 |" in report
+    assert "| a@example.com | 8.00 | 80.0% | 2 |" in report, "null이 아닌 마지막 계정"
     assert "| 계정 모름 | 2.00 | 20.0% | 1 |" in report
     assert "old@example.com" not in report
     assert "환산 비용 $10.00 (a@example.com $8.00, 계정 모름 $2.00)" in t.요약()
@@ -611,7 +611,7 @@ def test_보관_수를_넘은_보고서는_그_이름_모양의_파일만_지운
     left = set(t.이름들(folder))
     assert old not in left
     assert {"notes.md", bak, as_dir} <= left
-    assert {p.name for p in links} <= left
+    assert {p.name for p in links} <= left, "보관을 넘은 링크를 지우지 않음"
     assert target.read_text(encoding="utf-8") == "밖"
 
 
@@ -626,7 +626,7 @@ def test_보고서_폴더가_링크면_쓰지도_지우지도_않는다(
     (outside / "2026-W01.md").write_text("밖", encoding="utf-8")
     t.out.mkdir()
     assert _링크(outside, t.out / folder), "링크를 만들지 못했다"
-    assert t.돌린다("report") == 2
+    assert t.돌린다("report") == 2, "링크 폴더의 report 종료 코드"
     assert (
         f"보고서 폴더가 링크라 쓰지도 지우지도 않는다: {t.out / folder}" in capsys.readouterr().err
     )
@@ -851,7 +851,9 @@ def test_앞선_달에_시작한_세션도_시작_시각이_보인다(tmp_path: 
         "2026-06.jsonl",
         "2026-10.jsonl",
     ]
-    assert "| aaaaaaaa | C--project-agent | feature/a | 2026-06-20 09:00 |" in t.일간()
+    assert "| aaaaaaaa | C--project-agent | feature/a | 2026-06-20 09:00 |" in t.일간(), (
+        "앞선 달 세션의 시작 시각"
+    )
 
 
 def test_시간대를_바꿔_다시_돌려도_행이_겹치거나_빠지지_않는다(tmp_path: Path) -> None:
@@ -896,7 +898,7 @@ def test_기록_폴더가_없으면_state를_올리지_않고_끝난다(
     os.utime(p, (old, old))
     real = t.projects
     t.projects = tmp_path / "없는 폴더"
-    assert t.돌린다("ingest") == 2
+    assert t.돌린다("ingest") == 2, "기록 폴더 없는 ingest의 종료 코드"
     assert "세션 기록 폴더가 없다" in capsys.readouterr().err
     assert not (t.out / "state.json").exists()
     t.projects = real
@@ -921,7 +923,9 @@ def test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든
     del 첫["timestamp"]
     메인(t.projects, SID_A, [첫, 응답("m1", "2026-10-15T00:00:05Z", 입력=1, 출력=9)])
     t.돌린다("daily")
-    assert [(r["at"], r["output"]) for r in t.호출()] == [("2026-10-15T00:00:05Z", 9)]
+    assert [(r["at"], r["output"]) for r in t.호출()] == [("2026-10-15T00:00:05Z", 9)], (
+        "다음 줄 시각으로 든 응답"
+    )
     assert "경보 없음" in t.요약()
 
 
@@ -1083,7 +1087,7 @@ def test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든�
         "deferred_tools": 12,
         "instructions": 100,
         "other": 40,
-    }
+    }, "첫 호출 전의 시작 구성"
     assert a["large"] == [
         {
             "id": "tr1",
@@ -1109,7 +1113,7 @@ def test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든�
             "target": "curl",
             "carried": 3,
         },
-    ]
+    ], "큰 결과의 실려 간 호출"
     assert a["reads"] == [
         {"id": "tr1", "at": "2026-10-15T00:01:10Z", "path": BIG, "chars": 25_000, "again": False},
         {"id": "tr2", "at": "2026-10-15T00:02:10Z", "path": BIG, "chars": 25_000, "again": True},
@@ -1123,8 +1127,10 @@ def test_세션_행은_인계와_시작_구성과_도구와_압축과_PR을_든�
 def test_Bash의_큰_결과는_프로그램_이름만_남고_명령의_비밀은_장부에_없다(tmp_path: Path) -> None:
     t = _전부_판(tmp_path)
     for p in [*(t.out / "ledger").iterdir(), *(t.out / "daily").iterdir()]:
-        assert "s3cr3t" not in p.read_text(encoding="utf-8"), p
-    assert "| Bash | 12,000 | 3 | curl | aaaaaaaa |" in t.일간()
+        assert "s3cr3t" not in p.read_text(encoding="utf-8"), f"Bash 장부에 비밀이 남았다: {p}"
+    assert "| Bash | 12,000 | 3 | curl | aaaaaaaa |" in t.일간(), (
+        "Bash 큰 결과의 대상은 프로그램 이름"
+    )
 
 
 def test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다(tmp_path: Path) -> None:
@@ -1176,7 +1182,7 @@ def test_PowerShell의_변수_대입을_벗기고_비밀을_남기지_않는다(
         None,
         None,
         None,
-    ]
+    ], "PowerShell 큰 결과의 대상"
     for p in (t.out / "ledger").iterdir():
         assert "s3cr3t" not in p.read_text(encoding="utf-8"), p
 
@@ -1199,7 +1205,9 @@ def test_범위를_준_Read와_문턱까지의_결과는_큰_결과가_아니다
     메인(t.projects, SID_A, recs)
     assert t.돌린다("daily") == 0
     large = t.칸(SID_A, "large")
-    assert [(r["id"], r["chars"]) for r in large] == [("t6", 20_001), ("t7", 10_001)]
+    assert [(r["id"], r["chars"]) for r in large] == [("t6", 20_001), ("t7", 10_001)], (
+        "문턱까지와 범위를 준 결과는 큰 결과 아님"
+    )
 
 
 def _큰_결과_훅_입력(tool: str, inp: dict[str, object], chars: int) -> HookPayload:
@@ -1259,7 +1267,9 @@ def test_7절은_40만을_넘은_세션과_자동_압축_직전의_세션_컨텍
     section = _절(_전부_판(tmp_path).일간(), 7)
     assert "세션 컨텍스트가 40만을 넘은 메인 세션 1개" in section
     assert "압축 자동 1회, 수동 0회" in section
-    assert "자동 압축 직전의 세션 컨텍스트: 최소 510,000, 중앙값 510,000, 최대 510,000" in section
+    assert (
+        "자동 압축 직전의 세션 컨텍스트: 최소 510,000, 중앙값 510,000, 최대 510,000" in section
+    ), "자동 압축 직전의 세션 컨텍스트"
 
 
 def test_8절은_60분_넘게_쉰_뒤_캐시를_다시_쓴_호출을_든다(tmp_path: Path) -> None:
@@ -1278,7 +1288,7 @@ def test_9절은_시작_컨텍스트와_출처별_스킬_목록을_든다(tmp_pa
         "| 지연 도구 목록 | 12 |",
         "| 지침 파일 | 100 |",
         "| 그 밖 | 40 |",
-    ]
+    ], "9절의 출처별 스킬 목록"
 
 
 def test_10절은_브랜치별_비용과_인계와_PR_앞뒤를_가른다(tmp_path: Path) -> None:
@@ -1312,7 +1322,7 @@ def test_12절은_큰_결과와_셋이_읽은_파일과_다시_읽기_후보다(
 
 def test_40만을_넘은_세션이_있으면_경보(tmp_path: Path) -> None:
     t = _전부_판(tmp_path)
-    assert "경보: 세션 컨텍스트가 40만을 넘은 세션 1개" in t.요약().splitlines()
+    assert "경보: 세션 컨텍스트가 40만을 넘은 세션 1개" in t.요약().splitlines(), "40만 경보"
     assert "- 경보: 세션 컨텍스트가 40만을 넘은 세션 1개" in _절(t.일간(), 1)
 
 
@@ -1364,7 +1374,9 @@ def test_9절은_이_저장소와_그_워크트리의_세션만_센다(tmp_path:
     메인(t.projects, SID_B, [사람(at), 응답("m2", at, 입력=300)], FOLDER + "--claude-x")
     메인(t.projects, SID_C, [사람(at), 응답("m3", at, 입력=900)], FOLDER + "-2")
     assert t.돌린다("daily") == 0
-    assert "메인 세션 2개의 첫 호출 세션 컨텍스트 중앙값 200" in _절(t.일간(), 9)
+    assert "메인 세션 2개의 첫 호출 세션 컨텍스트 중앙값 200" in _절(t.일간(), 9), (
+        "이 저장소 세션만의 9절"
+    )
 
 
 def test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적는다(tmp_path: Path) -> None:
@@ -1375,7 +1387,9 @@ def test_9절과_시작_컨텍스트_경보는_헤드리스_세션을_따로_적
     메인(t.projects, SID_C, [사람(at, origin=None), 응답("m3", at, 입력=900)])
     assert t.돌린다("daily") == 0
     section = _절(t.일간(), 9)
-    assert "사람이 연 이 저장소의 메인 세션 1개의 첫 호출 세션 컨텍스트 중앙값 100." in section
+    assert "사람이 연 이 저장소의 메인 세션 1개의 첫 호출 세션 컨텍스트 중앙값 100." in section, (
+        "사람이 연 세션만의 중앙값"
+    )
     assert "SDK, 칸이 없는 옛 행) 2개는 아래 중앙값에 넣지 않았다" in section
     assert "그 첫 호출 세션 컨텍스트 중앙값은 800이다." in section
     assert t.세션_행(SID_B)["human"] is False
@@ -1423,7 +1437,7 @@ def test_명령_위치의_gh_pr_create만_PR로_센다(tmp_path: Path) -> None:
         {"at": "2026-10-15T00:07:00Z", "branch": "feature/a"},
         {"at": "2026-10-15T00:08:00Z", "branch": "feature/a"},
         {"at": "2026-10-15T00:09:00Z", "branch": "feature/c"},
-    ]
+    ], "명령 위치의 gh pr create만 PR"
 
 
 def test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운다(tmp_path: Path) -> None:
@@ -1462,8 +1476,12 @@ def test_PR의_브랜치는_head_인자를_기록의_브랜치보다_앞세운�
         ],
     )
     assert t.돌린다("daily") == 0
-    assert t.칸(SID_A, "prs") == [{"at": "2026-10-15T00:10:05Z", "branch": "feature/x"}]
-    assert t.칸(SID_B, "prs") == [{"at": "2026-10-15T01:00:05Z", "branch": "feature/y"}]
+    assert t.칸(SID_A, "prs") == [{"at": "2026-10-15T00:10:05Z", "branch": "feature/x"}], (
+        "gh의 --head가 PR의 브랜치"
+    )
+    assert t.칸(SID_B, "prs") == [{"at": "2026-10-15T01:00:05Z", "branch": "feature/y"}], (
+        "MCP의 head가 PR의 브랜치"
+    )
     rows = _표(_절(t.일간(), 10))
     assert "| feature/x | 8.00 | 100.0% | 1 | 0 | 50.0% · 50.0% |" in rows
     assert "| main | 0.00 | 0.0% | 2 | 0 | PR 시각 모름 |" in rows
@@ -1551,7 +1569,7 @@ def test_압축_뒤의_읽기는_다시_읽기_후보가_아니다(tmp_path: Pat
     ]
     메인(t.projects, SID_A, recs)
     assert t.돌린다("daily") == 0
-    assert "다시 읽기 후보 0회 0자" in _절(t.일간(), 12)
+    assert "다시 읽기 후보 0회 0자" in _절(t.일간(), 12), "압축 뒤의 읽기는 다시 읽기 아님"
 
 
 def test_포크에_복사된_도구_결과와_압축은_한_번만_센다(tmp_path: Path) -> None:
@@ -1569,9 +1587,9 @@ def test_포크에_복사된_도구_결과와_압축은_한_번만_센다(tmp_pa
     )
     assert t.돌린다("daily") == 0
     report = t.일간()
-    assert "문턱을 넘은 결과 1개" in _절(report, 12)
+    assert "문턱을 넘은 결과 1개" in _절(report, 12), "포크에 복사된 큰 결과는 한 번"
     assert "| Read | 30,000 | 0 | f.py | aaaaaaaa |" in _절(report, 12)
-    assert "압축 자동 1회, 수동 0회" in _절(report, 7)
+    assert "압축 자동 1회, 수동 0회" in _절(report, 7), "포크에 복사된 압축은 한 번"
     # preTokens가 없는 압축은 그 앞 마지막 호출의 세션 컨텍스트(r1의 1)를 쓴다.
     assert [r["context"] for r in t.칸(SID_A, "compactions")] == [1]
 
@@ -1631,7 +1649,9 @@ def test_실패한_Read_뒤의_범위_읽기는_다시_읽기_후보가_아니�
     ]
     메인(t.projects, SID_A, recs)
     assert t.돌린다("daily") == 0
-    assert "다시 읽기 후보 0회 0자(Read 글자의 0.0%)" in _절(t.일간(), 12)
+    assert "다시 읽기 후보 0회 0자(Read 글자의 0.0%)" in _절(t.일간(), 12), (
+        "실패한 Read 뒤의 범위 읽기"
+    )
     assert [r["id"] for r in t.칸(SID_A, "reads")] == ["c"]
 
 
@@ -1649,7 +1669,7 @@ def test_주가_끝난_다음_날_주간_보고서가_난다(tmp_path: Path) -> 
     t = _판(tmp_path)
     _날짜에(t, ["2026-10-12", "2026-10-18"])
     assert t.돌린다("daily", today="2026-10-18") == 0
-    assert "2026-W42.md" not in t.이름들("weekly")
+    assert "2026-W42.md" not in t.이름들("weekly"), "끝나지 않은 주의 주간 보고서 없음"
     assert t.돌린다("report", today="2026-10-19") == 0
     assert t.이름들("weekly") == ["2026-W39.md", "2026-W40.md", "2026-W41.md", "2026-W42.md"]
     week = t.주간("2026-W42")
@@ -1667,7 +1687,9 @@ def test_주간은_최근_넷만_남고_4주_요약은_지우지_않는다(tmp_p
     assert t.돌린다("daily", today="2026-10-19") == 0
     assert t.이름들("four-weeks") == ["2026-W37-W40.md"]
     assert t.돌린다("report", today="2026-11-09") == 0
-    assert t.이름들("weekly") == ["2026-W42.md", "2026-W43.md", "2026-W44.md", "2026-W45.md"]
+    assert t.이름들("weekly") == ["2026-W42.md", "2026-W43.md", "2026-W44.md", "2026-W45.md"], (
+        "주간은 최근 넷"
+    )
     assert t.이름들("four-weeks") == ["2026-W37-W40.md", "2026-W41-W44.md"]
 
 
@@ -1690,7 +1712,7 @@ def test_53주가_있는_해는_마지막_묶음에_53주를_넣는다(tmp_path:
     t = _판(tmp_path)
     _날짜에(t, ["2026-11-30", "2027-01-03", "2027-01-04"])
     assert t.돌린다("daily", today="2027-01-03") == 0
-    assert "2026-W49-W53.md" not in t.이름들("four-weeks")
+    assert "2026-W49-W53.md" not in t.이름들("four-weeks"), "53주는 마지막 묶음"
     assert t.돌린다("report", today="2027-01-04") == 0
     assert "2026-W53.md" in t.이름들("weekly")
     group = t.사주("2026-W49-W53")
