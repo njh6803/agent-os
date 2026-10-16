@@ -1,4 +1,4 @@
-# 2026-10-16 (37) code-review에 코드의 동작을 불러 대 보는 항목과 새 문장을 PR 직전 리뷰에 넘기는 문장 (대기열 260·305)
+# 2026-10-16 (45) code-review에 코드의 동작을 불러 대 보는 항목과 새 문장을 PR 직전 리뷰에 넘기는 문장 (대기열 260·305)
 
 > 사용자: 대기열 260·305(대상 파일이 `.claude/skills/code-review/SKILL.md`인 열린 행 가운데 지금 반영할 수 있는 둘)를 chore 한 PR로 반영한다
 
@@ -110,3 +110,6 @@ base `dbcdc6d6`, 파일 둘(스킬, 대기열), 커밋 없음, 미추적 둘(카
 - 이 PR은 워크트리에서 병합한다. 주 체크아웃은 다음 새 세션의 `tidy-checkouts`가 당긴다.
 - `skill-check-and-retro-section` 워크트리는 그대로다(대기열 238, 사람 몫).
 - CLI 좌석이 생기면 `coderabbit-review` 길로 밀 주장을 넘기는 방법을 잰다(위 PR 직전 축의 남긴 것).
+- 이 일지는 처음 37을 받았다. 푸시 전에 origin/main(`30b9f37`)을 다시 합치자 main에 일지 38이 들어와 있어
+  `tools/sibling_overlap.py --move`로 옮겼다. 그새 형제 워크트리 둘이 44를 받아 한 번 더 옮겨 45가 됐다.
+- 형제 워크트리 `07-review-axis-and-plugins`도 `.claude/skills/code-review/SKILL.md`를 고친다. 나중에 병합하는 쪽에서 글자 충돌 후보다.
