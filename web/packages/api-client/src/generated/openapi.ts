@@ -36,6 +36,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/end-user/runs/{run_id}/continuation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 서명한 최종 사용자의 끝난 실행을 이어 가는 새 실행을 일으켜 그 항목을 흘린다 */
+    post: operations["continue_end_user_run"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/end-user/runs/{run_id}/subscription": {
     parameters: {
       query?: never;
@@ -379,9 +396,10 @@ export interface components {
       | components["schemas"]["ConversationSummarized"];
     /**
      * FailedItem
-     * @description 실행이 실패로 끝났다. 고정 문구와 실행 식별자를 든다.
+     * @description 실행이 실패로 끝났다. 고정 문구와 실행 식별자와 실패 원인(없으면 null)을 든다.
      */
     FailedItem: {
+      cause: components["schemas"]["FailureCause"] | null;
       /** Message */
       message: string;
       /** Run Id */
@@ -392,6 +410,17 @@ export interface components {
        */
       type: "failed";
     };
+    /** @enum {string} */
+    FailureCause:
+      | "conversation_summary"
+      | "timeout"
+      | "tool_connection"
+      | "model_call"
+      | "tool_failure"
+      | "loop_limit"
+      | "resume_mismatch"
+      | "agent_code"
+      | "other";
     /**
      * FinishedItem
      * @description 실행이 출력을 내고 끝났다.
@@ -573,9 +602,10 @@ export interface components {
     };
     /**
      * RunFailed
-     * @description 실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다.
+     * @description 실행이 실패로 끝났다. error 는 내용, cause 는 실패 원인(없으면 null)이다. 런타임이 낸다.
      */
     RunFailed: {
+      cause: components["schemas"]["FailureCause"] | null;
       /** Error */
       error: string;
       /** Run Id */
@@ -656,7 +686,7 @@ export interface components {
     RunRow: components["schemas"]["RunSummary"] | components["schemas"]["UnreadableTrace"];
     /**
      * RunStarted
-     * @description 실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다.
+     * @description 실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기(없으면 null)를 든다. 런타임이 낸다.
      */
     RunStarted: {
       /** Agent */
@@ -669,6 +699,10 @@ export interface components {
       request: string;
       /** Run Id */
       run_id: string;
+      /** Shortcuts */
+      shortcuts: {
+        [key: string]: string;
+      } | null;
       /**
        * Ts
        * Format: date-time
@@ -1036,6 +1070,88 @@ export interface operations {
         };
       };
       /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청하는 쪽의 상한을 넘었다. Retry-After 의 초가 지난 뒤 다시 보낸다 */
+      429: {
+        headers: {
+          /** @description 다시 보내도 되기까지의 초. 1 이상의 정수다 */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  continue_end_user_run: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartRun"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": unknown;
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 포인트(파이썬 len)로 세고 상한의 기본값은 20,000자다 */
       422: {
         headers: {
           [name: string]: unknown;

@@ -877,6 +877,66 @@ def test_형식_1과_2_파일을_읽고_앞_실행이_없는_시작_이벤트는
             assert event.previous_run is None
 
 
+def test_실패_원인과_바로가기가_왕복하고_헤더는_3_그대로다(tmp_path: Path) -> None:
+    """새 필드 둘은 선택 필드라 형식을 올리지 않는다(ADR 0031, ADR 0022 의 둘째 2026-10-15 이력)."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    started = RunStarted(
+        run_id=RunId("run-3"),
+        ts=TS,
+        agent=AgentName("calc"),
+        request="그럼?",
+        principal=Principal("alice"),
+        previous_run=RunId("run-2"),
+        shortcuts={AgentName("calc"): RunId("run-2"), AgentName("weather"): RunId("run-1")},
+    )
+    failed = RunFailed(
+        run_id=RunId("run-3"),
+        ts=TS,
+        error="요약 모델이 답하지 않았다",
+        cause="conversation_summary",
+    )
+    store.write(started)
+    store.write(failed)
+
+    trace = store.read(RunId("run-3"))
+
+    assert trace is not None
+    assert trace.schema_version == "3"
+    assert list(trace.events) == [started, failed]
+    header = (tmp_path / "run-3.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    assert json.loads(header) == {"schema_version": "3", "run_id": "run-3"}
+
+
+def _old_lines(version: str) -> str:
+    """새 필드 둘의 키가 없는 시작 이벤트와 실패 이벤트. 그 형식의 런타임이 쓴 모양이다."""
+    previous = ',"previous_run":null' if version == "3" else ""
+    return (
+        f'{{"schema_version":"{version}","run_id":"x"}}\n'
+        '{"type":"run_started","run_id":"x","ts":"2026-09-21T12:00:00Z",'
+        f'"agent":"calc","request":"2+2?","principal":"alice"{previous}}}\n'
+        '{"type":"run_failed","run_id":"x","ts":"2026-09-21T12:00:01Z","error":"boom"}\n'
+    )
+
+
+@pytest.mark.parametrize("version", ["1", "2", "3"], ids=["형식 1", "형식 2", "형식 3"])
+def test_새_필드_둘의_키가_없는_옛_줄은_원인과_바로가기가_없음으로_읽힌다(
+    version: TraceSchemaVersion, tmp_path: Path
+) -> None:
+    """두 필드가 선택이고 기본값이 없음이라 옛 줄이 손상이 아니다."""
+    (tmp_path / "x.jsonl").write_text(_old_lines(version), encoding="utf-8")
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    trace = store.read(RunId("x"))
+
+    assert trace is not None
+    assert trace.schema_version == version
+    started, failed = trace.events
+    assert isinstance(started, RunStarted)
+    assert started.shortcuts is None
+    assert isinstance(failed, RunFailed)
+    assert failed.cause is None
+
+
 def test_형식_2_파일에_재개가_이어_쓴_뒤에도_헤더는_2_다(tmp_path: Path) -> None:
     """재개는 헤더를 다시 쓰지 않는다. 형식이 오른 날 멈춰 있던 실행을 새 런타임이 그대로 재개한다
     (스토리 47). 재개가 형식 3 에만 있는 이벤트를 이어 쓰지 않으므로 그 파일은 형식 2 그대로다."""

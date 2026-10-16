@@ -37,6 +37,7 @@ const STARTED: RunEvent = {
   request: "2 더하기 3 하고 4 더하기 5",
   principal: "operator",
   previous_run: null,
+  shortcuts: null,
 };
 const CALLED: RunEvent = {
   type: "llm_called",

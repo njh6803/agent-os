@@ -61,6 +61,11 @@ export async function 관리_클라이언트로_최종_사용자_경로를_부�
   await 관리.POST("/end-user/runs", { body: { agent: "echo", request: "안녕" } });
   // @ts-expect-error: 관리 클라이언트는 최종 사용자의 구독 경로도 모른다. 관리 화면은 그 스트림을 읽지 않는다
   await 관리.GET("/end-user/runs/{run_id}/subscription", { params: { path: { run_id: "r1" } } });
+  // @ts-expect-error: 관리 클라이언트는 최종 사용자의 이어 가기 경로도 모른다. 관리는 실행을 일으키지 않는다
+  await 관리.POST("/end-user/runs/{run_id}/continuation", {
+    params: { path: { run_id: "r1" } },
+    body: { agent: "echo", request: "그럼?" },
+  });
 }
 
 export async function 채널_클라이언트로_관리_경로를_부르면_컴파일이_실패한다(): Promise<void> {
@@ -105,4 +110,5 @@ expectTypeOf<Exclude<keyof paths, keyof AdminPaths>>().toEqualTypeOf<
   | "/end-user/runs"
   | "/end-user/runs/{run_id}/approval"
   | "/end-user/runs/{run_id}/subscription"
+  | "/end-user/runs/{run_id}/continuation"
 >();
