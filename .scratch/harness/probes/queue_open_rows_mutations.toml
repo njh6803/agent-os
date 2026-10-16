@@ -184,7 +184,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
 old = '''    if cited:'''
-new = '''    if cited and each:'''
+new = '''    if False:'''
 
 [[mutation]]
 name = "ref 를 주어도 디스크의 대기열을 읽는다"
@@ -225,3 +225,13 @@ expect = "red"
 file = "tools/queue_open_rows.py"
 old = '''    except (OSError, UnicodeDecodeError) as error:'''
 new = '''    except OSError as error:'''
+
+[[mutation]]
+name = "rows 를 주어도 행마다의 줄을 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "rows를_주면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if each:'''
+new = '''    if False:'''

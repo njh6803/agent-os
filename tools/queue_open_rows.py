@@ -56,7 +56,7 @@ from pathlib import Path
 QUEUE = Path(".scratch/retro-queue.md")
 MIN_ROUNDS = 3
 MIN_ROWS = 3
-SHARED = "셋 이상"  # MIN_ROWS 를 바꾸면 함께 바꾼다
+SHARED = f"{MIN_ROWS}개 행 이상"
 USAGE = "쓰임: uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>] [--rows]\n"
 GIT_TIMEOUT = 30
 
@@ -182,7 +182,7 @@ def _groups(groups: dict[str, list[Row]]) -> list[str]:
     return [f"  `{path}`: {_numbers(group)}" for path, group in groups.items()]
 
 
-def render(rows: list[Row], broken: list[int], *, each: bool = False) -> str:
+def render(rows: list[Row], broken: list[int]) -> str:
     out = [f"열린 행 {len(rows)}개"]
     ripe = sorted(
         (row for row in rows if row.rounds is not None and row.rounds >= MIN_ROUNDS),
@@ -214,11 +214,12 @@ def render(rows: list[Row], broken: list[int], *, each: bool = False) -> str:
         out.append(
             f"칸이 넷이 아닌 행: {' '.join(map(str, broken))} (세지 않았다. 표를 고치고 다시 센다)"
         )
-    if each:
-        out.append("행마다:")
-        out.extend(_row_line(row) for row in rows)
-        out.append("대상마다:")
-        out.extend(_groups(grouped))
+    return "\n".join(out)
+
+
+def render_rows(rows: list[Row]) -> str:
+    """`--rows` 가 기본 출력 뒤에 붙이는 행마다·대상마다의 줄."""
+    out = ["행마다:", *(_row_line(row) for row in rows), "대상마다:", *_groups(by_target(rows))]
     return "\n".join(out)
 
 
@@ -265,7 +266,9 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"대기열을 읽지 못했다: {error}\n")
         return 2
     rows, broken = read_rows(text)
-    print(render(rows, broken, each=each))
+    print(render(rows, broken))
+    if each:
+        print(render_rows(rows))
     return 1 if broken else 0
 
 

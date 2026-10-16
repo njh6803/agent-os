@@ -198,7 +198,7 @@ def test_디렉터리와_패턴은_같은_대상_파일_조건에_세지_않고_
         [],
     )
     shared, rest = out.split("디렉터리·패턴 대상")
-    assert "같은 대상 파일이 셋 이상: (없음)" in shared
+    assert "같은 대상 파일이 3개 행 이상: (없음)" in shared
     assert "`tools/`: 1 2 3" in rest
     assert "`a/*.toml`: 1 2 3" in rest
 
@@ -213,7 +213,7 @@ def test_괄호_안의_인용도_행_번호와_함께_기본_출력에_찍는다
 def test_조건에_드는_것이_없으면_없다고_적는다() -> None:
     out = render([row(1, 1, "a.md")], [])
     assert "회차 3 이상: (없음)" in out
-    assert "같은 대상 파일이 셋 이상: (없음)" in out
+    assert "같은 대상 파일이 3개 행 이상: (없음)" in out
 
 
 def test_이_저장소의_대기열을_빠짐없이_읽는다() -> None:
@@ -243,6 +243,19 @@ def test_main을_실제로_불러_임시_대기열의_조건을_찍는다(tmp_pa
 
 def test_main은_없는_파일이면_2로_끝난다(tmp_path: Path) -> None:
     assert main(["--queue", str(tmp_path / "없다.md")]) == 2
+
+
+def test_main은_rows를_주면_행마다의_줄을_기본_출력_뒤에_찍는다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(queue("| 9 | 일 | `a/b.md`(`c/d.md`) | 3회차 |"), encoding="utf-8")
+    assert main(["--queue", str(path)]) == 0
+    assert "행마다:" not in capsys.readouterr().out
+    assert main(["--queue", str(path), "--rows"]) == 0
+    out = capsys.readouterr().out
+    assert out.index("열린 행 1개") < out.index("행마다:")
+    assert "  9 3회차(승인) 대상: a/b.md / 인용: c/d.md" in out
 
 
 def test_main은_인자가_틀리면_2로_끝난다() -> None:
