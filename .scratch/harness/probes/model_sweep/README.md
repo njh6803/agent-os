@@ -149,6 +149,6 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 - 인계 훅(PR #276): 세션 컨텍스트가 20만 토큰을 넘은 세션이 셀프 리뷰 직전·커밋 뒤·PR 연 뒤에 오면 같은 브랜치의
   새 세션으로 넘긴다(`tools/hook_handoff.py`, `next-session` 결정표의 인계 줄). 한 브랜치의 몫이 두 세션 이상에 나뉘고,
   인계 지시문의 모델은 스윕 브랜치면 `tools/model_sweep.py`의 갈래다.
-- 큰 결과 알림 훅(PR #PR번호): 범위 없이 읽은 Read 결과가 2만 자를, Bash·PowerShell 결과가 1만 자를 넘으면
+- 큰 결과 알림 훅(PR #278): 범위 없이 읽은 Read 결과가 2만 자를, Bash·PowerShell 결과가 1만 자를 넘으면
   `tools/hook_large_result.py`가 크기와 문턱을 들어 범위를 좁히라고 알린다. 막지 않는다. 훅은 `CLAUDE_PROJECT_DIR`이
   가리키는 주 체크아웃의 사본이 돈다(`.claude/rules/tools.md`).
