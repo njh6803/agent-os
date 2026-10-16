@@ -5,7 +5,7 @@ date: 2026-09-22
 
 # 원칙 III의 판정자는 pyright가 아니라 전용 검사 하나다
 
-헌법 원칙 III는 `Any`, `cast`, `type: ignore`, `pyright: ignore`를 금하며 "pyright strict가 판정하며 테스트 코드도 대상이다"라고 적었다. **그 문장이 거짓이다.** pyright strict는 넷 중 하나도 잡지 않는다 — 명시적 `Any`는 Unknown이 아니라 정상 타입이고, `cast`는 정상 API이며, 억제 주석은 정의상 억제된다. 지금의 ruff select(E, W, F, I, UP, B, DTZ, TD)도 마찬가지다. 그래서 헌법 원칙 하나가 교정 루프 사다리("타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰")의 **맨 아래 층**에 있었다. **`tools/check_type_escapes.py` 하나를 판정자로 두고 pre-commit과 CI가 돌린다. 원칙 III의 문장을 그 사실에 맞춘다.**
+헌법 원칙 III는 `Any`, `cast`, `type: ignore`, `pyright: ignore`를 금하며 "pyright strict가 판정하며 테스트 코드도 대상이다"라고 적었다. **그 문장이 거짓이다.** pyright strict는 넷 중 하나도 잡지 않는다 — 명시적 `Any`는 Unknown이 아니라 정상 타입이고, `cast`는 정상 API이며, 억제 주석은 정의상 억제된다. 그때의 ruff select(E, W, F, I, UP, B, DTZ, TD)도 마찬가지다. 그래서 헌법 원칙 하나가 교정 루프 사다리("타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰")의 **맨 아래 층**에 있었다. **`tools/check_type_escapes.py` 하나를 판정자로 두고 pre-commit과 CI가 돌린다. 원칙 III의 문장을 그 사실에 맞춘다.**
 
 계기는 일지 `2026-09-22-09`의 회고 후보 1번이고 사용자가 승인했다. 티켓 02가 FastAPI·starlette·pydantic 타입을 실제로 들여오는 자리라 압력이 가장 높은 앞에 두었다. 새 규칙을 만드는 것이 아니라 있는 규칙을 한 층 올리는 것이라 "한 번의 사건으로 규칙을 만들지 않는다"에 걸리지 않는다.
 

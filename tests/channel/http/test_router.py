@@ -247,7 +247,7 @@ class FakePlugins:
         self.calls += 1
         return self.disabled
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         self.calls += 1
         if (kind, name) not in self._manifests:
             return "absent"

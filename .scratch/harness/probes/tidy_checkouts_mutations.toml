@@ -516,9 +516,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    verdict = judge_branch(branch, tip, ops.merged(root), contains(root, tip, ops.git))
+old = '''    verdict = judge_branch(branch, tip, ops.merged(root), contained=contains(root, tip, ops.git))
     if verdict.action != "delete":'''
-new = '''    verdict = judge_branch(branch, tip, ops.merged(root), contains(root, tip, ops.git))
+new = '''    verdict = judge_branch(branch, tip, ops.merged(root), contained=contains(root, tip, ops.git))
     if False:'''
 
 [[mutation]]

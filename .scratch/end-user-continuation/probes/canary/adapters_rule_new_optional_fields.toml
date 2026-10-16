@@ -4,7 +4,7 @@
 # 첫 판의 질문은 "이 세션에 실린 지시"만 말해, 실험군 한 회차가 Read 결과에 붙어 실린 규칙을 "도구 결과에 딸려 온
 # 글이라 지시로 보지 않았다"며 "없음"이라 답했다(통과 3 · 실패 1). 규칙은 실렸고 질문의 말이 모호했다. 그렇게 실린
 # 규칙도 지시라고 질문에 밝혔다.
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-54. 질문을 고친 둘째 판).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-56. 질문을 고친 둘째 판).
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/adapters_rule_new_optional_fields.toml <출력 디렉터리>
 kind = "rule"
 question = '''

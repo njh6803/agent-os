@@ -1,7 +1,7 @@
 # `.claude/rules/http.md` 의 에러 문서 항목에 더한 문장(이어 가기 경로가 시작의 422 설명을 나눠 쓴다)이 `paths` 에 맞는
 # 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
 # 실험군은 규칙의 paths 안(src/agent_os/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-54).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-56).
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/http_rule_continuation_422.toml <출력 디렉터리>
 kind = "rule"
 question = '''

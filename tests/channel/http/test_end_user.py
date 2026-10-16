@@ -282,7 +282,7 @@ class FakePlugins:
         self.calls += 1
         return self.disabled
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("최종 사용자 경로는 켜고 끄지 않는다")
 
 

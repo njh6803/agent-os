@@ -276,7 +276,7 @@ class FakePlugins:
             raise PluginError(self.corrupt)
         return self.disabled
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("core 는 켜고 끄지 않는다. 관리가 한다")
 
 
@@ -3901,7 +3901,7 @@ async def test_형식_2_트레이스의_재개와_이어_가지_않은_실행의
 
 @pytest.mark.parametrize("continued", [False, True], ids=["새 대화", "이어 간 실행"])
 async def test_에이전트가_대화_요약_이벤트를_내면_그_실행은_run_failed_로_끝난다(
-    continued: bool, trace: FakeTrace, clock: FakeClock
+    *, continued: bool, trace: FakeTrace, clock: FakeClock
 ) -> None:
     """요약 이벤트는 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라 런타임만 낸다. 에이전트가
     지어낸 것이 통과하면 런타임의 것과 가를 수 없고, 그 실행을 지나는 모든 이어 가기가 영구히 깨진다
@@ -4198,7 +4198,7 @@ def _summary_request(model: ToolAwareFakeModel) -> tuple[str, Json]:
 
 @pytest.mark.parametrize(("sizes", "summarized"), [((4, 6), False), ((4, 7), True)])
 async def test_원문_교환의_글자_수_합이_한도와_같으면_요약하지_않고_하나_넘으면_요약한다(
-    sizes: tuple[int, ...], summarized: bool, clock: FakeClock
+    sizes: tuple[int, ...], *, summarized: bool, clock: FakeClock
 ) -> None:
     """글자 수는 교환마다 요청과 출력을 더한 것이다(스토리 9)."""
     trace = FakeTrace()
@@ -4217,7 +4217,7 @@ async def test_원문_교환의_글자_수_합이_한도와_같으면_요약하�
     ("sizes", "summarized"), [((10_000, 10_000), False), ((10_000, 10_001), True)]
 )
 async def test_한도를_적지_않은_에이전트는_core_의_기본_20000자이고_목표는_5000자다(
-    sizes: tuple[int, ...], summarized: bool, clock: FakeClock
+    sizes: tuple[int, ...], *, summarized: bool, clock: FakeClock
 ) -> None:
     """기본값은 매니페스트가 아니라 core 가 소유한다(스토리 35, 명세 검토)."""
     trace = FakeTrace()
@@ -4933,7 +4933,7 @@ async def test_태스크_그룹의_자식이_몰아도_run_failed_는_하나이�
 
 @pytest.mark.parametrize("gated", [False, True], ids=["끝남", "일시정지"])
 async def test_결말을_쓴_뒤_도구_연결을_닫다_기한이_와도_결말을_덧붙이지_않는다(
-    gated: bool, trace: FakeTrace, clock: FakeClock
+    *, gated: bool, trace: FakeTrace, clock: FakeClock
 ) -> None:
     """범위는 결말까지다. 결말이 트레이스에 선 뒤 연결의 정리가 늦은 것은 실행이 시간 안에 끝나지
     않은 것이 아니다 — 덧붙이면 결말이 둘이 되고, 멈춘 실행은 재개할 수 없게 된다."""

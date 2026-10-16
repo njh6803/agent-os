@@ -38,7 +38,7 @@ ENGLISH = "Now let me run the full verification suite before committing."
 KOREAN = "이제 커밋 전에 검증 명령을 모두 돌리겠습니다."
 
 
-def _record(message_id: str, blocks: tuple[Mapping[str, str], ...], is_sidechain: bool) -> str:
+def _record(message_id: str, blocks: tuple[Mapping[str, str], ...], *, is_sidechain: bool) -> str:
     record = {
         "type": "assistant",
         "isSidechain": is_sidechain,
