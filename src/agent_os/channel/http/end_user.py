@@ -1,18 +1,20 @@
-"""최종 사용자 면. 사이트가 서명한 토큰으로 자기 실행을 시작하고 결정하고 구독한다(ADR 0023).
+"""최종 사용자 면. 사이트가 서명한 토큰으로 자기 실행을 시작·결정·구독하고 이어 간다(ADR 0023).
 
-경로는 접두사 `/end-user` 아래 셋이다. 시작(`POST /end-user/runs`, 본문은 `StartRun`), 결정
+경로는 접두사 `/end-user` 아래 넷이다. 시작(`POST /end-user/runs`, 본문은 `StartRun`), 결정
 (`POST /end-user/runs/{run_id}/approval`, 본문은 `Decision`), 구독
-(`GET /end-user/runs/{run_id}/subscription`, 선택 헤더 `Last-Event-ID`). 접두사를 `/runs` 와 가른
-이유는 nginx 가 바깥에 넘기는 경로를 그 접두사 하나로 만들기 위해서다(ADR 0024) — 운영자의 채널
-토큰과 원문 스트림이 원격에 닿지 않는다. 인증 미들웨어가 이 접두사 아래를 서명 토큰으로만 열고,
-지난 요청의 신원(주체 `발급자|sub` 와 사이트 항목)을 요청에 심는다. 주체도 승인자도 본문에서 받지
-않는다(ADR 0015).
+(`GET /end-user/runs/{run_id}/subscription`, 선택 헤더 `Last-Event-ID`), 이어 가기
+(`POST /end-user/runs/{run_id}/continuation`, 본문은 `StartRun`, ADR 0022 의 첫째 2026-10-15
+이력). 접두사를 `/runs` 와 가른 이유는 nginx 가 바깥에 넘기는 경로를 그 접두사 하나로 만들기
+위해서다(ADR 0024) — 운영자의 채널 토큰과 원문 스트림이 원격에 닿지 않는다. 인증 미들웨어가 이
+접두사 아래를 서명 토큰으로만 열고, 지난 요청의 신원(주체 `발급자|sub` 와 사이트 항목)을 요청에
+심는다. 주체도 승인자도 본문에서 받지 않는다(ADR 0015).
 
 **판정은 core 가 한다.** 라우트는 core 에 그 사이트의 열 에이전트 목록을 넘길 뿐 에이전트가 목록
 안인지, 실행이 누구의 것인지, 상태가 어떤지 먼저 보지 않는다(`.claude/rules/channel.md`). 결정과
-구독에서 실행의 에이전트와 주체는 트레이스 안에 있어, 채널이 먼저 보면 트레이스를 먼저 읽어 판정
-순서가 core 밖으로 샌다. 상태 코드는 표가 이 면의 것으로 옮긴다 — 남의 실행, 손상된 실행, 없는
-실행, 열 에이전트 밖의 실행은 모두 같은 404 고정 문구다(`agent_os.http.errors`).
+구독에서 실행의 에이전트와 주체는, 이어 가기에서 앞 실행의 주체와 상태는 트레이스 안에 있어, 채널이
+먼저 보면 트레이스를 먼저 읽어 판정 순서가 core 밖으로 샌다. 이어 가기가 열 에이전트 목록으로 보는
+것은 본문이 요청한 에이전트다. 상태 코드는 표가 이 면의 것으로 옮긴다 — 남의 실행, 손상된 실행,
+없는 실행, 열 에이전트 밖의 실행은 모두 같은 404 고정 문구다(`agent_os.http.errors`).
 
 **프레임은 `data:` 한 줄과 `id:` 한 줄이다.** `data` 는 최종 사용자 항목 하나(`items`)이고 `id` 는
 그 항목의 근거인 트레이스 인덱스의 십진 글자다. 결정 본문의 `pause_index` 는 일시정지 항목의 `id`
@@ -24,12 +26,14 @@
 않는 컴포넌트로 계약에 남긴다. 후처리로 지우지 않는다(ADR 0014 의 2026-09-24 이력이 같은 종류의
 후처리를 거부했다).
 
-**시작과 결정의 응답은 등록부의 받는 쪽 하나다.** 처음부터(결정은 결정 항목부터) 받는 구독과 같은
-프레임이고, 응답은 첫 이벤트를 받은 뒤에 시작한다(`router` 모듈 독스트링).
+**시작·결정·이어 가기의 응답은 등록부의 받는 쪽 하나다.** 처음부터(결정은 결정 항목부터) 받는
+구독과 같은 프레임이고, 응답은 첫 이벤트를 받은 뒤에 시작한다(`router` 모듈 독스트링). 이어 가기의
+첫 항목은 새 실행의 시작 항목이다.
 
 **상한은 이 면에만 걸린다**(`limits` 모듈, ADR 0023). 검사의 자리는 인증과 본문 검증 뒤, core
-앞이다. 시작은 요청 글자 수(422) → 동시 실행과 시간당 실행(429) 순이고, 결정은 동시 실행과 시간당
-실행(429), 구독은 구독 수(429)다. 시작과 결정의 칸은 등록부가 차지하고 돌려준다(`Runs.start`).
+앞이다. 시작과 이어 가기는 요청 글자 수(422) → 동시 실행과 시간당 실행(429) 순이고, 결정은 동시
+실행과 시간당 실행(429), 구독은 구독 수(429)다. 시작·결정·이어 가기의 칸은 등록부가 차지하고
+돌려준다(`Runs.start`).
 구독 수는 구독의 의존성이 들어올 때 세고, 응답이 끝난 뒤 FastAPI 가 요청 단위로 그 의존성을 닫을 때
 줄인다. 응답의 제너레이터에 맡기지 않는 이유는 `subscription` 의 독스트링이다.
 
@@ -93,9 +97,10 @@ END_USER_START_PATH = f"{END_USER_PREFIX}{_RUNS}"
 # 든다.
 LAST_EVENT_ID_PATTERN = r"^[0-9]{1,12}$"
 
-# 시작 경로의 422 설명. 요청 글자 수의 상한은 사이트 파일의 상한 표에서 오는 사이트마다 다른 값이라
-# 계약에는 단위와 기본값만 글자로 적는다 — 본문이 `StartRun` 그대로라 `maxLength` 를 둘 자리가
-# 없다(명세의 2026-10-05 to-tickets 주석). 기본값은 서버가 재는 그 상수에서 읽는다.
+# 시작 경로와 이어 가기 경로의 422 설명. 요청 글자 수의 상한은 사이트 파일의 상한 표에서 오는
+# 사이트마다 다른 값이라 계약에는 단위와 기본값만 글자로 적는다 — 본문이 `StartRun` 그대로라
+# `maxLength` 를 둘 자리가 없다(명세의 2026-10-05 to-tickets 주석). 기본값은 서버가 재는 그 상수에서
+# 읽는다.
 _START_INVALID = (
     "요청의 형식이 올바르지 않거나 request 가 그 사이트의 글자 수 상한을 넘었다. 글자는 코드 "
     f"포인트(파이썬 len)로 세고 상한의 기본값은 {DEFAULT_REQUEST_CHARS:,}자다"
@@ -119,12 +124,15 @@ def end_user_router(
     router = APIRouter(prefix=END_USER_PREFIX, responses=documented_stream_errors(500))
     subscriptions = SubscriptionQuota()
 
-    async def start_stream(body: StartRun, request: Request) -> RunStream:
-        """서명한 주체로 실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
+    async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
+        """서명한 주체로 새 실행을 일으키고 첫 이벤트를 받는다. 시작과 이어 가기가 앞 실행 하나만
+        다르게 준다.
 
-        에이전트가 그 사이트의 열 에이전트 목록 안인지 먼저 보지 않는다. 목록 밖이면 core 가 없는
-        에이전트와 같은 `Absent` 를 던지고 매니페스트를 읽지 않는다. 상한은 그보다 먼저다 — 요청
-        글자 수를 여기서 보고, 동시 실행과 시간당 실행은 등록부가 실행을 받으며 본다.
+        에이전트가 그 사이트의 열 에이전트 목록 안인지도, 앞 실행이 있는지·누구의 것인지·끝났는지도
+        먼저 보지 않는다. core 의 `run()` 이 판정하고(이어 가기는 앞 실행 → 고리 → 준비) 표가 옮긴다
+        — 목록 밖이면 core 가 없는 에이전트와 같은 `Absent` 를 던지고 매니페스트를 읽지 않는다.
+        상한은 그보다 먼저다 — 요청 글자 수를 여기서 보고, 동시 실행과 시간당 실행은 등록부가 실행을
+        받으며 본다. 그래서 남의 앞 실행에 보낸 이어 가기도 404 보다 429 가 먼저다.
         """
         user = _signed_in(request)
         check_request_chars(body.request, user.site)
@@ -132,6 +140,7 @@ def end_user_router(
             body.agent,
             body.request,
             user.principal,
+            previous_run=previous_run,
             visible_agents=user.site.agents,
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
@@ -143,6 +152,14 @@ def end_user_router(
         return await runs.start(
             events, request_id=request_id_of(request), first_index=0, end_user=user
         )
+
+    async def start_stream(body: StartRun, request: Request) -> RunStream:
+        """실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이 돌아온 뒤에 시작한다.
+
+        `started` 를 바로 의존성으로 걸지 않는 이유는 FastAPI 가 그 시그니처의 `previous_run` 을
+        질의 파라미터로 읽기 때문이다. 경로마다 앞 실행을 고정한 래퍼 하나가 의존성이다.
+        """
+        return await started(body, request, None)
 
     # 404 는 목록 밖이거나 없는 에이전트이고 메시지가 같다. 409 는 운영자가 꺼 둔 것을 부른 것이고
     # 종류와 이름 없는 고정 문구다. 422 는 본문의 형식이거나 요청 글자 수의 상한이다. 429 는
@@ -275,6 +292,38 @@ def end_user_router(
         async for frame in subscribed.frames():
             yield frame
 
+    async def continue_stream(
+        run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)], body: StartRun, request: Request
+    ) -> RunStream:
+        """서명한 주체의 앞 실행을 이어 가는 새 실행을 일으키고 첫 이벤트를 받는다. 응답은 이것이
+        돌아온 뒤에 선다. 판정과 상한의 자리는 `started` 이다."""
+        return await started(body, request, RunId(run_id))
+
+    # 시작과 앞 실행 하나만 다르다(ADR 0022 의 첫째 2026-10-15 이력). 본문은 `StartRun` 그대로이고
+    # 앞 실행은 경로에만 있다. 이유는 운영자 채널의 이어 가기와 같다(`router` 모듈 독스트링). 404 는
+    # 앞 실행이 없거나 남의 것이거나 손상된 것, 요청한 에이전트가 없거나 그 사이트의 열 에이전트
+    # 밖인 것이고 메시지가 모두 같은 고정 문구다. 실행을 가리키는 경로라 하위 타입이 아닌
+    # `PluginError`(깨진 고리, 요청한 에이전트와 그것이 쓰는 mcp 와 진입점의 구성 오류)도 404 다 —
+    # 구성 오류까지 404 가 되는 것은 결정과 같은 대가이고 원인은 서버 기록에 있다. 409 는 자기 앞
+    # 실행이 끝나지 않은 것(메시지가 실패·일시정지·결말 없음을 든다)과 꺼짐(고정 문구)이다. 422 와
+    # 429 는 시작과 같고 422 설명도 시작의 것을 나눠 쓴다 — 본문이 같은 `StartRun` 이고 같은 상한을
+    # 지난다. 경로 파라미터의 형식 오류는 그 설명의 "요청의 형식이 올바르지 않거나"가 덮는다. 전부
+    # 실행 식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다.
+    @router.post(
+        f"{_RUNS}/{{run_id:verbatim}}/continuation",
+        operation_id="continue_end_user_run",
+        summary="서명한 최종 사용자의 끝난 실행을 이어 가는 새 실행을 일으켜 그 항목을 흘린다",
+        response_class=EventSourceResponse,
+        responses=documented_stream_errors(
+            401, 404, 409, 422, 429, descriptions={422: _START_INVALID}
+        ),
+    )
+    async def continue_end_user_run(
+        stream: Annotated[RunStream, Depends(continue_stream)],
+    ) -> AsyncIterator[EndUserItem | SkipJsonSchema[ServerSentEvent]]:
+        async for frame in _framed(stream.items()):
+            yield frame
+
     return router
 
 
@@ -322,7 +371,7 @@ def _frame(index: int, event: Event) -> ServerSentEvent | None:
 
 
 async def _framed(items: AsyncIterable[Indexed]) -> AsyncIterator[ServerSentEvent]:
-    """등록부의 받는 쪽이 받은 이벤트를 투영한 프레임들. 시작·결정 응답과 구독의 실황이 쓴다."""
+    """등록부의 받는 쪽이 받은 이벤트를 투영한 프레임들. 실행을 일으킨 응답과 구독의 실황이 쓴다."""
     async for item in items:
         frame = _frame(item.index, item.event)
         if frame is not None:

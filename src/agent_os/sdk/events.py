@@ -43,14 +43,22 @@ class BaseEvent(BaseModel):
 # 식별자 패턴을 걸지 않는 것은 이벤트의 run_id 와 같은 규칙이다. 패턴 위반은 거슬러 읽기가 기록의
 # 손상으로 판정한다. 모델에 걸면 그 판정이 단건 읽기의 손상으로 옮고, 손편집 사례를 타입 있는 가짜로
 # 만들 수 없다.
+#
+# shortcuts 는 바로가기다. 에이전트 이름에서 그 대화에서 그 에이전트가 가장 최근에 처리한 실행으로
+# 가는 지도이고, 없음(None)은 바로가기가 없는 실행이다(ADR 0022 의 둘째 2026-10-15 이력). 기본값이
+# None 인 것은 형식 1·2·3 의 옛 줄에 이 키가 없기 때문이고 형식은 3 그대로다. 직렬화 스키마의 모양은
+# previous_run 과 같다. 키와 값에 sdk 의 패턴을 걸지 않는 것도 이벤트의 다른 식별자 필드와 같은
+# 규칙이다 — 걸면 패턴 위반이 단건 읽기의 손상이 된다. 필드 이름이 용어집의 말이 아닌 것은 이것이
+# 시작 이벤트의 필드일 뿐 도메인의 개념이 아니어서다.
 class RunStarted(BaseEvent):
-    """실행이 시작됐다. 에이전트, 요청, 주체, 이어 간 앞 실행(없으면 null)을 든다. 런타임이 낸다."""
+    """실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기(없으면 null)를 든다. 런타임이 낸다."""
 
     type: Literal["run_started"] = "run_started"
     agent: AgentName
     request: str
     principal: Principal
     previous_run: RunId | None = None
+    shortcuts: Mapping[AgentName, RunId] | None = None
 
 
 class ToolCall(BaseModel):
@@ -129,11 +137,35 @@ class RunFinished(BaseEvent):
     output: str
 
 
+# 실패 원인의 값 아홉(ADR 0031). 실패한 실행이 왜 실패했는지를 실패가 생긴 자리로 가른 종류이고
+# 실패의 내용(`RunFailed.error`)이 아니다. 닫힌 목록이고 값을 늘리는 것은 계약의 가산 변경이다.
+# 값마다의 뜻은 ADR 0031 의 이력에 있다. 이벤트와 최종 사용자 실패 항목이 이 값 집합 하나를 나눠
+# 쓴다 — 두 곳에 같은 열거를 따로 두면 언젠가 어긋난다. 별칭 이름이 계약의 컴포넌트 이름이 된다.
+type FailureCause = Literal[
+    "conversation_summary",
+    "timeout",
+    "tool_connection",
+    "model_call",
+    "tool_failure",
+    "loop_limit",
+    "resume_mismatch",
+    "agent_code",
+    "other",
+]
+
+
+# cause 는 실패 원인이고 없음(None)은 원인이 기록되지 않은 실패다. 기본값이 None 인 것은 형식 1·2·3
+# 의 옛 줄에 이 키가 없기 때문이고 형식은 3 그대로다(ADR 0031). 직렬화 스키마에서는 BaseEvent 의
+# 설정대로 required 이고 null 을 허락한다. 이름이 `reason` 이 아닌 이유는 관리 화면의 필드 이름 표가
+# 필드 이름을 키로 써서, 거부 사유(`ApprovalDenied.reason`)와 같은 이름이면 "실패 원인"을 붙일 칸이
+# 없기 때문이다. 원인이 든 실패는 런타임만 낸다 — 에이전트가 이 종류를 yield 하면 원인이 있든 없든
+# 그 실행은 런타임의 run_failed 로 끝난다(ADR 0031).
 class RunFailed(BaseEvent):
-    """실행이 실패로 끝났다. error 는 실패의 내용이다. 런타임이 낸다."""
+    """실행이 실패로 끝났다. error 는 내용, cause 는 실패 원인(없으면 null)이다. 런타임이 낸다."""
 
     type: Literal["run_failed"] = "run_failed"
     error: str
+    cause: FailureCause | None = None
 
 
 # 이어 간 실행의 트레이스에서 run_started 바로 뒤에 서고 실행 하나에 많아야 하나다(ADR 0022).

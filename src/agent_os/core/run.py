@@ -4,11 +4,13 @@
 스위트가 이 지점 하나를 민다. run_started, run_paused, approval_granted, approval_denied,
 run_resumed, run_failed 는 런타임이 내고, 에이전트는 run_finished 하나를 마지막에 낸다.
 conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 한도를 넘었을 때 에이전트를 부르기
-전에 낸다(계기, 범위, 실패는 core/continuation.py). 에이전트가 낸 다른 이벤트는 그대로 통과하되
-conversation_summarized 만은 예외다 — 그것은 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
-에이전트가 내면 그 실행은 run_failed 다(ADR 0022). 거부는 실행을 끝내지 않는다. 거부된 도구 호출은
-불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가 정상적으로 끝맺는다(ADR
-0009).
+전에 낸다(계기, 범위, 실패는 core/continuation.py). 에이전트가 낸 다른 이벤트는 통과하되 런타임만
+내는 둘, conversation_summarized 와 run_failed 는 예외다 — 에이전트가 내면 그 실행은 런타임의
+run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫힌다. 앞의 것은 다음 실행의 거슬러 읽기가
+트레이스에서 읽는 입력이고(ADR 0022), 뒤의 것은 결말이라 런타임이 쓰는 하나여야 하며 원인이 든
+실패는 런타임만 낸다(ADR 0031). 이유는 `_reject_runtime_only`. 거부는 실행을 끝내지 않는다. 거부된
+도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가 정상적으로
+끝맺는다(ADR 0009).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -67,7 +69,7 @@ run_failed 를 쓴다. 그래서 요약 중이었어도 같은 메시지이고, 
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator, Mapping, Sequence
-from contextlib import aclosing
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import NoReturn, TypeGuard, assert_never
@@ -720,23 +722,18 @@ class _Body:
                     conversation,
                 )
                 try:
-                    async for event in prepared.instance.run(self._started.request, ctx):
-                        for pending in ctx.take_events():
-                            yield pending
-                        if ctx.paused:
-                            break
-                        if isinstance(event, ConversationSummarized):
-                            # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는
-                            # 입력이라 에이전트가 지어낸 것이 통과하면 런타임의 것과 가를 수 없고,
-                            # 그 실행을 지나는 모든 이어 가기가 영구히 깨진다(ADR 0022). 재생
-                            # 구간에서도 같다.
-                            raise RuntimeError(
-                                f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}"
-                            )
-                        if ctx.replaying:
-                            ctx.replay_event(event)
-                            continue
-                        yield event
+                    agent_events = prepared.instance.run(self._started.request, ctx)
+                    async with _closing(agent_events) as from_agent:
+                        async for event in from_agent:
+                            for pending in ctx.take_events():
+                                yield pending
+                            if ctx.paused:
+                                break
+                            _reject_runtime_only(event, run_id)
+                            if ctx.replaying:
+                                ctx.replay_event(event)
+                                continue
+                            yield event
                 except _Paused:
                     pass
                 except Exception:
@@ -771,6 +768,42 @@ class _Body:
             error = "에이전트가 run_finished 없이 끝났다"
             self._settled = True
             yield self._emit(RunFailed(run_id=run_id, ts=self._clock.now(), error=error))
+
+
+@asynccontextmanager
+async def _closing(events: AsyncIterator[Event]) -> AsyncGenerator[AsyncIterator[Event]]:
+    """에이전트가 낸 이벤트의 순회. 나올 때 에이전트의 제너레이터를 그 자리에서 닫는다.
+
+    런타임이 그 순회 안에서 예외를 던지거나 일시정지로 빠져나가면 제너레이터는 yield 에 멈춘 채
+    남고, 가비지 수집이 나중에 다른 태스크에서 그것을 닫는다(PEP 525) — 에이전트가 anyio 취소
+    범위를 쥐고 있으면 그 자리에서 깨진다. 몸통이 안쪽 제너레이터를 `aclosing` 으로 닫는 까닭과
+    같다. sdk 의 `BaseAgent.run` 은 `AsyncIterator` 를 돌려준다고만 약속하므로 닫을 것이 있는
+    제너레이터일 때만 닫는다.
+    """
+    try:
+        yield events
+    finally:
+        if isinstance(events, AsyncGenerator):
+            await events.aclose()
+
+
+def _reject_runtime_only(event: Event, run_id: RunId) -> None:
+    """에이전트가 낸 이벤트가 런타임만 내는 종류면 실패로 끝낸다. 재생 구간에서도 같다.
+
+    대화 요약은 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라, 에이전트가 지어낸 것이
+    통과하면 런타임의 것과 가를 수 없고 그 실행을 지나는 모든 이어 가기가 영구히 깨진다(ADR 0022).
+    실패는 결말이라 런타임이 쓰는 하나여야 하고, 원인이 든 실패는 런타임만 낸다(ADR 0031). 원인 없는
+    것도 통과시키지 않는다 — 통과시키면 그 뒤 결말 없이 돌아온 에이전트에 런타임이 실패를 하나 더 써
+    실패가 둘이 되고, 그 뒤 끝남을 내면 실패를 보인 실행이 끝남이 된다. 메시지는 에이전트가 적은
+    글을 든다. 실패하려는 에이전트는 예외를 던지면 같은 결과를 얻는다.
+    """
+    match event:
+        case ConversationSummarized():
+            raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
+        case RunFailed(error=error):
+            raise RuntimeError(f"에이전트는 실패 이벤트를 낼 수 없다: {error}")
+        case _:
+            return
 
 
 async def _summary_outcome(

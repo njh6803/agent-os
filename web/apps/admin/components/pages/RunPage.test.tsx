@@ -31,6 +31,7 @@ const TRACE: Trace = {
       request: "1 더하기 2",
       principal: "operator",
       previous_run: null,
+      shortcuts: null,
     },
     {
       type: "llm_called",
@@ -83,6 +84,7 @@ const CONTINUED_TRACE: Trace = {
       request: "거기에 4를 더하면",
       principal: "operator",
       previous_run: PREVIOUS,
+      shortcuts: null,
     },
     {
       type: "conversation_summarized",
@@ -206,6 +208,7 @@ describe("실행 하나", () => {
       "요청 request",
       "주체 principal",
       "앞 실행 previous_run",
+      "바로가기 shortcuts",
     ]);
     expect(names(3)).toEqual(["시각 ts", "도구 tool", "성공 ok", "인자 args", "결과 내용 content"]);
     expect(names(4)).toEqual(["원문 raw"]);
@@ -347,6 +350,7 @@ describe("실행 하나", () => {
           request: script,
           principal: "operator",
           previous_run: previous,
+          shortcuts: null,
         },
         {
           type: "llm_called",

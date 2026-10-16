@@ -14,9 +14,12 @@ import type { paths } from "./generated/openapi";
 /** 채널 토큰이 여는 경로. 실행을 일으키는 것, 결정을 내는 것, 끝난 실행을 이어 가는 것이다. */
 type ChannelPath = "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation";
 
-/** 사이트가 서명한 토큰이 여는 경로. 최종 사용자가 자기 실행을 시작하고 결정하고 구독한다. */
+/** 사이트가 서명한 토큰이 여는 경로. 최종 사용자가 자기 실행을 시작하고 결정하고 구독하고 이어 간다. */
 type EndUserPath =
-  "/end-user/runs" | "/end-user/runs/{run_id}/approval" | "/end-user/runs/{run_id}/subscription";
+  | "/end-user/runs"
+  | "/end-user/runs/{run_id}/approval"
+  | "/end-user/runs/{run_id}/subscription"
+  | "/end-user/runs/{run_id}/continuation";
 
 /** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로와 최종 사용자의 경로를 뺀 것이다. */
 export type AdminPaths = Omit<paths, ChannelPath | EndUserPath>;
