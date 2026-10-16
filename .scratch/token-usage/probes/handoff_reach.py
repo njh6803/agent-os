@@ -154,7 +154,7 @@ def _hook_branches(out: Path, repo: Path) -> int:
     return unmeasured
 
 
-def _read_branch(out: Path, name: str, target: Path, expect_denied: bool) -> int:
+def _read_branch(out: Path, name: str, target: Path, *, expect_denied: bool) -> int:
     """C·D 하나를 돌린다. 표지는 답이 2행(`name: next-session`)을 옮겼거나 거부가 찍힌 것이다."""
     args = ["--setting-sources", "local", "--max-turns", "3", "--tools", "Read"]
     args += ["--permission-mode", "default"]

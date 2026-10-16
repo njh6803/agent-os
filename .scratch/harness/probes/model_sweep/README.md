@@ -146,3 +146,6 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 - 셀프 리뷰 표준 축(PR #268): `code-review`의 표준 축 서브에이전트가 변경 종류와 상관없이 `sonnet`·`high`로 돈다.
   전에는 `src/`·`tests/`·`tools/` 아래 `*.py`를 건드리지 않은 변경에서만 `sonnet`이었고, 나머지는 세션의 모델을
   물려받았다. 노력은 어느 쪽도 주지 않았다.
+- 인계 훅(PR #276): 세션 컨텍스트가 20만 토큰을 넘은 세션이 셀프 리뷰 직전·커밋 뒤·PR 연 뒤에 오면 같은 브랜치의
+  새 세션으로 넘긴다(`tools/hook_handoff.py`, `next-session` 결정표의 인계 줄). 한 브랜치의 몫이 두 세션 이상에 나뉘고,
+  인계 지시문의 모델은 스윕 브랜치면 `tools/model_sweep.py`의 갈래다.
