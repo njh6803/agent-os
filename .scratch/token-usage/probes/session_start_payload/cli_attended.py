@@ -7,8 +7,9 @@
 먼저 실행 파일에 든 판(`// Version: X`)을 찍는다. 표지는 다섯이다. 하나라도 없으면 1로
 끝난다(`.claude/rules/probes.md`의 첫 항목).
 1. 자식 환경을 짓는 함수: `CLAUDE_CODE_SESSION_ATTENDED:<판정>()?"1":"0"`
-2. 그 판정 함수의 본문: `CLAUDE_CODE_SESSION_KIND` 와 또 하나의 조건을 먼저 보아 거짓을 돌려주고,
-   대화형이면 참, 아니면 자식 세션이 아니면서 진입점이 목록에 있을 때 참
+2. 그 판정 함수의 본문 전체: `CLAUDE_CODE_SESSION_KIND` 가 `bg`·`daemon`·`daemon-worker` 이거나 또
+   하나의 함수가 값을 내면 거짓, 대화형이면 참, 아니면 자식 세션이 아니면서 진입점이 목록에 있을 때
+   참. 사이에 다른 문장이 없어야 맞는다
 3. 훅 명령을 띄우는 자리: 그 함수를 펼친 뒤 `CLAUDE_PROJECT_DIR` 을 더한다
 4. 셸 도구가 명령을 띄우는 자리: 그 함수를 `{sessionId:…}` 인자로 펼친다
 5. 판정이 읽는 두 값의 출처: 대화형은 시작 인자로, 자식 세션은 시작할 때의 환경
@@ -34,11 +35,18 @@ BUILDER = re.compile(
     + NAME
     + rb")\(\)\?\"1\":\"0\""
 )
+# 표지 2·5 는 사이에 다른 문장이 끼면 맞지 않게 실제 모양을 글자 그대로 적는다. 첫 판은 그 사이를
+# `.{0,200}?` 로 두어, 대화형 판정 앞에 다른 조기 반환이 끼어도 맞았다(PR #277 CodeRabbit).
 ORIGIN = re.compile(
     rb"setInteractive\(!"
     + NAME
-    + rb"\).{0,200}?setChildSession\(Boolean\(a\.CLAUDE_CODE_CHILD_SESSION\)\)",
-    re.DOTALL,
+    + rb"\),"
+    + NAME
+    + rb"\.setSpawnedByAttendedSession\(a\.CLAUDE_CODE_SESSION_ATTENDED\),"
+    + NAME
+    + rb"\.setEntrypoint\(a\.CLAUDE_CODE_ENTRYPOINT\),"
+    + NAME
+    + rb"\.setChildSession\(Boolean\(a\.CLAUDE_CODE_CHILD_SESSION\)\)"
 )
 SPAN = 400
 
@@ -55,11 +63,15 @@ def markers(builder: bytes, judge: bytes) -> list[tuple[str, re.Pattern[bytes]]]
             re.compile(
                 rb"function "
                 + re.escape(judge)
-                + rb"\(\)\{let e=a\.CLAUDE_CODE_SESSION_KIND;.{0,200}?"
-                + rb"if\(t\.interactive\)return!0;return!t\.childSession&&t\.entrypoint!==void 0&&"
+                + rb"\(\)\{let e=a\.CLAUDE_CODE_SESSION_KIND;"
+                + rb'if\(e==="bg"\|\|e==="daemon"\|\|e==="daemon-worker"\|\|'
                 + NAME
-                + rb"\.has\(t\.entrypoint\)\}",
-                re.DOTALL,
+                + rb"\(\)!==void 0\)return!1;let t="
+                + NAME
+                + rb"\(\);if\(t\.interactive\)return!0;"
+                + rb"return!t\.childSession&&t\.entrypoint!==void 0&&"
+                + NAME
+                + rb"\.has\(t\.entrypoint\)\}"
             ),
         ),
         (

@@ -117,7 +117,7 @@ def main() -> int:
                 before = ledger.read_text(encoding="utf-8").splitlines() if ledger.is_file() else []
                 elapsed, outcome, message = run_once(payload, env)
                 times.append(elapsed)
-                after = ledger.read_text(encoding="utf-8").splitlines()
+                after = ledger.read_text(encoding="utf-8").splitlines() if ledger.is_file() else []
                 account = json.loads(after[-1])["account_uuid"] if after else "없음"
                 grew = len(after) == len(before) + 1 and account == (None if broken else UUID)
                 # 읽지 못한 갈래는 0.2초를 기다렸어야 그 길을 지난 것이다.
