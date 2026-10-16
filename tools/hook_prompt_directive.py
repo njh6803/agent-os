@@ -50,6 +50,17 @@ open-session 스크립트가 하기도 한다. 이 폴더 가드는 새 훅이 �
 뒤 주 체크아웃이 한 번 당겨지기 전에는 옛 훅이 돌고, 옛 훅은 워크트리 문장을 다른 일보다 먼저
 따르라고만 한다. 그래서 순서는 그 문장 안에 있다. 작업 폴더가 주 체크아웃인지는 이 계기가 보지
 않는다 — open-session 이 옮긴 첫 줄이면 위의 폴더 가드가, 아니면 `tidy-checkouts` 1이 본다.
+
+손으로 연 세션(대기열 72). open-session 이 새 세션을 열지 못하면 사람이 손으로 열어 지시문을
+붙여 넣는다. 그 일은 앞 세션의 일지가 병합된 뒤에 나서 그 일지에 적힐 자리가 없었고, 09-29
+12:28 부터 09-30 17:04 까지 열한 번(두 번째 인스턴스 기록으로 센 수)이 그동안 한 번도 세어지지
+않았다(뒤에 일지 2026-09-30-06 이 셌다). 그래서 받는 쪽이 붙여 넣은 꼴을 알아보면 이 세션의 일지에
+그 사실을 바로 적으라는 계기를 더한다. 계기는 첫 턴에만 오고 일지는 보통 단계를 닫을 때 쓰므로,
+미루면 컨텍스트 압축이나 끊김에 그 한 줄이 사라진다(셀프 리뷰 두 축). 꼴의 판정은 `pasted_reason`
+이다. 못 보는 것: 사람이 슬래시 명령이 아닌 시작 프롬프트를 첫 줄에 쳐 넣고 지시문을 붙이면
+open-session 이 보낸 글과 같아 가르지 못한다(하네스 chore 의 시작 프롬프트가 그 꼴이다). 첫 줄을
+옮기는 쪽은 여는 쪽이 넘긴 루트의 스킬 파일을, 이 판정은 이 세션의 작업 폴더의 스킬 파일을 본다. 그
+스킬이 한쪽에만 있으면 틀린다(작업 폴더에만 있으면 `held=` 뒤 고쳐 보낸 글을 붙여 넣은 것으로 본다).
 """
 
 from __future__ import annotations
@@ -95,6 +106,20 @@ _TIDY_LATER = (
     "첫 세션이 아니라 `tidy-checkouts` 를 돌지 않는다 — 첫 세션이 돈다. 함께 돌면 같은 루트를 "
     "함께 당기거나 같은 워크트리를 함께 지우려 할 수 있다."
 )
+# next-session "지시문 형식" 블록의 라벨. 첫 줄이 이 가운데 하나로 시작하면 시작 프롬프트 줄 없이
+# 지시문만 붙여 넣은 것이다(대기열 72). tests/tools 의 계약 테스트가 그 블록과 대조한다.
+_DIRECTIVE_LABELS = (
+    "다음 작업:",
+    "다음 단계:",
+    "어디서:",
+    "시작 프롬프트:",
+    "브랜치:",
+    "모델:",
+    "읽을 것:",
+    "이어받을 상태:",
+    "확인할 선행 조건:",
+    "이번 요청 범위:",
+)
 
 
 class HookPayload(TypedDict, total=False):
@@ -111,11 +136,12 @@ class TranscriptRecord(TypedDict, total=False):
     type: str
 
 
-def context_for(prompt: str) -> str | None:
+def context_for(prompt: str, cwd: str | None = None) -> str | None:
     """새 세션 지시문이면 계기 문장, 아니면 None.
 
     지시문은 줄 머리에 `브랜치:` 줄(값이 있다)과 `어디서: 새 세션` 줄이 있는 프롬프트다. 문장 속에서
-    형식을 인용한 것은 세지 않는다.
+    형식을 인용한 것은 세지 않는다. `cwd` 는 이 세션의 작업 폴더로, 손으로 붙여 넣은 반각 슬래시
+    명령을 가를 때 스킬 파일을 찾는 자리다(`pasted_reason`).
     """
     branch = _directive_branch(prompt)
     if branch is None:
@@ -146,7 +172,48 @@ def context_for(prompt: str) -> str | None:
             f"`.claude/skills/{skill}/SKILL.md` 를 읽어 그대로 따른다. "
             "스킬의 인자는 첫 줄의 이름 뒤부터 메시지 끝까지다."
         )
+    pasted = pasted_reason(prompt, cwd)
+    if pasted is not None:
+        context += (
+            f" 이 지시문은 open-session 이 보낸 꼴이 아니다. {pasted}. open-session 은 시작 "
+            "프롬프트를 첫 줄에 두고, 이 저장소의 스킬 명령이면 스킬 파일을 읽으라는 문장으로 "
+            "옮겨 보낸다. 그래서 이 세션은 사람이 손으로 열어 붙여 넣은 것이고, 앞 세션의 "
+            "open-session 이 이 세션을 열지 못했거나 쓰이지 않았다. 그 일은 앞 세션의 일지가 "
+            "병합된 뒤에 나서 거기 적힐 자리가 없으므로, 이 세션의 일지에 그 사실을 한 줄 "
+            "적는다(대기열 72). 이 계기는 첫 턴에만 오니 미루지 않는다. 위의 제목·워크트리 "
+            "계기를 따른 뒤 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py` 의 "
+            "다음 빈 번호로 머리 한 줄 파일을 만들고 그 한 줄을 바로 적는다. 까닭을 모르면 "
+            "모른다고 적는다."
+        )
     return context
+
+
+def pasted_reason(prompt: str, cwd: str | None) -> str | None:
+    """open-session 이 보낸 꼴이 아니라 사람이 붙여 넣은 지시문이면 그렇게 본 까닭, 아니면 None.
+
+    open-session 은 시작 프롬프트를 첫 줄에 두고(그 스킬 2단계), 첫 줄이 이 저장소의 스킬 명령이면
+    스킬 파일 문장으로 옮겨 보낸다(`Convert-StartLine`). 그래서 둘을 손으로 붙여 넣은 꼴로 본다.
+    첫 줄이 지시문의 라벨 줄이다(시작 프롬프트 줄이 없다). 첫 줄이 반각 `/<스킬>` 이고 작업 폴더에
+    그 스킬 파일이 있다(옮겨졌어야 했다). 반각 `/` 는 진짜 명령이 되어도 훅이 원문을
+    받는다(`.scratch/harness/probes/slash_prompt_payload/probe.py`, claude 2.1.300 의 `claude -p`.
+    데스크톱 앱의 입력창에 붙여 넣은 길은 재지 않았다). 스킬 파일이
+    없는 반각 명령은 open-session 이 `held=` 로 멈춘 뒤 사람이 `／` 를 고쳐 보낸 글과 같아 세지
+    않는다. 작업 폴더를 모르면 그 파일을 볼 수 없어 세지 않는다.
+    """
+    head = prompt.lstrip()
+    first = head.splitlines()[0].strip() if head else ""
+    for label in _DIRECTIVE_LABELS:
+        if first.startswith(label):
+            return f"첫 줄이 시작 프롬프트가 아니라 지시문의 `{label}` 줄이다"
+    if not cwd or not head.startswith("/"):
+        return None
+    match = _SKILL_NAME.match(head, 1)
+    if match is None:
+        return None
+    skill = match.group(1)
+    if not (Path(cwd) / ".claude" / "skills" / skill / "SKILL.md").is_file():
+        return None
+    return f"첫 줄이 반각 `/{skill}` 이고 작업 폴더에 `.claude/skills/{skill}/SKILL.md` 가 있다"
 
 
 def block_reason_for(prompt: str, cwd: str | None) -> str | None:
@@ -306,7 +373,7 @@ def main() -> int:
     if reason is not None:
         print(json.dumps({"decision": "block", "reason": reason}))
         return 0
-    context = context_for(prompt)
+    context = context_for(prompt, payload.get("cwd"))
     # 지시문일 때만 트랜스크립트를 연다. 평범한 프롬프트마다 긴 파일을 읽지 않는다.
     if context is None or not is_first_turn(payload.get("transcript_path")):
         return 0

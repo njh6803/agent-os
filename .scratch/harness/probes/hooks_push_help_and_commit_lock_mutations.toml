@@ -1,0 +1,415 @@
+# 대기열 72·293·300 의 판정을 하나씩 깨서 그 테스트가 빨개지는지 본다.
+# 300 tools/hook_push_behind_main.py 와 tools/hook_push_delete_open_pr.py(도움말 `-h`·`--help` 는 푸시하지 않는다),
+# 72 tools/hook_prompt_directive.py(손으로 붙여 넣은 지시문을 알아본다),
+# 293 tools/hook_edit_during_commit.py(고친 파일의 체크아웃에서 도는 `git commit` 을 찾는다).
+# 윈도의 PEB 자리를 깨는 변이 둘은 이 PC 에서만 빨갛다(리눅스는 `/proc` 길이 돈다).
+# `runner.hooks` 는 훅 러너 전체를 돌려 페이로드 표가 main 의 배관을 잡는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+
+[runner.hooks]
+command = ["uv", "run", "python", "tools/run_hooks.py"]
+judge = "exit"
+red_exit = 1
+
+[[mutation]]
+name = "300 뒤처짐 훅이 도움말을 보지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "도움말을_묻는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+        if not asks_help(segment[push.end() :].split()):
+            return True
+'''
+new = '''
+        return True
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 묶음의 o 뒤를 값으로 보지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "값으로_먹히거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+                if letter == "o":
+                    index += 0 if word[position + 1 :] else 1
+                    break
+                if letter == "h":
+                    return True
+'''
+new = '''
+                if letter == "h":
+                    return True
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 o 의 다음 낱말을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "값으로_먹히거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+                    index += 0 if word[position + 1 :] else 1
+'''
+new = '''
+                    index += 0
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 값을 먹는 긴 옵션의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "값으로_먹히거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+        if word in VALUE_LONG_OPTIONS:
+            index += 1
+        elif word.startswith("-") and not word.startswith("--"):
+'''
+new = '''
+        if word.startswith("-") and not word.startswith("--"):
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 대시 둘 뒤도 옵션으로 읽는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "값으로_먹히거나"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+        if word == "--" or word.startswith("#"):
+'''
+new = '''
+        if word.startswith("#"):
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 꼬리 주석의 h 를 도움말로 읽는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "꼬리_주석"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+        if word == "--" or word.startswith("#"):
+'''
+new = '''
+        if word == "--":
+'''
+
+[[mutation]]
+name = "300 값을 먹는 긴 옵션 표가 git 의 도움말과 어긋난다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "긴_옵션_표는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+    {"--push-option", "--receive-pack", "--exec", "--repo", "--recurse-submodules"}
+'''
+new = '''
+    {"--push-option", "--receive-pack", "--exec", "--repo"}
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 help-all 을 모른다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "help_all"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+        if word in ("--help", "--help-all"):
+'''
+new = '''
+        if word in ("--help",):
+'''
+
+[[mutation]]
+name = "300 뒤처짐 훅이 묶음 안의 h 를 보지 않는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "묶음의_끝 or 묶음의_머리"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''
+                if letter == "h":
+                    return True
+'''
+new = '''
+                if letter == "h" and word == "-h":
+                    return True
+'''
+
+[[mutation]]
+name = "300 지우기 훅이 짧은 옵션의 h 를 도움말로 보지 않는다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py", "-k", "도움말"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''
+                if letter == "h":
+                    return None  # git 이 사용법을 내고 끝난다(대기열 300)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "300 지우기 훅이 묶음 어디의 h 든 도움말로 본다"
+tests = ["tests/tools/test_hook_push_delete_open_pr.py", "-k", "o_가_먹은_h"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_push_delete_open_pr.py"
+old = '''
+            letters = word[1:]
+            for position, letter in enumerate(letters):
+'''
+new = '''
+            letters = word[1:]
+            if "h" in letters:
+                return None
+            for position, letter in enumerate(letters):
+'''
+
+[[mutation]]
+name = "72 첫 줄의 라벨 줄을 보지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "라벨"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''
+    for label in _DIRECTIVE_LABELS:
+        if first.startswith(label):
+            return f"첫 줄이 시작 프롬프트가 아니라 지시문의 `{label}` 줄이다"
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "72 반각 슬래시의 스킬 파일이 있는지 보지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "스킬_파일이_없는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''
+    if not (Path(cwd) / ".claude" / "skills" / skill / "SKILL.md").is_file():
+        return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "72 첫 줄을 앞 공백을 벗기지 않고 읽는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "라벨_줄이면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''
+    head = prompt.lstrip()
+    first = head.splitlines()[0].strip() if head else ""
+'''
+new = '''
+    head = prompt
+    first = head.splitlines()[0].strip() if head else ""
+'''
+
+[[mutation]]
+name = "72 계기에 손으로 연 세션의 문장을 붙이지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "손으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''
+    pasted = pasted_reason(prompt, cwd)
+'''
+new = '''
+    pasted = None
+'''
+
+[[mutation]]
+name = "72 main 이 작업 폴더를 넘기지 않는다"
+runner = "hooks"
+tests = []
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''
+    context = context_for(prompt, payload.get("cwd"))
+'''
+new = '''
+    context = context_for(prompt)
+'''
+
+[[mutation]]
+name = "293 전역 옵션의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "하위_명령"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+        index += 2 if word in _GIT_VALUE_OPTIONS else 1
+'''
+new = '''
+        index += 1
+'''
+
+[[mutation]]
+name = "293 자식 git 을 띄운 런처도 센다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "런처"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+        if process.pid in launchers or git_subcommand(process.argv) != "commit":
+'''
+new = '''
+        if git_subcommand(process.argv) != "commit":
+'''
+
+[[mutation]]
+name = "293 리눅스 명령 줄의 빈 낱말을 버린다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "빈_낱말"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    return tuple(part.decode("utf-8", "replace") for part in parts)
+'''
+new = '''
+    return tuple(part.decode("utf-8", "replace") for part in parts if part)
+'''
+
+[[mutation]]
+name = "293 리눅스 부모 pid 를 이름 칸의 첫 닫는 괄호 뒤에서 센다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "부모_pid"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    fields = stat.rpartition(")")[2].split()
+'''
+new = '''
+    fields = stat.partition(")")[2].split()
+'''
+
+[[mutation]]
+name = "293 워크트리의 .git 파일을 체크아웃으로 세지 않는다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "워크트리"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+        if (candidate / ".git").exists():
+'''
+new = '''
+        if (candidate / ".git").is_dir():
+'''
+
+[[mutation]]
+name = "293 체크아웃을 경로 머리로 잇는다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "다른_체크아웃"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    pids = sorted({commit.pid for commit in commits if _same(commit.checkout, checkout)})
+'''
+new = '''
+    pids = sorted(
+        {
+            commit.pid
+            for commit in commits
+            if os.path.normcase(checkout).startswith(os.path.normcase(commit.checkout))
+        }
+    )
+'''
+
+[[mutation]]
+name = "293 프로세스 이름이 git 인지 보지 않는다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "git_프로세스의_커밋만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    gits = [process for process in processes if is_git(process.image)]
+'''
+new = '''
+    gits = list(processes)
+'''
+
+[[mutation]]
+name = "293 NotebookEdit 의 경로 칸을 읽지 않는다"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "경로를_읽는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    for key in ("file_path", "notebook_path"):
+'''
+new = '''
+    for key in ("file_path",):
+'''
+
+[[mutation]]
+name = "293 PEB 에서 명령 줄 대신 실행 파일 경로를 읽는다(윈도)"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "실제_프로세스"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    _PARAMS_COMMAND_LINE = 0x70
+'''
+new = '''
+    _PARAMS_COMMAND_LINE = 0x60
+'''
+
+[[mutation]]
+name = "293 PEB 의 작업 디렉터리 자리를 틀리게 읽는다(윈도)"
+tests = ["tests/tools/test_hook_edit_during_commit.py", "-k", "실제_프로세스"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    _PARAMS_CWD = 0x38
+'''
+new = '''
+    _PARAMS_CWD = 0x60
+'''
+
+[[mutation]]
+name = "293 main 이 커밋을 찾은 결과를 버린다"
+runner = "hooks"
+tests = []
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_edit_during_commit.py"
+old = '''
+    context = context_for(file_path, running_commits(processes))
+'''
+new = '''
+    context = context_for(file_path, [])
+'''
