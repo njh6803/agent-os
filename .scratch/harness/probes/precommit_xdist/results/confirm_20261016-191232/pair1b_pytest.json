@@ -1,0 +1,1 @@
+{"command": ["uv", "run", "pytest", "-q", "-n", "8"], "returncode": 0, "start": 1792145554.667457, "end": 1792145810.3343813, "seconds": 255.67, "counts": {"passed": 3396, "warnings": 5}, "banner": true}

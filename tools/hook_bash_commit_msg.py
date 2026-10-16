@@ -435,7 +435,7 @@ def deny_reason(command: str, cwd: str, home: str, *, own: str) -> str | None:
         if problems:
             return (
                 f"커밋 메시지 파일 `{message.file}` 이 commit-msg 훅({CHECKER})의 판정에"
-                f" 걸린다: {' / '.join(problems)}. 이대로 치면 pre-commit 단계의 검사(약 8분)를"
+                f" 걸린다: {' / '.join(problems)}. 이대로 치면 pre-commit 단계의 검사(몇 분)를"
                 " 모두 돈 뒤 commit-msg 단계에서 막혀 게이트를 한 번 더 돈다(대기열 222)."
                 " 파일의 제목을 고치고 다시 친다."
             )
