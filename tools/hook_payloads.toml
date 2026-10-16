@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${SEQ_3000} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
@@ -675,6 +675,22 @@ hook = "hook_grep_omitted.py"
 expect = "silent"
 note = "짧은 일치 줄 양옆의 600자 문맥 줄만 생략됐다 — 일치를 숨기지 않는다"
 payload = { tool_name = "Grep", tool_input = { pattern = "PROBE short", path = "C:/scratch/omit", output_mode = "content", "-C" = 1 }, tool_response = { mode = "content", numFiles = 0, filenames = [], content = "C:\\scratch\\omit\\ctx.txt-1-[Omitted long context line]\nC:\\scratch\\omit\\ctx.txt:2:PROBE short\nC:\\scratch\\omit\\ctx.txt-3-[Omitted long context line]", numLines = 3, totalLines = 3 } }
+
+# --- hook_large_result (PostToolUse Read|Bash|PowerShell) ---
+# 두 사례 모두 .scratch/token-usage/probes/large_result/payloads.jsonl(Claude Code 2.1.300)의 Bash 결과 객체 모양이다.
+# 발동은 그 `seq 1 2000` 호출을 3000 으로 바꾸고 출력을 ${SEQ_3000}(같은 명령의 13892자)으로 두었고, 침묵은 `bash_stderr` 그대로다.
+[[case]]
+hook = "hook_large_result.py"
+expect = "context"
+note = "Bash 출력 13892자가 문턱 1만 자를 넘었다"
+contains = ["이 도구 결과는 큰 결과 알림의 문턱을 넘었다", "13,892자", "10,000자", "seq 1 3000"]
+payload = { tool_name = "Bash", tool_input = { command = "seq 1 3000", description = "Print numbers 1 through 3000" }, tool_response = { stdout = "${SEQ_3000}", stderr = "", interrupted = false, isImage = false, noOutputExpected = false } }
+
+[[case]]
+hook = "hook_large_result.py"
+expect = "silent"
+note = "stdout·stderr 를 합친 짧은 Bash 출력"
+payload = { tool_name = "Bash", tool_input = { command = "echo out-line; echo err-line >&2", description = "Print a stdout line and a stderr line" }, tool_response = { stdout = "out-line\nerr-line", stderr = "", interrupted = false, isImage = false, noOutputExpected = false } }
 
 # --- hook_grill_design_check (PreToolUse Skill) ---
 # 첫째와 셋째 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).

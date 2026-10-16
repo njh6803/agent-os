@@ -106,6 +106,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "Read|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_large_result.py",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "PreToolUse": [

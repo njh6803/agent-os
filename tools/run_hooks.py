@@ -15,7 +15,7 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물둘 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물셋 — `${ROOT}`(저장소 루트),
 `${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
 날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
 두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
@@ -37,9 +37,11 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
 네트워크 없이 곧 실패한다), `${COMMIT_MSGS}`(commit-msg 판정을 부르는 pre-commit 설정과 그 판정
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
-`good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다). 사례의 `env`
-는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로
-준다. 기대는 넷. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+`good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다),
+`${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
+것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다). 사례의
+`env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
+로 준다. 기대는 넷. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
 context (`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
 문장(`message_of` — JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두
 들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵
@@ -625,6 +627,7 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "CLOSED_JOURNAL": closed_journal.as_posix(),
         "BROKEN_WEB": _broken_web(scratch).as_posix(),
         "COMMIT_MSGS": commit_msgs.as_posix(),
+        "SEQ_3000": "\n".join(str(n) for n in range(1, 3001)),
     }
 
 
