@@ -39,6 +39,7 @@
 | `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
+| `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |
 | `.claude/rules/*.md` | 해당 경로의 파일을 Read 도구로 열 때 자동. Bash(`cat`·`sed`)로 읽으면 안 실린다 | 아래 로드 시점 표에 따라 |
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
