@@ -1,4 +1,4 @@
-# 2026-10-16 (48) ruff FBT 켜기 (대기열 285)
+# 2026-10-16 (55) ruff FBT 켜기 (대기열 285)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STANDARDS.md`의 불리언 플래그 인자 금지를 린터 층(ruff FBT)으로
 옮기는 열린 대기열 행 285를 한 PR로 닫는다.
