@@ -4,7 +4,10 @@
 사용:
     uv run python .scratch/token-usage/probes/handoff_cost.py [--projects 폴더] [--repo 폴더 이름]
 
-저장소 루트에서 돈다(`tools.token_report`를 import한다). `--projects`의 기본은
+저장소 루트에서 돈다. `tools.token_report`는 작업 폴더가 아니라 이 파일의 위치로 찾은 저장소
+루트에서 import한다(작업 폴더를 경로 앞에 두면 저장소 밖에서 돌릴 때 그 폴더의 같은 이름 모듈이
+먼저 실린다).
+`--projects`의 기본은
 `~/.claude/projects/`, `--repo`의 기본은 주 체크아웃의 경로에서 만든 기록 폴더 이름이고, 그 이름으로
 시작하는 폴더(워크트리 폴더 포함)만 읽는다. PR 상태는 `gh pr list`로 묻는다.
 
@@ -68,7 +71,8 @@ Edit·Write·NotebookEdit·MultiEdit로 고쳤거나 작업 트리를 바꾸는 
 몫을 가르지 않는다. 그때는 판정을 사람이 쌍의 출력과 기록으로 마친다.
 
 종료 코드: 0은 인계 쌍이 있고 모두 표지를 지났을 때, 1은 표지 없는 쌍(gh 로 PR 상태를 읽지 못한
-쌍을 포함한다)이 하나라도 있거나 인계 쌍이 하나도 없을 때, 2는 기록 폴더가 없을 때다.
+쌍을 포함한다)이 하나라도 있거나 인계 쌍이 하나도 없을 때, 2는 기록 폴더가 없거나 이 파일 위치로
+찾은 저장소 루트에 `tools/token_report.py`가 없을 때다.
 
 못 보는 것:
 - 지워진 세션 기록. 앱에서 세션을 지우면 기록 파일이 없어지고 `<세션 ID>.desktop-released.json`
@@ -90,7 +94,11 @@ from bisect import bisect_right
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path.cwd()))
+ROOT = Path(__file__).resolve().parents[3]
+if not (ROOT / "tools" / "token_report.py").is_file():
+    print(f"{ROOT}에 tools/token_report.py가 없다. 프로브를 저장소 안에 둔다", file=sys.stderr)
+    sys.exit(2)
+sys.path.insert(0, str(ROOT))
 from tools.token_report import (  # noqa: E402
     EDITS,
     GIT_MUTATION,
@@ -494,6 +502,7 @@ def pr_states(branch: str) -> list[str] | None:
                 "--jq",
                 ".[].state",
             ],
+            cwd=ROOT,
             capture_output=True,
             text=True,
             timeout=GH_TIMEOUT,
