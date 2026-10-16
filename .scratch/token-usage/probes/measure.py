@@ -54,7 +54,7 @@ import sys
 import time
 from collections import Counter, defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType
@@ -185,26 +185,36 @@ class SessionScan:
     total_weight: float = 0.0
 
 
+# 쌓인 항목 하나: 글자 수, 들어온 호출 번호, 도구 결과면 그 결과의 번호(아니면 None).
+type Item = tuple[int, int, int | None]
+
+
+def settled(items: list[Item], end: int) -> tuple[float, dict[int, float]]:
+    """쌓인 항목을 `end`에서 끊을 때 더할 무게. 모든 항목의 합과 결과 번호마다의 몫을 돌려주고 받은
+    목록은 바꾸지 않는다(대기열 273의 보류 지적, PR #253 claude-review 첫 회차)."""
+    total = 0.0
+    per: dict[int, float] = defaultdict(float)
+    for chars, start, ref in items:
+        w = chars * max(end - start, 0)
+        total += w
+        if ref is not None:
+            per[ref] += w
+    return total, per
+
+
 def scan_results(p: Path) -> SessionScan:
     """도구 결과를 모으고 모든 항목의 무게 합과 결과마다의 무게를 매긴다.
 
     무게 = 글자 수 × 그 항목이 들어온 뒤 실려 간 호출 수. 세션 컨텍스트가 직전의 절반 아래로 줄면
     (압축) 그때까지 쌓인 항목은 거기서 끊는다.
     """
-    scan = SessionScan()
+    results: list[Result] = []
+    weight: list[float] = []
+    total = 0.0
     uses: dict[str, tuple[str, str, bool]] = {}
-    open_items: list[tuple[int, int, Result | None]] = []
+    open_items: list[Item] = []
     ids: set[str] = set()
     idx = prev = 0
-
-    def close(end: int) -> None:
-        for chars, start, res in open_items:
-            w = chars * max(end - start, 0)
-            scan.total_weight += w
-            if res is not None:
-                res.weight += w
-        open_items.clear()
-
     for d in records(p):
         kind = d.get("type")
         m = d.get("message") if isinstance(d.get("message"), dict) else {}
@@ -216,7 +226,11 @@ def scan_results(p: Path) -> SessionScan:
                 idx += 1
                 c = context_of(u)
                 if prev > 100_000 and c < prev * 0.5:
-                    close(idx)
+                    add, per = settled(open_items, idx)
+                    total += add
+                    for ref, w in per.items():
+                        weight[ref] += w
+                    open_items = []
                 prev = c
             for b in blocks_of(d):
                 if b.get("type") == "tool_use":
@@ -240,18 +254,24 @@ def scan_results(p: Path) -> SessionScan:
                 if b.get("type") == "tool_result":
                     name, key, ranged = uses.get(str(b.get("tool_use_id")), ("?", "", False))
                     n = text_len(b.get("content"))
-                    res = Result(name, n, key, ranged) if name in TOOLS else None
-                    if res is not None:
-                        scan.results.append(res)
-                    open_items.append((n, idx, res))
+                    ref: int | None = None
+                    if name in TOOLS:
+                        results.append(Result(name, n, key, ranged))
+                        weight.append(0.0)
+                        ref = len(results) - 1
+                    open_items.append((n, idx, ref))
                 elif b.get("type") == "text":
                     open_items.append((len(str(b.get("text", ""))), idx, None))
         elif kind == "attachment":
             a = d.get("attachment")
             if isinstance(a, dict) and a.get("type") != "prompt_snapshot":
                 open_items.append((len(json.dumps(a, ensure_ascii=False)), idx, None))
-    close(idx + 1)
-    return scan
+    add, per = settled(open_items, idx + 1)
+    total += add
+    for ref, w in per.items():
+        weight[ref] += w
+    weighed = [replace(r, weight=w) for r, w in zip(results, weight, strict=True)]
+    return SessionScan(weighed, total)
 
 
 def describe_spread(values: list[int]) -> str:

@@ -6,7 +6,7 @@ ADR 0033 본문의 수는 `.scratch/harness/probes/token_usage/`가 냈다.
 | 프로브 | 무엇을 재나 | 근거로 드는 곳 | 다시 돌 때 |
 |---|---|---|---|
 | `measure.py results <시간>` | 이 저장소의 Read·Bash·PowerShell 결과 글자 수 분포와, 범위 없이 받은 결과가 문턱(1만~4만 자)을 넘은 수·글자의 몫·기록 항목 무게의 몫 | 명세 "큰 결과 알림 훅" | 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/token-usage/probes/measure.py results 168`. 이 PC의 `~/.claude/projects/`(폴더 이름 `C--project-agent`로 시작) |
-| `token_report_mutations.toml` | `tools/token_report.py`(티켓 02)의 겹침 거르기, 응답 ID의 주인 고르기, 증분, 계정 고르기, 보관의 링크, 잘린 줄, synthetic을 하나씩 깨면 시험이 빨개지는지 | 일지 2026-10-16-51 | 저장소 루트에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/token_report_mutations.toml` |
+| `token_report_mutations.toml` | `tools/token_report.py`의 겹침 거르기, 응답 ID의 주인 고르기, 증분, 계정 고르기, 보관의 링크, 잘린 줄, synthetic(티켓 02)과, 세션 행의 칸(큰 결과의 문턱과 대상, 다시 읽기, 인계, 시작 구성, PR), 지표 7~12, 경보 둘, 주간·4주 보고서(티켓 03)를 하나씩 깨면 시험이 빨개지는지 | 일지 2026-10-16-51, 2026-10-16-61 | 저장소 루트에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/token_report_mutations.toml` |
 | `measure.py boundaries <시간>` | 메인 세션 컨텍스트가 20만을 넘은 뒤 처음 오는 경계의 종류, 그 지점의 세션 컨텍스트, 그 뒤 환산 비용. ADR 0033의 경계(커밋, PR 열기)와 셀프 리뷰 시작을 더한 경계를 견준다 | 명세 Problem Statement와 "인계 훅", ADR 0033 이력 2026-10-16 | 같은 자리에서 `... measure.py boundaries 168`. 단가표는 `.scratch/harness/probes/session_cost/costs.py` |
 
 표지, 판정의 정의(훅보다 넓은 커밋 판정 포함), 못 보는 것은 `measure.py` 독스트링이 원천이다.
