@@ -1,6 +1,6 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${COMMITTING_REPO} ${USAGE_REPO} ${USAGE_HOME} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${OVER_HANDOFF_TRANSCRIPT} ${UNDER_HANDOFF_TRANSCRIPT} ${EMPTY_TEMP} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${COMMITTING_REPO} ${USAGE_REPO} ${USAGE_HOME} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
 # 기대: deny | block | context | notice | silent. notice 는 사용자에게만 가는 systemMessage 하나다(additionalContext 가 함께 있으면 context). 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
@@ -610,6 +610,41 @@ hook = "hook_pr_next_session.py"
 expect = "silent"
 note = "문자열 안의 gh pr merge"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }
+
+# --- hook_handoff (PostToolUse Bash|PowerShell|Skill|GitHub MCP 의 PR 만들기) ---
+# 페이로드는 `claude -p` 세션의 탐침 훅이 저장한 실제 입력이다(.scratch/token-usage/probes/handoff_reach.py 의 A, 일지 2026-10-16-63).
+# 경로(자리표시자), 세션 ID(사례마다 다른 이름), `duration_ms`(120) 를 바꾸고 `scratchpad_dir`·`prompt_id` 를 뺐다. 침묵은 같은 커밋 입력을 문턱 아래의 세션에서 받은 것이다. 표지 폴더는 빈 임시 폴더로 준다.
+[[case]]
+hook = "hook_handoff.py"
+expect = "context"
+note = "문턱 위 세션의 커밋 — 인계 문장"
+contains = ["`커밋 뒤`", "인계의 계기", "SKILL.md"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-over", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "git -C ${MAIN_REPO} -c user.name=p -c user.email=p@localhost commit --allow-empty -m probe", description = "Create empty probe commit" }, tool_response = { stdout = "[main 5d4aa98] probe", stderr = "", interrupted = false, isImage = false, noOutputExpected = false, gitOperation = { commit = { sha = "5d4aa98", kind = "committed", branch = "main" } } }, tool_use_id = "toolu_01WyGSabuuYqEkkNV9SxRDs2", duration_ms = 120 }
+
+[[case]]
+hook = "hook_handoff.py"
+expect = "silent"
+note = "문턱 아래 세션의 같은 커밋"
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-under", transcript_path = "${UNDER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "git -C ${MAIN_REPO} -c user.name=p -c user.email=p@localhost commit --allow-empty -m probe", description = "Create empty probe commit" }, tool_response = { stdout = "[main 5d4aa98] probe", stderr = "", interrupted = false, isImage = false, noOutputExpected = false, gitOperation = { commit = { sha = "5d4aa98", kind = "committed", branch = "main" } } }, tool_use_id = "toolu_01WyGSabuuYqEkkNV9SxRDs2", duration_ms = 120 }
+
+# --- hook_handoff_notice (Stop) ---
+# 페이로드는 위와 같은 세션의 탐침 훅이 저장한 Stop 입력이다. 세션 ID 를 위 사례와 달리 둬 위의 인계 표지에 걸리지 않게 한다.
+[[case]]
+hook = "hook_handoff_notice.py"
+expect = "notice"
+note = "문턱 위 세션의 턴 끝 — 사람에게 한 번 알림"
+contains = ["인계 문턱", "한 번만 낸다"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "notice-case-over", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "알림 없음" }
+
+[[case]]
+hook = "hook_handoff_notice.py"
+expect = "silent"
+note = "문턱 아래 세션의 턴 끝"
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "notice-case-under", transcript_path = "${UNDER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "알림 없음" }
 
 # --- hook_push_behind_main (PreToolUse Bash|PowerShell) ---
 # 둘 다 origin 이 임시 bare 저장소라 네트워크와 이 저장소의 브랜치에 기대지 않는다. 침묵은 같은 뒤처진 저장소에서

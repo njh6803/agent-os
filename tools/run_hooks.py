@@ -17,7 +17,7 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물다섯 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물여덟 — `${ROOT}`(저장소 루트),
 `${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
 날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
 두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
@@ -30,6 +30,10 @@ pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘�
 origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진 저장소),
 `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
+`${OVER_HANDOFF_TRANSCRIPT}`·`${UNDER_HANDOFF_TRANSCRIPT}`(마지막 모델 응답의 usage 가 인계 문턱을
+넘는 트랜스크립트와 넘지 않는 트랜스크립트), `${EMPTY_TEMP}`(표지를 쓸 빈 임시 폴더. 사례의 `env` 로
+`TEMP`·`TMP`·`TMPDIR` 에 준다 — 시스템 임시 폴더에 남은 표지로 발동 사례가 PC 마다 처음 한 번만
+지나지 않게),
 `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글
 줄이 넘친 `long.py` 와 짧은 `short.py`), `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이
 저장소의 파일에 기대를 걸지 않는다), `${RAW_SEPARATOR}`(날것 U+2028 이 든 파일 — 표에는 그 문자를 둘
@@ -532,10 +536,11 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     작업 브랜치와 그 upstream 인 bare 저장소, 어긋난 잠금 파일의 `web/` 을 든 저장소)는 `GIT_*` 를
     벗긴 환경으로 만들고, 커밋은 작성자를 명령에 준다(`_IDENTITY`). 트랜스크립트 하나는 assistant
     기록이 있는 파일로 두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든
-    대화(`_MIDTURN_RECORDS`)다. ruff 프로젝트 하나는
-    줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
-    밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md` 와
-    CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
+    대화(`_MIDTURN_RECORDS`)다. 넷째와 다섯째는 마지막 모델 응답의 usage 가 인계 문턱(20만)을 넘는
+    것과 넘지 않는 것이고(`_handoff_transcript`), 표지를 쓸 빈 임시 폴더를 하나 둔다. ruff 프로젝트
+    하나는 줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을
+    설정 밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md`
+    와 CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
     모양이고, 하나만 회고 절이 있다. 커밋 메시지 파일 둘은 제목만 다르다.
     """
     main_repo = scratch / "on-main"
@@ -566,6 +571,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         encoding="utf-8",
         newline="\n",
     )
+    empty_temp = scratch / "empty-temp"
+    empty_temp.mkdir()
     korean_heredoc = "cat <<'EOF'\n" + "\n".join(f"한글 줄 {i}" for i in range(45)) + "\nEOF"
     ruff_project = scratch / "ruff-project"
     ruff_project.mkdir()
@@ -638,6 +645,9 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
+        "OVER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "over", 250_000).as_posix(),
+        "UNDER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "under", 120_000).as_posix(),
+        "EMPTY_TEMP": empty_temp.as_posix(),
         "KOREAN_HEREDOC_45": korean_heredoc,
         "RUFF_PROJECT": ruff_project.as_posix(),
         "LOOSE_PY": loose.as_posix(),
@@ -681,6 +691,35 @@ def _usage_home(scratch: Path) -> Path:
     account = {"accountUuid": "00000000-0000-0000-0000-0000000000aa", "emailAddress": "run@hooks"}
     (home / ".claude.json").write_text(json.dumps({"oauthAccount": account}), encoding="utf-8")
     return home
+
+
+def _handoff_transcript(scratch: Path, name: str, tokens: int) -> Path:
+    """마지막 모델 응답의 세 입력 토큰 합이 `tokens` 인 트랜스크립트. 인계 훅 둘이 읽는다.
+
+    기록의 모양은 실제 트랜스크립트의 assistant 기록이다(usage 가 `message` 안에 있다. 이 저장소의
+    트랜스크립트를 손으로 봤다, 일지 2026-10-16-63). 앞에 문턱을 넘는 응답을, 뒤에 도구 결과를
+    두어 마지막 응답만 센다는 것도 표의 사례가 지나게 한다."""
+    path = scratch / f"transcript-handoff-{name}.jsonl"
+    records: list[dict[str, JsonValue]] = []
+    for total in (900_000, tokens):
+        usage: dict[str, JsonValue] = {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 1_000,
+            "cache_read_input_tokens": total - 1_002,
+            "output_tokens": 300,
+        }
+        message: dict[str, JsonValue] = {
+            "id": f"msg_{total}",
+            "model": "claude-opus-5-5",
+            "content": [{"type": "tool_use", "id": f"toolu_{total}", "name": "Bash"}],
+            "usage": usage,
+        }
+        records.append({"type": "assistant", "isSidechain": False, "message": message})
+    records.append({"type": "user", "message": {"role": "user", "content": "ok"}})
+    path.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n", encoding="utf-8", newline="\n"
+    )
+    return path
 
 
 def _broken_web(scratch: Path) -> Path:
