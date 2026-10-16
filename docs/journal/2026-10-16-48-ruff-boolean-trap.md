@@ -92,3 +92,46 @@ next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STAND
   - [Minor] 고쳤다. 표준 줄의 "`bool`로 주석한 위치 매개변수"가 실제 규칙보다 좁았다. 주석 없이 불리언 기본값만 있어도
     FBT002가 막는다. 새 문장: "ruff FBT는 주석에 `bool`이 든 위치 매개변수, 불리언 기본값이 붙은 위치 매개변수, 호출에 위치로
     넘긴 `True`/`False` 리터럴만 막는다."
+
+## PR 봇 회차 (#272)
+
+- **claude-review 첫 회차.** 경계 지적 없음, Nit 둘. 둘 다 고치지 않고 PR 코멘트에 이유를 남겼다.
+  - `.scratch/plugin-toggle/issues/01-contract-switch-and-wrapped-rows.md`가 포트를 옛 위치 인자 꼴로 적는다. plugin-toggle은
+    `plan.md`에서 done이라 그 티켓은 기록이고, 기록은 잔존으로 세지 않는다(`docs/constitution/operations.md` 문서 위치).
+  - `_INHERIT_HANDLE` 이름. 셀프 리뷰에서 같은 이유로 두었다(위).
+- **CodeRabbit.** `@coderabbitai review`를 남겼으나 한도에 걸렸다(`Review rate limited`). CI 다섯은 모두 통과했다.
+
+## 회고
+
+후보 넷, 승인 하나, 기각 셋, 넘김 없음.
+
+1. **승인, 대기열 311(1회차).** 변이 표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않으면, pre-commit의 변이 표 검사가 커밋에 든
+   표만 보아 지나간다. 이 세션에서 `judge_branch` 호출을 바꾼 커밋이 `tidy_checkouts_mutations.toml`의 원문을 0번으로 만들었고,
+   셀프 리뷰 명세 축은 Info로, PR 직전 버그·성능 축은 Major로 냈다. 같은 꼴의 사례가 하나 더 남아 있다
+   (`run_checks_mutations.toml`이 가리키는 `tools/hook_bash_gate_pipe.py`의 원문). 꼴이 고정된 기계적 실수라 층은 검사다
+   (`.pre-commit-config.yaml`의 그 훅이 `file =`이 스테이지된 파일을 가리키는 표도 보게 한다). PR 하나로 되돌릴 수 있다.
+2. **기각.** 표준 줄의 첫 판은 린터 범위를 넓게, 둘째 판은 좁게 적었다. `code-review`의 주장 검증 10(코드의 동작을 불러 대 본다)과
+   PR 직전 버그·성능 축이 차례로 잡았다. 이미 있는 검사가 잡은 것이다.
+3. **기각.** 워크트리 가드가 변수가 든 셸 루프를 거부해 스크립트 파일로 다시 돌렸다. `CLAUDE.md` 환경 함정에 이미 있다.
+4. **기각.** pyright의 `include`에 `.scratch`가 없어 프로브의 시그니처 변경을 경로로 따로 넘겨 쟀다. 실수로 이어지지 않아
+   사건이 없다.
+
+## 다음
+
+토큰 최적화 세션(`토큰 최적화 및 일간보고서`)이 보낸 요청에 따라, 이 세션은 병합 뒤 새 세션을 열지 않고 멈춘다. 그 요청의 원문:
+
+> 토큰 최적화 작업(토큰 사용 티켓 01~09)이 끝날 때까지 새 일을 멈춰 주세요. 지금 맡은 티켓은 PR 병합까지 마치고(아직 시작 전이거나 커밋할 것이 없으면 지금 상태를 일지에 적고 바로) 멈춥니다. 새 티켓을 시작하지 않고, next-session 지시문은 일지에 적어 두기만 하며 open-session으로 새 세션을 열지 않습니다.
+
+재개 안내가 오면 아래 지시문으로 연다. 고르는 과정에서 둘을 뺐다. 54는 잠근 dev 의존성과 ADR이 필요하다. 308은 대상 파일
+`.claude/settings.json`이 `chore/hooks-push-help-and-commit-lock` 세션이 맡은 293과 같다.
+
+다음 작업: 대기열 31·287·311(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+다음 단계: 구현
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: 대기열 31·287·311(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+브랜치: chore/pre-commit-batch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 대기열 31·287·311 행과 그 행이 드는 일지들의 회고 절
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 토큰 최적화 세션의 재개 안내가 왔는지 본다
+이번 요청 범위: PR과 병합까지
