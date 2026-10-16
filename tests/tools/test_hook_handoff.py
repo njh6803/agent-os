@@ -211,6 +211,13 @@ def test_명령_앞의_래퍼와_경로로_부른_git_과_인용_없는_옵션_�
         assert boundary_of("Bash", {"command": command}) is None, command
 
 
+def test_줄인_옵션과_줄_잇기_뒤의_도움말은_경계로_센다() -> None:
+    """못 보는 것의 거짓 양성. git 은 `--dry` 를 `--dry-run` 으로 받고, 줄 잇기 뒤의 `-h` 도
+    도움말이다."""
+    for command in ("git commit --dry", "git commit \\\n  -h"):
+        assert boundary_of("Bash", {"command": command}) == "커밋 뒤", command
+
+
 def test_커밋과_PR_의_문장은_성공했는지를_모델에게_미룬다() -> None:
     """못 보는 것: 실패한 커밋과 PR 만들기도 경계로 센다. 문장이 "성공했으면"으로 미룬다."""
     for boundary in ("커밋 뒤", "PR 연 뒤"):
@@ -345,6 +352,21 @@ def test_병렬_호출의_앞쪽은_아직_기록되지_않은_응답_대신_그
     transcript = _트랜스크립트(tmp_path / "t.jsonl", [_응답(190_000), _도구_결과])
 
     assert handoff_context(_페이로드(transcript, command="git commit -F m.txt"), {}) is None
+
+
+def test_날것_줄_구분_문자가_든_기록도_한_줄로_읽는다(tmp_path: Path) -> None:
+    """JSONL 은 줄바꿈(LF)으로만 가른다. `splitlines` 는 U+2028·U+0085 에서도 갈라, 그 문자를
+    날것으로 담은 마지막 응답을 버리고 앞의 작은 응답을 읽었다(PR 직전 버그 리뷰)."""
+    separator = chr(0x2028)
+    big = json.loads(_응답(250_000))
+    big["message"]["content"] = [{"type": "text", "text": f"a{separator}b{chr(0x85)}c"}]
+    raw = json.dumps(big, ensure_ascii=False)
+    assert separator in raw
+    transcript = _트랜스크립트(tmp_path / "t.jsonl", [_응답(120_000), raw])
+
+    assert hook_handoff.tail_lines(transcript, 1024 * 1024)[-1] == raw
+    assert hook_handoff_notice.tail_lines(transcript, 1024 * 1024)[-1] == raw
+    assert handoff_context(_페이로드(transcript, command="git commit -F m.txt"), {}) is not None
 
 
 def test_깨진_기록은_예외_없이_넘긴다() -> None:

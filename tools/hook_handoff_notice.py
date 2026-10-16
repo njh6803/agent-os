@@ -79,7 +79,9 @@ def tail_lines(path: Path, limit: int) -> list[str]:
             data = transcript.read()
     except OSError:
         return []
-    lines = data.decode("utf-8", errors="replace").splitlines()
+    # JSONL 은 LF 로만 가른다. `splitlines` 는 기록 안의 날것 U+2028·U+0085 에서도 가른다.
+    lines = [line.rstrip("\r") for line in data.decode("utf-8", errors="replace").split("\n")]
+    lines = [line for line in lines if line]
     return lines[1:] if start > 0 else lines
 
 

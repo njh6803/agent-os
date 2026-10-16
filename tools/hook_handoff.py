@@ -47,6 +47,10 @@ tests/tools/test_hook_handoff.py 의 `test_두_훅의_문턱과_셈과_표지_�
 - 명령 앞의 래퍼(`time`, `env X=1`, `sudo`, `!`)와 경로로 부른 git(`/usr/bin/git`). 명령 위치를
   셸 문법 밖에서 가르지 않아 놓친다(거짓 음성).
 - 인용 없이 옵션 자리에 둔 값. `git commit -m -h` 의 `-h` 는 메시지인데 도움말로 읽어 놓친다.
+- 줄인 옵션(`git commit --dry`)과 줄 잇기(줄 끝 역슬래시와 줄바꿈) 뒤의 `-h`. 실행하지 않는 명령인데
+  경계로 센다(거짓 양성). 문턱 위에서 문장 하나를 낼 뿐이다.
+- 인계를 지시한 뒤 모델이 인계하지 않는 때로 보고 이은 세션. 표지가 이미 있어, 그 세션의 Stop
+  알림은 그 뒤로도 나지 않는다. 인계했는지는 훅이 알 수 없다.
 - 실패한 커밋과 PR 만들기. 문장이 "성공했으면"으로 미룬다. 실패한 셸 명령이 PostToolUse 를
   일으키는지 PostToolUseFailure 로 가는지는 재지 않았다.
 - 끝 `TAIL_BYTES` 안에 모델 응답이 없는 트랜스크립트. 침묵한다.
@@ -217,7 +221,9 @@ def tail_lines(path: Path, limit: int) -> list[str]:
             data = transcript.read()
     except OSError:
         return []
-    lines = data.decode("utf-8", errors="replace").splitlines()
+    # JSONL 은 LF 로만 가른다. `splitlines` 는 기록 안의 날것 U+2028·U+0085 에서도 가른다.
+    lines = [line.rstrip("\r") for line in data.decode("utf-8", errors="replace").split("\n")]
+    lines = [line for line in lines if line]
     return lines[1:] if start > 0 else lines
 
 
