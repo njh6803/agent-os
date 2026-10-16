@@ -654,7 +654,7 @@ def _handoff_transcript(scratch: Path, name: str, tokens: int) -> Path:
     """마지막 모델 응답의 세 입력 토큰 합이 `tokens` 인 트랜스크립트. 인계 훅 둘이 읽는다.
 
     기록의 모양은 실제 트랜스크립트의 assistant 기록이다(usage 가 `message` 안에 있다. 이 저장소의
-    트랜스크립트를 손으로 봤다, 일지 2026-10-16-57). 앞에 문턱을 넘는 응답을, 뒤에 도구 결과를
+    트랜스크립트를 손으로 봤다, 일지 2026-10-16-63). 앞에 문턱을 넘는 응답을, 뒤에 도구 결과를
     두어 마지막 응답만 센다는 것도 표의 사례가 지나게 한다."""
     path = scratch / f"transcript-handoff-{name}.jsonl"
     records: list[dict[str, JsonValue]] = []

@@ -1,4 +1,4 @@
-# 2026-10-16 (57) 인계 훅 둘과 그것이 바꾸는 문장
+# 2026-10-16 (63) 인계 훅 둘과 그것이 바꾸는 문장
 
 token-usage 티켓 05(`.scratch/token-usage/issues/05-handoff-hooks-and-sentences.md`)를 구현했다. 브랜치
 `feature/05-handoff-hooks-and-sentences`, 워크트리 `.claude/worktrees/05-handoff-hooks-and-sentences`.
