@@ -11,11 +11,13 @@
 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이 임시 저장소를 이 저장소로 돌린다,
 tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열 83·94 — 한국어 판정 훅 둘이
 SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). `CLAUDE_CODE_REMOTE` 도 벗긴다
-(`hook_session_web_deps` 가 클라우드 세션에서만 깐다). 자식은
+(`hook_session_web_deps` 가 클라우드 세션에서만 깐다). `CLAUDE_CODE_SESSION_ATTENDED` 와 카나리아의
+헤드리스 표지 `AGENT_OS_HEADLESS` 도 벗긴다(`hook_session_usage` 가 헤드리스 세션에서 요약을 보이지
+않는다). 자식은
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물여섯 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물여덟 — `${ROOT}`(저장소 루트),
 `${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
 날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
 두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
@@ -43,9 +45,12 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
 `good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다),
 `${COMMITTING_REPO}`(안에 연결된 워크트리 `.claude/worktrees/side` 를 둔 임시 저장소. 러너가 도는
-동안 그 워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 돈다, `committing_repository`). 사례의
-`env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
-로 준다. 기대는 다섯. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+동안 그 워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 돈다, `committing_repository`),
+`${USAGE_REPO}`(`.scratch/token-report/summary.txt` 에 방금 쓴 요약을 둔 임시 저장소 — 사용량 장부와
+요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
+`.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다). 사례의 `env` 는 자리표시자를 바꾼
+뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 다섯.
+deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
 context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는 `systemMessage` 하나.
 `additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료 0, 출력 없음).
 사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼 additionalContext·이유·
@@ -91,7 +96,7 @@ import tomllib
 from collections.abc import Callable, Collection, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -426,17 +431,22 @@ def notice_outcome(returncode: int, stdout: str, event: str) -> str:
 
 def hook_environment() -> dict[str, str]:
     """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT`,
-    `CLAUDE_CODE_REMOTE` 를 뺀다.
+    `CLAUDE_CODE_REMOTE`, `CLAUDE_CODE_SESSION_ATTENDED` 를 뺀다.
 
-    뒤의 둘은 훅이 세션의 종류를 가리는 근거다. `CLAUDE_CODE_ENTRYPOINT` 는
+    뒤의 셋은 훅이 세션의 종류를 가리는 근거다. `CLAUDE_CODE_ENTRYPOINT` 는
     `hook_stop_korean`·`hook_midturn_korean` 이 SDK 세션에서 침묵하는 근거이고,
-    `CLAUDE_CODE_REMOTE` 는 `hook_session_web_deps` 가 클라우드 세션에서만 까는 근거다. 러너를
-    띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다.
+    `CLAUDE_CODE_REMOTE` 는 `hook_session_web_deps` 가 클라우드 세션에서만 까는 근거이며,
+    `CLAUDE_CODE_SESSION_ATTENDED` 는 `hook_session_usage` 가 헤드리스 세션에서 요약을 보이지 않는
+    근거다. 러너를 띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다(`claude -p`
+    세션의 커밋에서는 `0` 이다). 같은 까닭으로 카나리아 도구가 붙이는 헤드리스 표지
+    `AGENT_OS_HEADLESS` 도 뺀다.
     """
     excluded = {
         "PYTHONUTF8",
         "CLAUDE_CODE_ENTRYPOINT",
         "CLAUDE_CODE_REMOTE",
+        "CLAUDE_CODE_SESSION_ATTENDED",
+        "AGENT_OS_HEADLESS",
         *REPO_LOCATION_VARS,
     }
     return {key: value for key, value in os.environ.items() if key not in excluded}
@@ -647,7 +657,40 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "CLOSED_JOURNAL": closed_journal.as_posix(),
         "BROKEN_WEB": _broken_web(scratch).as_posix(),
         "COMMIT_MSGS": commit_msgs.as_posix(),
+        "USAGE_REPO": _usage_repository(scratch, today).as_posix(),
+        "USAGE_HOME": _usage_home(scratch).as_posix(),
     }
+
+
+def _usage_repository(scratch: Path, today: str) -> Path:
+    """요약 파일(`.scratch/token-report/summary.txt`)을 방금 쓴 임시 저장소. 첫 줄은 오늘의 전날을
+    보고서 날짜로 든다(`tools/token_report.py` 가 쓰는 모양). 훅은 이 저장소의 주 체크아웃(곧 이
+    저장소) 아래에 계정 기록과 요약의 표지를 쓴다."""
+    repo = scratch / "usage-repo"
+    subprocess.run(
+        ["git", "init", "-q", str(repo)],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
+    report = repo / ".scratch" / "token-report"
+    report.mkdir(parents=True)
+    day = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
+    (report / "summary.txt").write_text(
+        f"보고서 날짜: {day}\n환산 비용 $0.00\n경보 없음\n보고서: {report}/daily/{day}.md\n",
+        encoding="utf-8",
+    )
+    return repo
+
+
+def _usage_home(scratch: Path) -> Path:
+    """가짜 계정의 `oauthAccount` 만 든 `.claude.json` 을 둔 홈."""
+    home = scratch / "usage-home"
+    home.mkdir()
+    account = {"accountUuid": "00000000-0000-0000-0000-0000000000aa", "emailAddress": "run@hooks"}
+    (home / ".claude.json").write_text(json.dumps({"oauthAccount": account}), encoding="utf-8")
+    return home
 
 
 def _handoff_transcript(scratch: Path, name: str, tokens: int) -> Path:
