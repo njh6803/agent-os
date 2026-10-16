@@ -139,7 +139,7 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 
 스윕 기간에 두 갈래의 조건을 함께 바꾸는 것을 한 줄씩 적는다. 효과는 병합 시각이 아니라 주 체크아웃을 당긴 뒤 새로 연
 세션부터 선다. 스킬은 세션을 시작한 체크아웃의 사본이 실리고(`docs/constitution/operations.md` 환경 규약 상세), 지시문
-세션은 주 체크아웃에서 시작한다. 프로젝트 설정도 띄운 자리의 것이 실렸다(플러그인 끄기를 손으로 본 것, 일지 2026-10-16-41).
+세션은 주 체크아웃에서 시작한다. 프로젝트 설정도 띄운 자리의 것이 실렸다(플러그인 끄기를 손으로 본 것, 일지 2026-10-16-50).
 
 - 플러그인 끄기(PR #268): 프로젝트 설정의 `enabledPlugins`에서 `document-skills`, `example-skills`, `skill-creator`,
   `code-review` 플러그인판을 끈다. 모든 호출에 실리는 시작 컨텍스트의 스킬 목록이 줄어든다.

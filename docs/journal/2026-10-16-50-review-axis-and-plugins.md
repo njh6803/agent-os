@@ -1,4 +1,4 @@
-# 2026-10-16 (41) 셀프 리뷰 표준 축을 sonnet·high로, 쓰지 않는 플러그인 넷 끄기
+# 2026-10-16 (50) 셀프 리뷰 표준 축을 sonnet·high로, 쓰지 않는 플러그인 넷 끄기
 
 > 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/token-usage/issues/07-review-axis-and-plugins.md
 > (지시문: 나란히 여는 4 중 4, 브랜치 feature/07-review-axis-and-plugins, 모델 Opus 5.5 / medium, 범위는 PR과 병합까지)
@@ -57,6 +57,10 @@ CodeRabbit CLI는 좌석 미배정(`Seat: not assigned`, CLI 0.7.5)으로 돌지
 - 기각: PR 번호를 채우려고 커밋과 푸시를 하나 더 했다. 그 푸시에 PR 직전 리뷰 절도 실려야 했으므로 따로 든 비용이 없다.
 
 이 회고를 담은 커밋의 첫 pre-commit에서 `tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[0-ok-0]`가 빨갰다(`expand-hung`, 1초 제한 안에 지연 0의 호출이 돌아오지 않았다). 이 커밋은 문서와 대기열만 바꿔 그 코드에 닿지 않고, 그 시험만 따로 돌리면 2 passed(7.07초)였다. 전체 스위트의 부하 아래에서 흔들린 것으로 보고 다시 커밋했다. 부하 아래의 흔들림은 대기열 306과 같은 모양이라 그 행의 회차로 다음 retro가 본다.
+
+## main 합치기
+
+푸시 전에 main에 형제 PR #269(`code-review`의 코드 동작 불러 보기와 새 문장 넘기기)가 병합돼 합쳤다. 충돌은 `code-review` 센티널 주석 한 줄뿐이었다. main 쪽 줄을 살리고 그 안의 "4단계의 sonnet 규칙"만 바뀐 규칙으로 바꿨다. 합친 뒤 옛 규칙 잔존 grep은 명세와 이 티켓뿐이고, 카나리아는 `--preflight --control-commit 30b9f37`로 갈음했다(통과 1). 이 PR이 바꾼 4단계 문단과 `expect`는 그대로다.
 
 ## 다음
 
