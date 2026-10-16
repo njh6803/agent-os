@@ -189,7 +189,7 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
         name: Annotated[str, Path(pattern=PLUGIN_NAME_PATTERN)],
         body: SetEnabled,
     ) -> Response:
-        written = plugins.write_enabled(kind, PluginName(name), body.enabled)
+        written = plugins.write_enabled(kind, PluginName(name), enabled=body.enabled)
         if written == "absent":
             raise _absent(kind, name)
         return Response(status_code=204)

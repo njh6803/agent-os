@@ -366,7 +366,7 @@ def _write_journal(folder: Path, day: date, number: str, slug: str) -> Path:
     ],
 )
 def test_실제_도구의_출력을_읽어_순번을_가른다(
-    tmp_path: Path, 하루_앞: bool, 순번: str, 형제: str | None, 새_번호: str | None, 옮긴다: bool
+    tmp_path: Path, *, 하루_앞: bool, 순번: str, 형제: str | None, 새_번호: str | None, 옮긴다: bool
 ) -> None:
     """훅이 읽는 출력의 꼴(`다음 빈 번호`·`이 브랜치의 새 번호`·`옮길 번호` 줄)이 도구가 내는 꼴과
     같은지 본다. 형제는 커밋하지 않은 일지를 든 형제 워크트리다. 날짜를 넘긴 세션이 시작한 날짜로 쓴
