@@ -39,20 +39,21 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
 `good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다). 사례의 `env`
 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로
-준다. 기대는 넷. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
-context (`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
-문장(`message_of` — JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두
-들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵
-사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를
-재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을 재는지 표지만 단다.
-`hookSpecificOutput` 을 내는 훅은
+준다. 기대는 다섯. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는 `systemMessage` 하나.
+`additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료 0, 출력 없음).
+사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼 additionalContext·이유·
+systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만
+대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵
+사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을
+재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
-발동·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로 센다. 등록되지
-않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더 잰다. 등록된
-이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에 기대한
-출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
+발동(silent 밖의 넷)·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로
+센다. 등록되지 않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더
+잰다. 등록된 이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에
+기대한 출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
 `systemMessage` 하나인 `notice`, 나머지는 모델에게도 가는 `context` 다. `context` 에도 사용자 몫의
 `systemMessage` 가 있어야 한다(`notice_outcome`). 표의 사례는 훅 파일이
 있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
@@ -103,7 +104,7 @@ _PROJECT_DIR = "${CLAUDE_PROJECT_DIR}"
 _REGISTRATION_PATTERN = re.compile(
     re.escape(REGISTRATION).replace(re.escape("{hook}"), r"(hook_\w+\.py)")
 )
-Expectation = Literal["deny", "block", "context", "silent"]
+Expectation = Literal["deny", "block", "context", "notice", "silent"]
 # 래퍼가 없는 훅을 지나갈 때의 알림(대기열 93)을 등록된 이벤트마다 재는 훅 이름. tools/ 에 없어야
 # 한다.
 ABSENT_HOOK = "hook_absent_for_launch_notice.py"
@@ -239,15 +240,15 @@ class NoticeResult:
         return self.outcome == self.expected
 
 
-def load_cases(path: Path = PAYLOADS) -> list[Case]:
-    """표를 읽는다. 기대가 넷 밖이거나, 훅 파일이 없거나, 침묵 사례에 `contains` 가 있으면
-    ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
+def load_cases(path: Path = PAYLOADS, root: Path = ROOT) -> list[Case]:
+    """표를 읽는다. 기대가 다섯 밖이거나, 훅 파일이 `root` 의 `tools/` 에 없거나, 침묵 사례에
+    `contains` 가 있으면 ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
     try:
         table = _Table.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
     except ValidationError as error:
         raise ValueError(f"{path.name}: {error}") from error
     for case in table.case:
-        if not (ROOT / "tools" / case.hook).is_file():
+        if not (root / "tools" / case.hook).is_file():
             raise ValueError(f"tools/{case.hook} 이 없다")
         if case.expect == "silent" and case.contains:
             raise ValueError(f"{case.hook} 의 침묵 사례에 contains 가 있다: {case.note}")
@@ -335,12 +336,14 @@ def _replace(text: str, replacements: dict[str, str]) -> str:
 
 
 def outcome_of(returncode: int, stdout: str, event: str) -> str:
-    """훅의 종료 코드와 stdout 을 기대 넷 중 하나로(또는 그 밖의 설명으로) 읽는다.
+    """훅의 종료 코드와 stdout 을 기대 다섯 중 하나로(또는 그 밖의 설명으로) 읽는다.
 
     `hookSpecificOutput` 은 `hookEventName` 이 있어야 하고(없으면 Claude Code 가 받지 않는 출력이라
-    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). 기대 넷
-    밖의 `notice` 는 사용자에게만 가는 `systemMessage` 하나다 — 래퍼가 Stop 에서 없는 훅을 지나갈
-    때의 출력이고(대기열 93), 표의 훅은 내지 않는다.
+    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). `notice` 는
+    사용자에게만 가는 `systemMessage` 하나다 — 표의 훅이 사람에게만 알릴 때와 래퍼가 Stop 에서
+    없는 훅을 지나갈 때(대기열 93)의 출력이다. `additionalContext` 가 함께 있으면 `context` 다.
+    모델에게도 가는 출력이고, Stop 에서는 그것이 대화를 잇게 한다(`.claude/rules/tools.md`).
+    그래서 notice 사례는 그 출력을 어긋남으로 잡는다.
     """
     if returncode == 2:
         return "block"
@@ -404,8 +407,9 @@ class _Launched:
 
 def notice_outcome(returncode: int, stdout: str, event: str) -> str:
     """래퍼 알림의 판정. `outcome_of` 와 같되 `context` 에도 사용자에게 가는 `systemMessage` 가
-    있어야 한다 — 없으면 `context 사용자 알림 없음`. 표의 훅은 `systemMessage` 를 내지 않으므로
-    `outcome_of` 에 넣지 않는다(PR #122 CodeRabbit 2회차)."""
+    있어야 한다 — 없으면 `context 사용자 알림 없음`. 표의 context 사례는 사용자 몫을 요구하지
+    않으므로(대부분의 훅은 모델에게만 알린다) `outcome_of` 에 넣지 않는다(PR #122 CodeRabbit
+    2회차)."""
     outcome = outcome_of(returncode, stdout, event)
     if outcome != "context" or _HookOutput.model_validate_json(stdout.strip()).systemMessage:
         return outcome
@@ -451,13 +455,15 @@ def _launch(
     registration: Registration,
     judge: Judge = outcome_of,
     env: dict[str, str] | None = None,
+    root: Path = ROOT,
 ) -> _Launched:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌린다. 넘기면 판정 `timeout` 이다.
+    """자식 하나를 등록의 모양과 시간 제한으로 돌린다. 래퍼는 `root` 의 것을 띄운다. 넘기면 판정
+    `timeout` 이다.
 
     `env` 는 `hook_environment()` 위에 덧씌운다."""
     try:
         process = subprocess.run(
-            launch_argv(hook),
+            launch_argv(hook, root),
             input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             capture_output=True,
             env={**hook_environment(), **(env or {})},
@@ -474,12 +480,14 @@ def _launch(
     return _Launched(outcome, (stdout or stderr).strip(), message)
 
 
-def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
+def run_case(
+    case: Case, replacements: dict[str, str], registration: Registration, root: Path = ROOT
+) -> Result:
     """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정하고 `contains` 를 대 본다. 넘기면 어긋남
-    `timeout` 이다."""
+    `timeout` 이다. 래퍼와 훅은 `root` 의 `tools/` 에서 띄운다 — 시험이 가짜 훅을 든 루트를 준다."""
     payload = substitute(case.payload, replacements)
     env = {key: _replace(value, replacements) for key, value in case.env.items()}
-    launched = _launch(case.hook, payload, registration, env=env)
+    launched = _launch(case.hook, payload, registration, env=env, root=root)
     missing = tuple(missing_fragments(launched.message, case.contains))
     return Result(case, launched.outcome, launched.output, missing)
 

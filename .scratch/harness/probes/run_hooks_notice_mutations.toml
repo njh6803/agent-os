@@ -1,0 +1,83 @@
+# tools/run_hooks.py 가 표의 기대 값 notice 를 받는 판정(token-usage 티켓 01)을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/run_hooks_notice_mutations.toml
+# 앞의 다섯은 이 티켓의 시험이 새로 고정한 판정이고(기대 값, 빈자리 셈, contains 의 원천, contains 를
+# 받는 검사, 함께 낸 출력의 판정. 기대 값 밖의 넷은 그 전부터 있던 코드다), 뒤의 둘은 시험이 가짜 훅을
+# 든 루트를 넘기는 이음매다. 시험은 이름에 notice 가 든 것으로 좁힌다.
+
+[[mutation]]
+name = "표가 notice 를 받지 않는다(옛 기대 넷)"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["literal_error"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''Expectation = Literal["deny", "block", "context", "notice", "silent"]'''
+new = '''Expectation = Literal["deny", "block", "context", "silent"]'''
+
+[[mutation]]
+name = "빈자리 셈이 notice 를 발동으로 세지 않는다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["hook_notice_and_silent.py: 발동 사례가 없다"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        elif not expects - {"silent"}:'''
+new = '''        elif not expects - {"silent", "notice"}:'''
+
+[[mutation]]
+name = "systemMessage 를 훅의 문장에 넣지 않는다(notice 의 조각을 못 찾는다)"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["('notice', ('턴이 끝났다',))"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    texts = [output.additionalContext, output.reason, output.systemMessage]'''
+new = '''    texts = [output.additionalContext, output.reason]'''
+
+[[mutation]]
+name = "notice 사례의 contains 를 받지 않는다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["침묵 사례에 contains 가 있다"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        if case.expect == "silent" and case.contains:'''
+new = '''        if case.expect in ("silent", "notice") and case.contains:'''
+
+[[mutation]]
+name = "systemMessage 를 additionalContext 보다 먼저 본다(함께 내면 notice)"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["('notice', ()) == ('context', ())"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    if (specific is not None and specific.additionalContext) or output.additionalContext:
+        return "context"
+    if output.systemMessage:
+        return "notice"
+'''
+new = '''    if output.systemMessage:
+        return "notice"
+    if (specific is not None and specific.additionalContext) or output.additionalContext:
+        return "context"
+'''
+
+[[mutation]]
+name = "표를 읽을 때 넘긴 루트가 아니라 저장소의 tools/ 를 본다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["tools/hook_fake_notice.py 이 없다"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''        if not (root / "tools" / case.hook).is_file():'''
+new = '''        if not (ROOT / "tools" / case.hook).is_file():'''
+
+[[mutation]]
+name = "사례를 돌릴 때 넘긴 루트가 아니라 저장소의 래퍼를 띄운다(가짜 훅이 없어 래퍼가 지나간다)"
+tests = ["tests/tools/test_run_hooks.py", "-k", "notice"]
+expect = "red"
+expect_output = ["('notice', ('턴이 끝났다',))"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''    launched = _launch(case.hook, payload, registration, env=env, root=root)'''
+new = '''    launched = _launch(case.hook, payload, registration, env=env)'''

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import pytest
 from pydantic import JsonValue
 from tools.run_hooks import (
     PAYLOADS,
+    ROOT,
     Case,
     Expectation,
     NoticeResult,
@@ -42,7 +44,8 @@ def _specific(**fields: str) -> str:
     return json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", **fields}})
 
 
-def test_종료_코드와_출력을_기대_넷으로_읽는다() -> None:
+def test_종료_코드와_출력을_기대로_읽는다() -> None:
+    """notice 는 `test_사용자에게만_가는_systemMessage_는_notice_다` 가 본다."""
     deny = _specific(permissionDecision="deny", permissionDecisionReason="x")
     context = _specific(additionalContext="retro")
     assert outcome_of(0, deny, "PreToolUse") == "deny"
@@ -85,7 +88,7 @@ def test_자리표시자는_표_안까지_바꾼다() -> None:
     }
 
 
-def test_표의_기대는_넷_중_하나여야_한다(tmp_path: Path) -> None:
+def test_표의_기대는_다섯_중_하나여야_한다(tmp_path: Path) -> None:
     table = tmp_path / "t.toml"
     table.write_text(
         '[[case]]\nhook = "hook_env_read.py"\nexpect = "warn"\npayload = { tool_name = "Bash" }\n',
@@ -106,6 +109,58 @@ def test_침묵_사례에는_찾을_문장이_없어_contains_를_받지_않는�
 
     with pytest.raises(ValueError, match="contains"):
         load_cases(table)
+
+
+def _fake_root(tmp_path: Path, output: dict[str, JsonValue]) -> Path:
+    """래퍼 사본과 `output` 을 내는 가짜 훅을 `tools/` 에 둔 루트. 러너는 등록의 모양 그대로 이
+    루트의 래퍼를 띄우고, 래퍼는 자기 옆의 훅을 돌린다. `output` 이 비면 아무것도 내지 않는다."""
+    root = tmp_path / "fake-root"
+    (root / "tools").mkdir(parents=True)
+    shutil.copy(ROOT / "tools" / "launch_hook.py", root / "tools")
+    text = json.dumps(output) if output else ""
+    (root / "tools" / "hook_fake_notice.py").write_text(
+        f"import sys\n\nsys.stdout.write({text!r})\n", encoding="utf-8"
+    )
+    return root
+
+
+_NOTICE_TABLE = (
+    '[[case]]\nhook = "hook_fake_notice.py"\nexpect = "notice"\ncontains = ["턴이 끝났다"]\n'
+    'payload = { hook_event_name = "Stop" }\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("output", "outcome", "missing"),
+    [
+        ({"systemMessage": "턴이 끝났다"}, "notice", ()),
+        (
+            {
+                "systemMessage": "턴이 끝났다",
+                "hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "턴이 끝났다"},
+            },
+            "context",
+            (),
+        ),
+        ({}, "silent", ("턴이 끝났다",)),
+    ],
+    ids=["systemMessage_하나", "additionalContext_도", "출력_없음"],
+)
+def test_표의_notice_사례는_사용자에게만_가는_systemMessage_하나를_낸_훅에서만_맞는다(
+    tmp_path: Path, output: dict[str, JsonValue], outcome: str, missing: tuple[str, ...]
+) -> None:
+    """표를 읽고(`load_cases`) 래퍼로 띄워 대조하는(`run_case`) 길이다. 판정 함수(`outcome_of`)는
+    이 길이 notice 를 받기 전에도 notice 를 냈다. 모델에게도 가는 additionalContext 가 함께 있으면
+    context 다. 맞는 갈래의 조각은 systemMessage 에만 있다."""
+    root = _fake_root(tmp_path, output)
+    table = tmp_path / "t.toml"
+    table.write_text(_NOTICE_TABLE, encoding="utf-8")
+
+    [case] = load_cases(table, root)
+    result = run_case(case, {}, Registration("Stop", 20), root)
+
+    assert (result.outcome, result.missing) == (outcome, missing)
+    assert result.ok is (outcome == "notice")
 
 
 def test_훅이_내는_문장은_JSON_을_풀어_읽고_종료_2_면_stderr_다() -> None:
@@ -293,6 +348,18 @@ def test_등록과_표의_빈자리를_센다() -> None:
     ]
 
 
+def test_빈자리_셈은_notice_를_발동으로_센다() -> None:
+    """사용자에게만 알리는 훅도 notice 사례를 발동으로 둔다."""
+    cases = [
+        _case("hook_notice_and_silent.py", "notice"),
+        _case("hook_notice_and_silent.py", "silent"),
+        _case("hook_notice_only.py", "notice"),
+    ]
+    registered = {"hook_notice_and_silent.py", "hook_notice_only.py"}
+
+    assert coverage_gaps(cases, registered) == ["hook_notice_only.py: 침묵 사례가 없다"]
+
+
 def test_이_저장소의_표는_등록된_훅마다_발동과_침묵이_있다() -> None:
     registered = registered_hooks()
 
@@ -441,8 +508,9 @@ def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_알림이다(tmp_
 
 
 def test_사용자에게만_가는_systemMessage_는_notice_다() -> None:
-    """래퍼가 Stop 처럼 additionalContext 를 내지 않는 이벤트에서 지나갈 때의 출력이다(대기열
-    93)."""
+    """표의 훅이 사람에게만 알릴 때와, 래퍼가 Stop 처럼 additionalContext 를 내지 않는 이벤트에서
+    지나갈 때의 출력이다(대기열 93). additionalContext 가 함께 있으면 모델에게도 가므로 context
+    다."""
     assert outcome_of(0, json.dumps({"systemMessage": "x"}), "Stop") == "notice"
     both = json.dumps(
         {
@@ -478,8 +546,9 @@ def test_래퍼의_알림은_모델에게_닿는_이벤트에서_context_이고_
 
 
 def test_래퍼의_알림은_사용자에게_가는_systemMessage_가_없으면_context_여도_어긋남이다() -> None:
-    """outcome_of 는 additionalContext 만 있어도 context 다. 표의 훅은 systemMessage 를 내지 않으니
-    그 판정은 그대로 두고, 래퍼의 알림만 사용자 몫을 따로 본다(PR #122 CodeRabbit 2회차)."""
+    """outcome_of 는 additionalContext 만 있어도 context 다. 표의 context 사례는 사용자 몫을
+    요구하지 않으니(대부분의 훅은 모델에게만 알린다) 그 판정은 그대로 두고, 래퍼의 알림만 사용자
+    몫을 따로 본다(PR #122 CodeRabbit 2회차)."""
     specific = {"hookEventName": "PreToolUse", "additionalContext": "x"}
     model_only = json.dumps({"hookSpecificOutput": specific})
     both = json.dumps({"systemMessage": "x", "hookSpecificOutput": specific})
