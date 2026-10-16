@@ -116,7 +116,7 @@ expect = "red"
 expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''        if threshold is None or any(c.mtime > threshold for c in copies)'''
+old = '''        if since is None or any(c.mtime > since for c in copies)'''
 new = '''        if True'''
 
 [[mutation]]
@@ -126,8 +126,8 @@ expect = "red"
 expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
 [[mutation.edit]]
 file = "tools/token_report.py"
-old = '''            threshold = last.timestamp() - 3600'''
-new = '''            threshold = last.timestamp() + 3600'''
+old = '''    return None if last is None else last.timestamp() - 3600'''
+new = '''    return None if last is None else last.timestamp() + 3600'''
 
 [[mutation]]
 name = "계정은 그 세션의 첫 줄이다"

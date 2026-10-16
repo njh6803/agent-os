@@ -91,6 +91,8 @@ from pathlib import Path
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
 FORMAT = 1
+# 시작 시각을 모르는 행의 순위 칸. 시각끼리 견주는 자리에 None 대신 둔다.
+_NO_TIME = datetime.min.replace(tzinfo=UTC)
 KEEP_DAILY = 7
 SPIKE = 1.5
 MIN_DAYS = 4
@@ -156,6 +158,7 @@ def _int(v: Json) -> int:
 
 
 def _parse_json(text: str) -> Json:
+    # `json.loads`의 반환형은 Any라, 여기서 `Json`으로 받아 뒤의 좁히기가 타입 검사를 지나게 한다.
     return json.loads(text)
 
 
@@ -617,9 +620,6 @@ def _owner_rank(
     return (rank, _NO_TIME, c.session, c.agent or "")
 
 
-_NO_TIME = datetime.min.replace(tzinfo=UTC)
-
-
 def _sorted_rows(rows: Iterable[Call | SessionRow | Unreadable]) -> list[dict[str, Json]]:
     def key(r: Call | SessionRow | Unreadable) -> tuple[str, str, str, str, str]:
         if isinstance(r, SessionRow):
@@ -631,72 +631,77 @@ def _sorted_rows(rows: Iterable[Call | SessionRow | Unreadable]) -> list[dict[st
     return [r.row() for r in sorted(rows, key=key)]
 
 
-def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
-    if not projects.is_dir():
-        # state를 올리면 다음 실행이 그 앞의 기록을 건너뛴다.
-        raise ToolError(f"세션 기록 폴더가 없다: {projects}. 장부와 state.json을 그대로 둔다")
-    started = time.time()
-    ledger_dir = out / "ledger"
+type Row = Call | SessionRow | Unreadable
+type Placed = tuple[str, Row]
+
+
+def changed_since(out: Path) -> float | None:
+    """지난 `ingest`의 한 시간 전(유닉스 시각). `state.json`이 없거나 읽지 못하면 None이다."""
     state_path = out / "state.json"
-    threshold: float | None = None
-    if not full and state_path.is_file():
-        last = _time(_obj(_parse_json(state_path.read_text(encoding="utf-8"))).get("last_ingest"))
-        if last is not None:
-            threshold = last.timestamp() - 3600
-    streams = discover(projects)
-    changed = [
-        k
-        for k, copies in sorted(streams.items(), key=lambda kv: (kv[0][0], kv[0][1] or ""))
-        if threshold is None or any(c.mtime > threshold for c in copies)
-    ]
+    if not state_path.is_file():
+        return None
+    last = _time(_obj(_parse_json(state_path.read_text(encoding="utf-8"))).get("last_ingest"))
+    return None if last is None else last.timestamp() - 3600
+
+
+def _agent_type(
+    key: StreamKey,
+    copy: Copy,
+    streams: dict[StreamKey, list[Copy]],
+    parents: dict[str, dict[str, str]],
+) -> str | None:
+    """서브에이전트 유형. `meta.json`을 먼저 보고, 없으면 부모 기록의 Agent 호출로 잇는다."""
+    session, agent = key
+    if agent is None:
+        return None
+    found = meta_type(copy.path)
+    if found is not None or (session, None) not in streams:
+        return found
+    if session not in parents:
+        parents[session] = agent_types(read_records(longest(streams[(session, None)]).path)[0])
+    return parents[session].get(agent)
+
+
+def _read_changed(
+    streams: dict[StreamKey, list[Copy]], changed: list[StreamKey]
+) -> tuple[Ledger, set[StreamKey]]:
+    """바뀐 기록을 읽는다. 훑은 뒤 지워진 기록은 건너뛰어 그 기록의 옛 행이 남는다."""
     parents: dict[str, dict[str, str]] = {}
     fresh = Ledger()
-    fresh_keys: set[StreamKey] = set()
+    keys: set[StreamKey] = set()
     for key in changed:
         copy = longest(streams[key])
-        agent_type: str | None = None
         try:
-            if key[1] is not None:
-                agent_type = meta_type(copy.path)
-                if agent_type is None and (key[0], None) in streams:
-                    if key[0] not in parents:
-                        parent = longest(streams[(key[0], None)])
-                        parents[key[0]] = agent_types(read_records(parent.path)[0])
-                    agent_type = parents[key[0]].get(key[1])
-            fresh.extend(read_stream(key, copy, agent_type))
+            rows = read_stream(key, copy, _agent_type(key, copy, streams, parents))
         except FileNotFoundError:
-            # 훑은 뒤 지워진 기록이다. 그 기록의 옛 행은 그대로 둔다.
             continue
-        fresh_keys.add(key)
-    existing = sorted(
-        m.group(1)
-        for name in (os.listdir(ledger_dir) if ledger_dir.is_dir() else [])
-        if (m := MONTH_NAME.fullmatch(name))
-    )
-    fresh_rows: list[Call | SessionRow | Unreadable] = [
-        *fresh.calls,
-        *fresh.sessions,
-        *fresh.unreadable,
-    ]
-    if fresh_rows:
-        first = min(month_of(_row_time(r), tz) for r in fresh_rows)
-        load = existing if full else [m for m in existing if m >= _prev_month(first)]
-    else:
-        load = []
-    # 다시 읽은 기록의 옛 행은 새 행으로 갈아 끼우되, 새로 읽은 사본에 없는 응답(긴 사본이 지워져
-    # 짧은 사본을 읽었을 때)의 옛 행은 남긴다. 장부는 기록이 지워져도 줄지 않는다.
-    # 다시 읽지 않은 행은 읽어 온 달 파일에 그대로 둔다. 시간대 인자가 바뀌어도 읽지 않은 달 파일로
-    # 옮겨 그 파일을 덮지 않게 하기 위해서다. 새로 읽은 행만 지금 시간대로 달을 가른다.
+        fresh.extend(rows)
+        keys.add(key)
+    return fresh, keys
+
+
+def _place(
+    old_months: dict[str, Ledger], fresh: Ledger, fresh_keys: set[StreamKey], tz: timezone
+) -> tuple[list[Placed], dict[str, StreamKey]]:
+    """달 파일에 둘 행과 직전 장부의 응답 주인. 다시 읽은 기록의 옛 행은 새 행으로 갈아 끼우되,
+    새로 읽은 사본에 없는 응답(긴 사본이 지워져 짧은 사본을 읽었을 때)의 옛 행은 남긴다. 다시 읽지
+    않은 행은 읽어 온 달 파일에 그대로 둔다. 시간대 인자가 바뀌어도 읽지 않은 달 파일로 옮겨 그
+    파일을 덮지 않게 하기 위해서다. 새로 읽은 행만 지금 시간대로 달을 가른다."""
     fresh_ids = {(_stream_of(c), c.id) for c in fresh.calls}
-    placed: list[tuple[str, Call | SessionRow | Unreadable]] = []
+    placed: list[Placed] = []
     held: dict[str, StreamKey] = {}
-    for month in load:
-        old = read_ledger_file(ledger_dir / f"{month}.jsonl")
+    for month, old in old_months.items():
         held.update((c.id, _stream_of(c)) for c in old.calls)
         placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]
         placed += [(month, s) for s in old.sessions if _stream_of(s) not in fresh_keys]
         placed += [(month, u) for u in old.unreadable if _stream_of(u) not in fresh_keys]
+    fresh_rows: list[Row] = [*fresh.calls, *fresh.sessions, *fresh.unreadable]
     placed += [(month_of(_row_time(r), tz), r) for r in fresh_rows]
+    return placed, held
+
+
+def choose_owners(placed: list[Placed], held: dict[str, StreamKey]) -> list[Placed]:
+    """응답 ID마다 한 행만 남긴다(`_owner_rank`). 호출 행이 아닌 행은 그대로 둔다."""
     starts = {r.session: r.start for _, r in placed if isinstance(r, SessionRow)}
     owner: dict[str, tuple[str, Call]] = {}
     for month, r in placed:
@@ -705,8 +710,38 @@ def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
         prev = owner.get(r.id)
         if prev is None or _owner_rank(r, starts, held) < _owner_rank(prev[1], starts, held):
             owner[r.id] = (month, r)
-    by_month: dict[str, list[Call | SessionRow | Unreadable]] = {m: [] for m in load}
-    for month, r in [*owner.values(), *((m, r) for m, r in placed if not isinstance(r, Call))]:
+    return [*owner.values(), *((m, r) for m, r in placed if not isinstance(r, Call))]
+
+
+def ingest(projects: Path, out: Path, tz: timezone, since: float | None) -> None:
+    """`since`(유닉스 시각)보다 뒤에 바뀐 기록을 다시 읽어 장부를 갱신한다. None이면 남은 기록을
+    모두 다시 읽고 모든 달 파일과 견준다."""
+    if not projects.is_dir():
+        # state를 올리면 다음 실행이 그 앞의 기록을 건너뛴다.
+        raise ToolError(f"세션 기록 폴더가 없다: {projects}. 장부와 state.json을 그대로 둔다")
+    started = time.time()
+    ledger_dir = out / "ledger"
+    streams = discover(projects)
+    changed = [
+        k
+        for k, copies in sorted(streams.items(), key=lambda kv: (kv[0][0], kv[0][1] or ""))
+        if since is None or any(c.mtime > since for c in copies)
+    ]
+    fresh, fresh_keys = _read_changed(streams, changed)
+    existing = sorted(
+        m.group(1)
+        for name in (os.listdir(ledger_dir) if ledger_dir.is_dir() else [])
+        if (m := MONTH_NAME.fullmatch(name))
+    )
+    fresh_rows: list[Row] = [*fresh.calls, *fresh.sessions, *fresh.unreadable]
+    load: list[str] = []
+    if fresh_rows:
+        first = min(month_of(_row_time(r), tz) for r in fresh_rows)
+        load = existing if since is None else [m for m in existing if m >= _prev_month(first)]
+    old_months = {m: read_ledger_file(ledger_dir / f"{m}.jsonl") for m in load}
+    placed, held = _place(old_months, fresh, fresh_keys, tz)
+    by_month: dict[str, list[Row]] = {m: [] for m in load}
+    for month, r in choose_owners(placed, held):
         by_month.setdefault(month, []).append(r)
     for month, rows in sorted(by_month.items()):
         body = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in _sorted_rows(rows))
@@ -715,8 +750,8 @@ def ingest(projects: Path, out: Path, tz: timezone, full: bool) -> str:
         "v": FORMAT,
         "last_ingest": _iso(datetime.fromtimestamp(started, UTC)),
     }
-    write_atomic(state_path, json.dumps(state) + "\n")
-    return f"기록 파일 {len(changed)}개를 다시 읽고 달 파일 {len(by_month)}개를 썼다: {ledger_dir}"
+    write_atomic(out / "state.json", json.dumps(state) + "\n")
+    print(f"기록 파일 {len(changed)}개를 다시 읽고 달 파일 {len(by_month)}개를 썼다: {ledger_dir}")
 
 
 # 계정
@@ -964,10 +999,10 @@ def _months(days: Iterable[date]) -> list[str]:
     return sorted({d.strftime("%Y-%m") for d in days})
 
 
-def prune_daily(daily: Path, keep_from: date) -> list[Path]:
-    """그 이름 모양의 보통 파일 가운데 보고할 7일(`keep_from`부터)보다 이른 날의 것을 지운다.
-    링크·폴더, 그보다 뒤의 날(다른 `--today`로 만든 것)은 건드리지 않는다."""
-    gone = sorted(
+def stale_reports(daily: Path, keep_from: date) -> list[Path]:
+    """그 이름 모양의 보통 파일 가운데 보고할 7일(`keep_from`부터)보다 이른 날의 것. 링크·폴더,
+    그보다 뒤의 날(다른 `--today`로 만든 것)은 들지 않는다."""
+    return sorted(
         p
         for p in daily.iterdir()
         if DAILY_NAME.fullmatch(p.name)
@@ -975,9 +1010,6 @@ def prune_daily(daily: Path, keep_from: date) -> list[Path]:
         and not is_link(p)
         and p.is_file()
     )
-    for p in gone:
-        p.unlink(missing_ok=True)
-    return gone
 
 
 def read_session_rows(path: Path) -> list[SessionRow]:
@@ -992,7 +1024,7 @@ def read_session_rows(path: Path) -> list[SessionRow]:
     return rows
 
 
-def report(out: Path, tz: timezone, today: date) -> str:
+def report(out: Path, tz: timezone, today: date) -> None:
     daily = out / "daily"
     if is_link(daily):
         raise ToolError(f"보고서 폴더가 링크라 쓰지도 지우지도 않는다: {daily}")
@@ -1029,8 +1061,10 @@ def report(out: Path, tz: timezone, today: date) -> str:
         write_atomic(path, render_day(days[d], alarms, starts, tz))
         summary = render_summary(days[d], alarms, path)
     write_atomic(out / "summary.txt", summary)
-    gone = prune_daily(daily, window[0])
-    return f"일간 보고서 {len(window)}개를 쓰고 {len(gone)}개를 지웠다: {daily}"
+    gone = stale_reports(daily, window[0])
+    for p in gone:
+        p.unlink(missing_ok=True)
+    print(f"일간 보고서 {len(window)}개를 쓰고 {len(gone)}개를 지웠다: {daily}")
 
 
 class ToolError(Exception):
@@ -1101,9 +1135,10 @@ def main(argv: list[str]) -> int:
     try:
         with Lock(out):
             if command != "report":
-                print(ingest(projects, out, tz, bool(getattr(args, "full", False))))
+                since = None if getattr(args, "full", False) else changed_since(out)
+                ingest(projects, out, tz, since)
             if command != "ingest":
-                print(report(out, tz, today))
+                report(out, tz, today)
     except LockedError as e:
         print(f"다른 실행이 도는 중이라 멈춘다. 잠금 파일: {e}", file=sys.stderr)
         print("멈춘 실행이 남긴 잠금이면 그 파일을 지우고 다시 돌린다.", file=sys.stderr)

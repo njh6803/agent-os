@@ -104,6 +104,21 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 
 `/security-review`는 origin/main을 합친 뒤 돌린다.
 
+## PR 봇 회차
+
+PR #270. CodeRabbit은 `@coderabbitai review`에 "Review rate limited"로 리뷰하지 않았다. 그 축은 위 PR 직전 리뷰가
+대신한다(PR 체크리스트). claude-review 첫 회차는 Critical·Major 없이 Minor 넷, Nit 둘이었다. 첫 회차라 지적마다 판단했고
+모두 근거가 맞아 고쳤다.
+
+- [Minor] `ingest`의 불리언 인자 `full`(`CODING_STANDARDS.md`의 불리언 플래그 인자). "언제부터 바뀐 기록을 읽을지"
+  값(`since`, None이면 모두)으로 바꾸고, 그 값을 구하는 질의(`changed_since`)를 따로 뒀다.
+- [Minor] `ingest`가 한 함수에 단계를 섞고 `try`가 유형 잇기까지 감쌌다. 유형 잇기(`_agent_type`), 바뀐 기록 읽기
+  (`_read_changed`, `try`는 `read_stream` 호출 하나), 행 배치(`_place`), 주인 고르기(`choose_owners`)로 나눴다.
+- [Minor] 명령과 질의를 섞었다(CQS). 지울 보고서를 구하는 질의(`stale_reports`)와 지우는 자리를 가르고, `ingest`·
+  `report`는 안내를 돌려주지 않고 출력한다.
+- [Minor] `CONTEXT.md`의 사용량 장부 풀이가 정한 형식과 어긋났다. 행의 원천을 이 도구의 독스트링으로 가리키게 고쳤다.
+- [Nit] `_NO_TIME`을 상수 구역으로 올리고, `_parse_json`에 까닭 한 줄을 달았다.
+
 ## 검사
 
 - PR 직전 리뷰 반영 뒤 이 도구의 시험 44개, 변이 18개가 모두 기대대로였다(커밋 전 작업 트리에서 돌렸다).
