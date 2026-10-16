@@ -114,7 +114,7 @@ def test_CLAUDE_CONFIG_DIR_의_설정도_막는다() -> None:
     ],
 )
 def test_Grep_도구는_경로나_glob_이_사용자_설정에_닿으면_막는다(
-    경로: str, glob: str | None, 막는다: bool
+    경로: str, glob: str | None, *, 막는다: bool
 ) -> None:
     """git 저장소가 아닌 폴더에서 Grep 도구는 glob 없이도 숨김 파일을 읽었다(셀프 리뷰 표준 축이
     가짜 파일로 손으로 봤다). 그래서 대상을 품은 폴더면 glob 이 없어도 막는다. glob 의 중괄호는

@@ -1,0 +1,199 @@
+# tools/token_report.py(티켓 02)의 겹침 거르기, 증분, 계정 고르기와 그 둘레를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/token_report_mutations.toml
+
+[[mutation]]
+name = "겹친 사본 가운데 짧은 것을 읽는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_겹친_사본은_한_번만_세고_긴_사본을_읽는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    return max(copies, key=lambda c: (c.size, c.folder))'''
+new = '''    return min(copies, key=lambda c: (c.size, c.folder))'''
+
+[[mutation]]
+name = "같은 응답 ID를 먼저 들어온 행에 남긴다"
+tests = ["tests/tools/test_token_report.py", "-k", "포크에_복사된"]
+expect = "red"
+expect_output = ["test_포크에_복사된_응답은_먼저_시작한_세션에_한_번만_든다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        if prev is None or _owner_rank(r, starts, held) < _owner_rank(prev[1], starts, held):'''
+new = '''        if prev is None:'''
+
+[[mutation]]
+name = "다시 읽은 기록의 옛 행을 갈아 끼우지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_다시_읽은_기록의_행은_새_값으로_갈아_끼운다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [(month, c) for c in old.calls]'''
+
+[[mutation]]
+name = "다시 읽은 기록의 옛 행을 모두 버린다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_긴_사본이_지워진_뒤_짧은_사본을_다시_읽어도_행이_남는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [(month, c) for c in old.calls if _stream_of(c) not in fresh_keys]'''
+
+[[mutation]]
+name = "다시 읽지 않은 행을 지금 시간대로 달을 다시 가른다"
+tests = ["tests/tools/test_token_report.py", "-k", "이웃_달"]
+expect = "red"
+expect_output = ["test_시간대를_바꾼_증분이_읽지_않은_이웃_달_파일을_덮어쓰지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        placed += [(month, c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids]'''
+new = '''        placed += [
+            (month_of(c.at, tz), c) for c in old.calls if (_stream_of(c), c.id) not in fresh_ids
+        ]'''
+
+[[mutation]]
+name = "세션 기록 폴더가 없어도 state를 올린다"
+tests = ["tests/tools/test_token_report.py", "-k", "기록_폴더가_없으면"]
+expect = "red"
+expect_output = ["test_기록_폴더가_없으면_state를_올리지_않고_끝난다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    if not projects.is_dir():
+        # state를'''
+new = '''    if False:
+        # state를'''
+
+[[mutation]]
+name = "보고할 7일보다 뒤의 보고서가 있으면 방금 쓴 것을 지운다"
+tests = ["tests/tools/test_token_report.py", "-k", "미래_날짜"]
+expect = "red"
+expect_output = ["test_미래_날짜_보고서가_있어도_보고할_7일은_지우지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        and p.name < f"{keep_from.isoformat()}.md"
+'''
+new = '''        and p.name not in sorted(x.name for x in daily.iterdir())[-KEEP_DAILY:]
+'''
+
+[[mutation]]
+name = "시작 모를 세션이 직전 장부의 응답을 지키지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_시작을_모르는_세션끼리_겹친_응답은_먼저_장부에_든_쪽에_남는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    rank = 0 if held.get(c.id) == _stream_of(c) else 2'''
+new = '''    rank = 2'''
+
+[[mutation]]
+name = "앞선 달 파일의 세션 행을 읽지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_앞선_달에_시작한_세션도_시작_시각이_보인다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''name.removesuffix(".jsonl") < _months(wide)[0]:'''
+new = '''name.removesuffix(".jsonl") < "0000":'''
+
+[[mutation]]
+name = "첫 줄에 시각이 없으면 다음 줄의 시각을 쓰지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        if seen.at is None:
+            seen.at = t
+'''
+new = ''''''
+
+[[mutation]]
+name = "증분 없이 언제나 모두 다시 읽는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        if since is None or any(c.mtime > since for c in copies)'''
+new = '''        if True'''
+
+[[mutation]]
+name = "증분의 한 시간 여유를 빼고 뒤로 민다"
+tests = ["tests/tools/test_token_report.py", "-k", "지난_실행"]
+expect = "red"
+expect_output = ["test_지난_실행_한_시간_전보다_앞선_파일은_다시_읽지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    return None if last is None else last.timestamp() - 3600'''
+new = '''    return None if last is None else last.timestamp() + 3600'''
+
+[[mutation]]
+name = "계정은 그 세션의 첫 줄이다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''            accounts[sid] = _str(r.get("email")) or uuid'''
+new = '''            accounts.setdefault(sid, _str(r.get("email")) or uuid)'''
+
+[[mutation]]
+name = "null 줄이 앞의 계정을 덮는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''            accounts[sid] = _str(r.get("email")) or uuid'''
+new = '''            accounts[sid] = _str(r.get("email")) or uuid
+        elif sid is not None:
+            accounts[sid] = UNKNOWN_ACCOUNT'''
+
+[[mutation]]
+name = "서브에이전트가 부모의 계정을 받지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_계정은_null이_아닌_마지막_줄이고_서브에이전트는_부모의_것이다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        d.accounts.setdefault(accounts.get(c.session, UNKNOWN_ACCOUNT), Tally()).add(cost)'''
+new = '''        who = accounts.get(c.session, UNKNOWN_ACCOUNT) if c.agent is None else UNKNOWN_ACCOUNT
+        d.accounts.setdefault(who, Tally()).add(cost)'''
+
+[[mutation]]
+name = "보관을 넘은 보고서를 지울 때 링크를 가리지 않는다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_보관_수를_넘은_보고서는_그_이름_모양의_파일만_지운다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        and not is_link(p)
+        and p.is_file()
+'''
+new = '''        and (is_link(p) or p.is_file())
+'''
+
+[[mutation]]
+name = "잘린 마지막 줄을 읽지 못한 줄로 센다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_잘린_마지막_줄은_경보_없이_넘기고_깨진_줄은_경보다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''    parts.pop()
+'''
+new = '''    if parts[-1] == b"":
+        parts.pop()
+'''
+
+[[mutation]]
+name = "synthetic 기록을 들인다"
+tests = ["tests/tools/test_token_report.py"]
+expect = "red"
+expect_output = ["test_synthetic_기록은_장부에도_경보에도_들지_않는다"]
+[[mutation.edit]]
+file = "tools/token_report.py"
+old = '''        if not isinstance(u, dict) or model == "<synthetic>":'''
+new = '''        if not isinstance(u, dict):'''

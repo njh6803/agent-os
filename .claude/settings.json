@@ -1,6 +1,10 @@
 {
   "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true
+    "pyright-lsp@claude-plugins-official": true,
+    "document-skills@anthropic-agent-skills": false,
+    "example-skills@anthropic-agent-skills": false,
+    "skill-creator@claude-plugins-official": false,
+    "code-review@claude-plugins-official": false
   },
   "skillOverrides": {
     "jira-commit": "off",
@@ -52,6 +56,11 @@
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_stop_korean.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_handoff_notice.py",
+            "timeout": 20
           }
         ]
       }
@@ -78,11 +87,31 @@
         ]
       },
       {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_edit_during_commit.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
         "matcher": "Bash|PowerShell|mcp__plugin_github_github__create_pull_request|mcp__plugin_github_github__merge_pull_request|mcp__github__create_pull_request|mcp__github__merge_pull_request",
         "hooks": [
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_pr_next_session.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell|Skill|mcp__plugin_github_github__create_pull_request|mcp__github__create_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_handoff.py",
             "timeout": 20
           }
         ]

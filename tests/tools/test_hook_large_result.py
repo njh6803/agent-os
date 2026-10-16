@@ -56,7 +56,7 @@ def _읽기(content: str, start: int = 1, **ranged: int) -> HookPayload:
     }
 
 
-def _셸(stdout: str, stderr: str = "", tool: str = "Bash", image: bool = False) -> HookPayload:
+def _셸(stdout: str, stderr: str = "", tool: str = "Bash", *, image: bool = False) -> HookPayload:
     return {
         "tool_name": tool,
         "tool_input": {"command": "seq 1 8000"},

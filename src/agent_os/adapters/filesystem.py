@@ -108,7 +108,7 @@ class FilesystemPlugins:
             raise PluginError(f"운영자 파일을 읽을 수 없다: {path}\n{error}") from error
         return _parse_operator_file(path, text)
 
-    def write_enabled(self, kind: PluginKind, name: PluginName, enabled: bool) -> WriteOutcome:
+    def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         """부재 판정 → 손상 판정 → 바뀌는 것이 있을 때만 통째로 교체. 순서가 의도다(포트의
         독스트링)."""
         if not self._manifest_path(kind, name).is_file():

@@ -404,6 +404,120 @@ def test_스킬_파일로_시작해도_지시문이_아니면_막지_않는다()
     assert block_reason_for(plain, ROOT) is None
 
 
+# 손으로 연 세션에 일지에 적으라는 계기의 표지(대기열 72). 문구를 다듬으면 여기 한 곳만 고친다.
+PASTED = "대기열 72"
+# 지시문 본문만(시작 프롬프트 줄과 빈 줄을 뺀 것). 사람이 앞 세션의 출력에서 지시문만 옮긴 꼴이다.
+BODY = DIRECTIVE.split("\n\n", 1)[1]
+
+
+def _skill_root(root: Path, skill: str = "implement") -> str:
+    """`.claude/skills/<skill>/SKILL.md` 가 있는 작업 폴더. open-session 의 `Convert-StartLine` 이
+    첫 줄을 옮기는 조건이 그 파일이다."""
+    skill_file = root / ".claude" / "skills" / skill / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("---\nname: x\n---\n", encoding="utf-8")
+    return str(root)
+
+
+def test_반각_슬래시의_이_저장소_스킬로_시작하면_손으로_연_세션이라_일지에_적으라고_한다(
+    tmp_path: Path,
+) -> None:
+    """대기열 72. open-session 은 이 저장소의 스킬 명령을 스킬 파일 문장으로 옮겨 보내므로, 반각
+    `/` 원문이 남은 첫 줄은 사람이 붙여 넣은 것이다. 앞 세션의 여는 일이 실패한 것은 앞 세션의
+    일지가 병합된 뒤라 거기 적힐 자리가 없다. 반각 `/` 는 진짜 명령이 되어도 훅이 원문을
+    받는다(`.scratch/harness/probes/slash_prompt_payload/probe.py`)."""
+    context = context_for(DIRECTIVE.replace("／", "/", 1), _skill_root(tmp_path))
+
+    assert context is not None
+    assert PASTED in context
+    assert "`/implement`" in context
+    assert "일지" in context
+    assert "`feature/05-traces-list`" in context
+    assert context.index("set_session_title") < context.index(PASTED)
+    # 계기는 첫 턴에만 와서, 단계를 닫을 때까지 미루면 압축이나 끊김에 사라진다(셀프 리뷰 두 축)
+    assert "바로 적는다" in context
+    assert "tools/sibling_overlap.py" in context
+
+
+def test_첫_줄이_지시문의_라벨_줄이면_손으로_연_세션이다() -> None:
+    """open-session 은 시작 프롬프트를 늘 첫 줄에 둔다(그 스킬 2단계). 첫 줄이 지시문의 라벨 줄이면
+    사람이 지시문만 붙여 넣은 것이다. 하네스 chore 처럼 슬래시 명령이 아닌 시작 프롬프트도 이 꼴로
+    잡힌다. 스킬 파일을 보지 않으므로 작업 폴더를 몰라도 같다."""
+    for prompt in (BODY, "\n  " + BODY, BODY.replace("\n", "\r\n")):
+        context = context_for(prompt, None)
+
+        assert context is not None, prompt[:20]
+        assert PASTED in context, prompt[:20]
+        assert "`다음 작업:`" in context, prompt[:20]
+
+
+def test_open_session_이_보낸_꼴이면_일지에_적으라고_하지_않는다(tmp_path: Path) -> None:
+    """스킬 파일 문장으로 옮긴 첫 줄, 옮기지 못한 채 전각으로 남은 첫 줄(`held=` 뒤 고치지 않고
+    보냈다), 슬래시 명령이 아닌 시작 프롬프트."""
+    root = _skill_root(tmp_path)
+    for prompt in (_opened(), DIRECTIVE, "대기열 1 을 반영한다\n\n" + BODY):
+        context = context_for(prompt, root)
+
+        assert context is not None, prompt[:20]
+        assert PASTED not in context, prompt[:20]
+
+
+def test_스킬_파일이_없는_반각_슬래시는_적으라고_하지_않는다(tmp_path: Path) -> None:
+    """open-session 은 스킬 파일이 없는 슬래시 명령만 옮기지 못해 `held=` 로 멈추고, 사람이 첫 글자
+    `／` 를 `/` 로 고쳐 보낸다(그 스킬 3단계). 손으로 붙여 넣은 것과 글이 같아 가르지 못하므로
+    적으라고 하지 않는다. 작업 폴더를 모를 때도 스킬 파일을 볼 수 없어 같다."""
+    halfwidth = DIRECTIVE.replace("／", "/", 1)
+
+    for cwd in (str(tmp_path), None):
+        context = context_for(halfwidth, cwd)
+
+        assert context is not None, cwd
+        assert PASTED not in context, cwd
+
+
+def test_못_보는_것_사람이_평범한_시작_프롬프트를_첫_줄에_쳐_붙여_넣으면_가르지_못한다(
+    tmp_path: Path,
+) -> None:
+    """거짓 음성이다. 슬래시 명령이 아닌 시작 프롬프트는 open-session 이 옮기지 않아, 사람이 그 줄을
+    먼저 치고 지시문을 붙여 넣으면 open-session 이 보낸 글과 같다."""
+    by_hand = "대기열 72·293·300 을 chore 한 PR 로 반영한다\n\n" + BODY
+
+    context = context_for(by_hand, _skill_root(tmp_path))
+
+    assert context is not None
+    assert PASTED not in context
+
+
+def test_못_보는_것_스킬이_한쪽에만_있으면_틀린다(tmp_path: Path) -> None:
+    """첫 줄을 옮기는 쪽은 여는 쪽 루트의 스킬 파일을, 이 판정은 이 세션의 작업 폴더의 스킬 파일을
+    본다. 같은 반각 첫 줄도 작업 폴더에만 스킬이 있으면(여는 쪽은 옮기지 못해 `held=` 뒤 사람이 고쳐
+    보냈다) 붙여 넣은 것으로 보고(거짓 양성), 작업 폴더에 없으면(여는 쪽은 옮겼어야 했다)
+    놓친다(거짓 음성)."""
+    halfwidth = DIRECTIVE.replace("／", "/", 1)
+    only_here = context_for(halfwidth, _skill_root(tmp_path / "here"))
+    (tmp_path / "missing").mkdir()
+    missing_here = context_for(halfwidth, str(tmp_path / "missing"))
+
+    assert only_here is not None
+    assert PASTED in only_here
+    assert missing_here is not None
+    assert PASTED not in missing_here
+
+
+def test_next_session_지시문_형식의_라벨을_훅이_안다() -> None:
+    """첫 줄이 라벨 줄인지는 형식의 라벨로 가른다. 형식에 라벨이 늘면 그 줄로 시작한 붙여 넣기를
+    놓친다."""
+    text = NEXT_SESSION.read_text(encoding="utf-8")
+    form = text.split("## 지시문 형식", 1)[1].split("```", 2)[1]
+    labels = [line.split(":", 1)[0] + ":" for line in form.strip().splitlines()]
+
+    assert labels
+    for label in labels:
+        context = context_for(f"{label} x\n\n" + BODY, None)
+        assert context is not None, label
+        assert PASTED in context, label
+
+
 def test_모델이_아직_답하지_않은_트랜스크립트는_첫_턴이다() -> None:
     """지시문으로 연 세션은 지시문이 첫 메시지다. 훅이 도는 시점엔 assistant 기록이 없다."""
     first_turn = [

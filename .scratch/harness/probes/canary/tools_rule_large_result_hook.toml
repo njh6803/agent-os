@@ -3,7 +3,7 @@
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 셋이다. 규칙 파일의 첫 제목, 그 훅이 하는 일을 적은 조각, 새로 잰 Read 알림 시간의 범위.
 # 훅 이름은 커밋 제목에 있어(세션에 실리는 git 상태) 카나리아로 쓰지 않는다.
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 갈래 커밋 820f237c, 일지 2026-10-16-49).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 갈래 커밋 820f237c, 일지 2026-10-16-67).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_large_result_hook.toml <출력 디렉터리>
 kind = "rule"
 question = '''

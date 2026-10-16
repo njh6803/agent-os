@@ -150,7 +150,7 @@ def fetch_prs(owner: str, name: str) -> list[Json]:
         cursor = conn["pageInfo"]["endCursor"]
 
 
-def load_gh(cache: Path, refresh: bool) -> tuple[list[dict[str, Json]], list[dict[str, Json]]]:
+def load_gh(cache: Path, *, refresh: bool) -> tuple[list[dict[str, Json]], list[dict[str, Json]]]:
     cache.mkdir(parents=True, exist_ok=True)
     prs_path, runs_path = cache / "prs.json", cache / "runs.json"
     if refresh or not prs_path.exists():
@@ -264,7 +264,7 @@ def scan(projects: Path, root: str, since: datetime | None = None) -> Scan:
     dirs = sorted(p for p in projects.iterdir() if p.is_dir() and p.name.startswith(PROJECT_PREFIX))
     for d in dirs:
         for f in sorted(d.rglob("*.jsonl"), key=lambda p: p.stat().st_mtime):
-            _scan_file(s, f, "subagents" in f.parts, root, seen_uuid)
+            _scan_file(s, f, sub="subagents" in f.parts, root=root, seen_uuid=seen_uuid)
     for recs in s.recs.values():
         recs.sort(key=lambda r: r.ts)
     # `cost-state`에는 시각이 없다. 창 안에 기록이 있는 세션의 것만 단가 대조와 몫에 남긴다. 창
@@ -281,7 +281,7 @@ def scan(projects: Path, root: str, since: datetime | None = None) -> Scan:
     return s
 
 
-def _scan_file(s: Scan, f: Path, sub: bool, root: str, seen_uuid: set[str]) -> None:
+def _scan_file(s: Scan, f: Path, *, sub: bool, root: str, seen_uuid: set[str]) -> None:
     with f.open(encoding="utf-8", errors="replace") as fh:
         for line in fh:
             try:
@@ -290,7 +290,7 @@ def _scan_file(s: Scan, f: Path, sub: bool, root: str, seen_uuid: set[str]) -> N
                 continue
             if not isinstance(o, dict):
                 continue
-            _scan_record(s, o, sub, root, seen_uuid)
+            _scan_record(s, o, sub=sub, root=root, seen_uuid=seen_uuid)
 
 
 def _scan_queued(
@@ -317,7 +317,7 @@ def _scan_queued(
     s.recs[sid].append(Rec(ts=ts, kind="other", branch=branch, in_repo=in_repo, queued_human=True))
 
 
-def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: set[str]) -> None:
+def _scan_record(s: Scan, o: dict[str, Json], *, sub: bool, root: str, seen_uuid: set[str]) -> None:
     t = o.get("type")
     sid = o.get("sessionId")
     if t == "cost-state" and isinstance(sid, str):
@@ -345,7 +345,7 @@ def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: s
         s.first_ts = ts if not s.first_ts or ts < s.first_ts else s.first_ts
         s.last_ts = ts if ts > s.last_ts else s.last_ts
     if t == "assistant":
-        _scan_assistant(s, o, sid, ts, branch, in_repo, sub)
+        _scan_assistant(s, o, sid, ts, branch, in_repo=in_repo, sub=sub)
     if sub:
         return
     uuid = o.get("uuid")
@@ -394,7 +394,7 @@ def _scan_record(s: Scan, o: dict[str, Json], sub: bool, root: str, seen_uuid: s
 
 
 def _scan_assistant(
-    s: Scan, o: dict[str, Json], sid: str, ts: str, branch: str, in_repo: bool, sub: bool
+    s: Scan, o: dict[str, Json], sid: str, ts: str, branch: str, *, in_repo: bool, sub: bool
 ) -> None:
     msg = o.get("message")
     if not isinstance(msg, dict):
@@ -748,7 +748,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
     first = run(["git", "worktree", "list", "--porcelain"], repo).splitlines()[0]
     root = norm(first.removeprefix("worktree "))
     git = Git(repo)
-    prs, runs = load_gh(args.cache, args.refresh)
+    prs, runs = load_gh(args.cache, refresh=args.refresh)
 
     by_branch: dict[str, list[dict[str, Json]]] = defaultdict(list)
     for pr in prs:

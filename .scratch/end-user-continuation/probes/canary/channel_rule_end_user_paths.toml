@@ -1,0 +1,24 @@
+# `.claude/rules/channel.md` 의 최종 사용자 면 경로 항목을 고친 문장(경로가 넷, 넷째 경로의 operation_id)이 `paths` 에
+# 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
+# 실험군은 규칙의 paths 안(src/agent_os/channel/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-60).
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/channel_rule_end_user_paths.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 최종 사용자 면의 경로를 나열한 항목이 있으면 두 가지를 글자 그대로 옮겨라.
+(1) 그 항목의 굵은 글씨 첫 문장. (2) 그 항목이 나열한 마지막 경로의 operation_id.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["최종 사용자 면의 경로는 /end-user 아래 넷이다", "continue_end_user_run"]
+source = ".claude/rules/channel.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/channel/http/bodies.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

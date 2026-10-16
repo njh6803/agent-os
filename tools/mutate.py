@@ -874,6 +874,7 @@ def _report_mutation(
     number: int,
     mutation: Mutation,
     runs: Sequence[_Run],
+    *,
     matched: bool,
     out: Callable[[str], None],
 ) -> None:
@@ -926,7 +927,7 @@ def measure(
     for mutation in spec.mutation:
         runs = _mutation_runs(root, mutation, runners[mutation.runner], runner, out)
         matched = _matched(mutation, runs)
-        _report_mutation(numbers[mutation.name], mutation, runs, matched, out)
+        _report_mutation(numbers[mutation.name], mutation, runs, matched=matched, out=out)
         if not matched:
             mismatched.append(mutation.name)
 

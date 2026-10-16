@@ -1,0 +1,144 @@
+# tools/hook_handoff.py 와 tools/hook_handoff_notice.py(티켓 05)의 경계 판정, 문턱, 세션 컨텍스트 셈, 표지와
+# tools/hook_pr_next_session.py 의 인계 문장을 하나씩 바꾸는 변이. 시험이 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/handoff_hook_mutations.toml
+# 두 훅의 같은 셈은 한쪽만 바꾸면 `test_두_훅의_문턱과_셈과_표지_이름이_같다` 가 잡고, Stop 쪽만 바꾼 변이는 자식으로
+# 돌리는 Stop 시험들이 잡는다.
+
+[[mutation]]
+name = "경계: 셀프 리뷰를 경계로 보지 않는다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''        return "셀프 리뷰 직전" if isinstance(skill, str) and is_this_skill(skill) else None'''
+new = '''        return None'''
+
+[[mutation]]
+name = "경계: 플러그인의 code-review 도 셀프 리뷰로 본다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''    return skill == SKILL and (not colon or in_folder)'''
+new = '''    return skill == SKILL'''
+
+[[mutation]]
+name = "경계: --dry-run 도 커밋으로 본다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''_NOT_RUNNING = frozenset({"--dry-run", "--help", "-h"})'''
+new = '''_NOT_RUNNING = frozenset({"--help", "-h"})'''
+
+[[mutation]]
+name = "경계: 셸의 gh pr create 를 보지 않는다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''    if any(_runs(_GH_PR_CREATE, segment) for segment in segments):
+        return "PR 연 뒤"'''
+new = '''    if False:
+        return "PR 연 뒤"'''
+
+[[mutation]]
+name = "문턱: 인계 훅의 문턱을 낮춘다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''THRESHOLD = 200_000'''
+new = '''THRESHOLD = 100_000'''
+
+[[mutation]]
+name = "문턱: 알림 훅의 문턱을 낮춘다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff_notice.py"
+old = '''THRESHOLD = 200_000'''
+new = '''THRESHOLD = 100_000'''
+
+[[mutation]]
+name = "셈: 압축 경계를 지나친다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''        if record.get("type") == "system" and record.get("subtype") == "compact_boundary":
+            context = None
+            continue'''
+new = '''        if record.get("type") == "system" and record.get("subtype") == "compact_boundary":
+            continue'''
+
+[[mutation]]
+name = "셈: 사이드체인 응답도 센다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''        if record.get("isSidechain"):
+            continue'''
+new = '''        if False:
+            continue'''
+
+[[mutation]]
+name = "침묵: 클라우드 세션에서도 인계한다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''    if "agent_id" in payload or environ.get("CLAUDE_CODE_REMOTE") == "true":'''
+new = '''    if "agent_id" in payload:'''
+
+[[mutation]]
+name = "표지: 인계해도 표지를 만들지 않는다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''    mark_handed_off(payload.get("session_id"))'''
+new = '''    pass'''
+
+[[mutation]]
+name = "표지: Stop 알림이 표지 없이 매번 난다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff_notice.py"
+old = '''    if size is None or size <= THRESHOLD or not claim_first(session_id):'''
+new = '''    if size is None or size <= THRESHOLD:'''
+
+[[mutation]]
+name = "표지: 표지를 쓰지 못해도 알린다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff_notice.py"
+old = '''        os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except OSError:
+        return False'''
+new = '''        os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+
+[[mutation]]
+name = "스킬: 작업 폴더의 사본을 고르지 않는다"
+tests = ["tests/tools/test_hook_handoff.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_handoff.py"
+old = '''        return candidate if has_section else SKILL_PATH'''
+new = '''        return SKILL_PATH'''
+
+[[mutation]]
+name = "PR 계기: 인계 계기를 따르라는 문장을 뺀다"
+tests = ["tests/tools/test_hook_pr_next_session.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_pr_next_session.py"
+old = '''다만 인계 계기(hook_handoff)가 "'''
+new = '''다만 "'''
