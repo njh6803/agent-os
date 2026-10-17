@@ -2,9 +2,11 @@
 
 `hook_handoff`(PostToolUse)는 단계 경계에서 모델에게 인계를 지시한다. 그 경계 전에 사람이 지금
 세션이 곧 넘어간다는 것을 알게 하는 몫이 이 훅이다(ADR 0033, 명세 `.scratch/token-usage/spec.md`
-"인계 훅"). 훅 러너가 한 훅을 이벤트 하나에만 받아(`tools/run_hooks.py` 의 `registered_hooks`) 두
-파일로 나눴다. 알림은 사람에게만 가는 `systemMessage` 다. Stop 의 `additionalContext` 는 대화를 잇게
-하므로 쓰지 않는다 (`.claude/rules/tools.md`).
+"인계 훅"). 경계가 오지 않는 세션(조사, 질문)은 넘어가지 않고 자동 압축되므로, 알림은 그 갈래와
+그런 일을 새 세션에서 시키라는 것도 적는다. 이 훅은 세션이 경계를 만날지 미리 알지 못한다. 훅 러너가
+한 훅을 이벤트 하나에만 받아(`tools/run_hooks.py` 의 `registered_hooks`) 두 파일로 나눴다. 알림은
+사람에게만 가는 `systemMessage` 다. Stop 의 `additionalContext` 는 대화를 잇게 하므로 쓰지 않는다
+(`.claude/rules/tools.md`).
 
 한 번만 알리는 표지는 `tools/launch_hook.py` 의 모양이다. 임시 폴더(`tempfile.gettempdir()`) 아래
 `STATE_DIR` 에 세션 ID 의 해시를 이름으로 한 빈 파일을 `O_EXCL` 로 만들고, 이 호출이 처음 만들었을
@@ -130,7 +132,9 @@ def notice_for(size: int) -> str:
         f"세션 컨텍스트가 {size:,} 토큰으로 인계 문턱 {THRESHOLD:,} 을 넘었다. 다음 단계 경계(셀프 "
         "리뷰 직전, 커밋 뒤, PR 연 뒤)에서 이 세션은 지시문을 내고 같은 브랜치의 새 세션으로 "
         "넘어간다. 이 세션이 받은 범위가 그 경계에서 끝나거나, 인계로 연 세션이 넘겨받은 것과 "
-        "같은 경계에 다시 오면 넘기지 않는다. 이 알림은 이 세션에서 한 번만 낸다."
+        "같은 경계에 다시 오면 넘기지 않는다. 단계 경계가 없는 일(셀프 리뷰·커밋·PR 없이 끝나는 "
+        "조사나 질문)은 넘어가지 않고 자동 압축 창에서 압축된다. 그런 일을 새로 시키려면 새 "
+        "세션에서 시킨다. 티켓 작업 중이면 그대로 둔다. 이 알림은 이 세션에서 한 번만 낸다."
     )
 
 

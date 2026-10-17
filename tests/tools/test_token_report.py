@@ -665,6 +665,44 @@ def test_빈_기록_폴더에서도_호출_없음_보고서와_요약을_쓴다(
     ]
 
 
+def test_보고서_머리는_한도의_차감을_usage에서_보라고_적는다(tmp_path: Path) -> None:
+    t = _판(tmp_path)
+    assert t.돌린다("daily") == 0
+    assert (
+        "구독 한도에서 무엇이 차감됐는지는 `/usage`의 플랜 사용량 내역"
+        "(이 기계의 기록으로 어림한 값)을 본다." in t.일간()
+    )
+
+
+def test_압축의_요약_요청은_기록에_usage가_없어_비용에_들지_않는다(tmp_path: Path) -> None:
+    """못 보는 것의 첫 항목. 요약 요청의 usage는 세션 기록에 없어 장부가 놓친다.
+
+    압축 경계 앞뒤 기록에 usage가 없는 것은 이 PC의 세션 기록 여럿을 손으로 봤다
+    (일지 2026-10-17-04). 그래서 압축 경계의 `preTokens`(요약 요청이 읽은 양) 100만도 비용에 들지
+    않는다.
+    """
+    t = _판(tmp_path)
+    요약: Rec = {
+        "type": "user",
+        "timestamp": "2026-10-15T00:03:00Z",
+        "isCompactSummary": True,
+        "message": {"role": "user", "content": "이 세션은 앞선 대화를 요약해 잇는다."},
+    }
+    메인(
+        t.projects,
+        SID_A,
+        [
+            사람("2026-10-15T00:00:00Z"),
+            응답("a1", "2026-10-15T00:01:00Z", 입력=1_000_000),
+            압축("2026-10-15T00:02:00Z", "c1", pre=1_000_000),
+            요약,
+            응답("a2", "2026-10-15T00:04:00Z", 캐시읽기=1_000_000),
+        ],
+    )
+    assert t.돌린다("daily") == 0
+    assert "모델 호출 2회, 환산 비용 $4.20" in t.일간()
+
+
 def test_report는_돌_때마다_summary를_다시_쓴다(tmp_path: Path) -> None:
     t = _판(tmp_path)
     t.돌린다("daily")
