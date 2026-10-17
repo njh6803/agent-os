@@ -1,0 +1,1 @@
+{"runs": 300, "burners": 0, "burners_alive": true, "unmeasured": 0, "delays": [0.001, 0.002, 0.004, 0.008, 0.016], "min_ms": 32.658, "median_ms": 35.022, "max_ms": 39.206, "under_31ms": 0}

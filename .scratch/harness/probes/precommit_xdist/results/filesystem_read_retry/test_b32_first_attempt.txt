@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+OSError: [Errno 22] Invalid argument
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+OSError: [Errno 22] Invalid argument
+Traceback (most recent call last):
+  File "C:\project\agent\.claude\worktrees\vigorous-mahavira-ebe993\.scratch\harness\probes\precommit_xdist\filesystem_read_retry.py", line 195, in run_test_mode
+    tests[which](Path(directory))
+  File "C:\Users\User\AppData\Local\Temp\claude\C--project-agent--claude-worktrees-vigorous-mahavira-ebe993\5ce61f8a-cafc-4689-b17d-eab0d4e824ec\scratchpad\test_filesystem_before.py", line 947, in test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안에서_성공한다
+    assert seen == TOGGLED_STATES
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\project\agent\.claude\worktrees\vigorous-mahavira-ebe993\.scratch\harness\probes\precommit_xdist\filesystem_read_retry.py", line 442, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\project\agent\.claude\worktrees\vigorous-mahavira-ebe993\.scratch\harness\probes\precommit_xdist\filesystem_read_retry.py", line 429, in main
+    summary = run_test_mode(args.runs, args.burners, args.pytest_loads, files)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\project\agent\.claude\worktrees\vigorous-mahavira-ebe993\.scratch\harness\probes\precommit_xdist\filesystem_read_retry.py", line 199, in run_test_mode
+    errors[which].append(str(error).splitlines()[-1][:200])
+                         ~~~~~~~~~~~~~~~~~~~~~~~^^^^
+IndexError: list index out of range
+
+[exited with code 0]
