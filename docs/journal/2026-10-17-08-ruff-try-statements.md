@@ -68,7 +68,7 @@ ruff 0.16.8에서 문턱을 0으로 두고(`--preview --select PLW0717 --config 
   `tail_lines` 셋(`hook_handoff`, `hook_handoff_notice`, `hook_midturn_korean`. `with` 하나에 `seek`·`read` 셋과 그 사이에서 다음
   `seek`의 자리를 정하는 계산 한 줄), 위에서 5로 줄인 `/proc` 읽기(읽기 넷과 이름 거르기), 일부러 넓게 감싼 관찰 탐침
   셋(`probe_mw_sse`, `probe_scope`, `probe_scope_cancel`)이다.
-- **문턱 6.** 지금 코드에서 값이 6인 넷을 덜 낸다. 참 양성 둘(`token_report` `main`, `measure.py` `abort_case`)을 놓치고 아닌 것
+- **문턱 6.** 고치기 전 13곳 가운데 값이 6인 넷을 덜 낸다(이 브랜치가 넷을 모두 고쳐 지금 코드에는 값이 6인 자리가 없다). 참 양성 둘(`token_report` `main`, `measure.py` `abort_case`)을 놓치고 아닌 것
   둘(`probe_uvicorn_shutdown`, `tidy_checkouts` 디스패치)을 덜 낸다. 아래 과거 사건은 5와 같이 둘을 잡는다. 놓치는 참 양성은 리뷰
   한 회차의 값이고 덜 내는 것은 함수 하나를 빼는 값이라 기본값을 바꿀 까닭이 없었다.
 - **과거 사건.** 서브에이전트가 행의 여덟 사건을 고치기 전 판으로 다시 지어 ruff로 손으로 봤다(지은 판과
@@ -248,3 +248,23 @@ open-session을 부른다 2026-10-17T12:32:24Z
 `git fetch` 뒤 origin/main은 기점 `544d59ac` 그대로라 합칠 것이 없었다. `sibling_overlap.py`는 번호 겹침 없음이었고, 함께 고친
 파일은 `.scratch/retro-queue.md` 하나다(PR #288·#289와 워크트리 셋). 지시문이 걱정한 `tools/mutate.py`는 아직 어느 형제도 고치지
 않았다. `coderabbit auth status`는 여전히 `Plan: Free`, `Seat: not assigned`라 PR 직전 리뷰는 대체 둘로 간다.
+
+## PR 직전 리뷰
+
+일지 커밋 `44995da0` 뒤에 대체 둘을 나란히 돌렸다. origin/main이 기점 그대로라 합치지 않고 돌렸다.
+
+- **`/security-review`**: 발견 없음. 식별 서브태스크가 후보를 내지 않아 거르는 서브태스크는 띄우지 않았다. 식별 서브태스크는
+  `_relay`가 런타임 전용 이벤트 거부와 재생 대조를 옛 차례대로 지나는 것, `_read_trace`가 경로 계산과 `exists()`를 `try` 밖에
+  둔 것, 막는 훅 둘의 판정이 같은 것을 따라갔고, diff 전체에서 비밀 모양의 낱말을 찾았지만 나오지 않았다.
+- **`bug-perf-review`**(기준 `544d59ac`, 22개 파일, 호출 38): 유효 1, 보류 0, 오탐 5. 동작이 바뀐 옮기기는 찾지 못했다. 밀 주장은
+  셈법·문턱 4의 8곳·13곳의 수·사건 표·닫는 차례·표준 줄·변이 표 18건이 모두 맞았다(리뷰가 ruff 0.16.8로 스크래치 표본을 문턱
+  0에 대 보고 지웠다).
+  - [Minor·유효] 문턱 절의 문턱 6 불릿이 "지금 코드에서 값이 6인 넷"이라 썼는데, 그 넷은 고치기 전 13곳의 값이고 이 브랜치가
+    모두 고쳐 지금 코드에는 값이 6인 자리가 없다(리뷰가 HEAD에서 문턱 4로 친 8곳이 모두 값 5였다). 바로 위 문턱 4 불릿의
+    "지금 코드에서"는 고친 뒤 기준이라 두 불릿의 기준 시점이 달랐다. "고치기 전 13곳 가운데"로 고치고, 대기열 337 닫힘 칸의
+    같은 셈도 "고치기 전 13곳에서"로 밝혔다.
+- 리뷰가 오탐으로 닫은 의심: `run.py`의 닫는 차례와 받는 `except`, `jsonl.read`에서 `Trace(...)` 생성이 `try` 안으로 든 것
+  (`frozen` dataclass라 생성자가 예외를 내지 않는다), `hook_edit_during_commit`의 인코딩·경합, `canary._Reading`의
+  `default_factory`, `token_report._run`의 이름 겹침.
+- 리뷰가 닿지 못한 것: `nginx_relay/measure.py`는 nginx와 인증서가 필요해 읽기로만 봤다. 변이 표의 "기점 판에서도 같았다"는
+  한 건만 기점 코드와 직접 대 봤다.
