@@ -1077,6 +1077,19 @@ def _since_picks(spec: Spec, args: _Args) -> list[str]:
     return fresh
 
 
+def _run_table(args: _Args, *, root: Path, runner: Runner, out: Callable[[str], None]) -> int:
+    """표 하나에서 고른 변이를 잰다. `--check` 면 원문만 본다."""
+    spec = read_spec(Path(args.tables[0]))
+    fresh = _since_picks(spec, args)
+    if args.since is not None:
+        listed = f" — {_labelled(fresh, _numbers(spec))}" if fresh else ""
+        out(f"--since {args.since}: 바뀌거나 더한 변이 {len(fresh)}{listed}")
+    selected = select(spec, [*args.picks, *fresh])
+    if args.checking:
+        return check(selected, root=root, out=out)
+    return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))
+
+
 def main(
     argv: Sequence[str],
     *,
@@ -1092,15 +1105,7 @@ def main(
     if args.checking and not args.picks and args.since is None:
         return _check_files(args.tables, root=root, out=out)
     try:
-        spec = read_spec(Path(args.tables[0]))
-        fresh = _since_picks(spec, args)
-        if args.since is not None:
-            listed = f" — {_labelled(fresh, _numbers(spec))}" if fresh else ""
-            out(f"--since {args.since}: 바뀌거나 더한 변이 {len(fresh)}{listed}")
-        selected = select(spec, [*args.picks, *fresh])
-        if args.checking:
-            return check(selected, root=root, out=out)
-        return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))
+        return _run_table(args, root=root, runner=runner, out=out)
     except SpecError as error:
         out(f"변이 파일 오류(아무 파일도 쓰지 않았다): {error}")
         return 2

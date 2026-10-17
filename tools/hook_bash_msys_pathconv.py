@@ -168,22 +168,23 @@ def _segments(command: str) -> list[list[str]]:
     lexer = shlex.shlex(source, posix=True, punctuation_chars=_PUNCTUATION)
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
-    segments: list[list[str]] = [[]]
-    takes_target = False
     try:
-        for token in lexer:
-            if takes_target:
-                takes_target = False
-            elif not token or any(char not in _PUNCTUATION for char in token):
-                segments[-1].append(token)
-            elif _REDIRECTION.fullmatch(token):
-                if segments[-1] and segments[-1][-1].isdigit():
-                    segments[-1].pop()
-                takes_target = True
-            else:
-                segments.append([])
+        tokens = list(lexer)
     except ValueError:
         return []
+    segments: list[list[str]] = [[]]
+    takes_target = False
+    for token in tokens:
+        if takes_target:
+            takes_target = False
+        elif not token or any(char not in _PUNCTUATION for char in token):
+            segments[-1].append(token)
+        elif _REDIRECTION.fullmatch(token):
+            if segments[-1] and segments[-1][-1].isdigit():
+                segments[-1].pop()
+            takes_target = True
+        else:
+            segments.append([])
     return [segment for segment in segments if segment]
 
 

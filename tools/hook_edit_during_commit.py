@@ -209,16 +209,14 @@ def _linux_processes() -> list[Process]:
             continue
         base = f"/proc/{entry}"
         try:
-            with open(f"{base}/comm", encoding="utf-8", errors="replace") as comm:
-                if comm.read().strip() != "git":
-                    continue
-            with open(f"{base}/stat", encoding="utf-8", errors="replace") as stat:
-                parent = parent_from_stat(stat.read())
-            with open(f"{base}/cmdline", "rb") as cmdline:
-                raw = cmdline.read()
+            if Path(f"{base}/comm").read_text(encoding="utf-8", errors="replace").strip() != "git":
+                continue
+            stat = Path(f"{base}/stat").read_text(encoding="utf-8", errors="replace")
+            raw = Path(f"{base}/cmdline").read_bytes()
             cwd = os.readlink(f"{base}/cwd")
         except OSError:
             continue
+        parent = parent_from_stat(stat)
         found.append(Process(int(entry), "git", argv_from_cmdline(raw), cwd, parent))
     return found
 

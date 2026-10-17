@@ -722,17 +722,9 @@ class _Body:
                     conversation,
                 )
                 try:
-                    agent_events = prepared.instance.run(self._started.request, ctx)
-                    async with _closing(agent_events) as from_agent:
-                        async for event in from_agent:
-                            for pending in ctx.take_events():
-                                yield pending
-                            if ctx.paused:
-                                break
-                            _reject_runtime_only(event, run_id)
-                            if ctx.replaying:
-                                ctx.replay_event(event)
-                                continue
+                    # 중계를 이 자리에서 닫는다. 아래에서 몸통이 `execute()` 를 닫는 까닭과 같다.
+                    async with aclosing(self._relay(prepared.instance, ctx)) as relayed:
+                        async for event in relayed:
                             yield event
                 except _Paused:
                     pass
@@ -771,6 +763,25 @@ class _Body:
             error = "에이전트가 run_finished 없이 끝났다"
             self._settled = True
             yield self._emit(RunFailed(run_id=run_id, ts=self._clock.now(), error=error))
+
+    async def _relay(self, agent: BaseAgent, ctx: _Context) -> AsyncGenerator[Event]:
+        """에이전트가 낸 이벤트를 흘린다. 그 앞에 호출 안에서 쌓인 이벤트를 먼저 흘린다.
+
+        일시정지가 기록되면 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트를 통과시키지 않는다.
+        재생 구간에서 에이전트가 낸 이벤트는 기록과 맞춰 소비하고 흘리지 않는다.
+        """
+        run_id = self._started.run_id
+        async with _closing(agent.run(self._started.request, ctx)) as from_agent:
+            async for event in from_agent:
+                for pending in ctx.take_events():
+                    yield pending
+                if ctx.paused:
+                    return
+                _reject_runtime_only(event, run_id)
+                if ctx.replaying:
+                    ctx.replay_event(event)
+                    continue
+                yield event
 
 
 @asynccontextmanager
