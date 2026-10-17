@@ -58,7 +58,7 @@ docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
 .scratch/          로컬 이슈 트래커. plan.md와 기능별 spec·티켓
-.design-sync/      /design-sync가 web/packages/ui를 Claude Design에 올리는 설정과 NOTES, 디자인 에이전트의 사용 규약과 그 검사기, 변환기 포크
+.design-sync/      /design-sync가 web/packages/ui를 빌드하는 설정과 NOTES(올리기는 Claude Code가 디자인 시스템 아티팩트에), 디자인 에이전트의 사용 규약과 그 검사기, 변환기 포크
 .claude/
   agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), bug-perf-review(CLI가 못 돌 때 버그·성능), spec-reviewer(명세 검토). 모두 수정 없음
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드

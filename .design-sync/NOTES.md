@@ -1,10 +1,18 @@
 # design-sync notes — @agent-os/ui
 
-`web/packages/ui` 를 Claude Design 프로젝트 "Agent OS 디자인 시스템"(config 의 `projectId`)에 올린다. 첫 동기화는
+`web/packages/ui` 를 빌드해 디자인 시스템에 올린다. 2026-10-15 까지는 Claude Design 프로젝트 "Agent OS 디자인
+시스템"(config 의 `projectId`)에 올렸고, 2026-10-16 부터는 아래 문단의 아티팩트에 올린다. 첫 동기화는
 2026-10-12, Claude Code 2.1.286 의 번들 스킬이다. 패키지와 결정의 배경은 ADR 0025·0026. 첫 프로젝트가 화면을 그릴
 계정과 다른 계정에 올라갔다고 사용자가 알려, 같은 날 사용자가 다시 로그인한 계정에 새로 만들고 같은 빌드를 다시 올렸다(소스가
 같아 채점은 이어 썼다, 일지 2026-10-12-11). 2026-10-14 에 design-refresh 의 디자인 시스템을 Claude Code 2.1.295 의 번들
 스킬로 다시 올렸다(일지 2026-10-15-01).
+
+2026-10-16 부터 올리는 곳은 Claude 아티팩트다(ADR 0025 의 2026-10-16 이력). 단독 Claude Design 은 2026-12-14 에 닫힌다.
+njh4803 의 단독 프로젝트를 "팀 디자인 시스템 마이그레이션"으로 옮긴 디자인 시스템 아티팩트
+https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 편집자로 초대받은 njh6803 계정의 Claude Code 가 Artifact 도구로
+올린다. 빌드(아래 "돌리는 법"의 driver 와 복사, 검사)는 그대로이고, 업로드 도구(`DesignSync`)로 단독 프로젝트에 올리는
+일은 그만둔다. config 의 `projectId` 는 옮긴 원본을 가리키는 기록이다. 아래에서 `DesignSync`, `finalize_plan`,
+`write_files` 를 말하는 문장은 단독 프로젝트에 올리던 때의 것이다.
 
 ## 돌리는 법
 
@@ -25,6 +33,27 @@
   `finalize_plan` writes 에 `foundations/**/*.html` 을 넣는다. 카드를 고쳤을 때와 새 프로젝트에 올릴 때 올린다.
 - 사용 규약 검사: 복사까지 마친 뒤 `node .design-sync/check-conventions.mjs`. 규약의 이름, 빼는 목록, 기초 카드와 목록
   타일의 변수와 복사를 함께 본다(아래 절들).
+- 아티팩트에 올리기(2026-10-16 부터): 맞출지는 `docs/agents/issue-tracker.md` 화면 디자인 절대로 커밋으로 가른다.
+  검사까지 마친 `ds-bundle/` 을 Artifact 도구의 `publish` 로 올린다. 호출은 `url` 이 아티팩트 주소, `root` 가
+  `ds-bundle/` 의 절대 경로, `file_path` 가 보낼 파일 하나의 절대 경로(상대 경로는 거부된다), `files` 가 나머지이고
+  키는 `project/<경로>`, 값은 `root` 아래 `<경로>` 다(형식의 `SKILL.md` 의 "The calls" 를 읽었다). 업로드 없이 빌드만
+  하는 driver 명령은 아직 적지 않았다. 번들 `/design-sync` 스킬은 끝에 `DesignSync` 로 올리므로, 첫 동기화가 그 스킬의
+  driver 를 읽어 빌드까지만 도는 명령을 여기 적는다. 올릴 경로는 아티팩트의 파일 목록(`list` 의 `scope: "files"`)과
+  빌드 산출을 맞대 고른다. 단독 프로젝트에 올리지 않던 빌드 부산물은 올리지 않고, 그 목록도 첫 동기화가 적는다. 빌드가 `ds-bundle/` 로 그대로 옮기는 저장소 원본 다섯(기초 카드 넷과
+  `.claude/rules/web-design.md`)이 옮긴 아티팩트의 `project/<같은 경로>` 에 바이트까지 같게 있었다
+  (`.scratch/design-artifacts/probes/hash_match.mjs`). 빌드 산출 전체는 아직 맞대지 않았다.
+  바뀐 파일만 보낸다. 지난 빌드에 있었고 이번 빌드에 없는 경로는 `files` 에 `"project/<경로>": null` 로 지운다(형식의
+  `SKILL.md` 를 읽었다). 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는
+  `manifest.json`, 단독 앱이 만든 `_ds_manifest.json`)은 지우지 않는다. 한 번에 보내는 경로는 255 개까지이고, 크기는
+  디자인 시스템 형식의 `SKILL.md` 가 한 번에 16 MiB, Artifact 도구 설명이 한 번에 64MB 라고 적는다(둘 다 2026-10-16 에
+  읽었고 재지 않았다. 작은 쪽을 따른다). 바뀐 것은 아티팩트에서 `read` 로 받은 sha256 과 맞대 고른다. 마지막에 색인
+  `project/design-system.json` 을 다시 읽어 다른 값은 그대로 두고 `lastChange` 의 넷을 모두 새로 적어 보낸다. `by` 는
+  사람의 이름, `at` 은 지금, `via` 는 `agent-os main@<짧은 SHA>`(올린 파일을 담은 main 의 커밋. 그래서 올리기는 그 PR 이 병합된 뒤다), `note` 는
+  바뀐 것의 요약이다.
+  그사이 누가 저장해 거절되면 그 파일을 다시 읽어 바꾼 것을 다시 얹고 한 번 더 보내고, 또 거절되면 멈추고 사람에게
+  알린다(형식의 `SKILL.md` 의 "Revising a system"). 화면의 "Finish the migration" 정리는 하지 않는다(정리하면 경로가 빌드와 어긋난다). 목록 타일
+  `thumbnail.html` 과 `_ds_needs_recompile` 은 옮긴 아티팩트의 파일 목록(판 `1792113436-f9ea`, `list` 의 `scope: "files"`
+  를 손으로 봤다)에 없다. 올릴지는 첫 동기화가 본다.
 
 ## 카드에 올리는 스토리
 
@@ -137,11 +166,10 @@
   승인한 `finalize_plan` 의 `deletes` 에 그 경로를 들어야 한다.
 - Alert 는 `cfg.overrides.Alert.cardMode: "column"` 이다. 2026-10-14 validate 가 보여 주기용 스토리 둘이 격자 칸보다
   넓다고(`[GRID_OVERFLOW] wide`) 알렸다. 표시 키라 채점에 들지 않는다.
-- config 의 `projectId` 가 `get_project` 에서 `404` 이고 `list_projects`(쓸 수 있는 것만 보인다)에 없으면, 프로젝트가
-  지워졌거나 다른 계정으로 로그인했을 수 있다. 2026-10-12 에는 다른 계정이었다(사용자가 알렸다). 새 프로젝트를 만들기 전에
-  사람에게 지금 로그인한 계정이 그리는 계정인지 묻는다. 두 계정이 같아야 한다는 규약은 `docs/agents/issue-tracker.md` 화면
-  디자인 절이다. 목록에 프로젝트가 있으면 그 owner 를 함께 보이면 묻기 쉽다(`DesignSync` 도구 설명이 `list_projects` 가 owner 를
-  돌려준다고 적는다).
+- 디자인 시스템 아티팩트의 `read` 가 "artifact not found" 를 내면 초대를 수락하지 않았거나 Claude Code 가 다른 계정이다
+  (2026-10-16 수락 전에 그렇게 나왔다). `claude auth status` 의 계정이 편집자로 초대받은 njh6803 인지 본다. 계정의 짝은
+  `docs/agents/issue-tracker.md` 화면 디자인 절이다. 단독 프로젝트에 올리던 때에는 config 의 `projectId` 가 `get_project`
+  에서 `404` 이면 지워졌거나 다른 계정이었다(2026-10-12 에는 다른 계정이었다).
 - 포크 파일은 채점 계약의 일부다. 주석만 고쳐도 다음 driver 실행이 모든 컴포넌트의 채점을 지우고 기본 상한(스토리 6개)으로만
   다시 캡처한다(2026-10-12 셀프 리뷰 뒤 한 번 겪었다). 포크를 고치면 `compare.mjs --max-stories 12` 로 다시 캡처해 다시 채점한다.
   줄바꿈도 계약의 바이트다. 포크는 작업 트리에서 LF 여야 한다(`git ls-files --eol .design-sync` 의 `w/lf`). 스킬 폴더에서
