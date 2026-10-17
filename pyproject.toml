@@ -69,7 +69,7 @@ preview = true
 explicit-preview-rules = true
 
 [tool.ruff.lint.pylint]
-# 기본값 5 를 그대로 적는다. 켜기 전 위반 13곳과 문턱의 판정은 일지 2026-10-17-08.
+# 기본값 5 를 그대로 적는다. 켜기 전 위반 13곳과 문턱의 판정은 일지 2026-10-17-11.
 max-statements-in-try = 5
 
 [tool.pyright]
