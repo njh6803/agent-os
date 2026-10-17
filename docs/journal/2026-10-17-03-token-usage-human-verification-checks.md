@@ -224,6 +224,9 @@ open-session을 부른다 2026-10-17T06:52:19Z
 
 ### PR 직전 리뷰
 
+`/security-review`는 반영 커밋 `4ddb83f4`를 푸시한 뒤(origin/main은 이미 합쳤다) 돌렸고 발견이 없었다. 비밀값 패턴, 개인
+데이터와 로컬 경로, 에이전트가 따르는 지시, 숨은 글자를 봤다.
+
 `bug-perf-review`(기준 `aa93cf7b`, 밀 주장은 위 "셀프 리뷰" 절의 여덟)는 유효 3(Minor 2, Nit 1), 보류 1, 오탐 0이었다. 밀 주장
 여덟 가운데 여섯은 근거와 맞았다. 성능 축은 코드가 바뀌지 않아 해당이 없다.
 - Minor: `cmd_simulate`가 "서브에이전트 기록만 빼고 센다"는 문장이 넓다. 실제로는 창 안에서 시작해 모델 호출이 둘 이상인
@@ -243,7 +246,51 @@ open-session을 부른다 2026-10-17T06:52:19Z
 직후 손으로 친 실행(228초, 같은 코드에서 그 테스트 통과)의 다섯 배였다. 그때 이 PC에 node 프로세스가 287개였고 모두 여러
 세션의 MCP 서버(playwright, sequential-thinking)였으며 CPU 부하는 85%였다. 부하 탓이라는 것은 어림이다. 이 변경은 마크다운뿐이라
 한 번 다시 커밋했다. 그 첫 시도 뒤 인계 훅이 `커밋 뒤` 계기(227,791)를 냈으나, 커밋이 실패해 경계가 아니고 이 세션이
-`인계: 커밋 뒤`로 열려 같은 경계라 넘기지 않는다(next-session "인계할 때" 1).
+`인계: 커밋 뒤`로 열려 같은 경계라 넘기지 않는다(next-session "인계할 때" 1). 다시 친 커밋 `4ddb83f4`는 pre-commit을
+모두 통과했고(pytest 228.6초) 그 뒤의 같은 계기(252,072)도 같은 까닭으로 넘기지 않았다.
+
+## 셋째 인계
+
+> 사용자: "끝났어?" (PR 직전 리뷰 둘을 마친 뒤 물었다. 아직 PR과 병합이 남았다고 답하고 이었다)
+
+`/git-pr`로 PR #286을 열었다. 이 저장소는 PR을 연 세션이 묻지 않고 병합까지 하는 규약이고 요청 범위가 병합까지라, 스킬의
+생성 전 확인은 기다리지 않았다. 본문에 알리는 기준이 걸린 것(30번째 호출 비의 중앙값 다섯 쌍 0.624, 여섯 쌍 0.637)과 사람에게
+할 부탁(f8b8b538)을 적었다. 연 직후 `get_status`로 보니 PR이 이 세션에 묶였고 claude-review가 빨갰다. 한도 탓인지는 보지 않았다.
+
+PR을 연 직후 인계 훅이 세션 컨텍스트 300,150으로 `PR 연 뒤` 경계의 계기를 냈다. 이 세션은 `인계: 커밋 뒤`로 열려 경계가
+다르고, 범위가 PR과 병합까지이며, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없어 넘긴다. 함께 온 `hook_pr_next_session`의
+계기보다 인계 줄이 앞선다. 이 세션(63d8ff5f)의 제목은 `feature/09-human-verification-checks`다. 커밋하지 않은 변경은 이
+일지(위 "PR 직전 리뷰"의 보안 리뷰 줄, 커밋 재시도 줄, 이 절)다. 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```
+다음 작업: .scratch/token-usage/issues/09-human-verification.md. 첫 스케줄러 보고서·요약·인계 쌍 여섯의 확인(PR #286)을 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/token-usage/issues/09-human-verification.md
+브랜치: feature/09-human-verification-checks
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-17-03-token-usage-human-verification-checks.md 의 "셋째 세션", "셋째 인계", "다음"
+이어받을 상태: 인계: PR 연 뒤. PR #286을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 워크트리에 커밋하지 않은 일지 고침(셋째 세션 절의 보안 리뷰 줄과 커밋 재시도 줄, 셋째 인계 절)이 있으니 그것을 먼저 커밋하고 푸시한 뒤 그 요청을 남긴다. 병합은 next-session "워크트리에서 병합할 때"의 길이다. 마지막 보고에서 인계 비용의 알리는 기준이 걸렸다는 것(30번째 호출 비의 중앙값 다섯 쌍 0.624, 여섯 쌍 0.637)을 사용자에게 알린다(PR 본문에는 적었다). 사람에게 물을 것(f8b8b538에서 경보 줄 옮기기)은 일지 "다음" 첫 항목이고 PR 본문의 리뷰어 참고에도 있다. 일지 파일은 docs/journal/2026-10-17-03-token-usage-human-verification-checks.md
+확인할 선행 조건: claude-review와 카나리아의 claude -p는 계정 주간 한도로 2026-10-18 21:00 UTC까지 돌지 않는다. PR #286의 claude-review가 빨갛게 나왔고 한도 탓인지는 확인하지 않았다(알아보는 법은 operations.md 리뷰 파이프라인 3). 앞 세션의 프로세스가 워크트리 잠금을 쥐고 남을 수 있다(대기열 326). pre-commit의 pytest에서 test_filesystem·test_sibling_overlap이 부하로 빨갈 수 있다(일지 셋째 세션 절). 다시 커밋하면 된다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/09-human-verification-checks (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰어 둘, 프로브, 커밋이 모두
+끝났고 손으로 띄운 web 검증은 앞서 멈췄다).
+
+open-session을 부른다 2026-10-17T09:28:22Z
+
+## 넷째 세션
+
+셋째 인계로 연 세션이 이어 썼다. 시작은 2026-10-17 09:29 UTC 무렵이다.
+
+> 사용자: "/implement .scratch/token-usage/issues/09-human-verification.md" (위 셋째 인계의 지시문. 범위는 PR과 병합까지)
+
+`git worktree list`에서 이 브랜치의 자리에 `locked`가 없었고 `EnterWorktree(path)`가 거부 없이 들어갔다. PR #286의
+`headRefOid`는 로컬 HEAD `4ddb83f4`와 같았고 `origin/main`은 이미 합친 `c41adadd`라 합칠 것이 없다. 셋째 세션의 커밋하지
+않은 일지 고침을 이 절과 함께 커밋하고 푸시한 뒤 `@coderabbitai review`를 남긴다.
 
 ## 회고
 
