@@ -1,4 +1,4 @@
-# 2026-10-17 (06) 다른 프로세스가 교체하는 동안의 읽기 사례를 부하에서 재현하고 판정을 계약과 맞춘다
+# 2026-10-17 (10) 다른 프로세스가 교체하는 동안의 읽기 사례를 부하에서 재현하고 판정을 계약과 맞춘다
 
 토큰 사용 티켓 09(사람 확인) 세션이 범위 밖이라며 넘긴 하네스 chore다. `tests/adapters/test_filesystem.py`의 시간에 민감한
 사례 하나를 ADR 0035의 "걸리면 그 사례만 고친다"대로 고친다. 대상은 그 시험과 그것을 재는 프로브, ADR 0035의 이력, 대기열
@@ -128,10 +128,10 @@ stderr에도 `PluginError` 아홉 번에 그 오류의 `Traceback`이 아홉 번
 다음 작업: 기능 harness. test_filesystem의 교체 중 읽기 사례를 부하에서 고친 변경을 셀프 리뷰부터 병합까지 잇는다
 다음 단계: 구현
 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: docs/journal/2026-10-17-06-filesystem-read-retry-under-load.md의 "인계 (셀프 리뷰 직전)" 절에 있는 지시문 원문대로 한다
+시작 프롬프트: docs/journal/2026-10-17-10-filesystem-read-retry-under-load.md의 "인계 (셀프 리뷰 직전)" 절에 있는 지시문 원문대로 한다
 브랜치: chore/filesystem-read-retry-under-load
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-06-filesystem-read-retry-under-load.md
+읽을 것: docs/journal/2026-10-17-10-filesystem-read-retry-under-load.md
 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기준 aa93cf7b, 명세는 일지의 지시문 원문)부터 한다. 남은 자리(⟪MUT⟫ 둘)와 결정은 일지의 "인계 (셀프 리뷰 직전)" 절이다. 이 일은 세션 local_449c0f9c-7be7-463a-bfff-1c8c49723486이 맡긴 곁 일이다. 그 세션은 인계했으므로, 병합하면 list_sessions에서 제목이 feature/09-human-verification-checks인 지금의 세션을 찾아 PR 링크를 한 줄로 알린다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
@@ -315,10 +315,10 @@ PR을 열기 전에 origin/main이 또 움직였으면 다시 합치고 `/securi
 다음 작업: 기능 harness. test_filesystem의 교체 중 읽기 사례를 부하에서 고친 변경을 PR과 병합까지 잇는다
 다음 단계: 구현
 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: docs/journal/2026-10-17-06-filesystem-read-retry-under-load.md의 "인계 (셀프 리뷰 직전)" 절에 있는 지시문 원문대로 한다
+시작 프롬프트: docs/journal/2026-10-17-10-filesystem-read-retry-under-load.md의 "인계 (셀프 리뷰 직전)" 절에 있는 지시문 원문대로 한다
 브랜치: chore/filesystem-read-retry-under-load
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-06-filesystem-read-retry-under-load.md
+읽을 것: docs/journal/2026-10-17-10-filesystem-read-retry-under-load.md
 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 PR 직전 리뷰(/security-review, bug-perf-review)는 끝났고 반영 커밋까지 했다. 푸시하지 않았고 열린 PR은 없다. 일지의 "인계 (커밋 뒤)" 절만 커밋하지 않았다. 그 일지를 커밋하고 푸시한 뒤 PR을 열고 봇 회차를 거쳐 병합한다. 이 일은 세션 local_449c0f9c-7be7-463a-bfff-1c8c49723486이 맡긴 곁 일이다. 병합하면 list_sessions에서 제목이 feature/09-human-verification-checks인 세션을 찾아 PR 링크를 한 줄로 알린다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
@@ -348,3 +348,9 @@ CodeRabbit 첫 회차는 Minor 하나다. `trace_once`가 쓰는 쪽 자식이 �
 반영 커밋의 첫 시도는 pre-commit의 pytest(168.0초)에서 대기열 306의 사례
 (`test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세스까지_끝낸다`, `_뛰는지(심장)`가 참)가 빨개 막혔다. 1 실패,
 3438 통과다. 이 PR이 건드리지 않은 시험이라 고치지 않고, 306에 이 일지를 회차로 더한 뒤 같은 커밋을 다시 쳤다.
+다시 친 커밋 `10ef4d21`은 pre-commit을 모두 지났다(pytest 293.8초).
+
+푸시하려 하니 origin/main이 `528bd257`(#289)로 한 커밋 움직여 푸시 전 훅이 막았다. 충돌 없이 합쳤고, #289가 일지
+2026-10-17-07을 들여 이 일지(처음 이름은 06)가 이름순으로 그보다 앞서게 되어 `sibling_overlap.py --move`로 10으로 옮겼다.
+인용은 ADR 0035 이력, 대기열 306·309, 프로브 README에서 함께 옮겨졌고, 남은 "일지 06"은 다른 날짜의 일지가 제 날의 06을
+가리킨 것뿐이다. #289가 바꾼 것은 retro 스킬과 대기열의 다른 행이라 이 브랜치가 따를 규약은 없다.
