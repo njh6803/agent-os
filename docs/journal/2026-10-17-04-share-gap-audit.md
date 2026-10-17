@@ -355,6 +355,43 @@ open-session을 부른다 2026-10-17T10:07:43Z
 고른 후보 일곱의 사건과 고친 처방을 거기서 다시 뽑아 대기열 행으로 옮겼다(아래 회고). 이 세션에서 사용자가 친 메시지는 지시문
 하나다.
 
+회고·대기열·일지 커밋 `aa0f5d68`의 pre-commit은 모두 지났다(pytest 131.1초, web-verify 200.8초. ruff 둘과 변이 표는 대상
+파일이 없어 `Skipped`). 그 커밋을 띄운 Bash 호출 뒤 `hook_handoff`가 계기를 냈다(세션 컨텍스트 271,994 토큰, 경계 `커밋 뒤`).
+
+## 넷째 인계
+
+커밋은 성공했고, 범위가 병합까지라 이 경계에서 끝나지 않으며, 이 세션의 지시문은 `인계: PR 연 뒤`라 같은 경계가 아니고,
+`인계 못함` 줄이 없어 넘긴다. 이 세션의 지금 제목은 `chore/handoff-notice-and-runbook-quotes`이고 바꿀 제목은
+`chore/handoff-notice-and-runbook-quotes (인계함)`이다. 이 세션이 띄운 백그라운드 작업은 끝난 커밋 하나라 멈출 것이 없다.
+이 절은 커밋하지 않는다.
+
+지시문:
+
+```
+다음 작업: chore/handoff-notice-and-runbook-quotes. 공유 대화 대조에서 사용자가 고른 세 항목과 보강 후보 일곱의 대기열 기록을 담은 PR #287을 푸시부터 병합까지 하고, 병합 뒤 일지 "다음"대로 보강 후보의 브랜치를 가른다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: https://claude.ai/share/5705455d-8d76-42f3-8c1d-92650e75db1e 내용을 확인하고 우리 프로젝트에 적용이 안된것을 찾아서 적용하고 싶어
+브랜치: chore/handoff-notice-and-runbook-quotes
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-17-04-share-gap-audit.md 의 "셋째로 이어받은 세션", "넷째 인계", "다음"
+이어받을 상태: 인계: 커밋 뒤. 회고·대기열·일지 커밋 aa0f5d68까지 했고 푸시하지 않았다. PR 제목과 본문은 이 커밋의 범위(대기열 332~337, 245·311·326)로 이미 고쳤다. 워크트리에 커밋하지 않은 일지 고침("넷째 인계" 절)이 있어 먼저 커밋한다. 남은 단계는 origin/main(b55f570e, #286. 이 브랜치와 겹치는 파일 없음)을 git merge로 합치기(sync_with_base_branch는 이 워크트리를 거부한다), 푸시, next-session 순서 1의 2(봇 회차), 워크트리 길의 병합이다. 앞 회차(d8deae2e)는 claude-review가 계정 주간 한도(2026-10-18 21:00 UTC에 풀림)로, CodeRabbit이 시간당 한도로 리뷰하지 못해 회차로 세지 않았다. 다시 한도에 걸리면 기다리지 않고 병합하고, 리뷰받은 커밋이 없다는 것과 풀리는 시각을 PR 코멘트에 남긴다(docs/constitution/operations.md 리뷰 파이프라인 3). 보안·버그 축은 PR 체크리스트의 PR 직전 리뷰가 대신한다. 병합 뒤의 지시문은 일지 "다음"으로 짓는다. 일지 경로는 docs/journal/2026-10-17-04-share-gap-audit.md
+확인할 선행 조건: claude-review가 한도로 빨가면 tools/wait_ci.py는 나머지 검사가 끝나는 대로 "실패 claude-review"로 끝나고, 그때 CodeRabbit이 아직 건너뜀 상태면 그 리뷰를 기다리지 않는다(그 독스트링의 판정). 이 PC의 부하가 크면 pre-commit의 시간 시험이 빨갤 수 있다(일지 "PR 직전 리뷰" 끝)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 이 세션이 띄운 대기는 없다.
+
+open-session을 부른다 2026-10-17T10:26:11Z
+
+## 넷째로 이어받은 세션
+
+넷째 인계로 연 세션이 이어 썼다. 첫 턴 훅대로 제목을 `chore/handoff-notice-and-runbook-quotes`로 바꾸고, `git worktree list`에서
+찾은 이 브랜치의 워크트리에 `EnterWorktree(path)`로 들어갔다. 거부는 없었다. 넘겨받은 일지 고침("넷째 인계")과 이 절을 먼저
+커밋하고, origin/main(`b55f570e`, #286)을 `git merge`로 합친 뒤 푸시한다. `tools/sibling_overlap.py`는 번호 겹침이 없다고 했고,
+형제 워크트리 `vigorous-mahavira-ebe993`(커밋하지 않은 변경)이 `.scratch/retro-queue.md`를 함께 고친다고 알렸다. 나중에
+병합하는 쪽이 글자 충돌을 푼다. 이 세션에서 사용자가 친 메시지는 지시문 하나다.
+
 ## 회고
 
 후보 다섯을 냈다. 승인 2, 기각 3, 넘김 0이다. 그와 따로, 사용자가 고른 보강 조사 후보 일곱(위 "보강 조사 후보의 선택")은
