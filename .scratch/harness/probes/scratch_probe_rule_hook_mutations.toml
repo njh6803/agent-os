@@ -93,6 +93,39 @@ old = '''전에 `.claude/rules/probes.md` 를'''
 new = '''전에 프로브 규칙을'''
 
 [[mutation]]
+name = "tool_input 이 사전인지 보지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    if not isinstance(tool_input, dict):'''
+new = '''    if tool_input is None:'''
+
+[[mutation]]
+name = "file_path 가 문자열인지 보지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    if not isinstance(path, str) or not is_scratch_script(path):'''
+new = '''    if path is None or not is_scratch_script(path):'''
+
+[[mutation]]
+name = "표지 파일을 만들지 못하면 알리지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+new = '''    except FileExistsError:
+        return False
+    except OSError:
+        return False'''
+
+[[mutation]]
 name = "대조군: 알림 끝 낱말을 바꾼다"
 tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
 expect = "green"

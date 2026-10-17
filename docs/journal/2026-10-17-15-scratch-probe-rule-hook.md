@@ -153,3 +153,10 @@ open-session을 부른다 2026-10-17T15:12:31Z
 초록이라 새 PLW0717이 이 훅의 `try`를 잡지 않는다. 셀프 리뷰가 "병합할지는 사용자에게 묻는다"고 적었으나,
 `docs/constitution/operations.md` 카나리아 항목(대기열 165)이 계정 한도로 막힌 카나리아는 기다리지 않고 사전 확인만 돌려
 병합한다고 정해 묻지 않는다.
+
+PR 직전 리뷰. CodeRabbit CLI는 `Seat: not assigned`라 돌지 않아 대체 둘을 돌렸다. `/security-review`는 지적이 없다.
+`coderabbit-review`(CLI 없이 셀프 리뷰 절의 밀 주장을 원천과 맞댔다)와 `bug-perf-review`가 같은 Minor 하나를 냈다.
+독스트링의 "그 매처의 PostToolUse 등록은 넷"인데 `hook_edit_during_commit`은 `Write|Edit|NotebookEdit` 묶음이고, 자리를
+보는 훅의 괄호에서 ruff 훅(조상의 ruff 설정)이 빠졌다. 두 묶음을 갈라 적고 ruff 훅을 더했다. `bug-perf-review`의 Minor
+둘(`context_for`의 꼴 가드 둘과 `claim_first`의 표지 파일 생성 실패 길에 시험·변이가 없다)도 시험 둘과 변이 셋으로 고정했다.
+훅 시험 21건 초록, 변이 13 모두 기대대로. 307 항목 끝 문장 앞에 "다만"을 붙이라는 Nit은 사실과 어긋나지 않아 두었다.

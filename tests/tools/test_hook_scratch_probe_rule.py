@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -83,6 +84,13 @@ def test_다른_도구와_경로_없는_입력은_지나간다() -> None:
     assert context_for({"tool_name": "Write"}) is None
 
 
+@pytest.mark.parametrize("tool_input", ["x", {"file_path": 1}, {"file_path": None}])
+def test_꼴이_어긋난_입력은_예외_없이_지나간다(tool_input: object) -> None:
+    # HookPayload 에 맞지 않는 꼴이라 main 처럼 JSON 에서 풀어 넘긴다.
+    payload = json.loads(json.dumps({"tool_name": "Write", "tool_input": tool_input}))
+    assert context_for(payload) is None
+
+
 def test_못_보는_것_Bash_heredoc_으로_쓴_스크래치_파일은_지나간다() -> None:
     # Bash 의 실제 입력은 명령 칸뿐이다. 이 훅의 등록 매처에도 Bash 가 없다. HookPayload 에 없는
     # 칸(command)을 실으려고 main 처럼 JSON 에서 풀어 넘긴다.
@@ -118,6 +126,15 @@ def test_표지를_쓰지_못하면_알린다(tmp_path: Path) -> None:
     # 표지 폴더 자리 자체가 파일이면 makedirs 가 FileExistsError 를 낸다. 이미 알린 것으로 읽지
     # 않는다.
     assert claim_first(marker_name("s1", ""), blocker)
+
+
+def test_표지_파일을_만들지_못하면_알린다(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def denied(*_args: object) -> int:
+        raise PermissionError
+
+    monkeypatch.setattr(os, "open", denied)
+    assert claim_first(marker_name("s1", ""), tmp_path)
+    assert claim_first(marker_name("s1", ""), tmp_path)
 
 
 def _run_main(
