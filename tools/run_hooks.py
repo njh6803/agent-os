@@ -11,11 +11,18 @@
 도 벗긴다(pre-commit 아래에서 git 이 내보낸 값이 임시 저장소를 이 저장소로 돌린다,
 tests/conftest.py). `CLAUDE_CODE_ENTRYPOINT` 도 벗긴다(대기열 83·94 — 한국어 판정 훅 둘이
 SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리에 기댄다). `CLAUDE_CODE_REMOTE` 도 벗긴다
-(`hook_session_web_deps` 가 클라우드 세션에서만 깐다). 자식은
+(`hook_session_web_deps` 가 클라우드 세션에서만 깐다). `CLAUDE_CODE_SESSION_ATTENDED` 와 카나리아의
+헤드리스 표지 `AGENT_OS_HEADLESS` 도 벗긴다(`hook_session_usage` 가 헤드리스 세션에서 요약을 보이지
+않는다). 자식은
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 열여덟 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물아홉 — `${ROOT}`(저장소 루트),
+`${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
+날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
+두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
+저장소), `${OPEN_PR_REPO}`(임시 bare 저장소를 origin 으로 두고 그 `chore/x` 끝을 머리로 둔 PR 7 의
+`refs/pull/7/head`·`merge` 가 있는 저장소),
 `${MAIN_REPO}`·`${WORK_REPO}`(임시 저장소 둘. 앞은 커밋이 하나 있는 main, 뒤는 커밋이 없는 작업
 브랜치다 — 이 저장소의 브랜치에 기대를 걸지 않는다), `${EMPTY_MAIN_REPO}`(커밋이 하나도 없는 main 의
 임시 저장소 — 새 프로젝트의 첫 커밋 자리), `${UNPUSHED_REPO}`(임시 bare 저장소를 upstream 으로 두고
@@ -23,6 +30,10 @@ pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘�
 origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진 저장소),
 `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
+`${OVER_HANDOFF_TRANSCRIPT}`·`${UNDER_HANDOFF_TRANSCRIPT}`(마지막 모델 응답의 usage 가 인계 문턱을
+넘는 트랜스크립트와 넘지 않는 트랜스크립트), `${EMPTY_TEMP}`(표지를 쓸 빈 임시 폴더. 사례의 `env` 로
+`TEMP`·`TMP`·`TMPDIR` 에 준다 — 시스템 임시 폴더에 남은 표지로 발동 사례가 PC 마다 처음 한 번만
+지나지 않게),
 `${KOREAN_HEREDOC_45}`(한글 45줄 heredoc), `${RUFF_PROJECT}`(ruff 설정이 있는 임시 디렉터리 — 한글
 줄이 넘친 `long.py` 와 짧은 `short.py`), `${LOOSE_PY}`(같은 한글 줄을 ruff 설정 밖에 둔 파일 — 이
 저장소의 파일에 기대를 걸지 않는다), `${RAW_SEPARATOR}`(날것 U+2028 이 든 파일 — 표에는 그 문자를 둘
@@ -32,22 +43,30 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${BROKEN_WEB}`(`web/package.json` 과 맞지 않는 `web/pnpm-lock.yaml` 을 둔 임시 디렉터리 — pnpm 이
 네트워크 없이 곧 실패한다), `${COMMIT_MSGS}`(commit-msg 판정을 부르는 pre-commit 설정과 그 판정
 스크립트의 사본을 둔 임시 저장소 — 제목이 72자를 넘는 `long-subject.txt` 와 맞는
-`good-subject.txt` 의 커밋 메시지 파일). 사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다.
-위에서 벗긴 변수가 필요한 사례는 그 값을 `env` 로 준다. 기대는 넷.
-deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2), context
-(`additionalContext`), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸
-문장(`message_of` — JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두
-들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵
-사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를
-재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을 재는지 표지만 단다.
-`hookSpecificOutput` 을 내는 훅은
+`good-subject.txt` 의 커밋 메시지 파일. 이 저장소 밖이라 훅이 그 판정을 띄우지 않는다),
+`${COMMITTING_REPO}`(안에 연결된 워크트리 `.claude/worktrees/side` 를 둔 임시 저장소. 러너가 도는
+동안 그 워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 돈다, `committing_repository`),
+`${USAGE_REPO}`(`.scratch/token-report/summary.txt` 에 방금 쓴 요약을 둔 임시 저장소 — 사용량 장부와
+요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
+`.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다),
+`${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
+것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다). 사례의
+`env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
+로 준다. 기대는 다섯. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
+context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는 `systemMessage` 하나.
+`additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료 0, 출력 없음).
+사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼 additionalContext·이유·
+systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만
+대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵
+사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을
+재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
-발동·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로 센다. 등록되지
-않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더 잰다. 등록된
-이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에 기대한
-출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
+발동(silent 밖의 넷)·침묵 한쪽이 없는 훅도 어긋남이다 — 러너는 표만 믿으므로 표의 빈자리를 스스로
+센다. 등록되지 않은 훅의 사례는 돌리지 않는다(대조할 이벤트와 시간 제한이 없다). 표 밖에서 하나 더
+잰다. 등록된 이벤트마다 래퍼를 없는 훅 이름(`ABSENT_HOOK`)으로 띄워, 지나갈 때의 알림이 그 이벤트에
+기대한 출력인지 본다(대기열 93). `NOTICE_ONLY_EVENTS`(Stop·SubagentStop)는 사용자에게만 가는
 `systemMessage` 하나인 `notice`, 나머지는 모델에게도 가는 `context` 다. `context` 에도 사용자 몫의
 `systemMessage` 가 있어야 한다(`notice_outcome`). 표의 사례는 훅 파일이
 있어야 해 이 길을 돌지 않는다. pre-commit 이 `always_run` 으로
@@ -74,9 +93,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -97,7 +119,7 @@ _PROJECT_DIR = "${CLAUDE_PROJECT_DIR}"
 _REGISTRATION_PATTERN = re.compile(
     re.escape(REGISTRATION).replace(re.escape("{hook}"), r"(hook_\w+\.py)")
 )
-Expectation = Literal["deny", "block", "context", "silent"]
+Expectation = Literal["deny", "block", "context", "notice", "silent"]
 # 래퍼가 없는 훅을 지나갈 때의 알림(대기열 93)을 등록된 이벤트마다 재는 훅 이름. tools/ 에 없어야
 # 한다.
 ABSENT_HOOK = "hook_absent_for_launch_notice.py"
@@ -233,15 +255,15 @@ class NoticeResult:
         return self.outcome == self.expected
 
 
-def load_cases(path: Path = PAYLOADS) -> list[Case]:
-    """표를 읽는다. 기대가 넷 밖이거나, 훅 파일이 없거나, 침묵 사례에 `contains` 가 있으면
-    ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
+def load_cases(path: Path = PAYLOADS, root: Path = ROOT) -> list[Case]:
+    """표를 읽는다. 기대가 다섯 밖이거나, 훅 파일이 `root` 의 `tools/` 에 없거나, 침묵 사례에
+    `contains` 가 있으면 ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
     try:
         table = _Table.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
     except ValidationError as error:
         raise ValueError(f"{path.name}: {error}") from error
     for case in table.case:
-        if not (ROOT / "tools" / case.hook).is_file():
+        if not (root / "tools" / case.hook).is_file():
             raise ValueError(f"tools/{case.hook} 이 없다")
         if case.expect == "silent" and case.contains:
             raise ValueError(f"{case.hook} 의 침묵 사례에 contains 가 있다: {case.note}")
@@ -329,12 +351,14 @@ def _replace(text: str, replacements: dict[str, str]) -> str:
 
 
 def outcome_of(returncode: int, stdout: str, event: str) -> str:
-    """훅의 종료 코드와 stdout 을 기대 넷 중 하나로(또는 그 밖의 설명으로) 읽는다.
+    """훅의 종료 코드와 stdout 을 기대 다섯 중 하나로(또는 그 밖의 설명으로) 읽는다.
 
     `hookSpecificOutput` 은 `hookEventName` 이 있어야 하고(없으면 Claude Code 가 받지 않는 출력이라
-    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). 기대 넷
-    밖의 `notice` 는 사용자에게만 가는 `systemMessage` 하나다 — 래퍼가 Stop 에서 없는 훅을 지나갈
-    때의 출력이고(대기열 93), 표의 훅은 내지 않는다.
+    `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). `notice` 는
+    사용자에게만 가는 `systemMessage` 하나다 — 표의 훅이 사람에게만 알릴 때와 래퍼가 Stop 에서
+    없는 훅을 지나갈 때(대기열 93)의 출력이다. `additionalContext` 가 함께 있으면 `context` 다.
+    모델에게도 가는 출력이고, Stop 에서는 그것이 대화를 잇게 한다(`.claude/rules/tools.md`).
+    그래서 notice 사례는 그 출력을 어긋남으로 잡는다.
     """
     if returncode == 2:
         return "block"
@@ -398,8 +422,9 @@ class _Launched:
 
 def notice_outcome(returncode: int, stdout: str, event: str) -> str:
     """래퍼 알림의 판정. `outcome_of` 와 같되 `context` 에도 사용자에게 가는 `systemMessage` 가
-    있어야 한다 — 없으면 `context 사용자 알림 없음`. 표의 훅은 `systemMessage` 를 내지 않으므로
-    `outcome_of` 에 넣지 않는다(PR #122 CodeRabbit 2회차)."""
+    있어야 한다 — 없으면 `context 사용자 알림 없음`. 표의 context 사례는 사용자 몫을 요구하지
+    않으므로(대부분의 훅은 모델에게만 알린다) `outcome_of` 에 넣지 않는다(PR #122 CodeRabbit
+    2회차)."""
     outcome = outcome_of(returncode, stdout, event)
     if outcome != "context" or _HookOutput.model_validate_json(stdout.strip()).systemMessage:
         return outcome
@@ -408,17 +433,22 @@ def notice_outcome(returncode: int, stdout: str, event: str) -> str:
 
 def hook_environment() -> dict[str, str]:
     """자식 훅의 환경. `PYTHONUTF8`, 저장소를 가리키는 `GIT_*`, `CLAUDE_CODE_ENTRYPOINT`,
-    `CLAUDE_CODE_REMOTE` 를 뺀다.
+    `CLAUDE_CODE_REMOTE`, `CLAUDE_CODE_SESSION_ATTENDED` 를 뺀다.
 
-    뒤의 둘은 훅이 세션의 종류를 가리는 근거다. `CLAUDE_CODE_ENTRYPOINT` 는
+    뒤의 셋은 훅이 세션의 종류를 가리는 근거다. `CLAUDE_CODE_ENTRYPOINT` 는
     `hook_stop_korean`·`hook_midturn_korean` 이 SDK 세션에서 침묵하는 근거이고,
-    `CLAUDE_CODE_REMOTE` 는 `hook_session_web_deps` 가 클라우드 세션에서만 까는 근거다. 러너를
-    띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다.
+    `CLAUDE_CODE_REMOTE` 는 `hook_session_web_deps` 가 클라우드 세션에서만 까는 근거이며,
+    `CLAUDE_CODE_SESSION_ATTENDED` 는 `hook_session_usage` 가 헤드리스 세션에서 요약을 보이지 않는
+    근거다. 러너를 띄운 세션의 값을 물려주면 판정이 러너가 도는 자리에 따라 바뀐다(`claude -p`
+    세션의 커밋에서는 `0` 이다). 같은 까닭으로 카나리아 도구가 붙이는 헤드리스 표지
+    `AGENT_OS_HEADLESS` 도 뺀다.
     """
     excluded = {
         "PYTHONUTF8",
         "CLAUDE_CODE_ENTRYPOINT",
         "CLAUDE_CODE_REMOTE",
+        "CLAUDE_CODE_SESSION_ATTENDED",
+        "AGENT_OS_HEADLESS",
         *REPO_LOCATION_VARS,
     }
     return {key: value for key, value in os.environ.items() if key not in excluded}
@@ -445,13 +475,15 @@ def _launch(
     registration: Registration,
     judge: Judge = outcome_of,
     env: dict[str, str] | None = None,
+    root: Path = ROOT,
 ) -> _Launched:
-    """자식 하나를 등록의 모양과 시간 제한으로 돌린다. 넘기면 판정 `timeout` 이다.
+    """자식 하나를 등록의 모양과 시간 제한으로 돌린다. 래퍼는 `root` 의 것을 띄운다. 넘기면 판정
+    `timeout` 이다.
 
     `env` 는 `hook_environment()` 위에 덧씌운다."""
     try:
         process = subprocess.run(
-            launch_argv(hook),
+            launch_argv(hook, root),
             input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
             capture_output=True,
             env={**hook_environment(), **(env or {})},
@@ -468,12 +500,14 @@ def _launch(
     return _Launched(outcome, (stdout or stderr).strip(), message)
 
 
-def run_case(case: Case, replacements: dict[str, str], registration: Registration) -> Result:
+def run_case(
+    case: Case, replacements: dict[str, str], registration: Registration, root: Path = ROOT
+) -> Result:
     """자식 하나를 등록의 모양과 시간 제한으로 돌려 판정하고 `contains` 를 대 본다. 넘기면 어긋남
-    `timeout` 이다."""
+    `timeout` 이다. 래퍼와 훅은 `root` 의 `tools/` 에서 띄운다 — 시험이 가짜 훅을 든 루트를 준다."""
     payload = substitute(case.payload, replacements)
     env = {key: _replace(value, replacements) for key, value in case.env.items()}
-    launched = _launch(case.hook, payload, registration, env=env)
+    launched = _launch(case.hook, payload, registration, env=env, root=root)
     missing = tuple(missing_fragments(launched.message, case.contains))
     return Result(case, launched.outcome, launched.output, missing)
 
@@ -504,10 +538,11 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     작업 브랜치와 그 upstream 인 bare 저장소, 어긋난 잠금 파일의 `web/` 을 든 저장소)는 `GIT_*` 를
     벗긴 환경으로 만들고, 커밋은 작성자를 명령에 준다(`_IDENTITY`). 트랜스크립트 하나는 assistant
     기록이 있는 파일로 두고, 다른 하나는 만들지 않은 경로다(첫 턴). 셋째는 중간 문장이 든
-    대화(`_MIDTURN_RECORDS`)다. ruff 프로젝트 하나는
-    줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을 설정
-    밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md` 와
-    CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
+    대화(`_MIDTURN_RECORDS`)다. 넷째와 다섯째는 마지막 모델 응답의 usage 가 인계 문턱(20만)을 넘는
+    것과 넘지 않는 것이고(`_handoff_transcript`), 표지를 쓸 빈 임시 폴더를 하나 둔다. ruff 프로젝트
+    하나는 줄 길이 100의 설정과 한글 줄이 넘친 `long.py`, 짧은 `short.py` 를 두고, 같은 한글 줄을
+    설정 밖(`loose.py`)에도 둔다. 날것 U+2028 이 든 파일 하나와, 보이지 않는 공백이 든 `.py`·`.md`
+    와 CR 이 든 `.md` 둘(홀로 선 것, CRLF)을 한 디렉터리에 둔다. 일지 둘은 "다음" 절을 채운 뒤의
     모양이고, 하나만 회고 절이 있다. 커밋 메시지 파일 둘은 제목만 다르다.
     """
     main_repo = scratch / "on-main"
@@ -538,6 +573,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         encoding="utf-8",
         newline="\n",
     )
+    empty_temp = scratch / "empty-temp"
+    empty_temp.mkdir()
     korean_heredoc = "cat <<'EOF'\n" + "\n".join(f"한글 줄 {i}" for i in range(45)) + "\nEOF"
     ruff_project = scratch / "ruff-project"
     ruff_project.mkdir()
@@ -575,8 +612,9 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
     closed_journal = journals / "2026-10-01-02-closed.md"
     closed_journal.write_text(f"# 일지\n\n## 회고\n\n- 62(새로)\n\n{closing}", encoding="utf-8")
     # 제목 76자와 맞는 제목. commit-msg 훅의 상한은 72자다(tools/check_commit_msg.py). 그 판정을
-    # 부르는 pre-commit 설정과 판정 스크립트의 사본을 둔 저장소다 — 훅은 커밋하는 저장소의 판정만
-    # 쓴다.
+    # 부르는 pre-commit 설정과 판정 스크립트의 사본을 둔 저장소다. 훅은 커밋하는 저장소의 판정만
+    # 쓰고, 이 저장소 밖이라 그 판정은 띄우지 않는다(대기열 246). 표는 이 저장소에서 커밋하는
+    # 사례에 이 파일들을 메시지로 쓴다.
     commit_msgs = scratch / "commit-msgs"
     subprocess.run(
         ["git", "init", "-q", "-b", "chore/x", str(commit_msgs)],
@@ -594,8 +632,13 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         ("good-subject.txt", "chore: 커밋 메시지 제목을 먼저 대 본다"),
     ):
         (commit_msgs / name).write_text(f"{subject}\n\n본문\n", encoding="utf-8")
+    today = datetime.now().astimezone().date().isoformat()
     return {
         "ROOT": ROOT.as_posix(),
+        "USER_HOME": Path.home().as_posix(),
+        "TODAY": today,
+        "NUMBERED_REPO": _numbered_repository(scratch, today).as_posix(),
+        "OPEN_PR_REPO": _open_pr_repository(scratch).as_posix(),
         "MAIN_REPO": main_repo.as_posix(),
         "EMPTY_MAIN_REPO": empty_main_repo.as_posix(),
         "WORK_REPO": work_repo.as_posix(),
@@ -604,6 +647,9 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
+        "OVER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "over", 250_000).as_posix(),
+        "UNDER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "under", 120_000).as_posix(),
+        "EMPTY_TEMP": empty_temp.as_posix(),
         "KOREAN_HEREDOC_45": korean_heredoc,
         "RUFF_PROJECT": ruff_project.as_posix(),
         "LOOSE_PY": loose.as_posix(),
@@ -613,7 +659,70 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "CLOSED_JOURNAL": closed_journal.as_posix(),
         "BROKEN_WEB": _broken_web(scratch).as_posix(),
         "COMMIT_MSGS": commit_msgs.as_posix(),
+        "USAGE_REPO": _usage_repository(scratch, today).as_posix(),
+        "USAGE_HOME": _usage_home(scratch).as_posix(),
+        "SEQ_3000": "\n".join(str(n) for n in range(1, 3001)),
     }
+
+
+def _usage_repository(scratch: Path, today: str) -> Path:
+    """요약 파일(`.scratch/token-report/summary.txt`)을 방금 쓴 임시 저장소. 첫 줄은 오늘의 전날을
+    보고서 날짜로 든다(`tools/token_report.py` 가 쓰는 모양). 훅은 이 저장소의 주 체크아웃(곧 이
+    저장소) 아래에 계정 기록과 요약의 표지를 쓴다."""
+    repo = scratch / "usage-repo"
+    subprocess.run(
+        ["git", "init", "-q", str(repo)],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
+    report = repo / ".scratch" / "token-report"
+    report.mkdir(parents=True)
+    day = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
+    (report / "summary.txt").write_text(
+        f"보고서 날짜: {day}\n환산 비용 $0.00\n경보 없음\n보고서: {report}/daily/{day}.md\n",
+        encoding="utf-8",
+    )
+    return repo
+
+
+def _usage_home(scratch: Path) -> Path:
+    """가짜 계정의 `oauthAccount` 만 든 `.claude.json` 을 둔 홈."""
+    home = scratch / "usage-home"
+    home.mkdir()
+    account = {"accountUuid": "00000000-0000-0000-0000-0000000000aa", "emailAddress": "run@hooks"}
+    (home / ".claude.json").write_text(json.dumps({"oauthAccount": account}), encoding="utf-8")
+    return home
+
+
+def _handoff_transcript(scratch: Path, name: str, tokens: int) -> Path:
+    """마지막 모델 응답의 세 입력 토큰 합이 `tokens` 인 트랜스크립트. 인계 훅 둘이 읽는다.
+
+    기록의 모양은 실제 트랜스크립트의 assistant 기록이다(usage 가 `message` 안에 있다. 이 저장소의
+    트랜스크립트를 손으로 봤다, 일지 2026-10-16-63). 앞에 문턱을 넘는 응답을, 뒤에 도구 결과를
+    두어 마지막 응답만 센다는 것도 표의 사례가 지나게 한다."""
+    path = scratch / f"transcript-handoff-{name}.jsonl"
+    records: list[dict[str, JsonValue]] = []
+    for total in (900_000, tokens):
+        usage: dict[str, JsonValue] = {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 1_000,
+            "cache_read_input_tokens": total - 1_002,
+            "output_tokens": 300,
+        }
+        message: dict[str, JsonValue] = {
+            "id": f"msg_{total}",
+            "model": "claude-opus-5-5",
+            "content": [{"type": "tool_use", "id": f"toolu_{total}", "name": "Bash"}],
+            "usage": usage,
+        }
+        records.append({"type": "assistant", "isSidechain": False, "message": message})
+    records.append({"type": "user", "message": {"role": "user", "content": "ok"}})
+    path.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n", encoding="utf-8", newline="\n"
+    )
+    return path
 
 
 def _broken_web(scratch: Path) -> Path:
@@ -673,6 +782,158 @@ def _unpushed_repository(scratch: Path) -> Path:
     return repo
 
 
+def _git_commands(commands: list[list[str]]) -> None:
+    for command in commands:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            env=hook_environment(),
+            timeout=DEFAULT_HOOK_TIMEOUT,
+        )
+
+
+def _numbered_repository(scratch: Path, today: str) -> Path:
+    """`journal_repository` 위에, 작업 트리에 커밋하지 않은 새 일지 둘(같은 순번 01, 다음 빈 순번
+    02)을 둔 저장소."""
+    repo = journal_repository(scratch / "numbered", today)
+    for number, slug in (("01", "x"), ("02", "y")):
+        journal = repo / "docs" / "journal" / f"{today}-{number}-{slug}.md"
+        journal.write_text(f"# {today} ({number}) {slug}\n", encoding="utf-8")
+    return repo
+
+
+def journal_repository(where: Path, today: str) -> Path:
+    """`where/repo` 에 origin/main 이 오늘 날짜의 01 일지를 들고, 작업 브랜치 `chore/x` 가 그 위인
+    저장소를 짓는다. 훅의 순번 대조를 재는 픽스처다(페이로드 표, `tests/tools/`, 프로브가 함께
+    쓴다).
+
+    origin 은 `where/origin.git` 의 bare 저장소다. main 에는 ADR·대기열 행·헌법 판도 둔다.
+    `tools/sibling_overlap.py` 는 merge-base 에서 네 자리 가운데 하나라도 비면 2로 끝난다.
+    """
+    origin = where / "origin.git"
+    repo = where / "repo"
+    _git_commands(
+        [
+            ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+            ["git", "init", "-q", "-b", "main", str(repo)],
+        ]
+    )
+    files = {
+        f"docs/journal/{today}-01-main.md": f"# {today} (01) main\n",
+        "docs/adr/0001-x.md": "# 0001\n",
+        ".scratch/retro-queue.md": "| 1 | x |\n",
+        "docs/constitution/README.md": "**Version**: 1.0.0\n",
+    }
+    for name, text in files.items():
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        (repo / name).write_text(text, encoding="utf-8")
+    _git_commands(
+        [
+            ["git", "-C", str(repo), "add", "-A"],
+            ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "-m", "main"],
+            ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+            ["git", "-C", str(repo), "push", "-q", "origin", "main"],
+            ["git", "-C", str(repo), "switch", "-q", "-c", "chore/x"],
+        ]
+    )
+    return repo
+
+
+def _open_pr_repository(scratch: Path) -> Path:
+    """origin 의 `chore/x` 끝을 머리로 둔 열린 PR 7 의 ref(`refs/pull/7/head`·`merge`)가 있는
+    저장소.
+
+    origin 은 같은 `scratch` 의 bare 저장소다. github.com 이 아니라 훅은 gh 대신 `git ls-remote`
+    로 열린 PR 을 가린다. 네트워크에 기대지 않는다.
+    """
+    origin = scratch / "open-pr-origin.git"
+    repo = scratch / "open-pr"
+    _git_commands(
+        [
+            ["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+            ["git", "init", "-q", "-b", "chore/x", str(repo)],
+            ["git", "-C", str(repo), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "x"],
+            ["git", "-C", str(repo), "remote", "add", "origin", str(origin)],
+            ["git", "-C", str(repo), "push", "-q", "origin", "chore/x"],
+            ["git", "-C", str(origin), "update-ref", "refs/pull/7/head", "refs/heads/chore/x"],
+            ["git", "-C", str(origin), "update-ref", "refs/pull/7/merge", "refs/heads/chore/x"],
+        ]
+    )
+    return repo
+
+
+@contextmanager
+def fixtures(scratch: Path) -> Generator[dict[str, str]]:
+    """자리표시자 전부의 값. `create_fixtures` 에 커밋이 도는 동안만 있는 `${COMMITTING_REPO}`
+    (`committing_repository`)를 더한다. 표의 사례를 돌리는 쪽(러너, tests/tools)은 이것을 쓴다."""
+    with committing_repository(scratch) as committing:
+        yield create_fixtures(scratch) | {"COMMITTING_REPO": committing.as_posix()}
+
+
+@contextmanager
+def committing_repository(scratch: Path) -> Generator[Path]:
+    """`scratch/committing` 저장소 안에 연결된 워크트리 `.claude/worktrees/side` 를 두고, 그
+    워크트리에서 pre-commit 훅에 멈춘 `git commit` 이 도는 동안 저장소 루트를 내준다.
+
+    이 저장소의 주 체크아웃과 그 안의 워크트리와 같은 자리다. 훅은 `release` 파일이 생길 때까지
+    기다리고(최대 10분), 나갈 때 그 파일을 만들어 커밋이 끝나기를 기다린다. 못 끝내면 죽인다.
+    `hook_edit_during_commit` 의 발동(워크트리의 파일)과 침묵(그 폴더 아래에서 커밋이 도는 주
+    체크아웃의 파일)을 표와 tests/tools 가 함께 잰다. 사용자 설정의 `core.hooksPath` 가 훅을 다른
+    데로 돌리지 않게 커밋에 그 값을 준다.
+    """
+    root = scratch / "committing"
+    side = root / ".claude" / "worktrees" / "side"
+    started = scratch / "committing-started"
+    release = scratch / "committing-release"
+    _git_commands(
+        [
+            ["git", "init", "-q", "-b", "main", str(root)],
+            ["git", "-C", str(root), *_IDENTITY, "commit", "-q", "--allow-empty", "-m", "first"],
+            ["git", "-C", str(root), "worktree", "add", "-q", "-b", "side", str(side)],
+        ]
+    )
+    hooks = root / ".git" / "hooks"
+    hooks.mkdir(exist_ok=True)
+    (hooks / "pre-commit").write_text(
+        "#!/bin/sh\n"
+        f': > "{started.as_posix()}"\n'
+        "i=0\n"
+        f'while [ ! -f "{release.as_posix()}" ] && [ "$i" -lt 6000 ]; do\n'
+        "  sleep 0.1\n"
+        "  i=$((i + 1))\n"
+        "done\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (hooks / "pre-commit").chmod(0o755)
+    (side / "tracked.txt").write_text("x\n", encoding="utf-8")
+    _git_commands([["git", "-C", str(side), "add", "tracked.txt"]])
+    command = ["git", "-c", f"core.hooksPath={hooks.as_posix()}", *_IDENTITY, "commit", "-q"]
+    process = subprocess.Popen(
+        [*command, "-m", "x"],
+        cwd=side,
+        env=hook_environment(),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + DEFAULT_HOOK_TIMEOUT
+        while not started.exists():
+            if process.poll() is not None or time.monotonic() > deadline:
+                raise RuntimeError("pre-commit 훅에 멈춘 커밋을 띄우지 못했다")
+            time.sleep(0.05)
+        yield root
+    finally:
+        release.write_text("", encoding="utf-8")
+        try:
+            process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+
+
 def _behind_repository(scratch: Path) -> Path:
     """작업 브랜치 `chore/x` 가 origin/main 보다 한 커밋 뒤처진 저장소.
 
@@ -711,8 +972,7 @@ def main() -> int:
     registrations = registered_hooks()
     gaps = coverage_gaps(cases, registrations)
     runnable = [case for case in cases if case.hook in registrations]
-    with tempfile.TemporaryDirectory() as scratch:
-        replacements = create_fixtures(Path(scratch))
+    with tempfile.TemporaryDirectory() as scratch, fixtures(Path(scratch)) as replacements:
         results = [run_case(case, replacements, registrations[case.hook]) for case in runnable]
     notices = run_notices(registrations)
     failures = [result for result in results if not result.ok]

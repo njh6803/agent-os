@@ -1,8 +1,8 @@
 # 훅 페이로드 표. tools/run_hooks.py 가 훅마다 자식을 띄워 기대와 대조한다(pre-commit, always_run).
 # 훅 하나에 발동 하나와 침묵 하나 이상. 침묵은 그 훅이 실제로 받을 입력 중 발동하지 말아야 할 것으로(반례의 축을 빼지 않게).
-# 자리표시자 ${ROOT} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} 는 러너가 채운다.
+# 자리표시자 ${ROOT} ${USER_HOME} ${TODAY} ${NUMBERED_REPO} ${OPEN_PR_REPO} ${MAIN_REPO} ${WORK_REPO} ${EMPTY_MAIN_REPO} ${UNPUSHED_REPO} ${BEHIND_REPO} ${NEW_TRANSCRIPT} ${USED_TRANSCRIPT} ${MIDTURN_TRANSCRIPT} ${OVER_HANDOFF_TRANSCRIPT} ${UNDER_HANDOFF_TRANSCRIPT} ${EMPTY_TEMP} ${KOREAN_HEREDOC_45} ${RUFF_PROJECT} ${LOOSE_PY} ${RAW_SEPARATOR} ${INVISIBLE_DIR} ${OPEN_JOURNAL} ${CLOSED_JOURNAL} ${BROKEN_WEB} ${COMMIT_MSGS} ${COMMITTING_REPO} ${USAGE_REPO} ${USAGE_HOME} ${SEQ_3000} 는 러너가 채운다.
 # 러너는 자식 환경에서 CLAUDE_CODE_ENTRYPOINT 를 벗긴다. SDK 세션의 침묵(hook_stop_korean, hook_midturn_korean)은 표가 아니라 tests/tools 가 본다.
-# 기대: deny | block | context | silent. 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
+# 기대: deny | block | context | notice | silent. notice 는 사용자에게만 가는 systemMessage 하나다(additionalContext 가 함께 있으면 context). 왜 그 기대인지는 각 훅의 독스트링이 원천이고 note 는 한 줄 표지다.
 # 선택 칸 contains 는 훅이 낸 문장(이유·계기)에 모두 들어야 하는 조각이다. 사례가 재려는 동작이 판정의 종류만으로 갈리지 않을 때 단다 — 옛 훅도 같은 종류를 낸 지시문 사례가 그랬다(대기열 130). 침묵 사례에는 둘 수 없다.
 
 # --- hook_env_read (PreToolUse Bash|Grep) ---
@@ -53,6 +53,34 @@ hook = "hook_env_read.py"
 expect = "silent"
 note = "래퍼 `command` 의 -v 는 명령을 찾기만 하고 돌리지 않는다 — 찾을 이름 뒤에 .env 가 있어도 읽지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "command -v column .env" } }
+
+# --- hook_user_settings_read (PreToolUse Bash|PowerShell|Read|Grep) ---
+# 대상의 경로만 풀고 파일은 열지 않는다. 사용자 설정을 읽지 않고도 판정이 갈린다.
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "deny"
+contains = ["키 이름만"]
+note = "사용자 설정의 Read — update-config 가 사용자 범위에서 여는 자리"
+payload = { tool_name = "Read", tool_input = { file_path = "${USER_HOME}/.claude/settings.json" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "deny"
+contains = ["호출 전체가 돌지 않았다"]
+note = "설정의 한 갈래를 통째로 출력(대기열 272. 사건의 명령은 공개 저장소라 일지가 적지 않아 같은 꼴로 재구성)"
+payload = { tool_name = "PowerShell", tool_input = { command = "Get-Content $HOME\\.claude\\settings.json -Raw | ConvertFrom-Json | Select-Object -ExpandProperty env" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "silent"
+note = "update-config 가 이 저장소에서 여는 프로젝트 설정(반례 축)"
+payload = { tool_name = "Read", tool_input = { file_path = "${ROOT}/.claude/settings.json" } }
+
+[[case]]
+hook = "hook_user_settings_read.py"
+expect = "silent"
+note = "막을 때 안내하는 키 이름 명령(keys_command 의 꼴)"
+payload = { tool_name = "Bash", tool_input = { command = "uv run python -c \"import json, pathlib; d = json.loads(pathlib.Path('${USER_HOME}/.claude/settings.json').read_text(encoding='utf-8')); print({k: sorted(v)[:20] if isinstance(v, dict) else type(v).__name__ for k, v in d.items()})\"" } }
 
 # --- hook_git_main_commit (PreToolUse Bash|PowerShell) ---
 [[case]]
@@ -245,8 +273,9 @@ payload = { tool_name = "Bash", tool_input = { command = "(cd ${MAIN_REPO} && gi
 
 [[case]]
 hook = "hook_bash_cd_outside.py"
-expect = "context"
-note = "같은 체크아웃의 하위 폴더로 — 일지 2026-10-13-22 의 모양(대기열 225)"
+expect = "deny"
+contains = ["하위 폴더", "대기열 225·252"]
+note = "같은 체크아웃의 하위 폴더로 — 일지 2026-10-13-22 의 모양(대기열 225). 알림 뒤에도 되풀이돼 막는다(대기열 252)"
 payload = { tool_name = "Bash", tool_input = { command = "cd web/packages/ui/src/components && ls" }, cwd = "${WORK_REPO}" }
 
 [[case]]
@@ -256,18 +285,25 @@ note = "하위 폴더에 남은 셸이 루트로 돌아온다 — 그 사건 셋
 payload = { tool_name = "Bash", tool_input = { command = "cd ${WORK_REPO} && git status --short" }, cwd = "${WORK_REPO}/web/packages/ui/src/components" }
 
 # --- hook_bash_commit_msg (PreToolUse Bash) ---
-# ${COMMIT_MSGS} 는 commit-msg 판정을 부르는 저장소이고 두 파일은 제목만 다르다. 긴 것은 일지 2026-10-13-30 의 76자를 흉내 낸다.
+# ${COMMIT_MSGS} 는 commit-msg 판정을 부르는 이 저장소 밖의 저장소이고 두 파일은 제목만 다르다. 긴 것은 일지 2026-10-13-30 의 76자를 흉내 낸다.
+# 훅은 이 저장소(${ROOT})의 커밋만 판정한다(대기열 246). 커밋은 ${ROOT} 에서 하고 메시지 파일만 그 저장소의 것을 쓴다.
 [[case]]
 hook = "hook_bash_commit_msg.py"
 expect = "deny"
 note = "제목이 72자를 넘는 메시지 파일 — 대기열 222 의 셋째 사건의 모양"
-payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${ROOT}" }
 
 [[case]]
 hook = "hook_bash_commit_msg.py"
 expect = "silent"
 note = "제목이 맞는 메시지 파일 — 그 사건 뒤 고쳐 친 커밋의 모양"
-payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/good-subject.txt" }, cwd = "${COMMIT_MSGS}" }
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/good-subject.txt" }, cwd = "${ROOT}" }
+
+[[case]]
+hook = "hook_bash_commit_msg.py"
+expect = "silent"
+note = "이 저장소 밖에서 같은 파일로 커밋한다 — 그 저장소의 판정 스크립트를 띄우지 않는다(대기열 246)"
+payload = { tool_name = "Bash", tool_input = { command = "git commit -F ${COMMIT_MSGS}/long-subject.txt" }, cwd = "${COMMIT_MSGS}" }
 
 # --- hook_bash_msys_pathconv (PreToolUse Bash) ---
 # 훅은 윈도이거나 `MSYSTEM` 이 있을 때만 알린다. 리눅스 CI 에서도 판정을 돌리려고 모든 사례에 넣는다.
@@ -353,6 +389,21 @@ expect = "silent"
 note = "다른 절을 적어 넣고 '다음' 절은 그대로 옮긴 Edit(대기열 62)"
 payload = { tool_name = "Edit", tool_input = { file_path = "${OPEN_JOURNAL}", old_string = "## 다음\n\n- web-admin의 04가 다음이다.", new_string = "## 한 것\n\n- 04\n\n## 다음\n\n- web-admin의 04가 다음이다." } }
 
+# 순번 대조(대기열 232). 결과(tool_response)는 journal_number_hook/run.py 의 A 가 잰 새 파일 Write 의 모양이다(claude 2.1.300).
+# 그 결과의 originalFile 은 null 인데 TOML 에 null 이 없어 뺐다. 훅은 type 만 읽는다. 저장소는 origin 이 임시 bare 저장소라 네트워크에 기대지 않는다.
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "context"
+contains = ["다음 빈 번호와 다르다", "옮길 번호는"]
+note = "main(merge-base)에 이미 있는 순번으로 새 일지를 만든 Write — 도구가 새 번호로 세지 않아 겹침으로도 알리지 않는 갈래(셀프 리뷰에서 실제 도구로 돈 테스트가 잡았다)"
+payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n", structuredPatch = [], userModified = false } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "다음 빈 순번으로 새 일지를 만든 Write — 도구에서 번호를 받고 만든 세션의 입력"
+payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n", structuredPatch = [], userModified = false } }
+
 # --- hook_ruff_line_width (PostToolUse Write|Edit) ---
 [[case]]
 hook = "hook_ruff_line_width.py"
@@ -410,12 +461,36 @@ expect = "silent"
 note = "줄 끝이 CRLF 인 마크다운 — LF 앞의 CR 은 줄 끝이다"
 payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/crlf.md", content = "| a |" } }
 
+# --- hook_edit_during_commit (PostToolUse Write|Edit|NotebookEdit) ---
+# 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
+# 침묵은 같은 저장소의 주 체크아웃 파일이다. 커밋하는 워크트리가 그 폴더 아래에 있어도 다른 체크아웃이다.
+[[case]]
+hook = "hook_edit_during_commit.py"
+expect = "context"
+contains = ["git commit", "대기열 293"]
+note = "커밋이 도는 워크트리의 파일을 고쳤다(대기열 293. 일지 2026-10-16-21 은 이 꼴로 커밋이 실패했다)"
+payload = { hook_event_name = "PostToolUse", tool_name = "Edit", tool_input = { file_path = "${COMMITTING_REPO}/.claude/worktrees/side/tracked.txt", old_string = "x", new_string = "y" }, cwd = "${COMMITTING_REPO}/.claude/worktrees/side" }
+
+[[case]]
+hook = "hook_edit_during_commit.py"
+expect = "silent"
+note = "그 폴더 아래 워크트리에서 커밋이 도는 주 체크아웃의 파일을 썼다 — 이 저장소의 주 체크아웃과 .claude/worktrees 의 자리"
+payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${COMMITTING_REPO}/notes.md", content = "메모\n" }, cwd = "${COMMITTING_REPO}" }
+
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]
 hook = "hook_prompt_directive.py"
 expect = "context"
-note = "next-session 지시문이 첫 메시지(트랜스크립트가 아직 없다)"
+contains = ["대기열 72", "`다음 작업:`"]
+note = "next-session 지시문이 첫 메시지(트랜스크립트가 아직 없다). 시작 프롬프트 줄 없이 지시문만 붙여 넣은 꼴이라 손으로 연 세션이다"
 payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서: 새 세션\n브랜치: chore/x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "context"
+contains = ["대기열 72", "`/implement`"]
+note = "사람이 반각 `/implement` 첫 줄로 붙여 넣은 지시문 — open-session 이면 스킬 파일 문장으로 옮겼을 것이다(대기열 72)"
+payload = { prompt = "/implement .scratch/x/issues/01-x.md\n\n다음 작업: .scratch/x/issues/01-x.md\n다음 단계: 구현\n어디서: 새 세션\n시작 프롬프트: /implement .scratch/x/issues/01-x.md\n브랜치: feature/01-x\n", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 
 [[case]]
 hook = "hook_prompt_directive.py"
@@ -536,6 +611,41 @@ expect = "silent"
 note = "문자열 안의 gh pr merge"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }
 
+# --- hook_handoff (PostToolUse Bash|PowerShell|Skill|GitHub MCP 의 PR 만들기) ---
+# 페이로드는 `claude -p` 세션의 탐침 훅이 저장한 실제 입력이다(.scratch/token-usage/probes/handoff_reach.py 의 A, 일지 2026-10-16-63).
+# 경로(자리표시자), 세션 ID(사례마다 다른 이름), `duration_ms`(120) 를 바꾸고 `scratchpad_dir`·`prompt_id` 를 뺐다. 침묵은 같은 커밋 입력을 문턱 아래의 세션에서 받은 것이다. 표지 폴더는 빈 임시 폴더로 준다.
+[[case]]
+hook = "hook_handoff.py"
+expect = "context"
+note = "문턱 위 세션의 커밋 — 인계 문장"
+contains = ["`커밋 뒤`", "인계의 계기", "SKILL.md"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-over", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "git -C ${MAIN_REPO} -c user.name=p -c user.email=p@localhost commit --allow-empty -m probe", description = "Create empty probe commit" }, tool_response = { stdout = "[main 5d4aa98] probe", stderr = "", interrupted = false, isImage = false, noOutputExpected = false, gitOperation = { commit = { sha = "5d4aa98", kind = "committed", branch = "main" } } }, tool_use_id = "toolu_01WyGSabuuYqEkkNV9SxRDs2", duration_ms = 120 }
+
+[[case]]
+hook = "hook_handoff.py"
+expect = "silent"
+note = "문턱 아래 세션의 같은 커밋"
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-under", transcript_path = "${UNDER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "git -C ${MAIN_REPO} -c user.name=p -c user.email=p@localhost commit --allow-empty -m probe", description = "Create empty probe commit" }, tool_response = { stdout = "[main 5d4aa98] probe", stderr = "", interrupted = false, isImage = false, noOutputExpected = false, gitOperation = { commit = { sha = "5d4aa98", kind = "committed", branch = "main" } } }, tool_use_id = "toolu_01WyGSabuuYqEkkNV9SxRDs2", duration_ms = 120 }
+
+# --- hook_handoff_notice (Stop) ---
+# 페이로드는 위와 같은 세션의 탐침 훅이 저장한 Stop 입력이다. 세션 ID 를 위 사례와 달리 둬 위의 인계 표지에 걸리지 않게 한다.
+[[case]]
+hook = "hook_handoff_notice.py"
+expect = "notice"
+note = "문턱 위 세션의 턴 끝 — 사람에게 한 번 알림"
+contains = ["인계 문턱", "한 번만 낸다"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "notice-case-over", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "알림 없음" }
+
+[[case]]
+hook = "hook_handoff_notice.py"
+expect = "silent"
+note = "문턱 아래 세션의 턴 끝"
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "notice-case-under", transcript_path = "${UNDER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "Stop", stop_hook_active = false, last_assistant_message = "알림 없음" }
+
 # --- hook_push_behind_main (PreToolUse Bash|PowerShell) ---
 # 둘 다 origin 이 임시 bare 저장소라 네트워크와 이 저장소의 브랜치에 기대지 않는다. 침묵은 같은 뒤처진 저장소에서
 # 지우는 푸시라, 뒤처짐이 아니라 명령 판정에서 걸러지는 것을 본다.
@@ -550,6 +660,48 @@ hook = "hook_push_behind_main.py"
 expect = "silent"
 note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 뒤처진 저장소에서도 막지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
+
+[[case]]
+hook = "hook_push_behind_main.py"
+expect = "silent"
+note = "셀프 리뷰의 명세 축 리뷰어가 확인하려고 친 도움말 — 뒤처진 저장소에서도 푸시하지 않는다(대기열 300, 일지 2026-10-16-27)"
+payload = { tool_name = "Bash", tool_input = { command = "git push -h" }, cwd = "${BEHIND_REPO}" }
+
+# --- hook_push_delete_open_pr (PreToolUse Bash|PowerShell) ---
+# origin 이 임시 bare 저장소라 훅은 gh 대신 ls-remote 의 merge ref 로 열린 PR 을 가린다. 네트워크에 기대지 않는다.
+# 침묵은 병합이 끝난 뒤의 실제 지우기다. 그 원격에는 PR 의 ref 가 없다.
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7", "pulls/7 -f state=closed"]
+note = "병합과 한 묶음으로 보낸 원격 브랜치 지우기(대기열 262, 일지 2026-10-15-01 의 꼴. 번호와 커밋은 재구성)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr merge 7 --squash --match-head-commit abc && git push origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7"]
+note = "PowerShell 의 지우기 refspec — 매처의 둘째 도구"
+payload = { tool_name = "PowerShell", tool_input = { command = "git push origin :chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "deny"
+contains = ["#7"]
+note = "원격 앞에 `=` 없이 쓴 --recurse-submodules — git 이 다음 낱말을 값으로 먹는다(대기열 296. 첫 판은 그 값을 원격으로 읽어 지나갔다)"
+payload = { tool_name = "Bash", tool_input = { command = "git push --recurse-submodules check origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "silent"
+note = "실제로 친 병합 뒤 원격 브랜치 지우기(일지 2026-10-13-38) — 열린 PR 이 없다"
+payload = { tool_name = "Bash", tool_input = { command = "git push origin --delete chore/ci-wait-background" }, cwd = "${BEHIND_REPO}" }
+
+[[case]]
+hook = "hook_push_delete_open_pr.py"
+expect = "silent"
+note = "열린 PR 의 머리를 지우는 꼴에 도움말을 붙였다 — git 이 사용법을 내고 끝나 지우지 않는다(대기열 300)"
+payload = { tool_name = "Bash", tool_input = { command = "git push -h origin --delete chore/x" }, cwd = "${OPEN_PR_REPO}" }
 
 # --- hook_webfetch_summary (PostToolUse WebFetch) ---
 # 앞의 셋은 실제 결과 객체다. 요약과 301 은 webfetch_payload/run.sh 의 A(Claude Code 2.1.296), 404 는 트랜스크립트 10389e93.
@@ -595,8 +747,26 @@ expect = "silent"
 note = "짧은 일치 줄 양옆의 600자 문맥 줄만 생략됐다 — 일치를 숨기지 않는다"
 payload = { tool_name = "Grep", tool_input = { pattern = "PROBE short", path = "C:/scratch/omit", output_mode = "content", "-C" = 1 }, tool_response = { mode = "content", numFiles = 0, filenames = [], content = "C:\\scratch\\omit\\ctx.txt-1-[Omitted long context line]\nC:\\scratch\\omit\\ctx.txt:2:PROBE short\nC:\\scratch\\omit\\ctx.txt-3-[Omitted long context line]", numLines = 3, totalLines = 3 } }
 
+# --- hook_large_result (PostToolUse Read|Bash|PowerShell) ---
+# 두 사례 모두 .scratch/token-usage/probes/large_result/payloads.jsonl(Claude Code 2.1.300)의 Bash 결과 객체 모양이다.
+# 발동은 그 `seq 1 2000` 호출을 3000 으로 바꾸고 출력을 ${SEQ_3000}(같은 명령의 13892자)으로 두었고, 침묵은 `bash_stderr` 그대로다.
+[[case]]
+hook = "hook_large_result.py"
+expect = "context"
+note = "Bash 출력 13892자가 문턱 1만 자를 넘었다"
+contains = ["이 도구 결과는 큰 결과 알림의 문턱을 넘었다", "13,892자", "10,000자", "seq 1 3000"]
+payload = { tool_name = "Bash", tool_input = { command = "seq 1 3000", description = "Print numbers 1 through 3000" }, tool_response = { stdout = "${SEQ_3000}", stderr = "", interrupted = false, isImage = false, noOutputExpected = false } }
+
+[[case]]
+hook = "hook_large_result.py"
+expect = "silent"
+note = "stdout·stderr 를 합친 짧은 Bash 출력"
+payload = { tool_name = "Bash", tool_input = { command = "echo out-line; echo err-line >&2", description = "Print a stdout line and a stderr line" }, tool_response = { stdout = "out-line\nerr-line", stderr = "", interrupted = false, isImage = false, noOutputExpected = false } }
+
 # --- hook_grill_design_check (PreToolUse Skill) ---
-# 두 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).
+# 첫째와 셋째 입력은 이 훅을 만든 세션이 `claude -p` stream-json 에서 받은 Skill 호출이다(Claude Code 2.1.296, args 만 줄였다).
+# 경로 접두의 둘은 대기열 284 의 꼴이다. 넷째(silent)는 트랜스크립트의 Skill 입력에 실제로 있던 이름이고, 둘째(context)는 그 꼴에
+# 이 스킬 이름을 넣어 지었다(grill-with-docs 를 그 꼴로 부른 기록은 없다). 다섯째(플러그인 접두)도 지은 입력이다. 그 이름의 플러그인 스킬은 없다.
 [[case]]
 hook = "hook_grill_design_check.py"
 expect = "context"
@@ -606,9 +776,28 @@ payload = { tool_name = "Skill", tool_input = { skill = "grill-with-docs", args 
 
 [[case]]
 hook = "hook_grill_design_check.py"
+expect = "context"
+note = "워크트리 세션이 경로 접두를 붙여 부른다(대기열 284)"
+contains = ["설계 인터뷰가 맞는지"]
+payload = { tool_name = "Skill", tool_input = { skill = ".claude/worktrees/admin-foo-design:grill-with-docs", args = "admin-foo" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
 expect = "silent"
 note = "라우터가 이어 부르는 grilling 은 같은 알림을 두 번 받지 않는다"
 payload = { tool_name = "Skill", tool_input = { skill = "grilling", args = "admin-foo" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "silent"
+note = "워크트리 세션이 경로 접두로 부른 다른 스킬 — 트랜스크립트에 있던 이름"
+payload = { tool_name = "Skill", tool_input = { skill = ".claude/worktrees/harness-audit:code-review" } }
+
+[[case]]
+hook = "hook_grill_design_check.py"
+expect = "silent"
+note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아니다(대기열 284)"
+payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.
@@ -624,3 +813,29 @@ hook = "hook_session_web_deps.py"
 expect = "silent"
 note = "로컬 세션의 시작(CLAUDE_CODE_REMOTE 없음) — 아무것도 하지 않는다"
 payload = { hook_event_name = "SessionStart", source = "startup", cwd = "${BROKEN_WEB}" }
+
+# --- hook_session_usage (SessionStart startup|resume|clear|compact|fork) ---
+# 러너는 CLAUDE_CODE_SESSION_ATTENDED 를 벗긴다. 사례마다 CLAUDE_PROJECT_DIR 을 ${USAGE_REPO} 로, 홈(USERPROFILE·HOME)을 ${USAGE_HOME} 으로 줘 실제 장부와 요약의 표지, 사람의 .claude.json 에 닿지 않는다.
+# 세 사례가 한 요약을 나눠 쓴다. 헤드리스 사례를 발동 사례 앞에 둔다 — 헤드리스가 표지를 가져가면 발동 사례가 침묵으로 어긋난다.
+# 페이로드의 모양은 .scratch/token-usage/probes/session_start_payload/start.jsonl 이다(헤드리스에는 model 이 없었다).
+[[case]]
+hook = "hook_session_usage.py"
+expect = "silent"
+note = "데스크톱 세션 안에서 띄운 claude -p(카나리아)의 시작 — 계정만 남기고 요약의 표지를 가져가지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "0" }
+payload = { session_id = "66655714-0000-0000-0000-000000000001", transcript_path = "${USAGE_HOME}/66655714-0000-0000-0000-000000000001.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "startup" }
+
+[[case]]
+hook = "hook_session_usage.py"
+expect = "notice"
+contains = ["보고서 날짜:", "경보 없음"]
+note = "새 요약 뒤 처음 시작한 대화형 세션 — 요약을 사람에게만 보인다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
+payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "startup", model = "claude-opus-5-5" }
+
+[[case]]
+hook = "hook_session_usage.py"
+expect = "silent"
+note = "이어 하기 — 계정만 남긴다"
+env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
+payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "resume", model = "claude-opus-5-5" }

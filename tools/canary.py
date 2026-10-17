@@ -194,6 +194,11 @@ _WORKTREE_TIMEOUT_SECONDS = 300.0  # 대조군 워크트리 하나를 꺼내거�
 _TIMED_OUT = 124  # GNU timeout 의 관례
 _PREFLIGHT = "--preflight"
 _CONTROL_COMMIT = "--control-commit"
+# 띄우는 `claude -p` 세션의 환경에 붙이는 헤드리스 표지. 세션 시작
+# 훅(`tools/hook_session_usage.py`)이 이것이 있으면 사람 몫의 요약 표지를 가져가지
+# 않는다(token-usage 티켓 04, 사용자가 골랐다). 훅은 이 도구를 import 하지 않아 같은
+# 이름(`HEADLESS_MARKER`)을 따로 적고 시험이 대조한다.
+HEADLESS_ENV = "AGENT_OS_HEADLESS"
 
 
 class SpecError(Exception):
@@ -876,13 +881,15 @@ def run_claude(
 ) -> RunResult:
     """`claude` 를 한 번 띄운다. 제한 시간을 넘기면 그때까지의 출력과 종료 코드 124 를 돌려준다.
 
-    멈춘 세션 하나가 나머지 회차의 원본까지 붙잡지 않게 하려는 것이다(PR #157 CodeRabbit).
+    멈춘 세션 하나가 나머지 회차의 원본까지 붙잡지 않게 하려는 것이다(PR #157 CodeRabbit). 환경에는
+    헤드리스 표지(`HEADLESS_ENV`)를 붙인다.
     """
     executable = shutil.which(args[0]) or args[0]
     try:
         completed = subprocess.run(
             [executable, *args[1:]],
             cwd=cwd,
+            env={**os.environ, HEADLESS_ENV: "1"},
             input=stdin.encode("utf-8"),
             capture_output=True,
             check=False,

@@ -8,13 +8,16 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 from pydantic import JsonValue
+from tools.hook_session_usage import HEADLESS_MARKER
 from tools.run_hooks import (
     PAYLOADS,
+    ROOT,
     Case,
     Expectation,
     NoticeResult,
@@ -22,6 +25,7 @@ from tools.run_hooks import (
     coverage_gaps,
     create_fixtures,
     expected_notice,
+    fixtures,
     hook_environment,
     launch_argv,
     load_cases,
@@ -42,7 +46,8 @@ def _specific(**fields: str) -> str:
     return json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", **fields}})
 
 
-def test_종료_코드와_출력을_기대_넷으로_읽는다() -> None:
+def test_종료_코드와_출력을_기대로_읽는다() -> None:
+    """notice 는 `test_사용자에게만_가는_systemMessage_는_notice_다` 가 본다."""
     deny = _specific(permissionDecision="deny", permissionDecisionReason="x")
     context = _specific(additionalContext="retro")
     assert outcome_of(0, deny, "PreToolUse") == "deny"
@@ -85,7 +90,7 @@ def test_자리표시자는_표_안까지_바꾼다() -> None:
     }
 
 
-def test_표의_기대는_넷_중_하나여야_한다(tmp_path: Path) -> None:
+def test_표의_기대는_다섯_중_하나여야_한다(tmp_path: Path) -> None:
     table = tmp_path / "t.toml"
     table.write_text(
         '[[case]]\nhook = "hook_env_read.py"\nexpect = "warn"\npayload = { tool_name = "Bash" }\n',
@@ -106,6 +111,58 @@ def test_침묵_사례에는_찾을_문장이_없어_contains_를_받지_않는�
 
     with pytest.raises(ValueError, match="contains"):
         load_cases(table)
+
+
+def _fake_root(tmp_path: Path, output: dict[str, JsonValue]) -> Path:
+    """래퍼 사본과 `output` 을 내는 가짜 훅을 `tools/` 에 둔 루트. 러너는 등록의 모양 그대로 이
+    루트의 래퍼를 띄우고, 래퍼는 자기 옆의 훅을 돌린다. `output` 이 비면 아무것도 내지 않는다."""
+    root = tmp_path / "fake-root"
+    (root / "tools").mkdir(parents=True)
+    shutil.copy(ROOT / "tools" / "launch_hook.py", root / "tools")
+    text = json.dumps(output) if output else ""
+    (root / "tools" / "hook_fake_notice.py").write_text(
+        f"import sys\n\nsys.stdout.write({text!r})\n", encoding="utf-8"
+    )
+    return root
+
+
+_NOTICE_TABLE = (
+    '[[case]]\nhook = "hook_fake_notice.py"\nexpect = "notice"\ncontains = ["턴이 끝났다"]\n'
+    'payload = { hook_event_name = "Stop" }\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("output", "outcome", "missing"),
+    [
+        ({"systemMessage": "턴이 끝났다"}, "notice", ()),
+        (
+            {
+                "systemMessage": "턴이 끝났다",
+                "hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": "턴이 끝났다"},
+            },
+            "context",
+            (),
+        ),
+        ({}, "silent", ("턴이 끝났다",)),
+    ],
+    ids=["systemMessage_하나", "additionalContext_도", "출력_없음"],
+)
+def test_표의_notice_사례는_사용자에게만_가는_systemMessage_하나를_낸_훅에서만_맞는다(
+    tmp_path: Path, output: dict[str, JsonValue], outcome: str, missing: tuple[str, ...]
+) -> None:
+    """표를 읽고(`load_cases`) 래퍼로 띄워 대조하는(`run_case`) 길이다. 판정 함수(`outcome_of`)는
+    이 길이 notice 를 받기 전에도 notice 를 냈다. 모델에게도 가는 additionalContext 가 함께 있으면
+    context 다. 맞는 갈래의 조각은 systemMessage 에만 있다."""
+    root = _fake_root(tmp_path, output)
+    table = tmp_path / "t.toml"
+    table.write_text(_NOTICE_TABLE, encoding="utf-8")
+
+    [case] = load_cases(table, root)
+    result = run_case(case, {}, Registration("Stop", 20), root)
+
+    assert (result.outcome, result.missing) == (outcome, missing)
+    assert result.ok is (outcome == "notice")
 
 
 def test_훅이_내는_문장은_JSON_을_풀어_읽고_종료_2_면_stderr_다() -> None:
@@ -293,6 +350,18 @@ def test_등록과_표의_빈자리를_센다() -> None:
     ]
 
 
+def test_빈자리_셈은_notice_를_발동으로_센다() -> None:
+    """사용자에게만 알리는 훅도 notice 사례를 발동으로 둔다."""
+    cases = [
+        _case("hook_notice_and_silent.py", "notice"),
+        _case("hook_notice_and_silent.py", "silent"),
+        _case("hook_notice_only.py", "notice"),
+    ]
+    registered = {"hook_notice_and_silent.py", "hook_notice_only.py"}
+
+    assert coverage_gaps(cases, registered) == ["hook_notice_only.py: 침묵 사례가 없다"]
+
+
 def test_이_저장소의_표는_등록된_훅마다_발동과_침묵이_있다() -> None:
     registered = registered_hooks()
 
@@ -307,9 +376,9 @@ def test_이_저장소의_표에서_contains_를_단_사례는_지금_훅의_문
     둔다. 조각을 단 사례가 없으면 범위가 빈 것이라 실패한다."""
     cases = [case for case in load_cases(PAYLOADS) if case.contains]
     registrations = registered_hooks()
-    replacements = create_fixtures(tmp_path)
 
-    results = [run_case(case, replacements, registrations[case.hook]) for case in cases]
+    with fixtures(tmp_path) as replacements:
+        results = [run_case(case, replacements, registrations[case.hook]) for case in cases]
 
     assert cases
     assert [(r.case.note, r.outcome, r.missing) for r in results if not r.ok] == []
@@ -351,6 +420,63 @@ def test_자식_환경은_러너를_띄운_세션이_클라우드인지_물려�
     monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
 
     assert "CLAUDE_CODE_REMOTE" not in hook_environment().keys()
+
+
+def test_자식_환경은_러너를_띄운_세션이_헤드리스인지_물려주지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`hook_session_usage` 는 `CLAUDE_CODE_SESSION_ATTENDED` 가 `0` 인 세션에서 요약을 보이지
+    않는다. `claude -p` 세션의 커밋에서 러너가 그 값을 물려받으면 발동 사례가 침묵으로 어긋난다.
+    """
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
+    monkeypatch.setenv(HEADLESS_MARKER, "1")
+
+    assert "CLAUDE_CODE_SESSION_ATTENDED" not in hook_environment().keys()
+    assert HEADLESS_MARKER not in hook_environment().keys()
+
+
+def test_사용량_저장소의_요약은_시작한_세션에_한_번_보이고_이어_하기는_침묵이다(
+    tmp_path: Path,
+) -> None:
+    """`${USAGE_REPO}` 와 `${USAGE_HOME}` 이 표의 사례를 실제로 가르고, 장부가 이 저장소가 아니라
+    임시 저장소에 쌓이는지 본다."""
+    replacements = create_fixtures(tmp_path)
+    registration = Registration("SessionStart", 20)
+    env = {
+        "CLAUDE_PROJECT_DIR": "${USAGE_REPO}",
+        "USERPROFILE": "${USAGE_HOME}",
+        "HOME": "${USAGE_HOME}",
+    }
+    start: dict[str, JsonValue] = {
+        "session_id": "s1",
+        "hook_event_name": "SessionStart",
+        "source": "startup",
+    }
+    resume: dict[str, JsonValue] = {**start, "source": "resume"}
+    headless = Case(
+        hook="hook_session_usage.py",
+        expect="silent",
+        payload=start,
+        env={**env, "CLAUDE_CODE_SESSION_ATTENDED": "0"},
+    )
+    shown = Case(
+        hook="hook_session_usage.py",
+        expect="notice",
+        payload=start,
+        env=env,
+        contains=["보고서 날짜:", "경보 없음"],
+    )
+
+    assert run_case(headless, replacements, registration).ok
+    assert run_case(shown, replacements, registration).ok
+    assert run_case(
+        Case(hook="hook_session_usage.py", expect="silent", payload=resume, env=env),
+        replacements,
+        registration,
+    ).ok
+    ledger = Path(replacements["USAGE_REPO"]) / ".scratch" / "token-report" / "ledger"
+    lines = (ledger / "accounts.jsonl").read_text(encoding="utf-8").splitlines()
+    assert [json.loads(line)["email"] for line in lines] == ["run@hooks"] * 3
 
 
 def test_실제_훅_하나를_페이로드로_돌려_판정한다(tmp_path: Path) -> None:
@@ -441,8 +567,9 @@ def test_러너도_등록처럼_래퍼로_띄워_없는_훅은_알림이다(tmp_
 
 
 def test_사용자에게만_가는_systemMessage_는_notice_다() -> None:
-    """래퍼가 Stop 처럼 additionalContext 를 내지 않는 이벤트에서 지나갈 때의 출력이다(대기열
-    93)."""
+    """표의 훅이 사람에게만 알릴 때와, 래퍼가 Stop 처럼 additionalContext 를 내지 않는 이벤트에서
+    지나갈 때의 출력이다(대기열 93). additionalContext 가 함께 있으면 모델에게도 가므로 context
+    다."""
     assert outcome_of(0, json.dumps({"systemMessage": "x"}), "Stop") == "notice"
     both = json.dumps(
         {
@@ -478,8 +605,9 @@ def test_래퍼의_알림은_모델에게_닿는_이벤트에서_context_이고_
 
 
 def test_래퍼의_알림은_사용자에게_가는_systemMessage_가_없으면_context_여도_어긋남이다() -> None:
-    """outcome_of 는 additionalContext 만 있어도 context 다. 표의 훅은 systemMessage 를 내지 않으니
-    그 판정은 그대로 두고, 래퍼의 알림만 사용자 몫을 따로 본다(PR #122 CodeRabbit 2회차)."""
+    """outcome_of 는 additionalContext 만 있어도 context 다. 표의 context 사례는 사용자 몫을
+    요구하지 않으니(대부분의 훅은 모델에게만 알린다) 그 판정은 그대로 두고, 래퍼의 알림만 사용자
+    몫을 따로 본다(PR #122 CodeRabbit 2회차)."""
     specific = {"hookEventName": "PreToolUse", "additionalContext": "x"}
     model_only = json.dumps({"hookSpecificOutput": specific})
     both = json.dumps({"systemMessage": "x", "hookSpecificOutput": specific})
@@ -533,6 +661,39 @@ def test_origin_main보다_한_커밋_뒤처진_저장소를_만든다(tmp_path:
 
     assert git_line("symbolic-ref", "--short", "HEAD") == "chore/x"
     assert git_line("rev-list", "--count", "HEAD..origin/main") == "1"
+
+
+def test_일지_번호_저장소는_main_의_01_과_커밋하지_않은_새_일지_둘을_든다(tmp_path: Path) -> None:
+    """`${NUMBERED_REPO}` 는 hook_journal_retro 의 순번 대조 사례가 기대는 모양이다. main 과 같은
+    순번 01 은 발동, 다음 빈 순번 02 는 침묵이다."""
+    replacements = create_fixtures(tmp_path)
+    repo, today = replacements["NUMBERED_REPO"], replacements["TODAY"]
+
+    def git_lines(*args: str) -> list[str]:
+        result = subprocess.run(
+            ["git", "-C", repo, *args], check=True, capture_output=True, text=True
+        )
+        return result.stdout.split()
+
+    assert git_lines("ls-tree", "--name-only", "origin/main", "docs/journal/") == [
+        f"docs/journal/{today}-01-main.md"
+    ]
+    assert sorted(git_lines("ls-files", "--others", "docs/journal/")) == [
+        f"docs/journal/{today}-01-x.md",
+        f"docs/journal/{today}-02-y.md",
+    ]
+
+
+def test_열린_PR_저장소는_origin_에_브랜치_끝을_머리로_둔_PR_의_ref_를_든다(tmp_path: Path) -> None:
+    """`${OPEN_PR_REPO}` 는 hook_push_delete_open_pr 의 deny 사례가 기대는 모양이다."""
+    repo = create_fixtures(tmp_path)["OPEN_PR_REPO"]
+    result = subprocess.run(
+        ["git", "-C", repo, "ls-remote", "origin"], check=True, capture_output=True, text=True
+    )
+    refs = dict(line.split("\t")[::-1] for line in result.stdout.splitlines())
+
+    assert refs["refs/pull/7/head"] == refs["refs/heads/chore/x"]
+    assert "refs/pull/7/merge" in refs
 
 
 def test_main_저장소_둘은_커밋의_유무로_갈린다(tmp_path: Path) -> None:

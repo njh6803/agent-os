@@ -41,6 +41,9 @@ dev = [
     "httpx>=0.28",
     # 워크플로 하드닝의 판정자(ADR 0027). 판은 uv.lock 이 고정해 pre-commit 러너와 CI 가 같은 판을 돈다.
     "zizmor>=1.30.1",
+    # pre-commit 러너의 pytest 만 프로세스 여럿에 나눠 돌린다(ADR 0035). 손으로 치는 pytest 와 CI 는
+    # 한 프로세스다. 판은 uv.lock 이 고정한다.
+    "pytest-xdist>=3.8.0",
 ]
 
 [build-system]
@@ -56,7 +59,7 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "UP", "B", "DTZ", "TD"]
+select = ["E", "W", "F", "I", "UP", "B", "DTZ", "TD", "FBT"]
 # TD003(이슈 링크)은 로컬 트래커라 대신 TD002의 괄호에 티켓 경로를 쓴다: TODO(first-slice/03): ...
 ignore = ["TD003"]
 

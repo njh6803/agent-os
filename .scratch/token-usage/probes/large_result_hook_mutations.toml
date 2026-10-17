@@ -1,0 +1,152 @@
+# tools/hook_large_result.py(티켓 06)의 문턱·범위 판정·글자 수 셈과 배선을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/token-usage/probes/large_result_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문구의 "약" 은 시험이 재지 않는다.
+
+[[mutation]]
+name = "문턱과 같은 크기에도 알린다(초과가 아니라 이상)"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    if chars <= limit:'''
+new = '''    if chars < limit:'''
+
+[[mutation]]
+name = "Read 문턱을 3만 자로 올린다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''READ_LIMIT = 20_000'''
+new = '''READ_LIMIT = 30_000'''
+
+[[mutation]]
+name = "셸 문턱을 2만 자로 올린다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''SHELL_LIMIT = 10_000'''
+new = '''SHELL_LIMIT = 20_000'''
+
+[[mutation]]
+name = "Read 에 셸 문턱을 쓴다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''        limit = READ_LIMIT'''
+new = '''        limit = SHELL_LIMIT'''
+
+[[mutation]]
+name = "범위 판정에서 offset 을 뺀다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''        if "offset" in fields or "limit" in fields:'''
+new = '''        if "limit" in fields:'''
+
+[[mutation]]
+name = "범위 판정에서 limit 을 뺀다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''        if "offset" in fields or "limit" in fields:'''
+new = '''        if "offset" in fields:'''
+
+[[mutation]]
+name = "범위 판정을 없앤다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''        if "offset" in fields or "limit" in fields:
+            return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "Read 에 줄 번호 접두를 더하지 않는다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    return len(content) + sum(len(str(start + n)) + 1 for n in range(count))'''
+new = '''    return len(content)'''
+
+[[mutation]]
+name = "줄 번호를 startLine 이 아니라 1부터 센다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    return numbered_chars(content, start if isinstance(start, int) else 1)'''
+new = '''    return numbered_chars(content, 1)'''
+
+[[mutation]]
+name = "끝 줄바꿈 뒤의 빈 줄에 접두를 세지 않는다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    count = content.count("\n") + 1'''
+new = '''    count = len(content.splitlines())'''
+
+[[mutation]]
+name = "파일로 옮겨진 셸 출력을 0자로 세지 않는다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    if response.get("isImage") is True or "persistedOutputPath" in response:'''
+new = '''    if response.get("isImage") is True:'''
+
+[[mutation]]
+name = "그림인 셸 출력을 0자로 세지 않는다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    if response.get("isImage") is True or "persistedOutputPath" in response:'''
+new = '''    if "persistedOutputPath" in response:'''
+
+[[mutation]]
+name = "stderr 를 세지 않는다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''        for value in (response.get("stdout"), response.get("stderr"))'''
+new = '''        for value in (response.get("stdout"),)'''
+
+[[mutation]]
+name = "글 결과가 아닌 Read 도 본문을 센다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''    if response.get("type") != "text":
+        return 0
+    file = response.get("file")'''
+new = '''    file = response.get("file")'''
+
+[[mutation]]
+name = "settings.json 매처에서 PowerShell 을 뺀다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "red"
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''        "matcher": "Read|Bash|PowerShell",'''
+new = '''        "matcher": "Read|Bash",'''
+
+[[mutation]]
+name = "대조군: 알림 문구의 '약' 을 뺀다"
+tests = ["tests/tools/test_hook_large_result.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_large_result.py"
+old = '''의 결과가 약 {chars:,}자로'''
+new = '''의 결과가 {chars:,}자로'''

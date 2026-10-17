@@ -1,0 +1,26 @@
+# next-session 결정표의 하네스 chore 배치 줄이 열린 대기열 행을 세는 도구(대기열 167)를 가리키는 문장이 새 세션에
+# 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이 없다.
+# 병합 뒤에 다시 돌리려면 `# 최신 결과:` 줄의 대조군 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 대조군 주 체크아웃 `15c81d24`, 일지 2026-10-16-30).
+#   셀프 리뷰가 결정표 문장을 고친 뒤 카나리아와 질문을 바꿔 다시 돌린 결과다. 실험군 3회차의 "없음" 섞임은 답이
+#   그 문장을 옮긴 뒤 "없음으로 답하지 않았다"고 덧붙인 것이다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_queue_open_rows.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 하나를 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+결정표에서 다음 단계가 "하네스 chore 배치"인 줄의 "지금(병합 뒤)" 칸을 찾고, 그 칸의 마지막 문장을 글자 그대로
+옮겨라. 그 칸에 열린 항목을 셀 명령을 든 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["괄호 안에 든 진짜 대상이 있는지 본다"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

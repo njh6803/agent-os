@@ -39,6 +39,7 @@
 | `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
+| `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |
 | `.claude/rules/*.md` | 해당 경로의 파일을 Read 도구로 열 때 자동. Bash(`cat`·`sed`)로 읽으면 안 실린다 | 아래 로드 시점 표에 따라 |
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
@@ -49,7 +50,7 @@
 - 경계: `uv run lint-imports`
 - web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다. e2e는 `pnpm -C web/apps/admin exec playwright test`이고 CI의 `e2e` 잡이 돈다. 로컬에서는 중계·시작 래퍼·api-client·서버 라우트를 건드렸을 때 친다. 사진 비교는 `pnpm -C web visual`이고 CI의 `visual` 잡이 돈다. 로컬에서는 `packages/ui`를 건드렸을 때 Docker로 친다)
 
-게이트는 열셋(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. pre-commit도 그 다섯의 명령을 돌린다. 그래서 셀프 리뷰를 반영한 뒤 커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다. 갈음되지 않는 것은 위 괄호의 `-m llm`·e2e·사진 비교와, 출력에서 `Skipped`인 검사다. ruff는 스테이지된 `.py`만 보므로 `.py` 없이 ruff 설정이나 판만 바꾼 커밋에서 `Skipped`이고, `SKIP`으로 뺀 검사도 그렇다. 그것은 손으로 친다. 나머지 가운데 여섯은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`), 워크플로 감사(zizmor, ADR 0027)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 둘인 e2e와 사진 비교는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
+게이트는 열셋(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. pre-commit도 그 다섯의 명령을 돌린다(pytest만 프로세스를 나눠 돌고, 한 프로세스에서만 나는 실패는 CI가 본다. ADR 0035). 그래서 셀프 리뷰를 반영한 뒤 커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다. 갈음되지 않는 것은 위 괄호의 `-m llm`·e2e·사진 비교와, 출력에서 `Skipped`인 검사다. ruff는 스테이지된 `.py`만 보므로 `.py` 없이 ruff 설정이나 판만 바꾼 커밋에서 `Skipped`이고, `SKIP`으로 뺀 검사도 그렇다. 그것은 손으로 친다. 나머지 가운데 여섯은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`), 워크플로 감사(zizmor, ADR 0027)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 둘인 e2e와 사진 비교는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
 
 ## 작업 규약
 1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.

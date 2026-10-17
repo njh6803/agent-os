@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 from tools.canary import (
+    HEADLESS_ENV,
     AgentOutcome,
     Facts,
     GitView,
@@ -46,6 +47,7 @@ from tools.canary import (
     target_problems,
     view_problems,
 )
+from tools.hook_session_usage import HEADLESS_MARKER
 
 _규칙_명세 = '''
 kind = "rule"
@@ -121,7 +123,7 @@ def _스킬_본문(folder: Path) -> str:
     return _줄({"type": "user", "message": {"content": [{"type": "text", "text": text}]}})
 
 
-def _결과(text: str, subtype: str = "success", is_error: bool = False) -> str:
+def _결과(text: str, subtype: str = "success", *, is_error: bool = False) -> str:
     return _줄({"type": "result", "subtype": subtype, "is_error": is_error, "result": text})
 
 
@@ -285,8 +287,8 @@ def test_init이_없으면_도구는_None이다() -> None:
 
 
 @pytest.mark.parametrize(("subtype", "is_error"), [("error_max_turns", False), ("success", True)])
-def test_결과가_오류면_답_대신_오류를_적는다(subtype: str, is_error: bool) -> None:
-    facts = read_facts([_init(), _결과("멈췄다", subtype, is_error)])
+def test_결과가_오류면_답_대신_오류를_적는다(subtype: str, *, is_error: bool) -> None:
+    facts = read_facts([_init(), _결과("멈췄다", subtype, is_error=is_error)])
 
     assert facts.answer is None
     assert facts.error is not None and subtype in facts.error
@@ -500,7 +502,7 @@ def test_다른_체크아웃의_사본이_실리면_실패다(tmp_path: Path) ->
 
 @pytest.mark.parametrize("다른_스킬", [False, True])
 def test_실험군이_스킬을_불렀어도_그_스킬이_실린_자리가_없으면_실패다(
-    tmp_path: Path, 다른_스킬: bool
+    tmp_path: Path, *, 다른_스킬: bool
 ) -> None:
     """자리 줄을 뽑지 못하면 자리 판정이 조용히 빈다. 실험군은 그 스킬의 자리가 있어야 한다."""
     folders = (str(tmp_path / ".claude" / "skills" / "grilling"),) if 다른_스킬 else ()
@@ -1756,6 +1758,19 @@ def test_claude가_제한_시간을_넘기면_그_회차는_0이_아닌_코드�
     assert "시간" in result.stderr
 
 
+def test_띄운_세션의_환경에_헤드리스_표지를_붙인다(tmp_path: Path) -> None:
+    """세션 시작 훅(`tools/hook_session_usage.py`)이 이 표지가 있는 세션에서 요약의 표지를 가져가지
+    않는다(token-usage 티켓 04, 사용자가 골랐다). 훅은 이 도구를 import 하지 않아 이름을 따로
+    적는다."""
+    읽는_명령 = [sys.executable, "-c", f"import os; print(os.environ.get({HEADLESS_ENV!r}))"]
+
+    result = run_claude(읽는_명령, tmp_path, "")
+
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout.strip() == "1"
+    assert HEADLESS_ENV == HEADLESS_MARKER
+
+
 @pytest.mark.parametrize(
     "argv",
     [
@@ -2498,7 +2513,7 @@ def test_꺼낸_대조군_안의_링크를_끊지_못하면_걷지_않고_알린
 
 @pytest.mark.parametrize("등록", [True, False])
 def test_걷기에_실패하면_등록이_남았는지에_따라_걷는_법을_가른다(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, 등록: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, 등록: bool
 ) -> None:
     """git 2.32 는 폴더 지우기에 실패해도 등록을 먼저 지워, 등록 없는 폴더에 `git worktree remove`
     를 치면 `is not a working tree` 로 끝났다(PR 직전 bug-perf-review). git 을 가짜로 둔다."""

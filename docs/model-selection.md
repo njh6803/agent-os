@@ -16,7 +16,7 @@
 | 지시문으로 여는 새 세션 | 모델과 레벨 | `next-session` 결정표의 "모델" 칸. 지시문의 "모델" 줄로 옮기고 `tools/open_session.ps1`이 보내기 전에 입력창에서 고른다(ADR 0029). 레벨 스윕 동안 칸이 `Opus 5.5 / xhigh`인 구현·하네스 브랜치는 `tools/model_sweep.py`가 내는 갈래다(ADR 0029 이력 2026-10-13) |
 | 사람이 직접 여는 세션 | 모델과 레벨 | 새 세션 화면의 기본값. `open_session.ps1`은 지시문 세션을 연 뒤 그 기본값을 고르기 전의 값으로 되돌린다(ADR 0029) |
 | 프로젝트 서브에이전트 | 모델 | `.claude/agents/*.md`의 `model` 머리. 없으면 세션의 모델을 물려받는다(Claude Code 문서 model-config) |
-| `code-review`의 표준 축 서브에이전트 | 모델 | `.claude/skills/code-review/SKILL.md`. 소스 파일이 없는 변경에서 모델을 내린다 |
+| `code-review`의 표준 축 서브에이전트 | 모델과 노력 | `.claude/skills/code-review/SKILL.md`. 변경 종류와 상관없이 언제나 `sonnet`·`high`다(ADR 0033). 명세 축은 둘 다 받지 않아 세션의 모델을 물려받는다(노력도 물려받는다는 것은 ADR 0033의 어림) |
 | 카나리아 | 모델 | 카나리아 명세의 `model`(기본값은 `tools/canary.py`). 까닭은 `docs/constitution/operations.md` 환경 규약 상세 |
 | PR 봇 claude-review | 모델 | `.github/workflows/claude-code-review.yml`의 `claude_args`. 지금은 `--model`이 없다(워크플로를 읽었다). 어느 모델로 도는지는 실행 로그로 보지 않았다 |
 | 모델 판정 실험 | 판정자의 모델과 레벨 | `.scratch/harness/probes/session_cost/README.md`의 사전 등록. 이미 돌린 실험의 기록이라 모델이 바뀌어도 고치지 않는다 |
@@ -71,7 +71,7 @@
 - Sonnet 5.5는 `low`와 `medium`의 긴 에이전트 작업에서 끝내기 전에 멈추고 사용자에게 확인을 구하기 쉽고, `low`에서는 변경을
   검증하지 않고 끝났다고 할 수 있다. `xhigh`와 `max`에서는 끝난 뒤 스스로 검토를 더 돌리고 서브에이전트를 띄우기도
   한다(prompting-claude-sonnet-5-5). ADR 0029가 결정 때(2026-10-12) Sonnet 5.5 칸을 `high`로 둔 까닭이 앞의 것이다.
-- 앱의 노력 슬라이더는 0~4칸이 `low`~`max`이고 5칸은 레벨이 아닌 Ultracode다(ADR 0029). Ultracode는 큰 작업마다 동적
+- 앱의 노력 메뉴는 낮음~최대 다섯 칸이 `low`~`max`이고 여섯째 칸은 레벨이 아닌 Ultracode다(ADR 0029). Ultracode는 큰 작업마다 동적
   워크플로를 짜는 Claude Code 설정이다. `/effort`나 설정으로 켜고 끄면 레벨은 그대로이고, `--effort ultracode` 플래그로 켜면
   레벨도 `xhigh`가 된다(model-config).
 - 프롬프트에 `ultrathink`를 넣으면 그 턴에 더 깊이 생각하라는 지시가 더해질 뿐, API로 가는 레벨은 바뀌지 않는다(model-config).
@@ -184,7 +184,8 @@ PR 뒤 비용은 그 브랜치에 귀속된 응답 가운데 PR이 열린 시각
 - 문서 종류는 중앙값이 $2.4라 레벨을 내려도 덜 수 있는 금액이 작다.
 - PR을 연 뒤의 비용이 구현의 약 3할, 하네스의 약 3~4할이다. ADR 0029가 결정 때(2026-10-12) Sonnet 5.5를 둔 칸은 PR
   반영·병합만 남은 끊긴 작업이고, PR을 연 세션은 반영과 병합까지 한다(`next-session` 1단계). 그래서 이 몫의 대부분은 PR을 연
-  세션의 모델과 레벨로 돈다(어림). 이 몫만 낮은 모델로 돌리는 것은 레벨 스윕이 끝난 뒤의 후보다(ADR 0029 이력 2026-10-13).
+  세션의 모델과 레벨로 돈다(어림). 다만 세션 컨텍스트가 20만 토큰을 넘어 PR을 연 뒤 인계하면 PR 뒤의 몫은 인계로 연 세션의
+  모델로 돈다(스윕 브랜치는 그 갈래, 스윕 밖은 `Sonnet 5.5 / high`. `next-session` 결정표의 인계 줄, ADR 0033). 이 몫만 낮은 모델로 돌리는 것은 레벨 스윕이 끝난 뒤의 후보다(ADR 0029 이력 2026-10-13).
 
 ### 열기 전에 알 수 있는 지표
 
@@ -236,7 +237,7 @@ feature 밖의 브랜치 134개에서는 첫 사람 메시지의 글자 수 0.48
 다음 가운데 하나가 생기면 이 절을 돈다. 자동으로 알리는 훅은 없고, 알아챈 세션이나 사람이 시작한다.
 
 - 공식 모델 목록(models overview)에 새 모델이 오르거나, 결정표 칸의 모델에 은퇴가 다가온다.
-- 앱의 모델 메뉴나 노력 슬라이더가 바뀐다. `open_session.ps1`이 보내기 전에 멈추는 것으로 드러난다(ADR 0029의 결과 절).
+- 앱의 모델 메뉴나 노력 메뉴가 바뀐다. `open_session.ps1`이 보내기 전에 멈추는 것으로 드러난다(ADR 0029의 결과 절).
 - Claude Code가 레벨의 기본값이나 눈금을 바꾼다(model-config).
 - 결정표의 칸을 바꾸자는 제안이 나온다(사용자, 회고, 스윕의 결과).
 - 레벨 스윕의 기간이 끝났다. `tools/model_sweep.py`가 그날부터 stderr로 알린다.
@@ -252,7 +253,7 @@ feature 밖의 브랜치 134개에서는 첫 사람 메시지의 글자 수 0.48
    (지금의 `claude-sonnet-5-5`처럼). 단가표에 없는 모델의 응답은 비용에서 빠지고, `analyze.py`의 "단가표에 없는 모델의 응답"
    표지로 드러난다. 프롬프트 길이로 단가가 갈리는 모델(지금은 Haiku 5.5)은 표가 10만 토큰 이하의 단가만 들어, 그 모델로 긴
    세션을 돌리면 비용이 낮게 잡힌다. 그 모델을 칸에 두려면 길이의 갈래를 먼저 표에 더한다.
-4. **메뉴를 본다.** 새 모델의 메뉴 이름과 노력 슬라이더의 칸을 `composer_menu_tree.ps1`과 `composer_effort_labels.ps1`로 손으로
+4. **메뉴를 본다.** 새 모델의 메뉴 이름과 노력 칸을 `composer_menu_tree.ps1 -Effort`와 `composer_effort_labels.ps1`로 손으로
    보고(`.scratch/harness/probes/README.md`), 그 모델의 "모델" 줄로 시험 세션 하나를 열어 `get_session`이 모델과 레벨을 그대로
    보이는지 본다. ADR 0029가 같은 방법으로 시험 세션 여덟 개를 열었다. 그 모델이 Fable이면 이 시험 세션에서 사용 크레딧
    동의가 첫 턴을 멈추는지도 본다. 멈추면 결정표 칸에도 스윕의 갈래에도 두지 않는다(ADR 0029 이력 2026-10-13).

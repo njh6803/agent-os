@@ -29,6 +29,7 @@ from agent_os.sdk import (
     ApprovalGranted,
     ConversationSummarized,
     Event,
+    FailureCause,
     Json,
     LlmCalled,
     RunFailed,
@@ -41,7 +42,8 @@ from agent_os.sdk import (
 )
 
 # 실패 항목의 문구. 요약 실패도 도구 서버 기동 실패도 같은 문구 하나다 — 예외 원문은 서버 기록과
-# 트레이스에만 있다. 실패 원인을 항목에 싣는 것은 end-user-continuation 이 더한다(ADR 0031).
+# 트레이스에만 있다. 원인이 기록된 실패면 항목의 원인(`FailedItem.cause`)이 그 종류를 들고, 원인마다
+# 보일 말을 정하는 것은 web-widget 의 몫이다(ADR 0031).
 FAILED_MESSAGE = "실행이 실패로 끝났다"
 
 # 항목은 응답에만 실리므로 직렬화 스키마 하나만 계약에 선다. 직렬화하면 필드가 언제나 전부 실리는데
@@ -107,15 +109,20 @@ class FinishedItem(BaseModel):
     output: str
 
 
-# 최종 사용자에게 보여 줄 말과 운영자에게 알릴 식별자다. 예외 원문은 싣지 않는다(ADR 0023).
+# 최종 사용자에게 보여 줄 말과 운영자에게 알릴 식별자, 그리고 실패 원인이다. 예외 원문은 싣지
+# 않는다(ADR 0023). 원인은 트레이스의 run_failed 가 든 값 그대로이고 이벤트와 같은 값 집합 하나를
+# 가리킨다(ADR 0031). 원인이 기록되지 않은 실패는 null 이다. null 이나 모르는 값에 고정 문구로
+# 내려가는 것은 web-widget 의 몫이다(ADR 0031). 기본값을 두지 않는다 — 항목은 런타임이 짓는 것이라
+# 원인 없음도 투영이 적어 넣고, 필드는 거부 사유 `reason` 처럼 required 이며 null 을 허락한다.
 class FailedItem(BaseModel):
-    """실행이 실패로 끝났다. 고정 문구와 실행 식별자를 든다."""
+    """실행이 실패로 끝났다. 고정 문구와 실행 식별자와 실패 원인(없으면 null)을 든다."""
 
     model_config = _ITEM_CONFIG
 
     type: Literal["failed"] = "failed"
     message: str
     run_id: RunId
+    cause: FailureCause | None
 
 
 # 트레이스에 근거가 없는 유일한 항목이다. 구독이 등록부에 없고 결말도 없는 실행(서버가 다시 떠
@@ -159,8 +166,8 @@ def project(event: Event) -> EndUserItem | None:
             return DecidedItem(decision="deny", reason=reason)
         case RunFinished(output=output):
             return FinishedItem(output=output)
-        case RunFailed(run_id=run_id):
-            return FailedItem(message=FAILED_MESSAGE, run_id=run_id)
+        case RunFailed(run_id=run_id, cause=cause):
+            return FailedItem(message=FAILED_MESSAGE, run_id=run_id, cause=cause)
         case LlmCalled() | RunResumed() | ConversationSummarized():
             return None
         case _:

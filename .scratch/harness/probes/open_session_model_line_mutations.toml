@@ -48,7 +48,7 @@ old = "(?<effort>[A-Za-z]+)(?![A-Za-z])'"
 new = "(?<effort>[A-Za-z]+)$'"
 
 [[mutation]]
-name = "슬라이더 칸을 하나 밀어 준다"
+name = "노력 칸을 하나 밀어 준다"
 tests = ["tests/tools/test_open_session.py"]
 expect = "red"
 [[mutation.edit]]

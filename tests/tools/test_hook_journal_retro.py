@@ -4,22 +4,45 @@
 담을 때. 경로만 보던 동안 인용 하나를 고친 Edit 마다 계기가 울렸다(대기열 28 의 5회차와 일지 둘).
 그 뒤 대기열 62·74 로 더 좁혔다. 제목은 줄 머리의 것만이고, 절이 비었거나 자리 표시뿐이거나 Edit 가
 앞뒤에 같은 절을 옮겼을 뿐이거나 일지에 회고 절이 이미 있으면 단계를 닫은 것이 아니다.
+
+새 일지 파일의 순번 대조(대기열 232)는 `tools/sibling_overlap.py` 의 출력을 읽는다. 판정은 출력
+글로 재고, 출력의 꼴이 훅이 읽는 꼴과 같은지는 임시 저장소에서 그 도구를 실제로 돌려 본다.
 """
 
 from __future__ import annotations
 
+import os
+import subprocess
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from tools.hook_journal_retro import (
     CLOSING_HEADING,
+    NUMBER_LEAD,
+    JournalNumbers,
+    Overlap,
+    Unreadable,
     context_for,
+    created_journal,
     is_journal,
+    number_context,
     read_journal,
+    read_numbers,
+    run_overlap,
     section_body,
 )
+from tools.run_hooks import journal_repository
 
 JOURNAL = "C:\\project\\agent\\docs\\journal\\2026-09-21-first-slice.md"
+NEW = "C:\\x\\docs\\journal\\2026-10-07-03-hooks.md"
+
+
+def _output(following: str, ours: str | None = "2026-10-07-03") -> str:
+    """도구 출력의 두 줄(`tools/sibling_overlap.py` 의 `render`). `ours` 는 이 브랜치의 새 일지
+    순번이고, None 이면 새 번호가 없다."""
+    mine = f"이 브랜치의 새 번호: 일지 {ours}, 대기열 281" if ours else "이 브랜치의 새 번호 없음"
+    return f"다음 빈 번호(형제 포함): 일지 {following}, 대기열 282\n{mine}\n"
 
 
 def test_다음_절을_담은_Write_는_retro_계기_문장을_돌려준다() -> None:
@@ -194,3 +217,204 @@ def test_일지가_아닌_파일은_도구가_무엇이든_None이다() -> None:
     assert context_for("Edit", "docs/adr/0008-x.md", "## 다음") is None
     assert not is_journal("docs/journal/notes.txt")
     assert not is_journal("journal/2026-09-21.md")
+
+
+def test_새_일지를_만든_Write_만_순번을_대_본다() -> None:
+    """Write 의 결과 `type` 이 새 파일과 덮어쓰기를 가른다. Edit 의 결과에는 그 값이 없다(2026-10-16
+    claude 2.1.300, `.scratch/harness/probes/journal_number_hook/run.py` 의 A)."""
+    assert created_journal("Write", NEW, {"type": "create", "originalFile": None})
+    assert not created_journal("Write", NEW, {"type": "update", "originalFile": "# x\n"})
+    assert not created_journal("Edit", NEW, {"filePath": NEW, "originalFile": "# x\n"})
+    assert not created_journal("Write", "C:\\x\\docs\\adr\\0034-x.md", {"type": "create"})
+    assert not created_journal("Write", NEW, None)
+    assert not created_journal("Write", NEW, {})
+
+
+def test_도구_출력에서_다음_빈_번호와_새_번호와_옮길_번호를_읽는다() -> None:
+    """대기열 296. 출력 파싱을 순번 판정과 문장 조립에서 떼어 낸 함수다. 두 줄 가운데 하나를 읽지
+    못하면 그 까닭을 돌려준다."""
+    moves = "옮길 번호: 일지 2026-10-07-03 → 2026-10-07-05, 대기열 280 → 282\n"
+
+    assert read_numbers(_output("2026-10-07-06") + moves) == JournalNumbers(
+        "2026-10-07-06", frozenset({"2026-10-07-03"}), {"2026-10-07-03": "2026-10-07-05"}
+    )
+    assert read_numbers(_output("2026-10-07-04", None)) == JournalNumbers(
+        "2026-10-07-04", frozenset(), {}
+    )
+    assert read_numbers("번호 겹침 없음\n") == Unreadable("출력에서 다음 빈 번호를 읽지 못했다")
+    assert read_numbers(_output("2026-10-07-04").splitlines()[0]) == Unreadable(
+        "출력에서 이 브랜치의 새 번호를 읽지 못했다"
+    )
+
+
+def test_다음_빈_번호의_바로_앞_순번이면_알리지_않는다() -> None:
+    """만든 파일은 도구가 이 브랜치의 새 일지로 세므로, 맞는 순번이면 다음 빈 번호가 그 다음이다."""
+    assert number_context(NEW, Overlap(0, _output("2026-10-07-04"), "")) is None
+
+
+def test_형제와_겹친_순번은_도구가_옮길_번호와_move_를_알린다() -> None:
+    """`ls` 로 고른 번호가 형제의 일지와 겹쳤다(대기열 232, 일지 2026-10-13-33)."""
+    moves = "옮길 번호: 일지 2026-10-07-03 → 2026-10-07-05, 대기열 280 → 282\n"
+
+    context = number_context(NEW, Overlap(1, _output("2026-10-07-06") + moves, ""))
+
+    assert context is not None
+    assert context.startswith(NUMBER_LEAD)
+    assert "2026-10-07-05" in context
+    assert "--move" in context
+    assert "mv <옛> <새>" in context, "Write 로 새로 만들면 옛 파일이 번호를 쥐어 다시 알린다"
+
+
+@pytest.mark.parametrize(
+    ("파일", "다음", "새_번호"),
+    [
+        pytest.param(
+            "2026-10-06-01-hooks.md", "2026-10-07-02", "2026-10-07-02", id="날짜가_다르다"
+        ),
+        pytest.param("2026-10-07-01-hooks.md", "2026-10-07-05", "2026-10-07-05", id="둘_이상_앞"),
+    ],
+)
+def test_다음_빈_번호와_다르면_그_번호를_알린다(파일: str, 다음: str, 새_번호: str) -> None:
+    """날짜를 넘긴 세션이 시작한 날짜로 쓴 일지(일지 2026-10-12-05)와, 이름순으로 뒤인 형제의 일지를
+    두고 앞 번호를 고른 일지. 둘 다 도구의 옮길 번호에는 들지 않는다."""
+    key = 파일[:13]
+    context = number_context(f"C:\\x\\docs\\journal\\{파일}", Overlap(0, _output(다음, key), ""))
+
+    assert context is not None
+    assert context.startswith(NUMBER_LEAD)
+    assert 새_번호 in context
+    assert "--move" not in context
+
+
+def test_이미_있는_순번은_새_번호에_없어_다음_빈_번호를_알린다() -> None:
+    """merge-base 나 main 에 같은 순번의 일지가 있으면 도구는 만든 파일을 새 일지로 세지 않는다.
+    그래서 다음 빈 번호가 마침 그 바로 다음이 된다(실제 도구로 돌린 아래 테스트가 잡았다)."""
+    output = _output("2026-10-07-04", None)
+
+    context = number_context("C:\\x\\docs\\journal\\2026-10-07-03-hooks.md", Overlap(0, output, ""))
+
+    assert context is not None
+    assert "2026-10-07-04" in context
+    assert "--move" not in context
+
+
+def test_못_보는_것_빈_사이를_건너뛴_큰_순번은_지나간다() -> None:
+    """만든 파일이 그 날짜의 가장 큰 순번이면, 그 앞이 비었는지 도구의 출력으로는 가를 수 없다."""
+    name = "C:\\x\\docs\\journal\\2026-10-07-09-hooks.md"
+
+    assert number_context(name, Overlap(0, _output("2026-10-07-10", "2026-10-07-09"), "")) is None
+
+
+def test_순번_꼴이_아닌_일지_이름은_다음_빈_번호를_알린다() -> None:
+    context = number_context(
+        "C:\\x\\docs\\journal\\notes.md", Overlap(0, _output("2026-10-07-04", None), "")
+    )
+
+    assert context is not None
+    assert context.startswith(NUMBER_LEAD)
+    assert "2026-10-07-04" in context
+
+
+@pytest.mark.parametrize(
+    ("대조", "조각"),
+    [
+        pytest.param(None, "띄우지 못했거나", id="띄우지_못함"),
+        pytest.param(
+            Overlap(2, "", "형제를 대조하지 못했다. git fetch\n할 일: …\n"),
+            "git fetch",
+            id="종료_2",
+        ),
+        pytest.param(Overlap(0, "번호 겹침 없음\n", ""), "읽지 못했다", id="다음_줄_없음"),
+        pytest.param(
+            Overlap(0, "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 281\n", ""),
+            "읽지 못했다",
+            id="새_번호_줄_없음",
+        ),
+    ],
+)
+def test_대조하지_못하면_손으로_치라는_계기를_낸다(대조: Overlap | None, 조각: str) -> None:
+    """번호를 대 보지 못한 채 침묵하면 훅이 없던 때와 같다. 실패를 알리고 칠 명령을 준다."""
+    context = number_context(NEW, 대조)
+
+    assert context is not None
+    assert "대 보지 못했다" in context
+    assert 조각 in context
+    assert "uv run python tools/sibling_overlap.py" in context
+
+
+def _git(*args: str) -> None:
+    subprocess.run(["git", *args], check=True, capture_output=True, timeout=60)
+
+
+def _today() -> date:
+    return datetime.now().astimezone().date()
+
+
+def _write_journal(folder: Path, day: date, number: str, slug: str) -> Path:
+    journal = folder / "docs" / "journal" / f"{day.isoformat()}-{number}-{slug}.md"
+    journal.write_text(f"# {day.isoformat()} ({number}) {slug}\n", encoding="utf-8")
+    return journal
+
+
+@pytest.mark.parametrize(
+    ("하루_앞", "순번", "형제", "새_번호", "옮긴다"),
+    [
+        pytest.param(False, "02", None, None, False, id="다음_빈_번호"),
+        pytest.param(False, "01", None, "02", False, id="main_에_있는_순번"),
+        pytest.param(False, "02", "02", "03", True, id="형제_워크트리와_겹침"),
+        pytest.param(True, "05", None, "02", True, id="main_의_최신_일지보다_앞선_날짜"),
+    ],
+)
+def test_실제_도구의_출력을_읽어_순번을_가른다(
+    tmp_path: Path, *, 하루_앞: bool, 순번: str, 형제: str | None, 새_번호: str | None, 옮긴다: bool
+) -> None:
+    """훅이 읽는 출력의 꼴(`다음 빈 번호`·`이 브랜치의 새 번호`·`옮길 번호` 줄)이 도구가 내는 꼴과
+    같은지 본다. 형제는 커밋하지 않은 일지를 든 형제 워크트리다. 날짜를 넘긴 세션이 시작한 날짜로 쓴
+    일지(일지 2026-10-12-05)는 main 의 오늘 일지보다 이름순으로 앞이다. 자식의 stdout 은 파일로
+    받고 UTF-8 로 내게 하므로, 한글 줄이 깨지면 다음 빈 번호를 읽지 못해 실패 계기로 갈린다."""
+    today = _today()
+    repo = journal_repository(tmp_path, today.isoformat())
+    if 형제 is not None:
+        sibling = tmp_path / "sibling"
+        _git("-C", str(repo), "worktree", "add", "-q", "-b", "chore/sibling", str(sibling), "main")
+        _write_journal(sibling, today, 형제, "sibling")
+    day = today - timedelta(days=1) if 하루_앞 else today
+    journal = _write_journal(repo, day, 순번, "x")
+
+    overlap = run_overlap(journal.parent)
+    context = number_context(str(journal), overlap)
+
+    assert overlap is not None, "도구를 띄우지 못했다"
+    if 새_번호 is None:
+        assert context is None, context
+        return
+    assert context is not None, overlap.stdout
+    assert context.startswith(NUMBER_LEAD)
+    assert f"{today.isoformat()}-{새_번호}" in context
+    assert ("--move" in context) is 옮긴다
+
+
+def test_못_보는_것_같은_순번의_새_일지_둘은_하나로_접혀_지나간다(tmp_path: Path) -> None:
+    """거짓 음성이다. 도구가 순번을 열쇠로 읽어 둘이 하나로 접힌다. 같은 날의 순번 겹침은
+    `tests/test_journal_names.py` 가 커밋 전에 본다."""
+    today = _today()
+    repo = journal_repository(tmp_path, today.isoformat())
+    _write_journal(repo, today, "02", "a")
+    journal = _write_journal(repo, today, "02", "x")
+
+    assert number_context(str(journal), run_overlap(journal.parent)) is None
+
+
+def test_대조_자식은_PYTHONUTF8_없이도_UTF8_로_낸다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """훅 환경에 `PYTHONUTF8` 이 있다고 가정하지 않는다(`.claude/rules/tools.md`)."""
+    monkeypatch.delenv("PYTHONUTF8", raising=False)
+    monkeypatch.delenv("PYTHONIOENCODING", raising=False)
+    assert "PYTHONUTF8" not in os.environ
+    repo = journal_repository(tmp_path, _today().isoformat())
+
+    overlap = run_overlap(repo / "docs" / "journal")
+
+    assert overlap is not None
+    assert "다음 빈 번호(형제 포함)" in overlap.stdout

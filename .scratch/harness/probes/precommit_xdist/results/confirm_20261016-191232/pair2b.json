@@ -1,0 +1,1 @@
+{"name": "pair2b", "seconds": 326.3, "runner_code": 0, "missing": [], "passed": true, "other_failed": [], "workers": "8", "counts": {"passed": 3396, "warnings": 5}, "pytest_returncode": 0, "pytest_seconds": 287.22, "pytest_start": 1792145860.99975, "pytest_end": 1792146148.2181542}

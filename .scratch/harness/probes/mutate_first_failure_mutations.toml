@@ -1,0 +1,28 @@
+[[mutation]]
+name = "변이에 -x 를 붙이지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "뒤의_시험이_걸려도"]
+expect = "red"
+timeout = 300
+expect_output = ["assert 1 == 0"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            tests = [*tests, "-x"]  # 빨강은'''
+new = '''            tests = [*tests]  # 빨강은'''
+
+[[mutation]]
+name = "변이에 -x 를 붙이지 않고 test_b 가 자지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "뒤의_시험이_걸려도"]
+expect = "red"
+timeout = 300
+expect_output = ["assert not True"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            tests = [*tests, "-x"]  # 빨강은'''
+new = '''            tests = [*tests]  # 빨강은'''
+
+[[mutation.edit]]
+file = "tests/tools/test_mutate.py"
+old = '''    b"        time.sleep(60)\n"'''
+new = '''    b"        time.sleep(0)\n"'''

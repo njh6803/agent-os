@@ -8,7 +8,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''    if written is not None and path.read_bytes() != written:'''
+old = '''    if written is not None and _retrying(path.read_bytes, blocked) != written:'''
 new = '''    if False:'''
 
 [[mutation]]
@@ -19,13 +19,13 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
-    if written is not None and path.read_bytes() != written:
+    if written is not None and _retrying(path.read_bytes, blocked) != written:
         raise _WrittenMeanwhile
-    path.write_bytes(original)
+    _retrying(lambda: path.write_bytes(original), blocked)
     _drop_bytecode(path)'''
 new = '''
-    current = path.read_bytes()
-    path.write_bytes(original)
+    current = _retrying(path.read_bytes, blocked)
+    _retrying(lambda: path.write_bytes(original), blocked)
     _drop_bytecode(path)
     if written is not None and current != written:
         raise _WrittenMeanwhile'''

@@ -296,7 +296,7 @@ def _자식이_올린다(module: Path) -> AbstractContextManager[int]:
 
 
 @pytest.mark.parametrize("linked", [False, True], ids=["폴더_안_이름", "폴더_밖_하드링크"])
-def test_폴더_아래_모듈을_올린_자식_프로세스를_찾는다(tmp_path: Path, linked: bool) -> None:
+def test_폴더_아래_모듈을_올린_자식_프로세스를_찾는다(tmp_path: Path, *, linked: bool) -> None:
     """대기열 201. 윈도는 올린 모듈의 매핑 이름과 그 파일의 하드링크 이름을 본다. uv 의 `.venv` 는
     기본으로 캐시에서 하드링크로 채워져, 다른 체크아웃의 파이썬이 올린 `.pyd` 가 이 폴더의 이름도
     막는다. 갈래는 `.scratch/harness/probes/module_holder.py` 의 G·E 와 같다. 윈도 밖은 볼 수 없다고
@@ -750,7 +750,7 @@ _CONTROLS = bytes(range(1, 8)) * 4
     ],
 )
 def test_블롭_이름은_git_hash_object_와_같은_판별로_낸다(
-    repo: Path, data: bytes, text: bool
+    repo: Path, data: bytes, *, text: bool
 ) -> None:
     """`.gitattributes` 의 `* text=auto eol=lf` 가 있는 저장소에서 git 이 텍스트로 보는 내용은 CRLF
     를 LF 로 바꾼 이름을, 바이너리로 보는 내용은 그대로의 이름을 낸다. 도구의 판별이 그와 같다."""
