@@ -46,8 +46,9 @@ const isHex64 = (s) => typeof s === "string" && /^[0-9a-f]{64}$/.test(s);
 
 /** 저장소 쪽 바이트. 구하지 못하면 null. 커밋은 16진수 7~40자만 받아 `git show`가 옵션으로 읽을 값을 막는다. */
 function repoBytes(row) {
+  if (typeof row.repo !== "string") return null;
   if (row.commit) {
-    if (!/^[0-9a-f]{7,40}$/.test(row.commit) || row.repo.startsWith("-")) return null;
+    if (typeof row.commit !== "string" || !/^[0-9a-f]{7,40}$/.test(row.commit) || row.repo.startsWith("-")) return null;
     try {
       return execFileSync("git", ["show", `${row.commit}:${row.repo}`], { maxBuffer: 64 * 1024 * 1024 });
     } catch {

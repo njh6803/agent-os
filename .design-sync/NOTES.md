@@ -47,7 +47,8 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 편집자로 초대받은
   `read` 로 받은 sha256 과 맞대 고른다. 바뀐 파일만 보낸다. 단독 프로젝트에 올리지 않던 빌드 부산물은 올리지 않는다.
   빌드 몫의 경로(지울 수 있는 경로)는 지난 빌드에 있었고 이번 빌드에 없는 것이고, `files` 에 `"project/<경로>": null`
   로 지운다(형식의 `SKILL.md` 를 읽었다). `ds-bundle/` 은 빌드마다 새로 지어 지난 빌드의 목록이 남지 않으므로, 첫
-  동기화가 올린 경로의 목록을 이 폴더에 커밋하고 그 목록과 이번 빌드를 맞대 지울 것을 고른다. 빌드 부산물의 목록도
+  동기화가 맞춘 빌드 산출의 경로 전부(해시가 같아 보내지 않은 것도 넣고 빌드 부산물은 뺀다)를 이 폴더에 목록으로
+  커밋하고, 다음 동기화는 그 목록과 이번 빌드를 맞대 지울 것을 고른 뒤 목록을 새로 적는다. 빌드 부산물의 목록도
   첫 동기화가 적는다. 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는
   `manifest.json`, 단독 앱이 만든 `_ds_manifest.json`)과 색인이 가리키는 파일(`docs` 의 `readme`·`sections`, 지금은
   `project/README.md`·`project/guidelines/index.md`·`project/guidelines/web-design.md`)은 지우지 않는다. 한 번에 보내는

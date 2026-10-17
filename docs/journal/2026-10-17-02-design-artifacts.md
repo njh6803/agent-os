@@ -178,6 +178,21 @@ pre-commit 통과, ruff는 손으로 통과). 합친 뒤에도 표 검사, ADR �
     README에 적었다), `git show` 실패의 원인을 뭉뚱그린 것(종료 1이라 놓치지 않는다), 맞출지 가르는 `git diff`가
     `web/packages/ui/visual/**`도 잡는 것(빌드를 더 하는 안전한 쪽이다).
 
+## PR 리뷰
+
+PR #285. 연 뒤 main이 한 커밋 나아가 푸시가 막혀 다시 합쳤다(대기열 끝 330·331을 둘 다 남겼다).
+
+- claude-review: 계정의 주간 사용량 한도로 리뷰를 시작하지 못하고 빨갛게 끝났다(`gh_run_summary.py`의 결과가
+  `is_error: true`, `api_error`, "You've hit your weekly limit · resets Oct 18, 9pm (UTC)"). 지적이 아니라 리뷰 없음이다.
+  `wait_ci.py`가 그 빨강을 실패로 세어 `끝: 실패 claude-review`로 끝났다(대기열 327이 적은 동작). 검사는 모두 초록이다.
+- CodeRabbit 첫 회차: Minor 둘, 둘 다 고쳤다. NOTES의 경로 목록을 올린 것만이 아니라 첫 동기화가 맞춘 빌드 산출 전부
+  (해시가 같아 보내지 않은 것도)로 적게 했다. `hash_match.mjs`는 `repo`나 `commit`이 문자열이 아닌 줄에서 멈추지 않고
+  측정 아님으로 센다(`repo`가 빠진 임시 기록으로 측정 아님 1, 종료 1을 봤다).
+- 이 반영의 첫 커밋 시도에서 pre-commit의 pytest가 `tests/adapters/test_filesystem.py::test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안에서_성공한다`
+  하나로 빨갰다(1 failed, 3432 passed). 이 브랜치가 건드리지 않은 코드이고 그 테스트만 다시 돌리면 통과했다(41초).
+  ADR 0035가 시간에 민감해 부하에서 걸릴 수 있다고 적은 사례 셋의 하나이고("걸리면 그 사례만 고친다"), 이 PR 밖이라
+  고치지 않고 커밋을 다시 시도했다.
+
 ## 회고
 
 후보 여섯, 승인 둘(지금 반영 하나, 대기열 하나), 기각 넷, 넘김 없음.
