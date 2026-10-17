@@ -17,7 +17,7 @@ SDK 세션에서 침묵하므로, 물려주면 판정이 러너를 띄운 자리
 settings.json 이 그 훅에 준 `timeout`(초) 안에 끝나야 한다 — 넘기면 어긋남 `timeout` 이다. 러너는
 pre-commit 이 매 커밋 돌리므로 훅 하나가 멈추면 커밋도 멈춘다.
 
-페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 스물아홉 — `${ROOT}`(저장소 루트),
+페이로드 표는 `tools/hook_payloads.toml`. 문자열 값의 자리표시자 — `${ROOT}`(저장소 루트),
 `${USER_HOME}`(러너를 띄운 사용자의 홈. 사용자 설정 파일의 경로를 짓는다), `${TODAY}`(이 기계의 지역
 날짜. `tools/sibling_overlap.py` 의 오늘과 같다), `${NUMBERED_REPO}`(임시 bare 저장소를 origin 으로
 두고 main 에 오늘의 01 일지가 있으며, 작업 브랜치의 작업 트리에 커밋하지 않은 01·02 일지가 있는
@@ -52,14 +52,14 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
 것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다). 사례의
 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
-로 준다. 기대는 다섯. deny(`permissionDecision: deny`), block(`decision: block` 또는 종료 코드 2),
-context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는 `systemMessage` 하나.
-`additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료 0, 출력 없음).
-사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼 additionalContext·이유·
-systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자 그대로 찾는다. 판정의 종류만
-대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130, 일지 2026-10-06-15). 침묵
-사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이 칸은 표의 사례가 어느 동작을
-재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
+로 준다. 기대는 `Expectation` 의 값이다. deny(`permissionDecision: deny`), block(`decision: block`
+또는 종료 코드 2), context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는
+`systemMessage` 하나. `additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료
+0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼
+additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자 그대로
+찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130, 일지
+2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이 칸은
+표의 사례가 어느 동작을 재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
@@ -256,8 +256,8 @@ class NoticeResult:
 
 
 def load_cases(path: Path = PAYLOADS, root: Path = ROOT) -> list[Case]:
-    """표를 읽는다. 기대가 다섯 밖이거나, 훅 파일이 `root` 의 `tools/` 에 없거나, 침묵 사례에
-    `contains` 가 있으면 ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
+    """표를 읽는다. 기대가 `Expectation` 밖이거나, 훅 파일이 `root` 의 `tools/` 에 없거나, 침묵
+    사례에 `contains` 가 있으면 ValueError — 침묵하는 훅에는 찾을 문장이 없다."""
     try:
         table = _Table.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
     except ValidationError as error:
@@ -351,7 +351,7 @@ def _replace(text: str, replacements: dict[str, str]) -> str:
 
 
 def outcome_of(returncode: int, stdout: str, event: str) -> str:
-    """훅의 종료 코드와 stdout 을 기대 다섯 중 하나로(또는 그 밖의 설명으로) 읽는다.
+    """훅의 종료 코드와 stdout 을 `Expectation` 의 값 하나로(또는 그 밖의 설명으로) 읽는다.
 
     `hookSpecificOutput` 은 `hookEventName` 이 있어야 하고(없으면 Claude Code 가 받지 않는 출력이라
     `output`) 그 값이 `event`(훅이 등록된 이벤트)와 같아야 한다(다르면 `event <이름>`). `notice` 는
