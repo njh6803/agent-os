@@ -167,7 +167,52 @@ open-session을 부른다 2026-10-17T06:14:33Z
 3432 통과). 읽기가 재시도 창(`_RETRY_DELAYS`, 합 31ms)을 다 쓰고도 `PermissionError`를 받아 `PluginError`로 끝났다. ADR 0035가
 시간에 민감한 사례로 든 셋 가운데 하나이고, 그 ADR 뒤 이 사례가 걸렸다고 적은 일지는 이것이 처음이다(`docs/journal`을
 grep했다). 같은 회차의 run-hooks는 250초, web-verify는 554초였다. 부하 탓이라는 것은 어림이다. 이 변경은 마크다운뿐이라
-ADR 0035대로 한 번 다시 커밋했다.
+ADR 0035대로 한 번 다시 커밋했다. 다시 친 커밋 `dc3ae91c`에서 ruff 둘은 `.py`가 없어 `Skipped`, 병렬 검사 여덟(check-instructions,
+zizmor, lint-imports, check-type-escapes, pyright, run-hooks, pytest 356.9초, web-verify)과 마크다운 표, 줄 구분 문자, 커밋 메시지가
+통과했고, 변이 표는 대상 파일이 없어 `Skipped`였다. 인용 대조는 저장소 밖 원문을 옮긴 둘(`scheduler.log`의 줄, 한도 문구)을
+경고했다.
+
+## 둘째 인계
+
+커밋 `dc3ae91c` 뒤 인계 훅이 세션 컨텍스트 290,769로 `커밋 뒤` 경계의 계기를 냈다. 이 세션은 `인계: 셀프 리뷰 직전`으로 열려
+같은 경계가 아니고, 범위가 PR과 병합까지이며, 이 일지에 `인계 못함` 줄이 없어 넘긴다. 이 세션(d4316239)의 제목은
+`feature/09-human-verification-checks`다. 이 절과 위 "다시 돌린 명령"의 결과 줄은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+남은 단계: 이 일지를 커밋하고 푸시한다. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. CodeRabbit CLI가
+안 되면 `/security-review`와 `bug-perf-review`, 밀 주장은 위 "셀프 리뷰" 절의 목록)를 돌리고 반영한 뒤 `/git-pr`로 PR을 연다.
+PR 본문과 마지막 보고에는 알리는 기준이 걸렸다는 것(30번째 호출 비의 중앙값 0.624, (나)는 작다)을 적어 사용자에게 알린다(명세
+축 Major의 반영). 봇 회차를 거쳐 워크트리 길(`next-session` "워크트리에서 병합할 때")로 병합하고 지시문을 낸다. claude-review는
+계정 주간 한도로 2026-10-18 21:00 UTC까지 돌지 않는다. `test_filesystem` 재시도 사례를 고치는 일은 이 티켓 밖이라 이 세션이
+따로 제안했다.
+
+지시문:
+
+```
+다음 작업: .scratch/token-usage/issues/09-human-verification.md. 첫 스케줄러 보고서·요약·인계 쌍 다섯의 확인을 PR로 병합한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/token-usage/issues/09-human-verification.md
+브랜치: feature/09-human-verification-checks
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-17-03-token-usage-human-verification-checks.md 의 "이어받은 세션", "둘째 인계", "다음"
+이어받을 상태: 인계: 커밋 뒤. 커밋 dc3ae91c까지 셀프 리뷰를 반영해 커밋했다(pre-commit 통과). 워크트리에 커밋하지 않은 일지 고침(셀프 리뷰 절의 pre-commit 결과 줄, 둘째 인계 절)이 있다. 남은 단계는 그 일지를 커밋하고 푸시한 뒤 PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절의 목록), /git-pr, 봇 회차, 워크트리 길의 병합이다. PR은 아직 없다. PR 본문과 마지막 보고에서 인계 비용의 알리는 기준이 걸렸다는 것을 사용자에게 알린다(일지 둘째 인계 절). 사람에게 물을 것(f8b8b538에서 경보 줄 옮기기)은 일지 "다음" 첫 항목이다. 일지 파일은 docs/journal/2026-10-17-03-token-usage-human-verification-checks.md
+확인할 선행 조건: claude-review와 카나리아의 claude -p는 계정 주간 한도로 2026-10-18 21:00 UTC까지 돌지 않는다. 앞 세션의 프로세스가 워크트리 잠금을 쥐고 남을 수 있다(대기열 326). pre-commit의 pytest에서 test_filesystem 재시도 사례가 부하로 빨갈 수 있다(ADR 0035, 일지 셀프 리뷰 절). 다시 커밋하면 된다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/09-human-verification-checks (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋과 리뷰어 둘이 모두 끝났다).
+`test_filesystem` 재시도 사례를 고치는 일은 새 작업 카드로 제안했다(사람이 시작한다).
+
+open-session을 부른다 2026-10-17T06:52:19Z
+
+## 셋째 세션
+
+둘째 인계로 연 세션(63d8ff5f)이 이어 썼다. 시작은 2026-10-17 06:54 UTC다.
+
+> 사용자: "/implement .scratch/token-usage/issues/09-human-verification.md" (위 둘째 인계의 지시문. 범위는 PR과 병합까지)
+
+`git worktree list`에서 이 브랜치의 자리에 `locked`가 없었고 `EnterWorktree(path)`가 거부 없이 들어갔다. `origin/main`은 여전히
+`aa93cf7b`라 합칠 것이 없다. `coderabbit auth status`가 `Seat: not assigned`라 PR 직전 리뷰는 대체 둘로 돈다.
 
 ## 회고
 
