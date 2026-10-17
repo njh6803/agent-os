@@ -925,7 +925,9 @@ class _DisabledReader(Protocol):
 
 
 def _read_while_past_cap(
-    plugins: _DisabledReader, running: Callable[[], bool]
+    plugins: _DisabledReader,
+    running: Callable[[], bool],
+    clock: Callable[[], float] = time.perf_counter,
 ) -> set[frozenset[PluginKey]]:
     """`_read_while` 와 같되, 재시도 상한을 다 쓰고도 파일이 잠겨 난 PluginError 는 넘어간다.
 
@@ -934,53 +936,57 @@ def _read_while_past_cap(
     전에 난 것은 재시도가 없거나 짧아진 것이고, 다른 까닭(반쪽 파일을 읽은 손상 등)은 시간과
     상관없이 빨강이라 그대로 던진다. 시간으로 가르려면 다섯 번 쉰 합이 31ms 보다 짧게 끝나는 일이
     없어야 하고, 그것은 `.scratch/harness/probes/precommit_xdist/retry_sleep_floor.py` 가 잰다(ADR
-    0035 의 2026-10-17 이력).
+    0035 의 2026-10-17 이력). clock 은 판정 시험이 경과 시간을 정하려고 바꾼다.
     """
     seen: set[frozenset[PluginKey]] = set()
     while True:
-        started = time.perf_counter()
+        started = clock()
         try:
             seen.add(plugins.read_disabled())
         except PluginError as error:
             locked = isinstance(error.__cause__, PermissionError)
-            if not locked or time.perf_counter() - started < RETRY_CAP_SECONDS:
+            if not locked or clock() - started < RETRY_CAP_SECONDS:
                 raise
         if not running():
             return seen
 
 
 # 위 판정이 넘기는 범위를 못 박는다. 실제 교체로는 상한 전의 실패도, 상한 뒤의 손상도 마음대로 만들
-# 수 없어(부하가 없으면 막힘이 상한 안에 풀린다) 늦게 실패하는 가짜로 부른다.
+# 수 없어(부하가 없으면 막힘이 상한 안에 풀린다) 바로 실패하는 가짜와 가짜 시계로 부른다. 실제로
+# 쉬게 하면 부하 아래에서는 0초를 쉬어도 상한을 넘길 수 있어 판정 시험이 흔들린다.
 @dataclasses.dataclass(frozen=True)
-class _LateFailure:
-    """`read_disabled` 가 delay 초를 쉰 뒤 cause 를 까닭으로 PluginError 를 던진다."""
+class _FailingReader:
+    """`read_disabled` 가 cause 를 까닭으로 PluginError 를 바로 던진다."""
 
     cause: Exception
-    delay: float
 
     def read_disabled(self) -> frozenset[PluginKey]:
-        time.sleep(self.delay)
         raise PluginError("가짜 실패") from self.cause
 
 
-def test_상한을_다_쓴_뒤의_잠김_PluginError_는_판정이_넘어간다() -> None:
-    late = _LateFailure(PermissionError(13, "잠김"), RETRY_CAP_SECONDS + 0.01)
+def _clock_after(elapsed: float) -> Callable[[], float]:
+    """처음 읽으면 0, 다음에 읽으면 elapsed 인 시계다. 판정은 읽기 한 번에 시계를 두 번 읽는다."""
+    return iter((0.0, elapsed)).__next__
 
-    assert _read_while_past_cap(late, lambda: False) == set()
+
+def test_상한을_다_쓴_뒤의_잠김_PluginError_는_판정이_넘어간다() -> None:
+    locked = _FailingReader(PermissionError(13, "잠김"))
+
+    assert _read_while_past_cap(locked, lambda: False, _clock_after(RETRY_CAP_SECONDS)) == set()
 
 
 def test_상한_전의_잠김_PluginError_는_판정이_던진다() -> None:
-    early = _LateFailure(PermissionError(13, "잠김"), 0.0)
+    locked = _FailingReader(PermissionError(13, "잠김"))
 
     with pytest.raises(PluginError, match="가짜 실패"):
-        _read_while_past_cap(early, lambda: False)
+        _read_while_past_cap(locked, lambda: False, _clock_after(RETRY_CAP_SECONDS - 0.001))
 
 
 def test_상한을_다_쓴_뒤라도_잠김이_아닌_PluginError_는_판정이_던진다() -> None:
-    broken = _LateFailure(ValueError("반쪽 파일"), RETRY_CAP_SECONDS + 0.01)
+    broken = _FailingReader(ValueError("반쪽 파일"))
 
     with pytest.raises(PluginError, match="가짜 실패"):
-        _read_while_past_cap(broken, lambda: False)
+        _read_while_past_cap(broken, lambda: False, _clock_after(RETRY_CAP_SECONDS + 0.01))
 
 
 def test_다른_스레드가_교체하는_동안의_읽기가_재시도_안에서_성공한다(root: Path) -> None:
@@ -1003,8 +1009,8 @@ def test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안�
 
     부하 아래에서는 다른 프로세스의 교체 하나가 상한보다 오래 파일을 쥐어, 읽기가 상한을 다 쓰고도
     PluginError 다. ADR 0017 이 받아들인 동작이라 그것은 넘어가고, 그 밖의 PluginError(상한 전의
-    것, 잠김이 아닌 까닭의 것)는 빨강이다. xdist 로 나눠 도는 pre-commit 에서 두 번 빨개져 이렇게
-    고쳤다. 재현과 원인은 ADR 0035 의 2026-10-17 이력이다.
+    것, 잠김이 아닌 까닭의 것)는 빨강이다. xdist 로 나눠 도는 pre-commit 에서 두 번 빨갰고, 실패의
+    모양이 남은 한 번이 이것이었다. 재현과 원인은 ADR 0035 의 2026-10-17 이력이다.
     """
     _write_agent(root, "calc")
     _operator_file(root, CALC_DISABLED)
