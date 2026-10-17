@@ -1,0 +1,28 @@
+# `.claude/rules/probes.md` 에 더한 두 항목(대기열 307 의 프로세스를 끄는 탐침, 331 의 바깥 스냅샷과 맞대는 프로브)이
+# `paths`(`.scratch/**/probes/**`)에 맞는 파일을 Read 로 열 때 실리는지.
+# 실험군은 이 명세를 부른 체크아웃의 프로브 파일, 대조군은 두 항목을 더하기 전 판(528bd257)의 같은 파일이다.
+# 카나리아는 두 항목에만 있는 조각이다.
+# 최신 결과: 사전 확인만 통과(2026-10-17, `--preflight --control-commit 528bd257`). 실제 회차는 계정 주간 한도로
+# 돌리지 못했다(일지 2026-10-17-15). 한도가 풀린 뒤 돌린다.
+# 돌리는 법: 워크트리 루트에서
+#   uv run python tools/canary.py --control-commit 528bd257 .scratch/harness/probes/canary/probes_rule_kill_and_snapshot.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데 (1) 측정 스크립트가 프로세스를 끄기 직전에 무엇을 보라는 문장과
+(2) 저장소 밖에서 가져온 파일과 저장소의 사본을 견주는 스크립트가 저장소 쪽을 어떻게 읽으라는 문장이 있으면,
+각각 그 문장을 글자 그대로 옮겨라. 읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면
+그 자리에 "없음"이라고만 적어라.
+'''
+expect = ["그 pid의 명령줄을 읽어", "그 스냅샷과 맞댄 커밋으로 고정한다"]
+source = ".claude/rules/probes.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+target = ".scratch/harness/probes/commit_msg_hook/time_hook.py"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+target = ".scratch/harness/probes/commit_msg_hook/time_hook.py"
