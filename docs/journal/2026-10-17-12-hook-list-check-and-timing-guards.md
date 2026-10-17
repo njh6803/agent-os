@@ -1,4 +1,4 @@
-# 2026-10-17 (09) 훅 목록 대조 시험, 시간 단언 여유 규칙, pre-commit 러너의 검사별 시간 제한을 들인다
+# 2026-10-17 (12) 훅 목록 대조 시험, 시간 단언 여유 규칙, pre-commit 러너의 검사별 시간 제한을 들인다
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 셋 가운데 첫째라 `tidy-checkouts`를 먼저 돌고 워크트리에 들어갔다.
 
@@ -65,8 +65,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 셋 가운�
 시작 프롬프트: 대기열 245·332·333(훅 목록 대조 시험, 시간 단언 여유 규칙, pre-commit 러너의 검사별 시간 제한)을 chore 한 PR로 반영한다. 각 행의 "어디로" 칸이 원천이고, 332는 306을, 333은 192를 함께 볼지 정한다
 브랜치: chore/hook-list-check-and-timing-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현과 변이·카나리아 사전 확인까지 마친 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review origin/main, 명세는 대기열 245·332·333 행과 이 일지)부터 한다. 332의 카나리아 실제 회차는 계정 주간 한도로 2026-10-19 06:00(KST) 뒤에 돌린다. 이 PR이 병합된 뒤 열 차례인 일은 334(손으로 치는 전체 검사를 러너로, ADR 0035 이력 초안을 보이고 사용자에게 다시 묻는다)와 336(스크래치 측정 알림 훅, 303·307·323 묶음과 함께)이고 일지 "다음"에 옮긴다. 일지는 docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
+읽을 것: docs/journal/2026-10-17-12-hook-list-check-and-timing-guards.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현과 변이·카나리아 사전 확인까지 마친 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review origin/main, 명세는 대기열 245·332·333 행과 이 일지)부터 한다. 332의 카나리아 실제 회차는 계정 주간 한도로 2026-10-19 06:00(KST) 뒤에 돌린다. 이 PR이 병합된 뒤 열 차례인 일은 334(손으로 치는 전체 검사를 러너로, ADR 0035 이력 초안을 보이고 사용자에게 다시 묻는다)와 336(스크래치 측정 알림 훅, 303·307·323 묶음과 함께)이고 일지 "다음"에 옮긴다. 일지는 docs/journal/2026-10-17-12-hook-list-check-and-timing-guards.md
 확인할 선행 조건: 주 체크아웃 미갱신일 수 있다: 첫 세션의 tidy-checkouts가 03 워크트리에서 gh TLS 시간 초과로 멈춰 병합된 워크트리 서른 남짓이 남았다(루트는 544d59ac로 당겼다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 형제 chore/filesystem-read-retry-under-load(아직 PR 없음)가 대기열 306·309 행과 ADR 0035 이력을 고치는 중이라 나중에 병합하는 쪽이 306 행의 글자 충돌을 푼다. 나란히 도는 337 세션이 tools/mutate.py의 try 블록을 고칠 수 있어 _kill_tree는 옮기지 않았다
 이번 요청 범위: PR과 병합까지
 ```
@@ -147,8 +147,8 @@ PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 문장):
 시작 프롬프트: 대기열 245·332·333(훅 목록 대조 시험, 시간 단언 여유 규칙, pre-commit 러너의 검사별 시간 제한)을 chore 한 PR로 반영한다. 각 행의 "어디로" 칸이 원천이고, 332는 306을, 333은 192를 함께 볼지 정한다
 브랜치: chore/hook-list-check-and-timing-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 199d3b52까지 했다(구현, 변이 아홉, 셀프 리뷰 두 축과 반영, pre-commit 모두 초록). 남은 단계는 origin/main(528bd257, .scratch/retro-queue.md 충돌 후보) 합치기, 푸시, PR 직전 리뷰(bug-perf-review 또는 coderabbit-review. 밀 주장은 일지 "셀프 리뷰"의 목록), PR, 봇 회차, 병합이다. 열린 PR은 없고 푸시하지 않았다. 332의 카나리아 실제 회차는 계정 주간 한도로 2026-10-19 06:00(KST) 뒤에 돌린다. 이 PR이 병합된 뒤 열 차례인 일은 334(손으로 치는 전체 검사를 러너로, ADR 0035 이력 초안을 보이고 사용자에게 다시 묻는다)와 336(스크래치 측정 알림 훅, 303·307·323 묶음과 함께)이고 일지 "다음"에 옮긴다. 일지는 docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
+읽을 것: docs/journal/2026-10-17-12-hook-list-check-and-timing-guards.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 199d3b52까지 했다(구현, 변이 아홉, 셀프 리뷰 두 축과 반영, pre-commit 모두 초록). 남은 단계는 origin/main(528bd257, .scratch/retro-queue.md 충돌 후보) 합치기, 푸시, PR 직전 리뷰(bug-perf-review 또는 coderabbit-review. 밀 주장은 일지 "셀프 리뷰"의 목록), PR, 봇 회차, 병합이다. 열린 PR은 없고 푸시하지 않았다. 332의 카나리아 실제 회차는 계정 주간 한도로 2026-10-19 06:00(KST) 뒤에 돌린다. 이 PR이 병합된 뒤 열 차례인 일은 334(손으로 치는 전체 검사를 러너로, ADR 0035 이력 초안을 보이고 사용자에게 다시 묻는다)와 336(스크래치 측정 알림 훅, 303·307·323 묶음과 함께)이고 일지 "다음"에 옮긴다. 일지는 docs/journal/2026-10-17-12-hook-list-check-and-timing-guards.md
 확인할 선행 조건: 앞 세션 둘의 프로세스가 살아 있으면 워크트리 잠금이 남아 EnterWorktree가 거부한다. 그때는 일지 밖의 미커밋 변경이 없는지 보고(일지의 인계 절은 커밋하지 않고 남겼다) git worktree unlock으로 푼다(일지 "이어받은 세션"). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 형제 chore/filesystem-read-retry-under-load(PR #288)가 대기열 306·309 행과 .scratch/harness/probes/README.md를 고쳐 나중에 병합하는 쪽이 306 행의 글자 충돌을 푼다. 나란히 도는 337 세션이 tools/mutate.py의 try 블록을 고칠 수 있어 _kill_tree는 옮기지 않았다
 이번 요청 범위: PR과 병합까지
 ```
@@ -176,3 +176,44 @@ CodeRabbit CLI는 좌석이 배정되지 않아(`Seat: not assigned`) 돌지 않
   - Nit: `pool.submit` 반복이 `try` 밖이다. **고쳤다.** `try` 안으로 옮겼다.
   - Nit: `stop()`이 잠금 밖에서 `kill_tree`를 불러 pid 재사용의 이론적 창이 있다. 두었다(보안 리뷰와 같은 판정).
 - `tests/tools/test_run_checks.py` 19 passed(145.53초. 홀로 8.56초였던 파일이라 다른 세션의 부하로 본다).
+
+## PR 회차
+
+PR #291을 열고 `@coderabbitai review`를 남겼다. CodeRabbit은 "Review skipped: manual review required for this OSS
+repository"로 건너뛰었고, claude-review는 계정 주간 한도로 리뷰를 시작하지 못했다(`usage_limit_reached`, "resets Oct 18,
+9pm (UTC)"). 그래서 봇 회차는 둘 다 0이다. 대기(`tools/wait_ci.py`)는 형제 #288이 먼저 병합되어 `끝: 충돌`로 끝났다.
+
+- origin/main(`80b3ccea`, #288)을 합쳤다. `.scratch/retro-queue.md`의 306·332·333 행이 글자 충돌이었다. 306은 이 브랜치가
+  넓힌 제목과 2026-10-16-50 회차에 #288이 더한 "같은 절차의 선례" 문장과 2026-10-17-10 회차를 합쳐 5회차로, 332는 #288의
+  7회차와 일지 목록에 이 브랜치의 반영 표지를 붙여, 333은 이 브랜치의 닫힘 판으로 풀었다.
+- 합치기 커밋의 첫 pre-commit은 `tests/tools/test_mutate.py`의
+  `test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세스까지_끝낸다` 하나로 빨갰다(pytest 322.9초, 1 failed 3446
+  passed). 306의 첫 사례이고 이 브랜치가 닿지 않는 파일이다. 같은 스테이지로 다시 친 커밋은 모든 검사가 통과했다.
+- `tools/sibling_overlap.py`가 이 일지(09)가 main의 최신 일지(10)보다 이름순으로 앞이라 알려, `--move`로 12로 옮겼다.
+
+## 회고
+
+후보 다섯, 승인 둘(새 행 하나, 회차로 셈 하나), 기각 셋, 넘김 0.
+
+1. **승인(새 행 342, 1회차).** `.claude/rules/tools.md`의 "기다리거나 되풀이하는 도구가 부르는 외부 명령에는 호출마다
+   시간 제한을 둔다"를 이 PR의 `run_one`이 멈춘 갈래(`process.communicate()`)에서 어겼고, 셀프 리뷰를 지나 PR 직전
+   `bug-perf-review`가 잡았다. 구현 때 실리는 rules를 어겨 리뷰가 잡은 사건이라 회차로 센다. 그 항목을 낸 대기열 행은
+   없어(일지 2026-10-13-38에서 바로 들었다) 새 행이다. 꼴(`subprocess`의 `run`·`communicate`·`wait`에 `timeout` 인자가
+   없다)이 고정되어 있어 사다리에서 검사 층으로 승인한다. 333도 같은 항목보다 먼저 지어진 도구에서 난 같은 꼴이다.
+2. **승인(306에 회차, 6회차).** 이 일지에서 306의 사례가 두 번 났다. 첫 커밋의 `test_filesystem` 교체 중 읽기(#288이 고친
+   것)와 합치기 커밋의 `test_mutate` Ctrl-C다. 열린 행이 처방한 사건이라 306에 이 일지 하나로 회차를 더했다.
+3. **기각.** 앱의 합치기 도구(`sync_with_base_branch`)가 이 워크트리를 앱이 만든 것이 아니라며 거부했다. 도구가 그 자리에서
+   알렸고 손으로 합치는 길이 메모리에 이미 있다.
+4. **기각.** CodeRabbit CLI의 좌석이 없었다. 리뷰 파이프라인의 대체 둘이 그 자리를 받는다.
+5. **기각.** 형제와 같은 대기열 행을 고쳐 글자 충돌이 났다. 인계 지시문과 `sibling_overlap.py`가 미리 알렸다.
+
+## 다음
+
+- 334: 손으로 치는 전체 검사를 러너(`uv run python tools/run_checks.py`)로 옮긴다. ADR 0035 이력 초안을 보이고 사용자에게
+  다시 묻는다. 이 PR(332·333)이 선행 조건이었다.
+- 336: 스크래치패드의 측정 스크립트에 `probes.md`를 알리는 계기 훅. 303·307·323 묶음과 한 PR로 한다.
+- 332의 카나리아 실제 회차(`.scratch/harness/probes/canary/tests_rule_timing_margin.toml`)를 계정 주간 한도가 풀린 뒤
+  (2026-10-19 06:00 KST) 돌리고 332를 닫는다.
+- `tools/mutate.py`의 `_kill_tree`와 `tools/run_checks.py`의 `kill_tree`를 하나로 모은다. 나란히 도는 337
+  (`chore/ruff-try-statements`)이 병합된 뒤의 몫이다.
+- 342: 외부 명령 호출에 시간 제한이 없는 꼴을 잡는 검사.
