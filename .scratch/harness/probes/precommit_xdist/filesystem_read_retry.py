@@ -47,12 +47,16 @@ PC 는 논리 CPU 16개다. `--pytest-loads P`(`test` 모드만)는 이 저장�
 동작), 이 프로브가 재는 것은 겹침뿐이다.
 
 표지(회차가 측정인지): 부하 프로세스가 회차가 끝날 때까지 살아 있었다, 자식의 `started` 시각이
-부모가 띄운 시각과 그 줄을 받은 시각 사이에 있다(한 축), `trace` 는 막힘이 하나 이상 있었다(재시도가
-실제로 돌았다). 표지가 없는 회차는 따로 세고, 하나라도 있으면 종료 코드가 1 이다. `--pytest-loads`
-는 pytest 가 끝나는 회차가 늘 하나 있어 1 로 끝난다. `test` 의 실패는 예외의 종류와 마지막 줄을
-남긴다. 재려는 실패의 모양은 `PluginError` 이고 마지막 줄이 `disabled.toml` 의 `[Errno 13]` 이다.
-어설션의 빨강은 메시지가 없어, 빨개진 줄의 코드와 읽기가 본 상태(`seen`, 꺼진 이름의 목록들)를
-남긴다. 시험 파일마다 위 잠김이 있었던 회차 수와, 그 가운데 통과한 회차 수를 따로 센다.
+부모가 띄운 시각과 그 줄을 받은 시각 사이에 있다(한 축), `trace` 는 막힘이 하나 이상 있었고(재시도가
+실제로 돌았다) 쓰는 쪽이 제때 끝나며 기록 파일을 남겼다(`toggler_ok`). 쓰는 쪽이 첫 줄을
+`FIRST_LINE_SECONDS` 안에 내지 않거나 교체를 마친 뒤 `TOGGLE_GRACE_SECONDS` 안에 끝나지 않으면 그
+회차를 끊는다. 자식이 멈추거나 기록 없이 죽어도 프로브가 끝없이 기다리거나 앞서 모은 회차를 잃지
+않게 하려는 것이다(PR #288 의 CodeRabbit 지적. 그 전의 판으로 돈 아래 결과에서는 이 갈래가 나지
+않았다). 표지가 없는 회차는 따로 세고, 하나라도 있으면 종료 코드가 1 이다. `--pytest-loads` 는
+pytest 가 끝나는 회차가 늘 하나 있어 1 로 끝난다. `test` 의 실패는 예외의 종류와 마지막 줄을 남긴다.
+재려는 실패의 모양은 `PluginError` 이고 마지막 줄이 `disabled.toml` 의 `[Errno 13]` 이다. 어설션의
+빨강은 메시지가 없어, 빨개진 줄의 코드와 읽기가 본 상태(`seen`, 꺼진 이름의 목록들)를 남긴다. 시험
+파일마다 위 잠김이 있었던 회차 수와, 그 가운데 통과한 회차 수를 따로 센다.
 
 돌리는 법: 저장소 루트에서 `uv run python <이 파일> <test|trace> N [--burners K]`. 이 파일은
 `.scratch/harness/probes/precommit_xdist/filesystem_read_retry.py` 다. 전체 결과 JSON 은 `--out` 에
@@ -69,10 +73,12 @@ import contextlib
 import importlib.util
 import json
 import os
+import queue
 import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 from collections.abc import Callable, Iterator
@@ -93,6 +99,9 @@ DISABLED = "disabled.toml"
 RETRY_WINDOW_NS = 31_000_000
 CAP_SECONDS = RETRY_WINDOW_NS / 1_000_000_000
 TOGGLE_SECONDS = 0.3
+# `trace` 가 쓰는 쪽을 기다리는 상한. 첫 줄까지, 그리고 교체 시간(TOGGLE_SECONDS) 뒤 끝나기까지다.
+FIRST_LINE_SECONDS = 30.0
+TOGGLE_GRACE_SECONDS = 30.0
 
 BURNER = "while True:\n    pass\n"
 # 쓰는 쪽 프로세스의 우선순위 등급(윈도). 다른 OS 에는 이 상수가 없어 모두 0 이다.
@@ -137,7 +146,7 @@ print(capped, flush=True)
 """
 
 
-def kill_tree(proc: subprocess.Popen[bytes]) -> None:
+def kill_tree(proc: subprocess.Popen[bytes] | subprocess.Popen[str]) -> None:
     """프로세스와 그 자식을 끝낸다. `pytest -n` 의 일꾼은 자식이라 `kill` 만으로는 남는다."""
     if proc.poll() is not None:
         return
@@ -348,16 +357,18 @@ def trace_once(module: ModuleType, root: Path, priority: str) -> dict[str, objec
         text=True,
         creationflags=PRIORITY[priority],
     )
-    assert toggler.stdout is not None
-    first = toggler.stdout.readline().split()
+    line = first_line(toggler, FIRST_LINE_SECONDS)
     after = time.perf_counter_ns()
+    first = (line or "").split()
     started = int(first[1]) if len(first) == 2 and first[0] == "started" else -1
     one_axis = before <= started <= after
+    in_time = line is not None
+    deadline = time.monotonic() + TOGGLE_SECONDS + TOGGLE_GRACE_SECONDS
     plugins = FilesystemPlugins(root)
     failed_calls: list[int] = []
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(Path, "read_text", traced)
-        while True:
+        while in_time:
             call += 1
             try:
                 plugins.read_disabled()
@@ -365,17 +376,39 @@ def trace_once(module: ModuleType, root: Path, priority: str) -> dict[str, objec
                 failed_calls.append(call)
             if toggler.poll() is not None:
                 break
-    toggler.wait(timeout=10)
-    toggled = json.loads(record_file.read_text(encoding="utf-8"))
-    record_file.unlink(missing_ok=True)
+            if time.monotonic() > deadline:
+                in_time = False
+    kill_tree(toggler)
+    try:
+        toggled = json.loads(record_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        toggled = None
+    finally:
+        record_file.unlink(missing_ok=True)
     return {
         "one_axis": one_axis,
+        "toggler_ok": in_time and toggled is not None,
         "calls": call,
         "failed_calls": failed_calls,
         "reads": reads,
-        "replaces": toggled["replaces"],
-        "capped": toggled["capped"],
+        "replaces": toggled["replaces"] if toggled is not None else [],
+        "capped": toggled["capped"] if toggled is not None else None,
     }
+
+
+def first_line(proc: subprocess.Popen[str], seconds: float) -> str | None:
+    """proc 의 첫 줄을 seconds 안에 받는다. 넘기면 None 이다. 막히는 `readline` 은 루프의 시간으로
+    끊지 못해 읽는 스레드에 맡긴다. 그 스레드는 daemon 이라 proc 를 끝내 파이프가 닫히면 함께
+    끝나고, 그러지 못해도 파이썬의 끝을 막지 않는다(`.claude/rules/probes.md`)."""
+    stream = proc.stdout
+    if stream is None:
+        return None
+    box: queue.Queue[str] = queue.Queue()
+    threading.Thread(target=lambda: box.put(stream.readline()), daemon=True).start()
+    try:
+        return box.get(timeout=seconds)
+    except queue.Empty:
+        return None
 
 
 def streaks(reads: list[tuple[int, int, int, str]]) -> list[tuple[int, int, int, int]]:
@@ -431,13 +464,16 @@ def run_trace_mode(runs: int, burner_count: int, priority: str) -> dict[str, obj
             assert isinstance(reads, list) and isinstance(replaces, list)
             found = streaks(reads)
             alive = all_alive(procs)
-            measured = bool(result["one_axis"]) and alive and bool(found)
+            measured = (
+                bool(result["one_axis"]) and bool(result["toggler_ok"]) and alive and bool(found)
+            )
             failed = result["failed_calls"]
             assert isinstance(failed, list)
             if not measured:
                 unmeasured += 1
                 reason = {
                     "one_axis": result["one_axis"],
+                    "toggler_ok": result["toggler_ok"],
                     "burners_alive": alive,
                     "replaces_ok": sum(1 for *_, outcome in replaces if outcome == "ok"),
                     "capped": result["capped"],
