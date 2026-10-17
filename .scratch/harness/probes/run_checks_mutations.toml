@@ -43,7 +43,7 @@ tests = ["tests/tools/test_run_checks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_checks.py"
-old = '''                    out.write(outcome.output)
+old = '''            out.write(outcome.output)
 '''
 new = ''''''
 
@@ -53,12 +53,12 @@ tests = ["tests/tools/test_run_checks.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/run_checks.py"
-old = '''                if not outcome.passed:
-                    failed = True
-                    out.write(outcome.output)'''
-new = '''                out.write(outcome.output)
-                if not outcome.passed:
-                    failed = True'''
+old = '''        if not outcome.passed:
+            failed = True
+            out.write(outcome.output)'''
+new = '''        out.write(outcome.output)
+        if not outcome.passed:
+            failed = True'''
 
 [[mutation]]
 name = "띄우지 못한 명령을 잡지 않는다"
@@ -110,8 +110,8 @@ tests = ["tests/tools/test_hook_bash_gate_pipe.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_gate_pipe.py"
-old = '''tools/(?:check_\w+|mutate|run_hooks|run_checks)\.py'''
-new = '''tools/(?:check_\w+|mutate|run_hooks)\.py'''
+old = '''tools/(?:check_\w+|mutate|run_hooks|run_checks|sibling_overlap)\.py'''
+new = '''tools/(?:check_\w+|mutate|run_hooks|sibling_overlap)\.py'''
 
 [[mutation]]
 name = "러너의 검사를 같은 id 의 다른 명령으로 다시 등록한다"

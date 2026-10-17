@@ -1,4 +1,4 @@
-# 2026-10-17 (11) ruff PLW0717 켜기 (대기열 337)
+# 2026-10-17 (13) ruff PLW0717 켜기 (대기열 337)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. `CODING_STANDARDS.md`의 "에러 처리와 정상 흐름을 분리한다" 가운데
 `try` 몸통의 길이를 린터 층(ruff preview 규칙 PLW0717)으로 옮기는 열린 대기열 행 337을 한 PR로 닫는다. 나란히 연 세 세션 가운데
@@ -229,7 +229,7 @@ PR 직전 리뷰에 밀 주장으로 넘길, 반영하며 새로 쓴 문장:
 시작 프롬프트: 대기열 337(ruff의 PLW0717로 try 블록의 문장 수를 재는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 켜기 전에 지금 위반 13곳을 하나씩 판정한다
 브랜치: chore/ruff-try-statements
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-11-ruff-try-statements.md (이 브랜치의 일지. 셀프 리뷰 절의 밀 주장 목록, 검사 절, 인계 절)
+읽을 것: docs/journal/2026-10-17-13-ruff-try-statements.md (이 브랜치의 일지. 셀프 리뷰 절의 밀 주장 목록, 검사 절, 인계 절)
 이어받을 상태: 인계: 커밋 뒤. 13곳 판정·수정, 설정, 표준 줄, 대기열 337 닫기, 셀프 리뷰 두 축의 반영까지 한 커밋에 담았고 pre-commit이 모두 통과했다. 일지의 검사·인계 절은 워크트리에 커밋하지 않은 채 있다. 남은 단계는 그 일지의 커밋, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 대체 둘. origin/main을 합친 뒤 /security-review, bug-perf-review 브리프에 일지의 밀 주장 목록), PR, 봇 회차, 병합, 회고, 다음 지시문이다. 아직 푸시하지 않았다
 확인할 선행 조건: 위반 자리 가운데 tools/mutate.py는 나란히 연 첫 세션의 333이 _kill_tree를 옮기거나 고치며 함께 만질 수 있어, 나중에 병합하는 쪽이 충돌을 푼다
 이번 요청 범위: PR과 병합까지
@@ -304,7 +304,7 @@ open-session을 부른다 2026-10-17T12:32:24Z
 시작 프롬프트: 대기열 337(ruff의 PLW0717로 try 블록의 문장 수를 재는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 켜기 전에 지금 위반 13곳을 하나씩 판정한다
 브랜치: chore/ruff-try-statements
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-11-ruff-try-statements.md (이 브랜치의 일지. 이어받기, PR 직전 리뷰, 인계 (PR 연 뒤) 절)
+읽을 것: docs/journal/2026-10-17-13-ruff-try-statements.md (이 브랜치의 일지. 이어받기, PR 직전 리뷰, 인계 (PR 연 뒤) 절)
 이어받을 상태: 인계: PR 연 뒤. PR #290을 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "인계 (PR 연 뒤)" 절은 워크트리에 커밋하지 않은 채 있어, 봇 회차의 반영 커밋에 함께 싣는다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다). 병합 뒤 회고와 다음 지시문이 남았다
 확인할 선행 조건: claude-review가 계정 주간 한도로 빨갈 수 있다(PR #287 본문에 2026-10-18 21:00 UTC에 풀린다고 적혔고, 이 PR에서는 아직 보지 않았다). 그러면 operations.md 리뷰 파이프라인 3대로 기다리지 않는다
 이번 요청 범위: PR과 병합까지
@@ -388,8 +388,8 @@ pre-commit이 모두 통과한 뒤(ruff 둘과 변이 표 원문은 바뀐 파�
 시작 프롬프트: 대기열 337(ruff의 PLW0717로 try 블록의 문장 수를 재는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 켜기 전에 지금 위반 13곳을 하나씩 판정한다
 브랜치: chore/ruff-try-statements
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-17-11-ruff-try-statements.md (이 브랜치의 일지. 봇 회차, 회고, 인계 (셋째 세션의 커밋 뒤), 다음 절)
-이어받을 상태: 인계: 커밋 뒤. 회고와 "다음"을 실은 커밋 e0c77163까지 했고 pre-commit이 모두 통과했으며 아직 푸시하지 않았다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. 푸시 뒤 @coderabbitai review를 새 세션이 남긴다. claude-review는 계정 주간 한도로 빨갛다(일지 "봇 회차"). 일지 docs/journal/2026-10-17-11-ruff-try-statements.md의 "인계 (셋째 세션의 커밋 뒤)" 절은 워크트리에 커밋하지 않은 채 있어, 봇 회차의 반영 커밋에 함께 싣는다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다). 병합 뒤 다음 지시문이 남았다
+읽을 것: docs/journal/2026-10-17-13-ruff-try-statements.md (이 브랜치의 일지. 봇 회차, 회고, 인계 (셋째 세션의 커밋 뒤), 다음 절)
+이어받을 상태: 인계: 커밋 뒤. 회고와 "다음"을 실은 커밋 e0c77163까지 했고 pre-commit이 모두 통과했으며 아직 푸시하지 않았다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. 푸시 뒤 @coderabbitai review를 새 세션이 남긴다. claude-review는 계정 주간 한도로 빨갛다(일지 "봇 회차"). 일지 docs/journal/2026-10-17-13-ruff-try-statements.md의 "인계 (셋째 세션의 커밋 뒤)" 절은 워크트리에 커밋하지 않은 채 있어, 봇 회차의 반영 커밋에 함께 싣는다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다). 병합 뒤 다음 지시문이 남았다
 확인할 선행 조건: CodeRabbit의 OSS 시간당 한도는 13:08:46Z 안내에서 22분 뒤에 풀린다고 했고, 풀렸는지는 보지 않았다. 다시 한도에 걸리면 operations.md 초록 착시 목록대로 PR 체크리스트의 PR 직전 리뷰가 보안·버그 축을 대신한다
 이번 요청 범위: PR과 병합까지
 ```
@@ -418,6 +418,20 @@ open-session을 부른다 2026-10-17T13:24:30Z
 - 합친 뒤 `tools/sibling_overlap.py`가 이 일지의 번호 08이 main의 최신 일지 10보다 이름순으로 앞선다고 1로 끝났다.
   `--move`로 11로 옮겼고, 인용은 대기열(227·326·327·337·341 행), 이 일지의 머리 줄, `pyproject.toml`의 주석에서 바뀌었다.
   다시 친 대조는 번호 겹침 없음이었다. PR 본문의 일지 경로 둘은 도구가 옮기지 않아 `gh pr edit`으로 고쳤다.
+- `5cf06a60`을 푸시하고 `@coderabbitai review`를 남긴 뒤의 대기도 `끝: 충돌`로 끝났다. 그새 #291(`9220d4a6`, 훅 목록 대조와
+  pre-commit 러너의 검사별 시간 제한)이 병합됐다. 대기열 충돌은 이 브랜치의 341과 main의 342를 번호 순으로 모두 남겨 풀었다.
+- 합친 트리에서 `uv run ruff check .`가 PLW0717 위반 하나를 냈다. #291이 `tools/run_checks.py`의 `run`에 들인 `try`(값 10)다.
+  기다리며 결과를 찍는 루프 전체를 `except BaseException`으로 감싸 Ctrl-C가 어느 문장에서 나도 자식을 끝낸다. 예외의 원천이
+  몸통 어디든 될 수 있어 일부러 넓게 감싼 것이므로 거짓 양성(의도한 넓이)으로 판정했다. 관찰 탐침 둘과 같은 처방으로 루프를
+  `_report`로 빼 `try`는 두 문장이 됐고, 감싸는 범위는 같다. 그 자리를 가리키는 `run_checks_mutations.toml`의 원문 둘을 새
+  들여쓰기로 고쳤고, 같은 표에서 main부터 어긋나 있던 `hook_bash_gate_pipe.py`의 원문 하나(정규식에 `sibling_overlap`이
+  더해졌다)도 커밋에 표가 실려 원문 검사에 걸리므로 함께 고쳤다. `tools/mutate.py`로 원문을 고친 변이 셋(`--since HEAD`)과
+  #291의 표의 Ctrl-C 변이(9)를 돌려 모두 기대대로 빨개졌고, 기준선의 `tests/tools/test_run_checks.py` 19개는 고친 코드로
+  통과했다. `uv run pyright tools/run_checks.py`는 0 errors였다. 합치기 커밋 `86874b81`의 pre-commit은 모두 통과했다.
+- 합친 뒤 `sibling_overlap.py`가 다시 이 일지가 main의 최신 일지 12보다 앞선다고 1로 끝나 `--move`로 13으로 옮겼다.
+- CodeRabbit은 `5cf06a60`에서 PR 전체(`80b3ccea`부터 그 헤드까지, 22개 파일)를 리뷰하고 `No actionable comments were generated`를
+  냈다. 이 PR에 낸 첫 리뷰라 첫 회차이고 지적은 없다. 안내가 시간당 한 번의 몫을 다 썼다고 해, 위 `run_checks.py` 수정은 다음
+  푸시에서 봇 리뷰를 받지 못한다. 그래서 그 증분을 `bug-perf-review`에 따로 맡겼다.
 
 ## 다음
 
@@ -426,3 +440,6 @@ open-session을 부른다 2026-10-17T13:24:30Z
 - `.scratch/web-widget/probes/nginx_relay/measure.py`는 nginx와 인증서가 필요해 고친 뒤 돌리지 않았다(PR "남긴 위험"). 그 탐침을
   다시 쓰는 세션이 먼저 돌려 본다.
 - 이 PR은 워크트리 길로 병합한다. 주 체크아웃 미갱신: 루트는 main.
+- 형제 워크트리 `full-checks-via-runner`가 `tools/run_checks.py`를 커밋하지 않은 채 고치고 있었다(`sibling_overlap.py`의 함께
+  고친 파일). 그쪽이 나중에 병합하면 이 브랜치가 `run`에서 뺀 `_report`와 글자 충돌이 날 수 있고, 이 PR이 켠 PLW0717이 그쪽의
+  새 `try`에도 걸린다.
