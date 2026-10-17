@@ -262,8 +262,8 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''        return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))'''
-new = '''        return measure(selected, root=root, runner=runner, out=out)'''
+old = '''    return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))'''
+new = '''    return measure(selected, root=root, runner=runner, out=out)'''
 
 [[mutation]]
 name = "다시 돌릴 번호를 내지 않는다"

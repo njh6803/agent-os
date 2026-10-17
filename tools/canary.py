@@ -173,7 +173,7 @@ import tomllib
 from collections.abc import Callable, Generator, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -475,20 +475,109 @@ def _outcome(agent: str, value: object) -> AgentOutcome:
     return AgentOutcome(agent, result.get("status", "상태 없음"), result.get("totalToolUseCount"))
 
 
-def read_facts(lines: Iterable[str]) -> Facts:
+@dataclass
+class _Reading:
+    """`read_facts` 가 줄을 차례로 읽으며 쌓는 것. 읽는 종류마다 메서드가 하나다."""
+
     tools: tuple[str, ...] | None = None
     servers: tuple[str, ...] = ()
     agents: tuple[str, ...] = ()
-    reads: list[str] = []
-    skills: list[str] = []
-    skill_dirs: list[str] = []
-    calls: list[str] = []
-    sub_turns = 0
-    sub_calls: list[str] = []
-    agent_calls: dict[str, str] = {}  # 본 세션의 Agent 호출 id 에서 subagent_type 으로
-    outcomes: list[AgentOutcome] = []
+    reads: list[str] = field(default_factory=list[str])
+    skills: list[str] = field(default_factory=list[str])
+    skill_dirs: list[str] = field(default_factory=list[str])
+    calls: list[str] = field(default_factory=list[str])
+    sub_turns: int = 0
+    sub_calls: list[str] = field(default_factory=list[str])
+    # 본 세션의 Agent 호출 id 에서 subagent_type 으로
+    agent_calls: dict[str, str] = field(default_factory=dict[str, str])
+    outcomes: list[AgentOutcome] = field(default_factory=list[AgentOutcome])
     answer: str | None = None
     error: str | None = None
+
+    def add(self, kind: str | None, raw: object) -> None:
+        """읽는 종류의 이벤트면 그 모양을 검증해 쌓는다. 어긋나면 ValidationError 가 올라간다."""
+        if kind == "system":
+            self._system(_SYSTEM.validate_python(raw))
+        elif kind == "assistant":
+            self._assistant(_TURN.validate_python(raw))
+        elif kind == "user":
+            self._user(_TURN.validate_python(raw))
+        elif kind == "result":
+            self._result(_RESULT.validate_python(raw))
+
+    def _system(self, system: _System) -> None:
+        if system.get("subtype") == "init":
+            self.tools = tuple(_canonical(name) for name in system.get("tools", []))
+            self.servers = tuple(_server_name(s) for s in system.get("mcp_servers", []))
+            self.agents = tuple(system.get("agents", []))
+
+    def _assistant(self, turn: _Turn) -> None:
+        if turn.get("parent_tool_use_id"):
+            self.sub_turns += 1
+            self.sub_calls += [
+                _canonical(block.get("name", "?"))
+                for block in _blocks(turn)
+                if block.get("type") == "tool_use"
+            ]
+            return
+        for block in _blocks(turn):
+            if block.get("type") != "tool_use":
+                continue
+            name = _canonical(block.get("name", "?"))
+            arguments = block.get("input", {})
+            if name == "Agent":
+                wanted = arguments.get("subagent_type")
+                agent = wanted if isinstance(wanted, str) else repr(arguments)
+                self.agent_calls[block.get("id", "")] = agent
+                self.calls.append(_agent_call(agent))
+                continue
+            self.calls.append(name)
+            if name == "Read":
+                path = arguments.get("file_path")
+                self.reads.append(path if isinstance(path, str) else repr(arguments))
+            elif name == "Skill":
+                skill = arguments.get("skill")
+                self.skills.append(skill if isinstance(skill, str) else repr(arguments))
+
+    def _user(self, turn: _Turn) -> None:
+        if turn.get("parent_tool_use_id"):
+            return
+        for block in _blocks(turn):
+            if block.get("type") == "text":
+                self.skill_dirs.extend(_SKILL_DIR.findall(block.get("text", "")))
+            called = block.get("tool_use_id")
+            if block.get("type") == "tool_result" and called in self.agent_calls:
+                value = turn.get("tool_use_result")
+                self.outcomes.append(_outcome(self.agent_calls[called], value))
+
+    def _result(self, result: _Result) -> None:
+        subtype = result.get("subtype", "")
+        text = result.get("result", "")
+        if subtype == "success" and not result.get("is_error", False):
+            self.answer, self.error = text, None
+        else:
+            self.answer, self.error = None, f"{subtype or '결과 없음'}: {text}"
+
+    def facts(self, malformed: Sequence[str]) -> Facts:
+        return Facts(
+            self.tools,
+            self.servers,
+            tuple(self.reads),
+            tuple(self.skills),
+            tuple(self.skill_dirs),
+            self.answer,
+            self.error,
+            tuple(malformed),
+            agents=self.agents,
+            calls=tuple(self.calls),
+            sub_turns=self.sub_turns,
+            sub_calls=tuple(self.sub_calls),
+            outcomes=tuple(self.outcomes),
+        )
+
+
+def read_facts(lines: Iterable[str]) -> Facts:
+    reading = _Reading()
     malformed: list[str] = []
     for number, line in enumerate(lines, 1):
         raw = _json_object(line)
@@ -497,76 +586,10 @@ def read_facts(lines: Iterable[str]) -> Facts:
         kind: str | None = None
         try:
             kind = _HEAD.validate_python(raw).get("type")
-            if kind == "system":
-                system = _SYSTEM.validate_python(raw)
-                if system.get("subtype") == "init":
-                    tools = tuple(_canonical(name) for name in system.get("tools", []))
-                    servers = tuple(_server_name(s) for s in system.get("mcp_servers", []))
-                    agents = tuple(system.get("agents", []))
-            elif kind == "assistant":
-                turn = _TURN.validate_python(raw)
-                if turn.get("parent_tool_use_id"):
-                    sub_turns += 1
-                    sub_calls += [
-                        _canonical(block.get("name", "?"))
-                        for block in _blocks(turn)
-                        if block.get("type") == "tool_use"
-                    ]
-                    continue
-                for block in _blocks(turn):
-                    if block.get("type") != "tool_use":
-                        continue
-                    name = _canonical(block.get("name", "?"))
-                    arguments = block.get("input", {})
-                    if name == "Agent":
-                        wanted = arguments.get("subagent_type")
-                        agent = wanted if isinstance(wanted, str) else repr(arguments)
-                        agent_calls[block.get("id", "")] = agent
-                        calls.append(_agent_call(agent))
-                        continue
-                    calls.append(name)
-                    if name == "Read":
-                        path = arguments.get("file_path")
-                        reads.append(path if isinstance(path, str) else repr(arguments))
-                    elif name == "Skill":
-                        skill = arguments.get("skill")
-                        skills.append(skill if isinstance(skill, str) else repr(arguments))
-            elif kind == "user":
-                turn = _TURN.validate_python(raw)
-                if turn.get("parent_tool_use_id"):
-                    continue
-                for block in _blocks(turn):
-                    if block.get("type") == "text":
-                        skill_dirs.extend(_SKILL_DIR.findall(block.get("text", "")))
-                    called = block.get("tool_use_id")
-                    if block.get("type") == "tool_result" and called in agent_calls:
-                        value = turn.get("tool_use_result")
-                        outcomes.append(_outcome(agent_calls[called], value))
-            elif kind == "result":
-                result = _RESULT.validate_python(raw)
-                subtype = result.get("subtype", "")
-                text = result.get("result", "")
-                if subtype == "success" and not result.get("is_error", False):
-                    answer, error = text, None
-                else:
-                    answer, error = None, f"{subtype or '결과 없음'}: {text}"
+            reading.add(kind, raw)
         except ValidationError as invalid:
             malformed.append(f"{number}번째 줄({kind or '종류 없음'}) {_where(invalid)}")
-    return Facts(
-        tools,
-        servers,
-        tuple(reads),
-        tuple(skills),
-        tuple(skill_dirs),
-        answer,
-        error,
-        tuple(malformed),
-        agents=agents,
-        calls=tuple(calls),
-        sub_turns=sub_turns,
-        sub_calls=tuple(sub_calls),
-        outcomes=tuple(outcomes),
-    )
+    return reading.facts(malformed)
 
 
 def _flat(text: str) -> str:

@@ -373,8 +373,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            running: list[str] = args.running'''
-new = '''            running: list[str] = []'''
+old = '''        running: list[str] = args.running'''
+new = '''        running: list[str] = []'''
 
 [[mutation]]
 name = "gh 실패를 0으로 끝낸다"
@@ -383,11 +383,11 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        return _remove_branch(root, listing, args.branch, args.tip, tools)
+old = '''        return _dispatch(args, root, listing, tools)
     except ToolError as error:
         print(error, file=sys.stderr)
         return 3'''
-new = '''        return _remove_branch(root, listing, args.branch, args.tip, tools)
+new = '''        return _dispatch(args, root, listing, tools)
     except ToolError as error:
         print(error, file=sys.stderr)
         return 0'''

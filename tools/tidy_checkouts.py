@@ -1817,23 +1817,28 @@ def main(
     except ToolError as error:
         print(error, file=sys.stderr)
         return 3
-    command: str = args.command
     try:
-        if command == "judge":
-            running: list[str] = args.running
-            return _judge_all(root, listing, running, tools)
-        if command == "remove":
-            return _remove(root, listing, args.path, args.branch, args.head, tools)
-        if command == "remove-stray":
-            return _remove_stray(root, listing, args.path, tools)
-        if command == "restore":
-            return _restore(root, listing, args.path, tools)
-        if command == "empty-trash":
-            return _empty_trash(root, tools)
-        return _remove_branch(root, listing, args.branch, args.tip, tools)
+        return _dispatch(args, root, listing, tools)
     except ToolError as error:
         print(error, file=sys.stderr)
         return 3
+
+
+def _dispatch(args: argparse.Namespace, root: Path, listing: list[Worktree], tools: Ops) -> int:
+    """하위 명령 하나를 돌리고 그 종료 코드를 돌려준다."""
+    command: str = args.command
+    if command == "judge":
+        running: list[str] = args.running
+        return _judge_all(root, listing, running, tools)
+    if command == "remove":
+        return _remove(root, listing, args.path, args.branch, args.head, tools)
+    if command == "remove-stray":
+        return _remove_stray(root, listing, args.path, tools)
+    if command == "restore":
+        return _restore(root, listing, args.path, tools)
+    if command == "empty-trash":
+        return _empty_trash(root, tools)
+    return _remove_branch(root, listing, args.branch, args.tip, tools)
 
 
 if __name__ == "__main__":

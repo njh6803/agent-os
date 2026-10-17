@@ -102,7 +102,8 @@ async def run_case(title: str, *, inside: bool) -> None:
     started = time.perf_counter()
     received: list[tuple[float, Item]] = []
     failure: BaseException | None = None
-    try:
+
+    async def consume() -> None:
         async with anyio.create_task_group() as group:
             send, receive = anyio.create_memory_object_stream[Item](100)
             if inside:
@@ -112,6 +113,9 @@ async def run_case(title: str, *, inside: bool) -> None:
             async with receive:
                 async for item in receive:
                     received.append((time.perf_counter() - started, item))
+
+    try:
+        await consume()
     except BaseException as error:  # noqa: BLE001 — 무엇이 새는지 보려는 자리다
         failure = error
     elapsed = time.perf_counter() - started

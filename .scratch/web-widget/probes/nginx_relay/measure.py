@@ -538,14 +538,16 @@ async def h2(port: int, target: str, *, cert: Path, limit_s: float) -> Exchange:
     deadline = time.monotonic() + limit_s
     try:
         while True:
-            message = await client.read(deadline - time.monotonic())
+            try:
+                message = await client.read(deadline - time.monotonic())
+            except TimeoutError:
+                exchange.end = "시간 초과"
+                break
             if message is None:
                 exchange.end = "h2_client 가 끝남"
                 break
             if stream.apply(message):
                 break
-    except TimeoutError:
-        exchange.end = "시간 초과"
     finally:
         client.kill()
         if not exchange.end_ms:
@@ -732,15 +734,16 @@ async def abort_case(ctx: Context, variant: str, closing: str, kind: str) -> Clo
     await writer.drain()
     received = b""
     error = ""
-    try:
-        while received.count(b"data: ") < needed:
+    while received.count(b"data: ") < needed:
+        try:
             chunk = await asyncio.wait_for(reader.read(65536), 30)
-            if not chunk:
-                error = "상류가 먼저 닫음"
-                break
-            received += chunk
-    except TimeoutError:
-        error = "30초 안에 프레임이 오지 않음"
+        except TimeoutError:
+            error = "30초 안에 프레임이 오지 않음"
+            break
+        if not chunk:
+            error = "상류가 먼저 닫음"
+            break
+        received += chunk
     if delay:
         await asyncio.sleep(delay)
     close_ms = now_ms()
