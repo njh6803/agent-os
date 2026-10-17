@@ -55,8 +55,10 @@ Design System 아티팩트의 `project/` 아래 같은 경로에 바뀐 파일�
 - njh6803의 Claude Code는 초대를 수락한 뒤 그 아티팩트를 편집 권한으로 읽고, 색인에 `lastChange`를 더해 썼다(손으로
   봤다. 판 `1792115455-aa71`이고 다시 받은 파일의 sha256이 올린 것과 같다, `hash_match.mjs`). 수락하기 전에는 도구가
   "artifact not found"를 낸다.
-- 올리기는 그 파일을 담은 PR이 main에 병합된 뒤에 하고, `lastChange`의 `via`에 main의 커밋을 적는다. 병합 전에
-  올리면 squash로 사라질 브랜치 커밋이 남는다.
+- 올리기는 그 입력을 바꾼 PR이 main에 병합된 뒤 main에서 빌드해 하고, `lastChange`의 `via`에 빌드한 main의 커밋을
+  적는다. 병합 전에 올리면 squash로 사라질 브랜치 커밋이 남고, 미리 지은 빌드를 올리면 그사이 병합된 변경이 빠진 채
+  `via`만 앞선다. 파일 몇 개만 올리면 `via`를 부분이라 적어 다음 동기화가 전체를 맞대게 한다(모양은
+  `docs/agents/issue-tracker.md` 화면 디자인 절).
 - 옮긴 배치(색인의 `editing: "off"`와 `source`)를 지키고, 화면의 "Finish the migration" 정리는 하지 않는다. 정리는
   파일을 아티팩트 형식의 배치로 다시 짜서 빌드와 경로가 맞지 않게 되고, 화면 편집을 켜 원천을 둘로 만든다.
 - 공식 안내대로라면 첫 쓰기로 단독 쪽과 갈라졌다. 다시 옮기기는 옮긴 뒤 Claude에서 바뀐 디자인 시스템을 그대로 두고

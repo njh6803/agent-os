@@ -33,25 +33,31 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 편집자로 초대받은
   `finalize_plan` writes 에 `foundations/**/*.html` 을 넣는다. 카드를 고쳤을 때와 새 프로젝트에 올릴 때 올린다.
 - 사용 규약 검사: 복사까지 마친 뒤 `node .design-sync/check-conventions.mjs`. 규약의 이름, 빼는 목록, 기초 카드와 목록
   타일의 변수와 복사를 함께 본다(아래 절들).
-- 아티팩트에 올리기(2026-10-16 부터): 맞출지는 `docs/agents/issue-tracker.md` 화면 디자인 절대로 커밋으로 가른다.
+- 아티팩트에 올리기(2026-10-16 부터): 맞출지와 `via` 의 모양은 `docs/agents/issue-tracker.md` 화면 디자인 절이 원천이다.
+  번들 `/design-sync` 스킬은 부르지 않는다(끝에 `DesignSync` 로 그만둔 단독 프로젝트에 올린다). 업로드 없이 빌드만
+  하는 driver 명령은 아직 적지 않았고, 첫 동기화가 그 스킬의 driver 를 읽어 빌드까지만 도는 명령을 여기 적는다.
+  빌드는 그 입력을 바꾼 PR 이 main 에 병합된 뒤 origin/main 을 체크아웃한 자리에서 하고, 올리기 전에
+  `git merge-base --is-ancestor <색인 via 의 커밋> HEAD` 로 옛 빌드로 되돌리지 않는지 본다.
   검사까지 마친 `ds-bundle/` 을 Artifact 도구의 `publish` 로 올린다. 호출은 `url` 이 아티팩트 주소, `root` 가
   `ds-bundle/` 의 절대 경로, `file_path` 가 보낼 파일 하나의 절대 경로(상대 경로는 거부된다), `files` 가 나머지이고
-  키는 `project/<경로>`, 값은 `root` 아래 `<경로>` 다(형식의 `SKILL.md` 의 "The calls" 를 읽었다). 업로드 없이 빌드만
-  하는 driver 명령은 아직 적지 않았다. 번들 `/design-sync` 스킬은 끝에 `DesignSync` 로 올리므로, 첫 동기화가 그 스킬의
-  driver 를 읽어 빌드까지만 도는 명령을 여기 적는다. 올릴 경로는 아티팩트의 파일 목록(`list` 의 `scope: "files"`)과
-  빌드 산출을 맞대 고른다. 단독 프로젝트에 올리지 않던 빌드 부산물은 올리지 않고, 그 목록도 첫 동기화가 적는다. 빌드가 `ds-bundle/` 로 그대로 옮기는 저장소 원본 다섯(기초 카드 넷과
-  `.claude/rules/web-design.md`)이 옮긴 아티팩트의 `project/<같은 경로>` 에 바이트까지 같게 있었다
-  (`.scratch/design-artifacts/probes/hash_match.mjs`). 빌드 산출 전체는 아직 맞대지 않았다.
-  바뀐 파일만 보낸다. 지난 빌드에 있었고 이번 빌드에 없는 경로는 `files` 에 `"project/<경로>": null` 로 지운다(형식의
-  `SKILL.md` 를 읽었다). 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는
-  `manifest.json`, 단독 앱이 만든 `_ds_manifest.json`)은 지우지 않는다. 한 번에 보내는 경로는 255 개까지이고, 크기는
-  디자인 시스템 형식의 `SKILL.md` 가 한 번에 16 MiB, Artifact 도구 설명이 한 번에 64MB 라고 적는다(둘 다 2026-10-16 에
-  읽었고 재지 않았다. 작은 쪽을 따른다). 바뀐 것은 아티팩트에서 `read` 로 받은 sha256 과 맞대 고른다. 마지막에 색인
-  `project/design-system.json` 을 다시 읽어 다른 값은 그대로 두고 `lastChange` 의 넷을 모두 새로 적어 보낸다. `by` 는
-  사람의 이름, `at` 은 지금, `via` 는 `agent-os main@<짧은 SHA>`(올린 파일을 담은 main 의 커밋. 그래서 올리기는 그 PR 이 병합된 뒤다), `note` 는
-  바뀐 것의 요약이다.
-  그사이 누가 저장해 거절되면 그 파일을 다시 읽어 바꾼 것을 다시 얹고 한 번 더 보내고, 또 거절되면 멈추고 사람에게
-  알린다(형식의 `SKILL.md` 의 "Revising a system"). 화면의 "Finish the migration" 정리는 하지 않는다(정리하면 경로가 빌드와 어긋난다). 목록 타일
+  키는 `project/<경로>`, 값은 `root` 아래 `<경로>` 다(형식의 `SKILL.md` 의 "The calls" 를 읽었다). 빌드가 `ds-bundle/` 로
+  그대로 옮기는 저장소 원본 다섯(기초 카드 넷과 `.claude/rules/web-design.md`)이 옮긴 아티팩트의 `project/<같은 경로>` 에
+  바이트까지 같게 있었다(`.scratch/design-artifacts/probes/hash_match.mjs`). 빌드 산출 전체는 아직 맞대지 않았다.
+  올릴 경로는 아티팩트의 파일 목록(`list` 의 `scope: "files"`)과 빌드 산출을 맞대 고르고, 바뀐 것은 아티팩트에서
+  `read` 로 받은 sha256 과 맞대 고른다. 바뀐 파일만 보낸다. 단독 프로젝트에 올리지 않던 빌드 부산물은 올리지 않는다.
+  빌드 몫의 경로(지울 수 있는 경로)는 지난 빌드에 있었고 이번 빌드에 없는 것이고, `files` 에 `"project/<경로>": null`
+  로 지운다(형식의 `SKILL.md` 를 읽었다). `ds-bundle/` 은 빌드마다 새로 지어 지난 빌드의 목록이 남지 않으므로, 첫
+  동기화가 올린 경로의 목록을 이 폴더에 커밋하고 그 목록과 이번 빌드를 맞대 지울 것을 고른다. 빌드 부산물의 목록도
+  첫 동기화가 적는다. 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는
+  `manifest.json`, 단독 앱이 만든 `_ds_manifest.json`)과 색인이 가리키는 파일(`docs` 의 `readme`·`sections`, 지금은
+  `project/README.md`·`project/guidelines/index.md`·`project/guidelines/web-design.md`)은 지우지 않는다. 한 번에 보내는
+  경로는 255 개까지이고, 크기는 디자인 시스템 형식의 `SKILL.md` 가 한 번에 16 MiB, Artifact 도구 설명이 한 번에 64MB 라고
+  적는다(둘 다 2026-10-16 에 읽었고 재지 않았다. 작은 쪽을 따른다).
+  마지막에 색인 `project/design-system.json` 을 다시 읽어 다른 값은 그대로 두고 `lastChange` 의 넷을 모두 새로 적어
+  보낸다. `by` 는 사람의 이름, `at` 은 지금, `via` 는 빌드한 main HEAD 의 `agent-os main@<짧은 SHA>`(빌드 산출 전체를 맞춘
+  때만. 파일 몇 개만 올리면 `agent-os 부분 main@<짧은 SHA>`), `note` 는 바뀐 것의 요약이다. 그사이 누가 저장해 거절되면
+  그 파일을 다시 읽어 바꾼 것을 다시 얹고 한 번 더 보내고, 또 거절되면 멈추고 사람에게 알린다(형식의 `SKILL.md` 의
+  "Revising a system"). 화면의 "Finish the migration" 정리는 하지 않는다(정리하면 경로가 빌드와 어긋난다). 목록 타일
   `thumbnail.html` 과 `_ds_needs_recompile` 은 옮긴 아티팩트의 파일 목록(판 `1792113436-f9ea`, `list` 의 `scope: "files"`
   를 손으로 봤다)에 없다. 올릴지는 첫 동기화가 본다.
 

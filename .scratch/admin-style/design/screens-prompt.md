@@ -10,7 +10,7 @@
 
 디자인 시스템 아티팩트(옮기기 전에는 단독 Claude Design의 프로젝트)에는 컴포넌트 카드, 기초 카드, 판단 기준(`.claude/rules/web-design.md`)이 있고 재탐색 디자인 파일(`.scratch/design-system/design/Agent OS Design System.dc.html`)의 패턴은 없다. 그래서 두 프롬프트는 패턴을 번호가 아니라 모양으로 적는다. 2026-10-16 명세 세션이 그 파일의 3절에서 옮겼고, 관리 화면의 결정과 어긋나는 규칙(거르기 지우기, 트레이스로 가는 링크)은 뺐다.
 
-1. **디자인 시스템을 맞춘다.** 그리기 직전에 디자인 시스템 아티팩트(https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH)를 `web/packages/ui`에 맞춘다. 맞출지는 날짜가 아니라 커밋으로 가르고(아티팩트 색인 `lastChange`의 `via`가 든 커밋 뒤로 빌드의 입력이 바뀌었는지), 바뀌었으면 `/design-sync`의 빌드로 `ds-bundle/`을 만들어 Claude Code가 편집자로 바뀐 파일만 올린다. 절차와 판을 맞대는 법은 `docs/agents/issue-tracker.md`의 화면 디자인 절과 `.design-sync/NOTES.md`의 "돌리는 법"이 원천이다. 맞대는 기록 파일은 이 기능의 `probes/`에 새로 둔다.
+1. **디자인 시스템을 맞춘다.** 그리기 직전에 디자인 시스템 아티팩트(https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH)를 `web/packages/ui`에 맞춘다. 맞출지는 날짜가 아니라 커밋으로 가르고(아티팩트 색인 `lastChange`의 `via`가 든 커밋 뒤로 빌드의 입력이 바뀌었는지), 바뀌었으면 `/design-sync`의 빌드로 `ds-bundle/`을 만들어 Claude Code가 편집자로 바뀐 파일만 올린다. 번들 `/design-sync` 스킬은 부르지 않는다(끝에 그만둔 단독 프로젝트로 올린다). 절차와 판을 맞대는 법은 `docs/agents/issue-tracker.md`의 화면 디자인 절과 `.design-sync/NOTES.md`의 "돌리는 법"이 원천이다. 맞대는 기록 파일은 이 기능의 `probes/`에 새로 둔다.
 2. **화면 아티팩트를 만든다.** njh4803이 Design 아티팩트를 만들고 njh6803을 편집자로 초대하며, njh6803이 수락한다. 디자인 시스템은 1의 아티팩트를 붙인다. Claude Code의 디자인 시스템 목록에는 다른 계정이 공유한 디자인 시스템이 나오지 않으므로(2026-10-16 손으로 봤다) Claude Code가 그릴 때는 그 주소를 이름으로 댄다. 양식이 뜨면 아래 "양식이 뜨면"의 짧은 답을 칸마다 넣고, 긴 글은 양식을 보낸 뒤 같은 대화에 넣는다.
 3. **와이어프레임을 그린다.** "1. 와이어프레임"을 그리는 쪽에 준다. 글이 잘리면 "그릴 화면" 앞과 뒤를 두 번에 나눠 넣는다.
 4. **안을 고른다.** 세션이 A·B를 그린 화면마다 다른 점을 정리해 추천을 맨 앞에 둔 선택 화면으로 묻고, 사람이 화면마다 하나를 고른다. 고칠 것이 있으면 대화로 더 요청한다. 고른 뒤 같은 대화에 "실행 하나는 A, 플러그인 목록은 B, 설정은 A로 골랐다. 고른 안을 디자인 파일 안의 쪽에 적어 줘"처럼 넣는다. 대화에만 남은 결과는 내보낸 파일에 실리지 않을 수 있다(`kickoff/prompting.md`).
@@ -96,7 +96,7 @@ Agent OS의 관리 화면을 와이어프레임으로 그려 줘. 관리 화면�
 3. **표를 만든다.** 이 폴더에 `README.md`를 만들고 `docs/agents/issue-tracker.md` 화면 디자인 절의 표를 둔다. 그 절대로 화면마다 한 줄이고, 한 파일에 화면이 여럿이면 파일 칸이 같은 줄이 여럿이다.
    - 근거 문서: `docs/adr/0026-design-system-is-one-package-judged-by-storybook.md`, `.scratch/plan.md`(admin-style 행), `.scratch/admin-style/design/screens-prompt.md`
    - 기준 커밋: 붙여 넣은 날의 그 근거 문서들의 커밋이다. 구하는 명령과 `--until`의 자리는 탐색 프롬프트의 "고른 뒤" 3과 같고, 칸에 "(어림)"을 붙인다.
-   - 동기화한 커밋: 아티팩트 색인 `lastChange`의 `via`(`agent-os main@<짧은 SHA>`)가 든 main의 커밋이다(`docs/agents/issue-tracker.md` 화면 디자인 절). `via`가 그 모양이 아니면 사람에게 묻는다.
+   - 동기화한 커밋: 아티팩트 색인 `lastChange`의 `via`(`agent-os main@<짧은 SHA>`)가 든 main의 커밋이다(`docs/agents/issue-tracker.md` 화면 디자인 절). `via`가 부분 올리기(`agent-os 부분 main@<짧은 SHA>`)면 그렇게 적고, 다른 모양이면 사람에게 묻는다.
    - 아티팩트: 화면 아티팩트의 주소와 받은 판 id다.
    - A·B를 그린 화면의 줄에는 고른 안을 함께 적는다. 디자인 파일에 적혀 있지 않으면 사람에게 묻는다.
 4. **명세를 쓴다.** to-spec 스킬의 차례대로 쓰고, 명세가 완성 화면을 가리킨다(ADR 0025). 그림이 이 프롬프트나 ADR 0026의 첫째 2026-10-12 이력과 다르면(없는 데이터를 그렸거나, 금지한 말을 썼거나, 새 아이콘을 썼으면) 명세 전에 사람에게 묻는다. 탐색용 가정은 명세가 결정으로 바꾸거나 다시 묻는다.
