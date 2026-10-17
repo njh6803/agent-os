@@ -461,6 +461,28 @@ expect = "silent"
 note = "줄 끝이 CRLF 인 마크다운 — LF 앞의 CR 은 줄 끝이다"
 payload = { tool_name = "Write", tool_input = { file_path = "${INVISIBLE_DIR}/crlf.md", content = "| a |" } }
 
+# --- hook_scratch_probe_rule (PostToolUse Write|Edit) ---
+# 경로는 이 훅을 만든 세션(2026-10-17, 데스크톱 앱)의 스크래치패드다. session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다 —
+# 넣으면 첫 실행 뒤로는 표지가 남아 침묵한다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_scratch_probe_rule.py"
+expect = "context"
+note = "스크래치패드에 Write 로 지은 측정 스크립트(대기열 323 의 꼴)"
+contains = [".claude/rules/probes.md"]
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\C--project-agent\\627ad275-7ef2-4b63-96e0-b8dabac0ed18\\scratchpad\\measure.py", content = "print(1)\n" } }
+
+[[case]]
+hook = "hook_scratch_probe_rule.py"
+expect = "silent"
+note = "같은 스크래치패드의 PR 본문 초안 — 실행 스크립트가 아니다"
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\C--project-agent\\627ad275-7ef2-4b63-96e0-b8dabac0ed18\\scratchpad\\pr-body.md", content = "## 요약\n" } }
+
+[[case]]
+hook = "hook_scratch_probe_rule.py"
+expect = "silent"
+note = "저장소의 프로브 — rules 의 paths 가 이미 싣는다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
+
 # --- hook_edit_during_commit (PostToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
 # 침묵은 같은 저장소의 주 체크아웃 파일이다. 커밋하는 워크트리가 그 폴더 아래에 있어도 다른 체크아웃이다.

@@ -1,0 +1,102 @@
+# tools/hook_scratch_probe_rule.py(대기열 336)의 판정과 표지를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/scratch_probe_rule_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "scratchpad 토막의 자리를 claude 다음 셋째로 묶지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''        parts[index] == "claude" and parts[index + 3] == "scratchpad"'''
+new = '''        parts[index] == "claude" and "scratchpad" in parts[index + 1 : -1]'''
+
+[[mutation]]
+name = "claude 토막을 요구하지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''        parts[index] == "claude" and parts[index + 3] == "scratchpad"'''
+new = '''        parts[index + 3] == "scratchpad"'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    parts = [part.casefold() for part in _SPLIT.split(path) if part]'''
+new = '''    parts = [part for part in _SPLIT.split(path) if part]'''
+
+[[mutation]]
+name = "확장자를 보지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    if Path(parts[-1] if parts else "").suffix not in SCRIPT_SUFFIXES:'''
+new = '''    if not parts:'''
+
+[[mutation]]
+name = "Edit 을 보지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "표지 이름에서 에이전트를 뺀다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = session_id'''
+
+[[mutation]]
+name = "폴더 자리의 파일을 이미 알린 것으로 읽는다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return True
+    try:
+        os.close('''
+new = '''    try:
+        os.makedirs(directory, exist_ok=True)
+        os.close('''
+
+[[mutation]]
+name = "표지가 이미 있어도 알린다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''    except FileExistsError:
+        return False'''
+new = '''    except FileExistsError:
+        return True'''
+
+[[mutation]]
+name = "알림에서 규칙 파일 경로를 뺀다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''전에 `.claude/rules/probes.md` 를'''
+new = '''전에 프로브 규칙을'''
+
+[[mutation]]
+name = "대조군: 알림 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_scratch_probe_rule.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_rule.py"
+old = '''"에이전트마다 한 번이다."'''
+new = '''"에이전트마다 한 번만 낸다."'''

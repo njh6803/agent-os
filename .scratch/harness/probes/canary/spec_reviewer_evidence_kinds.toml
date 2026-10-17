@@ -1,0 +1,27 @@
+# spec-reviewer 정의의 프로브 문단에 더한 문장(대기열 303, 보고의 근거를 종류로 가르고 임시 스크립트의 결과를
+# 손으로 본 것으로 적는다)이 새 세션의 서브에이전트에 실리는지.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 더하기 전 판(528bd257)이다. 옛 정의의 tools 줄은 새 판과 같다.
+# 최신 결과: 사전 확인만 통과(2026-10-17, `--preflight --control-commit 528bd257`). 실제 회차는 계정 주간 한도로
+# 돌리지 못했다(일지 2026-10-17-15). 한도가 풀린 뒤 돌린다.
+# 돌리는 법: 워크트리 루트에서
+#   uv run python tools/canary.py --control-commit 528bd257 .scratch/harness/probes/canary/spec_reviewer_evidence_kinds.toml <출력 디렉터리>
+kind = "agent"
+agent = "spec-reviewer"
+agent_tools = ["Read", "Grep", "Glob", "Bash"]
+question = '''
+spec-reviewer 서브에이전트를 Agent 도구로 한 번만 불러라. 서브에이전트에게 줄 프롬프트는 아래 단락 그대로다.
+
+도구를 하나도 쓰지 마라. 파일을 읽지 말고, 지금 네 지시문(시스템 프롬프트)에 적힌 것만 보고 답한다. 네가 저장소 밖에서 돌린 임시 스크립트의 결과를 보고에 어떻게 적으라는 문장이 있으면 글자 그대로 옮겨라. 지시문에 그런 문장이 없으면 '없음'이라고만 적어라.
+
+서브에이전트의 답을 고치거나 줄이지 말고 그대로 전하라.
+'''
+expect = ["커밋된 프로브가 아니라"]
+source = ".claude/agents/spec-reviewer.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
