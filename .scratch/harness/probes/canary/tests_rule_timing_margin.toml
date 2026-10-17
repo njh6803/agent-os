@@ -1,0 +1,27 @@
+# `.claude/rules/tests.md` 에 더한 항목(시간 단언의 상한은 홀로 잰 시간의 넉넉한 배수로 둔다, 대기열 332)이
+# `paths` 에 맞는 파일을 Read 로 열 때 실리는지.
+# 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 그 항목이 선례로 드는 이름 둘이다. 읽는 파일에는 둘 다 없다.
+# 최신 결과: 사전 확인(`--preflight`) 통과(2026-10-17, 이 PC, 두 갈래 모두 이 워크트리의 커밋 전 변경. 실제 회차의
+#   claude 판은 적어 두지 않았고 2026-10-17 21시의 판은 2.1.300이다). 실제 회차는 네 회차 모두 측정이 아니다. 계정 주간 한도로 세션이
+#   답하지 못했다("You've hit your weekly limit · resets Oct 19, 6am (Asia/Seoul)", 일지 2026-10-17-09). 한도가 풀린 뒤 돌린다.
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tests_rule_timing_margin.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 테스트의 시간 단언(몇 초 안에 돌아온다)의 상한을 어떻게 두라는 항목이 있으면,
+그 항목이 선례로 드는 이름(상수와 헬퍼)을 모두 백틱 안의 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["PACED", "_stops_growing"]
+source = ".claude/rules/tests.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tests/test_plugins_boundary.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

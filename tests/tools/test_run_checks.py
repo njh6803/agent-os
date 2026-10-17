@@ -12,6 +12,7 @@ import io
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -124,6 +125,107 @@ def test_띄우지_못한_명령도_실패로_알린다(tmp_path: Path) -> None:
 
     assert code == 1
     assert "not-a-program" in out.getvalue().decode()
+
+
+def _stops_growing(path: Path, within: float) -> bool:
+    """`within` 초 안에 파일이 1초 동안 자라지 않으면 참. 끝내기가 늦은 것과 끝내지 못한 것을
+    가르려고, 한 번만 견주지 않고 기한까지 거듭 견준다(대기열 306)."""
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        before = path.stat().st_size
+        time.sleep(1)
+        if path.stat().st_size == before:
+            return True
+    return False
+
+
+def test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패로_알린다(tmp_path: Path) -> None:
+    """pytest 작업 프로세스 여덟이 약 11시간 남아 커밋을 붙잡았다(대기열 333). 검사는 손자를
+    띄우고 120초 잔다. 손자는 검사의 출력 파이프를 물려받은 채 0.1초마다 표지 파일을 키운다.
+
+    제한(5초)은 부모와 손자가 뜨는 시간보다, 경과의 상한(60초)은 제한과 끝내기를 홀로 잰 시간보다
+    한참 넉넉하게 둔다(tests.md).
+    """
+    beat = tmp_path / "beat"
+    grandchild = (
+        "import pathlib, time\n"
+        "while True:\n"
+        f"    with pathlib.Path({str(beat)!r}).open('a') as f:\n"
+        "        f.write('.')\n"
+        "    time.sleep(0.1)\n"
+    )
+    parent = (
+        "import subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {grandchild!r}])\n"
+        "time.sleep(120)\n"
+    )
+    check = Check("stuck", (sys.executable, "-c", parent), timeout=5)
+    out = io.BytesIO()
+    start = time.monotonic()
+
+    code = run((check,), {}, tmp_path, out)
+
+    elapsed = time.monotonic() - start
+    text = out.getvalue().decode()
+    assert code == 1
+    assert "5초 시간 제한을 넘겼다" in text
+    assert elapsed < 60, f"돌아오기까지 {elapsed:.1f}초"
+    assert beat.exists(), "손자가 뜨기 전에 끊었다. 손자를 끝냈는지 재지 못한다"
+    assert _stops_growing(beat, within=15), "시간 제한 뒤에도 손자가 돈다"
+
+
+class _InterruptingOut(io.BytesIO):
+    """첫 줄을 쓰는 순간 Ctrl-C 처럼 `KeyboardInterrupt` 를 던지는 출력."""
+
+    def write(self, data: object, /) -> int:
+        raise KeyboardInterrupt
+
+
+def test_기다리는_도중_Ctrl_C_가_나면_남은_검사의_손자까지_끝낸다(tmp_path: Path) -> None:
+    """POSIX 에서 자식은 제 세션을 이끌어 터미널의 Ctrl-C 를 받지 못한다. 그래서 러너가 끝낸다.
+
+    빠른 검사는 손자의 표지 파일이 생긴 뒤에 끝나고, 그 결과를 찍는 순간 Ctrl-C 가 난다. 그래서
+    손자가 떴는지를 시간에 기대지 않고 안다. 멈춘 검사의 제한(45초)은 러너가 끝내지 않을 때도
+    시험이 그때 돌아와 경과의 상한(30초)으로 빨개지게 하려는 것이다. 30초는 홀로 돈 이 시험의
+    경과보다 한참 넉넉하다(tests.md).
+    """
+    beat = tmp_path / "beat"
+    grandchild = (
+        "import pathlib, time\n"
+        "while True:\n"
+        f"    with pathlib.Path({str(beat)!r}).open('a') as f:\n"
+        "        f.write('.')\n"
+        "    time.sleep(0.1)\n"
+    )
+    stuck = (
+        "import subprocess, sys, time\n"
+        f"subprocess.Popen([sys.executable, '-c', {grandchild!r}])\n"
+        "time.sleep(120)\n"
+    )
+    waits = (
+        "import pathlib, time\n"
+        f"while not pathlib.Path({str(beat)!r}).exists():\n"
+        "    time.sleep(0.1)\n"
+    )
+    checks = (
+        Check("stuck", (sys.executable, "-c", stuck), timeout=45),
+        Check("quick", (sys.executable, "-c", waits)),
+    )
+    start = time.monotonic()
+
+    with pytest.raises(KeyboardInterrupt):
+        run(checks, {}, tmp_path, _InterruptingOut())
+
+    elapsed = time.monotonic() - start
+    assert elapsed < 30, f"Ctrl-C 뒤 돌아오기까지 {elapsed:.1f}초"
+    assert _stops_growing(beat, within=15), "Ctrl-C 뒤에도 손자가 돈다"
+
+
+def test_검사의_시간_제한은_관측_최대의_네_배_이상이다() -> None:
+    """관측 최대는 xdist 전 한 프로세스 pre-commit pytest 의 1,048초다(대기열 333, 부하 아래
+    web-verify 는 500초). 그보다 짧으면 부하 아래의 정상 실행을 멈춘 검사로 끊는다."""
+    assert CHECKS, "검사 목록이 비었다"
+    assert all(check.timeout >= 4 * 1048 for check in CHECKS)
 
 
 def _cli(path_dir: Path, skips: list[str]) -> subprocess.CompletedProcess[str]:

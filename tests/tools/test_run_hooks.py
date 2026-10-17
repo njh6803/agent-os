@@ -8,11 +8,14 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import get_args
 
 import pytest
+import tools.run_hooks as run_hooks_module
 from pydantic import JsonValue
 from tools.hook_session_usage import HEADLESS_MARKER
 from tools.run_hooks import (
@@ -90,7 +93,7 @@ def test_자리표시자는_표_안까지_바꾼다() -> None:
     }
 
 
-def test_표의_기대는_다섯_중_하나여야_한다(tmp_path: Path) -> None:
+def test_표의_기대는_Expectation_의_값이어야_한다(tmp_path: Path) -> None:
     table = tmp_path / "t.toml"
     table.write_text(
         '[[case]]\nhook = "hook_env_read.py"\nexpect = "warn"\npayload = { tool_name = "Bash" }\n',
@@ -99,6 +102,56 @@ def test_표의_기대는_다섯_중_하나여야_한다(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="expect"):
         load_cases(table)
+
+
+def _docstring_placeholders(docstring: str) -> set[str]:
+    """러너 독스트링의 자리표시자 문단(`자리표시자 —` 부터 사례의 `env` 문장 앞까지)이 드는 이름.
+
+    문단 밖의 `${CLAUDE_PROJECT_DIR}`(등록 명령의 전개)는 러너가 채우는 값이 아니라 뺀다.
+    """
+    head, tail = "자리표시자 —", "`env` 는 자리표시자를 바꾼 뒤"
+    assert head in docstring, f"독스트링에 자리표시자 문단의 머리({head})가 없다"
+    assert tail in docstring, f"독스트링에 자리표시자 문단의 끝({tail})이 없다"
+    start, end = docstring.index(head), docstring.index(tail)
+    return set(re.findall(r"\$\{([A-Z0-9_]+)\}", docstring[start:end]))
+
+
+def test_이_저장소의_러너_독스트링은_자리표시자와_같은_집합을_든다(tmp_path: Path) -> None:
+    """수 낱말을 두 PR 이 같이 고쳐 실제와 어긋난 채 합쳐졌다(대기열 245). 수 대신 집합을 견준다."""
+    with fixtures(tmp_path) as values:
+        keys = set(values)
+
+    assert keys, "자리표시자가 하나도 없다. fixtures 를 잘못 읽었다"
+    assert _docstring_placeholders(run_hooks_module.__doc__ or "") == keys
+
+
+def test_독스트링에서_자리표시자_하나를_빼면_잡는다() -> None:
+    docstring = run_hooks_module.__doc__ or ""
+    trimmed = docstring.replace("`${SEQ_3000}`", "`SEQ_3000`")
+
+    assert "SEQ_3000" in _docstring_placeholders(docstring)
+    assert "SEQ_3000" not in _docstring_placeholders(trimmed)
+
+
+def _table_expectations(table: str) -> tuple[str, ...]:
+    """표 머리의 `# 기대:` 줄에서 첫 마침표 앞의 `|` 로 가른 값."""
+    (line,) = [line for line in table.splitlines() if line.startswith("# 기대:")]
+    head = line.removeprefix("# 기대:").split(".", 1)[0]
+    return tuple(part.strip() for part in head.split("|"))
+
+
+def test_이_저장소의_표_머리의_기대는_러너의_기대와_같다() -> None:
+    """`notice` 를 더하며 러너만 고쳐 표 머리가 넷으로 남은 것을 PR 직전 리뷰가 잡았다(대기열
+    311)."""
+    table = PAYLOADS.read_text(encoding="utf-8")
+
+    assert _table_expectations(table) == get_args(Expectation)
+
+
+def test_표_머리의_기대에서_하나를_빼면_잡는다() -> None:
+    table = "# 기대: deny | block | context | silent. notice 는 …\n"
+
+    assert _table_expectations(table) != get_args(Expectation)
 
 
 def test_침묵_사례에는_찾을_문장이_없어_contains_를_받지_않는다(tmp_path: Path) -> None:

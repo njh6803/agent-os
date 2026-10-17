@@ -1,0 +1,98 @@
+# 대기열 245(훅 러너 독스트링의 자리표시자와 표 머리의 기대를 대조하는 저장소 상태 시험)와
+# 대기열 333(tools/run_checks.py 의 검사별 시간 제한)을 하나씩 깨는 변이.
+# 표지는 고른 단언이 실패할 때만 pytest 의 E 줄에 나오는 문구다(.claude/rules/probes.md).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_list_and_timing_guards_mutations.toml
+
+[[mutation]]
+name = "독스트링에서 자리표시자 하나를 뺀다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "자리표시자와_같은"]
+expect = "red"
+expect_output = ["Extra items in the right set"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''`${SEQ_3000}`(Bash'''
+new = '''`SEQ_3000`(Bash'''
+
+[[mutation]]
+name = "독스트링에 없는 자리표시자를 더한다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "자리표시자와_같은"]
+expect = "red"
+expect_output = ["Extra items in the left set"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''`${ROOT}`(저장소 루트)'''
+new = '''`${ROOT}`·`${GHOST}`(저장소 루트)'''
+
+[[mutation]]
+name = "표 머리의 기대에서 notice 를 뺀다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "머리의_기대는"]
+expect = "red"
+expect_output = ["At index 3 diff"]
+[[mutation.edit]]
+file = "tools/hook_payloads.toml"
+old = '''# 기대: deny | block | context | notice | silent.'''
+new = '''# 기대: deny | block | context | silent.'''
+
+[[mutation]]
+name = "러너의 기대에만 값을 더한다"
+tests = ["tests/tools/test_run_hooks.py", "-k", "머리의_기대는"]
+expect = "red"
+expect_output = ["Right contains one more item"]
+[[mutation.edit]]
+file = "tools/run_hooks.py"
+old = '''Expectation = Literal["deny", "block", "context", "notice", "silent"]'''
+new = '''Expectation = Literal["deny", "block", "context", "notice", "silent", "warn"]'''
+
+[[mutation]]
+name = "시간 제한을 검사의 값보다 한참 길게 기다린다"
+tests = ["tests/tools/test_run_checks.py", "-k", "손자까지_끝내고"]
+expect = "red"
+expect_output = ["AssertionError: 돌아오기까지"]
+timeout = 600
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''        output, _ = process.communicate(timeout=check.timeout)'''
+new = '''        output, _ = process.communicate(timeout=check.timeout + 90)'''
+
+[[mutation]]
+name = "시간 제한을 넘기면 자식만 끝낸다"
+tests = ["tests/tools/test_run_checks.py", "-k", "손자까지_끝내고"]
+expect = "red"
+expect_output = ["AssertionError: 시간 제한 뒤에도 손자가 돈다"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''        kill_tree(process)
+        output = _drain(process)'''
+new = '''        process.kill()
+        output = _drain(process)'''
+
+[[mutation]]
+name = "시간 제한을 넘긴 것을 알리지 않는다"
+tests = ["tests/tools/test_run_checks.py", "-k", "손자까지_끝내고"]
+expect = "red"
+expect_output = ["assert '5초 시간 제한을 넘겼다' in"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''        message = f"{check.timeout:g}초 시간 제한을 넘겼다. 프로세스 트리를 끝냈다\n".encode()'''
+new = '''        message = b""'''
+
+[[mutation]]
+name = "기본 시간 제한이 관측 최대의 네 배보다 짧다"
+tests = ["tests/tools/test_run_checks.py", "-k", "네_배"]
+expect = "red"
+expect_output = ["where False = all("]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''CHECK_TIMEOUT_SECONDS = 4200'''
+new = '''CHECK_TIMEOUT_SECONDS = 1200'''
+
+[[mutation]]
+name = "Ctrl-C 가 나도 남은 검사를 끝내지 않는다"
+tests = ["tests/tools/test_run_checks.py", "-k", "Ctrl_C"]
+expect = "red"
+expect_output = ["AssertionError: Ctrl-C 뒤 돌아오기까지"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''                running.stop()
+                raise'''
+new = '''                raise'''
