@@ -609,6 +609,20 @@ def test_Stop_알림은_다음_경계에서_넘어가고_넘기지_않는_때를
     assert "같은 경계" in notice
 
 
+def test_Stop_알림은_경계가_없는_일은_압축되니_새_세션에서_시키라고_적는다() -> None:
+    notice = notice_for(230_000)
+
+    assert "단계 경계가 없는 일" in notice
+    # 티켓 뒤에 받은 요청도 커밋하면 경계라(`boundary_of`) 괄호는 일의 종류가 아니라 조건을 든다.
+    assert "셀프 리뷰·커밋·PR 없이 끝나는" in notice
+    assert "압축" in notice
+    assert "새 세션에서 시킨다" in notice
+    assert "티켓 작업 중이면 그대로 둔다" in notice
+    # 자동 압축 창은 저장소 밖 사용자 설정이라 그 값을 문장에 박지 않는다.
+    assert "400,000" not in notice
+    assert "40만" not in notice
+
+
 # --- 두 훅의 같음 ---
 
 
