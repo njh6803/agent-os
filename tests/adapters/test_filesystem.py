@@ -16,6 +16,7 @@ from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 
@@ -804,6 +805,11 @@ def test_PermissionError가_아닌_쓰기_실패는_다시_시도하지_않고_P
 # 빨개졌다).
 HOLD_SECONDS = 0.004
 TOGGLE_SECONDS = 0.3
+# 읽기 재시도의 설계 상한(ADR 0017 의 2026-09-27 첫 이력, 1·2·4·8·16ms 의 합). 어댑터의
+# `_RETRY_DELAYS` 를 읽지 않고 따로 둔다. 읽으면 재시도를 없애는 회귀가 판정의 문턱까지 0 으로
+# 만들어 지나간다. 상한의 크기 자체는 이 문턱이 못 박지 않는다(재시도 사이를 줄여도 막힘이 그 안에
+# 풀리면 초록이다). 쓰는 곳은 `_read_while_past_cap` 이다.
+RETRY_CAP_SECONDS = 0.031
 CALC_DISABLED = 'schema_version = "1"\nagent = ["calc"]\n'
 # 다른 프로세스가 파일을 연 채 잠깐 쥔다. 열었다는 신호를 표준 출력으로 보낸다.
 HOLDER = """
@@ -914,6 +920,75 @@ def _read_while(plugins: PluginSource, running: Callable[[], bool]) -> set[froze
             return seen
 
 
+class _DisabledReader(Protocol):
+    def read_disabled(self) -> frozenset[PluginKey]: ...
+
+
+def _read_while_past_cap(
+    plugins: _DisabledReader,
+    running: Callable[[], bool],
+    clock: Callable[[], float] = time.perf_counter,
+) -> set[frozenset[PluginKey]]:
+    """`_read_while` 와 같되, 재시도 상한을 다 쓰고도 파일이 잠겨 난 PluginError 는 넘어간다.
+
+    상한을 넘기면 PluginError 인 것이 ADR 0017 이 받아들인 동작이다. 넘기는 것은 둘을 모두 갖춘
+    것뿐이다. 까닭(`__cause__`)이 `PermissionError` 이고, 상한을 다 쓴 뒤에 났다. 상한을 다 쓰기
+    전에 난 것은 재시도가 없거나 짧아진 것이고, 다른 까닭(반쪽 파일을 읽은 손상 등)은 시간과
+    상관없이 빨강이라 그대로 던진다. 시간으로 가르려면 다섯 번 쉰 합이 31ms 보다 짧게 끝나는 일이
+    없어야 하고, 그것은 `.scratch/harness/probes/precommit_xdist/retry_sleep_floor.py` 가 잰다(ADR
+    0035 의 2026-10-17 이력). clock 은 판정 시험이 경과 시간을 정하려고 바꾼다.
+    """
+    seen: set[frozenset[PluginKey]] = set()
+    while True:
+        started = clock()
+        try:
+            seen.add(plugins.read_disabled())
+        except PluginError as error:
+            locked = isinstance(error.__cause__, PermissionError)
+            if not locked or clock() - started < RETRY_CAP_SECONDS:
+                raise
+        if not running():
+            return seen
+
+
+# 위 판정이 넘기는 범위를 못 박는다. 실제 교체로는 상한 전의 실패도, 상한 뒤의 손상도 마음대로 만들
+# 수 없어(부하가 없으면 막힘이 상한 안에 풀린다) 바로 실패하는 가짜와 가짜 시계로 부른다. 실제로
+# 쉬게 하면 부하 아래에서는 0초를 쉬어도 상한을 넘길 수 있어 판정 시험이 흔들린다.
+@dataclasses.dataclass(frozen=True)
+class _FailingReader:
+    """`read_disabled` 가 cause 를 까닭으로 PluginError 를 바로 던진다."""
+
+    cause: Exception
+
+    def read_disabled(self) -> frozenset[PluginKey]:
+        raise PluginError("가짜 실패") from self.cause
+
+
+def _clock_after(elapsed: float) -> Callable[[], float]:
+    """처음 읽으면 0, 다음에 읽으면 elapsed 인 시계다. 판정은 읽기 한 번에 시계를 두 번 읽는다."""
+    return iter((0.0, elapsed)).__next__
+
+
+def test_상한을_다_쓴_뒤의_잠김_PluginError_는_판정이_넘어간다() -> None:
+    locked = _FailingReader(PermissionError(13, "잠김"))
+
+    assert _read_while_past_cap(locked, lambda: False, _clock_after(RETRY_CAP_SECONDS)) == set()
+
+
+def test_상한_전의_잠김_PluginError_는_판정이_던진다() -> None:
+    locked = _FailingReader(PermissionError(13, "잠김"))
+
+    with pytest.raises(PluginError, match="가짜 실패"):
+        _read_while_past_cap(locked, lambda: False, _clock_after(RETRY_CAP_SECONDS - 0.001))
+
+
+def test_상한을_다_쓴_뒤라도_잠김이_아닌_PluginError_는_판정이_던진다() -> None:
+    broken = _FailingReader(ValueError("반쪽 파일"))
+
+    with pytest.raises(PluginError, match="가짜 실패"):
+        _read_while_past_cap(broken, lambda: False, _clock_after(RETRY_CAP_SECONDS + 0.01))
+
+
 def test_다른_스레드가_교체하는_동안의_읽기가_재시도_안에서_성공한다(root: Path) -> None:
     """읽기는 언제나 두 상태 가운데 하나를 본다. 반쪽 파일도, 500 도 없다. 관리의 GET 이
     스레드풀에서 읽는 사이 PUT 이 루프에서 쓰는 모양이다."""
@@ -930,7 +1005,13 @@ def test_다른_스레드가_교체하는_동안의_읽기가_재시도_안에�
 
 def test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안에서_성공한다(root: Path) -> None:
     """다른 `serve` 나 스크립트가 같은 파일을 쓰는 것이다. 나중에 쓴 쪽이 이기지만(스토리 44) 읽기는
-    어느 쪽이든 완전한 파일을 본다."""
+    어느 쪽이든 완전한 파일을 본다.
+
+    부하 아래에서는 다른 프로세스의 교체 하나가 상한보다 오래 파일을 쥐어, 읽기가 상한을 다 쓰고도
+    PluginError 다. ADR 0017 이 받아들인 동작이라 그것은 넘어가고, 그 밖의 PluginError(상한 전의
+    것, 잠김이 아닌 까닭의 것)는 빨강이다. xdist 로 나눠 도는 pre-commit 에서 두 번 빨갰고, 실패의
+    모양이 남은 한 번이 이것이었다. 재현과 원인은 ADR 0035 의 2026-10-17 이력이다.
+    """
     _write_agent(root, "calc")
     _operator_file(root, CALC_DISABLED)
     toggler = subprocess.Popen(
@@ -941,7 +1022,7 @@ def test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안�
     assert toggler.stdout is not None
     assert toggler.stdout.readline().strip() == "started"
 
-    seen = _read_while(_plugins(root), lambda: toggler.poll() is None)
+    seen = _read_while_past_cap(_plugins(root), lambda: toggler.poll() is None)
 
     assert toggler.wait(timeout=10) == 0
     assert seen == TOGGLED_STATES
