@@ -1,0 +1,45 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "notes": {
+      "files": {},
+      "name": "notes",
+      "order": []
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-16T01:16:56.463Z",
+    "v": 1
+  },
+  "docs": {
+    "readme": "project/README.md",
+    "sections": [
+      "project/guidelines/index.md",
+      "project/guidelines/web-design.md"
+    ]
+  },
+  "editing": "off",
+  "groups": [
+    "notes"
+  ],
+  "layout": "files",
+  "libraries": [],
+  "namespace": "AgentOsUi",
+  "sections": {},
+  "source": {
+    "app": "claude-design",
+    "exportedAt": "2026-10-16T01:16:56.463Z",
+    "map": "project/migration-map.json",
+    "projectId": "0a8386b7-e775-4145-97db-16d4de3a59c5",
+    "url": "https://claude.ai/design/p/0a8386b7-e775-4145-97db-16d4de3a59c5",
+    "v": 1
+  },
+  "title": "Agent OS 디자인 시스템",
+  "lastChange": {
+    "by": "Claude (njh6803 계정의 Claude Code)",
+    "at": "2026-10-16T01:50:45.163Z",
+    "via": "Claude Code · agent-os 편집자 쓰기 탐침",
+    "note": "2026-10-16 편집자 쓰기 탐침. 내용 파일은 바꾸지 않았다. 내용은 2026-10-14 /design-sync가 단독 Claude Design(0a8386b7)에 올린 것을 2026-10-16 마이그레이션으로 옮긴 것이다."
+  }
+}

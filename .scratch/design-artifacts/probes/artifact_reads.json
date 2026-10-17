@@ -1,0 +1,79 @@
+{
+  "artifact": "https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH",
+  "recordedAt": "2026-10-16",
+  "source": "Claude Code의 Artifact 도구(read, path·paths)가 파일마다 낸 판 id, 바이트 수, sha256을 옮겨 적었다. 계정은 njh6803(편집자)이다. 저장소 쪽은 줄의 commit(그때의 기점 df705c17)에서 꺼내고, published/ 아래 파일은 작업 트리에서 읽는다.",
+  "reads": [
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/guidelines/web-design.md",
+      "bytes": 11495,
+      "sha256": "71826600558e1d968f789306e58faf65c3c86dbb19d4c8048ab001af6f32e509",
+      "repo": ".claude/rules/web-design.md",
+      "commit": "df705c17",
+      "expect": "same"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/foundations/colors/index.html",
+      "bytes": 16048,
+      "sha256": "0d3ac3078ef8c0593ab7a24db77aabcb208010fe1c12a0c045cee6840708f98a",
+      "repo": ".design-sync/foundations/colors/index.html",
+      "commit": "df705c17",
+      "expect": "same"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/foundations/density/index.html",
+      "bytes": 4916,
+      "sha256": "4f8c4b15ba6052b59cd61a9903a6ac40bb8641b92237a7e34de92943573e122f",
+      "repo": ".design-sync/foundations/density/index.html",
+      "commit": "df705c17",
+      "expect": "same"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/foundations/spacing/index.html",
+      "bytes": 3974,
+      "sha256": "5815d6c402d0574433bbc18c1ab51d99a6f2cc367dbd89ab78b5d7cd60362b30",
+      "repo": ".design-sync/foundations/spacing/index.html",
+      "commit": "df705c17",
+      "expect": "same"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/foundations/type/index.html",
+      "bytes": 4312,
+      "sha256": "8b3bd99f400b89186d4c95c241a24f31d6cfcc49557c3ea39f91b45723d5b23d",
+      "repo": ".design-sync/foundations/type/index.html",
+      "commit": "df705c17",
+      "expect": "same"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/guidelines/index.md",
+      "bytes": 46,
+      "sha256": "a9bd8e3a7984a8a8e01b5046eaf7cfcab15399d580f644657860995345815c1e",
+      "repo": ".claude/rules/web-design.md",
+      "commit": "df705c17",
+      "expect": "differ"
+    },
+    {
+      "version": "1792113436-f9ea",
+      "path": "project/design-system.json",
+      "bytes": 823,
+      "sha256": "2e675afdc513e7fb29a9e51b7c82905021f20f938ab2b7de1a0b5c4b32c4d00e",
+      "repo": ".scratch/design-artifacts/probes/published/design-system.json",
+      "commit": null,
+      "expect": "differ"
+    },
+    {
+      "version": "1792115455-aa71",
+      "path": "project/design-system.json",
+      "bytes": 1225,
+      "sha256": "3841a02c52d055f9cca3b58ed5b951efa9090c16bfc86b3a370f3565c720bb4d",
+      "repo": ".scratch/design-artifacts/probes/published/design-system.json",
+      "commit": null,
+      "expect": "same"
+    }
+  ]
+}
