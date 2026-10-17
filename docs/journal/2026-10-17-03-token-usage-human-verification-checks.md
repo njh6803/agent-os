@@ -292,6 +292,20 @@ open-session을 부른다 2026-10-17T09:28:22Z
 `headRefOid`는 로컬 HEAD `4ddb83f4`와 같았고 `origin/main`은 이미 합친 `c41adadd`라 합칠 것이 없다. 셋째 세션의 커밋하지
 않은 일지 고침을 이 절과 함께 커밋하고 푸시한 뒤 `@coderabbitai review`를 남긴다.
 
+그 커밋 `bccf8342`는 pre-commit을 모두 통과했다(pytest 163.1초, web-verify 550.6초). 푸시 뒤 `gh` 명령이 2분을 넘겨
+멈췄는데, 그때 CPU 부하가 100%였고 가장 많이 쓴 python 열둘은 다른 워크트리(`vigorous-mahavira-ebe993`)의
+`.venv`가 띄운 `while True: pass`였다. 그 세션이 부하를 일부러 만든 것으로 보고 건드리지 않았다.
+
+### 봇 회차
+
+- **CodeRabbit.** 첫 회차다. `c41adadd`부터 `bccf8342`까지의 파일 셋을 보고 "No actionable comments"였고 병합 위험은
+  "Minimal"이었다. 시간당 한 번인 리뷰를 이것으로 다 썼다.
+- **claude-review.** `4ddb83f4`의 실행 39021141302와 `bccf8342`의 실행 39022353415가 모두 주간 한도("You've hit your
+  weekly limit · resets Oct 18, 9pm (UTC)")로 리뷰 없이 끝났다(`gh_run_summary.py`로 봤다). 이 PR에서 claude-review가 리뷰한
+  커밋은 없다. 지적이 아니라 리뷰 없음이라 실패로 세지 않는다(`docs/constitution/operations.md` 리뷰 파이프라인 3).
+- 고친 것과 뒤로 넘긴 일이 없다. 이 일지만의 푸시가 끝나면 PR 코멘트에 claude-review의 한도를 남기고 워크트리 길로
+  병합한다.
+
 ## 회고
 
 후보 다섯, 승인 0, 기각 다섯, 넘김 0이다.
