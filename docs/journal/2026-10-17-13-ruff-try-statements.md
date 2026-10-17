@@ -432,6 +432,13 @@ open-session을 부른다 2026-10-17T13:24:30Z
 - CodeRabbit은 `5cf06a60`에서 PR 전체(`80b3ccea`부터 그 헤드까지, 22개 파일)를 리뷰하고 `No actionable comments were generated`를
   냈다. 이 PR에 낸 첫 리뷰라 첫 회차이고 지적은 없다. 안내가 시간당 한 번의 몫을 다 썼다고 해, 위 `run_checks.py` 수정은 다음
   푸시에서 봇 리뷰를 받지 못한다. 그래서 그 증분을 `bug-perf-review`에 따로 맡겼다.
+- `bug-perf-review`(기준 `86874b81`, 호출 40): 유효 1(Nit), 오탐 0. 옛 `run`과 새 `run`을 같은 가짜 검사로 열한 사례(모두 통과,
+  실패 섞임, 검사 없음, 첫 `write`·`flush`에서 `KeyboardInterrupt`·`BrokenPipeError`, 시간 제한 초과 등)에 나란히 돌려 쓴 바이트,
+  반환값이나 예외, `kill_tree` 횟수, 남은 자식 수가 모두 같았다. 변이 표 셋의 원문 26개가 모두 한 번씩 있었다. 닿지 못한 것은
+  POSIX의 프로세스 그룹 길과 진짜 SIGINT다.
+  - [Nit·유효, 남겼다] `run_checks_mutations.toml`의 변이 5·6에 `expect_output`이 없다. 옛 변이 5의 원문(20칸 들여쓰기)은
+    24칸 줄에 부분 문자열로 맞아 원문 검사를 지났고, 그대로 넣으면 `IndentationError`로 빨개져 뜻과 다른 까닭으로 기대대로였다.
+    이 PR 전부터 없던 것이라 범위 밖으로 두고 "다음"에 적었다.
 
 ## 다음
 
@@ -443,3 +450,6 @@ open-session을 부른다 2026-10-17T13:24:30Z
 - 형제 워크트리 `full-checks-via-runner`가 `tools/run_checks.py`를 커밋하지 않은 채 고치고 있었다(`sibling_overlap.py`의 함께
   고친 파일). 그쪽이 나중에 병합하면 이 브랜치가 `run`에서 뺀 `_report`와 글자 충돌이 날 수 있고, 이 PR이 켠 PLW0717이 그쪽의
   새 `try`에도 걸린다.
+- `.scratch/harness/probes/run_checks_mutations.toml`의 변이 5·6에 `expect_output`을 다는 일이 남았다(위 "이어받기 (넷째
+  세션)"의 `bug-perf-review` Nit). `tools/mutate.py --check`가 원문을 부분 문자열로 대 들여쓰기가 어긋난 원문도 지나가는 것이
+  같은 뿌리다.
