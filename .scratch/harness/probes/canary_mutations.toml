@@ -655,12 +655,12 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                if turn.get("parent_tool_use_id"):
-                    sub_turns += 1
+        if turn.get("parent_tool_use_id"):
+            self.sub_turns += 1
 '''
 new = '''
-                if False:
-                    sub_turns += 1
+        if False:
+            self.sub_turns += 1
 '''
 
 [[mutation]]
@@ -671,10 +671,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                        outcomes.append(_outcome(agent_calls[called], value))
+                self.outcomes.append(_outcome(self.agent_calls[called], value))
 '''
 new = '''
-                        pass
+                pass
 '''
 
 [[mutation]]
@@ -685,19 +685,19 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                    if block.get("type") == "tool_result" and called in agent_calls:
+            if block.get("type") == "tool_result" and called in self.agent_calls:
 '''
 new = '''
-                    if block.get("type") == "tool_result":
+            if block.get("type") == "tool_result":
 '''
 
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                        outcomes.append(_outcome(agent_calls[called], value))
+                self.outcomes.append(_outcome(self.agent_calls[called], value))
 '''
 new = '''
-                        outcomes.append(_outcome(agent_calls.get(called or "", "?"), value))
+                self.outcomes.append(_outcome(self.agent_calls.get(called or "", "?"), value))
 '''
 
 [[mutation]]
@@ -820,13 +820,13 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                if turn.get("parent_tool_use_id"):
-                    continue
+        if turn.get("parent_tool_use_id"):
+            return
 '''
 new = '''
-                if turn.get("parent_tool_use_id"):
-                    sub_turns += 1
-                    continue
+        if turn.get("parent_tool_use_id"):
+            self.sub_turns += 1
+            return
 '''
 
 [[mutation]]
@@ -837,10 +837,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-                if subtype == "success" and not result.get("is_error", False):
+        if subtype == "success" and not result.get("is_error", False):
 '''
 new = '''
-                if answer is None and subtype == "success" and not result.get("is_error", False):
+        if self.answer is None and subtype == "success" and not result.get("is_error", False):
 '''
 
 [[mutation]]

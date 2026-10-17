@@ -55,17 +55,22 @@ async def main() -> None:
         await asyncio.sleep(0.05)
     async with httpx.AsyncClient(timeout=None) as client:
         try:
-            async with client.stream("GET", f"http://127.0.0.1:{port}/slow") as resp:
-                async for chunk in resp.aiter_text():
-                    log(f"client: 받음 {chunk.strip()!r}")
-                    if '"i": 0' in chunk or '"i":0' in chunk:
-                        log("멈춤 요청 (SIGINT 와 같은 should_exit=True)")
-                        server.should_exit = True
-            log("client: 스트림 정상 종료")
+            await consume(client, port, server)
         except Exception as error:
             log(f"client: 끊김 {type(error).__name__}")
     await serving
     log("server.serve() 반환")
+
+
+async def consume(client: httpx.AsyncClient, port: int, server: uvicorn.Server) -> None:
+    """첫 이벤트를 받으면 서버에 멈춤을 요청하고 스트림이 끝날 때까지 읽는다."""
+    async with client.stream("GET", f"http://127.0.0.1:{port}/slow") as resp:
+        async for chunk in resp.aiter_text():
+            log(f"client: 받음 {chunk.strip()!r}")
+            if '"i": 0' in chunk or '"i":0' in chunk:
+                log("멈춤 요청 (SIGINT 와 같은 should_exit=True)")
+                server.should_exit = True
+    log("client: 스트림 정상 종료")
 
 
 asyncio.run(main())
