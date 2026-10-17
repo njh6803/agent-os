@@ -6,7 +6,7 @@ paths:
 
 # 디자인 판단 기준
 
-디자인 시스템(`web/packages/ui`, `@agent-os/ui`)과 앱의 화면 부품을 쓸 때의 판단 기준이다. `/design-sync`가 같은 파일을 Claude Design의 guidelines로 올린다(ADR 0026). 디자인 토큰의 값은 디자인 토큰 CSS(`web/packages/ui/src/styles/theme.css`) 한 자리에만 있어 여기 적지 않는다. 컴포넌트마다의 쓰는 법(언제 쓰는지, 해도 되는 것과 안 되는 것)은 스토리 옆의 `<Name>.md`이고, 여기는 여러 컴포넌트와 앱에 걸친 것만 둔다. 워크스페이스 공통 기준은 `web-workspace.md`다.
+디자인 시스템(`web/packages/ui`, `@agent-os/ui`)과 앱의 화면 부품을 쓸 때의 판단 기준이다. `/design-sync`의 빌드가 같은 파일을 디자인 시스템의 guidelines로 담고, Claude Code가 그것을 디자인 시스템 아티팩트에 올린다(ADR 0026, ADR 0025의 2026-10-16 이력). 디자인 토큰의 값은 디자인 토큰 CSS(`web/packages/ui/src/styles/theme.css`) 한 자리에만 있어 여기 적지 않는다. 컴포넌트마다의 쓰는 법(언제 쓰는지, 해도 되는 것과 안 되는 것)은 스토리 옆의 `<Name>.md`이고, 여기는 여러 컴포넌트와 앱에 걸친 것만 둔다. 워크스페이스 공통 기준은 `web-workspace.md`다.
 
 ## 판정하는 것
 
