@@ -153,12 +153,12 @@ ruff 0.16.8에서 문턱을 0으로 두고(`--preview --select PLW0717 --config 
 `_segments`를 고치기 전 판과 같은 입력으로 견준 차이 0, 쓰기 실패로 소비 쪽이 닫힐 때 에이전트의 `finally`가 같은 태스크에서 도는
 차례)은 리뷰어가 손으로 다시 봐서 맞았다.
 
-- 고쳤다(Minor) — 대기열 닫힘 칸이 "`finally`·`else` 몸통은 보지 않는다"고 넓게 썼다. 재는 `try`의 몸통 안에 든 안쪽 `try`의
+- 고쳤다(Minor) — 대기열 닫힘 칸이 "`finally`·`else` 몸통과 `except` 없는 `try/finally`는 보지 않아"라고 넓게 썼다. 재는 `try`의 몸통 안에 든 안쪽 `try`의
   `finally`는 센다. "그 `try` 자신의"로 좁혔다.
 - 고쳤다(Minor) — `/proc` 읽기를 "모두 `OSError`의 원천"이라 거짓 양성에 가깝다고 판정했는데, 옛 `try`에 `parent_from_stat`
   파싱이 있었다(`git diff`로 봤다). 일지가 세운 기준대로 참 양성으로 고쳐 셈이 참 양성 10, 거짓 양성 2, 경계 1이 됐다. 일지 표,
-  셈 문장, 대기열 닫힘 칸을 함께 고쳤다. 같은 꼴로 문턱 4의 `tail_lines`도 "읽기 넷이 모두 원천"이 아니라 `seek`·`read` 사이의
-  계산 한 줄이 있다고 고쳤다.
+  셈 문장, 대기열 닫힘 칸을 함께 고쳤다. 같은 꼴로 문턱 4의 `tail_lines`도 읽기 넷이 모두 `OSError`의 원천이 아니라 `seek`·`read`
+  사이의 계산 한 줄이 있다고 고쳤다.
 - 고쳤다(Minor) — 행의 조건 "거짓 양성이 적을 때만 켠다"를 판정한 문장이 없었고, 문턱을 4와만 견줬다. 판정 문장과 문턱 6의
   비교(값이 6인 넷: 참 양성 둘을 놓치고 아닌 것 둘을 덜 내며 과거 사건은 같다)를 일지와 닫힘 칸에 더했다.
 - 고쳤다(Minor) — 일지가 어긋난 변이 표 넷을 "다른 파일의 원문"이라 썼다. 18건 가운데 9건이 이 브랜치가 고친 `core/run.py`를
@@ -185,9 +185,66 @@ PR 직전 리뷰에 밀 주장으로 넘길, 반영하며 새로 쓴 문장:
 - 일지 13곳 표의 `/proc` 행("`stat`의 파싱(`parent_from_stat`)이 섞였다", 참 양성)과 "참 양성 10, 거짓 양성 2, 경계 1", "참
   양성이 아닌 셋은 … 셋 모두 함수 하나를 빼서 풀렸다". 대기열 닫힘 칸의 같은 셈과 "그 `try` 자신의 `finally`·`else` 몸통".
 - 일지 문턱: `tail_lines`의 "`seek`·`read` 셋과 그 사이에서 다음 `seek`의 자리를 정하는 계산 한 줄", 문턱 6의 "값이 6인 넷 …
-  참 양성 둘을 놓치고 아닌 것 둘을 덜 낸다. 과거 사건은 5와 같이 둘을 잡는다".
+  참 양성 둘을 … 놓치고 아닌 것 둘을 … 덜 낸다. 아래 과거 사건은 5와 같이 둘을 잡는다".
 - 일지 변이 표: "어긋난 편집 18건 가운데 9건(`continuation` 4, `pause_index` 5)은 이 브랜치가 고친 `core/run.py`를 가리킨다",
   "기점 판에서도 `--check` 출력이 같았다".
 
 다시 돌린 명령: 고친 뒤 `tests/tools/test_canary.py`·`test_mutate.py` 385개 통과, 두 파일의 pyright 0 errors. 손으로 치는 다섯은
 커밋의 pre-commit 결과로 갈음한다(아래 검사).
+
+## 검사
+
+- **pre-commit**(커밋 `2c8fdf30`). 모두 통과했다. ruff check·format, 함께 띄운 검사 여덟(check-instructions, zizmor, lint-imports,
+  check-type-escapes, pyright 34.8초, run-hooks 132.3초, pytest 239.3초, web-verify 359.9초. 합 360.78초), 마크다운 표, 줄 구분 문자,
+  변이 표 원문, 커밋 메시지. 처음 친 커밋은 제목이 73자라 commit-msg 판정 훅이 pre-commit 전에 막았고, 제목을 줄여 다시 쳤다.
+- **ruff 전체.** pre-commit의 ruff는 스테이지된 `.py`만 보므로, 설정을 바꾼 이 커밋 직전에 `uv run ruff check .`(All checks
+  passed)와 `uv run ruff format --check .`(760 files already formatted)를 손으로 쳤다.
+- **인용 대조 경고 4건**(막지 않는다). 일지의 둘은 밀 주장 목록의 인용이 원문의 줄바꿈을 건너지 못한 것이다. 셀프 리뷰 절의 하나는
+  원문과 글자가 달라 원문대로 고쳤다. 대기열 349행의 `"try 블록 안에 로직을 쌓지 않는다"`는 이 브랜치 전부터 있던 337 행 첫 칸의
+  글이라 두었다.
+- **LLM 테스트.** `uv run --env-file ../../../.env pytest -m llm`이 7개 통과했다. `LLM 토큰 합계`는 38,725(입력 37,610, 출력
+  1,115), 트레이스 10개, 모델 호출 21건이고, 토큰을 셀 수 없는 LLM 테스트가 1개였다. 셀프 리뷰 전에 돌렸고, 그 뒤의 고침
+  (`tools/`의 이름 둘, 문서)은 LLM 테스트가 지나는 코드에 닿지 않는다.
+- **변이.** 위 변이 표 절. 셀프 리뷰가 바꾼 `tools/mutate.py`·`tools/canary.py`의 이름은 변이 표의 원문에 없고, 커밋의 변이 표 원문
+  검사가 통과했다.
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 커밋 `2c8fdf30` 뒤 경계에 와 `hook_handoff`의 계기가 들어왔다. 인계하지 않는
+때(계기를 낸 명령의 실패, 요청 범위가 이 경계에서 끝남, 인계로 연 세션, 이 세션이 쓴 `인계 못함` 줄)에 들지 않아 next-session의
+인계 줄로 넘긴다. 이 세션의 지금 제목은 `chore/ruff-try-statements`이고 `chore/ruff-try-statements (인계함)`으로 바꾼다. 번복한
+것은 셀프 리뷰 절에 적은 판정 둘(`/proc` 읽기를 참 양성으로, 문턱 셈의 "다섯은 어떤 문턱으로도"를 고친 것)이다. 이 검사 절과
+인계 절은 커밋하지 않았고, 새 세션이 이어 쓰고 커밋한다.
+
+남은 단계: 이 일지의 커밋, PR 직전 리뷰(CodeRabbit CLI는 `Seat: not assigned`라 대체 둘. origin/main을 합친 뒤 `/security-review`,
+`bug-perf-review` 브리프에 셀프 리뷰 절의 밀 주장 목록), PR(템플릿), 봇 회차, 병합(워크트리 사본의 next-session "워크트리에서
+병합할 때"), 회고, 다음. 아직 푸시하지 않았다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 보강 후보 7(대기열 337)을 반영한다: ruff preview 규칙 PLW0717(try 안의 문장 수)의 위반을 판정한 뒤 거짓 양성이 적을 때만 켜고, CODING_STANDARDS.md의 그 줄을 린터가 못 보는 것으로 줄인다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 337(ruff의 PLW0717로 try 블록의 문장 수를 재는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 켜기 전에 지금 위반 13곳을 하나씩 판정한다
+브랜치: chore/ruff-try-statements
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-17-08-ruff-try-statements.md (이 브랜치의 일지. 셀프 리뷰 절의 밀 주장 목록, 검사 절, 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 13곳 판정·수정, 설정, 표준 줄, 대기열 337 닫기, 셀프 리뷰 두 축의 반영까지 한 커밋에 담았고 pre-commit이 모두 통과했다. 일지의 검사·인계 절은 워크트리에 커밋하지 않은 채 있다. 남은 단계는 그 일지의 커밋, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 대체 둘. origin/main을 합친 뒤 /security-review, bug-perf-review 브리프에 일지의 밀 주장 목록), PR, 봇 회차, 병합, 회고, 다음 지시문이다. 아직 푸시하지 않았다
+확인할 선행 조건: 위반 자리 가운데 tools/mutate.py는 나란히 연 첫 세션의 333이 _kill_tree를 옮기거나 고치며 함께 만질 수 있어, 나중에 병합하는 쪽이 충돌을 푼다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-17T12:32:24Z
+
+## 이어받기 (새 세션)
+
+인계로 연 세션이 이어 쓴다. 첫 턴 훅대로 제목을 `chore/ruff-try-statements`로 바꾼 뒤 `EnterWorktree(path)`로 들어가려 했으나,
+도구가 `belongs to another running Claude Code session (locked: claude session ruff-try-statements (pid 23556))`로 거부했다. pid
+23556은 넘긴 세션의 `claude.exe`로 살아 있었고(`Get-Process`로 봤다), 그 세션은 `list_sessions`에서 제목
+`chore/ruff-try-statements (인계함)`에 `isRunning`이었다. 이 세션을 빼고 제목이 그 브랜치인 실행 중 세션은 없어 ADR 0032의 제목
+판정을 지나므로, 선례(일지 2026-10-16-70, 2026-10-17-04)대로 `git worktree unlock`으로 잠금만 풀고 들어왔다.
+
+`git fetch` 뒤 origin/main은 기점 `544d59ac` 그대로라 합칠 것이 없었다. `sibling_overlap.py`는 번호 겹침 없음이었고, 함께 고친
+파일은 `.scratch/retro-queue.md` 하나다(PR #288·#289와 워크트리 셋). 지시문이 걱정한 `tools/mutate.py`는 아직 어느 형제도 고치지
+않았다. `coderabbit auth status`는 여전히 `Plan: Free`, `Seat: not assigned`라 PR 직전 리뷰는 대체 둘로 간다.
