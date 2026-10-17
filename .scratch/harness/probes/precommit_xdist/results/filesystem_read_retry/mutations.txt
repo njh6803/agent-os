@@ -1,0 +1,13 @@
+기준선 pytest tests/adapters/test_filesystem.py -k 다른_프로세스가_교체하는: 초록 — 1 passed, 52 deselected in 14.50s
+기준선 pytest tests/adapters/test_filesystem.py -k 잠김이_아닌_PluginError_는_판정이_던진다: 초록 — 1 passed, 52 deselected in 0.78s
+기준선 pytest tests/adapters/test_filesystem.py -k 상한_전의_잠김_PluginError_는_판정이_던진다: 초록 — 1 passed, 52 deselected in 0.65s
+== 1. 읽기 재시도를 없앤다: 기대 빨강, 결과 빨강, 빨강, 빨강 — 1 failed, 52 deselected in 3.22s
+   tests/adapters/test_filesystem.py::test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안에서_성공한다
+== 2. 읽기 재시도의 간격을 0.2ms 다섯으로 줄인다: 기대 초록, 결과 초록, 초록, 초록, 초록, 초록, 초록, 초록, 초록, 초록, 초록 — 1 passed, 52 deselected in 3.06s
+== 3. 옛 판정으로 읽기 재시도의 간격을 0.2ms 다섯으로 줄인다: 기대 초록, 결과 초록, 초록, 초록 — 1 passed, 52 deselected in 3.44s
+== 4. 재시도를 없애고 판정이 아무것도 던지지 않는다: 기대 초록, 결과 초록 — 1 passed, 52 deselected in 3.17s
+== 5. 판정이 까닭을 보지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 52 deselected in 1.07s
+   tests/adapters/test_filesystem.py::test_상한을_다_쓴_뒤라도_잠김이_아닌_PluginError_는_판정이_던진다
+== 6. 판정이 시간을 보지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 52 deselected in 0.95s
+   tests/adapters/test_filesystem.py::test_상한_전의_잠김_PluginError_는_판정이_던진다
+변이 6 모두 기대대로

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+OSError: [Errno 22] Invalid argument
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+OSError: [Errno 22] Invalid argument
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+OSError: [Errno 22] Invalid argument
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+OSError: [Errno 22] Invalid argument

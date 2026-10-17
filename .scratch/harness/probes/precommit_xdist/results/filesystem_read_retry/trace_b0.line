@@ -1,0 +1,1 @@
+{"mode": "trace", "runs": 10, "burners": 0, "priority": "normal", "unmeasured": 0, "read_calls": 13111, "failed_reads": 0, "streak_ms": {"n": 727, "median": 0.145, "p99": 2.251, "max": 5.207, "over_31ms": 0}, "replace_ok_ms": {"n": 969, "median": 0.481, "p99": 0.772, "max": 10.768, "over_31ms": 0}, "branches": {"A": 696, "B": 31, "C": 0}, "long_or_failed_streaks": []}

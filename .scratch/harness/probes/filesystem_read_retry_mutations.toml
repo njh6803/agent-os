@@ -1,0 +1,91 @@
+# 다른 프로세스가 교체하는 동안의 읽기 시험이 판정을 바꾼 뒤에도 재시도의 회귀를 잡는지, 판정 함수
+# `_read_while_past_cap` 의 두 조건(까닭이 잠김, 상한을 다 쓴 뒤)이 시험으로 묶여 있는지 본다(ADR 0035).
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/filesystem_read_retry_mutations.toml
+# 앞의 넷은 윈도에서만 뜻이 있다. 리눅스는 교체가 원자적이라 PermissionError 가 없어 모두 초록이다.
+
+[[mutation]]
+name = "읽기 재시도를 없앤다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "다른_프로세스가_교체하는"]
+expect = "red"
+repeat = 3
+expect_output = ["PluginError: 운영자 파일을 읽을 수 없다"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''_RETRY_DELAYS = (0.001, 0.002, 0.004, 0.008, 0.016)'''
+new = '''_RETRY_DELAYS = ()'''
+
+# 이 사례가 잡지 못하는 회귀다. 윈도의 `time.sleep` 은 0.2ms 를 그보다 길게 자서 다섯 번의 실제 합이
+# 수 ms 이고(`retry_sleep_floor.py --delays`, README 의 그 행), 부하가 없으면 막힘이 대개 그 안에 풀린다.
+# 판정을 바꾸기 전에도 같다(아래 옛 판정의 변이). 상한의 크기를 못 박는 시험은 이 파일에 없다.
+# 초록은 확률이다. 부하 없는 막힘의 가장 긴 것(5.2ms)이 다섯 번 쉰 합의 중앙(4.5ms)보다 길어, 막힘이
+# 그 합보다 오래 가는 회차는 빨갛다. 그래서 첫 변이는 열 번 돌려 그 빈도를 결과로 남긴다.
+[[mutation]]
+name = "읽기 재시도의 간격을 0.2ms 다섯으로 줄인다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "다른_프로세스가_교체하는"]
+expect = "green"
+repeat = 10
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''_RETRY_DELAYS = (0.001, 0.002, 0.004, 0.008, 0.016)'''
+new = '''_RETRY_DELAYS = (0.0002, 0.0002, 0.0002, 0.0002, 0.0002)'''
+
+[[mutation]]
+name = "옛 판정으로 읽기 재시도의 간격을 0.2ms 다섯으로 줄인다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "다른_프로세스가_교체하는"]
+expect = "green"
+repeat = 3
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''_RETRY_DELAYS = (0.001, 0.002, 0.004, 0.008, 0.016)'''
+new = '''_RETRY_DELAYS = (0.0002, 0.0002, 0.0002, 0.0002, 0.0002)'''
+
+[[mutation.edit]]
+file = "tests/adapters/test_filesystem.py"
+old = '''    seen = _read_while_past_cap(_plugins(root), lambda: toggler.poll() is None)'''
+new = '''    seen = _read_while(_plugins(root), lambda: toggler.poll() is None)'''
+
+# 대조군. 재시도를 없애고 판정이 아무 PluginError 도 던지지 않게 하면 초록이다. 첫 변이의 빨강이 판정이
+# 던지는 자리에서 난다는 뜻이다.
+[[mutation]]
+name = "재시도를 없애고 판정이 아무것도 던지지 않는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "다른_프로세스가_교체하는"]
+expect = "green"
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''_RETRY_DELAYS = (0.001, 0.002, 0.004, 0.008, 0.016)'''
+new = '''_RETRY_DELAYS = ()'''
+
+[[mutation.edit]]
+file = "tests/adapters/test_filesystem.py"
+old = '''            if not locked or clock() - started < RETRY_CAP_SECONDS:
+                raise'''
+new = '''            if not locked or clock() - started < RETRY_CAP_SECONDS:
+                pass'''
+
+# 아래 둘은 판정 시험을 하나씩만 고른다. 시험이 `pytest.raises` 하나뿐이라 그 실패 머리(DID NOT RAISE)가
+# 고른 단언의 표지다. 두 변이를 손으로 넣어 실패 출력을 보고 골랐다.
+[[mutation]]
+name = "판정이 까닭을 보지 않는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "잠김이_아닌_PluginError_는_판정이_던진다"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE PluginError"]
+
+[[mutation.edit]]
+file = "tests/adapters/test_filesystem.py"
+old = '''            if not locked or clock() - started < RETRY_CAP_SECONDS:'''
+new = '''            if clock() - started < RETRY_CAP_SECONDS:'''
+
+[[mutation]]
+name = "판정이 시간을 보지 않는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "상한_전의_잠김_PluginError_는_판정이_던진다"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE PluginError"]
+
+[[mutation.edit]]
+file = "tests/adapters/test_filesystem.py"
+old = '''            if not locked or clock() - started < RETRY_CAP_SECONDS:'''
+new = '''            if not locked:'''
