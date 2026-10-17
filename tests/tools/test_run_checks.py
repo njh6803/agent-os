@@ -16,7 +16,15 @@ import time
 from pathlib import Path
 
 import pytest
-from tools.run_checks import CHECKS, Check, pytest_workers, run, skipped_ids
+from tools.run_checks import (
+    CHECKS,
+    Check,
+    Running,
+    pytest_workers,
+    run,
+    run_one,
+    skipped_ids,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -219,6 +227,24 @@ def test_기다리는_도중_Ctrl_C_가_나면_남은_검사의_손자까지_끝
     elapsed = time.monotonic() - start
     assert elapsed < 30, f"Ctrl-C 뒤 돌아오기까지 {elapsed:.1f}초"
     assert _stops_growing(beat, within=15), "Ctrl-C 뒤에도 손자가 돈다"
+
+
+def test_멈춘_뒤에_띄운_검사는_곧바로_끝내고_실패로_알린다(tmp_path: Path) -> None:
+    """Ctrl-C 로 `stop` 한 뒤 띄워진 검사는 `add` 가 받지 않아 띄운 스레드가 끝낸다. 남은 출력은
+    `_drain` 으로 읽어, 트리를 떠난 손자가 파이프를 쥐어도 기다림이 끝난다. 그 손자는 띄운 직후
+    끝내는 순서라 시험으로 만들지 못해, 여기서는 그 갈래가 120초 자는 검사를 곧바로 끝내는지만 본다.
+    경과의 상한(30초)은 홀로 돈 경과보다 한참 넉넉하다(tests.md)."""
+    running = Running()
+    running.stop()
+    check = Check("late", (sys.executable, "-c", "import time; time.sleep(120)"))
+    start = time.monotonic()
+
+    outcome = run_one(check, tmp_path, running)
+
+    elapsed = time.monotonic() - start
+    assert not outcome.passed
+    assert "멈추는 중이라 띄운 검사를 곧바로 끝냈다" in outcome.output.decode()
+    assert elapsed < 30, f"돌아오기까지 {elapsed:.1f}초"
 
 
 def test_검사의_시간_제한은_관측_최대의_네_배_이상이다() -> None:

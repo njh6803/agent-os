@@ -124,3 +124,55 @@ PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 문장):
   에서 재고, POSIX 의 프로세스 그룹 길은 CI 의 Linux 에서 잰다"
 - `Running` 독스트링: "`stop` 뒤에 띄운 자식은 `add` 가 받지 않아, 띄운 스레드가 곧바로 끝낸다"
 - 시험 독스트링: "멈춘 검사의 제한(45초)은 러너가 끝내지 않을 때도 시험이 그때 돌아와 경과의 상한(30초)으로 빨개지게 하려는 것이다"
+
+## 커밋
+
+- 첫 커밋은 pre-commit의 pytest 하나가 빨개 서지 않았다. `tests/adapters/test_filesystem.py`의
+  `test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안에서_성공한다`가 `PermissionError`로 실패했다(410.1초. 같은 때 web-verify
+  442.2초). 이 변경이 닿지 않는 파일이고, 형제 `chore/filesystem-read-retry-under-load`가 고치는 부하 아래의 흔들림이다(대기열 306).
+  같은 스테이지로 다시 친 커밋 `199d3b52`는 모든 검사가 통과했다(pyright 31.2초, run-hooks 70.6초, pytest 220.8초, web-verify
+  244.9초). 손으로 치는 다섯은 이 pre-commit으로 갈음한다.
+
+## 인계 (둘째)
+
+커밋 `199d3b52` 직후 세션 컨텍스트가 약 26.3만 토큰으로 인계 문턱을 넘어 `커밋 뒤` 경계에서 인계 계기가 왔다. 이 세션의 지시문의
+"이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니다. 이 세션의 제목은 `chore/hook-list-check-and-timing-guards`였고
+넘기며 `(인계함)`을 붙인다. 아직 푸시하지 않았고 PR도 없다. origin/main은 `528bd257`(#289, retro 스킬과 대기열)로 움직였고
+합치지 않았다. 그 커밋은 `.scratch/retro-queue.md`를 함께 고쳐 글자 충돌 후보다.
+
+```
+다음 작업: 기능 harness. 대기열 245·332·333을 한 PR로 반영하는 작업의 main 합치기·푸시·PR부터 병합까지
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 245·332·333(훅 목록 대조 시험, 시간 단언 여유 규칙, pre-commit 러너의 검사별 시간 제한)을 chore 한 PR로 반영한다. 각 행의 "어디로" 칸이 원천이고, 332는 306을, 333은 192를 함께 볼지 정한다
+브랜치: chore/hook-list-check-and-timing-guards
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 199d3b52까지 했다(구현, 변이 아홉, 셀프 리뷰 두 축과 반영, pre-commit 모두 초록). 남은 단계는 origin/main(528bd257, .scratch/retro-queue.md 충돌 후보) 합치기, 푸시, PR 직전 리뷰(bug-perf-review 또는 coderabbit-review. 밀 주장은 일지 "셀프 리뷰"의 목록), PR, 봇 회차, 병합이다. 열린 PR은 없고 푸시하지 않았다. 332의 카나리아 실제 회차는 계정 주간 한도로 2026-10-19 06:00(KST) 뒤에 돌린다. 이 PR이 병합된 뒤 열 차례인 일은 334(손으로 치는 전체 검사를 러너로, ADR 0035 이력 초안을 보이고 사용자에게 다시 묻는다)와 336(스크래치 측정 알림 훅, 303·307·323 묶음과 함께)이고 일지 "다음"에 옮긴다. 일지는 docs/journal/2026-10-17-09-hook-list-check-and-timing-guards.md
+확인할 선행 조건: 앞 세션 둘의 프로세스가 살아 있으면 워크트리 잠금이 남아 EnterWorktree가 거부한다. 그때는 일지 밖의 미커밋 변경이 없는지 보고(일지의 인계 절은 커밋하지 않고 남겼다) git worktree unlock으로 푼다(일지 "이어받은 세션"). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 형제 chore/filesystem-read-retry-under-load(PR #288)가 대기열 306·309 행과 .scratch/harness/probes/README.md를 고쳐 나중에 병합하는 쪽이 306 행의 글자 충돌을 푼다. 나란히 도는 337 세션이 tools/mutate.py의 try 블록을 고칠 수 있어 _kill_tree는 옮기지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-17T13:08Z
+
+## 이어받은 세션 (셋째)
+
+워크트리 잠금은 없어 `EnterWorktree`가 곧바로 들어갔다. 앱의 합치기 도구(`sync_with_base_branch`)는 이 워크트리를 앱이
+만든 것이 아니라며 거부해, 일지 변경을 스크래치패드에 받아 두고 `git merge origin/main`(`528bd257`)으로 합쳤다. 글자
+충돌은 없었다(`.scratch/retro-queue.md`도 자동으로 합쳐졌다). `tools/sibling_overlap.py`는 번호 겹침 없음을 냈다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 배정되지 않아(`Seat: not assigned`) 돌지 않았다. 대체 둘을 돌렸다.
+
+- `/security-review`: 발견 없음. 자식과 `taskkill`은 목록 인자로 띄우고 `shell=True`가 없다. Ctrl-C 길에서 거둔 pid가
+  재사용되면 `killpg`가 남의 그룹에 갈 수 있다는 것은 이론적인 경쟁이라 접었다.
+- `bug-perf-review`: Critical·Major 없음, Minor 1·Nit 2. 밀 주장 넷(tests.md의 수치, Ctrl-C 독스트링, `Running`의
+  `stop`/`add`, 시험의 45초와 30초)은 모두 코드와 원문에 맞다고 판정했다.
+  - Minor: 멈추는 중에 거절된 검사를 끝낸 뒤 `process.communicate()`에 시간 제한이 없어, 트리를 떠난 손자가 파이프를
+    쥐면 러너가 Ctrl-C 뒤에 멈춘다. **고쳤다.** `_drain` 뒤 `wait`로 바꿨다. 시험
+    `test_멈춘_뒤에_띄운_검사는_곧바로_끝내고_실패로_알린다`는 그 갈래가 도는지만 고정한다. 트리를 떠난 손자는 띄운 직후
+    끝내는 순서라 시험으로 만들지 못했다.
+  - Nit: `pool.submit` 반복이 `try` 밖이다. **고쳤다.** `try` 안으로 옮겼다.
+  - Nit: `stop()`이 잠금 밖에서 `kill_tree`를 불러 pid 재사용의 이론적 창이 있다. 두었다(보안 리뷰와 같은 판정).
+- `tests/tools/test_run_checks.py` 19 passed(145.53초. 홀로 8.56초였던 파일이라 다른 세션의 부하로 본다).

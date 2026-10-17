@@ -201,7 +201,8 @@ def run_one(check: Check, cwd: Path, running: Running | None = None) -> Outcome:
         return _wait(check, process, start)
     if not running.add(process):
         kill_tree(process)
-        process.communicate()
+        _drain(process)
+        process.wait()
         message = "멈추는 중이라 띄운 검사를 곧바로 끝냈다\n".encode()
         return Outcome(check, passed=False, output=message, seconds=time.monotonic() - start)
     try:
@@ -250,9 +251,9 @@ def run(checks: Sequence[Check], environ: Mapping[str, str], cwd: Path, out: Bin
     running = Running()
     if to_run:
         with ThreadPoolExecutor(max_workers=len(to_run)) as pool:
-            futures = [pool.submit(run_one, check, cwd, running) for check in to_run]
             # 이 try 는 with 안에 있어야 한다. 밖이면 with 를 나가며 남은 검사를 끝까지 기다린다
             try:
+                futures = [pool.submit(run_one, check, cwd, running) for check in to_run]
                 for future in as_completed(futures):
                     outcome = future.result()
                     status = "Passed" if outcome.passed else "Failed"
