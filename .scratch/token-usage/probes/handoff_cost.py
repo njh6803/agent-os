@@ -59,6 +59,8 @@ Edit·Write·NotebookEdit·MultiEdit로 고쳤거나 작업 트리를 바꾸는 
   글자의 몫을 곱한 값이다. H가 압축되면 그 뒤로는 I를 0으로 둔다(요약 안에서 가르지 못한다).
 - H가 압축되면 어림의 호출 수도 첫 압축까지로 센다(압축 뒤의 몫을 두 쪽에서 뺀다). (나)가 측정
   불가인 쌍은 세지 못한 다시 읽기만큼 실제가 낮아지므로 (다)도 재지 않고 따로 센다.
+- 셈에 드는 호출(인계 시점 응답, P의 인계 뒤 호출, H의 첫 압축까지의 호출) 가운데 하나라도 모델이
+  단가표(`price_of`)에 없으면 그 비용을 셀 수 없어 (다)를 재지 않고 단가표 밖 쌍으로 따로 센다.
 - 가르지 못한 몫은 새 일로 보고 두 쪽에서 뺀다. 압축 뒤의 몫, (나)의 조건에 들지 않는 다시 읽기(P가
   읽고 고친 파일을 H가 다시 읽은 것 등), 지시문 밖에서 P가 이미 알던 사실을 H가 셸로 다시 알아본
   것이 그렇다. 그만큼 실제를 낮게 잡는다. 앞 세션이 계속했다면 왔을 자동 압축과, H가 지시문·일지를
@@ -73,8 +75,8 @@ Edit·Write·NotebookEdit·MultiEdit로 고쳤거나 작업 트리를 바꾸는 
 몫을 가르지 않는다. 그때는 판정을 사람이 쌍의 출력과 기록으로 마친다.
 
 종료 코드: 0은 인계 쌍이 있고 모두 표지를 지났을 때, 1은 표지 없는 쌍(gh 로 PR 상태를 읽지 못한
-쌍을 포함한다)이나 (나)를 재지 못한 쌍이 하나라도 있거나 인계 쌍이 하나도 없을 때, 2는 기록 폴더가
-없거나 이 파일 위치로 찾은 저장소 루트에 `tools/token_report.py`가 없을 때다.
+쌍을 포함한다)이나 (나)를 재지 못한 쌍이나 단가표 밖 쌍이 하나라도 있거나 인계 쌍이 하나도 없을 때,
+2는 기록 폴더가 없거나 이 파일 위치로 찾은 저장소 루트에 `tools/token_report.py`가 없을 때다.
 
 못 보는 것:
 - 지워진 세션 기록. 앱에서 세션을 지우면 기록 파일이 없어지고 `<세션 ID>.desktop-released.json`
@@ -557,6 +559,7 @@ def main() -> int:
     gh_failed = 0
     unfinished = 0
     unmeasurable = 0
+    unpriced = 0
     a30: list[float] = []
     diffs: list[float] = []
     for h, hs, ps, pt in pairs:
@@ -644,14 +647,22 @@ def main() -> int:
         p_price = price_of(pt.call.model)
         # 압축 뒤의 몫은 실제(inherited_cost)처럼 어림에서도 뺀다.
         cut = min(hs.compactions, default=None)
-        n_est = sum(1 for line in hs.call_lines if cut is None or line <= cut)
-        estimate = n_est * ctx * (p_price.cache_read if p_price else 0.0) / 1e6
+        h_counted = [
+            c for c, line in zip(hs.calls, hs.call_lines, strict=True) if cut is None or line <= cut
+        ]
         h_end = hs.calls[-1].at
         giver_calls = [
             c
             for c, line in zip(ps.calls, ps.call_lines, strict=True)
             if line > pt.line and c.at <= h_end
         ]
+        if p_price is None or any(price_of(c.model) is None for c in [*giver_calls, *h_counted]):
+            # 단가가 없는 호출은 0으로 빠져 차가 틀어진다. 그래서 (다)를 재지 않는다.
+            unpriced += 1
+            print("- (다) 측정 불가: 셈에 드는 호출에 단가표 밖 모델이 있다")
+            continue
+        n_est = len(h_counted)
+        estimate = n_est * ctx * p_price.cache_read / 1e6
         inherited = inherited_cost(hs, extra)
         procedure = sum(_cost(c) for c in giver_calls)
         actual = inherited.cost + procedure
@@ -669,7 +680,8 @@ def main() -> int:
     print()
     print(
         f"표지 없는 쌍 {unmarked}, PR 상태를 읽지 못한 쌍 {gh_failed},"
-        f" 끝나지 않은 쌍 {unfinished}, (나)를 재지 못한 쌍 {unmeasurable}, 잰 쌍 {len(diffs)}"
+        f" 끝나지 않은 쌍 {unfinished}, (나)를 재지 못한 쌍 {unmeasurable},"
+        f" 단가표 밖 쌍 {unpriced}, 잰 쌍 {len(diffs)}"
     )
     if not pairs:
         print(f"인계 쌍이 없다. 폴더 이름 머리 {repo!r}와 기록 폴더 {args.projects}를 본다")
@@ -685,7 +697,7 @@ def main() -> int:
             print(f"{name}: 쌍 {len(vals)}이 {MIN_PAIRS}보다 적어 판정하지 않는다")
         else:
             print(f"{name}: {'걸렸다' if bad(statistics.median(vals)) else '걸리지 않았다'}")
-    return 1 if unmarked or gh_failed or unmeasurable or not pairs else 0
+    return 1 if unmarked or gh_failed or unmeasurable or unpriced or not pairs else 0
 
 
 if __name__ == "__main__":
