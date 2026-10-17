@@ -160,3 +160,9 @@ PR 직전 리뷰. CodeRabbit CLI는 `Seat: not assigned`라 돌지 않아 대체
 보는 훅의 괄호에서 ruff 훅(조상의 ruff 설정)이 빠졌다. 두 묶음을 갈라 적고 ruff 훅을 더했다. `bug-perf-review`의 Minor
 둘(`context_for`의 꼴 가드 둘과 `claim_first`의 표지 파일 생성 실패 길에 시험·변이가 없다)도 시험 둘과 변이 셋으로 고정했다.
 훅 시험 21건 초록, 변이 13 모두 기대대로. 307 항목 끝 문장 앞에 "다만"을 붙이라는 Nit은 사실과 어긋나지 않아 두었다.
+
+PR #292 CodeRabbit 첫 회차, Minor 셋. 프로브 README의 변이 수(아홉)가 표(열둘과 대조군)와 달라 고쳤다. 변이마다
+`expect_output`을 두라는 것은 셀프 리뷰가 남긴 것과 같아 두었다(변이마다 다른 시험 하나만 빨개지는 것을 `mutate.py` 출력으로
+봤다). 알림이 실제 세션의 모델에게 닿는지 보라는 것은 카나리아 `tools_rule_scratch_probe_hook.toml`이 할 일이고 계정 주간
+한도로 돌지 못했다. 뒤로 넘긴 일: 한도가 풀린 뒤(2026-10-19 06시 KST) 카나리아 셋(`probes_rule_kill_and_snapshot`,
+`spec_reviewer_evidence_kinds`, `tools_rule_scratch_probe_hook`)의 실제 회차를 돌려 각 명세 머리 주석에 결과를 적는다.
