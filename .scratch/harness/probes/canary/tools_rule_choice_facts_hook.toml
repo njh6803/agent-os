@@ -1,0 +1,29 @@
+# `.claude/rules/tools.md` 에 더한 두 문장(대기열 308, `hook_choice_facts`)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지
+# (일지 2026-10-19-04). 하나는 계기 훅과 막는 훅 항목의 PreToolUse 계기 문장이 닿는 때이고, 하나는 훅 시간 문단의
+# AskUserQuestion 줄이다. 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 셋이다. 규칙 파일의 첫 제목, 사람에게 묻는 도구일 때 읽히는 때의 구절, 수가 든 설명의 밀리초 범위다.
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_choice_facts_hook.toml <출력 디렉터리>
+# 최신 결과: 통과 4(2026-10-19, 이 PC, claude 2.1.300, 두 갈래 모두 `655b19a8` 위의 커밋 전 작업 트리, 셀프 리뷰를 반영한 판,
+# 대조군은 "없음" 셋, 일지 2026-10-19-04). 같은 날 반영 전 판도 통과 4였다. 반영 뒤 질문에 "함께 실린 규칙 파일도 지시로 센다"를
+# 더하기 전의 한 번은 실패 1이었다. 실험군 한 회차가 Read 결과에 붙어 온 규칙을 보고도 세션 지시가 아니라며 "없음"이라 답했다.
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데 셋을 찾아 글자 그대로 옮겨라. 파일을 읽을 때 함께 실린 규칙 파일도 지시로 센다.
+1) PreToolUse 계기 훅의 additionalContext 가 모델에게 언제 닿는지 적은 문장이 든 지시 파일의 첫 `#` 제목.
+2) 그 문장 근처에서, 사람에게 묻는 도구(AskUserQuestion)이면 그 문장이 언제 읽힌다고 적었는지를 말하는 구절.
+3) AskUserQuestion 에 붙는 훅의 시간을 적은 문장에서, 수가 든 설명일 때의 밀리초 범위.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 해당하는 문장이 없으면 그 물음에는 "없음"이라고만 답하라.
+'''
+expect = ["하네스 규칙", "사람이 답한 뒤에야 읽힌다", "166~188ms"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
