@@ -127,20 +127,10 @@ class JsonlTrace:
         if not path.exists():
             return None
         try:
-            with path.open("rb") as file:
-                lines = [line.decode("utf-8") for line in _committed(file)]
-            header = TraceHeader.model_validate_json(lines[0])
-            _require_same_run(run_id, header.run_id, "헤더")
-            events = tuple(_read_event(line) for line in lines[1:])
-            for event in events:
-                if isinstance(event, UnknownEvent):
-                    _require_raw_run(run_id, event.raw, "모르는 종류의 이벤트")
-                else:
-                    _require_same_run(run_id, event.run_id, "이벤트")
+            return _read_trace(run_id, path)
         except (OSError, IndexError, ValueError) as error:
             # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
             raise PluginError(f"트레이스를 읽을 수 없다: {path}\n{_describe(error)}") from error
-        return Trace(run_id=run_id, schema_version=header.schema_version, events=events)
 
     def list(
         self,
@@ -194,6 +184,22 @@ def _page_size(limit: int | None) -> int:
     if not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"limit 은 1 과 {MAX_LIMIT} 사이여야 한다: {limit}")
     return limit
+
+
+def _read_trace(run_id: RunId, path: Path) -> Trace:
+    """커밋된 줄 전부를 읽어 트레이스로. 손상은 OSError·IndexError·ValueError 로 올라가고 단건
+    읽기가 그것을 PluginError 로 바꾼다."""
+    with path.open("rb") as file:
+        lines = [line.decode("utf-8") for line in _committed(file)]
+    header = TraceHeader.model_validate_json(lines[0])
+    _require_same_run(run_id, header.run_id, "헤더")
+    events = tuple(_read_event(line) for line in lines[1:])
+    for event in events:
+        if isinstance(event, UnknownEvent):
+            _require_raw_run(run_id, event.raw, "모르는 종류의 이벤트")
+        else:
+            _require_same_run(run_id, event.run_id, "이벤트")
+    return Trace(run_id=run_id, schema_version=header.schema_version, events=events)
 
 
 def _row(path: Path) -> RunRow:

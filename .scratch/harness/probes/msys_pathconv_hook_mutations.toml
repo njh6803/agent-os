@@ -346,12 +346,12 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-            else:
-                segments.append([])
+        else:
+            segments.append([])
 '''
 new = '''
-            else:
-                pass
+        else:
+            pass
 '''
 
 [[mutation]]
@@ -362,10 +362,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-            elif _REDIRECTION.fullmatch(token):
+        elif _REDIRECTION.fullmatch(token):
 '''
 new = '''
-            elif False:
+        elif False:
 '''
 
 [[mutation]]
@@ -376,10 +376,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_bash_msys_pathconv.py"
 old = '''
-                if segments[-1] and segments[-1][-1].isdigit():
+            if segments[-1] and segments[-1][-1].isdigit():
 '''
 new = '''
-                if False:
+            if False:
 '''
 
 [[mutation]]

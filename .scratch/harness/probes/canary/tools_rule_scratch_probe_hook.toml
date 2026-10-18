@@ -1,0 +1,26 @@
+# `.claude/rules/tools.md` 의 훅별 시간 항목에 더한 Write·Edit 문장(대기열 336, `hook_scratch_probe_rule`)이
+# `paths` 에 맞는 파일을 Read 로 열 때 실리는지(일지 2026-10-17-15).
+# 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 둘이다. 규칙 파일의 첫 제목과 새 훅의 괄호 설명이다. 훅 이름은 git 상태의 바뀐 경로에도 들어 고르지 않았다.
+# 최신 결과: 사전 확인만 통과(2026-10-17, `--preflight`). 실제 회차는 계정 주간 한도로 돌리지 못했다(일지
+# 2026-10-17-15). 한도가 풀린 뒤 돌린다.
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_scratch_probe_hook.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, Write·Edit 도구 호출 뒤(PostToolUse)에 붙는 훅들을 나열한 문장이 있으면,
+그 문장이 든 지시 파일의 첫 `#` 제목과, 그 문장이 넷째 훅을 두고 괄호 안에 적은 설명을 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["하네스 규칙", "실행 스크립트일 때만 표지 파일 하나를 만든다"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

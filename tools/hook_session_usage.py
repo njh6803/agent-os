@@ -176,16 +176,21 @@ def append(path: Path, line: str, write: Callable[[int, bytes], int] = os.write)
     data = (line + "\n").encode("utf-8")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        for _ in range(APPEND_TRIES):
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _BINARY)
-            try:
-                write(fd, data)
-            finally:
-                os.close(fd)
-            if data in _tail(path):
-                return
+        _append_until_seen(path, data, write)
     except OSError:
         return
+
+
+def _append_until_seen(path: Path, data: bytes, write: Callable[[int, bytes], int]) -> None:
+    """`data` 를 쓰기 하나로 덧붙이고 파일 끝에 보이면 멈춘다. `APPEND_TRIES` 번까지 되풀이한다."""
+    for _ in range(APPEND_TRIES):
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | _BINARY)
+        try:
+            write(fd, data)
+        finally:
+            os.close(fd)
+        if data in _tail(path):
+            return
 
 
 def _tail(path: Path) -> bytes:

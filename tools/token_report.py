@@ -2431,11 +2431,7 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         with Lock(out):
-            if command != "report":
-                since = None if getattr(args, "full", False) else read_changed_since(out)
-                ingest(projects, out, tz, since)
-            if repo is not None:
-                report(out, tz, today, repo)
+            _run(args, projects, out, tz, today, repo)
     except LockedError as e:
         print(f"다른 실행이 도는 중이라 멈춘다. 잠금 파일: {e}", file=sys.stderr)
         print("멈춘 실행이 남긴 잠금이면 그 파일을 지우고 다시 돌린다.", file=sys.stderr)
@@ -2444,6 +2440,18 @@ def main(argv: list[str]) -> int:
         print(str(e), file=sys.stderr)
         return 2
     return 0
+
+
+def _run(
+    args: argparse.Namespace, projects: Path, out: Path, tz: timezone, today: date, repo: str | None
+) -> None:
+    """잠금 안의 일. `report` 가 아니면 세션 기록을 읽고, 저장소 이름이 있으면 보고서를 만든다."""
+    command: str = args.command
+    if command != "report":
+        since = None if getattr(args, "full", False) else read_changed_since(out)
+        ingest(projects, out, tz, since)
+    if repo is not None:
+        report(out, tz, today, repo)
 
 
 def _local_tz() -> timezone:

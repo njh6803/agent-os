@@ -57,7 +57,7 @@ import sys
 import threading
 import time
 from collections.abc import Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -238,6 +238,22 @@ def status_line(check_id: str, status: str) -> bytes:
     return f"{check_id:.<{_NAME_WIDTH}}{status}\n".encode()
 
 
+def _report(futures: Sequence[Future[Outcome]], out: BinaryIO) -> bool:
+    """끝난 차례로 찍는다. 하나라도 실패했으면 참."""
+    failed = False
+    for future in as_completed(futures):
+        outcome = future.result()
+        status = "Passed" if outcome.passed else "Failed"
+        out.write(status_line(outcome.check.id, f"{status} ({outcome.seconds:.1f}s)"))
+        if not outcome.passed:
+            failed = True
+            out.write(outcome.output)
+            if not outcome.output.endswith(b"\n"):
+                out.write(b"\n")
+        out.flush()
+    return failed
+
+
 def run(checks: Sequence[Check], environ: Mapping[str, str], cwd: Path, out: BinaryIO) -> int:
     """SKIP 밖의 검사를 한꺼번에 띄우고 끝난 차례로 찍는다. 하나라도 실패하면 1.
 
@@ -252,19 +268,11 @@ def run(checks: Sequence[Check], environ: Mapping[str, str], cwd: Path, out: Bin
     running = Running()
     if to_run:
         with ThreadPoolExecutor(max_workers=len(to_run)) as pool:
-            # 이 try 는 with 안에 있어야 한다. 밖이면 with 를 나가며 남은 검사를 끝까지 기다린다
+            # 이 try 는 with 안에 있어야 한다. 밖이면 with 를 나가며 남은 검사를 끝까지 기다린다.
+            # 기다리며 찍는 동안 어디서 Ctrl-C 가 나도 받도록 _report 를 통째로 감싼다
             try:
                 futures = [pool.submit(run_one, check, cwd, running) for check in to_run]
-                for future in as_completed(futures):
-                    outcome = future.result()
-                    status = "Passed" if outcome.passed else "Failed"
-                    out.write(status_line(outcome.check.id, f"{status} ({outcome.seconds:.1f}s)"))
-                    if not outcome.passed:
-                        failed = True
-                        out.write(outcome.output)
-                        if not outcome.output.endswith(b"\n"):
-                            out.write(b"\n")
-                    out.flush()
+                failed = _report(futures, out)
             except BaseException:
                 # POSIX 에서 자식은 제 세션을 이끌어 터미널의 Ctrl-C 를 받지 못한다
                 running.stop()

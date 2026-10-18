@@ -269,8 +269,8 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
-        if args.checking:
-            return check(selected, root=root, out=out)
+    if args.checking:
+        return check(selected, root=root, out=out)
 '''
 new = '''
 '''
