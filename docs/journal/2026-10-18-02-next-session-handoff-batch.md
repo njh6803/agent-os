@@ -133,3 +133,44 @@ Critical 없음. 판정은 이렇다.
 ### rebase
 
 origin/main(655b19a)에 rebase하자 `.scratch/retro-queue.md` 326~333 행이 충돌했다. 326·328·330은 이 브랜치의 닫힘 판을, 나머지는 main 판을 썼다. 326은 main이 여섯째 회차(일지 2026-10-17-13)를 더해 두 쪽이 모두 바꿨으므로, 닫힘 판에 그 고침을 얹었다. 스킬 4의 "다섯 회차" 둘도 여섯으로 고쳤다. rebase는 pre-commit을 돌리지 않아, 이 절을 담은 다음 커밋의 pre-commit이 rebase된 나무를 본다.
+
+## 인계 (커밋 뒤)
+
+커밋 1e15770 직후 세션 컨텍스트 215,227 토큰으로 `커밋 뒤` 경계의 인계 계기가 왔다. 인계하지 않는 때 다섯에 들지 않는다(커밋은 성공했다, 요청 범위는 PR과 병합까지, 앞 지시문의 이어받을 상태는 `인계:`로 시작하지 않는다, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음). 바꾸기 전 제목은 `chore/next-session-handoff-batch`다. 이 절은 커밋하지 않았다.
+
+남은 단계: 푸시, PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인. 밀 주장은 위 "셀프 리뷰 표준 축"의 고치며 새로 쓴 사실 문장 넷과 앞 절의 넷), PR(본문에 카나리아 통과 4 · 실패 0과 남긴 위험: `parentSessionId` 판정은 갈래마다 표본 하나), 봇 회차, 병합. 이 절은 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 326·328·330(next-session "인계할 때"와 3단계의 인계 절차 행 셋)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 326·328·330(대상 파일이 .claude/skills/next-session/SKILL.md인 열린 행 셋, 인계 절차)을 chore 한 PR로 반영한다. 각 행의 "어디로" 칸이 원천이다
+브랜치: chore/next-session-handoff-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 없음
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 두 축과 반영, 카나리아(통과 4 · 실패 0), origin/main rebase, 커밋 둘(pre-commit 통과)까지 했다. 푸시하지 않았고 PR은 없다. 남은 단계는 푸시, PR 직전 리뷰, PR, 봇 회차, 병합이고 일지의 마지막 절(커밋하지 않음)을 다음 커밋에 싣는다. 일지 docs/journal/2026-10-18-02-next-session-handoff-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기: `is not locked`(EnterWorktree(path)로 들어와 잠기지 않았다).
+
+open-session을 부른다 2026-10-18T22:03:54Z
+
+## 이어받은 세션 (커밋 뒤, 2026-10-19)
+
+> 사용자: 대기열 326·328·330(대상 파일이 .claude/skills/next-session/SKILL.md인 열린 행 셋, 인계 절차)을 chore 한 PR로 반영한다. 각 행의 "어디로" 칸이 원천이다
+
+- `git worktree list`에서 이 브랜치의 자리에 `locked` 줄이 없었고 `EnterWorktree(path)`가 거부 없이 들어갔다. HEAD는 1e15770, 커밋하지 않은 변경은 이 일지 하나였다.
+
+### PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 돌렸다.
+
+- `/security-review`: 지적 없음. 코드 변경은 `notice_for`의 고정 문구뿐이고 카나리아 명세는 손으로만 돈다.
+- `bug-perf-review`: Minor 둘, Nit 하나. 주장 넷은 모두 일치했다.
+  - [Minor] `detached`가 참인 표본이 없다. 고쳤다. 스킬 1에 "`detached`가 참인 표본은 아직 보지 못했다"를 더했다.
+  - [Minor] 잠금 풀기의 슬래시 절대 경로를 얻는 법이 없다. 고쳤다. `git rev-parse --show-toplevel`을 이 워크트리에서 쳐 `C:/project/agent/.claude/worktrees/next-session-handoff-batch`가 나오는 것을 보고 스킬 4에 적었다.
+  - [Nit] 열기가 막힌 뒤 잠금이 풀린 채 잇는다. 두었다. 다시 잠그지 않는 이유가 이미 스킬 4에 있다.
