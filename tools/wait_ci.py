@@ -39,6 +39,18 @@ combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
   끝난 검사가 있어도 main을 합쳐야 병합할 수 있다.
 - 끝난 검사의 결과가 `PASSING`이면 통과, 그 밖은 실패다. 같은 이름이 둘이면 끝나지 않은 쪽,
   다음으로 실패한 쪽을 든다.
+- 예외는 계정 한도로 빨간 claude-review다. 그 실행은 리뷰를 시작하지 못하고 끝나, 그 빨강은
+  지적이 아니라 리뷰 없음이다(`docs/constitution/operations.md` 리뷰 파이프라인 3, 대기열 327).
+  claude-review가 빨가면 롤업의 `detailsUrl`에서 잡 번호를 꺼내 `gh run view --job <잡> --log`를
+  잡마다 한 번 읽는다. 결과 블록(`"type": "result"`)이 `"is_error": true`, `"terminal_reason":
+  "api_error"`이고 `result`가 `LIMIT_PREFIX`로 시작하면 실패로 세지 않는다. 그러면 위의 갈래대로
+  CodeRabbit과 나머지 검사를 마저 기다리고, 통과 줄 끝에 한도로 리뷰 없음이라는 것과 그 문구(풀리는
+  시각이 든다)를 적는다. 다른 실패나 시간 초과로 끝나면 그 사실은 끝 줄 앞의 줄에 남는다. 같은
+  이름의 빨간 잡이 여럿이면 모두 한도일 때만 빼고, 하나라도 한도가 아니면 실패로 센다. 로그
+  읽기가 실패하면 PR 조회처럼 `max_fetch_errors`번까지 다음 조회에서 다시 읽고, 그래도 읽지
+  못했거나 잡 주소가 없으면 가르지 못한 것이라 실패로 세며 그 이유를 끝 줄 앞에 적는다. 한도로
+  잘못 읽어 통과시키면 리뷰 없는 병합으로 이어져, 모를 때는 실패 쪽이다. 이 모양은 PR #292의 실행
+  39047880157(한도)과 PR #278의 실행 38878140947(리뷰를 마친 초록)의 잡 로그로 손으로 봤다.
 
 종료 코드는 0 통과, 1 실패나 충돌, 2 인자 오류, 3 시간 초과, 4 기다릴 수 없음(gh가 연달아
 실패했다, 헤드가 다르거나 바뀌었다, 리뷰가 요청되지 않았다, 로컬 HEAD를 읽지 못했다)이다. 출력의
@@ -52,8 +64,15 @@ combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
   끝난다.
 - 충돌은 한 번의 조회로 판정한다. 충돌을 풀고 푸시한 직후의 조회가 옛 헤드 기준의 `CONFLICTING`을
   읽는지는 재지 않았다. 틀리면 대기를 한 번 더 띄운다.
-- 리뷰 코멘트의 내용과, claude-review가 계정 한도로 빨간 것과 진짜 실패의 차이. 끝났다는 것만
-  알리고, 나머지는 깨어난 세션이 읽는다(`docs/constitution/operations.md` 리뷰 파이프라인 3).
+- 리뷰 코멘트의 내용. 끝났다는 것만 알리고, 코멘트는 깨어난 세션이 읽는다
+  (`docs/constitution/operations.md` 리뷰 파이프라인 3).
+- 주간 한도 밖의 한도 문구. `LIMIT_PREFIX`로 시작하지 않는 결과(다른 한도의 문구를 포함해)는
+  진짜 실패로 센다. 실행 로그에서 본 한도 문구는 `LIMIT_PREFIX` 주석의 실행 셋에 나온 주간 한도의
+  것뿐이다.
+- 결과 블록 밖의 한도 문구. Claude가 읽은 파일이나 다른 단계의 출력에만 그 문구가 있으면 실패로
+  센다.
+- 클라우드 세션의 `gh run view`. 거기서 돌려 본 기록이 없다(`.claude/rules/tools.md` 클라우드
+  항목). 실패하면 가르지 못한 것이라 claude-review를 실패로 세어, 이 변경 전과 같이 끝난다.
 - 같은 이름의 재실행. 실패 뒤 다시 돌아 통과한 검사가 옛 실패와 함께 남으면 실패로 든다.
 - 세션이 꺼진 뒤의 완료. 대기는 그 세션의 백그라운드 작업이다. 세션을 닫은 뒤 대기가 어떻게
   되는지는 재지 않았다.
@@ -68,10 +87,11 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import re
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -85,6 +105,15 @@ UNREQUESTED_PREFIX = "Review skipped"
 # 외부 명령(gh, git) 하나의 시간 제한(초). 멈춘 호출은 돌아오지 않아 대기의 시간 제한에도 걸리지
 # 않는다.
 CALL_TIMEOUT = 60.0
+# 계정 한도로 빨갤 수 있는 리뷰 검사와, 그 잡 로그의 결과 블록이 한도일 때 `result` 의 머리.
+# 실행 38120400317(PR #172)·39045944809·39047880157(PR #292)에서 이 문구였다.
+REVIEW_CHECK = "claude-review"
+LIMIT_PREFIX = "You've hit your weekly limit"
+LIMIT_REASON = "api_error"
+JOB_URL = re.compile(r"/actions/runs/\d+/job/(\d+)")
+# `gh run view --job <잡> --log` 의 줄마다 붙은 "<잡>\t<단계>\t<시각> " 접두.
+# tools/gh_run_summary.py 의 PREFIX 와 같다. 이 도구는 스크립트로 돌아 그 모듈을 import 하지 못한다.
+LOG_PREFIX = re.compile(r"^[^\t]*\t[^\t]*\t\S*\s?")
 
 EXIT_PASSED = 0
 EXIT_FAILED = 1
@@ -102,13 +131,15 @@ class Snapshot:
     """한 번 읽은 PR.
 
     checks 는 이름에서 결과로 가고, 끝나지 않은 검사는 None 이다. notes 는 StatusContext 의
-    이름에서 마지막 상태의 설명으로 간다.
+    이름에서 마지막 상태의 설명으로 간다. failed_jobs 는 CheckRun 의 이름에서, 끝나서 빨간 그
+    이름의 실행마다 `detailsUrl` 의 잡 번호(주소가 없으면 None)로 간다.
     """
 
     head: str
     conflicting: bool
     checks: dict[str, str | None]
     notes: dict[str, str]
+    failed_jobs: dict[str, tuple[str | None, ...]]
 
 
 @dataclass(frozen=True)
@@ -157,11 +188,15 @@ def parse_snapshot(payload: Json) -> Snapshot:
         raise FetchError(f"PR 응답이 객체가 아니다: {payload!r}")
     rollup = payload.get("statusCheckRollup")
     checks: dict[str, str | None] = {}
+    failed_jobs: dict[str, tuple[str | None, ...]] = {}
     for check in rollup if isinstance(rollup, list) else []:
         if not isinstance(check, dict):
             continue
         name, result = _result(check)
         checks[name] = _worse(checks[name], result) if name in checks else result
+        if result is not None and result not in PASSING:
+            job = JOB_URL.search(_text(check.get("detailsUrl")))
+            failed_jobs[name] = (*failed_jobs.get(name, ()), job.group(1) if job else None)
     # StatusContext 의 상태는 설명과 같은 combined status 에서 읽는다. 롤업은 따로 읽어 시각이
     # 달라, 롤업의 건너뜀 SUCCESS 와 combined 의 Review in progress 가 함께 오면 통과로 읽힌다.
     statuses = payload.get("statuses")
@@ -179,15 +214,48 @@ def parse_snapshot(payload: Json) -> Snapshot:
         conflicting=payload.get("mergeable") == "CONFLICTING",
         checks=checks,
         notes=notes,
+        failed_jobs=failed_jobs,
     )
 
 
-def judge(snapshot: Snapshot, expected: Sequence[str]) -> Verdict:
+def limit_message(lines: Sequence[str]) -> str | None:
+    """잡 로그의 결과 블록이 API 오류이고 `result` 가 한도 문구면 그 문구를 낸다. 아니면 None.
+
+    결과 블록은 들여 쓴 JSON 객체라, 접두를 뗀 줄이 `{` 인 데서 `}` 인 데까지를 객체 하나로
+    읽는다(tools/gh_run_summary.py 의 `_blocks` 와 같은 모양). 객체 밖의 줄은 보지 않는다.
+    """
+    buffer: list[str] | None = None
+    for raw in lines:
+        line = LOG_PREFIX.sub("", raw, count=1).rstrip()
+        if line == "{":
+            buffer = [line]
+            continue
+        if buffer is None:
+            continue
+        buffer.append(line)
+        if line != "}":
+            continue
+        try:
+            block: Json = json.loads("\n".join(buffer))
+        except ValueError:
+            block = None
+        buffer = None
+        if not isinstance(block, dict) or block.get("type") != "result":
+            continue
+        result = block.get("result")
+        failed = block.get("is_error") is True and block.get("terminal_reason") == LIMIT_REASON
+        if failed and isinstance(result, str) and result.startswith(LIMIT_PREFIX):
+            return result
+    return None
+
+
+def judge(snapshot: Snapshot, expected: Sequence[str], excused: Collection[str] = ()) -> Verdict:
+    """excused 는 계정 한도로 빨개 실패로 세지 않을 이름이다."""
     pending = tuple(name for name, result in snapshot.checks.items() if result is None)
     failed = tuple(
         name
         for name, result in snapshot.checks.items()
-        if result is not None and result not in PASSING
+        if result is not None and result not in PASSING and name not in excused
     )
     missing = tuple(name for name in expected if name not in snapshot.checks)
     unrequested = tuple(
@@ -211,11 +279,19 @@ def _report(number: str, snapshot: Snapshot) -> list[str]:
 
 
 def _settle(
-    number: str, snapshot: Snapshot, elapsed: float, options: Options
+    number: str,
+    snapshot: Snapshot,
+    elapsed: float,
+    options: Options,
+    review: Review,
 ) -> tuple[int, list[str]] | None:
-    """헤드가 맞는 PR 로 끝낼지 정한다. 더 기다리면 None."""
-    verdict = judge(snapshot, options.expected)
+    """헤드가 맞는 PR 로 끝낼지 정한다. 더 기다리면 None. review 는 빨간 리뷰 검사를 가른 것이다."""
+    verdict = judge(snapshot, options.expected, excused=(REVIEW_CHECK,) if review.limit else ())
     lines = _report(number, snapshot)
+    if review.limit is not None:
+        lines.append(f"  {REVIEW_CHECK} 은 계정 한도로 리뷰 없음: {review.limit}")
+    if review.unclear is not None:
+        lines.append(f"  {REVIEW_CHECK} 이 한도인지 가르지 못했다: {review.unclear}")
     if snapshot.conflicting:
         return EXIT_FAILED, [*lines, "끝: 충돌. main 을 합치고 푸시한 뒤 다시 띄운다"]
     settled = not verdict.pending and not verdict.missing
@@ -224,7 +300,10 @@ def _settle(
         return EXIT_FAILED, [*lines, f"끝: 실패 {', '.join(verdict.failed)}"]
     if verdict.done:
         notes = "".join(f". {name}: {note}" for name, note in sorted(snapshot.notes.items()))
-        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}"]
+        reviewless = (
+            f". {REVIEW_CHECK}: 계정 한도로 리뷰 없음({review.limit})" if review.limit else ""
+        )
+        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}{reviewless}"]
     # 요청 직후에 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있어 요청 유예를 둔다.
     if settled and elapsed >= options.request_grace:
         names = ", ".join(verdict.unrequested)
@@ -247,6 +326,53 @@ def _settle(
     ]
 
 
+@dataclass(frozen=True)
+class Review:
+    """빨간 리뷰 검사를 가른 것. 셋 다 비면 한도가 아니거나 빨갛지 않다.
+
+    limit 은 계정 한도의 문구, unclear 는 가르지 못한 이유다. retrying 이면 로그 읽기가 실패해
+    다음 조회에서 다시 읽는다.
+    """
+
+    limit: str | None = None
+    unclear: str | None = None
+    retrying: bool = False
+
+
+class ReviewLimits:
+    """claude-review 의 빨간 잡이 계정 한도인지 잡 로그로 가른다.
+
+    끝난 잡의 로그는 바뀌지 않아 잡마다 한 번만 읽는다. 읽기가 실패하면 `max_errors`번째까지는
+    다시 읽으라고 내고, 그 뒤에는 가르지 못한 것으로 낸다.
+    """
+
+    def __init__(self, classify: Callable[[str], str | None], max_errors: int) -> None:
+        self._classify = classify
+        self._max_errors = max_errors
+        self._known: dict[str, str | None] = {}
+        self._errors: dict[str, int] = {}
+
+    def review(self, snapshot: Snapshot) -> Review:
+        limit: str | None = None
+        for job in snapshot.failed_jobs.get(REVIEW_CHECK, ()):
+            if job is None:
+                return Review(unclear="롤업에 잡 주소(detailsUrl)가 없다")
+            if job not in self._known:
+                try:
+                    self._known[job] = self._classify(job)
+                except FetchError as error:
+                    self._errors[job] = self._errors.get(job, 0) + 1
+                    if self._errors[job] < self._max_errors:
+                        return Review(retrying=True)
+                    return Review(
+                        unclear=f"잡 {job} 로그를 {self._errors[job]}번 읽지 못했다: {error}"
+                    )
+            limit = self._known[job]
+            if limit is None:
+                return Review()
+        return Review(limit=limit)
+
+
 def wait(
     number: str,
     head: str,
@@ -254,11 +380,16 @@ def wait(
     fetch: Callable[[str], Json],
     sleep: Callable[[float], None],
     clock: Callable[[], float],
+    classify: Callable[[str], str | None],
 ) -> tuple[int, list[str]]:
-    """검사가 끝날 때까지 PR 읽기와 `interval`초 잠자기를 되풀이한다. 종료 코드와 찍을 줄을 낸다."""
+    """검사가 끝날 때까지 PR 읽기와 `interval`초 잠자기를 되풀이한다. 종료 코드와 찍을 줄을 낸다.
+
+    classify 는 잡 번호를 받아 그 잡이 계정 한도로 빨갰으면 한도 문구를, 아니면 None 을 낸다.
+    """
     started = clock()
     errors: list[str] = []
     seen_head = False
+    limits = ReviewLimits(classify, options.max_fetch_errors)
     while True:
         elapsed = clock() - started
         try:
@@ -274,7 +405,11 @@ def wait(
             errors.clear()
             if snapshot.head == head:
                 seen_head = True
-                settled = _settle(number, snapshot, elapsed, options)
+                review = limits.review(snapshot)
+                # 로그를 다시 읽을 동안은 끝내지 않는다. 다시 읽기는 max_fetch_errors 번으로 끝난다.
+                settled = (
+                    None if review.retrying else _settle(number, snapshot, elapsed, options, review)
+                )
                 if settled is not None:
                     return settled
             elif seen_head:
@@ -290,7 +425,7 @@ def wait(
         sleep(options.interval)
 
 
-def _gh(*args: str) -> Json:
+def _gh_text(*args: str) -> str:
     try:
         completed = subprocess.run(
             ["gh", *args],
@@ -306,8 +441,13 @@ def _gh(*args: str) -> Json:
         raise FetchError(f"gh 를 띄우지 못했다: {error}") from error
     if completed.returncode != 0:
         raise FetchError(completed.stderr.strip() or f"gh 종료 코드 {completed.returncode}")
+    return completed.stdout
+
+
+def _gh(*args: str) -> Json:
+    stdout = _gh_text(*args)
     try:
-        payload: Json = json.loads(completed.stdout)
+        payload: Json = json.loads(stdout)
     except json.JSONDecodeError as error:
         raise FetchError(f"gh 출력이 JSON 이 아니다: {error}") from error
     return payload
@@ -322,6 +462,11 @@ def fetch_pr(number: str) -> Json:
     combined = _gh("api", f"repos/{{owner}}/{{repo}}/commits/{head}/status")
     statuses = combined.get("statuses") if isinstance(combined, dict) else None
     return {**pr, "statuses": statuses if isinstance(statuses, list) else []}
+
+
+def job_limit(job: str) -> str | None:
+    """잡 하나의 로그를 읽어 계정 한도로 빨갰으면 그 문구를 낸다. gh 가 실패하면 FetchError."""
+    return limit_message(_gh_text("run", "view", "--job", job, "--log").split("\n"))
 
 
 def local_head() -> str:
@@ -379,7 +524,7 @@ def main(argv: list[str] | None = None) -> int:
         request_grace=90.0,
         max_fetch_errors=3,
     )
-    code, lines = wait(number, head_arg, options, fetch_pr, time.sleep, time.monotonic)
+    code, lines = wait(number, head_arg, options, fetch_pr, time.sleep, time.monotonic, job_limit)
     print("\n".join(lines))
     return code
 
