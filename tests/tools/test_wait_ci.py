@@ -466,6 +466,27 @@ def test_한도인지_가르지_못하면_실패로_세고_이유를_적는다()
     assert script.sleeps == [30.0, 30.0]
 
 
+def test_가르지_못한_잡은_다른_검사를_기다리는_동안_다시_읽지_않는다() -> None:
+    # 다른 검사가 아직 돌면 가르지 못한 뒤에도 대기가 이어진다. 그동안 조회마다 다시 읽으면
+    # 실패마다 CALL_TIMEOUT 을 쓰고, 나중에 읽히면 낸 판정이 뒤집힌다(PR 직전 bug-perf-review).
+    red = run("claude-review", conclusion="FAILURE")
+    running = payload(run("verify", status="IN_PROGRESS"), red, *coderabbit())
+    script = Script(
+        running,
+        running,
+        running,
+        running,
+        running,
+        payload(run("verify"), red, *coderabbit()),
+        limits=[FetchError("gh 가 60초 안에 돌아오지 않았다")] * 3 + [LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert "가르지 못했다: 잡 117440173217 로그를 3번 읽지 못했다" in out
+    assert script.classified == ["117440173217"] * 3
+
+
 def test_잡_로그_읽기가_한_번_실패해도_다음_조회에서_다시_읽어_한도를_가른다() -> None:
     # 나머지 검사가 모두 끝나 있어도 한 번의 gh 실패로 곧바로 실패로 끝나지 않는다.
     script = Script(

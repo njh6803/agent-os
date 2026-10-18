@@ -136,3 +136,66 @@ open-session을 부른다 2026-10-18T22:06:11Z
 - PR #292 일지에 "다음" 절이 없어 여기에 옮긴다: 계정 한도가 풀린 뒤(2026-10-19 06시 KST) PR #292의 카나리아
   셋(`.scratch/harness/probes/canary/probes_rule_kill_and_snapshot.toml`, `spec_reviewer_evidence_kinds.toml`,
   `tools_rule_scratch_probe_hook.toml`)의 실제 회차를 돌려 각 명세 머리 주석에 결과를 적는다.
+
+## 인계 (커밋 뒤)
+
+둘째 세션(제목 `chore/wait-ci-review-limit`)이 앞 인계의 지시문으로 열려 셀프 리뷰와 반영을 마치고 커밋했다. 사용자
+프롬프트는 앞 인계의 시작 프롬프트와 같다.
+
+> 사용자: 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 열린 행)을 chore
+> 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+
+- 앞 세션의 프로세스가 턴을 마친 뒤에도 워크트리 잠금을 쥐어 `EnterWorktree(path)`가 `belongs to another running Claude
+  Code session`으로 거부했다. 10분을 기다려도 풀리지 않아 처음에는 주 체크아웃 세션에서 절대 경로로 리뷰와 반영을 했다.
+  커밋에서 `hook_git_main_commit`이 `git -C <워크트리> commit`을 주 체크아웃의 main 위 커밋으로 보고 막았고, 그때 origin/main에
+  막 들어온 PR #293의 `next-session` 잠금 풀기 항목(같은 거부의 여섯 회차, 대기열 326)을 읽고 `git worktree unlock`으로 풀고
+  들어가 커밋했다. 거부는 일곱째 회차다.
+- 셀프 리뷰 결과와 반영은 위 "셀프 리뷰" 절. 커밋 93b26703의 pre-commit은 모두 초록이었다(pytest 625.0초, web-verify
+  667.6초, run-hooks 270.6초). 인용 대조 경고 셋은 이 일지의 "PR 직전 리뷰에 밀 주장"이 독스트링의 줄바꿈된 문장을 한 줄로
+  옮긴 것이다(내용은 원문과 같다).
+- 커밋 뒤 인계 계기가 왔다(세션 컨텍스트 271,879 토큰). 남은 단계: origin/main(ebd09fb, PR #293·#294) 합치기, PR 직전
+  리뷰(`/security-review`와 `bug-perf-review`), 푸시와 PR, 봇 회차, 병합. 합칠 때 `.claude/skills/next-session/SKILL.md`와
+  `.scratch/retro-queue.md`가 양쪽에서 바뀌었다. #294는 전체를 볼 때 손 pytest 대신 러너를 치게 바꿨으니 합친 뒤의
+  `CLAUDE.md` 검증 명령 절을 따른다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 것)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/wait-ci-review-limit
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-03-wait-ci-review-limit.md(셀프 리뷰, 인계 (커밋 뒤), 이어받은 일)
+이어받을 상태: 인계: 커밋 뒤. 커밋 93b26703(셀프 리뷰 반영까지)이 브랜치에 있고 푸시하지 않았으며 PR은 없다. 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 origin/main 합치기(next-session SKILL.md와 retro-queue.md가 양쪽에서 바뀌었다), PR 직전 리뷰(/security-review와 bug-perf-review, 밀 주장은 일지 "셀프 리뷰" 절), 푸시와 PR, 봇 회차, 병합이다. 일지는 docs/journal/2026-10-19-03-wait-ci-review-limit.md이고 "## 다음"은 아직 없다. "이어받은 일"(PR #292 카나리아 셋의 실제 회차)은 이 PR 밖이라 "다음"으로 옮긴다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기는 `is not locked`로 끝났다(이 세션이 들어갈 때 손수 푼 뒤 `EnterWorktree(path)`가 다시 잠그지 않았다).
+
+open-session을 부른다 2026-10-18T23:15:56Z
+
+## PR 직전 리뷰
+
+셋째 세션이 앞 인계의 지시문으로 열려 `EnterWorktree(path)`로 바로 들어왔다(잠금 거부 없음). 사용자 프롬프트는 앞 인계의
+시작 프롬프트와 같다.
+
+- origin/main(ebd09fb) 합치기: 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라며 거부해 손으로 `git merge`했다.
+  `next-session` SKILL.md는 저절로 합쳐졌고, `.scratch/retro-queue.md`의 충돌 두 덩이는 행 번호마다 닫힌 쪽을 골라(326·328은
+  main, 327은 이 브랜치) 풀고 343(이 브랜치)과 344(main)를 둘 다 남겼다. 병합 커밋 35ade4b2의 pre-commit은 모두 초록(pytest
+  408.6초, web-verify 325.2초, run-hooks 125.0초).
+- `/security-review`: 지적 없음. 잡 번호는 숫자만 받아 리스트 인자로 넘기고, 로그의 공격자 글은 JSON 문자열 안에 있어 홀로 선
+  결과 블록이 되지 못하며, 모를 때는 실패 쪽이다.
+- `bug-perf-review`: Major 1, Minor 2, Nit 1. 밀 주장 다섯 가운데 넷째("다시 읽기는 max_fetch_errors 번으로 끝난다")와
+  `ReviewLimits` 독스트링이 코드와 어긋났다.
+  - 고친 것(Major): 세 번째 실패에서 "가르지 못함"을 내도 그 잡을 기억하지 않아, 다른 검사를 기다리는 동안 조회마다 로그를
+    다시 읽었다. 실패마다 `CALL_TIMEOUT`을 쓰고, 나중에 읽히면 낸 판정이 통과로 뒤집혔다. 실패 시험을 먼저 써 뒤집힘을
+    재현했고(`assert 0 == 1`), 가르지 못한 잡을 `_unclear`에 남겨 다시 읽지 않게 고쳤다. 시험 58건 초록.
+  - 고친 것(Minor): `ReviewLimits` 독스트링을 "`max_errors`번째 실패에서 가르지 못한 것으로 정한다"로, 모듈 독스트링과
+    `wait` 주석을 "모두 `max_fetch_errors`번"으로 맞췄다. 변이 하나("가르지 못한 잡을 다음 조회에서 다시 읽는다")를 더하고
+    원문이 사라진 변이 35를 새 코드에 맞췄다. `--check` 마흔넷 모두 원문 있음, `--since HEAD`의 둘 모두 기대대로 빨강.
+  - 남긴 것(Minor): 같은 이름의 옛 실행이 한도로 빨갛고 재실행이 통과하면 통과 줄에 "리뷰 없음"이 붙는다. 같은 이름의
+    재실행을 실패로 드는 기존 판정(`_worse`)의 연장이고, 병합 판정은 맞으며 표기만 어긋난다.
+  - 남긴 것(Nit): 다시 읽는 동안 다른 실패나 충돌을 보고도 끝내지 않아 끝이 최대 두 간격 늦다.

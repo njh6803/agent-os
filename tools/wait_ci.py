@@ -47,8 +47,9 @@ combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
   CodeRabbit과 나머지 검사를 마저 기다리고, 통과 줄 끝에 한도로 리뷰 없음이라는 것과 그 문구(풀리는
   시각이 든다)를 적는다. 다른 실패나 시간 초과로 끝나면 그 사실은 끝 줄 앞의 줄에 남는다. 같은
   이름의 빨간 잡이 여럿이면 모두 한도일 때만 빼고, 하나라도 한도가 아니면 실패로 센다. 로그
-  읽기가 실패하면 PR 조회처럼 `max_fetch_errors`번까지 다음 조회에서 다시 읽고, 그래도 읽지
-  못했거나 잡 주소가 없으면 가르지 못한 것이라 실패로 세며 그 이유를 끝 줄 앞에 적는다. 한도로
+  읽기가 실패하면 PR 조회처럼 모두 `max_fetch_errors`번까지 다음 조회에서 다시 읽고, 그래도 읽지
+  못했거나 잡 주소가 없으면 가르지 못한 것이라 실패로 세며 그 이유를 끝 줄 앞에 적는다. 가르지
+  못한 잡은 다른 검사를 기다리는 동안에도 다시 읽지 않는다. 한도로
   잘못 읽어 통과시키면 리뷰 없는 병합으로 이어져, 모를 때는 실패 쪽이다. 이 모양은 PR #292의 실행
   39047880157(한도)과 PR #278의 실행 38878140947(리뷰를 마친 초록)의 잡 로그로 손으로 봤다.
 
@@ -342,8 +343,9 @@ class Review:
 class ReviewLimits:
     """claude-review 의 빨간 잡이 계정 한도인지 잡 로그로 가른다.
 
-    끝난 잡의 로그는 바뀌지 않아 잡마다 한 번만 읽는다. 읽기가 실패하면 `max_errors`번째까지는
-    다시 읽으라고 내고, 그 뒤에는 가르지 못한 것으로 낸다.
+    끝난 잡의 로그는 바뀌지 않아 잡마다 한 번만 읽는다. 읽기가 `max_errors`번째로 실패하기
+    전까지는 다시 읽으라고 내고, `max_errors`번째 실패에서 가르지 못한 것으로 정해 그 잡은 다시
+    읽지 않는다. 다른 검사를 기다리는 동안 다시 읽으면 낸 판정이 뒤집힌다.
     """
 
     def __init__(self, classify: Callable[[str], str | None], max_errors: int) -> None:
@@ -351,12 +353,15 @@ class ReviewLimits:
         self._max_errors = max_errors
         self._known: dict[str, str | None] = {}
         self._errors: dict[str, int] = {}
+        self._unclear: dict[str, str] = {}
 
     def review(self, snapshot: Snapshot) -> Review:
         limit: str | None = None
         for job in snapshot.failed_jobs.get(REVIEW_CHECK, ()):
             if job is None:
                 return Review(unclear="롤업에 잡 주소(detailsUrl)가 없다")
+            if job in self._unclear:
+                return Review(unclear=self._unclear[job])
             if job not in self._known:
                 try:
                     self._known[job] = self._classify(job)
@@ -364,9 +369,10 @@ class ReviewLimits:
                     self._errors[job] = self._errors.get(job, 0) + 1
                     if self._errors[job] < self._max_errors:
                         return Review(retrying=True)
-                    return Review(
-                        unclear=f"잡 {job} 로그를 {self._errors[job]}번 읽지 못했다: {error}"
+                    self._unclear[job] = (
+                        f"잡 {job} 로그를 {self._errors[job]}번 읽지 못했다: {error}"
                     )
+                    return Review(unclear=self._unclear[job])
             limit = self._known[job]
             if limit is None:
                 return Review()
@@ -406,7 +412,8 @@ def wait(
             if snapshot.head == head:
                 seen_head = True
                 review = limits.review(snapshot)
-                # 로그를 다시 읽을 동안은 끝내지 않는다. 다시 읽기는 max_fetch_errors 번으로 끝난다.
+                # 로그를 다시 읽을 동안은 끝내지 않는다. 읽기는 잡마다 모두 max_fetch_errors 번으로
+                # 끝난다.
                 settled = (
                     None if review.retrying else _settle(number, snapshot, elapsed, options, review)
                 )

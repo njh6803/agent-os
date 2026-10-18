@@ -366,8 +366,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''                        unclear=f"잡 {job} 로그를'''
-new = '''                        limit=f"잡 {job} 로그를'''
+old = '''                    return Review(unclear=self._unclear[job])'''
+new = '''                    return Review(limit=self._unclear[job])'''
 
 [[mutation]]
 name = "잡 로그 읽기가 한 번 실패하면 다시 읽지 않는다"
@@ -451,3 +451,13 @@ file = "tools/wait_ci.py"
 old = '''        for job in snapshot.failed_jobs.get(REVIEW_CHECK, ()):'''
 new = '''        for job in [j for js in snapshot.failed_jobs.values() for j in js]:'''
 
+
+[[mutation]]
+name = "가르지 못한 잡을 다음 조회에서 다시 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "다시_읽지_않는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if job in self._unclear:'''
+new = '''            if False:'''
