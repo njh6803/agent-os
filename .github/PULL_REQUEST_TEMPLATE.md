@@ -45,7 +45,7 @@
 
 ## 체크리스트
 
-<!-- 실제로 실행한 것만 체크한다. 커밋의 pre-commit이 돌린 검사도 실행이고, 그 출력에서 Skipped인 검사는 실행이 아니다(CLAUDE.md 검증 명령 절). 안 돌렸으면 비워 두고 이유를 한 줄 적는다 -->
+<!-- 실제로 실행한 것만 체크한다. 커밋의 pre-commit이나 `uv run python tools/run_checks.py`가 돌린 검사도 실행이고(러너의 pytest는 프로세스를 나눠 돈다), 그 출력에서 Skipped인 검사는 실행이 아니다(CLAUDE.md 검증 명령 절). 안 돌렸으면 비워 두고 이유를 한 줄 적는다 -->
 
 - [ ] `uv run ruff check . && uv run ruff format --check .`
 - [ ] `uv run pyright`
@@ -60,8 +60,8 @@
 ## 확인 방법
 
 ```bash
-uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest -q
-pnpm -C web verify
+uv run ruff check . && uv run ruff format --check .
+uv run python tools/run_checks.py
 ```
 
 <!-- 위 외에 확인한 시나리오, 재현 절차, 실행한 명령과 결과 -->
