@@ -44,7 +44,7 @@
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
 ## 검증 명령
-- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 변경을 마치고 전체를 볼 때는 이것 대신 `uv run python tools/run_checks.py`를 친다. pre-commit의 러너라 pytest를 프로세스로 나눠 돌고(한 프로세스로는 8분을 넘긴다) 타입체크·경계·web도 함께 띄운다. 한 바퀴가 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. ruff 둘은 러너에 없어 린트 줄은 따로 친다(ADR 0035)
+- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 변경을 마치고 전체를 볼 때는 이것 대신 `uv run python tools/run_checks.py`를 친다. pre-commit의 러너라 pytest를 프로세스로 나눠 돌고(한 프로세스로는 8분을 넘긴다) 타입체크·경계·web도 함께 띄운다. 한 바퀴가 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. 다른 세션이 함께 돌면 600초에 닿으므로(581초를 봤다) 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다. ruff 둘은 러너에 없어 린트 줄은 따로 친다(ADR 0035)
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`

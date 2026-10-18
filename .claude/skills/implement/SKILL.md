@@ -16,7 +16,7 @@ Use /tdd where possible, at pre-agreed seams.
 
 의존성을 더하거나 올리면 설치된 판을 명세·ADR이 근거로 든 측정의 판(그 프로브의 README 줄)과 견준다. major가 다르면 그 측정을 다시 돌린다(대기열 61, 규약은 `docs/agents/issue-tracker.md`의 프로브와 근거 절).
 
-Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. 끝의 전체는 `uv run ruff check . && uv run ruff format --check .`와 `uv run python tools/run_checks.py`다. 맨 `uv run pytest -q`는 한 프로세스라 8분을 넘기고, 러너는 pytest를 나눠 돌며 타입체크·경계·web을 함께 띄운다(`CLAUDE.md` 검증 명령의 테스트 줄, ADR 0035). 러너 한 바퀴는 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
+Run linting and typechecking regularly, single test files regularly, and the full test suite once at the end. 끝의 전체는 `uv run ruff check . && uv run ruff format --check .`와 `uv run python tools/run_checks.py`다. 맨 `uv run pytest -q`는 한 프로세스라 8분을 넘기고, 러너는 pytest를 나눠 돌며 타입체크·경계·web을 함께 띄운다(`CLAUDE.md` 검증 명령의 테스트 줄, ADR 0035). 러너 한 바퀴는 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. 다른 세션이 함께 돌면 600초에 닿으므로 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다. red가 예상보다 넓으면 린트를 먼저 돌린다. 이름 충돌과 import 문제는 테스트 실패로 위장한다.
 
 구현 전부터 초록인 테스트(순서나 경계를 고정하는 가드)와 구현 뒤에 쓴 테스트는 빨강을 본 적이 없다. 그 테스트가 지키는 코드에 `tools/mutate.py`로 변이를 넣어 빨강을 본다. pytest 밖의 테스트(Vitest, Playwright, tsc)도 같은 도구다. 변이마다 기대를 변이 파일(TOML)에 적는다. 수십 분 도는 변이 열은 커밋한 뒤 다른 워크트리에서 돌리고 이 체크아웃에서는 계속 일한다. 코드를 옮기거나 고쳤으면 그 코드를 겨누던 변이 파일을 `--check`로 본다. 형식과 절차는 그 도구의 독스트링이다.
 
