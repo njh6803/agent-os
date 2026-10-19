@@ -1,0 +1,129 @@
+# tools/hook_measure_word.py(대기열 227)의 판정을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/measure_word_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "docs/adr 토막을 잇달아 요구하지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if any(folders[index : index + 2] == ["docs", "adr"] for index in range(len(folders) - 1)):'''
+new = '''    if "adr" in folders:'''
+
+[[mutation]]
+name = "retro-queue.md 의 부모를 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-1] == ".scratch" and name == "retro-queue.md":'''
+new = '''    if name == "retro-queue.md":'''
+
+[[mutation]]
+name = "프로브 README 에서 .scratch 조상을 요구하지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    return name == "readme.md" and folders[-1] == "probes" and ".scratch" in folders[:-1]'''
+new = '''    return name == "readme.md" and folders[-1] == "probes"'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    parts = [part.casefold() for part in _SPLIT.split(path) if part]'''
+new = '''    parts = [part for part in _SPLIT.split(path) if part]'''
+
+[[mutation]]
+name = "원래 있던 줄도 더한 줄로 센다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    return [line for line in new.splitlines() if line.strip() and line not in before]'''
+new = '''    return [line for line in new.splitlines() if line.strip()]'''
+
+[[mutation]]
+name = "Write 의 originalFile 을 읽지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    return (original if isinstance(original, str) else ""), content'''
+new = '''    return "", content'''
+
+[[mutation]]
+name = "근거 표지를 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''        and not any(mark in line for mark in EXEMPT_MARKS)'''
+new = '''        and True'''
+
+[[mutation]]
+name = "낱말 하나(재니)를 뺀다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''MEASURE_WORDS = ("쟀다", "재니", "실측")'''
+new = '''MEASURE_WORDS = ("쟀다", "실측")'''
+
+[[mutation]]
+name = "Edit 를 도구에서 뺀다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "걸린 줄의 수를 자르지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    shown = "\n".join(f"- {line.strip()[:LINE_WIDTH]}" for line in flagged[:SHOWN_LINES])'''
+new = '''    shown = "\n".join(f"- {line.strip()[:LINE_WIDTH]}" for line in flagged)'''
+
+[[mutation]]
+name = "걸린 줄의 글자를 자르지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    shown = "\n".join(f"- {line.strip()[:LINE_WIDTH]}" for line in flagged[:SHOWN_LINES])'''
+new = '''    shown = "\n".join(f"- {line.strip()}" for line in flagged[:SHOWN_LINES])'''
+
+[[mutation]]
+name = "Edit 의 originalFile 을 읽지 않는다(조각만 본다)"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''        if isinstance(original, str) and old and old in original:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "Edit 의 replace_all 을 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''            count = -1 if tool_input.get("replace_all") is True else 1'''
+new = '''            count = 1'''
+
+[[mutation]]
+name = "대조군: 알림의 무시 조건 앞 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_measure_word.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''"다음 셋이면 고치지 않고 이 알림은 무시한다.'''
+new = '''"다음 셋이면 손대지 않고 이 알림은 무시한다.'''
