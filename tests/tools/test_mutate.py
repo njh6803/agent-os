@@ -446,6 +446,21 @@ def _자라는지(심장: Path) -> bool:
     return False
 
 
+def _남았으면_끝낸다(심장: Path) -> None:
+    """시험이 빨개져 손자가 남았으면 끝낸다. 손자는 판정의 기한보다 길게 살아, 빨간 회차에 그대로
+    두면 그동안 `tmp_path` 에 쓴다. 기록 파일이 자라는 동안만 pid 를 손자의 것으로 믿는다. 끝난
+    손자의 pid 는 다른 프로세스가 다시 받을 수 있어 자라지 않으면 끄지 않는다. 0.5초보다 오래 쉰
+    손자는 끄지 못하고 스스로 끝나기를 둔다."""
+    pid = 심장.with_suffix(".pid")
+    if not 심장.exists() or not pid.exists():
+        return
+    크기 = 심장.stat().st_size
+    time.sleep(0.5)
+    if 심장.stat().st_size != 크기:
+        with contextlib.suppress(OSError):  # 그사이 끝났으면 없다
+            os.kill(int(pid.read_text()), signal.SIGTERM)
+
+
 def _첫_기다림을_끊는다(
     monkeypatch: pytest.MonkeyPatch,
     끊는_예외: Callable[[subprocess.Popen[str], float], BaseException],
@@ -493,13 +508,16 @@ def test_실제_러너는_시간_제한을_넘기면_손자_프로세스까지_�
     결과 = run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
 
     걸린 = time.monotonic() - 시작
-    assert 결과.timed_out_after == 60
-    assert "손자가 뛴다" in 결과.output
-    # 자식과 손자를 띄우는 시간과 `taskkill` 까지 든다. 8초로 두던 판이 pytest 세 벌을 함께 띄운
-    # 부하에서 13.6초로 빨갰다(ADR 0035 의 2026-10-18 이력)
-    assert 걸린 < 30
-    assert 심장.stat().st_size > 0
-    assert _멈추는지(심장), _손자가_산다
+    try:
+        assert 결과.timed_out_after == 60
+        assert "손자가 뛴다" in 결과.output
+        # 자식과 손자를 띄우는 시간과 `taskkill` 까지 든다. 8초로 두던 판이 pytest 세 벌을 함께 띄운
+        # 부하에서 13.6초로 빨갰다(ADR 0035 의 2026-10-18 이력)
+        assert 걸린 < 30
+        assert 심장.stat().st_size > 0
+        assert _멈추는지(심장), _손자가_산다
+    finally:
+        _남았으면_끝낸다(심장)
 
 
 def test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다(tmp_path: Path) -> None:
@@ -544,10 +562,13 @@ def test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세
     심장 = tmp_path / "heartbeat"
     _첫_기다림을_끊는다(monkeypatch, _Ctrl_C, lambda _: 심장.with_suffix(".printed").exists())
 
-    with pytest.raises(KeyboardInterrupt):
-        run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
 
-    assert _멈추는지(심장), _손자가_산다
+        assert _멈추는지(심장), _손자가_산다
+    finally:
+        _남았으면_끝낸다(심장)
 
 
 def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_출력은_잠시만_기다린다(
@@ -578,8 +599,7 @@ def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_�
         assert 걸린 < 30
         assert _자라는지(심장), _손자가_끝났다
     finally:
-        with contextlib.suppress(OSError):  # 스스로 끝났으면 없다
-            os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
+        _남았으면_끝낸다(심장)
 
 
 _그룹을_여는_자식 = """
@@ -618,8 +638,7 @@ def test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서
         else:
             assert _자라는지(심장), _손자가_끝났다
     finally:
-        with contextlib.suppress(OSError):  # 끝냈거나 스스로 끝났으면 없다
-            os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
+        _남았으면_끝낸다(심장)
 
 
 def test_실제_러너는_시간_안에_끝난_명령의_종료_코드와_출력을_돌려준다(tmp_path: Path) -> None:
