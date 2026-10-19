@@ -925,6 +925,77 @@ claude-review가 이 PR에 낸 첫 리뷰라 Minor·Nit을 지적마다 판단�
 - 이 절을 푸시하면 claude-review가 한 번 더 돈다. 그 회차에 Critical·Major가 없으면 이 일지를 다시 푸시하지 않고 보류
   이유를 PR 코멘트에 남긴 뒤 병합한다.
 
+## 인계 (일지 커밋 뒤)
+
+위 절을 담은 일지 커밋 `c6be5301`(pre-commit 통과) 뒤, 세션 컨텍스트가 20만 토큰을 넘어(24만) `커밋 뒤` 경계에서 인계
+계기가 왔다. 이 세션의 지시문 "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, 요청 범위는 PR과 병합까지이며,
+`get_session`의 `self`에 `parentSessionId`가 없어 곁 세션도 아니다. 그래서 넘긴다. 넘기기 전 이 세션의 제목은
+`chore/mutate-ctrl-c-under-load`였고, 넘기며 `chore/mutate-ctrl-c-under-load (인계함)`으로 바꾼다. 이 세션의 사용자 프롬프트는
+위 "이어받기 (PR 연 뒤)"가 인용한 지시문 하나이고, 결정과 고친 것은 그 절의 하위 절에 있다. 이 세션이 번복한 것은 둘이다.
+둘째 회차 PR 코멘트의 첫 판에 틀린 문장(변이 표가 시험의 주석 자리를 인용한다)이 있어 게시한 뒤 고쳤고, 위 절의 CodeRabbit
+문장을 커밋 전에 PR의 첫 코멘트와 대 보고 고쳤다.
+
+남은 단계(차례대로. 디스크의 `.claude/skills/next-session/SKILL.md`를 Read로 열어 따른다):
+
+1. 이 절(커밋 전)을 새 세션의 이어받기 기록과 한 커밋으로 묶고, `c6be5301`과 함께 한 번에 푸시한다. 푸시가 둘로 나뉘면
+   claude-review가 한 번 더 돈다. 새 세션도 ccd_pr `get_status`로 묶임을 보고, 묶이지 않았으면 `bind_pr`로 묶는다.
+2. 순서 1의 2(봇 회차). 푸시 뒤 `@coderabbitai review` 코멘트를 남기고 상태를 한 번 읽고, pending이면 `uv run python
+   tools/wait_ci.py 301`을 백그라운드로 띄우고 턴을 끝낸다. 그 푸시로 도는 claude-review는 셋째 회차라 Critical·Major만
+   고친다. CodeRabbit이 이번에 처음 리뷰하면 그것이 그 봇의 첫 회차다. 고친 것이 없는 회차면 일지를 다시 푸시하지 않고 보류
+   이유를 PR 코멘트에 남긴다(순서 1의 2 "뒤로 넘긴 일").
+3. 병합 길("워크트리에서 병합할 때" 1~4). 주 체크아웃 미갱신이면 보고에 그 한 줄을 남긴다.
+4. 다음 지시문(순서 2~4). 이 단계의 회고와 "다음"은 이미 아래에 있어 다시 돌지 않는다.
+
+알아 둘 것:
+
+- CodeRabbit은 이 PR에서 리뷰한 적이 없다(위 "푸시와 봇 둘째 회차"). 한도로 리뷰가 없으면 보안·버그 축은 PR 체크리스트의 PR
+  직전 대체 리뷰 둘이 대신한다.
+- 이 워크트리는 `sync_with_base_branch`가 거부한다(앱이 만든 워크트리가 아니다). main을 합칠 때는 손으로 `git merge`한다.
+- 건드리면 안 되는 것은 위 "인계 (계정 전환, 셀프 리뷰 도중)"의 그 절과 같다.
+
+### 인계 지시문 (일지 커밋 뒤)
+
+```
+다음 작업: 기능 harness. 대기열 306을 반영한다: 따로 돌리면 지나는 시간 시험이 전체 스위트의 부하 아래에서 빨개져 그 시험을 건드리지 않은 커밋의 pre-commit을 막는 사례(첫 사례는 tests/tools/test_mutate.py의 Ctrl-C 손자 판정)를 재현해 원인을 가르고 고친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
+브랜치: chore/mutate-ctrl-c-under-load
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-18-mutate-ctrl-c-under-load.md(그 브랜치에만 있고 "인계 (일지 커밋 뒤)" 절은 커밋 전이다)의 "인계 (일지 커밋 뒤)" 절. 앞의 인계 절 넷의 지시문은 옛 것이고 이 절이 우선한다
+이어받을 상태: 인계: 커밋 뒤. 일지만 고친 커밋 c6be5301까지 했고 아직 푸시하지 않았다. 커밋하지 않은 인계 절과 함께 한 번에 푸시하고 순서 1의 2(봇 회차)부터 한다(일지 docs/journal/2026-10-19-18-mutate-ctrl-c-under-load.md). 그 푸시로 도는 claude-review는 셋째 회차라 Critical·Major만 고친다. CodeRabbit은 이 PR에서 리뷰한 적이 없다(자동 리뷰는 별 수 조건으로 꺼져 있고, 786fe322 뒤의 요청은 한도였다). 첫·둘째 회차에서 고치지 않고 둔 지적과 그 이유는 PR 코멘트 둘에 있고, 뒤로 넘긴 일은 없다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/mutate-ctrl-c-under-load (인계함)`으로 바꿨다(묻지 않고 바뀌었다). 이 세션이 띄운 백그라운드 작업은 모두
+  끝나 있어 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝났다.
+- open-session을 부른다 2026-10-19T07:58:06Z
+
+## 이어받기 (일지 커밋 뒤)
+
+이 절부터는 위 "인계 지시문 (일지 커밋 뒤)"로 연 새 세션(2026-10-19)이 쓴다. 사용자 프롬프트는 그 지시문이고, 첫 줄 앞의
+시작 프롬프트와 나머지 줄은 위 지시문과 같다.
+
+> 사용자: (지시문) "이어받을 상태: 인계: 커밋 뒤. 일지만 고친 커밋 c6be5301까지 했고 아직 푸시하지 않았다. 커밋하지 않은
+> 인계 절과 함께 한 번에 푸시하고 순서 1의 2(봇 회차)부터 한다(일지 docs/journal/2026-10-19-18-mutate-ctrl-c-under-load.md). …"
+
+- **들어오기.** 훅의 계기대로 제목을 앱이 지은 `Queue 306 flaky test under load`에서 `chore/mutate-ctrl-c-under-load`로
+  바꾸고, `git worktree list`에서 이 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어왔다(거부 없음). 커밋하지 않은 것은 이
+  일지의 위 인계 절뿐이었다. ccd_pr `get_status`가 `bound: false`라 `bind_pr`로 PR #301을 이 세션에 묶었다.
+- **셋째 합치기.** PR이 `CONFLICTING`이었다. 그새 main에 #304(`5f38d61c`, 일지 2026-10-19-14)가 병합되어
+  `.scratch/retro-queue.md`와 `.scratch/harness/probes/README.md`의 표 끝에 행을 더했다. 합치기 전에 `sibling_overlap.py`가 번호
+  겹침 없음을 알렸다. 대기열은 번호 순서(363·364 뒤에 367·368)로, 프로브 README는 main의 행 셋(`worktree_skill_listing.py`,
+  `worktree_skill_overrides_hook_mutations.toml`, `tidy_settings_equivalent_mutations.toml`) 뒤에 이 브랜치의 행 둘을 두었다.
+  풀이는 바이트로 읽고 쓰는 스크래치 스크립트로 해 줄 끝이 LF 그대로다(`git ls-files --eol`로 봤다). 병합 커밋 `577b92af`의
+  pre-commit은 병합 모드라 ruff 둘이 `Skipped`였고 손으로 쳐 통과했다(`All checks passed!`, `789 files already formatted`).
+  러너(pytest 544.7초, web-verify 408.6초)와 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용 대조, 커밋 메시지는 `Passed`였다.
+  #304는 이 PR이 고친 시험과 프로브를 건드리지 않아 변이 표는 다시 돌리지 않았다.
+- **일지 커밋의 첫 pre-commit이 막혔다.** `tests/tools/test_hook_midturn_korean.py`의
+  `test_트랜스크립트_파일이_없으면_기다리지_않는다`가 2초 상한에 2.30초로 빨갰다(`1 failed, 3595 passed`, pytest 632.5초. 이
+  PC에 다른 세션이 여럿 돌던 때다). 이 커밋은 일지만 고쳐 그 시험을 건드리지 않았고, 아래 "다음"이 적은 남은 사례 셋 가운데
+  하나라 고치지 않고 다시 커밋했다. 그 사례가 빨갛게 난 것은 두 번째다.
+
 ## 회고
 
 이 단계(대기열 306, PR #301)를 닫으며 retro를 돌았다. 네 세션에 걸친 이 일지 전부와 이 세션을 읽었다. 후보 열, 승인 둘,
@@ -973,7 +1044,7 @@ claude-review가 이 PR에 낸 첫 리뷰라 Minor·Nit을 지적마다 판단�
 - 대기열 306은 열어 둔다. 남은 사례 셋은 재현하지 않아 그대로다. `web/eslint.config.test.ts`의 "app/ 이 next 와 react 를
   import" 사례(60초 제한에 144초, 일지 2026-10-17-04), 손자 없는 두 시험의 8초 상한(`tests/tools/test_mutate.py`),
   `tests/tools/test_hook_midturn_korean.py`의 `test_트랜스크립트_파일이_없으면_기다리지_않는다`(2초 상한에 3.34초, 위
-  "open_session 사례: 최종 측정에서 재현되어 고친다")다. 고치려면 이 PR처럼 먼저 부하를 건 반복 실행으로 재현한다.
+  "open_session 사례: 최종 측정에서 재현되어 고친다". 일지 커밋의 pre-commit에서 다시 2.30초, 위 "이어받기 (일지 커밋 뒤)")다. 고치려면 이 PR처럼 먼저 부하를 건 반복 실행으로 재현한다.
 - 이 PR이 고친 시험에 남긴 위험(1초 창의 얇은 여유, 시간 제한 시험의 30초 상한)은 ADR 0035의 2026-10-18 이력 "남은 것"이
   원천이다.
 - 회고가 대기열에 367(고친 길의 표지를 `probes.md` 첫 항목에 적는다)과 368(`hook_edit_during_commit`의 거짓 알림)을
