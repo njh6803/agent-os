@@ -121,6 +121,35 @@ new = '''    if os.environ.get("CLAUDE_CODE_REMOTE") == "never":
         return 0'''
 
 [[mutation]]
+name = "UTF-8 이 아닌 설정을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    except UnicodeDecodeError:
+        return _cannot("UTF-8 이 아니다")
+'''
+new = ''''''
+
+[[mutation]]
+name = "남은 임시 파일을 나이와 상관없이 지운다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''            if leftover.stat().st_mtime < cutoff:'''
+new = '''            if leftover.stat().st_mtime < cutoff + 2 * STALE_TEMP_SECONDS:'''
+
+[[mutation]]
+name = "남은 임시 파일을 치우지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''            if leftover.stat().st_mtime < cutoff:'''
+new = '''            if leftover.stat().st_mtime < 0:'''
+
+[[mutation]]
 name = "대조군: 알림의 끝 문장을 바꾼다"
 tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "green"

@@ -19,7 +19,8 @@
 원문을 내려받아 읽었다)는 경로를 단
 이름을 목록에 실을 때 일하는 파일이 든 폴더의 사본을 부르라는 안내를 함께 싣는다고 적고, 이 저장소의
 세션은 그 꼴로 Skill 을 190번 불렀다(`.scratch/harness/probes/session_cost/branches.json` 의
-브랜치별 `skills` 를 손으로 더했다). 끄면 그 이름은 부를 수 없고(숨긴 스킬을 전체 이름으로 부르면
+브랜치별 `skills` 를 손으로 더했다. 그 파일은 2026-09-19 뒤 병합된 PR 의 브랜치를 담고 2026-10-16 에
+커밋됐다). 끄면 그 이름은 부를 수 없고(숨긴 스킬을 전체 이름으로 부르면
 `skillOverrides` 오류다, 같은 문서의 "Override skill visibility from settings"), Skill 호출은 주
 체크아웃에 실린 사본으로 돈다. 워크트리에서 고친 스킬은 원래부터 그 이름이 아니라 Read 로 디스크의
 `SKILL.md` 를 열어 따른다(`docs/constitution/operations.md` 환경 규약 상세. 경로를 단 이름은 붙은
@@ -29,8 +30,11 @@
 local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`tools/check_instructions.py` 의 local
 검사 독스트링). 키의 이름공간 `.claude/worktrees/` 는 이 훅이 맡는다. 쓸 때마다 그 접두의 키 가운데
 워크트리 폴더가 없어진 것을 걷고 들어간 워크트리의 키를 더하며, 다른 키와 다른 설정은 그대로 둔다.
-바뀔 것이 없으면 쓰지 않고 침묵한다. 썼으면 사용자에게만 알린다(`systemMessage`). local 이 풀리지
-않거나 `skillOverrides` 가 객체가 아니면 고치지 않고 알린다.
+바뀔 것이 없으면 쓰지 않고 침묵한다. 썼으면 사용자에게만 알린다(`systemMessage`). local 이 UTF-8 이
+아니거나 JSON 객체로 풀리지 않거나 `skillOverrides` 가 객체가 아니면 고치지 않고 알린다. 쓸 때는
+앞 실행이 쓰다 죽어 남긴 한 시간 넘은 임시 파일을 치운다. 워크트리를 만들 때 받은 local 사본은 이
+훅이 루트를 고친 뒤 루트와 바이트가 달라지므로, `tools/tidy_checkouts.py` 의 `settings_equivalent`
+가 이 훅의 키와 서식을 빼고 견준다.
 
 클라우드 세션(`CLAUDE_CODE_REMOTE` 가 `true`)에서는 침묵한다. 클라우드 체크아웃에는 그 ignore 가
 없어, 쓰면 추적하지 않는 파일로 남는다(2026-10-19 클라우드 컨테이너에서 `git check-ignore` 가 1
@@ -50,15 +54,22 @@ local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`
 - 같은 파일을 같은 때 쓰는 다른 쓰기(Claude Code 의 권한 기억, `/skills` 메뉴, 다른 세션의 이 훅).
   읽고 쓰는 사이에 끼면 나중 쓰기가 이긴다.
 - 데스크톱 앱이 묶은 판에서 경로를 단 이름이 키로 먹는지. CLI 2.1.303 에서만 쟀다.
+- Windows 에서 세션이 읽는 local 의 자리와, 바꿔 끼운(`os.replace`) 파일을 설정 감시가 보는지. 공식
+  문서(settings 의 "Where Claude Code keeps the local file in a git repository", 2026-10-19 원문을
+  내려받아 읽었다)는 Windows 에서 local 이 `.claude/settings.json` 곁에 남는다고 적는다. 운영 규약의
+  모드 표가 `EnterWorktree` 로 들어온 세션의 훅 등록을 주 체크아웃의 것으로 적어, 그 곁인 주
+  체크아웃의 local 로 보았다(어림이고 Windows 에서 재지 않았다).
 - 끈 이름은 Skill 도구로 부를 수 없다(공식 문서 skills의 "Override skill visibility from settings":
   숨긴 스킬을 전체 이름으로 부르면 `skillOverrides` 오류다. 2026-10-19 원문을 내려받아 읽었다).
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import TypedDict
 
@@ -70,6 +81,8 @@ KEY_PREFIX = ".claude/worktrees/"
 LOCAL = Path(".claude") / "settings.local.json"
 OFF = "off"
 OVERRIDES = "skillOverrides"
+# 쓸 때 치우는 남은 임시 파일의 나이(초). 이보다 새 것은 다른 세션의 이 훅이 쓰는 중일 수 있다.
+STALE_TEMP_SECONDS = 3600
 # `json.loads` 의 반환형은 Any 라, 이것으로 받아 뒤의 좁히기가 타입 검사를 지나게 한다
 # (선례 `tools/token_report.py` 의 `Json`).
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -151,6 +164,8 @@ def apply(root: Path, worktree: Path) -> str | None:
         text = path.read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         text = None
+    except UnicodeDecodeError:
+        return _cannot("UTF-8 이 아니다")
     except OSError as error:
         return _cannot(f"읽지 못했다({error})")
     settings: dict[str, Json] = {}
@@ -191,6 +206,7 @@ def _write(path: Path, settings: dict[str, Json]) -> None:
     """같은 폴더의 임시 파일에 쓰고 바꿔 끼운다. 쓰다 끊겨도 원래 파일이 반쯤 남지 않고, 바꿔
     끼우지 못하면 임시 파일을 지운다."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    _sweep_stale_temps(path)
     temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     try:
         temporary.write_text(
@@ -202,6 +218,17 @@ def _write(path: Path, settings: dict[str, Json]) -> None:
     except OSError:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def _sweep_stale_temps(path: Path) -> None:
+    """앞 실행이 쓰다 죽어(시간 제한의 강제 종료, 앱 종료) 남긴 임시 파일 가운데
+    `STALE_TEMP_SECONDS` 가 넘은 것을 지운다. git 이 무시하지 않아 주 체크아웃을 더럽히기 때문이다.
+    지우지 못하면 둔다."""
+    cutoff = time.time() - STALE_TEMP_SECONDS
+    for leftover in path.parent.glob(f"{path.name}.*.tmp"):
+        with contextlib.suppress(OSError):
+            if leftover.stat().st_mtime < cutoff:
+                leftover.unlink()
 
 
 def main() -> int:

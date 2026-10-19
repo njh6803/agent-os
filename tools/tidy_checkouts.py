@@ -39,8 +39,9 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한 쪽).
 - 판정 2, 깨끗하다. `status --porcelain --untracked-files=all` 의 stdout 과 stderr 가 모두 비어야
   한다. stderr 의 경고는 git 이 그 아래를 보지 못했다는 뜻이다. `status --ignored` 의 `!!` 항목은
-  다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 바이트가 같은 `.claude/settings.local.json`)뿐이어야
-  한다.
+  다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 같은 `.claude/settings.local.json`)뿐이어야 한다.
+  설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
+  `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
 - 판정 3, 주인이 없다. 제목이 그 브랜치인 실행 중 세션이 있으면 남긴다. 잠금 사유는
   `claude session <이름> (pid <N>)` 모양이고 그 pid 가 살아 있으면 남긴다. 죽었으면 `remove` 가 풀고
@@ -144,8 +145,8 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   를 LF 로 바꾼 이름도 본다(`.gitattributes` 의 `* text=auto eol=lf`). 텍스트인지는 git 의
   판별(NUL, 홀로 쓰인 CR, 인쇄 문자 128개당 비인쇄 문자 하나를 넘는 비율)을 흉내 낸다. 그 판별은
   git 소스를 읽지 않고 알고 있던 것이고(어림), 테스트가 입력 몇에서 `git hash-object` 와 같은 이름을
-  내는지 본다. 다시 만들 수 있는 파일과 루트와 바이트가 같은 설정 파일은 뺀다. 커밋에 없는 파일(새
-  파일, 고친 파일, `.env`)이 하나라도 있으면 남긴다.
+  내는지 본다. 다시 만들 수 있는 파일과 루트와 같은 설정 파일(`settings_equivalent`)은 뺀다. 커밋에
+  없는 파일(새 파일, 고친 파일, `.env`)이 하나라도 있으면 남긴다.
 - 쥔 프로세스(판정 3의 작업 디렉터리와 모듈)가 있으면 남긴다.
 `remove-stray` 는 그 자리가 `.claude/worktrees/` 바로 아래의 등록 없는 폴더인지 다시 보고, 판정을
 다시 내고, 판정 4의 1의 탐침을 거쳐, 쥔 프로세스까지 넣어 다시 판정한 뒤 폴더째 휴지통으로 옮기고
@@ -245,6 +246,10 @@ WORKTREES_DIR = ".claude/worktrees"
 # 옆으로 옮겨 둔 무시된 항목이 쌓이는 자리. `WORKTREES_DIR` 바로 아래라 등록 없는 폴더 목록에서 뺀다
 TRASH_DIR = WORKTREES_DIR + "/.tidy-trash"
 SETTINGS = ".claude/settings.local.json"
+OVERRIDES = "skillOverrides"
+# `tools/hook_worktree_skill_overrides.py` 가 주 체크아웃의 local 설정에 적는 키의 접두(그 훅의
+# `KEY_PREFIX` 와 같다. 시험이 그 상수로 키를 지어 대 본다).
+WORKTREE_OVERRIDE_PREFIX = ".claude/worktrees/"
 PROBE_SUFFIX = ".tidy-probe"
 # 분리 HEAD 워크트리의 `remove` 인자. git 은 점으로 시작하는 브랜치 이름을 허락하지 않는다
 # (`git check-ref-format --branch .detached` 가 128. 한 글자 `@` 는 이 PC 의 git 2.32 가 허락했다,
@@ -1116,11 +1121,42 @@ def _checked(git: GitRunner, args: Sequence[str], cwd: Path) -> str:
     return result.stdout
 
 
-def _same_bytes(left: Path, right: Path) -> bool:
+def _same_settings(left: Path, right: Path) -> bool:
     try:
-        return left.read_bytes() == right.read_bytes()
+        return settings_equivalent(left.read_bytes(), right.read_bytes())
     except OSError:
         return False
+
+
+def settings_equivalent(left: bytes, right: bytes) -> bool:
+    """두 local 설정이 같은가. 바이트가 같거나, 둘 다 JSON 객체로 풀리고 `skillOverrides` 에서
+    `WORKTREE_OVERRIDE_PREFIX` 로 시작하는 키를 뺀 나머지가 같으면 같다. 그 키는
+    `tools/hook_worktree_skill_overrides.py` 가 주 체크아웃의 local 에 적고 다시 쓰는 것이라(대기열
+    274), 워크트리를 만들 때 받은 사본은 그 키와 서식만 달라도 다시 만들 수 있다. 풀리지 않으면
+    다르다고 본다(남기는 쪽)."""
+    if left == right:
+        return True
+    try:
+        first: Json = json.loads(left.decode("utf-8-sig"))
+        second: Json = json.loads(right.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(first, dict) or not isinstance(second, dict):
+        return False
+    return _without_worktree_overrides(first) == _without_worktree_overrides(second)
+
+
+def _without_worktree_overrides(settings: dict[str, Json]) -> dict[str, Json]:
+    overrides = settings.get(OVERRIDES)
+    if not isinstance(overrides, dict):
+        return settings
+    kept: dict[str, Json] = {
+        key: value
+        for key, value in overrides.items()
+        if not key.startswith(WORKTREE_OVERRIDE_PREFIX)
+    }
+    rest = {key: value for key, value in settings.items() if key != OVERRIDES}
+    return {**rest, OVERRIDES: kept} if kept else rest
 
 
 def _misplaced(*, exists: bool, toplevel: str | None) -> Facts:
@@ -1156,7 +1192,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
     if listed.returncode != 0 and not status_err:
         status_err = listed.stderr or f"exit {listed.returncode}"
     ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
-    settings_same = _same_bytes(root / SETTINGS, path / SETTINGS)
+    settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     return Facts(
         exists=True,
         toplevel=toplevel,
@@ -1227,10 +1263,11 @@ def gather_stray(root: Path, folder: Path, reachable: Callable[[], frozenset[str
 
 
 def _recreatable_file(root: Path, folder: Path, relative: str) -> bool:
-    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, 루트와 바이트가 같은 설정 파일)."""
+    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, 루트와 같은 설정 파일. 같음은
+    `settings_equivalent`)."""
     if relative.rsplit("/", 1)[-1] in RECREATABLE_FILES:
         return True
-    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)
+    return relative == SETTINGS and _same_settings(root / SETTINGS, folder / SETTINGS)
 
 
 def file_blob_ids(path: str) -> set[str]:

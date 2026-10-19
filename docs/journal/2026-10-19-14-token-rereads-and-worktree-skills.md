@@ -143,16 +143,63 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): "더한 �
 - (Nit) 스킬의 날짜 든 근거, `_cannot`·`apply` 같은 이름, 키 형식을 두 함수가 따로 읽는 것, `skill_names`를 두 번 세는 것은
   그대로 두었다. 근거를 문장에 남기는 것은 이 저장소 스킬의 관례이고, 나머지는 판단 항목이다.
 
+## PR 직전 리뷰
+
+> 사용자: PR 열어줘
+
+이 세션이 다시 시작된 뒤의 첫 요청이다. 커밋 `3add103`을 푸시한 뒤였고 main은 움직이지 않았다. CodeRabbit CLI가 이
+컨테이너에 없어(`which coderabbit`가 빈 출력) 대체 둘을 돌렸다. 내장 `/security-review`는 이 클론에 `origin/HEAD`가 없어 첫
+부름이 `git diff origin/HEAD...`에서 실패했고, `git remote set-head origin main`(로컬 참조만 바꾼다) 뒤에 돌았다.
+
+- 보안(`/security-review`): 신뢰도 8 이상의 지적 없음. 문턱 아래 참고 하나는 `os.replace`로 새로 쓴 local 설정의 권한 비트가
+  원래 파일의 것이 아니라 umask 기본값이 된다는 것이고, 지침이 빼라는 "디스크에 저장된 비밀" 범주라 두었다.
+- 버그·성능(`bug-perf-review`): 유효 2, 보류 4, 오탐 6.
+
+고친 것:
+
+- (Major 보류) 워크트리를 만들 때 받은 local 사본은 훅이 루트를 고친 뒤 루트와 바이트가 달라져, `tidy-checkouts`의 판정 2가
+  그 워크트리를 남긴다는 지적. 전제의 절반을 손으로 봤다. CLI 2.1.303의 `EnterWorktree(name)`은 사본을 만들지 않았지만(스크래치
+  스크립트로 임시 저장소에서 봤다), 이 PC의 워크트리들에는 루트와 같은 사본이 있었다(일지 2026-10-06-04). 그래서
+  `tools/tidy_checkouts.py`의 바이트 비교를 `settings_equivalent`로 바꿨다. 바이트가 같거나, 둘 다 JSON 객체로 풀리고
+  `skillOverrides`의 `.claude/worktrees/` 키를 뺀 나머지가 같으면 같다. 다른 권한, 다른 스킬 설정, 풀리지 않는 파일은 지금처럼
+  남긴다. 시험(순수 함수 아홉 사례, 등록된 워크트리와 등록 없는 폴더의 `judge` 둘)과 변이 표
+  `.scratch/harness/probes/tidy_settings_equivalent_mutations.toml`(여섯 모두 기대대로)을 더했다. 지우는 도구의 판정을 넓힌
+  것이라(`.claude/rules/tools.md`의 반박 항목) 판정을 깨려는 입력(루트에만, 워크트리에만 다른 권한, 다른 스킬 설정이 다름, 깨진
+  바이트, 객체가 아닌 JSON)을 시험 사례로 두었다. 경로와 링크의 판정은 바꾸지 않았다.
+- (Minor 유효) UTF-8이 아닌 local 설정에서 훅이 `UnicodeDecodeError`로 죽던 것을 "UTF-8 이 아니다" 알림으로 바꿨다(시험 사례
+  `cp949`).
+- (Minor 유효) 쓰다 죽은 실행이 남긴 임시 파일이 git에 무시되지 않아 주 체크아웃을 더럽히는 것. 쓸 때 한 시간 넘은
+  `settings.local.json.*.tmp`를 치운다(새 것은 다른 세션의 이 훅이 쓰는 중일 수 있어 둔다). 시험과 변이 둘을 더했다.
+- (Minor 보류) 스킬 3의 `sed` 끝 조건 `/^$/`가 Windows 파이썬의 CRLF 출력에서 빈 줄을 못 잡아 출력 끝까지 가는 것. 끝 조건을
+  `/^[[:space:]]*$/`로 바꿨다. LF와 CR을 붙인 출력에 다섯 문단 머리마다 돌려 크기가 CR 바이트만큼만 다른 것을 손으로 봤다.
+  카나리아는 같은 PR·같은 claude 판·본문 문구만 고친 것이라 사전 확인으로 갈음했다.
+- (Minor 보류) Windows에서 세션이 읽는 local의 자리와 바꿔 끼운 파일을 설정 감시가 보는지는 훅의 못 보는 것에 적었다. 공식 문서
+  (settings, 원문을 내려받아 읽었다)는 Windows에서 local이 `.claude/settings.json` 곁에 남는다고 적고, 모드 표로 미루어 주
+  체크아웃의 것으로 보았다(어림).
+- (밀 주장 2의 정밀도) "190번"에 그 파일이 담는 기간(2026-09-19 뒤 병합된 PR, 2026-10-16 커밋)을 붙였다.
+
+반영 뒤 `uv run python tools/run_checks.py`는 pytest 밖의 일곱이 지났고 pytest는 3,593건 통과, 같은 root 전용 1건 실패였다.
+커밋은 앞과 같이 `SKIP=pytest`다. 첫 커밋 시도에서 pre-commit 의 변이 표 검사가, 기존 표
+`.scratch/harness/probes/tidy_checkouts_mutations.toml`의 등록 없는 폴더 변이 둘이 옛 함수 이름(`_same_bytes`)을 원문으로 든다고
+막았다. 원문을 `_same_settings`로 맞추고 그 둘만 떼어 돌려 둘 다 기대대로 빨간 것을 봤다.
+
+남긴 것: (보류) `CLAUDE_PROJECT_DIR`이 워크트리인 세션이 그 아래에 워크트리를 만들면 훅이 그 워크트리의 local을 쓴다는 것은,
+위 `settings_equivalent`가 그 키를 빼고 견주므로 정리를 막지 않는다. 오탐 여섯은 보고의 근거대로 두었다.
+
+PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(다음 층에 밀 주장): "워크트리를 만들 때 받은 local 사본은 이 훅이 루트를 고친 뒤
+루트와 바이트가 달라지므로, `tools/tidy_checkouts.py` 의 `settings_equivalent` 가 이 훅의 키와 서식을 빼고 견준다", "Windows 에서
+local 이 `.claude/settings.json` 곁에 남는다고 적는다", "(끝 조건이 Windows 출력의 CR만 든 빈 줄에서도 멈춘다)".
+
 ## 회고
 
-후보 일곱, 승인 셋(새 행 361·362, 열린 행 359에 회차), 넘김 없음, 기각 넷이다.
+후보 일곱, 승인 셋(새 행 363·364, 열린 행 359에 회차), 넘김 없음, 기각 넷이다.
 
 - **1. root 로 도는 클라우드 컨테이너에서 읽기 전용 `chmod`로 쓰기 실패를 내는 시험이 늘 빨갛고, pre-commit 의 pytest 가 커밋을
   막아 `SKIP=pytest`가 들었다.** 승인(닫힌 80의 2회차). 사건은 이 세션의 `test_rewrap_comments` 실패이고, 80은
   `test_mutate.py`만 고쳤다. 층은 그 꼴을 쓰는 자리의 rules(`.claude/rules/tests.md`의 리눅스 조항)와 그 시험의 고침이다. 같은 꼴을
-  grep 으로 잡는 검사는 `test_tidy_checkouts.py`의 다른 쓰임이 거짓 양성이라 두지 않는다. 대기열 361.
+  grep 으로 잡는 검사는 `test_tidy_checkouts.py`의 다른 쓰임이 거짓 양성이라 두지 않는다. 대기열 363.
 - **2. 클라우드 컨테이너에서 자식 `claude -p`가 부모의 세션 ID 로 돌아, 세션 기록을 읽는 탐침의 기록이 한 파일에 섞였다.** 승인.
-  사건은 이 세션의 프로브 첫 판(짓기 전 시험에서 봤다). 층은 탐침을 짓는 자리의 rules(`.claude/rules/probes.md`)다. 대기열 362.
+  사건은 이 세션의 프로브 첫 판(짓기 전 시험에서 봤다). 층은 탐침을 짓는 자리의 rules(`.claude/rules/probes.md`)다. 대기열 364.
 - **3. `tools/mutate.py`가 훅 파일을 제자리에서 바꾸는 동안, 같은 파일을 부르는 프로브를 같은 체크아웃에서 함께 돌렸다.** 승인.
   그 도구의 독스트링이 이미 "잴 코드를 커밋하고 다른 워크트리에서" 돌리라고 적지만 실행 때 실리지 않는다. 결과가 흐려졌을 수
   있어 그 갈래만 다시 돌렸다. 층은 도구다. 열린 행 359의 처방(표가 가리키는 파일에 커밋하지 않은 변경이 있으면 시작 줄에서
@@ -166,8 +213,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): "더한 �
 
 ## 다음
 
-- 이 브랜치를 푸시했고 PR은 열지 않았다. 사용자가 PR을 청하면 연다. 그 전에 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰
-  파이프라인 2)를 돌리고 위 셀프 리뷰 절의 밀 주장을 브리프에 싣는다.
+- 위 PR 직전 리뷰를 반영한 커밋을 푸시하고 PR을 열었다. 이 세션이 PR 활동을 구독해 CI와 봇 리뷰를 초록까지 몬다. 봇이
+  짚으면 위 두 절의 밀 주장부터 대 본다.
 - 병합 뒤 이 PC에서 처음 일어나는 실제 `EnterWorktree`로 두 가지를 본다. 주 체크아웃의 `.claude/settings.local.json`이 사용자 전역
   ignore에 덮여 `git status`에 나오지 않는지, 데스크톱 앱이 묶은 판에서도 경로를 단 이름이 꺼지는지(프로브는 클라우드의 CLI
   2.1.303만 쟀다).

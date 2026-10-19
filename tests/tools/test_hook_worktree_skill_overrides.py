@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ from tools.hook_worktree_skill_overrides import (
     KEY_PREFIX,
     LOCAL,
     OFF,
+    STALE_TEMP_SECONDS,
     TOOL,
     HookPayload,
     Json,
@@ -228,24 +230,42 @@ def test_바꿔_끼우지_못하면_임시_파일을_지우고_알린다(
     assert sorted(p.name for p in (tmp_path / LOCAL).parent.iterdir()) == ["worktrees"]
 
 
+def test_쓸_때_한_시간_넘은_임시_파일은_치우고_새_것은_둔다(tmp_path: Path) -> None:
+    """쓰다 죽은 실행(시간 제한의 강제 종료, 앱 종료)이 남긴 임시 파일은 git 이 무시하지 않아 주
+    체크아웃을 더럽힌다. 새 것은 다른 세션의 이 훅이 쓰는 중일 수 있어 둔다."""
+    worktree = _워크트리(tmp_path, "x")
+    old = tmp_path / ".claude" / "settings.local.json.111.tmp"
+    old.write_text("x", encoding="utf-8")
+    hour_ago = time.time() - STALE_TEMP_SECONDS - 60
+    os.utime(old, (hour_ago, hour_ago))
+    fresh = tmp_path / ".claude" / "settings.local.json.222.tmp"
+    fresh.write_text("y", encoding="utf-8")
+
+    assert apply(tmp_path, worktree) is not None
+    assert not old.exists()
+    assert fresh.exists()
+
+
 @pytest.mark.parametrize(
-    ("text", "reason"),
+    ("data", "reason"),
     [
-        ("{깨진", "JSON 으로 풀리지 않는다"),
-        ("[1, 2]", "맨 위가 객체가 아니다"),
-        ('{"skillOverrides": "off"}', "skillOverrides 가 객체가 아니다"),
+        ("{깨진".encode(), "JSON 으로 풀리지 않는다"),
+        (b"[1, 2]", "맨 위가 객체가 아니다"),
+        (b'{"skillOverrides": "off"}', "skillOverrides 가 객체가 아니다"),
+        (b'{"permissions": {"allow": ["Bash(\xb0\xa1)"]}}', "UTF-8 이 아니다"),
     ],
+    ids=["JSON", "맨_위", "skillOverrides", "cp949"],
 )
 def test_풀지_못하는_설정은_고치지_않고_까닭과_함께_알린다(
-    tmp_path: Path, text: str, reason: str
+    tmp_path: Path, data: bytes, reason: str
 ) -> None:
     worktree = _워크트리(tmp_path, "x")
-    (tmp_path / LOCAL).write_text(text, encoding="utf-8")
+    (tmp_path / LOCAL).write_bytes(data)
 
     notice = apply(tmp_path, worktree)
 
     assert notice is not None and "끄지 못했다" in notice and reason in notice
-    assert (tmp_path / LOCAL).read_text(encoding="utf-8") == text
+    assert (tmp_path / LOCAL).read_bytes() == data
 
 
 def _띄운다(root: Path, payload: HookPayload, **env: str) -> subprocess.CompletedProcess[str]:
