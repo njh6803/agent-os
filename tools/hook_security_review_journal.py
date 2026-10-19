@@ -8,7 +8,7 @@ PR 직전 리뷰의 보고는 받은 턴에 일지로 옮긴다(`code-review` 6�
 본 세션이 그 명령의 지시를 따라 보고를 스스로 쓴다. 그래서 그 명령을 부르는 이 순간에 문장을 넣는다.
 본 세션은 CodeRabbit 좌석을 `coderabbit auth status` 한 줄로 보고(PR 템플릿의 PR 직전 리뷰 줄)
 좌석이 없으면 `coderabbit-review`를 거치지 않고 대체 둘로 가므로, `coderabbit-review` 정의에 둔
-문장은 흔한 길에서 읽히지 않는다(셀프 리뷰 명세 축, 일지 2026-10-19-05).
+문장은 흔한 길에서 읽히지 않는다(셀프 리뷰 명세 축, 일지 2026-10-19-14).
 
 가르는 것은 입력의 `tool_input.skill` 하나다. 앞의 `/`를 벗긴 이름이 `security-review`와 같을 때만
 알린다. 이 PC의 트랜스크립트에서 그 호출의 입력은 `{"skill": "security-review"}`가 136번,

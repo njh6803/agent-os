@@ -4,7 +4,7 @@ stdout 과 종료 코드를 그대로 돌려준다.
 
 스트림에는 additionalContext 가 실리지 않아(`.claude/rules/tools.md` 새 훅 항목), 이 줄이 없으면
 실험군의 음성 결과를 훅이 돌지 못한 회차(PATH, 시간 초과의 fail-open)와 가를 수 없다(PR 직전
-`bug-perf-review`, 일지 2026-10-19-05). 기록에는 도구 이름과 `skill` 값만 적는다.
+`bug-perf-review`, 일지 2026-10-19-14). 기록에는 도구 이름과 `skill` 값만 적는다.
 """
 
 import json
