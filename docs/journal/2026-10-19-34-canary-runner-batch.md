@@ -1,4 +1,4 @@
-# 2026-10-19 (26) 카나리아 러너가 rule 질문에 문장을 붙이고, 계정 한도 회차를 측정 아님으로 세고, 스킬 대조군에도 호출을 요구한다 (대기열 316·338·344)
+# 2026-10-19 (34) 카나리아 러너가 rule 질문에 문장을 붙이고, 계정 한도 회차를 측정 아님으로 세고, 스킬 대조군에도 호출을 요구한다 (대기열 316·338·344)
 
 브랜치 `chore/canary-runner-batch`. 대상 파일이 `tools/canary.py`인 열린 행 셋을 chore 한 PR로 반영한다.
 
@@ -70,8 +70,8 @@
 시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/canary-runner-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(한 일, 검사, 셀프 리뷰에 밀 주장, 인계)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세는 .scratch/retro-queue.md 316·338·344 행의 "어디로" 칸을 origin/main 판에서 읽는다. 이 브랜치는 그 행들을 이미 닫았다)부터 한다. 밀 주장은 일지 "셀프 리뷰에 밀 주장" 절이다. 시험·변이·카나리아는 돌았고 전체 검증(tools/run_checks.py)과 린트 둘은 리뷰 반영 뒤에 돈다. 일지는 docs/journal/2026-10-19-26-canary-runner-batch.md이고 "## 다음"은 아직 없다
+읽을 것: docs/journal/2026-10-19-34-canary-runner-batch.md(한 일, 검사, 셀프 리뷰에 밀 주장, 인계)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세는 .scratch/retro-queue.md 316·338·344 행의 "어디로" 칸을 origin/main 판에서 읽는다. 이 브랜치는 그 행들을 이미 닫았다)부터 한다. 밀 주장은 일지 "셀프 리뷰에 밀 주장" 절이다. 시험·변이·카나리아는 돌았고 전체 검증(tools/run_checks.py)과 린트 둘은 리뷰 반영 뒤에 돈다. 일지는 docs/journal/2026-10-19-34-canary-runner-batch.md이고 "## 다음"은 아직 없다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -192,8 +192,8 @@ PR 직전 `bug-perf-review`에 밀 주장(셀프 리뷰 반영으로 새로 쓴 
 시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/canary-runner-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(셀프 리뷰, 인계 (커밋 뒤))
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영을 마치고 커밋 8c2af6ce까지 했다(푸시 안 함, 열린 PR 없음). 남은 단계는 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(operations.md 리뷰 파이프라인 2, 밀 주장은 일지 "인계 (커밋 뒤)" 절), PR, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-26-canary-runner-batch.md
+읽을 것: docs/journal/2026-10-19-34-canary-runner-batch.md(셀프 리뷰, 인계 (커밋 뒤))
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영을 마치고 커밋 8c2af6ce까지 했다(푸시 안 함, 열린 PR 없음). 남은 단계는 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(operations.md 리뷰 파이프라인 2, 밀 주장은 일지 "인계 (커밋 뒤)" 절), PR, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-34-canary-runner-batch.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -257,8 +257,8 @@ Minor 반영을 마치고 `/code-review`(고정점 `HEAD` = `c7d5c36b`, 미커�
 시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/canary-runner-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(PR과 병합, PR 직전 리뷰, 인계 (셀프 리뷰 직전))
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD = c7d5c36b, 범위는 미커밋 변경뿐. 명세는 일지 "PR 직전 리뷰" 절의 Minor와 대기열 338 행의 "어디로" 칸)부터 한다. origin/main은 이미 합쳤고(c7d5c36b), PR 직전 리뷰 둘(/security-review 지적 없음, bug-perf-review Minor 고침·Nit 둠)도 돌았다. 푸시 안 함, 열린 PR 없음. 남은 단계는 셀프 리뷰 반영, 커밋, PR, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-26-canary-runner-batch.md
+읽을 것: docs/journal/2026-10-19-34-canary-runner-batch.md(PR과 병합, PR 직전 리뷰, 인계 (셀프 리뷰 직전))
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD = c7d5c36b, 범위는 미커밋 변경뿐. 명세는 일지 "PR 직전 리뷰" 절의 Minor와 대기열 338 행의 "어디로" 칸)부터 한다. origin/main은 이미 합쳤고(c7d5c36b), PR 직전 리뷰 둘(/security-review 지적 없음, bug-perf-review Minor 고침·Nit 둠)도 돌았다. 푸시 안 함, 열린 PR 없음. 남은 단계는 셀프 리뷰 반영, 커밋, PR, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-34-canary-runner-batch.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -345,8 +345,8 @@ open-session을 부른다 2026-10-19T12:10:58Z
 시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/canary-runner-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(PR 직전 리뷰, 셀프 리뷰 (미커밋 수정분), 인계 (커밋 뒤) 가운데 마지막 것)
-이어받을 상태: 인계: 커밋 뒤. PR 직전 리뷰 둘과 미커밋 수정분의 셀프 리뷰·반영을 마치고 커밋 90097b80까지 했다(pre-commit 모두 Passed, 푸시 안 함, 열린 PR 없음). 남은 단계는 푸시, PR(체크리스트 내용은 일지의 마지막 "인계 (커밋 뒤)" 절), @coderabbitai review, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-26-canary-runner-batch.md
+읽을 것: docs/journal/2026-10-19-34-canary-runner-batch.md(PR 직전 리뷰, 셀프 리뷰 (미커밋 수정분), 인계 (커밋 뒤) 가운데 마지막 것)
+이어받을 상태: 인계: 커밋 뒤. PR 직전 리뷰 둘과 미커밋 수정분의 셀프 리뷰·반영을 마치고 커밋 90097b80까지 했다(pre-commit 모두 Passed, 푸시 안 함, 열린 PR 없음). 남은 단계는 푸시, PR(체크리스트 내용은 일지의 마지막 "인계 (커밋 뒤)" 절), @coderabbitai review, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-34-canary-runner-batch.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -354,3 +354,10 @@ open-session을 부른다 2026-10-19T12:10:58Z
 제목을 `chore/canary-runner-batch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리는 이미 잠기지 않았다(`is not locked`).
 
 open-session을 부른다 2026-10-19T13:02:21Z
+
+## 푸시와 PR
+
+새 세션이 지시문대로 `EnterWorktree(path)`로 들어왔다. 커밋 뒤 인계 절을 커밋하고(`63badae1`), origin/main(`7556070`,
+#309)을 충돌 없이 합쳤다. `sibling_overlap`이 일지 번호 26이 origin/main의 최신 29보다 이름순으로 앞이라고 내어
+`--move`로 34로 옮겼다(그 사이 형제가 33을 가져갔다). 인용을 고친 파일은 `tools/canary.py`, `tests/tools/test_canary.py`,
+대기열, 프로브 README, 이 일지다. 옛 번호의 잔존은 0이다.

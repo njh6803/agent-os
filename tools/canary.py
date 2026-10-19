@@ -424,7 +424,7 @@ _LIMIT = TypeAdapter(_LimitEvent)
 # `rate_limit_event` 가 `status: rejected` 이고 결과의 `api_error` 가 이 값이었다. 같은 PC 의 다른
 # 세션이 막히지 않고 돈 카나리아 원본에도 한도 이벤트가 `status: allowed`·`allowed_warning`(주간
 # 한도 99% 경고)으로 찍혀 거절만 센다. 둘 다 커밋하지 않은 스크래치 원본을 손으로 읽은 것이다(일지
-# 2026-10-19-26. 막힌 사건은 일지 2026-10-17-07). 종류(`rateLimitType`)는 가리지 않는다. 주간 한도든
+# 2026-10-19-34. 막힌 사건은 일지 2026-10-17-07). 종류(`rateLimitType`)는 가리지 않는다. 주간 한도든
 # 다섯 시간 한도든 거절이면 그 회차는 측정이 아니다.
 _LIMIT_REJECTED = "rejected"
 _USAGE_LIMIT = "usage_limit_reached"
