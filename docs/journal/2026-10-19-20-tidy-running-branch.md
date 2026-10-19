@@ -1,4 +1,4 @@
-# 2026-10-19 (12) tidy_checkouts judge 의 브랜치 지우기가 실행 중 세션의 제목을 본다 (대기열 286)
+# 2026-10-19 (20) tidy_checkouts judge 의 브랜치 지우기가 실행 중 세션의 제목을 본다 (대기열 286)
 
 브랜치 `chore/tidy-running-branch`. 대기열 286을 chore 한 PR로 반영한다.
 
@@ -174,8 +174,8 @@ PR 직전 리뷰에 밀 새 사실 문장(반영으로 새로 썼다):
 시작 프롬프트: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/tidy-running-branch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-12-tidy-running-branch.md(한 일, 검사, 셀프 리뷰에 밀 주장, 이어받은 일, 인계)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세는 .scratch/retro-queue.md 286 행의 "어디로" 칸)부터 한다. 밀 주장은 일지 "셀프 리뷰에 밀 주장" 절이다. 리뷰 뒤 검증 명령(tools/run_checks.py, 린트 둘)은 아직 돌리지 않았다. 대기열 286은 이 세션이 이미 닫았다. PR #295의 Nit(limit_message 나누기)은 이 PR 밖이라 "다음"으로 옮긴다(일지 "이어받은 일"). 일지는 docs/journal/2026-10-19-12-tidy-running-branch.md이고 "## 다음"은 아직 없다
+읽을 것: docs/journal/2026-10-19-20-tidy-running-branch.md(한 일, 검사, 셀프 리뷰에 밀 주장, 이어받은 일, 인계)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세는 .scratch/retro-queue.md 286 행의 "어디로" 칸)부터 한다. 밀 주장은 일지 "셀프 리뷰에 밀 주장" 절이다. 리뷰 뒤 검증 명령(tools/run_checks.py, 린트 둘)은 아직 돌리지 않았다. 대기열 286은 이 세션이 이미 닫았다. PR #295의 Nit(limit_message 나누기)은 이 PR 밖이라 "다음"으로 옮긴다(일지 "이어받은 일"). 일지는 docs/journal/2026-10-19-20-tidy-running-branch.md이고 "## 다음"은 아직 없다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -209,8 +209,8 @@ open-session을 부른다 2026-10-19T04:09:16Z
 시작 프롬프트: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/tidy-running-branch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-12-tidy-running-branch.md(셀프 리뷰, 이어받은 일, 둘째 세션과 인계)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 그 반영을 한 커밋(대기열 286)이 pre-commit 전부를 지났고, 남은 단계는 origin/main 합치기, PR 직전 리뷰(밀 주장은 일지 "셀프 리뷰 > 고친 것"의 "PR 직전 리뷰에 밀 새 사실 문장"), PR 열기, 봇 회차, 병합이다(일지 docs/journal/2026-10-19-12-tidy-running-branch.md). 아직 푸시하지 않았고 열린 PR이 없다. 일지의 "둘째 세션과 인계" 절은 커밋하지 않은 채 워크트리에 있다. 대기열 286은 이미 닫았다. PR #295의 Nit(limit_message 나누기)은 이 PR 밖이라 "다음"으로 옮긴다(일지 "이어받은 일"). 일지 "## 다음"은 아직 없다
+읽을 것: docs/journal/2026-10-19-20-tidy-running-branch.md(셀프 리뷰, 이어받은 일, 둘째 세션과 인계)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 그 반영을 한 커밋(대기열 286)이 pre-commit 전부를 지났고, 남은 단계는 origin/main 합치기, PR 직전 리뷰(밀 주장은 일지 "셀프 리뷰 > 고친 것"의 "PR 직전 리뷰에 밀 새 사실 문장"), PR 열기, 봇 회차, 병합이다(일지 docs/journal/2026-10-19-20-tidy-running-branch.md). 아직 푸시하지 않았고 열린 PR이 없다. 일지의 "둘째 세션과 인계" 절은 커밋하지 않은 채 워크트리에 있다. 대기열 286은 이미 닫았다. PR #295의 Nit(limit_message 나누기)은 이 PR 밖이라 "다음"으로 옮긴다(일지 "이어받은 일"). 일지 "## 다음"은 아직 없다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -272,3 +272,97 @@ origin/main(`a89ec15c`, #298)을 합쳤다. 충돌은 없었다(겹친 파일은
   자리에서 어긋남을 알렸고 시험을 좁혀 다시 돌렸다.
 - 둘째 세션의 실패한 첫 커밋 뒤에 온 인계 계기. `next-session` "인계할 때" 1이 경계가 아니라고 가르게 했고 그대로 갈랐다.
 - 셋째 세션이 대기열 diff를 통째로 찍어 결과가 73KB였다. 하네스가 결과를 파일로 돌렸고 그 뒤로는 줄을 골라 읽었다.
+
+## 셋째 세션과 인계
+
+회고 뒤에 `sibling_overlap`이 겹침 둘을 알렸다. 형제 `pre-commit-batch`가 대기열 358·359를, main이 일지 2026-10-19-11을
+먼저 가져갔다. `--move`로 일지를 그날의 순번 12로, 새 행을 361·362로 옮겨 커밋했다(`f8334068`, pre-commit 전부 초록, pytest
+439초). 그 사이 main에 #302(`tests.md`의 리눅스 조항)와 #299가 들어와 합쳤다. 대기열 끝의 새 행끼리 충돌해 351 뒤에 361·362를
+두었고 pre-commit 전부가 초록이었다(`7157680e`). 새 `tests.md` 조항(`tests/tools/` 시험은 리눅스 CI에서도 돈다)은 이 브랜치의
+시험 둘이 지킨다. 윈도 전용 단언은 `sys.platform` 조건 안에 있고, 리눅스에서는 `remove-branch chore/Upper`가 접은 체크아웃
+가드에서 1로 멈춘다(코드를 읽었다).
+
+푸시 직전에 main이 다시 움직였다(#300: pre-commit이 색인의 변이 표 원문과 카나리아 명세 모양을 본다). 이 브랜치의 변이 표와
+카나리아에 닿아 합쳤다. 대기열 충돌 두 곳(인접한 286·287이 양쪽에서 닫혔다, 끝의 새 행)을 풀어 286은 이 브랜치의 닫힘, 287은
+main의 닫힘, 끝은 358·359·360 뒤에 361·362로 두었다. 새 검사 둘을 손으로 쳐 보니 지났다(`tools/mutate.py --check` 138 모두
+원문 있음, `tools/canary.py --shape` 통과). 그 병합 커밋의 pre-commit은 두 시도 모두 3563 통과·2 실패였고 실패한 시험이 달랐다.
+첫째는 `test_mutate.py`의 시간 단언 둘(13.8초·8.7초 대 상한 8초)과 run-hooks의 `hook_push_behind_main` 어긋남 하나, 둘째는
+`test_check_constitution_version.py`의 분리 HEAD 하나와 `test_hook_midturn_korean.py`의 시간 단언 하나, run-hooks의
+`hook_journal_retro` 시간 초과 하나였다(둘째 시도는 pyright 126초, web-verify 1027초로 부하가 컸다). 실패한 넷은 단독으로 모두
+통과했고(44초, 9.8초), run-hooks를 단독으로 돌리니 129건 어긋남 0이었으며, web-verify는 두 시도 모두 초록이었다. 그래서 일지
+2026-10-19-04의 길대로 `SKIP=pytest,run-hooks,web-verify`로 커밋했다(`e097579c`, 나머지 검사는 초록). PR의 CI가 셋을 다시 돈다.
+부하 실패는 회고에서 306에 이 일지를 이미 세어 회차를 더하지 않았다.
+
+결정:
+- 일지 번호는 푸시 뒤에도 main의 새 일지(`2026-10-19-13`)보다 앞이다. `sibling_overlap`이 `-16`으로 옮기라고 했지만, pre-commit
+  한 바퀴가 부하로 13~17분이고 main이 그새 또 움직일 수 있어, 옮기기는 병합 직전의 마지막 커밋("## 다음"과 함께)에서 한다.
+- PR #303을 열었다. 본문에 PR 직전 리뷰 결과와 위 SKIP 경위를 적었다. `@coderabbitai review` 코멘트는 남기지 않았다(인계
+  경계 `PR 연 뒤`의 몫이다).
+
+PR을 연 직후 인계 계기가 왔다(`PR 연 뒤`, 세션 컨텍스트 344,891 토큰). 이 세션이 넘겨받은 경계는 `커밋 뒤`라 같은 경계가
+아니고, 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그 전에 온 `커밋 뒤` 계기 넷은 넘겨받은 경계와
+같아 넘기지 않았다. 이 인계 절은 커밋하지 않았다. 이 세션의 제목은 `chore/tidy-running-branch`였고
+`chore/tidy-running-branch (인계함)`으로 바꾼다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 286(tools/tidy_checkouts.py judge가 체크아웃되지 않은 로컬 브랜치를 지울 후보로 낼 때 실행 중 세션의 브랜치를 보지 않는 것)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/tidy-running-branch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "셀프 리뷰", "이어받은 일", "셋째 세션과 인계" 절
+이어받을 상태: 인계: PR 연 뒤. PR #303이 열려 있고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "셋째 세션과 인계" 절은 커밋하지 않은 채 워크트리에 있다. 병합 직전의 마지막 커밋에서 할 일이 둘이다. sibling_overlap --move로 일지 번호를 main의 최신 일지 뒤로 옮기고, 일지 "## 다음"을 쓴다(PR #295의 Nit인 limit_message 나누기를 "이어받은 일"에서 옮긴다). 회고는 이미 돌았다(일지 "## 회고"). 이 PC는 다른 세션의 부하로 pre-commit의 시간 시험이 시도마다 다르게 빨갰다(일지 "셋째 세션과 인계"). 일지는 docs/journal/2026-10-19-20-tidy-running-branch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/tidy-running-branch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`은 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-10-19T06:56:30Z
+
+## 넷째 세션
+
+> 사용자: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로
+> 반영한다. 행의 "어디로" 칸이 원천이다
+
+위 지시문으로 연 넷째 세션이다. 제목을 `chore/tidy-running-branch`로 붙이고 `EnterWorktree(path)`로 이 워크트리에 들어갔다(거부
+없이 들어갔다). 순서 1의 2(봇 회차)부터 한다.
+
+### 봇 회차
+
+PR #303의 head(`e097579c`)가 로컬 HEAD와 같았고, 검사 여섯(claude-review, python, web, e2e, visual, verify)은 이미 초록이었다.
+CodeRabbit은 별이 적어 자동 리뷰를 하지 않았다는 코멘트만 있어 `@coderabbitai review`를 남기고 `tools/wait_ci.py 303`을
+백그라운드로 띄웠다.
+
+claude-review 첫 회차(`e097579c`)는 Minor 하나와 Nit 하나였다. 첫 회차라 지적마다 판단했다.
+- Minor(워크트리 판정 3의 `wt.branch in running`이 글자 그대로라 체크아웃되지 않은 브랜치의 `same_branch`와 견줌 규칙이 둘이다):
+  두고 이유를 남긴다. 뒤로 넘기지도 않는다. 두 규칙은 견주는 값의 출처가 달라 갈렸다. `same_branch`가 대소문자를 접는 것은
+  `for-each-ref`가 윈도에서 폴더의 이름으로 찍어 친 이름과 갈리기 때문이고(그 독스트링), 워크트리의 `wt.branch`는 등록이라 제목처럼
+  친 그대로다. 모아서 더 잡는 것은 사람이 제목을 다른 대소문자로 친 경우뿐이고, 그 세션은 작업 디렉터리로 쥔 프로세스가 판정 3에서
+  남긴다. 셀프 리뷰 표준 5와 같은 지적이고 그때의 판단(워크트리 쪽은 286의 "어디로"인 브랜치 지우기 판정 밖이다)도 그대로다. 모으면
+  모듈 독스트링의 못 보는 것 항목, 그 항목을 고정한 시험, `docs/constitution/operations.md`의 `EnterWorktree` 전 세션 확인("거르는
+  법은 판정 3과 같다")까지 같이 바뀐다.
+- Nit(`_remove_branch`가 `judge_branch`의 `running`에 `()`를 위치 인자로 넘긴다): 두고 이유를 남긴다. 같은 함수의 `remove` 재판정
+  (`judge(wt, facts, merged, (), ops.pid_alive, holders)`)이 이 PR 전부터 같은 꼴이고 바로 위 주석이 이유를 댄다. 한쪽만 키워드로
+  바꾸면 두 재판정의 꼴이 갈리고, 바꾸면 변이 48의 원문도 함께 고쳐야 한다.
+
+CodeRabbit 첫 회차(`a60e2ddd`..`e097579c`)는 "No actionable comments"였다. 병합 위험은 Minimal이고, 보안 구조 검토의 강화 제안
+하나(`remove-branch`가 지우는 순간에도 세션을 보게 하라)는 이 PR 전부터 있던 한계라고 그 리뷰가 스스로 적었다. 모듈 독스트링의
+못 보는 것("`judge` 뒤에 열린 세션의 체크아웃되지 않은 브랜치")과 시험 `test_remove_branch_는_judge_가_세션으로_남긴_브랜치도_지운다`가
+이미 그 한계를 적고 고정한다. 그 리뷰가 시간당 한도 하나를 썼다고 알렸다("0 remain after this review").
+
+고친 것이 없는 회차라 이 일지(번호 옮기기와 "다음")만 커밋해 푸시하고, 두 봇의 둘째 회차는 Critical·Major만 고친다. 보류
+이유는 PR 코멘트로 남겼다. `sibling_overlap --move`는 일지를 순번 20으로 옮겼다(처음 친 때는 19였는데 끝나기 전에 형제가
+가져갔다, 부하로 2분을 넘겼다). 그 도구가 셋째 세션의 옮기기 기록(그때 순번 12로 옮겼다)까지 20으로 고쳐, 그 문장은 손으로
+되돌렸다. 앞 지시문 두 곳의 "읽을 것" 경로가 20으로 바뀐 것은 지금 있는 파일을 가리키므로 두었다.
+
+## 다음
+
+- 대기열 286은 이 PR로 닫혔다. `tools/tidy_checkouts.py`를 대상으로 든 열린 행은 266(`judge` 끝의 이유별 요약 줄)과 361(대상은
+  `.claude/rules/tools.md`이고 `tidy_checkouts`는 선례 인용)이고, 둘 다 286과 다른 주제다.
+- PR #295(병합됨) claude-review 셋째 회차의 Nit: `tools/wait_ci.py`의 `limit_message`를 블록 묶기와 한도 판정으로 나눈다. 일지
+  2026-10-19-03 "다음"의 `limit_message`·`tools/gh_run_summary.py`의 `_blocks` 같은 결과 시험과 함께, 두 파일 가운데 하나를 고칠
+  때 한다. 코멘트에만 있던 일이라 여기 옮긴다(위 "이어받은 일").
