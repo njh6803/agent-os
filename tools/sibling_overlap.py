@@ -38,7 +38,17 @@ merge ref가 남아 있었다. 로컬 Windows에서는 아직 돌리지 않았�
 함께 고친 파일도 알린다. 이 브랜치가 merge-base 뒤에 고친 파일과 형제가 자기 merge-base
 뒤에 고친 파일이 겹치면, 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. 이것은 종료
 코드를 바꾸지 않는다. 형제와 main의 merge-base가 이 클론에 없으면(얕은 클론) 그 형제의 고친
-파일만 "알 수 없다"로 두고 번호는 그대로 대조한다.
+파일만 "알 수 없다"로 두고 번호는 그대로 대조한다. 형제 워크트리의 고친 파일에서는 디스크 사본이
+`origin/main`과 같은 파일을 뺀다. main을 합치고 커밋하기 전인 형제의 작업 트리에는 main의 변경이
+보여, 그 형제의 커밋이 바꾸지 않은 두 파일을 함께 고친 파일로 냈다(대기열 294, 일지 2026-10-16-20).
+
+열린 PR의 head는 원격에 `refs/pull/<N>/head`가 있는 것만 그 ref로 받는다. gh가 열린 PR로 읽어도
+PR을 연 지 몇 분 안에는 그 ref가 아직 없어, 그 ref를 받는 fetch가 128로 끝나 대조 전체가 2로
+멈췄다(대기열 288, 일지 2026-10-16-18). 그 뒤에도 head 커밋이 이 클론에 없는 PR은 커밋을 sha로
+받는다(`git fetch origin <sha>`). 같은 저장소에서 연 PR이면 head 브랜치의 끝이라 받아진다. 로컬
+원격에서 ref 없이 브랜치만 민 PR을 sha로 받는 것과, 원격에 객체가 없는 커밋을 받지 못해 그 PR만
+빠지는 것은 시험이 밟는다. GitHub 원격에서는 재지 않았다. 그래도 받지 못한 PR만 형제에서 빼고
+출력의 "받지 못해 대조에서 뺀 열린 PR" 줄로 알린다. 종료 코드는 남은 형제로 정한다.
 
 이 브랜치가 고친 파일(함께 고친 파일, 헌법 판, 카나리아, `--move` 가 쓰는 것)은 merge-base 뒤에
 고친 파일 가운데 main 과 내용이 다른 것과 미추적 파일이다. main 을 합치다 충돌을 풀고 커밋하기
@@ -201,6 +211,17 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
   `SKILL.md` 밖 파일, 훅 설정(`.claude/settings.json`)은 보지 않는다. 읽지 못한 명세(TOML 오류,
   글자가 아닌 `source`)는 원천이 없는 것으로 보아, 그 명세만 고친 하네스 파일도 알린다.
 - 함께 고친 파일의 어느 줄이 겹치는지. 파일 이름만 견준다.
+- 형제 워크트리의 미추적 파일이 `origin/main`의 같은 경로와 글자가 같은 것. 미추적 파일은 main과
+  견주지 않고 늘 고친 파일로 센다. main을 합치는 중에 main이 들여온 파일은 인덱스에 올라 추적
+  파일이라 빠진다. 미추적으로 같은 것은 손으로 옮겨 둔 것, 합친 뒤 `git restore --staged`로 내린
+  것, 형제가 새로 쓴 파일을 main이 뒤에 같은 글자로 더한 것 같은 경우다.
+- head 커밋을 받지 못해 뺀 열린 PR. 그 PR과의 번호 겹침과 함께 고친 파일을 보지 않고, 남은 형제로
+  0으로 끝날 수 있다. 기다렸다 다시 받지 않는다. 다시 치는 것은 출력을 읽은 사람이다. 포크에서
+  연 PR은 head 브랜치가 origin에 없어, ref가 생기기 전에 sha로 받아지는지 재지 않았다. 받지 못하면
+  이 갈래로 간다. sha로 받는 fetch가 시간 제한을 넘기면 그 PR만 빼지 않고 대조 전체가 2로 끝난다.
+  `ls-remote`에 있던 `refs/pull/<N>/head`가 fetch 전에 사라지면(그 사이 PR이 닫히거나 원격이 잠깐
+  실패하면) 그 ref를 main과 한 번에 받는 fetch가 실패해, sha 길로 내려가지 않고 대조 전체가 2로
+  끝난다. 다시 치면 그 PR은 열린 PR이 아니거나 ref 없는 PR의 길로 간다.
 - 이 브랜치가 고쳤어도 main 과 내용이 같아진 파일(main 의 같은 변경을 손으로 옮긴 것). 이 브랜치가
   고친 파일로 세지 않는다.
 - 다음 빈 번호나 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의
@@ -374,6 +395,7 @@ class Survey:
     reserved: str | None
     # 이 브랜치가 고친 파일 → 이 브랜치가 더한 줄에서 어디에도 없는 일지 번호를 가리킨 인용의 번호
     dangling: list[tuple[str, list[str]]]
+    unfetched: tuple[int, ...] = ()  # head 커밋을 받지 못해 형제에서 뺀 열린 PR(대기열 288)
 
     @property
     def siblings(self) -> list[Sibling]:
@@ -1003,19 +1025,15 @@ def _lines(text: str) -> frozenset[str]:
     return frozenset(line for line in text.splitlines() if line)
 
 
-def _worktree_changes(path: Path, since: str) -> frozenset[str]:
-    """작업 트리가 `since` 뒤에 고친 파일. 미추적 파일을 더한다."""
-    tracked = git(path, "diff", "--name-only", since)
-    untracked = git(path, "ls-files", "--others", "--exclude-standard")
-    return _lines(tracked) | _lines(untracked)
-
-
 def _own_changes(root: Path, base: str, main_sha: str) -> frozenset[str]:
-    """이 작업 트리가 merge-base 뒤에 고친 파일 가운데 main 과 내용이 다른 것. 미추적 파일을 더한다.
+    """작업 트리 `root` 가 `base` 뒤에 고친 파일 가운데 main 과 내용이 다른 것. 미추적 파일을
+    더한다.
 
-    main 과 같은 파일은 main 이 들여온 것이다. 합치기를 커밋하기 전에는 merge-base 가 옛 자리에
-    머물러 main 이 고친 파일이 모두 섞였고, 카나리아 누락이 main 의 규칙과 스킬을 알렸다(일지
-    2026-10-15-15).
+    이 브랜치에는 merge-base 를, 형제 워크트리에는 그 형제의 merge-base 나 닫힌 PR 의 head 를
+    넘긴다. main 과 같은 파일은 main 이 들여온 것이다. 합치기를 커밋하기 전에는 merge-base 가 옛
+    자리에 머물러 main 이 고친 파일이 모두 섞였고, 카나리아 누락이 main 의 규칙과 스킬을 알렸다(일지
+    2026-10-15-15). 형제에서도 같은 일이 나, main 과 글자가 같은 두 파일을 그 형제가 함께 고친
+    파일로 냈다(대기열 294, 일지 2026-10-16-20).
     """
     since_base = _lines(git(root, "diff", "--name-only", base))
     unlike_main = _lines(git(root, "diff", "--name-only", main_sha))
@@ -1061,6 +1079,18 @@ class Remote:
     pulls_from: str  # FROM_GH 또는 FROM_MERGE_REF
     own_head: str | None
     closed: dict[str, int]  # 닫힌 PR 의 head → 번호
+    heads: frozenset[int] = frozenset()  # 원격에 `refs/pull/<N>/head` 가 있는 PR
+    unfetched: tuple[int, ...] = ()  # head 커밋을 받지 못해 `pulls` 에서 뺀 열린 PR(대기열 288)
+
+
+def pull_heads(listing: str) -> frozenset[int]:
+    """`git ls-remote` 의 `refs/pull/*/head` 줄의 PR 번호."""
+    found: set[int] = set()
+    for line in listing.splitlines():
+        match = PULL_REF.match(line.partition("\t")[2].strip())
+        if match is not None and match.group(2) == "head":
+            found.add(int(match.group(1)))
+    return frozenset(found)
 
 
 def read_remote(root: Path) -> Remote:
@@ -1076,11 +1106,28 @@ def read_remote(root: Path) -> Remote:
     else:
         pulls, pulls_from = open_pulls(listing), FROM_MERGE_REF
     own = remote_head(listing, branch) if branch else None
-    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))
+    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls), pull_heads(listing))
 
 
-def fetch(root: Path, pulls: dict[int, str]) -> None:
-    """main 을 `origin/main` 으로 당기고, 열린 PR 의 head 를 ref 없이 받는다."""
+def has_commit(root: Path, sha: str) -> bool:
+    """`sha` 가 이 클론에 있는 커밋인지."""
+    result = _git_result(root, ("cat-file", "-e", f"{sha}^{{commit}}"), LOCAL_TIMEOUT)
+    return result.returncode == 0
+
+
+def fetch(root: Path, remote: Remote) -> Remote:
+    """main 을 `origin/main` 으로 당기고, 열린 PR 의 head 를 ref 없이 받는다.
+
+    gh 가 열린 PR 로 읽어도 원격에 `refs/pull/<N>/head` 가 아직 없을 수 있다. PR 을 연 지 몇 분
+    안에 그 ref 를 받는 fetch 가 128로 끝나 대조 전체가 2로 멈췄다(대기열 288, 일지
+    2026-10-16-18). 그래서 ref 는 원격에 있는 것만 받고, 그 뒤에도 head 커밋이 이 클론에 없는
+    PR(ref 가 없거나 gh 가 읽은 head 보다 옛것인 PR)은 커밋을 sha 로 받는다. 같은 저장소의 PR 이면
+    gh 가 읽은 head 는 그때의 head 브랜치 끝이다. 로컬 원격에서는 그런 커밋이 받아졌고, GitHub 이
+    그 커밋을 sha 로 내주는지와 그 사이 강제 푸시로 끝에서 밀려난 커밋은 재지 않았다. 그래도 받지
+    못한 PR 만 `pulls` 에서 빼 `unfetched` 에 든다. sha 로 받는 fetch 가 시간 제한을 넘기면
+    `SurveyError` 로 대조 전체가 멈춘다(모듈 독스트링의 못 보는 것).
+    """
+    present = [number for number in remote.pulls if number in remote.heads]
     git(
         root,
         "fetch",
@@ -1089,9 +1136,19 @@ def fetch(root: Path, pulls: dict[int, str]) -> None:
         "--no-write-fetch-head",
         REMOTE,
         f"+refs/heads/{BRANCH}:refs/remotes/{MAIN}",
-        *(f"refs/pull/{number}/head" for number in pulls),
+        *(f"refs/pull/{number}/head" for number in present),
         timeout=NETWORK_TIMEOUT,
     )
+    unfetched: list[int] = []
+    for number, head in remote.pulls.items():
+        if has_commit(root, head):
+            continue
+        args = ("fetch", "--quiet", "--no-tags", "--no-write-fetch-head", REMOTE, head)
+        _git_result(root, args, NETWORK_TIMEOUT)
+        if not has_commit(root, head):
+            unfetched.append(number)
+    pulls = {n: head for n, head in remote.pulls.items() if n not in unfetched}
+    return replace(remote, pulls=pulls, unfetched=tuple(unfetched))
 
 
 def survey(root: Path, remote: Remote) -> Survey:
@@ -1152,10 +1209,10 @@ def survey(root: Path, remote: Remote) -> Survey:
         if (closed := remote.closed.get(head)) is not None:
             # 커밋한 변경은 병합됐거나 앞으로 병합되지 않아 충돌 후보가 아니다(대기열 194)
             label = f"워크트리 {path}(PR #{closed} 닫힘)"
-            add(label, head, numbers, _worktree_changes(path, head), closed)
+            add(label, head, numbers, _own_changes(path, head, main_sha), closed)
             continue
         since = merge_base(root, head, main_sha)
-        changed = _worktree_changes(path, since) if since else None
+        changed = _own_changes(path, since, main_sha) if since else None
         add(f"워크트리 {path}", head, numbers, changed)
     disk = numbers_of(Disk(root))
     ours = unshared(fresh(disk, base_numbers), main_numbers)
@@ -1186,6 +1243,7 @@ def survey(root: Path, remote: Remote) -> Survey:
         base,
         reserved,
         dangling_files(root, (base, main_sha), changed, known),
+        remote.unfetched,
     )
 
 
@@ -1292,8 +1350,16 @@ def render(result: Survey, verdict: Verdict) -> str:
     lines = [
         _siblings_line(result.siblings),
         f"열린 PR 을 읽은 길: {_PULLS_FROM[result.pulls_from]}",
-        f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}",
     ]
+    if result.unfetched:
+        numbers = ", ".join(f"#{number}" for number in result.unfetched)
+        lines.append(
+            f"받지 못해 대조에서 뺀 열린 PR: {numbers}(원격에서 head 커밋을 받지 못했다. 막 연 PR"
+            " 이면 원격이 ref 를 아직 만들지 않은 것이다). 그 PR 과의 번호 겹침과 함께 고친 파일은"
+            " 보지 않았으니 잠시 뒤 다시 친다. 다시 쳐도 같으면 기다리지 않는다. 포크의 PR 이거나"
+            " 원격에 없는 커밋일 수 있고, 그 PR 과의 겹침은 PR 화면에서 손으로 본다"
+        )
+    lines.append(f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}")
     if not result.ours.journals:
         lines.append(_reserve_line(verdict.next_journal))
     if verdict.top_version:
@@ -1431,9 +1497,7 @@ def main(argv: list[str] | None = None, today: date | None = None) -> int:
 def _prepare(start: Path) -> tuple[Path, Remote]:
     """저장소 루트를 찾고 원격을 읽어 fetch 한다."""
     root = Path(git(start, "rev-parse", "--show-toplevel").strip()).resolve()
-    remote = read_remote(root)
-    fetch(root, remote.pulls)
-    return root, remote
+    return root, fetch(root, read_remote(root))
 
 
 def _check(start: Path, day: str) -> tuple[Survey, Verdict]:
