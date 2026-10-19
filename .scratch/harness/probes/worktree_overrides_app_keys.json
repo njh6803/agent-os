@@ -1,0 +1,20 @@
+{
+  "skillOverrides": {
+    ".claude/worktrees/worktree-overrides-pc-check:code-review": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:diagnosing-bugs": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:domain-modeling": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:grill-me": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:grill-with-docs": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:grilling": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:implement": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:next-session": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:open-session": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:retro": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:setup-matt-pocock-skills": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:tdd": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:tidy-checkouts": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:to-spec": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:to-tickets": "off",
+    ".claude/worktrees/worktree-overrides-pc-check:writing-for-agents": "off"
+  }
+}
