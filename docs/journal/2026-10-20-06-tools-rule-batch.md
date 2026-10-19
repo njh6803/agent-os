@@ -1,4 +1,4 @@
-# 2026-10-20 (02) tools 규칙의 허용 목록·다른 견줌 문장과 외부 명령의 시간 제한 검사
+# 2026-10-20 (06) tools 규칙의 허용 목록·다른 견줌 문장과 외부 명령의 시간 제한 검사
 
 브랜치 `chore/tools-rule-batch`. 대상 파일이 `.claude/rules/tools.md`인 열린 대기열 행 가운데 지금 반영할 수 있는 셋(321·342·361)을
 chore 한 PR로 반영했다.
@@ -122,7 +122,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
   한다."
 - `.claude/rules/tools.md`: "끊으면 안 되는 자리(지우는 git까지 그 도구의 git을 모두 맡은 `tools/tidy_checkouts.py`의 `real_git`.
   읽기만 하는 git도 함께 빠진다)"와 "이 항목을 어긴 것을 셀프 리뷰를 지나 PR 직전 `bug-perf-review`가 잡아(일지 2026-10-17-12)
-  이 검사를 더했다(일지 2026-10-20-02)".
+  이 검사를 더했다(일지 2026-10-20-06)".
 - `calls_without_timeout` 독스트링: "`asyncio` 하위 프로세스의 `wait`·`communicate` 는 timeout 을 받지 않아 `asyncio.wait_for` 로
   감싸도 잡히고, `communicate` 는 표지로도 뺄 수 없다", "`*`·`**` 로 펼친 인자는 timeout 이 든지 몰라 없는 것으로 본다", 못 보는
   것의 "`from subprocess import *` 뒤의 이름, `getoutput`·`getstatusoutput`(timeout 을 받지 않는다)", "표지는 줄 단위라 표지가
@@ -156,8 +156,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
 시작 프롬프트: 대기열 321·342·361(대상 파일이 .claude/rules/tools.md인 열린 행 셋)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
 브랜치: chore/tools-rule-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-02-tools-rule-batch.md 의 "셀프 리뷰"와 "인계"
-이어받을 상태: 인계: 커밋 뒤. 커밋 eb416d39까지 구현, 셀프 리뷰 반영, 검증을 마쳤고 pre-commit을 모두 지났다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 origin/main 합치기(#301이 .scratch/harness/probes/README.md와 .scratch/retro-queue.md를 고쳐 충돌 후보다), PR 직전 리뷰(일지의 "PR 직전 리뷰에 밀 주장"을 넘긴다), 푸시와 PR, 봇 회차, 워크트리에서 병합, 일지 "다음"과 회고다. 일지의 "인계" 절은 커밋하지 않았고 일지 "다음"에 넘길 후속 후보 셋이 거기 있다. 일지 docs/journal/2026-10-20-02-tools-rule-batch.md
+읽을 것: docs/journal/2026-10-20-06-tools-rule-batch.md 의 "셀프 리뷰"와 "인계"
+이어받을 상태: 인계: 커밋 뒤. 커밋 eb416d39까지 구현, 셀프 리뷰 반영, 검증을 마쳤고 pre-commit을 모두 지났다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 origin/main 합치기(#301이 .scratch/harness/probes/README.md와 .scratch/retro-queue.md를 고쳐 충돌 후보다), PR 직전 리뷰(일지의 "PR 직전 리뷰에 밀 주장"을 넘긴다), 푸시와 PR, 봇 회차, 워크트리에서 병합, 일지 "다음"과 회고다. 일지의 "인계" 절은 커밋하지 않았고 일지 "다음"에 넘길 후속 후보 셋이 거기 있다. 일지 docs/journal/2026-10-20-06-tools-rule-batch.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -289,7 +289,7 @@ open-session을 부른다 2026-10-19T14:04:12Z
 - 커밋 직전의 `tools/sibling_overlap.py`가 origin/main이 `4af37971`(#310, #311)로 움직였다고 알리고, 새 대기열 행 372가
   `canary-runner-batch` 워크트리의 372와 겹치며 이 일지(33)가 main의 최신 일지 2026-10-20-01보다 이름순으로 앞이라고 했다.
   대기열 변경을 스크래치 패치로 저장하고 그 파일을 되돌린 뒤 origin/main을 합쳤고(충돌 없음), 패치를 다시 얹고 `--move`로
-  일지를 2026-10-20-02로, 새 행을 373으로 옮겼다. main이 고친 파일 가운데 이 브랜치가 이름으로 든 것은 카나리아 러너
+  일지를 2026-10-20-06로, 새 행을 373으로 옮겼다. main이 고친 파일 가운데 이 브랜치가 이름으로 든 것은 카나리아 러너
   (`tools/canary.py`, #310이 한도 회차를 `[측정 아님]`으로 센다)와 `.claude/rules/tools.md`다. 이 PR의 카나리아 명세는
   사전 확인(`--preflight`) 통과로 다시 갈음했다. 조건 넷이 그대로다. 같은 PR·같은 claude 2.1.302의 통과가 있고, 원천 파일에서
   고친 곳은 본문뿐이며(main의 tools.md 변경은 31행의 훅 시간 항목, 이 브랜치의 번호 이동은 본문의 일지 인용), 명세에서 바뀐
@@ -341,7 +341,14 @@ open-session을 부른다 2026-10-19T23:08:25Z
 - origin/main 합치기. 위 커밋(`3ab60b5e`)의 푸시를 훅이 막았다. origin/main이 `f0fbb961`(#313)로 한 커밋 움직였다. #313은
   `.scratch/retro-queue.md`와 일지 2026-10-19-34만 고쳤고, 대기열이 세 군데 충돌했다. 306은 양쪽이 각자 10회차를 더해 11회차로
   합치고 일지 둘(2026-10-19-34, 이 일지)을 모두 실었다. 그래서 위 회고 1의 "10회차"는 합친 뒤 11회차다. 341은 main의 2회차를,
-  342는 이 브랜치의 닫힘을 썼고, 372(main)와 373(이 브랜치)은 둘 다 남겼다.
+  342는 이 브랜치의 닫힘을 썼고, 372(main)와 373(이 브랜치)은 둘 다 남겼다. 합친 커밋 `2f4e0f64`의 pre-commit은 모두 지났다.
+- 그 푸시도 훅이 막았다. origin/main이 `68378fef`(#308, 변이 도구의 표 가드)로 또 움직였다. 충돌 없이 합쳐졌다. #308은
+  이 브랜치와 같은 `.claude/rules/tools.md`(훅 시간 항목에 `hook_edit_during_mutate` 한 문장)와 `tools/mutate.py`를 고치고 새
+  도구 `tools/hook_edit_during_mutate.py`를 더했다. 이 브랜치의 `calls_without_timeout`이 그 새 하위 프로세스 호출을 잡는지
+  합친 판에서 `tools/check_instructions.py`를 돌려 0으로 봤다. #308의 일지 2026-10-20-04가 이 일지보다 이름순으로 뒤라
+  `tools/sibling_overlap.py --move`로 이 일지를 2026-10-20-06으로 옮겼다(인용을 고친 파일은 tools.md, 프로브 README, 카나리아
+  명세, 대기열, 이 일지. 옛 번호의 남은 인용은 grep으로 0). 카나리아는 사전 확인(`--preflight`) 통과로 다시 갈음했다. main의
+  tools.md 변경은 훅 시간 항목이라 카나리아 셋이 묻는 항목과 겹치지 않는다.
 
 ## 회고
 
