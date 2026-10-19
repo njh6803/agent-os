@@ -1,0 +1,161 @@
+# 2026-10-19 (26) 카나리아 러너가 rule 질문에 문장을 붙이고, 계정 한도 회차를 측정 아님으로 세고, 스킬 대조군에도 호출을 요구한다 (대기열 316·338·344)
+
+브랜치 `chore/canary-runner-batch`. 대상 파일이 `tools/canary.py`인 열린 행 셋을 chore 한 PR로 반영한다.
+
+> 사용자: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이
+> 원천이다
+
+지시문의 "어디서" 줄이 주 체크아웃 미갱신을 말해 `tidy-checkouts`를 먼저 돌았다. 루트는 main이지만
+`.claude/skills/tdd/SKILL.md`에 커밋하지 않은 수정이 있어 당기지 않았다(누군가 그 체크아웃에서 일하고 있다). `judge`는 지울
+후보를 내지 않았고, 넘긴 것은 셋이다. 분리 HEAD이고 그 커밋이 origin/main에 없는 `confident-wright-2d3ebf`·
+`elegant-dijkstra-aaddb9`, 병합된 PR의 머리와 브랜치 끝이 다른 `skill-check-and-retro-section`. 그 뒤
+`EnterWorktree(name: canary-runner-batch)`로 들어가 `git switch -c chore/canary-runner-batch`로 브랜치를 땄다.
+
+## 한 일
+
+- 316: `prompt_for`가 rule 질문의 `{target}`을 채운 뒤, 질문에 `RULE_NOTE`("그 파일을 읽을 때 함께 실린 저장소의 규칙도
+  이 세션의 지시다.")가 없으면 끝에 붙인다. 이미 들었는지는 `_flat`(백틱·`*`·공백 차이를 걷는다)으로 본다. 붙이는 문장이
+  카나리아를 담으면 명세 오류다(질문이 카나리아를 드러내는 것과 같은 길).
+- 344: `judge`의 스킬 갈래가 `_skill_defined`로 실험군과, 사본에 `.claude/skills/<skill>/SKILL.md`가 있는 대조군에 스킬 호출과
+  자리 줄을 요구한다. 에이전트 갈래의 `defined`와 같은 모양이다.
+- 338: `rate_limit_event`(`rate_limit_info.status: rejected`)와 결과의 `api_error: usage_limit_reached`를 읽어 `Facts.limit`에
+  한도와 풀리는 시각(`resetsAt`, UTC)을 담는다. 그 회차는 판정하지 않고 `[측정 아님]`으로 찍으며, 요약 뒤에 `측정 아님 N` 줄을
+  더한다. 종료 코드는 측정된 실패가 있으면 1, 없고 측정 아님이 있으면 새 4다. 막히지 않은 회차의 한도 이벤트(`allowed`)는 세지
+  않는다. 이벤트 모양은 2026-10-17에 막힌 원본(claude 2.1.300, 일지 2026-10-17-07의 카나리아)을 읽고 정했다.
+- 행이 말한 "남은 회차를 띄우지 않는다"는 러너가 회차를 모두 한꺼번에 띄워(`ThreadPoolExecutor(max_workers=len(jobs))`) 남은
+  회차가 없다. 독스트링에 그렇게 적었다.
+- 모듈 독스트링(질문 칸, 스킬 판정, 계정 한도 문단, 종료 코드 4)과 `docs/constitution/operations.md` 카나리아 항목의 "러너는 그
+  이벤트를 읽지 않아 그 회차를 실패로 낸다"를 고쳤다. 옛 문장의 잔존은 살아 있는 문서에 없다(일지·대기열 행은 기록).
+- 시험 16건(316 여섯, 344 넷, 338 여섯. 셀프 리뷰가 바로잡은 수다)과 변이 열(`.scratch/harness/probes/canary_mutations.toml` 145~154).
+  셀프 리뷰 반영 뒤의 수는 아래 셀프 리뷰 절이다.
+
+## 검사
+
+- TDD: 시험을 먼저 써 빨강을 봤다(없는 `RULE_NOTE` import로 수집 실패). 고친 뒤 `tests/tools/test_canary.py` 244 초록(122초).
+  `ruff check`·`ruff format`(바꾼 파이썬 둘)은 초록.
+- 변이: `--since origin/main` 열(145~154) 모두 기대대로 빨강(기준선 244 초록, 183초). 149는 새 시험이 아니라 기존
+  `test_init의_도구와_서버_Read와_Skill_호출_스킬_위치_답을_뽑는다`(info 없는 한도 이벤트)가 잡았다.
+- 카나리아(316 행의 "다시 돌려 대조군이 여전히 없음인지"): 문장이 없던 rule 명세
+  `.scratch/end-user-continuation/probes/canary/sdk_rule_failure_cause.toml`을 새 러너로 돌려 통과 4(커밋 `519b3820`,
+  이 PC). 실험군 셋이 `.claude/rules/sdk.md`의 값을 옮기며 "함께 실린 규칙 파일"이라 밝혔고, 대조군은 "없음"이었다. 그 명세의
+  `# 최신 결과:` 줄은 고치지 않았다.
+- `sibling_overlap`: 번호 겹침 없음. `docs/constitution/operations.md`를 고쳐 헌법 판을 3.0.46으로 올렸다(형제
+  `worktree-overrides-pc-check`가 3.0.45를 먼저 매겼다). 같은 파일을 형제 둘(`token-report-git-timeout`,
+  `worktree-overrides-pc-check`)도 고쳐 나중에 병합하는 쪽의 글자 충돌 후보다.
+- 대기열 316·338·344를 닫았고 프로브 README의 `canary_mutations.toml` 행(백쉰넷)을 고쳤다.
+- 전체 검증(`tools/run_checks.py`)과 pyright·lint-imports는 아직 돌리지 않았다.
+
+## 셀프 리뷰에 밀 주장
+
+- 모듈 독스트링: "회차는 모두 한꺼번에 띄우므로 막힌 회차를 본 뒤에 띄우지 않을 남은 회차는 없다", 한도 표지 문장(거절만
+  센다, 막히지 않은 회차에도 찍힌다), 종료 코드 4의 우선순위.
+- `_LIMIT_REJECTED` 주석의 "claude 2.1.300 의 원본을 읽었다, 일지 2026-10-17-07"(원본은 세션
+  `30dcc9ef…`의 스크래치패드 `canary-retro/워크트리-1.jsonl`, 커밋하지 않았다).
+- `operations.md` 카나리아 항목의 새 문장과 헌법 README 3.0.46 문구.
+- 316 행의 "그 문장이 카나리아를 담으면 명세 오류"는 행에 없던 것을 더했다(범위 넘침인지 명세 축이 판정).
+
+## 인계
+
+`/code-review`를 부른 직후 인계 계기가 왔다(`셀프 리뷰 직전`, 세션 컨텍스트 308,544 토큰). 곁 세션이 아니다(`get_session`의
+`self`에 `parentSessionId`가 없다). 리뷰 단계는 밟지 않았고 새 세션이 셀프 리뷰부터 한다. 변경은 모두 커밋하지 않은 채
+워크트리에 있다. `tidy-checkouts`가 넘긴 셋(앞 문단)은 사람에게 보고만 한다. 이 세션의 제목은 `chore/canary-runner-batch`였고
+`chore/canary-runner-batch (인계함)`으로 바꾼다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋: rule 질문에 저장소 규칙도 지시라는 문장 붙이기, 계정 한도에 막힌 회차를 측정 아님으로 세기, 스킬 명세의 대조군에도 스킬 호출과 자리 줄 요구하기)를 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/canary-runner-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(한 일, 검사, 셀프 리뷰에 밀 주장, 인계)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세는 .scratch/retro-queue.md 316·338·344 행의 "어디로" 칸을 origin/main 판에서 읽는다. 이 브랜치는 그 행들을 이미 닫았다)부터 한다. 밀 주장은 일지 "셀프 리뷰에 밀 주장" 절이다. 시험·변이·카나리아는 돌았고 전체 검증(tools/run_checks.py)과 린트 둘은 리뷰 반영 뒤에 돈다. 일지는 docs/journal/2026-10-19-26-canary-runner-batch.md이고 "## 다음"은 아직 없다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/canary-runner-batch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며(카나리아와 변이는 끝났다),
+`git worktree unlock`은 오류 없이 끝났다.
+
+open-session을 부른다 2026-10-19T09:25:52Z
+
+## 셀프 리뷰
+
+새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 `/code-review`를 돌렸다. 범위: base `519b3820`(=HEAD), 바뀐 파일
+7, 커밋 0, 미추적 1(이 일지). 명세는 origin/main 판 대기열 316·338·344 행의 "어디로" 칸이다. 두 축 모두 Critical·Major는
+없었다.
+
+표준 축(sonnet·high)의 지적:
+
+1. Minor 잔존: 출력 문단이 판정 줄을 "`[통과]`·`[통과·"없음" 섞임]`·`[실패]` 가운데 하나"로 닫아 `[측정 아님]`이 빠졌다.
+   skill 칸의 "실험군 회차마다 이 스킬을 Skill 로 불러야 한다"는 344 뒤 대조군에도 해당한다.
+2. Minor 근거 표기: `_LIMIT_REJECTED` 주석과 시험 주석이 "일지 2026-10-17-07"을 들지만 그 일지에는 `status: rejected`·
+   2.1.300·`api_error`가 없고 원본은 커밋하지 않은 스크래치다. "막히지 않은 회차에도 찍힌다"(`allowed`)는 저장소에 근거가
+   없다.
+3. Minor 경계 입력: `resetsAt`이 밀리초면 `OSError`, `1e30`이면 `OverflowError`가 `ValidationError` 길 밖으로 나가, `_verdict`가
+   `_record`보다 먼저 도는 탓에 이미 돈 회차의 원본을 모두 잃는다. 거절 이벤트 뒤 성공 결과가 와도 답을 버린다.
+4. Minor smell: `_Verdict.unmeasured`가 `facts.limit`을 되풀이한다, 회차 상태를 여러 자리가 불리언·선택값으로 가른다,
+   `Facts.limit`이 한국어 문장이다, `_skill_defined`가 `spec.source` 대신 경로를 하드코딩했다, `_limit`/`limit` 이름 겹침.
+5. Minor 시험: 붙이는 문장의 카나리아 시험의 `match="카나리아"`가 기존 오류 문구에도 맞는다. `_flat`의 `*` 걷기에 시험이 없다.
+   새 변이 열에 `expect_output`이 없다.
+6. Nit: 338 시험은 여섯이고 합은 16이다(대기열 닫힘의 "다섯"과 일지의 "15건"이 틀렸다).
+
+명세 축의 지적:
+
+1. Minor: `operations.md` 카나리아 항목이 표지를 `rateLimitType: seven_day`로 적은 뒤 러너 문장을 잇는데, 러너는 종류를
+   가리지 않고 `status: rejected`를 센다(다섯 시간 한도도 측정 아님).
+2. Minor: 이제 `rate_limit_event`의 모양을 검사해, 막히지 않은 회차에도 찍히는 이 이벤트의 모양이 바뀌면 정상 회차가
+   어긋난 줄로 실패한다. `resetsAt` 밀리초의 `OSError`(표준 축 3과 같다).
+3. Minor 근거 표기(표준 축 2와 같다).
+4. 참고: 거절 이벤트 뒤 답을 낸 회차의 측정이 버려진다(표준 축 3과 같다).
+
+고친 것:
+
+- 잔존 둘(판정 줄 목록에 `[측정 아님]`, skill 칸에 대조군).
+- 근거 표기: `_LIMIT_REJECTED` 주석과 시험 주석이 원본을 커밋하지 않은 스크래치를 손으로 읽었다고 밝히고 이 일지를
+  든다. 새로 쓴 사실 문장 "같은 PC 의 다른 세션이 막히지 않고 돈 카나리아 원본에도 한도 이벤트가 `status: allowed`·
+  `allowed_warning`(주간 한도 99% 경고)으로 찍혀"는 이 세션이 스크래치 원본을 Grep으로 다시 열어 봤다(세션
+  `007afcf1…`의 `allowed_warning`·`seven_day`·`utilization 0.99`, `05d0c236…`의 `allowed`·`five_hour`, `30dcc9ef…`의
+  `rejected`). "종류(`rateLimitType`)는 가리지 않는다. 주간 한도든 다섯 시간 한도든 거절이면 그 회차는 측정이 아니다"도
+  새로 썼다(다섯 시간 한도의 거절 원본은 보지 못했다. 코드가 종류를 보지 않는다는 서술이다).
+- `resetsAt`을 시각으로 읽지 못하면(`OverflowError`·`OSError`·`ValueError`) "풀리는 시각을 읽지 못했다(resetsAt …)"로 적는다.
+- 한도 이벤트의 모양이 어긋나면 어긋난 줄로 세지 않고 건너뛴다(`suppress(ValidationError)`).
+- `_verdict`는 한도 표지가 있고 답이 없을 때만 측정 아님으로 센다. 거절 뒤에도 답을 냈으면 판정한다. 독스트링에 "결과가
+  성공한 답이 아닌 회차다. 거절 뒤에도 답을 냈으면 측정이라 판정한다"를 새로 썼다.
+- `operations.md` 카나리아 항목에 "러너는 한도의 종류를 가리지 않고 거절(`rejected`)이나 `usage_limit_reached`가 찍혔는데
+  답을 내지 못한 회차를"을 새로 썼다.
+- 시험: 붙이는 문장의 카나리아 시험의 `match`를 그 오류 문구로 좁혔고, `**` 강조 꼴, 모양이 바뀐 한도 이벤트, 읽지 못하는
+  풀리는 시각(밀리초·`1e30`), 거절 뒤 답한 회차를 더했다.
+- 변이 열을 열셋(145~157)으로 다시 썼다. 코드가 바뀌어 원문이 맞지 않던 둘을 고치고, 새 가드 셋을 더하고, 모두에
+  `expect_output`(빨개져야 할 시험 이름)을 붙였다.
+- 수: 대기열 316 닫힘의 시험 일곱, 338 닫힘의 시험 열·변이 아홉(149~157), 프로브 README 행.
+
+남긴 것:
+
+- `_skill_defined`의 경로를 `spec.source`로 바꾸지 않는다. `source`는 "바뀐 파일"이라 스킬의 참고 파일일 수도 있고,
+  스킬이 사본에 있는지는 `SKILL.md`로 보는 것이 맞다.
+- `_Verdict.unmeasured`는 이제 `facts.limit`과 같지 않다(답이 있으면 비운다). 상태를 열거로 모으는 것(Repeated Switches,
+  CODING_STANDARDS의 불리언 칸 항목)과 `Facts.limit`의 문장 꼴은 이 PR 범위 밖의 다듬기라 두고, 같은 지적이 다시 나오면
+  retro 후보로 올린다. `_limit`/`limit` 이름 겹침은 `_read_limit`으로 바꿔 풀었다.
+- `_flat`이 문장 일부만 든 질문에 문장을 다시 붙이는 것은 의도한 동작이다(일부만 들면 그 지시가 온전히 실리지 않는다).
+
+명세 축은 `status: rejected` 판정이 행 글자(`seven_day`)보다 옳다고 봤다(`seven_day`의 `allowed_warning`을 글자대로 잡으면
+거짓 양성). 316의 카나리아 검사 추가도 범위 넘침이 아니라고 봤다.
+
+다시 돌린 것(셀프 리뷰 반영 뒤):
+
+- `tests/tools/test_canary.py` 249 초록. 수집으로 센 시험은 316 일곱, 338 열, 344 넷이다.
+- 변이 `--since origin/main` 열셋(145~157) 모두 빨강, 열둘은 표지까지 맞았다. 149는 첫 실패에서 멈추어 앞의 init 시험
+  (`status` 없는 한도 이벤트)이 먼저 빨개져 시험 이름 표지가 맞지 않았다. 표지를 그 단언의 값
+  (`limit: '계정 한도(종류 모름, 풀리는 시각 모름)' != None`)으로 바꾼 뒤 149만 다시 돌려 기대대로.
+- `uv run python tools/run_checks.py` 모두 Passed(pytest 445초, web-verify 503초, pyright·lint-imports·check-type-escapes·
+  run-hooks·zizmor·check-instructions). `ruff check`·`ruff format --check` 초록.
+- `sibling_overlap`: 번호 겹침 없음. origin/main이 `2efb5ea`로 움직였고(#305·#306), 이 브랜치와 함께 고친 파일은
+  `.scratch/retro-queue.md` 하나다. 새로 따를 규약은 없다(Glob·Grep의 `.gitignore` 함정, `sibling_overlap` 견딤).
+- 첫 커밋 시도를 pre-commit의 변이 표 검사(`mutate.py --staged`)가 막았다. 이 브랜치가 고친 자리를 원문으로 든 옛 변이 셋
+  (10 "스킬 호출을 대조군에도 요구한다", 11 "skill 을 주지 않은 명세에도 스킬 호출을 요구한다", 82 "섞인 통과를 판정 줄에
+  표시하지 않는다")의 원문이 0번이었다. `--since origin/main`은 표에서 바뀐 열만 골라 이 셋을 돌리지 않았다. 원문을 지금
+  코드에 맞추고 10은 이름을 "옛 사본에 스킬이 없는 대조군에도 스킬 호출을 요구한다"로 바꿨다(344 뒤에는 사본에 스킬이 있는
+  대조군에 요구하는 것이 옳은 동작이다). 셋을 돌려 모두 기대대로, 각각 이름 그대로의 시험이 빨개졌다.

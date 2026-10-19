@@ -132,14 +132,14 @@ new = '''
 '''
 
 [[mutation]]
-name = "스킬 호출을 대조군에도 요구한다"
+name = "옛 사본에 스킬이 없는 대조군에도 스킬 호출을 요구한다"
 tests = ["tests/tools/test_canary.py"]
 expect = "red"
 
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-        if spec.skill is not None and arm.role == "experiment":
+        if spec.skill is not None and _skill_defined(spec.skill, arm, checkout):
 '''
 new = '''
         if spec.skill is not None:
@@ -153,10 +153,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-        if spec.skill is not None and arm.role == "experiment":
+        if spec.skill is not None and _skill_defined(spec.skill, arm, checkout):
 '''
 new = '''
-        if arm.role == "experiment":
+        if _skill_defined(spec.skill or "", arm, checkout):
 '''
 
 [[mutation]]
@@ -1209,10 +1209,10 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    mark = "실패" if verdict.reasons else '통과·"없음" 섞임' if verdict.mixed_none else "통과"
+        mark = '통과·"없음" 섞임' if verdict.mixed_none else "통과"
 '''
 new = '''
-    mark = "실패" if verdict.reasons else "통과"
+        mark = "통과"
 '''
 
 [[mutation]]
@@ -2137,4 +2137,206 @@ old = '''
 '''
 new = '''
     if False:
+'''
+
+# 대기열 316·338·344. 표지는 빨개져야 할 시험의 이름이다(-q 의 FAILED 줄에만 실린다)
+
+[[mutation]]
+name = "rule 질문에 저장소 규칙도 지시라는 문장을 붙이지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_규칙_질문에는_함께_실린_저장소_규칙도_지시라는_문장을_붙인다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        return f"{question.rstrip()}\n{RULE_NOTE}\n"
+'''
+new = '''
+        return question
+'''
+
+[[mutation]]
+name = "명세가 이미 든 문장을 다시 붙인다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_명세가_이미_그_문장을_들면_다시_붙이지_않는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if _flat(RULE_NOTE) in _flat(question):
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "붙이는 문장의 카나리아를 명세 오류로 잡지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_붙이는_문장에_카나리아가_있으면_명세_오류다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if self.kind == "rule" and noted:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "사본에 스킬이 있는 대조군에도 호출과 자리 줄을 요구하지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_대조군_사본에_그_스킬이_있으면_대조군도_불러_자리_줄을_남겨야_한다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        arm.role == "experiment" or (checkout / ".claude" / "skills" / skill / "SKILL.md").is_file()
+'''
+new = '''
+        arm.role == "experiment"
+'''
+
+[[mutation]]
+name = "거절되지 않은 한도 이벤트도 계정 한도로 센다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+# 첫 실패에서 멈추어, 앞에 있는 init 시험(status 없는 한도 이벤트)이 먼저 빨개진다. 표지는 그 단언의 값이다
+expect_output = ["limit: '계정 한도(종류 모름, 풀리는 시각 모름)' != None"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if info.get("status") != _LIMIT_REJECTED:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "한도 이벤트를 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_계정_한도에_막힌_회차는_한도의_종류와_풀리는_시각을_뽑는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+                self._read_limit(_LIMIT.validate_python(raw))
+'''
+new = '''
+                pass
+'''
+
+[[mutation]]
+name = "모양이 바뀐 한도 이벤트를 어긋난 줄로 센다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_모양이_바뀐_한도_이벤트는_어긋난_줄로_세지_않고_건너뛴다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            with suppress(ValidationError):
+'''
+new = '''
+            if True:
+'''
+
+[[mutation]]
+name = "읽지 못하는 풀리는 시각이 예외로 올라간다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_읽지_못하는_풀리는_시각은_예외가_아니라_그대로_적는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+            except (OverflowError, OSError, ValueError):
+'''
+new = '''
+            except ZeroDivisionError:
+'''
+
+[[mutation]]
+name = "결과의 usage_limit_reached 를 읽지 않는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_결과만_usage_limit_reached여도_계정_한도로_읽는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+        if result.get("api_error") == _USAGE_LIMIT and self.limit is None:
+'''
+new = '''
+        if False:
+'''
+
+[[mutation]]
+name = "계정 한도에 막힌 회차를 판정해 실패로 낸다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_계정_한도에_막힌_회차는_실패가_아니라_측정_아님으로_세고_4다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if facts.limit is not None and facts.answer is None:
+        return _Verdict(facts, [], mixed_none=False, unmeasured=facts.limit)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "거절 이벤트 뒤에 답을 낸 회차도 측정 아님으로 센다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_거절_이벤트_뒤에도_답을_냈으면_측정이라_판정한다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if facts.limit is not None and facts.answer is None:
+'''
+new = '''
+    if facts.limit is not None:
+'''
+
+[[mutation]]
+name = "측정 아님만 있으면 0 으로 끝난다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_계정_한도에_막힌_회차는_실패가_아니라_측정_아님으로_세고_4다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    return _UNMEASURED if unmeasured else 0
+'''
+new = '''
+    return 0
+'''
+
+[[mutation]]
+name = "측정 아님이 측정된 실패보다 앞선다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_측정된_실패가_있으면_측정_아님이_있어도_1이다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if failed:
+        return 1
+    return _UNMEASURED if unmeasured else 0
+'''
+new = '''
+    if unmeasured:
+        return _UNMEASURED
+    return 1 if failed else 0
 '''

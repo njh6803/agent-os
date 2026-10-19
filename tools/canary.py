@@ -40,10 +40,12 @@
     model = "sonnet"                 # 선택. 기본 sonnet
     question = '''
     Read 도구로 `{target}` 하나만 통째로 읽어라. ...없으면 "없음"이라고만 답하라.
-    '''                              # stdin 으로 간다. rule 이면 {target} 이 갈래의 대상으로 바뀐다
+    '''                              # stdin 으로 간다. rule 이면 {target} 이 갈래의 대상으로
+                                     # 바뀌고 끝에 RULE_NOTE 가 붙는다(이미 들었으면 붙이지 않는다)
     expect = ["식별자는 영문"]        # 카나리아. 바뀐 본문에만 있는 글. 질문에 있으면 안 된다
     source = ".claude/rules/tools.md"  # 바뀐 규칙·스킬·서브에이전트 파일. 체크아웃 기준
-    # skill = "tidy-checkouts"       skill 이면 선택. 실험군 회차마다 이 스킬을 Skill 로 불러야 한다
+    # skill = "tidy-checkouts"       skill 이면 선택. 실험군과, 사본에 이 스킬이 있는 대조군의
+    #                                회차마다 이 스킬을 Skill 로 불러야 한다
     # agent = "spec-reviewer"        agent 면 반드시. 정의의 name
     # agent_tools = ["Read", "Grep", "Glob", "Bash"]   agent 면 반드시. 정의의 tools 줄
 
@@ -74,8 +76,9 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   읽었으면 답이 실린 규칙이 아니라 그 파일에서 왔을 수 있다.
 - skill: 실린 스킬 본문의 자리(`Base directory for this skill:` 줄)는 모두 `<체크아웃>/.claude/
   skills/` 바로 아래다. 워크트리는 주 체크아웃 안에 있어 접두사가 아니라 자리 전체로 견준다.
-  `skill` 을 주었으면 실험군은 그 스킬을 Skill 로 불렀고 그 이름의 자리 줄이 있다. 줄이 없으면
-  자리 판정이 비므로 실패다. 대조군에는 요구하지 않는다. 새 스킬은 옛 사본에 없다.
+  `skill` 을 주었으면 실험군과, 사본에 그 스킬(`.claude/skills/<skill>/SKILL.md`)이 있는 대조군은
+  그 스킬을 Skill 로 불렀고 그 이름의 자리 줄이 있다. 줄이 없으면 자리 판정이 비므로 실패다. 새
+  스킬이라 옛 사본에 없는 대조군은 부르지 않아도 된다(`_skill_defined`).
 - agent: 본 세션은 그 에이전트를 부르는 Agent 밖의 도구를 쓰지 않았다. 본 세션과 다른
   서브에이전트(Explore 등)도 정의의 도구를 가지므로, 정의를 직접 읽거나 다른 서브에이전트에게 읽혀
   옮긴 답을 이것이 막는다. 서브에이전트(`parent_tool_use_id` 가 붙은 assistant 이벤트, 앞쪽 실행이면
@@ -94,6 +97,12 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   열었다(대기열 212).
 - 대조군: 답에 카나리아가 하나도 없다. "없음"이든 옛 줄이든 된다. 카나리아가 있으면 질문이 답을
   흘렸거나 대조군이 새 사본이다.
+계정 한도에 막힌 회차는 판정하지 않고 "측정 아님"으로 따로 센다. 원본의 `rate_limit_event` 가
+`status: rejected` 이거나(한도의 종류는 가리지 않는다) 결과의 `api_error` 가 `usage_limit_reached`
+이고, 결과가 성공한 답이 아닌 회차다. 거절 뒤에도 답을 냈으면 측정이라 판정한다. 판정 줄은
+`[측정 아님]` 이고 그 한도와 풀리는 시각(`resetsAt`, UTC)을 찍는다. 이 표지를 읽지 않던 동안에는
+그 회차가 실패로 나와, 한 단계에서 명세를 세 번 돌리고 매번 원본을 열어 측정이 아님을 가렸다(대기열
+338). 회차는 모두 한꺼번에 띄우므로 막힌 회차를 본 뒤에 띄우지 않을 남은 회차는 없다.
 카나리아 대조는 백틱과 `*` 를 걷고 공백을 하나로 모은 뒤의 부분 문자열이다. 돌리기 전에 아래를 보고
 어긋나면 돌리지 않는다. 질문과 rule 갈래의 대상 파일에 카나리아가 없다. 갈래의 체크아웃이 있다.
 실험군 사본의 원천(`source`)에 카나리아가 모두 있고, 실험군과 체크아웃이 다른 대조군 사본에는 하나도
@@ -108,8 +117,8 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 `skill` 을 주지 않는다. 그 본문은 프롬프트에 펼쳐져 Skill 호출도 자리 줄도 남기지 않는다
 (claude 2.1.291 에서 `/grill-me` 로 손으로 봤다, 일지 2026-10-07-02).
 
-출력. 회차마다 판정 줄(`[통과]`·`[통과·"없음" 섞임]`·`[실패]` 가운데 하나, 갈래, 회차, 그 갈래
-체크아웃의 커밋), 실패 이유, 뽑은 사실 한 줄, 자르지 않은 답(줄마다 네 칸 들여)을 찍고, 끝에
+출력. 회차마다 판정 줄(`[통과]`·`[통과·"없음" 섞임]`·`[실패]`·`[측정 아님]` 가운데 하나, 갈래, 회차,
+그 갈래 체크아웃의 커밋), 실패 이유, 뽑은 사실 한 줄, 자르지 않은 답(줄마다 네 칸 들여)을 찍고, 끝에
 갈래마다의 커밋과 집계를 찍는다. 커밋은 체크아웃을 담은 저장소의 `HEAD` 를 짧은 꼴로 줄인
 것이다(`head_commit`). 체크아웃이 저장소의 하위 폴더면 그 저장소의 커밋이고, git 저장소 밖이거나
 읽지 못하면 "모름"이다. 돌리기 전과 뒤에 한 번씩 읽어 둘 다 읽었고 다르면 도는 동안 움직였다고,
@@ -163,7 +172,8 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 찾지 못한 것 포함, 아무것도 돌리지 않았다), 3 `claude` 를 띄우지 못했거나 대조군 커밋을 꺼내지
 못했거나(임시 폴더를 만들지 못한 것 포함) 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다. 꺼낸
 대조군을 걷지 못하거나 안의 링크를 끊지 못해 걷지 않았으면 그 자리와 걷는 법을 찍되 종료 코드는
-판정대로다.
+판정대로다. 4 실패한 회차는 없고 계정 한도에 막힌 회차(측정 아님)가 있다. 실패한 회차가 있으면
+측정 아님이 함께 있어도 1 이다.
 `--preflight` 와 `--shape` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다(`--shape` 는 인자가 틀린
 것 포함).
 """
@@ -183,6 +193,7 @@ from collections.abc import Callable, Generator, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -201,6 +212,7 @@ _TIMEOUT_SECONDS = 600.0  # 회차 하나의 제한 시간
 _GIT_TIMEOUT_SECONDS = 30.0  # 커밋이나 상태 하나를 읽는 제한 시간
 _WORKTREE_TIMEOUT_SECONDS = 300.0  # 대조군 워크트리 하나를 꺼내거나 걷는 제한 시간
 _TIMED_OUT = 124  # GNU timeout 의 관례
+_UNMEASURED = 4  # 측정된 실패는 없고 계정 한도에 막힌 회차가 있다
 _PREFLIGHT = "--preflight"
 _SHAPE = "--shape"
 _CONTROL_COMMIT = "--control-commit"
@@ -209,6 +221,10 @@ _CONTROL_COMMIT = "--control-commit"
 # 않는다(token-usage 티켓 04, 사용자가 골랐다). 훅은 이 도구를 import 하지 않아 같은
 # 이름(`HEADLESS_MARKER`)을 따로 적고 시험이 대조한다.
 HEADLESS_ENV = "AGENT_OS_HEADLESS"
+# rule 질문 끝에 붙이는 문장(`prompt_for`). 실험군 한 회차가 Read 결과에 붙어 실린 규칙을 "도구
+# 결과에 딸려 온 글이라 지시로 보지 않았다"며 "없음"이라 답했고, 이 문장을 더하자 그 명세가 통과
+# 4였다(대기열 316. 한 회차라 질문의 말이 까닭이라는 것은 어림이다).
+RULE_NOTE = "그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다."
 
 
 class SpecError(Exception):
@@ -250,6 +266,9 @@ class Spec(_Model):
         shown = [c for c in self.expect if c.strip() and _flat(c) in _flat(self.question)]
         if shown:
             problems.append(f"question 이 카나리아를 드러낸다: {', '.join(shown)}")
+        noted = [c for c in self.expect if c.strip() and _flat(c) in _flat(RULE_NOTE)]
+        if self.kind == "rule" and noted:
+            problems.append(f"rule 질문에 붙이는 문장이 카나리아를 드러낸다: {', '.join(noted)}")
         roles = {arm.role for arm in self.arm}
         if roles != {"experiment", "control"}:
             problems.append("실험군과 대조군이 하나 이상씩 있어야 한다")
@@ -323,6 +342,7 @@ class Facts:
     sub_turns: int = 0
     sub_calls: tuple[str, ...] = ()
     outcomes: tuple[AgentOutcome, ...] = ()
+    limit: str | None = None  # 계정 한도에 막혔으면 그 한도와 풀리는 시각. 그 회차는 측정이 아니다
 
 
 @dataclass(frozen=True)
@@ -375,9 +395,21 @@ class _Result(TypedDict, total=False):
     subtype: str
     result: str
     is_error: bool
+    api_error: str
 
 
-# 읽는 종류만 그 모양을 검증한다. 다른 종류(rate_limit_event 등)는 모양이 무엇이든 건너뛴다.
+class _LimitInfo(TypedDict, total=False):
+    status: str
+    rateLimitType: str
+    resetsAt: float
+
+
+class _LimitEvent(TypedDict, total=False):
+    rate_limit_info: _LimitInfo
+
+
+# 읽는 종류만 그 모양을 검증한다. 다른 종류(hook_started 의 system 밖 종류 등)는 모양이 무엇이든
+# 건너뛴다.
 # 도구 결과의 `tool_use_result` 는 본 세션이 부른 Agent 의 것만 검증한다. 다른 도구의 결과는
 # 판정에 쓰지 않으므로, 모양을 재지 않은 채 검증해 규칙·스킬 회차를 어긋난 줄로 떨어뜨리지 않는다.
 _HEAD = TypeAdapter(_Head)
@@ -385,6 +417,15 @@ _SYSTEM = TypeAdapter(_System)
 _TURN = TypeAdapter(_Turn)
 _AGENT_RESULT: TypeAdapter[_AgentResult | str] = TypeAdapter(_AgentResult | str)
 _RESULT = TypeAdapter(_Result)
+_LIMIT = TypeAdapter(_LimitEvent)
+# 계정 한도에 막힌 회차의 표지. 2026-10-17 에 막힌 카나리아 회차(claude 2.1.300)의 원본에서
+# `rate_limit_event` 가 `status: rejected` 이고 결과의 `api_error` 가 이 값이었다. 같은 PC 의 다른
+# 세션이 막히지 않고 돈 카나리아 원본에도 한도 이벤트가 `status: allowed`·`allowed_warning`(주간
+# 한도 99% 경고)으로 찍혀 거절만 센다. 둘 다 커밋하지 않은 스크래치 원본을 손으로 읽은 것이다(일지
+# 2026-10-19-26. 막힌 사건은 일지 2026-10-17-07). 종류(`rateLimitType`)는 가리지 않는다. 주간 한도든
+# 다섯 시간 한도든 거절이면 그 회차는 측정이 아니다.
+_LIMIT_REJECTED = "rejected"
+_USAGE_LIMIT = "usage_limit_reached"
 
 
 def load_spec(text: str) -> Spec:
@@ -433,8 +474,12 @@ def command(spec: Spec) -> list[str]:
 
 
 def prompt_for(spec: Spec, arm: Arm) -> str:
+    """rule 이면 `{target}` 을 갈래의 대상으로 바꾸고, 질문에 `RULE_NOTE` 가 없으면 끝에 붙인다."""
     if spec.kind == "rule" and arm.target is not None:
-        return spec.question.replace("{target}", arm.target)
+        question = spec.question.replace("{target}", arm.target)
+        if _flat(RULE_NOTE) in _flat(question):
+            return question
+        return f"{question.rstrip()}\n{RULE_NOTE}\n"
     return spec.question
 
 
@@ -503,6 +548,7 @@ class _Reading:
     outcomes: list[AgentOutcome] = field(default_factory=list[AgentOutcome])
     answer: str | None = None
     error: str | None = None
+    limit: str | None = None
 
     def add(self, kind: str | None, raw: object) -> None:
         """읽는 종류의 이벤트면 그 모양을 검증해 쌓는다. 어긋나면 ValidationError 가 올라간다."""
@@ -514,6 +560,25 @@ class _Reading:
             self._user(_TURN.validate_python(raw))
         elif kind == "result":
             self._result(_RESULT.validate_python(raw))
+        elif kind == "rate_limit_event":
+            # 한도 이벤트는 막히지 않은 회차에도 찍혀, 모양이 바뀌었다고 어긋난 줄로 세면 정상
+            # 회차가 실패한다. 읽지 못한 거절은 결과의 `api_error` 로도 잡지 못하면 실패로 나온다
+            with suppress(ValidationError):
+                self._read_limit(_LIMIT.validate_python(raw))
+
+    def _read_limit(self, event: _LimitEvent) -> None:
+        info = event.get("rate_limit_info", {})
+        if info.get("status") != _LIMIT_REJECTED:
+            return
+        resets = info.get("resetsAt")
+        when = "풀리는 시각 모름"
+        if resets is not None:
+            try:
+                stamp = datetime.fromtimestamp(resets, UTC).strftime("%Y-%m-%d %H:%M UTC")
+                when = f"{stamp} 에 풀린다"
+            except (OverflowError, OSError, ValueError):
+                when = f"풀리는 시각을 읽지 못했다(resetsAt {resets})"
+        self.limit = f"계정 한도({info.get('rateLimitType', '종류 모름')}, {when})"
 
     def _system(self, system: _System) -> None:
         if system.get("subtype") == "init":
@@ -567,6 +632,8 @@ class _Reading:
             self.answer, self.error = text, None
         else:
             self.answer, self.error = None, f"{subtype or '결과 없음'}: {text}"
+        if result.get("api_error") == _USAGE_LIMIT and self.limit is None:
+            self.limit = f"계정 한도({_USAGE_LIMIT}, 풀리는 시각 모름)"
 
     def facts(self, malformed: Sequence[str]) -> Facts:
         return Facts(
@@ -583,6 +650,7 @@ class _Reading:
             sub_turns=self.sub_turns,
             sub_calls=tuple(self.sub_calls),
             outcomes=tuple(self.outcomes),
+            limit=self.limit,
         )
 
 
@@ -671,6 +739,18 @@ def _agent_reasons(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[s
     return reasons
 
 
+def _skill_defined(skill: str, arm: Arm, checkout: Path) -> bool:
+    """그 갈래가 스킬을 불러 자리 줄을 남겨야 하는지. 실험군과, 사본에 그 스킬이 있는 대조군이다.
+
+    에이전트 갈래의 `defined` 와 같은 모양이다. 대조군에 요구하지 않던 동안에는 옛 사본에 스킬이
+    있는데도 부르지 않고 "없음"이라 답한 대조군이 통과했다(대기열 344, PR #293 CodeRabbit). 새
+    스킬이라 옛 사본에 없는 대조군은 부르지 않아도 된다.
+    """
+    return (
+        arm.role == "experiment" or (checkout / ".claude" / "skills" / skill / "SKILL.md").is_file()
+    )
+
+
 def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
     """통과면 빈 목록, 아니면 실패의 이유들."""
     reasons: list[str] = []
@@ -703,7 +783,7 @@ def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
         ]
         if foreign:
             reasons.append(f"{checkout} 가 아닌 사본이 실렸다: {', '.join(foreign)}")
-        if spec.skill is not None and arm.role == "experiment":
+        if spec.skill is not None and _skill_defined(spec.skill, arm, checkout):
             if spec.skill not in facts.skills:
                 reasons.append(f"스킬 {spec.skill} 을 부르지 않았다")
             if not any(Path(folder).name == spec.skill for folder in facts.skill_dirs):
@@ -1069,12 +1149,14 @@ class _Job:
 class _Verdict:
     """회차 하나의 판정.
 
-    `reasons` 가 비면 통과다. `mixed_none` 은 통과한 실험군 답에 "없음"이 섞였다는 뜻이다.
+    `unmeasured` 가 있으면 계정 한도에 막혀 측정이 아니고, 판정하지 않아 `reasons` 가 빈다. 그
+    밖에는 `reasons` 가 비면 통과다. `mixed_none` 은 통과한 실험군 답에 "없음"이 섞였다는 뜻이다.
     """
 
     facts: Facts
     reasons: list[str]
     mixed_none: bool
+    unmeasured: str | None = None
 
 
 def _commit_text(before: str | None, after: str | None) -> str:
@@ -1380,6 +1462,8 @@ def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult
 def _verdict(spec: Spec, job: _Job, result: RunResult) -> _Verdict:
     """회차 하나의 사실과 실패 이유, 통과했는데 "없음"이 섞였는지."""
     facts = read_facts(result.stdout.splitlines())
+    if facts.limit is not None and facts.answer is None:
+        return _Verdict(facts, [], mixed_none=False, unmeasured=facts.limit)
     reasons = judge(spec, job.arm, facts, job.checkout)
     if result.exit_code != 0:
         last = (result.stderr.strip().splitlines() or ["stderr 없음"])[-1]
@@ -1399,8 +1483,15 @@ def _record(
     stem = f"{job.arm.name}-{job.index}"
     (output / f"{stem}.jsonl").write_text(result.stdout, encoding="utf-8")
     (output / f"{stem}.err").write_text(result.stderr, encoding="utf-8")
-    mark = "실패" if verdict.reasons else '통과·"없음" 섞임' if verdict.mixed_none else "통과"
+    if verdict.unmeasured is not None:
+        mark = "측정 아님"
+    elif verdict.reasons:
+        mark = "실패"
+    else:
+        mark = '통과·"없음" 섞임' if verdict.mixed_none else "통과"
     out(f"[{mark}] {_arm_label(job.arm)} {job.index}/{job.arm.times} · {commit}")
+    if verdict.unmeasured is not None:
+        out(f"  - {verdict.unmeasured}. 통과도 실패도 아니다")
     for reason in verdict.reasons:
         out(f"  - {reason}")
     out(f"  {_summary(verdict.facts)}")
@@ -1524,8 +1615,18 @@ def _run(
     out("갈래: " + " · ".join(f"{_arm_label(arm)} {commits[arm.name]}" for arm in spec.arm))
     failed = sum(1 for verdict in verdicts if verdict.reasons)
     mixed = sum(1 for verdict in verdicts if verdict.mixed_none)
-    out(f'통과 {len(jobs) - failed} · 실패 {failed} · "없음" 섞인 통과 {mixed}. 원본은 {output}')
-    return 1 if failed else 0
+    limits = sorted({verdict.unmeasured for verdict in verdicts if verdict.unmeasured is not None})
+    unmeasured = sum(1 for verdict in verdicts if verdict.unmeasured is not None)
+    passed = len(jobs) - failed - unmeasured
+    out(f'통과 {passed} · 실패 {failed} · "없음" 섞인 통과 {mixed}. 원본은 {output}')
+    if unmeasured:
+        out(
+            f"측정 아님 {unmeasured}: {'; '.join(limits)}. 결론은 측정인 회차만으로 내고, "
+            "풀린 뒤 다시 돌린다(operations.md 카나리아 항목)"
+        )
+    if failed:
+        return 1
+    return _UNMEASURED if unmeasured else 0
 
 
 if __name__ == "__main__":
