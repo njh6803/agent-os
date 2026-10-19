@@ -234,3 +234,29 @@ open-session을 부른다 2026-10-19T07:10:38Z
 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin main` 뒤 `git log HEAD..origin/main`은 비어 main은
 그대로 a60e2ddd였다. 위 "커밋" 절의 인용 두 곳 수정과 두 인계 절을 이 절과 함께 커밋한다. `coderabbit auth status`는
 `Plan: Free`, `Seat: not assigned`라 PR 직전 리뷰는 대체 둘(`/security-review`, `bug-perf-review`)로 한다.
+
+커밋 `6b1f86a2`(위 일지 수정). pre-commit의 러너(580초)가 lint-imports, check-instructions, zizmor, check-type-escapes, pyright,
+run-hooks, web-verify, pytest를 통과했고 마크다운 표·줄 구분 문자·변이 표도 통과했다. ruff 둘, 카나리아 명세, 헌법 판은 대상
+파일이 없어 `Skipped`였다. 인용 대조 경고 1건(160행)은 셀프 리뷰가 고치기 전의 `CLAUDE.md` 문구를 옮긴 자리라, 원문이 저장소에
+더는 없어서 난다. 149행과 같은 까닭으로 두었다.
+
+## PR 직전 리뷰
+
+기준 a60e2ddd(origin/main과 같다), 범위는 바뀐 파일 셋이다. 밀 주장은 위 "반영으로 새로 쓴 사실 문장"과 대기열 211 닫힘 칸의
+"Glob은 패턴과 상관없이"(셀프 리뷰가 `CLAUDE.md`에서 같은 표현을 고쳤는데 이 칸에는 남았다)였다.
+
+- `/security-review`: 발견 없음. 새 두 줄은 무시된 파일이 결과에 덜 나오게 하는 처방이고, 비밀 값은 일지에 없다.
+  `hook_env_read`의 중괄호 glob 약점은 이 PR 전부터 있었고 "이 PR에 넣지 않은 것"에 이미 적었다.
+- `bug-perf-review`(호출 40에서 멈췄다): 유효 1, 보류 2, 오탐 3.
+  - 유효(Minor): Glob 줄의 "`/`가 든 패턴은 `path`가 아니라 작업 디렉터리에서 맞춰"는 일반화로는 거짓이었다. 이 세션에서
+    `path` `.claude\skills`에 `skills/tidy-checkouts/SKILL.md`를 주자 찾았고 `tidy-checkouts/SKILL.md`는 "No files found"였다
+    (손으로 봤다). 리뷰는 claude 2.1.299 실행 파일의 Glob 패턴 함수가 패턴 앞머리의 리터럴 조각이 `path`의 끝 조각과 같으면
+    떼고 `path` 기준으로 다시 쓴다고 읽었다(이 세션은 그 코드를 읽지 않았다). 잰 예만 남기도록 "`**/` 없이 `/`가 든 패턴은 좁힌
+    `path`에서 찾지 못할 수 있어"로 좁혔다. 위 "셀프 리뷰" 절의 "작업 디렉터리에서 맞춘다"도 같은 까닭으로 틀린 해석이다.
+  - 보류(Minor): `tools/hook_env_read.py` 9–10·215–216행의 Grep 서술이 새 Grep 줄보다 넓다. 위 "남긴 것"과 같은 후보다.
+  - 보류(Nit): "워크트리 스물하나"가 `git worktree list`의 등록 수라 지운 워크트리의 남은 폴더를 빠뜨렸을 수 있다. 이 세션에서
+    `ls -d C:/project/agent/.claude/worktrees/*/`가 스물하나를 냈다. 등록 수와 같아 닫았다.
+  - 오탐: 대기열 211 닫힘 칸의 "패턴과 상관없이"는 `--no-ignore`가 패턴이 아니라 환경 변수에만 달려 있다는 실행 파일 읽기가
+    받친다. 나머지 둘은 Grep 줄의 처방 범위와 결과 경로의 읽기였다.
+- 다른 문서에서 Glob·Grep의 `path`·glob 동작을 적은 곳은 `hook_env_read` 독스트링뿐이었다(리뷰가 `CLAUDE.md`, `README.md`,
+  `.claude/`, `docs/constitution`, `docs/agents`를 찾았다).
