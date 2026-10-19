@@ -878,3 +878,27 @@ expect = "silent"
 note = "이어 하기 — 계정만 남긴다"
 env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
 payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "resume", model = "claude-opus-5-5" }
+
+# --- hook_worktree_skill_overrides (PostToolUse EnterWorktree) ---
+# 페이로드의 모양은 claude 2.1.303 의 `claude -p` 세션에서 PostToolUse 훅이 받은 EnterWorktree 입력이다(일지 2026-10-19-14). 사례마다 CLAUDE_PROJECT_DIR 을 ${WORKTREE_SKILLS_REPO} 로 줘 이 저장소의 local 설정에 닿지 않는다.
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "notice"
+contains = ["스킬 사본 2개", ".claude/settings.local.json"]
+note = "주 체크아웃에서 워크트리 side 에 들어갔다 — 사본 둘을 끄는 키를 적고 사람에게만 알린다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000003", cwd = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side" }, tool_response = { worktreePath = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", worktreeBranch = "side", message = "Entered worktree at “${WORKTREE_SKILLS_REPO}/.claude/worktrees/side” on branch “side”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNHy" }
+
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "silent"
+note = "클라우드 세션의 같은 진입 — 그 체크아웃에는 local 을 무시하는 ignore 가 없어 쓰지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}", CLAUDE_CODE_REMOTE = "true" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000004", cwd = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side" }, tool_response = { worktreePath = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", worktreeBranch = "side", message = "Entered worktree at “${WORKTREE_SKILLS_REPO}/.claude/worktrees/side” on branch “side”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNHz" }
+
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "silent"
+note = "주 체크아웃의 워크트리 자리 밖에 판 워크트리에 들어갔다 — 목록이 붙일 접두를 몰라 적지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000005", cwd = "${MAIN_REPO}", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${MAIN_REPO}" }, tool_response = { worktreePath = "${MAIN_REPO}", worktreeBranch = "main", message = "Entered worktree at “${MAIN_REPO}” on branch “main”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNH0" }
