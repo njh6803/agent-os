@@ -109,3 +109,57 @@ open-session을 부른다 2026-10-19T06:00:53Z
 읽어 `reportPrivateUsage`). 그 시험은 도구의 호출 모양만 받는 `subprocess.run` 대역으로 바꿨고, 바꾼 두 파일의 pyright·ruff와 그
 시험은 초록이다. 나머지(pytest 330.9초, run-hooks, web-verify, 지침·타입 우회·경계·zizmor)는 그 바퀴에서 초록이었다. 린트 둘도
 초록. 커밋의 pre-commit으로 다섯을 갈음한다.
+
+커밋 `fa8f6a53`. pre-commit의 검사가 모두 통과했다(pytest 557.2초, web-verify 492.5초, pyright, run-hooks, 지침·타입 우회·경계·zizmor,
+표·줄 구분·변이 표·인용, commit-msg). 커밋 전 `sibling_overlap`은 0, 번호 겹침 없음. origin/main이 `a60e2dd`로 나아가 `HEAD...origin/main`의
+파일을 봤고 이 브랜치에 닿는 새 규약은 없었다(`tests.md`의 실행 권한·pwsh 항목, 게이트 열넷). 아직 main을 합치지 않았다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤에 인계 계기가 왔다(세션 컨텍스트 201,392 토큰). 이 세션은 `인계: 셀프 리뷰 직전`으로 열려 경계가 다르고, `get_session`의
+`self`에 `parentSessionId`가 없어 곁 세션이 아니다. 이 세션의 지금 제목은 `chore/sibling-overlap-batch`이고 `(인계함)`을 붙인다.
+PR 직전 `bug-perf-review`에 밀 주장은 위 "고친 것"의 모듈 독스트링 문장들이다.
+
+지시문:
+
+```
+다음 작업: 대기열 288·294. tools/sibling_overlap.py의 열린 행 둘(head ref가 아직 없는 PR에서 대조 전체가 멈추는 것, main을 합치는 중인 형제의 디스크 사본을 함께 고친 파일로 세는 것)을 chore 한 PR로 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 288·294(대상 파일이 tools/sibling_overlap.py인 열린 행 둘)를 chore 한 PR로 반영한다. 행의 "어디로"대로 고치고 그 입력의 시험을 더한다
+브랜치: chore/sibling-overlap-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/retro-queue.md의 288·294 행(이 브랜치에서 닫았다)과 그 근거 일지(2026-10-16-18, 2026-10-16-20)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영·run_checks·pre-commit을 마친 커밋 fa8f6a53이 있고 아직 푸시하지 않았으며 열린 PR이 없다. 남은 것은 origin/main 합치기(a60e2dd까지 나아갔다, 대기열 파일이 겹친다), PR 직전 리뷰(bug-perf-review 또는 coderabbit-review, 밀 주장은 일지의 고친 것 줄), 이 일지 커밋, 푸시, PR, 봇 회차, 병합. 판정과 한 일은 docs/journal/2026-10-19-15-sibling-overlap-batch.md
+확인할 선행 조건: 워크트리 잠금은 넘기는 세션이 풀었다. 풀리지 않았으면 git worktree unlock C:/project/agent/.claude/worktrees/sibling-overlap-batch 뒤 들어간다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-19T07:09:08Z
+
+## 이어받은 세션: 합치기와 PR 직전 리뷰
+
+> 사용자: 대기열 288·294(대상 파일이 tools/sibling_overlap.py인 열린 행 둘)를 chore 한 PR로 반영한다. 행의 "어디로"대로
+> 고치고 그 입력의 시험을 더한다
+
+`EnterWorktree(path)`로 들어왔다(잠금은 풀려 있었다). `origin/main`(`a60e2ddd`)을 직접 합쳤고, 대기열 287·288 두 줄이
+충돌했다. 287은 main의 닫힘을, 288은 이 브랜치의 닫힘을 골랐다. 합친 뒤 main과 다른 줄은 288·294뿐이다. 병합 커밋
+`89e4b141`의 pre-commit은 모두 통과했다(pytest 683.5초, web-verify 675.5초).
+
+PR 직전 리뷰:
+- `coderabbit-review`: 계정에 좌석이 없어(`Plan: Free`, `Seat: not assigned`) 돌지 못했다. 대체 둘을 돌렸다.
+- `/security-review`: 지적 없음. git 호출은 모두 목록 인자이고, sha로 받는 `fetch`의 값은 gh 길에서 40자 hex로 검사되며,
+  포크 작성자가 정하는 브랜치 이름은 git에 넘기지 않는다.
+- `bug-perf-review`: Minor 둘, Nit 하나. 밀어 본 주장 다섯 가운데 셋은 맞음, 둘은 확인 불가였다.
+
+고친 것:
+- Minor: `ls-remote`에 있던 `refs/pull/<N>/head`가 fetch 전에 사라지면 그 ref를 main과 함께 받는 fetch가 실패해 대조 전체가
+  2로 멈춘다(288과 같은 종류가 창만 좁아졌다). 코드는 두고 모듈 독스트링의 못 보는 것에 적었고, `read_remote`를 감싸 읽은
+  직후 원격의 ref를 지우는 시험으로 고정했다(실제 git으로 128을 낸다).
+- 확인 불가 주장: `fetch` 독스트링의 "같은 저장소의 PR이면 head 브랜치의 끝이라 받아진다"를, 로컬 원격에서 받아졌고 GitHub의
+  sha 받기와 강제 푸시로 밀려난 커밋은 재지 않았다고 낮췄다.
+
+남긴 것:
+- Minor(보류): sha로 받는 fetch의 시간 초과가 아닌 실패(속도 제한, 인증 일시 오류)도 받지 못한 PR로 세어, 겹치는 형제가 그
+  PR 하나뿐이면 0으로 끝난다. 독스트링과 시험이 이미 인정한 동작이고, 종료 코드를 올릴지는 설계 판단이라 두었다.
+- Nit: 형제마다 `git diff`가 하나 늘었다. 재지 않았다.

@@ -1314,6 +1314,31 @@ def test_head_커밋을_sha로_받는_fetch가_시간을_넘기면_대조_전체
     assert "git fetch 을 띄우지 못했거나" in captured.err
 
 
+def test_원격을_읽은_뒤_head_ref가_사라지면_대조_전체가_2로_멈춘다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """못 보는 것: `ls-remote` 에 있던 ref 를 받는 fetch 가 실패하면 sha 길로 내려가지 않는다."""
+    _, work, pusher = 저장소
+    pr5 = _PR을_민다(pusher, 5, {"docs/adr/0002-pr5.md": "그쪽\n"})
+    _gh_가_연다(monkeypatch, {5: pr5})
+    original = sibling_overlap.read_remote
+
+    def 읽은_뒤_ref를_지운다(root: Path) -> sibling_overlap.Remote:
+        remote = original(root)
+        _git(pusher, "push", "-q", "origin", ":refs/pull/5/head")
+        return remote
+
+    monkeypatch.setattr(sibling_overlap, "read_remote", 읽은_뒤_ref를_지운다)
+
+    code = main([str(work)])
+
+    captured = capsys.readouterr()
+    assert code == 2, captured.out
+    assert "git fetch (종료 128)" in captured.err
+
+
 def test_main을_합치는_중인_형제_워크트리에서_main과_같은_파일은_함께_고친_파일이_아니다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:

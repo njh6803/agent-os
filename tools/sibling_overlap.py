@@ -218,8 +218,10 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 - head 커밋을 받지 못해 뺀 열린 PR. 그 PR과의 번호 겹침과 함께 고친 파일을 보지 않고, 남은 형제로
   0으로 끝날 수 있다. 기다렸다 다시 받지 않는다. 다시 치는 것은 출력을 읽은 사람이다. 포크에서
   연 PR은 head 브랜치가 origin에 없어, ref가 생기기 전에 sha로 받아지는지 재지 않았다. 받지 못하면
-  이 갈래로 간다. sha로
-  받는 fetch가 시간 제한을 넘기면 그 PR만 빼지 않고 대조 전체가 2로 끝난다.
+  이 갈래로 간다. sha로 받는 fetch가 시간 제한을 넘기면 그 PR만 빼지 않고 대조 전체가 2로 끝난다.
+  `ls-remote`에 있던 `refs/pull/<N>/head`가 fetch 전에 사라지면(그 사이 PR이 닫히거나 원격이 잠깐
+  실패하면) 그 ref를 main과 한 번에 받는 fetch가 실패해, sha 길로 내려가지 않고 대조 전체가 2로
+  끝난다. 다시 치면 그 PR은 열린 PR이 아니거나 ref 없는 PR의 길로 간다.
 - 이 브랜치가 고쳤어도 main 과 내용이 같아진 파일(main 의 같은 변경을 손으로 옮긴 것). 이 브랜치가
   고친 파일로 세지 않는다.
 - 다음 빈 번호나 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의
@@ -1120,9 +1122,10 @@ def fetch(root: Path, remote: Remote) -> Remote:
     안에 그 ref 를 받는 fetch 가 128로 끝나 대조 전체가 2로 멈췄다(대기열 288, 일지
     2026-10-16-18). 그래서 ref 는 원격에 있는 것만 받고, 그 뒤에도 head 커밋이 이 클론에 없는
     PR(ref 가 없거나 gh 가 읽은 head 보다 옛것인 PR)은 커밋을 sha 로 받는다. 같은 저장소의 PR 이면
-    head 브랜치의 끝이라 받아진다. 그래도 받지 못한 PR 만 `pulls` 에서 빼 `unfetched` 에 든다. sha
-    로 받는 fetch 가 시간 제한을 넘기면 `SurveyError` 로 대조 전체가 멈춘다(모듈 독스트링의 못 보는
-    것).
+    gh 가 읽은 head 는 그때의 head 브랜치 끝이다. 로컬 원격에서는 그런 커밋이 받아졌고, GitHub 이
+    그 커밋을 sha 로 내주는지와 그 사이 강제 푸시로 끝에서 밀려난 커밋은 재지 않았다. 그래도 받지
+    못한 PR 만 `pulls` 에서 빼 `unfetched` 에 든다. sha 로 받는 fetch 가 시간 제한을 넘기면
+    `SurveyError` 로 대조 전체가 멈춘다(모듈 독스트링의 못 보는 것).
     """
     present = [number for number in remote.pulls if number in remote.heads]
     git(
