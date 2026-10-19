@@ -257,8 +257,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}"]'''
-new = '''        return EXIT_PASSED, [*lines, f"모두 통과{notes}"]'''
+old = '''        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}{reviewless}"]'''
+new = '''        return EXIT_PASSED, [*lines, f"모두 통과{notes}{reviewless}"]'''
 
 [[mutation]]
 name = "숫자 아닌 PR 번호를 stderr 로만 알린다"
@@ -303,3 +303,178 @@ expect = "green"
 file = "tools/wait_ci.py"
 old = '''{'진행 중' if result is None else result}'''
 new = '''{'pending' if result is None else result}'''
+
+# 대기열 327. 계정 한도로 빨간 claude-review 를 실패로 세지 않는 판정.
+[[mutation]]
+name = "한도 문구여도 실패로 센다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도로_빨가면 or 주간_한도_문구면"]
+expect = "red"
+expect_output = ["assert None == \"You've hit your weekly limit"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if failed and isinstance(result, str) and result.startswith(LIMIT_PREFIX):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "결과 블록의 is_error 를 보지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도가_아닌_빨강"]
+expect = "red"
+expect_output = ["(UTC)\" is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        failed = block.get("is_error") is True and block.get("terminal_reason") == LIMIT_REASON'''
+new = '''        failed = block.get("terminal_reason") == LIMIT_REASON'''
+
+[[mutation]]
+name = "결과 블록의 terminal_reason 을 보지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도가_아닌_빨강"]
+expect = "red"
+expect_output = ["(UTC)\" is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        failed = block.get("is_error") is True and block.get("terminal_reason") == LIMIT_REASON'''
+new = '''        failed = block.get("is_error") is True'''
+
+[[mutation]]
+name = "결과 블록 밖의 한도 문구도 한도로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도가_아닌_빨강"]
+expect = "red"
+expect_output = ["(UTC)\" is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if buffer is None:
+            continue'''
+new = '''        if buffer is None:
+            if line.strip().startswith(LIMIT_PREFIX):
+                return line.strip()
+            continue'''
+
+[[mutation]]
+name = "잡 로그를 조회마다 다시 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도로_빨가면"]
+expect = "red"
+expect_output = ["Left contains 2 more items, first extra item: '117440173217'"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if job not in self._known:'''
+new = '''            if True:'''
+
+[[mutation]]
+name = "다 읽어 보고도 가르지 못하면 한도로 본다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "가르지_못하면"]
+expect = "red"
+expect_output = [">       assert code == EXIT_FAILED", "E       assert 4 == 1"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''읽지 못했다: {error}"
+        return Review(Outcome.UNCLEAR, self._unclear[job])'''
+new = '''읽지 못했다: {error}"
+        return Review(Outcome.LIMIT, self._unclear[job])'''
+
+[[mutation]]
+name = "잡 로그 읽기가 한 번 실패하면 다시 읽지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한_번_실패해도 or 가르지_못하면"]
+expect = "red"
+expect_output = ["assert '가르지 못했다: 잡 117440173217 로그를 3번 읽지 못했다' in"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if self._errors[job] < self._max_errors:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "로그를 다시 읽는 동안에도 끝낸다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한_번_실패해도"]
+expect = "red"
+expect_output = [">       assert code == EXIT_PASSED", "E       assert 1 == 0"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''None if retrying else _settle(number, snapshot, elapsed, options, review)'''
+new = '''_settle(number, snapshot, elapsed, options, review)'''
+
+[[mutation]]
+name = "잡 주소가 없는 빨강을 건너뛴다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "잡_주소가_없으면"]
+expect = "red"
+expect_output = [">       assert code == EXIT_FAILED", "E       assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''                return Review(Outcome.UNCLEAR, "롤업에 잡 주소(detailsUrl)가 없다")'''
+new = '''                continue'''
+
+[[mutation]]
+name = "같은 이름의 빨간 잡은 마지막 것만 담는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "같은_이름의_빨간 or detailsUrl에서"]
+expect = "red"
+expect_output = ["{'claude-review': ('222',)} != {'claude-review': ('111', '222')}"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            failed_jobs[name] = (*failed_jobs.get(name, ()), job.group(1) if job else None)'''
+new = '''            failed_jobs[name] = (job.group(1) if job else None,)'''
+
+[[mutation]]
+name = "같은 이름에 한도가 아닌 잡이 있어도 뺀다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "같은_이름의_빨간_잡이_둘이면"]
+expect = "red"
+expect_output = [">       assert code == EXIT_FAILED", "E       assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if known is None:
+                return Review()'''
+new = '''            if known is None:
+                continue'''
+
+[[mutation]]
+name = "한도가 있으면 다른 실패도 세지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "다른_실패가_있으면"]
+expect = "red"
+expect_output = [">       assert code == EXIT_FAILED", "E       assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''excused=(REVIEW_CHECK,) if limited else ()'''
+new = '''excused=snapshot.checks.keys() if limited else ()'''
+
+[[mutation]]
+name = "통과 줄에 한도로 리뷰 없음을 적지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "한도로_빨가면 or 한_번_실패해도"]
+expect = "red"
+expect_output = ["assert 'claude-review' in '끝: 모두 통과"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}{reviewless}"]'''
+new = '''        return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}"]'''
+
+[[mutation]]
+name = "다른 검사의 빨강도 로그로 가른다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "다른_검사가_빨가면"]
+expect = "red"
+expect_output = ["assert ['117440173217'] == []"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        jobs = snapshot.failed_jobs.get(REVIEW_CHECK, ())'''
+new = '''        jobs = tuple(j for js in snapshot.failed_jobs.values() for j in js)'''
+
+
+[[mutation]]
+name = "가르지 못한 잡을 다음 조회에서 다시 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "다시_읽지_않는다"]
+expect = "red"
+expect_output = [">       assert code == EXIT_FAILED", "E       assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''            if job in self._unclear:'''
+new = '''            if False:'''
