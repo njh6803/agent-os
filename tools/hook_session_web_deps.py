@@ -3,12 +3,12 @@
 클라우드 세션의 VM 에는 `web/node_modules` 가 없어, web verify 와 러너(tools/run_checks.py)를
 돌리기 전에 `pnpm -C web install --frozen-lockfile` 을 손으로 쳐야 했다(일지 2026-10-07-05, 대기열
 138). 새 클론이라 pre-commit 의 git 훅도 없어, 손으로 `uv run pre-commit install` 을 치기 전의
-커밋은 인용 대조·변이 표 원문 확인·커밋 메시지 검사(셋 다 CI 에 없다)를 조용히 건너뛴다(일지
-2026-10-07-10 의 회고). 공식 문서(code.claude.com 의 cloud-environments, "Setup scripts vs.
-SessionStart hooks", 2026-10-07 읽음)는 설정 스크립트를 VM 을 갖추는 자리로, 프로젝트 설치를
-SessionStart 훅의 자리로 가른다. 설정 스크립트는 환경 캐시가 있으면 건너뛰고, 훅은 시작과
-이어짐마다 돈다. 클라우드 세션에서만 깔려면 `CLAUDE_CODE_REMOTE` 가 `true` 인지 보는 예를 같은
-문서가 든다.
+커밋은 인용 대조·변이 표 원문 확인·헌법 판 검사·커밋 메시지 검사(넷 다 CI 에 없다)를 조용히
+건너뛴다(일지 2026-10-07-10 의 회고, 헌법 판 검사는 대기열 31). 공식 문서(code.claude.com 의
+cloud-environments, "Setup scripts vs. SessionStart hooks", 2026-10-07 읽음)는 설정 스크립트를 VM 을
+갖추는 자리로, 프로젝트 설치를 SessionStart 훅의 자리로 가른다. 설정 스크립트는 환경 캐시가 있으면
+건너뛰고, 훅은 시작과 이어짐마다 돈다. 클라우드 세션에서만 깔려면 `CLAUDE_CODE_REMOTE` 가 `true`
+인지 보는 예를 같은 문서가 든다.
 
 판정은 넷이다. 환경 변수 `CLAUDE_CODE_REMOTE` 가 `true` 이고, 페이로드의 `source` 가 startup·resume
 일 때만 깐다. 그 위에서 프로젝트 루트에 `.pre-commit-config.yaml` 이 있으면

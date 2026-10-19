@@ -11,6 +11,7 @@
 
 사용: uv run python tools/canary.py [--control-commit <커밋>] <명세.toml> <출력 디렉터리>
       uv run python tools/canary.py --preflight [--control-commit <커밋>] <명세.toml> ...
+      uv run python tools/canary.py --shape <명세.toml> ...
 
 `--control-commit` 은 대조군 갈래의 `checkout` 칸 대신 그 커밋을 시스템 임시 디렉터리 아래 임시
 워크트리(`git worktree add --detach`)로 꺼내 대조군의 체크아웃으로 쓰고, 끝나면 걷는다
@@ -24,6 +25,13 @@
 문단)만 돌며 출력 디렉터리도 쓰지 않는다. 한 번 통과한 명세의 원천에서 문구만 고친 뒤 다시 돌리는
 대신 쓴다. 갈음하는 조건은 `operations.md` 의 카나리아 항목이 원천이다. 이 모드가 없을 때 문구를
 고칠 때마다 다시 돌려 `claude -p` 40번 가운데 28번이 재확인이었다(대기열 184, 일지 2026-10-12-09).
+
+`--shape` 는 명세의 모양(TOML 파싱과 명세 검증)만 보고 체크아웃·원천·대상은 보지 않는다. pre-commit
+이 커밋에 든 명세(`.scratch/**/probes/canary/*.toml`)를 이 모양으로 넘기고, CI 에서는 pytest 의
+저장소 상태 시험이 커밋된 명세 전부에 돈다. Edit 로 머리 주석 한 줄을 지우며 줄바꿈까지 지워 `kind`
+가 주석에 붙은 명세가, 셀프 리뷰 두 축이 잡을 때까지 깨진 채였다(대기열 287). 돌리기 전의
+확인(`--preflight`)을 대신 걸지 않은 것은, 갈래의 체크아웃까지 보는 그 확인이 대조군이 주 체크아웃인
+명세를 병합 뒤 주 체크아웃이 새 사본이 되면 막기 때문이다.
 
 명세는 TOML 이다. 체크아웃은 이 도구를 부른 폴더 기준이다.
 
@@ -156,7 +164,8 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 못했거나(임시 폴더를 만들지 못한 것 포함) 출력 디렉터리를 만들지 못했거나 원본을 쓰지 못했다. 꺼낸
 대조군을 걷지 못하거나 안의 링크를 끊지 못해 걷지 않았으면 그 자리와 걷는 법을 찍되 종료 코드는
 판정대로다.
-`--preflight` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다.
+`--preflight` 와 `--shape` 는 0 모든 명세가 지났다, 2 어긋난 명세가 있다(`--shape` 는 인자가 틀린
+것 포함).
 """
 
 from __future__ import annotations
@@ -193,6 +202,7 @@ _GIT_TIMEOUT_SECONDS = 30.0  # 커밋이나 상태 하나를 읽는 제한 시�
 _WORKTREE_TIMEOUT_SECONDS = 300.0  # 대조군 워크트리 하나를 꺼내거나 걷는 제한 시간
 _TIMED_OUT = 124  # GNU timeout 의 관례
 _PREFLIGHT = "--preflight"
+_SHAPE = "--shape"
 _CONTROL_COMMIT = "--control-commit"
 # 띄우는 `claude -p` 세션의 환경에 붙이는 헤드리스 표지. 세션 시작
 # 훅(`tools/hook_session_usage.py`)이 이것이 있으면 사람 몫의 요약 표지를 가져가지
@@ -1339,6 +1349,23 @@ def _preflight_only(
     return 2 if failed else 0
 
 
+def _shape_only(paths: Sequence[str], out: Callable[[str], None]) -> int:
+    """`--shape`. 명세마다 모양(TOML 파싱과 명세 검증)만 본다. 하나가 깨져도 나머지를 마저 본다."""
+    failed = 0
+    for name in paths:
+        try:
+            read_spec(Path(name))
+        except SpecError as error:
+            failed += 1
+            out(f"[실패] {name}")
+            for line in str(error).splitlines():
+                out(f"  {line}")
+        else:
+            out(f"[통과] {name}")
+    out(f"모양 확인 통과 {len(paths) - failed} · 실패 {failed}. 체크아웃과 claude 는 보지 않았다")
+    return 2 if failed else 0
+
+
 def _run_all(spec: Spec, jobs: Sequence[_Job], runner: Runner) -> list[RunResult]:
     """회차를 나란히 돌린다. `claude` 를 띄우지 못하면 OSError 가 그대로 올라온다."""
     args = command(spec)
@@ -1392,6 +1419,12 @@ def main(
 ) -> int:
     base = cwd if cwd is not None else Path.cwd()
     args = list(argv)
+    if args and args[0] == _SHAPE:
+        names = args[1:]
+        if not names or any(name.startswith("--") for name in names):
+            out(__doc__ or "")
+            return 2
+        return _shape_only(names, out)
     preflight = bool(args) and args[0] == _PREFLIGHT
     if preflight:
         args = args[1:]

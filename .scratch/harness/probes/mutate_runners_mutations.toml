@@ -315,7 +315,7 @@ file = "tools/mutate.py"
 old = '''
     if flags:
         raise _UsageError(
-            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 와 --since <커밋> 이다"
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다"
         )
 '''
 new = '''
