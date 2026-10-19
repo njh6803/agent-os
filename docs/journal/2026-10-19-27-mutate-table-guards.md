@@ -1,4 +1,4 @@
-# 2026-10-19 (19) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
+# 2026-10-19 (27) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대상 파일이 `tools/mutate.py`인 열린 대기열 행 넷을 한 PR로 닫는다.
 이 세션의 지금 제목은 `chore/mutate-table-guards`이고, 셀프 리뷰 직전에 인계 계기가 와서 넘긴다(아래 인계 절).
@@ -67,8 +67,8 @@ README(`.scratch/harness/probes/README.md`)의 새 표 행은 그 결과와 함�
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-19-mutate-table-guards.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-19-19-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
+읽을 것: docs/journal/2026-10-19-27-mutate-table-guards.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-19-27-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
 확인할 선행 조건: 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 이 브랜치와 겹치는지 병합 전에 본다(글자 충돌은 재지 않았다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -151,3 +151,61 @@ pyright(바뀐 파일 다섯) 0, ruff 초록.
 `tests/tools/test_hook_midturn_korean.py::test_트랜스크립트_파일이_없으면_기다리지_않는다` 하나(3599 통과)였다. 그때 이 PC는 CPU
 부하 80%, node 106·python 18·bash 20·pwsh 17 프로세스였다(PowerShell `Get-Process`·`Win32_Processor`로 손으로 봤다). 다섯째를
 치고, 또 막히면 멈추고 사람에게 알린다.
+
+다섯째 시도에서 커밋했다: `2c340e64`. pre-commit 결과는 모두 초록(pyright 41.4초, run-hooks 227.4초, pytest 395.1초,
+web-verify 417.9초, 변이 표 `--staged` 포함).
+
+## 인계(커밋 뒤)
+
+커밋 직후 인계 계기가 왔다(세션 컨텍스트 약 30만 토큰). 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다), 앞
+지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니다. 열린 PR은 없다(`gh pr view`가 찾지 못했다).
+
+남은 것: origin/main(`5f38d61`, 이 브랜치와 `.claude/rules/tools.md`·`.claude/settings.json`·`.scratch/retro-queue.md`·
+`tools/hook_payloads.toml`·`tools/run_hooks.py`를 함께 고쳤다) 합치기와 겹친 파일 대조, 다른 워크트리에서
+`mutate_table_guards_mutations.toml` 전체 실행과 `mutate_buffer_eol_retry_mutations.toml`의 고친 변이 둘(줄 끝 힌트를 빼기, 두
+번에도 붙이기)을 번호로 골라 다시 재기, 프로브 README 행, `tools/run_checks.py` 전체, PR 직전 리뷰(위 밀 주장 목록), PR·CI·병합.
+
+낸 지시문:
+
+```
+다음 작업: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+브랜치: chore/mutate-table-guards
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-27-mutate-table-guards.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 2c340e64에 들었다(PR 없음, 푸시하지 않았다). 남은 단계는 origin/main 합치기와 겹친 파일 대조, 다른 워크트리에서 mutate_table_guards_mutations.toml 전체 실행과 mutate_buffer_eol_retry_mutations.toml의 고친 변이 둘 다시 재기, 프로브 README 행, tools/run_checks.py 전체, PR 직전 리뷰(일지의 밀 주장 목록), PR·CI·병합이다. 일지에 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-27-mutate-table-guards.md
+확인할 선행 조건: origin/main이 5f38d61 이상으로 움직였고 이 브랜치와 .claude/rules/tools.md·.claude/settings.json·tools/hook_payloads.toml·tools/run_hooks.py를 함께 고쳤다. 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 겹치는지 병합 전에 본다. 이 PC의 부하로 pre-commit이 무관한 시간 시험에서 네 번 흔들렸다(일지)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/mutate-table-guards (인계함)`으로 바꿨고, 백그라운드 작업은 없었고, 워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T09:18:57Z
+
+## 이어받은 세션: 합치기와 PR 직전 리뷰
+
+> 사용자: 지시문 그대로(위 "인계(커밋 뒤)"의 "낸 지시문"과 같다)
+
+새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. PR #301은 아직 열려 있다.
+
+- **합치기.** origin/main(`519b3820`, #303·#304)을 합쳤다. 충돌 셋을 양쪽을 살려 풀었다. `.claude/rules/tools.md`는
+  main 줄에 이 브랜치의 `hook_edit_during_mutate` 문장을 같은 자리에 넣었고, 대기열 358은 이 브랜치의 닫힘을, 359는 main의
+  "265의 3회차"·일지 2026-10-19-14 인용에 이 브랜치의 취소선과 닫힘을 붙였고, `tools/run_hooks.py`는 main의 독스트링에
+  `${MUTATING_REPO}`·`${STALE_MUTATING_REPO}` 문장을 넣었다. 합친 뒤 `run_hooks.py` 134건 어긋남 0. 첫 병합 커밋 시도는
+  pytest의 `test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_출력은_잠시만_기다린다`(`걸린 < 8`이 9.4초, 3642 통과)
+  하나에 막혔다. #301이 부하 아래 흔들린다고 고치는 `run_command` 구역이고 이 브랜치는 고치지 않아 같은 상태로 다시 쳐서
+  `6b37abfa`로 들어갔다.
+- **PR 직전 리뷰.** CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다. `/security-review`: 발견 없음(표지의 pid는
+  살았는지만 보고, 훅에 subprocess가 없고, `git status`는 리스트 인자와 `--`). `bug-perf-review`: Critical·Major 없음.
+  - 유효(고쳤다) Minor: 훅 처방의 프로세스 사슬에 가상 환경의 런처 `python.exe`가 빠졌다(그 서브에이전트가 `uv run python`
+    사슬을 재어 python.exe 둘을 봤다). 문장을 "가상 환경의 런처 `python.exe`, `uv.exe`, 묶음을 돌리던 `bash.exe`"로 고쳤다.
+  - 밀 주장 "`uv run` 이 띄운 python 의 명령줄 경로는 상대 경로였다"는 반증되지 않았으나 호출 방식에 달렸다(절대 경로로 넘기면
+    절대 경로). "묶음이 상대 경로로 띄우면 명령줄 경로도 상대 경로이고, 일지 2026-10-19-13 이 그랬다"로 좁혔다.
+  - 둔다 Minor: `taskkill /F`로 끝난 표지가 남아 pid가 재사용되면 거짓 알림이 난다. 훅 독스트링의 못 보는 것 첫 항목에
+    이미 있고, 고치려면 표지에 시작 시각을 적어 대조해야 한다(PR 체크리스트에 적는다).
+  - 보류 Nit: `run_hooks.py`의 `_ended_pid`가 pid 재사용으로 드물게 흔들릴 수 있다(재현 못 함). 유효 Nit: "표지"가 출력
+    문구와 실행 중 파일의 두 뜻으로 쓰인다(두었다).
+  - 나머지 밀 주장(exit 러너의 `["failed"]`, "원문 확인은 표지를 둔 뒤다")은 맞다고 확인됐다.
+- 반영 뒤 바꾼 시험 두 파일 223 통과, 변이 표 `--check` 원문 열여덟 모두 한 번.
