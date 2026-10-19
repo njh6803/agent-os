@@ -209,3 +209,9 @@ open-session을 부른다 2026-10-19T09:18:57Z
     문구와 실행 중 파일의 두 뜻으로 쓰인다(두었다).
   - 나머지 밀 주장(exit 러너의 `["failed"]`, "원문 확인은 표지를 둔 뒤다")은 맞다고 확인됐다.
 - 반영 뒤 바꾼 시험 두 파일 223 통과, 변이 표 `--check` 원문 열여덟 모두 한 번.
+- **두 번째 합치기.** 반영을 커밋하는 동안 origin/main이 #306(`2efb5ea`)으로 움직여 한 번 더 합쳤다(충돌 없음, `50a0c941`).
+  `sibling_overlap.py`: 번호 겹침 없음.
+- **변이 표 전체 실행.** `50a0c941`을 분리 워크트리(`.claude/worktrees/mutate-table-guards-run`, 끝나고 지웠다)에 꺼내
+  그 워크트리의 도구로 돌렸다. `mutate_table_guards_mutations.toml`: 열여덟 모두 기대대로 빨강(종료 0).
+  `mutate_buffer_eol_retry_mutations.toml`의 고친 둘(번호 `2 3`): 기준선 초록(212 통과), 둘 다 기대대로 빨강(종료 0).
+  프로브 README에 새 표 행을 더하고 줄 끝 표 행에 다시 잰 결과를 덧붙였다.
