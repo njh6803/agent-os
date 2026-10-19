@@ -496,7 +496,7 @@ payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\
 hook = "hook_measure_word.py"
 expect = "silent"
 note = "ADR 0014 의 실제 줄 — 같은 줄에 \"쟀다\"와 그 프로브 경로를 든다"
-payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0014-http-channel-streams-the-run.md", old_string = "", new_string = "  취소가 결말로 바뀌고 태스크 그룹이 깨지지 않는 것을 쟀다(`.scratch/end-user-channel/probes/run_timeout.py`).\n" } }
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0014-http-channel-streams-the-run.md", old_string = "## 이력\n", new_string = "## 이력\n  취소가 결말로 바뀌고 태스크 그룹이 깨지지 않는 것을 쟀다(`.scratch/end-user-channel/probes/run_timeout.py`).\n" }, tool_response = { originalFile = "# 0014\n\n## 이력\n" } }
 
 # --- hook_edit_during_commit (PostToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.

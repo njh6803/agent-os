@@ -141,3 +141,12 @@ open-session을 부른다 2026-10-19T01:01:13Z
   - 유효: `test_슬래시_꼴과_대소문자가_다른_경로도_본다`의 `QUEUE.replace("\scratch\\", …)`가 바꿀 글자가 없어 아무것도 시험하지 않았다(`QUEUE`에는 `\.scratch\`가 있다). `\.scratch\`→`\.Scratch\`로 고치고 `docs\ADR` 줄을 더했다.
   - 보류→오탐: CRLF `originalFile`에서 여러 줄 `old_string`이 맞지 않을 수 있다는 지적. `.gitattributes`가 `* text=auto eol=lf`라 작업 트리 문서가 LF이고, 맞지 않아도 알림만 더 날 뿐 막지 않는다.
 - 다시 돌린 것: 훅 시험 23 passed, 변이 열넷 모두 기대대로.
+
+### PR #296 봇 첫 회차
+
+PR은 `gh pr create`가 GraphQL 연결 오류(TLS 시간 초과, HTTP 499)로 두 번 실패해 REST(`gh api repos/.../pulls`)로 열었다. 검사 다섯 모두 통과, CodeRabbit `Review completed`.
+
+- CodeRabbit Minor(고침): 페이로드 표의 침묵 사례가 비어 있지 않은 ADR에 빈 `old_string`이라 성공한 Edit 입력이 아니었다. 발동 사례와 같은 꼴(`## 이력\n` 조각과 `originalFile`)로 고쳤다. `tools/run_hooks.py` 129건 어긋남 0건.
+- CodeRabbit Minor(보류): 변이 열셋에 `expect_output`이 없다는 지적. `tools/mutate.py` 출력이 변이마다 실패한 시험 하나의 이름을 찍고, 열셋 모두 그 변이가 노린 시험이었다(이 일지의 PR 직전 리뷰 절 회차). 저장소의 변이 표 대부분도 `expect_output` 없이 시험 이름으로 가른다. 표지를 고르려면 변이마다 실패 출력을 손으로 봐야 해 값이 이 PR의 남은 일보다 크다.
+- CodeRabbit 보안 구조(오탐): 알림이 문서 줄을 컨텍스트에 옮긴다는 우려. 그 줄은 같은 세션의 모델이 방금 저장소 문서에 쓴 글이고, 세션 밖으로 나가지 않는다.
+- claude-review Nit 둘(보류): 경로 토막 분해를 형제 훅과 모으기는 훅이 서로 import하지 않는 규약(`.claude/rules/tools.md` 첫 항목)과 맞지 않는다. 독스트링 "판정" 절과 코드의 중복은 형제 훅과 같은 방식이다.
