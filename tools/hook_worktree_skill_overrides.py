@@ -204,9 +204,9 @@ def _fix(path: Path, root: Path, worktree: Path) -> str | None:
     count = len(skill_names(worktree))
     return (
         f"워크트리 {worktree.name} 의 스킬 사본 {count}개를 스킬 목록에서 끄도록 "
-        f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). CLI 세션에서는 주 체크아웃의 "
-        "스킬이 바뀌어도 경로를 단 사본이 목록에 붙지 않았지만, "
-        "이 PC 의 데스크톱 앱 세션에서는 붙었다."
+        f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). CLI 2.1.303 세션에서는 "
+        "주 체크아웃의 스킬이 바뀌어도 경로를 단 사본이 목록에 붙지 않았지만, "
+        "이 PC 의 데스크톱 앱 2.1.299 세션 두 회차에서는 붙었다."
     )
 
 
