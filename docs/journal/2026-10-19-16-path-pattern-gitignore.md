@@ -260,3 +260,104 @@ run-hooks, web-verify, pytest를 통과했고 마크다운 표·줄 구분 문�
     받친다. 나머지 둘은 Grep 줄의 처방 범위와 결과 경로의 읽기였다.
 - 다른 문서에서 Glob·Grep의 `path`·glob 동작을 적은 곳은 `hook_env_read` 독스트링뿐이었다(리뷰가 `CLAUDE.md`, `README.md`,
   `.claude/`, `docs/constitution`, `docs/agents`를 찾았다).
+
+반영 커밋 `29977458`(rebase 뒤 `a1057c6c`). pre-commit의 러너(490초)가 위와 같은 여덟을 통과했고, 마크다운 표·줄 구분 문자·변이
+표도 통과했다. 인용 대조 경고는 없었다. ruff 둘은 `Skipped`라 손으로 쳤다(`All checks passed!`, 783 files already formatted).
+
+`커밋 뒤` 경계에서 인계 계기가 왔지만 넘기지 않았다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해, `next-session`
+"인계할 때" 1의 같은 경계 판정에 든다.
+
+## PR
+
+`git fetch origin main` 뒤 main이 5f38d61c(#304, `tidy-checkouts` 독스트링과 워크트리 스킬 사본 훅)로 나아가 있었다. 겹친 파일은
+`.scratch/retro-queue.md` 하나였고, 그 PR이 바꾼 `.claude/rules/tools.md`·`operations.md`·`tidy-checkouts` 스킬에 Glob·Grep
+서술과 어긋나는 새 규약은 없었다(새 훅은 워크트리의 스킬 목록을 다룬다). `git rebase origin/main`이 충돌 없이 끝났고 푸시했다.
+rebase 뒤의 합친 상태는 로컬에서 다시 돌리지 않았고 CI가 본다.
+
+PR [#305](https://github.com/njh6803/agent-os/pull/305)를 열었다. 앱의 PR 막대가 이 세션에 묶었다(`get_status`의 `bound: true`).
+
+## 인계 (PR 연 뒤)
+
+PR을 열자 세션 컨텍스트가 문턱(20만)을 넘어 인계 계기(`PR 연 뒤`)가 왔다. 넘겨받은 경계(`커밋 뒤`)와 다르고, 요청 범위는 PR과
+병합까지이고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 넘긴다. 이 세션의 제목은
+`chore/path-pattern-gitignore`이고 `chore/path-pattern-gitignore (인계함)`으로 바꾼다. `@coderabbitai review` 코멘트는
+남기지 않았다(새 세션이 남긴다).
+
+실행 중 세션 확인: `search_session_transcripts`(`시작 프롬프트:`, limit 50)가 50건을 내 다 견주지 못했다. 본 범위에서 대기열 211을 든
+세션은 이 브랜치의 앞 세션 둘(`chore/path-pattern-gitignore (인계함)`, 실행 중 아님, PR 없음)뿐이었다.
+
+지시문:
+
+```
+다음 작업: 기능 하네스 chore. 대기열 211(대상 파일이 CLAUDE.md인 열린 행 가운데 지금 반영할 수 있는 것)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 211(경로 패턴의 Glob·Grep이 .gitignore와 다른 워크트리를 넘는지 재고 자리를 정하는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/path-pattern-gitignore
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-19-16-path-pattern-gitignore.md 의 "PR 직전 리뷰", "PR", "인계 (PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #305를 열었고(a1057c6c까지 푸시, origin/main 5f38d61c 위로 rebase) next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 없어 새 세션이 남긴다. PR 직전 리뷰(대체 둘)는 끝났고 결과는 PR 체크리스트에 있다. 일지에 커밋하지 않은 이 인계 절이 있으니 이어 쓴 뒤 봇 회차의 반영 커밋과 함께 푸시한다. 일지 "이 PR에 넣지 않은 것" 둘과 hook_env_read 독스트링 9–10·215–216행은 회고 후보다. docs/journal/2026-10-19-16-path-pattern-gitignore.md
+확인할 선행 조건: 실행 중 세션 확인의 검색 결과가 limit(50)과 같아 다 견주지 못했다. 본 범위에서는 대기열 211이나 CLAUDE.md의 이 줄을 맡은 실행 중 세션이 없었다
+이번 요청 범위: PR과 병합까지
+```
+
+백그라운드 작업: 이 세션이 띄운 커밋 둘과 리뷰 서브에이전트 둘은 모두 끝나 멈출 것이 없었다.
+
+잠금 풀기: `git worktree unlock C:/project/agent/.claude/worktrees/path-pattern-gitignore`가 `is not locked`로 끝났다(이 세션도
+`EnterWorktree(path)`로 들어왔다).
+
+open-session을 부른다 2026-10-19T07:51:14Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+> 사용자: 대기열 211(경로 패턴의 Glob·Grep이 .gitignore와 다른 워크트리를 넘는지 재고 자리를 정하는 열린 행)을 chore 한
+> PR로 반영한다. 행의 "어디로" 칸이 원천이다
+
+새 세션이 제목을 `chore/path-pattern-gitignore`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin main`
+뒤 `git log HEAD..origin/main`은 비어 main은 그대로 5f38d61c였다. PR #305는 `MERGEABLE`·`CLEAN`이고 검사가 모두 초록이었다.
+
+## PR 봇 첫 회차
+
+`@coderabbitai review`를 남기고 `tools/wait_ci.py 305`를 띄웠다. 끝 줄은 `모두 통과. CodeRabbit: Review rate limited`였다.
+CodeRabbit은 한도로 리뷰하지 않아 회차로 세지 않는다. 이 PR의 보안·버그 축은 PR 체크리스트에 적은 PR 직전 리뷰(대체 둘)가
+갈음한다(`docs/constitution/operations.md` 리뷰 파이프라인).
+
+claude-review의 첫 리뷰(a1057c6c)는 Critical·Major 없이 Minor 둘, Nit 하나였다. 첫 회차라 지적마다 판단했다.
+
+- (Minor) Glob 줄과 Grep 줄이 측정 근거(날짜, 일지·대기열 번호, 워크트리 수)를 줄 안에 담으니 처방만 두고 근거는 일지 링크로
+  줄이라는 것: 두었다. 이웃한 환경 함정 줄들이 날짜·일지·대기열 근거를 줄 안에 두고, `docs/agents/issue-tracker.md` 프로브와 근거
+  절이 손으로 본 사실은 그렇게 봤다고 밝히라고 한다. 시간 초과 문장은 처방의 까닭(결과가 더 나오는 것이 아니라 Glob이 아무것도
+  내지 못한다)이라 지우면 `path`를 좁히지 않을 수 있다.
+- (Minor) 두 줄이 claude 2.1.299 한 판의 동작에 기대는데 판이 없다는 것: 고쳤다. 두 줄의 근거 괄호를 "2026-10-19 claude
+  2.1.299에서 손으로 봤다"로 바꿨다. 오늘 잰 세션들의 판은 앱의 `AppData/Roaming/Claude/claude-code/` 아래 판 폴더가 2.1.295(10-12)와
+  2.1.299(10-17) 둘뿐인 것으로 가렸다(`ls -la`로 손으로 봤다). 지적의 뒤 절반("Grep의 `/` 패턴 규칙은 재지 않았다")은 PR 본문의
+  Glob 서술을 옮긴 것이고, Glob 줄은 이미 잰 예만 적는다.
+- (Nit) "워크트리 스물하나"가 곧 낡는 수라는 것: 고쳤다. 대기열 211의 "40개"(2026-10-12 `ls -d`)와는 다른 날의 수라 어긋남은
+  아니지만, 그 괄호는 지워도 행동이 바뀌지 않는다(`writing-for-agents`의 캐시·가지치기). 수는 이 일지 "셀프 리뷰" 절에 남는다.
+
+## 회고
+
+후보 여섯, 승인 셋(새 행 369·370·371), 넘김 없음, 기각 셋이다.
+
+- **1. `hook_env_read`의 Grep glob 판정이 마지막 `/` 뒤 조각만 봐서 `{.claude/**,docs/*.md}`가 훅을 지났다.** 승인. 사건은 위
+  "잰 것" 표다(맨 `.claude/**`는 막혔다). 2026-10-12 사건의 Grep도 같은 꼴이었다. 층은 막는 훅 자신이다. 같은 꼴이 루트의
+  `.env`에 닿는지는 재지 않아 행이 먼저 재게 했다. 같은 훅 독스트링의 넓은 Grep 서술(위 "남긴 것")도 같은 파일이라 그 행에 넣었다.
+  대기열 369, 1회차.
+- **2. 주 체크아웃에서 Glob이 잰 패턴마다 20초 시간 초과로 끝났다.** 승인. 이 PR이 더한 `CLAUDE.md`의 Glob 줄은 지침 층이고,
+  더 높은 층은 도구 설정(`.claude/settings.json`의 `env`)이다. 그 값이 앱 세션에 닿는지와 무시된 자리를 찾던 길의 값을 재지 않아
+  행이 먼저 재게 했다. 대기열 370, 1회차.
+- **3. Claude Code 도구의 동작을 손으로 본 줄에 그 판을 적지 않았다(위 claude-review Minor).** 승인. 근거 절은 코드를 읽은 것에만
+  판을 요구해 이번 줄은 규약을 어기지 않았다. 리뷰가 잡도록 둔 기준(`CODING_STANDARDS.md`)에도 없다. 판이 없는 줄을 가려낼
+  검사는 거짓 양성이 많아, 층은 근거를 쓰는 자리의 지침이다. 대기열 371, 1회차.
+- **4. 작은 chore 하나에 인계가 셋(셀프 리뷰 직전, 커밋 뒤, PR 연 뒤) 났다.** 기각. 사용량 장부가 지시문의 `인계:` 줄로 인계로
+  연 세션을 세어 문턱(ADR 0033)을 볼 때 이 PR도 들어간다. 문턱을 바꾸는 일은 ADR이고, 이 세션에 원인을 가를 측정이 없다.
+- **5. 두 번째 세션의 `git checkout -- CLAUDE.md .scratch/retro-queue.md`가 막혔다.** 기각. 자동 모드 분류기가 그 자리에서 막았다.
+- **6. 셀프 리뷰를 반영하며 "`/`가 든 패턴은 작업 디렉터리에서 맞춘다"는 틀린 해석을 줄에 넣었다.** 기각. PR 직전
+  `bug-perf-review`가 반례로 잡아 리뷰가 제 몫을 했고, 검사로 옮길 꼴이 없다.
+
+## 다음
+
+- 이 커밋(위 claude-review 반영, 회고, 대기열 369·370·371)을 푸시한 뒤 `@coderabbitai review`를 다시 남기고 둘째 회차를 본다.
+  claude-review는 둘째 회차라 Critical·Major만 고친다. CodeRabbit이 이번에 리뷰하면 그 봇의 첫 회차다.
+- 이 PR에서 남긴 일은 대기열 369(`hook_env_read`의 중괄호 glob과 독스트링), 370(Glob의 무시 규칙을 도구 설정으로), 371(근거 절의
+  도구 판)이다.
