@@ -177,7 +177,6 @@ import json
 import os
 import re
 import statistics
-import subprocess
 import sys
 import tempfile
 import time
@@ -233,7 +232,7 @@ _UNSAFE_PS = re.compile(r"@['\"{]|`")
 _LINE_CONTINUATION = re.compile(r"[\\`]\r?\n")
 _PROGRAM = re.compile(r"[\w./\\:+-]+")
 _WORKTREE = re.compile(r"/\.claude/worktrees/[^/]+/")
-GIT_TIMEOUT = 10
+CHECKOUT = Path(__file__).resolve().parent.parent
 
 
 # 단가표
@@ -2370,17 +2369,49 @@ def folder_name_of(checkout: Path) -> str:
     return re.sub(r"[^A-Za-z0-9]", "-", str(checkout))
 
 
+def _read_utf8(path: Path) -> str:
+    """`path`의 앞뒤 공백을 벗긴 글. UTF-8이 아니어도 `OSError`다."""
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except UnicodeDecodeError as e:
+        raise OSError(f"{path}를 읽지 못했다: {e}") from e
+
+
+def main_checkout_of(checkout: Path) -> Path:
+    """`checkout`의 git 공용 디렉터리의 부모.
+
+    git을 띄우지 않고 `checkout/.git`을 읽는다. 폴더면 그것이, 파일이면 `gitdir:`이 가리키는 폴더의
+    `commondir`(없으면 그 폴더)가 공용 디렉터리다(선례 `tools/hook_bash_commit_msg.py`의
+    `_common_dir`). 주 저장소, 연결된 워크트리, `--separate-git-dir` 저장소에서
+    `git rev-parse --git-common-dir`의 부모와 같다. git과 달리 상위 폴더로 올라가며 찾지 않고
+    `GIT_DIR`을 따르지 않는다. 작업 스케줄러는 이 도구를 BELOW_NORMAL로 돌려, CPU가 꽉 찼을 때 띄운
+    git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-17,
+    `.scratch/token-usage/probes/git_priority_load.py`). `.git`을 읽지 못하거나 `gitdir:` 줄이
+    없거나, 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다."""
+    dot_git = checkout / ".git"
+    if dot_git.is_dir():
+        return checkout
+    text = _read_utf8(dot_git)
+    if not text.startswith("gitdir:"):
+        raise OSError(f"{dot_git}에 gitdir: 줄이 없다")
+    gitdir = checkout / text.removeprefix("gitdir:").strip()
+    if not gitdir.is_dir():
+        raise OSError(f"{dot_git}의 gitdir: 폴더가 없다: {gitdir}")
+    common_file = gitdir / "commondir"
+    common = gitdir
+    if common_file.is_file():
+        relative = _read_utf8(common_file)
+        if not relative:
+            raise OSError(f"{common_file}가 비었다")
+        common = gitdir / relative
+    if not common.is_dir():
+        raise OSError(f"{dot_git}의 공용 디렉터리가 없다: {common}")
+    return Path(os.path.normpath(common)).parent
+
+
 def main_checkout() -> Path:
     """이 파일이 든 저장소의 git 공용 디렉터리의 부모."""
-    done = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        cwd=Path(__file__).resolve().parent,
-        capture_output=True,
-        text=True,
-        timeout=GIT_TIMEOUT,
-        check=True,
-    )
-    return Path(done.stdout.strip()).parent
+    return main_checkout_of(CHECKOUT)
 
 
 def _date_of(text: str) -> date:
@@ -2422,11 +2453,12 @@ def main(argv: list[str]) -> int:
     today: date = args.today or datetime.now(tz).date()
     try:
         out: Path = args.out or main_checkout() / ".scratch" / "token-report"
-        # 이 저장소의 폴더 이름은 보고서(9절)만 쓴다. `ingest`는 git 없이도 돈다.
+        # 이 저장소의 폴더 이름은 보고서(9절)만 쓴다. `ingest`는 `--out`을 주면 저장소 밖에서도
+        # 돈다.
         repo: str | None = None
         if command != "ingest":
             repo = args.repo or folder_name_of(main_checkout())
-    except (OSError, subprocess.SubprocessError) as e:
+    except OSError as e:
         print(f"주 체크아웃을 찾지 못했다. --out과 --repo를 준다: {e}", file=sys.stderr)
         return 2
     try:
