@@ -975,7 +975,7 @@ def test_주_체크아웃은_git_공용_디렉터리의_부모다() -> None:
 
 def test_주_체크아웃을_찾는_데_프로세스를_띄우지_않는다(monkeypatch: pytest.MonkeyPatch) -> None:
     # 작업 스케줄러는 BELOW_NORMAL로 돌아, CPU가 꽉 차면 띄운 git이 10초 제한을 넘겼다(일지
-    # 2026-10-19-17, .scratch/token-usage/probes/git_priority_load.py).
+    # 2026-10-19-24, .scratch/token-usage/probes/git_priority_load.py).
     def 막는다(*args: object, **kwargs: object) -> None:
         raise AssertionError("프로세스를 띄웠다")
 

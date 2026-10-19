@@ -50,7 +50,9 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
 `.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다),
 `${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
-것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다). 사례의
+것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다),
+`${WORKTREE_SKILLS_REPO}`(워크트리 자리 `.claude/worktrees/side/` 에 스킬 둘을 둔 임시 폴더 —
+워크트리 스킬 사본을 끄는 훅이 이 저장소의 주 체크아웃이 아니라 이 폴더의 local 설정에 쓴다). 사례의
 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
 로 준다. 기대는 `Expectation` 의 값이다. deny(`permissionDecision: deny`), block(`decision: block`
 또는 종료 코드 2), context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는
@@ -662,7 +664,20 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "USAGE_REPO": _usage_repository(scratch, today).as_posix(),
         "USAGE_HOME": _usage_home(scratch).as_posix(),
         "SEQ_3000": "\n".join(str(n) for n in range(1, 3001)),
+        "WORKTREE_SKILLS_REPO": _worktree_skills_repository(scratch).as_posix(),
     }
+
+
+def _worktree_skills_repository(scratch: Path) -> Path:
+    """워크트리 자리 `.claude/worktrees/side/` 에 스킬 둘(`.claude/skills/<이름>/SKILL.md`)을 둔
+    임시 폴더. `hook_worktree_skill_overrides` 가 이 폴더의 `.claude/settings.local.json` 을 쓴다.
+    훅은 폴더만 보므로 git 저장소로 짓지 않는다."""
+    repo = scratch / "worktree-skills-repo"
+    for skill in ("code-review", "tdd"):
+        folder = repo / ".claude" / "worktrees" / "side" / ".claude" / "skills" / skill
+        folder.mkdir(parents=True)
+        (folder / "SKILL.md").write_text(f"---\nname: {skill}\n---\n", encoding="utf-8")
+    return repo
 
 
 def _usage_repository(scratch: Path, today: str) -> Path:

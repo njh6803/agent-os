@@ -1,4 +1,4 @@
-# 2026-10-19 (17) 토큰 보고서 작업이 CPU가 꽉 찼을 때 git 10초 제한에 걸린 원인과 수정
+# 2026-10-19 (24) 토큰 보고서 작업이 CPU가 꽉 찼을 때 git 10초 제한에 걸린 원인과 수정
 
 next-session 지시문으로 연 새 세션의 기능 밖 진단이다. 작업 스케줄러 작업 `agent-os token_report daily`가 10/19 08:00에
 `tools/token_report.py`의 `main_checkout()`에서 `git rev-parse` 10초 제한(`GIT_TIMEOUT`)을 넘겨 종료 코드 2로 끝난 원인을
@@ -95,8 +95,8 @@ BELOW_NORMAL로 띄운 파이썬이 플래그 없이 띄운 손자의 클래스�
 시작 프롬프트: /diagnosing-bugs 작업 스케줄러 `agent-os token_report daily`가 2026-10-19 08:00에 `git rev-parse` 10초 초과(종료 코드 2)로 실패했다. docs/journal/2026-10-19-07-token-usage-09-close.md의 "작업 스케줄러 실패" 절부터 읽는다
 브랜치: chore/token-report-git-timeout
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-17-token-report-git-timeout.md 전체(원인, 고친 것, 인계 절)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 미추적 포함)부터 한다. 진단과 수정, 프로브 확인, 회고, "다음"은 끝났다. `tools/run_checks.py`는 멈춰 결과가 없다. docs/journal/2026-10-19-17-token-report-git-timeout.md
+읽을 것: docs/journal/2026-10-19-24-token-report-git-timeout.md 전체(원인, 고친 것, 인계 절)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 미추적 포함)부터 한다. 진단과 수정, 프로브 확인, 회고, "다음"은 끝났다. `tools/run_checks.py`는 멈춰 결과가 없다. docs/journal/2026-10-19-24-token-report-git-timeout.md
 확인할 선행 조건: 2026-10-20 08:00 작업 실행은 병합하고 주 체크아웃을 당긴 뒤여야 고친 파일로 돈다(일지 "다음")
 이번 요청 범위: PR과 병합까지
 ```
@@ -177,8 +177,8 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 돌렸다. `/security-review`�
 시작 프롬프트: /diagnosing-bugs 작업 스케줄러 `agent-os token_report daily`가 2026-10-19 08:00에 `git rev-parse` 10초 초과(종료 코드 2)로 실패했다. docs/journal/2026-10-19-07-token-usage-09-close.md의 "작업 스케줄러 실패" 절부터 읽는다
 브랜치: chore/token-report-git-timeout
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-17-token-report-git-timeout.md의 "셀프 리뷰(이어받은 세션)", "PR 직전 리뷰", "인계(커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 PR 직전 리뷰 둘을 반영해 커밋 둘(ae38cbe9, 3180a964)까지 했다. 커밋하지 않은 일지 변경(인계 절)이 워크트리에 있어 그것을 커밋한 뒤 origin/main을 합치고 푸시, PR 열기(`@coderabbitai review` 코멘트 포함), 봇 회차, 병합을 한다. PR 직전 리뷰는 다시 돌리지 않는다. pytest는 부하 아래 무관한 시간 단언 흔들림으로 `SKIP=pytest` 커밋했으니 CI의 python 잡을 본다. docs/journal/2026-10-19-17-token-report-git-timeout.md
+읽을 것: docs/journal/2026-10-19-24-token-report-git-timeout.md의 "셀프 리뷰(이어받은 세션)", "PR 직전 리뷰", "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 PR 직전 리뷰 둘을 반영해 커밋 둘(ae38cbe9, 3180a964)까지 했다. 커밋하지 않은 일지 변경(인계 절)이 워크트리에 있어 그것을 커밋한 뒤 origin/main을 합치고 푸시, PR 열기(`@coderabbitai review` 코멘트 포함), 봇 회차, 병합을 한다. PR 직전 리뷰는 다시 돌리지 않는다. pytest는 부하 아래 무관한 시간 단언 흔들림으로 `SKIP=pytest` 커밋했으니 CI의 python 잡을 본다. docs/journal/2026-10-19-24-token-report-git-timeout.md
 확인할 선행 조건: 2026-10-20 08:00 작업 실행은 병합하고 주 체크아웃을 당긴 뒤여야 고친 파일로 돈다(일지 "다음")
 이번 요청 범위: PR과 병합까지
 ```
@@ -186,6 +186,20 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 돌렸다. `/security-review`�
 PR 직전 리뷰에 밀 주장(셀프 리뷰 때 나열한 것): `main_checkout_of` 독스트링 전체(특히 "세 꼴에서 git과 같다", "없으면 `OSError`다"), `_read_utf8`
 독스트링, `hook_session_usage.py`의 고친 두 줄, 이 일지의 "원인"·"고친 것"·"고친 판의 확인"과 이 절의 사실 문장, 대기열 366
 행.
+
+## PR과 병합(이어받은 세션)
+
+위 "인계(커밋 뒤)" 지시문으로 연 세션이다. 인계 절을 커밋했고(`430da855`, 이 커밋의 pre-commit은 pytest까지 모두
+초록이었다), origin/main을 합치며 `.scratch/retro-queue.md`의 충돌(형제의 361~364와 이 브랜치의 366)을 번호 순으로 둘 다
+남겨 풀었다. `tools/sibling_overlap.py`가 이 일지가 main의 최신 일지(2026-10-19-20)보다 앞선다고 해 `--move`로 옮겼고,
+그 사이 형제가 21~23을 가져가 번호는 24가 됐다.
+
+병합 커밋의 첫 pre-commit은 web-verify만 빨갰다(pytest 927.8초 초록). `web/eslint.config.test.ts`의 끄기 주석 시험 둘이
+60초 제한을 넘겼고(67·110초), vitest 일꾼 하나가 응답 대기 시간 초과로 뜨지 못했다. 이 브랜치는 `web/`을 건드리지 않고,
+바로 앞 커밋의 web-verify는 630초에 초록이었다(이번 판은 736초). 부하 아래의 시간 초과로 보고 `SKIP=web-verify`로 커밋해
+web은 CI의 잡에 맡겼다.
+
+> 사용자: (이 세션의 첫 메시지는 위 "인계(커밋 뒤)" 절의 지시문 그대로다)
 
 ## 회고
 

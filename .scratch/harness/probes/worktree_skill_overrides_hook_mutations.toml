@@ -1,0 +1,179 @@
+# tools/hook_worktree_skill_overrides.py(대기열 274)의 판정과 쓰기를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/worktree_skill_overrides_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 문장은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "도구 이름을 보지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    if payload.get("tool_name") != TOOL:
+        return None'''
+new = '''    if not payload.get("tool_name"):
+        return None'''
+
+[[mutation]]
+name = "워크트리 자리 바로 아래인지 보지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    if worktree.resolve().parent != (root / WORKTREES).resolve():'''
+new = '''    if not worktree.is_dir():'''
+
+[[mutation]]
+name = "결과에 경로가 없을 때 입력의 경로를 보지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    raw = _str_field(payload.get("tool_response"), "worktreePath") or _str_field(
+        payload.get("tool_input"), "path"
+    )'''
+new = '''    raw = _str_field(payload.get("tool_response"), "worktreePath")'''
+
+[[mutation]]
+name = "SKILL.md 가 없는 폴더도 스킬로 센다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    return sorted(p.name for p in folder.iterdir() if (p / "SKILL.md").is_file())'''
+new = '''    return sorted(p.name for p in folder.iterdir())'''
+
+[[mutation]]
+name = "없어진 워크트리의 키를 걷지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        if not key.startswith(KEY_PREFIX) or _worktree_alive(root, key)'''
+new = '''        if True'''
+
+[[mutation]]
+name = "남은 워크트리의 키까지 걷는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    return bool(name) and (root / WORKTREES / name).is_dir()'''
+new = '''    return False'''
+
+[[mutation]]
+name = "끄지 않고 이름만 남긴다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        f"{KEY_PREFIX}{worktree.name}:{skill}": OFF for skill in skill_names(worktree)'''
+new = '''        f"{KEY_PREFIX}{worktree.name}:{skill}": "name-only" for skill in skill_names(worktree)'''
+
+[[mutation]]
+name = "바뀔 것이 없어도 쓴다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    if overrides == current:
+        return None'''
+new = '''    if not overrides and not current:
+        return None'''
+
+[[mutation]]
+name = "다른 설정을 버린다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    return {**settings, OVERRIDES: overrides}'''
+new = '''    return {OVERRIDES: overrides}'''
+
+[[mutation]]
+name = "BOM 을 벗기지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        text = path.read_text(encoding="utf-8-sig")'''
+new = '''        text = path.read_text(encoding="utf-8")'''
+
+[[mutation]]
+name = "맨 위가 객체가 아니어도 고친다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    if not isinstance(value, dict):
+        raise UnfixableSettingsError("맨 위가 객체가 아니다")
+    return value'''
+new = '''    return value if isinstance(value, dict) else {}'''
+
+[[mutation]]
+name = "클라우드 세션에서도 쓴다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+        return 0'''
+new = '''    if os.environ.get("CLAUDE_CODE_REMOTE") == "never":
+        return 0'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 설정을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    except UnicodeDecodeError as error:
+        raise UnfixableSettingsError("UTF-8 이 아니다") from error
+'''
+new = ''''''
+
+[[mutation]]
+name = "읽지 못한 설정을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    except OSError as error:
+        raise UnfixableSettingsError(f"읽지 못했다({error})") from error
+'''
+new = ''''''
+
+[[mutation]]
+name = "쓰지 못한 것을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        raise UnfixableSettingsError(f"쓰지 못했다({error})") from error'''
+new = '''        raise'''
+
+[[mutation]]
+name = "남은 임시 파일을 나이와 상관없이 지운다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        return path.stat().st_mtime < cutoff'''
+new = '''        return path.stat().st_mtime < cutoff + 2 * STALE_TEMP_SECONDS'''
+
+[[mutation]]
+name = "남은 임시 파일을 치우지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        return path.stat().st_mtime < cutoff'''
+new = '''        return path.stat().st_mtime < 0'''
+
+[[mutation]]
+name = "대조군: 알림의 끝 문장을 바꾼다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        "경로를 단 사본이 목록에 붙지 않는다."'''
+new = '''        "경로를 단 사본이 목록에서 빠진다."'''

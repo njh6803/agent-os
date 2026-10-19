@@ -2385,7 +2385,7 @@ def main_checkout_of(checkout: Path) -> Path:
     `_common_dir`). 주 저장소, 연결된 워크트리, `--separate-git-dir` 저장소에서
     `git rev-parse --git-common-dir`의 부모와 같다. git과 달리 상위 폴더로 올라가며 찾지 않고
     `GIT_DIR`을 따르지 않는다. 작업 스케줄러는 이 도구를 BELOW_NORMAL로 돌려, CPU가 꽉 찼을 때 띄운
-    git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-17,
+    git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-24,
     `.scratch/token-usage/probes/git_priority_load.py`). `.git`을 읽지 못하거나 `gitdir:` 줄이
     없거나, 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다."""
     dot_git = checkout / ".git"

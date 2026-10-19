@@ -21,7 +21,7 @@ ADR 0033(이력 2026-10-16 "요약은 새 보고서 뒤 처음 시작한 세션�
 한다. 그보다 낮으면 git 이 그 옵션을 모르는 인자로 찍고 0 으로 끝나 상대 경로가 함께 나오므로,
 출력이 절대 경로 한 줄이 아니면 저장소가 아닌 것으로 본다(`common_dir_parent`).
 `tools/token_report.py` 의 `main_checkout` 은 git 을 띄우지 않고 `.git` 을 읽는다(작업 스케줄러의
-BELOW_NORMAL 아래에서 git 이 굶었다, 일지 2026-10-19-17).
+BELOW_NORMAL 아래에서 git 이 굶었다, 일지 2026-10-19-24).
 
 요약. 출처가 `startup` 이고 헤드리스가 아닌 세션에서만 낸다(`shows_summary`). 요약 파일
 `summary.txt` 의 첫 줄 `보고서 날짜: YYYY-MM-DD` 를 읽어, `shown/summary-<보고서 날짜>` 표지를
