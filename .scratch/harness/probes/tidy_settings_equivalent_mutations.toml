@@ -1,0 +1,63 @@
+# tools/tidy_checkouts.py 의 `settings_equivalent`(대기열 274 의 PR 직전 리뷰 반영)를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/tidy_settings_equivalent_mutations.toml
+# 끝의 하나는 대조군이다. 독스트링의 문장은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "바이트만 견준다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return _without_worktree_overrides(first) == _without_worktree_overrides(second)'''
+new = '''    return first == second'''
+
+[[mutation]]
+name = "skillOverrides 를 통째로 뺀다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if not key.startswith(WORKTREE_OVERRIDE_PREFIX)'''
+new = '''        if False'''
+
+[[mutation]]
+name = "훅의 키를 빼지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if not key.startswith(WORKTREE_OVERRIDE_PREFIX)'''
+new = '''        if True'''
+
+[[mutation]]
+name = "빈 skillOverrides 를 남긴다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return {**rest, OVERRIDES: kept} if kept else rest'''
+new = '''    return {**rest, OVERRIDES: kept}'''
+
+[[mutation]]
+name = "객체가 아닌 JSON 도 견준다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if not isinstance(first, dict) or not isinstance(second, dict):
+        return False
+    return _without_worktree_overrides(first) == _without_worktree_overrides(second)'''
+new = '''    if not isinstance(first, dict) or not isinstance(second, dict):
+        return first == second
+    return _without_worktree_overrides(first) == _without_worktree_overrides(second)'''
+
+[[mutation]]
+name = "대조군: 독스트링의 끝 문장을 바꾼다"
+tests = ["tests/tools/test_tidy_checkouts.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    다르다고 본다(남기는 쪽)."""
+    if left == right:'''
+new = '''    다르다고 본다."""
+    if left == right:'''
