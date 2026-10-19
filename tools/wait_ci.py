@@ -94,6 +94,7 @@ import sys
 import time
 from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
+from enum import Enum, auto
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -287,12 +288,13 @@ def _settle(
     review: Review,
 ) -> tuple[int, list[str]] | None:
     """헤드가 맞는 PR 로 끝낼지 정한다. 더 기다리면 None. review 는 빨간 리뷰 검사를 가른 것이다."""
-    verdict = judge(snapshot, options.expected, excused=(REVIEW_CHECK,) if review.limit else ())
+    limited = review.outcome is Outcome.LIMIT
+    verdict = judge(snapshot, options.expected, excused=(REVIEW_CHECK,) if limited else ())
     lines = _report(number, snapshot)
-    if review.limit is not None:
-        lines.append(f"  {REVIEW_CHECK} 은 계정 한도로 리뷰 없음: {review.limit}")
-    if review.unclear is not None:
-        lines.append(f"  {REVIEW_CHECK} 이 한도인지 가르지 못했다: {review.unclear}")
+    if limited:
+        lines.append(f"  {REVIEW_CHECK} 은 계정 한도로 리뷰 없음: {review.detail}")
+    if review.outcome is Outcome.UNCLEAR:
+        lines.append(f"  {REVIEW_CHECK} 이 한도인지 가르지 못했다: {review.detail}")
     if snapshot.conflicting:
         return EXIT_FAILED, [*lines, "끝: 충돌. main 을 합치고 푸시한 뒤 다시 띄운다"]
     settled = not verdict.pending and not verdict.missing
@@ -301,9 +303,7 @@ def _settle(
         return EXIT_FAILED, [*lines, f"끝: 실패 {', '.join(verdict.failed)}"]
     if verdict.done:
         notes = "".join(f". {name}: {note}" for name, note in sorted(snapshot.notes.items()))
-        reviewless = (
-            f". {REVIEW_CHECK}: 계정 한도로 리뷰 없음({review.limit})" if review.limit else ""
-        )
+        reviewless = f". {REVIEW_CHECK}: 계정 한도로 리뷰 없음({review.detail})" if limited else ""
         return EXIT_PASSED, [*lines, f"끝: 모두 통과{notes}{reviewless}"]
     # 요청 직후에 띄운 대기의 첫 조회는 아직 건너뜀을 볼 수 있어 요청 유예를 둔다.
     if settled and elapsed >= options.request_grace:
@@ -327,17 +327,21 @@ def _settle(
     ]
 
 
+class Outcome(Enum):
+    """빨간 리뷰 검사를 가른 갈래."""
+
+    NOT_LIMIT = auto()  # 한도가 아니거나 빨갛지 않다
+    LIMIT = auto()  # detail 은 계정 한도의 문구
+    UNCLEAR = auto()  # detail 은 가르지 못한 이유
+    RETRYING = auto()  # 로그 읽기가 실패해 다음 조회에서 다시 읽는다
+
+
 @dataclass(frozen=True)
 class Review:
-    """빨간 리뷰 검사를 가른 것. 셋 다 비면 한도가 아니거나 빨갛지 않다.
+    """빨간 리뷰 검사를 가른 것."""
 
-    limit 은 계정 한도의 문구, unclear 는 가르지 못한 이유다. retrying 이면 로그 읽기가 실패해
-    다음 조회에서 다시 읽는다.
-    """
-
-    limit: str | None = None
-    unclear: str | None = None
-    retrying: bool = False
+    outcome: Outcome = Outcome.NOT_LIMIT
+    detail: str = ""
 
 
 class ReviewLimits:
@@ -356,27 +360,33 @@ class ReviewLimits:
         self._unclear: dict[str, str] = {}
 
     def review(self, snapshot: Snapshot) -> Review:
-        limit: str | None = None
-        for job in snapshot.failed_jobs.get(REVIEW_CHECK, ()):
+        jobs = snapshot.failed_jobs.get(REVIEW_CHECK, ())
+        # 빨간 잡이 모두 한도일 때만 LIMIT 이다. 하나라도 한도가 아니면 그 자리에서 NOT_LIMIT 을
+        # 내므로, 루프를 끝까지 돈 limit 은 모든 잡이 한도였을 때의 마지막 문구다.
+        limit = ""
+        for job in jobs:
             if job is None:
-                return Review(unclear="롤업에 잡 주소(detailsUrl)가 없다")
+                return Review(Outcome.UNCLEAR, "롤업에 잡 주소(detailsUrl)가 없다")
             if job in self._unclear:
-                return Review(unclear=self._unclear[job])
+                return Review(Outcome.UNCLEAR, self._unclear[job])
             if job not in self._known:
                 try:
                     self._known[job] = self._classify(job)
                 except FetchError as error:
-                    self._errors[job] = self._errors.get(job, 0) + 1
-                    if self._errors[job] < self._max_errors:
-                        return Review(retrying=True)
-                    self._unclear[job] = (
-                        f"잡 {job} 로그를 {self._errors[job]}번 읽지 못했다: {error}"
-                    )
-                    return Review(unclear=self._unclear[job])
-            limit = self._known[job]
-            if limit is None:
+                    return self._failed(job, error)
+            known = self._known[job]
+            if known is None:
                 return Review()
-        return Review(limit=limit)
+            limit = known
+        return Review(Outcome.LIMIT, limit) if jobs else Review()
+
+    def _failed(self, job: str, error: FetchError) -> Review:
+        """읽기 실패를 세고, `max_errors`번째면 그 잡을 가르지 못한 것으로 기억한다."""
+        self._errors[job] = self._errors.get(job, 0) + 1
+        if self._errors[job] < self._max_errors:
+            return Review(Outcome.RETRYING)
+        self._unclear[job] = f"잡 {job} 로그를 {self._errors[job]}번 읽지 못했다: {error}"
+        return Review(Outcome.UNCLEAR, self._unclear[job])
 
 
 def wait(
@@ -414,9 +424,8 @@ def wait(
                 review = limits.review(snapshot)
                 # 로그를 다시 읽을 동안은 끝내지 않는다. 읽기는 잡마다 모두 max_fetch_errors 번으로
                 # 끝난다.
-                settled = (
-                    None if review.retrying else _settle(number, snapshot, elapsed, options, review)
-                )
+                retrying = review.outcome is Outcome.RETRYING
+                settled = None if retrying else _settle(number, snapshot, elapsed, options, review)
                 if settled is not None:
                     return settled
             elif seen_head:

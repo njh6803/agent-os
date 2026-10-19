@@ -99,7 +99,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - 승인(회차): 잡 로그를 REST로 받으려다 gh가 이스케이프 문자 때문에 거부했다. 열린 280이 처방한 사건이라 280에 회차를
   더했다(2회차).
 - 승인(고침): `tools/gh_run_summary.py`가 결과 블록의 `result`를 내지 않아, 한도 문구를 원본 로그에서 grep해야 했다. 도구의
-  빠진 칸이라 사건 하나로 승인하고, 이 PR의 범위 밖이라 대기열 343(1회차)에 뒀다.
+  빠진 칸이라 사건 하나로 승인하고, 이 PR의 범위 밖이라 대기열 349(1회차)에 뒀다.
 - 기각: 다른 세션과 `tidy-checkouts`가 겹쳐 `remove`가 `등록된 워크트리가 아니다`로 끝났다. 도구가 지우기 전에 다시
   판정해 막았다.
 - 기각: 85줄 heredoc을 PreToolUse 훅이(상한 40줄), 변수를 든 `sed`를 워크트리 가드가 막았다. 이미 있는 훅·가드가 그 자리에서
@@ -184,7 +184,7 @@ open-session을 부른다 2026-10-18T23:15:56Z
 
 - origin/main(ebd09fb) 합치기: 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라며 거부해 손으로 `git merge`했다.
   `next-session` SKILL.md는 저절로 합쳐졌고, `.scratch/retro-queue.md`의 충돌 두 덩이는 행 번호마다 닫힌 쪽을 골라(326·328은
-  main, 327은 이 브랜치) 풀고 343(이 브랜치)과 344(main)를 둘 다 남겼다. 병합 커밋 35ade4b2의 pre-commit은 모두 초록(pytest
+  main, 327은 이 브랜치) 풀고 343(이 브랜치, 지금 349)과 344(main)를 둘 다 남겼다. 병합 커밋 35ade4b2의 pre-commit은 모두 초록(pytest
   408.6초, web-verify 325.2초, run-hooks 125.0초).
 - `/security-review`: 지적 없음. 잡 번호는 숫자만 받아 리스트 인자로 넘기고, 로그의 공격자 글은 JSON 문자열 안에 있어 홀로 선
   결과 블록이 되지 못하며, 모를 때는 실패 쪽이다.
@@ -199,3 +199,70 @@ open-session을 부른다 2026-10-18T23:15:56Z
   - 남긴 것(Minor): 같은 이름의 옛 실행이 한도로 빨갛고 재실행이 통과하면 통과 줄에 "리뷰 없음"이 붙는다. 같은 이름의
     재실행을 실패로 드는 기존 판정(`_worse`)의 연장이고, 병합 판정은 맞으며 표기만 어긋난다.
   - 남긴 것(Nit): 다시 읽는 동안 다른 실패나 충돌을 보고도 끝내지 않아 끝이 최대 두 간격 늦다.
+
+## 인계 (PR 연 뒤)
+
+셋째 세션(제목 `chore/wait-ci-review-limit`)이 PR 직전 리뷰를 반영해 커밋 56dd54a2(pre-commit 모두 초록, pytest 382.6초,
+web-verify 352.8초)를 푸시하고 PR #295를 열었다. CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 않았고
+대체 둘을 돌렸다(PR 본문 체크리스트). PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 209,761 토큰). `@coderabbitai review`
+코멘트는 남기지 않았다. 새 세션이 순서 1의 2(봇 회차)부터 한다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 것)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/wait-ci-review-limit
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-03-wait-ci-review-limit.md(PR 직전 리뷰, 인계 (PR 연 뒤), 이어받은 일)
+이어받을 상태: 인계: PR 연 뒤. PR #295가 열렸고 푸시한 HEAD는 56dd54a2다. 첫 `@coderabbitai review` 코멘트부터 순서 1의 2(봇 회차)를 하고 병합한다. 이 PR의 wait_ci는 브랜치의 새 판이라 claude-review가 한도로 빨가면 통과로 끝난다. PR 직전 bug-perf-review에서 보류한 Minor 1(같은 이름의 재실행이 통과해도 "리뷰 없음" 표기)과 Nit 1은 일지 "PR 직전 리뷰" 절과 PR 본문 "남긴 위험"에 있다. 일지의 이 절은 커밋하지 않은 채 워크트리에 있고, "## 다음"은 아직 없다. "이어받은 일"(PR #292 카나리아 셋의 실제 회차)은 이 PR 밖이라 "다음"으로 옮긴다. 일지는 docs/journal/2026-10-19-03-wait-ci-review-limit.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-10-18T23:52:31Z
+
+## 봇 회차
+
+넷째 세션(제목 `chore/wait-ci-review-limit`)이 앞 인계의 지시문으로 열려 `EnterWorktree(path)`로 바로 들어왔다. 사용자
+프롬프트는 앞 인계의 시작 프롬프트와 같다. `@coderabbitai review`를 남기고 브랜치의 `tools/wait_ci.py`로 기다리니
+`끝: 모두 통과. CodeRabbit: Review completed`로 끝났다(claude-review는 이번에 한도가 아니라 리뷰를 마쳤다). 두 봇 모두
+첫 회차다.
+
+- claude-review(Minor 3, Nit 1).
+  - 고친 것: `Review`의 `limit`·`unclear`·`retrying` 세 칸을 열거 `Outcome`(한도 아님, 한도, 가르지 못함, 다시 읽는 중)과
+    `detail` 한 칸으로 바꿨다. `CODING_STANDARDS.md`의 "갈래를 고르는 데이터클래스의 불리언 칸은 열거로 둔다"에 그대로
+    걸렸다.
+  - 고친 것: `ReviewLimits.review`의 `except` 몸통(실패 세기, 가르지 못함 기억, 반환 갈래)을 `_failed`로 뺐다. 질의가
+    캐시를 바꾸는 것(CQS)은 남겼다. 잡마다 한 번 읽고 기억하는 것이 그 객체의 일이고, 읽기와 판정을 두 메서드로 가르면
+    `wait`이 둘을 정한 차례로 불러야 하는 숨은 결합이 생긴다.
+  - 고친 것(Nit): "모두 한도일 때만 LIMIT"을 루프 앞 주석으로 밝혔다.
+  - 보류: `limit_message`와 `gh_run_summary._blocks`의 중복. import하지 못하는 까닭이 `LOG_PREFIX` 주석에 있고, 접두가
+    같다는 주장을 시험이 고정한다. 셀프 리뷰가 남긴 것과 같다.
+- CodeRabbit(Minor 1): 대기열 327 변이 열다섯에 `expect_output`이 없다. `.claude/rules/probes.md` 첫 항목대로 고쳤다.
+  일부러 없는 표지를 잠시 넣고 돌려 변이마다 실패 출력을 본 뒤, 고른 단언이 값과 함께 실패할 때만 나오는 문구(`E` 줄의
+  값, `>` 줄의 실패한 단언)를 골랐다. `--since origin/main` 열여섯 모두 표지까지 기대대로 빨강, `--check` 마흔넷 모두
+  원문 있음, 시험 58건 초록.
+- 변이 원문 일곱을 바뀐 코드에 맞췄다. "다 읽어 보고도 가르지 못하면 한도로 본다"의 원문은 16칸 들여쓴 같은 줄의 부분
+  문자열이라 두 번 맞아, 앞 줄의 끝을 더해 하나로 좁혔다.
+
+## 회고 (넷째 세션)
+
+후보 셋. 승인 하나, 기각 둘, 넘김 없음.
+
+- 승인(검사): 빨강을 기대한 새 변이에 표지가 없어도 알리는 검사가 없어, 변이 열다섯이 셀프 리뷰와 PR 직전 리뷰를 지나
+  CodeRabbit에서야 잡혔다. 규칙(`probes.md` 첫 항목)은 이미 있어 다음 층은 검사다. 대기열 350(1회차).
+- 기각: `bind_pr`에 저장소 주인을 짐작해 넣어 거부됐다. `gh pr view`가 낸 URL로 바로 고쳤고 되풀이되지 않았다.
+- 기각: 표지를 넣은 변이 실행이 한 번 600초를 넘겨 백그라운드로 넘어갔다(앞 회차는 1분 안). 다른 세션이 함께 도는
+  부하이고, `CLAUDE.md` 검증 명령 절이 이미 그때 다시 치지 않고 끝 알림을 기다리라고 한다.
+
+## 다음
+
+- 계정 한도가 풀린 뒤 PR #292의 카나리아 셋(`.scratch/harness/probes/canary/probes_rule_kill_and_snapshot.toml`,
+  `spec_reviewer_evidence_kinds.toml`, `tools_rule_scratch_probe_hook.toml`)의 실제 회차를 돌려 각 명세 머리 주석에 결과를
+  적는다(위 "이어받은 일").
+- 대기열 349(`gh_run_summary.py`의 `result` 칸), 350(표지 없는 새 빨강 변이를 알리는 검사)는 열린 행이다.
