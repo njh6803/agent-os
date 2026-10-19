@@ -39,8 +39,9 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한 쪽).
 - 판정 2, 깨끗하다. `status --porcelain --untracked-files=all` 의 stdout 과 stderr 가 모두 비어야
   한다. stderr 의 경고는 git 이 그 아래를 보지 못했다는 뜻이다. `status --ignored` 의 `!!` 항목은
-  다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 바이트가 같은 `.claude/settings.local.json`)뿐이어야
-  한다.
+  다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 같은 `.claude/settings.local.json`)뿐이어야 한다.
+  설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
+  `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
 - 판정 3, 주인이 없다. 제목이 그 브랜치인 실행 중 세션이 있으면 남긴다. 잠금 사유는
   `claude session <이름> (pid <N>)` 모양이고 그 pid 가 살아 있으면 남긴다. 죽었으면 `remove` 가 풀고
@@ -76,9 +77,15 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   보지 않고, 쥔 프로세스는 옮기기 직전에만 다시 본다(판정 4의 2).
 체크아웃되지 않은 로컬 브랜치는 판정 1을 보고, 병합된 PR 이 없어도 끝이 `origin/main` 에서 닿으면
 지운다(잃는 것은 이름뿐이다. `EnterWorktree` 가 만들고 세션이 떠난 `worktree-*` 브랜치 53개가 PR
-없이 남아 있었다, 일지 2026-10-15-06). `main`·`master` 는 지우지 않는다(루트가 다른 브랜치에 있을
-때 체크아웃되지 않은 브랜치로 보인다). `.claude/worktrees/` 아래인데 등록이 없는 폴더는 아래 "등록
-없는 폴더"로 가른다.
+없이 남아 있었다, 일지 2026-10-15-06). 지울 것이어도 판정 3의 제목은 본다. 그 브랜치가 제목인 실행
+중 세션이 있으면 남긴다(`judge_branch`, 대기열 286. 이것을 보지 않던 판이 실행 중인 세션
+`chore/mutate-followups` 의 브랜치를 지울 후보로 냈다, 일지 2026-10-16-15). 제목과 견줄 때도,
+체크아웃됐는지 워크트리 등록과 견줄 때도(`judge` 와 `remove-branch`) 대소문자를 가리지 않는다
+(`same_branch`. 글자 그대로 견준 판은 윈도에서 대소문자가 바뀌어 찍힌 체크아웃된 브랜치를 지울
+후보로 냈고 `remove-branch` 가 지웠다, 대기열 286 셀프 리뷰). 잠금과 쥔 프로세스는 워크트리의
+것이라 보지 않고, `remove-branch` 의 재판정은 `remove` 처럼 세션을 보지 않는다(아래 못 보는 것).
+`main`·`master` 는 지우지 않는다(루트가 다른 브랜치에 있을 때 체크아웃되지 않은 브랜치로
+보인다). `.claude/worktrees/` 아래인데 등록이 없는 폴더는 아래 "등록 없는 폴더"로 가른다.
 
 판정 4, 지운다(`remove`). 후보 하나를 다시 판정하고(세션과 쥔 프로세스는 빼고. 쥔 프로세스는
 1의 탐침과 2의 다시 거르기가 본다) 브랜치(분리 HEAD 는 `.detached`)와 HEAD 가 인자와 같을 때만, 아래
@@ -144,8 +151,8 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   를 LF 로 바꾼 이름도 본다(`.gitattributes` 의 `* text=auto eol=lf`). 텍스트인지는 git 의
   판별(NUL, 홀로 쓰인 CR, 인쇄 문자 128개당 비인쇄 문자 하나를 넘는 비율)을 흉내 낸다. 그 판별은
   git 소스를 읽지 않고 알고 있던 것이고(어림), 테스트가 입력 몇에서 `git hash-object` 와 같은 이름을
-  내는지 본다. 다시 만들 수 있는 파일과 루트와 바이트가 같은 설정 파일은 뺀다. 커밋에 없는 파일(새
-  파일, 고친 파일, `.env`)이 하나라도 있으면 남긴다.
+  내는지 본다. 다시 만들 수 있는 파일과 루트와 같은 설정 파일(`settings_equivalent`)은 뺀다. 커밋에
+  없는 파일(새 파일, 고친 파일, `.env`)이 하나라도 있으면 남긴다.
 - 쥔 프로세스(판정 3의 작업 디렉터리와 모듈)가 있으면 남긴다.
 `remove-stray` 는 그 자리가 `.claude/worktrees/` 바로 아래의 등록 없는 폴더인지 다시 보고, 판정을
 다시 내고, 판정 4의 1의 탐침을 거쳐, 쥔 프로세스까지 넣어 다시 판정한 뒤 폴더째 휴지통으로 옮기고
@@ -172,6 +179,14 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 - 탐침과 git 사이에 새로 생긴 점유와 파일. 다시 거른 뒤 git 이 지울 때까지의 틈이다.
 - 세션이 쓰던 워크트리인지. 제목, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의 CLI 를
   띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
+- 제목이 브랜치 이름과 다른 세션. 앞뒤 공백이나 꼬리(`(인계함)`)가 붙은 제목이 그렇고,
+  워크트리에서는 대소문자만 다른 제목도 그렇다(체크아웃되지 않은 브랜치에서는 `same_branch` 가 같은
+  이름으로 본다). 판정 1이 지울 것으로 낸 체크아웃되지 않은 브랜치는 그런 세션의 것이어도 대신 잡는
+  것이 없어 지울 후보로 찍힌다. 워크트리는 그 세션이 작업 디렉터리로 쥐었으면 판정 3의 쥔
+  프로세스가 남긴다.
+- `judge` 뒤에 열린 세션의 체크아웃되지 않은 브랜치. `remove-branch` 의 재판정은 세션을 보지
+  않고(그 하위 명령은 제목을 받지 않는다), 워크트리의 `remove` 처럼 옮기기 직전에 쥔 프로세스를
+  다시 보는 것도 없어 판정 1이 지울 것으로 낸 브랜치를 지운다.
 - 맥과 리눅스의 점유. 재지 않았다. 그 OS 는 열린 파일과 작업 디렉터리가 이름 바꾸기를 막지 않는
   것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다. 리눅스에서 작업 디렉터리로 쥔 것은
   판정 3과 판정 4의 2가 남긴다. 2 뒤에 들어온 것은 위의 탐침과 git 사이의 틈과 같은 결로 보지
@@ -245,6 +260,10 @@ WORKTREES_DIR = ".claude/worktrees"
 # 옆으로 옮겨 둔 무시된 항목이 쌓이는 자리. `WORKTREES_DIR` 바로 아래라 등록 없는 폴더 목록에서 뺀다
 TRASH_DIR = WORKTREES_DIR + "/.tidy-trash"
 SETTINGS = ".claude/settings.local.json"
+OVERRIDES = "skillOverrides"
+# `tools/hook_worktree_skill_overrides.py` 가 주 체크아웃의 local 설정에 적는 키의 접두(그 훅의
+# `KEY_PREFIX` 와 같다. 시험이 그 상수로 키를 지어 대 본다).
+WORKTREE_OVERRIDE_PREFIX = ".claude/worktrees/"
 PROBE_SUFFIX = ".tidy-probe"
 # 분리 HEAD 워크트리의 `remove` 인자. git 은 점으로 시작하는 브랜치 이름을 허락하지 않는다
 # (`git check-ref-format --branch .detached` 가 128. 한 글자 `@` 는 이 PC 의 git 2.32 가 허락했다,
@@ -303,6 +322,9 @@ _HOLDER_LABELS: dict[HolderKind, str] = {
     "cwd": "작업 디렉터리로 쥔 프로세스",
     "module": "모듈을 올린 프로세스",
 }
+# 판정 3에서 그 브랜치가 제목인 실행 중 세션 때문에 남긴 이유. 워크트리와 체크아웃되지 않은 브랜치가
+# 같이 쓴다
+_RUNNING_REASON = "그 브랜치가 제목인 세션이 돈다"
 # git 의 텍스트 판별에서 비인쇄로 세는 바이트. 32 아래에서 백스페이스·탭·ESC·폼 피드와 CR·LF 를 뺀
 # 것과 DEL 이다(`looks_text`)
 _NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (8, 9, 10, 12, 13, 27))
@@ -871,6 +893,15 @@ def same_path(left: str, right: str) -> bool:
     return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
 
 
+def same_branch(name: str | None, branch: str) -> bool:
+    """`for-each-ref` 가 찍은 브랜치 이름을 세션 제목이나 워크트리 등록과 대소문자를 가리지 않고
+    견준다. 윈도에서 낱개 참조의 폴더가 이미 다른 대소문자로 있으면 `for-each-ref` 는 그 폴더의
+    이름으로 찍고, 제목과 등록은 친 그대로다(`chore/x` 옆에 만든 `Chore/Upper` 가 `chore/Upper` 로
+    찍혔다. 테스트가 윈도에서 고정한다). 부르는 곳 셋 모두 맞으면 남기므로 잘못 맞아도 남기는
+    쪽이다(대기열 286)."""
+    return name is not None and name.casefold() == branch.casefold()
+
+
 def _without_long_prefix(path: str) -> str:
     """`\\\\?\\UNC\\` 와 `\\\\?\\` 머리를 뗀다. 그 머리째 작업 디렉터리를 옮긴 프로세스는 PEB 에
     머리가 남는다(PR 직전 버그 리뷰가 손으로 봤다)."""
@@ -991,7 +1022,7 @@ def judge(
     if extra:
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
     if wt.branch in running:
-        return verdict("keep", "그 브랜치가 제목인 세션이 돈다")
+        return verdict("keep", _RUNNING_REASON)
     pid = None if wt.locked is None else lock_pid(wt.locked)
     if wt.locked is not None and pid is None:
         return verdict("human", f"잠금 사유에 pid 가 없다: {wt.locked or '(사유 없음)'}")
@@ -1022,10 +1053,27 @@ def hold_for_strangers(
 
 
 def judge_branch(
-    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool = False
+    branch: str,
+    tip: str,
+    merged: Mapping[str, frozenset[str]],
+    running: Sequence[str],
+    *,
+    contained: bool = False,
 ) -> Verdict:
-    """체크아웃되지 않은 로컬 브랜치의 판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서
-    닿는다는 뜻이다. 병합된 PR 이 없어도 그러면 지운다. 잃는 것은 이름뿐이다."""
+    """체크아웃되지 않은 로컬 브랜치의 판정. 판정 1이 지울 것으로 낸 뒤에 판정 3의 제목을 본다.
+    `running` 은 실행 중 세션의 제목이고, 대소문자를 가리지 않고 견준다(`same_branch`, 대기열
+    286)."""
+    verdict = _judge_branch_merged(branch, tip, merged, contained=contained)
+    if verdict.action == "delete" and any(same_branch(title, branch) for title in running):
+        return replace(verdict, action="keep", reason=_RUNNING_REASON)
+    return verdict
+
+
+def _judge_branch_merged(
+    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool
+) -> Verdict:
+    """판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서 닿는다는 뜻이다. 병합된 PR 이 없어도
+    그러면 지운다. 잃는 것은 이름뿐이다."""
     if branch in PROTECTED_BRANCHES:
         return Verdict("keep", branch, "지우지 않는 브랜치다", branch, tip)
     heads = merged.get(branch)
@@ -1116,11 +1164,42 @@ def _checked(git: GitRunner, args: Sequence[str], cwd: Path) -> str:
     return result.stdout
 
 
-def _same_bytes(left: Path, right: Path) -> bool:
+def _same_settings(left: Path, right: Path) -> bool:
     try:
-        return left.read_bytes() == right.read_bytes()
+        return settings_equivalent(left.read_bytes(), right.read_bytes())
     except OSError:
         return False
+
+
+def settings_equivalent(left: bytes, right: bytes) -> bool:
+    """두 local 설정이 같은가. 바이트가 같거나, 둘 다 JSON 객체로 풀리고 `skillOverrides` 에서
+    `WORKTREE_OVERRIDE_PREFIX` 로 시작하는 키를 뺀 나머지가 같으면 같다. 그 키는
+    `tools/hook_worktree_skill_overrides.py` 가 주 체크아웃의 local 에 적고 다시 쓰는 것이라(대기열
+    274), 워크트리를 만들 때 받은 사본은 그 키와 서식만 달라도 다시 만들 수 있다. 풀리지 않으면
+    다르다고 본다(남기는 쪽)."""
+    if left == right:
+        return True
+    try:
+        first: Json = json.loads(left.decode("utf-8-sig"))
+        second: Json = json.loads(right.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(first, dict) or not isinstance(second, dict):
+        return False
+    return _without_worktree_overrides(first) == _without_worktree_overrides(second)
+
+
+def _without_worktree_overrides(settings: dict[str, Json]) -> dict[str, Json]:
+    overrides = settings.get(OVERRIDES)
+    if not isinstance(overrides, dict):
+        return settings
+    kept: dict[str, Json] = {
+        key: value
+        for key, value in overrides.items()
+        if not key.startswith(WORKTREE_OVERRIDE_PREFIX)
+    }
+    rest = {key: value for key, value in settings.items() if key != OVERRIDES}
+    return {**rest, OVERRIDES: kept} if kept else rest
 
 
 def _misplaced(*, exists: bool, toplevel: str | None) -> Facts:
@@ -1156,7 +1235,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
     if listed.returncode != 0 and not status_err:
         status_err = listed.stderr or f"exit {listed.returncode}"
     ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
-    settings_same = _same_bytes(root / SETTINGS, path / SETTINGS)
+    settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     return Facts(
         exists=True,
         toplevel=toplevel,
@@ -1227,10 +1306,11 @@ def gather_stray(root: Path, folder: Path, reachable: Callable[[], frozenset[str
 
 
 def _recreatable_file(root: Path, folder: Path, relative: str) -> bool:
-    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, 루트와 바이트가 같은 설정 파일)."""
+    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, 루트와 같은 설정 파일. 같음은
+    `settings_equivalent`)."""
     if relative.rsplit("/", 1)[-1] in RECREATABLE_FILES:
         return True
-    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)
+    return relative == SETTINGS and _same_settings(root / SETTINGS, folder / SETTINGS)
 
 
 def file_blob_ids(path: str) -> set[str]:
@@ -1378,8 +1458,9 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     contained = _contained_branches(root, ops.git)
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
-        if branch and branch not in checked_out:
-            print(_render_branch(judge_branch(branch, tip, merged, contained=branch in contained)))
+        if branch and not any(same_branch(name, branch) for name in checked_out):
+            verdict = judge_branch(branch, tip, merged, running, contained=branch in contained)
+            print(_render_branch(verdict))
     if trash_dir(root) is None:
         print(_trash_refused(root))
     leftovers = _trash_entries(root)
@@ -1683,14 +1764,16 @@ def _git_remove(root: Path, path: str, branch: str | None, git: GitRunner) -> in
 
 
 def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, ops: Ops) -> int:
-    if any(wt.branch == branch for wt in listing):
+    if any(same_branch(wt.branch, branch) for wt in listing):
         print(f"남겼다 {branch} — 체크아웃돼 있다")
         return 1
     current = ops.git(["rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"], root)
     if current.returncode != 0 or current.stdout.strip() != tip:
         print(f"남겼다 {branch} — judge 뒤에 바뀌었다: 지금 {current.stdout.strip() or '없음'}")
         return 1
-    verdict = judge_branch(branch, tip, ops.merged(root), contained=contains(root, tip, ops.git))
+    # `remove` 처럼 다시 판정할 때는 세션을 보지 않는다(모듈 독스트링)
+    merged = ops.merged(root)
+    verdict = judge_branch(branch, tip, merged, (), contained=contains(root, tip, ops.git))
     if verdict.action != "delete":
         print(f"남겼다 {branch} — 다시 판정했다: {verdict.reason}")
         return 1
@@ -1783,8 +1866,11 @@ def _still_stray(
 
 
 def _parser() -> argparse.ArgumentParser:
+    # 스킬 3은 독스트링을 파일 전체 Read 대신 `--help` 로 본다(대기열 271)
     parser = argparse.ArgumentParser(
-        prog="tidy_checkouts", description="병합된 워크트리와 로컬 브랜치를 판정하고 하나씩 지운다"
+        prog="tidy_checkouts",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True)
     judged = commands.add_parser("judge", help="워크트리와 로컬 브랜치를 판정해 찍는다")

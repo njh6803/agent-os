@@ -165,6 +165,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "EnterWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_worktree_skill_overrides.py",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "PreToolUse": [

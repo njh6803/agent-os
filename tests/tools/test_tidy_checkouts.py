@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import ctypes
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -21,7 +22,9 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from tools.hook_worktree_skill_overrides import KEY_PREFIX as HOOK_KEY_PREFIX
 from tools.tidy_checkouts import (
+    WORKTREE_OVERRIDE_PREFIX,
     Facts,
     Holder,
     Ops,
@@ -50,6 +53,7 @@ from tools.tidy_checkouts import (
     real_git,
     same_path,
     scan_modules,
+    settings_equivalent,
     tasklist_has,
     unrecreatable,
 )
@@ -431,6 +435,59 @@ def test_같은_이름의_파일은_다시_만들_수_있는_폴더가_아니다
     assert unrecreatable([".venv", "node_modules"], settings_same=True) == [".venv", "node_modules"]
 
 
+_HOOK_KEY = f"{HOOK_KEY_PREFIX}x:tdd"
+
+
+@pytest.mark.parametrize(
+    ("root", "worktree", "same"),
+    [
+        (b'{"env": {"A": "1"}}', b'{"env": {"A": "1"}}', True),
+        (
+            json.dumps(
+                {"env": {"A": "1"}, "skillOverrides": {_HOOK_KEY: "off"}}, indent=2
+            ).encode(),
+            b'{"env": {"A": "1"}}',
+            True,
+        ),
+        (b"{}", f'{{"skillOverrides": {{"{_HOOK_KEY}": "off"}}}}'.encode(), True),
+        (
+            f'{{"skillOverrides": {{"jira-start": "off", "{_HOOK_KEY}": "off"}}}}'.encode(),
+            b'{"skillOverrides": {"jira-start": "off"}}',
+            True,
+        ),
+        (b'{"permissions": {"allow": ["Bash(ls:*)"]}}', b"{}", False),
+        (b"{}", b'{"permissions": {"allow": ["Bash(ls:*)"]}}', False),
+        (b'{"skillOverrides": {"jira-start": "off"}}', b'{"skillOverrides": {}}', False),
+        (b"{}", b"{\xb0", False),
+        (b"[]", b"[ ]", False),
+    ],
+    ids=[
+        "바이트가_같다",
+        "루트에_훅의_키와_서식만_더했다",
+        "워크트리에만_훅의_키",
+        "다른_skillOverrides_키는_같다",
+        "루트에만_다른_권한",
+        "워크트리에만_다른_권한",
+        "다른_skillOverrides_키가_다르다",
+        "풀리지_않는다",
+        "객체가_아니다",
+    ],
+)
+def test_설정은_훅이_적는_워크트리_사본_키와_서식을_빼고_견준다(
+    root: bytes, worktree: bytes, *, same: bool
+) -> None:
+    """대기열 274 의 훅(`tools/hook_worktree_skill_overrides.py`)이 주 체크아웃의 local 설정에
+    `.claude/worktrees/` 키를 적고 다시 써도, 그 키 밖이 같은 워크트리 사본은 다시 만들 수 있다.
+    그 밖의 차이(권한, 다른 스킬 설정)와 풀리지 않는 파일은 지금처럼 남긴다."""
+    assert settings_equivalent(root, worktree) is same
+
+
+def test_설정에서_빼는_키의_접두는_훅이_적는_접두와_같다() -> None:
+    """훅끼리만 import 하지 않으므로 이 도구는 접두를 따로 둔다. 둘이 갈리면 지우는 판정이 조용히
+    좁아지거나 넓어진다."""
+    assert WORKTREE_OVERRIDE_PREFIX == HOOK_KEY_PREFIX
+
+
 # --- 판정 ---------------------------------------------------------------------------------------
 
 
@@ -640,23 +697,48 @@ def test_제목이_체크아웃된_브랜치면_다른_워크트리는_그대로
 
 
 def test_체크아웃되지_않은_브랜치는_병합된_PR_머리와_같을_때만_지운다() -> None:
-    assert judge_branch("chore/x", _HEAD, _MERGED).action == "delete"
-    assert judge_branch("chore/x", _OLD, _MERGED).action == "human"
-    assert judge_branch("chore/y", _HEAD, _MERGED).action == "keep"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ()).action == "delete"
+    assert judge_branch("chore/x", _OLD, _MERGED, ()).action == "human"
+    assert judge_branch("chore/y", _HEAD, _MERGED, ()).action == "keep"
 
 
 def test_병합된_PR_이_없어도_커밋이_모두_origin_main_에_있는_브랜치는_지운다() -> None:
     """2026-10-15 에 `EnterWorktree` 가 만든 `worktree-*` 브랜치 53개가 PR 없이 남아 있었다.
     끝이 `origin/main` 에서 닿으면 잃는 것은 이름뿐이다. `main` 은 루트가 다른 브랜치에 있을 때
     체크아웃되지 않은 브랜치로 보여도 지우지 않는다."""
-    gone = judge_branch("worktree-x", _HEAD, {}, contained=True)
+    gone = judge_branch("worktree-x", _HEAD, {}, (), contained=True)
     assert gone.action == "delete"
     assert "origin/main" in gone.reason
-    assert judge_branch("worktree-x", _HEAD, {}, contained=False).action == "keep"
-    assert judge_branch("main", _HEAD, {}, contained=True).action == "keep"
-    assert judge_branch("master", _HEAD, {}, contained=True).action == "keep"
+    assert judge_branch("worktree-x", _HEAD, {}, (), contained=False).action == "keep"
+    assert judge_branch("main", _HEAD, {}, (), contained=True).action == "keep"
+    assert judge_branch("master", _HEAD, {}, (), contained=True).action == "keep"
     # 병합된 PR 의 머리와 다른 끝은 origin/main 에 있어도 사람이 본다
-    assert judge_branch("chore/x", _OLD, _MERGED, contained=True).action == "human"
+    assert judge_branch("chore/x", _OLD, _MERGED, (), contained=True).action == "human"
+
+
+def test_체크아웃되지_않은_브랜치도_그_브랜치가_제목인_세션이_돌면_남긴다() -> None:
+    """대기열 286. 2026-10-16 에 실행 중인 세션 `chore/mutate-followups` 의 브랜치를 지울 후보로
+    냈다. 지우는 두 길(병합된 PR 의 머리, origin/main 에 든 끝) 모두 남긴다. 워크트리처럼 판정 1이
+    지울 것으로 낸 뒤에 보므로, 판정 1이 남기거나 넘긴 것은 그 이유를 그대로 든다."""
+    by_pr = judge_branch("chore/x", _HEAD, _MERGED, ("chore/x",))
+    assert by_pr.action == "keep", by_pr
+    assert by_pr.reason == "그 브랜치가 제목인 세션이 돈다"
+    assert judge_branch("worktree-x", _HEAD, {}, ("worktree-x",), contained=True).action == "keep"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ("chore/y",)).action == "delete"
+    assert judge_branch("chore/x", _OLD, _MERGED, ("chore/x",)).action == "human"
+    unmerged = judge_branch("chore/y", _HEAD, _MERGED, ("chore/y",))
+    assert unmerged.action == "keep"
+    assert "병합된 PR 이 없고" in unmerged.reason
+
+
+def test_다른_제목은_보지_않고_대소문자만_다르면_브랜치에서는_같다고_본다() -> None:
+    """못 보는 것. 앞뒤 공백이나 꼬리가 붙은 제목은 다른 이름으로 본다. 대소문자만 다른 제목은
+    체크아웃되지 않은 브랜치에서는 같은 이름으로 보아 남기고 워크트리에서는 다른 이름으로 본다."""
+    for title in (" chore/x", "chore/x ", "chore/x (인계함)"):
+        assert judge_branch("chore/x", _HEAD, _MERGED, (title,)).action == "delete", title
+        assert judge(_WT, _FACTS, _MERGED, (title,), _죽었다, ()).action == "delete", title
+    assert judge(_WT, _FACTS, _MERGED, ("Chore/X",), _죽었다, ()).action == "delete"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ("Chore/X",)).action == "keep"
 
 
 # --- 등록 없는 폴더(대기열 148) -------------------------------------------------------------------
@@ -931,6 +1013,26 @@ def test_judge_는_지울_후보와_명령을_찍는다(repo: Path, capsys: pyte
     assert not any("등록 없는 폴더" in line for line in lines), out
 
 
+def test_judge_는_루트에_훅의_키만_더한_설정을_든_워크트리를_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """워크트리를 만들 때 받은 local 설정 사본은, 그 뒤 훅이 루트에 `.claude/worktrees/` 키를 적어도
+    다시 만들 수 있는 것이다(대기열 274). 이 저장소처럼 `.claude/` 에 추적하는 파일이 있어야 git 이
+    폴더째가 아니라 그 설정 파일 하나를 무시된 항목으로 낸다."""
+    (repo / ".claude").mkdir(exist_ok=True)
+    (repo / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    _git("add", ".claude/settings.json", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "settings", cwd=repo)
+    path, head = _add(repo, "done")
+    (path / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
+    hooked = {"skillOverrides": {f"{HOOK_KEY_PREFIX}done:tdd": "off"}}
+    (repo / ".claude").mkdir(exist_ok=True)
+    (repo / ".claude" / "settings.local.json").write_text(json.dumps(hooked), encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({"chore/done": frozenset({head})})) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("지운다"), done
+
+
 def test_judge_는_실행_중인_세션의_제목을_받는다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1078,6 +1180,16 @@ def _stray(repo: Path, name: str = "stray") -> Path:
 
 def _stray_line(out: str) -> str:
     return next(line for line in out.splitlines() if "/stray" in line)
+
+
+def test_judge_는_루트에_훅의_키만_더한_설정을_든_등록_없는_폴더를_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stray(repo)
+    hooked = {"skillOverrides": {f"{HOOK_KEY_PREFIX}stray:tdd": "off"}}
+    (repo / ".claude" / "settings.local.json").write_text(json.dumps(hooked), encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
 
 
 def test_judge_는_내용이_모두_커밋에_있는_등록_없는_폴더를_지울_후보로_찍는다(
@@ -1779,6 +1891,63 @@ def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_�
     assert _git("branch", "--list", "ahead", cwd=repo) != ""
 
 
+def test_judge_는_실행_중인_세션의_제목인_체크아웃되지_않은_브랜치를_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 286. 병합된 PR 로 지울 브랜치와 PR 없이 origin/main 에 든 브랜치 모두 남기고
+    `remove-branch` 를 찍지 않는다. 제목이 다른 세션만 돌면 그대로 지울 후보다."""
+    _git("branch", "chore/loose", cwd=repo)
+    _git("branch", "worktree-x", cwd=repo)
+    _git("branch", "worktree-y", cwd=repo)
+    tip = _git("rev-parse", "chore/loose", cwd=repo)
+    argv = ["judge", "--running", "chore/loose", "--running", "worktree-x"]
+    assert main(argv, cwd=repo, ops=_ops({"chore/loose": frozenset({tip})})) == 0
+    lines = capsys.readouterr().out.splitlines()
+    for name in ("chore/loose", "worktree-x"):
+        line = next(line for line in lines if f" {name} " in line)
+        assert line == f"브랜치를 남긴다 {name} — 그 브랜치가 제목인 세션이 돈다", line
+    other = next(line for line in lines if " worktree-y " in line)
+    assert other.startswith("브랜치를 지운다"), other
+
+
+def test_judge_는_대소문자가_바뀌어_찍힌_브랜치도_그_제목의_세션이_돌면_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """윈도에서 낱개 참조의 폴더(`refs/heads/chore/`)가 이미 있으면 `Chore/Upper` 가 그 폴더 아래에
+    들어가 `for-each-ref` 가 `chore/Upper` 로 찍는다. 세션 제목은 친 그대로다. 대소문자를 가린
+    판은 그 세션의 브랜치를 지울 후보로 냈다(대기열 286 의 반박 시험)."""
+    _git("branch", "chore/x", cwd=repo)
+    _git("branch", "Chore/Upper", cwd=repo)
+    if sys.platform == "win32":
+        listed = _git("for-each-ref", "refs/heads", "--format=%(refname:short)", cwd=repo)
+        assert "chore/Upper" in listed.splitlines(), listed
+    assert main(["judge", "--running", "Chore/Upper"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/Upper" in line)
+    assert line.startswith("브랜치를 남긴다"), line
+
+
+def test_judge_와_remove_branch_는_대소문자가_바뀌어_찍힌_체크아웃된_브랜치를_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """윈도에서 `Chore/Upper` 워크트리의 등록은 친 그대로 찍히고 `for-each-ref` 는 `chore/Upper` 로
+    찍는다. 글자 그대로 견준 판은 그 브랜치를 체크아웃되지 않은 것으로 보아 지울 후보로 냈고,
+    `remove-branch` 가 지워 커밋하지 않은 파일이 든 워크트리의 HEAD 가 끊겼다(git 의 `branch -D` 도
+    대소문자를 가려 막지 않았다. 대기열 286 셀프 리뷰 명세 축)."""
+    _git("branch", "chore/x", cwd=repo)
+    path = repo / ".claude" / "worktrees" / "up"
+    _git("worktree", "add", "-b", "Chore/Upper", str(path), cwd=repo)
+    (path / "work.txt").write_text("x", encoding="utf-8")
+    tip = _git("rev-parse", "HEAD", cwd=path)
+    if sys.platform == "win32":
+        listed = _git("for-each-ref", "refs/heads", "--format=%(refname:short)", cwd=repo)
+        assert "chore/Upper" in listed.splitlines(), listed
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert not [line for line in lines if line.startswith("브랜치를") and "/Upper" in line], lines
+    assert main(["remove-branch", "chore/Upper", tip], cwd=repo, ops=_ops({})) == 1
+    assert _git("rev-parse", "HEAD", cwd=path) == tip
+
+
 def test_judge_는_git_없는_prunable_폴더의_분리_HEAD_가_origin_main_에_없으면_넘긴다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2095,6 +2264,20 @@ def test_remove_branch_는_체크아웃된_브랜치를_지우지_않는다(repo
     assert main(["remove-branch", "chore/done", head], cwd=repo, ops=_ops(merged)) == 1
 
 
+def test_remove_branch_는_judge_가_세션으로_남긴_브랜치도_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것. `judge` 뒤에 그 브랜치가 제목인 세션이 열려도 `remove-branch` 의 재판정은 세션을
+    보지 않고(제목을 받지 않는다), 워크트리의 `remove` 처럼 대신 잡는 쥔 프로세스도 없어 지운다."""
+    _git("branch", "chore/late", cwd=repo)
+    tip = _git("rev-parse", "chore/late", cwd=repo)
+    assert main(["judge", "--running", "chore/late"], cwd=repo, ops=_ops({})) == 0
+    kept = next(line for line in capsys.readouterr().out.splitlines() if " chore/late " in line)
+    assert kept.startswith("브랜치를 남긴다"), kept
+    assert main(["remove-branch", "chore/late", tip], cwd=repo, ops=_ops({})) == 0
+    assert _git("branch", "--list", "chore/late", cwd=repo) == ""
+
+
 def test_CLI_를_하위_프로세스로_부르면_인자_오류에_2로_끝난다() -> None:
     result = subprocess.run(
         [sys.executable, str(_TOOL), "remove"],
@@ -2105,3 +2288,20 @@ def test_CLI_를_하위_프로세스로_부르면_인자_오류에_2로_끝난�
     )
     assert result.returncode == 2
     assert "usage" in result.stderr
+
+
+def test_help_는_git_밖에서도_모듈_독스트링을_줄바꿈_그대로_찍는다(tmp_path: Path) -> None:
+    # 스킬 3은 독스트링을 파일 Read 가 아니라 이 출력으로 본다(대기열 271)
+    doc = tidy_checkouts.__doc__
+    assert doc is not None
+    result = subprocess.run(
+        [sys.executable, str(_TOOL), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert doc.strip() in result.stdout
