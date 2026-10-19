@@ -2382,19 +2382,21 @@ def main_checkout_of(checkout: Path) -> Path:
 
     git을 띄우지 않고 `checkout/.git`을 읽는다. 폴더면 그것이, 파일이면 `gitdir:`이 가리키는 폴더의
     `commondir`(없으면 그 폴더)가 공용 디렉터리다(선례 `tools/hook_bash_commit_msg.py`의
-    `_common_dir`). 주 저장소, 연결된 워크트리, `--separate-git-dir` 저장소에서
-    `git rev-parse --git-common-dir`의 부모와 같다. git과 달리 상위 폴더로 올라가며 찾지 않고
-    `GIT_DIR`을 따르지 않는다. 작업 스케줄러는 이 도구를 BELOW_NORMAL로 돌려, CPU가 꽉 찼을 때 띄운
-    git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-24,
+    `_common_dir`. 그 함수와 달리 읽지 못하면 `None`이 아니라 `OSError`이고, `gitdir: `의 공백을
+    요구하며 빈 `commondir`과 없는 폴더를 거른다). 주 저장소, 연결된 워크트리, `--separate-git-dir`
+    저장소에서 `git rev-parse --git-common-dir`의 부모와 같다. git과 달리 상위 폴더로 올라가며 찾지
+    않고 `GIT_DIR`을 따르지 않는다. 작업 스케줄러는 이 도구를 BELOW_NORMAL로 돌려, CPU가 꽉 찼을 때
+    띄운 git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-24,
     `.scratch/token-usage/probes/git_priority_load.py`). `.git`을 읽지 못하거나 `gitdir:` 줄이
     없거나, 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다."""
     dot_git = checkout / ".git"
     if dot_git.is_dir():
         return checkout
     text = _read_utf8(dot_git)
-    if not text.startswith("gitdir: "):
+    rest = text.removeprefix("gitdir: ")
+    if rest == text:
         raise OSError(f"{dot_git}에 gitdir: 줄이 없다")
-    gitdir = checkout / text.removeprefix("gitdir: ")
+    gitdir = checkout / rest
     if not gitdir.is_dir():
         raise OSError(f"{dot_git}의 gitdir: 폴더가 없다: {gitdir}")
     common_file = gitdir / "commondir"

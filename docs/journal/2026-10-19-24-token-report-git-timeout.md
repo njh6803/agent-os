@@ -199,6 +199,17 @@ PR 직전 리뷰에 밀 주장(셀프 리뷰 때 나열한 것): `main_checkout_
 바로 앞 커밋의 web-verify는 630초에 초록이었다(이번 판은 736초). 부하 아래의 시간 초과로 보고 `SKIP=web-verify`로 커밋해
 web은 CI의 잡에 맡겼다.
 
+PR #307을 열었다. 첫 헤드(`5c1cc95`)의 CI 여섯은 모두 초록이었고(python·web 잡 포함), claude-review 첫 회차는
+Critical·Major 없이 Minor 둘과 Nit 하나였다. 셋 다 받아들였다. `main_checkout_of` 독스트링에 `_common_dir`과 갈라지는
+점(`OSError`, `gitdir: `의 공백, 빈 `commondir`과 없는 폴더)을 적었고, `.git`이 폴더인지만 보던 시험의 이름을
+`test_이_저장소의_주_체크아웃은_dot_git이_폴더인_곳이다`로 좁혔고, `removeprefix` 결과를 한 번 받아 분기와 쓰는 자리를
+묶었다. 그 사이 main이 움직여 다시 충돌이 났다.
+
+다시 합친 병합 커밋(대기열 366과 main의 369~371을 번호 순으로 남겼다)의 pre-commit은 pytest만 빨갰다. 실패는 이 변경이
+건드리지 않은 `tests/tools/test_mutate.py::test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_출력은_잠시만_기다린다`의
+심장 박동 단언이고, 같은 판의 run-hooks가 481초(앞 판 125초)였다. 그 시험만 홀로 돌리니 통과했다(381초). 바뀐 시험 파일
+92개는 반영 직후 홀로 통과했다. 그래서 `SKIP=pytest`로 커밋하고 pytest는 CI의 `python` 잡에 맡긴다. 대기열 306의 회차다.
+
 > 사용자: (이 세션의 첫 메시지는 위 "인계(커밋 뒤)" 절의 지시문 그대로다)
 
 ## 회고

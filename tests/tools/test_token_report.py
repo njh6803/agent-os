@@ -968,7 +968,7 @@ def test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든
     assert "경보 없음" in t.요약()
 
 
-def test_주_체크아웃은_git_공용_디렉터리의_부모다() -> None:
+def test_이_저장소의_주_체크아웃은_dot_git이_폴더인_곳이다() -> None:
     # 워크트리에서 돌면 워크트리가 아니라 주 체크아웃(.git이 폴더인 곳)이 나온다.
     assert (main_checkout() / ".git").is_dir()
 
