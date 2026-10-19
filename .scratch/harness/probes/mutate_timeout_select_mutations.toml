@@ -199,8 +199,14 @@ tests = ["tests/tools/test_mutate.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''    if inside.returncode != 0 or inside.stdout.strip() != "true":'''
-new = '''    if False:'''
+old = '''
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise SpecError(f"--since {ref}: 표가 든 {where} 가 git 저장소 안이 아니다")
+'''
+new = '''
+    if False:
+        raise SpecError(f"--since {ref}: 표가 든 {where} 가 git 저장소 안이 아니다")
+'''
 
 [[mutation]]
 name = "고를 것이 없어도 돌린다"
