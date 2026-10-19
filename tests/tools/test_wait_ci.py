@@ -11,7 +11,7 @@ CodeRabbit 상태 이력에 나온 그대로다 (`.scratch/harness/probes/ci_wai
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import pytest
 from tools.wait_ci import (
@@ -21,15 +21,20 @@ from tools.wait_ci import (
     EXIT_PASSED,
     EXIT_TIMED_OUT,
     EXIT_USAGE,
+    LOG_PREFIX,
     FetchError,
     Json,
     Options,
     fetch_pr,
+    job_limit,
     judge,
+    limit_message,
     main,
     parse_snapshot,
     wait,
 )
+
+from tools import gh_run_summary
 
 HEAD = "1c98d6400000000000000000000000000000000a"
 OLD_HEAD = "88038b8000000000000000000000000000000000"
@@ -40,7 +45,9 @@ COMPLETED = "Review completed"
 RATE_LIMITED = "Review rate limited"
 
 
-def run(name: str, status: str = "COMPLETED", conclusion: str = "SUCCESS") -> Json:
+def run(
+    name: str, status: str = "COMPLETED", conclusion: str = "SUCCESS", job: str = "117440173217"
+) -> Json:
     return {
         "__typename": "CheckRun",
         "name": name,
@@ -48,6 +55,7 @@ def run(name: str, status: str = "COMPLETED", conclusion: str = "SUCCESS") -> Js
         "conclusion": conclusion if status == "COMPLETED" else "",
         "startedAt": "2026-10-13T04:41:24Z",
         "completedAt": "2026-10-13T04:44:17Z" if status == "COMPLETED" else "0001-01-01T00:00:00Z",
+        "detailsUrl": f"https://github.com/njh6803/agent-os/actions/runs/39047880157/job/{job}",
     }
 
 
@@ -173,11 +181,25 @@ def test_같은_이름이_둘이면_끝나지_않은_쪽과_실패한_쪽을_든
 class Script:
     """조회마다 정해 둔 응답을 차례로 내고(마지막 것은 되풀이한다), 잠든 시간만큼 시계를 민다."""
 
-    def __init__(self, *responses: Json | FetchError) -> None:
+    def __init__(
+        self,
+        *responses: Json | FetchError,
+        limits: Sequence[str | FetchError | None] = (None,),
+    ) -> None:
         self.responses = list(responses)
+        self.limits = list(limits)
         self.now = 0.0
         self.sleeps: list[float] = []
         self.fetched: list[str] = []
+        self.classified: list[str] = []
+
+    def classify(self, job: str) -> str | None:
+        """claude-review 잡의 한도 문구. 정해 둔 것을 차례로 낸다(마지막 것은 되풀이한다)."""
+        self.classified.append(job)
+        limit = self.limits.pop(0) if len(self.limits) > 1 else self.limits[0]
+        if isinstance(limit, FetchError):
+            raise limit
+        return limit
 
     def fetch(self, number: str) -> Json:
         self.fetched.append(number)
@@ -211,7 +233,9 @@ def waited(script: Script, opts: Options | None = None) -> tuple[int, str]:
     깨어난 세션은 그 줄을 결과와 다음 할 일로 읽는다(next-session 1단계).
     """
     fetch: Callable[[str], Json] = script.fetch
-    code, lines = wait("221", HEAD, opts or options(), fetch, script.sleep, script.clock)
+    code, lines = wait(
+        "221", HEAD, opts or options(), fetch, script.sleep, script.clock, script.classify
+    )
     assert lines[-1].startswith("끝:")
     return code, "\n".join(lines)
 
@@ -306,6 +330,264 @@ def test_실패가_있으면_1이고_실패한_이름을_찍는다() -> None:
     assert code == EXIT_FAILED
     assert "python FAILURE" in out
     assert out.endswith("끝: 실패 python, verify")
+
+
+LIMIT = "You've hit your weekly limit · resets Oct 18, 9pm (UTC)"
+
+
+def job_log(*body: str) -> list[str]:
+    """`gh run view --job <잡> --log` 의 줄 모양. 실행 39047880157(PR #292)의 claude-review 잡에서
+    결과 블록의 판정에 쓰는 키만 남겼다."""
+    prefix = "claude-review\tRun Claude Code Review\t2026-10-17T16:05:46.9839275Z "
+    return [f"{prefix}{line}" for line in body]
+
+
+def result_block(*, is_error: str, result: str, reason: str = "api_error") -> list[str]:
+    return job_log(
+        "{",
+        '  "permission_denials": [],',
+        f'  "terminal_reason": "{reason}",',
+        f'  "is_error": {is_error},',
+        '  "num_turns": 1,',
+        '  "subtype": "success",',
+        '  "api_error_status": 429,',
+        f'  "result": {result},',
+        '  "type": "result"',
+        "}",
+    )
+
+
+def test_결과_블록이_오류이고_주간_한도_문구면_그_문구를_낸다() -> None:
+    lines = [
+        *job_log("##[group]Run anthropics/claude-code-action@v1"),
+        *result_block(is_error="true", result=f'"{LIMIT}"'),
+        *job_log(
+            "##[error]Action failed with error: Claude execution failed: result is_error:true"
+        ),
+    ]
+    assert limit_message(lines) == LIMIT
+
+
+@pytest.mark.parametrize(
+    "lines",
+    [
+        # 리뷰를 마친 뒤 다른 단계에서 빨갰다. 결과 블록은 오류가 아니다.
+        result_block(is_error="false", result=f'"{LIMIT}"'),
+        # 오류이고 한도 문구지만 API 오류로 끝나지 않았다(본 한도 실행 셋은 모두 api_error 였다).
+        result_block(is_error="true", result=f'"{LIMIT}"', reason="completed"),
+        # 한도가 아닌 API 오류.
+        result_block(is_error="true", result='"API Error: 500 Internal server error"'),
+        # 주간 한도 밖의 한도 문구는 진짜 실패로 센다(독스트링의 못 보는 것). 지어낸 문구다.
+        result_block(is_error="true", result='"You\'ve hit your session limit · resets 3pm"'),
+        # 결과가 문자열이 아니다.
+        result_block(is_error="true", result="null"),
+        # Claude 단계 전에 끝났다(체크아웃 실패 등).
+        job_log("##[error]Process completed with exit code 128."),
+        # 한도 문구가 결과 블록 밖(Read 로 읽은 파일 원문 등)에만 있다.
+        job_log(f"  {LIMIT}"),
+    ],
+)
+def test_한도가_아닌_빨강은_문구를_내지_않는다(lines: list[str]) -> None:
+    assert limit_message(lines) is None
+
+
+def test_잡_로그의_접두는_gh_run_summary와_같은_모양으로_뗀다() -> None:
+    # 이 도구는 스크립트로 돌아 tools.gh_run_summary 를 import 하지 못해 같은 패턴을 다시 짰다.
+    assert LOG_PREFIX.pattern == gh_run_summary.PREFIX.pattern
+
+
+def test_빨간_CheckRun의_detailsUrl에서_잡_번호를_읽는다() -> None:
+    snapshot = parse_snapshot(
+        payload(
+            run("claude-review", conclusion="FAILURE", job="111"),
+            run("claude-review", conclusion="FAILURE", job="222"),
+            run("verify"),
+            *coderabbit(),
+        )
+    )
+    # 같은 이름의 빨간 실행은 모두 담고, 통과한 검사는 담지 않는다.
+    assert snapshot.failed_jobs == {"claude-review": ("111", "222")}
+
+
+def test_claude_review가_한도로_빨가면_실패로_세지_않고_CodeRabbit을_마저_기다린다() -> None:
+    # PR #292 에서 리뷰를 요청한 직후 띄운 대기가 `끝: 실패 claude-review` 로 끝났다(대기열 327).
+    limited = run("claude-review", conclusion="FAILURE")
+    script = Script(
+        payload(run("verify"), limited, *coderabbit(description=SKIPPED)),
+        payload(
+            run("verify"), limited, *coderabbit(state="PENDING", description="Review in progress")
+        ),
+        payload(run("verify"), limited, *coderabbit()),
+        limits=[LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_PASSED
+    assert script.sleeps == [30.0, 30.0]
+    last = out.splitlines()[-1]
+    assert "claude-review" in last
+    assert "리뷰 없음" in last
+    assert LIMIT in last
+    assert f"CodeRabbit: {COMPLETED}" in last
+    # 같은 잡의 로그는 한 번만 읽는다.
+    assert script.classified == ["117440173217"]
+
+
+def test_claude_review의_진짜_빨강은_곧바로_실패로_끝난다() -> None:
+    script = Script(
+        payload(
+            run("verify"),
+            run("claude-review", conclusion="FAILURE"),
+            *coderabbit(description=SKIPPED),
+        ),
+        limits=[None],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert script.sleeps == []
+
+
+def test_한도인지_가르지_못하면_실패로_세고_이유를_적는다() -> None:
+    script = Script(
+        payload(
+            run("verify"),
+            run("claude-review", conclusion="FAILURE"),
+            *coderabbit(description=SKIPPED),
+        ),
+        limits=[FetchError("gh 가 60초 안에 돌아오지 않았다")],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert "가르지 못했다: 잡 117440173217 로그를 3번 읽지 못했다" in out
+    assert "gh 가 60초 안에 돌아오지 않았다" in out
+    # PR 조회처럼 max_fetch_errors(3) 번까지 읽어 본다.
+    assert script.classified == ["117440173217"] * 3
+    assert script.sleeps == [30.0, 30.0]
+
+
+def test_가르지_못한_잡은_다른_검사를_기다리는_동안_다시_읽지_않는다() -> None:
+    # 다른 검사가 아직 돌면 가르지 못한 뒤에도 대기가 이어진다. 그동안 조회마다 다시 읽으면
+    # 실패마다 CALL_TIMEOUT 을 쓰고, 나중에 읽히면 낸 판정이 뒤집힌다(PR 직전 bug-perf-review).
+    red = run("claude-review", conclusion="FAILURE")
+    running = payload(run("verify", status="IN_PROGRESS"), red, *coderabbit())
+    script = Script(
+        running,
+        running,
+        running,
+        running,
+        running,
+        payload(run("verify"), red, *coderabbit()),
+        limits=[FetchError("gh 가 60초 안에 돌아오지 않았다")] * 3 + [LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert "가르지 못했다: 잡 117440173217 로그를 3번 읽지 못했다" in out
+    assert script.classified == ["117440173217"] * 3
+
+
+def test_잡_로그_읽기가_한_번_실패해도_다음_조회에서_다시_읽어_한도를_가른다() -> None:
+    # 나머지 검사가 모두 끝나 있어도 한 번의 gh 실패로 곧바로 실패로 끝나지 않는다.
+    script = Script(
+        payload(run("verify"), run("claude-review", conclusion="FAILURE"), *coderabbit()),
+        limits=[FetchError("gh 가 60초 안에 돌아오지 않았다"), LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_PASSED
+    assert f"claude-review: 계정 한도로 리뷰 없음({LIMIT})" in out.splitlines()[-1]
+    assert script.sleeps == [30.0]
+
+
+def test_잡_주소가_없으면_가르지_못한_것으로_실패로_센다() -> None:
+    no_url = run("claude-review", conclusion="FAILURE")
+    assert isinstance(no_url, dict)
+    del no_url["detailsUrl"]
+    script = Script(payload(run("verify"), no_url, *coderabbit()), limits=[LIMIT])
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert "가르지 못했다: 롤업에 잡 주소(detailsUrl)가 없다" in out
+    assert script.classified == []
+
+
+@pytest.mark.parametrize("limits", [[None, LIMIT], [LIMIT, None]])
+def test_같은_이름의_빨간_잡이_둘이면_모두_한도일_때만_뺀다(
+    limits: list[str | None],
+) -> None:
+    # 진짜 실패와 한도로 빨간 재실행이 함께 남으면, 롤업의 순서와 상관없이 실패다.
+    script = Script(
+        payload(
+            run("verify"),
+            run("claude-review", conclusion="FAILURE", job="111"),
+            run("claude-review", conclusion="FAILURE", job="222"),
+            *coderabbit(),
+        ),
+        limits=limits,
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 claude-review"
+    assert "리뷰 없음" not in out
+
+
+def test_같은_이름의_빨간_잡이_모두_한도면_뺀다() -> None:
+    script = Script(
+        payload(
+            run("verify"),
+            run("claude-review", conclusion="FAILURE", job="111"),
+            run("claude-review", conclusion="FAILURE", job="222"),
+            *coderabbit(),
+        ),
+        limits=[LIMIT],
+    )
+    code, _ = waited(script)
+    assert code == EXIT_PASSED
+    assert script.classified == ["111", "222"]
+
+
+def test_claude_review가_한도여도_다른_실패가_있으면_그것만_실패로_든다() -> None:
+    script = Script(
+        payload(
+            run("verify", conclusion="FAILURE"),
+            run("claude-review", conclusion="FAILURE"),
+            *coderabbit(),
+        ),
+        limits=[LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 verify"
+    assert LIMIT in out
+
+
+def test_다른_검사가_빨가면_한도를_가르지_않는다() -> None:
+    # 로그를 읽는 것은 claude-review 뿐이다. 다른 검사의 빨강은 한도 문구가 있어도 실패다.
+    script = Script(
+        payload(
+            run("verify", conclusion="FAILURE"), run("claude-review"), *coderabbit(), head=HEAD
+        ),
+        limits=[LIMIT],
+    )
+    code, out = waited(script)
+    assert code == EXIT_FAILED
+    assert out.splitlines()[-1] == "끝: 실패 verify"
+    assert script.classified == []
+
+
+def test_잡_로그는_시간_제한을_두고_읽고_실패하면_조회_실패로_센다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, CALL_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+    with pytest.raises(FetchError):
+        job_limit("117440173217")
+    assert seen == [CALL_TIMEOUT]
 
 
 def test_PR_헤드가_로컬_HEAD로_바뀌기를_기다린다() -> None:
