@@ -177,7 +177,7 @@ new = '''
 name = "그 판에 없는 블롭을 오류로 본다"
 tests = ["tests/tools/test_mutate.py"]
 expect = "red"
-expect_output = ["FAILED tests/tools/test_mutate.py::test_색인_확인은_어느_판도_추적하지_않는_파일을_작업_트리에서_읽는다"]
+expect_output = ["FAILED tests/tools/test_mutate.py::test_색인_확인은_원문이_든_파일을_지우거나_옮긴_커밋도_알린다[지운다]"]
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''
