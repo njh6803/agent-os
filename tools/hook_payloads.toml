@@ -821,6 +821,23 @@ expect = "silent"
 note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아니다(대기열 284)"
 payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
+# --- hook_choice_facts (PreToolUse AskUserQuestion) ---
+# 첫째 입력은 SDK 제어 모드 탐침(`.scratch/harness/probes/choice_facts/probe.py`, claude 2.1.300)의 훅이 받은 AskUserQuestion 입력이다.
+# 이 훅은 AskUserQuestion 마다 알려, 받는 입력 가운데 침묵할 것이 없다. 침묵 사례는 다른 도구의 실제 입력(위 grill-with-docs 의 첫째
+# 사례)으로 도구 이름으로 거르는 축을 잰다. 매처를 넓히면 그 입력이 온다.
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "context"
+note = "수가 든 설명이 있는 선택 화면 — 그 문장을 라벨과 함께 옮긴다"
+contains = ["설명에 든 사실을 대 보았는지", "빨강: 서버 하나에 약 4.5초가 든다."]
+payload = { tool_name = "AskUserQuestion", tool_input = { questions = [ { question = "어느 쪽으로 할까요?", header = "탐침", options = [ { label = "빨강", description = "서버 하나에 약 4.5초가 든다." }, { label = "파랑", description = "지금 코드는 그대로 둔다." } ], multiSelect = false } ] } }
+
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "silent"
+note = "선택 화면이 아닌 도구 — 매처를 넓혀도 도구 이름으로 거른다"
+payload = { tool_name = "Skill", tool_input = { skill = "grill-with-docs", args = "admin-foo" } }
+
 # --- hook_security_review_journal (PreToolUse Skill) ---
 # 첫째와 둘째는 이 PC의 트랜스크립트에 있던 Skill 입력이다. 첫째 꼴이 136번, 둘째(args 가 붙은 꼴)가 한 번이었다
 # (2026-10-19, tool_use id 로 중복을 걷은 수, args 는 줄였다). 셋째(silent)도 트랜스크립트에 있던 이름이다.
