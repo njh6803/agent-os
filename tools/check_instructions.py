@@ -21,6 +21,9 @@
 - `tools/hook_*.py`는 stdin 을 바이트(`sys.stdin.buffer`)로 읽는다. 훅 환경에 `PYTHONUTF8` 이 있다고
   가정하지 않는다 — 없으면 텍스트 stdin 은 cp949 이고, 한글이 든 입력은 예외 없이 출력 0바이트가
   된다(대기열 25).
+- `tools/` 의 파이썬은 외부 명령을 기다리는 호출(`subprocess.run`, `communicate`, `wait` 등)에
+  시간 제한을 둔다. 멈춘 호출은 루프의 시간 제한으로 끊지 못한다(대기열 342). 판정과 빼는 표지는
+  `calls_without_timeout` 의 독스트링이 원천이다.
 - 루트 밖에 `CLAUDE.md` 와 `AGENTS.md` 가 없다. `next dev` 가 앱 폴더에 두 파일을 만든다(ADR 0021,
   web-admin 티켓 01).
 - rules 파일과 임포트된 파일 안에도 `@` 임포트가 없다. 그것들도 따라가서 실린다.
@@ -34,11 +37,13 @@ pre-commit이 커밋마다 돌린다. 규칙을 쓰는 시점에 걸리는 것�
 from __future__ import annotations
 
 import ast
+import io
 import json
 import os
 import re
 import subprocess
 import sys
+import tokenize
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal, NamedTuple, TypedDict
@@ -98,6 +103,16 @@ _Place = Literal["text", "html", "unclosed"]
 # 옮기는 것이 싸다. `@x.md.` 는 끝의 마침표까지 토큰이라 허용된 임포트와 다른 것으로 잡힌다.
 _IMPORT_TOKEN = re.compile(r"(?<!\S)@([^\s가-힣]+)(?=\s|$)")
 _PATHISH = re.compile(r"^\.?[\w.-]+(?:/[\w.*-]+)*/?$")
+# 이 검사가 부르는 git 하나를 기다리는 초. 넘기면 알 수 없는 것으로 센다.
+CALL_TIMEOUT = 60
+# 외부 명령을 기다리는 `subprocess` 의 함수(대기열 342). `Popen` 은 띄우기만 하고 기다리지 않는다.
+_WAITING_FUNCTIONS = frozenset({"run", "call", "check_call", "check_output"})
+# 받는 쪽의 형을 보지 않는 메서드와 timeout 이 들어가는 위치 인자의 자리.
+_WAITING_METHODS = {"communicate": 1, "wait": 0}
+# 시간 제한을 두지 않는 자리의 표지. 주석의 머리이고 까닭이 뒤따라야 한다.
+_NO_TIMEOUT_MARKER = re.compile(r"^#\s*시간 제한 없음:\s*\S")
+# 표지로 빼지 않는 메서드. 끝낸 뒤에도 트리를 떠난 손자가 파이프를 쥐면 돌아오지 않는다.
+_UNMARKABLE_METHODS = frozenset({"communicate"})
 
 
 class _HookCommand(TypedDict, total=False):
@@ -303,7 +318,8 @@ def _local_problem(place: _LocalPlace) -> str | None:
 
 
 def _main_checkout(root: Path) -> Path | None:
-    """`root` 가 든 저장소의 주 체크아웃. git 저장소가 아니거나 알 수 없으면 None.
+    """`root` 가 든 저장소의 주 체크아웃. git 저장소가 아니거나 알 수 없으면 None. git 이
+    `CALL_TIMEOUT` 초 안에 돌아오지 않은 것도 알 수 없는 것이다.
 
     워크트리의 공용 git 디렉터리(`<주 체크아웃>/.git`)의 부모다. pre-commit 이 워크트리 커밋에서
     내보내는 `GIT_DIR` 같은 위치 변수가 남으면 `root` 가 아니라 그 저장소를 보므로 `GIT_` 로
@@ -320,8 +336,9 @@ def _main_checkout(root: Path) -> Path | None:
             encoding="utf-8",
             env=env,
             check=False,
+            timeout=CALL_TIMEOUT,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
     common = Path(result.stdout.strip())
     if result.returncode != 0 or common.name != ".git":
@@ -704,6 +721,140 @@ def hooks_reading_text_stdin(root: Path = ROOT) -> list[str]:
     return problems
 
 
+def _subprocess_names(tree: ast.Module) -> tuple[set[str], dict[str, str]]:
+    """`subprocess` 모듈을 가리키는 이름(별칭 포함)과, 거기서 가져온 기다리는 함수의 이름(별칭 →
+    원래 이름)."""
+    modules: set[str] = set()
+    functions: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(
+                alias.asname or alias.name for alias in node.names if alias.name == "subprocess"
+            )
+        elif isinstance(node, ast.ImportFrom) and node.module == "subprocess":
+            functions.update(
+                (alias.asname or alias.name, alias.name)
+                for alias in node.names
+                if alias.name in _WAITING_FUNCTIONS
+            )
+    return modules, functions
+
+
+def _waiting(
+    call: ast.Call, modules: set[str], functions: dict[str, str]
+) -> tuple[bool, int | None]:
+    """외부 명령을 기다리는 호출인지와, timeout 이 들어가는 위치 인자의 자리(키워드로만 받으면
+    None)."""
+    func = call.func
+    if isinstance(func, ast.Name):
+        return func.id in functions, None
+    if not isinstance(func, ast.Attribute):
+        return False, None
+    if isinstance(func.value, ast.Name) and func.value.id in modules:
+        return func.attr in _WAITING_FUNCTIONS, None
+    if func.attr in _WAITING_METHODS:
+        return True, _WAITING_METHODS[func.attr]
+    return False, None
+
+
+def _is_limit(value: ast.expr) -> bool:
+    """timeout 으로 준 값이 시간 제한인가. 글자 그대로의 None 만 아니다."""
+    return not (isinstance(value, ast.Constant) and value.value is None)
+
+
+def _has_timeout(call: ast.Call, position: int | None) -> bool:
+    for keyword in call.keywords:
+        if keyword.arg == "timeout":
+            return _is_limit(keyword.value)
+    if position is None or len(call.args) <= position:
+        return False
+    if any(isinstance(arg, ast.Starred) for arg in call.args[: position + 1]):
+        return False
+    return _is_limit(call.args[position])
+
+
+def _marked_lines(source: str) -> set[int]:
+    """까닭을 적은 표지 주석이 있는 줄. 주석은 토큰으로 읽어 문자열 속 글자는 세지 않는다."""
+    return {
+        token.start[0]
+        for token in tokenize.generate_tokens(io.StringIO(source).readline)
+        if token.type == tokenize.COMMENT and _NO_TIMEOUT_MARKER.match(token.string)
+    }
+
+
+def untimed_call_lines(source: str) -> list[tuple[int, str]]:
+    """외부 명령을 시간 제한 없이 기다리는 호출의 줄과 부른 이름. 판정은 `calls_without_timeout`."""
+    tree = ast.parse(source)
+    modules, functions = _subprocess_names(tree)
+    marked = _marked_lines(source)
+    found: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        waiting, position = _waiting(node, modules, functions)
+        if not waiting or _has_timeout(node, position):
+            continue
+        markable = not (
+            isinstance(node.func, ast.Attribute) and node.func.attr in _UNMARKABLE_METHODS
+        )
+        span = range(node.lineno, (node.end_lineno or node.lineno) + 1)
+        if markable and marked.intersection(span):
+            continue
+        found.append((node.lineno, ast.unparse(node.func)))
+    return sorted(found)
+
+
+def tool_sources(root: Path = ROOT) -> list[Path]:
+    """시간 제한 검사가 훑는 파일. `tools/` 아래(하위 폴더까지)의 파이썬이다."""
+    return sorted(
+        (root / "tools").rglob("*.py"), key=lambda path: path.relative_to(root).as_posix()
+    )
+
+
+def calls_without_timeout(root: Path = ROOT) -> list[str]:
+    """`tools/` 의 파이썬에서 외부 명령을 기다리는 호출에 시간 제한이 있는지 본다(대기열 342).
+
+    `subprocess` 의 `run`·`call`·`check_call`·`check_output` 과 `communicate`·`wait` 메서드에
+    `timeout` 이 없거나 글자 그대로 None 이면 문제다. `.claude/rules/tools.md` 는 기다리거나
+    되풀이하는 도구가 부르는 외부 명령에 호출마다 시간 제한을 두라고 한다. 루프의 시간 제한은
+    호출이 돌아와야 비교되므로 멈춘 호출을 끊지 못한다. 그 항목을 `tools/run_checks.py` 의
+    `run_one` 이 멈추는 중에 거절한 검사의 `process.communicate()` 에서 어겼고, 셀프 리뷰를 지나
+    PR 직전 `bug-perf-review` 가 잡았다(일지 2026-10-17-12). 어느 도구가 기다리는 도구인지는
+    AST 로 가를 수 없어 `tools/` 전부에 건다.
+
+    기다릴 일이 없는 자리(끝낸 자식을 거두는 `wait`)와 끊으면 안 되는 자리(지우는 git 을 도중에
+    끊으면 지우다 만 폴더가 남는다)는 그 호출이 걸친 줄에 `# 시간 제한 없음: <까닭>` 주석을 달아
+    뺀다. 주석의 머리여야 하고 까닭이 비면 빼지 않는다. `communicate` 는 표지로 빼지 않는다. 끝낸
+    뒤에도 트리를 떠난 손자가 파이프를 쥐면 돌아오지 않아(위 사건) timeout 으로 거둔다. 들인
+    때(2026-10-19) 잡힌 열셋 가운데 넷이 표지를 단 자리였고 나머지 아홉에는 시간 제한을 더했다.
+
+    잘못 막는 것: 받는 쪽의 형을 보지 않아 `threading.Event().wait()` 같은 다른 `wait` 와
+    `communicate` 도 잡는다. 그것도 끝없이 기다리므로 같게 다룬다. `asyncio` 하위 프로세스의
+    `wait`·`communicate` 는 timeout 을 받지 않아 `asyncio.wait_for` 로 감싸도 잡히고,
+    `communicate` 는 표지로도 뺄 수 없다. 지금 `tools/` 에는 asyncio 가 없어 들일 때 이 판정을
+    함께 고친다. `*`·`**` 로 펼친 인자는 timeout 이 든지 몰라 없는 것으로 본다.
+
+    못 보는 것: 변수에 담아 부른 함수(`runner = subprocess.run`), `getattr` 으로 꺼낸 것, 모듈을
+    다른 이름에 대입한 것(`sp = subprocess`), `from subprocess import *` 뒤의 이름,
+    `getoutput`·`getstatusoutput`(timeout 을 받지 않는다), `with Popen(...)` 이 빠져나갈 때의
+    암묵 `wait`, `Popen` 의 파이프를 직접 읽는 것(`process.stdout.read()`, `for line in
+    process.stdout`), `os.system`·`os.popen`·`os.waitpid`, `functools.partial` 로 감싼 함수,
+    timeout 에 준 변수나 식의 값이 None 인 것(`timeout=None if slow else 5`). 표지는 줄 단위라
+    표지가 걸린 줄의 다른 호출도 함께 뺀다. `tests/` 는 보지 않는다.
+    """
+    problems: list[str] = []
+    for path in tool_sources(root):
+        relative = path.relative_to(root).as_posix()
+        for lineno, name in untimed_call_lines(path.read_text(encoding="utf-8")):
+            problems.append(
+                f"{relative}:{lineno}: {name} 에 timeout 이 없다. 멈춘 외부 명령은 루프의 시간"
+                " 제한으로 끊지 못한다. timeout 을 주고 넘김을 실패 갈래로 세거나, 기다릴 일이"
+                " 없거나 끊으면 안 되는 자리면 그 호출에 '# 시간 제한 없음: <까닭>' 주석을 단다"
+                "(.claude/rules/tools.md)"
+            )
+    return problems
+
+
 def nested_instruction_files(root: Path = ROOT) -> list[str]:
     """루트 밖의 `CLAUDE.md` 와 `AGENTS.md`.
 
@@ -758,6 +909,7 @@ def main(root: Path = ROOT) -> int:
     problems.extend(patched_skills_without_sentinel(root))
     problems.extend(skills_with_sentinel_not_listed(root))
     problems.extend(hooks_reading_text_stdin(root))
+    problems.extend(calls_without_timeout(root))
     problems.extend(nested_instruction_files(root))
     problems.extend(imports_outside_claude_md(root))
     for problem in problems:

@@ -1487,6 +1487,37 @@ def test_gh_가_실패하면_3으로_끝난다(repo: Path) -> None:
     assert main(["judge"], cwd=repo, ops=Ops(merged=failing, pid_alive=_죽었다)) == 3
 
 
+def _멈춘_명령(seen: list[object]) -> object:
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, 1)
+
+    return stuck
+
+
+def test_gh_가_시간을_넘기면_부르지_못한_것으로_멈춘다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """넘긴 gh 를 병합된 PR 이 없는 것으로 읽으면 판정이 달라진다. 종료 3 의 갈래로 간다(대기열
+    342)."""
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_명령(seen))
+
+    with pytest.raises(ToolError, match="초 안에 돌아오지 않았다"):
+        tidy_checkouts.gh_merged_heads(tmp_path)
+    assert seen == [tidy_checkouts.CALL_TIMEOUT]
+
+
+def test_tasklist_가_시간을_넘기면_살아_있다고_본다(monkeypatch: pytest.MonkeyPatch) -> None:
+    """알 수 없으면 지우지 않는 쪽이다. CI(우분투)에서도 그 갈래를 밟도록 윈도로 보이게 한다."""
+    seen: list[object] = []
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(subprocess, "run", _멈춘_명령(seen))
+
+    assert process_alive(4242)
+    assert seen == [tidy_checkouts.CALL_TIMEOUT]
+
+
 def test_살아_있는_pid_와_끝난_pid_를_가른다() -> None:
     assert process_alive(os.getpid())
     finished = subprocess.run(

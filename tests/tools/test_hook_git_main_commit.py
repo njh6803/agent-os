@@ -14,6 +14,7 @@ from tools.hook_git_main_commit import (
     head_has_commit,
     reason_at,
 )
+from tools.run_hooks import registered_hooks
 
 # 작성자 설정이 없는 환경에서도 커밋을 만든다(선례 tools/run_hooks.py 의 `_IDENTITY`).
 _작성자 = ["-c", "user.name=test", "-c", "user.email=test@localhost"]
@@ -183,3 +184,44 @@ def test_저장소가_아니면_None이다(tmp_path: Path) -> None:
     (tmp_path / "plain").mkdir()
 
     assert current_branch(str(tmp_path / "plain")) is None
+
+
+def test_git_이_시간을_넘기면_띄우지_못한_것처럼_막지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """두 호출의 제한을 더해도 등록의 20초 안이다. 넘기면 등록의 시간 제한(fail-open)과 같은
+    쪽으로 끝나되 더 일찍 끝난다(대기열 342)."""
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, hook.CALL_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+
+    assert current_branch(str(tmp_path)) is None
+    assert not head_has_commit(str(tmp_path))
+    assert reason_at("git commit -m x", str(tmp_path)) is None
+    assert seen == [hook.CALL_TIMEOUT] * 3
+
+
+def test_main_위에서_커밋의_유무를_읽다가_시간을_넘겨도_막지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """막는 갈래의 둘째 git 만 넘긴 때다. 커밋의 유무를 읽지 못하면 커밋이 없다고 본다(독스트링의
+    fail-open)."""
+
+    def main_then_stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if args[1:] == ["branch", "--show-current"]:
+            return subprocess.CompletedProcess(args, 0, "main\n", "")
+        raise subprocess.TimeoutExpired(args, hook.CALL_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", main_then_stuck)
+
+    assert reason_at("git commit -m x", str(tmp_path)) is None
+
+
+def test_한_번의_판정이_부르는_git_의_시간_제한을_더해도_등록의_시간_제한_안이다() -> None:
+    """`reason_at` 은 git 을 많아야 둘(브랜치, 커밋의 유무) 부른다. 등록의 시간 제한을 넘기면
+    훅이 끊겨 같은 fail-open 이지만, 훅 스스로 끝내야 그 뒤의 판정 없이 일찍 끝난다."""
+    assert hook.CALL_TIMEOUT * 2 < registered_hooks()["hook_git_main_commit.py"].timeout
