@@ -159,6 +159,30 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 돌렸다. `/security-review`�
 단언 하나씩으로 빨갰고, 바뀐 시험 파일 92개는 홀로 통과했다. 그래서 `SKIP=pytest`로 커밋하고, pytest는 CI의 `python` 잡(한
 프로세스)에 맡긴다. 이것도 대기열 306의 회차다.
 
+## 인계(커밋 뒤)
+
+이 세션(제목 `chore/token-report-git-timeout`, 인계 지시문으로 연 세션)은 셀프 리뷰, PR 직전 리뷰 둘, 반영 커밋 둘
+(`ae38cbe9`, `3180a964`)까지 하고 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 이 인계 절은 커밋하지 않았다.
+푸시와 PR은 아직 없다. PR 직전 리뷰(`/security-review`, `bug-perf-review`)는 끝났으니 다시 돌리지 않는다. PR 체크리스트에는
+위 "PR 직전 리뷰" 절의 판정(대기열 결번은 오탐, 줄 끝 공백 갈래는 고정하지 않음)과 `SKIP=pytest`로 커밋한 까닭을 적는다.
+
+> 사용자: (이 세션의 첫 메시지는 인계 지시문 그대로다. 위 "인계(셀프 리뷰 직전)" 절의 지시문 블록)
+
+인계 지시문:
+
+```
+다음 작업: 토큰 보고서 작업이 CPU가 꽉 찼을 때 git 10초 제한에 걸린 원인을 고친 변경(`main_checkout`이 git을 띄우지 않는다)의 PR을 열고 병합까지 마친다
+다음 단계: 진단. 원인이 확인되면 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /diagnosing-bugs 작업 스케줄러 `agent-os token_report daily`가 2026-10-19 08:00에 `git rev-parse` 10초 초과(종료 코드 2)로 실패했다. docs/journal/2026-10-19-07-token-usage-09-close.md의 "작업 스케줄러 실패" 절부터 읽는다
+브랜치: chore/token-report-git-timeout
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-17-token-report-git-timeout.md의 "셀프 리뷰(이어받은 세션)", "PR 직전 리뷰", "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 PR 직전 리뷰 둘을 반영해 커밋 둘(ae38cbe9, 3180a964)까지 했다. 커밋하지 않은 일지 변경(인계 절)이 워크트리에 있어 그것을 커밋한 뒤 origin/main을 합치고 푸시, PR 열기(`@coderabbitai review` 코멘트 포함), 봇 회차, 병합을 한다. PR 직전 리뷰는 다시 돌리지 않는다. pytest는 부하 아래 무관한 시간 단언 흔들림으로 `SKIP=pytest` 커밋했으니 CI의 python 잡을 본다. docs/journal/2026-10-19-17-token-report-git-timeout.md
+확인할 선행 조건: 2026-10-20 08:00 작업 실행은 병합하고 주 체크아웃을 당긴 뒤여야 고친 파일로 돈다(일지 "다음")
+이번 요청 범위: PR과 병합까지
+```
+
 PR 직전 리뷰에 밀 주장(셀프 리뷰 때 나열한 것): `main_checkout_of` 독스트링 전체(특히 "세 꼴에서 git과 같다", "없으면 `OSError`다"), `_read_utf8`
 독스트링, `hook_session_usage.py`의 고친 두 줄, 이 일지의 "원인"·"고친 것"·"고친 판의 확인"과 이 절의 사실 문장, 대기열 366
 행.
@@ -182,3 +206,5 @@ PR 직전 리뷰에 밀 주장(셀프 리뷰 때 나열한 것): `main_checkout_
 
 - 병합 뒤 주 체크아웃을 당겨야 작업이 고친 파일로 돈다(작업 디렉터리가 주 체크아웃이다). 10/20 08:00 실행의
   `LastTaskResult`와 `scheduler.log`를 본다.
+
+open-session을 부른다 2026-10-19T08:25:28Z
