@@ -1007,7 +1007,8 @@ def test_since_의_커밋에_표가_없으면_모두_새로_더한_변이다(tmp
 
 
 def test_원문_확인도_since_로_고른_것만_본다(tmp_path: Path) -> None:
-    """코드를 고친 뒤 원문을 고친 변이만 다시 보는 길이다. 옛 프로브의 원문은 썩어도 된다."""
+    """코드를 고친 뒤 원문을 고친 변이만 다시 보는 길이다. 고르지 않은 변이의 원문은 보지 않는다.
+    커밋이 그 원문을 깨는지는 `--staged` 가 커밋마다 본다(대기열 312)."""
     표 = _커밋한_표(tmp_path, _글자_변이("하나", "x") + _글자_변이("둘", "y"))
     (tmp_path / "src/m.py").write_bytes(b"y = 1\nz = 1\n")  # 하나의 원문이 사라졌다
     표.write_text(
@@ -2039,7 +2040,7 @@ def test_원문만_보면_명령을_돌리지_않고_틀린_원문을_모두_알
     assert any("셋:" in 한줄 and "2번" in 한줄 for 한줄 in 줄)
     assert not any("하나:" in 한줄 for 한줄 in 줄)
     assert not any("줄 끝이 다르다" in 한줄 for 한줄 in 줄)  # 두 번인 원문은 줄 끝 탓이 아니다
-    # pre-commit 이 표 하나만 넘겨도 어느 표가 틀렸는지 보인다
+    # 표 하나만 넘겨도 어느 표가 틀렸는지 보인다
     assert all(한줄.startswith(f"{경로}: ") for 한줄 in 줄)
 
 
@@ -2067,8 +2068,9 @@ def _표를_쓴다(tmp_path: Path, 이름: str, 내용: str) -> str:
 
 
 def test_원문만_볼_때는_변이_파일_여럿을_받아_틀린_파일을_가리킨다(tmp_path: Path) -> None:
-    """pre-commit 이 커밋에 든 변이 표를 한 번에 넘긴다(대기열 92). 앞 파일에서 멈추면 뒤 파일을
-    못 본다."""
+    """변이 표 여럿을 한 번에 넘길 수 있다. 옛 pre-commit 이 커밋에 든 표를 이 모양으로
+    넘겼다(대기열
+    92. 지금은 `--staged` 를 띄운다). 앞 파일에서 멈추면 뒤 파일을 못 본다."""
     _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
     맞는 = _표를_쓴다(tmp_path, "a_mutations.toml", _변이_파일(old="x = 1", new="x = 2"))
     틀린 = _표를_쓴다(tmp_path, "b_mutations.toml", _변이_파일(old="z = 1", new="z = 2"))
@@ -2142,10 +2144,10 @@ def test_변이_파일_여럿은_원문_확인에서만_받고_이름과_섞지_
 
 
 def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다(tmp_path: Path) -> None:
-    """pre-commit 은 표 경로를 인자 끝에 붙여 띄운다. 훅 환경에 `PYTHONUTF8` 이 있다고 가정하지
-    않는다 — 없으면 윈도우의 파이프는 cp949 라 한국어 출력이 깨지거나 인코딩 오류로 끝난다. 자식의
-    `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳(리눅스 CI)에서도 다시 열기를 빼면
-    빨갛게 한다(PR #122 CodeRabbit)."""
+    """옛 pre-commit 은 표 경로를 인자 끝에 붙여 띄웠다(지금은 `--staged`). 훅 환경에 `PYTHONUTF8`
+    이 있다고 가정하지 않는다 — 없으면 윈도우의 파이프는 cp949 라 한국어 출력이 깨지거나 인코딩
+    오류로 끝난다. 자식의 `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳(리눅스 CI)에서도
+    다시 열기를 빼면 빨갛게 한다(PR #122 CodeRabbit)."""
     맞는 = _표를_쓴다(
         tmp_path,
         "a_mutations.toml",
@@ -2174,6 +2176,304 @@ def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다
     assert done.returncode == 2, done.stderr.decode("utf-8", "replace")
     assert "틀린 — 표" in stdout
     assert 틀린 in stdout
+
+
+_표_경로 = "probes/m_mutations.toml"
+_맞는_표 = _변이_파일(old="x = 1", new="x = 2")
+_깬_커밋 = "부모 판에서 맞던 원문을 이 커밋이 깼다"
+
+
+def _저장소(tmp_path: Path, 파일들: dict[str, str]) -> Path:
+    """`tmp_path` 를 main 브랜치의 저장소로 만들어 `파일들` 을 커밋한다."""
+    for 경로, 내용 in 파일들.items():
+        _파일을_둔다(tmp_path, 경로, 내용.encode("utf-8"))
+    _git(tmp_path, "init", "-q", "-b", "main")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    return tmp_path
+
+
+def _스테이지한다(root: Path, 상대_경로: str, 내용: bytes) -> None:
+    _파일을_둔다(root, 상대_경로, 내용)
+    _git(root, "add", 상대_경로)
+
+
+def _색인_확인(root: Path) -> tuple[int, str]:
+    줄: list[str] = []
+    code = main(["--staged"], root=root, runner=_부르면_안_되는_러너, out=줄.append)
+    return code, "\n".join(줄)
+
+
+def test_색인_확인은_부모_판에서_맞던_원문을_이_커밋이_깨면_표가_커밋에_들지_않아도_알린다(
+    tmp_path: Path,
+) -> None:
+    """표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않으면, 커밋에 든 표만 보던 확인이 지나가
+    원문이 0번인 표가 남았다(대기열 312)."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _맞는_표})
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2
+    assert f"{_표_경로}: !! 하나: src/m.py 에 원문이 0번 있다" in 출력
+    assert _깬_커밋 in 출력
+
+
+def test_색인_확인은_부모_판에서도_맞지_않던_원문은_알리지_않는다(tmp_path: Path) -> None:
+    """이 커밋 전부터 썩은 옛 표의 원문은 썩어도 된다(대기열 73·92). 표가 가리키는 파일을 고쳐도
+    그 원문은 이 커밋이 깬 것이 아니다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _변이_파일(old="z = 1", new="z")})
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "문제 0" in 출력
+
+
+def test_색인_확인은_표가_가리키지_않는_파일만_고친_커밋에서_변이를_보지_않는다(
+    tmp_path: Path,
+) -> None:
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", "src/o.py": "o = 1\n", _표_경로: _맞는_표})
+    _스테이지한다(root, "src/o.py", b"o = 2\n")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "커밋에 든 표 0, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0" in 출력
+
+
+def test_색인_확인은_커밋에_든_표의_원문을_모두_본다(tmp_path: Path) -> None:
+    """고치거나 더한 표는 이 커밋이 고친 파일과 상관없이 모든 원문을 본다(대기열 92)."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n"})
+    둘 = _변이_파일(old="z = 1", new="z = 2").replace('"하나"', '"둘"')
+    _스테이지한다(root, _표_경로, (_맞는_표 + 둘).encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2
+    assert f"{_표_경로}: !! 둘: src/m.py 에 원문이 0번 있다" in 출력
+    assert "!! 하나" not in 출력
+    assert _깬_커밋 not in 출력
+
+
+_읽히지_않는_표 = "[[mutation]]\nname = 1\n"
+
+
+def test_색인_확인은_커밋에_든_표가_변이_파일로_읽히지_않으면_알린다(tmp_path: Path) -> None:
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n"})
+    _스테이지한다(root, _표_경로, _읽히지_않는_표.encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2
+    assert f"{_표_경로}: !! 변이 파일 오류" in 출력
+
+
+def test_색인_확인은_커밋에_들지_않은_표가_읽히지_않아도_알리지_않는다(tmp_path: Path) -> None:
+    """읽히지 않는 옛 표는 이 커밋이 깬 것이 아니다. 도구의 형식이 바뀌어 옛 표가 읽히지 않는 것은
+    저장소 상태 시험(`test_이_저장소의_변이_파일은_지금의_도구로_모두_읽힌다`)이 본다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _읽히지_않는_표})
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "커밋에 든 표 0, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0" in 출력
+
+
+def test_색인_확인은_작업_트리가_아니라_커밋에_들_색인을_본다(tmp_path: Path) -> None:
+    """pre-commit 은 스테이지하지 않은 변경을 치워 두고 돌지만, 손으로 쳐도 커밋에 들 판을 본다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _맞는_표})
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+    _파일을_둔다(root, "src/m.py", b"x = 1\n")
+
+    assert _색인_확인(root)[0] == 2
+
+    _git(root, "add", "src/m.py")
+    _파일을_둔다(root, "src/m.py", b"x = 9\n")
+
+    assert _색인_확인(root)[0] == 0
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
+        ("rm", "-q", "src/m.py"),
+        ("mv", "src/m.py", "src/n.py"),
+        ("rm", "-q", "--cached", "src/m.py"),
+    ],
+    ids=["지운다", "옮긴다", "추적만_끊는다"],
+)
+def test_색인_확인은_원문이_든_파일을_지우거나_옮긴_커밋도_알린다(
+    tmp_path: Path, 명령: tuple[str, ...]
+) -> None:
+    """pre-commit 은 지운 파일을 훅에 넘기지 않고, 옮긴 파일은 새 이름만 넘긴다. 추적만 끊은 파일은
+    작업 트리에 그대로 있어도 커밋에 들 판에 없다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _맞는_표})
+    _git(root, *명령)
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2
+    assert "하나: src/m.py 를 읽지 못했다" in 출력
+    assert _깬_커밋 in 출력
+
+
+def test_색인_확인은_어느_판도_추적하지_않는_파일을_작업_트리에서_읽는다(tmp_path: Path) -> None:
+    """변이 표가 추적하지 않는 생성물을
+    가리키면(`.scratch/design-refresh/probes/checker_mutations.toml` 의 `ds-bundle/`), 옛 `--check`
+    처럼 그 파일이 있는 체크아웃에서 작업 트리를 읽는다. 색인만 읽으면 그 표를 고친 커밋이 생성물이
+    있는 체크아웃에서도 막혔다."""
+    root = _저장소(tmp_path, {".gitignore": "gen/\n", "src/m.py": "x = 1\n"})
+    _파일을_둔다(root, "gen/m.py", b"x = 1\n")
+    _스테이지한다(
+        root, _표_경로, _변이_파일(old="x = 1", new="x = 2", file="gen/m.py").encode("utf-8")
+    )
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "커밋에 든 표 1, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0" in 출력
+
+    (root / "gen/m.py").unlink()
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2
+    assert "하나: gen/m.py 를 읽지 못했다" in 출력
+
+
+def _main_을_합친다(
+    root: Path, *, 가지에서: Callable[[], None], main_에서: Callable[[], None]
+) -> None:
+    """지금 판에서 `topic` 을 따 `가지에서` 를, main 에서 `main_에서` 를 커밋한 뒤 topic 에 main 을
+    합치되 합치는 커밋은 만들지 않는다."""
+    _git(root, "checkout", "-q", "-b", "topic")
+    가지에서()
+    _git(root, "commit", "-q", "-m", "가지")
+    _git(root, "checkout", "-q", "main")
+    main_에서()
+    _git(root, "commit", "-q", "-m", "main")
+    _git(root, "checkout", "-q", "topic")
+    _git(root, "merge", "-q", "--no-commit", "--no-ff", "main")
+
+
+def test_색인_확인은_합칠_때_main_이_이미_깬_원문을_합치는_커밋의_탓으로_알리지_않는다(
+    tmp_path: Path,
+) -> None:
+    """두 부모에 같은 표가 있으면 두 부모에서 모두 맞던 원문만 본다. main 을 합치는 커밋은
+    가지의 HEAD 와 견주면 main 의 변경이 모두 든다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _맞는_표})
+
+    _main_을_합친다(
+        root,
+        가지에서=lambda: _스테이지한다(root, "src/o.py", b"o = 2\n"),
+        main_에서=lambda: _스테이지한다(root, "src/m.py", b"x = 9\n"),
+    )
+
+    code, 출력 = _색인_확인(root)
+    assert code == 0, 출력
+
+
+def test_색인_확인은_합친_결과가_가지에만_있는_표의_원문을_깨면_알린다(tmp_path: Path) -> None:
+    """가지가 더한 표와 main 이 고친 코드는 따로는 맞았고, 합친 판에서 원문이 깨진다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n"})
+
+    _main_을_합친다(
+        root,
+        가지에서=lambda: _스테이지한다(root, _표_경로, _맞는_표.encode("utf-8")),
+        main_에서=lambda: _스테이지한다(root, "src/m.py", b"x = 9\n"),
+    )
+
+    code, 출력 = _색인_확인(root)
+    assert code == 2
+    assert f"{_표_경로}: !! 하나: src/m.py 에 원문이 0번 있다" in 출력
+    assert _깬_커밋 in 출력
+
+
+def test_못_보는_것_색인_확인은_작업_트리의_줄_끝_변환을_거치지_않는다(tmp_path: Path) -> None:
+    """`eol=crlf` 인 파일은 색인에 LF 로 든다. 작업 트리의 CRLF 로 적은 원문은 디스크에서는 맞고
+    색인에서는 0번이다(잘못 막는다)."""
+    root = _저장소(tmp_path, {".gitattributes": "*.py text eol=crlf\n"})
+    _파일을_둔다(root, "src/m.py", b"x = 1\r\n")
+    표 = _변이_파일(old="x = 1", new="x = 2").replace("old = '''x = 1'''", 'old = "x = 1\\r\\n"')
+    _스테이지한다(root, _표_경로, 표.encode("utf-8"))
+    _git(root, "add", "src/m.py")
+
+    디스크 = main(
+        ["--check", str(root / _표_경로)], root=root, runner=_부르면_안_되는_러너, out=print
+    )
+    색인_코드, 출력 = _색인_확인(root)
+
+    assert 디스크 == 0
+    assert 색인_코드 == 2
+    assert "하나: src/m.py 에 원문이 0번 있다" in 출력
+
+
+def test_못_보는_것_색인_확인은_amend_에서_고칠_커밋이_넣은_깨진_원문을_지나간다(
+    tmp_path: Path,
+) -> None:
+    """`git commit --amend` 의 훅도 HEAD(고칠 커밋)를 부모로 본다. HEAD 가 훅을 건너뛰고 넣은 깨진
+    원문은 부모 판에서도 맞지 않던 원문으로 읽힌다(놓친다)."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", _표_경로: _맞는_표})
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+    _git(root, "commit", "-q", "--no-verify", "-m", "훅을 건너뛰고 깬 커밋")
+    _스테이지한다(root, "src/m.py", b"x = 9\ny = 1\n")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "고친 파일을 가리키는 다른 표의 변이 1, 문제 0" in 출력
+
+
+def test_색인_확인은_다른_인자와_섞지_않는다(tmp_path: Path) -> None:
+    for argv in (["--staged", "a_mutations.toml"], ["--staged", "--check"]):
+        줄: list[str] = []
+        code = main(argv, root=tmp_path, runner=_부르면_안_되는_러너, out=줄.append)
+        assert code == 2, argv
+        assert any("--staged 는 다른 인자와 섞지 않는다" in 한줄 for 한줄 in 줄), argv
+
+
+def test_색인_확인은_git_저장소_밖이면_그렇게_알리고_2다(tmp_path: Path) -> None:
+    code, 출력 = _색인_확인(tmp_path)
+
+    assert code == 2
+    assert "git 저장소 안이 아니다" in 출력
+
+
+def test_git_commit_의_훅으로_띄우면_그_커밋에_들_색인을_본다(tmp_path: Path) -> None:
+    """`git commit <경로>` 는 HEAD 에 그 경로만 더한 임시 색인을 `GIT_INDEX_FILE` 로 훅에
+    넘긴다. 스테이지한 다른 변경은 그 커밋에 들지 않는다. pre-commit 처럼 `PYTHONUTF8` 없이
+    띄운다."""
+    도구 = (ROOT / _이_도구).read_text(encoding="utf-8")
+    파일들 = {"src/m.py": "x = 1\n", "src/o.py": "o = 1\n", _표_경로: _맞는_표, _이_도구: 도구}
+    root = _저장소(tmp_path, 파일들)
+    훅 = root / ".git" / "hooks" / "pre-commit"
+    훅.parent.mkdir(exist_ok=True)
+    파이썬 = Path(sys.executable).as_posix()
+    훅.write_bytes(f'#!/bin/sh\nexec "{파이썬}" {_이_도구} --staged\n'.encode())
+    훅.chmod(0o755)
+    _스테이지한다(root, "src/m.py", b"x = 9\n")
+    _파일을_둔다(root, "src/o.py", b"o = 2\n")
+
+    def 커밋(*경로: str) -> tuple[int, str]:
+        done = subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
+            + ["commit", "-q", "-m", "커밋", *경로],
+            cwd=root,
+            capture_output=True,
+            env={**hook_environment(), "PYTHONIOENCODING": "cp949"},
+            check=False,
+            timeout=120,
+        )
+        return done.returncode, (done.stdout + done.stderr).decode("utf-8")
+
+    부분_코드, 부분_출력 = 커밋("src/o.py")
+    전부_코드, 전부_출력 = 커밋()
+
+    assert 부분_코드 == 0, 부분_출력
+    assert 전부_코드 != 0
+    assert f"{_표_경로}: !! 하나: src/m.py 에 원문이 0번 있다" in 전부_출력
 
 
 _신호를_기다린다 = """
@@ -2305,8 +2605,9 @@ def test_main_은_테스트를_돌리지_못하면_3이고_변이는_되돌렸�
 
 
 # 커밋된 변이 파일. 도구의 형식이 바뀌면 옛 파일이 조용히 깨진다 — 2026-10-01 에 형식을
-# 넓히며 일곱을 손으로 `--check` 했다(대기열 73). 원문은 보지 않는다. 옛 프로브의 원문은
-# 코드가 바뀌면 썩어도 되고, 다시 돌 때 `--check` 가 알린다.
+# 넓히며 일곱을 손으로 `--check` 했다(대기열 73). 이 시험은 원문을 보지 않는다. 커밋이 부모 판에서
+# 맞던 원문을 깨는지는 pre-commit 의 `--staged` 가 보고(대기열 312), 부모 판에서도 맞지 않던 옛
+# 원문은 썩어도 되어 다시 돌 때 `--check` 가 알린다.
 
 
 def test_이_저장소의_변이_파일은_지금의_도구로_모두_읽힌다() -> None:
