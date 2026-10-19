@@ -492,6 +492,46 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 
 다시 돌린 명령: 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
 
+## 인계 (커밋 뒤)
+
+셀프 리뷰를 반영한 커밋 `5699700a`가 pre-commit을 지났다. 병렬 검사 여덟(check-instructions, zizmor, lint-imports,
+check-type-escapes, pyright, run-hooks, web-verify, pytest)과 마크다운 표·줄 구분 문자·변이 표·커밋 메시지가 Passed이고, ruff
+둘은 `.py`가 없어 Skipped다. 인용 대조는 막지 않는 경고 3건을 냈다. 셋 모두 위 셀프 리뷰 절이 따옴표로 가리킨 것으로, 둘은 이
+세션이 지운 옛 문장("다음"의 낡은 SHA 줄과 옮겨 적은 규칙)이고 하나는 회고 1에서 줄을 넘긴 원문이라 두었다.
+
+그 직후 인계 계기(`커밋 뒤`, 세션 컨텍스트 257,151 토큰)가 왔다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청
+범위는 PR과 병합까지이고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니며, `인계 못함`
+줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 푸시하지 않았고 열린 PR은 없다. 이 세션의 제목은
+`docs/canary-runner-batch-retro`였고 `docs/canary-runner-batch-retro (인계함)`으로 바꾼다.
+
+이 세션의 첫 메시지는 위 `## 인계 (셀프 리뷰 직전)` 절(두 번째 것)의 지시문 그대로이고, 사용자 원문은 그 절의 인용 블록이다.
+그 지시가 인계받는 세션에도 걸리므로 아래 지시문의 "이어받을 상태"에 전체를 옮긴다.
+
+새 세션에 남은 일: `git fetch origin` 뒤 origin/main이 `be04b6e1`에서 움직였으면 합친다 → PR 직전 리뷰 둘을 나란히
+(`/security-review`와 `bug-perf-review` 서브에이전트. CodeRabbit CLI는 좌석이 없다, `docs/constitution/operations.md` 리뷰
+파이프라인 2. 밀 주장은 위 셀프 리뷰 절의 목록) → 반영 → 푸시와 PR → `@coderabbitai review` → 봇 회차 → 이 일지의 PR과
+병합 절을 마지막 봇 회차의 커밋에 실어 푸시(병합 뒤에 일지를 쓰면 대기열 341의 꼴을 되풀이한다) → "워크트리에서 병합할 때"로
+병합. 일지의 회고·다음 절은 파일 끝에 둔다. 병합 뒤 next-session으로 새 세션을 열지 않고 마지막 보고에 "재개 대기"를 적는다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. PR #310(대기열 316·338·344) 병합 뒤 일지 2026-10-19-34의 회고·다음 절과 대기열 306·341 회차, 새 행 372를 docs PR로 싣는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: docs/canary-runner-batch-retro
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-19-34-canary-runner-batch.md(셀프 리뷰 (회고 docs PR), 인계 (커밋 뒤) 가운데 마지막 것, 회고, 다음)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영을 마치고 커밋 5699700a까지 했다(pre-commit 모두 Passed, 푸시 안 함, 열린 PR 없음). 남은 단계는 origin/main이 움직였으면 합치기, PR 직전 리뷰 둘(/security-review와 bug-perf-review, 밀 주장은 일지의 셀프 리뷰 (회고 docs PR) 절), 푸시와 PR, @coderabbitai review, 봇 회차, 일지의 PR과 병합 절을 병합 전에 푸시, 병합이다. '하네스 작업 진행' 세션(local_7bc0f796-da54-466c-96f6-373b149df8b9)이 전한 사용자 지시가 이 작업에도 걸린다: 지금 맡은 브랜치와 PR은 평소 규약대로 끝까지 마무리한다(리뷰 반영, 병합, 일지 포함. 일지의 "다음"은 평소대로 적어도 된다). next-session으로 새 세션을 열지 않고, 같은 세션에서 다음 티켓이나 대기열 행을 시작하지도 않는다. 인계는 해도 되지만 이 지시 전체를 인계 프롬프트에 그대로 옮긴다. 이유는 그 세션이 retro 승인 기준과 next-session 결정표를 바꾸는 중이어서다. 재개 메시지가 오면 main을 당긴 뒤 바뀐 스킬은 디스크의 SKILL.md를 Read로 열어 따르고, 작업을 마치고 턴을 끝낼 때 마지막 보고에 "재개 대기"라고 적는다. 원문은 일지의 인계 (셀프 리뷰 직전) 절(두 번째 것). docs/journal/2026-10-19-34-canary-runner-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/canary-runner-batch-retro (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T18:49:25Z
+
 ## 회고
 
 후보 넷, 승인 셋(회차 둘, 새 행 하나), 기각 하나, 넘김 없음.
