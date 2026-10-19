@@ -7,7 +7,8 @@
    체크아웃의 `.claude/settings.local.json` 에 그 워크트리의 키를 적는다. 둘째 회차는 다른 앱
    세션이 그 워크트리에 `EnterWorktree(path)` 로 다시 들어갔고, 키는 이미 있었다. 다시 들어가는
    회차는 앞 회차의 `late-check` 를 지운 뒤에 들어간다. 남아 있으면 훅이 들어갈 때 그 키도 적어
-   양성 대조가 깨진다(훅의 `updated` 를 임시 폴더로 불러 봤다).
+   양성 대조가 깨진다(훅의 `updated` 를 임시 폴더로 불러 봤다). 그 키가 있으면 판정은 측정이
+   아니라고 적는다.
 2. 세션이 워크트리 안에 새 스킬 `.claude/skills/late-check/SKILL.md` 를 만든다. 들어간 뒤 생긴
    스킬이라 훅의 키에 없다(양성 대조).
 3. 세션이 도구 호출을 몇 번 더 하고, 만든 것만으로 `late-check` 가 든 목록이 생기지 않았는지
@@ -50,6 +51,10 @@
   측정이 아니다, README 행).
 - 목록이 워크트리를 다시 훑게 한 것. 표지는 다시 훑었다는 것만 보이고, 그것이 주 체크아웃의
   변경인지 들어간 뒤 생긴 `late-check` 인지는 가르지 않는다.
+- 기준 줄과 사람의 편집 사이에 붙은 목록. 판정은 기준 줄 뒤의 목록을 모두 편집이 낳은 것으로
+  본다. 그 사이에 세션의 다른 도구 호출로 `late-check` 가 든 목록이 붙으면 가르지 못한다. 출력의
+  시각을 편집 시각과 견주면 사람은 가를 수 있다(2026-10-19 두 회차는 그 구간에 목록이 없었다,
+  PR 직전 버그·성능 리뷰가 기록으로 봤다).
 - 측정 때의 키. 셋째 인자는 판정할 때 읽는다. 워크트리를 지운 뒤 다른 `EnterWorktree` 에서 훅이 그
   워크트리의 키를 걷으면(훅 독스트링) 주 체크아웃의 local 로는 "훅의 키가 없다"가 된다. 그래서
   2026-10-19 첫 회차의 키는 주 체크아웃의 local 에서 그 워크트리 접두의 키만 꺼내
@@ -59,21 +64,29 @@
 돌리는 법: `uv run --no-project python .scratch/harness/probes/worktree_overrides_app.py` 에 인자
 넷(기록 jsonl, 워크트리 이름, 훅의 키를 담은 설정 JSON(주 체크아웃의 `.claude/settings.local.json`
 이나 그 키를 옮긴 스냅샷), 기준 줄)을 준다. 표준 라이브러리만 쓴다. 종료 코드: 0 측정이다, 1 측정이
-아니다(출력의 JSON 한 줄이 함께 나온다), 2 인자가 넷이 아니다. 파일을 읽지 못하면 트레이스백과 함께
-1이라, 1 은 JSON 한 줄이 있을 때만 측정 아님이다.
+아니다(출력의 JSON 한 줄이 함께 나온다), 2 인자가 넷이 아니거나 기준 줄이 정수가 아니다. 설정 파일은
+훅처럼 `utf-8-sig` 로 읽고, 기록은 세션이 쓰는 도중에 잘린 글자를 바꿔 읽어 그 줄을 건너뛴다. 파일을
+읽지 못하거나 설정이 JSON 이 아니면 트레이스백과 함께 1이라, 1 은 JSON 한 줄이 있을 때만 측정
+아님이다.
 """
 
 import json
 import sys
 
+USAGE = "인자: <기록 jsonl> <워크트리 이름> <설정 JSON> <기준 줄(정수)>"
 if len(sys.argv) != 5:
-    print("인자: <기록 jsonl> <워크트리 이름> <설정 JSON> <기준 줄>", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
     sys.exit(2)
-transcript, worktree, settings_path, base = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+transcript, worktree, settings_path = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    base = int(sys.argv[4])
+except ValueError:
+    print(USAGE, file=sys.stderr)
+    sys.exit(2)
 prefix = f".claude/worktrees/{worktree}:"
 late_names = {"late-check", prefix + "late-check"}
 
-with open(settings_path, encoding="utf-8") as f:
+with open(settings_path, encoding="utf-8-sig") as f:
     settings = json.load(f)
 overrides = settings.get("skillOverrides") if isinstance(settings, dict) else None
 hooked = sorted(
@@ -85,7 +98,7 @@ hooked = sorted(
 versions: set[str] = set()
 before: list[tuple[int, bool, list[str]]] = []
 after: list[tuple[int, str, bool, list[str]]] = []
-with open(transcript, encoding="utf-8") as f:
+with open(transcript, encoding="utf-8", errors="replace") as f:
     for no, line in enumerate(f, 1):
         try:
             obj = json.loads(line)
@@ -109,11 +122,14 @@ with open(transcript, encoding="utf-8") as f:
 after_names = [n for _, _, _, ns in after for n in ns]
 late_before = any(late_names & set(ns) for _, _, ns in before)
 late_after = bool(late_names & set(after_names))
+late_hooked = prefix + "late-check" in hooked
 leaked = sorted(set(after_names) & set(hooked))
-measured = bool(after) and late_after and bool(hooked) and not late_before
+measured = bool(after) and late_after and bool(hooked) and not late_before and not late_hooked
 reasons = []
 if not hooked:
     reasons.append("훅의 키가 없다")
+if late_hooked:
+    reasons.append("late-check 가 훅의 키에 있다")
 if not after:
     reasons.append("기준 줄 뒤 목록이 없다")
 elif not late_after:

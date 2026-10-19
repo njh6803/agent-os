@@ -545,3 +545,46 @@ open-session을 부른다 2026-10-19T12:25:10Z
   같은 호출을 다시 하니 들어갔다. 앞의 세 이어받기에서는 없던 거부이고, 무엇이 git 실행을 막았는지는 보지 않았다.
 - 합치기 전 대조: `git diff HEAD...origin/main -- tools/tidy_checkouts.py`에 `settings_equivalent`가 든 줄이 없어, 훅 독스트링이 드는
   그 함수를 #303이 바꾸지 않았다. `CLAUDE.md`는 환경 함정에 Glob·Grep 항목 둘이 더해졌고(#305) 이 브랜치의 문장과 닿지 않는다.
+- 일지 커밋 `8ee07230`(앞 세션이 커밋하지 않은 네 번째 인계 절도 함께 들었다). pre-commit이 모두 통과였다(러너 616.2초, pytest
+  613.1초). ruff 둘은 `.py`가 없어 `Skipped`였다.
+- 합치기: `sync_with_base_branch`는 "This session doesn't run in a worktree the app made for it"로 거부했다(`EnterWorktree`로
+  들어온 워크트리라서다. 선례는 일지 2026-10-17-04, 2026-10-17-12, 2026-10-19-01, 2026-10-19-03). 그래서 `git merge origin/main`으로
+  합쳤다(`af17e4d5`). 프로브 README는 자동 병합됐고 충돌은 없었다. 앞 인계 절들이 보호 경로
+  `.claude/skills/tidy-checkouts/SKILL.md` 때문에 `git merge`를 손으로 치지 않는다고 했지만, 그 파일도 막힘 없이 합쳐졌다(2026-10-19-03이
+  `next-session` SKILL.md로 이미 겪은 것과 같다).
+- 합친 뒤 `uv run python tools/run_checks.py`(백그라운드)가 여덟 모두 통과였다(지침 3.8초, zizmor 5.3초, 경계 6.4초, 타입 우회
+  10.1초, pyright 59.8초, 훅 러너 337.6초, web-verify 530.7초, pytest 588.1초).
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI가 돌지 못해 대체 둘을 돌렸다.
+
+- `/security-review`(커밋하고 합친 뒤, 범위 `5e7fa88d...HEAD`): 찾기 서브태스크가 후보 0을 내 거르기 단계가 없었다. 프로브는
+  파일을 읽기만 하고 subprocess·eval·쓰기·네트워크가 없으며, 워크트리 이름은 키 접두로만 쓰여 경로에 닿지 않는다. 일지의
+  `C:\Users\User/…` 경로와 README 행의 세션 UUID는 기준에 못 미친다(main에 같은 꼴이 이미 있다).
+- `bug-perf-review`(범위 `5f38d61c..141c282b`): Critical·Major 0, Minor 1, Nit 5. 세 기록을 직접 돌려 줄 번호, 판, 72개,
+  `disable-model-invocation` 다섯, 17초(17.8초)를 맞다고 봤고, 훅 diff가 글뿐이며 변이 대조군 원문이 훅 209행과 글자 그대로
+  같다고 봤다.
+  - (Minor, 유효) 알림 문장, `.claude/rules/tools.md`, `tools/hook_grill_design_check.py`, `operations.md`가 "CLI에서는 붙지
+    않았고 앱에서는 붙었다"를 조건 없이 적는데, 붙은 두 앱 회차는 모두 `late-check`를 만든 회차이고 CLI 측정은 클라우드
+    컨테이너의 2.1.303이다. → `operations.md`의 후보 "앱과 CLI"에 "CLI의 측정은 클라우드 컨테이너의 2.1.303이라 OS와 판도
+    다르다"를 더했다(README의 `worktree_skill_listing.py` 행에서 클라우드 컨테이너를 봤다). 알림, `rules/tools.md`, grill
+    독스트링은 두었다. 과거형의 측정 사실로는 맞고, 훅 독스트링이 단서(다시 훑게 한 것을 모른다)를 이미 적었으며, 고치면 변이
+    명세와 카나리아를 다시 돌려야 한다. PR 체크리스트에 적는다.
+  - (Nit, 유효) 프로브가 BOM 붙은 설정, 잘린 멀티바이트, 정수가 아닌 기준 줄에서 JSON 없이 트레이스백으로 끝난다. → 설정은
+    훅처럼 `utf-8-sig`로, 기록은 `errors="replace"`로 읽고, 기준 줄이 정수가 아니면 종료 2로 끝낸다. 독스트링의 종료 코드
+    문장을 고쳤다. 같은 지적의 cp949 출력은 두었다(이유 문구의 한글은 cp949에 있고 스킬 이름은 ASCII다).
+  - (Nit, 유효) 앞 회차의 `late-check` 키가 훅의 키에 남으면 양성 대조가 깨지는데 판정이 거르지 않는다. → 그 키가 있으면
+    측정에서 빼고 이유 "late-check 가 훅의 키에 있다"를 적는다(`.claude/rules/probes.md` 첫 항목). 절차 1걸음에 한 문장을 더했다.
+  - (Nit, 보류→고침) 기준 줄과 사람의 편집 사이에 붙은 목록을 가르지 않는다. → 프로브 독스트링의 못 보는 것에 더했다.
+  - (Nit, 보류) 앱이 이름을 슬래시 아닌 꼴로 찍으면 거짓 통과가 날 수 있다. → 두었다. 두 앱 회차 모두 슬래시였고 통과 회차는
+    아직 없다.
+  - (Nit, 오탐) 셋째 기록의 "당긴 72초 뒤"가 기록으로 대어지지 않는다(파일 수정 시각으로는 74초). → 이 일지의 셋째 관찰 절이
+    적은 주 체크아웃 reflog의 당긴 시각(20:00:54 +0900)에서 260번째 줄(11:02:06Z)까지가 72초다.
+- 다시 돌린 것(스크래치 `rerun_probe.sh`, 키 스냅샷): 첫 회차(366)와 둘째 회차(198)는 종료 0, 측정이고 실패, `hooked` 16, `leaked`
+  11. 셋째 기록(13)은 종료 1, 측정 아님("기준 줄 뒤 목록에 late-check 가 없다"). 고치기 전과 같다. 기준 줄 `abc`는 종료 2와
+  사용법 한 줄. BOM을 붙이고 `late-check` 키를 더한 설정으로 첫 회차를 돌리면 종료 1, 측정 아님, "late-check 가 훅의 키에 있다".
+- 반영하며 새로 쓴 사실 문장: `operations.md`의 "CLI의 측정은 클라우드 컨테이너의 2.1.303이라 OS와 판도 다르다", 프로브
+  독스트링의 "그 키가 있으면 판정은 측정이 아니라고 적는다", 종료 코드 2의 둘째 조건과 읽기 방식, 못 보는 것의 "2026-10-19 두
+  회차는 그 구간에 목록이 없었다, PR 직전 버그·성능 리뷰가 기록으로 봤다".
+- 그사이 `origin/main`이 #309(토큰 보고서 파일과 일지 29)로 한 칸 더 앞섰다. 이 브랜치가 이름으로 든 파일과 닿지 않는다.
