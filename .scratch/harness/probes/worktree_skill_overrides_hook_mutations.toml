@@ -175,5 +175,5 @@ tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "green"
 [[mutation.edit]]
 file = "tools/hook_worktree_skill_overrides.py"
-old = '''        "경로를 단 사본이 목록에 붙지 않는다."'''
-new = '''        "경로를 단 사본이 목록에서 빠진다."'''
+old = '''        "이 PC 의 데스크톱 앱 2.1.299 세션 두 회차에서는 붙었다."'''
+new = '''        "이 PC 의 데스크톱 앱 세션에서도 빠진다."'''
