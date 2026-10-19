@@ -900,6 +900,30 @@ claude-review가 이 PR에 낸 첫 리뷰라 Minor·Nit을 지적마다 판단�
 - #300이 `tests/tools/test_mutate.py`, `tools/mutate.py`, `mutate_timeout_select_mutations.toml`을 고쳐, 커밋하지 않은 시험
   수정이 있는 채로는 합칠 수 없다. 그래서 이 세션의 변경(시험, ADR, 변이 결과, 일지, 대기열, README)을 먼저 커밋하고 그 뒤
   origin/main을 합친다. 위 변이 표는 합치기 전의 `tools/mutate.py`로 돈 것이다.
+- 커밋 `3f104896`(pre-commit 모두 통과. ruff도 돌았다. 인용 대조 경고 12건은 이름을 바꾼 이 일지의 앞 세션 줄이 모두 새
+  줄로 잡힌 것이다), 그 뒤 origin/main(`a60e2ddd`)을 합친 커밋 `786fe322`(pre-commit 모두 통과. main이 들인 `--staged`
+  변이 원문 확인도 지났다). `test_mutate.py`는 저절로 합쳐졌다(#300은 `--staged` 시험을 더했고 손자 시험 넷은 건드리지
+  않았다). 충돌은 둘이었다. 대기열은 두 쪽이 351 뒤에 더한 행을 번호 순서(358~360, 367·368)로 두었다. 프로브 README는
+  `mutation_check_mutations.toml` 행을 main 판으로 받고, `mutate_timeout_select_mutations.toml` 행은 이 브랜치의 두 실행
+  결과 뒤에 main의 대기열 312 문장을 이었다.
+- 변이 표는 합친 뒤 다시 돌리지 않았다. #300이 바꾼 것은 `--staged` 길이고, 이 표가 겨누는 시간 제한·Ctrl-C 길과 손자
+  시험 넷은 그대로다. #300이 원문을 바꾼 변이 하나(저장소 밖의 표)는 #300이 돌려 빨강을 확인했다(일지 2026-10-19-13).
+
+### 푸시와 봇 둘째 회차
+
+- PR 본문을 고친 뒤(일지 경로, #300 병합, 체크리스트의 SHA, 변이 표를 다시 돈 것) `786fe322`를 푸시하고, 첫 회차 반영
+  코멘트와 `@coderabbitai review`를 남겼다. `wait_ci.py`의 끝 줄은 "모두 통과. CodeRabbit: Review rate limited"였다.
+- CodeRabbit은 이 PR에서 한 번도 리뷰하지 않았다. PR을 열 때의 코멘트는 저장소의 별이 10개 미만이라 자동 리뷰를 하지
+  않는다고 적었고, 이번 `@coderabbitai review`는 한도에 걸렸다. `docs/constitution/operations.md` 리뷰 파이프라인대로 보안·버그
+  축은 PR 체크리스트에 적은 PR 직전 대체 리뷰 둘이 대신한다.
+- claude-review 둘째 회차(`786fe322`): Critical·Major 0, Minor 2, Nit 2. 둘째 회차라 고치지 않고 지적마다 두는 이유를 PR
+  코멘트로 남겼다. `_멈추는지`가 `_stops_growing`의 사본이라는 Minor는 `tests/tools/`에 시험끼리 나눠 쓰는 모듈이 없고
+  시험 모듈끼리 import하지 않아 새 공용 자리를 만들게 되므로 둔다. `_남았으면_끝낸다`의 한 번 견주기는 `finally`가 초록
+  회차에도 돌아, 기한까지 거듭 견주면 시험마다 15초를 다 기다리므로 둔다. 뒤로 넘기는 일은 없다. 그 코멘트의 첫 판은
+  "변이 표가 시험의 주석 자리를 인용한다"고 적었는데, 변이 표의 원문은 `tools/open_session.ps1` 쪽이라 틀려서 게시한 뒤
+  고쳤다.
+- 이 절을 푸시하면 claude-review가 한 번 더 돈다. 그 회차에 Critical·Major가 없으면 이 일지를 다시 푸시하지 않고 보류
+  이유를 PR 코멘트에 남긴 뒤 병합한다.
 
 ## 회고
 
