@@ -485,3 +485,63 @@ open-session을 부른다 2026-10-19T10:54:32Z
   프로브 README, 카나리아 명세 `tools_rule_worktree_skill_overrides.toml`(머리 주석 둘뿐이라 카나리아는 다시 돌리지 않는다), 헌법
   색인, 이 일지, 훅 독스트링이다. 옛 번호를 grep하니 다른 일지의 무관한 "일지 23" 둘만 남았다.
 - 헌법 판 3.0.45는 그대로다. 형제 `canary-runner-batch`가 3.0.46을 쓰고, 이 브랜치의 몫 3.0.45는 비켜 둔 것을 첫 커밋 때 봤다.
+- `141c282b`. pre-commit이 모두 통과였다: ruff 둘, 러너(경계 5.3초, 지침 6.9초, 타입 우회 8.1초, zizmor 10.8초, pyright 45.4초, 훅
+  러너 180.6초, pytest 335.1초, web-verify 349.3초), 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 헌법 판, 인용, 커밋
+  메시지. 인용 대조는 경고 21건이었고, 모두 이 일지가 고치기 전의 옛 문장이나 앱의 메시지를 옮긴 자리라 그대로 둔다. 푸시하지
+  않았다.
+
+## 네 번째 인계
+
+커밋 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 318,587 토큰, 경계 `커밋 뒤`)가 왔다. 커밋을 백그라운드로 띄운 직후라 끝을
+기다렸고, 성공했다. 인계하지 않는 때 다섯에 들지 않았다(계기를 낸 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션의 이어받을
+상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다). 이
+세션의 지금 제목은 `chore/worktree-overrides-pc-check`이고 `chore/worktree-overrides-pc-check (인계함)`으로 바꾼다. 이 세션이 띄운
+백그라운드 작업(리뷰 서브에이전트 둘, 번호 옮기기, 커밋)은 모두 끝났다. 이 세션에서 사람이 보낸 메시지는 지시문과 세션이 다시
+시작된 뒤의 "이어서" 한 마디였고, 결정을 바꾸는 말은 없었다.
+
+남은 순서:
+
+1. 기준 브랜치를 `sync_with_base_branch`로 합친다. `origin/main`이 #301·#303·#305·#306·#307로 앞섰고, 겹치는 파일은
+   `.scratch/harness/probes/README.md`이며, 보호 경로 `.claude/skills/tidy-checkouts/SKILL.md`를 고쳐 `git merge`를 손으로 치지 않는다.
+   합친 뒤 `git diff --name-only HEAD...origin/main`을 이 브랜치가 이름으로 든 파일과 대조한다. 훅 독스트링이 드는
+   `tools/tidy_checkouts.py`의 `settings_equivalent`를 #303이 고쳤을 수 있고, `CLAUDE.md`도 바뀌었다.
+2. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). 밀 주장은 이 일지의 셀프 리뷰 절, 두 번째로 이어받은 세션 절,
+   세 번째 셀프 리뷰 절에 있는 "새로 쓴 사실 문장" 목록 셋이다. 이 브랜치의 범위는 `5f38d61c..HEAD`다.
+3. 푸시하고 PR을 연 뒤 봇 회차와 병합을 `next-session`의 순서 1과 "워크트리에서 병합할 때"대로 한다.
+4. 병합 뒤 이 워크트리를 지우는 것은 주 체크아웃 세션의 `tidy-checkouts` 몫이다. 주 체크아웃의 `git status --porcelain`은 네 번
+   비었거나 `.claude/settings.local.json`이 없었으므로 확인 하나는 닫혔다.
+5. 후속은 제안 카드로 남긴다. 하나, 원인 후보 셋을 가르는 실험(워크트리의 local 사본에 키를 넣는 갈래가 후보 하나를 가르고, 새
+   스킬 없이 주 체크아웃의 변경만 주는 갈래가 셋째 기록의 물음을 가른다). 둘, `test_hook_midturn_korean.py`의 2초 시간 단언(형제
+   워크트리 `timing-tests-under-load`가 이미 다루는지 먼저 본다).
+
+넘기는 지시문:
+
+```
+다음 작업: #304의 훅(tools/hook_worktree_skill_overrides.py, 대기열 274)이 이 PC의 데스크톱 앱에서도 먹는지 실제 EnterWorktree로 확인하고 결과를 기록한다
+다음 단계: 구현(실제 실행 확인과 기록)
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
+브랜치: chore/worktree-overrides-pc-check
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 의 세 번째로 이어받은 세션 절, 세 번째 셀프 리뷰 절, 두 번째 커밋 절, 네 번째 인계 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 141c282b에 들었고(일지를 30으로 옮겼다) 푸시하지 않았다(PR 없음). 남은 순서는 일지의 네 번째 인계 절이다(이 절은 커밋하지 않았다). 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+확인할 선행 조건: origin/main이 #301·#303·#305·#306·#307로 앞섰다. 겹치는 파일은 .scratch/harness/probes/README.md 하나다
+이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
+```
+
+제목을 바꿨고(앱이 묻지 않고 바꿨다), `git worktree unlock C:/project/agent/.claude/worktrees/worktree-overrides-pc-check`는
+`is not locked`였다. 멈출 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-19T12:25:10Z
+
+## 네 번째로 이어받은 세션
+
+- 제목을 브랜치 이름으로 바꿨다(앱이 지은 제목이라 묻지 않고 바뀌었다).
+- 확인 하나를 다섯 번째로 봤다. 들어가기 전 주 체크아웃의 `git status --porcelain`은 stdout이 비었고, 앱이 넣은 git status
+  스냅샷도 `(clean)`이었다.
+- 첫 `EnterWorktree(path=C:/project/agent/.claude/worktrees/worktree-overrides-pc-check)`는 "Refusing to use … as an isolation
+  worktree: git could not be run to resolve it, so its git identity could not be verified."로 거부됐다. 바로 친
+  `git -C <그 워크트리> rev-parse --show-toplevel --git-dir --git-common-dir`는 워크트리, `.git/worktrees/<이름>`, `.git`을 정상으로 냈고,
+  같은 호출을 다시 하니 들어갔다. 앞의 세 이어받기에서는 없던 거부이고, 무엇이 git 실행을 막았는지는 보지 않았다.
+- 합치기 전 대조: `git diff HEAD...origin/main -- tools/tidy_checkouts.py`에 `settings_equivalent`가 든 줄이 없어, 훅 독스트링이 드는
+  그 함수를 #303이 바꾸지 않았다. `CLAUDE.md`는 환경 함정에 Glob·Grep 항목 둘이 더해졌고(#305) 이 브랜치의 문장과 닿지 않는다.
