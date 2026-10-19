@@ -1,4 +1,4 @@
-# 2026-10-19 (02) pre-commit 검사 셋(대기열 31·287·312)
+# 2026-10-19 (08) pre-commit 검사 셋(대기열 31·287·312)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대상 파일이 `.pre-commit-config.yaml`인 열린 대기열 행 가운데 ADR이
 필요 없는 셋(31 헌법 판, 287 카나리아 명세 모양, 312 변이 표 원문)을 한 PR로 닫는다.
@@ -193,8 +193,8 @@ next-session의 인계 줄대로 새 세션에 넘긴다. 이 세션의 제목�
   시작 프롬프트: 대기열 31·287·312(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
   브랜치: chore/pre-commit-batch
   모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-  읽을 것: docs/journal/2026-10-19-02-pre-commit-batch.md(그 워크트리의 추적하지 않는 파일. 끝의 "인계" 절이 남은 단계와 셀프 리뷰에 밀 주장이다)
-  이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리(C:/project/agent/.claude/worktrees/pre-commit-batch)에 있고 셀프 리뷰(/code-review, 기점 655b19a8)부터 한다. 일지 파일은 docs/journal/2026-10-19-02-pre-commit-batch.md이다
+  읽을 것: docs/journal/2026-10-19-08-pre-commit-batch.md(그 워크트리의 추적하지 않는 파일. 끝의 "인계" 절이 남은 단계와 셀프 리뷰에 밀 주장이다)
+  이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리(C:/project/agent/.claude/worktrees/pre-commit-batch)에 있고 셀프 리뷰(/code-review, 기점 655b19a8)부터 한다. 일지 파일은 docs/journal/2026-10-19-08-pre-commit-batch.md이다
   확인할 선행 조건: 없음
   이번 요청 범위: PR과 병합까지
   ```
@@ -313,3 +313,61 @@ Critical·Major 0. 받은 지적과 판정:
   돈다.
 - **다시 돌린 명령.** 새 시험만 골라 돌렸다(헌법 판 열둘 191초, 카나리아 하나, `--amend` 하나 모두 통과). 원문 확인
   `--check`가 두 표 모두 맞다. 나머지 검증 명령은 커밋의 pre-commit으로 갈음한다(결과는 아래 검사 절).
+- **커밋 `000c8512`의 pre-commit.** 러너(`parallel-checks`)는 `SKIP`으로 `Skipped`였다(까닭은 위 첫 커밋 시도). ruff 둘, 마크다운
+  표, 줄 구분 문자, 변이 표 원문(`--staged`), 헌법 판, 커밋 메시지가 `Passed`였다. 카나리아 명세 모양은 커밋에 든 명세가 없어
+  `(no files to check)Skipped`였다. 인용 대조는 두 묶음으로 경고 1건과 12건(막지 않는다)이다. 프로브 README 74줄 하나, 이
+  일지의 열(38·138·163·184·235·251·256·287·295·296줄), 헌법 README 11줄의 둘이다. 검사 절을 쓸 때 원문과 하나씩 대 본다. 커밋
+  요약의 `rewrite docs/constitution/README.md (96%)`는 긴 판 줄 하나를 바꾼 것이다(`git diff --stat 655b19a8 HEAD`가 한 줄 더하고
+  한 줄 지움, 줄 끝을 빼도 같다).
+
+## 인계(커밋 뒤)
+
+커밋 `000c8512`가 된 직후 세션 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 왔다는 계기가 왔다. 인계하지 않는 때 다섯에 들지
+않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이고, 넘겨받은 경계는 `셀프 리뷰 직전`으로 다르고, 이 세션이 쓴 `인계 못함`
+줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 main의 next-session(잠금 풀기 단계가 든 판)의 인계 줄대로
+새 세션에 넘긴다. 이 세션의 제목은 `chore/pre-commit-batch`이고 넘기기 전에 `chore/pre-commit-batch (인계함)`으로 바꾼다. 실행 중
+세션 확인에서 대기열 31·287·312나 대상 파일 `.pre-commit-config.yaml`을 쥔 다른 세션은 없었다(열린 PR #296의 227은 `tools/`의
+계기 훅이다).
+
+- **번복하거나 고친 것.** 반영 절의 `checker_mutations.toml` 머리 주석 고침을 되돌렸다. 그 밖에 커밋 뒤에 바꾼 것은 이 절과 위
+  pre-commit 줄뿐이고 커밋하지 않았다.
+- **남은 단계(차례대로).**
+  1. `origin/main`을 합친다. 인계(셀프 리뷰 직전) 절의 남은 단계 3이 적은 그대로다(`docs/constitution/README.md` 판 줄은
+     3.0.43을 두고 3.0.42 문장을 main의 3.0.42 문단으로 바꾼다, `CLAUDE.md`·`operations.md`·`retro-queue.md`의 겹침). 그 사이
+     #295도 병합되었다. `000c8512`가 러너를 `SKIP`으로 뺐으므로 합치는 커밋에서는 러너를 빼지 않는다.
+  2. PR 직전 리뷰 둘(`/security-review`, `bug-perf-review`)과 반영. 브리프에는 반영 절의 "PR 직전 리뷰에 밀 주장"을 나열한다.
+  3. 반영해 커밋한 뒤 변이 표를 돌린다. 헌법 표 전체(열넷)와 색인 확인 표 전체(열넷), 카나리아·runners·timeout_select 표는
+     `--since origin/main`이다. 차례와 제약은 인계(셀프 리뷰 직전) 절의 남은 단계 6이다. 결과는 변이 절과 프로브 README에
+     적고 새 표 두 행을 더한다.
+  4. 일지의 검사·회고·다음 절. 검사 절에는 첫 커밋 시도와 위 pre-commit 줄, 인용 대조 경고를 옮긴다. 회고 후보는 인계(셀프
+     리뷰 직전) 절의 남은 단계 7이다.
+  5. `/git-pr`, 봇 회차, 워크트리에서 병합하는 길, next-session.
+- **지시문.**
+
+  ```
+  다음 작업: 대기열 31·287·312(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+  다음 단계: 구현
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: 대기열 31·287·312(대상 파일이 `.pre-commit-config.yaml`인 열린 행 가운데 ADR이 필요 없는 셋)을 chore 한 PR로 반영한다
+  브랜치: chore/pre-commit-batch
+  모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+  읽을 것: docs/journal/2026-10-19-08-pre-commit-batch.md(끝의 "인계(커밋 뒤)" 절이 남은 단계다. 그 절은 워크트리에서 커밋하지 않은 고침이다)
+  이어받을 상태: 인계: 커밋 뒤. 커밋 000c8512까지 셀프 리뷰 반영과 커밋을 마쳤고(러너는 SKIP으로 뺐다), 푸시하지 않았고 PR도 없다. origin/main 합치기부터 하고 남은 단계는 일지의 "인계(커밋 뒤)" 절이다. 일지 파일은 docs/journal/2026-10-19-08-pre-commit-batch.md이다
+  확인할 선행 조건: 없음
+  이번 요청 범위: PR과 병합까지
+  ```
+
+- **넘기기 전에.** 제목을 `chore/pre-commit-batch (인계함)`으로 바꿨다(앱이 묻지 않았다). 이 세션이 띄운 백그라운드 작업은
+  없었다. `git worktree unlock C:/project/agent/.claude/worktrees/pre-commit-batch`는 `is not locked`로 끝났다. 이 세션이 들어갈 때
+  잠금을 손으로 풀었고, 그 뒤의 `EnterWorktree(path)`는 다시 잠그지 않은 것으로 보인다(잠금 사유를 따로 보지 않았다).
+
+open-session을 부른다 2026-10-19T02:48:11Z
+
+인계 못함 커밋 뒤
+
+- **열기가 막혔다.** `tools/open_session.ps1 -Action send`가 `idle=208s`, `fired=11:50:25.635`, `page=11:50:28.316`까지 내고 `6초
+  안에 지시문('대기열 31·287·312(대상 파일이 …')이 든 입력창 을(를) 찾지 못했다`로 1에 끝났다. `sent=`가 없어 보내지 않았다.
+  직후 `list_sessions`에 `chore/pre-commit-batch` 제목의 새 세션은 없었고, 같은 분에 `feature/09-human-verification-close`라는
+  새 세션이 생겨 돌고 있었다(그 브랜치의 `(인계함)` 세션이 같은 때에 인계했다). 두 세션의 딥링크가 같은 새 세션 화면에 겹쳐
+  이 지시문이 그 화면에 실리지 않았다고 보지만, 앱 로그(`deeplink_timeline.ps1`)로 가르지 않았다. 같은 파일로 다시 돌리지
+  않는다(open-session 막히면). 제목을 `chore/pre-commit-batch`로 되돌렸고, 이 세션에서 위 남은 단계 1부터 잇는다.

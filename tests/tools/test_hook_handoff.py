@@ -607,6 +607,8 @@ def test_Stop_알림은_다음_경계에서_넘어가고_넘기지_않는_때를
     assert "새 세션" in notice
     assert "끝나" in notice
     assert "같은 경계" in notice
+    # 다른 세션이 연 곁 세션도 넘기지 않는다(대기열 328).
+    assert "곁 세션" in notice
 
 
 def test_Stop_알림은_경계가_없는_일은_압축되니_새_세션에서_시키라고_적는다() -> None:
