@@ -706,10 +706,17 @@ def _usage_repository(scratch: Path, today: str) -> Path:
     return repo
 
 
+_ENDED: list[subprocess.Popen[bytes]] = []
+
+
 def _ended_pid() -> int:
-    """끝난 프로세스의 pid. 강제로 끝나 지우지 못한 변이 도구의 표지를 흉내 낸다."""
+    """끝난 프로세스의 pid. 강제로 끝나 지우지 못한 변이 도구의 표지를 흉내 낸다. 윈도는 그
+    프로세스의 핸들이 열린 동안 pid 를 다시 쓰지 않으므로 `Popen` 을 러너가 끝날 때까지 쥔다.
+    버리면 핸들이 닫혀, 부하 아래에서 다른 프로세스가 그 pid 를 받아 침묵 사례가 알렸다(PR #308
+    의 일지 커밋 pre-commit). POSIX 는 거두어야 살아 있지 않다고 읽혀 거둔다."""
     process = subprocess.Popen([sys.executable, "-c", "pass"], env=hook_environment())
     process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+    _ENDED.append(process)
     return process.pid
 
 
