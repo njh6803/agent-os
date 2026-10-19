@@ -1,4 +1,5 @@
-# tools/mutate.py --check 가 변이 표 여럿을 받아 pre-commit 에서 도는 배선(대기열 92)을 하나씩 빼는 변이.
+# tools/mutate.py --check 가 변이 표 여럿을 받는 배선(대기열 92)을 하나씩 빼는 변이. 그 배선으로 돌던
+# pre-commit 은 대기열 312부터 --staged 를 띄운다(mutate_staged_mutations.toml).
 # 도구가 자기 자신을 고친다(돌고 있는 프로세스는 이미 읽은 원본으로 돈다).
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutation_check_mutations.toml
 # UTF-8 로 다시 열지 않는 변이는 테스트가 자식에 PYTHONIOENCODING=cp949 를 주어 로캘과 무관하게 빨갛다(PR #122
