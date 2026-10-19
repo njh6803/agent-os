@@ -10,21 +10,17 @@
 보지 못한다, 아래 못 보는 것).
 
 **알림이 닿는 때.** 훅은 화면이 뜨기 직전에 돌지만 모델은 사용자가 답한 뒤에야 이 문장을 읽는다.
-SDK 제어 모드 탐침(`.scratch/harness/probes/choice_facts/probe.py`, claude 2.1.300)에서 표지 훅의 끝
-기록은 허락 요청(앱이 선택 화면을 띄우는 자리로 본다)보다 앞이었고(훅이 1.5초를 기다리게 한
-갈래에서도 허락 요청은 훅이 끝난 뒤에 왔다), 모델의 `tool_use` 와 도구
-결과(사람의 답) 사이에 모델의 출력이 없었으며, 표지 문장은 도구 결과 뒤의 답에 처음 나왔다. 그래서
-알림은 두 일을 시킨다. 방금 답을 받은 설명의 사실을 답을 쓰기 전에(다른 자리로 옮기거나 고른 대로
-실행하기 전에) 대 보는 것과, 다음 화면의 설명을 쓰기 전에 대 보는 것이다. 사건에서 틀린 사실이 남은
-자리도 옮긴 자리(합의 요약)였다. 앱 세션 자체에서는 재지 않았다. 앱 세션은 Agent SDK 안에서
-돈다(세션의 시스템 프롬프트가 그렇게 적는다).
+원천은 `.claude/rules/tools.md` 의 PreToolUse 계기 훅 항목이고, 그 근거는 이 도구에서 잰 SDK 제어
+모드 탐침(`.scratch/harness/probes/choice_facts/probe.py`)이다. 그래서 알림은 두 일을 시킨다. 방금
+답을 받은 설명의 사실을 답을 쓰기 전에(다른 자리로 옮기거나 고른 대로 실행하기 전에) 대 보는 것과,
+다음 화면의 설명을 쓰기 전에 대 보는 것이다. 사건에서 틀린 사실이 남은 자리도 옮긴 자리(합의
+요약)였다.
 
-화면보다 먼저 읽히는 문장은 따로 있다. 사용자 프롬프트에 붙는 훅과 앞선 도구 호출의 계기(모델이
-Skill 도구로 부른 인터뷰라면 `hook_grill_design_check` 가 첫 화면보다 먼저 닿는다. 사람이 슬래시
-명령으로 시작한 인터뷰에는 그 훅이 돌지 않는다고 그 독스트링이 적는다, 어림)다. 그러나 그 문장들은
-이 화면의 설명을 보지 못한다. 이 화면의 입력을 보고 낸 문장을 화면보다 먼저 읽히는 길로 아는 것은
-막는 훅의 거부 이유다(거부 이유는 도구 결과로 간다. Bash 에서 쟀고 AskUserQuestion 에서는 재지
-않았다, `hook_registration/run.sh` 의 D). 막지 않는 까닭은 아래 문단이다. 이 계기를 받은 뒤에도
+화면보다 먼저 읽히는 길(사용자 프롬프트의 훅, 앞선 호출의 계기, 막는 훅의 거부 이유)도 같은 항목이
+적는다. 앞의 둘은 이 화면의 설명을 보지 못한다(모델이 Skill 도구로 부른 인터뷰라면
+`hook_grill_design_check` 가 첫 화면보다 먼저 닿는다. 사람이 슬래시 명령으로 시작한 인터뷰에는 그
+훅이 돌지 않는다고 그 독스트링이 적는다, 어림). 거부 이유가 도구 결과로 가는 것은 AskUserQuestion
+에서 재지 않았다. 막지 않는 까닭은 아래 문단이다. 이 계기를 받은 뒤에도
 어겨지면 retro 가 다음 꼴을 고른다. 모든 화면을 막는 꼴은 후보가 아니다. 후보는 화면마다 처음 한
 번만 거부해 이유(이 알림)를 먼저 읽히고 같은 입력을 다시 부르면 지나가게 하는 막는 훅이다(어림.
 짓지도 재지도 않았다).
@@ -76,7 +72,7 @@ QUOTE_WIDTH = 100
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"'”’)\]」』])\s+|\n+")
 _DIGIT = re.compile(r"\d")
 _BODY = (
-    "{lead}. 이 문장은 화면을 띄우기 직전에 훅이 냈지만 사용자가 답한 뒤에야 읽힌다."
+    f"{LEAD}. 이 문장은 화면을 띄우기 직전에 훅이 냈지만 사용자가 답한 뒤에야 읽힌다."
     " 질문과 선택지 설명에 적은 사실(수, 시간, 지금 코드의 동작, 바뀌는지 그대로인지)을"
     " 지금 코드와 판정자(린터, 타입 검사, 훅)에 대 보지 않았으면, 답을 쓰기 전에"
     "(다음 라운드, 합의 요약, 일지 인용, 명세, ADR 로 옮기거나 고른 대로 실행하기 전에) 대 본다."
@@ -99,14 +95,13 @@ def context_for(payload: HookPayload) -> str | None:
     """AskUserQuestion 호출이면 컨텍스트 문장, 아니면 None."""
     if payload.get("tool_name") != TOOL:
         return None
-    context = _BODY.format(lead=LEAD)
     quotes = digit_sentences(payload.get("tool_input"))
     if not quotes:
-        return context
+        return _BODY
     shown = " / ".join(quotes[:QUOTE_LIMIT])
     rest = len(quotes) - QUOTE_LIMIT
     more = f" 외 {rest}개" if rest > 0 else ""
-    return f"{context} {QUOTES_LEAD}: {shown}{more}"
+    return f"{_BODY} {QUOTES_LEAD}: {shown}{more}"
 
 
 def digit_sentences(tool_input: Json) -> list[str]:

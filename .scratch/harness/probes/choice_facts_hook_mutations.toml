@@ -19,8 +19,8 @@ tests = ["tests/tools/test_hook_choice_facts.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_choice_facts.py"
-old = '''"{lead}. 이 문장은 화면을 띄우기 직전에 훅이 냈지만 사용자가 답한 뒤에야 읽힌다."'''
-new = '''"{lead}."'''
+old = '''f"{LEAD}. 이 문장은 화면을 띄우기 직전에 훅이 냈지만 사용자가 답한 뒤에야 읽힌다."'''
+new = '''f"{LEAD}."'''
 
 [[mutation]]
 name = "숫자가 든 문장만 고르지 않는다"
