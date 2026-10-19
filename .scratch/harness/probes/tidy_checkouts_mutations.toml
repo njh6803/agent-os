@@ -1107,7 +1107,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)'''
+old = '''    return relative == SETTINGS and _same_settings(root / SETTINGS, folder / SETTINGS)'''
 new = '''    return False'''
 
 [[mutation]]
@@ -1117,7 +1117,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    return relative == SETTINGS and _same_bytes(root / SETTINGS, folder / SETTINGS)'''
+old = '''    return relative == SETTINGS and _same_settings(root / SETTINGS, folder / SETTINGS)'''
 new = '''    return relative == SETTINGS'''
 
 [[mutation]]

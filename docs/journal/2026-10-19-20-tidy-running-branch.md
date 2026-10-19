@@ -410,6 +410,17 @@ open-session을 부른다 2026-10-19T07:35:23Z
 인계" 절을 이 절과 함께 커밋해 `e1a4a095`와 한 번에 푸시한다. 형제 PR #304(클라우드 세션, 대기열 271·274)가
 `tools/tidy_checkouts.py`와 그 시험·변이 표·스킬을 함께 고쳐, 나중에 병합하는 쪽에 글자 충돌 후보로 찍혔다.
 
+그 커밋(`9e2edec3`, pre-commit 전부 초록, pytest 598초)을 푸시하려 하자 `hook_push_behind_main`이 막았다. 그새 #304가 main에
+들어왔다. 합치니 충돌이 둘이었다. `tidy-checkouts` 3의 한 문단은 두 쪽이 다른 문장을 고쳤다(#304는 독스트링을 `--help`로 보라는
+문장을 넣었고 이 브랜치는 체크아웃되지 않은 브랜치 문장에 판정 3의 제목을 넣었다). main 판에 이 브랜치의 브랜치 문장을 넣었고,
+이 브랜치 판에서 그 문장만 되돌리면 main 판과의 차이가 `--help` 문장의 삽입 하나뿐인 것을 스크립트로 봤다. 대기열은 끝의 새
+행끼리라 361·362 뒤에 main의 363·364를 두었다. 자동으로 합쳐진 `tools/tidy_checkouts.py`에서 #304가 바꾼 자리는 설정 사본의
+같음(`settings_equivalent`)과 `--help`라 이 브랜치의 브랜치 판정과 겹치지 않는다. 합친 판에서 `tools/mutate.py --check`는
+`tidy_checkouts_mutations.toml` 138, `tidy_settings_equivalent_mutations.toml` 6 모두 원문이 있었고, 두 카나리아
+(`tidy_skill_running_branch.toml`, `tidy_skill_help_doc.toml`)의 `expect` 문자열이 모두 스킬에 있었다. 해소 스크립트의
+`Path.write_text`가 윈도에서 스킬을 CRLF로 써 git이 경고했고, 줄 끝을 LF로 되돌렸다(대기열 264와 같은 꼴, 커밋에서는 git이
+고쳤을 것이라 사건으로 세지 않는다).
+
 이 푸시의 봇 리뷰는 두 봇 모두 둘째 회차라 Critical·Major만 고친다. 그 회차에서 보류한 지적은 회차 세기와 뒤로 넘긴 일의
 규칙대로 일지에 다시 적어 푸시하지 않고 PR 코멘트에 남긴다. 병합은 워크트리에서 한다. 주 체크아웃 미갱신: 루트는 main(병합 뒤
 `tidy-checkouts`가 당긴다).

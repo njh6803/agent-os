@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import ctypes
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -21,7 +22,9 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from tools.hook_worktree_skill_overrides import KEY_PREFIX as HOOK_KEY_PREFIX
 from tools.tidy_checkouts import (
+    WORKTREE_OVERRIDE_PREFIX,
     Facts,
     Holder,
     Ops,
@@ -50,6 +53,7 @@ from tools.tidy_checkouts import (
     real_git,
     same_path,
     scan_modules,
+    settings_equivalent,
     tasklist_has,
     unrecreatable,
 )
@@ -429,6 +433,59 @@ def test_루트와_다른_설정_파일은_다시_만들_수_없다() -> None:
 
 def test_같은_이름의_파일은_다시_만들_수_있는_폴더가_아니다() -> None:
     assert unrecreatable([".venv", "node_modules"], settings_same=True) == [".venv", "node_modules"]
+
+
+_HOOK_KEY = f"{HOOK_KEY_PREFIX}x:tdd"
+
+
+@pytest.mark.parametrize(
+    ("root", "worktree", "same"),
+    [
+        (b'{"env": {"A": "1"}}', b'{"env": {"A": "1"}}', True),
+        (
+            json.dumps(
+                {"env": {"A": "1"}, "skillOverrides": {_HOOK_KEY: "off"}}, indent=2
+            ).encode(),
+            b'{"env": {"A": "1"}}',
+            True,
+        ),
+        (b"{}", f'{{"skillOverrides": {{"{_HOOK_KEY}": "off"}}}}'.encode(), True),
+        (
+            f'{{"skillOverrides": {{"jira-start": "off", "{_HOOK_KEY}": "off"}}}}'.encode(),
+            b'{"skillOverrides": {"jira-start": "off"}}',
+            True,
+        ),
+        (b'{"permissions": {"allow": ["Bash(ls:*)"]}}', b"{}", False),
+        (b"{}", b'{"permissions": {"allow": ["Bash(ls:*)"]}}', False),
+        (b'{"skillOverrides": {"jira-start": "off"}}', b'{"skillOverrides": {}}', False),
+        (b"{}", b"{\xb0", False),
+        (b"[]", b"[ ]", False),
+    ],
+    ids=[
+        "바이트가_같다",
+        "루트에_훅의_키와_서식만_더했다",
+        "워크트리에만_훅의_키",
+        "다른_skillOverrides_키는_같다",
+        "루트에만_다른_권한",
+        "워크트리에만_다른_권한",
+        "다른_skillOverrides_키가_다르다",
+        "풀리지_않는다",
+        "객체가_아니다",
+    ],
+)
+def test_설정은_훅이_적는_워크트리_사본_키와_서식을_빼고_견준다(
+    root: bytes, worktree: bytes, *, same: bool
+) -> None:
+    """대기열 274 의 훅(`tools/hook_worktree_skill_overrides.py`)이 주 체크아웃의 local 설정에
+    `.claude/worktrees/` 키를 적고 다시 써도, 그 키 밖이 같은 워크트리 사본은 다시 만들 수 있다.
+    그 밖의 차이(권한, 다른 스킬 설정)와 풀리지 않는 파일은 지금처럼 남긴다."""
+    assert settings_equivalent(root, worktree) is same
+
+
+def test_설정에서_빼는_키의_접두는_훅이_적는_접두와_같다() -> None:
+    """훅끼리만 import 하지 않으므로 이 도구는 접두를 따로 둔다. 둘이 갈리면 지우는 판정이 조용히
+    좁아지거나 넓어진다."""
+    assert WORKTREE_OVERRIDE_PREFIX == HOOK_KEY_PREFIX
 
 
 # --- 판정 ---------------------------------------------------------------------------------------
@@ -956,6 +1013,26 @@ def test_judge_는_지울_후보와_명령을_찍는다(repo: Path, capsys: pyte
     assert not any("등록 없는 폴더" in line for line in lines), out
 
 
+def test_judge_는_루트에_훅의_키만_더한_설정을_든_워크트리를_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """워크트리를 만들 때 받은 local 설정 사본은, 그 뒤 훅이 루트에 `.claude/worktrees/` 키를 적어도
+    다시 만들 수 있는 것이다(대기열 274). 이 저장소처럼 `.claude/` 에 추적하는 파일이 있어야 git 이
+    폴더째가 아니라 그 설정 파일 하나를 무시된 항목으로 낸다."""
+    (repo / ".claude").mkdir(exist_ok=True)
+    (repo / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    _git("add", ".claude/settings.json", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "settings", cwd=repo)
+    path, head = _add(repo, "done")
+    (path / ".claude" / "settings.local.json").write_text("{}", encoding="utf-8")
+    hooked = {"skillOverrides": {f"{HOOK_KEY_PREFIX}done:tdd": "off"}}
+    (repo / ".claude").mkdir(exist_ok=True)
+    (repo / ".claude" / "settings.local.json").write_text(json.dumps(hooked), encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({"chore/done": frozenset({head})})) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("지운다"), done
+
+
 def test_judge_는_실행_중인_세션의_제목을_받는다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1103,6 +1180,16 @@ def _stray(repo: Path, name: str = "stray") -> Path:
 
 def _stray_line(out: str) -> str:
     return next(line for line in out.splitlines() if "/stray" in line)
+
+
+def test_judge_는_루트에_훅의_키만_더한_설정을_든_등록_없는_폴더를_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _stray(repo)
+    hooked = {"skillOverrides": {f"{HOOK_KEY_PREFIX}stray:tdd": "off"}}
+    (repo / ".claude" / "settings.local.json").write_text(json.dumps(hooked), encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
 
 
 def test_judge_는_내용이_모두_커밋에_있는_등록_없는_폴더를_지울_후보로_찍는다(
@@ -2201,3 +2288,20 @@ def test_CLI_를_하위_프로세스로_부르면_인자_오류에_2로_끝난�
     )
     assert result.returncode == 2
     assert "usage" in result.stderr
+
+
+def test_help_는_git_밖에서도_모듈_독스트링을_줄바꿈_그대로_찍는다(tmp_path: Path) -> None:
+    # 스킬 3은 독스트링을 파일 Read 가 아니라 이 출력으로 본다(대기열 271)
+    doc = tidy_checkouts.__doc__
+    assert doc is not None
+    result = subprocess.run(
+        [sys.executable, str(_TOOL), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert doc.strip() in result.stdout
