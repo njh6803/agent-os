@@ -252,6 +252,62 @@ next-session 지시문으로 연 새 세션이다. 티켓 09(사람 확인)의 �
     작업 스케줄러 이벤트 기록은 꺼져 있었다(`IsEnabled`가 `False`). 작업 스케줄러 실패 절에 그 문장을 더했다.
   - (Nit 둘) 카나리아 대조군 회차의 스킬 호출과 스크래치 장부의 10/17 7절은 앞 세션의 스크래치 출력 폴더에만 있어 이
     세션도 열지 못했다. 고치지 않고 PR 체크리스트에 적는다.
+- **커밋과 PR.** 위 고침과 둘째 인계 절을 커밋 `5dfcf5ac`로 묶었다. pre-commit은 러너 여덟(345.83초)과 마크다운 표, 줄 구분
+  문자, 인용 대조, 커밋 메시지가 `Passed`였고, ruff 둘은 `.py`가 없어 `Skipped`라 커밋 전에 손으로 쳐 통과했다(`All checks
+  passed!`, `772 files already formatted`). 그 커밋 뒤에 PostToolUse 인계 훅이 세션 컨텍스트 222,746 토큰으로 `커밋 뒤` 계기를
+  냈으나, 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다. `/git-pr`로 푸시하고
+  [PR #299](https://github.com/njh6803/agent-os/pull/299)를 열었다(base `main`, HEAD `5dfcf5ac`). 사용자에게 확인을 묻지 않은 것은
+  "PR을 연 세션은 반영과 병합까지 묻지 않는다"는 규약대로다.
+
+## 셋째 인계(PR 연 뒤)
+
+- **계기.** `gh pr create`(#299)에 PostToolUse 인계 훅이 세션 컨텍스트 236,733 토큰으로 `PR 연 뒤` 계기를 냈다(문턱 20만).
+  `hook_pr_next_session`의 계기도 함께 왔으나 인계 줄이 이긴다. next-session "인계할 때" 1의 다섯 가운데 맞는 것이 없다. PR은
+  열렸고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 일지에
+  이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다.
+- **커밋하지 않은 변경.** 이 절과, 위 "셋째 세션" 절 끝의 "커밋과 PR" 항목이다.
+- **PR 상태.** `@coderabbitai review` 코멘트는 아직 남기지 않았다. 봇 회차는 새 세션이 처음부터 한다.
+- **이 세션의 지금 제목.** `feature/09-human-verification-close`(바꾸기 전).
+- **사용자 프롬프트.** 이 세션에서 사용자가 친 것은 지시문 하나뿐이다(위 "셋째 세션" 절의 인용).
+- **지시문.**
+
+```
+다음 작업: .scratch/token-usage/issues/09-human-verification.md. 연 PR #299의 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/token-usage/issues/09-human-verification.md
+브랜치: feature/09-human-verification-close
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-19-07-token-usage-09-close.md의 "셋째 세션"과 "셋째 인계(PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #299를 열고 5dfcf5ac까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "셋째 인계(PR 연 뒤)" 절과 "셋째 세션" 절 끝의 "커밋과 PR" 항목은 커밋하지 않았다. 그것과 새 세션의 절을 커밋해 푸시한 뒤에 리뷰를 요청하면 봇이 그 커밋까지 본다. 작업 스케줄러의 10/19 08:00 실패를 진단하는 일은 이 PR 밖이라 병합 뒤 마지막 보고에서 제안 카드로 낸다(일지 docs/journal/2026-10-19-07-token-usage-09-close.md)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-human-verification-close (인계함)`으로 바꿨고, 띄운 백그라운드 작업(커밋 둘, 리뷰 서브에이전트 둘)은 모두
+  끝나 멈출 것이 없었다. `git worktree unlock`은 `is not locked`였다.
+- open-session을 부른다 2026-10-19T04:30:44Z
+
+## 넷째 세션: 봇 회차와 병합
+
+셋째 인계의 지시문으로 연 새 세션이다. 시작은 2026-10-19 04:34 UTC 무렵이다.
+
+> 사용자: (지시문) "이어받을 상태: 인계: PR 연 뒤. PR #299를 열고 5dfcf5ac까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫
+> @coderabbitai review 코멘트도 새 세션이 남긴다. …"
+
+- **들어오기.** 제목을 앱이 지은 `Human verification issue 09 PR merge`에서 브랜치 이름으로 바꾸고, `git worktree list`에서 이
+  브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어왔다. 들어가기 직전의 `git worktree list --porcelain`과 `isRunning` 세션
+  확인은 치지 않았고, 들어간 뒤에 친 `--porcelain`에 `locked` 줄이 없었다. 넘긴 세션의 제목은 `… (인계함)`이라 브랜치와 같지
+  않다.
+- **PR 상태.** `5dfcf5ac`의 검사 일곱은 모두 `pass`였다. claude-review의 첫 리뷰(04:29:21Z)는 "지적 없음"이었고, CodeRabbit은
+  별이 10개 미만이라 자동 리뷰를 하지 않는다는 코멘트만 남겼다. `mergeStateStatus`는 `BEHIND`였다. 그새 main에 #298
+  (`a89ec15c`, 대기열 308의 계기 훅)이 병합됐다.
+- **합치기.** `origin/main`을 합쳤다. 대기열 표에서 글자 충돌은 없었다(main 쪽의 345~348 행이 이 브랜치의 350·351 행 앞에
+  들어갔다). 병합 커밋 `a4795ddf`의 pre-commit은 충돌 난 파일만 보는 병합 모드라 ruff 둘이 `Skipped`였고, 손으로 쳐
+  통과했다(`All checks passed!`, `778 files already formatted`). 러너 여덟(436.7초)과 마크다운 표, 줄 구분 문자, 인용 대조,
+  커밋 메시지는 `Passed`였다.
+- **일지 커밋과 리뷰 요청.** 셋째 인계 절, 셋째 세션 끝의 "커밋과 PR" 항목, 이 절을 한 커밋으로 묶어 병합 커밋과 함께
+  푸시하고, 그 뒤에 `@coderabbitai review`를 남긴다. 요청을 마지막 푸시보다 먼저 남기면 봇이 "head changed"로 버린다.
 
 ## 다음
 
