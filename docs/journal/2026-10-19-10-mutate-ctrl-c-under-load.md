@@ -666,3 +666,76 @@ PR 직전 리뷰에 밀 주장(셀프 리뷰를 반영하며 새로 쓰거나 �
     ADR 0035 의 2026-10-18 이력)".
 17. (두 sh 머리 주석) "재현에서 빨강이 난 부하(32개, pytest 세 벌)와 대조로 부하 없음을 다시 걸고", "(2026-10-19 에는 한
     번에 38~59회차)".
+
+## 커밋
+
+- 번호. 커밋 전 `tools/sibling_overlap.py`가 이 일지(2026-10-18-01)가 main의 최신 일지(2026-10-19-03)보다 이름순으로
+  앞이라고 알려 `--move`로 2026-10-19-10으로 옮기고 인용을 고쳤다. 그사이 origin/main은 `a7d93133`으로 움직였다.
+- 커밋 `a8650915`(test: 부하에서 흔들린 Ctrl-C 손자 판정과 패턴 호출의 1초 제한을 고친다 (대기열 306)). pre-commit은 모두
+  통과했다. ruff check, ruff format, checks(check-instructions 1.8초, lint-imports 6.2초, zizmor 8.1초, check-type-escapes
+  9.9초, pyright 52.4초, run-hooks 278.2초, pytest 392.2초, web-verify 466.6초), markdown tables, line separators, mutation
+  tables, quotes, commit message. 셀프 리뷰를 반영한 뒤의 손으로 치는 검증 다섯은 이 결과로 갈음한다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤 경계에서 세션 컨텍스트가 20만 토큰을 넘어(21만) 인계 계기가 왔다. 이 세션의 지시문 "이어받을 상태"는
+`인계: 계정 전환(셀프 리뷰 도중)`이라 같은 경계가 아니고, 요청 범위는 PR과 병합까지라 넘긴다. 넘기기 전 이 세션의 제목은
+`chore/mutate-ctrl-c-under-load`였고, 넘기며 `chore/mutate-ctrl-c-under-load (인계함)`으로 바꾼다. 이 세션의 사용자
+프롬프트는 위 "이어받기 (계정 전환 뒤)"가 적은 그 지시문 하나이고, 결정과 고친 것은 위 "셀프 리뷰 (open_session 고침 뒤)"의
+판정과 반영, "다시 잰 결과"에 있다.
+
+남은 단계(차례대로):
+
+1. 이 일지를 커밋한다(이 절과 "커밋" 절은 커밋하지 않고 넘긴다).
+2. ccd_host `sync_with_base_branch`로 origin/main을 합친다. 충돌 후보는 `docs/adr/0035-…md`(main의 #294가 2026-10-19
+   이력 "변경을 마치고 전체를 볼 때는 손으로 치는 pytest 대신 러너를 친다"를 더했다. 이력 차례는 2026-10-17, 2026-10-18,
+   2026-10-19 러너(main), 2026-10-19 패턴 호출), `.scratch/retro-queue.md`, `.scratch/harness/probes/README.md`다. 합친 뒤
+   바뀐 스킬은 Read로 디스크의 `SKILL.md`를 연다. 합치며 고친 것은 검증 명령을 다시 돌린다(합치기 커밋의 pre-commit으로
+   갈음할 수 있다).
+3. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). CodeRabbit CLI가 돌지 못하면 `/security-review`와
+   `bug-perf-review` 서브에이전트. 그 브리프에 위 "PR 직전 리뷰에 밀 주장" 열일곱을 밀 주장으로 넣는다. 보고와 반영은 받은
+   턴에 이 일지에 옮긴다.
+4. 푸시하고 PR을 연다(유형 test, 확인 `uv run python tools/run_checks.py`). `@coderabbitai review` 코멘트, ccd_pr로 묶기.
+5. 봇 회차를 반영하고 워크트리 길로 병합한다(next-session "워크트리에서 병합할 때"). 주 체크아웃 미갱신을 보고한다.
+6. retro, 이 일지의 "다음", 다음 지시문.
+
+알아 둘 것:
+
+- 형제 워크트리 `pre-commit-batch`도 `tests/tools/test_mutate.py`를 고친다. 그쪽이 먼저 병합되면 이 브랜치가 합칠 때
+  충돌 후보다.
+- 대기열 306 행에는 재현하지 않은 새 사례(`test_hook_midturn_korean.py`의 2초 상한, 3.34초)를 적어 두었고 이 PR은 고치지
+  않는다. 306 행은 열린 채로 둔다.
+- 건드리면 안 되는 것은 위 "인계 (계정 전환, 셀프 리뷰 도중)"의 그 절과 같다(운영 코드 `tools/mutate.py`·
+  `tools/open_session.ps1`, ADR 0035의 결정 본문, 대기열의 다른 행, 이 워크트리 밖의 파일).
+
+### 인계 지시문 (커밋 뒤)
+
+```
+다음 작업: 기능 harness. 대기열 306을 반영한다: 따로 돌리면 지나는 시간 시험이 전체 스위트의 부하 아래에서 빨개져 그 시험을 건드리지 않은 커밋의 pre-commit을 막는 사례(첫 사례는 tests/tools/test_mutate.py의 Ctrl-C 손자 판정)를 재현해 원인을 가르고 고친다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
+브랜치: chore/mutate-ctrl-c-under-load
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-10-mutate-ctrl-c-under-load.md(그 워크트리에만 있고 마지막 두 절 "커밋"과 "인계 (커밋 뒤)"는 커밋 전이다)의 "인계 (커밋 뒤)" 절. 앞의 인계 절 둘의 지시문은 옛 것이고 이 절이 우선한다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 최종 측정을 마쳐 a8650915로 커밋했고 pre-commit은 모두 통과했다. 푸시와 PR은 아직이다. 남은 단계(일지 커밋, origin/main 합치기, PR 직전 리뷰, 푸시와 PR, 봇 회차와 병합, 회고)는 읽을 것의 절에, PR 직전 리뷰에 밀 주장 열일곱은 그 앞 "PR 직전 리뷰에 밀 주장"에 있다
+확인할 선행 조건: origin/main이 이 브랜치의 기점(655b19a8)보다 앞서 있고 ADR 0035·대기열·프로브 README를 함께 바꿨다. 합칠 때의 충돌 후보와 이력 차례는 읽을 것의 절에 있다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/mutate-ctrl-c-under-load (인계함)`으로 바꿨다(묻지 않고 바뀌었다). 이 세션이 띄운 백그라운드 작업은 둘 다
+  끝나 있어 멈출 것이 없었다.
+- open-session을 부른다 2026-10-19T04:20:32Z
+
+## 이어받기 (커밋 뒤)
+
+이 절부터는 위 "인계 지시문 (커밋 뒤)"로 연 새 세션(2026-10-19)이 쓴다. 사용자 프롬프트는 그 지시문이고, 첫 줄 앞의 시작
+프롬프트와 나머지 줄은 위 지시문과 같다.
+
+- **제목.** 훅의 계기대로 이 세션의 제목을 `chore/mutate-ctrl-c-under-load`로 바꿨다.
+- **워크트리.** `EnterWorktree(path)`가 거부 없이 들어갔다(`git worktree list --porcelain`에 `locked` 줄이 없었다). HEAD는
+  `a8650915`이고 커밋하지 않은 것은 이 일지뿐이었다.
+- **origin/main.** `a7d93133`으로 기점 `655b19a8`보다 세 커밋(#293, #294, #295) 앞서 있다. 주 체크아웃도 `a7d93133`이라
+  미갱신이 아니다. main 쪽이 바꾼 파일 가운데 이 브랜치도 바꾼 것은 `.scratch/harness/probes/README.md`,
+  `.scratch/retro-queue.md`, ADR 0035 셋이다. main이 `.claude/skills/next-session/SKILL.md`를 고쳤으므로 병합 단계에서는
+  Skill 도구의 사본이 아니라 디스크의 그 파일을 Read로 연다.
