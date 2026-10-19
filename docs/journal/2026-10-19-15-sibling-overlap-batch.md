@@ -163,3 +163,49 @@ PR 직전 리뷰:
 - Minor(보류): sha로 받는 fetch의 시간 초과가 아닌 실패(속도 제한, 인증 일시 오류)도 받지 못한 PR로 세어, 겹치는 형제가 그
   PR 하나뿐이면 0으로 끝난다. 독스트링과 시험이 이미 인정한 동작이고, 종료 코드를 올릴지는 설계 판단이라 두었다.
 - Nit: 형제마다 `git diff`가 하나 늘었다. 재지 않았다.
+
+커밋 `e920d2f8`. pre-commit의 검사가 모두 통과했다(pytest 395.7초, web-verify 440.4초. 카나리아 명세와 헌법 판은 대상
+파일이 없어 Skipped). 푸시하려 하자 `hook_push_behind_main`이 main이 한 커밋(`5f38d61c`, PR #304) 나아갔다고 막았다.
+`sync_with_base_branch`는 앱이 만든 워크트리가 아니라고 거부해 `git merge origin/main`을 직접 쳤고, 충돌 없이 합쳤다.
+`.claude/settings.json`도 이 합치기로 들어왔다. 합친 뒤 `uv run python tools/run_checks.py`(pytest 603.1초, web-verify 525.7초,
+pyright, run-hooks, 지침·타입 우회·경계·zizmor)와 린트 둘은 초록이었고, `sibling_overlap`은 0이었다. 푸시하고 PR #306을 열었다.
+
+합친 PR #304가 들여온 `.scratch/harness/probes/worktree_skill_listing.py`를 백그라운드 보안 리뷰가 짚었다
+(`--permission-mode bypassPermissions`로 `claude -p`를 띄운다, MEDIUM). 이 PR이 쓴 파일이 아니라 고치지 않았다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 뒤에 인계 계기가 왔다(세션 컨텍스트 218,371 토큰). 이 세션은 `인계: 커밋 뒤`로 열려 경계가 다르고, `get_session`의
+`self`에 `parentSessionId`가 없어 곁 세션이 아니다. 이 세션의 지금 제목은 `chore/sibling-overlap-batch`이고 `(인계함)`을 붙인다.
+첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+
+지시문:
+
+```
+다음 작업: 대기열 288·294. tools/sibling_overlap.py의 열린 행 둘(head ref가 아직 없는 PR에서 대조 전체가 멈추는 것, main을 합치는 중인 형제의 디스크 사본을 함께 고친 파일로 세는 것)을 chore 한 PR로 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 288·294(대상 파일이 tools/sibling_overlap.py인 열린 행 둘)를 chore 한 PR로 반영한다. 행의 "어디로"대로 고치고 그 입력의 시험을 더한다
+브랜치: chore/sibling-overlap-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/retro-queue.md의 288·294 행(이 브랜치에서 닫았다)과 그 근거 일지(2026-10-16-18, 2026-10-16-20)
+이어받을 상태: 인계: PR 연 뒤. PR #306이 열렸고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. PR 직전 리뷰의 남긴 Minor(sha 받기의 시간 초과가 아닌 실패를 받지 못한 PR로 세는 것)는 PR 본문의 남긴 위험에 있다. 합친 PR #304의 프로브 worktree_skill_listing.py를 백그라운드 보안 리뷰가 짚었으나 이 PR 범위 밖이라 두었다. 판정과 한 일은 docs/journal/2026-10-19-15-sibling-overlap-batch.md
+확인할 선행 조건: 워크트리 잠금은 넘기는 세션이 풀었다. 풀리지 않았으면 git worktree unlock C:/project/agent/.claude/worktrees/sibling-overlap-batch 뒤 들어간다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-19T08:00:50Z
+
+## 이어받은 세션: 봇 회차
+
+> 사용자: 대기열 288·294(대상 파일이 tools/sibling_overlap.py인 열린 행 둘)를 chore 한 PR로 반영한다. 행의 "어디로"대로
+> 고치고 그 입력의 시험을 더한다
+
+`EnterWorktree(path)`로 들어왔다. PR #306의 CI 여섯은 `21217e8c`에서 초록이었고, claude-review의 첫 회차가 Minor 둘과
+Nit 하나를 냈다. 첫 회차라 지적마다 판단했다.
+
+- 고침(Minor): 받지 못한 PR 줄의 "잠시 뒤 다시 친다"가 포크처럼 기다려도 받아지지 않는 갈래와 가르지 못한다. 다시 쳐도
+  같으면 기다리지 않고 PR 화면에서 손으로 본다는 문장을 더했고, 그 문장을 기존 시험에 단언으로 고정했다.
+- 보류(Minor): `fetch`가 받는 일과 받지 못한 PR을 빼는 판정을 함께 하고 `Remote`를 돌려준다. 돌려주는 것은 그 명령의
+  결과(받지 못한 PR)이고 호출부가 `_prepare` 하나라, 나누면 함수와 시험이 늘 뿐 읽는 쪽의 혼동을 줄이지 않는다고 봤다.
+- 보류(Nit): `Remote.unfetched`가 `fetch` 뒤에야 채워지는 시간 결합. 리뷰도 호출부가 하나라 문제가 없다고 했다.

@@ -1356,7 +1356,8 @@ def render(result: Survey, verdict: Verdict) -> str:
         lines.append(
             f"받지 못해 대조에서 뺀 열린 PR: {numbers}(원격에서 head 커밋을 받지 못했다. 막 연 PR"
             " 이면 원격이 ref 를 아직 만들지 않은 것이다). 그 PR 과의 번호 겹침과 함께 고친 파일은"
-            " 보지 않았으니 잠시 뒤 다시 친다"
+            " 보지 않았으니 잠시 뒤 다시 친다. 다시 쳐도 같으면 기다리지 않는다. 포크의 PR 이거나"
+            " 원격에 없는 커밋일 수 있고, 그 PR 과의 겹침은 PR 화면에서 손으로 본다"
         )
     lines.append(f"다음 빈 번호(형제 포함): 일지 {verdict.next_journal}, 대기열 {verdict.next_row}")
     if not result.ours.journals:

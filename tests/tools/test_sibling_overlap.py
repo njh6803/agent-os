@@ -1224,6 +1224,7 @@ def test_head_커밋을_받지_못한_열린_PR만_형제에서_빼고_알린다
     assert "PR #5 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr5.md" in out
     assert "PR #8 ADR" not in out and f"PR #8 {pr8[:7]}" not in out
     assert "받지 못해 대조에서 뺀 열린 PR: #8(" in out
+    assert "다시 쳐도 같으면 기다리지 않는다" in out  # 포크처럼 기다려도 받아지지 않는 갈래
 
 
 def test_head_커밋을_받지_못한_열린_PR만_있으면_그_PR과_겹쳐도_0으로_끝난다(
