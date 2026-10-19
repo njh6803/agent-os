@@ -1,4 +1,4 @@
-# 2026-10-19 (30) 워크트리 스킬 끄기 훅을 이 PC의 앱에서 확인하다
+# 2026-10-20 (01) 워크트리 스킬 끄기 훅을 이 PC의 앱에서 확인하다
 
 브랜치 `chore/worktree-overrides-pc-check`. 일지 2026-10-19-14의 "다음"이 남긴 확인, 곧 #304의 훅
 `tools/hook_worktree_skill_overrides.py`(대기열 274)가 이 PC의 데스크톱 앱에서도 먹는지를 실제 `EnterWorktree`로 했다. 데스크톱
@@ -123,8 +123,8 @@ open-session을 부른다 2026-10-19T09:07:32Z
 시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
 브랜치: chore/worktree-overrides-pc-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 전체
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 5f38d61, 추적하지 않는 새 파일 둘 포함)부터 한다. 측정은 끝났고(실패) 훅은 고치지 않았다. 남은 순서는 일지의 인계 절. 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 전체
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 5f38d61, 추적하지 않는 새 파일 둘 포함)부터 한다. 측정은 끝났고(실패) 훅은 고치지 않았다. 남은 순서는 일지의 인계 절. 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
 확인할 선행 조건: 사람이 주 체크아웃의 .claude/skills/tdd/SKILL.md 끝에 더한 빈 줄을 되돌렸는지(이 세션은 확인하지 못했다)
 이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
 ```
@@ -261,8 +261,8 @@ web-verify가 함께 돌던 때다. 그 시험만 홀로 다시 돌리니 통과
 시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
 브랜치: chore/worktree-overrides-pc-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 전체(셀프 리뷰 절과 두 번째 인계 절)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 ce8ab11에 들었고 푸시하지 않았다(PR 없음). 남은 순서는 일지의 두 번째 인계 절이다(이 절과 커밋 절은 커밋하지 않았다). 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 전체(셀프 리뷰 절과 두 번째 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 ce8ab11에 들었고 푸시하지 않았다(PR 없음). 남은 순서는 일지의 두 번째 인계 절이다(이 절과 커밋 절은 커밋하지 않았다). 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
 확인할 선행 조건: 사람이 주 체크아웃의 .claude/skills/tdd/SKILL.md 끝에 더한 빈 줄을 되돌렸는지(이 세션이 세 번 봤을 때 모두 남아 있었다)
 이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
 ```
@@ -364,8 +364,8 @@ open-session을 부른다 2026-10-19T10:10:34Z
 시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
 브랜치: chore/worktree-overrides-pc-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 의 셀프 리뷰 절, 두 번째로 이어받은 세션 절, 세 번째 인계 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review ce8ab119)부터 한다. 둘째 측정 회차(측정이고 실패)와 그 기록은 끝났다. 남은 순서는 일지의 세 번째 인계 절이다. 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 의 셀프 리뷰 절, 두 번째로 이어받은 세션 절, 세 번째 인계 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review ce8ab119)부터 한다. 둘째 측정 회차(측정이고 실패)와 그 기록은 끝났다. 남은 순서는 일지의 세 번째 인계 절이다. 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
 확인할 선행 조건: 주 체크아웃의 git status --porcelain 이 비었는지(빈 줄은 사람이 되돌렸고, 이 세션은 워크트리 안이라 git 대신 파일 내용으로만 봤다)
 이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
 ```
@@ -523,8 +523,8 @@ open-session을 부른다 2026-10-19T10:54:32Z
 시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
 브랜치: chore/worktree-overrides-pc-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 의 세 번째로 이어받은 세션 절, 세 번째 셀프 리뷰 절, 두 번째 커밋 절, 네 번째 인계 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 141c282b에 들었고(일지를 30으로 옮겼다) 푸시하지 않았다(PR 없음). 남은 순서는 일지의 네 번째 인계 절이다(이 절은 커밋하지 않았다). 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 의 세 번째로 이어받은 세션 절, 세 번째 셀프 리뷰 절, 두 번째 커밋 절, 네 번째 인계 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 141c282b에 들었고(일지를 30으로 옮겼다) 푸시하지 않았다(PR 없음). 남은 순서는 일지의 네 번째 인계 절이다(이 절은 커밋하지 않았다). 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
 확인할 선행 조건: origin/main이 #301·#303·#305·#306·#307로 앞섰다. 겹치는 파일은 .scratch/harness/probes/README.md 하나다
 이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
 ```
@@ -647,8 +647,8 @@ PR을 연 직후 인계 계기(`hook_handoff`, 세션 컨텍스트 291,960 토�
 시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
 브랜치: chore/worktree-overrides-pc-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-30-worktree-overrides-pc-check.md 의 PR 직전 리뷰 절, 리뷰 반영 커밋과 PR 절, 다섯 번째 인계 절
-이어받을 상태: 인계: PR 연 뒤. PR #311을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 멈춤 지시: '하네스 작업 진행' 세션이 사용자 요청으로 전했다. 이 PR의 병합과 일지까지만 하고 next-session으로 새 세션을 열지 않으며 다음 작업을 시작하지 않는다. 인계하면 이 지시를 지시문에 옮긴다. 마지막 보고에 "재개 대기"를 적는다. 재개 메시지가 오면 main을 당기고 바뀐 스킬은 디스크의 SKILL.md를 Read로 연다. 전문은 일지의 다섯 번째 인계 절이다(이 절은 커밋하지 않았다). 일지 docs/journal/2026-10-19-30-worktree-overrides-pc-check.md
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 의 PR 직전 리뷰 절, 리뷰 반영 커밋과 PR 절, 다섯 번째 인계 절
+이어받을 상태: 인계: PR 연 뒤. PR #311을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 멈춤 지시: '하네스 작업 진행' 세션이 사용자 요청으로 전했다. 이 PR의 병합과 일지까지만 하고 next-session으로 새 세션을 열지 않으며 다음 작업을 시작하지 않는다. 인계하면 이 지시를 지시문에 옮긴다. 마지막 보고에 "재개 대기"를 적는다. 재개 메시지가 오면 main을 당기고 바뀐 스킬은 디스크의 SKILL.md를 Read로 연다. 전문은 일지의 다섯 번째 인계 절이다(이 절은 커밋하지 않았다). 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
 확인할 선행 조건: 없음
 이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
 ```
@@ -698,6 +698,79 @@ open-session을 부른다 2026-10-19T13:47:03Z
   러너는 334~616초였다. 끝난 뒤 이 PC에는 claude 프로세스 26개, node 47개가 떠 있었고 CPU는 21%였다(PowerShell로 손으로
   봤다). 바뀐 것은 알림 문자열, 변이 명세 한 줄, 일지라 부하로 보고, 인용 대조 경고 하나(알림을 옮긴 따옴표)의 따옴표를
   떼고 이 줄을 더한 일지만 다시 스테이지해 다시 쳤다.
+
+## 여섯 번째 인계
+
+반영 커밋 `33c9900a` 직후 인계 계기(`hook_handoff`, 세션 컨텍스트 252,548 토큰, 경계 `커밋 뒤`)가 왔다. 계기를 낸 커밋은
+백그라운드로 돌아 통과했다(러너의 pytest 658.4초, web-verify 493.9초). 인계하지 않는 때 다섯에 들지 않았다(커밋이 성공했고,
+요청 범위는 병합까지이며, 이 세션의 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의
+`self`에 `parentSessionId`가 없다). 이 세션의 지금 제목은 `chore/worktree-overrides-pc-check`이고
+`chore/worktree-overrides-pc-check (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업(대기 하나, 커밋 둘, gh 호출 둘)은 모두
+끝났다.
+
+커밋 전에 '하네스 작업 진행' 세션(`local_7bc0f796-da54-466c-96f6-373b149df8b9`)이 같은 멈춤 지시를 한 번 더 보냈다. 내용은 다섯
+번째 인계 절과 같고(할 일, 하지 않을 일, 이유, 재개), 인계하면 이 지시 전체를 인계 프롬프트에 옮기라고 했다. 이 세션에서 사람이
+직접 친 말은 첫 메시지(지시문)와 위 선택 화면의 답뿐이다.
+
+남은 순서:
+
+1. `33c9900a`를 푸시하고 `@coderabbitai review` 코멘트를 남긴 뒤 `next-session` 순서 1의 2(봇 회차)를 한다. PR 본문은 푸시 전에
+   이 세션이 이미 고쳤다(체크리스트에 봇 첫 회차 줄). claude-review 첫 회차에서 보류한 셋의 이유는 아직 PR 코멘트로 남기지
+   않았다. 위 "봇 회차" 절의 세 항목을 옮긴다. CodeRabbit은 첫 회차에서 시간당 포함 리뷰를 다 써, 이 푸시의 리뷰는 한도에 걸릴 수
+   있다. 둘째 회차부터는 Critical·Major만 고친다.
+2. 병합은 "워크트리에서 병합할 때" 1~3이고, 병합 뒤 주 체크아웃 미갱신 한 줄을 보고에 남긴다.
+3. 회고는 사용자 결정으로 재개 뒤로 미뤘다. `hook_journal_retro`의 계기가 와도 돌지 않는다.
+4. 병합 뒤 원인 실험(위 "다음")을 제안 카드로 남기고, 마지막 보고에 "재개 대기"를 적는다.
+
+넘기는 지시문:
+
+```
+다음 작업: #304의 훅(tools/hook_worktree_skill_overrides.py, 대기열 274)이 이 PC의 데스크톱 앱에서도 먹는지 실제 EnterWorktree로 확인하고 결과를 기록한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: #304 뒤 이 PC의 데스크톱 앱에서 두 가지를 확인한다. 하나, 주 체크아웃의 .claude/settings.local.json 이 git status 에 나오지 않는다. 둘, 주 체크아웃의 스킬 파일이 바뀐 뒤에도 그 워크트리의 스킬 사본이 경로를 단 이름(.claude/worktrees/<워크트리>:<스킬>)으로 스킬 목록에 붙지 않는다. 결과를 일지와 훅 독스트링의 못 보는 것에 적는다
+브랜치: chore/worktree-overrides-pc-check
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-01-worktree-overrides-pc-check.md 의 봇 회차 절, 다음 절, 여섯 번째 인계 절
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차를 반영한 커밋 33c9900a까지 했고 아직 푸시하지 않았다. 푸시와 순서 1의 2(봇 회차)부터 한다. PR 본문은 이미 고쳤다. claude-review 첫 회차에서 보류한 셋의 이유를 PR 코멘트로 남긴다(일지의 봇 회차 절). 회고는 사용자 결정으로 재개 뒤로 미뤘다. 병합 뒤 원인 실험을 제안 카드로 남긴다. 멈춤 지시('하네스 작업 진행' 세션이 사용자 요청으로 전했다): PR 311을 규약대로 끝까지(리뷰 반영, 병합, 일지) 마무리한다. 일지 "다음"은 적어도 된다. next-session으로 새 세션을 열지 않고 다음 티켓이나 대기열 행을 시작하지 않는다. 인계는 해도 되지만 이 지시 전체를 인계 프롬프트에 옮긴다. 이유: 그 세션이 retro 승인 기준과 next-session 결정표를 바꾸는 중이다. 재개 메시지가 오면 main을 당기고 바뀐 스킬은 디스크의 SKILL.md를 Read로 연다. 마지막 보고에 "재개 대기"를 적는다. 전문은 일지의 다섯·여섯 번째 인계 절. 일지 docs/journal/2026-10-20-01-worktree-overrides-pc-check.md
+확인할 선행 조건: 없음
+이번 요청 범위: 확인과 기록(일지, 훅 독스트링의 못 보는 것)의 PR과 병합까지
+```
+
+제목을 바꿨고(앱이 묻지 않고 바꿨다), `git worktree unlock C:/project/agent/.claude/worktrees/worktree-overrides-pc-check`는
+`is not locked`였다. 멈출 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-19T18:30:19Z
+
+첫 열기는 URL이 9080자라 스크립트가 쏘기 전에 거부했다(상한 8000, 세션은 생기지 않았다). 멈춤 지시를 그대로 옮긴 "이어받을
+상태" 칸이 길었다. 그 칸을 뜻은 그대로 두고 줄였고(위 지시문은 줄인 판이다), 전문은 다섯 번째 인계 절과 이 절을 가리킨다. 줄인
+판은 파이썬의 `urllib.parse.quote`로 7631자였다.
+
+open-session을 부른다 2026-10-19T18:32:13Z
+
+## 여섯 번째로 이어받은 세션
+
+- 첫 메시지는 위 지시문 그대로였다. 제목을 브랜치 이름으로 바꿨고(앱이 지은 제목 "워크트리 스킬 오버라이드 PC 확인"이라 묻지
+  않고 바뀌었다), `EnterWorktree(path)`는 처음 부른 한 번에 들어갔다.
+- `origin/main`이 #310(카나리아 러너, 헌법 3.0.46)으로 한 칸 더 앞서 PR이 `CONFLICTING`(`mergeStateStatus` `DIRTY`)이었다. #310과
+  이 브랜치가 함께 고친 파일은 `.scratch/harness/probes/README.md`, `docs/constitution/README.md`, `docs/constitution/operations.md`이고,
+  충돌은 헌법 색인의 판 줄 하나였다. 이 워크트리는 `EnterWorktree`로 들어온 것이라 `sync_with_base_branch`가 앞 세션에서 거부됐으므로
+  부르지 않고 `git merge origin/main`으로 합쳤다.
+- 판 줄은 main의 3.0.46을 두고, 그 줄의 3.0.46 문단 뒤에 이 브랜치의 3.0.45 문단을 끼웠다. #310의 문단이 3.0.45를 이 브랜치
+  몫으로 비워 두었다고 적기 때문이다. 끼우기는 스크래치 스크립트로 했고, `git diff --word-diff`로 main 대비 더해진 것이 그 문단
+  하나인 것을 봤다. `tools/check_constitution_version.py`는 "판 3.0.46 (origin/main 3.0.46, 비워 둔 판 3.0.45)"로 지나갔고, 이
+  브랜치의 카나리아 명세는 #310이 고친 `tools/canary.py --shape`를 지났다.
+- 합치기 커밋 `3f542dab`. pre-commit이 모두 통과였다(러너의 pyright 27.0초, 훅 러너 64.6초, pytest 151.3초, web-verify 208.1초).
+  ruff 둘과 카나리아 명세 모양은 검사할 파일이 없어 `Skipped`였고, 인용 대조 경고 셋은 main이 들여온 줄이다.
+- 합친 뒤 `tools/sibling_overlap.py`가 이 일지 30이 main의 최신 일지 2026-10-19-34보다 이름순으로 앞이라며 1로 끝났고, `--move`로
+  2026-10-20-01로 옮겼다. 인용을 고친 파일은 프로브 README, 카나리아 명세(머리 주석 둘뿐이라 카나리아는 다시 돌리지 않는다),
+  헌법 색인, 이 일지, 훅 독스트링이다. 옛 번호를 grep하니 다른 일지의 무관한 "일지 30" 셋만 남았다.
+- claude-review 첫 회차에서 보류한 셋과 고친 하나의 이유를 PR 코멘트로
+  남겼다([코멘트](https://github.com/njh6803/agent-os/pull/311#issuecomment-6274491133)).
+- "다음" 절을 이 일지의 끝으로 옮겼다. 다섯·여섯 번째 인계 절이 "위 다음"이라 가리킨 절이다.
+- 병합은 워크트리에서 해 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main. 병합된 이 워크트리를 지우는 것도 주
+  체크아웃 세션의 `tidy-checkouts` 몫이다. 멈춤 지시대로 병합 뒤 `next-session`의 2~4(다음 작업을 고르고, 지시문을 내고, 연다)는
+  하지 않는다.
 
 ## 다음
 

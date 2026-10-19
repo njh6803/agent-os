@@ -51,7 +51,7 @@ local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`
   사용자 전역 ignore(`~/.config/git/ignore` 의 `**/.claude/settings.local.json`)가 덮어, 이 PC 의 앱
   세션들이 이 훅으로 키를 적은 local 이 `git status` 에 나오지 않았다(2026-10-19 워크트리에 들어가기
   전의 `git status --porcelain` 과, 다음 세션이 시작할 때 앱이 넣은 git 상태로 봤다. 일지
-  2026-10-19-30).
+  2026-10-20-01).
 - `EnterWorktree` 밖의 길로 붙는 사본. 워크트리가 `.gitignore` 에 없는 저장소에서 주 체크아웃 세션이
   워크트리 파일을 읽어 붙는 것은 이 훅이 보지 않는다.
 - 다른 길로 워크트리에 온 세션(앱이 워크트리 폴더에서 연 세션, `/cd`)과 이 훅이 들어오기 전에 들어간
@@ -65,7 +65,7 @@ local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`
   뒤 만든 스킬도 같은 추가분에 실려 목록을 다시 훑은 것이 보였다. 같은 날 다른 앱 세션이 같은
   워크트리에 `EnterWorktree(path)` 로 다시 들어갔을 때도(키는 그대로 있었다, Grep 으로 개수를
   봤다) 같은 열하나가 붙었다. 2026-10-19 두 회차이고, 판정은
-  `.scratch/harness/probes/worktree_overrides_app.py` 다(일지 2026-10-19-30). 까닭은 가르지 않았다.
+  `.scratch/harness/probes/worktree_overrides_app.py` 다(일지 2026-10-20-01). 까닭은 가르지 않았다.
   후보는 셋이다. 하나, 들어간 뒤 세션이 주 체크아웃이 아닌 워크트리의 local 을 읽는다. 두 회차
   모두 세션의 기록 파일이 워크트리 이름의 프로젝트 폴더로 옮겨졌고, 워크트리의 local 사본은 이
   훅이 쓰기 전에 복사되어 두 회차 모두 그 키가 없었다(손으로 봤다). 공식 문서(settings 의 "Where
