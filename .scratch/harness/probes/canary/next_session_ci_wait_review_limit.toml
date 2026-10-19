@@ -1,0 +1,26 @@
+# next-session 1단계의 봇 회차에 더한 문장(claude-review가 계정 한도로 빨가면 tools/wait_ci.py 가 그 빨강을 실패로 세지
+# 않고, 통과 줄에 한도로 리뷰 없음을 덧붙인다, 대기열 327)이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주
+# 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이 없다. 병합 뒤에 다시 돌리려면 `# 최신 결과:` 줄의 대조군
+# 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-19, 이 PC, claude 2.1.302, 실험군 미커밋 본문, 대조군 주 체크아웃 `655b19a8`, 일지
+#   2026-10-19-03). 실험군 셋은 그 글을 옮겼고, 대조군은 "없음"을 답했다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_ci_wait_review_limit.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 하나를 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+순서의 1단계 아래 "봇 회차" 항목의 대기 문단에서, claude-review가 계정 한도로 빨갰을 때 대기 명령의 통과 줄에 덧붙는
+글을 백틱 안의 글자 그대로 옮겨라. 그런 글이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["계정 한도로 리뷰 없음(<한도 문구>)"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
