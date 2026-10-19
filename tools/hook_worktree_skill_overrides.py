@@ -88,8 +88,8 @@ STALE_TEMP_SECONDS = 3600
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
 
-class SettingsShapeError(ValueError):
-    """local 설정의 모양이 고칠 수 있는 꼴이 아니다."""
+class UnfixableSettingsError(ValueError):
+    """local 설정을 고칠 수 없다. 메시지가 사용자에게 알릴 까닭이다."""
 
 
 class HookPayload(TypedDict, total=False):
@@ -136,7 +136,7 @@ def updated(settings: dict[str, Json], root: Path, worktree: Path) -> dict[str, 
     없으면 None 이다. `settings` 는 고치지 않는다."""
     current = settings.get(OVERRIDES, {})
     if not isinstance(current, dict):
-        raise SettingsShapeError(f"{OVERRIDES} 가 객체가 아니다")
+        raise UnfixableSettingsError(f"{OVERRIDES} 가 객체가 아니다")
     kept = {
         key: value
         for key, value in current.items()
@@ -158,41 +158,49 @@ def _worktree_alive(root: Path, key: str) -> bool:
 
 def apply(root: Path, worktree: Path) -> str | None:
     """`root` 의 local 설정을 고친다. 썼거나 고치지 못했으면 사용자에게 알릴 문장, 바뀔 것이 없으면
-    None 이다."""
-    path = root / LOCAL
+    None 이다. 고치는 일은 `_fix` 가 하고, 여기서는 그 실패를 알림으로 바꾸기만 한다."""
     try:
-        text = path.read_text(encoding="utf-8-sig")
-    except FileNotFoundError:
-        text = None
-    except UnicodeDecodeError:
-        return _cannot("UTF-8 이 아니다")
-    except OSError as error:
-        return _cannot(f"읽지 못했다({error})")
-    settings: dict[str, Json] = {}
-    if text is not None:
-        try:
-            value: Json = json.loads(text)
-        except json.JSONDecodeError as error:
-            return _cannot(f"JSON 으로 풀리지 않는다({error})")
-        if not isinstance(value, dict):
-            return _cannot("맨 위가 객체가 아니다")
-        settings = value
-    try:
-        new = updated(settings, root, worktree)
-    except SettingsShapeError as error:
+        return _fix(root / LOCAL, root, worktree)
+    except UnfixableSettingsError as error:
         return _cannot(str(error))
+
+
+def _fix(path: Path, root: Path, worktree: Path) -> str | None:
+    """쓴 것을 알리는 문장을 돌려준다. 실패는 돌려주지 않고 `UnfixableSettingsError` 로 던져,
+    호출부가 반환값을 버려도 묻히지 않는다."""
+    new = updated(read_settings(path), root, worktree)
     if new is None:
         return None
-    try:
-        _write(path, new)
-    except OSError as error:
-        return _cannot(f"쓰지 못했다({error})")
+    _write(path, new)
     count = len(skill_names(worktree))
     return (
         f"워크트리 {worktree.name} 의 스킬 사본 {count}개를 스킬 목록에서 끄도록 "
         f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). 주 체크아웃의 스킬이 바뀌어도 "
         "경로를 단 사본이 목록에 붙지 않는다."
     )
+
+
+def read_settings(path: Path) -> dict[str, Json]:
+    """local 설정. 파일이 없으면 빈 설정이고, 읽거나 풀지 못하면 `UnfixableSettingsError` 다."""
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        return {}
+    except UnicodeDecodeError as error:
+        raise UnfixableSettingsError("UTF-8 이 아니다") from error
+    except OSError as error:
+        raise UnfixableSettingsError(f"읽지 못했다({error})") from error
+    return _parsed(text)
+
+
+def _parsed(text: str) -> dict[str, Json]:
+    try:
+        value: Json = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise UnfixableSettingsError(f"JSON 으로 풀리지 않는다({error})") from error
+    if not isinstance(value, dict):
+        raise UnfixableSettingsError("맨 위가 객체가 아니다")
+    return value
 
 
 def _cannot(reason: str) -> str:
@@ -203,6 +211,14 @@ def _cannot(reason: str) -> str:
 
 
 def _write(path: Path, settings: dict[str, Json]) -> None:
+    """쓰지 못하면 `UnfixableSettingsError` 다."""
+    try:
+        _replace(path, settings)
+    except OSError as error:
+        raise UnfixableSettingsError(f"쓰지 못했다({error})") from error
+
+
+def _replace(path: Path, settings: dict[str, Json]) -> None:
     """같은 폴더의 임시 파일에 쓰고 바꿔 끼운다. 쓰다 끊겨도 원래 파일이 반쯤 남지 않고, 바꿔
     끼우지 못하면 임시 파일을 지운다."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -226,9 +242,18 @@ def _sweep_stale_temps(path: Path) -> None:
     지우지 못하면 둔다."""
     cutoff = time.time() - STALE_TEMP_SECONDS
     for leftover in path.parent.glob(f"{path.name}.*.tmp"):
-        with contextlib.suppress(OSError):
-            if leftover.stat().st_mtime < cutoff:
+        if _modified_before(leftover, cutoff):
+            with contextlib.suppress(OSError):
                 leftover.unlink()
+
+
+def _modified_before(path: Path, cutoff: float) -> bool:
+    """`path` 가 `cutoff` 전에 마지막으로 바뀌었는지. 그사이 사라졌거나 볼 수 없으면 아니라고
+    본다."""
+    try:
+        return path.stat().st_mtime < cutoff
+    except OSError:
+        return False
 
 
 def main() -> int:

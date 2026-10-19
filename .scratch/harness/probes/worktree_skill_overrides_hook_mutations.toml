@@ -104,10 +104,10 @@ tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_worktree_skill_overrides.py"
-old = '''        if not isinstance(value, dict):
-            return _cannot("맨 위가 객체가 아니다")
-        settings = value'''
-new = '''        settings = value if isinstance(value, dict) else {}'''
+old = '''    if not isinstance(value, dict):
+        raise UnfixableSettingsError("맨 위가 객체가 아니다")
+    return value'''
+new = '''    return value if isinstance(value, dict) else {}'''
 
 [[mutation]]
 name = "클라우드 세션에서도 쓴다"
@@ -126,10 +126,30 @@ tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_worktree_skill_overrides.py"
-old = '''    except UnicodeDecodeError:
-        return _cannot("UTF-8 이 아니다")
+old = '''    except UnicodeDecodeError as error:
+        raise UnfixableSettingsError("UTF-8 이 아니다") from error
 '''
 new = ''''''
+
+[[mutation]]
+name = "읽지 못한 설정을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''    except OSError as error:
+        raise UnfixableSettingsError(f"읽지 못했다({error})") from error
+'''
+new = ''''''
+
+[[mutation]]
+name = "쓰지 못한 것을 알리지 않는다"
+tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_worktree_skill_overrides.py"
+old = '''        raise UnfixableSettingsError(f"쓰지 못했다({error})") from error'''
+new = '''        raise'''
 
 [[mutation]]
 name = "남은 임시 파일을 나이와 상관없이 지운다"
@@ -137,8 +157,8 @@ tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_worktree_skill_overrides.py"
-old = '''            if leftover.stat().st_mtime < cutoff:'''
-new = '''            if leftover.stat().st_mtime < cutoff + 2 * STALE_TEMP_SECONDS:'''
+old = '''        return path.stat().st_mtime < cutoff'''
+new = '''        return path.stat().st_mtime < cutoff + 2 * STALE_TEMP_SECONDS'''
 
 [[mutation]]
 name = "남은 임시 파일을 치우지 않는다"
@@ -146,8 +166,8 @@ tests = ["tests/tools/test_hook_worktree_skill_overrides.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_worktree_skill_overrides.py"
-old = '''            if leftover.stat().st_mtime < cutoff:'''
-new = '''            if leftover.stat().st_mtime < 0:'''
+old = '''        return path.stat().st_mtime < cutoff'''
+new = '''        return path.stat().st_mtime < 0'''
 
 [[mutation]]
 name = "대조군: 알림의 끝 문장을 바꾼다"

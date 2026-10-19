@@ -24,6 +24,7 @@ from pathlib import Path
 import pytest
 from tools.hook_worktree_skill_overrides import KEY_PREFIX as HOOK_KEY_PREFIX
 from tools.tidy_checkouts import (
+    WORKTREE_OVERRIDE_PREFIX,
     Facts,
     Holder,
     Ops,
@@ -479,6 +480,12 @@ def test_설정은_훅이_적는_워크트리_사본_키와_서식을_빼고_견
     `.claude/worktrees/` 키를 적고 다시 써도, 그 키 밖이 같은 워크트리 사본은 다시 만들 수 있다.
     그 밖의 차이(권한, 다른 스킬 설정)와 풀리지 않는 파일은 지금처럼 남긴다."""
     assert settings_equivalent(root, worktree) is same
+
+
+def test_설정에서_빼는_키의_접두는_훅이_적는_접두와_같다() -> None:
+    """훅끼리만 import 하지 않으므로 이 도구는 접두를 따로 둔다. 둘이 갈리면 지우는 판정이 조용히
+    좁아지거나 넓어진다."""
+    assert WORKTREE_OVERRIDE_PREFIX == HOOK_KEY_PREFIX
 
 
 # --- 판정 ---------------------------------------------------------------------------------------

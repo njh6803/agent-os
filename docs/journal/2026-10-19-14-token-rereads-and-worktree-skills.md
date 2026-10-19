@@ -190,6 +190,28 @@ PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(다음 층에 밀 주�
 루트와 바이트가 달라지므로, `tools/tidy_checkouts.py` 의 `settings_equivalent` 가 이 훅의 키와 서식을 빼고 견준다", "Windows 에서
 local 이 `.claude/settings.json` 곁에 남는다고 적는다", "(끝 조건이 Windows 출력의 CR만 든 빈 줄에서도 멈춘다)".
 
+## PR 봇 첫 회차
+
+PR #304를 열고 `@coderabbitai review`를 남겼다. CodeRabbit은 무료 OSS 한도("Review rate limited")로 리뷰하지 못했다.
+그 PR의 보안·버그 축은 위 PR 직전 리뷰가 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인). claude-review의 첫 리뷰는
+Critical·Major 없이 Minor 셋, Nit 둘이었다. 첫 회차라 지적마다 판단했다.
+
+- (Minor, CODING_STANDARDS 에러 처리 줄) `apply`가 읽기·풀기·쓰기의 실패마다 `_cannot`을 되풀이했다. 읽어서 푸는
+  `read_settings`·`_parsed`, 쓰기의 실패를 바꾸는 `_write`와 바꿔 끼우는 `_replace`로 나누고, 실패는 모두
+  `UnfixableSettingsError`(옛 `SettingsShapeError`)로 올려 `apply`의 `except` 하나가 알림으로 바꾼다. 읽기 실패(설정 자리가
+  폴더) 시험과 변이 둘(읽기·쓰기 실패를 알리지 않기)을 더했다.
+- (Minor, CQS 줄) 같은 고침으로 실패가 반환값이 아니라 예외가 되어, 쓰는 `_fix`가 돌려주는 것은 쓴 것의 보고뿐이다. 규칙이 막으려는
+  "호출부가 무시하면 실패가 묻힌다"는 길이 없어졌다.
+- (Minor, CODING_STANDARDS 삼키는 `with` 줄) `_sweep_stale_temps`의 나이 비교를 `_modified_before`로 빼고 `suppress`에는 지우기만
+  두었다.
+- (Nit) 두 접두가 같다는 것을 `test_설정에서_빼는_키의_접두는_훅이_적는_접두와_같다`로 직접 단언했다.
+- (Nit, 보류) 훅 독스트링의 측정 서사를 프로브 README로 옮기라는 것은 두었다. `.claude/rules/tools.md`가 훅의 독스트링에 못 보는
+  것과 그 근거를 적게 하고, 같은 꼴의 다른 훅도 독스트링에 근거를 둔다.
+
+반영 뒤 두 시험 파일 191건이 지났고, 변이 표 `worktree_skill_overrides_hook_mutations.toml` 열여덟이 모두 기대대로였다.
+`uv run python tools/run_checks.py`는 pytest 밖의 일곱이 지났고 pytest는 3,595건 통과, 같은 root 전용 1건 실패였다. 커밋은 앞과
+같이 `SKIP=pytest`다.
+
 ## 회고
 
 후보 일곱, 승인 셋(새 행 363·364, 열린 행 359에 회차), 넘김 없음, 기각 넷이다.

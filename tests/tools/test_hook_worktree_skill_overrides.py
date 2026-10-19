@@ -25,7 +25,7 @@ from tools.hook_worktree_skill_overrides import (
     TOOL,
     HookPayload,
     Json,
-    SettingsShapeError,
+    UnfixableSettingsError,
     apply,
     entered_worktree,
     skill_names,
@@ -156,7 +156,7 @@ def test_스킬이_없는_워크트리는_None_이다(tmp_path: Path) -> None:
 
 def test_skillOverrides_가_객체가_아니면_멈춘다(tmp_path: Path) -> None:
     worktree = _워크트리(tmp_path, "x")
-    with pytest.raises(SettingsShapeError):
+    with pytest.raises(UnfixableSettingsError):
         updated({"skillOverrides": ["tdd"]}, tmp_path, worktree)
 
 
@@ -244,6 +244,16 @@ def test_쓸_때_한_시간_넘은_임시_파일은_치우고_새_것은_둔다(
     assert apply(tmp_path, worktree) is not None
     assert not old.exists()
     assert fresh.exists()
+
+
+def test_읽지_못하는_설정은_까닭과_함께_알린다(tmp_path: Path) -> None:
+    worktree = _워크트리(tmp_path, "x")
+    (tmp_path / LOCAL).mkdir()
+
+    notice = apply(tmp_path, worktree)
+
+    assert notice is not None and "읽지 못했다" in notice
+    assert (tmp_path / LOCAL).is_dir()
 
 
 @pytest.mark.parametrize(
