@@ -1024,7 +1024,8 @@ def run_command(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
     except subprocess.TimeoutExpired:
         _kill_tree(process)
         output = _drain(process)
-        return CommandResult(process.wait(), output, timed_out_after=timeout)
+        code = process.wait()  # 시간 제한 없음: _kill_tree 로 끝낸 자식을 거둔다
+        return CommandResult(code, output, timed_out_after=timeout)
     except BaseException:
         _kill_tree(process)
         raise

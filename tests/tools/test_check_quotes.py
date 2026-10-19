@@ -5,10 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from tools.check_quotes import (
+    CALL_TIMEOUT,
     ROOT,
     Quote,
     added_lines,
@@ -16,6 +18,7 @@ from tools.check_quotes import (
     check,
     default_files,
     quotes_in,
+    tracked_text_files,
 )
 
 원문 = "지침을 쓰는 사람이 그 지침을 가장 먼저 어긴다는 것이 이 저장소가 훅을 위에 두는 이유다"
@@ -434,3 +437,34 @@ def test_CLI_는_경고가_없어도_본_인용_수를_출력한다(tmp_path: Pa
     # 넘긴 인자는 둘이지만 읽은 파일은 하나다. 저장소 밖이라 diff 가 없어 전체를 봤다.
     assert "파일 1개(그중 전체를 본 것 1개)에서 인용 1건" in process.stdout
     assert "경고 없음" in process.stdout
+
+
+def _멈춘_git(seen: list[object]) -> Callable[..., subprocess.CompletedProcess[bytes]]:
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, 1)
+
+    return stuck
+
+
+def test_git_목록이_시간을_넘기면_저장소_밖처럼_트리를_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """넘김은 git 이 실패한 갈래로 센다(대기열 342)."""
+    (tmp_path / "a.md").write_text("본문\n", encoding="utf-8")
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_git(seen))
+
+    assert tracked_text_files(tmp_path) == [tmp_path / "a.md"]
+    assert seen == [CALL_TIMEOUT]
+
+
+def test_git_diff_가_시간을_넘기면_전체를_본다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "a.md").write_text("본문\n", encoding="utf-8")
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_git(seen))
+
+    assert added_lines(tmp_path / "a.md", tmp_path) is None
+    assert seen == [CALL_TIMEOUT]

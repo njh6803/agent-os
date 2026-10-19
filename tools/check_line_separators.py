@@ -71,6 +71,9 @@ _SEPARATOR = re.compile(_SEPARATOR_PATTERN)
 _TEXT_PROBE = 8000
 # 인덱스에서 내용이 있는 일반 파일의 모드. 160000(서브모듈)과 120000(링크)은 뺀다.
 _REGULAR_MODES = frozenset({"100644", "100755"})
+# `git ls-files` 를 기다리는 초. pre-commit 은 훅에 시간 제한을 두지 않는다(`tools/run_checks.py`
+# 독스트링의 대기열 333, 대기열 342).
+CALL_TIMEOUT = 60
 HINT = (
     "소스에 그 문자가 필요하면 chr(0x2028) 처럼 만든다. "
     "이스케이프는 편집 도구가 날것으로 바꿀 수 있다. "
@@ -155,9 +158,14 @@ def problems_in(data: bytes, suffix: str) -> list[str]:
 
 
 def tracked_files(root: Path = ROOT) -> list[Path]:
-    """인덱스의 일반 파일 중 작업 트리에 있는 것. 인자 없이 부를 때의 범위다."""
+    """인덱스의 일반 파일 중 작업 트리에 있는 것. 인자 없이 부를 때의 범위다. git 이 실패하거나
+    `CALL_TIMEOUT` 초 안에 돌아오지 않으면 예외로 멈춘다."""
     listing = subprocess.run(
-        ["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True
+        ["git", "ls-files", "-s", "-z"],
+        cwd=root,
+        capture_output=True,
+        check=True,
+        timeout=CALL_TIMEOUT,
     )
     files: list[Path] = []
     seen: set[str] = set()

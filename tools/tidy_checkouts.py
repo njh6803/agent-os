@@ -272,6 +272,9 @@ DETACHED = ".detached"
 # 지우지 않는 브랜치. 루트가 다른 브랜치에 있을 때 `main` 이 체크아웃되지 않은 브랜치로 보인다
 PROTECTED_BRANCHES = frozenset({"main", "master"})
 MERGED_LIMIT = 1000
+# gh 와 tasklist 하나를 기다리는 초. 넘기면 부르지 못한 것으로 센다(대기열 342). git 은 두지 않는다
+# (`real_git`).
+CALL_TIMEOUT = 60
 RECREATABLE_DIRS = frozenset(
     {
         ".venv",
@@ -396,8 +399,12 @@ class Holder:
 
 
 def real_git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    """`GIT_OPTIONAL_LOCKS=0`: 남의 워크트리에서 친 `status` 가 색인을 고쳐 쓰며 잠그지 않는다."""
-    return subprocess.run(
+    """`GIT_OPTIONAL_LOCKS=0`: 남의 워크트리에서 친 `status` 가 색인을 고쳐 쓰며 잠그지 않는다.
+    시간 제한을 두지 않는다. 지우는 git(`worktree remove`, `branch -D`)도 이 길로 가고, 큰
+    `node_modules` 를 지우는 중에 끊으면 지우다 만 폴더가 남는다. 이 도구의 git 은 모두 이 함수
+    하나로 가서 읽기만 하는 git(`status --ignored`, `for-each-ref`, `merge-base`, `rev-parse`)도
+    함께 시간 제한이 없다. 그것만 끊으려면 `Ops.git` 을 지우는 길과 읽는 길로 갈라야 한다."""
+    return subprocess.run(  # 시간 제한 없음: 지우는 git 도 이 길로 가 도중에 끊지 않는다(독스트링)
         ["git", "-c", "core.longpaths=true", *args],
         cwd=cwd,
         env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
@@ -419,9 +426,12 @@ def gh_merged_heads(root: Path) -> dict[str, frozenset[str]]:
             encoding="utf-8",
             errors="replace",
             check=False,
+            timeout=CALL_TIMEOUT,
         )
     except OSError as error:
         raise ToolError(f"gh 를 띄우지 못했다: {error}") from error
+    except subprocess.TimeoutExpired as error:
+        raise ToolError(f"gh pr list 가 {CALL_TIMEOUT}초 안에 돌아오지 않았다") from error
     if result.returncode != 0:
         raise ToolError(f"gh pr list 가 {result.returncode} 로 끝났다: {result.stderr.strip()}")
     try:
@@ -431,12 +441,15 @@ def gh_merged_heads(root: Path) -> dict[str, frozenset[str]]:
 
 
 def process_alive(pid: int) -> bool:
-    """그 pid 의 프로세스가 있는지. 알 수 없으면 있다고 본다(지우지 않는 쪽)."""
+    """그 pid 의 프로세스가 있는지. 알 수 없으면(`tasklist` 가 시간을 넘긴 것도) 있다고 본다(지우지
+    않는 쪽)."""
     if sys.platform == "win32":
         query = ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"]
         try:
-            result = subprocess.run(query, capture_output=True, text=True, errors="replace")
-        except OSError:
+            result = subprocess.run(
+                query, capture_output=True, text=True, errors="replace", timeout=CALL_TIMEOUT
+            )
+        except (OSError, subprocess.TimeoutExpired):
             return True
         return result.returncode != 0 or tasklist_has(result.stdout, pid)
     try:

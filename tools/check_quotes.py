@@ -74,6 +74,8 @@ _PROPOSAL = re.compile(
 )
 _ELLIPSIS = re.compile(r"…|\.\.\.")
 _EXCLUDED_DIRS = frozenset({".git", ".venv", "node_modules", "worktrees", "__pycache__"})
+# git 호출 하나를 기다리는 초. 넘기면 git 이 실패한 갈래로 간다(대기열 342).
+CALL_TIMEOUT = 60
 
 
 @dataclass(frozen=True)
@@ -169,11 +171,18 @@ def quotes_in(markdown: str) -> list[Quote]:
 
 
 def tracked_text_files(root: Path = ROOT) -> list[Path]:
-    """git 이 추적하는 텍스트 파일. 저장소가 아니면(테스트) 트리를 걷는다."""
-    result = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "-z"], capture_output=True, check=False
-    )
-    if result.returncode == 0:
+    """git 이 추적하는 텍스트 파일. 저장소가 아니거나(테스트) git 이 `CALL_TIMEOUT` 초 안에 돌아오지
+    않으면 트리를 걷는다."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        result = None
+    if result is not None and result.returncode == 0:
         names = result.stdout.decode("utf-8", "replace").split("\0")
         return [
             (root / name).resolve() for name in names if name and Path(name).suffix in TEXT_SUFFIXES
@@ -221,13 +230,17 @@ def added_lines(path: Path, root: Path = ROOT) -> set[int] | None:
     같다. 스테이지된 줄(`diff --cached`)만 보던 때는 부분 스테이지된 파일의 나머지 편집을 손으로
     넘겨도 조용히 건너뛰었다(대기열 55). diff 가 빈 것은 추적하지 않는 새 파일이나 바뀌지 않은
     파일을 넘긴 경우다. 그때 아무것도 보지 않으면 검사가 조용히 빈 것이 되므로 전체를 본다. HEAD 가
-    없어도 전체다.
+    없거나 git 이 `CALL_TIMEOUT` 초 안에 돌아오지 않아도 전체다.
     """
-    result = subprocess.run(
-        ["git", "-C", str(root), "diff", "HEAD", "-U0", "--no-color", "--", str(path)],
-        capture_output=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "diff", "HEAD", "-U0", "--no-color", "--", str(path)],
+            capture_output=True,
+            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return None
     if result.returncode != 0 or not result.stdout.strip():
         return None
     return added_lines_from_diff(result.stdout.decode("utf-8", "replace"))
