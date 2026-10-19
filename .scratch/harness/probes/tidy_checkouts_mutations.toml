@@ -1525,3 +1525,31 @@ old = '''    if _is_link(trash) or (os.path.lexists(trash) and not trash.is_dir(
         return None'''
 new = '''    if False:
         return None'''
+
+[[mutation]]
+name = "gh: 시간을 넘긴 gh pr list 를 병합된 PR 이 없는 것으로 읽는다(대기열 342)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "gh_가_시간을_넘기면"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    except subprocess.TimeoutExpired as error:
+        raise ToolError(f"gh pr list 가 {CALL_TIMEOUT}초 안에 돌아오지 않았다") from error'''
+new = '''    except subprocess.TimeoutExpired:
+        return {}'''
+
+[[mutation]]
+name = "pid: 시간을 넘긴 tasklist 를 끝난 프로세스로 읽는다(대기열 342)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "tasklist_가_시간을_넘기면"]
+expect = "red"
+expect_output = ["where False = process_alive(4242)"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        except (OSError, subprocess.TimeoutExpired):
+            return True'''
+new = '''        except OSError:
+            return True
+        except subprocess.TimeoutExpired:
+            return False'''

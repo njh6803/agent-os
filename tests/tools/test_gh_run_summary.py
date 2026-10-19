@@ -7,9 +7,18 @@
 from __future__ import annotations
 
 import json
+import subprocess
 
 import pytest
-from tools.gh_run_summary import TEXT_WIDTH, Json, main, render, split_log, summarize
+from tools.gh_run_summary import (
+    CALL_TIMEOUT,
+    TEXT_WIDTH,
+    Json,
+    main,
+    render,
+    split_log,
+    summarize,
+)
 
 PREFIX = "claude-review\tRun Claude Code Review\t2026-09-20T10:45:00.0000000Z "
 
@@ -191,3 +200,19 @@ def test_인자가_없으면_쓰임을_알리고_2를_돌려준다(capsys: pytes
     assert main(["gh_run_summary.py"]) == 2
     assert main(["gh_run_summary.py", "abc"]) == 2
     assert "쓰임" in capsys.readouterr().err
+
+
+def test_gh_가_시간을_넘기면_알리고_1을_돌려준다(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, CALL_TIMEOUT)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+
+    assert main(["gh_run_summary.py", "123"]) == 1
+    assert f"{CALL_TIMEOUT}초 안에 돌아오지 않았다" in capsys.readouterr().err
+    assert seen == [CALL_TIMEOUT]
