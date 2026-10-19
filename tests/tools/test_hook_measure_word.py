@@ -86,7 +86,8 @@ def test_세_자리와_세_낱말을_모두_본다() -> None:
 
 def test_슬래시_꼴과_대소문자가_다른_경로도_본다() -> None:
     assert is_evidence_doc(ADR.replace("\\", "/"))
-    assert is_evidence_doc(QUEUE.replace("\\scratch\\", "\\Scratch\\"))
+    assert is_evidence_doc(QUEUE.replace("\\.scratch\\", "\\.Scratch\\"))
+    assert is_evidence_doc(ADR.replace("\\adr\\", "\\ADR\\"))
     assert is_evidence_doc(PROBE_README.replace("README.md", "readme.md"))
 
 

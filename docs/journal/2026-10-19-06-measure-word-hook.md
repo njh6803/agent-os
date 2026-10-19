@@ -99,3 +99,45 @@ PR 직전 리뷰에 밀 새 문장(원문):
 
 - `tools_rule_measure_word_hook.toml` 첫 판(규칙 파일의 첫 제목과 다섯째 훅의 괄호 설명을 한 물음에 묶었다)은 실험군 세 번이 모두 "없음"이라 실패였고 대조군은 "없음"이었다. operations.md의 "없음" 항목대로 통과한 `tools_rule_edit_during_commit.toml`처럼 번호 둘로 나눠 자리를 짚게 고치고, 카나리아를 괄호 설명과 "둘 다 시간은 재지 않았고"로 바꿨다. 다시 돈 회차는 통과 4, "없음" 섞임 0이었다(셀프 리뷰를 반영한 작업 트리, 러너가 찍은 커밋 ebd09fbb).
 - 형제 `tools_rule_scratch_probe_hook.toml`도 첫 판과 같은 꼴의 물음이고 실제 회차를 돈 적이 없다(사전 확인만). 같은 까닭으로 "없음"일 수 있다. 이 PR의 범위 밖이라 돌리지 않았다.
+
+### 커밋
+
+- `ae50a9ee`. 직전에 `git branch --show-current`가 `chore/measure-word-hook`, `sibling_overlap`이 번호 겹침 없음(origin/main은 ebd09fbb 그대로. 글자 충돌 후보에 `bug-perf-review-batch`의 `.claude/settings.json`·`tools/hook_payloads.toml`이 새로 들었다). pre-commit은 ruff 둘, check-instructions, lint-imports, check-type-escapes, zizmor, pyright, run-hooks, pytest(506초), web-verify, 표·줄 구분 문자·변이 표·인용·커밋 메시지 검사가 모두 Passed였고 Skipped는 없었다.
+
+## 인계 2
+
+커밋 뒤 경계에서 인계 계기(컨텍스트 255,297 토큰)가 왔다. 다섯 예외에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지, 넘겨받은 경계는 `셀프 리뷰 직전`이라 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `chore/measure-word-hook`이다. 아직 푸시하지 않았고 PR도 없다.
+
+### 지시문
+
+```
+다음 작업: 기능 harness. 대기열 227(측정 낱말을 쓴 줄에 프로브와 근거 절을 알리는 계기 훅)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 227(docs/adr/, probes/README.md, retro-queue.md에 더한 줄이 측정 낱말을 들면서 probes/ 경로도 "손으로"도 없으면 근거 절을 알리는 PostToolUse 계기 훅)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/measure-word-hook
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-06-measure-word-hook.md(셀프 리뷰 반영, 카나리아, 커밋, 이 인계)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 카나리아(통과 4)를 실은 커밋 ae50a9ee까지 했고 푸시하지 않았으며 PR이 없다. 남은 단계는 푸시, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지의 "PR 직전 리뷰에 밀 새 문장"), PR 열기, 봇 회차, 병합이다. 일지 docs/journal/2026-10-19-06-measure-word-hook.md
+확인할 선행 조건: 형제 hook-choice-facts(.claude/rules/tools.md, .claude/settings.json, 프로브 README, 대기열, 페이로드 표)와 bug-perf-review-batch(.claude/settings.json, 페이로드 표, 프로브 README, 대기열)가 같은 파일을 고쳐 먼저 병합되면 글자 충돌이 난다. 푸시 전 sibling_overlap을 다시 친다
+이번 요청 범위: PR과 병합까지
+```
+
+인계 직전 제목: `chore/measure-word-hook`. 잠금 풀기는 `is not locked`(이미 풀려 있었다).
+
+open-session을 부른다 2026-10-19T01:01:13Z
+
+## 이어받은 세션
+
+> 사용자: 대기열 227(docs/adr/, probes/README.md, retro-queue.md에 더한 줄이 측정 낱말을 들면서 probes/ 경로도 "손으로"도 없으면 근거 절을 알리는 PostToolUse 계기 훅)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+
+워크트리 `measure-word-hook`에 들어가 이었다. `sibling_overlap`은 번호 겹침 없음, origin/main은 ebd09fbb 그대로였다. 푸시한 뒤 PR 직전 리뷰를 돌렸다(CodeRabbit CLI는 좌석이 없어 대체 둘).
+
+### PR 직전 리뷰
+
+- `/security-review`: 지적 없음. 훅은 subprocess·파일 열기·eval이 없고, 출력은 additionalContext 하나다.
+- `bug-perf-review`: 유효 2(Minor), 보류 1. 밀었던 주장(독스트링 셋, 알림의 세 예외, 변이 열넷)은 모두 코드·시험과 맞는다고 대조했다.
+  - 유효: 프로브 README 행 앞머리가 변이를 "열"로 적었다. 실제는 빨강 기대 열셋과 대조군 하나다. "열셋"으로 고치고 자르기 변이를 둘로 나눠 적었다.
+  - 유효: `test_슬래시_꼴과_대소문자가_다른_경로도_본다`의 `QUEUE.replace("\scratch\\", …)`가 바꿀 글자가 없어 아무것도 시험하지 않았다(`QUEUE`에는 `\.scratch\`가 있다). `\.scratch\`→`\.Scratch\`로 고치고 `docs\ADR` 줄을 더했다.
+  - 보류→오탐: CRLF `originalFile`에서 여러 줄 `old_string`이 맞지 않을 수 있다는 지적. `.gitattributes`가 `* text=auto eol=lf`라 작업 트리 문서가 LF이고, 맞지 않아도 알림만 더 날 뿐 막지 않는다.
+- 다시 돌린 것: 훅 시험 23 passed, 변이 열넷 모두 기대대로.
