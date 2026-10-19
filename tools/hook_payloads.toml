@@ -822,8 +822,8 @@ note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아�
 payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
 # --- hook_security_review_journal (PreToolUse Skill) ---
-# 첫째와 둘째는 이 PC의 트랜스크립트에 있던 Skill 입력이다. 첫째 꼴이 146번, 둘째(args 가 붙은 꼴)가 한 번이었다
-# (2026-10-19, args 는 줄였다). 셋째(silent)도 트랜스크립트에 있던 이름이다.
+# 첫째와 둘째는 이 PC의 트랜스크립트에 있던 Skill 입력이다. 첫째 꼴이 136번, 둘째(args 가 붙은 꼴)가 한 번이었다
+# (2026-10-19, tool_use id 로 중복을 걷은 수, args 는 줄였다). 셋째(silent)도 트랜스크립트에 있던 이름이다.
 [[case]]
 hook = "hook_security_review_journal.py"
 expect = "context"

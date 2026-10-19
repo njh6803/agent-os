@@ -26,13 +26,15 @@ origin/main에 없는 `confident-wright-2d3ebf`·`elegant-dijkstra-aaddb9`·`vig
 ### 214: 예산 40을 넘긴 리뷰
 
 세는 법을 들인 PR #206이 병합된 뒤의 기록을 `reviewer_call_count.py --since 2026-10-12T15:47:23 --until 2026-10-18T23:00`으로
-쟀다. 측정 90회차 가운데 아홉이 40번을 넘겼다(41~62번). 아홉 모두 행의 계기("표지가 40에 닿은 뒤에도 이어 부르면")가
-아니었다. 셋은 마지막 `[호출 n]` 표지가 40인데 실제 누적이 41~42번이었고, 여섯은 마지막 표지가 25~38인데 실제가 41~62번이었다.
-나란히 부른 도구를 하나로 센 것으로 보인다(어림). 표지가 40에 닿은 일곱 가운데 넷은 실제로도 40번에서 멈췄다. 처음에는
+쟀다. 측정 90회차 가운데 아홉이 40번을 넘겼다(41~62번). 응답의 표지로 보면 아홉 모두 행의 계기("표지가 40에 닿은 뒤에도
+이어 부르면")가 아니었다. 셋은 마지막 `[호출 n]` 표지가 40인데 실제 누적이 41~42번이었고, 여섯은 마지막 표지가 25~38인데
+실제가 41~62번이었다. 처음에는 나란히 부른 도구를 하나로 센 것으로 어림했는데, PR 직전 `bug-perf-review`가 표지를 단 응답
+수와 대 보니 그 꼴은 셋뿐이었다. 나머지 여섯은 표지가 응답 수보다 커서 그 꼴로 설명되지 않고 실제보다 1~14 모자랐다(아래 PR
+직전 리뷰 절). 표지가 40에 닿은 일곱 가운데 넷은 실제로도 40번에서 멈췄다. 처음에는
 `--until 2026-10-19T00:00`으로 쟀는데 이 세션의 320 측정 서브에이전트가 섞여 92회가 나와, 창을 줄여 다시 쟀다.
 
 그래서 넘김은 모델이 예산을 무시해서가 아니라 모델이 스스로 센 수가 틀려서 난 것으로 보인다(아홉·셋·여섯의 가름은 프로브
-출력을 스크래치 스크립트로 손으로 갈랐고, 까닭은 어림이다). 예산 문단은 이미 "한 응답에서 나란히 부른 도구는 하나씩
+출력을 스크래치 스크립트로 손으로 갈랐고, 틀린 까닭은 두 꼴로 갈릴 뿐 하나로 정하지 못했다). 예산 문단은 이미 "한 응답에서 나란히 부른 도구는 하나씩
 더하고"라고 적는다. 셈 지침을 적은 뒤에도 셈이 틀렸으므로
 하네스가 세는 PreToolUse 훅이 맞는 층이다(`.claude/rules/tools.md`). 그런데 그 훅을 어디에 등록할지가 구조 결정이다. 모든
 세션의 `settings.json`에 두면 서브에이전트가 아닌 도구 호출마다 훅 프로세스가 하나씩 더 뜨고, 그 서브에이전트 정의의
@@ -75,7 +77,7 @@ frontmatter `hooks`에 두면 `tools/run_hooks.py`의 등록 대조(지금은 `s
 - 새 계기 훅 `tools/hook_security_review_journal.py`와 시험 `tests/tools/test_hook_security_review_journal.py`,
   `.claude/settings.json`의 PreToolUse Skill 매처 등록, `tools/hook_payloads.toml`의 발동 둘·비발동 하나,
   `.claude/rules/tools.md` 훅 시간 항목의 Skill 문장 둘(250).
-- 탐침 `.scratch/harness/probes/agent_report_hook/`(`run.py`, `hook.py`)와 `security_review_hook/run.py`, 프로브 README의
+- 탐침 `.scratch/harness/probes/agent_report_hook/`(`run.py`, `hook.py`)와 `security_review_hook/`(`run.py`, `hook.py`), 프로브 README의
   두 행. README의 `reviewer_call_count.py` 행 끝에 2026-10-19 결과(214).
 - 카나리아 `bug_perf_review_report_line_and_call_paths.toml`, `coderabbit_review_journal_line.toml`,
   `tools_rule_security_review_hook.toml`.
@@ -104,8 +106,8 @@ base `ebd09fbb`, 바뀐 파일 4개, 커밋 0개, 미추적 5개(탐침 둘, 카
 `uv run python -m pytest`가 통과하는 것, 214의 수, 일지의 정리 사실은 다시 대 보고 맞다고 했다.
 - Major: 3단계 둘째 길이 거부가 아니라 실패(시험의 오타, 수집 오류)로 끝나는 갈래가 없다. `agent_report_hook/run.py`의
   대조군은 Agent 도구 결과가 성공했는지 보지 않아, 호출이 거부돼도 `NONE`이 측정으로 센다.
-- Minor: "`code-review` 6단계 끝에만 있어"의 반례(`next-session` 1단계 4), "그 순간을 잡지 못한다"의 과한 일반화,
-  `coderabbit-review` 대체 둘 줄의 덜 끝난 문장과 `/security-review` 근거 종류, 같은 파일의 "이슈 없음" 문장과 새 끝 줄의
+- Minor: 옛 판의 `code-review` 6단계 끝에만 있다는 문장의 반례(`next-session` 1단계 4), 그 순간을 잡지 못한다는
+  단정의 과한 일반화, `coderabbit-review` 대체 둘 줄의 덜 끝난 문장과 `/security-review` 근거 종류, 같은 파일의 "이슈 없음" 문장과 새 끝 줄의
   충돌, 둘째 길의 heredoc 40줄 한도·지우는 함수·고정 폴더 공유, 214 칸의 "정의를 바꾸지 않았다", 일지의 단정과 대기열의
   손으로 가른 셈, README의 "표지 35개 응답", 턴 한도에 잘린 보고.
 - Nit: 두 정의의 같은 끝 줄, `run.py`의 함수 이름과 CQS, "손으로 봤다"의 근거 종류.
@@ -122,8 +124,9 @@ base `ebd09fbb`, 바뀐 파일 4개, 커밋 0개, 미추적 5개(탐침 둘, 카
 
 판정. 근거를 열어 본 것:
 - 명세 Major 250: 유효. PR 템플릿 56행이 좌석을 `coderabbit auth status` 한 줄로 보라고 하고, 대체 둘을 부르라는
-  문장은 그 줄과 `operations.md` 리뷰 파이프라인 2에만 있다. 지난 세션 기록 142개가 `/security-review`를 Skill
-  도구(`"skill":"security-review"`)로 불렀다(grep으로 셌다). 그래서 Skill 매처 계기 훅으로 덮는다. 선례는
+  문장은 그 줄과 `operations.md` 리뷰 파이프라인 2에만 있다. 지난 세션 기록에서 `/security-review`를 Skill
+  도구(`"skill":"security-review"`)로 부른 호출이 백 번이 넘는다(그때 grep으로 센 142는 PR 직전 리뷰가 id로 중복을
+  걷어 136으로 바로잡았다). 그래서 Skill 매처 계기 훅으로 덮는다. 선례는
   `hook_grill_design_check`다.
 - 명세 Major 320: 유효. 2026-10-16 서브에이전트 기록(`agent-aad475db1cfeb1000`)에서 거부 넷을 봤다. `-c` 둘은 코드에
   `git commit -m …`이 들어 "cannot be shown not to be git"이었고, heredoc 둘은 같은 글이 든 본문이라 "too complex"였다.
@@ -172,6 +175,10 @@ base `ebd09fbb`, 바뀐 파일 4개, 커밋 0개, 미추적 5개(탐침 둘, 카
 - `uv run pytest -q tests/tools/test_hook_security_review_journal.py tests/tools/test_hook_grill_design_check.py`: 20 passed.
 - `uv run python tools/run_hooks.py`: 훅 페이로드 130건 어긋남 0건, 래퍼 알림 5건 어긋남 0건, 표의 빈자리 0건.
 - 카나리아 셋: 위 카나리아 절.
+- 커밋 `0aa83005`의 pre-commit: 모두 통과했다(러너 595.58초, 그 가운데 pytest 568.5초·web-verify 593.6초). 변이 표 검사는
+  커밋에 변이 표가 없어 `Skipped`다. 인용 대조가 경고 둘을 냈다. 하나는 이 절의 셀프 리뷰 요약이 옛 판 문장을 따옴표로
+  옮긴 것이라 따옴표를 뗐다. 다른 하나는 `coderabbit-review.md` 11행의 따옴표 안 문장이다. 그것은 남의 글을 옮긴 인용이
+  아니라 서브에이전트가 보고 끝에 붙일 한 줄 자체이고, 앞 판도 같은 꼴로 그 한 줄을 따옴표에 넣었다. 그래서 두었다.
 
 PR 직전 리뷰에 밀 주장(셀프 리뷰를 반영하며 새로 쓴 사실 문장):
 1. `bug-perf-review.md` 3단계: "2026-10-16에 이 리뷰가 거부당한 넷은 모두 코드나 heredoc 본문에 git 명령 글(`git commit -m
@@ -182,10 +189,59 @@ PR 직전 리뷰에 밀 주장(셀프 리뷰를 반영하며 새로 쓴 사실 �
 3. 같은 정의 보고 형식: "`code-review` 6단계 끝과 PR을 연 뒤에 실리는 `next-session` 1단계 4에 있어", "2026-10-19 도구
    결과의 표지를 더하기 전 판의 실험군 두 회차 가운데 하나였고, 더한 판의 실행에서는 두 회차 모두 보고를 받을 때 돌았다."
 4. `coderabbit-review.md`: "본 세션이 `coderabbit auth status`로 좌석이 없는 것을 먼저 보고 이 정의를 부르지 않는 흔한 길".
-5. `tools/hook_security_review_journal.py` 독스트링: "그 호출의 입력은 `{"skill": "security-review"}`가 146번, `args`가 붙은
-   것이 한 번이었고 접두가 붙은 이름은 없었다", "그 문장은 셀프 리뷰 때 실리는 스킬과 PR 뒤에 실리는 `next-session` 1단계
-   4에 있어".
+5. `tools/hook_security_review_journal.py` 독스트링: Skill 입력의 수(그때는 146번과 `args`가 붙은 한 번, 접두 없음)와
+   "그 문장은 셀프 리뷰 때 실리는 스킬과 PR 뒤에 실리는 `next-session` 1단계 4에 있어".
 6. `.claude/rules/tools.md`: "Skill에는 PreToolUse `hook_grill_design_check`·`hook_security_review_journal`·
    `hook_midturn_korean`(매처 없음)과 함께 훅이 넷 붙는다."
 7. 대기열 214 승인 칸과 이 일지 214 절: "측정 90회차 가운데 아홉이 40번을 넘겼다(41~62번)." "셋은 마지막 `[호출 n]` 표지가
    40인데 실제 누적이 41~42번이었고, 여섯은 마지막 표지가 25~38인데 실제가 41~62번이었다."
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat : not assigned`라 대체 둘을 돌렸다. 기준은 origin/main `ebd09fbb`(fetch 뒤에도 그대로라 합칠
+것이 없었다)이고 커밋 `0aa83005`와 커밋하지 않은 이 일지 수정이 범위다.
+
+`/security-review`: 1차 식별 서브에이전트가 지적 없음을 냈다. 걸러낼 후보가 없어 거짓 양성 거르기 단계는 돌 것이 없었다.
+본 것은 새 훅(stdin JSON만 읽고 고정 문장만 내며 입력 값이 출력에 섞이지 않는다, 권한 판정을 내지 않는다), 탐침 셋(인자
+리스트로 띄우고 `shell=True`가 없다, 설정의 훅 명령에 바깥 입력이 없다, 훅 기록은 모양만 적는다), 정의의 함수 부르는 길,
+데이터·시험·문서 파일의 비밀 grep이다. 신뢰도 0.7 미만이라 뺀 관찰이 하나 있다. 공유 `/tmp`가 있는 다중 사용자 유닉스
+호스트에서는 다른 사용자가 `/tmp/bug-perf-review/`를 먼저 만들어 `conftest.py`를 심을 수 있다. 이 PC의 Git Bash에서
+`/tmp`는 사용자별 임시 폴더이고 클라우드 세션은 사용자가 한 명뿐인 컨테이너라 지금 환경에서는 성립하지 않는다고 그 축이
+판정했다. 받아들이고 두었다.
+
+이 `/security-review` 호출에서 새 계기 훅의 문장은 오지 않았다. 이 세션은 주 체크아웃(`ebd09fbb`, 새 훅의 등록이 없다)에서
+시작해 그 설정으로 돌기 때문이고, 등록이 주 체크아웃에 닿는 것은 병합한 뒤 `tidy-checkouts`가 당긴 다음이다. 등록 모양의
+도달은 `security_review_hook/run.py`가 쟀다.
+
+`bug-perf-review`: 마지막 `[호출 40]`, 지적 셋(모두 Minor, 유효), 오탐 넷. 보고 끝에 새 끝 줄(`받는 본 세션에게: …`)을 글자
+그대로 적었다. 이 PR이 더한 줄이 실제 리뷰에서 처음 쓰인 회차다. 예산에 닿아 카나리아 toml 셋과 `tools/run_hooks.py`
+전체는 열지 않았다고 적었다.
+- Minor: 훅 독스트링과 `tools/hook_payloads.toml` 주석의 "146번"은 서로 다른 호출 수가 아니다. 그 축이 Skill `tool_use`를
+  id로 중복을 걷어 세니 `{"skill":"security-review"}`가 136개, `args`가 붙은 것이 1개였고, 줄로 세면 154개·1개였다(이어 연
+  세션의 기록이 앞 대화를 복사한다). 접두가 붙은 `security-review`는 없었다. 일지의 "142개"와도 수가 다르다.
+- Minor: 대기열 214 칸과 일지 214 절의 까닭 문장(나란히 부른 도구를 하나로 센 데서 온 것으로 보인다)은 아홉 가운데 셋에만
+  맞는다. 셋(`rules-tools-batch` 36·35·62 등)은 마지막 표지가 표지를 단 응답 수와 같고, 여섯은 표지가 응답 수보다 커서 그
+  가설로 설명되지 않으며 실제보다 1~14 모자랐다. `feature/09-human-verification-checks`는 응답의 마지막 표지가 38인데 보고
+  첫 줄의 `[호출 52]`가 실제와 같았다. 수는 모두 맞다고 다시 쟀다.
+- Minor: `security_review_hook/run.py`의 실험군은 훅이 돌았다는 표지 없이 측정으로 센다. 훅 명령이 돌지 못한 회차(PATH,
+  시간 초과의 fail-open)도 "답에 없다"로 찍혀 음성 결과를 훅이 안 돈 것과 가르지 못한다. 이번 양성 결과는 훅이 돌아야만
+  나오는 문장이라 영향이 없다. 함수는 부르지 못하고 코드를 읽어 판정했다.
+- 밀 주장 일곱: 1·2·3·4·6은 맞다. 5는 첫째 지적이고, 7은 수가 맞고 까닭이 둘째 지적이다. 1을 대 보며 git 글이 없는 이
+  리뷰의 heredoc 시험 파일(호출 26)도 "too complex"로 거부됐고, `uv run python -c`로 파일을 쓰고 `-m pytest`로 돌리는 길은
+  지나갔다. 거부를 git 글 탓으로 읽을 근거가 없고, 정의는 이미 미리 알 수 없다고 적어 틀리지 않다고 했다.
+- 요청한 확인: 새 훅의 `context_for`에 어긋난 `skill` 값 열둘(공백, 개행, 대소문자, 역슬래시, `None`·`True`·`0`·`[]`·
+  `{}`·목록)과 빠진·문자열 `tool_input`을 넣어 모두 예외 없이 침묵했다. `main`은 최상위가 객체가 아닌 입력과 빈 입력에서
+  종료 1(PreToolUse의 fail-open, 실제 입력은 늘 객체)이다. 같은 매처의 두 훅은 이름 조건이 겹치지 않는다.
+
+판정과 반영(첫 회차라 Minor도 지적마다 판단했다):
+- 첫째 유효: 훅 독스트링과 페이로드 주석의 수를 136(id로 중복을 걷은 수)으로 고치고 줄로 센 154를 함께 적었다. 일지 셀프
+  리뷰 절의 142는 백 번이 넘는다는 말로 바꾸고 바로잡은 수를 괄호에 적었다. 밀 주장 목록의 옛 문장은 따옴표를 뗐다.
+- 둘째 유효: 대기열 214 칸과 일지 214 절의 까닭을 두 꼴(셋은 응답 수와 같은 표지, 여섯은 응답 수보다 큰 표지)로 나눴다.
+  `feature/09-human-verification-checks`의 보고 첫 줄도 적었다. 결론(하네스가 세는 훅, 등록 자리는 ADR)은 두 꼴 모두에서
+  선다. 214 ADR 초안 세션 카드의 브리프는 "아홉 모두 표지가 실제보다 적었다"만 들어 그대로 맞다.
+- 셋째 유효: `security_review_hook/`에 래퍼 `hook.py`를 두어 실험군 설정이 그것을 부르고, 래퍼가 임시 디렉터리의 기록
+  파일에 한 줄을 남긴 뒤 저장소의 훅에 입력을 넘기게 했다. 실험군은 그 줄이 있어야 측정으로 센다. 래퍼를 실제 페이로드로
+  한 번 돌려 훅의 출력이 그대로 나오는 것을 본 뒤 탐침을 다시 돌렸다. 세 회차 모두 측정이었고, 실험군 둘은 기록 줄 하나씩과
+  함께 첫 문장을 옮겼으며 대조군은 기록 없이 `NONE`이었다(종료 0). README 행을 고쳤다.
+- 밀 주장 1의 덧붙인 관찰(git 글 없는 heredoc도 거부): 정의는 이미 어느 명령이 거부될지 미리 알 수 없다고 적어 고치지
+  않았다. 대기열 320 칸에 이 관찰을 더했다.
