@@ -366,3 +366,50 @@ CodeRabbit 첫 회차(`a60e2ddd`..`e097579c`)는 "No actionable comments"였다.
 - PR #295(병합됨) claude-review 셋째 회차의 Nit: `tools/wait_ci.py`의 `limit_message`를 블록 묶기와 한도 판정으로 나눈다. 일지
   2026-10-19-03 "다음"의 `limit_message`·`tools/gh_run_summary.py`의 `_blocks` 같은 결과 시험과 함께, 두 파일 가운데 하나를 고칠
   때 한다. 코멘트에만 있던 일이라 여기 옮긴다(위 "이어받은 일").
+
+## 넷째 세션과 인계
+
+일지 번호 옮기기와 "다음"을 든 커밋(`e1a4a095`)이 pre-commit 전부를 지났다(pytest 395초, web-verify 407초, run-hooks 186초).
+아직 푸시하지 않았다. 커밋 직후 인계 계기가 왔다(`커밋 뒤`, 세션 컨텍스트 220,002 토큰). 이 세션이 넘겨받은 경계는 `PR 연 뒤`라
+같은 경계가 아니고, 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 넘긴다. 이 인계 절은 커밋하지
+않았다. 이 세션의 제목은 `chore/tidy-running-branch`였고 `chore/tidy-running-branch (인계함)`으로 바꾼다.
+
+결정: 두 봇의 첫 회차는 끝났다(claude-review는 Minor·Nit을 두었고 보류 이유를 PR 코멘트로 남겼다, CodeRabbit은 지적이 없었다).
+남은 단계는 푸시, `@coderabbitai review`, 대기, 둘째 회차(Critical·Major만 고친다), 병합이다. 새 세션이 이 인계 절을 커밋하지 않은
+채 `e1a4a095`만 푸시하면, 병합 직전에 일지만 바꾼 커밋 하나와 봇 회차가 한 번 더 든다. 그래서 푸시하기 전에 이 절을 새 세션의 첫
+기록과 함께 커밋해 한 번에 푸시하기를 권한다. CodeRabbit은 첫 회차에서 시간당 한도를 다 썼다고 알렸으므로(07:03Z), 그 뒤 한 시간
+안의 요청은 `Review rate limited`로 지나갈 수 있다. 그때 이 회차의 보안·버그 축은 PR 직전 리뷰의 결과(PR 본문)로 갈음한다
+(`docs/constitution/operations.md` 리뷰 파이프라인의 초록 착시 목록).
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 286(tools/tidy_checkouts.py judge가 체크아웃되지 않은 로컬 브랜치를 지울 후보로 낼 때 실행 중 세션의 브랜치를 보지 않는 것)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/tidy-running-branch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "넷째 세션", "다음", "넷째 세션과 인계" 절
+이어받을 상태: 인계: 커밋 뒤. PR #303이 열려 있고 커밋 e1a4a095(일지 번호를 20으로 옮기고 "다음"을 썼다)는 아직 푸시하지 않았다. 푸시와 순서 1의 2(봇 회차)부터 한다. 두 봇의 첫 회차는 끝났고 claude-review의 Minor·Nit 보류 이유는 PR 코멘트에 있어, 이번 푸시의 리뷰는 둘째 회차라 Critical·Major만 고친다. 일지의 "넷째 세션과 인계" 절은 커밋하지 않은 채 워크트리에 있고, 푸시 전에 함께 커밋하기를 권한다(그 절의 결정). 그 커밋 전에 sibling_overlap으로 일지 번호를 다시 본다. 일지는 docs/journal/2026-10-19-20-tidy-running-branch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/tidy-running-branch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`은 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-10-19T07:35:23Z
+
+## 다섯째 세션
+
+> 사용자: 대기열 286(tidy_checkouts.py judge의 브랜치 지우기 판정이 --running 제목을 보지 않는 열린 행)을 chore 한 PR로
+> 반영한다. 행의 "어디로" 칸이 원천이다
+
+위 지시문으로 연 다섯째 세션이다. 제목을 `chore/tidy-running-branch`로 붙이고 `EnterWorktree(path)`로 이 워크트리에 들어갔다(거부
+없이 들어갔다). `sibling_overlap`은 번호 겹침 없음이었고(origin/main은 `a60e2ddd` 그대로), 넷째 세션의 결정대로 "넷째 세션과
+인계" 절을 이 절과 함께 커밋해 `e1a4a095`와 한 번에 푸시한다. 형제 PR #304(클라우드 세션, 대기열 271·274)가
+`tools/tidy_checkouts.py`와 그 시험·변이 표·스킬을 함께 고쳐, 나중에 병합하는 쪽에 글자 충돌 후보로 찍혔다.
+
+이 푸시의 봇 리뷰는 두 봇 모두 둘째 회차라 Critical·Major만 고친다. 그 회차에서 보류한 지적은 회차 세기와 뒤로 넘긴 일의
+규칙대로 일지에 다시 적어 푸시하지 않고 PR 코멘트에 남긴다. 병합은 워크트리에서 한다. 주 체크아웃 미갱신: 루트는 main(병합 뒤
+`tidy-checkouts`가 당긴다).
