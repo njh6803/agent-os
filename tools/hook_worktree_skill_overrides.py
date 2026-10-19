@@ -1,0 +1,225 @@
+"""PostToolUse 훅(EnterWorktree). 세션이 주 체크아웃의 워크트리(`.claude/worktrees/<이름>/`)에
+들어가면, 그 워크트리의 스킬 사본이 스킬 목록에 붙지 않게 주 체크아웃의
+`.claude/settings.local.json` 의 `skillOverrides` 에 경로를 단
+이름(`.claude/worktrees/<이름>:<스킬>`)마다 `"off"` 를 적는다.
+
+대기열 274 다. 주 체크아웃에서 시작해 워크트리에 들어간 세션은, 그 뒤 주 체크아웃의 스킬 파일이
+바뀌면(다른 세션이 주 체크아웃을 당기면) 그 워크트리의 스킬을 바뀌지 않은 것까지 모두 경로를 단
+이름으로 목록에 더한다. 워크트리가 `.gitignore` 에 든 이 저장소의 모양에서는, 주 체크아웃 세션이
+워크트리 파일을 읽거나, 들어간 뒤 읽기만 하거나, 워크트리에서 시작한 세션에서는 붙지 않았다
+(`.gitignore` 에 없으면 주 체크아웃 세션이 읽기만 해도 붙었다). `skillOverrides` 에 경로를 단 이름을
+그대로 키로 `"off"` 를 주면 그 이름만 빠졌고, 세션 도중에 local 설정에 써도 먹었으며, 프로젝트
+설정의 `skillOverrides` 와 합쳐졌다. 워크트리 이름 자리의 별표는 먹지 않아 워크트리마다 이름을
+적는다. 이 훅을 등록한 세션에서도 바깥 변경 뒤 경로를 단 이름이 붙지 않았고, 훅이 적은 뒤에 새로
+생긴 스킬은 붙었다. 모두 `.scratch/harness/probes/worktree_skill_listing.py` 가 claude CLI 2.1.303
+에서 갈래마다 한 회차로 쟀다. 더한 목록이 세션이 끝날 때까지 호출마다 입력에 실린다는 것은
+어림이다(첨부가 대화 기록에 남는다고 보았고, 프로브는 한 턴만 돈다).
+
+끄는 값이 있다. 공식 문서(skills 의 "Load skills in monorepos and subdirectories" 절, 2026-10-19
+원문을 내려받아 읽었다)는 경로를 단
+이름을 목록에 실을 때 일하는 파일이 든 폴더의 사본을 부르라는 안내를 함께 싣는다고 적고, 이 저장소의
+세션은 그 꼴로 Skill 을 190번 불렀다(`.scratch/harness/probes/session_cost/branches.json` 의
+브랜치별 `skills` 를 손으로 더했다). 끄면 그 이름은 부를 수 없고(숨긴 스킬을 전체 이름으로 부르면
+`skillOverrides` 오류다, 같은 문서의 "Override skill visibility from settings"), Skill 호출은 주
+체크아웃에 실린 사본으로 돈다. 워크트리에서 고친 스킬은 원래부터 그 이름이 아니라 Read 로 디스크의
+`SKILL.md` 를 열어 따른다(`docs/constitution/operations.md` 환경 규약 상세. 경로를 단 이름은 붙은
+때의 판이다). 그래서 끄더라도 워크트리의 판을 따를 길은 남는다.
+
+추적하는 `.claude/settings.json` 이 아니라 local 에 쓰는 것은 워크트리 이름이 티켓마다 달라서다.
+local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`tools/check_instructions.py` 의 local
+검사 독스트링). 키의 이름공간 `.claude/worktrees/` 는 이 훅이 맡는다. 쓸 때마다 그 접두의 키 가운데
+워크트리 폴더가 없어진 것을 걷고 들어간 워크트리의 키를 더하며, 다른 키와 다른 설정은 그대로 둔다.
+바뀔 것이 없으면 쓰지 않고 침묵한다. 썼으면 사용자에게만 알린다(`systemMessage`). local 이 풀리지
+않거나 `skillOverrides` 가 객체가 아니면 고치지 않고 알린다.
+
+클라우드 세션(`CLAUDE_CODE_REMOTE` 가 `true`)에서는 침묵한다. 클라우드 체크아웃에는 그 ignore 가
+없어, 쓰면 추적하지 않는 파일로 남는다(2026-10-19 클라우드 컨테이너에서 `git check-ignore` 가 1
+이었다, 손으로 봤다).
+
+못 보는 것:
+- 머리말의 `name` 이 폴더 이름과 다른 스킬. 키는 폴더 이름으로 짓는다(이 저장소의 스킬 열여섯은 둘이
+  같았다, 2026-10-19 손으로 봤다. 프로브의 스킬도 둘이 같아 목록이 어느 쪽으로 이름을 짓는지는 재지
+  않았다).
+- 들어간 뒤에 그 워크트리에 새로 생긴 스킬. 다음 `EnterWorktree` 에서 적는다.
+- local 설정이 git 에서 무시되는지. 클라우드 세션만 침묵하고, 무시되지 않는 다른 체크아웃에서는
+  local 이 추적하지 않는 파일로 남는다(쓰다 실패한 임시 파일은 지운다).
+- `EnterWorktree` 밖의 길로 붙는 사본. 워크트리가 `.gitignore` 에 없는 저장소에서 주 체크아웃 세션이
+  워크트리 파일을 읽어 붙는 것은 이 훅이 보지 않는다.
+- 다른 길로 워크트리에 온 세션(앱이 워크트리 폴더에서 연 세션, `/cd`)과 이 훅이 들어오기 전에 들어간
+  세션.
+- 같은 파일을 같은 때 쓰는 다른 쓰기(Claude Code 의 권한 기억, `/skills` 메뉴, 다른 세션의 이 훅).
+  읽고 쓰는 사이에 끼면 나중 쓰기가 이긴다.
+- 데스크톱 앱이 묶은 판에서 경로를 단 이름이 키로 먹는지. CLI 2.1.303 에서만 쟀다.
+- 끈 이름은 Skill 도구로 부를 수 없다(공식 문서 skills의 "Override skill visibility from settings":
+  숨긴 스킬을 전체 이름으로 부르면 `skillOverrides` 오류다. 2026-10-19 원문을 내려받아 읽었다).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import TypedDict
+
+TOOL = "EnterWorktree"
+WORKTREES = Path(".claude") / "worktrees"
+# 스킬 목록이 워크트리 사본에 붙이는 접두. 윈도 PC 의 트랜스크립트에서도 슬래시였다(일지
+# 2026-10-16-27 의 `.claude/worktrees/harness-audit:code-review`).
+KEY_PREFIX = ".claude/worktrees/"
+LOCAL = Path(".claude") / "settings.local.json"
+OFF = "off"
+OVERRIDES = "skillOverrides"
+# `json.loads` 의 반환형은 Any 라, 이것으로 받아 뒤의 좁히기가 타입 검사를 지나게 한다
+# (선례 `tools/token_report.py` 의 `Json`).
+type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+
+
+class SettingsShapeError(ValueError):
+    """local 설정의 모양이 고칠 수 있는 꼴이 아니다."""
+
+
+class HookPayload(TypedDict, total=False):
+    """Claude Code 가 stdin 으로 주는 훅 입력 중 이 훅이 읽는 부분. 값의 꼴은 런타임에 다시 본다."""
+
+    tool_name: str
+    tool_input: Json
+    tool_response: Json
+
+
+def entered_worktree(payload: HookPayload, root: Path) -> Path | None:
+    """`root` 의 `.claude/worktrees/` 바로 아래 워크트리에 들어간 `EnterWorktree` 면 그 경로, 아니면
+    None. 경로는 결과의 `worktreePath` 를 먼저, 없으면 입력의 `path` 를 본다."""
+    if payload.get("tool_name") != TOOL:
+        return None
+    raw = _str_field(payload.get("tool_response"), "worktreePath") or _str_field(
+        payload.get("tool_input"), "path"
+    )
+    if not raw:
+        return None
+    worktree = Path(raw)
+    if worktree.resolve().parent != (root / WORKTREES).resolve():
+        return None
+    return worktree
+
+
+def _str_field(value: Json, key: str) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    field = value.get(key)
+    return field if isinstance(field, str) else None
+
+
+def skill_names(worktree: Path) -> list[str]:
+    """워크트리의 프로젝트 스킬. `.claude/skills/<이름>/SKILL.md` 가 있는 폴더 이름이다."""
+    folder = worktree / ".claude" / "skills"
+    if not folder.is_dir():
+        return []
+    return sorted(p.name for p in folder.iterdir() if (p / "SKILL.md").is_file())
+
+
+def updated(settings: dict[str, Json], root: Path, worktree: Path) -> dict[str, Json] | None:
+    """`worktree` 의 스킬 사본을 끄는 키를 더하고 없어진 워크트리의 키를 걷은 새 설정. 바뀔 것이
+    없으면 None 이다. `settings` 는 고치지 않는다."""
+    current = settings.get(OVERRIDES, {})
+    if not isinstance(current, dict):
+        raise SettingsShapeError(f"{OVERRIDES} 가 객체가 아니다")
+    kept = {
+        key: value
+        for key, value in current.items()
+        if not key.startswith(KEY_PREFIX) or _worktree_alive(root, key)
+    }
+    added: dict[str, Json] = {
+        f"{KEY_PREFIX}{worktree.name}:{skill}": OFF for skill in skill_names(worktree)
+    }
+    overrides = {**kept, **added}
+    if overrides == current:
+        return None
+    return {**settings, OVERRIDES: overrides}
+
+
+def _worktree_alive(root: Path, key: str) -> bool:
+    name = key[len(KEY_PREFIX) :].rpartition(":")[0]
+    return bool(name) and (root / WORKTREES / name).is_dir()
+
+
+def apply(root: Path, worktree: Path) -> str | None:
+    """`root` 의 local 설정을 고친다. 썼거나 고치지 못했으면 사용자에게 알릴 문장, 바뀔 것이 없으면
+    None 이다."""
+    path = root / LOCAL
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        text = None
+    except OSError as error:
+        return _cannot(f"읽지 못했다({error})")
+    settings: dict[str, Json] = {}
+    if text is not None:
+        try:
+            value: Json = json.loads(text)
+        except json.JSONDecodeError as error:
+            return _cannot(f"JSON 으로 풀리지 않는다({error})")
+        if not isinstance(value, dict):
+            return _cannot("맨 위가 객체가 아니다")
+        settings = value
+    try:
+        new = updated(settings, root, worktree)
+    except SettingsShapeError as error:
+        return _cannot(str(error))
+    if new is None:
+        return None
+    try:
+        _write(path, new)
+    except OSError as error:
+        return _cannot(f"쓰지 못했다({error})")
+    count = len(skill_names(worktree))
+    return (
+        f"워크트리 {worktree.name} 의 스킬 사본 {count}개를 스킬 목록에서 끄도록 "
+        f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). 주 체크아웃의 스킬이 바뀌어도 "
+        "경로를 단 사본이 목록에 붙지 않는다."
+    )
+
+
+def _cannot(reason: str) -> str:
+    return (
+        f"{LOCAL.as_posix()} 를 고치지 못해({reason}) 워크트리 스킬 사본을 스킬 목록에서 끄지 "
+        "못했다(대기열 274). 파일을 고치면 다음 EnterWorktree 에서 다시 적는다."
+    )
+
+
+def _write(path: Path, settings: dict[str, Json]) -> None:
+    """같은 폴더의 임시 파일에 쓰고 바꿔 끼운다. 쓰다 끊겨도 원래 파일이 반쯤 남지 않고, 바꿔
+    끼우지 못하면 임시 파일을 지운다."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        temporary.write_text(
+            json.dumps(settings, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        os.replace(temporary, path)
+    except OSError:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def main() -> int:
+    payload: HookPayload = json.load(sys.stdin.buffer)
+    if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+        return 0
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    if not project:
+        return 0
+    root = Path(project)
+    worktree = entered_worktree(payload, root)
+    if worktree is None:
+        return 0
+    notice = apply(root, worktree)
+    if notice is not None:
+        print(json.dumps({"systemMessage": notice}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1783,8 +1783,11 @@ def _still_stray(
 
 
 def _parser() -> argparse.ArgumentParser:
+    # 스킬 3은 독스트링을 파일 전체 Read 대신 `--help` 로 본다(대기열 271)
     parser = argparse.ArgumentParser(
-        prog="tidy_checkouts", description="병합된 워크트리와 로컬 브랜치를 판정하고 하나씩 지운다"
+        prog="tidy_checkouts",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True)
     judged = commands.add_parser("judge", help="워크트리와 로컬 브랜치를 판정해 찍는다")

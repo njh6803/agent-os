@@ -2105,3 +2105,20 @@ def test_CLI_를_하위_프로세스로_부르면_인자_오류에_2로_끝난�
     )
     assert result.returncode == 2
     assert "usage" in result.stderr
+
+
+def test_help_는_git_밖에서도_모듈_독스트링을_줄바꿈_그대로_찍는다(tmp_path: Path) -> None:
+    # 스킬 3은 독스트링을 파일 Read 가 아니라 이 출력으로 본다(대기열 271)
+    doc = tidy_checkouts.__doc__
+    assert doc is not None
+    result = subprocess.run(
+        [sys.executable, str(_TOOL), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert doc.strip() in result.stdout
