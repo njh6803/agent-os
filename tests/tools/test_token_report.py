@@ -1034,6 +1034,39 @@ def test_콜론_뒤_공백이_없는_gitdir_줄은_OSError다(tmp_path: Path) ->
         main_checkout_of(tmp_path)
 
 
+@pytest.mark.parametrize("tail", ["  ", "\t", ".", " .", ".."])
+def test_gitdir_줄_끝에_공백이나_점이_있으면_git처럼_OSError다(tmp_path: Path, tail: str) -> None:
+    # git은 이 줄들을 128로 거절한다. 윈도는 마지막 토막 끝의 공백과 점을 지워 `a  `는 폴더로 보이고
+    # `a  /commondir`은 없어, 거르지 않으면 `worktrees`나 주 체크아웃을 돌려줬다.
+    gitdir = tmp_path / "주" / ".git" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    checkout = tmp_path / "워크"
+    checkout.mkdir()
+    (checkout / ".git").write_text(f"gitdir: {gitdir}{tail}\n", encoding="utf-8")
+    with pytest.raises(OSError, match="줄 끝에 공백이나 점"):
+        main_checkout_of(checkout)
+
+
+def test_못_보는_것_하위_폴더를_주면_git과_달리_FileNotFoundError다(tmp_path: Path) -> None:
+    # git은 상위 폴더로 올라가며 `.git`을 찾는다. 이 함수는 주어진 폴더의 `.git`만 읽는다.
+    (tmp_path / "주" / ".git").mkdir(parents=True)
+    sub = tmp_path / "주" / "하위"
+    sub.mkdir()
+    with pytest.raises(FileNotFoundError):
+        main_checkout_of(sub)
+
+
+def test_못_보는_것_GIT_DIR을_두어도_결과가_같다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    main_repo = tmp_path / "주"
+    (main_repo / ".git").mkdir(parents=True)
+    (tmp_path / "남" / ".git").mkdir(parents=True)
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "남" / ".git"))
+    assert main_checkout_of(main_repo) == main_repo
+
+
 def test_gitdir이_가리킨_폴더가_없으면_OSError다(tmp_path: Path) -> None:
     # git은 이 저장소를 128로 거절한다. 엉뚱한 부모를 돌려주면 보고서가 그 아래에 쓰인다.
     (tmp_path / ".git").write_text("gitdir: 없는/폴더\n", encoding="utf-8")
