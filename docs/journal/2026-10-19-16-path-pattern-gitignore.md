@@ -157,7 +157,7 @@ open-session을 부른다 2026-10-19T06:22:13Z
 - 근거 표지 "(표지 파일로 손으로 봤다)"가 시간 초과까지 덮었고 "열아홉"은 세는 법이 없었다(두 축). 표지를 "손으로 봤다"로 바꾸고
   수는 `git worktree list`로 다시 센 스물하나로 썼다.
 - 좁힌 `path`에 `/`가 든 패턴을 주면 찾지 못한다(표준 축 Nit). 처방을 따르면 바로 밟는 함정이라 Glob 줄에 넣었다.
-- "결과에 `.claude/worktrees/<이름>/`이 보이면 다른 워크트리의 사본"은 주 체크아웃을 `path`로 준 워크트리 세션에서 자기 사본에도
+- "결과에 `.claude/worktrees/<이름>/`이 보이면 그것은 다른 워크트리의 사본이다"는 주 체크아웃을 `path`로 준 워크트리 세션에서 자기 사본에도
   맞는다(표준 축 Nit). "그 파일은 `<이름>` 워크트리의 사본이다"로 바꿨다.
 - 한 줄이 일곱 문장이었다(표준 축 smell). Glob 줄과 Grep 줄로 나눴다.
 - 일지의 2026-10-12 사건 문장이 두 호출을 같은 꼴로 적었다(명세 축 Nit). 트랜스크립트를 다시 읽어 위 "잰 것"을 고쳤다.
@@ -165,7 +165,7 @@ open-session을 부른다 2026-10-19T06:22:13Z
 반영으로 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장):
 - `CLAUDE.md` Glob 줄: "Glob 도구는 `.gitignore`를 보지 않아 `.venv`·`node_modules`·`.claude/worktrees/`까지 훑는다.", "주 체크아웃의
   루트와 `.claude`에서는 잰 패턴이 모두, 이름만 준 `pyproject.toml`까지 20초 시간 초과로 끝났다(그 아래 워크트리 스물하나).",
-  "`/`가 든 패턴은 `path`가 아니라 작업 디렉터리에서 맞춰, 좁힌 `path`에 `tidy-checkouts/SKILL.md`를 주면 \"No files found\"가 난다"
+  "`/`가 든 패턴은 `path`가 아니라 작업 디렉터리에서 맞춰"와 그 뒤의 `tidy-checkouts/SKILL.md` 예
 - `CLAUDE.md` Grep 줄: "Grep 도구는 glob이 없으면 `.gitignore`를 따른다.", "glob을 주면 그 glob(중괄호면 갈래 하나)에 바로 맞는
   무시된 파일과 폴더는 넘고, 맞은 폴더는 안까지 훑는다.", "`[!.]*`는 거의 모든 폴더 이름에 맞으니", "두 도구 모두 결과 경로에
   `.claude/worktrees/<이름>/`이 들면 그 파일은 `<이름>` 워크트리의 사본이다"
@@ -180,3 +180,57 @@ open-session을 부른다 2026-10-19T06:22:13Z
 - 설정 `env`의 `CLAUDE_CODE_GLOB_NO_IGNORE`가 지침보다 강한 층이라는 점(표준 축)은 위 "이 PR에 넣지 않은 것"에 이미 까닭을 적었다.
 
 다시 돌린 명령: 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
+
+## 커밋
+
+`239fcac7`(chore: Glob·Grep이 .gitignore를 넘는 자리를 환경 함정에 적는다 (대기열 211)). 커밋 직전에 `git branch --show-current`는
+`chore/path-pattern-gitignore`였고 `tools/sibling_overlap.py`는 번호 겹침 없음이었다.
+
+- pre-commit: 러너(449초)의 check-instructions, zizmor, lint-imports, check-type-escapes, pyright, run-hooks, web-verify, pytest가
+  통과했다. 마크다운 표, 줄 구분 문자, 변이 표가 통과했다. 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다.
+- ruff 둘은 `.py`가 없어 pre-commit에서 `Skipped`라 손으로 쳤다. `uv run ruff check .`(`All checks passed!`), `uv run ruff format
+  --check .`(783 files already formatted).
+- 인용 대조 경고 4건. 48행의 시간 초과 문구는 도구가 낸 오류 문구 그대로이고, 149행은 고치기 전 `CLAUDE.md`의 문구 그대로라 두었다.
+  160행은 고치기 전 문구를 줄여 옮겼고, 168행은 안쪽 따옴표를 역슬래시로 감쌌다. 둘은 원문 그대로로 고쳤다(커밋하지 않았다).
+- `-m llm`·e2e·사진 비교는 칠 계기가 아니다(문서만 바꿨다).
+
+## 인계 (커밋 뒤)
+
+커밋이 끝나자 세션 컨텍스트가 문턱(20만)을 넘어 인계 계기(`커밋 뒤`)가 왔다. 이 세션은 `셀프 리뷰 직전`에서 넘겨받았으므로 같은
+경계가 아니고, 요청 범위는 PR과 병합까지이고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 넘긴다.
+이 세션의 제목은 `chore/path-pattern-gitignore`이고 `chore/path-pattern-gitignore (인계함)`으로 바꾼다.
+
+남은 것: 위 인용 두 곳을 고친 일지의 커밋, PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 `/security-review`와 `bug-perf-review`를
+나란히. 밀 주장은 위 "반영으로 새로 쓴 사실 문장"), 푸시와 PR, 봇 회차, 병합(워크트리에서 병합할 때), 다음 지시문.
+
+실행 중 세션 확인: `search_session_transcripts`(`시작 프롬프트:`, limit 50)가 50건을 내 다 견주지 못했다. 본 범위에서 대기열 211을 든
+세션은 넘긴 앞 세션(`chore/path-pattern-gitignore (인계함)`, 실행 중 아님, PR 없음)뿐이었다.
+
+지시문:
+
+```
+다음 작업: 기능 하네스 chore. 대기열 211(대상 파일이 CLAUDE.md인 열린 행 가운데 지금 반영할 수 있는 것)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 211(경로 패턴의 Glob·Grep이 .gitignore와 다른 워크트리를 넘는지 재고 자리를 정하는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/path-pattern-gitignore
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-19-16-path-pattern-gitignore.md 의 "셀프 리뷰", "커밋", "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 239fcac7(CLAUDE.md 환경 함정의 Glob 줄·Grep 줄, 대기열 211 닫힘, 일지)까지 했고 셀프 리뷰 반영과 pre-commit 통과도 끝났다. 푸시하지 않았고 PR은 없다. 일지에 인용 대조 경고 두 곳을 고친 커밋하지 않은 수정이 있으니 이어 쓴 뒤 함께 커밋한다. 남은 것은 PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히. 밀 주장은 일지 "셀프 리뷰" 절의 "반영으로 새로 쓴 사실 문장"), 푸시와 PR, 봇 회차, 병합(워크트리에서 병합할 때), 다음 지시문이다. 일지 "이 PR에 넣지 않은 것" 둘과 hook_env_read 독스트링 215행은 회고 후보다. docs/journal/2026-10-19-16-path-pattern-gitignore.md
+확인할 선행 조건: 실행 중 세션 확인의 검색 결과가 limit(50)과 같아 다 견주지 못했다. 본 범위에서는 대기열 211이나 CLAUDE.md를 맡은 실행 중 세션이 없었다
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기: `git worktree unlock C:/project/agent/.claude/worktrees/path-pattern-gitignore`가 `is not locked`로 끝났다(이 세션은
+`EnterWorktree(path)`로 들어왔고 `git worktree list`에 이 워크트리의 `locked` 줄이 없었다).
+
+open-session을 부른다 2026-10-19T07:10:38Z
+
+## 이어받은 세션 (커밋 뒤)
+
+> 사용자: 대기열 211(경로 패턴의 Glob·Grep이 .gitignore와 다른 워크트리를 넘는지 재고 자리를 정하는 열린 행)을 chore 한
+> PR로 반영한다. 행의 "어디로" 칸이 원천이다
+
+새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin main` 뒤 `git log HEAD..origin/main`은 비어 main은
+그대로 a60e2ddd였다. 위 "커밋" 절의 인용 두 곳 수정과 두 인계 절을 이 절과 함께 커밋한다. `coderabbit auth status`는
+`Plan: Free`, `Seat: not assigned`라 PR 직전 리뷰는 대체 둘(`/security-review`, `bug-perf-review`)로 한다.
