@@ -431,9 +431,11 @@ _USAGE_LIMIT = "usage_limit_reached"
 
 
 def _describe_resets(info: _LimitInfo) -> str:
-    """거절이 풀리는 시각을 적은 구. 원본의 `resetsAt` 은 초 단위 유닉스
-    시각이었고(`_LIMIT_REJECTED` 주석의 원본을 손으로 읽었다), 읽지 못하면 값을 적는다. 숫자
-    문자열과 `True` 는 시각으로 읽지 않는다."""
+    """거절이 풀리는 시각을 적은 구.
+
+    원본의 `resetsAt` 은 초 단위 유닉스 시각이었고(`_LIMIT_REJECTED` 주석의 원본을 손으로
+    읽었다), 읽지 못하면 값을 적는다. 숫자 문자열과 `True` 는 시각으로 읽지 않는다.
+    """
     resets = info.get("resetsAt")
     if resets is None:
         return "풀리는 시각 모름"
