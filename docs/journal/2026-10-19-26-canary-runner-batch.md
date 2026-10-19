@@ -159,3 +159,50 @@ open-session을 부른다 2026-10-19T09:25:52Z
   표시하지 않는다")의 원문이 0번이었다. `--since origin/main`은 표에서 바뀐 열만 골라 이 셋을 돌리지 않았다. 원문을 지금
   코드에 맞추고 10은 이름을 "옛 사본에 스킬이 없는 대조군에도 스킬 호출을 요구한다"로 바꿨다(344 뒤에는 사본에 스킬이 있는
   대조군에 요구하는 것이 옳은 동작이다). 셋을 돌려 모두 기대대로, 각각 이름 그대로의 시험이 빨개졌다.
+- 둘째 시도는 무관한 시간 단언(`tests/tools/test_hook_midturn_korean.py::test_트랜스크립트_파일이_없으면_기다리지_않는다`,
+  2초 상한에 2.8초)으로 막혔다. 직전 `run_checks.py`에서는 초록이었고 셋째 시도에서 지나 커밋 `8c2af6ce`가 들어갔다.
+  한 번이라 retro 후보로 올리지 않는다(같은 꼴은 대기열 332·306).
+
+## 인계 (커밋 뒤)
+
+커밋 `8c2af6ce` 직후 인계 계기가 왔다(`커밋 뒤`, 세션 컨텍스트 266,489 토큰). 이 세션의 지시문의 "이어받을 상태"는
+`인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 요청 범위는 PR과 병합까지이며, `인계 못함` 줄이 없고, 딥링크로 연 세션이다.
+이 세션의 제목은 `chore/canary-runner-batch`였고 `chore/canary-runner-batch (인계함)`으로 바꾼다.
+
+남은 단계: origin/main 합치기(`sync_with_base_branch`. origin/main이 `2efb5ea`로 움직였고 함께 고친 파일은
+`.scratch/retro-queue.md` 하나다) → PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. CLI가 돌지 못하면
+`/security-review`와 `bug-perf-review`) → PR → 봇 회차 → 병합 → 일지 "## 다음"과 retro.
+
+PR 직전 `bug-perf-review`에 밀 주장(셀프 리뷰 반영으로 새로 쓴 사실 문장, 원문):
+
+- `_LIMIT_REJECTED` 주석: "같은 PC 의 다른 세션이 막히지 않고 돈 카나리아 원본에도 한도 이벤트가 `status: allowed`·
+  `allowed_warning`(주간 한도 99% 경고)으로 찍혀 거절만 센다", "종류(`rateLimitType`)는 가리지 않는다. 주간 한도든 다섯 시간
+  한도든 거절이면 그 회차는 측정이 아니다".
+- 모듈 독스트링: "결과가 성공한 답이 아닌 회차다. 거절 뒤에도 답을 냈으면 측정이라 판정한다".
+- `Reading.add` 주석: "읽지 못한 거절은 결과의 `api_error` 로도 잡지 못하면 실패로 나온다".
+- `operations.md` 카나리아 항목: "러너는 한도의 종류를 가리지 않고 거절(`rejected`)이나 `usage_limit_reached`가 찍혔는데 답을
+  내지 못한 회차를 판정하지 않고".
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋: rule 질문에 저장소 규칙도 지시라는 문장 붙이기, 계정 한도에 막힌 회차를 측정 아님으로 세기, 스킬 명세의 대조군에도 스킬 호출과 자리 줄 요구하기)를 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/canary-runner-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(셀프 리뷰, 인계 (커밋 뒤))
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영을 마치고 커밋 8c2af6ce까지 했다(푸시 안 함, 열린 PR 없음). 남은 단계는 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(operations.md 리뷰 파이프라인 2, 밀 주장은 일지 "인계 (커밋 뒤)" 절), PR, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-26-canary-runner-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/canary-runner-batch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T10:57:33Z
+
+## PR과 병합
+
+새 세션이 지시문대로 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다. 일지의 인계 절을
+커밋한 뒤 origin/main(`5e7fa88d`, #301·#305·#306·#307)을 `sync_with_base_branch`로 합친다.
