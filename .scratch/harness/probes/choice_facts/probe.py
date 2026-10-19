@@ -20,21 +20,26 @@ AskUserQuestion 의 답은 허락 응답의 `updatedInput.answers` 에 질문 �
   모양(래퍼 `tools/launch_hook.py`)으로 등록한다. 모델이 옮긴 첫 문장에 그 훅의 `LEAD` 가 있으면
   닿은 것이다(`.claude/rules/tools.md` 의 새 훅 넷). 훅 파일을 못 찾으면 래퍼의 알림을 옮겨 표지가
   없다.
+- `D_slow` — A 와 같은 등록에 `PROBE_HOOK_DELAY` 로 표지 훅이 `DELAY` 초를 기다린 뒤 출력하게 한다.
+  A 에서 허락 요청이 훅의 끝 기록 뒤에 온 것은 허락 요청이 훅을 기다린다는 해석과, 둘이 나란히
+  돌았는데 훅이 더 빨랐다는 해석이 모두 설명한다. 훅이 느려도 허락 요청이 끝 기록 뒤에 오면 앞의
+  해석이 선다.
 
 측정의 표지(`.claude/rules/probes.md`): 모든 갈래에서 모델이 AskUserQuestion 을 불렀고(assistant 의
-`tool_use`) 그 호출의 허락 요청과 도구 결과가 왔어야 측정이다. A 는 훅 기록에 AskUserQuestion 입력과
-끝 시각이 남아야 측정이다. 측정이 아니거나 아래 기대와 다른 갈래가 하나라도 있으면 1로 끝난다.
+`tool_use`) 그 호출의 허락 요청과 도구 결과(그 `tool_use` 의 id 를 가리키는 것)가 왔어야 측정이다.
+A·D 는 훅 기록에 AskUserQuestion 입력과 끝 시각이 남아야 측정이다. 측정이 아니거나 아래 기대와 다른
+갈래가 하나라도 있으면 1로 끝난다. 갈래 이름을 주면 그 갈래만 돌리고 보고한다.
 
 기대(모두 단언한다):
-- 표지: A·C 의 답에 표지가 있고 B 의 답에 없다. 답은 도구 결과 뒤의 모델 글만 본다.
+- 표지: A·C·D 의 답에 표지가 있고 B 의 답에 없다. 답은 도구 결과 뒤의 모델 글만 본다.
 - 차례: 허락 요청이 도구 결과보다 앞이고, 모델의 `tool_use` 와 도구 결과 사이에 모델의 글이 없다.
-  없으면 모델이 훅의 문장을 읽을 수 있는 첫 추론은 도구 결과(사람의 답)가 돌아온 뒤다. A 는 훅의 끝
-  기록이 허락 요청(앱의 선택 화면)보다 앞이다. C 는 훅의 시각을 남기지 않아 이 단언이 없다.
+  없으면 모델이 훅의 문장을 읽을 수 있는 첫 추론은 도구 결과(사람의 답)가 돌아온 뒤다. A·D 는 훅의
+  끝 기록이 허락 요청(앱의 선택 화면)보다 앞이다. C 는 훅의 시각을 남기지 않아 이 단언이 없다.
 
 돌리는 법: 저장소 루트에서
 `uv run python .scratch/harness/probes/choice_facts/probe.py <출력 디렉터리> [갈래 이름]`. `claude`
 CLI와 인증이 든다(갈래마다 haiku 세션 하나). `--setting-sources local` 이 사용자 설정과 프로젝트
-설정의 훅을 빼서, A 에 붙는 훅은 `--settings` 의 것 하나다. 갈래마다 `<갈래>.tsv`(줄마다
+설정의 훅을 빼서, A·D 에 붙는 훅은 `--settings` 의 것 하나다. 갈래마다 `<갈래>.tsv`(줄마다
 `<epoch>\\t<in|out>\\t<줄>`)와 `<갈래>.hook.jsonl` 을 남긴다.
 """
 
@@ -88,17 +93,19 @@ COMMAND = [
     "--verbose",
 ]
 TIMEOUT = 300
+DELAY = "1.5"
 
 
 @dataclass(frozen=True, kw_only=True)
 class Branch:
     """갈래 하나. `marker` 는 답에서 찾는 표지이고, `expect_marked` 는 그 표지가 있어야
-    기대대로인지, `logged` 는 훅 기록이 있어야 측정인지다."""
+    기대대로인지, `logged` 는 훅 기록이 있어야 측정인지, `env` 는 claude 에 더 주는 환경이다."""
 
     args: tuple[str, ...]
     marker: str
     expect_marked: bool
     logged: bool
+    env: tuple[tuple[str, str], ...] = ()
 
 
 BRANCHES = {
@@ -114,6 +121,13 @@ BRANCHES = {
         marker=LEAD,
         expect_marked=True,
         logged=False,
+    ),
+    "D_slow": Branch(
+        args=("--settings", str(HERE / "hooked.json")),
+        marker=MARK,
+        expect_marked=True,
+        logged=True,
+        env=(("PROBE_HOOK_DELAY", DELAY),),
     ),
 }
 
@@ -157,7 +171,7 @@ def drive(branch: str, out: Path) -> None:
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        env={**os.environ, "PROBE_LOG": str(hook_log)},
+        env={**os.environ, **dict(BRANCHES[branch].env), "PROBE_LOG": str(hook_log)},
     )
     stdin, stdout = process.stdin, process.stdout
     assert stdin is not None and stdout is not None
@@ -235,6 +249,7 @@ class Seen:
     """원본에서 찾은 시각(epoch)과 글. 찾지 못한 것은 None 이다."""
 
     tool_use: float | None = None
+    tool_use_id: str | None = None
     permission: float | None = None
     tool_result: float | None = None
     result_text: str = ""
@@ -263,11 +278,16 @@ def text_of(content: object) -> str:
     return str(content)
 
 
+def lines_of(path: Path) -> list[str]:
+    """`\\n` 으로만 가른 비지 않은 줄. `splitlines` 는 JSON 문자열 안의 U+2028·U+0085 에서도
+    가른다."""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    return [line for line in text.split("\n") if line]
+
+
 def read_branch(out: Path, branch: str) -> Seen:
     seen = Seen()
-    tsv = out / f"{branch}.tsv"
-    rows = tsv.read_text(encoding="utf-8").splitlines() if tsv.exists() else []
-    for row in rows:
+    for row in lines_of(out / f"{branch}.tsv"):
         at_text, direction, line = row.split("\t", 2)
         at = float(at_text)
         event = event_of(line)
@@ -282,8 +302,13 @@ def read_branch(out: Path, branch: str) -> Seen:
         ):
             seen.permission = at
         for block in blocks(event, "assistant"):
-            if block.get("type") == "tool_use" and block.get("name") == "AskUserQuestion":
-                seen.tool_use = seen.tool_use or at
+            if (
+                block.get("type") == "tool_use"
+                and block.get("name") == "AskUserQuestion"
+                and seen.tool_use is None
+            ):
+                seen.tool_use = at
+                seen.tool_use_id = str(block.get("id"))
             elif block.get("type") == "text":
                 text = " ".join(str(block.get("text")).split())
                 if seen.tool_use is not None and seen.tool_result is None:
@@ -291,20 +316,23 @@ def read_branch(out: Path, branch: str) -> Seen:
                 elif seen.tool_result is not None:
                     seen.answers_after.append((at, text))
         for block in blocks(event, "user"):
-            if block.get("type") == "tool_result" and seen.tool_result is None:
+            if (
+                block.get("type") == "tool_result"
+                and seen.tool_use_id is not None
+                and block.get("tool_use_id") == seen.tool_use_id
+                and seen.tool_result is None
+            ):
                 seen.tool_result = at
                 seen.result_text = " ".join(text_of(block.get("content")).split())
-    hook_log = out / f"{branch}.hook.jsonl"
-    if hook_log.exists():
-        for raw in hook_log.read_text(encoding="utf-8").splitlines():
-            record = json.loads(raw)
-            if "end" in record:
-                seen.hook_end.append(float(record["end"]))
-                continue
-            payload = record.get("payload", {})
-            if payload.get("tool_name") == "AskUserQuestion":
-                seen.hook_at.append(float(record["at"]))
-                seen.hook_inputs.append(payload.get("tool_input"))
+    for raw in lines_of(out / f"{branch}.hook.jsonl"):
+        record = json.loads(raw)
+        if "end" in record:
+            seen.hook_end.append(float(record["end"]))
+            continue
+        payload = record.get("payload", {})
+        if payload.get("tool_name") == "AskUserQuestion":
+            seen.hook_at.append(float(record["at"]))
+            seen.hook_inputs.append(payload.get("tool_input"))
     return seen
 
 
@@ -353,12 +381,14 @@ def report(name: str, seen: Seen) -> bool:
 
 def main() -> int:
     out = Path(sys.argv[1]).resolve()
-    only = sys.argv[2] if len(sys.argv) > 2 else None
+    names = sys.argv[2:3] or list(BRANCHES)
+    if any(name not in BRANCHES for name in names):
+        print(f"갈래 이름은 {', '.join(BRANCHES)} 가운데 하나다.", file=sys.stderr)
+        return 2
     out.mkdir(parents=True, exist_ok=True)
-    for branch in BRANCHES:
-        if only in (None, branch):
-            drive(branch, out)
-    results = [report(branch, read_branch(out, branch)) for branch in BRANCHES]
+    for name in names:
+        drive(name, out)
+    results = [report(name, read_branch(out, name)) for name in names]
     return 0 if all(results) else 1
 
 
