@@ -2370,9 +2370,9 @@ def folder_name_of(checkout: Path) -> str:
 
 
 def _read_utf8(path: Path) -> str:
-    """`path`의 앞뒤 공백을 벗긴 글. UTF-8이 아니어도 `OSError`다."""
+    """`path`의 끝 줄바꿈을 벗긴 글(git처럼 다른 공백은 남긴다). UTF-8이 아니어도 `OSError`다."""
     try:
-        return path.read_text(encoding="utf-8").strip()
+        return path.read_text(encoding="utf-8").rstrip("\r\n")
     except UnicodeDecodeError as e:
         raise OSError(f"{path}를 읽지 못했다: {e}") from e
 
@@ -2392,9 +2392,9 @@ def main_checkout_of(checkout: Path) -> Path:
     if dot_git.is_dir():
         return checkout
     text = _read_utf8(dot_git)
-    if not text.startswith("gitdir:"):
+    if not text.startswith("gitdir: "):
         raise OSError(f"{dot_git}에 gitdir: 줄이 없다")
-    gitdir = checkout / text.removeprefix("gitdir:").strip()
+    gitdir = checkout / text.removeprefix("gitdir: ")
     if not gitdir.is_dir():
         raise OSError(f"{dot_git}의 gitdir: 폴더가 없다: {gitdir}")
     common_file = gitdir / "commondir"

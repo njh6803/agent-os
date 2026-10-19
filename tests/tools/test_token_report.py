@@ -1026,6 +1026,14 @@ def test_gitdir_줄이_없는_git_파일은_OSError다(tmp_path: Path) -> None:
         main_checkout_of(tmp_path)
 
 
+def test_콜론_뒤_공백이_없는_gitdir_줄은_OSError다(tmp_path: Path) -> None:
+    # git은 이 모양을 128로 거절한다(PR 직전 bug-perf-review가 임시 저장소에서 git과 맞댔다).
+    (tmp_path / "x").mkdir()
+    (tmp_path / ".git").write_text("gitdir:x\n", encoding="utf-8")
+    with pytest.raises(OSError, match="gitdir: 줄이 없다"):
+        main_checkout_of(tmp_path)
+
+
 def test_gitdir이_가리킨_폴더가_없으면_OSError다(tmp_path: Path) -> None:
     # git은 이 저장소를 128로 거절한다. 엉뚱한 부모를 돌려주면 보고서가 그 아래에 쓰인다.
     (tmp_path / ".git").write_text("gitdir: 없는/폴더\n", encoding="utf-8")
