@@ -107,6 +107,7 @@ import contextlib
 import ctypes
 import importlib.util
 import json
+import re
 import statistics
 import subprocess
 import sys
@@ -137,6 +138,7 @@ LONG_GAP_SECONDS = 0.5
 OLD_BOUND_SECONDS = 8  # 시간 제한 시험이 고치기 전에 러너 호출 전체에 둔 상한
 BURNER = "while True:\n    pass\n"
 LOAD_WAIT_SECONDS = 900  # 출력을 남기는 pytest 부하가 끝나기를 기다리는 상한
+SUMMARY_LINE = re.compile(r"(FAILED|ERROR) [^ ]+\.py")  # `-rfE` 가 남기는 요약 줄
 SYNCHRONIZE = 0x00100000
 PROCESS_TERMINATE = 0x0001
 WAIT_TIMEOUT = 0x102
@@ -539,7 +541,7 @@ def burners(
     count: int, pytest_loads: int, logs: Sequence[Path] = ()
 ) -> Iterator[list[subprocess.Popen[bytes]]]:
     """부하 프로세스를 띄운다. `logs` 가 있으면 pytest 부하 i 의 출력을 `logs[i]` 에 남긴다(그
-    부하도 대상 시험을 한 번 돈다. `-rf` 로 실패한 시험의 이름이 끝에 남는다). 없으면 버린다."""
+    부하도 대상 시험을 한 번 돈다. `-rfE` 로 실패와 오류의 이름이 끝에 남는다). 없으면 버린다."""
     with contextlib.ExitStack() as stack:
         sinks = [stack.enter_context(path.open("wb")) for path in logs[:pytest_loads]]
         procs = [
@@ -548,7 +550,7 @@ def burners(
         ]
         procs += [
             subprocess.Popen(
-                [sys.executable, "-m", "pytest", "-q", "-rf", "-n", "8", "-p", "no:cacheprovider"],
+                [sys.executable, "-m", "pytest", "-q", "-rfE", "-n", "8", "-p", "no:cacheprovider"],
                 cwd=ROOT,
                 stdout=sinks[index] if index < len(sinks) else subprocess.DEVNULL,
                 stderr=subprocess.STDOUT if index < len(sinks) else subprocess.DEVNULL,
@@ -564,17 +566,27 @@ def burners(
             for proc in procs[count : count + len(sinks)]:
                 with contextlib.suppress(subprocess.TimeoutExpired):
                     proc.wait(timeout=LOAD_WAIT_SECONDS)
-            for proc in procs:
-                kill_tree(proc)
+            # 하나를 끝내지 못해도 나머지를 끝내고, 남은 것은 한 번 더 끝낸다. 하나의 기다림이
+            # 30초를 넘긴 예외가 이 반복을 끊어, 프로세스 64개 옆 측정 두 번이 부하 128개를 남긴 채
+            # 끝났다(일지 2026-10-20-05)
+            for _ in range(2):
+                for proc in procs:
+                    with contextlib.suppress(subprocess.TimeoutExpired):
+                        kill_tree(proc)
+            left = [proc.pid for proc in procs if proc.poll() is None]
+            if left:
+                print(f"끝내지 못한 부하 {len(left)}개(pid): {left}", file=sys.stderr, flush=True)
 
 
 def failed_in(log: Path) -> list[str]:
-    """pytest 부하의 출력에서 `-rf` 가 남긴 실패 줄을 꺼낸다."""
+    """pytest 부하의 출력에서 `-rfE` 가 남긴 실패와 오류 줄을 꺼낸다. `-rf` 만 주던 판은 setup 의
+    오류를 놓쳤다(일지 2026-10-20-05). 오류 줄은 시험 경로가 바로 붙은 것만 본다. 실패 절에 실린
+    로그(`ERROR    <로거>:…`)는 공백이 여럿이라 걸리지 않는다."""
     try:
         text = log.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ["(출력을 읽지 못했다)"]
-    return [line.strip()[:300] for line in text.splitlines() if line.startswith("FAILED ")]
+    return [line.strip()[:300] for line in text.splitlines() if SUMMARY_LINE.match(line)]
 
 
 def load_test_module(test_file: Path, index: int) -> ModuleType:
