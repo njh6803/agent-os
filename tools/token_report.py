@@ -2380,15 +2380,19 @@ def _read_utf8(path: Path) -> str:
 def main_checkout_of(checkout: Path) -> Path:
     """`checkout`의 git 공용 디렉터리의 부모.
 
-    git을 띄우지 않고 `checkout/.git`을 읽는다. 폴더면 그것이, 파일이면 `gitdir:`이 가리키는 폴더의
-    `commondir`(없으면 그 폴더)가 공용 디렉터리다(선례 `tools/hook_bash_commit_msg.py`의
-    `_common_dir`. 그 함수와 달리 읽지 못하면 `None`이 아니라 `OSError`이고, `gitdir: `의 공백을
-    요구하며 빈 `commondir`과 없는 폴더를 거른다). 주 저장소, 연결된 워크트리, `--separate-git-dir`
-    저장소에서 `git rev-parse --git-common-dir`의 부모와 같다. git과 달리 상위 폴더로 올라가며 찾지
-    않고 `GIT_DIR`을 따르지 않는다. 작업 스케줄러는 이 도구를 BELOW_NORMAL로 돌려, CPU가 꽉 찼을 때
-    띄운 git이 10초 제한을 넘겨 실패했다(일지 2026-10-19-24,
-    `.scratch/token-usage/probes/git_priority_load.py`). `.git`을 읽지 못하거나 `gitdir:` 줄이
-    없거나, 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다."""
+    git을 띄우지 않고 `checkout/.git`을 읽는다(띄운 git이 작업 스케줄러 아래에서 시간 제한을 넘겼다,
+    일지 2026-10-19-24). 폴더면 그것이, 파일이면 `gitdir:`이 가리키는 폴더의 `commondir`(없으면 그
+    폴더)가 공용 디렉터리다(선례 `tools/hook_bash_commit_msg.py`의 `_common_dir`. 그 함수와 달리
+    읽지 못하면 `None`이 아니라 `OSError`이고, `gitdir: `의 공백을 요구하며 빈 `commondir`과 없는
+    폴더를 거른다). 주 저장소, 연결된 워크트리, `--separate-git-dir` 저장소에서
+    `git rev-parse --git-common-dir`의 부모와 같다. `.git`을 읽지 못하거나 `gitdir:` 줄이 없거나
+    그 줄 끝에 공백이나 점이 있거나(git은 그 줄을 거절한다. 윈도는 경로의 마지막 토막 끝에서 공백과
+    점을 지우고 가운데 토막에서는 지우지 않아, 거르지 않으면 `gitdir`은 찾고 그 안의 `commondir`은
+    놓쳐 엉뚱한 부모가 나왔다), 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다.
+
+    못 보는 것. git과 달리 상위 폴더로 올라가며 찾지 않아, 체크아웃의 하위 폴더를 주면 `OSError`다.
+    `GIT_DIR`을 따르지 않아, 환경에 두어도 결과가 같다. `/.`로 끝나는 `gitdir:` 줄은 git이 받지만
+    여기서는 끝의 점에 걸려 `OSError`다(git이 쓰는 `.git`에는 나오지 않는 모양이다)."""
     dot_git = checkout / ".git"
     if dot_git.is_dir():
         return checkout
@@ -2396,6 +2400,8 @@ def main_checkout_of(checkout: Path) -> Path:
     rest = text.removeprefix("gitdir: ")
     if rest == text:
         raise OSError(f"{dot_git}에 gitdir: 줄이 없다")
+    if rest[-1:].isspace() or rest.endswith("."):
+        raise OSError(f"{dot_git}의 gitdir: 줄 끝에 공백이나 점이 있다")
     gitdir = checkout / rest
     if not gitdir.is_dir():
         raise OSError(f"{dot_git}의 gitdir: 폴더가 없다: {gitdir}")

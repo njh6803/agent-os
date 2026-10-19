@@ -874,7 +874,9 @@ def test_메뉴_항목은_이름이_같거나_이름_뒤에_공백이_오면_그
 # 멈춘 호출의 스레드 잡을 지우면(Remove-Job -Force) 그 호출이 끝날 때까지 기다려 제한 시간이 걸리지
 # 않았다(PR 직전 버그·성능 리뷰). 스레드 잡은 패턴 식별자를 형식 이름으로 찾는다. 윈도에는 그
 # 어셈블리가 있고, CI 의 리눅스 pwsh 에는 없어(`Cannot find path ... UIAutomationClient.dll`) 같은
-# 이름의 대역 형식을 정의한다. 시험이 보는 것은 시간이지 패턴이 아니다.
+# 이름의 대역 형식을 정의한다. 시험이 보는 것은 시간이지 패턴이 아니다. 멈춘 호출은 자는 대신
+# 풀어 주기를 기다리고, 본문이 시간을 잰 뒤 풀어 준다. 남은 스레드는 pwsh 가 끝날 때도 기다리므로
+# 멈춘 호출을 길게 두어도 서버를 닫는 시간이 늘지 않게 하려는 것이다.
 _PATTERN_TIMED = r"""
 if (-not ('System.Windows.Automation.ExpandCollapsePattern' -as [type])) {
     try { Add-Type -AssemblyName UIAutomationClient -ErrorAction Stop } catch { }
@@ -888,11 +890,13 @@ namespace System.Windows.Automation {
 }
 if (-not ('OpenSessionFakeElement' -as [type])) {
     Add-Type -TypeDefinition @'
+using System.Threading;
 public class OpenSessionFakePattern { public void Expand() {} }
 public class OpenSessionFakeElement {
     public int DelayMs;
+    public ManualResetEventSlim Released = new ManualResetEventSlim(false);
     public object GetCurrentPattern(object pattern) {
-        System.Threading.Thread.Sleep(DelayMs);
+        Released.Wait(DelayMs);
         return new OpenSessionFakePattern();
     }
 }
@@ -901,27 +905,36 @@ public class OpenSessionFakeElement {
 $element = New-Object OpenSessionFakeElement
 $element.DelayMs = [int]$given.delay_ms
 $watch = [System.Diagnostics.Stopwatch]::StartNew()
-$got = Invoke-PatternTimed $element 'expand' 1
-"$got|$($watch.ElapsedMilliseconds)|$([int]$script:HungCalls)"
+$got = Invoke-PatternTimed $element 'expand' ([int]$given.limit_s)
+$elapsed = $watch.ElapsedMilliseconds
+$element.Released.Set()
+"$got|$elapsed|$([int]$script:HungCalls)"
 """
 
 
+# 제한 안에 끝나야 할 호출에는 제한을 넉넉히 준다. 지연 0 의 호출이 1초 제한으로는 부하에서
+# `expand-hung` 으로 빨갰다(대기열 306, ADR 0035 의 2026-10-19 이력 "패턴 호출 시험은 제한 안에
+# 끝나야 할 사례에 넉넉한 제한을 준다"). 제한을 일부러 넘기는 호출은 제한을 짧게 두고, 멈춘 호출이
+# 끝날 때까지 기다린 판과 걸린 시간이 갈리게 멈춘 호출을 길게 둔다. 그 상한은 함수의 기본 제한(8초)
+# 보다 짧아, 받은 제한을 버리고 기본값으로 기다린 판도 빨갛다.
 @pytest.mark.parametrize(
-    ("delay_ms", "got", "hung"),
+    ("delay_ms", "limit_s", "got", "hung", "within_ms"),
     [
-        (0, "ok", 0),
-        (3000, "expand-hung", 1),  # 제한 시간 1초를 넘겨 멈춘 호출
+        (0, 30, "ok", 0, 30_000),
+        (20_000, 1, "expand-hung", 1, 6_000),  # 제한 1초를 넘겨 멈춘 호출. 20초를 기다리지 않는다
     ],
 )
 def test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다(
-    delay_ms: int, got: str, hung: int
+    delay_ms: int, limit_s: int, got: str, hung: int, within_ms: int
 ) -> None:
-    completed = _call("Invoke-PatternTimed", _PATTERN_TIMED, {"delay_ms": delay_ms})
+    completed = _call(
+        "Invoke-PatternTimed", _PATTERN_TIMED, {"delay_ms": delay_ms, "limit_s": limit_s}
+    )
 
     assert completed.returncode == 0, completed.stderr
     result, elapsed, counted = completed.stdout.strip().split("|")
     assert result == got
-    assert int(elapsed) < 2500  # 멈춘 호출의 3초를 기다리지 않는다
+    assert int(elapsed) < within_ms
     assert int(counted) == hung
 
 
