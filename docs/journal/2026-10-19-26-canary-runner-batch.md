@@ -321,3 +321,36 @@ open-session을 부른다 2026-10-19T12:10:58Z
 - 첫 커밋 시도는 pytest의 시간 단언 셋(`test_run.py`의 기한, `test_filesystem.py`의 교체 중 읽기 재시도,
   `test_hook_midturn_korean.py`의 2초)으로 막혔다. 이 브랜치가 건드리지 않은 시험이고, 그 회차의 pytest가 1080초(평소 445초)로
   PC가 붐볐다(대기열 332·306과 같은 꼴). 다시 시도했다.
+- 둘째 시도의 pre-commit이 모두 Passed(ruff 둘, pyright, lint-imports, check-type-escapes, check-instructions, zizmor,
+  run-hooks, web-verify, pytest, 마크다운 표, 줄 구분 문자, 변이 표, 인용, 커밋 메시지. 카나리아 명세 모양과 헌법 판은
+  고친 파일이 없어 Skipped). 커밋 `90097b80`.
+
+## 인계 (커밋 뒤)
+
+커밋 `90097b80` 직후 인계 계기가 왔다(`커밋 뒤`, 세션 컨텍스트 205,715 토큰). 이 세션의 지시문의 "이어받을 상태"는
+`인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 요청 범위는 PR과 병합까지이며, `인계 못함` 줄이 없고, 딥링크로 연 세션이다.
+이 세션의 제목은 `chore/canary-runner-batch`였고 `chore/canary-runner-batch (인계함)`으로 바꾼다.
+
+남은 단계: 푸시 → PR(템플릿대로. 체크리스트의 PR 직전 리뷰 줄에 위 "PR 직전 리뷰" 절의 결과와 둔 Nit, 그 값을 적고, 셀프
+리뷰 줄에 세 회차 모두 Critical·Major 없음을 적는다. 리뷰어 참고에 위 "셀프 리뷰 (미커밋 수정분)" 절의 "반영으로 새로 쓴
+사실 문장" 둘) → `@coderabbitai review` → 봇 회차 → 병합 → 일지 "## 다음"과 retro. PR 직전 리뷰는 이미 돌았으므로 다시
+돌리지 않는다(이 커밋의 변경은 셀프 리뷰 반영뿐이다).
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋: rule 질문에 저장소 규칙도 지시라는 문장 붙이기, 계정 한도에 막힌 회차를 측정 아님으로 세기, 스킬 명세의 대조군에도 스킬 호출과 자리 줄 요구하기)를 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 316·338·344(대상 파일이 tools/canary.py인 열린 행 셋)를 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/canary-runner-batch
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-26-canary-runner-batch.md(PR 직전 리뷰, 셀프 리뷰 (미커밋 수정분), 인계 (커밋 뒤) 가운데 마지막 것)
+이어받을 상태: 인계: 커밋 뒤. PR 직전 리뷰 둘과 미커밋 수정분의 셀프 리뷰·반영을 마치고 커밋 90097b80까지 했다(pre-commit 모두 Passed, 푸시 안 함, 열린 PR 없음). 남은 단계는 푸시, PR(체크리스트 내용은 일지의 마지막 "인계 (커밋 뒤)" 절), @coderabbitai review, 봇 회차, 병합, 일지 "## 다음"과 retro다. docs/journal/2026-10-19-26-canary-runner-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/canary-runner-batch (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T13:02:21Z
