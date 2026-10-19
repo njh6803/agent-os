@@ -24,8 +24,8 @@ expect_output = ["test_원문이_줄_끝만_달라_0번이면_그_까닭을_덧�
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            hint = _eol_hint(current, old) if count == 0 else ""'''
-new = '''            hint = ""'''
+old = '''            hint = (_eol_hint(current, old) or _escape_hint(current, old)) if count == 0 else ""'''
+new = '''            hint = _escape_hint(current, old) if count == 0 else ""'''
 
 [[mutation]]
 name = "두 번인 원문에도 줄 끝의 까닭을 붙인다"
@@ -35,8 +35,8 @@ expect_output = ["test_원문만_보면_명령을_돌리지_않고_틀린_원문
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            hint = _eol_hint(current, old) if count == 0 else ""'''
-new = '''            hint = _eol_hint(current, old)'''
+old = '''            hint = (_eol_hint(current, old) or _escape_hint(current, old)) if count == 0 else ""'''
+new = '''            hint = _eol_hint(current, old) or _escape_hint(current, old)'''
 
 [[mutation]]
 name = "파일의 줄 끝을 보지 않는다"
