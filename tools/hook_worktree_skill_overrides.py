@@ -12,7 +12,8 @@
 설정의 `skillOverrides` 와 합쳐졌다. 워크트리 이름 자리의 별표는 먹지 않아 워크트리마다 이름을
 적는다. 이 훅을 등록한 세션에서도 바깥 변경 뒤 경로를 단 이름이 붙지 않았고, 훅이 적은 뒤에 새로
 생긴 스킬은 붙었다. 모두 `.scratch/harness/probes/worktree_skill_listing.py` 가 claude CLI 2.1.303
-에서 갈래마다 한 회차로 쟀다. 더한 목록이 세션이 끝날 때까지 호출마다 입력에 실린다는 것은
+에서 갈래마다 한 회차로 쟀다. 이 PC 의 데스크톱 앱 세션에서는 이 훅이 키를 적었는데도 이름이
+붙었다(못 보는 것의 데스크톱 앱 항목). 더한 목록이 세션이 끝날 때까지 호출마다 입력에 실린다는 것은
 어림이다(첨부가 대화 기록에 남는다고 보았고, 프로브는 한 턴만 돈다).
 
 끄는 값이 있다. 공식 문서(skills 의 "Load skills in monorepos and subdirectories" 절, 2026-10-19
@@ -46,19 +47,35 @@ local 은 이 PC 의 사용자 전역 ignore 가 덮어 추적되지 않는다(`
   않았다).
 - 들어간 뒤에 그 워크트리에 새로 생긴 스킬. 다음 `EnterWorktree` 에서 적는다.
 - local 설정이 git 에서 무시되는지. 클라우드 세션만 침묵하고, 무시되지 않는 다른 체크아웃에서는
-  local 이 추적하지 않는 파일로 남는다(쓰다 실패한 임시 파일은 지운다).
+  local 이 추적하지 않는 파일로 남는다(쓰다 실패한 임시 파일은 지운다). 이 PC 의 주 체크아웃에서는
+  사용자 전역 ignore(`~/.config/git/ignore` 의 `**/.claude/settings.local.json`)가 덮어, 이 PC 의 앱
+  세션들이 이 훅으로 키를 적은 local 이 `git status` 에 나오지 않았다(2026-10-19 워크트리에 들어가기
+  전의 `git status --porcelain` 과, 다음 세션이 시작할 때 앱이 넣은 git 상태로 봤다. 일지
+  2026-10-19-23).
 - `EnterWorktree` 밖의 길로 붙는 사본. 워크트리가 `.gitignore` 에 없는 저장소에서 주 체크아웃 세션이
   워크트리 파일을 읽어 붙는 것은 이 훅이 보지 않는다.
 - 다른 길로 워크트리에 온 세션(앱이 워크트리 폴더에서 연 세션, `/cd`)과 이 훅이 들어오기 전에 들어간
   세션.
 - 같은 파일을 같은 때 쓰는 다른 쓰기(Claude Code 의 권한 기억, `/skills` 메뉴, 다른 세션의 이 훅).
   읽고 쓰는 사이에 끼면 나중 쓰기가 이긴다.
-- 데스크톱 앱이 묶은 판에서 경로를 단 이름이 키로 먹는지. CLI 2.1.303 에서만 쟀다.
-- Windows 에서 세션이 읽는 local 의 자리와, 바꿔 끼운(`os.replace`) 파일을 설정 감시가 보는지. 공식
-  문서(settings 의 "Where Claude Code keeps the local file in a git repository", 2026-10-19 원문을
-  내려받아 읽었다)는 Windows 에서 local 이 `.claude/settings.json` 곁에 남는다고 적는다. 운영 규약의
-  모드 표가 `EnterWorktree` 로 들어온 세션의 훅 등록을 주 체크아웃의 것으로 적어, 그 곁인 주
-  체크아웃의 local 로 보았다(어림이고 Windows 에서 재지 않았다).
+- 데스크톱 앱 세션. 이 PC 의 앱(기록 줄의 `version` 으로 Claude Code 2.1.299)에서 주 체크아웃을 연
+  세션이 `EnterWorktree(name)` 으로 들어가자 이 훅이 그 워크트리의 스킬 열여섯에 키를 적었는데,
+  사람이 주 체크아웃의 스킬 파일을 고친 뒤 붙은 추가분에 그 가운데 목록에 실리는 열하나가 모두
+  경로를 단 이름으로 실렸다(나머지 다섯은 `disable-model-invocation` 이라 원래 목록에 없다). 들어간
+  뒤 만든 스킬도 같은 추가분에 실려 목록을 다시 훑은 것이 보였다. 2026-10-19 한 회차이고, 판정은
+  `.scratch/harness/probes/worktree_overrides_app.py` 다(일지 2026-10-19-23). 까닭은 가르지 않았다.
+  후보는 셋이다. 하나, 들어간 뒤 세션이 주 체크아웃이 아닌 워크트리의 local 을 읽는다. 그 세션의
+  기록 파일이 워크트리 이름의 프로젝트 폴더로 옮겨졌고, 워크트리의 local 사본은 이 훅이 쓰기 전에
+  복사되어 그 키가 없었다(둘 다 손으로 봤다). 공식 문서(settings 의 "Where Claude Code keeps the
+  local file in a git repository", 2026-10-19 원문을 내려받아 읽었다)는 Windows 에서 local 이
+  `.claude/settings.json` 곁에 남는다고 적는다. 이 훅은 운영 규약의 모드 표가 `EnterWorktree` 로
+  들어온 세션의 훅 등록을 주 체크아웃의 것으로 적은 데 기대어 그 곁을 주 체크아웃의 local 로
+  보았는데(어림), 이 후보가 맞으면 그 어림이 틀렸다. CLI 의 프로브는 `git worktree add` 로 만들어
+  local 사본이 없는 워크트리에 `EnterWorktree(path)` 로 들어갔다(그 프로브의 코드를 읽었다). 그래서
+  이 후보가 맞으면 갈린 것은 앱과 CLI 가 아니라 워크트리에 local 사본이 있었는지일 수 있다. 둘, 그
+  판이 경로를 단 키를 맞추지 않는다(실행 파일에 `skillOverrides` 가 든 줄이 있다는 것만 손으로
+  봤고(`grep -a -c`), 그것은 그 판이 그 설정을 안다는 것만 보인다). 셋, Windows 에서 바꿔
+  끼운(`os.replace`) 파일을 설정 감시가 보지 못한다.
 - 끈 이름은 Skill 도구로 부를 수 없다(공식 문서 skills의 "Override skill visibility from settings":
   숨긴 스킬을 전체 이름으로 부르면 `skillOverrides` 오류다. 2026-10-19 원문을 내려받아 읽었다).
 """
@@ -175,8 +192,9 @@ def _fix(path: Path, root: Path, worktree: Path) -> str | None:
     count = len(skill_names(worktree))
     return (
         f"워크트리 {worktree.name} 의 스킬 사본 {count}개를 스킬 목록에서 끄도록 "
-        f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). 주 체크아웃의 스킬이 바뀌어도 "
-        "경로를 단 사본이 목록에 붙지 않는다."
+        f"{LOCAL.as_posix()} 의 {OVERRIDES} 에 적었다(대기열 274). CLI 세션에서는 주 체크아웃의 "
+        "스킬이 바뀌어도 경로를 단 사본이 목록에 붙지 않았지만, "
+        "이 PC 의 데스크톱 앱 세션에서는 붙었다."
     )
 
 
