@@ -821,6 +821,29 @@ expect = "silent"
 note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아니다(대기열 284)"
 payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
+# --- hook_security_review_journal (PreToolUse Skill) ---
+# 첫째와 둘째는 이 PC의 트랜스크립트에 있던 Skill 입력이다. 첫째 꼴이 136번, 둘째(args 가 붙은 꼴)가 한 번이었다
+# (2026-10-19, tool_use id 로 중복을 걷은 수, args 는 줄였다). 셋째(silent)도 트랜스크립트에 있던 이름이다.
+[[case]]
+hook = "hook_security_review_journal.py"
+expect = "context"
+note = "본 세션이 PR 직전 리뷰의 대체 둘로 내장 /security-review 를 부른다"
+contains = ["/security-review의 보고를 다 쓴 그 턴에 일지로 옮긴다", "code-review 6단계 끝"]
+payload = { tool_name = "Skill", tool_input = { skill = "security-review" } }
+
+[[case]]
+hook = "hook_security_review_journal.py"
+expect = "context"
+note = "범위를 args 로 주고 부른다"
+contains = ["/security-review의 보고를 다 쓴 그 턴에 일지로 옮긴다"]
+payload = { tool_name = "Skill", tool_input = { skill = "security-review", args = "범위는 6b439aaf..HEAD (커밋 둘)." } }
+
+[[case]]
+hook = "hook_security_review_journal.py"
+expect = "silent"
+note = "셀프 리뷰의 code-review 는 보고를 받는 순간이 그 스킬 6단계 끝에 있다"
+payload = { tool_name = "Skill", tool_input = { skill = "code-review" } }
+
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.
 [[case]]
