@@ -837,7 +837,9 @@ def calls_without_timeout(root: Path = ROOT) -> list[str]:
     못 보는 것: 변수에 담아 부른 함수(`runner = subprocess.run`), `getattr` 으로 꺼낸 것, 모듈을
     다른 이름에 대입한 것(`sp = subprocess`), `from subprocess import *` 뒤의 이름,
     `getoutput`·`getstatusoutput`(timeout 을 받지 않는다), `with Popen(...)` 이 빠져나갈 때의
-    암묵 `wait`, `os.system`·`os.popen`, timeout 에 준 변수의 값이 None 인 것. 표지는 줄 단위라
+    암묵 `wait`, `Popen` 의 파이프를 직접 읽는 것(`process.stdout.read()`, `for line in
+    process.stdout`), `os.system`·`os.popen`·`os.waitpid`, `functools.partial` 로 감싼 함수,
+    timeout 에 준 변수나 식의 값이 None 인 것(`timeout=None if slow else 5`). 표지는 줄 단위라
     표지가 걸린 줄의 다른 호출도 함께 뺀다. `tests/` 는 보지 않는다.
     """
     problems: list[str] = []

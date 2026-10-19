@@ -402,8 +402,9 @@ def real_git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]
     """`GIT_OPTIONAL_LOCKS=0`: 남의 워크트리에서 친 `status` 가 색인을 고쳐 쓰며 잠그지 않는다.
     시간 제한을 두지 않는다. 지우는 git(`worktree remove`, `branch -D`)도 이 길로 가고, 큰
     `node_modules` 를 지우는 중에 끊으면 지우다 만 폴더가 남는다. 이 도구의 git 은 모두 이 함수
-    하나로 가서 읽기만 하는 git(`status --ignored`, `for-each-ref`, `merge-base`, `rev-parse`)도
-    함께 시간 제한이 없다. 그것만 끊으려면 `Ops.git` 을 지우는 길과 읽는 길로 갈라야 한다."""
+    하나로 가서 읽기만 하는 git(`status --ignored`, `for-each-ref`, `merge-base`, `rev-parse`,
+    `rev-list`, `worktree list` 등)도 함께 시간 제한이 없다. 그것만 끊으려면 `Ops.git` 을 지우는
+    길과 읽는 길로 가르거나, 이 함수가 하위 명령으로 갈라 읽는 길에만 시간 제한을 준다."""
     return subprocess.run(  # 시간 제한 없음: 지우는 git 도 이 길로 가 도중에 끊지 않는다(독스트링)
         ["git", "-c", "core.longpaths=true", *args],
         cwd=cwd,

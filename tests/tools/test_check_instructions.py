@@ -1037,6 +1037,25 @@ def test_못_보는_것_변수에_담아_부른_것과_with_의_Popen() -> None:
     assert untimed_call_lines(source) == []
 
 
+def test_못_보는_것_파이프_읽기와_waitpid_와_partial_과_None_이_되는_식() -> None:
+    """독스트링의 못 보는 것. `Popen` 의 파이프를 직접 읽는 것, `os.waitpid`, `functools.partial`
+    로 감싼 함수, None 이 될 수 있는 식을 준 timeout 은 지나간다."""
+    source = (
+        "import functools\n"
+        "import os\n"
+        "import subprocess\n"
+        "process = subprocess.Popen(['git'], stdout=subprocess.PIPE)\n"
+        "process.stdout.read()\n"
+        "for line in process.stdout:\n"
+        "    pass\n"
+        "os.waitpid(process.pid, 0)\n"
+        "functools.partial(subprocess.run, ['git'])()\n"
+        "subprocess.run(['git'], timeout=None if slow else 5)\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
 def test_못_보는_것_표지는_그_줄의_다른_호출도_뺀다() -> None:
     source = (
         "import subprocess\nprocess.wait(); subprocess.run(['git'])  # 시간 제한 없음: 거둔다\n"

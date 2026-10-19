@@ -1,4 +1,4 @@
-# 2026-10-19 (28) tools 규칙의 허용 목록·다른 견줌 문장과 외부 명령의 시간 제한 검사
+# 2026-10-19 (33) tools 규칙의 허용 목록·다른 견줌 문장과 외부 명령의 시간 제한 검사
 
 브랜치 `chore/tools-rule-batch`. 대상 파일이 `.claude/rules/tools.md`인 열린 대기열 행 가운데 지금 반영할 수 있는 셋(321·342·361)을
 chore 한 PR로 반영했다.
@@ -122,7 +122,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
   한다."
 - `.claude/rules/tools.md`: "끊으면 안 되는 자리(지우는 git까지 그 도구의 git을 모두 맡은 `tools/tidy_checkouts.py`의 `real_git`.
   읽기만 하는 git도 함께 빠진다)"와 "이 항목을 어긴 것을 셀프 리뷰를 지나 PR 직전 `bug-perf-review`가 잡아(일지 2026-10-17-12)
-  이 검사를 더했다(일지 2026-10-19-28)".
+  이 검사를 더했다(일지 2026-10-19-33)".
 - `calls_without_timeout` 독스트링: "`asyncio` 하위 프로세스의 `wait`·`communicate` 는 timeout 을 받지 않아 `asyncio.wait_for` 로
   감싸도 잡히고, `communicate` 는 표지로도 뺄 수 없다", "`*`·`**` 로 펼친 인자는 timeout 이 든지 몰라 없는 것으로 본다", 못 보는
   것의 "`from subprocess import *` 뒤의 이름, `getoutput`·`getstatusoutput`(timeout 을 받지 않는다)", "표지는 줄 단위라 표지가
@@ -131,5 +131,90 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
   독스트링의 대기열 333, 대기열 342)".
 - 훅 시험 독스트링: "`reason_at` 은 git 을 많아야 둘(브랜치, 커밋의 유무) 부른다."
 - 변이 표 머리 주석: "pytest 는 실패한 줄까지의 시험 소스를 함께 찍어, 소스에 있는 문구는 표지로 고르지 않는다."
+
+## 인계
+
+커밋 `eb416d39`가 pre-commit을 모두 지났다(묶음 검사 584초, pytest 581.3초. 이 PC에 다른 세션이 여럿 돌던 때다). 막지 않는 인용 대조
+경고 셋은 그대로 두었다. 대기열 354행의 것은 그 행이 처음부터 제안한 문장이고, 이 일지 84행과 128행의 것은 고치기 전의 규칙 문구와
+독스트링을 옮긴 것이다(128행은 검사가 `*`를 벗겨 대조했다). 커밋 직후 인계 계기가 왔다(세션 컨텍스트 347,996 토큰, 경계 `커밋 뒤`).
+인계하지 않는 때 다섯에 들지 않는다. 이 세션은 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다), 요청 범위는
+"PR과 병합까지"다. 인계 전 제목은 `chore/tools-rule-batch`다.
+
+남은 단계는 origin/main 합치기(`5e7fa88`, #301이 프로브 README와 대기열을 고쳐 충돌 후보다), PR 직전 리뷰(위 "PR 직전 리뷰에 밀
+주장"을 넘긴다), 푸시와 PR, 봇 회차, 워크트리에서 병합, 일지 "다음"과 회고다. 일지 "다음"에 넘길 후속 후보는 셋이다. 위 셀프 리뷰의
+`token_report.py` `pr_head_of` 허용 목록, `tidy_checkouts`의 읽기만 하는 git에 시간 제한을 두는 갈래(`Ops.git` 가르기), 변이 140의
+표지를 출력을 보지 않고 짐작한 일(`.claude/rules/probes.md`의 "고르기 전에 변이를 손으로 넣어 실패 출력을 한 번 보고"를 어겼다)이다.
+같은 대상 파일의 대기열 57·141·238은 앞 지시문이 범위에서 뺀 그대로 열려 있다. 57은 실행 중 세션
+`chore/worktree-overrides-pc-check`가 settings 쪽을 맡았는지 가르지 못했고, 141은 클라우드 세션에서 재야 하고, 238은 사람 몫이다.
+
+낸 지시문:
+
+```
+다음 작업: 기능 하네스 chore. 대기열 321·342·361(대상 파일이 .claude/rules/tools.md인 열린 행 가운데 지금 반영할 수 있는 셋)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 321·342·361(대상 파일이 .claude/rules/tools.md인 열린 행 셋)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/tools-rule-batch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-33-tools-rule-batch.md 의 "셀프 리뷰"와 "인계"
+이어받을 상태: 인계: 커밋 뒤. 커밋 eb416d39까지 구현, 셀프 리뷰 반영, 검증을 마쳤고 pre-commit을 모두 지났다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 origin/main 합치기(#301이 .scratch/harness/probes/README.md와 .scratch/retro-queue.md를 고쳐 충돌 후보다), PR 직전 리뷰(일지의 "PR 직전 리뷰에 밀 주장"을 넘긴다), 푸시와 PR, 봇 회차, 워크트리에서 병합, 일지 "다음"과 회고다. 일지의 "인계" 절은 커밋하지 않았고 일지 "다음"에 넘길 후속 후보 셋이 거기 있다. 일지 docs/journal/2026-10-19-33-tools-rule-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/tools-rule-batch (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 잠금 풀기는 `is not locked`로 이미 풀려 있었다.
+
+open-session을 부른다 2026-10-19T13:01:49Z
+
+## 이어받은 세션
+
+> 사용자: 대기열 321·342·361(대상 파일이 .claude/rules/tools.md인 열린 행 셋)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이
+> 원천이다
+
+위 지시문으로 연 세션이다. 제목을 `chore/tools-rule-batch`로 바꾸고 `git worktree list`에서 그 브랜치가 체크아웃된
+`.claude/worktrees/tools-rule-batch`로 `EnterWorktree(path)` 해 들어갔다(거부되지 않았다).
+
+- origin/main 합치기. `7556070c`(#301, #309)를 합쳤다. 충돌 후보였던 `.scratch/harness/probes/README.md`와
+  `.scratch/retro-queue.md`는 저절로 합쳐졌다(main은 README에 새 행 셋과 한 행의 문구, 대기열에 306·339 행의 문구와 새 행
+  367·368을 더했고, 이 브랜치가 고친 행과 겹치지 않는다). main이 고친 `tools/token_report.py`는 하위 프로세스를 새로 띄우지
+  않아, 합친 뒤 `tools/check_instructions.py`가 0으로 끝났다.
+- 일지 번호. 합친 뒤 `tools/sibling_overlap.py`가 이 일지(28)가 main의 최신 일지 2026-10-19-29보다 이름순으로 앞이라고 알려
+  `--move`로 33으로 옮겼다. 인용을 고친 파일은 `.claude/rules/tools.md`, 프로브 README, 카나리아 명세, 대기열, 이 일지다(위
+  지시문 블록의 경로도 함께 바뀌었다). 옛 번호의 남은 인용은 grep으로 0이다.
+- 번호를 옮긴 커밋의 pre-commit에서 pytest 하나가 빨갰다. `tests/tools/test_hook_midturn_korean.py`의
+  `test_트랜스크립트_파일이_없으면_기다리지_않는다`가 2초 상한에 2.55초였다(`1 failed, 3658 passed`, pytest 882.1초, 묶음 검사
+  947.8초. 이 PC에 다른 세션이 여럿 돌던 때다). 나머지 일곱 검사는 모두 지났다. 그 시험만 따로 돌리면 0.97초에 지났다. 이
+  커밋은 문서와 일지 번호만 고쳐 그 시험을 건드리지 않았고, 대기열 306이 적은 같은 종류의 사례다. 빨간 것은 일지
+  2026-10-19-25의 셋(3.34초, 2.6초, 2.30초)에 이어 네 번째다. 그 일지의 선례대로 고치지 않고 다시 커밋한다.
+- 멈춤 지시. PR 직전 리뷰를 도는 동안 '하네스 작업 진행' 세션이 사용자의 요청을 전달했다. 그 세션이 retro의 승인 기준과
+  next-session 결정표(chore 배치 조건)를 바꾸는 중이라, 이 PR은 병합과 일지까지 마치되 next-session으로 새 세션을 열지 않고
+  같은 세션에서 다음 일을 시작하지도 않으며 재개 메시지를 기다린다. 재개되면 main을 당긴 뒤 바뀐 스킬은 디스크의 `SKILL.md`를
+  Read로 열어 따른다. 전달된 사용자 원문은 아래와 같다.
+
+> 사용자: 이 세션"하네스 작업 진행"의 모든 작업이 끝날 때 까지 현재 열린 세션들에게 현재 작업중인 것 까지만 마무리하고 다음
+> 작업은 이어하지 않도록 지시하고 통제할 수 있어?
+> 이 세션"하네스 작업 진행"의 모든 작업이 끝나면 재개할 수 있도록 해줘.
+
+### PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 돌렸다. 둘 다 첫 실행이 네트워크 오류(`ENOTFOUND`)로 멈춰 다시
+돌렸다(`bug-perf-review`는 멈춘 자리에서 이었다).
+
+- `/security-review`(합친 뒤 커밋 `e7b9294e` 기준): 지적 없음. 바뀐 `subprocess.run`이 모두 리스트 인자이고 `shell=True`가
+  없으며, 새 AST 검사는 파싱만 하고, 지우기를 정하는 읽기는 넘기면 지우지 않는 쪽이라고 봤다.
+- `bug-perf-review`: Critical·Major·Minor 0, Nit 넷. 위 "PR 직전 리뷰에 밀 주장" 여섯은 모두 사실이고, 1과 4에 한 군데씩 고칠
+  곳이 있다고 했다. 관련 시험 일곱 파일 452개 통과(214초).
+  - Nit. `check_line_separators`·`check_md_tables`의 시간 제한 주석이 까닭을 pre-commit에 시간 제한이 없다는 것으로 들지만,
+    pre-commit 훅은 파일 이름을 넘겨 `git ls-files`에 닿지 않는다. 판정: 맞다(등록의 `types`와 `main`의 `paths`를 읽었다.
+    인자 없이 `main()`을 부르는 것은 pytest의 저장소 상태 시험이다). 주석을 "인자 없이 돌 때만 부른다"로 고쳤다.
+  - Nit. `calls_without_timeout`의 못 보는 것에 `Popen` 파이프 직접 읽기, `os.waitpid`, `functools.partial`, None이 될 수
+    있는 조건식 timeout이 빠졌다. 판정: 맞다. 그 넷이 지나간다는 시험을 먼저 더해 통과를 본 뒤 독스트링에 적었다.
+  - Nit. `real_git` 독스트링의 "갈라야 한다"가 단정이고 읽기 git 목록이 닫혀 있다(`rev-list`, `worktree list`도 읽기).
+    판정: 맞다(두 하위 명령이 쓰이는 줄을 grep으로 봤다). 목록에 둘과 "등"을 더하고 "이 함수가 하위 명령으로 가르는" 길을
+    함께 적었다.
+  - Nit(보류). `check_quotes`에서 git이 멈추면 `added_lines`가 파일마다 60초를 기다리고, `tracked_text_files`가 넘기면 트리
+    걷기로 가서 무시된 파일까지 말뭉치에 든다. 판정: 남긴다. 경고만 내는 검사이고 이 PR 전에는 끝없이 기다리던 자리다.
+    고치려면 한 번 넘기면 뒤의 git을 건너뛰는 모듈 전역 상태를 들여야 하는데, git이 멈추는 상황을 재현하지 않았다. PR
+    체크리스트에 적는다.
 
 ## 다음

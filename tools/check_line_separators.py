@@ -71,8 +71,8 @@ _SEPARATOR = re.compile(_SEPARATOR_PATTERN)
 _TEXT_PROBE = 8000
 # 인덱스에서 내용이 있는 일반 파일의 모드. 160000(서브모듈)과 120000(링크)은 뺀다.
 _REGULAR_MODES = frozenset({"100644", "100755"})
-# `git ls-files` 를 기다리는 초. pre-commit 은 훅에 시간 제한을 두지 않는다(`tools/run_checks.py`
-# 독스트링의 대기열 333, 대기열 342).
+# `git ls-files` 를 기다리는 초(대기열 342). 인자 없이 돌 때(pytest 의 저장소 상태 시험, 손으로 칠
+# 때)만 부른다. pre-commit 훅은 파일 이름을 넘겨 이 호출에 닿지 않는다.
 CALL_TIMEOUT = 60
 HINT = (
     "소스에 그 문자가 필요하면 chr(0x2028) 처럼 만든다. "
