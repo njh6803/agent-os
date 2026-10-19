@@ -1,0 +1,30 @@
+# coderabbit-review 정의에 더한 일지 옮기기 문장(대기열 250)이 새 세션의 서브에이전트에 실리는지. 대체 둘을 알리는
+# 줄에 더한 두 문장과 findings 를 낸 보고의 끝 줄을 본다. 실험군은 이 워크트리, 대조군은 바뀌기 전 판이다. 이 PR
+# 안에서는 주 체크아웃(`ebd09fb`)이 그 판이다. 병합 뒤에는 그 커밋을 `--control-commit` 으로 준다(README
+# `canary/` 행). agent_tools 는 실험군 정의의 tools 줄과 같은 집합이어야 한다(러너의 agent_problems).
+# 최신 결과: 통과 4(2026-10-19 셀프 리뷰를 반영한 판, 이 PC, claude 2.1.302, 러너는 `ebd09fb`의 `tools/canary.py`,
+# 대조군 주 체크아웃 `ebd09fb`, 실험군은 `ebd09fb` 위의 커밋 전 변경, 일지 2026-10-19-05). 반영 전 판도 통과 4였다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/coderabbit_review_journal_line.toml <출력 디렉터리>
+#   병합 뒤: uv run python tools/canary.py --control-commit ebd09fb .scratch/harness/probes/canary/coderabbit_review_journal_line.toml <출력 디렉터리>
+kind = "agent"
+agent = "coderabbit-review"
+agent_tools = ["Bash", "Read", "Grep", "Glob"]
+question = '''
+coderabbit-review 서브에이전트를 Agent 도구로 한 번만 불러라. 서브에이전트에게 줄 프롬프트는 아래 단락 그대로다.
+
+도구를 하나도 쓰지 마라. 파일을 읽지 말고, 지금 네 지시문(시스템 프롬프트)에 적힌 것만 보고 답한다. 두 물음에 번호를 붙여 답하라. 1) CLI가 findings를 내지 못하고 끝날 때 보고 끝에 붙이라고 준 한 줄이 있으면 그 줄을 따옴표 안의 글 전부 글자 그대로 옮겨라. 그런 줄이 없으면 '없음'이라고만 적어라. 2) CLI가 findings를 낸 보고의 마지막 줄에 글자 그대로 적으라고 준 한 줄이 있으면 그 줄을 글자 그대로 옮겨라. 그런 줄이 없으면 '없음'이라고만 적어라.
+
+서브에이전트의 답을 고치거나 줄이지 말고 그대로 전하라.
+'''
+expect = ["두 보고도 받은 턴에 일지로 옮긴다", "받는 본 세션에게"]
+source = ".claude/agents/coderabbit-review.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
