@@ -640,23 +640,48 @@ def test_제목이_체크아웃된_브랜치면_다른_워크트리는_그대로
 
 
 def test_체크아웃되지_않은_브랜치는_병합된_PR_머리와_같을_때만_지운다() -> None:
-    assert judge_branch("chore/x", _HEAD, _MERGED).action == "delete"
-    assert judge_branch("chore/x", _OLD, _MERGED).action == "human"
-    assert judge_branch("chore/y", _HEAD, _MERGED).action == "keep"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ()).action == "delete"
+    assert judge_branch("chore/x", _OLD, _MERGED, ()).action == "human"
+    assert judge_branch("chore/y", _HEAD, _MERGED, ()).action == "keep"
 
 
 def test_병합된_PR_이_없어도_커밋이_모두_origin_main_에_있는_브랜치는_지운다() -> None:
     """2026-10-15 에 `EnterWorktree` 가 만든 `worktree-*` 브랜치 53개가 PR 없이 남아 있었다.
     끝이 `origin/main` 에서 닿으면 잃는 것은 이름뿐이다. `main` 은 루트가 다른 브랜치에 있을 때
     체크아웃되지 않은 브랜치로 보여도 지우지 않는다."""
-    gone = judge_branch("worktree-x", _HEAD, {}, contained=True)
+    gone = judge_branch("worktree-x", _HEAD, {}, (), contained=True)
     assert gone.action == "delete"
     assert "origin/main" in gone.reason
-    assert judge_branch("worktree-x", _HEAD, {}, contained=False).action == "keep"
-    assert judge_branch("main", _HEAD, {}, contained=True).action == "keep"
-    assert judge_branch("master", _HEAD, {}, contained=True).action == "keep"
+    assert judge_branch("worktree-x", _HEAD, {}, (), contained=False).action == "keep"
+    assert judge_branch("main", _HEAD, {}, (), contained=True).action == "keep"
+    assert judge_branch("master", _HEAD, {}, (), contained=True).action == "keep"
     # 병합된 PR 의 머리와 다른 끝은 origin/main 에 있어도 사람이 본다
-    assert judge_branch("chore/x", _OLD, _MERGED, contained=True).action == "human"
+    assert judge_branch("chore/x", _OLD, _MERGED, (), contained=True).action == "human"
+
+
+def test_체크아웃되지_않은_브랜치도_그_브랜치가_제목인_세션이_돌면_남긴다() -> None:
+    """대기열 286. 2026-10-16 에 실행 중인 세션 `chore/mutate-followups` 의 브랜치를 지울 후보로
+    냈다. 지우는 두 길(병합된 PR 의 머리, origin/main 에 든 끝) 모두 남긴다. 워크트리처럼 판정 1이
+    지울 것으로 낸 뒤에 보므로, 판정 1이 남기거나 넘긴 것은 그 이유를 그대로 든다."""
+    by_pr = judge_branch("chore/x", _HEAD, _MERGED, ("chore/x",))
+    assert by_pr.action == "keep", by_pr
+    assert by_pr.reason == "그 브랜치가 제목인 세션이 돈다"
+    assert judge_branch("worktree-x", _HEAD, {}, ("worktree-x",), contained=True).action == "keep"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ("chore/y",)).action == "delete"
+    assert judge_branch("chore/x", _OLD, _MERGED, ("chore/x",)).action == "human"
+    unmerged = judge_branch("chore/y", _HEAD, _MERGED, ("chore/y",))
+    assert unmerged.action == "keep"
+    assert "병합된 PR 이 없고" in unmerged.reason
+
+
+def test_다른_제목은_보지_않고_대소문자만_다르면_브랜치에서는_같다고_본다() -> None:
+    """못 보는 것. 앞뒤 공백이나 꼬리가 붙은 제목은 다른 이름으로 본다. 대소문자만 다른 제목은
+    체크아웃되지 않은 브랜치에서는 같은 이름으로 보아 남기고 워크트리에서는 다른 이름으로 본다."""
+    for title in (" chore/x", "chore/x ", "chore/x (인계함)"):
+        assert judge_branch("chore/x", _HEAD, _MERGED, (title,)).action == "delete", title
+        assert judge(_WT, _FACTS, _MERGED, (title,), _죽었다, ()).action == "delete", title
+    assert judge(_WT, _FACTS, _MERGED, ("Chore/X",), _죽었다, ()).action == "delete"
+    assert judge_branch("chore/x", _HEAD, _MERGED, ("Chore/X",)).action == "keep"
 
 
 # --- 등록 없는 폴더(대기열 148) -------------------------------------------------------------------
@@ -1779,6 +1804,63 @@ def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_�
     assert _git("branch", "--list", "ahead", cwd=repo) != ""
 
 
+def test_judge_는_실행_중인_세션의_제목인_체크아웃되지_않은_브랜치를_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 286. 병합된 PR 로 지울 브랜치와 PR 없이 origin/main 에 든 브랜치 모두 남기고
+    `remove-branch` 를 찍지 않는다. 제목이 다른 세션만 돌면 그대로 지울 후보다."""
+    _git("branch", "chore/loose", cwd=repo)
+    _git("branch", "worktree-x", cwd=repo)
+    _git("branch", "worktree-y", cwd=repo)
+    tip = _git("rev-parse", "chore/loose", cwd=repo)
+    argv = ["judge", "--running", "chore/loose", "--running", "worktree-x"]
+    assert main(argv, cwd=repo, ops=_ops({"chore/loose": frozenset({tip})})) == 0
+    lines = capsys.readouterr().out.splitlines()
+    for name in ("chore/loose", "worktree-x"):
+        line = next(line for line in lines if f" {name} " in line)
+        assert line == f"브랜치를 남긴다 {name} — 그 브랜치가 제목인 세션이 돈다", line
+    other = next(line for line in lines if " worktree-y " in line)
+    assert other.startswith("브랜치를 지운다"), other
+
+
+def test_judge_는_대소문자가_바뀌어_찍힌_브랜치도_그_제목의_세션이_돌면_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """윈도에서 낱개 참조의 폴더(`refs/heads/chore/`)가 이미 있으면 `Chore/Upper` 가 그 폴더 아래에
+    들어가 `for-each-ref` 가 `chore/Upper` 로 찍는다. 세션 제목은 친 그대로다. 대소문자를 가린
+    판은 그 세션의 브랜치를 지울 후보로 냈다(대기열 286 의 반박 시험)."""
+    _git("branch", "chore/x", cwd=repo)
+    _git("branch", "Chore/Upper", cwd=repo)
+    if sys.platform == "win32":
+        listed = _git("for-each-ref", "refs/heads", "--format=%(refname:short)", cwd=repo)
+        assert "chore/Upper" in listed.splitlines(), listed
+    assert main(["judge", "--running", "Chore/Upper"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/Upper" in line)
+    assert line.startswith("브랜치를 남긴다"), line
+
+
+def test_judge_와_remove_branch_는_대소문자가_바뀌어_찍힌_체크아웃된_브랜치를_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """윈도에서 `Chore/Upper` 워크트리의 등록은 친 그대로 찍히고 `for-each-ref` 는 `chore/Upper` 로
+    찍는다. 글자 그대로 견준 판은 그 브랜치를 체크아웃되지 않은 것으로 보아 지울 후보로 냈고,
+    `remove-branch` 가 지워 커밋하지 않은 파일이 든 워크트리의 HEAD 가 끊겼다(git 의 `branch -D` 도
+    대소문자를 가려 막지 않았다. 대기열 286 셀프 리뷰 명세 축)."""
+    _git("branch", "chore/x", cwd=repo)
+    path = repo / ".claude" / "worktrees" / "up"
+    _git("worktree", "add", "-b", "Chore/Upper", str(path), cwd=repo)
+    (path / "work.txt").write_text("x", encoding="utf-8")
+    tip = _git("rev-parse", "HEAD", cwd=path)
+    if sys.platform == "win32":
+        listed = _git("for-each-ref", "refs/heads", "--format=%(refname:short)", cwd=repo)
+        assert "chore/Upper" in listed.splitlines(), listed
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert not [line for line in lines if line.startswith("브랜치를") and "/Upper" in line], lines
+    assert main(["remove-branch", "chore/Upper", tip], cwd=repo, ops=_ops({})) == 1
+    assert _git("rev-parse", "HEAD", cwd=path) == tip
+
+
 def test_judge_는_git_없는_prunable_폴더의_분리_HEAD_가_origin_main_에_없으면_넘긴다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2093,6 +2175,20 @@ def test_remove_branch_는_체크아웃된_브랜치를_지우지_않는다(repo
     _, head = _add(repo, "done")
     merged = {"chore/done": frozenset({head})}
     assert main(["remove-branch", "chore/done", head], cwd=repo, ops=_ops(merged)) == 1
+
+
+def test_remove_branch_는_judge_가_세션으로_남긴_브랜치도_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것. `judge` 뒤에 그 브랜치가 제목인 세션이 열려도 `remove-branch` 의 재판정은 세션을
+    보지 않고(제목을 받지 않는다), 워크트리의 `remove` 처럼 대신 잡는 쥔 프로세스도 없어 지운다."""
+    _git("branch", "chore/late", cwd=repo)
+    tip = _git("rev-parse", "chore/late", cwd=repo)
+    assert main(["judge", "--running", "chore/late"], cwd=repo, ops=_ops({})) == 0
+    kept = next(line for line in capsys.readouterr().out.splitlines() if " chore/late " in line)
+    assert kept.startswith("브랜치를 남긴다"), kept
+    assert main(["remove-branch", "chore/late", tip], cwd=repo, ops=_ops({})) == 0
+    assert _git("branch", "--list", "chore/late", cwd=repo) == ""
 
 
 def test_CLI_를_하위_프로세스로_부르면_인자_오류에_2로_끝난다() -> None:
