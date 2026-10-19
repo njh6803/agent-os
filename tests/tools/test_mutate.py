@@ -389,7 +389,7 @@ _손자 = """
 import os, pathlib, sys, time
 심장 = pathlib.Path(sys.argv[1])
 심장.with_suffix(".pid").write_text(str(os.getpid()))
-끝 = time.monotonic() + 20  # 아무도 끝내지 못해도 스스로 끝난다
+끝 = time.monotonic() + 60  # 아무도 끝내지 못해도 스스로 끝난다. 판정의 기한보다 길게 산다
 while time.monotonic() < 끝:
     with 심장.open("ab") as f:
         f.write(b".")
@@ -413,10 +413,37 @@ time.sleep(60)
 """
 
 
-def _뛰는지(심장: Path) -> bool:
+_판정_기한_초 = 15
+_손자가_산다 = f"러너가 돌아온 뒤 {_판정_기한_초}초 동안 손자의 기록 파일이 1초도 멈추지 않았다"
+_손자가_끝났다 = f"{_판정_기한_초}초 동안 손자의 기록 파일이 자라지 않았다(남아야 할 손자가 끝났다)"
+
+
+def _멈추는지(심장: Path) -> bool:
+    """기한 안에 손자의 기록 파일이 1초 동안 자라지 않으면 참. 한 번만 견주지 않고 기한까지 거듭
+    견준다(`tests/tools/test_run_checks.py` 의 `_stops_growing`). 부하에서는 `taskkill` 이 손자를
+    끝냈다고 알리고 러너가 돌아온 뒤에도 손자가 잠깐 더 살아 기록 파일에 쓴 회차가 있었다. 러너가
+    돌아온 직후 0.5초 사이를 한 번만 견주던 판은 그 쓰기를 산 손자로 읽었다(대기열 306, ADR 0035 의
+    2026-10-18 이력. `taskkill /F` 가 끝내기를 시작만 하고 돌아오는 `TerminateProcess` 를 부른다는
+    해석은 어림이다)."""
+    끝 = time.monotonic() + _판정_기한_초
+    while time.monotonic() < 끝:
+        크기 = 심장.stat().st_size
+        time.sleep(1)
+        if 심장.stat().st_size == 크기:
+            return True
+    return False
+
+
+def _자라는지(심장: Path) -> bool:
+    """손자의 기록 파일이 기한 안에 한 번이라도 자라면 참이다. 부하로 손자가 늦게 돌아도 기한까지
+    기다린다."""
+    끝 = time.monotonic() + _판정_기한_초
     크기 = 심장.stat().st_size
-    time.sleep(0.5)
-    return 심장.stat().st_size != 크기
+    while time.monotonic() < 끝:
+        time.sleep(0.05)
+        if 심장.stat().st_size != 크기:
+            return True
+    return False
 
 
 def _첫_기다림을_끊는다(
@@ -468,9 +495,11 @@ def test_실제_러너는_시간_제한을_넘기면_손자_프로세스까지_�
     걸린 = time.monotonic() - 시작
     assert 결과.timed_out_after == 60
     assert "손자가 뛴다" in 결과.output
-    assert 걸린 < 8
+    # 자식과 손자를 띄우는 시간과 `taskkill` 까지 든다. 8초로 두던 판이 pytest 세 벌을 함께 띄운
+    # 부하에서 13.6초로 빨갰다(ADR 0035 의 2026-10-18 이력)
+    assert 걸린 < 30
     assert 심장.stat().st_size > 0
-    assert not _뛰는지(심장)
+    assert _멈추는지(심장), _손자가_산다
 
 
 def test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다(tmp_path: Path) -> None:
@@ -518,7 +547,7 @@ def test_실제_러너는_기다리는_동안_Ctrl_C_가_나도_손자_프로세
     with pytest.raises(KeyboardInterrupt):
         run_command([sys.executable, "-c", _자식, _손자, str(심장), "머문다"], tmp_path, 60)
 
-    assert not _뛰는지(심장)
+    assert _멈추는지(심장), _손자가_산다
 
 
 def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_출력은_잠시만_기다린다(
@@ -544,8 +573,10 @@ def test_못_보는_것_고아가_되거나_제_세션을_연_손자는_남고_�
     try:
         assert 결과.timed_out_after == 60
         assert "그만 읽었다" in 결과.output
-        assert 걸린 < 8
-        assert _뛰는지(심장)
+        # 시간 제한 시험과 같은 자식과 손자를 띄우는 길이다. 8초로 두던 판이 pre-commit 에서 9.3초로
+        # 빨갰다(일지 2026-10-17-04, ADR 0035 의 2026-10-18 이력)
+        assert 걸린 < 30
+        assert _자라는지(심장), _손자가_끝났다
     finally:
         with contextlib.suppress(OSError):  # 스스로 끝났으면 없다
             os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
@@ -582,7 +613,10 @@ def test_못_보는_것_프로세스_그룹만_따로_연_손자는_POSIX_에서
 
     try:
         assert 결과.timed_out_after == 60
-        assert _뛰는지(심장) == (sys.platform != "win32")
+        if sys.platform == "win32":
+            assert _멈추는지(심장), _손자가_산다
+        else:
+            assert _자라는지(심장), _손자가_끝났다
     finally:
         with contextlib.suppress(OSError):  # 끝냈거나 스스로 끝났으면 없다
             os.kill(int(심장.with_suffix(".pid").read_text()), signal.SIGTERM)
