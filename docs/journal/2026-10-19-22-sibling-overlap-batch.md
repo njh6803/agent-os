@@ -1,4 +1,4 @@
-# 2026-10-19 (15) sibling_overlap 의 head ref 없는 PR 과 합치는 중인 형제 사본
+# 2026-10-19 (22) sibling_overlap 의 head ref 없는 PR 과 합치는 중인 형제 사본
 
 브랜치 `chore/sibling-overlap-batch`. 대기열 288·294(대상 파일이 `tools/sibling_overlap.py`인 열린 행 둘)를 chore 한 PR로
 반영한다. 이 세션의 지금 제목은 `chore/sibling-overlap-batch`이고, 인계하며 `chore/sibling-overlap-batch (인계함)`으로 바꾼다.
@@ -65,7 +65,7 @@ origin/main)로 당겼다. 당긴 커밋은 그 스킬을 바꾸지 않았다.
 브랜치: chore/sibling-overlap-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: .scratch/retro-queue.md의 288·294 행(이 브랜치에서 닫았다)과 그 근거 일지(2026-10-16-18, 2026-10-16-20)
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현·시험·대기열 닫기를 마친 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 merge-base origin/main, 명세는 두 행)부터 한다. 그 뒤 반영, run_checks, 커밋, PR, 병합. 판정과 한 일은 docs/journal/2026-10-19-15-sibling-overlap-batch.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현·시험·대기열 닫기를 마친 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 merge-base origin/main, 명세는 두 행)부터 한다. 그 뒤 반영, run_checks, 커밋, PR, 병합. 판정과 한 일은 docs/journal/2026-10-19-22-sibling-overlap-batch.md
 확인할 선행 조건: 워크트리 잠금은 넘기는 세션이 풀었다. 풀리지 않았으면 git worktree unlock C:/project/agent/.claude/worktrees/sibling-overlap-batch 뒤 들어간다
 이번 요청 범위: PR과 병합까지
 ```
@@ -130,7 +130,7 @@ PR 직전 `bug-perf-review`에 밀 주장은 위 "고친 것"의 모듈 독스�
 브랜치: chore/sibling-overlap-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: .scratch/retro-queue.md의 288·294 행(이 브랜치에서 닫았다)과 그 근거 일지(2026-10-16-18, 2026-10-16-20)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영·run_checks·pre-commit을 마친 커밋 fa8f6a53이 있고 아직 푸시하지 않았으며 열린 PR이 없다. 남은 것은 origin/main 합치기(a60e2dd까지 나아갔다, 대기열 파일이 겹친다), PR 직전 리뷰(bug-perf-review 또는 coderabbit-review, 밀 주장은 일지의 고친 것 줄), 이 일지 커밋, 푸시, PR, 봇 회차, 병합. 판정과 한 일은 docs/journal/2026-10-19-15-sibling-overlap-batch.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영·run_checks·pre-commit을 마친 커밋 fa8f6a53이 있고 아직 푸시하지 않았으며 열린 PR이 없다. 남은 것은 origin/main 합치기(a60e2dd까지 나아갔다, 대기열 파일이 겹친다), PR 직전 리뷰(bug-perf-review 또는 coderabbit-review, 밀 주장은 일지의 고친 것 줄), 이 일지 커밋, 푸시, PR, 봇 회차, 병합. 판정과 한 일은 docs/journal/2026-10-19-22-sibling-overlap-batch.md
 확인할 선행 조건: 워크트리 잠금은 넘기는 세션이 풀었다. 풀리지 않았으면 git worktree unlock C:/project/agent/.claude/worktrees/sibling-overlap-batch 뒤 들어간다
 이번 요청 범위: PR과 병합까지
 ```
@@ -189,7 +189,7 @@ PR을 연 뒤에 인계 계기가 왔다(세션 컨텍스트 218,371 토큰). �
 브랜치: chore/sibling-overlap-batch
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: .scratch/retro-queue.md의 288·294 행(이 브랜치에서 닫았다)과 그 근거 일지(2026-10-16-18, 2026-10-16-20)
-이어받을 상태: 인계: PR 연 뒤. PR #306이 열렸고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. PR 직전 리뷰의 남긴 Minor(sha 받기의 시간 초과가 아닌 실패를 받지 못한 PR로 세는 것)는 PR 본문의 남긴 위험에 있다. 합친 PR #304의 프로브 worktree_skill_listing.py를 백그라운드 보안 리뷰가 짚었으나 이 PR 범위 밖이라 두었다. 판정과 한 일은 docs/journal/2026-10-19-15-sibling-overlap-batch.md
+이어받을 상태: 인계: PR 연 뒤. PR #306이 열렸고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. PR 직전 리뷰의 남긴 Minor(sha 받기의 시간 초과가 아닌 실패를 받지 못한 PR로 세는 것)는 PR 본문의 남긴 위험에 있다. 합친 PR #304의 프로브 worktree_skill_listing.py를 백그라운드 보안 리뷰가 짚었으나 이 PR 범위 밖이라 두었다. 판정과 한 일은 docs/journal/2026-10-19-22-sibling-overlap-batch.md
 확인할 선행 조건: 워크트리 잠금은 넘기는 세션이 풀었다. 풀리지 않았으면 git worktree unlock C:/project/agent/.claude/worktrees/sibling-overlap-batch 뒤 들어간다
 이번 요청 범위: PR과 병합까지
 ```
