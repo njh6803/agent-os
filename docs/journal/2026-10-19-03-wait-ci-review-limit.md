@@ -266,3 +266,48 @@ open-session을 부른다 2026-10-18T23:52:31Z
   `spec_reviewer_evidence_kinds.toml`, `tools_rule_scratch_probe_hook.toml`)의 실제 회차를 돌려 각 명세 머리 주석에 결과를
   적는다(위 "이어받은 일").
 - 대기열 349(`gh_run_summary.py`의 `result` 칸), 350(표지 없는 새 빨강 변이를 알리는 검사)는 열린 행이다.
+- `tools/wait_ci.py`의 `limit_message`와 `tools/gh_run_summary.py`의 `_blocks`가 같은 로그에서 같은 결과 블록을 내는지
+  보는 시험이 없다(지금은 접두가 같다는 시험뿐이다). 다음에 두 파일 가운데 하나를 고칠 때 더한다(아래 "봇 둘째 회차").
+
+## 인계 (커밋 뒤, 넷째 세션)
+
+넷째 세션(제목 `chore/wait-ci-review-limit`)이 봇 첫 회차를 반영해 커밋 34dc9e4b를 만들었다. 푸시하지 않았다. 커밋은 세
+번째 시도에 통과했다. 앞의 두 번은 pytest가 부하로 빨갰고(첫째 2건, 둘째 13건과 run-hooks·web-verify, 한 바퀴 25분,
+python·node 프로세스 63개, CPU 73%), 실패한 시험은 따로 돌리면 모두 통과했다(13건 166초). 이 변경이 건드린 파일의 시험은
+아니었다. 커밋 뒤 인계 계기가 왔다(세션 컨텍스트 259,914 토큰). 봇 회차의 지적과 판정은 위 "봇 회차" 절이고, PR 코멘트에는
+아직 보류 이유를 남기지 않았다. 새 세션은 푸시한 뒤 claude-review의 `limit_message` 중복 보류 이유를 PR 코멘트로 남기고,
+둘째 회차(Critical·Major만 고친다)를 기다려 병합한다.
+
+지시문:
+
+```
+다음 작업: 기능 harness. 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 것)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 327(claude-review가 계정 주간 한도로 빨간 동안 tools/wait_ci.py가 그 빨강을 실패로 세는 열린 행)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 원천이다
+브랜치: chore/wait-ci-review-limit
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-03-wait-ci-review-limit.md(봇 회차, 회고 (넷째 세션), 다음, 인계 (커밋 뒤, 넷째 세션))
+이어받을 상태: 인계: 커밋 뒤. PR #295가 열려 있고 봇 첫 회차를 반영한 커밋 34dc9e4b는 푸시하지 않았다. 푸시하고 순서 1의 2(봇 회차)부터 한다. 두 봇의 첫 회차는 끝났고 이번 푸시의 리뷰가 둘째 회차라 Critical·Major만 고친다. claude-review의 보류(limit_message와 gh_run_summary._blocks의 중복)는 이유를 PR 코멘트로 아직 남기지 않았다(일지 "봇 회차" 절). 일지의 이 인계 절은 커밋하지 않은 채 워크트리에 있다. 이 PC는 다른 세션의 부하로 pre-commit의 pytest가 두 번 빨갰고 따로 돌리면 통과했다. 일지는 docs/journal/2026-10-19-03-wait-ci-review-limit.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-10-19T01:46:03Z
+
+## 봇 둘째 회차 (다섯째 세션)
+
+다섯째 세션(제목 `chore/wait-ci-review-limit`)이 앞 인계의 지시문으로 열렸다. 사용자 프롬프트는 앞 인계의 시작 프롬프트와
+같다. `EnterWorktree(path)`가 두 번 모두 "the protected checkout C:\project\agent has git metadata that could not be
+resolved"로 거부했다. `git worktree list --porcelain`에 prunable이 없고 `.git/worktrees/*/gitdir`이 모두 제자리를 가리켜
+원인은 찾지 못했다. 그래서 세션은 주 체크아웃에 머문 채 `git -C <워크트리>`와 절대 경로로 일했고, 주 체크아웃은 건드리지
+않았다.
+
+- 34dc9e4b를 푸시하고 첫 회차의 보류 이유(`limit_message` 중복)를 PR 코멘트로 남긴 뒤 `@coderabbitai review`를 남겼다.
+  브랜치의 `tools/wait_ci.py`(`--head 34dc9e4b…`, 작업 폴더가 main이라 헤드를 줬다)가 `끝: 모두 통과. CodeRabbit: Review
+  rate limited`로 끝났다. CodeRabbit은 한도로 리뷰가 없어 회차로 세지 않는다.
+- claude-review 둘째 회차는 Minor 2(`ReviewLimits.review`의 CQS, `limit_message`와 `_blocks`의 중복), Nit 2(`detail`의
+  뜻이 갈래마다 다름, `_settle`의 보고 줄과 판정 섞임)였다. Critical·Major가 없어 고치지 않고 지적마다 보류 이유를 PR
+  코멘트로 남겼다. 중복 지적이 더한 "블록 파싱도 두 도구가 같은 결과를 내는지 시험"은 뒤로 넘겨 "다음"에 적었다.
