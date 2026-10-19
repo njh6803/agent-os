@@ -113,6 +113,41 @@ open-session을 부른다 2026-10-19T11:10:44Z
     거절했다(git 128). 셀프 리뷰가 밀라고 넘긴 두 주장이 섰다. 갈린 꼬리는 `/.` 하나로 git은 받고 이 함수는 거절한다. git이
     쓰는 `.git`에 나오지 않는 모양이고 틀린 부모가 아니라 `OSError`로 실패해 오탐으로 두었다.
 
+- **커밋과 PR.** 일지 커밋은 첫 시도가 600초 제한에 걸려 멈췄고(세션이 끊김), 둘째 시도는 web-verify의
+  `eslint.config.test.ts` "app/ 이 next 와 react 를 import…" 시험이 60초 제한에 82.6초로 걸려 실패했다. 바뀐 것이 일지뿐이라
+  다른 세션이 함께 돈 부하로 보고 한 번 더 쳤고, 셋째에서 그 시험이 통과해 `8063f048`이 들어갔다(web-verify 349.2초). 원인은
+  재지 않았다. 푸시하고 PR #309를 열었다.
+
+## 인계(PR 연 뒤)
+
+PR을 연 뒤 경계에서 세션 컨텍스트가 인계 문턱을 넘어 봇 회차와 병합은 새 세션에 넘긴다. 이 세션의 지금 제목은
+`chore/token-report-blind-spot-tests`다. 첫 `@coderabbitai review`는 아직 남기지 않았다.
+
+```
+다음 작업: 토큰 보고서 `main_checkout_of`의 못 보는 것과 gitdir 줄 끝 공백·점 거절을 담은 PR #309를 반영·병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: PR #309(토큰 보고서 main_checkout_of의 못 보는 것 시험 고정과 gitdir 줄 끝 공백·점 거절)의 봇 회차를 돌고 반영해 병합한다
+브랜치: chore/token-report-blind-spot-tests
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 이 일지의 "이어받은 세션: PR 직전 리뷰와 PR" 절
+이어받을 상태: 인계: PR 연 뒤. PR #309를 열었고 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. 일지 파일은 docs/journal/2026-10-19-29-token-report-blind-spot-tests.md이고, 이 인계 절은 커밋하지 않은 채 워크트리에 있다
+확인할 선행 조건: 일지 커밋의 web-verify에서 eslint.config.test.ts 시험 하나가 부하로 60초 제한을 넘긴 일이 한 번 있었다(원인은 재지 않았다). CI의 web 잡이 같은 시험에서 빨가면 부하로 단정하지 말고 그 시험을 본다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-19T12:18:43Z
+
+## 이어받은 세션: 봇 회차
+
+> 사용자: PR #309(토큰 보고서 main_checkout_of의 못 보는 것 시험 고정과 gitdir 줄 끝 공백·점 거절)의 봇 회차를 돌고 반영해 병합한다
+
+- **첫 회차.** CodeRabbit은 한도에 걸려 리뷰가 없었다(회차로 세지 않는다). claude-review의 첫 리뷰는 Minor 하나와 Nit
+  하나였고 둘 다 반영했다.
+  - Minor: 독스트링이 줄 끝의 점을 "git은 그 줄을 거절한다"로 묶었지만 `/.` 꼬리는 git이 받는다(PR 본문의 "남긴 위험"에만
+    있었다). 독스트링의 못 보는 것에 적고, 거절을 단언하는 시험으로 고정했다.
+  - Nit: `GIT_DIR` 시험이 `.git` 폴더 분기만 돌았다. 같은 시험에 `gitdir:` 파일 분기를 더했다.
+
 ## 다음(이어받은 세션)
 
 - 이 PR을 병합한 뒤 주 체크아웃 세션에서 `/tidy-checkouts`로 루트를 당긴다. 10/20 08:00 실행의 `LastTaskResult`와 주

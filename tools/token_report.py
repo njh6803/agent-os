@@ -2391,7 +2391,8 @@ def main_checkout_of(checkout: Path) -> Path:
     놓쳐 엉뚱한 부모가 나왔다), 가리킨 폴더나 공용 디렉터리가 없으면 `OSError`다.
 
     못 보는 것. git과 달리 상위 폴더로 올라가며 찾지 않아, 체크아웃의 하위 폴더를 주면 `OSError`다.
-    `GIT_DIR`을 따르지 않아, 환경에 두어도 결과가 같다."""
+    `GIT_DIR`을 따르지 않아, 환경에 두어도 결과가 같다. `/.`로 끝나는 `gitdir:` 줄은 git이 받지만
+    여기서는 끝의 점에 걸려 `OSError`다(git이 쓰는 `.git`에는 나오지 않는 모양이다)."""
     dot_git = checkout / ".git"
     if dot_git.is_dir():
         return checkout

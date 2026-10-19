@@ -1057,14 +1057,35 @@ def test_못_보는_것_하위_폴더를_주면_git과_달리_FileNotFoundError�
         main_checkout_of(sub)
 
 
+def test_못_보는_것_gitdir_줄_끝의_슬래시_점은_git과_달리_OSError다(tmp_path: Path) -> None:
+    # git은 `<경로>/.`를 받는다(PR 직전 bug-perf-review가 임시 저장소에서 git과 맞댔다). 이 함수는
+    # 끝의 점에 걸려 거절한다. git이 쓰는 `.git`에는 나오지 않는 모양이라 틀린 부모 대신 실패로
+    # 둔다.
+    gitdir = tmp_path / "주" / ".git" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    checkout = tmp_path / "워크"
+    checkout.mkdir()
+    (checkout / ".git").write_text(f"gitdir: {gitdir}/.\n", encoding="utf-8")
+    with pytest.raises(OSError, match="줄 끝에 공백이나 점"):
+        main_checkout_of(checkout)
+
+
 def test_못_보는_것_GIT_DIR을_두어도_결과가_같다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     main_repo = tmp_path / "주"
-    (main_repo / ".git").mkdir(parents=True)
+    (main_repo / ".git" / "worktrees" / "a").mkdir(parents=True)
+    (main_repo / ".git" / "worktrees" / "a" / "commondir").write_text("../..\n", encoding="utf-8")
+    worktree = tmp_path / "워크"
+    worktree.mkdir()
+    (worktree / ".git").write_text(
+        f"gitdir: {main_repo / '.git' / 'worktrees' / 'a'}\n", encoding="utf-8"
+    )
     (tmp_path / "남" / ".git").mkdir(parents=True)
     monkeypatch.setenv("GIT_DIR", str(tmp_path / "남" / ".git"))
     assert main_checkout_of(main_repo) == main_repo
+    assert main_checkout_of(worktree).resolve() == main_repo.resolve()
 
 
 def test_gitdir이_가리킨_폴더가_없으면_OSError다(tmp_path: Path) -> None:
