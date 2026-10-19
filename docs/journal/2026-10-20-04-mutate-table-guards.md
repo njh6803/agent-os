@@ -1,4 +1,4 @@
-# 2026-10-19 (32) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
+# 2026-10-20 (04) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대상 파일이 `tools/mutate.py`인 열린 대기열 행 넷을 한 PR로 닫는다.
 이 세션의 지금 제목은 `chore/mutate-table-guards`이고, 셀프 리뷰 직전에 인계 계기가 와서 넘긴다(아래 인계 절).
@@ -67,8 +67,8 @@ README(`.scratch/harness/probes/README.md`)의 새 표 행은 그 결과와 함�
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-19-32-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
+읽을 것: docs/journal/2026-10-20-04-mutate-table-guards.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-20-04-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
 확인할 선행 조건: 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 이 브랜치와 겹치는지 병합 전에 본다(글자 충돌은 재지 않았다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -174,8 +174,8 @@ web-verify 417.9초, 변이 표 `--staged` 포함).
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 2c340e64에 들었다(PR 없음, 푸시하지 않았다). 남은 단계는 origin/main 합치기와 겹친 파일 대조, 다른 워크트리에서 mutate_table_guards_mutations.toml 전체 실행과 mutate_buffer_eol_retry_mutations.toml의 고친 변이 둘 다시 재기, 프로브 README 행, tools/run_checks.py 전체, PR 직전 리뷰(일지의 밀 주장 목록), PR·CI·병합이다. 일지에 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-32-mutate-table-guards.md
+읽을 것: docs/journal/2026-10-20-04-mutate-table-guards.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 2c340e64에 들었다(PR 없음, 푸시하지 않았다). 남은 단계는 origin/main 합치기와 겹친 파일 대조, 다른 워크트리에서 mutate_table_guards_mutations.toml 전체 실행과 mutate_buffer_eol_retry_mutations.toml의 고친 변이 둘 다시 재기, 프로브 README 행, tools/run_checks.py 전체, PR 직전 리뷰(일지의 밀 주장 목록), PR·CI·병합이다. 일지에 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-20-04-mutate-table-guards.md
 확인할 선행 조건: origin/main이 5f38d61 이상으로 움직였고 이 브랜치와 .claude/rules/tools.md·.claude/settings.json·tools/hook_payloads.toml·tools/run_hooks.py를 함께 고쳤다. 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 겹치는지 병합 전에 본다. 이 PC의 부하로 pre-commit이 무관한 시간 시험에서 네 번 흔들렸다(일지)
 이번 요청 범위: PR과 병합까지
 ```
@@ -237,8 +237,8 @@ PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 약 28만 토큰). 
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
-이어받을 상태: 인계: PR 연 뒤. PR #308을 열었고 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. 순서 1의 2(봇 회차)부터 한다. 일지는 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-32-mutate-table-guards.md
+읽을 것: docs/journal/2026-10-20-04-mutate-table-guards.md
+이어받을 상태: 인계: PR 연 뒤. PR #308을 열었고 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. 순서 1의 2(봇 회차)부터 한다. 일지는 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-20-04-mutate-table-guards.md
 확인할 선행 조건: PR 직전 리뷰의 둔 지적(표지의 pid 재사용 거짓 알림 Minor, `_ended_pid` Nit, "표지" 두 뜻 Nit)은 PR 체크리스트에 있다. 이 PC의 부하로 pre-commit의 시간 시험이 흔들린 적이 있다(일지)
 이번 요청 범위: PR과 병합까지
 ```
@@ -272,7 +272,7 @@ claude-review(유지보수성·경계): 경계 지적 없음.
 한 번(18·19). 바꾼 두 시험 파일 `-n 4` 종료 0, ruff·pyright(바꾼 두 파일) 초록.
 
 반영 전에 origin/main(`7556070`, #308 밖의 토큰 보고서 변경)을 합쳤다(겹친 파일 없음). `sibling_overlap.py`가 이 일지가
-main의 최신 일지 2026-10-19-29보다 이름순으로 앞이라 하여 `--move`로 2026-10-19-32로 옮겼다.
+main의 최신 일지 2026-10-19-29보다 이름순으로 앞이라 하여 `--move`로 2026-10-20-04로 옮겼다.
 
 ## 두 번째 봇 회차(71ffdf9)
 
@@ -313,3 +313,52 @@ retro는 돌리지 않았다. 그 승인 기준을 다른 세션이 바꾸는 �
   열어 따르고, 위 회고 후보를 새 기준으로 판정한다.
 - 병합 뒤 주 체크아웃 미갱신: 주 체크아웃 세션에서 `/tidy-checkouts`로 루트를 당긴다(이 PR이 새 훅 `hook_edit_during_mutate`를
   등록한다. 당기기 전에는 래퍼가 그 훅을 찾지 못해 지나간다).
+
+## 인계(커밋 뒤, 3baa6960)
+
+`3baa6960`(`_ended_pid` 고침과 위 일지 절)의 pre-commit이 모두 초록으로 들어간 직후 인계 계기가 왔다(세션 컨텍스트 약 25만
+토큰). 이 세션의 지시문은 `인계: PR 연 뒤`라 같은 경계가 아니고, 곁 세션이 아니다. 푸시하지 않았다. 남은 것: 푸시, 마지막 푸시 뒤
+`@coderabbitai review`와 봇 회차(`tools/wait_ci.py`), 반영, 병합(워크트리 길), 병합 뒤 주 체크아웃 미갱신 한 줄. 위 "다음" 절과
+"회고(보류)"는 이미 커밋에 들었다. 이 세션의 지금 제목은 `chore/mutate-table-guards`다.
+
+'하네스 작업 진행' 세션이 전한 정지 지시를 인계 지시문의 "확인할 선행 조건" 칸에 그대로 옮긴다(그 지시가 인계받은 세션도 같은
+지점에서 멈추게 하라고 했다).
+
+낸 지시문:
+
+```
+다음 작업: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+브랜치: chore/mutate-table-guards
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-04-mutate-table-guards.md
+이어받을 상태: 인계: 커밋 뒤. PR #308의 두 번째 봇 회차까지 반영했고 그 판정과 run-hooks의 pid 재사용 고침이 커밋 3baa6960에 들었다(푸시하지 않았다). 푸시와 순서 1의 2(봇 회차)부터 하고 병합까지 한다. 일지는 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-20-04-mutate-table-guards.md
+확인할 선행 조건: 정지 지시('하네스 작업 진행' 세션이 사용자 요청을 전함, 원문 그대로): "지금 맡은 작업까지만 마무리하고, 그다음 작업은 시작하지 말고 재개 메시지를 기다려 주세요. … 할 일: 지금 맡은 브랜치와 PR은 평소 규약대로 끝까지 마무리합니다(리뷰 반영, 병합, 일지 포함). 일지의 "다음"은 평소대로 적어도 됩니다. 하지 않을 일: next-session으로 새 세션을 열지 않습니다. 같은 세션에서 다음 티켓이나 대기열 행을 시작하지도 않습니다. 지금 작업을 잇기 위한 인계는 해도 됩니다. 다만 인계 프롬프트에 이 지시 전체를 그대로 옮겨, 인계받은 세션도 같은 지점에서 멈추게 합니다. 이유: '하네스 작업 진행' 세션이 retro의 승인 기준과 next-session 결정표(chore 배치 조건)를 바꾸고 있습니다. 그래서 다음 작업을 고르는 규칙이 곧 바뀝니다. 재개: '하네스 작업 진행' 세션이 모든 작업을 마치면 재개 메시지를 보냅니다. 그때 main을 당긴 뒤, 바뀐 스킬은 디스크의 SKILL.md를 Read로 열어 따릅니다(Skill 도구는 옛 사본을 실을 수 있습니다). 작업을 마치고 턴을 끝낼 때 마지막 보고에 "재개 대기"라고 적어 주세요." 그 세션은 local_7bc0f796-da54-466c-96f6-373b149df8b9. retro는 위 이유로 보류했다(일지 "회고(보류)"). 이 PC의 부하로 pre-commit의 시간 시험과 run-hooks가 흔들린 적이 있다(일지)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/mutate-table-guards (인계함)`으로 바꾸고, 백그라운드 작업은 없고, 워크트리 잠금을 푼다.
+
+워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T14:04:29Z
+
+## 이어받은 세션: 푸시와 병합
+
+> 사용자: 지시문 그대로(위 "인계(커밋 뒤, 3baa6960)"의 "낸 지시문"과 같다)
+
+새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 첫 시도는 "git could not be run to resolve it"로 거절됐고, 곧바로
+`git -C <워크트리> status`가 정상으로 돌아 같은 호출을 다시 하니 들어갔다(부하로 본다, 재지 않았다). 정지 지시대로 이 PR의
+병합까지만 하고 다음 작업은 열지 않는다.
+
+> 사용자: "다시 시도" (`git branch --show-current` 한 줄이 120초를 넘겨 백그라운드로 넘어간 채 세션이 끊긴 뒤)
+
+- **네 번째 합치기.** 그사이 origin/main이 #310·#311(`4af3797`)로 움직였다. 충돌 둘을 양쪽을 살려 풀었다.
+  `.claude/rules/tools.md`는 main 줄(`hook_grill_design_check` 괄호 문구가 바뀌었다)에 이 브랜치의 `hook_edit_during_mutate` 문장을
+  같은 자리에 넣었고, 대기열은 316을 main의 닫힘(`chore/canary-runner-batch`), 317을 이 브랜치의 닫힘으로 두었다. 병합 커밋
+  `f5ce7809`의 pre-commit이 모두 초록이었다(인용 대조 경고 넷은 main에서 들어온 줄).
+- **일지 번호.** `sibling_overlap.py`가 이 일지가 main의 최신 일지 2026-10-20-01보다 이름순으로 앞이라 하여 `--move`로
+  2026-10-20-04로 옮겼다(02·03은 형제가 썼다). 옛 번호의 잔존 0.
+- '하네스 작업 진행' 세션이 같은 정지 지시를 다시 보냈다(ADR 0036 PR을 `chore/hook-census`가 마무리하는 중). 이 PR만 마친다.
