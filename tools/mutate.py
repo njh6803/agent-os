@@ -1450,7 +1450,7 @@ def _note_uncommitted(root: Path, spec: Spec, table: Path, out: Callable[[str], 
         )
 
 
-def _git_dir(root: Path) -> Path | None:
+def git_dir_of(root: Path) -> Path | None:
     """그 체크아웃의 git 디렉터리. `.git` 이 디렉터리면 그것, 워크트리의 `.git` 파일이면 `gitdir:`
     줄이 가리키는 곳이다. 읽지 못하면 None."""
     dot_git = root / ".git"
@@ -1469,7 +1469,7 @@ def _running_marker(root: Path, table: Path) -> Generator[None]:
     """도는 동안 그 체크아웃의 git 디렉터리에 pid 와 표를 든 표지를 두고, 끝나면(예외로 끝나도)
     지운다. 편집 훅이 이것을 보고 변이가 든 체크아웃의 편집을 알린다(대기열 358). git 디렉터리를
     찾지 못했거나 쓰지 못하면 표지 없이 돈다."""
-    git_dir = _git_dir(root)
+    git_dir = git_dir_of(root)
     marker = git_dir / f"{MARKER_PREFIX}{os.getpid()}.json" if git_dir is not None else None
     if marker is not None:
         content = {"pid": os.getpid(), "table": str(table.resolve())}

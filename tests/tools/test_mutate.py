@@ -17,7 +17,7 @@ import signal
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -2908,25 +2908,77 @@ def test_도구가_잡지_않는_예외로_끝나도_표지는_지운다(tmp_pat
     assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
 
 
-@pytest.mark.parametrize("인자", [["--check"], ["--staged"]], ids=["원문만", "색인"])
-def test_원문만_볼_때는_표지를_두지_않는다(
-    tmp_path: Path, 인자: list[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """파일을 쓰지 않는 확인은 변이와 겹칠 편집이 없다."""
+@pytest.mark.parametrize(
+    "인자",
+    [["--check"], ["--check", "1"], ["--staged"]],
+    ids=["원문만", "골라_원문만", "색인"],
+)
+def test_원문만_볼_때는_표지를_두지_않는다(tmp_path: Path, 인자: list[str]) -> None:
+    """파일을 쓰지 않는 확인은 변이와 겹칠 편집이 없다. 러너가 불리지 않으니 줄을 낼 때마다 git
+    디렉터리를 본다(PR #308 claude-review: 도구 안의 이름을 갈아 끼우지 않고 행동으로 단언한다).
+    고르지 않은 `--check` 와 고른 `--check` 는 다른 길로 간다."""
     root, 표 = _시험이_든_저장소(tmp_path)
-    불린: list[Path] = []
+    줄: list[str] = []
+    본_표지: list[Path] = []
 
-    @contextlib.contextmanager
-    def 표지(root: Path, table: Path) -> Generator[None]:
-        불린.append(table)
-        yield
+    def 내보내기(한줄: str) -> None:
+        줄.append(한줄)
+        본_표지.extend((root / ".git").glob(f"{MARKER_PREFIX}*"))
 
-    monkeypatch.setattr(mutate, "_running_marker", 표지)
-    argv = [표, *인자] if 인자 == ["--check"] else 인자
+    argv = 인자 if 인자 == ["--staged"] else [표, *인자]
 
-    assert main(argv, root=root, runner=_부르면_안_되는_러너, out=print) == 0
-    assert 불린 == []
+    assert main(argv, root=root, runner=_부르면_안_되는_러너, out=내보내기) == 0
+    assert 줄, "줄이 하나도 나지 않으면 표지를 볼 자리가 없다"
+    assert 본_표지 == []
 
 
 def test_표지_이름은_편집_훅이_찾는_이름과_같다() -> None:
     assert hook_edit_during_mutate.MARKER_PREFIX == MARKER_PREFIX
+
+
+def _상대_gitdir_체크아웃(tmp_path: Path) -> Path:
+    """`.git` 파일이 상대 경로 `gitdir:` 로 옆 폴더의 git 디렉터리를 가리키는 체크아웃."""
+    (tmp_path / "real.git").mkdir()
+    체크아웃 = tmp_path / "co"
+    체크아웃.mkdir()
+    (체크아웃 / ".git").write_text("gitdir: ../real.git\n", encoding="utf-8")
+    return 체크아웃
+
+
+def _gitdir_아닌_파일(tmp_path: Path) -> Path:
+    체크아웃 = tmp_path / "co"
+    체크아웃.mkdir()
+    (체크아웃 / ".git").write_text("깨졌다\n", encoding="utf-8")
+    return 체크아웃
+
+
+def _워크트리(tmp_path: Path) -> Path:
+    root, _ = _시험이_든_저장소(tmp_path / "main")
+    옆 = tmp_path / "side"
+    _git(root, "worktree", "add", "-q", "-b", "side", str(옆))
+    return 옆
+
+
+def _저장소_루트(tmp_path: Path) -> Path:
+    return _시험이_든_저장소(tmp_path)[0]
+
+
+def _git_없는_폴더(tmp_path: Path) -> Path:
+    return tmp_path
+
+
+@pytest.mark.parametrize(
+    "만들기",
+    [_저장소_루트, _워크트리, _상대_gitdir_체크아웃, _gitdir_아닌_파일, _git_없는_폴더],
+    ids=["저장소", "워크트리", "상대_gitdir", "gitdir_아닌_파일", "git_없음"],
+)
+def test_표지를_두는_자리와_편집_훅이_찾는_자리가_같다(
+    tmp_path: Path, 만들기: Callable[[Path], Path]
+) -> None:
+    """훅은 단독 실행 스크립트라 도구의 해석을 import하지 않고 사본을 든다. 한쪽만 고치면 훅이
+    조용히 침묵하므로 두 사본을 같은 입력에 돌려 묶는다(PR #308 claude-review)."""
+    체크아웃 = 만들기(tmp_path)
+    도구 = mutate.git_dir_of(체크아웃)
+    훅 = hook_edit_during_mutate.git_dir_of(str(체크아웃))
+
+    assert (None if 도구 is None else str(도구.resolve())) == 훅

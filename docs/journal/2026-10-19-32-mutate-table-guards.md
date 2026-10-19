@@ -1,4 +1,4 @@
-# 2026-10-19 (27) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
+# 2026-10-19 (32) 변이 도구의 표 가드 넷(대기열 313·317·358·359)
 
 next-session 지시문으로 연 새 세션의 하네스 chore다. 대상 파일이 `tools/mutate.py`인 열린 대기열 행 넷을 한 PR로 닫는다.
 이 세션의 지금 제목은 `chore/mutate-table-guards`이고, 셀프 리뷰 직전에 인계 계기가 와서 넘긴다(아래 인계 절).
@@ -67,8 +67,8 @@ README(`.scratch/harness/probes/README.md`)의 새 표 행은 그 결과와 함�
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-27-mutate-table-guards.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-19-27-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
+읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 origin/main, 명세는 대기열 네 행과 일지 2026-10-19-13의 회고·다음 절)부터 한다. docs/journal/2026-10-19-32-mutate-table-guards.md. 그 뒤 남은 것: 프로브 README의 새 변이 표 행, 커밋 뒤 다른 워크트리에서 `mutate_table_guards_mutations.toml` 전체 실행, `tools/run_checks.py` 전체
 확인할 선행 조건: 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 이 브랜치와 겹치는지 병합 전에 본다(글자 충돌은 재지 않았다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -174,8 +174,8 @@ web-verify 417.9초, 변이 표 `--staged` 포함).
 시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
 브랜치: chore/mutate-table-guards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-19-27-mutate-table-guards.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 2c340e64에 들었다(PR 없음, 푸시하지 않았다). 남은 단계는 origin/main 합치기와 겹친 파일 대조, 다른 워크트리에서 mutate_table_guards_mutations.toml 전체 실행과 mutate_buffer_eol_retry_mutations.toml의 고친 변이 둘 다시 재기, 프로브 README 행, tools/run_checks.py 전체, PR 직전 리뷰(일지의 밀 주장 목록), PR·CI·병합이다. 일지에 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-27-mutate-table-guards.md
+읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 2c340e64에 들었다(PR 없음, 푸시하지 않았다). 남은 단계는 origin/main 합치기와 겹친 파일 대조, 다른 워크트리에서 mutate_table_guards_mutations.toml 전체 실행과 mutate_buffer_eol_retry_mutations.toml의 고친 변이 둘 다시 재기, 프로브 README 행, tools/run_checks.py 전체, PR 직전 리뷰(일지의 밀 주장 목록), PR·CI·병합이다. 일지에 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-32-mutate-table-guards.md
 확인할 선행 조건: origin/main이 5f38d61 이상으로 움직였고 이 브랜치와 .claude/rules/tools.md·.claude/settings.json·tools/hook_payloads.toml·tools/run_hooks.py를 함께 고쳤다. 열린 PR #301(대기열 306, chore/mutate-ctrl-c-under-load)이 tests/tools/test_mutate.py를 고친다. 먼저 병합되면 겹치는지 병합 전에 본다. 이 PC의 부하로 pre-commit이 무관한 시간 시험에서 네 번 흔들렸다(일지)
 이번 요청 범위: PR과 병합까지
 ```
@@ -215,3 +215,61 @@ open-session을 부른다 2026-10-19T09:18:57Z
   그 워크트리의 도구로 돌렸다. `mutate_table_guards_mutations.toml`: 열여덟 모두 기대대로 빨강(종료 0).
   `mutate_buffer_eol_retry_mutations.toml`의 고친 둘(번호 `2 3`): 기준선 초록(212 통과), 둘 다 기대대로 빨강(종료 0).
   프로브 README에 새 표 행을 더하고 줄 끝 표 행에 다시 잰 결과를 덧붙였다.
+- **세 번째 합치기.** PR을 열기 직전 origin/main에 #301(대기열 306)과 #307이 들어왔다. #301은 `tests/tools/test_mutate.py`를
+  함께 고쳐 지시문의 선행 조건대로 합친 뒤 견줬다. 글자 충돌 없이 합쳐졌고 그 파일과 훅 시험 223 통과, 두 표 `--check` 원문
+  모두 한 번. 병합 커밋의 pre-commit이 초록이었다. 앞 커밋(README·일지)의 pre-commit도 모두 초록이었다(ruff 둘은 `.py`가 없어
+  Skipped라 손으로 쳐서 초록).
+- **PR.** 푸시하고 #308을 열었다. CodeRabbit CLI는 좌석이 없어 대체 둘의 결과를 체크리스트에 적었다.
+
+## 인계(PR 연 뒤)
+
+PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 약 28만 토큰). 이 세션의 지시문은 `인계: 커밋 뒤`라 같은 경계가 아니고, 곁
+세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그 사이 `커밋 뒤` 계기가 네 번 왔고 모두 지시문과 같은
+경계라 넘기지 않았다. 남은 것: 첫 `@coderabbitai review` 코멘트, 봇 회차(`tools/wait_ci.py`), 반영, 병합(워크트리 길),
+일지 "다음"과 회고. 이 세션의 지금 제목은 `chore/mutate-table-guards`다.
+
+낸 지시문:
+
+```
+다음 작업: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 313·317·358·359(대상 파일이 `tools/mutate.py`인 열린 행 넷. 358은 3회차)를 chore 한 PR로 반영한다
+브랜치: chore/mutate-table-guards
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-19-32-mutate-table-guards.md
+이어받을 상태: 인계: PR 연 뒤. PR #308을 열었고 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. 순서 1의 2(봇 회차)부터 한다. 일지는 커밋하지 않은 인계 절이 있다. docs/journal/2026-10-19-32-mutate-table-guards.md
+확인할 선행 조건: PR 직전 리뷰의 둔 지적(표지의 pid 재사용 거짓 알림 Minor, `_ended_pid` Nit, "표지" 두 뜻 Nit)은 PR 체크리스트에 있다. 이 PC의 부하로 pre-commit의 시간 시험이 흔들린 적이 있다(일지)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/mutate-table-guards (인계함)`으로 바꿨고, 백그라운드 작업은 없었고, 워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-19T11:17:27Z
+
+## 이어받은 세션: 봇 회차와 반영
+
+> 사용자: 지시문 그대로(위 "인계(PR 연 뒤)"의 "낸 지시문"과 같다)
+
+새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `@coderabbitai review`를 남기고(11:21Z) 상태를 한 번 읽으니
+CodeRabbit 줄이 아직 `Review skipped: manual review required`였다. 곧바로 띄운 `tools/wait_ci.py 308`은 그 줄을 "요청되지
+않았다"로 읽고 종료 4로 끝났다(코멘트를 남긴 지 3분, 봇이 상태를 바꾸기 전). 그 줄이 바뀔 때까지 30초마다 보는 루프 뒤에
+대기를 다시 띄웠는데, 세션이 다시 시작되며 그 대기가 끊겼다. 12:24Z에 손으로 보니 CodeRabbit `Review completed`, 범위
+`5e7fa88..68fedcf`(그때 HEAD), "No actionable comments"였다.
+
+claude-review(유지보수성·경계): 경계 지적 없음.
+
+- 고쳤다 Minor: 훅의 `git_dir_of`와 도구의 `_git_dir`가 같은 해석의 두 사본인데 묶는 시험이 없었다. 도구 쪽을 공개 이름
+  `git_dir_of`로 바꾸고, 저장소·워크트리·상대 `gitdir:`·`gitdir:` 아닌 파일·git 없음의 다섯 사례에서 두 함수가 같은 경로를 내는지
+  보는 `test_표지를_두는_자리와_편집_훅이_찾는_자리가_같다`를 더했다.
+- 고쳤다 Minor: `test_원문만_볼_때는_표지를_두지_않는다`가 `_running_marker`를 갈아 끼웠다. 줄을 낼 때마다 git 디렉터리의
+  표지를 보는 행동 단언으로 바꿨다. 그 과정에서 고르지 않은 `--check`는 `_check_files`로 가 `_run_table`의 `--check` 길을 지나지
+  않는다는 것을 변이로 알았다(원문 확인에도 표지를 두는 변이가 처음에 지나갔다). 고른 `--check 1` 사례를 더해 잡았다.
+- 둔다 Nit 둘: `_running_marker`의 `suppress` 모양, 훅 처방이 윈도 전용이라는 것(이 저장소의 주 환경이 윈도다).
+
+새 시험 둘이 잡는지 손으로 변이 셋을 넣어 봤다(스크래치 스크립트, 커밋하지 않았다). 원문 확인에도 표지를 두기, 훅이 상대
+`gitdir:`를 체크아웃에서 풀지 않기, 도구가 `.git` 디렉터리 대신 그 부모를 내기: 셋 다 빨강. 두 변이 표 `--check` 원문 모두
+한 번(18·19). 바꾼 두 시험 파일 `-n 4` 종료 0, ruff·pyright(바꾼 두 파일) 초록.
+
+반영 전에 origin/main(`7556070`, #308 밖의 토큰 보고서 변경)을 합쳤다(겹친 파일 없음). `sibling_overlap.py`가 이 일지가
+main의 최신 일지 2026-10-19-29보다 이름순으로 앞이라 하여 `--move`로 2026-10-19-32로 옮겼다.
