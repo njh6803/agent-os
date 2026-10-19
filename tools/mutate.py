@@ -9,15 +9,32 @@
 사용: PYTHONUTF8=1 uv run python tools/mutate.py <변이 파일.toml> [이름|번호 ...] [--since <커밋>]
           [--check]
       uv run python tools/mutate.py --check <변이 파일.toml> <변이 파일.toml> ...
+      uv run python tools/mutate.py --staged
 LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/mutate.py …` 이고 tests 에
 `-m llm` 을 넣는다. `--check` 는 원문만 본다 — 명령을 돌리지 않고, 고른 변이마다 원문이 파일에
 정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을 모두 알린다. 코드를 고친 뒤 다른
 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이 파일 여럿(`.toml` 로 끝나는
 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고 주면 줄마다 그 파일의 경로가
-붙고 읽지 못한 파일이 있어도 나머지를 본다. pre-commit 이 커밋에 든 변이 표(`_mutations.toml`)를 이
-모양으로 넘긴다 — 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한 표의 원문이 사라진 일이
-있었다(대기열 92). 커밋에 들지 않은 옛 표는 보지 않는다. 옛 프로브의 원문은 코드가 바뀌면 썩어도
-되고, 다시 돌리거나 고쳐 커밋할 때 이 확인이 알린다.
+붙고 읽지 못한 파일이 있어도 나머지를 본다.
+
+`--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
+고친 표(`*_mutations.toml`)는 모든 원문을 본다. 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
+표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 표는 이 커밋이 고친 파일(지우거나 옮긴
+것 포함)을 가리키는 변이만 보고, 부모 판에서 맞던 원문이 색인에서 깨졌을 때 알린다. 표가 가리키는
+코드만 바뀌고 표는 커밋에 들지 않아, 커밋에 든 표만 보던 확인을 지나 원문이 0번인 표가 남았다(대기열
+312). 부모 판에서도 맞지 않던 원문은 썩어도 되고(대기열 73·92), 다시 돌리거나 그 표를 고쳐 커밋할 때
+이 확인이 알린다. 합치는 중이면(`MERGE_HEAD`) 표가 색인과 같은 부모 모두에서 맞던 원문만 본다. main
+을 합치는 커밋을 가지의 HEAD 하나와만 견주면 main 의 변경이 모두 들어, main 이 이미 깬 원문을 그
+커밋의 탓으로 읽는다. 색인을 읽으므로 ruff 훅이 고친 바이트는 다음 시도에서 본다(고친 시도는
+pre-commit 이 실패로 끝낸다). `git commit <경로>` 는 임시 색인을 `GIT_INDEX_FILE` 로 훅에 넘기고 이
+확인은 그 색인을 본다. 색인에도 어느 부모에도 없는 파일(추적하지 않는 생성물)은 이 커밋이 깰 수 없어
+옛 `--check` 처럼 작업 트리에서 읽고, 그래서 그 파일이 있는 체크아웃에서 커밋한다
+(`.scratch/design-refresh/probes/checker_mutations.toml` 의 머리 주석). 이 커밋이 추적을 끊은 파일은
+작업 트리에 남아도 읽지 못했다고 알린다. 못 보는 것: 색인의 블롭을 그대로 읽어 작업 트리의 줄 끝
+변환을 거치지 않는다. `eol=crlf` 인 파일에 CRLF 로 적은 원문은 디스크에서 맞아도 이 확인에서는
+0번이다. 이 저장소는 `* text=auto eol=lf` 라 색인과 작업 트리의 줄 끝이 같다. `git commit --amend`
+의 훅도 HEAD(고칠 커밋)를 부모로 본다. 그 커밋이 훅을 건너뛰고(`--no-verify`) 넣은 깨진 원문은 부모
+판에서도 맞지 않던 원문으로 읽혀 amend 에서 지나간다.
 
 고르기. 이름, 번호, `--since <커밋>` 으로 고르고 함께 주면 합친다. 아무것도 주지 않으면 전부다.
 번호는 표에 적힌 차례(1부터)이고, 출력의 줄 머리와 어긋났을 때의 마지막 줄(`다시 돌릴 번호`)에
@@ -199,6 +216,7 @@ lastfailed 에 남지 않게 한다.
 from __future__ import annotations
 
 import contextlib
+import errno
 import io
 import os
 import re
@@ -611,8 +629,18 @@ def _inside(root: Path, relative: str) -> Path | None:
     return path if path.is_relative_to(root.resolve()) else None
 
 
-def _mutated(root: Path, mutation: Mutation) -> dict[Path, tuple[bytes, bytes]]:
-    """파일마다 (원래 바이트, 변이된 바이트). 편집은 적힌 차례로 앞 편집의 결과 위에 들어간다."""
+type Reader = Callable[[Path], bytes]  # 저장소 안의 경로 → 그 판의 바이트. 없으면 OSError
+
+
+def _read_disk(path: Path) -> bytes:
+    return path.read_bytes()
+
+
+def _mutated(
+    root: Path, mutation: Mutation, read: Reader = _read_disk
+) -> dict[Path, tuple[bytes, bytes]]:
+    """파일마다 (원래 바이트, 변이된 바이트). 편집은 적힌 차례로 앞 편집의 결과 위에 들어간다.
+    바이트는 `read` 가 읽는다. 기본은 디스크이고, 색인 확인은 커밋과 색인의 판을 읽는다."""
     files: dict[Path, tuple[bytes, bytes]] = {}
     for edit in mutation.edit:
         path = _inside(root, edit.file)
@@ -620,7 +648,7 @@ def _mutated(root: Path, mutation: Mutation) -> dict[Path, tuple[bytes, bytes]]:
             raise SpecError(f"{mutation.name}: {edit.file} 는 저장소 밖이다")
         if path not in files:
             try:
-                data = path.read_bytes()
+                data = read(path)
             except OSError as error:
                 raise SpecError(f"{mutation.name}: {edit.file} 를 읽지 못했다: {error}") from error
             files[path] = (data, data)
@@ -653,8 +681,9 @@ def _eol_hint(data: bytes, old: bytes) -> str:
     return f". 줄 끝이 다르다(파일은 {ending}, 줄 끝을 맞추면 {found}번)"
 
 
-def _file_problems(root: Path, spec: Spec) -> list[str]:
-    """고른 변이의 원문, 그 변이들이 쓰는 러너의 자리, 되돌릴 파일. 아무 파일도 쓰지 않는다."""
+def _file_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[str]:
+    """고른 변이의 원문(`read` 가 읽은 바이트), 그 변이들이 쓰는 러너의 자리, 되돌릴 파일. 자리와
+    되돌릴 파일은 디스크에서 본다. 아무 파일도 쓰지 않는다."""
     problems: list[str] = []
     for name in sorted({m.runner for m in spec.mutation} & spec.runner.keys()):
         where = _inside(root, spec.runner[name].cwd)
@@ -664,7 +693,7 @@ def _file_problems(root: Path, spec: Spec) -> list[str]:
             )
     for mutation in spec.mutation:
         try:
-            _mutated(root, mutation)
+            _mutated(root, mutation, read)
         except SpecError as error:
             problems.append(str(error))
         for relative in mutation.restore:
@@ -887,9 +916,9 @@ def _report_mutation(
     _details(runs, out)
 
 
-def check(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
+def check(spec: Spec, *, root: Path, out: Callable[[str], None], read: Reader = _read_disk) -> int:
     """원문만 본다. 명령을 돌리지 않는다. 모두 맞으면 0, 하나라도 틀리면 틀린 것을 모두 알리고 2."""
-    problems = _file_problems(root, spec)
+    problems = _file_problems(root, spec, read)
     for problem in problems:
         out(f"!! {problem}")
     if problems:
@@ -1019,6 +1048,224 @@ def _check_files(paths: Sequence[str], *, root: Path, out: Callable[[str], None]
     return code
 
 
+_TABLES = "*_mutations.toml"  # 색인 확인이 보는 변이 표. git 의 경로 패턴이라 `*` 가 `/` 도 맞춘다
+_INDEX = ""  # 색인의 판 이름. 블롭 이름이 `:<경로>` 가 된다
+_BROKEN_HERE = "부모 판에서 맞던 원문을 이 커밋이 깼다"
+# `git cat-file --batch` 의 머리 줄. 없는 것은 `<이름> missing` 따위라 맞지 않는다
+_BATCH_HEAD = re.compile(rb"[0-9a-f]{40,64} ([a-z]+) ([0-9]+)")
+
+
+def _git_out(root: Path, *args: str) -> str:
+    done = _git(root, *args)
+    if done.returncode != 0:
+        raise SpecError(f"git {args[0]} (종료 {done.returncode}): {done.stderr.strip()}")
+    return done.stdout
+
+
+def _names(output: str) -> list[str]:
+    """`-z` 로 받은 경로들."""
+    return [name for name in output.split("\0") if name]
+
+
+def _blobs(root: Path, names: Sequence[str]) -> dict[str, bytes]:
+    """`git cat-file --batch` 한 번으로 읽은 블롭. 이름은 `<커밋>:<경로>` 이고 색인은 `:<경로>` 다.
+    그 판에 없거나 블롭이 아닌 것은 빠진다. 줄바꿈이 든 이름은 그 프로토콜로 물을 수 없어 빠진다."""
+    asked = [name for name in dict.fromkeys(names) if "\n" not in name]
+    if not asked:
+        return {}
+    try:
+        done = subprocess.run(
+            ["git", "cat-file", "--batch"],
+            cwd=root,
+            input="".join(f"{name}\n" for name in asked).encode("utf-8"),
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise SpecError(f"git cat-file 를 돌리지 못했다: {error}") from error
+    if done.returncode != 0:
+        reason = done.stderr.decode("utf-8", "replace").strip()
+        raise SpecError(f"git cat-file (종료 {done.returncode}): {reason}")
+    found: dict[str, bytes] = {}
+    data, at = done.stdout, 0
+    for name in asked:
+        end = data.find(b"\n", at)
+        if end < 0:
+            raise SpecError("git cat-file 의 출력이 물은 이름보다 짧다")
+        head = _BATCH_HEAD.fullmatch(data, at, end)
+        at = end + 1
+        if head is None:
+            continue
+        size = int(head[2])
+        if head[1] == b"blob":
+            found[name] = data[at : at + size]
+        at += size + 1
+    return found
+
+
+def _reader(
+    root: Path, blobs: Mapping[str, bytes], rev: str, deleted: frozenset[str] | None = None
+) -> Reader:
+    """`rev` 판의 바이트를 `blobs` 에서 읽는다. `rev` 가 `_INDEX` 면 색인이다. `deleted` 를 주면 그
+    판에 없고 `deleted` 에도 없는 파일(어느 판도 추적하지 않는 파일)은 작업 트리에서 읽는다."""
+    base = root.resolve()
+    where = "색인" if rev == _INDEX else f"커밋 {rev[:12]}"
+
+    def read(path: Path) -> bytes:
+        relative = path.relative_to(base).as_posix()
+        data = blobs.get(f"{rev}:{relative}")
+        if data is not None:
+            return data
+        if deleted is not None and relative not in deleted:
+            return _read_disk(path)
+        raise FileNotFoundError(errno.ENOENT, f"{where}에 없다", relative)
+
+    return read
+
+
+class _Relative:
+    """편집의 `file` 을 저장소 기준 경로로 푼다. 밖이면 None. 같은 글자는 한 번만 푼다. 표 82개의
+    변이마다 `resolve` 하면 색인 확인 한 번이 이 PC에서 약 7초였고, 글자마다 한 번 풀면 약 2초였다
+    (2026-10-19, 프로세스 안에서 손으로 쟀다)."""
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        self._base = root.resolve()
+        self._known: dict[str, str | None] = {}
+
+    def __call__(self, name: str) -> str | None:
+        if name not in self._known:
+            path = _inside(self._root, name)
+            self._known[name] = None if path is None else path.relative_to(self._base).as_posix()
+        return self._known[name]
+
+    def files(self, mutation: Mutation) -> frozenset[str] | None:
+        """변이가 고치는 파일. 저장소 밖을 가리키는 편집이 있으면 None."""
+        found = [self(edit.file) for edit in mutation.edit]
+        return None if None in found else frozenset(name for name in found if name is not None)
+
+
+def _fits(root: Path, mutation: Mutation, read: Reader) -> bool:
+    """그 판에서 원문이 차례대로 모두 정확히 한 번씩 있다."""
+    try:
+        _mutated(root, mutation, read)
+    except SpecError:
+        return False
+    return True
+
+
+def _changes(root: Path, parent: str) -> dict[str, str]:
+    """색인이 `parent` 와 다른 경로와 그 상태 글자(`A`·`M`·`D`·`T`·`U`). 이름 바꿈은 지우고 더한
+    것으로 읽는다(`--no-renames`). 그래서 상태 하나에 경로 하나다."""
+    parts = _names(
+        _git_out(root, "diff", "--cached", "--name-status", "--no-renames", "-z", parent)
+    )
+    return dict(zip(parts[1::2], parts[::2], strict=True))
+
+
+def _parents(root: Path) -> list[str]:
+    """이 커밋의 부모가 될 커밋. 첫 커밋이면 없고, 합치는 중이면 `MERGE_HEAD` 가 더해진다."""
+    found: list[str] = []
+    for ref in ("HEAD", "MERGE_HEAD"):
+        done = _git(root, "rev-parse", "--quiet", "--verify", f"{ref}^{{commit}}")
+        if done.returncode == 0:
+            found.append(done.stdout.strip())
+    return found
+
+
+@dataclass(frozen=True)
+class _Watched:
+    """커밋에 들지 않은 표의 변이 가운데 이 커밋이 고친 파일을 가리키는 것. `same` 은 표가 색인과
+    같은 부모다."""
+
+    table: str
+    mutation: Mutation
+    same: tuple[str, ...]
+
+
+def staged(*, root: Path, out: Callable[[str], None]) -> int:
+    """커밋에 들 판(색인)의 변이 표 원문을 본다. 모두 맞으면 0, 하나라도 틀리면 2.
+
+    표가 색인과 같은 부모가 하나도 없으면(이 커밋이 표를 더했거나 고쳤다) 모든 원문을 색인에서
+    본다. 아니면 이 커밋이 고친 파일을 가리키는 변이만, 표가 같은 부모 모두에서 맞던 원문이 색인에서
+    깨졌을 때 알린다. 부모에서도 맞지 않던 원문은 썩어도 된다(대기열 73·92). 어느 판도 추적하지
+    않는 파일은 작업 트리에서 읽는다."""
+    inside = _git(root, "rev-parse", "--is-inside-work-tree")
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise SpecError(f"{root} 가 git 저장소 안이 아니다")
+    parents = _parents(root)
+    status = {parent: _changes(root, parent) for parent in parents}
+    changed = {parent: frozenset(found) for parent, found in status.items()}
+    # 어느 부모에서 지워진 파일. 색인에 없는 파일 가운데 이것 밖의 것은 어느 판도 추적하지 않는다
+    deleted = frozenset(
+        path for found in status.values() for path, letter in found.items() if letter == "D"
+    )
+    tables = _names(_git_out(root, "ls-files", "-z", "--", _TABLES))
+    texts = _blobs(root, [f":{table}" for table in tables])
+    relative = _Relative(root)
+    lines: list[str] = []
+    problems = 0
+    authored: list[tuple[str, Spec]] = []
+    authored_count = 0
+    watched: list[_Watched] = []
+    for table in tables:
+        same = tuple(parent for parent in parents if table not in changed[parent])
+        text = texts.get(f":{table}")
+        if text is None:
+            continue  # 색인에 블롭이 없다(충돌이 풀리지 않은 표)
+        if not same:
+            authored_count += 1
+        try:
+            spec = load_spec(text.decode("utf-8"))
+        except (UnicodeDecodeError, SpecError) as error:
+            if not same:
+                # 변이 파일 오류는 문제를 줄바꿈으로 잇는다. 줄마다 표의 경로를 붙인다
+                lines += [f"{table}: !! 변이 파일 오류: {line}" for line in str(error).splitlines()]
+                problems += 1
+            continue
+        if not same:
+            authored.append((table, spec))
+            continue
+        for mutation in spec.mutation:
+            files = relative.files(mutation)
+            if files is not None and all(files & changed[parent] for parent in same):
+                watched.append(_Watched(table, mutation, same))
+    wanted = [
+        f":{name}"
+        for _, spec in authored
+        for mutation in spec.mutation
+        for name in relative.files(mutation) or ()
+    ]
+    wanted += [
+        f"{rev}:{name}"
+        for item in watched
+        for name in relative.files(item.mutation) or ()
+        for rev in (_INDEX, *item.same)
+    ]
+    blobs = _blobs(root, wanted)
+    index = _reader(root, blobs, _INDEX, deleted)
+    for table, spec in authored:
+        found = _file_problems(root, spec, index)
+        lines += [f"{table}: !! {problem}" for problem in found]
+        problems += len(found)
+    for item in watched:
+        if not all(_fits(root, item.mutation, _reader(root, blobs, rev)) for rev in item.same):
+            continue  # 부모 판에서도 맞지 않던 원문이다
+        try:
+            _mutated(root, item.mutation, index)
+        except SpecError as error:
+            lines.append(f"{item.table}: !! {error} — {_BROKEN_HERE}")
+            problems += 1
+    for line in lines:
+        out(line)
+    out(
+        f"색인 확인: 커밋에 든 표 {authored_count}, 고친 파일을 가리키는 다른 표의 변이"
+        f" {len(watched)}, 문제 {problems}"
+    )
+    return 2 if problems else 0
+
+
 class _UsageError(Exception):
     """인자를 잘못 줬다. 아무 파일도 읽기 전에 난다."""
 
@@ -1048,7 +1295,7 @@ def _parse(argv: Sequence[str]) -> _Args:
     flags = [arg for arg in rest if arg.startswith("--")]
     if flags:
         raise _UsageError(
-            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 와 --since <커밋> 이다"
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다"
         )
     if not rest:
         raise _UsageError(__doc__ or "")
@@ -1097,6 +1344,15 @@ def main(
     runner: Runner = run_command,
     out: Callable[[str], None] = print,
 ) -> int:
+    if "--staged" in argv:
+        if len(argv) != 1:
+            out("--staged 는 다른 인자와 섞지 않는다. 커밋에 들 판(색인)의 표를 모두 본다")
+            return 2
+        try:
+            return staged(root=root, out=out)
+        except SpecError as error:
+            out(f"색인 확인을 하지 못했다: {error}")
+            return 2
     try:
         args = _parse(argv)
     except _UsageError as error:

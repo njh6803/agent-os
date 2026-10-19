@@ -42,12 +42,14 @@ from tools.canary import (
     mixed_none,
     prompt_for,
     read_facts,
+    read_spec,
     run_claude,
     source_problems,
     target_problems,
     view_problems,
 )
 from tools.hook_session_usage import HEADLESS_MARKER
+from tools.run_hooks import hook_environment
 
 _규칙_명세 = '''
 kind = "rule"
@@ -2039,6 +2041,110 @@ def test_상태는_돌리기_전에_체크아웃마다_한_번만_읽는다(tmp_
     assert code == 0
     assert len(가짜.호출) == 4
     assert 상태.읽은 == ["새", "옛"]
+
+
+# 모양 확인(대기열 287)
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _부르면_안_되는_상태(checkout: Path) -> GitView | None:
+    raise AssertionError(f"모양 확인이 체크아웃 {checkout} 를 읽었다")
+
+
+def _모양_확인(tmp_path: Path, *명세들: Path) -> tuple[int, list[str], _가짜]:
+    가짜 = _가짜({})
+    printed: list[str] = []
+    argv = ["--shape", *(str(path) for path in 명세들)]
+    code = main(argv, cwd=tmp_path, runner=가짜, out=printed.append, view=_부르면_안_되는_상태)
+    return code, printed, 가짜
+
+
+def test_모양_확인은_명세마다_TOML_과_명세_검증만_보고_깨진_명세를_잡는다(tmp_path: Path) -> None:
+    """Edit 로 머리 주석 한 줄을 지우며 줄바꿈까지 지워 `kind` 가 주석에 붙은 명세가, 셀프 리뷰 두
+    축이 잡을 때까지 깨진 채였다(대기열 287). 하나가 깨져도 나머지를 마저 본다."""
+    붙은 = tmp_path / "붙은.toml"
+    붙은.write_text("# 머리 주석" + _스킬_명세.lstrip("\n"), encoding="utf-8")
+    맞는 = tmp_path / "맞는.toml"
+    맞는.write_text(_스킬_명세, encoding="utf-8")
+    깨진 = tmp_path / "깨진.toml"
+    깨진.write_text("kind = ", encoding="utf-8")
+
+    code, printed, 가짜 = _모양_확인(tmp_path, 붙은, 맞는, 깨진)
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("[실패]" in line and "붙은.toml" in line for line in printed)
+    assert "  kind\n    Field required" in "\n".join(printed)
+    assert any("[통과]" in line and "맞는.toml" in line for line in printed)
+    assert any("[실패]" in line and "깨진.toml" in line for line in printed)
+    assert printed[-1].startswith("모양 확인 통과 1 · 실패 2")
+
+
+def test_모양_확인은_체크아웃과_원천과_대상을_보지_않는다(tmp_path: Path) -> None:
+    """못 보는 것. 돌리기 전의 확인(`--preflight`)은 갈래의 체크아웃까지 보아, 대조군이 주
+    체크아웃인 명세는 병합 뒤 주 체크아웃이 새 사본이 되면 막힌다. 모양 확인은 그것을 보지 않아
+    체크아웃이 없는 명세도 지나간다."""
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+
+    code, printed, _ = _모양_확인(tmp_path, spec_path)
+    사전_코드, 사전_출력, _ = _사전_확인(tmp_path, spec_path)
+
+    assert code == 0, printed
+    assert 사전_코드 == 2
+    assert any("새: 체크아웃" in line and "이 없다" in line for line in 사전_출력), 사전_출력
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["--shape"], ["--shape", "a.toml", "--preflight"], ["--preflight", "--shape", "a.toml"]],
+)
+def test_모양_확인의_인자가_맞지_않으면_사용법을_알리고_2다(
+    tmp_path: Path, argv: list[str]
+) -> None:
+    printed: list[str] = []
+
+    code = main(argv, cwd=tmp_path, runner=_가짜({}), out=printed.append, view=_부르면_안_되는_상태)
+
+    assert code == 2
+    assert any("사용:" in line for line in printed)
+
+
+def test_이_저장소의_카나리아_명세는_모두_모양을_지난다() -> None:
+    """CI 는 pre-commit 을 돌리지 않아, 커밋된 명세 전부의 모양을 이 시험이 본다(대기열 287)."""
+    경로들 = sorted(_ROOT.glob(".scratch/**/probes/canary/*.toml"))
+    문제: list[str] = []
+    for 경로 in 경로들:
+        try:
+            read_spec(경로)
+        except SpecError as error:
+            문제.append(f"{경로.relative_to(_ROOT).as_posix()}: {error}")
+
+    assert 경로들, "카나리아 명세를 하나도 찾지 못했다. glob 이 아무것도 재지 않는다"
+    assert 문제 == []
+
+
+def test_pre_commit_처럼_띄우면_깨진_명세를_UTF_8_로_알린다(tmp_path: Path) -> None:
+    """pre-commit 은 명세 경로를 인자 끝에 붙여 띄운다. 훅 환경에 `PYTHONUTF8` 이 있다고 가정하지
+    않는다. 자식의 `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳에서도 다시 열기를 빼면
+    빨갛게 한다."""
+    깨진 = tmp_path / "깨진_명세.toml"
+    깨진.write_text("kind = ", encoding="utf-8")
+
+    done = subprocess.run(
+        [sys.executable, str(_ROOT / "tools" / "canary.py"), "--shape", str(깨진)],
+        cwd=tmp_path,
+        capture_output=True,
+        env={**hook_environment(), "PYTHONIOENCODING": "cp949"},
+        check=False,
+        timeout=60,
+    )
+    stdout = done.stdout.decode("utf-8")
+
+    assert done.returncode == 2, done.stderr.decode("utf-8", "replace")
+    assert "[실패]" in stdout
+    assert "깨진_명세.toml" in stdout
 
 
 # 대조군 커밋
