@@ -2256,10 +2256,10 @@ expect_output = ["tests/tools/test_canary.py::test_읽지_못하는_풀리는_�
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-            except (OverflowError, OSError, ValueError):
+        except (OverflowError, OSError, ValueError):
 '''
 new = '''
-            except ZeroDivisionError:
+        except ZeroDivisionError:
 '''
 
 [[mutation]]
@@ -2339,4 +2339,49 @@ new = '''
     if unmeasured:
         return _UNMEASURED
     return 1 if failed else 0
+'''
+
+[[mutation]]
+name = "거절 이벤트의 종류 칸을 모양대로 검증해 거절까지 버린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_거절_이벤트의_종류_칸이_바뀌어도_거절은_놓치지_않는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    rateLimitType: object
+'''
+new = '''
+    rateLimitType: str
+'''
+
+[[mutation]]
+name = "거절 이벤트의 풀리는 시각 칸을 모양대로 검증해 거절까지 버린다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_읽지_못하는_풀리는_시각은_예외가_아니라_그대로_적는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    resetsAt: object
+'''
+new = '''
+    resetsAt: float
+'''
+
+[[mutation]]
+name = "비었거나 없는 풀리는 시각을 읽지 못한 값으로 적는다"
+tests = ["tests/tools/test_canary.py"]
+expect = "red"
+expect_output = ["tests/tools/test_canary.py::test_풀리는_시각이_null이거나_없으면_모름으로_적는다"]
+
+[[mutation.edit]]
+file = "tools/canary.py"
+old = '''
+    if resets is None:
+        return "풀리는 시각 모름"
+'''
+new = '''
 '''

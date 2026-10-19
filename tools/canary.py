@@ -400,8 +400,10 @@ class _Result(TypedDict, total=False):
 
 class _LimitInfo(TypedDict, total=False):
     status: str
-    rateLimitType: str
-    resetsAt: float
+    # 거절을 가르는 것은 `status` 뿐이다. 다른 칸은 모양을 묻지 않고 읽을 수 있는 만큼만 읽어, 그
+    # 칸의 모양이 바뀌었다고 거절까지 버리지 않는다
+    rateLimitType: object
+    resetsAt: object
 
 
 class _LimitEvent(TypedDict, total=False):
@@ -426,6 +428,23 @@ _LIMIT = TypeAdapter(_LimitEvent)
 # 다섯 시간 한도든 거절이면 그 회차는 측정이 아니다.
 _LIMIT_REJECTED = "rejected"
 _USAGE_LIMIT = "usage_limit_reached"
+
+
+def _describe_resets(info: _LimitInfo) -> str:
+    """거절이 풀리는 시각을 적은 구. 원본의 `resetsAt` 은 초 단위 유닉스
+    시각이었고(`_LIMIT_REJECTED` 주석의 원본을 손으로 읽었다), 읽지 못하면 값을 적는다. 숫자
+    문자열과 `True` 는 시각으로 읽지 않는다."""
+    resets = info.get("resetsAt")
+    if resets is None:
+        return "풀리는 시각 모름"
+    if isinstance(resets, int | float) and not isinstance(resets, bool):
+        try:
+            stamp = datetime.fromtimestamp(resets, UTC).strftime("%Y-%m-%d %H:%M UTC")
+        except (OverflowError, OSError, ValueError):
+            pass
+        else:
+            return f"{stamp} 에 풀린다"
+    return f"풀리는 시각을 읽지 못했다(resetsAt {resets})"
 
 
 def load_spec(text: str) -> Spec:
@@ -570,15 +589,10 @@ class _Reading:
         info = event.get("rate_limit_info", {})
         if info.get("status") != _LIMIT_REJECTED:
             return
-        resets = info.get("resetsAt")
-        when = "풀리는 시각 모름"
-        if resets is not None:
-            try:
-                stamp = datetime.fromtimestamp(resets, UTC).strftime("%Y-%m-%d %H:%M UTC")
-                when = f"{stamp} 에 풀린다"
-            except (OverflowError, OSError, ValueError):
-                when = f"풀리는 시각을 읽지 못했다(resetsAt {resets})"
-        self.limit = f"계정 한도({info.get('rateLimitType', '종류 모름')}, {when})"
+        kind = info.get("rateLimitType")
+        self.limit = (
+            f"계정 한도({kind if isinstance(kind, str) else '종류 모름'}, {_describe_resets(info)})"
+        )
 
     def _system(self, system: _System) -> None:
         if system.get("subtype") == "init":

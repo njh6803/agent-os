@@ -414,12 +414,32 @@ def test_모양이_바뀐_한도_이벤트는_어긋난_줄로_세지_않고_건
     assert facts.limit is None
 
 
-@pytest.mark.parametrize("풀리는_때", [1792357200000, 1e30])
-def test_읽지_못하는_풀리는_시각은_예외가_아니라_그대로_적는다(풀리는_때: float) -> None:
-    facts = read_facts([_init(("Skill",)), _한도_이벤트(resetsAt=풀리는_때), _한도_결과()])
+@pytest.mark.parametrize("풀리는_때", [1792357200000, 1e30, "2026-10-18T21:00:00Z", True])
+def test_읽지_못하는_풀리는_시각은_예외가_아니라_그대로_적는다(풀리는_때: object) -> None:
+    """결과의 `api_error` 없이 한도 이벤트만으로도 거절을 놓치지 않는다."""
+    facts = read_facts([_init(("Skill",)), _한도_이벤트(resetsAt=풀리는_때)])
 
-    읽은_값 = float(풀리는_때)  # 모양 검증이 `resetsAt` 을 float 로 읽는다
-    assert facts.limit == f"계정 한도(seven_day, 풀리는 시각을 읽지 못했다(resetsAt {읽은_값}))"
+    assert facts.limit == f"계정 한도(seven_day, 풀리는 시각을 읽지 못했다(resetsAt {풀리는_때}))"
+    assert facts.malformed == ()
+
+
+@pytest.mark.parametrize("비운_칸", [{"resetsAt": None}, {}])
+def test_풀리는_시각이_null이거나_없으면_모름으로_적는다(비운_칸: dict[str, object]) -> None:
+    """`resetsAt: null` 은 고치기 전 판에서 모양 검증이 이벤트 전체를 버려 거절까지 잃었다."""
+    정보 = {**{키: 값 for 키, 값 in _한도_정보.items() if 키 != "resetsAt"}, **비운_칸}
+    줄 = _줄({"type": "rate_limit_event", "rate_limit_info": 정보})
+    facts = read_facts([_init(("Skill",)), 줄])
+
+    assert facts.limit == "계정 한도(seven_day, 풀리는 시각 모름)"
+    assert facts.malformed == ()
+
+
+@pytest.mark.parametrize("종류", [None, 7])
+def test_거절_이벤트의_종류_칸이_바뀌어도_거절은_놓치지_않는다(종류: object) -> None:
+    facts = read_facts([_init(("Skill",)), _한도_이벤트(rateLimitType=종류)])
+
+    assert facts.limit == "계정 한도(종류 모름, 2026-10-18 21:00 UTC 에 풀린다)"
+    assert facts.malformed == ()
 
 
 # 판정
