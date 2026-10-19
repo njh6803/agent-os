@@ -17,11 +17,12 @@ import signal
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 
 import pytest
 from tools.mutate import (
+    MARKER_PREFIX,
     RESTORE_WAITS,
     ROOT,
     CommandResult,
@@ -40,6 +41,8 @@ from tools.mutate import (
     select,
 )
 from tools.run_hooks import hook_environment
+
+from tools import hook_edit_during_mutate, mutate
 
 _초록 = CommandResult(0, "1 passed in 0.01s\n")
 _빨강 = CommandResult(1, "FAILED tests/test_x.py::test_x - AssertionError\n1 failed in 0.01s\n")
@@ -2524,8 +2527,10 @@ new = "ROOT = Path(__file__).resolve().parent.parent"
     환경 = hook_environment()
     환경.pop("PYTHONUNBUFFERED", None)
 
+    # 번호로 둘 다 고른다. 고르지 않은 전체 실행은 이 도구에 커밋하지 않은 변경이 있으면 시작 줄에
+    # 알림을 내(대기열 359), 이 저장소의 작업 트리에 따라 첫 줄이 달라진다
     with subprocess.Popen(
-        [sys.executable, _이_도구, 표],
+        [sys.executable, _이_도구, 표, "1", "2"],
         cwd=ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -2621,3 +2626,254 @@ def test_이_저장소의_변이_파일은_지금의_도구로_모두_읽힌다(
 
     assert 경로들, "변이 파일을 하나도 찾지 못했다. glob 이 아무것도 재지 않는다"
     assert 문제 == []
+
+
+# --- 판정 낱말뿐인 표지, 이스케이프 힌트, 시작 줄의 알림, 도는 동안의 표지 ---
+# 대기열 313·317·359·358 의 차례다.
+
+
+def _표지를_단_변이(러너_줄: str, 표지_줄: str) -> str:
+    return 러너_줄 + _변이_파일(old="x", new="y").replace(
+        'expect = "red"', f'expect = "red"\n{표지_줄}'
+    )
+
+
+@pytest.mark.parametrize(
+    ("러너_줄", "표지_줄"),
+    [
+        ("", 'expect_output = ["failed"]'),
+        ("", 'expect_output = ["1 failed"]'),
+        ("", 'expect_output = ["FAILED"]'),
+        ("", 'expect_output = ["test_x 가 실패", "passed"]'),
+        (_VITEST_러너, 'runner = "vitest"\nexpect_output = ["FAIL"]'),
+        (
+            _VITEST_러너.replace('judge = "vitest"', 'judge = "playwright"'),
+            'runner = "vitest"\nexpect_output = ["2 passed"]',
+        ),
+        (
+            _VITEST_러너.replace('judge = "vitest"', 'judge = "pytest"')
+            + 'baseline_output = ["passed"]\n',
+            'runner = "vitest"',
+        ),
+    ],
+    ids=["낱말", "수와_낱말", "대문자", "여럿_가운데_하나", "vitest", "playwright", "기준선"],
+)
+def test_러너가_어느_실패에나_찍는_판정_낱말뿐인_표지는_변이_파일_오류다(
+    러너_줄: str, 표지_줄: str
+) -> None:
+    """`["failed"]` 는 pytest 의 요약 줄 `N failed` 와 단언 dict 의 `"type": "failed"` 에 늘 실려,
+    고른 단언이 빨개졌다는 표지가 되지 못했다(대기열 313)."""
+    with pytest.raises(SpecError, match="판정 낱말"):
+        load_spec(_표지를_단_변이(러너_줄, 표지_줄))
+
+
+@pytest.mark.parametrize(
+    ("러너_줄", "표지_줄"),
+    [
+        ("", 'expect_output = ["test_x 가 실패"]'),
+        ("", 'expect_output = ["failed to parse"]'),
+        ("", 'expect_output = ["== 1"]'),
+        (_EXIT_러너, 'runner = "checker"\nexpect_output = ["failed"]'),
+    ],
+    ids=[
+        "판정_낱말이_없다",
+        "못_보는_것_다른_낱말이_섞였다",
+        "글자가_없다",
+        "못_보는_것_exit_판정",
+    ],
+)
+def test_판정_낱말이_아닌_낱말이_든_표지는_받는다(러너_줄: str, 표지_줄: str) -> None:
+    """exit 판정은 출력의 요약을 읽지 않아 거를 낱말을 두지 않는다. 그 러너의 명령이 무엇이든
+    `["failed"]` 를 받는다(독스트링의 못 보는 것)."""
+    assert load_spec(_표지를_단_변이(러너_줄, 표지_줄)).mutation[0].expect_output
+
+
+@pytest.mark.parametrize(
+    ("내용", "원문", "까닭"),
+    [
+        (b"a = 1\nb = 2\n", r"a = 1\nb = 2", "이스케이프를 풀지 않는다(풀면 1번)"),
+        (b"a = 1\n\tb = 2\n", r"a = 1\n\tb = 2", "이스케이프를 풀지 않는다(풀면 1번)"),
+        (b"a = 1\nc = 2\n", r"a = 1\nb = 2", None),
+        (b"a = 1\nb = 2\n", "a = 9", None),
+        (b"a = 1\r\nb = 2\r\n", r"a = 1\nb = 2", None),
+    ],
+    ids=[
+        "줄바꿈",
+        "탭",
+        "풀어도_없다",
+        "글자_그대로의_이스케이프가_없다",
+        "못_보는_것_줄_끝까지_맞춰야_찾히면_알리지_않는다",
+    ],
+)
+def test_원문의_글자_그대로인_이스케이프를_풀어_찾히면_그_까닭을_덧붙인다(
+    tmp_path: Path, 내용: bytes, 원문: str, 까닭: str | None
+) -> None:
+    """작은따옴표 문자열에 적은 `\\n` 이 풀리지 않아 원문이 0번이었고, 도구는 "0번 있다" 만
+    알렸다(대기열 317)."""
+    _파일을_둔다(tmp_path, "src/m.py", 내용)
+    줄: list[str] = []
+
+    assert check(load_spec(_변이_파일(old=원문, new="z")), root=tmp_path, out=줄.append) == 2
+    assert any("원문이 0번 있다" in 한줄 for 한줄 in 줄), 줄
+    if 까닭 is None:
+        assert not any("이스케이프를 풀지 않는다" in 한줄 for 한줄 in 줄), 줄
+    else:
+        assert any(까닭 in 한줄 for 한줄 in 줄), 줄
+
+
+def _시험이_든_저장소(root: Path) -> tuple[Path, str]:
+    """`src/m.py` 와 그 시험 `tests/test_x.py` 와 변이 표 `mutations.toml` 을 커밋한 저장소."""
+    표 = _변이_파일(old="x = 1", new="x = 2").replace(
+        'tests = ["tests/test_x.py"]', 'tests = ["tests/test_x.py::test_x", "-q"]'
+    )
+    파일들 = {
+        "src/m.py": "x = 1\n",
+        "tests/test_x.py": "def test_x(): pass\n",
+        "mutations.toml": 표,
+    }
+    _저장소(root, 파일들)
+    return root, str(root / "mutations.toml")
+
+
+def _시작_줄_알림(줄: Sequence[str]) -> list[str]:
+    return [한줄 for 한줄 in 줄 if "커밋하지 않은 변경" in 한줄]
+
+
+@pytest.mark.parametrize(
+    "고친_파일",
+    ["src/m.py", "tests/test_x.py", "mutations.toml", "src/new.py"],
+    ids=["표가_가리키는_파일", "그_시험", "표_자체", "가리키지_않는_파일"],
+)
+def test_고르지_않은_전체_실행은_시작_줄에서_커밋하지_않은_변경을_알린다(
+    tmp_path: Path, 고친_파일: str
+) -> None:
+    """셀프 리뷰 전에 새 표 둘의 전체를 돌렸고, 리뷰가 시험과 표지를 고쳐 두 표를 다시 돌았다
+    (대기열 359). 표지는 표 자체에 있다. 알리기만 하고 막지 않는다."""
+    root, 표 = _시험이_든_저장소(tmp_path)
+    path = root / 고친_파일
+    path.write_bytes(path.read_bytes() + b"# edited\n" if path.exists() else b"y = 1\n")
+    러너 = _변이면(root / "src/m.py", b"x = 2", _빨강)
+    줄: list[str] = []
+
+    assert main([표], root=root, runner=러너, out=줄.append) == 0, 줄
+    알림 = _시작_줄_알림(줄)
+    if 고친_파일 == "src/new.py":
+        assert 알림 == [], 줄
+    else:
+        assert len(알림) == 1, 줄
+        assert 고친_파일 in 알림[0]
+        기준선 = next(at for at, 한줄 in enumerate(줄) if 한줄.startswith("기준선"))
+        assert 줄.index(알림[0]) < 기준선
+
+
+@pytest.mark.parametrize("고르기", [["1"], ["--since", "HEAD"]], ids=["번호", "since"])
+def test_고른_실행은_커밋하지_않은_변경을_알리지_않는다(tmp_path: Path, 고르기: list[str]) -> None:
+    root, 표 = _시험이_든_저장소(tmp_path)
+    (root / "src/m.py").write_bytes(b"x = 1\n# edited\n")
+    if "--since" in 고르기:  # 표를 커밋했으니 바뀐 변이가 있어야 고른다
+        path = Path(표)
+        path.write_text(path.read_text(encoding="utf-8").replace('"하나"', '"바뀐 하나"'), "utf-8")
+    러너 = _변이면(root / "src/m.py", b"x = 2", _빨강)
+    줄: list[str] = []
+
+    assert main([표, *고르기], root=root, runner=러너, out=줄.append) == 0, 줄
+    assert _시작_줄_알림(줄) == [], 줄
+
+
+def test_git_저장소_밖의_전체_실행은_알림_없이_돈다(tmp_path: Path) -> None:
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+    표 = _변이_파일을_쓴다(tmp_path, _변이_파일(old="x = 1", new="x = 2"))
+    줄: list[str] = []
+
+    assert main([표], root=tmp_path, runner=_변이면(path, b"x = 2", _빨강), out=줄.append) == 0
+    assert _시작_줄_알림(줄) == [], 줄
+
+
+def _표지를_보는_러너(git_디렉터리: Path, 원본: Path, 본_것: list[object]) -> 러너:
+    """불릴 때마다 `git_디렉터리` 의 도는 표지를 읽어 `본_것` 에 쌓고, `원본` 에 변이가 들었으면
+    빨강, 아니면 초록을 낸다."""
+    판정 = _변이면(원본, b"x = 2", _빨강)
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        for 표지 in git_디렉터리.glob(f"{MARKER_PREFIX}*.json"):
+            본_것.append(json.loads(표지.read_text(encoding="utf-8")))
+        return 판정(argv, cwd, timeout)
+
+    return 러너
+
+
+def test_도는_동안_그_체크아웃의_git_디렉터리에_pid_와_표를_든_표지를_두고_끝나면_지운다(
+    tmp_path: Path,
+) -> None:
+    """표 묶음을 `TaskStop` 으로 멈춘 뒤 남은 셸 스크립트가 다음 표를 이어 돌았고, 그 약 17분 동안
+    변이가 든 체크아웃에서 도구와 시험을 고쳤다(대기열 358). 편집 훅이 이 표지를 본다."""
+    root, 표 = _시험이_든_저장소(tmp_path)
+    본_것: list[object] = []
+    러너 = _표지를_보는_러너(root / ".git", root / "src/m.py", 본_것)
+
+    assert main([표], root=root, runner=러너, out=print) == 0
+    assert len(본_것) == 2, "기준선과 변이가 도는 동안 표지가 하나씩 있어야 한다"
+    assert all(표지 == {"pid": os.getpid(), "table": str(Path(표).resolve())} for 표지 in 본_것)
+    assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
+
+
+def test_워크트리에서는_그_워크트리의_git_디렉터리에_표지를_둔다(tmp_path: Path) -> None:
+    root, _ = _시험이_든_저장소(tmp_path / "main")
+    옆 = tmp_path / "side"
+    _git(root, "worktree", "add", "-q", "-b", "side", str(옆))
+    표 = _변이_파일을_쓴다(tmp_path, _변이_파일(old="x = 1", new="x = 2"))
+    git_디렉터리 = root / ".git" / "worktrees" / "side"
+    본_것: list[object] = []
+    러너 = _표지를_보는_러너(git_디렉터리, 옆 / "src/m.py", 본_것)
+
+    assert main([표], root=옆, runner=러너, out=print) == 0
+    assert len(본_것) == 2, "워크트리의 git 디렉터리에 표지가 없었다"
+    assert list(git_디렉터리.glob(f"{MARKER_PREFIX}*")) == []
+    assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
+
+
+def test_테스트를_돌리지_못해도_표지는_지운다(tmp_path: Path) -> None:
+    root, 표 = _시험이_든_저장소(tmp_path)
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        raise OSError("못 띄웠다")
+
+    assert main([표], root=root, runner=러너, out=lambda _: None) == 3
+    assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
+
+
+def test_도구가_잡지_않는_예외로_끝나도_표지는_지운다(tmp_path: Path) -> None:
+    """위 시험의 `OSError` 는 도구 안에서 잡혀 3으로 돌아온다. 잡히지 않고 빠져나가는 길도 지운다
+    (셀프 리뷰 명세 축)."""
+    root, 표 = _시험이_든_저장소(tmp_path)
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        raise RuntimeError("러너가 터졌다")
+
+    with pytest.raises(RuntimeError, match="러너가 터졌다"):
+        main([표], root=root, runner=러너, out=lambda _: None)
+    assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
+
+
+@pytest.mark.parametrize("인자", [["--check"], ["--staged"]], ids=["원문만", "색인"])
+def test_원문만_볼_때는_표지를_두지_않는다(
+    tmp_path: Path, 인자: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """파일을 쓰지 않는 확인은 변이와 겹칠 편집이 없다."""
+    root, 표 = _시험이_든_저장소(tmp_path)
+    불린: list[Path] = []
+
+    @contextlib.contextmanager
+    def 표지(root: Path, table: Path) -> Generator[None]:
+        불린.append(table)
+        yield
+
+    monkeypatch.setattr(mutate, "_running_marker", 표지)
+    argv = [표, *인자] if 인자 == ["--check"] else 인자
+
+    assert main(argv, root=root, runner=_부르면_안_되는_러너, out=print) == 0
+    assert 불린 == []
+
+
+def test_표지_이름은_편집_훅이_찾는_이름과_같다() -> None:
+    assert hook_edit_during_mutate.MARKER_PREFIX == MARKER_PREFIX

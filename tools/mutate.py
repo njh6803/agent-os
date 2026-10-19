@@ -51,7 +51,11 @@ pre-commit 이 실패로 끝낸다). `git commit <경로>` 는 임시 색인을 
 고친 판에서 그런 일을 전체 실행이 잡았다(일지 2026-10-12-16의 둘째 판). 전체 실행은 셀프 리뷰와
 PR 직전 리뷰(보안·버그·성능)를 반영해 커밋한 뒤에 한 번 돈다. 리뷰가 시험을 고치면 그 전의 실행은
 옛 시험을 잰 것이라, 리뷰 전에 띄운 묶음을 멈추고 다시 돌렸다(셀프 리뷰 전에 약 15분, 대기열 265.
-PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 못 보는 것: 코드만 바꾼
+PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고도 리뷰 전에 새 표 둘의 전체를 돌려
+다시 돌았다(대기열 359). 그래서 고르지 않은 전체 실행은 시작 줄에서, 표 자체(표지가 여기 있다)나
+표가 가리키는 파일이나 그 시험(`tests` 인자 가운데 러너의 자리 기준으로 있는 파일, `::` 뒤는 뗀다)에
+커밋하지 않은 변경이 있으면 그 경로를 알린다. 리뷰 전 실행을 가리키는 대리 신호라 막지 않는다. git
+저장소 밖이면 말하지 않는다. 못 보는 것: 코드만 바꾼
 판에서 원문이 그대로인 변이도 둘레의 코드가 바뀌어 결과가 달라질 수 있다. 시험을 더하면 초록을
 기대한 변이(대조군)가 빨개질 수 있다(일지 2026-10-12-29, `mutate_restore` 표). 고른 것만 돌리면 둘
 다 보지 못한다.
@@ -117,7 +121,13 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 못 보는 것: 코드
 코드를 벗긴 출력에서 매 반복 찾는다. 하나라도 없으면 `표지 없음: …` 줄과 출력의 끝을 내고 어긋남으로
 센다. 러너의 `baseline_output` 은 기준선에서 같은 일을 한다. 없으면 기준선은 초록이 아니다. 종료
 코드 0 만으로는 아무것도 읽지 않고 끝난 검사기와 가를 수 없다. 빈 문자열은 어느 출력에나 있어 변이
-파일 오류다.
+파일 오류다. 러너가 어느 실패나 통과에나 찍는 판정 낱말(`_VERDICT_WORDS`. pytest 의 `failed`·
+`passed`·`error`, vitest 의 `FAIL`, playwright 의 `passed` 따위, 대소문자를 가리지 않는다)만으로 된
+표지도 같은 까닭으로 변이 파일 오류다. 숫자와 기호는 낱말로 세지 않아 `1 failed` 도 걸린다.
+`["failed"]` 를 표지로 골랐더니 pytest 의 요약 줄과 단언 dict 의 `"type": "failed"` 에 늘 실려 고른
+단언이 빨개졌다는 표지가 되지 못했다(대기열 313). exit 판정은 요약을 읽지 않아 거를 낱말을 두지
+않는다. 못 보는 것: 판정 낱말이 아닌 낱말이 하나라도 섞이면 받는다(`test failed` 의 `test`). exit
+러너의 명령이 pytest 여도 그 출력의 판정 낱말을 거르지 않는다(`["failed"]` 를 받는다).
 
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
@@ -160,8 +170,16 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 못 보는 것: 코드
 변이마다의 `timeout` 으로 걸고, 바깥의 상한은 표 전체보다 넉넉히 준다. 도는 동안 변이한 파일을
 고치면(되돌릴 파일로 적지 않았으면) 되돌림이 그 파일을 덮지 않고 3으로 멈추고, 변이는 손으로 걷어
 낸다. 백그라운드로 띄운 표 묶음을 `TaskStop` 으로 멈추면 윈도우에서 묶음을 돌리던 셸 스크립트와 그
-아래 프로세스가 남아 다음 표를 이어 돌았다(일지 2026-10-15-13·2026-10-16-07). 멈춘 뒤 명령줄로 남은
-프로세스를 찾아 `taskkill /T` 로 끝내고, 임시 워크트리에 변이가 남았는지 `git status` 로 본다.
+아래 프로세스가 남아 다음 표를 이어 돌았다(일지 2026-10-15-13·2026-10-16-07·2026-10-19-13). 셋째에는
+찾기가 `python.exe` 에 머물러 묶음을 돌리던 `bash.exe` 와 `uv.exe` 를 놓쳤고, 그 약 17분 동안 변이가
+든 체크아웃에서 이 도구와 그 시험을 고쳤다(대기열 358). 멈춘 뒤 명령줄에 표 파일 이름이나 묶음
+스크립트가 든 `bash.exe`·`uv.exe`·`python.exe` 를 찾아(`uv run` 이 띄운 python 의 명령줄 경로는 상대
+경로였다) 가장 위의 것을 `taskkill /T /F` 로 끝내고, 변이가 남았는지 `git status` 로 본다. 그래서
+도는 동안(기준선부터 마지막 되돌림까지) 이 체크아웃의 git 디렉터리(워크트리면 `.git` 파일이 가리키는
+곳)에 `mutate-running-<pid>.json`(pid 와 표의 절대 경로)을 두고 끝나면 예외로 끝나도 지운다.
+PostToolUse 계기 훅 `tools/hook_edit_during_mutate.py` 가 그 체크아웃의 파일을 고칠 때 표지의 pid 가
+살아 있으면 알린다. 강제로 끝나 남은 표지는 pid 가 죽어 알리지 않는다. 원문만 보는 `--check` 와
+`--staged` 는 파일을 쓰지 않아 표지를 두지 않는다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -196,7 +214,10 @@ lastfailed 에 남지 않게 한다.
 줄 끝을 맞춘 바이트에서 찾히면, 변이 파일 오류와 `--check` 가 "줄 끝이 다르다" 와 함께 파일의 줄
 끝과 줄 끝을 맞춘 횟수를 덧붙인다. 패치 스크립트의
 `Path.write_text` 가 윈도우에서 도구를 CRLF 로 바꿔 써 원문 스무 개 남짓이 0번으로만 나왔고, git 은
-커밋에서 LF 로 고쳐 diff 로는 보이지 않았다(대기열 264). vitest 의 skip
+커밋에서 LF 로 고쳐 diff 로는 보이지 않았다(대기열 264). 0번인 원문이 글자 그대로의 `\\n`·`\\t`
+를 들고 그것을 푼 바이트에서 찾히면, TOML 의 작은따옴표 문자열은 이스케이프를 풀지 않는다는 까닭과
+푼 횟수를 덧붙인다. 작은따옴표로 적은 `\\n` 이 풀리지 않아 원문이 0번이었고 도구는 "0번 있다" 만
+알렸다(대기열 317). 줄 끝 힌트가 먼저이고, 둘을 함께 맞춰 보지는 않는다. vitest 의 skip
 은 세지 않는다. `-t` 로 좁히면 고르지 않은 테스트가 skipped 로 세어져 `it.skip` 과 가를 수 없다. tsc
 의 빨강은 진단이 난 파일만 본다. 변이가 낸 문법 오류가 적은 파일까지 번져도 빨강이다. 윈도우에서
 `pnpm.CMD` 같은 배치 파일은 cmd.exe 가 돌려 인자의 `&`·`%`·`^` 가 해석될 수 있다. 좁힌 선택이 비면
@@ -218,6 +239,7 @@ from __future__ import annotations
 import contextlib
 import errno
 import io
+import json
 import os
 import re
 import shutil
@@ -226,7 +248,7 @@ import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -241,6 +263,9 @@ _KILL_SECONDS = 30  # 윈도우의 `taskkill` 을 기다리는 시간
 # 따랐다. 변이를 되돌리는 쓰기가 `[Errno 22] Invalid argument` 로 한 번 막혔고(대기열 267), 무엇이
 # 그 틈에 파일을 쥐었는지는 재지 않았다
 RESTORE_WAITS = (0.2, 0.5, 1.0, 2.0)
+# 도는 동안 그 체크아웃의 git 디렉터리에 두는 표지 `mutate-running-<pid>.json` 의 머리. 편집 훅
+# `tools/hook_edit_during_mutate.py` 의 같은 이름과 같아야 한다(대기열 358)
+MARKER_PREFIX = "mutate-running-"
 
 type Outcome = Literal["green", "red", "unhandled", "error"]
 type JudgeName = Literal["pytest", "vitest", "playwright", "tsc", "exit"]
@@ -263,6 +288,22 @@ _PLAYWRIGHT_COUNT = re.compile(
 _PLAYWRIGHT_FAILED = re.compile(r"\s*\d+ failed\s*")
 _TSC_DIAGNOSTIC = re.compile(r"(\S+)\((\d+),(\d+)\): error (TS\d+)")
 _NUMBER = re.compile(r"[0-9]+")
+_WORD = re.compile(r"[^\W\d_]+")  # 표지의 낱말. 숫자와 기호는 낱말이 아니다
+# 판정마다 러너가 어느 실패나 통과에나 찍는 낱말(대소문자를 가리지 않는다). 이 낱말뿐인 표지는
+# 고른 단언이 빨개졌다는 표지가 되지 못한다(대기열 313). exit 판정은 출력의 요약을 읽지 않는다
+_VERDICT_WORDS: dict[JudgeName, frozenset[str]] = {
+    "pytest": frozenset(
+        {"failed", "passed", "error", "errors", "skipped", "xfailed", "xpassed", "deselected"}
+    ),
+    "vitest": frozenset(
+        {"fail", "failed", "pass", "passed", "error", "errors", "skipped", "todo", "tests"}
+    ),
+    "playwright": frozenset(
+        {"passed", "failed", "skipped", "flaky", "interrupted", "did", "not", "run"}
+    ),
+    "tsc": frozenset({"error"}),
+    "exit": frozenset(),
+}
 
 
 class SpecError(Exception):
@@ -470,6 +511,26 @@ def _judging_for(command: RunnerSpec, mutation: Mutation | None = None) -> Judgi
     return Judging(command.judge, diagnostic_in, command.red_exit)
 
 
+def _verdict_only(markers: Sequence[str], kind: JudgeName) -> list[str]:
+    """`kind` 판정의 러너가 어느 실패나 통과에나 찍는 낱말만으로 된 표지. 낱말이 하나도 없는
+    표지(`== 1`)는 여기서 거르지 않는다."""
+    words = _VERDICT_WORDS[kind]
+    found: list[str] = []
+    for marker in markers:
+        parts = [part.casefold() for part in _WORD.findall(marker)]
+        if parts and all(part in words for part in parts):
+            found.append(marker)
+    return found
+
+
+def _verdict_note(owner: str, field: str, markers: Sequence[str], kind: JudgeName) -> str:
+    listed = ", ".join(repr(marker) for marker in markers)
+    return (
+        f"{owner}: {field} 의 표지 {listed} 는 {kind} 러너가 어느 실패에나 찍는 판정 낱말뿐이다."
+        " 고른 단언만 찍는 문구(시험 이름, 단언의 값)로 고른다"
+    )
+
+
 def _runner_problems(spec: Spec) -> list[str]:
     """변이 파일의 러너마다 이름과 판정의 짝. 파일을 보지 않는다."""
     problems = [
@@ -486,6 +547,9 @@ def _runner_problems(spec: Spec) -> list[str]:
             problems.append(f"러너 {name}: red_exit 는 exit 판정만 쓴다(이 러너는 {command.judge})")
         if "" in command.baseline_output:
             problems.append(f"러너 {name}: baseline_output 에 빈 표지가 있다. 어느 출력에나 있다")
+        weak = _verdict_only(command.baseline_output, command.judge)
+        if weak:
+            problems.append(_verdict_note(f"러너 {name}", "baseline_output", weak, command.judge))
     return problems
 
 
@@ -504,6 +568,9 @@ def _mutation_problems(spec: Spec) -> list[str]:
             problems.append(f"{m.name}: diagnostic_in 은 tsc 판정만 쓴다(이 러너는 {kind})")
         if "" in m.expect_output:
             problems.append(f"{m.name}: expect_output 에 빈 표지가 있다. 어느 출력에나 있다")
+        weak = _verdict_only(m.expect_output, kind)
+        if weak:
+            problems.append(_verdict_note(m.name, "expect_output", weak, kind))
         if m.expect == "unhandled" and kind != "vitest":
             problems.append(f"{m.name}: expect unhandled 는 vitest 판정만 쓴다(이 러너는 {kind})")
     return problems
@@ -656,7 +723,7 @@ def _mutated(
         old = edit.old.encode("utf-8")
         count = current.count(old)
         if count != 1:
-            hint = _eol_hint(current, old) if count == 0 else ""
+            hint = (_eol_hint(current, old) or _escape_hint(current, old)) if count == 0 else ""
             raise SpecError(
                 f"{mutation.name}: {edit.file} 에 원문이 {count}번 있다. 정확히 한 번이어야 한다"
                 f" (줄 끝과 들여쓰기까지 바이트로 맞춘다){hint}"
@@ -679,6 +746,21 @@ def _eol_hint(data: bytes, old: bytes) -> str:
     bare = data.count(b"\n") - crlf
     ending = "CRLF 와 LF 가 섞였다" if crlf and bare else "CRLF 뿐이다" if crlf else "LF 뿐이다"
     return f". 줄 끝이 다르다(파일은 {ending}, 줄 끝을 맞추면 {found}번)"
+
+
+def _escape_hint(data: bytes, old: bytes) -> str:
+    """0번인 원문이 글자 그대로의 `\\n`·`\\t` 를 들고, 그것을 푼 바이트에서 찾히면 덧붙일 까닭.
+    아니면 빈 문자열. 작은따옴표 문자열에 적은 `\\n` 이 풀리지 않아 원문이 0번이었다(대기열
+    317)."""
+    if b"\\n" not in old and b"\\t" not in old:
+        return ""
+    found = data.count(old.replace(b"\\n", b"\n").replace(b"\\t", b"\t"))
+    if not found:
+        return ""
+    return (
+        ". 원문에 글자 그대로의 \\n·\\t 가 있다. TOML 의 작은따옴표 문자열은 이스케이프를 풀지"
+        f" 않는다(풀면 {found}번). 줄을 바꿀 자리는 여러 줄 리터럴('''…''')로 적는다"
+    )
 
 
 def _file_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[str]:
@@ -1324,9 +1406,90 @@ def _since_picks(spec: Spec, args: _Args) -> list[str]:
     return fresh
 
 
+def _watched_paths(root: Path, spec: Spec) -> list[str]:
+    """변이가 고치는 파일과 그 시험(러너의 자리 기준으로 푼 인자 가운데 있는 파일), 저장소 기준
+    경로로. `::` 뒤의 시험 이름은 떼고, 옵션과 파일이 아닌 인자(`-k` 의 식)는 뺀다."""
+    runners = _runners(spec)
+    base = root.resolve()
+    found: dict[str, None] = {}
+    for mutation in spec.mutation:
+        candidates = [edit.file for edit in mutation.edit]
+        cwd = Path(runners[mutation.runner].cwd)
+        candidates += [
+            (cwd / arg.split("::", 1)[0]).as_posix()
+            for arg in mutation.tests
+            if not arg.startswith("-")
+        ]
+        for relative in candidates:
+            path = _inside(root, relative)
+            if path is not None and path.exists():
+                found[path.relative_to(base).as_posix()] = None
+    return list(found)
+
+
+def _note_uncommitted(root: Path, spec: Spec, table: Path, out: Callable[[str], None]) -> None:
+    """표 자체나 표가 가리키는 파일이나 그 시험에 커밋하지 않은 변경이 있으면 한 줄로 알린다.
+    막지 않는다. git 저장소 밖이거나 git 을 부르지 못하면 말하지 않는다."""
+    paths = _watched_paths(root, spec)
+    with contextlib.suppress(ValueError):  # 표가 저장소 밖이면 표는 보지 않는다
+        paths.insert(0, table.resolve().relative_to(root.resolve()).as_posix())
+    if not paths:
+        return
+    try:
+        done = _git(root, "status", "--porcelain", "-z", "--no-renames", "--", *paths)
+    except SpecError:
+        return
+    if done.returncode != 0:
+        return
+    changed = [entry[3:] for entry in _names(done.stdout) if len(entry) > 3]
+    if changed:
+        out(
+            "알림(막지 않는다): 고르지 않은 전체 실행인데 표나 표가 가리키는 파일이나 그 시험에"
+            f" 커밋하지 않은 변경이 있다 — {', '.join(changed)}. 전체 실행은 셀프 리뷰와 PR 직전"
+            " 리뷰를 반영해 커밋한 뒤에 한 번 돈다(독스트링의 언제 전체를 돌리나, 대기열 359)"
+        )
+
+
+def _git_dir(root: Path) -> Path | None:
+    """그 체크아웃의 git 디렉터리. `.git` 이 디렉터리면 그것, 워크트리의 `.git` 파일이면 `gitdir:`
+    줄이 가리키는 곳이다. 읽지 못하면 None."""
+    dot_git = root / ".git"
+    try:
+        if dot_git.is_dir():
+            return dot_git
+        line = dot_git.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return None
+    target = line.removeprefix("gitdir:").strip() if line.startswith("gitdir:") else ""
+    return (root / target).resolve() if target else None
+
+
+@contextlib.contextmanager
+def _running_marker(root: Path, table: Path) -> Generator[None]:
+    """도는 동안 그 체크아웃의 git 디렉터리에 pid 와 표를 든 표지를 두고, 끝나면(예외로 끝나도)
+    지운다. 편집 훅이 이것을 보고 변이가 든 체크아웃의 편집을 알린다(대기열 358). git 디렉터리를
+    찾지 못했거나 쓰지 못하면 표지 없이 돈다."""
+    git_dir = _git_dir(root)
+    marker = git_dir / f"{MARKER_PREFIX}{os.getpid()}.json" if git_dir is not None else None
+    if marker is not None:
+        content = {"pid": os.getpid(), "table": str(table.resolve())}
+        try:
+            marker.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            marker = None
+    try:
+        yield
+    finally:
+        if marker is not None:
+            with contextlib.suppress(OSError):
+                marker.unlink(missing_ok=True)
+
+
 def _run_table(args: _Args, *, root: Path, runner: Runner, out: Callable[[str], None]) -> int:
-    """표 하나에서 고른 변이를 잰다. `--check` 면 원문만 본다."""
-    spec = read_spec(Path(args.tables[0]))
+    """표 하나에서 고른 변이를 잰다. `--check` 면 원문만 본다. 고르지 않은 전체 실행이면 시작
+    줄에서 커밋하지 않은 변경을 알린다."""
+    table = Path(args.tables[0])
+    spec = read_spec(table)
     fresh = _since_picks(spec, args)
     if args.since is not None:
         listed = f" — {_labelled(fresh, _numbers(spec))}" if fresh else ""
@@ -1334,7 +1497,10 @@ def _run_table(args: _Args, *, root: Path, runner: Runner, out: Callable[[str], 
     selected = select(spec, [*args.picks, *fresh])
     if args.checking:
         return check(selected, root=root, out=out)
-    return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))
+    if not args.picks and args.since is None:
+        _note_uncommitted(root, selected, table, out)
+    with _running_marker(root, table):
+        return measure(selected, root=root, runner=runner, out=out, numbers=_numbers(spec))
 
 
 def main(

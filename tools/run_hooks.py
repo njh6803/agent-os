@@ -49,17 +49,19 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${USAGE_REPO}`(`.scratch/token-report/summary.txt` 에 방금 쓴 요약을 둔 임시 저장소 — 사용량 장부와
 요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
 `.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다),
-`${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
-것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다). 사례의
-`env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
-로 준다. 기대는 `Expectation` 의 값이다. deny(`permissionDecision: deny`), block(`decision: block`
-또는 종료 코드 2), context (`additionalContext` — 모델에게 간다), notice(사용자에게만 가는
-`systemMessage` 하나. `additionalContext` 가 함께 있으면 모델에게도 가므로 context 다), silent(종료
-0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` — JSON 을 푼
-additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자 그대로
-찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130, 일지
-2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이 칸은
-표의 사례가 어느 동작을 재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
+`${MUTATING_REPO}`·`${STALE_MUTATING_REPO}`(git 디렉터리에 `tools/mutate.py` 가 도는 동안 두는
+표지를 둔 임시 저장소 둘. 앞은 러너 자신의 pid 라 훅이 도는 동안 살아 있고, 뒤는 끝난 프로세스의 pid
+다), `${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이
+없는 것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다).
+사례의 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을
+`env` 로 준다. 기대는 `Expectation` 의 값이다. deny(`permissionDecision: deny`),
+block(`decision: block` 또는 종료 코드 2), context (`additionalContext` — 모델에게 간다),
+notice(사용자에게만 가는 `systemMessage` 하나. `additionalContext` 가 함께 있으면 모델에게도 가므로
+context 다), silent(종료 0, 출력 없음). 사례의 선택 칸 `contains` 는 훅이 낸 문장(`message_of` —
+JSON 을 푼 additionalContext·이유·systemMessage, 종료 2 면 stderr)에 모두 들어야 하는 조각이고, 글자
+그대로 찾는다. 판정의 종류만 대조하던 때 새 계기의 발동·침묵 사례가 옛 훅에서도 지났다(대기열 130,
+일지 2026-10-06-15). 침묵 사례에는 둘 수 없다. 내용 전체를 재는 것은 그 훅의 tests/tools 이고, 이
+칸은 표의 사례가 어느 동작을 재는지 표지만 단다. `hookSpecificOutput` 을 내는 훅은
 `hookEventName` 을 같이 내야 하고 그 값이 훅이 등록된 이벤트와 같아야 한다 — Claude Code 가 그
 필드를 요구하므로 없거나 다르면 유효하게 받지 않는 출력이고, 러너도 `output`·`event <이름>` 으로
 어긋남이라 본다. 등록과 표가 한쪽에만 있는 훅(등록됐는데 표에 없다, 표에 있는데 등록되지 않았다)과
@@ -661,6 +663,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "COMMIT_MSGS": commit_msgs.as_posix(),
         "USAGE_REPO": _usage_repository(scratch, today).as_posix(),
         "USAGE_HOME": _usage_home(scratch).as_posix(),
+        "MUTATING_REPO": _mutating_repository(scratch, "mutating", os.getpid()).as_posix(),
+        "STALE_MUTATING_REPO": _mutating_repository(scratch, "stale", _ended_pid()).as_posix(),
         "SEQ_3000": "\n".join(str(n) for n in range(1, 3001)),
     }
 
@@ -684,6 +688,31 @@ def _usage_repository(scratch: Path, today: str) -> Path:
         f"보고서 날짜: {day}\n환산 비용 $0.00\n경보 없음\n보고서: {report}/daily/{day}.md\n",
         encoding="utf-8",
     )
+    return repo
+
+
+def _ended_pid() -> int:
+    """끝난 프로세스의 pid. 강제로 끝나 지우지 못한 변이 도구의 표지를 흉내 낸다."""
+    process = subprocess.Popen([sys.executable, "-c", "pass"], env=hook_environment())
+    process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+    return process.pid
+
+
+def _mutating_repository(scratch: Path, name: str, pid: int) -> Path:
+    """git 디렉터리에 `tools/mutate.py` 가 도는 동안 두는 표지(`mutate-running-<pid>.json`)를 둔
+    임시 저장소. 러너 자신의 pid 를 주면 훅이 도는 동안 살아 있다. 이름은 그 도구의 `MARKER_PREFIX`
+    를 따른다(러너는 그 모듈을 import 하지 않는다)."""
+    repo = scratch / f"{name}-repo"
+    subprocess.run(
+        ["git", "init", "-q", str(repo)],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
+    (repo / "m.py").write_text("x = 1\n", encoding="utf-8")
+    marker = {"pid": pid, "table": ".scratch/harness/probes/x_mutations.toml"}
+    (repo / ".git" / f"mutate-running-{pid}.json").write_text(json.dumps(marker), encoding="utf-8")
     return repo
 
 
