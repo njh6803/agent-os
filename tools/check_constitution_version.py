@@ -41,7 +41,7 @@ from __future__ import annotations
 import io
 import sys
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from tools.sibling_overlap import (
@@ -128,7 +128,7 @@ def judge(root: Path) -> Judged:
     if judged.passes:
         return judged
     reserved = reserved_version(current_branch(root), main_text, ours_text)
-    return Judged(judged.changed, judged.ours, judged.main, judged.base, reserved)
+    return replace(judged, reserved=reserved)
 
 
 def _report(judged: Judged, out: Callable[[str], None]) -> None:
