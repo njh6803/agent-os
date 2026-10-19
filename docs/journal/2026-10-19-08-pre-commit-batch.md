@@ -371,3 +371,36 @@ open-session을 부른다 2026-10-19T02:48:11Z
   새 세션이 생겨 돌고 있었다(그 브랜치의 `(인계함)` 세션이 같은 때에 인계했다). 두 세션의 딥링크가 같은 새 세션 화면에 겹쳐
   이 지시문이 그 화면에 실리지 않았다고 보지만, 앱 로그(`deeplink_timeline.ps1`)로 가르지 않았다. 같은 파일로 다시 돌리지
   않는다(open-session 막히면). 제목을 `chore/pre-commit-batch`로 되돌렸고, 이 세션에서 위 남은 단계 1부터 잇는다.
+
+## main 합치기
+
+`origin/main`(`a7d93133`, #293·#294·#295)을 합쳤다. 충돌은 `docs/constitution/README.md`의 판 줄 하나였고, main의 3.0.42
+문단을 그대로 두고 그 앞에 이 브랜치의 3.0.43 문단을 넣었다(3.0.42를 비워 두었다는 문장은 뺐다). `CLAUDE.md`,
+`operations.md`, `retro-queue.md`, 프로브 README는 저절로 합쳐졌고, main 대비 남은 차이가 이 브랜치의 몫뿐인 것을 diff로
+봤다. main이 더한 카나리아 명세 셋은 `--shape`를 지났다. 커밋 직전 `sibling_overlap.py`가 이 일지(02)가 main의 03보다
+이름순으로 앞이라고 알려 `--move`로 08로 옮겼다. 합치는 커밋 `6f7516e9`의 pre-commit은 러너 여덟을 모두 지났다(482.6초.
+pytest 456.0초, web-verify 482.2초, run-hooks 249.3초, pyright 36.5초). 합치는 중이라 pre-commit이 충돌 파일만 넘겨 ruff 둘과
+카나리아 명세 모양은 `Skipped`였고, 변이 표 원문·헌법 판·마크다운 표·줄 구분 문자·커밋 메시지는 `Passed`였다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어(`operations.md` 리뷰 파이프라인 2) 대체 둘을 돌렸다. 기준은 `a7d93133`이다.
+
+- **`/security-review`.** 지적 없음. 새 도구 셋의 git 호출은 모두 리스트 인자이고 셸을 거치지 않으며, 변이 표는 `tomllib`과
+  pydantic으로 읽고, 표가 가리키는 경로는 기존 `_inside()`가 저장소 안으로 묶는다.
+- **`bug-perf-review`.** 유효 1(Minor), 보류 2, 호출 40.
+  - **Minor(유효, 남김).** `--staged`가 커밋마다 저장소의 변이 표 전부(84개, 변이 1931개)를 읽어 푼다. 리뷰가 부하 아래 한 번
+    잰 값은 전체 23.97초, 프로세스 안 5.98초(cProfile 포함), 프로파일 없는 `load_spec`만 1.13초였다. 거르기(바뀐 경로의 파일
+    이름이 든 표만 풀기)로 아낄 몫은 약 1초이고 나머지는 `uv run` 시작과 git 하위 프로세스다. 고치면 `staged()`와 그 시험,
+    표지를 단 `mutate_staged` 표의 원문이 함께 움직인다. PR 체크리스트에 그 값과 함께 둔다.
+  - **보류 → 고쳤다.** `.pre-commit-config.yaml`의 "다른 세션이 함께 돌 때 7~8초"가 리뷰의 한 번 측정(23.97초)과 어긋났다. 지금
+    `Measure-Command`로 세 번 다시 쟀더니 23.6초, 10.3초, 20.5초였다(다른 세션이 여럿 돌 때, `uv run` 시작 포함). 주석을 "수
+    초에서 수십 초 … 다른 세션이 함께 돌 때 7~24초"로 고쳤다. 같은 까닭으로 `tools/check_constitution_version.py`의 "커밋마다 수
+    초"도 리뷰가 잰 17.4초를 넣어 "수 초에서 십수 초(… 4.5~17초 …)"로 고쳤다.
+  - **보류 → 오탐.** 프로브 README 62줄은 `mutation_check_mutations.toml` 행이고 이미 `--staged`로 바뀐 배선과 손으로 치는
+    `--check`를 함께 적는다.
+  - **밀 주장.** 반영 절의 나열과 나열 밖 일곱을 대 봤고 거짓은 없었다. `git rebase --continue`가 pre-commit을 돌리지 않는 것은
+    임시 저장소에서 표지 훅으로 봤고(git 2.32), 그 문장을 고정한 시험은 없다. `--shape`는 깨진 명세 셋과 정상 둘을 함께 줘도 뒤의
+    정상까지 `[통과]`로 보고하고 2로 끝났다.
+- **반영으로 새로 쓴 문장(봇 회차에 밀 주장).** `.pre-commit-config.yaml`의 "수 초에서 수십 초 … 7~24초",
+  `tools/check_constitution_version.py`의 "수 초에서 십수 초(… 4.5~17초 …)".
