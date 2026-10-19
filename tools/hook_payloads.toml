@@ -499,6 +499,22 @@ expect = "silent"
 note = "그 폴더 아래 워크트리에서 커밋이 도는 주 체크아웃의 파일을 썼다 — 이 저장소의 주 체크아웃과 .claude/worktrees 의 자리"
 payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${COMMITTING_REPO}/notes.md", content = "메모\n" }, cwd = "${COMMITTING_REPO}" }
 
+# --- hook_edit_during_mutate (PostToolUse Write|Edit|NotebookEdit) ---
+# `${MUTATING_REPO}` 의 git 디렉터리에는 러너 자신의 pid 로 도는 변이 도구의 표지가 있고,
+# `${STALE_MUTATING_REPO}` 에는 끝난 프로세스의 pid 로 남은 표지가 있다(강제로 끝나 지우지 못했다).
+[[case]]
+hook = "hook_edit_during_mutate.py"
+expect = "context"
+contains = ["tools/mutate.py", "대기열 358", "bash.exe"]
+note = "변이 도구가 도는 체크아웃의 파일을 고쳤다(대기열 358. TaskStop 뒤 남은 묶음이 다음 표를 돌던 17분)"
+payload = { hook_event_name = "PostToolUse", tool_name = "Edit", tool_input = { file_path = "${MUTATING_REPO}/m.py", old_string = "x", new_string = "y" }, cwd = "${MUTATING_REPO}" }
+
+[[case]]
+hook = "hook_edit_during_mutate.py"
+expect = "silent"
+note = "강제로 끝나 남은 표지의 체크아웃 — pid 가 죽어 도는 변이가 없다"
+payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${STALE_MUTATING_REPO}/m.py", content = "x = 2\n" }, cwd = "${STALE_MUTATING_REPO}" }
+
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]
 hook = "hook_prompt_directive.py"

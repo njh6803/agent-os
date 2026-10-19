@@ -1,0 +1,198 @@
+# tools/mutate.py 의 표 검증·힌트·시작 줄 알림·도는 표지(대기열 313·317·359·358)와 편집 훅
+# tools/hook_edit_during_mutate.py 의 판정을 하나씩 빼는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_table_guards_mutations.toml
+# 이 도구 자신을 고치는 변이라 커밋한 뒤 다른 워크트리에서 그 워크트리의 도구로 돌린다(독스트링의 제자리가
+# 아닌 실행). 표지는 그 변이를 잡는 시험의 이름이나 매개변수 id 이고, 판정 낱말뿐인 표지는 이 표가 더한
+# 규칙이 거부한다.
+
+[[mutation]]
+name = "판정 낱말뿐인 표지를 거부하지 않는다"
+tests = ["tests/tools/test_mutate.py::test_러너가_어느_실패에나_찍는_판정_낱말뿐인_표지는_변이_파일_오류다"]
+expect = "red"
+expect_output = ["판정_낱말뿐인_표지는_변이_파일_오류다[낱말]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if parts and all(part in words for part in parts):'''
+new = '''        if parts and False:'''
+
+[[mutation]]
+name = "판정 낱말을 대소문자째 견준다"
+tests = ["tests/tools/test_mutate.py::test_러너가_어느_실패에나_찍는_판정_낱말뿐인_표지는_변이_파일_오류다"]
+expect = "red"
+expect_output = ["[대문자]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        parts = [part.casefold() for part in _WORD.findall(marker)]'''
+new = '''        parts = list(_WORD.findall(marker))'''
+
+[[mutation]]
+name = "낱말이 없는 표지도 판정 낱말뿐으로 읽는다"
+tests = ["tests/tools/test_mutate.py::test_판정_낱말이_아닌_낱말이_든_표지는_받는다"]
+expect = "red"
+expect_output = ["[글자가_없다]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if parts and all(part in words for part in parts):'''
+new = '''        if all(part in words for part in parts):'''
+
+[[mutation]]
+name = "기준선 표지는 판정 낱말을 보지 않는다"
+tests = ["tests/tools/test_mutate.py::test_러너가_어느_실패에나_찍는_판정_낱말뿐인_표지는_변이_파일_오류다"]
+expect = "red"
+expect_output = ["[기준선]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        weak = _verdict_only(command.baseline_output, command.judge)'''
+new = '''        weak = _verdict_only([], command.judge)'''
+
+[[mutation]]
+name = "이스케이프 힌트를 붙이지 않는다"
+tests = ["tests/tools/test_mutate.py::test_원문의_글자_그대로인_이스케이프를_풀어_찾히면_그_까닭을_덧붙인다"]
+expect = "red"
+expect_output = ["[줄바꿈]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            hint = (_eol_hint(current, old) or _escape_hint(current, old)) if count == 0 else ""'''
+new = '''            hint = _eol_hint(current, old) if count == 0 else ""'''
+
+[[mutation]]
+name = "풀어도 없는 원문에도 이스케이프 힌트를 붙인다"
+tests = ["tests/tools/test_mutate.py::test_원문의_글자_그대로인_이스케이프를_풀어_찾히면_그_까닭을_덧붙인다"]
+expect = "red"
+expect_output = ["[풀어도_없다]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    found = data.count(old.replace(b"\\n", b"\n").replace(b"\\t", b"\t"))
+    if not found:
+        return ""'''
+new = '''    found = data.count(old.replace(b"\\n", b"\n").replace(b"\\t", b"\t"))'''
+
+[[mutation]]
+name = "탭 이스케이프는 풀지 않는다"
+tests = ["tests/tools/test_mutate.py::test_원문의_글자_그대로인_이스케이프를_풀어_찾히면_그_까닭을_덧붙인다"]
+expect = "red"
+expect_output = ["[탭]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    found = data.count(old.replace(b"\\n", b"\n").replace(b"\\t", b"\t"))'''
+new = '''    found = data.count(old.replace(b"\\n", b"\n"))'''
+
+[[mutation]]
+name = "고른 실행에서도 커밋하지 않은 변경을 알린다"
+tests = ["tests/tools/test_mutate.py::test_고른_실행은_커밋하지_않은_변경을_알리지_않는다"]
+expect = "red"
+expect_output = ["test_고른_실행은_커밋하지_않은_변경을_알리지_않는다[번호]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    if not args.picks and args.since is None:
+        _note_uncommitted(root, selected, table, out)'''
+new = '''    if True:
+        _note_uncommitted(root, selected, table, out)'''
+
+[[mutation]]
+name = "표 자체는 보지 않는다"
+tests = ["tests/tools/test_mutate.py::test_고르지_않은_전체_실행은_시작_줄에서_커밋하지_않은_변경을_알린다"]
+expect = "red"
+expect_output = ["[표_자체]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        paths.insert(0, table.resolve().relative_to(root.resolve()).as_posix())'''
+new = '''        pass'''
+
+[[mutation]]
+name = "시험 인자는 보지 않는다"
+tests = ["tests/tools/test_mutate.py::test_고르지_않은_전체_실행은_시작_줄에서_커밋하지_않은_변경을_알린다"]
+expect = "red"
+expect_output = ["[그_시험]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            for arg in mutation.tests
+            if not arg.startswith("-")'''
+new = '''            for arg in mutation.tests
+            if False'''
+
+[[mutation]]
+name = "시험 인자의 :: 뒤를 떼지 않는다"
+tests = ["tests/tools/test_mutate.py::test_고르지_않은_전체_실행은_시작_줄에서_커밋하지_않은_변경을_알린다"]
+expect = "red"
+expect_output = ["[그_시험]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            (cwd / arg.split("::", 1)[0]).as_posix()'''
+new = '''            (cwd / arg).as_posix()'''
+
+[[mutation]]
+name = "끝나도 표지를 지우지 않는다"
+tests = ["tests/tools/test_mutate.py::test_테스트를_돌리지_못해도_표지는_지운다"]
+expect = "red"
+expect_output = ["test_테스트를_돌리지_못해도_표지는_지운다"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''                marker.unlink(missing_ok=True)'''
+new = '''                pass'''
+
+[[mutation]]
+name = "잡지 않는 예외로 끝나면 표지를 지우지 않는다"
+tests = ["tests/tools/test_mutate.py::test_도구가_잡지_않는_예외로_끝나도_표지는_지운다"]
+expect = "red"
+expect_output = ["test_도구가_잡지_않는_예외로_끝나도_표지는_지운다"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    try:
+        yield
+    finally:
+        if marker is not None:'''
+new = '''    if True:
+        yield
+    if True:
+        if marker is not None:'''
+
+[[mutation]]
+name = "워크트리의 git 파일을 풀지 않는다"
+tests = ["tests/tools/test_mutate.py::test_워크트리에서는_그_워크트리의_git_디렉터리에_표지를_둔다"]
+expect = "red"
+expect_output = ["AssertionError: 워크트리의 git 디렉터리에 표지가 없었다"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    return (root / target).resolve() if target else None'''
+new = '''    return None'''
+
+[[mutation]]
+name = "훅이 죽은 pid 의 표지도 센다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_산_pid_의_표지만_센다"]
+expect = "red"
+expect_output = ["test_산_pid_의_표지만_센다"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return sorted(marker for marker in found if is_alive(marker.pid))'''
+new = '''    return sorted(found)'''
+
+[[mutation]]
+name = "훅이 git 파일의 상대 경로를 지금 폴더에서 푼다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_git_파일의_상대_경로는_그_체크아웃에서_푼다"]
+expect = "red"
+expect_output = ["test_git_파일의_상대_경로는_그_체크아웃에서_푼다"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return str((Path(checkout) / target).resolve())'''
+new = '''    return str(Path(target).resolve())'''
+
+[[mutation]]
+name = "훅이 남은 묶음을 표의 절대 경로로 찾게 한다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_남은_묶음은_절대_경로가_아니라_표_파일_이름으로_찾게_한다"]
+expect = "red"
+expect_output = ["test_남은_묶음은_절대_경로가_아니라_표_파일_이름으로_찾게_한다"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    names = ", ".join(f"`{_file_name(run.table)}`" for run in running)'''
+new = '''    names = ", ".join(f"`{run.table}`" for run in running)'''
+
+[[mutation]]
+name = "훅이 표 파일 이름을 뗄 때 윈도 구분자를 보지 않는다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_남은_묶음은_절대_경로가_아니라_표_파일_이름으로_찾게_한다"]
+expect = "red"
+expect_output = ["test_남은_묶음은_절대_경로가_아니라_표_파일_이름으로_찾게_한다"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return path.replace("\\", "/").rsplit("/", 1)[-1]'''
+new = '''    return path.rsplit("/", 1)[-1]'''
