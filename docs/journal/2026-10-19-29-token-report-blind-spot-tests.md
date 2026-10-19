@@ -71,8 +71,49 @@ PR 직전 리뷰에 밀 주장: 독스트링의 "윈도는 경로의 마지막 �
    셀프 리뷰의 닫힌 주장 항목이 두 축에서 잡았고, `code-review` 6단계의 "반례를 일반 조항으로" 지침대로 고쳤다. 이미 있는
    층이 커밋 전에 잡았다.
 
+## 인계(커밋 뒤)
+
+`ab351cf0`을 커밋했다(pre-commit 모두 초록, pytest 563.7초, web-verify 550.0초). 세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤
+경계에 와서 PR과 병합은 새 세션에 넘긴다. 이 세션의 지금 제목은 `chore/token-report-blind-spot-tests`다.
+
+```
+다음 작업: 토큰 보고서 `main_checkout_of`의 못 보는 것과 gitdir 줄 끝 공백·점 거절을 담은 커밋의 PR을 열고 반영·병합한다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리다. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: PR #307의 claude-review 3회차 Minor를 반영한다. tools/token_report.py의 main_checkout_of 독스트링이 못 보는 것으로 적은 두 입력(하위 폴더에서 부르면 OSError, GIT_DIR을 두어도 결과가 같음)을 tests/tools/test_token_report.py에 시험으로 고정하고, gitdir 줄 끝 공백이 지나가는 것을 독스트링의 못 보는 것에 적고 시험으로 고정한다. 독스트링의 사건 경위는 한 줄 참조로 줄인다
+브랜치: chore/token-report-blind-spot-tests
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 이 일지의 "줄 끝 공백은 지나가지 않고 틀린 답을 냈다"와 "셀프 리뷰" 절(요청과 달리 거절을 넣은 까닭, PR 직전 리뷰에 밀 주장)
+이어받을 상태: 인계: 커밋 뒤. 커밋 하나를 했고 푸시와 PR은 아직이다. 다음은 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)와 PR 열기, 봇 회차, 병합이다. 일지 파일은 docs/journal/2026-10-19-29-token-report-blind-spot-tests.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main(깨끗하지 않다, `.claude/skills/tdd/SKILL.md`가 바뀌어 있다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 2026-10-20 08:00 작업 실행은 주 체크아웃을 당긴 뒤여야 고친 파일로 돈다. 그 실행의 LastTaskResult와 주 체크아웃의 .scratch/token-report/scheduler.log를 본다
+이번 요청 범위: PR과 병합까지
+```
+
 ## 다음
 
 - 주 체크아웃이 아직 `5f38d61c`라(위 선행 조건) 이 PR을 병합해도 10/20 08:00 실행은 git을 띄우는 옛 판으로 돈다. 주
   체크아웃의 `.claude/skills/tdd/SKILL.md` 변경을 맡은 사람이나 세션이 그것을 정리한 뒤 주 체크아웃 세션에서
   `/tidy-checkouts`로 당긴다. 그 뒤의 실행에서 `LastTaskResult`와 주 체크아웃의 `.scratch/token-report/scheduler.log`를 본다.
+
+open-session을 부른다 2026-10-19T11:10:44Z
+
+## 이어받은 세션: PR 직전 리뷰와 PR
+
+> 사용자: (지시문 그대로. 이 일지의 머리 인용과 같다)
+
+- **선행 조건.** `tidy-checkouts`의 1·2에서 루트는 main이고 깨끗했으며 이미 `origin/main`(`5e7fa88d`)과 같았다. 누군가
+  `tdd/SKILL.md` 변경을 정리하고 당긴 뒤다. 그래서 PR #307의 고침은 루트에 들어와 있고, 10/20 08:00 실행은 git을 띄우지 않는
+  판으로 돈다. 이 PR의 거절 한 줄은 병합 뒤 루트를 다시 당겨야 들어간다. `judge`는 지울 후보를 내지 않았다(쥔 프로세스와
+  병합된 PR 없음으로 남김, 분리 HEAD 둘과 머리가 다른 `skill-check-and-retro-section`은 사람에게 넘김).
+- **합치기.** `origin/main`(#301)을 합쳤다. 겹치는 파일이 없다.
+- **PR 직전 리뷰.** `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 돌렸다.
+  - `/security-review`: 지적 없음. 더한 것은 입력을 거절하는 검사뿐이라 돌려줄 수 있는 경로가 줄기만 한다.
+  - `bug-perf-review`: 유효 0, 오탐 1. 서브에이전트가 실제 `git worktree add`로 만든 워크트리의 `.git` 꼬리를 바꿔 git
+    2.32와 맞댔다(커밋하지 않은 스크래치 프로브). 없음·`\n`·`\r\n`·`\n\n`은 둘 다 받고, 공백·점·공백+개행·탭·NBSP는 둘 다
+    거절했다(git 128). 셀프 리뷰가 밀라고 넘긴 두 주장이 섰다. 갈린 꼬리는 `/.` 하나로 git은 받고 이 함수는 거절한다. git이
+    쓰는 `.git`에 나오지 않는 모양이고 틀린 부모가 아니라 `OSError`로 실패해 오탐으로 두었다.
+
+## 다음(이어받은 세션)
+
+- 이 PR을 병합한 뒤 주 체크아웃 세션에서 `/tidy-checkouts`로 루트를 당긴다. 10/20 08:00 실행의 `LastTaskResult`와 주
+  체크아웃의 `.scratch/token-report/scheduler.log`를 본다.
