@@ -1167,6 +1167,211 @@ def test_PR이_닫힌_형제_워크트리는_커밋하지_않은_변경만_견�
     assert "- PR #5: README.md\n" in out
 
 
+def _gh_가_연다(monkeypatch: pytest.MonkeyPatch, pulls: dict[int, str]) -> None:
+    """원격을 github.com 으로 보이게 하고, gh 가 `pulls` 를 열린 PR 로 읽게 한다."""
+
+    def 깃허브다(url: str) -> tuple[str, str]:
+        return ("o", "r")
+
+    def gh_가_읽는다(root: Path, owner: str, repo: str) -> str:
+        return "".join(f"{number} {sha}\n" for number, sha in pulls.items())
+
+    monkeypatch.setattr(sibling_overlap, "github_repo", 깃허브다)
+    monkeypatch.setattr(sibling_overlap, "gh_listing", gh_가_읽는다)
+
+
+def test_head_ref가_아직_없는_열린_PR은_head_커밋을_받아_대조한다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """대기열 288: PR 을 연 지 몇 분 안에는 gh 가 열린 PR 을 읽어도 `refs/pull/<N>/head` 가 원격에
+    아직 없어, 그 ref 를 받는 fetch 가 128로 끝나 대조 전체가 2로 멈췄다. head 커밋은 브랜치에
+    있다."""
+    _, work, pusher = 저장소
+    _git(pusher, "checkout", "-q", "-b", "pr7", "origin/main")
+    pr7 = _커밋한다(pusher, {"docs/adr/0002-pr.md": "그쪽\n"}, "PR 7")
+    _git(pusher, "push", "-q", "origin", "pr7")  # 브랜치만 있고 refs/pull/7/head 는 없다
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    _gh_가_연다(monkeypatch, {7: pr7})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "PR #7 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr.md" in out
+    assert "받지 못해 대조에서 뺀" not in out
+
+
+def test_head_커밋을_받지_못한_열린_PR만_형제에서_빼고_알린다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """head 커밋이 원격 어디에서도 닿지 않으면 그 PR 만 빼고 나머지 형제는 그대로 대조한다."""
+    _, work, pusher = 저장소
+    _git(pusher, "checkout", "-q", "-b", "pr8", "origin/main")
+    pr8 = _커밋한다(pusher, {"docs/adr/0002-pr8.md": "밀지 않았다\n"}, "PR 8")
+    _git(pusher, "checkout", "-q", "main")
+    pr5 = _PR을_민다(pusher, 5, {"docs/adr/0002-pr5.md": "그쪽\n"})
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    _gh_가_연다(monkeypatch, {5: pr5, 8: pr8})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "PR #5 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr5.md" in out
+    assert "PR #8 ADR" not in out and f"PR #8 {pr8[:7]}" not in out
+    assert "받지 못해 대조에서 뺀 열린 PR: #8(" in out
+
+
+def test_head_커밋을_받지_못한_열린_PR만_있으면_그_PR과_겹쳐도_0으로_끝난다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """못 보는 것: 뺀 PR 과의 번호 겹침은 보지 않아, 남은 형제로 0으로 끝난다."""
+    _, work, pusher = 저장소
+    _git(pusher, "checkout", "-q", "-b", "pr8", "origin/main")
+    pr8 = _커밋한다(pusher, {"docs/adr/0002-pr8.md": "밀지 않았다\n"}, "PR 8")
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    _gh_가_연다(monkeypatch, {8: pr8})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "받지 못해 대조에서 뺀 열린 PR: #8(" in out
+
+
+def test_head_ref가_gh가_읽은_head보다_옛것인_열린_PR은_head_커밋을_받아_대조한다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """원격의 `refs/pull/<N>/head` 가 아직 브랜치의 앞 커밋에 머물면 그 ref 로는 head 가 오지
+    않는다."""
+    _, work, pusher = 저장소
+    _PR을_민다(pusher, 9, {"docs/before.md": "앞 커밋\n"})
+    _git(pusher, "checkout", "-q", "pr9")
+    pr9 = _커밋한다(pusher, {"docs/adr/0002-pr9.md": "그쪽\n"}, "PR 9 의 둘째 커밋")
+    _git(pusher, "push", "-q", "origin", "pr9")  # refs/pull/9/head 는 앞 커밋에 머문다
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n"})
+    _gh_가_연다(monkeypatch, {9: pr9})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "PR #9 ADR 0002: 이 브랜치 0002-ours.md, 그쪽 0002-pr9.md" in out
+    assert "받지 못해 대조에서 뺀" not in out
+
+
+def test_head_커밋을_sha로_받는_fetch가_시간을_넘기면_대조_전체가_2로_멈춘다(
+    저장소: tuple[Path, Path, Path],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """못 보는 것: 시간을 넘긴 fetch 는 받지 못한 것으로 세지 않는다."""
+    _, work, pusher = 저장소
+    _git(pusher, "checkout", "-q", "-b", "pr8", "origin/main")
+    pr8 = _커밋한다(pusher, {"docs/adr/0002-pr8.md": "밀지 않았다\n"}, "PR 8")
+    _gh_가_연다(monkeypatch, {8: pr8})
+    original = subprocess.run
+
+    def sha_받기가_멈춘다(
+        command: list[str],
+        *,
+        cwd: Path,
+        capture_output: bool,
+        text: bool,
+        encoding: str,
+        errors: str,
+        timeout: float,
+        check: bool,
+    ) -> subprocess.CompletedProcess[str]:
+        """도구의 `subprocess.run` 호출 모양만 받는다. 그 밖의 호출이 오면 TypeError 로 드러난다."""
+        if "fetch" in command and command[-1] == pr8:
+            raise subprocess.TimeoutExpired(command, timeout)
+        return original(
+            command,
+            cwd=cwd,
+            capture_output=capture_output,
+            text=text,
+            encoding=encoding,
+            errors=errors,
+            timeout=timeout,
+            check=check,
+        )
+
+    monkeypatch.setattr(subprocess, "run", sha_받기가_멈춘다)
+
+    code = main([str(work)])
+
+    captured = capsys.readouterr()
+    assert code == 2, captured.out
+    assert "git fetch 을 띄우지 못했거나" in captured.err
+
+
+def test_main을_합치는_중인_형제_워크트리에서_main과_같은_파일은_함께_고친_파일이_아니다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 294: main 을 합치고 커밋하기 전인 형제의 작업 트리에는 main 의 변경이 보여, 디스크
+    사본이 origin/main 과 글자가 같은 파일을 그 형제가 함께 고친 파일로 냈다.
+
+    미추적 파일은 main 과 글자가 같아도 센다(못 보는 것).
+    """
+    _, work, pusher = 저장소
+    sibling = work.parent / "merging"
+    _git(work, "worktree", "add", "-q", "-b", "merging", str(sibling), "origin/main")
+    _커밋한다(sibling, {"CLAUDE.md": "형제 지침\n"}, "형제의 일")
+    _커밋한다(pusher, {"README.md": "main 이 고쳤다\n", "docs/new.md": "main 의 새 파일\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(sibling, "merge", "-q", "--no-commit", "--no-ff", "origin/main")
+    # 합친 뒤 main 이 더한 파일을 형제가 손으로 옮겨 두었다(미추적)
+    _커밋한다(pusher, {"docs/later.md": "main 이 뒤에 더했다\n"}, "main 이 더 나아간다")
+    _git(pusher, "push", "-q", "origin", "main")
+    _쓴다(sibling, {"docs/later.md": "main 이 뒤에 더했다\n"})
+    _쓴다(
+        work,
+        {
+            "README.md": "이쪽\n",
+            "CLAUDE.md": "이쪽 지침\n",
+            "docs/new.md": "이쪽 새 파일\n",
+            "docs/later.md": "이쪽\n",
+        },
+    )
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert f"- 워크트리 {sibling.resolve()}: CLAUDE.md, docs/later.md\n" in out
+
+
+def test_PR이_닫힌_형제_워크트리가_main을_합치는_중이면_main과_같은_파일은_함께_고친_파일이_아니다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 294 의 가름은 PR 이 닫힌 워크트리의 갈래(닫힌 head 뒤에 커밋하지 않은 변경)에도
+    쓴다."""
+    _, work, pusher = 저장소
+    closed = _워크트리의_PR을_민다(work, "closed", 4, {"CLAUDE.md": "병합\n"})
+    _커밋한다(pusher, {"README.md": "main 이 고쳤다\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(closed, "merge", "-q", "--no-commit", "--no-ff", "origin/main")
+    _쓴다(closed, {"docs/dirty.md": "커밋하지 않았다\n"})
+    _쓴다(work, {"README.md": "이쪽\n", "docs/dirty.md": "이쪽\n"})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert f"- 워크트리 {closed.resolve()}(PR #4 닫힘): docs/dirty.md\n" in out
+
+
 def test_PR이_닫힌_형제_워크트리의_번호는_접지_않고_대조한다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
