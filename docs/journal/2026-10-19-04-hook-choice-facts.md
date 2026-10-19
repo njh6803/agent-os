@@ -146,6 +146,15 @@ pre-commit의 첫 커밋 시도는 pyright 한 건에 막혔다. 셀프 리뷰�
 넘기지 않고 이 세션에서 이었다. 계기가 가리킨 이 워크트리의 스킬 사본은 #293 앞이라, 그 전에 origin/main의 판을 꺼내 곁 세션
 판정(`get_session`의 `self`에 `parentSessionId`가 없었다)과 잠금 풀기 단계를 확인해 두었다.
 
+둘째 커밋 `16f88988`(PR 직전 리뷰 반영과 회고, 아래 "PR 직전" 끝의 네 시도) 뒤에 인계 계기가 왔다(세션 컨텍스트 286,194
+토큰, 경계 `커밋 뒤`). 인계하지 않는 다섯에 들지 않아 넘겼다. 이 세션의 제목은 `chore/hook-choice-facts`였고 `(인계함)`을
+붙였다. 이 문단과 아래 열기 줄은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+open-session을 부른다 2026-10-19T02:27:47Z
+
+인계로 연 세션은 제목을 `chore/hook-choice-facts`로 붙이고, `git worktree list`에서 이 워크트리를 찾아 `EnterWorktree(path)`로
+들어왔다. 넘긴 세션이 잠금을 풀어 두어 거부가 없었다. origin/main은 `ebd09fbb` 그대로라 다시 합칠 것이 없었다.
+
 ## PR 직전
 
 origin/main(`ebd09fbb`, #293·#294)을 합쳤다. 충돌은 없었고, 합친 뒤 `sibling_overlap`은 번호 겹침 없음이었다. 새 형제
