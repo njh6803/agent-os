@@ -1,7 +1,9 @@
-"""tools/morning_collect.py 의 순수 함수 검증. 장부 호출과 기록 줄은 시험마다 작게 지어 넣는다.
+"""tools/morning_collect.py 와 그 바깥 명령 층 tools/morning_sources.py 의 순수 함수 검증. 장부
+호출과 기록 줄은 시험마다 작게 지어 넣는다.
 
 gh·git·tasklist 를 부르는 길은 넘기는 인자(PR 목록의 한도)만 시험하고, 출력을 받는 길은 `collect` 를
-실제로 돌려 확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사).
+실제로 돌려 확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사. 바깥 명령 층을 나눈 뒤는
+일지 2026-10-20-33 의 검사).
 """
 
 from __future__ import annotations
@@ -14,9 +16,7 @@ import pytest
 from tools.hook_report import BLOCK, NOTICE, Firing
 from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
-    PR_LIMIT,
     Collected,
-    GhPr,
     HookRow,
     OffBranch,
     TicketRow,
@@ -27,9 +27,9 @@ from tools.morning_collect import (
     ago_text,
     branch_rows,
     bucket_of,
-    ci_state,
     combo_costs,
     command_rows,
+    concurrency_buckets,
     cost_by_concurrency,
     cost_rows,
     day_rows,
@@ -37,16 +37,13 @@ from tools.morning_collect import (
     handoff_tickets,
     hook_legend,
     hook_rows,
-    journal_next,
     kept,
     kind_rows,
     label_of,
+    load_line,
     merged_got,
-    merged_prs,
     merged_unknown,
     off_cells,
-    open_prs,
-    open_state,
     over_cap,
     queue_part,
     queue_whats,
@@ -56,7 +53,6 @@ from tools.morning_collect import (
     size_groups,
     start_rows,
     sweep_kind,
-    tasklist_load,
     ticket_cells,
     ticket_start,
     timing,
@@ -64,10 +60,20 @@ from tools.morning_collect import (
     top_combo,
     without_merged,
     work_of,
-    worktree_entries,
     worktree_pr,
 )
-from tools.morning_report import UNCOLLECTED, Metric, Section, Table, Value, pr_kind
+from tools.morning_report import UNCOLLECTED, Metric, QueueRow, Section, Table, Value, pr_kind
+from tools.morning_sources import (
+    PR_LIMIT,
+    GhPr,
+    ci_state,
+    journal_next,
+    merged_prs,
+    open_prs,
+    open_state,
+    tasklist_load,
+    worktree_entries,
+)
 from tools.token_report import Call, Json, Period, Start, StartParts
 
 KST = timezone(timedelta(hours=9))
@@ -166,6 +172,39 @@ def test_비용을_호출이_난_분의_동시_세션_수_구간으로_나눈다
     assert cost is not None
     shares = cost_by_concurrency(calls, active, date(2026, 10, 13), date(2026, 10, 19), KST)
     assert shares == {"4~6": cost, "1~3": cost}
+
+
+def test_병합_PR은_메인_세션_호출이_난_분의_평균_동시_세션_구간에_든다() -> None:
+    # 메인 세션 호출이 동시 세션 4와 6인 분에 났으면 평균 5라 4~6에 든다. 돈 세션이 없는 분은 1로
+    # 세고, 메인 세션 호출이 없는 PR(서브에이전트 호출만 있다)은 뺀다. 비용은 서브에이전트까지 센
+    # 브랜치 전체다
+    t1, t2, quiet = "2026-10-19T01:00:00Z", "2026-10-19T01:10:00Z", "2026-10-19T02:00:00Z"
+    by_branch = {
+        "chore/x": [호출(t1), 호출(t2), 호출(t2, agent="a1")],
+        "chore/y": [호출(t1, "s9", agent="a2", branch="chore/y")],
+        "chore/z": [호출(quiet, "s5", branch="chore/z")],
+    }
+    stamps = {분(t1): {"s1", "b", "c", "d"}, 분(t2): {"s1", "b", "c", "d", "e", "f"}}
+    created = datetime(2026, 10, 19, 0, tzinfo=UTC)
+    merged = datetime(2026, 10, 19, 3, tzinfo=UTC)
+    prs = [PR(b, created, merged) for b in ("chore/x", "chore/y", "chore/z")]
+
+    def cost_of(branch: str) -> float:
+        return sum(c.cost() or 0.0 for c in by_branch[branch])
+
+    assert concurrency_buckets(prs, by_branch, stamps) == {
+        "4~6": [(cost_of("chore/x"), 3.0)],
+        "1~3": [(cost_of("chore/z"), 3.0)],
+    }
+
+
+def test_부하_줄은_프로세스를_읽지_못해도_워크트리_수를_적고_읽은_값만_남긴다() -> None:
+    text, got = load_line((3, 2048), 5)
+    assert text == "claude 프로세스 3개 · 메모리 2,048 MB · 워크트리 5개(주 체크아웃을 빼고)"
+    assert list(got.values) == ["load:processes", "load:memory_mb", "load:worktrees"]
+    text, got = load_line(None, 0)
+    assert text == f"프로세스 {UNCOLLECTED} · 워크트리 0개(주 체크아웃을 빼고)"
+    assert list(got.values) == ["load:worktrees"]
 
 
 def test_명령의_이름표는_알아볼_수_있는_꼴만_남긴다() -> None:
@@ -567,6 +606,22 @@ def test_절마다_모은_것을_하나로_합친다() -> None:
     got = merged_got([a, b])
     assert got.values == {"x": Value("엑스", 1.0, "회")}
     assert (got.refs, got.branches) == ({1, 2}, {"chore/x": "제목"})
+    # 새것에 합치고 넘겨받은 것은 바꾸지 않는다
+    assert (a.refs, b.refs, a.branches) == ({1}, {2}, {})
+
+
+def test_조각이_모은_것을_더하면_자기만_채우고_더한_조각은_그대로다() -> None:
+    mine = Collected()
+    mine.value("x", "엑스", 1.0, "회")
+    piece = Collected()
+    piece.value("y", "와이", 2.0, "개")
+    piece.refs.add(7)
+    row = QueueRow(3, 2, human=False, what="무엇")
+    piece.queue[3] = row
+    mine.add(piece)
+    assert list(mine.values) == ["x", "y"]
+    assert (mine.refs, mine.queue) == ({7}, {3: row})
+    assert (list(piece.values), piece.refs) == (["y"], {7})
 
 
 def test_걸린_시간은_10분_30초를_넘은_것을_합계에서_빼고_따로_센다() -> None:

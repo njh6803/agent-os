@@ -6,9 +6,18 @@
 장부(`token_report`의 `.scratch/token-report/ledger/`), 이 저장소의 세션
 기록(`~/.claude/projects/`), `origin/main`의 대기열과 티켓과 일지, `gh`의 PR·CI,
 `git worktree list`, `tasklist`, 그리고 `--reports` 폴더에서 그날 앞의 가장 늦은 메모(제안이 고른
-확인할 수치의 열쇠, `morning_report.latest_checks`)다. 비용·장부·명령 이름은 `token_report`, 훅의
-발동은 `hook_report`, 대기열 행은 `queue_open_rows`, 레벨 스윕의 기간·갈래·표본 수는
-`model_sweep`·`model_sweep_judge`를 그대로 불러 쓴다.
+확인할 수치의 열쇠, `morning_report.latest_checks`)다. 이 도구가 부르는 gh·git·tasklist는
+`morning_sources`에 있고, 다른 도구를 불러 쓰는 읽기는 그 도구의 명령을 그대로 쓴다(훅의 들인 날과
+주 체크아웃을 찾는 git은 `hook_report`의 것이라 시간 제한과 실패 갈래도 그 도구의 것이다).
+비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 행은 `queue_open_rows`, 레벨
+스윕의 기간·갈래·표본 수는 `model_sweep`·`model_sweep_judge`를 그대로 불러 쓴다.
+
+짜임. 읽기와 짓기를 가른다. 파일과 명령을 읽는 것은 `main`(앞 날의 메모), `collect`, 그리고 그
+둘이 부르는 읽기 함수다. 읽기 함수의 예는 `morning_sources`, `token_report`·`hook_report`의 읽기,
+`scan_transcripts`, `_handoff_from`, `_last_record`, `_gather_*`다. `_gather_*`는 `collect`를
+줄이려고 뗀 읽기로, 여러 번 읽거나 읽은 것으로 다음에 읽을 것을 고른다. 절을 짓는
+함수(`_*_section`과 그 조각 `_*_piece`)는 파일도 명령도 읽지 않고 받은 값으로만 짓는다. 절마다
+확인할 수치와 이름을 지을 것을 `Collected`에 모아 `Part`로 돌려준다.
 
 재는 것(날짜는 이 기계의 지역 날짜, 보고하는 날 `--day`는 기본 어제).
 - 핵심 지표: 그날의 7일 앞부터 그날까지 여덟 날의 환산 비용, 읽지 못한 기록 줄, PR당 비용, 평균 동시
@@ -73,8 +82,9 @@
   기다림)는 모른다. 주 체크아웃에서 도는 세션은 세지 않는다.
 - 열린 PR, 대기열, 워크트리, 프로세스는 모으는 순간의 값이라, 지난 날의 보고를 다시 만들면 오늘
   값이 든다.
-- `gh pr list`·`gh pr view`는 클라우드 세션에서 GraphQL이 막혀 실패한다(`.claude/rules/tools.md`).
-  `gh run list`는 클라우드에서 본 기록이 없다. gh가 실패하면 그 표와 줄을 `(수집 안 됨)`으로 적고
+- 클라우드 세션에서 `gh pr list`는 GraphQL이 막혀 실패했고, `gh pr view`는 요청한 필드에 따라
+  실패하기도 되기도 했다(`.claude/rules/tools.md`). 이 도구가 `gh pr view`로 요청하는 필드와 `gh run
+  list`는 클라우드에서 본 기록이 없다. gh가 실패하면 그 표와 줄을 `(수집 안 됨)`으로 적고
   0으로 끝난다. 이 갈래는 코드를 읽은 것이고 클라우드에서 돌려 보지는 않았다.
 - `tasklist`가 없는 기계(윈도 밖)에서는 프로세스 수가 수집 안 됨이다.
 
@@ -88,12 +98,10 @@ from __future__ import annotations
 
 import argparse
 import ast
-import csv
 import io
 import json
 import re
 import statistics
-import subprocess
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
@@ -112,8 +120,28 @@ from tools.morning_report import (
     Section,
     Table,
     Value,
+    json_list,
+    json_obj,
+    json_str,
+    json_time,
     latest_checks,
     pr_kind,
+)
+from tools.morning_sources import (
+    FAILED,
+    GhPr,
+    OpenPr,
+    PrView,
+    branch_subject,
+    ci_runs,
+    latest_journal,
+    main_text,
+    merged_prs,
+    open_prs,
+    pr_view,
+    processes,
+    ticket_paths,
+    worktree_list,
 )
 from tools.token_report import Call, Json
 
@@ -127,8 +155,6 @@ HOOK_HALF = 14
 TOO_EARLY = "판단 이름"  # 명세가 정한 판정 낱말. "판단하기 이르다"의 명사형이다
 TICKET_DAYS = 28
 ACTIVE_H = 24
-CALL_TIMEOUT = 60
-PR_LIMIT = 1000  # `gh pr list`의 기본 한도는 30이라 넘으면 조용히 잘린다
 TOP = 5
 TOP_LARGE = 3
 TOP_COMMANDS = 10
@@ -144,11 +170,7 @@ HANDOFF_HOOK = "hook_handoff.py"  # 단계 경계에서 인계를 지시하는 �
 UNKNOWN_LABEL = "(알 수 없음)"
 MERGED_FAILED = f"- 병합 PR {UNCOLLECTED}(gh 실패)"
 MERGED_METRICS = frozenset({"per_pr", "per_hour", "prs"})  # 병합 PR에 기대는 핵심 지표
-REVIEW = {
-    "APPROVED": "리뷰 승인",
-    "CHANGES_REQUESTED": "리뷰 변경 요청",
-    "REVIEW_REQUIRED": "리뷰 대기",
-}
+QUEUE_PATH = queue_open_rows.QUEUE.as_posix()
 SCRIPT = re.compile(r"(?:^|[/\\])([a-z0-9_]+\.(?:py|ps1|sh|ts|mjs))$")
 RUNNERS = frozenset({"uv", "uvx", "pnpm", "npx", "node", "pwsh", "powershell", "bash", "sh"})
 RUNNERS_PY = frozenset({"python", "python3"})
@@ -192,35 +214,7 @@ CHECKBOX = re.compile(r"^\s*[-*] \[[ xX]\]", re.MULTILINE)
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 TRIGGER = re.compile(r"^\w+ 훅(?:\([^)]*\))?\.\s*")
 SENTENCE_END = re.compile(r"(?<=다)\.(?:\s|$)")
-FAILED = frozenset(
-    {"FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "ERROR", "STARTUP_FAILURE"}
-)
-PASSED = frozenset({"SUCCESS", "SKIPPED", "NEUTRAL"})
 CHECKOUT = Path(__file__).resolve().parent.parent
-
-
-def _obj(v: Json) -> dict[str, Json]:
-    return v if isinstance(v, dict) else {}
-
-
-def _list(v: Json) -> list[Json]:
-    return v if isinstance(v, list) else []
-
-
-def _str(v: Json) -> str:
-    return v if isinstance(v, str) else ""
-
-
-def _int(v: Json) -> int | None:
-    return v if isinstance(v, int) and not isinstance(v, bool) else None
-
-
-def _time(v: Json) -> datetime | None:
-    try:
-        t = datetime.fromisoformat(_str(v))
-    except ValueError:
-        return None
-    return t if t.tzinfo is not None else t.replace(tzinfo=UTC)
 
 
 def _minute(t: datetime) -> int:
@@ -271,7 +265,7 @@ class DayRow:
 def _main_stamps(calls: Iterable[Call]) -> dict[str, list[int]]:
     stamps: dict[str, list[int]] = defaultdict(list)
     for c in calls:
-        t = _time(c.at)
+        t = json_time(c.at)
         if c.agent is None and t is not None:
             stamps[c.session].append(_minute(t))
     return stamps
@@ -294,7 +288,7 @@ def day_rows(
     cost: dict[date, float] = {}
     mains: dict[date, set[str]] = defaultdict(set)
     for c in calls:
-        t = _time(c.at)
+        t = json_time(c.at)
         if t is None:
             continue
         d = t.astimezone(tz).date()
@@ -320,6 +314,36 @@ def day_rows(
     return rows
 
 
+def concurrency_buckets(
+    prs: Iterable[GhPr], by_branch: Mapping[str, Sequence[Call]], stamps: Mapping[int, set[str]]
+) -> dict[str, list[tuple[float, float]]]:
+    """병합 PR을 그 PR의 메인 세션 호출이 돌던 분의 평균 동시 세션 수(`stamps`는 분마다 돌던
+    세션)로 버킷에 나눈다. 돈 세션이 없는 분(`stamps`에 없는 분)은 1로 센다. 버킷마다 (그 브랜치의
+    장부 전체 비용, PR을 연 뒤 병합까지 시간)이고, 메인 세션 호출이 없는 PR은 뺀다."""
+    buckets: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for p in prs:
+        calls = by_branch.get(p.branch, [])
+        conc = [
+            len(stamps.get(_minute(t), ())) or 1
+            for c in calls
+            if c.agent is None and (t := json_time(c.at)) is not None
+        ]
+        if conc and p.merged is not None:
+            cost = sum(c.cost() or 0.0 for c in calls)
+            lead = (p.merged - p.created).total_seconds() / 3600
+            buckets[bucket_of(round(statistics.fmean(conc)))].append((cost, lead))
+    return dict(buckets)
+
+
+def _merged_kinds(merged: Iterable[GhPr], tz: timezone) -> dict[date, Counter[str]]:
+    """병합한 날마다 PR 종류(`pr_kind`)의 수."""
+    kinds: dict[date, Counter[str]] = defaultdict(Counter)
+    for p in merged:
+        if p.merged is not None:
+            kinds[p.merged.astimezone(tz).date()][pr_kind(p.title)] += 1
+    return dict(kinds)
+
+
 def cost_by_concurrency(
     calls: Iterable[Call], active: Mapping[int, set[str]], first: date, last: date, tz: timezone
 ) -> dict[str, float]:
@@ -328,7 +352,7 @@ def cost_by_concurrency(
     분(메인 세션이 `SPAN_GAP_MIN`분 넘게 쉬는 동안 돈 서브에이전트)은 1로 센다."""
     out: dict[str, float] = defaultdict(float)
     for c in calls:
-        t = _time(c.at)
+        t = json_time(c.at)
         if t is None or not first <= t.astimezone(tz).date() <= last:
             continue
         out[bucket_of(len(active.get(_minute(t), ())) or 1)] += c.cost() or 0.0
@@ -384,57 +408,11 @@ def label_of(command: str) -> str:
     return m.group(1) if m else base
 
 
-def ci_state(checks: Sequence[Json]) -> str:
-    """열린 PR의 검사 상태. 실패가 하나라도 있으면 실패, 끝나지 않은 것이 있으면 도는 중이다."""
-    results: list[str] = []
-    running = False
-    for c in checks:
-        o = _obj(c)
-        result = (_str(o.get("conclusion")) or _str(o.get("state"))).upper()
-        status = _str(o.get("status")).upper()
-        if status and status != "COMPLETED" and not result:
-            running = True
-        elif result in ("PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS"):
-            running = True
-        results.append(result)
-    if not checks:
-        return "CI 없음"
-    if any(r in FAILED for r in results):
-        return "CI 실패"
-    if running or not all(r in PASSED for r in results):
-        return "CI 도는 중"
-    return "CI 통과"
-
-
-def open_state(pr: Json) -> str:
-    """열린 PR의 상태. 초안, 리뷰 결정(`reviewDecision`), CI를 ` · `로 잇는다. 리뷰 결정이 비었으면
-    (리뷰를 요구하지 않는 저장소) 그 칸을 뺀다."""
-    o = _obj(pr)
-    parts = ["초안"] if o.get("isDraft") is True else []
-    review = REVIEW.get(_str(o.get("reviewDecision")))
-    if review is not None:
-        parts.append(review)
-    return " · ".join([*parts, ci_state(_list(o.get("statusCheckRollup")))])
-
-
 def review_rounds(opened: datetime, commits: Iterable[tuple[datetime, str]]) -> int:
     """PR을 연 뒤 올린 커밋 수. 리뷰를 받고 고친 횟수의 대리값이다. `commits`는 (커밋 시각,
     머리줄)이고, 머리줄이 `Merge `로 시작하는 커밋(main을 합친 것)은 고친 것이 아니라 세지
     않는다."""
     return sum(1 for t, headline in commits if t > opened and not headline.startswith("Merge "))
-
-
-def tasklist_load(text: str) -> tuple[int, int]:
-    """`tasklist /FO CSV /NH`의 출력에서 프로세스 수와 메모리 합(MB)."""
-    count = 0
-    kb = 0
-    for row in csv.reader(io.StringIO(text)):
-        if len(row) < 5 or not row[0].lower().endswith(".exe"):
-            continue
-        digits = re.sub(r"\D", "", row[4])
-        count += 1
-        kb += int(digits) if digits else 0
-    return count, kb // 1024
 
 
 def queue_whats(text: str) -> dict[int, str]:
@@ -534,6 +512,29 @@ class TicketRow:
     active_h: float
     sessions: int
     handoffs: int
+
+
+def _ticket_row(
+    number: int,
+    ticket: str,
+    text: str | None,
+    calls: Sequence[Call],
+    handoff: Mapping[str, bool],
+) -> TicketRow:
+    """병합된 티켓 PR 하나의 줄. `text`는 `origin/main`의 티켓 파일 글이고 찾지 못했으면 None이다.
+    `calls`는 그 브랜치의 장부 전체 호출이다."""
+    mains = {c.session for c in calls if c.agent is None}
+    return TicketRow(
+        number,
+        ticket,
+        found=text is not None,
+        criteria=len(CHECKBOX.findall(text)) if text else 0,
+        chars=len(text) if text else 0,
+        cost=sum(c.cost() or 0.0 for c in calls),
+        active_h=len(active_minutes(_main_stamps(calls))) / 60,
+        sessions=len(mains),
+        handoffs=sum(1 for s in mains if handoff.get(s)),
+    )
 
 
 def size_groups(rows: Sequence[TicketRow]) -> list[tuple[str, list[TicketRow]]]:
@@ -710,21 +711,21 @@ def tool_timings(
     seen: set[str] = set()
     out: list[tuple[str, float]] = []
     for rec in records:
-        at = _time(rec.get("timestamp"))
+        at = json_time(rec.get("timestamp"))
         if at is None:
             continue
-        for item in _list(_obj(rec.get("message")).get("content")):
-            o = _obj(item)
+        for item in json_list(json_obj(rec.get("message")).get("content")):
+            o = json_obj(item)
             if o.get("type") == "tool_use":
-                uid = _str(o.get("id"))
-                name = _str(o.get("name"))
-                inp = _obj(o.get("input"))
+                uid = json_str(o.get("id"))
+                name = json_str(o.get("name"))
+                inp = json_obj(o.get("input"))
                 label = _shell_label(name, inp) if name in SHELLS else name
                 skip = inp.get("run_in_background") is True or name in SKIPPED_TOOLS
                 if uid:
                     uses[uid] = (at, label, skip)
             elif o.get("type") == "tool_result":
-                uid = _str(o.get("tool_use_id"))
+                uid = json_str(o.get("tool_use_id"))
                 if uid in seen or uid not in uses:
                     continue
                 seen.add(uid)
@@ -756,7 +757,7 @@ def work_of(
     handoff: Mapping[str, bool],
 ) -> Work:
     """병합된 PR 하나의 비용과 시간. `calls`는 그 브랜치의 장부 전체 호출이다."""
-    timed = [(t, c) for c in calls if (t := _time(c.at)) is not None]
+    timed = [(t, c) for c in calls if (t := json_time(c.at)) is not None]
     cost = sum(c.cost() or 0.0 for _, c in timed)
     after = sum(c.cost() or 0.0 for t, c in timed if t >= opened)
     sessions = {c.session for _, c in timed if c.agent is None}
@@ -908,36 +909,6 @@ def shown_path(path: str, key: str) -> str:
     return tail if tail.lower() == key else key
 
 
-def worktree_entries(porcelain: str) -> list[tuple[str, str | None]]:
-    """`git worktree list --porcelain`의 (경로, 브랜치). 첫 항목(주 체크아웃)은 뺀다."""
-    entries: list[tuple[str, str | None]] = []
-    path: str | None = None
-    branch: str | None = None
-    for line in [*porcelain.splitlines(), ""]:
-        if line.startswith("worktree "):
-            path, branch = line.removeprefix("worktree "), None
-        elif line.startswith("branch refs/heads/"):
-            branch = line.removeprefix("branch refs/heads/")
-        elif not line and path is not None:
-            entries.append((path, branch))
-            path = None
-    return entries[1:]
-
-
-def journal_next(text: str) -> str:
-    """일지의 `## 다음` 절. 없으면 빈 글이다."""
-    lines = text.splitlines()
-    for i, line in enumerate(lines):
-        if line.strip() == "## 다음":
-            body: list[str] = []
-            for rest in lines[i + 1 :]:
-                if rest.startswith("## "):
-                    break
-                body.append(rest)
-            return "\n".join(body).strip()
-    return ""
-
-
 def duty_of(source: str) -> str:
     """훅 파일 독스트링 첫 문단의 첫 문장. 앞머리의 계기(`PreToolUse 훅(Bash).`)는 떼고
     `DUTY_CHARS`자로 줄인다."""
@@ -961,199 +932,16 @@ def body_excerpt(body: str) -> str:
     return " ".join(COMMENT.sub(" ", body).split())[:BODY_CHARS]
 
 
-# 바깥 명령
-
-
-def _run(args: Sequence[str], cwd: Path) -> str | None:
-    """명령의 stdout. 실패하거나 `CALL_TIMEOUT`초를 넘으면 None이다."""
-    try:
-        done = subprocess.run(
-            list(args),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=CALL_TIMEOUT,
-            check=False,
-            cwd=cwd,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    return done.stdout if done.returncode == 0 else None
-
-
-def _gh_json(args: Sequence[str], cwd: Path) -> Json:
-    out = _run(["gh", *args], cwd)
-    if out is None:
-        return None
-    try:
-        j: Json = json.loads(out)
-    except ValueError:
-        return None
-    return j
-
-
-@dataclass(frozen=True)
-class GhPr:
-    number: int
-    title: str
-    branch: str
-    created: datetime
-    merged: datetime | None
-
-
-def _gh_pr(j: Json) -> GhPr | None:
-    o = _obj(j)
-    number = _int(o.get("number"))
-    created = _time(o.get("createdAt"))
-    if number is None or created is None:
-        return None
-    merged = _time(o.get("mergedAt"))
-    return GhPr(number, _str(o.get("title")), _str(o.get("headRefName")), created, merged)
-
-
-def merged_prs(since: date, root: Path) -> list[GhPr] | None:
-    """`since`(UTC 날짜라 하루 앞부터 받는다) 뒤에 병합된 PR."""
-    j = _gh_json(
-        [
-            "pr",
-            "list",
-            "--state",
-            "merged",
-            "--limit",
-            str(PR_LIMIT),
-            "--search",
-            f"merged:>={(since - timedelta(days=1)).isoformat()}",
-            "--json",
-            "number,title,headRefName,createdAt,mergedAt",
-        ],
-        root,
-    )
-    if not isinstance(j, list):
-        return None
-    return [p for x in j if (p := _gh_pr(x)) is not None and p.merged is not None]
-
-
-@dataclass(frozen=True)
-class OpenPr:
-    pr: GhPr
-    state: str
-
-
-def open_prs(root: Path) -> list[OpenPr] | None:
-    j = _gh_json(
-        [
-            "pr",
-            "list",
-            "--state",
-            "open",
-            "--limit",
-            str(PR_LIMIT),
-            "--json",
-            "number,title,headRefName,createdAt,isDraft,reviewDecision,statusCheckRollup",
-        ],
-        root,
-    )
-    if not isinstance(j, list):
-        return None
-    return [OpenPr(p, open_state(x)) for x in j if (p := _gh_pr(x)) is not None]
-
-
-@dataclass(frozen=True)
-class PrView:
-    """`commits`는 (커밋 시각, 머리줄)이다."""
-
-    title: str
-    body: str
-    branch: str
-    created: datetime | None
-    commits: tuple[tuple[datetime, str], ...]
-
-
-def pr_view(number: int, root: Path) -> PrView | None:
-    j = _gh_json(
-        ["pr", "view", str(number), "--json", "title,body,headRefName,createdAt,commits"], root
-    )
-    o = _obj(j)
-    if not o:
-        return None
-    commits = tuple(
-        (t, _str(_obj(c).get("messageHeadline")))
-        for c in _list(o.get("commits"))
-        if (t := _time(_obj(c).get("committedDate"))) is not None
-    )
-    return PrView(
-        _str(o.get("title")),
-        _str(o.get("body")),
-        _str(o.get("headRefName")),
-        _time(o.get("createdAt")),
-        commits,
-    )
-
-
-def ci_runs(root: Path) -> list[tuple[str, float]] | None:
-    """main의 최근 CI 열 번의 (결과, 걸린 초)."""
-    j = _gh_json(
-        [
-            "run",
-            "list",
-            "--branch",
-            "main",
-            "--limit",
-            "10",
-            "--json",
-            "conclusion,createdAt,updatedAt",
-        ],
-        root,
-    )
-    if not isinstance(j, list):
-        return None
-    out: list[tuple[str, float]] = []
-    for x in j:
-        o = _obj(x)
-        a, b = _time(o.get("createdAt")), _time(o.get("updatedAt"))
-        if a is not None and b is not None:
-            out.append((_str(o.get("conclusion")), (b - a).total_seconds()))
-    return out
-
-
-def processes(root: Path) -> tuple[int, int] | None:
-    out = _run(["tasklist", "/FI", "IMAGENAME eq claude.exe", "/FO", "CSV", "/NH"], root)
-    return None if out is None else tasklist_load(out)
-
-
-def _latest_journal(root: Path) -> tuple[str, str]:
-    """`origin/main`에서 `## 다음` 절이 있는 가장 늦은 일지의 (경로, 그 절). 없으면 빈 글 둘이다."""
-    out = _run(["git", "grep", "-n", "^## 다음", "origin/main", "--", "docs/journal/"], root)
-    names = sorted({line.split(":", 2)[1] for line in (out or "").splitlines() if ":" in line})
-    if not names:
-        return "", ""
-    return names[-1], journal_next(_run(["git", "show", f"origin/main:{names[-1]}"], root) or "")
-
-
-def _tickets(root: Path) -> dict[str, str]:
-    out = _run(["git", "ls-tree", "-r", "--name-only", "origin/main", "--", ".scratch"], root)
-    found: dict[str, str] = {}
-    for line in (out or "").splitlines():
-        if "/issues/" in line and line.endswith(".md"):
-            found.setdefault(Path(line).stem, line)
-    return found
-
-
-def _last_record(projects: Path, worktree: str) -> datetime | None:
-    folder = projects / token_report.folder_name_of(Path(worktree))
-    times = [p.stat().st_mtime for p in folder.glob("*.jsonl") if p.is_file()]
-    return datetime.fromtimestamp(max(times), UTC) if times else None
-
-
-# 모으기
+# 절 짓기
 
 
 @dataclass
 class Collected:
     """절 하나를 짓는 동안 모으는 것. `values`는 확인할 수치로 고를 수 있는 값, `refs`는 이름을 지을
     PR, `branches`는 PR이 없는 브랜치의 마지막 커밋 제목, `queue`는 이름을 지을 대기열 행이다. 절을
-    짓는 함수마다 제 것을 지어 돌려주고 `merged_got`이 합친다."""
+    짓는 함수와 그 도움 함수(`load_line` 등)는 스스로 만든 것이나 자기가 부른 도움 함수가 돌려준
+    것을 채워 돌려주며(값은 `value`로, 이름 지을 것은 그 칸에 바로, 다른 조각이 모은 것은 `add`로),
+    인자로 받은 것은 바꾸지 않는다. 여러 절의 것은 `merged_got`이 새것 하나에 합친다."""
 
     values: dict[str, Value] = field(default_factory=dict[str, Value])
     refs: set[int] = field(default_factory=set[int])
@@ -1164,14 +952,18 @@ class Collected:
         if v is not None:
             self.values[key] = Value(label, v, unit)
 
+    def add(self, other: Collected) -> None:
+        """`other`가 모은 것을 더한다."""
+        self.values.update(other.values)
+        self.refs |= other.refs
+        self.branches.update(other.branches)
+        self.queue.update(other.queue)
+
 
 def merged_got(parts: Iterable[Collected]) -> Collected:
     out = Collected()
     for p in parts:
-        out.values.update(p.values)
-        out.refs |= p.refs
-        out.branches.update(p.branches)
-        out.queue.update(p.queue)
+        out.add(p)
     return out
 
 
@@ -1184,11 +976,32 @@ class Part:
 
 
 @dataclass(frozen=True)
+class Piece:
+    """절의 한 조각. 표와 그 아래 줄, 그 조각을 지으며 모은 것이다."""
+
+    tables: tuple[Table, ...]
+    lines: tuple[str, ...]
+    got: Collected
+
+
+@dataclass(frozen=True)
 class Sources:
     """원본 줄에 적는 읽은 자리. 장부와 세션 기록의 실제 경로다."""
 
     ledger: str
     records: str
+
+
+@dataclass(frozen=True)
+class HookScan:
+    """훅 절이 읽은 것. `rows`는 표의 행, `duties`는 표에 오른 훅마다 그 파일 독스트링에서 뽑은 하는
+    일, `introduced`는 등록된 훅의 들인 날(`hook_report.introduced_dates`. git 기록에 없는 훅은
+    빠지고 표에는 모름으로 적힌다), `firings`는 세션 기록에서 찾은 발동 전부다."""
+
+    rows: tuple[HookRow, ...]
+    duties: Mapping[str, str]
+    introduced: Mapping[str, date]
+    firings: tuple[hook_report.Firing, ...]
 
 
 def _share(part: float, total: float) -> str:
@@ -1212,18 +1025,66 @@ def _token_section(
     handoff: Mapping[str, bool],
     pr_at: Mapping[str, datetime],
 ) -> Part:
+    """상세 1. 요약, 비용 구성, 시작 구성, 비용이 큰 세션과 브랜치, 낭비 후보의 차례로 잇는다.
+    `handoff`와 `pr_at`은 브랜치 표(`branch_rows`)가 쓴다."""
+    summary = _summary_piece(p)
+    starts = _start_piece(p)
+    waste = _waste_piece(p, main_checkout, wanted)
+    sessions = Table(
+        ("세션", "기록 폴더", "브랜치", "비용(서브에이전트 포함)", "최대 세션 컨텍스트", "호출"),
+        "lllrrr",
+        tuple(session_rows(p)),
+    )
+    branches = Table(
+        ("브랜치", "비용", "몫", "세션", "인계로 열린 세션", "PR 앞 · 뒤"),
+        "lrrrrr",
+        tuple(branch_rows(p, handoff, pr_at)),
+    )
+    tables = (
+        *summary.tables,
+        Table(("구분", "모델", "노력", "호출", "비용", "몫"), "lllrrr", tuple(cost_rows(p))),
+        *starts.tables,
+        sessions,
+        branches,
+        *waste.tables,
+    )
     got = Collected()
-    prefix = token_report.file_key_of(str(main_checkout)).rstrip("/") + "/"
+    for piece in (summary, starts, waste):
+        got.add(piece.got)
+    lines = (*summary.lines, *starts.lines, *waste.lines)
+    source = f"{src.ledger}(`tools/token_report.py`의 일간 집계)"
+    return Part(Section(1, "토큰 사용", tables, lines, source), got)
 
-    def short(key: str) -> str:
-        return key.removeprefix(prefix)
 
+def _human_parts(p: token_report.Period) -> list[token_report.StartParts]:
+    """사람이 연 세션 가운데 시작 구성을 아는 세션의 구성."""
+    return [s.parts for s in p.starts if s.human and s.parts is not None]
+
+
+def _start_piece(p: token_report.Period) -> Piece:
+    """사람이 연 세션의 시작 컨텍스트 구성 표(`start_rows`). 구성을 아는 세션이 없으면 표 대신 수집
+    안 됨 한 줄이다."""
+    starts = start_rows(p.starts)
+    if not starts:
+        line = f"- 시작 컨텍스트 구성 {UNCOLLECTED}(사람이 연 세션 가운데 구성을 아는 세션이 없다)"
+        return Piece((), (line,), Collected())
+    head = (f"시작 때 싣는 것(사람이 연 세션 {len(_human_parts(p))}개)", "중앙값", "실린 세션")
+    return Piece((Table(head, "lrr", tuple(starts)),), (), Collected())
+
+
+def _summary_piece(p: token_report.Period) -> Piece:
+    """그날의 요약 표(호출 수, 비중, 40만을 넘은 세션, 압축, 쉰 뒤 캐시 재작성, 캐시 효율, 사람이
+    열지 않은 세션의 시작, 큰 도구 결과 수, 계정별 비용)와 확인할 수치로 남기는 값. 값에는 요약 표에
+    없는 시작 스킬 목록 글자 수(구성을 아는 사람이 연 세션의 중앙값, `token:skill_chars`. 시작 구성
+    표(`start_rows`)의 스킬 목록 합 행이 적는 중앙값이다)도 들고, 구하지 못한 값은 남기지
+    않는다(`Collected.value`)."""
+    got = Collected()
     total = p.total.cost
     main = p.kinds["메인 세션"].cost
     xhigh = sum(t.cost for (_, _, effort), t in p.models.items() if effort == "xhigh")
     auto = [c for c in p.compactions if c.trigger == "auto"]
     before = [c.context for c in auto if c.context is not None]
-    known = [s.parts for s in p.starts if s.human and s.parts is not None]
+    known = _human_parts(p)
     skills = statistics.median(sum(x.skills.values()) for x in known) if known else None
     headless = [s.context for s in p.starts if not s.human]
     n_main = p.kinds["메인 세션"].calls
@@ -1270,6 +1131,23 @@ def _token_section(
     got.value("token:auto_compactions", "자동 압축", len(auto), "회")
     got.value("token:idle_cost", "쉰 뒤 캐시 재작성 비용", p.idle.cost, "$")
     got.value("token:skill_chars", "시작 스킬 목록", skills, "자")
+    return Piece((Table(("항목", "값"), "ll", tuple(summary)),), (), got)
+
+
+def _waste_piece(p: token_report.Period, main_checkout: Path, wanted: Collection[str]) -> Piece:
+    """낭비 후보 표(여러 세션이 읽은 파일 `TOP`개, 큰 도구 결과 `TOP_LARGE`개, 다시 읽기)와 그 값.
+    읽은 파일의 값은 표에 든 것과 앞 날의 메모가 고른 것(`wanted`)을 남긴다. 파일은 세션을 건너
+    가르는 열쇠(`token_report.file_key_of`. 역빗금을 `/`로, 글자를 소문자로 바꾸고 첫 워크트리
+    접두를 벗긴다)로 묶고, 주 체크아웃(`main_checkout`) 아래의 열쇠는 그 아래의 상대 경로로 줄인다.
+    그래서 이 저장소의 워크트리 파일도 주 체크아웃의 상대 경로로 적힌다. 적는 경로는 `shown_path`가
+    원래 경로의 꼬리로 대소문자를 되살린 것이고, 꼬리가 열쇠와 맞지 않으면(다른 저장소의 워크트리
+    파일) 소문자 열쇠 그대로다."""
+    got = Collected()
+    prefix = token_report.file_key_of(str(main_checkout)).rstrip("/") + "/"
+
+    def short(key: str) -> str:
+        return key.removeprefix(prefix)
+
     waste: list[tuple[str, str, str]] = []
     sessions: dict[str, set[str]] = defaultdict(set)
     count: Counter[str] = Counter()
@@ -1309,59 +1187,22 @@ def _token_section(
     again_chars = sum(r.chars for r in again)
     waste.append(("다시 읽기 후보", f"{len(again)}회 · {again_chars:,}자", UNCOLLECTED))
     got.value("token:reread_chars", "다시 읽기 후보 글자", again_chars, "자")
-    tables = [
-        Table(("항목", "값"), "ll", tuple(summary)),
-        Table(("구분", "모델", "노력", "호출", "비용", "몫"), "lllrrr", tuple(cost_rows(p))),
-    ]
-    lines: list[str] = []
-    starts = start_rows(p.starts)
-    if starts:
-        head = (f"시작 때 싣는 것(사람이 연 세션 {len(known)}개)", "중앙값", "실린 세션")
-        tables.append(Table(head, "lrr", tuple(starts)))
-    else:
-        lines.append(
-            f"- 시작 컨텍스트 구성 {UNCOLLECTED}(사람이 연 세션 가운데 구성을 아는 세션이 없다)"
-        )
-    tables += [
-        Table(
-            (
-                "세션",
-                "기록 폴더",
-                "브랜치",
-                "비용(서브에이전트 포함)",
-                "최대 세션 컨텍스트",
-                "호출",
-            ),
-            "lllrrr",
-            tuple(session_rows(p)),
-        ),
-        Table(
-            ("브랜치", "비용", "몫", "세션", "인계로 열린 세션", "PR 앞 · 뒤"),
-            "lrrrrr",
-            tuple(branch_rows(p, handoff, pr_at)),
-        ),
-        Table(("낭비 후보", "크기", "예상 절감액(하루)"), "lrr", tuple(waste)),
-    ]
-    source = f"{src.ledger}(`tools/token_report.py`의 일간 집계)"
-    return Part(Section(1, "토큰 사용", tuple(tables), tuple(lines), source), got)
+    table = Table(("낭비 후보", "크기", "예상 절감액(하루)"), "lrr", tuple(waste))
+    return Piece((table,), (), got)
 
 
-def _hook_section(root: Path, projects: Path, day: date, src: Sources) -> Part:
+def _hook_section(
+    hooks: HookScan | str, day: date, runs: Sequence[tuple[str, float]] | None, src: Sources
+) -> Part:
+    """`hooks`는 `_gather_hooks`가 읽은 것이거나 읽지 못한 까닭이다. `runs`는 main의 최근
+    CI(`ci_runs`)이고, 읽지 못했으면 None이다."""
     got = Collected()
     source = (
         f"{src.records}(`tools/hook_report.py`와 같은 읽기), `.claude/settings.json`,"
         " `gh run list --branch main`"
     )
-    try:
-        settings = (root / ".claude" / "settings.json").read_text(encoding="utf-8")
-        hooks = hook_report.registered_hooks(settings)
-        introduced = hook_report.introduced_dates(root, hooks)
-        repo = hook_report.main_checkout_folder(root)
-    except (OSError, UnicodeDecodeError, ValueError) as error:
-        return Part(Section(2, "하네스", (), (f"- 훅 표 {UNCOLLECTED}: {error}",), source), got)
-    prints = hook_report.fingerprints(root / "tools", hooks)
-    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints)
-    rows = hook_rows(scan.firings, hooks, introduced, day, scan.earliest)
+    if isinstance(hooks, str):
+        return Part(Section(2, "하네스", (), (f"- 훅 표 {UNCOLLECTED}: {hooks}",), source), got)
     head = (
         "구분",
         "훅",
@@ -1375,13 +1216,9 @@ def _hook_section(root: Path, projects: Path, day: date, src: Sources) -> Part:
         "판정",
     )
     cells: list[tuple[str, ...]] = []
-    for r in rows:
-        try:
-            duty = duty_of((root / "tools" / r.hook).read_text(encoding="utf-8"))
-        except OSError:
-            duty = UNCOLLECTED
+    for r in hooks.rows:
         ratio = f"{r.recent / r.previous:.2f}배" if r.previous else "새로 발동" if r.recent else "-"
-        since = introduced.get(r.hook)
+        since = hooks.introduced.get(r.hook)
         cells.append(
             (
                 r.kind,
@@ -1392,7 +1229,7 @@ def _hook_section(root: Path, projects: Path, day: date, src: Sources) -> Part:
                 r.last.isoformat() if r.last else "-",
                 since.isoformat() if since else "모름",
                 UNCOLLECTED,
-                duty,
+                hooks.duties[r.hook],
                 r.verdict,
             )
         )
@@ -1402,15 +1239,14 @@ def _hook_section(root: Path, projects: Path, day: date, src: Sources) -> Part:
     start = day - timedelta(days=HOOK_HALF * 2 - 1)
     unattributed = sum(
         1
-        for f in scan.firings
+        for f in hooks.firings
         if f.hook in (hook_report.UNKNOWN, hook_report.AMBIGUOUS) and start <= f.day <= day
     )
     lines = [
         f"- 건수는 최근 {HOOK_HALF}일({day - timedelta(days=HOOK_HALF - 1)} ~ {day}, UTC 날짜)이고,"
         f" 어느 훅인지 가르지 못한 막음이 {start} ~ {day}에 {unattributed}건 있다.",
-        *hook_legend(rows),
+        *hook_legend(hooks.rows),
     ]
-    runs = ci_runs(root)
     if runs is None:
         lines.append(f"- main의 CI {UNCOLLECTED}(gh 실패)")
     elif runs:
@@ -1425,16 +1261,34 @@ def _hook_section(root: Path, projects: Path, day: date, src: Sources) -> Part:
     return Part(Section(2, "하네스", (table,), tuple(lines), source), got)
 
 
+def load_line(load: tuple[int, int] | None, worktrees: int) -> tuple[str, Collected]:
+    """지금의 부하 줄의 글과 그 값. `load`는 claude 프로세스의 (수, 메모리 MB)이고 읽지 못했으면
+    None이다. `worktrees`는 주 체크아웃을 뺀 워크트리 수다."""
+    got = Collected()
+    if load:
+        got.value("load:processes", "claude 프로세스", load[0], "개")
+        got.value("load:memory_mb", "claude 메모리", load[1], "MB")
+    got.value("load:worktrees", "워크트리", worktrees, "개")
+    head = (
+        f"claude 프로세스 {load[0]}개 · 메모리 {load[1]:,} MB"
+        if load
+        else f"프로세스 {UNCOLLECTED}"
+    )
+    return f"{head} · 워크트리 {worktrees}개(주 체크아웃을 빼고)", got
+
+
 def _parallel_section(
     rows: Sequence[DayRow],
     kinds: Mapping[date, Counter[str]],
     buckets: Mapping[str, list[tuple[float, float]]],
     shares: Mapping[str, float],
-    load: str,
+    load: tuple[int, int] | None,
+    worktrees: int,
     src: Sources,
-) -> Section:
-    """`buckets`는 동시 세션 구간마다 그 구간에서 돈 병합 PR의 (비용, PR 연 뒤 병합까지 시간)이고,
-    `shares`는 구간마다 그 분에 난 호출의 비용(`cost_by_concurrency`)이다."""
+) -> Part:
+    """`rows`는 그날까지의 날들이고 마지막이 그날이다. `buckets`는 동시 세션 구간마다 그 구간에서 돈
+    병합 PR의 (비용, PR 연 뒤 병합까지 시간)이고, `shares`는 구간마다 그 분에 난 호출의
+    비용(`cost_by_concurrency`)이다. `load`와 `worktrees`는 `load_line`."""
     head = (
         "날짜",
         "사람이 연 세션",
@@ -1503,15 +1357,17 @@ def _parallel_section(
         Table(head, "lrrrrrrrrrl", tuple(day_cells)),
         Table(bucket_head, "lrrrrrr", tuple(bucket_rows)),
     )
+    load_text, got = load_line(load, worktrees)
+    got.value("parallel:avg", "어제 평균 동시 세션", rows[-1].avg, "")
     lines = (
         "- 동시 세션은 그 분에 돈 메인 세션 수다. 비용은 호출이 난 분으로, 병합 PR은 그 브랜치의"
         " 메인 세션 호출이 난 분의 평균으로 구간을 가른다. 세션 두 칸은 그날 호출이 있는 메인"
         " 세션을 사람이 연 세션과 그 밖(헤드리스 `claude -p`, SDK, 사실을 모르는 세션)으로 나눈"
         " 수다.",
-        f"- 지금의 부하: {load}",
+        f"- 지금의 부하: {load_text}",
     )
     source = f"{src.ledger}, `gh pr list --state merged`, `git worktree list`, `tasklist`"
-    return Section(3, "병렬 세션", tables, lines, source)
+    return Part(Section(3, "병렬 세션", tables, lines, source), got)
 
 
 def _timing_row(label: str, t: Timing) -> tuple[str, ...]:
@@ -1539,7 +1395,8 @@ def command_rows(
     tool_cells, tool_got = _timing_cells(others, TOP_TOOLS, wanted)
     rows += commands
     rows += [(f"도구: {c[0]}", *c[1:]) for c in tool_cells]
-    return rows, merged_got([got, tool_got])
+    got.add(tool_got)
+    return rows, got
 
 
 def _timing_cells(
@@ -1597,7 +1454,7 @@ def scan_transcripts(projects: Path, repo: str, first: date, last: date, tz: tim
             (shells if label.split(":", 1)[0] in SHELLS else tools)[label].append(secs)
         if agent is None:
             continue
-        stamps = sorted(t for d in data if (t := _time(d.get("timestamp"))) is not None)
+        stamps = sorted(t for d in data if (t := json_time(d.get("timestamp"))) is not None)
         if stamps and inside(stamps[0]):
             gaps = ((b - a).total_seconds() for a, b in zip(stamps, stamps[1:], strict=False))
             span[agent] = sum(g for g in gaps if g <= SPAN_GAP_MIN * 60)
@@ -1624,10 +1481,10 @@ def _work_section(
     if works is None:
         lines.append(MERGED_FAILED)
     else:
-        works_tables, summary, works_got = _works_table(works, rounds)
-        tables += works_tables
-        lines += summary
-        got = merged_got([got, works_got])
+        piece = _works_piece(works, rounds)
+        tables += piece.tables
+        lines += piece.lines
+        got.add(piece.got)
     head = ("명령", "횟수", "합계(분)", "중앙값(초)", "상위 10%(초)", "10분 30초 넘음")
     tables.append(Table(head, "lrrrrr", tuple(commands)))
     by_type: dict[str, list[tuple[float, float]]] = defaultdict(list)
@@ -1659,9 +1516,7 @@ def _work_section(
     return Part(section, got)
 
 
-def _works_table(
-    works: Sequence[Work], rounds: Mapping[int, int | None]
-) -> tuple[list[Table], list[str], Collected]:
+def _works_piece(works: Sequence[Work], rounds: Mapping[int, int | None]) -> Piece:
     """병합된 작업 가운데 비싼 `TOP`개의 표, 작업 종류별 중앙값 표, 그 기간의 요약 줄."""
     got = Collected()
     head = (
@@ -1715,13 +1570,12 @@ def _works_table(
             "PR 연 뒤 몫 중앙값",
         )
         tables.append(Table(kind_head, "lrrrrrr", tuple(kind_rows(works))))
-    return tables, lines, got
+    return Piece(tuple(tables), tuple(lines), got)
 
 
-def _queue_section(day: date, root: Path) -> Part:
-    path = queue_open_rows.QUEUE.as_posix()
-    source = f"`origin/main:{path}`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
-    text = _run(["git", "show", f"origin/main:{path}"], root)
+def _queue_section(day: date, text: str | None) -> Part:
+    """`text`는 `origin/main`의 대기열 파일 글이고, 읽지 못했으면 None이다."""
+    source = f"`origin/main:{QUEUE_PATH}`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
     if text is None:
         lines = (f"- 대기열 {UNCOLLECTED}(git show 실패)",)
         return Part(Section(5, "회고 대기열", (), lines, source), Collected())
@@ -1801,21 +1655,33 @@ def queue_part(day: date, text: str, source: str) -> Part:
     return Part(Section(5, "회고 대기열", tuple(tables), lines, source), got)
 
 
+@dataclass(frozen=True)
+class ActiveWorktree:
+    """진행 중인 워크트리 세션 하나. `pr`은 `worktree_pr`의 갈래(병합은 오지 않는다), `number`는
+    열린 PR의 번호, `last`는 마지막 기록 시각, `subject`는 PR이 없는 브랜치의 마지막 커밋 제목이고
+    PR이 열렸거나 분리 HEAD거나 git이 실패하면 None이다."""
+
+    branch: str | None
+    pr: str
+    number: int | None
+    last: datetime
+    subject: str | None
+
+
 def _yesterday_section(
     day: date,
     merged: Sequence[GhPr] | None,
     opened: Sequence[OpenPr] | None,
-    worktrees: Sequence[tuple[str, str | None]],
-    projects: Path,
-    root: Path,
+    active: Sequence[ActiveWorktree],
+    leftover: int,
     now: datetime,
     tz: timezone,
     journal: str,
 ) -> Part:
-    """어제 병합한 PR, 열린 PR, 진행 중인 워크트리 세션. `merged`나 `opened`가 None이면 gh가 실패한
-    것이라 그 표 대신 수집 안 됨 한 줄을 두고, 그 탓에 가를 수 없는 워크트리의 PR은
-    `PR (수집 안 됨)`으로 적는다. PR이 병합됐는데 남은 워크트리는 표에 넣지 않고, 마지막 기록과
-    상관없이 모두 세어 확인할 수치로 남긴다."""
+    """어제 병합한 PR, 열린 PR, 진행 중인 워크트리 세션(`active`). `merged`나 `opened`가 None이면
+    gh가 실패한 것이라 그 표 대신 수집 안 됨 한 줄을 두고, 그 탓에 가를 수 없는 워크트리의 PR은
+    `PR (수집 안 됨)`으로 적는다. PR이 병합됐는데 남은 워크트리의 수(`leftover`)는 표에 넣지 않고
+    확인할 수치로 남긴다."""
     got = Collected()
     tables: list[Table] = []
     lines: list[str] = []
@@ -1851,34 +1717,23 @@ def _yesterday_section(
         )
         got.refs.update(o.pr.number for o in opened)
         tables.append(Table(("PR", "작업 이름", "작업 내용", "상태"), "llll", open_rows))
-    merged_branches = None if merged is None else {p.branch for p in merged}
-    open_numbers = None if opened is None else {o.pr.branch: o.pr.number for o in opened}
     worktree_rows: list[tuple[str, ...]] = []
-    leftover = 0
-    for path, branch in worktrees:
-        state, number = worktree_pr(branch, merged_branches, open_numbers)
-        if state == "병합":
-            leftover += 1
+    for w in active:
+        ago = f"마지막 기록 {ago_text((now - w.last).total_seconds())}"
+        name = w.branch or "(분리 HEAD)"
+        if w.number is not None:
+            worktree_rows.append((name, f"{{{{ref:{w.number}}}}}", f"PR 열림 · {ago}"))
             continue
-        last = _last_record(projects, path)
-        if last is None or now - last > timedelta(hours=ACTIVE_H):
-            continue
-        ago = f"마지막 기록 {ago_text((now - last).total_seconds())}"
-        name = branch or "(분리 HEAD)"
-        if number is not None:
-            worktree_rows.append((name, f"{{{{ref:{number}}}}}", f"PR 열림 · {ago}"))
-            continue
-        if branch is not None:
-            subject = _run(["git", "log", "-1", "--format=%s", f"origin/main..{branch}"], root)
-            got.branches[branch] = (subject or "").strip() or "(아직 커밋 없음)"
-        pr = "PR 없음" if state == "없음" else f"PR {UNCOLLECTED}"
+        if w.branch is not None:
+            got.branches[w.branch] = (w.subject or "").strip() or "(아직 커밋 없음)"
+        pr = "PR 없음" if w.pr == "없음" else f"PR {UNCOLLECTED}"
         worktree_rows.append((name, f"{{{{branch:{name}}}}}", f"{pr} · {ago}"))
     unknown = UNCOLLECTED.strip("()")
     head = ("브랜치", "작업 내용", f"PR · 마지막 기록(세션이 도는지·답을 기다리는지는 {unknown})")
     tables.append(Table(head, "lll", tuple(worktree_rows)))
     if not worktree_rows:
         lines.append(f"- 최근 {ACTIVE_H}시간 안에 기록이 있는 진행 중인 워크트리 세션이 없다")
-    if merged_branches is not None:
+    if merged is not None:
         got.value("worktrees:merged", "PR이 병합됐는데 남은 워크트리", leftover, "개")
         if leftover:
             lines.append(f"- PR이 병합됐는데 남은 워크트리 {leftover}개는 표에 넣지 않았다")
@@ -1890,17 +1745,11 @@ def _yesterday_section(
     return Part(section, got)
 
 
-def _sweep_section(
-    merged: Sequence[GhPr],
-    by_branch: Mapping[str, list[Call]],
-    handoff: Mapping[str, bool],
-    tickets: Mapping[str, str],
-    handoff_from: date | None,
-    day: date,
-    tz: timezone,
-    root: Path,
-    src: Sources,
-) -> Part:
+def _sweep_piece(
+    merged: Sequence[GhPr], by_branch: Mapping[str, Sequence[Call]], day: date
+) -> tuple[Piece, int]:
+    """레벨 스윕의 표(갈래마다 병합 수와 배정대로 돈 몫, 배정과 다르게 돈 브랜치)와 기간 줄, 그리고
+    배정과 다르게 돈 브랜치 수."""
     got = Collected()
     judge = model_sweep_judge
     arm_of = {v: k for k, v in judge.ARM_RECORD.items()}
@@ -1965,29 +1814,34 @@ def _sweep_section(
         " 지시문의 `모델:` 줄 표지를 보지 않아 판정의 모집단과 다를 수 있다.",
     ]
     got.refs.update(o.number for o in off)
-    first = ticket_start(day, handoff_from)
-    rows: list[TicketRow] = []
-    for p in merged:
-        m = TICKET_BRANCH.match(p.branch)
-        if p.merged is None or m is None or not first <= p.merged.astimezone(tz).date() <= day:
-            continue
-        path = tickets.get(m.group(1))
-        text = _run(["git", "show", f"origin/main:{path}"], root) if path else None
-        cs = by_branch.get(p.branch, [])
-        mains = {c.session for c in cs if c.agent is None}
-        rows.append(
-            TicketRow(
-                p.number,
-                m.group(1),
-                found=text is not None,
-                criteria=len(CHECKBOX.findall(text)) if text else 0,
-                chars=len(text) if text else 0,
-                cost=sum(c.cost() or 0.0 for c in cs),
-                active_h=len(active_minutes(_main_stamps(cs))) / 60,
-                sessions=len(mains),
-                handoffs=sum(1 for s in mains if handoff.get(s)),
-            )
+    tables = [
+        Table(
+            ("종류", "갈래", "병합 / 목표", "배정대로 돈 몫", f"문턱 {judge.TOP_SHARE_MIN:.0%}"),
+            "llrrl",
+            tuple(sweep_rows),
+        ),
+    ]
+    if off:
+        head = (
+            "PR",
+            "작업 이름",
+            "종류",
+            "배정",
+            "배정대로 돈 몫",
+            "실제 최대(본 세션 비용)",
+            "최대 조합의 몫",
         )
+        tables.append(Table(head, "llllrlr", tuple(off_cells(off))))
+    return Piece(tuple(tables), tuple(lines), got), len(off)
+
+
+def _ticket_piece(
+    rows: Sequence[TicketRow], handoff_from: date | None, first: date, off: int
+) -> Piece:
+    """티켓 분할의 표(수락 조건 수로 나눈 무리마다 비용·활동·인계, 티켓마다의 행)와, 창과 인계가 난
+    티켓 수 줄과 티켓 파일을 찾지 못한 PR 줄. `first`는 티켓 창의 첫날(`ticket_start`)이고, `off`는
+    배정과 다르게 돈 브랜치 수(`_sweep_piece`)라 그 줄에 함께 적는다."""
+    got = Collected()
     size_rows: list[tuple[str, ...]] = []
     for name, g in size_groups(rows):
         n_handed = sum(1 for r in g if r.handoffs)
@@ -2017,10 +1871,10 @@ def _sweep_section(
     )
     handed = handoff_tickets(found)
     got.refs.update(r.number for r in found)
-    lines.append(
+    lines = [
         f"- 티켓은 {since}부터 병합된 {len(found)}개이고, 인계가 난 티켓(한 세션에 들지 않은"
-        f" 티켓)은 {len(handed)}개다. 배정과 다르게 돈 브랜치는 {len(off)}개다."
-    )
+        f" 티켓)은 {len(handed)}개다. 배정과 다르게 돈 브랜치는 {off}개다.",
+    ]
     if found:
         got.value("tickets:handoff_share", "인계가 난 티켓 몫", len(handed) / len(found) * 100, "%")
     missing = [r for r in rows if not r.found]
@@ -2030,24 +1884,6 @@ def _sweep_section(
         refs = "; ".join(f"{{{{ref:{r.number}}}}}" for r in missing)
         lines.append(f"- 티켓 파일을 찾지 못해 무리에서 뺀 PR: {refs}")
     tables = [
-        Table(
-            ("종류", "갈래", "병합 / 목표", "배정대로 돈 몫", f"문턱 {judge.TOP_SHARE_MIN:.0%}"),
-            "llrrl",
-            tuple(sweep_rows),
-        ),
-    ]
-    if off:
-        head = (
-            "PR",
-            "작업 이름",
-            "종류",
-            "배정",
-            "배정대로 돈 몫",
-            "실제 최대(본 세션 비용)",
-            "최대 조합의 몫",
-        )
-        tables.append(Table(head, "llllrlr", tuple(off_cells(off))))
-    tables.append(
         Table(
             (
                 "크기",
@@ -2061,16 +1897,26 @@ def _sweep_section(
             "lrrrrrr",
             tuple(size_rows),
         )
-    )
+    ]
     if found:
         head = ("PR", "작업 이름", "수락 조건", "글자", "비용", "활동", "세션", "인계")
         tables.append(Table(head, "llrrrrrr", tuple(ticket_cells(rows))))
+    return Piece(tuple(tables), tuple(lines), got)
+
+
+def _model_section(sweep: Piece, tickets: Piece, src: Sources) -> Part:
+    """상세 7. 레벨 스윕 조각과 티켓 분할 조각을 한 절로 잇는다."""
+    got = Collected()
+    got.add(sweep.got)
+    got.add(tickets.got)
     source = (
         f"{src.ledger}, `gh pr list`, `origin/main:.scratch/*/issues/*.md`,"
         " `tools/model_sweep_judge.py`의 기간·표본 수·문턱(배정된 모델·레벨이 본 세션 비용 최대인"
         " 브랜치의 몫)"
     )
-    return Part(Section(7, "모델 선택과 티켓 분할", tuple(tables), tuple(lines), source), got)
+    tables = (*sweep.tables, *tickets.tables)
+    section = Section(7, "모델 선택과 티켓 분할", tables, (*sweep.lines, *tickets.lines), source)
+    return Part(section, got)
 
 
 def merged_unknown(s: Section, kept: Sequence[str] = ()) -> Section:
@@ -2131,15 +1977,21 @@ def _metric_got(metrics: Sequence[Metric]) -> Collected:
     return got
 
 
-def collect(root: Path, day: date, projects: Path, now: datetime, wanted: Collection[str]) -> Data:
-    """`wanted`는 앞 날의 메모가 고른 확인할 수치의 열쇠다(`morning_report.latest_checks`). 병합
-    PR을 읽지 못하면(gh 실패) 그것에 기대는 핵심 지표와 상세 3·7은 여기서, 상세 4·6은 그 절을 짓는
-    함수가 `None`을 받아 수집 안 됨으로 적는다."""
-    tz = _local_tz()
-    main = token_report.main_checkout_of(root)
-    ledger_dir = main / ".scratch" / "token-report" / "ledger"
-    repo = token_report.folder_name_of(main)
-    src = Sources(f"토큰 장부 `{ledger_dir.as_posix()}`", f"세션 기록 `{projects.as_posix()}`")
+# 모으기
+
+
+@dataclass(frozen=True)
+class LedgerScan:
+    """장부의 모든 달에서 읽은 것. `handoff`와 `human`은 세션마다 인계했는지와 사람이 연
+    세션인지이고, 사실을 모르는 세션은 둘 다 거짓이다."""
+
+    calls: list[Call]
+    handoff: dict[str, bool]
+    human: dict[str, bool]
+
+
+def _gather_ledger(ledger_dir: Path) -> LedgerScan:
+    """장부의 모든 달의 호출과 세션의 사실."""
     calls: list[Call] = []
     handoff: dict[str, bool] = {}
     human: dict[str, bool] = {}
@@ -2149,6 +2001,149 @@ def collect(root: Path, day: date, projects: Path, now: datetime, wanted: Collec
         for s in ledger.sessions:
             handoff[s.session] = s.facts is not None and s.facts.handoff
             human[s.session] = s.facts is not None and s.facts.human
+    return LedgerScan(calls, handoff, human)
+
+
+def _by_branch(calls: Iterable[Call]) -> dict[str, list[Call]]:
+    """브랜치마다 그 브랜치의 호출. 브랜치가 없는 호출은 뺀다."""
+    by_branch: dict[str, list[Call]] = defaultdict(list)
+    for c in calls:
+        if c.branch:
+            by_branch[c.branch].append(c)
+    return dict(by_branch)
+
+
+def _agent_costs(calls: Iterable[Call]) -> dict[str, float]:
+    """서브에이전트마다 그 호출의 비용 합."""
+    cost: dict[str, float] = defaultdict(float)
+    for c in calls:
+        if c.agent is not None:
+            cost[c.agent] += c.cost() or 0.0
+    return dict(cost)
+
+
+def _gather_rounds(
+    works: Sequence[Work], root: Path
+) -> tuple[dict[int, PrView | None], dict[int, int | None]]:
+    """비싼 `TOP`개 작업의 PR(`pr_view`)과 그 리뷰 왕복. 읽은 PR은 이름을 지을 때 다시 쓴다."""
+    top = sorted(works, key=lambda w: (-w.cost, w.number))[:TOP]
+    views = {w.number: pr_view(w.number, root) for w in top}
+    rounds: dict[int, int | None] = {}
+    for n, v in views.items():
+        rounds[n] = review_rounds(v.created, v.commits) if v is not None and v.created else None
+    return views, rounds
+
+
+def _handoff_from(root: Path) -> date | None:
+    """인계 훅(`HANDOFF_HOOK`)이 들어온 날. 읽지 못하면 None이다."""
+    try:
+        return hook_report.introduced_dates(root, [HANDOFF_HOOK]).get(HANDOFF_HOOK)
+    except OSError:
+        return None
+
+
+def _gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
+    """등록된 훅과 그 발동(`hook_report`), 표에 오른 훅 파일의 하는 일. 설정·들인 날·주 체크아웃을
+    읽지 못하면 그 까닭이다."""
+    try:
+        settings = (root / ".claude" / "settings.json").read_text(encoding="utf-8")
+        hooks = hook_report.registered_hooks(settings)
+        introduced = hook_report.introduced_dates(root, hooks)
+        repo = hook_report.main_checkout_folder(root)
+    except (OSError, UnicodeDecodeError, ValueError) as error:
+        return str(error)
+    prints = hook_report.fingerprints(root / "tools", hooks)
+    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints)
+    rows = hook_rows(scan.firings, hooks, introduced, day, scan.earliest)
+    duties: dict[str, str] = {}
+    for r in rows:
+        try:
+            duties[r.hook] = duty_of((root / "tools" / r.hook).read_text(encoding="utf-8"))
+        except OSError:
+            duties[r.hook] = UNCOLLECTED
+    return HookScan(tuple(rows), duties, introduced, scan.firings)
+
+
+def _gather_tickets(
+    root: Path,
+    merged: Sequence[GhPr],
+    by_branch: Mapping[str, Sequence[Call]],
+    handoff: Mapping[str, bool],
+    first: date,
+    day: date,
+    tz: timezone,
+) -> list[TicketRow]:
+    """티켓 창(`first`부터 `day`까지)에 병합된 티켓 PR마다 `origin/main`의 티켓 파일을 읽어 짓는
+    줄."""
+    paths = ticket_paths(root)
+    rows: list[TicketRow] = []
+    for p in merged:
+        m = TICKET_BRANCH.match(p.branch)
+        if p.merged is None or m is None or not first <= p.merged.astimezone(tz).date() <= day:
+            continue
+        path = paths.get(m.group(1))
+        text = main_text(root, path) if path else None
+        rows.append(_ticket_row(p.number, m.group(1), text, by_branch.get(p.branch, []), handoff))
+    return rows
+
+
+def _last_record(projects: Path, worktree: str) -> datetime | None:
+    folder = projects / token_report.folder_name_of(Path(worktree))
+    times = [p.stat().st_mtime for p in folder.glob("*.jsonl") if p.is_file()]
+    return datetime.fromtimestamp(max(times), UTC) if times else None
+
+
+def _gather_worktrees(
+    root: Path,
+    projects: Path,
+    entries: Sequence[tuple[str, str | None]],
+    merged: Sequence[GhPr] | None,
+    opened: Sequence[OpenPr] | None,
+    now: datetime,
+) -> tuple[list[ActiveWorktree], int]:
+    """진행 중인 워크트리 세션(마지막 기록이 `ACTIVE_H`시간 안)과, PR이 병합됐는데 남은 워크트리의
+    수(마지막 기록과 상관없이 센다). `entries`는 `worktree_list`의 (경로, 브랜치)다."""
+    merged_branches = None if merged is None else {p.branch for p in merged}
+    open_numbers = None if opened is None else {o.pr.branch: o.pr.number for o in opened}
+    active: list[ActiveWorktree] = []
+    leftover = 0
+    for path, branch in entries:
+        state, number = worktree_pr(branch, merged_branches, open_numbers)
+        if state == "병합":
+            leftover += 1
+            continue
+        last = _last_record(projects, path)
+        if last is None or now - last > timedelta(hours=ACTIVE_H):
+            continue
+        subject = branch_subject(root, branch) if number is None and branch is not None else None
+        active.append(ActiveWorktree(branch, state, number, last, subject))
+    return active, leftover
+
+
+def _gather_prs(
+    refs: Iterable[int], views: Mapping[int, PrView | None], root: Path
+) -> dict[int, Pr]:
+    """이름을 지을 PR마다 제목과 본문 앞부분. 이미 읽은 것(`views`)은 다시 부르지 않는다."""
+    prs: dict[int, Pr] = {}
+    for n in sorted(refs):
+        v = views[n] if n in views else pr_view(n, root)
+        prs[n] = (
+            Pr(n, v.title, body_excerpt(v.body), v.branch) if v is not None else Pr(n, None, "", "")
+        )
+    return prs
+
+
+def collect(root: Path, day: date, projects: Path, now: datetime, wanted: Collection[str]) -> Data:
+    """`wanted`는 앞 날의 메모가 고른 확인할 수치의 열쇠다(`morning_report.latest_checks`). 병합
+    PR을 읽지 못하면(gh 실패) 그것에 기대는 핵심 지표와 상세 3·7은 여기서, 상세 4·6은 그 절을 짓는
+    함수가 `None`을 받아 수집 안 됨으로 적는다."""
+    tz = _local_tz()
+    main = token_report.main_checkout_of(root)
+    ledger_dir = main / ".scratch" / "token-report" / "ledger"
+    repo = token_report.folder_name_of(main)
+    src = Sources(f"토큰 장부 `{ledger_dir.as_posix()}`", f"세션 기록 `{projects.as_posix()}`")
+    ledger = _gather_ledger(ledger_dir)
+    calls, handoff = ledger.calls, ledger.handoff
     series = _days(day, SERIES_DAYS)
     book = token_report.gather_book(ledger_dir, series[0], day)
     daybook = token_report.daybook_of(book, tz, series[0], repo)
@@ -2159,56 +2154,30 @@ def collect(root: Path, day: date, projects: Path, now: datetime, wanted: Collec
     )
     merged = merged_all or []
     merged_times = [p.merged for p in merged if p.merged is not None]
-    rows = day_rows(calls, merged_times, series, tz, human)
+    rows = day_rows(calls, merged_times, series, tz, ledger.human)
     metrics = _metrics(periods, rows)
     alarms = len(token_report.alarms_of(periods[-1], list(periods[:-1])).alarms)
 
-    by_branch: dict[str, list[Call]] = defaultdict(list)
-    for c in calls:
-        if c.branch:
-            by_branch[c.branch].append(c)
+    by_branch = _by_branch(calls)
     week = _days(day, WORK_DAYS)
     in_week = [
         p
         for p in merged
         if p.merged is not None and week[0] <= p.merged.astimezone(tz).date() <= day
     ]
-    kinds: dict[date, Counter[str]] = defaultdict(Counter)
-    for p in merged:
-        if p.merged is not None:
-            kinds[p.merged.astimezone(tz).date()][pr_kind(p.title)] += 1
+    entries = worktree_list(root)
     stamps = active_minutes(_main_stamps(calls))
-    buckets: dict[str, list[tuple[float, float]]] = defaultdict(list)
-    for p in in_week:
-        mains = [c for c in by_branch.get(p.branch, []) if c.agent is None]
-        conc = [
-            len(stamps.get(_minute(t), ())) or 1 for c in mains if (t := _time(c.at)) is not None
-        ]
-        if conc and p.merged is not None:
-            cost = sum(c.cost() or 0.0 for c in by_branch[p.branch])
-            lead = (p.merged - p.created).total_seconds() / 3600
-            buckets[bucket_of(round(statistics.fmean(conc)))].append((cost, lead))
-    worktrees = worktree_entries(_run(["git", "worktree", "list", "--porcelain"], root) or "")
-    load = processes(root)
-    load_text = (
-        f"claude 프로세스 {load[0]}개 · 메모리 {load[1]:,} MB"
-        if load
-        else f"프로세스 {UNCOLLECTED}"
-    ) + f" · 워크트리 {len(worktrees)}개(주 체크아웃을 빼고)"
-    load_got = Collected()
-    if load:
-        load_got.value("load:processes", "claude 프로세스", load[0], "개")
-        load_got.value("load:memory_mb", "claude 메모리", load[1], "MB")
-    load_got.value("load:worktrees", "워크트리", len(worktrees), "개")
-    load_got.value("parallel:avg", "어제 평균 동시 세션", rows[-1].avg, "")
-    shares = cost_by_concurrency(calls, stamps, week[0], day, tz)
-    parallel = _parallel_section(rows[1:], kinds, buckets, shares, load_text, src)
+    parallel = _parallel_section(
+        rows[1:],
+        _merged_kinds(merged, tz),
+        concurrency_buckets(in_week, by_branch, stamps),
+        cost_by_concurrency(calls, stamps, week[0], day, tz),
+        processes(root),
+        len(entries),
+        src,
+    )
 
     scanned = scan_transcripts(projects, repo, week[0], day, tz)
-    agent_cost: dict[str, float] = defaultdict(float)
-    for c in calls:
-        if c.agent is not None:
-            agent_cost[c.agent] += c.cost() or 0.0
     types = {c.agent: c.agent_type for c in calls if c.agent is not None and c.agent_type}
     scanned = replace(scanned, agent_type=types | scanned.agent_type)
     works = [
@@ -2216,52 +2185,46 @@ def collect(root: Path, day: date, projects: Path, now: datetime, wanted: Collec
         for p in in_week
         if p.merged is not None and p.branch in by_branch
     ]
-    top = sorted(works, key=lambda w: (-w.cost, w.number))[:TOP]
-    views: dict[int, PrView | None] = {w.number: pr_view(w.number, root) for w in top}
-    rounds: dict[int, int | None] = {}
-    for n, v in views.items():
-        rounds[n] = review_rounds(v.created, v.commits) if v is not None and v.created else None
+    views, rounds = _gather_rounds(works, root)
     opened = open_prs(root)
-    try:
-        handoff_from = hook_report.introduced_dates(root, [HANDOFF_HOOK]).get(HANDOFF_HOOK)
-    except OSError:
-        handoff_from = None
-    journal_path, journal = _latest_journal(root)
-    sweep = _sweep_section(
-        merged, by_branch, handoff, _tickets(root), handoff_from, day, tz, root, src
-    )
+    handoff_from = _handoff_from(root)
+    first = ticket_start(day, handoff_from)
+    sweep, off = _sweep_piece(merged, by_branch, day)
+    tickets = _gather_tickets(root, merged, by_branch, handoff, first, day, tz)
+    model = _model_section(sweep, _ticket_piece(tickets, handoff_from, first, off), src)
     if merged_all is None:
         metrics = without_merged(metrics)
-        parallel = merged_unknown(parallel, parallel.lines)
-        sweep = Part(merged_unknown(sweep.section), Collected())
+        parallel = Part(merged_unknown(parallel.section, parallel.section.lines), parallel.got)
+        model = Part(merged_unknown(model.section), Collected())
+    active, leftover = _gather_worktrees(root, projects, entries, merged_all, opened, now)
+    journal_path, journal = latest_journal(root)
+    hooks = _gather_hooks(root, projects, day)
+    runs = ci_runs(root) if isinstance(hooks, HookScan) else None  # 훅 표가 없는 절은 CI 줄도 없다
 
     parts = [
         _token_section(periods[-1], main, wanted, src, handoff, daybook.pr_at),
-        _hook_section(root, projects, day, src),
-        Part(parallel, load_got),
+        _hook_section(hooks, day, runs, src),
+        parallel,
         _work_section(
-            None if merged_all is None else works, rounds, scanned, agent_cost, wanted, src
+            None if merged_all is None else works,
+            rounds,
+            scanned,
+            _agent_costs(calls),
+            wanted,
+            src,
         ),
-        _queue_section(day, root),
-        _yesterday_section(
-            day, merged_all, opened, worktrees, projects, root, now, tz, journal_path
-        ),
-        sweep,
+        _queue_section(day, main_text(root, QUEUE_PATH)),
+        _yesterday_section(day, merged_all, opened, active, leftover, now, tz, journal_path),
+        model,
     ]
     got = merged_got([_metric_got(metrics), *(p.got for p in parts)])
-    prs: dict[int, Pr] = {}
-    for n in sorted(got.refs):
-        v = views[n] if n in views else pr_view(n, root)
-        prs[n] = (
-            Pr(n, v.title, body_excerpt(v.body), v.branch) if v is not None else Pr(n, None, "", "")
-        )
     return Data(
         day=day,
         made=now.astimezone(tz).isoformat(timespec="seconds"),
         metrics=metrics,
         values=got.values,
         sections=tuple(p.section for p in parts),
-        prs=prs,
+        prs=_gather_prs(got.refs, views, root),
         queue=got.queue,
         branches=got.branches,
         journal=journal,
