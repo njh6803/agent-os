@@ -3298,8 +3298,10 @@ def _write_finished(
     principal: Principal = PRINCIPAL,
     previous: str | None = None,
     between: Sequence[Event] = (),
+    shortcuts: Mapping[str, str] | None = None,
 ) -> None:
-    """끝난 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(남의 주체, 요약 자리)도 쓴다."""
+    """끝난 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(남의 주체, 요약 자리)도 쓴다.
+    바로가기를 주지 않으면 옛 대화의 실행이다."""
     trace.write(
         RunStarted(
             run_id=RunId(run_id),
@@ -3308,11 +3310,20 @@ def _write_finished(
             request=request,
             principal=principal,
             previous_run=None if previous is None else RunId(previous),
+            shortcuts=_map_of(shortcuts),
         )
     )
     for event in between:
         trace.write(event)
     trace.write(RunFinished(run_id=RunId(run_id), ts=FIXED_NOW, output=output))
+
+
+def _map_of(shortcuts: Mapping[str, str] | None) -> Mapping[AgentName, RunId] | None:
+    return (
+        None
+        if shortcuts is None
+        else {AgentName(agent): RunId(run_id) for agent, run_id in shortcuts.items()}
+    )
 
 
 # 컨텍스트 멤버의 값
@@ -3894,6 +3905,332 @@ async def test_형식_2_트레이스의_재개와_이어_가지_않은_실행의
 
         assert events[-1].type == "run_finished"
         assert set(trace.reads) == {_RUN_1}
+
+
+# --- 바로가기 -------------------------------------------------------------------
+#
+# 시작 이벤트는 에이전트마다 그 대화에서 그 에이전트가 가장 최근에 처리한 실행을 가리키는 지도를
+# 든다(ADR 0022 의 둘째 2026-10-15 이력, end-user-continuation 명세 "바로가기"). 새 대화는 빈
+# 지도이고 이어 가기는 앞 실행의 지도에 앞 실행 자신을 덮어 쓴다. 거슬러 읽기는 지도에서 지금
+# 에이전트의 실행으로 곧장 가고 그 실행의 지도로 그 에이전트의 앞 실행으로 가기를 되풀이해, 다른
+# 에이전트의 실행을 읽지 않는다. 앞 실행에 지도가 없으면(옛 대화) 없음이 이어지고 위 "거슬러 읽기가
+# 멈추는 자리" 절처럼 앞 실행을 하나씩 따라간다 — 위 절의 손으로 쓴 트레이스가 옛 대화의 사례다.
+
+
+def _started_of(events: Sequence[Event]) -> RunStarted:
+    started = events[0]
+    assert isinstance(started, RunStarted), [e.type for e in events]
+    return started
+
+
+# 쓰기
+
+
+async def test_새_대화의_시작_이벤트는_빈_바로가기를_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    events = await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    assert _started_of(events).shortcuts == {}
+
+
+async def test_에이전트를_바꿔_이어_가면_시작_이벤트가_에이전트마다_가장_최근_실행을_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """A → B → A. 앞 실행의 지도에 앞 실행 자신을 덮어 쓴다."""
+    plugins = FakePlugins({"alpha": WeavingAgent(), "beta": WeavingAgent()})
+    model = GenericFakeChatModel(messages=iter([]))
+    await _run(WeavingAgent(), model, trace, clock, plugins=plugins, name="alpha")
+    second = await _continue("run-1", trace, clock, name="beta", plugins=plugins)
+
+    third = await _continue("run-2", trace, clock, name="alpha", plugins=plugins)
+
+    assert _started_of(second).shortcuts == {"alpha": "run-1"}
+    assert _started_of(third).shortcuts == {"alpha": "run-1", "beta": "run-2"}
+
+
+async def test_같은_에이전트로_셋을_이으면_그_칸이_바로_앞_실행이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """지도의 그 칸이 앞 실행 자신이면 판정에서 읽은 것을 다시 읽지 않는다."""
+    await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+    await _continue("run-1", trace, clock)
+    trace.reads.clear()
+
+    third = await _continue("run-2", trace, clock)
+
+    assert _started_of(third).shortcuts == {"calc": "run-2"}
+    assert trace.reads == [RunId("run-2"), RunId("run-1")]
+
+
+async def test_옛_대화를_이어_가면_바로가기_없음이_이어지고_앞_실행을_하나씩_따라간다(
+    clock: FakeClock,
+) -> None:
+    """옛 대화를 지도로 옮기지 않는다(명세가 거부했다). 없음이 그 표시다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r1", request="q1", output="a1")
+    _write_finished(trace, "r2", agent="other", previous="r1")
+    trace.reads.clear()
+
+    first = await _continue("r2", trace, clock)
+    second = await _continue("run-1", trace, clock)
+
+    assert _started_of(first).shortcuts is None
+    assert _started_of(second).shortcuts is None
+    assert trace.reads[:2] == [RunId("r2"), RunId("r1")]
+    assert _unwoven(_output_of(second)) == (None, [["q1", "a1"], ["그럼?", _output_of(first)]])
+
+
+# 따라가기
+
+
+@pytest.mark.parametrize("detour", [1, 5])
+async def test_다른_에이전트로_몇_번을_이어_갔든_돌아온_에이전트는_앞_실행과_자기_실행만_읽는다(
+    detour: int, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """A 로 둘, B 로 k 번 이어 간 뒤 A 로 돌아온다. 읽는 실행은 앞 실행(마지막 B)과 A 의 실행
+    둘뿐이고 k 와 무관하다(스토리 3·4)."""
+    plugins = FakePlugins({"alpha": WeavingAgent(), "beta": WeavingAgent()})
+    model = GenericFakeChatModel(messages=iter([]))
+    first = await _run(WeavingAgent(), model, trace, clock, plugins=plugins, name="alpha")
+    second = await _continue("run-1", trace, clock, name="alpha", request="a2", plugins=plugins)
+    for index in range(detour):
+        await _continue(f"run-{index + 2}", trace, clock, name="beta", plugins=plugins)
+    last = f"run-{detour + 2}"
+    trace.reads.clear()
+
+    back = await _continue(last, trace, clock, name="alpha", request="a3", plugins=plugins)
+
+    assert trace.reads == [RunId(last), RunId("run-2"), RunId("run-1")]
+    assert _unwoven(_output_of(back)) == (
+        None,
+        [["2+2?", _output_of(first)], ["a2", _output_of(second)]],
+    )
+
+
+async def test_바로가기를_따라가다_가장_가까운_요약을_만나면_덮는_끝에서_멈춘다(
+    clock: FakeClock,
+) -> None:
+    """멈추는 자리는 옛 대화의 규칙 그대로다. 덮는 끝은 읽지 않는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", request="q0", output="a0", shortcuts={})
+    _write_finished(trace, "r1", request="q1", output="a1", previous="r0", shortcuts={"calc": "r0"})
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1"})
+    _write_finished(
+        trace,
+        "r3",
+        request="q3",
+        output="a3",
+        previous="r2",
+        shortcuts={"calc": "r1", "other": "r2"},
+        between=[_summarized("r3", covers="r1", summary="r1 까지의 요약")],
+    )
+    _write_finished(
+        trace, "r4", agent="other", previous="r3", shortcuts={"calc": "r3", "other": "r2"}
+    )
+    trace.reads.clear()
+
+    events = await _continue("r4", trace, clock)
+
+    assert _unwoven(_output_of(events)) == ("r1 까지의 요약", [["q3", "a3"]])
+    assert trace.reads == [RunId("r4"), RunId("r3")]
+    assert _started_of(events).shortcuts == {"calc": "r3", "other": "r4"}
+
+
+# 검증 — 지도는 서버의 기록이라 어긋나면 깨진 것이다
+
+
+def _write_unfinished(trace: FakeTrace, run_id: str, shortcuts: Mapping[str, str]) -> None:
+    trace.write(
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=FIXED_NOW,
+            agent=AgentName("calc"),
+            request="x",
+            principal=PRINCIPAL,
+            shortcuts=_map_of(shortcuts),
+        )
+    )
+    trace.write(RunFailed(run_id=RunId(run_id), ts=FIXED_NOW, error="down"))
+
+
+def _detoured(trace: FakeTrace) -> None:
+    """r1(calc) 뒤 r2(other). calc 로 r2 를 이어 가면 지도가 r1 을 가리킨다."""
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1"})
+
+
+async def _shortcut_missing(trace: FakeTrace, clock: FakeClock) -> None:
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_damaged(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    trace.damaged.add(RunId("r1"))
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_foreign(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", principal=BOB, shortcuts={})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_other_agent(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", agent="third", shortcuts={})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_unfinished(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_unfinished(trace, "r1", {})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_unmapped(trace: FakeTrace, clock: FakeClock) -> None:
+    """지도가 가리킨 실행은 같은 대화의 지도 있는 실행이어야 한다."""
+    _write_finished(trace, "r1")
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_cycle(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", previous="r2", shortcuts={"calc": "r2"})
+    _write_finished(trace, "r2", previous="r1", shortcuts={"calc": "r1"})
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_escaping_key(trace: FakeTrace, clock: FakeClock) -> None:
+    """앞 실행의 에이전트가 calc 가 아니어도 그 기록 규칙은 본다. 새 지도가 그것을 이어받는다."""
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(
+        trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1", "Bad Key": "r1"}
+    )
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_escaping_value(trace: FakeTrace, clock: FakeClock) -> None:
+    """따라간 실행의 지도도 기록 규칙을 지난다."""
+    _write_finished(trace, "r0", shortcuts={})
+    _write_finished(trace, "r1", previous="r0", shortcuts={"calc": "r0", "other": "../etc"})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_uncovered_end(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(
+        trace,
+        "r2",
+        previous="r1",
+        shortcuts={"calc": "r1"},
+        between=[_summarized("r2", covers="ghost")],
+    )
+    _write_finished(trace, "r3", agent="other", previous="r2", shortcuts={"calc": "r2"})
+    await _continue("r3", trace, clock)
+
+
+async def _shortcut_nonempty_without_previous(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={"calc": "r0"})
+    await _continue("r1", trace, clock)
+
+
+async def _shortcut_without_previous_run(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(trace, "r2", previous="r1", shortcuts={"calc": "r0"})
+    await _continue("r2", trace, clock)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "run_id", "reason"),
+    [
+        pytest.param(_shortcut_missing, "r1", "없다", id="가리킨 실행 없음"),
+        pytest.param(_shortcut_damaged, "r1", "모르는 종류", id="가리킨 실행 손상"),
+        pytest.param(_shortcut_foreign, "r1", "주체", id="가리킨 실행의 주체가 다름"),
+        pytest.param(_shortcut_other_agent, "r1", "에이전트", id="가리킨 실행의 에이전트가 다름"),
+        pytest.param(_shortcut_unfinished, "r1", "failed", id="가리킨 실행이 끝나지 않음"),
+        pytest.param(_shortcut_unmapped, "r1", "바로가기가 없다", id="가리킨 실행에 지도 없음"),
+        pytest.param(_shortcut_cycle, "r1", "순환", id="순환"),
+        pytest.param(_shortcut_escaping_key, "r2", "패턴", id="키의 패턴 위반"),
+        pytest.param(_shortcut_escaping_value, "r1", "패턴", id="값의 패턴 위반"),
+        pytest.param(_shortcut_uncovered_end, "ghost", "덮는 끝", id="덮는 끝을 못 만남"),
+        pytest.param(
+            _shortcut_nonempty_without_previous, "r1", "비어", id="앞 실행이 없는데 지도가 참"
+        ),
+        pytest.param(
+            _shortcut_without_previous_run, "r2", "앞 실행", id="지도의 값에 앞 실행이 없음"
+        ),
+    ],
+)
+async def test_바로가기가_어긋나면_하위_타입이_아닌_PluginError이고_메시지가_실행과_이유를_든다(
+    scenario: Callable[[FakeTrace, FakeClock], Awaitable[None]],
+    run_id: str,
+    reason: str,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """요청이 아니라 서버의 기록이 가리킨 것이라 깨진 고리와 같다(명세 "바로가기"의 검증). 거절된
+    이어 가기는 트레이스를 남기지 않는다."""
+    with pytest.raises(PluginError) as caught:
+        await scenario(trace, clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert run_id in str(caught.value)
+    assert reason in str(caught.value)
+    assert clock.ids_issued == 0
+    assert all(e.run_id != "run-1" for e in trace.events)
+
+
+async def test_앞_실행의_지도_위반은_주체와_끝남_뒤에_선다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """지도의 검증은 고리 덩어리라 앞 실행의 판정 순서가 그대로다(티켓 03, 명세 "core — 판정
+    순서")."""
+    _write_finished(trace, "r1", principal=BOB, shortcuts={"Bad Key": "r0"})
+    _write_unfinished(trace, "r2", {"Bad Key": "r0"})
+
+    with pytest.raises(DifferentPrincipal):
+        await _continue("r1", trace, clock)
+    with pytest.raises(NotContinuable):
+        await _continue("r2", trace, clock)
+
+
+async def test_앞_실행_칸의_키를_바꾼_지도는_잡히지_않고_받아들인다(clock: FakeClock) -> None:
+    """앞 실행을 따로 읽지 않으면 지도의 키를 댈 수 없다(명세 검토). r2 의 지도에서 calc 칸의 키를
+    other 로 바꿨다. 잃은 칸의 교환은 빠진다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"other": "r1"})
+
+    events = await _continue("r2", trace, clock)
+
+    assert _unwoven(_output_of(events)) == (None, [])
+
+
+# 재개 — 자기 지도로 다시 읽는다
+
+
+async def test_바로가기가_있는_이어_간_실행의_재개는_자기_지도로_읽어_앞_실행을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """처음과 같은 실행을 같은 규칙으로 읽어 같은 멤버를 주므로 재생 대조가 통과한다."""
+    _write_finished(trace, "r0", request="q0", output="a0", shortcuts={})
+    _write_finished(trace, "r1", agent="other", previous="r0", shortcuts={"calc": "r0"})
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue("r1", trace, clock, model=model, tools=tools, plugins=plugins)
+    assert [e.type for e in paused] == ["run_started", "llm_called", "run_paused"]
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    assert set(trace.reads) == {_RUN_1, RunId("r0")}
+    recorded = next(e for e in trace.events if isinstance(e, LlmCalled) and e.prompt)
+    assert _unwoven(recorded.prompt.split("\n")[0]) == (None, [["q0", "a0"]])
 
 
 # 에이전트가 낸 요약 이벤트는 실패다
@@ -4610,6 +4947,37 @@ async def test_자기_요약의_덮는_끝이_앞_실행_자신이면_재개는_
     )
     trace.forget(RunId("r1"))
     trace.forget(RunId("r2"))
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    assert set(trace.reads) == {_RUN_1}
+
+
+async def test_자기_요약의_덮는_끝이_지도의_그_에이전트_칸이면_재개는_아무것도_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """바로가기가 있는 실행에서 "덮는 끝이 앞 실행 자신이면"의 일반화다. 앞 실행은 다른 에이전트의
+    실행이고 덮는 끝은 지도의 calc 칸이다."""
+    _write_finished(trace, "r1", request="요", output="답", shortcuts={})
+    _write_finished(
+        trace,
+        "r2",
+        request="요요요요",
+        output="답답답답답",
+        previous="r1",
+        shortcuts={"calc": "r1"},
+    )
+    _write_finished(trace, "r3", agent="other", previous="r2", shortcuts={"calc": "r2"})
+    model = _summarizing_model(_reply("요약 글"), _tool_request("send"), _reply("끝"))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    plugins.conversation_limit = 10
+    paused = await _continue("r3", trace, clock, model=model, tools=tools, plugins=plugins)
+    assert _summary_event(paused).last_covered_run == "r2"
+    for run_id in ("r1", "r2", "r3"):
+        trace.forget(RunId(run_id))
     trace.reads.clear()
 
     events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
