@@ -147,3 +147,44 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
   열여덟 가운데 하나), 이 표를 커밋에 실으니 pre-commit의 `mutate.py --staged`가 막았다. 시작과 이어 가기가 함께 쓰게 된
   `started`의 `previous_run` 줄을 원문에 넣어 고쳤고, 그 변이 하나를 돌려 기대대로였다. 그래서 남은 위험의 열여덟은 열일곱이다.
 - 첫 커밋 시도는 위 막힘으로 실패했다(인용 경고 셋도 함께 났고 따옴표를 떼어 고쳤다).
+- 둘째 커밋 `6d792161`이 pre-commit을 통과했다(손으로 치는 다섯은 이 결과로 갈음한다).
+
+## 인계 (커밋 뒤)
+
+경계 `커밋 뒤`에 인계 계기가 왔다(세션 컨텍스트 약 35만 토큰). 인계하지 않는 때 다섯에 들지 않았다 — 커밋은 성공했고, 요청
+범위는 병합까지이며, 이 세션의 지시문은 다른 경계(`셀프 리뷰 직전`)였고, `인계 못함` 줄이 없고, `get_session`의 `self`에
+`parentSessionId`가 없다.
+
+남은 단계: PR 직전 리뷰(`/security-review`와 `bug-perf-review` 서브에이전트를 나란히. 그 전에 `origin/main`을 합친다 —
+`3a84a692`가 이 브랜치보다 앞서 있고 겹치는 파일은 없었다), 그 지적의 반영, PR(본문의 남긴 위험: anyio 5의 `move_on_after`
+타이머 변경이 이제 실행 타임아웃에 닿는다, main에서 원문이 사라진 변이 열일곱, 03·05와 같은 파일의 글자 충돌 후보), 봇 회차,
+병합 직전의 기능 닫기 판정(티켓 체크박스에 2026-10-20 판정을 적었고 병합 직전에 다시 본다), 병합. PR 직전 리뷰의 브리프에 밀
+주장은 위 "셀프 리뷰"의 목록이다.
+
+지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md. 런타임이 쓰는 모든 실패가 생긴 자리의 원인을 들고, 먼저 난 실패가 결말이다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
+브랜치: feature/02-runtime-names-the-failure-cause
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/02-runtime-names-the-failure-cause (인계함)`으로 바꾸고, 워크트리 잠금을 풀었다. 멈출 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-20T04:15:53Z
+
+## 이어받은 세션 (커밋 뒤부터)
+
+open-session이 연 새 세션이다. 제목을 `feature/02-runtime-names-the-failure-cause`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에
+들어가 `implement` 스킬을 Read로 열어 따랐다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 커밋 뒤. … 남은 것은 origin/main
+> 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히 …), 반영, PR, 봇 회차, 병합 직전 기능
+> 닫기 판정, 병합이다. … 이번 요청 범위: PR과 병합까지"
