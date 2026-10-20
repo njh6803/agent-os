@@ -339,3 +339,15 @@ Read로 열어 따랐다. `git fetch` 뒤 origin/main은 `0262841b`에서 움직
 `-m llm`(`aabf98ae`, 04가 든 main을 합친 뒤. 합치기로 `run.py`가 바뀌어 다시 돌렸다): 7 passed, 170.68초. LLM 토큰 합계
 55,120(입력 53,997, 출력 1,123), 트레이스 10개, 모델 호출 22건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다. PR 본문의 그 줄과
 기능 닫기·04 합치기·일지 경로를 고쳤다.
+
+`@coderabbitai review`(마지막 푸시 `87abe95d` 뒤)는 이번에도 "Review rate limited"였다. CI는 모두 초록.
+
+봇 회차(claude-review, `87abe95d`): 경계 지적 없음, Major 1·Minor 2·Nit 1. 고친 것이 없다.
+- **Major, 사실이 아니다.** `core.md` 32행의 실행 타임아웃 항목이 `fail_after`·`TimeoutError` 그대로라고 했지만, 그 줄은 이미
+  `move_on_after`·`cancelled_caught`·`deadline_failure`·`_held`로 적혀 있고 `TimeoutError`는 "예외 타입으로 보면 ETIMEDOUT도 기한으로
+  읽힌다"는 반례로만 나온다.
+- **Minor, 두었다.** 같은 설명이 모듈 독스트링·`deadline_failure`·`_hold_failure`·`_connected`·`_closing`·`core.md`에 되풀이된다.
+  원천 하나로 모으는 것은 이 티켓의 체크박스 밖이고 앞 회차의 "진입점 둘의 꼬리"와 같은 대기열 후보다.
+- **Minor, 두었다.** `_connected` 독스트링의 "PR 직전 리뷰" 출처. `adapters/jsonl.py`·`filesystem.py`의 "(PR 직전 보안·버그 축)"과
+  같은 저장소 관례다.
+- **Nit, 두었다.** `_Site`의 `inside`와 `write`가 같은 원인으로 간다. 자리는 원인이 아니라 실패를 받는 곳이라 따로 둔다(명세 자리 표).
