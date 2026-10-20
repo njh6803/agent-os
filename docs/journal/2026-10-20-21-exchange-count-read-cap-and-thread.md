@@ -169,3 +169,55 @@ sdk의 두 문장(`events.py`의 주석, `Conversation` 독스트링)이 거짓�
 
 다시 돌린 것(커밋 전): `tests/core/test_run.py`와 `tests/sdk` 353 passed, 바꾼 넷의 pyright 0 errors, ruff check·format
 초록. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+
+## 커밋
+
+리뷰 반영을 한 커밋으로 넣었다(16 files). 첫 시도는 commit-msg 훅이 제목 길이(72자 초과)로 막아 제목을 줄였다.
+pre-commit은 ruff check·format, checks(lint-imports, zizmor, check-instructions, check-type-escapes, pyright 29.6초,
+run-hooks 84.5초, pytest 229.6초, web-verify 264.1초), markdown tables, line separators, mutation tables(`--staged`),
+canary specs, commit message가 모두 Passed다. constitution version은 헌법 파일을 고치지 않아 `Skipped`(no files)다.
+quotes는 경고 2건이다. 이 일지 셀프 리뷰 절의 두 인용("긴 고리가 …알려진 한계다", "새 요약은 언제나 …")은 리뷰가 고쳐
+지운 옛 문장이라 저장소에 없는 것이 맞다. 그래서 손으로 치는 다섯은 이 pre-commit으로 갈음됐다.
+
+## 커밋 뒤에 인계
+
+커밋이 끝나자 인계 계기가 왔다(세션 컨텍스트 354,623 토큰, 경계 `커밋 뒤`). 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라
+경계가 다르고, 요청 범위는 PR과 병합까지이며, 곁 세션이 아니다(`get_session` self에 `parentSessionId` 없음). 이 브랜치에
+열린 PR이 없어 다음 단계는 이 세션의 지시문 값(구현)을 옮긴다. `tools/model_sweep.py`는 `Opus 5.5 / xhigh`를 냈다. 이 세션의
+지금 제목은 `feature/04-exchange-count-read-cap-and-thread`이고 인계 직전에 `(인계함)`을 붙인다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md. 교환 수와 상한과 스레드. 짧은 말이 수백 번 쌓여도 한 번에 읽는 실행이 묶이고, 이어 가기의 거슬러 읽기가 서버를 멈추지 않는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md
+브랜치: feature/04-exchange-count-read-cap-and-thread
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md(셀프 리뷰 절의 "새로 쓴 사실 문장", 커밋 절. 끝의 "커밋 뒤에 인계" 절은 커밋하지 않아 워크트리에만 있다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(두 축)와 그 반영을 커밋까지 마쳤고 pre-commit은 모두 초록이다(손으로 치는 다섯은 갈음됨). 남은 단계는 차례로 (1) walk_cap_mutations.toml 20개 전체 실행(리뷰 반영 뒤에는 6·7·19·20만 돌렸다), (2) core.md를 고쳤으므로 카나리아 core_rule_read_cap_thread.toml 다시 돌기, (3) 티켓의 "검증 명령" 체크박스 채우기(pre-commit 결과와 -m llm 7 passed가 일지에 있다), (4) origin/main 합치기, (5) PR 직전 리뷰에 일지 셀프 리뷰 절의 "새로 쓴 사실 문장"을 밀 주장으로 넘기기, (6) PR, 봇 회차, 병합 직전 판정 체크박스, 워크트리 길로 병합, next-session이다. 셀프 리뷰가 남긴 지적 하나(01 티켓 11행)의 이유는 일지에 있다. 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨고, 이 세션이 띄운 백그라운드 작업은 끝난 커밋뿐이라 멈출 것이 없었으며,
+`git worktree unlock C:/project/agent/.claude/worktrees/04-exchange-count-read-cap-and-thread`는 `is not locked`로
+끝났다(넘어간다).
+
+open-session을 부른다 2026-10-20T06:41:59Z
+
+`tools/open_session.ps1 -Action send`가 `page=` 뒤에 멈췄다. 새 세션 화면이 앱의 마지막 폴더인
+`C:\project\agent\.claude\worktrees\skill-listing-budget`(같은 때 돌던 `chore/skill-listing-budget` 세션의 워크트리)로 열려
+그 폴더의 신뢰 대화상자가 떴고, 스크립트는 루트가 아닌 폴더를 수락하지 않아 보내지 않았다(`sent=` 없음, 세션은 생기지
+않았다). 제목을 `feature/04-exchange-count-read-cap-and-thread`로 되돌렸고, 이 세션에서 `커밋 뒤`의 다음 단계를 잇는다.
+
+인계 못함 커밋 뒤
+
+## 커밋 뒤
+
+- `walk_cap_mutations.toml` 전체 실행(커밋 `2a4ce5b0`): 변이 20 모두 기대대로. 15·20은 초록 기대대로 초록이고, 나머지
+  열여덟은 표지까지 맞았다. 끝난 뒤 작업 트리에 변이가 남지 않았다(`git status --porcelain`).
+- 카나리아 `core_rule_read_cap_thread.toml`(claude 2.1.302, 커밋 `2a4ce5b0`): 통과 4. 실험군 3/3이 `READ_CAP`,
+  `EXCHANGE_COUNT_LIMIT`, `abandon_on_cancel=False`를 옮겼고 대조군은 "없음"이었다. 명세의 `# 최신 결과:` 줄과 프로브
+  README의 walk_cap 결과 칸을 고쳤다.
