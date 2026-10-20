@@ -983,10 +983,12 @@ def pull_bodies(text: str) -> dict[int, str] | None:
     """`own_pull_bodies` 의 gh 가 낸 줄(`[번호, 본문]` 의 JSON)에서 번호 → 본문.
 
     본문이 빈 PR 은 null 이 와 빈 글로 든다. 풀지 못한 줄이 하나라도 있으면 None 이다. 일부만 보고
-    다 봤다고 하지 않는다.
+    다 봤다고 하지 않는다. 줄은 `\\n` 으로만 가른다. JSON 은 문자열 안의 U+0085·U+2028·U+2029 를
+    날것으로 둘 수 있고(jq 가 그것을 이스케이프하는지는 재지 않았다), `splitlines` 는 그 글자에서도
+    갈라 본문에 그 글자가 든 PR 의 줄을 풀지 못하게 한다.
     """
     found: dict[int, str] = {}
-    for line in text.splitlines():
+    for line in text.split("\n"):  # splitlines 는 U+0085·U+2028 에서도 가른다
         if not line.strip():
             continue
         try:
@@ -1024,8 +1026,9 @@ def pull_body_lines(
 
     인용이 바뀌는 PR 마다 옮긴 본문을 `folder`(없으면 처음 쓸 때 만드는 임시 폴더)의
     `pr-<번호>-body.md` 에 바이트 그대로 쓰고, 그 파일을 올리는 REST 명령을 든다. 클라우드 세션에서
-    `gh pr …` 하위 명령 셋이 GraphQL 이 막혀 실패했고 REST 는 됐다(`.claude/rules/tools.md`. `gh pr
-    edit` 는 거기서 재지 않았다). 열린 PR 이 없으면 빈 목록이다.
+    `gh pr list`, `gh pr checks <번호>`, `gh pr view <번호> --json headRefOid` 가 GraphQL 이 막혀
+    실패했고 REST 는 됐다(`.claude/rules/tools.md`. `gh pr edit` 는 거기서 재지 않았다). 열린 PR 이
+    없으면 빈 목록이다.
     """
     if bodies is None:
         return [

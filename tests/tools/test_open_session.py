@@ -1283,6 +1283,9 @@ $shown -join '|'
         # 지시문의 줄은 폴더 표시가 아니다
         (["C:\\project\\agent", "D:\\x"], "첫 줄\nD:\\x\n끝", "C:\\project\\agent"),
         (["C:\\a", "C:\\a", "c:\\b"], "", "C:\\a|c:\\b"),  # 같은 글은 한 번
+        # 여러 줄 문단의 Text 는 지시문의 어느 줄과도 같지 않고, 입력창을 읽지 못하면 지시문이
+        # 비어도 폴더가 아니다
+        (["C:\\project\\agent", "D:\\x\n둘째 줄", "E:\\y\r\n끝"], "", "C:\\project\\agent"),
         (["agent", "환경: agent", "C:/project/agent", "\\\\server\\share"], "", ""),
         ([], "", ""),
     ],

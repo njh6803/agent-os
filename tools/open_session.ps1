@@ -217,9 +217,9 @@ function Send-Prompt {
     $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
 
     # 딥링크가 폴더를 싣지 않아(위 `folder` 주석) 새 세션은 앱의 마지막 폴더에서 열린다. 그 폴더가 다른 워크트리여서 인계
-    # 열기가 그리로 간 일이 네 번이었다(대기열 378. 둘은 새 세션이 거기 열려 첫 턴 훅에 막혀 멈췄고, 둘은 위 신뢰 대화상자에서
-    # 멈췄다). 그래서 화면이 보이는 폴더가 -Folder 가 아니면 모델을 고르기 전에 멈춘다. 화면은 지시문이 든 채 남아 사람이 폴더를
-    # 고르고 보낸다. 모델은 아직 고르지 않았으므로 모델 줄이 있으면 멈춤 문구가 그 값도 고르라고 한다. 폴더 글은 입력창보다 늦게
+    # 열기가 그리로 간 일을 대기열 378 이 네 회차로 셌다(둘은 새 세션이 거기 열려 첫 턴에 멈췄고(첫 턴 훅이 막은 것으로 본다),
+    # 둘은 위 신뢰 대화상자에서 멈췄다. 같은 폴더에서 첫 턴에 멈춘 인계 세션이 둘 더 있었다, 일지 2026-10-20-16). 그래서
+    # 화면이 보이는 폴더가 -Folder 가 아니면 모델을 고르기 전에 멈춘다. 화면은 지시문이 든 채 남아 사람이 폴더를 고르고 보낸다. 모델은 아직 고르지 않았으므로 모델 줄이 있으면 멈춤 문구가 그 값도 고르라고 한다. 폴더 글은 입력창보다 늦게
     # 그려질 수 있어 0.5초 간격으로 여섯 번까지 읽는다.
     $shown = @()
     for ($i = 0; $i -lt 6 -and $shown.Count -eq 0; $i++) {
@@ -414,10 +414,11 @@ function Get-EditValue($el) {
 # 갈린다(.scratch/harness/probes/composer_folder.ps1, 앱 2.37337.1.0, 2026-10-20). 잰 회차는 마지막 폴더가 C:\project\agent 인
 # 하나뿐이라, 그 Text 가 마지막 폴더를 따라 바뀐다는 것은 어림이다(양성 대조가 없다). 틀려서 다른 폴더를 놓치면 open-session
 # 4단계의 `cwd` 확인이 보낸 뒤에 잡는다. 지시문의 문단도 묶음 안의 Text 라 입력창의
-# 줄과 같은 글은 뺀다. 드라이브 경로(`X:\`)로 시작하는 글만 고르고 같은 글은 한 번 든다. 순수하다.
+# 줄과 같은 글은 뺀다. 여러 줄 문단의 Text 는 어느 한 줄과도 같지 않을 수 있고 입력창을 읽지 못하면 줄이 없어, 줄바꿈을 품은 글도
+# 폴더로 읽지 않는다(폴더 경로에는 줄바꿈이 없다). 드라이브 경로(`X:\`)로 시작하는 글만 고르고 같은 글은 한 번 든다. 순수하다.
 function Select-ShownFolders([string[]] $names, [string] $prompt) {
     $lines = @($prompt -split "`r?`n")
-    return @($names | Where-Object { $_ -cmatch '^[A-Za-z]:\\' -and $lines -cnotcontains $_ } | Select-Object -Unique)
+    return @($names | Where-Object { $_ -cmatch '^[A-Za-z]:\\' -and $_ -notmatch '[\r\n]' -and $lines -cnotcontains $_ } | Select-Object -Unique)
 }
 
 function Read-ShownFolders($box) {

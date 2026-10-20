@@ -1,5 +1,5 @@
 # open_session.ps1 의 새 세션 화면 폴더 확인(대기열 378. `Select-ShownFolders`, `Get-FolderMismatch`)의 테스트가 무엇을 재는지
-# 변이로 본다(일곱). 규칙 하나를 빼면 빨강이어야 한다.
+# 변이로 본다(여덟). 규칙 하나를 빼면 빨강이어야 한다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_folder_mutations.toml
 # 테스트는 파워셸 AST 에서 함수를 떼어 pwsh 로 부른다(tests/tools/test_open_session.py). 접근성 트리를 읽는 `Read-ShownFolders`
 # 와 `Send-Prompt` 의 멈춤은 시험이 없다. 실제 앱의 새 세션 화면에서 손으로 본 것은 커밋하지 않은 스크래치 스크립트로 부른
@@ -11,8 +11,17 @@ tests = ["tests/tools/test_open_session.py", "-k", "드라이브_경로만"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/open_session.ps1"
-old = '''$_ -cmatch '^[A-Za-z]:\\' -and $lines -cnotcontains $_ }'''
-new = '''$_ -cmatch '^[A-Za-z]:\\' }'''
+old = ''' -and $lines -cnotcontains $_ }'''
+new = ''' }'''
+
+[[mutation]]
+name = "378: 줄바꿈을 품은 글도 폴더로 센다"
+tests = ["tests/tools/test_open_session.py", "-k", "드라이브_경로만"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''$_ -notmatch '[\r\n]' -and '''
+new = ''''''
 
 [[mutation]]
 name = "378: 드라이브 뒤의 구분자를 보지 않는다"

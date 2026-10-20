@@ -630,6 +630,14 @@ def test_gh_가_낸_줄에서_열린_PR의_번호와_본문을_읽는다() -> No
     assert pull_bodies('["7","본문"]\n') is None
 
 
+def test_본문에_날것으로_든_U0085와_U2028은_줄을_가르지_않는다() -> None:
+    """JSON 은 문자열 안의 그 글자를 이스케이프하지 않아도 된다. `splitlines` 는 그 글자에서도 갈라
+    한 PR 의 줄을 둘로 쪼갰다(PR 직전 `bug-perf-review`)."""
+    body = f"가{chr(0x85)}나{chr(0x2028)}다{chr(0x2029)}라"
+
+    assert pull_bodies(f'[7,"{body}"]\n') == {7: body}
+
+
 def test_이_브랜치의_PR_본문은_origin_owner의_head로_REST에서_읽는다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

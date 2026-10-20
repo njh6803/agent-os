@@ -1448,3 +1448,13 @@ expect_output = ["tests/tools/test_sibling_overlap.py::test_분리_HEAD면_PR_�
 file = "tools/sibling_overlap.py"
 old = "    if repo is None or branch is None:"
 new = "    if repo is None:"
+
+[[mutation]]
+name = "376: PR 본문의 줄을 splitlines 로 가른다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "U0085와_U2028"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_본문에_날것으로_든_U0085와_U2028은_줄을_가르지_않는다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''text.split("\n"):  # splitlines'''
+new = '''text.splitlines():  # splitlines'''
