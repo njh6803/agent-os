@@ -49,8 +49,10 @@ origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진
 `${USAGE_REPO}`(`.scratch/token-report/summary.txt` 에 방금 쓴 요약을 둔 임시 저장소 — 사용량 장부와
 요약의 표지가 이 저장소의 주 체크아웃이 아니라 여기에 쌓인다), `${USAGE_HOME}`(가짜 계정의
 `.claude.json` 을 둔 임시 홈 — 사람의 설정 파일을 읽지 않는다),
-`${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이 없는
-것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다),
+`${MUTATING_REPO}`·`${STALE_MUTATING_REPO}`(git 디렉터리에 `tools/mutate.py` 가 도는 동안 두는
+표지를 둔 임시 저장소 둘. 앞은 러너 자신의 pid 라 훅이 도는 동안 살아 있고, 뒤는 끝난 프로세스의 pid
+다), `${SEQ_3000}`(Bash 의 `seq 1 3000` 이 내는 13892자 — 표에 그대로 두기에는 길다. 끝 줄바꿈이
+없는 것은 `.scratch/token-usage/probes/large_result/payloads.jsonl` 의 `seq 1 2000` 결과와 같다),
 `${WORKTREE_SKILLS_REPO}`(워크트리 자리 `.claude/worktrees/side/` 에 스킬 둘을 둔 임시 폴더 —
 워크트리 스킬 사본을 끄는 훅이 이 저장소의 주 체크아웃이 아니라 이 폴더의 local 설정에 쓴다). 사례의
 `env` 는 자리표시자를 바꾼 뒤 자식 환경을 덧씌운다. 위에서 벗긴 변수가 필요한 사례는 그 값을 `env`
@@ -663,6 +665,8 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "COMMIT_MSGS": commit_msgs.as_posix(),
         "USAGE_REPO": _usage_repository(scratch, today).as_posix(),
         "USAGE_HOME": _usage_home(scratch).as_posix(),
+        "MUTATING_REPO": _mutating_repository(scratch, "mutating", os.getpid()).as_posix(),
+        "STALE_MUTATING_REPO": _mutating_repository(scratch, "stale", _ended_pid()).as_posix(),
         "SEQ_3000": "\n".join(str(n) for n in range(1, 3001)),
         "WORKTREE_SKILLS_REPO": _worktree_skills_repository(scratch).as_posix(),
     }
@@ -699,6 +703,38 @@ def _usage_repository(scratch: Path, today: str) -> Path:
         f"보고서 날짜: {day}\n환산 비용 $0.00\n경보 없음\n보고서: {report}/daily/{day}.md\n",
         encoding="utf-8",
     )
+    return repo
+
+
+_ENDED: list[subprocess.Popen[bytes]] = []
+
+
+def _ended_pid() -> int:
+    """끝난 프로세스의 pid. 강제로 끝나 지우지 못한 변이 도구의 표지를 흉내 낸다. 윈도는 그
+    프로세스의 핸들이 열린 동안 pid 를 다시 쓰지 않으므로 `Popen` 을 러너가 끝날 때까지 쥔다.
+    버리면 핸들이 닫혀, 부하 아래에서 다른 프로세스가 그 pid 를 받아 침묵 사례가 알렸다(PR #308
+    의 일지 커밋 pre-commit). POSIX 는 거두어야 살아 있지 않다고 읽혀 거둔다."""
+    process = subprocess.Popen([sys.executable, "-c", "pass"], env=hook_environment())
+    process.wait(timeout=DEFAULT_HOOK_TIMEOUT)
+    _ENDED.append(process)
+    return process.pid
+
+
+def _mutating_repository(scratch: Path, name: str, pid: int) -> Path:
+    """git 디렉터리에 `tools/mutate.py` 가 도는 동안 두는 표지(`mutate-running-<pid>.json`)를 둔
+    임시 저장소. 러너 자신의 pid 를 주면 훅이 도는 동안 살아 있다. 이름은 그 도구의 `MARKER_PREFIX`
+    를 따른다(러너는 그 모듈을 import 하지 않는다)."""
+    repo = scratch / f"{name}-repo"
+    subprocess.run(
+        ["git", "init", "-q", str(repo)],
+        check=True,
+        capture_output=True,
+        env=hook_environment(),
+        timeout=DEFAULT_HOOK_TIMEOUT,
+    )
+    (repo / "m.py").write_text("x = 1\n", encoding="utf-8")
+    marker = {"pid": pid, "table": ".scratch/harness/probes/x_mutations.toml"}
+    (repo / ".git" / f"mutate-running-{pid}.json").write_text(json.dumps(marker), encoding="utf-8")
     return repo
 
 

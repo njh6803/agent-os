@@ -22,8 +22,9 @@ main 은 막지 않는다. 킥오프는 새 프로젝트의 첫 커밋을 main �
 판정한다 — 앞은 못 막고 뒤는 오탐이다), 래퍼 스크립트 안의 커밋, detached HEAD(브랜치 이름이 비어
 막지 않는다), `HEAD` 가 아직 커밋을 가리키지 않는 main(다른 브랜치에 커밋이 있는 저장소에서
 `git switch --orphan main` 한 뒤 — 커밋의 유무를 저장소가 아니라 `HEAD` 로 재므로 막지 않는다),
-git 이 없거나 저장소 밖(막지 않는다 — 게이트가 아니라 안전장치라 fail-open 이다. 커밋의 유무를 읽지
-못해도 커밋이 없다고 본다), 앞 모양(다른 세션의 커밋이 내 브랜치에 얹히는 것).
+git 이 없거나 저장소 밖이거나 `CALL_TIMEOUT` 초 안에 돌아오지 않을 때(막지 않는다 — 게이트가 아니라
+안전장치라 fail-open 이다. 커밋의 유무를 읽지 못해도 커밋이 없다고 본다), 앞 모양(다른 세션의 커밋이
+내 브랜치에 얹히는 것).
 """
 
 from __future__ import annotations
@@ -37,6 +38,8 @@ from typing import TypedDict
 
 PROTECTED = frozenset({"main"})
 _REPO_LOCATION_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR")
+# git 하나를 기다리는 초. 많아야 두 번 부르므로 더해도 등록의 시간 제한(20초) 안이다(대기열 342).
+CALL_TIMEOUT = 8
 
 # `commit-tree`·`commit-graph` 는 커밋이 아니라 배관이다. `\b` 는 `-` 앞에서도 경계라 따로 막는다.
 _GIT_COMMIT = re.compile(r"git\s+(?:(?:-C|-c)\s+\S+\s+|--no-pager\s+)*commit(?![\w-])")
@@ -89,7 +92,8 @@ def _without_heredoc_bodies(command: str) -> list[str]:
 
 
 def _git(args: list[str], cwd: str | None) -> subprocess.CompletedProcess[str] | None:
-    """`cwd` 에서 git 을 띄운다. 저장소를 가리키는 환경 변수를 벗긴다. 띄우지 못하면 None."""
+    """`cwd` 에서 git 을 띄운다. 저장소를 가리키는 환경 변수를 벗긴다. 띄우지 못하거나
+    `CALL_TIMEOUT` 초 안에 돌아오지 않으면 None."""
     env = {key: value for key, value in os.environ.items() if key not in _REPO_LOCATION_VARS}
     try:
         return subprocess.run(
@@ -99,8 +103,9 @@ def _git(args: list[str], cwd: str | None) -> subprocess.CompletedProcess[str] |
             capture_output=True,
             text=True,
             check=False,
+            timeout=CALL_TIMEOUT,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
 
 

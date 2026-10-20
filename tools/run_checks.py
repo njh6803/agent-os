@@ -203,7 +203,7 @@ def run_one(check: Check, cwd: Path, running: Running | None = None) -> Outcome:
     if not running.add(process):
         kill_tree(process)
         _drain(process)
-        process.wait()
+        process.wait()  # 시간 제한 없음: kill_tree 로 끝낸 자식을 거둔다
         message = "멈추는 중이라 띄운 검사를 곧바로 끝냈다\n".encode()
         return Outcome(check, passed=False, output=message, seconds=time.monotonic() - start)
     try:
@@ -219,7 +219,7 @@ def _wait(check: Check, process: subprocess.Popen[bytes], start: float) -> Outco
     except subprocess.TimeoutExpired:
         kill_tree(process)
         output = _drain(process)
-        process.wait()
+        process.wait()  # 시간 제한 없음: kill_tree 로 끝낸 자식을 거둔다
         message = f"{check.timeout:g}초 시간 제한을 넘겼다. 프로세스 트리를 끝냈다\n".encode()
         if output and not output.endswith(b"\n"):
             output += b"\n"

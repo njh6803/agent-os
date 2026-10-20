@@ -54,6 +54,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 # 인덱스에서 내용이 있는 일반 파일의 모드. 160000(서브모듈)과 120000(링크)은 뺀다.
 _REGULAR_MODES = frozenset({"100644", "100755"})
+# `git ls-files` 를 기다리는 초(대기열 342). 인자 없이 돌 때(pytest 의 저장소 상태 시험, 손으로 칠
+# 때)만 부른다. pre-commit 훅은 파일 이름을 넘겨 이 호출에 닿지 않는다.
+CALL_TIMEOUT = 60
 # 비 ASCII 문자는 chr() 로 만든다. 편집 도구가 역슬래시-u 이스케이프를 날것으로 저장한다.
 _BOM = chr(0xFEFF)
 # cmark 는 NUL 을 U+FFFD 로 바꾼 뒤 읽는다.
@@ -553,9 +556,14 @@ def problems_in(text: str) -> list[str]:
 
 
 def tracked_markdown(root: Path = ROOT) -> list[Path]:
-    """인덱스의 일반 마크다운 파일 중 작업 트리에 있는 것. 인자 없이 부를 때의 범위다."""
+    """인덱스의 일반 마크다운 파일 중 작업 트리에 있는 것. 인자 없이 부를 때의 범위다. git 이
+    실패하거나 `CALL_TIMEOUT` 초 안에 돌아오지 않으면 예외로 멈춘다."""
     listing = subprocess.run(
-        ["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True
+        ["git", "ls-files", "-s", "-z"],
+        cwd=root,
+        capture_output=True,
+        check=True,
+        timeout=CALL_TIMEOUT,
     )
     files: list[Path] = []
     seen: set[str] = set()
