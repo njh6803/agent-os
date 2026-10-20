@@ -71,10 +71,10 @@ file = "src/agent_os/core/continuation.py"
 old = '''
     if summary is not None and older == summary.last_covered_run:
         return None
-    next_link = read_link(trace, older)
+    return older
 '''
 new = '''
-    next_link = read_link(trace, older)
+    return older
 '''
 
 [[mutation]]
@@ -116,7 +116,9 @@ expect = "red"
 file = "src/agent_os/core/run.py"
 old = '''
     continued = (
-        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
     )
     if visible_agents is not None and agent not in visible_agents:
         raise Absent(_no_agent(agent))
@@ -129,7 +131,9 @@ new = '''
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
     continued = (
-        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
     )
 '''
 
@@ -330,10 +334,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/continuation.py"
 old = '''
-    if sum(run.size for run in gathered.runs) <= limit:
+    over_size = sum(run.size for run in gathered.runs) > limit
 '''
 new = '''
-    if sum(run.size for run in gathered.runs) < limit:
+    over_size = sum(run.size for run in gathered.runs) >= limit
 '''
 
 [[mutation]]
@@ -344,11 +348,11 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/continuation.py"
 old = '''
-    if sum(run.size for run in gathered.runs) <= limit:
+    over_size = sum(run.size for run in gathered.runs) > limit
 '''
 new = '''
     previous = "" if gathered.summary is None else gathered.summary.summary
-    if sum(run.size for run in gathered.runs) + len(previous) <= limit:
+    over_size = sum(run.size for run in gathered.runs) + len(previous) > limit
 '''
 
 [[mutation]]
@@ -373,11 +377,11 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/continuation.py"
 old = '''
-        if total + run.size > half:
+        if total + run.size > half or len(kept) >= EXCHANGE_COUNT_LIMIT // 2:
             break
 '''
 new = '''
-        if kept and total + run.size > half:
+        if kept and total + run.size > half or len(kept) >= EXCHANGE_COUNT_LIMIT // 2:
             break
 '''
 
