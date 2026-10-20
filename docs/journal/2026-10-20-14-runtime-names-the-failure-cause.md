@@ -1,0 +1,149 @@
+# 2026-10-20 (14) end-user-continuation 티켓 02: 실패 원인
+
+나란히 여는 넷(02·03·05·06) 가운데 첫 세션이다. 주 체크아웃이 미갱신이라 Skill 도구로 `tidy-checkouts`를 먼저 돌고,
+주 체크아웃에서 브랜치를 따지 않고 워크트리 `.claude/worktrees/02-runtime-names-the-failure-cause`에 들어가 브랜치를
+`feature/02-runtime-names-the-failure-cause`로 바꿨다. `implement` 스킬을 Read로 열어 따랐다. 세션 제목은
+`feature/02-runtime-names-the-failure-cause`다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자:
+> .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
+> 다음 작업: … 런타임이 쓰는 모든 실패가 생긴 자리의 원인을 들고, 먼저 난 실패가 결말이다 … 어디서: 새 세션. 나란히 여는
+> 4 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고 … 이번 요청 범위: PR과 병합까지"
+
+## tidy-checkouts
+
+지울 후보는 없었고 사람에게 넘길 것이 셋이었다(분리 HEAD 둘, 병합된 PR의 머리와 끝이 다른 브랜치 하나). 지시문대로 보고만
+하고 답을 기다리지 않았다. 셋의 이름은 이 세션의 압축 전 트랜스크립트에만 있고 옮기지 못했다. 다음 정리가 다시 본다.
+
+## 한 것 (커밋 전, 작업 트리)
+
+- **core.** `run.py`: 런타임이 에이전트에게 던진 예외를 그 객체로 기억하는 `_Thrown`(`remember`, `blamed`, `cause_of`), 몸통이
+  실패를 받는 자리의 닫힌 열거 `_Site`와 기본 갈래 없는 `_cause_at`(`assert_never`), `_settled`(결말을 썼다)와 `_held`(쓸
+  결말을 붙잡았다)의 분리와 `_hold`·`_hold_failure`·`_write_held`, 진입점의 기한을 `anyio.move_on_after`의
+  `cancelled_caught`로 보기(디스크의 `TimeoutError`는 결말 없이 올라온다), 이벤트가 아닌 값을 쓰기 전에 거르는
+  `_reject_stray`, 요약 실패의 원인. `_drive`는 ruff PLW0717(try 안 문장 수) 때문에 `_drive`·`_connected`·`_attend` 셋으로
+  나눴다. 모듈 독스트링의 타임아웃 문단을 고치고 실패 원인 문단을 더했다.
+- **테스트.** `tests/core/test_run.py`의 기존 사례에 원인 단언을 더하고 끝에 "실패 원인" 절을 더했다(262개 초록). 기존 기한
+  사례의 기대와 이름을 붙잡은 실패로 바꿨다. `tests/channel/http/test_end_user.py`의 실패 항목 dict 단언 셋을 실제 원인으로
+  고치고 이어 가기의 요약 실패 사례를 더했다. `tests/channel/http/test_router.py`의 "실행 안의 실패" 사례에 원인 열을
+  더했다(메시지 열 이름을 `cause`에서 `message`로). 채널·main 315개 초록.
+- **지침.** `.claude/rules/core.md`의 실행 타임아웃 항목(`move_on_after`, 붙잡은 결말)과 실패 정책(원인, 동일성 규칙, 기본 갈래
+  없음, 먼저 난 실패, 결말 뒤 닫기). `.claude/rules/core.md`를 고쳤으므로 카나리아 `core_rule_runtime_only_events.toml`을 새
+  `claude -p` 세션에서 불러 `# 최신 결과:` 줄을 고쳐야 한다(`sibling_overlap.py`가 알렸다. 아직 안 했다).
+- **변이.** 새 표 `.scratch/end-user-continuation/probes/cause_mutations.toml` 넷(타입으로 가름, 마지막 하나만 기억, 요약
+  원인 없음, 도구 연결 원인 바꿈) 모두 기대대로이고 README 행을 더했다. 이번 변경으로 원문이 사라진 옛 변이 둘을 새 코드에
+  맞췄다 — `end-user-continuation/probes/contract_mutations.toml`의 "멈춘 뒤 결말 표지를 세우지 않는다"(들여쓰기),
+  `end-user-channel/probes/timeout_mutations.toml`의 "돌아오기만 하면 결말로 본다"(새 끝 판정 줄). 앞의 것은 표 10개 전부,
+  뒤의 것은 그 변이 하나만 담은 임시 표로 돌려 기대대로였다.
+- **잔존.** `유일한 실패`는 `test_run.py`의 독스트링 하나였고 고쳤다. `기록되지 않은`(sdk 주석, `items.py`, rules 둘, ADR
+  0031, 테스트 둘)은 옛 트레이스의 실패가 여전히 `null`이라 그대로 참이다. ADR 0014의 `fail_after` 문장(226·271·286줄)은 지난
+  이력 항목이라 `.claude/rules/adr.md`대로 포인터를 달지 않았다. 다만 286줄은 anyio 5의 `move_on_after` 타이머 변경을 "지금
+  코드가 쓰는 `fail_after`와 같게 맞추는" 것이라 위협이 아니라고 적었는데, 이제 코드가 `move_on_after`를 쓰므로 anyio 5를 들일
+  때 그 변경이 실행 타임아웃에 닿는다. PR 본문의 "남긴 위험"에 적는다.
+
+## 고친 것 / 겪은 것
+
+- 압축 뒤 `run.py`에 `@contextmanager`의 `Iterator` 반환이 pyright `reportDeprecated`였다. `Generator`로 바꿨다.
+- `test_앞서_받은_모델의_예외를_…`이 "API down"을 기대했으나 가짜 모델(`GenericFakeChatModel`)이 도구를 붙이지 못해
+  `NotImplementedError`를 먼저 냈다. 원인 단언(모델 호출)은 맞으므로 메시지 단언만 그 예외로 바꿨다.
+- 변이 표지를 고르려 스크래치 스크립트로 변이를 손으로 넣었다가 되돌리며 `Path.write_text`가 윈도에서 `run.py`의 줄 끝을
+  CRLF로 바꿨다. `sed -i 's/\r$//'`로 LF로 되돌리고 `git diff --stat`가 정상 크기임을 봤다.
+
+## 남은 위험·넘길 것
+
+- main에서 이미 원문이 사라진 변이 열여덟이 있다(`conversation/probes/continuation_mutations.toml` 다섯,
+  `end-user-channel/probes/contract_mutations.toml` 넷, `timeout_mutations.toml` 하나, `web-admin/probes/pause_index_mutations.toml`
+  여덟). 이 브랜치가 만든 것이 아니라 고치지 않았다. 대기열 후보다.
+- 03·05가 같은 파일(`run.py`, `core.md`, 테스트 셋, 프로브 README)을 고친다. 뒤에 병합하는 쪽에서 글자 충돌 후보다.
+
+## 인계
+
+경계 `셀프 리뷰 직전`에 인계 계기가 왔다(세션 컨텍스트 약 28만 토큰). `/code-review`는 불렸지만 단계를 밟지 않았다. 셀프
+리뷰는 새 세션이 한다. 백그라운드의 `tools/run_checks.py`는 멈췄다(결과를 보지 못했다). `-m llm`도 아직 돌리지 않았다.
+
+지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md. 런타임이 쓰는 모든 실패가 생긴 자리의 원인을 들고, 먼저 난 실패가 결말이다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
+브랜치: feature/02-runtime-names-the-failure-cause
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/02-runtime-names-the-failure-cause (인계함)`으로 바꾸고, 러너를 멈추고, 워크트리 잠금을 풀었다.
+
+open-session을 부른다 2026-10-20T02:52:09Z
+
+## 이어받은 세션 (셀프 리뷰부터)
+
+open-session이 연 새 세션이다. 제목을 `feature/02-runtime-names-the-failure-cause`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에
+들어가 `implement` 스킬을 Read로 열어 따랐다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 셀프 리뷰 직전. … 셀프 리뷰
+> (/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증 … -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml,
+> 커밋·PR·병합으로 간다. … 이번 요청 범위: PR과 병합까지"
+
+## 셀프 리뷰
+
+범위: base `911babc0`, 바뀐 파일 9, 커밋 0, 미추적 2(`cause_mutations.toml`, 이 일지). 표준 축은 sonnet·high, 명세 축은 본 세션
+모델이다.
+
+- **명세 축 Major — 연결에 들어간 뒤의 예상 밖 예외가 사라진다.** `_connected`가 들어간 뒤의 예외를 모두 닫기의 것으로 보고
+  버려, `_attend`가 붙잡기·결말 표지를 마치기 전에 난 예외(탐침은 `_Context` 생성)가 결말도 예외도 없이 끝났다. main은 같은
+  경우에 `run_failed`를 썼다. **고쳤다.** 자리 `_Site`에 "연결 안의 나머지"(`inside`, 원인 그 밖)를 더하고 연결 안의 몫을
+  `_holding("inside")`로 감쌌다. 그 덕에 `entered` 표지가 없어졌다(들어간 뒤의 예외는 결말을 이미 붙잡았거나 썼으므로 `_hold`가
+  버린다). 사례 `test_연결_안에서_에이전트_자리_밖의_런타임_예외는_그_밖이고_결말이_남는다`(빨강을 본 뒤 고쳤다). 명세 168·174·176줄의
+  코드 위치와 닫힌 주장("그 밖에 … 나는 예외는 없다")을 지금 동작으로 고쳤다.
+- **표준 축 Minor 3 — 일시정지를 쓰지 못한 실행이 조용히 끝난다.** main부터 있던 동작이다. 이 브랜치에서는 닫기의 예외가
+  `_connected` 안에서 버려져 `_drive`의 `except`에 오는 것이 쓰기 실패뿐이고, 멈춘 실행의 쓰기 실패는 일시정지(쌓인 이벤트의
+  마지막)가 트레이스에 없다는 뜻이다. **고쳤다.** 티켓의 그 밖 항목(쓰기가 한 번만 실패하면 뒤의 `run_failed`가 남고 그것이 그 밖을 든다)대로 그 밖의
+  `run_failed`를 쓴다. 사례 `test_일시정지를_쓰지_못한_실행은_멈춘_것이_아니라_그_밖의_실패로_끝난다`(빨강을 본 뒤 고쳤다).
+- **명세 축 Minor — 에이전트의 정리 코드를 기다리다 기한이 오면 먼저 난 실패가 진다.** `_relay` 안에서 런타임이 던진 실패
+  (`_reject_runtime_only` 등)가 `_closing`이 에이전트를 닫은 뒤에야 붙잡혔다. **고쳤다.** `_relay`의 순회를
+  `_holding("agent", ctx)`로 감싸 닫기 전에 붙잡는다. 사례
+  `test_런타임이_에이전트_자리에서_던진_실패는_정리_코드를_기다리다_기한이_와도_결말이다`(빨강을 본 뒤 고쳤다).
+- **명세 축 Minor — 디스크 `TimeoutError`의 보편 주장이 넓다.** **고쳤다.** `run.py` 모듈 독스트링과 `core.md`를 "몸통이 받는
+  자리에서는 그 자리의 원인, 받지 않는 자리(요약 이벤트 쓰기, 결말 쓰기)에서는 결말 없음"으로.
+- **표준 축 Minor 4 — 예외 그룹 문장.** `asyncio.TaskGroup` 안의 `ctx.llm()` 실패는 그룹으로 올라와 에이전트 코드다(명세가 "예외
+  그룹에 넣으면 에이전트 코드"로 정했다). **고쳤다.** `_Thrown` 독스트링에 그 갈래를 적었다.
+- **표준 축 Minor 5 — 까닭 없는 단언.** **고쳤다.** `pytest.raises(TimeoutError, match=…)`, 이벤트가 아닌 값의 메시지 전체 단언.
+- **표준 축 Minor 6 — 변이 표지.** **고쳤다.** `timeout_mutations.toml`의 "돌아오기만 하면 결말로 본다"에 `expect_output`
+  (`Right contains one more item: 'run_failed'`)을 더했다. 그 변이 하나만 담은 임시 표로 돌려 기대대로였다.
+- **표준 축 Major 1 — `_loaded`의 `getattr`이 암묵적 `Any`.** **남겼다.** 운영 로더 `filesystem.py`의 `load_agent`가 같은
+  모양(`getattr` → `BaseAgent`)이고 시그니처를 어긴 에이전트는 실제로 그 길로만 온다. 원칙 III의 판정자 `check_type_escapes`도
+  초록이다.
+- **표준 축 Major 2 — ADR 0014의 `fail_after` 문장.** **남겼다.** 226·271·286줄은 지난 이력 항목이라 기록이다(`operations.md`
+  문서 위치). 다만 286줄의 논증(anyio 5의 `move_on_after` 타이머 변경은 위협이 아니다)은 이제 코드가 `move_on_after`를 쓰므로
+  anyio 5를 들일 때 실행 타임아웃에 닿는다. PR 본문의 남긴 위험에 적는다. `end-user-channel/spec.md:334`는 done 기능이라 기록이다.
+- **냄새(판단).** `run()`·`resume()`의 기한 꼬리 중복(기존), `_Body` 표지 넷의 얽힘(티켓이 `_settled`·`_held`를 따로 들라고
+  정했다), CQS(`_write_held`, `remember`), `_cause_at`의 Feature Envy, `blamed`/`remember` 동사. 판단 항목이라 남긴다.
+- **명세 축 Nit.** `test_앞서_받은_모델의_예외를_…`의 모델 예외가 붙이기 자리의 `NotImplementedError`인 것은 위 "고친 것"에 이미
+  적었다. 동일성을 가르는 요점은 그대로라 남긴다.
+
+PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
+
+- `run.py` `_Site` 주석의 요지: 도구 연결의 닫기는 자리가 아니다, 연결 안의 몫이 끝나면 결말을 붙잡았거나 이미 썼으므로 버린다
+- `_connected`: "들어간 뒤의 예외면 결말을 이미 붙잡았거나 썼으므로 `_hold` 가 버린다"
+- `_drive` 주석의 요지: 멈춘 실행이면 실패한 것은 일시정지까지의 쓰기이고, 일시정지는 쌓인 이벤트의 마지막이라 트레이스에 없다
+- 모듈 독스트링·`core.md`: "그 TimeoutError 는 다른 예외와 같다 — 몸통이 받는 자리(연결, 에이전트, 결말 전 쓰기)에서는 그
+  자리의 원인이고, 몸통이 받지 않는 자리(요약 이벤트 쓰기, 결말 쓰기)에서는 결말 없이 올라온다"
+- 명세 174줄: "결말 전에 이벤트를 트레이스에 쓰다 난 예외와, 연결 안의 몫이 선언 확인·에이전트 밖에서 런타임 자신의 예외로 끝난 것"
+
+## 검사
+
+- 셀프 리뷰 전: `tools/run_checks.py` 전부 Passed(pytest 808.7초, web-verify 578.4초). ruff 둘 초록.
+- `uv run --env-file ../../../.env pytest -m llm`: 7 passed(882초). LLM 토큰 합계 55,493(입력 54,232, 출력 1,261), 트레이스 10개,
+  모델 호출 22건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
+- 카나리아 `core_rule_runtime_only_events.toml`: 통과 4(claude 2.1.302). 셀프 리뷰가 원천 문장을 고친 뒤 `--preflight` 통과로
+  갈음했다.
+- 셀프 리뷰 반영 뒤: `tests/core/test_run.py` 265 passed, ruff 둘 초록, `cause_mutations.toml` 넷 기대대로, `--check` 둘 원문 확인.
+  `timeout_mutations.toml`의 변이 "최종 사용자의 시작이 넘기지 않는다"는 main부터 원문이 사라진 것이었는데(위 "남은 위험"의
+  열여덟 가운데 하나), 이 표를 커밋에 실으니 pre-commit의 `mutate.py --staged`가 막았다. 시작과 이어 가기가 함께 쓰게 된
+  `started`의 `previous_run` 줄을 원문에 넣어 고쳤고, 그 변이 하나를 돌려 기대대로였다. 그래서 남은 위험의 열여덟은 열일곱이다.
+- 첫 커밋 시도는 위 막힘으로 실패했다(인용 경고 셋도 함께 났고 따옴표를 떼어 고쳤다).

@@ -17,7 +17,7 @@
 import asyncio
 import io
 import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
@@ -590,8 +590,8 @@ async def test_항목은_프롬프트도_도구_결과도_주체도_싣지_않�
 
 
 async def test_실패한_실행은_고정_문구와_실행_식별자의_실패_항목이고_원문을_싣지_않는다() -> None:
-    """사용자에게 보여 줄 말과 운영자에게 알릴 식별자다. 원문은 트레이스에 있다. 원인은 트레이스의
-    실패 이벤트가 든 것 그대로이고, 원인이 기록되지 않은 실패는 `null` 이다(ADR 0031)."""
+    """사용자에게 보여 줄 말과 운영자에게 알릴 식별자다. 원문은 트레이스에 있다. 원인은 런타임이
+    실패 이벤트에 적은 것 그대로다 — 결말 없이 돌아온 에이전트는 에이전트 코드다(ADR 0031)."""
     trace = FakeTrace()
 
     async with _serving(_app(trace=trace)) as client:
@@ -599,7 +599,7 @@ async def test_실패한_실행은_고정_문구와_실행_식별자의_실패_�
 
     assert _frames(response.text)[-1] == (
         1,
-        {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None},
+        {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "agent_code"},
     )
     assert "run_finished" not in response.text
     assert "run_finished" in trace.events[-1].model_dump_json()
@@ -615,7 +615,10 @@ async def test_에이전트가_지어낸_실패는_나가지_않고_실패_항�
 
     assert _frames(response.text) == [
         (0, {"type": "started", "run_id": "run-1"}),
-        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None}),
+        (
+            1,
+            {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "agent_code"},
+        ),
     ]
     assert [event.type for event in trace.events] == ["run_started", "run_failed"]
 
@@ -1018,6 +1021,38 @@ async def test_이어_가기도_조립이_넘긴_타임아웃에서_실패_항�
     assert failed.error == TIMED_OUT
 
 
+def _summary_down() -> Iterator[AIMessage | str]:
+    raise RuntimeError("summary API down")
+    yield AIMessage(content="닿지 않는다")
+
+
+async def test_이어_가기의_요약이_실패하면_실패_항목이_원인_대화_요약을_든다() -> None:
+    """앞 실행의 원문 교환이 core 의 기본 한도를 넘어 런타임이 요약하다 모델이 실패한다. 위젯은
+    원인을 보고 할 일을 정한다(end-user-continuation 명세 "최종 사용자 실패 항목"). 원문은 싣지
+    않는다."""
+    trace = FakeTrace()
+    long_start = _started("mine").model_copy(update={"request": "요" * 20_000})
+    _write(trace, "mine", long_start, _finished("mine"))
+    model = GenericFakeChatModel(messages=_summary_down())
+
+    async with _serving(_app(trace=trace, model=model)) as client:
+        response = await client.post(_continue_path("mine"), json=_start("echo"), headers=_as())
+
+    assert _frames(response.text) == [
+        (0, {"type": "started", "run_id": "run-1"}),
+        (
+            1,
+            {
+                "type": "failed",
+                "message": FAILED_MESSAGE,
+                "run_id": "run-1",
+                "cause": "conversation_summary",
+            },
+        ),
+    ]
+    assert "summary API down" not in response.text
+
+
 async def test_이어_가기_결정_구독의_경로는_서로_가로채지_않는다() -> None:
     """`verbatim` 이 슬래시까지 잡으므로 고유한 접미사 셋이 각 요청을 제 라우트에 보낸다. 결정
     본문을 이어 가기에 보내면 `StartRun` 의 검증을, 이어 가기 본문을 결정에 보내면 `Decision` 의
@@ -1415,7 +1450,7 @@ async def test_타임아웃으로_끝난_실행은_실패_항목으로_닫히고
 
     assert starting.frames() == [
         (0, {"type": "started", "run_id": "run-1"}),
-        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None}),
+        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "timeout"}),
     ]
     failed = trace.events[-1]
     assert isinstance(failed, RunFailed)

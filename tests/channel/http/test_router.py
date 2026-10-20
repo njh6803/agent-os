@@ -682,18 +682,30 @@ def test_keepalive_간격이_관리_화면_중계의_침묵_한도보다_짧다(
 
 
 @pytest.mark.parametrize(
-    ("agent", "model", "tools", "cause"),
+    ("agent", "model", "tools", "message", "cause"),
     [
-        ("adding", GenericFakeChatModel(messages=iter(())), BrokenTools(), "server did not start"),
-        ("asking", GenericFakeChatModel(messages=_failing_replies()), ScopedTools(), "API down"),
+        (
+            "adding",
+            GenericFakeChatModel(messages=iter(())),
+            BrokenTools(),
+            "server did not start",
+            "tool_connection",
+        ),
+        (
+            "asking",
+            GenericFakeChatModel(messages=_failing_replies()),
+            ScopedTools(),
+            "API down",
+            "model_call",
+        ),
     ],
     ids=["도구 연결 실패", "모델 실패"],
 )
 async def test_실행_안의_실패는_200_스트림_속_run_failed_다(
-    agent: str, model: ChatModel, tools: ToolSource, cause: str
+    agent: str, model: ChatModel, tools: ToolSource, message: str, cause: str
 ) -> None:
     """트레이스가 남는 실패와 남지 않는 실패가 CLI 와 같은 경계로 갈린다(스토리 9). 경계는 첫
-    이벤트다."""
+    이벤트다. 프레임은 원문 이벤트라 런타임이 적은 실패 원인도 저절로 실린다(ADR 0031)."""
     trace = FakeTrace()
     app = _app(trace=trace, model=model, tools=tools)
 
@@ -703,7 +715,9 @@ async def test_실행_안의_실패는_200_스트림_속_run_failed_다(
     assert response.status_code == 200
     frames = _frames(response.text)
     assert _types(frames) == ["run_started", "run_failed"]
-    assert cause in json.loads(frames[-1])["error"]
+    failed = json.loads(frames[-1])
+    assert message in failed["error"]
+    assert failed["cause"] == cause
     assert frames == trace.lines
 
 
