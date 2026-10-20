@@ -168,27 +168,35 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
 
 만료할 행 없음(`tools/queue_open_rows.py`, 워크트리와 `--ref origin/main` 둘 다).
 
+일지에만 남기는 것: "다음"을 바꾼 일지 커밋의 pre-commit pytest에서 `tests/adapters/test_filesystem.py`의
+`test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다`가 `WinError 5`로 한 번 빨갰다(3901 통과 1 실패).
+그 테스트만 따로 돌리면 통과했다. 대기열 306이 받아들여 닫은 종류의 새 사례라(ADR 0036) 회차를 더하지 않고 커밋을 다시 쳤다.
+
 ## 다음
 
 이 PR은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
 
-뒤로 넘긴 일(사용자 결정): 이 저장소가 쓰는 스킬마다 하네스(경로 규칙, 훅, 다른 스킬의 단계)가 이름으로 부르는 자리를
-감사하고, `frontend-design`을 부를지·어디서·`.claude/rules/web-design.md`와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계
-인터뷰. 근거는 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절이다. 사용자가 고르면
-`/grill-with-docs`로 연다.
+결정표로는 "기능의 티켓이 아니라 하네스 chore PR이었고, 그 PR이 든 주제가 남지 않았다" 줄이라 프론티어(mcp-shutdown의
+멈춘 명세)를 골랐으나, 사용자가 뒤로 넘긴 설계 인터뷰를 병합 뒤 바로 하자고 정했다. 결정표와 다른 까닭은 이 결정이다.
 
-결정표는 "기능의 티켓이 아니라 하네스 chore PR이었고, 그 PR이 든 주제가 남지 않았다" 줄이다. 진행 중인
-end-user-continuation의 남은 티켓 02·04는 각자 세션이 PR #325·#323으로 맡고 있다. 다른 프론티어 mcp-shutdown은 명세
-단계이고, 그 명세가 워크트리 `mcp-shutdown-spec`(브랜치 `docs/mcp-shutdown-spec`)에 커밋되지 않은 채 2026-10-17부터 멈춰
-있다(일지 2026-10-17-05는 그 워크트리에만 있다). 끊긴 작업을 잇는 줄로 그것을 다음으로 고른다.
+> 사용자: "병합 뒤에 바로 인터뷰를 진행"
 
-다음 작업: 기능 mcp-shutdown. 워크트리 mcp-shutdown-spec에 커밋되지 않고 멈춘 명세(`.scratch/mcp-shutdown/spec.md`)를 이어 커밋하고 PR로 병합한다
-다음 단계: 명세
-어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: 워크트리 mcp-shutdown-spec 의 docs/journal/2026-10-17-05-mcp-shutdown-spec.md 끝에서부터 mcp-shutdown 명세 작업을 이어 커밋하고 PR로 병합한다
-브랜치: docs/mcp-shutdown-spec
+인터뷰는 이 저장소가 쓰는 스킬마다 하네스(경로 규칙, 훅, 다른 스킬의 단계)가 이름으로 부르는 자리를 감사하고,
+`frontend-design`을 부를지·어디서·`.claude/rules/web-design.md`와 부딪칠 때 어느 쪽이 이기는지를 정한다. 근거는 ADR 0033
+이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절이다.
+
+인터뷰 뒤의 프론티어: 진행 중인 end-user-continuation의 남은 티켓 02·04는 각자 세션이 PR #325·#323으로 맡고 있다. 다른
+프론티어 mcp-shutdown은 명세 단계이고, 그 명세가 워크트리 `mcp-shutdown-spec`(브랜치 `docs/mcp-shutdown-spec`)에 커밋되지
+않은 채 2026-10-17부터 멈춰 있다(일지 2026-10-17-05는 그 워크트리에만 있다). 그 워크트리를 쥔 세션이 살아 있지 않은지는
+확인하지 못했다.
+
+다음 작업: 기능 skill-call-sites. 이 저장소가 쓰는 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계 인터뷰
+다음 단계: 설계 인터뷰
+어디서: 새 세션. 결정표는 프론티어(mcp-shutdown 명세)지만 사용자가 이 인터뷰를 병합 뒤 바로 하자고 정했다. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /grill-with-docs docs/journal/2026-10-20-23-skill-listing-budget.md 의 "다음"과 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절대로, 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정한다
+브랜치: docs/skill-call-sites
 모델: Opus 5.5 / xhigh
-읽을 것: 워크트리 mcp-shutdown-spec 의 docs/journal/2026-10-17-05-mcp-shutdown-spec.md
-이어받을 상태: 그 워크트리의 명세·프로브·일지는 미추적이고 plan.md·ADR 0034는 고친 채 커밋하지 않았다. 그 일지의 셀프 리뷰 절이 고친다고 정한 것들이 반영됐는지는 이 세션이 보지 않았다. 브랜치 끝은 8a2163eb라 origin/main을 합쳐야 한다
-확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 그 워크트리를 쥔 세션이 살아 있지 않은지 확인하지 못했다(제목이 그 브랜치인 세션을 list_sessions에서 찾지 못했다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+읽을 것: docs/adr/0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md 의 이력 "2026-10-20 스킬 목록 예산을 0.006으로 낮춘다"
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
