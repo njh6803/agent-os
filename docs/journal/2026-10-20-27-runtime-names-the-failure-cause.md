@@ -1,4 +1,4 @@
-# 2026-10-20 (24) end-user-continuation 티켓 02: 실패 원인
+# 2026-10-20 (27) end-user-continuation 티켓 02: 실패 원인
 
 나란히 여는 넷(02·03·05·06) 가운데 첫 세션이다. 주 체크아웃이 미갱신이라 Skill 도구로 `tidy-checkouts`를 먼저 돌고,
 주 체크아웃에서 브랜치를 따지 않고 워크트리 `.claude/worktrees/02-runtime-names-the-failure-cause`에 들어가 브랜치를
@@ -70,8 +70,8 @@
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -170,8 +170,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -240,8 +240,8 @@ review` 코멘트, 봇 회차, 병합 직전 기능 닫기 판정(티켓 체크�
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md의 "PR 직전 리뷰"·"인계 (PR 연 뒤)" 절
-이어받을 상태: 인계: PR 연 뒤. PR #325를 열었고(푸시함) @coderabbitai review 코멘트는 아직 남기지 않았다. 합치기와 리뷰 반영 뒤 -m llm을 다시 돌리다 인계로 멈췄으니 다시 돌려 PR 본문의 그 줄을 고친다. 그 뒤 봇 회차, 병합 직전 기능 닫기 판정, 워크트리에서 병합. 일지 docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md의 "PR 직전 리뷰"·"인계 (PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #325를 열었고(푸시함) @coderabbitai review 코멘트는 아직 남기지 않았다. 합치기와 리뷰 반영 뒤 -m llm을 다시 돌리다 인계로 멈췄으니 다시 돌려 PR 본문의 그 줄을 고친다. 그 뒤 봇 회차, 병합 직전 기능 닫기 판정, 워크트리에서 병합. 일지 docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -274,3 +274,60 @@ origin/main이 아침 보고(#322, 겹치는 파일 없음)로 움직여 일지�
 - **Minor, 두었다.** `_write_held`가 쓰고 쓴 것을 돌려준다(CQS). 돌려주는 것은 성공 여부가 아니라 쓴 이벤트이고 호출부가
   그것으로 yield를 정해 무시할 수 없다. 같은 파일의 `_emit`과 같은 모양이다. `_settled`를 쓰기 전에 세우는 순서는 독스트링의
   "쓰기가 실패하면 결말 없음이다"가 적은 의도다.
+
+## 04 병합 뒤 다시 합치기와 기능 닫기
+
+리뷰 반영 커밋 뒤 푸시 전에 보니 형제 04(PR #323, `0262841b`)가 병합돼 있었다. 합치기에서 셋이 충돌했다.
+- `tests/core/test_run.py`: import 줄(우리 `sys`, 04 `threading`·`time`). 셋 다 남겼다.
+- probes README: 표의 행끼리. 우리 `cause_mutations.toml` 행과 04가 고친 `shortcuts_mutations.toml` 행, 새 `walk_cap_mutations.toml`
+  행을 모두 남겼다.
+- `.claude/rules/core.md`: 세 줄이 한 덩어리로 충돌했지만 공통 조상과 견주니 줄마다 한쪽만 고쳤다(실행 타임아웃·실패 정책은 우리,
+  이어 가기는 04). 글자 단위 3-way로 합쳐 겹침이 없음을 단언했다.
+
+`run.py`는 저절로 합쳐졌다. `tools/mutate.py --check`로 01~04의 변이 표 49개가 모두 원문이 한 번씩 있음을 봤고,
+`tests/core/test_run.py`와 `tests/test_server.py`가 479 passed였다.
+
+기능 닫기 판정(`origin/main` `0262841b`): 04까지 `done`이라 이 PR이 마지막 잎이다. `.scratch/plan.md`의 end-user-continuation
+행을 `done`으로 바꾸고 프론티어 문단에 닫힘을 적었다. web-widget을 막던 여섯이 모두 닫혀 web-widget이 풀렸다.
+
+## 인계 (커밋 뒤, 둘째)
+
+합치기 커밋(04가 든 main) 뒤에 경계 `커밋 뒤`의 인계 계기가 왔다(세션 컨텍스트 약 20.8만 토큰). 이 세션의 지시문은 `인계: PR 연 뒤`라
+같은 경계가 아니고, 요청 범위는 병합까지이며, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다.
+
+커밋한 것: 일지와 -m llm(`52f96e00`까지 푸시함), 리뷰 반영(독스트링 두 줄과 봇 회차 일지, 푸시하지 않음), 04가 든 origin/main 합치기
+(푸시하지 않음). 커밋하지 않은 것: `.scratch/plan.md`(기능 행 `done`과 프론티어 문단), 티켓 02의 기능 닫기 체크박스 글, 이 일지의
+"04 병합 뒤 다시 합치기와 기능 닫기"와 이 절.
+
+남은 단계: 커밋하지 않은 셋을 커밋(`docs: end-user-continuation을 닫는다` 꼴), 푸시 전 `git fetch`로 origin/main이 또 움직였는지
+보기(움직였으면 합치기), 푸시, PR 본문 고치기(기능 닫기와 04 합치기, `plan.md`가 바뀐 영역에 든다), `@coderabbitai review`(마지막
+푸시 뒤), 봇 회차, 병합 직전 `headRefOid` 대조, 워크트리에서 병합. 이 세션의 지금 제목은 `feature/02-runtime-names-the-failure-cause`다.
+
+제목을 `feature/02-runtime-names-the-failure-cause (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(모니터는 앞서 멈췄다), 워크트리
+잠금은 이미 풀려 있었다(`is not locked`).
+
+지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md. 런타임이 쓰는 모든 실패가 생긴 자리의 원인을 들고, 먼저 난 실패가 결말이다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
+브랜치: feature/02-runtime-names-the-failure-cause
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md의 "04 병합 뒤 다시 합치기와 기능 닫기"·"인계 (커밋 뒤, 둘째)" 절
+이어받을 상태: 인계: 커밋 뒤. PR #325가 열려 있다. 리뷰 반영 커밋과 04가 든 origin/main 합치기 커밋은 아직 푸시하지 않았고, .scratch/plan.md(기능 닫기)·티켓 02 체크박스·일지는 커밋하지 않았다. 그것을 커밋하고 git fetch로 main을 다시 본 뒤 푸시, PR 본문 고치기, 마지막 푸시 뒤 @coderabbitai review, 봇 회차, 워크트리에서 병합. 일지 docs/journal/2026-10-20-27-runtime-names-the-failure-cause.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-20T08:47:10Z
+
+## 이어받은 세션 (커밋 뒤, 둘째부터)
+
+open-session이 연 새 세션이다. 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어가 `implement` 스킬을
+Read로 열어 따랐다. `git fetch` 뒤 origin/main은 `0262841b`에서 움직이지 않아 다시 합치지 않는다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 커밋 뒤. PR #325가 열려 있다. … 그것을
+> 커밋하고 git fetch로 main을 다시 본 뒤 푸시, PR 본문 고치기, 마지막 푸시 뒤 @coderabbitai review, 봇 회차, 워크트리에서 병합. …
+> 이번 요청 범위: PR과 병합까지"
