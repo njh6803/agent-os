@@ -39,8 +39,10 @@ expect_output = ["assert ['run-2', 'run-2', 'run-1'] == ['run-2', 'run-1']"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/continuation.py"
-old = '''        link = known if known is not None and known.run_id == target else read_link(trace, target)'''
-new = '''        link = read_link(trace, target)'''
+old = '''        if known is not None and known.run_id == target:
+            link = known'''
+new = '''        if False:
+            link = known'''
 
 [[mutation]]
 name = "따라가지 않는 앞 실행의 기록 규칙을 보지 않는다"

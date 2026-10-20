@@ -1,4 +1,4 @@
-"""이어 가기. 앞 실행의 판정, 고리를 거슬러 읽기, 한도를 넘은 원문을 요약에 접기(ADR 0022).
+"""이어 가기. 앞 실행의 판정, 고리를 거슬러 읽기, 한도나 기준을 넘은 원문을 요약에 접기(ADR 0022).
 
 run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 일이 여기 있다(요약 실패를 run_failed
 로 바꾸는 것과 재생 기록 열에서 요약을 빼는 것은 run.py 다). run.py 가 바뀌는 이유(실행을 모는 것)와
@@ -18,11 +18,20 @@ run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 
 에이전트의 실행은 교환도 요약도 내지 않고 지나간다. 어느 쪽이든 가장 가까운 요약을 만나면 그 요약이
 덮는 끝의 실행까지 거슬러 가되 그 실행은 읽지 않고 멈춘다. 요약이 없으면 그 에이전트의 처음(지도에
 그 에이전트가 없음, 옛 대화에서는 previous_run 이 없는 실행)까지 간다. 더 오래된 요약은 쓰지 않는다
-— 새 요약은 언제나 앞 요약을 접어 만들어진다. 읽은 실행마다 검증하고 어느 것이든 서버의 기록이
-가리킨 것이 깨진 것이라 PluginError 이며 메시지가 그 실행과 이유를 든다. 포트에 가벼운 읽기를 더하지
-않고 트레이스 전체를 읽는다 — 비용은 읽는 실행의 수에 비례하고 측정은 conversation 명세의 프로브다.
+— 새 요약은 만난 가장 가까운 요약을 접어 만들어진다. 읽기 상한(아래)에 닿은 대화에서는 상한이 멈춘
+자리보다 오래된 교환 가운데 만난 요약이 덮지 않은 것이 새 요약에 들지 않는다. 그 요약을 만나지
+못했으면 상한 너머의 요약과 교환이, 만났어도 그 요약이 덮는 끝에 닿기 전에 멈췄으면 그 사이의 교환이
+빠지고, 그 뒤 계기가 서서 접히면 빠진 것은 다시 읽히지 않는다. 읽은 실행마다 검증하고 어느 것이든
+서버의 기록이 가리킨 것이 깨진 것이라 PluginError 이며 메시지가 그 실행과 이유를 든다. 포트에 가벼운
+읽기를 더하지 않고 트레이스 전체를 읽는다 — 비용은 읽는 실행의 수에 비례하고, 그 수를 앞 실행을 세어
+읽기 상한(`READ_CAP`)이 묶는다. 닿으면 그때까지 모은 것으로 멈추고 실패가 아니다. 이 모듈의 함수는
+모두 동기다. run() 은 `gather_continued` 를 스레드 하나로 불러 이벤트 루프를 막지 않고, resume() 은
+`resumed_conversation` 을 루프 위에서 부른다(첫 걸음에 await 가 없어야 한다, ADR 0014). 상한과
+자리의 규칙은 `.claude/rules/core.md` 의 이어 가기 항목이 원천이고 측정은 end-user-continuation
+명세의 프로브다.
 
-**요약.** 원문 교환의 글자 수가 한도를 넘으면 에이전트를 부르기 전에 접는다(ADR 0022). 계기, 꼬리,
+**요약.** 원문 교환의 글자 수가 한도를 넘거나 수가 교환 수 기준(`EXCHANGE_COUNT_LIMIT`)을 넘으면
+에이전트를 부르기 전에 접는다(ADR 0022 와 그 둘째 2026-10-15 이력). 계기, 꼬리,
 덮는 끝, 목표 글자 수, 실패 정책의 규칙은 `.claude/rules/core.md` 의 "대화 요약" 항목이 원천이고
 명세 "core — 대화 요약"에서 왔다. 여기서는 이유만 적는다. 지시(SUMMARY_INSTRUCTIONS)와 데이터(JSON
 문서 하나)를 가르는 것은 JSON 문자열의 이스케이프 덕에 요청에 심은 글이 문서 밖으로 나와 지시처럼
@@ -80,6 +89,21 @@ from agent_os.sdk import (
 # 목록 상한이 core 에 있는 것과 같은 자리이고, 매니페스트에 두면 그 숫자가 직렬화 스키마와 관리
 # API 에 박혀 기본값을 바꾸는 것이 계약 변경이 된다(`.claude/rules/sdk.md`). 값은 명세가 정했다.
 DEFAULT_CONVERSATION_LIMIT = 20_000
+
+# 교환 수 기준. 원문 교환의 수가 이것을 넘으면 글자 수가 한도 아래여도 요약한다. 글자 수 한도와 같은
+# 자리에 core 가 들고 매니페스트 필드가 아니다(ADR 0022 의 둘째 2026-10-15 이력). 값은 재개의 거슬러
+# 읽기가 이벤트 루프를 막는 최악을 0.5초 안팎에 두는 것이다(end-user-continuation 명세 "값", 프로브
+# `walk_budget.py`). 그 수는 이벤트 다섯의 작은 트레이스로 잰 것이라, 도구 결과가 큰 트레이스가
+# 이어지는 대화의 재개는 그 예산을 넘을 수 있다(명세의 어림). 바꾸려면 그 프로브를 다시 돌고 아래
+# 읽기 상한과의 관계를 지킨다.
+EXCHANGE_COUNT_LIMIT = 50
+
+# 읽기 상한. 거슬러 읽기 한 번이 읽는 트레이스의 수이고 앞 실행을 센다. 모든 면과 이어 가기와 재개에
+# 같다. 닿으면 그때까지 모은 것으로 진행한다 — 실패가 아니다. 바로가기를 따라가는 읽기는 많아야
+# 교환 수 기준 + 2 개라(원문 실행 기준 + 1 개와 다른 에이전트의 앞 실행) 닿는 것은 옛 대화와, 교환
+# 수 기준이 서기 전(티켓 03 과 04 사이)에 쓰인 바로가기 대화뿐이다. 그 관계는 테스트가 고정한다(명세
+# "거슬러 읽기의 상한과 자리").
+READ_CAP = 100
 
 # 요약 호출의 시스템 메시지. 명세 "core — 대화 요약"의 문구 그대로이고 {target} 이 목표 글자 수다.
 # 숫자는 한도마다 다르지만 문구는 런타임 하나라 ADR 0022 가 말한 "고정 프롬프트"다. 테스트는 글자
@@ -201,6 +225,7 @@ def gather_continued(
 ) -> Continued:
     """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽고, 새 실행의 지도를
     짓는다. 지도가 있으면 바로가기를 따라가고(`_follow`) 없으면 앞 실행을 하나씩 따라간다(`_walk`).
+    run() 이 이것 전부를 한 번의 스레드 호출로 부르므로 판정 하나를 떼어 루프 위로 옮기지 않는다.
 
     규칙: 없음(`Absent`) → 손상(`TraceDamagedBeforePrincipal`) → 다른 주체(`DifferentPrincipal`) →
     끝나지 않음(`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수
@@ -416,11 +441,15 @@ def _walk(
     첫 실행은 부르는 쪽이 주체와 끝남을 이미 판정해 그 `run_finished` 와 함께 넘긴다 — run() 은
     하위 타입으로, resume() 은 PluginError 로 가르고 여기서는 되풀이하지 않는다. 다음 실행부터는
     `_finished_of` 다. `summary` 는 이미 만난 요약이고(재개하는 실행 자신의 것), 있으면 고리의
-    요약을 집지 않고 그 덮는 끝에서 멈춘다. 다음 실행을 읽을지 멈출지는 `_next_link` 가 가른다.
+    요약을 집지 않고 그 덮는 끝에서 멈춘다. 다음 실행을 읽을지 멈출지는 읽지 않고 가를 수 있는
+    판정(`_older_run`)이 먼저 가르고, 그다음이 읽기 상한이며 읽기가 마지막이다 — 그 판정의 깨짐은
+    상한에 닿아도 깨짐이다. 첫 실행은 부르는 쪽이 읽은 앞 실행이라 읽기 상한에 하나로 센다. 이어
+    가기와 재개가 같은 앞 실행부터 같은 수를 세어 같은 자리에서 멈춘다.
     """
     newest_first: list[OwnRun] = []
     visited: set[RunId] = set()
     link, finished = first, first_finished
+    reads = 1
     while True:
         visited.add(link.run_id)
         check_record_rules(link)
@@ -429,10 +458,14 @@ def _walk(
             newest_first.append(OwnRun(run_id=link.run_id, exchange=exchange))
             if summary is None and link.summary is not None:
                 summary = link.summary
-        older = _next_link(trace, link, summary, visited)
-        if older is None:
+        older = _older_run(link, summary, visited)
+        if older is None or reads >= READ_CAP:
             return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
-        link, finished = older, _finished_of(older, principal)
+        older_link = read_link(trace, older)
+        if older_link is None:
+            raise PluginError(f"고리의 실행이 없다: {older} (실행 {link.run_id} 의 앞 실행)")
+        reads += 1
+        link, finished = older_link, _finished_of(older_link, principal)
 
 
 def _follow(
@@ -452,10 +485,14 @@ def _follow(
     이미 지난 실행(재개하는 실행 자신)이라 지도가 그것을 가리키면 순환이다. `known` 은 부르는 쪽이
     이미 읽은 실행(이어 가기의 앞 실행)이라 지도가 그것을 가리키면 다시 읽지 않는다. 읽은 실행마다
     기록 규칙, 주체, 끝남, 에이전트가 지도의 키와 같음, 지도가 있음을 보고 어긋나면 `PluginError`
-    다. 순환과 멈춤의 순서는 `_next_link` 와 같다 — 지나온 실행을 먼저 보고 그다음 덮는 끝이다.
+    다. 순환과 멈춤의 순서는 `_walk` 와 같다 — 지나온 실행을 먼저 보고 그다음 덮는 끝이고, 읽기
+    상한은 읽기 바로 앞이다. `known` 은 읽기 상한에 하나로 센다. 재개는 앞 실행을 따로 읽지 않으므로
+    읽은 것만 세는데, 상한에 닿을 만큼 모은 이어 가기는 교환 수 기준을 넘겨 접혔으므로 그 재개는
+    자기 요약의 덮는 끝에서 상한보다 먼저 멈춘다.
     """
     newest_first: list[OwnRun] = []
     visited = set(passed)
+    reads = 0 if known is None else 1
     while True:
         if target is None:
             if summary is not None:
@@ -471,7 +508,13 @@ def _follow(
             )
         if summary is not None and target == summary.last_covered_run:
             return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
-        link = known if known is not None and known.run_id == target else read_link(trace, target)
+        if known is not None and known.run_id == target:
+            link = known
+        elif reads >= READ_CAP:
+            return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
+        else:
+            link = read_link(trace, target)
+            reads += 1
         if link is None:
             raise PluginError(
                 f"바로가기가 가리킨 실행이 없다: {target} (실행 {source} 의 바로가기 {agent})"
@@ -497,18 +540,18 @@ def _follow(
         source, target = link.run_id, mapped.get(agent)
 
 
-def _next_link(
-    trace: TraceStore,
+def _older_run(
     link: Link,
     summary: ConversationSummarized | None,
     visited: set[RunId],
-) -> Link | None:
-    """거슬러 읽기의 다음 실행. None 이면 멈춘다 — 고리의 처음이거나 가장 가까운 요약이 덮는 끝이다.
+) -> RunId | None:
+    """거슬러 읽기에서 다음에 읽을 실행. None 이면 멈춘다 — 고리의 처음이거나 가장 가까운 요약이
+    덮는 끝이다. 읽지 않고 가를 수 있는 판정만 하고, 읽기 상한과 읽기는 부르는 쪽(`_walk`)이다.
 
     덮는 끝의 실행은 읽지 않는다. 순환은 지나온 실행 식별자로 보고 멈춤 조건보다 먼저다 — 정상
     고리에서 덮는 끝은 요약보다 오래돼 지나온 실행일 수 없으므로, 되돌아가는 간선의 목적지가 덮는
-    끝과 같은 손편집 트레이스만 여기서 갈린다. 요약을 만났는데 덮는 끝 없이 고리의 처음에 닿는 것과
-    다음 실행이 없는 것은 기록이 깨진 것이다.
+    끝과 같은 손편집 트레이스만 여기서 갈린다. 요약을 만났는데 덮는 끝 없이 고리의 처음에 닿는 것은
+    기록이 깨진 것이다.
     """
     older = link.started.previous_run
     if older is None:
@@ -522,10 +565,7 @@ def _next_link(
         raise PluginError(f"고리가 순환한다: 실행 {link.run_id} 의 앞 실행 {older} 을 이미 지났다")
     if summary is not None and older == summary.last_covered_run:
         return None
-    next_link = read_link(trace, older)
-    if next_link is None:
-        raise PluginError(f"고리의 실행이 없다: {older} (실행 {link.run_id} 의 앞 실행)")
-    return next_link
+    return older
 
 
 # --- 요약 ------------------------------------------------------------------------------
@@ -538,19 +578,23 @@ def limit_of(manifest: PluginManifest) -> int:
 
 
 def plan_fold(gathered: Gathered, limit: int) -> Fold | None:
-    """한도를 넘었으면 무엇을 접고 무엇을 남길지. 넘지 않았으면 None. 규칙은 모듈 독스트링의 "요약".
+    """글자 수 한도나 교환 수 기준을 넘었으면 무엇을 접고 무엇을 남길지. 둘 다 넘지 않았으면 None.
+    규칙은 모듈 독스트링의 "요약".
 
     꼬리는 가장 최근 교환부터 거꾸로 세어 합이 한도의 절반(정수 나눗셈. 합은 정수라 같은 조건이다)을
-    넘지 않는 데까지다. 합이 한도를 넘고 꼬리가 절반 이하이므로 접히는 실행이 적어도 하나 있다. 목표
-    글자 수는 한도의 4분의 1을 올림한 값이라 한도가 1 이상이면 1 이상이다(명세 "core — 대화 요약").
+    넘지 않고 수가 기준의 절반을 넘지 않는 데까지다. 계기가 "넘음"이고 꼬리가 둘 다 절반 이하이므로
+    접히는 실행이 적어도 하나 있다. 목표 글자 수는 교환 수로 접혀도 한도의 4분의 1을 올림한 값이라
+    한도가 1 이상이면 1 이상이다(명세 "core — 대화 요약", end-user-continuation 명세 "요약의 계기와
+    꼬리").
     """
-    if sum(run.size for run in gathered.runs) <= limit:
+    over_size = sum(run.size for run in gathered.runs) > limit
+    if not over_size and len(gathered.runs) <= EXCHANGE_COUNT_LIMIT:
         return None
     half = limit // 2
     kept: list[OwnRun] = []
     total = 0
     for run in reversed(gathered.runs):
-        if total + run.size > half:
+        if total + run.size > half or len(kept) >= EXCHANGE_COUNT_LIMIT // 2:
             break
         kept.append(run)
         total += run.size
