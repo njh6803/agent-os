@@ -432,3 +432,60 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 고친 프로브는 스크래치패드의 `check_probe_fixes.py`로 손으로 대 봤다(측정이 아니다). `failed_in`은 결과 폴더의 로그 넷 가운데 `node down`으로 끝난 하나에만 표지를 붙였다. `normalize_line_ends`는 `a\r\r\nb\r\nc\rd\n가\r\r\n`을 `a\nb\nc\nd\n가\n`으로 바꿨다. `burners(4, 0)`에서 셋째 `Popen`이 `OSError`를 던지게 하자 먼저 뜬 둘이 끝났고, `burners(2, 0)`도 나온 뒤 둘이 끝났다. 남은 부하는 명령줄로 찾았고, 같은 찾기가 블록 안에서 둘을 보는 것(양성 대조)을 함께 봤다. eslint의 `vitest_once`는 `OBSERVE_TIMEOUT_MS`를 1500으로 낮춰(제한 6초) 부르자 6.2초에 -1을 돌려줬고, 4초째에 이 워크트리의 vitest 프로세스 둘이 보였다가 끝난 뒤에는 없었다. 첫 실행에서는 찾는 PowerShell이 자기 명령줄에 걸려 남은 것처럼 보여 자신을 빼고 다시 돌렸다. vitest를 끊은 두 실행이 시험의 임시 트리 `web/judge-*` 둘을 남겨(`afterAll`이 돌지 못했다) 지웠다. 시간 초과로 끊은 eslint 회차는 같은 것을 남긴다. `kill_tree`의 시간 제한 길은 밟지 않았다.
 
 이 고침은 측정을 낸 뒤의 것이라, 커밋된 결과는 고치기 전의 프로브 코드가 냈다. 계산하는 값은 바꾸지 않았고, `failed_in`의 표지만 새로 더해져 커밋된 JSON의 `pytest_load_failed`에는 없다(`pytest3_b32_before_pytest2.txt`가 `[]`로 실려 있다).
+
+## PR 연 뒤 인계
+
+- 리뷰 반영 커밋 `d0f6a24c`를 띄우자 인계 계기(`커밋 뒤`, 세션 컨텍스트 325,087 토큰)가 왔다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘기지 않았다(인계하지 않는 때의 같은 경계). 커밋은 pre-commit을 모두 지났다(묶음 검사 225.0초: pyright 31.9초·run-hooks 94.4초·pytest 169.4초·web-verify 224.4초, 카나리아 명세와 헌법 판은 `Skipped`). 인용 대조 경고 셋 가운데 337행은 셀프 리뷰 절이 그때의 ADR 문장을 든 것이고, 이번에 그 문장을 고쳐 원문이 사라졌다. 기록이라 그대로 둔다. 338·342행은 위 "커밋" 절의 감김 차이다.
+- 푸시하고 PR #314를 `d0f6a24c`로 열었다. `@coderabbitai review` 코멘트는 남기지 않았다.
+- PR을 열자 인계 계기(`PR 연 뒤`, 331,870 토큰)가 왔다. 인계하지 않는 다섯 때에 들지 않는다. 명령이 성공했고, 요청 범위는 병합까지이며, 이 세션이 넘겨받은 경계는 `커밋 뒤`라 다르고, `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 열린 PR이 있어 다음 단계는 `PR 반영·병합`이다. `tools/model_sweep.py`는 `Opus 5.5 / xhigh`였다. 이 세션의 지금 제목은 `chore/timing-tests-under-load`다.
+- 이 세션이 번복하거나 고친 것: 앞 세션의 셀프 리뷰가 고친 ADR 0035 eslint 이력의 `-t` 문장을 PR 직전 리뷰를 따라 다시 고쳤다.
+- 정지 지시는 위 "둘째 인계받은 세션" 절의 원문(chore/hook-census 세션)과 "커밋 뒤 인계" 절의 두 원문이다. 지시문의 "이어받을 상태"에 항목을 빠짐없이 옮기고 원문은 이 일지를 가리켰다(딥링크 상한 8,000자. `tools/open_session.ps1`처럼 싸 보니 프롬프트 1,501자, 인코딩 7,570자).
+
+인계 지시문:
+
+```
+다음 작업: 기능 harness. 대기열 306의 남은 사례 셋(midturn 2초, mutate 8초, eslint 60초 제한)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계 계기(PR 연 뒤)로 넘긴다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)의 남은 사례 셋을 chore 한 PR로 반영한다. 오늘 여러 세션의 pre-commit을 막은 test_hook_midturn_korean.py의 test_트랜스크립트_파일이_없으면_기다리지_않는다부터 하고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
+브랜치: chore/timing-tests-under-load
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "둘째 인계받은 세션" 절부터 끝까지(PR 직전 리뷰 절, 끝의 "PR 연 뒤 인계" 절)
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #314를 d0f6a24c로 열었고 PR 직전 리뷰(CLI 좌석 없음, /security-review 지적 없음, bug-perf-review의 Minor 다섯과 보류 하나를 고쳤다)를 반영했다. 일지에 커밋하지 않은 인계 절이 있다. 일지 docs/journal/2026-10-20-08-timing-tests-under-load.md. 정지 지시(chore/hook-census 세션, 사용자의 요청): 지금 맡은 일(이 PR의 리뷰 반영·CI·병합, 일지)까지만 마무리하고 다음 작업으로 넘어가지 않는다. 새 chore나 대기열 행을 시작하지 않고, next-session 지시문대로 새 세션을 열지 않고, open-session을 실행하지 않는다(인계는 된다). 인계하면 이 지시를 새 지시문의 "이어받을 상태"에 옮긴다. chore/hook-census(ADR 0036)를 main에 병합하면 재개 메시지가 온다. 오면 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약으로 잇는다. 마무리한 뒤 마지막 보고에 "재개 대기"를 적고 멈춰 기다린다. 원문은 일지
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/timing-tests-under-load (인계함)`으로 바꿨다. 멈출 대기는 없었다(이 세션이 띄운 백그라운드 작업은 커밋 둘과 리뷰 에이전트 둘이었고 모두 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-20T00:28:26Z
+
+## 셋째 인계받은 세션
+
+10-20 09:2x(KST)에 위 인계 지시문으로 열린 세션이 이었다. 사용자 프롬프트는 시작 프롬프트 한 줄 그대로이고 지시문이 뒤에 붙었다. 제목을 `chore/timing-tests-under-load`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다(잠금은 풀려 있어 거부되지 않았다). 헤드는 `d0f6a24c`로 PR #314의 `headRefOid`와 같았다.
+
+- **봇 회차 1.** `@coderabbitai review` 코멘트를 남기고 상태를 한 번 읽었다. 검사 여섯(claude-review·e2e·python·verify·visual·web)은 모두 초록이었고 CodeRabbit 줄은 코멘트 전의 `Review skipped: manual review required for this OSS repository`였다. `tools/wait_ci.py 314`를 백그라운드로 띄웠다.
+- **CodeRabbit은 리뷰하지 않는다.** CodeRabbit이 요청 코멘트에 `Review skipped: 190 files exceed the limit of 100`으로 답했다. 바뀐 파일 190개 가운데 184개가 `.scratch/harness/probes/` 아래다(`git diff --name-only origin/main...HEAD`). 대기 도구는 상태 설명이 같은 글로 바뀐 것을 `Review skipped`로 시작하는 요청 전의 건너뜀으로 읽어 `끝: CodeRabbit 리뷰가 요청되지 않았다. `@coderabbitai review` 를 남기고 다시 띄운다`(종료 4)로 끝났다. 다시 요청해도 파일 수는 그대로라 따르지 않았다. 선례는 일지 2026-10-03-03이다(115개·116개로 두 회차 모두 건너뛰었다). 그래서 이 PR의 봇 회차는 claude-review만 센다.
+- **claude-review 1회차**(`d0f6a24c`, 그 봇이 이 PR에 낸 첫 리뷰). Critical·Major 0, Minor 하나와 Nit 셋이고, 지적마다 판단해 모두 보류했다. 이유는 PR 코멘트 `issuecomment-6280496192`에 남겼다. Minor(midturn 시험의 `SimpleNamespace` 결합)는 훅이 `time`에서 쓰는 것이 `monotonic`·`sleep` 둘뿐이고 다른 속성을 쓰게 되면 시험이 `AttributeError`로 빨개지며, 제안된 `sleep`만 바꾸는 길은 전역 `time.sleep`을 바꾼다. Nit(`from tools import hook_midturn_korean`을 위 구역에 붙이라)는 ruff의 isort가 지금 자리를 요구한다. 그 줄을 옮긴 사본을 `ruff check --select I --stdin-filename tests/tools/test_hook_midturn_korean.py -`에 넣자 I001로 빨갰고, 지금 판은 같은 명령에서 통과했다. 처음에는 `sed -n '1,20p;38p;21,37p;39,$p'`로 옮긴 사본을 지으려 했는데, sed는 줄을 파일 순서대로만 찍어 원래 순서 그대로였다(그 통과는 판정이 아니다). 옮긴 사본은 스크래치패드의 `move_import.py`로 지었고 import 구역을 눈으로 본 뒤 판정했다. 나머지 Nit 둘(mutate 30초 상한과 `_KILL_SECONDS`의 겹침, eslint의 `PROGRAM_TIMEOUT_MS`와 `throw run.error`)은 지적도 변경을 요구하지 않았고 PR 본문 "남긴 위험"에 이미 있다.
+- 고친 것이 없어 이 회차에는 코드 커밋이 없다. 이 절과 아래 회고·다음을 커밋해 푸시하고, 그 푸시로 도는 claude-review가 2회차다. 2회차부터는 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴 뒤 병합하며, 고친 것이 없으면 일지를 다시 푸시하지 않는다(next-session 1단계의 2).
+
+## 회고
+
+후보 아홉. 승인 셋(회차로 셈 둘, 고침 하나), 기각 여섯, 넘김 0. 사건은 이 단계의 네 세션(위 절들)에서 골랐다.
+
+1. 승인(회차로 셈). CodeRabbit이 파일 수 한도로 이 PR을 통째로 리뷰하지 않았다(위 "셋째 인계받은 세션", 190개 가운데 184개가 프로브). 열린 대기열 102가 처방한 사건(프로브를 CodeRabbit의 경로 필터에서 뺀다)이라 102에 회차를 더했다(2회차). 프로브를 빼면 이 PR은 6개다.
+2. 승인(고침). `tools/wait_ci.py`가 파일 수 한도의 건너뜀을 요청 전의 건너뜀으로 읽어, 다시 요청하라는 끝 줄로 끝났다(위 같은 절). 그 안내대로 하면 같은 끝이 되풀이된다. 사건: 이 세션의 대기가 그 줄로 끝났다. 층: 그 도구의 판정과 시험, 그 끝 줄을 따르는 `next-session` 1의 2 대기 문장. 되돌림: PR 하나. 도구의 버그라 사건 하나로 반영하는 종류이나, 이 세션은 정지 지시로 다음 일을 시작하지 않아 대기열 374로 두었다. 원인을 줄이는 길은 102다.
+3. 승인(회차로 셈). 측정 도중 Edit 두 번에 `hook_edit_during_commit`이 이 체크아웃에서 `git commit`이 돈다고 알렸고, 이 세션은 커밋을 띄우지 않았으며 두 번 모두 부하 pytest가 돌던 때였다(위 "eslint 사례: 재현과 원인"). 열린 대기열 368이 처방한 사건이라 368에 회차를 더했다(2회차).
+4. 기각. 첫 커밋이 부하 pytest가 남긴 결과 파일의 `\r\r\n`으로 줄 구분 문자 검사 둘에 막혔다(위 "커밋"). 이미 있는 검사가 그 자리에서 막았고, 이 PR이 `burners`의 `normalize_line_ends`로 고쳤다(위 "PR 직전 리뷰").
+5. 기각. 프로세스 64개 측정의 정리가 `TimeoutExpired`로 끊겨 부하 256개가 남았고, 뒤의 변이 표와 eslint 재현이 그 부하를 받아 결과로 쓰지 않았다(위 "mutate 사례: 64개 측정이 남긴 부하"). 이 PR이 `burners`의 정리와 `kill_tree`의 `TASKKILL_SECONDS`로 고쳤다.
+6. 기각. eslint 대조의 첫 판을 `--setupFiles`로 붙였더니 vitest 5.0.2가 거부해 대조 회차 하나가 헛돌았다(위 "eslint 사례: 재현과 원인"). 프로브의 측정 판정이 그 회차를 측정이 아니라고 세어 종료 1로 알렸다.
+7. 기각. 셀프 리뷰가 고친 ADR 0035 eslint 이력의 `-t` 문장을 PR 직전 리뷰가 거꾸로라고 다시 고쳤다(위 "PR 직전 리뷰"). 리뷰가 제 몫을 한 것이다.
+8. 기각. 측정 도중 세션이 다시 시작되어 백그라운드 측정이 멈췄고 사용자가 다시 돌리게 했다(위 머리). 원인은 앱의 세션 재시작이고 저장소에서 고칠 층이 없다.
+9. 기각. 이 세션이 sed의 여러 `p`로 import를 옮긴 사본을 지으려 해, 원래 순서 그대로인 입력에서 ruff의 통과를 받았다(위 "claude-review 1회차"). `CLAUDE.md` 환경 함정의 "검사 도구가 내가 생각하는 것을 실제로 봤는지"에 드는 일이지만, 결과를 쓰기 전에 스스로 알아채 다시 쟀다. 리뷰가 잡은 사건이 아니라 회차로 세지 않고, 비용은 호출 둘이다.
+
+## 다음
+
+- 재개 대기. 위 정지 지시대로 next-session으로 새 세션을 열지 않았고 다음 일을 시작하지 않았다. 다음 작업은 `chore/hook-census` 세션이 재개 메시지를 보낸 뒤, main을 당기고 그때의 next-session 결정표(디스크의 `SKILL.md`를 Read로 연다)로 정한다.
+- 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 재개 뒤 여는 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
+- 306은 이 PR로 남은 사례 셋을 고쳤고, 측정 중 난 새 사례가 남아 열려 있다(그 행).
+- 이 PR에서 대기열 374를 더하고 102·368에 회차를 더했다.
