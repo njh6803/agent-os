@@ -2097,7 +2097,19 @@ async def test_이어_가기는_같은_SSE_스트림이고_첫_이벤트가_앞_
     assert started["previous_run"] == STORED
     assert started["run_id"] == "run-1"
     assert started["request"] == "그럼?"
+    assert started["shortcuts"] is None
     assert frames == trace.lines[2:]
+
+
+async def test_채널로_시작한_실행을_이어_가면_시작_이벤트가_앞_실행을_가리키는_지도다() -> None:
+    """지도는 core 한 자리가 짓는다. 위 사례의 저장된 실행은 지도가 없는 옛 실행이라 없음이 이어진다
+    (end-user-continuation 명세 "바로가기")."""
+    async with _serving(_app()) as client:
+        first = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await _continue(client, "run-1", _start("echo", "그럼?"))
+
+    assert json.loads(_frames(first.text)[0])["shortcuts"] == {}
+    assert json.loads(_frames(response.text)[0])["shortcuts"] == {"echo": "run-1"}
 
 
 def _long_finished_stored() -> FakeTrace:

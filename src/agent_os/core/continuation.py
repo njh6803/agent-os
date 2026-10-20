@@ -5,15 +5,22 @@ run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 
 이 모듈이 바뀌는 이유(대화를 읽고 줄이는 것)가 다르다. 포트는 늘지 않는다
 — 쓰는 것은 TraceStore.read, ChatModel.ainvoke, Clock.now 다.
 
-**거슬러 읽기.** 앞 실행에서 시작 이벤트의 previous_run 을 따라 거슬러 가며 지금 에이전트의 것만
-모은다. 지금 에이전트와 같은 실행은 교환 하나(시작 이벤트의 요청과 run_finished 의 출력)를 내고, 그
-트레이스에 대화 요약 이벤트가 있고 아직 요약을 만나지 않았으면 그것이 가장 가까운 요약이다. 다른
-에이전트의 실행은 교환도 요약도 내지 않고 지나간다. 가장 가까운 요약을 만나면 그 요약이 덮는 끝의
-실행까지 거슬러 가되 그 실행은 읽지 않고 멈춘다. 요약이 없으면 고리의 처음(previous_run 이 없는
-실행)까지 간다. 더 오래된 요약은 쓰지 않는다 — 새 요약은 언제나 앞 요약을 접어 만들어진다. 실행마다
-검증하고 어느 것이든 서버의 기록이 가리킨 것이 깨진 것이라 PluginError 이며 메시지가 그 실행과
-이유를 든다. 포트에 가벼운 읽기를 더하지 않고 트레이스 전체를 읽는다 — 비용은 지나는 실행의 수에
-비례하고 측정은 conversation 명세의 프로브다.
+**바로가기.** 시작 이벤트의 shortcuts 는 에이전트마다 그 대화에서 그 에이전트가 가장 최근에 처리한
+실행을 가리키는 지도다(ADR 0022 의 둘째 2026-10-15 이력). 새 대화는 빈 지도이고, 이어 가기는 앞
+실행의 지도에 앞 실행 자신을 덮어 쓴다(`shortcuts_after`). 앞 실행에 지도가 없으면(옛 대화) 새
+실행도 없음을 쓴다. 그래서 지도가 있는 실행은 대화의 처음부터 모두 지도가 있고 지도는 온전하다.
+
+**거슬러 읽기.** 지금 에이전트의 교환만 모은다. 지금 에이전트의 실행은 교환 하나(시작 이벤트의
+요청과 run_finished 의 출력)를 내고, 그 트레이스에 대화 요약 이벤트가 있고 아직 요약을 만나지
+않았으면 그것이 가장 가까운 요약이다. 지도가 있으면 지도에서 지금 에이전트의 실행으로 곧장 가고 그
+실행의 지도에서 그 에이전트의 앞 실행으로 가기를 되풀이한다(`_follow`) — 다른 에이전트의 실행은
+읽지 않는다. 옛 대화는 시작 이벤트의 previous_run 을 따라 앞 실행을 하나씩 따라가고(`_walk`) 다른
+에이전트의 실행은 교환도 요약도 내지 않고 지나간다. 어느 쪽이든 가장 가까운 요약을 만나면 그 요약이
+덮는 끝의 실행까지 거슬러 가되 그 실행은 읽지 않고 멈춘다. 요약이 없으면 그 에이전트의 처음(지도에
+그 에이전트가 없음, 옛 대화에서는 previous_run 이 없는 실행)까지 간다. 더 오래된 요약은 쓰지 않는다
+— 새 요약은 언제나 앞 요약을 접어 만들어진다. 읽은 실행마다 검증하고 어느 것이든 서버의 기록이
+가리킨 것이 깨진 것이라 PluginError 이며 메시지가 그 실행과 이유를 든다. 포트에 가벼운 읽기를 더하지
+않고 트레이스 전체를 읽는다 — 비용은 읽는 실행의 수에 비례하고 측정은 conversation 명세의 프로브다.
 
 **요약.** 원문 교환의 글자 수가 한도를 넘으면 에이전트를 부르기 전에 접는다(ADR 0022). 계기, 꼬리,
 덮는 끝, 목표 글자 수, 실패 정책의 규칙은 `.claude/rules/core.md` 의 "대화 요약" 항목이 원천이고
@@ -24,9 +31,10 @@ run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 
 요약 글의 길이를 모델의 출력 상한으로 강제하지 않는 것은 넘어도 다음 요약이 다시 접기 때문이다.
 문구를 고치면 명세의 그 절을 함께 고친다.
 
-**재개.** 재개는 요약하지 않고 요약할지를 다시 판정하지도 않는다. 자기 트레이스의 요약 이벤트를 이미
-만난 요약으로 다루는 이유는, 이어 가기 사이에 한도를 내렸으면 앞선 요약을 든 실행이 원문 꼬리 안에
-설 수 있어 일반 규칙(처음 만난 요약에서 멈춤)으로 읽으면 처음과 다른 멤버가 되기 때문이다.
+**재개.** 재개는 요약하지 않고 요약할지를 다시 판정하지도 않는다. 지도가 있는 실행은 자기 지도로
+다시 읽어 앞 실행을 따로 읽지 않는다. 자기 트레이스의 요약 이벤트를 이미 만난 요약으로 다루는
+이유는, 이어 가기 사이에 한도를 내렸으면 앞선 요약을 든 실행이 원문 꼬리 안에 설 수 있어 일반
+규칙(처음 만난 요약에서 멈춤)으로 읽으면 처음과 다른 멤버가 되기 때문이다.
 """
 
 from __future__ import annotations
@@ -62,6 +70,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunStarted,
+    is_plugin_name,
     is_run_id,
 )
 
@@ -155,6 +164,15 @@ class Gathered:
 
 
 @dataclass(frozen=True)
+class Continued:
+    """이어 가기 판정을 지난 것. 거슬러 읽기가 모은 것과 새 실행의 시작 이벤트에 쓸 지도(옛 대화는
+    없음)."""
+
+    gathered: Gathered
+    shortcuts: Mapping[AgentName, RunId] | None
+
+
+@dataclass(frozen=True)
 class Fold:
     """요약 한 번이 접을 것과 남길 것. 앞 요약과 접히는 실행들(오래된 것부터), 원문으로 남는 꼬리
     (오래된 것부터), 목표 글자 수."""
@@ -178,17 +196,20 @@ class Fold:
 
 def gather_continued(
     trace: TraceStore, previous: RunId, agent: AgentName, principal: Principal
-) -> Gathered:
-    """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽는다.
+) -> Continued:
+    """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽고, 새 실행의 지도를
+    짓는다. 지도가 있으면 바로가기를 따라가고(`_follow`) 없으면 앞 실행을 하나씩 따라간다(`_walk`).
 
     규칙: 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
     (`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수 없어서이고,
     주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 남의
     실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023).
 
-    예외: 앞 실행 자신의 기록 규칙 위반(앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수)은 손상이지만
-    고리의 판정(`_walk`)에 들어 주체와 끝남 뒤에 선다. 최종 사용자 경로에서 존재를 덜 드러내는
-    쪽이고 명세 "core — 판정 순서"가 그렇게 정했다.
+    예외: 앞 실행 자신의 기록 규칙 위반(앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수, 지도의
+    패턴과 일관성)은 손상이지만 고리의 판정에 들어 주체와 끝남 뒤에 선다. 최종 사용자 경로에서
+    존재를 덜 드러내는 쪽이고 명세 "core — 판정 순서"가 그렇게 정했다. 앞 실행의 에이전트가 지금
+    에이전트가 아니어서 따라가지 않을 때도 본다 — 새 지도가 앞 실행의 지도를 이어받아 거기 든 손상이
+    다음 실행들로 번지기 때문이다(end-user-continuation 명세 "바로가기").
 
     요청이 댄 식별자는 포트에 닿기 전에 sdk 의 판정자를 지난다. 런타임은 그런 이름의 트레이스를 만들
     수 없으므로 패턴 위반은 없음이다. 재개는 거르지 않는다(명세 "core — 이어 가기 진입점").
@@ -206,15 +227,40 @@ def gather_continued(
         raise NotContinuable(
             f"앞 실행 {previous} 은 끝나지 않아 이어 갈 수 없다: 상태 {run_status(link.last)}"
         )
-    return _walk(trace, link, link.last, agent, principal, summary=None)
+    check_record_rules(link)
+    shortcuts = shortcuts_after(link)
+    if shortcuts is None:
+        gathered = _walk(trace, link, link.last, agent, principal, summary=None)
+    else:
+        gathered = _follow(
+            trace,
+            link.run_id,
+            shortcuts.get(agent),
+            agent,
+            principal,
+            summary=None,
+            known=link,
+        )
+    return Continued(gathered=gathered, shortcuts=shortcuts)
+
+
+def shortcuts_after(link: Link) -> Mapping[AgentName, RunId] | None:
+    """`link` 를 이어 가는 실행의 지도. 그 실행의 지도에 그 실행 자신을 덮어 쓴다. 옛 대화는
+    없음이다."""
+    started = link.started
+    if started.shortcuts is None:
+        return None
+    return {**started.shortcuts, started.agent: started.run_id}
 
 
 def resumed_conversation(trace: TraceStore, own: Link) -> Conversation:
-    """재개하는 실행의 멤버. 시작 이벤트의 앞 실행에서 다시 거슬러 읽어 처음과 같은 값을 만든다.
+    """재개하는 실행의 멤버. 처음과 같은 실행을 같은 규칙으로 다시 읽어 처음과 같은 값을 만든다.
 
-    `own` 은 재개하는 실행 자신이다(`_read_paused` 가 읽고 기록 규칙을 이미 봤다). 그 트레이스에 든
-    요약 이벤트가 있으면 이미 만난 가장 가까운 요약이라 그 덮는 끝에서 멈추고, 덮는 끝이 앞 실행
-    자신이면 아무것도 읽지 않는다 — 가장 최근 교환까지 접힌 실행이고 꼬리가 비어 있다. 모듈
+    `own` 은 재개하는 실행 자신이다(`_read_paused` 가 읽고 기록 규칙을 이미 봤다). 지도가 있으면
+    자기 지도에서 그 에이전트의 실행부터 따라가고 앞 실행을 따로 읽지 않는다. 없으면(옛 대화) 앞
+    실행에서 하나씩 따라간다. 그 트레이스에 든 요약 이벤트가 있으면 이미 만난 가장 가까운 요약이라
+    그 덮는 끝에서 멈추고, 덮는 끝이 처음 읽을 실행(지도의 그 에이전트 칸, 옛 대화에서는 앞 실행
+    자신)이면 아무것도 읽지 않는다 — 가장 최근 교환까지 접힌 실행이고 꼬리가 비어 있다. 모듈
     독스트링의 "재개". 앞 실행이 없으면(이어 가지 않은 실행, 형식 2로 쓰인 트레이스) 거슬러 읽을
     것이 없다. 있는데 그 실행이 없거나 깨졌으면 요청이 아니라 서버의 기록이 가리킨 것이라
     `PluginError` 그대로다. 주체의 비교 대상은 멈춘 실행의 `run_started` 주체다.
@@ -223,6 +269,17 @@ def resumed_conversation(trace: TraceStore, own: Link) -> Conversation:
     previous = started.previous_run
     if previous is None:
         return NEW_CONVERSATION
+    if started.shortcuts is not None:
+        gathered = _follow(
+            trace,
+            started.run_id,
+            started.shortcuts.get(started.agent),
+            started.agent,
+            started.principal,
+            summary=own.summary,
+            passed=frozenset({started.run_id}),
+        )
+        return gathered.conversation()
     if own.summary is not None and own.summary.last_covered_run == previous:
         return Conversation(summary=own.summary.summary, exchanges=())
     link = read_link(trace, previous)
@@ -270,9 +327,15 @@ def _sound_events(stored: Trace, run_id: RunId) -> tuple[Event, ...]:
 
 def check_record_rules(link: Link) -> None:
     """실행 하나의 기록이 규칙에 맞는지. 앞 실행 필드의 패턴, 요약 이벤트의 개수와 자리(시작 바로
-    뒤, 많아야 하나), 요약이 덮는 끝의 패턴. 고리의 실행과 재개하는 실행 자신에 같은 규칙이다 — 자기
-    트레이스에만 빼는 이유가 없다(명세 "이어 간 실행의 재개"). 어긋나면 기록이 깨진 것이라
-    PluginError 이고 메시지가 그 실행과 이유를 든다."""
+    뒤, 많아야 하나), 요약이 덮는 끝의 패턴, 지도의 키(플러그인 이름)와 값(실행 식별자)의 패턴.
+    고리의 실행과 재개하는 실행 자신에 같은 규칙이다 — 자기 트레이스에만 빼는 이유가 없다(명세 "이어
+    간 실행의 재개"). 어긋나면 기록이 깨진 것이라 PluginError 이고 메시지가 그 실행과 이유를 든다.
+
+    지도와 앞 실행 필드의 일관성은 앞 실행을 따로 읽지 않고 볼 수 있는 둘만 본다 — 앞 실행이 없으면
+    지도가 비어 있고, 있으면 지도의 값 가운데 그 앞 실행이 있다. 그 칸의 키(앞 실행의 에이전트)는 앞
+    실행을 읽어야 댈 수 있어 보지 않는다. 그래서 앞 실행이 아닌 칸을 손으로 지운 지도와 앞 실행 칸의
+    키를 다른 이름으로 바꾼 지도는 받아들이고, 앞 실행 칸을 지운 지도는 둘째 일관성에 걸린다
+    (end-user-continuation 명세 검토)."""
     run_id = link.run_id
     older = link.started.previous_run
     if older is not None and not is_run_id(older):
@@ -288,6 +351,18 @@ def check_record_rules(link: Link) -> None:
         raise PluginError(
             f"실행 {run_id} 의 요약이 덮는 끝이 패턴을 어긴다: {link.summary.last_covered_run!r}"
         )
+    shortcuts = link.started.shortcuts
+    if shortcuts is None:
+        return
+    for key, value in shortcuts.items():
+        if not is_plugin_name(key):
+            raise PluginError(f"실행 {run_id} 의 바로가기 키가 패턴을 어긴다: {key!r}")
+        if not is_run_id(value):
+            raise PluginError(f"실행 {run_id} 의 바로가기 값이 패턴을 어긴다: {value!r}")
+    if older is None and shortcuts:
+        raise PluginError(f"이어 가지 않은 실행 {run_id} 의 바로가기가 비어 있지 않다")
+    if older is not None and older not in shortcuts.values():
+        raise PluginError(f"실행 {run_id} 의 바로가기에 앞 실행 {older} 이 없다")
 
 
 def _finished_of(link: Link, principal: Principal) -> RunFinished:
@@ -334,6 +409,68 @@ def _walk(
         if older is None:
             return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
         link, finished = older, _finished_of(older, principal)
+
+
+def _follow(
+    trace: TraceStore,
+    source: RunId,
+    target: RunId | None,
+    agent: AgentName,
+    principal: Principal,
+    *,
+    summary: ConversationSummarized | None,
+    passed: frozenset[RunId] = frozenset(),
+    known: Link | None = None,
+) -> Gathered:
+    """바로가기를 따라 지금 에이전트의 실행만 모은다. 규칙은 모듈 독스트링의 "거슬러 읽기".
+
+    `source` 는 `target` 을 가리킨 지도를 든 실행이고 메시지가 그것을 든다. `passed` 는 부르는 쪽이
+    이미 지난 실행(재개하는 실행 자신)이라 지도가 그것을 가리키면 순환이다. `known` 은 부르는 쪽이
+    이미 읽은 실행(이어 가기의 앞 실행)이라 지도가 그것을 가리키면 다시 읽지 않는다. 읽은 실행마다
+    기록 규칙, 주체, 끝남, 에이전트가 지도의 키와 같음, 지도가 있음을 보고 어긋나면 `PluginError`
+    다. 순환과 멈춤의 순서는 `_next_link` 와 같다 — 지나온 실행을 먼저 보고 그다음 덮는 끝이다.
+    """
+    newest_first: list[OwnRun] = []
+    visited = set(passed)
+    while True:
+        if target is None:
+            if summary is not None:
+                raise PluginError(
+                    f"요약이 덮는 끝 {summary.last_covered_run} 을 만나지 못한 채 에이전트 "
+                    f"{agent} 의 처음에 닿았다(실행 {source})"
+                )
+            return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
+        if target in visited:
+            raise PluginError(
+                f"바로가기가 순환한다: 실행 {source} 의 바로가기 {agent} 가 이미 지난 실행 "
+                f"{target} 을 가리킨다"
+            )
+        if summary is not None and target == summary.last_covered_run:
+            return Gathered(summary=summary, runs=tuple(reversed(newest_first)))
+        link = known if known is not None and known.run_id == target else read_link(trace, target)
+        if link is None:
+            raise PluginError(
+                f"바로가기가 가리킨 실행이 없다: {target} (실행 {source} 의 바로가기 {agent})"
+            )
+        visited.add(target)
+        check_record_rules(link)
+        finished = _finished_of(link, principal)
+        if link.started.agent != agent:
+            raise PluginError(
+                f"바로가기가 가리킨 실행 {target} 의 에이전트 {link.started.agent} 가 바로가기의 "
+                f"키 {agent} 와 다르다(실행 {source})"
+            )
+        mapped = link.started.shortcuts
+        if mapped is None:
+            raise PluginError(
+                f"바로가기가 가리킨 실행 {target} 에 바로가기가 없다(실행 {source} 의 바로가기 "
+                f"{agent})"
+            )
+        exchange = Exchange(request=link.started.request, output=finished.output)
+        newest_first.append(OwnRun(run_id=link.run_id, exchange=exchange))
+        if summary is None and link.summary is not None:
+            summary = link.summary
+        source, target = link.run_id, mapped.get(agent)
 
 
 def _next_link(
