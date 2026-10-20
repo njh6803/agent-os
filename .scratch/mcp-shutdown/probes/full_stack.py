@@ -9,14 +9,19 @@
 4. `uv lock`, `uv sync` 뒤 시제품 파일의 ruff 둘(검사와 서식), pyright, 타입 우회 검사,
    lint-imports, pytest(`tests/adapters`·`tests/core`·`tests/channel`)를 돌리고, MCP 어댑터와 CLI
    처리기의 테스트 파일만 한 번 더 돌려 테스트마다 걸린 시간(`--durations=0`)을 찍는다. 끝으로
-   core 에 시제품 어댑터를 물린 `write_failure.py --expect closed`를 돌린다.
+   core 에 시제품 어댑터를 물린 `write_failure.py --expect closed`를, POSIX 에서는 런처가 뜨기
+   전에 부모가 끝난 회차를 만드는 `stale_parent.py --expect refused`를 돌린다.
 5. 대조군을 돈다. 두 OS 에서 CLI 처리기를 `asyncio.run` 그대로로 바꾼 사본의 처리기 테스트와
    어댑터가 그룹에 싸인 예외를 벗기지 않게 바꾼 사본의 해당 테스트(이름에 "연결_안"이나
    "뜨자마자")와 `write_failure.py --expect escaped`를, POSIX 에서는 어댑터가 런처를 쓰지 않게
    바꾼 사본과 런처가 부모를 보지 않게 바꾼 사본의 닫기 테스트(이름에 "내려간다")를 돌려 빨강이
-   기대한 테스트에서 기대한 까닭으로 나는지 본다.
+   기대한 테스트에서 기대한 까닭으로 나는지 본다. 부모를 보지 않는 사본에서는
+   `stale_parent.py --expect spawned`도 돈다.
+6. 어긋난 단계가 없으면 만든 임시 폴더(사본과 대조군 사본, `.venv` 포함 수백 MB)를 지운다. 있으면
+   살펴보도록 남기고 마지막 줄에 경로를 찍는다.
 
-표지: 본 단계와 `write_failure.py`는 모두 0으로 끝나야 하고(그 프로브는 표지와 기대를 스스로 본다),
+표지: 본 단계와 프로브(POSIX 는 둘, 아니면 `write_failure.py` 하나)는 모두 0으로 끝나야
+하고(프로브는 표지와 기대를 스스로 본다),
 대조군의 테스트는 기대한 테스트만 실패하며 각 실패의 요약 줄(`-rf`)에 기대한 문구가 있어야 한다.
 런처 없음은 자식을 남기는 서버와 프로세스가 죽는 사례, 부모를 보지 않음은 프로세스가 죽는 사례이고
 문구는 하트비트 단언의 것이다. 처리기 없음은 두 사례이고 문구는 한 번이면 중단의 한 줄, 두 번이면
@@ -85,6 +90,7 @@ EXPECTED_RED = {
 }
 POSIX_VARIANTS = {"no_launcher", "no_parent_watch"}
 WRITE_FAILURE = ["uv", "run", "python", str(HERE / "write_failure.py"), "--expect"]
+STALE_PARENT = ["uv", "run", "python", str(HERE / "stale_parent.py"), "--expect"]
 UNWRAPPED = "연결_안 or 뜨자마자"
 
 
@@ -204,6 +210,8 @@ def main() -> int:
         ),
         ("write failure", [*WRITE_FAILURE, "closed"], 600),
     ]
+    if os.name == "posix":
+        steps.append(("stale parent", [*STALE_PARENT, "refused"], 300))
     bad: list[str] = []
     for name, command, timeout in steps:
         result = _run(name, command, copy, timeout)
@@ -233,7 +241,20 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False))
             if result["exit"] != 0:
                 bad.append(f"{variant}: write failure")
-    print(json.dumps({"copy": str(copy), "unexpected": bad}, ensure_ascii=False))
+        if variant == "no_parent_watch":
+            # 견줌을 지우면 부모가 이미 끝난 회차에도 서버가 뜨는지 본다(양성 대조).
+            result = _run(f"{variant}: stale parent", [*STALE_PARENT, "spawned"], target, 300)
+            print(json.dumps(result, ensure_ascii=False))
+            if result["exit"] != 0:
+                bad.append(f"{variant}: stale parent")
+    summary: dict[str, object] = {"copy": str(copy), "unexpected": bad, "removed": False}
+    if not bad:
+        try:
+            shutil.rmtree(copy.parent)
+            summary["removed"] = True
+        except OSError as error:
+            summary["remove_error"] = f"{type(error).__name__}: {error}"
+    print(json.dumps(summary, ensure_ascii=False))
     return 1 if bad else 0
 
 

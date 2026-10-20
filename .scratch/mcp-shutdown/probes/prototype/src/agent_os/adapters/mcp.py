@@ -9,8 +9,8 @@ ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 i
 닫기(입력 닫기 → 기다림 → 프로세스 묶음 끄기)는 mcp 의 stdio_client 가 취소에서 보호한 채 한다(ADR
 0034). 서버들은 연 순서의 반대로 하나씩 닫힌다. POSIX 에서는 서버를 런처(`mcp_launcher.py`) 뒤에
 띄운다. 런처가 프로세스 그룹의 우두머리가 되어, 서버가 스스로 끝나거나 이 프로세스가 죽으면 그룹을
-끈다. 그래서 명령이 없는 것은 띄우기 전에 여기서 본다 — 런처 안에서 나면 연결이 닫힌 것으로만
-보인다.
+끈다. 이 프로세스의 번호를 런처에 넘겨 런처가 뜨는 사이에 죽은 것도 알아보게 한다. 그래서 명령이
+없는 것은 띄우기 전에 여기서 본다 — 런처 안에서 나면 연결이 닫힌 것으로만 보인다.
 
 밖으로 나가는 예외는 내장 타입이다. 서버를 여는 동안의 실패는 서버 이름과 명령과 원인을 든
 ConnectionError, 도구 호출의 실패는 RuntimeError, 연결 안(부르는 쪽)에서 난 예외는 그 객체 그대로다.
@@ -22,6 +22,7 @@ GeneratorExit 가 `BaseExceptionGroup` 으로 나오면 결말을 쓴 실행도 
 from __future__ import annotations
 
 import errno
+import os
 import shutil
 import sys
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
@@ -44,6 +45,9 @@ from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
 from agent_os.sdk import Json, McpServer, PluginName
 
 LAUNCHER = Path(__file__).with_name("mcp_launcher.py")
+# 도구 목록을 읽는 쪽 수의 상한. 커서를 무시하고 같은 쪽을 거듭 내는 서버에 붙어 멈추지 않게 한다.
+# 지금 판이 기대던 `langchain-mcp-adapters`의 `load_mcp_tools`와 같은 값이다.
+MAX_TOOL_PAGES = 1000
 
 
 class McpTools:
@@ -167,21 +171,27 @@ def _parameters(server: McpServer) -> StdioServerParameters:
     if command is None:
         raise FileNotFoundError(errno.ENOENT, "명령을 찾지 못했다", server.command)
     return StdioServerParameters(
-        command=sys.executable, args=["-I", str(LAUNCHER), command, *server.args]
+        command=sys.executable,
+        args=["-I", str(LAUNCHER), str(os.getpid()), command, *server.args],
     )
 
 
 async def _all_tools(session: ClientSession) -> list[Tool]:
-    """서버의 도구 전부. 목록이 쪽으로 나뉘어 오면 커서를 따라 끝까지 읽는다."""
+    """서버의 도구 전부. 목록이 쪽으로 나뉘어 오면 커서를 따라 끝까지 읽는다.
+
+    빈 커서도 끝으로 보고, 쪽 수가 상한을 넘으면 실패한다. 지금 판이 기대던 `load_mcp_tools`가
+    그렇게 하고(없음과 빈 글을 함께 끝으로 본다는 주석) 시제품의 첫 판은 둘 다 놓쳤다(PR 직전 리뷰).
+    """
     tools: list[Tool] = []
     cursor: str | None = None
-    while True:
+    for _ in range(MAX_TOOL_PAGES):
         params = None if cursor is None else PaginatedRequestParams(cursor=cursor)
         page = await session.list_tools(params=params)
         tools.extend(page.tools)
         cursor = page.next_cursor
-        if cursor is None:
+        if not cursor:
             return tools
+    raise RuntimeError(f"도구 목록이 {MAX_TOOL_PAGES}쪽을 넘었다")
 
 
 def _text_of(result: CallToolResult) -> str:

@@ -29,6 +29,11 @@ FIXTURE = McpServer(
     command=sys.executable, args=(str(Path(__file__).with_name("mcp_fixture_server.py")),)
 )
 LINGERING = Path(__file__).with_name("mcp_lingering.py")
+PAGED = Path(__file__).with_name("mcp_paged_server.py")
+# 쪽 나눔 사례의 기한. 고치기 전의 어댑터는 같은 쪽을 끝없이 물어 기한이 없으면 멈춘다. 끝없는
+# 목록 사례(1000쪽)가 Windows 에서 홀로 2.5~2.9초, full_stack 의 두 OS 를 함께 돈 회차에 6.13초였다
+# (tests.md 의 시간 단언).
+PAGED_WITHIN_SECONDS = 30
 
 
 @asynccontextmanager
@@ -98,6 +103,29 @@ async def test_서버를_지정하지_않으면_도구_없이_연다() -> None:
 
     async with tools.connect({}) as opened:
         assert list(opened.tools()) == []
+
+
+def _paged(shape: str) -> dict[PluginName, McpServer]:
+    server = McpServer(command=sys.executable, args=(str(PAGED), shape))
+    return {PluginName("paged"): server}
+
+
+async def test_빈_커서는_도구_목록의_끝이다() -> None:
+    """빈 커서로 다시 물으면 같은 쪽이 끝없이 온다."""
+    with anyio.fail_after(PAGED_WITHIN_SECONDS):
+        async with McpTools().connect(_paged("empty")) as connection:
+            names = [spec.name for spec in connection.tools()]
+
+    assert names == ["paged"]
+
+
+async def test_끝나지_않는_도구_목록은_쪽_수의_상한에서_연결_오류다() -> None:
+    with (
+        anyio.fail_after(PAGED_WITHIN_SECONDS),
+        pytest.raises(ConnectionError, match="paged.*1000쪽"),
+    ):
+        async with McpTools().connect(_paged("endless")):
+            pass
 
 
 # --- 닫기(ADR 0034) ---

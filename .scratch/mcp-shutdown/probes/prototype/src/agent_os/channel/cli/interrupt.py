@@ -16,6 +16,7 @@ KeyboardInterrupt 를 올리고 남은 태스크를 다시 취소해 끝나기�
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import signal
 import sys
@@ -68,15 +69,24 @@ class _Presses:
             task.get_loop().call_soon_threadsafe(lambda: None)
             return
         # 신호 처리기는 표준 에러에 쓰는 도중에도 돌 수 있어 버퍼를 거치지 않고 쓴다.
-        os.write(2, f"{FORCED}\n".encode())
+        with contextlib.suppress(OSError):
+            os.write(2, f"{FORCED}\n".encode())
         _die_interrupted()
 
 
 def _end_interrupted() -> NoReturn:
-    """첫 번째로 취소된 실행이 닫기를 마친 뒤의 끝. 한 줄을 남기고 중단의 꼴로 끝난다."""
-    sys.stdout.flush()
-    sys.stderr.write(f"{INTERRUPTED}\n")
-    sys.stderr.flush()
+    """첫 번째로 취소된 실행이 닫기를 마친 뒤의 끝. 한 줄을 남기고 중단의 꼴로 끝난다.
+
+    표준 출력이나 에러를 읽는 쪽이 먼저 떠났으면(`| head`) 쓰기가 OSError(BrokenPipeError)를 낸다.
+    한 줄을 남기지 못해도 끝나는 꼴은 지킨다(PR 직전 리뷰). 신호 처리기의 둘째 길도 같다. 시작
+    때부터 표준 출력이 없거나(`sys.stdout`이 None) 파일 객체가 닫힌 것은 CLI 가 만들지 않는 상태라
+    받지 않는다.
+    """
+    with contextlib.suppress(OSError):
+        sys.stdout.flush()
+    with contextlib.suppress(OSError):
+        sys.stderr.write(f"{INTERRUPTED}\n")
+        sys.stderr.flush()
     _die_interrupted()
 
 

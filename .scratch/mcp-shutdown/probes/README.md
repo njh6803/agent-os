@@ -31,6 +31,12 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-sh
 MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" python:3.12.10-slim-bookworm sh /repo/.scratch/mcp-shutdown/probes/linux_full_stack.sh
 ```
 
+`stale_parent.py`는 `full_stack.py`가 Linux 사본에서 부른다. 표준 라이브러리만 쓰므로 시제품 폴더를 지금 폴더로 주면 패키지 없이 홀로도 돈다.
+
+```sh
+MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" -w /repo/.scratch/mcp-shutdown/probes/prototype python:3.12.10-slim-bookworm python /repo/.scratch/mcp-shutdown/probes/stale_parent.py --expect refused
+```
+
 `--init`은 컨테이너의 첫 프로세스가 고아가 된 프로세스를 거두게 한다. 없으면 상류의 그룹 기다림이 끝난 좀비를 산 것으로 볼 수 있다(mcp 2.3.0의 `terminate_posix_process_tree` 독스트링을 읽었다. 없는 판으로는 재지 않았다).
 
 프로브는 남은 프로세스를 번호만 보고 끄지 않는다. 가짜 프로세스는 멈춤 파일이나 60초 수명으로 스스로 끝나고, `everything.py`는 번호·만든 시각·명령줄이 연 뒤의 목록과 모두 같은 것만 다시 확인한 뒤 끈다(번호는 다시 쓰여 남의 프로세스를 끌 수 있다. 일지 2026-10-16-36 "사고"). 프로브가 스스로 띄운 자식(`Popen`의 핸들을 쥔 것)은 시간이 넘으면 그 핸들로 끈다.
@@ -40,8 +46,60 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" pytho
 | `close_paths.py`(가짜 프로세스 `fakes.py`, 런처 시제품 `launcher.py`, Linux 실행 `linux.sh`) | mcp의 `stdio_client`와 `ClientSession`을 직접 열어 닫는 길마다 서버와 그 자식이 내려가는지와 닫는 데 걸린 시간. 사례는 도구 호출 도중의 기한(`cancel`), 정상 닫기(`stay_normal`), 자식을 남기는 서버(`exit_child_normal`), 세션 안의 예외(`raise_inside`), 다른 태스크에서 닫아 닫기 자체가 예외로 끝남(`close_fails`), SIGTERM을 무시하는 서버(`sigterm_ignored_cancel`, POSIX), 없는 명령(`missing_command`), CLI처럼 `asyncio.run`으로 도는 자식의 Ctrl+C 한 번(`cli_ctrl_c`)과 닫는 도중의 둘째(`cli_ctrl_c_twice`, 10초 뒤에도 살아 있으면 셋째)와 그 자식의 종료 코드. `--cli-handler force`는 두 CLI 사례를 명세가 정한 처리기의 시제품(`_run_with_force_exit`)으로 돈다. 하트비트 파일이 0.6초 사이에 자랐는지로 산 것을 가른다. 1.30.0이 양성 대조다(서버가 남는다). 표지는 독스트링 | `spec.md`의 "닫는 데 드는 시간", "서버를 여는 실패", "경계를 넘는 예외", "CLI의 Ctrl+C", "결말 뒤 닫기의 예외", Testing Decisions. ADR 0034의 2026-10-17 이력 | 위 명령. 사례 하나에 5~15초, 전부 1~2분 | mcp 1.30.0·2.3.0, anyio 4.15.1, Python 3.12.10. Windows 10(이 PC)과 Docker의 Debian bookworm(WSL2 커널 6.18), 2026-10-17 |
 | `serve_shutdown.py`(같은 `fakes.py`·`launcher.py`·`linux.sh`) | serve처럼 uvicorn(`timeout_graceful_shutdown=5`)으로 띄운 앱의 수명(`Runs.lifespan`과 같은 모양)이 실행 하나(입력이 닫혀도 끝나지 않는 서버)를 쥔 채 멈출 때, 서버가 내려가는지와 신호에서 수명 닫기·실행 끝·프로세스 끝까지의 시간. 사례는 신호 하나(`graceful`), SIGINT 둘(`force`, POSIX), 수명 닫기 도중의 셋째(`force_then_interrupt`, POSIX), 강제 종료(`sigkill`) | `spec.md`의 "serve 종료", "Linux 런처"의 끄는 때. ADR 0034의 2026-10-17 이력 | 위 명령. 사례 하나에 10~20초 | 위와 같고 uvicorn 0.53.0, starlette 1.6.0 |
 | `everything.py` | 실제 `npx`의 everything(`plugins/mcp/everything`과 같은 명령)으로 도구 호출 도중의 기한과 정상 닫기 뒤 자손 프로세스(번호·만든 시각·명령줄)가 남는지. 이벤트 루프를 살려 둔 채 1초·4초·`gc.collect()` 뒤에 보고, 루프를 닫은 뒤에 한 번 더 본다. Windows만 | `spec.md`의 Problem Statement, ADR 0034의 "검증"(재현 프로브) | Node와 npx, 네트워크(처음 받을 때). 사례 하나에 15~25초 | 위 판과 Node 24.19.0, npx 11.17.0, `@modelcontextprotocol/server-everything` 1.0.0(npx 캐시의 package.json) |
-| `full_stack.py`(시제품 `prototype/`, Linux 실행 `linux_full_stack.sh`) | 저장소 사본의 의존성을 `mcp>=2.3,<3`으로 바꾸고 시제품(어댑터, 런처, 픽스처 서버, 닫기 테스트의 가짜 프로세스, CLI 처리기, 어댑터와 처리기의 테스트)을 얹은 뒤 시제품 파일의 ruff 검사와 포맷, pyright strict, 타입 우회 검사, lint-imports, `tests/adapters`·`tests/core`·`tests/channel`이 지나는지와 두 테스트 파일의 시간. 사본에서 `write_failure.py --expect closed`도 돈다. 대조군(양성 대조)은 두 OS에서 처리기를 `asyncio.run` 그대로로 바꾼 사본과 어댑터가 겉봉을 벗기지 않는 사본(여기서는 `write_failure.py --expect escaped`), POSIX에서 런처를 뺀 사본과 부모 감시를 뺀 사본이다. 기대한 테스트만 기대한 까닭(실패 요약 줄의 문구)으로 빨간지 본다 | `spec.md`의 "경계를 넘는 예외", "소비 지점까지 잰 것", Testing Decisions의 "빨강을 먼저 본다"와 "시간" | 위 명령. `--source <트리>`로 다른 커밋의 트리를 줄 수 있다(`git archive <커밋> \| tar -x -C <트리>`로 푼 것. Linux는 그 트리를 `/src`에 붙이고 `linux_full_stack.sh /src`). 패키지를 받고 테스트를 돌려 Windows 8~14분(부하에 따라), Linux 8~10분 | mcp 2.3.0, mcp-types 2.3.0, anyio 4.15.1, pydantic 2.13.5, pyright 1.1.414, ruff 0.16.8, 저장소 `30949cfc`(앞선 회차는 `aa93cf7b`와 `8a2163eb`) |
+| `full_stack.py`(시제품 `prototype/`, Linux 실행 `linux_full_stack.sh`) | 저장소 사본의 의존성을 `mcp>=2.3,<3`으로 바꾸고 시제품(어댑터, 런처, 픽스처 서버, 닫기 테스트의 가짜 프로세스, 쪽 나눔 가짜 서버, CLI 처리기, 어댑터와 처리기의 테스트)을 얹은 뒤 시제품 파일의 ruff 검사와 포맷, pyright strict, 타입 우회 검사, lint-imports, `tests/adapters`·`tests/core`·`tests/channel`이 지나는지와 두 테스트 파일의 시간. 사본에서 `write_failure.py --expect closed`를, POSIX에서는 `stale_parent.py --expect refused`도 돈다. 대조군(양성 대조)은 두 OS에서 처리기를 `asyncio.run` 그대로로 바꾼 사본과 어댑터가 겉봉을 벗기지 않는 사본(여기서는 `write_failure.py --expect escaped`), POSIX에서 런처를 뺀 사본과 부모 감시를 뺀 사본(여기서는 `stale_parent.py --expect spawned`)이다. 기대한 테스트만 기대한 까닭(실패 요약 줄의 문구)으로 빨간지 본다. 어긋남이 없으면 만든 임시 폴더를 지운다 | `spec.md`의 "경계를 넘는 예외", "소비 지점까지 잰 것", Testing Decisions의 "빨강을 먼저 본다"와 "시간" | 위 명령. `--source <트리>`로 다른 커밋의 트리를 줄 수 있다(`git archive <커밋> \| tar -x -C <트리>`로 푼 것. Linux는 그 트리를 `/src`에 붙이고 `linux_full_stack.sh /src`). 패키지를 받고 테스트를 돌려 Windows 8~14분(부하에 따라), Linux 8~10분 | mcp 2.3.0, mcp-types 2.3.0, anyio 4.15.1, pydantic 2.13.5, pyright 1.1.414, ruff 0.16.8, 저장소 `83f09401`(앞선 회차는 `30949cfc`, `aa93cf7b`, `8a2163eb`) |
+| `stale_parent.py` | POSIX 런처 시제품이, 자기를 띄운 프로세스가 런처가 뜨기 전에 이미 끝났으면 서버를 띄우지 않는지. 중간 프로세스가 갈라 낸 자식(`fork`)이 새 세션을 열고 중간 프로세스의 번호를 넘기며 런처로 바뀐다(`exec`). 중간 프로세스가 곧바로 끝나고 자식은 부모가 바뀐 것을 본 뒤에 바뀌는 `died`와, 중간 프로세스가 자식을 기다리는 `alive`(양성 대조: 런처가 서버를 띄우고 그룹을 SIGKILL로 꺼 -9)를 세 회차씩 돈다. `--expect refused`는 런처의 거부 문구("이미 끝나")가 있고 서버의 표지 파일이 없는 것, `--expect spawned`(부모와 견주는 두 자리를 지운 런처)는 서버의 표지가 생기는 것이다. 우두머리가 아니라서 띄우지 않은 것과는 런처의 문구로 가른다. 표지는 독스트링 | `spec.md`의 "Linux 런처"(견주는 번호), Testing Decisions의 "모듈" | `full_stack.py`가 Linux 사본에서 돈다. 홀로는 위 명령. 10초 안팎 | Python 3.12.10, Docker의 Debian bookworm. 시제품은 위 `full_stack.py`의 판 |
 | `write_failure.py` | core `run()`에 진짜 MCP 어댑터를 물려, 연결이 열린 채 트레이스 쓰기가 실패한 실행(둘째 쓰기 `write_2`, 셋째 쓰기 `write_3`), 에이전트가 예외를 낸 실행(`raise`), 실패하는 도구를 부른 에이전트가 런타임의 `ToolError`를 잡지 않은 실행(`tool_error`)이 어떻게 끝나는지. 트레이스의 기록, `run()`이 낸 이벤트, `run_failed`의 글과 원인, `run()` 밖으로 나온 예외를 찍는다. 지금 폴더의 트리를 쓰므로 저장소에서 돌면 지금 판을, `full_stack.py`의 사본에서 돌면 시제품을 잰다. 표지(도구가 불렸고 실패시키려던 차례에 그 이벤트의 쓰기를 시도했다)와 판정(글, 원인, 겉봉 안의 `GeneratorExit`)은 독스트링 | `spec.md`의 Solution, 사용자 스토리 11, "경계를 넘는 예외" | 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/mcp-shutdown/probes/write_failure.py --expect escaped`. 지금 판은 그룹을 올려 `escaped`가 기대다. 10초 안팎 | 지금 판은 mcp 1.30.0, langchain-mcp-adapters 0.3.2, 저장소 `30949cfc`, Windows(이 PC). 시제품은 위 `full_stack.py`의 판 |
+
+## 2026-10-21 결과
+
+PR 직전 리뷰(보안 축과 버그·성능 축)를 반영한 뒤 돈 회차다. 보안 축은 지적이 없었다. 버그·성능 축이 짚어 시제품을 넷 고쳤다. 어댑터는 도구 목록에서 빈 커서를 끝으로 보고 1000쪽을 넘으면 실패한다(쪽 나눔 가짜 서버 `mcp_paged_server.py`와 테스트 둘을 더했다). 런처는 어댑터가 넘긴 번호와 견주고 뜨자마자 한 번 견준다(그것을 재는 `stale_parent.py`를 더했다). CLI 처리기는 표준 출력이나 에러를 쓰다 `OSError`가 나도 끝나는 꼴을 지킨다. 닫기 테스트의 가짜 프로세스는 하트비트 쓰기가 한 번 실패해도 쓰는 스레드가 죽지 않는다. `full_stack.py`에는 POSIX 단계와 대조군 하나(둘 다 `stale_parent.py`)와 임시 폴더 지우기(대기열 392)를 더했다. `close_paths.py`·`serve_shutdown.py`·`everything.py`는 다시 돌리지 않았다.
+
+### `full_stack.py`
+
+이 브랜치가 합친 `83f09401` 위에서 두 OS가 함께 돌았다(`30949cfc`와 사이에 `src`와 어댑터·core·채널의 테스트는 바뀌지 않았다). 두 OS 모두 기대와 어긋난 단계가 없어 임시 폴더를 지웠다(`"removed": true`). 패키지는 앞선 회차와 같은 84개다. 시제품 파일 여덟의 ruff 검사와 포맷 0건, pyright strict 0건, 타입 우회 검사 0건, import 계약 다섯 유지, `tests/adapters`·`tests/core`·`tests/channel` 658개 통과(앞 회차 656개와 쪽 나눔 테스트 둘, 1개는 `llm` 표지로 빠졌다). 사본의 `write_failure.py --expect closed`는 네 사례 모두 `run_failed`로 끝났고 밖으로 나온 예외가 없었다.
+
+대조군 넷은 앞 회차와 같은 테스트가 같은 까닭으로 빨갰다(위 2026-10-20 표). 더한 것은 `stale_parent.py`다.
+
+| 런처(Linux, 프로브의 첫 판) | `died`(부모가 런처를 띄우자마자 끝남) 세 회차 | `alive`(양성 대조) 세 회차 |
+|---|---|---|
+| 시제품, `--expect refused` | 모두 런처가 "이미 끝나" 한 줄을 남기고 서버를 띄우지 않았다 | 모두 서버가 뜨고 런처가 -9로 끝났다 |
+| 부모를 보지 않는 사본, `--expect spawned` | 모두 서버가 떴다(부모가 끝난 것을 본 때 서버의 표지는 아직 없었다) | 같다 |
+
+- 이 프로브는 full_stack에 엮기 전에 시제품 폴더를 그대로 붙인 컨테이너에서 손으로 두 기대를 한 번씩 돌렸고 같은 값이었다. 지금 런처에 `--expect spawned`를 주자 `died` 세 회차가 어긋남으로 잡혔다.
+- 쪽 나눔 테스트 둘은 고치기 전의 어댑터를 얹은 사본(앞 회차가 남긴 것)에서 둘 다 기한 30초에 걸려 `TimeoutError`로 빨갰다(같은 쪽을 거듭 물은 것은 코드를 읽은 추론이다). 고친 어댑터로는 같은 Windows 사본에서 홀로 2.94초(1000쪽)와 2.34초(빈 커서)에 지났고, 셀프 리뷰 뒤 다시 돌려 2.51초와 1.64초였다(손으로 봤다. full_stack의 대조군에는 넣지 않았다).
+
+### 셀프 리뷰 뒤 다시 돈 Linux 회차
+
+명세의 둘째 셀프 리뷰(일지 2026-10-20-36의 "2026-10-21 셀프 리뷰를 이어받은 세션")가 `stale_parent.py` 첫 판의 표지가 재려는 상황을 보이지 못한다고 짚었다. 첫 판은 중간 프로세스가 런처를 띄우자마자 끝나 런처의 파이썬이 뜨는 시간과 겨뤘고, `spawned`의 표지(부모가 끝난 것을 본 때 서버의 표지가 아직 없었다)는 런처가 띄울지 정한 순간에 부모가 이미 없었다는 것까지 보이지 못했다. 지금 판은 갈라 낸 자식이 부모가 바뀐 것을 본 뒤에 런처로 바뀌고 그 사실을 파일로 남긴다(독스트링). 그 판으로 `full_stack.py`를 Linux에서만 다시 돌렸다(`83f09401`. Windows는 그 프로브를 돌지 않고, 시제품의 다른 변경은 독스트링과 주석뿐이다).
+
+- 어긋난 단계가 없어 임시 폴더를 지웠다. 시제품 파일 여덟의 ruff 검사와 포맷 0건, pyright strict 0건, 타입 우회 검사 0건, import 계약 다섯 유지, 658개 통과, `write_failure.py` 네 사례 기대대로, 대조군 넷은 위와 같은 테스트가 같은 까닭으로 빨갰다.
+- `stale_parent.py`는 두 기대 모두 `died` 세 회차의 표지(부모가 바뀐 것을 본 뒤에 런처로 바뀌었다)가 섰다. 지금 런처는 세 회차 모두 "이미 끝나" 한 줄을 남기고 서버를 띄우지 않았고, 부모를 보지 않는 사본의 런처는 세 회차 모두 서버를 띄웠다. `alive`는 두 런처 모두 서버가 뜨고 런처가 -9로 끝났다.
+- full_stack에 엮기 전에 시제품 폴더를 붙인 컨테이너에서 홀로 돌려 같은 값을 봤고, 지금 런처에 `--expect spawned`를 주자 `died` 세 회차가 어긋남으로 잡혔다.
+
+새 테스트의 시간(`--durations`, 초). 같은 때 두 회차가 함께 돌았고, Windows는 시간이 바뀌지 않은 픽스처 테스트도 앞 회차보다 길었다.
+
+| 테스트 | Windows | Linux |
+|---|---|---|
+| 도구 호출 도중의 기한 | 12.76 | 5.65 |
+| 연결을 연 프로세스가 갑자기 죽음 | 14.28 | 5.12 |
+| 연결 안의 예외 | 9.37 | 4.99 |
+| 자식을 남기는 서버의 닫기 | 7.91 | 3.16 |
+| 도구 호출 도중에 서버가 죽음 | 3.78 | 0.95 |
+| 연결 안에서 던진 예외 그룹 | 3.54 | 1.40 |
+| yield에 멈춘 제너레이터 | 3.11 | 1.15 |
+| 뜨자마자 끝나는 서버 | 0.36 | 0.08 |
+| 끝나지 않는 도구 목록(1000쪽) | 6.13 | 2.64 |
+| 빈 커서 | 5.48 | 1.24 |
+| Ctrl+C 한 번 | 12.45 | 5.67 |
+| Ctrl+C 두 번 | 9.22 | 2.78 |
+| 있던 픽스처 테스트 넷(목록, 호출, 실패, 없는 도구) | 3.85~6.05씩 | 1.15~1.40씩 |
+
+### 다시 돌리기 전에 고칠 것
+
+PR 직전 버그·성능 축이 짚었고 이번 회차에는 닿지 않아 고치지 않았다. 둘 다 프로브가 끝나지 않거나 프로세스를 남기는 길이라 측정값은 바꾸지 않는다.
+
+- `full_stack.py`의 `_run`은 `subprocess.run(capture_output=True, timeout=…)`이다. 시간이 넘으면 `uv`만 끄고, Windows에서는 그 뒤 시간 제한 없는 `communicate()`로 출력을 거둔다. `uv`가 띄운 pytest가 파이프를 쥐고 있으면 끝을 보지 못해 프로브가 끝나지 않고 pytest가 남는다(Python 3.12.10의 `subprocess.run` 소스를 읽었다. 끝나지 않는 것은 재지 않았다). 출력을 파일로 받거나 시간 제한이 걸리는 읽기로 바꾼다.
+- `serve_shutdown.py`는 서버가 30초 안에 뜨지 않거나 `/start` 응답이 오류면 `urlopen`의 예외로 추적을 남기고 끝난다. 그때 띄운 uvicorn 자식은 멈춤 파일도 부모 감시도 없어 남고 포트를 쥔다. 그 자식을 쥔 `Popen` 핸들로 끄는 `finally`를 둔다(이 폴더의 프로세스를 끄는 규칙은 위 "프로브는 남은 프로세스를 번호만 보고 끄지 않는다").
 
 ## 2026-10-20 결과
 

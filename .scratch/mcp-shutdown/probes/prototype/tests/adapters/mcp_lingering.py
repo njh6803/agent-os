@@ -36,10 +36,16 @@ def heartbeat(folder: Path, role: str) -> Path:
 
 
 def _beat(folder: Path, role: str) -> None:
+    """하트비트를 쓰다 멈춤 파일이 생기거나 수명이 지나면 프로세스째 끝낸다. 쓰기가 한 번 실패해도
+    (실패의 까닭은 재지 않았다) 이 스레드가 죽지 않게 넘긴다. 죽으면 하트비트만 멈춘 채 프로세스가
+    남아 닫기를 지난 것처럼 보인다(PR 직전 리뷰. 프로브판 `fakes.py`도 같은 자리를 넘긴다)."""
     end = time.monotonic() + LIFETIME_SECONDS
     while time.monotonic() < end and not (folder / STOP).exists():
-        with heartbeat(folder, role).open("ab") as file:
-            file.write(b".")
+        try:
+            with heartbeat(folder, role).open("ab") as file:
+                file.write(b".")
+        except OSError:
+            pass
         time.sleep(0.1)
     os._exit(0)
 
