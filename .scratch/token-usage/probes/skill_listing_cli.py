@@ -17,10 +17,14 @@ B는 `skillOverrides`만 둔 `.claude/settings.json`을 둔다. 그 값은 `--se
 갈래마다 stream-json의 `system/init`에서 세션 ID와 `skills`를 읽고, 그 세션의 기록
 (`~/.claude/projects/*/<세션 ID>.jsonl`)을 같은 폴더의 `skill_listing_entries.py`로 읽어 모델에게 간
 첫 스킬 목록의 항목을 꺼낸다. 표지는 `system/init`과 `result` 이벤트가 있고 기록에 첫 모델 호출 전
-`skill_listing` 첨부가 있는 것이다. 양성 대조는 둘이다. A의 목록에 `anthropic-skills:*`가 있어야
+`skill_listing` 첨부가 있는 것이다. 양성 대조는 셋이다. A의 목록에 `anthropic-skills:*`가 있어야
 이 설정 출처에서도 동기화된 스킬이 실린다는 것이 서고, 끄지 않은 `CONTROL`이 A와 B의 목록에 모두
 있어야 B에서 빠진 항목이 그 출처 전체가 아니라 하나씩 빠진 것이다(A에 없으면 그 대조를 할 수 없어
-측정 아님으로 센다). 표지나 대조가 하나라도 없으면 1로 끝난다.
+측정 아님으로 센다). 그리고 두 갈래의 `.claude/skills`에 같은 프로젝트 스킬 `PROBE_SKILL`을 두고 B의
+`skillOverrides`에서만 끈다. 그 스킬이 A의 목록에 있고 B의 목록에 없어야 B가 프로젝트 설정의
+`skillOverrides`를 읽은 것이다. 이 대조가 없으면 B에 `anthropic-skills:*`가 남은 결과를 "먹지
+않는다"와 "B가 그 설정을 읽지 않았다"로 가르지 못한다(PR #320의 CodeRabbit 지적). 표지나 대조가
+하나라도 없으면 1로 끝난다.
 
 못 보는 것: 데스크톱 앱 세션. 앱은 동기화 폴더 밖의 `anthropic-skills:*`(2026-10-20 이 PC에서
 `consolidate-memory`·`explain-usage`·`schedule`·`setup-claude`)도 싣는데 CLI에는 없다. 그것은 앱
@@ -45,6 +49,7 @@ import skill_listing_entries as entries_probe
 PROMPT = "도구를 쓰지 않고 '끝'이라고만 답한다."
 TIMEOUT_SECONDS = 240
 CONTROL = entries_probe.CONTROL
+PROBE_SKILL = "skill-listing-probe-control"
 SOURCE = "anthropic-skills"
 MEASURED_OFF = tuple(
     f"{SOURCE}:{name}"
@@ -197,9 +202,14 @@ def main() -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         for variant in ("A", "B"):
             cwd = Path(scratch) / variant
-            (cwd / ".claude").mkdir(parents=True)
+            skill_dir = cwd / ".claude" / "skills" / PROBE_SKILL
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(
+                f"---\nname: {PROBE_SKILL}\ndescription: 대조용 프로젝트 스킬\n---\n\n대조용\n",
+                encoding="utf-8",
+            )
             if variant == "B":
-                settings = {"skillOverrides": overrides}
+                settings = {"skillOverrides": {**overrides, PROBE_SKILL: "off"}}
                 (cwd / ".claude" / "settings.json").write_text(
                     json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
@@ -224,6 +234,17 @@ def main() -> int:
     if results.get("B") is not None and CONTROL in a and CONTROL not in b:
         print(f"측정 아님: B의 첫 목록에 끄지 않은 {CONTROL}가 없다")
         unmeasured += 1
+    listed_a, listed_b = results.get("A"), results.get("B")
+    if listed_a is not None and listed_b is not None:
+        if PROBE_SKILL not in listed_a or PROBE_SKILL in listed_b:
+            in_a = "있음" if PROBE_SKILL in listed_a else "없음"
+            in_b = "있음" if PROBE_SKILL in listed_b else "없음"
+            where = f"A {in_a}, B {in_b}"
+            print(
+                f"측정 아님: 프로젝트 스킬 {PROBE_SKILL}가 A에만 있지 않아({where}) "
+                "B가 skillOverrides를 읽었는지 모른다"
+            )
+            unmeasured += 1
     left = [name for name in off if name in b]
     gone = [name for name in off if name in a and name not in b]
     print(f"끈 {len(off)}개 가운데 A에 있고 B에서 빠진 것 {len(gone)}개, B에 남은 것 {len(left)}개")

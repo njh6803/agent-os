@@ -256,3 +256,77 @@ plugins/loading, skills, settings, settings-reference, desktop, permissions)를 
   들어갔다(잠금 거부 없음). 셀프 리뷰·ADR 승인·커밋은 앞 세션이 마쳐 지시문의 "이어받을 상태"대로 푸시부터 했다.
 - `git fetch origin` 뒤 `tools/sibling_overlap.py`: 번호 겹침 없음, origin/main은 앞 세션이 병합한 `2d460f6`
   그대로였다. 이 커밋은 앞 세션의 인계 절과 이 절만 싣는다.
+- 커밋 `6175675d`(일지만). pre-commit 모두 통과(검사 러너: pytest 376.2초, web-verify 328.2초, run-hooks 93.9초,
+  pyright 34.2초. ruff 둘·카나리아 명세·헌법 판은 대상 파일이 없어 Skipped). 푸시하고 PR #320을 열었다.
+  CodeRabbit CLI 좌석은 이 PR에서 다시 봐도 `Seat: not assigned`였다.
+- `EnterWorktree` 뒤 이 세션에 스킬 목록이 다시 실렸고 `slack:*`가 빠져 있었다. 워크트리의 `.claude/settings.json`을
+  읽은 것으로 보인다(어림). 세션 도중의 목록이라 ADR의 근거로 쓰지 않는다.
+
+### 봇 회차 1 (CodeRabbit과 claude-review 모두 첫 회차)
+
+`@coderabbitai review` 뒤 `tools/wait_ci.py 320`: 검사 일곱 모두 통과, CodeRabbit `Review completed`. 지적은 CodeRabbit
+인라인 둘(Minor 둘), claude-review 다섯(Minor 넷, Nit 하나)이다.
+
+- 고친 것:
+  - CodeRabbit(`skill_listing_cli.py`): B에 `anthropic-skills:*`가 남은 결과를 "먹지 않는다"와 "B가 설정을 읽지 않았다"로
+    가를 양성 대조가 없었다. 두 갈래의 `.claude/skills`에 프로젝트 스킬 `skill-listing-probe-control`을 두고 B의
+    `skillOverrides`에서만 끈 뒤, A에만 있을 때만 측정으로 센다. 가짜 `run_variant`로 네 갈래(A에만, 둘 다, A에 없음,
+    둘 다 없음) rc 0·1·1·1을 봤다. 실제로 다시 돌리니(claude 2.1.302) 대조 스킬은 A의 첫 목록에만 있었고(stream-json
+    원본에서도 A에만 한 번), `anthropic-skills:*`는 두 갈래 모두 0개라 측정 아님(rc 1)으로 앞 결과와 같았다. README
+    행을 맞췄다. ADR의 CLI 문장("측정이 되지 않았다")은 그대로 맞아 고치지 않았다.
+  - claude-review: 프로브끼리 서로 import한다(`budget` → `cli`·`entries`, `deny` → `budget`·`cli`, `cli` → `entries`).
+    그래서 위 "판정"의 "남긴다"에 적은 이유("공통 모듈을 두면 한 프로브를 고칠 때 다른 프로브의 옛 결과를 재현하는
+    길까지 함께 바뀐다")는 틀렸다. 그 길은 이미 함께 바뀐다. 겹친 함수를 합치지 않는 이유는 측정을 마친 프로브의 구조를
+    바꾸면 기록한 결과를 다시 재야 하고 얻는 것이 읽기 편함뿐이라는 것으로 바로잡는다. PR 본문 "남긴 위험"의 같은 줄도
+    `gh pr edit`로 고쳤다.
+- 보류(지적마다 이유를 PR 코멘트에 남겼다):
+  - CodeRabbit(`.claude/settings.json` 7행 `code-review@claude-plugins-official`): 오탐. PR #268부터 있던 줄이고(ADR 0033
+    본문 "시작 컨텍스트를 줄인다"), 이 PR은 그 줄 끝에 쉼표만 붙였다.
+  - claude-review의 `deny.py` `main` 추상화 수준, `run_variant` 중복, 같은 이름 `has_description`: 위 바로잡은 이유대로
+    측정을 마친 프로브의 구조는 바꾸지 않는다.
+  - claude-review의 ADR 30행 포인터 자리: `.claude/rules/adr.md` 규약(바뀐 문장 뒤에 단다)대로 그 문장 바로 뒤다.
+  - claude-review의 일지 "31행"·"승인 전": 그 시점의 기록이고, 뒤 절이 30행으로 옮긴 것과 두 승인을 적었다.
+
+## 회고
+
+이 일지의 세 세션(`1d37e692`, `976e6e1b`, 이 세션)을 함께 봤다. 후보 일곱, 승인 하나(회차), 기각 다섯, 일지에만 하나다.
+넘긴 것은 없다. `tools/hook_report.py`의 뺄 후보는 없었고, `tools/queue_open_rows.py`(이 체크아웃과 `--ref origin/main`
+둘)의 만료할 행도 없었다.
+
+승인:
+1. **`skill_listing_cli.py`가 `.claude/rules/probes.md` 셋째 항목을 어겼다.** 사건: 위 "봇 회차 1"의 CodeRabbit 지적.
+   B가 프로젝트 설정을 읽었다는 양성 대조가 없어 "먹지 않는다"와 "읽지 않았다"를 가르지 못했고, 셀프 리뷰 두 축과 PR
+   직전 `bug-perf-review`를 지나 PR 봇이 잡았다. 구현 때 실리는 rules를 어겨 리뷰가 잡은 사건이라 회차로 센다. 대기열
+   346에 더해 2회차(179의 3회차)다. 더하는 것(346의 계기 훅)이 세 번째에 닿았지만 이 PR에 훅을 섞지 않고 대기열에
+   둔다. 346은 이제 회차 3 이상이라 chore 배치의 계기에 든다.
+
+기각:
+2. claude-review가 프로브끼리 import하는 구조와 어긋난 "남긴다"의 이유를 잡았다. 판단의 근거 문장을 대 보는 것은
+   리뷰에 둔 기준이고 리뷰가 제 몫을 했다.
+3. CodeRabbit이 이 PR 전부터 있던 `code-review` 플러그인 줄을 이 PR의 변경으로 읽었다. 이쪽의 실수가 없다.
+4. 스크래치패드로 `cd`하는 명령을 PreToolUse 훅이 막았다. 훅이 제 몫을 했고 경로를 인자로 줘 다시 쳤다.
+5. 판정 명령(pyright)을 파이프로 쳐 훅이 알렸고, 넘친 줄(E501)도 훅이 알려 커밋 전에 감았다. 둘 다 훅이 제 몫을 했다.
+6. 첫 세션의 번복(README 기준선의 세션 ID, 내장 스킬 수, 일지 번호 10→15→17)은 그 세션들이 스스로 다시 재거나 번호를
+   옮기며 고쳤고, 일지에 원인이 적히지 않아 층을 고를 수 없다.
+
+일지에만:
+7. `EnterWorktree` 뒤 다시 실린 스킬 목록에서 `slack:*`가 빠졌다(위 "PR" 절). 다음 측정에서 앱 세션을 새로 열지 않고
+   워크트리에 들어가는 길로 첫 목록을 볼 수 있을지는 재지 않았다.
+
+## 다음
+
+이 PR은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
+
+결정표는 "하네스·문서만 고친 PR이었고 같은 주제가 남았다" 줄이다. 남은 것은 처음 요청(스킬 목록 줄이기)의 나머지인
+목록 예산 측정이고, 사용자가 병합 뒤 별도 세션에서 하자고 정해 새 세션으로 연다(위 "셀프 리뷰" 절의 인용).
+
+다음 작업: 기능 skill-listing-trim. 앱 세션에서 skillListingBudgetFraction의 0.003보다 순한 비율 몇과 프로젝트·사용자 스킬의 "name-only"를 재 잃는 계기와 줄어드는 양을 견주고, 고르면 ADR 0033에 새 이력으로 적는다
+다음 단계: 구현
+어디서: 새 세션. 결정표는 이 세션이지만 사용자가 병합 뒤 별도 세션으로 정했다. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "다음"과 ADR 0033 이력 2026-10-20의 "스킬 목록 예산을 낮춘다" 항목대로 목록 예산과 name-only를 앱 세션에서 재 견주고, 고르면 설정과 ADR 0033 새 이력까지 PR로 병합한다
+브랜치: chore/skill-listing-budget
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "사용자 프롬프트"와 "셀프 리뷰"의 0.003 대조 문단, .scratch/token-usage/probes/README.md 의 skill_listing_* 행
+이어받을 상태: 측정은 설정을 넣은 워크트리 폴더에서 새로 연 앱 세션의 첫 목록만 근거로 쓴다(세션 도중의 목록은 ADR이 근거에서 뺐다). 앞 측정 때 앱이 start_session을 두 턴 연속 "자동 이벤트"로 보고 거절해 사용자가 그 폴더에서 직접 열었다. 측정용 임시 설정은 측정 뒤 되돌린다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
