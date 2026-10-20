@@ -1,4 +1,4 @@
-# 2026-10-20 (21) 원문 교환이 50개를 넘으면 접고, 거슬러 읽기는 100개에서 멈추며, 이어 가기의 판정은 스레드 하나에서 돈다
+# 2026-10-20 (25) 원문 교환이 50개를 넘으면 접고, 거슬러 읽기는 100개에서 멈추며, 이어 가기의 판정은 스레드 하나에서 돈다
 
 end-user-continuation 티켓 04의 구현 세션이다. 03 세션이 병합 뒤 연 04 세션은 다른 워크트리 폴더에 열려 첫 턴에 멈춰,
 06 세션의 일지 "다음"이 낸 지시문으로 새로 열렸다. 주 체크아웃 미갱신이라 `tidy-checkouts`를 먼저 돌았다.
@@ -91,8 +91,8 @@ end-user-continuation 티켓 04의 구현 세션이다. 03 세션이 병합 뒤 
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md
 브랜치: feature/04-exchange-count-read-cap-and-thread
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md(커밋하지 않았다. 워크트리에 있다)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, base는 origin/main의 merge-base)부터 한다. 구현·테스트·변이 표 18개·다른 표 원문 여섯의 고침·카나리아·-m llm(7 passed)은 마쳤고 티켓은 done으로 고쳤다. 비워 둔 체크박스 둘(검증 명령, 병합 직전 판정)은 새 세션이 채운다. 리뷰 전의 run_checks와 린트 둘은 초록이었고(일지 검사 절), 리뷰 반영 뒤의 다섯은 커밋의 pre-commit으로 갈음한다. walk_cap_mutations.toml의 전체 실행은 리뷰를 반영해 커밋한 뒤에 한 번 돈다. --check가 알린 pause_index 표의 run.py 원문 다섯이 main에서 이미 썩었는지는 확인하지 않았다. 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md
+읽을 것: 일지 docs/journal/2026-10-20-25-exchange-count-read-cap-and-thread.md(커밋하지 않았다. 워크트리에 있다)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, base는 origin/main의 merge-base)부터 한다. 구현·테스트·변이 표 18개·다른 표 원문 여섯의 고침·카나리아·-m llm(7 passed)은 마쳤고 티켓은 done으로 고쳤다. 비워 둔 체크박스 둘(검증 명령, 병합 직전 판정)은 새 세션이 채운다. 리뷰 전의 run_checks와 린트 둘은 초록이었고(일지 검사 절), 리뷰 반영 뒤의 다섯은 커밋의 pre-commit으로 갈음한다. walk_cap_mutations.toml의 전체 실행은 리뷰를 반영해 커밋한 뒤에 한 번 돈다. --check가 알린 pause_index 표의 run.py 원문 다섯이 main에서 이미 썩었는지는 확인하지 않았다. 일지 docs/journal/2026-10-20-25-exchange-count-read-cap-and-thread.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -195,8 +195,8 @@ quotes는 경고 2건이다. 이 일지 셀프 리뷰 절의 두 인용("긴 고
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md
 브랜치: feature/04-exchange-count-read-cap-and-thread
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md(셀프 리뷰 절의 "새로 쓴 사실 문장", 커밋 절. 끝의 "커밋 뒤에 인계" 절은 커밋하지 않아 워크트리에만 있다)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(두 축)와 그 반영을 커밋까지 마쳤고 pre-commit은 모두 초록이다(손으로 치는 다섯은 갈음됨). 남은 단계는 차례로 (1) walk_cap_mutations.toml 20개 전체 실행(리뷰 반영 뒤에는 6·7·19·20만 돌렸다), (2) core.md를 고쳤으므로 카나리아 core_rule_read_cap_thread.toml 다시 돌기, (3) 티켓의 "검증 명령" 체크박스 채우기(pre-commit 결과와 -m llm 7 passed가 일지에 있다), (4) origin/main 합치기, (5) PR 직전 리뷰에 일지 셀프 리뷰 절의 "새로 쓴 사실 문장"을 밀 주장으로 넘기기, (6) PR, 봇 회차, 병합 직전 판정 체크박스, 워크트리 길로 병합, next-session이다. 셀프 리뷰가 남긴 지적 하나(01 티켓 11행)의 이유는 일지에 있다. 일지 docs/journal/2026-10-20-21-exchange-count-read-cap-and-thread.md
+읽을 것: 일지 docs/journal/2026-10-20-25-exchange-count-read-cap-and-thread.md(셀프 리뷰 절의 "새로 쓴 사실 문장", 커밋 절. 끝의 "커밋 뒤에 인계" 절은 커밋하지 않아 워크트리에만 있다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(두 축)와 그 반영을 커밋까지 마쳤고 pre-commit은 모두 초록이다(손으로 치는 다섯은 갈음됨). 남은 단계는 차례로 (1) walk_cap_mutations.toml 20개 전체 실행(리뷰 반영 뒤에는 6·7·19·20만 돌렸다), (2) core.md를 고쳤으므로 카나리아 core_rule_read_cap_thread.toml 다시 돌기, (3) 티켓의 "검증 명령" 체크박스 채우기(pre-commit 결과와 -m llm 7 passed가 일지에 있다), (4) origin/main 합치기, (5) PR 직전 리뷰에 일지 셀프 리뷰 절의 "새로 쓴 사실 문장"을 밀 주장으로 넘기기, (6) PR, 봇 회차, 병합 직전 판정 체크박스, 워크트리 길로 병합, next-session이다. 셀프 리뷰가 남긴 지적 하나(01 티켓 11행)의 이유는 일지에 있다. 일지 docs/journal/2026-10-20-25-exchange-count-read-cap-and-thread.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -304,8 +304,12 @@ CodeRabbit은 요청 코멘트에도 `Review rate limited`였다(다음 리뷰�
 보안·버그 축은 PR 직전 리뷰의 결과(PR 체크리스트)가 대신하고, 병합은 재리뷰를 기다리지 않는다(`operations.md` 리뷰
 파이프라인). 고칠 지적이 없어 반영 커밋은 없고, 이 일지와 티켓의 병합 직전 판정, 대기열만 커밋해 푸시한다.
 
-병합 직전 판정: `git fetch` 뒤 `origin/main`에서 05·06은 `done`, 02는 `ready-for-agent`라 기능을 닫지 않았다. `origin/main`에는
-이 브랜치가 들이지 않은 커밋이 없다.
+병합 직전 판정: `git fetch` 뒤 `origin/main`에서 05·06은 `done`, 02는 `ready-for-agent`라 기능을 닫지 않았다. 그 판정과
+회고를 커밋(`ae607f28`)한 뒤 푸시 전에 다시 fetch하니 `origin/main`이 #322(아침 보고 형식, `b78317fe`)로 움직여 합쳤다.
+충돌은 대기열 끝 하나였고, main의 380행을 두고 이 브랜치의 새 행을 381·382로 뒤에 붙였으며, 378은 두 쪽이 각자 센
+다른 사건을 합쳐 4회차로 적었다(아래 회고 1). 합친 판에서도 02는 `ready-for-agent`다. main에 일지 2026-10-20-22가
+들어와 이 일지(21)가 이름순으로 앞서게 되어 `tools/sibling_overlap.py --move`로 25로 옮겼고, PR 본문의 일지 경로도
+`gh pr edit`으로 고쳤다. 같은 때 02 세션이 PR #325를 열었다.
 
 ## 회고
 
@@ -316,12 +320,13 @@ CodeRabbit은 요청 코멘트에도 `Review rate limited`였다(다음 리뷰�
 381·382로 옮겼다.
 
 1. **승인(회차): 커밋 뒤 인계의 새 세션 화면이 앱의 마지막 폴더인 다른 워크트리(`skill-listing-budget`)로 열렸다**(위
-   "커밋 뒤에 인계"). 원인이 378과 같아(앱의 마지막 폴더가 다른 워크트리) 378에 3회차를 더했다. 스크립트는 신뢰 대화상자
+   "커밋 뒤에 인계"). 원인이 378과 같아(앱의 마지막 폴더가 다른 워크트리) 378에 회차를 더했다. 커밋 뒤 main을 합칠 때 아침 보고 세션
+(일지 2026-10-20-22)이 자기 인계 실패라는 다른 사건으로 먼저 3회차를 더해 둔 것과 만나, 합친 행은 4회차다. 스크립트는 신뢰 대화상자
    앞에서 멈춰 그때는 세션이 생기지 않았는데, 지시문이 채워진 채 남은 그 화면이 뒤에 보내져 이 브랜치를 제목으로 한 세션
    (`feature/04-exchange-count-read-cap-and-thread (중복, 멈춤)`, `get_session`의 생성 07:15:01Z, 마지막 활동 07:18:58Z,
    `cwd` 루트)이 생겼다. 이 세션과 제목이 겹쳐 멈춘 것으로 보고, 그 세션의 기록은 읽지 않았다. 이 워크트리의 작업 트리와
-   커밋에는 손이 닿지 않았다(`git status --porcelain`, `git log`). 378은 더하는 것이라 이 티켓 PR에서 반영하지 않고, 회차
-   3이라 기능을 닫는 세션의 결정표가 chore 배치의 계기로 센다.
+   커밋에는 손이 닿지 않았다(`git status --porcelain`, `git log`). 378은 더하는 것이라 이 티켓 PR에서 반영하지 않고, 회차가
+   3 이상이라 기능을 닫는 세션의 결정표가 chore 배치의 계기로 센다.
 2. **승인(새 행 381): 구현 세션이 `tools/mutate.py`의 측정 실행 둘을 같은 체크아웃에서 나란히 띄웠다**(위 "변이와
    카나리아"). 두 실행이 같은 `continuation.py`에 변이를 넣고 되돌렸을 수 있었다. 끝난 뒤 변이가 남지 않은 것을 보았고
    손상은 없었다. 처방은 도구의 가드(같은 git 디렉터리에 pid가 살아 있는 다른 표지가 있으면 시작하지 않는다)이고, 첫
