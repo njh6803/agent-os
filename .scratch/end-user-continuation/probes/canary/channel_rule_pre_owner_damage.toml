@@ -1,0 +1,24 @@
+# `.claude/rules/channel.md` 의 최종 사용자 면 경로 항목을 고친 문장(깨진 고리와 요청한 에이전트의 구성 오류가 404 가 아니라
+# 500 고정 문구다)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 05).
+# 실험군은 규칙의 paths 안(src/agent_os/channel/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 일지 2026-10-20-13). 셀프 리뷰가 원천의 본문을 고친 뒤 같은 날 같은 판의 사전 확인(--preflight)으로 갈음했다(2026-10-20, 일지 2026-10-20-13).
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/channel_rule_pre_owner_damage.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 최종 사용자 면의 경로를 나열한 항목이 있으면 그 항목에서 깨진 고리를 말한 문장 하나를
+글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["주체를 확인한 뒤의 고장이라 표가 덮지 않고 500 고정 문구다"]
+source = ".claude/rules/channel.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/channel/http/bodies.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

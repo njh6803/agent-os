@@ -34,14 +34,16 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 위의 것이 전부(꺼짐과 운영자 파일의 손상, 깨진 고리도) 결정 이벤트를 쓰기 전에 나 트레이스가
 그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지 않는다(ADR 0012
 이력). 하위 타입을 가르는 기준은 "깨졌나"다 — 대상이 없거나 대상의 상태나 주체가 요청을 허락하지
-않는 것이 하위 타입이고 남는 것이 서버의 구성이나 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력).
+않는 것이 4xx 를 내는 하위 타입이고 그 밖의 것은 서버의 구성이나 기록이 깨진 것이다(ADR 0014 의
+2026-09-26 이력). 깨진 것 가운데 요청이 가리킨 실행을 그 주체와 견주기 전에 만난 손상만
+TraceDamagedBeforePrincipal 로 따로 선다(`before_principal`, ADR 0023 의 2026-10-16 이력).
 요청이 댄 에이전트나 실행이나 이어 갈 앞 실행이 없거나, 호출자가 볼 수 있는 에이전트의 집합 밖이면
 Absent, 실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아니면
 NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이 쓰는 mcp 를 운영자가 꺼
 두었으면 Disabled(ADR 0017), 결정하는 쪽이 그 실행의 주체가 아니거나 앞 실행이 다른 주체의 것이면
 DifferentPrincipal, 앞 실행이 run_finished 로 끝나지 않았으면 NotContinuable 이다(ADR 0022·0023).
 재개할 실행의 트레이스가 가리키는 에이전트가 없는 것과 고리에서 만나는 실행이 없거나 깨진 것은
-요청이 아니라 서버의 기록이 댄 것이라 기록과 구성이 어긋난 것, 곧 PluginError 그대로다.
+요청이 아니라 서버의 기록이 댄 것이라 기록과 구성이 어긋난 것, 곧 기반 타입 PluginError 그대로다.
 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import 다. 그 이유는 `_prepare`. 이어 가기는 그 앞에 앞
 실행(없음 → 손상 → 다른 주체 → 끝나지 않음)과 고리의 판정이 선다. 그 이유는 core/continuation.py 다.
 재개는 그 앞에 트레이스 판정(없음 → 손상 → 다른 주체 → 열 에이전트 밖 → 형식 1 → 일시정지 아님 →
@@ -81,6 +83,7 @@ from agent_os.core.continuation import (
     NEW_CONVERSATION,
     Fold,
     Link,
+    before_principal,
     check_record_rules,
     gather_continued,
     limit_of,
@@ -931,11 +934,13 @@ def read_own_run(
     """요청한 주체가 볼 수 있는 자기 실행 하나를 읽는다. 재개의 첫 걸음과 같은 판정(`_own_link`)이고
     구독(채널)이 이것을 부른다.
 
-    판정 순서는 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 열 에이전트
-    밖(`Absent`)이다(ADR 0014 의 2026-10-05 이력). 손상은 재개가 손상이라 부르던 것 그대로다 — 단건
-    읽기(`link_of`: 모르는 종류, 빈 트레이스, 식별자 어긋남, 시작 이벤트로 열리지 않음)와 기록 규칙
-    (`check_record_rules`: 앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수). 손상이 주체보다 앞인
-    이유는 손상된 트레이스의 주체를 믿을 수 없어서다. 주체와 열 에이전트는 최종 사용자 면에서 둘 다
+    판정 순서는 없음(`Absent`) → 손상(`TraceDamagedBeforePrincipal`) → 다른 주체
+    (`DifferentPrincipal`) → 열 에이전트 밖(`Absent`)이다(ADR 0014 의 2026-10-05 이력). 손상은
+    재개가 손상이라 부르던 것 그대로다 — 어댑터가 감싼 읽기 실패, 단건 읽기(`link_of`: 모르는 종류,
+    빈 트레이스, 식별자 어긋남, 시작 이벤트로 열리지 않음)와 기록 규칙(`check_record_rules`: 앞 실행
+    필드의 패턴, 요약 이벤트의 자리와 개수). 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를
+    믿을 수 없어서이고, 그래서 최종 사용자 면이 그것을 없는 실행처럼 덮는다(ADR 0023 의 2026-10-16
+    이력). 주체와 열 에이전트는 최종 사용자 면에서 둘 다
     404 라 순서가 노출을 바꾸지 않는다. 열 에이전트 밖의 메시지는 없는 실행의 것과 글자 그대로 같고,
     다른 주체의 메시지는 실행을 들되 그 실행의 주체 이름을 들지 않는다.
 
@@ -954,12 +959,15 @@ def _own_link(
     visible_agents: frozenset[AgentName] | None,
 ) -> tuple[TraceSchemaVersion, Link]:
     """자기 실행 읽기의 판정 자체(판정 순서는 `read_own_run`). 재개는 거슬러 읽기의 표현이 필요해
-    이것을 직접 부르고, 채널은 이벤트 열만 받는 `read_own_run` 을 부른다."""
-    stored = trace.read(run_id)
+    이것을 직접 부르고, 채널은 이벤트 열만 받는 `read_own_run` 을 부른다. 손상은 주인을 확인하기
+    전의 것이라 하위 타입이다(`before_principal`). 없음은 손상이 아니라 그 사이에 선다."""
+    with before_principal():
+        stored = trace.read(run_id)
     if stored is None:
         raise Absent(_no_run(run_id))
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+    with before_principal():
+        link = link_of(stored, run_id)
+        check_record_rules(link)
     if link.started.principal != principal:
         raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
     if visible_agents is not None and link.started.agent not in visible_agents:

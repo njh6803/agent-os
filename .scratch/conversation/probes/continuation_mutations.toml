@@ -51,14 +51,12 @@ file = "src/agent_os/core/continuation.py"
 old = '''
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = read_link(trace, previous)
-    if link is None:
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
+    with before_principal():
+        link = read_link(trace, previous)
 '''
 new = '''
-    link = read_link(trace, previous)
-    if link is None:
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
+    with before_principal():
+        link = read_link(trace, previous)
 '''
 
 [[mutation]]
@@ -101,12 +99,12 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-                    if isinstance(event, ConversationSummarized):
-                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+        case ConversationSummarized():
+            raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
 '''
 new = '''
-                    if isinstance(event, ConversationSummarized) and False:
-                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+        case ConversationSummarized() if False:
+            raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
 '''
 
 [[mutation]]
@@ -120,10 +118,14 @@ old = '''
     gathered = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
 '''
 new = '''
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
     gathered = (
@@ -153,10 +155,21 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/http/errors.py"
 old = '''
-        case NotResumable() | Disabled() | DifferentPrincipal() | NotContinuable():
+        case DifferentPrincipal():
+            if operator:
 '''
 new = '''
-        case NotResumable() | Disabled():
+        case DifferentPrincipal() if False:
+            if operator:
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+        case NotResumable() | NotContinuable():
+'''
+new = '''
+        case NotResumable():
 '''
 
 [[mutation]]
@@ -263,10 +276,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    resumption = _read_paused(trace, run_id, pause_index)
+    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
 '''
 new = '''
-    resumption = _read_paused(trace, run_id, pause_index)
+    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
     trace.write(
         ConversationSummarized(
             run_id=run_id,
@@ -288,11 +301,11 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+        link = link_of(stored, run_id)
+        check_record_rules(link)
 '''
 new = '''
-    link = link_of(stored, run_id)
+        link = link_of(stored, run_id)
 '''
 
 [[mutation]]
@@ -390,11 +403,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-        trace.write(outcome)
-        yield outcome
+            yield self._emit(outcome)
 '''
 new = '''
-        trace.write(outcome)
+            self._emit(outcome)
 '''
 
 # --- 티켓 03 (2026-10-05) -----------------------------------------------------------------

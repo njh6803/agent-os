@@ -32,7 +32,8 @@ run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -46,6 +47,7 @@ from agent_os.core.ports import (
     NotContinuable,
     PluginError,
     Trace,
+    TraceDamagedBeforePrincipal,
     TraceStore,
     UnknownEvent,
     run_status,
@@ -181,10 +183,11 @@ def gather_continued(
 ) -> Gathered:
     """run() 의 이어 가기 판정. 앞 실행을 하위 타입으로 가른 뒤 고리를 거슬러 읽는다.
 
-    규칙: 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
-    (`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수 없어서이고,
-    주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 남의
-    실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023).
+    규칙: 없음(`Absent`) → 손상(`TraceDamagedBeforePrincipal`) → 다른 주체(`DifferentPrincipal`) →
+    끝나지 않음(`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수
+    없어서이고, 주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼
+    숨기려면 남의 실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023). 손상이 하위 타입인 이유는
+    `before_principal` 이다.
 
     예외: 앞 실행 자신의 기록 규칙 위반(앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수)은 손상이지만
     고리의 판정(`_walk`)에 들어 주체와 끝남 뒤에 선다. 최종 사용자 경로에서 존재를 덜 드러내는
@@ -195,7 +198,8 @@ def gather_continued(
     """
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = read_link(trace, previous)
+    with before_principal():
+        link = read_link(trace, previous)
     if link is None:
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
     if link.started.principal != principal:
@@ -231,6 +235,25 @@ def resumed_conversation(trace: TraceStore, own: Link) -> Conversation:
     finished = _finished_of(link, started.principal)
     gathered = _walk(trace, link, finished, started.agent, started.principal, summary=own.summary)
     return gathered.conversation()
+
+
+@contextmanager
+def before_principal() -> Generator[None]:
+    """요청이 가리킨 실행을 그 주체와 견주기 전에 만난 손상을 하위 타입으로 바꾼다.
+
+    여는 함수는 둘이다. 이어 가기의 앞 실행 읽기(`gather_continued`)와 자기 실행 읽기의 단건
+    읽기·기록 규칙(`run._own_link`. 없음의 판정을 사이에 두고 두 번 연다)이다. 안에서 나는 것은
+    어댑터가 감싼 읽기 실패와 단건 읽기의 손상과 기록 규칙의 위반이고, 모두 기반 타입이다. 깨진
+    것이라 기준("깨졌나")은 그대로이고 문구도 그대로다 — 최종 사용자 면이 덮을 몫을 가르는 표지일
+    뿐이다. 그 자리의 손상이 덮이는 이유는 손상된 트레이스의 주체를 믿을 수 없어 500이 남의 손상된
+    실행의 존재를 드러내기 때문이다(ADR 0023 의 2026-10-16 이력). 주체를 확인한 뒤의 읽기(고리,
+    재개의 앞 실행)는 열지 않는다 — 거기서 깨진 것은 요청한 주체 자신의 기록이 가리킨 것이라 숨길
+    남이 없다.
+    """
+    try:
+        yield
+    except PluginError as error:
+        raise TraceDamagedBeforePrincipal(str(error)) from error
 
 
 def read_link(trace: TraceStore, run_id: RunId) -> Link | None:

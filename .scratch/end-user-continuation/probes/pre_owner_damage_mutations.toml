@@ -1,0 +1,144 @@
+# 티켓 05(404 덮기)의 변이 표. 구현 전부터 초록이던 테스트가 빨강을 볼 수 있는지 본다 — 자기 실행의
+# 손상이 404 인 HTTP 사례(옛 표에서도 404 였다), 운영자 면의 500 원문, 그리고 고리와 재개의 앞 실행이
+# 기반 타입이라는 core 사례(옛 코드에서는 모든 손상이 기반 타입이었다)다. 빨강의 판정은
+# `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/pre_owner_damage_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 가 된 체크아웃에서 돈다.
+
+[[mutation]]
+name = "고리의 단건 읽기도 주인을 확인하기 전의 손상으로"
+tests = [
+    "tests/core/test_run.py",
+    "-k",
+    "고리의_실행을_어댑터가 or 멈춘_사이_앞_실행을_어댑터가",
+]
+expect = "red"
+expect_output = ["TraceDamagedBeforePrincipal'> is PluginError"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    stored = trace.read(run_id)
+    return None if stored is None else link_of(stored, run_id)
+'''
+new = '''
+    with before_principal():
+        stored = trace.read(run_id)
+        return None if stored is None else link_of(stored, run_id)
+'''
+
+[[mutation]]
+name = "고리의 기록 규칙도 주인을 확인하기 전의 손상으로"
+tests = ["tests/core/test_run.py", "-k", "고리가_깨지면_하위_타입이_아닌"]
+expect = "red"
+expect_output = ["TraceDamagedBeforePrincipal'> is PluginError"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+        visited.add(link.run_id)
+        check_record_rules(link)
+'''
+new = '''
+        visited.add(link.run_id)
+        with before_principal():
+            check_record_rules(link)
+'''
+
+[[mutation]]
+name = "자기 실행 읽기의 손상을 감싸지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "자기_실행의_손상도"]
+expect = "red"
+expect_output = ["where 500 = <Response [500 Internal Server Error]>.status_code"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    with before_principal():
+        link = link_of(stored, run_id)
+        check_record_rules(link)
+'''
+new = '''
+    link = link_of(stored, run_id)
+    check_record_rules(link)
+'''
+
+[[mutation]]
+name = "이어 가기의 앞 실행 읽기를 감싸지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "자기_실행의_손상도"]
+expect = "red"
+expect_output = ["where 500 = <Response [500 Internal Server Error]>.status_code"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    with before_principal():
+        link = read_link(trace, previous)
+'''
+new = '''
+    link = read_link(trace, previous)
+'''
+
+[[mutation]]
+name = "최종 사용자 면이 손상을 덮지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "자기_실행의_손상도"]
+expect = "red"
+expect_output = ["where 500 = <Response [500 Internal Server Error]>.status_code"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+        case PluginError():
+'''
+new = '''
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=500, message=INTERNAL_MESSAGE)
+        case PluginError():
+'''
+
+[[mutation]]
+name = "운영자 면도 손상을 덮는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "손상된_남의_실행에_운영자_채널은"]
+expect = "red"
+expect_output = ["where 404 = <Response [404 Not Found]>.status_code"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+        case TraceDamagedBeforePrincipal():
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''
+new = '''
+        case TraceDamagedBeforePrincipal():
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''
+
+[[mutation]]
+name = "손상의 갈래가 기반 타입 뒤에 선다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "자기_실행의_손상도"]
+expect = "red"
+expect_output = ["where 500 = <Response [500 Internal Server Error]>.status_code"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+        case TraceDamagedBeforePrincipal():
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+        case PluginError():
+            return _Failure(status=500, message=str(error) if operator else INTERNAL_MESSAGE)
+'''
+new = '''
+        case PluginError():
+            return _Failure(status=500, message=str(error) if operator else INTERNAL_MESSAGE)
+        case TraceDamagedBeforePrincipal():
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''

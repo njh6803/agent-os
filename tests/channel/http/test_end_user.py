@@ -107,6 +107,7 @@ SUBSCRIPTION = f"{END_USER_PREFIX}/runs/{{run_id}}/subscription"
 CONTINUATION = f"{END_USER_PREFIX}/runs/{{run_id}}/continuation"
 
 # 이 사이트가 여는 에이전트. `secret` 은 등록돼 있지만 목록 밖이고, `nope` 은 목록 안이지만 없다.
+# `unloadable` 과 `unwired` 는 운영자의 구성 실수다 — 진입점을 불러올 수 없고, 없는 mcp 를 가리킨다.
 OPEN_AGENTS = frozenset(
     AgentName(name)
     for name in (
@@ -118,6 +119,7 @@ OPEN_AGENTS = frozenset(
         "chatty",
         "forging",
         "unloadable",
+        "unwired",
         "nope",
     )
 )
@@ -252,8 +254,10 @@ MANIFESTS = {
     "forging": _manifest("forging"),
     "secret": _manifest("secret"),
     "unloadable": _manifest("unloadable"),
+    "unwired": _manifest("unwired", mcp=["no-such-server"]),
 }
 UNLOADABLE_REASON = "진입점을 불러올 수 없다: plugins/agents/unloadable/agent.py"
+UNWIRED_REASON = "지정한 mcp 플러그인이 없다: no-such-server"
 
 
 class FakePlugins:
@@ -772,23 +776,26 @@ async def test_남의_실행에_낸_결정은_없는_실행과_같은_404이고_
 
 
 async def test_손상된_실행과_열_에이전트_밖의_실행도_같은_404이고_서버_기록은_원인을_든다() -> None:
-    """손상된 남의 트레이스가 있다는 것도 숨긴다(ADR 0023 의 2026-10-05 이력). 원인은 서버 기록에
-    원래 상태 코드와 함께 남아 운영자가 되살린다(스토리 52). 목록에서 뺀 에이전트의 멈춘 실행은 계속
-    재개하지 못한다."""
+    """손상된 남의 트레이스가 있다는 것도 숨긴다(ADR 0023 의 2026-10-05·2026-10-16 이력). 원인은
+    서버 기록에 원래 상태 코드와 하위 타입과 함께 남아 운영자가 되살린다(스토리 52). 목록에서 뺀
+    에이전트의 멈춘 실행은 계속 재개하지 못한다."""
     trace = FakeTrace()
     _write(trace, "damaged", _started("damaged", BOB, "gated"), _paused("damaged"))
     trace.damaged.add(RunId("damaged"))
     _write(trace, "hidden", _started("hidden", ALICE, "secret"), _paused("hidden"))
     stderr = io.StringIO()
+    headers = _as() | {"Origin": ORIGIN}
 
     async with _serving(_app(trace=trace, stderr=stderr)) as client:
-        damaged = await client.post(_decide_path("damaged"), json=APPROVE, headers=_as())
-        hidden = await client.post(_decide_path("hidden"), json=APPROVE, headers=_as())
+        damaged = await client.post(_decide_path("damaged"), json=APPROVE, headers=headers)
+        hidden = await client.post(_decide_path("hidden"), json=APPROVE, headers=headers)
 
     for response in (damaged, hidden):
         assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
         assert response.json()["message"] == NOT_FOUND_MESSAGE
-    assert "원래 상태 500 PluginError" in stderr.getvalue()
+        assert response.headers["access-control-allow-origin"] == ORIGIN
+    assert "원래 상태 500 TraceDamagedBeforePrincipal" in stderr.getvalue()
     assert "모르는 종류의 이벤트" in stderr.getvalue()
     assert len(trace.events) == 4
 
@@ -796,24 +803,142 @@ async def test_손상된_실행과_열_에이전트_밖의_실행도_같은_404�
 async def test_손상된_남의_실행에_운영자_채널은_500_원문이고_최종_사용자_면은_404_고정이다() -> (
     None
 ):
-    """표가 면을 인자로 받는다(`failure_for`). 운영자 면은 바뀌지 않는다. 서버 기록은 둘 다 원인을
-    든다."""
+    """표가 면을 인자로 받는다(`failure_for`). 운영자 면은 주인을 확인하기 전의 손상도 다른
+    `PluginError` 처럼 500 원문이다 — 결정과 이어 가기 둘 다다. 서버 기록은 셋 다 원인을 들고, 덮은
+    최종 사용자 면의 것만 원래 상태 코드를 앞에 적는다."""
     trace = FakeTrace()
     _write(trace, "damaged", _started("damaged", BOB, "gated"), _paused("damaged"))
     trace.damaged.add(RunId("damaged"))
     stderr = io.StringIO()
 
     async with _serving(_app(trace=trace, stderr=stderr)) as client:
-        operator = await client.post("/runs/damaged/approval", json=APPROVE, headers=CHANNEL)
+        decided = await client.post("/runs/damaged/approval", json=APPROVE, headers=CHANNEL)
+        continued = await client.post(
+            "/runs/damaged/continuation", json=_start("echo"), headers=CHANNEL
+        )
         end_user = await client.post(_decide_path("damaged"), json=APPROVE, headers=_as())
 
-    assert operator.status_code == 500
-    assert "모르는 종류의 이벤트" in operator.json()["message"]
+    for operator in (decided, continued):
+        assert operator.status_code == 500
+        assert "모르는 종류의 이벤트" in operator.json()["message"]
     assert end_user.status_code == 404
     assert end_user.json()["message"] == NOT_FOUND_MESSAGE
     lines = stderr.getvalue().splitlines()
+    assert len(lines) == 3
+    assert all("TraceDamagedBeforePrincipal: 모르는 종류의 이벤트" in line for line in lines)
+    assert ["원래 상태 500" in line for line in lines] == [False, False, True]
+
+
+# 덮기 — 최종 사용자 면이 404 로 덮는 것은 주인을 확인하기 전의 손상뿐이다(ADR 0023 의 2026-10-16
+# 이력). 주체를 확인한 뒤의 고장은 운영자의 구성 실수이거나 자기 기록이 가리킨 것이라 숨길 남이
+# 없다. 그것을 404 로 덮으면 위젯이 저장한 대화를 지우고, 고친 뒤에도 대화는 돌아오지 않는다(ADR
+# 0024).
+
+
+def _broken_answer(response: Response, reason: str, log: str) -> None:
+    """주인을 확인한 뒤의 고장이 최종 사용자 면에 나간 모양. 허용 출처가 읽는 JSON 봉투의 고정 문구
+    500 이고, 원인은 그 응답의 추적 식별자가 든 서버 기록 한 줄에만 있다. 기반 타입이고 덮지
+    않았으니 원래 상태 코드를 적지 않는다."""
+    assert response.status_code == 500, reason
+    assert response.headers["content-type"] == "application/json"
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == INTERNAL_MESSAGE
+    assert reason not in response.text
+    assert response.headers["access-control-allow-origin"] == ORIGIN
+    [line] = [line for line in log.splitlines() if response.headers["X-Request-Id"] in line]
+    assert "status=500 PluginError: " in line, line
+    assert reason in line, line
+
+
+async def test_결정에서_주인을_확인한_뒤의_고장은_고정_문구의_500이다() -> None:
+    """진입점을 불러올 수 없는 에이전트, 없는 mcp, 기록이 가리키는 에이전트의 부재, 깨진 고리. 넷
+    모두 자기 멈춘 실행이고 주체 판정 뒤라 덮지 않는다. 결정 이벤트를 쓰기 전이라 실행은 일시정지
+    그대로다."""
+    trace = FakeTrace()
+    _write(trace, "unloadable", _started("unloadable", agent="unloadable"), _paused("unloadable"))
+    _write(trace, "unwired", _started("unwired", agent="unwired"), _paused("unwired"))
+    _write(trace, "agentless", _started("agentless", agent="nope"), _paused("agentless"))
+    unlinked = _started("unlinked", agent="gated", previous="gone")
+    _write(trace, "unlinked", unlinked, _paused("unlinked"))
+    before = list(trace.events)
+    reasons = {
+        "unloadable": UNLOADABLE_REASON,
+        "unwired": UNWIRED_REASON,
+        "agentless": "에이전트 플러그인이 없다: nope",
+        "unlinked": "이어 간 앞 실행이 없다: gone",
+    }
+    stderr = io.StringIO()
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        responses = {
+            run_id: await client.post(
+                _decide_path(run_id), json=APPROVE, headers=_as() | {"Origin": ORIGIN}
+            )
+            for run_id in reasons
+        }
+
+    for run_id, response in responses.items():
+        _broken_answer(response, reasons[run_id], stderr.getvalue())
+    assert trace.events == before
+
+
+async def test_이어_가기의_구성_오류와_깨진_고리는_고정_문구의_500이다() -> None:
+    """자기 끝난 앞 실행을 이어 가는데 요청한 에이전트의 진입점이나 mcp 가 깨졌거나, 앞 실행이
+    가리키는 고리의 실행이 없다. 주체 판정 뒤라 덮지 않는다(end-user-continuation 명세 "최종 사용자
+    면의 404 덮기"). 실행 식별자를 만들기 전이라 트레이스가 늘지 않는다."""
+    trace = FakeTrace()
+    _finished_own(trace, "mine")
+    _write(trace, "unlinked", _started("unlinked", previous="gone"), _finished("unlinked"))
+    before = list(trace.events)
+    requests = {
+        ("mine", "unloadable"): UNLOADABLE_REASON,
+        ("mine", "unwired"): UNWIRED_REASON,
+        ("unlinked", "echo"): "고리의 실행이 없다: gone",
+    }
+    stderr = io.StringIO()
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        responses = {
+            (previous, agent): await client.post(
+                _continue_path(previous),
+                json=_start(agent),
+                headers=_as() | {"Origin": ORIGIN},
+            )
+            for previous, agent in requests
+        }
+
+    for key, response in responses.items():
+        _broken_answer(response, requests[key], stderr.getvalue())
+    assert trace.events == before
+
+
+async def test_자기_실행의_손상도_남의_손상처럼_404이고_기록에는_하위_타입이_남는다() -> None:
+    """손상된 트레이스의 주체를 믿을 수 없어 자기 것인지 모른다. 그래서 자기 실행의 손상도 남의
+    손상과 같은 404 고정 문구다 — 결정과 이어 가기 둘 다다. 허용 출처가 읽는 JSON 봉투이고, 원인은
+    원래 상태 코드와 하위 타입과 함께 기록에 남는다."""
+    trace = FakeTrace()
+    _write(trace, "held", _started("held", agent="gated"), _paused("held"))
+    _finished_own(trace, "mine")
+    trace.damaged.update({RunId("held"), RunId("mine")})
+    before = list(trace.events)
+    stderr = io.StringIO()
+    origin = {"Origin": ORIGIN}
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        decided = await client.post(_decide_path("held"), json=APPROVE, headers=_as() | origin)
+        continued = await client.post(
+            _continue_path("mine"), json=_start("echo"), headers=_as() | origin
+        )
+
+    for response in (decided, continued):
+        assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
+        assert response.json()["message"] == NOT_FOUND_MESSAGE
+        assert response.headers["access-control-allow-origin"] == ORIGIN
+    lines = stderr.getvalue().splitlines()
     assert len(lines) == 2
-    assert all("모르는 종류의 이벤트" in line for line in lines)
+    assert all("원래 상태 500 TraceDamagedBeforePrincipal: 모르는 종류" in line for line in lines)
+    assert trace.events == before
 
 
 async def test_자기_실행의_상태는_409이고_메시지가_가른다() -> None:
@@ -910,15 +1035,19 @@ async def test_없거나_남의_것이거나_손상된_남의_앞_실행과_없�
         ("mine", "secret"),
     ]
 
+    headers = _as() | {"Origin": ORIGIN}
+
     async with _serving(_app(trace=trace)) as client:
         responses = [
-            await client.post(_continue_path(previous), json=_start(agent), headers=_as())
+            await client.post(_continue_path(previous), json=_start(agent), headers=headers)
             for previous, agent in requests
         ]
 
     for response in responses:
         assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
         assert response.json()["message"] == NOT_FOUND_MESSAGE
+        assert response.headers["access-control-allow-origin"] == ORIGIN
     assert trace.events == before
 
 
@@ -1998,12 +2127,13 @@ async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_�
 
 
 async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_CORS_헤더가_붙는다() -> None:
-    """페이지 안 위젯이 이어 가기의 에러 봉투도 읽어 404 와 409 를 가를 수
+    """페이지 안 위젯이 이어 가기의 에러 봉투도 읽어 404 와 409 와 500 을 가를 수
     있다(end-user-continuation 스토리 11. 무엇을 할지는 web-widget 이 정한다). 401 은 인증이,
-    나머지는 표가 낸다."""
+    나머지는 표가 낸다. 500 은 운영자의 구성 실수라 위젯이 대화를 지우지 않을 몫이다."""
     origin = {"Origin": ORIGIN}
     trace = FakeTrace()
     _write(trace, "held", _started("held", agent="gated"), _paused("held"))
+    _finished_own(trace, "mine")
     hourly_once = _site(limits=SiteLimits(hourly_runs_per_principal=1))
 
     async with _serving(_app(sites=hourly_once)) as limited:
@@ -2022,8 +2152,11 @@ async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_COR
         invalid = await client.post(
             _continue_path("..%2Fescape"), json=_start("echo"), headers=_as() | origin
         )
+        broken = await client.post(
+            _continue_path("mine"), json=_start("unloadable"), headers=_as() | origin
+        )
 
-    responses = {401: refused, 404: missing, 409: paused, 422: invalid, 429: busy}
+    responses = {401: refused, 404: missing, 409: paused, 422: invalid, 429: busy, 500: broken}
     for status, response in responses.items():
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json", status
