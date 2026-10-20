@@ -103,3 +103,39 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): 위 `check_recor
 - `uv run python tools/run_checks.py`: lint-imports·check-instructions·zizmor·check-type-escapes·pyright·run-hooks·web-verify·pytest 모두 Passed(pytest 688.9s, web-verify 430.6s).
 - `uv run --env-file ../../../.env pytest -m llm`(러너와 함께 돌렸다): 6 passed, 1 failed. 실패는 `test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_사용자_경로로_이어_가면_앞_대화를_안다`의 `serve 가 서지 않았다` — serve 프로세스가 기동 줄 전에 종료 코드 1로 끝났고 `serve.log`는 비어 있었다. 토큰 합계 50,776(입력 49,762, 출력 1,014), 트레이스 8개, 모델 호출 19건, 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.
 - 그 테스트만 러너가 끝난 뒤 홀로 다시 돌려 1 passed(270.56s). 토큰 합계 397(입력 270, 출력 127), 트레이스 2개, 모델 호출 2건. 첫 실패의 원인(로그 없는 종료 1)은 가르지 못했다. 부하와 겹친 회차에서만 났다는 것까지가 본 것이다. retro 후보로 넘긴다.
+
+커밋: 6a7da749 `feat: 이어 가기와 재개가 바로가기로 그 에이전트의 실행만 읽는다 (end-user-continuation 03)`. 첫 시도는 pre-commit의 web-verify에서 Vitest 작업자 기동 시간 초과(`[vitest-pool-runner]: Timeout waiting for worker to respond`, HomePage.test.tsx)로 막혔다. 이 커밋은 web 파일을 건드리지 않았고 바로 앞 러너에서 같은 검사가 통과해 그대로 다시 쳤고, 둘째 시도에서 pre-commit 전부 Passed(pytest 542.0s, web-verify 450.4s). 같은 부하 회차의 기동 실패라 retro 후보다(위 `-m llm`의 serve 기동 실패와 같은 모양).
+
+이 세션(새 세션, 제목 `feature/03-shortcuts-walk-only-that-agent`)은 앞 세션에서 `인계: 셀프 리뷰 직전`으로 넘겨받았고, 셀프 리뷰·반영·검증·커밋까지 했다. 사용자 프롬프트는 앞 인계 지시문 그대로였다(위 "인계" 절의 지시문과 같다).
+
+## 인계 (둘째)
+
+인계 계기가 `커밋 뒤`에 왔다(세션 컨텍스트 306,923 토큰). 곁 세션이 아니다(`get_session` self에 `parentSessionId` 없음). 열린 PR이 없다(아직 푸시하지 않았다).
+
+인계 지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/03-shortcuts-walk-only-that-agent.md. 시작 이벤트에 에이전트별 바로가기를 쓰고, 이어 가기와 재개는 그 에이전트의 실행만 따라간다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/03-shortcuts-walk-only-that-agent.md
+브랜치: feature/03-shortcuts-walk-only-that-agent
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-20-12-shortcuts-walk-only-that-agent.md의 "셀프 리뷰 (새 세션, 인계 뒤)" 절부터
+이어받을 상태: 인계: 커밋 뒤. 커밋 6a7da749까지 셀프 리뷰 반영, run_checks·-m llm(실패 하나는 홀로 다시 돌려 통과)·변이 표 15개·pre-commit을 마쳤다. 남은 단계: PR 직전 리뷰(operations.md 리뷰 파이프라인 2의 coderabbit-review, CLI가 못 돌면 bug-perf-review. 밀 주장은 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장"), 그 반영, 첫 푸시(-u. `git branch -m`이 .git/config를 쓰지 못해 upstream이 없을 수 있다), PR, 봇 회차, 병합. 일지 docs/journal/2026-10-20-12-shortcuts-walk-only-that-agent.md(마지막 두 절은 커밋하지 않았다)
+확인할 선행 조건: 병합은 워크트리의 길(next-session "워크트리에서 병합할 때")로 한다. 형제 워크트리 02·05가 src/agent_os/core/run.py·continuation.py·tests/core/test_run.py·.claude/rules/core.md를, 06이 probes/README.md를 함께 고친다(나중에 병합하는 쪽에서 글자 충돌 후보)
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-20T03:18:44Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+> 사용자: (next-session 지시문) 이어받을 상태: 인계: 커밋 뒤. … 남은 단계: PR 직전 리뷰(…), 그 반영, 첫 푸시(-u …), PR, 봇 회차, 병합.
+
+origin/main(3a84a692, #317 일지·대기열만)을 병합 커밋으로 합쳤다. CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 식별 서브태스크가 HIGH·MEDIUM 0건을 냈다. 바로가기로 다른 주체·숨긴 에이전트의 실행을 읽는 길(`_follow`가 따라간 실행마다 주체·에이전트를 본다), 지도 값의 경로 탐색(`check_record_rules`의 `is_run_id` 패턴), 따라간 실행 모두의 주체 판정을 따라가 봤다. 거를 지적이 없어 거름 단계는 돌지 않았다.
+- `bug-perf-review`: 밀 주장 셋 가운데 독스트링과 변이 표 2번 주석은 코드와 맞았다. core.md 괄호는 03 이후에 옛 대화를 이어 간 실행(`shortcuts_after`가 None)을 빠뜨렸다는 Minor 하나(유효, 값 작음). 버그·성능의 새 실패 장면은 없었다.
+
+고친 것: core.md 괄호를 "(이 기능 전이나 티켓 01과 03 사이에 쓰인 실행, 그리고 그런 대화를 그 뒤에 이은 실행)"으로 보강했다. rules 파일의 문구 하나만 바꿨고 `paths`는 그대로라 새 세션에서 불러 보지는 않았다.
