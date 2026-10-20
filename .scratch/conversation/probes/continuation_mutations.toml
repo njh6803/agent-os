@@ -101,12 +101,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-                    if isinstance(event, ConversationSummarized):
-                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+        case ConversationSummarized():
 '''
 new = '''
-                    if isinstance(event, ConversationSummarized) and False:
-                        # 런타임만 내는 종류다. 다음 실행의 거슬러 읽기가 트레이스에서 읽는 입력이라
+        case ConversationSummarized() if False:
 '''
 
 [[mutation]]
@@ -120,10 +118,14 @@ old = '''
     gathered = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
 '''
 new = '''
+    if visible_agents is not None and agent not in visible_agents:
+        raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
     gathered = (
@@ -153,10 +155,21 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/http/errors.py"
 old = '''
-        case NotResumable() | Disabled() | DifferentPrincipal() | NotContinuable():
+        case NotResumable() | NotContinuable():
 '''
 new = '''
-        case NotResumable() | Disabled():
+        case NotResumable():
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+        case DifferentPrincipal():
+            if operator:
+                return _Failure(status=409, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+'''
+new = '''
 '''
 
 [[mutation]]
@@ -263,10 +276,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    resumption = _read_paused(trace, run_id, pause_index)
+    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
 '''
 new = '''
-    resumption = _read_paused(trace, run_id, pause_index)
+    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
     trace.write(
         ConversationSummarized(
             run_id=run_id,
@@ -390,11 +403,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-        trace.write(outcome)
-        yield outcome
+            yield self._emit(outcome)
 '''
 new = '''
-        trace.write(outcome)
+            self._emit(outcome)
 '''
 
 # --- 티켓 03 (2026-10-05) -----------------------------------------------------------------
@@ -497,10 +509,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/EventItem.tsx"
 old = '''
-  if (isEventField(name) && RUN_FIELDS.has(name) && typeof value === "string") {
+  if (RUN_FIELDS.has(name) && typeof value === "string") {
 '''
 new = '''
-  if (isEventField(name) && RUN_FIELDS.has(name) && value !== undefined) {
+  if (RUN_FIELDS.has(name) && value !== undefined) {
 '''
 
 [[mutation]]

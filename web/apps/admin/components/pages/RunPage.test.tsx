@@ -100,6 +100,60 @@ const CONTINUED_TRACE: Trace = {
   ],
 };
 
+// 실패한 실행. 실패 원인은 계약의 값 그대로 온다.
+const FAILED = "r-calc-failed";
+const FAILED_TRACE: Trace = {
+  run_id: FAILED,
+  schema_version: "3",
+  events: [
+    {
+      type: "run_started",
+      run_id: FAILED,
+      ts: TS,
+      agent: "calc",
+      request: "1 더하기 2",
+      principal: "operator",
+      previous_run: null,
+      shortcuts: null,
+    },
+    {
+      type: "run_failed",
+      run_id: FAILED,
+      ts: TS,
+      error: "모델 호출이 실행 기한 300초를 넘겼다",
+      cause: "timeout",
+    },
+  ],
+};
+
+// 바로가기의 실행 식별자. 띄어쓰기·빗금·한글을 두어 링크의 주소가 인코딩되는 것을 잰다.
+const CALC_SHORTCUT = "r calc/셋";
+const WEATHER_SHORTCUT = "r-weather-1";
+
+/**
+ * 시작 이벤트의 필드만 바꾼 `TRACE`. 트레이스는 바깥에서 온 텍스트라, 바꾼 값은 계약 밖의 모양(지도가 아닌 바로가기
+ * 따위)도 받는다.
+ */
+function withStarted(fields: Readonly<Record<string, unknown>>) {
+  const [started, ...rest] = TRACE.events;
+  if (started?.type !== "run_started") {
+    throw new Error("첫 이벤트가 시작 이벤트가 아니다");
+  }
+  return { ...TRACE, events: [{ ...started, ...fields }, ...rest] };
+}
+
+/** 이벤트 항목에서 계약의 이름이 `name` 인 필드의 값 칸. */
+function fieldValue(item: HTMLElement, name: string): HTMLElement {
+  const term = within(item)
+    .getAllByRole("term")
+    .find((found) => found.querySelector("code")?.textContent === name);
+  const value = term?.nextElementSibling;
+  if (!(value instanceof HTMLElement)) {
+    throw new Error(`${name} 필드가 없다`);
+  }
+  return value;
+}
+
 /**
  * `GET /traces/{run_id}` 하나에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 요청마다의 `Authorization` 을
  * 쌓아 돌려준다.
@@ -242,19 +296,127 @@ describe("실행 하나", () => {
   test.each([".", ".."])(
     "앞 실행이 %s 이면 주소가 /runs/ 밖으로 풀리므로 링크가 아니라 글자다",
     async (dot) => {
-      const [started, ...rest] = TRACE.events;
-      if (started?.type !== "run_started") {
-        throw new Error("첫 이벤트가 시작 이벤트가 아니다");
-      }
-      serveTrace(`/traces/${RUN}`, () =>
-        HttpResponse.json({ ...TRACE, events: [{ ...started, previous_run: dot }, ...rest] }),
-      );
+      serveTrace(`/traces/${RUN}`, () => HttpResponse.json(withStarted({ previous_run: dot })));
 
       await openRun(RUN);
 
       await screen.findByRole("region", { name: "이벤트" });
       expect(within(events()).queryByRole("link")).toBeNull();
       expect(eventItem(0).textContent).toContain(`previous_run${dot}`);
+    },
+  );
+
+  test("실패 원인은 용어집의 말과 계약의 이름을 함께 보이고 값은 계약의 값 그대로 글자다", async () => {
+    serveTrace(`/traces/${FAILED}`, () => HttpResponse.json(FAILED_TRACE));
+
+    await openRun(FAILED);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    expect(
+      within(eventItem(1))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual(["시각 ts", "에러 error", "실패 원인 cause"]);
+    // 원인마다 문구를 짓는 것은 위젯의 몫이다. 관리 화면은 운영자에게 계약의 값을 보인다.
+    expect(fieldValue(eventItem(1), "cause").textContent).toBe("timeout");
+  });
+
+  test("바로가기는 에이전트마다 이름이 글자이고 그 실행의 상세로 가는 링크 하나다", async () => {
+    serveTrace(`/traces/${RUN}`, () =>
+      HttpResponse.json(
+        withStarted({ shortcuts: { calc: CALC_SHORTCUT, weather: WEATHER_SHORTCUT } }),
+      ),
+    );
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    const shortcuts = fieldValue(eventItem(0), "shortcuts");
+    const rows = within(shortcuts)
+      .getAllByRole("term")
+      .map((agent) => ({
+        agent: agent.textContent,
+        links:
+          agent.nextElementSibling instanceof HTMLElement
+            ? within(agent.nextElementSibling)
+                .queryAllByRole("link")
+                .map((link) => [link.textContent, link.getAttribute("href")])
+            : [],
+      }));
+    expect(rows).toEqual([
+      { agent: "calc", links: [[CALC_SHORTCUT, `/runs/${encodeURIComponent(CALC_SHORTCUT)}`]] },
+      { agent: "weather", links: [[WEATHER_SHORTCUT, "/runs/r-weather-1"]] },
+    ]);
+    expect(within(shortcuts).getByRole("link", { name: CALC_SHORTCUT }).getAttribute("href")).toBe(
+      "/runs/r%20calc%2F%EC%85%8B",
+    );
+    // 링크는 바로가기의 칸 둘뿐이다. 이어 가지 않은 실행의 앞 실행은 글자다.
+    expect(within(events()).getAllByRole("link")).toHaveLength(2);
+  });
+
+  test("바로가기가 없는 옛 실행은 링크 없이 글자 null 이다", async () => {
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe("null");
+    expect(within(events()).queryByRole("link")).toBeNull();
+  });
+
+  test("새 대화의 첫 실행인 빈 바로가기는 링크 없이 글자 {} 라 옛 실행의 null 과 갈린다", async () => {
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(withStarted({ shortcuts: {} })));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: "이벤트" });
+    expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe("{}");
+    expect(within(events()).queryByRole("link")).toBeNull();
+  });
+
+  test.each([".", ".."])(
+    "바로가기의 실행이 %s 이면 그 칸만 링크가 아니라 글자이고 다른 칸은 링크다",
+    async (dot) => {
+      serveTrace(`/traces/${RUN}`, () =>
+        HttpResponse.json(withStarted({ shortcuts: { calc: dot, weather: WEATHER_SHORTCUT } })),
+      );
+
+      await openRun(RUN);
+
+      await screen.findByRole("region", { name: "이벤트" });
+      const shortcuts = fieldValue(eventItem(0), "shortcuts");
+      expect(
+        within(shortcuts)
+          .getAllByRole("link")
+          .map((link) => link.textContent),
+      ).toEqual([WEATHER_SHORTCUT]);
+      expect(shortcuts.textContent).toContain(`calc${dot}`);
+    },
+  );
+
+  test.each<[string, unknown, string]>([
+    ["문자열", "r-calc", "r-calc"],
+    ["배열", ["r-calc"], '[\n  "r-calc"\n]'],
+    [
+      "문자열이 아닌 값을 든 객체",
+      { calc: "r-calc", weather: 3 },
+      '{\n  "calc": "r-calc",\n  "weather": 3\n}',
+    ],
+    [
+      "null 을 든 객체",
+      { calc: "r-calc", weather: null },
+      '{\n  "calc": "r-calc",\n  "weather": null\n}',
+    ],
+  ])(
+    "바로가기가 지도가 아닌 %s 이면 링크 없이 지금의 글자 그리기로 보인다",
+    async (_, shortcuts, shown) => {
+      serveTrace(`/traces/${RUN}`, () => HttpResponse.json(withStarted({ shortcuts })));
+
+      await openRun(RUN);
+
+      await screen.findByRole("region", { name: "이벤트" });
+      expect(within(events()).queryByRole("link")).toBeNull();
+      expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe(shown);
     },
   );
 
@@ -338,6 +500,9 @@ describe("실행 하나", () => {
     const bold = '{"type":"<b>굵게</b>"}';
     // 앞 실행의 값은 링크의 href 에 든다. 인코딩되어 `/runs/` 아래의 조각으로만 남아야 한다.
     const previous = "javascript:window.__agentOsXss = true/../../plugins?x#y";
+    // 바로가기의 에이전트 이름은 글자이고, 실행 식별자는 앞 실행처럼 인코딩된 조각으로만 href 에 든다.
+    const agent = '<iframe src="javascript:window.__agentOsXss = true"></iframe>';
+    const shortcut = "javascript:window.__agentOsXss = 1#../..";
     const hostile: Trace = {
       run_id: RUN,
       schema_version: "3",
@@ -350,7 +515,7 @@ describe("실행 하나", () => {
           request: script,
           principal: "operator",
           previous_run: previous,
-          shortcuts: null,
+          shortcuts: { [agent]: shortcut },
         },
         {
           type: "llm_called",
@@ -381,15 +546,19 @@ describe("실행 하나", () => {
 
     await screen.findByRole("region", { name: "이벤트" });
     const shown = events().textContent;
-    for (const text of [image, script, link, bold, previous]) {
+    for (const text of [image, script, link, bold, previous, agent, shortcut]) {
       expect(shown).toContain(text);
     }
     expect(document.querySelector("img")).toBeNull();
+    expect(document.querySelector("iframe")).toBeNull();
     expect(document.body.querySelector("script")).toBeNull();
     expect(document.querySelector("b")).toBeNull();
     expect(document.querySelector('a[href^="javascript"]')).toBeNull();
     expect(within(events()).getByRole("link", { name: previous }).getAttribute("href")).toBe(
       "/runs/javascript%3Awindow.__agentOsXss%20%3D%20true%2F..%2F..%2Fplugins%3Fx%23y",
+    );
+    expect(within(events()).getByRole("link", { name: shortcut }).getAttribute("href")).toBe(
+      "/runs/javascript%3Awindow.__agentOsXss%20%3D%201%23..%2F..",
     );
     expect(Reflect.has(window, "__agentOsXss")).toBe(false);
   });
