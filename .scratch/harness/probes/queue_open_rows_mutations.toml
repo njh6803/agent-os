@@ -128,7 +128,7 @@ new = '''CELL_SPLIT = re.compile(r"\|")'''
 
 [[mutation]]
 name = "회차 문턱을 넘는 것만 센다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_두_조건"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
 expect = "red"
 
 [[mutation.edit]]
@@ -138,7 +138,7 @@ new = '''row.rounds > MIN_ROUNDS'''
 
 [[mutation]]
 name = "같은 대상 파일의 문턱을 둘로 낮춘다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_두_조건"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
 expect = "red"
 
 [[mutation.edit]]
@@ -235,3 +235,148 @@ expect = "red"
 file = "tools/queue_open_rows.py"
 old = '''    if each:'''
 new = '''    if False:'''
+
+# ADR 0036 의 사람 몫·만료 판정(2026-10-19).
+
+[[mutation]]
+name = "사람 몫을 회차 3 이상과 만료에서 빼지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_행은_회차"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    counted = [row for row in rows if not row.human]'''
+new = '''    counted = rows'''
+
+[[mutation]]
+name = "사람 몫 줄을 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_행은_회차"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if humans:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "만료에서 사람 몫을 빼지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''(row for row in waiting if row.last is not None and row.last < cutoff)'''
+new = '''(row for row in rows if row.last is not None and row.last < cutoff)'''
+
+[[mutation]]
+name = "만료 경계를 그날까지 넓힌다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''row.last < cutoff)'''
+new = '''row.last <= cutoff)'''
+
+[[mutation]]
+name = "만료를 13일로 줄인다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''EXPIRY_DAYS = 14'''
+new = '''EXPIRY_DAYS = 13'''
+
+[[mutation]]
+name = "가장 이른 날짜를 고른다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "가장_늦은_날짜와_사람_몫을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return max(found, default=None)'''
+new = '''    return min(found, default=None)'''
+
+[[mutation]]
+name = "없는 날짜에서 멈춘다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "없는_날짜는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        try:
+            found.append(date.fromisoformat(text))
+        except ValueError:
+            continue'''
+new = '''        found.append(date.fromisoformat(text))'''
+
+[[mutation]]
+name = "날짜를 찾지 못한 행을 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "날짜가_없는_행은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if undated:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "사람 몫을 무엇 칸에서 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "가장_늦은_날짜와_사람_몫을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''named["어디로"].lstrip("*")'''
+new = '''named["무엇"].lstrip("*")'''
+
+[[mutation]]
+name = "날짜를 모든 칸에서 찾는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "무엇과_어디로_칸의_날짜는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''_last_date(named["승인"])'''
+new = '''_last_date(" ".join(cells))'''
+
+[[mutation]]
+name = "--today 의 값을 버린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "today를_기준일로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''                today = date.fromisoformat(args.pop(0))'''
+new = '''                date.fromisoformat(args.pop(0))'''
+
+[[mutation]]
+name = "만료에서 회차 3 이상을 빼지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    waiting = [row for row in counted if row not in ripe]'''
+new = '''    waiting = counted'''
+
+[[mutation]]
+name = "사람 몫의 쌍점을 보지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "쌍점으로_시작할_때만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''.startswith(HUMAN_MARK)'''
+new = '''.startswith(HUMAN)'''
+
+[[mutation]]
+name = "사람 몫 앞의 굵게 표시를 벗기지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "쌍점으로_시작할_때만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''named["어디로"].lstrip("*").startswith'''
+new = '''named["어디로"].startswith'''
