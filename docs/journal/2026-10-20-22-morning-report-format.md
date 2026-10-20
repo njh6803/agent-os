@@ -1,4 +1,4 @@
-# 2026-10-20 (18) 아침 보고 형식 개선
+# 2026-10-20 (22) 아침 보고 형식 개선
 
 브랜치 `chore/morning-report-format`. 매일 아침 보고를 예약 작업으로 등록한 뒤, 그 보고를 위에서 30초 안에 판단할 수 있는 형식으로
 바꿨다. 숫자를 모으는 도구와 보고를 그리는 도구를 저장소 `tools/`에 두고 시험을 붙였다.
@@ -296,11 +296,11 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문).
 다음 작업: 기능 morning-report-format. 일일 보고서 형식 개선을 PR 직전 리뷰부터 병합, 예약 작업 지시문 교체, 마지막 보고까지 마친다
 다음 단계: PR 반영·병합
 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: docs/journal/2026-10-20-18-morning-report-format.md 의 "인계(커밋 뒤)" 절의 남은 단계를 1부터 잇는다. 명세 원문과 사용자의 답은 같은 일지의 사용자 프롬프트 절에 있다
+시작 프롬프트: docs/journal/2026-10-20-22-morning-report-format.md 의 "인계(커밋 뒤)" 절의 남은 단계를 1부터 잇는다. 명세 원문과 사용자의 답은 같은 일지의 사용자 프롬프트 절에 있다
 브랜치: chore/morning-report-format
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-18-morning-report-format.md 전부, C:\Users\User\.claude\scheduled-tasks\daily-morning-report\SKILL.new.md
-이어받을 상태: 인계: 커밋 뒤. 커밋 955eb7b0까지 했고 PR은 아직 없다. 남은 단계는 origin/main 합치기, PR 직전 리뷰, PR과 봇 회차와 병합, 예약 작업 지시문 교체, 사용자에게 마지막 보고, 일지 "다음"과 회고다(docs/journal/2026-10-20-18-morning-report-format.md)
+읽을 것: docs/journal/2026-10-20-22-morning-report-format.md 전부, C:\Users\User\.claude\scheduled-tasks\daily-morning-report\SKILL.new.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 955eb7b0까지 했고 PR은 아직 없다. 남은 단계는 origin/main 합치기, PR 직전 리뷰, PR과 봇 회차와 병합, 예약 작업 지시문 교체, 사용자에게 마지막 보고, 일지 "다음"과 회고다(docs/journal/2026-10-20-22-morning-report-format.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 병합 뒤 예약 작업 지시문 교체와 사용자에게 마지막 보고까지
 ```

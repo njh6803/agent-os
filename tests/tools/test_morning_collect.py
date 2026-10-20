@@ -1,7 +1,7 @@
 """tools/morning_collect.py 의 순수 함수 검증. 장부 호출과 기록 줄은 시험마다 작게 지어 넣는다.
 
 gh·git·tasklist 를 부르는 길은 시험이 없고 `collect` 를 실제로 돌려
-확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-18 의 검사).
+확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사).
 """
 
 from __future__ import annotations
