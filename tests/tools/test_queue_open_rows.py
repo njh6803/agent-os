@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
 from tools.queue_open_rows import QUEUE, Row, by_target, main, paths_in, read_rows, render
 
 ROOT = Path(__file__).resolve().parents[2]
+TODAY = date(2026, 10, 19)
 
 HEAD = "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
 
@@ -125,9 +127,11 @@ def test_고칠_파일이_아닌_경로_모양도_대상으로_센다() -> None:
 
 def test_사용자가_순서를_올린_행은_표지가_없어_세지_않는다() -> None:
     """못 보는 것. 결정표의 둘째 조건은 행에서 읽지 않는다."""
-    out = render(read_rows(queue("| 5 | 일 | `a.md` | 사용자가 순서를 올렸다, 1회차 |"))[0], [])
+    approval = "사용자가 순서를 올렸다, 1회차, 2026-10-18"
+    out = render(read_rows(queue(f"| 5 | 일 | `a.md` | {approval} |"))[0], [], TODAY)
     assert "회차 3 이상: (없음)" in out
-    assert "5" not in out.split("\n", 1)[1]
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): (없음)" in out
+    assert "날짜를 찾지 못한 행" not in out
 
 
 def test_회차를_말로만_적은_행은_모른다고_센다() -> None:
@@ -163,12 +167,102 @@ def test_칸이_넷이_아닌_행은_빠뜨리지_않고_알린다() -> None:
     assert "칸이 넷이 아닌 행: 7" in render(rows, broken)
 
 
-def row(number: int, rounds: int | None, *targets: str, cited: tuple[str, ...] = ()) -> Row:
-    return Row(number, rounds, "승인" if rounds is not None else None, targets, cited)
+def row(
+    number: int,
+    rounds: int | None,
+    *targets: str,
+    cited: tuple[str, ...] = (),
+    last: date | None = None,
+    human: bool = False,
+) -> Row:
+    cell = "승인" if rounds is not None else None
+    return Row(number, rounds, cell, targets, cited, last, human)
 
 
-def test_결정표의_두_조건을_모은다() -> None:
-    """`next-session` 결정표의 chore 배치 조건: 회차 3 이상, 같은 대상 파일 셋 이상."""
+def test_승인_칸의_가장_늦은_날짜와_사람_몫을_읽는다() -> None:
+    rows, _ = read_rows(
+        queue(
+            "| 1 | 일 | `a.md` | 자체 승인 2026-10-01, 2회차, "
+            "일지 2026-10-03-02-journal-number-uniqueness.md·2026-10-02-04 |",
+            "| 2 | 일 | 사람 몫: 주 체크아웃에서 정리한다 | 사용자 승인 2026-10-13, 11회차 |",
+            "| 3 | 일 | `b.md` | 승인, 1회차 |",
+        )
+    )
+    assert [(r.number, r.last, r.human) for r in rows] == [
+        (1, date(2026, 10, 3), False),
+        (2, date(2026, 10, 13), True),
+        (3, None, False),
+    ]
+
+
+def test_사람_몫은_어디로_칸이_사람_몫과_쌍점으로_시작할_때만이고_굵게_써도_읽는다() -> None:
+    """셀프 리뷰: `사람 몫`으로만 견주자 `사람 몫이 아닌 …`이 사람 몫이 되고 `**사람 몫:**`은
+    빠졌다."""
+    rows, _ = read_rows(
+        queue(
+            "| 1 | 일 | **사람 몫:** 정리한다 | 1회차 |",
+            "| 2 | 일 | 사람 몫이 아닌 `tools/y.py` | 1회차 |",
+        )
+    )
+    assert [(r.number, r.human) for r in rows] == [(1, True), (2, False)]
+
+
+def test_회차_3_이상인_행은_반영할_때까지_만료하지_않는다() -> None:
+    """셀프 리뷰: chore 를 기능 뒤에만 여니 문턱을 넘은 행이 반영을 기다리다 14일을 넘겨 닫힐 수
+    있었다."""
+    out = render([row(1, 3, last=date(2026, 9, 1)), row(2, 2, last=date(2026, 9, 1))], [], TODAY)
+    assert "회차 3 이상: 1(3회차)" in out
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): 2(2026-09-01)" in out.splitlines()
+
+
+def test_사람_몫_행은_회차_3_이상에_넣지_않고_따로_적는다() -> None:
+    """대기열 238: 사람이 할 일을 세션마다 다시 보며 회차가 11까지 쌓여 chore 계기가 됐다."""
+    out = render([row(238, 11, human=True), row(306, 9)], [], TODAY)
+    assert "회차 3 이상: 306(9회차)" in out
+    assert "사람 몫(회차를 chore 계기로 세지 않고 만료하지 않는다): 238" in out
+
+
+def test_승인_칸의_가장_늦은_날짜가_14일_넘게_지난_행을_만료로_적는다() -> None:
+    out = render(
+        [
+            row(1, 1, last=date(2026, 10, 4)),
+            row(2, 2, last=date(2026, 10, 5)),
+            row(3, 1, last=date(2026, 10, 18)),
+            row(4, 1, last=date(2026, 9, 1), human=True),
+        ],
+        [],
+        TODAY,
+    )
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): 1(2026-10-04)" in out.splitlines()
+
+
+def test_없는_날짜는_넘고_남은_날짜에서_가장_늦은_것을_고른다() -> None:
+    rows, _ = read_rows(queue("| 1 | 일 | `a.md` | 자체 승인 2026-10-01, 1회차, 반영 2026-02-30 |"))
+    assert rows[0].last == date(2026, 10, 1)
+
+
+def test_만료할_행이_없으면_없다고_적고_날짜가_없는_행은_따로_적는다() -> None:
+    out = render([row(1, 1, last=date(2026, 10, 18)), row(4, None)], [], TODAY)
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): (없음)" in out
+    assert "날짜를 찾지 못한 행: 4" in out
+
+
+def test_못_보는_것_회차가_아닌_날짜도_가장_늦은_날짜로_센다() -> None:
+    """부분 반영을 적은 날이 늦으면 새 회차가 없어도 만료하지 않는다."""
+    approval = "자체 승인 2026-09-21, 1회차, 일지 2026-09-21-01. 반영 2026-10-18"
+    rows, _ = read_rows(queue(f"| 1 | 일 | `a.md` | {approval} |"))
+    out = render(rows, [], TODAY)
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): (없음)" in out
+
+
+def test_못_보는_것_무엇과_어디로_칸의_날짜는_보지_않는다() -> None:
+    rows, _ = read_rows(queue("| 1 | 2026-10-18 에 난 일 | `a.md`(2026-10-18) | 1회차 |"))
+    assert rows[0].last is None
+
+
+def test_결정표의_조건을_모은다() -> None:
+    """`next-session` 결정표의 chore 배치 조건은 회차 3 이상이다. 같은 대상 파일 셋 이상은
+    계기가 아니라 배치를 고른 뒤 함께 묶을 행이다(ADR 0036)."""
     out = render(
         [
             row(167, 3, "tools/"),
@@ -241,6 +335,18 @@ def test_main을_실제로_불러_임시_대기열의_조건을_찍는다(tmp_pa
     assert "칸이 넷이 아닌 행: 10" in done.stdout
 
 
+def test_main은_today를_기준일로_만료할_행을_찍는다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(queue("| 9 | 일 | `a.md` | 자체 승인 2026-09-01, 1회차 |"), encoding="utf-8")
+    assert main(["--queue", str(path), "--today", "2026-09-15"]) == 0
+    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-09-01 전): (없음)" in capsys.readouterr().out
+    assert main(["--queue", str(path), "--today", "2026-09-16"]) == 0
+    assert "2026-09-02 전): 9(2026-09-01)" in capsys.readouterr().out
+    assert main(["--queue", str(path), "--today", "어제"]) == 2
+
+
 def test_main은_없는_파일이면_2로_끝난다(tmp_path: Path) -> None:
     assert main(["--queue", str(tmp_path / "없다.md")]) == 2
 
@@ -258,10 +364,10 @@ def test_main은_rows를_주면_행마다의_줄을_기본_출력_뒤에_찍는�
     assert "  9 3회차(승인) 대상: a/b.md / 인용: c/d.md" in out
 
 
-def test_main은_인자가_틀리면_2로_끝난다() -> None:
-    assert main(["--queue"]) == 2
-    assert main(["--모름"]) == 2
-    assert main(["--queue", "a.md", "--ref", "HEAD"]) == 2
+def test_main은_인자가_틀리면_쓰임을_내고_2로_끝난다(capsys: pytest.CaptureFixture[str]) -> None:
+    for argv in (["--queue"], ["--모름"], ["--queue", "a.md", "--ref", "HEAD"]):
+        assert main(argv) == 2
+        assert "쓰임: uv run python tools/queue_open_rows.py" in capsys.readouterr().err
 
 
 def test_main은_대시로_시작하는_ref를_git에_넘기지_않는다(

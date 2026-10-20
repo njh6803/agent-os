@@ -39,5 +39,6 @@
 | [0033](0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md) | 세션 컨텍스트는 단계 경계의 인계와 40만 자동 압축 창으로 묶고, 토큰 사용은 사용량 장부에서 만든 일간 보고서로 지켜본다 | accepted | 2026-10-15 |
 | [0034](0034-mcp-adapter-uses-mcp-2-and-closes-servers-even-when-cancelled.md) | MCP 어댑터는 mcp 2를 직접 써서 취소된 실행의 MCP 서버도 끝까지 닫는다 | accepted | 2026-10-16 |
 | [0035](0035-precommit-pytest-is-split-by-xdist-in-the-runner.md) | pre-commit의 pytest는 러너만 pytest-xdist로 나눠 돌리고, 프로세스 수는 논리 CPU 수의 절반이다 | accepted | 2026-10-16 |
+| [0036](0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md) | 하네스에 더하는 것은 같은 실수의 세 번째나 손상 한 번에 더하고, 쓰이지 않는 훅은 빼자고 넘기며, 대기열 행은 14일이 지나면 목록에서 내린다 | accepted | 2026-10-19 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
