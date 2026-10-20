@@ -221,3 +221,64 @@ open-session을 부른다 2026-10-20T06:41:59Z
 - 카나리아 `core_rule_read_cap_thread.toml`(claude 2.1.302, 커밋 `2a4ce5b0`): 통과 4. 실험군 3/3이 `READ_CAP`,
   `EXCHANGE_COUNT_LIMIT`, `abandon_on_cancel=False`를 옮겼고 대조군은 "없음"이었다. 명세의 `# 최신 결과:` 줄과 프로브
   README의 walk_cap 결과 칸을 고쳤다.
+
+## main 합치기
+
+`origin/main`이 `ed111753`(#320 skill-listing-trim, #321 티켓 05)으로 움직여 합쳤다. 충돌은 넷이고 모두 이웃한 자리를
+양쪽이 따로 고친 글자 충돌이었다. 양쪽이 바꾼 단어를 `git diff --word-diff=porcelain <merge-base> <쪽>`으로 본 뒤 풀었다.
+- `tests/core/test_run.py`: 같은 모듈의 import 둘을 한 줄로 합쳤다.
+- `.scratch/plan.md`: conversation 행은 이 브랜치 판(알려진 한계를 닫은 문장), end-user-channel 행은 main 판(05의 좁힘
+  괄호), end-user-continuation 행은 main 판에 이 브랜치의 고침("와 기준이 서기 전에 쓰인 바로가기 대화")을 얹었다.
+- `.scratch/conversation/probes/README.md`: 두 티켓의 문단을 모두 남기고 05를 앞에 두었다.
+- `.claude/rules/core.md`: 이어 가기 항목은 이 브랜치 판, 실패 정책 항목은 main 판이다. 푼 결과가 HEAD와는 main의 고침만,
+  main과는 이 브랜치의 단어 변경 20개만 다른 것을 다시 봤다.
+
+05의 `before_principal()`이 `gather_continued`의 첫 읽기를 감싸, 합친 판에서는 그 감싸개가 스레드 안에서 돈다. 스레드의
+예외가 그대로 올라오므로 타입이 바뀌지 않는다. 합친 판에서 `tests/core/test_run.py`·`tests/channel/http/test_end_user.py`·
+`tests/sdk` 439 passed, `mutate.py --check`로 표 넷(walk_cap 20, shortcuts 15, continuation 30, pre_owner_damage 8)의
+원문이 모두 한 번씩, `pre_owner_damage_mutations.toml` 8개를 돌려 모두 기대대로 빨갰다. 합치기 커밋(`28a11976`)의
+pre-commit은 ruff 둘, checks 여덟, markdown tables, line separators, mutation tables, quotes, commit message가 모두
+Passed이고 canary specs와 constitution version은 고친 파일이 없어 `Skipped`다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어 돌지 못하는 상태 그대로라(`operations.md` 리뷰 파이프라인 2) 대체 둘을 합친 뒤에 나란히
+돌렸다. `bug-perf-review`의 브리프에는 셀프 리뷰 절의 "새로 쓴 사실 문장" 여덟과, 합친 판에서 감싸개가 스레드 안에서 도는
+자리를 밀 주장으로 넣었다.
+
+- `/security-review`(범위 `ed111753` 이후): 취약점을 찾는 서브태스크가 신뢰도 0.7 이상인 HIGH·MEDIUM 지적을 내지 않아
+  거를 것이 없었다. 따라간 것은 스레드 뒤의 인가 순서(예외 타입이 그대로 `http/errors.py`의 표에 닿는다), 읽기 상한과
+  주체 검사(교환을 모으는 실행은 모두 주체를 확인한 뒤), 워커 스레드의 읽기와 루프의 쓰기의 겹침(어댑터에 가변 공유 상태가
+  없다)이다. 제한기 공유와 취소 때의 기다림은 가용성이라 제외 기준에 들었다.
+- `-m llm`(합친 판 `28a11976`, `uv run --env-file ../../../.env pytest -m llm -q`): 7 passed, 3832 deselected(162.71초).
+  LLM 토큰 합계 54,665(입력 53,620, 출력 1,045). 트레이스 10개, 모델 호출 22건. 트레이스를 남기지 않은 LLM 테스트 1개는
+  세지 못했다. 셀프 리뷰의 리팩터링(`_older_run`)과 합치기 뒤의 판이라 다시 돌렸다.
+- `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`(PR마다 보는 확인).
+- `bug-perf-review`(기준 `ed111753`, 16 파일, 호출 40): 유효 Minor 2, 오탐 5, Critical·Major 없음. 밀 주장 여덟 가운데
+  2·3·4·5는 참이고(3은 옛 고리 99/100/101/150에서 읽기 99/100/100/100, 바로가기 고리는 읽기 52에서 접힘을 직접 불러
+  봤다), 1·6·7은 글자 그대로는 참이되 아래 첫 지적의 변형이 빠졌고, 8이 둘째 지적이다. 합친 자리(`before_principal` +
+  스레드)는 `anyio.to_thread.run_sync(gather_continued, …)`를 직접 불러 예외 타입이 그대로임을 봤다(앞 실행 손상은
+  정확한 `TraceDamagedBeforePrincipal`, 고리 중간 손상은 정확한 `PluginError`). 오탐 다섯은 반쯤 쓴 줄(어댑터가 끝나지
+  않은 마지막 줄을 아직 안 쓰인 것으로 읽는다), 취소의 자리, `_follow`의 이어 가기·재개 읽기 수 비대칭(티켓 04 뒤의
+  데이터에서는 상한 전에 접히거나 멈춘다), `plan_fold` 경계, 상한의 하나 어긋남이다.
+  - Minor 1 — 요약을 만났는데 그 덮는 끝에 닿기 전에 상한에 걸리면 덮는 끝과 멈춘 자리 사이의 교환이 요약에도 원문에도
+    들지 않고, 접히면 영구히 빠진다(스크래치패드 프로브: 같은 에이전트 200개 옛 고리, r190의 요약이 r50까지 덮음,
+    r199에서 이어 가기 → 요약과 r100~r199, r51~r99 빠짐). 동작은 명세가 받아들인 범위라 문장만 고쳤다. 반례를
+    덧붙이지 않고 성질("상한이 멈춘 자리보다 오래된 교환 가운데 만난 요약이 덮지 않은 것이 빠진다")로 고쳤다. 처음에
+    "오래된 것이 무엇이든 빠진다"로 썼다가, 만난 요약 자체는 새 요약에 접히므로 그 문장이 거짓인 것을 다시 대 보고
+    바로잡았다.
+  - Minor 2 — `plan.md` conversation 행의 "티켓 04가 닫았다"가 재개는 루프 위에 남는다는 명세·`core.md`와 어긋난다
+    (명세 248행: 옛 대화의 재개는 첫 읽기로 0.6~0.9초, 어림). "묶었다"로 고치고 재개를 괄호에 넣었다.
+- 반영으로 새로 쓴 사실 문장(PR 봇이 겨눌 자리):
+  - `continuation.py` 모듈 독스트링과 `core.md` 이어 가기 항목: "읽기 상한(아래)에 닿은 대화에서는 상한이 멈춘 자리보다
+    오래된 교환 가운데 만난 요약이 덮지 않은 것이 새 요약에 들지 않는다. 그 요약을 만나지 못했으면 상한 너머의 요약과
+    교환이, 만났어도 그 요약이 덮는 끝에 닿기 전에 멈췄으면 그 사이의 교환이 빠지고, 그 뒤 계기가 서서 접히면 빠진 것은
+    다시 읽히지 않는다."
+  - `sdk/conversation.py` 독스트링: "그 상한에 닿은 긴 대화에서는 상한이 멈춘 자리보다 오래된 교환 가운데 거슬러 읽기가
+    만난 요약이 덮지 않은 것이 이 값에 들지 않는다(그 뒤 접힌 새 요약에도 들지 않는다)."
+  - `sdk/events.py` 주석: "거슬러 읽기가 읽기 상한(core)에 닿아 멈춘 적이 있는 대화는 그 상한 너머의 교환 가운데 만난
+    요약이 덮지 않은 것이 빠진다."
+  - `plan.md` conversation 행: "긴 고리가 `serve`의 이벤트 루프를 막던 한계는 end-user-continuation 티켓 04가
+    묶었다(이어 가기의 거슬러 읽기는 스레드로 보내고, 루프 위에 남는 재개의 거슬러 읽기는 읽는 실행 수의 상한이 묶는다)."
+- 반영 뒤: 고친 파이썬 셋의 ruff check·format 초록. `core.md`를 고쳐 카나리아를 다시 돌려 통과 4(커밋 `28a11976` 위의
+  작업 트리). 손으로 치는 다섯은 이 반영 커밋의 pre-commit으로 갈음한다.
