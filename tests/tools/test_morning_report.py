@@ -181,7 +181,8 @@ def 상세(*rows: tuple[str, ...], number: int = 4, lines: tuple[str, ...] = ())
 def test_작업은_처음_나온_표에만_내용을_적고_뒤에서는_그_절을_가리킨다() -> None:
     row = ("#301", "{{name:301}}", "{{content:301}}")
     sections = (상세(row), 상세(row, number=6))
-    text, _, warnings = render(자료(sections=sections), 메모(), {})
+    notes = 메모(remarks={4: ("해석",)}, next=("다음",))
+    text, _, warnings = render(자료(sections=sections), notes, {})
     assert "| #301 | Ctrl-C 판정 안정화 | 부하에서 흔들린 판정과 시간 제한을 고쳤다 |" in text
     assert "| #301 | Ctrl-C 판정 안정화 | → 상세 4 |" in text
     assert warnings == []
@@ -359,25 +360,42 @@ def test_앞_날의_메모가_고른_확인할_수치의_열쇠를_읽는다(tmp
     assert latest_checks(tmp_path, date(2026, 10, 17)) == frozenset()
 
 
-def test_절의_차례는_핵심_지표_할_일_제안_그리고_접힌_상세다() -> None:
+def test_절의_차례는_핵심_지표_할_일_제안_그리고_펼친_상세다() -> None:
+    # 예약 작업의 답을 그리는 앱이 `<details>`를 접지 못하고 태그를 글자로 보였다
     text, _, _ = render(자료(sections=(상세(number=1),)), 메모(), {})
     order = [text.index(h) for h in ("## 핵심 지표", "## 직접 하실 일", "## 개선 제안", "## 상세")]
     assert order == sorted(order)
-    assert "<details><summary>1. 비싼 작업과 오래 걸린 명령</summary>" in text
-    assert text.index("## 상세") < text.index("<details><summary>1.")
+    assert "### 1. 비싼 작업과 오래 걸린 명령" in text
+    assert text.index("## 상세") < text.index("### 1.")
+
+
+def test_보고에는_앱이_그리지_못하는_HTML_태그가_없다() -> None:
+    sections = (상세(number=1), 상세(number=4))
+    text, _, _ = render(자료(sections=sections), 메모(proposals=(제안(),)), {})
+    assert "<details" not in text
+    assert "<summary" not in text
 
 
 def test_상세_절의_끝에_원본을_한_줄로_적는다() -> None:
-    text, _, _ = render(자료(sections=(상세(),)), 메모(), {})
-    body = text.split("<summary>4. 비싼 작업과 오래 걸린 명령</summary>", 1)[1]
-    assert body.split("</details>", 1)[0].rstrip().splitlines()[-1] == "원본: task 통계"
+    text, _, _ = render(자료(sections=(상세(), 상세(number=5))), 메모(), {})
+    body = text.split("### 4. 비싼 작업과 오래 걸린 명령", 1)[1].split("### 5.", 1)[0]
+    assert body.rstrip().splitlines()[-1] == "원본: task 통계"
 
 
-def test_상세_절의_목록이_다섯_줄을_넘으면_경고한다() -> None:
-    lines = tuple(f"- 줄 {i}" for i in range(4))
-    notes = 메모(remarks={4: ("해석 하나", "해석 둘")})
-    _, _, warnings = render(자료(sections=(상세(lines=lines),)), notes, {})
-    assert any("상세 4" in w for w in warnings)
+def test_상세_절에_해석이_없으면_경고한다() -> None:
+    # 예약 작업의 첫 실행(10-19 보고)이 상세 1·3에만 해석을 쓰고 2·4·5·7을 비웠다
+    sections = (상세(number=2), 상세(number=6), 상세(number=7))
+    _, _, warnings = render(자료(sections=sections), 메모(remarks={7: ("해석",)}), {})
+    assert warnings == [
+        "상세 2에 해석이 없다(메모의 remarks에 그 절의 표를 읽은 해석을 한 줄에서 3줄까지 쓴다)",
+        "상세 6에 해석이 없다(메모의 next에 다음 할 일을 두세 줄 쓴다)",
+    ]
+
+
+def test_상세_절의_해석이_세_줄을_넘으면_경고한다() -> None:
+    notes = 메모(remarks={4: ("하나", "둘", "셋", "넷")})
+    _, _, warnings = render(자료(sections=(상세(lines=("- 수집 줄",) * 6),)), notes, {})
+    assert warnings == ["상세 4의 해석이 4줄로 3줄을 넘는다(가장 중요한 것만 남긴다)"]
 
 
 def test_제안의_상태와_확인할_수치는_지난_상태에서_잇고_오늘_상태를_낸다() -> None:
@@ -410,11 +428,11 @@ def test_제안_상태는_확인할_수치의_열쇠와_함께_쓰고_다시_읽
     assert read_state(state_json(state)) == state
 
 
-def test_제안의_바꿀_것은_표_아래_접힌_곳에_적는다() -> None:
+def test_제안의_바꿀_것은_표_아래에_펼쳐_적는다() -> None:
     text, _, _ = render(자료(), 메모(proposals=(제안(),)), {})
-    details = text.split("<details><summary>제안별 바꿀 것</summary>", 1)[1].split("</details>")[0]
-    assert "**1. 커밋 대기 줄이기**" in details
-    assert "- 검사를 나눈다" in details
+    changes = text.split("**제안별 바꿀 것**", 1)[1].split("## 상세", 1)[0]
+    assert "**1. 커밋 대기 줄이기**" in changes
+    assert "- 검사를 나눈다" in changes
 
 
 def test_수집_JSON은_쓰고_다시_읽어도_같다() -> None:
@@ -440,16 +458,6 @@ def test_메모_JSON을_읽지_못하면_경고로_알리고_빈_메모로_그�
     assert main(["--reports", str(tmp_path), "--day", "2026-10-19"]) == 0
     first = capsys.readouterr().err.splitlines()[0]
     assert first.startswith("경고: 메모 JSON을 읽지 못해 빈 메모로 그렸다(메모 전체를 다시 쓴다):")
-
-
-def test_목록_경고는_수집_줄과_메모_줄을_나눠_메모가_쓸_줄_수를_알린다() -> None:
-    lines = tuple(f"- 줄 {i}" for i in range(4))
-    notes = 메모(remarks={4: ("해석 하나", "해석 둘")})
-    _, _, warnings = render(자료(sections=(상세(lines=lines),)), notes, {})
-    assert warnings == [
-        "상세 4의 목록이 6줄로 5줄을 넘는다(수집 4줄, 메모 2줄)."
-        " 메모가 이 절에 쓸 수 있는 줄은 1줄이다"
-    ]
 
 
 def test_제안의_작업_내용은_문서에서_먼저_나오는_표_행에_붙는다() -> None:

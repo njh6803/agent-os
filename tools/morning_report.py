@@ -13,10 +13,13 @@
   값이 있는 날의 중앙값), 판정. 판정은 수집 도구가 경보로 넘긴 지표면 `⚠ 경보 (<까닭>)`, 아니면 7일
   안의 최고·최저, 아니면 정상이다. 경보 문장은 이 칸에만 있다.
 - 직접 하실 일: 메모의 할 일. 대기열 행이면 제목을 `대기열 <번호> (<회차>회차) <이름>`으로 짓는다.
-- 개선 제안: 표와, 표 아래 접힌 "바꿀 것". 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
+- 개선 제안: 표와, 표 아래에 펼친 "바꿀 것". 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
   `신규`, `효과 확인됨`(확인할 수치가 바라는 쪽으로 움직였다)이다. 진행 중과 보류는 제안과 PR을 잇는
   기록이 없어 `UNKNOWN_STATE`로 적는다. 확인할 수치의 열쇠가 지난 상태와 다르면 견주지 않는다.
-- 상세: 머리에 수집 JSON과 모은 시각을 적고, 절마다 `<details>`로 접고 끝에 원본을 한 줄로 적는다.
+- 상세: 머리에 수집 JSON과 모은 시각을 적고, 절마다 `### <번호>. <제목>` 아래에 표와 줄을 펼치고
+  끝에 원본을 한 줄로 적는다. 예약 작업의 답은 이 보고를 옮겨 적는데, 그 답을 그리는 앱은
+  `<details>`를 접지 못하고 태그를 글자로 보였다(일지 2026-10-20-28). 그래서 HTML 태그를 쓰지
+  않는다.
 
 작업 표기. 작업이 나오는 곳에는 번호·이름·내용을 함께 쓰되, 내용은 그 작업이 처음 나온 자리에만
 쓰고 뒤에서는 번호와 이름만 쓴다. 수집 도구의 칸은 `{{name:N}}`·`{{content:N}}`(PR),
@@ -30,8 +33,9 @@ PR 제목을 가져오지 못했으면 `LOOKUP_FAILED`로 적는다(이름을 �
 - 메모에 이름이나 내용이 없는 작업, 번호 바로 뒤에 조사가 붙은 작업 번호(이름을 끼우면 받침이
   어긋난다).
 - 할 일의 까닭이 두 문장 이상이거나(`SENTENCE_END`), 제안의 난이도가 `DIFFICULTIES` 밖의 낱말이다.
-- 상세 절의 목록 줄 수가 `MAX_LIST`를 넘는다. 수집 줄과 메모 줄을 나눠 세고, 메모가 그 절에 쓸 수
-  있는 줄 수를 알린다.
+- 상세 절에 메모의 해석이 없거나(상세 6은 다음 할 일), 해석이 `MAX_REMARKS`줄을 넘는다. 수치는 표가
+  보이고 무엇을 뜻하는지는 해석이 말하므로, 해석이 빈 절은 측정만 있고 분석이 없다. 예약 작업의 첫
+  실행(2026-10-19 보고)은 상세 1·3에만 해석을 쓰고 2·4·5·7을 비웠다(일지 2026-10-20-28).
 - 메모 JSON을 읽지 못했다(빈 메모로 그린다). 예약 작업은 `경고:` 줄마다 메모를 고치므로 이것도
   경고다.
 
@@ -70,7 +74,7 @@ LOOKUP_FAILED = "(제목 조회 실패)"
 NO_NAME = "(이름 없음)"
 NO_CONTENT = "(내용 없음)"
 UNCOLLECTED = "(수집 안 됨)"
-MAX_LIST = 5
+MAX_REMARKS = 3  # 상세 절 하나에 메모가 쓰는 해석 줄의 상한
 NEXT_SECTION = 6  # 메모의 다음 할 일을 붙이는 상세 절(어제 작업과 다음 할 일)
 UNITS = {"money": "$", "int": "", "float1": "", "float2": ""}  # `Metric.kind`마다 값의 단위
 UNKNOWN_STATE = "(진행 중·보류는 수집 안 됨)"
@@ -717,7 +721,7 @@ def _todo_warnings(t: Todo) -> list[str]:
 def _proposal_lines(
     data: Data, notes: Notes, state: Mapping[str, Seen], namer: Namer, marks: Marks
 ) -> tuple[list[str], dict[str, Seen], Marks, list[str]]:
-    """제안 표와 접힌 "바꿀 것", 오늘의 제안 상태, 표지, 경고."""
+    """제안 표와 그 아래 펼친 "바꿀 것", 오늘의 제안 상태, 표지, 경고."""
     if not notes.proposals:
         return ["없음"], {}, marks, []
     head = (
@@ -764,7 +768,7 @@ def _proposal_lines(
             )
         new_state[p.id] = Seen(prev.since if prev is not None else data.day, today, p.check)
     # 표의 행이 모두 바꿀 것보다 앞에 그려지므로, 바꿀 것은 표를 다 채운 뒤에 채운다
-    details = ["<details><summary>제안별 바꿀 것</summary>", ""]
+    details = ["**제안별 바꿀 것**", ""]
     for i, (p, title) in enumerate(zip(notes.proposals, titles, strict=True), start=1):
         details += [f"**{i}. {title}**", ""]
         changes: list[str] = []
@@ -773,7 +777,6 @@ def _proposal_lines(
             changes.append(f"- {written}")
         details += changes or ["- (적지 않음)"]
         details.append("")
-    details.append("</details>")
     lines = [*table_lines(Table(head, "rlllllll", tuple(rows))), "", *details]
     return lines, new_state, marks, warnings
 
@@ -784,7 +787,7 @@ def _section_lines(
     """상세 절 하나의 글, 표지, 경고. 수집 도구가 쓴 표와 줄은 자리 표시자만 채우고, 메모의 해석
     줄만 글 속 작업 번호에 이름을 붙인다(수집 도구의 줄은 번호와 이름을 자리 표시자로 쓴다)."""
     where = f"상세 {s.number}"
-    out = [f"<details><summary>{s.number}. {s.title}</summary>", ""]
+    out = [f"### {s.number}. {s.title}", ""]
     for t in s.tables:
         rows: list[tuple[str, ...]] = []
         for r in t.rows:
@@ -798,21 +801,26 @@ def _section_lines(
     for x in s.lines:
         filled, marks = namer.fill(x, where, marks)
         lines.append(filled)
-    written = [*notes.remarks.get(s.number, ()), *(notes.next if s.number == NEXT_SECTION else ())]
+    remarks = notes.remarks.get(s.number, ())
+    written = [*remarks, *(notes.next if s.number == NEXT_SECTION else ())]
     for x in written:
         expanded, marks = namer.expand(x, where, marks)
         lines.append(f"- {expanded}")
     warnings: list[str] = []
-    if len(lines) > MAX_LIST:
-        collected = len(s.lines)
+    if not written:
+        hint = (
+            "next에 다음 할 일을 두세 줄"
+            if s.number == NEXT_SECTION
+            else f"remarks에 그 절의 표를 읽은 해석을 한 줄에서 {MAX_REMARKS}줄까지"
+        )
+        warnings.append(f"{where}에 해석이 없다(메모의 {hint} 쓴다)")
+    if len(remarks) > MAX_REMARKS:
         warnings.append(
-            f"{where}의 목록이 {len(lines)}줄로 {MAX_LIST}줄을 넘는다"
-            f"(수집 {collected}줄, 메모 {len(written)}줄)."
-            f" 메모가 이 절에 쓸 수 있는 줄은 {max(0, MAX_LIST - collected)}줄이다"
+            f"{where}의 해석이 {len(remarks)}줄로 {MAX_REMARKS}줄을 넘는다(가장 중요한 것만 남긴다)"
         )
     if lines:
         out += [*lines, ""]
-    out += [f"원본: {s.source}", "", "</details>", ""]
+    out += [f"원본: {s.source}", ""]
     return out, marks, warnings
 
 
