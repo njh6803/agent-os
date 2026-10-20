@@ -1,4 +1,4 @@
-# 2026-10-20 (19) end-user-continuation 티켓 02: 실패 원인
+# 2026-10-20 (24) end-user-continuation 티켓 02: 실패 원인
 
 나란히 여는 넷(02·03·05·06) 가운데 첫 세션이다. 주 체크아웃이 미갱신이라 Skill 도구로 `tidy-checkouts`를 먼저 돌고,
 주 체크아웃에서 브랜치를 따지 않고 워크트리 `.claude/worktrees/02-runtime-names-the-failure-cause`에 들어가 브랜치를
@@ -70,8 +70,8 @@
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -170,8 +170,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-24-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -188,3 +188,28 @@ open-session이 연 새 세션이다. 제목을 `feature/02-runtime-names-the-fa
 > 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 커밋 뒤. … 남은 것은 origin/main
 > 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히 …), 반영, PR, 봇 회차, 병합 직전 기능
 > 닫기 판정, 병합이다. … 이번 요청 범위: PR과 병합까지"
+
+## origin/main 합치기 (두 번)
+
+`sync_with_base_branch`는 앱이 만든 워크트리가 아니라며 거절해 직접 합쳤다. 첫 합치기(03·06이 든 main, `314ec233`)와 둘째
+합치기(05가 든 main, `ed111753`) 모두 `.claude/rules/core.md` 34줄이 충돌했다. 이 브랜치는 그 줄 중간("…(위 실행 타임아웃
+항목).")에 실패 원인 단락을 끼웠고 main은 같은 줄의 다른 문장(바로가기, `TraceDamagedBeforePrincipal`)을 고쳤다. 공통 조상
+대비 우리 쪽이 순수 삽입임을 단언한 뒤 main 판의 같은 자리에 끼웠다. probes README는 표의 행 추가끼리라 셋 다 남겼다.
+`sibling_overlap.py`가 일지 번호를 14에서 19로 옮겼다.
+
+## PR 직전 리뷰
+
+- `/security-review`: 발견 없음. `run_failed.error`는 이전과 같은 `_describe`이고, 최종 사용자 면은 고정 문구와 닫힌 열거
+  `cause`만 받는다(`channel/http/items.py`, 이 브랜치가 고치지 않았다).
+- `bug-perf-review`(기준 `2d460f6b`): Minor 3. 밀 주장 다섯은 아래 셋째를 빼고 코드와 맞았다.
+  - **유효, 고쳤다.** 명세 자리 표의 위치 칸 셋이 낡았다(`_drive`의 `replay_event`, 에이전트 코드의 `_drive`, 그 밖의
+    `_connected`의 안쪽 `except`). `_relay`·`_attend`·`_connected`의 `_holding("inside")`로 고쳤다.
+  - **보류였다가 재현해 고쳤다.** 에이전트가 도는 중 기한이 오고 도구 연결의 닫기가 그 취소를 일반 예외로 덮으면, 결말이
+    시간 초과가 아니라 `tool_connection`과 닫기의 메시지였다. 사례
+    `test_기한의_취소를_도구_연결의_닫기가_다른_예외로_바꿔도_원인은_시간_초과다`(`FlakyCloseTools`와 `SleepyModel`)가
+    `('OSError: close failed', 'tool_connection')`으로 빨간 것을 본 뒤, `_connected`가 예외의 문맥 고리에서 취소를 찾으면
+    그 취소를 다시 던지게 고쳤다(`_cancellation_under`). 실제 MCP 어댑터가 취소 중 닫기에서 일반 예외를 내는지는 재지
+    않았다. 밀 주장 2("들어간 뒤의 예외면 결말을 이미 붙잡았거나 썼으므로")는 이 경로에서 거짓이었고 주석을 고쳤다.
+
+리뷰 반영 커밋 뒤에 인계 계기(`커밋 뒤`, 세션 컨텍스트 약 24.6만 토큰)가 왔다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로
+시작해 같은 경계라 넘기지 않고 이었다(next-session "인계할 때" 1).

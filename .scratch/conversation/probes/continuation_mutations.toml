@@ -51,14 +51,12 @@ file = "src/agent_os/core/continuation.py"
 old = '''
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = read_link(trace, previous)
-    if link is None:
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
+    with before_principal():
+        link = read_link(trace, previous)
 '''
 new = '''
-    link = read_link(trace, previous)
-    if link is None:
-        raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
+    with before_principal():
+        link = read_link(trace, previous)
 '''
 
 [[mutation]]
@@ -301,11 +299,11 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+        link = link_of(stored, run_id)
+        check_record_rules(link)
 '''
 new = '''
-    link = link_of(stored, run_id)
+        link = link_of(stored, run_id)
 '''
 
 [[mutation]]
