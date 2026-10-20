@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -29,6 +29,11 @@ from tools.morning_report import (
     Todo,
     Value,
     check_text,
+    json_int,
+    json_list,
+    json_obj,
+    json_str,
+    json_time,
     latest_checks,
     main,
     metric_row,
@@ -490,3 +495,19 @@ def test_못_보는_것_다로_끝나지_않는_문장은_세지_않는다() -> 
     todo = Todo("정리", "워크트리를 지움. 브랜치도 지울까? 디스크를 비운다.")
     _, _, warnings = render(자료(), 메모(todos=(todo,)), {})
     assert warnings == []
+
+
+def test_JSON_풀이는_기대한_꼴이_아니면_빈_것이나_None이다() -> None:
+    # 수집 도구와 그리기 도구가 함께 쓴다. 꼴이 틀린 칸은 실패로 끝내지 않고 비운다
+    assert (json_obj({"a": 1}), json_obj([1])) == ({"a": 1}, {})
+    assert (json_list([1]), json_list({"a": 1})) == ([1], [])
+    assert (json_str("가"), json_str(3)) == ("가", "")
+    # 참거짓은 파이썬에서 int 의 하위 형이지만 수로 읽지 않는다
+    assert (json_int(3), json_int(json.loads("true")), json_int(3.0)) == (3, None, None)
+
+
+def test_JSON_시각은_시간대가_없으면_UTC로_읽고_읽지_못하면_None이다() -> None:
+    assert json_time("2026-10-19T09:00:00") == datetime(2026, 10, 19, 9, tzinfo=UTC)
+    kst = timezone(timedelta(hours=9))
+    assert json_time("2026-10-19T09:00:00+09:00") == datetime(2026, 10, 19, 9, tzinfo=kst)
+    assert (json_time("어제"), json_time(None), json_time(1)) == (None, None, None)
