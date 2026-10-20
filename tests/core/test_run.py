@@ -31,6 +31,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 
+from agent_os.core.continuation import before_principal
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
     Absent,
@@ -3891,6 +3892,28 @@ async def test_요청이_가리킨_실행의_손상은_세_진입점_모두_주�
         assert "run-1" in str(caught.value)
     assert trace.events == before
     assert clock.ids_issued == 0
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        Absent("없다"),
+        DifferentPrincipal("남의 실행이다"),
+        NotResumable("멈추지 않았다"),
+        TraceDamagedBeforePrincipal("이미 손상이다"),
+    ],
+    ids=["부재", "다른 주체", "재개 불가", "이미 손상"],
+)
+def test_주인을_확인하기_전의_자리는_하위_타입을_손상으로_바꾸지_않고_그대로_올린다(
+    error: PluginError,
+) -> None:
+    """감싸는 자리 안에 4xx 를 내는 판정이 들어와도 그 갈래가 손상(최종 사용자 면의 404, 운영자
+    면의 500)으로 바뀌지 않는다. 이미 손상인 것은 다시 감싸지 않는다. 기반 타입이 손상이 되는
+    것은 위 시험이다."""
+    with pytest.raises(PluginError) as caught, before_principal():
+        raise error
+
+    assert caught.value is error
 
 
 # 이어 간 실행의 재개 — 에이전트는 처음과 같은 멤버를 받는다

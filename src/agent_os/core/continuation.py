@@ -305,11 +305,14 @@ def before_principal() -> Generator[None]:
     뿐이다. 그 자리의 손상이 덮이는 이유는 손상된 트레이스의 주체를 믿을 수 없어 500이 남의 손상된
     실행의 존재를 드러내기 때문이다(ADR 0023 의 2026-10-16 이력). 주체를 확인한 뒤의 읽기(고리와
     바로가기, 재개의 앞 실행)는 열지 않는다 — 거기서 깨진 것은 요청한 주체 자신의 기록이 가리킨
-    것이라 숨길 남이 없다.
+    것이라 숨길 남이 없다. 바꾸는 것은 기반 타입뿐이고 하위 타입은 그대로 올린다 — 안에 4xx 를 내는
+    판정이 들어와도 그 갈래가 손상으로 바뀌지 않고, 이미 손상인 것을 다시 감싸지 않는다.
     """
     try:
         yield
     except PluginError as error:
+        if type(error) is not PluginError:
+            raise
         raise TraceDamagedBeforePrincipal(str(error)) from error
 
 

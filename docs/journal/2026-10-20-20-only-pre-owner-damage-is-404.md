@@ -187,7 +187,8 @@ claude 2.1.302에서 http와 channel은 통과 4였다. core의 첫 판은 통�
   갈음했다(위 판정).
 - **변이.** `pre_owner_damage_mutations.toml` 일곱, `contract_mutations.toml`에서 고친 여섯, conversation의
   `continuation_mutations.toml`에서 고친 일곱이 모두 기대대로 빨갰다. 셀프 리뷰가 테스트를 고친 뒤
-  `pre_owner_damage_mutations.toml` 전체는 다시 돌리지 않았다(PR 직전 리뷰를 반영한 뒤 한 번 돈다).
+  `pre_owner_damage_mutations.toml` 전체는 다시 돌리지 않았다. PR 직전 리뷰를 반영한 뒤(이어받은 세션)
+  그 표 전체(가드 항목을 더해 여덟)를 돌려 모두 기대대로 빨갰다.
 - **e2e(진단 중).** 전체 e2e(`pnpm -C web/apps/admin exec playwright test`)에서 `e2e/decision.e2e.ts:12`("멈춘 실행을
   허가하면 재개 스트림이 조각으로 붙고 …")가 두 번 실패했다. 첫 번은 LLM 테스트와 카나리아가 함께 돌던 때, 둘째는
   셀프 리뷰 반영 뒤다. 증상은 둘 다 39행 `expect(events).toContainText("run_finished")`가 5초 안에 서지 않은 것이고,
@@ -282,11 +283,68 @@ open-session을 부른다 2026-10-20T04:16:20Z
     문단에 그 결과를 더했다.
   - end-user-continuation probes README: 표의 행을 합쳤다(03·06의 행, 이 브랜치의 행, 05의 명세 셋을 든 `canary` 행).
   - 합친 뒤 고친 것: 03의 바로가기 검증 사례(`test_바로가기가_어긋나면_…`)의 빼는 모양을 `type(caught.value) is
-    PluginError`로(티켓 31행), `before_principal` 독스트링과 `core.md`의 "고리를 따라갈 때"에 바로가기를 더했다. 티켓
-    31행의 "이 PR을 열 때 03은 병합되지 않았다"를 지금 사실로 고쳤다.
+    PluginError`로(티켓 31행), `before_principal` 독스트링과 `core.md`의 고리를 따라갈 때를 말한 문장에 바로가기를
+    더했다. 티켓 31행에서 이 PR을 열 때 03이 병합되지 않았다고 적은 문장을 지금 사실로 고쳤다.
   - 확인: `tests/core/test_run.py`, `tests/channel/http/test_end_user.py`·`test_router.py`, `tests/test_server.py`가
     618 passed. `mutate.py --staged` 문제 0. conversation 표의 이 브랜치 변이 둘(`--since origin/main`)이 합친 코드에서
     모두 기대대로 빨갰다. `core.md`를 원천으로 든 카나리아 둘(05의 `core_rule_pre_owner_damage.toml`, 03의
     `core_rule_shortcuts.toml`)은 사전 확인 통과 2로 갈음했다.
   - `tools/sibling_overlap.py`가 이 일지가 main의 최신 일지(`-16`)보다 이름순으로 앞이라 알려 `--move`로 `-13`에서
     `-20`으로 옮겼다(인용도 함께).
+- **PR 직전 리뷰.** CodeRabbit CLI는 좌석이 없어 대체 둘을 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인).
+  - 보안: 내장 `/security-review`를 커밋하고 main을 합친 뒤(`785575f8`) 돌렸다. 발견 없음. 존재·소유 오라클(주체
+    비교 전에 기반 타입이 새는 자리), 최종 사용자 응답의 원문 누출, 면을 줄인 뒤 최종 사용자 경로가 운영자 면으로
+    읽히는 길을 경로마다 따라가 모두 닫았다.
+  - 버그·성능: `bug-perf-review` 서브에이전트. 유효 셋이 모두 Nit이고 오탐 둘이다. 밀 주장 일곱은 코드와 시험에
+    대어 모두 참으로 닫았고, `before_principal` 한 번의 비용은 약 1.1µs라 트레이스 읽기(ms)에 견줘 무시된다. e2e
+    진단의 빈틈도 찾지 못했다.
+    - Nit 1(고쳤다): `before_principal`이 `PluginError` 전부를 잡아, 감싼 안에 `Absent`·`DifferentPrincipal`을
+      던지는 줄이 들어오면 그 갈래가 조용히 손상(최종 사용자 면 404, 운영자 면 500)으로 바뀐다. 지금은 닿는 길이
+      없다. 기반 타입만 바꾸고 하위 타입은 그대로 올리게 했다. 시험(`test_주인을_확인하기_전의_자리는_하위_타입을_…`,
+      네 사례)이 구현 전에 넷 모두 빨갰고, 변이 표에 "감싸는 자리가 하위 타입도 손상으로 바꾼다"를 더했다.
+    - Nit 2(고쳤다): `failure_for` 독스트링의 나열에 새 하위 타입이 없었고, 그 둘레와 `read_own_run` 독스트링에
+      짧게 끊긴 줄이 있었다.
+    - Nit 3(회고로 넘김): 최종 사용자 면이 덮은 404의 원인은 서버 기록에서만 찾는데, JSONL 어댑터의 단건 읽기
+      실패는 메시지가 두 줄이라(`트레이스를 읽을 수 없다: {path}` 다음 줄에 오류 종류) 추적 식별자로 grep하면
+      오류 종류가 든 둘째 줄을 놓친다. 이 브랜치가 만든 형식이 아니다(아래 "회고").
+  - 확인: `tests/core/test_run.py` 272 passed, 고친 네 파일 `ruff check` 통과, `pre_owner_damage_mutations.toml`
+    여덟이 모두 기대대로, 세 변이 표의 원문 확인(`mutate.py --check`) 통과.
+- **티켓.** 43행(검증 명령)은 로컬 e2e의 흔들림을 괄호로 달아 닫았다. 44행(기능 닫기)은 `git fetch` 뒤
+  `origin/main`(`2d460f6b`)의 02·04가 `ready-for-agent`라 닫지 않는다고 적었다. 병합 직전에 다시 본다.
+
+## 회고
+
+두 세션(구현한 세션과 이어받은 세션)을 함께 본다. 낸 후보는 일곱이고 승인 0, 기각 6, 넘김 0, 일지에만 남기는 것 1이다.
+대기열에 더한 행과 회차는 없다. 만료할 행은 이 브랜치와 `origin/main` 두 출력 모두 없었다(`tools/queue_open_rows.py`).
+
+1. **일지에만: e2e `decision.e2e.ts:12`가 이 PC의 부하에서 흔들렸다**(위 "검사"의 e2e 항목). 진단에 루프 둘(각 8회)이
+   들었다. 허가 뒤 기본 5초 창에 MCP 픽스처 기동과 픽스처의 2초 휴지가 함께 드는 시간 시험이라, 대기열 306이 받아들여
+   닫은 종류(부하에서만 빨간 시간 시험, ADR 0036)의 새 사례다. retro 5단계대로 306을 잇지도 새 행을 쓰지도 않는다. 다시
+   열지는 사람이 정한다. 고친다면 그 단언에 픽스처 기동을 넣은 기한을 주는 한 줄이다.
+2. **기각: 첫 커밋이 다른 기능의 변이 표에서 막혔다**(위 "판정"의 첫 커밋). 셀프 리뷰가 `contract_mutations.toml`만 보고
+   conversation의 `continuation_mutations.toml`은 보지 않았다. pre-commit의 `mutate.py --staged`가 그 자리에서 막았다.
+   이미 있는 검사가 막은 것이다.
+3. **기각: 둘째 커밋이 그 표의 옛 찌꺼기 다섯에서 막혔고, 같은 다섯을 06도 나란히 고쳐 main을 합칠 때 글자 충돌을
+   풀었다.** `--staged`는 이 커밋이 새로 깬 원문과 커밋에 든 표의 원문 전부를 보는 설계라(대기열 312), 표를 고치는 쪽이
+   그 표의 옛 찌꺼기를 치운다. 막은 것은 설계대로이고, 표를 건드리지 않는 커밋까지 막게 하거나 찌꺼기를 봐주게 하는 것은
+   게이트를 바꾸는 일이라 이 비용으로는 내지 않는다. 사실 하나를 남긴다. 2026-10-20에 표 95개 가운데 19개에 옛 찌꺼기가
+   있었다(세션 스크래치의 `check_all_tables.py`가 표마다 `mutate.py --check`를 불렀다). 이 브랜치가 고친 `run.py`를
+   가리키는 `.scratch/web-admin/probes/pause_index_mutations.toml`의 여덟도 그중이고, 그 표를 고치지 않은 커밋은
+   막히지 않았다.
+4. **기각: `before_principal`의 `except PluginError`가 하위 타입까지 잡았다.** 셀프 리뷰 표준 축이 판단 항목으로 냈고
+   구현 세션이 남겼다가, PR 직전 `bug-perf-review`가 Nit으로 다시 내 두 줄로 고쳤다. 리뷰가 잡도록 둔 판단이라 리뷰가 제
+   몫을 했다.
+5. **기각: 최종 사용자 면이 덮은 404의 원인이 서버 기록에서 두 줄이다**(PR 직전 리뷰 Nit 3). 이 브랜치가 만든 형식이
+   아니고 실제로 놓친 사건이 없다. 하네스가 아니라 제품의 기록 형식이라 PR 본문의 남긴 위험에 적는다.
+6. **기각: 워크트리 가드가 명령 둘을 거부했다**(이어받은 세션의 `S=…; git show …` 복합 명령, `xargs -a`). 앱 가드가 그
+   자리에서 막았고 `CLAUDE.md` 환경 함정이 이미 적는다. 둘 다 스크래치의 파이썬 스크립트로 옮겼다.
+7. **기각: 훅이 세 번 알렸다**(중간 문장이 한국어가 아님, 판정 명령을 파이프에 넣음, 큰 결과 1만 자). 이미 있는 훅이 그
+   자리에서 알린 것이다.
+
+## 다음
+
+이 PR은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
+
+이 PR은 end-user-continuation을 닫지 않는다. 남은 잎 02·04는 각자 세션이 맡는다(02는
+`feature/02-runtime-names-the-failure-cause` 세션, 04는 06이 연 `feature/04-exchange-count-read-cap-and-thread` 세션).
+그래서 이 세션은 지시문을 내지 않는다. 뒤에 병합되는 잎이 기능을 닫고 다음 지시문을 낸다.
