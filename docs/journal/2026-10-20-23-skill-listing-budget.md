@@ -143,3 +143,52 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 - open-session을 부른다 2026-10-20T07:49:16Z
+
+## 셋째 세션
+
+`chore/skill-listing-budget`의 셋째 세션이 이었다. 일지의 "인계 (둘째)" 절을 커밋하고(`4446b29d`) 푸시해 PR #324를 열었다.
+
+- PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 돌렸다. `/security-review` 지적 0건(설정 한 줄이
+  권한·훅·샌드박스 경계를 바꾸지 않고 비밀 값이 없다). `bug-perf-review` 유효 0 / 오탐 2(설정 키 순서, 일지 문구). JSON과 ADR
+  표의 산술·경로를 다시 대 봤다.
+- ruff 둘은 pre-commit에서 `.py`가 없어 Skipped라 손으로 쳤고 통과했다.
+- 봇 회차: CI 다섯 모두 통과. CodeRabbit은 "Review rate limited"로 리뷰가 없다. 보안·버그 축은 위 대체 둘의 결과를 PR
+  체크리스트에 적은 것이 대신한다. claude-review 첫 회차는 지적 없음(ADR 표의 산술을 다시 대 맞다고 했다).
+
+## 회고
+
+후보 셋, 승인 0, 기각 3, 넘김 0.
+
+- CodeRabbit CLI 좌석 없음과 PR 리뷰 한도: 기각. `docs/constitution/operations.md` 리뷰 파이프라인 2·3이 이미 대체 길과 판정을
+  적고, 이 세션은 그대로 따랐다.
+- 커밋 뒤의 인계 절이 커밋되지 않은 채 남아 커밋 하나를 더했다: 기각. `next-session` "인계할 때" 2가 일지를 커밋하지 않고 새
+  세션이 커밋하게 정한 대로다.
+- 앞 인계 절의 "병합 뒤 일지 '다음'에 적는다"가 `next-session` 1의 2(뒤로 넘긴 일은 병합 전에 일지 "다음"에 싣는다)와
+  어긋났다: 기각. 이 세션이 스킬대로 병합 전에 실었고 실수나 비용이 나지 않았다.
+
+만료할 행 없음(`tools/queue_open_rows.py`, 워크트리와 `--ref origin/main` 둘 다).
+
+## 다음
+
+이 PR은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
+
+뒤로 넘긴 일(사용자 결정): 이 저장소가 쓰는 스킬마다 하네스(경로 규칙, 훅, 다른 스킬의 단계)가 이름으로 부르는 자리를
+감사하고, `frontend-design`을 부를지·어디서·`.claude/rules/web-design.md`와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계
+인터뷰. 근거는 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절이다. 사용자가 고르면
+`/grill-with-docs`로 연다.
+
+결정표는 "기능의 티켓이 아니라 하네스 chore PR이었고, 그 PR이 든 주제가 남지 않았다" 줄이다. 진행 중인
+end-user-continuation의 남은 티켓 02·04는 각자 세션이 PR #325·#323으로 맡고 있다. 다른 프론티어 mcp-shutdown은 명세
+단계이고, 그 명세가 워크트리 `mcp-shutdown-spec`(브랜치 `docs/mcp-shutdown-spec`)에 커밋되지 않은 채 2026-10-17부터 멈춰
+있다(일지 2026-10-17-05는 그 워크트리에만 있다). 끊긴 작업을 잇는 줄로 그것을 다음으로 고른다.
+
+다음 작업: 기능 mcp-shutdown. 워크트리 mcp-shutdown-spec에 커밋되지 않고 멈춘 명세(`.scratch/mcp-shutdown/spec.md`)를 이어 커밋하고 PR로 병합한다
+다음 단계: 명세
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 워크트리 mcp-shutdown-spec 의 docs/journal/2026-10-17-05-mcp-shutdown-spec.md 끝에서부터 mcp-shutdown 명세 작업을 이어 커밋하고 PR로 병합한다
+브랜치: docs/mcp-shutdown-spec
+모델: Opus 5.5 / xhigh
+읽을 것: 워크트리 mcp-shutdown-spec 의 docs/journal/2026-10-17-05-mcp-shutdown-spec.md
+이어받을 상태: 그 워크트리의 명세·프로브·일지는 미추적이고 plan.md·ADR 0034는 고친 채 커밋하지 않았다. 그 일지의 셀프 리뷰 절이 고친다고 정한 것들이 반영됐는지는 이 세션이 보지 않았다. 브랜치 끝은 8a2163eb라 origin/main을 합쳐야 한다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 그 워크트리를 쥔 세션이 살아 있지 않은지 확인하지 못했다(제목이 그 브랜치인 세션을 list_sessions에서 찾지 못했다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
