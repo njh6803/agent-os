@@ -1,4 +1,4 @@
-# 2026-10-20 (23) 스킬 목록 예산을 0.006으로 낮춘다
+# 2026-10-20 (26) 스킬 목록 예산을 0.006으로 낮춘다
 
 주 체크아웃에서 시작해 `tidy-checkouts`로 루트를 당긴 뒤 워크트리 `skill-listing-budget`(브랜치
 `chore/skill-listing-budget`)으로 들어간 앱 세션 `2dad46dc`가 썼다. 일지 2026-10-20-17의 "다음"을 이었다.
@@ -110,8 +110,8 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
 시작 프롬프트: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "다음"과 ADR 0033 이력 2026-10-20의 "스킬 목록 예산을 낮춘다" 항목대로 목록 예산과 name-only를 앱 세션에서 재 견주고, 고르면 설정과 ADR 0033 새 이력까지 PR로 병합한다
 브랜치: chore/skill-listing-budget
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-23-skill-listing-budget.md, docs/adr/0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md 의 이력 "2026-10-20 스킬 목록 예산을 0.006으로 낮춘다"
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 측정과 사용자의 값 선택(0.006, name-only 쓰지 않음)은 끝났고 ADR 이력 문장은 셀프 리뷰를 반영한 뒤 보여 승인받는다. 명세 축 요구는 일지의 "셀프 리뷰에 넘길 요구" 절이다. docs/journal/2026-10-20-23-skill-listing-budget.md
+읽을 것: docs/journal/2026-10-20-26-skill-listing-budget.md, docs/adr/0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md 의 이력 "2026-10-20 스킬 목록 예산을 0.006으로 낮춘다"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 측정과 사용자의 값 선택(0.006, name-only 쓰지 않음)은 끝났고 ADR 이력 문장은 셀프 리뷰를 반영한 뒤 보여 승인받는다. 명세 축 요구는 일지의 "셀프 리뷰에 넘길 요구" 절이다. docs/journal/2026-10-20-26-skill-listing-budget.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 - open-session을 부른다 2026-10-20T07:26:32Z
@@ -138,8 +138,8 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
 시작 프롬프트: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "다음"과 ADR 0033 이력 2026-10-20의 "스킬 목록 예산을 낮춘다" 항목대로 목록 예산과 name-only를 앱 세션에서 재 견주고, 고르면 설정과 ADR 0033 새 이력까지 PR로 병합한다
 브랜치: chore/skill-listing-budget
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-23-skill-listing-budget.md 의 "셀프 리뷰"와 "인계 (둘째)" 절
-이어받을 상태: 인계: 커밋 뒤. 커밋 a1ebc477까지 셀프 리뷰 반영과 사용자의 ADR 이력 승인을 마쳤고(승인 줄이 이력 끝에 있다) 아직 푸시하지 않았다. 측정은 다시 하지 않는다. 남은 단계는 푸시, PR 직전 리뷰, PR, 봇 회차, 워크트리에서 병합이고, 병합 뒤 일지 "다음"에 스킬 호출 자리 감사의 설계 인터뷰를 적는다. docs/journal/2026-10-20-23-skill-listing-budget.md
+읽을 것: docs/journal/2026-10-20-26-skill-listing-budget.md 의 "셀프 리뷰"와 "인계 (둘째)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 a1ebc477까지 셀프 리뷰 반영과 사용자의 ADR 이력 승인을 마쳤고(승인 줄이 이력 끝에 있다) 아직 푸시하지 않았다. 측정은 다시 하지 않는다. 남은 단계는 푸시, PR 직전 리뷰, PR, 봇 회차, 워크트리에서 병합이고, 병합 뒤 일지 "다음"에 스킬 호출 자리 감사의 설계 인터뷰를 적는다. docs/journal/2026-10-20-26-skill-listing-budget.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 - open-session을 부른다 2026-10-20T07:49:16Z
@@ -152,6 +152,8 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
   권한·훅·샌드박스 경계를 바꾸지 않고 비밀 값이 없다). `bug-perf-review` 유효 0 / 오탐 2(설정 키 순서, 일지 문구). JSON과 ADR
   표의 산술·경로를 다시 대 봤다.
 - ruff 둘은 pre-commit에서 `.py`가 없어 Skipped라 손으로 쳤고 통과했다.
+- 푸시 전에 origin/main을 두 번 합쳤다. 둘째 합치기 뒤 `tools/sibling_overlap.py`가 이 일지(23)가 main의 최신 일지 25보다
+  이름순으로 앞이라며 1로 끝나, `--move`로 26으로 옮겼다(ADR 0033의 인용도 함께 옮겨졌다).
 - 봇 회차: CI 다섯 모두 통과. CodeRabbit은 "Review rate limited"로 리뷰가 없다. 보안·버그 축은 위 대체 둘의 결과를 PR
   체크리스트에 적은 것이 대신한다. claude-review 첫 회차는 지적 없음(ADR 표의 산술을 다시 대 맞다고 했다).
 
@@ -193,7 +195,7 @@ PR 직전 리뷰에 밀 주장: 위 "고친 것"의 원문 넷과 "잃는 계기
 다음 작업: 기능 skill-call-sites. 이 저장소가 쓰는 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계 인터뷰
 다음 단계: 설계 인터뷰
 어디서: 새 세션. 결정표는 프론티어(mcp-shutdown 명세)지만 사용자가 이 인터뷰를 병합 뒤 바로 하자고 정했다. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
-시작 프롬프트: /grill-with-docs docs/journal/2026-10-20-23-skill-listing-budget.md 의 "다음"과 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절대로, 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정한다
+시작 프롬프트: /grill-with-docs docs/journal/2026-10-20-26-skill-listing-budget.md 의 "다음"과 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절대로, 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정한다
 브랜치: docs/skill-call-sites
 모델: Opus 5.5 / xhigh
 읽을 것: docs/adr/0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md 의 이력 "2026-10-20 스킬 목록 예산을 0.006으로 낮춘다"
