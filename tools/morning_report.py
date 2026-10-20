@@ -88,7 +88,8 @@ DIFFICULTIES = ("쉬움", "보통", "어려움")
 
 
 # JSON 풀이. `json_*`는 수집 도구(`morning_collect`·`morning_sources`)도 가져다 쓴다. 이 도구는
-# 스크립트로 돌아 `tools` 패키지를 가져오지 못하므로 함께 쓰는 것을 이 파일에 둔다.
+# 스크립트로 돌아 `tools` 패키지를 가져오지 못하므로 함께 쓰는 것을 이 파일에 둔다. 이 도구를
+# `-m`으로 부르게 되면 `json_*`를 공용 모듈로 옮겨 바깥 명령 층이 그리기 도구에 기대지 않게 한다.
 
 
 def json_obj(v: Json) -> dict[str, Json]:

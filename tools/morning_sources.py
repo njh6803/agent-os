@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+# 바깥 명령 층이 그리기 도구에서 JSON 풀이를 가져오는 까닭은 `morning_report.py`의 JSON 풀이
+# 주석에 있다(그리기 도구는 스크립트로 돌아 `tools` 패키지를 가져오지 못한다).
 from tools.morning_report import Json, json_int, json_list, json_obj, json_str, json_time
 
 CALL_TIMEOUT = 60
