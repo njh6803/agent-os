@@ -1,17 +1,20 @@
 """tools/morning_collect.py 의 순수 함수 검증. 장부 호출과 기록 줄은 시험마다 작게 지어 넣는다.
 
-gh·git·tasklist 를 부르는 길은 시험이 없고 `collect` 를 실제로 돌려
-확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사).
+gh·git·tasklist 를 부르는 길은 넘기는 인자(PR 목록의 한도)만 시험하고, 출력을 받는 길은 `collect` 를
+실제로 돌려 확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사).
 """
 
 from __future__ import annotations
 
+import subprocess
 from datetime import UTC, date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from tools.hook_report import BLOCK, NOTICE, Firing
 from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
+    PR_LIMIT,
     Collected,
     GhPr,
     HookRow,
@@ -30,7 +33,9 @@ from tools.morning_collect import (
     kept,
     label_of,
     merged_got,
+    merged_prs,
     merged_unknown,
+    open_prs,
     open_state,
     over_cap,
     queue_part,
@@ -466,3 +471,20 @@ def test_병합_PR을_읽지_못하면_그것에_기대는_표와_줄을_걷고_
     got = merged_unknown(s, kept=("- 지금의 부하: 워크트리 3개",))
     lines = (f"- 병합 PR {UNCOLLECTED}(gh 실패)", "- 지금의 부하: 워크트리 3개")
     assert got == Section(3, "병렬 세션", (), lines, "출처")
+
+
+def test_PR_목록의_두_호출은_같은_한도를_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # gh pr list 의 기본 한도(30)로 잘리면 열린 PR 이 있는 워크트리가 "PR 없음"으로 적힌다
+    seen: list[list[str]] = []
+
+    def 빈_목록(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(args)
+        return subprocess.CompletedProcess(args, 0, "[]", "")
+
+    monkeypatch.setattr(subprocess, "run", 빈_목록)
+    open_prs(tmp_path)
+    merged_prs(date(2026, 10, 19), tmp_path)
+    limits = [a[a.index("--limit") + 1] if "--limit" in a else None for a in seen]
+    assert limits == [str(PR_LIMIT), str(PR_LIMIT)]

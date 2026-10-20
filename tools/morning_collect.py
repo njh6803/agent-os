@@ -110,6 +110,7 @@ TOO_EARLY = "판단 이름"  # 명세가 정한 판정 낱말. "판단하기 이
 TICKET_DAYS = 28
 ACTIVE_H = 24
 CALL_TIMEOUT = 60
+PR_LIMIT = 1000  # `gh pr list`의 기본 한도는 30이라 넘으면 조용히 잘린다
 TOP = 5
 TOP_COMMANDS = 5
 TOP_TOOLS = 3
@@ -760,7 +761,7 @@ def merged_prs(since: date, root: Path) -> list[GhPr] | None:
             "--state",
             "merged",
             "--limit",
-            "1000",
+            str(PR_LIMIT),
             "--search",
             f"merged:>={(since - timedelta(days=1)).isoformat()}",
             "--json",
@@ -786,6 +787,8 @@ def open_prs(root: Path) -> list[OpenPr] | None:
             "list",
             "--state",
             "open",
+            "--limit",
+            str(PR_LIMIT),
             "--json",
             "number,title,headRefName,createdAt,isDraft,reviewDecision,statusCheckRollup",
         ],

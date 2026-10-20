@@ -412,3 +412,55 @@ real, 한 번). 예약 작업의 Bash 시간 제한 10분 안이다. 기존 메�
 5. `over_cap` 독스트링: "호출이 모두 넘어 `timing`이 None인 이름표도 센다."
 6. 렌더 독스트링의 경고 둘: "수집 줄과 메모 줄을 나눠 세고, 메모가 그 절에 쓸 수 있는 줄 수를 알린다.", "예약 작업은 `경고:` 줄마다
    메모를 고치므로 이것도 경고다."
+
+## PR 봇 첫 회차
+
+PR #322를 36c9ce44로 열었다. 일지 커밋(36c9ce44)과 PR을 연 뒤에 인계 계기가 다시 왔으나 위 `인계 못함` 줄이 있어 넘기지 않았다.
+검사 일곱(CodeRabbit, claude-review, e2e, python, verify, visual, web)이 모두 통과했고 CodeRabbit은 리뷰를 마쳤다
+(`tools/wait_ci.py`).
+
+- CodeRabbit Minor. `open_prs`의 `gh pr list`에 `--limit`가 없어 기본 한도 30(`gh pr list --help`의 `default 30`)에서 잘리고,
+  열린 PR이 있는 워크트리를 "PR 없음"으로 적는다. 판정: 맞다. 고친다. `PR_LIMIT`(1000) 상수를 두어 `merged_prs`와 같은 값을 주고,
+  두 호출이 넘기는 한도를 시험으로 고정했다(`subprocess.run`을 바꿔 끼운다. 선례는 `test_check_instructions.py`). 고치기 전 빨강은
+  `[None, '1000']`이었다. gh를 부르는 길에는 시험이 없다고 적던 시험 파일 독스트링도 함께 고쳤다.
+- claude-review Minor 넷(`collect()` 130줄, `_sweep_section` 150줄에 스윕과 티켓 분할이 함께 듦, 모듈 1867줄, `_obj` 등이 두 파일에
+  겹침). 판정: 넘긴다. 넷 모두 `morning_collect.py`의 구조를 나누는 일이라 한 묶음의 후속으로 둔다. 셀프 리뷰에서 `_sweep_section`과
+  겹친 함수를 남긴 판정(위 셀프 리뷰 절)도 그 후속에서 다시 본다. "다음"에 적었다.
+- claude-review Nit. `from tools import …`가 따로 선 import 묶음. 판정: 둔다. ruff의 `I` 규칙이 켜져 있고(`pyproject.toml`의
+  `select`) 이 묶음으로 통과한다.
+
+다시 돌린 검사: 보고 도구 시험 두 파일 86개 통과, 바뀐 파이썬 둘에 pyright 0, ruff check·format 0. 나머지는 커밋의 pre-commit으로
+갈음한다.
+
+## 회고
+
+후보 여섯. 승인 둘(회차 더함 하나, 새 행 하나), 기각 넷, 넘김 0.
+
+- 승인(회차로 세는 것). 인계 열기가 앱의 마지막 폴더인 다른 워크트리(`skill-listing-budget`)의 신뢰 대화상자에서 멈춰 인계하지
+  못했다(위 인계 절). 열린 대기열 378이 같은 원인(마지막 폴더가 다른 워크트리)을 처방한다. 378에 회차를 더해 3회차다.
+- 승인(새 행). `open_prs`가 `gh pr list`를 `--limit` 없이 불렀고 셀프 리뷰와 PR 직전 리뷰를 지나 PR 봇이 잡았다. 사건이 있고,
+  `tools/check_instructions.py`의 검사로 가장 높은 층에 둘 수 있으며, PR 하나로 되돌린다. 더하는 것이라 대기열 380(1회차)에 둔다.
+  `tools/`의 다른 `gh … list` 호출(`merged_prs`, `gh run list`, `tidy_checkouts`의 `gh pr list`)은 모두 `--limit`를 준다.
+- 기각. 셀프 리뷰 반영 때 일지에 적은 렌더 독스트링의 근거 행(옛 보고 169~172행)이 주장을 받치지 못해 PR 직전 리뷰가 잡았다.
+  독스트링 문장의 사실은 맞았고(옛 보고 7·109행) 어긋난 것은 근거로 든 행 번호였으며, 대기열 260이 둔 다음 층(밀 주장)이
+  계획대로 잡았다.
+- 기각. `.claude/rules/tools.md`의 `morning_collect` 갈래 서술(`gh pr view` 실패도 `(수집 안 됨)`)이 틀렸고 PR 직전 리뷰가 밀 주장
+  10으로 잡았다. 리뷰 브리프의 주장 검증 10(코드의 동작)이 둔 층이 제 몫을 했다.
+- 기각. 일지의 따옴표 인용 넷이 원문과 글자가 달랐다. 이미 있는 검사(`check_quotes`, 대기열 42)가 커밋에서 알렸다.
+- 기각. 바뀐 파이썬 셋이 작업 트리에서 CRLF였다. `core.autocrlf`가 커밋에서 LF로 바꿔 저장소에 남지 않았고, 어느 단계에서
+  바뀌었는지 사건을 특정하지 못했다.
+
+만료할 행은 없었다(`tools/queue_open_rows.py`를 로컬과 `--ref origin/main`으로 돌렸다).
+
+## 다음
+
+- 주 체크아웃(`C:\project\agent`)은 main의 0a6e0b0d라 이 PR의 도구가 없다. 예약 작업 `daily-morning-report`는 주 체크아웃의
+  `tools/`를 부르므로, 주 체크아웃 세션에서 `/tidy-checkouts`로 당기기 전의 아침 실행은 지시문 0단계대로 멈추고 그렇게 알린다.
+- 병합 뒤 이 세션이 예약 작업 지시문을 `SKILL.new.md`로 바꾸고 옛 스크립트 셋을 `old/`로 옮긴다(저장소 밖). 첫 실행(10-21 09:10)의
+  수집 시간과 렌더 경고 수, 상단 세 절을 다음 세션이 본다.
+- `tools/morning_collect.py` 나누기(PR #322 claude-review Minor 넷): `collect()`에서 동시성 버킷과 부하 절을 떼고, `_sweep_section`을
+  스윕과 티켓 분할로 나누며, JSON 풀이 함수(`_obj` 등)를 한 곳에 두고, 바깥 명령 층과 절 조립을 가른다.
+- 보고에 "(수집 안 됨)"으로 적는 넷을 모을 길: 제안의 진행 중·보류(제안 `id`와 PR을 잇는 기록), 낭비 후보의 예상 절감액(그 파일의
+  토큰 수 × 실려 간 호출 수 × 캐시 읽기 단가), 알림 뒤 고친 비율(훅 알림과 그 뒤 같은 파일 편집의 짝), 세션의 실제 상태(앱의
+  `list_sessions`).
+- 대기열 378이 3회차라 chore 계기다.
