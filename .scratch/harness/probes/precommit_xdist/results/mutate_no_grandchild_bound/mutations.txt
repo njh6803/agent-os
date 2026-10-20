@@ -1,0 +1,6 @@
+기준선 pytest tests/tools/test_mutate.py -k 시간_제한을_실제로_넘긴: 초록 — 1 passed, 181 deselected in 2.95s
+== 1. 시간 제한을 넘긴 자식을 끝내지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 181 deselected in 61.59s (0:01:01)
+   tests/tools/test_mutate.py::test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다
+== 2. 시간 제한을 첫 기다림에 넘기지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 181 deselected in 97.80s (0:01:37)
+   tests/tools/test_mutate.py::test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다
+변이 2 모두 기대대로

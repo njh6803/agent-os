@@ -1,4 +1,5 @@
-"""tools/hook_midturn_korean.py 의 순수 함수와, 자식으로 띄운 훅의 실제 출력.
+"""tools/hook_midturn_korean.py 의 순수 함수와, 자식으로 띄운 훅의 실제 출력. 기다리지 않는 길
+하나는 이 프로세스에서 main 을 불러 기다림이 불리는지 본다.
 
 트랜스크립트의 모양은 `.scratch/harness/probes/pretool_text/` 탐침이 본 것이다(claude 2.1.286).
 기록은 내용 블록 하나에 한 줄이고, 파일에는 메시지가 끝나거나 도구 결과를 쓸 때 그때까지의 블록이
@@ -7,13 +8,16 @@
 
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from tools.hook_midturn_korean import (
     MIN_HANGUL_RATIO,
     MIN_LETTERS,
@@ -30,6 +34,8 @@ from tools.hook_stop_korean import MIN_LETTERS as STOP_MIN_LETTERS
 from tools.hook_stop_korean import letter_counts as stop_letter_counts
 from tools.hook_stop_korean import prose_of as stop_prose_of
 from tools.run_hooks import hook_environment
+
+from tools import hook_midturn_korean
 
 HOOK = Path(__file__).parents[2] / "tools" / "hook_midturn_korean.py"
 
@@ -339,13 +345,29 @@ def test_트랜스크립트_경로가_없으면_조용히_지나간다() -> None
     assert _run_hook({"hook_event_name": "PreToolUse", "tool_use_id": "t1"}) == ""
 
 
-def test_트랜스크립트_파일이_없으면_기다리지_않는다(tmp_path: Path) -> None:
+def test_트랜스크립트_파일이_없으면_기다리지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """파일이 없는 경로(이 세션은 워크트리로 옮기자 옛 폴더의 파일이 사라졌다)에서 호출마다 상한만큼
     늦추지 않는다. 파일은 있는데 더 쓰이지 않는 사본의 경로는 이 가드가 막지 못한다(독스트링의 못
-    보는 것)."""
-    start = time.monotonic()
+    보는 것).
 
-    output = _run_hook(_payload(tmp_path / "없음.jsonl", "t1"))
+    걸린 시간이 아니라 기다림(`time.sleep`)이 불리는지 본다. 자식으로 띄운 훅이 상한(2초) 안에
+    끝나는지 재던 판은 전체 스위트의 부하에서, 훅이 한 번도 쉬지 않았는데도 자식을 띄우고 모듈을
+    읽는 데만 2초를 넘겨 빨갰다(ADR 0035 의 2026-10-19 트랜스크립트 파일 이력). 상한을 넓히면
+    상한만큼 기다리는 회귀도 지나가 그 길은 쓰지 않는다. `time.sleep` 없이 도는 기다림은 이 시험이
+    보지 못한다."""
 
-    assert output == ""
-    assert time.monotonic() - start < WAIT_SECONDS
+    def 기다린다(seconds: float) -> None:
+        raise AssertionError(f"파일이 없는데 {seconds}초 쉬며 기록을 기다렸다")
+
+    monkeypatch.setattr(
+        hook_midturn_korean, "time", SimpleNamespace(monotonic=time.monotonic, sleep=기다린다)
+    )
+    # 이 세션이 SDK 로 떴으면 main 이 가드 앞에서 돌아가 시험이 헛돈다
+    monkeypatch.delenv("CLAUDE_CODE_ENTRYPOINT", raising=False)
+    payload = json.dumps(_payload(tmp_path / "없음.jsonl", "t1")).encode("utf-8")
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(payload), encoding="utf-8"))
+
+    assert hook_midturn_korean.main() == 0
+    assert capsys.readouterr().out == ""

@@ -1,0 +1,36 @@
+# tests/tools/test_mutate.py 의 `test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다` 가 무엇을 잡는지
+# 변이로 본다(둘). 대기열 306 에서 자식의 수명을 20초에서 60초로, 걸린 시간의 상한을 8초에서 30초로 넓힌
+# 뒤의 판이다(ADR 0035 의 2026-10-19 이력 "손자 없는 시간 제한 시험의 상한을 30초로 넓힌다").
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_runner_timeout_bound_mutations.toml
+# 도구가 자기 자신을 고친다(돌고 있는 프로세스는 이미 읽은 원본으로 돈다). 표지는 고른 단언이 실패할 때
+# pytest 가 그 단언을 풀어 쓴 `E` 줄의 문구다. 첫째는 걸린 시간 단언의 `time.monotonic` 풀이, 둘째는
+# `timed_out_after` 단언의 값이다. 시험 코드 조각에는 둘 다 값 없이 보인다.
+
+[[mutation]]
+name = "시간 제한을 넘긴 자식을 끝내지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "시간_제한을_실제로_넘긴"]
+expect = "red"
+expect_output = ["= <built-in function monotonic>()"]
+timeout = 300
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''
+    except subprocess.TimeoutExpired:
+        _kill_tree(process)
+        output = _drain(process)
+'''
+new = '''
+    except subprocess.TimeoutExpired:
+        output = _drain(process)
+'''
+
+[[mutation]]
+name = "시간 제한을 첫 기다림에 넘기지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "시간_제한을_실제로_넘긴"]
+expect = "red"
+expect_output = ["assert None == 1"]
+timeout = 300
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        stdout, stderr = process.communicate(timeout=timeout)'''
+new = '''        stdout, stderr = process.communicate()'''

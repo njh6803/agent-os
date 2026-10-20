@@ -1,0 +1,422 @@
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+................E....................................................... [  7%]
+........................................................................ [  9%]
+.....F.................................................................. [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+..................F..................................................... [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+...................F.................................................... [ 75%]
+.......................................................................F [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+...................                                                      [100%]
+=================================== ERRORS ====================================
+____________ ERROR at setup of test_운영자_파일이_깨졌으면_진단이_그_파일의_경로를_적는다 ____________
+[gw4] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+self = <Popen: returncode: None args: 'ver'>, _maxsize = 9223372036854775807
+_warn = <built-in function warn>
+
+    def __del__(self, _maxsize=sys.maxsize, _warn=warnings.warn):
+        if not self._child_created:
+            # We didn't get to successfully create a child process.
+            return
+        if self.returncode is None:
+            # Not reading subprocess exit status creates a zombie process which
+            # is only destroyed at the parent python process exit
+            _warn("subprocess %s is still running" % self.pid,
+                  ResourceWarning, source=self)
+        # In case the child hasn't been waited on, check if it's done.
+>       self._internal_poll(_deadstate=_maxsize)
+
+C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Popen: returncode: None args: 'ver'>, _deadstate = 9223372036854775807
+_WaitForSingleObject = <built-in function WaitForSingleObject>
+_WAIT_OBJECT_0 = 0, _GetExitCodeProcess = <built-in function GetExitCodeProcess>
+
+    def _internal_poll(self, _deadstate=None,
+            _WaitForSingleObject=_winapi.WaitForSingleObject,
+            _WAIT_OBJECT_0=_winapi.WAIT_OBJECT_0,
+            _GetExitCodeProcess=_winapi.GetExitCodeProcess):
+        """Check if child process has terminated.  Returns returncode
+        attribute.
+    
+        This method is called by __del__, so it can only refer to objects
+        in its local scope.
+    
+        """
+        if self.returncode is None:
+>           if _WaitForSingleObject(self._handle, 0) == _WAIT_OBJECT_0:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           OSError: [WinError 6] 핸들이 잘못되었습니다
+
+C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:1575: OSError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000001F3F400BEC0>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\logging.py:858: in pytest_runtest_setup
+    yield
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:178: in pytest_runtest_setup
+    collect_unraisable(item.config)
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:79: in collect_unraisable
+    raise errors[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+config = <_pytest.config.Config object at 0x000001F3EDB4F5C0>
+
+    def collect_unraisable(config: Config) -> None:
+        pop_unraisable = config.stash[unraisable_exceptions].pop
+        errors: list[pytest.PytestUnraisableExceptionWarning | RuntimeError] = []
+        meta = None
+        hook_error = None
+        try:
+            while True:
+                try:
+                    meta = pop_unraisable()
+                except IndexError:
+                    break
+    
+                if isinstance(meta, BaseException):
+                    hook_error = RuntimeError("Failed to process unraisable exception")
+                    hook_error.__cause__ = meta
+                    errors.append(hook_error)
+                    continue
+    
+                msg = meta.msg
+                try:
+>                   warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+E                   pytest.PytestUnraisableExceptionWarning: Exception ignored in: <function Popen.__del__ at 0x000001F3EDD3B6A0>
+E                   Enable tracemalloc to get traceback where the object was allocated.
+E                   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:67: PytestUnraisableExceptionWarning
+================================== FAILURES ===================================
+________________ test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다 _________________
+[gw0] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10227/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0/disabled.toml')
+text = 'schema_version = "1"\nagent = ["calc"]\nmcp = []\nskill = []\nmodel = []\n'
+
+    def _replace_operator_file(path: Path, text: str) -> None:
+        """같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 통째로 교체한다. 반쪽 파일이 보이지 않는다.
+    
+        성공이든 실패든 임시 파일을 남기지 않는다. 교체가 `PermissionError` 면 다시 시도하고, 그래도
+        실패하면 옛 파일이 그대로인 채 PluginError 다. 실패의 형태를 하나로 만드는 자리가 여기이고
+        정상 흐름은 `_swap_in` 에 있다.
+        """
+        try:
+>           _swap_in(path, text)
+
+src\agent_os\adapters\filesystem.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\agent_os\adapters\filesystem.py:251: in _swap_in
+    _retrying(lambda: os.replace(temp, path))
+src\agent_os\adapters\filesystem.py:205: in _retrying
+    return attempt()
+           ^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   _retrying(lambda: os.replace(temp, path))
+                      ^^^^^^^^^^^^^^^^^^^^^^
+E   PermissionError: [WinError 5] 액세스가 거부되었습니다: 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10227\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\.disabled.toml.rvbmvire.tmp' -> 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10227\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\disabled.toml'
+
+src\agent_os\adapters\filesystem.py:251: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+root = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10227/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0')
+
+    def test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다(root: Path) -> None:
+        """손편집기나 다른 `serve` 가 잠깐 연 것이다."""
+        _write_agent(root, "calc")
+        path = _operator_file(root, CANONICAL_EMPTY)
+        holder = subprocess.Popen(
+            [sys.executable, "-c", HOLDER, str(path), str(HOLD_SECONDS)],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        assert holder.stdout is not None
+        assert holder.stdout.readline().strip() == "opened"
+>       outcome = _plugins(root).write_enabled(PluginKind.AGENT, PluginName("calc"), enabled=False)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\adapters\test_filesystem.py:908: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\agent_os\adapters\filesystem.py:120: in write_enabled
+    _replace_operator_file(self._root / _DISABLED, _render_operator_file(wanted))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10227/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0/disabled.toml')
+text = 'schema_version = "1"\nagent = ["calc"]\nmcp = []\nskill = []\nmodel = []\n'
+
+    def _replace_operator_file(path: Path, text: str) -> None:
+        """같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 통째로 교체한다. 반쪽 파일이 보이지 않는다.
+    
+        성공이든 실패든 임시 파일을 남기지 않는다. 교체가 `PermissionError` 면 다시 시도하고, 그래도
+        실패하면 옛 파일이 그대로인 채 PluginError 다. 실패의 형태를 하나로 만드는 자리가 여기이고
+        정상 흐름은 `_swap_in` 에 있다.
+        """
+        try:
+            _swap_in(path, text)
+        except OSError as error:
+>           raise PluginError(f"운영자 파일을 쓸 수 없다: {path}\n{error}") from error
+E           agent_os.core.ports.PluginError: 운영자 파일을 쓸 수 없다: C:\Users\User\AppData\Local\Temp\pytest-of-User\pytest-10227\popen-gw0\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\disabled.toml
+E           [WinError 5] 액세스가 거부되었습니다: 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10227\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\.disabled.toml.rvbmvire.tmp' -> 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10227\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\disabled.toml'
+
+src\agent_os\adapters\filesystem.py:242: PluginError
+__________________________ test_한_줄에_겹친_목록_표식이_선형이다 ___________________________
+[gw7] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+    def test_한_줄에_겹친_목록_표식이_선형이다() -> None:
+        """수평선 판정이 끊긴 자리를 기억한다(cmark 의 thematic_break_kill_pos)."""
+>       assert _seconds("- " * 8000 + "a\n") < LIMIT_SECONDS
+E       AssertionError: assert 1.2049205000002985 < 1.0
+E        +  where 1.2049205000002985 = _seconds((('- ' * 8000) + 'a\n'))
+
+tests\tools\test_check_md_tables.py:249: AssertionError
+____________ test_재개가_다시_멈추면_새_안내_줄의_자리가_새_일시정지의_것이고_그대로_치면_끝까지_간다 ____________
+[gw4] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+self = Handle(940), CloseHandle = <built-in function CloseHandle>
+
+    def Close(self, CloseHandle=_winapi.CloseHandle):
+        if not self.closed:
+            self.closed = True
+>           CloseHandle(self)
+E           OSError: [WinError 6] 핸들이 잘못되었습니다
+
+C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\subprocess.py:221: OSError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x000001F3F59D6160>
+when = 'call'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\logging.py:865: in pytest_runtest_call
+    yield
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\capture.py:900: in pytest_runtest_call
+    return (yield)
+            ^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\skipping.py:268: in pytest_runtest_call
+    return (yield)
+            ^^^^^
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:183: in pytest_runtest_call
+    collect_unraisable(item.config)
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:79: in collect_unraisable
+    raise errors[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+config = <_pytest.config.Config object at 0x000001F3EDB4F5C0>
+
+    def collect_unraisable(config: Config) -> None:
+        pop_unraisable = config.stash[unraisable_exceptions].pop
+        errors: list[pytest.PytestUnraisableExceptionWarning | RuntimeError] = []
+        meta = None
+        hook_error = None
+        try:
+            while True:
+                try:
+                    meta = pop_unraisable()
+                except IndexError:
+                    break
+    
+                if isinstance(meta, BaseException):
+                    hook_error = RuntimeError("Failed to process unraisable exception")
+                    hook_error.__cause__ = meta
+                    errors.append(hook_error)
+                    continue
+    
+                msg = meta.msg
+                try:
+>                   warnings.warn(pytest.PytestUnraisableExceptionWarning(msg))
+E                   pytest.PytestUnraisableExceptionWarning: Exception ignored in: <function Handle.Close at 0x000001F3EDD3A5C0>
+E                   Enable tracemalloc to get traceback where the object was allocated.
+E                   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\unraisableexception.py:67: PytestUnraisableExceptionWarning
+---------------------------- Captured stderr call -----------------------------
+[10/20/26 06:39:13] INFO     Processing request of type           server.py:733
+                             ListToolsRequest                                  
+[10/20/26 06:39:44] INFO     Processing request of type           server.py:733
+                             ListToolsRequest                                  
+                    INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+[10/20/26 06:40:21] INFO     Processing request of type           server.py:733
+                             ListToolsRequest                                  
+                    INFO     Processing request of type           server.py:733
+                             CallToolRequest                                   
+____________________ test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_멈춰_빨강이다 ____________________
+[gw2] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10227/popen-gw2/test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_0')
+
+    def test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_멈춰_빨강이다(tmp_path: Path) -> None:
+        """끝까지 돌았다면 test_b 가 60초를 자 시간 제한(40초)을 넘긴 오류였을 변이다. 실제 pytest 로
+        본다. 멈춘 것은 test_b 가 자기 전에 남기는 파일이 없는 것으로 본다. 첫 판은 걸린 시간이
+        20초 미만인지 봤는데, 그 안에 기준선과 변이로 pytest 를 두 번 띄우는 시간까지 들어 pytest 두
+        벌을 동시에 돌린 부하 아래에서 20.3초와 21.6초로 빨갰다(ADR 0035의 부딪힘. 한 프로세스로는
+        4.56초, xdist 8개 홀로는 10.60초였다. 원인이 부하의 지연이라는 것은 어림이다). 시간 제한은
+        기동이 늘어도 남게 40초로 두되, test_b 의 60초 잠보다 짧아야 `-x` 가 빠진 변이가 시간 제한에
+        걸려 빨개진다."""
+        _파일을_둔다(tmp_path, "v.txt", b"1")
+        _파일을_둔다(tmp_path, "test_two.py", _뒤가_다른_시험)
+        변이 = (
+            _변이_파일(old="1", new="2", file="v.txt")
+            .replace("tests/test_x.py", "test_two.py")
+            .replace('expect = "red"', 'expect = "red"\ntimeout = 40')
+        )
+    
+        code = measure(load_spec(변이), root=tmp_path, runner=run_command, out=lambda _: None)
+    
+>       assert code == 0
+E       assert 1 == 0
+
+tests\tools\test_mutate.py:223: AssertionError
+============================== warnings summary ===============================
+tests/test_conftest.py::test_skip_이_하나라도_있으면_세션이_실패한다
+tests/test_conftest.py::test_skip_이_없으면_그대로_통과한다
+tests/test_conftest.py::test_deselect_는_skip_이_아니다
+tests/test_conftest.py::test_llm_테스트가_tmp_path_에_남긴_트레이스의_토큰_합계를_끝에_찍는다
+tests/test_conftest.py::test_llm_테스트가_돌지_않으면_토큰_합계를_찍지_않는다
+  C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pytest_asyncio\plugin.py:299: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+  The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+  
+    warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다
+FAILED tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다
+FAILED tests/test_main.py::test_재개가_다시_멈추면_새_안내_줄의_자리가_새_일시정지의_것이고_그대로_치면_끝까지_간다
+FAILED tests/tools/test_mutate.py::test_못_보는_것_뒤의_시험이_걸려도_첫_실패에서_멈춰_빨강이다
+4 failed, 3614 passed, 5 warnings, 1 error in 4606.50s (1:16:46)

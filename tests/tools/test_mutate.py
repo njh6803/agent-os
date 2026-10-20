@@ -525,13 +525,17 @@ def test_실제_러너는_시간_제한을_넘기면_손자_프로세스까지_�
 
 def test_실제_러너는_시간_제한을_실제로_넘긴_명령을_끊는다(tmp_path: Path) -> None:
     """다른 실제 러너 시험은 첫 기다림에 시간 제한을 넣어, 시간 제한을 기다림에 넘기는 배관은 이
-    시험만 잰다. 자식이 20초를 자므로 기동이 늦어도 1초 제한은 늘 먼저 온다."""
+    시험만 잰다. 자식이 60초를 자므로 기동이 늦어도 1초 제한은 늘 먼저 오고, 러너가 자식이 끝나기를
+    기다리는 회귀는 걸린 시간의 상한에서 빨갛다."""
     시작 = time.monotonic()
 
-    결과 = run_command([sys.executable, "-c", "import time; time.sleep(20)"], tmp_path, 1)
+    결과 = run_command([sys.executable, "-c", "import time; time.sleep(60)"], tmp_path, 1)
 
     assert 결과.timed_out_after == 1
-    assert time.monotonic() - 시작 < 8
+    # 자식을 띄우는 시간과 제한 1초, `taskkill` 이 든다. 8초로 두던 판이 CPU 를 태우는 프로세스 32개
+    # 옆에서 60회차 가운데 7번 빨갰고(가장 긴 것 23.3초) 늘어난 몫은 모두 `taskkill` 이었다(ADR
+    # 0035 의 2026-10-19 이력 "손자 없는 시간 제한 시험의 상한을 30초로 넓힌다")
+    assert time.monotonic() - 시작 < 30
 
 
 def test_실제_러너는_프로세스_트리를_끝내지_못해도_자식은_끝낸다(

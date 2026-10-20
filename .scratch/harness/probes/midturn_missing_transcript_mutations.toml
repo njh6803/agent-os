@@ -1,0 +1,39 @@
+# tests/tools/test_hook_midturn_korean.py 의 `test_트랜스크립트_파일이_없으면_기다리지_않는다` 가 무엇을 잡는지
+# 변이로 본다(둘). 대기열 306 에서 자식으로 띄운 훅의 2초 상한을, 이 프로세스에서 main 을 부르고 기다림
+# (`time.sleep`)이 불리면 빨개지는 판으로 바꾼 뒤의 판이다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/midturn_missing_transcript_mutations.toml
+# 표지는 시험의 대역이 던지는 메시지에 쉰 초가 든 것이다. 시험 코드 조각에는 그 자리가 `{seconds}` 로만
+# 보여, 값이 든 문구는 대역이 실제로 불린 실패의 `E` 줄에서만 나온다.
+
+[[mutation]]
+name = "파일이 없어도 기록을 기다린다"
+tests = ["tests/tools/test_hook_midturn_korean.py", "-k", "파일이_없으면_기다리지"]
+expect = "red"
+expect_output = ["파일이 없는데 0.05초 쉬며"]
+timeout = 120
+[[mutation.edit]]
+file = "tools/hook_midturn_korean.py"
+old = '''
+    if not transcript.is_file():
+        return 0
+    deadline'''
+new = '''
+    deadline'''
+
+[[mutation]]
+name = "파일이 없으면 상한만큼 쉬고 지나간다"
+tests = ["tests/tools/test_hook_midturn_korean.py", "-k", "파일이_없으면_기다리지"]
+expect = "red"
+expect_output = ["파일이 없는데 2.0초 쉬며"]
+timeout = 120
+[[mutation.edit]]
+file = "tools/hook_midturn_korean.py"
+old = '''
+    if not transcript.is_file():
+        return 0
+'''
+new = '''
+    if not transcript.is_file():
+        time.sleep(WAIT_SECONDS)
+        return 0
+'''
