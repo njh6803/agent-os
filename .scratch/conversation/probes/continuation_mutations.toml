@@ -115,7 +115,7 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    gathered = (
+    continued = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
     if visible_agents is not None and agent not in visible_agents:
@@ -128,7 +128,7 @@ new = '''
         raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
-    gathered = (
+    continued = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
 '''

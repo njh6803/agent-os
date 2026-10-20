@@ -15,7 +15,10 @@ run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
 짐작하는 기본값이 없다. 이어 간 실행은 새 실행 식별자와 새 트레이스 파일을 갖고 run_started 에 앞
-실행을 적는다. 에이전트는 고리에서 자기가 처리한 교환과 자기 대화 요약만 컨텍스트 멤버로 받는다.
+실행과 바로가기를 적는다. 바로가기는 이 자리 하나가 지어(새 대화는 빈 지도, 이어 가기는 앞 실행의
+지도에 앞 실행 자신을 덮어 쓴 것, 옛 대화는 없음) 운영자 채널, CLI, 최종 사용자 경로가 같은 지도를
+쓴다. 에이전트는 고리에서 자기가 처리한 교환과 자기 대화 요약만 컨텍스트 멤버로 받고, 거슬러 읽기는
+지도를 따라 그 에이전트의 실행만 읽는다(`continuation.py`).
 
 resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 때문이다. 재개는 에이전트 이름,
 요청, 주체를 받지 않고 트레이스의 run_started 에서 읽는다. 하나로 합치면 "재개일 때는 이 인자
@@ -507,13 +510,14 @@ async def run(
     `DEFAULT_RUN_TIMEOUT_SECONDS` 다. 운영자 채널과 최종 사용자 경로는 `serve` 가 받은 값을, CLI 는
     없음을 넘긴다. 범위와 실패 정책은 모듈 독스트링이다.
     """
-    gathered = (
+    continued = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
     if visible_agents is not None and agent not in visible_agents:
         raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
+    gathered = None if continued is None else continued.gathered
     fold = None if gathered is None else plan_fold(gathered, limit_of(manifest))
     run_id = clock.new_run_id()
     started = RunStarted(
@@ -523,6 +527,7 @@ async def run(
         request=request,
         principal=principal,
         previous_run=previous_run,
+        shortcuts={} if continued is None else continued.shortcuts,
     )
     trace.write(started)
     yield started

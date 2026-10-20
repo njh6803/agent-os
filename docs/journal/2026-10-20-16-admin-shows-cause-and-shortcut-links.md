@@ -1,4 +1,4 @@
-# 2026-10-20 (11) 관리 화면이 실패 원인을 글자로, 바로가기를 링크로 그린다
+# 2026-10-20 (16) 관리 화면이 실패 원인을 글자로, 바로가기를 링크로 그린다
 
 일지 2026-10-16-60의 "다음"이 낸 지시문(나란히 여는 4 중 4)으로 연 새 세션이다. 제목을 브랜치 이름
 `feature/06-admin-shows-cause-and-shortcut-links`로 바꿨다. 묶음의 첫 세션이 아니라 `tidy-checkouts`는 돌지 않았다. 주
@@ -70,7 +70,7 @@
 브랜치: feature/06-admin-shows-cause-and-shortcut-links
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
 읽을 것: 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 이 세션이 띄운 run_checks는 인계로 멈춰 pytest·web-verify 결과가 없으니 리뷰를 반영한 뒤 다시 돌린다. admin_mutations.toml의 전체 실행은 리뷰를 반영해 커밋한 뒤 한 번 돌고 그때 잰 시간을 프로브 README 줄에 적는다. 일지: docs/journal/2026-10-20-11-admin-shows-cause-and-shortcut-links.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 이 세션이 띄운 run_checks는 인계로 멈춰 pytest·web-verify 결과가 없으니 리뷰를 반영한 뒤 다시 돌린다. admin_mutations.toml의 전체 실행은 리뷰를 반영해 커밋한 뒤 한 번 돌고 그때 잰 시간을 프로브 README 줄에 적는다. 일지: docs/journal/2026-10-20-16-admin-shows-cause-and-shortcut-links.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -174,7 +174,7 @@ pre-commit을 지났다. ruff 둘은 스테이지된 `.py`가 없어 Skipped였�
 브랜치: feature/06-admin-shows-cause-and-shortcut-links
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
 읽을 것: 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 4184f54e까지 했고 푸시하지 않았으며 PR이 없다. 남은 단계는 PR 직전 리뷰(origin/main을 합친 뒤 /security-review, 그리고 이 일지의 "PR 직전 bug-perf-review에 밀 주장" 목록을 넘긴 bug-perf-review를 나란히)와 반영, admin_mutations.toml의 전체 실행과 그 날짜·걸린 시간을 프로브 README 줄에 적기, 티켓 Status를 done으로 바꾸고 남은 체크박스 둘(검증 명령, 병합 직전의 기능 닫기 판정) 처리, 일지 번호와 probes/README.md의 충돌 확인, PR과 봇 회차, 병합이다. 일지: docs/journal/2026-10-20-11-admin-shows-cause-and-shortcut-links.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 4184f54e까지 했고 푸시하지 않았으며 PR이 없다. 남은 단계는 PR 직전 리뷰(origin/main을 합친 뒤 /security-review, 그리고 이 일지의 "PR 직전 bug-perf-review에 밀 주장" 목록을 넘긴 bug-perf-review를 나란히)와 반영, admin_mutations.toml의 전체 실행과 그 날짜·걸린 시간을 프로브 README 줄에 적기, 티켓 Status를 done으로 바꾸고 남은 체크박스 둘(검증 명령, 병합 직전의 기능 닫기 판정) 처리, 일지 번호와 probes/README.md의 충돌 확인, PR과 봇 회차, 병합이다. 일지: docs/journal/2026-10-20-16-admin-shows-cause-and-shortcut-links.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -212,3 +212,109 @@ failed). 5분 40초 걸렸다. 프로브 README 줄의 시간과 결과 칸을 �
 `run_checks` 여덟과 그 뒤 커밋들의 pre-commit이다. 기능 닫기는 `git fetch` 뒤 `origin/main`의 02·04·05가
 `ready-for-agent`라 이 PR이 닫지 않는다. `sibling_overlap.py`는 번호 겹침이 없었다. 형제 02·03·05가 일지
 2026-10-20-12~14와 같은 프로브 README를 쓰므로 나중에 병합하는 쪽이 그 글자 충돌을 푼다.
+
+**커밋.** `2548d070`(docs: 티켓 06을 닫고 변이 표 전체 실행과 PR 직전 리뷰를 적는다)이 pre-commit의 `run_checks` 여덟(pytest
+684.7초, web-verify 674.5초)을 지났다. 600초를 넘겨 백그라운드로 넘어갔고 다시 치지 않고 끝 알림을 기다렸다. ruff 둘은
+스테이지된 `.py`가 없어 Skipped라 손으로 쳐 0이었다. 커밋 직후 `커밋 뒤` 경계의 인계 계기(206,898 토큰)가 왔으나, 이
+세션 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다.
+
+## PR과 인계 (PR 연 뒤)
+
+PR을 열기 직전 `origin/main`이 `9e92ec72`(#316, 일지 하나)로 또 움직여 한 번 더 합쳤다. 겹치는 파일은 없었다.
+`coderabbit auth status`는 `Seat: not assigned`였다. 브랜치를 푸시하고 PR
+[njh6803/agent-os#319](https://github.com/njh6803/agent-os/pull/319)를 열었다. 앱의 PR 막대가 이 세션에 묶었다(`get_status`
+의 `bound: true`). 첫 `@coderabbitai review`는 남기지 않았다(새 세션이 남긴다).
+
+PR을 연 직후 세션 컨텍스트가 255,210 토큰으로 `PR 연 뒤` 경계의 인계 계기가 왔다. 인계하지 않는 때 다섯에 들지 않는다.
+PR이 열렸고, 받은 범위는 병합까지이며, 이 세션 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르고, 이 세션이 쓴
+`인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 열린 PR이 있어 다음 단계는 `PR 반영·병합`이고,
+`tools/model_sweep.py`가 이 브랜치에 `Opus 5.5 / xhigh`를 냈다. 이 세션의 지금 제목은
+`feature/06-admin-shows-cause-and-shortcut-links`이다.
+
+다음 작업: .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md. 관리 화면의 실행 상세가 실패 원인을 글자로, 바로가기를 그 실행으로 가는 링크로 그린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계로 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md
+브랜치: feature/06-admin-shows-cause-and-shortcut-links
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
+이어받을 상태: 인계: PR 연 뒤. PR njh6803/agent-os#319를 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 이 일지의 "커밋" 줄부터 이 절까지는 커밋하지 않은 채 워크트리에 있다. 병합 전에 남은 것은 봇 회차와 반영, 일지 끝의 회고(retro)와 "다음" 절을 써서 커밋·푸시하기, 병합 직전 기능 닫기 재판정(origin/main의 형제 잎 Status를 다시 보고 티켓 06 마지막 체크박스의 괄호를 맞춘다), "워크트리에서 병합할 때"의 길이다. 일지: docs/journal/2026-10-20-16-admin-shows-cause-and-shortcut-links.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `feature/06-admin-shows-cause-and-shortcut-links (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 있었다. 워크트리
+잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-20T04:02:53Z
+
+`open_session.ps1 -Action send`는 `sent=13:05:48`(모델과 노력은 원래 값과 같았다)까지 갔고 `split=`도 났으나, `focus`가
+90초 안에 이 브랜치 이름의 행을 찾지 못했다. `list_sessions`에서 `fired=` 뒤에 처음 활동한 세션은 앱이 지은 제목 "관리 화면
+실패 원인 및 바로가기 링크"(`local_80837ff1`)였고 `cwd`가 루트가 아니라 `.claude/worktrees/skill-listing-trim`이었다. 그 폴더에서
+일한 다른 세션("측정 끝")이 앱의 마지막 폴더를 바꿔 둔 것으로 본다. 그 세션의 기록은 `done (success), 0 turns`라 첫 턴 훅이
+연 저장소 표지와 작업 폴더가 달라 프롬프트를 막은 것으로 읽었다. 같은 파일로 다시 쏘면 세션이 둘 생겨 다시 열지 않았다.
+제목을 바꾸기 전 제목으로 되돌렸다. 워크트리 잠금은 되돌리지 않는다.
+
+인계 못함 PR 연 뒤
+
+## PR 반영 (인계 못한 뒤 이 세션)
+
+`@coderabbitai review`를 남기고 `tools/wait_ci.py 319`를 띄웠다. 대기는 충돌로 끝났다. `origin/main`이 `e70d6722`(#318, 형제
+03)로 움직여 세 번째로 합쳤다. 글자 충돌은 `.scratch/end-user-continuation/probes/README.md` 표 하나였고, 03의
+`shortcuts_mutations.toml` 줄 다음에 06의 `admin_mutations.toml` 줄을 두어 풀었다. 03이 `run()`의 앞 실행 읽기 결과를
+`gathered`에서 `continued`로 바꿔 conversation 표 6번("준비를 고리보다 먼저 한다")의 원문이 다시 0번이 되었다. 합친 판에서
+그 이름으로 옮기고 6번만 돌려 기대대로 빨갰다(1 failed). conversation 프로브 README의 06 문단에도 적었다.
+`sibling_overlap.py`가 main에 들어온 03의 일지 12가 이 일지(11)보다 이름순으로 뒤라고 알려 `--move`로 16으로 옮겼다. PR
+본문의 일지 경로와 6번 문장은 푸시 전에 손으로 고친다.
+
+**봇 첫 회차.** claude-review는 지적 없음이었다. CodeRabbit은 Minor 하나였다. conversation 표 변이 8("표에서 새 하위 타입
+둘을 빼면 500 이 된다")이 `NotContinuable` 매핑 제거와 `DifferentPrincipal` 갈래 제거를 한 변이에 묶어, 어느 쪽 가드가
+빨개졌는지 알 수 없다는 지적이다. 고치지 않고 스레드에 이유를 남겼다(PR #319 `discussion_r4321447488`). 그 변이는 처음 쓸
+때 `case` 한 줄에 넷이 있던 원문에서 새 둘을 빼는 편집 하나였고, 이 PR은 갈래가 둘로 갈린 지금 코드로 원문을 옮겼을 뿐
+뜻을 바꾸지 않았다. 둘로 나누는 것은 conversation 프로브의 강화라 티켓 06 범위 밖이고, 형제 05가 같은 변이를 다른 모양으로
+고치고 있어 나누면 그쪽 병합의 충돌이 커진다.
+
+## 회고
+
+후보 아홉, 승인 둘, 기각 일곱, 넘김 없음. 만료할 행은 작업 트리와 `--ref origin/main` 두 출력 모두 없었다.
+
+승인:
+1. **인계 열기가 다른 워크트리 폴더에 열려 첫 턴에 멈췄다.** 사건: 이 일지의 "PR과 인계" 끝 문단의 인계 세션(`local_80837ff1`)과,
+   형제 03 세션이 병합 뒤 연 04 세션(`local_c8d00e58`, 앱 제목 "교환 수 읽기 상한과 스레드")이 모두 `cwd`
+   `.claude/worktrees/skill-listing-trim`에 열렸다. 03의 일지는 이것을 적지 않은 채 병합되어 여기서 센다. 같은 날 02·05의
+   인계 세션(`local_72e6c71b`, `local_e6512405`)도 같은 폴더였으나 그 세션들을 연 쪽이 살아 있어 그쪽 몫으로 둔다. 층: 쏘기
+   전에 새 세션 화면의 폴더 표시를 읽어 `-Folder`와 다르면 멈추는 스크립트 가드. 되돌림: PR 하나. 더하는 것이라 문턱 전이다.
+   대기열 378(2회차)에 두고 108과 서로 가리키게 했다.
+2. **인계가 돌던 `run_checks`를 멈춰 판정자 임시 트리가 junction과 함께 남았다.** 사건: 이 일지 앞 절의 `web/judge-O2Bymh/`.
+   층: `web/eslint.config.test.ts`가 시작할 때 앞 실행의 `web/judge-*`를 junction을 따라가지 않고 지운다. 되돌림: PR 하나.
+   만료한 65의 2회차이고 고침이지만, 관리 화면 티켓의 PR에 판정자 테스트를 섞지 않아 대기열 379(2회차)에 둔다.
+
+기각:
+3. pre-commit이 685초로 600초를 넘겼다. `CLAUDE.md` 검증 명령 절이 백그라운드 알림을 기다리라고 하고 그대로 했다.
+4. 앱 가드가 printf로 일지에 덧붙이는 명령을 거부했다. 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 다룬다.
+5. 형제 03의 병합으로 conversation 6번 원문이 썩었다. `tools/mutate.py --check`가 잡았다.
+6. 일지 번호가 main의 12보다 이름순으로 앞섰다. `sibling_overlap.py`가 잡았고 PR 본문은 푸시 전에 고쳐 실수가 나지 않았다.
+7. 셀프 리뷰가 잡은 사실 문장들. 리뷰가 제 몫을 했다.
+8. 변이가 도는 동안 티켓을 고쳐 `hook_edit_during_mutate.py`가 알렸다. 훅이 제 몫을 했다.
+9. 이 세션 행에 대한 `focus`가 30초 시간 초과였다. 배치는 덤이라 비용이 없었다.
+
+## 다음
+
+이 PR은 워크트리에서 병합하고 주 체크아웃을 당기지 않는다. 주 체크아웃 미갱신: 루트는 main.
+
+형제 02·05는 지시문을 내지 않는다. 두 브랜치는 각자 워크트리에 체크아웃되어 있고, 그 브랜치의 `(인계함)` 세션이 연 인계
+세션이 이 세션처럼 skill-listing-trim 폴더에 열려 첫 턴에 멈췄다(위 회고 1). 두 브랜치는 그 세션들이 잇고, 사람이 그
+두 `(인계함)` 세션을 본다. 04는 03 세션이 연 세션이 같은 까닭으로 멈춰 브랜치가 없어 아래 지시문으로 연다. 앱의 마지막
+폴더가 skill-listing-trim 워크트리인 동안 딥링크로 열면 또 그 폴더에 열린다(대기열 378).
+
+CodeRabbit이 짚은 conversation 변이 8을 둘로 나눌지는 그 표를 다음에 만지는 쪽이 정한다(PR #319 스레드).
+
+다음 작업: .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md. 교환 수와 상한과 스레드. 짧은 말이 수백 번 쌓여도 한 번에 읽는 실행이 묶이고, 이어 가기의 거슬러 읽기가 서버를 멈추지 않는다
+다음 단계: 구현
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/04-exchange-count-read-cap-and-thread.md
+브랜치: feature/04-exchange-count-read-cap-and-thread
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 나란히 도는 티켓 02·05(.scratch/end-user-continuation/issues/), docs/journal/2026-10-20-16-admin-shows-cause-and-shortcut-links.md의 "다음"
+이어받을 상태: 03 세션이 병합 뒤 연 04 세션(앱 제목 "교환 수 읽기 상한과 스레드")은 다른 워크트리 폴더에 열려 첫 턴에 멈췄고 브랜치를 따지 않았다. 그 세션은 쓰지 않는다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
