@@ -566,6 +566,11 @@ def timing(values: Sequence[float]) -> Timing | None:
     return Timing(len(kept), sum(kept), statistics.median(kept), p90, len(values) - len(kept))
 
 
+def over_cap(groups: Iterable[Sequence[float]]) -> int:
+    """`WAIT_CAP_S`를 넘은 호출의 수. 호출이 모두 넘어 `timing`이 None인 이름표도 센다."""
+    return sum(1 for values in groups for v in values if v > WAIT_CAP_S)
+
+
 def _shell_label(name: str, inp: dict[str, Json]) -> str:
     command = inp.get("command")
     return f"{name}: {label_of(command)}" if isinstance(command, str) else name
@@ -1252,9 +1257,7 @@ def _work_section(
             f" 중앙값 {statistics.median(wait) / 60:.1f}분"
         )
         got.value("human:wait_min", "사람 응답 대기 합계", sum(wait) / 60, "분")
-    over = sum(
-        t.over for v in [*scanned.shells.values(), *others.values()] if (t := timing(v)) is not None
-    )
+    over = over_cap([*scanned.shells.values(), *others.values()])
     lines.append(f"- 10분 30초를 넘어 기다림·중단으로 합계에서 뺀 호출 {over}회")
     source = f"{src.ledger}, {src.records}, `gh pr view`"
     section = Section(4, "비싼 작업과 오래 걸린 명령", tuple(tables), tuple(lines), source)
@@ -1317,13 +1320,19 @@ def _works_table(
 
 
 def _queue_section(day: date, root: Path) -> Part:
-    got = Collected()
     path = queue_open_rows.QUEUE.as_posix()
     source = f"`origin/main:{path}`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
     text = _run(["git", "show", f"origin/main:{path}"], root)
     if text is None:
         lines = (f"- 대기열 {UNCOLLECTED}(git show 실패)",)
-        return Part(Section(5, "회고 대기열", (), lines, source), got)
+        return Part(Section(5, "회고 대기열", (), lines, source), Collected())
+    return queue_part(day, text, source)
+
+
+def queue_part(day: date, text: str, source: str) -> Part:
+    """대기열 파일의 글(`text`)로 지은 상세 5. 3회차 이상 행은 표로 적어, 행이 늘어도 목록은 한
+    줄이다(상세 절은 목록 다섯 줄 이하)."""
+    got = Collected()
     rows, _ = queue_open_rows.read_rows(text)
     whats = queue_whats(text)
     ripe = [
@@ -1338,19 +1347,25 @@ def _queue_section(day: date, root: Path) -> Part:
     ]
     for r in [*ripe, *humans]:
         got.queue[r.number] = QueueRow(r.number, r.rounds, r.human, whats.get(r.number, ""))
-    lines = [
+    lines = (
         f"- 열린 행 {len(rows)}개 · 기한 지난 행 {len(stale)}개 · 사람 몫 {len(humans)}개"
-        "(직접 하실 일 참고)"
-    ]
-    lines += [
-        f"- **대기열 {r.number} ({r.rounds}회차) {{{{qname:{r.number}}}}}**:"
-        f" {{{{qcontent:{r.number}}}}}"
+        "(직접 하실 일 참고)",
+    )
+    cells = tuple(
+        (
+            f"대기열 {r.number}",
+            f"{r.rounds}회차",
+            f"{{{{qname:{r.number}}}}}",
+            f"{{{{qcontent:{r.number}}}}}",
+        )
         for r in sorted(ripe, key=lambda r: (-(r.rounds or 0), r.number))
-    ]
+    )
+    head = ("대기열", "회차", "작업 이름", "작업 내용")
+    tables = (Table(head, "lrll", cells),) if cells else ()
     got.value("queue:open", "대기열 열린 행", len(rows), "개")
     got.value("queue:expired", "대기열 기한 지난 행", len(stale), "개")
     got.value("queue:ripe", f"대기열 {queue_open_rows.MIN_ROUNDS}회 이상 행", len(ripe), "개")
-    return Part(Section(5, "회고 대기열", (), tuple(lines), source), got)
+    return Part(Section(5, "회고 대기열", tables, lines, source), got)
 
 
 def _yesterday_section(

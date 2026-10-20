@@ -32,6 +32,8 @@ from tools.morning_collect import (
     merged_got,
     merged_unknown,
     open_state,
+    over_cap,
+    queue_part,
     queue_whats,
     review_rounds,
     size_groups,
@@ -353,6 +355,36 @@ def test_걸린_시간은_10분_30초를_넘은_것을_합계에서_빼고_따�
     # 상위 10% 경계는 자료 안에서 잇는 분위수(inclusive)라 가장 큰 값을 넘지 않는다
     assert t == Timing(count=3, total_s=6.0, median_s=2.0, p90_s=2.8, over=1)
     assert timing([900.0]) is None
+
+
+def test_한계를_넘은_호출은_호출이_모두_넘은_이름표까지_센다() -> None:
+    # `timing`이 None인 이름표(호출이 모두 한계를 넘었다)도 빠지지 않는다
+    assert over_cap([[1.0, 700.0], [900.0, 800.0], []]) == 3
+
+
+def test_대기열_3회차_이상_행은_목록이_아니라_표로_적는다() -> None:
+    # 상세 절은 목록 다섯 줄 이하라(작성 규칙 4), 행 수가 늘어도 목록은 한 줄이다
+    text = (
+        "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
+        "| 238 | 남은 워크트리 | 사람 몫: 정리 | 2026-10-19 11회차 |\n"
+        "| 240 | 규칙 넷 | `CLAUDE.md` | 2026-10-19 4회차 |\n"
+        "| 241 | 규칙 다섯 | `CLAUDE.md` | 2026-10-19 6회차 |\n"
+        "| 242 | 규칙 하나 | `CLAUDE.md` | 2026-10-19 2회차 |\n"
+    )
+    part = queue_part(date(2026, 10, 19), text, "원본")
+    summary = "- 열린 행 4개 · 기한 지난 행 0개 · 사람 몫 1개(직접 하실 일 참고)"
+    assert part.section.lines == (summary,)
+    assert part.section.tables == (
+        Table(
+            ("대기열", "회차", "작업 이름", "작업 내용"),
+            "lrll",
+            (
+                ("대기열 241", "6회차", "{{qname:241}}", "{{qcontent:241}}"),
+                ("대기열 240", "4회차", "{{qname:240}}", "{{qcontent:240}}"),
+            ),
+        ),
+    )
+    assert sorted(part.got.queue) == [238, 240, 241]
 
 
 def 기록(at: str, *content: dict[str, Json]) -> dict[str, Json]:

@@ -3,8 +3,9 @@
 보고는 두 손이 함께 쓴다. 수치와 표는 수집 도구가 JSON(`<날짜>.data.json`, `Data`)으로 내고, 작업
 이름·요약·할 일·제안·해석은 예약 작업의 모델이 메모 JSON(`<날짜>.notes.json`, `Notes`)으로 쓴다. 이
 도구는 둘을 합쳐 `<날짜>.md`를 그린다. 모델이 수치를 손으로 옮기던 판(2026-10-20 시험 보고)은 같은
-사실이 여러 절에 되풀이되고 PR 번호가 이름 없이 괄호에만 적혔다(`(#301)`). 그래서 수치는 모델의 손을
-거치지 않고, 작업 이름은 이 도구가 붙인다.
+사실이 여러 절에 되풀이되고(워크트리 20개·claude 프로세스 54개와 `/tidy-checkouts` 권고가 "한눈에
+보기"와 "병렬 세션 최적화" 두 절에) PR 번호가 이름 없이 괄호에만 적혔다(`(#301)`). 그래서 수치는
+모델의 손을 거치지 않고, 작업 이름은 이 도구가 붙인다.
 
 그리는 것(차례를 바꾸지 않는다).
 - 머리: 경보·직접 하실 일·개선 제안의 수.
@@ -14,7 +15,7 @@
 - 직접 하실 일: 메모의 할 일. 대기열 행이면 제목을 `대기열 <번호> (<회차>회차) <이름>`으로 짓는다.
 - 개선 제안: 표와, 표 아래 접힌 "바꿀 것". 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
   `신규`, `효과 확인됨`(확인할 수치가 바라는 쪽으로 움직였다)이다. 진행 중과 보류는 제안과 PR을 잇는
-  기록이 없어 `UNKNOWN_STATE`로 적는다.
+  기록이 없어 `UNKNOWN_STATE`로 적는다. 확인할 수치의 열쇠가 지난 상태와 다르면 견주지 않는다.
 - 상세: 머리에 수집 JSON과 모은 시각을 적고, 절마다 `<details>`로 접고 끝에 원본을 한 줄로 적는다.
 
 작업 표기. 작업이 나오는 곳에는 번호·이름·내용을 함께 쓰되, 내용은 그 작업이 처음 나온 자리에만
@@ -29,7 +30,10 @@ PR 제목을 가져오지 못했으면 `LOOKUP_FAILED`로 적는다(이름을 �
 - 메모에 이름이나 내용이 없는 작업, 번호 바로 뒤에 조사가 붙은 작업 번호(이름을 끼우면 받침이
   어긋난다).
 - 할 일의 까닭이 두 문장 이상이거나(`SENTENCE_END`), 제안의 난이도가 `DIFFICULTIES` 밖의 낱말이다.
-- 상세 절의 목록 줄 수가 `MAX_LIST`를 넘는다.
+- 상세 절의 목록 줄 수가 `MAX_LIST`를 넘는다. 수집 줄과 메모 줄을 나눠 세고, 메모가 그 절에 쓸 수
+  있는 줄 수를 알린다.
+- 메모 JSON을 읽지 못했다(빈 메모로 그린다). 예약 작업은 `경고:` 줄마다 메모를 고치므로 이것도
+  경고다.
 
 못 보는 것.
 - 메모의 글이 사실인지는 보지 않는다. 수치는 표에서만 오고, 글은 해석이다.
@@ -424,10 +428,12 @@ class Notes:
 
 @dataclass(frozen=True)
 class Seen:
-    """제안 하나의 상태. `since`는 처음 낸 날, `value`는 그날 보고의 확인할 수치다."""
+    """제안 하나의 상태. `since`는 처음 낸 날, `value`는 그날 보고의 확인할 수치, `check`는 그
+    수치의 열쇠(`Proposal.check`)다. 열쇠가 바뀐 제안은 지난 값과 견주지 않는다."""
 
     since: date
     value: float | None
+    check: str = ""
 
 
 def read_state(j: Json) -> dict[str, Seen]:
@@ -436,12 +442,15 @@ def read_state(j: Json) -> dict[str, Seen]:
         o = _obj(v)
         since = _day(o.get("since"))
         if since is not None:
-            out[k] = Seen(since, _num(o.get("value")))
+            out[k] = Seen(since, _num(o.get("value")), _str(o.get("check")))
     return out
 
 
 def state_json(state: Mapping[str, Seen]) -> Json:
-    return {k: {"since": s.since.isoformat(), "value": s.value} for k, s in state.items()}
+    return {
+        k: {"since": s.since.isoformat(), "value": s.value, "check": s.check}
+        for k, s in state.items()
+    }
 
 
 # 핵심 지표
@@ -723,16 +732,19 @@ def _proposal_lines(
     )
     where = "개선 제안"
     rows: list[tuple[str, ...]] = []
+    titles: list[str] = []
     new_state: dict[str, Seen] = {}
     warnings: list[str] = []
-    details = ["<details><summary>제안별 바꿀 것</summary>", ""]
     for i, p in enumerate(notes.proposals, start=1):
         prev = state.get(p.id)
+        if prev is not None and prev.check != p.check:
+            prev = replace(prev, value=None)  # 다른 지표의 값과 견주지 않는다
         value = data.values.get(p.check)
         today = value.value if value is not None else None
         title, marks = namer.expand(p.title, where, marks)
         basis, marks = namer.expand(p.basis, where, marks)
         effect, marks = namer.expand(p.effect, where, marks)
+        titles.append(title)
         rows.append(
             (
                 str(i),
@@ -750,7 +762,10 @@ def _proposal_lines(
                 f"제안 「{p.title}」의 난이도 칸이 {'·'.join(DIFFICULTIES)} 밖의 낱말이다:"
                 f" {p.difficulty or '(비었다)'}"
             )
-        new_state[p.id] = Seen(prev.since if prev is not None else data.day, today)
+        new_state[p.id] = Seen(prev.since if prev is not None else data.day, today, p.check)
+    # 표의 행이 모두 바꿀 것보다 앞에 그려지므로, 바꿀 것은 표를 다 채운 뒤에 채운다
+    details = ["<details><summary>제안별 바꿀 것</summary>", ""]
+    for i, (p, title) in enumerate(zip(notes.proposals, titles, strict=True), start=1):
         details += [f"**{i}. {title}**", ""]
         changes: list[str] = []
         for c in p.change:
@@ -789,7 +804,12 @@ def _section_lines(
         lines.append(f"- {expanded}")
     warnings: list[str] = []
     if len(lines) > MAX_LIST:
-        warnings.append(f"{where}의 목록이 {len(lines)}줄로 {MAX_LIST}줄을 넘는다")
+        collected = len(s.lines)
+        warnings.append(
+            f"{where}의 목록이 {len(lines)}줄로 {MAX_LIST}줄을 넘는다"
+            f"(수집 {collected}줄, 메모 {len(written)}줄)."
+            f" 메모가 이 절에 쓸 수 있는 줄은 {max(0, MAX_LIST - collected)}줄이다"
+        )
     if lines:
         out += [*lines, ""]
     out += [f"원본: {s.source}", "", "</details>", ""]
@@ -918,12 +938,14 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"수집 JSON을 읽지 못했다: {error}\n")
         return 2
     notes_path = reports / f"{day.isoformat()}.notes.json"
+    unread: list[str] = []
     try:
         notes = Notes.of(_read_json(notes_path)) if notes_path.exists() else Notes.of({})
     except (OSError, ValueError) as error:
-        sys.stderr.write(f"메모 JSON을 읽지 못해 빈 메모로 그린다: {error}\n")
+        unread.append(f"메모 JSON을 읽지 못해 빈 메모로 그렸다(메모 전체를 다시 쓴다): {error}")
         notes = Notes.of({})
     text, new_state, warnings = render(data, notes, latest_state(reports, day))
+    warnings = [*unread, *warnings]
     (reports / f"{day.isoformat()}.md").write_text(text, encoding="utf-8")
     state_text = json.dumps(state_json(new_state), ensure_ascii=False, indent=1)
     (reports / f"{day.isoformat()}.state.json").write_text(state_text, encoding="utf-8")

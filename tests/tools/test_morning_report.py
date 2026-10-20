@@ -30,10 +30,13 @@ from tools.morning_report import (
     Value,
     check_text,
     latest_checks,
+    main,
     metric_row,
     proposal_state,
+    read_state,
     render,
     sparkline,
+    state_json,
     table_lines,
     verdict,
 )
@@ -379,16 +382,32 @@ def test_상세_절의_목록이_다섯_줄을_넘으면_경고한다() -> None:
 
 def test_제안의_상태와_확인할_수치는_지난_상태에서_잇고_오늘_상태를_낸다() -> None:
     notes = 메모(proposals=(제안(),))
-    state = {"commit-wait": Seen(date(2026, 10, 18), 400.0)}
+    state = {"commit-wait": Seen(date(2026, 10, 18), 400.0, CHECK)}
     text, new_state, _ = render(자료(), notes, state)
     assert "| 1 | 커밋 대기 줄이기 |" in text
     assert "git commit 중앙값 400.0초 → 385.2초 | 효과 확인됨 |" in text
-    assert new_state == {"commit-wait": Seen(date(2026, 10, 18), 385.2)}
+    assert new_state == {"commit-wait": Seen(date(2026, 10, 18), 385.2, CHECK)}
 
 
 def test_처음_낸_제안의_시작일은_보고하는_날이다() -> None:
     _, new_state, _ = render(자료(), 메모(proposals=(제안(),)), {})
-    assert new_state == {"commit-wait": Seen(DAY, 385.2)}
+    assert new_state == {"commit-wait": Seen(DAY, 385.2, CHECK)}
+
+
+CHECK = "cmd:git commit:median_s"
+
+
+def test_확인할_수치의_열쇠가_바뀐_제안은_지난_값과_견주지_않는다() -> None:
+    # 같은 제안을 다른 지표로 다시 내면 다른 지표끼리 견주게 된다
+    state = {"commit-wait": Seen(date(2026, 10, 18), 400.0, "cmd:다른 것:median_s")}
+    text, new_state, _ = render(자료(), 메모(proposals=(제안(),)), state)
+    assert "| git commit 중앙값 385.2초 | (진행 중·보류는 수집 안 됨) |" in text
+    assert new_state == {"commit-wait": Seen(date(2026, 10, 18), 385.2, CHECK)}
+
+
+def test_제안_상태는_확인할_수치의_열쇠와_함께_쓰고_다시_읽는다() -> None:
+    state = {"commit-wait": Seen(DAY, 385.2, CHECK)}
+    assert read_state(state_json(state)) == state
 
 
 def test_제안의_바꿀_것은_표_아래_접힌_곳에_적는다() -> None:
@@ -409,3 +428,57 @@ def test_메모_JSON의_빠진_칸은_빈_값으로_읽는다() -> None:
     assert notes.prs == {301: Named("이름", "내용", "")}
     assert notes.todos == ()
     assert notes.proposals == ()
+
+
+def test_메모_JSON을_읽지_못하면_경고로_알리고_빈_메모로_그린다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 예약 작업은 `경고:` 줄마다 메모를 고친다. 접두가 없으면 문법 오류를 지나친다
+    data = json.dumps(자료().to_json(), ensure_ascii=False)
+    (tmp_path / "2026-10-19.data.json").write_text(data, encoding="utf-8")
+    (tmp_path / "2026-10-19.notes.json").write_text('{"prs": {"301": {"name": "a",}}}', "utf-8")
+    assert main(["--reports", str(tmp_path), "--day", "2026-10-19"]) == 0
+    first = capsys.readouterr().err.splitlines()[0]
+    assert first.startswith("경고: 메모 JSON을 읽지 못해 빈 메모로 그렸다(메모 전체를 다시 쓴다):")
+
+
+def test_목록_경고는_수집_줄과_메모_줄을_나눠_메모가_쓸_줄_수를_알린다() -> None:
+    lines = tuple(f"- 줄 {i}" for i in range(4))
+    notes = 메모(remarks={4: ("해석 하나", "해석 둘")})
+    _, _, warnings = render(자료(sections=(상세(lines=lines),)), notes, {})
+    assert warnings == [
+        "상세 4의 목록이 6줄로 5줄을 넘는다(수집 4줄, 메모 2줄)."
+        " 메모가 이 절에 쓸 수 있는 줄은 1줄이다"
+    ]
+
+
+def test_제안의_작업_내용은_문서에서_먼저_나오는_표_행에_붙는다() -> None:
+    # 표의 행이 모두 바꿀 것보다 앞에 그려지므로, 바꿀 것은 표를 다 채운 뒤에 채운다
+    first = 제안(change=("#301 을 나눈다",))
+    second = 제안(id="b", title="둘째", basis="#301 의 기다림")
+    text, _, _ = render(자료(), 메모(proposals=(first, second)), {})
+    assert f"| #301 Ctrl-C 판정 안정화({CONTENT}) 의 기다림 |" in text
+    assert "- #301 Ctrl-C 판정 안정화 을 나눈다" in text
+
+
+def test_못_보는_것_이어_쓴_대기열_번호는_앞_번호에만_이름을_붙인다() -> None:
+    notes = 메모(remarks={5: ("대기열 238·243 은 사람 몫이다",)})
+    text, _, warnings = render(자료(sections=(상세(number=5),)), notes, {})
+    assert (
+        "- 대기열 238 남은 워크트리 정리(정리 도구가 지우지 못한 워크트리 여섯)·243 은 사람 몫이다"
+        in text
+    )
+    assert warnings == []
+
+
+def test_못_보는_것_세는_말이_붙은_대기열_번호는_놓친다() -> None:
+    notes = 메모(remarks={5: ("대기열 238건 은 사람 몫이다",)})
+    text, _, warnings = render(자료(sections=(상세(number=5),)), notes, {})
+    assert "- 대기열 238건 은 사람 몫이다" in text
+    assert warnings == []
+
+
+def test_못_보는_것_다로_끝나지_않는_문장은_세지_않는다() -> None:
+    todo = Todo("정리", "워크트리를 지움. 브랜치도 지울까? 디스크를 비운다.")
+    _, _, warnings = render(자료(), 메모(todos=(todo,)), {})
+    assert warnings == []
