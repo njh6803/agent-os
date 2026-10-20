@@ -282,8 +282,11 @@ retro가 규칙 후보로 올린다(`CLAUDE.md` 교정 루프).
   "PR 만들어줘", `retro`의 "마무리를 말할 때"), `retro` 밖에서 스킬이나 `CLAUDE.md`를 고칠 때의 `writing-for-agents`,
   남기려던 `anthropic-skills:built-in-browser`의 "Read this skill before the first step that uses the built-in browser"가
   그것이다. 공식 문서는 설명이 빠진 스킬도 부를 수는 있지만 모델이 스스로 고를 가능성이 낮아진다고 적는다(원문,
-  settings-reference). 그래서 이번에는 고르지 않고, 앱 세션에서 0.003보다 순한 비율 몇을 재 잃는 계기와 줄어드는 양을
-  견준 뒤 정한다(사용자 결정, 일지 2026-10-20-17).
+  settings-reference). 예산을 낮추는 대신 고른 항목만 `skillOverrides`의 `"name-only"`로 설명 없이 싣는 길도 문서에
+  있다(원문, skills). `anthropic-skills:*`에는 같은 키의 `"off"`가 먹지 않아 `"name-only"`도 먹지 않을 것으로 보고(어림)
+  재지 않았다. 그래서 이번에는 고르지 않고, 앱 세션에서 0.003보다 순한 비율 몇을 재 잃는 계기와 줄어드는 양을
+  견준 뒤 정한다(사용자 결정, 일지 2026-10-20-17). 프로젝트·사용자 스킬 몇을 `"name-only"`로 두는 길도 그 측정에서
+  함께 견준다.
 - **동기화된 스킬을 claude.ai에서 하나씩 끈다.** 위 `anthropic-skills:*` 항목이 적은, 문서에 있는 하나씩 끄는 길이다.
   claude.ai 웹과 이 PC의 다른 프로젝트까지 계정 전체에 닿고, `pdf`와 `xlsx`는 늘 동기화된다(원문, skills). 데스크톱 앱이
   따로 싣는 넷만 골라 끄는 길은 문서에서 찾지 못했다.

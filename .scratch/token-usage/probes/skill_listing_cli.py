@@ -18,8 +18,9 @@ B는 `skillOverrides`만 둔 `.claude/settings.json`을 둔다. 그 값은 `--se
 (`~/.claude/projects/*/<세션 ID>.jsonl`)을 같은 폴더의 `skill_listing_entries.py`로 읽어 모델에게 간
 첫 스킬 목록의 항목을 꺼낸다. 표지는 `system/init`과 `result` 이벤트가 있고 기록에 첫 모델 호출 전
 `skill_listing` 첨부가 있는 것이다. 양성 대조는 둘이다. A의 목록에 `anthropic-skills:*`가 있어야
-이 설정 출처에서도 동기화된 스킬이 실린다는 것이 서고, B의 목록에 끄지 않은 `CONTROL`이 있어야 B에서
-빠진 항목이 그 출처 전체가 아니라 하나씩 빠진 것이다. 표지나 대조가 하나라도 없으면 1로 끝난다.
+이 설정 출처에서도 동기화된 스킬이 실린다는 것이 서고, 끄지 않은 `CONTROL`이 A와 B의 목록에 모두
+있어야 B에서 빠진 항목이 그 출처 전체가 아니라 하나씩 빠진 것이다(A에 없으면 그 대조를 할 수 없어
+측정 아님으로 센다). 표지나 대조가 하나라도 없으면 1로 끝난다.
 
 못 보는 것: 데스크톱 앱 세션. 앱은 동기화 폴더 밖의 `anthropic-skills:*`(2026-10-20 이 PC에서
 `consolidate-memory`·`explain-usage`·`schedule`·`setup-claude`)도 싣는데 CLI에는 없다. 그것은 앱
@@ -216,6 +217,9 @@ def main() -> int:
     b = [e for e in results.get("B") or [] if e.startswith(f"{SOURCE}:")]
     if results.get("A") is not None and not a:
         print(f"측정 아님: A의 첫 목록에 {SOURCE}:*가 없어 이 설정 출처에서 실리는지 모른다")
+        unmeasured += 1
+    elif results.get("A") is not None and CONTROL not in a:
+        print(f"측정 아님: A의 첫 목록에 {CONTROL}가 없어 B의 빠짐을 하나씩 뺀 것과 가르지 못한다")
         unmeasured += 1
     if results.get("B") is not None and CONTROL in a and CONTROL not in b:
         print(f"측정 아님: B의 첫 목록에 끄지 않은 {CONTROL}가 없다")

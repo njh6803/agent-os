@@ -11,11 +11,14 @@
 항목마다 설명이 남았는지(`- 이름: 설명`)와 이름만 남았는지(`- 이름`)를 가르고, 첨부의 `names` 수를
 본문 항목 수와 함께 찍는다. 두 수가 같으면 예산이 항목을 통째로 빼지 않은 것이라, 목록에 없는 항목은
 설정이 뺀 것으로 읽는다(공식 skills 문서는 목록이 늘 모든 스킬의 이름을 담는다고 적는다). 첫 모델
-호출 뒤에 다시 온 `skill_listing` 첨부는 시각과 글자 수, `names` 수를 찍는다.
+호출 뒤에 다시 온 `skill_listing` 첨부는 시각과 글자 수, `names` 수를 찍는다. 첫 목록의 글자 수는
+`token_report`처럼 줄마다 줄바꿈 하나를 더한 값이고, 뒤 첨부의 글자 수는 본문 길이 그대로라 같은
+목록이 1자 적게 찍힌다.
 
-표지 셋이 모두 있어야 측정이다. 첫 모델 호출 전에 `skill_listing` 첨부가 있다. 기록의 첫 `cwd`가
+표지 넷이 모두 있어야 측정이다. 첫 모델 호출 전에 `skill_listing` 첨부가 있고, 그 첨부마다
+`names` 목록이 있다(없으면 위의 두 수를 견줄 수 없다). 기록의 첫 `cwd`가
 `--cwd`로 준 폴더와 같다(`normcase`·`normpath`로 견준다). `anthropic-skills:built-in-browser`가
-목록에 있다. 셋째는 끄지 않고 남기는 항목이라, 다른 `anthropic-skills:*`가 없을 때 "그 출처가 아예
+목록에 있다. 넷째는 끄지 않고 남기는 항목이라, 다른 `anthropic-skills:*`가 없을 때 "그 출처가 아예
 실리지 않았다"는 해석과 "`skillOverrides`가 하나씩 뺐다"는 해석을 가르는 양성 대조다. 하나라도
 없으면 그 까닭을 찍고 1로 끝난다. `jira-*`(사용자 레벨 스킬, 프로젝트 설정이 이미 끈다)가 없는 것은
 그 세션이 프로젝트 설정의 `skillOverrides`를 읽었다는 대조로 함께 찍는다.
@@ -116,6 +119,7 @@ def main() -> int:
     version = next((r["version"] for r in records if isinstance(r.get("version"), str)), None)
     start: list[str] = []
     start_names = 0
+    names_missing = 0
     later: list[str] = []
     called = False
     for rec in records:
@@ -131,7 +135,10 @@ def main() -> int:
             later.append(f"{stamp}: {len(text):,}자, {names_part}")
         else:
             start.append(text)
-            start_names += n_names or 0
+            if n_names is None:
+                names_missing += 1
+            else:
+                start_names += n_names
     entries: list[str] = []
     name_only: list[str] = []
     chars: dict[str, int] = {}
@@ -149,7 +156,10 @@ def main() -> int:
     print(f"첫 모델 호출 전 skill_listing 첨부 {len(start)}개, 그 뒤 {len(later)}개")
     for line in later:
         print(f"  그 뒤 {line}")
-    print(f"첫 목록 합 {sum(chars.values()):,}자, 항목 {len(entries)}개, names {start_names}개")
+    names_part = f"names {start_names}개"
+    if names_missing:
+        names_part += f"(names 없는 첨부 {names_missing}개)"
+    print(f"첫 목록 합 {sum(chars.values()):,}자, 항목 {len(entries)}개, {names_part}")
     for source, n in sorted(chars.items(), key=lambda kv: -kv[1]):
         print(f"  {source}: {n:,}자")
     described = len(entries) - len(name_only)
@@ -163,6 +173,11 @@ def main() -> int:
     reasons: list[str] = []
     if not start:
         reasons.append("첫 모델 호출 전 skill_listing 첨부가 없다")
+    if names_missing:
+        reasons.append(
+            f"첫 모델 호출 전 첨부 {names_missing}개에 names 목록이 없어"
+            " 설정이 뺀 것과 예산이 뺀 것을 가르지 못한다"
+        )
     if first_cwd is None or not same_dir(first_cwd, args.cwd):
         reasons.append(f"기록의 cwd가 {args.cwd}가 아니다")
     if CONTROL not in entries:

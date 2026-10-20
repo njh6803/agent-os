@@ -182,3 +182,38 @@ plugins/loading, skills, settings, settings-reference, desktop, permissions)를 
 - 남긴다: 이력 제목(cowork도 데스크톱 앱이 계정에서 싣는 플러그인이라 제목이 덮는다고 본다. 바꾸면 포인터와 함께 바뀌어
   얻는 것이 없다). 프로브 사이의 중복과 `a, b` 이름(한 번 쓰고 남기는 프로브라, 공통 모듈을 두면 한 프로브를 고칠 때 다른
   프로브의 옛 결과를 재현하는 길까지 함께 바뀐다. 판단이다).
+
+## 커밋과 PR 직전 리뷰
+
+- 커밋 `89240c4d`. pre-commit이 모두 통과했다(검사 러너 523초: pytest 522.8초, web-verify 291.2초, run-hooks
+  133.6초, pyright 35.2초. ruff 둘, 표, 줄 구분 문자, 변이 표, 커밋 메시지 통과. 카나리아 명세와 헌법 판은 대상 파일이
+  없어 Skipped). 인용 대조 경고 6건은 모두 저장소 밖 원문이나 기록이다. ADR 227행은 프로브 출력(표지
+  `blocked by permission rules`가 그 일부), 283행은 `~/.claude/skills/synced/*/built-in-browser/SKILL.md` 셋에 글자 그대로
+  있고(Grep), 일지 넷은 옛 문장과 리뷰 보고를 옮긴 기록이다.
+- `git fetch origin` 뒤 `git merge origin/main`(병합 커밋 `a3a8864f`, 충돌 없음). main이 새로 바꾼 파일과 이 브랜치의
+  파일은 겹치지 않았다.
+- CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 나란히 돌렸다.
+- `/security-review`: 신뢰도 8 이상 0건. 식별 서브태스크가 낸 후보가 없어 거짓 양성 거르기는 돌지 않았다.
+- `bug-perf-review`: 유효 4(Minor 3, Nit 1), 보류 6, 오탐 5. 도구 호출 40에서 멈춰 보류 일부를 닫지 못했다.
+  - 고친 것:
+    - `skill_listing_entries.py`가 첫 첨부의 `names` 없음을 `names 0개`로 합쳐 0으로 끝나던 것을, `names 없는 첨부 N개`로
+      찍고 측정 아님으로 세게 했다. 가짜 기록 넷(목록, 키 없음, 문자열, 둘 가운데 하나만 없음)으로 rc 0·1·1·1을 손으로
+      봤고, 5682dc15 기록의 출력은 그대로였다.
+    - `skill_listing_cli.py`가 A에 `CONTROL`이 없으면 B의 대조를 건너뛰던 것을 측정 아님으로 세게 했다. `run_variant`와
+      `shutil.which`를 가짜로 바꿔 네 갈래(둘 다 있음, A에 없음, B에서 빠짐, A에 출처 없음)로 rc 0·1·1·1을 손으로 봤다.
+      고치기 전에는 둘째가 0이었다.
+    - `skill_listing_entries.py` 독스트링에 첫 목록은 줄마다 줄바꿈을 더한 값(`token_report`와 같다)이고 뒤 첨부는 본문
+      길이 그대로라 1자 적게 찍힌다고 적었다(Nit).
+    - ADR "스킬 목록 예산을 낮춘다" 항목에 `skillOverrides`의 `"name-only"` 길을 더했다(문서 침묵).
+    - 프로브 README의 두 행(entries, cli)에 새 측정 아님 조건을 맞췄다.
+  - 보류를 본 세션이 닫은 것: 이름으로 부르는 자리(위 대조와 같은 grep으로 줄을 봤다), `built-in-browser` 인용 끝말(Grep
+    3건), 압축 03:08(기록의 `compact_boundary`가 `2026-10-20T03:08:13Z`), 일간 보고서의 중앙값 셋(주 체크아웃
+    `.scratch/token-report/daily/2026-10-16·17·19.md`의 "9. 시작 컨텍스트" 표, 사람이 연 세션만), 프로브 독스트링의
+    skills 문서 문장(skills.md "Skill descriptions are cut short" 절의 "The listing always contains every skill name"),
+    프로브가 남긴 haiku 세션(같은 보고서가 헤드리스 세션을 중앙값에서 뺀다).
+  - PR 봇에 밀 주장(이번 반영으로 새로 쓴 문장, 원문 그대로):
+    - ADR: "예산을 낮추는 대신 고른 항목만 `skillOverrides`의 `"name-only"`로 설명 없이 싣는 길도 문서에 있다(원문, skills).
+      `anthropic-skills:*`에는 같은 키의 `"off"`가 먹지 않아 `"name-only"`도 먹지 않을 것으로 보고(어림) 재지 않았다."
+    - ADR: "프로젝트·사용자 스킬 몇을 `"name-only"`로 두는 길도 그 측정에서 함께 견준다."
+    - 프로브 독스트링: "첫 목록의 글자 수는 `token_report`처럼 줄마다 줄바꿈 하나를 더한 값이고, 뒤 첨부의 글자 수는 본문
+      길이 그대로라 같은 목록이 1자 적게 찍힌다."
