@@ -725,7 +725,9 @@ def test_옮긴_본문은_바이트_그대로_쓰고_쓰지_못한_PR은_오류�
 
 
 def test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든다(tmp_path: Path) -> None:
-    """대기열 376. 명령은 클라우드에서도 도는 REST 다. 쓰지 못한 PR 만 손으로 고치라고 한다."""
+    """대기열 376. 명령은 클라우드에서도 도는 REST 다. 쓰지 못한 PR 만 손으로 고치라고 한다. 명령이
+    본문 전체를 덮어쓰므로 올리기 전에 지금 본문과 견주라고 명령 앞에 적고, 명령은 줄 끝에 두어
+    그 뒤를 그대로 붙여 넣을 수 있게 한다(PR #328 CodeRabbit·셀프 리뷰)."""
     path = tmp_path / "pr-7-body.md"
     bodies = {7: "일지 2026-10-07-03\r\n", 8: "무관\n", 9: "일지 2026-10-07-03\n"}
 
@@ -733,12 +735,16 @@ def test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든�
 
     assert lines == [
         f"이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다. 옮긴 본문을 {path.as_posix()} 에"
-        " 썼다. 올리는 명령: gh api repos/o/r/pulls/7 --method PATCH -F"
+        " 썼다. 올리는 명령은 본문 전체를 이 파일로 덮어쓴다. 올리기 전에 지금 본문을 다시 읽어"
+        " 이 파일과 견주고, 옮긴 번호 밖의 차이(읽은 뒤에 사람·봇·세션이 고친 것)가 있으면 이"
+        " 파일에도 넣는다. 올리는 명령: gh api repos/o/r/pulls/7 --method PATCH -F"
         f' "body=@{path.as_posix()}"',
         "이 브랜치의 열린 PR #8 본문에는 옮길 인용이 없다",
         "이 브랜치의 열린 PR #9 본문에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다(막혔다)."
         " 손으로 고친다",
     ]
+    command = f'gh api repos/o/r/pulls/7 --method PATCH -F "body=@{path.as_posix()}"'
+    assert lines[0].endswith(f"올리는 명령: {command}")
     assert pull_body_lines({}, {}, ("o", "r")) == []
     assert pull_body_lines(None, {}, ("o", "r")) == [
         "이 브랜치의 열린 PR 본문을 읽지 못했다(gh 가 없거나 `gh api` 가 실패했다). PR 본문에"

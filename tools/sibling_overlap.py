@@ -212,7 +212,8 @@ claude-review 가 짚은 것이 세 번이었다(일지 2026-10-13-01·2026-10-1
   의 owner 가 다르다)은 걸리지 않아 아무것도 찍지 않는다. gh 가 없거나 실패하면 읽지 못했다는 한
   줄만 낸다. 클라우드 세션에서 REST 가 된다는 것(`.claude/rules/tools.md`)에 기댈 뿐 그 길로 돌려
   보지는 않았다. PR 본문에는 merge-base·main 의 줄을 두는 판정이 없어, 같은 꼴이면 형제를 가리킨
-  번호도 옮긴 판에 든다. PR 제목은 읽지 않는다.
+  번호도 옮긴 판에 든다. PR 제목은 읽지 않는다. 옮긴 판은 읽은 때의 본문이라 그 뒤의 고침이 들지
+  않고, 올리기 전에 지금 본문과 견주는 것은 출력 줄의 말일 뿐 도구는 견주지 않는다.
 - 인덱스. 대조는 작업 트리를 읽으므로, `--move` 뒤 옛 이름의 지움을 스테이지하지 않고 커밋해 옛
   일지가 커밋에 남아도 0으로 끝난다.
 - 카나리아 명세가 고친 단락을 묻는지. 그 하네스 파일을 원천으로 든 명세 하나를 이 브랜치가
@@ -1047,8 +1048,11 @@ def pull_body_lines(
 
     쓴 PR 은 그 파일을 올리는 REST 명령을 든다. 클라우드 세션에서 `gh pr list`,
     `gh pr checks <번호>`, `gh pr view <번호> --json headRefOid` 가 GraphQL 이 막혀 실패했고 REST 는
-    됐다(`.claude/rules/tools.md`. `gh pr edit` 는 거기서 재지 않았다). 열린 PR 이 없으면 빈
-    목록이다.
+    됐다(`.claude/rules/tools.md`. `gh pr edit` 는 거기서 재지 않았다). 그 명령은 본문 전체를 이번에
+    읽은 판으로 덮어써, 읽은 뒤에 사람·봇·세션이 고친 것(CodeRabbit 이 본문에 넣는 요약 블록 등)이
+    지금 본문에서 빠진다(GitHub 의 편집 이력에는 남는다). 그래서 올리기 전에 지금 본문과 그 파일을
+    견주라는 말을 명령 앞에 적고, 명령은 줄 끝에 두어 그 뒤를 그대로 붙여 넣을 수 있게 한다(PR #328
+    CodeRabbit·셀프 리뷰). 열린 PR 이 없으면 빈 목록이다.
     """
     if bodies is None:
         return [
@@ -1069,7 +1073,10 @@ def pull_body_lines(
         else:
             where = outcome.as_posix()
             lines.append(
-                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 {where} 에 썼다. 올리는 명령: gh api"
+                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 {where} 에 썼다. 올리는 명령은 본문"
+                " 전체를 이 파일로 덮어쓴다. 올리기 전에 지금 본문을 다시 읽어 이 파일과 견주고,"
+                " 옮긴 번호 밖의 차이(읽은 뒤에 사람·봇·세션이 고친 것)가 있으면 이 파일에도"
+                " 넣는다. 올리는 명령: gh api"
                 f' repos/{owner}/{name}/pulls/{number} --method PATCH -F "body=@{where}"'
             )
     return lines
