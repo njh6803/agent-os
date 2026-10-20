@@ -154,3 +154,61 @@ zizmor, check-instructions, check-type-escapes, pyright, run-hooks, web-verify 4
 - 06 티켓 괄호: "틈 문단의 줄은 01 병합 시점을 적은 문단 안에 있고 괄호 "(06이 바로가기를 링크로 그린다)"가 지금도 참이다",
   "conversation 01의 틈 문단도 02가 닫은 뒤 그대로 남았다".
 - `Shortcuts` 독스트링의 "(end-user-continuation 스토리 26·42)".
+
+**커밋.** 다섯을 옮긴 뒤 다시 친 커밋 `4184f54e`(feat: 관리 화면의 실행 상세가 실패 원인을 글자로, 바로가기를 링크로 그린다)가
+pre-commit을 지났다. ruff 둘은 스테이지된 `.py`가 없어 Skipped였고, 손으로 친 `uv run ruff check .`·`ruff format --check .`가
+0이다. 아직 푸시하지 않았고 PR도 없다(`gh pr view`가 `no pull requests found`).
+
+## 인계 (커밋 뒤)
+
+커밋 `4184f54e` 직후 세션 컨텍스트가 363,168 토큰으로 인계 문턱 20만을 넘은 채 `커밋 뒤` 경계에 와서 계기가 왔다. 인계하지
+않는 때 다섯에 들지 않는다. 커밋은 성공했고, 받은 범위는 병합까지이며, 이 세션 지시문의 이어받을 상태는 `인계: 셀프 리뷰
+직전`이라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 열린 PR이
+없어 다음 단계는 이 세션 지시문의 값을 옮긴다. `tools/model_sweep.py`가 이 브랜치에 `Opus 5.5 / xhigh`를 냈다. 이 세션의 지금
+제목은 `feature/06-admin-shows-cause-and-shortcut-links`이다.
+
+다음 작업: .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md. 관리 화면의 실행 상세가 실패 원인을 글자로, 바로가기를 그 실행으로 가는 링크로 그린다
+다음 단계: 구현
+어디서: 새 세션. 인계로 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/end-user-continuation/issues/06-admin-shows-cause-and-shortcut-links.md
+브랜치: feature/06-admin-shows-cause-and-shortcut-links
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 나란히 도는 티켓 02·03·05(.scratch/end-user-continuation/issues/)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 4184f54e까지 했고 푸시하지 않았으며 PR이 없다. 남은 단계는 PR 직전 리뷰(origin/main을 합친 뒤 /security-review, 그리고 이 일지의 "PR 직전 bug-perf-review에 밀 주장" 목록을 넘긴 bug-perf-review를 나란히)와 반영, admin_mutations.toml의 전체 실행과 그 날짜·걸린 시간을 프로브 README 줄에 적기, 티켓 Status를 done으로 바꾸고 남은 체크박스 둘(검증 명령, 병합 직전의 기능 닫기 판정) 처리, 일지 번호와 probes/README.md의 충돌 확인, PR과 봇 회차, 병합이다. 일지: docs/journal/2026-10-20-11-admin-shows-cause-and-shortcut-links.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `feature/06-admin-shows-cause-and-shortcut-links (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 없었다. `git worktree
+unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-20T03:19:26Z
+
+## PR 직전 (인계받은 둘째 세션)
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를
+> 반영한 커밋 4184f54e까지 했고 푸시하지 않았으며 PR이 없다. … 이번 요청 범위: PR과 병합까지"
+
+제목을 브랜치 이름으로 바꾸고 `git worktree list`에서 이 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어갔다.
+`origin/main`(`3a84a692`, #317)을 합쳤다. 그쪽 변경은 대기열과 다른 일지 하나라 이 브랜치와 겹치는 파일이 없었다.
+
+**PR 직전 리뷰.** 보안은 `/security-review`, 버그·성능은 위 목록의 밀 주장 넷을 넘긴 `bug-perf-review`를 나란히
+돌렸다(기준 `3a84a692`, 파일 8). 둘 다 지적이 0이었다.
+- 보안: 바로가기의 에이전트 이름은 텍스트 자식이고, 실행 식별자는 `runHref`를 지나 `href`가 `/runs/` 뒤의 인코딩한
+  조각뿐이라 새 싱크가 아니다. 짝 없는 서로게이트가 `encodeURIComponent`에서 던지는 것은 DoS라 제외했고 앞 실행
+  갈래에 이미 있던 동작이다.
+- 버그·성능: 밀 주장 넷이 모두 근거와 맞았다(표 머리 주석의 HTML 사례와 변이 9·11, `_baseline_runs`로 센 기준선
+  9번, 01 티켓 13·74행과 conversation 01의 `git log`, `spec.md`의 스토리 26·42). 오탐·수용 여섯은 빈 문자열 식별자의
+  `/runs/` 링크(계약 밖이고 앞 실행에 이미 있다), 서로게이트, 바로가기 칸의 인코딩만 겨누는 변이가 없는 것(`runHref`를
+  나눠 쓰고 8번이 `RunLink` 우회를 겨눈다), 01 티켓 13행의 현재형, 인계 지시문의 "다음 단계: 구현", 한 것 절의
+  "변이 9개"(리뷰 전 시점)였다.
+
+**변이 전체 실행.** 리뷰가 시험을 고치지 않아 합친 커밋 `d094d740`에서 `admin_mutations.toml` 전체를 이
+체크아웃에서 돌렸다. 기준선 9번이 모두 초록이고 변이 11이 모두 기대대로 빨갰다(각 1 failed, `.`·`..` 변이는 2
+failed). 5분 40초 걸렸다. 프로브 README 줄의 시간과 결과 칸을 고쳤다. 도는 동안 티켓 파일을 고쳐
+`hook_edit_during_mutate.py`가 알렸다. 변이 대상(`EventItem.tsx`)이 아니라 되돌림은 그대로 돌았고, 끝난 뒤
+`git status`에 변이가 남지 않았다.
+
+**티켓.** `Status:`를 `done`으로 바꾸고 남은 체크박스 둘을 표시했다. 검증 명령은 앞 세션이 셀프 리뷰를 반영한 뒤 돌린
+`run_checks` 여덟과 그 뒤 커밋들의 pre-commit이다. 기능 닫기는 `git fetch` 뒤 `origin/main`의 02·04·05가
+`ready-for-agent`라 이 PR이 닫지 않는다. `sibling_overlap.py`는 번호 겹침이 없었다. 형제 02·03·05가 일지
+2026-10-20-12~14와 같은 프로브 README를 쓰므로 나중에 병합하는 쪽이 그 글자 충돌을 푼다.
