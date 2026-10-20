@@ -460,8 +460,8 @@ class HookRow:
     recent: int
     previous: int
     verdict: str
-    days: int
-    last: date | None
+    days: int = 0
+    last: date | None = None
 
 
 UNREGISTERED = "등록 안 됨"
@@ -509,7 +509,7 @@ def hook_rows(
         if h in active:
             continue
         old = h in introduced and introduced[h] < start
-        rows.append(HookRow("조용함", h, 0, 0, "검토" if old and judged else TOO_EARLY, 0, None))
+        rows.append(HookRow("조용함", h, 0, 0, "검토" if old and judged else TOO_EARLY))
     return rows
 
 
@@ -622,10 +622,9 @@ def combo_costs(mains: Iterable[Call]) -> dict[str, float]:
 
 def top_combo(mains: Sequence[Call]) -> str | None:
     """메인 세션 비용이 가장 큰 `모델/노력`(`combo_costs`의 열쇠). `model_sweep_judge.ARM_RECORD`의
-    값과 견준다. 판정 도구가 읽는
-    `top_model_effort`(`.scratch/harness/probes/session_cost/collect.py`)와 모양은 같지만, 비용은
-    토큰 장부에서 오고(그 프로브는 제 집계다) 동률이면 이름 차례로 고른다(그 프로브는 먼저 센
-    쪽이다). 그래서 판정과 갈릴 수 있다."""
+    값과 견준다. 판정 도구가 읽는 프로브(`.scratch/harness/probes/session_cost/collect.py`)의
+    `top_model_effort`와 모양은 같지만, 비용은 토큰 장부에서 오고(그 프로브는 제 집계다) 동률이면
+    이름 차례로 고른다(그 프로브는 먼저 센 쪽이다). 그래서 판정과 갈릴 수 있다."""
     cost = combo_costs(mains)
     if not cost:
         return None
@@ -829,14 +828,14 @@ def start_rows(starts: Sequence[token_report.Start]) -> list[tuple[str, ...]]:
     컨텍스트도 같은 세션들이라, 구성을 모르는 세션까지 센 핵심 지표의 시작 컨텍스트와 갈릴 수
     있다."""
     known = [(s.context, s.parts) for s in starts if s.human and s.parts is not None]
+    if not known:
+        return []
     n = len(known)
 
     def row(label: str, values: Sequence[int], unit: str) -> tuple[str, ...]:
         loaded = sum(1 for v in values if v > 0)
         return (label, f"{statistics.median(values):,.0f}{unit}", f"{loaded}/{n}")
 
-    if not known:
-        return []
     sources = {
         k: [p.skills.get(k, 0) for _, p in known] for k in {k for _, p in known for k in p.skills}
     }
