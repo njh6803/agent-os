@@ -27,7 +27,7 @@ https://code.claude.com/docs/en/model-config.md). 기록에 남은 자동 압축
 
 **시작 컨텍스트를 줄인다.** 이 저장소에서 쓰지 않는 플러그인 가운데 넷(`document-skills`, `example-skills`,
 `skill-creator`, `code-review` 플러그인판)을 프로젝트 설정(`.claude/settings.json`의 `enabledPlugins`)에서 끈다.
-`frontend-design`, `claude-security`, `coderabbit`, `slack`은 앞으로 쓸 것으로 보고 둔다. `claude-hud`는 상태줄이 쓰고,
+`frontend-design`, `claude-security`, `coderabbit`, `slack`은 앞으로 쓸 것으로 보고 둔다. (바뀜: 이력 2026-10-20 "slack만 끄고 데스크톱 앱이 계정에서 싣는 스킬은 프로젝트 설정으로 끄지 못한다고 적는다") `claude-hud`는 상태줄이 쓰고,
 스킬 목록에 보인 `cowork-plugin-management`는 사용자 설정의 `enabledPlugins`에 없어 이번에 다루지 않았다.
 Playwright MCP는 두 벌이 실리므로 사용자 범위의 서버를 지우고 플러그인판만 남긴다.
 
@@ -186,3 +186,106 @@ retro가 규칙 후보로 올린다(`CLAUDE.md` 교정 루프).
   지시문을 새 세션에 붙여 넣는다.
 
 이 이력은 2026-10-16에 사용자가 승인했다.
+
+### 2026-10-20 slack만 끄고 데스크톱 앱이 계정에서 싣는 스킬은 프로젝트 설정으로 끄지 못한다고 적는다
+
+사용자가 매 호출에 실리는 스킬 목록을 프로젝트 레벨에서 더 줄일 수 있는지 물었다(일지 2026-10-20-17). 그 질문을 받은
+주 체크아웃 세션의 첫 스킬 목록은 26,462자였다(`.scratch/token-usage/probes/skill_listing_entries.py`로 그 세션의 기록을
+읽었다. 일간 보고서 2026-10-19의 중앙값과 같다). 출처별로 `anthropic-skills` 10,211자(17개), 접두 없는 프로젝트·사용자·내장 9,904자,
+`slack` 3,712자(13개), `claude-security` 999자, `cowork-plugin-management` 725자(2개), `coderabbit` 468자,
+`frontend-design` 240자, `claude-hud` 203자였다. 그래서 셋을 프로젝트 설정(`.claude/settings.json`)으로 끄려 했고, 새로
+연 앱 세션의 목록에서 빠진 것은 `slack` 하나였다(아래 "잰 것"). 먹지 않은 두 설정은 두지 않는다. 남겨 두면 읽는 쪽이
+이미 꺼졌다고 읽는다. 아래에서 "원문"이라 적은 공식 문서의 문장은 2026-10-20에 `https://code.claude.com/docs/en/<쪽>.md`를
+내려받아 손으로 대 봤다.
+
+- **`slack`을 끈다.** 위 본문은 앞으로 쓸 것으로 보고 두었다. 그 뒤로 이 저장소의 세션은 Slack 커넥터를 인증하지
+  않았고(그 세션이 시작될 때 `plugin:slack:slack`이 인증 전이라고 떴다), 사용자가 끄기를 골랐다. 프로젝트 설정의
+  `false`가 사용자 설정의 `true`를 이기는 것은 위 근거 "플러그인"의 문서 문장이다.
+- **`cowork-plugin-management`는 끄지 못한다.** `claude plugin list`가 이 플러그인을 claude.ai에서 동기화된 플러그인
+  (`@synced`, 경로 `~/.claude/plugins/synced/` 아래)으로 보였다. 위 본문이 사용자 설정의 `enabledPlugins`에서 찾지
+  못한 까닭이다. 문서는 커밋하는 프로젝트 설정에 `"이름@synced": false`를 두면 그 프로젝트에서 빠진다고 적지만(원문,
+  https://code.claude.com/docs/en/plugins/loading), 그 줄을 둔 앱 세션의 목록에 두 항목이 남았다. 워크트리와 주
+  체크아웃의 `.claude/settings.local.json`에는 `enabledPlugins`가 없어 개인 설정 파일이 다시 켠 것은 아니다. 남은
+  해석은 앱이 이 플러그인을 스스로 넘기는 길이다. 문서는 데스크톱 앱이 claude.ai에서 동기화된 플러그인을 스스로
+  관리한다고 적지만(원문, https://code.claude.com/docs/en/settings-reference 의 `disableSideloadFlags`), 어떤
+  플러그인 ID로 넘기는지는 적지 않았고 확인하지 못했다.
+- **`anthropic-skills:*`는 끄지 못한다.** claude.ai 계정에서 동기화된 스킬(`~/.claude/skills/synced/` 아래 폴더 셋에
+  같은 이름으로 13개씩)과 데스크톱 앱이 따로 싣는 스킬 넷(`consolidate-memory`·`explain-usage`·`schedule`·`setup-claude`)이
+  이 이름 공간을 쓴다. `skillOverrides`에 목록의 이름 그대로 `"anthropic-skills:<이름>": "off"`를 열여섯 적은 앱 세션에서
+  17개가 모두 남았고, 같은 세션에서 같은 방식으로 적은 프로젝트 스킬(`grilling`)과 사용자 스킬(`jira-*`)은 빠졌다.
+  문서는 `skillOverrides`가 플러그인 스킬에 먹지 않는다고 적고, 데스크톱 앱이 동기화된 스킬을 세션에 플러그인으로
+  넘긴다고 적는다(원문, https://code.claude.com/docs/en/skills). 둘을 이으면 결과가 설명되지만 문서가 그 연결을 적지는
+  않았다(어림). 문서가 적은 다른 끄는 길은 이 저장소가 커밋하는 프로젝트 설정으로 쓸 수 없거나, 재지 않았다. 계정 전체에
+  닿는 claude.ai의 스킬 설정과 데스크톱 앱의 Customize(원문, skills), 관리형 설정에만 두는 `disableSideloadFlags`(원문,
+  settings-reference)는 이 저장소의 결정이 아니다. 플러그인 스킬은 `/plugin`으로 다루라는 문장(원문, skills)과 부모
+  프로세스가 넘긴 플러그인을 설정 파일에서 `"<이름>@inline": false`로 끈다는 문장(원문, plugins/loading)은 있지만,
+  앱이 이 이름 공간을 어떤 플러그인 ID로 넘기는지 확인하지 못해 그 키를 적어 재지 않았다.
+- **권한 거부 규칙은 CLI 세션의 목록에서 프로젝트 스킬을 빼지 못했다.** MCP 서버를 프로젝트 설정에서 끄는 것처럼 스킬을
+  끄는 길로 사용자가 물었다. `permissions.deny`의 `Skill(이름)`은 호출만 막는다. 범위를 둔 거부 규칙은 도구를 남기고 맞는
+  호출만 막는다는 것이 공식 permissions 문서의 문장이고(원문을 저장해 읽었다), CLI 세션에서 `Skill(grilling)`·`Skill(retro)`을
+  거부해도 두 항목이 설명과 함께 목록에 남았다. 같은 설정에서 Skill 도구로 `grilling`을 부르자
+  "Skill execution blocked by permission rules"로 막혀, 규칙은 읽혔다
+  (`.scratch/token-usage/probes/skill_listing_deny.py`, claude 2.1.302). 앱 세션과 `anthropic-skills:*`에는 재지
+  않았다.
+
+**잰 것.** 줄어드는 것은 `slack` 3,712자로, 위 세션의 첫 목록의 14%다. 근거 "세션 컨텍스트의 구성"의 무게(스킬 목록
+첨부 12.4%)에 곱하면 메인 세션이 읽는 양의 약 2%다(기간이 다른 두 측정을 곱한 어림이다). 셋이 모두 먹었다면 13,793자
+(52%), 약 6%였다.
+
+- 데스크톱 앱 세션(`5682dc15`, claude 2.1.299): 세 설정과 측정용 임시 설정(`grilling` off,
+  `frontend-design@claude-plugins-official` false, `skillListingBudgetFraction` 0.003)을 둔 워크트리에서 사용자가 새로
+  열었다. 첫 목록에서 `slack`·`frontend-design`·`grilling`·`jira-*`는 빠졌고 `cowork-plugin-management` 2개와
+  `anthropic-skills` 17개는 남았다(`skill_listing_entries.py`). 끈 항목은 이름까지 빠지고 예산에 밀린 항목은 이름이
+  남아(같은 프로브로 `names` 57개와 본문 항목 57개가 같다) 한 목록으로 둘을 갈랐다. 임시 설정은 측정 뒤 되돌렸다.
+- 세션 도중의 변경은 근거로 쓰지 않는다. 설정을 바꾼 세션(`1d37e692`)의 기록에는 첫 목록 뒤에 목록이 세 번 더
+  실렸다(`skill_listing_entries.py`). 03:02 UTC의 목록은 22,749자, `names` 59개로 첫 목록보다 13개 적었고 본문에
+  `slack:` 줄이 없었다(손으로 봤다). 그 뒤의 변경과 압축(03:08)을 지나 03:47에 다시 실린 목록도 같은 22,749자,
+  `names` 59개였다. 다시 실린 까닭(설정을 다시 읽었는지, 압축 뒤에 다시 붙였는지)은 가를 수 없다.
+- CLI 세션(`.scratch/token-usage/probes/skill_listing_cli.py`, claude 2.1.302)은 측정이 되지 않았다. 설정 출처를
+  `project,local`로 좁힌 대조군에도 `anthropic-skills:*`가 하나도 실리지 않았다. 출처에 `user`를 넣으면 이 PC의 사용자
+  설정 Stop 훅이 턴마다 Slack에 알림을 보내 그 갈래는 띄우지 않았다.
+
+고르지 않은 것은 넷이다.
+
+- **동기화를 끈다(`syncClaudeAiSkills: false`).** 커밋하는 프로젝트 설정의 `false`는 무시된다(공식 settings 문서의 예외
+  표, 원문을 저장해 읽었다). 개인 파일(`.claude/settings.local.json`)의 `false`는 받아들여져, 이미 받은 동기화 스킬을
+  싣지 않고 새로 내려받지도 않는다. 받은 스킬을 `~/.claude/skills/.trash/`로 옮긴다고 문서가 적은 것은 사용자 설정과
+  관리형 설정의 `false`다(원문, settings-reference). 그래서 개인 파일에 두면 이 프로젝트 폴더의 세션에서만 빠질 것으로
+  본다(어림). 그래도 고르지 않는다. 커밋하지 않는 파일이라 저장소의 결정으로 둘 수 없다. 데스크톱 문서는 로컬 세션도
+  계정에서 켠 스킬을 싣고 예외는 관리형 설정 `disableSideloadFlags`뿐이라고 적어(원문, desktop) 앱 세션에서 이 키가
+  듣는지 모른다. 들어도 남기려던 `built-in-browser`까지 함께 빠진다. 앱 세션에서 재지 않았다.
+- **번들 스킬을 끈다(`disableBundledSkills`).** 번들 스킬과 워크플로를 한꺼번에 끈다(원문, settings-reference).
+  `bug-perf-review`가 보안 축을 넘기는 내장 `/security-review`도 모델에게서 사라진다. 원문은 번들 스킬은 지우고
+  `/init` 같은 내장 명령은 모델에게 숨긴다고 적는다.
+- **스킬 목록 예산을 낮춘다(`skillListingBudgetFraction`).** 이 저장소에서는 예산이 목록 크기를 정하지 않았다. 플러그인
+  넷을 끄는 변경(PR #268, 2026-10-16 05:03 UTC 병합)의 앞뒤가 섞인 일간 보고서 2026-10-16(지역 시간대 +09:00의 날짜)의
+  첫 목록 중앙값은 28,990자였고, 병합 뒤의 날짜인 2026-10-17에는 25,737자였다. 위 세션의 첫 목록에는 설명 없이 이름만
+  남은 항목이 없었다(`skill_listing_entries.py`). 예산을 낮추면 적게 부른 스킬의 설명부터 빠진다. CLI 세션에서 비율을 낮춰 봤다
+  (`.scratch/token-usage/probes/skill_listing_budget.py`, haiku, claude 2.1.302). 프로젝트·내장 27개(8,822자)의
+  목록에서 기본(0.01)과 0.005는 그대로였고, 0.0025에서 11개, 0.001에서 13개가 설명 없이 이름만 남았다. 설명이 중간에
+  잘린 항목은 없었다. 0.0025에서 설명을 지킨 프로젝트 스킬은 `next-session`과 `code-review` 둘이고, 측정한 날 이 PC의
+  사용 횟수(`~/.claude.json`의 `skillUsage`, 손으로 찍었다)로 1·2위였다. 그때 6회였던 `diagnosing-bugs`는 0.0025에서
+  빠졌다. 내장 스킬 열넷(`dataviz`, `artifact-*` 등)은 0.001에서도 설명을 지켰고, 같은 내장인 `init`과
+  `security-review`는 빠졌다. 공식 문서도 목록이 예산을 넘으면 가장 적게 부른 스킬의 설명부터 뺀다고 적는다(원문,
+  settings-reference와 skills). 위 앱 세션(`5682dc15`)에 0.003을 넣자 첫 목록이 8,676자로 줄고 57개 가운데 38개가
+  이름만 남았다(`skill_listing_entries.py`). 설명을 지킨 프로젝트 스킬은
+  `code-review`·`next-session`·`open-session`·`tidy-checkouts` 넷이고, 스스로 돌 계기를 설명에 둔 프로젝트 스킬
+  `retro`·`writing-for-agents`·`diagnosing-bugs`·`tdd`와 사용자 레벨 스킬 `git-*`의 설명이 빠졌다. 앱에서 넣어 본
+  비율은 0.003 하나다. 사용 횟수는 이 PC의 기록이라 새로 더한 스킬은 부르기 전부터 설명을 잃는다.
+  설명이 빠져도 이름은 남아, 지침과 다른 스킬과 훅이 이름을 들어 부르게 한 길은 그대로다. 0.003에서 설명이 빠진
+  프로젝트 스킬 가운데 `diagnosing-bugs`는 `CLAUDE.md` 작업 규약 6이, `tdd`는 `implement`가, `domain-modeling`은
+  `grill-with-docs`가, `writing-for-agents`는 `retro`가 이름을 들어 부르게 한다. `grill-with-docs`는 `next-session`이
+  설계 인터뷰의 시작 프롬프트로 적고, `retro`는 단계를 닫는 일지 편집에 `hook_journal_retro`가 계기를 넣는다. 사용자
+  레벨 스킬 가운데 `git-branch`·`git-pr`·`git-pr-feedback`·`git-pr-merge`는 `next-session`과 운영 문서
+  (`docs/constitution/operations.md`) 등이 슬래시 명령으로 든다(`CLAUDE.md`, `.claude/skills`, `.claude/agents`,
+  `.claude/rules`, `tools/hook_*.py`, 운영 문서에서 이름을 찾아 손으로 봤다). 잃는 것은 설명에만 적힌 계기다. 사용자의 말에서 시작하는 계기(`diagnosing-bugs`의 "debug this", `git-pr`의
+  "PR 만들어줘", `retro`의 "마무리를 말할 때"), `retro` 밖에서 스킬이나 `CLAUDE.md`를 고칠 때의 `writing-for-agents`,
+  남기려던 `anthropic-skills:built-in-browser`의 "Read this skill before the first step that uses the built-in browser"가
+  그것이다. 공식 문서는 설명이 빠진 스킬도 부를 수는 있지만 모델이 스스로 고를 가능성이 낮아진다고 적는다(원문,
+  settings-reference). 그래서 이번에는 고르지 않고, 앱 세션에서 0.003보다 순한 비율 몇을 재 잃는 계기와 줄어드는 양을
+  견준 뒤 정한다(사용자 결정, 일지 2026-10-20-17).
+- **동기화된 스킬을 claude.ai에서 하나씩 끈다.** 위 `anthropic-skills:*` 항목이 적은, 문서에 있는 하나씩 끄는 길이다.
+  claude.ai 웹과 이 PC의 다른 프로젝트까지 계정 전체에 닿고, `pdf`와 `xlsx`는 늘 동기화된다(원문, skills). 데스크톱 앱이
+  따로 싣는 넷만 골라 끄는 길은 문서에서 찾지 못했다.
+
+이 이력은 2026-10-20에 사용자가 승인했다.
