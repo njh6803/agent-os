@@ -271,3 +271,7 @@ open-session을 부른다 2026-10-20T11:33:51Z
   커밋하지 않은 것은 이 일지 하나였다.
 - `tools/sibling_overlap.py`는 번호 겹침 없음이었다. 새로 열린 PR #327(`chore/tidy-idle-sessions`)이 프로브 README를 고치고 일지
   2026-10-20-31을 쓰며, PR #296은 `docs/agents/issue-tracker.md`도 고친다.
+- 일지 고침을 커밋했다(`11d267d7`, pre-commit 통과). origin/main(`bea74a07`, PR #326)을 합치니 `.scratch/retro-queue.md`의 두 자리가
+  충돌했다. main은 345에 2회차(일지 2026-10-20-28)를 더했고 이 브랜치는 345를 닫았다. 닫힌 행에 그 2회차를 넣어 둘을 살렸고, 끝의
+  383(이 브랜치)과 384(main)는 둘 다 남겼다. 346은 이웃 줄이라 함께 걸렸고 main 쪽이 분기점과 같아 이 브랜치의 것을 썼다.
+- CodeRabbit CLI는 `Seat: not assigned`라 PR 직전 리뷰는 대체 둘(`/security-review`, `bug-perf-review`)로 돈다.
