@@ -1,4 +1,4 @@
-# 2026-10-20-07 하네스가 더해지기만 하는 길을 막는다 (ADR 0036)
+# 2026-10-20-09 하네스가 더해지기만 하는 길을 막는다 (ADR 0036)
 
 브랜치 `chore/hook-census`, 워크트리 `.claude/worktrees/hook-census`. 이 세션의 제목은 "하네스 작업 진행"이었고, 셀프 리뷰 직전에 인계 계기가 와서 `chore/hook-census (인계함)`으로 바꾸고 넘긴다. 커밋은 아직 없다. 새 세션이 이 파일을 이어 쓰고 커밋한다.
 
@@ -145,8 +145,8 @@ PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 사실 문장).
 시작 프롬프트: 계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??
 브랜치: chore/hook-census
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-07-harness-stops-growing.md, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 5e7fa88d, 명세는 ADR 0036 초안과 일지의 사용자 프롬프트 원문)부터 한다. 새 파일은 git add -N으로 표시해 두었다. 리뷰를 반영한 뒤 ADR 0036을 사용자에게 보여 승인받는다(306을 받아들여 닫은 것과 대기열의 처음 적용 16행이 든다). 승인 뒤 일지를 마무리하고 커밋한다. origin/main이 이 브랜치의 기점보다 앞서 있어 PR 전에 sync_with_base_branch로 합친다. .claude/rules/tools.md와 대기열은 열린 PR 312 등과 겹칠 수 있다. 병합한 뒤에는 사용자의 요청대로 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상과 경위는 일지의 "세션 통제" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 일지 docs/journal/2026-10-20-07-harness-stops-growing.md
+읽을 것: docs/journal/2026-10-20-09-harness-stops-growing.md, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 5e7fa88d, 명세는 ADR 0036 초안과 일지의 사용자 프롬프트 원문)부터 한다. 새 파일은 git add -N으로 표시해 두었다. 리뷰를 반영한 뒤 ADR 0036을 사용자에게 보여 승인받는다(306을 받아들여 닫은 것과 대기열의 처음 적용 16행이 든다). 승인 뒤 일지를 마무리하고 커밋한다. origin/main이 이 브랜치의 기점보다 앞서 있어 PR 전에 sync_with_base_branch로 합친다. .claude/rules/tools.md와 대기열은 열린 PR 312 등과 겹칠 수 있다. 병합한 뒤에는 사용자의 요청대로 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상과 경위는 일지의 "세션 통제" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 일지 docs/journal/2026-10-20-09-harness-stops-growing.md
 확인할 선행 조건: tools/run_checks.py 전체와 pyright를 마지막 변경 뒤 돌리지 못했다(인계로 멈췄다)
 이번 요청 범위: PR과 병합까지, 그 뒤 멈춘 세션의 재개까지
 ```
@@ -193,8 +193,8 @@ PR 직전 리뷰에 밀 주장에 더한다(합치며 새로 쓴 사실 문장):
 시작 프롬프트: 계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??
 브랜치: chore/hook-census
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-07-harness-stops-growing.md, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
-이어받을 상태: 인계: 커밋 뒤. ADR 0036은 사용자가 승인했다. 커밋 7bf2e4fc와 origin/main 병합 커밋 33ccba49까지 했고 아직 푸시하지 않았으며 열린 PR이 없다. 일지의 "main 합치기"와 "인계 (커밋 뒤)" 절은 커밋하지 않았다. 그 일지 변경을 커밋하고, 푸시하고, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지)를 반영한 뒤 PR을 열어 봇 회차와 병합까지 한다. 병합한 뒤에는 사용자의 요청대로 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상은 일지의 "세션 통제"와 "인계 (커밋 뒤)" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 사용자에게 할 보고는 일지의 "인계 (커밋 뒤)" 절에 있다. 일지 docs/journal/2026-10-20-07-harness-stops-growing.md
+읽을 것: docs/journal/2026-10-20-09-harness-stops-growing.md, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
+이어받을 상태: 인계: 커밋 뒤. ADR 0036은 사용자가 승인했다. 커밋 7bf2e4fc와 origin/main 병합 커밋 33ccba49까지 했고 아직 푸시하지 않았으며 열린 PR이 없다. 일지의 "main 합치기"와 "인계 (커밋 뒤)" 절은 커밋하지 않았다. 그 일지 변경을 커밋하고, 푸시하고, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지)를 반영한 뒤 PR을 열어 봇 회차와 병합까지 한다. 병합한 뒤에는 사용자의 요청대로 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상은 일지의 "세션 통제"와 "인계 (커밋 뒤)" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 사용자에게 할 보고는 일지의 "인계 (커밋 뒤)" 절에 있다. 일지 docs/journal/2026-10-20-09-harness-stops-growing.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지, 그 뒤 멈춘 세션의 재개까지
 ```
@@ -231,3 +231,85 @@ CodeRabbit CLI는 좌석이 없어(`Seat: not assigned`) 대체 둘을 돌렸다
 - (보류 → 오탐) 카나리아 체크아웃을 읽지 않는다는 독스트링: 그 기록 폴더는 `C--project-agent-canary-<커밋>` 꼴이라 워크트리 글롭에 걸리지 않고, `test_주_체크아웃과_그_워크트리의_기록만_읽고_서브에이전트_기록도_읽는다`가 그 폴더를 넣어 고정한다(`~/.claude/projects`를 손으로 봤다).
 
 다시 돌린 명령: 두 시험 파일 75개 통과, ruff check·format, pyright(고친 네 파일), `tools/mutate.py --check`(두 표의 원문 스물·서른일곱 모두 한 번씩), `queue_open_rows.py --ref 51572a31 --today 2026-10-19`(열린 86, 만료 13, 날짜 없음 4·13·16)와 `--today 2026-10-20`(열린 69).
+
+## PR과 인계 (셋째 세션, 2026-10-20)
+
+리뷰 반영 커밋 `d6d726a7`의 pre-commit은 모두 통과했다(ruff check·format, 검사 러너 여덟 가운데 pytest 260.1초·web-verify 280.8초, 표·줄 구분 문자·변이 표, 인용 대조, 커밋 메시지. 카나리아 모양과 헌법 판은 해당 파일이 없어 `Skipped`). 그 커밋 뒤에 인계 계기(336,243 토큰, 경계 `커밋 뒤`)가 왔으나, 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘기지 않았다(next-session "인계할 때" 1).
+
+푸시한 뒤 PR #315를 열었다(origin/main은 `51572a31` 그대로였다). 체크리스트에 PR 직전 리뷰의 결과와 두고 간 성능 Minor 하나를 적었다. `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+
+PR을 연 직후 인계 계기(353,659 토큰, 경계 `PR 연 뒤`)가 왔다. 인계하지 않는 다섯에 들지 않았다. PR 생성은 성공했고, 요청 범위는 병합과 재개까지이며, "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `chore/hook-census`이고 `chore/hook-census (인계함)`으로 바꾼다.
+
+PR 직전에 `list_sessions`를 다시 봤다. 정지 지시 뒤에 새로 생긴 실행 중 세션은 `local_10ee43cd`("대기열 306 남은 사례 셋") 하나였다. 이 세션은 PR #314(chore/timing-tests-under-load)를 인계받은 세션이고, 그 지시문의 "이어받을 상태"에 정지 지시가 이미 옮겨져 있어 다시 보내지 않았다. 재개 메시지의 대상에 더한다. 그 PR은 306의 사례를 고치므로, 이 PR과 뒤에 병합하는 쪽이 대기열 306 행의 충돌을 푼다(이 PR은 그 행을 받아들여 닫았다).
+
+남은 단계(새 세션이 한다): 첫 `@coderabbitai review` 코멘트와 봇 회차, 병합(워크트리에서 병합할 때), next-session, 재개 메시지, 사용자에게 할 보고.
+- 재개 메시지 대상: 위 "세션 통제" 절의 여섯(`local_59152ef3`, `local_e9f08d98`, `local_d1765060`, `local_48850536`, `local_d928b27e`, `local_c55fa64e`)과 둘(`local_bbb2d881`, `local_96616a7c`), `local_eda9fa35`, 그리고 `local_10ee43cd`. 그 가운데 `local_bbb2d881`은 재개 메시지를 그 세션으로 보내 달라고 했다. 처음 보낸 대상은 첫 세션의 요약에만 있어, 보내기 전에 `list_sessions`에서 정지 지시를 받고 멈춘 세션을 다시 찾는다. 병합 전에 새로 생긴 세션에는 같은 정지 지시를 보낸다.
+- 사용자에게 할 보고: 병합 뒤 다음 작업은 제품이다(end-user-continuation 티켓 02~06이 `ready-for-agent`, 이 세션에서 파일을 다시 봤다). 선택 화면 설명의 "티켓 01"이 틀렸다는 것을 바로잡는다. 이 세션의 사용자 프롬프트는 시작 프롬프트 하나("계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??")이고, 그 답이 이 보고다.
+
+```
+다음 작업: chore/hook-census (ADR 0036). 하네스는 세 번째나 손상 한 번에 더하고, 쓰이지 않는 훅은 빼자고 넘기며, 대기열 행은 14일 뒤 만료한다는 변경의 PR #315 봇 회차·병합과 멈춘 세션의 재개
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??
+브랜치: chore/hook-census
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-09-harness-stops-growing.md의 "PR 직전 리뷰"와 "PR과 인계" 절, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #315를 d6d726a7로 열었고 PR 직전 리뷰(CLI 좌석 없음, /security-review 지적 없음, bug-perf-review의 유효 여덟과 보류에서 유효로 판정한 하나를 고쳤다)를 반영했다. 두고 간 성능 Minor 하나는 PR 체크리스트에 있다. 일지에 커밋하지 않은 인계 절이 있다. ADR 0036은 사용자가 승인했다. 병합한 뒤 사용자의 요청대로 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상은 일지의 "세션 통제"와 "PR과 인계" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 사용자에게 할 보고는 일지의 "PR과 인계" 절에 있다. 일지 docs/journal/2026-10-20-09-harness-stops-growing.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지, 그 뒤 멈춘 세션의 재개까지
+```
+
+제목을 `chore/hook-census (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 있었고, 워크트리는 이미 잠겨 있지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-20T00:58:35Z
+
+## 봇 회차 (넷째 세션, 2026-10-20)
+
+시작 프롬프트는 앞 세 세션과 같다("계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??"). 제목을 `chore/hook-census`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 main은 움직이지 않았다.
+
+`d6d726a7`의 검사는 모두 초록이었다. CodeRabbit은 별이 10개 미만이라는 건너뜀 코멘트만 남겼고, claude-review의 첫 회차는 Critical·Major 0, Minor 2, Nit 1이었다.
+- (Minor, 고침) `hook_report.py`의 `main`이 기록 폴더 이름을 네 겹 중첩으로 지었다. `main_checkout_folder`로 뺐다. `--repo` 없는 길을 고정한 시험이 없어 워크트리에서도 주 체크아웃의 이름을 짓는다는 시험을 더했다. 리팩터링을 먼저 한 뒤라 빨강은 `--git-common-dir`을 `--git-dir`로 바꾼 판에서 봤다(`-main--git-worktrees`로 갈렸다). 되돌린 뒤 그 파일의 시험 36개 통과, pyright 0, `tools/mutate.py --check`로 원문 스물 확인.
+- (Minor, 고치지 않음) `render`를 판정과 표 조립으로 나누자는 지적: 그 함수의 줄 셋이 `hook_report_mutations.toml`의 원문이라 나누면 원문을 다시 고정하고 스물을 다시 돌려야 하는데, 얻는 것은 읽기 쉬움뿐이다. 뒤로 넘기는 일이 아니다.
+- (Nit, 고치지 않음) `queue_open_rows.py`의 `main`을 `argparse`로 바꾸자는 지적: 인자 시험이 stderr의 까닭 문구를 보고 변이 하나가 `args.pop(0)` 줄을 원문으로 쓴다. 두 도구의 방식을 맞추는 것뿐이라 그 값을 치르지 않는다.
+
+정지 지시 뒤에 새로 생긴 실행 중 세션은 `local_48b329b4`(chore/timing-tests-under-load, PR #314) 하나였다. `local_10ee43cd`가 넘긴 세션이고, `search_session_transcripts`("재개 메시지")의 조각에 정지 지시가 옮겨져 있어 다시 보내지 않았다. 재개 메시지의 대상에 더한다.
+
+## main 합치기와 인계 (넷째 세션, 2026-10-20)
+
+위 고침을 커밋하기 직전 `tools/sibling_overlap.py`가 1로 끝났다. 그사이 PR #314(chore/timing-tests-under-load)가 병합되어 origin/main이 `1039d50e`로 움직였고, 이 일지가 그 PR의 일지 2026-10-20-08보다 이름순으로 앞서게 됐다(옮길 번호 07 → 09). 위 절의 "main은 움직이지 않았다"는 이 세션을 시작한 때의 사실이다.
+
+- `git merge --no-commit origin/main`의 충돌은 `.scratch/retro-queue.md`의 두 행이었다. 102는 그 PR의 회고가 같은 날 2회차를 더해(일지 2026-10-20-08) 이 브랜치가 만료로 닫던 것을 버리고 main 쪽을 살렸다. 승인 칸의 가장 늦은 날짜가 2026-10-20이 되어 만료할 행이 아니다. 306은 main 쪽 내용(#314가 고친 사례와 새 사례)을 살리고 그 위에 취소선과 닫힘 표지를 얹었으며, 표지 끝을 "10·11회차와 `chore/timing-tests-under-load`(PR #314)의 고침과 새 사례는 이 결정을 병합하기 전에 나란히 들어왔다"로 고쳤다. 푸는 스크립트(스크래치패드)가 줄 끝을 CRLF로 바꿔 LF로 되돌렸다.
+- 합친 대기열은 `queue_open_rows.py --today 2026-10-20`으로 열린 행 71개다(69와 되살아난 102와 #314가 더한 374). 만료할 행은 없고, 회차 3 이상은 227, 사람 몫은 238이다. ADR 0036 Consequences의 수 문장 끝에 이 경위를 덧붙였다.
+- 병합 커밋 `050df7fe`의 pre-commit은 모두 통과했다(검사 러너 여덟 가운데 pytest 162.7초·web-verify 192.7초, 합 193.09초, 표·줄 구분 문자·변이 표, 인용 대조 경고 없음, 커밋 메시지. ruff 둘과 카나리아 모양·헌법 판은 해당 파일이 없어 `Skipped`).
+
+PR 직전 리뷰에 밀 주장에 더한다(합치며 새로 쓴 사실 문장): 위 306 표지의 끝 문장과 ADR 0036의 "그 뒤 PR #314를 합치자 …71행이 됐다".
+
+그 커밋 뒤에 인계 계기(242,322 토큰, 경계 `커밋 뒤`)가 왔다. 인계하지 않는 다섯에 들지 않았다. 커밋은 성공했고, 요청 범위는 병합과 재개까지이며, "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `chore/hook-census`이고 `chore/hook-census (인계함)`으로 바꾼다.
+
+남은 단계(새 세션이 한다).
+- 커밋하지 않은 변경 셋(`tools/hook_report.py`의 `main_checkout_folder`, 그 시험, 이 일지)을 커밋하기 전에 `uv run python tools/sibling_overlap.py --move`로 이 일지를 2026-10-20-09로 옮긴다. 그 도구가 이 브랜치의 변경과 미추적 파일 안의 인용도 옮긴다.
+- 커밋과 푸시, 마지막 푸시 뒤의 첫 `@coderabbitai review` 코멘트, `tools/wait_ci.py` 대기. CodeRabbit은 그 리뷰가 첫 회차이고, claude-review는 그 푸시가 둘째 회차라 Critical·Major만 고친다. 위 "봇 회차" 절에서 고치지 않은 Minor·Nit 둘의 까닭은 아직 PR 코멘트로 남기지 않았다.
+- 병합(워크트리에서 병합할 때), next-session, 재개 메시지, 사용자에게 할 보고("PR과 인계" 절).
+- 재개 메시지 대상: "PR과 인계" 절의 열에 `local_48b329b4`를 더한다. 이름이 `(인계함)`인 세션은 이미 넘긴 세션이라 메시지를 받아도 일하지 않는다(next-session "넘긴 뒤"). 실제로 이어 갈 것은 줄기마다 마지막 세션이고, 이 세션이 `list_sessions`에서 본 것은 `local_48b329b4`(#314 병합), `local_bbb2d881`(issue-tracker-batch, PR 없음), `local_96616a7c`(#312 병합), `local_d928b27e`(#313 병합), `local_c55fa64e`(#311 병합), `local_48850536`(#308 병합), `local_afbf82d3`(#309 병합)이다. 보내기 전에 다시 본다.
+- 재개 메시지에 하나를 더 적기를 권한다. 재개한 세션들이 저마다 next-session을 돌면 새 결정표의 제품 먼저로 모두 같은 end-user-continuation 티켓 묶음(02~06)을 고를 수 있다. 실행 중 세션 확인은 이미 도는 세션만 거르고, 함께 여는 세션 사이에는 27초의 틈으로 같은 행을 맡은 적이 있다(대기열 283). 그래서 그 묶음은 이 PR을 병합한 세션의 next-session이 열고, 재개한 세션은 그 티켓을 다음 작업에서 뺀다고 적는다.
+
+```
+다음 작업: chore/hook-census (ADR 0036). 하네스는 세 번째나 손상 한 번에 더하고, 쓰이지 않는 훅은 빼자고 넘기며, 대기열 행은 14일 뒤 만료한다는 변경의 PR #315 봇 회차·병합과 멈춘 세션의 재개
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??
+브랜치: chore/hook-census
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-09-harness-stops-growing.md의 "봇 회차 (넷째 세션)"과 "main 합치기와 인계 (넷째 세션)" 절, docs/adr/0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md
+이어받을 상태: 인계: 커밋 뒤. PR #314를 합친 병합 커밋 050df7fe까지 했고 아직 푸시하지 않았다. 커밋하지 않은 변경 셋(claude-review 첫 회차의 Minor 하나를 고친 tools/hook_report.py와 그 시험, 일지)이 있다. 커밋 전에 sibling_overlap.py --move로 일지를 2026-10-20-09로 옮기고, 커밋·푸시한 뒤 마지막 푸시 뒤에 첫 @coderabbitai review 코멘트를 남기고 순서 1의 2(봇 회차)대로 기다린다. 고치지 않은 claude-review의 Minor·Nit 둘의 까닭은 아직 PR 코멘트로 남기지 않았다. 병합한 뒤 멈춰 둔 세션들에 재개 메시지를 보낸다. 대상과 재개 메시지에 더할 것(제품 티켓 묶음은 병합한 세션이 연다)은 일지의 "main 합치기와 인계" 절이고, 보내기 전에 list_sessions로 그사이 새로 생긴 세션도 찾는다. 재개 메시지에는 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따르라고 적는다. 병합 전까지 새로 생긴 세션에는 같은 정지 지시를 보낸다. 사용자에게 할 보고는 일지의 "PR과 인계" 절에 있다. 일지 docs/journal/2026-10-20-09-harness-stops-growing.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지, 그 뒤 멈춘 세션의 재개까지
+```
+
+open-session을 부른다 2026-10-20T01:13:31Z
+
+## 커밋과 봇 회차 (다섯째 세션, 2026-10-20)
+
+시작 프롬프트는 앞 네 세션과 같다("계속 하네스 작업만 하는것 같은데 도대체 언제 끝나??"). 제목을 `chore/hook-census`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 main은 `050df7fe`가 합친 `1039d50e` 그대로였다.
+
+- `tools/sibling_overlap.py --move`로 이 일지를 2026-10-20-07에서 2026-10-20-09로 옮겼다. 인용을 고친 파일은 프로브 README, 카나리아 명세 다섯, ADR 0036, 이 일지다. `git grep`으로 옛 번호를 찾으니 남은 것은 이 브랜치와 무관한 옛 일지의 "일지 07"뿐이었다.

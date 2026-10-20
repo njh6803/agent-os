@@ -8,7 +8,7 @@
 #   같은 PR 안의 앞 판 넷(통과 4, 통과 3·실패 1, 통과 4, 통과 2·실패 2)과 그때마다 고친 질문·본문은 그 일지의 검사 절.
 #   2026-10-13 PR 직전 버그 축 반영(200 문장의 순서와 expect 하나)은 `--preflight` 로 갈음했다(통과, 일지 2026-10-13-06).
 # 셋째 물음(대기열 166의 조건)은 ADR 0036 이 그 조건을 chore 배치의 계기에서 빼 2026-10-19 에 걷었다. 위 결과의 셋째는 그
-#   조건이 실리던 판의 것이다. 지금 판의 그 칸은 `next_session_product_first.toml` 이 본다(일지 2026-10-20-07).
+#   조건이 실리던 판의 것이다. 지금 판의 그 칸은 `next_session_product_first.toml` 이 본다(일지 2026-10-20-09).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_number_body_batch.toml <출력 디렉터리>
 kind = "skill"

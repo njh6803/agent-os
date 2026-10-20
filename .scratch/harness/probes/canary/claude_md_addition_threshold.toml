@@ -1,10 +1,10 @@
 # CLAUDE.md 교정 루프의 셋째 줄(새 검사·훅·지침 문장은 같은 실수의 세 번째나 손상 한 번에 더한다, ADR 0036)이 새 세션에
-# 실리는지(일지 2026-10-20-07). CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다. 두 갈래 모두 같은 pyproject.toml 을
+# 실리는지(일지 2026-10-20-09). CLAUDE.md 는 매 세션 실리므로 규칙 갈래의 모양만 빌린다. 두 갈래 모두 같은 pyproject.toml 을
 # 읽고 체크아웃만 다르다. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 카나리아가
 # 없다. 워크트리 세션에는 주 체크아웃의 `CLAUDE.md`가 실리지 않아(`.scratch/harness/probes/claude_md_parent.py`, 대기열 171)
 # 실험군의 통과는 워크트리 사본이 실렸다는 뜻이다. 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판을 `--control-commit` 으로 준다
 # (README `canary/` 행).
-# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `be04b6e1`, 일지 2026-10-20-07).
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `be04b6e1`, 일지 2026-10-20-09).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/claude_md_addition_threshold.toml <출력 디렉터리>
 kind = "rule"

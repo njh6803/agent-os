@@ -414,6 +414,13 @@ def render(
     return "\n".join(out)
 
 
+def main_checkout_folder(root: Path) -> str:
+    """주 체크아웃의 기록 폴더 이름. 워크트리에서 돌아도 공통 git 디렉터리의 부모로 찾는다.
+    OSError 는 `_git` 의 것이다."""
+    common = _git(root, "rev-parse", "--path-format=absolute", "--git-common-dir").strip()
+    return folder_name_of(str(Path(common).parent))
+
+
 def _positive(text: str) -> int:
     try:
         value = int(text)
@@ -458,13 +465,7 @@ def main(argv: list[str]) -> int:
     projects: Path = args.projects or Path.home() / ".claude" / "projects"
     try:
         hooks = registered_hooks((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
-        repo: str = args.repo or folder_name_of(
-            str(
-                Path(
-                    _git(root, "rev-parse", "--path-format=absolute", "--git-common-dir").strip()
-                ).parent
-            )
-        )
+        repo: str = args.repo or main_checkout_folder(root)
         introduced = introduced_dates(root, hooks)
     except (OSError, UnicodeDecodeError, ValueError) as error:
         sys.stderr.write(f"settings.json 이나 git 을 읽지 못했다: {error}\n")

@@ -25,6 +25,7 @@ from tools.hook_report import (
     fingerprints,
     folder_name_of,
     introduced_dates,
+    main_checkout_folder,
     registered_hooks,
     render,
     scan,
@@ -472,6 +473,16 @@ def _commit(root: Path, day: str) -> None:
         capture_output=True,
         env={**hook_environment(), "GIT_COMMITTER_DATE": f"{day}T00:00:00Z"},
     )
+
+
+def test_워크트리에서도_주_체크아웃의_기록_폴더_이름을_짓는다(tmp_path: Path) -> None:
+    main = tmp_path / "main"
+    main.mkdir()
+    _hook_repository(main, [])
+    _git(main, "worktree", "add", "-q", str(tmp_path / "wt"))
+    folder = main_checkout_folder(main)
+    assert folder.endswith("-main")
+    assert main_checkout_folder(tmp_path / "wt") == folder
 
 
 def test_지웠다가_다시_들인_훅은_다시_들인_날부터_센다(tmp_path: Path) -> None:
