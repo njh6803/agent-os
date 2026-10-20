@@ -103,6 +103,30 @@
 - `run_checks.py`는 zizmor, lint-imports, check-instructions, check-type-escapes, pyright, run-hooks가 `Passed`를 찍은 뒤 인계로
   멈췄다. pytest와 web의 결과는 없다.
 
+## 인계 (셀프 리뷰 직전)
+
+이 세션의 제목은 `chore/third-round-batch`였다. `/code-review`를 부른 직후 인계 계기(`셀프 리뷰 직전`, 컨텍스트 329,004 토큰)가
+와 리뷰의 단계는 밟지 않았다. 셀프 리뷰는 새 세션이 한다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가
+없다).
+
+```
+다음 작업: 기능 하네스 chore. 대기열 345·346·376·377·378 반영을 셀프 리뷰부터 PR과 병합까지 잇는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 346·376·377·378(회차 3 이상인 열린 행 넷. 227도 3회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행(378과 tools/open_session.ps1의 18·360)은 행 원문으로 가려 묶는다
+브랜치: chore/third-round-batch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-20-30-third-round-batch.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-20-30-third-round-batch.md). PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook, 대기열 227)과의 겹침을 적는다. 그 PR도 .claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였다. PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고, 병합 전에 써야 한다(대기열 383)
+확인할 선행 조건: run_checks.py의 pytest·web 결과(인계로 멈춰 보지 못했다)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/third-round-batch (인계함)`으로 바꿨고, 백그라운드 `run_checks.py`를 멈췄고, `git worktree unlock`이 오류 없이
+끝났다.
+
+open-session을 부른다 2026-10-20T10:47:31Z
+
 ## 이어 받은 세션 (인계 뒤)
 
 - 지시문의 선행 조건대로 `run_checks.py`를 다시 돌렸다(커밋하지 않은 같은 판). web-verify를 포함한 일곱은 `Passed`였고 pytest는
@@ -124,7 +148,7 @@
 2. Minor: 378이 센 네 번 가운데 둘(일지 2026-10-20-22·2026-10-20-25)은 그보다 앞선 신뢰 대화상자 검사에서 멈췄는데, 3단계의
    "폴더 오류"는 새 문구 둘만 가리켜 그 멈춤에는 부탁 줄이 없다.
 3. Nit: 108과 378은 행끼리(HEAD 판의 "어디로" 칸) 서로 가리키지만 코드와 스킬에는 108 포인터가 없다.
-4. Minor: 스킬 3단계와 ps1 주석의 "인계 세션이 그 워크트리에 열려 첫 턴에 멈춘 일이 네 번"이 사실보다 크다. 22·25의 건은
+4. Minor: 인계 세션이 그 워크트리에 열려 첫 턴에 멈춘 일이 네 번이라는 스킬 3단계와 ps1 주석의 옛 문장이 사실보다 크다. 22·25의 건은
    신뢰 대화상자에서 멈춰 그때는 세션이 생기지 않았다.
 5. Nit: `open_session_folder_mutations.toml` 머리가 `Send-Prompt`의 멈춤도 실제 앱에서 손으로 봤다고 적었으나, 손으로 본 것은
    스크래치 스크립트로 부른 `Read-ShownFolders`와 대조 함수이고 `throw` 길은 돌리지 않았다.
@@ -136,8 +160,8 @@
 
 1. Major: 명세 축 1과 같다(폴더 오류 뒤의 모델·노력).
 2. Minor: `check_quotes._diff_head`의 `rename: bool`이 `CODING_STANDARDS.md`의 불리언 플래그 항목에 걸린다.
-3. Minor: 인용 둘. 일지 2026-10-20-27 390행의 "`core.md`의 실행 타임아웃 항목이 옛 메커니즘 그대로다"가 PR #325 코멘트 원문과
-   다르고, 이 일지 28행의 "Quit requested before 'ready'"는 저장소에 없고 `%APPDATA%\Claude\logs\main.log`(2026-08-21에서
+3. Minor: 인용 둘. 일지 2026-10-20-27 390행이 따옴표로 든 봇의 지적(`core.md`의 실행 타임아웃 항목이 옛 메커니즘 그대로라는
+   것)이 PR #325 코멘트 원문과 글자가 다르고, 이 일지 28행의 "Quit requested before 'ready'"는 저장소에 없고 `%APPDATA%\Claude\logs\main.log`(2026-08-21에서
    끊긴다)에서도 찾지 못했다.
 4. Minor: 명세 축 4와 같다("네 번"). 378에서 첫 턴에 멈췄다고 적힌 것은 티켓 06 하나다.
 5. Minor: `composer_folder.ps1`은 마지막 폴더가 `C:\project\agent`인 한 회차뿐이라, 마지막 폴더가 다를 때 같은 Text가 따라 바뀐다는
@@ -177,7 +201,7 @@
 - 표준 7. `pull_body_lines` 독스트링을 `tools.md`가 본 것(클라우드에서 `gh pr …` 하위 명령 셋이 막히고 REST는 됐다)과 `gh pr edit`는
   재지 않았다는 것으로 고쳤다.
 - Nit 다섯. `--move`의 help에 PR 본문, 재시도 주석을 "0.5초 간격으로 여섯 번까지"로, README 행에 콤보 상자·분할 버튼,
-  `hook_probe_conclusion` 독스트링을 "`paths`가 잡는 README를 모두 들고 그보다 넓다"로 고치고 그 넓은 쪽을 시험
+  `hook_probe_conclusion` 독스트링을 `paths`가 잡는 README를 모두 들되 그보다 넓다는 뜻으로 고치고 그 넓은 쪽을 시험
   `test_루트가_아닌_자리의_scratch_도_프로브_README_로_본다`로 고정했다(시험이 스물하나가 되어 346 닫힘 문장도 고쳤다).
   `docs/agents/issue-tracker.md`의 프로브 규칙 문장에 새 훅을 더했다.
 
@@ -209,26 +233,41 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장).
 `.scratch/retro-queue.md` 하나다. 새로 열린 PR #297도 #296처럼 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 README,
 대기열, `tools/hook_payloads.toml`을 고친다.
 
-## 인계 (셀프 리뷰 직전)
+### 커밋
 
-이 세션의 제목은 `chore/third-round-batch`였다. `/code-review`를 부른 직후 인계 계기(`셀프 리뷰 직전`, 컨텍스트 329,004 토큰)가
-와 리뷰의 단계는 밟지 않았다. 셀프 리뷰는 새 세션이 한다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가
-없다).
+셀프 리뷰를 반영한 판을 커밋했다(`chore: 인계 열기의 폴더 확인과 프로브 결론 훅 등 대기열 다섯 (345·346·376·377·378)`). pre-commit은
+ruff 둘, 검사 러너의 여덟(lint-imports, zizmor, check-instructions, check-type-escapes, pyright, run-hooks, pytest 191초,
+web-verify 230초), 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 인용, 커밋 메시지가 `Passed`였고 헌법 판 검사는
+헌법을 고치지 않아 `Skipped`였다. 인용 검사가 이 일지의 따옴표 셋(옛 스킬 문장, 일지 27의 옛 문장, 내가 바꿔 쓴 독스트링의 뜻)을
+경고해 커밋 뒤에 따옴표를 풀었다. 이 고침과 이 절은 아직 커밋하지 않았다.
+
+## 인계 (커밋 뒤)
+
+이 세션의 제목은 `chore/third-round-batch`였다. 커밋 직후 인계 계기(`커밋 뒤`, 컨텍스트 286,195 토큰)가 왔다. 이 세션은 곁 세션이
+아니고(`get_session`의 `self`에 `parentSessionId`가 없다), 넘겨받은 경계(`셀프 리뷰 직전`)와 이번 경계가 다르며, 요청 범위가 PR과
+병합까지라 넘긴다. 열린 PR은 없고 아무것도 푸시하지 않았다.
 
 ```
-다음 작업: 기능 하네스 chore. 대기열 345·346·376·377·378 반영을 셀프 리뷰부터 PR과 병합까지 잇는다
+다음 작업: 기능 하네스 chore. 대기열 345·346·376·377·378 반영을 커밋 뒤부터 PR과 병합까지 잇는다
 다음 단계: 구현
 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
 시작 프롬프트: 대기열 346·376·377·378(회차 3 이상인 열린 행 넷. 227도 3회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행(378과 tools/open_session.ps1의 18·360)은 행 원문으로 가려 묶는다
 브랜치: chore/third-round-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-20-30-third-round-batch.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-20-30-third-round-batch.md). PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook, 대기열 227)과의 겹침을 적는다. 그 PR도 .claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였다. PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고, 병합 전에 써야 한다(대기열 383)
-확인할 선행 조건: run_checks.py의 pytest·web 결과(인계로 멈춰 보지 못했다)
+읽을 것: 일지 docs/journal/2026-10-20-30-third-round-batch.md (끝의 "이어 받은 세션"과 이 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 통과했다. 일지의 따옴표 고침과 인계 절은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 그것을 커밋하고, origin/main을 합치고(겹치는 파일은 .scratch/retro-queue.md), PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)를 돌린 뒤 PR을 여는 것이다. PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook)과 #297이 같은 하네스 파일(.claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml)을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다는 것과, 378의 폴더 읽기가 마지막 폴더가 다른 회차의 양성 대조 없는 어림이라는 것을 적는다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였으니 PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고 병합 전에 쓴다(대기열 383, 표준 축 5의 측정을 회고 후보로 넘겼다). 열린 PR은 없고 푸시하지 않았다. docs/journal/2026-10-20-30-third-round-batch.md
+확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
 
-제목을 `chore/third-round-batch (인계함)`으로 바꿨고, 백그라운드 `run_checks.py`를 멈췄고, `git worktree unlock`이 오류 없이
-끝났다.
+제목을 `chore/third-round-batch (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(검사 러너, 카나리아, 커밋, 리뷰 서브에이전트
+둘)은 모두 끝나 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝났다(이미 풀려 있었다).
 
-open-session을 부른다 2026-10-20T10:47:31Z
+open-session을 부른다 2026-10-20T11:33:51Z
+
+## 이어 받은 세션 (커밋 뒤 인계 뒤)
+
+- 제목을 `chore/third-round-batch`로 바꾸고 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다.
+  커밋하지 않은 것은 이 일지 하나였다.
+- `tools/sibling_overlap.py`는 번호 겹침 없음이었다. 새로 열린 PR #327(`chore/tidy-idle-sessions`)이 프로브 README를 고치고 일지
+  2026-10-20-31을 쓰며, PR #296은 `docs/agents/issue-tracker.md`도 고친다.
