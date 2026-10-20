@@ -1,0 +1,27 @@
+# `.claude/rules/adr.md` 에 더한 문단(ADR 을 쓰거나 이력을 더하기 전에 `domain-modeling` 을 부른다)이 ADR 파일을 Read 로 열 때
+# 실리는지(ADR 0033 이력 2026-10-20 "하네스가 스킬을 부르는 자리를 감사하고, 설명에만 기대던 계기를 하네스로 옮긴다").
+# 실험군은 그 스킬을 언급하지 않는 ADR 하나를, 대조군은 같은 체크아웃의 paths 밖(pyproject.toml)을 읽는다. 카나리아의 제목
+# "ADR 규칙"은 옛 판에도 있어 실린 파일을 가리킬 뿐이고, 새 문단이 실렸다는 것은 스킬 이름이 가린다.
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 셀프 리뷰를 반영하고 커밋하기 전의 워크트리 사본 `5fee4cd6` 위, 일지
+# 2026-10-20-35).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/adr_rule_domain_modeling.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 아키텍처 결정 기록을 새로 쓰거나 그 이력을 더하기 전에 Skill 도구로 어떤 스킬을
+부르라는 문장이 있으면, 그 문장이 든 지시 파일의 첫 `#` 제목과 그 스킬의 이름을 각각 글자 그대로 옮겨라.
+읽은 파일에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["ADR 규칙", "domain-modeling"]
+source = ".claude/rules/adr.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "docs/adr/0001-runtime-engine-behind-the-plugin-contract.md"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "pyproject.toml"
