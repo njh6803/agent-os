@@ -1712,7 +1712,18 @@ expect_output = ["pid 4242 를 끄려 했다"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if own is not None and own in sessions:'''
+old = '''    if own in sessions:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "end-holders: 부른 세션을 몰라도 끈다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "부른_세션을_모르면"]
+expect = "red"
+expect_output = ["pid 4242 를 끄려 했다"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if own is None or not _SESSION_ID.fullmatch(own):'''
 new = '''    if False:'''
 
 [[mutation]]

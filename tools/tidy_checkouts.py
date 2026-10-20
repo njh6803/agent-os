@@ -193,7 +193,8 @@
 떴다. 다른 세션이 메시지를 보내자 앱이 그 세션을 다시 띄웠고 세션은 대화를 이어 답했다. 그
 워크트리를 지운 뒤라 다시 뜬 세션의 작업 디렉터리는 주 체크아웃이었다. 아래 순서로 보고 어긋나면
 아무것도 끄지 않는다.
-1. 인자의 세션 id 가 모두 `local_<uuid>` 모양이고, 이 도구를 부른 세션이 없다.
+1. 인자의 세션 id 가 모두 `local_<uuid>` 모양이고, 이 도구를 부른 세션을 환경으로 알며(앱 밖에서
+   불러 모르면 끄지 않는다, PR 리뷰) 그 세션이 인자에 없다.
 2. 그 경로가 등록된 워크트리다.
 3. 프로세스를 다시 훑어 그 폴더를 작업 디렉터리로 쥔 프로세스와 산 잠금 pid 를 찾는다. 없으면
    끝낼 것 없이 0으로 끝난다.
@@ -284,9 +285,9 @@
 `empty-trash`: 0 휴지통이 비었다. 1 남은 것이 있다(항목마다 쥔 프로세스를 찍었다). 2 는 `remove` 와
 같다.
 `end-holders`: 0 쥔 프로세스를 끝냈다(쥔 것이 처음부터 없었어도 0). 1 아무것도 끄지 않았거나(이
-도구를 부른 세션이다, 등록된 워크트리가 아니다, 프로세스를 볼 수 없다, 받은 세션 밖의 프로세스가
-쥐었다) 끈 뒤에도 쥔 것이 남았다. 2 세션 id 모양이 아니거나 `remove` 의 2와 같다. 3 은 `remove` 와
-같다.
+도구를 부른 세션이거나 그 세션을 모른다, 등록된 워크트리가 아니다, 프로세스를 볼 수 없다, 받은 세션
+밖의 프로세스가 쥐었다) 끈 뒤에도 쥔 것이 남았다. 2 세션 id 모양이 아니거나 `remove` 의 2와 같다.
+3 은 `remove` 와 같다.
 """
 
 from __future__ import annotations
@@ -2133,7 +2134,10 @@ def _end_holders(
     if wrong:
         print(f"세션 id 모양(local_<uuid>)이 아니다: {', '.join(wrong)}", file=sys.stderr)
         return 2
-    if own is not None and own in sessions:
+    if own is None or not _SESSION_ID.fullmatch(own):
+        print(f"남겼다 {target} — 부른 세션을 모른다(환경의 {SESSION_ENV} 가 없거나 어긋난다)")
+        return 1
+    if own in sessions:
         print(f"남겼다 {target} — 이 도구를 부른 세션({own})은 끝내지 않는다")
         return 1
     wt = next((w for w in listing[1:] if same_path(w.path, target)), None)

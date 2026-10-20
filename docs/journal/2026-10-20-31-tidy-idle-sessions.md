@@ -138,6 +138,7 @@ open-session을 부른다 2026-10-20T11:18:41Z
 - 반영 뒤 `tidy_checkouts_mutations.toml` `--check` 165개 원문 한 번씩, `tests/tools/test_tidy_checkouts.py` 192 통과.
 - 커밋 `3c7bc2eb`(pre-commit 모두 통과), 푸시, PR #327, `@coderabbitai review` 요청.
 - CI 모두 초록. CodeRabbit은 `Review rate limited`로 리뷰 없음(보안·버그·성능 축은 PR 직전 대체 둘). claude-review 1회차는 Minor 셋·Nit 둘(`_end_holders` 쪼개기, `holders` 재바인딩, `end_process`의 명령·질의 섞임, 잠금 pid 규칙의 흩어짐)이고, 모두 PR 코멘트에 보류 이유를 남겼다. 뒤로 넘긴 일은 없다.
+- 일지 커밋 `926ebd5e` 푸시 뒤 claude-review 2회차는 Minor 넷·Nit 둘(Critical·Major 없음)이라 PR 코멘트에 보류 이유를 남겼다. CodeRabbit 1회차는 리뷰를 마쳤고 Major 하나였다. `end-holders`가 부른 세션 id(`SESSION_ENV`)를 모르면(앱 밖에서 불렀다, 모양이 어긋난다) 부른 세션을 빼는 장치가 조용히 꺼졌다. 이 세션의 Bash에서는 그 값이 물려졌다(`uv run python`으로 찍어 봤다). 고쳤다: 그때는 아무것도 끄지 않고 1로 끝난다. 시험 `test_end_holders_는_부른_세션을_모르면_아무것도_끄지_않는다`(없음·모양 어긋남)를 먼저 빨갛게 보고 고쳤고, 그 값을 지우던 기존 시험 다섯은 쉬는 세션과 다른 부른 세션 id를 넣게 바꿨다. 변이 하나를 더하고 옮겨 간 원문 하나를 고쳤다. 시험 파일 194 통과, `--since origin/main` 변이 40 모두 기대대로. 커밋 전에 PR 본문을 넓혔다.
 
 ## 회고
 

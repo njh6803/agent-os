@@ -70,6 +70,7 @@ _OLD = "a" * 40
 # 가짜 세션 id. 실제 자식 프로세스의 환경에도 넣는다. 이 PC 의 어느 세션과도 겹치지 않는다
 _SESSION = "local_00000000-0000-0000-0000-000000000001"
 _OTHER_SESSION = "local_00000000-0000-0000-0000-000000000002"
+_CALLER = "local_00000000-0000-0000-0000-000000000003"
 _TOOL = Path(__file__).resolve().parents[2] / "tools" / "tidy_checkouts.py"
 
 
@@ -1220,7 +1221,7 @@ def test_end_holders_는_쉬는_세션의_프로세스만_끝내고_judge_가_�
     """실제 자식 프로세스로 잰다. 받은 세션 밖이면 끄지 않고, 받은 세션이면 끈 뒤 쥔 것이
     사라져 다음 `judge` 가 지울 것으로 낸다. 끈 뒤에는 실제로 기다린다(프로세스가 끝나는 데 틈이
     있다)."""
-    monkeypatch.delenv(SESSION_ENV, raising=False)
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
     path, head = _add(repo, "done")
     ops = replace(_ops({"chore/done": frozenset({head})}), sleep=time.sleep)
     with _자식이_쥔다(path, _SESSION) as pid:
@@ -1278,10 +1279,30 @@ def test_judge_와_end_holders_는_부른_세션의_프로세스를_끝내지_�
     assert "이 도구를 부른 세션" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("own", [None, "local_모양이-아니다"])
+def test_end_holders_는_부른_세션을_모르면_아무것도_끄지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, own: str | None
+) -> None:
+    """앱 밖에서 부르면 환경에 세션 id 가 없어 부른 세션을 뺄 수 없다. 그때는 끄지 않는다."""
+    if own is None:
+        monkeypatch.delenv(SESSION_ENV, raising=False)
+    else:
+        monkeypatch.setenv(SESSION_ENV, own)
+    path, head = _add(repo, "done")
+    ops = replace(
+        _ops({"chore/done": frozenset({head})}),
+        processes=_쥔다(path, 4242),
+        session_of=_세션({4242: _SESSION}),
+        end=_끄면_안_된다,
+    )
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 1
+    assert "부른 세션을 모른다" in capsys.readouterr().out
+
+
 def test_end_holders_는_받은_세션_밖의_프로세스가_하나라도_쥐면_아무것도_끄지_않는다(
     repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv(SESSION_ENV, raising=False)
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
     path, head = _add(repo, "done")
     base = _ops({"chore/done": frozenset({head})})
     mixed = replace(
@@ -1299,7 +1320,7 @@ def test_end_holders_는_끄기_직전에_세션_id_가_바뀐_프로세스를_�
 ) -> None:
     """pid 만 보고 끄지 않는다(`.claude/rules/probes.md`). 훑은 뒤 그 pid 가 끝나 다른 프로세스가
     받았으면 환경의 세션 id 가 다르다."""
-    monkeypatch.delenv(SESSION_ENV, raising=False)
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
     path, head = _add(repo, "done")
     reads: list[int] = []
 
@@ -1323,7 +1344,7 @@ def test_end_holders_는_끄기_전에_다시_판정해_지울_후보가_아니�
     """셀프 리뷰 명세 축. `judge` 뒤에 바뀌었거나(파일을 고쳤다) 처음부터 후보가 아닌 워크트리
     (병합되지 않았다)를 쥔 프로세스는, 찍힌 적 없는 `end-holders` 를 치거나 옛 줄을 다시 쳐도
     끄지 않는다. `remove` 가 지우기 전에 다시 판정하는 것과 짝이다."""
-    monkeypatch.delenv(SESSION_ENV, raising=False)
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
     path, head = _add(repo, "done")
     held = replace(
         _ops({}), processes=_쥔다(path, 1), session_of=_세션({1: _SESSION}), end=_끄면_안_된다
@@ -1342,7 +1363,7 @@ def test_end_holders_는_쉬는_세션의_산_잠금_pid_도_끄고_judge_가_�
     """셀프 리뷰 명세 축. `EnterWorktree` 로 연 세션은 잠금 사유에 자기 pid 를 남기고, 인계할 때만
     푼다. 그 세션이 쉬면 잠금 pid 도 그 세션의 것이라 함께 끈다. 잠금 pid 가 작업 디렉터리로 쥐지
     않아도 끈다."""
-    monkeypatch.delenv(SESSION_ENV, raising=False)
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
     path, head = _add(repo, "done")
     _git("worktree", "lock", "--reason", "claude session done (pid 9)", str(path), cwd=repo)
     ended: list[int] = []
