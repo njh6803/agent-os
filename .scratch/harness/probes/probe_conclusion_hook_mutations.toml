@@ -1,0 +1,167 @@
+# tools/hook_probe_conclusion.py(대기열 346)의 판정과 표지를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/probe_conclusion_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "README 이름을 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "README_가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\project\agent\.scratch\harness\probes\guard_hooks_time.py''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    if not parts or parts[-1] != README:'''
+new = '''    if not parts:'''
+
+[[mutation]]
+name = ".scratch 를 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "README_가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\project\agent\web\probes\README.md''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    return SCRATCH in folders and PROBES in folders[folders.index(SCRATCH) + 1 :]'''
+new = '''    return PROBES in folders'''
+
+[[mutation]]
+name = "probes 를 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "README_가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\project\agent\.scratch\design-system\design\README.md''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    return SCRATCH in folders and PROBES in folders[folders.index(SCRATCH) + 1 :]'''
+new = '''    return SCRATCH in folders'''
+
+[[mutation]]
+name = "probes 가 .scratch 뒤인지 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "README_가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\probes\.scratch\x\README.md''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''PROBES in folders[folders.index(SCRATCH) + 1 :]'''
+new = '''PROBES in folders'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "대소문자가"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    parts = [part.casefold() for part in _SPLIT.split(path) if part]'''
+new = '''    parts = [part for part in _SPLIT.split(path) if part]'''
+
+[[mutation]]
+name = "Edit 을 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "tool_input 이 사전인지 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "꼴이_어긋난"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    if not isinstance(tool_input, dict):'''
+new = '''    if tool_input is None:'''
+
+[[mutation]]
+name = "file_path 가 문자열인지 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "꼴이_어긋난"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    if not isinstance(path, str) or not is_probe_readme(path):'''
+new = '''    if path is None or not is_probe_readme(path):'''
+
+[[mutation]]
+name = "알림에서 규칙 파일 경로를 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "셋째_항목을_짚는다"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    " `.claude/rules/probes.md` 셋째 항목을 대 본다.'''
+new = '''    " 프로브 규칙의 셋째 항목을 대 본다.'''
+
+[[mutation]]
+name = "알림에서 양성 대조를 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "셋째_항목을_짚는다"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''나왔다는 양성 대조가 있는가, 같은'''
+new = '''나왔는가, 같은'''
+
+[[mutation]]
+name = "표지 이름에서 에이전트를 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "한_번"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = session_id'''
+
+[[mutation]]
+name = "표지가 이미 있어도 알린다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "한_번"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    except FileExistsError:
+        return False'''
+new = '''    except FileExistsError:
+        return True'''
+
+[[mutation]]
+name = "폴더 자리의 파일을 이미 알린 것으로 읽는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "표지_폴더를"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return True
+    try:
+        os.close('''
+new = '''    try:
+        os.makedirs(directory, exist_ok=True)
+        os.close('''
+
+[[mutation]]
+name = "표지 파일을 만들지 못하면 알리지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "표지_파일을"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+new = '''    except FileExistsError:
+        return False
+    except OSError:
+        return False'''
+
+[[mutation]]
+name = "임시 폴더가 없으면 알리지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "임시_폴더가"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''            # 쓸 수 있는 임시 폴더가 없다. 표지를 쓰지 못한 것과 같이 알린다.
+            directory = None'''
+new = '''            return 0'''
+
+[[mutation]]
+name = "대조군: 알림 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_probe_conclusion.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''에이전트마다 한 번이다."'''
+new = '''에이전트마다 한 번만 낸다."'''

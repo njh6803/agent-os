@@ -1264,3 +1264,83 @@ def test_스킬과_복구_안내가_넘기는_인자는_모두_스크립트가_�
     assert completed.returncode == 0, completed.stderr
     params = set(completed.stdout.split())
     assert passed <= params, f"스크립트가 받지 않는 인자: {passed - params}"
+
+
+# 새 세션 화면은 입력창 묶음 안에 폴더의 전체 경로를 Text 로 보인다(`환경: <폴더 이름>` 버튼과 함께,
+# .scratch/harness/probes/composer_folder.ps1, 2026-10-20). 지시문의 문단도 같은 묶음의 Text 라
+# 지시문의 줄은 뺀다. 대기열 378: 앱의 마지막 폴더인 다른 워크트리에서 인계 세션이 열려 첫 턴에
+# 멈췄다.
+_SHOWN_FOLDERS = """
+$shown = @(Select-ShownFolders @($given.names) $given.prompt)
+$shown -join '|'
+"""
+
+
+@pytest.mark.parametrize(
+    ("names", "prompt", "shown"),
+    [
+        (["새 세션", "agent", "C:\\project\\agent", "보내기"], "지시문", "C:\\project\\agent"),
+        # 지시문의 줄은 폴더 표시가 아니다
+        (["C:\\project\\agent", "D:\\x"], "첫 줄\nD:\\x\n끝", "C:\\project\\agent"),
+        (["C:\\a", "C:\\a", "c:\\b"], "", "C:\\a|c:\\b"),  # 같은 글은 한 번
+        # 여러 줄 문단의 Text 는 지시문의 어느 줄과도 같지 않고, 입력창을 읽지 못하면 지시문이
+        # 비어도 폴더가 아니다
+        (["C:\\project\\agent", "D:\\x\n둘째 줄", "E:\\y\r\n끝"], "", "C:\\project\\agent"),
+        (["agent", "환경: agent", "C:/project/agent", "\\\\server\\share"], "", ""),
+        ([], "", ""),
+    ],
+)
+def test_새_세션_화면의_글에서_드라이브_경로만_폴더로_고른다(
+    names: list[str], prompt: str, shown: str
+) -> None:
+    completed = _call("Select-ShownFolders", _SHOWN_FOLDERS, {"names": names, "prompt": prompt})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == shown
+
+
+_FOLDER_MISMATCH = """
+$mismatch = Get-FolderMismatch @($given.shown) $given.folder
+if ($mismatch) { "멈춤: $mismatch" } else { 'ok' }
+"""
+
+
+@pytest.mark.parametrize(
+    ("shown", "folder"),
+    [
+        (["C:\\project\\agent"], "C:\\project\\agent"),
+        (["C:\\project\\agent\\"], "c:/project/agent"),  # 끝의 구분자, 슬래시, 대소문자
+    ],
+)
+def test_보이는_폴더가_모두_Folder_와_같으면_보낸다(shown: list[str], folder: str) -> None:
+    completed = _call("Get-FolderMismatch", _FOLDER_MISMATCH, {"shown": shown, "folder": folder})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "ok"
+
+
+@pytest.mark.parametrize(
+    ("shown", "cause"),
+    [
+        (
+            ["C:\\project\\agent\\.claude\\worktrees\\skill-listing-trim"],
+            "'C:\\project\\agent\\.claude\\worktrees\\skill-listing-trim' 이고",
+        ),
+        (
+            ["C:\\project\\agent", "C:\\project\\other"],
+            "'C:\\project\\agent, C:\\project\\other' 이고",
+        ),
+        (["C:\\project\\agent2"], "'C:\\project\\agent2' 이고"),  # 앞부분만 같은 것은 다른 폴더다
+        ([], "폴더 경로를 찾지 못했다"),  # 앱이 모양을 바꿨으면 확인하지 못한 채 보내지 않는다
+    ],
+)
+def test_보이는_폴더가_Folder_가_아니면_보내지_않고_멈춘다(shown: list[str], cause: str) -> None:
+    completed = _call(
+        "Get-FolderMismatch", _FOLDER_MISMATCH, {"shown": shown, "folder": "C:\\project\\agent"}
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    out = completed.stdout.strip()
+    assert out.startswith("멈춤: "), out
+    assert cause in out
+    assert "보내지 않았다" in out
