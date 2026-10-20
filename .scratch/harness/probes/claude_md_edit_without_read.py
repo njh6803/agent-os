@@ -14,7 +14,8 @@
 
 표지. 그 회차가 측정인 것은 셋이 모두 맞을 때다. 대상 파일을 겨눈 Edit 호출과 그 결과가 스트림에
 있고, 모델의 글에 `CLAUDE.md` 의 표지 문장이 있고(지침이 실렸다는 표지), 결과가 아래 두 갈래 가운데
-하나다. 표지 없는 회차는 따로 세고, 하나라도 있으면 종료 코드 1 이다.
+하나다. 표지 없는 회차는 따로 세고, 하나라도 있으면 종료 코드 1 이다. 양성 대조(`notes`) 회차의
+결과가 `read-first` 가 아니어도 종료 코드 1 이다(그 판에서 "먼저 Read 를 요구한다"가 서지 않는다).
 - `read-first`: 대상 Edit 결과가 모두 오류이고 그 문구에 `READ_FIRST` 가 있으며, 파일이 그대로다.
 - `edited`: 오류가 아닌 대상 Edit 결과가 있고, 파일이 바뀌었다.
 다른 까닭의 거부(낱말을 찾지 못함, 권한 거부)는 재려는 상황이 아니라 `other` 로 두고 측정으로 세지
@@ -211,7 +212,12 @@ def main() -> int:
             print(line)
     unmeasured = [row for row in rows if not row["measured"]]
     print(f"측정 {len(rows) - len(unmeasured)} / 표지 없음 {len(unmeasured)}")
-    return 1 if unmeasured else 0
+    control_failed = [
+        row for row in rows if row["arm"] == "notes" and row["outcome"] != "read-first"
+    ]
+    if control_failed:
+        print(f"양성 대조 실패 {len(control_failed)}: notes 회차가 read-first 가 아니다")
+    return 1 if unmeasured or control_failed else 0
 
 
 if __name__ == "__main__":

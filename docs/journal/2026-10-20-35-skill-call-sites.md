@@ -228,3 +228,43 @@ open-session을 부른다 2026-10-20T16:08:17Z
   3. 유효. ADR 0033 "잰 것"의 "지침으로 실린 것은 Read로 치지 않는다"가 잰 범위(`claude -p`, 임시 폴더 루트의 `CLAUDE.md`)보다 넓었다. 잰 것과 재지 않은 것(데스크톱 앱 세션, 하위·상위 폴더, `@` 임포트)으로 좁혔다. 사용자가 승인한 이력의 문장이지만 결정은 바뀌지 않는 근거의 범위라 고치고 보고에 밝힌다.
   4. 보류 → 닫음. "하네스의 다섯 자리"의 기준. 읽는 세션에게 자기 단계로 돌리라고 하는 줄(`to-spec` 27행의 "명세를 쓴 뒤의 차례", `next-session` 22·58행)은 계기이고, 기능 전체의 순서를 그린 줄(`to-tickets` 21행)과 역할을 나눈 줄(`bug-perf-review.md` 31행)은 언급이라 다섯이 맞다. 결정(그대로 둔다)은 어느 쪽이든 같다.
   5. 보류 → 닫음. `.cmd` 셔임이면 시간 초과의 `kill`이 손자를 남긴다는 지적. 이 PC의 `shutil.which("claude")`는 `C:\Users\User\.local\bin\claude.EXE`라 해당하지 않는다.
+
+### 커밋과 PR
+
+- 반영을 `docs: PR 직전 리뷰를 반영해 탐침이 거부 문구를 표지로 보게 한다`(`992d01cf`)로 커밋했다. pre-commit이 모두 통과했다(parallel-checks 여덟 단계 310.97초, 표·줄 구분 문자·변이 표·인용 대조. 카나리아 모양은 바뀐 명세가 없어 `Skipped`이고, 커밋 전에 셋을 손으로 `--shape`로 돌려 통과했다). 인용 대조 경고 1건은 이 절의 3번이 지운 옛 ADR 문장을 그대로 든 것이라 그대로 두었다. 커밋 직전 `sibling_overlap.py`는 번호 겹침 없음, origin/main `83f0940` 그대로였다.
+- 이 커밋 뒤 `hook_handoff`가 `커밋 뒤` 경계를 알렸지만, 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `next-session` "인계할 때" 1(같은 경계에 다시 왔다)대로 넘기지 않았다.
+- 푸시하고 PR [#330](https://github.com/njh6803/agent-os/pull/330)을 열었다. ccd_pr `get_status`가 이미 묶여 있다고 했다(검사 통과 1, 대기 5). PR 본문의 체크리스트에 PR 직전 리뷰 둘의 결과를 적었고, 남긴 위험에 ADR 승인 뒤 "잰 것" 한 문장을 좁힌 것을 적었다. `@coderabbitai review`는 아직 남기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 직후 세션 컨텍스트가 246,016 토큰으로 문턱을 넘어 `hook_handoff`가 `PR 연 뒤` 경계를 알렸다. 경계가 넘겨받은 `커밋 뒤`와 달라 "인계하지 않는 때"에 들지 않았고, 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 이 세션의 지금 제목은 `docs/skill-call-sites`다. 이 세션의 사용자 프롬프트는 인계 지시문 하나다.
+
+- 남은 단계: 이 일지의 커밋하지 않은 수정(이 "커밋과 PR" 절과 인계 절)을 봇 회차의 반영과 함께 커밋, `next-session` 순서 1의 2(봇 회차)부터. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 그 뒤 반영, 병합(워크트리에서 병합할 때), 다음 지시문.
+- 회차 세기: 봇 리뷰는 아직 한 번도 오지 않았다.
+
+인계 지시문:
+
+다음 작업: 기능 skill-call-sites. 이 저장소가 쓰는 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계 인터뷰
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리의 인계라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs docs/journal/2026-10-20-26-skill-listing-budget.md 의 "다음"과 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절대로, 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정한다
+브랜치: docs/skill-call-sites
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-20-35-skill-call-sites.md 의 "인계 (PR 연 뒤)"와 그 앞 "커밋과 PR"
+이어받을 상태: 인계: PR 연 뒤. 설계 인터뷰, 셀프 리뷰, ADR 승인, PR 직전 리뷰 둘(/security-review 지적 없음, bug-perf-review 유효 셋 반영)은 끝났다(다시 하지 않는다). PR #330을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 봇 리뷰는 아직 한 번도 오지 않았다. 일지의 커밋하지 않은 수정("커밋과 PR" 절과 인계 절)이 워크트리에 있다. docs/journal/2026-10-20-35-skill-call-sites.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/skill-call-sites (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(리뷰 서브에이전트, 탐침 실행, 커밋이 모두 끝나 있었다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-20T16:30:45Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+2026-10-21에 인계 지시문으로 연 새 앱 세션이 제목을 `docs/skill-call-sites`로 바꾸고 `EnterWorktree(path)`로 워크트리 `skill-call-sites`에 들어갔다. 지시문 첫 줄이 다시 `grill-with-docs`를 가리켰지만 앞 인계와 같이 인터뷰와 셀프 리뷰는 다시 하지 않았다. 이 세션의 사용자 프롬프트는 인계 지시문 하나다.
+
+### 봇 회차 (첫 회차)
+
+- 첫 `@coderabbitai review` 코멘트를 이 세션이 남겼다. 처음 읽은 CodeRabbit 줄은 `Review skipped: manual review required for this OSS repository`였고, 코멘트 뒤에 `Review completed`가 되었다. 검사 일곱이 모두 통과했다(헤드 `992d01cf`).
+- 인라인 지적 하나(Minor, 첫 회차라 지적마다 판단). `claude_md_edit_without_read.py`의 `main`이 양성 대조 갈래 `notes`의 회차가 `edited`여도 종료 코드 0을 냈다. 그러면 "먼저 Read를 요구한다"가 이 판에서 서지 않는데도 `claude-md` 갈래의 결과가 근거로 남는다(`.claude/rules/probes.md` 셋째 항목). 유효. `notes` 회차 가운데 `read-first`가 아닌 것이 있으면 한 줄을 찍고 종료 코드 1을 내게 고쳤다. 독스트링과 README 행에 그 갈래를 적었다. 가짜 행으로 셋(정상, `notes`가 `edited`, 표지 없음)을 돌려 종료 코드가 0·1·1로 갈렸다(탐침 안의 `run_once`를 바꿔 끼웠고 `claude`는 부르지 않았다). 결론과 측정 결과는 바뀌지 않는다.
+- 나머지 변경(요약, 보안 구조 검토)은 지적이 아니다. 보안 구조 쪽이 말한 한계(데스크톱 앱 세션, 첫 쓰기)는 이미 독스트링의 "못 보는 것"에 있다.
