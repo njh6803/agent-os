@@ -368,6 +368,12 @@ afterAll(() => {
 // 판정자 하나를 모든 테스트가 쓴다. 커밋된 파일의 자리에서 재는 테스트는 위반을 파일에 쓰지 않고 lintText 로 그 경로에 넣는다.
 const judge = new ESLint({ cwd: WEB });
 
+// TypeScript 프로그램을 새로 세우는 테스트(판정자가 관리 화면 앱의 자리를 처음 린트하는 것, verify 의 린트 명령을 자식으로
+// 띄우는 것)의 제한. 프로그램을 세우는 동안은 이벤트 루프가 막혀 vitest 의 제한이 테스트를 끊지 못하고, 끝난 뒤에야 넘김으로
+// 알린다. 그래서 60초 제한은 멈춘 테스트를 막지 못한 채 부하에서 빨갛기만 했다(pre-commit 에서 67·110·144초, ADR 0035 의
+// 2026-10-20 이력 "TypeScript 프로그램을 처음 세우는 eslint 테스트에 넉넉한 제한을 준다"). 자식 eslint 는 같은 값으로 끊는다.
+const PROGRAM_TIMEOUT_MS = 600_000;
+
 async function ruleIdsAt(path: string, source: string): Promise<(string | null)[]> {
   const [result] = await judge.lintText(source, { filePath: path });
   return (result?.messages ?? []).map((message) => message.ruleId);
@@ -436,7 +442,7 @@ describe("실제 생성 클라이언트 자리", () => {
 // 관리 화면 앱의 실제 자리. 임시 트리에는 next 와 react 가 설치되지 않고 tsconfig 도 손으로 지은 것이라, 실제
 // node_modules 와 Next 가 읽는 tsconfig 에 기대는 것은 여기서 잰다. 파일이 있는 자리만 쓴다. 없는 경로를 주면
 // 프로젝트 서비스가 그 파일을 찾지 못해 규칙이 아니라 파싱 오류가 난다(2026-09-30 실측, 일지 2026-09-30-01).
-describe("실제 관리 화면 자리", () => {
+describe("실제 관리 화면 자리", { timeout: PROGRAM_TIMEOUT_MS }, () => {
   const ADMIN = join(WEB, "apps", "admin");
   const LAYOUT = join(ADMIN, "app", "layout.tsx");
 
@@ -536,7 +542,7 @@ describe("판정 범위", () => {
   });
 });
 
-describe("끄기 주석", () => {
+describe("끄기 주석", { timeout: PROGRAM_TIMEOUT_MS }, () => {
   test("끄기 주석이 끄려던 위반은 verify 의 린트 명령에서 그대로 보고되고 빨갛다", () => {
     const run = lintWithVerifyCommand(["cli/next-line.ts", "cli/whole-file.ts"]);
 
@@ -566,8 +572,11 @@ function lintWithVerifyCommand(paths: readonly string[]): {
   const run = spawnSync(
     process.execPath,
     [ESLINT_BIN, ...args, ...paths.map((path) => join(fixture, path))],
-    { cwd: WEB, encoding: "utf-8" },
+    { cwd: WEB, encoding: "utf-8", timeout: PROGRAM_TIMEOUT_MS },
   );
+  if (run.error !== undefined) {
+    throw run.error;
+  }
   return { status: run.status, stdout: run.stdout };
 }
 

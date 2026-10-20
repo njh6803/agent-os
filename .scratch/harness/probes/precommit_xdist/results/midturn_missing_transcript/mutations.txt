@@ -1,0 +1,6 @@
+기준선 pytest tests/tools/test_hook_midturn_korean.py -k 파일이_없으면_기다리지: 초록 — 1 passed, 26 deselected in 0.12s
+== 1. 파일이 없어도 기록을 기다린다: 기대 빨강, 결과 빨강 — 1 failed, 26 deselected in 0.92s
+   tests/tools/test_hook_midturn_korean.py::test_트랜스크립트_파일이_없으면_기다리지_않는다
+== 2. 파일이 없으면 상한만큼 쉬고 지나간다: 기대 빨강, 결과 빨강 — 1 failed, 26 deselected in 0.67s
+   tests/tools/test_hook_midturn_korean.py::test_트랜스크립트_파일이_없으면_기다리지_않는다
+변이 2 모두 기대대로
