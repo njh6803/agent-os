@@ -58,7 +58,7 @@ import statistics
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -83,16 +83,33 @@ SENTENCE_END = re.compile(r"(?<=다)\.(?:\s|$)")
 DIFFICULTIES = ("쉬움", "보통", "어려움")
 
 
-def _obj(v: Json) -> dict[str, Json]:
+# JSON 풀이. `json_*`는 수집 도구(`morning_collect`·`morning_sources`)도 가져다 쓴다. 이 도구는
+# 스크립트로 돌아 `tools` 패키지를 가져오지 못하므로 함께 쓰는 것을 이 파일에 둔다.
+
+
+def json_obj(v: Json) -> dict[str, Json]:
     return v if isinstance(v, dict) else {}
 
 
-def _list(v: Json) -> list[Json]:
+def json_list(v: Json) -> list[Json]:
     return v if isinstance(v, list) else []
 
 
-def _str(v: Json) -> str:
+def json_str(v: Json) -> str:
     return v if isinstance(v, str) else ""
+
+
+def json_int(v: Json) -> int | None:
+    return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+
+def json_time(v: Json) -> datetime | None:
+    """ISO 시각. 시간대가 없으면 UTC로 읽는다."""
+    try:
+        t = datetime.fromisoformat(json_str(v))
+    except ValueError:
+        return None
+    return t if t.tzinfo is not None else t.replace(tzinfo=UTC)
 
 
 def _num(v: Json) -> float | None:
@@ -101,17 +118,13 @@ def _num(v: Json) -> float | None:
     return float(v) if isinstance(v, int | float) else None
 
 
-def _int(v: Json) -> int | None:
-    return v if isinstance(v, int) and not isinstance(v, bool) else None
-
-
 def _strs(v: Json) -> tuple[str, ...]:
-    return tuple(_str(x) for x in _list(v))
+    return tuple(json_str(x) for x in json_list(v))
 
 
 def _day(v: Json) -> date | None:
     try:
-        return date.fromisoformat(_str(v))
+        return date.fromisoformat(json_str(v))
     except ValueError:
         return None
 
@@ -149,13 +162,13 @@ class Metric:
 
     @staticmethod
     def of(j: Json) -> Metric:
-        o = _obj(j)
+        o = json_obj(j)
         alarm = o.get("alarm")
         return Metric(
-            _str(o.get("key")),
-            _str(o.get("label")),
-            _str(o.get("kind")),
-            tuple(_num(x) for x in _list(o.get("series"))),
+            json_str(o.get("key")),
+            json_str(o.get("label")),
+            json_str(o.get("kind")),
+            tuple(_num(x) for x in json_list(o.get("series"))),
             alarm if isinstance(alarm, str) else None,
         )
 
@@ -173,11 +186,11 @@ class Table:
 
     @staticmethod
     def of(j: Json) -> Table:
-        o = _obj(j)
+        o = json_obj(j)
         return Table(
             _strs(o.get("head")),
-            _str(o.get("align")),
-            tuple(_strs(r) for r in _list(o.get("rows"))),
+            json_str(o.get("align")),
+            tuple(_strs(r) for r in json_list(o.get("rows"))),
         )
 
 
@@ -202,13 +215,13 @@ class Section:
 
     @staticmethod
     def of(j: Json) -> Section:
-        o = _obj(j)
+        o = json_obj(j)
         return Section(
-            _int(o.get("number")) or 0,
-            _str(o.get("title")),
-            tuple(Table.of(t) for t in _list(o.get("tables"))),
+            json_int(o.get("number")) or 0,
+            json_str(o.get("title")),
+            tuple(Table.of(t) for t in json_list(o.get("tables"))),
             _strs(o.get("lines")),
-            _str(o.get("source")),
+            json_str(o.get("source")),
         )
 
 
@@ -226,13 +239,13 @@ class Pr:
 
     @staticmethod
     def of(number: int, j: Json) -> Pr:
-        o = _obj(j)
+        o = json_obj(j)
         title = o.get("title")
         return Pr(
             number,
             title if isinstance(title, str) else None,
-            _str(o.get("body")),
-            _str(o.get("branch")),
+            json_str(o.get("body")),
+            json_str(o.get("branch")),
         )
 
 
@@ -248,8 +261,10 @@ class QueueRow:
 
     @staticmethod
     def of(number: int, j: Json) -> QueueRow:
-        o = _obj(j)
-        return QueueRow(number, _int(o.get("rounds")), o.get("human") is True, _str(o.get("what")))
+        o = json_obj(j)
+        return QueueRow(
+            number, json_int(o.get("rounds")), o.get("human") is True, json_str(o.get("what"))
+        )
 
 
 @dataclass(frozen=True)
@@ -265,14 +280,14 @@ class Value:
 
     @staticmethod
     def of(j: Json) -> Value | None:
-        o = _obj(j)
+        o = json_obj(j)
         v = _num(o.get("value"))
-        return None if v is None else Value(_str(o.get("label")), v, _str(o.get("unit")))
+        return None if v is None else Value(json_str(o.get("label")), v, json_str(o.get("unit")))
 
 
 def _numbered[T](j: Json, make: Callable[[int, Json], T]) -> dict[int, T]:
     out: dict[int, T] = {}
-    for k, v in _obj(j).items():
+    for k, v in json_obj(j).items():
         if k.isdigit():
             out[int(k)] = make(int(k), v)
     return out
@@ -319,24 +334,26 @@ class Data:
     @staticmethod
     def of(j: Json) -> Data:
         """다른 형식의 수집 JSON은 칸이 빠져 조용히 틀리게 그리므로 읽지 않는다(ValueError)."""
-        o = _obj(j)
+        o = json_obj(j)
         if o.get("format") != FORMAT:
             raise ValueError(f"수집 JSON의 형식 {o.get('format')}이 이 도구의 {FORMAT}와 다르다")
         day = _day(o.get("day"))
         if day is None:
             raise ValueError("수집 JSON에 day가 없다")
-        values = {k: v for k, x in _obj(o.get("values")).items() if (v := Value.of(x)) is not None}
+        values = {
+            k: v for k, x in json_obj(o.get("values")).items() if (v := Value.of(x)) is not None
+        }
         return Data(
             day,
-            _str(o.get("made")),
-            tuple(Metric.of(m) for m in _list(o.get("metrics"))),
+            json_str(o.get("made")),
+            tuple(Metric.of(m) for m in json_list(o.get("metrics"))),
             values,
-            tuple(Section.of(s) for s in _list(o.get("sections"))),
+            tuple(Section.of(s) for s in json_list(o.get("sections"))),
             _numbered(o.get("prs"), Pr.of),
             _numbered(o.get("queue"), QueueRow.of),
-            {k: _str(v) for k, v in _obj(o.get("branches")).items()},
-            _str(o.get("journal")),
-            _int(o.get("alarms")) or 0,
+            {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
+            json_str(o.get("journal")),
+            json_int(o.get("alarms")) or 0,
         )
 
 
@@ -351,8 +368,8 @@ class Named:
 
     @staticmethod
     def of(_number: int, j: Json) -> Named:
-        o = _obj(j)
-        return Named(_str(o.get("name")), _str(o.get("content")), _str(o.get("group")))
+        o = json_obj(j)
+        return Named(json_str(o.get("name")), json_str(o.get("content")), json_str(o.get("group")))
 
 
 @dataclass(frozen=True)
@@ -363,8 +380,8 @@ class Todo:
 
     @staticmethod
     def of(j: Json) -> Todo:
-        o = _obj(j)
-        return Todo(_str(o.get("title")), _str(o.get("why")), _int(o.get("queue")))
+        o = json_obj(j)
+        return Todo(json_str(o.get("title")), json_str(o.get("why")), json_int(o.get("queue")))
 
 
 @dataclass(frozen=True)
@@ -383,16 +400,16 @@ class Proposal:
 
     @staticmethod
     def of(j: Json) -> Proposal:
-        o = _obj(j)
+        o = json_obj(j)
         return Proposal(
-            _str(o.get("id")),
-            _str(o.get("title")),
-            _str(o.get("basis")),
-            _str(o.get("effect")),
-            _str(o.get("difficulty")),
-            _str(o.get("decision")),
-            _str(o.get("check")),
-            _str(o.get("better")),
+            json_str(o.get("id")),
+            json_str(o.get("title")),
+            json_str(o.get("basis")),
+            json_str(o.get("effect")),
+            json_str(o.get("difficulty")),
+            json_str(o.get("decision")),
+            json_str(o.get("check")),
+            json_str(o.get("better")),
             _strs(o.get("change")),
         )
 
@@ -411,13 +428,13 @@ class Notes:
 
     @staticmethod
     def of(j: Json) -> Notes:
-        o = _obj(j)
+        o = json_obj(j)
         return Notes(
             _numbered(o.get("prs"), Named.of),
             _numbered(o.get("queue"), Named.of),
-            {k: _str(v) for k, v in _obj(o.get("branches")).items()},
-            tuple(Todo.of(t) for t in _list(o.get("todos"))),
-            tuple(Proposal.of(p) for p in _list(o.get("proposals"))),
+            {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
+            tuple(Todo.of(t) for t in json_list(o.get("todos"))),
+            tuple(Proposal.of(p) for p in json_list(o.get("proposals"))),
             _numbered(o.get("remarks"), lambda _n, v: _strs(v)),
             _strs(o.get("next")),
         )
@@ -438,11 +455,11 @@ class Seen:
 
 def read_state(j: Json) -> dict[str, Seen]:
     out: dict[str, Seen] = {}
-    for k, v in _obj(j).items():
-        o = _obj(v)
+    for k, v in json_obj(j).items():
+        o = json_obj(v)
         since = _day(o.get("since"))
         if since is not None:
-            out[k] = Seen(since, _num(o.get("value")), _str(o.get("check")))
+            out[k] = Seen(since, _num(o.get("value")), json_str(o.get("check")))
     return out
 
 

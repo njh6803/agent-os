@@ -1,7 +1,9 @@
-"""tools/morning_collect.py 의 순수 함수 검증. 장부 호출과 기록 줄은 시험마다 작게 지어 넣는다.
+"""tools/morning_collect.py 와 그 바깥 명령 층 tools/morning_sources.py 의 순수 함수 검증. 장부
+호출과 기록 줄은 시험마다 작게 지어 넣는다.
 
 gh·git·tasklist 를 부르는 길은 넘기는 인자(PR 목록의 한도)만 시험하고, 출력을 받는 길은 `collect` 를
-실제로 돌려 확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사).
+실제로 돌려 확인했다(`.claude/rules/tests.md`, 일지 2026-10-20-22 의 검사. 바깥 명령 층을 나눈 뒤는
+일지 2026-10-20-29 의 검사).
 """
 
 from __future__ import annotations
@@ -14,46 +16,48 @@ import pytest
 from tools.hook_report import BLOCK, NOTICE, Firing
 from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
-    PR_LIMIT,
     Collected,
-    GhPr,
     HookRow,
     TicketRow,
     Timing,
     active_minutes,
     ago_text,
     bucket_of,
-    ci_state,
     day_rows,
     duty_of,
     handoff_tickets,
     hook_legend,
     hook_rows,
-    journal_next,
     kept,
     label_of,
     merged_got,
-    merged_prs,
     merged_unknown,
-    open_prs,
-    open_state,
     over_cap,
     queue_part,
     queue_whats,
     review_rounds,
     size_groups,
     sweep_kind,
-    tasklist_load,
     ticket_start,
     timing,
     tool_timings,
     top_combo,
     without_merged,
     work_of,
-    worktree_entries,
     worktree_pr,
 )
 from tools.morning_report import UNCOLLECTED, Metric, Section, Table, Value, pr_kind
+from tools.morning_sources import (
+    PR_LIMIT,
+    GhPr,
+    ci_state,
+    journal_next,
+    merged_prs,
+    open_prs,
+    open_state,
+    tasklist_load,
+    worktree_entries,
+)
 from tools.token_report import Call, Json
 
 KST = timezone(timedelta(hours=9))
