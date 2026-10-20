@@ -3,14 +3,14 @@
 로더, 루프, 도구 연결, 승인 게이트, 재생, 트레이스 기록, 실패 정책이 전부 이 아래에 있어서 기본
 스위트가 이 지점 하나를 민다. run_started, run_paused, approval_granted, approval_denied,
 run_resumed, run_failed 는 런타임이 내고, 에이전트는 run_finished 하나를 마지막에 낸다.
-conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 한도를 넘었을 때 에이전트를 부르기
-전에 낸다(계기, 범위, 실패는 core/continuation.py). 에이전트가 낸 다른 이벤트는 통과하되 런타임만
-내는 둘, conversation_summarized 와 run_failed 는 예외다 — 에이전트가 내면 그 실행은 런타임의
-run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫힌다. 앞의 것은 다음 실행의 거슬러 읽기가
-트레이스에서 읽는 입력이고(ADR 0022), 뒤의 것은 결말이라 런타임이 쓰는 하나여야 하며 원인이 든
-실패는 런타임만 낸다(ADR 0031). 이유는 `_reject_runtime_only`. 거부는 실행을 끝내지 않는다. 거부된
-도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가 정상적으로
-끝맺는다(ADR 0009).
+conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 글자 수 한도나 교환 수 기준을 넘었을
+때 에이전트를 부르기 전에 낸다(계기, 범위, 실패는 core/continuation.py). 에이전트가 낸 다른 이벤트는
+통과하되 런타임만 내는 둘, conversation_summarized 와 run_failed 는 예외다 — 에이전트가 내면 그
+실행은 런타임의 run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫힌다. 앞의 것은 다음
+실행의 거슬러 읽기가 트레이스에서 읽는 입력이고(ADR 0022), 뒤의 것은 결말이라 런타임이 쓰는 하나여야
+하며 원인이 든 실패는 런타임만 낸다(ADR 0031). 이유는 `_reject_runtime_only`. 거부는 실행을 끝내지
+않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가
+정상적으로 끝맺는다(ADR 0009).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -80,6 +80,7 @@ from datetime import datetime
 from typing import NoReturn, TypeGuard, assert_never
 
 import anyio
+import anyio.to_thread
 from langchain_core.messages import AIMessage, BaseMessage
 
 from agent_os.core.continuation import (
@@ -500,8 +501,12 @@ async def run(
     이어 가기의 판정은 준비보다 앞이다 — 앞 실행(없음 → 손상 → 다른 주체 → 끝나지 않음), 고리,
     그다음 준비(부재 → 깨짐 → 꺼짐 → import). 재개가 트레이스 판정을 준비보다 앞에 두는 것과 같은
     모양이고, 꺼진 에이전트로 이어 가려는 요청도 고리를 다 읽은 뒤에 거절되는 비용이 있다. 전부 실행
-    식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 거슬러 읽기는 동기이고
-    이벤트 루프 위에서 돈다. 긴 고리가 루프를 막는 것은 알려진 한계다(명세 "고리를 거슬러 읽기").
+    식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다. 이어 가기의 판정 전부(앞
+    실행과 고리)는 한 번의 스레드 호출로 이벤트 루프 밖에서 돌아 긴 고리가 루프를 막지 않고, 판정
+    순서와 예외는 그대로 올라온다. 취소가 오면 그 읽기가 끝나기를 기다린다(anyio 의 기본값). 그
+    시간은 실행 타임아웃 밖이고 읽기 상한(`READ_CAP`)이 묶는다. 재개의 거슬러 읽기는 루프 위에
+    남는다 (`.claude/rules/core.md` 의 이어 가기 항목, end-user-continuation 명세 "거슬러 읽기의
+    상한과 자리").
 
     `visible_agents` 는 호출자가 볼 수 있는 에이전트의 집합이고 없음은 전부다(ADR 0023 의
     2026-10-05 이력). 최종 사용자 경로가 그 사이트의 열 에이전트 목록을 넘긴다. 요청이 댄 에이전트가
@@ -514,7 +519,9 @@ async def run(
     없음을 넘긴다. 범위와 실패 정책은 모듈 독스트링이다.
     """
     continued = (
-        None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
     )
     if visible_agents is not None and agent not in visible_agents:
         raise Absent(_no_agent(agent))
@@ -638,10 +645,10 @@ class _Body:
     """실행의 몸통. 시작 이벤트(재개에서는 결정 이벤트) 뒤부터 결말까지이고 run() 과 resume() 이
     공유한다.
 
-    이어 가기에서 원문이 한도를 넘었으면(`Fold`) 먼저 요약하고, 도구를 연결한 채 에이전트를 돌리고,
-    결말을 붙인다. 진입점의 실행 타임아웃이 이것 하나를 감싼다. 기한이 몸통을 끊으면 진입점은
-    `deadline_failure` 로 결말이 이미 정해졌는지 묻는다 — 그 판정이 몸통 안에 있는 이유는 이벤트의
-    종류로 정할 수 없어서다(아래 `_paused` 의 주석).
+    이어 가기에서 원문이 글자 수 한도나 교환 수 기준을 넘었으면(`Fold`) 먼저 요약하고, 도구를 연결한
+    채 에이전트를 돌리고, 결말을 붙인다. 진입점의 실행 타임아웃이 이것 하나를 감싼다. 기한이 몸통을
+    끊으면 진입점은 `deadline_failure` 로 결말이 이미 정해졌는지 묻는다 — 그 판정이 몸통 안에 있는
+    이유는 이벤트의 종류로 정할 수 없어서다(아래 `_paused` 의 주석).
     """
 
     def __init__(

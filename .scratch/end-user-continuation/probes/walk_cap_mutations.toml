@@ -1,0 +1,327 @@
+# 티켓 04(교환 수와 상한과 스레드)의 변이 표. 구현 뒤에 쓴 테스트(교환 수로 접힐 때의 글자 수 절반,
+# 26번째 이어 가기, 상한의 관계)와 결정을 가르는 사례(앞 실행을 세는 자리, 상한을 판정들 뒤에 두는
+# 자리, 재개와 이어 가기의 같은 수, 스레드로 보내는 범위, 취소되면 기다리기)가 빨강을 볼 수 있는지 하나씩
+# 되돌려 본다. 변이마다 고른 단언이 그 까닭으로 빨개졌다는 표지(`expect_output`)를 단다. 빨강의 판정은
+# `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/walk_cap_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 가 된 체크아웃에서 돈다. 스레드 변이는 루프 위에서 막힌 읽기마다
+# 박동을 5초 기다려 그 몫이 길다.
+
+# --- 교환 수 -------------------------------------------------------------------------------
+
+[[mutation]]
+name = "교환 수 기준과 같은 수에서 접는다"
+tests = ["tests/core/test_run.py", "-k", "교환_수_기준_50개와_같으면"]
+expect = "red"
+expect_output = ["At index 1 diff: 'conversation_summarized' != 'run_finished'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    if not over_size and len(gathered.runs) <= EXCHANGE_COUNT_LIMIT:'''
+new = '''    if not over_size and len(gathered.runs) < EXCHANGE_COUNT_LIMIT:'''
+
+[[mutation]]
+name = "앞 요약을 교환 하나로 센다"
+tests = ["tests/core/test_run.py", "-k", "26번째_이어_가기에서_온다"]
+expect = "red"
+expect_output = ["At index 24 diff"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    if not over_size and len(gathered.runs) <= EXCHANGE_COUNT_LIMIT:'''
+new = '''    if not over_size and len(gathered.runs) + (gathered.summary is not None) <= EXCHANGE_COUNT_LIMIT:'''
+
+[[mutation]]
+name = "꼬리에 기준의 절반보다 하나 더 남긴다"
+tests = ["tests/core/test_run.py", "-k", "꼬리는_기준의_절반인_25개"]
+expect = "red"
+expect_output = ["assert 'r25' == 'r26'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''len(kept) >= EXCHANGE_COUNT_LIMIT // 2:'''
+new = '''len(kept) > EXCHANGE_COUNT_LIMIT // 2:'''
+
+[[mutation]]
+name = "교환 수로 접힐 때는 글자 수의 절반을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "글자_수의_절반_규칙을_함께_지킨다"]
+expect = "red"
+expect_output = ["assert 'r26' == 'r50'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if total + run.size > half or len(kept) >= EXCHANGE_COUNT_LIMIT // 2:'''
+new = '''        if (over_size and total + run.size > half) or len(kept) >= EXCHANGE_COUNT_LIMIT // 2:'''
+
+# --- 읽기 상한 -----------------------------------------------------------------------------
+
+[[mutation]]
+name = "옛 대화의 읽기가 앞 실행을 세지 않는다"
+tests = ["tests/core/test_run.py", "-k", "옛_대화의_거슬러_읽기는_앞_실행을_세어"]
+expect = "red"
+expect_output = ["assert 101 == 100"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    link, finished = first, first_finished
+    reads = 1'''
+new = '''    link, finished = first, first_finished
+    reads = 0'''
+
+[[mutation]]
+name = "옛 대화의 읽기에 상한이 없다"
+tests = ["tests/core/test_run.py", "-k", "옛_대화의_거슬러_읽기는_앞_실행을_세어"]
+expect = "red"
+expect_output = ["assert 101 == 100"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if older is None or reads >= READ_CAP:'''
+new = '''        if older is None:'''
+
+[[mutation]]
+name = "상한을 읽지 않고 가를 수 있는 판정들 앞에 둔다"
+tests = ["tests/core/test_run.py", "-k", "상한에_닿는_자리에서도_덮는_끝을_못_만난_채"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        older = _older_run(link, summary, visited)
+        if older is None or reads >= READ_CAP:'''
+new = '''        older = None if reads >= READ_CAP else _older_run(link, summary, visited)
+        if older is None:'''
+
+[[mutation]]
+name = "옛 대화의 재개는 앞 실행을 세지 않는다"
+tests = ["tests/core/test_run.py", "-k", "상한에서_멈춘_이어_간_실행의_재개는"]
+expect = "red"
+# 재개가 r0 까지 읽어 멤버에 그 교환이 들고 프롬프트 대조가 어긋나 실패로 끝난다.
+expect_output = ["assert 'run_failed' == 'run_finished'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    summary: ConversationSummarized | None,
+) -> Gathered:
+    """앞 실행에서 거슬러 가며'''
+new = '''    summary: ConversationSummarized | None,
+    start: int = 1,
+) -> Gathered:
+    """앞 실행에서 거슬러 가며'''
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    link, finished = first, first_finished
+    reads = 1'''
+new = '''    link, finished = first, first_finished
+    reads = start'''
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''started.principal, summary=own.summary)'''
+new = '''started.principal, summary=own.summary, start=0)'''
+
+[[mutation]]
+name = "바로가기 읽기에 상한이 없다"
+tests = ["tests/core/test_run.py", "-k", "바로가기를_따라가는_읽기도_앞_실행을_세어"]
+expect = "red"
+expect_output = ["assert 101 == 100"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        elif reads >= READ_CAP:'''
+new = '''        elif False:'''
+
+[[mutation]]
+name = "바로가기 읽기가 앞 실행을 세지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기를_따라가는_읽기도_앞_실행을_세어"]
+expect = "red"
+expect_output = ["assert 101 == 100"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    reads = 0 if known is None else 1'''
+new = '''    reads = 0'''
+
+[[mutation]]
+name = "읽기 상한이 교환 수 기준에 2를 더한 것보다 작다"
+tests = ["tests/core/test_run.py", "-k", "읽기_상한은_교환_수_기준에_2를_더한"]
+expect = "red"
+expect_output = ["<= 51"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''READ_CAP = 100'''
+new = '''READ_CAP = 51'''
+
+# --- 스레드 --------------------------------------------------------------------------------
+
+# pytest 가 첫 실패에서 멈춰(`tools/mutate.py` 의 pytest 러너) 매개변수 둘을 `-k` 하나로 고르면 뒤의
+# 것이 돌지 않는다. 매개변수마다 따로 겨누는 변이는 노드 식별자로 나눈다.
+
+[[mutation]]
+name = "이어 가기의 판정을 루프 위에서 부른다 — 읽기마다 막는 가짜"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[읽기마다]"]
+expect = "red"
+expect_output = ["assert [False, False, False] == [True, True, True]"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)'''
+new = '''        else gather_continued(trace, previous_run, agent, principal)'''
+
+[[mutation]]
+name = "이어 가기의 판정을 루프 위에서 부른다 — 앞 실행에서만 막는 가짜"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[앞 실행 읽기만]"]
+expect = "red"
+expect_output = ["assert [False] == [True]"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)'''
+new = '''        else gather_continued(trace, previous_run, agent, principal)'''
+
+[[mutation]]
+name = "앞 실행 읽기만 스레드로 보낸다 — 읽기마다 막는 가짜가 잡는다"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[읽기마다]"]
+expect = "red"
+expect_output = ["assert [True, False, False] == [True, True, True]"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    continued = (
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
+    )'''
+new = '''    if previous_run is None:
+        continued = None
+    else:
+        first = await anyio.to_thread.run_sync(trace.read, previous_run)
+
+        class _Preread:
+            def read(self, run_id):
+                return first if run_id == previous_run else trace.read(run_id)
+
+        continued = gather_continued(_Preread(), previous_run, agent, principal)'''
+
+[[mutation]]
+name = "앞 실행 읽기만 스레드로 보낸다 — 앞 실행에서만 막는 가짜는 못 잡는다"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[앞 실행 읽기만]"]
+expect = "green"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    continued = (
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
+    )'''
+new = '''    if previous_run is None:
+        continued = None
+    else:
+        first = await anyio.to_thread.run_sync(trace.read, previous_run)
+
+        class _Preread:
+            def read(self, run_id):
+                return first if run_id == previous_run else trace.read(run_id)
+
+        continued = gather_continued(_Preread(), previous_run, agent, principal)'''
+
+[[mutation]]
+name = "고리만 스레드로 보내고 앞 실행 읽기를 루프에 남긴다 — 앞 실행에서만 막는 가짜"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[앞 실행 읽기만]"]
+expect = "red"
+expect_output = ["assert [False] == [True]"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    continued = (
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
+    )'''
+new = '''    if previous_run is None:
+        continued = None
+    else:
+        first = trace.read(previous_run)
+
+        class _Preread:
+            def read(self, run_id):
+                return first if run_id == previous_run else trace.read(run_id)
+
+        continued = await anyio.to_thread.run_sync(
+            gather_continued, _Preread(), previous_run, agent, principal
+        )'''
+
+[[mutation]]
+name = "고리만 스레드로 보내고 앞 실행 읽기를 루프에 남긴다 — 읽기마다 막는 가짜"
+tests = ["tests/core/test_run.py::test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다[읽기마다]"]
+expect = "red"
+expect_output = ["assert [False, True, True] == [True, True, True]"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    continued = (
+        None
+        if previous_run is None
+        else await anyio.to_thread.run_sync(gather_continued, trace, previous_run, agent, principal)
+    )'''
+new = '''    if previous_run is None:
+        continued = None
+    else:
+        first = trace.read(previous_run)
+
+        class _Preread:
+            def read(self, run_id):
+                return first if run_id == previous_run else trace.read(run_id)
+
+        continued = await anyio.to_thread.run_sync(
+            gather_continued, _Preread(), previous_run, agent, principal
+        )'''
+
+[[mutation]]
+name = "취소되면 읽던 스레드를 버린다"
+tests = ["tests/core/test_run.py", "-k", "거슬러_읽기_도중_취소되면"]
+expect = "red"
+# 범위를 나올 때 가짜의 `finished` 가 아직 꺼져 있다. 단언의 코드 조각(`trace.finished.is_set()`)은
+# 다른 단언이 실패해도 출력에 실려 고르지 않는다.
+expect_output = ["unset> = <tests.core.test_run.HeldTrace object at"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''run_sync(gather_continued, trace, previous_run, agent, principal)'''
+new = '''run_sync(
+            gather_continued, trace, previous_run, agent, principal, abandon_on_cancel=True
+        )'''
+
+# 재개의 첫 걸음에 await 가 들면 같은 실행에 동시에 온 둘째 결정이 첫째의 결정보다 먼저 일시정지를
+# 읽는다(ADR 0014). 이어 간 실행의 재개만 그렇게 바꾼 구현은 이어 가지 않은 실행을 재개하는 채널의
+# 동시 재개 테스트로는 초록이라(대조), core 의 이어 간 실행 동시 재개 테스트가 가른다.
+
+[[mutation]]
+name = "이어 간 실행의 재개만 첫 걸음에서 스레드를 기다린다"
+tests = ["tests/core/test_run.py", "-k", "이어_간_실행에_동시에_온_결정_둘은"]
+expect = "red"
+# 결정 둘이 모두 받아들여져 둘 다 끝났다. pytest 가 목록을 줄여 찍어 차이 줄을 고른다.
+expect_output = ["At index 1 diff: 'run_finished' != '일시정지 상태가 아니라 재개할 수 없다: run-1'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)'''
+new = '''    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
+    if resumption.started.previous_run is not None:
+        await anyio.to_thread.run_sync(len, resumption.records)'''
+
+[[mutation]]
+name = "이어 간 실행의 재개만 첫 걸음에서 스레드를 기다린다 — 채널의 동시 재개 테스트는 못 잡는다"
+tests = ["tests/channel/http/test_router.py", "-k", "한_루프에서_동시에_온_결정_둘은"]
+expect = "green"
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)'''
+new = '''    resumption = _read_paused(trace, run_id, pause_index, approver, visible_agents)
+    if resumption.started.previous_run is not None:
+        await anyio.to_thread.run_sync(len, resumption.records)'''
