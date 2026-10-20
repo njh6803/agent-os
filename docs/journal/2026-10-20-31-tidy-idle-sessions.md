@@ -64,7 +64,7 @@ ADR 0032 이력 2026-10-20 초안에 넷을 적었다(사용자 승인 전이다
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: docs/journal/2026-10-20-31-tidy-idle-sessions.md
 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 고정점 origin/main)부터 한다. 리뷰를 반영한 뒤 카나리아 둘(`tidy_skill_idle_sessions.toml`, `tidy_skill_running_branch.toml`)을 돌려 `# 최신 결과:` 줄을 고치고, ADR 0032 이력 2026-10-20 초안을 사용자에게 보여 승인을 받은 뒤 Consequences 끝에 승인 문장을 단다. `tools/run_checks.py`는 아직 한 바퀴도 끝나지 않았다. docs/journal/2026-10-20-31-tidy-idle-sessions.md
-확인할 선행 조건: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 
 제목을 `chore/tidy-idle-sessions (인계함)`으로 바꿨고, 백그라운드 `run_checks.py`를 멈췄으며, 워크트리 잠금을 풀었다.
@@ -117,7 +117,7 @@ Consequences 끝에 승인 문장을 달았다.
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: docs/journal/2026-10-20-31-tidy-idle-sessions.md
 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 카나리아 둘(통과 4), ADR 0032 이력 승인 문장, run_checks 통과까지 커밋 `3951db8f`에 들었다(푸시 전, PR 없음). 남은 단계: origin/main을 합치고, PR 직전 리뷰 둘(`/security-review`, `bug-perf-review` 서브에이전트. 밀 주장은 이 일지의 "PR 직전 리뷰에 밀 주장" 줄)을 나란히 돌려 반영한 뒤, 푸시·PR(`/git-pr`)·`@coderabbitai review` 요청·CI·봇 회차·병합(워크트리 병합 길). 일지의 "이어받은 세션" 절 뒤에 이어 쓰고 함께 커밋한다. docs/journal/2026-10-20-31-tidy-idle-sessions.md
-확인할 선행 조건: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 
 제목을 `chore/tidy-idle-sessions (인계함)`으로 바꿨고, 백그라운드 작업은 없었으며, 워크트리 잠금은 이미 풀려 있었다.
@@ -132,7 +132,32 @@ open-session을 부른다 2026-10-20T11:18:41Z
 - `/security-review`: 확신도 7 이상 없음(명령 주입·경로·엉뚱한 프로세스·환경 변수 노출·역직렬화를 봤다).
 - `bug-perf-review`: 유효 Minor 다섯, 보류 하나, 오탐 셋. 잘못된 프로세스를 끄는 경로는 찾지 못했다.
   - 고친 것: 밀 주장 4. ADR 이력 "못 보는 것"이 "다시 띄운 세션은 주 체크아웃에서 돌므로"로, 스킬 3.2가 "주 체크아웃에서 돈다"로 근거(지운 뒤 한 번 봤다)보다 세게 단정했다. 둘을 한 번 본 것으로 낮췄다.
-  - 고친 것: 밀 주장 1·2. "`EnterWorktree`로 연 세션은 인계할 때만 잠금을 풀어"는 `EnterWorktree(path)`가 잠그지 않고 인계 밖에서도 풀린 일(일지 2026-10-20-06)과 어긋났다. 독스트링과 ADR 결정 4를 "`EnterWorktree(name)`으로 만든 워크트리는 인계 단계 전에는 풀리지 않을 수 있어"로 좁혔다.
+  - 고친 것: 밀 주장 1·2. "`EnterWorktree`로 연 세션은 인계할 때만 잠금을 풀어"는 `EnterWorktree(path)`가 잠그지 않고 인계 밖에서도 풀린 일(일지 2026-10-20-06)과 어긋났다. 독스트링과 ADR 결정 4를 `EnterWorktree(name)`으로 만든 워크트리에 한하고 인계 단계 전에는 풀리지 않을 수 있다는 뜻으로 좁혔다.
   - 고친 것: 산 잠금 pid의 환경에 세션 id가 든 것은 재지 않았다는 것을 독스트링과 ADR 못 보는 것에 적었다(들지 않으면 끄지 않는 안전한 쪽이다).
   - 둔 것(PR 체크리스트): 성능 둘(`end-holders`마다 `gh pr list`를 다시 부른다, 잠긴 워크트리마다 `alive`를 두 번 부른다)과 보류 하나(`taskkill /T`가 pid 재사용으로 고아를 자식으로 잡을 가능성).
 - 반영 뒤 `tidy_checkouts_mutations.toml` `--check` 165개 원문 한 번씩, `tests/tools/test_tidy_checkouts.py` 192 통과.
+- 커밋 `3c7bc2eb`(pre-commit 모두 통과), 푸시, PR #327, `@coderabbitai review` 요청.
+- CI 모두 초록. CodeRabbit은 `Review rate limited`로 리뷰 없음(보안·버그·성능 축은 PR 직전 대체 둘). claude-review 1회차는 Minor 셋·Nit 둘(`_end_holders` 쪼개기, `holders` 재바인딩, `end_process`의 명령·질의 섞임, 잠금 pid 규칙의 흩어짐)이고, 모두 PR 코멘트에 보류 이유를 남겼다. 뒤로 넘긴 일은 없다.
+
+## 회고
+
+후보 다섯: 승인 하나, 기각 넷, 넘김 없음. 만료할 행은 없었다(`queue_open_rows.py`, 작업 트리와 `--ref origin/main` 둘 다).
+
+- 승인(대기열 385, 1회차): 병합 뒤 다음 작업을 고르려고 `plan.md`의 남은 기능과 티켓 상태를 찾는 데 호출이 여섯 들었다. 표 행이 길어 Grep이 줄을 생략했고 awk는 워크트리 가드가 거부했다. 더하는 것(새 도구)이라 첫 회차로 둔다.
+- 기각: PR 본문 heredoc이 40줄을 넘어 훅이 막았다. 이미 있는 훅이 그 자리에서 막았다.
+- 기각: awk 명령을 워크트리 가드가 거부했다. 이미 있는 앱 가드가 막았고 `CLAUDE.md` 환경 함정에 적혀 있다.
+- 기각: 셀프 리뷰 반영으로 새로 쓴 문장 둘이 근거보다 셌던 것을 PR 직전 `bug-perf-review`가 잡았다. 밀 주장으로 넘긴 리뷰가 제 몫을 했다.
+- 기각: 일지에 줄여 옮긴 문장에 따옴표를 붙여 인용 대조가 경고했다. 이미 있는 검사가 알렸고 따옴표를 뗐다.
+
+## 다음
+
+다음 작업: 기능 mcp-shutdown. 설계 인터뷰(ADR 0034, #266)가 끝났고 명세가 없다
+다음 단계: 명세
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /to-spec
+브랜치: docs/mcp-shutdown-to-spec
+모델: Opus 5.5 / xhigh
+읽을 것: .scratch/plan.md 의 mcp-shutdown 행
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
