@@ -139,3 +139,14 @@ origin/main(3a84a692, #317 일지·대기열만)을 병합 커밋으로 합쳤�
 - `bug-perf-review`: 밀 주장 셋 가운데 독스트링과 변이 표 2번 주석은 코드와 맞았다. core.md 괄호는 03 이후에 옛 대화를 이어 간 실행(`shortcuts_after`가 None)을 빠뜨렸다는 Minor 하나(유효, 값 작음). 버그·성능의 새 실패 장면은 없었다.
 
 고친 것: core.md 괄호를 "(이 기능 전이나 티켓 01과 03 사이에 쓰인 실행, 그리고 그런 대화를 그 뒤에 이은 실행)"으로 보강했다. rules 파일의 문구 하나만 바꿨고 `paths`는 그대로라 새 세션에서 불러 보지는 않았다.
+
+커밋 ec1742a9(pre-commit 전부 Passed, pytest 794.1s, web-verify 483.8s), 첫 푸시 `-u`로 upstream을 걸었다. PR #318.
+
+## 봇 회차 (PR #318)
+
+첫 회차(헤드 ec1742a): 검사 모두 통과. CodeRabbit은 `Review rate limited`라 보안·버그·성능 축의 대체는 PR 본문의 PR 직전 리뷰다. claude-review는 Critical·Major 없이 Minor 넷과 Nit 하나를 냈고 모두 보류했다(PR 코멘트에 이유).
+
+- Minor 1·2·3과 Nit은 셀프 리뷰가 판단으로 남긴 냄새(`_walk`·`_follow` 반복과 검증 순서, `_follow`의 인자 수, 앞 실행 기록 규칙의 이중 검사, 변이 표와 분기의 일대일)와 같다.
+- Minor 4는 명세·티켓의 "손으로 키 하나를 지운 지도는 … 받아들인다"가 `check_record_rules` 독스트링(앞 실행 칸을 지운 지도는 둘째 일관성에 걸린다)과 어긋난 채 병합된다는 것이다. 사용자가 승인한 명세 문장이라 이 PR에서 고치지 않았다.
+
+넘긴 일(다음 절을 쓰는 세션이 옮긴다): 명세 `.scratch/end-user-continuation/spec.md`와 티켓 03의 위 문장을 독스트링의 동작대로 고칠지 사용자 승인을 받는다(retro 넘김 후보). 부하 회차의 기동 실패 둘(`-m llm`의 serve 종료 1, pre-commit의 Vitest 작업자 시간 초과)도 retro 후보다.
