@@ -6,6 +6,8 @@
 import asyncio
 import itertools
 import json
+import threading
+import time
 from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
@@ -31,7 +33,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 
-from agent_os.core.continuation import before_principal
+from agent_os.core.continuation import EXCHANGE_COUNT_LIMIT, READ_CAP, before_principal
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
     Absent,
@@ -4604,15 +4606,16 @@ async def test_재생_구간에서_에이전트가_실패_이벤트를_내도_�
     assert tools.connection.calls == []
 
 
-# --- 대화 요약 — 한도를 넘으면 런타임이 접는다 ----------------------------------------
+# --- 대화 요약 — 한도나 교환 수 기준을 넘으면 런타임이 접는다 ---------------
 #
 # 이어 가기에서 거슬러 읽기가 모은 원문 교환의 글자 수 합이 그 에이전트의 한도(매니페스트, 없으면
-# core 의 기본 20,000)를 넘으면, 런타임이 에이전트를 부르기 전에 그 실행의 모델과 고정 프롬프트로 앞
-# 요약과 오래된 교환을 새 요약에 접는다(ADR 0022, 명세 "core — 대화 요약"). 가장 최근 교환들은
-# 한도의 절반 안에서 원문으로 남는다. 요약 이벤트는 run_started 바로 뒤에 서고, 에이전트는 새 요약과
-# 원문 꼬리를 받는다. 요약이 실패하면 에이전트를 부르지 않고 run_failed 다. 재개는 모델을 다시
-# 부르지 않고 자기 트레이스의 요약을 쓴다. 교환의 글자 수는 요청과 출력을 더한 파이썬 len 이고, 아래
-# 도우미가 그 크기의 교환으로 고리를 손으로 쓴다.
+# core 의 기본 20,000)를 넘거나 그 수가 교환 수 기준(50)을 넘으면, 런타임이 에이전트를 부르기 전에
+# 그 실행의 모델과 고정 프롬프트로 앞 요약과 오래된 교환을 새 요약에 접는다(ADR 0022, 명세 "core —
+# 대화 요약", end-user-continuation 명세 "요약의 계기와 꼬리"). 가장 최근 교환들은 한도의 절반과
+# 기준의 절반(25개) 안에서 원문으로 남는다. 요약 이벤트는 run_started 바로 뒤에 서고, 에이전트는 새
+# 요약과 원문 꼬리를 받는다. 요약이 실패하면 에이전트를 부르지 않고 run_failed 다. 재개는 모델을
+# 다시 부르지 않고 자기 트레이스의 요약을 쓴다. 교환의 글자 수는 요청과 출력을 더한 파이썬 len 이고,
+# 아래 도우미가 그 크기의 교환으로 고리를 손으로 쓴다.
 
 
 def _chain(trace: FakeTrace, *sizes: int) -> str:
@@ -4770,6 +4773,93 @@ async def test_가장_최근_교환_하나가_절반보다_길면_그것도_접�
             {"request": "요요요요", "output": "답답답답답"},
         ],
     }
+
+
+# 계기와 원문 범위 — 교환 수
+
+_SHORT = {"request": "요", "output": "답"}
+
+
+@pytest.mark.parametrize(("count", "summarized"), [(50, False), (51, True)])
+async def test_짧은_교환이_교환_수_기준_50개와_같으면_요약하지_않고_하나_넘으면_요약한다(
+    count: int, *, summarized: bool, clock: FakeClock
+) -> None:
+    """글자 수는 기본 한도 20,000 아래다. 교환 수의 계기는 글자 수의 것과 둘 가운데 하나라도다
+    (end-user-continuation 명세 "요약의 계기와 꼬리")."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * count)
+    model = _summarizing_model()
+
+    events = await _continue(last, trace, clock, model=model)
+
+    expected = ["run_started", "conversation_summarized", "run_finished"]
+    assert [e.type for e in events] == (expected if summarized else expected[::2])
+    assert model.calls == (1 if summarized else 0)
+
+
+async def test_교환_수로_접히면_꼬리는_기준의_절반인_25개이고_목표는_그대로_한도의_4분의_1이다(
+    clock: FakeClock,
+) -> None:
+    """짧은 교환 51개. 가장 최근 25개(r27~r51)가 원문으로 남고 r1~r26 이 접혀 덮는 끝은 r26 이다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 51)
+    model = _summarizing_model()
+
+    events = await _continue(last, trace, clock, model=model)
+
+    assert _summary_event(events).last_covered_run == "r26"
+    assert _unwoven(_output_of(events)) == ("요약 글", [["요", "답"]] * 25)
+    system, document = _summary_request(model)
+    assert document == {"previous_summary": None, "exchanges": [_SHORT] * 26}
+    assert "5000자" in system
+
+
+async def test_교환_수로_접혀도_꼬리는_글자_수의_절반_규칙을_함께_지킨다(clock: FakeClock) -> None:
+    """한도 1,000, 짧은 교환 49개 뒤에 300자 둘. 합 698 은 한도 아래이고 51개가 계기다. 뒤에서부터
+    300 은 절반 500 안이고 그다음 300 은 넘어, 꼬리는 25개가 아니라 하나다. 목표는 250자다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 49, 300, 300)
+    model = _summarizing_model()
+    plugins = FakePlugins({"calc": WeavingAgent()}, conversation_limit=1_000)
+
+    events = await _continue(last, trace, clock, model=model, plugins=plugins)
+
+    assert _summary_event(events).last_covered_run == "r50"
+    assert _unwoven(_output_of(events)) == ("요약 글", [["요" * 150, "답" * 150]])
+    system, _ = _summary_request(model)
+    assert "250자" in system
+
+
+class CountingAgent:
+    """멤버의 요약과 교환 수만 출력에 옮긴다. 출력이 짧아 여러 번 이어 가도 교환이 커지지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        conversation = ctx.conversation
+        output = f"{conversation.summary}/{len(conversation.exchanges)}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_교환_수로_접힌_뒤_짧은_교환만_이어지면_다음_요약은_26번째_이어_가기에서_온다(
+    clock: FakeClock,
+) -> None:
+    """요약 뒤 원문은 꼬리 25개와 그 실행 자신이라 이어 갈 때마다 하나씩 는다. 25번을 더 이어 가
+    50개에 닿고, 26번째가 51개를 모아 다시 접는다(명세 "요약의 계기와 꼬리")."""
+    trace = FakeTrace()
+    previous = _chain(trace, *[2] * 51)
+    model = _summarizing_model(_reply("요약 글"), _reply("둘째 요약"))
+    plugins = FakePlugins({"calc": CountingAgent()})
+    seen: list[tuple[str, bool]] = []
+
+    for _ in range(27):
+        events = await _continue(previous, trace, clock, model=model, plugins=plugins)
+        summarized = any(isinstance(e, ConversationSummarized) for e in events)
+        seen.append((_output_of(events), summarized))
+        previous = events[0].run_id
+
+    assert seen[0] == ("요약 글/25", True)
+    assert seen[1:26] == [(f"요약 글/{count}", False) for count in range(26, 51)]
+    assert seen[26] == ("둘째 요약/25", True)
+    assert model.calls == 2
 
 
 # 모델 호출과 고정 프롬프트
@@ -5169,6 +5259,289 @@ async def test_자기_요약_이벤트의_자리나_개수가_어긋난_재개�
     assert reason in str(caught.value)
     assert trace.events == before
     assert tools.servers is None
+
+
+# --- 거슬러 읽기의 상한과 자리 ---------------------------------------------------------
+#
+# 거슬러 읽기 한 번은 앞 실행을 세어 많아야 읽기 상한(100)만큼의 트레이스를 읽고, 닿으면 그때까지
+# 모은 것으로 진행한다 — 실패도 메시지도 아니다. 바로가기를 따라가는 읽기는 교환 수 기준 덕에 많아야
+# 52개라 닿는 것은 옛 대화와, 기준이 서기 전(티켓 03 과 04 사이)에 쓰인 바로가기 대화뿐이다. 이어
+# 가기를 시작할 때의 판정 전부는 한 번의 스레드 호출로 이벤트 루프 밖에서 돌고, 취소가 오면 그
+# 읽기가 끝나기를 기다린다. 재개의 거슬러 읽기는 루프 위에 남고 그것은 이어 간 실행의 동시 재개
+# 테스트(아래 스레드 절의 끝)가 고정한다 — 채널의 동시 재개 테스트(`test_router.py`)는 이어 가지
+# 않은 실행을 재개한다(end-user-continuation 명세 "거슬러 읽기의 상한과 자리").
+
+
+def _detour_chain(trace: FakeTrace, detours: int) -> str:
+    """옛 대화. calc 의 실행 r0 뒤로 other 의 실행 r1 … r{detours} 가 이어진다. 마지막을
+    돌려준다."""
+    _write_finished(trace, "r0", request="q0", output="a0")
+    previous = "r0"
+    for index in range(1, detours + 1):
+        _write_finished(trace, f"r{index}", agent="other", previous=previous)
+        previous = f"r{index}"
+    return previous
+
+
+# 상한
+
+
+@pytest.mark.parametrize(("detours", "reached"), [(99, True), (100, False)])
+async def test_옛_대화의_거슬러_읽기는_앞_실행을_세어_100개까지만_읽고_모은_것으로_진행한다(
+    detours: int, *, reached: bool, clock: FakeClock
+) -> None:
+    """고리가 100개면 처음 r0 까지 읽는다. 101개면 앞 실행부터 100개를 읽고 r0 은 읽지 않은 채 모은
+    것(교환 없음)으로 끝까지 간다."""
+    trace = FakeTrace()
+    last = _detour_chain(trace, detours)
+    trace.reads.clear()
+
+    events = await _continue(last, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_finished"]
+    assert len(trace.reads) == 100
+    assert (RunId("r0") in trace.reads) is reached
+    assert _unwoven(_output_of(events)) == (None, [["q0", "a0"]] if reached else [])
+
+
+async def test_상한에서_멈춘_이어_간_실행의_재개는_같은_실행을_읽어_재생_대조가_통과한다(
+    clock: FakeClock,
+) -> None:
+    """재개가 상한 없이 r0 까지 읽으면 멤버에 r0 의 교환이 들어 프롬프트 대조가 어긋난다."""
+    trace = FakeTrace()
+    last = _detour_chain(trace, 100)
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue(last, trace, clock, model=model, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    walked = [run_id for run_id in trace.reads if run_id != _RUN_1]
+    assert len(walked) == 100
+    assert RunId("r0") not in walked
+
+
+async def test_상한에서_모은_것이_계기를_넘으면_접히고_다음_이어_가기는_그_덮는_끝에서_멈춘다(
+    clock: FakeClock,
+) -> None:
+    """옛 대화의 짧은 교환 120개. 100개(r21~r120)를 모아 75개를 접고 25개를 남겨 덮는 끝이 r95 다.
+    다음 이어 가기는 그 요약에서 r96 까지 읽고 멈춘다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 120)
+    model = _summarizing_model()
+    trace.reads.clear()
+    first = await _continue(last, trace, clock, model=model)
+    assert len(trace.reads) == 100
+    assert _summary_event(first).last_covered_run == "r95"
+    _, document = _summary_request(model)
+    assert document == {"previous_summary": None, "exchanges": [_SHORT] * 75}
+    trace.reads.clear()
+
+    second = await _continue("run-1", trace, clock, request="또?")
+
+    assert trace.reads == [RunId("run-1"), *(RunId(f"r{index}") for index in range(120, 95, -1))]
+    assert _unwoven(_output_of(second)) == (
+        "요약 글",
+        [*([["요", "답"]] * 25), ["그럼?", _output_of(first)]],
+    )
+
+
+async def test_바로가기를_따라가는_읽기도_앞_실행을_세어_100개에서_멈춘다(clock: FakeClock) -> None:
+    """교환 수 기준이 없던 때 쓰인 바로가기 대화(티켓 03 과 04 사이)는 한 에이전트의 원문 실행이
+    100개를 넘을 수 있다. 앞 실행 r100 을 포함해 100개를 읽고 r0 은 읽지 않는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", shortcuts={})
+    for index in range(1, 101):
+        older = f"r{index - 1}"
+        _write_finished(trace, f"r{index}", previous=older, shortcuts={"calc": older})
+    trace.reads.clear()
+
+    events = await _continue("r100", trace, clock, model=_summarizing_model())
+
+    assert len(trace.reads) == 100
+    assert RunId("r0") not in trace.reads
+    assert _summary_event(events).last_covered_run == "r75"
+
+
+async def test_상한에_닿는_자리에서도_덮는_끝을_못_만난_채_처음에_닿으면_깨진_고리다(
+    clock: FakeClock,
+) -> None:
+    """상한은 읽지 않고 가를 수 있는 판정(처음, 순환, 덮는 끝) 뒤, 읽기 바로 앞이다. 고리 100개의
+    처음 r0 을 100번째로 읽은 뒤 처음에 닿았는데 r99 의 요약이 덮는 끝을 아직 만나지 못했다."""
+    trace = FakeTrace()
+    previous = _detour_chain(trace, 98)
+    _write_finished(trace, "r99", previous=previous, between=[_summarized("r99", covers="gone")])
+
+    with pytest.raises(PluginError, match="만나지 못한") as caught:
+        await _continue("r99", trace, clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert len(trace.reads) == 100
+
+
+def test_읽기_상한은_교환_수_기준에_2를_더한_것_이상이다() -> None:
+    """원문 교환이 기준을 넘으면 접히므로 바로가기로 읽는 그 에이전트의 원문 실행은 많아야 기준 + 1
+    개이고, 앞 실행이 다른 에이전트의 것이면 하나가 더 든다. 기준을 올리다 이 관계가 깨지면 상한이
+    바로가기 대화까지 자른다."""
+    assert EXCHANGE_COUNT_LIMIT + 2 <= READ_CAP
+
+
+# 스레드
+
+# 막힌 읽기가 박동을 기다리는 기한(초). 루프 밖이면 몇 ms 안에 박동이 뛰고, 루프 위면 그 읽기가
+# 루프를 막아 기한까지 뛰지 않는다. 기한은 빨강의 비용일 뿐이라 부하에도 초록이 흔들리지 않게 넉넉히
+# 둔다(`.claude/rules/tests.md`).
+BEAT_WAIT = 5.0
+
+
+class Heartbeat:
+    """이벤트 루프 위에서 잠들기를 되풀이하며 센다. 루프가 막히면 세지 않는다."""
+
+    def __init__(self) -> None:
+        self.beats = 0
+
+    async def beat(self) -> None:
+        while True:
+            self.beats += 1
+            await anyio.sleep(0.001)
+
+
+class BlockingTrace(FakeTrace):
+    """`blocking` 에 든 실행(없음이면 모두)을 읽을 때 박동이 한 번 뛸 때까지 그 스레드를
+    `time.sleep` 으로 막는다. 막은 읽기마다 그동안 박동이 뛰었는지를 `saw_beat` 에 쌓는다."""
+
+    def __init__(self, heartbeat: Heartbeat, blocking: frozenset[RunId] | None) -> None:
+        super().__init__()
+        self._heartbeat = heartbeat
+        self._blocking = blocking
+        self.saw_beat: list[bool] = []
+
+    def read(self, run_id: RunId) -> Trace | None:
+        if self._blocking is None or run_id in self._blocking:
+            before = self._heartbeat.beats
+            deadline = time.monotonic() + BEAT_WAIT
+            while self._heartbeat.beats == before and time.monotonic() < deadline:
+                time.sleep(0.005)
+            self.saw_beat.append(self._heartbeat.beats != before)
+        return super().read(run_id)
+
+
+@pytest.mark.parametrize(
+    ("blocking", "blocked"),
+    [
+        pytest.param(None, 3, id="읽기마다"),
+        pytest.param(frozenset({RunId("r3")}), 1, id="앞 실행 읽기만"),
+    ],
+)
+async def test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다(
+    blocking: frozenset[RunId] | None, blocked: int, clock: FakeClock
+) -> None:
+    """앞 실행 읽기와 고리 따라가기가 한 번의 스레드 호출이다. 막은 읽기마다 박동을 보므로 읽기마다
+    막는 가짜가 고리만 스레드로 보낸 구현과 앞 실행 읽기만 보낸 구현을 모두 가른다. 앞 실행
+    읽기에서만 막는 가짜는 명세 검토가 든 사례이고 앞의 것만 가른다(변이 표
+    `walk_cap_mutations.toml`)."""
+    heartbeat = Heartbeat()
+    trace = BlockingTrace(heartbeat, blocking)
+    last = _chain(trace, 2, 2, 2)
+    events: list[Event] = []
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(heartbeat.beat)
+        await anyio.sleep(0)
+        events = await _continue(last, trace, clock)
+        group.cancel_scope.cancel()
+
+    assert events[-1].type == "run_finished"
+    assert trace.saw_beat == [True] * blocked
+
+
+class HeldTrace(FakeTrace):
+    """`held` 를 읽기 시작하면 `started` 를 세우고 `release` 까지 그 스레드를 막은 뒤 다 읽고
+    `finished` 를 세운다."""
+
+    def __init__(self, held: RunId) -> None:
+        super().__init__()
+        self._held = held
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.finished = threading.Event()
+
+    def read(self, run_id: RunId) -> Trace | None:
+        if run_id != self._held:
+            return super().read(run_id)
+        self.started.set()
+        self.release.wait(BEAT_WAIT)
+        found = super().read(run_id)
+        self.finished.set()
+        return found
+
+
+async def test_이어_가기의_거슬러_읽기_도중_취소되면_그_읽기가_끝나기를_기다린다(
+    clock: FakeClock,
+) -> None:
+    """앱이 멈추는 바깥 취소. 스레드를 버리면 그것이 포트를 계속 쓴다. 읽기가 시작했다는 표시를 본
+    뒤에 취소하고 그 뒤에야 읽기를 풀어 준다 — 취소가 읽기 앞이나 뒤에 오는 회차가 없다(명세 검토,
+    프로브 `thread_cancel_wait.py`)."""
+    trace = HeldTrace(RunId("r2"))
+    last = _chain(trace, 2, 2)
+    running_at_cancel = False
+
+    with anyio.CancelScope() as scope:
+
+        async def cancel_while_reading() -> None:
+            nonlocal running_at_cancel
+            with anyio.fail_after(BEAT_WAIT):
+                while not trace.started.is_set():
+                    await anyio.sleep(0.001)
+            running_at_cancel = not trace.finished.is_set()
+            scope.cancel()
+            threading.Timer(0.2, trace.release.set).start()
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(cancel_while_reading)
+            await _continue(last, trace, clock)
+
+    assert running_at_cancel
+    assert trace.finished.is_set()
+
+
+async def test_이어_간_실행에_동시에_온_결정_둘은_하나만_받아들여져_도구가_한_번_불린다(
+    clock: FakeClock,
+) -> None:
+    """재개의 거슬러 읽기는 루프 위에 남는다(ADR 0014). 이어 간 실행의 재개는 첫 걸음 안에서 고리를
+    다시 읽으므로, 그 읽기를 스레드로 보내면 둘째 결정이 첫째의 결정보다 먼저 일시정지를 읽어 둘 다
+    받아들여지고 승인된 도구가 두 번 불린다. 채널의 동시 재개 테스트(`test_router.py`)는 이어 가지
+    않은 실행을 재개해 이 읽기를 지나지 않는다."""
+    trace = FakeTrace()
+    last = _chain(trace, 2, 2)
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝"), _reply("또")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue(last, trace, clock, model=model, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+    pause_index = _last_index(trace, _RUN_1)
+    outcomes: list[str] = []
+
+    async def decide() -> None:
+        try:
+            events = await _resume(
+                _RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=pause_index
+            )
+        except NotResumable as error:
+            outcomes.append(str(error))
+        else:
+            outcomes.append(events[-1].type)
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(decide)
+        group.start_soon(decide)
+
+    assert sorted(outcomes) == ["run_finished", "일시정지 상태가 아니라 재개할 수 없다: run-1"]
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
 
 
 # --- 실행 타임아웃 ---------------------------------------------------------------------
