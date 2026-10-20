@@ -217,3 +217,42 @@ plugins/loading, skills, settings, settings-reference, desktop, permissions)를 
     - ADR: "프로젝트·사용자 스킬 몇을 `"name-only"`로 두는 길도 그 측정에서 함께 견준다."
     - 프로브 독스트링: "첫 목록의 글자 수는 `token_report`처럼 줄마다 줄바꿈 하나를 더한 값이고, 뒤 첨부의 글자 수는 본문
       길이 그대로라 같은 목록이 1자 적게 찍힌다."
+- 커밋 `0c3a4538`(PR 직전 리뷰 반영). pre-commit 모두 통과(검사 러너 266초: pytest 265.6초, web-verify 232.5초, run-hooks
+  79.4초, pyright 30.4초. 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped). 인용 대조 경고 3건은 skills 문서 원문 둘과
+  ADR 문장을 옮긴 기록 하나다. 아직 푸시하지 않았고 PR은 없다.
+
+## 인계 (이어받은 앱 세션 `976e6e1b`)
+
+- 인계 경계: 커밋 뒤. `0c3a4538`을 커밋한 직후 인계 계기를 받았다(세션 컨텍스트 약 27만 토큰).
+- 남은 단계: 푸시, `/git-pr`로 PR 열기(본문 체크리스트에 위 "커밋과 PR 직전 리뷰"의 트리아지와 CLI 좌석 미배정을 적는다),
+  `@coderabbitai review` 코멘트, `tools/wait_ci.py` 대기와 봇 회차 반영, next-session "워크트리에서 병합할 때"로 병합,
+  병합 뒤 next-session. ADR 이력은 사용자가 두 번 승인했다(위 "판정"). PR 직전 리뷰 뒤 더한 `name-only` 두 문장은
+  재지 않은 길과 뒤 측정 계획만 적은 것이라 다시 묻지 않았고, 사용자에게 보고만 했다.
+- 병합 뒤 다음 작업의 후보(사용자 결정): 앱 세션에서 `skillListingBudgetFraction`의 0.003보다 순한 비율 몇과
+  프로젝트·사용자 스킬의 `"name-only"`를 재 잃는 계기와 줄어드는 양을 견주고, 고르면 ADR 0033에 새 이력으로 적는다.
+  별도 세션이다.
+- 이 세션의 지금 제목: `chore/skill-listing-trim`(넘기기 전에 `chore/skill-listing-trim (인계함)`으로 바꾼다)
+- 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+- open-session을 부른다 2026-10-20T05:40:33Z
+
+지시문:
+
+다음 작업: 기능 skill-listing-trim. slack만 끄는 설정과 ADR 0033 이력 2026-10-20을 PR로 열고 봇 리뷰를 반영해 병합한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "사용자 프롬프트" 절이 요청 원문이다. 셀프 리뷰(/code-review)부터 이어 ADR 승인, 커밋, PR, 병합까지 한다
+브랜치: chore/skill-listing-trim
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "커밋과 PR 직전 리뷰"와 "인계 (이어받은 앱 세션 `976e6e1b`)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰, ADR 승인(두 번), PR 직전 리뷰(CodeRabbit CLI 좌석 미배정이라 /security-review와 bug-perf-review)와 그 반영까지 마쳐 커밋 89240c4d, origin/main 병합 a3a8864f, 0c3a4538이 있다. 열린 PR이 없고 아직 푸시하지 않았으니 푸시와 /git-pr, 그 뒤 next-session 순서 1의 2(봇 회차)부터 한다. PR 본문 체크리스트의 PR 직전 리뷰 줄은 일지 "커밋과 PR 직전 리뷰"를 옮긴다. 일지의 인계 절은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-20-17-skill-listing-trim.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+## PR (이어받은 앱 세션, 셋째)
+
+> 사용자: docs/journal/2026-10-20-17-skill-listing-trim.md 의 "사용자 프롬프트" 절이 요청 원문이다. 셀프 리뷰(/code-review)부터 이어 ADR 승인, 커밋, PR, 병합까지 한다
+
+- 제목을 `chore/skill-listing-trim`으로 바꾸고 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로
+  들어갔다(잠금 거부 없음). 셀프 리뷰·ADR 승인·커밋은 앞 세션이 마쳐 지시문의 "이어받을 상태"대로 푸시부터 했다.
+- `git fetch origin` 뒤 `tools/sibling_overlap.py`: 번호 겹침 없음, origin/main은 앞 세션이 병합한 `2d460f6`
+  그대로였다. 이 커밋은 앞 세션의 인계 절과 이 절만 싣는다.
