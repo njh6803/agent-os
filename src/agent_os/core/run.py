@@ -965,7 +965,8 @@ def _own_link(
 ) -> tuple[TraceSchemaVersion, Link]:
     """자기 실행 읽기의 판정 자체(판정 순서는 `read_own_run`). 재개는 거슬러 읽기의 표현이 필요해
     이것을 직접 부르고, 채널은 이벤트 열만 받는 `read_own_run` 을 부른다. 손상은 주인을 확인하기
-    전의 것이라 하위 타입이다(`before_principal`). 없음은 손상이 아니라 그 사이에 선다."""
+    전의 것이라 하위 타입이고(이유는 `TraceDamagedBeforePrincipal`, 감싸는 것은 `before_principal`),
+    없음은 손상이 아니라 그 사이에 선다."""
     with before_principal():
         stored = trace.read(run_id)
     if stored is None:

@@ -311,6 +311,153 @@ open-session을 부른다 2026-10-20T04:16:20Z
     여덟이 모두 기대대로, 세 변이 표의 원문 확인(`mutate.py --check`) 통과.
 - **티켓.** 43행(검증 명령)은 로컬 e2e의 흔들림을 괄호로 달아 닫았다. 44행(기능 닫기)은 `git fetch` 뒤
   `origin/main`(`2d460f6b`)의 02·04가 `ready-for-agent`라 닫지 않는다고 적었다. 병합 직전에 다시 본다.
+- **커밋·PR.** 리뷰 반영과 티켓·일지·회고를 `0d2cff19`로 커밋했고(pre-commit 통과), 푸시해 PR #321을 열었다. 열 때
+  고친 것이 둘이다. 제목이 74자라 72자 안으로 줄였고, 본문에서 견줘 보지 않은 대안을 든 문장을 지워 사실로 바꿨다.
+  리뷰 줄의 좌석 문구는 `coderabbit auth status`를 실제로 친 뒤에 적었다.
+
+## 인계 (PR 연 뒤)
+
+이 세션(이어받은 세션)의 제목은 `feature/05-only-pre-owner-damage-is-404`였다. 세션 컨텍스트가 문턱(20만)을 넘은 채
+`PR 연 뒤`에 와서 next-session의 인계 줄로 다시 넘긴다. 받은 경계(`커밋 뒤`)와 다른 경계이고, 요청 범위가 병합까지이며,
+곁 세션이 아니라(`get_session`의 `self`에 `parentSessionId`가 없다) 인계하지 않는 때가 아니다. 주 체크아웃은 main이고
+`origin/main`(`2d460f6b`)과 같아 선행 조건에 적지 않았다.
+
+남은 단계는 next-session 순서 1의 2(봇 회차)부터다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 병합 직전에
+`git fetch` 뒤 `origin/main`의 02·04 `Status:`를 다시 본다(티켓 44행). 둘 다 done이면 이 PR이 기능의 마지막 잎이라
+티켓 44행과 `plan.md`, 아래 "다음"(지시문을 내지 않는다는 문장)을 고쳐 기능을 닫는다. 이 절과 위 "커밋·PR" 줄은
+커밋하지 않았다.
+
+지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md. 최종 사용자 면이 404로 덮는 것은 주인을 확인하기 전의 손상뿐이고, 운영자의 구성 실수는 500이다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md
+브랜치: feature/05-only-pre-owner-damage-is-404
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-20-only-pre-owner-damage-is-404.md 의 "이어받은 세션", "인계 (PR 연 뒤)", "다음" 절
+이어받을 상태: 인계: PR 연 뒤. PR #321 을 열었고 봇 회차는 아직이다(@coderabbitai review 코멘트도 남기지 않았다). next-session 순서 1의 2부터 한다. 커밋하지 않은 변경은 일지의 "인계 (PR 연 뒤)" 절과 "커밋·PR" 줄뿐이다. 병합 직전에 형제 02·04의 Status를 다시 보고, 둘 다 done이면 이 PR이 기능을 닫는다(티켓 44행, 일지 "다음"을 고친다). docs/journal/2026-10-20-20-only-pre-owner-damage-is-404.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/05-only-pre-owner-damage-is-404 (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었다. 워크트리 잠금은
+`is not locked`로 이미 풀려 있었다(이 세션은 `EnterWorktree(path)`로 들어왔다).
+
+open-session을 부른다 2026-10-20T06:00:56Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+> 사용자: "`.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md"
+
+첫 메시지는 위 문장 뒤에 위 "인계 (PR 연 뒤)"의 지시문을 붙인 것이다.
+
+- **시작.** 제목을 `feature/05-only-pre-owner-damage-is-404`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+  지시문의 선행 조건이 없음이라 `tidy-checkouts`는 돌지 않았다.
+- **봇 회차.** `@coderabbitai review`를 남기고 `tools/wait_ci.py 321`을 기다렸다. 헤드 `0d2cff19`에서 검사는 모두
+  통과했고 CodeRabbit은 `Review rate limited`라 리뷰가 없다. 회차로 세지 않고, 보안·버그 축은 PR 본문 체크리스트에
+  적은 PR 직전 리뷰 둘이 대체한다(`docs/constitution/operations.md` 초록 착시 목록). claude-review의 첫 회차는
+  Critical·Major·Minor 없이 Nit 하나였다. 같은 근거(주체 확인 전의 손상은 남의 존재를 드러낸다)를
+  `TraceDamagedBeforePrincipal`, `before_principal`, `failure_for`의 독스트링이 세 번 되풀이한다는 것이다. 일지를
+  어차피 푸시해야 해서 같은 커밋에 고쳤다. 원천은 `TraceDamagedBeforePrincipal`에 두고, 나머지 둘은 그 독스트링을
+  가리키게 줄였다.
+- **형제 상태.** `git fetch` 뒤 `origin/main`의 02·04가 `ready-for-agent`다. 이 PR은 기능을 닫지 않는다(티켓 44행과
+  아래 "다음"은 그대로).
+- **반영.** `/git-pr-feedback`대로 인라인 코멘트와 리뷰 요약을 보니 둘 다 없었고, 반영할 것은 위 Nit 하나다. 고친
+  두 파일은 `tools/rewrap_comments.py`로 감았고 `ruff check`와 `ruff format --check`가 통과했다.
+
+## 인계 (셀프 리뷰 직전)
+
+이 세션(PR 연 뒤를 이어받은 세션)의 제목은 `feature/05-only-pre-owner-damage-is-404`였다. 반영 커밋 전의 셀프
+리뷰(`/code-review`)를 부른 순간 세션 컨텍스트가 문턱(20만)을 넘어 `셀프 리뷰 직전`에 왔다. 받은 경계(`PR 연
+뒤`)와 다르고, 요청 범위가 병합까지이며, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다).
+그래서 셀프 리뷰의 단계를 밟지 않고 넘긴다. 이 세션이 번복한 것은 없다.
+
+커밋하지 않은 변경은 셋이다. `src/agent_os/core/continuation.py`의 `before_principal` 독스트링과
+`src/agent_os/http/errors.py`의 `failure_for` 독스트링(claude-review Nit 반영), 그리고 이 일지의 "이어받은 세션
+(PR 연 뒤)" 절과 이 절이다. 남은 단계는 셀프 리뷰(base는 `HEAD`, 범위는 그 셋), 커밋, 푸시,
+`@coderabbitai review`와 대기(claude-review는 둘째 회차라 Critical·Major만 고친다), 병합 직전 형제 02·04의
+`Status:` 재확인, 워크트리에서 병합이다.
+
+지시문:
+
+```
+다음 작업: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md. 최종 사용자 면이 404로 덮는 것은 주인을 확인하기 전의 손상뿐이고, 운영자의 구성 실수는 500이다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md
+브랜치: feature/05-only-pre-owner-damage-is-404
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-20-only-pre-owner-damage-is-404.md 의 "이어받은 세션 (PR 연 뒤)", "인계 (셀프 리뷰 직전)", "다음" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. PR #321 의 claude-review 첫 회차 Nit(같은 근거가 독스트링 세 곳에 되풀이)을 반영한 before_principal·failure_for 독스트링과 일지 두 절이 커밋되지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review, base HEAD)부터 한다. 그 뒤 커밋, 푸시, @coderabbitai review 와 tools/wait_ci.py 대기(헤드 0d2cff19 의 CodeRabbit 은 rate limited 라 회차로 세지 않았다. claude-review 는 다음이 둘째 회차라 Critical·Major 만 고친다), 병합 직전 형제 02·04 Status 재확인(둘 다 done 이면 이 PR 이 기능을 닫는다, 티켓 44행), 워크트리에서 병합이다. docs/journal/2026-10-20-20-only-pre-owner-damage-is-404.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/05-only-pre-owner-damage-is-404 (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었다(`wait_ci.py`
+대기는 이미 끝났다). 워크트리 잠금은 `is not locked`로 이미 풀려 있었다.
+
+open-session을 부른다 2026-10-20T06:08:00Z
+
+## 이어받은 세션 (셀프 리뷰 직전)
+
+> 사용자: "`.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md"
+
+첫 메시지는 위 문장 뒤에 위 "인계 (셀프 리뷰 직전)"의 지시문을 붙인 것이다.
+
+- **시작.** 제목을 `feature/05-only-pre-owner-damage-is-404`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+  지시문의 선행 조건이 없음이라 `tidy-checkouts`는 돌지 않았다.
+- **셀프 리뷰.** 범위: base `0d2cff19`, 커밋 0, 고친 파일 3(`continuation.py`, `errors.py`, 이 일지), 미추적 0. 명세는
+  claude-review 첫 회차의 Nit 원문이고 티켓 05는 참고로 넘겼다. 표준 축은 sonnet·high, 명세 축은 본 세션의 모델로
+  나란히 띄웠다.
+  - 표준 축: 하드 위반 없음, Minor 둘(판단 항목), Nit 둘.
+    - Minor: `before_principal`이 원천이라 가리킨 `TraceDamagedBeforePrincipal` 독스트링에 "바로가기"가 없다. main을
+      합칠 때(위 "main 합치기") 바로가기를 `before_principal`과 `core.md`에만 더했다.
+    - Minor: `gather_continued`와 `_own_link`의 독스트링이 이유를 `before_principal`에서 찾게 해, 이 diff 뒤로 포인터가
+      두 단이 됐다.
+    - Nit: `core.md`·`http.md`도 같은 근거를 길게 적는다.
+    - Nit: 위 인계 절의 "Critical·Major 만 고친다"가 `operations.md` 리뷰 파이프라인 4의 줄임과 어긋난다.
+  - 명세 축: Critical·Major 없음, Minor 둘, Nit 하나. 사라진 정보는 바로가기 말고 없고, ADR이 아니라 원천
+    독스트링을 가리키게 한 것이 요구의 뜻(고칠 곳 하나)에 더 맞다고 판정했다.
+    - Minor: 바로가기(표준 축과 같다).
+    - Minor: 위 "인계 (셀프 리뷰 직전)"가 커밋하지 않은 일지 변경을 두 절로 셌는데, "커밋·PR" 줄과 "인계 (PR 연
+      뒤)" 절도 커밋되지 않았다. 파일 수 셋은 맞다.
+    - Nit: 위 "같은 커밋에 고쳤다"가 커밋 전에 과거형이다.
+  - 두 축이 참으로 닫은 것: `before_principal`을 여는 자리 셋(`continuation.py`의 하나, `run.py`의 둘), 그 안에서
+    하위 타입을 던지는 줄이 없음, 하위 타입을 그대로 올림(명세 축이 스크래치 스크립트로 불러 봤고 `-k
+    주인을_확인하기_전` 16 passed), 지운 문장의 내용이 원천에 남음, `failure_for`의 500 고정 문구, 일지의 `gh`
+    사실(헤드 `0d2cff19`의 검사 모두 통과, CodeRabbit의 rate limited, claude-review의 Nit 하나, 인라인 코멘트와 리뷰
+    0, 02·04의 `ready-for-agent`), 위 절의 `> 사용자:` 인용. PR 제목이 처음에 74자였다는 말은 지금 대 볼 수 없다(지금
+    68자).
+- **판정.**
+  - 고친 것:
+    - 바로가기(두 축의 Minor). `TraceDamagedBeforePrincipal` 독스트링의 이유 문단에 깨진 바로가기를 더했다. 마지막
+      문단은 "주체를 확인한 뒤에 읽는 것은 기반 타입 그대로다"를 일반 조항으로 세우고 고리·바로가기, 재개의 앞 실행,
+      앞 실행 자신의 기록 규칙을 그 예로 두었다(code-review 6단계 1).
+    - 두 단 포인터(표준 축의 Minor). `gather_continued`와 `_own_link`가 이유를 `TraceDamagedBeforePrincipal`에서 찾게
+      했다. `_own_link`에는 감싸는 것이 `before_principal`이라는 말을 남겼다. `run.py` 모듈 독스트링이
+      `before_principal`과 ADR 0023의 2026-10-16 이력을 괄호로 드는 문장은 이유가 아니라 장치와 결정을 드는 것이라
+      두었다.
+  - 남긴 것:
+    - `core.md`·`http.md`의 근거 반복(표준 축의 Nit). 지침은 그 경로의 파일을 열 때 실리는 에이전트용 문서라,
+      독스트링을 가리키게 줄이면 읽는 쪽이 한 번 더 열어야 한다. 봇의 Nit도 독스트링 셋만 들었다.
+    - "Critical·Major 만 고친다"(표준 축의 Nit). 회차 세기의 원천인 `next-session` 1단계의 줄임이다. 그 원문은
+      "둘째 회차부터는 Critical·Major만 고치고, 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴 뒤 병합한다"이고,
+      보류 코멘트는 이번 회차에 그대로 따른다.
+    - 인계 절의 셈(명세 축의 Minor). 지난 세션의 인계 기록이라 고치지 않고 여기 적는다. 커밋하지 않은 일지 변경은
+      "커밋·PR" 줄과 "인계 (PR 연 뒤)", "이어받은 세션 (PR 연 뒤)", "인계 (셀프 리뷰 직전)"의 세 절이었다.
+    - "같은 커밋에 고쳤다"(명세 축의 Nit). 이 커밋으로 참이 된다.
+  - 다음 층(PR 봇의 둘째 회차)이 겨눌, 반영하며 새로 쓴 문장의 원문:
+    - `ports.py` `TraceDamagedBeforePrincipal`: "주체를 확인한 뒤의 고장(깨진 고리와 깨진 바로가기, 기록이 가리키는
+      에이전트의 부재, 구성 오류)은 요청한 사람 자신의 실행과 대화에 관한 것이라 드러나는 남의 것이 없어 기반 타입
+      그대로다", "같은 읽기라도 주체를 확인한 뒤에 읽는 것은 기반 타입 그대로다. 고리나 바로가기를 따라갈 때, 재개가
+      앞 실행을 다시 읽을 때, 이어 가기에서 주체·끝남 뒤에 보는 앞 실행 자신의 기록 규칙이 그렇다"
+    - `continuation.py` `gather_continued`: "손상이 하위 타입인 이유는 `TraceDamagedBeforePrincipal` 의 독스트링이다"
+    - `run.py` `_own_link`: "손상은 주인을 확인하기 전의 것이라 하위 타입이고(이유는 `TraceDamagedBeforePrincipal`,
+      감싸는 것은 `before_principal`), 없음은 손상이 아니라 그 사이에 선다"
+  - 다시 돌린 것: 고친 네 파일(`ports.py`, `continuation.py`, `run.py`, `errors.py`)의 `ruff check`와
+    `ruff format --check`가 통과했다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
 
 ## 회고
 
