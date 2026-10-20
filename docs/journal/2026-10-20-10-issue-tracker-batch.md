@@ -462,6 +462,11 @@ open-session을 부른다 2026-10-20T02:55:11Z
   PR 코멘트에 남긴다. 푸시 전 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었고 origin/main은 911babc0 그대로였다.
 - 병합은 워크트리에서 한다. 주 체크아웃 미갱신: 루트는 main. 이 세션은 새 세션을 열지 않으므로, 다음에 새 세션을 여는 지시문이
   그 줄을 적는다(next-session "워크트리에서 병합할 때" 4).
+- 일지 커밋 cc43deda의 둘째 회차는 claude-review가 다시 "지적 없음"이었고, CodeRabbit은 `Review rate limited`로 리뷰 없이 끝나
+  회차로 세지 않았다. 보류한 지적은 없다.
+- 병합 직전 확인에서 `mergeStateStatus`가 `BEHIND`였다. 그새 main에 #317(3a84a692, 다른 일지 하나와 대기열 행)이 들어왔고, 이
+  브랜치의 일지와 겹치는 파일이 없어 `git merge --no-commit origin/main`이 충돌 없이 끝났다. 합치기 전 `sibling_overlap.py`도 번호
+  겹침 없음이었다. 그 합친 커밋을 푸시하고 다시 기다린 뒤 병합한다.
 
 ## 회고
 
