@@ -155,6 +155,8 @@ class OpenPr:
 
 
 def open_prs(root: Path) -> list[OpenPr] | None:
+    """열린 PR(`PR_LIMIT`개까지)과 그 상태(`open_state`). gh가 실패하거나 JSON 목록이 아니면
+    None이고, 번호나 연 시각을 읽지 못한 PR은 뺀다."""
     j = _gh_json(
         [
             "pr",
@@ -185,6 +187,8 @@ class PrView:
 
 
 def pr_view(number: int, root: Path) -> PrView | None:
+    """PR 하나의 제목·본문·브랜치·연 시각·커밋. gh가 실패하거나 JSON 객체가 아니거나 빈 객체이면
+    None이다."""
     j = _gh_json(
         ["pr", "view", str(number), "--json", "title,body,headRefName,createdAt,commits"], root
     )
@@ -248,6 +252,8 @@ def tasklist_load(text: str) -> tuple[int, int]:
 
 
 def processes(root: Path) -> tuple[int, int] | None:
+    """`claude.exe` 프로세스의 (수, 메모리 합 MB)(`tasklist_load`). `tasklist`가 없거나 실패하면
+    None이다."""
     out = _run(["tasklist", "/FI", "IMAGENAME eq claude.exe", "/FO", "CSV", "/NH"], root)
     return None if out is None else tasklist_load(out)
 

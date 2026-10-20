@@ -116,7 +116,7 @@ expect_output = ["Left contains one more item: 'run_failed'"]
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-                    self._settled = self._settled or ctx.paused
+            self._settled = self._settled or ctx.paused
 '''
 new = '''
 '''

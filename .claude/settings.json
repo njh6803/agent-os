@@ -14,6 +14,7 @@
     "jira-start": "off",
     "jira-test": "off"
   },
+  "skillListingBudgetFraction": 0.006,
   "env": {
     "PYTHONUTF8": "1",
     "UV_LINK_MODE": "copy"
