@@ -100,11 +100,9 @@ expect = "red"
 file = "src/agent_os/core/run.py"
 old = '''
         case ConversationSummarized():
-            raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
 '''
 new = '''
         case ConversationSummarized() if False:
-            raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
 '''
 
 [[mutation]]
@@ -115,7 +113,7 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    gathered = (
+    continued = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
     if visible_agents is not None and agent not in visible_agents:
@@ -128,7 +126,7 @@ new = '''
         raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
     prepared = _prepare(plugins, manifest)
-    gathered = (
+    continued = (
         None if previous_run is None else gather_continued(trace, previous_run, agent, principal)
     )
 '''
@@ -155,21 +153,21 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/http/errors.py"
 old = '''
-        case DifferentPrincipal():
-            if operator:
+        case NotResumable() | NotContinuable():
 '''
 new = '''
-        case DifferentPrincipal() if False:
-            if operator:
+        case NotResumable():
 '''
 
 [[mutation.edit]]
 file = "src/agent_os/http/errors.py"
 old = '''
-        case NotResumable() | NotContinuable():
+        case DifferentPrincipal():
+            if operator:
+                return _Failure(status=409, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
 '''
 new = '''
-        case NotResumable():
 '''
 
 [[mutation]]
@@ -509,10 +507,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/EventItem.tsx"
 old = '''
-  if (isEventField(name) && RUN_FIELDS.has(name) && typeof value === "string") {
+  if (RUN_FIELDS.has(name) && typeof value === "string") {
 '''
 new = '''
-  if (isEventField(name) && RUN_FIELDS.has(name) && value !== undefined) {
+  if (RUN_FIELDS.has(name) && value !== undefined) {
 '''
 
 [[mutation]]
