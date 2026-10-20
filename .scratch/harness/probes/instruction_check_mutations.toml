@@ -170,3 +170,173 @@ expect = "red"
 file = "tools/check_instructions.py"
 old = '''    return value[index] in "\"'" and (index == 0 or value[index - 1] in " \t[,")'''
 new = '''    return value[index] in "\"'"'''
+
+# 대기열 342(chore/tools-rule-batch). 외부 명령의 시간 제한 판정(`calls_without_timeout`)과 주 체크아웃을
+# 찾는 git 의 시간 제한을 하나씩 끈다. 표지는 -k 로 고른 시험이 단언 하나면 그 시험의 FAILED 줄이고, 단언이
+# 여럿이거나 예외로 빨개지기를 기대하면 실패한 단언의 값이 찍힌 `E` 줄의 문구다(.claude/rules/probes.md 의 표지
+# 고르기). pytest 는 실패한 줄까지의 시험 소스를 함께 찍어, 소스에 있는 문구는 표지로 고르지 않는다.
+
+[[mutation]]
+name = "main 에서 시간 제한 검사를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "CLI_진입점이_시간_제한"]
+expect = "red"
+expect_output = ["assert 'tools/x.py:2: subprocess.run 에 timeout 이 없다' in"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    problems.extend(calls_without_timeout(root))
+'''
+new = ''''''
+
+[[mutation]]
+name = "timeout=None 을 시간 제한으로 본다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "timeout_None"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_timeout_None_은_시간_제한이_아니다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return not (isinstance(value, ast.Constant) and value.value is None)'''
+new = '''    return True'''
+
+[[mutation]]
+name = "까닭 없는 표지도 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "까닭_없는_표지"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_까닭_없는_표지는_빼지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_NO_TIMEOUT_MARKER = re.compile(r"^#\s*시간 제한 없음:\s*\S")'''
+new = '''_NO_TIMEOUT_MARKER = re.compile(r"^#\s*시간 제한 없음:")'''
+
+[[mutation]]
+name = "주석의 머리가 아닌 표지도 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "주석_머리가_아닌_표지"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_주석_머리가_아닌_표지는_빼지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        if token.type == tokenize.COMMENT and _NO_TIMEOUT_MARKER.match(token.string)'''
+new = '''        if token.type == tokenize.COMMENT and re.search(r"시간 제한 없음:\s*\S", token.string)'''
+
+[[mutation]]
+name = "표지를 토큰이 아니라 줄의 글자에서 찾는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "문자열_속_표지"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_문자열_속_표지는_빼지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return {
+        token.start[0]
+        for token in tokenize.generate_tokens(io.StringIO(source).readline)
+        if token.type == tokenize.COMMENT and _NO_TIMEOUT_MARKER.match(token.string)
+    }'''
+new = '''    return {
+        number
+        for number, line in enumerate(source.splitlines(), 1)
+        if re.search(r"#\s*시간 제한 없음:\s*\S", line)
+    }'''
+
+[[mutation]]
+name = "communicate 도 표지로 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "communicate_는_표지로"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_communicate_는_표지로_빼지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        if markable and marked.intersection(span):'''
+new = '''        if marked.intersection(span):'''
+
+[[mutation]]
+name = "subprocess 에서 가져온 함수 이름을 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "별칭과_from_import"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_별칭과_from_import_로_부른_것도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        elif isinstance(node, ast.ImportFrom) and node.module == "subprocess":'''
+new = '''        elif isinstance(node, ast.ImportFrom) and node.module == "subprocess.never":'''
+
+[[mutation]]
+name = "subprocess 모듈의 별칭을 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "별칭과_from_import"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_별칭과_from_import_로_부른_것도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''                alias.asname or alias.name for alias in node.names if alias.name == "subprocess"'''
+new = '''                alias.name for alias in node.names if alias.name == "subprocess"'''
+
+[[mutation]]
+name = "위치 인자로 준 timeout 을 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "시간_제한을_준_호출은"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_시간_제한을_준_호출은_통과한다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''_WAITING_METHODS = {"communicate": 1, "wait": 0}'''
+new = '''_WAITING_METHODS = {"communicate": None, "wait": None}'''
+
+[[mutation]]
+name = "키워드 펼치기를 시간 제한으로 본다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "키워드_펼치기"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_키워드_펼치기는_시간_제한으로_보지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    for keyword in call.keywords:
+        if keyword.arg == "timeout":'''
+new = '''    for keyword in call.keywords:
+        if keyword.arg is None:
+            return True
+        if keyword.arg == "timeout":'''
+
+[[mutation]]
+name = "tools 의 하위 폴더를 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "파일과_줄로_보고한다 and 시간_제한"]
+expect = "red"
+expect_output = ["assert 1 == 2"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        (root / "tools").rglob("*.py"), key=lambda path: path.relative_to(root).as_posix()'''
+new = '''        (root / "tools").glob("*.py"), key=lambda path: path.relative_to(root).as_posix()'''
+
+[[mutation]]
+name = "주 체크아웃을 찾는 git 의 넘김을 거두지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "주_체크아웃을_찾는_git_이_시간을_넘기면"]
+expect = "red"
+expect_output = ["subprocess.TimeoutExpired: Command"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    except (OSError, subprocess.TimeoutExpired):
+        return None
+    common = Path(result.stdout.strip())'''
+new = '''    except OSError:
+        return None
+    common = Path(result.stdout.strip())'''
+
+[[mutation]]
+name = "주 체크아웃을 찾는 git 에 시간 제한을 주지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "주_체크아웃을_찾는_git_에_시간_제한을"]
+expect = "red"
+expect_output = ["assert [None] == [60]"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except (OSError, subprocess.TimeoutExpired):'''
+new = '''            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):'''

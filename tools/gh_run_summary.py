@@ -56,6 +56,8 @@ SCRIPT_ECHO = re.compile(r"^(\x1b|\^\[)\[36;1m")  # 러너가 다시 보여 주�
 PREFIX = re.compile(r"^[^\t]*\t[^\t]*\t\S*\s?")  # "<job>\t<step>\t<timestamp> " 접두
 TEXT_LIMIT = 12
 TEXT_WIDTH = 200
+# 로그 받기를 기다리는 초. 로그는 실행 전체라 git 호출보다 넉넉히 둔다(대기열 342).
+CALL_TIMEOUT = 120
 
 
 @dataclass
@@ -212,7 +214,8 @@ def split_log(text: str) -> list[str]:
 
 
 def fetch_log(run_id: str) -> list[str]:
-    """`gh`가 실패하면 CalledProcessError를 올린다. 실패의 형태는 예외 하나다."""
+    """`gh`가 실패하면 CalledProcessError를, `CALL_TIMEOUT`초 안에 돌아오지 않으면 TimeoutExpired를
+    올린다."""
     completed = subprocess.run(
         ["gh", "run", "view", run_id, "--log"],
         capture_output=True,
@@ -220,6 +223,7 @@ def fetch_log(run_id: str) -> list[str]:
         encoding="utf-8",
         errors="replace",
         check=True,
+        timeout=CALL_TIMEOUT,
     )
     return split_log(completed.stdout)
 
@@ -233,6 +237,9 @@ def main(argv: list[str]) -> int:
     except subprocess.CalledProcessError as error:
         sys.stderr.write(str(error.stderr))
         return error.returncode
+    except subprocess.TimeoutExpired:
+        sys.stderr.write(f"gh run view 가 {CALL_TIMEOUT}초 안에 돌아오지 않았다\n")
+        return 1
     print(render(summarize(lines)))
     return 0
 
