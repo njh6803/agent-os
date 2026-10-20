@@ -116,8 +116,68 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문).
 - `shared_files`: "`queue_open_rows`는 대상만으로 묶음을 가르고 인용 경로는 "대상이면 위의 수에 더한다"며 따로 찍는데"
 - 시험 주석: "헤드리스 세션까지 한 칸에 합치자 10-19의 세션이 옛 보고의 82에서 271로 보였다"
 
+## PR 직전 리뷰
+
+인계로 연 세션(제목 `chore/morning-report-full-detail`)이 했다. 그 전에 origin/main(#325)을 합쳤다. 그 PR이 고친 파일은 이 브랜치와
+겹치지 않았다. CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 취약점 없음. 새 표와 칸의 값은 기존 허용 목록 판정(`program_of`, `label_of`, `HOOK_COMMAND`, 등록 훅의 지문)을
+  거친 값이거나 숫자다. 훅의 이유 머리(`Firing.head`)는 수집 도구 어디서도 읽지 않는다. 계정 이메일은 제외 기준(디스크의 민감
+  데이터)으로 보고하지 않았다.
+- `bug-perf-review`(호출 40): 유효 0, 보류 2, 오탐 5. 밀 주장 열 문장은 모두 근거와 맞았다(실제 장부 10-19로 `branch_rows`와
+  `token_report`의 브랜치 열이 같은 차례, `shared_files`의 `CLAUDE.md`가 대상 셋·인용 둘).
+  - 보류 1(Minor). 모델 호출이 없는 날 비용 구성·상위 세션·브랜치 표가 머리줄만 그려진다. 판정: 둔다. `table_lines`는 행이 없으면
+    머리줄과 구분줄만 그린다. main의 훅 표·명령 표·티켓 표도 같은 모양이라, 새 표만 `if rows:`로 막으면 관례가 갈린다. 고치는 값은
+    표 여럿의 갈래와 그 시험이고, 호출이 없는 날은 아직 없었다. PR 체크리스트에 적는다.
+  - 보류 2(Minor). 시험 주석의 "옛 보고의 82"의 근거를 리뷰가 찾지 못했다. 판정: 오탐. `old/2026-10-20.old-format.md` 85행의 10-19
+    행 "앱·사람 세션" 칸이 82다.
+  - 덧붙인 관찰. 옛 `task_stats`의 전체 횟수는 넘은 호출을 포함했고 새 "셸 명령 전체" 행의 횟수는 뺀 수다. 판정: 바꾸지 않는다. 새
+    표는 모든 행에서 횟수와 "10분 30초 넘음" 칸을 나눠 적고(`timing`), main의 명령 표도 같은 셈이었다.
+
 ## 남은 일
 
 - 예약 작업 지시문(`~/.claude/scheduled-tasks/daily-morning-report/SKILL.md`)은 이 PR을 병합하고 주 체크아웃을 당긴 뒤 바꾼다.
   먼저 바꾸면 옛 도구가 옛 경고(목록 다섯 줄)를 낸다. 바꿀 것은 5단계(보고를 끝까지 옮긴다), 3단계의 해석 규칙(상세 1·2·3·4·5·7마다
   한 줄에서 세 줄, 절마다 볼 방향), 0단계의 도구 판 확인(`morning_report.py`에 `MAX_REMARKS`가 있는지)이다. 옛 판은 `old/`에 둔다.
+  새 판은 `~/.claude/scheduled-tasks/daily-morning-report/SKILL.next.md`에 있다(명세 축 반영으로 늘어난 칸까지 절마다 볼 방향에
+  넣었다). 바꾸는 길은 지금 `SKILL.md`를 `old/SKILL.v2.md`로 옮기고 `SKILL.next.md`를 `SKILL.md`로 옮기는 것이다. 그 뒤 예약 작업을
+  바로 한 번 돌려(`run_scheduled_task`, 작업 `daily-morning-report`) 답이 보고 끝까지 옮겼는지와 경고가 0인지 본다.
+
+## 인계(커밋 뒤)
+
+이 세션(제목 "일일 아침 9시 보고서 등록", 바꾸기 전)은 세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤에 와서 넘긴다(ADR 0033).
+지시문 없이 연 세션이라 시작 프롬프트는 위 "사용자 프롬프트"의 요청이다.
+
+- 한 것. 커밋 `4b1ab21f`까지 구현, 셀프 리뷰 두 축과 그 반영, 10-19 다시 모으기를 마쳤다. pre-commit 통과(인용 대조 경고 10건은
+  줄이 감긴 독스트링과 고치기 전 문장의 인용이라 막지 않았다). 푸시와 PR은 아직이다.
+- 이 세션이 번복한 것. 첫 판 명세의 작성 규칙 4를 풀었다(위 판단해서 적용한 것). 첫 판 `command_rows` 독스트링이 옛 `task_stats`가
+  "같은 두 셈을 냈다"고 썼다가, 옛 스크립트를 열어 보니 셸 명령 전체는 표의 행이 아니라 표 밖의 줄이어서 고쳤다.
+- 남은 단계(차례대로).
+  1. PR 직전 리뷰. `coderabbit-review` 서브에이전트, CLI가 돌지 못하면 `bug-perf-review`, 그리고 본 세션의 `/security-review`.
+     위 "PR 직전 리뷰에 밀 주장"을 `bug-perf-review` 브리프에 넣는다. 반영과 그 보고는 이 일지에 옮긴다.
+  2. 푸시, PR(본문 끝 줄 규약), 봇 회차, `next-session` "워크트리에서 병합할 때"로 병합과 원격 브랜치 삭제.
+  3. 병합 SHA를 곁 세션 `local_9b519266-1af2-4232-a0fc-1ae6bd8e2641`(브랜치 `claude/hungry-robinson-5cb964`, 제목
+     chore/morning-collect-split)에 SendMessage로 알린다. 그 세션은 이 브랜치의 병합을 기다렸다가 그 위에서 `morning_collect.py`를
+     나눈다. `sibling_overlap.py`가 그 워크트리(`confident-wright-2d3ebf`)와 고친 파일 셋이 겹친다고 낸 것이 그 세션이다.
+  4. 사람에게 주 체크아웃 세션의 `/tidy-checkouts`를 부탁하고, 당겨진 뒤 위 "남은 일"대로 예약 작업 지시문을 바꾸고 다시 돌린다.
+  5. 회고와 이 일지의 "다음". 마지막 보고에는 빠졌던 것, 고친 것, 대신한 것(주간 보고는 여덟 날 열과 날짜별 표가 대신한다), 남긴 것
+     (이유 머리를 남기지 않는 것, 냄새 8, `token_report`와 셈이 겹치는 것)을 넣는다.
+- 형제 일지 29·30·31(`sibling_overlap.py`가 낸 워크트리 셋)이 먼저 병합되면 이 일지가 이름순으로 앞서므로, 병합 전에
+  `sibling_overlap.py --move`로 옮긴다.
+
+지시문.
+
+```
+다음 작업: 기능 morning-report-full-detail. 아침 보고의 상세를 펼치고 빠진 측정값을 표로 되살린 커밋을 PR로 내 병합하고 예약 작업 지시문을 바꾼다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-10-20-28-morning-report-full-detail.md 의 "사용자 프롬프트" 요청을 이어서 한다. 남은 단계는 그 일지의 "인계(커밋 뒤)" 절이다
+브랜치: chore/morning-report-full-detail
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-28-morning-report-full-detail.md 의 "PR 직전 리뷰에 밀 주장", "남은 일", "인계(커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 커밋 4b1ab21f까지 구현·셀프 리뷰 두 축 반영·pre-commit을 마쳤고 푸시와 PR은 아직이다. 남은 단계는 PR 직전 리뷰부터이고, 병합 뒤 곁 세션 알림과 예약 작업 지시문 교체가 있다. docs/journal/2026-10-20-28-morning-report-full-detail.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지. 병합 뒤 예약 작업 지시문 교체와 다시 돌려 확인까지
+```
+
+open-session을 부른다 2026-10-20T10:11:58Z
