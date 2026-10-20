@@ -892,6 +892,7 @@ async def test_이어_가기는_시작과_같은_항목_스트림이고_첫_항�
     started = trace.of(RunId("run-2"))[0]
     assert isinstance(started, RunStarted)
     assert started.previous_run == "run-1"
+    assert started.shortcuts == {"echo": "run-1"}
     assert started.principal == ALICE
 
 

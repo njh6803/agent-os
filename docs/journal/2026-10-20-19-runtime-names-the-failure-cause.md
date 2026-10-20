@@ -1,4 +1,4 @@
-# 2026-10-20 (14) end-user-continuation 티켓 02: 실패 원인
+# 2026-10-20 (19) end-user-continuation 티켓 02: 실패 원인
 
 나란히 여는 넷(02·03·05·06) 가운데 첫 세션이다. 주 체크아웃이 미갱신이라 Skill 도구로 `tidy-checkouts`를 먼저 돌고,
 주 체크아웃에서 브랜치를 따지 않고 워크트리 `.claude/worktrees/02-runtime-names-the-failure-cause`에 들어가 브랜치를
@@ -70,8 +70,8 @@
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md, 나란히 도는 티켓 .scratch/end-user-continuation/issues/03-*.md·05-*.md·06-*.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현·테스트·지침·변이 표는 커밋하지 않은 채 워크트리에 있고 티켓 체크박스는 검증 줄과 기능 닫기 줄만 남았다. 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 하고, 전체 검증(ruff 둘은 초록, tools/run_checks.py는 결과를 못 봤다)과 -m llm 한 번, 카나리아 core_rule_runtime_only_events.toml, 커밋·PR·병합으로 간다. 남은 위험과 넘길 것은 일지 docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -170,8 +170,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: /implement .scratch/end-user-continuation/issues/02-runtime-names-the-failure-cause.md
 브랜치: feature/02-runtime-names-the-failure-cause
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-14-runtime-names-the-failure-cause.md
+읽을 것: docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md의 "셀프 리뷰"·"검사"·"인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 전체 검증(러너 초록, -m llm 7 passed), 카나리아를 마치고 6d792161로 커밋했다(푸시 안 함, PR 없음). 남은 것은 origin/main 합치기(sync_with_base_branch), PR 직전 리뷰(/security-review와 bug-perf-review를 나란히, 밀 주장은 일지 "셀프 리뷰"의 목록), 반영, PR, 봇 회차, 병합 직전 기능 닫기 판정, 병합이다. 일지 docs/journal/2026-10-20-19-runtime-names-the-failure-cause.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
