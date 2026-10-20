@@ -469,6 +469,40 @@ open-session을 부른다 2026-10-20T00:28:26Z
 - **claude-review 1회차**(`d0f6a24c`, 그 봇이 이 PR에 낸 첫 리뷰). Critical·Major 0, Minor 하나와 Nit 셋이고, 지적마다 판단해 모두 보류했다. 이유는 PR 코멘트 `issuecomment-6280496192`에 남겼다. Minor(midturn 시험의 `SimpleNamespace` 결합)는 훅이 `time`에서 쓰는 것이 `monotonic`·`sleep` 둘뿐이고 다른 속성을 쓰게 되면 시험이 `AttributeError`로 빨개지며, 제안된 `sleep`만 바꾸는 길은 전역 `time.sleep`을 바꾼다. Nit(`from tools import hook_midturn_korean`을 위 구역에 붙이라)는 ruff의 isort가 지금 자리를 요구한다. 그 줄을 옮긴 사본을 `ruff check --select I --stdin-filename tests/tools/test_hook_midturn_korean.py -`에 넣자 I001로 빨갰고, 지금 판은 같은 명령에서 통과했다. 처음에는 `sed -n '1,20p;38p;21,37p;39,$p'`로 옮긴 사본을 지으려 했는데, sed는 줄을 파일 순서대로만 찍어 원래 순서 그대로였다(그 통과는 판정이 아니다). 옮긴 사본은 스크래치패드의 `move_import.py`로 지었고 import 구역을 눈으로 본 뒤 판정했다. 나머지 Nit 둘(mutate 30초 상한과 `_KILL_SECONDS`의 겹침, eslint의 `PROGRAM_TIMEOUT_MS`와 `throw run.error`)은 지적도 변경을 요구하지 않았고 PR 본문 "남긴 위험"에 이미 있다.
 - 고친 것이 없어 이 회차에는 코드 커밋이 없다. 이 절과 아래 회고·다음을 커밋해 푸시하고, 그 푸시로 도는 claude-review가 2회차다. 2회차부터는 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴 뒤 병합하며, 고친 것이 없으면 일지를 다시 푸시하지 않는다(next-session 1단계의 2).
 
+## 셋째 세션의 커밋 뒤 인계
+
+- 아래 회고와 대기열 374를 더하는 커밋이라 푸시 전에 `gh pr edit`으로 PR 본문을 넓혔다(next-session 1단계의 1). "남긴 위험"에 CodeRabbit이 파일 수 한도로 리뷰하지 않았다는 항목, "변경된 영역"의 `.scratch/`에 회고가 고친 대기열 행, "관련 티켓"에 374와 102·368의 회차를 더했다.
+- 커밋 직전 `tools/sibling_overlap.py`는 번호 겹침 없음이었다(이 브랜치의 새 번호 일지 2026-10-20-08·대기열 374, 다음 빈 번호 2026-10-20-09·375). origin/main은 `51572a3`으로 이 브랜치가 합친 그대로였다.
+- 커밋 `73bfc3e3`은 pre-commit을 모두 지났다(묶음 검사 195.1초: pyright 24.7초·run-hooks 53.6초·pytest 179.0초·web-verify 194.8초, ruff 둘과 카나리아 명세와 헌법 판은 `Skipped`, 인용 대조 경고 없음).
+- 그 커밋을 띄우자 인계 계기(`커밋 뒤`, 세션 컨텍스트 258,750 토큰)가 왔다. 인계하지 않는 다섯 때에 들지 않는다. 명령이 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문은 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 열린 PR이 있어 다음 단계는 `PR 반영·병합`이다. `tools/model_sweep.py`는 `Opus 5.5 / xhigh`였다. 이 세션의 지금 제목은 `chore/timing-tests-under-load`다. 푸시는 하지 않았다(`커밋 뒤` 경계의 새 세션이 푸시와 봇 회차부터 한다).
+- 이 세션이 번복하거나 고친 것: 없다. 위 "claude-review 1회차"의 sed 착오는 판정에 쓰기 전에 다시 쟀다.
+- 정지 지시는 위 "둘째 인계받은 세션" 절의 원문과 "커밋 뒤 인계" 절의 두 원문이다. 지시문의 "이어받을 상태"에 항목을 빠짐없이 옮기고 원문은 이 일지를 가리켰다. 시작 프롬프트 한 줄과 빈 줄 뒤에 지시문을 이은 프롬프트를 `tools/open_session.ps1`처럼 싸 보니(파이썬 `urllib.parse.quote`, `safe="-_.~"`, 앞뒤 `claude://code/new?q=`·`&source=open-session`) 처음 판이 8,191자로 상한 8,000자를 넘어, 일지에 있는 괄호 설명 둘을 빼 7,893자(프롬프트 1,488자)로 줄였다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 harness. 대기열 306의 남은 사례 셋(midturn 2초, mutate 8초, eslint 60초 제한)을 반영한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계 계기(커밋 뒤)로 넘긴다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)의 남은 사례 셋을 chore 한 PR로 반영한다. 오늘 여러 세션의 pre-commit을 막은 test_hook_midturn_korean.py의 test_트랜스크립트_파일이_없으면_기다리지_않는다부터 하고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
+브랜치: chore/timing-tests-under-load
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "셋째 인계받은 세션" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 73bfc3e3(봇 1회차·회고·다음)까지 커밋했고 푸시하지 않았다. PR 본문은 그 범위로 고쳤다. 일지의 커밋하지 않은 인계 절을 커밋해 함께 푸시하고 순서 1의 2(봇 회차)부터 한다. 그 푸시의 claude-review가 2회차다. CodeRabbit은 파일 수 한도로 이 PR을 리뷰하지 않아 wait_ci가 다른 검사를 기다린 뒤 "리뷰가 요청되지 않았다"(종료 4)로 끝난다. 다시 요청해도 같으니 그 출력의 다른 검사 줄로 판정한다(대기열 374). 일지 docs/journal/2026-10-20-08-timing-tests-under-load.md. 정지 지시(chore/hook-census 세션, 사용자의 요청): 이 PR의 리뷰 반영·CI·병합, 일지까지만 마무리한다. 새 chore나 대기열 행을 시작하지 않고, next-session 지시문대로 새 세션을 열지 않고, open-session을 실행하지 않는다(인계는 된다). 인계하면 이 지시를 새 지시문의 "이어받을 상태"에 옮긴다. ADR 0036을 main에 병합하면 재개 메시지가 온다. 오면 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약으로 잇는다. 마무리한 뒤 마지막 보고에 "재개 대기"를 적고 멈춰 기다린다. 원문은 일지
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/timing-tests-under-load (인계함)`으로 바꿨다. 멈출 대기는 없었다(이 세션이 띄운 백그라운드 작업은 `wait_ci.py` 대기 하나였고 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-20T00:47:14Z
+
+## 넷째 인계받은 세션
+
+10-20 09:4x(KST)에 위 "셋째 세션의 커밋 뒤 인계" 지시문으로 열린 세션이 이었다. 사용자 프롬프트는 시작 프롬프트 한 줄 그대로이고 지시문이 뒤에 붙었다. 제목을 `chore/timing-tests-under-load`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다(거부되지 않았다). 헤드는 `73bfc3e3`으로 원격보다 하나 앞섰고, PR #314의 `headRefOid`는 아직 `d0f6a24c`였다. 커밋하지 않은 변경은 위 "셋째 세션의 커밋 뒤 인계" 절 하나였다.
+
+- 그 절과 이 절을 커밋해 `73bfc3e3`과 함께 푸시한다. 일지만 더하는 커밋이라 PR 본문은 고치지 않았다(셋째 세션이 `73bfc3e3`의 범위로 이미 고쳤다).
+
 ## 회고
 
 후보 아홉. 승인 셋(회차로 셈 둘, 고침 하나), 기각 여섯, 넘김 0. 사건은 이 단계의 네 세션(위 절들)에서 골랐다.
