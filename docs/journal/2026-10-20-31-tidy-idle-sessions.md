@@ -102,3 +102,37 @@ open-session을 부른다 2026-10-20T10:09:06Z
 > 사용자: 승인 (추천) — "네 가지 결정을 그대로 확정합니다. 앞으로 /tidy-checkouts가 쉬는 세션의 프로세스를 끄고 병합된 워크트리를 지우며, 앱이 만든 워크트리는 앱에 맡깁니다."
 
 Consequences 끝에 승인 문장을 달았다.
+
+### 커밋과 인계
+
+- 전체 검사 러너(`tools/run_checks.py`)는 리뷰 반영 뒤 한 바퀴 모두 통과(pytest 221초, web-verify 244초). 린트 둘 초록.
+- 커밋 `3951db8f`. pre-commit 모두 통과했고, 인용 대조 경고 넷은 이 일지가 틀렸던 옛 문구를 인용한 자리 둘과 이 브랜치가 건드리지 않은 헌법 README 문장 둘이라 두었다.
+- 인계 계기(`커밋 뒤`, 세션 컨텍스트 약 30.3만 토큰)로 넘긴다. 바꾸기 전 제목은 `chore/tidy-idle-sessions`다.
+
+다음 작업: 기능 tidy-checkouts(ADR 0032 이력 2026-10-20). 쉬는 세션만 쥔 병합된 워크트리의 프로세스를 끝내고 지우며, 앱이 만든 워크트리는 앱에 맡긴다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 남긴것 1번 pr병합되고 세션 끝나면 정리 하게 못해? 사람에게 넘기는것도 (요청의 앞뒤와 사용자의 답은 docs/journal/2026-10-20-31-tidy-idle-sessions.md 의 "사용자 프롬프트" 절)
+브랜치: chore/tidy-idle-sessions
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-20-31-tidy-idle-sessions.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 카나리아 둘(통과 4), ADR 0032 이력 승인 문장, run_checks 통과까지 커밋 `3951db8f`에 들었다(푸시 전, PR 없음). 남은 단계: origin/main을 합치고, PR 직전 리뷰 둘(`/security-review`, `bug-perf-review` 서브에이전트. 밀 주장은 이 일지의 "PR 직전 리뷰에 밀 주장" 줄)을 나란히 돌려 반영한 뒤, 푸시·PR(`/git-pr`)·`@coderabbitai review` 요청·CI·봇 회차·병합(워크트리 병합 길). 일지의 "이어받은 세션" 절 뒤에 이어 쓰고 함께 커밋한다. docs/journal/2026-10-20-31-tidy-idle-sessions.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `chore/tidy-idle-sessions (인계함)`으로 바꿨고, 백그라운드 작업은 없었으며, 워크트리 잠금은 이미 풀려 있었다.
+
+open-session을 부른다 2026-10-20T11:18:41Z
+
+## 이어받은 세션: PR 직전 리뷰와 병합
+
+> 사용자: 남긴것 1번 pr병합되고 세션 끝나면 정리 하게 못해? 사람에게 넘기는것도 (요청의 앞뒤와 사용자의 답은 docs/journal/2026-10-20-31-tidy-idle-sessions.md 의 "사용자 프롬프트" 절)
+
+- origin/main(`bea74a07`, #325·#326)을 충돌 없이 합쳤다. `sibling_overlap.py`는 번호 겹침 없음.
+- `/security-review`: 확신도 7 이상 없음(명령 주입·경로·엉뚱한 프로세스·환경 변수 노출·역직렬화를 봤다).
+- `bug-perf-review`: 유효 Minor 다섯, 보류 하나, 오탐 셋. 잘못된 프로세스를 끄는 경로는 찾지 못했다.
+  - 고친 것: 밀 주장 4. ADR 이력 "못 보는 것"이 "다시 띄운 세션은 주 체크아웃에서 돌므로"로, 스킬 3.2가 "주 체크아웃에서 돈다"로 근거(지운 뒤 한 번 봤다)보다 세게 단정했다. 둘을 한 번 본 것으로 낮췄다.
+  - 고친 것: 밀 주장 1·2. "`EnterWorktree`로 연 세션은 인계할 때만 잠금을 풀어"는 `EnterWorktree(path)`가 잠그지 않고 인계 밖에서도 풀린 일(일지 2026-10-20-06)과 어긋났다. 독스트링과 ADR 결정 4를 "`EnterWorktree(name)`으로 만든 워크트리는 인계 단계 전에는 풀리지 않을 수 있어"로 좁혔다.
+  - 고친 것: 산 잠금 pid의 환경에 세션 id가 든 것은 재지 않았다는 것을 독스트링과 ADR 못 보는 것에 적었다(들지 않으면 끄지 않는 안전한 쪽이다).
+  - 둔 것(PR 체크리스트): 성능 둘(`end-holders`마다 `gh pr list`를 다시 부른다, 잠긴 워크트리마다 `alive`를 두 번 부른다)과 보류 하나(`taskkill /T`가 pid 재사용으로 고아를 자식으로 잡을 가능성).
+- 반영 뒤 `tidy_checkouts_mutations.toml` `--check` 165개 원문 한 번씩, `tests/tools/test_tidy_checkouts.py` 192 통과.
