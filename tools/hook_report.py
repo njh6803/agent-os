@@ -28,6 +28,9 @@ retro가 새 훅·검사를 승인하기 전과 모델이 바뀐 뒤(`docs/model
   들인 날이다).
 - 뺄 후보: 창의 첫날보다 먼저 들였고 창 안에서 알리지도 막지도 않은 등록 훅. 창 안에 들인 훅과 들인
   날을 모르는 훅은 따로 적는다. 손상을 막는 훅은 0건이어도 남긴다. 그 판정은 retro 4단계가 한다.
+  기록이 하나도 없거나 가장 이른 기록이 창의 첫날보다 늦으면 후보를 판정하지 않는다. 기록이 빈 날의
+  발동은 0으로 보여 조용한 훅이 모두 후보가 된다.
+- 읽는 사이 사라졌거나 열지 못한 기록 파일은 건너뛰고 머리 줄에 센다.
 
 못 보는 것.
 - 알림을 읽은 모델이 따랐는지는 모른다. 무시된 알림도 한 번으로 센다.
@@ -40,14 +43,18 @@ retro가 새 훅·검사를 승인하기 전과 모델이 바뀐 뒤(`docs/model
 - pre-commit과 CI의 검사는 세지 않는다(세션 기록에 없다). `tools/` 밖의 훅(플러그인 훅)의 알림도
   세지 않는다. 그 훅이나 앱이 도구 호출을 막은 것은 `UNKNOWN`으로 센다.
 - 기록 보존 기한(Claude Code 의 `cleanupPeriodDays`, 기본 30일)보다 긴 창은 앞쪽이 비어 0으로 센다.
-  그래서 가장 이른 기록 날짜를 함께 찍고, 그 날이 창의 첫날보다 늦으면 비어 있는 날 수를 적는다.
+  그래서 가장 이른 기록 날짜를 함께 찍고, 그 날이 창의 첫날보다 늦으면 비어 있는 날 수를 적고 뺄
+  후보는 판정하지 않는다.
 - 카나리아 체크아웃(`<이름>-canary-*`)과 다른 PC의 기록은 읽지 않는다.
 - 이름을 바꾼 훅은 새 이름을 더한 날을 들인 날로 본다. 옛 이름으로 지낸 날은 세지 않는다.
 
 쓰임: `uv run python tools/hook_report.py [--days N] [--today YYYY-MM-DD] [--projects <폴더>]
 [--repo <폴더 이름>] [--root <저장소 루트>]`. 기본 루트는 이 파일이 든 체크아웃이고, 기본 `--repo`는
 그 체크아웃의 주 체크아웃 경로로 짓는다(`git rev-parse --git-common-dir`). 표준 라이브러리만 쓴다.
-종료 0은 표를 냈다, 2는 인자가 틀렸거나 settings.json·git을 읽지 못했다.
+종료 0은 표를 냈다, 2는 인자가 틀렸거나(창이 날짜의 범위를 넘는 `--days` 도) settings.json·git을
+읽지 못했다. 기록 파일을 모두 읽어 이 PC의 기록 4705개에서 한 번에 1분 남짓 걸렸다(2026-10-20, PR
+직전 리뷰가 `time` 으로 한 번 손으로 쟀다. 다른 세션이 돌던 때다). Bash 도구로 칠 때는 `timeout` 을
+300000으로 준다(기본 120초).
 """
 
 from __future__ import annotations
@@ -98,12 +105,13 @@ class Firing:
 @dataclass(frozen=True)
 class Scan:
     """`broken` 은 JSON 객체로 읽지 못한 줄 수, `earliest` 는 시각이 든 기록 가운데 가장 이른
-    날이다."""
+    날, `unreadable` 은 열지 못한 기록 파일 수(`files` 에 든다)다."""
 
     firings: tuple[Firing, ...]
     files: int
     broken: int
     earliest: date | None
+    unreadable: int = 0
 
 
 def folder_name_of(checkout: str) -> str:
@@ -258,10 +266,15 @@ def scan(files: Iterable[Path], prints: Mapping[str, frozenset[str]]) -> Scan:
     seen: set[str] = set()
     broken = 0
     count = 0
+    unreadable = 0
     earliest: date | None = None
     for path in files:
         count += 1
-        parts = path.read_bytes().split(b"\n")
+        try:
+            parts = path.read_bytes().split(b"\n")
+        except OSError:  # 도는 동안 다른 세션이 기한 지난 기록을 지웠다
+            unreadable += 1
+            continue
         parts.pop()
         for raw in parts:
             if not raw.strip():
@@ -284,7 +297,7 @@ def scan(files: Iterable[Path], prints: Mapping[str, frozenset[str]]) -> Scan:
             earliest = day if earliest is None else min(earliest, day)
             for hook, kind, head in _record_firings(record, prints):
                 firings.append(Firing(hook, kind, day, head))
-    return Scan(tuple(firings), count, broken, earliest)
+    return Scan(tuple(firings), count, broken, earliest, unreadable)
 
 
 def registered_hooks(settings: str) -> list[str]:
@@ -347,9 +360,10 @@ def render(
     start = today - timedelta(days=days - 1)
     inside = [firing for firing in result.firings if start <= firing.day <= today]
     earliest = result.earliest.isoformat() if result.earliest else "없음"
+    unopened = f", 읽지 못한 파일 {result.unreadable}개" if result.unreadable else ""
     out = [
         f"훅 발동 {start.isoformat()} ~ {today.isoformat()} ({days}일, UTC 날짜). 기록 파일"
-        f" {result.files}개, 읽지 못한 줄 {result.broken}개, 가장 이른 기록 {earliest}.",
+        f" {result.files}개, 읽지 못한 줄 {result.broken}개{unopened}, 가장 이른 기록 {earliest}.",
     ]
     if result.earliest is not None and result.earliest > start:
         gap = (result.earliest - start).days
@@ -372,9 +386,19 @@ def render(
     old = [hook for hook in quiet if hook in introduced and introduced[hook] < start]
     young = [hook for hook in quiet if hook in introduced and introduced[hook] >= start]
     undated = [hook for hook in quiet if hook not in introduced]
+    # 기록이 비어 있는 날에는 발동했어도 0으로 보여, 조용한 훅을 모두 후보로 낸다
+    if result.earliest is None:
+        verdict = "판정하지 않는다(기록이 없다. `--projects`·`--repo` 를 본다)"
+    elif result.earliest > start:
+        verdict = (
+            f"판정하지 않는다(창의 앞 {(result.earliest - start).days}일에 기록이 없다."
+            " `--days` 를 줄여 다시 돌린다)"
+        )
+    else:
+        verdict = _listed(old, introduced)
     out += [
         "",
-        f"뺄 후보: {_listed(old, introduced)}",
+        f"뺄 후보: {verdict}",
         "  (창보다 먼저 들였고 창 안에서 알리지도 막지도 않았다. 손상을 막는 훅은 0건이어도 남긴다."
         " 판정은 retro 4단계)",
         f"아직 판단하지 않는 훅(창 안에 들였다): {_listed(young, introduced)}",
@@ -428,6 +452,9 @@ def main(argv: list[str]) -> int:
     root: Path = args.root
     days: int = args.days
     today: date = args.today or datetime.now(UTC).date()
+    if days - 1 > (today - date.min).days:  # 기록을 다 읽은 뒤 창을 계산하다 넘치지 않게
+        sys.stderr.write(f"창이 날짜의 범위를 넘는다: --days {days}\n")
+        return 2
     projects: Path = args.projects or Path.home() / ".claude" / "projects"
     try:
         hooks = registered_hooks((root / ".claude" / "settings.json").read_text(encoding="utf-8"))

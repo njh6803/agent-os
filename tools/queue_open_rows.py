@@ -243,7 +243,7 @@ def render(rows: list[Row], broken: list[int], today: date | None = None) -> str
     )
     expired = " ".join(f"{row.number}({row.last})" for row in stale)
     out.append(f"만료할 행(승인 칸의 가장 늦은 날짜가 {cutoff} 전): {expired or '(없음)'}")
-    undated = [row for row in counted if row.last is None]
+    undated = [row for row in waiting if row.last is None]  # 만료할 수 있는 행만 날짜가 필요하다
     if undated:
         out.append(f"날짜를 찾지 못한 행: {_numbers(undated)}")
     grouped = by_target(rows)

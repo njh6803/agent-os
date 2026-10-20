@@ -30,6 +30,7 @@ from tools.hook_report import (
     scan,
     transcript_files,
 )
+from tools.launch_hook import notice, skip_reason
 from tools.run_hooks import create_fixtures, hook_environment, load_cases, message_of, substitute
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -189,6 +190,28 @@ def test_래퍼가_인자가_틀려_지나간_알림도_세지_않는다(tmp_pat
     )
     path = _write(tmp_path / "s.jsonl", _notice("hook_a.py", wrong, "u1"))
     assert scan([path], {}).firings == ()
+
+
+def test_래퍼가_지나가며_내는_실제_출력은_세지_않는다(tmp_path: Path) -> None:
+    """PR 직전 버그 축: 위 두 시험은 문구를 손으로 옮겨, `launch_hook.skip_reason` 의 문구가
+    바뀌어도 초록이었다. 래퍼의 함수로 지은 출력을 넣는다."""
+    strings = {"hook_event_name": "PostToolUse"}
+    outputs = [
+        notice(skip_reason(argv), strings)
+        for argv in (["launch_hook.py"], ["launch_hook.py", "hook_a.py"])
+    ]
+    records = [_notice("hook_a.py", out, f"u{i}") for i, out in enumerate(outputs)]
+    assert scan([_write(tmp_path / "s.jsonl", *records)], {}).firings == ()
+
+
+def test_읽는_사이_사라진_기록_파일은_건너뛰고_읽지_못한_파일로_센다(tmp_path: Path) -> None:
+    """PR 직전 버그 축: 도는 동안 다른 세션이 기한 지난 기록을 지우면 트레이스백으로 끝났다."""
+    path = _write(tmp_path / "s.jsonl", _notice("hook_a.py", _context("고쳐라"), "u1"))
+    result = scan([tmp_path / "gone.jsonl", path], {})
+    assert _counts(result) == {("hook_a.py", NOTICE): 1}
+    assert result.unreadable == 1
+    out = render(result, [], {}, TODAY, 28)
+    assert "읽지 못한 파일 1개" in out
 
 
 def test_tools_밖의_훅_명령의_알림은_세지_않는다(tmp_path: Path) -> None:
@@ -377,10 +400,20 @@ def test_들인_날을_모르는_훅은_후보에_넣지_않고_따로_적는다
     assert "뺄 후보: (없음)" in out
 
 
-def test_가장_이른_기록이_창의_첫날보다_늦으면_앞쪽이_비었다고_적는다() -> None:
+def test_가장_이른_기록이_창의_첫날보다_늦으면_앞쪽이_비었다고_적고_뺄_후보를_내지_않는다() -> None:
+    """PR 직전 버그 축: 앞쪽이 빈 창에서도 조용한 훅을 모두 뺄 후보로 냈다."""
     result = Scan((), 1, 0, date(2026, 10, 1))
     out = render(result, ["hook_a.py"], {"hook_a.py": date(2026, 9, 1)}, TODAY, 28)
     assert "가장 이른 기록이 2026-10-01 이라 창의 앞 9일은 기록이 없다" in out
+    assert "뺄 후보: 판정하지 않는다(창의 앞 9일에 기록이 없다" in out
+    assert "hook_a.py(2026-09-01 들임)" not in out
+
+
+def test_기록이_하나도_없으면_뺄_후보를_내지_않는다() -> None:
+    """PR 직전 버그 축: 틀린 `--projects`·`--repo` 에서 등록 훅이 모두 뺄 후보로 나왔다."""
+    out = render(Scan((), 0, 0, None), ["hook_a.py"], {"hook_a.py": date(2026, 9, 1)}, TODAY, 28)
+    assert "뺄 후보: 판정하지 않는다(기록이 없다" in out
+    assert "hook_a.py(2026-09-01 들임)" not in out
 
 
 def test_모름과_여럿으로_센_막음은_이유의_머리와_함께_적는다() -> None:
@@ -469,7 +502,11 @@ def test_main을_실제로_불러_임시_저장소의_표와_뺄_후보를_찍�
     root = tmp_path / "repo"
     _hook_repository(root, ["hook_a.py", "hook_quiet.py"])
     projects = tmp_path / "projects"
-    _write(projects / "R" / "s.jsonl", _notice("hook_a.py", _context("고쳐라"), "u1"))
+    _write(
+        projects / "R" / "s.jsonl",
+        _notice("hook_a.py", "", "u0", "2026-09-20T00:00:00.000Z"),  # 창 앞의 기록
+        _notice("hook_a.py", _context("고쳐라"), "u1"),
+    )
     done = _run(
         *("--projects", str(projects), "--repo", "R"),
         *("--root", str(root), "--today", "2026-10-19"),
@@ -486,6 +523,10 @@ def test_main은_인자가_틀리면_까닭을_내고_2로_끝난다() -> None:
     today = _run("--today", "어제")
     assert today.returncode == 2
     assert "날짜는 YYYY-MM-DD다: 어제" in today.stderr
+    # PR 직전 버그 축: 기록을 다 읽은 뒤 창을 계산하다 OverflowError 트레이스백으로 끝났다
+    wide = _run("--days", "99999999")
+    assert wide.returncode == 2
+    assert "창이 날짜의 범위를 넘는다" in wide.stderr
 
 
 def test_main은_settings를_읽지_못하면_2로_끝난다(tmp_path: Path) -> None:
