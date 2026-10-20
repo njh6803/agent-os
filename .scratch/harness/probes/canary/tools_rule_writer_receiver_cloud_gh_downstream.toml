@@ -3,9 +3,9 @@
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 셋이고, 셋 다 그 항목에만 있고 이 체크아웃의 `CLAUDE.md`·`README.md`·헌법 원칙에는 없는 글이다(grep 으로
 #   셌다). `open_session.ps1` 은 대조군이 읽는 `README.md` 에 있어 카나리아로 쓰지 않았다.
-# 최신 결과: 통과 4(2026-10-14, 이 PC, claude 2.1.296, origin/main 7eebfd7 을 합치며 막는 훅 문장을 넓힌 작업 트리 —
-#   러너가 찍은 커밋은 d212931f, 일지 2026-10-14-07). PR 봇 리뷰를 반영해 원천의 문구와 항목 경계만 고친 판은
-#   2026-10-14 에 --preflight 로 갈음했다(일지 2026-10-14-07).
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 클라우드 gh 항목의 `gh pr …` 도구 수를 넷으로 고친 작업 트리 —
+#   러너가 찍은 커밋은 3a84a692, 일지 2026-10-20-22). PR 직전 리뷰 뒤 같은 항목의 `gh pr view` 갈래 문장을 고쳐
+#   사전 확인으로 갈음했다(2026-10-20, claude 2.1.302, 일지 2026-10-20-22).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_writer_receiver_cloud_gh_downstream.toml <출력 디렉터리>
 kind = "rule"
 question = '''
