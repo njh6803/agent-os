@@ -224,6 +224,38 @@ open-session을 부른다 2026-10-20T16:15:42Z
 - 남긴 것과 이유: (13) 수가 맞다, (14) 명세에 받는 쪽을 적었다, (15)~(17) 위의 이유.
 - 다시 돌린 명령: 바꾼 프로브와 시제품의 `ruff check`·`ruff format --check` 통과, Linux `full_stack.py` 통과. 손으로 치는 검증 다섯은 커밋의 pre-commit으로 갈음한다(결과는 커밋 뒤에 적는다).
 
+### 인계(커밋 뒤)
+
+반영과 회고를 `c3ffd2d5`로 커밋했다. pre-commit은 ruff 둘과 `run_checks.py`의 여덟(zizmor, lint-imports, check-instructions, check-type-escapes, pyright, run-hooks, pytest, web-verify)이 모두 지났고, `Skipped`는 커밋에 든 파일이 없는 둘(카나리아 명세, 헌법 판)뿐이라 손으로 치는 다섯은 이 결과로 갈음한다. 인용 대조는 경고 넷을 냈고 막지 않았다. 넷 모두 위 셀프 리뷰 (2)·(3)·(5)·(12)가 이 커밋으로 고치기 전의 원문을 옮긴 것이라 저장소에 글자 그대로 남지 않은 것이다.
+
+커밋 직전에 인계 계기(`커밋 뒤`, 세션 컨텍스트 약 36만 토큰)가 왔고 커밋이 성공해 경계에 왔다. 인계하지 않는 때 다섯에 들지 않는다. 이 세션이 넘겨받은 경계는 `셀프 리뷰 직전`이고, 요청 범위는 PR과 병합까지이며, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `docs/mcp-shutdown-to-spec`이었다. 브랜치에 PR이 없어(`gh pr view`가 찾지 못했다) 다음 단계는 이 세션 지시문의 것을 그대로 옮겼고, `tools/model_sweep.py`는 `스윕 밖`이었다.
+
+다음 작업: 기능 mcp-shutdown. 명세와 PR 직전 리뷰·셀프 리뷰의 반영을 커밋했고(c3ffd2d5) 푸시와 PR이 남았다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/mcp-shutdown-to-spec
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-20-36-mcp-shutdown-spec.md
+이어받을 상태: 인계: 커밋 뒤. c3ffd2d5까지 커밋했고 아직 푸시하지 않았다(PR 없음). 그 커밋은 PR 직전 리뷰의 반영과 그 셀프 리뷰(이 일지의 "셀프 리뷰(PR 직전 리뷰의 반영)" 절, 두 축 Critical·Major 없음, (1)~(12)를 고치고 (13)~(17)을 남겼다), Linux full_stack 재실행 통과, 회고(대기열 339 3회차, 107·108·117 만료)를 담았고 pre-commit이 모두 지났다(이 일지의 "인계(커밋 뒤)"). 남은 단계는 푸시, PR(체크리스트에 PR 직전 리뷰의 판정과 미룬 둘의 이유, CodeRabbit 좌석이 없어 /security-review와 bug-perf-review로 대신한 결과, 셀프 리뷰 결과, pre-commit 결과), 첫 @coderabbitai review 코멘트와 봇 회차, 워크트리에서 병합, 그 뒤 이 일지 "다음"대로 next-session이다. 앞 세션들이 남긴 full_stack 옛 사본 열 개(%TEMP%의 mcp-full-stack-*, 약 2.8GB)는 지우지 않았고 보고에 알린다. 일지 docs/journal/2026-10-20-36-mcp-shutdown-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/mcp-shutdown-to-spec (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(커밋과 Linux full_stack은 끝났다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-20T16:58:21Z
+
+## 2026-10-21 커밋 뒤를 이어받아 PR을 연 세션
+
+> 사용자: ".claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 다음 작업: 기능 mcp-shutdown. 명세와 PR 직전 리뷰·셀프 리뷰의 반영을 커밋했고(c3ffd2d5) 푸시와 PR이 남았다 / 다음 단계: 명세 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 … 이번 요청 범위: PR과 병합까지"
+
+제목을 브랜치 이름으로 바꾸고, `git worktree list`에서 찾은 워크트리 `mcp-shutdown-to-spec`에 `EnterWorktree(path)`로 들어갔다. 인계한 세션이 쓴 위 "인계(커밋 뒤)" 절은 커밋되지 않은 채 있어 이 세션의 커밋에 실었다.
+
+- **main을 합쳤다.** origin/main이 `28f5eac8`(#330, skill-call-sites)로 한 커밋 앞서 있었다. `git merge origin/main`이 `.scratch/plan.md`에서 두 구역을 충돌로 냈다. 한쪽은 이 브랜치가 고친 mcp-shutdown 행과 그 옆 줄의 web-widget 행(main이 끝에 괄호를 더했다)이고, 다른 쪽은 프론티어 문장(이 브랜치는 가운데를, main은 끝에 한 문장을 더했다)이다. 줄마다 다른 쪽이 병합 기점의 줄과 같은 것을 확인한 뒤 두 고침을 모두 살렸고, 푼 파일을 `origin/main`과 견주면 이 브랜치의 고침만, `HEAD`와 견주면 main의 고침만 남는 것을 낱말 단위 diff로 봤다.
+- **#330이 세운 규약.** `.claude/rules/adr.md`가 ADR을 새로 쓰거나 이력을 더하기 전에 `domain-modeling`을 부르게 했다. 이 브랜치의 ADR 0034 이력은 그 규약 전에 쓰고 승인받았으므로, 그 스킬을 불러 이력과 명세가 더한 줄의 말을 `CONTEXT.md`(#330이 더한 "거꾸로 동기화"·"계기" 포함)에 대 봤다. 용어집이 피하라고 한 말 가운데 걸린 것은 "세션" 13번과 "클라이언트" 10번이다. 모두 POSIX의 프로세스 세션(`start_new_session`), mcp의 `ClientSession`과 프로토콜의 클라이언트 쪽, 이 저장소의 Claude 세션, pytest 세션이라 용어집의 실행·도구 연결을 가리키지 않는다. 런처와 부모 감시는 어댑터의 구현이라 용어집에 넣지 않는다. 고친 것은 없다. 새 ADR을 낼지도 다시 갈랐다. 부모 감시와 둘째 Ctrl+C는 취소되어도 서버를 내린다는 ADR 0034의 결정을 넓힌 것이라 이력이 맞다(헌법 거버넌스의 "같은 결정의 개정").
+- **CodeRabbit 좌석.** `coderabbit auth status`가 이번에도 `Plan: Free`, `Seat: not assigned`였다. PR 직전 축은 앞 세션이 돌린 대체 둘(`/security-review`, `bug-perf-review`)의 결과를 PR 체크리스트에 옮긴다. #330은 하네스 문서만 바꿔 그 리뷰가 본 변경에 닿지 않는다.
+- **번호.** `tools/sibling_overlap.py`가 겹침 없음으로 끝났다(이 브랜치의 일지 2026-10-20-36, 대기열 391·392).
+
 ## 회고
 
 후보 여덟. 승인 셋, 기각 셋, 일지에만 둘, 넘김 없음. 대기열 만료는 이 워크트리와 `origin/main`(`83f09401`) 모두 없었다.
