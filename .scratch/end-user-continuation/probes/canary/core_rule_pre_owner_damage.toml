@@ -1,0 +1,28 @@
+# `.claude/rules/core.md` 의 실패 정책 항목에 더한 문장(주인을 확인하기 전의 손상의 하위 타입, 그것을 던지는 자리와 감싸는
+# 것)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 05).
+# 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 일지 2026-10-20-20). 첫 판의 질문은 (2)가 "어디서 던지는지 말한
+# 문장"이라, 규칙이 실린 실험군 한 회차가 자리를 나열한 다음 문장을 옮겨 실패했다(통과 3·실패 1, 같은 날). 그래서 묻는
+# 문장을 좁혔다. 셀프 리뷰가 원천의 본문을 고친 뒤 같은 날 같은 판의 사전 확인(--preflight)으로 갈음했다(2026-10-20, 일지 2026-10-20-20).
+# main(티켓 03의 바로가기)을 합쳐 같은 항목의 고리 문장이 늘어난 뒤에도 같은 날 사전 확인으로 갈음했다(일지 2026-10-20-20).
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/core_rule_pre_owner_damage.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 실행 전 실패의 하위 타입을 가르는 기준을 다루는 항목이 있으면 두 가지를 글자 그대로
+옮겨라. (1) 그 항목에서 요청이 가리킨 실행을 그 주체와 견주기 전에 만난 손상에 붙는 하위 타입의 이름. (2) 그 하위 타입을
+던지는 자리가 몇 곳인지와 그 자리를 감싸는 함수의 이름을 함께 말한 문장 하나(자리를 하나하나 나열한 문장이 아니다).
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["TraceDamagedBeforePrincipal", "던지는 자리는 둘이고 continuation.py의 before_principal이 감싼다"]
+source = ".claude/rules/core.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/core/loop.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

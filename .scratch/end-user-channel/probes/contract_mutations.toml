@@ -11,16 +11,18 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+    with before_principal():
+        link = link_of(stored, run_id)
+        check_record_rules(link)
     if link.started.principal != principal:
         raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
 '''
 new = '''
     if stored.events and getattr(stored.events[0], "principal", principal) != principal:
         raise DifferentPrincipal(f"실행 {run_id} 은 요청한 주체의 실행이 아니다")
-    link = link_of(stored, run_id)
-    check_record_rules(link)
+    with before_principal():
+        link = link_of(stored, run_id)
+        check_record_rules(link)
 '''
 
 [[mutation]]
@@ -225,15 +227,19 @@ name = "실행을 가리키는 경로의 깨진 기록을 500 으로"
 tests = ["tests/channel/http/test_end_user.py", "-k", "손상된"]
 expect = "red"
 
+# 티켓 05 뒤에는 면이 둘이고 최종 사용자 면이 404 로 덮는 깨진 기록은 주인을 확인하기 전의 손상
+# 하나다(`TraceDamagedBeforePrincipal` 의 갈래). 원문을 그 갈래로 옮겼다.
 [[mutation.edit]]
 file = "src/agent_os/http/errors.py"
 old = '''
-                case Surface.END_USER_RUN:
-                    return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
 '''
 new = '''
-                case Surface.END_USER_RUN:
-                    return _Failure(status=500, message=INTERNAL_MESSAGE)
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=500, message=INTERNAL_MESSAGE)
 '''
 
 [[mutation]]
@@ -319,14 +325,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/channel/http/end_user.py"
 old = '''
-        return await runs.start(
-            events, request_id=request_id_of(request), first_index=decision.pause_index + 1
-        )
+            first_index=decision.pause_index + 1,
 '''
 new = '''
-        return await runs.start(
-            events, request_id=request_id_of(request), first_index=decision.pause_index
-        )
+            first_index=decision.pause_index,
 '''
 
 [[mutation]]
@@ -337,7 +339,7 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/channel/http/end_user.py"
 old = '''
-        live = None if run_status(events[-1]) != "unfinished" else runs.join(RunId(run_id))
+        live = None if run_status(events[-1]) != "unfinished" else runs.join(run_id)
 '''
 new = '''
         live = None
@@ -351,10 +353,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/channel/http/end_user.py"
 old = '''
-                yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
+            yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events)))
 '''
 new = '''
-                yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events) - 1))
+            yield ServerSentEvent(data=UnfinishedItem(), id=str(len(self.events) - 1))
 '''
 
 [[mutation]]
@@ -454,14 +456,34 @@ name = "구독의 한 걸음 사이에 await"
 tests = ["tests/channel/http/test_end_user.py", "-k", "읽는_바로_그때"]
 expect = "red"
 
+# 첫 걸음이 동기 함수(`first_step`)로 옮겨 그 안에 await 를 넣을 수 없어, 함수를 비동기로 바꾸고 부르는
+# 자리에서 기다리게 하는 세 군데를 함께 고친다(티켓 05가 원문을 맞췄다).
 [[mutation.edit]]
 file = "src/agent_os/channel/http/end_user.py"
 old = '''
-        own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
+    def first_step(user: EndUser, run_id: RunId, last_event_id: str | None) -> _Subscription:
 '''
 new = '''
-        own = read_own_run(trace, RunId(run_id), user.principal, user.site.agents)
+    async def first_step(user: EndUser, run_id: RunId, last_event_id: str | None) -> _Subscription:
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+        own = read_own_run(trace, run_id, user.principal, user.site.agents)
+'''
+new = '''
+        own = read_own_run(trace, run_id, user.principal, user.site.agents)
         await __import__("asyncio").sleep(0.05)
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/end_user.py"
+old = '''
+            subscribed = first_step(user, RunId(run_id), last_event_id)
+'''
+new = '''
+            subscribed = await first_step(user, RunId(run_id), last_event_id)
 '''
 
 [[mutation]]
