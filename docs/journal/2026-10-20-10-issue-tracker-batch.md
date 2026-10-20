@@ -406,6 +406,63 @@ origin/main(911babc0)이고 범위는 이 일지 하나다.
 - 리뷰어가 덧붙인 것: 지금 `tools/sibling_overlap.py`는 번호 겹침 없음이지만, 이름순으로 앞서는 형제가 06(`-11`), 03(`-12`), 05(`-13`)
   셋이다. 앞 절 둘의 "06·03"은 그때의 기록이라 두었다.
 
+커밋 0c1ede78의 pre-commit이 통과했다. 러너(634.5초)의 lint-imports, zizmor, check-instructions, check-type-escapes, pyright, run-hooks,
+pytest(586.3초), web-verify와 마크다운 표·줄 구분 문자·변이 표·커밋 메시지가 통과했고, ruff 둘·카나리아 명세·헌법 판은 대상 파일이
+없어 `Skipped`였다. 인용 대조 경고 하나는 위 지적 1이 고치기 전의 회고 문구를 든 인용이다. ruff 둘은 손으로 쳐 통과했다
+(`All checks passed!`, `811 files already formatted`). 푸시 전 `git fetch origin` 뒤에도 origin/main은 911babc0이었고,
+`uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다. 이름순으로 앞서는 형제에 티켓 02 워크트리(`2026-10-20-14`)가 더해져
+넷이 됐다. 푸시하고 PR #316(`docs: 트래커 규약 배치(대기열 104·172·371)를 ADR 0036으로 접고 일지만 싣는다`)을 열었다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 직후 세션 컨텍스트가 문턱(20만, 그때 222,574)을 넘어 인계 계기(`PR 연 뒤`)가 왔다. `hook_pr_next_session`의 계기도 함께
+왔지만 결정표의 인계 줄이 이긴다. 인계하지 않는 때 다섯에 들지 않았다(PR이 열렸다, 요청 범위는 PR과 병합까지, 이 세션을 연 지시문의
+이어받을 상태는 다른 경계인 `인계: 커밋 뒤`다, `인계 못함` 줄이 없다, `get_session`의 `self`에 `parentSessionId`가 없다). 봇 회차는
+밟지 않았고 `@coderabbitai review` 코멘트도 남기지 않았다. 이 세션의 제목은 `chore/issue-tracker-batch`이고
+`chore/issue-tracker-batch (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 커밋)은 모두 끝났다.
+`uv run python tools/model_sweep.py chore/issue-tracker-batch`는 `Opus 5.5 / xhigh`였다.
+
+지시문:
+
+```
+다음 작업: 기능 retro-queue. 대기열 104·172·371 반영 배치를 ADR 0036으로 접고 일지 한 파일만 싣는 PR #316을 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 104·172·371(대상 파일이 docs/agents/issue-tracker.md인 열린 행 셋)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 정한 자리에 고치고, 반영한 행을 닫는다
+브랜치: chore/issue-tracker-batch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-20-10-issue-tracker-batch.md 의 "재개와 접기", "PR 직전 리뷰", "인계 (PR 연 뒤)", "다음" 절
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #316은 커밋 0c1ede78로 열었고, PR 직전 리뷰(/security-review 발견 0, bug-perf-review 지적 둘)는 반영해 그 커밋에 실었다. 일지에 이 인계 절을 더한 커밋하지 않은 수정이 있으니 봇 회차의 반영과 함께 커밋한다. 고친 것이 없는 회차면 next-session 1단계의 2 "뒤로 넘긴 일"의 일지만 푸시하는 규칙을 따른다. 푸시 전 sibling_overlap이 이 일지를 옮기라고 하면(티켓 02·03·05·06 워크트리가 2026-10-20-11~14를 든다) --move 뒤 기록 문장("재개와 접기"의 옮긴 번호 2026-10-20-10)과 지시문 블록의 경로(보낸 원문의 번호)까지 새 번호로 바뀌었는지 보고 당시의 원문대로 되돌린다. 재개 메시지의 남은 조건: 이 브랜치를 마친 뒤 다음 작업은 열지 않고 "다음 작업은 chore/hook-census가 연 end-user-continuation 묶음이 맡았다"는 한 줄로 보고하고 턴을 끝낸다. docs/journal/2026-10-20-10-issue-tracker-batch.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+`git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-20T02:55:11Z
+
+## 이어 받은 세션 (PR 연 뒤)
+
+지시문으로 연 새 세션이 제목을 `chore/issue-tracker-batch`로 바꾸고 `git worktree list`에서 이 브랜치의 워크트리
+(`.claude/worktrees/issue-tracker-batch`, HEAD 0c1ede78)를 찾아 EnterWorktree(path)로 들어갔다. 앞 세션이 병합하지 않고
+인계했으므로 `tidy-checkouts`는 돌지 않았다. `git fetch origin` 뒤에도 origin/main은 911babc0이었고, 커밋하지 않은 수정은 이
+일지 하나였다.
+
+## 봇 회차
+
+- 첫 상태: PR 헤드는 0c1ede78, `MERGEABLE`·`CLEAN`이었고 검사는 모두 초록이었다. claude-review(첫 회차)는 "지적 없음"이었다.
+  CodeRabbit은 별이 10개 미만인 저장소라 자동 리뷰를 건너뛰었다(`Review skipped: manual review required …`).
+- `@coderabbitai review` 코멘트를 남기자 CodeRabbit이 `Review in progress`가 되어 `uv run python tools/wait_ci.py 316`을
+  백그라운드로 띄웠다.
+- 대기는 `끝: 모두 통과. CodeRabbit: Review completed`로 끝났다. CodeRabbit 첫 회차는 리뷰 본문과 인라인 코멘트 없이 요약
+  코멘트에 "No actionable comments were generated in the recent review"를 적었고, 그 범위는 911babc0부터 현재 헤드 0c1ede78까지였다.
+  요약 코멘트에 따르면 이 저장소의 포함 리뷰는 시간당 하나이고, 이번 리뷰로 그 시간의 몫이 0이 됐다.
+- 두 봇 모두 첫 회차에 지적이 없어 고친 것이 없는 회차다. 그래서 앞 절과 이 절을 더한 일지만 커밋해 푸시한다(next-session
+  1단계의 2 "뒤로 넘긴 일"). 그 푸시로 도는 리뷰는 봇마다 둘째 회차로 세고, 거기서 보류한 지적은 일지에 다시 적어 푸시하지 않고
+  PR 코멘트에 남긴다. 푸시 전 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었고 origin/main은 911babc0 그대로였다.
+- 병합은 워크트리에서 한다. 주 체크아웃 미갱신: 루트는 main. 이 세션은 새 세션을 열지 않으므로, 다음에 새 세션을 여는 지시문이
+  그 줄을 적는다(next-session "워크트리에서 병합할 때" 4).
+
 ## 회고
 
 후보 여덟, 승인 0, 기각 여덟, 넘김 0. 1~7은 앞 세션이 적었고, 8은 셀프 리뷰 뒤 이 세션이 더했다. 더할 것이 없어
