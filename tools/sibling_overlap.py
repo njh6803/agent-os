@@ -152,7 +152,11 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 고친 것을 거꾸로 되돌리고 2로 끝난다. 되돌리지 못한 것이 있으면 그것을 들고 `--move` 를 다시 치지
 말라고 한다(다시 치면 이미 옮긴 인용이 사슬을 따라 한 번 더 옮겨진다). 글을 먼저 고치고 이름을
 바꾸며 인덱스는 건드리지 않는다. 그래서 출력은 이름을 바꾼 파일을 `옛 → 새` 로 따로 찍고, 옛 이름의
-지움까지 스테이지하라고(`git add -A`) 말한다. 옮기지 못한 꼴(아래 못 보는 것)도 함께 말한다. 옮긴
+지움까지 스테이지하라고(`git add -A`) 말한다. 옮기지 못한 꼴(아래 못 보는 것)도 함께 말한다.
+origin 이 GitHub 이고 브랜치 위이면 이 브랜치를 head 로 든 열린 PR 의 본문을 `gh api`(REST)로 읽어
+같은 꼴로 대 보고, 인용이 바뀌는 PR 마다 옮긴 본문을 임시 파일에 쓴 뒤 그 파일을 올리는 명령 한
+줄을 찍는다(대기열 376). 본문은 올리지 않는다. 번호를 옮긴 뒤 열린 PR 본문에 옛 일지 경로가 남아
+claude-review 가 짚은 것이 세 번이었다(일지 2026-10-13-01·2026-10-13-64·2026-10-20-01). 옮긴
 뒤에는 다시 대조해 찍고 그 종료 코드로 끝난다.
 
 `-h`·`--help` 는 쓰임과 종료 코드를 찍는다. 2로 끝나면 stderr 에 할 일(번호를 손으로 고르지
@@ -197,13 +201,18 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
   든 번호와 같아 "새로"가 아니다. 일지는 `tests/test_journal_names.py`, ADR은
   `tools/check_adr_pointers.py`가 본다.
 - `--move` 가 옮기지 못하는 인용. 줄인 꼴("일지 03"), 꼴의 낱말 없이 든 번호("새로 연 것은
-  250·251"), 커밋 메시지와 PR 본문, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
-  파일(따라가 쓰지 않는다)은 그대로다. 인용 블록에서 `>` 없이 이어지는 줄은 옮긴다. 거꾸로 같은
-  꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다. 코드 스팬과 펜스 안도 옮긴다. 파일 이름
-  인용(`docs/journal/…`)이 대개 그 안에 있어서다. 그래서 없는 일지 인용 판정이 옛 번호의 기록 자리로
-  안내한 코드 스팬도, 그 안의 번호가 이 브랜치의 지금 번호이면 옮긴다. 이 브랜치가 더하거나 고친
-  줄에서 형제의 같은 번호를 가리킨 인용도 옮긴다. 거꾸로 이 브랜치의 번호를 가리켰어도 merge-base 나
-  main 의 판에 같은 글자의 줄이 있으면 둔다.
+  250·251"), 커밋 메시지와 PR 제목, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
+  파일(따라가 쓰지 않는다)은 그대로다. PR 본문은 옮긴 판과 명령만 내고 올리지 않는다. 인용 블록에서
+  `>` 없이 이어지는 줄은 옮긴다. 거꾸로 같은 꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다.
+  코드 스팬과 펜스 안도 옮긴다. 파일 이름 인용(`docs/journal/…`)이 대개 그 안에 있어서다. 그래서
+  없는 일지 인용 판정이 옛 번호의 기록 자리로 안내한 코드 스팬도, 그 안의 번호가 이 브랜치의 지금
+  번호이면 옮긴다. 이 브랜치가 더하거나 고친 줄에서 형제의 같은 번호를 가리킨 인용도 옮긴다. 거꾸로
+  이 브랜치의 번호를 가리켰어도 merge-base 나 main 의 판에 같은 글자의 줄이 있으면 둔다.
+- `--move` 의 PR 본문 확인. origin 이 GitHub 이 아니거나 분리 HEAD 면 묻지 않고, 포크에서 연 PR(head
+  의 owner 가 다르다)은 걸리지 않아 아무것도 찍지 않는다. gh 가 없거나 실패하면 읽지 못했다는 한
+  줄만 낸다. 클라우드 세션에서 REST 가 된다는 것(`.claude/rules/tools.md`)에 기댈 뿐 그 길로 돌려
+  보지는 않았다. PR 본문에는 merge-base·main 의 줄을 두는 판정이 없어, 같은 꼴이면 형제를 가리킨
+  번호도 옮긴 판에 든다. PR 제목은 읽지 않는다.
 - 인덱스. 대조는 작업 트리를 읽으므로, `--move` 뒤 옛 이름의 지움을 스테이지하지 않고 커밋해 옛
   일지가 커밋에 남아도 0으로 끝난다.
 - 카나리아 명세가 고친 단락을 묻는지. 그 하네스 파일을 원천으로 든 명세 하나를 이 브랜치가
@@ -235,16 +244,19 @@ main 의 판에 글자 그대로 있는 줄도 옮기지 않는다. 그 줄의 �
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import NoReturn, Protocol
+from urllib.parse import quote
 
 REMOTE = "origin"
 BRANCH = "main"
@@ -266,6 +278,9 @@ PULL_REF = re.compile(r"^refs/pull/(\d+)/(head|merge)$")
 GITHUB_URL = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
 GH_PULL = re.compile(r"^(\d+) ([0-9a-f]{40})$")
 GH_JQ = r'.[] | "\(.number) \(.head.sha)"'
+GH_BODY_JQ = r".[] | [.number, .body] | @json"  # 줄마다 JSON 하나. 본문의 줄바꿈은 이스케이프된다
+
+type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
 # 일지 인용. 목록 꼴(`일지 A·B`)의 번호를 함께 잡는다(대기열 254)
 JOURNAL_CITE = re.compile(r"일지 (\d{4}-\d{2}-\d{2}-\d{2}(?:·\d{4}-\d{2}-\d{2}-\d{2})*)(?!\d)")
@@ -950,6 +965,98 @@ def gh_listing(root: Path, owner: str, repo: str) -> str | None:
     return result.stdout if result is not None and result.returncode == 0 else None
 
 
+def own_pull_bodies(root: Path, owner: str, repo: str, branch: str) -> dict[int, str] | None:
+    """`gh api` 로 읽은, 이 저장소의 `branch` 를 head 로 든 열린 PR 의 번호 → 본문.
+
+    gh 가 없거나 실패하거나 출력을 풀지 못하면 None. 포크에서 연 PR 은 head 의 owner 가 달라
+    걸리지 않는다.
+    """
+    gh = shutil.which("gh")
+    if gh is None:
+        return None
+    endpoint = f"repos/{owner}/{repo}/pulls?state=open&head={owner}:{quote(branch, safe='')}"
+    result = _run([gh, "api", endpoint, "--jq", GH_BODY_JQ], root, NETWORK_TIMEOUT)
+    return pull_bodies(result.stdout) if result is not None and result.returncode == 0 else None
+
+
+def pull_bodies(text: str) -> dict[int, str] | None:
+    """`own_pull_bodies` 의 gh 가 낸 줄(`[번호, 본문]` 의 JSON)에서 번호 → 본문.
+
+    본문이 빈 PR 은 null 이 와 빈 글로 든다. 풀지 못한 줄이 하나라도 있으면 None 이다. 일부만 보고
+    다 봤다고 하지 않는다.
+    """
+    found: dict[int, str] = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        try:
+            pair: Json = json.loads(line)
+        except ValueError:
+            return None
+        if not isinstance(pair, list) or len(pair) != 2:
+            return None
+        number, body = pair
+        if not isinstance(number, int) or not (body is None or isinstance(body, str)):
+            return None
+        found[number] = body or ""
+    return found
+
+
+def moved_bodies(bodies: Mapping[int, str], shifted: Iterable[Move]) -> dict[int, str]:
+    """`bodies`(PR 번호 → 본문) 가운데 옮길 번호대로 인용이 바뀌는 것만 옮긴 본문으로 낸다.
+
+    꼴은 `rewrite` 와 같다. 대기열 행의 머리(`| N |`)는 대기열 파일의 것이라 PR 본문에서는 옮기지
+    않는다.
+    """
+    plan = renumber(shifted)
+    moved = {number: rewrite(body, plan, "") for number, body in bodies.items()}
+    return {number: moved[number] for number in sorted(moved) if moved[number] != bodies[number]}
+
+
+def pull_body_lines(
+    bodies: Mapping[int, str] | None,
+    shifted: Sequence[Move],
+    repo: tuple[str, str],
+    folder: Path | None = None,
+) -> list[str]:
+    """이 브랜치의 열린 PR 본문(`own_pull_bodies`)을 옮길 번호에 대 본 출력 줄. 본문은 고치지
+    않는다.
+
+    인용이 바뀌는 PR 마다 옮긴 본문을 `folder`(없으면 처음 쓸 때 만드는 임시 폴더)의
+    `pr-<번호>-body.md` 에 바이트 그대로 쓰고, 그 파일을 올리는 REST 명령을 든다. 클라우드 세션에서
+    `gh pr …` 하위 명령 셋이 GraphQL 이 막혀 실패했고 REST 는 됐다(`.claude/rules/tools.md`. `gh pr
+    edit` 는 거기서 재지 않았다). 열린 PR 이 없으면 빈 목록이다.
+    """
+    if bodies is None:
+        return [
+            "이 브랜치의 열린 PR 본문을 읽지 못했다(gh 가 없거나 `gh api` 가 실패했다). PR 본문에"
+            " 옮기기 전 번호가 남았는지 손으로 본다"
+        ]
+    moved = moved_bodies(bodies, shifted)
+    owner, name = repo
+    lines: list[str] = []
+    for number in sorted(bodies):
+        head = f"이 브랜치의 열린 PR #{number} 본문"
+        if number not in moved:
+            lines.append(f"{head}에는 옮길 인용이 없다")
+            continue
+        try:
+            folder = folder or Path(tempfile.mkdtemp(prefix="sibling-overlap-"))
+            path = folder / f"pr-{number}-body.md"
+            path.write_bytes(moved[number].encode("utf-8"))
+        except OSError as error:
+            lines.append(
+                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다({error}). 손으로 고친다"
+            )
+            continue
+        where = path.as_posix()
+        lines.append(
+            f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 {where} 에 썼다. 올리는 명령: gh api"
+            f' repos/{owner}/{name}/pulls/{number} --method PATCH -F "body=@{where}"'
+        )
+    return lines
+
+
 class Snapshot(Protocol):
     def names(self, directory: str) -> list[str]: ...
 
@@ -1463,7 +1570,8 @@ def _parser() -> argparse.ArgumentParser:
         "--move",
         action="store_true",
         help="옮길 번호대로 일지·ADR 의 파일 이름과 일지 머리 줄, 이 브랜치의 변경과 미추적 파일"
-        " 안의 인용을 옮기고 다시 대조한다",
+        " 안의 인용을 옮기고 다시 대조한다. 이 브랜치의 열린 PR 본문은 옮긴 판과 올리는 명령만"
+        " 낸다",
     )
     return parser
 
@@ -1530,8 +1638,19 @@ def _move_and_check(start: Path, day: str) -> tuple[Survey, Verdict]:
     plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)
     apply_moves(root, plan)
     print(_moved_line(verdict.shifted, plan))
+    for line in own_pull_lines(root, verdict.shifted):
+        print(line)
     result = survey(root, remote)
     return result, judge(result, day)
+
+
+def own_pull_lines(root: Path, shifted: Sequence[Move]) -> list[str]:
+    """origin 이 GitHub 이고 브랜치 위일 때 이 브랜치의 열린 PR 본문을 대 본다(대기열 376)."""
+    repo = github_repo(git(root, "remote", "get-url", REMOTE))
+    branch = current_branch(root)
+    if repo is None or branch is None:
+        return []
+    return pull_body_lines(own_pull_bodies(root, *repo, branch), shifted, repo)
 
 
 if __name__ == "__main__":

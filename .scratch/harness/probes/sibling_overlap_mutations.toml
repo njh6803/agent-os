@@ -1,4 +1,4 @@
-# tools/sibling_overlap.py(대기열 115·157·175·182·194·199·220·224·235·249·251·254·279)를 하나씩 깨는 변이.
+# tools/sibling_overlap.py(대기열 115·157·175·182·194·199·220·224·235·249·251·254·279·376)를 하나씩 깨는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/sibling_overlap_mutations.toml
 # 걸리는 시간: mutate.py 출력의 pytest 시간을 손으로 더하면 기준선과 변이 마흔둘이 1710초(번마다
 # 33~55초)와 2046초(35~87초)였다(2026-10-12, 일지 2026-10-12-16). 예순둘로 늘린 뒤에는 3757초(번마다
@@ -131,8 +131,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return _lines(tracked) | _lines(untracked)'''
-new = '''    return _lines(tracked)'''
+old = '''    return (since_base & unlike_main) | untracked'''
+new = '''    return since_base & unlike_main'''
 
 [[mutation]]
 name = "열린 PR 의 head 를 fetch 하지 않는다"
@@ -140,7 +140,12 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        *(f"refs/pull/{number}/head" for number in pulls),
+old = '''        *(f"refs/pull/{number}/head" for number in present),
+'''
+new = ''''''
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        _git_result(root, args, NETWORK_TIMEOUT)
 '''
 new = ''''''
 
@@ -430,7 +435,7 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            add(label, head, numbers, _worktree_changes(path, head), closed)'''
+old = '''            add(label, head, numbers, _own_changes(path, head, main_sha), closed)'''
 new = '''            add(label, head, numbers, frozenset(), closed)'''
 
 [[mutation]]
@@ -439,8 +444,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))'''
-new = '''    return Remote(pulls, pulls_from, own, {})'''
+old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls), pull_heads(listing))'''
+new = '''    return Remote(pulls, pulls_from, own, {}, pull_heads(listing))'''
 
 [[mutation]]
 name = "열린 PR 의 head 와 같은 커밋도 닫힌 PR 의 것으로 본다"
@@ -484,8 +489,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            add(label, head, numbers, _worktree_changes(path, head), closed)'''
-new = '''            add(label, head, Numbers({}, {}, {}, None), _worktree_changes(path, head), closed)'''
+old = '''            add(label, head, numbers, _own_changes(path, head, main_sha), closed)'''
+new = '''            add(label, head, Numbers({}, {}, {}, None), _own_changes(path, head, main_sha), closed)'''
 
 [[mutation]]
 name = "gh api 가 열렸다고 한 PR 도 merge ref 가 없으면 닫힌 PR 로 본다"
@@ -493,8 +498,8 @@ tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls))'''
-new = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, open_pulls(listing)))'''
+old = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, pulls), pull_heads(listing))'''
+new = '''    return Remote(pulls, pulls_from, own, closed_heads(listing, open_pulls(listing)), pull_heads(listing))'''
 
 [[mutation]]
 name = "형제 줄에서 PR 이 닫힌 워크트리를 접지 않는다"
@@ -809,10 +814,10 @@ tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    print(_moved_line(verdict.shifted, plan))
+old = '''        print(line)
     result = survey(root, remote)
     return result, judge(result, day)'''
-new = '''    print(_moved_line(verdict.shifted, plan))
+new = '''        print(line)
     return result, verdict'''
 
 [[mutation]]
@@ -1355,3 +1360,91 @@ old = '''    if not heads:
         return frozenset()
 '''
 new = ''''''
+
+# 대기열 376: `--move` 가 이 브랜치의 열린 PR 본문을 옮길 번호에 대 본다
+
+[[mutation]]
+name = "376: 옮긴 뒤 PR 본문을 대 보지 않는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR_본문에_남은"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_옮기기는_이_브랜치의_열린_PR_본문에_남은_옛_번호를_알린다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''
+    for line in own_pull_lines(root, verdict.shifted):
+        print(line)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "376: 풀지 못한 줄을 건너뛰고 다 봤다고 한다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR의_번호와_본문"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_gh_가_낸_줄에서_열린_PR의_번호와_본문을_읽는다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''
+        except ValueError:
+            return None
+'''
+new = '''
+        except ValueError:
+            continue
+'''
+
+[[mutation]]
+name = "376: head 필터 없이 저장소의 열린 PR 을 모두 읽는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "origin_owner의_head"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_이_브랜치의_PR_본문은_origin_owner의_head로_REST에서_읽는다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''pulls?state=open&head={owner}:{quote(branch, safe='')}"'''
+new = '''pulls?state=open"'''
+
+[[mutation]]
+name = "376: PR 본문에서도 대기열 행의 머리를 옮긴다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "바뀌는_PR_본문만"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으로_낸다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''rewrite(body, plan, "")'''
+new = '''rewrite(body, plan, QUEUE)'''
+
+[[mutation]]
+name = "376: 바뀌지 않은 본문도 옮긴 본문으로 낸다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "바뀌는_PR_본문만"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으로_낸다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = ''' if moved[number] != bodies[number]}'''
+new = '''}'''
+
+[[mutation]]
+name = "376: 본문을 쓰지 못하면 멈춘다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "올리는_명령을_든다"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''
+            path.write_bytes(moved[number].encode("utf-8"))
+        except OSError as error:
+'''
+new = '''
+            path.write_bytes(moved[number].encode("utf-8"))
+        except KeyError as error:
+'''
+
+[[mutation]]
+name = "376: 분리 HEAD 에서도 PR 본문을 묻는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "분리_HEAD면_PR_본문을"]
+expect = "red"
+expect_output = ["tests/tools/test_sibling_overlap.py::test_분리_HEAD면_PR_본문을_묻지_않는다"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = "    if repo is None or branch is None:"
+new = "    if repo is None:"

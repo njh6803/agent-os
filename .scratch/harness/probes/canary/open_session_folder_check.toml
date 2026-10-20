@@ -1,0 +1,26 @@
+# open-session 3단계에 더한 새 세션 화면의 폴더 확인(대기열 378)의 출력 표지와 폴더 오류의 부탁이 새 세션에 실리는지
+# (일지 2026-10-20-30).
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판(77ecd319)에는 두 카나리아가 모두 없다.
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 러너가 찍은 커밋 77ecd319 위의 커밋하지 않은 판. 셀프 리뷰를 반영한 뒤
+# 다시 돌렸다, 일지 2026-10-20-30).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/open_session_folder_check.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+open-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 3단계에서 스크립트가 새 세션 화면의 폴더를 대 보고 같을 때 찍는다고 적은 출력 표지와,
+폴더를 말하는 오류로 멈췄을 때 사람에게 하는 부탁 한 줄을 글자 그대로 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["folder=<폴더>", "환경 버튼에서"]
+source = ".claude/skills/open-session/SKILL.md"
+skill = "open-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

@@ -147,8 +147,8 @@ function Send-Prompt {
     if (-not $pick) { 'model=unset 지시문에 모델 줄이 없어 입력창에 있던 값으로 연다' }
     # `folder`를 실으면 앱이 외부에서 온 폴더로 보고(`src=external`) 신뢰를 다시 묻고, 그 대화상자를
     # 거치면 폴더가 떨어져 스크래치 워크스페이스로 열린다(실측 9). 폴더는 싣지 않는다. 앱은 마지막
-    # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 그것이 루트다. 맞는지는 스킬이
-    # `list_sessions`의 cwd 로 확인한다.
+    # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 대개 그것이 루트다. 마지막 폴더가 다른 워크트리일 수 있어
+    # 보내기 전에 화면의 폴더를 -Folder 와 대 보고(아래 `folder=`), 보낸 뒤에는 스킬이 `list_sessions`의 cwd 로 확인한다.
     $url = 'claude://code/new?q=' + [uri]::EscapeDataString($prompt) + '&source=open-session'
     # 윈도가 프로토콜 핸들러에 URL 을 명령줄로 넘기고 그 명령줄이 잘린다. 넘치면 앱이 딥링크를 아예
     # 받지 못하고, 스크립트는 아래 `page=` 에서 "화면을 못 찾았다"로 끝나 원인을 가린다. 실측: 9766자는
@@ -216,6 +216,21 @@ function Send-Prompt {
     # 그 상태에서 "빈 입력창이 없다"를 성공으로 치면 확인이 공허해진다(PR #33 리뷰). 못 찾으면 멈춘다.
     $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
 
+    # 딥링크가 폴더를 싣지 않아(위 `folder` 주석) 새 세션은 앱의 마지막 폴더에서 열린다. 그 폴더가 다른 워크트리여서 인계
+    # 열기가 그리로 간 일이 네 번이었다(대기열 378. 둘은 새 세션이 거기 열려 첫 턴 훅에 막혀 멈췄고, 둘은 위 신뢰 대화상자에서
+    # 멈췄다). 그래서 화면이 보이는 폴더가 -Folder 가 아니면 모델을 고르기 전에 멈춘다. 화면은 지시문이 든 채 남아 사람이 폴더를
+    # 고르고 보낸다. 모델은 아직 고르지 않았으므로 모델 줄이 있으면 멈춤 문구가 그 값도 고르라고 한다. 폴더 글은 입력창보다 늦게
+    # 그려질 수 있어 0.5초 간격으로 여섯 번까지 읽는다.
+    $shown = @()
+    for ($i = 0; $i -lt 6 -and $shown.Count -eq 0; $i++) {
+        if ($i -gt 0) { Start-Sleep -Milliseconds 500 }
+        $shown = @(Read-ShownFolders $box)
+    }
+    $mismatch = Get-FolderMismatch $shown $Folder
+    if ($mismatch -and $pick) { $mismatch += " 모델은 아직 고르지 않았다. 보내기 전에 모델 버튼에서 지시문의 모델 줄대로 '$($pick.Model) / $($pick.Effort)' 도 고른다." }
+    if ($mismatch) { throw $mismatch }
+    "folder=$($shown -join ', ')"
+
     # 모델 줄은 아래 `held=` 보다 먼저 고른다. `held=` 면 사람이 첫 글자만 고쳐 보내므로, 그때도 첫 턴이 줄의 값으로 돈다.
     # 고른 뒤 `sent=` 전에 멈추면(고르기·보내기 버튼·제출 확인의 실패, `held=`) 이 스크립트가 되돌릴 때가 없다. 기본값이 바뀌었으면
     # 사람이 보낸 뒤(제출 확인의 시간 초과면 이미 보냈을 수 있다) 칠 복구를 남긴다(PR 직전 버그·성능 리뷰, Get-PendingRestoreLine).
@@ -267,7 +282,8 @@ function Get-RuntimeKey($el) {
 # 가리키는 문장은 명령이 아니라 지시라 그대로 보낼 수 있다. 왜 이렇게 하는지와 그 대가는 open-session 스킬.
 # 이름은 훅의 전각 대체 경로와 같은 kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못하고, 파일이 없으면
 # 옮기지 않아 아래 `held=` 가 받는다. 인자에 지시문 전문이 드는 것은 슬래시 명령과 같다.
-# 딥링크가 폴더를 싣지 않아 새 세션은 앱의 마지막 폴더에서 열린다. 그래서 두 겹으로 막는다. 경로는 상대 경로라
+# 딥링크가 폴더를 싣지 않아 새 세션은 앱의 마지막 폴더에서 열린다. 보내기 전의 화면 폴더 확인(`Send-Prompt` 의 `folder=`)
+# 뒤에도 이 줄이 두 겹으로 막는다. 경로는 상대 경로라
 # 저장소가 아닌 폴더에서는 파일을 못 찾아 멈추고, 연 저장소를 표지로 실어 새 세션의 훅이 자기 작업 폴더와
 # 다르면 프롬프트를 막는다(PR #65 의 CodeRabbit). 문구는 hook_prompt_directive 의 `_OPENED_LINE` 이 글자로
 # 파싱하는 형식이라, 바꾸면 tests/tools 의 대조 테스트가 빨개진다.
@@ -391,6 +407,46 @@ function Find-ComposerButton($box, [string] $prefix) {
 
 function Get-EditValue($el) {
     try { return $el.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { return '' }
+}
+
+# 새 세션 화면이 어느 폴더에서 열렸는지. 화면은 입력창 묶음(입력창에서 위로 올라가 `모델:` 버튼이 처음 보이는 조상) 안에 폴더의
+# 전체 경로를 Text 로, 폴더 이름을 `환경: <이름>` 버튼으로 보인다. 분할 보기의 다른 패널과 그 대화 속 경로는 묶음보다 위에서
+# 갈린다(.scratch/harness/probes/composer_folder.ps1, 앱 2.37337.1.0, 2026-10-20). 잰 회차는 마지막 폴더가 C:\project\agent 인
+# 하나뿐이라, 그 Text 가 마지막 폴더를 따라 바뀐다는 것은 어림이다(양성 대조가 없다). 틀려서 다른 폴더를 놓치면 open-session
+# 4단계의 `cwd` 확인이 보낸 뒤에 잡는다. 지시문의 문단도 묶음 안의 Text 라 입력창의
+# 줄과 같은 글은 뺀다. 드라이브 경로(`X:\`)로 시작하는 글만 고르고 같은 글은 한 번 든다. 순수하다.
+function Select-ShownFolders([string[]] $names, [string] $prompt) {
+    $lines = @($prompt -split "`r?`n")
+    return @($names | Where-Object { $_ -cmatch '^[A-Za-z]:\\' -and $lines -cnotcontains $_ } | Select-Object -Unique)
+}
+
+function Read-ShownFolders($box) {
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $buttonCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
+    $node = $box
+    for ($i = 0; $i -lt 20 -and $node; $i++) {
+        $node = $walker.GetParent($node)
+        if (-not $node) { break }
+        $hits = @($node.FindAll($Scope::Descendants, $buttonCond) | Where-Object { try { $_.Current.Name.StartsWith('모델:') } catch { $false } })
+        if ($hits.Count -eq 0) { continue }
+        $names = @($node.FindAll($Scope::Descendants, $textCond) | ForEach-Object { try { $_.Current.Name } catch { $null } })
+        return Select-ShownFolders $names (Get-EditValue $box)
+    }
+    return @()
+}
+
+# 보이는 폴더가 -Folder 와 다르면 보내지 않고 멈출 까닭, 같으면 $null. 끝의 구분자와 `/`·`\`, 대소문자는 가리지 않는다(윈도
+# 경로). 보이는 폴더가 없으면(앱이 화면의 모양을 바꿨다) 확인하지 못한 채 보내지 않는다. 신뢰 대화상자의 폴더 확인과 같은
+# 쪽이다. 순수하다.
+function Get-FolderMismatch([string[]] $shown, [string] $folder) {
+    $norm = { param($p) $p.Replace('/', '\').TrimEnd('\') }
+    $want = & $norm $folder
+    $paths = @($shown | Where-Object { $_ })
+    $tail = "보내지 않았다. 사람이 입력창 아래의 환경 버튼에서 '$want' 를 고른 뒤 보낸다."
+    if ($paths.Count -eq 0) { return "새 세션 화면의 입력창 묶음에서 폴더 경로를 찾지 못했다. $tail" }
+    if (@($paths | Where-Object { (& $norm $_) -ne $want }).Count -eq 0) { return $null }
+    return "새 세션 화면의 폴더가 '$($paths -join ', ')' 이고 '$want' 가 아니다(딥링크는 앱의 마지막 폴더에서 연다). $tail"
 }
 
 # 입력창 묶음의 모델 버튼이 지금 보이는 모델과 노력. 자식 Text 로 읽는다(Split-ComposerTexts 의 주석).
