@@ -36,6 +36,7 @@ pre-commit 이 바뀐 .md 를 넘기고 `verbose: true` 로 출력을 보인다.
 
 from __future__ import annotations
 
+import functools
 import io
 import re
 import subprocess
@@ -343,7 +344,7 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
     다시 경고하면 경고를 무시하는 습관만 만든다. 필터가 None 을 주면 그 파일은 전체를 본다.
     """
     corpus = load_corpus(root)
-    unwrapped: dict[Path, str] = {}
+    unwrapped: Callable[[str], str] = functools.cache(unwrap)
     warnings: list[str] = []
     files_read = files_whole = quotes_checked = 0
     for path in files:
@@ -372,7 +373,11 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
 
 
 def _warning(
-    quote: Quote, relative: str, corpus: dict[Path, str], unwrapped: dict[Path, str], root: Path
+    quote: Quote,
+    relative: str,
+    corpus: dict[Path, str],
+    unwrapped: Callable[[str], str],
+    root: Path,
 ) -> str | None:
     """인용 하나의 경고(파일:줄: 인용 — 이유). 원문을 찾으면 None."""
     shown = quote.text if len(quote.text) <= 60 else quote.text[:57] + "…"
@@ -404,21 +409,18 @@ def _contains(text: str, quote: str) -> bool:
     return all(piece in text for piece in _pieces(quote))
 
 
-def _found_elsewhere(quote: str, corpus: dict[Path, str], unwrapped: dict[Path, str]) -> bool:
+def _found_elsewhere(quote: str, corpus: dict[Path, str], unwrapped: Callable[[str], str]) -> bool:
     """인용 자신 말고 한 자리 더 있는가. 조각마다 두 번째 자리를 센다(인용 파일에도 조각은 있다).
 
     글자 그대로 두 자리가 없는 조각은 감긴 줄을 편 사본(`unwrap`)에서 다시 센다. 독스트링과 주석은
     폭 100 으로 감겨 낱말 사이에 줄바꿈과 들여쓰기가 들어, 그것을 한 줄로 옮긴 인용이 저장소에
-    없다고 경고됐다(대기열 345). 인용은 한 줄이라 그대로 센다. 편 사본은 처음 필요할 때 파일마다 한
-    번 만들어 `unwrapped` 에 둔다.
+    없다고 경고됐다(대기열 345). 인용은 한 줄이라 그대로 센다. `unwrapped` 는 `check` 가 한 번
+    부르는 동안 같은 글의 편 사본을 한 번만 만드는 `unwrap` 이다.
     """
     for piece in _pieces(quote):
         if sum(text.count(piece) for text in corpus.values()) >= 2:
             continue
-        for path, text in corpus.items():
-            if path not in unwrapped:
-                unwrapped[path] = unwrap(text)
-        if sum(text.count(piece) for text in unwrapped.values()) < 2:
+        if sum(unwrapped(text).count(piece) for text in corpus.values()) < 2:
             return False
     return True
 

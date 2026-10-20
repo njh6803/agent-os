@@ -814,10 +814,10 @@ tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        print(line)
+old = '''    report_own_pulls(root, verdict.shifted)
     result = survey(root, remote)
     return result, judge(result, day)'''
-new = '''        print(line)
+new = '''    report_own_pulls(root, verdict.shifted)
     return result, verdict'''
 
 [[mutation]]
@@ -1371,8 +1371,7 @@ expect_output = ["tests/tools/test_sibling_overlap.py::test_옮기기는_이_브
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''
-    for line in own_pull_lines(root, verdict.shifted):
-        print(line)
+    report_own_pulls(root, verdict.shifted)
 '''
 new = '''
 '''
@@ -1425,9 +1424,9 @@ new = '''}'''
 
 [[mutation]]
 name = "376: 본문을 쓰지 못하면 멈춘다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "올리는_명령을_든다"]
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "쓰지_못한_PR은_오류로"]
 expect = "red"
-expect_output = ["tests/tools/test_sibling_overlap.py::test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든다"]
+expect_output = ["tests/tools/test_sibling_overlap.py::test_옮긴_본문은_바이트_그대로_쓰고_쓰지_못한_PR은_오류로_든다"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''

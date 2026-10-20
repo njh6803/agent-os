@@ -1015,48 +1015,63 @@ def moved_bodies(bodies: Mapping[int, str], shifted: Iterable[Move]) -> dict[int
     return {number: moved[number] for number in sorted(moved) if moved[number] != bodies[number]}
 
 
+def write_moved_bodies(
+    moved: Mapping[int, str], folder: Path | None = None
+) -> dict[int, Path | OSError]:
+    """옮긴 본문(`moved_bodies`)을 PR 마다 `folder`(없으면 처음 쓸 때 만드는 임시 폴더)의
+    `pr-<번호>-body.md` 에 바이트 그대로 쓴다. PR 의 본문은 고치지 않는다.
+
+    PR 번호 → 쓴 파일이고, 쓰지 못한 PR 은 그 오류다. 하나를 쓰지 못해도 나머지는 쓴다.
+    """
+    written: dict[int, Path | OSError] = {}
+    target = folder
+    for number in sorted(moved):
+        try:
+            target = target or Path(tempfile.mkdtemp(prefix="sibling-overlap-"))
+            path = target / f"pr-{number}-body.md"
+            path.write_bytes(moved[number].encode("utf-8"))
+        except OSError as error:
+            written[number] = error
+            continue
+        written[number] = path
+    return written
+
+
 def pull_body_lines(
     bodies: Mapping[int, str] | None,
-    shifted: Sequence[Move],
+    written: Mapping[int, Path | OSError],
     repo: tuple[str, str],
-    folder: Path | None = None,
 ) -> list[str]:
-    """이 브랜치의 열린 PR 본문(`own_pull_bodies`)을 옮길 번호에 대 본 출력 줄. 본문은 고치지
-    않는다.
+    """이 브랜치의 열린 PR 본문(`own_pull_bodies`)마다 옮긴 본문을 쓴 결과(`write_moved_bodies`)를
+    대 본 출력 줄.
 
-    인용이 바뀌는 PR 마다 옮긴 본문을 `folder`(없으면 처음 쓸 때 만드는 임시 폴더)의
-    `pr-<번호>-body.md` 에 바이트 그대로 쓰고, 그 파일을 올리는 REST 명령을 든다. 클라우드 세션에서
-    `gh pr list`, `gh pr checks <번호>`, `gh pr view <번호> --json headRefOid` 가 GraphQL 이 막혀
-    실패했고 REST 는 됐다(`.claude/rules/tools.md`. `gh pr edit` 는 거기서 재지 않았다). 열린 PR 이
-    없으면 빈 목록이다.
+    쓴 PR 은 그 파일을 올리는 REST 명령을 든다. 클라우드 세션에서 `gh pr list`,
+    `gh pr checks <번호>`, `gh pr view <번호> --json headRefOid` 가 GraphQL 이 막혀 실패했고 REST 는
+    됐다(`.claude/rules/tools.md`. `gh pr edit` 는 거기서 재지 않았다). 열린 PR 이 없으면 빈
+    목록이다.
     """
     if bodies is None:
         return [
             "이 브랜치의 열린 PR 본문을 읽지 못했다(gh 가 없거나 `gh api` 가 실패했다). PR 본문에"
             " 옮기기 전 번호가 남았는지 손으로 본다"
         ]
-    moved = moved_bodies(bodies, shifted)
     owner, name = repo
     lines: list[str] = []
     for number in sorted(bodies):
         head = f"이 브랜치의 열린 PR #{number} 본문"
-        if number not in moved:
+        outcome = written.get(number)
+        if outcome is None:
             lines.append(f"{head}에는 옮길 인용이 없다")
-            continue
-        try:
-            folder = folder or Path(tempfile.mkdtemp(prefix="sibling-overlap-"))
-            path = folder / f"pr-{number}-body.md"
-            path.write_bytes(moved[number].encode("utf-8"))
-        except OSError as error:
+        elif isinstance(outcome, OSError):
             lines.append(
-                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다({error}). 손으로 고친다"
+                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다({outcome}). 손으로 고친다"
             )
-            continue
-        where = path.as_posix()
-        lines.append(
-            f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 {where} 에 썼다. 올리는 명령: gh api"
-            f' repos/{owner}/{name}/pulls/{number} --method PATCH -F "body=@{where}"'
-        )
+        else:
+            where = outcome.as_posix()
+            lines.append(
+                f"{head}에 옮기기 전 번호가 있다. 옮긴 본문을 {where} 에 썼다. 올리는 명령: gh api"
+                f' repos/{owner}/{name}/pulls/{number} --method PATCH -F "body=@{where}"'
+            )
     return lines
 
 
@@ -1641,19 +1656,22 @@ def _move_and_check(start: Path, day: str) -> tuple[Survey, Verdict]:
     plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)
     apply_moves(root, plan)
     print(_moved_line(verdict.shifted, plan))
-    for line in own_pull_lines(root, verdict.shifted):
-        print(line)
+    report_own_pulls(root, verdict.shifted)
     result = survey(root, remote)
     return result, judge(result, day)
 
 
-def own_pull_lines(root: Path, shifted: Sequence[Move]) -> list[str]:
-    """origin 이 GitHub 이고 브랜치 위일 때 이 브랜치의 열린 PR 본문을 대 본다(대기열 376)."""
+def report_own_pulls(root: Path, shifted: Sequence[Move]) -> None:
+    """origin 이 GitHub 이고 브랜치 위일 때 이 브랜치의 열린 PR 본문을 옮길 번호에 대 보고, 옮긴
+    본문을 파일에 써서 그 줄을 찍는다(대기열 376)."""
     repo = github_repo(git(root, "remote", "get-url", REMOTE))
     branch = current_branch(root)
     if repo is None or branch is None:
-        return []
-    return pull_body_lines(own_pull_bodies(root, *repo, branch), shifted, repo)
+        return
+    bodies = own_pull_bodies(root, *repo, branch)
+    written = write_moved_bodies(moved_bodies(bodies, shifted)) if bodies is not None else {}
+    for line in pull_body_lines(bodies, written, repo):
+        print(line)
 
 
 if __name__ == "__main__":

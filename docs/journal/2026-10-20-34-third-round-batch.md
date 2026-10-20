@@ -1,4 +1,4 @@
-# 2026-10-20 (30) 하네스 chore: 대기열 346·376·377·378
+# 2026-10-20 (34) 하네스 chore: 대기열 346·376·377·378
 
 브랜치 `chore/third-round-batch`. 회차 3 이상인 열린 대기열 행 넷(346·376·377·378)과, 377과 대상 파일이 같은 고침 행 345를 chore
 한 PR로 반영했다.
@@ -116,8 +116,8 @@
 시작 프롬프트: 대기열 346·376·377·378(회차 3 이상인 열린 행 넷. 227도 3회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행(378과 tools/open_session.ps1의 18·360)은 행 원문으로 가려 묶는다
 브랜치: chore/third-round-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-20-30-third-round-batch.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-20-30-third-round-batch.md). PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook, 대기열 227)과의 겹침을 적는다. 그 PR도 .claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였다. PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고, 병합 전에 써야 한다(대기열 383)
+읽을 것: 일지 docs/journal/2026-10-20-34-third-round-batch.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-20-34-third-round-batch.md). PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook, 대기열 227)과의 겹침을 적는다. 그 PR도 .claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였다. PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고, 병합 전에 써야 한다(대기열 383)
 확인할 선행 조건: run_checks.py의 pytest·web 결과(인계로 멈춰 보지 못했다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -254,8 +254,8 @@ web-verify 230초), 표, 줄 구분 문자, 변이 표, 카나리아 명세 모�
 시작 프롬프트: 대기열 346·376·377·378(회차 3 이상인 열린 행 넷. 227도 3회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행(378과 tools/open_session.ps1의 18·360)은 행 원문으로 가려 묶는다
 브랜치: chore/third-round-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-20-30-third-round-batch.md (끝의 "이어 받은 세션"과 이 인계 절)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 통과했다. 일지의 따옴표 고침과 인계 절은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 그것을 커밋하고, origin/main을 합치고(겹치는 파일은 .scratch/retro-queue.md), PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)를 돌린 뒤 PR을 여는 것이다. PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook)과 #297이 같은 하네스 파일(.claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml)을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다는 것과, 378의 폴더 읽기가 마지막 폴더가 다른 회차의 양성 대조 없는 어림이라는 것을 적는다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였으니 PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고 병합 전에 쓴다(대기열 383, 표준 축 5의 측정을 회고 후보로 넘겼다). 열린 PR은 없고 푸시하지 않았다. docs/journal/2026-10-20-30-third-round-batch.md
+읽을 것: 일지 docs/journal/2026-10-20-34-third-round-batch.md (끝의 "이어 받은 세션"과 이 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 통과했다. 일지의 따옴표 고침과 인계 절은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 그것을 커밋하고, origin/main을 합치고(겹치는 파일은 .scratch/retro-queue.md), PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)를 돌린 뒤 PR을 여는 것이다. PR 본문의 "남긴 위험"에 열린 PR #296(chore/measure-word-hook)과 #297이 같은 하네스 파일(.claude/settings.json, .claude/rules/tools.md, .scratch/harness/probes/README.md, .scratch/retro-queue.md, tools/hook_payloads.toml)을 고쳐 나중에 병합하는 쪽에 글자 충돌이 날 수 있다는 것과, 378의 폴더 읽기가 마지막 폴더가 다른 회차의 양성 대조 없는 어림이라는 것을 적는다. 376의 손 확인은 열린 PR 본문 읽기(own_pull_bodies)까지였으니 PR을 연 뒤 이 PR로 그 길을 한 번 더 본다. 이 일지에는 회고와 다음 절이 아직 없고 병합 전에 쓴다(대기열 383, 표준 축 5의 측정을 회고 후보로 넘겼다). 열린 PR은 없고 푸시하지 않았다. docs/journal/2026-10-20-34-third-round-batch.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -328,3 +328,107 @@ open-session을 부른다 2026-10-20T11:33:51Z
 
 다시 돌린 명령. ruff 둘은 초록, 바꾼 도구의 시험 넷은 268건 통과(앞의 266건에 새 시험 하나와 새 사례 하나)였다. 나머지 게이트는
 이 반영 커밋의 pre-commit으로 갈음한다.
+
+### 커밋과 PR
+
+- 반영을 커밋했다(`02e63e3b`). pre-commit은 ruff 둘, 검사 러너의 여덟(pytest 215초, web-verify 333초), 표, 줄 구분 문자, 변이 표,
+  카나리아 명세 모양, 인용, 커밋 메시지가 `Passed`였고 헌법 판 검사는 `Skipped`였다.
+- 커밋 직후 인계 계기(`커밋 뒤`, 컨텍스트 326,723 토큰)가 왔다. 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해
+  `next-session` "인계할 때" 1의 같은 경계라 넘기지 않고 이었다.
+- 푸시하고 PR #328을 `gh api repos/njh6803/agent-os/pulls --method POST --input <파일>`로 열었다(대기열 382의 처방). 앱의 PR
+  감시는 이미 묶여 있었다. 마지막 푸시 뒤 `@coderabbitai review`를 남겼다.
+- 376의 손 확인(앞 세션이 PR을 연 뒤로 넘긴 것). 스크래치 스크립트로 이 브랜치의 `own_pull_bodies`를 부르니 `{328: 5977}`로 방금
+  연 본문(5,977자)을 그대로 읽었다. 같은 본문에 가짜 옮김(그때 이 일지의 번호를 2026-10-20-32로)을 대 `pull_body_lines`를
+  부르니 `pr-328-body.md`를 쓰고 올리는 명령 한 줄을 냈고, 그 파일에서 옛 번호는 0, 새 번호는 3이었다. PATCH 명령은 GitHub의
+  본문을 바꾸므로 돌리지 않았다.
+
+### PR 봇 회차 (첫 회차)
+
+- `tools/wait_ci.py 328`이 `끝: 모두 통과. CodeRabbit: Review rate limited`로 끝났다(헤드 `02e63e3b`). CodeRabbit은 한도로 리뷰하지
+  않아 회차로 세지 않는다. 보안·버그 축은 PR 체크리스트에 적은 PR 직전 리뷰 결과가 대신한다(`docs/constitution/operations.md` 리뷰
+  파이프라인).
+- claude-review의 첫 리뷰는 Minor 둘이었고, 둘 다 `CODING_STANDARDS.md` 판단 기준에 걸려 고쳤다.
+  1. CQS. `pull_body_lines`가 질의 이름으로 옮긴 본문 파일을 썼다. 셀프 리뷰 표준 축 8이 같은 것을 짚었을 때는 판단 항목으로
+     두었다(위 셀프 리뷰 절). 그 보류 이유(돌려주는 줄이 쓰기 실패까지 담으니 조용히 묻히는 실패가 아니다)는 그 항목을 예로 든
+     `save()`의 bool로만 읽은 것이라 뒤집었다. 파일을 쓰는 명령 `write_moved_bodies`(PR 번호 → 쓴 파일이나 그 오류)와 줄만 짓는
+     질의 `pull_body_lines(bodies, written, repo)`로 나눴다. `--move`의 호출부는 줄을 돌려주던 `own_pull_lines`를, 읽고 쓰고 찍는
+     명령 `report_own_pulls`로 바꿨다. 시험은 쓰기(디렉터리가 막은 PR 하나만 오류이고 나머지는 쓴다)와 줄 짓기를 따로 보고, 분리
+     HEAD 시험은 찍은 것이 없는지를 본다. 변이 143(호출부)과 148(쓰기 실패와 그 대상 시험)을 고쳤고, `--check`가 원문이 없다고 낸
+     85(옮긴 뒤 다시 대조하지 않는다)도 새 줄로 고쳤다.
+  2. 출력 인자. `_found_elsewhere`가 호출자가 만든 `unwrapped` 사전을 채웠다. `check`가 `functools.cache(unwrap)`을 한 번 두고 그
+     호출 가능 객체를 `_warning`·`_found_elsewhere`에 넘긴다. 같은 글은 한 번의 `check` 안에서 한 번만 편다. 변이 17의 원문을
+     고쳤다.
+- 확인. 두 시험 파일이 90건·54건 통과했고, ruff 둘과 바꾼 파일 넷의 pyright가 초록이었다. `mutate.py --since HEAD`의 85·143·148과
+  17이 기대대로 빨갰고, 두 변이 표의 `--check`는 원문이 한 번씩 있었다.
+
+### 일지 번호 옮김과 376의 실제 길
+
+- 반영을 커밋하기 전에 친 `tools/sibling_overlap.py`가 종료 1이었다. 이 일지(그때 번호는 30)가 origin/main(PR #327이 병합되어
+  `30949cfc`)의 최신 일지 31보다 이름순으로 앞이라, 다음 세션이 이 일지의 "다음"을 지나친다는 것이다. `--move`로 34로 옮겼다.
+  인용을 고친 파일은 이 일지, 일지 2026-10-20-27, 대기열, 프로브 README와 변이·카나리아 표다. 옮긴 뒤 손으로 보니 앞 절의 가짜
+  옮김 기록까지 34로 바뀌어 뜻이 틀어졌고, 그 줄을 번호 없이 고쳐 썼다.
+- 같은 실행이 이 브랜치의 열린 PR #328 본문에서 옛 번호 셋을 찾아, 옮긴 본문 파일과 올리는 명령을 냈다. 376이 처음으로 실제
+  쓰임에서 돌았다. 받은 본문과 바이트로 견주니 바뀐 것은 그 셋뿐이었다. 이 회차의 내용(봇 회차, 대기열 386·387, 376의 실제 길)을
+  그 파일에 더해 같은 꼴의 `gh api repos/njh6803/agent-os/pulls/328 --method PATCH -F "body=@<파일>"`로 올렸다(본문 6,469자).
+- 대기열의 새 번호는 `다음 빈 번호`의 386부터 받았다. main의 PR #327이 385를 먼저 썼다.
+
+## 회고
+
+retro를 이 일지와 이 세션으로 돌았다. 이 일지가 단계를 닫으므로, 대기열 383이 다룬 빠뜨림을 피하려고 병합 전에 쓴다. 후보는
+열셋이고 승인 넷(그 가운데 회차로 센 것 둘), 기각 아홉, 넘김은 없다. 만료할 행은 이 브랜치와 origin/main 판 모두 없었다.
+
+승인.
+1. 셀프 리뷰 지적을 고치며 새로 쓴 사실 문장이 또 넘쳐 PR 직전 `bug-perf-review`가 잡았다(스킬 3단계·ps1 주석의 "네 번",
+   `pull_body_lines` 독스트링의 "하위 명령 셋"). `code-review` 6단계 1의 "근거를 끝까지 열고 쓴다"를 어긴 것이라 회차로 센다.
+   그 지침을 낸 260이 닫혀 새 행 386에 260의 3회차로 이었다. 사례마다 다른 문장이고 근거를 열었는지는 검사가 판정하지 못해, 행의
+   종류를 끝이 열린 결함 종류로 보았다. 종류에 맞선 그물(같은 6단계 1 끝의 밀 주장)이 이번에도 PR 전에 잡았으므로 그 값을
+   받아들이고 386을 닫았다. 새 사례는 일지에만 적는다.
+2. `composer_folder.ps1`의 README 행이 양성 대조 없이 결론을 냈고 셀프 리뷰 표준 축 5가 잡았다. `.claude/rules/probes.md` 셋째
+   항목을 어긴 것이라 회차로 센다. 그 항목에 계기 훅을 처방한 346은 사건 때 main에서 열린 행이었고 이 PR이 그 훅으로 닫는다. 그래서
+   346에 회차를 더했다(3회차, 179의 4회차). 사건 때 훅은 이 워크트리에만 있었고 세션의 훅은 주 체크아웃의 옛 사본으로 돌아
+   (`.claude/rules/tools.md`) 짚지 못했다. 처방이 듣지 않은 사례가 아니라 처방이 서기 전의 사례라 새 행으로 잇지 않았다.
+3. 같은 지적의 측정(마지막 폴더가 다른 회차의 양성 대조)은 이 세션에서 하지 않았다. 고침(어림인 사실을 재어 맞추는 것)이라 사건
+   하나로 승인하고, 실제 열기에서 잴 수 있어 대기열 387(1회차)에 두었다.
+4. 첫 세션이 프로브 README의 `probe_conclusion_hook_mutations.toml` 행에 실패한 경로를 손으로 봤다고 적었으나 보지 않았다(위 고친
+   것과 번복). 고침이고 층은 검사다. 그 세션에서 변이 1~4의 `expect_output`이 그 경로를 직접 재게 반영했다.
+
+기각.
+- 셀프 리뷰가 CQS 지적을 판단 항목으로 두어 PR 봇이 다시 짚었고 CI가 한 바퀴 더 돌았다. `CODING_STANDARDS.md` 심각도가 Minor를
+  후속 허용으로 두고 `code-review` 6단계 4가 이유를 적은 보류를 허용한다. 보류는 이유와 함께 일지에 있었고, 리뷰가 잡도록 둔 기준을
+  PR 봇이 잡아 제 몫을 했다. 보류 이유가 그 항목을 예로만 읽은 것이었다는 점은 위 봇 회차에 적었다.
+- `check_quotes`의 출력 인자를 셀프 리뷰가 놓치고 PR 봇이 잡았다. 리뷰가 잡도록 둔 기준이고, 검사로 옮기면 인자를 채우는 정당한
+  쓰임까지 걸린다(`CODING_STANDARDS.md` 19행이 대응 린트가 없다고 적는다).
+- 일지 2026-10-20-27의 따옴표 인용이 저장소 밖 원문(PR #325 코멘트)과 글자가 달랐고 셀프 리뷰 표준 축이 잡았다. `check_quotes`가
+  닿지 않는 자리를 리뷰가 잡았고, 기계로 대조하려면 pre-commit이 GitHub를 읽어야 한다.
+- 워크트리 가드가 따옴표 인자가 든 `uv run python -c`를 거부했다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 적는다.
+- Git Bash가 `git show origin/main:<경로>`의 인자를 경로로 바꿨다. `hook_bash_msys_pathconv`가 그 자리에서 알렸다.
+- 편집 도구가 시험과 일지에 U+2028·U+2029를 날것으로 저장했다. `hook_line_separators`가 그 자리에서 알렸다.
+- pytest의 `-k`가 두 파일 모두에 걸려 한 파일의 시험이 빠졌다. 통과 수로 바로 보였고 pytest의 문서화된 동작이라, 지침은 하는 일이
+  없고 막는 검사는 거짓 양성이 많다.
+- 변이 85의 원문이 봇 회차 반영으로 깨졌다. `mutate.py --check`가 커밋 전에 잡았고 pre-commit의 `--staged`도 잡는다.
+- CodeRabbit CLI에 좌석이 없고 PR 봇이 한도에 걸렸다. 리뷰 파이프라인이 대체 길(대체 리뷰 둘, 체크리스트의 결과)을 정해 두었다.
+
+일지에만 남기는 것.
+- PR 본문 초안의 "남긴 위험"에 근거 없는 이유를 썼다가 올리기 전에 행의 처방으로 고쳤다.
+- 인계가 두 번 있었다(셀프 리뷰 직전 329,004 토큰, 커밋 뒤 286,195 토큰). 이 세션은 커밋 뒤 계기가 다시 왔으나 같은 경계라 넘기지
+  않았다.
+
+## 다음
+
+병합한 세션이 낸 지시문이다. 결정표의 프론티어 줄(하네스 chore PR이었고 그 주제가 남지 않았다)로 `.scratch/plan.md`의 프론티어
+셋(web-widget, admin-style, mcp-shutdown) 가운데 골랐다. mcp-shutdown은 `docs/mcp-shutdown-to-spec` 세션이 이미 돌고, web-widget의
+그리기는 그 흐름을 admin-style이 먼저 정하기로 되어 있어(plan.md의 web-widget 행 끝) admin-style이다. 설계는 끝났고 `spec.md`가
+없다.
+
+```
+다음 작업: 기능 admin-style. 관리 화면의 스타일과 아이콘의 명세를 쓴다
+다음 단계: 명세
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /to-spec admin-style
+브랜치: docs/admin-style-spec
+모델: Opus 5.5 / xhigh
+읽을 것: .scratch/plan.md의 admin-style 행, docs/journal/2026-10-17-02-design-artifacts.md(앞 명세 세션이 화면 그리기 앞에서 design-artifacts로 갈라진 자리)
+이어받을 상태: 없음
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```

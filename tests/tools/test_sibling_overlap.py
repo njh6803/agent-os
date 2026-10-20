@@ -49,13 +49,13 @@ from tools.sibling_overlap import (
     next_numbers,
     open_pulls,
     own_pull_bodies,
-    own_pull_lines,
     plan_moves,
     pull_bodies,
     pull_body_lines,
     read_numbers,
     remote_head,
     renumber,
+    report_own_pulls,
     reserved_version,
     rewrite,
     unbumped,
@@ -63,6 +63,7 @@ from tools.sibling_overlap import (
     unshared,
     vacating_first,
     worktrees,
+    write_moved_bodies,
 )
 
 from tools import sibling_overlap
@@ -669,7 +670,9 @@ def test_이_브랜치의_PR_본문은_origin_owner의_head로_REST에서_읽는
 
 
 def test_분리_HEAD면_PR_본문을_묻지_않는다(
-    저장소: tuple[Path, Path, Path], monkeypatch: pytest.MonkeyPatch
+    저장소: tuple[Path, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """못 보는 것: 분리 HEAD 에는 head 로 든 브랜치가 없어 아무것도 찍지 않는다."""
     _, work, _ = 저장소
@@ -686,11 +689,12 @@ def test_분리_HEAD면_PR_본문을_묻지_않는다(
     monkeypatch.setattr(sibling_overlap, "own_pull_bodies", 본문을_읽는다)
     shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05")]
 
-    assert own_pull_lines(work, shifted) == []
+    report_own_pulls(work, shifted)
     assert asked == ["topic"]
     _git(work, "checkout", "-q", "--detach")
-    assert own_pull_lines(work, shifted) == []
+    report_own_pulls(work, shifted)
     assert asked == ["topic"]
+    assert capsys.readouterr().out == ""
 
 
 def test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으로_낸다() -> None:
@@ -706,31 +710,37 @@ def test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으�
     }
 
 
+def test_옮긴_본문은_바이트_그대로_쓰고_쓰지_못한_PR은_오류로_든다(tmp_path: Path) -> None:
+    """대기열 376. 하나를 쓰지 못해도 멈추지 않고 나머지를 쓴다."""
+    (tmp_path / "pr-8-body.md").mkdir()
+    moved = {7: "일지 2026-10-07-05\r\n", 8: "막힘", 9: "아홉"}
+
+    written = write_moved_bodies(moved, tmp_path)
+
+    assert written[7] == tmp_path / "pr-7-body.md"
+    assert written[9] == tmp_path / "pr-9-body.md"
+    assert isinstance(written[8], OSError)
+    assert (tmp_path / "pr-7-body.md").read_bytes() == moved[7].encode("utf-8")
+    assert write_moved_bodies({}, tmp_path) == {}
+
+
 def test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든다(tmp_path: Path) -> None:
-    """대기열 376. 고친 본문은 바이트 그대로 파일에 쓰고, 명령은 클라우드에서도 도는 REST 다."""
-    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05")]
-    moved = "일지 2026-10-07-05\r\n"
+    """대기열 376. 명령은 클라우드에서도 도는 REST 다. 쓰지 못한 PR 만 손으로 고치라고 한다."""
+    path = tmp_path / "pr-7-body.md"
+    bodies = {7: "일지 2026-10-07-03\r\n", 8: "무관\n", 9: "일지 2026-10-07-03\n"}
 
-    lines = pull_body_lines(
-        {7: "일지 2026-10-07-03\r\n", 8: "무관\n"}, shifted, ("o", "r"), tmp_path
-    )
+    lines = pull_body_lines(bodies, {7: path, 9: PermissionError("막혔다")}, ("o", "r"))
 
-    written = tmp_path / "pr-7-body.md"
-    assert written.read_bytes() == moved.encode("utf-8")
     assert lines == [
-        f"이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다. 옮긴 본문을 {written.as_posix()} 에"
+        f"이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다. 옮긴 본문을 {path.as_posix()} 에"
         " 썼다. 올리는 명령: gh api repos/o/r/pulls/7 --method PATCH -F"
-        f' "body=@{written.as_posix()}"',
+        f' "body=@{path.as_posix()}"',
         "이 브랜치의 열린 PR #8 본문에는 옮길 인용이 없다",
+        "이 브랜치의 열린 PR #9 본문에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다(막혔다)."
+        " 손으로 고친다",
     ]
-    assert pull_body_lines({}, shifted, ("o", "r"), tmp_path) == []
-    # 쓰지 못하면 그 PR 만 손으로 고치라고 하고 멈추지 않는다
-    blocked = tmp_path / "파일"
-    blocked.write_text("", encoding="utf-8")
-    [line] = pull_body_lines({7: "일지 2026-10-07-03\n"}, shifted, ("o", "r"), blocked)
-    assert line.startswith("이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지")
-    assert line.endswith("). 손으로 고친다")
-    assert pull_body_lines(None, shifted, ("o", "r"), tmp_path) == [
+    assert pull_body_lines({}, {}, ("o", "r")) == []
+    assert pull_body_lines(None, {}, ("o", "r")) == [
         "이 브랜치의 열린 PR 본문을 읽지 못했다(gh 가 없거나 `gh api` 가 실패했다). PR 본문에"
         " 옮기기 전 번호가 남았는지 손으로 본다"
     ]

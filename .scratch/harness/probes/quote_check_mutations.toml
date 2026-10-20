@@ -180,7 +180,7 @@ expect = "red"
 expect_output = ["tests/tools/test_check_quotes.py::test_감긴_독스트링과_주석을_한_줄로_옮긴_인용도_원문을_찾는다"]
 [[mutation.edit]]
 file = "tools/check_quotes.py"
-old = "        if sum(text.count(piece) for text in unwrapped.values()) < 2:"
+old = "        if sum(unwrapped(text).count(piece) for text in corpus.values()) < 2:"
 new = "        if sum(text.count(piece) for text in corpus.values()) < 2:"
 
 [[mutation]]

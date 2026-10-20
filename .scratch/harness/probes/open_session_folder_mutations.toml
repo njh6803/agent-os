@@ -3,7 +3,7 @@
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_folder_mutations.toml
 # 테스트는 파워셸 AST 에서 함수를 떼어 pwsh 로 부른다(tests/tools/test_open_session.py). 접근성 트리를 읽는 `Read-ShownFolders`
 # 와 `Send-Prompt` 의 멈춤은 시험이 없다. 실제 앱의 새 세션 화면에서 손으로 본 것은 커밋하지 않은 스크래치 스크립트로 부른
-# `Read-ShownFolders` 와 `Get-FolderMismatch` 이고, `Send-Prompt` 의 멈춤(`throw`)은 돌리지 않았다(일지 2026-10-20-30).
+# `Read-ShownFolders` 와 `Get-FolderMismatch` 이고, `Send-Prompt` 의 멈춤(`throw`)은 돌리지 않았다(일지 2026-10-20-34).
 
 [[mutation]]
 name = "378: 지시문의 줄도 폴더로 센다"
