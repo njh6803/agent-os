@@ -5,19 +5,26 @@
 삭제는 후보 하나마다 따로 부른다. 끊긴 호출이 망가뜨리는 것은 많아야 하나다.
 
 사용(주 체크아웃에서):
-    uv run python tools/tidy_checkouts.py judge [--running "<세션 제목>" ...]
+    uv run python tools/tidy_checkouts.py judge [--running "<제목이나 브랜치>" ...]
+                                                [--idle <세션 id> ...]
     uv run python tools/tidy_checkouts.py remove "<경로>" <브랜치|.detached> <HEAD>
     uv run python tools/tidy_checkouts.py remove-branch <브랜치> <커밋>
     uv run python tools/tidy_checkouts.py remove-stray "<경로>"
     uv run python tools/tidy_checkouts.py restore "<경로>.tidy-probe"
+    uv run python tools/tidy_checkouts.py end-holders "<경로>" <세션 id> [<세션 id> ...]
     uv run python tools/tidy_checkouts.py empty-trash
 
-`--running` 은 `list_sessions` 에서 이 세션을 뺀 `isRunning` 세션의 제목이다. 도구는 앱의 세션을
-보지 못해 부르는 쪽이 넘긴다. `judge` 는 줄마다 `지운다`·`남긴다`·`넘긴다`(사람에게)·`되돌린다`와
-이유를 찍고, 지울 것에는 부를 `remove`·`remove-branch`·`remove-stray` 명령을, 되돌릴 것에는
-`restore` 를 붙인다. 끝에 휴지통(`TRASH_DIR`)에 남은 것이 있으면 항목마다 쥔 프로세스와 함께 찍고
-`empty-trash` 를 붙인다. 경로나 브랜치 이름에 셸이 풀 수 있는 글자가 들었으면 명령 없이 넘긴다.
-git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
+`--running` 은 `list_sessions` 에서 이 세션을 뺀 `isRunning` 세션의 제목과 브랜치(`branch`)다.
+앱이 적은 브랜치는 세션을 만들 때의 이름이라, 세션 안에서 브랜치를 바꾸면 체크아웃된 브랜치와
+다르다(2026-10-20 에 실행 중 세션의 `claude/hungry-robinson-5cb964` 를 제목만 받은 판이 지울
+후보로 냈다). `--idle` 은 프로세스를 끝내도 되는 쉬는 세션의 id(`sessionId`)다. 고르는 기준은
+부르는 쪽(스킬)이 정한다. 도구는 앱의 세션을 보지 못해 부르는 쪽이 넘긴다. 이 도구를 부른 세션
+(환경의 `SESSION_ENV`)은 `--idle` 에 있어도 뺀다. `judge` 는 줄마다 `지운다`·`남긴다`·
+`넘긴다`(사람에게)·`되돌린다`·`끝낸다`와 이유를 찍고, 지울 것에는 부를 `remove`·`remove-branch`·
+`remove-stray` 명령을, 되돌릴 것에는 `restore` 를, 끝낼 것에는 `end-holders` 를 붙인다. 끝에
+휴지통(`TRASH_DIR`)에 남은 것이 있으면 항목마다 쥔 프로세스와 함께 찍고 `empty-trash` 를 붙인다.
+경로나 브랜치 이름에 셸이 풀 수 있는 글자가 들었으면 명령 없이 넘긴다. git 은 모두
+`core.longpaths=true` 로 친다(스킬 머리 문단).
 
 판정. 워크트리마다 아래 순서로 보고 처음 어긋난 것을 이유로 찍는다. 모두 맞아야 지운다.
 - 자리. 폴더가 없으면(등록이 `prunable` 이든 아니든) 잃을 것이 없어 지운다. `remove` 가 등록만
@@ -29,27 +36,43 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   `remove` 가 폴더를 휴지통으로 옮긴 뒤 등록을 걷는다. 그 폴더에서 친 git 은 루트 저장소에 닿아
   status 를 쓸 수 없다(대기열 135, 일지 2026-10-07-03). 폴더가 있는데 `git rev-parse
   --show-toplevel` 이 그 경로가 아니면 사람에게 넘긴다.
+- 앱의 표지. 그 워크트리의 git 디렉터리(`git rev-parse --absolute-git-dir`, `.git/worktrees/
+  <이름>/`)에 `APP_MARKER` 가 있으면 앱의 정리(`[WorktreePool]`)에 맡겨 남긴다(ADR 0032). 앱은 그
+  워크트리를 새 세션에 다시 내준다. 2026-10-20 에 앱이 만든 분리 HEAD 워크트리 둘이 판정 1에서
+  사람에게 넘겨졌고, 그 정리 도중에 앱이 그중 하나를 새 세션에 내주어 브랜치가 바뀌었다.
 - 판정 1, 병합됐다. 분리 HEAD 는 그 커밋이 `origin/main` 에서 닿을 때만 다음 판정으로 가고(잃는
   것이 없다. 2026-10-15 에 모델 스윕과 옛 세션의 분리 HEAD 일곱이 넘겨진 채 남아 있었다), 아니면
   넘긴다. 브랜치는 병합된 PR 중 머리 브랜치 이름이 같은 것의 `headRefOid` 가 브랜치 끝(그 워크트리의
-  HEAD)과 같아야 한다. 이름이 같은 PR 이 없으면 남기고, 있는데 머리가 다르면 넘긴다. 이름만 보면
-  포크의 같은 이름 브랜치를 잡으므로 머리를 견준다. squash 라 `git log` 로는 가르지 못하고,
-  체크아웃된 브랜치는 끝이 `origin/main` 의 조상인 것으로도 판정하지 않는다. 막 따고 커밋하지 않은
-  브랜치도 조상이다(일지 2026-10-05-05). 병합된 PR 은 `gh pr list` 한 번에 최근 1000개를 읽는다.
-  그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한 쪽).
+  HEAD)과 같거나, 브랜치 끝이 그 머리 가운데 하나의 조상이어야 한다(`behind_merged`. 로컬에만
+  있는 커밋이 없다). 2026-10-20 에 `chore/skill-check-and-retro-section` 의 로컬 끝이 PR #114 의
+  머리보다 커밋 넷 뒤였는데 사람에게 넘겼다. 머리 커밋이 이 저장소에 없으면(원격 브랜치가 지워진
+  뒤 받아 오지 않았다) 조상인지 알 수 없어 넘긴다. 이름이 같은 PR 이 없으면 남기고, 있는데 머리와
+  다르고 조상도 아니면 넘긴다. 이름만 보면 포크의 같은 이름 브랜치를 잡으므로 머리를 견준다.
+  squash 라 `git log` 로는 가르지 못하고, 체크아웃된 브랜치는 끝이 `origin/main` 의 조상인 것으로도
+  판정하지 않는다. 막 따고 커밋하지 않은 브랜치도 조상이다(일지 2026-10-05-05). 병합된 PR 은 `gh
+  pr list` 한 번에 최근 1000개를 읽는다. 그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한
+  쪽).
 - 판정 2, 깨끗하다. `status --porcelain --untracked-files=all` 의 stdout 과 stderr 가 모두 비어야
   한다. stderr 의 경고는 git 이 그 아래를 보지 못했다는 뜻이다. `status --ignored` 의 `!!` 항목은
   다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 같은 `.claude/settings.local.json`)뿐이어야 한다.
   설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
   `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
-- 판정 3, 주인이 없다. 제목이 그 브랜치인 실행 중 세션이 있으면 남긴다. 잠금 사유는
-  `claude session <이름> (pid <N>)` 모양이고 그 pid 가 살아 있으면 남긴다. 죽었으면 `remove` 가 풀고
-  지운다. 사유가 다른 모양이면 넘긴다. 잠금이 없다고 주인이 없는 것은 아니다. `git worktree add` 로
-  판 워크트리와 `EnterWorktree(path)` 로 들어간 워크트리는 잠기지 않는다(일지 2026-10-06-04).
-  잠금 다음에는 그 폴더나 그 아래를 작업 디렉터리로 쥔 프로세스를 보고, 있으면 이름과 pid 를
-  들어 남긴다(대기열 186). 쉬는 세션은 `isRunning` 이 아니라 제목으로 잡히지 않는데, 데스크톱 앱이
-  `--resume` 으로 띄운 그 세션의 `claude.exe` 가 워크트리 루트를 쥐고 있었다(판정 4의 1의 근거).
+- 판정 3, 주인이 없다. 제목이나 브랜치가 그 브랜치인 실행 중 세션이 있으면 남긴다. 잠금 사유는
+  `claude session <이름> (pid <N>)` 모양이고 그 pid 가 살아 있으면 남긴다. 다만 산 잠금 pid 는 그
+  워크트리를 연 세션의 `claude.exe` 라, 쥔 프로세스에 함께 넣어(`with_lock`) 그 세션이 `--idle` 로
+  받은 세션이면 아래처럼 `끝낸다`로 낸다. `EnterWorktree` 로 연 세션은 인계할 때만 잠금을 풀어,
+  넣지 않으면 병합하고 쉬는 세션의 워크트리를 끝내지 못한다(셀프 리뷰 명세 축). 죽었으면 `remove`
+  가 풀고 지운다. 사유가 다른 모양이면 넘긴다. 잠금이 없다고 주인이 없는 것은 아니다.
+  `git worktree add` 로 판 워크트리와 `EnterWorktree(path)` 로 들어간 워크트리는 잠기지 않는다(일지
+  2026-10-06-04). 잠금 다음에는 그 폴더나 그 아래를 작업 디렉터리로 쥔 프로세스를 보고, 있으면
+  이름과 pid 를 들어 남긴다(대기열 186). 쉬는 세션은 `isRunning` 이 아니라 제목으로 잡히지 않는데,
+  데스크톱 앱이 `--resume` 으로 띄운 그 세션의 `claude.exe` 가 워크트리 루트를 쥐고 있었다(판정 4의
+  1의 근거). 쥔 프로세스마다 환경의 세션 id(`SESSION_ENV`, `process_session`)를 읽어 pid 옆에
+  적는다. 쥔 프로세스가 모두 `--idle` 로 받은 세션의 것이면 남기지 않고 `끝낸다`로 내고
+  `end-holders` 를 붙인다(아래 "쉬는 세션의 프로세스"). 하나라도 세션을 모르거나 받지 않은 세션의
+  것이면 남긴다. 앱은 쉬는 세션의 `claude.exe` 를 보관하기 전까지 띄워 두어(2026-10-20 에 앱이 띄운
+  `claude.exe` 가 80여 개였다), 병합되고 깨끗한 워크트리가 그 세션이 보관될 때까지 남았다.
   이 단계가 없던 판은 그 워크트리를 지운다(또는 아래처럼 넘긴다)로 내고 `remove` 의 점유 탐침에서야
   막혔다(일지 2026-10-12-14). 프로세스는 `judge` 한 번에 한 번 훑는다. 그 세션에서
   `lock_holder.py --folder` 가 프로세스 720개 중 539개의 작업 디렉터리를 0.11초 안에 읽었다. 볼 수
@@ -77,9 +100,10 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
   보지 않고, 쥔 프로세스는 옮기기 직전에만 다시 본다(판정 4의 2).
 체크아웃되지 않은 로컬 브랜치는 판정 1을 보고, 병합된 PR 이 없어도 끝이 `origin/main` 에서 닿으면
 지운다(잃는 것은 이름뿐이다. `EnterWorktree` 가 만들고 세션이 떠난 `worktree-*` 브랜치 53개가 PR
-없이 남아 있었다, 일지 2026-10-15-06). 지울 것이어도 판정 3의 제목은 본다. 그 브랜치가 제목인 실행
-중 세션이 있으면 남긴다(`judge_branch`, 대기열 286. 이것을 보지 않던 판이 실행 중인 세션
-`chore/mutate-followups` 의 브랜치를 지울 후보로 냈다, 일지 2026-10-16-15). 제목과 견줄 때도,
+없이 남아 있었다, 일지 2026-10-15-06). 병합된 PR 머리의 조상인 끝도 워크트리처럼 지운다. 지울
+것이어도 판정 3의 제목과 브랜치는 본다. 제목이나 브랜치가 그 브랜치인 실행 중 세션이 있으면
+남긴다(`judge_branch`, 대기열 286. 이것을 보지 않던 판이 실행 중인 세션 `chore/mutate-followups` 의
+브랜치를 지울 후보로 냈다, 일지 2026-10-16-15). 제목과 견줄 때도,
 체크아웃됐는지 워크트리 등록과 견줄 때도(`judge` 와 `remove-branch`) 대소문자를 가리지 않는다
 (`same_branch`. 글자 그대로 견준 판은 윈도에서 대소문자가 바뀌어 찍힌 체크아웃된 브랜치를 지울
 후보로 냈고 `remove-branch` 가 지웠다, 대기열 286 셀프 리뷰). 잠금과 쥔 프로세스는 워크트리의
@@ -161,6 +185,28 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 옆 이름(`.tidy-probe`)에 `.git` 과 함께 남은 폴더는 원래 이름의 등록이 폴더를 잃은 채 남아 있으면
 `restore` 가 그 이름으로 되돌린다. 등록이 없거나 원래 이름에 무엇이 있으면 되돌리지 않는다.
 
+쉬는 세션의 프로세스(`end-holders`). 판정 3이 `끝낸다`로 낸 워크트리의 쥔 프로세스를 끝낸다. 세션은
+사이드바에 남는다. 2026-10-20 에 쉬는 세션 하나를 `taskkill /T /F` 로 끄고 손으로 봤다. 앱은 그
+프로세스를 바로 다시 띄우지 않았고, 원격 제어에서는 그 세션이 절전이나 오프라인일 수 있다는 문구가
+떴다. 다른 세션이 메시지를 보내자 앱이 그 세션을 다시 띄웠고 세션은 대화를 이어 답했다. 그
+워크트리를 지운 뒤라 다시 뜬 세션의 작업 디렉터리는 주 체크아웃이었다. 아래 순서로 보고 어긋나면
+아무것도 끄지 않는다.
+1. 인자의 세션 id 가 모두 `local_<uuid>` 모양이고, 이 도구를 부른 세션이 없다.
+2. 그 경로가 등록된 워크트리다.
+3. 프로세스를 다시 훑어 그 폴더를 작업 디렉터리로 쥔 프로세스와 산 잠금 pid 를 찾는다. 없으면
+   끝낼 것 없이 0으로 끝난다.
+4. 쥔 프로세스가 모두 인자의 세션 것이다. 하나라도 아니면 아무것도 끄지 않는다.
+5. 판정 1~3을 다시 내어(실행 중 세션은 빼고) `끝낸다`가 나올 때만 간다. `judge` 뒤에 파일을 고쳤거나
+   찍힌 적 없는 줄로 병합되지 않은 워크트리를 주면 끄지 않는다. `remove` 의 다시 판정과 짝이다.
+   그 세션이 그사이 다시 돌기 시작했는지는 이 도구가 보지 못한다. 부르는 쪽이 이 명령을 치기
+   직전에 `list_sessions` 로 다시 본다(스킬 3.2).
+6. 프로세스마다 끄기 직전에 세션 id 를 다시 읽어, 훑을 때와 같을 때만 끈다(`end_process`). 훑은
+   뒤 그 pid 가 끝나 다른 프로세스가 받았으면 값이 다르다. pid 만 보고 끄지 않는다
+   (`.claude/rules/probes.md`). 윈도는 `taskkill /T /F` 로 그 아래 프로세스(셸, MCP 서버)까지
+   끄고, 그 밖은 SIGTERM 을 그 프로세스에만 보낸다.
+7. `END_WAITS` 만큼 기다리며 다시 훑어 쥔 프로세스가 없어지면 0으로 끝난다. 다음 `judge` 가 그
+   워크트리를 다시 판정한다.
+
 못 보는 것.
 - 옮긴 뒤에 남은 추적 파일을 다른 프로세스가 워크트리 밖의 하드링크 이름으로 적재한 것.
   추적 파일은 하드링크가 아니라 드물다.
@@ -177,13 +223,22 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 - 휴지통 자리 이름의 역산(`origin_of`)은 이름에 `~~` 가 든 워크트리와 `~<숫자>` 로 끝나는 상대
   경로에서 어긋나 쥔 프로세스를 옛 자리로 찾지 못한다. 지우기는 그대로 막혀 남으니 안전한 쪽이다.
 - 탐침과 git 사이에 새로 생긴 점유와 파일. 다시 거른 뒤 git 이 지울 때까지의 틈이다.
-- 세션이 쓰던 워크트리인지. 제목, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의 CLI 를
-  띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
-- 제목이 브랜치 이름과 다른 세션. 앞뒤 공백이나 꼬리(`(인계함)`)가 붙은 제목이 그렇고,
-  워크트리에서는 대소문자만 다른 제목도 그렇다(체크아웃되지 않은 브랜치에서는 `same_branch` 가 같은
-  이름으로 본다). 판정 1이 지울 것으로 낸 체크아웃되지 않은 브랜치는 그런 세션의 것이어도 대신 잡는
-  것이 없어 지울 후보로 찍힌다. 워크트리는 그 세션이 작업 디렉터리로 쥐었으면 판정 3의 쥔
-  프로세스가 남긴다.
+- 세션이 쓰던 워크트리인지. 제목과 브랜치, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의
+  CLI 를 띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
+- 같은 이름으로 다시 딴 브랜치의 끝이 옛 병합된 PR 머리의 조상인 것(옛 PR 의 바탕보다 앞선 커밋에서
+  땄다). 판정 1이 병합된 것으로 본다. 끝이 그 머리에 들어 잃는 커밋은 없고, 워크트리는 판정 2·3을
+  그대로 본다.
+- 쉬는 세션의 프로세스 가운데 판정 3의 작업 디렉터리로 쥔 것 말고는 끝내지 않는다. 모듈을 올린
+  것과 등록 없는 폴더를 쥔 것은 그대로 남긴다. 환경에 `SESSION_ENV` 가 없는 프로세스(앱 밖에서 띄운
+  CLI, 환경을 비우고 띄운 자식)는 세션을 모르는 것으로 보아 남긴다. 리눅스는 띄워질 때의 환경을
+  읽고, 그 아래 프로세스는 끄지 않는다. 세션이 쉬는지는 보지 못해 부르는 쪽이 `--idle` 로 고른 것을
+  믿는다.
+- 폴더가 없거나 등록이 prunable 인 워크트리의 앱 표지. 읽지 않고 자리 판정대로 등록을 걷는다.
+- 제목도 앱이 적은 브랜치도 그 브랜치 이름과 다른 세션. 앞뒤 공백이나 꼬리(`(인계함)`)가 붙은
+  제목이 그렇고, 워크트리에서는 대소문자만 다른 제목도 그렇다(체크아웃되지 않은 브랜치에서는
+  `same_branch` 가 같은 이름으로 본다). 판정 1이 지울 것으로 낸 체크아웃되지 않은 브랜치는 그런
+  세션의 것이어도 대신 잡는 것이 없어 지울 후보로 찍힌다. 워크트리는 그 세션이 작업 디렉터리로
+  쥐었으면 판정 3의 쥔 프로세스가 남긴다.
 - `judge` 뒤에 열린 세션의 체크아웃되지 않은 브랜치. `remove-branch` 의 재판정은 세션을 보지
   않고(그 하위 명령은 제목을 받지 않는다), 워크트리의 `remove` 처럼 옮기기 직전에 쥔 프로세스를
   다시 보는 것도 없어 판정 1이 지울 것으로 낸 브랜치를 지운다.
@@ -226,6 +281,10 @@ git 은 모두 `core.longpaths=true` 로 친다(스킬 머리 문단).
 막혔다). 2 는 `remove` 와 같다.
 `empty-trash`: 0 휴지통이 비었다. 1 남은 것이 있다(항목마다 쥔 프로세스를 찍었다). 2 는 `remove` 와
 같다.
+`end-holders`: 0 쥔 프로세스를 끝냈다(쥔 것이 처음부터 없었어도 0). 1 아무것도 끄지 않았거나(이
+도구를 부른 세션이다, 등록된 워크트리가 아니다, 프로세스를 볼 수 없다, 받은 세션 밖의 프로세스가
+쥐었다) 끈 뒤에도 쥔 것이 남았다. 2 세션 id 모양이 아니거나 `remove` 의 2와 같다. 3 은 `remove` 와
+같다.
 """
 
 from __future__ import annotations
@@ -239,21 +298,22 @@ import json
 import os
 import re
 import shutil
+import signal
 import stat
 import string
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
-type Action = Literal["delete", "keep", "human", "hold", "restore"]
+type Action = Literal["delete", "keep", "human", "hold", "restore", "end"]
 type GitRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 type ProcessPath = tuple[int, str, str]  # (pid, 실행 파일 이름, 작업 디렉터리나 모듈의 경로)
-type HolderKind = Literal["cwd", "module"]
+type HolderKind = Literal["cwd", "module", "lock"]
 
 COMMAND = "uv run python tools/tidy_checkouts.py"
 WORKTREES_DIR = ".claude/worktrees"
@@ -320,14 +380,18 @@ _ACTIONS: dict[Action, str] = {
     "human": "넘긴다",
     "hold": "넘긴다",
     "restore": "되돌린다",
+    "end": "끝낸다",
 }
 _HOLDER_LABELS: dict[HolderKind, str] = {
     "cwd": "작업 디렉터리로 쥔 프로세스",
     "module": "모듈을 올린 프로세스",
+    "lock": "잠금 pid",
 }
-# 판정 3에서 그 브랜치가 제목인 실행 중 세션 때문에 남긴 이유. 워크트리와 체크아웃되지 않은 브랜치가
-# 같이 쓴다
-_RUNNING_REASON = "그 브랜치가 제목인 세션이 돈다"
+# 판정 3에서 제목이나 브랜치(`list_sessions` 의 `branch`)가 그 브랜치인 실행 중 세션 때문에 남긴
+# 이유. 워크트리와 체크아웃되지 않은 브랜치가 같이 쓴다
+_RUNNING_REASON = "제목이나 브랜치가 그 브랜치인 세션이 돈다"
+# 판정 1에서 브랜치 끝이 병합된 PR 머리의 조상이라 지우는 이유
+_BEHIND_REASON = "브랜치 끝이 병합된 PR 의 머리보다 뒤다. 로컬에만 있는 커밋이 없다"
 # git 의 텍스트 판별에서 비인쇄로 세는 바이트. 32 아래에서 백스페이스·탭·ESC·폼 피드와 CR·LF 를 뺀
 # 것과 DEL 이다(`looks_text`)
 _NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (8, 9, 10, 12, 13, 27))
@@ -337,6 +401,16 @@ WHOLE_READ_LIMIT = 64 * 1024 * 1024
 # 되돌리기를 다시 시도하기 전에 기다리는 초. 옮기기가 지난 뒤 되돌리기가 `WinError 5` 로 한 번
 # 막혔다(대기열 202). 무엇이 그 틈에 폴더를 쥐었는지는 재지 않았다
 RESTORE_WAITS = (0.2, 0.5, 1.0, 2.0)
+# 데스크톱 앱이 자기 워크트리의 git 디렉터리(`.git/worktrees/<이름>/`)에 두는 표지. 앱의 정리
+# (`[WorktreePool]`)는 이 표지가 있는 워크트리만 지운다(ADR 0032)
+APP_MARKER = "claude-desktop-worktree"
+# 데스크톱 앱이 세션의 `claude.exe` 환경에 넣는 세션 id. 그 아래 프로세스도 물려받는다(2026-10-20
+# 에 이 PC 의 세션 프로세스 환경을 PEB 에서 읽어 손으로 봤다)
+SESSION_ENV = "CLAUDE_CODE_HOST_SESSION_ID"
+_SESSION_ID = re.compile(r"local_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+# `end-holders` 가 프로세스를 끈 뒤 쥔 것이 사라졌는지 다시 보기 전에 기다리는 초. 끄기를 부른
+# 뒤에도 프로세스가 끝나기까지 틈이 있다(어림, 재지 않았다)
+END_WAITS = (0.2, 0.5, 1.0, 2.0)
 
 
 class ToolError(Exception):
@@ -359,7 +433,9 @@ class Worktree:
 class Facts:
     """판정 2와 자리 판정의 재료. 자리가 어긋나면 status 를 읽지 않아 빈 값이다. `aside` 는 점유
     탐침의 옆 이름 폴더가 있다는 뜻이고, `contained` 는 HEAD 가 `origin/main` 에서 닿는다는 뜻이다
-    (분리 HEAD 에서만 읽는다)."""
+    (분리 HEAD 에서만 읽는다). `behind` 는 브랜치 끝이 이름이 같은 병합된 PR 의 머리 가운데 하나의
+    조상이라는 뜻이고(끝이 머리와 같으면 읽지 않는다), `app_marker` 는 앱의 표지(`APP_MARKER`)가
+    있다는 뜻이다."""
 
     exists: bool
     toplevel: str | None
@@ -370,12 +446,16 @@ class Facts:
     aside: bool = False
     contained: bool = False
     has_git: bool = True
+    behind: bool = False
+    app_marker: bool = False
 
 
 @dataclass(frozen=True)
 class Verdict:
     """`hold` 는 지울 것이었는데 제목 모를 세션 때문에 넘긴 것이다. 사람이 승인하면 지운다.
-    `human` 은 사람이 직접 본다. `unlock` 은 지우기 전에 죽은 잠금을 풀어야 한다는 뜻이다."""
+    `human` 은 사람이 직접 본다. `unlock` 은 지우기 전에 죽은 잠금을 풀어야 한다는 뜻이다. `end` 는
+    지울 것이었는데 쉬는 세션의 프로세스만 쥐어, `sessions` 의 프로세스를 끝내면 지울 수 있다는
+    뜻이다."""
 
     action: Action
     path: str
@@ -383,6 +463,7 @@ class Verdict:
     branch: str | None = None
     head: str | None = None
     unlock: bool = False
+    sessions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -480,13 +561,27 @@ def _linux_cwds() -> list[ProcessPath]:
     return found
 
 
+def _linux_session(pid: int) -> str | None:
+    """`/proc/<pid>/environ` 의 세션 id. 프로세스가 띄워질 때의 환경이다."""
+    try:
+        raw = Path(f"/proc/{pid}/environ").read_bytes()
+    except OSError:
+        return None
+    return session_in(raw.decode("utf-8", errors="replace").split("\0"))
+
+
 if sys.platform == "win32":
     _QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
     _VM_READ = 0x0010  # PROCESS_VM_READ
     _INHERIT_HANDLE = False  # bInheritHandle. 자식 프로세스에 핸들을 물려주지 않는다
-    # x64 의 자리: PEB.ProcessParameters, 그 안의 CurrentDirectory.DosPath(UNICODE_STRING)
+    # x64 의 자리: PEB.ProcessParameters, 그 안의 CurrentDirectory.DosPath(UNICODE_STRING),
+    # Environment(포인터), EnvironmentSize(바이트)
     _PEB_PARAMS = 0x20
     _PARAMS_CWD = 0x38
+    _PARAMS_ENV = 0x80
+    _PARAMS_ENV_SIZE = 0x3F0
+    # 환경 블록을 읽는 크기의 상한(바이트). 넘으면 읽지 않는다
+    _ENV_LIMIT = 1 << 20
     _LIST_MODULES_ALL = 0x03  # 32비트와 64비트 모듈 모두
     _LONG_PATH = 32768
     _INVALID_HANDLE = ctypes.c_void_p(-1).value
@@ -565,7 +660,8 @@ if sys.platform == "win32":
             return None
         return buffer.raw if got.value == size else None
 
-    def _peb_cwd(kernel: ctypes.WinDLL, ntdll: ctypes.WinDLL, handle: int) -> str | None:
+    def _peb_params(kernel: ctypes.WinDLL, ntdll: ctypes.WinDLL, handle: int) -> int | None:
+        """그 프로세스 안의 RTL_USER_PROCESS_PARAMETERS 주소."""
         info = _BasicInformation()
         size = ctypes.sizeof(info)
         status = ntdll.NtQueryInformationProcess(handle, 0, ctypes.byref(info), size, None)
@@ -573,9 +669,13 @@ if sys.platform == "win32":
         if status != 0 or not isinstance(peb, int):
             return None
         raw = _read_memory(kernel, handle, peb + _PEB_PARAMS, 8)
-        if raw is None:
+        return None if raw is None else int.from_bytes(raw, "little")
+
+    def _peb_cwd(kernel: ctypes.WinDLL, ntdll: ctypes.WinDLL, handle: int) -> str | None:
+        params = _peb_params(kernel, ntdll, handle)
+        if params is None:
             return None
-        raw = _read_memory(kernel, handle, int.from_bytes(raw, "little") + _PARAMS_CWD, 16)
+        raw = _read_memory(kernel, handle, params + _PARAMS_CWD, 16)
         if raw is None:
             return None
         length = int.from_bytes(raw[0:2], "little")
@@ -584,6 +684,35 @@ if sys.platform == "win32":
             return None
         text = _read_memory(kernel, handle, buffer, length)
         return text.decode("utf-16-le", errors="replace") if text is not None else None
+
+    def _peb_environment(kernel: ctypes.WinDLL, ntdll: ctypes.WinDLL, handle: int) -> str | None:
+        """환경 블록(`이름=값` 들을 NUL 로 이은 것). 지금의 환경이다."""
+        params = _peb_params(kernel, ntdll, handle)
+        if params is None:
+            return None
+        pointer = _read_memory(kernel, handle, params + _PARAMS_ENV, 8)
+        size = _read_memory(kernel, handle, params + _PARAMS_ENV_SIZE, 8)
+        if pointer is None or size is None:
+            return None
+        length = int.from_bytes(size, "little")
+        if not 0 < length <= _ENV_LIMIT:
+            return None
+        block = _read_memory(kernel, handle, int.from_bytes(pointer, "little"), length)
+        return block.decode("utf-16-le", errors="replace") if block is not None else None
+
+    def _windows_session(pid: int) -> str | None:
+        """그 프로세스 환경 블록의 세션 id. x64 의 자리만 안다."""
+        if ctypes.sizeof(ctypes.c_void_p) != 8:
+            return None
+        kernel, ntdll = _windows_api()
+        handle = kernel.OpenProcess(_QUERY_LIMITED | _VM_READ, _INHERIT_HANDLE, pid)
+        if not handle:
+            return None
+        try:
+            text = _peb_environment(kernel, ntdll, handle)
+        finally:
+            kernel.CloseHandle(handle)
+        return None if text is None else session_in(text.split("\0"))
 
     def _image_name(kernel: ctypes.WinDLL, handle: int) -> str:
         buffer = ctypes.create_unicode_buffer(1024)
@@ -744,6 +873,41 @@ def scan_modules() -> list[ProcessPath] | None:
         return None
 
 
+def process_session(pid: int) -> str | None:
+    """그 프로세스 환경의 세션 id(`SESSION_ENV`). 없거나, 모양(`local_<uuid>`)이 어긋나거나, 이
+    OS 에서 읽을 수 없거나, 읽다 실패하면 None. 윈도는 PEB 의 환경 블록을, 리눅스는
+    `/proc/<pid>/environ` 을 읽는다."""
+    try:
+        if sys.platform == "win32":
+            return _windows_session(pid)
+        if sys.platform == "linux":
+            return _linux_session(pid)
+    except (OSError, AttributeError, ValueError, ctypes.ArgumentError):
+        return None
+    return None
+
+
+def end_process(pid: int) -> bool:
+    """그 프로세스를 끝낸다. 윈도는 `taskkill /T /F` 로 그 아래 프로세스까지 끝내고, 그 밖은
+    SIGTERM 을 그 프로세스에만 보낸다. 이미 없으면 끝낸 것으로 본다."""
+    if sys.platform == "win32":
+        command = ["taskkill", "/PID", str(pid), "/T", "/F"]
+        try:
+            result = subprocess.run(
+                command, capture_output=True, text=True, errors="replace", timeout=CALL_TIMEOUT
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0 or not process_alive(pid)
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return True
+
+
 def holders_in(
     processes: Sequence[ProcessPath] | None, folder: str, kind: HolderKind = "cwd"
 ) -> list[Holder] | None:
@@ -817,6 +981,8 @@ class Ops:
     processes: Callable[[], list[ProcessPath] | None] = scan_processes
     modules: Callable[[], list[ProcessPath] | None] = scan_modules
     sleep: Callable[[float], None] = time.sleep
+    session_of: Callable[[int], str | None] = process_session
+    end: Callable[[int], bool] = end_process
 
 
 def holders_from(
@@ -861,6 +1027,28 @@ def parse_worktrees(porcelain: str) -> list[Worktree]:
 def lock_pid(reason: str) -> int | None:
     match = _LOCK_PID.match(reason)
     return int(match.group(1)) if match else None
+
+
+def session_in(entries: Iterable[str]) -> str | None:
+    """환경 항목(`이름=값`)에서 세션 id. 이름은 글자 그대로 견주고, 값은 `local_<uuid>` 모양일
+    때만 돌려준다. 찍은 `end-holders` 명령을 에이전트가 셸에 그대로 친다."""
+    for entry in entries:
+        key, separator, value = entry.partition("=")
+        if separator and key == SESSION_ENV:
+            return value if _SESSION_ID.fullmatch(value) else None
+    return None
+
+
+def sessions_of(
+    holders: Sequence[Holder] | None, session_of: Callable[[int], str | None]
+) -> dict[int, str]:
+    """쥔 프로세스마다 환경의 세션 id. 읽지 못한 pid 는 넣지 않는다."""
+    found: dict[int, str] = {}
+    for holder in holders or ():
+        session = session_of(holder.pid)
+        if session is not None:
+            found[holder.pid] = session
+    return found
 
 
 def parse_merged(text: str) -> dict[str, frozenset[str]]:
@@ -956,8 +1144,12 @@ def combine_holders(
     return [*(cwd or ()), *(module or ())]
 
 
-def describe_holders(holders: Sequence[Holder] | None) -> str:
-    """남긴 이유에 붙일 쥔 프로세스. 못 찾은 것(빈 목록)과 볼 수 없는 것(None)을 가른다."""
+def describe_holders(
+    holders: Sequence[Holder] | None, owners: Mapping[int, str] | None = None
+) -> str:
+    """남긴 이유에 붙일 쥔 프로세스. 못 찾은 것(빈 목록)과 볼 수 없는 것(None)을 가른다. `owners`
+    는 pid 마다 환경의 세션 id 이고, 있으면 pid 옆에 적는다."""
+    known = owners or {}
     if holders is None:
         return "쥔 프로세스를 찾지 못했다(이 OS 에서 볼 수 없거나 프로세스를 읽다 실패했다)"
     if not holders:
@@ -971,13 +1163,18 @@ def describe_holders(holders: Sequence[Holder] | None) -> str:
     parts: list[str] = []
     for kind, label in _HOLDER_LABELS.items():
         names = ", ".join(
-            f"{holder.image or '(이름 모름)'}(pid {holder.pid})"
+            f"{holder.image or '(이름 모름)'}(pid {holder.pid}{_session_note(known, holder.pid)})"
             for holder in holders
             if holder.kind == kind
         )
         if names:
             parts.append(f"{label}: {names}")
     return "; ".join(parts)
+
+
+def _session_note(owners: Mapping[int, str], pid: int) -> str:
+    session = owners.get(pid)
+    return "" if session is None else f", 세션 {session}"
 
 
 # --- 판정 ---------------------------------------------------------------------------------------
@@ -990,9 +1187,13 @@ def judge(
     running: Sequence[str],
     alive: Callable[[int], bool],
     holders: Sequence[Holder] | None,
+    *,
+    owners: Mapping[int, str] | None = None,
+    idle: Collection[str] = (),
 ) -> Verdict:
     """워크트리 하나의 판정. 순서와 근거는 모듈 독스트링. `holders` 는 그 폴더를 작업 디렉터리로
-    쥔 프로세스이고, 볼 수 없었으면 None 이다."""
+    쥔 프로세스이고, 볼 수 없었으면 None 이다. `owners` 는 쥔 프로세스마다 환경의 세션 id 이고,
+    `idle` 은 부르는 쪽이 쉰다고 넘긴 세션이다(부른 세션은 빼고 넘긴다)."""
 
     def verdict(action: Action, reason: str) -> Verdict:
         return Verdict(action, wt.path, reason, wt.branch, wt.head)
@@ -1017,6 +1218,8 @@ def judge(
         return verdict("delete", "폴더가 없고 등록만 남았다. remove 가 등록을 걷는다")
     if facts.toplevel is None or not same_path(facts.toplevel, wt.path):
         return verdict("human", f"그 폴더의 git 이 다른 저장소({facts.toplevel})를 읽는다")
+    if facts.app_marker:
+        return verdict("keep", f"앱의 표지({APP_MARKER})가 있다. 앱의 정리에 맡긴다")
     if wt.head is None:
         return verdict("human", "HEAD 를 읽지 못했다")
     if wt.branch is None:
@@ -1026,7 +1229,7 @@ def judge(
         heads = merged.get(wt.branch)
         if not heads:
             return verdict("keep", "병합된 PR 이 없다")
-        if wt.head not in heads:
+        if wt.head not in heads and not facts.behind:
             return verdict("human", "병합된 PR 의 머리와 브랜치 끝이 다르다")
     if facts.status:
         return verdict("keep", "바뀐 파일이 있다")
@@ -1040,15 +1243,61 @@ def judge(
     pid = None if wt.locked is None else lock_pid(wt.locked)
     if wt.locked is not None and pid is None:
         return verdict("human", f"잠금 사유에 pid 가 없다: {wt.locked or '(사유 없음)'}")
-    if pid is not None and alive(pid):
+    if pid is not None and alive(pid) and not _lock_ends(pid, holders, owners, idle):
         return verdict("keep", f"잠금 pid {pid} 가 살아 있다. 그 세션: {wt.locked}")
     if holders:
-        return verdict("keep", f"{describe_holders(holders)}. 그 프로세스가 끝나야 지운다")
-    note = "분리 HEAD 이고 그 커밋이 origin/main 에 있다" if wt.branch is None else ""
+        described = describe_holders(holders, owners)
+        sessions = idle_sessions(holders, owners or {}, idle)
+        if sessions:
+            reason = f"쉬는 세션의 프로세스만 쥐었다. {described}. 끝내면 지울 수 있다"
+            return replace(verdict("end", reason), sessions=sessions)
+        return verdict("keep", f"{described}. 그 프로세스가 끝나야 지운다")
+    if wt.branch is None:
+        note = "분리 HEAD 이고 그 커밋이 origin/main 에 있다"
+    else:
+        note = _BEHIND_REASON if facts.behind else ""
     if pid is None:
         return verdict("delete", note)
     dead = f"잠금 pid {pid} 는 죽었다. remove 가 풀고 지운다"
     return Verdict("delete", wt.path, dead, wt.branch, wt.head, unlock=True)
+
+
+def _lock_ends(
+    pid: int,
+    holders: Sequence[Holder] | None,
+    owners: Mapping[int, str] | None,
+    idle: Collection[str],
+) -> bool:
+    """산 잠금 pid 를 쥔 프로세스로 함께 끝낼 수 있는가. 부르는 쪽이 그 pid 를 쥔 것에 넣었고
+    (`with_lock`) 그 세션이 쉰다고 받은 세션일 때만이다. 넣지 않았는데 지나가면 판정이 `지운다` 로
+    흘러 산 잠금을 푼다."""
+    return any(holder.pid == pid for holder in holders or ()) and (owners or {}).get(pid) in idle
+
+
+def with_lock(
+    holders: Sequence[Holder] | None, wt: Worktree, alive: Callable[[int], bool]
+) -> list[Holder] | None:
+    """쥔 프로세스에 산 잠금 pid 를 더한다(이미 들었으면 그대로). 잠금 pid 는 그 워크트리를 연
+    세션의 `claude.exe` 이고, 그 세션이 쉬면 함께 끝낸다. 쥔 것을 볼 수 없었으면(None) 더하지
+    않는다."""
+    if holders is None:
+        return None
+    pid = None if wt.locked is None else lock_pid(wt.locked)
+    if pid is None or not alive(pid) or any(holder.pid == pid for holder in holders):
+        return list(holders)
+    return [*holders, Holder(pid, "", "lock")]
+
+
+def idle_sessions(
+    holders: Sequence[Holder], owners: Mapping[int, str], idle: Collection[str]
+) -> tuple[str, ...]:
+    """쥔 프로세스가 모두 쉬는 세션의 것이면 그 세션들(정렬). 하나라도 세션을 모르거나 쉬는 세션이
+    아니면 빈 튜플이다."""
+    sessions = {owners.get(holder.pid) for holder in holders}
+    if not holders or None in sessions:
+        return ()
+    known = {session for session in sessions if session is not None}
+    return tuple(sorted(known)) if known <= set(idle) else ()
 
 
 def hold_for_strangers(
@@ -1073,21 +1322,22 @@ def judge_branch(
     running: Sequence[str],
     *,
     contained: bool = False,
+    behind: bool = False,
 ) -> Verdict:
     """체크아웃되지 않은 로컬 브랜치의 판정. 판정 1이 지울 것으로 낸 뒤에 판정 3의 제목을 본다.
-    `running` 은 실행 중 세션의 제목이고, 대소문자를 가리지 않고 견준다(`same_branch`, 대기열
-    286)."""
-    verdict = _judge_branch_merged(branch, tip, merged, contained=contained)
+    `running` 은 실행 중 세션의 제목과 브랜치이고, 대소문자를 가리지 않고 견준다(`same_branch`,
+    대기열 286)."""
+    verdict = _judge_branch_merged(branch, tip, merged, contained=contained, behind=behind)
     if verdict.action == "delete" and any(same_branch(title, branch) for title in running):
         return replace(verdict, action="keep", reason=_RUNNING_REASON)
     return verdict
 
 
 def _judge_branch_merged(
-    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool
+    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool, behind: bool
 ) -> Verdict:
     """판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서 닿는다는 뜻이다. 병합된 PR 이 없어도
-    그러면 지운다. 잃는 것은 이름뿐이다."""
+    그러면 지운다. 잃는 것은 이름뿐이다. `behind` 는 끝이 병합된 PR 머리의 조상이라는 뜻이다."""
     if branch in PROTECTED_BRANCHES:
         return Verdict("keep", branch, "지우지 않는 브랜치다", branch, tip)
     heads = merged.get(branch)
@@ -1097,6 +1347,8 @@ def _judge_branch_merged(
         reason = "병합된 PR 이 없고 origin/main 에 없는 커밋이 있다"
         return Verdict("keep", branch, reason, branch, tip)
     if tip not in heads:
+        if behind:
+            return Verdict("delete", branch, _BEHIND_REASON, branch, tip)
         return Verdict("human", branch, "병합된 PR 의 머리와 브랜치 끝이 다르다", branch, tip)
     return Verdict("delete", branch, "", branch, tip)
 
@@ -1228,7 +1480,26 @@ def contains(root: Path, commit: str, git: GitRunner) -> bool:
     return git(["merge-base", "--is-ancestor", commit, "origin/main"], root).returncode == 0
 
 
-def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
+def behind_merged(root: Path, tip: str, heads: Collection[str] | None, git: GitRunner) -> bool:
+    """`tip` 이 `heads`(이름이 같은 병합된 PR 의 머리) 가운데 하나의 조상인지. 끝이 머리와 같으면
+    읽지 않고 False 다. 머리 커밋이 이 저장소에 없으면(받아 오지 않았다) 닿지 않는 것으로 본다."""
+    if not heads or tip in heads:
+        return False
+    return any(
+        git(["merge-base", "--is-ancestor", tip, head], root).returncode == 0
+        for head in sorted(heads)
+    )
+
+
+def _has_app_marker(path: Path, git: GitRunner) -> bool:
+    """그 워크트리의 git 디렉터리(`.git/worktrees/<이름>/`)에 앱의 표지가 있는지."""
+    found = git(["rev-parse", "--absolute-git-dir"], path)
+    if found.returncode != 0:
+        return False
+    return (Path(found.stdout.strip()) / APP_MARKER).exists()
+
+
+def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozenset[str]]) -> Facts:
     path = Path(wt.path)
     # 분리 HEAD 는 폴더가 없어도 본다. 등록을 걷기 전에 그 커밋이 origin/main 에 있는지 알아야 한다
     contained = wt.branch is None and wt.head is not None and contains(root, wt.head, git)
@@ -1250,6 +1521,11 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
         status_err = listed.stderr or f"exit {listed.returncode}"
     ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
     settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
+    behind = (
+        wt.branch is not None
+        and wt.head is not None
+        and behind_merged(root, wt.head, merged.get(wt.branch), git)
+    )
     return Facts(
         exists=True,
         toplevel=toplevel,
@@ -1258,6 +1534,8 @@ def gather(root: Path, wt: Worktree, git: GitRunner) -> Facts:
         ignored=ignored,
         settings_same=settings_same,
         contained=contained,
+        behind=behind,
+        app_marker=_has_app_marker(path, git),
     )
 
 
@@ -1388,6 +1666,9 @@ def _orphan_home(stray: Path, listing: Sequence[Worktree]) -> str | None:
 
 
 def _render_worktree(verdict: Verdict) -> str:
+    if verdict.action == "end":
+        command = f'{COMMAND} end-holders "{verdict.path}" {" ".join(verdict.sessions)}'
+        return _render(verdict, "", command)
     branch = DETACHED if verdict.branch is None else verdict.branch
     command = f'{COMMAND} remove "{verdict.path}" {branch} {verdict.head}'
     return _render(verdict, "", command)
@@ -1407,12 +1688,15 @@ def _render_stray(verdict: Verdict) -> str:
 def _render(verdict: Verdict, prefix: str, command: str) -> str:
     """판정 한 줄. `prefix` 는 라벨 앞에 붙는 말이다(브랜치 줄은 `브랜치를 `)."""
     label = prefix + _ACTIONS[verdict.action]
-    names = (verdict.path, verdict.branch or "", verdict.head or "")
-    if verdict.action in ("delete", "hold", "restore") and any(map(_SHELL_UNSAFE.search, names)):
+    names = (verdict.path, verdict.branch or "", verdict.head or "", *verdict.sessions)
+    commanded = verdict.action in ("delete", "hold", "restore", "end")
+    if commanded and any(map(_SHELL_UNSAFE.search, names)):
         hand_off = prefix + "넘긴다"
         return f"{hand_off} {verdict.path} — 셸이 풀 수 있는 글자가 든 이름이라 명령을 찍지 않는다"
     if verdict.action == "hold":
         return f"{label} {verdict.path} — {verdict.reason}. 승인하면 → {command}"
+    if verdict.action == "end":
+        return f"{label} {verdict.path} — {verdict.reason} → {command}"
     if verdict.action not in ("delete", "restore"):
         return f"{label} {verdict.path} — {verdict.reason}"
     note = f" ({verdict.reason})" if verdict.reason else ""
@@ -1433,7 +1717,14 @@ def _contained_branches(root: Path, git: GitRunner) -> frozenset[str]:
     return frozenset(line for line in listed.stdout.splitlines() if line)
 
 
-def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops: Ops) -> int:
+def _judge_all(
+    root: Path,
+    listing: list[Worktree],
+    running: Sequence[str],
+    idle: Collection[str],
+    ops: Ops,
+) -> int:
+    """`idle` 은 부르는 쪽이 쉰다고 넘긴 세션에서 이 도구를 부른 세션을 뺀 것이다."""
     merged = ops.merged(root)
     others = [wt for wt in listing[1:] if not wt.bare]
     processes = ops.processes()
@@ -1442,8 +1733,12 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     modules = functools.cache(ops.modules)
     verdicts: list[Verdict] = []
     for wt in others:
-        facts = gather(root, wt, ops.git)
-        verdict = judge(wt, facts, merged, running, ops.pid_alive, holders_in(processes, wt.path))
+        facts = gather(root, wt, ops.git, merged)
+        holders = with_lock(holders_in(processes, wt.path), wt, ops.pid_alive)
+        owners = sessions_of(holders, ops.session_of)
+        verdict = judge(
+            wt, facts, merged, running, ops.pid_alive, holders, owners=owners, idle=idle
+        )
         if _dead(wt, facts):
             # 지우다 만 폴더. 내용은 등록 없는 폴더의 판정으로 가르고, 명령은 워크트리의 것이다
             holders = holders_from(processes, modules(), wt.path)
@@ -1473,7 +1768,10 @@ def _judge_all(root: Path, listing: list[Worktree], running: Sequence[str], ops:
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
         if branch and not any(same_branch(name, branch) for name in checked_out):
-            verdict = judge_branch(branch, tip, merged, running, contained=branch in contained)
+            behind = behind_merged(root, tip, merged.get(branch), ops.git)
+            verdict = judge_branch(
+                branch, tip, merged, running, contained=branch in contained, behind=behind
+            )
             print(_render_branch(verdict))
     if trash_dir(root) is None:
         print(_trash_refused(root))
@@ -1702,7 +2000,7 @@ def _still_candidate(
     holders: Sequence[Holder] | None,
 ) -> tuple[Verdict, Facts] | None:
     """판정 1~3(세션은 빼고)을 다시 낸다. 지울 것이 아니면 이유를 찍고 None."""
-    facts = gather(root, wt, ops.git)
+    facts = gather(root, wt, ops.git, merged)
     verdict = judge(wt, facts, merged, (), ops.pid_alive, holders)
     if verdict.action != "delete":
         print(f"남겼다 {wt.path} — {moment} 다시 판정했다: {verdict.reason}")
@@ -1787,7 +2085,9 @@ def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, o
         return 1
     # `remove` 처럼 다시 판정할 때는 세션을 보지 않는다(모듈 독스트링)
     merged = ops.merged(root)
-    verdict = judge_branch(branch, tip, merged, (), contained=contains(root, tip, ops.git))
+    contained = contains(root, tip, ops.git)
+    behind = behind_merged(root, tip, merged.get(branch), ops.git)
+    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
     if verdict.action != "delete":
         print(f"남겼다 {branch} — 다시 판정했다: {verdict.reason}")
         return 1
@@ -1815,6 +2115,80 @@ def _remove_stray(root: Path, listing: list[Worktree], target: str, ops: Ops) ->
     left = _empty([moved], ops, root)
     print(f"지웠다 {path.as_posix()}" + (" (휴지통에 일부가 남았다)" if left else ""))
     return 0
+
+
+def _end_holders(
+    root: Path,
+    listing: list[Worktree],
+    target: str,
+    sessions: Sequence[str],
+    own: str | None,
+    ops: Ops,
+) -> int:
+    """워크트리를 작업 디렉터리로 쥔 프로세스를, 모두 `sessions` 의 것일 때만 끝낸다. 순서와 종료
+    코드는 모듈 독스트링의 "쉬는 세션의 프로세스"."""
+    wrong = [session for session in sessions if not _SESSION_ID.fullmatch(session)]
+    if wrong:
+        print(f"세션 id 모양(local_<uuid>)이 아니다: {', '.join(wrong)}", file=sys.stderr)
+        return 2
+    if own is not None and own in sessions:
+        print(f"남겼다 {target} — 이 도구를 부른 세션({own})은 끝내지 않는다")
+        return 1
+    wt = next((w for w in listing[1:] if same_path(w.path, target)), None)
+    if wt is None:
+        print(f"남겼다 {target} — 등록된 워크트리가 아니다")
+        return 1
+    found = with_lock(holders_in(ops.processes(), wt.path), wt, ops.pid_alive)
+    if found is None:
+        print(f"남겼다 {wt.path} — 이 OS 에서 프로세스를 볼 수 없거나 읽다 실패했다")
+        return 1
+    if not found:
+        print(f"끝낼 것이 없다 {wt.path} — 쥔 프로세스가 없다. judge 를 다시 친다")
+        return 0
+    owners = sessions_of(found, ops.session_of)
+    strangers = [holder for holder in found if owners.get(holder.pid) not in sessions]
+    if strangers:
+        described = describe_holders(strangers, owners)
+        print(f"남겼다 {wt.path} — 받은 세션 밖의 프로세스가 쥐었다. 끝낸 것은 없다: {described}")
+        return 1
+    # `remove` 처럼 끄기 전에 판정 1~3을 다시 낸다. `judge` 뒤에 고친 파일이나, 찍힌 적 없는 줄을
+    # 친 병합되지 않은 워크트리의 프로세스를 끄지 않는다. 실행 중 세션은 부르는 쪽이 이 명령을
+    # 치기 직전에 `list_sessions` 로 다시 본다(스킬 3.2)
+    merged = ops.merged(root)
+    facts = gather(root, wt, ops.git, merged)
+    again = judge(wt, facts, merged, (), ops.pid_alive, found, owners=owners, idle=sessions)
+    if again.action != "end":
+        print(f"남겼다 {wt.path} — 끄기 전에 다시 판정했다: {again.reason}. 끝낸 것은 없다")
+        return 1
+    for holder in found:
+        name = f"{holder.image or '(이름 모름)'}(pid {holder.pid})"
+        # 끄기 직전에 세션 id 를 다시 읽는다. 훑은 뒤 그 pid 가 끝나 다른 프로세스가 받았으면 값이
+        # 다르다. pid 만 보고 끄지 않는다(`.claude/rules/probes.md`). 앞 프로세스를 끄며 함께
+        # 끝났으면 읽지 못한다(None)
+        now = ops.session_of(holder.pid)
+        if now is None:
+            continue
+        if now != owners[holder.pid]:
+            print(f"건너뛰었다 {name} — 훑은 뒤 세션 id 가 {now} 로 바뀌었다")
+            continue
+        if not ops.end(holder.pid):
+            print(f"끄지 못했다 {name}")
+    # 끄기를 부른 뒤에도 프로세스가 끝나기까지 틈이 있어 기다리며 다시 훑는다
+    left = with_lock(holders_in(ops.processes(), wt.path), wt, ops.pid_alive)
+    for wait in END_WAITS:
+        if left is not None and not left:
+            break
+        ops.sleep(wait)
+        left = with_lock(holders_in(ops.processes(), wt.path), wt, ops.pid_alive)
+    if left is not None and not left:
+        ended = describe_holders(found, owners)
+        print(
+            f"끝냈다 {wt.path} 를 쥔 프로세스 — {ended}. 세션은 사이드바에 남고 다시 띄우면 "
+            "대화가 이어진다. judge 를 다시 친다"
+        )
+        return 0
+    print(f"남겼다 {wt.path} — 아직 쥔 프로세스가 있다: {describe_holders(left)}")
+    return 1
 
 
 def _restore(root: Path, listing: list[Worktree], target: str, ops: Ops) -> int:
@@ -1888,7 +2262,21 @@ def _parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     judged = commands.add_parser("judge", help="워크트리와 로컬 브랜치를 판정해 찍는다")
-    judged.add_argument("--running", action="append", default=[], help="실행 중 세션의 제목")
+    judged.add_argument(
+        "--running",
+        action="append",
+        default=[],
+        help="실행 중 세션의 제목이나 브랜치(list_sessions 의 title, branch)",
+    )
+    judged.add_argument(
+        "--idle",
+        action="append",
+        default=[],
+        help="프로세스를 끝내도 되는 쉬는 세션의 id(list_sessions 의 sessionId)",
+    )
+    ended = commands.add_parser("end-holders", help="워크트리를 쥔 쉬는 세션의 프로세스를 끝낸다")
+    ended.add_argument("path")
+    ended.add_argument("sessions", nargs="+")
     removed = commands.add_parser("remove", help="워크트리 후보 하나를 지운다")
     removed.add_argument("path")
     removed.add_argument("branch")
@@ -1927,9 +2315,16 @@ def main(
 def _dispatch(args: argparse.Namespace, root: Path, listing: list[Worktree], tools: Ops) -> int:
     """하위 명령 하나를 돌리고 그 종료 코드를 돌려준다."""
     command: str = args.command
+    # 이 도구를 부른 세션. 앱이 넣은 환경을 셸과 uv 를 거쳐 물려받는다
+    own = os.environ.get(SESSION_ENV)
     if command == "judge":
         running: list[str] = args.running
-        return _judge_all(root, listing, running, tools)
+        requested: list[str] = args.idle
+        idle = frozenset(session for session in requested if session != own)
+        return _judge_all(root, listing, running, idle, tools)
+    if command == "end-holders":
+        sessions: list[str] = args.sessions
+        return _end_holders(root, listing, args.path, sessions, own, tools)
     if command == "remove":
         return _remove(root, listing, args.path, args.branch, args.head, tools)
     if command == "remove-stray":
