@@ -47,7 +47,8 @@ run() 과 resume() 이 에이전트를 부르기 전에 대화를 두고 하는 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Generator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -61,6 +62,7 @@ from agent_os.core.ports import (
     NotContinuable,
     PluginError,
     Trace,
+    TraceDamagedBeforePrincipal,
     TraceStore,
     UnknownEvent,
     run_status,
@@ -223,10 +225,11 @@ def gather_continued(
     짓는다. 지도가 있으면 바로가기를 따라가고(`_follow`) 없으면 앞 실행을 하나씩 따라간다(`_walk`).
     run() 이 이것 전부를 한 번의 스레드 호출로 부르므로 판정 하나를 떼어 루프 위로 옮기지 않는다.
 
-    규칙: 없음(`Absent`) → 손상(`PluginError`) → 다른 주체(`DifferentPrincipal`) → 끝나지 않음
-    (`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수 없어서이고,
-    주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼 숨기려면 남의
-    실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023).
+    규칙: 없음(`Absent`) → 손상(`TraceDamagedBeforePrincipal`) → 다른 주체(`DifferentPrincipal`) →
+    끝나지 않음(`NotContinuable`)이다. 손상이 주체보다 앞인 이유는 손상된 트레이스의 주체를 믿을 수
+    없어서이고, 주체가 끝나지 않음보다 앞인 이유는 최종 사용자 경로가 남의 실행을 없는 실행처럼
+    숨기려면 남의 실행의 상태가 먼저 드러나면 안 되기 때문이다(ADR 0023). 손상이 하위 타입인 이유는
+    `TraceDamagedBeforePrincipal` 의 독스트링이다.
 
     예외: 앞 실행 자신의 기록 규칙 위반(앞 실행 필드의 패턴, 요약 이벤트의 자리와 개수, 지도의
     패턴과 일관성)은 손상이지만 고리의 판정에 들어 주체와 끝남 뒤에 선다. 최종 사용자 경로에서
@@ -239,7 +242,8 @@ def gather_continued(
     """
     if not is_run_id(previous):
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
-    link = read_link(trace, previous)
+    with before_principal():
+        link = read_link(trace, previous)
     if link is None:
         raise Absent(f"이어 갈 앞 실행이 없다: {previous}")
     if link.started.principal != principal:
@@ -311,6 +315,26 @@ def resumed_conversation(trace: TraceStore, own: Link) -> Conversation:
     finished = _finished_of(link, started.principal)
     gathered = _walk(trace, link, finished, started.agent, started.principal, summary=own.summary)
     return gathered.conversation()
+
+
+@contextmanager
+def before_principal() -> Generator[None]:
+    """요청이 가리킨 실행을 그 주체와 견주기 전에 만난 손상을 하위 타입으로 바꾼다.
+
+    여는 함수는 둘이다. 이어 가기의 앞 실행 읽기(`gather_continued`)와 자기 실행 읽기의 단건
+    읽기·기록 규칙(`run._own_link`. 없음의 판정을 사이에 두고 두 번 연다)이다. 안에서 나는 것은
+    어댑터가 감싼 읽기 실패와 단건 읽기의 손상과 기록 규칙의 위반이고, 모두 기반 타입이다. 문구는
+    그대로다. 이 자리만 따로 세우는 이유와 주체를 확인한 뒤의 읽기(고리와 바로가기, 재개의 앞
+    실행)를 열지 않는 이유는 `TraceDamagedBeforePrincipal` 의 독스트링이 원천이다. 바꾸는 것은 기반
+    타입뿐이고 하위 타입은 그대로 올린다 — 안에 4xx 를 내는 판정이 들어와도 그 갈래가 손상으로
+    바뀌지 않고, 이미 손상인 것을 다시 감싸지 않는다.
+    """
+    try:
+        yield
+    except PluginError as error:
+        if type(error) is not PluginError:
+            raise
+        raise TraceDamagedBeforePrincipal(str(error)) from error
 
 
 def read_link(trace: TraceStore, run_id: RunId) -> Link | None:

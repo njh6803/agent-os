@@ -4,7 +4,8 @@
     "document-skills@anthropic-agent-skills": false,
     "example-skills@anthropic-agent-skills": false,
     "skill-creator@claude-plugins-official": false,
-    "code-review@claude-plugins-official": false
+    "code-review@claude-plugins-official": false,
+    "slack@claude-plugins-official": false
   },
   "skillOverrides": {
     "jira-commit": "off",
