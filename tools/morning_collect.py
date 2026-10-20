@@ -1074,9 +1074,10 @@ def _start_piece(p: token_report.Period) -> Piece:
 
 def _summary_piece(p: token_report.Period) -> Piece:
     """그날의 요약 표(호출 수, 비중, 40만을 넘은 세션, 압축, 쉰 뒤 캐시 재작성, 캐시 효율, 사람이
-    열지 않은 세션의 시작, 큰 도구 결과 수, 계정별 비용)와 확인할 수치로 남기는 값. 값에는 표에 없는
-    시작 스킬 목록 글자 수(구성을 아는 사람이 연 세션의 중앙값, `token:skill_chars`)도 들고, 구하지
-    못한 값은 남기지 않는다(`Collected.value`)."""
+    열지 않은 세션의 시작, 큰 도구 결과 수, 계정별 비용)와 확인할 수치로 남기는 값. 값에는 요약 표에
+    없는 시작 스킬 목록 글자 수(구성을 아는 사람이 연 세션의 중앙값, `token:skill_chars`. 시작 구성
+    표(`start_rows`)의 스킬 목록 합 행이 적는 중앙값이다)도 들고, 구하지 못한 값은 남기지
+    않는다(`Collected.value`)."""
     got = Collected()
     total = p.total.cost
     main = p.kinds["메인 세션"].cost

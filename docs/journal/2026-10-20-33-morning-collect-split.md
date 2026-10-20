@@ -361,3 +361,67 @@ bea74a07의 옛 판정 아홉을 적은 스크래치 파일이다.
 다시 돌린 명령: 시험 두 파일 109 통과, ruff 둘 초록(전체), pyright 0(바뀐 다섯 파일). ruff가 표준 축 반영으로 더한 시험의
 `json_int(True)`를 참거짓 위치 인자(FBT003)로 잡아 `json_int(json.loads("true"))`로 고쳤다. 같은 값을 JSON 글에서 읽어
 넘기는 것이라 시험의 뜻은 같다. 명세 축 반영 뒤의 검사는 병합 커밋의 pre-commit으로 갈음한다.
+
+## 병합 커밋과 main 합치기
+
+커밋 직전 `tools/sibling_overlap.py`가 origin/main이 30949cf(PR #327, 워크트리 정리)로 움직였고 그 커밋이 일지 2026-10-20-31을
+더해, 이 일지(29)가 이름순으로 앞서 다음 세션이 지나친다고 알렸다. `--move`로 33으로 옮겼고, 도구가 머리 줄과 시험 독스트링의
+인용을 고쳤다. 옮기지 않는 꼴(줄인 번호, 조사가 붙은 번호)은 grep으로 0이었다. PR #327이 바꾼 파일은 `tidy_checkouts`와 운영
+문서의 워크트리 정리 규약이라 이 브랜치가 따르는 절차에 닿지 않았다.
+
+병합 커밋 `c1a4fbf1`(bea74a07을 합친 것). pre-commit은 모두 Passed였다(pytest 265.1초, web-verify 338.4초, 카나리아 명세와
+헌법 판은 해당 파일 없음으로 Skipped). pre-commit이 병합 커밋에서는 충돌 파일만 본다고 알려(`Checking merge-conflict files
+only`) ruff 둘은 `tools/morning_collect.py`와 `tests/tools/test_morning_collect.py`만 봤다. 나머지 바뀐 파일은 그 앞에 저장소
+전체로 손으로 쳐 초록이었고, 그 뒤에 고친 것은 `tools/morning_collect.py`뿐이다. 인용 대조 경고 5건은 고쳐 없앤 옛 문장을
+기록으로 인용한 자리다.
+
+커밋 뒤 인계 계기가 왔다(컨텍스트 253,171). 셀프 리뷰 직전과 같이 곁 세션이라 `next-session`의 인계하지 않는 때에 들어 넘기지
+않았다.
+
+main 합치기. 앱의 `sync_with_base_branch`로 30949cf를 합쳐 병합 커밋 `b01b4224`가 생겼다(충돌 없음). 시험 두 파일과
+`tests/tools/test_tidy_checkouts.py`가 303 통과였다.
+
+형제 세션의 요청. `chore/morning-report-full-detail` 세션(곧 `chore/morning-report-split`)이 세션 사이 메시지로 알렸다. 원문의 앞
+두 문장:
+
+> 사용자 요청으로 아침 보고 형식을 다시 짜는 작업(브랜치 chore/morning-report-split)을 시작합니다. 그 세션이 나누고 있는
+> tools/morning_collect.py와 tools/morning_report.py를 고치게 됩니다.
+
+같은 메시지가 그쪽은 이 PR이 병합된 뒤에 코드를 고치니 병합 커밋 SHA를 그 세션에 알려 달라고 했고, 나누는 범위는 바꿀 필요가
+없다고 했다. 병합 뒤에 알린다.
+
+## PR 직전 리뷰
+
+범위: base `30949cfc`(지금 origin/main), 파일 여섯, 커밋 셋(`3c90e0a9`, 병합 `c1a4fbf1`·`b01b4224`). CodeRabbit CLI는 좌석이
+없어 `bug-perf-review` 서브에이전트와 내장 `/security-review`를 나란히 돌렸다. `bug-perf-review`에는 두 회차 셀프 리뷰의 고친
+것 줄에 적은 새 문장 열다섯과 일지의 판단 넷을 밀 주장으로 넘겼다.
+
+보안(`/security-review`). 발견 없음. 후보가 없어 거짓 양성 거르기는 돌지 않았다. 추적한 흐름: `_run`은 옛 판을 그대로 옮겨
+인자 목록·`shell` 없음·60초 제한·실패 시 None이 같고, gh·git·tasklist 명령 아홉의 인자가 bea74a07과 같다.
+`branch_subject`·`main_text`의 인자는 늘 `origin`으로 시작해 옵션으로 읽힐 수 없고, PR 번호는 `json_int`로 거른 정수다. 수집
+JSON에 쓰는 것은 옛 판과 같고, 새 `HookScan.firings`는 가르지 못한 막음의 건수를 셀 때만 써 훅이 막은 이유의 머리는 옛 판처럼
+남지 않는다.
+
+버그·성능(`bug-perf-review`, 호출 40에서 멈춤). 옛 판과 갈리는 길은 없었다. 두 판의 모든 함수를 AST로 견줘 옮긴 함수는 이름만
+다르고 본문이 같았고, 바뀐 함수는 줄 단위로 대 값과 표·줄의 차례가 같았다고 했다. 가짜 `subprocess.run`으로 이 PC의 실제
+장부(호출 102,499건)와 `--day 2026-10-19`를 세 갈래(모든 명령이 OSError, 모든 명령이 빈 출력, 병합 PR·티켓·`## 다음(보류)`
+일지·워크트리 네 꼴을 넣은 입력)로 돌려 수집 JSON, 목록, 바깥 호출의 종류·횟수가 같았다. 호출 순서만 달랐다(`_gather_worktrees`가
+앞으로 옴). 스윕 갈래의 병합 PR과 장부 호출이 있는 티켓 PR은 그 하네스가 밟지 못해 줄 단위 대조로만 닫았다. 밀 주장 열아홉
+가운데 어긋난 것은 하나였다.
+- [Minor, 유효] `_summary_piece` 독스트링의 "표에 없는"은 요약 표에만 참이다. 같은 값이 시작 구성 표(`start_rows`)의 스킬 목록
+  합 행에 있다. 읽기에 따라 맞는 문장이라 확신은 낮다고 했다.
+- 오탐 셋: `worktree_list`가 git 실패를 빈 목록으로 돌리는 것, `_gather_hooks`가 훅 파일의 `UnicodeDecodeError`를 잡지 않는 것,
+  바깥 호출 순서. 셋 다 옛 판과 같고, 앞의 것은 `morning_sources` 독스트링이 밝혀 둔다.
+- 따라가지 못한 것: 시험 두 파일의 diff(통과만 확인), 옛 함수 이름을 인용하는 다른 문서, `token_report.py`의 `gh pr` 걸림.
+
+PR 직전 리뷰에서 고친 것:
+- `_summary_piece` 독스트링의 새 문장: "값에는 요약 표에 없는 시작 스킬 목록 글자 수(구성을 아는 사람이 연 세션의 중앙값,
+  `token:skill_chars`. 시작 구성 표(`start_rows`)의 스킬 목록 합 행이 적는 중앙값이다)도 들고, 구하지 못한 값은 남기지 않는다
+  (`Collected.value`)." 사람이 연 세션 넷(구성 앎 셋, 모름 하나)과 사람이 열지 않은 세션 하나를 넣은 기간으로 두 함수를 불러
+  `token:skill_chars` 250과 그 행의 `250자`가 같았고, 구성을 아는 세션이 없는 기간에서는 값도 표도 없었다(스크래치 탐침).
+- 따라가지 못한 것 가운데 둘을 손으로 봤다. 살아 있는 문서(rules, 스킬, 헌법, ADR, 계획, 대기열, `tools/`, `tests/tools/`)를 옛 이름
+  (`_latest_journal`, `_tickets`, `_works_table`, `_sweep_section`, `_concurrency_buckets`, `_load_line`)으로 grep하니 대기열 380행만
+  걸렸고, 그 행은 둘째 회차에 남긴 기록 칸이다. `token_report.py`의 `gh pr` 걸림은 독스트링과 명령 낱말을 풀이하는 함수의
+  독스트링이다(위 도구 수 판단의 grep).
+
+PR 직전 리뷰에서 남긴 것과 이유: 없음(오탐 셋은 위의 까닭).
