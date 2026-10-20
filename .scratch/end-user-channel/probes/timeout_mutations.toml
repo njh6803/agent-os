@@ -76,14 +76,15 @@ new = '''
 name = "돌아오기만 하면 결말로 본다"
 tests = ["tests/core/test_run.py", "-k", "run_finished_없이_돌아온"]
 expect = "red"
+expect_output = ["Right contains one more item: 'run_failed'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-                self._settled = self._paused or isinstance(last, RunFinished)
+        self._settled = self._settled or (finished and self._held is None)
 '''
 new = '''
-                self._settled = True
+        self._settled = True
 '''
 
 # --- 채널: 받은 값을 core 에 넘기는 네 자리 -----------------------------------------------------
@@ -128,12 +129,14 @@ file = "src/agent_os/channel/http/end_user.py"
 old = '''
             body.request,
             user.principal,
+            previous_run=previous_run,
             visible_agents=user.site.agents,
             timeout_seconds=run_timeout_seconds,
 '''
 new = '''
             body.request,
             user.principal,
+            previous_run=previous_run,
             visible_agents=user.site.agents,
 '''
 

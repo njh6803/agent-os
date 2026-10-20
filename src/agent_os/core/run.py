@@ -58,26 +58,44 @@ MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트�
 
 실행 타임아웃(ADR 0014 의 2026-10-05 이력 "실행에 타임아웃이 생긴다"): 시작 이벤트(재개에서는 결정
 이벤트)를 쓴 뒤 정한 시간 안에 결말이 나지 않으면 run_failed("실행이 N초 안에 끝나지 않았다")로
-끝난다. 자리는 진입점 둘이고, 진입점이 `anyio.fail_after` 를 열어 몸통(`_Body`) 하나를 감싼다 —
-몸통은 이어 가기의 요약 호출부터 결말까지다. 기한이 오면 취소가 안쪽 await 에 들어가고, 취소는
-BaseException 이라 몸통과 요약의 `except Exception` 을 지나쳐 범위를 나오며 `TimeoutError` 가 된다.
-진입점은 그것을 잡아 몸통에게 결말이 이미 정해졌는지 묻고(`_Body.deadline_failure`), 아니면
-run_failed 를 쓴다. 그래서 요약 중이었어도 같은 메시지이고, 결말을 쓴 뒤 도구 연결을 닫다 기한이
-와도 결말이 둘이 되지 않는다. 부르던 도구는 취소되어 tool_called 가 없고, 그때까지 쌓인 런타임
-이벤트(재개 이벤트 따위)는 결말 앞에 흘린다. 테스트가 기한을 떨어뜨린 자리는 요약 호출, 모델 호출,
-도구 호출, 도구 연결의 닫기이고 도구 연결을 여는 자리는 같은 모양이라는 어림이다. 재개마다 다시
-센다 — 멈춰 있는 시간은 세지 않는다(ADR 0009). 기한은 시계 포트가 아니라 이벤트 루프의 시계로 센다.
-범위가 yield 를 건너므로 부르는 쪽은 이벤트 사이에 await 하지 않는다 — 도구 연결의 취소 범위가 이미
-요구하던 것이다(`.claude/rules/channel.md`).
+끝난다. 자리는 진입점 둘이고, 진입점이 `anyio.move_on_after` 를 열어 몸통(`_Body`) 하나를 감싼다
+— 몸통은 이어 가기의 요약 호출부터 결말까지다. 기한이 오면 취소가 안쪽 await 에 들어가고, 취소는
+BaseException 이라 몸통과 요약의 `except Exception` 을 지나쳐 범위가 받는다. 진입점은 범위가 실제로
+취소를 받았는지(`cancelled_caught`)로 기한을 본다 — 예외의 타입으로 보면 디스크나 네트워크
+드라이브가 낸 `TimeoutError`(ETIMEDOUT)도 기한으로 읽힌다. 그 TimeoutError 는 다른 예외와 같다 —
+몸통이 받는 자리(연결, 에이전트, 결말 전 쓰기)에서는 그 자리의 원인이고, 몸통이 받지 않는 자리(요약
+이벤트 쓰기, 결말 쓰기)에서는 결말 없이 올라온다.
+기한이면 몸통에게 결말을 묻고(`_Body.deadline_failure`) 이미 썼으면 아무것도, 붙잡은 실패가 있으면
+그것을, 아니면 시간 초과를 쓴다. 그래서 요약 중이었어도 같은 메시지이고, 결말을 쓴 뒤 도구 연결을
+닫다 기한이 와도 결말이 둘이 되지 않는다. 부르던 도구는 취소되어 tool_called 가 없고, 그때까지 쌓인
+런타임 이벤트(재개 이벤트 따위)는 결말 앞에 흘린다. 테스트가 기한을 떨어뜨린 자리는 요약 호출, 모델
+호출, 도구 호출, 도구 연결의 닫기이고 도구 연결을 여는 자리는 같은 모양이라는 어림이다. 재개마다
+다시 센다 — 멈춰 있는 시간은 세지 않는다(ADR 0009). 기한은 시계 포트가 아니라 이벤트 루프의 시계로
+센다. 범위가 yield 를 건너므로 부르는 쪽은 이벤트 사이에 await 하지 않는다 — 도구 연결의 취소 범위가
+이미 요구하던 것이다(`.claude/rules/channel.md`).
+
+실패 원인(ADR 0031, end-user-continuation 명세 "실패 원인"): 런타임이 쓰는 run_failed 는 모두
+원인 아홉 가운데 하나를 들고, 원인은 실패가 처음 생긴 자리로 정한다. 요약 호출은 대화 요약, 기한은
+시간 초과다(요약 도중이어도). 몸통이 실패를 받는 자리는 닫힌 열거(`_Site`: 연결, 에이전트, 연결 안의
+나머지, 결말 전 쓰기)이고 자리에서 원인으로 가는 갈래(`_cause_at`)에 기본 갈래가 없다. 에이전트
+자리의 예외는 런타임이 에이전트에게 던진 그 객체(`_Thrown`)면 던진 자리의 원인이고 아니면 에이전트
+코드다 — 타입이 아니라 동일성으로 가른다. 런타임이 에이전트에게 던지는 예외를 더하는 변경은 던지는
+자리의 기억과 그 원인을 단언하는 테스트를 함께 더한다. 타입 검사가 보지 못하는 빠짐은 그것 하나다.
+먼저 난 실패가 결말이다 — 에이전트 몫의 실패와 선언 확인의 실패는 도구 연결을 닫기 전에
+붙잡고(`_Body._hold`), 런타임이 에이전트 자리에서 던진 실패는 에이전트를 닫기 전에 붙잡는다. 닫기의
+예외와 닫는 도중의 기한은 그것을 바꾸지 못한다. 결말을 쓴 뒤 닫기가 실패하면 run_failed 를
+덧붙이지 않는다(대가는 `_Body._connected`). 결말 전 쓰기가 한 번 실패한 실행은 뒤의 run_failed 가
+그 밖을 든다 — 일시정지를 쓰지 못한 실행도 멈춘 것이 아니라 그렇다. run_failed 까지 쓰지 못하면
+원인도 결말도 없이 예외가 올라온다.
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, AsyncIterator, Mapping, Sequence
-from contextlib import aclosing, asynccontextmanager, suppress
+from collections.abc import AsyncGenerator, AsyncIterator, Generator, Mapping, Sequence
+from contextlib import aclosing, asynccontextmanager, contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
-from typing import NoReturn, TypeGuard, assert_never
+from typing import Literal, NoReturn, TypeGuard, assert_never, get_args
 
 import anyio
 import anyio.to_thread
@@ -96,7 +114,7 @@ from agent_os.core.continuation import (
     resumed_conversation,
     summarize,
 )
-from agent_os.core.loop import ModelCaller, model_caller, run_loop
+from agent_os.core.loop import LoopLimitExceeded, ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, message_from, reply_from
 from agent_os.core.ports import (
     Absent,
@@ -121,9 +139,11 @@ from agent_os.sdk import (
     ApprovalDenied,
     ApprovalGranted,
     BaseAgent,
+    BaseEvent,
     Conversation,
     ConversationSummarized,
     Event,
+    FailureCause,
     Json,
     LlmCalled,
     McpServer,
@@ -171,6 +191,74 @@ _NOT_REPLAYED = (
     RunResumed,
     ConversationSummarized,
 )
+
+# sdk 의 이벤트 종류들. `Event` 는 판별자가 붙은 Annotated 합이라 isinstance 에 바로 쓸 수 없어 그
+# 합에서 꺼낸다. 에이전트가 이벤트가 아닌 값을 냈는지 보는 데만 쓴다(`_reject_stray`).
+_EVENT_KINDS: tuple[type[BaseEvent], ...] = get_args(get_args(Event)[0])
+
+_NO_FINISH = "에이전트가 run_finished 없이 끝났다"
+
+# 몸통이 실패를 받는 자리. 닫힌 열거다 — 도구 연결(연결에 들어가는 동안과 선언 확인),
+# 에이전트(에이전트의 순회에서 빠져나온 예외), 연결 안의 나머지(그 둘 밖에서 연결 안의 몫이
+# 런타임 자신의 예외로 끝난 것, 이를테면 컨텍스트를 만들다 터진 것), 결말 전의 트레이스 쓰기.
+# 요약과 기한은 따로 선 자리라 여기 없고, 도구 연결의 닫기는 자리가 아니다(연결 안의 몫이 끝나면
+# 결말을 붙잡았거나 이미 썼으므로 버린다).
+# 자리에서 원인으로 가는 갈래는 `_cause_at` 하나이고 기본 갈래가 없어, 자리를 더하면 원인을 정하지
+# 않은 갈래가 타입 검사에서 빨개진다 — 그것이 실패 원인의 목록을 다시 볼 계기다(ADR 0031,
+# end-user-continuation 명세 "실패 원인").
+type _Site = Literal["connection", "agent", "inside", "write"]
+
+
+class _Thrown:
+    """런타임이 이 실행 안에서 에이전트에게 던진 예외와 그 원인. 몸통과 수명이 같다.
+
+    에이전트에서 빠져나온 예외가 여기 든 객체 그 자체(`is`)면 그 원인이고 아니면 에이전트 코드다.
+    잡아 그대로 다시 던지면 같은 객체라 원인이 남고, 감싸거나 다른 예외로 바꾸거나 예외 그룹에
+    넣으면 에이전트 코드다. `asyncio.TaskGroup` 안에서 불러 그룹으로 올라온 것도 그렇다 — 그룹을
+    고른 것은 에이전트다. 타입으로 가르지 않는 이유는 `ToolError` 가 sdk 의 공개 타입이라
+    에이전트가 스스로 던질 수 있어서이고, 마지막 하나가 아니라 전부를 드는 이유는
+    앞서 받은 예외를 나중에 다시 던지는 에이전트가 있어서다. 에이전트가 받는 예외를 런타임의 새
+    타입으로 감싸지 않는다 — 에이전트가 잡는 이름이 바뀐다.
+
+    타입 검사가 보지 못하는 것: 에이전트 자리 안에서 런타임이 새로 던지는 예외를 던지는 자리에서
+    여기 기억하지 않으면 그 예외는 에이전트 코드로 간다. 그래서 런타임이 에이전트에게 던지는 예외를
+    더하는 변경은 여기의 기억과 그 원인을 단언하는 테스트를 함께 더한다. 트레이스백을 붙잡는 비용은
+    재지 않았고, 실행이 끝나면 버린다.
+    """
+
+    def __init__(self) -> None:
+        self._thrown: list[tuple[Exception, FailureCause]] = []
+
+    def remember[E: Exception](self, error: E, cause: FailureCause) -> E:
+        """던질 예외를 원인과 함께 적고 그대로 돌려준다. 이미 적힌 객체면 처음의 원인이 남는다."""
+        if self.cause_of(error) is None:
+            self._thrown.append((error, cause))
+        return error
+
+    @contextmanager
+    def blamed(self, cause: FailureCause) -> Generator[None]:
+        """이 안에서 나는 예외를 그 원인으로 적고 그 객체를 그대로 올린다."""
+        try:
+            yield
+        except Exception as error:
+            self.remember(error, cause)
+            raise
+
+    def cause_of(self, error: BaseException) -> FailureCause | None:
+        return next((cause for thrown, cause in self._thrown if thrown is error), None)
+
+
+def _cause_at(site: _Site, error: Exception, thrown: _Thrown) -> FailureCause:
+    """몸통이 받은 실패의 원인. 자리마다 갈래 하나이고 기본 갈래가 없다(`_Site` 의 주석)."""
+    match site:
+        case "connection":
+            return "tool_connection"
+        case "agent":
+            return thrown.cause_of(error) or "agent_code"
+        case "inside" | "write":
+            return "other"
+        case _:
+            assert_never(site)
 
 
 @dataclass(frozen=True)
@@ -287,8 +375,10 @@ class _Context:
         replay: Replay,
         verdict: _Verdict | None,
         conversation: Conversation,
+        thrown: _Thrown,
     ) -> None:
         self.run_id = started.run_id
+        self._thrown = thrown
         self.conversation = conversation
         self._started_at = started.ts
         self._paused = False
@@ -327,9 +417,15 @@ class _Context:
         """프롬프트와 "첫 턴인가"는 이 호출의 클로저가 들고 있다.
 
         인스턴스에 두면 에이전트가 llm() 을 겹쳐 부를 때 서로 덮어써 대조가 엉뚱해진다.
+
+        모델에 도구를 붙이는 것은 루프 밖이지만 모델 포트에 닿는 몫이라 모델 호출의 실패다. 루프
+        상한의 예외는 `run_loop` 가 내고, 그 안에서 도는 것은 런타임의 클로저뿐이라 여기서 받은 그
+        예외는 언제나 런타임의 것이다.
         """
         self._stay_paused()
-        invoke = model_caller(self._model, self._tools.tools())
+        specs = self._tools.tools()
+        with self._thrown.blamed("model_call"):
+            invoke = model_caller(self._model, specs)
         first = True
 
         async def ask(messages: Sequence[BaseMessage]) -> AIMessage:
@@ -337,13 +433,17 @@ class _Context:
             turn, first = prompt if first else "", False
             return await self._ask(invoke, messages, turn)
 
-        return await run_loop(ask, prompt, call=self._call)
+        try:
+            return await run_loop(ask, prompt, call=self._call)
+        except LoopLimitExceeded as error:
+            self._thrown.remember(error, "loop_limit")
+            raise
 
     async def tool(self, name: str, **args: Json) -> str:
-        """도구가 ok=false 를 돌려주든 예외를 던지든 에이전트에게는 같은 ToolError 다."""
+        """도구가 ok=false 를 돌려주든 예외를 던지든 거부됐든 에이전트에게는 같은 ToolError 다."""
         result = await self._call(name, args)
         if not result.ok:
-            raise ToolError(result.content)
+            raise self._thrown.remember(ToolError(result.content), "tool_failure")
         return result.content
 
     def take_events(self) -> list[Event]:
@@ -352,8 +452,12 @@ class _Context:
         return taken
 
     def replay_event(self, event: Event) -> None:
-        """재생 구간에서 에이전트가 낸 이벤트를 기록과 맞춰 소비한다. 조립부가 부른다."""
-        self._replay.take_agent_event(event)
+        """재생 구간에서 에이전트가 낸 이벤트를 기록과 맞춰 소비한다. 조립부가 부른다.
+
+        몸통이 에이전트 밖에서 내는 실패이지만 어긋남은 재개 대조다.
+        """
+        with self._thrown.blamed("resume_mismatch"):
+            self._replay.take_agent_event(event)
 
     async def _ask(
         self, invoke: ModelCaller, messages: Sequence[BaseMessage], prompt: str
@@ -363,17 +467,20 @@ class _Context:
         prompt 는 루프의 첫 턴에만 차 있고 둘째 턴부터는 빈 문자열이다. 둘째 턴부터의 입력은
         기록에서 파생되므로 같은 값을 턴마다 되풀이해 적지 않는다(ADR 0009 의 2026-09-22 이력).
         """
-        replayed = self._replay.take_model(prompt)
+        with self._thrown.blamed("resume_mismatch"):
+            replayed = self._replay.take_model(prompt)
         if replayed is not None:
             return message_from(replayed)
         if self._verdict is not None:
-            raise Mismatch(
+            mismatch = Mismatch(
                 f"멈춘 도구 호출 {self._verdict.paused.tool} 대신 모델을 부르려 했다. "
                 "에이전트가 바뀌었다"
             )
+            raise self._thrown.remember(mismatch, "resume_mismatch")
         self._resume()
-        message = await invoke(messages)
-        self._record_model_call(reply_from(message), prompt)
+        with self._thrown.blamed("model_call"):
+            message = await invoke(messages)
+            self._record_model_call(reply_from(message), prompt)
         return message
 
     async def _call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
@@ -388,11 +495,13 @@ class _Context:
         """
         self._stay_paused()
         masked = _mask(name, args, self._policy.secrets)
-        replayed = self._replay.take_tool(name, masked)
+        with self._thrown.blamed("resume_mismatch"):
+            replayed = self._replay.take_tool(name, masked)
         if replayed is not None:
             return ToolResult(ok=replayed.ok, content=replayed.content)
         if self._verdict is not None:
-            _require_paused_call(self._verdict.paused, name, masked)
+            with self._thrown.blamed("resume_mismatch"):
+                _require_paused_call(self._verdict.paused, name, masked)
         verdict = self._take_verdict()
         self._resume()
         if verdict is None:
@@ -407,7 +516,8 @@ class _Context:
                     pass
                 case _:
                     assert_never(verdict.decision)
-        _reject_masked_args(name, args, self._policy.secrets)
+        with self._thrown.blamed("resume_mismatch"):
+            _reject_masked_args(name, args, self._policy.secrets)
         result = await _call_safely(self._tools, name, args)
         self._record_tool_call(name, masked, result)
         return result
@@ -557,11 +667,10 @@ async def run(
         clock=clock,
     )
     seconds = _timeout_of(timeout_seconds)
-    try:
-        with anyio.fail_after(seconds):
-            async for event in body.events():
-                yield event
-    except TimeoutError:
+    with anyio.move_on_after(seconds) as deadline:
+        async for event in body.events():
+            yield event
+    if deadline.cancelled_caught:
         failure = body.deadline_failure(seconds)
         if failure is not None:
             trace.write(failure)
@@ -630,11 +739,10 @@ async def resume(
         clock=clock,
     )
     seconds = _timeout_of(timeout_seconds)
-    try:
-        with anyio.fail_after(seconds):
-            async for event in body.events():
-                yield event
-    except TimeoutError:
+    with anyio.move_on_after(seconds) as deadline:
+        async for event in body.events():
+            yield event
+    if deadline.cancelled_caught:
         failure = body.deadline_failure(seconds)
         if failure is not None:
             trace.write(failure)
@@ -676,22 +784,38 @@ class _Body:
         # 런타임이 실제로 게이트에서 멈췄는가. 이벤트 종류로 판정하지 않는 이유는 에이전트가
         # run_paused 를 지어내 yield 할 수 있기 때문이다. 에이전트는 신뢰 경계 밖이다.
         self._paused = False
-        # 결말이 정해졌는가. 몸통이 run_failed 를 썼거나, 런타임이 멈췄거나, 에이전트가
-        # run_finished 를 마지막으로 내고 돌아왔다. 그 뒤에 남는 것은 도구 연결의 정리뿐이다.
+        # 결말을 썼는가. 몸통이 run_failed 를 썼거나, 런타임이 멈췄거나, 에이전트가 run_finished 를
+        # 마지막으로 내고 돌아왔다. 그 뒤에 남는 것은 도구 연결의 정리뿐이고, 그 정리의 예외도
+        # 기한도 아무것도 덧붙이지 않는다.
         self._settled = False
+        # 쓸 결말을 붙잡았는가. 에이전트 몫의 실패와 선언 확인의 실패를 도구 연결을 닫기 전에
+        # 붙잡아, 닫은 뒤에 쓴다. 먼저 붙잡은 것이 이긴다. `_settled` 와 한 표지로 합치지 않는
+        # 이유는, 붙잡은 실패를 쓰기 전(닫는 도중)에 기한이 오면 진입점이 시간 초과 대신 이것을 써야
+        # 해서다.
+        self._held: RunFailed | None = None
+        # 런타임이 에이전트에게 던진 예외. 원인을 가르는 데 쓴다(`_Thrown`).
+        self._thrown = _Thrown()
+        # 몸통이 트레이스에 쓴 마지막 이벤트. 결말 없이 돌아왔는지를 이것으로 본다.
+        self._last: Event | None = None
 
     def deadline_failure(self, seconds: float) -> RunFailed | None:
-        """기한이 몸통을 끊은 실행의 결말(질의). 결말이 이미 정해졌으면 없음이다.
+        """기한이 몸통을 끊은 실행의 결말(질의). 결말을 이미 썼으면 없음이다.
 
         결말을 쓴 뒤 도구 연결을 닫는 데 기한이 지난 것은 실행이 시간 안에 끝나지 않은 것이
         아니다 — 범위는 결말까지다. 덧붙이면 결말이 둘이 되고 멈춘 실행은 재개할 수 없게 된다.
-        에이전트가 결말 모양의 이벤트(지어낸 run_paused, 아직 돌아오지 않은 채 낸 run_finished)를
-        낸 뒤에 걸린 것은 결말이 정해지지 않은 것이라 실패로 끝낸다. 몸통의 끝 판정과 같은 기준이다.
+        붙잡은 실패가 있으면(그 뒤 닫는 도중에 기한이 왔다) 결말은 그것이다 — 먼저 난 실패가
+        결말이다. 에이전트가 결말 모양의 이벤트(지어낸 run_paused, 아직 돌아오지 않은 채 낸
+        run_finished)를 낸 뒤에 걸린 것은 결말이 정해지지 않은 것이라 실패로 끝낸다. 몸통의 끝
+        판정과 같은 기준이다.
         """
         if self._settled:
             return None
+        if self._held is not None:
+            return self._held
         error = f"실행이 {seconds:g}초 안에 끝나지 않았다"
-        return RunFailed(run_id=self._started.run_id, ts=self._clock.now(), error=error)
+        return RunFailed(
+            run_id=self._started.run_id, ts=self._clock.now(), error=error, cause="timeout"
+        )
 
     async def events(self) -> AsyncIterator[Event]:
         """요약(필요하면)과 에이전트의 이벤트와 결말. 런타임이 내는 것은 트레이스에 쓴 뒤에 낸다."""
@@ -711,73 +835,144 @@ class _Body:
         self._trace.write(event)
         return event
 
+    def _hold(self, error: Exception, site: _Site) -> None:
+        """자리에서 받은 실패를 쓸 결말로 붙잡는다. 메시지와 원인이 함께 그 실패의 것이다."""
+        self._hold_failure(_describe(error), _cause_at(site, error, self._thrown))
+
+    @contextmanager
+    def _holding(self, site: _Site, ctx: _Context | None = None) -> Generator[None]:
+        """이 안에서 빠져나온 예외를 그 자리의 실패로 붙잡고 그대로 올린다. 멈춘 실행이면 붙잡지
+        않는다 — 신호를 감싸 올린 예외는 실패가 아니다."""
+        try:
+            yield
+        except Exception as error:
+            if ctx is None or not ctx.paused:
+                self._hold(error, site)
+            raise
+
+    def _hold_failure(self, error: str, cause: FailureCause) -> None:
+        """먼저 붙잡은 것이 이기고, 결말을 이미 썼으면 붙잡지 않는다 — 뒤따른 실패는 버린다."""
+        if self._held is None and not self._settled:
+            self._held = RunFailed(
+                run_id=self._started.run_id, ts=self._clock.now(), error=error, cause=cause
+            )
+
+    def _write_held(self) -> RunFailed | None:
+        """붙잡은 결말을 쓴다. 쓸 것이 없거나 이미 썼으면 없음이다. 쓰기가 실패하면 결말
+        없음이다."""
+        held = self._held
+        if held is None or self._settled:
+            return None
+        self._settled = True
+        self._trace.write(held)
+        return held
+
     async def _drive(self, conversation: Conversation) -> AsyncIterator[Event]:
         """도구를 연결한 채 에이전트를 돌리고 결말을 붙인다."""
-        run_id = self._started.run_id
-        last: Event | None = None
-
-        async def execute() -> AsyncGenerator[Event]:
-            """실패해도 그때까지 쌓인 이벤트를 먼저 흘린다.
-
-            일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
-            run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
-            신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다.
-            """
-            prepared = self._prepared
-            async with self._tools.connect(prepared.servers) as connection:
-                _reject_unknown_declarations(prepared.policy, connection.tools())
-                ctx = _Context(
-                    self._started,
-                    self._clock,
-                    self._model,
-                    connection,
-                    prepared.policy,
-                    self._replay,
-                    self._verdict,
-                    conversation,
-                )
-                try:
-                    # 중계를 이 자리에서 닫는다. 아래에서 몸통이 `execute()` 를 닫는 까닭과 같다.
-                    async with aclosing(self._relay(prepared.instance, ctx)) as relayed:
-                        async for event in relayed:
-                            yield event
-                except _Paused:
-                    pass
-                except Exception:
-                    if not ctx.paused:
-                        raise
-                finally:
-                    self._paused = ctx.paused
-                    # 일시정지가 기록되면 결말이 정해진 것이다. 에이전트의 정리 코드(`_closing`)가
-                    # 기다리는 동안 기한이 와 이 자리를 예외로 지나가도 실패를 덧붙이지 않는다.
-                    self._settled = self._settled or ctx.paused
-                    for pending in ctx.take_events():
-                        yield pending
-                # 에이전트의 몫이 끝났다. 여기서부터는 도구 연결의 정리뿐이다. 마지막 이벤트가
-                # run_finished 가 아니면 결말은 아래의 run_failed 이고 아직 쓰지 않았다.
-                self._settled = self._paused or isinstance(last, RunFinished)
-
         # 안쪽 제너레이터를 여기서 닫는다. 트레이스 쓰기가 실패하면 예외가 이 몸통에서 나고, 그때
-        # execute() 는 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을
-        # 닫아 MCP 어댑터의 anyio 취소 범위가 깨진다 — 연결은 연 태스크가 닫아야 한다(http-channel
-        # 티켓 03).
-        async with aclosing(execute()) as executed:
+        # 안쪽은 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을 닫아
+        # MCP 어댑터의 anyio 취소 범위가 깨진다 — 연결은 연 태스크가 닫아야 한다(http-channel 티켓
+        # 03).
+        async with aclosing(self._connected(conversation)) as executed:
             try:
                 async for event in executed:
-                    last = event
+                    self._last = event
                     yield self._emit(event)
             except Exception as error:
-                # 멈춘 뒤에 나는 예외는 도구 연결의 정리뿐이다. 일시정지가 트레이스에 이미 있으므로
-                # 그 위에 run_failed 를 덧붙이지 않는다. 덧붙이면 재개가 그 실행을 실패로 읽는다.
-                if not self._paused:
-                    failed = RunFailed(run_id=run_id, ts=self._clock.now(), error=_describe(error))
-                    self._settled = True
-                    yield self._emit(failed)
+                # 결말 전의 트레이스 쓰기가 실패했다(그 밖). 닫기의 예외는 `_connected` 가 버려
+                # 여기 오지 않는다. 붙잡은 실패가 있으면 그것이 먼저다. 멈춘 실행이면 실패한 것은
+                # 일시정지까지의 쓰기다 — 일시정지는 쌓인 이벤트의 마지막이라 트레이스에 없고,
+                # 결말은 아직 정해지지 않았다.
+                if self._paused:
+                    self._settled = False
+                self._hold(error, "write")
+                failed = self._write_held()
+                if failed is not None:
+                    yield failed
                 return
-        if not self._paused and not isinstance(last, RunFinished):
-            error = "에이전트가 run_finished 없이 끝났다"
-            self._settled = True
-            yield self._emit(RunFailed(run_id=run_id, ts=self._clock.now(), error=error))
+        failed = self._write_held()
+        if failed is not None:
+            yield failed
+
+    async def _connected(self, conversation: Conversation) -> AsyncGenerator[Event]:
+        """도구 연결을 열고 그 안의 몫을 흘린 뒤 닫는다. 실패는 닫기 전에 붙잡혀 있다.
+
+        연결에 들어가는 동안의 예외는 도구 연결이다. 연결 안의 몫이 제 자리 밖의 예외로 끝나면 그
+        밖으로 붙잡는다. 그래서 들어간 뒤 연결을 나오며 난 예외는 닫기의 것이고, 그때는 결말을
+        붙잡았거나 이미 썼으므로 버린다 — 먼저 난 실패가 결말이다. 닫기가 도는 취소를 다른 예외로
+        덮었으면 그 취소를 다시 던진다(기한이 먼저다). 결말을 쓴 뒤의 닫기 실패는 그래서
+        트레이스에도 서버 기록에도 흔적이 없다. 채널의 서버 기록 길로
+        올리려면 결말을 쓴 뒤 다시 던져야 해 CLI 의 종료 코드와 멈춘 실행의 선례(닫기의 예외를
+        버린다)가 갈린다(명세 "먼저 난 실패", PR 직전 리뷰). 그 닫기에서 도구 서버 프로세스가
+        남는지는 mcp-shutdown 이 본다.
+        """
+        try:
+            async with self._tools.connect(self._prepared.servers) as connection:
+                # 연결 안의 몫을 이 자리에서 닫는다. 몸통이 이것을 닫는 까닭과 같다.
+                async with aclosing(self._attend(connection, conversation)) as attended:
+                    with self._holding("inside"):
+                        async for event in attended:
+                            yield event
+        except Exception as error:
+            # 닫기의 정리 코드가 기한(이나 바깥)의 취소를 다른 예외로 덮었으면 그 취소가 먼저다.
+            # 다시 던져 진입점의 범위가 받게 한다 — 삼키면 기한이 닫기의 예외로 읽힌다.
+            cancelled = _cancellation_under(error)
+            if cancelled is not None:
+                raise cancelled from None
+            # 그 밖에 들어간 뒤의 예외면 결말을 이미 붙잡았거나 썼으므로 `_hold` 가 버린다.
+            self._hold(error, "connection")
+
+    async def _attend(
+        self, connection: ToolConnection, conversation: Conversation
+    ) -> AsyncGenerator[Event]:
+        """연결 안의 몫. 선언을 확인하고 에이전트를 돌리며, 실패해도 그때까지 쌓인 이벤트를 흘린다.
+
+        일시정지는 실패가 아니다. 신호를 여기서 받아 연결을 정상으로 닫고, 쌓인 이벤트의 끝에
+        run_paused 가 있다. 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트는 통과시키지 않고,
+        신호를 다른 예외로 감싸 올려도 멈춘 실행에 run_failed 가 덧붙지 않는다. 선언 확인의 실패도
+        연결 안에서 나므로 에이전트 몫의 실패처럼 붙잡는다 — 그러지 않으면 뒤의 닫기 예외가 빠져나와
+        먼저 난 실패가 그 자리에서만 서지 않는다.
+        """
+        prepared = self._prepared
+        try:
+            _reject_unknown_declarations(prepared.policy, connection.tools())
+        except Exception as error:
+            self._hold(error, "connection")
+            return
+        ctx = _Context(
+            self._started,
+            self._clock,
+            self._model,
+            connection,
+            prepared.policy,
+            self._replay,
+            self._verdict,
+            conversation,
+            self._thrown,
+        )
+        try:
+            # 중계를 이 자리에서 닫는다. 몸통이 안쪽 제너레이터를 닫는 까닭과 같다.
+            async with aclosing(self._relay(prepared.instance, ctx)) as relayed:
+                async for event in relayed:
+                    yield event
+        except _Paused:
+            pass
+        except Exception as error:
+            if not ctx.paused:
+                self._hold(error, "agent")
+        finally:
+            self._paused = ctx.paused
+            # 일시정지가 기록되면 결말이 정해진 것이다. 에이전트의 정리 코드(`_closing`)가 기다리는
+            # 동안 기한이 와 이 자리를 예외로 지나가도 실패를 덧붙이지 않는다.
+            self._settled = self._settled or ctx.paused
+            for pending in ctx.take_events():
+                yield pending
+        # 에이전트의 몫이 끝났다. 여기서부터는 도구 연결의 정리뿐이다. 마지막 이벤트가 run_finished
+        # 가 아니면 결말은 실패이고, 붙잡아 두었다가 닫은 뒤에 쓴다.
+        finished = isinstance(self._last, RunFinished)
+        if not self._paused and not finished:
+            self._hold_failure(_NO_FINISH, "agent_code")
+        self._settled = self._settled or (finished and self._held is None)
 
     async def _relay(self, agent: BaseAgent, ctx: _Context) -> AsyncGenerator[Event]:
         """에이전트가 낸 이벤트를 흘린다. 그 앞에 호출 안에서 쌓인 이벤트를 먼저 흘린다.
@@ -787,16 +982,20 @@ class _Body:
         """
         run_id = self._started.run_id
         async with _closing(agent.run(self._started.request, ctx)) as from_agent:
-            async for event in from_agent:
-                for pending in ctx.take_events():
-                    yield pending
-                if ctx.paused:
-                    return
-                _reject_runtime_only(event, run_id)
-                if ctx.replaying:
-                    ctx.replay_event(event)
-                    continue
-                yield event
+            # 에이전트를 닫기 전에 붙잡는다. 닫기가 에이전트의 정리 코드를 기다리는 동안 기한이 와도
+            # 먼저 난 실패가 결말이다 — 도구 연결의 닫기와 같은 기준이다.
+            with self._holding("agent", ctx):
+                async for event in from_agent:
+                    for pending in ctx.take_events():
+                        yield pending
+                    if ctx.paused:
+                        return
+                    _reject_stray(event)
+                    _reject_runtime_only(event, run_id)
+                    if ctx.replaying:
+                        ctx.replay_event(event)
+                        continue
+                    yield event
 
 
 @asynccontextmanager
@@ -826,6 +1025,18 @@ async def _closing(events: AsyncIterator[Event]) -> AsyncGenerator[AsyncIterator
     else:
         if isinstance(events, AsyncGenerator):
             await events.aclose()
+
+
+def _reject_stray(value: object) -> None:
+    """에이전트가 sdk 의 이벤트가 아닌 값을 냈으면 쓰기 전에 실패로 끝낸다(에이전트 코드).
+
+    sdk 의 시그니처는 이벤트만 허락하지만 플러그인은 로더를 지나 타입 검사 밖에서 온다. 여기서 보지
+    않으면 그 값은 트레이스 쓰기에서 터져 결말 전 쓰기의 실패(그 밖)와 갈리지 않는다. 인자가
+    `object` 인 것은 이벤트로 적힌 값을 다시 보는 검사가 타입 검사에서 쓸모없는 검사로 보이지 않게
+    하려는 것이다.
+    """
+    if not isinstance(value, _EVENT_KINDS):
+        raise TypeError(f"에이전트가 sdk 의 이벤트가 아닌 값을 냈다: {type(value).__name__}")
 
 
 def _reject_runtime_only(event: Event, run_id: RunId) -> None:
@@ -860,7 +1071,10 @@ async def _summary_outcome(
         return await summarize(model, fold, run_id, clock)
     except Exception as error:
         return RunFailed(
-            run_id=run_id, ts=clock.now(), error=f"대화 요약이 실패했다: {_describe(error)}"
+            run_id=run_id,
+            ts=clock.now(),
+            error=f"대화 요약이 실패했다: {_describe(error)}",
+            cause="conversation_summary",
         )
 
 
@@ -1139,6 +1353,20 @@ async def _call_safely(tools: ToolConnection, name: str, args: Mapping[str, Json
         return await tools.call(name, args)
     except Exception as error:
         return ToolResult(ok=False, content=_describe(error))
+
+
+def _cancellation_under(error: BaseException) -> BaseException | None:
+    """`error` 가 덮은 취소. 정리 코드(`finally`, `__aexit__`)가 도는 취소 중에 다른 예외를 내면
+    파이썬은 취소를 그 예외의 문맥(`__context__`)에 남긴다."""
+    cancelled = anyio.get_cancelled_exc_class()
+    seen: set[int] = set()
+    current = error.__context__
+    while current is not None and id(current) not in seen:
+        if isinstance(current, cancelled):
+            return current
+        seen.add(id(current))
+        current = current.__context__
+    return None
 
 
 def _describe(error: BaseException) -> str:
