@@ -16,7 +16,8 @@ import os
 import shutil
 import subprocess
 import sys
-from collections.abc import Generator, Sequence
+import time
+from collections.abc import Callable, Generator, Sequence
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import replace
 from pathlib import Path
@@ -24,6 +25,8 @@ from pathlib import Path
 import pytest
 from tools.hook_worktree_skill_overrides import KEY_PREFIX as HOOK_KEY_PREFIX
 from tools.tidy_checkouts import (
+    APP_MARKER,
+    SESSION_ENV,
     WORKTREE_OVERRIDE_PREFIX,
     Facts,
     Holder,
@@ -50,9 +53,11 @@ from tools.tidy_checkouts import (
     parse_merged,
     parse_worktrees,
     process_alive,
+    process_session,
     real_git,
     same_path,
     scan_modules,
+    session_in,
     settings_equivalent,
     tasklist_has,
     unrecreatable,
@@ -62,6 +67,10 @@ from tools import tidy_checkouts
 
 _HEAD = "b" * 40
 _OLD = "a" * 40
+# 가짜 세션 id. 실제 자식 프로세스의 환경에도 넣는다. 이 PC 의 어느 세션과도 겹치지 않는다
+_SESSION = "local_00000000-0000-0000-0000-000000000001"
+_OTHER_SESSION = "local_00000000-0000-0000-0000-000000000002"
+_CALLER = "local_00000000-0000-0000-0000-000000000003"
 _TOOL = Path(__file__).resolve().parents[2] / "tools" / "tidy_checkouts.py"
 
 
@@ -233,12 +242,17 @@ def test_프로세스를_읽다_실패하면_볼_수_없는_것으로_돌려준�
 
 
 @contextmanager
-def _자식이_쥔다(folder: Path) -> Generator[int]:
-    """`folder` 를 작업 디렉터리로 쥔 자식 파이썬을 띄우고, 준비되면 그 pid 를 내준다."""
+def _자식이_쥔다(folder: Path, session: str | None = None) -> Generator[int]:
+    """`folder` 를 작업 디렉터리로 쥔 자식 파이썬을 띄우고, 준비되면 그 pid 를 내준다. 환경의
+    세션 id 는 `session` 으로 정한다. 이 시험을 돌린 세션의 id 를 물려주지 않는다."""
     script = "import sys\nprint('ready', flush=True)\nsys.stdin.read()\n"
+    env = {key: value for key, value in os.environ.items() if key != SESSION_ENV}
+    if session is not None:
+        env[SESSION_ENV] = session
     child = subprocess.Popen(
         [sys.executable, "-c", script],
         cwd=folder,
+        env=env,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True,
@@ -267,6 +281,20 @@ def test_폴더를_작업_디렉터리로_쥔_자식_프로세스를_찾는다(t
     assert mine, f"자식 pid {pid} 가 없다: {found}"
     assert mine[0].image
     assert os.getpid() not in {holder.pid for holder in found}
+
+
+def test_자식_프로세스의_환경에서_세션_id_를_읽는다(tmp_path: Path) -> None:
+    """CI(우분투)는 `/proc/<pid>/environ` 으로, 윈도는 PEB 의 환경 블록으로 읽는다. 다른 OS 는
+    읽을 수 없다고(None) 돌려준다."""
+    with _자식이_쥔다(tmp_path, _SESSION) as pid:
+        found = process_session(pid)
+    with _자식이_쥔다(tmp_path) as pid:
+        missing = process_session(pid)
+    if sys.platform not in ("win32", "linux"):
+        assert found is None
+        return
+    assert found == _SESSION
+    assert missing is None
 
 
 def _적재할_DLL() -> Path:
@@ -722,7 +750,7 @@ def test_체크아웃되지_않은_브랜치도_그_브랜치가_제목인_세�
     지울 것으로 낸 뒤에 보므로, 판정 1이 남기거나 넘긴 것은 그 이유를 그대로 든다."""
     by_pr = judge_branch("chore/x", _HEAD, _MERGED, ("chore/x",))
     assert by_pr.action == "keep", by_pr
-    assert by_pr.reason == "그 브랜치가 제목인 세션이 돈다"
+    assert by_pr.reason == "제목이나 브랜치가 그 브랜치인 세션이 돈다"
     assert judge_branch("worktree-x", _HEAD, {}, ("worktree-x",), contained=True).action == "keep"
     assert judge_branch("chore/x", _HEAD, _MERGED, ("chore/y",)).action == "delete"
     assert judge_branch("chore/x", _OLD, _MERGED, ("chore/x",)).action == "human"
@@ -739,6 +767,96 @@ def test_다른_제목은_보지_않고_대소문자만_다르면_브랜치에�
         assert judge(_WT, _FACTS, _MERGED, (title,), _죽었다, ()).action == "delete", title
     assert judge(_WT, _FACTS, _MERGED, ("Chore/X",), _죽었다, ()).action == "delete"
     assert judge_branch("chore/x", _HEAD, _MERGED, ("Chore/X",)).action == "keep"
+
+
+def test_브랜치_끝이_병합된_PR_머리의_조상이면_지운다() -> None:
+    """2026-10-20 에 `chore/skill-check-and-retro-section` 의 로컬 끝이 PR #114 의 머리보다 커밋
+    넷 뒤였다. 로컬에만 있는 커밋이 없어 잃을 것이 없는데 사람에게 넘겼다. 조상인지는 `gather` 가
+    git 으로 읽어 `behind` 로 넣는다. 판정 2·3은 그대로 본다."""
+    moved = {"chore/x": frozenset({_OLD})}
+    verdict = judge(_WT, replace(_FACTS, behind=True), moved, (), _죽었다, ())
+    assert verdict.action == "delete", verdict
+    assert "머리보다 뒤" in verdict.reason
+    assert judge(_WT, _FACTS, moved, (), _죽었다, ()).action == "human"
+    dirty = replace(_FACTS, behind=True, status=" M a")
+    assert judge(_WT, dirty, moved, (), _죽었다, ()).action == "keep"
+    assert judge_branch("chore/x", _HEAD, moved, (), behind=True).action == "delete"
+    assert judge_branch("chore/x", _HEAD, moved, ()).action == "human"
+    assert judge_branch("chore/x", _HEAD, moved, ("chore/x",), behind=True).action == "keep"
+
+
+def test_앱의_표지가_있는_워크트리는_넘기지_않고_앱의_정리에_맡긴다() -> None:
+    """2026-10-20 에 앱이 만든 분리 HEAD 워크트리 둘(`confident-wright-2d3ebf` 등)을 사람에게
+    넘겼고, 시험하는 동안 앱이 그중 하나를 새 세션에 다시 내주었다. 표지가 있으면 앱의 정리
+    (`[WorktreePool]`)가 지우므로 판정 1보다 먼저 남긴다(ADR 0032)."""
+    marked = replace(_FACTS, app_marker=True)
+    for wt, merged in ((_WT, _MERGED), (replace(_WT, branch=None), {})):
+        verdict = judge(wt, marked, merged, (), _죽었다, ())
+        assert verdict.action == "keep", verdict
+        assert "claude-desktop-worktree" in verdict.reason
+
+
+def test_쥔_프로세스가_모두_쉬는_세션의_것이면_끝낼_것으로_낸다() -> None:
+    """2026-10-20. 병합되고 깨끗한 워크트리를 쉬는 세션(`isRunning` 이 아니다)의 `claude.exe` 가
+    작업 디렉터리로 쥐어 남았다. 앱은 보관하기 전까지 그 프로세스를 띄워 둔다. 쥔 프로세스마다
+    환경의 세션 id 를 읽어, 모두 부르는 쪽이 쉰다고 넘긴 세션의 것이면 끝낼 것으로 낸다."""
+    owners = {61148: _SESSION}
+    verdict = judge(_WT, _FACTS, _MERGED, (), _죽었다, _CLAUDE, owners=owners, idle={_SESSION})
+    assert (verdict.action, verdict.sessions) == ("end", (_SESSION,)), verdict
+    assert f"claude.exe(pid 61148, 세션 {_SESSION})" in verdict.reason
+
+
+def test_쉰다고_받지_않은_세션이나_세션_모를_프로세스가_쥐면_남긴다() -> None:
+    owners = {61148: _SESSION}
+    idle = {_SESSION}
+    mixed = (*_CLAUDE, Holder(7, "pwsh.exe"))
+    unknown = judge(_WT, _FACTS, _MERGED, (), _죽었다, mixed, owners=owners, idle=idle)
+    assert unknown.action == "keep", "세션 모를 프로세스가 섞였다"
+    other = judge(
+        _WT, _FACTS, _MERGED, (), _죽었다, _CLAUDE, owners={61148: _OTHER_SESSION}, idle=idle
+    )
+    assert other.action == "keep", "받지 않은 세션의 프로세스다"
+    assert _OTHER_SESSION in other.reason
+    assert judge(_WT, _FACTS, _MERGED, (), _죽었다, _CLAUDE, owners=owners).action == "keep"
+    # 앞의 판정(판정 2, 실행 중 세션)이 먼저다
+    dirty = replace(_FACTS, status=" M a")
+    assert (
+        judge(_WT, dirty, _MERGED, (), _죽었다, _CLAUDE, owners=owners, idle=idle).action == "keep"
+    )
+    running = ("chore/x",)
+    kept = judge(_WT, _FACTS, _MERGED, running, _죽었다, _CLAUDE, owners=owners, idle=idle)
+    assert kept.action == "keep"
+
+
+def test_잠금_pid_가_쉬는_세션의_쥔_프로세스이면_끝낼_것으로_낸다() -> None:
+    """셀프 리뷰 명세 축. 잠금 pid 는 그 워크트리를 연 세션의 `claude.exe` 다. 그 세션이 쉬면 잠금도
+    쥔 프로세스로 끝낸다. 잠금 pid 가 쥔 것에 없거나(부르는 쪽이 넣지 않았다) 받지 않은 세션의
+    것이면 잠금의 세션을 이유로 남긴다. 그대로 두면 판정이 `지운다` 로 흘러 산 잠금을 푼다."""
+    locked = replace(_WT, locked="claude session x (pid 7)")
+    lock = Holder(7, "", "lock")
+    idle = {_SESSION}
+    owners = {7: _SESSION, 61148: _SESSION}
+    held = (*_CLAUDE, lock)
+    verdict = judge(locked, _FACTS, _MERGED, (), _살았다, held, owners=owners, idle=idle)
+    assert (verdict.action, verdict.sessions) == ("end", (_SESSION,)), verdict
+    assert "잠금 pid: (이름 모름)(pid 7" in verdict.reason
+    for holders, known in (
+        (_CLAUDE, {7: _SESSION, 61148: _SESSION}),
+        (held, {7: _OTHER_SESSION, 61148: _SESSION}),
+        (held, {61148: _SESSION}),
+    ):
+        kept = judge(locked, _FACTS, _MERGED, (), _살았다, holders, owners=known, idle=idle)
+        assert kept.action == "keep", kept
+        assert "claude session x" in kept.reason
+
+
+def test_환경에서_세션_id_를_모양이_맞을_때만_읽는다() -> None:
+    """찍은 `end-holders` 명령을 에이전트가 셸에 그대로 친다. 모양이 어긋난 값은 세션이 없는 것으로
+    본다."""
+    assert session_in(["=C:=C:\\repo", "PATH=x", f"{SESSION_ENV}={_SESSION}"]) == _SESSION
+    assert session_in(["PATH=x"]) is None
+    assert session_in([f"{SESSION_ENV}=local_x; rm -rf /"]) is None
+    assert session_in([f"{SESSION_ENV.lower()}={_SESSION}"]) is None
 
 
 # --- 등록 없는 폴더(대기열 148) -------------------------------------------------------------------
@@ -1093,8 +1211,268 @@ def test_judge_는_작업_디렉터리로_쥔_프로세스가_있으면_제목_�
         assert done.startswith("넘긴다")
         return
     assert done.startswith("남긴다"), done
-    assert f"(pid {pid})" in done
+    assert f"(pid {pid}" in done
     assert "remove" not in done
+
+
+def test_end_holders_는_쉬는_세션의_프로세스만_끝내고_judge_가_지울_것으로_낸다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """실제 자식 프로세스로 잰다. 받은 세션 밖이면 끄지 않고, 받은 세션이면 끈 뒤 쥔 것이
+    사라져 다음 `judge` 가 지울 것으로 낸다. 끈 뒤에는 실제로 기다린다(프로세스가 끝나는 데 틈이
+    있다)."""
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
+    path, head = _add(repo, "done")
+    ops = replace(_ops({"chore/done": frozenset({head})}), sleep=time.sleep)
+    with _자식이_쥔다(path, _SESSION) as pid:
+        assert main(["judge", "--idle", _SESSION], cwd=repo, ops=ops) == 0
+        line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+        if sys.platform not in ("win32", "linux"):
+            assert line.startswith("지운다"), line
+            return
+        assert line.startswith("끝낸다"), line
+        assert f"pid {pid}, 세션 {_SESSION}" in line
+        assert f'end-holders "{path.as_posix()}" {_SESSION}' in line
+        assert main(["end-holders", str(path), _OTHER_SESSION], cwd=repo, ops=ops) == 1
+        assert process_alive(pid)
+        assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 0
+    capsys.readouterr()
+    assert main(["judge"], cwd=repo, ops=ops) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("지운다"), done
+
+
+def _세션(sessions: dict[int, str]) -> Callable[[int], str | None]:
+    def session_of(pid: int) -> str | None:
+        return sessions.get(pid)
+
+    return session_of
+
+
+def _끄면_안_된다(pid: int) -> bool:
+    raise AssertionError(f"pid {pid} 를 끄려 했다")
+
+
+def _쥔다(path: Path, *pids: int) -> Callable[[], list[tuple[int, str, str]]]:
+    def processes() -> list[tuple[int, str, str]]:
+        return [(pid, "claude.exe", str(path)) for pid in pids]
+
+    return processes
+
+
+def test_judge_와_end_holders_는_부른_세션의_프로세스를_끝내지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """도구를 부른 세션은 환경의 세션 id 로 안다. 부르는 쪽이 그 세션을 쉰다고 넘겨도 빼고 본다."""
+    monkeypatch.setenv(SESSION_ENV, _SESSION)
+    path, head = _add(repo, "done")
+    ops = replace(
+        _ops({"chore/done": frozenset({head})}),
+        processes=_쥔다(path, 4242),
+        session_of=_세션({4242: _SESSION}),
+        end=_끄면_안_된다,
+    )
+    assert main(["judge", "--idle", _SESSION], cwd=repo, ops=ops) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert line.startswith("남긴다"), line
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 1
+    assert "이 도구를 부른 세션" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("own", [None, "local_모양이-아니다"])
+def test_end_holders_는_부른_세션을_모르면_아무것도_끄지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, own: str | None
+) -> None:
+    """앱 밖에서 부르면 환경에 세션 id 가 없어 부른 세션을 뺄 수 없다. 그때는 끄지 않는다."""
+    if own is None:
+        monkeypatch.delenv(SESSION_ENV, raising=False)
+    else:
+        monkeypatch.setenv(SESSION_ENV, own)
+    path, head = _add(repo, "done")
+    ops = replace(
+        _ops({"chore/done": frozenset({head})}),
+        processes=_쥔다(path, 4242),
+        session_of=_세션({4242: _SESSION}),
+        end=_끄면_안_된다,
+    )
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 1
+    assert "부른 세션을 모른다" in capsys.readouterr().out
+
+
+def test_end_holders_는_받은_세션_밖의_프로세스가_하나라도_쥐면_아무것도_끄지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
+    path, head = _add(repo, "done")
+    base = _ops({"chore/done": frozenset({head})})
+    mixed = replace(
+        base, processes=_쥔다(path, 1, 2), session_of=_세션({1: _SESSION}), end=_끄면_안_된다
+    )
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=mixed) == 1
+    assert "받은 세션 밖의 프로세스" in capsys.readouterr().out
+    # 세션 id 모양이 아닌 인자는 인자 오류다
+    assert main(["end-holders", str(path), "local_x;rm"], cwd=repo, ops=mixed) == 2
+    assert "세션 id 모양" in capsys.readouterr().err
+
+
+def test_end_holders_는_끄기_직전에_세션_id_가_바뀐_프로세스를_끄지_않는다(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pid 만 보고 끄지 않는다(`.claude/rules/probes.md`). 훑은 뒤 그 pid 가 끝나 다른 프로세스가
+    받았으면 환경의 세션 id 가 다르다."""
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
+    path, head = _add(repo, "done")
+    reads: list[int] = []
+
+    def drifting(pid: int) -> str | None:
+        reads.append(pid)
+        return _SESSION if len(reads) == 1 else _OTHER_SESSION
+
+    ops = replace(
+        _ops({"chore/done": frozenset({head})}),
+        processes=_쥔다(path, 1),
+        session_of=drifting,
+        end=_끄면_안_된다,
+    )
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 1
+    assert len(reads) == 2
+
+
+def test_end_holders_는_끄기_전에_다시_판정해_지울_후보가_아니면_끄지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """셀프 리뷰 명세 축. `judge` 뒤에 바뀌었거나(파일을 고쳤다) 처음부터 후보가 아닌 워크트리
+    (병합되지 않았다)를 쥔 프로세스는, 찍힌 적 없는 `end-holders` 를 치거나 옛 줄을 다시 쳐도
+    끄지 않는다. `remove` 가 지우기 전에 다시 판정하는 것과 짝이다."""
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
+    path, head = _add(repo, "done")
+    held = replace(
+        _ops({}), processes=_쥔다(path, 1), session_of=_세션({1: _SESSION}), end=_끄면_안_된다
+    )
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=held) == 1
+    assert "병합된 PR 이 없다" in capsys.readouterr().out
+    (path / "new.txt").write_text("x", encoding="utf-8")
+    merged = replace(held, merged=_ops({"chore/done": frozenset({head})}).merged)
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=merged) == 1
+    assert "바뀐 파일이 있다" in capsys.readouterr().out
+
+
+def test_end_holders_는_쉬는_세션의_산_잠금_pid_도_끄고_judge_가_풀고_지울_것으로_낸다(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """셀프 리뷰 명세 축. `EnterWorktree` 로 연 세션은 잠금 사유에 자기 pid 를 남기고, 인계할 때만
+    푼다. 그 세션이 쉬면 잠금 pid 도 그 세션의 것이라 함께 끈다. 잠금 pid 가 작업 디렉터리로 쥐지
+    않아도 끈다."""
+    monkeypatch.setenv(SESSION_ENV, _CALLER)
+    path, head = _add(repo, "done")
+    _git("worktree", "lock", "--reason", "claude session done (pid 9)", str(path), cwd=repo)
+    ended: list[int] = []
+
+    def alive(pid: int) -> bool:
+        return pid == 9 and pid not in ended
+
+    def processes() -> list[tuple[int, str, str]]:
+        return [] if 1 in ended else [(1, "claude.exe", str(path))]
+
+    def end(pid: int) -> bool:
+        ended.append(pid)
+        return True
+
+    ops = replace(
+        _ops({"chore/done": frozenset({head})}),
+        pid_alive=alive,
+        processes=processes,
+        session_of=_세션({1: _SESSION, 9: _SESSION}),
+        end=end,
+    )
+    assert main(["judge", "--idle", _SESSION], cwd=repo, ops=ops) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert line.startswith("끝낸다"), line
+    assert main(["end-holders", str(path), _SESSION], cwd=repo, ops=ops) == 0
+    assert sorted(ended) == [1, 9]
+    capsys.readouterr()
+    assert main(["judge"], cwd=repo, ops=ops) == 0
+    done = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert done.startswith("지운다"), done
+    assert "풀고 지운다" in done
+
+
+def test_judge_와_remove_는_병합된_PR_머리보다_뒤인_워크트리를_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """2026-10-20 `skill-check-and-retro-section` 의 모양. PR 머리는 다른 체크아웃에서 더 나갔고
+    로컬 끝은 그 조상이다. 머리 커밋이 이 저장소에 없으면 조상인지 알 수 없어 넘긴다."""
+    path, behind = _add(repo, "done")
+    (path / "more.txt").write_bytes(b"x\n")
+    _git("add", "more.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-q", "-m", "PR 에 더한 커밋", cwd=path)
+    ahead = _git("rev-parse", "HEAD", cwd=path)
+    # 머리 커밋을 참조로 남긴다(원격 추적 브랜치의 자리)
+    _git("update-ref", "refs/remotes/origin/chore/done", ahead, cwd=repo)
+    _git("reset", "-q", "--hard", behind, cwd=path)
+    merged = {"chore/done": frozenset({ahead})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert line.startswith("지운다"), line
+    assert "머리보다 뒤" in line
+    assert main(["judge"], cwd=repo, ops=_ops({"chore/done": frozenset({_OLD})})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert line.startswith("넘긴다"), line
+    assert main(["remove", str(path), "chore/done", behind], cwd=repo, ops=_ops(merged)) == 0
+    assert not path.exists()
+    assert _git("branch", "--list", "chore/done", cwd=repo) == ""
+
+
+def test_judge_는_병합된_PR_머리보다_앞선_워크트리를_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """로컬에만 있는 커밋이 있다. 조상 판정의 방향(끝이 머리의 조상이다)이 뒤집히면 지운다."""
+    path, merged_head = _add(repo, "done")
+    (path / "local.txt").write_bytes(b"x\n")
+    _git("add", "local.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-q", "-m", "PR 뒤에 로컬에서만 더한 커밋", cwd=path)
+    assert main(["judge"], cwd=repo, ops=_ops({"chore/done": frozenset({merged_head})})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/done" in line)
+    assert line.startswith("넘긴다"), line
+
+
+def test_judge_와_remove_branch_는_병합된_PR_머리보다_뒤인_브랜치를_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _git("switch", "-q", "-c", "chore/loose", cwd=repo)
+    (repo / "loose.txt").write_bytes(b"x\n")
+    _git("add", "loose.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-q", "-m", "origin/main 에 없는 커밋", cwd=repo)
+    tip = _git("rev-parse", "HEAD", cwd=repo)
+    (repo / "more.txt").write_bytes(b"x\n")
+    _git("add", "more.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-q", "-m", "PR 에 더한 커밋", cwd=repo)
+    ahead = _git("rev-parse", "HEAD", cwd=repo)
+    _git("update-ref", "refs/remotes/origin/chore/loose", ahead, cwd=repo)
+    _git("reset", "-q", "--hard", tip, cwd=repo)
+    _git("switch", "-q", "main", cwd=repo)
+    merged = {"chore/loose": frozenset({ahead})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if " chore/loose" in line)
+    assert line.startswith("브랜치를 지운다"), line
+    assert main(["remove-branch", "chore/loose", tip], cwd=repo, ops=_ops(merged)) == 0
+    assert _git("branch", "--list", "chore/loose", cwd=repo) == ""
+
+
+def test_judge_와_remove_는_앱의_표지가_있는_워크트리를_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """표지는 워크트리마다의 git 디렉터리(`.git/worktrees/<이름>/`)에 있다. 표지가 없으면 지울
+    분리 HEAD 워크트리다(origin/main 의 커밋)."""
+    path, head = _add_detached(repo, "pool")
+    gitdir = Path(_git("rev-parse", "--absolute-git-dir", cwd=path))
+    (gitdir / APP_MARKER).write_text("", encoding="utf-8")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/pool" in line)
+    assert line.startswith("남긴다"), line
+    assert APP_MARKER in line
+    assert main(["remove", str(path), ".detached", head], cwd=repo, ops=_ops({})) == 1
+    assert path.exists()
 
 
 def test_judge_는_워크트리가_여럿이어도_프로세스를_한_번만_훑는다(
@@ -1936,7 +2314,7 @@ def test_judge_는_실행_중인_세션의_제목인_체크아웃되지_않은_�
     lines = capsys.readouterr().out.splitlines()
     for name in ("chore/loose", "worktree-x"):
         line = next(line for line in lines if f" {name} " in line)
-        assert line == f"브랜치를 남긴다 {name} — 그 브랜치가 제목인 세션이 돈다", line
+        assert line == f"브랜치를 남긴다 {name} — 제목이나 브랜치가 그 브랜치인 세션이 돈다", line
     other = next(line for line in lines if " worktree-y " in line)
     assert other.startswith("브랜치를 지운다"), other
 
