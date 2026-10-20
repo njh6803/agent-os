@@ -43,6 +43,7 @@ from agent_os.core.ports import (
     NotContinuable,
     NotResumable,
     PluginError,
+    TraceDamagedBeforePrincipal,
 )
 from agent_os.http.paths import is_under
 
@@ -190,36 +191,30 @@ class LimitExceeded(Exception):
 class Surface(Enum):
     """요청이 어느 면의 것인가. 표가 같은 예외를 면마다 다르게 번역한다(ADR 0023).
 
-    운영자 면(관리와 `/runs`)은 원문 그대로다. 최종 사용자 면은 둘로 갈린다 — 실행을 일으키는 시작
-    경로와, 있는 실행을 가리키는 경로(결정, 구독, 이어 가기)다. 둘이 가르는 것은 하위 타입이 아닌
-    `PluginError`(기록이나 구성이 깨진 것) 하나다. 실행을 가리키는 경로에서 그것을 그대로 내면
-    손상된 남의 트레이스가 있다는 것이 드러난다. 그래서 그 경로에서는 구성 오류도 404 가 되고 원인은
-    서버 기록에 남는다(ADR 0023 의 2026-10-05 이력). 불리언 둘이 아니라 열거 하나인 이유는
+    운영자 면(관리와 `/runs`)은 원문 그대로이고 최종 사용자 면은 덮는다. 최종 사용자 면의 경로끼리는
+    가르지 않는다 — 같은 예외는 시작에서든 실행을 읽는 경로에서든 같은 번역이다. 덮는 404 의 몫인
+    주인을 확인하기 전의 손상(`TraceDamagedBeforePrincipal`)은 실행을 읽는 경로에서만 나므로 경로로
+    가를 것이 남지 않는다(ADR 0023 의 2026-10-16 이력). 불리언이 아니라 열거인 이유는
     `CODING_STANDARDS.md` 의 불리언 플래그 인자다.
     """
 
     OPERATOR = "operator"
-    END_USER_START = "end_user_start"
-    END_USER_RUN = "end_user_run"
+    END_USER = "end_user"
 
 
 @dataclass(frozen=True)
 class EndUserPaths:
-    """최종 사용자 면이 서는 자리. 조립 층이 채널의 접두사와 시작 경로를 넘긴다.
+    """최종 사용자 면이 서는 자리. 조립 층이 채널의 접두사를 넘긴다.
 
     면은 요청의 경로로 정한다. 접두사 비교는 인증 표와 같은 `is_under` 하나라, 서명 토큰으로 열린
-    경로와 최종 사용자 면으로 번역되는 경로가 갈리지 않는다. 시작 경로는 정확히 같은지만 본다 —
-    실행을 가리키는 경로는 그 아래에 서므로 접두사로 보면 둘이 섞인다.
+    경로와 최종 사용자 면으로 번역되는 경로가 갈리지 않는다.
     """
 
     prefix: str
-    start: str
 
     def surface_of(self, path: str) -> Surface:
         """경로 하나의 면(질의)."""
-        if not is_under(path, self.prefix):
-            return Surface.OPERATOR
-        return Surface.END_USER_START if path == self.start else Surface.END_USER_RUN
+        return Surface.END_USER if is_under(path, self.prefix) else Surface.OPERATOR
 
 
 def failure_for(error: Exception, surface: Surface) -> _Failure:
@@ -228,20 +223,22 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
     갈래를 셋으로 나눠 두면 예외 하나를 더할 때 세 곳을 고쳐야 하므로 한 항목이 한 갈래다.
     관리 쪽 부재(포트가 `None` 을 돌려준 것)는 라우트가 `HTTPException(404)` 로 말하고 그것이 첫
     갈래로 들어온다. core 의 실행 전 실패는 타입으로 갈려 오고 여기가 MRO 로 옮긴다(ADR 0014) —
-    부재 404, 재개 불가 409, 꺼짐 409, 다른 주체 409, 이어 갈 수 없음 409, 그 밖의 `PluginError`
-    500. 하위 타입의 갈래가 기반 타입보다 먼저여야 한다. 뒤집히면 전부 500 이 된다. 기준은
-    "깨졌나"다(ADR 0014 의 2026-09-26 이력) — 4xx 는 대상이 없거나 대상의 상태나 주체가 요청을
-    허락하지 않는 것이고, `PluginError` 가 500 인 이유는 하위 타입 다섯을 뺀 뒤 남는 것이 "서버의
-    구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의
-    말은 내부 사정을 담는다. 요청하는 쪽의 상한(`LimitExceeded`)은 면과 무관하게 429 이고 문구는
-    어느 상한인지만 들며 `Retry-After` 를 싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
+    부재 404, 재개 불가 409, 꺼짐 409, 다른 주체 409, 이어 갈 수 없음 409, 주인을 확인하기 전의
+    손상(`TraceDamagedBeforePrincipal`) 500, 그 밖의 `PluginError` 500. 하위 타입의 갈래가 기반
+    타입보다 먼저여야 한다. 뒤집히면 전부 500 이 된다. 기준은 "깨졌나"다(ADR 0014 의 2026-09-26
+    이력) — 4xx 는 대상이 없거나 대상의 상태나 주체가 요청을 허락하지 않는 것이고, `PluginError` 가
+    500 인 이유는 4xx 를 내는 하위 타입 밖의 것이 "서버의 구성이나 기록이 깨졌다"뿐이기 때문이다.
+    주인을 확인하기 전의 손상도 깨진 것이라 운영자 면에서는 500 원문이다. 운영자 면에서는
+    마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의 말은 내부 사정을 담는다. 요청하는 쪽의
+    상한(`LimitExceeded`)은 면과 무관하게 429 이고 문구는 어느 상한인지만 들며 `Retry-After` 를
+    싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
 
-    최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05 이력). 404 는 전부 고정 문구 하나다.
-    다른 주체(409)는 없는 실행과 같은 404 다. 실행을 가리키는 경로의 하위 타입이 아닌
-    `PluginError`(500, 기록이나 구성이 깨진 것)도 404 다 — 손상이 주체 판정보다 앞이라(core) 남의
-    손상된 실행이 500 으로 그 존재를 드러내기 때문이고, 구성 오류까지 404 가 되는 것이 그 대가다.
-    시작 경로의 그것은 500 이되 고정 문구다. 꺼짐(409)은 종류와 이름 없는 고정 문구다. 재개 불가와
-    이어 갈 수 없음은 자기 실행의 상태라 메시지 그대로다.
+    최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05·2026-10-16 이력). 404 는 전부 고정
+    문구 하나다. 다른 주체(409)는 없는 실행과 같은 404 다. 주인을 확인하기 전의 손상(500)도 404 다
+    — 그 이유는 `TraceDamagedBeforePrincipal` 의 독스트링이 원천이다. 그 밖의 `PluginError`(500,
+    주체를 확인한 뒤의 구성이나 기록의 고장)는 어느 경로에서나 500 이되 고정 문구다 — 숨길 남이
+    없고, 404 로 덮으면 위젯이 저장한 대화를 지운다. 꺼짐(409)은 종류와 이름 없는 고정 문구다. 재개
+    불가와 이어 갈 수 없음은 자기 실행의 상태라 메시지 그대로다.
     """
     operator = surface is Surface.OPERATOR
     match error:
@@ -273,14 +270,12 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
                 message=f"{error.limit.value}의 상한을 넘었다",
                 headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
             )
+        case TraceDamagedBeforePrincipal():
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
         case PluginError():
-            match surface:
-                case Surface.OPERATOR:
-                    return _Failure(status=500, message=str(error))
-                case Surface.END_USER_START:
-                    return _Failure(status=500, message=INTERNAL_MESSAGE)
-                case Surface.END_USER_RUN:
-                    return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+            return _Failure(status=500, message=str(error) if operator else INTERNAL_MESSAGE)
         case _:
             return _Failure(status=500, message=INTERNAL_MESSAGE)
 
