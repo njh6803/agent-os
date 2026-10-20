@@ -13,10 +13,13 @@
   값이 있는 날의 중앙값), 판정. 판정은 수집 도구가 경보로 넘긴 지표면 `⚠ 경보 (<까닭>)`, 아니면 7일
   안의 최고·최저, 아니면 정상이다. 경보 문장은 이 칸에만 있다.
 - 직접 하실 일: 메모의 할 일. 대기열 행이면 제목을 `대기열 <번호> (<회차>회차) <이름>`으로 짓는다.
-- 개선 제안: 표와, 표 아래 접힌 "바꿀 것". 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
+- 개선 제안: 표와, 표 아래에 펼친 "바꿀 것". 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
   `신규`, `효과 확인됨`(확인할 수치가 바라는 쪽으로 움직였다)이다. 진행 중과 보류는 제안과 PR을 잇는
   기록이 없어 `UNKNOWN_STATE`로 적는다. 확인할 수치의 열쇠가 지난 상태와 다르면 견주지 않는다.
-- 상세: 머리에 수집 JSON과 모은 시각을 적고, 절마다 `<details>`로 접고 끝에 원본을 한 줄로 적는다.
+- 상세: 머리에 수집 JSON과 모은 시각을 적고, 절마다 `### <번호>. <제목>` 아래에 표와 줄을 펼치고
+  끝에 원본을 한 줄로 적는다. 예약 작업의 답은 이 보고를 옮겨 적는데, 그 답을 그리는 앱은
+  `<details>`를 접지 못하고 태그를 글자로 보였다(일지 2026-10-20-28). 그래서 HTML 태그를 쓰지
+  않는다.
 
 작업 표기. 작업이 나오는 곳에는 번호·이름·내용을 함께 쓰되, 내용은 그 작업이 처음 나온 자리에만
 쓰고 뒤에서는 번호와 이름만 쓴다. 수집 도구의 칸은 `{{name:N}}`·`{{content:N}}`(PR),
@@ -30,8 +33,9 @@ PR 제목을 가져오지 못했으면 `LOOKUP_FAILED`로 적는다(이름을 �
 - 메모에 이름이나 내용이 없는 작업, 번호 바로 뒤에 조사가 붙은 작업 번호(이름을 끼우면 받침이
   어긋난다).
 - 할 일의 까닭이 두 문장 이상이거나(`SENTENCE_END`), 제안의 난이도가 `DIFFICULTIES` 밖의 낱말이다.
-- 상세 절의 목록 줄 수가 `MAX_LIST`를 넘는다. 수집 줄과 메모 줄을 나눠 세고, 메모가 그 절에 쓸 수
-  있는 줄 수를 알린다.
+- 상세 절에 메모의 해석이 없거나(상세 6은 다음 할 일), 해석이 `MAX_REMARKS`줄을 넘는다. 수치는 표가
+  보이고 무엇을 뜻하는지는 해석이 말하므로, 해석이 빈 절은 측정만 있고 분석이 없다. 예약 작업의 첫
+  실행(2026-10-19 보고)은 상세 1·3에만 해석을 쓰고 2·4·5·7을 비웠다(일지 2026-10-20-28).
 - 메모 JSON을 읽지 못했다(빈 메모로 그린다). 예약 작업은 `경고:` 줄마다 메모를 고치므로 이것도
   경고다.
 
@@ -58,7 +62,7 @@ import statistics
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -70,7 +74,7 @@ LOOKUP_FAILED = "(제목 조회 실패)"
 NO_NAME = "(이름 없음)"
 NO_CONTENT = "(내용 없음)"
 UNCOLLECTED = "(수집 안 됨)"
-MAX_LIST = 5
+MAX_REMARKS = 3  # 상세 절 하나에 메모가 쓰는 해석 줄의 상한
 NEXT_SECTION = 6  # 메모의 다음 할 일을 붙이는 상세 절(어제 작업과 다음 할 일)
 UNITS = {"money": "$", "int": "", "float1": "", "float2": ""}  # `Metric.kind`마다 값의 단위
 UNKNOWN_STATE = "(진행 중·보류는 수집 안 됨)"
@@ -83,16 +87,34 @@ SENTENCE_END = re.compile(r"(?<=다)\.(?:\s|$)")
 DIFFICULTIES = ("쉬움", "보통", "어려움")
 
 
-def _obj(v: Json) -> dict[str, Json]:
+# JSON 풀이. `json_*`는 수집 도구(`morning_collect`·`morning_sources`)도 가져다 쓴다. 이 도구는
+# 스크립트로 돌아 `tools` 패키지를 가져오지 못하므로 함께 쓰는 것을 이 파일에 둔다. 이 도구를
+# `-m`으로 부르게 되면 `json_*`를 공용 모듈로 옮겨 바깥 명령 층이 그리기 도구에 기대지 않게 한다.
+
+
+def json_obj(v: Json) -> dict[str, Json]:
     return v if isinstance(v, dict) else {}
 
 
-def _list(v: Json) -> list[Json]:
+def json_list(v: Json) -> list[Json]:
     return v if isinstance(v, list) else []
 
 
-def _str(v: Json) -> str:
+def json_str(v: Json) -> str:
     return v if isinstance(v, str) else ""
+
+
+def json_int(v: Json) -> int | None:
+    return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+
+def json_time(v: Json) -> datetime | None:
+    """ISO 시각. 시간대가 없으면 UTC로 읽는다."""
+    try:
+        t = datetime.fromisoformat(json_str(v))
+    except ValueError:
+        return None
+    return t if t.tzinfo is not None else t.replace(tzinfo=UTC)
 
 
 def _num(v: Json) -> float | None:
@@ -101,17 +123,13 @@ def _num(v: Json) -> float | None:
     return float(v) if isinstance(v, int | float) else None
 
 
-def _int(v: Json) -> int | None:
-    return v if isinstance(v, int) and not isinstance(v, bool) else None
-
-
 def _strs(v: Json) -> tuple[str, ...]:
-    return tuple(_str(x) for x in _list(v))
+    return tuple(json_str(x) for x in json_list(v))
 
 
 def _day(v: Json) -> date | None:
     try:
-        return date.fromisoformat(_str(v))
+        return date.fromisoformat(json_str(v))
     except ValueError:
         return None
 
@@ -149,13 +167,13 @@ class Metric:
 
     @staticmethod
     def of(j: Json) -> Metric:
-        o = _obj(j)
+        o = json_obj(j)
         alarm = o.get("alarm")
         return Metric(
-            _str(o.get("key")),
-            _str(o.get("label")),
-            _str(o.get("kind")),
-            tuple(_num(x) for x in _list(o.get("series"))),
+            json_str(o.get("key")),
+            json_str(o.get("label")),
+            json_str(o.get("kind")),
+            tuple(_num(x) for x in json_list(o.get("series"))),
             alarm if isinstance(alarm, str) else None,
         )
 
@@ -173,11 +191,11 @@ class Table:
 
     @staticmethod
     def of(j: Json) -> Table:
-        o = _obj(j)
+        o = json_obj(j)
         return Table(
             _strs(o.get("head")),
-            _str(o.get("align")),
-            tuple(_strs(r) for r in _list(o.get("rows"))),
+            json_str(o.get("align")),
+            tuple(_strs(r) for r in json_list(o.get("rows"))),
         )
 
 
@@ -202,13 +220,13 @@ class Section:
 
     @staticmethod
     def of(j: Json) -> Section:
-        o = _obj(j)
+        o = json_obj(j)
         return Section(
-            _int(o.get("number")) or 0,
-            _str(o.get("title")),
-            tuple(Table.of(t) for t in _list(o.get("tables"))),
+            json_int(o.get("number")) or 0,
+            json_str(o.get("title")),
+            tuple(Table.of(t) for t in json_list(o.get("tables"))),
             _strs(o.get("lines")),
-            _str(o.get("source")),
+            json_str(o.get("source")),
         )
 
 
@@ -226,13 +244,13 @@ class Pr:
 
     @staticmethod
     def of(number: int, j: Json) -> Pr:
-        o = _obj(j)
+        o = json_obj(j)
         title = o.get("title")
         return Pr(
             number,
             title if isinstance(title, str) else None,
-            _str(o.get("body")),
-            _str(o.get("branch")),
+            json_str(o.get("body")),
+            json_str(o.get("branch")),
         )
 
 
@@ -248,8 +266,10 @@ class QueueRow:
 
     @staticmethod
     def of(number: int, j: Json) -> QueueRow:
-        o = _obj(j)
-        return QueueRow(number, _int(o.get("rounds")), o.get("human") is True, _str(o.get("what")))
+        o = json_obj(j)
+        return QueueRow(
+            number, json_int(o.get("rounds")), o.get("human") is True, json_str(o.get("what"))
+        )
 
 
 @dataclass(frozen=True)
@@ -265,14 +285,14 @@ class Value:
 
     @staticmethod
     def of(j: Json) -> Value | None:
-        o = _obj(j)
+        o = json_obj(j)
         v = _num(o.get("value"))
-        return None if v is None else Value(_str(o.get("label")), v, _str(o.get("unit")))
+        return None if v is None else Value(json_str(o.get("label")), v, json_str(o.get("unit")))
 
 
 def _numbered[T](j: Json, make: Callable[[int, Json], T]) -> dict[int, T]:
     out: dict[int, T] = {}
-    for k, v in _obj(j).items():
+    for k, v in json_obj(j).items():
         if k.isdigit():
             out[int(k)] = make(int(k), v)
     return out
@@ -319,24 +339,26 @@ class Data:
     @staticmethod
     def of(j: Json) -> Data:
         """다른 형식의 수집 JSON은 칸이 빠져 조용히 틀리게 그리므로 읽지 않는다(ValueError)."""
-        o = _obj(j)
+        o = json_obj(j)
         if o.get("format") != FORMAT:
             raise ValueError(f"수집 JSON의 형식 {o.get('format')}이 이 도구의 {FORMAT}와 다르다")
         day = _day(o.get("day"))
         if day is None:
             raise ValueError("수집 JSON에 day가 없다")
-        values = {k: v for k, x in _obj(o.get("values")).items() if (v := Value.of(x)) is not None}
+        values = {
+            k: v for k, x in json_obj(o.get("values")).items() if (v := Value.of(x)) is not None
+        }
         return Data(
             day,
-            _str(o.get("made")),
-            tuple(Metric.of(m) for m in _list(o.get("metrics"))),
+            json_str(o.get("made")),
+            tuple(Metric.of(m) for m in json_list(o.get("metrics"))),
             values,
-            tuple(Section.of(s) for s in _list(o.get("sections"))),
+            tuple(Section.of(s) for s in json_list(o.get("sections"))),
             _numbered(o.get("prs"), Pr.of),
             _numbered(o.get("queue"), QueueRow.of),
-            {k: _str(v) for k, v in _obj(o.get("branches")).items()},
-            _str(o.get("journal")),
-            _int(o.get("alarms")) or 0,
+            {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
+            json_str(o.get("journal")),
+            json_int(o.get("alarms")) or 0,
         )
 
 
@@ -351,8 +373,8 @@ class Named:
 
     @staticmethod
     def of(_number: int, j: Json) -> Named:
-        o = _obj(j)
-        return Named(_str(o.get("name")), _str(o.get("content")), _str(o.get("group")))
+        o = json_obj(j)
+        return Named(json_str(o.get("name")), json_str(o.get("content")), json_str(o.get("group")))
 
 
 @dataclass(frozen=True)
@@ -363,8 +385,8 @@ class Todo:
 
     @staticmethod
     def of(j: Json) -> Todo:
-        o = _obj(j)
-        return Todo(_str(o.get("title")), _str(o.get("why")), _int(o.get("queue")))
+        o = json_obj(j)
+        return Todo(json_str(o.get("title")), json_str(o.get("why")), json_int(o.get("queue")))
 
 
 @dataclass(frozen=True)
@@ -383,16 +405,16 @@ class Proposal:
 
     @staticmethod
     def of(j: Json) -> Proposal:
-        o = _obj(j)
+        o = json_obj(j)
         return Proposal(
-            _str(o.get("id")),
-            _str(o.get("title")),
-            _str(o.get("basis")),
-            _str(o.get("effect")),
-            _str(o.get("difficulty")),
-            _str(o.get("decision")),
-            _str(o.get("check")),
-            _str(o.get("better")),
+            json_str(o.get("id")),
+            json_str(o.get("title")),
+            json_str(o.get("basis")),
+            json_str(o.get("effect")),
+            json_str(o.get("difficulty")),
+            json_str(o.get("decision")),
+            json_str(o.get("check")),
+            json_str(o.get("better")),
             _strs(o.get("change")),
         )
 
@@ -411,13 +433,13 @@ class Notes:
 
     @staticmethod
     def of(j: Json) -> Notes:
-        o = _obj(j)
+        o = json_obj(j)
         return Notes(
             _numbered(o.get("prs"), Named.of),
             _numbered(o.get("queue"), Named.of),
-            {k: _str(v) for k, v in _obj(o.get("branches")).items()},
-            tuple(Todo.of(t) for t in _list(o.get("todos"))),
-            tuple(Proposal.of(p) for p in _list(o.get("proposals"))),
+            {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
+            tuple(Todo.of(t) for t in json_list(o.get("todos"))),
+            tuple(Proposal.of(p) for p in json_list(o.get("proposals"))),
             _numbered(o.get("remarks"), lambda _n, v: _strs(v)),
             _strs(o.get("next")),
         )
@@ -438,11 +460,11 @@ class Seen:
 
 def read_state(j: Json) -> dict[str, Seen]:
     out: dict[str, Seen] = {}
-    for k, v in _obj(j).items():
-        o = _obj(v)
+    for k, v in json_obj(j).items():
+        o = json_obj(v)
         since = _day(o.get("since"))
         if since is not None:
-            out[k] = Seen(since, _num(o.get("value")), _str(o.get("check")))
+            out[k] = Seen(since, _num(o.get("value")), json_str(o.get("check")))
     return out
 
 
@@ -717,7 +739,7 @@ def _todo_warnings(t: Todo) -> list[str]:
 def _proposal_lines(
     data: Data, notes: Notes, state: Mapping[str, Seen], namer: Namer, marks: Marks
 ) -> tuple[list[str], dict[str, Seen], Marks, list[str]]:
-    """제안 표와 접힌 "바꿀 것", 오늘의 제안 상태, 표지, 경고."""
+    """제안 표와 그 아래 펼친 "바꿀 것", 오늘의 제안 상태, 표지, 경고."""
     if not notes.proposals:
         return ["없음"], {}, marks, []
     head = (
@@ -764,7 +786,7 @@ def _proposal_lines(
             )
         new_state[p.id] = Seen(prev.since if prev is not None else data.day, today, p.check)
     # 표의 행이 모두 바꿀 것보다 앞에 그려지므로, 바꿀 것은 표를 다 채운 뒤에 채운다
-    details = ["<details><summary>제안별 바꿀 것</summary>", ""]
+    details = ["**제안별 바꿀 것**", ""]
     for i, (p, title) in enumerate(zip(notes.proposals, titles, strict=True), start=1):
         details += [f"**{i}. {title}**", ""]
         changes: list[str] = []
@@ -773,7 +795,6 @@ def _proposal_lines(
             changes.append(f"- {written}")
         details += changes or ["- (적지 않음)"]
         details.append("")
-    details.append("</details>")
     lines = [*table_lines(Table(head, "rlllllll", tuple(rows))), "", *details]
     return lines, new_state, marks, warnings
 
@@ -784,7 +805,7 @@ def _section_lines(
     """상세 절 하나의 글, 표지, 경고. 수집 도구가 쓴 표와 줄은 자리 표시자만 채우고, 메모의 해석
     줄만 글 속 작업 번호에 이름을 붙인다(수집 도구의 줄은 번호와 이름을 자리 표시자로 쓴다)."""
     where = f"상세 {s.number}"
-    out = [f"<details><summary>{s.number}. {s.title}</summary>", ""]
+    out = [f"### {s.number}. {s.title}", ""]
     for t in s.tables:
         rows: list[tuple[str, ...]] = []
         for r in t.rows:
@@ -798,21 +819,26 @@ def _section_lines(
     for x in s.lines:
         filled, marks = namer.fill(x, where, marks)
         lines.append(filled)
-    written = [*notes.remarks.get(s.number, ()), *(notes.next if s.number == NEXT_SECTION else ())]
+    remarks = notes.remarks.get(s.number, ())
+    written = [*remarks, *(notes.next if s.number == NEXT_SECTION else ())]
     for x in written:
         expanded, marks = namer.expand(x, where, marks)
         lines.append(f"- {expanded}")
     warnings: list[str] = []
-    if len(lines) > MAX_LIST:
-        collected = len(s.lines)
+    if not written:
+        hint = (
+            "next에 다음 할 일을 두세 줄"
+            if s.number == NEXT_SECTION
+            else f"remarks에 그 절의 표를 읽은 해석을 한 줄에서 {MAX_REMARKS}줄까지"
+        )
+        warnings.append(f"{where}에 해석이 없다(메모의 {hint} 쓴다)")
+    if len(remarks) > MAX_REMARKS:
         warnings.append(
-            f"{where}의 목록이 {len(lines)}줄로 {MAX_LIST}줄을 넘는다"
-            f"(수집 {collected}줄, 메모 {len(written)}줄)."
-            f" 메모가 이 절에 쓸 수 있는 줄은 {max(0, MAX_LIST - collected)}줄이다"
+            f"{where}의 해석이 {len(remarks)}줄로 {MAX_REMARKS}줄을 넘는다(가장 중요한 것만 남긴다)"
         )
     if lines:
         out += [*lines, ""]
-    out += [f"원본: {s.source}", "", "</details>", ""]
+    out += [f"원본: {s.source}", ""]
     return out, marks, warnings
 
 
