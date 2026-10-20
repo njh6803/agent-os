@@ -26,6 +26,15 @@ $X"를 얻는다(`Limit.rate`). 보고하는 날의 몫, 최근 24시간의 속�
   잡혀 쓸 수 있는 점을 버릴 수 있지만, 비율을 틀리게 내지는 않는다.
 - 계정은 `~/.claude.json`의 `oauthAccount`의 이메일(없으면 `accountUuid`)이고 장부의 세션
   계정(`token_report.read_accounts`)과 글자로 맞댄다. 둘 다 없으면 `record`가 쓰지 않고 2로 끝난다.
+  계정 기록을 남기기 전에 연 세션의 비용은 어느 계정과도 맞지 않아 빠지고, 1%당 달러가 작게 나온다.
+- 점의 시각은 `get_usage`를 부른 시각이 아니라 `record`를 친 시각이다. 결과 파일이 15분까지 묵을 수
+  있어 그만큼의 비용이 비율에 더 들 수 있다.
+- 몫이 정수 퍼센트라 기준 점의 몫이 작으면(창이 막 초기화된 뒤 1~5%) 반올림만으로 비율이 크게
+  흔들린다. 문턱을 두지 않았다.
+- 보고하는 날의 몫은 그날의 비용을 지금의 비율로 나눈다. `--day`로 며칠 전을 다시 그리면 그때의
+  비율이 아니다.
+PR 직전 리뷰(`bug-perf-review`)가 짚은 위 셋과 계정 기록 전 세션은 예약 실행이 쌓인 뒤 날 사이로
+견주어 볼 어림의 한계로 남겼다.
 
 쓰임: `uv run python -m tools.morning_limit record --reports <폴더> --plan <get_usage 결과 JSON>`.
 종료 0은 한 줄을 덧붙였다. 2는 쓰지 않았다는 뜻이고 까닭은 stderr에 있다. 결과 파일을 읽지
@@ -88,7 +97,10 @@ def record_of(result: Json, account: str, now: datetime) -> Record | str:
         window = json_obj(w)
         if json_str(window.get("label")) != WEEKLY:
             continue
-        percent, resets = json_int(window.get("percentUsed")), json_time(window.get("resetsAt"))
+        raw = window.get("percentUsed")
+        if isinstance(raw, float):
+            return f"get_usage의 주간 · 모든 모델 몫이 정수가 아니다: {raw}"
+        percent, resets = json_int(raw), json_time(window.get("resetsAt"))
         if percent is not None and resets is not None:
             return Record(now, account, percent, resets)
     return "get_usage의 결과에 주간 · 모든 모델 창이 없다"

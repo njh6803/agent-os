@@ -76,6 +76,7 @@ from tools.morning_collect import (
     worktree_pr,
     write_outputs,
 )
+from tools.morning_collect import main as collect_main
 from tools.morning_limit import Record
 from tools.morning_report import (
     UNCOLLECTED,
@@ -926,6 +927,29 @@ def test_수집은_시트와_수집_JSON을_임시_파일_없이_쓰고_JSON은_
     # 다시 쓰면 덮어쓰고 임시 파일을 남기지 않는다
     write_outputs(tmp_path, data)
     assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_수집_파일을_쓰지_못하면_트레이스백_없이_종료_2로_까닭을_적는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 윈도에서 다른 프로세스가 연 파일로 os.replace가 PermissionError를 내면 종료 1로 끝났고,
+    # 지시문은 종료 2만 다룬다(PR 직전 리뷰)
+    root = tmp_path / "root"
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    data = Data(date(2026, 10, 19), "", (), {}, (), {}, {}, {}, "", "한도 없음")
+
+    def 모음(*_: object) -> Data:
+        return data
+
+    def 막힘(*_: object) -> Path:
+        raise PermissionError("다른 프로세스가 쓰고 있다")
+
+    monkeypatch.setattr("tools.morning_collect.collect", 모음)
+    monkeypatch.setattr("tools.morning_collect.write_outputs", 막힘)
+    args = ["--reports", str(tmp_path / "r"), "--root", str(root), "--day", "2026-10-19"]
+    assert collect_main(args) == 2
+    assert "수집 파일을 쓰지 못했다" in capsys.readouterr().err
 
 
 def test_시트는_행이_있는_표의_열쇠만_메모를_쓸_표로_싣는다() -> None:

@@ -48,6 +48,19 @@ def test_주간_모든_모델의_창이_없으면_까닭이다() -> None:
     )
 
 
+def test_주간_몫이_정수가_아니면_창이_없다고_하지_않고_그_까닭을_적는다() -> None:
+    body: Json = {
+        "windows": [
+            {
+                "label": "Weekly · all models",
+                "percentUsed": 66.5,
+                "resetsAt": "2026-10-25T21:00:00Z",
+            }
+        ]
+    }
+    assert record_of(body, "a@x", AT) == "get_usage의 주간 · 모든 모델 몫이 정수가 아니다: 66.5"
+
+
 def test_기록은_한_줄로_쓰고_다시_읽는다() -> None:
     line = 기록().to_json()
     assert read_records(json.dumps(line) + "\n" + "{깨진 줄\n") == [기록()]

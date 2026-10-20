@@ -2683,7 +2683,12 @@ def main(argv: list[str]) -> int:
     except OSError as error:
         sys.stderr.write(f"주 체크아웃이나 장부를 읽지 못했다: {error}\n")
         return 2
-    print(write_outputs(reports, data))
+    try:
+        out = write_outputs(reports, data)
+    except OSError as error:
+        sys.stderr.write(f"수집 파일을 쓰지 못했다: {error}\n")
+        return 2
+    print(out)
     print("\n".join(sheet_lines(data)))
     return 0
 

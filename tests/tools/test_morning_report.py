@@ -373,6 +373,9 @@ def test_장부를_채우기_전에_찍은_한도가_없으면_어림하지_않�
     text, _, _ = render(자료(limit=limit), 메모(), {}, "summary")
     assert "지금 **37%** 썼습니다" in text
     assert "어제 쓴 몫과 속도는 어림하지 않았습니다" in text
+    # 몫이나 비용이 0이어도 비율이 없는데, 그 원인은 내일도 그대로일 수 있다(PR 직전 리뷰)
+    assert "내일부터 나옵니다" not in text
+    assert "몫이나 그때까지의 비용이 0이라" in text
 
 
 def test_확인할_수치의_달러는_10_이상이면_소수점_없이_적는다() -> None:

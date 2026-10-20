@@ -121,3 +121,54 @@
 - 남긴 것: 냄새 판단 항목(위 판정의 "남김")과 `SENTENCE_END` 중복(이 변경 전부터 두 파일에 있었다). 모두 지금 동작을 틀리게 하지 않아 회고 후보로 넘긴다.
 - 다시 돌린 명령: 아침 보고 시험 셋 153개 통과(`uv run pytest -q tests/tools/test_morning_collect.py tests/tools/test_morning_limit.py tests/tools/test_morning_report.py`), `ruff check .`·`ruff format --check .` 깨끗, 바뀐 파일 여섯의 pyright 깨끗. 나머지 손으로 치는 검사는 커밋의 pre-commit 결과로 갈음한다(결과는 커밋 뒤 아래에).
 - PR 직전 리뷰에 밀 새 주장: (1) 수집은 시트를 먼저, 수집 JSON을 나중에 쓰므로 JSON이 있으면 시트도 있다. (2) `record`는 15분보다 오래된 결과 파일을 종료 2로 거절한다. (3) `environment.hooks`에 드는 판정은 `검토`·`아직 이르다`·`등록 안 됨`뿐이다. (4) 행이 없는 표는 블록 없이 "그 밖의 수"에 `해당 없음` 한 줄로 적힌다.
+
+## 인계 (커밋 뒤)
+
+이 세션은 일지 앞 절의 "인계 (셀프 리뷰 직전)"를 받아 셀프 리뷰, 반영, 커밋까지 하고 컨텍스트가 약 24.5만 토큰으로 문턱을 넘은 채 `커밋 뒤` 경계에 왔다. 제목은 `Morning report split 인계`였고 지금은 `chore/morning-report-split (인계함)`으로 바꾼다.
+
+사용자 프롬프트(이 세션의 첫 메시지, 지시문):
+
+> 사용자: docs/journal/2026-10-20-39-morning-report-split.md 의 "사용자 프롬프트" 요청을 이어서 한다. 남은 단계는 docs/journal/2026-10-20-40-morning-report-five.md 의 "인계 (셀프 리뷰 직전)" 절이다
+> (이번 요청 범위: PR과 병합까지. 병합 뒤 예약 작업을 다섯으로 나누고 다시 돌려 확인까지)
+
+한 것(자세한 판정은 위 "셀프 리뷰" 절):
+
+- 두 축 셀프 리뷰를 돌리고(표준 축 sonnet·high, 명세 축 세션 모델) Major 셋과 Minor를 모두 시험 먼저로 고쳤다. 아침 보고 시험 셋 153개 통과.
+- 커밋 `23edd7c2`. pre-commit 게이트 열넷이 초록이었고(zizmor, lint-imports, check-instructions, check-type-escapes, pyright, run-hooks, pytest 246초, web-verify 316초, 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지, ruff 둘) 건너뛴 것은 카나리아 명세와 헌법 판(해당 파일이 없다)뿐이다. 인용 대조 경고 6건은 막지 않는 경고이고 아직 하나씩 보지 않았다.
+- 푸시하지 않았다. PR도 없다. 회고(`retro`)는 앞 세션이 위 `## 회고`에 적었고, 셀프 리뷰가 낸 새 후보(남긴 냄새 판단 항목, `SENTENCE_END` 중복)는 위 "남긴 것"에 적었다. 마지막 세션의 회고가 이것까지 읽는다.
+
+번복한 것: 없다. 앞 세션의 설계와 견본 승인("응. 진행해")은 그대로다.
+
+남은 일(차례대로):
+
+1. 인용 대조 경고 6건을 하나씩 본다(원문과 다른 인용이면 고치고, 아니면 그대로).
+2. `git merge origin/main`으로 맞춘다. 겹치는 파일은 `.scratch/retro-queue.md` 하나(글자 충돌 후보)이고, 대기열 384 행을 닫은 줄과 main이 새로 더한 행(345·346·376·377·378)이 맞닿는다.
+3. 푸시, PR 본문(왜 이렇게 했나, 남긴 위험, 계약 영향, 변경된 영역. 계약(`sdk/`, `openapi.json`, 헌법)은 건드리지 않았다), `bug-perf-review` 서브에이전트나 `coderabbit-review`의 PR 직전 리뷰, 봇 회차, 병합(워크트리에서 병합하는 길).
+4. 병합 뒤 곧바로 예약 작업 다섯: `daily-morning-report`를 종합(매일 09:00)으로 고치고, 비용(09:30)·작업(09:45)·작업 환경(월 10:00)·실험(월 10:15)을 새로 만든다. 옛 `SKILL.md`는 `~/.claude/scheduled-tasks/daily-morning-report/old/`로 옮긴다. 본문은 앞 절의 틀에서 `<보고 이름>`과 `<보고>`만 바꾼다. 지시문 교체와 주 체크아웃 당기기는 연달아 한다(옛 지시문의 가드는 `MAX_REMARKS`, 새 것은 `MAX_DECISIONS`를 찾아 사이에 낀 실행이 틀린 안내로 끝난다). 그 뒤 종합 하나를 `run_scheduled_task`로 돌려 확인한다.
+5. 새 지시문이 의존하는 `tools/morning_limit.py`와 `tools/morning_report.py`는 주 체크아웃의 것을 부르므로, 예약 작업을 돌리기 전에 주 체크아웃 세션에서 `/tidy-checkouts`로 당겨야 한다.
+
+확인하지 못한 것: 앞 절의 둘(작업·작업 환경·실험 보고를 메모를 채워 경고 0까지 그려 보지 않았다, 주간 한도 환산 경로를 실제 데이터로 돌리지 않았다)에 더해, 새 시트 파일(`<날짜>.sheet.txt`)과 원자적 쓰기를 실제 `morning_collect` 실행으로 돌려 보지 않았다(시험은 `write_outputs`를 부른다).
+
+일지 파일: docs/journal/2026-10-20-40-morning-report-five.md
+open-session을 부른다 2026-10-20T15:37:11Z
+
+## PR 직전 (2026-10-21, 새 세션이 이어서)
+
+> 사용자: docs/journal/2026-10-20-39-morning-report-split.md 의 "사용자 프롬프트" 요청을 이어서 한다. 남은 단계는 docs/journal/2026-10-20-40-morning-report-five.md 의 "인계 (커밋 뒤)" 절이다
+
+- 인용 대조. 커밋 뒤라 기본 모드는 볼 줄이 없어, 이 브랜치가 바꾼 마크다운을 `--all-lines`로 다시 봤다(경고 넷). 진짜는
+  `common.md`의 시트 제목 인용 하나였다(셀프 리뷰가 시트 제목에 "행이 없는 표는 그려지지 않아 뺐다"를 더한 뒤 옛 제목을
+  인용하고 있었다). 고쳤다. 나머지 셋은 설계 문서의 제안 칸 이름, 수식의 틀, 저장소 밖의 세션 제목이라 그대로 둔다.
+- `git merge origin/main`(병합 커밋 `6c3756ca`). `.scratch/retro-queue.md`의 충돌은 main이 더한 383행을 살리고 이 브랜치가
+  닫은 384행을 두었다. main은 384행을 바꾸지 않았다(병합 기준과 글자로 견줬다). 병합 커밋의 pre-commit 게이트 열넷이 초록이었다.
+- PR 직전 리뷰. `coderabbit auth status`가 `Seat: not assigned`라 대체 둘로 간다. `bug-perf-review`가 Critical·Major 없이 Minor
+  여덟을 냈고, 셀프 리뷰의 주장 넷 가운데 셋은 참, 넷째(행 없는 표는 `해당 없음` 한 줄)는 `environment.hooks`에서 어긋났다
+  (모든 훅이 `유지`면 표 객체를 만들지 않는다).
+  - 고침: 시트 없이 JSON만 남은 보고 폴더의 갈래를 `common.md` 준비 4에 더했다(Minor 1). `morning_collect`의 `main`이
+    `write_outputs`의 `OSError`를 종료 2로 낸다(Minor 2). `record_of`가 정수가 아닌 몫을 "창이 없다"가 아니라 그 까닭으로
+    거절한다(Minor 4). 환산하지 못한 문구가 "내일부터 나옵니다"라고 약속하지 않는다(Minor 8). `environment.md`에 훅이 모두
+    `유지`일 때를 적었다(주장 4). 시험을 먼저 써서 셋이 빨간 것을 본 뒤 고쳤다.
+  - 남김: 점의 시각이 `record`를 친 시각인 것(Minor 3), 작은 몫에서 비율이 흔들리는 것(Minor 5), 계정 기록 전 세션의 비용이
+    빠지는 것(Minor 6), `--day`로 옛날을 다시 그릴 때의 비율(Minor 7). 정상 흐름의 동작을 틀리게 하지 않아 `morning_limit.py`
+    독스트링의 못 보는 것에 적고 회고 후보로 넘긴다.
+- 다시 돌린 명령: 아침 보고 시험 셋 155개 통과, `ruff check .`·`ruff format --check .` 깨끗, 바뀐 파일 여섯의 pyright 깨끗.
