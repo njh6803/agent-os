@@ -12,10 +12,14 @@
 - `notes`(양성 대조): 대상이 실리지 않는 `notes.md` 다. 여기서 Edit 가 거부되어야 "먼저 Read 를
   요구한다"가 이 판에서 선다.
 
-표지. 그 회차가 측정인 것은 둘이 모두 맞을 때다. 대상 파일을 겨눈 Edit 호출과 그 결과가 스트림에
-있고, 모델의 글에 `CLAUDE.md` 의 표지 문장이 있다(지침이 실렸다는 표지). 표지 없는 회차는 따로 세고,
-하나라도 있으면 종료 코드 1 이다. 결과는 Edit 결과의 `is_error` 와 끝난 뒤 파일이 바뀌었는지로
-가른다.
+표지. 그 회차가 측정인 것은 셋이 모두 맞을 때다. 대상 파일을 겨눈 Edit 호출과 그 결과가 스트림에
+있고, 모델의 글에 `CLAUDE.md` 의 표지 문장이 있고(지침이 실렸다는 표지), 결과가 아래 두 갈래 가운데
+하나다. 표지 없는 회차는 따로 세고, 하나라도 있으면 종료 코드 1 이다.
+- `read-first`: 대상 Edit 결과가 모두 오류이고 그 문구에 `READ_FIRST` 가 있으며, 파일이 그대로다.
+- `edited`: 오류가 아닌 대상 Edit 결과가 있고, 파일이 바뀌었다.
+다른 까닭의 거부(낱말을 찾지 못함, 권한 거부)는 재려는 상황이 아니라 `other` 로 두고 측정으로 세지
+않는다. 첫 판은 Edit 결과가 있기만 하면 측정으로 셌다. PR 직전 버그 축이 짚어 거부 문구를 표지로
+더했다(일지 2026-10-20-35).
 
 돌리는 법: 저장소 루트에서
     uv run python .scratch/harness/probes/claude_md_edit_without_read.py <출력 디렉터리> [갈래 이름]
@@ -41,6 +45,9 @@ MARKER = "파란 고래 일곱"
 OLD = "카나리아-원본"
 NEW = "카나리아-바뀜"
 ARMS = {"claude-md": "CLAUDE.md", "notes": "notes.md"}
+# Edit 가 먼저 Read 를 요구하며 거부할 때의 문구. 2026-10-20 첫 실행의 원본에서 본 결과 문구
+# "File has not been read yet. Read it first before writing to it." 의 앞 조각이다.
+READ_FIRST = "has not been read yet"
 PROMPT = (
     "답은 반드시 `표지: ` 로 시작하는 줄로 시작한다. 그 뒤에는 이 세션에 실린"
     " 프로젝트 지시에서 '표지 문장:' 뒤의 낱말을 글자 그대로 옮기고, 없으면"
@@ -96,8 +103,8 @@ def blocks(event: dict[str, object]) -> list[dict[str, object]]:
     ]
 
 
-def judge(raw: Path, target: str) -> dict[str, object]:
-    """Edit 호출과 그 결과, 답의 표지를 모은다."""
+def judge(raw: Path, target: str, *, changed: bool) -> dict[str, object]:
+    """Edit 호출과 그 결과, 답의 표지를 모으고 회차를 가른다."""
     edit_ids: set[str] = set()
     results: list[dict[str, object]] = []
     # 표지 줄은 Edit 를 부르기 전의 글 블록에 오기도 해서(첫 실행의 원본에서 봤다) `result` 만 보지
@@ -130,9 +137,26 @@ def judge(raw: Path, target: str) -> dict[str, object]:
     return {
         "edit_calls": len(edit_ids),
         "edit_results": results,
+        "outcome": outcome(results, changed=changed),
         "loaded": any(MARKER in text for text in [*texts, answer]),
         "answer_head": answer[:300],
     }
+
+
+def outcome(results: list[dict[str, object]], *, changed: bool) -> str:
+    """대상 Edit 결과와 파일이 바뀌었는지로 회차를 가른다. 까닭이 다른 거부는 `other` 다."""
+    if not results:
+        return "other"
+    rejected = [
+        result
+        for result in results
+        if result.get("is_error") is True and READ_FIRST in str(result.get("text"))
+    ]
+    if len(rejected) == len(results) and not changed:
+        return "read-first"
+    if changed and any(result.get("is_error") is not True for result in results):
+        return "edited"
+    return "other"
 
 
 def run_once(claude: str, arm: str, number: int, out: Path) -> dict[str, object]:
@@ -163,8 +187,8 @@ def run_once(claude: str, arm: str, number: int, out: Path) -> dict[str, object]
                 code = 124
         changed = NEW in (work / target).read_text(encoding="utf-8")
     row: dict[str, object] = {"arm": arm, "run": number, "exit": code, "changed": changed}
-    row.update(judge(raw, target))
-    row["measured"] = bool(row["edit_results"]) and row["loaded"] is True
+    row.update(judge(raw, target, changed=changed))
+    row["measured"] = row["loaded"] is True and row["outcome"] != "other"
     return row
 
 

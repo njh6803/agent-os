@@ -395,7 +395,7 @@ retro가 규칙 후보로 올린다(`CLAUDE.md` 교정 루프).
 
 **잰 것.** 모두 이 PC, claude 2.1.302, 모델 sonnet이다.
 
-- `.scratch/harness/probes/claude_md_edit_without_read.py`: 회차마다 새 임시 폴더에서 `claude -p --tools Edit`로 Read 없이 `CLAUDE.md`(세션을 시작할 때 실린다)와 `notes.md`(양성 대조)의 낱말 하나를 바꾸게 했다. 네 회차 모두 Edit가 "File has not been read yet. Read it first before writing to it."로 거부되었고 파일은 바뀌지 않았다(측정 4, 표지 없음 0). 지침으로 실린 것은 Read로 치지 않는다.
+- `.scratch/harness/probes/claude_md_edit_without_read.py`: 회차마다 새 임시 폴더에서 `claude -p --tools Edit`로 Read 없이 `CLAUDE.md`(세션을 시작할 때 실린다)와 `notes.md`(양성 대조)의 낱말 하나를 바꾸게 했다. 네 회차 모두 Edit가 "File has not been read yet. Read it first before writing to it."로 거부되었고 파일은 바뀌지 않았다(측정 4, 표지 없음 0). 세션을 시작할 때 실린 루트의 `CLAUDE.md`도 Read로 치지 않는다. 잰 것은 `claude -p`의 임시 폴더 루트에 둔 `CLAUDE.md`뿐이고, 데스크톱 앱 세션, 하위·상위 폴더의 `CLAUDE.md`, `@`로 임포트한 파일은 재지 않았다.
 - 카나리아 `.scratch/harness/probes/canary/agent_docs_rule.toml`: 스킬 파일과 `CLAUDE.md`를 Read로 연 실험군 여섯이 규칙의 제목과 스킬 이름을 옮겼고, `paths` 밖을 연 대조군 셋은 "없음"이었다(통과 9). 시작할 때 실린 `CLAUDE.md`는 이 규칙을 함께 싣지 않는다.
 - 카나리아 `adr_rule_domain_modeling.toml`(통과 4)과 `claude_md_grill_new_feature.toml`(통과 4, 대조군은 주 체크아웃 `30949cfc`)이 나머지 두 문장이 실리는 것을 보였다.
 - 재지 못한 것: 데스크톱 앱 세션과 서브에이전트에서 경로 규칙이 실리는지, Write로 처음 만드는 파일에 실리는지, Bash로 읽은 파일에 실리는지. 손으로 본 것은 이렇다. Write로 새 파일을 만들 때 실렸다는 기록이 claude 2.1.296에 있다(`docs/agents/issue-tracker.md` 프로브와 근거 절, 대기열 247). 이 PR의 셀프 리뷰에서는 데스크톱 앱의 서브에이전트가 Read로 스킬 파일을 열자 이 규칙이 실렸다. Bash로 읽은 파일은 `CLAUDE.md` 지도 표가 실리지 않는다고 적지만, 같은 셀프 리뷰에서 실린 때(본 세션이 `cat`으로 카나리아 명세를 읽자 `probes.md`, 서브에이전트가 `sed`로 읽자 `adr.md`·`tools.md`)와 실리지 않은 때(본 세션이 `sed`로 `tools/`의 파일)가 섞였다(일지 2026-10-20-35). 새 스킬을 Write로 만드는 세션에 이 규칙이 실리지 않으면 `writing-for-agents`의 설명에 기댄다.

@@ -148,7 +148,7 @@ open-session을 부른다 2026-10-20T13:01:09Z
 - S4: ADR 0033의 경로 훅 선례를 `hook_scratch_probe_rule` 하나로 고치고, "`hook_journal_retro`도 일지 경로에서 울리지만, 경로만 보던 동안 인용 하나를 고친 Edit마다 울려 세션이 그 계기를 무시하게 되자 본문 조건으로 좁혔다(그 독스트링을 읽었다)"를 더했다.
 - S5: "코드 단계에는 `web-design.md`가 이미 실리고"를 "확정된 디자인 파일을 코드로 옮기는 단계는 디자인 파일과 `.claude/rules/web-design.md`를 따른다. 그 규칙은 컴포넌트 코드(`paths`는 `web/packages/ui/**`와 `web/apps/*/components/**`)를 열 때 실린다"로 고쳤다.
 - S6·P6·P8: `agent-docs.md`의 "Write로 처음 만드는 파일에는 실리지 않는다"를 지웠다. ADR 0033 "못 본 것"을 "재지 못한 것"으로 바꿔, Write는 claude 2.1.296에서 실렸다는 손 기록(대기열 247), Bash는 이 셀프 리뷰에서 실린 때(본 세션의 `cat`으로 카나리아 명세를 읽자 `probes.md`, 서브에이전트의 `sed`로 `adr.md`·`tools.md`)와 실리지 않은 때(본 세션의 `sed`로 `tools/`의 파일)가 섞였다고 적었다. 같은 ADR의 고르지 않은 것에서 "Write로 처음 만드는 파일에는 실리지 않는다"도 "재지 못했다"로 고쳤다.
-- S7·P7: "색 네다섯 개"를 "색 네 개에서 여섯 개"로, "자동 생성의 티"를 "흔한 기본값"으로 고쳤다. 인용 "워크트리에서는 쓰지 않는다"를 지우고 "`next-session`이 그 스킬의 `git checkout main`이 워크트리에서 실패하거나 main을 가져간다고 적은 경고"로 풀었다. "제 폴더 밖 한 곳 이상이"를 원문 "제 폴더 밖의 한 곳 이상이"로, `git-pr`이 나오는 자리에 `to-tickets`를 더했고, "고른 것은 모두 사용자가 골랐다"를 "`coderabbit:code-review`를 그대로 둔 것 말고는"으로 좁혔다.
+- S7·P7: "색 네다섯 개"를 "색 네 개에서 여섯 개"로, "자동 생성의 티"를 "흔한 기본값"으로 고쳤다. 인용 "워크트리에서는 쓰지 않는다"를 지우고 "`next-session`이 그 스킬의 `git checkout main`이 워크트리에서 실패하거나 main을 가져간다고 적은 경고"로 풀었다. "제 폴더 밖 한 곳 이상이"를 원문 "제 폴더 밖의 한 곳 이상이"로, `git-pr`이 나오는 자리에 `to-tickets`를 더했고, "고른 것은 모두 사용자가 골랐다"를 "표의 `coderabbit:code-review` 행(묻지 않고 그대로 두었다) 말고는"으로 좁혔다.
 - S8·P5: ADR 0025의 계정 기록 경로를 주 체크아웃의 `.scratch/token-report/ledger/accounts.jsonl`(커밋하지 않는 파일)로 고치고, 계정이 바뀐 줄을 찍어 손으로 본 것(2026-10-16 06:05 njh6803, 08:10 njh4803, 10-17 06:53 njh6803, 10-18 21:05:30 njh4803 뒤로 그대로)을 근거로 달았다. "계정을 바꾸기로 한 기록은 일지에 없다"를 "계정을 바꾸려고 세션을 멈춘 인계가 둘 있지만(2026-10-18-02, 2026-10-19-25), 둘 다 멈춘 자리와 이을 일만 적었고 왜 바꾸는지와 위 이력의 계정 구성을 어떻게 할지는 적지 않았다"로 고쳤다.
 - S9·P4·P9: `CONTEXT.md`의 계기를 넓혀 "하네스가 이름을 들어 시키는 계기"와 "스킬의 설명이 적은 계기"를 함께 두고, `_Avoid_`에서 "언급"을 뺐다. 저장소가 이미 넓은 뜻(`CLAUDE.md` 교정 루프의 "계기는 그 스킬의 설명이 원천이다", 인계 계기)으로 쓰고 있어, 좁은 정의 대신 정의를 쓰임에 맞췄다. ADR 0033에는 "이 이력에서 꾸밈 없이 쓴 계기는 하네스의 계기다"를 두고 "이 둘이 먼저 설명이 적은 계기를 잃는다"로 고쳤다. 거꾸로 동기화는 `## 화면`으로 옮기고, 디자인 시스템과 목업의 길을 나눠 정의했다.
 - P1: ADR 0033 "부딪치면 저장소 규칙이 이긴다"에 사용자 답의 축(색·글꼴·토큰, 도구 이름의 고정폭, 그림자, 움직임, 화면 문구의 용어), `frontend-design`을 비워 둔 축(새 화면의 배치, 문구 다듬기, 찍어 보고 고치기)에만 쓴다는 제한, 저장소 규칙에 `CONTEXT.md`의 용어, 흔한 기본값이 저장소 규칙에 있으면 바꾸지 않는다는 것, 충돌 줄의 칸(어느 화면, 무엇을 권했는지, 어느 줄을 따랐는지)을 더했다. 다섯 축이 `web-design.md`에 있는 것(토큰 CSS, 도구 이름의 고정폭, `shadow-float`, 뼈대가 움직이지 않음과 `motion-reduce`, 버튼 글자)은 그 파일을 읽어 확인했다.
@@ -181,3 +181,50 @@ open-session을 부른다 2026-10-20T13:01:09Z
 > 사용자: 아 그리고 지금은 티켓없이 하네스 작업을 계속 하고 있는데 어떤 작업이든 항상 티켓으로 등록하고 작업할 수 있도록 해줘. CLAUDE.md 지침으로 한줄 넣어야하나? 플랜없이 티켓만 있어도 되잖아? 그치? 플랜이랑 티켓의 개념 설명 좀
 
 플랜(`plan.md`의 기능 행), 명세, 티켓(`issues/NN-*.md`), 대기열의 층과, 플랜 행 없이 티켓만 둔 선례를 설명하고, `CLAUDE.md` 한 줄로는 강제력이 없어 정할 것이 남는다고 답했다. 이 PR과 섞지 않으려 새 세션을 제안했고, 사용자가 새 세션을 골랐다. 그 세션(워크트리 `ticket-for-every-pr-design`)이 ADR 0037을 설계해 승인까지 받았고, 아직 커밋하지 않았다고 보고했다. 이 세션은 그 일을 하지 않는다.
+
+### 커밋과 main 합치기
+
+- 승인 줄을 단 뒤 `chore: 설명에만 기대던 스킬 계기를 하네스로 옮기고 화면은 Claude Code가 그린다 (ADR 0033)`로 커밋했다. pre-commit이 모두 통과했다(parallel-checks 여덟 단계, 표·줄 구분 문자·변이 표·카나리아 모양·인용 대조). 처음 친 제목은 75자라 커밋 메시지 훅의 사전 검사가 막아 줄였다.
+- 인용 대조 경고 6건을 하나씩 봤다. 이 절의 "고친 것" S7·P7 줄이 ADR 0033의 문장을 다르게 옮겨 원문("표의 `coderabbit:code-review` 행(묻지 않고 그대로 두었다) 말고는")으로 고쳤다. 나머지 다섯은 저장소 밖 원문(frontend-design 스킬, 사용자가 붙여 넣은 화면 설명), 리뷰가 본 커밋 전 초안, 주석 줄바꿈으로 갈린 원문이라 그대로 두었다. 이 고침은 아직 커밋하지 않았다.
+- `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거절했다. 그래서 `git fetch origin` 뒤 `git merge --no-edit origin/main`으로 직접 합쳤다(main은 #325~#329까지 왔다). `.scratch/plan.md`의 프론티어 문단이 충돌했다. main 쪽(end-user-continuation이 닫혀 web-widget이 풀렸고 프론티어는 web-widget, admin-style, mcp-shutdown이다) 뒤에 이 브랜치의 두 문장을 이었고, web-widget도 프론티어가 되어 끝 문장을 "admin-style 과 web-widget 의 화면은 그 스킬이 선 뒤에 그린다"로 넓혔다(web-widget 행의 덧붙임도 그 스킬로 그린다고 적는다). 병합 커밋도 pre-commit을 모두 지났다.
+- main에서 새로 선 규약 가운데 이 브랜치의 파일과 닿는 것은 프로브 결론 훅(`tools/hook_probe_conclusion.py`)과 `probes.md` 해석 항목의 한 문장이다. 이 브랜치의 탐침은 양성 대조(`notes.md`)를 이미 뒀다. 거부 문구는 기록만 하고 표지로 보지 않았는데 이때는 그것을 놓쳤고, PR 직전 버그 축이 짚어 아래 "이어받은 세션 (커밋 뒤)"에서 고쳤다. ADR이 인용한 `docs/agents/issue-tracker.md`의 "프로브와 근거" 절은 main에도 그대로 있다.
+- PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 CLI 축은 돌지 못한다. 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 돌릴 차례였다. `bug-perf-review`에 밀 주장은 위 "고친 것" 줄들과 이 절의 plan.md 끝 문장이다.
+- 관찰(손으로 봤다): 이 데스크톱 앱 본 세션에서 Read로 `.claude/agents/bug-perf-review.md`를 열자 `.claude/rules/agent-docs.md`가 실렸다. ADR 0033 이력의 "재지 못한 것" 가운데 데스크톱 앱 세션 갈래의 손 기록 하나다.
+
+## 인계 (커밋 뒤)
+
+병합 커밋 뒤 세션 컨텍스트가 200,152 토큰으로 문턱을 넘어 `hook_handoff`가 `커밋 뒤` 경계를 알렸다. 이 세션의 지금 제목은 `docs/skill-call-sites`다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다).
+
+- 남은 단계: 이 일지의 커밋하지 않은 수정(위 인용 고침과 이 인계 절)을 다음 일지 기록과 함께 커밋, PR 직전 리뷰 둘(`/security-review`와 `bug-perf-review`, 범위는 origin/main 이후), 리뷰 반영, PR(`gh pr create`, ccd_pr `get_status`·`bind_pr`), `@coderabbitai review`, 봇 회차, 병합(워크트리에서 병합할 때). 아직 푸시하지 않았고 PR이 없다.
+- ADR 승인은 받았다. 인터뷰와 셀프 리뷰를 다시 하지 않는다.
+
+인계 지시문:
+
+다음 작업: 기능 skill-call-sites. 이 저장소가 쓰는 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정하는 설계 인터뷰
+다음 단계: 설계 인터뷰
+어디서: 새 세션. 같은 브랜치·워크트리의 인계라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs docs/journal/2026-10-20-26-skill-listing-budget.md 의 "다음"과 ADR 0033 이력 2026-10-20 "스킬 목록 예산을 0.006으로 낮춘다"의 "잃는 계기" 절대로, 스킬마다 하네스가 이름으로 부르는 자리를 감사하고 frontend-design을 부를지·어디서·web-design.md와 부딪칠 때 어느 쪽이 이기는지를 정한다
+브랜치: docs/skill-call-sites
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-20-35-skill-call-sites.md 의 "인계 (커밋 뒤)"와 그 앞 "커밋과 main 합치기"
+이어받을 상태: 인계: 커밋 뒤. 설계 인터뷰와 셀프 리뷰는 끝났고 ADR 0033·0025 새 이력은 사용자가 승인했다(인터뷰와 셀프 리뷰를 다시 하지 않는다). 셀프 리뷰를 반영한 커밋과 origin/main을 합친 병합 커밋까지 했고, 아직 푸시하지 않아 PR이 없다. 일지의 커밋하지 않은 수정(인용 한 줄 고침과 인계 절)이 워크트리에 있다. 남은 것은 PR 직전 리뷰 둘(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review), 반영, 커밋, PR, 봇 회차, 병합이다. docs/journal/2026-10-20-35-skill-call-sites.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/skill-call-sites (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-20T16:08:17Z
+
+## 이어받은 세션 (커밋 뒤)
+
+2026-10-21에 인계 지시문으로 연 새 앱 세션이 제목을 `docs/skill-call-sites`로 바꾸고 `EnterWorktree(path)`로 워크트리 `skill-call-sites`에 들어갔다. 지시문 첫 줄이 다시 `grill-with-docs`를 가리켰지만, 앞 인계와 같이 인터뷰와 셀프 리뷰는 다시 하지 않았다. `git fetch origin` 뒤 origin/main은 `83f09401` 그대로라 다시 합칠 것이 없었다.
+
+### PR 직전 리뷰
+
+- `/security-review`: 범위는 `origin/HEAD...HEAD`(merge-base `83f09401`)의 13개 파일. 식별 서브태스크가 신뢰도 8 이상의 지적을 내지 않아 거르기 서브태스크는 띄우지 않았다. 따라간 경로는 탐침 `claude_md_edit_without_read.py`(고정 argv, 셸 없음, 프롬프트는 상수, `json.loads`만)와 카나리아 명세 셋이 `tools/canary.py`에서 쓰이는 길(argv에 닿는 것은 `model`과 도구 이름뿐, `checkout`은 커밋된 값이고 pre-commit은 `--shape`만 돈다)이다.
+- `bug-perf-review`(sonnet, 기준 `83f09401`, 13개 파일, 호출 40에 닿아 마쳤다): 유효 3(모두 Minor), 보류 2, 오탐 0. 밀 주장으로 넘긴 "고친 것" 줄들과 plan.md 끝 문장은 첫째 지적 하나 말고 모두 맞았다(계정 장부의 전환 넷, `hook_journal_retro` 독스트링, `web-design.md`의 `paths`와 다섯 축, 카나리아 아홉).
+  1. 유효. 위 "커밋과 main 합치기"의 "거부 문구 표지를 이미 둬"가 틀렸다. 탐침의 `measured`는 Edit 결과가 있고 표지 문장이 실렸는지만 봐, 다른 까닭의 거부(낱말을 찾지 못함, 권한 거부)도 "Read를 요구한다"로 셀 수 있었다(`.claude/rules/probes.md` 첫 항목). 탐침에 `READ_FIRST`(`has not been read yet`)와 `outcome`(`read-first`·`edited`·`other`)을 더하고 `other`는 측정으로 세지 않게 고쳤다. 가짜 입력 여덟(거부 문구 하나·둘, 다른 까닭, 섞임, 바뀜, 거부인데 바뀜, 성공인데 그대로, 결과 없음)이 모두 기대대로 갈렸다. 고친 판을 claude 2.1.302로 다시 돌려 측정 4 / 표지 없음 0, 네 회차 모두 `read-first`였다(종료 0). 탐침 README 행에 결과 갈래와 다시 돌린 결과를 더했다. 결론은 그대로이고 양성 대조(`notes`)와 거부 문구 표지가 함께 섰다. 그 일지 줄은 사실대로 고쳤다.
+  2. 유효. `plan.md` 프론티어 문단이 design-reverse-sync를 프론티어로 말하지 않았다. 그 행의 Blocked by `design-artifacts`가 `done`이라 `issue-tracker.md`의 정의로는 프론티어다. 셀프 리뷰 S12가 남긴 이유("프론티어 문단이 적는다")가 문단과 맞지 않았다. 문단에 "그것도 프론티어이고, 프론티어는 … 넷이다"를 더했다.
+  3. 유효. ADR 0033 "잰 것"의 "지침으로 실린 것은 Read로 치지 않는다"가 잰 범위(`claude -p`, 임시 폴더 루트의 `CLAUDE.md`)보다 넓었다. 잰 것과 재지 않은 것(데스크톱 앱 세션, 하위·상위 폴더, `@` 임포트)으로 좁혔다. 사용자가 승인한 이력의 문장이지만 결정은 바뀌지 않는 근거의 범위라 고치고 보고에 밝힌다.
+  4. 보류 → 닫음. "하네스의 다섯 자리"의 기준. 읽는 세션에게 자기 단계로 돌리라고 하는 줄(`to-spec` 27행의 "명세를 쓴 뒤의 차례", `next-session` 22·58행)은 계기이고, 기능 전체의 순서를 그린 줄(`to-tickets` 21행)과 역할을 나눈 줄(`bug-perf-review.md` 31행)은 언급이라 다섯이 맞다. 결정(그대로 둔다)은 어느 쪽이든 같다.
+  5. 보류 → 닫음. `.cmd` 셔임이면 시간 초과의 `kill`이 손자를 남긴다는 지적. 이 PC의 `shutil.which("claude")`는 `C:\Users\User\.local\bin\claude.EXE`라 해당하지 않는다.
