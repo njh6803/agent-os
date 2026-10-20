@@ -138,7 +138,12 @@ LONG_GAP_SECONDS = 0.5
 OLD_BOUND_SECONDS = 8  # 시간 제한 시험이 고치기 전에 러너 호출 전체에 둔 상한
 BURNER = "while True:\n    pass\n"
 LOAD_WAIT_SECONDS = 900  # 출력을 남기는 pytest 부하가 끝나기를 기다리는 상한
+# 부하를 끝내는 `taskkill` 한 번의 상한. 부하 아래에서 가장 긴 것이 22초였다(ADR 0035 의 2026-10-19
+# 이력 "손자 없는 시간 제한 시험의 상한을 30초로 넓힌다")
+TASKKILL_SECONDS = 60
 SUMMARY_LINE = re.compile(r"(FAILED|ERROR) [^ ]+\.py")  # `-rfE` 가 남기는 요약 줄
+# `-q` 가 끝에 찍는 결과 줄(`4 failed, 3614 passed, 5 warnings, 1 error in 4606.50s (1:16:46)`)
+RESULT_LINE = re.compile(r"(\d+ [a-z]+(, \d+ [a-z]+)*|no tests ran) in \d+(\.\d+)?s\b")
 SYNCHRONIZE = 0x00100000
 PROCESS_TERMINATE = 0x0001
 WAIT_TIMEOUT = 0x102
@@ -524,7 +529,9 @@ def unmeasured_reason(trace: Trace, *, alive: bool) -> str | None:
 
 
 def kill_tree(proc: subprocess.Popen[bytes]) -> None:
-    """부하 프로세스와 그 자식을 끝낸다. `pytest -n` 의 일꾼은 자식이라 `kill` 만으로는 남는다."""
+    """부하 프로세스와 그 자식을 끝낸다. `pytest -n` 의 일꾼은 자식이라 `kill` 만으로는 남는다.
+    `taskkill` 이나 그 뒤의 기다림이 상한을 넘기면 `TimeoutExpired` 를 던지고, 부르는 쪽이 다음
+    부하로 넘어간다."""
     if proc.poll() is not None:
         return
     RUN(
@@ -532,6 +539,7 @@ def kill_tree(proc: subprocess.Popen[bytes]) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
+        timeout=TASKKILL_SECONDS,
     )
     proc.wait(timeout=30)
 
@@ -541,23 +549,36 @@ def burners(
     count: int, pytest_loads: int, logs: Sequence[Path] = ()
 ) -> Iterator[list[subprocess.Popen[bytes]]]:
     """부하 프로세스를 띄운다. `logs` 가 있으면 pytest 부하 i 의 출력을 `logs[i]` 에 남긴다(그
-    부하도 대상 시험을 한 번 돈다. `-rfE` 로 실패와 오류의 이름이 끝에 남는다). 없으면 버린다."""
+    부하도 대상 시험을 한 번 돈다. `-rfE` 로 실패와 오류의 이름이 끝에 남는다). 없으면 버린다.
+    남긴 출력은 부하를 끝낸 뒤 줄 끝을 맞춘다(`normalize_line_ends`)."""
     with contextlib.ExitStack() as stack:
         sinks = [stack.enter_context(path.open("wb")) for path in logs[:pytest_loads]]
-        procs = [
-            subprocess.Popen([sys.executable, "-c", BURNER], stdout=subprocess.DEVNULL)
-            for _ in range(count)
-        ]
-        procs += [
-            subprocess.Popen(
-                [sys.executable, "-m", "pytest", "-q", "-rfE", "-n", "8", "-p", "no:cacheprovider"],
-                cwd=ROOT,
-                stdout=sinks[index] if index < len(sinks) else subprocess.DEVNULL,
-                stderr=subprocess.STDOUT if index < len(sinks) else subprocess.DEVNULL,
-            )
-            for index in range(pytest_loads)
-        ]
+        procs: list[subprocess.Popen[bytes]] = []
         try:
+            # 띄우는 도중 끊겨도(Ctrl-C, `OSError`) 이미 뜬 부하는 아래 `finally` 가 끝낸다
+            for _ in range(count):
+                procs.append(
+                    subprocess.Popen([sys.executable, "-c", BURNER], stdout=subprocess.DEVNULL)
+                )
+            for index in range(pytest_loads):
+                procs.append(
+                    subprocess.Popen(
+                        [
+                            sys.executable,
+                            "-m",
+                            "pytest",
+                            "-q",
+                            "-rfE",
+                            "-n",
+                            "8",
+                            "-p",
+                            "no:cacheprovider",
+                        ],
+                        cwd=ROOT,
+                        stdout=sinks[index] if index < len(sinks) else subprocess.DEVNULL,
+                        stderr=subprocess.STDOUT if index < len(sinks) else subprocess.DEVNULL,
+                    )
+                )
             # pytest 는 수집과 일꾼을 띄우는 데 시간이 든다. 그 전의 회차는 부하가 덜하다(어림).
             time.sleep(20.0 if pytest_loads else 1.0 if count else 0.0)
             yield procs
@@ -568,7 +589,7 @@ def burners(
                     proc.wait(timeout=LOAD_WAIT_SECONDS)
             # 하나를 끝내지 못해도 나머지를 끝내고, 남은 것은 한 번 더 끝낸다. 하나의 기다림이
             # 30초를 넘긴 예외가 이 반복을 끊어, 프로세스 64개 옆 측정 두 번이 부하 128개를 남긴 채
-            # 끝났다(일지 2026-10-20-05)
+            # 끝났다(일지 2026-10-20-08)
             for _ in range(2):
                 for proc in procs:
                     with contextlib.suppress(subprocess.TimeoutExpired):
@@ -576,17 +597,39 @@ def burners(
             left = [proc.pid for proc in procs if proc.poll() is None]
             if left:
                 print(f"끝내지 못한 부하 {len(left)}개(pid): {left}", file=sys.stderr, flush=True)
+            for sink in sinks:
+                sink.close()
+            for path in logs[:pytest_loads]:
+                normalize_line_ends(path)
+
+
+def normalize_line_ends(path: Path) -> None:
+    """부하 pytest 의 출력에서 줄 끝을 `\\n` 으로 맞춘다. rich 로그 줄이 `\\r\\r\\n` 으로 끝나, 앞의
+    홀로 선 CR 때문에 git 이 그 파일만 CRLF 째 스테이지하고 줄 구분 문자 검사 둘이 빨갰다(일지
+    2026-10-20-08 의 커밋 절). 줄 끝이 아닌 홀로 선 CR 도 줄 끝으로 바꾼다. 읽거나 쓰지 못하면
+    둔다."""
+    with contextlib.suppress(OSError):
+        data = path.read_bytes()
+        fixed = re.sub(rb"\r", b"\n", re.sub(rb"\r+\n", b"\n", data))
+        if fixed != data:
+            path.write_bytes(fixed)
 
 
 def failed_in(log: Path) -> list[str]:
     """pytest 부하의 출력에서 `-rfE` 가 남긴 실패와 오류 줄을 꺼낸다. `-rf` 만 주던 판은 setup 의
-    오류를 놓쳤다(일지 2026-10-20-05). 오류 줄은 시험 경로가 바로 붙은 것만 본다. 실패 절에 실린
-    로그(`ERROR    <로거>:…`)는 공백이 여럿이라 걸리지 않는다."""
+    오류를 놓쳤다(일지 2026-10-20-08). 오류 줄은 시험 경로가 바로 붙은 것만 본다. 실패 절에 실린
+    로그(`ERROR    <로거>:…`)는 공백이 여럿이라 걸리지 않는다. 끝의 결과 줄(`RESULT_LINE`)이 없으면
+    표지를 하나 더한다. 정리 단계가 끝낸 부하는 실패 줄도 결과 줄도 없이 `node down` 으로 끝나,
+    빈 목록이 "실패 없음" 과 갈리지 않았다(PR 직전 리뷰, 일지 2026-10-20-08)."""
     try:
         text = log.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ["(출력을 읽지 못했다)"]
-    return [line.strip()[:300] for line in text.splitlines() if SUMMARY_LINE.match(line)]
+    lines = text.splitlines()
+    found = [line.strip()[:300] for line in lines if SUMMARY_LINE.match(line)]
+    if not any(RESULT_LINE.match(line) for line in lines):
+        found.append("(결과 줄이 없다. 끝나기 전에 끊겼다)")
+    return found
 
 
 def load_test_module(test_file: Path, index: int) -> ModuleType:

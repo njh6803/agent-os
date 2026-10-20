@@ -1,4 +1,4 @@
-# 2026-10-20 (05) 부하에서 흔들리는 시간 시험의 남은 사례 셋을 재현해 원인을 가른다
+# 2026-10-20 (08) 부하에서 흔들리는 시간 시험의 남은 사례 셋을 재현해 원인을 가른다
 
 대기열 306을 반영하는 하네스 chore의 둘째 PR이다. 앞 PR(#301, 일지 2026-10-19-25)이 남긴 사례 셋을 사례마다 부하를 건
 반복 실행으로 재현해 원인을 가른 뒤 고친다. 대상은 `tests/tools/test_hook_midturn_korean.py`의 파일이 없는 사례,
@@ -229,8 +229,8 @@ pre-commit이 pytest·pyright·web verify를 함께 띄울 때였고, 이 부하
 ## eslint 사례: 고침
 
 시험만 고쳤다. `web/eslint.config.test.ts`에 `PROGRAM_TIMEOUT_MS`(600초)를 두고 "실제 관리 화면 자리"와 "끄기 주석"의
-`describe`에 그 제한을 줬다. 묶음에 주는 것은 `-t`로 하나만 고르면 다른 시험이 그 묶음에서 프로그램을 처음 세우기
-때문이다. verify의 린트 명령을 띄우는 `spawnSync`에도 같은 값의 `timeout`을 주고, 끊기면 `run.error`를 던진다. 자식은
+`describe`에 그 제한을 줬다. 묶음에 주는 것은 프로그램을 처음 세우는 시험이 무엇을 도느냐에 따라 달라서다(`-t`로 다른
+시험 하나만 고르면 그 시험이 세운다. 이 문장은 PR 직전 리뷰가 짚어 고쳤다). verify의 린트 명령을 띄우는 `spawnSync`에도 같은 값의 `timeout`을 주고, 끊기면 `run.error`를 던진다. 자식은
 이벤트 루프와 무관하게 끊기므로, 멈춘 자식은 이제 600초에서 실제로 끊긴다. 600초는 홀로 돌린 시간(3초 남짓)의 넉넉한
 배수이고, pre-commit 러너의 검사 제한(4200초) 안이다. "실제 생성 클라이언트 자리"(32개 옆 36.8초)와 `beforeAll`(제한
 120초. 리포터 JSON에 훅의 시간이 실리지 않아 재지 못했다)은 빨강이 재현되지 않아 그대로 뒀다.
@@ -260,8 +260,8 @@ pre-commit이 pytest·pyright·web verify를 함께 띄울 때였고, 이 부하
 시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)의 남은 사례 셋을 chore 한 PR로 반영한다. 오늘 여러 세션의 pre-commit을 막은 test_hook_midturn_korean.py의 test_트랜스크립트_파일이_없으면_기다리지_않는다부터 하고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
 브랜치: chore/timing-tests-under-load
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-20-05-timing-tests-under-load.md 전체(사례마다의 재현·원인·고침과 끝의 "인계" 절), ADR 0035의 2026-10-19 이력 셋과 2026-10-20 이력
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경과 미추적 파일이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 `5e7fa88d`, 미추적 포함)부터 한다. 세 사례 모두 고쳤고 midturn·mutate 사례는 측정과 변이까지 마쳤다. eslint 사례는 앞 세션이 띄운 `bash .scratch/harness/probes/precommit_xdist/eslint_program_timeout_all.sh after`가 2026-10-20 06:22(KST)부터 돈다(고친 판의 `slow-pass` 대조, 부하 없음, pytest 세 벌과 프로세스 32개. 32개는 한 시간 넘게 걸린다). 첫 단계 `after_control_slow_pass`는 06:27에 끝났다(`control_ok` 참, 셋 모두 67496.4~67908.2ms 걸리고도 초록, 종료 0), 둘째 `after_b0`는 06:28에 끝났다(0/3, `next-react` 중앙 2774.8ms). 남은 `after_pytest3_b32`가 끝나면 `.scratch/harness/probes/precommit_xdist/results/eslint_program_timeout/after_pytest3_b32.line`이 쓰인다. 그때까지 부하를 얹는 명령(`tools/run_checks.py`, pytest, vitest)을 치지 않고 그 파일을 Monitor로 기다린다. 끝나면 대조와 `after_b0`·`after_pytest3_b32`의 빨강·`passed_over_60s`로 ADR 0035의 2026-10-20 이력과 `.scratch/harness/probes/README.md`의 eslint 줄에 남은 `<<after>>`를 채우고 일지에 적는다(대조가 맞지 않거나 고친 판이 빨가면 진단한다). 측정이 끝난 뒤 `web/judge-*`·`web/probe-slow-*`가 남았으면 지운다. 커밋 직전 `tools/sibling_overlap.py`가 일지 번호를 옮기라고 한다(2026-10-20-05 → 다음 빈 번호, `--move`). 일지 docs/journal/2026-10-20-05-timing-tests-under-load.md
+읽을 것: docs/journal/2026-10-20-08-timing-tests-under-load.md 전체(사례마다의 재현·원인·고침과 끝의 "인계" 절), ADR 0035의 2026-10-19 이력 셋과 2026-10-20 이력
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경과 미추적 파일이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준 `5e7fa88d`, 미추적 포함)부터 한다. 세 사례 모두 고쳤고 midturn·mutate 사례는 측정과 변이까지 마쳤다. eslint 사례는 앞 세션이 띄운 `bash .scratch/harness/probes/precommit_xdist/eslint_program_timeout_all.sh after`가 2026-10-20 06:22(KST)부터 돈다(고친 판의 `slow-pass` 대조, 부하 없음, pytest 세 벌과 프로세스 32개. 32개는 한 시간 넘게 걸린다). 첫 단계 `after_control_slow_pass`는 06:27에 끝났다(`control_ok` 참, 셋 모두 67496.4~67908.2ms 걸리고도 초록, 종료 0), 둘째 `after_b0`는 06:28에 끝났다(0/3, `next-react` 중앙 2774.8ms). 남은 `after_pytest3_b32`가 끝나면 `.scratch/harness/probes/precommit_xdist/results/eslint_program_timeout/after_pytest3_b32.line`이 쓰인다. 그때까지 부하를 얹는 명령(`tools/run_checks.py`, pytest, vitest)을 치지 않고 그 파일을 Monitor로 기다린다. 끝나면 대조와 `after_b0`·`after_pytest3_b32`의 빨강·`passed_over_60s`로 ADR 0035의 2026-10-20 이력과 `.scratch/harness/probes/README.md`의 eslint 줄에 남은 `<<after>>`를 채우고 일지에 적는다(대조가 맞지 않거나 고친 판이 빨가면 진단한다). 측정이 끝난 뒤 `web/judge-*`·`web/probe-slow-*`가 남았으면 지운다. 커밋 직전 `tools/sibling_overlap.py`가 일지 번호를 옮기라고 한다(2026-10-20-08 → 다음 빈 번호, `--move`). 일지 docs/journal/2026-10-20-08-timing-tests-under-load.md
 확인할 선행 조건: 다른 세션('하네스 작업 진행')이 전달한 사용자 요청이 이어진다. 전문은 아래 "전달받은 지시" 블록이고, 그대로 따른다(이 브랜치의 PR과 병합까지만 하고, next-session으로 새 세션을 열지 않으며, 마지막 보고에 "재개 대기"를 적는다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -302,7 +302,7 @@ pre-commit이 pytest·pyright·web verify를 함께 띄울 때였고, 이 부하
 브랜치: chore/timing-tests-under-load
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
 읽을 것: 일지 전체(끝의 "인계" 절에 긴 판 지시문과 전달받은 지시 원문), ADR 0035의 2026-10-19·20 이력
-이어받을 상태: 인계: 셀프 리뷰 직전. 미커밋·미추적 변경이 있고 /code-review(기준 5e7fa88d, 미추적 포함)부터 한다. 고친 eslint 판의 측정(eslint_program_timeout_all.sh after)이 돈다. results/eslint_program_timeout/after_pytest3_b32.line이 쓰일 때까지 pytest·vitest·run_checks를 치지 않고 Monitor로 기다린 뒤 <<after>> 둘을 채운다. 나머지는 인계 절의 긴 판. 일지 docs/journal/2026-10-20-05-timing-tests-under-load.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 미커밋·미추적 변경이 있고 /code-review(기준 5e7fa88d, 미추적 포함)부터 한다. 고친 eslint 판의 측정(eslint_program_timeout_all.sh after)이 돈다. results/eslint_program_timeout/after_pytest3_b32.line이 쓰일 때까지 pytest·vitest·run_checks를 치지 않고 Monitor로 기다린 뒤 <<after>> 둘을 채운다. 나머지는 인계 절의 긴 판. 일지 docs/journal/2026-10-20-08-timing-tests-under-load.md
 확인할 선행 조건: '하네스 작업 진행' 세션이 전한 사용자 지시가 이어진다. 지금 브랜치와 PR은 규약대로 끝까지 마무리한다(리뷰 반영, 병합, 일지. "다음"은 적어도 된다). next-session으로 새 세션을 열지 않고 다음 티켓·대기열 행을 시작하지 않는다. 인계는 되지만 이 지시 전체를 인계 프롬프트에 옮긴다. 이유는 그 세션이 retro 승인 기준과 next-session 결정표를 바꾸는 중이어서다. 재개 메시지가 오면 main을 당기고 바뀐 스킬은 디스크의 SKILL.md를 Read로 연다. 턴을 끝낼 때 마지막 보고에 "재개 대기"를 적는다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -325,7 +325,7 @@ open-session을 부른다 2026-10-19T21:41:05Z
 
 ADR 0035의 2026-10-20 이력과 README eslint 행의 `<<after>>`를 이 수로 채웠다. 측정이 끝났을 때 `web/judge-*`·`web/probe-slow-*`는 남지 않았고, 이 워크트리의 부하 프로세스도 남지 않았다(명령줄에 `while True` 또는 이 워크트리 경로가 든 파이썬은 `worktree-overrides-pc-check`의 둘뿐이었다).
 
-08:0x(KST)에 '하네스 작업 진행' 세션(`local_7bc0f796-da54-466c-96f6-373b149df8b9`, chore/hook-census)이 같은 정지 지시를 다시 보냈다. 요지: 그 세션이 하네스 규약을 바꾸는 PR(ADR 0036: chore는 기능의 마지막 티켓 뒤에만 연다, 새 훅·검사·지침 문장은 같은 실수의 세 번째나 손상 한 번에만 더한다, 대기열 행은 14일 뒤 만료한다)을 마무리하는 동안, 맡은 일(열린 PR의 리뷰 반영·CI·병합, 일지)만 마무리하고 새 chore·대기열 행·새 세션을 시작하지 않는다. 인계하면 "이어받을 상태"에 이 지시를 그대로 옮긴다. 재개 메시지가 오면 main을 당기고 디스크의 SKILL.md를 Read로 열어 새 규약을 따른다. 이 브랜치는 그대로 PR과 병합까지 마무리한다.
+07:55(KST, 트랜스크립트의 기록 시각)에 '하네스 작업 진행' 세션(`local_7bc0f796-da54-466c-96f6-373b149df8b9`, chore/hook-census)이 같은 정지 지시를 다시 보냈다. 요지: 그 세션이 하네스 규약을 바꾸는 PR(ADR 0036: chore는 기능의 마지막 티켓 뒤에만 연다, 새 훅·검사·지침 문장은 같은 실수의 세 번째나 손상 한 번에만 더한다, 대기열 행은 14일 뒤 만료한다)을 마무리하는 동안, 맡은 일(열린 PR의 리뷰 반영·CI·병합, 일지)만 마무리하고 새 chore·대기열 행·새 세션을 시작하지 않는다. 인계하면 "이어받을 상태"에 이 지시를 그대로 옮긴다. 재개 메시지가 오면 main을 당기고 디스크의 SKILL.md를 Read로 열어 새 규약을 따른다. 이 브랜치는 그대로 PR과 병합까지 마무리한다.
 
 ## 셀프 리뷰
 
@@ -334,7 +334,7 @@ ADR 0035의 2026-10-20 이력과 README eslint 행의 `<<after>>`를 이 수로 
 고친 것:
 - (표준 1) ADR mutate 이력의 트리 시험 수가 두 측정을 섞었다. "트리 시험은 이 측정들에서 모두 통과했고 가장 긴 것이 32개 옆 1794.9ms, 48개 옆 1363.3ms였다."로 고쳤다.
 - (표준 2·명세 6) ADR midturn 이력의 "갈래는 A와 B였다"는 고치기 전 판만 잰 측정에 한정됐다(`pair_pytest3_r2`에 A' 하나). "갈래는 고치기 전 판만 잰 측정에서 A와 B였고(32개 옆 A 72·B 59, pytest 세 벌 옆 A 4·B 5), 두 판을 차례로 부른 측정의 고치기 전 판에서도 A와 B가 거의 전부였다(32개 옆 A 115·B 33, pytest 세 벌 옆 B 36·A 23과 A 19·B 19·A' 1)."로 고쳤다.
-- (표준 3·명세 1) ADR eslint 이력. "`-t`로 하나만 고르면…" 이유는 관리 화면 묶음에만 맞아 "관리 화면 자리는 `-t`로 하나만 고르면 그 묶음의 다른 시험이 프로그램을 처음 세우므로 시험이 아니라 묶음에 주고, 끄기 주석은 두 시험이 모두 자식 eslint를 띄워 묶음에 준다."로 나눴다. 멈춘 자식이 실제로 600초에서 끊긴다고 적은 옛 문장은 재지 않은 것이라 "`spawnSync`의 `timeout`은 이벤트 루프와 무관하게 자식을 끊는다. Node 24.19.0에서 30초 자는 자식에 제한 500ms를 주자 535ms에 `SIGTERM`으로 끝나고 `error.code`가 `ETIMEDOUT`이었다(손으로 봤다, 일지 2026-10-20-05). 600초 끊김 자체는 재지 않았다."로 바꿨다(스크래치패드의 `spawn_timeout.mjs`로 이 세션이 쳤다). 변이 항목이 없던 것은 "변이는 두지 않았다. 시험의 단언은 그대로이고 바꾼 것은 제한뿐이라, 회귀를 새로 잡는 단언이 없다. 묶음의 제한이 세 시험에 걸리는 것은 고친 판의 대조가, `spawnSync`의 `timeout`이 자식을 끊는 것은 위 손으로 본 것이 보인다. `throw run.error`의 길은 시험도 측정도 밟지 않았다."를 더했다. 남은 것에 "67·110초 빨강이 난 pre-commit에서는 vitest 일꾼 하나가 응답 대기 시간 초과로 뜨지 못한 것도 함께 났다(일지 2026-10-19-24). 이 시험의 제한과 다른 사건이라 재지도 고치지도 않았다."를 더했다. 일지의 `TimeoutNaNWarning` 문장은 어림이라고 고쳤다.
+- (표준 3·명세 1) ADR eslint 이력. "`-t`로 하나만 고르면…" 이유는 관리 화면 묶음에만 맞아 "관리 화면 자리는 `-t`로 하나만 고르면 그 묶음의 다른 시험이 프로그램을 처음 세우므로 시험이 아니라 묶음에 주고, 끄기 주석은 두 시험이 모두 자식 eslint를 띄워 묶음에 준다."로 나눴다. 멈춘 자식이 실제로 600초에서 끊긴다고 적은 옛 문장은 재지 않은 것이라 "`spawnSync`의 `timeout`은 이벤트 루프와 무관하게 자식을 끊는다. Node 24.19.0에서 30초 자는 자식에 제한 500ms를 주자 535ms에 `SIGTERM`으로 끝나고 `error.code`가 `ETIMEDOUT`이었다(손으로 봤다, 일지 2026-10-20-08). 600초 끊김 자체는 재지 않았다."로 바꿨다(스크래치패드의 `spawn_timeout.mjs`로 이 세션이 쳤다). 변이 항목이 없던 것은 "변이는 두지 않았다. 시험의 단언은 그대로이고 바꾼 것은 제한뿐이라, 회귀를 새로 잡는 단언이 없다. 묶음의 제한이 세 시험에 걸리는 것은 고친 판의 대조가, `spawnSync`의 `timeout`이 자식을 끊는 것은 위 손으로 본 것이 보인다. `throw run.error`의 길은 시험도 측정도 밟지 않았다."를 더했다. 남은 것에 "67·110초 빨강이 난 pre-commit에서는 vitest 일꾼 하나가 응답 대기 시간 초과로 뜨지 못한 것도 함께 났다(일지 2026-10-19-24). 이 시험의 제한과 다른 사건이라 재지도 고치지도 않았다."를 더했다. 일지의 `TimeoutNaNWarning` 문장은 어림이라고 고쳤다.
 - (표준 4) `mutate_no_grandchild_bound.py` 독스트링의 "제한 1초를 빼고 견주지 않는다"가 코드(`branch`가 1초를 뺀다)와 반대라 "빼고 견준다"로 고쳤다. `repro` 결과에 `bound_ms`가 없는 것은 "그보다 앞선 `repro` 단계의 결과(`b0`, `b32`, `pytest3`, `control_*`)는 더 앞의 판으로 돌아 요약에 `bound_ms` 가 없다."로 적었다.
 - (표준 5) README eslint 행과 프로브 독스트링·주석의 `--setupFiles`는 손으로 본 것이라 그렇게 적었다("첫 대조 회차는 0.7초에 리포터 JSON 없이 끝났고(그 원본은 다음 대조가 덮었다. 손으로 띄워 보니 `--setupFiles`가 `Unknown option`이었다)").
 - (표준 6·명세 2) 3.1초·2.1초와 2.14초·4.17초의 출처를 ADR·306 행·일지에 적었다. ADR: "PR #301의 코멘트 `issuecomment-6264852685`에 있다", "(앞 세션의 지시문이 세션 기록을 `test_hook_midturn_korean`으로 찾아 적었다. 어느 세션인지는 적지 않았다)". 코멘트에 두 수가 있는 것은 `gh api`로 봤다.
@@ -363,3 +363,72 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 문장은 위 고친 것 
 ## main 합치기
 
 origin/main `68378fef`(기준 `5e7fa88d` 뒤의 #309·#310·#311·#313·#308)를 합쳤다. main이 `.claude/settings.json`을 바꿔 앱의 합치기 도구를 먼저 불렀으나, 이 세션은 앱이 만든 워크트리가 아니라는 까닭으로 거부돼 `git merge --no-commit --no-ff origin/main`으로 직접 합쳤다(그 도구는 커밋하지 않은 변경도 거부해서 이 일지의 편집본을 스크래치패드에 옮겨 두고 `git restore`한 뒤 불렀고, 합친 뒤 되돌려 놓았다). 충돌은 `.scratch/retro-queue.md`의 306 행 하나였다. main 쪽은 회차를 10회차로 올리고 일지 목록에 `2026-10-19-34-canary-runner-batch.md`를 더했다(#313). 이 브랜치의 행에 그 두 조각만 얹었고, 푼 뒤 main과 다른 줄이 306 행 하나이고 그 차이가 이 브랜치가 고친 조각뿐인 것을 diff로 봤다. `tests/tools/test_mutate.py`와 프로브 README는 저절로 합쳐졌다. #308이 변이 표 가드 넷(판정 낱말뿐인 표지를 변이 파일 오류로 내는 것 등)을 더해서, 이 브랜치의 변이 표 둘을 합친 도구의 `--check`로 다시 봤고 둘 다 원문이 한 번씩 있었다. 두 표의 표지는 판정 낱말이 아닌 문구다.
+
+합치기 커밋 `5ceb66cb`는 pre-commit을 모두 지났다(묶음 검사 211.7초: pyright 27.1초·run-hooks 67.9초·pytest 193.8초·web-verify 211.4초 등, 줄 구분 문자와 변이 표 통과, 카나리아 명세와 헌법 판은 `Skipped`). 인용 대조 경고 넷(`.scratch/retro-queue.md` 328·350행, 프로브 README 80행)은 모두 main이 더한 줄이라 이 브랜치가 고치지 않았다.
+
+## 커밋 뒤 인계
+
+합치기 커밋을 띄우자 인계 계기(`커밋 뒤`, 세션 컨텍스트 219,621 토큰)가 왔고, 커밋이 0으로 끝나 경계가 됐다. 위 "커밋" 절의 "커밋 뒤에 인계 계기는 오지 않았다"는 첫 커밋 `0678b4ce` 때의 일이다. 그 뒤 큰 도구 결과 몇이 컨텍스트를 다시 문턱 위로 올렸다. 인계하지 않는 다섯 때에 들지 않는다. 명령이 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없는 것은 앞에서 봤다). 열린 PR이 없어 다음 단계는 이 세션의 지시문 그대로 `구현`이다. 이 세션의 지금 제목은 `chore/timing-tests-under-load`다. 이 세션이 번복한 것: 위 "커밋" 절의 인계 판단(계기가 다시 와서 넘긴다), 정지 지시를 받은 시각 `08:0x`를 트랜스크립트의 기록 시각 `07:55`로 고쳤다.
+
+두 번째 정지 지시(2026-10-19T22:55:52Z 기록, `local_7bc0f796-da54-466c-96f6-373b149df8b9` '하네스 작업 진행' 세션이 보냈다. 글자 그대로):
+
+```
+[작업 정지 지시] "하네스 작업 진행" 세션(chore/hook-census)의 작업이 끝날 때까지, 지금 하던 일까지만 마무리하고 다음 작업으로 넘어가지 마세요.
+
+사용자의 요청입니다. 하네스 규약을 바꾸는 PR(ADR 0036: chore는 기능의 마지막 티켓 뒤에만 연다, 새 훅·검사·지침 문장은 같은 실수의 세 번째나 손상 한 번에만 더한다, 대기열 행은 14일 뒤 만료한다)을 chore/hook-census 세션이 마무리하는 중입니다.
+
+- 해도 되는 것: 지금 맡은 일의 마무리(이미 연 PR의 리뷰 반영·CI 확인·병합, 쓰던 일지 마무리).
+- 하지 말 것: 새 chore나 대기열 행을 새로 시작하기, next-session 지시문대로 새 세션을 열기, open-session 실행.
+- 인계(hook_handoff)를 해야 하면, 새 세션의 지시문 "이어받을 상태"에 이 정지 지시를 그대로 옮겨 적으세요. 앞서 인계된 세션들이 이 지시를 잃고 다음 일을 이어 간 일이 있었습니다.
+- 마무리한 뒤에는 멈춰서 기다리세요. chore/hook-census 세션이 끝나면 재개 메시지를 보냅니다. 재개 뒤에는 main을 당긴 다음 디스크의 SKILL.md를 Read로 열어 새 규약을 따르세요.
+```
+
+"하지 말 것"의 open-session 실행과 인계는 함께 읽었다. 같은 메시지가 인계를 해야 하면 새 세션의 지시문에 옮기라고 했고, 첫 지시도 지금 작업을 잇는 인계는 해도 된다고 했다. 그래서 인계로 여는 새 세션(인계 절차의 `open-session`)은 허락된 것으로 보고, 지시문의 "이어받을 상태"에 이 지시를 옮겼다. 원문 전부를 옮기면 딥링크가 상한(8,000자)을 넘어서, 항목을 빠짐없이 옮기고 원문은 이 절을 가리켰다. 인계 지시문(`tools/open_session.ps1`처럼 싸 보니 URL 7,503자, 프롬프트 1,427자):
+
+```
+다음 작업: 기능 harness. 대기열 306의 남은 사례 셋(midturn 2초, mutate 8초, eslint 60초 제한)을 반영한다
+다음 단계: 구현
+어디서: 새 세션. 인계 계기(커밋 뒤)로 넘긴다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 306(전체 스위트의 부하 아래에서 흔들리는 시간 시험을 사례마다 원인을 갈라 고치는 열린 행)의 남은 사례 셋을 chore 한 PR로 반영한다. 오늘 여러 세션의 pre-commit을 막은 test_hook_midturn_korean.py의 test_트랜스크립트_파일이_없으면_기다리지_않는다부터 하고, 고치기 전에 부하를 건 반복 실행으로 빨강을 재현해 원인을 가른다
+브랜치: chore/timing-tests-under-load
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "인계받은 세션" 절부터 끝까지(셀프 리뷰 절의 밀 주장, 끝의 "커밋 뒤 인계" 절에 정지 지시 원문)
+이어받을 상태: 인계: 커밋 뒤. 0678b4ce(변경 전체)와 5ceb66cb(origin/main 합치기)까지 커밋했고 푸시와 PR은 없다. 일지에 커밋하지 않은 인계 절이 있다. 남은 단계는 PR 직전 리뷰(bug-perf-review에 밀 주장은 일지 셀프 리뷰 절의 고친 것 줄 따옴표 문장 전부), PR, 봇 회차, 병합, 일지 "다음"이다. 일지 docs/journal/2026-10-20-08-timing-tests-under-load.md. 정지 지시('하네스 작업 진행' 세션, chore/hook-census가 끝날 때까지): 지금 맡은 일(이 PR의 리뷰 반영·CI·병합, 일지)만 마무리한다. 새 chore나 대기열 행을 시작하지 않고, next-session 지시문대로 새 세션을 열지 않고, open-session을 실행하지 않는다(인계는 된다). 인계하면 새 지시문 "이어받을 상태"에 이 지시를 그대로 옮긴다. 마무리한 뒤 마지막 보고에 "재개 대기"를 적고 멈춰 기다린다. 재개 메시지가 오면 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약을 따른다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/timing-tests-under-load (인계함)`으로 바꿨다. 멈출 대기는 없었다(이 세션이 띄운 백그라운드 작업은 커밋 둘이었고 모두 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-19T23:52:57Z
+
+## 둘째 인계받은 세션
+
+10-20 08:5x(KST)에 위 인계 지시문으로 열린 세션이 이었다. 사용자 프롬프트는 시작 프롬프트 한 줄 그대로이고 지시문이 뒤에 붙었다. 제목을 `chore/timing-tests-under-load`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+- **main 합치기.** origin/main이 #312(`51572a31`, tools 규칙 배치)로 한 걸음 나가 있었다. `git merge --no-commit --no-ff origin/main`으로 합쳤고 충돌은 `.scratch/retro-queue.md`의 306 행 하나였다. 이 브랜치의 행에 main이 바꾼 두 조각(10회차 → 11회차, 일지 목록에 `2026-10-20-06-tools-rule-batch.md`)만 얹었고, 푼 뒤 main과 다른 줄이 306 행 하나인 것을 diff로 봤다. 프로브 README는 저절로 합쳐졌다. #312가 더한 `calls_without_timeout` 검사는 `tools/`의 파이썬만 보아 이 브랜치의 프로브와 시험에 걸리지 않는다. 합치기 커밋 `be9fc867`은 pre-commit을 모두 지났다(묶음 검사 205.6초: pyright 27.1초·run-hooks 65.5초·pytest 165.2초·web-verify 205.2초, 카나리아 명세와 헌법 판은 `Skipped`). 인용 대조 경고 하나(`.scratch/retro-queue.md` 354행)는 main이 더한 줄이다.
+- **세 번째 정지 지시.** PR 직전 리뷰를 기다리던 동안 `chore/hook-census` 세션(`local_9037e191-4ccc-4d50-9c62-ab16fe1587c0`. 앞 두 지시를 보낸 `local_7bc0f796-…`와 다른 세션이다)이 같은 지시를 보냈다. 지시문의 "이어받을 상태"에 든 것과 같아 이 PR의 리뷰 반영·CI·병합·일지까지만 하고 "재개 대기"로 멈춘다. 답하지 않아도 된다고 해서 답하지 않았다. 원문(글자 그대로):
+
+```
+chore/hook-census 세션이 보내는 정지 지시입니다(사용자의 요청). 지금 하던 일까지만 마무리하고 다음 작업으로 넘어가지 마세요. 인계하게 되면 이 지시를 새 지시문의 "이어받을 상태"에 옮겨 적어 주세요. chore/hook-census(ADR 0036: 하네스는 세 번째나 손상 한 번에 더하고, 대기열 행은 14일 뒤 만료한다)를 main에 병합하면 이 세션에 재개 메시지를 보냅니다. 그 메시지가 오면 main을 당긴 뒤 디스크의 SKILL.md를 Read로 열어 새 규약으로 이어 가면 됩니다. 이 메시지에는 답하지 않아도 됩니다.
+```
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해, 대체 둘을 합치기 커밋 `be9fc867` 위에서 나란히 돌렸다. 기준은 `51572a31`(`git merge-base origin/main HEAD`)이다.
+
+- **`/security-review`.** 식별 서브태스크가 지적 없음으로 돌아와 거짓 양성 거르기 단계는 돌 것이 없었다. 하위 프로세스는 모두 인자 목록으로 띄우고 셸을 거치지 않으며, 자식이 도는 머리말과 `web/`에 쓰는 대조 파일은 상수로만 짓는다고 봤다. 결과 파일 174개와 일지에서 키·토큰·비밀번호 꼴과 사용자 식별자를 찾아 0건이었다.
+- **`bug-perf-review`.** 범위 16개 파일, 도구 호출 40에서 마쳤다. Critical·Major 0, 유효 Minor 다섯, 보류 하나, 오탐 하나다. 밀 주장(셀프 리뷰 절의 고친 것 줄 따옴표 문장) 열셋은 모두 근거와 맞았고, 그 가운데 3의 표현 하나를 짚었다. 대 보지 못했다고 한 둘은 이 세션이 봤다. 9의 코멘트는 `gh api`의 `issue_url`이 `issues/301`이었고, 11의 선형 시험은 결과 폴더의 빨간 회차 다섯이 1.03·1.20·1.22·1.37·1.67초였다.
+
+고친 것(모두 값이 작아 PR을 열기 전에 고쳤다):
+- (유효) `mutate_ctrl_c.py`의 `burners`가 부하를 띄우는 자리가 `try` 밖이라, 띄우는 도중 Ctrl-C나 `OSError`가 나면 이미 뜬 부하가 남았다. 하나씩 띄워 목록에 넣는 것을 `try` 안으로 옮겼다.
+- (유효) `failed_in`이 결과 줄 없이 끝난 로그(정리 단계가 끝낸 부하 pytest. `pytest3_b32_before_pytest2.txt`가 `node down` 뒤 `F` 하나로 끝난다)를 `[]`로 돌려 "실패 없음"과 갈리지 않았다. `-q`의 끝 줄(`RESULT_LINE`)이 없으면 `(결과 줄이 없다. 끝나기 전에 끊겼다)`를 더한다.
+- (유효) `eslint_program_timeout.py`가 시간 초과 때 `pnpm`(cmd로 풀린다)만 끝내 vitest와 일꾼이 남고, 다음 회차가 그 옆에서 돌았다. `Popen`으로 띄워 넘기면 `mutate_ctrl_c.py`의 `kill_tree`로 트리째 끝낸다. 남은 vitest가 임시 폴더의 파일을 쥐어 정리가 던지면 요약을 쓰기 전에 끝나므로 `TemporaryDirectory(ignore_cleanup_errors=True)`로 바꿨다.
+- (유효) 부하 pytest의 출력을 결과 폴더에 그대로 써, 다시 돌려 커밋하면 위 "커밋" 절의 줄 구분 문자 빨강이 되풀이된다. `burners`가 부하를 끝낸 뒤 출력 파일을 닫고 `normalize_line_ends`로 `\r+\n`과 홀로 선 `\r`을 `\n`으로 맞춘다.
+- (유효, 표현) ADR 0035 eslint 이력의 "`-t`로 하나만 고르면 그 묶음의 다른 시험이 프로그램을 처음 세우므로"는 읽는 대로면 거꾸로다. `-t`로 고르면 다른 시험은 돌지 않고 고른 시험이 세운다. "앱의 프로그램을 처음 세우는 시험이 무엇을 도느냐에 따라 달라서(묶음을 다 돌면 첫 시험이 세우고, `-t`로 다른 시험 하나만 고르면 그 시험이 세운다)"로 고쳤다. 위 "eslint 사례: 고침" 절의 같은 문장도 고쳤다.
+- (보류, 고침) `kill_tree`의 `taskkill`에 시간 제한이 없어, 멈추면 정리 단계가 끝나지 않았다. 멈추는 `taskkill`은 재현하지 않았고, `TASKKILL_SECONDS`(60초)를 줘서 넘기면 `TimeoutExpired`로 다음 부하로 넘어가게 했다. 부르는 곳(`burners`, eslint 프로브)은 그 예외를 삼키고, `burners`는 남은 것을 한 번 더 끝낸 뒤 센다.
+- (오탐) 밀 주장 1의 48개 옆 1363.3ms는 두 판 가운데 고친 판 사본의 값이다(고치기 전 판 사본은 1077.1ms). 트리 시험의 본문은 두 판에서 같고 문장은 "이 측정들에서 가장 긴 것"이라 그대로 둔다.
+
+고친 프로브는 스크래치패드의 `check_probe_fixes.py`로 손으로 대 봤다(측정이 아니다). `failed_in`은 결과 폴더의 로그 넷 가운데 `node down`으로 끝난 하나에만 표지를 붙였다. `normalize_line_ends`는 `a\r\r\nb\r\nc\rd\n가\r\r\n`을 `a\nb\nc\nd\n가\n`으로 바꿨다. `burners(4, 0)`에서 셋째 `Popen`이 `OSError`를 던지게 하자 먼저 뜬 둘이 끝났고, `burners(2, 0)`도 나온 뒤 둘이 끝났다. 남은 부하는 명령줄로 찾았고, 같은 찾기가 블록 안에서 둘을 보는 것(양성 대조)을 함께 봤다. eslint의 `vitest_once`는 `OBSERVE_TIMEOUT_MS`를 1500으로 낮춰(제한 6초) 부르자 6.2초에 -1을 돌려줬고, 4초째에 이 워크트리의 vitest 프로세스 둘이 보였다가 끝난 뒤에는 없었다. 첫 실행에서는 찾는 PowerShell이 자기 명령줄에 걸려 남은 것처럼 보여 자신을 빼고 다시 돌렸다. vitest를 끊은 두 실행이 시험의 임시 트리 `web/judge-*` 둘을 남겨(`afterAll`이 돌지 못했다) 지웠다. 시간 초과로 끊은 eslint 회차는 같은 것을 남긴다. `kill_tree`의 시간 제한 길은 밟지 않았다.
+
+이 고침은 측정을 낸 뒤의 것이라, 커밋된 결과는 고치기 전의 프로브 코드가 냈다. 계산하는 값은 바꾸지 않았고, `failed_in`의 표지만 새로 더해져 커밋된 JSON의 `pytest_load_failed`에는 없다(`pytest3_b32_before_pytest2.txt`가 `[]`로 실려 있다).

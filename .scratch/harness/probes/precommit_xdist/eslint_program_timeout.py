@@ -75,7 +75,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from mutate_ctrl_c import ROOT, burners, failed_in
+from mutate_ctrl_c import ROOT, burners, failed_in, kill_tree
 
 TARGETS = {
     "next-react": "app/ 이 next 와 react 를 import 하는 것은 아무것도 보고되지 않는다",
@@ -160,20 +160,18 @@ def vitest_once(
     if config is not None:
         command.append(f"--config={config}")
     start = time.monotonic()
+    process = subprocess.Popen(
+        command, cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     try:
-        process = subprocess.run(
-            command,
-            cwd=ROOT,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=OBSERVE_TIMEOUT_MS / 1000 * 4,
-        )
+        returncode = process.wait(timeout=OBSERVE_TIMEOUT_MS / 1000 * 4)
     except subprocess.TimeoutExpired:
-        # pnpm 만 끝나고 vitest 는 남을 수 있다. 그 회차는 JSON 이 없어 측정이 아니다
+        # `pnpm` 은 cmd 로 풀려 그것만 끝내면 vitest 와 일꾼이 남아, 다음 회차가 그 옆에서 돈다.
+        # 트리째 끝낸다. 그 회차는 JSON 이 없어 측정이 아니다
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            kill_tree(process)
         return -1, time.monotonic() - start
-    return process.returncode, time.monotonic() - start
+    return returncode, time.monotonic() - start
 
 
 def read_report(report: Path) -> dict[str, object] | None:
@@ -336,7 +334,11 @@ def main() -> int:
     # 밖에서는 패키지를 찾지 못한다)
     setup = ROOT / "web" / f"probe-slow-{os.getpid()}.setup.ts" if args.control else None
     config = setup.with_name(f"probe-slow-{os.getpid()}.vitest.config.ts") if setup else None
-    with tempfile.TemporaryDirectory() as directory, contextlib.ExitStack() as stack:
+    # 끝내지 못한 vitest 가 임시 폴더의 파일을 쥐어도 정리가 던져 요약을 잃지 않게 한다
+    with (
+        tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory,
+        contextlib.ExitStack() as stack,
+    ):
         if setup is not None and config is not None:
             names = json.dumps(list(TARGETS.values()), ensure_ascii=False)
             setup.write_text(SETUP % (names, SLOW_ENV), encoding="utf-8")
