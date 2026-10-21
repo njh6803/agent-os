@@ -217,3 +217,12 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다.
 PR 봇에 밀 주장(이 반영으로 새로 쓴 사실 문장)은 PR 본문에 싣는다. README의 자손 조건과 asyncio의 거두기, `interrupt.py`의 백그라운드 작업 문장, `test_interrupt.py` 독스트링의 두 신호가 합쳐진다는 문장이다.
 
 검사(커밋 전): `uv run ruff check .` 0, `uv run ruff format --check .` 0(881파일), 바꾼 두 파일의 `uv run pyright` 0, `tests/channel/cli/test_interrupt.py` 6 passed(56.02초), `tools/mutate.py --check` 변이 넷의 원문이 한 번씩 있다.
+
+## 검사 (PR 직전 리뷰 반영 뒤)
+
+- 커밋 `0e2c94c6`의 pre-commit: 모두 Passed. 러너는 442.9초였다(pytest 442.6초, web-verify 439.4초, run-hooks 99.8초, pyright 37.1초). 카나리아 명세 모양과 헌법 판은 이 커밋에 그 파일이 없어 Skipped였다. 인용 대조는 경고 없음이었다.
+- 인계 계기: 그 커밋 뒤에 왔다(세션 컨텍스트 238,883 토큰, 경계 `커밋 뒤`). 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다(next-session "인계할 때" 1).
+- origin/main이 그새 `23f150ae`(#335, 아침 보고 도구)로 움직여 합쳤다(`09d49baf`, 충돌 없음). 이 브랜치가 고친 파일과 겹치지 않는다(`git diff --name-only HEAD...origin/main`).
+- 변이 전체 실행(`09d49baf`): 기준선 셋 초록, 변이 넷 모두 빨강. 넷째의 표지를 TOML에 `\n`으로 적어 맞지 않았고, `\n`으로 고쳐 넷째만 다시 돌려 표지까지 맞았다(프로브 README의 2026-10-21 "PR 직전 리뷰 뒤 전체 실행").
+- 티켓 01의 체크박스를 모두 `[x]`로, 상태를 `done`으로 바꿨다. 처리기 테스트의 수(넷에서 여섯)와 둘째 누름의 자리에 주석을 달았고, 명세 Testing Decisions의 "둘째 SIGINT(첫째 0.5초 뒤)"에 같은 날 주석을 달았다.
+- `uv run --env-file ../../../.env pytest -m llm`(`interrupt.py`를 고친 뒤, `09d49baf`와 작업 트리의 문서 변경): 7 passed(187.14초). LLM 토큰 합계 48,165(입력 47,120, 출력 1,045), 트레이스 10개, 모델 호출 20건, 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.

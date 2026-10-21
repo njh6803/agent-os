@@ -56,7 +56,7 @@ new = '''
 name = "둘째도 범위를 취소할 뿐이다"
 tests = ["tests/channel/cli/test_interrupt.py", "-k", "한_번_더_누르면"]
 expect = "red"
-expect_output = ["assert '실행을 중단했다. MCP 서버가 닫히기를 기다리지 않고 끝낸다.' in '실행을 중단했다.\n'"]
+expect_output = ["assert '실행을 중단했다. MCP 서버가 닫히기를 기다리지 않고 끝낸다.' in '실행을 중단했다.\\n'"]
 
 [[mutation.edit]]
 file = "src/agent_os/channel/cli/interrupt.py"
