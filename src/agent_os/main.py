@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import getpass
 import io
 import os
@@ -37,6 +36,7 @@ from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
+from agent_os.channel.cli.interrupt import run_interruptibly
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
     EXIT_FINISHED,
@@ -117,8 +117,8 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"{error}\n")
         return EXIT_FAILED
     if isinstance(args, ResumeArgs):
-        return asyncio.run(_resume(args, model, Principal(user)))
-    return asyncio.run(_run(args, model, Principal(user)))
+        return run_interruptibly(lambda: _resume(args, model, Principal(user)))
+    return run_interruptibly(lambda: _run(args, model, Principal(user)))
 
 
 def _chat_model(name: str | None) -> ChatModel:
