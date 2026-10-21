@@ -31,3 +31,10 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 셋 가운�
 - 다시 돌린 명령: 새 시험 단독은 초록이었다. 손으로 치는 다섯은 커밋 `bf5e2b4a`의 pre-commit으로 갈음했다. ruff 둘과 러너 여덟(pytest 414.6s, web-verify 291.9s)이 모두 Passed였고, 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped였다.
 
 PR 직전 리뷰에 밀 주장은 위 고친 것의 새 문장이다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `Seat: not assigned`라 돌지 못해(`coderabbit auth status`), origin/main을 합친 뒤(`fd867b5b`) 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 0건. 묶음 1은 `ticket_paths` 사전의 열쇠로만 쓰이고, `main_text`에 넘는 경로는 `git ls-tree origin/main`이 낸 사전의 값이며, `_run`은 셸 없이 인자 목록으로 부른다.
+- `bug-perf-review`: 0건. 정규식 경계를 직접 대 봐 `feature/`의 옛 동작이 그대로이고(`Feature/01-a`, `feature/012-x` 등도 옛 식과 같이 맞지 않는다), `origin/main`의 `.scratch/**/issues/*.md`에 같은 stem이 둘 이상인 것은 0개였다. 밀 주장 1~3은 코드와 시험에 맞았고, 4(메모리 부족과 pre-commit 시간)는 로그를 보지 못해 확인하지 못했다고 적었다.
