@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** in-progress
+**Status:** done
 
 ### 도구
 
@@ -20,7 +20,7 @@
 
 ### 검증
 
-- [ ] 이 워크트리에서 아침 보고 수집을 한 번 돌려 오류 없이 끝나는 것을 본다. `tools/morning_tasks/common.md`의 명령은 `--directory`로 주 체크아웃을 가리켜 그대로 치면 주 체크아웃의 도구가 돈다. 그래서 워크트리 루트에서 `--directory` 없이 `uv run python -m tools.morning_collect --reports <폴더> --day <어제>`로 친다. `--reports`는 세션 스크래치패드의 폴더로 주어 사람의 보고 폴더를 덮지 않는다. 수집은 몇 분 걸리므로 Bash의 `timeout`을 600000으로 주고, 10분을 넘겨 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다(`common.md`의 수집 단계. 다시 치면 수집이 둘 돌아 서로 느려진다). 이 티켓을 쓸 때 main에는 `chore/NNN-` 브랜치로 병합된 PR이 없었으므로(#335의 머리는 `chore/morning-report-followup`이었다, `gh pr view`로 손으로 봤다), 그때까지 없으면 새 행이 실제로 드는지는 시험이 본다고 일지에 적는다
-- [ ] 첫 편집으로 이 티켓의 `Status:`를 `in-progress`로 바꿔 첫 커밋에 싣고, PR을 열기 전에 `done`으로 바꾼다
+- [x] 이 워크트리에서 아침 보고 수집을 한 번 돌려 오류 없이 끝나는 것을 본다. `tools/morning_tasks/common.md`의 명령은 `--directory`로 주 체크아웃을 가리켜 그대로 치면 주 체크아웃의 도구가 돈다. 그래서 워크트리 루트에서 `--directory` 없이 `uv run python -m tools.morning_collect --reports <폴더> --day <어제>`로 친다. `--reports`는 세션 스크래치패드의 폴더로 주어 사람의 보고 폴더를 덮지 않는다. 수집은 몇 분 걸리므로 Bash의 `timeout`을 600000으로 주고, 10분을 넘겨 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다(`common.md`의 수집 단계. 다시 치면 수집이 둘 돌아 서로 느려진다). 이 티켓을 쓸 때 main에는 `chore/NNN-` 브랜치로 병합된 PR이 없었으므로(#335의 머리는 `chore/morning-report-followup`이었다, `gh pr view`로 손으로 봤다), 그때까지 없으면 새 행이 실제로 드는지는 시험이 본다고 일지에 적는다
+- [x] 첫 편집으로 이 티켓의 `Status:`를 `in-progress`로 바꿔 첫 커밋에 싣고, PR을 열기 전에 `done`으로 바꾼다
 - [x] 원칙 III를 지킨다
 - [x] 검증 명령이 모두 초록이다
