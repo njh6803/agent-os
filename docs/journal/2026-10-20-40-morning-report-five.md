@@ -172,3 +172,36 @@ open-session을 부른다 2026-10-20T15:37:11Z
     빠지는 것(Minor 6), `--day`로 옛날을 다시 그릴 때의 비율(Minor 7). 정상 흐름의 동작을 틀리게 하지 않아 `morning_limit.py`
     독스트링의 못 보는 것에 적고 회고 후보로 넘긴다.
 - 다시 돌린 명령: 아침 보고 시험 셋 155개 통과, `ruff check .`·`ruff format --check .` 깨끗, 바뀐 파일 여섯의 pyright 깨끗.
+
+## 인계 (PR 연 뒤)
+
+이 세션은 "인계 (커밋 뒤)"를 받아 위 "PR 직전" 절까지 하고, PR을 연 직후 컨텍스트가 약 22.5만 토큰으로 문턱을 넘은 채 `PR 연 뒤` 경계에 왔다. 제목은 `chore/morning-report-split`이었고 지금은 `chore/morning-report-split (인계함)`으로 바꾼다.
+
+사용자 프롬프트(이 세션의 첫 메시지는 위 "PR 직전" 절에 인용했다). 그 뒤 사용자가 한 번 물었다.
+
+> 사용자: 끝났어?
+
+답: 아직이다. PR 직전 단계까지 왔고 PR, 봇 회차, 병합, 예약 작업 다섯과 확인이 남았다고 답하고 이어 갔다.
+
+한 것(위 "PR 직전" 절에 더해):
+
+- 푸시 직전 `hook_push_behind_main`이 origin/main보다 2커밋 뒤처졌다고 막아(#330·#331) 다시 합쳤다(충돌 없음). 충돌 없는 합치기라 pre-commit이 돌지 않아 `uv run python tools/run_checks.py`(lint-imports, zizmor, check-instructions, check-type-escapes, pyright, run-hooks, web-verify 473초, pytest 549초 모두 Passed)와 ruff 둘을 손으로 쳤고, `tools/sibling_overlap.py`는 번호 겹침 없음.
+- `/security-review`: 발견 없음(서브에이전트 한 번, 후보가 없어 거짓 양성 거르기는 돌 것이 없었다).
+- 푸시하고 PR [njh6803/agent-os#332](https://github.com/njh6803/agent-os/pull/332)를 열었다. 본문의 체크리스트에 PR 직전 리뷰 대체 둘의 결과를 적었다.
+
+번복한 것: 없다.
+
+남은 일(차례대로):
+
+1. 봇 회차. 첫 `@coderabbitai review` 코멘트부터 새 세션이 남긴다(next-session 순서 1의 2).
+2. 병합은 워크트리에서 병합하는 길(next-session "워크트리에서 병합할 때"). 병합 뒤 주 체크아웃은 이 워크트리 세션이 당기지 못한다.
+3. 병합 뒤 예약 작업 다섯은 "인계 (셀프 리뷰 직전)" 절의 틀과 "인계 (커밋 뒤)" 절의 4·5가 원천이다. 주 체크아웃이 당겨져야 새 지시문이 도므로, 지시문 교체와 주 체크아웃 당기기(사람이 주 체크아웃 세션에서 `/tidy-checkouts`)를 연달아 한다.
+
+확인하지 못한 것: "인계 (커밋 뒤)" 절의 마지막 문단 그대로다.
+
+워크트리는 잠겨 있지 않았다(`git worktree unlock`이 "is not locked"로 끝났다). 열기 시각을 셸로 덧붙이는 복합 명령은 워크트리 가드가 거부해 Edit로 적었다.
+open-session을 부른다 2026-10-21T00:07:54Z
+
+## 봇 회차와 병합 (2026-10-21, 새 세션이 이어서)
+
+> 사용자: docs/journal/2026-10-20-39-morning-report-split.md 의 "사용자 프롬프트" 요청을 이어서 한다. 남은 단계는 docs/journal/2026-10-20-40-morning-report-five.md 의 "인계 (PR 연 뒤)" 절이다
