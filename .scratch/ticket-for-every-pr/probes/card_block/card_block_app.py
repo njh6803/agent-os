@@ -43,6 +43,7 @@ from log_hook import MARK  # noqa: E402
 LIST = "mcp__ccd_session__list_start_targets"
 START = "mcp__ccd_session__start_session"
 TASK_ID = "task_id"
+RECEIVER_REJECTION = "proposal_id must be the task_id"
 
 
 def _text(content: object) -> str:
@@ -130,7 +131,13 @@ def judge(
     own = first(START, "own")
     proposal = first(START, "proposal")
     found = {"list": listed, "own": own, "proposal": proposal}
-    missing = [k for k, v in found.items() if v is None or str(v.get("id")) not in logged]
+    missing = [
+        k
+        for k, v in found.items()
+        if v is None
+        or str(v.get("id")) not in logged
+        or logged[str(v.get("id"))].get("tool_name") != v.get("name")
+    ]
     out: dict[str, object] = {"measured": not missing, "missing": missing}
     if own is not None:
         text = results.get(str(own.get("id")), "")
@@ -145,8 +152,12 @@ def judge(
     if proposal is not None:
         text = results.get(str(proposal.get("id")), "")
         out["proposal_result"] = text[:400]
-        out["proposal_passed"] = MARK not in text and bool(text)
-    out["as_expected"] = bool(out.get("own_blocked")) and bool(out.get("proposal_passed"))
+        out["proposal_passed"] = MARK not in text and RECEIVER_REJECTION in text
+    out["as_expected"] = (
+        bool(out.get("own_blocked"))
+        and out.get("own_logged_denied") is True
+        and bool(out.get("proposal_passed"))
+    )
     return out
 
 

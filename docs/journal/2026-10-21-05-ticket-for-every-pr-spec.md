@@ -186,3 +186,54 @@ origin/main이 `23f150ae`(#335, harness 001)로 움직였다. 그 PR이 첫 harn
 - 명세 "CI"의 `Status:` 판독 규칙, 열한 장의 줄 위치, 75장·72·9~21번째 줄.
 - 명세 "번호"의 `001`·`002`와 다섯째 자리가 비는 때. "쓰는 때와 상태"와 Out of Scope의 티켓 수.
 - 프로브 README의 병합 커밋 절(워크트리 갈래, 손으로 본 것, 못 본 것).
+
+커밋 `f715e87c`(합치기와 PR 직전 리뷰 반영)의 pre-commit에서 ruff 둘, 러너의 여덟(러너 358.92초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조(인용 3건, 경고 없음), 커밋 메시지가 모두 Passed였다. 카나리아 명세 모양과 헌법 판은 대상 파일이 없어 Skipped였다. 커밋 전에 바꾼 프로브에 ruff 둘과 pyright를 따로 쳐서 통과했다. `coderabbit auth status`는 `Seat: not assigned`였다(CLI 대신 대체 둘을 돌린 까닭).
+
+이 커밋 뒤에 인계 계기(`커밋 뒤`, 세션 컨텍스트 약 30.6만 토큰)가 왔다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤.`로 시작해 인계로 연 세션이 넘겨받은 경계에 다시 온 것이라, `next-session` "인계할 때" 1의 인계하지 않는 때다. 넘기지 않고 PR로 잇는다.
+
+## 인계(PR 연 뒤)
+
+origin/main이 그대로 `23f150ae`인 것을 본 뒤 푸시하고, PR #336(머리 `f715e87c`)을 `gh api repos/njh6803/agent-os/pulls --method POST --input <JSON 파일>`로 열었다(대기열 382의 길. 제목의 공백을 셸 인자로 넘기지 않는다). 그런데 PR을 연 뒤의 계기 둘(`hook_pr_next_session`, `hook_handoff`)이 오지 않았다. 두 훅은 명령 위치의 `gh pr create`와 GitHub MCP의 PR 만들기 도구만 PR 열기로 알아본다(`tools/hook_handoff.py` 독스트링과 `tools/hook_pr_next_session.py`의 이름 표를 읽었다). 대기열 382가 아직 반영 전의 열린 행이라, 그 길을 따르면 PR 연 뒤의 계기가 빠진다. 회고 후보다.
+
+계기는 오지 않았지만 조건은 그대로다(세션 컨텍스트 약 30.6만 토큰, 경계 `PR 연 뒤`). 이 경계는 지시문이 넘겨받은 `커밋 뒤`와 달라 인계하지 않는 때 다섯에 들지 않는다. 요청 범위는 병합까지이고, `get_session`의 `self`에 `parentSessionId`가 없으며, 이 일지에 `인계 못함` 줄이 없다. 그래서 규약의 취지대로 넘긴다. 브랜치에 열린 PR이 있어 다음 단계는 `PR 반영·병합`이고, `tools/model_sweep.py`는 `스윕 밖`이라 모델은 `Sonnet 5.5 / high`다. PR은 이미 이 세션에 묶여 있었다(`get_status`의 `bound: true`). 이 세션의 제목은 `docs/ticket-for-every-pr-to-spec`이었다.
+
+다음 작업: 기능 ticket-for-every-pr. 명세 PR #336을 열었고 봇 회차 전이다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/ticket-for-every-pr-to-spec
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-21-05-ticket-for-every-pr-spec.md
+이어받을 상태: 인계: PR 연 뒤. PR #336(머리 f715e87c)을 gh api로 열어 PR 열기 훅 둘이 돌지 않았고, 계기 없이 인계 규약의 취지대로 넘긴다. 순서 1의 2(봇 회차)부터 하고 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 이 세션이 일지 끝에 더한 절(합치기 커밋 bd7a6a24 뒤의 검사 결과, PR 직전 리뷰, 커밋 f715e87c 뒤 인계하지 않은 까닭, 인계(PR 연 뒤))은 커밋하지 않았다. 봇 회차의 첫 반영 커밋에 함께 싣는다(고칠 지적이 없어도 일지는 병합 전에 커밋해 푸시한다). 명세 본문을 고치면 서두의 수를 다시 센다(지금 넘겨받은 것 16, 사용자가 고른 것 3, 머리 문단 밖 (명세가 정했다) 29, 거부한 안 17, ADR 이력 0). 회고 후보 하나: 대기열 382의 PR 여는 길(gh api …/pulls --method POST)을 hook_pr_next_session과 hook_handoff가 PR 열기로 알아보지 못한다. 남은 단계는 봇 회차, 워크트리에서 병합, 그 뒤 next-session과 retro다. 일지 docs/journal/2026-10-21-05-ticket-for-every-pr-spec.md
+확인할 선행 조건: 없음. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/ticket-for-every-pr-to-spec (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. 잠금 풀기는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-10-21T06:51:29Z
+
+## 이어받은 세션(PR 연 뒤)
+
+> 사용자: ".claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 다음 작업: 기능 ticket-for-every-pr. 명세 PR #336을 열었고 봇 회차 전이다 / 다음 단계: PR 반영·병합 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / … / 이어받을 상태: 인계: PR 연 뒤. … / 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/ticket-for-every-pr-to-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 머리 `f715e87c`는 PR #336의 머리와 같았고 origin/main은 `23f150ae` 그대로였다. 첫 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 336`을 띄웠다. 일곱 검사(CodeRabbit, claude-review, e2e, python, verify, visual, web)가 모두 통과했다.
+
+## 봇 회차
+
+두 봇 모두 이 PR에 낸 첫 리뷰라 첫 회차다. Minor·Nit도 지적마다 고칠지 판단한다.
+
+- **CodeRabbit Minor 1(고친다).** 카드 막기 프로브 `card_block_app.py`의 `missing` 판정이 훅 기록의 `tool_use_id`만 맞댔다. 기록된 `tool_name`이 호출한 도구의 이름과 같은지 보지 않으면 같은 id의 엉뚱한 기록이 통과한다. `as_expected`도 `own_logged_denied`가 참인지 보지 않았다. 둘을 더했다. 커밋한 결과 파일(`2026-10-21-result.json`)은 `own_logged_denied: true`이고 훅 기록의 `tool_name`이 호출 이름과 같아 값은 달라지지 않는다.
+- **CodeRabbit Minor 2(고친다).** 양성 대조 `proposal_passed`가 "표지가 없고 결과가 비어 있지 않다"였다. 받는 쪽이 아닌 다른 오류도 통과한다. 프로브 규칙(`.claude/rules/probes.md` 첫 항목)이 재려는 상황이 났다는 표지를 단언하라는 자리라, 결과에 `proposal_id must be the task_id`(받는 쪽의 거절 문구)가 든 것만 통과로 바꿨다. 커밋한 결과의 `proposal_result`에 그 문구가 있다.
+- **claude-review Minor 1(남긴다).** `judge` 안의 `first(name, pick)`이 문자열로 갈래를 고른다는 지적이다. 한 번 돌고 끝나는 판정 스크립트이고 동작은 맞다.
+- **claude-review Minor 2(고친다).** `merge_commit.py` 독스트링의 갈래 번호가 1, 4, 2, 3 순이었다. 본문 순서대로 1~4로 다시 매기고 가리키는 문장(측정인 회차의 표지, "3에서 훅이 돌지 않은 것")을 맞췄다. 리뷰가 든 줄 번호(362, 585, 630, 209)는 파일 길이(291, 165줄)를 넘어 맞지 않았지만 지적 자체는 독스트링에서 확인했다.
+- **claude-review Nit 둘(남긴다).** `with` 둘에 임시 폴더 넷을 겹쳐 여는 것과 `_merge_head_found`가 `main` 뒤에 있는 것이다. 읽는 순서의 취향이고 동작은 같다.
+
+확인. 합성 입력으로 `judge`를 돌려 정상 입력은 `as_expected`가 참, 받는 쪽이 아닌 다른 오류와 `denied`가 아닌 기록은 거짓, 도구명이 다른 기록은 `measured`가 거짓인 것을 봤다. 원래 세션 기록은 지워져 커밋한 결과를 같은 입력으로 다시 판정하지는 못했다. 바꾼 두 프로브에 ruff 둘과 pyright를 쳤고 통과했다. 명세 본문은 바꾸지 않아 서두의 수는 그대로다(넘겨받은 것 16, 사용자가 고른 것 3, 머리 문단 밖 `(명세가 정했다)` 29, 거부한 안 17, ADR 이력 0).
+
+뒤로 넘긴 일은 없다.
+
+## 다음
+
+기능 `ticket-for-every-pr`은 명세가 병합되면 `spec.md`가 있고 `issues/`가 없는 단계다. 결정표대로 명세 검토(`spec-reviewer` 서브에이전트)를 하고 그 뒤 `/to-tickets .scratch/ticket-for-every-pr/spec.md`로 티켓을 쪼갠다. 명세 서두의 수(넘겨받은 것 16, 사용자가 고른 것 3, 머리 문단 밖 `(명세가 정했다)` 29, 거부한 안 17, ADR 이력 0)는 티켓 쪼개기 중 명세를 고치면 다시 센다.
+
+회고 후보 하나. 대기열 382의 PR 여는 길(`gh api …/pulls --method POST`)을 `hook_pr_next_session`과 `hook_handoff`가 PR 열기로 알아보지 못해 PR 연 뒤의 계기가 오지 않았다(위 "인계(PR 연 뒤)"). 이 명세의 PR을 병합한 뒤 retro가 판정한다.

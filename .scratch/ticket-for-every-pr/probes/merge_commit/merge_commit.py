@@ -13,20 +13,20 @@
    `git merge-base origin/main HEAD <MERGE_HEAD>`(둘째 인자 뒤의 커밋들을 합친 가상의 커밋과 첫
    인자의 merge-base)로 구한 C에는 `tools/x.py`가 없고 `queue.md`만 든다. 훅은 `MERGE_HEAD`를
    git 디렉터리의 파일로도, ref 이름(`git rev-parse -q --verify MERGE_HEAD`)으로도 찾는다.
-4. 링크드 워크트리의 충돌 병합. 1과 같은 병합을 `git worktree add`로 만든 워크트리에서 친다. 그
+2. 링크드 워크트리의 충돌 병합. 1과 같은 병합을 `git worktree add`로 만든 워크트리에서 친다. 그
    워크트리의 `.git`은 파일이고 git 디렉터리는 클론의 `.git/worktrees/<이름>`이라, 작업 트리 루트의
    `.git/MERGE_HEAD`를 경로로 읽으면 병합 중인 것을 놓친다. 기대는 넷이다. 루트 경로로는
    `MERGE_HEAD`가 없고, git 디렉터리의 파일과 ref 이름으로는 있다. ref 이름으로 구한 C에는
    `queue.md`만 든다. 표지는 워크트리의 `.git`이 파일이고 훅이 본 git 디렉터리에 `worktrees`가 든
    것이다(이 저장소의 커밋 대부분이 링크드 워크트리에서 난다, PR 직전 `bug-perf-review`가 짚었다).
-2. 충돌 없는 병합. main만 `tools/x.py`를 더하고 `git merge origin/main --no-edit`를 친다. 이
+3. 충돌 없는 병합. main만 `tools/x.py`를 더하고 `git merge origin/main --no-edit`를 친다. 이
    저장소는 pre-commit과 commit-msg만 깐다(`.pre-commit-config.yaml`의
    `default_install_hook_types`). 그래서 pre-commit 훅만 둔 이 갈래에서는 훅이 돌지 않아야 한다.
    병합 커밋이 생겼다(부모 둘)는 것이 병합이 일어났다는 표지다.
-3. 양성 대조. 같은 훅으로 보통 커밋을 쳐서 훅이 돌고 `MERGE_HEAD`가 없었다는 것을 본다. 2에서 훅이
+4. 양성 대조. 같은 훅으로 보통 커밋을 쳐서 훅이 돌고 `MERGE_HEAD`가 없었다는 것을 본다. 3에서 훅이
    돌지 않은 것이 훅을 실행하지 못해서가 아니라는 것을 가른다.
 
-측정인 회차는 표지(1과 4의 `CONFLICT` 출력과 훅 기록, 2의 부모 둘, 3의 훅 기록, 4의 워크트리
+측정인 회차는 표지(1과 2의 `CONFLICT` 출력과 훅 기록, 3의 부모 둘, 4의 훅 기록, 2의 워크트리
 표지)를 모두 갖춘 회차다.
 측정이 아니거나 기대와 다르면 1로 끝난다. 결과는 JSON 한 줄로 찍는다. 표준 라이브러리만 쓰고 git을
 부를 때마다 시간 제한을 둔다. 저장소 밖 임시 폴더에서 돌도록 git의 저장소 위치 변수를 벗긴다.
