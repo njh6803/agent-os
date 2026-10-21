@@ -15,7 +15,7 @@
 
 ## 원인
 
-지시문은 "7일 값이 모두 같으면 어제가 최고이자 최저로 뽑히는 것"으로 짐작했지만, `verdict`(`tools/morning_report.py`)에는 창의
+앞 세션의 지시문(저장소에 남지 않았다)은 7일 값이 모두 같으면 어제가 최고이자 최저로 뽑히는 것으로 짐작했지만, `verdict`(`tools/morning_report.py`)에는 창의
 값이 모두 같으면 뽑지 않는 가드(`len(set(window)) > 1`)가 이미 있었다. 확인 실행의 수집 파일을 열어 보니
 `unreadable`의 여덟 날은 `[0, 0, 0, 0, 0, 0, 5, 0]`이었다. 창(그날을 포함한 7일)에 5가 하루 있어 가드를 지났고, 어제의 0이
 다른 다섯 날의 0과 같은 값으로 창의 최저라 `7일 중 최저`로 뽑혔다. 평소(앞 7일 중앙값)도 0이라 차이 칸이 `+0`이었다.
@@ -139,3 +139,46 @@ open-session을 부른다 2026-10-21T04:45:07Z
   깨끗, 바뀐 파일 셋의 pyright 0 오류. 보고 폴더 사본으로 `morning_report.py --report summary --day 2026-10-20`을 다시 그려
   표에 환산 비용 한 행만 남고 "평소대로" 줄의 맨 앞에 읽지 못한 기록 줄이 든 것을 봤다. 손으로 치는 다섯은 커밋의 pre-commit으로
   갈음한다.
+
+### 커밋과 인계 (커밋 뒤)
+
+- 커밋 직전: 브랜치 `chore/morning-report-followup`, `sibling_overlap.py` 번호 겹침 없음(다음 빈 번호 일지 `2026-10-21-07`, 대기열
+  401). 이름순으로 앞서는 형제 일지가 둘(`01-mcp-2-and-cli-interrupt`의 06, `ticket-for-every-pr-to-spec`의 05)이라 그쪽이 먼저
+  병합되면 이 일지 번호를 옮긴다.
+- 커밋: pre-commit을 모두 지났다(pyright, run-hooks, pytest, web-verify 등 Passed. canary specs·constitution version은 대상
+  파일이 없어 Skipped). 인용 대조 경고 넷이 났다. 셋(94·110·116행 근처)은 셀프 리뷰가 고쳐 지운 옛 문장을 기록으로 인용한
+  것이고, 18행의 인용은 앞 지시문의 문장이라 저장소에 없다. 다음 세션이 따옴표를 떼거나 출처를 적는다.
+- 커밋 뒤 세션 컨텍스트가 약 21만 토큰으로 문턱을 넘은 채 `커밋 뒤` 경계에 와서 인계 계기가 왔다. 인계하지 않는 때 다섯에
+  들지 않았다(커밋 성공, 범위는 병합까지, 앞 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 다른 경계, `인계 못함` 줄
+  없음, `get_session`의 `self`에 `parentSessionId` 없음). 이 세션의 제목은 `chore/morning-report-followup`이었고
+  `chore/morning-report-followup (인계함)`으로 바꾼다.
+- 결정: 부동소수 오차는 평소와의 같음에만 둔다(위 반영). 티켓 `Status:`는 봇 회차 뒤 병합 직전에 `done`으로 바꾼다(ADR 0037).
+- 남은 일: 18행 인용 정리, 이 절의 커밋, PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. 위 "PR 직전 리뷰에 밀
+  새 문장"을 브리프에 나열), 푸시, PR, 봇 회차, 수용 기준 체크와 `Status: done`, 워크트리에서 병합하는 길.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/001-morning-unusual-ties.md. 아침 보고 "평소와 다른 것"의 동률 오판 고침을 커밋 뒤부터 이어 PR과 병합까지 한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-10-20-40-morning-report-five.md 의 "봇 회차와 병합" 절 뒤를 잇는다. 확인 실행에서 찾은 0·0 오판을 시험 먼저로 고치고 PR과 병합까지 한다
+브랜치: chore/morning-report-followup
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-04-morning-report-followup.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 두 축을 반영하고 커밋했다(pre-commit 통과, 아직 푸시하지 않았고 PR 없음). 일지의 "커밋과 인계" 절은 커밋하지 않았다. 남은 단계는 일지 18행의 인용 정리와 그 절의 커밋, PR 직전 리뷰(일지의 "PR 직전 리뷰에 밀 새 문장"을 브리프에 나열), 푸시, PR, 봇 회차, 병합 직전 티켓 수용 기준 체크와 Status done, 워크트리에서 병합하는 길이다. docs/journal/2026-10-21-04-morning-report-followup.md
+확인할 선행 조건: 새로 만든 예약 작업 넷이 실행 중 승인에 멈추지 않는지(권한 모드)는 확인하지 못했다. 비용(09:30)·작업(09:45) 보고는 아직 한 번도 돌지 않았다(일지 2026-10-20-40 병합 뒤 절)
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금은 이미 풀려 있었다(`is not locked`). 띄운 백그라운드 작업은 모두 끝나 있었다.
+open-session을 부른다 2026-10-21T05:11:07Z
+
+## 이어받기 (커밋 뒤부터)
+
+새 세션이 지시문대로 `morning-report-followup` 워크트리에 `EnterWorktree(path)`로 들어가 이었다. 시작 프롬프트는 위 요청과 같다.
+
+> 사용자: docs/journal/2026-10-20-40-morning-report-five.md 의 "봇 회차와 병합" 절 뒤를 잇는다. 확인 실행에서 찾은 0·0 오판을 시험 먼저로 고치고 PR과 병합까지 한다
+
+- 18행 인용: 따옴표를 떼고 출처(앞 세션의 지시문, 저장소에 없다)를 적었다. "커밋과 인계" 절의 같은 인용도 따옴표를 뗐다.
+- origin/main은 `ed5618cb`에서 움직이지 않았다(`git fetch origin` 뒤).
