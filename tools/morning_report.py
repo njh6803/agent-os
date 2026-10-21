@@ -641,8 +641,9 @@ def verdict(series: Sequence[float | None], alarm: str | None) -> str:
     같은 값으로 최고·최저인 날과 평소와 같은 날은 정상이다(그 전날 하루만 5이고 나머지가 0인 지표가
     `| 읽지 못한 기록 줄 | 0 | 0 | +0 | 원인 모름 |`으로 평소와 다른 것에 올랐다, 일지
     2026-10-21-04). 평소와 같은 홀로 최고·최저는 창의 다른 날에 값이 하루뿐이고 창 밖의 첫날에 값이
-    있을 때 난다(`(8, 없음×5, 2, 5)`). 평소는 두 값의 평균일 수 있어 부동소수 오차 안이면 같다고
-    본다."""
+    있을 때 난다(`(8, 없음×5, 2, 5)`). 다른 날과의 같음과 평소와의 같음은 모두 부동소수 오차
+    (`math.isclose`) 안이면 같다고 본다. 평소는 두 값의 평균일 수 있고, 같은 금액도 세션 비용을 더한
+    순서가 다르면 한 ulp 갈린다(`0.1 + 0.2`와 `0.3`)."""
     if alarm is not None:
         return f"⚠ 경보 ({alarm})" if alarm else "⚠ 경보"
     today = series[-1]
@@ -652,9 +653,12 @@ def verdict(series: Sequence[float | None], alarm: str | None) -> str:
     if base is not None and math.isclose(today, base):
         return "정상"
     others = [v for v in series[1:-1] if v is not None]
-    if others and today > max(others):
+    if not others:
+        return "정상"
+    top, bottom = max(others), min(others)
+    if today > top and not math.isclose(today, top):
         return "7일 중 최고"
-    if others and today < min(others):
+    if today < bottom and not math.isclose(today, bottom):
         return "7일 중 최저"
     return "정상"
 
