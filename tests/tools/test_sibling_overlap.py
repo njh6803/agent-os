@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from tools.sibling_overlap import (
     CONSTITUTION,
+    GH_BODY_JQ,
     JOURNAL_DIR,
     ON_FAILURE,
     ON_STUCK,
@@ -43,13 +44,18 @@ from tools.sibling_overlap import (
     is_behind,
     journal_day,
     main,
+    moved_bodies,
     moves,
     next_numbers,
     open_pulls,
+    own_pull_bodies,
     plan_moves,
+    pull_bodies,
+    pull_body_lines,
     read_numbers,
     remote_head,
     renumber,
+    report_own_pulls,
     reserved_version,
     rewrite,
     unbumped,
@@ -57,6 +63,7 @@ from tools.sibling_overlap import (
     unshared,
     vacating_first,
     worktrees,
+    write_moved_bodies,
 )
 
 from tools import sibling_overlap
@@ -610,6 +617,139 @@ def test_줄인_인용과_조사는_옮기지_않고_같은_꼴이면_다른_뜻
     assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == (
         "일지 03, 새로 연 것은 2·5다. 대기열 3를 연다. 형제의 일지 2026-10-07-05 과 겹쳤다\n"
     )
+
+
+def test_gh_가_낸_줄에서_열린_PR의_번호와_본문을_읽는다() -> None:
+    """대기열 376. 줄마다 `[번호, 본문]` 의 JSON 이다. 본문이 비면 null 이 온다."""
+    text = '[7,"일지 2026-10-07-03\\r\\n둘째 줄"]\n\n[9,null]\n'
+
+    assert pull_bodies(text) == {7: "일지 2026-10-07-03\r\n둘째 줄", 9: ""}
+    assert pull_bodies("") == {}
+    # 풀지 못한 줄이 하나라도 있으면 읽지 못한 것이다. 일부만 보고 다 봤다고 하지 않는다
+    assert pull_bodies('[7,"본문"]\n{"number": 9}\n') is None
+    assert pull_bodies("잘린 [7,\n") is None
+    assert pull_bodies('["7","본문"]\n') is None
+
+
+def test_본문에_날것으로_든_U0085와_U2028은_줄을_가르지_않는다() -> None:
+    """JSON 은 문자열 안의 그 글자를 이스케이프하지 않아도 된다. `splitlines` 는 그 글자에서도 갈라
+    한 PR 의 줄을 둘로 쪼갰다(PR 직전 `bug-perf-review`)."""
+    body = f"가{chr(0x85)}나{chr(0x2028)}다{chr(0x2029)}라"
+
+    assert pull_bodies(f'[7,"{body}"]\n') == {7: body}
+
+
+def test_이_브랜치의_PR_본문은_origin_owner의_head로_REST에서_읽는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """못 보는 것: 포크에서 연 PR 은 head 의 owner 가 달라 걸리지 않는다. gh 가 없거나 실패하면
+    None."""
+    commands: list[list[str]] = []
+    answer: list[subprocess.CompletedProcess[str] | None] = []
+
+    def 띄운다(
+        command: list[str], cwd: Path, timeout: float
+    ) -> subprocess.CompletedProcess[str] | None:
+        commands.append(command)
+        return answer[0]
+
+    def gh_가_있다(name: str) -> str:
+        return "gh"
+
+    monkeypatch.setattr(sibling_overlap, "_run", 띄운다)
+    monkeypatch.setattr(sibling_overlap.shutil, "which", gh_가_있다)
+    answer.append(subprocess.CompletedProcess([], 0, '[7,"본문"]\n', ""))
+
+    assert own_pull_bodies(tmp_path, "o", "r", "chore/x") == {7: "본문"}
+    endpoint = "repos/o/r/pulls?state=open&head=o:chore%2Fx"
+    assert commands == [["gh", "api", endpoint, "--jq", GH_BODY_JQ]]
+    answer[0] = subprocess.CompletedProcess([], 1, "", "HTTP 404")
+    assert own_pull_bodies(tmp_path, "o", "r", "chore/x") is None
+    answer[0] = None  # 띄우지 못했거나 시간을 넘겼다
+    assert own_pull_bodies(tmp_path, "o", "r", "chore/x") is None
+
+
+def test_분리_HEAD면_PR_본문을_묻지_않는다(
+    저장소: tuple[Path, Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """못 보는 것: 분리 HEAD 에는 head 로 든 브랜치가 없어 아무것도 찍지 않는다."""
+    _, work, _ = 저장소
+    asked: list[str] = []
+
+    def 깃허브다(url: str) -> tuple[str, str]:
+        return ("o", "r")
+
+    def 본문을_읽는다(root: Path, owner: str, repo: str, branch: str) -> dict[int, str]:
+        asked.append(branch)
+        return {}
+
+    monkeypatch.setattr(sibling_overlap, "github_repo", 깃허브다)
+    monkeypatch.setattr(sibling_overlap, "own_pull_bodies", 본문을_읽는다)
+    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05")]
+
+    report_own_pulls(work, shifted)
+    assert asked == ["topic"]
+    _git(work, "checkout", "-q", "--detach")
+    report_own_pulls(work, shifted)
+    assert asked == ["topic"]
+    assert capsys.readouterr().out == ""
+
+
+def test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으로_낸다() -> None:
+    """대기열 376. 인용 블록은 두고, 대기열 행의 머리 꼴(`| N |`)은 PR 본문에서 옮기지 않는다."""
+    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05"), Move("대기열", "135", "137")]
+    bodies = {
+        8: "무관한 본문\n",
+        7: "일지 2026-10-07-03, 대기열 135\r\n> 일지 2026-10-07-03\r\n| 135 | 표 |\r\n",
+    }
+
+    assert moved_bodies(bodies, shifted) == {
+        7: "일지 2026-10-07-05, 대기열 137\r\n> 일지 2026-10-07-03\r\n| 135 | 표 |\r\n"
+    }
+
+
+def test_옮긴_본문은_바이트_그대로_쓰고_쓰지_못한_PR은_오류로_든다(tmp_path: Path) -> None:
+    """대기열 376. 하나를 쓰지 못해도 멈추지 않고 나머지를 쓴다."""
+    (tmp_path / "pr-8-body.md").mkdir()
+    moved = {7: "일지 2026-10-07-05\r\n", 8: "막힘", 9: "아홉"}
+
+    written = write_moved_bodies(moved, tmp_path)
+
+    assert written[7] == tmp_path / "pr-7-body.md"
+    assert written[9] == tmp_path / "pr-9-body.md"
+    assert isinstance(written[8], OSError)
+    assert (tmp_path / "pr-7-body.md").read_bytes() == moved[7].encode("utf-8")
+    assert write_moved_bodies({}, tmp_path) == {}
+
+
+def test_PR_본문의_줄은_옮긴_본문의_파일과_올리는_명령을_든다(tmp_path: Path) -> None:
+    """대기열 376. 명령은 클라우드에서도 도는 REST 다. 쓰지 못한 PR 만 손으로 고치라고 한다. 명령이
+    본문 전체를 덮어쓰므로 올리기 전에 지금 본문과 견주라고 명령 앞에 적고, 명령은 줄 끝에 두어
+    그 뒤를 그대로 붙여 넣을 수 있게 한다(PR #328 CodeRabbit·셀프 리뷰)."""
+    path = tmp_path / "pr-7-body.md"
+    bodies = {7: "일지 2026-10-07-03\r\n", 8: "무관\n", 9: "일지 2026-10-07-03\n"}
+
+    lines = pull_body_lines(bodies, {7: path, 9: PermissionError("막혔다")}, ("o", "r"))
+
+    assert lines == [
+        f"이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다. 옮긴 본문을 {path.as_posix()} 에"
+        " 썼다. 올리는 명령은 본문 전체를 이 파일로 덮어쓴다. 올리기 전에 지금 본문을 다시 읽어"
+        " 이 파일과 견주고, 옮긴 번호 밖의 차이(읽은 뒤에 사람·봇·세션이 고친 것)가 있으면 이"
+        " 파일에도 넣는다. 올리는 명령: gh api repos/o/r/pulls/7 --method PATCH -F"
+        f' "body=@{path.as_posix()}"',
+        "이 브랜치의 열린 PR #8 본문에는 옮길 인용이 없다",
+        "이 브랜치의 열린 PR #9 본문에 옮기기 전 번호가 있다. 옮긴 본문을 쓰지 못했다(막혔다)."
+        " 손으로 고친다",
+    ]
+    command = f'gh api repos/o/r/pulls/7 --method PATCH -F "body=@{path.as_posix()}"'
+    assert lines[0].endswith(f"올리는 명령: {command}")
+    assert pull_body_lines({}, {}, ("o", "r")) == []
+    assert pull_body_lines(None, {}, ("o", "r")) == [
+        "이 브랜치의 열린 PR 본문을 읽지 못했다(gh 가 없거나 `gh api` 가 실패했다). PR 본문에"
+        " 옮기기 전 번호가 남았는지 손으로 본다"
+    ]
 
 
 def test_옮기기는_코드_스팬과_펜스_안의_같은_꼴도_옮긴다() -> None:
@@ -1949,6 +2089,7 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
     assert "옛 이름의 지움까지 함께 스테이지한다(`git add -A`)" in out
     assert "번호 뒤의 조사는 옮기지 않았으니 손으로 본다" in out
     assert "번호 겹침 없음" in out and "옮길 번호" not in out
+    assert "PR 본문" not in out  # origin 이 GitHub 이 아니면 PR 본문을 묻지 않는다
     assert not (work / old).exists()
     moved = (work / "docs/journal/2026-10-07-03-ours.md").read_text(encoding="utf-8")
     assert moved == "# 2026-10-07 (03) 이쪽\n\n대기열 3를 연다.\n"
@@ -1962,6 +2103,47 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
     out = capsys.readouterr().out
     assert code == 0, out
     assert out.startswith("옮길 번호가 없어 옮기지 않았다\n")
+
+
+def test_옮기기는_이_브랜치의_열린_PR_본문에_남은_옛_번호를_알린다(
+    저장소: tuple[Path, Path, Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """대기열 376: 일지를 옮긴 뒤 열린 PR 본문에 옛 일지 경로가 남아 claude-review 가 짚었다(일지
+    2026-10-20-01 등 세 번). 본문은 고치지 않고 고친 본문의 파일과 올리는 명령을 낸다."""
+    _, work, pusher = 저장소
+    pr5 = _PR을_민다(pusher, 5, {"docs/journal/2026-10-07-02-pr.md": "# 2026-10-07 (02) 그쪽\n"})
+    _연다(pusher, 5, pr5)
+    _커밋한다(work, {"docs/journal/2026-10-07-02-ours.md": "# 2026-10-07 (02) 이쪽\n"}, "일지")
+    asked: list[tuple[str, str, str]] = []
+
+    def 깃허브다(url: str) -> tuple[str, str]:
+        return ("o", "r")
+
+    def gh_가_연다(root: Path, owner: str, repo: str) -> str:
+        return f"5 {pr5}\n"
+
+    def 본문을_읽는다(root: Path, owner: str, repo: str, branch: str) -> dict[int, str]:
+        asked.append((owner, repo, branch))
+        return {7: "일지는 docs/journal/2026-10-07-02-ours.md 다\n"}
+
+    monkeypatch.setattr(sibling_overlap, "github_repo", 깃허브다)
+    monkeypatch.setattr(sibling_overlap, "gh_listing", gh_가_연다)
+    monkeypatch.setattr(sibling_overlap, "own_pull_bodies", 본문을_읽는다)
+    monkeypatch.setattr(sibling_overlap.tempfile, "tempdir", str(tmp_path))
+
+    code = main([str(work), "--move"], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert asked == [("o", "r", "topic")]
+    assert "이 브랜치의 열린 PR #7 본문에 옮기기 전 번호가 있다." in out
+    assert "올리는 명령: gh api repos/o/r/pulls/7 --method PATCH -F" in out
+    [written] = tmp_path.glob("*/pr-7-body.md")
+    assert written.read_text(encoding="utf-8") == "일지는 docs/journal/2026-10-07-03-ours.md 다\n"
+    assert f'"body=@{written.as_posix()}"' in out
 
 
 def test_이_브랜치가_더한_줄의_일지_인용이_어디에도_없는_번호면_1로_끝난다(
