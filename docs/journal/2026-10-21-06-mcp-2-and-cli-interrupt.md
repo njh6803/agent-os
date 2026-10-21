@@ -294,6 +294,42 @@ open-session을 부른다 2026-10-21T07:04:16Z
 10. **기각.** 리뷰가 잡은 것들. 셀프 리뷰의 사실 문장(POSIX의 자식, 닫는 시간, 수명 문장 등)과 claude-review의 "끝내는 분기 둘"은 리뷰가 잡도록 둔 기준이고 그 리뷰가 잡았다.
 11. **기각.** claude-review의 anyio 미선언은 봇의 오탐이고 값은 판정 한 줄이다.
 
+## 인계 (봇 회차 커밋 뒤)
+
+커밋 `15dd250b`(CI 수정, claude-review 첫 회차 반영, 티켓 02 항목, 회고와 대기열, 일지 "다음") 직후 인계 계기가 왔다(세션 컨텍스트 306,828 토큰, 경계 `커밋 뒤`). 그 커밋의 pre-commit은 모두 Passed였다. 러너는 349.09초(pytest 262.9초, web-verify 348.8초, run-hooks 89.8초, pyright 34.5초)였고, 카나리아 명세 모양과 헌법 판은 그 파일이 없어 Skipped, 인용 대조는 경고 없음이었다. 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 경계가 다르고, 요청 범위는 PR과 병합까지이며, 이 세션이 쓴 `인계 못함` 줄은 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 인계하지 않는 다섯 때에 들지 않는다. 이 세션의 지금 제목은 `feature/01-mcp-2-and-cli-interrupt`다.
+
+결정과 번복:
+
+- 커밋 전에 origin/main(`c2c2105f`, #336)을 합쳤다(`13f63a5e`, 충돌 없음). 그 커밋이 대기열 한 줄을 고쳐 대기열을 고치기 전에 합쳤다.
+- 회고의 선택 화면에 적은 훅 비용을 고쳐 적었다(위 회고 3).
+- PR 본문을 이 커밋의 범위로 넓혔다(`gh pr edit`). 변경된 영역에 `.scratch/` 줄을, 체크리스트에 PR 봇 첫 회차 줄을 더했다. 그 줄은 판정을 PR 코멘트에 적는다고 말한다.
+- 아직 푸시하지 않았다. claude-review 첫 회차의 판정 코멘트(위 "봇 회차" 절의 1~5)와 `@coderabbitai review` 코멘트도 남기지 않았다. 새 세션이 푸시한 뒤 남긴다.
+
+지시문:
+
+다음 작업: .scratch/mcp-shutdown/issues/01-mcp-2-and-cli-interrupt.md. mcp 2로 옮겨 취소된 실행의 MCP 서버도 닫힌 뒤 끝나게 하고, CLI가 Ctrl+C를 직접 받는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-shutdown/issues/01-mcp-2-and-cli-interrupt.md
+브랜치: feature/01-mcp-2-and-cli-interrupt
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-06-mcp-2-and-cli-interrupt.md(그 워크트리의 작업 트리 판)의 "봇 회차 (셋째로 이어받은 세션)"과 "인계 (봇 회차 커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. `15dd250b`까지 CI의 pyright 수정, claude-review 첫 회차 반영, 회고, 일지 "다음"을 커밋했다(pre-commit 모두 Passed). PR 본문은 이 범위로 이미 넓혔다. 아직 푸시하지 않았고 claude-review 첫 회차의 판정 코멘트(일지 "봇 회차" 절의 1~5)와 `@coderabbitai review` 코멘트도 남기지 않았다. 푸시와 순서 1의 2(봇 회차)부터 한다. 다음 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 첫 회차다. 워크트리에 커밋하지 않은 일지 변경(인계 절)이 있어, 그것을 먼저 커밋해 두 커밋을 한 번에 푸시하면 claude-review가 한 번 돈다. docs/journal/2026-10-21-06-mcp-2-and-cli-interrupt.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+잠금 풀기는 `is not locked`로 넘어갔다. 멈출 백그라운드 작업은 없었다(`hook_report.py`와 커밋은 끝났다).
+
+open-session을 부른다 2026-10-21T08:52:05Z
+
+`tools/open_session.ps1`은 `idle=0s`, `start=.claude/skills/implement/SKILL.md`, `fired=17:52:52.763`, `page=`, `folder=C:\project\agent`, `restore=필요`까지 낸 뒤 "모델 메뉴를 펼치지 못했다(expand-error: …)"로 멈췄다(종료 코드 1). open-session 3의 모델 오류 갈래라 같은 파일로 다시 돌리지 않았다. 사람에게 새 세션 화면의 모델과 노력을 맞춰 보내 달라고 부탁하고 턴을 끝낸다. 그 무렵 다른 두 세션(`docs/ticket-for-every-pr-to-tickets`, `docs/design-reverse-sync`)이 돌고 있었고 까닭은 가르지 않았다. 제목은 `(인계함)` 그대로 둔다. 남은 화면이 보내지면 그것이 인계 세션이다.
+
+## 봇 회차 (넷째로 이어받은 세션)
+
+> 사용자(지시문): "이어받을 상태: 인계: 커밋 뒤. `15dd250b`까지 CI의 pyright 수정, claude-review 첫 회차 반영, 회고, 일지 "다음"을 커밋했다(pre-commit 모두 Passed). … 푸시와 순서 1의 2(봇 회차)부터 한다. 다음 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 첫 회차다. … 이번 요청 범위: PR과 병합까지"
+
+이 세션이 제목을 브랜치로 바꾸고 `EnterWorktree(path)`로 들어왔다. 로컬 HEAD는 `15dd250b`, PR의 `headRefOid`는 `9abf1d8f`이고 origin/main은 `c2c2105f`로 이미 합친 자리다. 앞 세션의 인계 절과 이 절을 한 커밋으로 묶어 두 커밋을 한 번에 푸시한다.
+
 ## 다음
 
 - **PR #337의 봇 회차와 병합은 이 세션이다**(지시문의 범위). 병합 뒤 `next-session`.
