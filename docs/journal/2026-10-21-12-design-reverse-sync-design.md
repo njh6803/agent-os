@@ -1,4 +1,4 @@
-# 2026-10-21 (08) 디자인 시스템 아티팩트의 웹 편집을 코드로 들이는 거꾸로 동기화의 설계 인터뷰
+# 2026-10-21 (12) 디자인 시스템 아티팩트의 웹 편집을 코드로 들이는 거꾸로 동기화의 설계 인터뷰
 
 next-session 지시문으로 연 세션이다(다음 작업: 기능 design-reverse-sync, 다음 단계: 설계 인터뷰, 브랜치 `docs/design-reverse-sync`, 이번 요청 범위: PR과 병합까지). 주 체크아웃에서 `tidy-checkouts`를 돈 뒤 워크트리 `design-reverse-sync`에 들어가 `grill-with-docs`(그 안의 `grilling`, `domain-modeling`)를 따랐다. 지시문의 인자는 "`.scratch/plan.md` 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다"였다. 인터뷰 도중 컨텍스트가 한 번 압축됐다. 산출물은 ADR 0025의 2026-10-21 이력 초안, ADR 0025·0026 본문의 포인터, `CONTEXT.md`의 말 셋(디자인 시스템 올리기, 웹 편집, 거꾸로 동기화의 고쳐 쓴 정의), `plan.md`의 design-reverse-sync 행과 새 design-card-build 행, 이 일지다.
 
@@ -146,8 +146,8 @@ Claude Code에서는 `theme.css`를 비롯한 모든 것을 바꿀 수 있고, �
   시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다
   브랜치: docs/design-reverse-sync
   모델: Opus 5.5 / xhigh
-  읽을 것: docs/journal/2026-10-21-08-design-reverse-sync-design.md 전체(인터뷰의 답과 합의 요약, 인계 절), ADR 0025의 2026-10-21 이력 초안, retro를 돌 때 docs/journal/2026-10-20-35-skill-call-sites.md 의 "한 것"
-  이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`)부터 한다(docs/journal/2026-10-21-08-design-reverse-sync-design.md). 설계 인터뷰는 끝났고 사용자가 합의 요약을 확인했다. 리뷰 범위는 origin/main 이후의 작업 트리와 미추적 일지이고, 명세 축의 기준은 그 일지의 사용자 답(고른 설명 포함)과 합의 요약이다. 반영한 뒤 ADR 0025의 2026-10-21 이력 초안을 사용자에게 보여 승인을 받고 이력 끝에 승인 줄을 적는다. 이 단계를 닫는 retro는 일지 2026-10-20-35까지 읽는다(그 단계가 retro 없이 병합됐다). 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다.
+  읽을 것: docs/journal/2026-10-21-12-design-reverse-sync-design.md 전체(인터뷰의 답과 합의 요약, 인계 절), ADR 0025의 2026-10-21 이력 초안, retro를 돌 때 docs/journal/2026-10-20-35-skill-call-sites.md 의 "한 것"
+  이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`)부터 한다(docs/journal/2026-10-21-12-design-reverse-sync-design.md). 설계 인터뷰는 끝났고 사용자가 합의 요약을 확인했다. 리뷰 범위는 origin/main 이후의 작업 트리와 미추적 일지이고, 명세 축의 기준은 그 일지의 사용자 답(고른 설명 포함)과 합의 요약이다. 반영한 뒤 ADR 0025의 2026-10-21 이력 초안을 사용자에게 보여 승인을 받고 이력 끝에 승인 줄을 적는다. 이 단계를 닫는 retro는 일지 2026-10-20-35까지 읽는다(그 단계가 retro 없이 병합됐다). 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다.
   확인할 선행 조건: 없음
   이번 요청 범위: PR과 병합까지
   ```
@@ -286,8 +286,8 @@ retro를 돌았다. 읽은 것은 이 일지 전체와 일지 2026-10-20-35(retr
   시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다
   브랜치: docs/design-reverse-sync
   모델: Opus 5.5 / xhigh
-  읽을 것: docs/journal/2026-10-21-08-design-reverse-sync-design.md 의 "인계 (커밋 뒤)"와 그 앞 "커밋", 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록
-  이어받을 상태: 인계: 커밋 뒤. 설계 인터뷰, 셀프 리뷰, ADR 0025 2026-10-21 이력의 승인과 승인 줄, 회고(대기열 410·411과 여섯 행의 회차)는 끝났고 커밋 2d5e8fa8까지 했다(다시 하지 않는다). 아직 origin/main을 합치지 않았고 푸시하지 않아 PR이 없다. 일지의 커밋하지 않은 수정("커밋" 절과 인계 절)이 워크트리에 있다. 남은 것은 origin/main 합치기(plan.md·retro-queue.md 충돌, 직접 merge), PR 직전 리뷰, 반영, 커밋, PR, 봇 회차, 병합, 일지의 다음 절과 다음 지시문(명세 /to-spec)이다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-08-design-reverse-sync-design.md
+  읽을 것: docs/journal/2026-10-21-12-design-reverse-sync-design.md 의 "인계 (커밋 뒤)"와 그 앞 "커밋", 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록
+  이어받을 상태: 인계: 커밋 뒤. 설계 인터뷰, 셀프 리뷰, ADR 0025 2026-10-21 이력의 승인과 승인 줄, 회고(대기열 410·411과 여섯 행의 회차)는 끝났고 커밋 2d5e8fa8까지 했다(다시 하지 않는다). 아직 origin/main을 합치지 않았고 푸시하지 않아 PR이 없다. 일지의 커밋하지 않은 수정("커밋" 절과 인계 절)이 워크트리에 있다. 남은 것은 origin/main 합치기(plan.md·retro-queue.md 충돌, 직접 merge), PR 직전 리뷰, 반영, 커밋, PR, 봇 회차, 병합, 일지의 다음 절과 다음 지시문(명세 /to-spec)이다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-12-design-reverse-sync-design.md
   확인할 선행 조건: 없음
   이번 요청 범위: PR과 병합까지
   ```
@@ -356,8 +356,8 @@ ADR 0025 이력 끝의 승인 줄은 그대로 두었다.
   시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다
   브랜치: docs/design-reverse-sync
   모델: Sonnet 5.5 / high
-  읽을 것: docs/journal/2026-10-21-08-design-reverse-sync-design.md 의 "이어받은 세션 (커밋 뒤)"부터 끝까지(PR 직전 리뷰, 반영 커밋, 인계 (PR 연 뒤), 다음)
-  이어받을 상태: 인계: PR 연 뒤. PR #341을 열었다. origin/main 합치기, PR 직전 리뷰(/security-review 취약점 없음, bug-perf-review 유효 6을 모두 반영), 승인받은 ADR 0025 이력을 고친 글의 사용자 확정, 일지의 다음 절은 끝났다(다시 하지 않는다). 일지의 커밋하지 않은 수정(인계 절)이 워크트리에 있다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 병합 뒤 다음 지시문은 일지의 다음 절대로 명세(/to-spec)다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-08-design-reverse-sync-design.md
+  읽을 것: docs/journal/2026-10-21-12-design-reverse-sync-design.md 의 "이어받은 세션 (커밋 뒤)"부터 끝까지(PR 직전 리뷰, 반영 커밋, 인계 (PR 연 뒤), 다음)
+  이어받을 상태: 인계: PR 연 뒤. PR #341을 열었다. origin/main 합치기, PR 직전 리뷰(/security-review 취약점 없음, bug-perf-review 유효 6을 모두 반영), 승인받은 ADR 0025 이력을 고친 글의 사용자 확정, 일지의 다음 절은 끝났다(다시 하지 않는다). 일지의 커밋하지 않은 수정(인계 절)이 워크트리에 있다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 병합 뒤 다음 지시문은 일지의 다음 절대로 명세(/to-spec)다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-12-design-reverse-sync-design.md
   확인할 선행 조건: 없음
   이번 요청 범위: PR과 병합까지
   ```
@@ -374,7 +374,9 @@ ADR 0025 이력 끝의 승인 줄은 그대로 두었다.
 - 병합 커밋 `41e49e9d`의 첫 pre-commit은 web-verify(eslint의 `JavaScript heap out of memory`), pytest(수집 중 `MemoryError`), 훅 러너(`launch_hook.py`의 트레이스백)가 한꺼번에 빨갰다. 바뀐 것이 마크다운뿐이고 세 단계가 모두 메모리 부족으로 죽었고, 그때 여유 메모리가 32.7GB 중 8.3GB라 다른 세션의 검사와 겹친 부족으로 보고(손으로 본 것은 죽은 모양과 여유 메모리뿐이다) 같은 커밋을 다시 쳐 모두 통과했다(pytest 515.1초, web-verify 430.0초, 훅 러너 212.4초). 대기열 306이 받아들인 부하 아래의 빨강과 같은 갈래라 회차를 더하지 않는다.
 - 푸시 뒤 CI에서 `visual`이 `molecules-alert--showcase-run-failed-dark-compact` 한 장에서 6픽셀 차이로 빨갰다(`verify`는 그 결과를 모으는 잡이라 따라 빨갰다). 이 PR은 `web/`을 바꾸지 않았고(`git diff --name-only origin/main...HEAD`의 `web/` 줄 0개) main의 최근 CI 여덟 번이 모두 초록이라 `gh run rerun --failed`로 실패한 잡만 다시 돌렸고 모두 초록이었다. 같은 모양이 다시 나면 사진 비교의 흔들림으로 세는 것을 판단할 일이다.
 - 봇 회차(claude-review): 지적 Nit 하나. ADR 0025 2026-10-21 이력의 "옮기는 규칙", "명세가 정할 것" 같은 항목이 한 글머리표가 천 자를 넘는 문단이라 항목 하나를 인용하거나 고치기 어렵다는 것이다. 승인받은 글이라 이 PR에서 나누지 않고 보류했다(PR 코멘트에 이유를 남겼다). 명세로 옮길 때 항목을 나누는 일은 아래 "다음"에 적었다. CodeRabbit은 `Review rate limited`라 회차를 세지 않는다.
+- 둘째 회차(일지 푸시 `d98722ea`)의 claude-review: Critical·Major 없음, Minor 하나(명세가 정할 것의 결과를 ADR 0025에 되쓰지 말고 `spec.md`에만 둔다)와 Nit 하나(ADR 0036 본문에 계기 훅이 문턱을 거치지 않는다는 예외를 한 줄로 옮긴다). 둘째 회차라 둘 다 보류하고 PR 코멘트에 이유를 남겼으며, 둘 다 아래 "다음"에 적었다.
+- 병합이 `the head branch is not up to date with the base branch`로 막혀(`mergeStateStatus`가 `BEHIND`) main의 #340(`f1e6516b`)을 합쳤다. 충돌은 없었고 자동 병합이었다. `sibling_overlap.py`가 이 일지(`…-08`)가 main의 최신 일지 `…-10`보다 이름순으로 앞서 다음 세션이 지나칠 수 있다고 알려, `--move`로 일지를 `2026-10-21-12`로 옮겼다(대기열 410·411과 `plan.md`·ADR 0025의 인용도 도구가 옮겼다). PR 본문의 일지 경로는 도구가 만든 본문으로 올렸다(옮긴 번호와 끝 줄바꿈 밖의 차이는 없었다).
 
 ## 다음
 
-기능 design-reverse-sync는 설계가 끝났고 `.scratch/design-reverse-sync/`에 `spec.md`가 없는 단계다. 결정표대로 다음은 명세(`/to-spec`)이고, 명세가 정할 것은 ADR 0025 2026-10-21 이력의 "명세가 정할 것" (1)~(6)과 "재지 못한 것"이다. PR 직전 리뷰가 넘긴 밀 주장 가운데 저장소 밖 원문이라 대 보지 못한 셋(형식 설명의 테마·색 한도와 "kept, no UI", CronCreate의 7일 만료)은 명세가 아티팩트 형식 설명을 다시 읽을 때 대 본다. 또 ADR 0025 2026-10-21 이력의 한 글머리표가 천 자를 넘는 항목("옮기는 규칙", "명세가 정할 것")은 명세로 옮기며 항목 하나씩 나눠 쓴다(PR 봇의 Nit을 보류한 일이고 이력의 글은 바꾸지 않는다).
+기능 design-reverse-sync는 설계가 끝났고 `.scratch/design-reverse-sync/`에 `spec.md`가 없는 단계다. 결정표대로 다음은 명세(`/to-spec`)이고, 명세가 정할 것은 ADR 0025 2026-10-21 이력의 "명세가 정할 것" (1)~(6)과 "재지 못한 것"이다. PR 직전 리뷰가 넘긴 밀 주장 가운데 저장소 밖 원문이라 대 보지 못한 셋(형식 설명의 테마·색 한도와 "kept, no UI", CronCreate의 7일 만료)은 명세가 아티팩트 형식 설명을 다시 읽을 때 대 본다. 또 ADR 0025 2026-10-21 이력의 한 글머리표가 천 자를 넘는 항목("옮기는 규칙", "명세가 정할 것")은 명세로 옮기며 항목 하나씩 나눠 쓴다(PR 봇의 Nit을 보류한 일이고 이력의 글은 바꾸지 않는다). 둘째 회차에서 보류한 둘도 명세 단계의 일이다. 명세가 정할 것 (1)~(6)의 확정 결과는 ADR 0025에 되쓰지 않고 `spec.md`에만 두며, ADR 0036 본문에 계기 훅이 문턱을 거치지 않는다는 예외를 한 줄로 옮기는 것은 훅이 실제로 들어오는 구현 때 본다.
