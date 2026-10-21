@@ -333,3 +333,14 @@ retro를 돌았다. 읽은 것은 이 일지 전체와 일지 2026-10-20-35(retr
 ADR 0025 이력 끝의 승인 줄은 그대로 두었다.
 
 반영 커밋 직전 `git branch --show-current`는 `docs/design-reverse-sync`였고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, origin/main `5040230`이었다(다음 빈 번호 일지 2026-10-21-11, 대기열 410).
+
+### 반영 커밋
+
+- `48e817b2` `docs: PR 직전 리뷰가 찾은 ADR 0025 이력의 틀린 사실을 바로잡는다 (design-reverse-sync)`는 pre-commit이 모두 통과했다(pytest 636.4초, web-verify 542.6초). ruff 둘은 `.py`가 없어, 카나리아 모양과 헌법 판은 해당 파일이 없어 `Skipped`이다. 손으로 치는 다섯 가운데 테스트, 타입체크, 경계, web은 이 결과로 갈음하고, `Skipped`인 린트는 커밋 뒤 손으로 쳐 `uv run ruff check .` 출력 `All checks passed!`, `uv run ruff format --check .` 출력 `890 files already formatted`였다.
+- 인용 대조 경고 5건을 하나씩 봤고 모두 그대로 둔다. 270줄은 ruff의 출력이다. 311·313·314·315줄은 이 커밋이 고치기 전의 ADR 0025 문장을 기록으로 옮긴 것이라 저장소에 더는 없고, 고치기 전 원문(`2d5e8fa8`)과 글자 그대로 같다.
+- 이 커밋을 친 직후 `hook_handoff`가 세션 컨텍스트 274,392 토큰, 경계 `커밋 뒤`로 인계를 지시했다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 `next-session` "인계할 때" 1의 같은 경계에 들므로 넘기지 않고 이었다.
+- 커밋을 하나 더 쳐 이 일지를 싣고 푸시한 뒤 PR을 연다. PR을 연 뒤 일지만 푸시하면 claude-review가 한 번 더 돈다(`next-session` 1단계의 2).
+
+## 다음
+
+기능 design-reverse-sync는 설계가 끝났고 `.scratch/design-reverse-sync/`에 `spec.md`가 없는 단계다. 결정표대로 다음은 명세(`/to-spec`)이고, 명세가 정할 것은 ADR 0025 2026-10-21 이력의 "명세가 정할 것" (1)~(6)과 "재지 못한 것"이다. PR 직전 리뷰가 넘긴 밀 주장 가운데 저장소 밖 원문이라 대 보지 못한 셋(형식 설명의 테마·색 한도와 "kept, no UI", CronCreate의 7일 만료)은 명세가 아티팩트 형식 설명을 다시 읽을 때 대 본다.
