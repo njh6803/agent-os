@@ -14,11 +14,11 @@ WBR·What/So what/Now what·Google SRE·Few·영국 정부 표 지침에서 규�
 그리는 것.
 - 종합(`summary`): 첫 줄에 오늘 정할 것의 수와 메모의 결론, 주간 한도(지금 몫, 초기화까지 남은 때,
   보고하는 날 쓴 몫과 하루 예산, 최근 24시간 속도로 차는 시각, 환산 비율), 오늘 정할 것(질문·추천·
-  근거·확인할 수치와 그 상태), 평소와 다른 것(경보이거나 7일 안의 최고·최저인 지표만 표로, 원인은
-  메모. 나머지는 이름만 한 줄), 직접 하실 일, 오늘 나오는 분야별 보고. 제안 상태는 지난 상태
-  파일(`<날짜>.state.json`)과 견줘 `신규`, `효과 확인됨`(확인할 수치가 바라는 쪽으로 움직였다)이다.
-  진행 중과 보류는 제안과 PR을 잇는 기록이 없어 `UNKNOWN_STATE`로 적는다. 확인할 수치의 열쇠가 지난
-  상태와 다르면 견주지 않는다.
+  근거·확인할 수치와 그 상태), 평소와 다른 것(경보이거나 7일 안에서 홀로 최고·최저인 지표만 표로,
+  다른 날과 같은 값이거나 평소와 같은 최고·최저는 빼고(`verdict`), 원인은 메모. 나머지는 이름만 한
+  줄), 직접 하실 일, 오늘 나오는 분야별 보고. 제안 상태는 지난 상태 파일(`<날짜>.state.json`)과 견줘
+  `신규`, `효과 확인됨`(확인할 수치가 바라는 쪽으로 움직였다)이다. 진행 중과 보류는 제안과 PR을 잇는
+  기록이 없어 `UNKNOWN_STATE`로 적는다. 확인할 수치의 열쇠가 지난 상태와 다르면 견주지 않는다.
 - 분야별: 머리에 메모의 결론과 "이 보고에서 정할 것", 그 보고로 가는 표마다 블록 하나(`### <결론>`,
   `<질문> · <기간> · <단위>`, 표, 그래서, 할 일), 끝에 그 보고로 가는 절의 줄("그 밖의 수")과 원본.
   결론·그래서·할 일은 메모가 표의 열쇠(`Table.key`)로 쓰고, 질문·기간·단위·칸 이름은 수집 도구가
@@ -63,6 +63,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import math
 import re
 import statistics
 import sys
@@ -635,21 +636,36 @@ def baseline(series: Sequence[float | None]) -> float | None:
 
 
 def verdict(series: Sequence[float | None], alarm: str | None) -> str:
+    """창은 그날을 포함한 7일(`series[1:]`)이다. 그날이 창의 다른 날 모두보다 높아야 최고, 낮아야
+    최저다. 창 밖의 첫날(`series[0]`)은 견주는 날에 들지 않고 평소(`baseline`)에만 든다. 다른 날과
+    같은 값으로 최고·최저인 날과 평소와 같은 날은 정상이다(그 전날 하루만 5이고 나머지가 0인 지표가
+    `| 읽지 못한 기록 줄 | 0 | 0 | +0 | 원인 모름 |`으로 평소와 다른 것에 올랐다, 일지
+    2026-10-21-04). 평소와 같은 홀로 최고·최저는 창의 다른 날에 값이 하루뿐이고 창 밖의 첫날에 값이
+    있을 때 난다(`(8, 없음×5, 2, 5)`). 다른 날과의 같음과 평소와의 같음은 모두 부동소수 오차
+    (`math.isclose`) 안이면 같다고 본다. 평소는 두 값의 평균일 수 있고, 같은 금액도 세션 비용을 더한
+    순서가 다르면 한 ulp 갈린다(`0.1 + 0.2`와 `0.3`)."""
     if alarm is not None:
         return f"⚠ 경보 ({alarm})" if alarm else "⚠ 경보"
     today = series[-1]
     if today is None:
         return "-"
-    window = [v for v in series[1:] if v is not None]
-    if len(set(window)) > 1 and today == max(window):
+    base = baseline(series)
+    if base is not None and math.isclose(today, base):
+        return "정상"
+    others = [v for v in series[1:-1] if v is not None]
+    if not others:
+        return "정상"
+    top, bottom = max(others), min(others)
+    if today > top and not math.isclose(today, top):
         return "7일 중 최고"
-    if len(set(window)) > 1 and today == min(window):
+    if today < bottom and not math.isclose(today, bottom):
         return "7일 중 최저"
     return "정상"
 
 
 def unusual(m: Metric) -> bool:
-    """평소와 다른 지표: 경보이거나 7일 안의 최고·최저다(Amazon WBR: 예외만 본다)."""
+    """평소와 다른 지표: 경보이거나 `verdict`가 7일 중 최고·최저로 본 지표다(Amazon WBR: 예외만
+    본다)."""
     return bool(m.series) and verdict(m.series, m.alarm) not in ("정상", "-")
 
 
