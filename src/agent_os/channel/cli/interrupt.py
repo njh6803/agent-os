@@ -66,29 +66,18 @@ def run_interruptibly[T](main: Callable[[], Coroutine[object, object, T]]) -> T:
     presses = _Presses()
     previous = signal.signal(signal.SIGINT, presses.on_sigint)
     try:
-        outcome = _run_guarded(presses, main)
-        # 처리기를 단 채 견준다. 되돌린 뒤라면 그 사이의 둘째가 KeyboardInterrupt 의 추적을 찍는다.
-        if isinstance(outcome, _Cancelled) or presses.pressed:
-            _end_interrupted()
-    finally:
-        signal.signal(signal.SIGINT, previous)
-    return outcome
-
-
-def _run_guarded[T](
-    presses: _Presses, main: Callable[[], Coroutine[object, object, T]]
-) -> T | _Cancelled:
-    """주 코루틴을 범위 아래에서 돌린다. 눌린 뒤에 난 예외는 추적 대신 중단의 꼴로 끝낸다."""
-    try:
         return asyncio.run(presses.guarded(main))
-    except BaseException:
+    finally:
+        # 값이든 예외든 눌렸으면 여기서 끝난다. 처리기를 단 채 견준다. 되돌린 뒤라면 그 사이의
+        # 둘째가 KeyboardInterrupt 의 추적을 찍는다.
         if presses.pressed:
             _end_interrupted()
-        raise
+        signal.signal(signal.SIGINT, previous)
 
 
-class _Cancelled:
-    """첫 번째로 취소되어 범위가 그 취소를 삼켰다는 표지. 주 코루틴의 반환값과 가르려고 둔다."""
+class _Cancelled(Exception):
+    """첫 번째의 취소를 범위가 삼켰다는 표지. 눌렸을 때만 나서 `run_interruptibly` 가 눌림을 보고
+    중단의 꼴로 끝내므로 밖으로 나가지 않는다."""
 
 
 class _Presses:
@@ -99,14 +88,14 @@ class _Presses:
         self._scope: anyio.CancelScope | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
-    async def guarded[T](self, main: Callable[[], Coroutine[object, object, T]]) -> T | _Cancelled:
+    async def guarded[T](self, main: Callable[[], Coroutine[object, object, T]]) -> T:
         with anyio.CancelScope() as scope:
             self._scope = scope
             self._loop = asyncio.get_running_loop()
             if self.pressed:  # 범위를 잡기 전에 눌렸다
                 scope.cancel()
             return await main()
-        return _Cancelled()
+        raise _Cancelled
 
     def on_sigint(self, signum: int, frame: FrameType | None) -> None:
         if self.pressed:

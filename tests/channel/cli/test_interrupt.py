@@ -26,11 +26,14 @@ from pathlib import Path
 
 import pytest
 
-from agent_os.channel.cli.interrupt import FORCED, INTERRUPTED, STATUS_CONTROL_C_EXIT
+from agent_os.channel.cli.interrupt import FORCED, INTERRUPTED
 
 LINGERING = Path(__file__).parents[2] / "adapters" / "mcp_lingering.py"
-# 처리하지 않은 KeyboardInterrupt 로 끝나는 파이썬과 같은 꼴. `Popen` 이 보는 값이다.
-DIED_INTERRUPTED = STATUS_CONTROL_C_EXIT if sys.platform == "win32" else -signal.SIGINT
+# 처리하지 않은 KeyboardInterrupt 로 끝나는 파이썬과 같은 꼴. `Popen` 이 보는 값이고 윈도우는
+# STATUS_CONTROL_C_EXIT 다. 구현의 상수를 가져다 견주지 않는다. 그 상수가 틀려도 초록이 되고,
+# 리눅스의 pyright 는 윈도우 갈래를 닿지 않는 코드로 보아 그 가져오기를 쓰지 않는 것으로
+# 잡았다(PR #337 의 첫 CI).
+DIED_INTERRUPTED = 0xC000013A if sys.platform == "win32" else -signal.SIGINT
 # 자식이 끝나기를 기다리는 상한. 넘으면 끝나지 않은 것으로 보고 `Popen` 핸들로 끈다.
 ENDED_WITHIN_SECONDS = 30
 # 둘째가 닫기를 끊으면 둘째 뒤 끝나기까지가 명세의 프로브(`close_paths.py --cli-handler scope`)에서
