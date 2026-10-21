@@ -262,3 +262,74 @@ retro를 돌았다. 읽은 것은 이 일지 전체와 일지 2026-10-20-35(retr
 - 임시 폴더 `find`의 시간 초과: 227의 사건에서 생긴 비용이라 따로 세지 않았다.
 - `theme.css` 경로를 `web/packages/ui/src/theme.css`로 잘못 짚었다: Glob이 바로 찾아 비용이 없었다.
 - 일지 2026-10-20-35의 커밋 제목 75자(커밋 메시지 훅이 막았다), `sync_with_base_branch` 거절(앱이 만든 워크트리가 아니다, 직접 병합으로 지나갔다), 카나리아 명세의 일지 번호 28(`tools/sibling_overlap.py`의 다음 빈 번호로 고쳤다): 있는 검사와 도구가 그 자리에서 잡았다.
+
+### 커밋
+
+- 커밋 직전 `git branch --show-current`는 `docs/design-reverse-sync`였고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, origin/main `5040230`이었다(대기열 다음 빈 번호 408, 이 브랜치의 새 번호는 일지 08과 대기열 406·407).
+- 첫 커밋은 pre-commit의 pytest가 막았다(572.2초). `tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다`가 `PermissionError`(WinError 5)로 빨갰다. 이 커밋은 문서만 바꿨고, 대기열 306이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)라 306의 결정대로 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+- 다시 친 커밋 `2d5e8fa8` `docs: 디자인 시스템 웹 편집의 거꾸로 동기화를 ADR 0025 이력으로 정한다 (design-reverse-sync)`는 pre-commit이 모두 통과했다. parallel-checks 여덟 단계(zizmor, lint-imports, check-instructions, check-type-escapes, pyright 44.7초, run-hooks 179.7초, web-verify 529.6초, pytest 557.3초), 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지다. ruff 둘은 `.py`가 없어, 카나리아 모양과 헌법 판은 해당 파일이 없어 `Skipped`이다. 손으로 치는 다섯 가운데 테스트, 타입체크, 경계, web은 이 결과로 갈음하고, `Skipped`인 린트는 커밋 뒤 손으로 쳐 `uv run ruff check .` "All checks passed!", `uv run ruff format --check .` "885 files already formatted"였다.
+- 인용 대조 경고 9건을 하나씩 봤고 모두 그대로 둔다. 여섯(17·121·129·167·168·179줄)은 이 일지가 기록한 옛 문장이다(앞 세션의 선택지 설명, 합의 요약, 옛 이력 제목, 리뷰가 본 고치기 전 초안). 둘(193줄)은 저장소 밖 원문(아티팩트의 형식 설명, CronCreate 도구 설명)이다. 219줄은 ADR 0025에 글자 그대로 있는데, 인용 안의 `"files"` 따옴표에서 검사가 짝을 잘못 지었다.
+
+## 인계 (커밋 뒤)
+
+- 커밋을 친 뒤 `hook_handoff`가 세션 컨텍스트 271,658 토큰, 경계 `커밋 뒤`로 인계를 지시했다. `next-session` "인계할 때" 1의 인계하지 않는 때 다섯에 들지 않는다. 커밋이 성공했고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 이 세션의 지금 제목은 `docs/design-reverse-sync`이고, 넘기며 `docs/design-reverse-sync (인계함)`으로 바꾼다. 이 세션의 사용자 프롬프트는 지시문 하나와 위 셀프 리뷰·승인 절에 옮긴 답 둘이다. 이 절과 위 "커밋" 절은 커밋하지 않았다. 새 세션이 이 파일을 이어 쓰고 커밋한다.
+- 남은 단계: origin/main을 합친다(`5040230` 이후. `.scratch/plan.md`와 `.scratch/retro-queue.md`가 충돌한다. 대기열은 main의 403~405 뒤에 이 브랜치의 406·407을 둔다. `sync_with_base_branch`는 앱이 만든 워크트리가 아니라고 거절했으니(일지 2026-10-20-35) `git fetch origin` 뒤 `git merge --no-edit origin/main`으로 직접 합친다). 그 뒤 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. 앞 단계에서는 CodeRabbit 좌석이 없어 `/security-review`와 `bug-perf-review`를 돌렸다), 반영, 커밋, 푸시, PR(`gh pr create`, ccd_pr `get_status`·`bind_pr`), 첫 `@coderabbitai review` 코멘트, 봇 회차, 병합(`next-session` "워크트리에서 병합할 때"), 이 일지의 `## 다음`과 다음 지시문(다음 단계는 design-reverse-sync 명세, `/to-spec`)이다.
+- `bug-perf-review`에 밀 주장은 위 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록이다.
+- 셀프 리뷰, ADR 0025 2026-10-21 이력의 승인과 승인 줄, 회고는 끝났다(다시 하지 않는다). 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다.
+- 인계 지시문:
+
+  ```text
+  다음 작업: 기능 design-reverse-sync. 사람이 웹에서 고친 디자인 시스템 아티팩트를 저장소의 코드로 다시 들이는 거꾸로 동기화의 설계 인터뷰
+  다음 단계: 설계 인터뷰
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다
+  브랜치: docs/design-reverse-sync
+  모델: Opus 5.5 / xhigh
+  읽을 것: docs/journal/2026-10-21-08-design-reverse-sync-design.md 의 "인계 (커밋 뒤)"와 그 앞 "커밋", 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록
+  이어받을 상태: 인계: 커밋 뒤. 설계 인터뷰, 셀프 리뷰, ADR 0025 2026-10-21 이력의 승인과 승인 줄, 회고(대기열 406·407과 여섯 행의 회차)는 끝났고 커밋 2d5e8fa8까지 했다(다시 하지 않는다). 아직 origin/main을 합치지 않았고 푸시하지 않아 PR이 없다. 일지의 커밋하지 않은 수정("커밋" 절과 인계 절)이 워크트리에 있다. 남은 것은 origin/main 합치기(plan.md·retro-queue.md 충돌, 직접 merge), PR 직전 리뷰, 반영, 커밋, PR, 봇 회차, 병합, 일지의 다음 절과 다음 지시문(명세 /to-spec)이다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-08-design-reverse-sync-design.md
+  확인할 선행 조건: 없음
+  이번 요청 범위: PR과 병합까지
+  ```
+
+- 제목을 `docs/design-reverse-sync (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(커밋 둘과 임시 폴더 `find`가 모두 끝나 있었다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-21T10:22:44Z
+
+## 이어받은 세션 (커밋 뒤)
+
+지시문(이어받을 상태: 인계: 커밋 뒤)으로 연 새 세션이 제목을 `docs/design-reverse-sync`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `grill-with-docs`는 설명대로 리뷰 중이라 인터뷰를 다시 열지 않았다.
+
+- `git fetch origin` 뒤 `git merge --no-edit origin/main`(`5040230c`, #337)으로 합쳤다. `.scratch/plan.md`는 저절로 합쳐졌고 `.scratch/retro-queue.md`만 충돌했다. main의 403~405 뒤에 이 브랜치의 406·407을 두었다.
+- 병합 커밋 직전 `git branch --show-current`는 `docs/design-reverse-sync`였고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다.
+- 첫 병합 커밋은 pre-commit의 web-verify(366.9초)가 막았다. vitest 브라우저 시험 `web/packages/ui/src/styles/DesignTokens.stories.tsx`의 iframe이 `did not become ready within 60000ms`였고, 나머지 288개 시험과 다른 일곱 단계는 통과했다. 이 병합은 `web/`을 바꾸지 않았고 대기열 306이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)라, 306의 결정대로 회차를 더하지 않고 여기에만 적고 다시 쳤다. 다시 친 병합 커밋 `08f66e3b`는 pre-commit이 모두 통과했다(pytest 349.5초, web-verify 414.9초. ruff 둘은 병합에서 충돌한 파일만 보아 `Skipped`).
+- `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 PR 직전 CLI 축은 비고, 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review`)을 병합 커밋 뒤에 나란히 돌렸다.
+
+### PR 직전 리뷰
+
+- `/security-review`: 취약점 없음. 바뀐 것이 마크다운뿐이고, 바뀐 줄에 비밀값과 새 개인정보가 없다(아티팩트 링크와 계정 이름은 바뀌지 않은 줄에 원래 있던 것이다). 설계가 여는 CSS 주입과 웹 편집에 실린 지시의 갈래는 구현이 없고 편집할 수 있는 계정이 사용자 본인뿐이라 신고하지 않았다. 후보가 없어 오탐 거르기 서브태스크는 띄우지 않았다.
+- `bug-perf-review`(기준 `5040230c`, 파일 6개, 호출 40): 유효 6(모두 Minor), 오탐 6, 밀 주장 열 가운데 확인 다섯(3·4·8·10, 5는 문서 안에서), 보류 셋(1·6·7, 저장소 밖 원문), 일부 확인 하나(2), 어긋남 하나(9).
+  - B1: "올리기의 마지막 호출이 보낸 파일마다의 sha256"은 올리기가 바뀐 파일만 보내므로(`docs/agents/issue-tracker.md` 39줄) 둘째 올리기부터 기록이 일부만 들고, "기록에 없는 새 파일"이 보내지 않은 파일을 모두 잡는다. "기록이 아직 없으면 맞댈 웹 편집도 없다"는 첫 올리기 전에만 참이다.
+  - B2(밀 주장 9): 계기 훅이 ADR 0036 문턱을 거치지 않는다는 문장이 ADR 0037의 꼴을 따랐지만, ADR 0036 21줄에는 ADR 0037 포인터만 있고 이 이력의 포인터가 없다.
+  - B3: 거부한 안(design-system 폴더)의 까닭 "오래전에 닫힌 폴더에 티켓이 계속 더해진다"는 고른 폴더에도 같이 걸린다(ADR 0037의 "상태는 done 그대로").
+  - B4: "정리를 하지 않는 까닭은 위 2026-10-16 이력 그대로다"는 그 이력의 까닭 둘 가운데 "화면 편집을 켜 원천을 둘로 만든다"가 이 이력의 편집 켜기와 부딪친다.
+  - B5: 값 바꾸기의 "시스템 다크 같은 사본 블록도 함께 고친다"는 맞지 않다. 값 바꾸기의 토큰은 `theme.css`에 한 번씩만 있고, 사본 블록은 대응과 밀도에만 있다. 셋째 라운드의 고른 설명에 있던 틀린 사실이 ADR로 옮겨졌다.
+  - B6: plan.md admin-style 행에 "`tokens.json`은 design-reverse-sync의 구현이 올린다"를 더하고도 admin-style의 첫 그리기가 그 구현보다 먼저 올 때를 적지 않았다.
+
+여섯 모두 근거를 열어 대 봤고(`issue-tracker.md` 37~42줄, ADR 0025 62~63줄, ADR 0036 21줄, ADR 0037 18~32줄, `theme.css`의 블록 선택자와 33·191·552줄 부근) 맞았다. 고치는 값이 작아 PR을 열기 전에 고쳤다. ADR 0025 이력은 승인받은 글이라 결정은 바꾸지 않고 사실과 문장만 바로잡았고, 새 결정이 드는 갈래는 "명세가 정할 것"으로 넘겼다.
+
+- B1: 기록을 "올린 뒤 `project/` 아래 있는 파일마다의 sha256"으로, 앞 기록에 이번에 보내고 지운 것을 합친 것으로 고쳤다. 기록 없음은 "첫 올리기 전에는"으로 좁혔다. 첫 올리기 뒤에 기록이 없거나 읽히지 않을 때 멈추는지는 "명세가 정할 것" (1)에 더했다.
+- B2: ADR 0036 21줄의 ADR 0037 포인터 뒤에 이 이력의 포인터를 이어 달고, 이 이력의 "함께 고치는 것"에 ADR 0036을 더했다. `tools/check_adr_pointers.py`가 종료 0이고, 제목을 일부러 틀린 사본 폴더에서는 그 줄을 "가리킨 이력 제목이 없다"로 잡아 새 포인터를 읽는 것을 봤다.
+- B3: 거부 까닭에서 "닫힌 폴더"를 빼고, 고른 폴더도 done 폴더에 티켓을 더하는 것은 같아 그것으로 가르지 않는다고 적었다(done 폴더를 어떻게 볼지는 ADR 0037이 명세로 넘겼다).
+- B4: 그 이력의 까닭 가운데 빌드와 경로의 어긋남만 그대로이고, 원천이 둘이 되는 것은 이 이력의 거꾸로 동기화가 맡는다고 고쳤다.
+- B5: 값 바꾸기에는 사본이 없다는 것과, 사본은 대응과 밀도에만 있어 사람이 고른 대응 바꾸기를 옮길 때 함께 고친다는 것으로 고쳤다.
+- B6: admin-style 행에 첫 그리기가 그 구현보다 먼저 오면 붙일 `tokens.json`이 없으므로, 붙이는 법을 정하는 그 PR이 이 순서도 함께 본다고 더했다. admin-style이 이 기능을 기다릴지는 계획의 결정이라 정하지 않았다.
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py` 종료 0, `uv run python tools/check_md_tables.py`(바꾼 세 파일) 종료 0.
+
+승인받은 이력의 글이 바뀌어, 고친 다섯 곳(B1~B5)과 plan.md 한 줄(B6)을 쉬운 말로 보이고 물었다.
+
+> 사용자: "고친 글로 확정한다 (Recommended)" — 설명: 다섯 곳을 고친 글 그대로 둡니다. 승인 줄은 그대로 두고, 일지에 PR 직전 리뷰가 고친 것과 이 확인을 적은 뒤 커밋하고 PR을 열어 병합까지 진행합니다.
+
+ADR 0025 이력 끝의 승인 줄은 그대로 두었다.
+
+반영 커밋 직전 `git branch --show-current`는 `docs/design-reverse-sync`였고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, origin/main `5040230`이었다(다음 빈 번호 일지 2026-10-21-11, 대기열 410).
