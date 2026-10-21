@@ -377,6 +377,35 @@ ADR 0025 이력 끝의 승인 줄은 그대로 두었다.
 - 둘째 회차(일지 푸시 `d98722ea`)의 claude-review: Critical·Major 없음, Minor 하나(명세가 정할 것의 결과를 ADR 0025에 되쓰지 말고 `spec.md`에만 둔다)와 Nit 하나(ADR 0036 본문에 계기 훅이 문턱을 거치지 않는다는 예외를 한 줄로 옮긴다). 둘째 회차라 둘 다 보류하고 PR 코멘트에 이유를 남겼으며, 둘 다 아래 "다음"에 적었다.
 - 병합이 `the head branch is not up to date with the base branch`로 막혀(`mergeStateStatus`가 `BEHIND`) main의 #340(`f1e6516b`)을 합쳤다. 충돌은 없었고 자동 병합이었다. `sibling_overlap.py`가 이 일지(`…-08`)가 main의 최신 일지 `…-10`보다 이름순으로 앞서 다음 세션이 지나칠 수 있다고 알려, `--move`로 일지를 `2026-10-21-12`로 옮겼다(대기열 410·411과 `plan.md`·ADR 0025의 인용도 도구가 옮겼다). PR 본문의 일지 경로는 도구가 만든 본문으로 올렸다(옮긴 번호와 끝 줄바꿈 밖의 차이는 없었다).
 
+## 인계 (커밋 뒤)
+
+- 일지를 옮긴 커밋 `f61852d1`(제목: `docs: 설계 일지를 2026-10-21-12로 옮기고 둘째 회차 보류를 적는다 (design-reverse-sync)`)을 친 직후 `hook_handoff`가 세션 컨텍스트 213,952 토큰, 경계 `커밋 뒤`로 인계를 지시했다. 이 커밋은 pre-commit이 모두 통과했고(pytest 240.9초, web-verify 287.2초, 훅 러너 79.8초) 인용 대조 경고는 없었다. `next-session` "인계할 때" 1의 인계하지 않는 때 다섯에 들지 않는다. 계기를 낸 커밋이 성공했고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문의 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 이 세션의 사용자 프롬프트는 지시문 하나뿐이다. 이 세션이 번복하거나 고친 것은 없다(승인받은 글은 바꾸지 않았고, 대기열 번호와 일지 번호를 병합에 맞춰 옮겼을 뿐이다).
+- 이 세션의 지금 제목은 `docs/design-reverse-sync`이고, 넘기며 `docs/design-reverse-sync (인계함)`으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이 파일을 이어 쓰고 다음 커밋에 싣는다.
+- 인계 지시문(`uv run python tools/model_sweep.py docs/design-reverse-sync`는 `스윕 밖`이라 열린 PR이 있는 인계 줄의 값):
+
+  ```text
+  다음 작업: 기능 design-reverse-sync. 사람이 웹에서 고친 디자인 시스템 아티팩트를 저장소의 코드로 다시 들이는 거꾸로 동기화의 설계 인터뷰
+  다음 단계: PR 반영·병합
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-reverse-sync 행과 ADR 0025 이력 2026-10-20의 거꾸로 동기화 결정을 근거로, 디자인 시스템 아티팩트의 웹 편집기가 고치는 tokens.json을 빌드에서 낼지와 그 모양, 편집을 켜는 법, 고친 토큰을 web/packages/ui의 theme.css로 옮기는 규칙과 그 판정, 다음 /design-sync가 웹에서 고친 것을 덮어쓰기 전에 거르는 자리를 정한다
+  브랜치: docs/design-reverse-sync
+  모델: Sonnet 5.5 / high
+  읽을 것: docs/journal/2026-10-21-12-design-reverse-sync-design.md 의 "이어받은 세션 (PR 연 뒤)"부터 끝까지(인계 (커밋 뒤), 다음). 일지 이름이 이전 지시문의 2026-10-21-08에서 옮겨졌다
+  이어받을 상태: 인계: 커밋 뒤. PR #341에 푸시하지 않은 커밋 둘(병합 커밋 d497e28b, 일지 이동 f61852d1)이 있고 pre-commit은 모두 통과했다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. 봇 지적 둘의 보류(셋째 회차부터는 Critical·Major만 고친다), visual 한 장의 6픽셀 흔들림을 gh run rerun --failed로 넘긴 일, main이 또 앞서 병합이 막힐 때의 길, 병합 뒤 다음 지시문(명세 /to-spec)의 이어받을 상태에 옮길 보류 둘은 일지의 "이어받은 세션 (PR 연 뒤)"와 "다음"에 있다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-21-12-design-reverse-sync-design.md
+  확인할 선행 조건: 없음
+  이번 요청 범위: PR과 병합까지
+  ```
+
+- 제목을 `docs/design-reverse-sync (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-21T12:17:06Z
+
+## 이어받은 세션 (커밋 뒤, 푸시 전)
+
+지시문(이어받을 상태: 인계: 커밋 뒤)으로 연 새 세션이 제목을 `docs/design-reverse-sync`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 시작 프롬프트는 `/grill-with-docs`이지만 설계 인터뷰는 끝났고 "다음 단계"가 PR 반영·병합이라, 스킬을 따르되 인터뷰는 다시 열지 않고 푸시와 `next-session` 순서 1의 2(봇 회차)부터 이었다. 사용자 프롬프트는 지시문 하나뿐이다.
+
+- 시작할 때 `git fetch origin` 뒤 `HEAD..origin/main`이 비어 있어 main이 더 앞서지 않았다. 푸시하지 않은 커밋은 병합 커밋 `d497e28b`와 일지 이동 `f61852d1`이고, PR #341은 원격 브랜치가 병합 커밋을 몰라 `BEHIND`였다. 이 절과 앞 "인계 (커밋 뒤)" 절은 한 커밋에 실어 푸시한다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다).
+
 ## 다음
 
 기능 design-reverse-sync는 설계가 끝났고 `.scratch/design-reverse-sync/`에 `spec.md`가 없는 단계다. 결정표대로 다음은 명세(`/to-spec`)이고, 명세가 정할 것은 ADR 0025 2026-10-21 이력의 "명세가 정할 것" (1)~(6)과 "재지 못한 것"이다. PR 직전 리뷰가 넘긴 밀 주장 가운데 저장소 밖 원문이라 대 보지 못한 셋(형식 설명의 테마·색 한도와 "kept, no UI", CronCreate의 7일 만료)은 명세가 아티팩트 형식 설명을 다시 읽을 때 대 본다. 또 ADR 0025 2026-10-21 이력의 한 글머리표가 천 자를 넘는 항목("옮기는 규칙", "명세가 정할 것")은 명세로 옮기며 항목 하나씩 나눠 쓴다(PR 봇의 Nit을 보류한 일이고 이력의 글은 바꾸지 않는다). 둘째 회차에서 보류한 둘도 명세 단계의 일이다. 명세가 정할 것 (1)~(6)의 확정 결과는 ADR 0025에 되쓰지 않고 `spec.md`에만 두며, ADR 0036 본문에 계기 훅이 문턱을 거치지 않는다는 예외를 한 줄로 옮기는 것은 훅이 실제로 들어오는 구현 때 본다.
