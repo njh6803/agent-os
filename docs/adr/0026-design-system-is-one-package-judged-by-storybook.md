@@ -35,7 +35,7 @@ ADR 0025는 디자인 시스템의 원천을 코드로 정하고 세부(패키�
 
 **디자인 문서.** 디자인 판단 기준은 `.claude/rules/web-design.md`(paths: `web/packages/ui/**`, `web/apps/*/components/**`)에 둔다. 그 경로의 파일을 Read하면 실리고, `/design-sync`의 `guidelinesGlob`이 같은 파일을 Claude Design의 guidelines로 올린다. (바뀜: ADR 0025 이력 2026-10-16 "디자인 시스템과 화면은 Claude 아티팩트에 두고, Claude Code가 편집자로 저장소에서 올린다") 그래서 사본이 없다. `/design-sync`에 관한 이 절의 사실은 모두 같은 실행 파일을 읽은 것이다. `guidelinesGlob`은 패키지 밖이라도 저장소 안의 `.md`를 받고, 패키지 루트의 README.md나 DESIGN.md는 기본값으로 올리지 않는다. 앱별 기준은 필요할 때 `web-design-widget.md`와 `web-design-admin.md`로 더한다. 컴포넌트별 쓰임은 스토리 옆의 `<Name>.md`에 적고, `/design-sync`가 그 컴포넌트의 설명으로 올린다. 디자인 토큰의 값은 코드에만 둔다.
 
-**동기화.** Claude Design에서 화면을 그리기 직전에 `/design-sync`를 돈다. (바뀜: ADR 0025 이력 2026-10-16 "디자인 시스템과 화면은 Claude 아티팩트에 두고, Claude Code가 편집자로 저장소에서 올린다") 맞추지 않은 디자인 시스템이 해를 끼치는 것은 그 순간이기 때문이다. `/design-sync`의 상태(`.design-sync/`의 config, NOTES, conventions, overrides)는 스킬의 규약대로 저장소 루트에 커밋하고, 산출물(`ds-bundle/`, `.ds-sync/`, 캐시)은 무시한다.
+**동기화.** Claude Design에서 화면을 그리기 직전에 `/design-sync`를 돈다. (바뀜: ADR 0025 이력 2026-10-16 "디자인 시스템과 화면은 Claude 아티팩트에 두고, Claude Code가 편집자로 저장소에서 올린다") (바뀜: ADR 0025 이력 2026-10-21 "디자인 시스템 아티팩트의 편집을 tokens.json으로 열고, 사람이 알리거나 화면 작업과 올리기가 찾은 웹 편집을 디자인 토큰 CSS로 들인다") 맞추지 않은 디자인 시스템이 해를 끼치는 것은 그 순간이기 때문이다. `/design-sync`의 상태(`.design-sync/`의 config, NOTES, conventions, overrides)는 스킬의 규약대로 저장소 루트에 커밋하고, 산출물(`ds-bundle/`, `.ds-sync/`, 캐시)은 무시한다.
 
 ## Considered Options
 
