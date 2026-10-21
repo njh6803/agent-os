@@ -3,6 +3,15 @@
 서버마다 프로세스와 세션 하나를 열어 connect 가 살아 있는 동안 유지한다. MCP 의 타입은 여기서
 ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 isError 를 돌려주면 ok=false 다.
 
+**던지는 예외의 타입은 내장이다(`.scratch/mcp-shutdown/spec.md` 의 "경계를 넘는 예외").** 원인
+(`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기, 세션 열기, `initialize()`,
+도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령과 원인을 든 ConnectionError 이고 원래 예외가
+`__cause__` 다. 취소는 바꾸지 않는다.
+도구 호출의 실패는 서버와 도구를 든 RuntimeError 다. 연결 안(부르는 쪽)에서 난 예외는 그 객체 그대로
+나온다. mcp 의 태스크 그룹이 그것을 그룹으로 두 겹 감싸므로, 겹마다 그 하나만 들었으면 벗긴다.
+닫기에서 다른 예외가 더 났으면 그 그룹을 그대로 낸다. core 가 연결 안의 yield 에 멈춘 제너레이터를
+닫을 때 들어가는 GeneratorExit 도 같다. 벗기지 않으면 결말을 쓴 실행이 그 그룹을 밖으로 올린다.
+
 **닫기는 취소된 실행에서도 끝까지 간다(ADR 0034).** 서버들은 연 순서의 반대로 하나씩 닫는다(탈출
 스택의 순서). mcp 2 의 stdio 클라이언트가 서버마다의 닫기를 취소에서 보호하므로, 실행 타임아웃이나
 serve 의 종료로 취소된 실행도 서버를 닫은 뒤에 끝난다. 상류의 닫기는 서버의 입력을 닫고 서버가
@@ -23,9 +32,10 @@ Object 를 곧바로 끝내고, POSIX 는 그룹에 SIGTERM 을 보내 2초 안�
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Mapping, Sequence
-from contextlib import AsyncExitStack, asynccontextmanager
+from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
+from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
 from dataclasses import dataclass
+from typing import TypeGuard
 
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.types import (
@@ -50,19 +60,20 @@ class McpTools:
     async def connect(
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
+        """서버들을 매니페스트에 적힌 순서로 열고, 탈출 스택이 연 순서의 반대로 닫는다."""
         async with AsyncExitStack() as stack:
             routes: dict[str, _Route] = {}
-            for server in servers.values():
-                session = await _session(stack, server)
-                for tool in await _all_tools(session):
-                    routes[tool.name] = _Route(session=session, tool=tool)
+            for name, server in servers.items():
+                for route in await stack.enter_async_context(_opened(name, server)):
+                    routes[route.tool.name] = route
             yield McpConnection(routes)
 
 
 @dataclass(frozen=True)
 class _Route:
-    """도구 하나와 그 도구를 가진 서버의 세션."""
+    """도구 하나와 그 도구를 가진 서버의 이름과 세션."""
 
+    server: PluginName
     session: ClientSession
     tool: Tool
 
@@ -85,16 +96,89 @@ class McpConnection:
         route = self._routes.get(name)
         if route is None:
             raise LookupError(f"도구가 없다: {name}")
-        result = await route.session.call_tool(name, dict(args))
+        try:
+            result = await route.session.call_tool(name, dict(args))
+        except Exception as error:
+            raise RuntimeError(
+                f"MCP 서버 {route.server}의 도구 {name} 호출이 실패했다: {_describe(error)}"
+            ) from error
         return ToolResult(ok=not result.is_error, content=_text_of(result))
 
 
-async def _session(stack: AsyncExitStack, server: McpServer) -> ClientSession:
+@asynccontextmanager
+async def _opened(name: PluginName, server: McpServer) -> AsyncGenerator[list[_Route]]:
+    """서버 하나의 도구들을 내주고, 나갈 때 그 서버를 닫는다.
+
+    여는 동안의 실패는 서버 이름과 명령을 든 ConnectionError 다(`_connecting`). 이 서버의 태스크
+    그룹 두 겹을 지나 나온 예외는 여기서 겉봉을 벗긴다(`_Escaped`). 서버마다 이 문맥 하나를 두어,
+    탈출 스택을 인자로 받아 거기에 등록하는 꼴(출력 인자)을 두지 않는다.
+    """
+    escaped = _Escaped()
+    unwrapped: BaseException | None = None
+    try:
+        async with AsyncExitStack() as stack:
+            with escaped.watching():
+                with _connecting(name, server):
+                    session, tools = await stack.enter_async_context(_session(server))
+                yield [_Route(server=name, session=session, tool=tool) for tool in tools]
+    except BaseExceptionGroup as group:
+        unwrapped = escaped.unwrap(group)
+        if unwrapped is None:
+            raise
+    # except 밖에서 던진다. 안에서 던지면 벗긴 예외의 문맥(`__context__`)이 그것을 품은 그룹이 된다.
+    if unwrapped is not None:
+        raise unwrapped
+
+
+@contextmanager
+def _connecting(name: PluginName, server: McpServer) -> Generator[None]:
+    """이 안의 예외를 서버 이름과 명령과 원인을 든 ConnectionError 로 바꾼다. 원인의 글은 예외
+    그룹을 펼친 것이다. 취소는 Exception 이 아니라 바꾸지 않는다."""
+    try:
+        yield
+    except Exception as error:
+        raise ConnectionError(
+            f"MCP 서버 {name}({server.command})에 붙지 못했다: {_describe(error)}"
+        ) from error
+
+
+@asynccontextmanager
+async def _session(server: McpServer) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
+    """서버를 띄워 세션을 열고 도구 목록을 읽는다. 나갈 때 세션과 프로세스를 닫는다."""
     parameters = StdioServerParameters(command=server.command, args=list(server.args))
-    read, write = await stack.enter_async_context(stdio_client(parameters))
-    session = await stack.enter_async_context(ClientSession(read, write))
-    await session.initialize()
-    return session
+    async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        yield session, await _all_tools(session)
+
+
+class _Escaped:
+    """연결 안에서 빠져나온 예외를 기억해 두고, 닫기를 지나 그룹에 싸여 나오면 그것을 찾는다."""
+
+    def __init__(self) -> None:
+        self._errors: list[BaseException] = []
+
+    @contextmanager
+    def watching(self) -> Generator[None]:
+        """이 안에서 빠져나온 예외를 기억한다. 여는 동안의 실패와, 연결 안(부르는 쪽)에서 난 예외와
+        닫기가 넣은 GeneratorExit 를 함께 덮는다."""
+        try:
+            yield
+        except BaseException as error:
+            self._errors.append(error)
+            raise
+
+    def unwrap(self, group: BaseExceptionGroup[BaseException]) -> BaseException | None:
+        """한 겹씩 하나만 든 그룹을 따라 내려가다 기억한 객체를 만나면 그것, 못 만나면 없음.
+
+        만나는 대로 멈춘다. 안쪽에서 던진 것이 그 자신 예외 그룹이면(에이전트가 낸 그룹) 그 속까지
+        내려가지 않는다. 잎까지 내려가 견주면 그 경우 겉봉을 벗기지 못한다.
+        """
+        current: BaseException = group
+        while not any(current is error for error in self._errors):
+            if not _is_group(current) or len(current.exceptions) != 1:
+                return None
+            current = current.exceptions[0]
+        return current
 
 
 async def _all_tools(session: ClientSession) -> list[Tool]:
@@ -128,3 +212,15 @@ def _text_of(result: CallToolResult) -> str:
         ):
             parts.append(block.resource.text)
     return "".join(parts)
+
+
+def _describe(error: BaseException) -> str:
+    """ExceptionGroup 은 겉만 보면 원인을 알 수 없어서 안의 예외를 펼친다."""
+    if _is_group(error):
+        return "; ".join(_describe(inner) for inner in error.exceptions)
+    return f"{type(error).__name__}: {error}"
+
+
+def _is_group(error: BaseException) -> TypeGuard[BaseExceptionGroup[BaseException]]:
+    """isinstance 로 좁히면 pyright 가 타입 인자를 Unknown 으로 둔다. 여기서 명시한다."""
+    return isinstance(error, BaseExceptionGroup)
