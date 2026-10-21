@@ -22,10 +22,18 @@ mcp의 `stdio_client`와 `ClientSession`을 직접 쓴다. 어댑터(`McpTools`)
 - `cli_ctrl_c_twice`: `cli_ctrl_c`에 0.5초 뒤 SIGINT 하나를 더한다. 둘째는 닫기의 유예(2초) 안에
   온다. 그 뒤 10초가 지나도 자식이 끝나지 않았으면 셋째를 보낸다(사람이 멈춘 CLI 에서 한 번 더
   누르는 것). 셋째가 나갔는지(`third_sigint_to_exit_seconds`)가 둘째 뒤에 멈췄는지를 가른다.
+- `cli_ctrl_c_closing`: 같은 자식이 `slow(0.1)` 뒤 세션을 나와 `stdio_client`의 닫기를 시작하고,
+  그 0.5초 뒤(닫기의 유예 2초 안)에 SIGINT 하나를 받는다. core 가 결말을 쓴 뒤 도구 연결을 닫는
+  동안 사람이 Ctrl+C 를 누르는 모양이다(CLI 는 결말을 받자마자 답을 찍는다). 10초가 지나도 자식이
+  끝나지 않았으면 하나를 더 보낸다(`followup_sigint_to_exit_seconds`). 첫째가 자식을 끝냈는지는 그
+  기록이 없고 `sigint_to_exit_seconds`가 10초보다 작은지로 가른다. 2026-10-21 명세 검토가 짚었다.
 
-`--cli-handler force`를 주면 두 CLI 사례의 자식이 `asyncio.run`의 처리기 대신 명세가 정한 처리기의
-시제품(`_run_with_force_exit`. 첫 SIGINT 는 주 태스크를 취소하고 둘째는 곧바로 끝낸다)으로 돈다.
-끝나는 꼴은 처리하지 않은 KeyboardInterrupt 로 끝나는 파이썬과 같다(POSIX 는 SIGINT 로 죽고 윈도우는
+`--cli-handler force`를 주면 CLI 사례의 자식이 `asyncio.run`의 처리기 대신 ADR 0034 2026-10-17
+이력의 처리기 시제품(`_run_with_force_exit`. 첫 SIGINT 는 주 태스크를 취소하고 둘째는 곧바로
+끝낸다)으로 돈다. `--cli-handler scope`는 2026-10-21 이력이 고른 처리기의 시제품
+(`_run_with_scope_cancel`)이다. 첫 SIGINT 를 주 태스크의 네이티브 취소 대신 `main`을 감싼 anyio 취소
+범위의 `cancel`로 전하고, 둘째는 같게 곧바로 끝낸다. 끝나는 꼴은 처리하지
+않은 KeyboardInterrupt 로 끝나는 파이썬과 같다(POSIX 는 SIGINT 로 죽고 윈도우는
 STATUS_CONTROL_C_EXIT). 자식의 종료 코드(`child_exit`)를 기록에 남긴다.
 
 선택: `--launcher none|kill|watch`(POSIX만. `launcher.py`를 서버 앞에 끼운다. watch는
@@ -37,7 +45,9 @@ venv는 이 환경의 `sys.executable`이다. 윈도우의 venv 파이썬은 진
 `raise_inside`는 던진 예외가 호출자에게 온 것 안에 있고, `close_fails`는 닫기가 다른 태스크라는
 anyio 의 예외로 끝났고, 없는 명령은 그 까닭(명령을 찾지 못했다)이 예외나 런처의 한 줄에 있고,
 `cli_ctrl_c`는 SIGINT를 보내기 전에 `slow`가 시작했고 자식이 `slow`가 돌아오기 전에
-KeyboardInterrupt로 끝났다 (돌아온 뒤에 끝났으면 취소가 아니라 정상 닫기를 잰 것이다). 표지가 없는
+KeyboardInterrupt로 끝났다 (돌아온 뒤에 끝났으면 취소가 아니라 정상 닫기를 잰 것이다).
+`cli_ctrl_c_closing`은 첫 SIGINT 가 자식이 찍은 닫기 시작(`closing`) 뒤이고 닫기 끝(`closed`) 앞이며
+(닫기 끝이 없어도 된다), 자식이 처리기를 거쳐 끝났다(60초에 꺼지지 않았다). 표지가 없는
 사례는 측정이 아니라고 따로 세고 종료 코드를 1로 둔다. 남은 프로세스는 멈춤 파일로 끝내고, 끝나지
 않으면 그것도 종료 코드 1이다.
 
@@ -84,12 +94,15 @@ CASES = (
     "missing_command",
     "cli_ctrl_c",
     "cli_ctrl_c_twice",
+    "cli_ctrl_c_closing",
 )
 POSIX_ONLY = {"sigterm_ignored_cancel"}
 CANCELLED = {"cancel", "sigterm_ignored_cancel"}
-CLI = {"cli_ctrl_c", "cli_ctrl_c_twice"}
+CLI = {"cli_ctrl_c", "cli_ctrl_c_twice", "cli_ctrl_c_closing"}
 SECOND_SIGINT_SECONDS = 0.5
 THIRD_SIGINT_SECONDS = 10.0
+CLOSING_SIGINT_SECONDS = 0.5
+FOLLOWUP_SIGINT_SECONDS = 10.0
 STATUS_CONTROL_C_EXIT = 0xC000013A
 # anyio 가 취소 범위를 연 태스크가 아닌 태스크에서 닫을 때 내는 예외의 글(`close_fails`의 표지). 첫
 # 회차의 원본 출력에서 골랐다.
@@ -278,6 +291,14 @@ def _marked(case: str, record: dict[str, object]) -> bool:
         twice = case != "cli_ctrl_c_twice" or "second_sigint_to_exit_seconds" in record
         right_after = record.get("beating_right_after")
         existed = isinstance(right_after, dict) and None not in right_after.values()
+        if case == "cli_ctrl_c_closing":
+            return (
+                record.get("closing_before_sigint") is True
+                and record.get("sigint_before_closed") is True
+                and record.get("keyboard_interrupt") is True
+                and "child_timeout" not in record
+                and existed
+            )
         return (
             record.get("slow_started_before_sigint") is True
             and record.get("keyboard_interrupt") is True
@@ -306,9 +327,11 @@ def _marked(case: str, record: dict[str, object]) -> bool:
 
 
 def _cli_child(config: dict[str, str | list[str]]) -> None:
-    """`cli_ctrl_c`의 자식. CLI처럼 `asyncio.run`으로 돌고 `slow(30)` 도중에 SIGINT를 받는다."""
+    """CLI 사례의 자식. CLI처럼 `asyncio.run`으로 돌고 `slow(30)` 도중에 SIGINT를 받는다.
+    `cli_ctrl_c_closing`이면 `slow(0.1)` 뒤 닫기를 시작하고 그 0.5초 뒤에 받는다."""
     work = Path(str(config["work"]))
-    marker = work / "server.hb.slow"
+    closing = config.get("closing") == "yes"
+    marker = work / ("closing" if closing else "server.hb.slow")
     params = StdioServerParameters(command=str(config["command"]), args=list(config["args"]))
 
     def interrupt() -> None:
@@ -322,10 +345,19 @@ def _cli_child(config: dict[str, str | list[str]]) -> None:
         end = time.monotonic() + 30
         while not marker.exists() and time.monotonic() < end:
             time.sleep(0.05)
-        print(json.dumps({"sigint": time.time(), "slow": marker.exists()}), flush=True)
+        if closing:
+            time.sleep(CLOSING_SIGINT_SECONDS)
+        seen = "closing_seen" if closing else "slow"
+        print(json.dumps({"sigint": time.time(), seen: marker.exists()}), flush=True)
         if os.name == "posix":
             signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
         _send()
+        if closing:
+            # 첫째가 자식을 끝내지 못하면 사람은 한 번 더 누른다. daemon 이라 끝났으면 여기 오지
+            # 않는다.
+            time.sleep(FOLLOWUP_SIGINT_SECONDS)
+            print(json.dumps({"followup_sigint": time.time()}), flush=True)
+            _send()
         if config.get("twice") == "yes":
             time.sleep(SECOND_SIGINT_SECONDS)
             print(json.dumps({"second_sigint": time.time()}), flush=True)
@@ -349,14 +381,27 @@ def _cli_child(config: dict[str, str | list[str]]) -> None:
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         threading.Thread(target=interrupt, daemon=True).start()
-                        await session.call_tool("slow", {"seconds": 30})
-                        print(json.dumps({"slow_returned": time.time()}), flush=True)
+                        if closing:
+                            await session.call_tool("slow", {"seconds": 0.1})
+                        else:
+                            await session.call_tool("slow", {"seconds": 30})
+                            print(json.dumps({"slow_returned": time.time()}), flush=True)
+                    if closing:
+                        # 이 블록을 나서면 `stdio_client`의 닫기(입력을 닫고 유예 2초를 기다린다)가
+                        # 시작된다.
+                        print(json.dumps({"closing": time.time()}), flush=True)
+                        marker.touch()
+                if closing:
+                    print(json.dumps({"closed": time.time()}), flush=True)
 
     # 20초 넘게 끝나지 않으면 모든 스레드의 스택을 표준 에러(`cli_stderr.txt`)에 남긴다. 둘째 Ctrl+C
     # 뒤 윈도우에서 자식이 끝나지 않은 첫 회차의 자리를 보려고 더했다.
     faulthandler.dump_traceback_later(20)
     if config.get("handler") == "force":
         _run_with_force_exit(main)
+        return
+    if config.get("handler") == "scope":
+        _run_with_scope_cancel(main)
         return
     try:
         asyncio.run(main())
@@ -412,14 +457,52 @@ def _run_with_force_exit(main: Callable[[], Coroutine[object, object, None]]) ->
         _die_interrupted()
 
 
+def _run_with_scope_cancel(main: Callable[[], Coroutine[object, object, None]]) -> None:
+    """첫 SIGINT 를 `main`을 감싼 anyio 취소 범위의 `cancel`로 전하고, 둘째는 곧바로 끝내는 처리기.
+
+    `_run_with_force_exit`와 다른 것은 첫째의 전달 하나다. 네이티브 `task.cancel()`은 상류가 닫기를
+    감싼 보호 범위를 뚫을 수 있고(v2.3.0 `stdio_client`의 주석을 읽었다), anyio 의 범위 취소는 보호
+    범위 안에서는 전하지 않고 그 범위를 나온 뒤에 전한다. 신호 처리기는 루프가 select에서 기다리는
+    도중에도 주 스레드에 끼어들어 돌고 루프를 깨우지 않으므로, 범위의 `cancel`을
+    `call_soon_threadsafe`로 루프에 맡겨 루프를 깨운다(Python 3.12 `asyncio/runners.py`의 SIGINT
+    처리기도 같은 호출로 깨운다). 범위가 취소를 삼키므로 `asyncio.run`이 돌아온 뒤 눌렸는지로 끝을
+    가른다.
+    """
+    held: dict[str, anyio.CancelScope | asyncio.AbstractEventLoop] = {}
+    pressed: list[float] = []
+
+    def on_sigint(signum: int, frame: object) -> None:
+        scope, loop = held.get("scope"), held.get("loop")
+        first = not pressed and isinstance(scope, anyio.CancelScope)
+        if first and isinstance(loop, asyncio.AbstractEventLoop):
+            pressed.append(time.time())
+            loop.call_soon_threadsafe(scope.cancel)
+            return
+        print(json.dumps({"force_exit": time.time()}), flush=True)
+        _die_interrupted()
+
+    async def wrapped() -> None:
+        with anyio.CancelScope() as scope:
+            held["scope"] = scope
+            held["loop"] = asyncio.get_running_loop()
+            await main()
+
+    signal.signal(signal.SIGINT, on_sigint)
+    asyncio.run(wrapped())
+    if pressed:
+        print(json.dumps({"cancelled": time.time()}), flush=True)
+        _die_interrupted()
+
+
 def _cli_case(
-    work: Path, command: str, args: list[str], *, twice: bool, handler: str
+    work: Path, command: str, args: list[str], *, twice: bool, closing: bool, handler: str
 ) -> dict[str, object]:
     config = {
         "work": str(work),
         "command": command,
         "args": args,
         "twice": "yes" if twice else "no",
+        "closing": "yes" if closing else "no",
         "handler": handler,
     }
     stderr_path = work / "cli_stderr.txt"
@@ -442,13 +525,25 @@ def _cli_case(
     record["cli_stderr_tail"] = stderr_path.read_text(encoding="utf-8", errors="replace")[-3000:]
     if timed_out:
         record["child_timeout"] = True
+    times: dict[str, float] = {}
     for line in out.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        for key in ("closing", "closed"):
+            if key in event:
+                times[key] = float(event[key])
+        if "followup_sigint" in event:
+            record["followup_sigint_to_exit_seconds"] = round(
+                exited - float(event["followup_sigint"]), 3
+            )
         if "sigint" in event:
-            record["slow_started_before_sigint"] = event["slow"]
+            times["sigint"] = float(event["sigint"])
+            if "closing_seen" in event:
+                record["closing_before_sigint"] = event["closing_seen"]
+            else:
+                record["slow_started_before_sigint"] = event["slow"]
             record["sigint_to_exit_seconds"] = round(exited - float(event["sigint"]), 3)
         if "keyboard_interrupt" in event or "cancelled" in event or "force_exit" in event:
             record["keyboard_interrupt"] = True  # 처리기마다 끝나는 표지가 다르다
@@ -462,6 +557,13 @@ def _cli_case(
             )
         if "third_sigint" in event:
             record["third_sigint_to_exit_seconds"] = round(exited - float(event["third_sigint"]), 3)
+    if closing and "closing" in times and "sigint" in times:
+        record["closing_to_sigint_seconds"] = round(times["sigint"] - times["closing"], 3)
+        record["closing_before_sigint"] = (
+            record.get("closing_before_sigint") is True and times["sigint"] > times["closing"]
+        )
+        record["sigint_before_closed"] = "closed" not in times or times["closed"] > times["sigint"]
+        record["closed_emitted"] = "closed" in times
     return record
 
 
@@ -471,7 +573,8 @@ def run_case(case: str, launcher: str, python: str, handler: str) -> dict[str, o
     command, args = _command(case, work, launcher, _python(python))
     if case in CLI:
         twice = case == "cli_ctrl_c_twice"
-        record = _cli_case(work, command, args, twice=twice, handler=handler)
+        closing = case == "cli_ctrl_c_closing"
+        record = _cli_case(work, command, args, twice=twice, closing=closing, handler=handler)
     elif case == "close_fails":
         params = StdioServerParameters(command=command, args=args)
         record = anyio.run(_close_elsewhere, case, work, params)
@@ -493,7 +596,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--launcher", choices=("none", "kill", "watch"), default="none")
     parser.add_argument("--python", choices=("base", "venv"), default="base")
-    parser.add_argument("--cli-handler", choices=("asyncio", "force"), default="asyncio")
+    parser.add_argument("--cli-handler", choices=("asyncio", "force", "scope"), default="asyncio")
     parser.add_argument("--cli-child")
     parser.add_argument("cases", nargs="*")
     options = parser.parse_args()
