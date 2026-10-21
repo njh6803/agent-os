@@ -1,0 +1,35 @@
+# 티켓 03의 PR 직전 리뷰가 고친 사례 5의 기다림이 실제로 무는지 변이로 본다(implement 스킬, 대기열
+# 29). 연결을 여는 프로세스가 표지를 남기기 전에 끝나면 기한을 채우지 않고 곧바로 그 종료 코드를 들며
+# 빨개져야 한다. 구현 뒤에 고친 갈래라 빨강을 본 적이 없다. 사용:
+# PYTHONUTF8=1 uv run python tools/mutate.py .scratch/mcp-shutdown/probes/ticket03_mutations.toml
+# 표지는 고친 단언의 메시지에만 있는 종료 코드 문구다. 변이는 기한도 600초로 늘리고 시간 제한은
+# 300초라, 끝난 프로세스를 보지 않고 기한까지 기다리는 판이면 빨강이 아니라 시간 제한 넘김으로
+# 어긋난다(반복문을 읽은 것이고 그 판을 돌려 보지는 않았다). 시간 제한을 기한(120초)보다 짧은 90초로 둔 첫 판은 다른 세션들로 CPU가 100%이던 때
+# 기준선(변이 없는 사례 5)이 90초를 넘겨 재지 못했다(일지 2026-10-21-09).
+
+[[mutation]]
+name = "연결을 여는 프로세스가 곧바로 끝난다"
+tests = ["tests/adapters/test_mcp.py", "-k", "연결을_연_프로세스가"]
+expect = "red"
+expect_output = ["(연결을 여는 프로세스의 종료 코드: 3)"]
+timeout = 300
+
+[[mutation.edit]]
+file = "tests/adapters/test_mcp.py"
+old = '''
+anyio.run(main)
+"""
+'''
+new = '''
+sys.exit(3)
+"""
+'''
+
+[[mutation.edit]]
+file = "tests/adapters/test_mcp.py"
+old = '''
+CONNECT_WITHIN_SECONDS = 120
+'''
+new = '''
+CONNECT_WITHIN_SECONDS = 600
+'''

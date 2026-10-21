@@ -109,14 +109,15 @@ def _parameters(server: McpServer) -> StdioServerParameters:
     """서버를 띄울 명령. 윈도우가 아니면 런처를 앞에 세우고, 그 전에 명령이 있는지 본다.
 
     명령이 없다는 실패가 런처 안에서 나면 클라이언트에는 연결이 닫힌 것으로만 보이므로 여기서
-    `FileNotFoundError`를 낸다. 윈도우에서는 찾아보지 않는다. 상류가 `.cmd`·`.ps1`까지 붙여 찾고,
-    없으면 같은 예외를 낸다(`.scratch/mcp-shutdown/spec.md` 의 "서버를 여는 실패").
+    `FileNotFoundError`를 낸다. `shutil.which`는 실행 권한이 있는 파일만 찾으므로 있지만 실행할 수
+    없는 명령도 이 예외다. 윈도우에서는 찾아보지 않는다. 상류가 `.cmd`·`.ps1`까지 붙여 찾고, 없으면
+    같은 예외를 낸다(`.scratch/mcp-shutdown/spec.md` 의 "서버를 여는 실패").
     """
     if sys.platform == "win32":
         return StdioServerParameters(command=server.command, args=list(server.args))
     command = shutil.which(server.command)
     if command is None:
-        raise FileNotFoundError(errno.ENOENT, "명령을 찾지 못했다", server.command)
+        raise FileNotFoundError(errno.ENOENT, "실행할 수 있는 명령을 찾지 못했다", server.command)
     return StdioServerParameters(
         command=sys.executable,
         args=["-I", str(LAUNCHER), str(os.getpid()), command, *server.args],

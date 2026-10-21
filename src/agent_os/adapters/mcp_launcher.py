@@ -71,9 +71,13 @@ def main(argv: list[str]) -> int:
     except OSError as error:
         sys.stderr.write(f"런처: MCP 서버를 띄우지 못했다: {error}\n")
         return EXIT_SPAWN_FAILED
-    _detach_stdio()
-    _wait_for_server_or_parent(server, parent)
-    os.killpg(0, signal.SIGKILL)
+    try:
+        _detach_stdio()
+        _wait_for_server_or_parent(server, parent)
+    finally:
+        # 서버를 띄운 뒤라면 어디서 예외가 나도(입출력 바꾸기나 스레드 시작의 자원 고갈) 끈다.
+        # 예외로 이 프로세스만 끝나면 상류는 서버가 끝난 것으로 보고 그룹 끄기를 건너뛴다.
+        os.killpg(0, signal.SIGKILL)
     return 0  # 닿지 않는다. 그룹에 이 프로세스도 들어 위에서 함께 끝난다.
 
 

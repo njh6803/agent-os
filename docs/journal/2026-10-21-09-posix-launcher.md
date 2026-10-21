@@ -175,3 +175,69 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - 사례 5: "30초 안에 생기지 않았다: ['connected', 'wrapper.hb', 'stay.hb']". 셀프 리뷰 전에도 연결 표지를 같은 30초로 기다렸으니 하트비트를 더한 탓이 아니다. 이 PC에서 사례 5의 자식을 홀로 세 번 띄워 보니 연결 표지까지 9.81~12.34초였고 하트비트 둘은 그보다 먼저 생겼다(세션 스크래치패드의 `case5_timing.py`, 손으로 봤다). 30초는 그 2.5~3배라 `.claude/rules/tests.md`의 시간 단언 항목(홀로 돈 시간의 넉넉한 배수)에 못 미쳤다. 사례 5에만 `CONNECT_WITHIN_SECONDS = 120`을 두었다. 홀로 돌린 사례 5는 1 passed(호출 15.45초)였다.
 - `tests/tools/test_sibling_overlap.py::test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한다`: 둘째 `--move`가 0이 아니라 2로 끝났다. 이 브랜치가 건드리지 않은 테스트이고 홀로 돌리면 1 passed(172.59초)였다. 부하에서 난 것으로 보지만 까닭은 가르지 않았다(어림). 다시 빨가면 diagnosing-bugs로 간다.
 - 인용 대조 경고: 이 일지가 `CODING_STANDARDS.md`의 문구를 줄여 인용했다. 원문("실패 분기마다 같은 출력·종료 코드·`continue`를 되풀이하는 것")으로 고쳤다.
+
+### 커밋과 검사
+
+커밋 `f841366e`(feat: 윈도우가 아닌 OS에서 MCP 서버를 런처 뒤에 띄운다). 아직 푸시하지 않았다.
+
+- 그 커밋의 pre-commit이 모두 Passed였다. ruff 둘, 러너(`tools/run_checks.py`)의 lint-imports 2.7초, zizmor 4.0초, check-instructions 7.0초, check-type-escapes 12.2초, pyright 55.9초, run-hooks 184.1초, pytest 300.1초, web-verify 354.0초, 그리고 표·줄 구분 문자·변이 표·카나리아 명세 모양·인용 대조·커밋 메시지. 헌법 판 검사는 고친 헌법 파일이 없어 Skipped였다. 손으로 치는 다섯(린트 둘, pyright, lint-imports, pytest)과 web verify는 이 결과로 갈음한다(`CLAUDE.md` 검증 명령 절).
+- `-m llm`은 셀프 리뷰 전에 돌린 것(위 "커밋 전 검사", 7 passed, LLM 토큰 합계 51,518)이다. 그 뒤의 변경은 런처(POSIX에서만 돈다), 독스트링, 테스트의 기다림이라 이 PC의 LLM 테스트가 지나는 길을 바꾸지 않아 다시 돌리지 않았다. 이 PC(Windows)의 `-m llm`은 런처를 지나지 않으므로, 런처 쪽은 CI의 Linux와 Docker의 Linux에서 손으로 본 프로브(위 "반영 뒤 다시 돌린 것")가 본다.
+- 티켓의 "검증 명령이 모두 초록이다" 줄을 이 절로 체크했다(커밋하지 않았다).
+
+## 인계 (커밋 뒤)
+
+커밋 `f841366e` 직후 인계 계기가 왔다(세션 컨텍스트 355,952 토큰, 경계 `커밋 뒤`). 앞서 첫 커밋 때도 같은 계기가 왔지만 그 커밋이 pre-commit에 막혀 경계가 아니었다. 인계하지 않는 다섯 때에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄은 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `feature/03-posix-launcher`다.
+
+새 세션이 알아 둘 것(이 세션만 아는 것):
+
+- PR 직전 리뷰는 대체 둘이다(CLI 좌석 없음, 위 "커밋 전 검사" 끝). `/security-review`는 origin/main을 합친 뒤에 돌린다. 이 세션이 본 마지막 origin/main은 `303e8fb5`(#339)였고 이 브랜치가 든 파일과 겹치지 않았다. `bug-perf-review`의 브리프에는 위 "PR 직전 리뷰에 밀 주장" 다섯을 그대로 넣고, 사례 5의 새 상한 문장("이 PC 에서 홀로 연결 표지까지 9.8~12.3초였고 … 30초로 두던 판은 pre-commit 러너의 부하에서 … 그 기다림을 넘겼다")과 프로브 README 결과 절의 "바꾸기가 된 표지는 …" 문장도 더한다.
+- PR #338 본문에는 아직 빨간 CI 실행의 URL만 있다. 푸시하기 전에 `gh pr edit`으로 템플릿 전체(왜, 남긴 위험, 계약 영향 없음, 변경된 영역, 체크리스트, 리뷰어 참고)를 채우고, 푸시 뒤 PR head가 로컬과 같아지면 `gh pr ready`, 그 뒤 `@coderabbitai review`다. claude-review는 draft를 건너뛰어 아직 이 PR을 리뷰하지 않았다.
+- 형제 02(PR #340)가 `.claude/rules/adapters.md`, `src/agent_os/adapters/mcp.py`, `tests/adapters/test_mcp.py`, 프로브 README를 함께 고친다. 02가 먼저 병합되면 그 일지가 2026-10-21-10이라 이 일지 09의 번호는 그대로이지만 위 네 파일에서 글자 충돌이 날 수 있다. 기능 닫기 판정은 티켓 03의 마지막 줄대로 병합 바로 앞에 한다.
+- 커밋 전 pre-commit에서 한 번 빨갰던 `test_sibling_overlap.py`의 한 테스트(위 "막힌 커밋")는 다시 빨가면 diagnosing-bugs로 간다.
+
+지시문:
+
+다음 작업: .scratch/mcp-shutdown/issues/03-posix-launcher.md. Windows가 아닌 OS에서 MCP 서버를 런처 뒤에 띄워, 서버가 끝나거나 agent-os 프로세스가 죽으면 그 서버의 프로세스 그룹이 모두 내려간다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-shutdown/issues/03-posix-launcher.md
+브랜치: feature/03-posix-launcher
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-09-posix-launcher.md(그 워크트리의 커밋하지 않은 수정이 있다)의 "이어받은 세션 (셀프 리뷰부터)"와 "인계 (커밋 뒤)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제, PR #340)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 `f841366e`로 커밋했고(pre-commit 모두 Passed) 아직 푸시하지 않았다. 열린 draft PR #338이 있다. 일지의 검사 절과 티켓의 검증 줄 체크는 커밋하지 않은 수정으로 워크트리에 있다. 남은 단계는 차례로 origin/main 합치기, PR 직전 리뷰(`/security-review`와 `bug-perf-review`)와 반영, 커밋, PR 본문 갱신, 푸시, draft에서 ready, `@coderabbitai review`와 순서 1의 2(봇 회차), 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. docs/journal/2026-10-21-09-posix-launcher.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `feature/03-posix-launcher (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(Docker 회차, 카나리아, 커밋, 리뷰어 둘은 끝났다). 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-10-21T11:48:52Z
+
+## 이어받은 세션 (커밋 뒤부터)
+
+> 사용자: "`.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: .scratch/mcp-shutdown/issues/03-posix-launcher.md … 다음 단계: PR 반영·병합 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 … 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 `f841366e`로 커밋했고(pre-commit 모두 Passed) 아직 푸시하지 않았다. 열린 draft PR #338이 있다. … 이번 요청 범위: PR과 병합까지"
+
+제목을 `feature/03-posix-launcher`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch` 뒤 origin/main은 `303e8fb5`(#339)였고 이 브랜치가 든 파일과 겹치지 않았다. 형제 02(PR #340)는 아직 열려 있다(ready). origin/main을 합쳤다(병합 커밋 `68e965f3`, 충돌 없음).
+
+### PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 식별 서브태스크가 후보 0건을 냈다. 서버 명령과 인자는 디스크의 `plugin.toml`에서만 오고(HTTP 호출자와 LLM 출력은 닿지 않는다), 런처는 셸 없이 리스트로 띄우며, `-I`와 스크립트 경로 뒤의 인자는 파이썬 옵션이 되지 않고, `killpg`는 우두머리 확인 뒤 자기 그룹만 끈다고 봤다. 거를 후보가 없어 둘째 단계는 돌지 않았다.
+- `bug-perf-review`(sonnet): 유효 4, 보류 1, 모두 Minor. 밀 주장 일곱 가운데 다섯이 일치, 하나(프로브 README 61행)가 부분 일치, 하나(상류 이슈 초안의 npx·uvx)가 보류였다. 런처의 경합 갈래(부모 틈, 동시 종료, `killpg`, 127, 입출력 바꾸는 순서)에서는 시나리오를 찾지 못했다.
+
+근거를 대 본 뒤 다섯을 모두 고쳤다.
+
+- (유효) 런처가 서버를 띄운 뒤 입출력 바꾸기나 기다리는 스레드의 시작에서 예외가 나면 `killpg`에 닿지 않아 런처만 끝나고 서버가 남았다. 그 뒤를 `try/finally`로 감쌌다. 런처의 POSIX 갈래는 pytest가 아니라 Docker의 Linux에서 손으로 봐 왔으므로 같은 방식으로 댔다. 세션 스크래치패드의 `check_finally.py`(커밋하지 않았다, 표준 라이브러리만)가 런처를 새 세션으로 띄우고, 심은 실패가 서버의 표지(`started`)를 기다린 뒤 예외를 내게 해 "서버가 뜬 뒤의 실패"를 만든다. `python:3.12.10-slim-bookworm`(`--init`)에서 세 회차씩, 고치기 전 런처는 `detach`·`thread` 모두 종료 코드 1과 `boom`을 남기고 그룹에 서버가 남았고(kept), 고친 런처는 모두 -9로 그룹째 꺼졌다(killed). 정상 길(서버가 0.3초 뒤 스스로 끝남)은 두 판 모두 -9, 남은 구성원 0이었다. 첫 회차에서는 고친 런처가 서버가 표지를 쓰기도 전에 그룹을 꺼 표지 규칙대로 "측정 아님"으로 셌고, 심은 실패가 표지를 기다리게 고쳐 다시 돌렸다.
+- (유효, 명세가 받아들인 동작) 실행 권한이 없는 명령도 `shutil.which`가 `None`이라 "명령을 찾지 못했다"가 됐다. 명세 "서버를 여는 실패"가 이미 그렇게 정했으므로 예외 종류는 두고 글을 "실행할 수 있는 명령을 찾지 못했다"로, `_parameters` 독스트링에 그 갈래를 적었다. 새 글은 옛 글을 품어 `close_paths.py`의 판정과 02 티켓의 서술에 어긋나지 않는다.
+- (유효) 사례 5의 기다림이 연결을 여는 프로세스가 죽어도 120초를 채웠다. `parent.poll()`을 조건에 넣고 단언 메시지에 그 종료 코드를 실었다. 빨강을 본 적이 없는 갈래라 `.scratch/mcp-shutdown/probes/ticket03_mutations.toml`을 더했다(아래 검사 절).
+- (유효) 프로브 README 61행의 "바꾸기가 된 표지"가 부모 감시를 뺀 사본의 두 줄 가운데 하나만 댔다. `stale_parent.py`의 서버는 뜨자마자 표지를 써서(그 파일의 `_SERVER`) 기다리며 보는 줄이 그대로여도 `spawned`가 지난다. 줄마다 표지를 나눠 적었다(기다리며 보는 줄은 사례 5의 빨강).
+- (보류를 고침) 상류 이슈 초안의 "their child inherits stdin and may exit on its own"은 재지 않은 덧붙임이라 지웠다. 올리지 않은 초안이다.
+
+### 반영 뒤 검사
+
+- `coderabbit auth status`를 다시 쳤고 `Plan: Free`, `Seat: not assigned`였다.
+- 바꾼 파이썬 파일 셋의 `ruff check`·`ruff format --check`·`pyright`·`pyright --pythonplatform Linux`가 모두 0이었다.
+- 변이 표 `ticket03_mutations.toml`: 첫 판은 시간 제한을 기한(120초)보다 짧은 90초로 두어, 끝난 프로세스를 보지 않는 판이면 시간 제한에 걸리게 했다. 그런데 기준선(변이 없는 사례 5)이 90초를 넘겨 변이를 넣지 못했다. 그때 이 PC의 CPU가 100%였고 파이썬 프로세스가 34개였다(다른 세션들). 같은 때 홀로 돌린 사례 5는 pytest 75.22초였고 그 가운데 테스트 본문은 12.45초였다. 그래서 변이가 기한도 600초로 늘리게 하고 시간 제한을 300초로 두었다. 다시 돌린 회차는 기준선 초록(9.93초), 변이 빨강(32.69초, 표지 "(연결을 여는 프로세스의 종료 코드: 3)")으로 기대대로였다. 되돌린 뒤 `git diff`에 변이가 남지 않았다. 끝난 프로세스를 보지 않는 판이 시간 제한에 걸린다는 것은 반복문을 읽은 것이고 돌려 보지는 않았다.
+- 고르지 않은 전체 실행이라 도구가 "커밋하지 않은 변경이 있다"를 알렸다. 반영을 마친 뒤의 실행이고 그 뒤 시험을 고치지 않았다.
+
+반영 커밋을 띄운 직후 인계 계기가 왔다(세션 컨텍스트 317,324 토큰, 경계 `커밋 뒤`). 그 커밋은 검사가 모두 Passed였지만, 도는 동안 이 일지를 고쳐 러너가 "files were modified by this hook"으로 실패했다(대기열 293의 모양, 훅이 미리 알렸다). 실패한 명령이라 경계가 아니고, 성공했어도 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않는다(next-session "인계할 때" 1). 일지를 함께 스테이지해 다시 커밋했다.

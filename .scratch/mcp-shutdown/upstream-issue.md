@@ -18,7 +18,7 @@ stdio_client (POSIX): children left by a server that exits within the grace peri
 
 **What happens.** `stdio_client` starts the server in a new session, and on shutdown `_stop_server_process` closes stdin and waits `PROCESS_TERMINATION_TIMEOUT` for the server to exit. Only when the server does *not* exit in time does it call `_terminate_process_tree`, which kills the whole process group. If the server exits on its own within the grace period (the well-behaved case, and the fastest shutdown), any children it started stay in the group and keep running. On Windows the same path is covered by `close_process_job`, which reaps surviving job members; on POSIX that call is a no-op, so the two platforms differ.
 
-We hit it with test servers shaped like a wrapper: a parent process that exits when stdin closes while a child it started keeps running. We have not checked whether real wrappers such as `npx` or `uvx` end up in this state; their child inherits stdin and may exit on its own.
+We hit it with test servers shaped like a wrapper: a parent process that exits when stdin closes while a child it started keeps running. We have not checked whether real wrappers such as `npx` or `uvx` end up in this state.
 
 **Reproduction.** Save as `repro.py` and run `python repro.py`, then `python repro.py --control`:
 

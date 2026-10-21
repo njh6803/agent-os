@@ -240,12 +240,21 @@ def test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간�
     )
     try:
         end = time.monotonic() + CONNECT_WITHIN_SECONDS
-        while not all(path.exists() for path in ready) and time.monotonic() < end:
+        while (
+            not all(path.exists() for path in ready)
+            and parent.poll() is None
+            and time.monotonic() < end
+        ):
             time.sleep(0.05)
+        # 표지가 생기기 전에 끝났으면(연결 실패) 기한을 채우지 않고 그 종료 코드를 든다.
+        exited = parent.poll()
     finally:
         parent.kill()
         parent.wait()
 
     missing = [path.name for path in ready if not path.exists()]
-    assert not missing, f"{CONNECT_WITHIN_SECONDS}초 안에 생기지 않았다: {missing}"
+    assert not missing, (
+        f"{CONNECT_WITHIN_SECONDS}초 안에 생기지 않았다: {missing}"
+        f"(연결을 여는 프로세스의 종료 코드: {exited})"
+    )
     _멈췄다(*beats)
