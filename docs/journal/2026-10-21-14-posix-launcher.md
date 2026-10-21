@@ -1,4 +1,4 @@
-# 2026-10-21 (09) mcp-shutdown 티켓 03: POSIX 런처
+# 2026-10-21 (14) mcp-shutdown 티켓 03: POSIX 런처
 
 브랜치 `feature/03-posix-launcher`, 워크트리 `.claude/worktrees/03-posix-launcher`. 티켓은 `.scratch/mcp-shutdown/issues/03-posix-launcher.md`.
 
@@ -42,8 +42,8 @@
 시작 프롬프트: /implement .scratch/mcp-shutdown/issues/03-posix-launcher.md
 브랜치: feature/03-posix-launcher
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-09-posix-launcher.md(그 워크트리의 커밋하지 않은 파일)의 "빨강을 먼저 본다"와 "인계 (커밋 뒤)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제)
-이어받을 상태: 인계: 커밋 뒤. `b0ed462f`(런처 없이 닫기 사례 2와 5를 더한 실험 커밋, pre-commit 모두 Passed)까지 했다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 차례로 푸시와 draft PR, 그 CI 실행에서 두 사례의 빨강을 보고 URL을 PR 본문에 남기기(그 실행이 끝날 때까지 푸시하지 않는다), 런처와 나머지 체크박스 구현, 검사, 셀프 리뷰, 커밋, PR 직전 리뷰, 봇 회차, 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. 워크트리에 커밋하지 않은 일지가 있다. docs/journal/2026-10-21-09-posix-launcher.md
+읽을 것: docs/journal/2026-10-21-14-posix-launcher.md(그 워크트리의 커밋하지 않은 파일)의 "빨강을 먼저 본다"와 "인계 (커밋 뒤)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제)
+이어받을 상태: 인계: 커밋 뒤. `b0ed462f`(런처 없이 닫기 사례 2와 5를 더한 실험 커밋, pre-commit 모두 Passed)까지 했다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 차례로 푸시와 draft PR, 그 CI 실행에서 두 사례의 빨강을 보고 URL을 PR 본문에 남기기(그 실행이 끝날 때까지 푸시하지 않는다), 런처와 나머지 체크박스 구현, 검사, 셀프 리뷰, 커밋, PR 직전 리뷰, 봇 회차, 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. 워크트리에 커밋하지 않은 일지가 있다. docs/journal/2026-10-21-14-posix-launcher.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -110,8 +110,8 @@ Docker의 Linux에서 작업 트리를 복사해 돌렸다(결과는 `.scratch/m
 시작 프롬프트: /implement .scratch/mcp-shutdown/issues/03-posix-launcher.md
 브랜치: feature/03-posix-launcher
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-09-posix-launcher.md(그 워크트리의 커밋하지 않은 파일)의 "이어받은 세션"과 "인계 (셀프 리뷰 직전)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준점 origin/main)부터 한다. 런처와 나머지 체크박스는 구현했고, 티켓의 검증 명령 줄과 기능 닫기 줄만 남았다. 남은 단계는 차례로 셀프 리뷰와 반영, 커밋, 일지 검사 절, PR 본문 갱신과 draft에서 ready로 바꾸기, PR 직전 리뷰, 푸시, 봇 회차, 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. docs/journal/2026-10-21-09-posix-launcher.md
+읽을 것: docs/journal/2026-10-21-14-posix-launcher.md(그 워크트리의 커밋하지 않은 파일)의 "이어받은 세션"과 "인계 (셀프 리뷰 직전)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기준점 origin/main)부터 한다. 런처와 나머지 체크박스는 구현했고, 티켓의 검증 명령 줄과 기능 닫기 줄만 남았다. 남은 단계는 차례로 셀프 리뷰와 반영, 커밋, 일지 검사 절, PR 본문 갱신과 draft에서 ready로 바꾸기, PR 직전 리뷰, 푸시, 봇 회차, 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. docs/journal/2026-10-21-14-posix-launcher.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -203,8 +203,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: /implement .scratch/mcp-shutdown/issues/03-posix-launcher.md
 브랜치: feature/03-posix-launcher
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-09-posix-launcher.md(그 워크트리의 커밋하지 않은 수정이 있다)의 "이어받은 세션 (셀프 리뷰부터)"와 "인계 (커밋 뒤)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제, PR #340)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 `f841366e`로 커밋했고(pre-commit 모두 Passed) 아직 푸시하지 않았다. 열린 draft PR #338이 있다. 일지의 검사 절과 티켓의 검증 줄 체크는 커밋하지 않은 수정으로 워크트리에 있다. 남은 단계는 차례로 origin/main 합치기, PR 직전 리뷰(`/security-review`와 `bug-perf-review`)와 반영, 커밋, PR 본문 갱신, 푸시, draft에서 ready, `@coderabbitai review`와 순서 1의 2(봇 회차), 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. docs/journal/2026-10-21-09-posix-launcher.md
+읽을 것: docs/journal/2026-10-21-14-posix-launcher.md(그 워크트리의 커밋하지 않은 수정이 있다)의 "이어받은 세션 (셀프 리뷰부터)"와 "인계 (커밋 뒤)", .scratch/mcp-shutdown/issues/02-boundary-exceptions.md(나란히 도는 형제, PR #340)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 `f841366e`로 커밋했고(pre-commit 모두 Passed) 아직 푸시하지 않았다. 열린 draft PR #338이 있다. 일지의 검사 절과 티켓의 검증 줄 체크는 커밋하지 않은 수정으로 워크트리에 있다. 남은 단계는 차례로 origin/main 합치기, PR 직전 리뷰(`/security-review`와 `bug-perf-review`)와 반영, 커밋, PR 본문 갱신, 푸시, draft에서 ready, `@coderabbitai review`와 순서 1의 2(봇 회차), 기능 닫기 판정, 병합, 일지 `## 다음`과 next-session이다. docs/journal/2026-10-21-14-posix-launcher.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -240,4 +240,22 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다.
 - 변이 표 `ticket03_mutations.toml`: 첫 판은 시간 제한을 기한(120초)보다 짧은 90초로 두어, 끝난 프로세스를 보지 않는 판이면 시간 제한에 걸리게 했다. 그런데 기준선(변이 없는 사례 5)이 90초를 넘겨 변이를 넣지 못했다. 그때 이 PC의 CPU가 100%였고 파이썬 프로세스가 34개였다(다른 세션들). 같은 때 홀로 돌린 사례 5는 pytest 75.22초였고 그 가운데 테스트 본문은 12.45초였다. 그래서 변이가 기한도 600초로 늘리게 하고 시간 제한을 300초로 두었다. 다시 돌린 회차는 기준선 초록(9.93초), 변이 빨강(32.69초, 표지 "(연결을 여는 프로세스의 종료 코드: 3)")으로 기대대로였다. 되돌린 뒤 `git diff`에 변이가 남지 않았다. 끝난 프로세스를 보지 않는 판이 시간 제한에 걸린다는 것은 반복문을 읽은 것이고 돌려 보지는 않았다.
 - 고르지 않은 전체 실행이라 도구가 "커밋하지 않은 변경이 있다"를 알렸다. 반영을 마친 뒤의 실행이고 그 뒤 시험을 고치지 않았다.
 
-반영 커밋을 띄운 직후 인계 계기가 왔다(세션 컨텍스트 317,324 토큰, 경계 `커밋 뒤`). 그 커밋은 검사가 모두 Passed였지만, 도는 동안 이 일지를 고쳐 러너가 "files were modified by this hook"으로 실패했다(대기열 293의 모양, 훅이 미리 알렸다). 실패한 명령이라 경계가 아니고, 성공했어도 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않는다(next-session "인계할 때" 1). 일지를 함께 스테이지해 다시 커밋했다.
+반영 커밋을 띄운 직후 인계 계기가 왔다(세션 컨텍스트 317,324 토큰, 경계 `커밋 뒤`). 그 커밋은 검사가 모두 Passed였지만, 도는 동안 이 일지를 고쳐 러너가 "files were modified by this hook"으로 실패했다(대기열 293의 모양, 훅이 미리 알렸다). 실패한 명령이라 경계가 아니고, 성공했어도 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않는다(next-session "인계할 때" 1). 일지를 함께 스테이지해 다시 커밋했다(`4cbbd20e`).
+
+### 형제 02를 합침
+
+반영 커밋 뒤 `git fetch`에서 형제 02가 PR #340으로 병합되어 있었다(origin/main `f1e6516b`). 합치자 네 파일이 충돌했다.
+
+- `src/agent_os/adapters/mcp.py`: 02의 구조(`_opened`·`_connecting`·`_session(server)`·`_Escaped`)를 그대로 두고, 02의 `_session`이 `StdioServerParameters`를 만들던 줄만 이 브랜치의 `_parameters(server)`로 바꿨다. 그래서 명령 찾아보기의 `FileNotFoundError`는 02의 여는 단계 안에서 나고 `ConnectionError`의 원인이 된다(티켓 머리의 병합 순서 문단이 예상한 대로다). import 줄은 둘을 합쳤다. `_parameters` 독스트링과 규칙 파일의 런처 항목에 그 관계를 한 구절씩 더했다.
+- `tests/adapters/test_mcp.py`: 이 브랜치의 사례 2·5와 02가 더한 테스트 둘을 모두 남겼다. 서버 기동 실패 테스트는 02의 판(`ConnectionError`, 원인 `FileNotFoundError`)이 자동으로 들어왔다.
+- 프로브 README: 표는 이 브랜치의 `full_stack.py`·`stale_parent.py`·`not_leader.py` 줄과 02의 `write_failure.py` 줄을 고르고 `ticket02_mutations.toml`과 `ticket03_mutations.toml` 줄을 둘 다 두었다. 결과 절은 이 브랜치의 런처 절 뒤에 02의 절 둘을 이었다.
+- 카나리아 `adapters_rule_new_optional_fields.toml`의 `# 최신 결과:` 줄: 두 쪽 모두 같은 규칙 파일에 자기 항목만 더한 트리에서 잰 것이라, 합친 규칙 파일은 아무도 재지 않았다.
+
+합친 작업 트리에서 본 것:
+
+- 어댑터 파일과 테스트의 `ruff check`·`ruff format --check`, `pyright`와 `pyright --pythonplatform Linux`가 모두 0이었다.
+- 어댑터 테스트 19개가 이 PC(Windows)에서 59.86초, Docker의 Linux(`python:3.12.10-slim-bookworm`, `--init`)에서 35.77초로 모두 지났다. Linux에서는 02의 테스트들(뜨자마자 끝나는 서버, 서버 기동 실패, 도구 호출 도중에 죽는 서버 등)이 런처를 거쳐 돈 첫 회차다. 세션 스크래치패드의 `linux_adapter_tests.sh`(커밋하지 않았다)가 작업 트리를 읽기 전용으로 붙여 `pyproject.toml`·`uv.lock`·`README.md`·`openapi.json`·`src`·`tests`·`tools`·`plugins`를 복사하고 `uv sync --frozen` 뒤 그 파일만 돌렸다.
+- 카나리아 둘(`adapters_rule_new_optional_fields.toml`, `adapters_rule_boundary_exceptions.toml`)을 합친 규칙 파일에서 돌려 둘 다 통과 4였다. 런처 항목에 위의 구절을 더한 뒤 한 번 더 돌려 다시 둘 다 통과 4였고, 두 명세의 `# 최신 결과:` 줄은 그 회차로 고쳤다.
+- `tools/sibling_overlap.py`가 이 일지(09)가 origin/main의 최신 일지(10)보다 이름순으로 앞이라 다음 세션이 지나친다며 다음 빈 번호로 옮기라고 했다. `--move`로 14로 옮겼고, 인용 여섯 파일을 도구가 고쳤다. 옛 번호의 줄인 꼴은 이 브랜치에 남지 않았다.
+
+기능 닫기 판정(2026-10-21, origin/main `f1e6516b`를 들인 이 병합): 02 티켓의 `Status`가 `done`이라 이 PR이 닫는다. 03 티켓의 `Status`를 `done`으로, 마지막 체크 상자를 채우고, `.scratch/plan.md`의 mcp-shutdown 행을 `done`으로 바꾸고 프론티어 문단에 닫힘을 적었다. mcp-shutdown은 다른 기능을 막지 않아 프론티어는 web-widget, admin-style, design-reverse-sync 셋이 된다. 병합 전에 main을 다시 들이면 다시 판정한다.

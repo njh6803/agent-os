@@ -44,7 +44,7 @@ PAGED_WITHIN_SECONDS = 30
 APPEAR_WITHIN_SECONDS = 30
 # 사례 5의 상한. 그 자식은 새 파이썬에서 어댑터와 mcp 를 불러 들인 뒤에야 연결을 연다. 이 PC 에서
 # 홀로 연결 표지까지 9.8~12.3초였고(하트비트 둘은 그보다 먼저 생겼다), 30초로 두던 판은 pre-commit
-# 러너의 부하에서 표지 셋이 모두 생기기 전에 그 기다림을 넘겼다(일지 2026-10-21-09, 손으로 봤다).
+# 러너의 부하에서 표지 셋이 모두 생기기 전에 그 기다림을 넘겼다(일지 2026-10-21-14, 손으로 봤다).
 CONNECT_WITHIN_SECONDS = 120
 # 닫은 뒤 하트비트가 멈추기를 기다리는 기한. 판정의 꼴은 `_멈췄다` 다.
 STOP_WITHIN_SECONDS = 15
@@ -98,13 +98,75 @@ async def test_없는_도구는_에러다() -> None:
             await connection.call("nope", {})
 
 
-async def test_서버_기동_실패는_연결_단계에서_예외다() -> None:
+async def test_서버_기동_실패는_서버_이름과_명령을_든_연결_오류다() -> None:
     tools: ToolSource = McpTools()
     broken = McpServer(command="definitely-not-a-command-agent-os")
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(
+        ConnectionError, match="broken.*definitely-not-a-command-agent-os"
+    ) as raised:
         async with tools.connect({PluginName("broken"): broken}):
             pass
+    assert isinstance(raised.value.__cause__, FileNotFoundError)
+
+
+async def test_둘째_서버가_열리지_않아도_연결_오류_하나다() -> None:
+    """둘째 서버의 실패는 먼저 연 서버의 태스크 그룹 안에서 나므로 그 그룹에도 싸인다."""
+    tools: ToolSource = McpTools()
+    broken = McpServer(command="definitely-not-a-command-agent-os")
+
+    with pytest.raises(ConnectionError, match="broken.*definitely-not-a-command-agent-os"):
+        async with tools.connect({PluginName("fixture"): FIXTURE, PluginName("broken"): broken}):
+            pass
+
+
+async def test_여는_도중의_취소는_연결_오류로_바꾸지_않는다() -> None:
+    """실행 타임아웃이 서버를 띄우는 도중에 오는 모양이다. 취소가 연결 오류로 바뀌면 범위가 그
+    취소를 받지 못하고 연결 오류가 밖으로 나온다."""
+    with anyio.move_on_after(0) as scope:
+        async with McpTools().connect({PluginName("fixture"): FIXTURE}):
+            pytest.fail("취소된 연결이 열렸다")
+
+    assert scope.cancelled_caught
+
+
+async def test_뜨자마자_끝나는_서버는_서버_이름을_든_연결_오류_하나다() -> None:
+    """세션을 연 뒤 실패하므로 그 예외가 상류의 태스크 그룹을 지나 두 겹으로 싸인다. 어댑터가
+    벗겨 그 `ConnectionError` 하나로 낸다."""
+    tools: ToolSource = McpTools()
+    exiting = McpServer(command=sys.executable, args=("-c", "pass"))
+
+    with pytest.raises(ConnectionError, match="exiting.*Connection closed"):
+        async with tools.connect({PluginName("exiting"): exiting}):
+            pass
+
+
+class _본문의_예외(Exception):
+    pass
+
+
+async def test_연결_안에서_던진_예외_그룹은_그_그룹_그대로_나온다() -> None:
+    """부르는 쪽이 스스로 낸 그룹도 겉봉(상류의 태스크 그룹 두 겹)만 벗고 그 객체로 나온다."""
+    thrown = ExceptionGroup("본문", [_본문의_예외()])
+
+    with pytest.raises(ExceptionGroup) as raised:
+        async with _fixture_connection():
+            raise thrown
+    assert raised.value is thrown
+
+
+async def test_연결_안의_yield_에_멈춘_제너레이터는_예외_없이_닫힌다() -> None:
+    """core 는 연결을 연 채 이벤트를 내는 제너레이터를 그 자리에서 닫는다(트레이스 쓰기가 실패한
+    실행, `core/run.py` 의 `_drive`). 닫기가 넣는 GeneratorExit 를 상류의 태스크 그룹이 감싼 채
+    두면 `aclose` 가 `BaseExceptionGroup` 을 내고, 결말을 쓴 실행도 그것을 밖으로 올린다."""
+
+    async def 연결_안에서_낸다() -> AsyncGenerator[str]:
+        async with _fixture_connection():
+            yield "연결 안"
+
+    events = 연결_안에서_낸다()
+    assert await anext(events) == "연결 안"
+    await events.aclose()
 
 
 async def test_서버를_지정하지_않으면_도구_없이_연다() -> None:
@@ -128,14 +190,13 @@ async def test_빈_커서는_도구_목록의_끝이다() -> None:
     assert names == ["paged"]
 
 
-async def test_끝나지_않는_도구_목록은_쪽_수의_상한에서_여는_단계가_실패한다() -> None:
-    """실패는 서버를 여는 동안 나 상류의 태스크 그룹에 싸여 나온다. 그 꼴은 경계의 예외 티켓(02)이
-    조이므로 여기서는 그룹 안의 잎에서 쪽 수를 찾는다."""
-    with anyio.fail_after(PAGED_WITHIN_SECONDS), pytest.raises(ExceptionGroup) as raised:
+async def test_끝나지_않는_도구_목록은_쪽_수의_상한에서_서버를_든_연결_오류다() -> None:
+    with (
+        anyio.fail_after(PAGED_WITHIN_SECONDS),
+        pytest.raises(ConnectionError, match="paged.*1000쪽"),
+    ):
         async with McpTools().connect(_paged("endless")):
             pass
-
-    assert raised.group_contains(RuntimeError, match="1000쪽")
 
 
 # --- 닫기(ADR 0034) ---
@@ -258,3 +319,23 @@ def test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간�
         f"(연결을 여는 프로세스의 종료 코드: {exited})"
     )
     _멈췄다(*beats)
+
+
+async def test_연결_안에서_난_예외는_감싸이지_않고_나오며_서버가_내려간다(folder: Path) -> None:
+    thrown = _본문의_예외()
+
+    with pytest.raises(_본문의_예외) as raised:
+        async with McpTools().connect(_lingering("wrapper", folder)):
+            await _생길_때까지_기다린다(folder / "stay.hb")
+            raise thrown
+
+    assert raised.value is thrown
+    _멈췄다(folder / "wrapper.hb", folder / "stay.hb")
+
+
+async def test_도구_호출_도중에_서버가_죽으면_서버와_도구를_든_RuntimeError_다(
+    folder: Path,
+) -> None:
+    async with McpTools().connect(_lingering("stay", folder)) as connection:
+        with pytest.raises(RuntimeError, match="lingering.*crash.*Connection closed"):
+            await connection.call("crash", {})
