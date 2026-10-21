@@ -47,6 +47,7 @@ from tools.morning_report import (
     sparkline,
     state_json,
     table_lines,
+    unusual,
     verdict,
 )
 
@@ -163,6 +164,32 @@ def test_경보가_아니면_7일_안에서_최고와_최저와_정상을_가른
     assert verdict((0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0), None) == "7일 중 최고"
     assert verdict((0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.5), None) == "7일 중 최저"
     assert verdict((0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 3.5), None) == "정상"
+
+
+def test_어제가_다른_날과_같은_값으로_최고나_최저면_평소와_다르지_않다() -> None:
+    # 확인 실행에서 어제의 전날 하루만 5이고 어제를 포함한 여섯 날이 0인 지표가
+    # `| 읽지 못한 기록 줄 | 0 | 0 | +0 | 원인 모름 |`으로 평소와 다른 것에 올랐다(일지
+    # 2026-10-21-04)
+    unread = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 0.0)
+    assert verdict(unread, None) == "정상"
+    assert not unusual(Metric("unreadable", "읽지 못한 기록 줄", "int", unread, None))
+    assert verdict((1.0, 9.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0), None) == "정상"
+    assert verdict((4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0), None) == "정상"
+
+
+def test_어제가_평소와_같으면_홀로_최고여도_평소와_다르지_않다() -> None:
+    # 창의 다른 날에 값이 하루뿐이면 창 밖의 첫날과의 중앙값이 어제와 같을 수 있다(차이 칸이 +0%)
+    assert verdict((8.0, None, None, None, None, None, 2.0, 5.0), None) == "정상"
+    # 0.1과 0.2의 중앙값은 0.15000000000000002라 같음을 ==로 견주면 홀로 최저로 뽑힌다
+    assert verdict((0.1, None, None, None, None, None, 0.2, 0.15), None) == "정상"
+
+
+def test_7일_안의_최고와_최저는_어제를_뺀_여섯_날과_견준다() -> None:
+    # 창 밖의 첫날은 견주는 날에 들지 않는다. 평소의 중앙값에만 들어, 어제가 평소와 같은지를 가르는
+    # 자리에서만 판정에 닿는다(위 시험)
+    assert verdict((9.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0), None) == "7일 중 최고"
+    assert verdict((None, None, None, None, None, None, 2.0, 1.0), None) == "7일 중 최저"
+    assert verdict((None, None, None, None, None, None, None, 1.0), None) == "정상"
 
 
 def test_어제_값이_없으면_판정하지_않는다() -> None:
@@ -406,6 +433,14 @@ def test_평소와_다른_것은_경보와_7일_최고_최저만_싣고_나머�
     text, _, _ = render(자료(metrics=(지표(alarm="1.76배"), calm)), 메모(), {}, "summary")
     assert "| 환산 비용 | $856 | $486 | +76% | 세션이 많았다 |" in text
     assert "**평소대로:** 병합 PR 수" in text
+
+
+def test_다른_날과_같은_값으로_최저인_지표는_평소와_다른_것에_싣지_않고_평소대로에_적는다() -> None:
+    tied = Metric("unreadable", "읽지 못한 기록 줄", "int", (0, 0, 0, 0, 0, 0, 5, 0), None)
+    text, _, warnings = render(자료(metrics=(지표(alarm="1.76배"), tied)), 메모(), {}, "summary")
+    assert "| 읽지 못한 기록 줄 |" not in text
+    assert "**평소대로:** 읽지 못한 기록 줄" in text
+    assert not [w for w in warnings if "unreadable" in w]
 
 
 def test_평소와_다른_지표에_원인이_없으면_원인_모름으로_적고_경고한다() -> None:
