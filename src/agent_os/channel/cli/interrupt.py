@@ -3,7 +3,9 @@
 
 조합 층의 run 과 resume 이 `asyncio.run` 대신 `run_interruptibly` 를 부른다. 그 앞에 SIGINT 처리기를
 달아 asyncio 의 러너가 제 처리기를 달지 않게 하고(러너는 SIGINT 처리기가 기본값일 때만 단다. Python
-3.12 `asyncio/runners.py`), 끝나면 이전 처리기를 되돌린다. 처리기는 주 스레드에서만 달 수 있다
+3.12 `asyncio/runners.py`), 끝나면 이전 처리기를 되돌린다. 처리기가 기본값이 아니면 러너와 같이
+달지 않고 `asyncio.run` 그대로 돈다. 셸이 작업 제어 없이 띄운 백그라운드 작업은 SIGINT 를 무시한 채
+시작하고, 그 무시가 같은 터미널의 Ctrl+C 에서 그 실행을 지킨다. 처리기는 주 스레드에서만 달 수 있다
 (`signal.signal` 이 다른 스레드에서 ValueError 를 낸다). CLI 진입점과 `tests/test_main.py` 의
 in-process 호출이 모두 주 스레드다. serve 는 이것을 쓰지 않는다. uvicorn 이 제 처리기를 단다.
 
@@ -57,7 +59,10 @@ FORCED = "실행을 중단했다. MCP 서버가 닫히기를 기다리지 않고
 
 def run_interruptibly[T](main: Callable[[], Coroutine[object, object, T]]) -> T:
     """`asyncio.run(main())` 과 같되 Ctrl+C 를 직접 받는다. 눌렸으면 돌아오지 않고 중단의 꼴로
-    끝난다. 주 코루틴이 값을 돌려주든 예외로 끝나든 같다."""
+    끝난다. 주 코루틴이 값을 돌려주든 예외로 끝나든 같다. SIGINT 처리기가 기본값이 아니면(무시,
+    다른 처리기) 받지 않고 `asyncio.run(main())` 그대로다."""
+    if signal.getsignal(signal.SIGINT) is not signal.default_int_handler:
+        return asyncio.run(main())
     presses = _Presses()
     previous = signal.signal(signal.SIGINT, presses.on_sigint)
     try:

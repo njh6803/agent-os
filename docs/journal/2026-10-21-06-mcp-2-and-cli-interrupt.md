@@ -61,6 +61,7 @@ MCP 어댑터 모듈 독스트링의 "닫는 데 하나에 약 2초"는 mcp 2.3.
 - `uv run --env-file ../../../.env pytest -m llm`: 7 passed(183.09초). LLM 토큰 합계 54,973(입력 53,898, 출력 1,075), 트레이스 10개, 모델 호출 22건, 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
 - `tools/mutate.py --check`: 변이 셋의 원문이 한 번씩 있다(독스트링을 고친 뒤).
 - 나머지(pytest, 지침·타입 우회·훅·web 등)는 이 커밋의 pre-commit으로 갈음한다.
+- 커밋 `9cbb0a80`의 pre-commit: 모두 Passed. 러너는 399.2초였다(pytest 398.6초, web-verify 392.2초, run-hooks 111.8초, pyright 44.2초). ruff 둘, 표·줄 구분 문자·변이 표(`--staged`)·카나리아 명세 모양·헌법 판·커밋 메시지도 Passed였다. 인용 대조는 경고 5건을 냈다(막지 않는다). 일지의 넷 가운데 셋은 고쳐서 이제 저장소에 없는 문장을 옮긴 것(셀프 리뷰 표준 축 1과 명세 축 (c)가 인용한 옛 독스트링, 반영 줄의 첫 고침)이고, 하나는 원문의 쉼표를 빠뜨린 것(반영 줄의 `runs.py` 항목, 커밋 뒤에 고쳤다)이다. `docs/constitution/README.md` 11행은 판 줄이 한 줄이라 옛 이력의 인용이 함께 걸린 것이다.
 
 ## 카나리아
 
@@ -138,7 +139,7 @@ open-session을 부른다 2026-10-21T04:55:32Z
 
 - 어댑터 모듈 독스트링(표준 1·2, 명세 (c)): 상류가 트리를 끄는 조건(유예 안에 끝나지 않은 서버만), 두 OS의 끄는 법, 윈도우만 Job Object를 닫아 남은 자손을 거둔다는 것과 POSIX에서는 스스로 끝난 서버의 자식이 남는다는 것, 명세 표의 잰 값 셋, 늦어지는 것에 serve의 종료를 더했다. 목록은 "넷"에서 "셋"이 되었다(가장 빨리 닫히는 모양을 첫 항목에 합쳤다). 상류 `_stop_server_process`와 `terminate_posix_process_tree`를 끝까지 열고 썼다. 첫 고침에서 "SIGTERM을 보내고 2초 뒤 SIGKILL"로 썼다가, 상류가 그룹이 사라지지 않을 때만 SIGKILL을 보내는 것을 보고 그 조건을 넣었다.
 - 쪽 상한 주석과 `_all_tools` 독스트링(표준 판단): "앞서 기대던 라이브러리(ADR 0034 가 바꾼 것)"로 ADR을 가리킨다. 이름(`langchain-mcp-adapters`)을 한 번 넣었다가 뺐다. 이 브랜치가 살아 있는 문서에서 그 이름의 잔존을 0으로 맞췄고(위 "문서"), ADR 0034가 그 이름을 여섯 번 든다.
-- `runs.py` 모듈·`lifespan` 독스트링, `channel.md`, `test_end_user.py` 독스트링(표준 3): "스스로 끝나기를 기다리지 않고 곧바로 취소한다"와 "수명의 태스크 그룹은 취소된 실행의 태스크가 끝나기를 기다리고 그 끝에 MCP 서버의 닫기가 든다"로 나눴다. `lifespan`의 `finally`가 `group.cancel_scope.cancel()` 뒤 태스크 그룹을 나가는 코드를 보고 썼다.
+- `runs.py` 모듈·`lifespan` 독스트링, `channel.md`, `test_end_user.py` 독스트링(표준 3): "스스로 끝나기를 기다리지 않고 곧바로 취소한다"와 "수명의 태스크 그룹은 취소된 실행의 태스크가 끝나기를 기다리고, 그 끝에 MCP 서버의 닫기가 든다"(`channel.md`의 문장)로 나눴다. `lifespan`의 `finally`가 `group.cancel_scope.cancel()` 뒤 태스크 그룹을 나가는 코드를 보고 썼다.
 - `interrupt.py`(표준 4·6, 판단 하나, Nit 하나, 명세 (c) 둘): 깨움 서술자 문장을 POSIX와 윈도우로 갈랐고, JSONL 출처를 `agent_os.adapters.jsonl`의 모듈 독스트링으로, 원인 단정을 ADR 0034 이력의 "가르지 않았다"로 고쳤다. `_write_unbuffered`는 `_raw_stderr()`를 `suppress` 밖으로 뺐다. 눌린 뒤 주 코루틴이 예외로 끝나는 길은 실패하는 테스트(`test_누른_뒤_실행이_취소가_아닌_예외로_끝나도_중단의_꼴로_끝난다`, 고치기 전 종료 코드 1)를 먼저 보고 `_run_guarded`로 고쳤다.
 - core `_Body._connected` 독스트링(표준 5): 프로브가 다른 태스크에서 닫아 범위를 나가는 자리의 예외만 냈고, core는 그 길을 밟지 않으며 다른 까닭의 닫기는 재지 않았다는 한정을 적었다. 상류 `stdio_client`의 `finally`를 열고 썼다.
 - README의 init 항목(명세 (c)): 좀비 문장을 빼고, 그룹 기다림이 유예를 넘겨 상류가 그룹째 끄는 서버에만 든다는 조건과 init 없이 재지 않았다는 것을 적었다. 좀비는 런처가 들어와야 생기는 어림이라 티켓 03의 "문서와 독스트링"에 볼 항목으로 넘겼다.
@@ -160,3 +161,59 @@ open-session을 부른다 2026-10-21T04:55:32Z
 8. core `_connected`: "상류의 닫기는 서버를 끄는 일을 보호된 `finally` 에서 먼저 하고 그 뒤에 자기 취소 범위를 나간다 … 프로브는 닫기를 연 태스크가 아닌 태스크에서 해 범위를 나가는 자리의 예외를 냈고, 그 예외로 끝난 닫기 뒤에도 서버는 내려갔다 … core 는 연결을 연 태스크에서 닫으므로 그 길을 밟지 않고, 다른 까닭으로 끝난 닫기는 재지 않았다."
 9. README: "init이 없으면, 입력이 닫혀도 2초 안에 끝나지 않아 상류가 그룹째 끄는 서버마다 그 그룹이 사라지기를 기다리는 시간이 상한(2초)을 다 채운다고 상류가 적었다"
 10. 프로브 README의 2026-10-21 "티켓 01의 셀프 리뷰 변이" 문단과 표의 `ticket01_mutations.toml` 행.
+
+## 인계 (커밋 뒤)
+
+커밋 `9cbb0a80`(pre-commit 모두 Passed, 위 "검사 (셀프 리뷰 반영 뒤)") 직후 인계 계기가 왔다(세션 컨텍스트 350,089 토큰, 경계 `커밋 뒤`). 인계하지 않는 다섯 때에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르다. 이 세션이 쓴 `인계 못함` 줄은 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `feature/01-mcp-2-and-cli-interrupt`다.
+
+이 세션이 번복하거나 고친 것은 위 "### 반영"의 고친 것 줄에 있다. 어댑터 독스트링의 SIGKILL 조건을 상류 코드에 맞춰 고쳤고, 옛 라이브러리 이름을 한 번 넣었다가 뺐다. 그 밖에 프로브 README의 변이 결과 문단에 처음 쓴 "실패한 단언은 두 회차가 같았다"를 뺐다. 첫 회차에는 표지가 없어 어느 단언이 빨갰는지 보지 않았기 때문이다. 커밋 뒤에는 일지의 인용 하나(`channel.md` 문장의 쉼표)를 고쳤고, 검사 절에 pre-commit 결과를 적었다. 이 둘과 이 절은 커밋하지 않았다.
+
+새 세션이 할 것은 차례로 다음과 같다.
+
+1. 커밋 뒤 변이 전체 실행(`tools/mutate.py`, 표 `.scratch/mcp-shutdown/probes/ticket01_mutations.toml`)
+2. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인). origin/main이 `ed5618cb`에서 움직였으면 먼저 합친다. CodeRabbit CLI는 좌석이 없어(Seat: not assigned) 돌지 못하므로 `/security-review`와 `bug-perf-review` 서브에이전트로 대신한다. 그 브리프에는 위 "PR 직전 리뷰에 밀 주장" 열을 "나열 밖도 잰다"와 함께 싣는다.
+3. PR(`/git-pr`)과 봇 회차, 병합
+4. 일지 `## 다음`과 next-session
+
+지시문:
+
+다음 작업: .scratch/mcp-shutdown/issues/01-mcp-2-and-cli-interrupt.md. mcp 2로 옮겨 취소된 실행의 MCP 서버도 닫힌 뒤 끝나게 하고, CLI가 Ctrl+C를 직접 받는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-shutdown/issues/01-mcp-2-and-cli-interrupt.md
+브랜치: feature/01-mcp-2-and-cli-interrupt
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-06-mcp-2-and-cli-interrupt.md(그 워크트리의 작업 트리 판)의 "인계 (커밋 뒤)"와 "### 반영"의 "PR 직전 리뷰에 밀 주장"
+이어받을 상태: 인계: 커밋 뒤. `9cbb0a80`까지 구현, 셀프 리뷰 반영, 검사(pre-commit 모두 Passed, `-m llm` 7 passed)를 마쳤다. 아직 푸시하지 않았고 열린 PR이 없다. 남은 단계는 차례로 커밋 뒤 변이 전체 실행(`.scratch/mcp-shutdown/probes/ticket01_mutations.toml`), PR 직전 리뷰(`/security-review`와 `bug-perf-review`, 브리프에 일지의 "PR 직전 리뷰에 밀 주장" 열), PR, 봇 회차, 병합, 일지 `## 다음`과 next-session이다. 워크트리에 커밋하지 않은 일지 변경이 있다. docs/journal/2026-10-21-06-mcp-2-and-cli-interrupt.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+잠금 풀기는 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-21T06:02:00Z
+
+`tools/open_session.ps1`은 `fired=15:03:16`, `page=`, `folder=C:\project\agent`, `model=Opus 5.5`(원래 Sonnet 5.5), `effort=xhigh`(원래 high), `restore=필요`까지 낸 뒤 "모델을 고르는 사이 입력창의 지시문이 바뀌었다. 보내지 않았다."로 멈췄다(종료 코드 1, `idle=1340s`). open-session 3의 모델 오류 갈래라 같은 파일로 다시 돌리지 않았다. 사람에게 입력창을 보고 보내 달라고 부탁하고 턴을 끝냈다. 제목은 `(인계함)` 그대로 둔다. 남은 화면이 보내지면 그것이 인계 세션이다.
+
+사용자가 다시 시도하라고 했다. 다시 돌리기 전에 그 브랜치 제목의 세션이 생기지 않았고 남은 화면이 창에 없음을 봤다. 멈춘 06:03 무렵 다른 두 브랜치의 인계 열기가 함께 있어 그 딥링크가 입력창을 덮은 것으로 본다(가르지 않았다). 같은 파일로 다시 돌려 `sent=15:15:21`로 보냈다. 고르기 전 값이 이미 `Opus 5.5 / xhigh`라 `restored=바뀐 것 없음`이었고, 첫 시도가 남긴 기본값(원래 Sonnet 5.5 / high)은 되돌리지 않았다. 새 세션 `local_483f5cb7`은 제목 `feature/01-mcp-2-and-cli-interrupt`, `cwd` 루트, `claude-opus-5-5` / `xhigh`다. 분할은 `split=`로 됐고, `focus`는 제목이 90초 뒤에 붙어 행을 찾지 못했다(새 세션은 메인 창 첫 패널에 보인다).
+
+## PR 직전 리뷰 (둘째로 이어받은 세션)
+
+> 사용자(지시문): "이어받을 상태: 인계: 커밋 뒤. `9cbb0a80`까지 구현, 셀프 리뷰 반영, 검사(pre-commit 모두 Passed, `-m llm` 7 passed)를 마쳤다. 아직 푸시하지 않았고 열린 PR이 없다. … 이번 요청 범위: PR과 병합까지"
+
+이 세션이 `EnterWorktree(path)`로 들어왔다. origin/main은 `ed5618cb` 그대로라 합치지 않았다. 순서는 지시문과 달리 PR 직전 리뷰를 변이 전체 실행보다 먼저 돌렸다. `tools/mutate.py` 독스트링이 전체 실행을 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤에 한 번 돌게 정했고, 리뷰가 시험을 고치면 그 전의 실행은 옛 시험을 잰 것이기 때문이다. 이 리뷰가 실제로 시험을 고쳤다.
+
+CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 취약점 0. 서브태스크가 MCP 서버를 띄우는 명령·환경·작업 폴더, 도구 결과를 글로 바꾸는 길, 서버가 보내는 요청(샘플링·elicitation·루트 목록은 기본 콜백이 거절한다), 처리기의 고정 문구, 의존성 교체를 따라갔다. 자식의 환경은 mcp 2.3.0 `get_default_environment()`의 허용 목록뿐이라 API 키가 넘어가지 않는다. 후보가 없어 오탐 거르기 단계는 돌지 않았다.
+- `bug-perf-review`(sonnet): Minor 넷(유효 둘, 보류 둘). 밀 주장 열 가운데 1~8과 10은 일치였다(9는 아래 1). 호출 예산 40을 넘겨 50에서 멈췄다고 보고가 스스로 적었다.
+
+트리아지(본 세션이 근거를 열었다):
+
+1. 유효 → 고쳤다. README init 항목(밀 주장 9)이 상류의 조건을 뺐다. 상류 독스트링은 그룹이 모든 구성원이 죽어 거두어져야 사라진다고 적고, 그래서 그 기다림은 자손을 둔 서버에만 든다. Python 3.12 `asyncio/unix_events.py`의 기본 자식 감시자(`PidfdChildWatcher`, `ThreadedChildWatcher`)가 제 자식의 번호만 `waitpid`하는 것을 읽고, 자손 없는 서버는 asyncio가 거둔다고 적었다. 티켓 03의 README 항목에 런처가 들어오면 이 문장도 다시 쓴다는 것을 더했다.
+2. 유효 → 고쳤다. `run_interruptibly`가 물려받은 SIGINT 무시를 덮어썼다. 셸이 작업 제어 없이 띄운 백그라운드 작업(`agent-os run … &`)이 같은 터미널의 Ctrl+C에 끊긴다. 이전의 `asyncio.run`은 처리기가 `default_int_handler`일 때만 제 처리기를 단다(`asyncio/runners.py`). 실패하는 테스트(`test_SIGINT를_무시한_채_시작하면_그_무시를_지킨다`, 고치기 전 종료 코드 3221225786과 `실행을 중단했다.`)를 먼저 보고, 처리기가 기본값이 아니면 `asyncio.run` 그대로 도는 갈래로 고쳤다. 같은 갈래가 이전 처리기가 `None`(파이썬 밖에서 단 처리기)이라 되돌리기가 `TypeError`를 내는 경우도 닫는다.
+3. 보류 → 고쳤다. 두 번 누르는 사례의 둘째가 첫째의 0.5초 뒤라는 시간으로 갈렸다. 부하 아래에서 자식이 굶으면 둘째가 취소보다 먼저 오거나 POSIX에서 두 신호가 처리기 한 번으로 합쳐질 수 있다(코드를 읽은 어림, 재현하지 않았다). 고치는 값이 작아 둘째를 취소 표지(`cancelled`) 뒤로 옮겼다. 고친 시험이 아직 무는지 둘째가 곧바로 끝내지 않는 변이를 손으로 넣어 봤고 `FORCED` 단언이 빨갰다(둘째는 취소 표지 0.052초 뒤, 끝은 둘째 1.96초 뒤). 그 변이를 표의 넷째로 더했다. `FORCED_WITHIN_SECONDS` 주석의 "끊지 못하면 둘째 뒤 약 1.5초"는 둘째가 앞당겨져 "약 2초"로 고쳤다.
+4. 보류 → 오탐. core `_connected`의 프로브 문장(밀 주장 8)은 명세 "결말 뒤 닫기의 예외"(158~159행)와 같다. 리뷰가 부수로 물은 CLI `_report`는 `_show`가 이벤트 열을 끝까지 돈다(`async for`, 중간에 나가지 않는다).
+
+PR 봇에 밀 주장(이 반영으로 새로 쓴 사실 문장)은 PR 본문에 싣는다. README의 자손 조건과 asyncio의 거두기, `interrupt.py`의 백그라운드 작업 문장, `test_interrupt.py` 독스트링의 두 신호가 합쳐진다는 문장이다.
+
+검사(커밋 전): `uv run ruff check .` 0, `uv run ruff format --check .` 0(881파일), 바꾼 두 파일의 `uv run pyright` 0, `tests/channel/cli/test_interrupt.py` 6 passed(56.02초), `tools/mutate.py --check` 변이 넷의 원문이 한 번씩 있다.

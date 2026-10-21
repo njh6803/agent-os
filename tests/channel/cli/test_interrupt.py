@@ -3,9 +3,12 @@
 MCP 사례의 자식은 처리기 아래에서 진짜 MCP 어댑터로 입력이 닫혀도 끝나지 않는 서버
 (`tests/adapters/mcp_lingering.py` 의 `stay`)를 열고 스스로 SIGINT 를 올린다. 그 서버를 닫는 데
 상류의 유예 2초가 든다. 사례마다 재려는 상황이 났다는 표지를 먼저 본다. 도구 호출 도중의 누름은
-서버가 호출을 받았다는 표지(`slow`) 뒤에 오고, 닫는 도중의 누름은 자식이 연결을 나서기 직전에 쓴
-표지(`closing`) 0.5초 뒤에 온다. 가짜 포트로 상류의 닫기를 흉내 내지 않는다. 처리기가 바꾸는 모양이
-진짜 상류의 닫기에서만 나서, 흉내로는 처리기를 빠뜨린 구현도 초록이 된다(명세의 Testing Decisions).
+서버가 호출을 받았다는 표지(`slow`) 뒤에 오고, 그 뒤의 둘째는 첫째가 호출을 취소했다는
+표지(`cancelled`) 뒤에 온다. 둘째를 시간(첫째의 0.5초 뒤)으로 가르면 부하 아래에서 자식이 굶을 때
+둘째가 취소보다 먼저 오거나, POSIX 에서 두 신호가 처리기 한 번으로 합쳐질 수 있다(PR 직전 리뷰).
+닫는 도중의 누름은 자식이 연결을 나서기 직전에 쓴 표지(`closing`) 0.5초 뒤에 온다. 가짜 포트로
+상류의 닫기를 흉내 내지 않는다. 처리기가 바꾸는 모양이 진짜 상류의 닫기에서만 나서, 흉내로는
+처리기를 빠뜨린 구현도 초록이 된다(명세의 Testing Decisions).
 
 신호를 올리는 법은 OS 마다 다르다. POSIX 에서 보조 스레드가 `raise_signal` 로 올리면 그 스레드가
 신호를 받아 주 스레드의 대기가 깨지지 않는다. 그래서 그 스레드는 SIGINT 를 막고 프로세스에 보낸다.
@@ -32,9 +35,9 @@ DIED_INTERRUPTED = STATUS_CONTROL_C_EXIT if sys.platform == "win32" else -signal
 ENDED_WITHIN_SECONDS = 30
 # 둘째가 닫기를 끊으면 둘째 뒤 끝나기까지가 명세의 프로브(`close_paths.py --cli-handler scope`)에서
 # 0.006~0.133초라 문턱은 그 7배가 넘는다(`.claude/rules/tests.md` 의 시간 단언). 이 구현은
-# 윈도우에서 홀로 0.015~0.017초였다(아래 `_누른다` 를 사례마다 세 번 불러 손으로 봤다, 일지
-# 2026-10-21-06). 끊지 못하면 자식은 첫째의 닫기(상류의 유예 2초)를 마치고서야 끝나 둘째 뒤 약
-# 1.5초다.
+# 윈도우에서 홀로 0.015~0.017초였다(둘째를 첫째의 0.5초 뒤에 누르던 판의 `_누른다` 를 사례마다 세
+# 번 불러 손으로 봤다, 일지 2026-10-21-06). 끊지 못하면 자식은 첫째의 닫기(상류의 유예 2초)를
+# 마치고서야 끝나 둘째 뒤 약 2초다.
 FORCED_WITHIN_SECONDS = 1.0
 # 닫는 도중의 첫째 뒤 끝나기까지. 범위로 전하는 처리기의 시제품은 누른 뒤 1.48~1.56초였고, 네이티브
 # 취소로 전하면 10초 안에 끝나지 않았다(`close_paths.py` 의 `cli_ctrl_c_closing`, 두 OS). 이 구현은
@@ -59,14 +62,22 @@ server = McpServer(command=sys.executable, args=(lingering, "stay", str(folder))
 marker = folder / ("closing" if moment == "closing" else "slow")
 
 
+def appeared(path: Path) -> bool:
+    end = time.monotonic() + 30
+    while not path.exists():
+        if time.monotonic() > end:
+            return False
+        time.sleep(0.05)
+    return True
+
+
 def press() -> None:
     if os.name == "posix":
         signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
-    end = time.monotonic() + 30
-    while not marker.exists() and time.monotonic() < end:
-        time.sleep(0.05)
     for count in range(presses):
-        if count or moment == "closing":
+        if not appeared(marker if count == 0 else folder / "cancelled"):
+            return
+        if count == 0 and moment == "closing":
             time.sleep(0.5)
         (folder / f"pressed-{count}").write_text(str(time.time()), encoding="utf-8")
         if os.name == "posix":
@@ -151,6 +162,24 @@ async def main() -> None:
 
 
 run_interruptibly(main)
+"""
+
+_IGNORING_CHILD = """
+import asyncio
+import signal
+
+from agent_os.channel.cli.interrupt import run_interruptibly
+
+signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+async def main() -> str:
+    signal.raise_signal(signal.SIGINT)
+    await asyncio.sleep(0.2)
+    return "done"
+
+
+print(run_interruptibly(main), signal.getsignal(signal.SIGINT) is signal.SIG_IGN)
 """
 
 
@@ -298,3 +327,14 @@ def test_누른_뒤_실행이_취소가_아닌_예외로_끝나도_중단의_꼴
     assert INTERRUPTED in written
     assert FORCED not in written
     assert "Traceback" not in written
+
+
+def test_SIGINT를_무시한_채_시작하면_그_무시를_지킨다() -> None:
+    """셸이 작업 제어 없이 띄운 백그라운드 작업(`agent-os run … &`)은 SIGINT 를 무시한 채 시작해,
+    같은 터미널의 Ctrl+C 가 그 실행을 끊지 않는다. `asyncio.run` 의 러너처럼 그 무시를 덮어쓰지
+    않는다."""
+    command = [sys.executable, "-c", _IGNORING_CHILD]
+    ended = subprocess.run(command, capture_output=True, timeout=ENDED_WITHIN_SECONDS, check=False)
+
+    assert ended.returncode == 0, ended.stderr.decode(errors="replace")
+    assert ended.stdout.split() == [b"done", b"True"]

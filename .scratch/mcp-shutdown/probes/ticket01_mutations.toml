@@ -49,3 +49,23 @@ old = '''
 new = '''
         sys.stderr.write(f"{FORCED}\n")
 '''
+
+# PR 직전 리뷰가 둘째 누름을 첫째의 0.5초 뒤에서 취소 표지(`cancelled`) 뒤로 옮겨 시험을 고쳤다. 고친
+# 시험이 둘째의 곧바로 끝내기를 아직 무는지 본다. 표지는 손으로 넣어 본 실패의 `E` 줄이다.
+[[mutation]]
+name = "둘째도 범위를 취소할 뿐이다"
+tests = ["tests/channel/cli/test_interrupt.py", "-k", "한_번_더_누르면"]
+expect = "red"
+expect_output = ["assert '실행을 중단했다. MCP 서버가 닫히기를 기다리지 않고 끝낸다.' in '실행을 중단했다.\n'"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/interrupt.py"
+old = '''
+        if self.pressed:
+            _write_unbuffered(FORCED)
+            _die_interrupted()
+        self.pressed = True
+'''
+new = '''
+        self.pressed = True
+'''
