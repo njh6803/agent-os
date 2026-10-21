@@ -1,7 +1,8 @@
 # `.claude/rules/channel.md` 의 최종 사용자 면 경로 항목을 고친 문장(경로가 넷, 넷째 경로의 operation_id)이 `paths` 에
 # 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
 # 실험군은 규칙의 paths 안(src/agent_os/channel/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 일지 2026-10-16-60).
+# 최신 결과: 통과 4(2026-10-21, 이 PC, claude 2.1.302, 일지 2026-10-21-06). 셀프 리뷰가 원천의 본문을 고친 뒤
+# 같은 날 같은 판의 사전 확인(--preflight)으로 갈음했다(2026-10-21, 일지 2026-10-21-06).
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/channel_rule_end_user_paths.toml <출력 디렉터리>
 kind = "rule"
 question = '''
