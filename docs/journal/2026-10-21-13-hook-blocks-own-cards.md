@@ -92,10 +92,73 @@ else"로 답한 뒤 요청을 끊고 말로 답했다.
     전에, 매처 변이를 더한 여섯은 셀프 리뷰 반영 뒤에 돌렸다)"로 고쳤다.
 - 남긴 것.
   - 표준 축 Minor 3(까닭의 글이 사용자가 시켰는데 `own_initiative`로 잘못 적은 갈래를 말하지 않는다): 글은 명세 "까닭의 글"이
-    정한 요소 그대로이고, 괄호의 "그 값은 사용자가 말로 새 세션을 시켰거나 … 때만 쓴다"가 그 갈래를 연다. 명세 축도 같은 갈래를
+    정한 요소 그대로이고, 괄호의 "그 값은 사용자가 말로 새 세션을 시켰거나 사용자에게 물을 때만 쓴다"가 그 갈래를 연다. 명세 축도 같은 갈래를
     어긋남으로 보지 않았다.
   - Nit: `JsonValue` 이름(다른 훅의 TypedDict 합 관례), `ensure_ascii` 주석 없음(시험 독스트링이 지킨다), `KICKOFF.md` 매처 나열
     (이미 여럿 빠졌고 settings.json이 원천이라 적었다), 변이 2의 문자열 사례, 카나리아의 "약 0.2초" 기대와 머리 주석의 "(위
     둘째 줄)", 변이 5의 `-k`가 `offer`도 고른다는 것(그 회차에 빨개진 것은 `user_asked` 하나였다), 스토리 38의 `offer` 우회.
 - 다시 돌린 명령: `tests/tools/test_hook_session_card.py` 9 통과, 변이 여섯 기대대로. 나머지 손으로 치는 다섯은 커밋의
-  pre-commit으로 갈음한다(결과는 커밋 뒤에 적는다).
+  pre-commit으로 갈음했다. 커밋 `949fcbba`의 pre-commit은 모두 Passed(pytest 545.3초, 헌법 판은 고친 파일이 없어 Skipped).
+  인용 대조 경고 1건(이 절의 줄임표 인용)은 커밋 뒤 원문 그대로 고쳤다.
+- PR 직전 리뷰에 밀 주장(셀프 리뷰 반영으로 새로 쓴 문장): 위 "고친 것"의 새 문장 다섯(`KICKOFF.md`의 `hook_session_card`
+  괄호, 독스트링의 판과 "카드는 만들어지지 않는다", `hook_payloads.toml`의 note와 머리 주석, 프로브 README의 변이 행).
+
+## 인계 (커밋 뒤)
+
+커밋 `949fcbba` 직후 세션 컨텍스트가 약 21.8만 토큰으로 문턱을 넘은 채 `커밋 뒤` 경계에 와서 인계 계기가 왔다. 인계하지 않는 때
+다섯에 들지 않았다(넘겨받은 경계는 `셀프 리뷰 직전`이라 같지 않고, 요청 범위는 PR과 병합까지다). 이 세션의 제목은
+`feature/06-hook-blocks-own-cards`였고 `feature/06-hook-blocks-own-cards (인계함)`으로 바꾼다.
+
+- 커밋 뒤에 고친 것(커밋하지 않음): 이 일지의 셀프 리뷰 절 끝과 이 절. 새 세션이 다음 커밋에 싣는다.
+- 남은 일: 티켓의 "실제 세션의 확인"(사람이 이 워크트리 폴더에서 새 앱 세션을 열어 `own_initiative`가 막히고 `user_asked`나
+  없는 `proposal_id`가 막히지 않는지 본다. 결과는 `probes/README.md`와 이 일지에), 티켓 `Status:`를 `done`으로, PR 직전 리뷰
+  (위 밀 주장 포함), 푸시, PR, 봇 회차, 워크트리에서 병합하는 길.
+- 확인하지 못한 것: 래퍼와 `settings.json` 등록으로 실제 앱 세션에서 막히는지.
+- 지시문:
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md. 모델이 스스로 내는 세션 카드를 훅이 막는다. 커밋은 됐고 실제 세션의 확인과 PR부터 잇는다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리다. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md
+브랜치: feature/06-hook-blocks-own-cards
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-13-hook-blocks-own-cards.md 의 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 949fcbba까지 구현과 셀프 리뷰 반영을 마쳤고 열린 PR은 없다. 일지의 커밋 뒤 수정은 커밋하지 않았다. 남은 단계는 실제 세션의 확인(사람이 이 워크트리 폴더에서 새 앱 세션을 연다), 티켓 Status done, PR 직전 리뷰(일지의 밀 주장), 푸시, PR, 봇 회차, 워크트리에서 병합. docs/journal/2026-10-21-13-hook-blocks-own-cards.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 잠금 풀기: `is not locked`라 넘어갔다.
+- open-session을 부른다 2026-10-21T13:15:09Z
+
+## PR 직전 리뷰 (이어받은 둘째 세션)
+
+> 사용자: (지시문) 다음 작업: .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md. 모델이 스스로 내는 세션 카드를 훅이 막는다. 커밋은 됐고 실제 세션의 확인과 PR부터 잇는다
+
+지시문대로 주 체크아웃에서 `tidy-checkouts`를 먼저 돌았다. 루트는 이미 `origin/main`(`14efe41d`)과 같아 당기지 않았다. 쉬는
+세션만 쥔 병합된 워크트리 둘(`02-boundary-exceptions`, `ticket-for-every-pr-to-tickets`)은 `end-holders`로 그 세션을 끄고
+브랜치와 함께 지웠다. 휴지통의 `node_modules` 셋(`01-mcp-2-and-cli-interrupt`, `ticket-for-every-pr-to-spec`,
+`ticket-for-every-pr-to-tickets`)은 그것을 올린 프로세스(node.exe, esbuild.exe) 때문에 남았다. 나머지 워크트리는 병합된 PR이
+없거나, 다른 세션의 프로세스가 쥐었거나, 앱의 표지가 있어 남겼다.
+
+- `origin/main`을 합쳤다(병합 커밋 `00e4df47`, 충돌 없음). `sibling_overlap.py`는 0으로 끝났고, 이 일지 순번 13은 겹치지 않는다.
+- CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다.
+  - `/security-review`: 취약점 없음. 훅 명령은 다른 등록과 같은 모양이고 입력이 명령줄에 닿지 않으며, 출력은 상수 글뿐이다.
+  - `bug-perf-review`: Critical·Major 0. 보류 Minor 2(`initiation` 값을 대소문자·공백 정규화 없이 견준다, `tool_input`이 JSON
+    문자열로 오면 지나간다. 둘 다 실제 입력은 enum 문자열과 객체였다), 유효 Nit 1(다른 세션 도구를 보지 않는다는 것을 매처
+    값으로만 지키고 `output_for`가 `tool_name`을 보지 않는다는 단언이 없다). 고치지 않았다. PR 체크리스트의 그 줄에 판정과 값을
+    적는다(고치는 값: Minor 둘은 각각 시험 하나와 한 줄, Nit은 시험 하나).
+- 실제 세션의 확인은 하지 못했다. 사람에게 이 워크트리 폴더에서 새 앱 세션을 열고 붙여 넣을 글(아래 지시문의 "확인할 선행
+  조건")을 건넸는데, 그 결과가 오기 전에 주간 한도 95% 초과로 인계 요청이 왔다(세션 "주간한도 95% 초과 시 세션 전환"의 메시지).
+
+## 인계 (한도 전환)
+
+주간 한도가 95%를 넘어 다른 계정으로 넘기라는 메시지를 받았다. 새 단계를 시작하지 않고 이 일지를 커밋해 푸시하고 멈춘다. PR은
+열지 않았다. 이 세션의 제목은 `feature/06-hook-blocks-own-cards`이고 `feature/06-hook-blocks-own-cards (인계함)`으로 바꾼다.
+
+- 남은 일: 실제 세션의 확인(결과를 `probes/README.md`와 이 일지에), 티켓 `Status:`를 `done`으로, 위 리뷰의 Nit·보류 Minor를
+  고칠지 정하기(고치면 셀프 리뷰를 짧게 다시), PR(체크리스트에 위 리뷰 결과), `@coderabbitai review`, 봇 회차, 워크트리에서 병합.
+- 남은 위험: 래퍼와 `settings.json` 등록이 실제 앱 세션에서 막는지 아직 보지 않았다. 막지 않으면 훅은 조용히 아무것도 막지 않는다.
+  `.claude/rules/tools.md`·`.claude/settings.json`·`tools/hook_payloads.toml`을 함께 고친 형제 PR(#296, #297)과 워크트리
+  (`bug-perf-review-batch`, `measure-word-hook`)가 있어, 뒤에 병합하는 쪽에서 글자 충돌이 날 수 있다.
