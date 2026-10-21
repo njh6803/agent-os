@@ -55,7 +55,7 @@ WBR·What/So what/Now what·Google SRE·Few·영국 정부 표 지침에서 규�
   다시 적으면 막지 못한다.
 
 쓰임: `uv run python tools/morning_report.py --reports <폴더> --day YYYY-MM-DD --report <보고>`.
-종료 0은 그렸다(경고는 stderr), 2는 수집 JSON을 읽지 못했다.
+종료 0은 그렸다(경고는 stderr), 2는 수집 JSON을 읽지 못했거나 보고·상태 파일을 쓰지 못했다.
 """
 
 from __future__ import annotations
@@ -1246,10 +1246,14 @@ def main(argv: list[str]) -> int:
     text, new_state, warnings = render(data, notes, latest_state(reports, day), report)
     warnings = [*unread, *warnings]
     out = reports / f"{day.isoformat()}.{report}.md"
-    out.write_text(text, encoding="utf-8")
-    if new_state is not None:
-        state_text = json.dumps(state_json(new_state), ensure_ascii=False, indent=1)
-        (reports / f"{day.isoformat()}.state.json").write_text(state_text, encoding="utf-8")
+    try:
+        out.write_text(text, encoding="utf-8")
+        if new_state is not None:
+            state_text = json.dumps(state_json(new_state), ensure_ascii=False, indent=1)
+            (reports / f"{day.isoformat()}.state.json").write_text(state_text, encoding="utf-8")
+    except OSError as error:
+        sys.stderr.write(f"보고 파일을 쓰지 못했다: {error}\n")
+        return 2
     for w in warnings:
         sys.stderr.write(f"경고: {w}\n")
     print(out)

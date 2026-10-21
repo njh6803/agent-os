@@ -678,6 +678,19 @@ def test_메모_JSON을_읽지_못하면_경고로_알리고_빈_메모로_그�
     assert first.startswith("경고: 메모 JSON을 읽지 못해 빈 메모로 그렸다(메모 전체를 다시 쓴다):")
 
 
+def test_보고나_상태_파일을_쓰지_못하면_트레이스백_없이_종료_2다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 예약 작업은 종료 코드와 stderr 한 줄로 실패를 가른다. 같은 이름의 폴더가 쓰기를 막는다
+    _자료_파일(tmp_path)
+    (tmp_path / "2026-10-19.work.md").mkdir()
+    assert main(["--reports", str(tmp_path), "--day", "2026-10-19", "--report", "work"]) == 2
+    assert capsys.readouterr().err.startswith("보고 파일을 쓰지 못했다:")
+    (tmp_path / "2026-10-19.state.json").mkdir()
+    assert main(["--reports", str(tmp_path), "--day", "2026-10-19", "--report", "summary"]) == 2
+    assert capsys.readouterr().err.startswith("보고 파일을 쓰지 못했다:")
+
+
 def test_JSON_풀이는_기대한_꼴이_아니면_빈_것이나_None이다() -> None:
     # 수집 도구와 그리기 도구가 함께 쓴다. 꼴이 틀린 칸은 실패로 끝내지 않고 비운다
     assert (json_obj({"a": 1}), json_obj([1])) == ({"a": 1}, {})

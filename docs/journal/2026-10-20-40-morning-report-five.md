@@ -205,3 +205,11 @@ open-session을 부른다 2026-10-21T00:07:54Z
 ## 봇 회차와 병합 (2026-10-21, 새 세션이 이어서)
 
 > 사용자: docs/journal/2026-10-20-39-morning-report-split.md 의 "사용자 프롬프트" 요청을 이어서 한다. 남은 단계는 docs/journal/2026-10-20-40-morning-report-five.md 의 "인계 (PR 연 뒤)" 절이다
+
+- 봇 첫 회차(두 봇 모두 첫 리뷰). CI 다섯 통과.
+  - CodeRabbit(지적 하나, 고침): `morning_report`의 `main`이 보고·상태 파일 쓰기의 `OSError`를 트레이스백으로 냈다. 수집 쪽과
+    같이 종료 2와 stderr 한 줄로 낸다. 시험을 먼저 써서 빨간 것(PermissionError)을 본 뒤 고쳤고, 독스트링과 `common.md`의 종료
+    2 설명도 맞췄다.
+  - claude-review(Minor 셋·Nit 하나, 보류): `Draft.expand`·`fill`의 CQS, `draft.warnings`에 덧붙이는 출력 인자,
+    `morning_report.py`의 크기(모델과 그리기 가르기), `estimate`의 인자 여섯. 셀프 리뷰가 "남김"으로 판정한 냄새와 같은 뿌리라
+    지금 동작을 틀리게 하지 않고, 다음에 이 파일을 건드리는 작업(회고 후보)으로 넘긴다.
