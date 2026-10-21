@@ -259,3 +259,34 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다.
 - `tools/sibling_overlap.py`가 이 일지(09)가 origin/main의 최신 일지(10)보다 이름순으로 앞이라 다음 세션이 지나친다며 다음 빈 번호로 옮기라고 했다. `--move`로 14로 옮겼고, 인용 여섯 파일을 도구가 고쳤다. 옛 번호의 줄인 꼴은 이 브랜치에 남지 않았다.
 
 기능 닫기 판정(2026-10-21, origin/main `f1e6516b`를 들인 이 병합): 02 티켓의 `Status`가 `done`이라 이 PR이 닫는다. 03 티켓의 `Status`를 `done`으로, 마지막 체크 상자를 채우고, `.scratch/plan.md`의 mcp-shutdown 행을 `done`으로 바꾸고 프론티어 문단에 닫힘을 적었다. mcp-shutdown은 다른 기능을 막지 않아 프론티어는 web-widget, admin-style, design-reverse-sync 셋이 된다. 병합 전에 main을 다시 들이면 다시 판정한다.
+
+병합 커밋 `d4d9b22a`의 pre-commit이 모두 Passed였다(러너 294.84초, pytest 280.9초, web-verify 294.4초). 헌법 판 검사만 고친 헌법 파일이 없어 Skipped였다. 병합 커밋의 pre-commit은 충돌한 파일만 보므로(`Checking merge-conflict files only`) 저장소 전체의 `ruff check`·`ruff format --check`를 손으로 쳤고 깨끗했다.
+
+### 다시 들인 main
+
+회고를 쓰기 전의 `git fetch`에서 origin/main이 #341(design-reverse-sync 설계, `14efe41d`)로 한 커밋 움직여 있었다. `.scratch/plan.md`의 프론티어 문단만 충돌했고, main이 더한 그 인터뷰의 문장 뒤에 이 브랜치의 닫힘 문장을 이었다(병합 커밋 `47db3f91`, pre-commit 모두 Passed). 02의 `Status`는 그대로 `done`이라 기능 닫기 판정은 바뀌지 않는다.
+
+### 인계 계기를 넘기지 않음
+
+두 병합 커밋 직후에 인계 계기가 왔다(세션 컨텍스트 227,832 토큰과 333,028 토큰, 경계 `커밋 뒤`). 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다(next-session "인계할 때" 1).
+
+## 회고
+
+후보 8, 승인 1, 기각 7, 넘김 0. 이 일지의 세 세션(인계로 이어진 같은 티켓)을 모두 본다.
+
+1. **승인, 대기열 412(293의 4회차).** 반영 커밋 `4cbbd20e`의 첫 시도가, pre-commit이 도는 동안 이 일지를 고쳐 러너의 "files were modified by this hook"으로 실패했다(위 "반영 뒤 검사"의 끝 문단). 293이 처방한 `hook_edit_during_commit`이 알렸지만, PostToolUse 훅이라 알림은 편집이 끝난 뒤에 왔다. 293은 "알린 뒤에도 어겨지면 막는 훅"을 다음 층으로 적어 두었고, 같은 실수의 네 번째라 더하는 것의 문턱을 지났다. 기능 PR의 범위 밖이라 이 세션에서 반영하지 않고 대기열에 둔다. 막기 전에 같은 훅의 거짓 알림(368)을 먼저 고쳐야 해서 두 행이 서로 가리킨다. 문턱을 지난 새 훅이라 `tools/hook_report.py`를 돌렸다. "뺄 후보"의 `hook_prompt_directive.py`는 일지 2026-10-21-06의 회고에서 사용자가 남기기로 골랐고 그 도구의 집계 버그는 대기열 404가 들어, 다시 넘기지 않았다.
+2. **기각(이미 있는 검사가 막았고, 306이 받아들인 종류).** 부하에서 시간이 넘친 사례 셋이다. 사례 5의 30초 기다림이 pre-commit에서 넘쳐 커밋이 막혔고(120초로 늘렸다, 위 "막힌 커밋"), 같은 커밋에서 이 브랜치가 건드리지 않은 `test_sibling_overlap`의 옮기기 사례가 빨갰으며, 변이 표의 첫 판(시간 제한 90초)은 CPU 100%에서 기준선이 넘쳤다. 306이 받아들여 닫은 끝이 열린 결함 종류라 회차를 더하지 않고 여기에만 적는다. 사례 5의 30초는 `.claude/rules/tests.md`의 시간 단언 항목(홀로 잰 시간의 넉넉한 배수)을 그 사례를 홀로 재기 전에 정한 것이었다.
+3. **기각(리뷰가 제 몫을 했다).** PR 직전 `bug-perf-review`가 셀프 리뷰가 놓친 둘(서버를 띄운 뒤의 예외에서 런처가 그룹을 끄지 않음, 사례 5가 죽은 자식을 기한까지 기다림)을 잡았다. 검사로 옮길 꼴이 아니고 표준에 더할 새 판단 기준도 아니다.
+4. **기각(사건 없음).** 두 브랜치가 같은 규칙 파일에 항목을 하나씩 더해, 각자 잰 카나리아가 합친 파일을 재지 않았다. `sibling_overlap.py`는 함께 고친 파일만 알린다. 이번에는 합친 트리에서 손으로 다시 재서 놓친 것이 없다.
+5. **기각(사건 없음).** 병합 커밋의 pre-commit은 충돌한 파일만 본다. 첫 병합 커밋에서 충돌하지 않은 파일은 ruff가 보지 않았지만, 저장소 전체의 ruff를 손으로 쳐 깨끗했고 pytest의 저장소 상태 테스트는 저장소 전체를 본다.
+6. **기각(훅이 알렸다).** 도구 호출 앞의 중간 문장을 영어로 썼다(`hook_midturn_korean`).
+7. **기각(훅이 알렸다).** `git show origin/main:.scratch/…`가 Git Bash의 경로 변환으로 실패했다(`hook_bash_msys_pathconv`. `MSYS_NO_PATHCONV=1`로 다시 쳤다).
+8. **기각(훅이 알렸다).** `.scratch/plan.md`의 긴 줄이 Grep 결과에서 생략되었다(`hook_grep_omitted`. Read로 그 줄을 열었다).
+
+만료할 행은 이 브랜치와 `--ref origin/main` 모두 없었다.
+
+## 다음
+
+mcp-shutdown이 이 PR로 닫힌다. 병합 뒤의 다음 작업은 next-session 결정표의 "그 기능의 마지막 티켓이었고 … 회차 3 이상인 항목" 줄(하네스 chore 배치)이고, 행은 지시문을 낼 때 `queue_open_rows.py --ref origin/main`으로 고른다. 이 회고가 더한 412는 4회차라 그 조건에 든다.
+
+이 기능이 남긴 것은 런처의 알려진 한계 둘(`.claude/rules/adapters.md`와 런처 모듈 독스트링), macOS를 재지 않은 것, 사용자가 올리지 않기로 한 상류 이슈 초안(`.scratch/mcp-shutdown/upstream-issue.md`)이다. 런처를 뺄 계기는 그 독스트링이 든다.
