@@ -192,4 +192,32 @@ Critical·Major 없음. 보류 Minor 셋, 오탐 넷. 밀 주장 아홉은 모�
 - 티켓 01: "실행 타임아웃의 기한(`move_on_after`)도 같은 범위 취소이고 core는 그 범위 안에서 에이전트의 제너레이터를 닫으므로(`core/run.py`의 기한 범위와 `_closing`, 코드를 읽었다) 첫 Ctrl+C는 기한과 같은 꼴이 될 뿐이다. 저장소의 플러그인 에이전트에는 `finally`가 없다(`plugins/`에서 grep했다)"
 - 티켓 01: "커서가 `None`이 아닌 동안 따르기만 하는 어댑터(시제품의 첫 판, 빈 글을 끝으로 보지 않고 쪽 상한이 없다)로 둘 다 기한의 `TimeoutError`로 빨간 것을 본 뒤"
 
-이 둘은 PR 봇이 다음 층이다. 다시 돌린 명령은 이 반영의 커밋이 부르는 pre-commit으로 갈음한다.
+이 둘은 PR 봇이 다음 층이다. 다시 돌린 명령은 이 반영의 커밋이 부르는 pre-commit으로 갈음했다. 커밋 `3bad1f43`의 pre-commit이 모두 통과했다(러너 229.22초, 인용 대조 경고 없음). ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였고, 마지막 `.py` 변경(`close_paths.py`)은 `c5f09a32`에서 ruff를 지났다. 카나리아 명세와 헌법 판 검사는 해당 파일이 없어 `Skipped`였다.
+
+## 인계 (커밋 뒤)
+
+`3bad1f43` 커밋 뒤 인계 계기(`커밋 뒤`, 세션 컨텍스트 약 26만 토큰)가 왔다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위("티켓까지")는 PR과 병합까지라 커밋에서 끝나지 않으며, 이 세션이 넘겨받은 경계는 `셀프 리뷰 직전`이라 이번 경계와 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/mcp-shutdown-to-tickets`이고 넘기기 전에 `docs/mcp-shutdown-to-tickets (인계함)`으로 바꾼다. `tools/model_sweep.py docs/mcp-shutdown-to-tickets`는 `스윕 밖`이고 열린 PR이 없어 모델은 결정표의 인계 줄대로 `Opus 5.5 / xhigh`다.
+
+지시문:
+
+다음 작업: 기능 mcp-shutdown. 티켓 셋(01~03), 명세 주석, ADR 0034의 2026-10-21 이력(사용자 승인), 프로브 사례를 커밋했고 PR을 열어 병합하는 것이 남았다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/mcp-shutdown/spec.md
+브랜치: docs/mcp-shutdown-to-tickets
+모델: Opus 5.5 / xhigh
+읽을 것: 일지 docs/journal/2026-10-21-03-mcp-shutdown-to-tickets.md의 "셀프 리뷰"부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. `c5f09a32`(티켓 셋과 명세·ADR·프로브·일지), origin/main `561b37cb`를 합친 `a2f1ae6f`, PR 직전 리뷰를 반영한 `3bad1f43`까지 커밋했고 푸시하지 않았다(PR 없음). 셀프 리뷰, ADR 0034 이력의 사용자 승인, PR 직전 리뷰(CodeRabbit 좌석 없음이라 `/security-review`는 지적 없음, `bug-perf-review`는 보류 Minor 셋 가운데 둘을 고치고 프론티어 문단 하나를 선례로 남겼다)를 마쳤다. 남은 단계는 이 일지의 커밋하지 않은 인계 절을 커밋하고, 푸시하고, PR을 열고(체크리스트에 두 리뷰의 결과와 남긴 지적의 이유. 계약 영향은 이 PR이 헌법을 고치지 않고 티켓 01이 `tech.md`를 고친다는 것과 ADR 0034 이력의 승인), 순서 1의 2(봇 회차)와 병합을 거쳐, 일지에 `## 다음`(다음은 티켓 01)을 쓰고 next-session을 부르는 것이다. docs/journal/2026-10-21-03-mcp-shutdown-to-tickets.md
+  워크트리 mcp-shutdown-spec(커밋하지 않은 원본)은 지울지를 사람이 정한다. %TEMP%의 mcp-full-stack-* 사본은 대기열 392의 몫이다.
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+
+제목을 `docs/mcp-shutdown-to-tickets (인계함)`으로 바꿨다. `git worktree unlock`은 `is not locked`였다(넘어간다).
+
+open-session을 부른다 2026-10-21T03:16:24Z
+
+## 이어받은 세션 (커밋 뒤)
+
+위 지시문으로 연 새 세션이 제목을 `docs/mcp-shutdown-to-tickets`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다. HEAD는 `3bad1f43`이었고 커밋하지 않은 변경은 이 일지 하나였다.
+
+> 사용자: "`.claude/skills/to-tickets/SKILL.md` 를 읽어 그대로 따른다. … 인자: .scratch/mcp-shutdown/spec.md … 이어받을 상태: 인계: 커밋 뒤. … 남은 단계는 이 일지의 커밋하지 않은 인계 절을 커밋하고, 푸시하고, PR을 열고(체크리스트에 두 리뷰의 결과와 남긴 지적의 이유. 계약 영향은 이 PR이 헌법을 고치지 않고 티켓 01이 `tech.md`를 고친다는 것과 ADR 0034 이력의 승인), 순서 1의 2(봇 회차)와 병합을 거쳐, 일지에 `## 다음`(다음은 티켓 01)을 쓰고 next-session을 부르는 것이다. … 이번 요청 범위: 티켓까지"
