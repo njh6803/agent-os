@@ -79,3 +79,41 @@ open-session을 부른다 2026-10-21T09:59:00Z
 - `uv run --env-file ../../../.env pytest -m llm`: 7 passed(290.3초). LLM 토큰 합계 58,308(입력 57,234, 출력 1,074), 트레이스 10개, 모델 호출 23건, 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
 - 카나리아 둘(claude 2.1.302, HEAD `5040230c`에 커밋하지 않은 작업 트리): `adapters_rule_boundary_exceptions.toml` 통과 4, `adapters_rule_new_optional_fields.toml` 통과 4. 두 명세의 최신 결과 줄을 고쳤다.
 - 변이 `ticket02_mutations.toml`: 변이 3 모두 표지까지 기대대로 빨갰다.
+
+## 커밋
+
+`35a42aa2`(feat, 파일 11). pre-commit이 모두 Passed였다(ruff 둘, 병렬 검사 322.7초 — lint-imports, zizmor, check-instructions, check-type-escapes, pyright 48.0초, run-hooks 177.9초, pytest 308.7초, web-verify 321.9초 — 와 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 커밋 메시지. 헌법 판은 Skipped). 인용 대조가 경고 셋을 냈고 셋 다 셀프 리뷰가 고치기 전의 옛 문장을 인용한 것이라 둔다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤에 컨텍스트가 인계 문턱을 넘어 인계 계기가 왔다. 이 세션의 제목은 `feature/02-boundary-exceptions`였고 `feature/02-boundary-exceptions (인계함)`으로 바꾼다. 커밋은 푸시하지 않았고 PR은 없다. 이 일지 수정은 커밋하지 않았다.
+
+지시문:
+
+```
+다음 작업: .scratch/mcp-shutdown/issues/02-boundary-exceptions.md. run_failed가 어느 MCP 서버가 무엇 때문에 실패했는지 말하고, 어댑터의 예외가 내장 타입으로 포트를 넘으며, 결말을 쓴 실행은 그것으로 끝난다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-shutdown/issues/02-boundary-exceptions.md
+브랜치: feature/02-boundary-exceptions
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-10-boundary-exceptions.md(셀프 리뷰, 검사, 커밋, 인계 절), .scratch/mcp-shutdown/issues/03-posix-launcher.md(나란히 도는 형제, PR #338)
+이어받을 상태: 인계: 커밋 뒤. 커밋 35a42aa2까지 셀프 리뷰 반영, 검사(run_checks, -m llm, 카나리아 둘, 변이 표, pre-commit 전부 통과), 티켓 체크 표시를 마쳤고 기능 닫기 판정 하나만 체크하지 않았다. 일지의 커밋·인계 절은 커밋하지 않은 변경으로 워크트리에 있다. 푸시하지 않았고 PR은 없다. 남은 것: PR 직전 리뷰(operations.md 리뷰 파이프라인 2. 셀프 리뷰 반영으로 새로 쓴 문장은 일지 셀프 리뷰 절의 고친 것 줄에 원문으로 있고 그 리뷰의 밀 주장으로 넘긴다), 푸시와 /git-pr, 봇 회차, 병합 직전의 기능 닫기 판정(03의 Status. 03이 먼저 병합되면 mcp.py·test_mcp.py·adapters.md·프로브 README를 합친다), 병합. 일지 docs/journal/2026-10-21-10-boundary-exceptions.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기: `is not locked`(이미 풀려 있었다).
+
+open-session을 부른다 2026-10-21T10:55:39Z
+
+## PR 직전 리뷰 (새 세션, 기점 `5040230c`)
+
+> 사용자: (next-session 지시문) "남은 것: PR 직전 리뷰(operations.md 리뷰 파이프라인 2. 셀프 리뷰 반영으로 새로 쓴 문장은 일지 셀프 리뷰 절의 고친 것 줄에 원문으로 있고 그 리뷰의 밀 주장으로 넘긴다), 푸시와 /git-pr, 봇 회차, 병합 직전의 기능 닫기 판정"
+
+CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 나란히 돌렸다. origin/main은 `5040230c`에서 움직이지 않아 합칠 것이 없었다.
+
+- `/security-review`: High·Medium 0건. 새 오류 글은 서버 이름·`command`·원인 글만 싣고 `args`·`secret_args`와 호출 인자는 싣지 않는다. 원인 글은 이 PR 전에도 `core/run.py`의 `_describe`가 `run_failed`에 썼다.
+- `bug-perf-review`: 유효 0, 보류 2, 오탐 2. 밀 주장 넷(adapters.md 문장, 어댑터 독스트링, 포트 독스트링, 새 테스트 둘)은 코드와 맞았고, 서브에이전트가 취소 시점을 0.05·0.3·0.6·1.0초로 바꿔 둘째 서버까지 연 채 돌려도 `ConnectionError`가 새지 않았다. `tests/adapters/test_mcp.py` 17 passed(41초).
+  - 보류(둔다): 여는 도중의 취소 테스트가 `move_on_after(0)`이라 띄운 뒤의 시점을 굳히지 않는다. 변이 표의 첫 변이가 `붙지 못했다: CancelledError`로 빨개 그 취소가 `_connecting`을 지난다는 것은 보였다. 시점을 굳히려면 타이밍에 기대는 테스트가 된다.
+  - 보류(둔다): 둘째 서버가 열리지 않는 테스트가 먼저 연 서버의 프로세스가 내려갔는지 보지 않는다. 서버 둘의 하트비트 장치를 새로 지어야 하고, 한 서버의 경우는 기존 하트비트 테스트가 덮는다.
