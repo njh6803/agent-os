@@ -1,0 +1,168 @@
+# 2026-10-21 (15) ticket-for-every-pr 티켓 01: 번호 도구가 harness 티켓 번호를 낸다
+
+브랜치 `feature/01-harness-ticket-numbers`, 워크트리 `.claude/worktrees/01-harness-ticket-numbers`. 티켓은 `.scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md`.
+
+> 사용자: "`.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md / 다음 작업: … 번호 도구가 harness 티켓 번호를 내주고 겹치면 알리고 옮긴다. 기능 ticket-for-every-pr의 첫 티켓이고 PR #339로 명세 검토와 티켓 일곱이 병합됐다 / 다음 단계: 구현 / 어디서: 새 세션. 나란히 여는 3 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 01-harness-ticket-numbers)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다 … 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래 / 읽을 것: … 나란히 여는 나머지 티켓은 .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md, .scratch/ticket-for-every-pr/issues/07-morning-report-harness-branches.md / 이어받을 상태: 없음 / 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다 / 이번 요청 범위: PR과 병합까지"
+
+## 체크아웃 정리
+
+`tidy-checkouts`가 루트를 `5040230c`에서 `303e8fb5`로 당겼다. 워크트리 `01-mcp-2-and-cli-interrupt`는 쉬는 세션의 프로세스만 쥐어 `end-holders`로 그 프로세스를 끈 뒤 워크트리와 브랜치 `feature/01-mcp-2-and-cli-interrupt`를 지웠다. 그 `web/node_modules`는 휴지통(`.tidy-trash/01-mcp-2-and-cli-interrupt~~web%2Fnode_modules`)에 남았다. 다른 체크아웃의 node.exe(39984, 34752)와 esbuild.exe(25568, 62520, 27856, 51652)가 그 안의 `esbuild.exe`를 올려 `empty-trash`가 1로 끝났다. 나머지 워크트리는 병합된 PR이 없거나(`06-hook-blocks-own-cards`, `07-morning-report-harness-branches` 등) 실행 중 세션의 프로세스가 쥐어 남겼다. 사람에게 넘길 것은 없었다.
+
+## 구현
+
+`tools/sibling_overlap.py`가 읽는 번호에 다섯째로 harness 티켓(`.scratch/harness/issues/NNN-<slug>.md`의 세 자리)을 더했다. 번호마다 stem(`NNN-<slug>`)을 들고, 같은 번호에 같은 stem이면 공유한 이력, 다른 stem이면 겹침이다.
+
+- **merge-base 자리.** 나머지 넷은 merge-base에서 자리가 비면 2로 끝나지만 티켓 자리는 비어도 대조를 잇는다. #335 전에 딴 브랜치의 merge-base에는 harness 폴더가 없다.
+- **다음 빈 번호.** "다음 빈 번호(형제 포함)" 줄 끝에 `티켓 NNN`이 붙는다. 어디에도 없으면 001이고, 있으면 가장 큰 번호 다음의 세 자리다. 지금 이 워크트리에서는 `티켓 002`다.
+- **누가 옮기나(`ours_moves_ticket`).** 다른 번호처럼 이 브랜치가 비켜 가되, 이 브랜치에 열린 PR이 있으면 옮기지 않는다. 둘 다 열린 PR이면 번호가 큰 쪽이 옮기고, 그쪽이 main에 병합된 티켓이면 이 브랜치가 옮긴다. 겹친 형제 가운데 하나라도 이 브랜치가 옮기라고 하면 새 티켓 전부를 옮긴다. 그쪽이 옮기는 겹침만 남으면 알리기만 하고 종료 코드에 넣지 않는다. 고칠 쪽의 대조가 이 브랜치를 열린 PR로 보고 1로 끝나기 때문이다.
+- **형제 워크트리의 PR.** 형제 워크트리는 HEAD가 열린 PR의 head와 같을 때만 그 PR의 것으로 안다. head 뒤에 커밋을 더한 형제 워크트리는 PR이 없는 형제로 읽혀, 이 브랜치에 열린 PR이 있으면 그쪽이 옮긴다고 알린다. 그 티켓이 그쪽 PR의 head에 없고 그쪽 PR 번호가 더 작으면, 그쪽 대조는 번호가 큰 이 브랜치가 옮긴다고 보아 둘 다 옮기지 않는 교착이 남는다. 그 티켓을 PR에 밀면 갈린다. 독스트링의 못 보는 것에 적고 시험으로 고정했다. 셀프 리뷰에서 형제 워크트리도 원격 브랜치 끝으로 가리게 바꿔 이 교착을 없앴다(아래 "반영").
+- **`--move`.** 티켓 파일 이름, 머리 줄(harness 티켓 파일에서만), stem 인용을 옮긴다. stem의 경계는 `A-Za-z0-9_-` 밖이라 한글 조사가 붙어도 맞고 하이픈이나 숫자가 이어지면 맞지 않는다. 인용 블록, merge-base·main에 글자 그대로 있는 줄, 워크트리 폴더 이름은 그대로 둔다. stem 없이 번호만 든 티켓 인용("티켓 002")은 옮기지 않고, 옮긴 줄에서 손으로 보라고 한다.
+- **브랜치 줄(`branch_lines`).** 지금 브랜치가 옮긴 티켓의 `chore/<stem>`이면 `git branch -m` 명령과 세션 제목을 바꾸라는 줄을 찍는다. 원격에도 있으면 새 이름의 푸시와 옛 원격 브랜치 지우기를, 열린 PR이 있으면 새 이름으로 PR을 다시 열고 옛 PR을 닫으라는 할 일을 찍는다. 도구는 브랜치를 바꾸지 않는다. 대조에서도 열린 PR이 있는 `chore/<stem>`이 옮겨야 하면 PR을 다시 열라는 줄을 낸다. stem이 아닌 브랜치(`feature/…`)는 이름이 그대로라 PR이 끊기지 않아 아무것도 찍지 않는다. 셀프 리뷰에서 이 함수를 셋으로 쪼갰다(아래 "반영").
+- **독스트링의 못 보는 것.** 기능 폴더(`.scratch/<기능>/issues/`)의 두 자리 번호, 지시문이 받아 두고 파일이 아직 없는 번호, 위의 교착, 번호만 든 인용을 적었다. 기능 폴더의 두 자리 번호가 형제와 같아도 겹침이 아니라는 시험을 두었다.
+- **KICKOFF.md 289행.** 대조 목록에 티켓 번호와 누가 옮기나를, `--move`에 티켓과 브랜치 명령을, 바꿀 곳에 경로 상수 다섯(`HARNESS_ISSUES`는 비어도 2로 끝나지 않아 티켓을 쓰지 않는 프로젝트는 그대로 둬도 된다)을 더했다.
+
+## 빨강을 먼저 본 것
+
+다섯째 번호를 더하기 전의 도구로 통합 시험 여섯이 단언에서 빨갰다(6 failed, 123.58초). merge-base에 harness 폴더가 없는 사례는 다음 빈 번호 줄에 `티켓 001`이 없어서, 열린 PR이 있는 이 브랜치의 사례는 "옮기지 않는다" 줄이 없어서 빨갰다. 출력이 "이 브랜치의 새 번호 없음"과 "번호 겹침 없음"이었다. 형제 워크트리·열린 PR·main이 이미 쓴 티켓과 겹치는 사례 셋은 출력을 메시지로 단 단언에서, `--move` 사례는 `assert False`에서 빨갰다. 그 넷은 남은 출력에 어느 단언인지가 없다. 순수 함수 시험과 구현 뒤에 더한 시험(형제 워크트리의 PR, 기능 폴더, stem이 아닌 브랜치, 브랜치 줄)은 아래 변이로 빨강을 봤다.
+
+## 변이
+
+`.scratch/harness/probes/sibling_overlap_mutations.toml`에 티켓 변이 스물여덟(151~178)을 더했고, 코드가 옮겨 가 원문이 맞지 않게 된 여섯(27~29·73·74·88)의 원문을 고쳤다. `--check`가 0으로 끝난 뒤 `--since origin/main`으로 돌렸다.
+
+- 첫 회차는 27~29의 기준선인 시험 파일 전체가 600초 제한을 넘겨 변이를 하나도 넣지 못했다. 진행 표시는 100%까지 갔다. 같은 PC에서 나란히 연 세션들이 돌던 때이고, 원인은 가르지 않았다.
+- 그 셋의 시험을 그 변이를 잡는 시험만 `-k`로 고르게 좁혀 다시 돌렸다. 기준선 열일곱 406초, 변이 서른넷 134초였고 서른셋이 기대대로였다.
+- 152는 빨갰지만 표지가 없어 어긋났다. 고른 시험 둘 가운데 앞의 것(형제 워크트리)이 먼저 빨개져 첫 실패에서 멈췄고, 표지로 고른 뒤의 것(열린 PR)이 돌지 않았다. `-k`를 표지의 시험 하나로 좁혀 152만 다시 돌렸고 표지까지 빨강이었다(기준선 4초, 변이 5초).
+
+변이 표 머리 주석과 프로브 README의 그 행에 적었다.
+
+## 검사 (셀프 리뷰 전)
+
+- `uv run ruff check .` 0, `uv run ruff format --check .` 0(898파일).
+- `uv run python tools/run_checks.py`: 인계로 멈췄다. 멈추기 전에 zizmor 4.6초, lint-imports 4.9초, check-instructions 5.1초, check-type-escapes 8.8초, pyright 43.0초, run-hooks 144.4초가 Passed였고, pytest와 web-verify는 결과가 없다. 일지와 변이 표·프로브 README를 고친 것은 러너가 도는 동안이었다.
+- 시험 파일 전체(`tests/tools/test_sibling_overlap.py`)는 이 세션에서 끝까지 돈 결과가 없다. 압축 전에 돈 실행은 ON_FAILURE 문구를 바꾼 단언 하나만 빨갰고(단언을 새 문구로 고쳤다), 그 뒤의 새 시험은 변이의 기준선으로 하나씩 초록이었다.
+
+## 인계
+
+`/code-review`를 부른 직후 인계 계기가 왔다(세션 컨텍스트 249,826 토큰, 경계 `셀프 리뷰 직전`). 이 세션은 그 단계를 밟지 않았다. 인계하지 않는 다섯 때에 들지 않는다. 계기를 낸 호출은 성공했고, 요청 범위는 PR과 병합까지이며, 지시문의 "이어받을 상태"는 `없음`이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `feature/01-harness-ticket-numbers`다.
+
+결정과 번복:
+
+- ruff의 불리언 위치 인자 규칙(FBT) 때문에 `ours_moves_ticket`의 `merged`와 `branch_lines`의 `pushed`·`own_pull`을 키워드 전용으로 바꾸고 시험의 호출도 고쳤다.
+- 도구의 ON_FAILURE 문구에 harness 티켓을 더해 그 단언을 새 문구로 고쳤다.
+- 변이 표의 27~29는 시험 파일 전체를 기준선으로 삼다가 600초를 넘겨, 그 변이를 잡는 시험만 `-k`로 고르게 좁혔다(위 "변이"). 152의 `-k`도 표지의 시험 하나로 좁혔다.
+- 이 일지의 교착 문단을 처음에 "head 뒤에 있으면"으로 거꾸로 썼다가 도구 독스트링("head 뒤에 커밋을 더한 워크트리")에 맞춰 고쳤다. "빨강을 먼저 본 것"은 처음에 단언의 종류를 어림으로 적었다가 남은 출력에 있는 것만 적게 고쳤다.
+
+새 세션이 할 것은 차례로 셀프 리뷰(`/code-review`, 기점은 origin/main의 merge-base `303e8fb5`. 그 사이 origin/main은 `14efe41d`로 움직였고 이 브랜치가 고친 파일과 겹치지 않는다)와 반영, 러너 다시 돌리기(`uv run python tools/run_checks.py`), 티켓 01의 체크박스와 `Status: done`(아직 `in-progress`이고 체크박스는 모두 `[ ]`다), 이 일지의 셀프 리뷰·검사 절 마무리, 커밋, origin/main 합치기, PR 직전 리뷰, PR, 봇 회차, 병합, 일지 `## 다음`과 next-session이다. 커밋하지 않은 변경은 이 워크트리에 있다(`git status`). 셀프 리뷰 브리프에는 이 일지의 "구현"이 적은 판정(누가 옮기나, 교착, stem 경계, 브랜치 줄)을 밀 주장으로 싣는다.
+
+지시문:
+
+다음 작업: .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md. 번호 도구가 harness 티켓 번호를 내주고 겹치면 알리고 옮긴다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md
+브랜치: feature/01-harness-ticket-numbers
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-15-harness-ticket-numbers.md(그 워크트리의 커밋하지 않은 파일)의 "인계"와 "구현"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`)부터 한다. 구현, 시험, 변이 서른넷(모두 기대대로), ruff 둘은 마쳤고, 러너는 인계로 멈춰 pytest와 web의 결과가 없다. 티켓 01은 아직 `in-progress`다. docs/journal/2026-10-21-15-harness-ticket-numbers.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+러너(`run_checks.py`)는 TaskStop으로 멈췄다. 잠금 풀기는 오류 없이 끝났다.
+
+open-session을 부른다 2026-10-21T13:06:02Z
+
+## 셀프 리뷰
+
+새 세션(인계를 받은 세션)이 `/code-review`를 돌렸다. base `303e8fb5`, 바뀐 파일 여섯, 커밋 0, 미추적 하나(이 일지). 표준 축은 sonnet·high, 명세 축은 본 세션 모델이다.
+
+표준 축:
+
+- **변이 표지(하드, `.claude/rules/probes.md` 첫 항목).** 새 변이 스물여덟의 `expect_output`이 모두 시험 함수 이름이라, 그 시험의 어느 단언이 빨개져도 맞는다. 152의 어긋남이 이 갈래였다. → 고친다. 고른 단언이 실패할 때만 나오는 문구로 바꾸고 변이를 손으로 넣어 출력을 본다.
+- **불리언 플래그(`CODING_STANDARDS.md`).** `ours_moves_ticket`의 `merged`, `branch_lines`의 `pushed`·`own_pull`을 FBT를 피하려고 키워드 전용으로 옮긴 것은 그 줄이 말하는 우회다. → 고친다. main 갈래는 부르는 쪽(`judge`)이 가르고, 브랜치 줄은 이름 바꾸기와 원격 줄로 쪼개며, `Survey.pushed`는 원격 끝(`own_head`)으로 둔다.
+- **PR 다시 열기의 조건.** 독스트링이 "열린 PR 이 있는데 옮기는 이 두 갈래에서는"이라고만 적어, 코드가 `chore/<stem>`일 때만 낸다는 조건이 빠졌다. → 고친다.
+- **교착 시험이 한쪽만 고정한다.** → 아래 명세 축의 교착을 고치며 양쪽을 돌리는 시험을 둔다.
+- **"티켓 폴더의 경로가 어긋나도 조용히 겹침 없음이 된다"에 시험이 없다(`.claude/rules/tools.md` 못 보는 것).** → 고친다.
+- **냄새.** `chore/{stem}` 판정이 `judge`와 `branch_lines`에 같은 모양으로 있다(Duplicated Code) → 한 함수로 모은다. `render`의 겹침 줄 f-string이 `found`와 `yielded`에 같다 → 모은다. `branch`·`own_pull`·`pushed`가 함께 다닌다(Data Clumps) → 위 쪼개기로 줄인다. stem을 `[3:]`·`partition("-")`로 자른다(Primitive Obsession) → 남긴다. 세 자리 고정이라 판단 항목만이다.
+- **잔존.** `tools/run_hooks.py:863`의 "네 자리 가운데 하나라도 비면 2로 끝난다"는 지금도 참이다 → 남긴다. 일지의 "123.58초"는 pytest가 찍은 시간을 옮긴 것이고 측정으로 적지 않았다 → 남긴다.
+
+명세 축:
+
+- 빠진 것과 범위 넘침은 없다. `branch_lines`의 PR 다시 열기는 "새 이름의 브랜치로 PR을 다시 열라는 할 일"에 든다.
+- **main 을 들인 뒤의 티켓 겹침(Major 후보).** `chore/001-alpha`가 main 을 merge 커밋으로 들이면 main 에 병합된 `001-zulu`와 한 트리에 같은 번호가 둘인데, 대조는 "새 번호 없음, 번호 겹침 없음, 0"이다(명세 축이 임시 저장소로 봤다). 일지·ADR 은 같은 자리를 `tests/test_journal_names.py`·`tools/check_adr_pointers.py`가 보지만 티켓에는 없다. → 고친다. 일지의 선례대로 저장소 상태 시험(같은 번호의 harness 티켓이 둘이면 빨강)을 두고, 독스트링의 그 항목에 티켓을 더해 시험으로 고정한다.
+- **교착(Minor).** 이 브랜치의 열린 PR 은 원격의 같은 이름 브랜치 끝으로, 형제 워크트리의 열린 PR 은 HEAD 로 가려 규칙이 다르다. 명세 축이 양쪽을 돌려 둘 다 0, 둘 다 "옮기지 않는다"를 봤다. → 고친다. 형제 워크트리도 그 브랜치의 원격 끝으로 가린다. 원격에 같은 이름의 브랜치가 없는 워크트리만 HEAD 로 가리고, 그 갈래의 교착은 못 보는 것에 좁혀 남긴다.
+- **비킬 때의 글(Nit).** stem 이 아닌 브랜치에서도 "옮기면 티켓의 stem 인 브랜치 이름이 바뀌어"가 뜬다. → 고친다. 규약의 까닭으로 적는다.
+- **그쪽이 옮길 때의 종료 0(Minor).** What to build 는 겹치면 1로 끝난다고 하고 비키는 갈래의 종료 코드는 정하지 않았다. → 결정으로 티켓 메모에 남긴다. 고칠 것이 이 브랜치에 없고, 1로 끝내면 `CLAUDE.md`의 커밋 전 규약("1로 끝나면 출력대로 고친다")이 이 브랜치에 고치라고 하는데 그쪽 대조는 이 브랜치를 열린 PR 로 보고 1을 낸다. 처음에 "커밋이 막힌다"로 적었다가 고쳤다. 번호 도구는 pre-commit 에 없다.
+- **이 일지의 거짓 문장.** "빨강을 먼저 본 것"이 기능 폴더 시험도 변이로 빨강을 봤다고 적었는데, 그 시험을 기대로 든 변이가 없다. → 변이를 더해 빨강을 보고 그 문장을 맞춘다.
+- **"지시문이 받아 두고 아직 파일이 없는 티켓 번호"에 시험이 없다.** → 고친다.
+
+본 세션이 더 찾은 것: `--move`가 티켓 stem 을 옮길 때 워크트리 폴더 경로의 인용(`.claude/worktrees/001-ours`)까지 바꾼다(`rewrite`를 불러 봤다). 폴더 이름은 그대로 두므로 옮긴 뒤의 인용이 없는 폴더를 가리킨다. → 고친다. `worktrees/`·`worktrees\` 뒤의 stem 은 두고 시험으로 고정한다.
+
+### 반영
+
+고친 것:
+
+- **불리언 플래그.** `ours_moves_ticket(own_pull, their_pull)`만 남기고 main 갈래는 `judge`가 `sibling is result.main`으로 가른다. `branch_lines`를 `renamed_branch`(옮길 티켓의 `chore/` 브랜치인가)·`rename_lines`·`remote_lines`로 쪼개고, `Survey.pushed`를 `own_head`(원격의 같은 이름 브랜치 끝, 없으면 `None`)로 바꿨다. 이 쪼개기로 `chore/` 판정의 중복과 Data Clumps 도 함께 풀렸다. 겹침 줄의 f-string 은 `_clash_lines`로 모았다.
+- **교착.** 열린 PR 을 이 브랜치와 형제 워크트리 모두 `branch_pull`(head 가 원격의 같은 이름 브랜치 끝과 같은 PR, 여럿이면 작은 번호)로 가린다. `read_remote`가 `refs/heads/*`를 모두 읽고(`remote_branches`), `worktrees()`가 브랜치 이름을 준다(`Worktree`). 명세 축이 돌린 꼴(형제가 PR 의 head 뒤에 커밋을 더했다)을 양쪽에서 돌리는 시험과, 원격에 브랜치가 없는 형제 워크트리를 양쪽에서 돌리는 시험을 두었다.
+- **main 을 들인 뒤의 겹침.** `tests/test_harness_ticket_names.py`(읽은 파일이 있다, 이 저장소에 겹침이 없다, 겹침을 잡는다)를 두고, 독스트링 못 보는 것의 그 항목에 티켓을 더해 main 을 merge 커밋으로 들이기 전과 뒤를 돌리는 시험으로 고정했다.
+- **못 보는 것의 시험.** 경로가 어긋난 harness 폴더(조용히 겹침 없음), 지시문이 받아 두고 파일이 없는 번호(다음 빈 번호로 다시 나온다), 원격에 브랜치가 없는 형제 워크트리를 시험으로 고정했다.
+- **글.** PR 다시 열기의 조건(`chore/` 브랜치일 때만)을 독스트링과 KICKOFF.md 289행에 적었다. 비킬 때의 글을 규약의 까닭("티켓의 브랜치(`chore/<stem>`)는 옮기면 이름이 바뀌어 PR 이 끊기므로")으로 바꿨다.
+- **워크트리 폴더 경로.** stem 인용 꼴의 앞에 `worktrees[/\\]` 뒤가 아니라는 조건을 두고 시험으로 고정했다. 원격에 없는 `chore/` 브랜치에서 `--move`가 푸시·지우기 명령을 찍지 않는 시험도 더했다.
+- **이 일지.** 위 "그쪽이 옮길 때의 종료 0"의 "커밋이 막힌다"를 고쳤다. 번호 도구는 pre-commit 에 없다. 결정은 티켓 01의 "구현에서 정한 것"에 적었다.
+
+남긴 것: stem 을 `[3:]`·`partition("-")`로 자르는 것(판단 항목, 세 자리 고정), `tools/run_hooks.py:863`(지금도 참), "123.58초"(pytest 가 찍은 시간을 옮겼다).
+
+PR 직전 리뷰에 밀 새 사실 문장(원문):
+
+- 독스트링 `--move` 문단: "워크트리 폴더 이름도 그대로 둔다. 그래서 그 폴더를 가리킨 인용(`worktrees/`·`worktrees\\` 바로 뒤의 stem)도 옮기지 않는다. 옮기면 없는 폴더를 가리킨다(셀프 리뷰에서 `rewrite` 를 불러 봤다)."
+- 독스트링 누가 옮기나 문단: "열린 PR 이 있는데 옮기는 이 두 갈래에서 지금 브랜치가 옮길 티켓의 `chore/` 브랜치면, 새 이름의 브랜치로 PR 을 다시 열고 옛 PR 을 닫으라는 할 일을 낸다. 다른 이름의 브랜치는 이름이 그대로라 PR 이 끊기지 않는다."
+- 독스트링 새 문단: "열린 PR 은 이 브랜치와 형제 워크트리를 같은 규칙으로 가린다. head 가 원격의 같은 이름 브랜치 끝과 같은 PR 이 그 브랜치의 PR 이다. 두 대조가 같은 규칙으로 가려야 겹친 두 쪽이 같은 쪽을 옮기라고 한다. 형제 워크트리를 HEAD 로 가린 첫 판에서는, head 뒤에 커밋을 더한 형제와 이 브랜치가 서로 상대가 옮긴다고 알려 둘 다 옮기지 않았다(셀프 리뷰 명세 축이 임시 저장소로 양쪽을 돌려 봤다)."
+- 못 보는 것: "harness 티켓은 `tests/test_harness_ticket_names.py`가 본다. 티켓은 main 에 병합된 것과 겹치면 열린 PR 이 있어도 이 브랜치가 옮기는데, main 을 merge 커밋으로 들인 뒤에는 그 겹침도 보지 못한다(셀프 리뷰 명세 축)."
+- 못 보는 것: "원격에 같은 이름의 브랜치가 없는 형제 워크트리(분리 HEAD 이거나 이름을 바꾼 브랜치)의 열린 PR. HEAD 가 그 PR 의 head 와 같아도 열린 PR 이 없는 것으로 본다. 그 워크트리의 대조도 같은 규칙으로 자기에게 열린 PR 이 없다고 보아, 이 브랜치에 열린 PR 이 있으면 그쪽이 옮기고 그쪽도 그렇게 안다."
+- 비킬 때의 글: "티켓의 브랜치(`chore/<stem>`)는 옮기면 이름이 바뀌어 PR 이 끊기므로, 열린 PR 이 없거나 PR 번호가 더 큰 그쪽이 옮긴다(종료 코드와 무관)"
+- `tests/test_harness_ticket_names.py` 독스트링: "브랜치가 main 을 merge 커밋으로 들인 뒤에는 main 에 병합된 같은 번호의 티켓이 merge-base 에 들어 "새로" 매긴 번호가 아니라 겹침으로 보지 않는다(셀프 리뷰 명세 축이 임시 저장소로 봤다). 슬러그가 달라 git 충돌도 나지 않는다. CI 는 PR 의 병합 커밋에서 돌고 main 보호가 strict 라, 나중에 병합되는 PR 은 이 테스트에 걸린다." main 보호의 strict 는 `gh api repos/{owner}/{repo}/branches/main/protection`의 `required_status_checks.strict`가 `true`인 것을 이 세션에서 봤다.
+- 티켓 01 "구현에서 정한 것"의 세 줄과 KICKOFF.md 289행의 조건.
+
+### 변이 표 (반영 중에 끊었다)
+
+- 코드가 옮겨 가 원문이 맞지 않던 열하나(닫힌 PR 읽기 둘, 158·162·164·166·173·174·176~178)의 원문을 고치고, 새 코드와 새 시험을 겨누는 열둘(179~190. 형제 워크트리를 HEAD 로 가리기, 원격 브랜치를 이 브랜치 것만 읽기, 워크트리의 브랜치, 브랜치가 아닌 ref, 큰 PR 번호, 워크트리 폴더 경로의 stem, 기능 폴더의 두 자리 티켓, main 을 들이기 전의 비키기, 경로가 어긋난 harness 폴더, 000 으로 내기, 티켓 이름 시험 둘)을 더했다. `--check`는 변이 190 모두 원문이 한 번씩 있어 0이다. 아직 돌리지 않았다.
+- 표지(`expect_output`)는 151~190 모두 아직 시험 함수 이름이다. 고르려고 일회용 스크래치 스크립트(변이를 넣고 `pytest -x --tb=short`를 돌려 전체 출력을 남기고 `finally`에서 바이트를 되쓴다)로 151~190을 돌렸다. 151~171은 출력을 얻었고, 172는 시험의 `git clone`이 실패한 ERROR, 173~190은 프로세스가 뜨지 못한 종료 3221225794로 끝났다. 한도로 그 셸을 `TaskStop`한 때와 겹친다. 멈춘 뒤 남은 프로세스는 없었고 `--check`가 0이라 변이는 남지 않았다.
+- 151~171에서 본 실패 문구(표지 후보. 그 변이의 출력에서만 봤고, 다른 단언이 빨개질 때 없는지는 보지 않았다): 151 `Right contains one more item: ('티켓', '002', '002-ours.md', '002-theirs.md')`, 153 `assert '009' == '010'`, 154 `assert 2 == 0`, 155 `assert '이 브랜치의 새 번호: 티켓 001\n' in`, 156 `Right contains one more item: Move(kind='티켓', old='003-next', new='004-next')`, 161 `'번호 겹침 없음' is contained here`, 165 `'옮길 번호' is contained here`, 166 `'다시 열고' is contained here`, 167 `+ next 다. 003-ours-ext`, 168 `+ urs.md, 002-ours를 본다`, 169 `+ # 002: 이쪽`, 171 `assert '# 999: 이쪽\n' == '# 002: 이쪽\n'`. 170은 `startswith` 단언의 `where False` 줄이고 객체 주소가 섞여 그 줄 전체는 표지가 되지 못한다. 152·157~160·162~164는 출력을 메시지로 단 단언이라 `E` 줄에 출력만 실려 어느 단언인지 보이지 않는다. 158·159·163·164의 출력에는 비키는 글이, 157·160·162에는 `번호 겹침 1:`이 실렸다.
+
+## 검사 (셀프 리뷰 반영 중)
+
+- `tests/tools/test_sibling_overlap.py`와 `tests/test_harness_ticket_names.py`: 120 passed(182.00초). 끊기 전 마지막 코드 수정(`_citation_pattern` 독스트링 한 줄) 앞이다.
+- 바꾼 파이썬 셋의 `ruff check`와 `ruff format --check`: 0.
+- 러너(`run_checks.py`)는 따로 돌리지 않았다. 첫 커밋 시도의 pre-commit 에서 pyright 만 빨갰다(`test_브랜치_줄은_…`이 `renamed_branch`의 반환을 `*names`로 풀어 `None`일 수 있다는 오류 다섯). 이름 둘을 따로 묶게 고치고 그 시험과 pyright(바꾼 파일 셋)가 0이었다. 같은 시도에서 zizmor·lint-imports·check-instructions·check-type-escapes·run-hooks·pytest(218.1초)·web-verify(224.6초)와 ruff 둘, 변이 표 원문 확인은 Passed 였다. 다시 친 커밋의 결과는 아래 "인계".
+
+## 끊음
+
+주간 한도로 다른 세션이 끊으라고 알려 왔다.
+
+> 다른 세션(주간한도 95% 초과 시 세션 전환): "주간 한도가 95%를 넘어 다른 계정으로 작업을 넘겨야 합니다. 새 작업이나 새 단계를 시작하지 말고 지금 하던 일을 안전한 지점까지만 마무리하세요. 커밋하지 않은 변경은 커밋하고 반드시 푸시한 뒤에(…) next-session 스킬로 인계 지시문을 내고 멈추세요. … 이 계정에서는 새 세션을 열지 마세요(open-session을 부르지 말고, 지시문만 최종 답변에 적어 사람이 다른 계정에서 붙여 넣게 하세요)."
+
+표지 고르기를 멈추고, 반영 중인 상태를 커밋해 푸시한다. 티켓 01은 `in-progress`이고 체크박스는 모두 `[ ]`다. 아래 "다음"을 쓰자 일지 훅이 retro 를 돌리라고 했지만, 단계를 닫지 않고 반영 도중에 끊는 것이라 retro 의 계기("단계를 닫을 때")가 아니어서 돌리지 않았다. 단계를 닫는 세션이 돈다.
+
+## 다음
+
+반영을 마저 하고 PR 과 병합까지 간다. 차례:
+
+1. 변이 표지. 151~190 의 `expect_output`을 고른 단언이 실패할 때만 나오는 문구로 바꾼다(`.claude/rules/probes.md` 첫 항목). 위 "변이 표"의 후보는 151~171 의 출력에서 본 것이고, 172~190 은 출력부터 다시 모은다. 출력을 메시지로 단 단언(152·157~160·162~164)은 단언에 문구가 다른 메시지를 달거나 출력의 줄 가운데 그 단언만 보는 줄을 고른다.
+2. 고른 표를 `--since origin/main`으로 돌리고, 시간을 표 머리 주석과 프로브 README 의 그 행에 적는다. README 행에는 셀프 리뷰로 고친 열하나와 더한 열둘을 더한다. 이 브랜치는 시험을 고치고 지웠으므로 PR 직전 리뷰를 반영해 커밋한 뒤 전체도 한 번 돈다(`tools/mutate.py` 독스트링 "언제 전체를 돌리나").
+3. 러너(`uv run python tools/run_checks.py`, 백그라운드), 티켓 01 의 체크박스와 `Status: done`, 이 일지의 검사 절 마무리, 커밋, origin/main 합치기(`sync_with_base_branch`), PR 직전 리뷰(위 "반영"의 밀 주장을 브리프에 싣는다), PR, 봇 회차, 병합, next-session.
+
+## 인계 (커밋 뒤)
+
+커밋을 친 뒤 인계 계기가 왔다(세션 컨텍스트 274,707 토큰, 경계 `커밋 뒤`). 위 "끊음"의 요청과 같은 쪽이라 넘긴다. 앞 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니다. 요청대로 이 계정에서는 `open-session`을 부르지 않고, 지시문은 사람이 다른 계정에서 붙여 넣는다. 제목은 `feature/01-harness-ticket-numbers (인계함)`으로 바꾸고 워크트리 잠금을 푼다.
+
+지시문:
+
+다음 작업: .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md. 번호 도구가 harness 티켓 번호를 내주고 겹치면 알리고 옮긴다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md
+브랜치: feature/01-harness-ticket-numbers
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-21-15-harness-ticket-numbers.md의 "셀프 리뷰"(그 아래 "반영"과 "변이 표")와 "다음"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영 도중 주간 한도로 끊어, 반영 중인 상태를 커밋하고 푸시했다(PR 없음). 남은 단계는 일지 "다음"의 차례이고 변이 표지 고르기(151~190, 172~190은 출력부터 다시 모은다)부터 한다. 다른 계정으로 넘기려고 이 세션은 새 세션을 열지 않았다. docs/journal/2026-10-21-15-harness-ticket-numbers.md
+확인할 선행 조건: 새 세션이 이 PC가 아니면 그 워크트리가 없다. 그때는 origin의 feature/01-harness-ticket-numbers를 받아 잇는다
+이번 요청 범위: PR과 병합까지
