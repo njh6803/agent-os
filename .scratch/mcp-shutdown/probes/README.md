@@ -1,6 +1,6 @@
 # mcp-shutdown 프로브
 
-명세·ADR이 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 `.scratch/mcp-shutdown/spec.md`와 ADR 0034의 2026-10-17 이력이다.
+명세·ADR이 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 `.scratch/mcp-shutdown/spec.md`, 그 티켓(`.scratch/mcp-shutdown/issues/`), ADR 0034의 2026-10-17과 2026-10-21 이력이다.
 
 ## 돌리는 법
 
@@ -16,7 +16,8 @@ uv pip install --python <환경>/env-2.3.0/Scripts/python.exe mcp==2.3.0 anyio==
 ```sh
 PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/close_paths.py
 PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/close_paths.py --python venv cancel exit_child_normal
-PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/close_paths.py --cli-handler force cli_ctrl_c cli_ctrl_c_twice
+PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/close_paths.py --cli-handler force cli_ctrl_c cli_ctrl_c_twice cli_ctrl_c_closing
+PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/close_paths.py --cli-handler scope cli_ctrl_c cli_ctrl_c_twice cli_ctrl_c_closing
 PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/serve_shutdown.py
 PYTHONUTF8=1 <환경>/env-2.3.0/Scripts/python.exe .scratch/mcp-shutdown/probes/everything.py
 PYTHONUTF8=1 uv run python .scratch/mcp-shutdown/probes/full_stack.py
@@ -26,7 +27,8 @@ Linux는 Docker 컨테이너에서 돈다. `linux.sh`가 컨테이너 안에 두
 
 ```sh
 MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-shutdown/probes:/probes:ro" python:3.12.10-slim-bookworm sh /probes/linux.sh close_paths
-MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-shutdown/probes:/probes:ro" python:3.12.10-slim-bookworm sh /probes/linux.sh close_paths --cli-handler force cli_ctrl_c cli_ctrl_c_twice
+MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-shutdown/probes:/probes:ro" python:3.12.10-slim-bookworm sh /probes/linux.sh close_paths --cli-handler force cli_ctrl_c cli_ctrl_c_twice cli_ctrl_c_closing
+MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-shutdown/probes:/probes:ro" python:3.12.10-slim-bookworm sh /probes/linux.sh close_paths --cli-handler scope cli_ctrl_c cli_ctrl_c_twice cli_ctrl_c_closing
 MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>/.scratch/mcp-shutdown/probes:/probes:ro" python:3.12.10-slim-bookworm sh /probes/linux.sh serve_shutdown
 MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" python:3.12.10-slim-bookworm sh /repo/.scratch/mcp-shutdown/probes/linux_full_stack.sh
 ```
@@ -43,12 +45,50 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" -w /r
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
-| `close_paths.py`(가짜 프로세스 `fakes.py`, 런처 시제품 `launcher.py`, Linux 실행 `linux.sh`) | mcp의 `stdio_client`와 `ClientSession`을 직접 열어 닫는 길마다 서버와 그 자식이 내려가는지와 닫는 데 걸린 시간. 사례는 도구 호출 도중의 기한(`cancel`), 정상 닫기(`stay_normal`), 자식을 남기는 서버(`exit_child_normal`), 세션 안의 예외(`raise_inside`), 다른 태스크에서 닫아 닫기 자체가 예외로 끝남(`close_fails`), SIGTERM을 무시하는 서버(`sigterm_ignored_cancel`, POSIX), 없는 명령(`missing_command`), CLI처럼 `asyncio.run`으로 도는 자식의 Ctrl+C 한 번(`cli_ctrl_c`)과 닫는 도중의 둘째(`cli_ctrl_c_twice`, 10초 뒤에도 살아 있으면 셋째)와 그 자식의 종료 코드. `--cli-handler force`는 두 CLI 사례를 명세가 정한 처리기의 시제품(`_run_with_force_exit`)으로 돈다. 하트비트 파일이 0.6초 사이에 자랐는지로 산 것을 가른다. 1.30.0이 양성 대조다(서버가 남는다). 표지는 독스트링 | `spec.md`의 "닫는 데 드는 시간", "서버를 여는 실패", "경계를 넘는 예외", "CLI의 Ctrl+C", "결말 뒤 닫기의 예외", Testing Decisions. ADR 0034의 2026-10-17 이력 | 위 명령. 사례 하나에 5~15초, 전부 1~2분 | mcp 1.30.0·2.3.0, anyio 4.15.1, Python 3.12.10. Windows 10(이 PC)과 Docker의 Debian bookworm(WSL2 커널 6.18), 2026-10-17 |
+| `close_paths.py`(가짜 프로세스 `fakes.py`, 런처 시제품 `launcher.py`, Linux 실행 `linux.sh`) | mcp의 `stdio_client`와 `ClientSession`을 직접 열어 닫는 길마다 서버와 그 자식이 내려가는지와 닫는 데 걸린 시간. 사례는 도구 호출 도중의 기한(`cancel`), 정상 닫기(`stay_normal`), 자식을 남기는 서버(`exit_child_normal`), 세션 안의 예외(`raise_inside`), 다른 태스크에서 닫아 닫기 자체가 예외로 끝남(`close_fails`), SIGTERM을 무시하는 서버(`sigterm_ignored_cancel`, POSIX), 없는 명령(`missing_command`), CLI처럼 `asyncio.run`으로 도는 자식의 Ctrl+C 한 번(`cli_ctrl_c`)과 닫는 도중의 둘째(`cli_ctrl_c_twice`, 10초 뒤에도 살아 있으면 셋째)와 닫기를 시작한 뒤의 첫 Ctrl+C(`cli_ctrl_c_closing`, 10초 뒤에도 살아 있으면 둘째)와 그 자식의 종료 코드. `--cli-handler force`는 CLI 사례를 2026-10-17 처리기의 시제품(`_run_with_force_exit`, 첫째가 주 태스크의 네이티브 취소)으로, `scope`는 2026-10-21 처리기의 시제품(`_run_with_scope_cancel`, 첫째가 주 코루틴을 감싼 anyio 취소 범위의 취소)으로 돈다. 하트비트 파일이 0.6초 사이에 자랐는지로 산 것을 가른다. 1.30.0이 양성 대조다(서버가 남는다). 표지는 독스트링 | `spec.md`의 "닫는 데 드는 시간", "서버를 여는 실패", "경계를 넘는 예외", "CLI의 Ctrl+C", "결말 뒤 닫기의 예외", Testing Decisions. ADR 0034의 2026-10-17과 2026-10-21 이력. 티켓 01의 처리기 테스트 | 위 명령. 사례 하나에 5~15초(`cli_ctrl_c_closing`의 `force`는 약 15초), 전부 1~2분 | mcp 1.30.0·2.3.0, anyio 4.15.1, Python 3.12.10. Windows 10(이 PC)과 Docker의 Debian bookworm(WSL2 커널 6.18), 2026-10-17. CLI 사례 셋은 2026-10-21(Windows는 2.3.0만) |
 | `serve_shutdown.py`(같은 `fakes.py`·`launcher.py`·`linux.sh`) | serve처럼 uvicorn(`timeout_graceful_shutdown=5`)으로 띄운 앱의 수명(`Runs.lifespan`과 같은 모양)이 실행 하나(입력이 닫혀도 끝나지 않는 서버)를 쥔 채 멈출 때, 서버가 내려가는지와 신호에서 수명 닫기·실행 끝·프로세스 끝까지의 시간. 사례는 신호 하나(`graceful`), SIGINT 둘(`force`, POSIX), 수명 닫기 도중의 셋째(`force_then_interrupt`, POSIX), 강제 종료(`sigkill`) | `spec.md`의 "serve 종료", "Linux 런처"의 끄는 때. ADR 0034의 2026-10-17 이력 | 위 명령. 사례 하나에 10~20초 | 위와 같고 uvicorn 0.53.0, starlette 1.6.0 |
 | `everything.py` | 실제 `npx`의 everything(`plugins/mcp/everything`과 같은 명령)으로 도구 호출 도중의 기한과 정상 닫기 뒤 자손 프로세스(번호·만든 시각·명령줄)가 남는지. 이벤트 루프를 살려 둔 채 1초·4초·`gc.collect()` 뒤에 보고, 루프를 닫은 뒤에 한 번 더 본다. Windows만 | `spec.md`의 Problem Statement, ADR 0034의 "검증"(재현 프로브) | Node와 npx, 네트워크(처음 받을 때). 사례 하나에 15~25초 | 위 판과 Node 24.19.0, npx 11.17.0, `@modelcontextprotocol/server-everything` 1.0.0(npx 캐시의 package.json) |
 | `full_stack.py`(시제품 `prototype/`, Linux 실행 `linux_full_stack.sh`) | 저장소 사본의 의존성을 `mcp>=2.3,<3`으로 바꾸고 시제품(어댑터, 런처, 픽스처 서버, 닫기 테스트의 가짜 프로세스, 쪽 나눔 가짜 서버, CLI 처리기, 어댑터와 처리기의 테스트)을 얹은 뒤 시제품 파일의 ruff 검사와 포맷, pyright strict, 타입 우회 검사, lint-imports, `tests/adapters`·`tests/core`·`tests/channel`이 지나는지와 두 테스트 파일의 시간. 사본에서 `write_failure.py --expect closed`를, POSIX에서는 `stale_parent.py --expect refused`도 돈다. 대조군(양성 대조)은 두 OS에서 처리기를 `asyncio.run` 그대로로 바꾼 사본과 어댑터가 겉봉을 벗기지 않는 사본(여기서는 `write_failure.py --expect escaped`), POSIX에서 런처를 뺀 사본과 부모 감시를 뺀 사본(여기서는 `stale_parent.py --expect spawned`)이다. 기대한 테스트만 기대한 까닭(실패 요약 줄의 문구)으로 빨간지 본다. 어긋남이 없으면 만든 임시 폴더를 지운다 | `spec.md`의 "경계를 넘는 예외", "소비 지점까지 잰 것", Testing Decisions의 "빨강을 먼저 본다"와 "시간" | 위 명령. `--source <트리>`로 다른 커밋의 트리를 줄 수 있다(`git archive <커밋> \| tar -x -C <트리>`로 푼 것. Linux는 그 트리를 `/src`에 붙이고 `linux_full_stack.sh /src`). 패키지를 받고 테스트를 돌려 Windows 8~14분(부하에 따라), Linux 8~10분 | mcp 2.3.0, mcp-types 2.3.0, anyio 4.15.1, pydantic 2.13.5, pyright 1.1.414, ruff 0.16.8, 저장소 `83f09401`(앞선 회차는 `30949cfc`, `aa93cf7b`, `8a2163eb`) |
 | `stale_parent.py` | POSIX 런처 시제품이, 자기를 띄운 프로세스가 런처가 뜨기 전에 이미 끝났으면 서버를 띄우지 않는지. 중간 프로세스가 갈라 낸 자식(`fork`)이 새 세션을 열고 중간 프로세스의 번호를 넘기며 런처로 바뀐다(`exec`). 중간 프로세스가 곧바로 끝나고 자식은 부모가 바뀐 것을 본 뒤에 바뀌는 `died`와, 중간 프로세스가 자식을 기다리는 `alive`(양성 대조: 런처가 서버를 띄우고 그룹을 SIGKILL로 꺼 -9)를 세 회차씩 돈다. `--expect refused`는 런처의 거부 문구("이미 끝나")가 있고 서버의 표지 파일이 없는 것, `--expect spawned`(부모와 견주는 두 자리를 지운 런처)는 서버의 표지가 생기는 것이다. 우두머리가 아니라서 띄우지 않은 것과는 런처의 문구로 가른다. 표지는 독스트링 | `spec.md`의 "Linux 런처"(견주는 번호), Testing Decisions의 "모듈" | `full_stack.py`가 Linux 사본에서 돈다. 홀로는 위 명령. 10초 안팎 | Python 3.12.10, Docker의 Debian bookworm. 시제품은 위 `full_stack.py`의 판 |
 | `write_failure.py` | core `run()`에 진짜 MCP 어댑터를 물려, 연결이 열린 채 트레이스 쓰기가 실패한 실행(둘째 쓰기 `write_2`, 셋째 쓰기 `write_3`), 에이전트가 예외를 낸 실행(`raise`), 실패하는 도구를 부른 에이전트가 런타임의 `ToolError`를 잡지 않은 실행(`tool_error`)이 어떻게 끝나는지. 트레이스의 기록, `run()`이 낸 이벤트, `run_failed`의 글과 원인, `run()` 밖으로 나온 예외를 찍는다. 지금 폴더의 트리를 쓰므로 저장소에서 돌면 지금 판을, `full_stack.py`의 사본에서 돌면 시제품을 잰다. 표지(도구가 불렸고 실패시키려던 차례에 그 이벤트의 쓰기를 시도했다)와 판정(글, 원인, 겉봉 안의 `GeneratorExit`)은 독스트링 | `spec.md`의 Solution, 사용자 스토리 11, "경계를 넘는 예외" | 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/mcp-shutdown/probes/write_failure.py --expect escaped`. 지금 판은 그룹을 올려 `escaped`가 기대다. 10초 안팎 | 지금 판은 mcp 1.30.0, langchain-mcp-adapters 0.3.2, 저장소 `30949cfc`, Windows(이 PC). 시제품은 위 `full_stack.py`의 판 |
+
+## 2026-10-21 결과 — 명세 검토 뒤의 CLI 사례
+
+티켓을 나누기 전의 명세 검토(spec-reviewer)가, 서버를 닫는 2초 사이에 온 첫 Ctrl+C가 CLI를 끝내지 못한다고 짚었다. 검토는 저장소 밖 임시 스크립트로 손으로 봤고, 이 회차는 같은 상황을 `close_paths.py`에 사례 `cli_ctrl_c_closing`과 처리기 `--cli-handler scope`로 더해 다시 쟀다. 세 CLI 사례를 Windows에서는 mcp 2.3.0으로 세 처리기(`asyncio.run` 그대로, `force`, `scope`)에, Linux에서는 `linux.sh`의 네 갈래로 두 처리기(`force`, `scope`)에 돌렸다. Windows의 1.30.0은 돌지 않았다. 다른 사례와 `serve_shutdown.py`·`everything.py`·`full_stack.py`는 다시 돌리지 않았다.
+
+### 닫기를 시작한 뒤의 첫 Ctrl+C — `cli_ctrl_c_closing`
+
+자식은 도구를 한 번 부른 뒤 세션을 나와 닫기 시작을 찍고(`closing`), 0.5초 뒤에 SIGINT를 한 번 받는다. 10초 뒤에도 살아 있으면 한 번 더 받는다. 상류가 닫기를 마치면 닫기 끝을 찍는다(`closed`). 표지(첫 SIGINT가 닫기 시작 뒤이고 닫기 끝 앞, 자식이 처리기를 거쳐 끝났다)는 모든 회차에서 섰다. 시간은 첫 SIGINT에서 자식이 끝나기까지다.
+
+| 자리 | `asyncio.run` 그대로 | `force` | `scope` |
+|---|---|---|---|
+| Windows, 2.3.0 | 10초 안에 끝나지 않음. 둘째 뒤 0.517초에 KeyboardInterrupt의 추적과 함께 끝남. 모두 내려감 | 10초 안에 끝나지 않음. 둘째 뒤 0.038초. 모두 내려감 | 1.561초. 닫기 끝이 찍혔다. 모두 내려감 |
+| Linux, 1.30.0 | | 10초 안에 끝나지 않음. 둘째 뒤 0.007초. 서버 남음 | 0.008초. 닫기 끝이 없다. 서버 남음 |
+| Linux, 2.3.0 none | | 같다(둘째 뒤 0.008초). 서버 남음 | 1.489초. 닫기 끝이 찍혔다. 내려감 |
+| Linux, 2.3.0 kill | | 같다(0.006초). 서버 남음 | 1.478초. 같다. 내려감 |
+| Linux, 2.3.0 watch | | 같다(0.008초). 3초 뒤 모두 내려감 | 1.479초. 같다. 내려감 |
+
+- 첫 SIGINT를 주 태스크의 네이티브 취소로 전하면(`asyncio.run` 그대로와 `force`) 2.3.0에서 자식이 10초 안에 끝나지 않았다. 닫기 끝의 표지(`closed`)는 연결을 나선 뒤에 찍어, 네이티브 취소가 그 자리 앞에서 밖으로 올라가면 닫기가 끝났어도 찍히지 않는다(코드를 읽었다). 그래서 이 표지로 닫기가 끝나지 않았다고 가르지는 않는다. 같은 자식과 같은 닫기에서 그 SIGINT를 범위 취소로 전한 `scope`는 닫기를 마치고 누른 뒤 1.48~1.56초(닫기 시작에서 약 2.0초, 상류의 유예)에 끝났다. 그래서 "이 자식의 닫기는 누르지 않아도 멈춘다"는 해석은 서지 않는다(같은 서버의 정상 닫기 `stay_normal`도 2.0~2.2초였다. 아래 2026-10-17 표). 상류의 무엇이 끝나지 않는지(출력 비우기인지 프로세스 기다림인지)는 스택으로 가르지 않았다.
+- 1.30.0의 `scope`는 누른 뒤 0.008초에 끝나며 서버를 남겼다. 1.30.0은 닫기를 취소로부터 보호하지 않아 범위 취소가 닫기를 곧바로 끊은 것으로 본다(ADR 0034가 적은 1.30.0의 닫기로 본 어림). `scope`가 서버를 닫는 것은 2.3.0의 보호된 닫기 위에서다.
+- 1.30.0의 `force`도 10초 안에 끝나지 않았다. 까닭은 가르지 않았다.
+
+### 나머지 CLI 사례
+
+처리기를 바꿔도 도구 호출 도중의 한 번과 두 번은 2026-10-17과 같은 모양이었다. 시간은 첫 SIGINT(두 번이면 둘째)에서 자식이 끝나기까지다.
+
+| 자리 | `cli_ctrl_c`(한 번) | `cli_ctrl_c_twice`(두 번, 둘째 뒤) |
+|---|---|---|
+| Windows 2.3.0, `asyncio.run` 그대로 | 2.472초, 모두 내려감 | 끝나지 않음. 60초에 프로브가 껐다(측정 아님, 2026-10-17과 같다) |
+| Windows 2.3.0, `force` | 2.06초, 모두 내려감 | 0.016초, 모두 내려감 |
+| Windows 2.3.0, `scope` | 2.238초, 모두 내려감 | 0.133초, 모두 내려감 |
+| Linux 1.30.0, `force` | 2.251초, 내려감 | 0.006초, 서버 남음 |
+| Linux 1.30.0, `scope` | 0.008초, 서버 남음 | 측정 아님(첫 SIGINT에 끝나 둘째를 보내지 못했다) |
+| Linux 2.3.0 none, `force` / `scope` | 2.092초 / 2.024초, 내려감 | 0.008초 / 0.008초, 서버 남음 |
+| Linux 2.3.0 kill, `force` / `scope` | 2.022초 / 2.027초, 내려감 | 0.009초 / 0.006초, 서버 남음 |
+| Linux 2.3.0 watch, `force` / `scope` | 2.026초 / 2.025초, 내려감 | 0.007초 / 0.007초, 3초 뒤 모두 내려감 |
+
+- 종료 코드(`Popen`이 보는 값)는 모든 회차에서 Windows 3221225786, Linux -2였고, `linux.sh`의 끝 두 줄에서 bash는 두 꼴을 모두 130으로 봤다.
+- 측정 아닌 회차가 둘이라 그 두 실행(Windows `asyncio.run` 그대로, Linux 1.30.0 `scope`)은 1로 끝났다. 나머지 실행은 0이었다.
 
 ## 2026-10-21 결과
 
