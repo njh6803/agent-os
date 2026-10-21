@@ -8,7 +8,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 어댑터
 
@@ -40,4 +40,4 @@
 
 - [x] **원칙 III를 지킨다**
 - [x] 검증 명령이 모두 초록이다. 어댑터를 건드리므로 `-m llm`과 전체 `tools/run_checks.py`를 돌려 일지의 검사 절에 적는다
-- [ ] **기능을 닫는지는 main을 마지막으로 들인 뒤, 병합 바로 앞에 판정한다.** `git fetch` 뒤 `origin/main`의 03 티켓 파일 `Status:`가 `done`이면 이 PR이 `.scratch/plan.md`의 mcp-shutdown 행을 `done`으로 바꾸고 프론티어 문단을 고친다. 아니면 03이 닫는다. main이 최신 기준(strict)이라 뒤에 병합되는 쪽은 앞의 병합을 들여야 병합할 수 있는데, strict는 코드를 묶을 뿐 판정한 때를 묶지 않는다. 그래서 판정 뒤에 main을 다시 들였으면 다시 판정한다. 아니면 둘 다 "아직"으로 판정한 채 병합되어 아무도 닫지 않는다(셀프 리뷰가 짚었다. 01은 이 티켓을 막고 있어 이미 `done`이다)
+- [x] **기능을 닫는지는 main을 마지막으로 들인 뒤, 병합 바로 앞에 판정한다.** `git fetch` 뒤 `origin/main`의 03 티켓 파일 `Status:`가 `done`이면 이 PR이 `.scratch/plan.md`의 mcp-shutdown 행을 `done`으로 바꾸고 프론티어 문단을 고친다. 아니면 03이 닫는다. main이 최신 기준(strict)이라 뒤에 병합되는 쪽은 앞의 병합을 들여야 병합할 수 있는데, strict는 코드를 묶을 뿐 판정한 때를 묶지 않는다. 그래서 판정 뒤에 main을 다시 들였으면 다시 판정한다. 아니면 둘 다 "아직"으로 판정한 채 병합되어 아무도 닫지 않는다(셀프 리뷰가 짚었다. 01은 이 티켓을 막고 있어 이미 `done`이다). 판정(2026-10-21, origin/main `303e8fb`를 들인 `7f4c7484`): 03의 `Status`가 `ready-for-agent`이고 PR #338이 열려 있어 아직이다. 03이 닫는다
