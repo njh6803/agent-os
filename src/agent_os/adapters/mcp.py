@@ -8,10 +8,12 @@ ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 i
 serve 의 종료로 취소된 실행도 서버를 닫은 뒤에 끝난다. 상류의 닫기는 서버의 입력을 닫고 서버가
 스스로 끝나기를 2초 기다린 뒤, 그때까지 끝나지 않은 서버만 프로세스 트리째 끈다. 윈도우는 Job
 Object 를 곧바로 끝내고, POSIX 는 그룹에 SIGTERM 을 보내 2초 안에 그룹이 사라지지 않으면 SIGKILL 을
-보낸다. 윈도우는 그 뒤 Job Object 를 닫아 남은 자손을 거두고, POSIX 는 그것을 하지 않아 유예 안에
-스스로 끝난 서버가 남긴 자식은 남는다(mcp 2.3.0 `client/stdio.py` 의 `_stop_server_process`, 코드를
-읽었다. Linux 에서 잰 것은 `.scratch/mcp-shutdown/probes/README.md` 의 `exit_child_normal`).
-운영자와 플러그인 작성자가 알 것은 셋이다.
+보낸다. 윈도우는 그 뒤 Job Object 를 닫아 남은 자손을 거두고, POSIX 는 그것을 하지 않는다(mcp 2.3.0
+`client/stdio.py` 의 `_stop_server_process`, 코드를 읽었다. 런처 없이 Linux 에서 잰 것은
+`.scratch/mcp-shutdown/probes/README.md` 의 `exit_child_normal`). 그래서 윈도우가 아닌 OS 에서는
+서버를 런처(`mcp_launcher.py`) 뒤에 띄운다. 유예 안에 스스로 끝난 서버가 남긴 자식은 런처가 서버의
+프로세스 그룹째 거두고, 이 프로세스가 갑자기 죽어도 런처가 그것을 보고 그룹을 끈다(그 모듈의
+독스트링). 닫는 시간에 대해 운영자와 플러그인 작성자가 알 것은 셋이다.
 
 - 서버 하나를 닫는 시간은 서버의 모양에 달렸다. 잰 값은 입력이 닫히면 스스로 끝나는 서버가
   0.18~0.46초, 입력이 닫혀도 끝나지 않는 서버가 2.0~2.2초(상류의 유예), SIGTERM 까지 무시하는
@@ -23,9 +25,14 @@ Object 를 곧바로 끝내고, POSIX 는 그룹에 SIGTERM 을 보내 2초 안�
 
 from __future__ import annotations
 
+import errno
+import os
+import shutil
+import sys
 from collections.abc import AsyncGenerator, Mapping, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.types import (
@@ -40,6 +47,8 @@ from mcp.types import (
 from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
 from agent_os.sdk import Json, McpServer, PluginName
 
+# 윈도우가 아닌 OS 에서 서버 앞에 세우는 런처(그 모듈의 독스트링).
+LAUNCHER = Path(__file__).with_name("mcp_launcher.py")
 # 도구 목록을 읽는 쪽 수의 상한. 이 어댑터가 mcp 를 직접 쓰기 전에 기대던 라이브러리(ADR 0034 가
 # 바꾼 것)와 같은 값이다(`_all_tools`).
 MAX_TOOL_PAGES = 1000
@@ -90,11 +99,28 @@ class McpConnection:
 
 
 async def _session(stack: AsyncExitStack, server: McpServer) -> ClientSession:
-    parameters = StdioServerParameters(command=server.command, args=list(server.args))
-    read, write = await stack.enter_async_context(stdio_client(parameters))
+    read, write = await stack.enter_async_context(stdio_client(_parameters(server)))
     session = await stack.enter_async_context(ClientSession(read, write))
     await session.initialize()
     return session
+
+
+def _parameters(server: McpServer) -> StdioServerParameters:
+    """서버를 띄울 명령. 윈도우가 아니면 런처를 앞에 세우고, 그 전에 명령이 있는지 본다.
+
+    명령이 없다는 실패가 런처 안에서 나면 클라이언트에는 연결이 닫힌 것으로만 보이므로 여기서
+    `FileNotFoundError`를 낸다. 윈도우에서는 찾아보지 않는다. 상류가 `.cmd`·`.ps1`까지 붙여 찾고,
+    없으면 같은 예외를 낸다(`.scratch/mcp-shutdown/spec.md` 의 "서버를 여는 실패").
+    """
+    if sys.platform == "win32":
+        return StdioServerParameters(command=server.command, args=list(server.args))
+    command = shutil.which(server.command)
+    if command is None:
+        raise FileNotFoundError(errno.ENOENT, "명령을 찾지 못했다", server.command)
+    return StdioServerParameters(
+        command=sys.executable,
+        args=["-I", str(LAUNCHER), str(os.getpid()), command, *server.args],
+    )
 
 
 async def _all_tools(session: ClientSession) -> list[Tool]:

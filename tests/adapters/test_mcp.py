@@ -42,6 +42,10 @@ PAGED_WITHIN_SECONDS = 30
 # 겹친 부하(CPU 86%)에서 홀로 돈 명세의 시제품 사례 하나가 12.5초 걸렸고, 20초로 두던 판은 전체
 # 회차에서 그 기다림을 넘겼다(`.claude/rules/tests.md` 의 시간 단언).
 APPEAR_WITHIN_SECONDS = 30
+# 사례 5의 상한. 그 자식은 새 파이썬에서 어댑터와 mcp 를 불러 들인 뒤에야 연결을 연다. 이 PC 에서
+# 홀로 연결 표지까지 9.8~12.3초였고(하트비트 둘은 그보다 먼저 생겼다), 30초로 두던 판은 pre-commit
+# 러너의 부하에서 표지 셋이 모두 생기기 전에 그 기다림을 넘겼다(일지 2026-10-21-09, 손으로 봤다).
+CONNECT_WITHIN_SECONDS = 120
 # 닫은 뒤 하트비트가 멈추기를 기다리는 기한. 판정의 꼴은 `_멈췄다` 다.
 STOP_WITHIN_SECONDS = 15
 
@@ -200,8 +204,8 @@ async def test_스스로_끝나며_자식을_남기는_서버를_닫으면_그_�
     _멈췄다(folder / "child.hb")
 
 
-# 사례 5의 자식. 연결을 연 뒤 표지 파일을 남기고 기다린다. 테스트가 그 표지를 본 뒤 이 프로세스를
-# 강제로 끈다.
+# 사례 5의 자식. 연결을 연 뒤 표지 파일을 남기고 기다린다. 테스트가 그 표지와 서버의 하트비트를 본
+# 뒤 이 프로세스를 강제로 끈다.
 _CONNECTED = "connected"
 _PARENT = """
 import sys
@@ -229,16 +233,19 @@ anyio.run(main)
 def test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간다(folder: Path) -> None:
     """윈도우는 그 프로세스가 끝나며 Job Object 가 닫히고, POSIX 는 런처가 부모가 바뀐 것을 보고
     서버의 프로세스 그룹을 끈다."""
+    beats = (folder / "wrapper.hb", folder / "stay.hb")
+    ready = (folder / _CONNECTED, *beats)
     parent = subprocess.Popen(
         [sys.executable, "-c", _PARENT, str(LINGERING), str(folder), _CONNECTED]
     )
     try:
-        end = time.monotonic() + APPEAR_WITHIN_SECONDS
-        while not (folder / _CONNECTED).exists() and time.monotonic() < end:
+        end = time.monotonic() + CONNECT_WITHIN_SECONDS
+        while not all(path.exists() for path in ready) and time.monotonic() < end:
             time.sleep(0.05)
     finally:
         parent.kill()
         parent.wait()
 
-    assert (folder / _CONNECTED).exists(), f"{APPEAR_WITHIN_SECONDS}초 안에 연결을 열지 못했다"
-    _멈췄다(folder / "wrapper.hb", folder / "stay.hb")
+    missing = [path.name for path in ready if not path.exists()]
+    assert not missing, f"{CONNECT_WITHIN_SECONDS}초 안에 생기지 않았다: {missing}"
+    _멈췄다(*beats)
