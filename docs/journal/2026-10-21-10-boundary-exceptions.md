@@ -117,3 +117,11 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 나란히 돌렸다. ori
 - `bug-perf-review`: 유효 0, 보류 2, 오탐 2. 밀 주장 넷(adapters.md 문장, 어댑터 독스트링, 포트 독스트링, 새 테스트 둘)은 코드와 맞았고, 서브에이전트가 취소 시점을 0.05·0.3·0.6·1.0초로 바꿔 둘째 서버까지 연 채 돌려도 `ConnectionError`가 새지 않았다. `tests/adapters/test_mcp.py` 17 passed(41초).
   - 보류(둔다): 여는 도중의 취소 테스트가 `move_on_after(0)`이라 띄운 뒤의 시점을 굳히지 않는다. 변이 표의 첫 변이가 `붙지 못했다: CancelledError`로 빨개 그 취소가 `_connecting`을 지난다는 것은 보였다. 시점을 굳히려면 타이밍에 기대는 테스트가 된다.
   - 보류(둔다): 둘째 서버가 열리지 않는 테스트가 먼저 연 서버의 프로세스가 내려갔는지 보지 않는다. 서버 둘의 하트비트 장치를 새로 지어야 하고, 한 서버의 경우는 기존 하트비트 테스트가 덮는다.
+
+## PR #340 봇 첫 회차
+
+검사 모두 초록, CodeRabbit `Review completed`. 두 봇 모두 이 PR의 첫 리뷰라 Minor·Nit을 지적마다 판단했다.
+
+- CodeRabbit Minor(고쳤다): `ticket02_mutations.toml`의 표지를 실패 출력을 보지 않고 어림해 골랐다(`.claude/rules/probes.md` 위반, README가 스스로 그렇게 적었다). 변이를 하나씩 손으로 넣어 실패 출력을 보고, 둘째 표지를 값까지 든 `Actual message: …` 줄로, 셋째를 그룹의 머리 줄 `ExceptionGroup: unhandled errors in a TaskGroup`으로 조였다. 첫째는 그대로다. 고친 표로 `tools/mutate.py`가 기준선 셋 초록, 변이 셋 표지까지 빨강. 결과는 프로브 README의 "PR #340 봇 회차" 절. 손 실행 스크립트가 윈도에서 원문을 텍스트 모드로 되써 `mcp.py`의 줄 끝이 CRLF가 되었고, 내용이 같아 `git checkout --`으로 되돌렸다.
+- claude-review Minor(둔다): 모듈 독스트링과 `adapters.md`의 새 항목이 같은 사실을 두 번 적는다. 규칙은 `src/agent_os/adapters/` 아래 어느 파일을 열어도 실려 `mcp.py`를 열지 않는 에이전트에게도 닿는다(카나리아의 실험군이 `clock.py`를 읽는 까닭). 줄이면 그 카나리아를 다시 돌려야 한다.
+- claude-review Nit(둔다): `_describe`·`_is_group` 사본. 근거는 셀프 리뷰 절의 남긴 것과 PR 본문.

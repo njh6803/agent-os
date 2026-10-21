@@ -60,7 +60,17 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" -w /r
 
 ## 2026-10-21 결과 — 티켓 02의 셀프 리뷰 변이
 
-`ticket02_mutations.toml`(커밋하지 않은 작업 트리에서 두 번 돌았다). 첫 회차는 표지 없이 돌아 기준선 셋이 초록이었고 변이 셋이 각각 1 failed였다. 그 뒤 실패의 까닭을 표지(`expect_output`)로 더해 다시 돌렸고, 둘째 회차도 기준선 셋이 초록이었고 변이 셋 모두 표지까지 기대대로 빨갰다. 표지는 손으로 넣어 본 실패 출력에서 고른 것이 아니라 실패의 까닭(취소가 바뀐 연결 오류의 글, 정규식 불일치, 벗기지 못한 그룹의 이름)을 어림한 것이다. 그래도 셋 모두 그 변이가 낸 실패에서만 실리는 글이다(통과하는 회차에는 실패 출력이 없고, 취소 사례의 다른 단언 `pytest.fail`과 `cancelled_caught`는 그 글을 싣지 않는다).
+`ticket02_mutations.toml`(커밋하지 않은 작업 트리에서 두 번 돌았다). 첫 회차는 표지 없이 돌아 기준선 셋이 초록이었고 변이 셋이 각각 1 failed였다. 그 뒤 실패의 까닭을 표지(`expect_output`)로 더해 다시 돌렸고, 둘째 회차도 기준선 셋이 초록이었고 변이 셋 모두 표지까지 기대대로 빨갰다. 그때의 표지는 손으로 넣어 본 실패 출력에서 고른 것이 아니라 실패의 까닭(취소가 바뀐 연결 오류의 글, 정규식 불일치, 벗기지 못한 그룹의 이름)을 어림한 것이었다. PR #340의 CodeRabbit이 `.claude/rules/probes.md`의 "고르기 전에 변이를 손으로 넣어 실패 출력을 한 번 본다"를 짚어 아래 절에서 다시 골랐다.
+
+### PR #340 봇 회차 — 표지를 실패 출력에서 다시 고름
+
+변이를 하나씩 손으로 넣어 그 테스트만 돌리고 실패 출력을 보았다(세션 스크래치패드의 스크립트, 커밋 `ef40a717`의 작업 트리). 셋 다 1 failed였다.
+
+- 1(취소도 연결 오류로): 실패 머리의 `E` 줄이 `ConnectionError: MCP 서버 fixture(<python 경로>)에 붙지 못했다: CancelledError: Cancelled via cancel scope …`였다. 표지 `붙지 못했다: CancelledError`는 그 줄에만 있어 그대로 둔다. 이 테스트의 다른 단언(`pytest.fail`, `cancelled_caught`)이 실패하면 연결 오류가 나지 않으므로 그 글이 실리지 않는다.
+- 2(원인을 싣지 않는 글): `E` 줄이 `Regex pattern did not match.`, `Expected regex: 'lingering.*crash.*Connection closed'`, `Actual message: 'MCP 서버 lingering의 도구 crash 호출이 실패했다'`였다. `Regex pattern did not match`는 다른 까닭으로 글이 어긋나도 찍히므로, 변이가 낸 값까지 든 `Actual message: 'MCP 서버 lingering의 도구 crash 호출이 실패했다'`로 바꿨다.
+- 3(빠져나온 예외를 기억하지 않음): `pytest.raises(ConnectionError)`를 지나 그룹이 새어 `Exception Group Traceback`이 찍혔고, 그 머리 줄이 `ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)`이었다. 표지 `ExceptionGroup`은 트레이스백의 코드 줄(`raise BaseExceptionGroup(`)에도 걸리므로, 벗기지 못한 그룹 자신의 머리 줄 `ExceptionGroup: unhandled errors in a TaskGroup`으로 바꿨다.
+
+고친 표로 `tools/mutate.py`를 고르지 않고 돌렸다(표만 커밋하지 않은 작업 트리라 도구가 알림을 냈다). 기준선 셋이 초록이었고 변이 셋 모두 표지까지 기대대로 빨갰다. 기준선 `-k 서버가_죽으면`은 171.63초로, 같은 테스트가 앞의 손 실행(변이를 넣은 회차)에서 55.38초, PR 직전 리뷰의 파일 전체 실행에서 41초 안이었던 것보다 길었다. 까닭은 가르지 않았다.
 
 ## 2026-10-21 결과 — 티켓 01의 셀프 리뷰 변이
 

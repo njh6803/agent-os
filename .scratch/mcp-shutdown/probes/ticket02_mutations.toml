@@ -1,7 +1,8 @@
 # 티켓 02의 셀프 리뷰가 더하거나 조인 테스트가 실제로 무는지 변이로 본다(implement 스킬). 셋 모두
 # 구현 뒤에 써서 빨강을 본 적이 없다. 사용:
 # PYTHONUTF8=1 uv run python tools/mutate.py .scratch/mcp-shutdown/probes/ticket02_mutations.toml
-# 표지는 표지 없이 돈 첫 회차 뒤에 고른 실패의 까닭이다(취소가 바뀐 연결 오류, 글의 불일치, 벗기지 못한 그룹).
+# 표지는 변이를 하나씩 손으로 넣어 본 실패 출력에서 고른, 그 변이의 실패에서만 실리는 줄이다(취소가 바뀐 연결 오류의
+# E 줄, 원인이 빠진 글의 Actual message 줄, 벗기지 못한 그룹의 머리 줄. PR #340 CodeRabbit).
 
 [[mutation]]
 name = "여는 동안의 취소도 연결 오류로 바꾼다"
@@ -24,7 +25,7 @@ new = '''
 name = "도구 호출 실패의 글에 원인을 싣지 않는다"
 tests = ["tests/adapters/test_mcp.py", "-k", "서버가_죽으면"]
 expect = "red"
-expect_output = ["Regex pattern did not match"]
+expect_output = ["Actual message: 'MCP 서버 lingering의 도구 crash 호출이 실패했다'"]
 
 [[mutation.edit]]
 file = "src/agent_os/adapters/mcp.py"
@@ -39,7 +40,7 @@ new = '''
 name = "연결을 연 뒤에 빠져나온 예외를 기억하지 않는다"
 tests = ["tests/adapters/test_mcp.py", "-k", "둘째_서버가"]
 expect = "red"
-expect_output = ["ExceptionGroup"]
+expect_output = ["ExceptionGroup: unhandled errors in a TaskGroup"]
 
 [[mutation.edit]]
 file = "src/agent_os/adapters/mcp.py"
