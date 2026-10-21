@@ -21,7 +21,7 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
 | `card_block/`(탐침 훅 `log_hook.py`, 판정 `card_block_app.py`, 2026-10-21 기록 `2026-10-21-hook-log.jsonl`·`2026-10-21-result.json`) | 데스크톱 앱 세션에서 매처 `mcp__ccd_session__start_session`의 PreToolUse 훅이 `initiation: own_initiative` 호출을 받는지, 그 입력에 `initiation`이 실리는지, `permissionDecision: deny`로 막으면 카드가 생기지 않고 이유가 모델에게 가는지. 양성 대조로 훅이 지나보낸 호출(없는 `proposal_id`)은 도구가 스스로 거절하는지 | `spec.md` "카드 막는 훅" | 사람 한 번(워크트리 폴더에서 새 앱 세션을 열고 정해진 글을 보낸다)과 그 앱 세션 하나. 표준 라이브러리만 쓴다 | Claude Code 2.1.299(판정 때 탐침 세션 기록의 `version`을 손으로 봤다. 그 기록이 지워져 커밋한 출력에는 판이 없다), Windows 데스크톱 앱 |
-| `merge_commit/`(`merge_commit.py`, 2026-10-21 기록 `2026-10-21-result.json`) | 브랜치가 `origin/main`을 합치다 충돌을 풀고 친 커밋의 pre-commit에서, HEAD만으로 구한 merge-base의 색인 차이에 main이 들여온 파일이 섞이는지와, `git merge-base origin/main HEAD <MERGE_HEAD>`로 구하면 빠지는지. 충돌 없는 `git merge`에서 pre-commit 훅이 도는지. 양성 대조로 보통 커밋에서 같은 훅이 도는지 | `spec.md` "커밋 검사"의 바뀐 파일(C) | 맨 원격과 클론을 임시 폴더에 셋 만든다(시간은 재지 않았다). 표준 라이브러리만 쓴다 | git 2.32.0.windows.2(결과 줄의 `git`) |
+| `merge_commit/`(`merge_commit.py`, 2026-10-21 기록 `2026-10-21-result.json`) | 브랜치가 `origin/main`을 합치다 충돌을 풀고 친 커밋의 pre-commit에서, HEAD만으로 구한 merge-base의 색인 차이에 main이 들여온 파일이 섞이는지와, `git merge-base origin/main HEAD <MERGE_HEAD>`로 구하면 빠지는지. 같은 병합을 링크드 워크트리에서 치면 `MERGE_HEAD`를 어디서 찾을 수 있는지(작업 트리 루트의 `.git/MERGE_HEAD`, git 디렉터리의 파일, ref 이름). 충돌 없는 `git merge`에서 pre-commit 훅이 도는지. 양성 대조로 보통 커밋에서 같은 훅이 도는지 | `spec.md` "커밋 검사"의 바뀐 파일(C) | 맨 원격과 클론을 임시 폴더에 넷 만든다(시간은 재지 않았다). 표준 라이브러리만 쓴다 | git 2.32.0.windows.2(결과 줄의 `git`) |
 
 ## 2026-10-21 결과: 카드 막기
 
@@ -43,13 +43,16 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 
 ## 2026-10-21 결과: 병합 커밋
 
-측정이었다. 결과 줄(`merge_commit/2026-10-21-result.json`)의 `measured`와 `expected`가 참이다. 표지는 셋 다 있었다. 충돌 갈래의 병합 출력에 `CONFLICT`가 있었고 훅 기록이 생겼으며, 충돌 없는 갈래의 HEAD는 부모가 둘이었고, 양성 대조의 보통 커밋에서 훅 기록이 생겼다.
+측정이었다. 결과 줄(`merge_commit/2026-10-21-result.json`)의 `measured`와 `expected`가 참이다. 표지는 넷 다 있었다. 충돌 갈래와 워크트리 갈래의 병합 출력에 `CONFLICT`가 있었고 훅 기록이 생겼으며, 충돌 없는 갈래의 HEAD는 부모가 둘이었고, 양성 대조의 보통 커밋에서 훅 기록이 생겼다. 워크트리 갈래에서는 워크트리의 `.git`이 파일이었고 훅이 본 git 디렉터리가 `…/work/.git/worktrees/linked`였다. 이 결과 파일은 PR 직전 `bug-perf-review`가 짚어 워크트리 갈래를 더한 판의 것이고, 앞 판(갈래 셋)의 값은 이 판의 같은 갈래와 같았다.
 
-- **HEAD만으로 구하면 main의 파일이 섞인다.** 충돌을 풀고 친 커밋의 pre-commit에서 `MERGE_HEAD`가 있었고, `git merge-base origin/main HEAD`에서 색인까지의 차이는 `queue.md`와 `tools/x.py`였다. `tools/x.py`는 main만 더한 파일이다.
-- **`MERGE_HEAD`까지 넣으면 빠진다.** `git merge-base origin/main HEAD <MERGE_HEAD>`에서 색인까지의 차이는 `queue.md`뿐이었다.
+- **HEAD만으로 구하면 main의 파일이 섞인다.** 충돌을 풀고 친 커밋의 pre-commit에서 `MERGE_HEAD`가 있었고, `git merge-base origin/main HEAD`에서 색인까지의 차이는 `queue.md`와 `tools/x.py`였다. `tools/x.py`는 main만 더한 파일이다. 워크트리 갈래도 같았다.
+- **`MERGE_HEAD`까지 넣으면 빠진다.** `git merge-base origin/main HEAD <MERGE_HEAD>`에서 색인까지의 차이는 `queue.md`뿐이었다. `MERGE_HEAD`를 git 디렉터리의 파일에서 읽어 넣은 것과 ref 이름 그대로 넣은 것이 같았고, 두 갈래 모두 그랬다.
+- **링크드 워크트리에서는 작업 트리 루트의 경로로 `MERGE_HEAD`를 찾지 못한다.** 워크트리 갈래에서 `<작업 트리 루트>/.git/MERGE_HEAD`는 없었고(`top_merge_head_present`가 거짓), git 디렉터리의 파일과 ref 이름(`git rev-parse -q --verify MERGE_HEAD`)으로는 있었다. 같은 경로 검사가 충돌 갈래(일반 클론)에서는 참이었으므로, 경로 검사가 늘 거짓을 내서 그렇다는 해석은 서지 않는다. 양성 대조의 보통 커밋에서는 두 길 모두 `MERGE_HEAD`가 없었다.
 - **충돌 없는 병합에서는 pre-commit 훅이 돌지 않았다.** 이 갈래의 저장소에는 pre-commit 훅만 두었다. 같은 훅이 양성 대조의 보통 커밋에서는 돌았으므로, 훅을 실행하지 못해서 돌지 않았다는 해석은 서지 않는다.
+
+손으로 본 것. 이 명세의 브랜치가 `origin/main`을 합친 커밋 `bd7a6a24`(`git merge --no-commit --no-ff` 뒤 `git commit`, 충돌 없음)에서, 이 저장소의 pre-commit은 `[INFO] Checking merge-conflict files only.`를 찍고 파일을 받는 ruff 둘은 `(no files to check)`로 건너뛰었지만 러너(`always_run`)는 돌아 여덟 검사가 모두 지났다(그 커밋의 출력을 세션 스크래치패드에 받아 읽었다). 그래서 러너에 둔 검사는 `--no-commit` 병합을 마무리하는 커밋에서도 돈다. 충돌을 풀고 친 커밋도 `MERGE_HEAD`가 있는 커밋이라 pre-commit이 같은 모드로 돌 것으로 보지만 어림이다(그 커밋은 이 프레임워크로 치지 않았다).
 
 못 본 것.
 
-- 이 저장소의 pre-commit 프레임워크(`.pre-commit-config.yaml`의 `default_install_hook_types`)가 까는 훅으로는 재지 않았다. 탐침의 훅은 셸 스크립트 하나다. 그 프레임워크가 pre-merge-commit을 깔지 않는다는 것은 설정 파일을 읽은 것이다.
-- `git merge --no-commit` 뒤의 커밋과, `MERGE_HEAD`가 main이 아닌 다른 브랜치인 병합은 돌리지 않았다.
+- 이 저장소의 pre-commit 프레임워크(`.pre-commit-config.yaml`의 `default_install_hook_types`)가 까는 훅으로 충돌을 풀고 친 커밋은 재지 않았다. 탐침의 훅은 셸 스크립트 하나다. 그 프레임워크가 pre-merge-commit을 깔지 않는다는 것은 설정 파일을 읽은 것이다.
+- `MERGE_HEAD`가 main이 아닌 다른 브랜치인 병합은 돌리지 않았다.
