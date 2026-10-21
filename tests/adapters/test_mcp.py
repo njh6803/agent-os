@@ -12,6 +12,7 @@
 뒤 스스로 끝난다.
 """
 
+import subprocess
 import sys
 import time
 from collections.abc import AsyncGenerator, Iterator
@@ -187,4 +188,57 @@ async def test_도구_호출_도중에_기한이_오면_감싼_프로세스_아�
 
     assert (folder / "slow").exists(), "서버가 도구 호출을 받지 않았다"
     assert scope.cancelled_caught
+    _멈췄다(folder / "wrapper.hb", folder / "stay.hb")
+
+
+async def test_스스로_끝나며_자식을_남기는_서버를_닫으면_그_자식도_내려간다(folder: Path) -> None:
+    """상류는 유예 안에 스스로 끝난 서버의 트리를 끄지 않는다. 윈도우는 Job Object 를 닫아 남은
+    자식을 거두고, POSIX 는 런처가 서버의 프로세스 그룹을 끈다."""
+    async with McpTools().connect(_lingering("leaving", folder)):
+        await _생길_때까지_기다린다(folder / "child.hb")
+
+    _멈췄다(folder / "child.hb")
+
+
+# 사례 5의 자식. 연결을 연 뒤 표지 파일을 남기고 기다린다. 테스트가 그 표지를 본 뒤 이 프로세스를
+# 강제로 끈다.
+_CONNECTED = "connected"
+_PARENT = """
+import sys
+from pathlib import Path
+
+import anyio
+
+from agent_os.adapters.mcp import McpTools
+from agent_os.sdk import McpServer, PluginName
+
+lingering, folder, connected = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
+server = McpServer(command=sys.executable, args=(lingering, "wrapper", str(folder)))
+
+
+async def main() -> None:
+    async with McpTools().connect({PluginName("lingering"): server}):
+        (folder / connected).touch()
+        await anyio.sleep(120)
+
+
+anyio.run(main)
+"""
+
+
+def test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간다(folder: Path) -> None:
+    """윈도우는 그 프로세스가 끝나며 Job Object 가 닫히고, POSIX 는 런처가 부모가 바뀐 것을 보고
+    서버의 프로세스 그룹을 끈다."""
+    parent = subprocess.Popen(
+        [sys.executable, "-c", _PARENT, str(LINGERING), str(folder), _CONNECTED]
+    )
+    try:
+        end = time.monotonic() + APPEAR_WITHIN_SECONDS
+        while not (folder / _CONNECTED).exists() and time.monotonic() < end:
+            time.sleep(0.05)
+    finally:
+        parent.kill()
+        parent.wait()
+
+    assert (folder / _CONNECTED).exists(), f"{APPEAR_WITHIN_SECONDS}초 안에 연결을 열지 못했다"
     _멈췄다(folder / "wrapper.hb", folder / "stay.hb")
