@@ -8,6 +8,8 @@ gh·git·tasklist 를 부르는 길은 넘기는 인자(PR 목록의 한도)만 
 
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
@@ -18,7 +20,9 @@ from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
     Collected,
     HookRow,
+    HookScan,
     OffBranch,
+    Sources,
     TicketRow,
     Timing,
     Work,
@@ -32,25 +36,34 @@ from tools.morning_collect import (
     concurrency_buckets,
     cost_by_concurrency,
     cost_rows,
+    day_period,
     day_rows,
     duty_of,
+    gather_limit,
+    gather_works,
     handoff_tickets,
     hook_legend,
     hook_rows,
+    hook_section,
     kept,
     kind_rows,
     label_of,
+    ledger_time,
     load_line,
     merged_got,
     merged_unknown,
+    money_unit,
     off_cells,
     over_cap,
     queue_part,
     queue_whats,
     review_rounds,
     session_rows,
+    sheet_lines,
+    sheet_path,
     shown_path,
     size_groups,
+    span_period,
     start_rows,
     sweep_kind,
     ticket_cells,
@@ -61,11 +74,25 @@ from tools.morning_collect import (
     without_merged,
     work_of,
     worktree_pr,
+    write_outputs,
 )
-from tools.morning_report import UNCOLLECTED, Metric, QueueRow, Section, Table, Value, pr_kind
+from tools.morning_collect import main as collect_main
+from tools.morning_limit import Record
+from tools.morning_report import (
+    UNCOLLECTED,
+    Data,
+    Limit,
+    Metric,
+    QueueRow,
+    Section,
+    Table,
+    Value,
+    pr_kind,
+)
 from tools.morning_sources import (
     PR_LIMIT,
     GhPr,
+    OpenPr,
     ci_state,
     journal_next,
     merged_prs,
@@ -299,7 +326,7 @@ def test_훅_표는_최근_14일과_앞_14일을_견주고_조용한_훅을_가�
     assert HookRow("알림", "hook_a.py", 1, 2, "유지", 3, last) in rows
     assert HookRow("막음", "hook_b.py", 1, 0, "유지", 1, last - timedelta(days=1)) in rows
     assert HookRow("조용함", "hook_old.py", 0, 0, "검토", 0, None) in rows
-    assert HookRow("조용함", "hook_new.py", 0, 0, "판단 이름", 0, None) in rows
+    assert HookRow("조용함", "hook_new.py", 0, 0, "아직 이르다", 0, None) in rows
 
 
 def test_훅_표는_발동한_훅을_셋으로_자르지_않고_모두_적는다() -> None:
@@ -324,15 +351,15 @@ def test_기록이_창의_첫날보다_늦으면_조용한_훅을_검토로_내�
     rows = hook_rows(
         [], ["hook_old.py"], {"hook_old.py": date(2026, 9, 1)}, last, date(2026, 10, 1)
     )
-    assert rows == [HookRow("조용함", "hook_old.py", 0, 0, "판단 이름", 0, None)]
+    assert rows == [HookRow("조용함", "hook_old.py", 0, 0, "아직 이르다", 0, None)]
 
 
-def test_판단_이름_판정이_있는_날에만_그_뜻을_한_줄로_푼다() -> None:
-    # "판단 이름"은 "판단하기 이르다"인데 처음 보는 사람은 "이름(name)"으로 읽는다
-    early = [HookRow("조용함", "hook_new.py", 0, 0, "판단 이름", 0, None)]
+def test_아직_이르다_판정이_있는_날에만_그_까닭을_한_줄로_푼다() -> None:
+    # 옛 낱말 "판단 이름"은 처음 보는 사람이 "이름(name)"으로 읽었다(설계의 문제 2)
+    early = [HookRow("조용함", "hook_new.py", 0, 0, "아직 이르다", 0, None)]
     kept_rows = [HookRow("알림", "hook_a.py", 1, 2, "유지", 1, date(2026, 10, 19))]
     [line] = hook_legend(early)
-    assert line.startswith("- 판정 `판단 이름`은 판단하기 이르다는 뜻이다")
+    assert line.startswith("- 판정 `아직 이르다`는 그 훅을 창(28일) 안에서 들였거나")
     assert hook_legend(kept_rows) == []
 
 
@@ -406,8 +433,8 @@ def test_티켓마다_수락_조건과_비용과_인계를_수락_조건_차례�
     )
     rows = [티켓(2, 9, handoffs=1), 티켓(1, 3), lost]
     assert ticket_cells(rows) == [
-        ("#1", "{{name:1}}", "3", "300", "$1.0", "1.0h", "1", "0"),
-        ("#2", "{{name:2}}", "9", "900", "$2.0", "1.0h", "1", "1"),
+        ("#1", "{{name:1}}", "3", "300", "1", "1.0h", "1", "0"),
+        ("#2", "{{name:2}}", "9", "900", "2", "1.0h", "1", "1"),
     ]
 
 
@@ -443,8 +470,8 @@ def 작업(n: int, kind: str, cost: float, after: float = 0.5) -> Work:
 def test_작업_종류마다_비용_활동_병합까지_세션_PR_뒤_몫의_중앙값을_적는다() -> None:
     works = [작업(1, "chore", 10.0), 작업(2, "chore", 30.0, after=0.1), 작업(3, "feat", 50.0)]
     assert kind_rows(works) == [
-        ("chore", "2", "$20.0", "1.0h", "2.0h", "1.5", "30%"),
-        ("feat", "1", "$50.0", "1.0h", "2.0h", "3", "50%"),
+        ("chore", "2", "20", "1.0h", "2.0h", "1.5", "30%"),
+        ("feat", "1", "50", "1.0h", "2.0h", "3", "50%"),
     ]
 
 
@@ -454,12 +481,12 @@ def test_서브에이전트_유형마다_횟수_비용_실행_합계와_1회_비
         "general-purpose": [(600.0, 10.0)],
     }
     assert agent_rows(by_type) == [
-        ("general-purpose", "1", "$10.00", "$10.00", "10", "10.0분"),
-        ("bug-perf-review", "2", "$4.00", "$2.00", "4", "2.0분"),
+        ("general-purpose", "1", "10", "10", "10", "10.0분"),
+        ("bug-perf-review", "2", "4", "2", "4", "2.0분"),
     ]
 
 
-def test_비용_구성은_구분_모델_노력마다_비용이_큰_차례다() -> None:
+def test_비용_구성은_누가_썼나_모델_노력마다_비용이_큰_차례이고_주간_한도의_몫을_적는다() -> None:
     p = Period([date(2026, 10, 19)])
     calls = [
         호출("2026-10-19T01:00:00Z", effort="medium"),
@@ -468,12 +495,23 @@ def test_비용_구성은_구분_모델_노력마다_비용이_큰_차례다() -
     ]
     for c in calls:
         p.add(c, {}, {})
-    assert [r[:4] for r in cost_rows(p)] == [
-        ("메인 세션", "opus-5-5", "xhigh", "1"),
-        ("메인 세션", "opus-5-5", "medium", "1"),
+    assert [r[:4] for r in cost_rows(p, None)] == [
+        ("세션", "opus-5-5", "xhigh", "1"),
+        ("세션", "opus-5-5", "medium", "1"),
         ("서브에이전트", "opus-5-5", "xhigh", "1"),
     ]
-    assert cost_rows(p)[0][5] == "60.0%"
+    assert cost_rows(p, None)[0][5:] == (UNCOLLECTED, "60.0%")
+    top = p.models[("메인 세션", "opus-5-5", "xhigh")].cost
+    assert cost_rows(p, top / 2)[0][5] == "2.0"
+
+
+def test_비용_구성은_다섯_조합_밖을_한_행으로_합친다() -> None:
+    p = Period([date(2026, 10, 19)])
+    for i, effort in enumerate(("low", "medium", "high", "xhigh", "max", "none", "x")):
+        p.add(호출(f"2026-10-19T01:0{i}:00Z", effort=effort, output=1_000 * (i + 1)), {}, {})
+    rows = cost_rows(p, None)
+    assert len(rows) == 6
+    assert rows[-1][:4] == ("그 밖의 2개 조합", "", "", "2")
 
 
 def test_시작_컨텍스트는_구성을_아는_세션의_중앙값이고_실린_세션은_값이_0보다_큰_세션이다() -> None:
@@ -510,12 +548,13 @@ def test_상위_세션은_서브에이전트를_합친_비용이_큰_차례다()
         p.add(c, {}, {})
     big = calls[2].cost()
     assert big is not None
-    first, second = session_rows(p)
-    assert first == ("s2", "C--project-agent", "chore/x", f"${big:,.2f}", "0", "1")
-    assert (second[0], second[5]) == ("session-", "2")
+    first, second = session_rows(p, None)
+    # 세션 번호와 기록 폴더는 사람이 알아볼 수 없어 작업 이름의 자리 표시자로 적는다
+    assert first == ("{{work:chore/x}}", f"{big:,.0f}", UNCOLLECTED, "0K", "1")
+    assert (second[0], second[4]) == ("{{work:chore/x}}", "2")
 
 
-def test_브랜치별_비용은_세션_인계_PR_앞뒤_몫을_함께_적는다() -> None:
+def test_브랜치별_비용은_세션_인계_PR을_열기_전에_쓴_몫을_함께_적는다() -> None:
     opened = datetime(2026, 10, 19, 2, tzinfo=UTC)
     pr_at = {"chore/a": opened}
     p = Period([date(2026, 10, 19)])
@@ -528,9 +567,17 @@ def test_브랜치별_비용은_세션_인계_PR_앞뒤_몫을_함께_적는다(
         p.add(c, {}, pr_at)
     cost = calls[0].cost()
     assert cost is not None
-    first, second = branch_rows(p, {"s2": True}, pr_at)
-    assert first == ("chore/a", f"${cost * 2:,.2f}", "66.7%", "2", "1", "50.0% · 50.0%")
-    assert (second[0], second[5]) == ("(모름)", "PR 시각 모름")
+    first, second = branch_rows(p, {"s2": True}, pr_at, None)
+    assert first == (
+        "{{work:chore/a}}",
+        f"{cost * 2:,.0f}",
+        UNCOLLECTED,
+        "66.7%",
+        "2",
+        "1",
+        "50.0%",
+    )
+    assert (second[0], second[6]) == ("(모름)", "PR 연 시각 모름")
 
 
 def test_읽은_파일의_보이는_경로는_대소문자를_살린다() -> None:
@@ -654,24 +701,22 @@ def test_대기열_3회차_이상_행과_같은_대상_파일_묶음은_목록�
         "| 241 | 규칙 다섯 | `CLAUDE.md` | 2026-10-19 6회차 |\n"
         "| 242 | 규칙 하나 | `CLAUDE.md` | 2026-10-19 2회차 |\n"
     )
-    part = queue_part(date(2026, 10, 19), text, "원본")
+    part = queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준")
     summary = "- 열린 행 4개 · 기한 지난 행 0개 · 사람 몫 1개(직접 하실 일 참고)"
     assert part.section.lines == (summary,)
-    assert part.section.tables == (
-        Table(
-            ("대기열", "회차", "작업 이름", "작업 내용"),
-            "lrll",
-            (
-                ("대기열 241", "6회차", "{{qname:241}}", "{{qcontent:241}}"),
-                ("대기열 240", "4회차", "{{qname:240}}", "{{qcontent:240}}"),
-            ),
-        ),
-        Table(
-            ("대상 파일", "대상인 행", "행 번호", "인용한 행", "인용 행 번호"),
-            "lrlrl",
-            (("CLAUDE.md", "3", "240, 241, 242", "0", "-"),),
-        ),
+    ripe, shared = part.section.tables
+    assert (ripe.key, ripe.report, ripe.period) == (
+        "environment.queue",
+        "environment",
+        "10-20 09:00 기준",
     )
+    assert ripe.rows == (
+        ("대기열 241", "6회차", "{{qname:241}}", "{{qcontent:241}}"),
+        ("대기열 240", "4회차", "{{qname:240}}", "{{qcontent:240}}"),
+    )
+    assert shared.key == "environment.queue_files"
+    assert shared.head[1] == "대상인 항목(개)"
+    assert shared.rows == (("CLAUDE.md", "3", "240, 241, 242", "0", "-"),)
     assert sorted(part.got.queue) == [238, 240, 241]
 
 
@@ -687,7 +732,7 @@ def test_대상_파일_표는_괄호_안의_인용을_대상과_더해_행_셋�
         "| 5 | 마 | `c.md`(근거 `r.md`) | 2026-10-19 1회차 |\n"
         "| 6 | 바 | `d.md`(근거 `r.md`) | 2026-10-19 1회차 |\n"
     )
-    [table] = queue_part(date(2026, 10, 19), text, "원본").section.tables
+    [table] = queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준").section.tables
     assert table.rows == (
         ("a.md", "2", "1, 2", "1", "3"),
         ("r.md", "0", "-", "3", "4, 5, 6"),
@@ -702,7 +747,7 @@ def test_대상_파일_표는_행_둘이_든_파일과_디렉터리_대상을_�
         "| 2 | 나 | `a.md` · `.claude/rules/` | 2026-10-19 1회차 |\n"
         "| 3 | 다 | `.claude/rules/` | 2026-10-19 1회차 |\n"
     )
-    assert queue_part(date(2026, 10, 19), text, "원본").section.tables == ()
+    assert queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준").section.tables == ()
 
 
 def 기록(at: str, *content: dict[str, Json]) -> dict[str, Json]:
@@ -780,10 +825,11 @@ def test_일지의_다음_절만_꺼낸다() -> None:
 
 
 def test_병합_PR을_읽지_못하면_그것에_기대는_표와_줄을_걷고_수집_안_됨을_적는다() -> None:
-    s = Section(3, "병렬 세션", (Table(("병합 PR",), "r", (("0",),)),), ("- 병합 PR 0개",), "출처")
+    table = Table("work.days", "work", "질문?", "기간", "개", ("병합 PR",), "r", (("0",),))
+    s = Section(3, "병렬 세션", "environment", (table,), ("- 병합 PR 0개",), "출처")
     got = merged_unknown(s, kept=("- 지금의 부하: 워크트리 3개",))
     lines = (f"- 병합 PR {UNCOLLECTED}(gh 실패)", "- 지금의 부하: 워크트리 3개")
-    assert got == Section(3, "병렬 세션", (), lines, "출처")
+    assert got == Section(3, "병렬 세션", "environment", (), lines, "출처")
 
 
 def test_PR_목록의_두_호출은_같은_한도를_준다(
@@ -801,3 +847,139 @@ def test_PR_목록의_두_호출은_같은_한도를_준다(
     merged_prs(date(2026, 10, 19), tmp_path)
     limits = [a[a.index("--limit") + 1] if "--limit" in a else None for a in seen]
     assert limits == [str(PR_LIMIT), str(PR_LIMIT)]
+
+
+def test_표_부제의_기간은_하루와_여러_날을_날_수로_가른다() -> None:
+    assert day_period(date(2026, 10, 19)) == "10-19 하루"
+    assert span_period(date(2026, 10, 13), date(2026, 10, 19)) == "10-13 ~ 10-19(7일)"
+
+
+def test_훅_표는_판정이_유지인_훅을_빼고_그_수를_줄로_적는다() -> None:
+    # 설계의 문제 3: 표의 대부분이 손볼 것 없는 `유지` 행이라 손볼 행이 묻혔다
+    last = date(2026, 10, 19)
+    rows = (
+        HookRow("알림", "hook_a.py", 3, 2, "유지", 3, last),
+        HookRow("조용함", "hook_old.py", 0, 0, "검토", 0, None),
+    )
+    scan = HookScan(rows, {"hook_a.py": "a", "hook_old.py": "b"}, {}, ())
+    section = hook_section(scan, last, None, Sources("장부", "기록")).section
+    [table] = section.tables
+    assert (table.key, table.report) == ("environment.hooks", "environment")
+    assert [r[1] for r in table.rows] == ["hook_old.py"]
+    assert any("등록된 훅 1개는 판정이 `유지`" in line for line in section.lines)
+
+
+def test_작업_칸의_브랜치는_PR_번호를_모으고_PR이_없으면_커밋_제목을_모은다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    at = datetime(2026, 10, 19, tzinfo=UTC)
+    merged = [GhPr(7, "가", "chore/a", at, at), GhPr(9, "가 다시", "chore/a", at, at)]
+    opened = [OpenPr(GhPr(11, "나", "feat/b", at, None), "검토 중")]
+    subjects = {"chore/c": "다를 고친다\n"}
+
+    def subject(_root: Path, branch: str) -> str | None:
+        return subjects.get(branch)
+
+    monkeypatch.setattr("tools.morning_collect.branch_subject", subject)
+    works = {"chore/a", "feat/b", "chore/c", "chore/d", "main"}
+    refs, got = gather_works(works, merged, opened, Path("."))
+    assert refs == {9, 11}
+    assert got == {"chore/c": "다를 고친다"}
+
+
+def test_한도_기록이_없으면_주간_한도는_그_까닭이다(tmp_path: Path) -> None:
+    got = gather_limit([], [], tmp_path, date(2026, 10, 19), KST)
+    assert isinstance(got, str)
+    assert "한도 기록이 없다" in got
+
+
+def test_장부를_채운_시각은_월별_장부_파일의_가장_늦은_수정_시각이다(tmp_path: Path) -> None:
+
+    assert ledger_time(tmp_path) == datetime.min.replace(tzinfo=UTC)
+    for name, at in (("2026-09.jsonl", 1_000_000), ("2026-10.jsonl", 2_000_000), ("x.jsonl", 9e9)):
+        (tmp_path / name).write_text("", encoding="utf-8")
+        os.utime(tmp_path / name, (at, at))
+    # 계정 기록처럼 달 이름이 아닌 파일은 장부 호출이 아니라 보지 않는다
+    assert ledger_time(tmp_path) == datetime.fromtimestamp(2_000_000, UTC)
+
+
+def test_비용_표의_단위는_비율이_있을_때만_주간_한도를_적는다() -> None:
+    # 비율이 없으면 `주간 한도(%p)` 칸이 그려지지 않는데 부제에는 그 단위가 남았다
+    assert money_unit(None) == "달러"
+    assert money_unit(13.0) == "달러와 주간 한도 %p"
+
+
+def test_수집은_시트와_수집_JSON을_임시_파일_없이_쓰고_JSON은_시트_뒤에_온다(
+    tmp_path: Path,
+) -> None:
+    # 수집 JSON이 있으면 시트도 있다. 건너뛴 보고가 시트(확인할 수치 열쇠, 평소와 다른 지표)를
+    # 파일로 읽고, 반쯤 쓴 JSON이 남지 않는다
+    data = Data(date(2026, 10, 19), "", (), {}, (), {}, {}, {}, "", "한도 없음")
+    out = write_outputs(tmp_path, data)
+    assert out == tmp_path / "2026-10-19.data.json"
+    assert sheet_path(tmp_path, data.day).read_text(encoding="utf-8") == "\n".join(
+        sheet_lines(data)
+    )
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "2026-10-19.data.json",
+        "2026-10-19.sheet.txt",
+    ]
+    # 다시 쓰면 덮어쓰고 임시 파일을 남기지 않는다
+    write_outputs(tmp_path, data)
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_수집_파일을_쓰지_못하면_트레이스백_없이_종료_2로_까닭을_적는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 윈도에서 다른 프로세스가 연 파일로 os.replace가 PermissionError를 내면 종료 1로 끝났고,
+    # 지시문은 종료 2만 다룬다(PR 직전 리뷰)
+    root = tmp_path / "root"
+    (root / ".claude").mkdir(parents=True)
+    (root / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
+    data = Data(date(2026, 10, 19), "", (), {}, (), {}, {}, {}, "", "한도 없음")
+
+    def 모음(*_: object) -> Data:
+        return data
+
+    def 막힘(*_: object) -> Path:
+        raise PermissionError("다른 프로세스가 쓰고 있다")
+
+    monkeypatch.setattr("tools.morning_collect.collect", 모음)
+    monkeypatch.setattr("tools.morning_collect.write_outputs", 막힘)
+    args = ["--reports", str(tmp_path / "r"), "--root", str(root), "--day", "2026-10-19"]
+    assert collect_main(args) == 2
+    assert "수집 파일을 쓰지 못했다" in capsys.readouterr().err
+
+
+def test_시트는_행이_있는_표의_열쇠만_메모를_쓸_표로_싣는다() -> None:
+    def 표(key: str, *rows: tuple[str, ...]) -> Table:
+        return Table(key, "work", "무엇이 있나?", "어제", "개", ("이름",), "l", rows)
+
+    section = Section(5, "어제", "work", (표("work.empty"), 표("work.full", ("a",))), (), "gh")
+    data = Data(date(2026, 10, 19), "", (), {}, (section,), {}, {}, {}, "", "한도 없음")
+    sheet = "\n".join(sheet_lines(data))
+    assert "work · work.full:" in sheet
+    assert "work.empty" not in sheet
+
+
+def test_한도의_비용은_가장_늦은_기록의_계정_세션_호출만_센다(tmp_path: Path) -> None:
+    accounts = [
+        {"session_id": "s1", "account_uuid": "u1", "email": "a@x"},
+        {"session_id": "s2", "account_uuid": "u2", "email": "b@x"},
+    ]
+    (tmp_path / "accounts.jsonl").write_text(
+        "\n".join(json.dumps(a) for a in accounts), encoding="utf-8"
+    )
+    month = tmp_path / "2026-10.jsonl"
+    month.write_text("", encoding="utf-8")
+    filled = datetime(2026, 10, 20, tzinfo=UTC).timestamp()
+    os.utime(month, (filled, filled))
+    mine, other = 호출("2026-10-18T03:00:00Z", "s1"), 호출("2026-10-18T03:00:00Z", "s2")
+    record = Record(
+        datetime(2026, 10, 19, tzinfo=UTC), "a@x", 50, datetime(2026, 10, 25, tzinfo=UTC)
+    )
+    got = gather_limit([record], [mine, other], tmp_path, date(2026, 10, 19), KST)
+    assert isinstance(got, Limit)
+    assert got.account == "a@x"
+    assert got.spent == mine.cost() != 0
