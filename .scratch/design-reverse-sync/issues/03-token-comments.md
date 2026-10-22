@@ -6,6 +6,8 @@
 
 02가 짓기 명령과 설명을 읽는 자리를 세운 뒤에 돈다. 04·05와 파일이 겹치지 않아 나란히 돈다. 이 티켓은 08(첫 올리기)을 막는다. 첫 올리기가 내는 `tokens.json`의 설명이 이 주석이기 때문이다.
 
+**02가 넘긴 것(2026-10-22).** 02의 시험 가운데 지금 디자인 토큰 CSS에 주석이 없다는 것에 기댄 단언이 있어, 주석을 달면 깨진다. `web/tools/sync-design-system/build.test.ts`의 "지금 디자인 토큰 CSS 에는 줄 끝 주석이 없어 설명이 모두 빈 칸이다" 사례와 "글자 크기는 type 묶음 하나에 …" 사례의 `usage: ""` 셋, `tokens-json.test.ts`의 "설명 하나는 그 토큰의 설명 차이다" 사례의 `before: ""`다. 이 티켓이 주석과 함께 그 기대를 고친다. 첫 사례는 "설명이 빈 토큰이 없다"로 뒤집는다. 받은 저장본 사례는 시험 자료(`fixtures/`)끼리 맞대므로 깨지지 않는다. 그 기대를 겨누는 변이(`.scratch/design-reverse-sync/probes/sync_script_mutations.toml`)의 표지도 함께 본다.
+
 **Blocked by:** 02
 
 **Status:** ready-for-agent

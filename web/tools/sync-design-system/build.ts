@@ -72,7 +72,7 @@ interface ColorCandidate {
   readonly values: readonly ColorValue[];
 }
 
-function limit(what: string, count: number, cap: number): void {
+function checkLimit(what: string, count: number, cap: number): void {
   if (count > cap) {
     throw new CommandError(
       "limit",
@@ -95,7 +95,7 @@ function benches(css: string): {
       winners: parsed.winners(key, mode),
     })),
   );
-  limit("페이지 테마(테마 × 모드)", found.length, LIMITS.themes);
+  checkLimit("페이지 테마(테마 × 모드)", found.length, LIMITS.themes);
   return { benches: found, css: parsed };
 }
 
@@ -202,7 +202,7 @@ function family(
       ? []
       : [{ name: found[1] ?? "", value: declaration.value, usage: declaration.comment }];
   });
-  limit(what, tokens.length, LIMITS.familyTokens);
+  checkLimit(what, tokens.length, LIMITS.familyTokens);
   return { note: "", tokens };
 }
 
@@ -210,7 +210,7 @@ function family(
 export function buildTokensFile(css: string): TokensFile {
   const { benches: found, css: parsed } = benches(css);
   const color = colorTokens(found);
-  limit("색 토큰", color.length, LIMITS.colors);
+  checkLimit("색 토큰", color.length, LIMITS.colors);
   const sans = found[0]?.winners.get("--sans")?.value;
   if (sans === undefined) {
     throw new CommandError("input", "디자인 토큰 CSS 의 기본 테마에 --sans 가 없다");

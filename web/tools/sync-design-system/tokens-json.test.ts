@@ -1,6 +1,8 @@
 // 두 벌의 tokens.json 을 값으로 맞대는 공용 함수의 테스트(design-reverse-sync 명세 "맞대는 것"의 2026-10-22 주석,
-// Testing Decisions "왕복"의 셋째 문장). 입력은 실제 디자인 토큰 CSS 로 지은 tokens.json 을 고친 것이다.
+// Testing Decisions "왕복"의 셋째 문장). 입력은 실제 디자인 토큰 CSS 로 지은 tokens.json 을 고친 것과, 임시
+// 아티팩트에서 받은 시험 자료(`fixtures/`)다.
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
@@ -290,6 +292,39 @@ describe("값으로 맞대기", () => {
     expect(sameHash).toBe(false);
   });
 
+  test("페이지가 버리는 테마 id(객체의 기본 속성 이름)는 벌로 세지 않는다", () => {
+    // id 는 소문자로 바꾼 뒤 거르므로 `toString` 같은 낙타 꼴 이름은 걸리지 않는다(페이지도 같다).
+    const themes = ["prototype", "constructor", "nokcheong-light"].map((id) => ({
+      id,
+      name: id,
+    }));
+
+    expect(readTokens({ color: { themes, tokens: [] } }).themes).toEqual(["nokcheong-light"]);
+  });
+
+  test("같은 이름의 둘째 토큰은 한 계열 안에 있든 앞 계열이 쓴 이름이든 버린다", () => {
+    const read = readTokens({
+      color: { themes: [{ id: "a" }], tokens: [{ name: "x", value: "#111111" }] },
+      spacing: {
+        tokens: [
+          { name: "x", value: "4px" },
+          { name: "s", value: "4px" },
+          { name: "s", value: "8px" },
+        ],
+      },
+      radius: {
+        tokens: [
+          { name: "s", value: "2px" },
+          { name: "r", value: "2px" },
+        ],
+      },
+    });
+    const spacing = [...(read.families.get("spacing")?.tokens ?? [])];
+
+    expect(spacing.map(([name, token]) => [name, token.value])).toEqual([["s", "4px"]]);
+    expect([...(read.families.get("radius")?.tokens.keys() ?? [])]).toEqual(["r"]);
+  });
+
   test("맞대는 몫 밖의 칸(이름, 판, 테마의 표시 이름)은 맞대지 않는다", () => {
     const after = edited((file) => {
       file.name = "다른 이름";
@@ -302,5 +337,67 @@ describe("값으로 맞대기", () => {
     });
 
     expect(compare(after)).toEqual({ diffs: [], sameHash: true });
+  });
+});
+
+describe("임시 아티팩트에서 받은 저장본", () => {
+  // 비공개 임시 디자인 시스템 아티팩트(2026-10-22, 지금은 지웠다)에서 Artifact 도구가 파일마다 낸 sha256 이다. 올린
+  // tokens.json 은 판 1792670467-a367 의 것이고, 사람이 페이지에서 gray-50 의 녹청 라이트 값과 radius-m 설명을
+  // 고쳐 저장한 뒤의 두 파일은 판 1792671359-792c 의 것이다(.scratch/design-reverse-sync/probes/README.md).
+  // 올린 파일을 따로 두는 것은, 디자인 토큰 CSS 가 바뀌어도(03 의 설명 주석) 이 사례가 그대로이게 하려는 것이다.
+  const RECEIVED = [
+    ["uploaded-tokens.json", "191da4dc98d92e537243767fc8c3f0b22a5b9e75b0b83b5e7751590e51f90251"],
+    ["page-saved-tokens.json", "8ec4aab6d2dcd42353561439aea3a49910ab787efbcbbcd5601a1cced26020bb"],
+    ["page-saved-README.md", "fa615f747a3d82916b44d4f18f1c84cadaa5a12c89db05ebdef0dcb37338406c"],
+  ] as const;
+
+  function fixture(name: string): Buffer {
+    return readFileSync(join(import.meta.dirname, "fixtures", name));
+  }
+
+  function parsedFixture(name: string): unknown {
+    const parsed: unknown = JSON.parse(fixture(name).toString("utf-8"));
+    return parsed;
+  }
+
+  test.each(RECEIVED)("%s 는 Artifact 도구가 낸 바이트 그대로다", (name, sha256) => {
+    expect(createHash("sha256").update(fixture(name)).digest("hex")).toBe(sha256);
+  });
+
+  test("올린 파일과 페이지가 저장한 파일을 맞대면 사람이 고친 둘만 나온다", () => {
+    const uploaded = readTokens(parsedFixture("uploaded-tokens.json"));
+    const saved = readTokens(parsedFixture("page-saved-tokens.json"));
+
+    expect(diffTokens(uploaded, saved)).toEqual([
+      {
+        kind: "value",
+        family: "color",
+        token: "gray-50",
+        theme: "nokcheong-light",
+        before: "#f4f8fb",
+        after: "#f0f4f8",
+      },
+      {
+        kind: "usage",
+        family: "radius",
+        token: "radius-m",
+        before: "",
+        after: "버튼과 카드의 모서리",
+      },
+    ]);
+  });
+
+  test("페이지가 꼴을 다시 쓴 저장본도 고친 둘을 되돌리면 올린 파일과 맞대는 값이 같다", () => {
+    const uploaded = record(parsedFixture("uploaded-tokens.json"));
+    const saved = record(parsedFixture("page-saved-tokens.json"));
+    // 페이지가 꼴을 다시 썼다는 표지. 올린 파일에 없던 빈 글꼴 목록이 저장본에 있다.
+    expect(Object.hasOwn(record(uploaded.type), "fonts")).toBe(false);
+    expect(record(saved.type).fonts).toEqual([]);
+
+    const gray = tokenIn(saved, "color", "gray-50");
+    gray.value = { ...record(gray.value), "nokcheong-light": "#f4f8fb" };
+    tokenIn(saved, "radius", "radius-m").usage = "";
+
+    expect(comparisonHash(readTokens(saved))).toBe(comparisonHash(readTokens(uploaded)));
   });
 });

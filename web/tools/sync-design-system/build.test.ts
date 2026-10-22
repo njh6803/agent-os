@@ -91,6 +91,19 @@ describe("짓기", () => {
     ]).toEqual([98, 3, 7, 4]);
   });
 
+  test("색 토큰은 원색, 반투명, 쓰임새 토큰의 차례이고 그 안에서는 디자인 토큰 CSS 의 차례다", () => {
+    const names = buildTokensFile(CSS).color.tokens.map((token) => token.name);
+
+    expect([0, 67, 68, 74, 75, 97].map((index) => names[index])).toEqual([
+      "gray-0",
+      "info-950",
+      "overlay-black-4",
+      "overlay-white-16",
+      "bg",
+      "shadow-color",
+    ]);
+  });
+
   test("테마는 여덟 벌이고 첫째가 녹청 라이트, 그다음 녹청 다크와 군청·자초·쪽빛의 라이트·다크 순이다", () => {
     const { themes } = buildTokensFile(CSS).color;
 
@@ -223,12 +236,16 @@ describe("짓기", () => {
     let css = CSS;
     css = commentLine(css, "--gray-500: #636363;", "군청 블록의 주석");
     css = commentLine(css, "--bg: var(--gray-950);", "다크 대응의 주석");
-    css = insertBefore(css, "--radius-s:", ["  /* 앞 줄의 주석 */"]);
+    // 줄 하나를 차지한 주석은 앞 선언(radius-s)의 것도 뒤 선언(radius-m)의 것도 아니다.
+    css = insertBefore(css, "--radius-m:", ["  /* 앞 줄의 주석 */"]);
     const file = buildTokensFile(css);
 
     expect(colorToken(file, "gray-500").usage).toBe("");
     expect(colorToken(file, "bg").usage).toBe("");
-    expect(file.radius.tokens.find((token) => token.name === "radius-s")?.usage).toBe("");
+    expect(file.radius.tokens.slice(0, 2).map((token) => [token.name, token.usage])).toEqual([
+      ["radius-s", ""],
+      ["radius-m", ""],
+    ]);
   });
 
   test("글자 크기는 type 묶음 하나에 스타일 셋이고 크기·줄 높이·굵기가 디자인 토큰 CSS 의 값 그대로다", () => {
@@ -296,8 +313,11 @@ describe("짓기", () => {
       ].join("\n"),
     );
 
+    const error = buildError(extra);
+
     expect(extra).not.toBe(CSS);
-    expect(buildError(extra).kind).toBe("limit");
+    expect(error.kind).toBe("limit");
+    expect(error.message).toContain("페이지 테마(테마 × 모드) 수가 10 개로");
   });
 
   test("색이 600 개를 넘는 입력은 한도 오류다", () => {
@@ -307,7 +327,10 @@ describe("짓기", () => {
     );
     const css = insertBefore(CSS, "    --gray-0: #ffffff;", filler);
 
-    expect(buildError(css).kind).toBe("limit");
+    const error = buildError(css);
+
+    expect(error.kind).toBe("limit");
+    expect(error.message).toContain("색 토큰 수가 601 개로");
   });
 
   test("600 개 그대로의 색은 한도 안이다", () => {
@@ -327,6 +350,9 @@ describe("짓기", () => {
       (_, index) => `  --spacing-${String(100 + index)}: 1px;`,
     );
 
-    expect(buildError(insertBefore(CSS, "  --spacing-0: 0px;", filler)).kind).toBe("limit");
+    const error = buildError(insertBefore(CSS, "  --spacing-0: 0px;", filler));
+
+    expect(error.kind).toBe("limit");
+    expect(error.message).toContain("간격 토큰 수가 61 개로");
   });
 });

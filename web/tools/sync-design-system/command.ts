@@ -8,13 +8,14 @@
  * - `usage`: 명령이나 인자가 틀렸다.
  * - `input`: 입력 파일을 읽거나 풀 수 없다.
  * - `limit`: 형식의 한도(테마 8, 색 600, 다른 계열 60)를 넘는다.
+ * - `output`: 출력 파일을 쓸 수 없다.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { JsonValue } from "./tokens-json.ts";
 
-export const ERROR_KINDS = ["usage", "input", "limit"] as const;
+export const ERROR_KINDS = ["usage", "input", "limit", "output"] as const;
 
 export type ErrorKind = (typeof ERROR_KINDS)[number];
 
@@ -55,10 +56,17 @@ export function readInput(path: string): string {
   }
 }
 
-/** 출력 파일을 쓰고 그 절대 경로를 돌려준다. 폴더가 없으면 만든다. */
+/** 출력 파일을 쓰고 그 절대 경로를 돌려준다. 폴더가 없으면 만든다. 쓸 수 없으면 `output` 오류다. */
 export function writeOutput(path: string, text: string): string {
   const absolute = resolve(path);
-  mkdirSync(dirname(absolute), { recursive: true });
-  writeFileSync(absolute, text);
+  try {
+    mkdirSync(dirname(absolute), { recursive: true });
+    writeFileSync(absolute, text);
+  } catch (error) {
+    throw new CommandError(
+      "output",
+      `${path} 를 쓸 수 없다: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   return absolute;
 }

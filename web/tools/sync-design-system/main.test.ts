@@ -36,6 +36,18 @@ function invoke(...args: string[]): Outcome {
   return { status: result.status, report, lines: lines.length };
 }
 
+/** 보고의 오류 문구. 없으면 빈 글이다. */
+function errorMessage(report: unknown): string {
+  if (typeof report !== "object" || report === null || !("error" in report)) {
+    return "";
+  }
+  const { error } = report;
+  if (typeof error !== "object" || error === null || !("message" in error)) {
+    return "";
+  }
+  return typeof error.message === "string" ? error.message : "";
+}
+
 describe("스크립트 진입", () => {
   test("짓기는 지은 tokens.json 을 출력 파일에 쓰고 보고 JSON 하나를 낸 뒤 0 으로 끝난다", () => {
     const css = join(scratch, "theme.css");
@@ -78,6 +90,7 @@ describe("스크립트 진입", () => {
 
     expect(outcome.status).toBe(1);
     expect(outcome.report).toMatchObject({ command: "build", ok: false, error: { kind: "limit" } });
+    expect(errorMessage(outcome.report)).toContain("간격 토큰 수가 61 개로");
   });
 
   test("읽을 수 없는 입력 파일은 input 오류다", () => {
@@ -85,6 +98,20 @@ describe("스크립트 진입", () => {
 
     expect(outcome.status).toBe(1);
     expect(outcome.report).toMatchObject({ command: "build", ok: false, error: { kind: "input" } });
+    expect(errorMessage(outcome.report)).toContain("없다.css 를 읽을 수 없다");
+  });
+
+  test("출력 파일을 쓸 수 없으면 output 오류다", () => {
+    // 출력 경로가 폴더(작업 폴더)라 쓰지 못한다.
+    const outcome = invoke("build", "--out", ".");
+
+    expect(outcome.status).toBe(1);
+    expect(outcome.report).toMatchObject({
+      command: "build",
+      ok: false,
+      error: { kind: "output" },
+    });
+    expect(errorMessage(outcome.report)).toContain(". 를 쓸 수 없다");
   });
 
   test("출력 파일을 주지 않으면 usage 오류다", () => {
@@ -92,17 +119,31 @@ describe("스크립트 진입", () => {
 
     expect(outcome.status).toBe(1);
     expect(outcome.report).toMatchObject({ command: "build", ok: false, error: { kind: "usage" } });
+    expect(errorMessage(outcome.report)).toContain("--out <tokens.json>");
   });
 
-  test("모르는 명령은 usage 오류이고 아는 명령을 문구에 든다", () => {
-    const outcome = invoke("rebuild");
+  test("모르는 옵션은 usage 오류다", () => {
+    const outcome = invoke("build", "--bogus", "x", "--out", "tokens.json");
 
     expect(outcome.status).toBe(1);
     expect(outcome.report).toMatchObject({
-      command: "rebuild",
+      command: "build",
       ok: false,
       error: { kind: "usage" },
     });
-    expect(JSON.stringify(outcome.report)).toContain("build");
+    expect(errorMessage(outcome.report)).toContain("bogus");
+  });
+
+  test("모르는 명령은 usage 오류이고 아는 명령을 문구에 든다", () => {
+    // 명령 이름에 build 가 들지 않아야 문구의 build 가 아는 명령 목록에서 온 것이다.
+    const outcome = invoke("deploy");
+
+    expect(outcome.status).toBe(1);
+    expect(outcome.report).toMatchObject({
+      command: "deploy",
+      ok: false,
+      error: { kind: "usage" },
+    });
+    expect(errorMessage(outcome.report)).toContain("build");
   });
 });

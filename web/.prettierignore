@@ -1,2 +1,5 @@
 # pnpm 이 쓰는 파일. 모양은 pnpm 이 정한다
 pnpm-lock.yaml
+# 디자인 시스템 페이지가 저장한 바이트 그대로의 시험 자료. 모양은 페이지가 정한다(사람 몫 뒤의 빈 줄 둘을
+# Prettier 가 하나로 줄인다). 같은 폴더의 tokens.json 둘은 Prettier 를 지나 빼지 않는다
+tools/sync-design-system/fixtures/page-saved-README.md

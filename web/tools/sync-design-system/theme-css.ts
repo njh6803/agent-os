@@ -6,16 +6,19 @@
  *   `data-theme="<테마>"` 와 `data-mode="<모드>"` 를 단 것으로 보고, 선택자가 그 요소에 맞는 규칙 가운데 브라우저처럼
  *   레이어, 특정성, 차례로 이기는 사용자 정의 속성의 선언을 고른다. 그래서 군청·자초의 주 버튼 덮기 같은 갈래가
  *   목록 없이 그대로 나온다. 고른 선언은 줄 번호와 줄 끝 주석을 함께 든다.
- * - `@media` 안의 규칙은 보지 않는다. 시스템 모드(`prefers-color-scheme`)와 폭에 따른 밀도의 사본이고, 페이지의 벌은
- *   모드를 명시한 요소다.
+ * - `@layer` 밖의 at-rule(`@media`, `@supports`, `@container` 등) 안의 규칙은 보지 않는다. 이 파일의 `@media` 는
+ *   시스템 모드(`prefers-color-scheme`)와 폭에 따른 밀도의 사본이고, 페이지의 벌은 모드를 명시한 요소다.
  * - `@theme` 블록(Tailwind)은 캐스케이드와 따로, `inline` 이 아닌 블록의 선언을 그대로 낸다. 글자 크기, 간격, 모서리의
  *   값이 거기 있다.
  * - 주석은 선언을 끝낸 `;` 와 같은 줄에서 시작하는 것만 그 선언의 것이다(명세 "토큰 설명의 자리"). 앞 줄의 주석은
  *   어느 선언의 것도 아니다.
  *
  * 못 보는 것: 선택자는 이 파일이 쓰는 꼴(`:root`, `:host(…)`, 속성 선택자, `:not(…)`, 태그)만 푼다. 다른 의사 클래스나
- * 속성 연산자가 사용자 정의 속성을 선언한 규칙에 오면 입력 오류로 멈춘다. `!important` 와 이름 있는 레이어의 미리
- * 선언(`@layer a, b;`)은 보지 않고, 레이어의 차례는 블록이 처음 나온 차례다.
+ * 속성 연산자가 사용자 정의 속성을 선언한 규칙에 오면 입력 오류로 멈춘다. 결합자가 든 선택자는 풀지 않고 뿌리에 맞지
+ * 않는 것으로 넘겨, 그 안의 의사 클래스도 오류가 아니다. `!important`, 이름 있는 레이어의 미리 선언(`@layer a, b;`),
+ * 중첩 레이어(`@layer a { @layer b { … } }` 의 `a.b`)는 보지 않는다. 레이어의 차례는 그 레이어 블록에 바로 든 규칙이
+ * 처음 나온 차례이고(사용자 정의 속성이 없는 규칙도 센다), 안쪽 레이어는 바깥 레이어와 따로 세며 바깥이 달라도 이름이
+ * 같으면(`a.x` 와 `c.x`) 하나로 센다.
  */
 
 import { CommandError } from "./command.ts";
@@ -496,13 +499,14 @@ export function parseThemeCss(css: string): ThemeCss {
     if (rule.context.some((head) => !head.startsWith("@layer"))) {
       return [];
     }
-    const custom = rule.declarations.filter((declaration) => declaration.property.startsWith("--"));
-    if (custom.length === 0) {
-      return [];
-    }
+    // 레이어의 차례는 사용자 정의 속성이 없는 규칙까지 세어 처음 나온 차례다.
     const layerHead = rule.context.findLast((head) => head.startsWith("@layer"));
     if (layerHead !== undefined && !layers.includes(layerHead)) {
       layers.push(layerHead);
+    }
+    const custom = rule.declarations.filter((declaration) => declaration.property.startsWith("--"));
+    if (custom.length === 0) {
+      return [];
     }
     const layer = layerHead === undefined ? Number.POSITIVE_INFINITY : layers.indexOf(layerHead);
     return [{ rule, custom, layer, order }];

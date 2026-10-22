@@ -10,12 +10,16 @@
  * 정규 꼴은 Design System 형식의 페이지(판 1792564314-af13 의 `artifact-type/app.js`)가 `tokens.json` 을 읽을 때
  * 하는 정리를 따라 한다. 그래서 페이지가 저장하며 꼴만 다시 쓴 파일(문자열 색 값을 첫 테마의 객체로, 빈 설명 칸, 소문자
  * hex, 글자 스타일의 기본값과 문자열 굵기, 키의 차례)은 차이가 없다. 색과 그림자의 값은 벌마다 풀어 둔다. 값이 없는
- * 벌은 첫 테마의 값을 물려받기 때문이다(형식 설명 `format.md` 의 "tokens.json grammar"). 페이지가 버리는 값(읽지
- * 못하는 색, 같은 이름의 둘째 토큰, 한도 뒤의 것)도 버린다.
+ * 벌은 첫 테마의 값을 물려받기 때문이다(형식 설명 `format.md` 의 "tokens.json grammar"). 페이지가 버리는 값 가운데
+ * 읽지 못하는 색, 같은 이름의 둘째 토큰, 한도 뒤의 것은 버린다. 토큰 이름은 페이지처럼 앞의 `--` 만 뗀다(형식 설명은
+ * `.` 도 뗀다고 적지만 그 판의 페이지 스크립트는 토큰 이름에서 `--` 만 뗀다).
  *
- * 맞대지 않는 것: 맨 위의 `name`·`version`·`meta`, 테마의 표시 이름과 차례, 토큰과 묶음의 차례. 페이지는 이것들을
- * 지키거나 다시 쓰지만 디자인 토큰 CSS 로 옮길 값이 아니다. 다른 토큰을 가리키는 값이 실제로 있는 토큰인지는 보지
- * 않는다(페이지는 그런 값을 버린다).
+ * 맞대지 않는 것: 맨 위의 `name`·`version`·`meta`, 테마의 표시 이름, 토큰과 묶음의 차례. 페이지는 이것들을 지키거나
+ * 다시 쓰지만 디자인 토큰 CSS 로 옮길 값이 아니다. 테마의 차례도 그 자체로는 맞대지 않는다. 다만 첫 테마와, 첫 테마에
+ * 값이 없을 때 값을 빌려 올 벌은 차례로 정해지므로, 차례가 바뀌면 벌마다 푼 값이 바뀔 수 있고 그것은 값의 차이로 나온다.
+ *
+ * 따라 하지 않는 페이지의 정리: 다른 토큰을 가리키는 값이 실제로 있는 토큰인지와 자기나 서로를 가리켜 도는지(페이지는
+ * 그런 값을 버린다), 글꼴 스택의 문법(형식 설명이 금지하는 글자와 따옴표 짝). 그런 값은 남겨 맞댄다.
  */
 
 import { createHash } from "node:crypto";
@@ -65,6 +69,7 @@ export interface TokenFamily {
 
 /** 짓기가 쓰는 tokens.json. */
 export interface TokensFile {
+  /** 페이지가 저장할 때 쓰는 판(판 1792564314-af13 의 `app.js` 가 `version: 1` 로 다시 쓴다). 맞대지 않는다. */
   readonly version: 1;
   readonly color: { readonly themes: readonly Theme[]; readonly tokens: readonly ColorToken[] };
   readonly type: {
@@ -75,7 +80,11 @@ export interface TokensFile {
   readonly radius: TokenFamily;
 }
 
-/** 형식의 한도(`format.md` 의 caps 줄). 넘는 것을 페이지가 버리므로 정규 꼴도 버린다. */
+/**
+ * 형식의 한도(`format.md` 의 caps 줄)와, 그 줄에 없이 페이지 스크립트(판 1792564314-af13 의 `app.js`)가 테마의 표시
+ * 이름·글꼴 이름·글자 묶음 이름을 자르는 길이(`name`, 120). 넘는 것을 페이지가 버리거나 자르므로 정규 꼴도 그렇게
+ * 한다(테마의 표시 이름은 맞대지 않아 쓰지 않는다).
+ */
 export const LIMITS = {
   themes: 8,
   colors: 600,
@@ -305,9 +314,10 @@ function readThemes(color: Readonly<Record<string, unknown>>): string[] {
   return themes.length > 0 ? themes : ["light"];
 }
 
+/** 계열 하나. `taken` 은 앞 계열들이 이미 쓴 토큰 이름이고(계열이 이름 하나를 나눈다), 그 이름의 토큰은 버린다. */
 function readFamily(
   value: unknown,
-  taken: Set<string>,
+  taken: ReadonlySet<string>,
   read: (raw: unknown) => string | ReadonlyMap<string, string> | undefined,
 ): CanonicalFamily {
   const family = isRecord(value) ? value : {};
@@ -321,10 +331,9 @@ function readFamily(
     }
     const name = tokenName(own(item, "name"));
     const parsed = read(own(item, "value"));
-    if (!NAME.test(name) || taken.has(name) || parsed === undefined) {
+    if (!NAME.test(name) || taken.has(name) || tokens.has(name) || parsed === undefined) {
       continue;
     }
-    taken.add(name);
     tokens.set(name, { value: parsed, usage: text(own(item, "usage"), LIMITS.usage) });
   }
   return { note: text(own(family, "note"), LIMITS.note), tokens };
@@ -441,17 +450,20 @@ export function readTokens(input: unknown): CanonicalTokens {
     colorTokens.set(name, { value, usage: text(own(item, "usage"), LIMITS.usage) });
   }
 
-  const taken = new Set(colorTokens.keys());
   const families = new Map<string, CanonicalFamily>([["color", { note: "", tokens: colorTokens }]]);
+  const taken = (): ReadonlySet<string> =>
+    new Set([...families.values()].flatMap((family) => [...family.tokens.keys()]));
   families.set(
     "spacing",
-    readFamily(own(root, "spacing"), taken, (raw) => length(raw)),
+    readFamily(own(root, "spacing"), taken(), (raw) => length(raw)),
   );
   families.set(
     "radius",
-    readFamily(own(root, "radius"), taken, (raw) => length(raw, true)),
+    readFamily(own(root, "radius"), taken(), (raw) => length(raw, true)),
   );
-  const shadow = readFamily(own(root, "shadow"), taken, (raw) => perTheme(raw, themes, plainValue));
+  const shadow = readFamily(own(root, "shadow"), taken(), (raw) =>
+    perTheme(raw, themes, plainValue),
+  );
   if (shadow.tokens.size > 0) {
     families.set("shadow", shadow);
   }
@@ -470,7 +482,7 @@ export function readTokens(input: unknown): CanonicalTokens {
       continue;
     }
     extras += 1;
-    const family = readFamily(value, taken, plainValue);
+    const family = readFamily(value, taken(), plainValue);
     if (family.tokens.size > 0) {
       families.set(key, family);
     }
