@@ -17,16 +17,19 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
 - 회차 기록에는 모델이 쓴 글과 도구 입력을 담을 칸이 없다. 수, 식별자, 참거짓, 정해진 이름만 담고,
   글 칸은 칸마다 그 값이 나오는 꼴만 받는다(`.claude/rules/tools.md`의 허용 목록 항목). 모델 이름은
   `claude-`로 시작하는 이름과 `<synthetic>`, 창·subtype·끝난 까닭·노력은 영소문자 식별자, 도구
-  이름은 영문 식별자, 계정 이름은 이메일의 `@` 앞 꼴, 오염 꼴의 이름은 러너 상수의 꼴이다. 게이트와
+  이름은 영문 식별자, 계정 이름은 이메일의 `@` 앞 꼴(첫 글자는 영소문자나 숫자이고 그 뒤는
+  영소문자·숫자·`._-`다. 대문자와 `+`는 받지 않는다), 오염 꼴의 이름은 러너 상수의 꼴이다. 게이트와
   준비의 명령은 명세가 정한 세 명령의 상수(`GATE_COMMANDS`, `SETUP_COMMANDS`)와 같아야 한다. 회차
-  폴더 경로는 마지막 조각이 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더 이름이고,
-  줄바꿈·따옴표·`=`가 없다. 실패한 숨은 시험의 노드 ID는 겹치지 않고 줄바꿈이 없다.
+  폴더 경로는 마지막 조각이 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더 이름이다. 경로 전체에
+  제어 문자(줄바꿈과 유니코드 줄 구분 문자 포함)·따옴표·`=`가 없고, 앞 경로 부분은 그 밖의 글을
+  받는다. 실패한 숨은 시험의 노드 ID는 겹치지 않고 제어 문자(줄바꿈 포함)가 없다.
 
 못 보는 것. 키와 형, 칸 사이의 맞음(끝의 종류와 하위 이유, 끝남이 아닌 회차의 게이트, 결과 커밋과
 고른 규칙)만 본다. 값이 실제와 맞는지(비용의 합이 세션 비용의 합인지, 노드 ID가 과제 목록의
-것인지)는 그 값을 짓는 도구가 지킨다. 꼴로 좁힌 글 칸도 그 꼴 안의 글은 받는다. 도구 이름, 오염
-꼴의 이름, 계정 이름 칸은 식별자 꼴이라 `sk-ant-…` 같은 토큰 꼴의 글도 받는다. 그 칸은 init 이벤트의
-도구 목록, 러너 상수, 명령 줄로 받은 계정 이름에서만 옮긴다(회차 도구가 지킨다). 실패한 노드 ID도
+것인지)는 그 값을 짓는 도구가 지킨다. 꼴로 좁힌 글 칸도 그 꼴 안의 글은 받으므로, 비밀 토큰과
+우연히 같은 꼴의 글은 칸의 꼴로 막지 못한다. 도구 이름 칸이 `ghp_…`를, 회차 폴더의 앞 경로 부분이
+`sk-ant-…`를 받는 것이 그 예다. 글 칸의 값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는
+도구가 지킨다. 실패한 노드 ID도
 매개변수 부분에 공백과 따옴표가 들 수 있어 꼴로 좁히지 않고, 과제 목록의 숨은 시험 ID에서만 옮긴다.
 """
 
@@ -140,8 +143,8 @@ _PATTERN_NAME = re.compile(r"[가-힣a-z0-9][가-힣a-z0-9_-]*")  # 오염 꼴�
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_()]*")
 _VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")
 _TOKEN = re.compile(r"[0-9a-z]+")
-_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\"'=]+")
-_NODE = re.compile(r"[^\x00-\x1f\x7f]+")
+_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")
+_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")
 
 
 class ShapeError(ValueError):
@@ -1035,7 +1038,10 @@ def next_round_no(
 
 
 def _dumps(value: dict[str, Json]) -> str:
-    return json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    try:
+        return json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    except ValueError as e:
+        raise ShapeError(f"글로 바꾸지 못한다: 수는 유한한 값만 쓴다({e})") from e
 
 
 def _read_text(path: Path, what: str) -> str:
@@ -1048,7 +1054,7 @@ def _read_text(path: Path, what: str) -> str:
 def _top(text: str, what: str, keys: tuple[str, ...]) -> _Obj:
     try:
         value: Json = json.loads(text)
-    except (json.JSONDecodeError, RecursionError) as e:
+    except (ValueError, RecursionError) as e:  # 자릿수 한도를 넘는 정수는 맨 ValueError다
         raise ShapeError(f"{what}: JSON이 아니다({e})") from e
     if not isinstance(value, dict):
         raise ShapeError(f"{what}: 맨 위가 객체가 아니다")
@@ -1141,9 +1147,11 @@ class _Obj:
         def ok(v: Json) -> float | None:
             if isinstance(v, bool) or not isinstance(v, int | float):
                 return None
-            if not math.isfinite(v) or v < 0:
+            try:
+                f = float(v)
+            except OverflowError:  # float로 담지 못하는 큰 정수
                 return None
-            return float(v)
+            return f if math.isfinite(f) and f >= 0 else None
 
         return self._get(key, "0 이상의 수", ok)
 

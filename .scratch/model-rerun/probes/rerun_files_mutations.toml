@@ -302,7 +302,7 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\"'=]+")'''
+old = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")'''
 new = '''_ROUND_DIR = re.compile(r"(?s).+")'''
 
 [[mutation]]
@@ -313,7 +313,7 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f]+")'''
+old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")'''
 new = '''_NODE = re.compile(r"(?s).+")'''
 
 [[mutation]]
@@ -405,8 +405,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''if not math.isfinite(v) or v < 0:'''
-new = '''if v < 0:'''
+old = '''return f if math.isfinite(f) and f >= 0 else None'''
+new = '''return f if f >= 0 else None'''
 
 [[mutation]]
 name = "깊은 중첩이 ShapeError 가 아니다"
@@ -416,8 +416,8 @@ expect_output = ["RecursionError"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''except (json.JSONDecodeError, RecursionError) as e:'''
-new = '''except json.JSONDecodeError as e:'''
+old = '''except (ValueError, RecursionError) as e:'''
+new = '''except ValueError as e:'''
 
 [[mutation]]
 name = "UTF-8 이 아닌 파일이 ShapeError 가 아니다"
@@ -455,3 +455,60 @@ new = '''
         }
     )
 '''
+
+# PR 직전 bug-perf-review 를 반영한 갈래(일지 2026-10-23-12 "PR 직전 리뷰").
+
+[[mutation]]
+name = "float 로 담지 못하는 큰 정수가 OverflowError 로 샌다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "형이_다른_값은"]
+expect = "red"
+expect_output = ["OverflowError"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except OverflowError:'''
+new = '''except ZeroDivisionError:'''
+
+[[mutation]]
+name = "자릿수 한도를 넘는 정수 리터럴이 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "JSON_이_아니거나"]
+expect = "red"
+expect_output = ["Exceeds the limit"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except (ValueError, RecursionError) as e:'''
+new = '''except (json.JSONDecodeError, RecursionError) as e:'''
+
+[[mutation]]
+name = "쓰기의 유한하지 않은 수가 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰기는_유한하지"]
+expect = "red"
+expect_output = ["Out of range float"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except ValueError as e:'''
+new = '''except TypeError as e:'''
+
+[[mutation]]
+name = "회차 폴더 경로가 U+2029 를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "줄을_끊는_문자를"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")'''
+new = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\"'=]+")'''
+
+[[mutation]]
+name = "실패 노드가 U+0085 를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "줄을_끊는_문자를"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")'''
+new = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\u2028\u2029]+")'''

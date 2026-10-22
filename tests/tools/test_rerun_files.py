@@ -392,6 +392,7 @@ def test_회차_기록의_빠진_키는_거부한다(길: tuple[str | int, ...])
         (("tasks", 0, "pr_cost_usd"), "12.5"),
         (("tasks", 0, "pr_cost_usd"), float("nan")),
         (("tasks", 0, "round_cap_usd"), float("inf")),
+        (("tasks", 0, "round_cap_usd"), 10**400),
         (("tasks", 0, "hidden_tests"), "tests/a.py::t"),
         (("tasks", 0, "base"), "abc"),
         (("tasks", 0, "tier"), "거대"),
@@ -436,6 +437,7 @@ def test_과제_목록의_형이_다른_값은_거부한다(길: tuple[str | int
         (("sessions", 0, "main_lines", 0, "effort"), "x=1"),
         (("claude_version",), "2.1.302\n글"),
         (("round_dir",), 'D:/"x"/model-rerun-01-C-2-a1b2c3'),
+        (("round_dir",), "D:/x\ty/model-rerun-01-C-2-a1b2c3"),
     ],
 )
 def test_회차_기록의_형이_다른_값은_거부한다(길: tuple[str | int, ...], 값: Json) -> None:
@@ -459,6 +461,7 @@ def test_JSON_이_아니거나_맨_위가_객체가_아니면_거부한다() -> 
     사례 = (
         ("{", "JSON이 아니다"),
         ("[" * 100000, "JSON이 아니다"),
+        ('{"shape_version": ' + "1" * 5000 + "}", "JSON이 아니다"),
         ("[]", "객체"),
         ("null", "객체"),
     )
@@ -467,6 +470,20 @@ def test_JSON_이_아니거나_맨_위가_객체가_아니면_거부한다() -> 
             parse_task_list(글)
         with pytest.raises(ShapeError, match=까닭):
             parse_record(글)
+
+
+def test_쓰기는_유한하지_않은_수를_ShapeError_로_거부한다(tmp_path: Path) -> None:
+    기록 = _기록()
+    나쁜_기록 = replace(기록, spend=replace(기록.spend, official_usd=float("nan")))
+    with pytest.raises(ShapeError, match="유한"):
+        dumps_record(나쁜_기록)
+    with pytest.raises(ShapeError, match="유한"):
+        write_record(tmp_path, 나쁜_기록)
+    assert list(tmp_path.iterdir()) == []
+    목록 = _목록()
+    나쁜_목록 = replace(목록, tasks=(replace(목록.tasks[0], round_cap_usd=float("inf")),))
+    with pytest.raises(ShapeError, match="유한"):
+        dumps_task_list(나쁜_목록)
 
 
 def test_UTF_8_이_아닌_파일은_거부한다(tmp_path: Path) -> None:
@@ -665,11 +682,32 @@ def test_실패한_숨은_시험_노드는_겹치지_않는다() -> None:
 
 
 @pytest.mark.parametrize(
-    ("노드", "까닭"), [("tests/a.py", "노드 ID"), ("tests/a.py::t\n글", "failed")]
+    ("노드", "까닭"),
+    [
+        ("tests/a.py", "노드 ID"),
+        ("tests/a.py::t\n글", "failed"),
+        ("tests/a.py::t\t글", "failed"),
+    ],
 )
-def test_실패한_숨은_시험은_노드_ID_꼴이고_줄바꿈이_없다(노드: str, 까닭: str) -> None:
+def test_실패한_숨은_시험은_노드_ID_꼴이고_제어_문자가_없다(노드: str, 까닭: str) -> None:
     숨은: Json = {"passed": 2, "total": 3, "failed": [노드]}
     with pytest.raises(ShapeError, match=까닭):
+        parse_record(_바꿔(dumps_record(_기록()), ("outcome", "hidden"), 숨은))
+
+
+# 손으로 고른 목록이 아니라 str.splitlines 가 줄을 끊는 문자 전부다.
+_줄을_끊는_문자 = [
+    chr(c) for c in range(sys.maxunicode + 1) if len(f"a{chr(c)}b".splitlines()) == 2
+]
+
+
+@pytest.mark.parametrize("문자", _줄을_끊는_문자, ids=ascii)
+def test_회차_폴더_경로와_실패_노드는_줄을_끊는_문자를_모두_거부한다(문자: str) -> None:
+    폴더 = f"D:/x{문자}y/model-rerun-01-C-2-a1b2c3"
+    with pytest.raises(ShapeError, match="round_dir"):
+        parse_record(_바꿔(dumps_record(_기록()), ("round_dir",), 폴더))
+    숨은: Json = {"passed": 2, "total": 3, "failed": [f"tests/a.py::t{문자}글"]}
+    with pytest.raises(ShapeError, match="failed"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "hidden"), 숨은))
 
 
