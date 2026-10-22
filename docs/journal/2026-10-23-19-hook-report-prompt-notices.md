@@ -111,7 +111,7 @@
 - main 대조: `tools/sibling_overlap.py`의 origin/main 줄이 움직여 `git diff --name-only HEAD...origin/main`을 이 브랜치가 고친 파일과 맞댔다. main에 새로 선 규약 둘을 봤다. `docs/agents/issue-tracker.md`의 "결과를 본 뒤 판정 기준(표지, 문턱, 무엇을 하나로 세는지)을 바꿨으면 바꾼 기준과 그 까닭을 결과와 함께 적는다"에 따라 프로브 README 행에 `toolUseID` 변이의 `-k`를 넓힌 것과 그 까닭을 더했다. `CODING_STANDARDS.md`의 `bool | None` 금지는 이 브랜치의 코드에 해당하는 자리가 없다.
 
 PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 사실 문장(원문):
-- `.scratch/harness/probes/README.md`의 `hook_report_mutations.toml` 행: "앞 결과를 본 뒤 바꾼 기준이 하나 있다. `toolUseID`로 짓는 변이의 `-k`에 짝 열쇠 시험(`짝은_세션과_이벤트가`)을 더했다."
+- `.scratch/harness/probes/README.md`의 `hook_report_mutations.toml` 행: "`tools/mutate.py`가 pytest에 `-x`를 붙여, 그 변이는 파일에서 앞선 SessionStart 갈래 시험이 빨개지자 멈추고 짝 열쇠 시험을 돌지 않았다."
 - `tools/hook_report.py` 독스트링: "다른 이벤트에서는 이 저장소의 훅이 `hook_success`를 남겨 짝이 있으니, 짝 없는 첨부는 `UNKNOWN` 알림이다."
 - 같은 곳: "이벤트를 가리지 않고 모든 훅의 조각과 견주던 판은 앱의 글에 든 낱말(경로의 `scratchpad`, `PostToolUse`)이 10자 이상 조각과 맞아 그 훅의 알림이나 `AMBIGUOUS`로 셌다"
 - 같은 곳: "짝을 `toolUseID`로 짓지 않는 것은 SessionStart의 첨부는 그 자리가 이벤트 이름이라 `hook_success`의 것과 달라서다."
@@ -130,3 +130,9 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 사실 문장(원문)
 - `uv run ruff check`·`uv run ruff format --check`(고친 세 파이썬 파일): 통과. `uv run python tools/check_adr_pointers.py`: 출력 없이 0.
 - `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 35 모두 기대대로.
 - 나머지 손으로 치는 검증 명령은 커밋의 pre-commit 으로 갈음한다. 결과는 커밋 뒤 아래에 적는다.
+
+### 커밋 뒤
+
+- 커밋 `50218031`의 pre-commit: ruff check·ruff format 통과, 러너(`tools/run_checks.py`)의 열 검사(check-ticket, lint-imports, check-instructions, zizmor, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest) 모두 통과(353.95s), 마크다운 표·줄 구분 문자·변이 표 원문 통과, 카나리아 명세와 헌법 판은 고친 파일이 없어 `Skipped`(이 브랜치는 둘 다 건드리지 않았다). 인용 대조 경고 둘은 막지 않는 경고이고, 하나는 셀프 리뷰가 옛 독스트링을 옮긴 기록(92행), 하나는 main 에만 있던 `docs/agents/issue-tracker.md`의 문장(111행)이라 main 을 합쳐 풀렸다.
+- 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라고 거절해, `git fetch origin` 뒤 `git merge --no-edit origin/main`으로 합쳤다(커밋 `1106dbbe`, 충돌 없음. `.scratch/harness/probes/README.md`는 자동으로 합쳐졌다). 합친 뒤 `tools/sibling_overlap.py`는 번호 겹침 없음.
+- 합친 판에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 35 모두 기대대로. 그런데 `toolUseID` 변이의 출력이 "1 failed, 51 deselected"로, `-k`에 든 두 시험 가운데 앞의 것에서 멈췄다. `tools/mutate.py`가 pytest에 `-x`를 붙이기 때문이다(891행). 셀프 리뷰 반영에서 `-k`에 짝 열쇠 시험을 `or`로 더한 것은 아무것도 더 재지 않았다. 그 변이를 갈래마다 하나로 나눠(서른여섯) `… hook_report_mutations.toml 25 26`으로 돌리니 둘 다 기대대로 빨강이었고, 짝 열쇠 시험(`test_짝은_세션과_이벤트가_모두_같아야_짓는다`)이 혼자서도 그 변이를 잡았다. README 행을 이 사실로 고쳤다.

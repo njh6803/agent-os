@@ -250,8 +250,18 @@ old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.ge
 new = '''    return ContextKey("", _str(attachment.get("hookEvent")), text)'''
 
 [[mutation]]
-name = "짝을 이벤트 대신 toolUseID 로 짓는다"
-tests = ["tests/tools/test_hook_report.py", "-k", "같은_세션과_이벤트에서 or 짝은_세션과_이벤트가"]
+name = "짝을 이벤트 대신 toolUseID 로 짓는다(SessionStart 갈래)"
+tests = ["tests/tools/test_hook_report.py", "-k", "같은_세션과_이벤트에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)'''
+new = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("toolUseID")), text)'''
+
+[[mutation]]
+name = "짝을 이벤트 대신 toolUseID 로 짓는다(PreToolUse 와 PostToolUse 가 같은 ID 를 쓰는 갈래)"
+tests = ["tests/tools/test_hook_report.py", "-k", "짝은_세션과_이벤트가"]
 expect = "red"
 
 [[mutation.edit]]
