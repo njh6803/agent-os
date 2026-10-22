@@ -49,6 +49,9 @@
   인자 기본값의 이름은 보지 않아, M이 새로 지은 모듈 수준 이름에 기대는 시험이 조건 3을
   지난다(명세 조건 3의 2026-10-22 주석이 한계로 두었다). 본문의 docstring도 문자열 상수로 세어,
   M이 새로 쓴 문서에 같은 글이 있으면 그 시험이 빠진다.
+- 조건 3은 문자열 상수의 값을 소스 글자에서 찾는다. 이어 붙인 문자열(`"ab" "cd"`)과 이스케이프가
+  든 문자열(`"a\\tb"`)은 값과 소스 글자가 달라 M에 있어도 없다고 나와, 그 문자열에 기대는 시험이
+  조건 3을 지난다.
 - 조건 3의 문자열에 NUL이 들었거나 명령 줄에 넘기지 못할 만큼 길면 `git grep`을 띄우지 못해, 그
   노드가 아니라 후보 전체가 실패 갈래다.
 - 시험 파일과 지원 파일은 `tools/rerun_files.py`의 허용 꼴(`is_test_file`, `is_support_file`)에
@@ -59,6 +62,8 @@
   같은 문 안에서 정의한 시험은 보지 않는다.
 - 조건 2는 실패 메시지의 머리만 본다. `ImportError`·`ModuleNotFoundError`처럼 새 이름에서 나는
   다른 예외는 남는다(명세가 정한 세 종류뿐이다).
+- B에 덮은 `conftest.py`가 B에 없는 이름을 불러오면 pytest가 모으기 전에 종료 4로 멈추고 junit
+  xml을 남기지 않아, 노드마다 조건 2로 빠지지 않고 후보 전체가 실패 갈래다.
 - 프로세스 트리를 끄는 길은 그 트리를 떠난 손자(새 세션이나 그룹으로 떼어 낸 것)를 끄지 못한다. 그
   손자가 작업 트리를 쥐면 걷지 못하고, 남은 자리와 걷는 법을 `out`으로 알린다.
 """
@@ -132,9 +137,9 @@ def _is_test_def(node: ast.stmt) -> bool:
 
 
 def _test_defs(source: str) -> dict[str, _Def]:
-    """모듈의 시험 함수. 풀리지 않는 소스는 시험이 없다."""
+    """모듈의 시험 함수. 풀리지 않는 소스는 시험이 없다. 앞의 BOM은 벗기고 푼다."""
     try:
-        tree = ast.parse(source)
+        tree = ast.parse(source.removeprefix(chr(0xFEFF)))
     except (SyntaxError, ValueError):
         return {}
     out: dict[str, _Def] = {}

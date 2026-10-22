@@ -142,6 +142,11 @@ def test_B_에_없거나_풀리지_않는_시험_파일의_시험은_모두_새�
     assert _이름들(got) == ["tests/test_a.py::test_a"]
 
 
+def test_BOM_으로_시작하는_시험_파일의_시험도_본다() -> None:
+    m = chr(0xFEFF) + "def test_a():\n    assert 1\n"
+    assert _이름들(changed_tests({}, {"tests/test_a.py": m})) == ["tests/test_a.py::test_a"]
+
+
 def test_비동기_시험도_본다() -> None:
     m = "async def test_a():\n    assert 1\n"
     assert _이름들(changed_tests({}, {"tests/test_a.py": m})) == ["tests/test_a.py::test_a"]
@@ -819,6 +824,57 @@ def test_못_보는_것_NUL_이_든_문자열은_git_grep_을_띄우지_못해_�
     repo, base, _ = _저장소(tmp_path)
     with pytest.raises(CandidateError, match="띄우지 못했다"):
         term_in(repo, base, STRING, "a\x00b", outside_tests=False, limits=Limits())
+
+
+def test_못_보는_것_이어_붙이거나_이스케이프가_든_문자열은_소스에서_찾지_못한다(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    _쓰기(repo, {"calc.py": 'MSG = ("long-" "message")\nTAB = "a\\tb"\n'})
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "M")
+    merge = _git(repo, "rev-parse", "HEAD")
+    m = 'def test_a():\n    assert x == ("long-" "message"), "a\\tb"\n'
+    (got,) = changed_tests({}, {"tests/test_a.py": m})
+    assert got.strings == ("a\tb", "long-message")
+    limits = Limits()
+    for text in got.strings:
+        found = term_in(repo, merge, STRING, text, outside_tests=True, limits=limits)
+        assert not found, f"소스 글자와 다른 값을 찾았다: {text!r}"
+
+
+def test_못_보는_것_B_에서_불러오지_못하는_conftest_는_후보_전체의_실패_갈래다(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    _쓰기(repo, {"pytest.ini": "[pytest]\npythonpath = .\n", "calc.py": "OLD = 1\n"})
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "B")
+    base = _git(repo, "rev-parse", "HEAD")
+    _쓰기(
+        repo,
+        {
+            "calc.py": "OLD = 1\nNEW = 2\n",
+            "tests/conftest.py": "from calc import NEW\n",
+            "tests/test_a.py": "def test_a():\n    assert 1 == 2\n",
+        },
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "M")
+    merge = _git(repo, "rev-parse", "HEAD")
+    임시 = tmp_path / "임시"
+    임시.mkdir()
+
+    got = sort_candidate(
+        repo, base, merge, setup=_NO_SETUP, pytest=_PYTEST, temp_root=임시, out=lambda _: None
+    )
+
+    assert isinstance(got, Failure)
+    assert "junit xml 을 남기지 않았다(종료 4" in got.reason
 
 
 def test_git_grep_이_0_과_1_밖으로_끝나면_실패_갈래다(tmp_path: Path) -> None:

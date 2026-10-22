@@ -64,3 +64,44 @@
 - `tools/rerun_hidden.py` 독스트링: "M 두 실행 어디에도 결과가 없는 바뀐 시험(마커로 빠졌거나 M에서 모으지 못했다)은 함수 노드 ID 하나로 조건 1에서 빠진다", "B의 작업 트리에 덮지 못한 것(B에서 상위 자리가 파일이다 등)은 그 후보의 실패 갈래", "본문의 docstring도 문자열 상수로 세어, M이 새로 쓴 문서에 같은 글이 있으면 그 시험이 빠진다", "조건 3의 문자열에 NUL이 들었거나 명령 줄에 넘기지 못할 만큼 길면 `git grep`을 띄우지 못해, 그 노드가 아니라 후보 전체가 실패 갈래다", "pytest 설정이 `python_files`로 더 모으는 `tests/` 아래 `*_test.py`는 시험 파일이 아니라 지원 파일로 덮인다", "`if` 같은 문 안에서 정의한 시험은 보지 않는다".
 - `tools/rerun_files.py` 독스트링: "조각은 영문·숫자·`_.-`로 되며 영문·숫자·`_`로 시작한다(`..`, 숨은 폴더, `-`로 시작하는 조각을 받지 않는다)", "실패한 숨은 시험의 노드 ID는 겹치지 않고, 숨은 시험 ID와 같은 꼴", "숨은 시험과 실패한 노드 ID의 매개변수 부분(`::` 뒤)은 공백과 따옴표가 들 수 있어 제어 문자 밖의 꼴로 좁히지 않고".
 - 티켓 07 메모의 실패 노드 칸 문장, 티켓 05 메모의 넘긴 판단 항목, 프로브 README의 변이 결과 문단과 시간 문장.
+
+## 커밋과 인계
+
+fbcd6239로 커밋했다. pre-commit의 검사가 모두 Passed였고(pytest 308.7초, web-verify 271.6초, 변이 표 원문 확인 포함) 이것이 손으로 치는 다섯을 갈음한다. 커밋 직후 인계 계기(컨텍스트 297,764 토큰, `커밋 뒤`)가 왔다. 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다) 인계하지 않는 다른 때에도 들지 않아 넘긴다. 이 세션의 제목은 `feature/02-hidden-test-filter`였고 `feature/02-hidden-test-filter (인계함)`으로 바꾼다. 낸 지시문은 아래다.
+
+```
+다음 작업: .scratch/model-rerun/issues/02-hidden-test-filter.md. 후보 하나의 원래 PR 시험 가운데 흔들리지 않고 B에서 단언으로 실패하며 새 이름에 기대지 않는 노드만 숨은 시험으로 남긴다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/02-hidden-test-filter.md
+브랜치: feature/02-hidden-test-filter
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-18-hidden-test-filter.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 fbcd6239로 커밋했고(티켓 Status done, pre-commit 모두 Passed, 변이 19 모두 빨강) 아직 푸시하지 않았고 PR도 없다. 남은 것은 PR 직전 리뷰(일지 "셀프 리뷰"의 "반영으로 새로 쓴 문장"을 밀 주장으로 브리프에 넣는다), 푸시와 /git-pr, 봇 회차, 병합, 회고와 next-session이다. 형제 워크트리 03-rerun-judge·04-round-clone이 프로브 README와 티켓 07을 함께 고쳐 나중에 병합하는 쪽에서 글자 충돌 후보다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-18-hidden-test-filter.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+```
+
+워크트리 잠금을 풀었다.
+
+open-session을 부른다 2026-10-22T22:31:34Z
+
+## 이어받은 세션: 체크아웃 정리
+
+인계받은 새 세션이 첫 턴에 `tidy-checkouts`를 돌았다. 루트는 이미 main이고 origin/main(d0e696c9)과 같았다. 쉬는 세션만 쥔 워크트리 둘(`006-eslint-judge-tree-cleanup`, `01-rerun-file-shapes`)의 세션 프로세스를 `end-holders`로 끈 뒤 워크트리와 브랜치를 지웠다. 휴지통의 `worktree-overrides-pc-check~~.venv`는 python.exe(pid 41176)가 모듈을 올려 여전히 남았다. 나머지 워크트리는 병합된 PR이 없거나 쥔 프로세스가 있거나 앱의 표지가 있어 남겼다. 그 뒤 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 확신 8 이상의 지적이 없다. 서브프로세스는 모두 리스트 인자이고 `git grep`의 패턴은 `-e`로 넘기며, junit은 expat이라 외부 엔터티를 풀지 않고, 덮을 경로는 허용 꼴과 조각마다의 링크 검사를 지난다.
+- `bug-perf-review`: Critical·Major 없음. 유효 셋(Minor 둘, Nit 하나), 보류 하나. 밀어 달라고 브리프에 넣은 "반영으로 새로 쓴 문장" 아홉은 모두 코드와 맞았다(NUL·긴 문자열은 그 에이전트가 `term_in`을 불러 확인했다).
+
+고친 것.
+- BOM으로 시작하는 시험 파일의 시험이 모두 사라지던 것(`_test_defs`가 `ast.parse`에 BOM을 그대로 넘겨 `SyntaxError`를 삼켰다): BOM을 벗기고 푼다. 시험은 고치기 전에 빨갰다.
+- 이어 붙이거나 이스케이프가 든 문자열이 조건 3을 지나는 것: 소스 글자와 값이 달라 찾지 못한다는 것을 독스트링 "못 보는 것"에 적고 시험으로 고정했다. 고치려면 M의 `tests/` 밖 소스를 AST로 풀어 상수를 대조해야 해서 값이 크다.
+- 보류였던 conftest의 import 실패: 커밋하지 않은 스크래치 스크립트(`conftest_junit.py`)로 임시 폴더에서 pytest를 띄워 보니 종료 4이고 junit xml을 남기지 않았다(손으로 봤다). 그래서 후보 전체가 실패 갈래인 것을 "못 보는 것"에 적고 임시 저장소의 `sort_candidate` 시험으로 고정했다.
+- 위 셋을 지키는 변이 셋을 변이 표에 더했고, 그 셋만 담은 표로 돌려 모두 표지까지 기대대로 빨갰다. 전체 표는 `--check`로 원문 22가 한 번씩 있음을 봤다.
+
+남긴 것.
+- Nit: `tools/rerun_files.py`의 조각 꼴이 윈도에서 같은 자리를 가리키는 별칭(끝이 `.`인 조각, `nul` 같은 장치 이름)을 받는다. 작업 트리 바깥으로 쓰는 길이 아니고 덮은 파일이 없다는 실패나 같은 폴더로 합쳐지는 정도라 PR 체크리스트에 두는 지적으로 적는다.
