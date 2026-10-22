@@ -45,7 +45,7 @@
 
 고친 것.
 - 스킬 2단계의 계정 판정. 표준 축이 `paths`를 준 `read`의 머리에 "owned by you"가 없고 "published by a writer of the artifact"만 나온 것을 봤다. 고친 문장: "`read`로 `paths` 없이 읽어 머리를 본다. `paths`를 준 읽기의 머리에는 주인 문구가 나오지 않았다(셀프 리뷰 서브에이전트가 봤다, 일지 2026-10-22-15). 머리가 지금 계정을 주인("owned by you")으로 적거나 편집할 수 있다("writer")고 적어야 한다. 누가 올렸는지를 적는 "published by a writer of the artifact"는 이 판정이 아니다."
-- `tokens.json`의 경로. 디자인 시스템 아티팩트 안의 경로는 어디에도 정해지지 않았다(명세 축). 고친 문장: "`list` `scope: "files"`에서 이름이 `tokens.json`인 파일을 찾아 있으면 그 경로로 읽는다. 그 파일을 디자인 시스템 아티팩트의 어느 경로에 올릴지는 design-reverse-sync의 구현이 정한다." 재지 못한 것에도 더했다.
+- `tokens.json`의 경로. 디자인 시스템 아티팩트 안의 경로는 어디에도 정해지지 않았다(명세 축). 스킬 2단계에 두 문장을 더했다. 앞의 것은 `list`의 `files` 범위에서 이름이 `tokens.json`인 파일을 찾아 그 경로로 읽는다는 것이고, 뒤의 것은 그 파일을 올릴 경로를 design-reverse-sync의 구현이 정한다는 것이다(원문은 스킬 2단계). 재지 못한 것에도 더했다.
 - 새 프로젝트의 첫 `design-system` 탐색이 "artifact not found"에 막히는 갈래. 고친 문장: "화면 디자인 절에 디자인 시스템 아티팩트의 주소가 아직 없으면 이 단계를 건너뛴다. 계정은 5에서 만드는 아티팩트의 주인이다."
 - 끊긴 뒤 다시 부르면 아티팩트가 둘이 되는 갈래(두 축). 고친 문장: "시작 프롬프트 끝에 `아티팩트:` 줄이 있으면 끊긴 뒤 다시 부른 것이다. 새로 만들지 않고 그 주소를 `read`해 그 아티팩트에 이어 그린다. … 바로 그 주소를 시작 프롬프트 끝의 `아티팩트:` 줄에 적는다."
 - 그리는 차례가 화면 프롬프트(와이어프레임을 고른 뒤 완성 화면)와 갈린 것(두 축). 고친 문장: "무엇을 어떤 차례로 그릴지는 시작 프롬프트가 정한다. 와이어프레임을 먼저 고르게 하면 5~6을 와이어프레임으로 돈 뒤 완성 화면으로 한 번 더 돈다." `screens-prompt.md`의 "4의 안 고르기"를 "3의 안 고르기"로 고쳤다.
@@ -55,7 +55,7 @@
 - 웹 편집 확인이 작업 트리의 파일을 셀 수 있었다(`.claude/rules/probes.md`의 스냅샷 항목). "커밋한 같은 파일(`git show HEAD:<경로>`, 작업 트리의 고친 판이 아니다)"로 고치고, 머리에 sha256이 없을 때 `diff`로 맞대는 길을 더했다.
 - 닫힌 주장 "사람에게는 둘만 묻는다"(스킬)와 "사람에게 남기는 일은 둘이다"(`kickoff/prompting.md`)에 반례(설치 허락, 계정, 참고 디자인)가 있었다. 둘 다 "디자인에서 사람이 판단하는 것은 방향과 확정할 화면이고, 그 밖에는 단계가 막혔을 때만 사람을 부른다"는 일반 조항으로 고쳤고, 티켓 수용 기준 문장도 맞췄다.
 - `next-session` 결정표 줄의 조건이 admin-style 행에 "명세 전"이라는 말이 없어 성립하지 않을 수 있었고(명세 축), `design-system` 재탐색은 `spec.md`와 README 줄이 있어 성립하지 않았다(표준 축). "`plan.md`의 그 기능 행이 명세 전에 화면을 그린다고 적거나 `.scratch/<slug>/design/`에 시작 프롬프트(`*-prompt.md`)가 있는데, … 디자인 시스템의 방향을 다시 탐색할 때도 `spec.md`와 README의 줄이 있든 없든 이 줄이다"로 고쳤다.
-- 살아 있는 문서의 옛 표현과 미래형. `plan.md` web-widget 행("명세 직전에 Claude Design에서 … 내보낸다")과 admin-style 행 머리("화면은 Claude Design에서 그 디자인 시스템으로 그린다"), admin-style·design-reverse-sync 행의 "그 스킬을 들이는 PR이 정한다", `.scratch/design-reverse-sync/spec.md` Out of Scope 두 줄("아직 저장소에 없다 … 다음 PR", "`/ui-design`을 들이는 PR이 … 정한다"), `.scratch/design-system/design/README.md` 머리를 `/ui-design`과 과거형으로 고쳤다.
+- 살아 있는 문서의 옛 표현과 미래형. `plan.md` web-widget 행(명세 직전에 Claude Design에서 그려 내보낸다는 옛 문장)과 admin-style 행 머리(Claude Design에서 디자인 시스템으로 화면을 그린다는 옛 문장), admin-style·design-reverse-sync 행의 "그 스킬을 들이는 PR이 정한다", `.scratch/design-reverse-sync/spec.md` Out of Scope 두 줄("아직 저장소에 없다 … 다음 PR", "`/ui-design`을 들이는 PR이 … 정한다"), `.scratch/design-system/design/README.md` 머리를 `/ui-design`과 과거형으로 고쳤다.
 - 일지의 따옴표 인용 하나가 영문 형식 지침의 번역이었다. 따옴표를 빼고 옮긴 것이라고 적었다.
 - `tools/hook_payloads.toml`에 근접 반례 침묵 입력(`.scratch/harness/probes/design/x.toml`)을 더했다(대기열 24).
 
@@ -67,3 +67,30 @@
 - 훅 셋의 같은 모양(`marker_name`·`claim_first`·`main`)은 훅끼리 import하지 않는 규약의 비용이다(`.claude/rules/tools.md`).
 
 다시 돌린 것: `run_hooks.py`(152건 어긋남 0), `check_md_tables`·`check_instructions`·`check_line_separators`(0), 카나리아 둘(통과 4). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+
+## 인계
+
+커밋 `9fc49ed5`(pre-commit 통과) 뒤 세션 컨텍스트가 인계 문턱을 넘어 `hook_handoff`의 `커밋 뒤` 계기가 왔다. 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다) 요청 범위가 병합까지라 넘긴다. 이 세션의 지금 제목은 `chore/002-ui-design-skill`이고 `chore/002-ui-design-skill (인계함)`으로 바꾼다.
+
+이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다. pre-commit의 인용 대조가 이 일지에 경고 둘을 냈다(막지 않는다). 셀프 리뷰 절의 `list scope: files에서…` 인용은 스킬 원문을 줄여 옮기며 `…`를 넣은 것이고, `화면은 Claude Design에서 그 디자인 시스템으로 그린다`는 이번에 고쳐 저장소에서 사라진 옛 문장이다. 새 세션이 따옴표를 떼거나 원문대로 맞춘다. `.scratch/plan.md` 17행의 `"그리기 직전의 /design-sync"` 경고는 이 PR 전부터 있던 문장이다.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/002-ui-design-skill.md. 화면 디자인 스킬 /ui-design과 디자인 폴더 계기 훅을 들인 커밋의 PR을 열고 병합한다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다
+브랜치: chore/002-ui-design-skill
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-15-ui-design-skill.md(셀프 리뷰 절의 고친 것과 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 커밋 9fc49ed5까지 티켓의 수용 기준을 모두 채우고 셀프 리뷰를 반영해 커밋했다(아직 푸시하지 않았고 PR도 없다). 남은 단계는 일지의 인계 절이 든 인용 경고 둘을 고쳐 커밋하는 것, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 셀프 리뷰를 반영하며 새로 쓴 문장은 일지 셀프 리뷰 절의 고친 것 줄에 원문으로 있고 bug-perf-review 브리프에 밀 주장으로 나열한다), 푸시와 PR, 봇 회차, 병합이다. 일지의 "다음" 절과 회고는 아직 없다. docs/journal/2026-10-22-15-ui-design-skill.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 함께 고친 파일로 PR #296·#297·#347과 티켓 03 워크트리(KICKOFF.md, docs/agents/issue-tracker.md)를 들었다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 충돌을 본다
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-10-22T10:35:36Z
+
+## 이어 한 세션
+
+새 세션이 제목을 바꾸고 주 체크아웃에서 `tidy-checkouts`를 돌았다. 루트는 이미 origin/main(`96fbe241`)과 같았다. 지운 것은 `worktree-01-contrast-module` 브랜치와 휴지통의 `node_modules` 다섯이고, 병합된 워크트리 다섯은 쉬는 세션과 셸 프로세스가 쥐어 남았으며, 등록 없이 `.git`이 있는 `01-contrast-module` 폴더는 사람에게 넘겼다. 휴지통의 `.venv` 하나는 python.exe가 쥐어 남았다. 그 뒤 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+인계 절의 인용 경고 둘은 따옴표를 떼고 서술로 고쳤다. 앞의 것은 원문의 `"files"` 따옴표가 인용 경계를 깨뜨린 것이었다.
