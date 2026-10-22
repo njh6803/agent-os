@@ -7,6 +7,7 @@
     "./theme.css": "./src/styles/theme.css",
     "./fonts.css": "./src/styles/fonts.css",
     "./testing": "./src/testing/index.ts",
+    "./contrast": "./src/styles/contrast.ts",
     "./storybook": "./src/storybook/preview.tsx"
   },
   "publishConfig": {

@@ -3,6 +3,14 @@
 # 스토리 테스트를 실패시키는지(티켓의 수용 기준) 본다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-system/probes/ui_mutations.toml [이름 ...]
 # 실제 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다(docs/constitution/operations.md).
+# 2026-10-22(design-reverse-sync 01): 명암비 계산이 `styles/contrast.ts` 로 옮겨 그 변이의 `file` 을 옮겼고, 표를 커밋하며
+# design-refresh 가 컴포넌트와 토큰을 다시 지어 원문이 0번이 된 변이 열넷을 정리했다. 열은 지금 코드로 원문을 고쳤고(먹·
+# 열 벌이던 Matrix 변이는 라이트 공통 블록·여덟 벌로, 주 버튼의 accent-hover 는 primary-hover 로), 넷은 뺐다. 위험 버튼의
+# 테두리가 border 인 변이는 지금 그것이 정답이고 반대 꼴을 design-refresh 의 `theme_colors_mutations.toml` 이 잰다. 작은
+# 버튼의 높이 변이는 버튼이 크기를 고르지 않게 되어 겨눌 자리가 없다. 버튼과 아이콘 버튼의 포커스 링이 accent 를 읽는
+# 변이 둘은 공문 테마가 없어졌고 지금 여덟 벌 모두 accent 와 focus-ring 이 같은 값이라 계산값으로 가를 수 없다
+# (`.claude/rules/web-design.md`. 포커스 링은 그 design-refresh 표의 "버튼의 포커스 링을 border 로 칠하면"이 잰다). 일지
+# 2026-10-22-24.
 
 [runner.stories]
 command = ["pnpm", "exec", "vitest", "run", "--project", "storybook"]
@@ -96,10 +104,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/storybook/preview.tsx"
 old = '''
-      root.dataset["mode"] = mode;
+    setOrRemoveAttribute(root, "data-mode", modeOf(context.globals));
 '''
 new = '''
-      delete root.dataset["mode"];
+    root.removeAttribute("data-mode");
 '''
 
 # --- 판정 함수와 음성 사례 ---------------------------------------------------------------------------------------
@@ -111,7 +119,7 @@ tests = ["packages/ui/src/testing/Checks.stories.tsx", "-t", "명암비는 21"]
 expect = "red"
 
 [[mutation.edit]]
-file = "web/packages/ui/src/testing/index.ts"
+file = "web/packages/ui/src/styles/contrast.ts"
 old = '''
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 '''
@@ -152,18 +160,18 @@ new = '''
 # --- 디자인 토큰 CSS 와 글꼴 CSS ------------------------------------------------------------------------------------
 
 [[mutation]]
-name = "먹 라이트의 muted 가 옅은 단계를 가리키면 Matrix 의 명암비가 빨갛다"
+name = "라이트의 text-muted 가 옅은 단계를 가리키면 Matrix 의 명암비가 빨갛다"
 runner = "stories"
-tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "열 벌"]
+tests = ["packages/ui/src/styles/DesignTokens.stories.tsx", "-t", "여덟 벌 모두"]
 expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
 old = '''
-    --muted: var(--gray-600);
+    --text-muted: var(--gray-500);
 '''
 new = '''
-    --muted: var(--gray-400);
+    --text-muted: var(--gray-300);
 '''
 
 [[mutation]]
@@ -248,10 +256,12 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/DesignTokens.stories.tsx"
 old = '''
-      <ShadowFrame shadow="on" css={themeCss} theme="muk" mode="light">
+          <ShadowFrame
+            shadow="on"
 '''
 new = '''
-      <ShadowFrame shadow="raw" css={themeCss} theme="muk" mode="light">
+          <ShadowFrame
+            shadow="raw"
 '''
 
 # --- 진입점 -------------------------------------------------------------------------------------------------
@@ -304,7 +314,7 @@ new = '''
 '''
 
 [[mutation]]
-name = "주 버튼이 accent-hover 로 칠하면 빨갛다"
+name = "주 버튼이 primary-hover 로 칠하면 빨갛다"
 runner = "stories"
 tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "주 버튼은"]
 expect = "red"
@@ -312,40 +322,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.tsx"
 old = '''
-  primary: "border-transparent bg-accent text-on-accent",
+  primary: "border-transparent bg-primary text-on-primary",
 '''
 new = '''
-  primary: "border-transparent bg-accent-hover text-on-accent",
-'''
-
-[[mutation]]
-name = "위험 버튼의 테두리가 border 면 빨갛다"
-runner = "stories"
-tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "위험 버튼은"]
-expect = "red"
-
-[[mutation.edit]]
-file = "web/packages/ui/src/components/atoms/Button.tsx"
-old = '''
-  danger: "border-danger bg-raised text-danger",
-'''
-new = '''
-  danger: "border-border bg-raised text-danger",
-'''
-
-[[mutation]]
-name = "작은 버튼이 40px 이면 빨갛다"
-runner = "stories"
-tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "작은 버튼의 높이"]
-expect = "red"
-
-[[mutation.edit]]
-file = "web/packages/ui/src/components/atoms/Button.tsx"
-old = '''
-  s: "h-control-s px-3 text-small",
-'''
-new = '''
-  s: "h-control-m px-3 text-small",
+  primary: "border-transparent bg-primary-hover text-on-primary",
 '''
 
 [[mutation]]
@@ -357,12 +337,12 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.tsx"
 old = '''
-        {icon === undefined ? null : <Icon name={icon} size={ICON_SIZE[size]} />}
+        {icon === undefined ? null : <Icon name={icon} size="16" />}
         {children}
 '''
 new = '''
         {children}
-        {icon === undefined ? null : <Icon name={icon} size={ICON_SIZE[size]} />}
+        {icon === undefined ? null : <Icon name={icon} size="16" />}
 '''
 
 [[mutation]]
@@ -431,8 +411,8 @@ new = '''
     ? DISABLED_CLASS
 '''
 
-# 첫 판은 `bg-tint` 로 바꿨고 초록이었다. tint 와 disabled-surface 는 열 벌 모두 같은 원색(gray-200·gray-800)을 가리켜
-# 계산값으로는 가를 수 없다(같은 값의 변이). 값이 다른 raised 로 겨눈다.
+# 첫 판은 `bg-tint` 로 바꿨고 초록이었다. 첫 디자인 시스템의 tint 와 disabled-surface 는 열 벌 모두 같은 원색(gray-200·
+# gray-800)을 가리켜 계산값으로는 가를 수 없었다(같은 값의 변이). 값이 다른 raised 로 겨눈다.
 [[mutation]]
 name = "쓸 수 없는 버튼의 바탕이 raised 면 빨갛다"
 runner = "stories"
@@ -442,25 +422,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.tsx"
 old = '''
-  "cursor-not-allowed border-transparent bg-disabled-surface text-disabled-text";
+const DISABLED_CLASS = "cursor-not-allowed border-bg-disabled bg-bg-disabled text-text-disabled";
 '''
 new = '''
-  "cursor-not-allowed border-transparent bg-raised text-disabled-text";
-'''
-
-[[mutation]]
-name = "버튼의 포커스 링이 accent 를 읽으면 공문에서 빨갛다"
-runner = "stories"
-tests = ["packages/ui/src/components/atoms/Button.stories.tsx", "-t", "Tab 으로"]
-expect = "red"
-
-[[mutation.edit]]
-file = "web/packages/ui/src/components/atoms/Button.tsx"
-old = '''
-  "relative inline-flex items-center justify-center whitespace-nowrap rounded-m border font-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
-'''
-new = '''
-  "relative inline-flex items-center justify-center whitespace-nowrap rounded-m border font-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const DISABLED_CLASS = "cursor-not-allowed border-bg-disabled bg-bg-raised text-text-disabled";
 '''
 
 [[mutation]]
@@ -471,12 +436,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.tsx"
-old = '''
-  m: "h-control-m px-4 text-body",
-'''
-new = '''
-  m: "h-control-m px-8 text-body",
-'''
+old = '''rounded-m border px-3 text-body'''
+new = '''rounded-m border px-8 text-body'''
 
 # --- 아이콘 버튼 ------------------------------------------------------------------------------------------------
 
@@ -518,10 +479,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/IconButton.tsx"
 old = '''
-const SIZE_CLASS = { m: "size-control-m", s: "size-control-s" } satisfies Record<
+const SIZE_CLASS = { m: "size-control", s: "size-control-s" } satisfies Record<
 '''
 new = '''
-const SIZE_CLASS = { m: "size-control-m", s: "size-control-m" } satisfies Record<
+const SIZE_CLASS = { m: "size-control", s: "size-control" } satisfies Record<
 '''
 
 [[mutation]]
@@ -533,10 +494,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/IconButton.tsx"
 old = '''
-      {loading ? <Spinner size={ICON_SIZE[size]} /> : <Icon name={icon} size={ICON_SIZE[size]} />}
+      {loading ? <Spinner size="16" /> : <Icon name={icon} size="16" />}
 '''
 new = '''
-      {loading ? <Icon name={icon} size={ICON_SIZE[size]} /> : <Spinner size={ICON_SIZE[size]} />}
+      {loading ? <Icon name={icon} size="16" /> : <Spinner size="16" />}
 '''
 
 [[mutation]]
@@ -548,25 +509,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/IconButton.tsx"
 old = '''
-  ghost: "cursor-not-allowed bg-transparent text-disabled-text",
+  ghost: "cursor-not-allowed border-transparent bg-transparent text-text-disabled",
 '''
 new = '''
-  ghost: "cursor-not-allowed bg-disabled-surface text-disabled-text",
-'''
-
-[[mutation]]
-name = "아이콘 버튼의 포커스 링이 accent 를 읽으면 공문에서 빨갛다"
-runner = "stories"
-tests = ["packages/ui/src/components/atoms/IconButton.stories.tsx", "-t", "Tab 으로"]
-expect = "red"
-
-[[mutation.edit]]
-file = "web/packages/ui/src/components/atoms/IconButton.tsx"
-old = '''
-  "inline-flex shrink-0 items-center justify-center rounded-m focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
-'''
-new = '''
-  "inline-flex shrink-0 items-center justify-center rounded-m focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  ghost: "cursor-not-allowed border-transparent bg-bg-disabled text-text-disabled",
 '''
 
 # --- 아이콘 -------------------------------------------------------------------------------------------------
