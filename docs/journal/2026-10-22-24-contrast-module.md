@@ -1,4 +1,4 @@
-# 2026-10-22 (17) 명암비 모듈을 패키지 이름으로 내보낸다 (design-reverse-sync 01)
+# 2026-10-22 (24) 명암비 모듈을 패키지 이름으로 내보낸다 (design-reverse-sync 01)
 
 브랜치 `feature/01-contrast-module`, 워크트리 `.claude/worktrees/01-contrast-module`. 티켓은 `.scratch/design-reverse-sync/issues/01-contrast-module.md`.
 
@@ -45,8 +45,8 @@
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/01-contrast-module.md
 브랜치: feature/01-contrast-module
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-17-contrast-module.md(이 브랜치의 일지. 새 세션이 이어 쓰고 커밋한다), .scratch/plan.md 의 design-reverse-sync 행. 나란히 도는 티켓은 .scratch/design-reverse-sync/issues/02-build-tokens-json.md 이고 파일이 겹치지 않는다
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 web/tools/contrast-module.test.ts, .scratch/design-reverse-sync/probes/contrast_module_mutations.toml 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main)부터 한다. 일지 docs/journal/2026-10-22-17-contrast-module.md. 리뷰를 반영한 뒤 고친 변이 표 셋을 다시 돌리고 커밋한다. 고친 기존 표 둘(.scratch/design-refresh/probes/theme_colors_mutations.toml, .scratch/design-system/probes/ui_mutations.toml)에는 이 브랜치가 고치지 않은 변이의 문제(원문 0번, 저장소에 없는 되돌릴 PNG)가 17건과 14건 있어, 그 둘을 실은 커밋은 pre-commit의 tools/mutate.py --staged 가 2로 막을 것으로 본다(커밋해 보지 않았다. 목록은 일지 "인계"). 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다
+읽을 것: docs/journal/2026-10-22-24-contrast-module.md(이 브랜치의 일지. 새 세션이 이어 쓰고 커밋한다), .scratch/plan.md 의 design-reverse-sync 행. 나란히 도는 티켓은 .scratch/design-reverse-sync/issues/02-build-tokens-json.md 이고 파일이 겹치지 않는다
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 web/tools/contrast-module.test.ts, .scratch/design-reverse-sync/probes/contrast_module_mutations.toml 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main)부터 한다. 일지 docs/journal/2026-10-22-24-contrast-module.md. 리뷰를 반영한 뒤 고친 변이 표 셋을 다시 돌리고 커밋한다. 고친 기존 표 둘(.scratch/design-refresh/probes/theme_colors_mutations.toml, .scratch/design-system/probes/ui_mutations.toml)에는 이 브랜치가 고치지 않은 변이의 문제(원문 0번, 저장소에 없는 되돌릴 PNG)가 17건과 14건 있어, 그 둘을 실은 커밋은 pre-commit의 tools/mutate.py --staged 가 2로 막을 것으로 본다(커밋해 보지 않았다. 목록은 일지 "인계"). 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다
 확인할 선행 조건: pnpm -C web visual(Docker)을 아직 치지 않았다. 셀프 리뷰 전 판의 tools/run_checks.py 는 종료 0이었다
 이번 요청 범위: PR과 병합까지
 ```
@@ -95,7 +95,7 @@ Critical·Major 없음, 범위 넘침 없음. Minor 셋, Nit 둘. 서브에이�
     - `index.ts`: "`./contrast`(명암비 모듈)는 `web/tools` 쪽이 패키지 이름으로 부른다(지금은 `web/tools/contrast-module.test.ts`)"
     - `Entrypoints.stories.tsx`: "자기 참조. 루트 `web/package.json` 이 이 패키지를 들여 링크가 서기 전에도 풀렸다", "`./contrast` 를 루트 설정(`nodenext`)과 Node 로 푸는 것은 `web/tools/contrast-module.test.ts` 가 본다"
     - 시험 머리: "vitest 는 Vite 의 해석으로 모듈을 풀어 `.js` 를 붙인 상대 import 도 이웃 `.ts` 로 풀므로, `web/tools` 의 스크립트처럼 Node 를 띄워 패키지 이름으로 부르는 사례를 따로 둔다", "이 시험은 디자인 토큰 CSS 를 풀지 않는다"
-    - 새 변이 표 머리: "그때 루트 타입 검사는 시험의 import 에서 빨갰다(손으로 봤다, 일지 2026-10-22-17). Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 와 타입 검사의 TS2834·TS2835 는 옮기기 전 판에서 프로브 `tools_import.mjs` 의 as-is 갈래가 낸다", "`.js` 를 붙인 상대 import 는 타입 검사와 Vite 가 이웃 `.ts` 로 풀어 Node 를 띄우는 사례만 잡는다"
+    - 새 변이 표 머리: "그때 루트 타입 검사는 시험의 import 에서 빨갰다(손으로 봤다, 일지 2026-10-22-24). Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 와 타입 검사의 TS2834·TS2835 는 옮기기 전 판에서 프로브 `tools_import.mjs` 의 as-is 갈래가 낸다", "`.js` 를 붙인 상대 import 는 타입 검사와 Vite 가 이웃 `.ts` 로 풀어 Node 를 띄우는 사례만 잡는다"
     - 티켓 04 메모: "`contrastFailures`는 `"<테마>/<모드> <글자>/<바탕> <두 자리로 내린 비> < <기준>"` 꼴의 문자열 목록을 돌려주고, 반투명 바탕을 그 아래 바탕에 겹치는 셈(`surfaceColor`)은 그 함수 안의 클로저다"
 
 ## 앞 PR들이 썩힌 변이 표의 원문
@@ -160,8 +160,8 @@ Critical·Major 없음, 범위 넘침 없음. Minor 셋, Nit 둘. 서브에이�
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/01-contrast-module.md
 브랜치: feature/01-contrast-module
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-17-contrast-module.md(이 브랜치의 일지. 새 세션이 이어 쓰고 커밋한다), .scratch/plan.md 의 design-reverse-sync 행. 나란히 도는 티켓은 .scratch/design-reverse-sync/issues/02-build-tokens-json.md 이고 파일이 겹치지 않는다
-이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 반영, 사진 비교, 전체 검사, 커밋, origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI 좌석이 없어 /security-review 와 bug-perf-review)와 그 반영 커밋까지 마쳤고 티켓 01은 done 이다. 아직 푸시하지 않았고 PR 도 없다. 남은 것은 푸시, /git-pr 로 PR 열기(본문의 리뷰 결과·넘긴 것·남긴 위험은 일지의 "PR 직전 리뷰" 절에 있다), 마지막 푸시 뒤 @coderabbitai review, CI 와 봇 회차 반영, 병합 직전의 plan.md 행 판정(origin/main 의 design-reverse-sync 행이 아직 todo 인지. 02 가 먼저 병합되면 이 브랜치의 행 고침과 겹친다)과 일지 번호 확인, 워크트리에서 병합이다. 일지의 커밋하지 않은 "인계 (커밋 뒤)" 절은 새 세션이 이어 쓰고 커밋한다. 일지 docs/journal/2026-10-22-17-contrast-module.md
+읽을 것: docs/journal/2026-10-22-24-contrast-module.md(이 브랜치의 일지. 새 세션이 이어 쓰고 커밋한다), .scratch/plan.md 의 design-reverse-sync 행. 나란히 도는 티켓은 .scratch/design-reverse-sync/issues/02-build-tokens-json.md 이고 파일이 겹치지 않는다
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 반영, 사진 비교, 전체 검사, 커밋, origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI 좌석이 없어 /security-review 와 bug-perf-review)와 그 반영 커밋까지 마쳤고 티켓 01은 done 이다. 아직 푸시하지 않았고 PR 도 없다. 남은 것은 푸시, /git-pr 로 PR 열기(본문의 리뷰 결과·넘긴 것·남긴 위험은 일지의 "PR 직전 리뷰" 절에 있다), 마지막 푸시 뒤 @coderabbitai review, CI 와 봇 회차 반영, 병합 직전의 plan.md 행 판정(origin/main 의 design-reverse-sync 행이 아직 todo 인지. 02 가 먼저 병합되면 이 브랜치의 행 고침과 겹친다)과 일지 번호 확인, 워크트리에서 병합이다. 일지의 커밋하지 않은 "인계 (커밋 뒤)" 절은 새 세션이 이어 쓰고 커밋한다. 일지 docs/journal/2026-10-22-24-contrast-module.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -187,7 +187,7 @@ open-session을 부른다 2026-10-22T12:47:58Z
   3. Nit. 확장자 표기가 셋으로 갈린다. **보류.** 셀프 리뷰 표준 축 3과 같은 판정이다. 규칙 문장은 교정 루프의 문턱을 따른다.
 - 보류는 모두 일을 뒤로 넘기는 것이 아니어서 "다음"에 옮길 일이 없다. 고친 것이 없는 회차라 이 일지(회고와 "다음" 포함)만 실은 커밋을 푸시한다. 그 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다.
 - 회고를 실은 커밋 `558e3f70`의 푸시 뒤 `visual`이 사진 하나의 3픽셀 차이로 빨갰고 `verify`가 그것을 따라 빨갰다(회고 7). 나머지 다섯은 SUCCESS였고 CodeRabbit은 다시 한도였다. claude-review 둘째 회차는 Critical·Major 없이 Minor 둘, Nit 하나였다. 둘째 회차라 셋 다 보류하고 PR 코멘트에 이유를 남겼다. 모드 목록을 `themes.ts`로 되돌리자는 Minor는 티켓 04가 바로 `web/tools`에서 이 모듈을 부르는 쪽이라 상대 import를 막는 제약이 04 뒤에도 남는다. Next 해석을 추적하자는 Minor는 이미 admin-style 행이 들고 있다. 메시지 여섯 줄을 글자로 적었다는 Nit은 티켓이 요구한 "다른 짝은 그대로"를 그 목록이 단언한다. 뒤로 넘기는 일은 없다. 회차 기록과 대기열 414를 실은 다음 커밋의 푸시가 CI를 새로 돌린다.
-- 병합 직전 확인. `git fetch` 뒤 origin/main은 `c47bedce` 그대로라 design-reverse-sync 행은 아직 `todo`이고 02는 병합되지 않았다(이 브랜치의 행 고침과 겹치지 않는다). 이 일지보다 번호가 큰 형제 일지(18~21)도 아직 main에 없다.
+- 병합 직전 확인. 첫 확인 때는 origin/main이 `c47bedce` 그대로였다. 회차 기록 커밋 `86df4ba3`을 푸시하려 하자 훅(`hook_push_behind_main`)이 origin/main보다 한 커밋 뒤처졌다며 막았다. 그사이 PR #352(harness 002, `/ui-design`)가 병합되어 있었다. origin/main을 합치며(`fd643f55`) 충돌 둘을 풀었다. `.scratch/plan.md`는 admin-style·design-reverse-sync 두 행을 양쪽이 고쳐, main의 문구 고침("그 스킬을 들인 PR(2026-10-22 harness 티켓 002)이", admin-style의 `/ui-design` 메모)과 이 브랜치의 고침(admin-style 메모, design-reverse-sync의 상태와 프론티어)을 모두 남겼다. 대기열은 420(main의 2회차)과 421(이 브랜치의 7회차)을 남겼다. #352가 일지 21을 들여 이 일지가 그보다 앞 번호가 되어, `tools/sibling_overlap.py --move`로 17을 24로 옮기고 도구가 낸 명령으로 PR 본문의 인용도 옮겼다. main의 design-reverse-sync 행은 여전히 `todo`이고 02는 아직 병합되지 않았다.
 
 ## 회고
 

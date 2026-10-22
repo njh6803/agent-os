@@ -1,6 +1,6 @@
 # design-reverse-sync 티켓 01 의 변이 표. `web/tools/contrast-module.test.ts` 의 vitest 사례 둘은 패키지가 짝 표 파일을
 # 그대로 내보내던 때에도 초록이었다(Vite 가 확장자 없는 상대 import 를 풀었다). 그때 루트 타입 검사는 시험의 import 에서
-# 빨갰다(손으로 봤다, 일지 2026-10-22-17). Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 와 타입 검사의 TS2834·TS2835 는 옮기기
+# 빨갰다(손으로 봤다, 일지 2026-10-22-24). Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 와 타입 검사의 TS2834·TS2835 는 옮기기
 # 전 판에서 프로브 `tools_import.mjs` 의 as-is 갈래가 낸다(같은 폴더 README). 시험의 단언, Node 를 띄우는 사례, 진입점
 # 스토리의 여섯째 진입점은 빨강을 본 적이 없다.
 # vitest 변이는 단언이 재는 짝 표나 판정 하나를 바꾸고 그 시험 하나로 좁혀(`-t`) 빨개지는지 본다. 타입 검사 변이는 새
@@ -8,7 +8,7 @@
 # 빨개지는지 본다. `.js` 를 붙인 상대 import 는 타입 검사와 Vite 가 이웃 `.ts` 로 풀어 Node 를 띄우는 사례만 잡는다. 같은
 # 변이를 그 사례의 시험(빨강)과, vitest 안의 사례 둘·루트 타입 검사의 대조군(초록)으로 둔다. 표지는 고른 단언이나 검사가
 # 실패할 때만 나오는 문구(값까지 든 기대 줄, 판정 메시지, 오류 번호)로 골랐고, 아홉을 돌려 빨간 회차의 출력에 그 표지가
-# 실린 것을 봤다(일지 2026-10-22-17).
+# 실린 것을 봤다(일지 2026-10-22-24).
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/contrast_module_mutations.toml [번호 ...]
 
 [runner.node]
