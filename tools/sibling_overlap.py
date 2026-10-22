@@ -29,7 +29,7 @@
 않은 변경과 미추적 파일)를 읽는다. merge-base에서 앞의 네 자리 가운데 하나라도 비면 경로가 어긋난
 것으로 보고 2로 끝난다(조용히 겹침 없음이 되지 않게). harness 티켓 자리는 비어도 2로 끝나지 않는다.
 #335 전에 딴 브랜치의 merge-base 에는 harness 폴더가 없어, 그 자리를 넣으면 그 브랜치들이 대조를
-잃는다. 그 값으로 티켓 폴더의 경로가 어긋나도 조용히 겹침 없음이 된다.
+잃는다. 그 값은 못 보는 것의 경로가 어긋난 harness 티켓 폴더 항목이다.
 
 열린 PR은 GitHub REST(`gh api repos/<owner>/<repo>/pulls?state=open`)로 읽는다. `origin`이
 github.com이 아니거나 `gh`가 없거나 실패하면 `refs/pull/N/merge`가 있는 PR을 열린 것으로 본다.
@@ -171,24 +171,33 @@ harness 티켓은 파일 이름(`NNN-<slug>.md`)과 stem 인용(`NNN-<slug>`)을
 번호의 글(대기열 행, 기능 폴더의 티켓)과 섞인다. harness 티켓 파일 안에서는 머리 줄(`# NNN:`)도
 옮긴다. 지금 브랜치가 옮긴 stem 의 `chore/` 브랜치면 브랜치를 바꾸는 명령(`git branch -m`)과 세션
 제목을 새 브랜치로 바꾸라는 할 일을 찍고, 원격에 그 브랜치가 있으면 새 이름으로 푸시하는 명령과 옛
-원격 브랜치를 지우는 명령도 찍는다. 도구는 브랜치·인덱스·참조를 바꾸지 않고, 워크트리 폴더 이름도
-그대로 둔다. 그래서 그 폴더를 가리킨 인용(`worktrees/`·`worktrees\\` 바로 뒤의 stem)도 옮기지
-않는다. 옮기면 없는 폴더를 가리킨다(셀프 리뷰에서 `rewrite` 를 불러 봤다).
+원격 브랜치를 지우는 명령도 찍는다. 도구는 브랜치와 인덱스를 바꾸지 않고(원격 추적 ref 는 아래
+쓰임의 fetch 가 움직인다), 워크트리 폴더 이름도 그대로 둔다. 그래서 그 폴더를 가리킨
+인용(`worktrees/`·`worktrees\\` 바로 뒤의 stem. 대소문자를 가리지 않고, 문자열 리터럴과 JSON 이
+이스케이프한 역슬래시 둘도 구분자다)도 옮기지 않는다. 옮기면 없는 폴더를 가리킨다(셀프 리뷰에서
+`rewrite` 를 불러 봤다. 역슬래시 둘과 대문자는 PR 직전 버그 축이 불러 봤다).
 
 티켓 번호가 겹치면 누가 옮기는지가 다른 번호와 다르다(ADR 0037 "번호", 명세 "번호"의 2026-10-21
 명세 검토 주석). 기본은 이 브랜치가 비켜 간다. 다만 티켓의 브랜치 이름은 그 stem 이라, 옮기면 브랜치
 이름이 바뀌어 그 브랜치의 열린 PR 이 끊긴다. 그래서 이 브랜치에 열린 PR 이 있으면 옮기지 않고 그쪽이
-옮긴다고 알리기만 한다. 고칠 것이 이 브랜치에 없어 종료 코드를 바꾸지 않고, 그쪽의 대조는 이
-브랜치를 열린 PR 로 보고 1을 낸다. 둘 다 열린 PR 이면 PR 번호가 큰 쪽이 옮긴다. 그쪽이 main 에
+옮긴다고 알리기만 한다. 고칠 것이 이 브랜치에 없어 종료 코드를 바꾸지 않는다. 그쪽의 대조는 이
+브랜치를 열린 PR 로 보고 1을 내는데, 이 브랜치의 티켓이 그쪽에 보일 때만이다. 같은 기계의 형제
+워크트리는 이 브랜치의 작업 트리를 읽지만, 다른 기계의 형제는 이 브랜치의 PR head 만 읽어 커밋하고
+푸시하기 전의 티켓을 보지 못한다(못 보는 것의 다른 기계 항목을 그쪽에서 본 것). 둘 다 열린 PR 이면
+PR 번호가 큰 쪽이 옮긴다. 그쪽이 main 에
 병합된 티켓이면 그쪽은 옮길 수 없어, 열린 PR 이 있어도 이 브랜치가 옮긴다. 열린 PR 이 있는데 옮기는
 이 두 갈래에서 지금 브랜치가 옮길 티켓의 `chore/` 브랜치면, 새 이름의 브랜치로 PR 을 다시 열고 옛
 PR 을 닫으라는 할 일을 낸다. 다른 이름의 브랜치는 이름이 그대로라 PR 이 끊기지 않는다. 겹친 형제
 가운데 하나라도 이 브랜치가 옮기라고 하면 다른 번호처럼 이 브랜치의 새 티켓 전부를 옮긴다.
 
-열린 PR 은 이 브랜치와 형제 워크트리를 같은 규칙으로 가린다. head 가 원격의 같은 이름 브랜치 끝과
-같은 PR 이 그 브랜치의 PR 이다. 두 대조가 같은 규칙으로 가려야 겹친 두 쪽이 같은 쪽을 옮기라고
-한다. 형제 워크트리를 HEAD 로 가린 첫 판에서는, head 뒤에 커밋을 더한 형제와 이 브랜치가 서로 상대가
-옮긴다고 알려 둘 다 옮기지 않았다(셀프 리뷰 명세 축이 임시 저장소로 양쪽을 돌려 봤다).
+열린 PR 은 이 브랜치와 형제 워크트리를 같은 규칙으로 가린다(`branch_pull`). head 가 원격의 같은 이름
+브랜치 끝과 같은 PR 이 그 브랜치의 PR 이다. 원격에 같은 이름의 브랜치가 없거나 분리 HEAD 면 head 가
+그 체크아웃의 HEAD 와 같은 PR 이다. 두 대조가 같은 규칙으로 가려야 겹친 두 쪽이 같은 쪽을 옮기라고
+한다. 형제 워크트리를 HEAD 로만 가린 첫 판에서는, head 뒤에 커밋을 더한 형제와 이 브랜치가 서로
+상대가 옮긴다고 알려 둘 다 옮기지 않았다(셀프 리뷰 명세 축이 임시 저장소로 양쪽을 돌려 봤다). 원격
+끝으로만 가린 둘째 판에서는, 이름을 바꾼 형제 워크트리가 PR 의 head 에 커밋한 티켓을 이쪽은 그 PR 로
+보고 그쪽은 자기 PR 이 없다고 보아, PR 번호가 작은 그쪽까지 둘 다 옮겼다(PR 직전 버그 축이 임시
+저장소로 양쪽을 돌려 봤다).
 
 `-h`·`--help` 는 쓰임과 종료 코드를 찍는다. 2로 끝나면 stderr 에 할 일(번호를 손으로 고르지
 않는다)을 함께 싣는다(대기열 251). 시작 경로만 받던 때 `--help` 를 경로로 읽어 2로 끝났고, 2일 때
@@ -279,9 +288,13 @@ PR 을 닫으라는 할 일을 낸다. 다른 이름의 브랜치는 이름이 �
 - 지시문이 받아 두고 아직 파일이 없는 티켓 번호. 디스크의 티켓 파일로 찬 번호를 보므로, 다음 세션에
   넘길 지시문에 번호만 적어 둔 동안 형제가 같은 번호를 받아 간다. 일지처럼 받은 번호로 바로 파일을
   만든다.
-- 원격에 같은 이름의 브랜치가 없는 형제 워크트리(분리 HEAD 이거나 이름을 바꾼 브랜치)의 열린 PR.
-  HEAD 가 그 PR 의 head 와 같아도 열린 PR 이 없는 것으로 본다. 그 워크트리의 대조도 같은 규칙으로
-  자기에게 열린 PR 이 없다고 보아, 이 브랜치에 열린 PR 이 있으면 그쪽이 옮기고 그쪽도 그렇게 안다.
+- 경로가 어긋난 harness 티켓 폴더. 그 자리는 merge-base 에서 비어도 2로 끝나지 않으므로(위), 폴더를
+  옮기거나 이름을 바꾸면 티켓은 겹침 없음이 되고 다음 빈 티켓 번호는 `001` 이 된다.
+- 원격에 같은 이름의 브랜치가 없고(분리 HEAD 이거나 이름을 바꾼 브랜치) HEAD 가 열린 PR 의 head 와
+  다른(그 head 뒤에 커밋을 더한) 형제 워크트리의 열린 PR. 열린 PR 이 없는 것으로 보고, 그
+  워크트리의 대조도 같은 규칙으로 자기 PR 이 없다고 본다. 그 형제의 티켓이 커밋하지 않은 것이면 이
+  브랜치에 열린 PR 이 있을 때 그쪽이 옮기고 그쪽도 그렇게 안다. 그 티켓이 PR 의 head 에 있으면
+  이쪽은 그 PR 을 PR 형제로 보아, 그 PR 번호가 이 브랜치의 것보다 작으면 두 쪽이 다 옮긴다.
 - `--move` 의 브랜치 줄은 `chore/<stem>` 꼴의 브랜치만 본다. 다른 이름의 브랜치(`feature/…`)와 분리
   HEAD 에서는 찍지 않는다.
 """
@@ -364,8 +377,10 @@ _TICKET_HEAD = r"|^# (?P<ticket>\d{3}):"
 # 티켓 stem 의 경계. slug 는 영문·숫자·하이픈이다. `\w` 는 한글을 품어 stem 뒤에 붙은 조사에서
 # 맞지 않는다
 STEM_EDGE = "A-Za-z0-9_-"
-# 워크트리 폴더 이름은 옮기지 않으므로 그 폴더를 가리킨 인용의 stem 도 두는 앞자리
-WORKTREE_PARENT = r"worktrees[/\\]"
+# 워크트리 폴더 이름은 옮기지 않으므로 그 폴더를 가리킨 인용의 stem 도 두는 앞자리. 대소문자를
+# 가리지 않고, 문자열 리터럴과 JSON 이 이스케이프한 역슬래시 둘도 구분자다. 뒤보기는 폭이 고정이라
+# 꼴마다 하나씩 둔다
+WORKTREE_PARENTS = (r"(?i:worktrees)[/\\]", r"(?i:worktrees)\\\\")
 BOM = chr(0xFEFF)
 
 NETWORK_TIMEOUT = 120
@@ -769,12 +784,13 @@ def renumber(shifted: Iterable[Move]) -> Renumber:
 
 def _citation_pattern(path: str, plan: Renumber) -> re.Pattern[str]:
     """`path` 에서 옮길 인용의 꼴. 티켓 stem 은 `plan` 의 stem 그대로를 앞뒤 경계와 함께 맞대고,
-    워크트리 폴더 경로(`worktrees/`·`worktrees\\` 뒤)의 stem 은 둔다."""
+    워크트리 폴더 경로(`worktrees/`·`worktrees\\` 뒤, `WORKTREE_PARENTS`)의 stem 은 둔다."""
     if not plan.stems:
         return QUEUE_CITATION if path == QUEUE else CITATION
     source = _CITATIONS + (_QUEUE_HEAD if path == QUEUE else "")
     stems = "|".join(re.escape(stem) for stem in sorted(plan.stems, key=len, reverse=True))
-    source += rf"|(?<![{STEM_EDGE}])(?<!{WORKTREE_PARENT})(?P<stem>{stems})(?![{STEM_EDGE}])"
+    parents = "".join(f"(?<!{parent})" for parent in WORKTREE_PARENTS)
+    source += rf"|(?<![{STEM_EDGE}]){parents}(?P<stem>{stems})(?![{STEM_EDGE}])"
     if path.startswith(f"{HARNESS_ISSUES}/"):
         source += _TICKET_HEAD
     return re.compile(source, re.MULTILINE)
@@ -1351,15 +1367,14 @@ class Remote:
     branches: dict[str, str] = field(default_factory=dict[str, str])  # 원격 브랜치 → 끝
 
 
-def branch_pull(remote: Remote, branch: str | None) -> int | None:
-    """`branch` 의 열린 PR. head 가 원격의 같은 이름 브랜치 끝과 같은 PR 이고, 둘 이상이면 가장 작은
-    번호다. 원격에 그 브랜치가 없거나 분리 HEAD(`branch` 가 None)면 없다. 이 브랜치와 형제
-    워크트리가 같이 쓴다. 규칙이 갈리면 티켓이 겹친 두 대조가 서로 상대가 옮긴다고 알린다(모듈
-    독스트링)."""
+def branch_pull(remote: Remote, branch: str | None, head: str) -> int | None:
+    """`branch` 의 열린 PR. head 가 원격의 같은 이름 브랜치 끝과 같은 PR 이다. 원격에 그 브랜치가
+    없거나 분리 HEAD(`branch` 가 None)면 head 가 그 체크아웃의 HEAD(`head`)와 같은 PR 이다. 둘
+    이상이면 가장 작은 번호다. 이 브랜치와 형제 워크트리가 같이 쓴다. 규칙이 갈리면 티켓이 겹친 두
+    대조가 서로 다른 쪽을 옮기라고 한다(모듈 독스트링)."""
     tip = remote.branches.get(branch) if branch is not None else None
-    if tip is None:
-        return None
-    return min((number for number, head in remote.pulls.items() if head == tip), default=None)
+    target = head if tip is None else tip
+    return min((number for number, sha in remote.pulls.items() if sha == target), default=None)
 
 
 def pull_heads(listing: str) -> frozenset[int]:
@@ -1457,6 +1472,7 @@ def survey(root: Path, remote: Remote) -> Survey:
     others: list[Sibling] = []
     taken = [base_numbers, main_numbers]
     branch = current_branch(root)
+    own = git(root, "rev-parse", "HEAD").strip()
 
     def add(
         label: str,
@@ -1499,7 +1515,8 @@ def survey(root: Path, remote: Remote) -> Survey:
             continue
         since = merge_base(root, head, main_sha)
         changed = _own_changes(path, since, main_sha) if since else None
-        add(f"워크트리 {path}", head, numbers, changed, pull=branch_pull(remote, tree.branch))
+        pull = branch_pull(remote, tree.branch, head)
+        add(f"워크트리 {path}", head, numbers, changed, pull=pull)
     disk = numbers_of(Disk(root))
     ours = unshared(fresh(disk, base_numbers), main_numbers)
     changed = _own_changes(root, base, main_sha)
@@ -1531,7 +1548,7 @@ def survey(root: Path, remote: Remote) -> Survey:
         dangling_files(root, (base, main_sha), changed, known),
         remote.unfetched,
         branch=branch,
-        own_pull=branch_pull(remote, branch),
+        own_pull=branch_pull(remote, branch, own),
         own_head=remote.own_head,
     )
 

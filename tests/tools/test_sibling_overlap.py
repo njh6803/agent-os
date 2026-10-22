@@ -432,17 +432,19 @@ def test_워크트리_목록은_bare와_사라진_것을_빼고_경로와_HEAD�
     ]
 
 
-def test_브랜치의_열린_PR은_head가_그_브랜치의_원격_끝과_같은_PR이다() -> None:
-    """이 브랜치와 형제 워크트리가 같은 규칙으로 가린다. 원격에 브랜치가 없거나 분리 HEAD 면 HEAD 가
-    PR 의 head 와 같아도 열린 PR 이 없다(못 보는 것). 같은 끝을 든 PR 이 둘이면 작은 번호다."""
+def test_브랜치의_PR은_원격_끝과_같은_PR이고_원격에_없으면_HEAD와_같은_PR이다() -> None:
+    """이 브랜치와 형제 워크트리가 같은 규칙으로 가린다. 원격 끝이 있으면 HEAD 는 보지 않는다.
+    원격에 브랜치가 없거나 분리 HEAD 면 head 가 HEAD 와 같은 PR 이다. 같은 끝을 든 PR 이 둘이면
+    작은 번호다."""
     remote = Remote(
         {5: "aaa", 7: "bbb", 9: "bbb"}, "merge ref", None, {}, branches={"chore/x": "bbb"}
     )
 
-    assert branch_pull(remote, "chore/x") == 7
-    assert branch_pull(remote, "chore/y") is None
-    assert branch_pull(remote, None) is None
-    assert branch_pull(replace(remote, branches={"chore/x": "ccc"}), "chore/x") is None
+    assert branch_pull(remote, "chore/x", "aaa") == 7
+    assert branch_pull(remote, "chore/y", "aaa") == 5
+    assert branch_pull(remote, None, "bbb") == 7
+    assert branch_pull(remote, "chore/y", "ddd") is None
+    assert branch_pull(replace(remote, branches={"chore/x": "ccc"}), "chore/x", "aaa") is None
 
 
 def test_카나리아로_불러_보는_하네스_파일은_스킬_본문과_규칙과_서브에이전트다() -> None:
@@ -728,13 +730,18 @@ def test_티켓은_stem을_slug까지_맞대어_옮기고_머리_줄은_harness_
 
 
 def test_워크트리_폴더를_가리킨_stem은_폴더_이름을_옮기지_않으므로_둔다() -> None:
-    """옮기면 없는 폴더를 가리킨다. 브랜치와 티켓 경로의 같은 stem 은 옮긴다."""
+    """옮기면 없는 폴더를 가리킨다. 브랜치와 티켓 경로의 같은 stem 은 옮긴다. 대소문자를 가리지
+    않고, 문자열 리터럴과 JSON 이 이스케이프한 역슬래시 둘도 구분자다(PR 직전 버그 축)."""
     plan = renumber([Move("티켓", "001-ours", "002-ours")])
     line = "브랜치 `chore/001-ours`, 워크트리 `.claude/worktrees/001-ours`\n"
     windows = "C:\\repo\\.claude\\worktrees\\001-ours 에서 연다\n"
+    upper = "C:\\repo\\.claude\\Worktrees\\001-ours 에서 연다\n"
+    escaped = '{"cwd": "C:\\\\repo\\\\.claude\\\\worktrees\\\\001-ours"}\n'
 
     assert rewrite(line, plan, "docs/journal/x.md") == line.replace("chore/001", "chore/002")
     assert rewrite(windows, plan, "docs/journal/x.md") == windows
+    assert rewrite(upper, plan, "docs/journal/x.md") == upper
+    assert rewrite(escaped, plan, "docs/x.json") == escaped
     assert rewrite("trees/001-ours\n", plan, "docs/x.md") == "trees/002-ours\n"
 
 
@@ -2678,11 +2685,13 @@ def test_형제_워크트리의_PR은_브랜치의_원격_끝으로_알아_두_�
     assert "옮길 번호" not in out
 
 
-def test_원격에_브랜치가_없는_형제_워크트리는_HEAD가_PR의_head여도_PR이_없다(
+def test_원격에_브랜치가_없는_형제_워크트리는_HEAD가_PR의_head면_그_PR로_알아_같은_쪽을_옮긴다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """못 보는 것. 그 워크트리의 대조도 같은 규칙으로 자기에게 열린 PR 이 없다고 보아, 열린 PR 이
-    있는 이 브랜치는 비켜 주고 그쪽이 옮긴다."""
+    """이름을 바꾼 브랜치나 분리 HEAD 의 형제 워크트리. 그 워크트리의 대조도 같은 규칙으로 자기 PR
+    을 알아, PR 번호가 큰 이 브랜치가 옮기고 그쪽은 비켜 준다. 원격 끝으로만 가린 판에서는 이쪽이
+    비켜 주고 PR 번호가 작은 그쪽이 옮겼고, 그 티켓이 PR 의 head 에 있으면 둘 다 옮겼다(PR 직전
+    버그 축)."""
     _, work, _ = 저장소
     _이_브랜치의_PR을_연다(work, "chore/001-ours", 9, {f"{ISSUES}/001-ours.md": "# 001: 이쪽\n"})
     sibling = _워크트리의_PR을_민다(work, "sibling", 5, {"docs/other.md": "그쪽\n"}).resolve()
@@ -2692,16 +2701,42 @@ def test_원격에_브랜치가_없는_형제_워크트리는_HEAD가_PR의_head
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
-    assert code == 0, out
-    assert "티켓 번호가 겹쳤지만 이 브랜치는 옮기지 않는다. 이 브랜치에 열린 PR #9 이 있어" in out
+    assert code == 1, out
     assert f"- 워크트리 {sibling} 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-sibling.md\n" in out
+    assert "옮길 번호: 티켓 001-ours → 002-ours\n" in out
+
+    code = main([str(sibling)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "티켓 번호가 겹쳤지만 이 브랜치는 옮기지 않는다. 이 브랜치에 열린 PR #5 이 있어" in out
+    assert "옮길 번호" not in out
+
+
+def test_원격에_브랜치가_없고_HEAD가_PR의_head_뒤인_형제_워크트리는_PR이_없다고_보아_둘_다_옮긴다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것. 그 티켓이 PR 의 head 에 있으면 이쪽은 그 PR 을 PR 형제로 보아 PR 번호가 큰 이
+    브랜치가 옮기고, 그쪽은 자기 PR 이 없다고 보아 그쪽도 옮긴다."""
+    _, work, _ = 저장소
+    _이_브랜치의_PR을_연다(work, "chore/001-ours", 9, {f"{ISSUES}/001-ours.md": "# 001: 이쪽\n"})
+    ticket = {f"{ISSUES}/001-sibling.md": "# 001: 형제\n"}
+    sibling = _워크트리의_PR을_민다(work, "sibling", 5, ticket).resolve()
+    _연다(sibling, 5, _git(sibling, "rev-parse", "HEAD"))
+    _커밋한다(sibling, {"docs/more.md": "head 뒤\n"}, "head 뒤의 커밋")
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "- PR #5 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-sibling.md\n" in out
+    assert "옮길 번호: 티켓 001-ours → 002-ours\n" in out
 
     code = main([str(sibling)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 1, out
     assert "옮길 번호: 티켓 001-sibling → 002-sibling\n" in out
-    assert "이 브랜치는 옮기지 않는다" not in out
 
 
 def test_main을_merge_커밋으로_들인_뒤에는_main에_병합된_같은_번호의_티켓을_보지_못한다(
