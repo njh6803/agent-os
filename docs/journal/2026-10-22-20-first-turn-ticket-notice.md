@@ -49,7 +49,7 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 
 ### 명세 축
 
-1. Major. 티켓의 "이 훅을 지시문일 때만으로 든 살아 있는 자리를 고친다"가 덜 됐다. `.claude/skills/next-session/SKILL.md` 107줄의 "라벨을 바꾸면 훅은 예외 없이 침묵하고"가 이제 거짓이다(라벨을 바꾼 지시문은 사람이 보는 세션에서 티켓 알림을 받는다. 그 축이 함수를 불러 봤다). `.scratch/ticket-for-every-pr/spec.md` 25·217줄도 같은 말이다(Minor). → 스킬은 고친다. 명세 두 줄은 두는데, 명세는 to-spec·to-tickets 가 쓰는 문서이고(CLAUDE.md 지도 표) 그 두 줄은 이 기능이 출발한 상태를 "지금 … 넓힌다"로 적은 문장이라서다. 이 세션이 저장소를 다시 grep 해 `hook_prompt_directive`·"첫 턴 훅"이 든 살아 있는 문서(스킬 셋, ADR 0032·0036·0037 본문, `open_session.ps1`, `hook_pr_head_sync.py`, 프로브 README, 대기열의 열린 행, model-rerun 설계, token-usage 명세)를 한 줄씩 열었고, 지시문 전용이라 거짓이 된 줄은 그 하나였다. ADR 0037 15줄의 "첫 턴 훅이 침묵한다"는 결정 시점의 근거라 포인터를 달지 않는다(`.claude/rules/adr.md` 달지 않는 것).
+1. Major. 티켓의 잔존 항목(저장소를 grep 해 이 훅을 지시문일 때만으로 든 살아 있는 자리를 고친다)이 덜 됐다. `.claude/skills/next-session/SKILL.md` 107줄의 "라벨을 바꾸면 훅은 예외 없이 침묵하고"가 이제 거짓이다(라벨을 바꾼 지시문은 사람이 보는 세션에서 티켓 알림을 받는다. 그 축이 함수를 불러 봤다). `.scratch/ticket-for-every-pr/spec.md` 25·217줄도 같은 말이다(Minor). → 스킬은 고친다. 명세 두 줄은 두는데, 명세는 to-spec·to-tickets 가 쓰는 문서이고(CLAUDE.md 지도 표) 그 두 줄은 이 기능이 출발한 상태를 "지금 … 넓힌다"로 적은 문장이라서다. 이 세션이 저장소를 다시 grep 해 `hook_prompt_directive`·"첫 턴 훅"이 든 살아 있는 문서(스킬 셋, ADR 0032·0036·0037 본문, `open_session.ps1`, `hook_pr_head_sync.py`, 프로브 README, 대기열의 열린 행, model-rerun 설계, token-usage 명세)를 한 줄씩 열었고, 지시문 전용이라 거짓이 된 줄은 그 하나였다. ADR 0037 15줄의 첫 턴 훅이 침묵한다는 문장은 결정 시점의 근거라 포인터를 달지 않는다(`.claude/rules/adr.md` 달지 않는 것).
 2. Minor. 카나리아 명세 머리가 "일지 2026-10-22-20"을 드는데 그 일지에 검사 절이 없다. → 검사 절을 쓴다.
 3. Minor(갈래). 면제 일을 주 체크아웃에서 시작하면, 알림이 면제를 "따르지 않는 때"에 넣어 주 체크아웃에서 `docs/<slug>` 를 따고 제목을 둘 수 있다. → 면제 일도 워크트리와 제목은 같다고 적는다.
 4. Minor(갈래). 다른 티켓의 워크트리 폴더에서 연 세션이 다른 일을 받으면(이번 확인 세션이 그 길이었다) 2)가 남의 티켓 브랜치 이름을 바꾸게 한다. → 다른 티켓의 브랜치는 두고 사용자에게 알린다고 적는다.
@@ -78,4 +78,32 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 - **실제 입력 표.** `uv run python tools/run_hooks.py` 153건, 어긋남 0(셀프 리뷰 전. 반영 뒤는 커밋의 pre-commit 이 돈다).
 - **시간.** `.scratch/ticket-for-every-pr/probes/first_turn_time.py` 두 번(결과와 부하는 그 폴더 README 의 2026-10-22 결과 절), 값은 `.claude/rules/tools.md`.
 - **카나리아 둘.** `tools_rule_prompt_directive_time.toml`: 통과 4(실험군 3/3이 두 범위를 옮겼고 대조군은 두 물음 모두 "없음", claude 2.1.302, `e62eb052` 위의 커밋 전 작업 트리. 셀프 리뷰 반영은 `.claude/rules/tools.md` 를 고치지 않았다). `next_session_label_ticket_notice.toml`: 통과 4(실험군 3/3이 새 문장을, 대조군 주 체크아웃 `c47bedce` 는 옛 문장 "예외 없이 침묵"을 옮겼다).
-- **게이트.** 셀프 리뷰 전 `tools/run_checks.py` 모두 Passed. 반영 뒤는 커밋의 pre-commit 으로 갈음한다.
+- **게이트.** 셀프 리뷰 전 `tools/run_checks.py` 모두 Passed. 반영 뒤는 첫 커밋의 pre-commit 이 모두 Passed 였다(pytest 401초, web-verify 322초, 훅 러너, pyright 둘, 타입 우회, 경계, 커밋 검사, 지침, zizmor, 표·줄 구분 문자·변이 표·카나리아 모양 검사. 헌법 판은 대상 파일이 없어 Skipped). 인용 대조가 경고 10건을 냈다. 둘(티켓 항목과 ADR 0037 문장을 글자가 다르게 옮긴 것)은 따옴표를 떼고 고쳤고, 나머지는 바뀌기 전 옛 문장이나 파이썬 문자열 이음으로 갈라진 새 문장을 옮긴 것이라 둔다.
+
+## 인계 (커밋 뒤)
+
+첫 커밋 뒤 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트 335,245 토큰으로 문턱 200,000 을 넘은 채 `커밋 뒤` 경계였다. 인계하지 않는 때 다섯에 들지 않았다(커밋은 성공했다, 요청 범위는 PR과 병합까지다, 지시문의 이어받을 상태는 `없음` 이었다, `인계 못함` 줄이 없다, `get_session self` 에 `parentSessionId` 가 없다). 이 세션의 제목은 `feature/05-first-turn-ticket-notice` 이고 `feature/05-first-turn-ticket-notice (인계함)` 으로 바꾼다. 이 세션이 받은 사용자 프롬프트는 위 "구현"의 지시문과 두 선택 화면의 답이 전부다. 번복한 결정은 없고, 고친 것은 셀프 리뷰 반영 절이 전부다. 주 체크아웃은 `main` 이고 origin/main 과 같은 커밋이었다(`git worktree list`).
+
+지시문:
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md. 첫 턴 훅이 티켓 없는 브랜치를 알린다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
+브랜치: feature/05-first-turn-ticket-notice
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-20-first-turn-ticket-notice.md 전체(셀프 리뷰 반영 절의 새 문장이 PR 직전 리뷰에 밀 주장이다)
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 첫 커밋까지 했다(pre-commit 모두 Passed). 남은 단계는 차례로 이렇다. 일지의 인계 절(커밋하지 않았다)을 다음 커밋에 싣는다. 티켓의 체크박스를 표시하고 Status를 done으로 바꾼다. origin/main을 합친다. PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)를 돌리고 반영한다. 반영을 커밋한 뒤 .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml 전체를 다시 돌린다(변이 도구가 커밋 뒤의 전체 실행을 요구했다). 푸시, PR, 봇 회차, 워크트리 길의 병합, 일지 다음과 회고. 첫 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다. 사용자가 "푸시 뒤에 보관 (추천)"을 골랐다(일지의 모델에게 닿는지 절). 일지 docs/journal/2026-10-22-20-first-turn-ticket-notice.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-22T13:16Z
+
+## 인계받은 세션 (커밋 뒤부터)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md / (…) 이어받을 상태: 인계: 커밋 뒤. (…) / 이번 요청 범위: PR과 병합까지"
+
+- 제목을 `feature/05-first-turn-ticket-notice` 로 바꿨다. `git worktree list` 에서 그 브랜치가 `.claude/worktrees/05-first-turn-ticket-notice` 에 있어 `EnterWorktree(path)` 로 들어갔다(잠금에 막히지 않았다).
+- 티켓의 체크박스를 모두 표시하고 상태를 `done` 으로 바꿔 위 인계 절과 한 커밋에 실었다. origin/main 은 그새 #351(`c47bedce`) 하나가 더 들어와 있었다.

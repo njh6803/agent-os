@@ -6,37 +6,37 @@
 
 **Blocked by:** 02, 03
 
-**Status:** in-progress
+**Status:** done
 
 ### 훅
 
-- [ ] **새 훅을 두지 않고 `tools/hook_prompt_directive.py`를 넓힌다**(명세의 거부한 안). 지금은 지시문일 때만 트랜스크립트를 연다
-- [ ] **알리는 때.** 넷이 모두 맞을 때 한 번 낸다. 첫 턴이다(지금의 `is_first_turn`), 첫 메시지가 지시문이 아니다(지금의 지시문 판정), 사람이 보는 세션이다(아래 가름), 첫 메시지가 `<scheduled-task `로 시작하지 않는다(앱의 예약 작업이 연 세션은 그 가름으로 헤드리스로 보이지 않는다. 명세의 주석). 헤드리스 가름과 예약 작업 거르기를 트랜스크립트보다 먼저 본다
-- [ ] **헤드리스 가름**은 `tools/hook_session_usage.py`의 `shows_summary` 가름(`CLAUDE_CODE_SESSION_ATTENDED`가 `0`이거나 표지 변수 `AGENT_OS_HEADLESS`가 비지 않았다)을 같은 꼴로 옮긴다. 훅끼리 import하지 않으므로 두 파일에 두고, 시험이 두 가름이 같은지 본다(선례 `tests/tools/test_hook_midturn_korean.py`의 `test_산문_규칙과_문턱은_Stop_훅과_같다`)
-- [ ] **알리는 것**(명세 "알리는 것" 그대로). 주 체크아웃에서 시작했으면 셋 앞에 브랜치를 따지 않고 `EnterWorktree`로 워크트리에 먼저 들어간다는 것과 그 까닭(주 체크아웃에 먼저 쓴 티켓은 따라오지 않고 main을 당기지 못하게 한다). 셋의 차례: 티켓을 쓴다(자리는 기능 폴더의 다음 번호이거나 `.scratch/harness/issues/NNN-<slug>.md`, 번호는 `uv run python tools/sibling_overlap.py`의 다음 빈 번호, 상태는 in-progress), 브랜치를 티켓 자리에 맞춘다(`git branch -m`), 세션 제목을 그 브랜치로 바꾼다. 따르지 않는 때 셋, 커밋 검사가 티켓 없는 커밋을 막는다는 것, 규약 원천 한 줄
-- [ ] **제목 문구**는 지금 훅의 지시문 계기 문구(`set_session_title`에 `self`, 거부하면 이 세션의 ID를 찾아 넘기고, 찾지 못하면 제목을 두고 사용자에게 알린다)를 그대로 쓴다. 두 계기가 같은 문구를 쓰는지 시험이 본다
-- [ ] **지시문에는 새 알림을 내지 않는다.** 지시문의 지금 계기(제목, `tidy-checkouts`, 폴더 막기)는 그대로다
-- [ ] **독스트링.** 알리는 때와 그 까닭, 헤드리스 가름의 원천, 비용(지시문이 아닌 프롬프트에서도 트랜스크립트를 연다. 첫 assistant 기록에서 멈춘다), 못 보는 것(첫 메시지만으로는 질문만 하는 세션과 커밋할 세션을 가르지 못한다, 지시문 모양의 글을 붙여 넣고 다른 일을 시키면 알림이 뜨지 않는다, 다른 예약 작업이 헤드리스로 보이는지는 보지 못했다, 예약 작업이 커밋할 일을 맡게 되면 이 알림 없이 커밋 검사가 처음 알린다)
+- [x] **새 훅을 두지 않고 `tools/hook_prompt_directive.py`를 넓힌다**(명세의 거부한 안). 지금은 지시문일 때만 트랜스크립트를 연다
+- [x] **알리는 때.** 넷이 모두 맞을 때 한 번 낸다. 첫 턴이다(지금의 `is_first_turn`), 첫 메시지가 지시문이 아니다(지금의 지시문 판정), 사람이 보는 세션이다(아래 가름), 첫 메시지가 `<scheduled-task `로 시작하지 않는다(앱의 예약 작업이 연 세션은 그 가름으로 헤드리스로 보이지 않는다. 명세의 주석). 헤드리스 가름과 예약 작업 거르기를 트랜스크립트보다 먼저 본다
+- [x] **헤드리스 가름**은 `tools/hook_session_usage.py`의 `shows_summary` 가름(`CLAUDE_CODE_SESSION_ATTENDED`가 `0`이거나 표지 변수 `AGENT_OS_HEADLESS`가 비지 않았다)을 같은 꼴로 옮긴다. 훅끼리 import하지 않으므로 두 파일에 두고, 시험이 두 가름이 같은지 본다(선례 `tests/tools/test_hook_midturn_korean.py`의 `test_산문_규칙과_문턱은_Stop_훅과_같다`)
+- [x] **알리는 것**(명세 "알리는 것" 그대로). 주 체크아웃에서 시작했으면 셋 앞에 브랜치를 따지 않고 `EnterWorktree`로 워크트리에 먼저 들어간다는 것과 그 까닭(주 체크아웃에 먼저 쓴 티켓은 따라오지 않고 main을 당기지 못하게 한다). 셋의 차례: 티켓을 쓴다(자리는 기능 폴더의 다음 번호이거나 `.scratch/harness/issues/NNN-<slug>.md`, 번호는 `uv run python tools/sibling_overlap.py`의 다음 빈 번호, 상태는 in-progress), 브랜치를 티켓 자리에 맞춘다(`git branch -m`), 세션 제목을 그 브랜치로 바꾼다. 따르지 않는 때 셋, 커밋 검사가 티켓 없는 커밋을 막는다는 것, 규약 원천 한 줄
+- [x] **제목 문구**는 지금 훅의 지시문 계기 문구(`set_session_title`에 `self`, 거부하면 이 세션의 ID를 찾아 넘기고, 찾지 못하면 제목을 두고 사용자에게 알린다)를 그대로 쓴다. 두 계기가 같은 문구를 쓰는지 시험이 본다
+- [x] **지시문에는 새 알림을 내지 않는다.** 지시문의 지금 계기(제목, `tidy-checkouts`, 폴더 막기)는 그대로다
+- [x] **독스트링.** 알리는 때와 그 까닭, 헤드리스 가름의 원천, 비용(지시문이 아닌 프롬프트에서도 트랜스크립트를 연다. 첫 assistant 기록에서 멈춘다), 못 보는 것(첫 메시지만으로는 질문만 하는 세션과 커밋할 세션을 가르지 못한다, 지시문 모양의 글을 붙여 넣고 다른 일을 시키면 알림이 뜨지 않는다, 다른 예약 작업이 헤드리스로 보이는지는 보지 못했다, 예약 작업이 커밋할 일을 맡게 되면 이 알림 없이 커밋 검사가 처음 알린다)
 
 ### 시험
 
-- [ ] **순수 함수 시험**(`tests/tools/test_hook_prompt_directive.py`). 첫 턴의 보통 프롬프트(알림과 그 낱말: 티켓 자리, 번호 명령, `git branch -m`, 제목, 따르지 않는 때), 첫 턴이 아닌 같은 프롬프트(침묵), 헤드리스 표지 둘 각각(침묵), `<scheduled-task `로 시작하는 첫 메시지(침묵), 지시문(지금 계기만 있고 새 알림 없음), 두 헤드리스 가름이 같다는 것, 두 계기의 제목 문구가 같다는 것
-- [ ] **빨강을 먼저 본다.** 지금 훅으로 보통 프롬프트의 알림 사례가 빨간 것을 본다
-- [ ] **실제 입력 표**(`tools/hook_payloads.toml`). 첫 턴의 `보통 프롬프트` 사례(`끝났어?`, 지금 `silent`)를 알림으로 바꾼다. 첫 턴이 아닌 같은 프롬프트(`${USED_TRANSCRIPT}`)의 침묵, 헤드리스 세션의 침묵(`env`로 `CLAUDE_CODE_SESSION_ATTENDED = "0"`), 첫 메시지가 `<scheduled-task name=`으로 시작하는 실제 입력의 침묵을 더한다. 러너는 훅을 띄울 때 그 두 변수(`CLAUDE_CODE_SESSION_ATTENDED`, `AGENT_OS_HEADLESS`)를 벗기므로(`tools/run_hooks.py`의 `hook_environment`), 알림 사례는 `run_hooks`를 부른 세션의 환경과 상관없이 같은 결과가 나오고, 헤드리스 침묵 사례는 사례의 `env`로만 정해진다. `uv run python tools/run_hooks.py`로 돌려 본다
+- [x] **순수 함수 시험**(`tests/tools/test_hook_prompt_directive.py`). 첫 턴의 보통 프롬프트(알림과 그 낱말: 티켓 자리, 번호 명령, `git branch -m`, 제목, 따르지 않는 때), 첫 턴이 아닌 같은 프롬프트(침묵), 헤드리스 표지 둘 각각(침묵), `<scheduled-task `로 시작하는 첫 메시지(침묵), 지시문(지금 계기만 있고 새 알림 없음), 두 헤드리스 가름이 같다는 것, 두 계기의 제목 문구가 같다는 것
+- [x] **빨강을 먼저 본다.** 지금 훅으로 보통 프롬프트의 알림 사례가 빨간 것을 본다
+- [x] **실제 입력 표**(`tools/hook_payloads.toml`). 첫 턴의 `보통 프롬프트` 사례(`끝났어?`, 지금 `silent`)를 알림으로 바꾼다. 첫 턴이 아닌 같은 프롬프트(`${USED_TRANSCRIPT}`)의 침묵, 헤드리스 세션의 침묵(`env`로 `CLAUDE_CODE_SESSION_ATTENDED = "0"`), 첫 메시지가 `<scheduled-task name=`으로 시작하는 실제 입력의 침묵을 더한다. 러너는 훅을 띄울 때 그 두 변수(`CLAUDE_CODE_SESSION_ATTENDED`, `AGENT_OS_HEADLESS`)를 벗기므로(`tools/run_hooks.py`의 `hook_environment`), 알림 사례는 `run_hooks`를 부른 세션의 환경과 상관없이 같은 결과가 나오고, 헤드리스 침묵 사례는 사례의 `env`로만 정해진다. `uv run python tools/run_hooks.py`로 돌려 본다
 
 ### 시간과 닿음
 
-- [ ] **시간.** 래퍼(`tools/launch_hook.py`)를 거쳐 큰 트랜스크립트(이 PC의 가장 큰 것)에서 첫 턴의 보통 프롬프트, 첫 턴이 아닌 보통 프롬프트, 헤드리스를 다섯 번씩 재고, 프로브를 `.scratch/ticket-for-every-pr/probes/`에 커밋하고 그 폴더의 `README.md` 표에 줄을 더한다. 값을 `.claude/rules/tools.md`의 훅별 시간에 같은 꼴로 적는다(다른 세션이 여럿 돌던 때면 그렇다고 적는다)
-- [ ] **모델에게 닿는지.** 새 `claude -p` 세션이 아니라(헤드리스라 침묵한다) 사람이 보는 세션에서, 모델이 알림의 한 문장을 옮기게 해서 본다(`.claude/rules/tools.md` 새 훅 항목. 스트림에는 그 문장이 실리지 않는다). 워크트리 세션의 훅은 주 체크아웃의 파일이 돌므로(같은 항목), 사람에게 그 워크트리 폴더에서 새 앱 세션을 한 번 열어 달라고 묻는다(06의 확인과 같은 길). 결과를 일지에 적고, 열지 못했으면 보지 못했다고 적는다
+- [x] **시간.** 래퍼(`tools/launch_hook.py`)를 거쳐 큰 트랜스크립트(이 PC의 가장 큰 것)에서 첫 턴의 보통 프롬프트, 첫 턴이 아닌 보통 프롬프트, 헤드리스를 다섯 번씩 재고, 프로브를 `.scratch/ticket-for-every-pr/probes/`에 커밋하고 그 폴더의 `README.md` 표에 줄을 더한다. 값을 `.claude/rules/tools.md`의 훅별 시간에 같은 꼴로 적는다(다른 세션이 여럿 돌던 때면 그렇다고 적는다)
+- [x] **모델에게 닿는지.** 새 `claude -p` 세션이 아니라(헤드리스라 침묵한다) 사람이 보는 세션에서, 모델이 알림의 한 문장을 옮기게 해서 본다(`.claude/rules/tools.md` 새 훅 항목. 스트림에는 그 문장이 실리지 않는다). 워크트리 세션의 훅은 주 체크아웃의 파일이 돌므로(같은 항목), 사람에게 그 워크트리 폴더에서 새 앱 세션을 한 번 열어 달라고 묻는다(06의 확인과 같은 길). 결과를 일지에 적고, 열지 못했으면 보지 못했다고 적는다
 
 ### 문서
 
-- [ ] `KICKOFF.md` 훅 목록의 `hook_prompt_directive` 줄에 첫 턴 알림을 더한다
-- [ ] `.claude/rules/tools.md`에서 이 훅을 지시문 계기로만 말하는 자리가 있으면 고친다. 저장소를 grep해 이 훅을 "지시문일 때만"으로 든 살아 있는 자리를 고친다
-- [ ] **카나리아.** `.claude/rules/tools.md`를 고쳤으면(위 시간 값과 이 항목) 그 파일을 원천으로 든 카나리아 명세(`.scratch/harness/probes/canary/tools_rule*.toml`)를 고치거나 새로 두고 새 `claude -p` 세션에서 불러 본다(명세 "이음매"의 스킬과 문서, `CLAUDE.md` 작업 규약 3). 그러지 않으면 커밋 전 `tools/sibling_overlap.py`가 1로 끝난다. 결과를 일지의 검사 절에 적는다. 쓰기 전에 Skill 도구로 `writing-for-agents`를 부른다(`.claude/rules/agent-docs.md`)
+- [x] `KICKOFF.md` 훅 목록의 `hook_prompt_directive` 줄에 첫 턴 알림을 더한다
+- [x] `.claude/rules/tools.md`에서 이 훅을 지시문 계기로만 말하는 자리가 있으면 고친다. 저장소를 grep해 이 훅을 "지시문일 때만"으로 든 살아 있는 자리를 고친다
+- [x] **카나리아.** `.claude/rules/tools.md`를 고쳤으면(위 시간 값과 이 항목) 그 파일을 원천으로 든 카나리아 명세(`.scratch/harness/probes/canary/tools_rule*.toml`)를 고치거나 새로 두고 새 `claude -p` 세션에서 불러 본다(명세 "이음매"의 스킬과 문서, `CLAUDE.md` 작업 규약 3). 그러지 않으면 커밋 전 `tools/sibling_overlap.py`가 1로 끝난다. 결과를 일지의 검사 절에 적는다. 쓰기 전에 Skill 도구로 `writing-for-agents`를 부른다(`.claude/rules/agent-docs.md`)
 
 ### 검증
 
-- [ ] 첫 편집으로 이 티켓의 `Status:`를 `in-progress`로 바꿔 첫 커밋에 싣고, PR을 열기 전에 `done`으로 바꾼다
-- [ ] 원칙 III를 지킨다
-- [ ] 검증 명령이 모두 초록이다
+- [x] 첫 편집으로 이 티켓의 `Status:`를 `in-progress`로 바꿔 첫 커밋에 싣고, PR을 열기 전에 `done`으로 바꾼다
+- [x] 원칙 III를 지킨다
+- [x] 검증 명령이 모두 초록이다
