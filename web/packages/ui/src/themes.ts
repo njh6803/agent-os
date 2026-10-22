@@ -23,10 +23,10 @@ export type ThemeKey = (typeof THEMES)[number]["key"];
 /** 사이트나 운영자가 고르지 않았을 때의 테마. 속성이 없는 문서와 호스트도 이 값으로 그린다. */
 export const DEFAULT_THEME: ThemeKey = "nokcheong";
 
-/** `data-mode` 의 값. 속성이 없으면 시스템 설정(`prefers-color-scheme`)을 따른다. */
-export const MODES = ["light", "dark"] as const;
-
-export type Mode = (typeof MODES)[number];
+// 모드 목록(`data-mode` 의 값)은 명암비 모듈이 정의한다. 그 모듈은 상대 import 가 없어야 해서 들이는 쪽이 여기다.
+// 사진 비교(`visual/`, `nodenext`)도 이 파일을 들여 확장자를 붙인다. `.js` 는 두 해석(`bundler`, `nodenext`)이 모두
+// 이웃 `.ts` 로 푼다.
+export { MODES, type Mode } from "./styles/contrast.js";
 
 /**
  * `data-density` 의 값. 촘촘(compact)과 보통(regular)이고 테마·모드와 같은 요소에 단다. 속성이 없으면 화면 폭 768px
