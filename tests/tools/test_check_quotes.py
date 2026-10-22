@@ -135,6 +135,88 @@ def test_더한_줄은_스테이지와_상관없이_작업_트리가_HEAD_에_�
     assert [warning.split(":")[1] for warning in warnings] == ["2", "3"]
 
 
+def test_이름을_바꾼_파일은_옛_경로와_짝지어_바뀐_줄만_본다(tmp_path: Path) -> None:
+    """새 경로 하나로 diff 하면 파일 전체가 더한 줄이라 옮겨 온 옛 줄까지 다시 대조된다(대기열
+    377)."""
+    채움 = "".join(f"채움 줄 {n}번은 인용이 없고 옮겨도 그대로다\n" for n in range(8))
+    _저장소를_만든다(
+        tmp_path, f'옛 줄 "커밋된 옛 줄의 틀린 인용은 이름을 바꿔도 다시 보지 않는다"\n{채움}'
+    )
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    _git(tmp_path, "mv", "docs/quoting.md", "docs/moved.md")
+    moved = tmp_path / "docs" / "moved.md"
+    _덧붙인다(moved, '새 줄 "옮긴 뒤 더한 줄의 틀린 인용은 스무 자를 넘어 잡혀야 한다"\n')
+    _git(tmp_path, "add", ".")
+
+    warnings = check([moved], tmp_path, line_filter=lambda p: added_lines(p, tmp_path)).warnings
+
+    assert [warning.split(":")[:2] for warning in warnings] == [["docs/moved.md", "10"]]
+
+
+def test_이름을_바꾸지_않은_새_파일은_모든_줄이_더한_줄이다(tmp_path: Path) -> None:
+    """옮긴 것이 아니면 짝지을 옛 경로가 없다. 지운 파일이 없으니 git 도 이름 바꾸기로 읽지
+    않는다."""
+    _저장소를_만든다(tmp_path, "첫 줄\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    new = tmp_path / "docs" / "new.md"
+    _덧붙인다(new, "하나\n둘\n셋\n")
+    _git(tmp_path, "add", ".")
+
+    assert added_lines(new, tmp_path) == {1, 2, 3}
+
+
+def test_이름_바꾸기를_묻는_git_이_시간을_넘기면_새_파일_그대로_본다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """넘김은 git 이 실패한 갈래로 센다(대기열 342). 옛 경로를 모르니 파일 전체가 더한 줄이다."""
+    새_파일 = "new file mode 100644\n--- /dev/null\n+++ b/x.md\n@@ -0,0 +1,2 @@\n+a\n+b\n"
+    seen: list[list[str]] = []
+
+    def run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        seen.append(args)
+        if "--name-status" in args:
+            raise subprocess.TimeoutExpired(args, 1)
+        return subprocess.CompletedProcess(args, 0, 새_파일.encode(), b"")
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+    assert added_lines(tmp_path / "x.md", tmp_path) == {1, 2}
+    assert [("--name-status" in args) for args in seen] == [False, True]
+
+
+def test_감긴_독스트링과_주석을_한_줄로_옮긴_인용도_원문을_찾는다(tmp_path: Path) -> None:
+    """독스트링과 주석은 폭 100 으로 감긴다. 한 줄로 옮긴 인용이 없다고 경고됐다(대기열 345)."""
+    (tmp_path / "tool.py").write_text(
+        'def f() -> None:\n    """감긴 독스트링의 첫 줄은 여기서 끊기고\n'
+        '    다음 줄에서 이어지는 문장이다."""\n'
+        "# 감긴 주석의 첫 줄은 여기서 끊기고\n#   다음 줄에서 이어지는 문장이다\n",
+        encoding="utf-8",
+    )
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '독스트링은 "감긴 독스트링의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 '
+        "한다.\n\n"
+        '주석은 "감긴 주석의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 한다.\n',
+    )
+
+    assert check([quoting], tmp_path).warnings == []
+
+
+def test_빈_줄로_나뉜_두_문단을_이은_인용은_원문으로_세지_않는다(tmp_path: Path) -> None:
+    """줄을 펴는 것은 감긴 줄만이다. 빈 줄은 이음매가 둘이라 문단을 넘어 맞지 않는다."""
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '"앞 문단의 끝 문장이다 그리고 뒤 문단의 첫 문장이다"\n',
+        원천="앞 문단의 끝 문장이다\n\n그리고 뒤 문단의 첫 문장이다",
+    )
+
+    assert len(check([quoting], tmp_path).warnings) == 1
+
+
 def test_상대_경로로_넘어온_파일도_한_번만_센다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -385,6 +467,27 @@ def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path:
     같은_틀린_인용 = f'하나 "{원문[:-3]} 까닭이다"\n둘 "{원문[:-3]} 까닭이다"\n'
     quoting = _저장소를_만든다(tmp_path, 같은_틀린_인용, 원천="다른 것")
     assert check([quoting], tmp_path).warnings == []
+
+    # 줄을 편 사본은 줄 머리의 `#` 를 주석 표지로 지워, 마크다운 제목과 앞 줄을 잇는다.
+    제목_자리 = tmp_path / "제목"
+    제목_자리.mkdir()
+    제목과_이어진_인용 = _저장소를_만든다(
+        제목_자리,
+        '"앞 문단의 마지막 줄 끝 제목의 낱말들이 이어진다"\n',
+        원천="앞 문단의 마지막 줄 끝\n## 제목의 낱말들이 이어진다",
+    )
+    assert check([제목과_이어진_인용], 제목_자리).warnings == []
+
+    # 같은 사본은 감긴 문장과 서로 무관한 이웃 줄을 가르지 못해, 한 줄의 끝과 다음 줄의 머리를
+    # 잇는다.
+    이웃_자리 = tmp_path / "이웃"
+    이웃_자리.mkdir()
+    이웃_줄이_이어진_인용 = _저장소를_만든다(
+        이웃_자리,
+        '"다른 이야기로 끝나고 무관한 이야기로 시작한다"\n',
+        원천="첫 줄은 다른 이야기로 끝나고\n무관한 이야기로 시작한다 둘째 줄은",
+    )
+    assert check([이웃_줄이_이어진_인용], 이웃_자리).warnings == []
 
 
 def test_이_저장소_전체를_돌려도_끝난다() -> None:
