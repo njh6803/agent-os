@@ -250,11 +250,41 @@ def test_사전_등록_표지가_둘_이상이면_절이_없다() -> None:
     assert prereg_section(f"{PREREG_START}\n{PREREG_START}\n정의\n{PREREG_END}\n") is None
 
 
-def test_이_저장소의_프로브_README는_표지를_홀로_한_줄에만_쓴다() -> None:
-    # 다른 글에 표지를 적으면 절을 꺼내지 못해 판정이 결론 없음으로 멈춘다.
-    줄들 = rerun_judge.PREREG_README.read_text(encoding="utf-8").splitlines()
-    든_줄 = [줄 for 줄 in 줄들 if PREREG_START in 줄 or PREREG_END in 줄]
-    assert [줄 for 줄 in 든_줄 if 줄.strip() not in (PREREG_START, PREREG_END)] == []
+def test_사전_등록_표지가_줄_안에_섞여도_하나씩이면_절로_받는다() -> None:
+    # 못 보는 것: 절이 없는 글의 한 문장이 두 표지를 적으면 그 사이를 절로 읽는다. 저장소의 README는
+    # 아래 시험이 지킨다.
+    assert prereg_section(f"a {PREREG_START}x{PREREG_END} b\n") == "x"
+
+
+def _README_표지_어긋남(글: str) -> list[str]:
+    """README 글이 표지의 두 약속을 어긴 자리. 표지가 든 줄은 표지뿐이고, 표지가 있으면 절로
+    꺼내진다."""
+    든_줄 = [줄 for 줄 in 글.splitlines() if PREREG_START in 줄 or PREREG_END in 줄]
+    어긋남 = [
+        f"표지가 다른 글과 한 줄에 있다: {줄}"
+        for 줄 in 든_줄
+        if 줄.strip() not in (PREREG_START, PREREG_END)
+    ]
+    if 든_줄 and prereg_section(글) is None:
+        어긋남.append(f"표지가 {len(든_줄)}줄에 있는데 절로 꺼내지지 않는다")
+    return 어긋남
+
+
+def test_README_표지_약속의_어긋남을_잡는다() -> None:
+    절 = f"{PREREG_START}\n정의\n{PREREG_END}\n"
+    assert _README_표지_어긋남(절) == []
+    assert _README_표지_어긋남("표지 없음\n") == []
+    # 절이 없을 때 한 문장이 두 표지를 적으면 판정 도구가 그 사이를 절로 받는다. 첫 판의 README
+    # 머리가 그랬다.
+    assert _README_표지_어긋남(f"글 `{PREREG_START}`·`{PREREG_END}` 문장\n") != []
+    # 표지를 홀로 한 줄에 적은 예시가 하나 더 들면 표지가 둘이 되어 판정이 결론 없음으로
+    # 멈춘다.
+    assert _README_표지_어긋남(f"{절}예시\n{PREREG_START}\n") != []
+    assert _README_표지_어긋남(f"{PREREG_START}\n정의\n") != []
+
+
+def test_이_저장소의_프로브_README가_표지_약속을_지킨다() -> None:
+    assert _README_표지_어긋남(rerun_judge.PREREG_README.read_text(encoding="utf-8")) == []
 
 
 def test_시험의_README_해시는_절_내용의_SHA_256_이다() -> None:
