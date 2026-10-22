@@ -34,12 +34,48 @@ MCP_TOOLS: dict[str, Action] = {
 # `"$(gh pr create)"` 처럼 큰따옴표 안의 치환은 못 본다. 래퍼 스크립트 사각과 같은 종류다
 # (일지 2026-09-21 세션 경계).
 _GH_PR = re.compile(r"gh\s+pr\s+(create|merge)\b")
+# 실행하지 않는 옵션. `--` 뒤는 옵션이 아니다(hook_handoff 의 `_NOT_RUNNING` 과 같다, 대기열 408).
+_NOT_RUNNING = frozenset({"--dry-run", "--help", "-h"})
 # hook_bash_heredoc 의 _OPENER 와 같다. 훅은 단독 실행 스크립트라 서로 import 하지 않는다.
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
 # `2>&1` 의 & 는 리다이렉션이라 분리자가 아니다.
 _SEPARATOR = re.compile(r"\|\||&&|\$\(|`|(?<![<>])[&|]|[;\n]")
 _PREFIX = re.compile(r"^(?:\s+|[({]|[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*")
+
+# `gh api` 로 `repos/<주인>/<이름>/pulls` 에 POST 하는 것도 PR 을 여는 것이다(대기열 408). 메서드는
+# `-X`·`--method` 가 정하고, 없으면 몸(`-f`·`-F`·`--input`)이 있을 때 POST, 아니면 GET 이다.
+# 도움말(`gh api --help`)은 필드만 말해, `--input` 은 탐침으로 쟀다
+# (`.scratch/harness/probes/gh_api_method.py`). 엔드포인트가 인용되기
+# 쉬워(`"repos/{owner}/{repo}/pulls"`) 인용 구간을 지우지 않고 그 안의 공백과 셸 문자를 `_` 로 바꿔
+# 한 낱말로 남긴다. 판정은 hook_handoff 의 `opens_pr_by_api` 와 같고, 두 시험이 같은 표
+# (`tests/tools/gh_api_cases.py`)를 쓴다. 못 보는 것: `gh api graphql` 의 `createPullRequest`,
+# 변수로 준 엔드포인트(`gh api "$ENDPOINT"`), REST 의 병합(`PUT …/pulls/<번호>/merge`).
+_GH_API = re.compile(r"gh\s+api(?![\w-])")
+_NOT_WORD = re.compile(r"[^\w./{}:@=+,-]")
+_PULLS = re.compile(r"(?:^|/)repos/[^/]+/[^/]+/pulls/?$")
+_API_VALUE_OPTIONS = frozenset(
+    {
+        "-X",
+        "--method",
+        "-f",
+        "--raw-field",
+        "-F",
+        "--field",
+        "-H",
+        "--header",
+        "--input",
+        "-q",
+        "--jq",
+        "-t",
+        "--template",
+        "--hostname",
+        "-p",
+        "--preview",
+        "--cache",
+    }
+)
+_API_BODY_OPTIONS = frozenset({"-f", "--raw-field", "-F", "--field", "--input"})
 
 
 class ToolInput(TypedDict, total=False):
@@ -56,9 +92,10 @@ class HookPayload(TypedDict, total=False):
 def action_for(tool_name: str, command: str | None) -> Action | None:
     """PR을 여는 호출이면 "create", 병합하는 호출이면 "merge", 둘 다 아니면 None.
 
-    셸 도구는 명령 위치에 있는 `gh pr create|merge` 를 찾고, GitHub MCP 도구는 이름으로 안다.
-    `gh pr view|checks|comment` 와 `git push` 는 세션을 닫는 일이 아니고, 문구를 데이터로 품은
-    echo·printf·커밋 메시지·heredoc 본문도 아니다.
+    셸 도구는 명령 위치에 있는 `gh pr create|merge` 와 `pulls` 에 POST 하는 `gh api` 를 찾고,
+    GitHub MCP 도구는 이름으로 안다. `gh pr view|checks|comment` 와 `git push` 는 세션을 닫는 일이
+    아니고, 문구를 데이터로 품은 echo·printf·커밋 메시지·heredoc 본문도 아니다. `--dry-run`·
+    `--help`·`-h` 를 준 명령은 돌리지 않는다.
     """
     if tool_name in MCP_TOOLS:
         return MCP_TOOLS[tool_name]
@@ -66,14 +103,71 @@ def action_for(tool_name: str, command: str | None) -> Action | None:
         return None
     for segment in _executed_segments(command):
         match = _GH_PR.match(segment)
-        if match is not None:
+        if match is not None and _runs(segment[match.end() :]):
             return "create" if match.group(1) == "create" else "merge"
+    if any(opens_pr_by_api(segment) for segment in _api_segments(command)):
+        return "create"
     return None
+
+
+def _runs(rest: str) -> bool:
+    """명령 뒤의 글에 실행하지 않는 옵션이 없는가. `--` 뒤는 경로라 옵션으로 보지 않는다."""
+    words = rest.split()
+    options = words[: words.index("--")] if "--" in words else words
+    return not _NOT_RUNNING.intersection(options)
+
+
+def opens_pr_by_api(segment: str) -> bool:
+    """조각이 `gh api` 로 `repos/<주인>/<이름>/pulls` 에 POST 하는가. 메서드는 `-X`·`--method` 가
+    정하고, 없으면 몸(`-f`·`-F`·`--input`)이 있을 때 POST 다."""
+    match = _GH_API.match(segment)
+    if match is None:
+        return False
+    words = segment[match.end() :].split()
+    method: str | None = None
+    body = False
+    endpoint: str | None = None
+    index = 0
+    while index < len(words):
+        word = words[index]
+        index += 1
+        if word == "--":
+            if endpoint is None and index < len(words):
+                endpoint = words[index]
+            break
+        if not word.startswith("-") or word == "-":
+            endpoint = word if endpoint is None else endpoint
+            continue
+        if word in _NOT_RUNNING:
+            return False
+        if word.startswith("--"):
+            option, equals, value = word.partition("=")
+        else:
+            option, value = word[:2], word[2:]
+            equals = "=" if value else ""
+        if not equals and option in _API_VALUE_OPTIONS:
+            value = words[index] if index < len(words) else ""
+            index += 1
+        if option in ("-X", "--method"):
+            method = value.upper()
+        elif option in _API_BODY_OPTIONS:
+            body = True
+    if endpoint is None or _PULLS.search(endpoint) is None:
+        return False
+    return method == "POST" if method is not None else body
 
 
 def _executed_segments(command: str) -> list[str]:
     """명령 위치부터 시작하는 조각들. heredoc 본문과 인용 구간을 버리고 나눈 뒤 앞을 벗긴다."""
     joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)))
+    return [_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
+
+
+def _api_segments(command: str) -> list[str]:
+    """`_executed_segments` 와 같되 인용 구간을 그 안의 글로 남긴다. 공백과 셸 문자는 `_` 로 바꿔
+    한 낱말로 두고, 빈 인용도 `_` 로 자리를 지킨다."""
+    lines = "\n".join(_without_heredoc_bodies(command))
+    joined = _QUOTED.sub(lambda quoted: _NOT_WORD.sub("_", quoted.group(0)[1:-1]) or "_", lines)
     return [_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
 
 

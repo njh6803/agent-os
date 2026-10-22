@@ -3,9 +3,10 @@
 
 세션 컨텍스트가 20만 토큰을 넘은 세션은 단계 경계에서 같은 브랜치·워크트리의 새 세션으로 넘긴다
 (ADR 0033, 명세 `.scratch/token-usage/spec.md` "인계 훅"). 경계는 셋이고 사용자가 골랐다. 셀프 리뷰
-직전(Skill 의 `code-review`), 커밋 뒤(명령 위치의 `git commit`), PR 연 뒤(셸의 `gh pr create` 와 MCP
-의 PR 만들기)다. 문장은 경계를 글자 그대로 `셀프 리뷰 직전`·`커밋 뒤`·`PR 연 뒤` 로 부른다 —
-`next-session` 의 인계 줄이 지시문의 `이어받을 상태: 인계: <경계>` 를 이 글자로 견준다.
+직전(Skill 의 `code-review`), 커밋 뒤(명령 위치의 `git commit`), PR 연 뒤(셸의 `gh pr create`,
+`pulls` 에 POST 하는 `gh api`, MCP 의 PR 만들기)다. 문장은 경계를 글자 그대로
+`셀프 리뷰 직전`·`커밋 뒤`·`PR 연 뒤` 로 부른다 — `next-session` 의 인계 줄이 지시문의
+`이어받을 상태: 인계: <경계>` 를 이 글자로 견준다.
 
 판정의 차례. 도구 이름과 명령 문자열, 스킬 이름으로 경계인지 먼저 가르고, 경계일 때만 트랜스크립트
 끝 `TAIL_BYTES` 를 연다. 경계가 아닌 호출은 파이썬을 띄우는 값만 쓴다. 세션 컨텍스트는 메인 세션의
@@ -59,6 +60,8 @@ tests/tools/test_hook_handoff.py 의 `test_두_훅의_문턱과_셈과_표지_�
   나온다. 다음 경계가 받는다(어림).
 - 클라우드 세션. 인계하지 않는다.
 - 다른 저장소에 한 커밋. `git -C <임시 저장소> commit` 도 경계로 센다(거짓 양성).
+- `gh api graphql` 의 `createPullRequest` 와 변수로 준 엔드포인트(`gh api "$ENDPOINT"`)로 연 PR.
+  `repos/<주인>/<이름>/pulls` 를 글자로 보지 못해 놓친다(거짓 음성).
 - `transcript_path` 가 더 쓰이지 않는 사본을 가리킬 때의 낡은 값(`hook_midturn_korean` 독스트링).
 - 데스크톱 세션 안에서 띄운 `claude -p` 세션. 대화형과 가르지 못한다.
 - 인계 절이 없는 옛 워크트리(이 훅을 들인 커밋 전에 딴 브랜치)의 세션. 주 체크아웃의 사본을 가리켜,
@@ -113,6 +116,35 @@ _QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
 _SEPARATOR = re.compile(r"\|\||&&|\$\(|`|(?<![<>])[&|]|[;\n]")
 _COMMAND_PREFIX = re.compile(r"^(?:\s+|[({]|[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*")
 
+# `gh api` 로 `pulls` 에 POST 하는 PR 만들기(대기열 408). 아래 상수와
+# `opens_pr_by_api`·`_api_segments` 는 tools/hook_pr_next_session.py 와 같고, 두 시험이 같은
+# 표(`tests/tools/gh_api_cases.py`)를 쓴다.
+_GH_API = re.compile(r"gh\s+api(?![\w-])")
+_NOT_WORD = re.compile(r"[^\w./{}:@=+,-]")
+_PULLS = re.compile(r"(?:^|/)repos/[^/]+/[^/]+/pulls/?$")
+_API_VALUE_OPTIONS = frozenset(
+    {
+        "-X",
+        "--method",
+        "-f",
+        "--raw-field",
+        "-F",
+        "--field",
+        "-H",
+        "--header",
+        "--input",
+        "-q",
+        "--jq",
+        "-t",
+        "--template",
+        "--hostname",
+        "-p",
+        "--preview",
+        "--cache",
+    }
+)
+_API_BODY_OPTIONS = frozenset({"-f", "--raw-field", "-F", "--field", "--input"})
+
 
 class HookPayload(TypedDict, total=False):
     """Claude Code 가 stdin 으로 주는 PostToolUse 훅 입력 중 이 훅이 읽는 부분."""
@@ -160,6 +192,8 @@ def boundary_of(tool_name: str, tool_input: Mapping[str, object]) -> Boundary | 
         return "커밋 뒤"
     if any(_runs(_GH_PR_CREATE, segment) for segment in segments):
         return "PR 연 뒤"
+    if any(opens_pr_by_api(segment) for segment in _api_segments(command)):
+        return "PR 연 뒤"
     return None
 
 
@@ -187,6 +221,56 @@ def _executed_segments(command: str) -> list[str]:
     """명령 위치부터 시작하는 조각들. 인용은 `_` 로 바꿔 옵션 값 자리를
     남긴다(hook_git_main_commit)."""
     joined = _QUOTED.sub("_", "\n".join(_without_heredoc_bodies(command)))
+    return [_COMMAND_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
+
+
+def opens_pr_by_api(segment: str) -> bool:
+    """조각이 `gh api` 로 `repos/<주인>/<이름>/pulls` 에 POST 하는가. 메서드는 `-X`·`--method` 가
+    정하고, 없으면 몸(`-f`·`-F`·`--input`)이 있을 때 POST 다(`gh api --help`,
+    `.scratch/harness/probes/gh_api_method.py`)."""
+    match = _GH_API.match(segment)
+    if match is None:
+        return False
+    words = segment[match.end() :].split()
+    method: str | None = None
+    body = False
+    endpoint: str | None = None
+    index = 0
+    while index < len(words):
+        word = words[index]
+        index += 1
+        if word == "--":
+            if endpoint is None and index < len(words):
+                endpoint = words[index]
+            break
+        if not word.startswith("-") or word == "-":
+            endpoint = word if endpoint is None else endpoint
+            continue
+        if word in _NOT_RUNNING:
+            return False
+        if word.startswith("--"):
+            option, equals, value = word.partition("=")
+        else:
+            option, value = word[:2], word[2:]
+            equals = "=" if value else ""
+        if not equals and option in _API_VALUE_OPTIONS:
+            value = words[index] if index < len(words) else ""
+            index += 1
+        if option in ("-X", "--method"):
+            method = value.upper()
+        elif option in _API_BODY_OPTIONS:
+            body = True
+    if endpoint is None or _PULLS.search(endpoint) is None:
+        return False
+    return method == "POST" if method is not None else body
+
+
+def _api_segments(command: str) -> list[str]:
+    """`_executed_segments` 와 같되 인용 구간을 그 안의 글로 남긴다. 엔드포인트가 인용되기
+    쉽다(`"repos/{owner}/{repo}/pulls"`). 공백과 셸 문자는 `_` 로 바꿔 한 낱말로 두고, 빈 인용도
+    `_` 로 자리를 지킨다."""
+    lines = "\n".join(_without_heredoc_bodies(command))
+    joined = _QUOTED.sub(lambda quoted: _NOT_WORD.sub("_", quoted.group(0)[1:-1]) or "_", lines)
     return [_COMMAND_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
 
 

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TypedDict
 
 import pytest
+from tests.tools import gh_api_cases
 from tools.hook_handoff import (
     MCP_CREATE_TOOLS,
     SECTION,
@@ -196,6 +197,23 @@ def test_저장소_옵션과_별칭과_경로_인자가_낀_명령도_경계다(
         ("gh pr new -t x", "PR 연 뒤"),
     ):
         assert boundary_of("Bash", {"command": command}) == boundary, command
+
+
+def test_gh_api_로_pulls_에_POST_하면_PR_연_뒤다() -> None:
+    """`hook_pr_next_session` 과 같은 판정이고 같은 표를 쓴다(대기열 408,
+    `tests/tools/gh_api_cases.py`)."""
+    for command in gh_api_cases.OPENS:
+        assert boundary_of("Bash", {"command": command}) == "PR 연 뒤", command
+    # 표의 `git commit -m "gh api …"` 는 이 훅에서 커밋 뒤라, PR 연 뒤가 아닌지만 본다
+    for command in gh_api_cases.NOT_OPENS:
+        assert boundary_of("Bash", {"command": command}) != "PR 연 뒤", command
+
+
+def test_못_보는_것_GraphQL_과_변수_엔드포인트의_PR_만들기는_경계가_아니다() -> None:
+    """거짓 음성이다. `gh api graphql` 의 `createPullRequest` 와 변수로 준 엔드포인트는 보지
+    않는다."""
+    for command in gh_api_cases.BLIND:
+        assert boundary_of("Bash", {"command": command}) is None, command
 
 
 def test_명령_앞의_래퍼와_경로로_부른_git_과_인용_없는_옵션_값은_보지_못한다() -> None:
