@@ -1,0 +1,115 @@
+# 티켓 05(feature/05-first-turn-ticket-notice)의 첫 턴 티켓 알림 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml
+# tools/hook_prompt_directive.py 의 알림 판정과 그 원천 문서를 하나씩 깨서, 구현 뒤에 썼거나 이음매에서 이미 초록이던
+# 시험이 빨강이 되는지 잰다. 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "티켓 알림이 헤드리스 가름을 보지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "헤드리스_표지가"]
+expect = "red"
+expect_output = ["attended='0')"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''        if not is_attended(attended, marker) or prompt.lstrip().startswith(_SCHEDULED_TASK):'''
+new = '''        if prompt.lstrip().startswith(_SCHEDULED_TASK):'''
+
+[[mutation]]
+name = "헤드리스 가름이 표지 변수를 보지 않는다"
+tests = ["tests/tools/test_headless_gate_agreement.py", "-k", "세션_사용량_훅과_같다"]
+expect = "red"
+expect_output = ["where True = is_attended(None, '0')"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    return attended != "0" and not marker'''
+new = '''    return attended != "0"'''
+
+[[mutation]]
+name = "헤드리스 가름의 변수 이름이 갈렸다"
+tests = ["tests/tools/test_headless_gate_agreement.py", "-k", "세션_사용량_훅과_같다"]
+expect = "red"
+expect_output = ["""'os.environ.get("CLAUDE_CODE_ATTENDED")' in"""]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''ATTENDED_VAR = "CLAUDE_CODE_SESSION_ATTENDED"'''
+new = '''ATTENDED_VAR = "CLAUDE_CODE_ATTENDED"'''
+
+[[mutation]]
+name = "예약 작업을 거르지 않는다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "예약_작업이_연"]
+expect = "red"
+expect_output = ["= _notice('<scheduled-task name="]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''        if not is_attended(attended, marker) or prompt.lstrip().startswith(_SCHEDULED_TASK):'''
+new = '''        if not is_attended(attended, marker):'''
+
+[[mutation]]
+name = "예약 작업의 머리를 앞 공백을 벗기지 않고 본다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "예약_작업이_연"]
+expect = "red"
+expect_output = ["= _notice(('\\n' + '<scheduled-task name="]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''        if not is_attended(attended, marker) or prompt.lstrip().startswith(_SCHEDULED_TASK):'''
+new = '''        if not is_attended(attended, marker) or prompt.startswith(_SCHEDULED_TASK):'''
+
+[[mutation]]
+name = "거르기보다 트랜스크립트를 먼저 본다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "트랜스크립트를_열지_않고"]
+expect = "red"
+expect_output = ["Error: [Errno"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    context = context_for(prompt, cwd)
+    if context is None:
+        if not is_attended'''
+new = '''    context = context_for(prompt, cwd)
+    if not is_first_turn(transcript_path):
+        return None
+    if context is None:
+        if not is_attended'''
+
+[[mutation]]
+name = "지시문 계기에도 헤드리스 가름을 건다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "지시문이면_지금_계기만"]
+expect = "red"
+expect_output = ["assert None == 'next-session"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    context = context_for(prompt, cwd)
+    if context is None:
+        if not is_attended'''
+new = '''    context = context_for(prompt, cwd)
+    if not is_attended(attended, marker):
+        return None
+    if context is None:
+        if not is_attended'''
+
+[[mutation]]
+name = "티켓 알림이 제목 문구를 따로 쓴다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "제목_문구가_같다"]
+expect = "red"
+expect_output = ["assert '앱이 지은 제목이면"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. " + TITLE_FALLBACK + " "'''
+new = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. 거부하면 사용자에게 알린다. "'''
+
+[[mutation]]
+name = "원천 문서가 번호 명령의 이름을 바꿨다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "규약_낱말은_원천_문서에"]
+expect = "red"
+expect_output = ["'`uv run python tools/sibling_overlap.py`' in '# 이슈 트래커"]
+
+[[mutation.edit]]
+file = "docs/agents/issue-tracker.md"
+old = '''번호는 `uv run python tools/sibling_overlap.py`가 내는 다음 빈 번호'''
+new = '''번호는 `uv run python tools/next_number.py`가 내는 다음 빈 번호'''
