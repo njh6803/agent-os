@@ -1,4 +1,4 @@
-# 2026-10-22 (06) design-reverse-sync 명세 검토와 티켓
+# 2026-10-22 (10) design-reverse-sync 명세 검토와 티켓
 
 next-session 지시문으로 연 새 세션이다. 제목을 브랜치 이름 `docs/design-reverse-sync-tickets`로 바꾸고, 주 체크아웃이 미갱신이라 `tidy-checkouts`를 먼저 돌았다. 그 뒤 주 체크아웃에서 브랜치를 따지 않고 워크트리 `.claude/worktrees/design-reverse-sync-tickets`에 들어가 브랜치를 `docs/design-reverse-sync-tickets`로 바꿨다. `to-tickets` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
@@ -85,8 +85,8 @@ spec-reviewer가 `98272c4f`의 명세를 체크리스트 일곱과 질문 둘로
 시작 프롬프트: /to-tickets .scratch/design-reverse-sync/spec.md
 브랜치: docs/design-reverse-sync-tickets
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-22-06-design-reverse-sync-tickets.md 의 "사용자가 고른 것"(설명까지)과 "인계 (셀프 리뷰 직전)" 절, .scratch/design-reverse-sync/issues/
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 명세 검토(spec-reviewer)와 사용자 선택 셋(B1은 이어받기, 저장 꼴은 02의 임시 아티팩트, 티켓 열 장 그대로)은 끝났다(다시 묻지 않는다). to-tickets의 1~5단계는 끝났으니 다시 쪼개거나 묻지 않는다. ADR 이력은 없다. 셀프 리뷰를 반영한 뒤 커밋, PR 직전 리뷰(일지의 밀 주장 목록), PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘을 낸다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-06-design-reverse-sync-tickets.md
+읽을 것: docs/journal/2026-10-22-10-design-reverse-sync-tickets.md 의 "사용자가 고른 것"(설명까지)과 "인계 (셀프 리뷰 직전)" 절, .scratch/design-reverse-sync/issues/
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 명세 검토(spec-reviewer)와 사용자 선택 셋(B1은 이어받기, 저장 꼴은 02의 임시 아티팩트, 티켓 열 장 그대로)은 끝났다(다시 묻지 않는다). to-tickets의 1~5단계는 끝났으니 다시 쪼개거나 묻지 않는다. ADR 이력은 없다. 셀프 리뷰를 반영한 뒤 커밋, PR 직전 리뷰(일지의 밀 주장 목록), PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘을 낸다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-10-design-reverse-sync-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: 티켓까지
 ```
@@ -178,8 +178,8 @@ PR 직전 리뷰(`bug-perf-review`)에 밀 주장으로 넘길, 이 반영이 �
 시작 프롬프트: /to-tickets .scratch/design-reverse-sync/spec.md
 브랜치: docs/design-reverse-sync-tickets
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-22-06-design-reverse-sync-tickets.md 의 "셀프 리뷰 반영"(밀 주장 목록)과 "커밋과 인계" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 85d8d42b까지 했고 푸시하지 않았다. 일지의 "커밋과 인계" 절은 커밋하지 않은 변경으로 워크트리에 있다. 남은 단계는 PR 직전 리뷰(일지 "셀프 리뷰 반영"의 밀 주장 목록과 인용 대조 경고 15건을 브리프에 싣는다), 푸시와 PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. 명세 검토, 사용자 선택 셋, to-tickets 1~5단계, 셀프 리뷰는 끝났다(다시 묻거나 돌리지 않는다). ADR 이력은 없다. origin/main이 caaa062(#345, harness 티켓 번호 도구)로 하나 앞서 있고 이 브랜치와 고친 파일이 겹치지 않는다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-06-design-reverse-sync-tickets.md
+읽을 것: docs/journal/2026-10-22-10-design-reverse-sync-tickets.md 의 "셀프 리뷰 반영"(밀 주장 목록)과 "커밋과 인계" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 85d8d42b까지 했고 푸시하지 않았다. 일지의 "커밋과 인계" 절은 커밋하지 않은 변경으로 워크트리에 있다. 남은 단계는 PR 직전 리뷰(일지 "셀프 리뷰 반영"의 밀 주장 목록과 인용 대조 경고 15건을 브리프에 싣는다), 푸시와 PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. 명세 검토, 사용자 선택 셋, to-tickets 1~5단계, 셀프 리뷰는 끝났다(다시 묻거나 돌리지 않는다). ADR 이력은 없다. origin/main이 caaa062(#345, harness 티켓 번호 도구)로 하나 앞서 있고 이 브랜치와 고친 파일이 겹치지 않는다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-10-design-reverse-sync-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: 티켓까지
 ```
@@ -248,8 +248,8 @@ PR을 연 뒤 인계 계기(`PR 연 뒤`, 328,920 토큰)가 왔다. `next-sessi
 시작 프롬프트: /to-tickets .scratch/design-reverse-sync/spec.md
 브랜치: docs/design-reverse-sync-tickets
 모델: Sonnet 5.5 / high
-읽을 것: docs/journal/2026-10-22-06-design-reverse-sync-tickets.md 의 "PR 직전 리뷰 반영"과 "커밋, PR, 인계 (PR 연 뒤)" 절
-이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #347은 c61d7cc0까지 푸시했고 PR 직전 리뷰(대체 둘)는 끝나 PR 체크리스트에 적었다. 일지의 "커밋, PR, 인계 (PR 연 뒤)" 절은 커밋하지 않은 변경으로 워크트리에 있어 봇 회차의 반영 커밋에 함께 싣는다. 병합 직전에 sibling_overlap.py로 일지 번호 07·08·09의 형제가 먼저 병합됐는지 보고 그러면 이 일지 번호를 옮긴다. 병합은 워크트리 병합 길, 그 뒤 retro(고침을 반영하면 면제 PR이라 harness 티켓 하나를 같은 PR에), 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. 명세 검토, 사용자 선택 셋, to-tickets 1~5단계, 셀프 리뷰, PR 직전 리뷰는 끝났다(다시 묻거나 돌리지 않는다). ADR 이력은 없다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-06-design-reverse-sync-tickets.md
+읽을 것: docs/journal/2026-10-22-10-design-reverse-sync-tickets.md 의 "PR 직전 리뷰 반영"과 "커밋, PR, 인계 (PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #347은 c61d7cc0까지 푸시했고 PR 직전 리뷰(대체 둘)는 끝나 PR 체크리스트에 적었다. 일지의 "커밋, PR, 인계 (PR 연 뒤)" 절은 커밋하지 않은 변경으로 워크트리에 있어 봇 회차의 반영 커밋에 함께 싣는다. 병합 직전에 sibling_overlap.py로 일지 번호 07·08·09의 형제가 먼저 병합됐는지 보고 그러면 이 일지 번호를 옮긴다. 병합은 워크트리 병합 길, 그 뒤 retro(고침을 반영하면 면제 PR이라 harness 티켓 하나를 같은 PR에), 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. 명세 검토, 사용자 선택 셋, to-tickets 1~5단계, 셀프 리뷰, PR 직전 리뷰는 끝났다(다시 묻거나 돌리지 않는다). ADR 이력은 없다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-10-design-reverse-sync-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: 티켓까지
 ```
@@ -269,3 +269,4 @@ open-session을 부른다 2026-10-22T08:04:49Z
 - 푸시 전 상태: PR head `c61d7cc0`이 로컬 HEAD와 같았다. `mergeStateStatus`는 `BEHIND`였다. origin/main에 #346(`b2f5c61d`, 일지 `2026-10-22-08`)이 병합돼 있었다.
 - 일지 번호: 이 일지는 06이고 들어온 일지는 08이라 겹치지 않는다. 형제 07·09는 아직 병합되지 않았다.
 - 봇: claude-review는 "지적 없음"으로 끝났다(`Blocked by` 간선이 PR 본문과 일치한다고 확인했다). CodeRabbit은 별이 10개 미만이라 자동 리뷰를 건너뛰고 수동 요청을 기다린다. 인라인 리뷰 코멘트는 0개다.
+- 번호 옮김: origin/main을 합치자 #346이 일지 `2026-10-22-08`로 병합돼 있었다. 이 일지(`2026-10-22-06`)가 이름순으로 그보다 앞서 다음 세션이 "다음"을 지나칠 수 있어, `tools/sibling_overlap.py --move`로 `2026-10-22-10`으로 옮겼다. 인용을 고친 파일은 명세 주석, `plan.md`, 이 일지이고, PR 본문의 번호 둘도 같이 고쳤다. 형제 `choice-facts-batch`(07)와 `02-docs-and-skills-teach-tickets`(09)는 아직 병합 전이며 이 일지보다 앞서지 않는다. 앞 절들이 적은 옛 번호 `2026-10-22-06`은 그 시점의 기록이라 두었다.
