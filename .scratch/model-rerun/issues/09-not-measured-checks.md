@@ -34,12 +34,12 @@
 
 ### 한도
 
-- [ ] **`rate_limit_event`의 `status: rejected`이거나 결과의 `api_error`가 `usage_limit_reached`면 "측정 아님(한도)"이고 `resetsAt`을 적는다**(`tools/canary.py`와 같은 표지). `allowed_warning`은 기록만 한다
+- [ ] **`rate_limit_event`의 `status: rejected`이거나 결과의 `api_error`가 `usage_limit_reached`면 "측정 아님(한도)"이고 `resetsAt`을 적는다**(`tools/canary.py`와 같은 표지). 결과의 `api_error`만 있거나, `resetsAt`이 비거나 없거나 시각으로 읽히지 않으면(숫자가 아닌 값) 그 칸을 비워 적는다. `tools/canary.py`도 앞의 것은 `_result`가 "풀리는 시각 모름"으로, 뒤의 것은 `_describe_resets`가 "풀리는 시각 모름"이나 "읽지 못했다"로 적는다. 비운 한도를 어떻게 다룰지는 10이 정한다(명세 "한도"의 2026-10-23 주석). `allowed_warning`은 기록만 한다
 - [ ] **회차의 첫과 끝의 `utilization`을 창마다 적는다**
 
 ### 시험과 검증
 
-- [ ] **사례**(명세 Testing Decisions "회차 하나"): 계정 확인(가짜가 로그아웃이면 종료 1과 `email` 없는 JSON을 내는 것, 다른 계정, 슬래시나 대소문자만 다른 `configDirectory`), 설정 확인(`env` 키, 빈 `mcp_servers`가 아닌 것, B가 켠 플러그인은 통과하고 그 밖의 플러그인은 끄고 측정 아님(설정)), 모델·노력 불일치와 하네스가 정한 서브에이전트 모델·Agent 입력으로 고른 모델의 통과, 오염(`xargs gh`, `["gh", "api"]`는 걸리고 `high `는 걸리지 않음, `git commit -F -` heredoc과 `-m` 메시지 안의 `gh`는 걸리지 않고 `bash` heredoc 안의 `gh`는 걸림, Write 내용의 주소는 `.py`에서 걸리고 `.md`와 `tests/` 아래에서 걸리지 않음, `~/.claude` 경로는 걸리고 `~/.claude-rerun`은 걸리지 않음, `/c/` 꼴과 대소문자, 서브에이전트의 도구 입력, 거부된 호출을 오염으로 세지 않는 것과 결과 이벤트 여럿의 거부 합치기), 한도 표지와 `resetsAt`, 사용률
+- [ ] **사례**(명세 Testing Decisions "회차 하나"): 계정 확인(가짜가 로그아웃이면 종료 1과 `email` 없는 JSON을 내는 것, 다른 계정, 슬래시나 대소문자만 다른 `configDirectory`), 설정 확인(`env` 키, 빈 `mcp_servers`가 아닌 것, B가 켠 플러그인은 통과하고 그 밖의 플러그인은 끄고 측정 아님(설정)), 모델·노력 불일치와 하네스가 정한 서브에이전트 모델·Agent 입력으로 고른 모델의 통과, 오염(`xargs gh`, `["gh", "api"]`는 걸리고 `high `는 걸리지 않음, `git commit -F -` heredoc과 `-m` 메시지 안의 `gh`는 걸리지 않고 `bash` heredoc 안의 `gh`는 걸림, Write 내용의 주소는 `.py`에서 걸리고 `.md`와 `tests/` 아래에서 걸리지 않음, `~/.claude` 경로는 걸리고 `~/.claude-rerun`은 걸리지 않음, `/c/` 꼴과 대소문자, 서브에이전트의 도구 입력, 거부된 호출을 오염으로 세지 않는 것과 결과 이벤트 여럿의 거부 합치기), 한도 표지와 `resetsAt`, 결과의 `api_error`만 있는 한도와 `resetsAt`이 빈 거절의 빈 칸, 사용률
 - [ ] **기록에 남기는 꼴을 반박한다.** 걸린 꼴의 이름과 도구 이름 말고 입력의 글이 기록에 실리는 길이 없는지, 명령 치환, 따옴표 낱말, 여러 줄 명령을 든 입력으로 본다(`.claude/rules/tools.md`의 허용 목록 항목)
 - [ ] **하위 프로세스 호출마다 시간 제한을 둔다**(`.claude/rules/tools.md`의 시간 제한 항목)
 - [ ] **원칙 III를 지킨다**
