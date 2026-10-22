@@ -56,7 +56,7 @@
 
 - [ ] **`docs/agents/issue-tracker.md` 화면 디자인 절의 올리기 절차와 `.design-sync/NOTES.md`의 "돌리는 법"은 이 스킬을 가리키는 포인터만 남긴다.** NOTES의 사실 기록(빌린 빌드의 세부)은 그대로 둔다. NOTES의 "번들 `/design-sync` 스킬은 부르지 않는다" 문장은 "사람이 쳐서 빌드 스크립트를 풀고 번들 스킬의 업로드는 하지 않는다"로 고친다(명세 "바뀌는 문서와 스킬"의 글자 그대로)
 - [ ] **`.scratch/admin-style/design/screens-prompt.md`의 하는 법 1단계와 `.claude/rules/web-design.md`의 머리 문장(올리는 길)을 이 스킬로 고친다**
-- [ ] **`/ui-design`이 이 티켓 때 저장소에 있으면 그 그리기 전 단계에 이 스킬의 확인을 넣는다.** 없으면 넣지 않고, `.scratch/plan.md` admin-style 행의 design-reverse-sync 덧붙임이 그 스킬을 들이는 PR에 넘긴 문장이 그대로인지 본다(명세 Out of Scope)
+- [ ] **`/ui-design`의 그리기 전 단계에 이 스킬의 확인을 넣는다.** 그 스킬은 2026-10-22 harness 티켓 002가 이 기능보다 먼저 들였다(명세 Out of Scope)
 - [ ] **기록과 기준본을 `CONTEXT.md`에 더할지는 Skill 도구로 `domain-modeling`을 불러 가른다**
 - [ ] **스크립트를 부르는 `web/package.json`의 스크립트 줄이 필요하면 이 티켓이 더한다**(02가 넘겼다)
 - [ ] **옛 표현의 잔존이 살아 있는 문서에 0이다.** "번들 `/design-sync` 스킬은 부르지 않는다", 문서마다의 올리기 절차 문장을 저장소 전체에서 grep해 본다(`CLAUDE.md` 작업 규약 4)

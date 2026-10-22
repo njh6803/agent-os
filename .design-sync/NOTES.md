@@ -8,9 +8,9 @@
 스킬로 다시 올렸다(일지 2026-10-15-01).
 
 2026-10-16 부터 올리는 곳은 Claude 아티팩트다(ADR 0025 의 2026-10-16 이력). 단독 Claude Design 은 2026-12-14 에 닫힌다.
-njh4803 의 단독 프로젝트를 "팀 디자인 시스템 마이그레이션"으로 옮긴 디자인 시스템 아티팩트
-https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 편집자로 초대받은 njh6803 계정의 Claude Code 가 Artifact 도구로
-올린다. 빌드(아래 "돌리는 법"의 driver 와 복사, 검사)는 그대로이고, 업로드 도구(`DesignSync`)로 단독 프로젝트에 올리는
+단독 프로젝트를 "팀 디자인 시스템 마이그레이션"으로 옮긴 디자인 시스템 아티팩트
+https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주인이거나 편집자인 계정의 Claude Code 가 Artifact
+도구로 올린다. 계정은 적지 않고 올리기 전에 읽어 본다(ADR 0025 의 2026-10-20 이력, 아래 "artifact not found" 줄). 빌드(아래 "돌리는 법"의 driver 와 복사, 검사)는 그대로이고, 업로드 도구(`DesignSync`)로 단독 프로젝트에 올리는
 일은 그만둔다. config 의 `projectId` 는 옮긴 원본을 가리키는 기록이다. 아래에서 `DesignSync`, `finalize_plan`,
 `write_files` 를 말하는 문장은 단독 프로젝트에 올리던 때의 것이다.
 
@@ -174,8 +174,9 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 편집자로 초대받은
 - Alert 는 `cfg.overrides.Alert.cardMode: "column"` 이다. 2026-10-14 validate 가 보여 주기용 스토리 둘이 격자 칸보다
   넓다고(`[GRID_OVERFLOW] wide`) 알렸다. 표시 키라 채점에 들지 않는다.
 - 디자인 시스템 아티팩트의 `read` 가 "artifact not found" 를 내면 초대를 수락하지 않았거나 Claude Code 가 다른 계정이다
-  (2026-10-16 수락 전에 그렇게 나왔다). `claude auth status` 의 계정이 편집자로 초대받은 njh6803 인지 본다. 계정의 짝은
-  `docs/agents/issue-tracker.md` 화면 디자인 절이다. 단독 프로젝트에 올리던 때에는 config 의 `projectId` 가 `get_project`
+  (2026-10-16 수락 전에 그렇게 나왔다). `read` 의 머리가 지금 계정을 주인("owned by you")이나 편집자("writer")로 적어야
+  올린다. 아니면 `claude auth status` 의 계정을 사람에게 알린다. 계정의 규약은 `docs/agents/issue-tracker.md` 화면 디자인
+  절이다. 단독 프로젝트에 올리던 때에는 config 의 `projectId` 가 `get_project`
   에서 `404` 이면 지워졌거나 다른 계정이었다(2026-10-12 에는 다른 계정이었다).
 - 포크 파일은 채점 계약의 일부다. 주석만 고쳐도 다음 driver 실행이 모든 컴포넌트의 채점을 지우고 기본 상한(스토리 6개)으로만
   다시 캡처한다(2026-10-12 셀프 리뷰 뒤 한 번 겪었다). 포크를 고치면 `compare.mjs --max-stories 12` 로 다시 캡처해 다시 채점한다.
