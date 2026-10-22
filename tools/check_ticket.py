@@ -1,11 +1,14 @@
-"""커밋 검사: 이 브랜치의 변경이 티켓 하나를 가리키는지 본다(ADR 0037).
+"""커밋 검사: 이 브랜치의 변경이 티켓 하나를 가리키는지 본다(ADR 0037). CI 는 PR 마다 같은 판정을
+하고, 가리키는 티켓의 `Status:` 가 done 인지도 본다.
 
 pre-commit 에 항목을 따로 두지 않고 `tools/run_checks.py` 의 `CHECKS` 에 든다(id `check-ticket`).
 건너뛰기는 그 id 의 `SKIP` 이다. 작업 폴더의 저장소를 보고, git 을 부를 때 저장소를 가리키는 환경
 변수를 벗기지 않는다. git 이 훅에 임시 색인(`GIT_INDEX_FILE`)을 주는 커밋(일부 파일만 커밋하는
 `git commit <경로>`, 고친 추적 파일을 모두 싣는 `-a`)에서는 그 색인이 pre-commit 과 러너를 거쳐
-여기까지 닿아야 그 커밋에 들 것을 보기 때문이다.
-명세는 `.scratch/ticket-for-every-pr/spec.md` 의 "면제 모양", "커밋 검사", "전환"이다.
+여기까지 닿아야 그 커밋에 들 것을 보기 때문이다. CI 는 `.github/workflows/ci.yml` 의 `ticket` 잡이
+`--ci` 로 부른다(아래 CI).
+명세는 `.scratch/ticket-for-every-pr/spec.md` 의 "면제 모양", "커밋 검사", "전환", "CI" 이고, 판정의
+원천은 이 독스트링이다.
 
 바뀐 파일(C). 이 브랜치와 `origin/main` 의 merge-base 에서 지금 색인까지의 차이다. 이름 바꾸기는
 지운 것과 더한 것 둘로 센다(rename 감지를 끈다). 켜면 면제 밖의 파일을 면제 모양의 자리로 옮긴
@@ -23,9 +26,9 @@ pre-commit 에서 HEAD 는 아직 병합 전이라, HEAD 만으로 구하면 C �
 
 1. 분리 HEAD 이거나 브랜치가 main 이면 지난다. main 위의 커밋은 `tools/hook_git_main_commit.py` 가
    막는다.
-2. `origin/main` 을 찾지 못하면 한 줄을 알리고 지난다. 원격 없이 연습하는 클론이다. HEAD 가 아직
-   커밋을 가리키지 않아도(고아 브랜치의 첫 커밋) 한 줄을 알리고 지난다. 딴 자리가 없어 전환을
-   가르지 못한다.
+2. `origin/main` 을 찾지 못하면 한 줄을 알리고 지난다. 원격 없이 연습하는 클론이다. 그 클론이 연
+   PR 은 CI 가 같은 판정을 한다. HEAD 가 아직 커밋을 가리키지 않아도(고아 브랜치의 첫 커밋) 한 줄을
+   알리고 지난다. 딴 자리가 없어 전환을 가르지 못한다.
 3. 규약 전에 연 브랜치면 한 줄을 알리고 지난다(아래 전환).
 4. C 가 비었거나 모두 면제 모양이면 지난다.
 5. 티켓 모양 브랜치는 그 티켓이 C 에 있고 색인에 남아 있어야 지난다. `feature/NN-<slug>` 는
@@ -63,49 +66,103 @@ merge-base 의 트리로 가르지 않는다. main 을 합치면 merge-base 가 
 브랜치를 검사가 든 main 으로 rebase 하면 첫 자기 커밋의 부모가 새 main 이 되어 판정을 받는다. 딴
 자리가 옮겨진 것이라 그대로 두고, 막히면 막는 글의 길을 따른다.
 
-막는 글(stderr). 면제 모양 밖의 바뀐 파일(앞의 열 개와 나머지 수), 브랜치가 티켓 모양이면 찾은 티켓
-경로, 티켓을 쓸 자리와 번호를 받는 명령, 브랜치 이름을 바꾸는 명령, 규약 원천을 싣는다. 가리키는
-티켓 파일이 디스크에는 있는데 C 에 없으면 그 티켓의 `Status:` 를 in-progress 로 고치고
+CI. `--ci` 로 부르면 PR 의 값을 환경 변수로 받아 PR 단위로 같은 판정을 한다. `PR_HEAD_REF` 는 머리
+브랜치 이름, `PR_HEAD_SHA` 는 머리 커밋, `PR_BASE_SHA` 는 base 커밋이다. 판정 전체의 기준은
+`origin/main` 대신 base 커밋이고, 브랜치 이름과 HEAD 는 머리 브랜치와 머리 커밋이 대신한다.
+체크아웃한 PR 의 병합 커밋은 분리 HEAD 라 판정 1 을 체크아웃으로 보지 않는다. 보면 모든 PR 이
+지난다. 머리 커밋을 체크아웃하지 않는 것은 규약 전에 딴 PR 의 머리에는 이 파일이 없어서다. 병합
+커밋에는 base 쪽의 이 파일이 있다.
+- C 는 base 와 머리의 merge-base 에서 머리 커밋까지의 차이다(색인이 아니라 머리 커밋의 트리).
+  전환의 첫 자기 커밋은 base 에 없는 머리의 커밋 가운데 가장 오래된 것이다(위의 위상 순서). 그래서
+  다른 브랜치를 base 로 둔 PR 은 그 base 브랜치의 커밋을 제 것으로 세지 않는다.
+- 판정 2 의 자리에서 받은 커밋 값이 비었거나 이 저장소에 없으면 git 실패(종료 2)다. CI 의 체크아웃이
+  이력을 덜 받은 것이라 지나지 않는다. MERGE_HEAD 와 HEAD 가 없는 첫 커밋은 CI 에 없다.
+- 판정 5·6 으로 지나면 가리키는 티켓(판정 5 의 그 파일, `docs/` 브랜치면 판정 6 의 harness 티켓
+  전부)의 `Status:` 를 머리 커밋의 그 파일에서 읽고, 하나라도 done 이 아니면 막는다. 티켓은 PR 을
+  열기 전에 done 이다(명세 "쓰는 때와 상태").
+- 판정 전에 받은 세 값과 체크아웃한 병합 커밋의 첫 부모를 stdout 에 한 줄 찍는다. base 값이 그 첫
+  부모와 같은지 실제 실행에서 견주기 위해서다.
+- `PR_HEAD_REF` 가 비면(PR 이 아닌 실행, main 의 push) 한 줄을 찍고 지난다. 필수 검사 `verify` 가
+  건너뛴 잡을 빨강으로 보므로 이 잡은 push 에서도 돌고 곧바로 끝난다.
+
+`Status:` 를 읽는 규칙. 값은 줄 머리가 `Status:` 나 `**Status:**` 인 첫 줄의 첫 낱말이다. 줄
+어디서든 첫 출현을 읽지 않는다. 티켓이 수용 기준 본문(기능을 닫는 판정의 문장)이나 설명에 `Status:`
+를 한 번 더 들고, 그 자리가 상태 줄보다 앞인 티켓도 있다(`.scratch/ticket-for-every-pr/issues/` 의
+04). 그런 줄이 없거나 값이 비었거나 첫 낱말이 글자 그대로 `done` 이 아니면 done 이 아니다.
+
+막는 글(stderr). 판정 7 은 면제 모양 밖의 바뀐 파일(앞의 열 개와 나머지 수), 브랜치가 티켓 모양이면
+찾은 티켓 경로, 티켓을 쓸 자리와 번호를 받는 명령, 브랜치 이름을 바꾸는 명령, 규약 원천을 싣는다.
+가리키는 티켓 파일이 디스크에는 있는데 C 에 없으면 그 티켓의 `Status:` 를 in-progress 로 고치고
 스테이지하라는 알림을 더한다. 고치지 않은 것과 고치고 스테이지하지 않은 것을 가르지 않는다.
-pre-commit 은 훅이 도는 동안 스테이지하지 않은 고침을 치워 둘이 커밋에서 갈리지 않는다.
+pre-commit 은 훅이 도는 동안 스테이지하지 않은 고침을 치워 둘이 커밋에서 갈리지 않는다. CI 에서는
+머리 줄이 "PR 을 막았다" 이고, 알림은 머리 커밋의 트리에 있는데 C 에 없는 티켓에 대해 `Status:` 를
+done 으로 고쳐 커밋하고 다시 푸시하라는 것이다(이미 done 이면 앞서 닫힌 티켓이라 이 PR 의 티켓을
+새로 쓰라고 한다). CI 가 done 이 아닌 티켓으로 막으면 그 티켓 경로와
+지금 값, done 으로 고쳐 다시 푸시하라는 할 일, 규약 원천을 싣는다. 판정과 git 실패의 출력은 첫 줄이
+`check-ticket: ` 으로 시작한다. 인자를 잘못 주면 argparse 가 사용법을 그 접두 없이 찍는다.
 
 러너에 둔 값. 러너는 한 검사가 실패해도 나머지를 끝까지 기다리므로, 막히는 커밋은 러너 한 바퀴 뒤에
 글이 보이고 고친 뒤 한 바퀴를 더 돈다. 러너가 곧바로 멈추기를 들이면(대기열 192) 이 값은 사라진다.
 변경을 마치고 손으로 친 러너에서도 이 검사가 지금 색인으로 돌아, 티켓을 스테이지하기 전이면 빨갛다.
 
 종료 코드. 0 지남, 1 막음, 2 git 이 실패했다(띄우지 못함, 시간 초과, 판정에 쓰는 git 의 0 아닌
-종료. 저장소가 아닌 폴더도 여기다).
+종료. 저장소가 아닌 폴더와, CI 가 받은 커밋 값을 찾지 못한 것도 여기다). 인자를 잘못 준 것도
+argparse 가 2 로 끝낸다.
 
 못 보는 것.
-- pre-commit 을 거치지 않은 커밋은 지난다. 훅을 깔지 않은 클론, `--no-verify`, 이 id 의 `SKIP`,
-  충돌 없는 `git merge` 의 병합 커밋(이 저장소는 pre-merge-commit 훅을 깔지 않는다)이다.
-- 티켓의 내용(수용 기준이 맞는지, `Status:` 가 무엇인지)은 보지 않는다.
+- pre-commit 을 거치지 않은 커밋은 커밋 때 지난다. 훅을 깔지 않은 클론, `--no-verify`, 이 id 의
+  `SKIP`, 충돌 없는 `git merge` 의 병합 커밋(이 저장소는 pre-merge-commit 훅을 깔지 않는다)이다.
+  그 커밋이 든 PR 은 CI 가 같은 판정으로 잡는다.
+- 티켓의 내용(수용 기준이 맞는지)은 보지 않는다. `Status:` 는 CI 만 보고, 커밋 검사는 보지 않는다.
 - `docs/` 브랜치에 harness 티켓을 하나 쓰거나 이미 있는 harness 티켓을 고치기만 하고 회고 반영이
   아닌 일을 실어도 지난다.
 - 고아 브랜치(`git checkout --orphan`)의 첫 커밋은 HEAD 가 없어 지난다(판정 2). 그 뒤의 커밋은
   뿌리 커밋의 트리로 전환을 가른다. 색인을 비우고(`git rm -r --cached .`) 만든 뿌리는 이 파일이 없어
   규약 전으로 지난다.
-- 면제 모양만 고치는 PR 은 고침이 무엇이든 지난다(ADR 의 오타 고침, `CONTEXT.md` 의 말 고침).
+- 면제 모양만 고치는 PR 은 고침이 무엇이든 지난다(ADR 의 오타 고침, `CONTEXT.md` 의 말 고침). CI 도
+  그 PR 의 티켓 `Status:` 를 보지 않는다.
 - 얕은 클론에서 딴 자리가 깊이 밖이면 판정하지 않고 지난다(위 C). 그 클론의 고아 브랜치도 같다.
   `git fetch --deepen` 이나 `--unshallow` 로 딴 자리를 가져오면 판정을 받는다.
 - 지나는 갈래가 내는 한 줄(전환, `origin/main` 없음, 얕은 클론)은 러너가 통과한 검사의 출력을 찍지
-  않아 커밋과 손으로 친 러너에서 보이지 않고, 이 검사를 바로 칠 때 보인다.
+  않아 커밋과 손으로 친 러너에서 보이지 않고, 이 검사를 바로 칠 때와 CI 잡의 로그에서 보인다.
 - 검사가 main 에 들어온 뒤에도 그 전의 main 에서 딴 브랜치(가져오지 않은 `origin/main` 에서 딴 것)는
-  딴 자리의 트리에 이 파일이 없어 끝까지 지난다.
+  딴 자리의 트리에 이 파일이 없어, 커밋 검사와 CI 모두에서 끝까지 지난다.
+- CI 에서 머리 브랜치가 main 인 PR(포크의 main 에서 연 것)은 판정 1 로 지난다. main 위 커밋을
+  막는 훅(`tools/hook_git_main_commit.py`)은 이 저장소의 Claude 세션 훅이라, 포크의 main 에서 친
+  커밋이 그 훅을 거쳤다고 볼 수 없다.
+- 다른 브랜치 위에 쌓은 브랜치의 커밋은 커밋 검사가 `origin/main` 에 견줘 base 브랜치의 변경까지
+  센다. 그래서 면제 모양만 고친 커밋도 base 브랜치가 든 면제 밖 파일 때문에 막힌다(거짓 양성).
+  커밋 검사는 그 브랜치가 PR 에서 무엇을 base 로 둘지 모른다. 그 PR 은 CI 가 base 커밋에 견줘
+  지난다. 다만 base 브랜치가 squash 로 병합되어 PR 의 base 가 main 으로 바뀐 뒤에는, base 브랜치의
+  커밋이 main 에 없어 CI 도 그 변경을 이 PR 의 것으로 세어 막는다(거짓 양성). 막는 글의 할 일(티켓
+  쓰기, 브랜치 이름 바꾸기)은 이 경우의 길이 아니다.
+  `git rebase --onto origin/main <옛 base 브랜치>` 로 이 브랜치의 커밋만 옮겨 푸시하면 지난다. base
+  만 바꾸는 것은 워크플로의 `pull_request` 기본 계기(opened, synchronize, reopened)가 아니라서 CI 가
+  다시 돌지 않고, 다음 푸시에서 돈다.
 """
 
 from __future__ import annotations
 
+import argparse
+import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import TextIO
 
 CHECK_PATH = "tools/check_ticket.py"
 BASE = "refs/remotes/origin/main"
 GIT_TIMEOUT = 60.0
 SHOWN = 10
+PREFIX = "check-ticket: "
+PR_HEAD_REF = "PR_HEAD_REF"
+PR_HEAD_SHA = "PR_HEAD_SHA"
+PR_BASE_SHA = "PR_BASE_SHA"
+DONE = "done"
+CONVENTION = "규약 원천: docs/agents/issue-tracker.md"
 
 _EXEMPT_FILES = frozenset(
     {
@@ -118,6 +175,7 @@ _EXEMPT_FILES = frozenset(
     }
 )
 _HARNESS_ISSUES = ".scratch/harness/issues/"
+_STATUS_HEADS = ("Status:", "**Status:**")
 
 
 class GitError(Exception):
@@ -128,6 +186,15 @@ class GitError(Exception):
 class Change:
     path: str
     deleted: bool
+
+
+@dataclass(frozen=True)
+class PullRequest:
+    """CI 가 환경 변수로 받는 PR 의 값."""
+
+    branch: str
+    head: str
+    base: str
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
@@ -157,12 +224,26 @@ def _out(cwd: Path, *args: str) -> str:
     return _text(result.stdout)
 
 
+def _fields(cwd: Path, *args: str) -> list[str]:
+    """`-z` 로 친 git 의 출력을 NUL 로 가른 조각. 경로의 앞뒤 공백을 지우지 않는다."""
+    result = _git(cwd, *args)
+    if result.returncode != 0:
+        message = _text(result.stderr)
+        raise GitError(f"git {args[0]} 가 {result.returncode} 로 끝났다: {message}")
+    return result.stdout.decode("utf-8", "replace").split("\0")
+
+
 def _maybe(cwd: Path, *args: str) -> str | None:
     """성공하면 출력, 아니면 None. 있는지 묻는 git 에 쓴다."""
     result = _git(cwd, *args)
     if result.returncode != 0:
         return None
     return _text(result.stdout)
+
+
+def _commit(cwd: Path, rev: str) -> str | None:
+    """그 이름이 가리키는 커밋, 없으면 None."""
+    return _maybe(cwd, "rev-parse", "-q", "--verify", f"{rev}^{{commit}}")
 
 
 def exempt(path: str) -> bool:
@@ -217,24 +298,46 @@ def points_at(kind: str, stem: str, path: str) -> bool:
     )
 
 
-def tickets_on_disk(root: Path, kind: str, stem: str) -> list[str]:
+def pointed(branch: str, present: list[str]) -> list[str]:
+    """판정 5·6 이 찾은 티켓. 티켓 모양 브랜치는 그 티켓이고, `docs/` 브랜치는 harness 티켓
+    전부다."""
+    stem = ticket_stem(branch)
+    if stem is not None:
+        return [path for path in present if points_at(*stem, path)]
+    if branch.startswith("docs/"):
+        return [path for path in present if is_harness_ticket(path)]
+    return []
+
+
+def tickets_on_disk(root: Path, branch: str) -> list[str]:
     """작업 트리에 있는, 그 브랜치가 가리키는 티켓 파일."""
-    pattern = f"harness/issues/{stem}.md" if kind == "chore" else f"*/issues/{stem}.md"
+    stem = ticket_stem(branch)
+    if stem is None:
+        return []
+    kind, name = stem
+    pattern = f"harness/issues/{name}.md" if kind == "chore" else f"*/issues/{name}.md"
     found = sorted((root / ".scratch").glob(pattern))
     return [p.relative_to(root).as_posix() for p in found if p.is_file()]
 
 
+def tickets_in_tree(cwd: Path, head: str, branch: str) -> list[str]:
+    """머리 커밋의 트리에 있는, 그 브랜치가 가리키는 티켓 파일."""
+    stem = ticket_stem(branch)
+    if stem is None:
+        return []
+    listing = _fields(
+        cwd, "ls-tree", "--full-tree", "-r", "--name-only", "-z", head, "--", ".scratch"
+    )
+    return [path for path in listing if path and points_at(*stem, path)]
+
+
 def merge_head(cwd: Path) -> str | None:
     """병합을 마무리하는 중이면 MERGE_HEAD 의 커밋. 링크드 워크트리에서도 ref 이름으로 찾는다."""
-    return _maybe(cwd, "rev-parse", "-q", "--verify", "MERGE_HEAD^{commit}")
+    return _commit(cwd, "MERGE_HEAD")
 
 
-def changes(cwd: Path, base: str) -> list[Change]:
-    """merge-base 에서 지금 색인까지. 이름 바꾸기는 지운 것과 더한 것 둘이다."""
-    result = _git(cwd, "diff", "--cached", "--name-status", "--no-renames", "-z", base, "--")
-    if result.returncode != 0:
-        raise GitError(f"git diff 가 {result.returncode} 로 끝났다")
-    fields = result.stdout.decode("utf-8", "replace").split("\0")
+def _changes(cwd: Path, *diff: str) -> list[Change]:
+    fields = _fields(cwd, "diff", "--name-status", "--no-renames", "-z", *diff, "--")
     return [
         Change(path, status == "D")
         for status, path in zip(fields[0::2], fields[1::2], strict=False)
@@ -242,10 +345,20 @@ def changes(cwd: Path, base: str) -> list[Change]:
     ]
 
 
-def merge_base(cwd: Path, heads: list[str]) -> str | None:
+def staged_changes(cwd: Path, base: str) -> list[Change]:
+    """merge-base 에서 지금 색인까지(커밋 검사). 이름 바꾸기는 지운 것과 더한 것 둘이다."""
+    return _changes(cwd, "--cached", base)
+
+
+def tree_changes(cwd: Path, base: str, head: str) -> list[Change]:
+    """merge-base 에서 머리 커밋까지(CI). 이름 바꾸기는 지운 것과 더한 것 둘이다."""
+    return _changes(cwd, base, head)
+
+
+def merge_base(cwd: Path, base: str, heads: list[str]) -> str | None:
     """C 를 셀 자리. 공통 조상이 없으면(`merge-base` 가 1 로 끝난다) 빈 트리다. 얕은 클론이면
     조상이 깊이 밖에 있을 수 있어 자리를 모른다(None)."""
-    result = _git(cwd, "merge-base", BASE, *heads)
+    result = _git(cwd, "merge-base", base, *heads)
     if result.returncode == 0:
         return _text(result.stdout)
     if result.returncode == 1:
@@ -260,18 +373,30 @@ def _has_check(cwd: Path, commit: str) -> bool:
     return _git(cwd, "cat-file", "-e", f"{commit}:{CHECK_PATH}").returncode == 0
 
 
-def before_convention(cwd: Path) -> bool:
-    """브랜치를 딴 자리(첫 자기 커밋의 부모, 자기 커밋이 없으면 HEAD)의 트리에 이 검사가 없는가."""
-    listing = _out(cwd, "rev-list", "--parents", "HEAD", "--not", BASE)
+def before_convention(cwd: Path, head: str, base: str) -> bool:
+    """브랜치를 딴 자리(첫 자기 커밋의 부모, 자기 커밋이 없으면 머리)의 트리에 이 검사가 없는가.
+    자기 커밋은 `base` 에 없는 `head` 의 커밋이다."""
+    listing = _out(cwd, "rev-list", "--parents", head, "--not", base)
     own: dict[str, list[str]] = {}
     for line in listing.splitlines():
         commit, *parents = line.split()
         own[commit] = parents
     if not own:
-        return not _has_check(cwd, "HEAD")
+        return not _has_check(cwd, head)
     firsts = [commit for commit, parents in own.items() if not any(p in own for p in parents)]
     # 부모 없는 자기 커밋(고아 브랜치의 뿌리)은 딴 자리가 없어 그 커밋 자신의 트리로 가른다
     return all(not _has_check(cwd, own[commit][0] if own[commit] else commit) for commit in firsts)
+
+
+def status_of(text: str) -> str | None:
+    """줄 머리가 `Status:` 나 `**Status:**` 인 첫 줄의 첫 낱말. 그런 줄이 없으면 None, 값이 비면
+    빈 문자열이다."""
+    for line in text.splitlines():
+        for head in _STATUS_HEADS:
+            if line.startswith(head):
+                words = line.removeprefix(head).split()
+                return words[0] if words else ""
+    return None
 
 
 class Outcome(Enum):
@@ -287,14 +412,41 @@ class Verdict:
 
 
 _PASS = Verdict(Outcome.PASS)
+_SHALLOW = Verdict(Outcome.NOTE, "얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다.")
 
 
 def _note(message: str) -> Verdict:
-    return Verdict(Outcome.NOTE, f"check-ticket: {message}")
+    return Verdict(Outcome.NOTE, message)
 
 
-def _blocked(root: Path, branch: str, present: list[str], outside: list[str]) -> str:
-    lines = [f"check-ticket: 브랜치 {branch} 의 변경이 티켓을 가리키지 않아 커밋을 막았다."]
+def _transition(branch: str) -> Verdict:
+    return _note(f"규약 전에 연 브랜치({branch})라 판정하지 않고 지난다.")
+
+
+@dataclass(frozen=True)
+class Wording:
+    """막는 글에서 커밋 검사와 CI 가 달리 쓰는 말."""
+
+    blocked: str
+    unstaged: str
+
+
+COMMIT_WORDING = Wording(
+    "커밋을 막았다",
+    "알림: {path} 가 디스크에는 있지만 이 커밋에 들지 않는다. 그 파일의 `Status:` 를 in-progress 로"
+    " 고치고(이미 고쳤으면 그대로) `git add {path}` 로 스테이지한다.",
+)
+PR_WORDING = Wording(
+    "PR 을 막았다",
+    "알림: {path} 가 머리 커밋에는 있지만 이 PR 의 변경에 들지 않는다. 그 파일의 `Status:` 를 done"
+    " 으로 고쳐 커밋하고 다시 푸시한다. 이미 done 이면 앞서 닫힌 티켓이니 아래 할 일대로 이 PR 의"
+    " 티켓을 새로 쓴다.",
+)
+
+
+def _blocked(branch: str, outside: list[str], found: list[str], wording: Wording) -> str:
+    """판정 7 의 막는 글. `found` 는 그 브랜치가 가리키는데 C 에 들지 않은 티켓이다."""
+    lines = [f"브랜치 {branch} 의 변경이 티켓을 가리키지 않아 {wording.blocked}."]
     lines.append(f"면제 모양 밖의 바뀐 파일 {len(outside)}개:")
     lines += [f"  {path}" for path in outside[:SHOWN]]
     if len(outside) > SHOWN:
@@ -302,20 +454,13 @@ def _blocked(root: Path, branch: str, present: list[str], outside: list[str]) ->
     stem = ticket_stem(branch)
     if stem is not None:
         kind, name = stem
-        on_disk = tickets_on_disk(root, kind, name)
         expected = (
             f"{_HARNESS_ISSUES}{name}.md"
             if kind == "chore"
             else f".scratch/<slug>/issues/{name}.md"
         )
-        lines.append(f"이 브랜치가 가리키는 티켓: {', '.join(on_disk) or expected}")
-        for path in on_disk:
-            if path not in present:
-                lines.append(
-                    f"알림: {path} 가 디스크에는 있지만 이 커밋에 들지 않는다. 그 파일의"
-                    " `Status:` 를 in-progress 로 고치고(이미 고쳤으면 그대로)"
-                    f" `git add {path}` 로 스테이지한다."
-                )
+        lines.append(f"이 브랜치가 가리키는 티켓: {', '.join(found) or expected}")
+        lines += [wording.unstaged.format(path=path) for path in found]
     lines += [
         "할 일:",
         "  1. 티켓을 쓴다. 기능의 일이면 그 기능 폴더 .scratch/<slug>/issues/NN-<slug>.md, 그 밖의"
@@ -324,9 +469,30 @@ def _blocked(root: Path, branch: str, present: list[str], outside: list[str]) ->
         "  2. 브랜치 이름을 티켓 파일 이름의 stem 에 맞춘다: `git branch -m <새 이름>`"
         "(feature/NN-<slug> 나 chore/NNN-<slug>). 이미 푸시했으면 새 이름으로 푸시하고 옛 원격"
         " 브랜치를 지운다. 열린 PR 이 있으면 사람에게 묻는다.",
-        "규약 원천: docs/agents/issue-tracker.md",
+        CONVENTION,
     ]
     return "\n".join(lines)
+
+
+def _not_done(path: str, status: str | None) -> str:
+    if status is None:
+        return f"  {path}: 상태 줄이 없다"
+    return f"  {path}: 지금 값 `{status}`" if status else f"  {path}: 상태 줄의 값이 비었다"
+
+
+def _statuses(cwd: Path, head: str, branch: str, tickets: list[str]) -> Verdict:
+    """CI 가 판정 5·6 으로 지난 뒤, 가리키는 티켓이 머리 커밋에서 모두 done 인지 본다."""
+    found = [(path, status_of(_out(cwd, "show", f"{head}:{path}"))) for path in tickets]
+    open_ = [_not_done(path, status) for path, status in found if status != DONE]
+    if not open_:
+        return _PASS
+    lines = [f"브랜치 {branch} 가 가리키는 티켓이 done 이 아니라 {PR_WORDING.blocked}.", *open_]
+    lines += [
+        "할 일: 그 티켓의 `Status:` 를 done 으로 고쳐 커밋하고 다시 푸시한다. 티켓은 PR 을 열기"
+        " 전에 done 이다.",
+        CONVENTION,
+    ]
+    return Verdict(Outcome.BLOCK, "\n".join(lines))
 
 
 def current_branch(cwd: Path) -> str | None:
@@ -341,52 +507,143 @@ def current_branch(cwd: Path) -> str | None:
     return _text(result.stdout)
 
 
+def _outside(changed: list[Change]) -> list[str]:
+    return [c.path for c in changed if not exempt(c.path)]
+
+
+def _present(changed: list[Change]) -> list[str]:
+    return [c.path for c in changed if not c.deleted]
+
+
 def judge(cwd: Path) -> Verdict:
+    """커밋 검사. 지금 브랜치와 색인을 `origin/main` 에 견줘 판정 1~7 을 한다."""
     branch = current_branch(cwd)
     if branch is None or branch == "main":
         return _PASS
-    if _maybe(cwd, "rev-parse", "-q", "--verify", f"{BASE}^{{commit}}") is None:
+    if _commit(cwd, BASE) is None:
         return _note("origin/main 을 찾지 못해 판정하지 않고 지난다.")
-    if _maybe(cwd, "rev-parse", "-q", "--verify", "HEAD^{commit}") is None:
+    if _commit(cwd, "HEAD") is None:
         return _note("HEAD 가 아직 없어(첫 커밋) 판정하지 않고 지난다.")
-    if before_convention(cwd):
-        return _note(f"규약 전에 연 브랜치({branch})라 판정하지 않고 지난다.")
+    if before_convention(cwd, "HEAD", BASE):
+        return _transition(branch)
     heads = ["HEAD"]
     merging = merge_head(cwd)
     if merging is not None:
         heads.append(merging)
-    base = merge_base(cwd, heads)
+    base = merge_base(cwd, BASE, heads)
     if base is None:
-        return _note("얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다.")
-    changed = changes(cwd, base)
-    outside = [c.path for c in changed if not exempt(c.path)]
+        return _SHALLOW
+    changed = staged_changes(cwd, base)
+    outside = _outside(changed)
     if not outside:
         return _PASS
-    present = [c.path for c in changed if not c.deleted]
-    stem = ticket_stem(branch)
-    if stem is not None and any(points_at(*stem, path) for path in present):
-        return _PASS
-    if branch.startswith("docs/") and any(is_harness_ticket(path) for path in present):
+    if pointed(branch, _present(changed)):
         return _PASS
     root = Path(_out(cwd, "rev-parse", "--show-toplevel"))
-    return Verdict(Outcome.BLOCK, _blocked(root, branch, present, outside))
+    found = tickets_on_disk(root, branch)
+    return Verdict(Outcome.BLOCK, _blocked(branch, outside, found, COMMIT_WORDING))
+
+
+def _received(cwd: Path, name: str, value: str) -> str:
+    """CI 가 받은 커밋 값을 커밋으로 푼다. 비었거나 이 저장소에 없으면 git 실패다."""
+    commit = _commit(cwd, value) if value else None
+    if commit is None:
+        raise GitError(f"{name} 의 커밋({value or '빈 값'})을 이 체크아웃에서 찾지 못했다.")
+    return commit
+
+
+def judge_pr(cwd: Path, pr: PullRequest) -> Verdict:
+    """CI 의 판정. 머리 브랜치와 머리 커밋을 base 커밋에 견줘 판정 1~7 을 하고, 판정 5·6 으로
+    지나면 가리키는 티켓이 done 인지 본다."""
+    if pr.branch == "main":
+        return _PASS
+    head = _received(cwd, PR_HEAD_SHA, pr.head)
+    base = _received(cwd, PR_BASE_SHA, pr.base)
+    if before_convention(cwd, head, base):
+        return _transition(pr.branch)
+    start = merge_base(cwd, base, [head])
+    if start is None:
+        return _SHALLOW
+    changed = tree_changes(cwd, start, head)
+    outside = _outside(changed)
+    if not outside:
+        return _PASS
+    present = _present(changed)
+    tickets = pointed(pr.branch, present)
+    if tickets:
+        return _statuses(cwd, head, pr.branch, tickets)
+    found = [path for path in tickets_in_tree(cwd, head, pr.branch) if path not in present]
+    return Verdict(Outcome.BLOCK, _blocked(pr.branch, outside, found, PR_WORDING))
+
+
+def pull_request(environ: Mapping[str, str]) -> PullRequest | None:
+    """CI 가 받은 PR 의 값. 머리 브랜치가 비었으면(PR 이 아닌 실행) None 이다."""
+    branch = environ.get(PR_HEAD_REF, "")
+    if not branch:
+        return None
+    return PullRequest(branch, environ.get(PR_HEAD_SHA, ""), environ.get(PR_BASE_SHA, ""))
+
+
+def judge_ci(cwd: Path, pr: PullRequest | None) -> Verdict:
+    """`--ci` 의 판정. PR 이 아닌 실행은 한 줄을 알리고 지난다."""
+    if pr is None:
+        return _note("PR 이 아닌 실행(main 의 push)이라 판정하지 않고 지난다.")
+    return judge_pr(cwd, pr)
+
+
+def inputs_line(cwd: Path, pr: PullRequest) -> str:
+    """CI 가 판정 전에 받은 값과 체크아웃한 병합 커밋의 첫 부모. 실제 실행이 base 값을 그 첫 부모와
+    견준다."""
+    try:
+        parent = _commit(cwd, "HEAD^1") or "없음"
+    except GitError as error:
+        parent = f"읽지 못했다({error})"
+    return (
+        f"CI 입력: 머리 브랜치 {pr.branch}, 머리 커밋 {pr.head or '빈 값'},"
+        f" base 커밋 {pr.base or '빈 값'}, 체크아웃한 병합 커밋의 첫 부모 {parent}"
+    )
+
+
+def _write(stream: TextIO, message: str) -> None:
+    stream.buffer.write(f"{PREFIX}{message}\n".encode())
+    stream.buffer.flush()
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="커밋 검사(ADR 0037). 판정은 이 파일의 독스트링이다"
+    )
+    parser.add_argument(
+        "--ci",
+        action="store_true",
+        help=f"CI 의 판정. PR 의 값은 환경 변수 {PR_HEAD_REF}, {PR_HEAD_SHA}, {PR_BASE_SHA}"
+        " 로 받는다",
+    )
+    parser.add_argument("cwd", nargs="?", type=Path, help="판정할 저장소. 없으면 작업 폴더")
+    return parser
 
 
 def main(argv: list[str]) -> int:
-    cwd = Path(argv[1]) if len(argv) > 1 else Path.cwd()
+    args = _parser().parse_args(argv[1:])
+    ci: bool = args.ci
+    where: Path | None = args.cwd
+    cwd = Path.cwd() if where is None else where
+    pr = pull_request(os.environ) if ci else None
+    if pr is not None:
+        _write(sys.stdout, inputs_line(cwd, pr))
     try:
-        verdict = judge(cwd)
+        verdict = judge_ci(cwd, pr) if ci else judge(cwd)
     except GitError as error:
-        sys.stderr.buffer.write(f"check-ticket: {error}\n".encode())
+        _write(sys.stderr, str(error))
         return 2
     match verdict.outcome:
         case Outcome.PASS:
             return 0
         case Outcome.NOTE:
-            sys.stdout.buffer.write(f"{verdict.message}\n".encode())
+            _write(sys.stdout, verdict.message)
             return 0
         case Outcome.BLOCK:
-            sys.stderr.buffer.write(f"{verdict.message}\n".encode())
+            _write(sys.stderr, verdict.message)
             return 1
 
 

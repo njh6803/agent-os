@@ -8,7 +8,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 판정
 
