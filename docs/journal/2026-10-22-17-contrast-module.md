@@ -69,7 +69,7 @@ base `96fbe241`, 바뀐 추적 파일 13, 커밋 0, 미추적 3(시험, 새 변�
 
 1. Minor. `index.ts`의 "`./contrast`(명암비 모듈)는 `web/tools` 의 스크립트가 부른다"와 `contrast.ts` 머리의 "`web/tools` 의 스크립트가 이 짝 표와 공식으로 판정한다"는 아직 없는 스크립트(티켓 04)를 현재형으로 적었다. 지금 패키지 이름으로 부르는 것은 시험 하나다. **고친다.** 지금 부르는 시험으로 적는다.
 2. Minor. 새 변이 표 머리의 "Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 였고(일지)"는 출처가 틀렸다. 그 오류와 TS2834·TS2835는 프로브 `tools_import.mjs`가 옛 짝 표 파일을 내보내 낸 것이고, 이 세션이 손으로 본 것은 루트 타입 검사가 시험의 import에서 빨간 것뿐이다. **고친다.** 프로브 README 행의 "같은 때 루트 타입 검사와 Node 실행은 그 import에서 빨갰다"도 같은 까닭으로 고친다.
-3. Nit. 같은 모듈을 들이는 확장자 표기가 셋(`.js`, `.ts`, 없음)으로 갈리고, `themes.ts` 주석의 "`.js` 는 두 해석이 모두 이웃 `.ts` 로 푼다"는 손으로 본 것에 기댄다. **남긴다.** 표기는 설정마다 요구가 달라서이고(주석에 까닭이 있다), 두 해석이 그 파일을 푸는지는 패키지와 사진 비교의 타입 검사가 게이트마다 다시 본다.
+3. Nit. 같은 모듈을 들이는 확장자 표기가 셋(`.js`, `.ts`, 없음)으로 갈리고, `themes.ts` 주석의 "`.js` 는 두 해석(`bundler`, `nodenext`)이 모두 이웃 `.ts` 로 푼다"는 손으로 본 것에 기댄다. **남긴다.** 표기는 설정마다 요구가 달라서이고(주석에 까닭이 있다), 두 해석이 그 파일을 푸는지는 패키지와 사진 비교의 타입 검사가 게이트마다 다시 본다.
 4. Nit(smell, Middle Man). `testing/index.ts`의 다시 내보내기. **남긴다.** `@agent-os/ui/testing`의 공개 면과 `Checks.stories.tsx`의 import를 지킨다.
 5. Nit. 시험 머리의 "디자인 토큰 CSS 의 여덟 벌은 그 CSS 를 푸는 들이기 명령이 판정한다"는 04의 일을 현재형으로 적었다. **고친다.** 이 시험이 디자인 토큰 CSS를 풀지 않는다고만 적는다(04의 몫은 티켓 01·04에 이미 있다).
 
@@ -116,3 +116,27 @@ Critical·Major 없음, 범위 넘침 없음. Minor 셋, Nit 둘. 서브에이�
 - `git fetch` 뒤 origin/main에 PR #350(티켓 없는 브랜치의 커밋을 막는 `tools/check_ticket.py`)이 들어왔다. 이 브랜치는 티켓 모양이고 바뀐 파일에 티켓 01이 있어 그 검사의 판정 5로 지난다. origin/main의 design-reverse-sync 행은 아직 `todo`라 이 PR이 기능의 첫 병합이다. 행과 프론티어 문단을 `in-progress`로 고쳤다.
 - 티켓 01의 체크박스 열둘을 채우고 `Status`를 `done`으로 바꿨다. 기능은 닫지 않는다(04를 막는다).
 - `uv run ruff check .`와 `uv run ruff format --check .`가 초록이고, `uv run python tools/run_checks.py`가 아홉 항목 모두 Passed로 종료 0이었다(web-verify 271초, pytest 297초).
+- 커밋 `48c232f4`의 pre-commit이 모두 Passed였다(변이 표 원문 확인 포함, 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped). 인용 대조가 이 일지의 인용 14건에 경고를 냈다. 열둘은 셀프 리뷰가 고치기 전의 초안 문장이거나 주석의 줄바꿈 자리라 원문과 같은 문장이고(스크래치 스크립트로 주석 기호와 줄바꿈을 풀어 대 봤다), `themes.ts` 주석을 인용한 하나는 괄호 `(`bundler`, `nodenext`)`를 빼고 옮겨 원문대로 고쳤다.
+- origin/main을 합쳤다(`959e3276`). #350과 그사이 병합된 #351(model-rerun 명세, 일지 `2026-10-22-16`)이 들어왔고 충돌은 없었다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat : not assigned`라 CLI 대신 대체 둘을 돌렸다. 기준은 합친 뒤의 merge-base `c47bedce`다.
+
+### 보안 축(`/security-review`)
+
+식별 서브태스크가 HIGH·MEDIUM 없음으로 보고해 거르기 단계에 넘길 것이 없었다. 본 것: 패키지 `exports`의 `./contrast`(패키지가 `private`이고 순수 계산 파일 하나를 가리킨다), 루트 작업 공간 의존과 잠금 파일 3줄(`link:packages/ui`뿐이고 외부에서 받는 것이 없다), 시험의 `spawnSync`(인자 배열, `shell` 없음, `--eval` 스크립트가 모듈 상수), 변이 표의 고정 러너 명령과 저장소 안 경로, 바뀐 문서의 비밀 값 검색.
+
+### 버그·성능 축(`bug-perf-review`)
+
+40번 호출 한도에 닿아 멈췄다. 넷(유효 1, 보류 3), 오탐 다섯(시험 `spawnSync`의 시간 제한, 종료 코드와 출력 판정, 인자 인용, 잠금 파일, `publishConfig`). 맡긴 네 갈래(Node 사례, 옮긴 계산이 글자 그대로 같은지, `.js`·`.ts` import, 변이 표의 `-t` 겹침과 되돌릴 사진)와 밀 주장은 위 넷 말고 어긋남이 없었다. 이 PC에서 시험 3개가 통과했고 `mutate.py --check`가 세 표 모두 원문 한 번씩이었다.
+
+1. Major·보류. `.design-sync/overrides/preview-gen-storybook.mjs:41`이 `themes.ts`에서 `MODES`를 가져온다면, 정의가 옮겨 깨진다. **오탐.** 그 스크립트는 `themes.ts`를 읽지 않는다. 주석이 기본 테마와 모드·밀도 값을 손으로 맞춰 둔 사본이라고 적는다("mirror … keep them in step"). `themes.ts`는 여전히 `MODES`를 내보낸다. 셀프 리뷰 명세 축 5와 같은 자리다.
+2. Minor·보류. `themes.ts:29`의 `.js` 다시 내보내기를 Next가 풀지 못할 수 있다. **넘긴다.** 패키지 소스에서 확장자를 붙인 상대 import는 이 한 줄뿐이고 이 PR이 넣었다. 확장자가 필요한 것은 사진 비교 셋(`visual/media.visual.ts`, `stories.visual.ts`, `storybook.ts`)이 `nodenext`로 `themes.ts`를 들여서다. 확장자 없이 두면 그쪽 타입 검사가 TS2835로 빨갛고(일지 위 "고친 것"), `.ts`로 두면 패키지와 앞으로 들일 앱의 타입 검사에 `allowImportingTsExtensions`가 요구된다. 지금 `web/apps`에서 `@agent-os/ui`의 TS를 들이는 곳은 없다. 설치된 Next 16.3.6을 읽어 보니 플래그 없는 `next build`는 Turbopack이다(`dist/lib/bundler.js`, "The default is turbopack when nothing is configured"). `--webpack`이면 `extensionAlias`를 `config.experimental.extensionAlias`에서만 받는다(`dist/build/webpack-config.js:591`, `config-shared.js`에 기본값 없음). `.js` 지정자를 `.ts`에 잇는 것은 소비하는 번들러의 설정 몫이다(webpack의 `resolve.extensionAlias`가 이 용도다). 그래서 받는 쪽인 `plan.md`의 admin-style 행에 재는 일과 고치는 길을 적었다. 그 문제는 이 PR이 병합된 뒤에야 생기고, 메모도 같은 병합으로 들어간다.
+3. Minor·보류. `tools_import.mjs`는 `--commit` 기본값이 `HEAD`이고 "지금의 `src/styles/contrast.ts`"를 전제해, 옮긴 뒤 판에서 인자 없이 돌리면 두 갈래의 뜻이 달라진다. **고친다.** 프로브 머리에 옮기기 전 판에서만 뜻이 있다고 적었다. 옮긴 뒤 판(`959e3276`)에서 인자 없이 돌려 보니 `as-is`는 타입 검사 0·`node` 0(`{"pairs":43,"failures":43}`)이라 표지가 없고, `self-contained`는 "잘라 붙일 자리를 찾지 못했다"여서 측정 0, 측정 아님 2, 종료 1이었다. 잘못된 결론이 조용히 나지는 않는다.
+4. Minor·유효. 새 변이 표 머리의 "표지는 변이를 손으로 넣어 본 실패 출력에서 골랐다"를 일지가 받치지 않는다(이 일지에 그 기록이 없다). **고친다.** 확인된 것으로 좁혔다. 고른 단언이나 검사가 실패할 때만 나오는 문구로 골랐고(셀프 리뷰 표준 축이 봤다), 아홉을 돌려 빨간 회차의 출력에 그 표지가 실린 것을 봤다.
+
+### PR 직전 리뷰의 반영
+
+- 고친 것: 버그·성능 3·4(프로브 머리, 새 변이 표 머리). 넘긴 것: 2(`plan.md` admin-style 행). 오탐: 1. 보안 축은 발견이 없었다. 바꾼 것이 주석과 문서뿐이라 다시 돌린 명령은 반영 커밋의 pre-commit으로 갈음한다.
+- 반영으로 새로 쓴 사실 문장(PR에 밀 주장): 프로브 머리의 "옮긴 뒤의 판에서 `--commit` 없이 돌리면 `as-is` 는 타입 검사와 `node` 가 모두 0 이라 표지가 없고 `self-contained` 는 잘라 붙일 자리를 찾지 못해, 둘 다 측정이 아니고 종료 코드가 1 이다", 변이 표 머리의 "표지는 고른 단언이나 검사가 실패할 때만 나오는 문구(값까지 든 기대 줄, 판정 메시지, 오류 번호)로 골랐고, 아홉을 돌려 빨간 회차의 출력에 그 표지가 실린 것을 봤다", admin-style 행의 "Next 16.3.6은 플래그가 없으면 Turbopack으로 빌드하고 그쪽은 재지 않았다. `--webpack`이면 `resolve.extensionAlias`를 `experimental.extensionAlias`에서만 받아 기본으로는 풀지 않는다", "패키지 소스에서 확장자를 붙인 상대 import는 이 한 줄뿐이다".
