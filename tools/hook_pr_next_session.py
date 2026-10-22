@@ -76,6 +76,7 @@ _API_VALUE_OPTIONS = frozenset(
     }
 )
 _API_BODY_OPTIONS = frozenset({"-f", "--raw-field", "-F", "--field", "--input"})
+_CONTINUATION = re.compile(r"`\n")
 
 
 class ToolInput(TypedDict, total=False):
@@ -145,6 +146,7 @@ def opens_pr_by_api(segment: str) -> bool:
         else:
             option, value = word[:2], word[2:]
             equals = "=" if value else ""
+            value = value.removeprefix("=")  # `-X=POST` 의 `=` 는 값이 아니다
         if not equals and option in _API_VALUE_OPTIONS:
             value = words[index] if index < len(words) else ""
             index += 1
@@ -165,8 +167,9 @@ def _executed_segments(command: str) -> list[str]:
 
 def _api_segments(command: str) -> list[str]:
     """`_executed_segments` 와 같되 인용 구간을 그 안의 글로 남긴다. 공백과 셸 문자는 `_` 로 바꿔
-    한 낱말로 두고, 빈 인용도 `_` 로 자리를 지킨다."""
-    lines = "\n".join(_without_heredoc_bodies(command))
+    한 낱말로 두고, 빈 인용도 `_` 로 자리를 지킨다. PowerShell 의 줄 이음(줄 끝 백틱)은 이어 붙인다.
+    백틱에서 가르면 둘째 줄의 몸(`-f`)을 놓친다."""
+    lines = _CONTINUATION.sub(" ", "\n".join(_without_heredoc_bodies(command)))
     joined = _QUOTED.sub(lambda quoted: _NOT_WORD.sub("_", quoted.group(0)[1:-1]) or "_", lines)
     return [_PREFIX.sub("", piece, count=1) for piece in _SEPARATOR.split(joined)]
 

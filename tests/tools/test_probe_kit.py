@@ -156,3 +156,47 @@ def test_글_모드의_흐름도_읽는다(tmp_path: Path) -> None:
     assert reader.drain(30) == ["하나\n", "둘\n"]
     assert reader.ended
     process.wait(timeout=30)
+
+
+def test_글_모드의_흐름에_풀지_못하는_바이트가_와도_앞뒤_줄을_잃지_않는다(tmp_path: Path) -> None:
+    """글 흐름의 `readline` 은 덩어리째 풀다 `UnicodeDecodeError`(`ValueError`)를 던져, 흐름을
+    닫았다고 보고 읽기를 멈추면 앞 줄까지 잃고 자식은 파이프가 차서 멈춘다(PR 직전 리뷰가 재현)."""
+    script = tmp_path / "child.py"
+    script.write_text(
+        "import sys\nsys.stdout.buffer.write(b'ok1\\n\\xff\\xfe\\nok2\\n')\n", encoding="utf-8"
+    )
+    process = subprocess.Popen(
+        [sys.executable, str(script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+    )
+    assert process.stdout is not None
+    reader = LineReader(process.stdout)
+
+    assert reader.drain(30) == ["ok1\n", "��\n", "ok2\n"]
+    assert reader.ended
+    process.wait(timeout=30)
+
+
+def test_배출은_줄이_계속_와도_제한_시간에_끝난다(tmp_path: Path) -> None:
+    """제한 시간은 배출 전체의 마감이다. 줄 사이에만 걸면 계속 쓰는 자식 앞에서 돌아오지 않는다."""
+    script = tmp_path / "child.py"
+    script.write_text(
+        "import time\nwhile True:\n    print('줄', flush=True)\n    time.sleep(0.05)\n",
+        encoding="utf-8",
+    )
+    process = subprocess.Popen(
+        [sys.executable, str(script)], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+    )
+    assert process.stdout is not None
+    reader = LineReader(process.stdout)
+    try:
+        started = time.monotonic()
+        lines = reader.drain(0.5)
+        assert time.monotonic() - started < 10
+        assert lines
+    finally:
+        process.kill()
+        process.wait(timeout=30)

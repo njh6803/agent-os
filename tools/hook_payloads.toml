@@ -723,7 +723,7 @@ payload = { session_id = "handoff-case-under", transcript_path = "${UNDER_HANDOF
 [[case]]
 hook = "hook_handoff.py"
 expect = "context"
-note = "문턱 위 세션이 gh api 로 pulls 에 POST 했다 — PR 연 뒤(대기열 408). 위 실제 입력의 모양에서 명령·설명·도구 응답(커밋의 gitOperation 을 뺐다)·세션 ID·tool_use_id 를 PR 열기에 맞게 고쳐 지었다"
+note = "문턱 위 세션이 gh api 로 pulls 에 POST 했다 — PR 연 뒤(대기열 408). 두 사례 위 '문턱 위 세션의 커밋' 의 실제 입력(같은 트랜스크립트)에서 명령·설명·도구 응답(커밋의 gitOperation 을 뺐다)·세션 ID·tool_use_id 를 PR 열기에 맞게 고쳐 지었다"
 contains = ["`PR 연 뒤`", "인계의 계기"]
 env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
 payload = { session_id = "handoff-case-api", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "gh api repos/o/r/pulls --input body.json", description = "Open a pull request" }, tool_response = { stdout = "{}", stderr = "", interrupted = false, isImage = false, noOutputExpected = false }, tool_use_id = "toolu_handoff_api", duration_ms = 120 }

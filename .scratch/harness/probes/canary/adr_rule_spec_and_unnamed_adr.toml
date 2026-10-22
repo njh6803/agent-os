@@ -2,7 +2,7 @@
 # 사실을 거짓으로 만들 때 그 ADR 의 이력에 적을 것이고, 하나는 새 ADR 이 이름으로 들지 않은 ADR 을 찾는 길이다.
 # 실험군은 두 문장을 언급하지 않는 ADR 하나를, 대조군은 같은 체크아웃의 paths 밖(pyproject.toml)을 읽는다.
 # 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 두 갈래 모두 `6bd52b06` 위의 커밋 전 작업 트리, 대조군은 "없음" 둘,
-#   일지 2026-10-22-07).
+#   일지 2026-10-22-11).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/adr_rule_spec_and_unnamed_adr.toml <출력 디렉터리>
 kind = "rule"

@@ -204,6 +204,8 @@ def test_gh_api_로_pulls_에_POST_하면_PR_연_뒤다() -> None:
     `tests/tools/gh_api_cases.py`)."""
     for command in gh_api_cases.OPENS:
         assert boundary_of("Bash", {"command": command}) == "PR 연 뒤", command
+    for command in gh_api_cases.POWERSHELL_OPENS:
+        assert boundary_of("PowerShell", {"command": command}) == "PR 연 뒤", command
     # 표의 `git commit -m "gh api …"` 는 이 훅에서 커밋 뒤라, PR 연 뒤가 아닌지만 본다
     for command in gh_api_cases.NOT_OPENS:
         assert boundary_of("Bash", {"command": command}) != "PR 연 뒤", command

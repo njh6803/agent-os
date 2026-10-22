@@ -105,7 +105,8 @@ def pyright_checks(platform: str) -> tuple[Check, ...]:
     이 PC(윈도)의 pyright 와 러너가 초록인 시험 파일을 리눅스 CI 의 pyright 가
     `sys.platform == "win32"` 갈래에서만 쓴 가져오기로 빨갛게 냈다(대기열 403). 리눅스에서는 두
     검사가 같아 한 번만 돈다. 시험이 리눅스에서만 빨개지는 몫(281·318 의 꼴)은 이 검사가 잡지
-    못하고 CI 가 잡는다.
+    못하고 CI 가 잡는다. 둘째 검사는 id 가 따로라 `SKIP=pyright` 로는 빠지지 않는다. 둘 다 빼려면
+    `SKIP=pyright,pyright-linux` 다(PR 직전 리뷰).
     """
     plain = Check("pyright", ("uv", "run", "pyright"))
     if platform == "linux":

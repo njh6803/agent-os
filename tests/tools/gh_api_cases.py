@@ -13,6 +13,8 @@ OPENS = (
     'gh api --method POST "repos/{owner}/{repo}/pulls" --input body.json',
     "gh api -X POST /repos/o/r/pulls -F draft=true",
     "gh api -XPOST repos/o/r/pulls",
+    # 짧은 옵션의 `=` 는 값이 아니다(gh 2.98.0 의 `-X=POST` 요청 줄이 `POST` 였다, PR 직전 리뷰)
+    "gh api -X=POST repos/o/r/pulls",
     "gh api --method=POST repos/o/r/pulls/",
     "gh api repos/o/r/pulls --input body.json",
     "cd /c/project/agent && gh api repos/o/r/pulls -f 'title=feat: x' > pr.json",
@@ -22,6 +24,7 @@ OPENS = (
 NOT_OPENS = (
     "gh api repos/o/r/pulls",
     "gh api repos/o/r/pulls -X GET -f state=open",
+    "gh api repos/o/r/pulls -X=GET -f state=open",
     "gh api repos/o/r/pulls --input body.json --method GET",
     "gh api repos/o/r/pulls/12/comments -f body=x",
     "gh api repos/o/r/issues -f title=x",
@@ -29,6 +32,9 @@ NOT_OPENS = (
     "echo 'gh api repos/o/r/pulls -f title=x'",
     'git commit -m "gh api repos/o/r/pulls -f title=x"',
 )
+
+# PowerShell 의 줄 이음(줄 끝 백틱). 백틱을 명령 치환으로 갈라 둘째 줄의 몸을 놓쳤다(PR 직전 리뷰).
+POWERSHELL_OPENS = ("gh api repos/o/r/pulls `\n  -f title=x -f head=b -f base=main",)
 
 # 못 보는 것(거짓 음성). GraphQL 의 `createPullRequest` 와 변수로 준 엔드포인트.
 BLIND = (

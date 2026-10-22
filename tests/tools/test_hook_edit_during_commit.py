@@ -38,6 +38,8 @@ HOOK = Path(__file__).parents[2] / "tools" / "hook_edit_during_commit.py"
     ("argv", "subcommand"),
     [
         pytest.param(["git", "commit", "-F", "msg.txt"], "commit", id="보통_커밋"),
+        # 못 보는 것(거짓 양성). 편집기가 열린 채 남은 커밋도 끝날 때까지 커밋으로 센다.
+        pytest.param(["git", "commit"], "commit", id="편집기를_여는_커밋"),
         pytest.param(
             ["C:\\Program Files\\Git\\mingw64\\bin\\git.exe", "commit", "-q"],
             "commit",
@@ -138,6 +140,8 @@ def test_고친_파일의_체크아웃에서_도는_커밋이면_막는다(tmp_p
     assert "이미 적용" not in reason
     # 커밋을 띄우지 않은 세션이 남긴 거짓 양성(못 보는 것)에 막혔을 때 기다릴 커밋이 없다.
     assert "띄운 커밋이 없으면 같은 편집을 한 번 다시 한다" in reason
+    # 끝나지 않는 커밋(편집기가 열린 채 남은 것)은 기다려도 풀리지 않는다(PR 직전 리뷰).
+    assert "끝나지 않으면 그 pid 를 사용자에게 알린다" in reason
 
 
 def _git_layout(root: Path) -> dict[str, str]:

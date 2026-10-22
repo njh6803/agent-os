@@ -1,4 +1,4 @@
-# 2026-10-22 (07) 하네스 chore 배치: 회차 3 이상인 대기열 행 아홉과 같은 대상의 고침 셋
+# 2026-10-22 (11) 하네스 chore 배치: 회차 3 이상인 대기열 행 아홉과 같은 대상의 고침 셋
 
 브랜치 `chore/choice-facts-batch`, 워크트리 `.claude/worktrees/choice-facts-batch`.
 
@@ -116,8 +116,8 @@ E의 첫 판 기준 하나는 결과를 본 뒤 고쳤다. "거부 표지를 둘
 시작 프롬프트: 대기열 394·395·339·412·341·391·396·400·403(회차 3 이상인 열린 행 아홉. 227도 4회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행 368(412보다 먼저 고친다)·369·408(412와 tools/hook_payloads.toml이나 같은 훅 파일을 든다)을 함께 반영한다
 브랜치: chore/choice-facts-batch
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-07-choice-facts-batch.md 의 "인계 (셀프 리뷰 직전)"과 그 앞 절들
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-22-07-choice-facts-batch.md). 열두 행의 반영과 대기열 닫기, 카나리아 여섯은 끝났고 회고와 "## 다음"은 아직이다. 이 브랜치가 next-session(1단계의 일지 3·병합 길 4)·grilling·to-tickets·code-review를 고쳐, 그 스킬은 워크트리 사본의 SKILL.md를 Read로 열어 따른다
+읽을 것: docs/journal/2026-10-22-11-choice-facts-batch.md 의 "인계 (셀프 리뷰 직전)"과 그 앞 절들
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(docs/journal/2026-10-22-11-choice-facts-batch.md). 열두 행의 반영과 대기열 닫기, 카나리아 여섯은 끝났고 회고와 "## 다음"은 아직이다. 이 브랜치가 next-session(1단계의 일지 3·병합 길 4)·grilling·to-tickets·code-review를 고쳐, 그 스킬은 워크트리 사본의 SKILL.md를 Read로 열어 따른다
 확인할 선행 조건: tools/run_checks.py의 pytest와 web verify는 이 판에서 끝까지 돌지 않았다(인계로 멈췄고, 멈추는 순간 web-verify가 vitest 도중 Failed로 찍혔다. 멈춤 탓이라는 것은 어림이다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -135,7 +135,7 @@ open-session을 부른다 2026-10-22T05:48:54Z
 - 앞 세션이 러너를 vitest 도중에 멈춰, `web/eslint.config.test.ts`의 `afterAll`이 지우지 못한 픽스처 `web/judge-vZhAvt/`(위반 사례 파일과 api-client를 가리키는 junction)가 미추적으로 남았다. 지우는 명령은 자동 모드 분류기가 거부해, 이 세션의 스크래치패드로 옮겼다. `web/` 안에 두면 다음 web verify의 eslint와 Prettier가 그 파일을 읽는다.
 - `tests/tools/test_hook_edit_during_commit.py` 하나만 작업 트리가 CRLF였다(`git ls-files --eol`의 `w/crlf`, 속성은 `eol=lf`). LF로 맞췄다.
 - `uv run python tools/run_checks.py`를 다시 돌렸다. 아홉 모두 통과했다(pytest 207.4초, web-verify 232.1초, pyright-linux 40.1초). 앞 세션이 끝까지 보지 못한 pytest와 web verify가 이 판에서 초록이다. `uv run ruff check .`과 `uv run ruff format --check .`도 통과했다.
-- `sibling_overlap.py`가 1로 끝났다. 둘이다. 일지 번호는 origin/main의 최신 `2026-10-22-04`보다 앞서 `2026-10-22-05`로 옮겨야 한다(셀프 리뷰 뒤 `--move`). 그리고 이 브랜치가 `code-review` SKILL.md(6단계 끝의 `next-session` 1단계 4→3 괄호)를 고쳤는데 그 원천의 카나리아 명세를 고치지 않았다. 앞 세션의 카나리아 여섯에 code-review가 없었다. 여섯 명세 가운데 그 괄호를 묻는 것이 없어, 같은 문단을 묻는 `code_review_overlap_exit_two.toml`에 둘째 물음(그 괄호, 기대 `1단계 3의 번호 받기`)을 더했다. 대조군 `55ba299`에는 옛 괄호 `1단계 4의 번호 받기`가 있다(`git show`로 봤다). 사전 확인은 통과했다. 돌리니 통과 4였다(claude 2.1.302, `--control-commit 55ba299`). 대조군은 둘째 물음에 옛 괄호를 옮겼다.
+- `sibling_overlap.py`가 1로 끝났다. 둘이다. 일지 번호는 origin/main의 최신 `2026-10-22-04`보다 앞서 `2026-10-22-05`로 옮겨야 한다(셀프 리뷰 뒤 `--move`. 그때의 `--move`는 같은 날의 번호 07을 내 그 이름으로 옮겼고, PR 직전 리뷰를 반영한 뒤 main에 08이 들어 다시 11로 옮겼다. 아래 PR 직전 리뷰 절). 그리고 이 브랜치가 `code-review` SKILL.md(6단계 끝의 `next-session` 1단계 4→3 괄호)를 고쳤는데 그 원천의 카나리아 명세를 고치지 않았다. 앞 세션의 카나리아 여섯에 code-review가 없었다. 여섯 명세 가운데 그 괄호를 묻는 것이 없어, 같은 문단을 묻는 `code_review_overlap_exit_two.toml`에 둘째 물음(그 괄호, 기대 `1단계 3의 번호 받기`)을 더했다. 대조군 `55ba299`에는 옛 괄호 `1단계 4의 번호 받기`가 있다(`git show`로 봤다). 사전 확인은 통과했다. 돌리니 통과 4였다(claude 2.1.302, `--control-commit 55ba299`). 대조군은 둘째 물음에 옛 괄호를 옮겼다.
 
 ### 셀프 리뷰
 
@@ -195,6 +195,62 @@ open-session을 부른다 2026-10-22T05:48:54Z
 남긴 것: 표준 Minor 1(그 명세는 티켓 아홉이 모두 done인 기록이다), 표준 Minor 5(막는 이유가 백그라운드 커밋의 끝 알림을 기다리라고 시켜 인계 단계가 어긋나지 않는다), ADR 0035의 "검사 여덟"(이력), 판단 항목 둘(`Slot.mark`, `run_branch`, 까닭은 위 판단 항목 줄).
 
 다시 돌린 명령: `uv run pytest -q tests/tools/test_probe_kit.py` 13 passed, `tests/tools/test_hook_choice_facts.py` 31 passed, `tests/tools/test_hook_env_read.py` 165 passed, `tests/tools/test_hook_edit_during_commit.py` 51 passed. `tools/mutate.py`의 `choice_facts_hook_mutations.toml`이 변이 29 모두 기대대로였다. `tools/run_hooks.py`가 146건 어긋남 0이었다. 바꾼 세 파일의 ruff check·format·pyright는 오류 0이었다. probes.md는 본문의 일지 번호만 고쳐 `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_stream_delete_marker.toml`(통과 1)로 갈음했다(같은 PR·같은 판 2.1.302로 앞서 통과 4, 머리말과 명세의 칸은 그대로, 카나리아는 묻는 자리에 남았다). 손으로 치는 다섯은 커밋 `7e0cf7df`의 pre-commit으로 갈음했다. ruff check·format, lint-imports, check-instructions, zizmor, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify, 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세가 모두 Passed였고(묶음 360초), 헌법 판 검사만 고친 헌법 파일이 없어 Skipped였다. 인용 대조는 이 일지에서 경고 6건을 냈다. 셋은 셀프 리뷰가 고치기 전의 문구를 든 것이라 저장소에 없는 것이 맞고, 둘은 `tools/hook_edit_during_commit.py`의 막는 이유가 문자열 여러 줄에 나뉘어 있어 글자로 이어 찾지 못한 것이며, 하나(위 13)는 원문의 한 문장을 표시 없이 건너뛴 인용이라 원문대로 고쳤다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 자리가 없어 돌지 못하므로 대체 길로 갔다. origin/main `98272c4f`를 합친 커밋 `87b69a66` 위에서 내장 `/security-review`와 `bug-perf-review` 셋(훅, 탐침·공용 도구, 문서와 밀 주장 1~13)을 띄웠다.
+
+보안 리뷰: 찾는 서브에이전트가 하나를 냈고(확신 0.9), 거르는 서브에이전트가 3/10으로 걸러 지적이 0이다. 그 하나는 `tools/hook_env_read.py`의 `_brace_branches`가 대괄호 안의 `{`·`}`까지 펼쳐, 옛 판이 막던 `cat .en[!{}]`·`cat .en[u-{}]`·`cat .e[a-{][!}]`, `grep -r --include=.en[u-{}]`, `rg -g '.en[!{}]'`, Grep 도구 glob `.en[!{}]` 등이 지나가는 회귀다. 찾는 쪽은 Git Bash·GNU grep·Grep 도구가 가짜 숨김 파일 `.abv`를 그 꼴로 읽는 것을 봤다. 거르는 쪽은 일부러 만든 입력이고 더 쉬운 우회가 이미 못 보는 것에 있어 취약점은 아니라고 보고, 정확성 버그로 넘기라고 했다. 찾는 쪽은 범위 밖의 옛 구멍으로 `[^x]`도 들었다. 파이썬 fnmatch는 그것을 부정으로 읽지 않는데 bash·GNU grep·ripgrep은 부정으로 읽어, `cat .en[^x]`이 옛 판과 새 판 모두 지나간다.
+
+훅 축 보고: Minor 6, Nit 1.
+- Minor 1. `_brace_branches`가 묶음 수에 지수로 커져, `{a,b}` 열여섯에 7.0초가 걸렸고 스물은 100초에 끝나지 않았다. 등록의 시간 제한 20초를 넘으면 막지 않고 지나간다.
+- Minor 2. `hook_choice_facts`가 막는 이유에 질문·라벨의 수도 옮기는데, 그 수를 고쳐 다시 부르면 화면 열쇠가 달라져 한 번 더 막는다. 못 보는 것에 없다.
+- Minor 3. `hook_edit_during_commit`이 끝나지 않는 커밋(편집기가 열린 채 남은 것) 앞에서 모든 편집을 막는데, 막는 이유에 빠져나올 길이 없다.
+- Minor 4. 두 훅의 `gh api` 판정이 `-X=POST`의 값을 `=POST`로 읽어 PR 열기를 놓친다. 축이 `GH_DEBUG=api`로 gh 2.98.0이 그것을 POST로 보내는 것을 봤다.
+- Minor 5. PowerShell의 백틱 줄 이음으로 필드를 다음 줄에 둔 `gh api`를 두 훅이 놓친다.
+- Minor 6. `hook_env_read` 모듈 독스트링의 손으로 본 문장(셀프 리뷰가 넘긴 밀 주장 7)이 숨김 파일도 gitignore 된 파일로 본 것처럼 읽힌다.
+- Nit. `tools/hook_payloads.toml` 726행 note(밀 주장 10)의 "위 실제 입력"이 바로 위 사례인지 두 사례 위인지 적지 않았다. `transcript_path`는 두 사례 위의 것이다.
+- 밀 주장 1~7·10·11은 맞다고 확인했다(7은 첫 문장의 문구만 어긋난다). 오탐 넷(Bash 백슬래시 줄 이음, 런처의 자식 git, 600겹 중첩, 빈 묶음)을 적었다.
+
+탐침·공용 도구 축 보고: Minor 5, Nit 1, 보류 1.
+- Minor 1. `tools/probe_kit.py`의 `LineReader`가 글 흐름(`text=True`)에서 풀지 못하는 바이트를 만나면 `UnicodeDecodeError`(`ValueError`)를 흐름 닫힘으로 삼켜, 앞 줄까지 잃고 EOF처럼 보이며 자식이 파이프가 차서 멈췄다(임시 스크립트로 재현).
+- Minor 2. `drain`의 제한 시간이 줄 사이에만 걸려 0.1초마다 쓰는 자식 앞에서 `drain(0.5)`가 돌아오지 않았다(재현).
+- Minor 3. `.scratch/harness/probes/edit_during_commit_launcher.py`가 양성 대조(옛 판의 거짓 알림)가 한 번도 없어도 0으로 끝난다. Nit로 `communicate(timeout=120)`이 넘으면 띄운 git을 끄지 않아 `index.lock`이 남을 수 있다.
+- Minor 4. `.scratch/harness/probes/gh_api_method.py`가 대조 갈래의 기대 메서드를 단언하지 않는다.
+- Minor 5. `SKIP=pyright`로는 `pyright-linux`가 빠지지 않는데 안내가 없다.
+- 보류. `choice_facts/probe.py` 머리의 "세 회차 가운데 하나"와 훅 독스트링의 "다섯 번"이 횟수에서 갈린다.
+
+문서 축 보고: 유효 0, 보류 1, 오탐 2. 호출 40번에 닿아 멈췄다.
+- 보류. 이 일지 138행이 번호를 `2026-10-22-05`로 옮겨야 한다고만 적고, 파일은 `-07`인데 옮겼다는 줄이 없다.
+- 오탐 2. `.scratch/token-usage/spec.md:9`와 그 `issues/05-handoff-hooks-and-sentences.md:27`의 옛 "1단계 3". 셀프 리뷰 표준 Minor 1과 같은 판정(티켓이 모두 done인 기록)이라고 축이 스스로 분류했다.
+- 밀 주장 8·9·12는 맞고, 13은 대조군 `55ba299`를 열지 못했다. 카나리아 다섯(`adr_rule_spec_and_unnamed_adr`, `grilling_entry_branches`, `probes_rule_stream_delete_marker`, `to_tickets_path_rule`, `tools_rule_choice_facts_hook`)은 열지 못했다.
+
+### 반영
+
+모두 PR을 열기 전에 고쳤다. 고치는 값이 작고 비밀 가드와 탐침 도구의 존재 이유에 닿기 때문이다.
+- 보안 후보는 버그로 고쳤다. 닿는지 보는 자리(`_reaches_env`, `_glob_reaching_env`)가 펼친 갈래와 함께 펼치기 전의 패턴도 보게 했다(`_candidates`). 옛 구멍 `[^`도 같이 막았다. `_matches_env`가 `[^`를 `[!`로 바꿔 판정한다. 대괄호 안 중괄호의 Bash·`--include`·`-g`·Grep 도구 입력과 `[^`의 입력을 막는다고 단언하는 시험 셋을 더했다.
+- 훅 Minor 1: 갈래 상한 `_BRANCH_LIMIT = 256`을 두고, 넘으면 펼치기를 멈춰 막는 쪽으로 간다. 펼치기를 재귀에서 반복으로 바꿨다. `{a,b}` 아홉과 마흔은 막고(20초 안), 여덟은 지나간다고 고정했고, 못 보는 것에 그 거짓 양성을 적었다.
+- 훅 Minor 2: 못 보는 것에 수를 고쳐 다시 부른 화면이 새 화면이라 또 막힌다는 거짓 양성을 적고 시험으로 고정했다.
+- 훅 Minor 3: 막는 이유에 "몇 분이 지나도 끝나지 않으면 그 pid 를 사용자에게 알린다. 편집기가 열린 채 남은 커밋은 기다려도 끝나지 않는다."를 더하고, 못 보는 것에 끝나지 않는 커밋을 적었으며, 편집기를 여는 커밋 갈래를 시험에 더했다.
+- 훅 Minor 4: 붙여 쓴 짧은 옵션 값의 앞 `=`를 한 번 벗긴다(두 사본 같게). `-X=POST`를 `OPENS`에, `-X=GET`을 `NOT_OPENS`에 더했다. 탐침 `gh_api_method.py`에도 그 갈래를 더해 POST임을 봤다(아래).
+- 훅 Minor 5: 두 훅이 PowerShell의 백틱 줄 이음(백틱 뒤 줄바꿈)을 이어 붙인 뒤 가른다. `POWERSHELL_OPENS`로 두 훅의 PowerShell 사례를 고정했다.
+- 훅 Minor 6: 문장을 "숨김 파일은 gitignore 하지 않은 가짜 파일로, `{*.md,**}` 는 gitignore 된 숨김 가짜 파일로 봤다"로 갈랐다.
+- 훅 Nit: note를 "두 사례 위 '문턱 위 세션의 커밋' 의 실제 입력(같은 트랜스크립트)에서"로 고쳤다.
+- 탐침 Minor 1: 글 흐름은 그 밑의 바이트 흐름을 그 흐름의 인코딩으로 줄마다 `errors="replace"`로 풀고 `\r\n`을 `\n`으로 바꾼다. 밑의 흐름과 인코딩은 흐름을 좁히지 않고 `getattr`로 꺼내 구체 형식(`io.BufferedIOBase`·`io.RawIOBase`, `str`)으로 좁힌다. `TextIOWrapper`로 좁히면 제네릭 인자를 몰라 pyright strict가 오류 여덟을 냈고(그 판정의 else 갈래에도 Unknown이 남았다), 선례 `src/agent_os/channel/cli/interrupt.py`의 `_raw_stderr`를 따랐다. 깨진 바이트 앞뒤 줄을 잃지 않는다는 시험을 더했다.
+- 탐침 Minor 2: `drain`의 제한 시간을 배출 전체의 마감으로 바꿨다. 줄이 계속 오는 자식 앞에서 `drain(0.5)`가 돌아오는 시험을 더했다. 옛 코드에서 그 시험이 멈춘 것을 먼저 봤다(명령이 백그라운드로 옮겨져 멈췄고, 남은 자식 프로세스는 없었다).
+- 탐침 Minor 3과 Nit: `run_branch`가 고친 길을 지난 회차 수를 돌려주고, 런처를 상대 경로로 친 갈래에서 그것이 0이면 "양성 대조 없음"을 찍고 1로 끝난다. 절대 경로 갈래는 옛 판도 침묵하는 것이 기대라 문턱을 걸지 않는다. `communicate`가 넘으면 자기 핸들로 끄고 다시 던진다. 이 탐침은 다시 돌리지 않았다.
+- 탐침 Minor 4: `CONTROLS`(필드 없음 GET, `-f` POST, `-X POST` POST)와 어긋나면 측정 아님으로 센다. 다시 돌려 측정 6/6이었고(gh 2.98.0) `-X=POST`는 POST였다. README 행에 그 결과를 더했다.
+- 탐침 Minor 5: `tools/run_checks.py`의 `pyright_checks` 독스트링에 둘 다 빼려면 `SKIP=pyright,pyright-linux`라고 적었다.
+- 탐침 보류: README와 이 일지는 "셋째 회차"라 적어, `probe.py` 머리를 "셋째 회차가"로 맞췄다.
+- 문서 보류: 138행에 그때의 `--move`가 같은 날의 번호 07을 내 그 이름으로 옮겼다고 덧붙였다.
+- 문서 오탐 2는 셀프 리뷰 표준 Minor 1과 같은 판정으로 두었다.
+- 미확인 둘을 이었다. `git show 55ba299:./.claude/skills/code-review/SKILL.md`에 `1단계 4의 번호 받기`가 한 번 있다(밀 주장 13이 맞다). 카나리아 다섯은 `tools/canary.py --preflight`로 모두 통과했다. 대조군을 커밋으로 꺼내는 셋(`--control-commit 6bd52b06`)과, 같은 체크아웃에서 `paths` 밖 파일을 읽는 둘(인자 없이)이다. 처음에 뒤의 둘에도 `--control-commit`을 줘 옛 사본의 원천에 카나리아가 있다고 실패했고, 명세 머리의 돌리는 법대로 인자 없이 다시 돌렸다.
+
+다시 돌린 명령: 바꾼 파이썬 파일의 `uv run ruff check`(통과)와 `ruff format --check`(77 files already formatted), 바꾼 파일의 `uv run pyright`(`probe_kit.py`를 고친 뒤 오류 0), `uv run pytest -q`로 바꾼 시험 파일 일곱 367 passed, `tools/mutate.py --check`로 바뀐 훅·도구를 겨누는 변이 표 여덟이 모두 원문이 한 번씩 있다.
+
+커밋 직전의 번호 대조: origin/main이 `b2f5c61`로 움직여, 이 일지(그때 07)가 main에 든 `2026-10-22-08`보다 이름순으로 앞이라고 1로 끝났다. `--move`로 `2026-10-22-11`로 옮겼고, 도구가 이 일지의 기록 문장 둘(그때 07로 옮겼다는 138행과 그 반영 줄)의 번호까지 바꿔 손으로 되돌렸다. 대기열 번호 420~425는 겹침이 없다. `git diff --name-only HEAD...origin/main`의 열넷 가운데 이 브랜치와 함께 고친 것은 탐침 README와 대기열 둘이고, 나머지(번호 도구와 harness 티켓 번호, 모델 재실행 설계)에서 이 브랜치가 따를 새 규약은 보지 못했다.
+
+첫 커밋 시도는 pre-commit의 ruff check 하나로 막혔다(`too-many-statements-in-try-clause`, `tools/probe_kit.py`의 `_pump`가 8 > 5). 앞의 ruff check는 pyright 오류를 고치며 `_pump`를 다시 쓰기 전에 친 것이었다. 다른 검사는 모두 Passed였다(pytest 349.6초, web-verify 227.5초, 헌법 판만 Skipped). 읽는 일을 `_pump_text`·`_pump_plain`으로 나눠 `try` 절을 줄였고, 그 else 갈래에 남은 Unknown(pyright)도 위의 꼴로 없앴다. ruff check·format, pyright(윈도·리눅스 플랫폼), `tests/tools/test_probe_kit.py` 15 passed를 다시 봤다.
 
 ## 회고
 

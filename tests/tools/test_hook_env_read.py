@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pytest
@@ -340,6 +341,52 @@ def test_못_보는_것_빼는_glob_의_중괄호는_펼치지_않아_막는다(
     """거짓 양성이다. 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호는 펼치지 않는다. 따옴표가 있으면
     grep 은 중괄호를 글자로 읽어 `.env` 를 빼지 않으므로, 펼쳐서 뺀다고 보면 문이 열린다."""
     assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
+        "cat .en[!{}]",
+        "cat .en[u-{}]",
+        "cat .e[a-{][!}]",
+        "grep -r --include=.en[u-{}] KEY .",
+        "rg --hidden --no-ignore -g .en[u-{}] KEY .",
+        "rg -uu -g '.en[!{}]' KEY",
+    ],
+)
+def test_대괄호_안의_중괄호는_펼치기_전의_glob_으로도_본다(명령: str) -> None:
+    """bash·GNU grep·ripgrep 은 대괄호 안의 `{`·`}` 를 글자로 읽어 `.en[!{}]` 가 `.env` 에 맞는다.
+    펼친 갈래만 본 판은 `[!{}]` 를 `[!]` 로 깨뜨려 지나보냈다(옛 판은 막았다. PR 직전 보안 리뷰가
+    판정 함수와 가짜 숨김 파일로 봤다)."""
+    assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize("glob", [".en[!{}]", "**/.en[!{}]", ".en[u-{}]", ".e[a-{][!}]"])
+def test_Grep_도구의_대괄호_안의_중괄호도_막는다(glob: str) -> None:
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
+
+
+@pytest.mark.parametrize(
+    "명령", ["cat .en[^x]", "rg -uu -g '.en[^x]' KEY", "grep -rn --exclude=.en[^v] KEY ."]
+)
+def test_대괄호의_캐럿은_느낌표처럼_부정으로_읽는다(명령: str) -> None:
+    """bash·GNU grep·ripgrep 은 `[^x]` 를 `[!x]` 처럼 부정으로 읽고 fnmatch 는 `^` 를 글자로 읽는다.
+    그래서 `.en[^x]` 를 지나보냈고, `--exclude=.en[^v]` 는 `.env` 를 빼지 않는데 뺀다고 봤다(이 PR
+    전부터 있던 구멍, PR 직전 보안 리뷰)."""
+    assert deny_reason_for_command(명령) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", ".en[^x]") is not None
+
+
+def test_못_보는_것_갈래가_상한을_넘는_glob_은_닿는지_보지_않고_막는다() -> None:
+    """거짓 양성이다. 갈래는 묶음 수에 지수로 늘어, 다 펼쳐 판정하면 묶음 열여섯에 7초가 걸렸고
+    훅의 시간 제한(20초)을 넘으면 막지 않고 지나간다(fail-open, PR 직전 리뷰가 쟀다). 그래서 갈래가
+    256을 넘으면 어느 갈래도 `.env` 에 닿지 않아도 막는다. 256 까지는 판정한다."""
+    started = time.monotonic()
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 9) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 40) is not None
+    assert deny_reason_for_command("cat " + "{a,b}" * 40) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 8) is None
+    assert time.monotonic() - started < 20
 
 
 def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> None:

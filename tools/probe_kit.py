@@ -29,8 +29,10 @@ current:` 로 감싸고, 재려는 상황이 났다는 표지를 본 뒤 `curren
 
 from __future__ import annotations
 
+import io
 import queue
 import threading
+import time
 from collections import Counter
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -112,7 +114,10 @@ class LineReader:
     끊지 못해(`.claude/rules/tools.md` 의 시간 제한 항목) daemon 스레드가 읽어 큐에 넣는다.
     스레드는 EOF 에서 끝 표시(None)를 넣고, 그 표시를 꺼낸 읽기는 `ended` 로 기억해 뒤의 읽기와
     배출이 같은 표시를 다시 기다리며 막히지 않는다. 바이트 흐름은 UTF-8 로 풀고 풀지 못한 바이트는
-    바꿔 넣는다."""
+    바꿔 넣는다. 글 흐름(`text=True`)은 그 밑의 바이트 흐름을 그 흐름의 인코딩으로 같은 방식으로
+    풀고 `\\r\\n` 을 `\\n` 으로 바꾼다. 글 흐름의 `readline` 은 덩어리째 풀다 `UnicodeDecodeError`
+    를 던져, 앞 줄까지 잃고 읽기가 멈춰 자식이 파이프가 차서 멈췄다(PR 직전 리뷰가 재현). 그래서
+    넘기기 전에 그 흐름을 읽지 않는다(이미 푼 글은 바이트 흐름에 없다)."""
 
     def __init__(self, stream: IO[bytes] | IO[str]) -> None:
         self._lines: queue.Queue[str | None] = queue.Queue()
@@ -120,14 +125,30 @@ class LineReader:
         threading.Thread(target=self._pump, args=(stream,), daemon=True).start()
 
     def _pump(self, stream: IO[bytes] | IO[str]) -> None:
+        # `TextIOWrapper` 는 제네릭이라 좁혀도 `buffer` 의 형식을 모른다. 그래서 흐름은 좁히지 않고
+        # 밑의 흐름과 인코딩을 이름으로 꺼내 구체 형식으로 좁힌다(선례
+        # `src/agent_os/channel/cli/interrupt.py` 의 `_raw_stderr`).
+        buffer = getattr(stream, "buffer", None)
+        encoding = getattr(stream, "encoding", None)
         try:
-            while raw := stream.readline():
-                text = raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace")
-                self._lines.put(text)
+            if isinstance(buffer, (io.BufferedIOBase, io.RawIOBase)) and isinstance(encoding, str):
+                self._pump_text(buffer, encoding)
+            else:
+                self._pump_plain(stream)
         except (OSError, ValueError):  # 프로브가 흐름을 먼저 닫았다
             pass
         finally:
             self._lines.put(None)
+
+    def _pump_text(self, buffer: io.BufferedIOBase | io.RawIOBase, encoding: str) -> None:
+        """글 흐름 밑의 바이트 흐름을 줄마다 그 인코딩으로 풀고 `\\r\\n` 을 `\\n` 으로 바꾼다."""
+        while raw := buffer.readline():
+            self._lines.put(raw.decode(encoding, errors="replace").replace("\r\n", "\n"))
+
+    def _pump_plain(self, stream: IO[bytes] | IO[str]) -> None:
+        """바이트 흐름은 UTF-8 로 풀고, 밑의 바이트 흐름을 꺼내지 못한 글 흐름은 그대로 읽는다."""
+        while raw := stream.readline():
+            self._lines.put(raw if isinstance(raw, str) else raw.decode("utf-8", errors="replace"))
 
     @property
     def ended(self) -> bool:
@@ -147,9 +168,11 @@ class LineReader:
         return line
 
     def drain(self, timeout: float) -> list[str]:
-        """남은 줄을 EOF 나 줄 사이의 제한 시간까지 모은다. 하위 프로세스가 띄운 손자가 출력을
-        쥐고 남으면 EOF 가 오지 않으므로 제한 시간으로 끝난다."""
+        """남은 줄을 EOF 나 제한 시간까지 모은다. 제한 시간은 배출 전체의 마감이다. 하위 프로세스가
+        띄운 손자가 출력을 쥐고 남으면 EOF 가 오지 않고, 줄 사이에만 걸면 계속 쓰는 자식 앞에서
+        돌아오지 않는다(PR 직전 리뷰가 재현)."""
+        deadline = time.monotonic() + timeout
         lines: list[str] = []
-        while (line := self.readline(timeout)) is not None:
+        while (line := self.readline(deadline - time.monotonic())) is not None:
             lines.append(line)
         return lines

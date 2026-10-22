@@ -140,6 +140,8 @@ def test_gh_api_로_pulls_에_POST_하면_PR_을_여는_명령이다() -> None:
     for command in gh_api_cases.OPENS:
         assert action_for("Bash", command) == "create", command
     assert action_for("PowerShell", gh_api_cases.OPENS[0]) == "create"
+    for command in gh_api_cases.POWERSHELL_OPENS:
+        assert action_for("PowerShell", command) == "create", command
 
 
 def test_gh_api_의_다른_메서드와_엔드포인트와_데이터는_계기가_아니다() -> None:

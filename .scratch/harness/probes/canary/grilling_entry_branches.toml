@@ -3,7 +3,7 @@
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(6bd52b06)이다. 옛 판에는 카나리아가 없다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 `--control-commit 6bd52b06` 은 "없음" 둘, 실험군은 `6bd52b06` 위의
-#   커밋 전 변경, 일지 2026-10-22-07).
+#   커밋 전 변경, 일지 2026-10-22-11).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py --control-commit 6bd52b06 .scratch/harness/probes/canary/grilling_entry_branches.toml <출력 디렉터리>
 kind = "skill"

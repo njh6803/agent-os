@@ -8,9 +8,11 @@
 보내려던 요청 줄(`> <메서드> /api/v3/repos/o/r/pulls`)을 찍는다. 밖으로는 아무것도 나가지 않는다.
 
 갈래. 필드 없음(GET 이어야 한다, 음성 대조), `-f`(POST, 양성 대조), `-X POST`(POST, 양성 대조),
-`--input` 만, `--input` 과 `-X GET`.
+`--input` 만, `--input` 과 `-X GET`, `-X=POST`(짧은 옵션에 `=` 를 붙인 꼴, PR 직전 리뷰).
 
-표지. 출력에 그 요청 줄이 있다. 없으면 그 회차는 측정이 아니다(`tools/probe_kit.py` 의 `Rounds`).
+표지. 출력에 그 요청 줄이 있고, 대조 갈래면 그 메서드가 기대(`CONTROLS`)와 같다. 아니면 그 회차는
+측정이 아니다(`tools/probe_kit.py` 의 `Rounds`). 대조가 어긋나면 gh 판이나 디버그 기록의 꼴이 바뀐
+것이라 다른 갈래의 값도 믿지 않는다.
 
 쓰임: 저장소 루트에서 `PYTHONUTF8=1 uv run python .scratch/harness/probes/gh_api_method.py`.
 """
@@ -31,6 +33,7 @@ from tools.probe_kit import Rounds  # noqa: E402
 
 ENDPOINT = "repos/o/r/pulls"
 REQUEST_LINE = re.compile(r"^> ([A-Z]+) /api/v3/repos/o/r/pulls\b", re.MULTILINE)
+CONTROLS = {"필드 없음": "GET", "-f": "POST", "-X POST": "POST"}
 
 
 def main() -> int:
@@ -51,6 +54,7 @@ def main() -> int:
             "-X POST": ["-X", "POST"],
             "--input 만": ["--input", str(body)],
             "--input 과 -X GET": ["--input", str(body), "-X", "GET"],
+            "-X=POST": ["-X=POST"],
         }
         for label, options in branches.items():
             command = ["gh", "api", "--hostname", "localhost", *options, ENDPOINT]
@@ -66,8 +70,11 @@ def main() -> int:
                     check=False,
                 )
                 found = REQUEST_LINE.search(done.stdout + done.stderr)
+                expected = CONTROLS.get(label)
                 if found is None:
                     slot.mark(measured=False, result=f"요청 줄 없음(종료 {done.returncode})")
+                elif expected is not None and found.group(1) != expected:
+                    slot.mark(measured=False, result=f"대조 어긋남: {found.group(1)} ≠ {expected}")
                 else:
                     slot.mark(measured=True, result=f"{label} → {found.group(1)}")
     print(rounds.summary())

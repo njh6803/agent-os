@@ -13,7 +13,9 @@
 
 표지. 훑기가 그 회차의 꼬리표가 든 git 프로세스를 한 번이라도 봤고 커밋이 0 으로 끝났다. 아니면 그
 회차는 측정이 아니다(`tools/probe_kit.py` 의 `Rounds`). 옛 판이 거짓 알림을 낸 회차가 지금 판의
-고친 길을 지난 회차다(`.claude/rules/probes.md` 첫 항목, 대기열 367).
+고친 길을 지난 회차다(`.claude/rules/probes.md` 첫 항목, 대기열 367). 런처를 상대 경로로 친 갈래에서
+그런 회차가 하나도 없으면 양성 대조가 서지 않은 것이라 1 로 끝난다(PR 직전 리뷰). 절대 경로 갈래는
+옛 판도 침묵하는 것이 기대라 문턱을 걸지 않는다.
 
 거짓 알림의 순간. 옛 판이 센 프로세스가 띄운 프로세스(pid 가 같다)면, 그 회차의 앞선 훑기에서
 그것을 부모로 둔 git 을 봤는지로 "자식 전"과 "자식 뒤"를 가른다. 띄운 프로세스의 자식이면 "자식
@@ -171,7 +173,8 @@ def stop_load(load: list[subprocess.Popen[bytes]]) -> None:
 
 def run_branch(
     name: str, executable: Path, target: str, repo: Path, runs: int, *, loaded: bool
-) -> tuple[int, str]:
+) -> tuple[int, str, int]:
+    """그 갈래의 종료 코드, 보고, 옛 판이 거짓 알림을 낸 회차(고친 길을 지난 회차)의 수."""
     env = clean_env()
     scanner = Scanner(str(ROOT))
     thread = threading.Thread(target=scanner.run, daemon=True)
@@ -192,7 +195,13 @@ def run_branch(
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.PIPE,
                 )
-                _, stderr = process.communicate(timeout=120)
+                try:
+                    _, stderr = process.communicate(timeout=120)
+                except subprocess.TimeoutExpired:
+                    # 남긴 git 이 index.lock 을 쥐면 뒤 회차가 모두 실패한다. 자기 핸들로 끈다.
+                    process.kill()
+                    process.communicate(timeout=30)
+                    raise
                 time.sleep(0.05)  # 끝난 뒤의 훑기 하나까지 기다린다
                 scans = scanner.scans.pop(tag, [])
                 if process.returncode != 0:
@@ -234,7 +243,7 @@ def run_branch(
     ]
     if scanner.errors:
         lines.append(f"훑기 오류 {len(scanner.errors)}건, 첫 것: {scanner.errors[0]}")
-    return rounds.exit_code() | bool(scanner.errors), "\n".join(lines)
+    return rounds.exit_code() | bool(scanner.errors), "\n".join(lines), fixed_path_rounds
 
 
 def main(argv: list[str]) -> int:
@@ -254,9 +263,14 @@ def main(argv: list[str]) -> int:
             for target_name, target in targets.items():
                 for loaded in (False, True):
                     name = f"{executable_name} {target_name} {'부하' if loaded else '맨'}"
-                    code, report = run_branch(name, executable, target, repo, runs, loaded=loaded)
+                    code, report, fixed = run_branch(
+                        name, executable, target, repo, runs, loaded=loaded
+                    )
                     print(report, flush=True)
                     exit_code |= code
+                    if executable_name.startswith("런처") and target_name == "상대" and not fixed:
+                        print(f"{name}: 양성 대조 없음(옛 판의 거짓 알림 0)", flush=True)
+                        exit_code |= 1
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     return exit_code
