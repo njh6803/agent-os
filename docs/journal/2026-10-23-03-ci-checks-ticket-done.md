@@ -1,4 +1,4 @@
-# 2026-10-23 (01) CI가 PR마다 커밋 검사를 하고 가리키는 티켓이 done인지 본다 (ticket-for-every-pr 04)
+# 2026-10-23 (03) CI가 PR마다 커밋 검사를 하고 가리키는 티켓이 done인지 본다 (ticket-for-every-pr 04)
 
 ## 구현 (첫 세션)
 
@@ -54,8 +54,8 @@
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-01-ci-checks-ticket-done.md의 "구현 (첫 세션)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-23-01-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-23-03-ci-checks-ticket-done.md의 "구현 (첫 세션)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-23-03-ci-checks-ticket-done.md
 확인할 선행 조건: 러너에 uuidgen이 있는지와 ticket 잡의 timeout-minutes 10(어림)은 첫 CI 실행에서 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -119,8 +119,8 @@ open-session을 부른다 2026-10-22T12:41:16Z
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-01-ci-checks-ticket-done.md의 "구현 (첫 세션)"과 "구현 (둘째 세션)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 f7e30606까지 했고 아직 푸시하지 않았다(열린 PR 없음). 남은 단계는 차례로 origin/main을 합치기, PR 직전 리뷰(CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)와 반영, 반영을 커밋한 뒤 변이 전체 실행 한 번, 티켓의 Status를 in-progress로 둔 채 draft PR을 열어 ticket 잡과 verify의 빨강 보기, gh run rerun --failed, 잡이 찍은 base 값과 병합 커밋의 첫 부모 견주기, done으로 바꿔 푸시해 초록 보기, ci_job_durations.py에 브랜치를 주어 timeout-minutes 고치기, ready와 봇 회차, 병합. 이 티켓만은 PR을 열기 전에 done으로 바꾸지 않는다(티켓의 검증 절). 일지 docs/journal/2026-10-23-01-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-23-03-ci-checks-ticket-done.md의 "구현 (첫 세션)"과 "구현 (둘째 세션)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 f7e30606까지 했고 아직 푸시하지 않았다(열린 PR 없음). 남은 단계는 차례로 origin/main을 합치기, PR 직전 리뷰(CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)와 반영, 반영을 커밋한 뒤 변이 전체 실행 한 번, 티켓의 Status를 in-progress로 둔 채 draft PR을 열어 ticket 잡과 verify의 빨강 보기, gh run rerun --failed, 잡이 찍은 base 값과 병합 커밋의 첫 부모 견주기, done으로 바꿔 푸시해 초록 보기, ci_job_durations.py에 브랜치를 주어 timeout-minutes 고치기, ready와 봇 회차, 병합. 이 티켓만은 PR을 열기 전에 done으로 바꾸지 않는다(티켓의 검증 절). 일지 docs/journal/2026-10-23-03-ci-checks-ticket-done.md
 확인할 선행 조건: 러너에 uuidgen이 있는지(없으면 스텝이 127로 실패한다), ticket 잡의 timeout-minutes 10(어림), 잡이 찍은 base 커밋 값이 병합 커밋의 첫 부모와 같은지(PR을 연 뒤 main이 움직였으면 다음 푸시의 실행에서도 견주고, 다르면 티켓대로 사람에게 묻는다)는 CI 실행에서 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -171,8 +171,8 @@ PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 303,456 토큰, 경
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-01-ci-checks-ticket-done.md의 "구현 (둘째 세션)"과 "구현 (셋째 세션)" 절
-이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. draft PR #355를 티켓 Status in-progress로 열었고, PR 직전 리뷰의 반영과 변이 전체 실행은 끝났다. 이 티켓만의 남은 차례는 이렇다. 첫 CI 실행에서 ticket 잡과 verify가 빨간지(막는 글이 티켓 경로, in-progress, done으로 바꿔 다시 푸시하라는 할 일을 드는지) 보고, gh run rerun --failed로 다시 돌린 시도에서도 본다. 두 시도에서 잡이 찍은 "CI 입력" 줄의 base 커밋이 그 시도가 체크아웃한 병합 커밋의 첫 부모와 같은지 견주고, 다르면 일지에 적고 사람에게 묻는다. 실행 번호와 결과를 일지에 적는다. 그 뒤 티켓 Status를 done으로 바꿔 커밋·푸시해 초록을 보고, ci_job_durations.py에 이 브랜치를 주어 ticket 잡의 timeout-minutes를 고친다. PR 본문의 남긴 위험 첫 줄과 verify 판정 체크박스를 결과로 고치고 gh pr ready, 그 뒤 @coderabbitai review와 봇 회차, 병합이다. ready 전에 done이다. 일지 "다음"에 CI의 전환 갈래는 병합 뒤 규약 전에 딴 열린 PR이 다음에 푸시될 때 처음 돈다는 것을 적는다(티켓의 실제 실행 절). 셋째 세션의 일지 절은 커밋하지 않은 채 넘겼다. 일지 docs/journal/2026-10-23-01-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-23-03-ci-checks-ticket-done.md의 "구현 (둘째 세션)"과 "구현 (셋째 세션)" 절
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. draft PR #355를 티켓 Status in-progress로 열었고, PR 직전 리뷰의 반영과 변이 전체 실행은 끝났다. 이 티켓만의 남은 차례는 이렇다. 첫 CI 실행에서 ticket 잡과 verify가 빨간지(막는 글이 티켓 경로, in-progress, done으로 바꿔 다시 푸시하라는 할 일을 드는지) 보고, gh run rerun --failed로 다시 돌린 시도에서도 본다. 두 시도에서 잡이 찍은 "CI 입력" 줄의 base 커밋이 그 시도가 체크아웃한 병합 커밋의 첫 부모와 같은지 견주고, 다르면 일지에 적고 사람에게 묻는다. 실행 번호와 결과를 일지에 적는다. 그 뒤 티켓 Status를 done으로 바꿔 커밋·푸시해 초록을 보고, ci_job_durations.py에 이 브랜치를 주어 ticket 잡의 timeout-minutes를 고친다. PR 본문의 남긴 위험 첫 줄과 verify 판정 체크박스를 결과로 고치고 gh pr ready, 그 뒤 @coderabbitai review와 봇 회차, 병합이다. ready 전에 done이다. 일지 "다음"에 CI의 전환 갈래는 병합 뒤 규약 전에 딴 열린 PR이 다음에 푸시될 때 처음 돈다는 것을 적는다(티켓의 실제 실행 절). 셋째 세션의 일지 절은 커밋하지 않은 채 넘겼다. 일지 docs/journal/2026-10-23-03-ci-checks-ticket-done.md
 확인할 선행 조건: 러너에 uuidgen이 있는지(없으면 ticket 스텝이 127로 실패한다)와, 잡이 찍은 base 커밋 값과 병합 커밋 첫 부모의 견줌(PR을 연 뒤 main이 움직였으면 다음 푸시의 실행에서도 견준다)은 CI 실행에서 본다. 열린 PR #354(05-first-turn-ticket-notice)가 KICKOFF.md와 .scratch/ticket-for-every-pr/probes/README.md를 함께 고쳐, 나중에 병합하는 쪽에서 충돌할 수 있다
 이번 요청 범위: PR과 병합까지
 ```
@@ -233,8 +233,8 @@ open-session을 부른다 2026-10-22T14:21:26Z
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-01-ci-checks-ticket-done.md의 "PR 반영·병합 (넷째 세션)" 절
-이어받을 상태: 인계: 커밋 뒤. origin/main(19bbfa0)을 합친 병합 커밋과 timeout 커밋 02c876ef까지 했고 아직 푸시하지 않았다(PR #355는 draft, 티켓 Status는 done). 남은 차례는 이렇다. 푸시하고 tools/wait_ci.py로 기다린 뒤 ticket 잡 로그의 "CI 입력" 줄에서 base 커밋이 b104f8fa(PR을 연 때의 main)에 머무는지, 머리와 main의 merge-base를 따라 19bbfa06(이 사이 main을 또 합쳤으면 그 main)이 되는지 본다. done 푸시의 실행 39800541754에서 base b104f8fa와 병합 커밋의 첫 부모 19bbfa06이 이미 갈렸으므로, 티켓의 실제 실행 절대로 그 결과와 함께 바뀐 파일의 기준을 병합 커밋의 첫 부모로 바꿀지 사람에게 묻는다(두 해석과 거짓 양성 장면은 일지). 바꾸기로 하면 check_ticket.py와 시험·변이 표·독스트링을 고치는 일이 이 PR에 더해진다. 답을 받은 뒤 티켓의 실제 실행 첫 체크박스를 채우고, PR 본문(남긴 위험의 base 줄과 timeout 줄, 셀프 리뷰 줄의 일지 경로 -22를 -28로, verify 판정 체크박스)을 결과로 고치고 gh pr ready, 그 뒤 @coderabbitai review와 봇 회차, 병합이다. 일지 "다음"에 CI의 전환 갈래는 병합 뒤 규약 전에 딴 열린 PR이 다음에 푸시될 때 처음 돈다는 것을 적고 티켓의 실제 실행 둘째 체크박스를 채운다. 넷째 세션의 일지 끝(인용 고침과 이 인계 절)은 커밋하지 않은 채 넘겼다. 일지 docs/journal/2026-10-23-01-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-23-03-ci-checks-ticket-done.md의 "PR 반영·병합 (넷째 세션)" 절
+이어받을 상태: 인계: 커밋 뒤. origin/main(19bbfa0)을 합친 병합 커밋과 timeout 커밋 02c876ef까지 했고 아직 푸시하지 않았다(PR #355는 draft, 티켓 Status는 done). 남은 차례는 이렇다. 푸시하고 tools/wait_ci.py로 기다린 뒤 ticket 잡 로그의 "CI 입력" 줄에서 base 커밋이 b104f8fa(PR을 연 때의 main)에 머무는지, 머리와 main의 merge-base를 따라 19bbfa06(이 사이 main을 또 합쳤으면 그 main)이 되는지 본다. done 푸시의 실행 39800541754에서 base b104f8fa와 병합 커밋의 첫 부모 19bbfa06이 이미 갈렸으므로, 티켓의 실제 실행 절대로 그 결과와 함께 바뀐 파일의 기준을 병합 커밋의 첫 부모로 바꿀지 사람에게 묻는다(두 해석과 거짓 양성 장면은 일지). 바꾸기로 하면 check_ticket.py와 시험·변이 표·독스트링을 고치는 일이 이 PR에 더해진다. 답을 받은 뒤 티켓의 실제 실행 첫 체크박스를 채우고, PR 본문(남긴 위험의 base 줄과 timeout 줄, 셀프 리뷰 줄의 일지 경로 -22를 -28로, verify 판정 체크박스)을 결과로 고치고 gh pr ready, 그 뒤 @coderabbitai review와 봇 회차, 병합이다. 일지 "다음"에 CI의 전환 갈래는 병합 뒤 규약 전에 딴 열린 PR이 다음에 푸시될 때 처음 돈다는 것을 적고 티켓의 실제 실행 둘째 체크박스를 채운다. 넷째 세션의 일지 끝(인용 고침과 이 인계 절)은 커밋하지 않은 채 넘겼다. 일지 docs/journal/2026-10-23-03-ci-checks-ticket-done.md
 확인할 선행 조건: 합친 머리의 실행에서 base 값이 어느 쪽으로 나오는지는 아직 재지 않았다. 열린 PR #354(05-first-turn-ticket-notice)가 KICKOFF.md와 .scratch/ticket-for-every-pr/probes/README.md를 함께 고쳐, 나중에 병합하는 쪽에서 충돌할 수 있다
 이번 요청 범위: PR과 병합까지
 ```
@@ -283,7 +283,7 @@ open-session을 부른다 2026-10-22T15:23:32Z
 ### 봇 첫 회차와 main 합치기
 
 - `wait_ci.py`가 1(`충돌`)로 끝났다. 그사이 PR #354(티켓 05)가 `ebaed667`로 병합되었다. CodeRabbit은 `Review rate limited`(무료 OSS 한도, 리뷰 없음)라 이 PR의 회차로 세지 않는다. claude-review는 성공했고 이 PR에 낸 첫 리뷰라 첫 회차다.
-- origin/main(`ebaed667`)을 합쳤다. `KICKOFF.md`와 대기열은 자동으로 합쳐졌고, `.scratch/ticket-for-every-pr/probes/README.md`는 표의 한 자리에서 충돌했다. 이 브랜치가 넓힌 `check_ticket_mutations.toml` 행을 남기고 main이 그 아래 더한 `first_turn_time.py`·`prompt_directive_mutations.toml` 행 둘을 이어 붙였다(스크래치 스크립트. 그 스크립트가 줄 끝을 CRLF로 써서 LF로 되돌렸고, main과의 차이는 그 행 하나다). main에 일지 `2026-10-22-29`가 들어와 `tools/sibling_overlap.py`가 이 일지를 `2026-10-23-01`로 옮기라고 해 `--move`로 옮겼다. 옛 번호가 남은 곳은 넷째 세션의 지시문을 옮긴 인용 한 줄뿐이다.
+- origin/main(`ebaed667`)을 합쳤다. `KICKOFF.md`와 대기열은 자동으로 합쳐졌고, `.scratch/ticket-for-every-pr/probes/README.md`는 표의 한 자리에서 충돌했다. 이 브랜치가 넓힌 `check_ticket_mutations.toml` 행을 남기고 main이 그 아래 더한 `first_turn_time.py`·`prompt_directive_mutations.toml` 행 둘을 이어 붙였다(스크래치 스크립트. 그 스크립트가 줄 끝을 CRLF로 써서 LF로 되돌렸고, main과의 차이는 그 행 하나다). main에 일지 `2026-10-22-29`가 들어와 `tools/sibling_overlap.py`가 이 일지를 `2026-10-23-01`로 옮기라고 해 `--move`로 옮겼다(병합 직전에 다시 `-03`으로 옮겼다, 아래 "병합 직전의 main 합치기"). 옛 번호가 남은 곳은 넷째 세션의 지시문을 옮긴 인용 한 줄뿐이다.
 - claude-review 첫 회차의 지적 셋.
   - Minor(`main()`이 `--ci` 불리언으로 같은 갈래를 두 번 고른다): 고쳤다. PR 값을 받고 입력 줄을 찍고 판정하는 일을 `_run_ci`로 모아 `main`은 `ci`를 한 번만 본다. 동작은 같다. `tests/tools/test_check_ticket.py` 69 passed, ruff·pyright 0, 변이 표 `--check`가 원문 16 그대로다. 이 반영 커밋의 셀프 리뷰는 앞 세션들의 PR 반영 커밋처럼 `/code-review`를 다시 돌리지 않고 다음 푸시의 claude-review 회차에 맡긴다.
   - Minor(ADR 0037에 CI 판정의 이력이 없다): ADR을 고치지 않는다. ADR 0037의 못 보는 것(68행)이 "CI에서도 볼지는 명세가 정한다"로 그 결정을 명세에 맡겼고, 명세의 "CI" 절과 그 검토 주석이 정했다. 결정이 바뀐 것이 아니라 맡긴 것을 채운 것이다. 이 근거를 PR 본문의 계약 영향에 적었다.
@@ -295,6 +295,12 @@ open-session을 부른다 2026-10-22T15:23:32Z
 - claude-review 둘째 회차는 Critical·Major 없이 Minor 하나와 Nit 둘이라 고치지 않고 보류 이유를 PR 코멘트에 남겼다(회차 세기). Minor는 `_run_ci`가 입력 줄을 찍는 명령과 `Verdict`를 돌려주는 질의를 함께 한다는 CQS였다. 첫 회차가 `main`의 두 번 고르기를 걷으라고 해 생긴 함수이고, 출력은 판정 전에 찍어야 판정이 git 실패로 끝나도 남는다. Nit 둘(`_out`·`_fields`의 실패 모양 되풀이, `inputs_line`의 이름)은 이 PR이 만든 모양이 아니거나 이 파일의 관례와 맞다고 리뷰가 적었다.
 - CodeRabbit은 앞 머리에서 한도로 리뷰가 없어, 이 머리의 리뷰가 첫 회차다. 지적 하나는 Major(보안)였다. `ticket` 잡이 PR의 병합 커밋에 든 `tools/check_ticket.py`를 돌리므로, PR이 그 파일을 늘 0으로 끝나게 고치면 잡과 `verify`가 지난다는 것이고, 검사기를 신뢰된 고정 ref에서 돌리라고 했다. 코드는 고치지 않았다. 명세의 "CI"가 검사 도구를 그 체크아웃에서 돌리기로 정했고(규약 전에 딴 PR의 머리에는 도구가 없다), 이 잡이 막는 것은 세션의 실수다. 일부러 하는 우회는 이 도구만의 구멍이 아니다. python 잡도 PR의 시험을 돌리고 PR이 워크플로를 고칠 수도 있으며, 그 변경은 PR 리뷰가 본다. 잡은 읽기 권한뿐이라 우회로 얻는 것은 초록 하나다. base 쪽 도구를 돌리면 이 도구를 고친 PR(이 PR처럼)이 옛 판으로 판정받는다. 그 판단(막는 대상과 막지 않는 길)을 `ci.yml`의 `ticket` 잡 주석에 적었다. `.claude/rules/tools.md`가 막는 훅에 요구하는 "실수로 내는 길인지, 일부러 하는 우회까지인지"를 이 잡에도 적은 것이다.
 - 이 반영의 첫 커밋 시도는 pre-commit pytest가 막았다. `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 `_시각`에서 `cancelled` 파일을 빈 채로 읽어 `ValueError`로 빨갰다(1 failed, 4344 passed. pytest 408.0초로 앞 커밋들의 270초대보다 느렸다). 이 커밋이 건드리지 않은 시험이고, 부하에서 빨개지는 시간 시험의 새 사례다. 대기열 306을 닫은 결정(ADR 0036)대로 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+- `2c1fdc5a`(위 반영과 이 일지의 회고·다음)를 푸시하고 `@coderabbitai review`를 남겼다. 검사는 모두 초록이었다. claude-review 셋째 회차는 Critical·Major 없이 둘째 회차와 같은 Minor(`_run_ci`의 CQS)와 Nit 하나라 고치지 않았다. CodeRabbit은 시간당 한도로 `Review failed`라 회차로 세지 않았다. 이 머리는 `ci.yml` 주석과 일지만 바꿨고, 보안·버그 축의 대체는 PR 체크리스트의 PR 직전 리뷰다(`docs/constitution/operations.md` 리뷰 파이프라인). 둘을 PR 코멘트에 남겼다.
+
+### 병합 직전의 main 합치기
+
+- 병합 확인에서 `mergeStateStatus`가 `BEHIND`였다. 그사이 PR #357(model-rerun 티켓)이 `9999e83e`로 병합되었다. 겹친 파일은 대기열 하나였고 자동으로 합쳐졌다. main에 일지 `2026-10-23-02`가 들어와 이 일지가 이름순으로 그 앞에 서므로 `tools/sibling_overlap.py --move`로 `2026-10-23-03`으로 옮겼다. `--move`가 앞 문단 "봇 첫 회차와 main 합치기"에 적힌 그때의 번호(`-01`)까지 `-03`으로 바꿔, 그 자리만 손으로 `-01`로 되돌렸다.
+- PR 본문의 변이 줄이 "`62fc35f8` 뒤 `check_ticket.py`와 시험은 바뀌지 않았다"고 적었는데, `7b6e41a0`의 `_run_ci` 반영이 그 파일을 고쳤다. 그 반영 뒤에는 `--check`(원문 16 그대로)만 봤으므로, 변이 표 전체를 다시 돌렸다. `변이 16 모두 기대대로`였고 작업 트리는 되돌아왔다. PR 본문의 그 줄을 이 결과로 고쳤다.
 
 ## 회고
 
