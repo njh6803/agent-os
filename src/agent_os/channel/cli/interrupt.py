@@ -24,8 +24,10 @@ in-process 호출이 모두 주 스레드다. serve 는 이것을 쓰지 않는�
 **두 번째는 표준 에러에 다른 한 줄을 쓰고 정리 없이 곧바로 끝난다.** mcp 2.3.0 의 닫기가 닫는 도중의
 둘째 네이티브 취소에서 끝나지 않아서다(`.scratch/mcp-shutdown/spec.md` 의 "CLI의 Ctrl+C"). 곧바로
 끝낸 뒤 남은 MCP 서버는 윈도우에서는 이 프로세스가 끝나며 닫힌 Job Object 가 함께 거두고, POSIX
-에서는 남을 수 있다. 트레이스는 결말 없이 남고 쓰던 줄이 반쪽으로 남을 수 있다. JSONL 어댑터는
-끝나지 않은 마지막 줄을 커밋되지 않은 것으로 읽는다(`agent_os.adapters.jsonl` 의 모듈 독스트링).
+에서는 서버 앞의 런처가 부모(이 프로세스)가 죽은 것을 보고 서버의 프로세스 그룹째 거둔다
+(`agent_os.adapters.mcp_launcher` 의 모듈 독스트링). 트레이스는 결말 없이 남고 쓰던 줄이 반쪽으로
+남을 수 있다. JSONL 어댑터는 끝나지 않은 마지막 줄을 커밋되지 않은 것으로
+읽는다(`agent_os.adapters.jsonl` 의 모듈 독스트링).
 
 **끝나는 꼴은 처리하지 않은 KeyboardInterrupt 로 끝나는 파이썬과 같다.** POSIX 는 SIGINT 로 죽고
 (셸에서 130), 윈도우는 STATUS_CONTROL_C_EXIT(3221225786)다. 그 꼴을 보고 Ctrl+C 를 알아보는 부모
