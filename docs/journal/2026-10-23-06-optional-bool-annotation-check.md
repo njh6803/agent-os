@@ -58,3 +58,31 @@
 - 남긴 것: `endswith("반환")` 결합은 한 파일 안의 메시지 조사 하나라 판단 항목으로 둔다. `_member_kind`의 `"None"` 문자열도 같다. 어댑터의 `X | None` 표준과의 긴장은 `bool | None` 반환이 "없다"가 아니라 세 번째 답이라는 독스트링의 잘못 막는 것 항목이 답한다. 범위를 네 곳에 적은 것은 원천이 상수 하나이고 나머지는 설명이다. `>= 200`은 같은 파일의 `tool_sources() >= 50` 선례를 따른다.
 - 다시 돌린 것: 변이 `instruction_check_mutations.toml --since origin/main` 열둘 모두 기대대로(표는 마흔), `canary_mutations.toml --since origin/main` 하나 기대대로. ruff 둘 초록. 전체 검사 러너는 pytest만 빨강이었다(`test_이_저장소의_표는_전부_GFM_에서_깨지지_않는다`, 프로브 README 행에 이스케이프하지 않은 `bool | None`의 `|`가 칸을 하나 더 냈다). `\|`로 고치고 그 시험을 다시 돌려 초록이었다. 나머지 아홉 게이트(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright 둘, run-hooks, web-verify)는 초록이었다. 커밋의 pre-commit이 다섯을 다시 돈다.
 - PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): `optional_bool_annotations` 독스트링의 "합 안의 합(`Optional[bool | None]`, `Union[bool, Optional[bool]]`), 그리고 주석 전체나 갈래 하나를 문자열로 쓴 주해(`'bool | None'`, `Optional['bool']`. 앞뒤 공백은 벗긴다)", "이름 `Optional`·`Union` 이 typing 의 것인지 보지 않아, 같은 이름의 다른 것으로 쓴 주석도 잡는다", "갈래는 이름 `bool` 과 상수 None 으로만 알아봐서 `builtins.bool | None` 과 `bool | NoneType` 도 지나간다".
+- 커밋 `e572351a`. pre-commit이 모두 초록이었다(ruff 둘, 러너의 열 검사, 마크다운 표, 줄 구분, 변이 표, 따옴표, 커밋 메시지. 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`).
+
+### 인계 (커밋 뒤)
+
+커밋 직후 인계 계기가 왔다(세션 컨텍스트 210,245 토큰, 경계 `커밋 뒤`). 인계하지 않는 때 다섯에 들지 않았다(이 세션의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 다른 경계다. 곁 세션도 아니다). 이 세션의 지금 제목은 `chore/004-optional-bool-annotation-check`이고 넘기기 전에 `(인계함)`을 붙인다. 아직 푸시하지 않았고 PR도 없다. PR을 열 때 본문과 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 브리프에 위 "PR 직전 리뷰에 밀 주장"을 싣는다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/004-optional-bool-annotation-check.md. 매개변수와 반환의 주석이 `bool | None`인 자리를 AST로 잡는 검사를 더한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 423을 티켓 .scratch/harness/issues/004-optional-bool-annotation-check.md로 쓰고 한다
+브랜치: chore/004-optional-bool-annotation-check
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-06-optional-bool-annotation-check.md의 "이어받음"과 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 티켓 done까지 커밋 e572351a에 들었고 아직 푸시하지 않았다. 남은 것은 PR 직전 리뷰(operations.md 리뷰 파이프라인 2, 일지의 "PR 직전 리뷰에 밀 주장"을 브리프에), 푸시, PR, 봇 회차, 병합이다. 일지 docs/journal/2026-10-23-06-optional-bool-annotation-check.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/004-optional-bool-annotation-check (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 이미 풀렸다(`is not locked`).
+- open-session을 부른다 2026-10-22T18:24:51Z
+
+### 이어받음 (커밋 뒤)
+
+- 새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. origin/main은 그대로 `975bf04c`라 합칠 것이 없었다.
+- PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 나란히 돌렸다. `bug-perf-review`는 지적 0(위 "PR 직전 리뷰에 밀 주장" 셋을 직접 불러 맞는다고 했고, canary의 `is False`→`is _Registration.GONE`이 같은 갈래라고 했다. 저장소 전체를 훑는 데 약 3초가 더해지는 것은 Minor로 받아들였다. 2000겹 `bool|` 문자열 주해의 RecursionError는 소스의 `ast.parse`가 먼저 죽는 입력이라 오탐). `/security-review`도 취약점 없음(`_parsed`는 `ast.parse`로만 읽고 평가하지 않는다).
