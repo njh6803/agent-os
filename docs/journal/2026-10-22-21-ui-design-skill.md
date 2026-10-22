@@ -251,3 +251,59 @@ origin/main(`e62eb052`)을 충돌 없이 합쳤다. 새 `tools/check_ticket.py`�
 PR 직전 리뷰는 다시 돌리지 않는다. 이번 문장은 두 축이 명령을 쳐 본 것을 그대로 옮긴 것이고, 다음 층은 PR 봇이다.
 
 커밋 `8eb340da`(pre-commit 통과, 인용 대조 경고 하나는 그 뒤 따옴표를 떼어 고쳤다). 푸시 직전 origin/main이 `c47bedce`(PR #351)로 움직여 합쳤고(충돌 없음), `sibling_overlap.py`가 main의 최신 일지 2026-10-22-16보다 이 일지가 이름순으로 앞선다고 해 `--move`로 이 일지를 2026-10-22-21로 옮겼다. 인용을 고친 파일은 스킬, 프로브 README, 카나리아 명세 셋이고, 옛 번호의 잔존은 0이다.
+
+그 커밋(pre-commit 통과, 인용 경고 없음) 뒤 푸시하고 PR #352를 열었다. PR 체크리스트에 대체 둘(`/security-review` 지적 없음, `bug-perf-review` 세 회차)의 결과와 보류한 것을 적었다.
+
+## 인계 (넷째)
+
+이 세션은 `커밋 뒤` 계기를 두 번 받았고, 지시문이 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다. PR #352를 연 뒤 `PR 연 뒤` 계기가 왔다. 다른 경계이고, 곁 세션이 아니며(`get_session`의 `self`에 `parentSessionId`가 없다), 요청 범위가 병합까지라 넘긴다. 이 세션의 지금 제목은 `chore/002-ui-design-skill`이고 `chore/002-ui-design-skill (인계함)`으로 바꾼다.
+
+커밋하지 않은 변경은 이 일지의 이 절뿐이다. PR에는 아직 `@coderabbitai review` 코멘트가 없다. 회고 후보로 둘 것: `test_probe_kit.py`의 시간 제한 시험이 web-verify와 함께 돌 때 한 번 실패한 것, 훅 `design_slug`의 뒤 점 별칭.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/002-ui-design-skill.md. 화면 디자인 스킬 /ui-design과 디자인 폴더 계기 훅을 들인 PR #352를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다
+브랜치: chore/002-ui-design-skill
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-21-ui-design-skill.md(셀프 리뷰 (셋째)·(넷째) 절, PR 직전 리뷰 (셋째) 절, 인계 (넷째) 절)
+이어받을 상태: 인계: PR 연 뒤. PR #352를 열었고(헤드 커밋은 일지 번호를 옮긴 커밋, pre-commit 통과) 봇 회차부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 일지의 인계 (넷째) 절뿐이다. 남은 단계는 봇 회차(next-session 순서 1의 2), 반영, 병합, 일지의 "다음" 절과 회고다. 회고 후보 둘은 인계 (넷째) 절에 있다. docs/journal/2026-10-22-21-ui-design-skill.md
+확인할 선행 조건: 주 체크아웃은 main이다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 함께 고친 파일로 PR #296·#297과 워크트리 01-contrast-module·04-ci-checks-ticket-done·05-first-turn-ticket-notice·bug-perf-review-batch·mcp-shutdown-spec·measure-word-hook을 들었다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 충돌을 본다. 일지 번호는 main보다 앞서면 다시 옮긴다
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-10-22T12:46:37Z
+
+## 이어 한 세션 (넷째)
+
+지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 봇 회차를 했다. PR 헤드 `c41d4989`가 `git rev-parse HEAD`와 같았고, 첫 `@coderabbitai review`를 남긴 뒤 `tools/wait_ci.py 352`가 "모두 통과. CodeRabbit: Review completed"로 끝났다.
+
+## 봇 회차 (첫째)
+
+두 봇 모두 이 PR의 첫 리뷰라 Minor·Nit을 지적마다 판단했다.
+
+claude-review(Minor 3·Nit 2).
+- 고침: `next-session` 결정표의 "화면 디자인" 줄이 앞머리에 "`spec.md`가 없으며"를 두고 끝에 `design-system` 재탐색을 "있든 없든 이 줄"이라는 예외로 달아, 위에서부터 읽으면 예외에 닿기 전에 선행 조건에서 떨어졌다. 조건 칸을 두 갈래(첫째는 재탐색, 둘째는 명세 전의 화면)로 고쳤다. 카나리아 `next_session_ui_design_row.toml`은 시작 프롬프트 칸만 보아 기대값이 그대로다.
+- 보류: 표지 헬퍼 `marker_name`·`claim_first`의 셋째 사본(공용 모듈로 모으는 정리는 이 PR 밖), 7단계 단락의 sprawl(셀프 리뷰 넷째가 첫 옮기기 뒤로 미뤘다), `gettempdir()`를 감싼 `except OSError`(리뷰도 그 `try`가 맞다고 적었다), `.claude/rules/tools.md` 시간 줄의 길이(이 PR 밖의 정리).
+
+CodeRabbit(Minor 2, 둘 다 고침).
+- `.scratch/admin-style/design/screens-prompt.md`의 "2. UI mockups" 머리가 하는 법을 1~5로 다시 매긴 뒤에도 "4에서 고른 안"을 가리켰다. "하는 법 3에서 고른 안"으로 고쳤다.
+- `.scratch/design-system/design/README.md`의 내려받기 단락이 옛 절차를 지금 일처럼 적어 머리 단락의 `/ui-design`과 다퉜다. 단독 Claude Design 때의 기록으로 적고, 다음 재탐색부터는 `/ui-design` 7단계가 옮긴다고 고쳤다.
+
+## 회고
+
+후보 여섯. 승인 1(회차로 세는 것), 기각 4, 일지에만 남기는 것 1, 넘김 0. 만료할 행은 없었다(`tools/queue_open_rows.py`).
+
+1. 승인(회차로 세는 것). 하는 법을 1~5로 다시 매긴 뒤 `screens-prompt.md`의 "4에서 고른 안"이 남았고, `design-system/design/README.md`가 옛 내려받기 절차를 지금 일처럼 적었다. 둘 다 셀프 리뷰 넷을 지나 CodeRabbit이 잡았다. `CLAUDE.md` 작업 규약 4(옛 표현의 잔존 0)를 어긴 사건이라 같은 처방을 든 열린 행 420에 회차를 더했다(2회차).
+2. 기각. 결정표 "화면 디자인" 줄의 조건과 예외가 다툰 것은 판단 항목이고 리뷰(claude-review)가 제 몫을 했다. 검사로 옮길 수 없고 표준에 더할 새 기준도 아니다.
+3. 기각. 표지 헬퍼의 셋째 사본도 리뷰가 잡은 판단 항목이다. 정리 자체는 "다음"에 둔다.
+4. 기각. 훅 `design_slug`가 윈도의 뒤 점 별칭(`design./x.html`)을 놓치는 것은 실제 사건이 없다.
+5. 기각. 일지에 덧붙이는 heredoc을 워크트리 가드가 거부했다. 이미 있는 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 적은 꼴이라 Edit 도구로 돌았다.
+6. 일지에만. `tests/tools/test_probe_kit.py`의 시간 제한 시험이 web-verify와 함께 돌 때 한 번 빨갰다(인계 넷째 절). 받아들여 닫은 306의 종류(부하 아래의 시간 시험)라 회차를 더하지 않는다.
+
+## 다음
+
+- 표지 헬퍼(`marker_name`·`claim_first`)가 `hook_scratch_probe_rule.py`·`hook_probe_conclusion.py`·`hook_ui_design.py`에 세 벌이다. 공용 모듈로 모으는 정리는 이 PR 밖에 남긴다(claude-review 첫 회차의 보류, 회고 3).
+- `/ui-design` 7단계를 "경로 가드", "대조와 되돌림", "표 채우기"로 나누는 일은 첫 옮기기(admin-style)에서 막힌 자리를 본 뒤에 한다.
+- 다음 작업은 결정표가 정한다. 화면 디자인 줄이 서 있으므로 admin-style은 `/ui-design admin-style`로 들어갈 수 있다(`.scratch/plan.md`의 그 행).
