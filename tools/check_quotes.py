@@ -10,8 +10,9 @@
 `로그의 한 줄:` 처럼 있는 글을 가리키는 표지 뒤는 본다. 따옴표의 짝은 줄이 아니라 문단·목록 항목
 안에서 짓는다 — 줄마다 지으면 줄을 넘는 인용의 닫는 따옴표가 같은 줄의 다음 인용과 짝지어져 사이의
 산문을 인용으로 잡았다(대기열 67). 글자 그대로 두 자리가 없으면 감긴 줄(줄바꿈, 들여쓰기, 주석 머리
-`#`)을 공백 하나로 편 사본에서 다시 센다 — 폭 100 으로 감긴 독스트링을 한 줄로 옮긴 인용이 없다고
-경고됐다(대기열 345).
+`#`·`//`)을 공백 하나로 편 사본에서 다시 센다 — 폭 100 으로 감긴 독스트링을 한 줄로 옮긴 인용이
+없다고 경고됐다(대기열 345. `//` 는 대기열 436). 넘겨받은 파일은 대조 전에 모두 말뭉치에 넣는다 —
+추적되지 않은 두 파일이 서로를 인용하면 넘긴 차례에 따라 앞 파일의 인용이 경고됐다(대기열 398).
 pre-commit 이 바뀐 .md 를 넘기고 `verbose: true` 로 출력을 보인다. 기본은 작업 트리가 HEAD 에 더한
 줄만 본다 — 파일 전체를 보면 옛 인용(대기열의 한 줄 후보, 런북의 프롬프트 예시)이 대기열 파일
 하나에서만 서른 건 남짓 울려 경고를 무시하게 된다(2026-09-28 실측). 이름을 바꾼 파일은 옛 경로와
@@ -26,12 +27,12 @@ pre-commit 이 바뀐 .md 를 넘기고 `verbose: true` 로 출력을 보인다.
 묶음을 열고 줄을 넘는 코드 스팬과 HTML 블록은 모르므로, 그 자리를 넘는 인용은 짝이 뒤집힌다,
 기본 모드에서 바뀐 파일의 바뀌지 않은 줄에 있는 인용, 기본 모드에서 이름을 바꾼 파일이 옛 경로에서
 그대로 옮겨 온 줄의 인용(사용자가 받아들인 값이다, 대기열 377. git 이 이름 바꾸기로 짝짓지 못한
-옮김은 새 파일처럼 전체를 본다), 감긴 줄을 편 사본에서만 맞는 인용 가운데 원문의 줄 머리 `#` 가 주석
-표지가 아니라 마크다운 제목이었던 것(제목과 앞 줄이 이어져 원문으로 센다), 같은 사본에서 서로 무관한
-이웃 줄(한 줄의 끝과 다음 줄의 머리)이 이어져 맞는 인용(감긴 문장과 가르지 못해 원문으로 센다),
-같은 틀린 인용이 두 곳에 있는 것(둘이 서로를 세어 준다), 원문이 저장소 밖인 인용(경고가 거짓
-양성이다), 마크다운 밖의 인용, 원문이 바뀐 뒤 인용만 옛 문구인 것 중 옛 문구가 다른 기록(일지)에
-남아 있는 것.
+옮김은 새 파일처럼 전체를 본다), 감긴 줄을 편 사본에서만 맞는 인용 가운데 원문의 줄 머리 `#`·`//` 가
+주석 표지가 아니라 마크다운 제목이나 주석이 아닌 글의 일부였던 것(그 줄과 앞 줄이 이어져 원문으로
+센다), 같은 사본에서 서로 무관한 이웃 줄(한 줄의 끝과 다음 줄의 머리)이 이어져 맞는
+인용(감긴 문장과 가르지 못해 원문으로 센다), 같은 틀린 인용이 두 곳에 있는 것(둘이 서로를 세어
+준다), 원문이 저장소 밖인 인용(경고가 거짓 양성이다), 마크다운 밖의 인용, 원문이 바뀐 뒤 인용만 옛
+문구인 것 중 옛 문구가 다른 기록(일지)에 남아 있는 것.
 """
 
 from __future__ import annotations
@@ -101,8 +102,9 @@ def normalize(text: str) -> str:
     return text.replace("`", "").replace("*", "")
 
 
-# 감긴 줄의 이음매 — 줄바꿈과 그 앞뒤의 공백·탭, 다음 줄 머리의 주석 표지 `#`(파이썬·셸·PowerShell).
-_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:#+[ \t]*)?")
+# 감긴 줄의 이음매 — 줄바꿈과 그 앞뒤의 공백·탭, 다음 줄 머리의 주석 표지
+# `#`(파이썬·셸·PowerShell)와 `//`(TS·JS, 대기열 436).
+_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:(?:#+|//+)[ \t]*)?")
 
 
 def unwrap(text: str) -> str:
@@ -347,6 +349,7 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
     unwrapped: Callable[[str], str] = functools.cache(unwrap)
     warnings: list[str] = []
     files_read = files_whole = quotes_checked = 0
+    readable: list[tuple[Path, str, str]] = []
     for path in files:
         relative = _relative(path, root)
         if relative.startswith(SKIPPED_PREFIXES):
@@ -356,8 +359,12 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
         except (OSError, UnicodeDecodeError):
             continue
         # 추적되지 않은 새 파일도 자기 자리를 센다. 키는 resolve 한 것 — 상대 경로로 넘어온 추적
-        # 파일이 다른 키로 한 번 더 들어가면 모든 인용이 두 번 세어져 검사가 조용히 빈다.
+        # 파일이 다른 키로 한 번 더 들어가면 모든 인용이 두 번 세어져 검사가 조용히 빈다. 대조 전에
+        # 모두 넣는다 — 대조하는 차례에 넣으면 앞 파일의 인용이 뒤에 넘긴 미추적 파일의 원문을 보지
+        # 못한다(대기열 398).
         corpus.setdefault(path.resolve(), normalize(markdown))
+        readable.append((path, relative, markdown))
+    for path, relative, markdown in readable:
         allowed = line_filter(path) if line_filter is not None else None
         files_read += 1
         if allowed is None:

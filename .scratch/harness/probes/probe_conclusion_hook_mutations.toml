@@ -1,4 +1,4 @@
-# tools/hook_probe_conclusion.py(대기열 346)의 판정과 표지를 하나씩 깨는 변이.
+# tools/hook_probe_conclusion.py(대기열 346·421)의 판정과 표지와 알림 문장을 하나씩 깨는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/probe_conclusion_hook_mutations.toml
 # 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
 
@@ -84,8 +84,8 @@ tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "셋째_항목을_�
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_probe_conclusion.py"
-old = '''    " `.claude/rules/probes.md` 셋째 항목을 대 본다.'''
-new = '''    " 프로브 규칙의 셋째 항목을 대 본다.'''
+old = '''결론마다 `.claude/rules/probes.md` 셋째 항목을 대 본다.'''
+new = '''결론마다 프로브 규칙의 셋째 항목을 대 본다.'''
 
 [[mutation]]
 name = "알림에서 양성 대조를 뺀다"
@@ -95,6 +95,132 @@ expect = "red"
 file = "tools/hook_probe_conclusion.py"
 old = '''나왔다는 양성 대조가 있는가, 같은'''
 new = '''나왔는가, 같은'''
+
+[[mutation]]
+name = "알림에서 근거의 종류를 모두 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''AssertionError: 탐침이 단언하거나 찍은 것''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''근거의 종류를 밝힌다. 탐침이 단언하거나 찍은"
+    " 것인가, 저장한 원본을 손으로 본 것인가, 어림인가. 커밋하지'''
+new = '''근거의 종류를 밝힌다. 커밋하지'''
+
+[[mutation]]
+name = "알림에서 손으로 본 것을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''AssertionError: 저장한 원본을 손으로 본 것''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''것인가, 저장한 원본을 손으로 본 것인가, 어림인가.'''
+new = '''것인가, 어림인가.'''
+
+[[mutation]]
+name = "알림에서 어림을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''AssertionError: 어림인가''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''손으로 본 것인가, 어림인가. 커밋하지'''
+new = '''손으로 본 것인가. 커밋하지'''
+
+[[mutation]]
+name = "알림에서 커밋하지 않은 실행을 손으로 본 것으로 두는 문장을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '커밋하지 않은 스크립트나 사본으로 돌린 것도 손으로 본 것' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''어림인가. 커밋하지 않은 스크립트나 사본으로 돌린"
+    " 것도 손으로 본 것이고, 손으로 본 것은'''
+new = '''어림인가. 손으로 본 것은'''
+
+[[mutation]]
+name = "알림에서 손으로 본 것의 명령을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '손으로 본 것은 그 명령과 함께 적는다' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''손으로 본 것이고, 손으로 본 것은 그 명령과 함께 적는다.'''
+new = '''손으로 본 것이다.'''
+
+[[mutation]]
+name = "알림에서 섞인 행의 손으로 본 쪽을 밝히라는 문장을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '손으로 본 쪽에 그렇다고 붙인다' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''함께 있으면 손으로 본 쪽에 그렇다고 붙인다. 결과를'''
+new = '''함께 있다. 결과를'''
+
+[[mutation]]
+name = "알림에서 결과를 본 뒤 바꾼 기준을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '결과를 본 뒤 판정 기준' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''붙인다. 결과를 본 뒤 판정 기준(표지, 문턱,"
+    " 무엇을 하나로 세는지)을 바꿨으면 바꾼 기준과 그 까닭을 적는다. 코드'''
+new = '''붙인다. 코드'''
+
+[[mutation]]
+name = "알림에서 바꾼 기준의 까닭을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '바꾼 기준과 그 까닭' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''바꾼 기준과 그 까닭을 적는다.'''
+new = '''바꾼 기준을 적는다.'''
+
+[[mutation]]
+name = "알림에서 코드 읽기와 웹 요약을 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '코드 읽기와 웹 요약까지 든 근거의 갈래 전체' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''적는다. 코드 읽기와 웹 요약까지 든"
+    " 근거의 갈래 전체와 사례는'''
+new = '''적는다. 근거의 갈래와 사례는'''
+
+[[mutation]]
+name = "알림에서 근거 절의 경로를 뺀다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "근거의_종류와"]
+expect = "red"
+expect_output = ['''assert '`docs/agents/issue-tracker.md` 프로브와 근거 절' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    " `docs/agents/issue-tracker.md` 프로브와 근거 절이다.'''
+new = '''    " 프로브와 근거 절이다.'''
+
+[[mutation]]
+name = "알림이 가리키는 절 제목이 문서에서 바뀐다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "가리키는_절이"]
+expect = "red"
+expect_output = ['''AssertionError: docs/agents/issue-tracker.md: 프로브와 근거''']
+[[mutation.edit]]
+file = "docs/agents/issue-tracker.md"
+old = '''## 프로브와 근거
+'''
+new = '''## 프로브와 근거 문장
+'''
+
+[[mutation]]
+name = "알림의 절 이름이 문서의 제목과 어긋난다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "가리키는_절이"]
+expect = "red"
+expect_output = ['''AssertionError: docs/agents/issue-tracker.md: 근거''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    " `docs/agents/issue-tracker.md` 프로브와 근거 절이다.'''
+new = '''    " `docs/agents/issue-tracker.md` 근거 절이다.'''
 
 [[mutation]]
 name = "표지 이름에서 에이전트를 뺀다"
