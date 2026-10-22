@@ -41,6 +41,8 @@
 - [ ] `docs/constitution/tech.md` 원격·CI 행의 잡 수("잡 넷")
 - [ ] `docs/constitution/operations.md` 가드레일 절의 `verify`가 기다리는 잡 수("네 잡", "넷이 모두")와, 03이 더한 커밋 검사가 CI 잡도 돈다는 말. 헌법 patch 판을 올린다(번호 도구의 "형제가 쓴 가장 높은 헌법 판"보다 높게)
 - [ ] `CLAUDE.md` 검증 명령 절의 "CI도 돌리고" 무리에 커밋 검사를 넣는다
+
+> 메모(03 셀프 리뷰): 03은 CI 전의 사실을 두 자리에 적었다. 04가 CI 잡을 더하면 둘 다 거짓이 되니 같은 PR에서 고친다. `CLAUDE.md` 검증 명령 절의 "커밋 검사(`tools/check_ticket.py`, ADR 0037)는 아직 pre-commit에서만 돈다"와, `docs/constitution/operations.md` 가드레일 첫 문장의 한쪽에만 있는 검사 목록에 든 "브랜치의 변경을 커밋에 들 색인으로 보는 것이라 아직 pre-commit에만 있고"다.
 - [ ] `KICKOFF.md`의 `.github/workflows/ci.yml` 줄에 새 잡을 더한다
 - [ ] 고친 뒤 저장소를 다시 grep해 CI 잡의 수를 든 다른 살아 있는 자리가 없는지 본다(`CLAUDE.md` 작업 규약 4)
 
