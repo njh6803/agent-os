@@ -13,12 +13,13 @@
 했다. 이 훅 전에 Write·Edit 에 붙은 PostToolUse 등록은 넷이다. 첫 `Write|Edit` 묶음의
 `hook_journal_retro`(일지 파일의 회고 계기), `hook_ruff_line_width`(ruff),
 `hook_line_separators`(파일 내용)와 `Write|Edit|NotebookEdit` 묶음의 `hook_edit_during_commit`(도는
-커밋)이고, 저마다 다른 일을 판정한다. 고친 파일의 자리를 보는 것(일지 훅은 일지 경로, ruff 훅은
-조상의 ruff 설정, 커밋 훅은 체크아웃 안인지)도 그 일의 대상을 고를 뿐 스크래치패드를 보지 않는다. 그
-하나에 얹으면 독스트링의 왜·못 보는 것과 페이로드 표의 사례가 두 판정으로 섞인다. 매처가 없는
-PreToolUse `hook_midturn_korean` 도 Write·Edit 에 붙지만 쓰기 전이라 쓴 파일을 알릴 자리가 아니다.
-값은 Write·Edit 마다 래퍼를 거친 파이썬 한 번(약 0.2초, `.claude/rules/tools.md` 의 시간 항목의
-어림이고 이 훅은 재지 않았다)이다. 등록은 새 매처 묶음을 만들지 않고 첫 `Write|Edit` 묶음에 더한다.
+커밋. 그 뒤 PreToolUse 에서 막는 훅으로 옮겼다, 대기열 412)이고, 저마다 다른 일을 판정한다. 고친
+파일의 자리를 보는 것(일지 훅은 일지 경로, ruff 훅은 조상의 ruff 설정, 커밋 훅은 체크아웃 안인지)도
+그 일의 대상을 고를 뿐 스크래치패드를 보지 않는다. 그 하나에 얹으면 독스트링의 왜·못 보는 것과
+페이로드 표의 사례가 두 판정으로 섞인다. 매처가 없는 PreToolUse `hook_midturn_korean` 도 Write·Edit
+에 붙지만 쓰기 전이라 쓴 파일을 알릴 자리가 아니다. 값은 Write·Edit 마다 래퍼를 거친 파이썬 한 번(약
+0.2초, `.claude/rules/tools.md` 의 시간 항목의 어림이고 이 훅은 재지 않았다)이다. 등록은 새 매처
+묶음을 만들지 않고 첫 `Write|Edit` 묶음에 더한다.
 
 판정. 도구가 Write·Edit 이고 `tool_input.file_path` 가 문자열이며, 경로를 `/`·`\\` 로 가른 토막에서
 `claude` 토막 다음 두 토막(프로젝트, 세션) 바로 뒤가 `scratchpad` 이고(대소문자를 가리지 않는다) 그

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from tests.tools import gh_api_cases
 from tools.hook_pr_next_session import MCP_TOOLS, SHELL_TOOLS, action_for, context_for
 from tools.run_hooks import registered_matchers
 
@@ -124,3 +125,32 @@ def test_따옴표_안의_분리자는_명령_위치를_만들지_않는다() ->
 def test_치환과_인용된_환경변수_뒤의_gh_pr도_명령_위치다() -> None:
     assert action_for("Bash", "PR_URL=$(gh pr create --fill)") == "create"
     assert action_for("Bash", "FOO='a b' gh pr merge 28") == "merge"
+
+
+def test_실행하지_않는_gh_pr_은_계기가_아니다() -> None:
+    """`--dry-run`·`--help`·`-h` 는 PR 을 열거나 병합하지 않는다(hook_handoff 의 `_runs` 와 같다,
+    대기열 408). `--` 뒤는 옵션이 아니다."""
+    for command in ("gh pr create --dry-run --fill", "gh pr create --help", "gh pr merge 3 -h"):
+        assert action_for("Bash", command) is None, command
+    assert action_for("Bash", "gh pr merge 3 --squash -- -h") == "merge"
+
+
+def test_gh_api_로_pulls_에_POST_하면_PR_을_여는_명령이다() -> None:
+    """대기열 408. 표와 메서드 규칙은 `tests/tools/gh_api_cases.py`."""
+    for command in gh_api_cases.OPENS:
+        assert action_for("Bash", command) == "create", command
+    assert action_for("PowerShell", gh_api_cases.OPENS[0]) == "create"
+    for command in gh_api_cases.POWERSHELL_OPENS:
+        assert action_for("PowerShell", command) == "create", command
+
+
+def test_gh_api_의_다른_메서드와_엔드포인트와_데이터는_계기가_아니다() -> None:
+    for command in gh_api_cases.NOT_OPENS:
+        assert action_for("Bash", command) is None, command
+
+
+def test_못_보는_것_GraphQL_과_변수_엔드포인트와_REST_병합은_계기가_아니다() -> None:
+    """거짓 음성이다. `gh api graphql` 의 `createPullRequest`, 변수로 준 엔드포인트, REST 의
+    병합(`PUT …/pulls/<번호>/merge`)은 보지 않는다."""
+    for command in (*gh_api_cases.BLIND, "gh api -X PUT repos/o/r/pulls/3/merge"):
+        assert action_for("Bash", command) is None, command

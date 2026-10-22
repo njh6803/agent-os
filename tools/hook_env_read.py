@@ -6,8 +6,11 @@
 규칙은 호출의 모양만 맞춰 grep 의 인자 자리를 못 보므로 Bash 는 이 훅이 맡는다. 2026-09-28
 하네스 감사에서 서브에이전트의 grep 한 번에 `.env` 의 키 값이 도구 출력에 실렸다(대기열 43).
 실패가 조용하고(실린 뒤에야 안다) 패턴이 고정돼 첫 사건에서 막는 훅으로 갔다
-(`.claude/rules/tools.md`). Grep 도구는 glob 없이 훑을 때는 숨김·gitignore 파일을 건너뛰지만,
-경로로 `.env` 를 주거나 glob(`*`·`.*`·`.env*`)이 있으면 읽는다(2026-09-28 가짜 `.env` 로 실측).
+(`.claude/rules/tools.md`). Grep 도구는 glob 없이 훑으면 gitignore 된 파일을 건너뛰지만(숨김
+파일은 읽는다), 경로로 `.env` 를 주거나 glob 의 한 갈래(중괄호면 갈래마다)가 그 파일에 바로 맞으면
+읽는다(2026-09-28 가짜 `.env` 로 실측. 2026-10-22 에 손으로 봤다. 숨김 파일은 gitignore 하지 않은
+가짜 파일로, `{*.md,**}` 는 gitignore 된 숨김 가짜 파일로 봤다, 대기열 369). 그래서 glob 은 중괄호
+갈래마다 펼쳐 본다.
 `.env.example` 은 읽어도 된다. 파일 이름은 대소문자를 가리지 않는다(Windows 는 `.ENV` 도 같은
 파일이다).
 
@@ -44,7 +47,14 @@ cat`), 언어 안의 읽기(`python -c "open('.env')"`), `cp .env x` 뒤의 `cat
 (`env -S 'cat .env'`), 래퍼의 긴 옵션을 줄여 쓴 꼴(`sudo --us root cat .env` — getopt_long 은
 모호하지 않은 머리를 받지만 이 훅은 표에 적은 이름 그대로만 값 옵션으로 본다), PowerShell 도구(권한
 deny 가 `Get-Content`·`Select-String` 과 그 별칭만 막고 `[IO.File]::ReadAllText` 같은 읽기는
-지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등).
+지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등),
+gitignore 하지 않은 `.env` 가 든 폴더를 glob 없이 훑는 Grep 도구(숨김 파일을 읽는다). 거짓
+양성으로는 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호가 있다. 펼치지 않아, 따옴표 없이 bash 가 펼쳐
+`.env` 를 빼는 `--exclude={.env*,x}` 도 막는다. 인용된 중괄호는 grep 이 글자로 읽어 `.env` 를 빼지
+않으므로 펼쳐서 뺀다고 보지 않는다. 닿는지 보는 자리는 거꾸로 펼쳐 본다. 토큰은 shlex 가 인용을 벗긴
+뒤라, bash 가 펼치지 않는 인용된 중괄호(`cat '.{env,x}'`)와 쉼표 없는 묶음(`cat .{env}`, rg·Grep
+도구의 glob 처럼 갈래 하나로 푼다)도 `.env` 로 보아 막는다. 갈래가 256 을 넘는 glob(`{a,b}` 아홉)은
+어느 갈래도 `.env` 에 닿지 않아도 막는다. 다 펼쳐 판정하면 훅의 시간 제한을 넘어 지나가기 때문이다.
 에이전트 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건
 개발용 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
@@ -188,11 +198,22 @@ def env_file_name(token: str) -> str | None:
 
 
 def _glob_reaching_env(token: str) -> str | None:
-    """셸이 `.env` 로 펼칠 glob 이면 그 토큰(`.e*`, `.env*`). 점으로 시작하지 않으면 아니다."""
-    leaf = token.replace("\\", "/").rsplit("/", 1)[-1]
-    if not leaf.startswith(".") or not any(char in leaf for char in "*?["):
-        return None
-    return token if _matches_env(leaf) else None
+    """셸이 `.env` 로 펼칠 glob 이면 그 토큰(`.e*`, `.env*`, `.{env,x}`). 점으로 시작하지 않는
+    갈래는 아니다. 중괄호는 bash 가 갈래로 펼치므로 갈래마다 본다(대기열 369). 갈래는
+    `_brace_branches` 가 펼쳐 bash 가 글자로 두는 꼴도 막는다(모듈 독스트링의 못 보는 것). 펼치기
+    전의 토큰도 본다(`_candidates`)."""
+    candidates = _candidates(token.replace("\\", "/"))
+    if candidates is None:
+        return token
+    for branch in candidates:
+        leaf = branch.rsplit("/", 1)[-1]
+        if not leaf.startswith("."):
+            continue
+        if any(char in leaf for char in "*?[") and _matches_env(leaf):
+            return token
+        if branch != token and env_file_name(branch) is not None:
+            return token
+    return None
 
 
 def deny_reason_for_command(command: str, cwd: str | None = None) -> str | None:
@@ -212,17 +233,16 @@ def deny_reason_for_command(command: str, cwd: str | None = None) -> str | None:
 def deny_reason_for_grep_tool(path: str | None, glob: str | None) -> str | None:
     """Grep 도구의 경로나 glob 이 `.env` 파일에 닿으면 막는 이유, 아니면 None.
 
-    glob 이 있으면 Grep 도구는 숨김·gitignore 파일도 읽으므로(2026-09-28 실측) `*`·`.*` 도 `.env` 에
-    닿는 glob 이다. 확장자 glob(`*.py`)은 닿지 않는다.
+    Grep 도구는 glob 의 갈래가 바로 맞는 gitignore 된 파일도 읽으므로 `*`·`.*`·`**` 도 `.env` 에
+    닿는 glob 이다. 중괄호는 갈래마다 펼쳐 한 갈래라도 닿으면 막는다(`{*.md,**}` 가 gitignore 된
+    숨김 파일을 읽었다, 2026-10-22 손으로 봤다, 대기열 369). 확장자 glob(`*.py`)은 닿지 않는다.
     """
     if path is not None:
         name = env_file_name(path.replace("\\", "/"))
         if name is not None:
             return _grep_tool_reason(f"경로 `{name}`")
-    if glob is not None:
-        leaf = glob.replace("\\", "/").rsplit("/", 1)[-1]
-        if leaf.lower() not in ALLOWED_ENV_FILES and _matches_env(leaf):
-            return _grep_tool_reason(f"glob `{glob}`(숨김·gitignore 파일도 읽는다)")
+    if glob is not None and _reaches_env(glob.replace("\\", "/")):
+        return _grep_tool_reason(f"glob `{glob}`(glob 에 맞는 gitignore 된 파일도 읽는다)")
     return None
 
 
@@ -352,7 +372,7 @@ def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
     if any(_matches_env(value) for value in _option_values(args, {"--exclude"})):
         return False
     includes = _option_values(args, {"--include"})
-    if includes and not any(_matches_env(value) for value in includes):
+    if includes and not any(_reaches_env(value) for value in includes):
         return False
     return _paths_reach_root(args, _GREP_VALUE_OPTIONS, cwd)
 
@@ -372,15 +392,101 @@ def _rg_sweeps_root(args: list[str], cwd: str | None) -> bool:
     if any(_matches_env(glob[1:]) for glob in globs if glob.startswith("!")):
         return False
     positives = [glob for glob in globs if not glob.startswith("!")]
-    if positives and not any(_matches_env(glob) for glob in positives):
+    if positives and not any(_reaches_env(glob) for glob in positives):
         return False
     return _paths_reach_root(args, _RG_VALUE_OPTIONS, cwd)
 
 
 def _matches_env(pattern: str) -> bool:
-    """glob 이 `.env` 나 `.env.<무엇>` 에 닿는가. `**/.env*` 는 앞의 디렉터리 조각을 뗀다."""
-    leaf = pattern.rsplit("/", 1)[-1].lower()
+    """glob 이 `.env` 나 `.env.<무엇>` 에 닿는가. `**/.env*` 는 앞의 디렉터리 조각을 뗀다. 중괄호는
+    펼치지 않는다. 빼는 자리(`--exclude`, rg 의 `!`)가 이것을 써, 인용된 중괄호를 글자로 읽는 도구가
+    `.env` 를 빼지 않는데도 뺀다고 보지 않게 한다. 대괄호의 `[^` 는 `[!` 로 읽는다. bash·GNU grep·
+    ripgrep 은 둘 다 부정으로 읽고 fnmatch 는 `^` 를 글자로 읽어, `.en[^x]` 를 지나보내고
+    `--exclude=.en[^v]` 가 `.env` 를 뺀다고 봤다(PR 직전 보안 리뷰)."""
+    leaf = pattern.rsplit("/", 1)[-1].lower().replace("[^", "[!")
     return any(fnmatch.fnmatch(sample, leaf) for sample in (".env", ".env.local"))
+
+
+def _reaches_env(pattern: str) -> bool:
+    """중괄호 갈래 가운데 하나라도 `.env` 에 닿는가(`.env.example` 만 맞는 갈래는 아니다). 닿는지
+    보는 자리(Grep 도구의 glob, rg 의 glob, grep 의 `--include`)가 쓴다. 갈래가 너무 많으면 닿는다고
+    본다(`_brace_branches`)."""
+    candidates = _candidates(pattern)
+    if candidates is None:
+        return True
+    return any(
+        branch.rsplit("/", 1)[-1].lower() not in ALLOWED_ENV_FILES and _matches_env(branch)
+        for branch in candidates
+    )
+
+
+def _candidates(pattern: str) -> list[str] | None:
+    """닿는지 볼 glob 들. 펼친 갈래와 펼치기 전의 패턴이다. 대괄호 안의 `{`·`}` 는 bash·GNU grep·
+    ripgrep 이 글자로 읽어 `.en[!{}]` 가 `.env` 에 맞는데, 펼치면 `[!{}]` 가 `[!]` 로 깨져 맞지
+    않는다. 펼친 갈래만 본 판이 그것을 지나보냈다(옛 판은 막았다, PR 직전 보안 리뷰). 갈래가
+    너무 많으면 None 이다."""
+    branches = _brace_branches(pattern)
+    if branches is None:
+        return None
+    return branches if pattern in branches else [pattern, *branches]
+
+
+# 펼칠 갈래의 상한. 갈래는 묶음 수에 지수로 늘어(`{a,b}` 열여섯에 65536), 다 펼쳐 판정하면 열여섯에
+# 7초가 걸렸고 훅의 시간 제한(20초)을 넘으면 막지 않고 지나간다(fail-open, PR 직전 리뷰가 쟀다).
+_BRANCH_LIMIT = 256
+
+
+def _brace_branches(pattern: str) -> list[str] | None:
+    """중괄호 갈래를 모두 펼친 glob 들. 여러 묶음과 겹친 묶음(`{a,{b,c}}`)도 푼다. 쉼표가 없는
+    묶음(`{x}`)은 갈래 하나로 푼다. Grep 도구의 glob 이 그렇게 읽는다(2026-10-22 손으로 봤다.
+    `.ignore` 에 든 숨김 파일을 glob 없이는 건너뛰고 `{<그 이름>}` 으로는 읽었으며, `{*.md}` 는
+    마크다운을 찾았다. rg 의 glob 은 Grep 도구가 ripgrep 위에 있어 같다고 보고 따로 재지 않았다,
+    어림). bash 는 그것을 글자로 두는데, 대괄호 밖이면 글자로 둔 갈래는 `{`·`}` 가 남아 `.env` 에
+    바로 맞지 않는다. 대괄호 안이면 맞을 수 있어 부르는 쪽이 펼치기 전의 패턴도 본다(`_candidates`).
+    짝이 없는 `{` 는 bash 처럼 글자로 두고 그 뒤의 묶음을 푼다(`{{a,b}` 는 `{a`·`{b`). 갈래가
+    `_BRANCH_LIMIT` 를 넘으면 펼치기를 멈추고 None 이다."""
+    done: list[str] = []
+    pending = [pattern]
+    while pending:
+        current = pending.pop()
+        group = _first_group(current)
+        if group is None:
+            done.append(current)
+        else:
+            head, options, tail = group
+            pending.extend(head + option + tail for option in reversed(options))
+        if len(done) + len(pending) > _BRANCH_LIMIT:
+            return None
+    return done
+
+
+def _first_group(pattern: str) -> tuple[str, list[str], str] | None:
+    """짝이 맞는 첫 중괄호 묶음의 앞, 갈래들, 뒤. 묶음이 없으면 None 이다."""
+    start = pattern.find("{")
+    while start != -1:
+        depth = 0
+        commas: list[int] = []
+        end = -1
+        for index in range(start, len(pattern)):
+            char = pattern[index]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    end = index
+                    break
+            elif char == "," and depth == 1:
+                commas.append(index)
+        if end == -1:
+            start = pattern.find("{", start + 1)
+            continue
+        bounds = [start, *commas, end]
+        options = [
+            pattern[left + 1 : right] for left, right in zip(bounds, bounds[1:], strict=False)
+        ]
+        return pattern[:start], options, pattern[end + 1 :]
+    return None
 
 
 def _paths_reach_root(args: list[str], value_options: frozenset[str], cwd: str | None) -> bool:

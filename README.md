@@ -99,7 +99,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 |---|---|---|
 | 원칙과 거버넌스 | `docs/constitution/principles.md` | `CLAUDE.md`가 임포트 |
 | 스택과 의존성의 결정 | `docs/constitution/tech.md` | 구현은 `pyproject.toml`과 `web/package.json`. 둘이 다르면 구현을 맞추거나 ADR |
-| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`(커밋마다 도는 검사 여덟은 그것이 부르는 `tools/run_checks.py`의 `CHECKS`)과 `.github/workflows/ci.yml`. 명령이 바뀌면 넷 다. 워크플로 감사의 설정은 `.github/zizmor.yml` |
+| 검증·운영 규약 | `docs/constitution/operations.md` | 검증 명령은 `CLAUDE.md`, 실행은 `.pre-commit-config.yaml`(커밋마다 도는 검사는 그것이 부르는 `tools/run_checks.py`의 `CHECKS`)과 `.github/workflows/ci.yml`. 명령이 바뀌면 넷 다. 워크플로 감사의 설정은 `.github/zizmor.yml` |
 | 제품 의도와 성공의 정의 | `docs/PRD.md` | 헌법은 원칙 I의 기한만 |
 | 용어 | `CONTEXT.md` | 피할 말 포함 |
 | 결정과 이유 | `docs/adr/`, 색인 `docs/adr/README.md` | 헌법과 rules는 번호로 인용만 |
@@ -109,8 +109,8 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 Read 도구로 열 때만 실림 |
 | 지침의 로드 시점 표 | `CLAUDE.md` 교정 루프 절 | ADR 0004는 결정의 기록, 런북 3단계 템플릿은 새 프로젝트용 사본 |
 | 현재 구조 | 코드 | 이 README의 트리는 안내 |
-| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | |
-| 기능 명세와 티켓 | `.scratch/<slug>/` | |
+| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | 제품 기능만. 하네스 기능과 harness 티켓의 상태는 티켓의 `Status:` |
+| 기능 명세와 티켓 | `.scratch/<slug>/` | harness 티켓은 `.scratch/harness/issues/`. 규약은 `docs/agents/issue-tracker.md` |
 | 디스크 형식(매니페스트, 이벤트) | `src/agent_os/sdk/`와 `tests/sdk/` | `rules/sdk.md`는 결정만 |
 | 설치된 스킬과 해시 | `skills-lock.json` | |
 | 진행 기록 | `docs/journal/` | 이력이지 원천이 아니다 |

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/.scratch/harness/probes/choice_facts/deny_hook.py\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

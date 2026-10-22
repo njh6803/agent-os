@@ -8,13 +8,14 @@
 
 - 체크아웃 밖 파일의 Write(침묵). 프로세스를 훑지 않는 길이다.
 - 커밋이 돌지 않는 체크아웃 파일의 Write(침묵). 프로세스를 훑고 커밋을 찾지 못하는 길이다.
-- 커밋이 도는 워크트리 파일의 Edit(알림). 훑고 찾는 길이다.
+- 커밋이 도는 워크트리 파일의 Edit(막음). 훑고 찾는 길이다. 대기열 412 로 훅이 PreToolUse 에서 막게
+  된 뒤에는 판정을 PreToolUse 의 deny 로 읽는다.
 
 표지. 침묵 둘은 출력이 같아 어느 길을 지났는지 출력으로 가를 수 없다. 그래서 회차마다 훅 자신의
 함수로 그 갈래의 상황이 났는지 먼저 본다. 체크아웃 밖이면 `checkout_of` 가 None 이고(훅의 `main` 이
 훑기 전에 돌아온다, 코드를 읽었다), 훑는 두 갈래는 그 체크아웃이 있고
 `running_commits(scan_processes())` 에 그 체크아웃의 커밋이 없거나 있다. 상황이 다르거나,
-판정(`outcome_of`)이 기대와 다르거나, 알림 갈래의 문장(`message_of`)에 `git commit` 이 없으면 측정이
+판정(`outcome_of`)이 기대와 다르거나, 막음 갈래의 문장(`message_of`)에 `git commit` 이 없으면 측정이
 아니라 세고 1로 끝난다. 끝 줄에 갈래마다 최소·최대 밀리초와, 잴 때 이 PC 에 떠 있던 git 프로세스
 수(훑는 길의 몫이 그 수를 따른다)를 찍는다.
 
@@ -68,7 +69,7 @@ def run_once(payload: dict[str, object]) -> tuple[float, str, str]:
     elapsed = (time.perf_counter() - started) * 1000
     stdout = completed.stdout.decode("utf-8", "replace")
     stderr = completed.stderr.decode("utf-8", "replace")
-    outcome = outcome_of(completed.returncode, stdout, "PostToolUse")
+    outcome = outcome_of(completed.returncode, stdout, "PreToolUse")
     return elapsed, outcome, message_of(completed.returncode, stdout, stderr)
 
 
@@ -110,7 +111,7 @@ def main() -> int:
                 "",
                 _write(no_commit),
             ),
-            ("커밋이 도는 워크트리 Edit", side_file, "훑고 찾음", "context", "git commit", edit),
+            ("커밋이 도는 워크트리 Edit", side_file, "훑고 찾음", "deny", "git commit", edit),
         ]
         processes = scan_processes()
         for name, path, path_kind, expect, marker, payload in cases:
