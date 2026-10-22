@@ -4,7 +4,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { buildTokensFile, buildTokensJson } from "./build.ts";
+import { THEMES } from "../../packages/ui/src/themes.ts";
+import { buildTokensFile, buildTokensJson, THEME_NAMES } from "./build.ts";
 import { CommandError } from "./command.ts";
 import type { ColorToken, TokensFile } from "./tokens-json.ts";
 
@@ -113,6 +114,10 @@ describe("짓기", () => {
       "녹청 다크",
       "군청 라이트",
     ]);
+  });
+
+  test("테마의 한국어 이름은 패키지의 테마 목록과 키와 이름이 같다", () => {
+    expect(THEME_NAMES).toEqual(new Map(THEMES.map((theme) => [theme.key, theme.name])));
   });
 
   test("원색 68 개는 여덟 벌의 값을 모두 적고, 같은 테마의 라이트·다크는 그 테마 블록의 값을 나눈다", () => {

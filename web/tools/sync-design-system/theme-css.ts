@@ -478,6 +478,11 @@ function beats(challenger: Candidate, holder: Candidate): boolean {
 
 const THEME_KEY = /\[\s*data-theme\s*=\s*["']?([^"'\]\s]+)["']?\s*\]/g;
 
+/** 규칙이 바로 든 레이어(가장 안쪽 `@layer` 머리). 레이어 밖이면 없다. */
+function layerOf(rule: StyleRule): string | undefined {
+  return rule.context.findLast((head) => head.startsWith("@layer"));
+}
+
 /** 디자인 토큰 CSS 를 푼다. 풀 수 없으면 `input` 오류다. */
 export function parseThemeCss(css: string): ThemeCss {
   const { rules, themeStatic } = parse(css);
@@ -494,20 +499,16 @@ export function parseThemeCss(css: string): ThemeCss {
     }
   }
 
-  const layers: string[] = [];
-  const cascading = rules.flatMap((rule, order) => {
-    if (rule.context.some((head) => !head.startsWith("@layer"))) {
-      return [];
-    }
-    // 레이어의 차례는 사용자 정의 속성이 없는 규칙까지 세어 처음 나온 차례다.
-    const layerHead = rule.context.findLast((head) => head.startsWith("@layer"));
-    if (layerHead !== undefined && !layers.includes(layerHead)) {
-      layers.push(layerHead);
-    }
+  // `@layer` 밖의 at-rule 안의 규칙은 보지 않는다.
+  const visible = rules.filter((rule) => rule.context.every((head) => head.startsWith("@layer")));
+  // 레이어의 차례는 사용자 정의 속성이 없는 규칙까지 세어 처음 나온 차례다.
+  const layers = [...new Set(visible.map(layerOf).filter((head) => head !== undefined))];
+  const cascading = visible.flatMap((rule, order) => {
     const custom = rule.declarations.filter((declaration) => declaration.property.startsWith("--"));
     if (custom.length === 0) {
       return [];
     }
+    const layerHead = layerOf(rule);
     const layer = layerHead === undefined ? Number.POSITIVE_INFINITY : layers.indexOf(layerHead);
     return [{ rule, custom, layer, order }];
   });

@@ -35,12 +35,17 @@ export type ReportFields = Readonly<Record<string, JsonValue>>;
 /** 명령 하나. 인자는 명령 이름 뒤의 것이다. */
 export type Command = (args: readonly string[]) => ReportFields;
 
+/** 잡은 오류의 문구. `Error` 가 아닌 값은 글로 바꾼다. */
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** 인자 풀기(`node:util` 의 `parseArgs`)가 던지는 오류를 `usage` 오류로 바꾼다. */
 export function parsedArgs<T>(parse: () => T): T {
   try {
     return parse();
   } catch (error) {
-    throw new CommandError("usage", error instanceof Error ? error.message : String(error));
+    throw new CommandError("usage", messageOf(error));
   }
 }
 
@@ -49,10 +54,7 @@ export function readInput(path: string): string {
   try {
     return readFileSync(resolve(path), "utf-8");
   } catch (error) {
-    throw new CommandError(
-      "input",
-      `${path} 를 읽을 수 없다: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new CommandError("input", `${path} 를 읽을 수 없다: ${messageOf(error)}`);
   }
 }
 
@@ -63,10 +65,7 @@ export function writeOutput(path: string, text: string): string {
     mkdirSync(dirname(absolute), { recursive: true });
     writeFileSync(absolute, text);
   } catch (error) {
-    throw new CommandError(
-      "output",
-      `${path} 를 쓸 수 없다: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new CommandError("output", `${path} 를 쓸 수 없다: ${messageOf(error)}`);
   }
   return absolute;
 }

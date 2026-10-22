@@ -38,10 +38,11 @@ import {
 } from "./tokens-json.ts";
 
 /**
- * 테마 키의 한국어 이름. 패키지의 테마 목록(`web/packages/ui/src/themes.ts`)과 같은 이름이고, `web/tools` 가 그 패키지에
- * 의존하지 않아 여기 적는다. 없는 키는 키를 이름으로 쓴다.
+ * 테마 키의 한국어 이름. 없는 키는 키를 이름으로 쓴다. 패키지의 테마 목록(`web/packages/ui/src/themes.ts`)을 옮긴
+ * 것이고, 두 목록이 같은지는 시험이 본다. 그 파일은 이웃 모듈을 `.js` 로 상대 import 해 Node 가 바로 부를 수 없고, Node 로
+ * 부를 수 있는 내보내기(`@agent-os/ui/contrast`)에는 테마 목록이 없어 여기 적는다.
  */
-const THEME_NAMES: ReadonlyMap<string, string> = new Map([
+export const THEME_NAMES: ReadonlyMap<string, string> = new Map([
   ["nokcheong", "녹청"],
   ["guncheong", "군청"],
   ["jacho", "자초"],

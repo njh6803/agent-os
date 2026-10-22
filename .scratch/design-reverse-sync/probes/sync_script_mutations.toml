@@ -56,12 +56,10 @@ expect_output = ["AssertionError: expected { '--x': '#222222' } to deeply equal 
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/theme-css.ts"
-old = '''    if (layerHead !== undefined && !layers.includes(layerHead)) {'''
-new = '''    if (
-      layerHead !== undefined &&
-      !layers.includes(layerHead) &&
-      rule.declarations.some((declaration) => declaration.property.startsWith("--"))
-    ) {'''
+old = '''visible.map(layerOf)'''
+new = '''visible
+      .filter((rule) => rule.declarations.some((declaration) => declaration.property.startsWith("--")))
+      .map(layerOf)'''
 
 [[mutation]]
 name = "not 의 인자를 보지 않으면 뿌리 사례가 빨갛다"
@@ -120,8 +118,8 @@ expect_output = ["to deeply equal { '--not-dark': '#111111' }", "+   \"--media\"
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/theme-css.ts"
-old = '''    if (rule.context.some((head) => !head.startsWith("@layer"))) {'''
-new = '''    if (rule.context.some((head) => head.startsWith("@theme"))) {'''
+old = '''rule.context.every((head) => head.startsWith("@layer"))'''
+new = '''rule.context.every((head) => !head.startsWith("@theme"))'''
 
 [[mutation]]
 name = "풀 수 없는 선택자를 맞지 않는 것으로 넘기면 입력 오류 사례가 빨갛다"
@@ -346,8 +344,8 @@ expect_output = ["AssertionError: expected +0 to be 1 // Object.is equality"]
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/main.ts"
-old = '''      code: 1,'''
-new = '''      code: 0,'''
+old = '''code: 1 };'''
+new = '''code: 0 };'''
 
 [[mutation]]
 name = "모르는 명령 문구에서 아는 명령을 빼면 모르는 명령 사례가 빨갛다"
@@ -358,8 +356,8 @@ expect_output = ["AssertionError: expected '모르는 명령 \"deploy\"' to cont
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/main.ts"
-old = '''. 아는 명령: ${[...COMMANDS.keys()].join(", ")}`,'''
-new = '''`,'''
+old = '''. 아는 명령: ${known}`'''
+new = '''`'''
 
 [[mutation]]
 name = "읽기 실패를 usage 로 내면 입력 파일 사례가 빨갛다"
@@ -370,8 +368,8 @@ expect_output = ["-     \"kind\": \"input\",", "+     \"kind\": \"usage\","]
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/command.ts"
-old = '''      "input",'''
-new = '''      "usage",'''
+old = '''CommandError("input",'''
+new = '''CommandError("usage",'''
 
 [[mutation]]
 name = "인자 풀기의 오류를 그대로 던지면 모르는 옵션 사례가 빨갛다"
@@ -382,7 +380,7 @@ expect_output = ["AssertionError: expected null to match object { command: 'buil
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/command.ts"
-old = '''    throw new CommandError("usage", error instanceof Error ? error.message : String(error));'''
+old = '''    throw new CommandError("usage", messageOf(error));'''
 new = '''    throw error;'''
 
 [[mutation]]
@@ -394,15 +392,8 @@ expect_output = ["AssertionError: expected null to match object { command: 'buil
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/command.ts"
-old = '''
-  } catch (error) {
-    throw new CommandError(
-      "output",'''
-new = '''
-  } catch (error) {
-    throw error;
-    throw new CommandError(
-      "output",'''
+old = '''    throw new CommandError("output", `${path} 를 쓸 수 없다: ${messageOf(error)}`);'''
+new = '''    throw error;'''
 
 # --- 맞대기(tokens-json.ts) -----------------------------------------------------------------------------------
 
@@ -573,3 +564,18 @@ expect_output = ["Expected: \"d24f5042a21999dc70392eac1b2fbbc391d8177d85145142ed
 file = "web/tools/sync-design-system/tokens-json.ts"
 old = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "0",'''
 new = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "",'''
+
+# --- PR 의 첫 claude-review 회차가 더한 사례(build.ts) ------------------------------------------------------------
+# 번호가 밀리지 않게 끝에 둔다. 짓기 절의 사례다.
+
+[[mutation]]
+name = "테마 이름 하나가 패키지 목록과 다르면 테마 이름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "테마의 한국어 이름은"]
+expect = "red"
+expect_output = ["+   \"jacho\" => \"자쵸\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  ["jacho", "자초"],'''
+new = '''  ["jacho", "자쵸"],'''
