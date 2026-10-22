@@ -1,4 +1,4 @@
-# 2026-10-22 (23) 첫 턴 훅이 티켓 없는 브랜치를 알린다 (ticket-for-every-pr 05)
+# 2026-10-22 (29) 첫 턴 훅이 티켓 없는 브랜치를 알린다 (ticket-for-every-pr 05)
 
 ## 구현
 
@@ -50,7 +50,7 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 ### 명세 축
 
 1. Major. 티켓의 잔존 항목(저장소를 grep 해 이 훅을 지시문일 때만으로 든 살아 있는 자리를 고친다)이 덜 됐다. `.claude/skills/next-session/SKILL.md` 107줄의 "라벨을 바꾸면 훅은 예외 없이 침묵하고"가 이제 거짓이다(라벨을 바꾼 지시문은 사람이 보는 세션에서 티켓 알림을 받는다. 그 축이 함수를 불러 봤다). `.scratch/ticket-for-every-pr/spec.md` 25·217줄도 같은 말이다(Minor). → 스킬은 고친다. 명세 두 줄은 두는데, 명세는 to-spec·to-tickets 가 쓰는 문서이고(CLAUDE.md 지도 표) 그 두 줄은 이 기능이 출발한 상태를 "지금 … 넓힌다"로 적은 문장이라서다. 이 세션이 저장소를 다시 grep 해 `hook_prompt_directive`·"첫 턴 훅"이 든 살아 있는 문서(스킬 셋, ADR 0032·0036·0037 본문, `open_session.ps1`, `hook_pr_head_sync.py`, 프로브 README, 대기열의 열린 행, model-rerun 설계, token-usage 명세)를 한 줄씩 열었고, 지시문 전용이라 거짓이 된 줄은 그 하나였다. ADR 0037 15줄의 첫 턴 훅이 침묵한다는 문장은 결정 시점의 근거라 포인터를 달지 않는다(`.claude/rules/adr.md` 달지 않는 것).
-2. Minor. 카나리아 명세 머리가 "일지 2026-10-22-23"을 드는데 그 일지에 검사 절이 없다. → 검사 절을 쓴다.
+2. Minor. 카나리아 명세 머리가 "일지 2026-10-22-29"을 드는데 그 일지에 검사 절이 없다. → 검사 절을 쓴다.
 3. Minor(갈래). 면제 일을 주 체크아웃에서 시작하면, 알림이 면제를 "따르지 않는 때"에 넣어 주 체크아웃에서 `docs/<slug>` 를 따고 제목을 둘 수 있다. → 면제 일도 워크트리와 제목은 같다고 적는다.
 4. Minor(갈래). 다른 티켓의 워크트리 폴더에서 연 세션이 다른 일을 받으면(이번 확인 세션이 그 길이었다) 2)가 남의 티켓 브랜치 이름을 바꾸게 한다. → 다른 티켓의 브랜치는 두고 사용자에게 알린다고 적는다.
 5. Nit. 프로브 README의 "같은 프롬프트와 같은 사본이 … 셋째와 넷째 갈래의 침묵"이 셋째 갈래도 같은 사본이라고 읽힌다. 셋째는 원본이다. → 고친다.
@@ -93,8 +93,8 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
 브랜치: feature/05-first-turn-ticket-notice
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md 전체(셀프 리뷰 반영 절의 새 문장이 PR 직전 리뷰에 밀 주장이다)
-이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 첫 커밋까지 했다(pre-commit 모두 Passed). 남은 단계는 차례로 이렇다. 일지의 인계 절(커밋하지 않았다)을 다음 커밋에 싣는다. 티켓의 체크박스를 표시하고 Status를 done으로 바꾼다. origin/main을 합친다. PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)를 돌리고 반영한다. 반영을 커밋한 뒤 .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml 전체를 다시 돌린다(변이 도구가 커밋 뒤의 전체 실행을 요구했다). 푸시, PR, 봇 회차, 워크트리 길의 병합, 일지 다음과 회고. 첫 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다. 사용자가 "푸시 뒤에 보관 (추천)"을 골랐다(일지의 모델에게 닿는지 절). 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
+읽을 것: docs/journal/2026-10-22-29-first-turn-ticket-notice.md 전체(셀프 리뷰 반영 절의 새 문장이 PR 직전 리뷰에 밀 주장이다)
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 첫 커밋까지 했다(pre-commit 모두 Passed). 남은 단계는 차례로 이렇다. 일지의 인계 절(커밋하지 않았다)을 다음 커밋에 싣는다. 티켓의 체크박스를 표시하고 Status를 done으로 바꾼다. origin/main을 합친다. PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)를 돌리고 반영한다. 반영을 커밋한 뒤 .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml 전체를 다시 돌린다(변이 도구가 커밋 뒤의 전체 실행을 요구했다). 푸시, PR, 봇 회차, 워크트리 길의 병합, 일지 다음과 회고. 첫 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다. 사용자가 "푸시 뒤에 보관 (추천)"을 골랐다(일지의 모델에게 닿는지 절). 일지 docs/journal/2026-10-22-29-first-turn-ticket-notice.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -137,8 +137,8 @@ open-session을 부른다 2026-10-22T13:16Z
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
 브랜치: feature/05-first-turn-ticket-notice
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md의 "PR 직전 리뷰"와 "PR 과 인계" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
-이어받을 상태: 인계: PR 연 뒤. PR #354를 열었고 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. 커밋하지 않은 일지 수정(PR 직전 리뷰 절의 마지막 줄, 따옴표 둘을 뗀 것, PR 과 인계 절)이 워크트리에 있으니 첫 반영 커밋이나 회고 커밋에 싣는다. 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)은 아직 보관하지 않았다. 사용자가 고른 "푸시 뒤에 보관 (추천)"의 조건이 커밋하지 않은 작업이 없을 때라, 그 일지 수정을 커밋해 푸시한 뒤 보관한다. 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
+읽을 것: docs/journal/2026-10-22-29-first-turn-ticket-notice.md의 "PR 직전 리뷰"와 "PR 과 인계" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
+이어받을 상태: 인계: PR 연 뒤. PR #354를 열었고 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. 커밋하지 않은 일지 수정(PR 직전 리뷰 절의 마지막 줄, 따옴표 둘을 뗀 것, PR 과 인계 절)이 워크트리에 있으니 첫 반영 커밋이나 회고 커밋에 싣는다. 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)은 아직 보관하지 않았다. 사용자가 고른 "푸시 뒤에 보관 (추천)"의 조건이 커밋하지 않은 작업이 없을 때라, 그 일지 수정을 커밋해 푸시한 뒤 보관한다. 일지 docs/journal/2026-10-22-29-first-turn-ticket-notice.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -202,8 +202,8 @@ open-session을 부른다 2026-10-22T14:09Z
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
 브랜치: feature/05-first-turn-ticket-notice
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md의 "인계받은 세션 (PR 연 뒤부터)"와 "인계 (커밋 뒤, 셋째 세션)" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
-이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차 반영(계약 시험과 변이 9번), 회고, 일지 "다음"을 커밋 011b803a에 실었고(pre-commit 모두 Passed) 아직 푸시하지 않았다. PR 본문은 그 커밋에 맞춰 이미 고쳤고, 첫 회차에서 고치지 않은 지적의 까닭은 PR 코멘트로 남겼다. 커밋하지 않은 일지의 인계 절이 워크트리에 있으니 이어 쓴 뒤 커밋하고(pre-commit이 10분 남짓이라 백그라운드로) 푸시한다. 그 뒤 순서 1의 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴다. CodeRabbit은 첫 푸시에서 한도로 리뷰가 없어 아직 회차가 없다. 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다(사용자가 고른 "푸시 뒤에 보관", 조건은 커밋하지 않은 작업이 없을 때). 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
+읽을 것: docs/journal/2026-10-22-29-first-turn-ticket-notice.md의 "인계받은 세션 (PR 연 뒤부터)"와 "인계 (커밋 뒤, 셋째 세션)" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차 반영(계약 시험과 변이 9번), 회고, 일지 "다음"을 커밋 011b803a에 실었고(pre-commit 모두 Passed) 아직 푸시하지 않았다. PR 본문은 그 커밋에 맞춰 이미 고쳤고, 첫 회차에서 고치지 않은 지적의 까닭은 PR 코멘트로 남겼다. 커밋하지 않은 일지의 인계 절이 워크트리에 있으니 이어 쓴 뒤 커밋하고(pre-commit이 10분 남짓이라 백그라운드로) 푸시한다. 그 뒤 순서 1의 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴다. CodeRabbit은 첫 푸시에서 한도로 리뷰가 없어 아직 회차가 없다. 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다(사용자가 고른 "푸시 뒤에 보관", 조건은 커밋하지 않은 작업이 없을 때). 일지 docs/journal/2026-10-22-29-first-turn-ticket-notice.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -217,4 +217,7 @@ open-session을 부른다 2026-10-22T14:37Z
 > 사용자: (위 지시문을 첫 메시지로 받았다) ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md / (…) 이어받을 상태: 인계: 커밋 뒤. (…) / 이번 요청 범위: PR과 병합까지"
 
 - 제목을 `feature/05-first-turn-ticket-notice` 로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어갔다(잠금에 막히지 않았다). origin/main 은 `b104f8fa` 그대로라 합칠 것이 없었다.
-- 위 인계 절을 이 절과 함께 커밋해 `011b803a` 와 같이 푸시한다. 이 푸시로 도는 claude-review 는 둘째 회차다.
+- 위 인계 절을 이 절과 함께 `093e223e` 로 커밋했다. 그 pre-commit 이 도는 사이 #353(`19bbfa06`)이 main 에 들어와, 푸시 훅이 뒤처졌다며 막았다. origin/main 을 합치니 `.scratch/retro-queue.md` 의 420·421행이 충돌했다. 420은 이 브랜치가 3회차로, 421은 main 이 7회차로 올린 것이라 둘 다 살렸다(`aeaee1f0`, pre-commit 모두 Passed).
+- 합친 뒤 `tools/sibling_overlap.py` 가 이 일지(23)가 main 의 최신 일지 24보다 이름순으로 앞이라며 1로 끝났다. `--move` 로 옮기는 사이 형제가 28을 가져가 29로 옮겼다. 인용을 고친 파일은 대기열, 카나리아 명세 둘, 이 훅의 시험 파일, 이 일지이고, 옛 번호(`10-22-23`)를 grep 하니 남은 것이 없었다. PR 본문의 일지 줄도 옮긴다.
+- 옮김의 첫 커밋은 pre-commit 의 `run-hooks` 하나에 막혔다. `hook_journal_retro.py` 의 "다음 빈 순번으로 새 일지를 만든 Write" 사례가 침묵 대신 알렸다. 커밋을 23:59 무렵(KST)에 띄워 러너가 `${TODAY}` 를 10월 22일로 픽스처를 지었고, 그 사례가 돈 것은 자정 뒤라 훅이 부른 `tools/sibling_overlap.py` 는 오늘을 10월 23일로 읽은 것으로 본다(출력 파일 시각 00:06:32, 검사 묶음 408초, `run-hooks` 172초). 이 브랜치는 그 훅과 러너를 고치지 않았다. 자정 뒤 같은 커밋을 다시 돌렸다. 대기열에 같은 꼴(자정에 걸린 검사)의 행은 없다. 회고 후보로 둔다.
+- 그 커밋까지 푸시한다. 이 푸시로 도는 claude-review 는 둘째 회차다.

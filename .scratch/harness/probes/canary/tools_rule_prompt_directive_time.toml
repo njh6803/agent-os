@@ -3,7 +3,7 @@
 # 실리는지. 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 둘이다. 트랜스크립트를 열지 않는 헤드리스 갈래의 범위와, assistant 기록을 뺀 사본을 끝까지 읽는 최악의 범위.
 # 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 두 갈래 모두 `e62eb052` 위의 커밋 전 작업 트리, 대조군은 두 물음
-# 모두 "없음", 일지 2026-10-22-23).
+# 모두 "없음", 일지 2026-10-22-29).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_prompt_directive_time.toml <출력 디렉터리>
 kind = "rule"
 question = '''

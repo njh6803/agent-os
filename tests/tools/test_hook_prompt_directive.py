@@ -665,7 +665,7 @@ def test_알림의_규약_낱말은_원천_문서에_있다(tmp_path: Path) -> N
 def test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다(tmp_path: Path) -> None:
     """다른 티켓의 워크트리에서 연 세션이 다른 일을 받으면, 차례대로 따른 1)이 남의 워크트리에 새
     티켓을 먼저 쓴다. 그래서 그 조건은 1) 앞에 온다(PR 직전 `bug-perf-review`, 일지
-    2026-10-22-23)."""
+    2026-10-22-29)."""
     notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
 
     assert notice is not None
