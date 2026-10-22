@@ -272,3 +272,22 @@ open-session을 부른다 2026-10-22T05:00:34Z
 - `visual`의 `molecules-switch--off-dark-regular-focus` 사진이 이 PR에서 1픽셀 차이로 한 번 빨갰고(웹 코드를 건드리지 않은 PR) 다시 돌려 초록이 됐다. 한 번뿐이라 후보로 올리지 않았다. 되풀이되면 retro가 대기열에서 회차를 센다.
 - 이 세션은 `retro`를 돌았다(위 `## 회고`). 병합한 뒤의 세션은 다시 돌지 않아도 된다.
 - 주 체크아웃 미갱신: 루트는 main. 병합된 이 워크트리와 브랜치는 다음 주 체크아웃 세션의 `tidy-checkouts`가 지운다.
+
+## 인계 (커밋 뒤, 봇 회차 뒤)
+
+커밋 `e4aa8537`(일지의 둘째 푸시 뒤·회고·다음과 대기열 413·414·만료 셋) 직후 인계 계기(`hook_handoff`, 세션 컨텍스트 229,033 토큰, 경계 `커밋 뒤`)가 왔다. `next-session`의 "인계할 때"를 Read로 열어 인계하지 않는 다섯 때를 봤다. 명령은 성공했고, 요청 범위는 병합까지라 이 경계에서 끝나지 않으며, 이 세션을 연 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 경계가 다르다. 이 세션이 쓴 `인계 못함` 줄은 없고 `get_session`의 `self`에 `parentSessionId`가 없다. 다섯 어디에도 들지 않아 인계한다. `tools/model_sweep.py docs/design-reverse-sync-spec`은 `스윕 밖`이다. 이 일지의 위 절들은 이미 커밋됐고 이 절만 커밋하지 않은 채 있다.
+
+```
+다음 작업: 기능 design-reverse-sync의 명세. PR #344의 봇 첫 회차를 반영해 `7f700617`까지 푸시했고(CI·claude-review 초록), 일지·회고·대기열의 커밋 `e4aa8537`이 푸시 전이다. 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec design-reverse-sync
+브랜치: docs/design-reverse-sync-spec
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-22-04-design-reverse-sync-spec.md 의 "이어받은 세션 (PR 연 뒤)"부터 끝까지, .claude/skills/next-session/SKILL.md 의 순서 1(봇 회차와 병합 길)과 "워크트리에서 병합할 때"
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-10-22-04-design-reverse-sync-spec.md 이 일지의 "인계 (커밋 뒤, 봇 회차 뒤)" 절(이 지시문)만 커밋하지 않은 채 워크트리에 있다. 푸시(`e4aa8537`)와 이 절의 커밋은 한 번에 푸시하고 순서 1의 2대로 `tools/wait_ci.py`를 띄운다. 일지 "다음"과 `## 회고`는 이미 있고 retro도 돌았으니 다시 돌지 않는다. 봇 회차: CodeRabbit 첫 회차 Major 둘(156·182행)은 반영했다. 둘째 `@coderabbitai review`는 한도로 비었고(`Review rate limited`) 두 스레드에 CodeRabbit 답글이 없다. 그래서 병합 전에 PR 코멘트 하나에 "CodeRabbit이 `7f700617`을 읽지 않았다, 명세 156·182·274행의 고침은 claude-review(유지보수성·경계)만 봤고 보안·버그 축이 비어 있다"를 적는다(operations.md 리뷰 파이프라인 3). claude-review는 두 번 모두 지적 없음이라 푸시 뒤 한 번 더 돌아도 Critical·Major만 본다. 병합 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`, `headRefOid`와 `HEAD` 대조를 한다. 병합 뒤의 다음은 명세 검토(spec-reviewer)와 /to-tickets이다. 사용자 결정 셋은 끝났고(다시 묻지 않는다) ADR 이력은 없다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. 일지는 같은 파일을 이어 쓴다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-22T05:27:39Z
