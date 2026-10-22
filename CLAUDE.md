@@ -36,7 +36,7 @@
 | `CODING_STANDARDS.md` | code-review 때 | retro가 세 번째 반복에서 더할 때 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
 | `.scratch/retro-queue.md` | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
-| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다) |
+| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
 | `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |

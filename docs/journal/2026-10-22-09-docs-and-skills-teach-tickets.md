@@ -1,0 +1,53 @@
+# 2026-10-22 (09) 규약 문서와 스킬이 "PR마다 티켓 하나"의 차례를 가르친다 (ticket-for-every-pr 02)
+
+> 사용자: (next-session 지시문을 첫 메시지로 받았다) "다음 작업: .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md. 규약 문서와 스킬이 "PR마다 티켓 하나"의 차례를 가르친다 … 이번 요청 범위: PR과 병합까지"
+
+## 체크아웃 정리
+
+지시문의 "어디서"대로 제목을 `feature/02-docs-and-skills-teach-tickets`로 바꾸고 `tidy-checkouts`를 돌았다. 루트를 `98272c4f`에서 `caaa062b`(origin/main, #345의 병합)로 당겼다. `03-posix-launcher`를 쥔 쉬는 세션의 프로세스를 끄고 그 워크트리와 브랜치를 지웠고, 체크아웃되지 않은 `worktree-design-reverse-sync-tickets` 브랜치를 지웠다. 쥔 프로세스가 있는 넷, 병합된 PR이 없는 여덟, 앱의 표지가 있는 둘은 남겼다. 휴지통의 `node_modules` 아홉과 `.venv` 하나는 다른 체크아웃의 node·esbuild·python이 모듈을 올려 남았다. 그 뒤 `EnterWorktree`로 새 워크트리에 들어가 브랜치를 바꿨다.
+
+## 구현
+
+첫 편집으로 티켓 02의 `Status:`를 `in-progress`로 바꿨다. 스킬을 고치기 전에 `writing-for-agents`를 불렀다.
+
+- 규약 원천. `docs/agents/issue-tracker.md` 규약 절에 PR마다 티켓 하나와 면제 둘, harness 티켓의 자리·세 자리 번호·서식, 기능 밖 제품 고침의 자리, 브랜치 이름이 stem이라는 것, 상태의 흐름, 병합된 티켓을 잇는 새 티켓을 더했다. 같은 파일의 전체 계획 절과 화면 디자인 절, `docs/constitution/operations.md`의 세 절(브랜치와 병합, 문서 위치의 기록 판정, 리뷰 파이프라인 1의 명세 축), 헌법 판 3.0.49, `CLAUDE.md` 지도 표, 루트 `README.md` 원천 표, PR 템플릿, 대기열 머리, `model_sweep` README의 "조건 변경(ADR 0037)" 문단을 고쳤다. 헌법 판은 번호 도구의 "형제가 쓴 가장 높은 헌법 판"(3.0.48)보다 높다.
+- 스킬 다섯. `implement`(티켓 맞추기 문단), `next-session`(chore 배치 줄을 티켓 단위로, 3단계의 티켓 번호, 프론티어 줄, 지시문 형식), `code-review`(명세 출처의 셋째 항목), `retro`(회고 반영 줄, 티켓 경로로 닫기), `to-tickets`(stem이 구현 브랜치). 사본의 센티널 주석도 고쳤다.
+- 고치지 않은 자리. `docs/model-selection.md`(티켓이 그렇게 정했다), `tools/morning_collect.py`와 그 테스트의 번호 없는 `chore/<slug>` 주석(지금도 참이다), `session_cost` README의 측정 분류, `KICKOFF.md`의 `chore/kickoff`, done 기능인 design-refresh의 티켓, `CLAUDE.md`와 `tools/morning_tasks/environment.md`의 "chore 브랜치"(지금도 참이다). `next-session`의 "하네스·문서만 고친 PR … 같은 주제가 남았다" 줄은 처음에 이 티켓의 범위 밖이라 두었는데, 명세 203행이 그 줄을 이름으로 들어 셀프 리뷰가 짚었고 고쳤다(아래 셀프 리뷰). 잔존 grep에서 옛 정의(`chore/<slug>`, `fix/<slug>`, "티켓 밖의 하네스/제품")를 든 살아 있는 문서는 0이었다.
+
+## 검사 (셀프 리뷰 전)
+
+카나리아. 바꾼 스킬 다섯마다 `.scratch/harness/probes/canary/`에 명세를 새로 썼다(`implement_ticket_status`, `next_session_chore_tickets`, `code_review_branch_ticket`, `retro_ticket_reflection`, `to_tickets_stem_branch`). 실험군은 이 워크트리, 대조군은 주 체크아웃(`caaa062b`)이다. 사전 확인 다섯이 통과했고, claude 2.1.302에서 다섯 모두 통과 4였다. `retro_ticket_reflection`의 첫 판은 통과 2·실패 2였다. 2번 질문이 취소선 문장의 "바로 다음 문장"을 물어, 실험군 두 회차가 새 문장을 건너뛰고 그 뒤의 문장을 옮겼다. 세 회차 모두 1번에 새 4단계 줄을 옮겨 새 사본은 실렸으므로, 닫힌 자리를 적는 법의 문장을 모두 옮기게 질문을 고쳐 다시 돌렸다. 기존 카나리아 서른의 사전 확인은 모두 막혔다. 대조군인 주 체크아웃이 그 명세를 들인 PR의 병합 뒤 새 사본이거나, `--control-commit`에 줄 옛 판 체크아웃이 없어서다. 지난 PR의 확인 기록이라 이 티켓에서 고칠 것이 아니다.
+
+검증 명령. `uv run ruff check . && uv run ruff format --check .`가 통과했고, `uv run python tools/run_checks.py`의 검사 여덟(zizmor, check-instructions, lint-imports, check-type-escapes, pyright, run-hooks, web-verify, pytest)이 모두 통과했다.
+
+## 셀프 리뷰
+
+`/code-review`(base `caaa062b`, 고친 파일 14, 미추적 6, 커밋 0). Skill 도구가 실은 것은 주 체크아웃의 옛 사본이라 명세 출처의 셋째 항목이 없었지만, 티켓과 명세를 인자로 넘겨 같은 결과다. 표준 축은 Major 셋과 Minor 여섯, 명세 축은 Minor 넷과 Nit 셋이었다. 두 축이 같은 자리를 셋 짚었다(면제 PR의 회고 티켓 예외, `.scratch/harness/`의 기록 판정, chore 세션이 `implement`를 싣지 않는 것).
+
+고친 것.
+- `docs/agents/issue-tracker.md`. 면제 PR에서 회고가 harness 티켓을 쓰면 브랜치 이름과 맞대지 않고 `docs/<slug>` 그대로라는 예외를 PR마다 티켓 하나 항목과 stem 항목에 더했다(명세 166행 판정 6). 상태 항목의 부정형 문장을 "티켓은 그 일을 하는 PR에 함께 싣는다"로 바꿨다. `operations.md` 브랜치 절의 "티켓을 쓰지 않는 면제 PR"에서 "티켓을 쓰지 않는"을 뺐다.
+- `docs/constitution/operations.md` 문서 위치. `.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않는다는 괄호를 더했다. 001이 done이라 "하네스 기능은 티켓이 모두 done일 때 기록"으로 읽으면 같은 문단의 `.scratch/harness/probes/`와 어긋났다.
+- `next-session` 87행. 병합된 PR의 남은 일을 이 세션에서 이을 때 다음 번호의 새 harness 티켓을 쓰고 새 브랜치를 딴다고 더했다(명세 203행).
+- `next-session` chore 줄. 받는 세션은 `implement`를 싣지 않으므로 "읽을 것" 줄에 `docs/agents/issue-tracker.md`를 둔다고 더했다. 시작 프롬프트의 꼴은 명세 257행이 정해 두었다.
+- `implement`. 티켓 없이 받은 일의 브랜치를 바꾸면 `set_session_title`로 세션 제목도 바꾼다고 더했다(사용자 스토리 25).
+- `retro` 4단계. 회고 반영 줄을 종류별 목록("고침", "더하는 것")의 끝으로 옮기고 "어느 종류든"으로 열었다. 지금 PR이 이미 병합된 갈래(다음 번호의 새 harness 티켓과 새 브랜치)를 더하고, 번호 도구를 다시 치는 문장을 새로 쓰는 harness 티켓 모두에 걸리게 했다. 센티널 주석도 고쳤다.
+- 대기열 머리의 닫힘 꼴에 retro와 같은 `. …`를 넣었다.
+- retro 카나리아의 1번 질문을 옮긴 줄에 맞게 고쳤다.
+
+남긴 것과 이유.
+- chore 시작 프롬프트를 `/implement`로 바꾸는 것. 명세 257행이 꼴을 "명세가 정했다"로 고정했다. 대신 "읽을 것" 줄로 규약 문서를 가리켰다.
+- `implement`의 "PR을 열기 전에 done" 문장을 끝 단계로 옮기는 것. 상태의 흐름을 한 문단에 모아 둔 것이고, PR의 티켓이 done인지는 CI(티켓 04)가 본다(명세 192행).
+- 같은 뜻이 여러 문서에 있다는 지적(브랜치 이름, 다시 치기, 닫힘 꼴). 티켓이 스킬마다 그 문장을 요구했고, 각 자리가 `docs/agents/issue-tracker.md`를 원천으로 가리킨다. 대기열 머리의 "티켓은 행 번호만 가리키고"도 같다.
+- `wontfix` harness 티켓의 기록 판정. 명세 285행이 처음 필요해지는 세션이 사람에게 묻는다고 미뤘다.
+- `model_sweep` README 문단의 날짜가 효력이 서는 날이 아니라 넣은 날이라는 지적. 티켓이 "그 문단이 들어간 날"을 요구했다.
+- 시작 프롬프트의 `<NNN>`과 티켓의 `NNN`. 스킬의 다른 자리 표시와 같은 꺾쇠 꼴이고 뜻이 같다.
+- 루트 README 행, to-tickets의 slug 문장. 규약의 원천을 가리키는 포인터와 그 stem이 브랜치가 된다는 요구에서 바로 나오는 문장이라 둔다.
+
+PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 문장(코드 리뷰 6단계 1).
+- issue-tracker.md: "다만 그 PR에서 회고가 고침을 반영하면 harness 티켓 한 장을 같은 PR에 쓰고, 그 티켓은 브랜치 이름과 맞대지 않아 브랜치는 `docs/<slug>` 그대로다(`retro` 4단계, ADR 0037)", "예외는 위 면제 PR에 회고가 쓴 harness 티켓 하나다", "티켓은 그 일을 하는 PR에 함께 싣는다"
+- operations.md: "`.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않고 티켓을 하나씩 본다"
+- implement: "`set_session_title`에 `self`와 새 브랜치를 주어 세션 제목도 바꾼다. 형제 거르기와 체크아웃 정리가 제목으로 세션을 찾는다."
+- next-session: "받는 세션은 `implement`를 싣지 않으므로 "읽을 것" 줄에 `docs/agents/issue-tracker.md`(harness 티켓의 서식·상태·번호)를 둔다.", "병합된 티켓은 다시 열지 않으므로 남은 일로 다음 번호의 새 harness 티켓을 쓰고 그 stem으로 새 브랜치를 딴다(`docs/agents/issue-tracker.md`)"
+- retro: "지금 PR이 이미 병합됐으면 반영은 새 PR이라 다음 번호의 새 harness 티켓을 쓰고 그 stem으로 브랜치를 딴다."
+
+다시 돌린 것. 카나리아 명세 다섯의 사전 확인이 통과했고, 질문을 고친 `retro_ticket_reflection`은 다시 돌려 통과 4였다. 나머지 넷은 질문이 가리키는 문장이 그대로라 사전 확인으로 갈음했다. 손으로 치는 검증 다섯은 이 커밋의 pre-commit 결과로 갈음한다.
