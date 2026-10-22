@@ -220,12 +220,12 @@ new = '''            raise'''
 name = "BOM 을 벗기지 않고 푼다"
 tests = ["tests/tools/test_rerun_hidden.py", "-k", "BOM_으로_시작하는"]
 expect = "red"
-expect_output = ["assert [] == ['tests/test_a.py::test_a']"]
+expect_output = ["CandidateError: M 의 시험 파일을 풀지 못했다: tests/test_a.py"]
 
 [[mutation.edit]]
 file = "tools/rerun_hidden.py"
-old = '''        tree = ast.parse(source.removeprefix(chr(0xFEFF)))'''
-new = '''        tree = ast.parse(source)'''
+old = '''        return ast.parse(source.removeprefix(chr(0xFEFF)))'''
+new = '''        return ast.parse(source)'''
 
 [[mutation]]
 name = "B 의 pytest 가 junit 을 남기지 않아도 실패 갈래로 세지 않는다"
@@ -256,3 +256,29 @@ new = '''                strings.update(
                     for line in sub.value.encode("unicode_escape").decode("ascii").split("\n")
                     if len(line) >= 2
                 )'''
+
+[[mutation]]
+name = "M 의 풀리지 않는 파일을 시험이 없는 것으로 본다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "M_의_시험_파일이_풀리지"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if tree is None:
+            raise CandidateError(f"M 의 시험 파일을 풀지 못했다: {file}")'''
+new = '''        if tree is None:
+            continue'''
+
+[[mutation]]
+name = "M 의 풀리지 않는 파일이 있어도 후보가 성공으로 끝난다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "후보의_실패_갈래이고"]
+expect = "red"
+expect_output = ["AssertionError: Hidden(hidden_tests="]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if tree is None:
+            raise CandidateError(f"M 의 시험 파일을 풀지 못했다: {file}")'''
+new = '''        if tree is None:
+            continue'''

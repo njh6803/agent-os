@@ -11,7 +11,8 @@
   않는다.
   - 바뀐 시험은 M과 B의 시험 파일에서 AST로 견준 시험 함수다. 모듈 수준의 `test_*`와 `Test*`
     클래스의 `test_*` 메서드 가운데 M에 새로 생겼거나 함수 정의(데코레이터 포함)의 AST 덤프가 다른
-    것이다. 줄 번호는 덤프에 들지 않아 줄만 옮긴 시험은 바뀌지 않았다.
+    것이다. 줄 번호는 덤프에 들지 않아 줄만 옮긴 시험은 바뀌지 않았다. B에서 풀리지 않는 파일의
+    시험은 모두 새것이고, M에서 풀리지 않는 파일은 바뀐 시험을 셀 수 없어 그 후보의 실패 갈래다.
   - 시험의 단위는 pytest의 노드 ID다. 매개변수화한 시험은 경우마다 따로 센다.
   - 조건 1. M에서 두 번 다 통과한 노드만 남는다.
   - 조건 2. B에 M의 시험 파일과 지원 파일을 덮고 돌린 junit xml에서, `error` 요소인 노드,
@@ -130,18 +131,12 @@ class ChangedTest:
 type _Def = ast.FunctionDef | ast.AsyncFunctionDef
 
 
-def _is_test_def(node: ast.stmt) -> bool:
-    return isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name.startswith(
-        "test_"
-    )
+def _is_test_def(node: _Def) -> bool:
+    return node.name.startswith("test_")
 
 
-def _test_defs(source: str) -> dict[str, _Def]:
-    """모듈의 시험 함수. 풀리지 않는 소스는 시험이 없다. 앞의 BOM은 벗기고 푼다."""
-    try:
-        tree = ast.parse(source.removeprefix(chr(0xFEFF)))
-    except (SyntaxError, ValueError):
-        return {}
+def _test_defs(tree: ast.Module) -> dict[str, _Def]:
+    """모듈의 시험 함수."""
     out: dict[str, _Def] = {}
     for node in tree.body:
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and _is_test_def(node):
@@ -151,6 +146,14 @@ def _test_defs(source: str) -> dict[str, _Def]:
                 if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef) and _is_test_def(item):
                     out[f"{node.name}::{item.name}"] = item
     return out
+
+
+def _parse(source: str) -> ast.Module | None:
+    """앞의 BOM은 벗기고 푼다. 풀리지 않으면 `None`이다."""
+    try:
+        return ast.parse(source.removeprefix(chr(0xFEFF)))
+    except (SyntaxError, ValueError):
+        return None
 
 
 def _body_terms(node: _Def) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -170,12 +173,17 @@ def _body_terms(node: _Def) -> tuple[tuple[str, ...], tuple[str, ...]]:
 def changed_tests(base: Mapping[str, str], merge: Mapping[str, str]) -> tuple[ChangedTest, ...]:
     """M의 시험 파일(`merge`, 경로 → 소스) 가운데 B(`base`)에 없거나 정의가 다른 시험 함수.
 
-    파일은 경로 차례, 함수는 정의 차례다. B에 없는 파일의 시험은 모두 새것이다.
+    파일은 경로 차례, 함수는 정의 차례다. B에 없거나 B에서 풀리지 않는 파일의 시험은 모두
+    새것이다. M에서 풀리지 않는 파일은 그 안의 바뀐 시험을 셀 수 없어 `CandidateError`다.
     """
     out: list[ChangedTest] = []
     for file in sorted(merge):
-        old = _test_defs(base.get(file, ""))
-        for name, node in _test_defs(merge[file]).items():
+        tree = _parse(merge[file])
+        if tree is None:
+            raise CandidateError(f"M 의 시험 파일을 풀지 못했다: {file}")
+        before_tree = _parse(base.get(file, ""))
+        old = {} if before_tree is None else _test_defs(before_tree)
+        for name, node in _test_defs(tree).items():
             before = old.get(name)
             if before is not None and ast.dump(before) == ast.dump(node):
                 continue
@@ -556,9 +564,9 @@ def _remove_checkout(repo: Path, place: Path, limits: Limits, out: Callable[[str
             )
             return
     reason = ""
+    # 시간을 넘겨 죽은 꺼내기는 잠금을 남겼을 수 있어 --force 를 두 번 준다
+    args = ["-c", "core.longpaths=true", "worktree", "remove", "--force", "--force", str(place)]
     try:
-        # 시간을 넘겨 죽은 꺼내기는 잠금을 남겼을 수 있어 --force 를 두 번 준다
-        args = ["-c", "core.longpaths=true", "worktree", "remove", "--force", "--force", str(place)]
         done = _git(repo, args, limits.worktree)
         if done.returncode != 0:
             reason = _last_line(_text(done.stderr))
@@ -751,7 +759,18 @@ def _remove_parent(parent: Path, out: Callable[[str], None]) -> None:
     try:
         parent.rmdir()
     except OSError:
-        out(f"임시 폴더 {parent} 가 남았다. 남은 것을 확인한 뒤 지운다")
+        out(f"임시 폴더 {parent} 가 남았다{_leftover_names(parent)}. 남은 것을 확인한 뒤 지운다")
+
+
+def _leftover_names(parent: Path) -> str:
+    """남은 이름을 정렬해 다섯까지 보이는 괄호 글. 모두의 수를 앞에 둔다. 읽지 못하면 빈 글이다."""
+    left: list[str] = []
+    with suppress(OSError):
+        left = sorted(p.name for p in parent.iterdir())
+    if not left:
+        return ""
+    more = " …" if len(left) > 5 else ""
+    return f"(남은 것 {len(left)}개: {', '.join(left[:5])}{more})"
 
 
 def sort_candidate(

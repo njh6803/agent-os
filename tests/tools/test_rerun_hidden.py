@@ -142,6 +142,11 @@ def test_B_에_없거나_풀리지_않는_시험_파일의_시험은_모두_새�
     assert _이름들(got) == ["tests/test_a.py::test_a"]
 
 
+def test_M_의_시험_파일이_풀리지_않으면_CandidateError_다() -> None:
+    with pytest.raises(CandidateError, match="tests/test_a.py"):
+        changed_tests({}, {"tests/test_a.py": "def (:\n"})
+
+
 def test_BOM_으로_시작하는_시험_파일의_시험도_본다() -> None:
     m = chr(0xFEFF) + "def test_a():\n    assert 1\n"
     assert _이름들(changed_tests({}, {"tests/test_a.py": m})) == ["tests/test_a.py::test_a"]
@@ -693,6 +698,71 @@ def test_준비가_실패하면_실패_갈래다(tmp_path: Path) -> None:
     assert isinstance(got, Failure)
     assert "준비" in got.reason
     assert "3" in got.reason
+    assert _워크트리들(repo) == 전
+    assert list(임시.iterdir()) == []
+
+
+def test_임시_폴더에_남은_것은_지우지_않고_그_이름을_알린다(tmp_path: Path) -> None:
+    repo, base, merge = _저장소(tmp_path)
+    임시 = tmp_path / "임시"
+    임시.mkdir()
+    notes: list[str] = []
+
+    sort_candidate(
+        repo,
+        base,
+        merge,
+        setup=((sys.executable, "-c", "open('../낯선.txt', 'w').close()"),),
+        pytest=_PYTEST,
+        temp_root=임시,
+        out=notes.append,
+    )
+
+    (parent,) = 임시.iterdir()
+    assert [p.name for p in parent.iterdir()] == ["낯선.txt"]
+    assert any("낯선.txt" in note and str(parent) in note for note in notes), notes
+
+
+def test_임시_폴더에_남은_이름은_정렬해_다섯까지_보이고_모두의_수를_적는다(tmp_path: Path) -> None:
+    repo, base, merge = _저장소(tmp_path)
+    임시 = tmp_path / "임시"
+    임시.mkdir()
+    notes: list[str] = []
+    make = "for n in 'gfedcba': open(f'../낯선{n}.txt', 'w').close()"
+
+    sort_candidate(
+        repo,
+        base,
+        merge,
+        setup=((sys.executable, "-c", make),),
+        pytest=_PYTEST,
+        temp_root=임시,
+        out=notes.append,
+    )
+
+    (note,) = [note for note in notes if "임시 폴더" in note]
+    assert "남은 것 7개: 낯선a.txt, 낯선b.txt, 낯선c.txt, 낯선d.txt, 낯선e.txt …" in note, note
+    assert "낯선f.txt" not in note, note
+
+
+def test_M_의_시험_파일이_풀리지_않으면_후보의_실패_갈래이고_작업_트리가_남지_않는다(
+    tmp_path: Path,
+) -> None:
+    repo, base, _ = _저장소(tmp_path)
+    _쓰기(repo, {"tests/test_new.py": "def test_x(:\n"})
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "M 깨짐")
+    merge = _git(repo, "rev-parse", "HEAD")
+    전 = _워크트리들(repo)
+    임시 = tmp_path / "임시"
+    임시.mkdir()
+
+    got = sort_candidate(
+        repo, base, merge, setup=_NO_SETUP, pytest=_PYTEST, temp_root=임시, out=print
+    )
+
+    assert isinstance(got, Failure), got
+    assert "M 의 시험 파일을 풀지 못했다: tests/test_new.py" in got.reason, got.reason
     assert _워크트리들(repo) == 전
     assert list(임시.iterdir()) == []
 

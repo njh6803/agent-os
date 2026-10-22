@@ -105,3 +105,102 @@ CodeRabbit CLI는 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 
 
 남긴 것.
 - Nit: `tools/rerun_files.py`의 조각 꼴이 윈도에서 같은 자리를 가리키는 별칭(끝이 `.`인 조각, `nul` 같은 장치 이름)을 받는다. 작업 트리 바깥으로 쓰는 길이 아니고 덮은 파일이 없다는 실패나 같은 폴더로 합쳐지는 정도라 PR 체크리스트에 두는 지적으로 적는다.
+
+## 커밋, PR, 둘째 인계
+
+PR 직전 리뷰 반영을 6ba3747e로 커밋했다(pre-commit 모두 Passed, pytest 317.7초, web-verify 239.8초). 커밋 직후 인계 계기(`커밋 뒤`)가 왔으나 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다. origin/main이 d0e696c9 그대로라 리베이스 없이 푸시하고 PR #363을 열었다. 그 직후 인계 계기(`PR 연 뒤`, 컨텍스트 270,251 토큰)가 왔다. 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다) 다른 인계하지 않는 때에도 들지 않아 넘긴다. 이 세션의 제목은 `feature/02-hidden-test-filter`였고 `feature/02-hidden-test-filter (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업은 없다. 낸 지시문은 아래다.
+
+```
+다음 작업: .scratch/model-rerun/issues/02-hidden-test-filter.md. 후보 하나의 원래 PR 시험 가운데 흔들리지 않고 B에서 단언으로 실패하며 새 이름에 기대지 않는 노드만 숨은 시험으로 남긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/02-hidden-test-filter.md
+브랜치: feature/02-hidden-test-filter
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-18-hidden-test-filter.md
+이어받을 상태: 인계: PR 연 뒤. PR #363(https://github.com/njh6803/agent-os/pull/363)을 6ba3747e로 열었고 아직 봇 회차를 시작하지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다(마지막 푸시 뒤). PR 직전 리뷰(CLI 좌석 없음, 대체 둘)는 반영했고 결과는 PR 체크리스트에 있다. 남긴 Nit 하나(윈도 별칭 조각)는 체크리스트에 적었다. 형제 워크트리 03-rerun-judge·04-round-clone이 프로브 README와 티켓 07을 함께 고쳐 나중에 병합하는 쪽에서 글자 충돌 후보다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-18-hidden-test-filter.md
+확인할 선행 조건: 없음(주 체크아웃은 main이고 origin/main d0e696c9와 같다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+```
+
+워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-22T22:59:29Z
+
+## 이어받은 세션: 봇 회차
+
+인계 지시문(`인계: PR 연 뒤`)으로 연 셋째 세션이다. 제목을 `feature/02-hidden-test-filter`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 주 체크아웃은 main이고 origin/main과 같아 `tidy-checkouts`를 돌지 않았다. PR #363의 헤드는 6ba3747e로 HEAD와 같았고, 마지막 푸시 뒤 첫 `@coderabbitai review` 코멘트를 남겼다. 그때 python·web·visual은 pending이었고 claude-review·e2e·ticket은 통과였다.
+
+`tools/wait_ci.py`가 모두 통과, CodeRabbit `Review completed`로 끝났다. 두 봇 모두 첫 회차라 Minor·Nit도 지적마다 판단했다.
+
+고친 것.
+- CodeRabbit Minor: M의 시험 파일이 풀리지 않으면 `_test_defs`가 빈 매핑을 돌려 빈 `Hidden`이 성공처럼 돌아갔다. 풀기를 `_parse`로 떼고, `changed_tests`가 M에서 풀리지 않는 파일이면 `CandidateError`를 던진다. B에서 풀리지 않는 파일은 전처럼 모두 새것이다. 시험은 고치기 전에 빨갰다. BOM 변이는 이제 그 오류를 내므로 원문과 표지를 고쳤고, 오류를 `continue`로 바꾸는 변이를 더했다(스크래치 표로 둘 다 표지까지 빨갰다, `--check` 원문 23). 이 결정은 PR 본문 "왜 이렇게 했나"에 먼저 더했다.
+- claude-review Minor: 임시 폴더를 걷지 못한 알림에 남은 이름(다섯까지)을 넣었다. 준비 명령이 임시 폴더에 낯선 파일을 만드는 시험은 고치기 전에 빨갰다.
+- claude-review Nit 둘: `_is_test_def`가 `_Def`를 받게 해 `isinstance`를 한 번만 걸고, `_remove_checkout`의 `try`가 `_git` 호출만 감싼다. `TypeIs`로 좁히는 길은 이름이 `test_`가 아닌 함수에서도 거짓이라 반대 갈래를 잘못 좁혀 버렸다.
+
+보류한 것(PR 코멘트에 이유를 남긴다).
+- claude-review Minor: `_cut_links`가 `tools/canary.py`의 사본이고 모듈 하나가 바뀌는 이유 셋을 진다. 두 모듈을 함께 쓰는 티켓 05의 메모에 이미 넘겼다.
+
+## 셋째 인계
+
+반영을 마치고 ruff 두 줄이 초록인 채로 `/code-review`(base 6ba3747e)를 불렀더니 인계 계기(`셀프 리뷰 직전`, 컨텍스트 243,995 토큰)가 왔다. 이 세션의 지시문은 `인계: PR 연 뒤`라 경계가 다르고, 곁 세션이 아니며(`get_session`의 `self`에 `parentSessionId`가 없다) 요청 범위(PR과 병합까지)도 여기서 끝나지 않아 넘긴다. 셀프 리뷰는 밟지 않았다. 변경은 모두 커밋하지 않은 채 워크트리에 있다(`tools/rerun_hidden.py`, `tests/tools/test_rerun_hidden.py`, `.scratch/model-rerun/probes/rerun_hidden_mutations.toml`, `tools/mutate.py`, `tests/tools/test_mutate.py`, `.claude/rules/probes.md`, 티켓 02, 이 일지). PR 본문은 M 구문 오류 결정과 변이 23으로 이미 고쳤다. claude-review의 보류 Minor(`_cut_links` 사본·모듈 크기) 이유를 PR 코멘트로 아직 남기지 않았다. `.claude/rules/probes.md`에 더한 항목은 새 세션에서 불러 보는 확인(`CLAUDE.md` 작업 규약 3)을 아직 하지 않았다. 이 세션의 제목은 `feature/02-hidden-test-filter`였고 `feature/02-hidden-test-filter (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업(`wait_ci`)은 이미 끝났다. 낸 지시문은 아래다.
+
+```
+다음 작업: .scratch/model-rerun/issues/02-hidden-test-filter.md. 후보 하나의 원래 PR 시험 가운데 흔들리지 않고 B에서 단언으로 실패하며 새 이름에 기대지 않는 노드만 숨은 시험으로 남긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/02-hidden-test-filter.md
+브랜치: feature/02-hidden-test-filter
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-18-hidden-test-filter.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 봇 첫 회차(CodeRabbit Minor 하나, claude-review Minor 하나·Nit 둘)와 회고 반영(tools/mutate.py 문구, .claude/rules/probes.md 항목)이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review base 6ba3747e)부터 한다. 그 뒤 커밋·푸시, 보류한 claude-review Minor(_cut_links 사본과 모듈 크기, 티켓 05 메모로 넘김)의 이유를 PR 코멘트로 남기기, 대기(wait_ci), 둘째 회차(Critical·Major만), 병합이다. 회고와 "다음"은 일지에 이미 썼다. PR 본문은 이미 넓혔다. probes.md 항목은 새 세션에서 불러 보는 확인이 남았다. 일지 docs/journal/2026-10-23-18-hidden-test-filter.md
+확인할 선행 조건: 없음(주 체크아웃은 main이고 origin/main과 같다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+```
+
+워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-22T23:25:24Z
+
+## 이어받은 세션: 셀프 리뷰
+
+셋째 인계 지시문으로 연 넷째 세션이다. 제목을 바꾸고 `EnterWorktree(path)`로 들어와 `/code-review`(base 6ba3747e, 커밋하지 않은 8파일, 커밋 0, 미추적 0)를 돌렸다. 두 축 모두 Critical·Major는 없었다. 표준 축 Minor 2·Nit 4·smell 2, 명세 축 Minor 3·Nit 4.
+
+고친 것.
+- 표준 Minor(`except` 안에 쌓인 로직, `CODING_STANDARDS.md` "에러 처리와 정상 흐름을 분리한다"): `_remove_parent`의 남은 이름 조립을 `_leftover_names`로 뗐다. `except`에는 알림 한 줄만 남는다.
+- 표준 Minor·명세 Minor(다섯까지 자르기와 정렬을 아무것도 재지 않는다, 더 있다는 표시가 없다): 알림을 "남은 것 7개: a, b, c, d, e …"처럼 모두의 수와 줄임표를 적게 바꾸고, 일곱 파일을 남기는 시험을 더했다. 시험은 고치기 전에 빨갰다.
+- 명세 Minor(M을 풀지 못하면 실패 갈래라는 결정이 티켓에 없다): 티켓 02 메모에 "PR 봇 첫 회차에서 정한 것" 줄을 더했다.
+- 명세 Minor(실패 갈래를 `sort_candidate`까지 밟는 시험이 없다): M의 시험 파일이 구문 오류인 임시 저장소로 `Failure`와 그 까닭 문구, 작업 트리·임시 폴더가 남지 않음을 단언하는 시험을 더했다. 구현 뒤에 쓴 시험이라 변이 24("M 의 풀리지 않는 파일이 있어도 후보가 성공으로 끝난다")를 더해 빨강을 봤다. 변이 23은 고르기(`-k`)에 이 시험도 들지만 `tools/mutate.py`가 `-x`라 앞 시험의 실패에서 멈춰 이 시험의 빨강을 보이지 못했다. 그 사이 까닭 단언을 파일 이름에서 까닭 문구 전체로 좁혔다(다른 갈래의 `Failure`도 파일 이름을 담을 수 있다). 표지 `AssertionError: Hidden(hidden_tests=`는 변이를 손으로 넣어 실패 출력에서 골랐다.
+- 명세·표준 Nit(새 mutate 문구가 "이름이나 번호"를 권하는데 독스트링은 워크트리 가드 때문에 번호를 쓰라고 한다): 문구를 "그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 이름을 준다"로 바꾸고 시험 단언을 맞췄다.
+- 그 문구 수정을 앞 세션부터 `.scratch/harness/probes/mutate_runners_mutations.toml`의 "모르는 선택을 변이 이름으로 넘긴다" 원문이 따라가지 못해 `--check`가 0번으로 빨갰다. 원문을 지금 코드에 맞췄다. `tools/mutate.py`를 겨누는 표 열하나와 이 티켓의 표 모두 `--check`가 초록이다.
+- 표준 Nit(회고 4의 따옴표 인용이 `CODING_STANDARDS.md`에 없는 글자열): 지금 표준의 굵은 머리 "에러 처리와 정상 흐름을 분리한다"로 고쳤다.
+
+남긴 것.
+- 테스트 이름에 `CandidateError`가 든 것(Nit): 같은 파일의 선례(`test_풀리지_않는_junit_은_CandidateError_다`)와 맞춘 재량이라 둔다.
+- `_parse` 이름, `_test_defs`의 `isinstance` 연쇄 두 번(smell, Nit): 판단 항목이고 05가 두 모듈을 함께 쓸 때 볼 메모의 모듈 정리와 같은 자리라 넘긴다.
+- PR 본문의 "빈 `Hidden`이 성공처럼" 범위(다른 시험 파일이 있으면 부분 결과였다)와 "211 passed" 수: 커밋 뒤 PR 본문을 고칠 때 함께 고친다.
+- 회고 5의 근거가 한 단계 느슨하다(Nit): `CLAUDE.md` 환경 함정의 "따옴표 인자나 변수가 든 단일 명령도 거부했고"가 그 거부를 품는다고 보고 둔다.
+
+PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): "변이 몇만 돌리려면 표 뒤에 그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 이름을 준다", 티켓 메모 "M에서 풀리지 않는 시험 파일(구문 오류, NUL)은 그 후보의 실패 갈래(`CandidateError`가 `Failure`로)이고, B에서 풀리지 않는 파일은 그 파일의 시험을 모두 새것으로 센다", `_leftover_names` 독스트링 "남은 이름을 정렬해 다섯까지 보이는 괄호 글. 모두의 수를 앞에 둔다. 읽지 못하면 빈 글이다".
+
+다시 돌린 것: ruff 두 줄 초록, 바꾼 파일 pyright 0 errors, `tests/tools/test_rerun_hidden.py` 56 passed(새 시험 둘을 더한 뒤, 까닭 단언을 좁히기 전), `tests/tools/test_mutate.py` 218 passed, 변이 23·24 기대대로. 나머지는 커밋의 pre-commit으로 갈음한다.
+
+`tools/sibling_overlap.py`가 `.claude/rules/probes.md`를 원천으로 든 카나리아 명세 넷을 이 브랜치에서 고치지 않았다며 1로 끝났다. 넷은 다른 PR에서 통과해 사전 확인으로 갈음하는 조건("같은 PR 안에서 통과")에 맞지 않고, 넷의 카나리아는 새 항목의 글이 아니다. 그래서 새 항목을 재는 명세 `.scratch/harness/probes/canary/probes_rule_uncommitted_edit.toml`을 더해 돌렸다. 통과 4(claude 2.1.302, 실험군 셋이 머리 문장과 까닭을 옮겼고 paths 밖 대조군은 "없음"). 인계에 남았던 "probes.md 항목을 새 세션에서 불러 보는 확인"이 이것이다.
+
+## 회고
+
+후보 다섯. 승인 둘(둘 다 이 세션에서 반영), 기각 셋, 넘김 없음.
+
+1. 승인(손상 한 번, 더하는 것). 셀프 리뷰 반영 중 변이를 덧붙이는 스크래치 스크립트가 `Path.write_text(..., newline="\\n")`의 `ValueError`로 끝나며 미추적 변이 표를 비웠다(사본으로 되살렸다). 작업을 잃은 손상이라 문턱을 지난다. 이 사고를 잡는 검사는 짓기 어려워 지침 층이고, 스크래치패드에 실행 스크립트를 쓰면 `hook_scratch_probe_rule`이 여는 `.claude/rules/probes.md`에 "아직 커밋하지 않은 프로브 파일은 Edit 도구로 고친다"를 더했다. 새 훅·검사가 아니라 `hook_report`는 돌리지 않았다.
+2. 승인(고침, 사건 하나). 이 세션이 변이 둘만 돌리려고 `tools/mutate.py --help`를 쳤더니 "아는 것은 --check, --staged, --since"만 알려, 이름·번호 고르기를 모른 채 스크래치 표를 썼다(앞 세션도 스크래치 표로 셋만 돌렸다). 모르는 선택 문구에 "변이 몇만 돌리려면 표 뒤에 그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 이름을 준다"를 더하고 시험 단언으로 고정했다(고치기 전에 빨갰다).
+3. 기각. `_test_defs`가 예외를 삼켜 시험을 조용히 잃은 것이 두 번(BOM, M의 구문 오류) 리뷰에서 잡혔다. 판단 기준이라 검사로 옮길 수 없고, 리뷰가 제 몫을 했다.
+4. 기각. `_remove_checkout`의 `try` 범위 Nit은 `CODING_STANDARDS.md`의 "에러 처리와 정상 흐름을 분리한다"(대기열 337, 닫힘)를 리뷰가 잡은 것이라 회차에서 뺀다.
+5. 기각. 일지에 덧붙이는 heredoc을 워크트리 가드가 거부했다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정에 적혀 있다.
+
+대기열에 새로 적은 행은 없다. `queue_open_rows`의 만료할 행은 작업 트리와 `origin/main` 모두 없었다.
+
+## 다음
+
+- 티켓 02 병합 뒤 05(과제 고르기, Blocked by 02)가 풀린다. 03·04는 형제 워크트리에서 도는 중이다.
+- 05에 넘긴 판단 항목(같은 이름의 `Hidden`·`Outcome`, `tools/canary.py`와 겹치는 `_cut_links`·작업 트리 걷기, `rerun_hidden.py`의 바깥 층 떼기)은 티켓 05 메모에 있다. claude-review가 첫 회차에 같은 것을 짚었다.
+- 형제 03·04가 `.scratch/model-rerun/probes/README.md`와 티켓 07을 함께 고쳐, 나중에 병합하는 쪽에서 글자 충돌 후보다.
