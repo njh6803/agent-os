@@ -99,6 +99,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 CHECK_PATH = "tools/check_ticket.py"
@@ -144,12 +145,16 @@ def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
         raise GitError(message) from error
 
 
+def _text(raw: bytes) -> str:
+    return raw.decode("utf-8", "replace").strip()
+
+
 def _out(cwd: Path, *args: str) -> str:
     result = _git(cwd, *args)
     if result.returncode != 0:
-        message = result.stderr.decode("utf-8", "replace").strip()
+        message = _text(result.stderr)
         raise GitError(f"git {' '.join(args)} 가 {result.returncode} 로 끝났다: {message}")
-    return result.stdout.decode("utf-8", "replace").strip()
+    return _text(result.stdout)
 
 
 def _maybe(cwd: Path, *args: str) -> str | None:
@@ -157,7 +162,7 @@ def _maybe(cwd: Path, *args: str) -> str | None:
     result = _git(cwd, *args)
     if result.returncode != 0:
         return None
-    return result.stdout.decode("utf-8", "replace").strip()
+    return _text(result.stdout)
 
 
 def exempt(path: str) -> bool:
@@ -242,12 +247,12 @@ def merge_base(cwd: Path, heads: list[str]) -> str | None:
     조상이 깊이 밖에 있을 수 있어 자리를 모른다(None)."""
     result = _git(cwd, "merge-base", BASE, *heads)
     if result.returncode == 0:
-        return result.stdout.decode("utf-8", "replace").strip()
+        return _text(result.stdout)
     if result.returncode == 1:
         if _out(cwd, "rev-parse", "--is-shallow-repository") == "true":
             return None
         return _out(cwd, "hash-object", "-t", "tree", "--stdin")
-    message = result.stderr.decode("utf-8", "replace").strip()
+    message = _text(result.stderr)
     raise GitError(f"git merge-base 가 {result.returncode} 로 끝났다: {message}")
 
 
@@ -269,13 +274,26 @@ def before_convention(cwd: Path) -> bool:
     return all(not _has_check(cwd, own[commit][0] if own[commit] else commit) for commit in firsts)
 
 
+class Outcome(Enum):
+    PASS = "지남"
+    NOTE = "알리고 지남"
+    BLOCK = "막음"
+
+
 @dataclass(frozen=True)
 class Verdict:
-    passed: bool
-    message: str
+    outcome: Outcome
+    message: str = ""
 
 
-def _blocked(root: Path, branch: str, changed: list[Change], outside: list[str]) -> str:
+_PASS = Verdict(Outcome.PASS)
+
+
+def _note(message: str) -> Verdict:
+    return Verdict(Outcome.NOTE, f"check-ticket: {message}")
+
+
+def _blocked(root: Path, branch: str, present: list[str], outside: list[str]) -> str:
     lines = [f"check-ticket: 브랜치 {branch} 의 변경이 티켓을 가리키지 않아 커밋을 막았다."]
     lines.append(f"면제 모양 밖의 바뀐 파일 {len(outside)}개:")
     lines += [f"  {path}" for path in outside[:SHOWN]]
@@ -291,9 +309,8 @@ def _blocked(root: Path, branch: str, changed: list[Change], outside: list[str])
             else f".scratch/<slug>/issues/{name}.md"
         )
         lines.append(f"이 브랜치가 가리키는 티켓: {', '.join(on_disk) or expected}")
-        in_commit = {c.path for c in changed if not c.deleted}
         for path in on_disk:
-            if path not in in_commit:
+            if path not in present:
                 lines.append(
                     f"알림: {path} 가 디스크에는 있지만 이 커밋에 들지 않는다. 그 파일의"
                     " `Status:` 를 in-progress 로 고치고(이미 고쳤으면 그대로)"
@@ -319,50 +336,40 @@ def current_branch(cwd: Path) -> str | None:
     if result.returncode == 1:
         return None
     if result.returncode != 0:
-        message = result.stderr.decode("utf-8", "replace").strip()
+        message = _text(result.stderr)
         raise GitError(f"git symbolic-ref 가 {result.returncode} 로 끝났다: {message}")
-    return result.stdout.decode("utf-8", "replace").strip()
+    return _text(result.stdout)
 
 
 def judge(cwd: Path) -> Verdict:
     branch = current_branch(cwd)
     if branch is None or branch == "main":
-        return Verdict(passed=True, message="")
+        return _PASS
     if _maybe(cwd, "rev-parse", "-q", "--verify", f"{BASE}^{{commit}}") is None:
-        return Verdict(
-            passed=True, message="check-ticket: origin/main 을 찾지 못해 판정하지 않고 지난다."
-        )
+        return _note("origin/main 을 찾지 못해 판정하지 않고 지난다.")
     if _maybe(cwd, "rev-parse", "-q", "--verify", "HEAD^{commit}") is None:
-        return Verdict(
-            passed=True, message="check-ticket: HEAD 가 아직 없어(첫 커밋) 판정하지 않고 지난다."
-        )
+        return _note("HEAD 가 아직 없어(첫 커밋) 판정하지 않고 지난다.")
     if before_convention(cwd):
-        return Verdict(
-            passed=True,
-            message=f"check-ticket: 규약 전에 연 브랜치({branch})라 판정하지 않고 지난다.",
-        )
+        return _note(f"규약 전에 연 브랜치({branch})라 판정하지 않고 지난다.")
     heads = ["HEAD"]
     merging = merge_head(cwd)
     if merging is not None:
         heads.append(merging)
     base = merge_base(cwd, heads)
     if base is None:
-        return Verdict(
-            passed=True,
-            message="check-ticket: 얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다.",
-        )
+        return _note("얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다.")
     changed = changes(cwd, base)
     outside = [c.path for c in changed if not exempt(c.path)]
     if not outside:
-        return Verdict(passed=True, message="")
+        return _PASS
     present = [c.path for c in changed if not c.deleted]
     stem = ticket_stem(branch)
     if stem is not None and any(points_at(*stem, path) for path in present):
-        return Verdict(passed=True, message="")
+        return _PASS
     if branch.startswith("docs/") and any(is_harness_ticket(path) for path in present):
-        return Verdict(passed=True, message="")
+        return _PASS
     root = Path(_out(cwd, "rev-parse", "--show-toplevel"))
-    return Verdict(passed=False, message=_blocked(root, branch, changed, outside))
+    return Verdict(Outcome.BLOCK, _blocked(root, branch, present, outside))
 
 
 def main(argv: list[str]) -> int:
@@ -372,12 +379,15 @@ def main(argv: list[str]) -> int:
     except GitError as error:
         sys.stderr.buffer.write(f"check-ticket: {error}\n".encode())
         return 2
-    if verdict.passed:
-        if verdict.message:
+    match verdict.outcome:
+        case Outcome.PASS:
+            return 0
+        case Outcome.NOTE:
             sys.stdout.buffer.write(f"{verdict.message}\n".encode())
-        return 0
-    sys.stderr.buffer.write(f"{verdict.message}\n".encode())
-    return 1
+            return 0
+        case Outcome.BLOCK:
+            sys.stderr.buffer.write(f"{verdict.message}\n".encode())
+            return 1
 
 
 if __name__ == "__main__":
