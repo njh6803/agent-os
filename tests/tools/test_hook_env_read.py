@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pytest
@@ -251,6 +252,141 @@ def test_Grep_도구는_경로와_glob_을_본다() -> None:
     assert deny_reason_for_grep_tool("C:/project/agent", ".env.example") is None
     assert deny_reason_for_grep_tool("src", "*.py") is None
     assert deny_reason_for_grep_tool(None, None) is None
+
+
+@pytest.mark.parametrize(
+    "glob",
+    [
+        "{*.md,**}",
+        "{.claude/**,docs/*.md}",
+        "**/{.env,x}",
+        "*.{md,env}",
+        "{docs/*.md,{a,.e*}}",
+        "{.env}",
+        "**/{.e*}",
+        "{.{env},y}",
+    ],
+)
+def test_Grep_도구의_glob_은_중괄호_갈래마다_본다(glob: str) -> None:
+    """한 갈래만 `.env` 에 닿아도 막는다. 마지막 `/` 뒤 조각만 본 판은 `{.claude/**,docs/*.md}` 를
+    지나보냈다(대기열 369). Grep 도구는 `{*.md,**}` 로 gitignore 된 숨김 파일을 읽었다(2026-10-22
+    손으로 봤다)."""
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
+
+
+@pytest.mark.parametrize(
+    "glob",
+    [
+        "{*.md,docs/*.md}",
+        "*.{py,md}",
+        "{src,tests}/**/*.py",
+        "{.env.example,*.md}",
+        "{*.md",
+        "{*.md}",
+        "{{.env,x}",
+    ],
+)
+def test_Grep_도구의_중괄호_glob_이_env_에_닿지_않으면_지나간다(glob: str) -> None:
+    """`{{.env,x}` 의 첫 `{` 는 짝이 없어 글자로 남고(bash 처럼 뒤의 묶음만 푼다), 남은 `{` 가
+    갈래마다 붙어 `.env` 에 바로 맞지 않는다."""
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is None
+
+
+def test_못_보는_것_gitignore_하지_않은_env_는_glob_없는_Grep_도_읽는다() -> None:
+    """거짓 음성이다. Grep 도구는 glob 이 없어도 숨김 파일을 읽었다(2026-10-22 손으로 봤다). 훅은
+    경로와 glob 만 보므로, gitignore 하지 않은 `.env` 가 든 폴더를 glob 없이 훑으면 지나간다."""
+    assert deny_reason_for_grep_tool("C:/project/agent", None) is None
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
+        "cat .{env,x}",
+        "cat ./.{envrc,env}",
+        "rg -uu -g '{*.md,**}' KEY",
+        "rg -uu -g '{.env}' KEY",
+        "grep -rn --include={*.py,.env} KEY .",
+    ],
+)
+def test_셸과_rg_와_grep_의_중괄호도_갈래마다_닿는지_본다(명령: str) -> None:
+    """bash 는 따옴표 없는 `{a,b}` 를 갈래로 펼치고 rg 의 glob 도 중괄호를 갈래로 읽는다. 같은 값을
+    견주는 자리라 Grep 도구와 함께 고쳤다(대기열 369)."""
+    assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
+        "cat .{envrc,gitignore}",
+        "rg -uu -g '{*.py,*.md}' KEY",
+        "grep -rn --include={*.py,*.md} KEY .",
+    ],
+)
+def test_중괄호의_갈래가_모두_env_밖이면_막지_않는다(명령: str) -> None:
+    assert deny_reason_for_command(명령) is None
+
+
+@pytest.mark.parametrize("명령", ["cat '.{env,x}'", "cat .{env}"])
+def test_못_보는_것_읽는_명령의_인용된_중괄호와_쉼표_없는_묶음도_펼쳐_막는다(명령: str) -> None:
+    """거짓 양성이다. 토큰은 shlex 가 인용을 벗긴 뒤라 인용된 중괄호(bash 가 펼치지 않는다)를
+    가르지 못한다. 쉼표 없는 묶음은 rg·Grep 도구의 glob 처럼 갈래 하나로 풀어, bash 가 글자로 두는
+    `.{env}` 도 `.env` 로 본다."""
+    assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize(
+    "명령", ["grep -rn --exclude={.env*,x} KEY .", "rg -uu -g '!{.env*,x}' KEY"]
+)
+def test_못_보는_것_빼는_glob_의_중괄호는_펼치지_않아_막는다(명령: str) -> None:
+    """거짓 양성이다. 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호는 펼치지 않는다. 따옴표가 있으면
+    grep 은 중괄호를 글자로 읽어 `.env` 를 빼지 않으므로, 펼쳐서 뺀다고 보면 문이 열린다."""
+    assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
+        "cat .en[!{}]",
+        "cat .en[u-{}]",
+        "cat .e[a-{][!}]",
+        "grep -r --include=.en[u-{}] KEY .",
+        "rg --hidden --no-ignore -g .en[u-{}] KEY .",
+        "rg -uu -g '.en[!{}]' KEY",
+    ],
+)
+def test_대괄호_안의_중괄호는_펼치기_전의_glob_으로도_본다(명령: str) -> None:
+    """bash·GNU grep·ripgrep 은 대괄호 안의 `{`·`}` 를 글자로 읽어 `.en[!{}]` 가 `.env` 에 맞는다.
+    펼친 갈래만 본 판은 `[!{}]` 를 `[!]` 로 깨뜨려 지나보냈다(옛 판은 막았다. PR 직전 보안 리뷰가
+    판정 함수와 가짜 숨김 파일로 봤다)."""
+    assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize("glob", [".en[!{}]", "**/.en[!{}]", ".en[u-{}]", ".e[a-{][!}]"])
+def test_Grep_도구의_대괄호_안의_중괄호도_막는다(glob: str) -> None:
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
+
+
+@pytest.mark.parametrize(
+    "명령", ["cat .en[^x]", "rg -uu -g '.en[^x]' KEY", "grep -rn --exclude=.en[^v] KEY ."]
+)
+def test_대괄호의_캐럿은_느낌표처럼_부정으로_읽는다(명령: str) -> None:
+    """bash·GNU grep·ripgrep 은 `[^x]` 를 `[!x]` 처럼 부정으로 읽고 fnmatch 는 `^` 를 글자로 읽는다.
+    그래서 `.en[^x]` 를 지나보냈고, `--exclude=.en[^v]` 는 `.env` 를 빼지 않는데 뺀다고 봤다(이 PR
+    전부터 있던 구멍, PR 직전 보안 리뷰)."""
+    assert deny_reason_for_command(명령) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", ".en[^x]") is not None
+
+
+def test_못_보는_것_갈래가_상한을_넘는_glob_은_닿는지_보지_않고_막는다() -> None:
+    """거짓 양성이다. 갈래는 묶음 수에 지수로 늘어, 다 펼쳐 판정하면 묶음 열여섯에 7초가 걸렸고
+    훅의 시간 제한(20초)을 넘으면 막지 않고 지나간다(fail-open, PR 직전 리뷰가 쟀다). 그래서 갈래가
+    256을 넘으면 어느 갈래도 `.env` 에 닿지 않아도 막는다. 256 까지는 판정한다."""
+    started = time.monotonic()
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 9) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 40) is not None
+    assert deny_reason_for_command("cat " + "{a,b}" * 40) is not None
+    assert deny_reason_for_grep_tool("C:/project/agent", "{a,b}" * 8) is None
+    assert time.monotonic() - started < 20
 
 
 def test_도구가_Grep_이면_경로를_Bash_면_명령을_판정한다() -> None:

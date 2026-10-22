@@ -20,6 +20,7 @@ from tools.run_checks import (
     CHECKS,
     Check,
     Running,
+    pyright_checks,
     pytest_workers,
     run,
     run_one,
@@ -71,6 +72,28 @@ def test_러너의_pytest_는_계산한_프로세스_수로_나눠_돈다() -> N
     assert command[:4] == ("uv", "run", "pytest", "-q")
     assert "-n" in command
     assert command[command.index("-n") + 1] == str(pytest_workers(os.cpu_count()))
+
+
+@pytest.mark.parametrize("platform", ["win32", "darwin"])
+def test_리눅스가_아닌_곳의_pyright_는_리눅스_플랫폼으로_한_번_더_돈다(platform: str) -> None:
+    """이 PC(윈도)의 pyright 가 초록인 시험 파일을 리눅스 CI 의 pyright 가 빨갛게
+    냈다(대기열 403)."""
+    checks = pyright_checks(platform)
+
+    assert [check.id for check in checks] == ["pyright", "pyright-linux"]
+    assert checks[0].command == ("uv", "run", "pyright")
+    assert checks[1].command == ("uv", "run", "pyright", "--pythonplatform", "Linux")
+
+
+def test_리눅스의_pyright_는_한_번만_돈다() -> None:
+    """리눅스에서는 두 검사가 같아 한 번 더 돌 몫이 없다."""
+    assert [check.id for check in pyright_checks("linux")] == ["pyright"]
+
+
+def test_러너의_pyright_는_이_플랫폼의_검사다() -> None:
+    expected = [check.id for check in pyright_checks(sys.platform)]
+
+    assert [check.id for check in CHECKS if check.id.startswith("pyright")] == expected
 
 
 def test_검사를_함께_띄운다(tmp_path: Path) -> None:

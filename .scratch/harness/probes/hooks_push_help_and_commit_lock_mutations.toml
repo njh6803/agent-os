@@ -408,8 +408,8 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-    context = context_for(file_path, running_commits(processes))
+    reason = deny_reason(file_path, running_commits(processes))
 '''
 new = '''
-    context = context_for(file_path, [])
+    reason = deny_reason(file_path, [])
 '''

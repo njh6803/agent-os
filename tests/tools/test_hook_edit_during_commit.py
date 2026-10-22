@@ -18,9 +18,11 @@ from tools.hook_edit_during_commit import (
     RunningCommit,
     argv_from_cmdline,
     checkout_of,
-    context_for,
+    commit_directory,
+    deny_reason,
     edited_file,
     git_subcommand,
+    is_launcher,
     parent_from_stat,
     running_commits,
     scan_processes,
@@ -36,6 +38,8 @@ HOOK = Path(__file__).parents[2] / "tools" / "hook_edit_during_commit.py"
     ("argv", "subcommand"),
     [
         pytest.param(["git", "commit", "-F", "msg.txt"], "commit", id="보통_커밋"),
+        # 못 보는 것(거짓 양성). 편집기가 열린 채 남은 커밋도 끝날 때까지 커밋으로 센다.
+        pytest.param(["git", "commit"], "commit", id="편집기를_여는_커밋"),
         pytest.param(
             ["C:\\Program Files\\Git\\mingw64\\bin\\git.exe", "commit", "-q"],
             "commit",
@@ -116,21 +120,141 @@ def test_위로_올라가_처음_git_이_있는_폴더가_체크아웃이다(tmp
     assert checkout_of(str(tmp_path)) is None
 
 
-def test_고친_파일의_체크아웃에서_도는_커밋이면_알린다(tmp_path: Path) -> None:
+def test_고친_파일의_체크아웃에서_도는_커밋이면_막는다(tmp_path: Path) -> None:
+    """PostToolUse 의 알림은 편집 뒤에 와서, 알림을 받고도 커밋이 실패했다(대기열 412). 그래서
+    편집 전에 막고, 커밋이 끝난 뒤 같은 편집을 다시 하게 한다."""
     main, _ = _checkouts(tmp_path)
     checkout = checkout_of(str(main))
     assert checkout is not None
     file = main / "tools" / "x.py"
     file.write_text("x = 1\n", encoding="utf-8")
 
-    context = context_for(str(file), [RunningCommit(4321, checkout)])
+    reason = deny_reason(str(file), [RunningCommit(4321, checkout)])
 
-    assert context is not None
-    assert "git commit" in context
-    assert "4321" in context
-    assert "대기열 293" in context
-    assert "이미 적용" in context
-    assert "다시 읽" in context
+    assert reason is not None
+    assert "git commit" in reason
+    assert "4321" in reason
+    assert "막았다" in reason
+    assert "대기열 293·412" in reason
+    assert "끝난 뒤" in reason
+    assert "이미 적용" not in reason
+    # 커밋을 띄우지 않은 세션이 남긴 거짓 양성(못 보는 것)에 막혔을 때 기다릴 커밋이 없다.
+    assert "띄운 커밋이 없으면 같은 편집을 한 번 다시 한다" in reason
+    # 끝나지 않는 커밋(편집기가 열린 채 남은 것)은 기다려도 풀리지 않는다(PR 직전 리뷰).
+    assert "끝나지 않으면 그 pid 를 사용자에게 알린다" in reason
+
+
+def _git_layout(root: Path) -> dict[str, str]:
+    """Git for Windows 의 배치. 런처 둘(`cmd`, `bin`)과 실제 git(`mingw64/bin`), 그리고 곁에
+    `mingw64` 가 없는 `bin/git.exe`(cygwin 처럼 실제 git 이 `bin` 에 있는 꼴)."""
+    install = root / "Git"
+    paths = {
+        "cmd": install / "cmd" / "git.exe",
+        "bin": install / "bin" / "git.exe",
+        "real": install / "mingw64" / "bin" / "git.exe",
+        "cygwin": root / "cygwin64" / "bin" / "git.exe",
+    }
+    for path in paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"")
+    return {name: str(path) for name, path in paths.items()}
+
+
+def test_윈도_git_의_런처를_실행_파일_자리로_알아본다(tmp_path: Path) -> None:
+    """런처는 곁의 `mingw64`(또는 `mingw32`, `clangarm64`) 아래 실제 git 이 있는 `cmd`·`bin` 의
+    `git.exe` 다. 리눅스의 이름(`git`)과 실행 파일 자리를 읽지 못한 이름(`git.exe`)은 런처가
+    아니다."""
+    layout = _git_layout(tmp_path)
+
+    assert is_launcher(layout["cmd"])
+    assert is_launcher(layout["bin"])
+    assert not is_launcher(layout["real"])
+    assert not is_launcher(layout["cygwin"])
+    assert not is_launcher("git.exe")
+    assert not is_launcher("git")
+
+
+def _repo_and_outside(root: Path) -> tuple[Path, Path]:
+    """커밋하는 저장소 A(`repo`)와 커밋을 띄운 다른 체크아웃 B(`outside`)의 하위 폴더 `deep`."""
+    repo, outside = root / "repo", root / "outside"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "sub").mkdir()
+    (outside / ".git").mkdir(parents=True)
+    (outside / "deep").mkdir()
+    return repo, outside / "deep"
+
+
+@pytest.mark.parametrize(
+    ("kind", "options", "where"),
+    [
+        pytest.param("cmd", ("-C", "{repo}"), "outside", id="런처_절대_-C"),
+        pytest.param("bin", ("-C", "../../repo"), "outside", id="런처_상대_-C"),
+        pytest.param("cmd", ("--work-tree={repo}",), "outside", id="런처_절대_work_tree"),
+        pytest.param("cmd", ("--work-tree", "../../repo"), "outside", id="런처_상대_work_tree"),
+        pytest.param("cmd", ("-C", "", "-C", "{repo}"), "outside", id="런처_빈_-C_는_건너뛴다"),
+        pytest.param("real", ("-C", "{repo}"), "outside", id="실제_git_절대_-C_옮기기_전"),
+        pytest.param("real", ("-C", "{repo}"), "repo", id="실제_git_절대_-C_옮긴_뒤"),
+        pytest.param("real", ("-C", "{repo}", "-C", "sub"), "outside", id="실제_git_절대_뒤_상대"),
+        pytest.param("real", ("-C", "../../repo"), "repo", id="실제_git_상대_-C_옮긴_뒤"),
+        pytest.param("real", ("--work-tree={repo}",), "outside", id="실제_git_절대_work_tree"),
+        pytest.param("git.exe", ("-C", "{repo}"), "outside", id="자리를_모르는_git_절대_-C"),
+    ],
+)
+def test_커밋이_도는_작업_트리를_띄운_폴더가_아니라_명령_줄로_찾는다(
+    tmp_path: Path, kind: str, options: tuple[str, ...], where: str
+) -> None:
+    """런처는 띄운 폴더를 작업 디렉터리로 쥔 채 살고, 실제 git 도 `-C` 를 풀어 작업 디렉터리를
+    옮기기 전에는 띄운 폴더에 있다. 그 순간을 띄운 폴더의 커밋으로 세던 판이 부하 pytest 가 임시
+    저장소에 친 커밋을 이 체크아웃의 커밋으로 두 번 알렸다(대기열 368,
+    `.scratch/harness/probes/edit_during_commit_launcher.py`). 절대 경로 `-C` 는 옮기기 전과 뒤가
+    같은 자리를 가리키고, 런처는 옮기지 않으므로 띄운 폴더에서 푼다. 옮긴 뒤의 실제 git 에 상대 경로
+    `-C` 를 다시 얹으면 놓친다(PR 직전 `bug-perf-review`)."""
+    layout = _git_layout(tmp_path / "install")
+    image = layout.get(kind, kind)
+    repo, deep = _repo_and_outside(tmp_path)
+    cwd = deep if where == "outside" else repo
+    argv = ("git", *(word.format(repo=repo.as_posix()) for word in options), "commit")
+
+    found = running_commits([Process(7, image, argv, str(cwd))])
+
+    assert found == [RunningCommit(7, str(checkout_of(str(repo))))]
+    assert checkout_of(commit_directory(Process(7, image, argv, str(cwd)))) == checkout_of(
+        str(repo)
+    )
+
+
+def test_못_보는_것_상대_경로의_실제_git_이_옮기기_전이면_띄운_폴더의_커밋으로_센다(
+    tmp_path: Path,
+) -> None:
+    """거짓 양성이다. 상대 경로 `-C`·`--work-tree` 는 실제 git 이 이미 옮겼는지 알 수 없어 작업
+    디렉터리를 그대로 믿는다. 옮기기 전의 순간이면 띄운 폴더의 편집을 막는다."""
+    layout = _git_layout(tmp_path / "install")
+    repo, deep = _repo_and_outside(tmp_path)
+    argv = ("git", "-C", "../../repo", "commit")
+
+    found = running_commits([Process(7, layout["real"], argv, str(deep))])
+
+    assert found == [RunningCommit(7, str(checkout_of(str(deep))))]
+    assert checkout_of(str(deep)) != checkout_of(str(repo))
+
+
+@pytest.mark.parametrize("where", ["outside", "repo"])
+def test_런처가_띄운_실제_git_의_상대_경로는_런처의_작업_디렉터리에서_푼다(
+    tmp_path: Path, where: str
+) -> None:
+    """런처의 자식은 런처의 작업 디렉터리에서 시작해 같은 명령 줄을 받는다. 그래서 자식이 옮겼든
+    옮기기 전이든 상대 경로를 런처의 작업 디렉터리에서 풀면 같은 자리다. 자식의 작업 디렉터리를 믿던
+    판은 런처로 친 상대 경로의 네 갈래(갈래마다 60회차)에서 27·59·28·58회차를 거짓으로 셌다. 순간은
+    자식 git 이나 자식이 끝난 뒤였다(`.scratch/harness/probes/edit_during_commit_launcher.py`)."""
+    layout = _git_layout(tmp_path / "install")
+    repo, deep = _repo_and_outside(tmp_path)
+    argv = ("git", "-C", "../../repo", "commit")
+    launcher = Process(10, layout["cmd"], argv, str(deep), parent=1)
+    child = Process(11, layout["real"], argv, str(deep if where == "outside" else repo), parent=10)
+
+    found = running_commits([launcher, child])
+
+    assert found == [RunningCommit(11, str(checkout_of(str(repo))))]
 
 
 @pytest.mark.parametrize("committing", ["main", "side"])
@@ -146,7 +270,7 @@ def test_주_체크아웃과_그_안의_워크트리는_다른_체크아웃이�
     file = there / "tools" / "x.py"
     file.write_text("x = 1\n", encoding="utf-8")
 
-    assert context_for(str(file), [RunningCommit(1, checkout)]) is None
+    assert deny_reason(str(file), [RunningCommit(1, checkout)]) is None
 
 
 def test_도는_커밋이_없거나_체크아웃_밖의_파일이면_알리지_않는다(tmp_path: Path) -> None:
@@ -158,8 +282,8 @@ def test_도는_커밋이_없거나_체크아웃_밖의_파일이면_알리지_�
     outside = tmp_path / "scratch.md"
     outside.write_text("메모\n", encoding="utf-8")
 
-    assert context_for(str(inside), []) is None
-    assert context_for(str(outside), [RunningCommit(1, checkout)]) is None
+    assert deny_reason(str(inside), []) is None
+    assert deny_reason(str(outside), [RunningCommit(1, checkout)]) is None
 
 
 def test_편집_도구_셋의_파일_경로를_읽는다() -> None:
@@ -214,7 +338,7 @@ def test_못_보는_것_git_이_없는_작업_트리의_커밋은_세지_않는�
     found = running_commits([Process(1, "git", argv, str(work))])
 
     assert found == []
-    assert context_for(str(file), [RunningCommit(1, str(work))]) is None
+    assert deny_reason(str(file), [RunningCommit(1, str(work))]) is None
 
 
 # 윈도 git 의 런처. 이 PC 에서 세션의 PowerShell 도구가 `git` 을 이것으로 먼저 풀었고, 띄운 폴더를
@@ -345,6 +469,13 @@ def test_멈춰_세운_커밋을_실제_프로세스에서_찾고_끝나면_놓�
         during = running_commits(processes)
         assert checkout_of(str(side)) in {commit.checkout for commit in during}
         assert checkout_of(str(root)) not in {commit.checkout for commit in during}
+        if sys.platform == "win32":
+            # 런처를 알아보려면 실행 파일의 전체 경로를 읽어야 한다
+            images = {
+                process.image for process in processes if process.pid in {c.pid for c in during}
+            }
+            assert images
+            assert all(os.path.isabs(image) for image in images), images
 
     processes = scan_processes()
     assert processes is not None
@@ -363,9 +494,9 @@ def _run_hook(payload: dict[str, object]) -> str:
     return result.stdout.decode("utf-8")
 
 
-def test_훅은_도는_커밋의_워크트리_편집에만_계기를_낸다(tmp_path: Path) -> None:
+def test_훅은_도는_커밋의_워크트리_편집만_막는다(tmp_path: Path) -> None:
     """stdin 의 바이트 페이로드부터 출력까지. 주 체크아웃의 편집은 그 폴더 아래 워크트리에서 커밋이
-    돌아도 침묵한다."""
+    돌아도 지나간다."""
     with committing_repository(tmp_path) as root:
         side_file = root / ".claude" / "worktrees" / "side" / "tracked.txt"
         main_file = root / "notes.md"
@@ -373,27 +504,30 @@ def test_훅은_도는_커밋의_워크트리_편집에만_계기를_낸다(tmp_
 
         firing = _run_hook(
             {
-                "hook_event_name": "PostToolUse",
+                "hook_event_name": "PreToolUse",
                 "tool_name": "Edit",
                 "tool_input": {"file_path": str(side_file), "old_string": "x", "new_string": "y"},
             }
         )
         quiet = _run_hook(
             {
-                "hook_event_name": "PostToolUse",
+                "hook_event_name": "PreToolUse",
                 "tool_name": "Write",
                 "tool_input": {"file_path": str(main_file), "content": "메모\n"},
             }
         )
 
     output = json.loads(firing)["hookSpecificOutput"]
-    assert output["hookEventName"] == "PostToolUse"
-    assert "git commit" in output["additionalContext"]
+    assert output["hookEventName"] == "PreToolUse"
+    assert output["permissionDecision"] == "deny"
+    assert "git commit" in output["permissionDecisionReason"]
     assert quiet == ""
 
 
-def test_settings의_매처는_편집_도구_셋이다() -> None:
-    """알림은 편집이 끝난 뒤에 온다(PostToolUse). 그 편집 하나는 이미 겹쳤다."""
-    assert registered_matchers("hook_edit_during_commit.py", "PostToolUse") == [
+def test_settings의_매처는_편집_도구_셋이고_편집_전에_돈다() -> None:
+    """편집이 끝난 뒤(PostToolUse)에 알리던 판은 알림을 받고도 그 편집이 커밋을 실패시켰다(대기열
+    412). 편집 전(PreToolUse)에 막는다."""
+    assert registered_matchers("hook_edit_during_commit.py", "PreToolUse") == [
         "Write|Edit|NotebookEdit"
     ]
+    assert registered_matchers("hook_edit_during_commit.py", "PostToolUse") == []

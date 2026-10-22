@@ -6,6 +6,8 @@ ADR 0005 의 2026-10-07 이력). 그래서
 `.pre-commit-config.yaml` 은 이 검사들을 훅 하나로 두고 이 러너가 함께 띄운다. 잰 뒤에 워크플로
 감사(zizmor, ADR 0027)가 더해져 여덟이다. 그 검사는 한 번에 0.3초 남짓이지만, 그 회귀 테스트가
 그때 병목이던 pytest 에 1.5~6.7초를 더한다(손으로 봤다). 함께 띄운 벽시계 시간은 다시 재지 않았다.
+리눅스가 아닌 곳에서는 pyright 를 리눅스 플랫폼으로 한 번 더 돌아 아홉이다(`pyright_checks`, 대기열
+403).
 파일을 고치는 ruff 둘은 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기
 하나다. CI 는 잡마다 명령을 직접 돈다(`.github/workflows/ci.yml`).
 
@@ -97,8 +99,23 @@ def pytest_workers(cpu_count: int | None) -> int:
     return max(1, (cpu_count or 1) // 2)
 
 
+def pyright_checks(platform: str) -> tuple[Check, ...]:
+    """pyright 검사. 리눅스가 아니면 `--pythonplatform Linux` 로 한 번 더 돈다.
+
+    이 PC(윈도)의 pyright 와 러너가 초록인 시험 파일을 리눅스 CI 의 pyright 가
+    `sys.platform == "win32"` 갈래에서만 쓴 가져오기로 빨갛게 냈다(대기열 403). 리눅스에서는 두
+    검사가 같아 한 번만 돈다. 시험이 리눅스에서만 빨개지는 몫(281·318 의 꼴)은 이 검사가 잡지
+    못하고 CI 가 잡는다. 둘째 검사는 id 가 따로라 `SKIP=pyright` 로는 빠지지 않는다. 둘 다 빼려면
+    `SKIP=pyright,pyright-linux` 다(PR 직전 리뷰).
+    """
+    plain = Check("pyright", ("uv", "run", "pyright"))
+    if platform == "linux":
+        return (plain,)
+    return (plain, Check("pyright-linux", ("uv", "run", "pyright", "--pythonplatform", "Linux")))
+
+
 CHECKS: tuple[Check, ...] = (
-    Check("pyright", ("uv", "run", "pyright")),
+    *pyright_checks(sys.platform),
     Check("lint-imports", ("uv", "run", "lint-imports")),
     Check("pytest", ("uv", "run", "pytest", "-q", "-n", str(pytest_workers(os.cpu_count())))),
     Check("check-instructions", ("uv", "run", "python", "tools/check_instructions.py")),
