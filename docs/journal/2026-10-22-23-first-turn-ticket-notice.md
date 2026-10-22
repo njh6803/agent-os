@@ -187,3 +187,34 @@ open-session을 부른다 2026-10-22T14:09Z
 ## 다음
 
 티켓 05는 이 PR(#354)로 닫힌다. 이 기능에 남은 티켓은 04(CI 가 티켓 done 을 본다)이고, 나란히 연 세션이 `feature/04-ci-checks-ticket-done` 에서 맡고 있다. 04가 이 기능의 마지막 티켓이다.
+
+## 인계 (커밋 뒤, 셋째 세션)
+
+- 위 봇 첫 회차의 반영, 회고, "다음"을 커밋 `011b803a`(`test: 첫 턴 알림의 규약 낱말을 원천 문서와 대조하고 회고를 싣는다`)에 실었다. pre-commit 모두 Passed(pytest 426.9초, web-verify 362.2초). 인용 대조 경고 1건은 119줄의 인용이 훅의 파이썬 문자열 이음으로 갈라진 새 문장이라 둔다. 아직 푸시하지 않았다. PR 본문은 이 커밋에 맞춰 푸시 전에 고쳤고, 첫 회차에서 고치지 않은 지적의 까닭을 PR 코멘트로 남겼다.
+- 커밋 뒤 인계 계기가 왔다. 세션 컨텍스트 286,484 토큰으로 `커밋 뒤` 경계였다. 인계하지 않는 때 다섯에 들지 않았다(커밋은 성공했다, 요청 범위는 PR 과 병합까지다, 지시문의 이어받을 상태는 `인계: PR 연 뒤` 로 경계가 다르다, `인계 못함` 줄이 없다, `get_session self` 에 `parentSessionId` 가 없다). 이 세션의 제목은 `feature/05-first-turn-ticket-notice` 이고 `feature/05-first-turn-ticket-notice (인계함)` 으로 바꾼다. 이 세션이 받은 사용자 프롬프트는 위 "인계받은 세션 (PR 연 뒤부터)" 절의 지시문 하나다. 번복한 결정은 없다. 멈출 백그라운드 작업은 없다(대기와 커밋이 끝났다).
+
+지시문:
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md. 첫 턴 훅이 티켓 없는 브랜치를 알린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
+브랜치: feature/05-first-turn-ticket-notice
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md의 "인계받은 세션 (PR 연 뒤부터)"와 "인계 (커밋 뒤, 셋째 세션)" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차 반영(계약 시험과 변이 9번), 회고, 일지 "다음"을 커밋 011b803a에 실었고(pre-commit 모두 Passed) 아직 푸시하지 않았다. PR 본문은 그 커밋에 맞춰 이미 고쳤고, 첫 회차에서 고치지 않은 지적의 까닭은 PR 코멘트로 남겼다. 커밋하지 않은 일지의 인계 절이 워크트리에 있으니 이어 쓴 뒤 커밋하고(pre-commit이 10분 남짓이라 백그라운드로) 푸시한다. 그 뒤 순서 1의 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴다. CodeRabbit은 첫 푸시에서 한도로 리뷰가 없어 아직 회차가 없다. 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다(사용자가 고른 "푸시 뒤에 보관", 조건은 커밋하지 않은 작업이 없을 때). 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금 풀기는 `is not locked` 로 끝났다.
+
+open-session을 부른다 2026-10-22T14:37Z
+
+## 인계받은 세션 (커밋 뒤부터, 넷째 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md / (…) 이어받을 상태: 인계: 커밋 뒤. (…) / 이번 요청 범위: PR과 병합까지"
+
+- 제목을 `feature/05-first-turn-ticket-notice` 로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어갔다(잠금에 막히지 않았다). origin/main 은 `b104f8fa` 그대로라 합칠 것이 없었다.
+- 위 인계 절을 이 절과 함께 커밋해 `011b803a` 와 같이 푸시한다. 이 푸시로 도는 claude-review 는 둘째 회차다.
