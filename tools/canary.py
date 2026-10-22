@@ -194,6 +194,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import Enum
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -1302,17 +1303,26 @@ def _cut_links(folder: Path) -> list[str]:
     return left
 
 
-def _registered(base: Path, place: Path) -> bool | None:
-    """`place` 가 아직 git 워크트리로 등록돼 있는지. 목록을 읽지 못하면 None 이다."""
+class _Registration(Enum):
+    """`place` 의 git 워크트리 등록. 목록을 읽지 못하면 `UNKNOWN` 이다."""
+
+    LISTED = "listed"
+    GONE = "gone"
+    UNKNOWN = "unknown"
+
+
+def _registration(base: Path, place: Path) -> _Registration:
+    """`place` 가 아직 git 워크트리로 등록돼 있는지."""
     listed = _worktree(base, "list", "--porcelain")
     if listed is None or listed.returncode != 0:
-        return None
+        return _Registration.UNKNOWN
     key = _place_key(place)
-    return any(
+    found = any(
         _place_key(line.removeprefix("worktree ")) == key
         for line in _text(listed.stdout).splitlines()
         if line.startswith("worktree ")
     )
+    return _Registration.LISTED if found else _Registration.GONE
 
 
 _FORCE = ("--force",)
@@ -1335,7 +1345,7 @@ def _leftover_message(
     else:
         reason = "git 은 걷었다고 했지만 폴더가 남았다"
     head = f"임시 워크트리를 다 걷지 못했다: {place}({reason}). 그 폴더를 쥔 프로세스가 끝난 뒤 "
-    if _registered(base, place) is False:
+    if _registration(base, place) is _Registration.GONE:
         return (
             f"{head}{place.parent} 를 지운다. git 등록은 걷혔고 폴더만 남았다(안의 링크는 이미 "
             "끊었다)"
