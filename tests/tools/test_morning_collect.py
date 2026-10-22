@@ -40,6 +40,7 @@ from tools.morning_collect import (
     day_rows,
     duty_of,
     gather_limit,
+    gather_tickets,
     gather_works,
     handoff_tickets,
     hook_legend,
@@ -885,6 +886,42 @@ def test_작업_칸의_브랜치는_PR_번호를_모으고_PR이_없으면_커�
     refs, got = gather_works(works, merged, opened, Path("."))
     assert refs == {9, 11}
     assert got == {"chore/c": "다를 고친다"}
+
+
+def test_티켓_PR은_기능_브랜치와_번호_세_자리_하네스_브랜치를_티켓_파일_이름으로_맞춘다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 번호 없는 `chore/<slug>`는 티켓이 없는 하네스 브랜치이고, 자릿수가 다른 번호도 맞추지 않는다
+    at = datetime(2026, 10, 19, tzinfo=UTC)
+    paths = {
+        "01-a": ".scratch/f/issues/01-a.md",
+        "001-b": ".scratch/harness/issues/001-b.md",
+        "c": ".scratch/harness/issues/c.md",
+        "0001-d": ".scratch/harness/issues/0001-d.md",
+        "001-": ".scratch/harness/issues/001-.md",
+        "001-e": ".scratch/f/issues/001-e.md",
+    }
+
+    def ticket_paths(_root: Path) -> dict[str, str]:
+        return paths
+
+    def main_text(_root: Path, _path: str) -> str:
+        return "- [ ] 가\n- [ ] 나\n"
+
+    monkeypatch.setattr("tools.morning_collect.ticket_paths", ticket_paths)
+    monkeypatch.setattr("tools.morning_collect.main_text", main_text)
+    merged = [
+        GhPr(1, "가", "feature/01-a", at, at),
+        GhPr(2, "나", "chore/001-b", at, at),
+        GhPr(3, "다", "chore/c", at, at),
+        GhPr(4, "라", "chore/01-a", at, at),
+        GhPr(5, "마", "chore/0001-d", at, at),
+        GhPr(6, "바", "chore/001-", at, at),
+        GhPr(7, "사", "feature/001-e", at, at),
+    ]
+    day = date(2026, 10, 19)
+    rows = gather_tickets(Path("."), merged, {}, {}, day, day, UTC)
+    assert [(r.number, r.ticket, r.criteria) for r in rows] == [(1, "01-a", 2), (2, "001-b", 2)]
 
 
 def test_한도_기록이_없으면_주간_한도는_그_까닭이다(tmp_path: Path) -> None:

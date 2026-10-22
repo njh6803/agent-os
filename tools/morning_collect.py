@@ -227,7 +227,11 @@ GH_SUB = frozenset({"pr", "run", "api", "issue", "repo", "workflow", "auth", "se
 GH_SUB2 = frozenset(
     {"checks", "view", "create", "merge", "list", "watch", "diff", "edit", "ready", "comment"}
 )
-TICKET_BRANCH = re.compile(r"^feature/(\d{2}-[\w.-]+)$")
+# 티켓 PR의 브랜치. 기능 티켓은 `feature/NN-<slug>`, harness 티켓은 `chore/NNN-<slug>`이고(ADR
+# 0037), 묶음 1(`NN-<slug>`, `NNN-<slug>`)을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은 브랜치면
+# 그 값이 티켓 파일 이름의 stem이고, 이름이 다르면 티켓 파일을 찾지 못한 행이 된다. 번호 없는
+# `chore/<slug>`는 티켓이 없는 하네스 브랜치라 맞추지 않는다.
+TICKET_BRANCH = re.compile(r"^(?:feature/(?=\d{2}-)|chore/(?=\d{3}-))(\d+-[\w.-]+)$")
 WORK = re.compile(r"{{work:([^{}]+)}}")
 CHECKBOX = re.compile(r"^\s*[-*] \[[ xX]\]", re.MULTILINE)
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
@@ -2367,7 +2371,7 @@ def _gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
     return HookScan(tuple(rows), duties, introduced, scan.firings)
 
 
-def _gather_tickets(
+def gather_tickets(
     root: Path,
     merged: Sequence[GhPr],
     by_branch: Mapping[str, Sequence[Call]],
@@ -2554,7 +2558,7 @@ def collect(
     handoff_from = _handoff_from(root)
     first = ticket_start(day, handoff_from)
     sweep, off = _sweep_piece(merged, by_branch, day)
-    tickets = _gather_tickets(root, merged, by_branch, handoff, first, day, tz)
+    tickets = gather_tickets(root, merged, by_branch, handoff, first, day, tz)
     model = _model_section(sweep, _ticket_piece(tickets, handoff_from, first, off, day), src)
     if merged_all is None:
         metrics = without_merged(metrics)
