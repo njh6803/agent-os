@@ -522,8 +522,15 @@ payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\
 [[case]]
 hook = "hook_probe_conclusion.py"
 expect = "context"
-note = "프로브 README 의 결론 행을 고쳤다(대기열 346. 일지 2026-10-20-17 의 꼴)"
-contains = [".claude/rules/probes.md", "양성 대조"]
+note = "프로브 README 의 결론 행을 고쳤다(대기열 346·421. 일지 2026-10-20-17 의 꼴)"
+contains = [
+    ".claude/rules/probes.md",
+    "양성 대조",
+    "근거의 종류",
+    "그 명령과 함께",
+    "결과를 본 뒤 판정 기준",
+    "docs/agents/issue-tracker.md",
+]
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\README.md", old_string = "| a |", new_string = "| b |" } }
 
 [[case]]

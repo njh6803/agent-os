@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -41,6 +42,34 @@ def test_프로브_README_를_고치면_셋째_항목을_짚는다() -> None:
     assert ".claude/rules/probes.md" in context
     assert "양성 대조" in context
     assert "다른 해석" in context
+
+
+def test_프로브_README_를_고치면_근거의_종류와_결과를_본_뒤_바꾼_기준을_짚는다() -> None:
+    # 대기열 421: 손으로 본 결과를 탐침의 결과 사이에 측정처럼 적었고, 결과를 본 뒤 바꾼 기준을
+    # 밝히지 않았다.
+    context = context_for(_edit(README))
+    assert context is not None
+    # "어림" 만으로는 첫째 몫의 "어림이라고 적는다" 에도 맞아, 둘째 몫에만 있는 꼴로 본다.
+    for kind in ("탐침이 단언하거나 찍은 것", "저장한 원본을 손으로 본 것", "어림인가"):
+        assert kind in context, kind
+    assert "커밋하지 않은 스크립트나 사본으로 돌린 것도 손으로 본 것" in context
+    assert "손으로 본 것은 그 명령과 함께 적는다" in context
+    assert "손으로 본 쪽에 그렇다고 붙인다" in context
+    assert "결과를 본 뒤 판정 기준" in context
+    assert "바꾼 기준과 그 까닭" in context
+    assert "코드 읽기와 웹 요약까지 든 근거의 갈래 전체" in context
+    assert "`docs/agents/issue-tracker.md` 프로브와 근거 절" in context
+
+
+def test_알림이_가리키는_절이_그_문서에_있다() -> None:
+    # 문서와 절 이름을 알림에서 읽는다. 문서의 제목과 알림의 절 이름 어느 쪽이 바뀌어도 잡는다.
+    context = context_for(_edit(README))
+    assert context is not None
+    pointer = re.search(r"`(docs/[^`]+\.md)` (\S+(?: \S+)*?) 절이다", context)
+    assert pointer is not None
+    doc, section = pointer.groups()
+    lines = (Path(__file__).resolve().parents[2] / doc).read_text(encoding="utf-8").splitlines()
+    assert f"## {section}" in lines, f"{doc}: {section}"
 
 
 def test_Write_도_알린다() -> None:
@@ -106,22 +135,45 @@ def test_못_보는_것_Bash_로_고친_README_는_지나간다() -> None:
     assert context_for(json.loads(json.dumps(bash))) is None
 
 
-def test_못_보는_것_README_밖에_적은_결론은_지나간다() -> None:
+def test_못_보는_것_README_밖에_적은_결과와_결론은_지나간다() -> None:
     for path in (
         ROOT + "\\.claude\\rules\\tools.md",
         ROOT + "\\docs\\adr\\0036-x.md",
         ROOT + "\\.scratch\\harness\\probes\\choice_facts\\probe.py",
+        # 대기열 421 의 세 사례가 README 밖에서 근거의 종류를 어긴 자리.
+        ROOT + "\\tools\\hook_choice_facts.py",
+        ROOT + "\\.scratch\\model-rerun\\spec.md",
+        ROOT + "\\.scratch\\design-reverse-sync\\probes\\contrast_module_mutations.toml",
     ):
         assert context_for(_edit(path)) is None, path
 
 
-def test_못_보는_것_결론이_아닌_편집에도_알린다() -> None:
-    # 변이 수만 고친 행이어도 경로가 맞으면 알린다. 결론인지는 모델이 가른다.
+def test_못_보는_것_결과도_결론도_아닌_편집에도_알린다() -> None:
+    # 변이 수만 고친 행이어도 경로가 맞으면 알린다. 결과나 결론인지는 모델이 가른다. HookPayload 에
+    # 없는 칸(old_string·new_string)을 실으려고 main 처럼 JSON 에서 풀어 넘긴다.
     payload = json.loads(
         json.dumps(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": README, "old_string": "변이 7", "new_string": "변이 8"},
+            }
+        )
+    )
+    assert context_for(payload) is not None
+
+
+def test_못_보는_것_근거를_이미_밝힌_결과에도_알린다() -> None:
+    # 근거의 종류를 밝혔는지는 판정하지 않는다. 경로가 맞으면 알린다. 칸을 싣는 까닭은 위 시험과
+    # 같다.
+    payload = json.loads(
+        json.dumps(
+            {
+                "tool_name": "Edit",
+                "tool_input": {
+                    "file_path": README,
+                    "old_string": "| C | 옮겼다 |",
+                    "new_string": "| C | 옮겼다(저장한 원본을 손으로 봤다) |",
+                },
             }
         )
     )
@@ -195,10 +247,11 @@ def test_main_은_프로브_README_가_아니면_표지를_쓰지_않는다(
     assert LEAD in _run_main(monkeypatch, capsys, _session_edit(README))
 
 
-def test_못_보는_것_한_번_알린_뒤의_결론은_지나간다(
+def test_못_보는_것_한_번_알린_뒤의_결과와_결론은_지나간다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # 결론이 아닌 편집(변이 수)으로 알림을 넘기면, 같은 세션의 뒤 결론 편집은 알림을 받지 못한다.
+    # 결과도 결론도 아닌 편집(변이 수)으로 알림을 넘기면, 같은 세션의 뒤 결과·결론 편집은 알림을
+    # 받지 못한다.
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
     assert LEAD in _run_main(monkeypatch, capsys, _session_edit(README))
     other = ROOT + "\\.scratch\\token-usage\\probes\\README.md"
