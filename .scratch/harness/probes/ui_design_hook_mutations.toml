@@ -94,6 +94,15 @@ new = '''        if directory is not None:
             claim_first(name, directory)'''
 
 [[mutation]]
+name = "가르기 전에 . 과 .. 토막을 접지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''posixpath.normpath(_SEPARATORS.sub("/", path))'''
+new = '''_SEPARATORS.sub("/", path)'''
+
+[[mutation]]
 name = "대조군: 알림 문장의 끝 낱말을 바꾼다"
 tests = ["tests/tools/test_hook_ui_design.py"]
 expect = "green"

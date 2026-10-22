@@ -72,6 +72,20 @@ def test_design_폴더_자체나_scratch_밖의_design은_지나간다() -> None
     assert design_slug(ROOT + "\\.scratch\\design\\x.md") is None
 
 
+def test_점과_점점_토막을_접은_경로로_판정한다() -> None:
+    # PR 직전 bug-perf-review 가 손으로 부른 반례들. 접기 전에는 `..` 를 기능으로 읽거나 놓쳤다.
+    assert design_slug(ROOT + "\\.scratch\\..\\design\\x\\y.md") is None
+    assert design_slug(ROOT + "\\.scratch\\a\\design\\b\\..\\..\\c.md") is None
+    assert design_slug(ROOT + "\\.scratch\\f\\design\\..") is None
+    assert design_slug(ROOT + "\\.scratch\\f\\.\\design\\a.md") == "f"
+    assert design_slug(ROOT + "\\.scratch\\f\\..\\g\\design\\a.md") == "g"
+
+
+def test_접히지_않고_맨_앞에_남은_점점은_판정을_바꾸지_않는다() -> None:
+    assert design_slug("..\\..\\.scratch\\f\\design\\a.md") == "f"
+    assert design_slug("../.scratch/design/a.md") is None
+
+
 def test_대소문자가_다른_폴더_이름도_디자인_폴더다() -> None:
     assert design_slug(ROOT + "\\.Scratch\\admin-style\\Design\\x.md") == "admin-style"
 

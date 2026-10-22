@@ -20,8 +20,10 @@ Write 로 처음 만드는 파일에 실리는지는 재지 못했다.
 
 판정. 도구가 Write·Edit 이고 `tool_input.file_path` 가 문자열이며, 경로를 `/`·`\\` 로 가른 토막에
 `.scratch`, 기능, `design` 이 이어지고 그 뒤에 토막이 하나 이상 있으면(대소문자를 가리지 않는다)
-알린다. 문장에는 그 기능 토막을 넣어 `/ui-design <기능>` 으로 적는다. `.scratch/design/` 처럼 기능
-토막이 없는 경로와 `design` 으로 끝나는 폴더 경로는 지나간다.
+알린다. 가르기 전에 `.`·`..` 토막을 접는다(`posixpath.normpath`). 접히지 않고 남는 `..` 는 경로
+맨 앞뿐이라 `.scratch` 뒤에 오지 않고 판정을 바꾸지 않는다. 문장에는 그 기능 토막을 넣어
+`/ui-design <기능>` 으로 적는다. `.scratch/design/` 처럼 기능 토막이 없는 경로와 `design` 으로
+끝나는 폴더 경로는 지나간다.
 
 한 번. 표지는 `tools/launch_hook.py` 의 모양이다. 임시 폴더(`tempfile.gettempdir()`) 아래
 `STATE_DIR` 에 세션 ID 와 `agent_id`(서브에이전트는 컨텍스트가 따로다)의 해시로 빈 파일을 `O_EXCL`
@@ -46,6 +48,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import posixpath
 import re
 import sys
 import tempfile
@@ -64,7 +67,7 @@ _BODY = (
     " 부른 세션이거나 화면 작업이 아니면(README 한 줄, 명세의 링크) 이 알림은 무시한다."
     " 이 알림은 세션·에이전트마다 한 번이다."
 )
-_SPLIT = re.compile(r"[\\/]+")
+_SEPARATORS = re.compile(r"[\\/]+")
 
 
 class ToolInput(TypedDict, total=False):
@@ -82,8 +85,9 @@ class HookPayload(TypedDict, total=False):
 
 
 def design_slug(path: str) -> str | None:
-    """`.scratch/<기능>/design/` 아래 파일이면 그 기능 토막(쓴 그대로), 아니면 None."""
-    parts = [part for part in _SPLIT.split(path) if part]
+    """`.scratch/<기능>/design/` 아래 파일이면 그 기능 토막(쓴 그대로), 아니면 None. 접지 않으면
+    `..` 를 기능으로 읽었다(셀프 리뷰가 Minor로 남기고 PR 직전 bug-perf-review가 다시 냈다)."""
+    parts = [part for part in posixpath.normpath(_SEPARATORS.sub("/", path)).split("/") if part]
     folded = [part.casefold() for part in parts]
     # 마지막 토막은 파일이라 design 자리에서 뺀다.
     for index in range(len(parts) - 3):

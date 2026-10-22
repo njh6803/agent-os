@@ -2,7 +2,7 @@
 # 감사하고, 설명에만 기대던 계기를 하네스로 옮긴다")이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다.
 # 이 PR 이 병합되기 전의 주 체크아웃(`aba71813`)에는 카나리아가 없다. 병합 뒤에는 `aba71813` 을 `--control-commit` 으로
 # 준다(README `canary/` 행).
-# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `aba71813` 은 "없음", 일지 2026-10-22-15).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, 셀프 리뷰 둘째 반영 뒤, 대조군 주 체크아웃 `96fbe241` 은 "없음", 일지 2026-10-22-15).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_ui_design_row.toml <출력 디렉터리>
 kind = "skill"
