@@ -40,26 +40,33 @@ export function makeJudgeTree(root: string): string {
   return tree;
 }
 
-/** `root` 바로 아래의 남은 판정자 트리를 지우고 지운 경로를 돌려준다. */
-export function removeLeftoverJudgeTrees(root: string): string[] {
-  const removed: string[] = [];
+/** `root` 바로 아래의 남은 판정자 트리(이름이 맞고 표지가 든 디렉터리)의 경로를 돌려준다. */
+export function findLeftoverJudgeTrees(root: string): string[] {
+  const trees: string[] = [];
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || !NAME.test(entry.name)) {
       continue;
     }
     const tree = join(root, entry.name);
-    if (lstatSync(join(tree, MARKER), { throwIfNoEntry: false })?.isFile() !== true) {
-      continue;
+    if (lstatSync(join(tree, MARKER), { throwIfNoEntry: false })?.isFile() === true) {
+      trees.push(tree);
     }
-    rmSync(tree, { recursive: true, force: true, maxRetries: 5 });
-    removed.push(tree);
   }
-  return removed;
+  return trees;
+}
+
+/** `root` 바로 아래의 남은 판정자 트리를 지운다. 무엇을 지울지는 `findLeftoverJudgeTrees` 가 가른다. */
+export function removeLeftoverJudgeTrees(root: string): void {
+  for (const tree of findLeftoverJudgeTrees(root)) {
+    rmSync(tree, { recursive: true, force: true, maxRetries: 5 });
+  }
 }
 
 if (import.meta.main) {
   const root = process.argv[2] ?? dirname(import.meta.dirname);
-  for (const tree of removeLeftoverJudgeTrees(root)) {
+  const trees = findLeftoverJudgeTrees(root);
+  removeLeftoverJudgeTrees(root);
+  for (const tree of trees) {
     console.log(`남은 판정자 트리를 지웠다: ${tree}`);
   }
 }
