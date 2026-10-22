@@ -170,6 +170,7 @@ origin/main을 합치니 #349(aba71813)가 `tools/probe_kit.py`를 들였고, `.
 - Sonnet 5.5 캐시 읽기 단가를 지표 문서와 장부 단가표에서 Claude Code 판마다 맞추는 일(명세의 범위 밖 줄)은 대기열 432로 간다. 받는 쪽은 그 행을 고르는 chore가 정한다.
 - 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 루트를 당기지 않는다(`next-session` "워크트리에서 병합할 때").
 - 대기열 404를 고치기 전에는 `hook_report.py`가 `hook_prompt_directive.py`를 계속 뺄 후보로 낸다. 다음 회고도 넘기지 않는다.
+- 구현 티켓이 프로브 `headless_flags.py`(약 800줄, 함수 40여 개)를 `tools/`의 모듈 셋으로 옮길 때 요약·판정(`summarize`, `judge`, `prices`)·구동(`drive`, `run_arm`)으로 나눈다(PR #351 claude-review 둘째 회차 Nit). 명세가 이미 `tools/`의 모듈 셋을 정했으므로 그 분할의 근거로 쓴다.
 
 ## 인계 (커밋 뒤)
 
@@ -224,3 +225,36 @@ open-session이 연 새 세션이다. 첫 메시지는 이 일지 맨 위의 첫
 - `--judge .scratch/model-rerun/probes/headless_flags/2026-10-22`: "측정 12회차, 측정 아님 0회차", 종료 0.
 - 사본을 `tests/`에 잠시 두고 `uv run pyright --outputjson`: `filesAnalyzed` 1, 오류 68개이고 모두 부분 미지 계열이다. 옮긴 뒤의 68개와 같고 이번 고침이 낸 오류는 없다. 사본은 지웠다.
 - `uv run ruff check`·`ruff format --check` 그 파일: 통과.
+
+## 인계 (PR 연 뒤)
+
+`0d0ea8f6` 커밋 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 약 28.6만 토큰, 경계 `커밋 뒤`)가 왔지만 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘기지 않았다(`next-session` "인계할 때" 1). 푸시하고 PR #351을 연 뒤에 다시 계기(약 29.7만 토큰, 경계 `PR 연 뒤`)가 왔다. 이번에는 다섯에 들지 않았다. PR이 열렸고, 요청 범위가 병합까지이고, 넘겨받은 경계와 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 첫 `@coderabbitai review` 코멘트는 남기지 않았다(새 세션이 남긴다). 이 세션의 지금 제목은 `docs/model-rerun-spec`이다. `tools/model_sweep.py docs/model-rerun-spec`은 `스윕 밖`이었다.
+
+지시문:
+
+```
+다음 작업: 기능 model-rerun. 승인된 설계(.scratch/model-rerun/design.md)로 측정 도구의 명세를 쓴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/model-rerun-spec
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-22-16-model-rerun-spec.md("PR 직전 리뷰", "인계 (PR 연 뒤)"), .claude/skills/next-session/SKILL.md 순서 1
+이어받을 상태: 인계: PR 연 뒤. PR #351을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(보안 /security-review, 버그·성능 bug-perf-review)는 마쳤고 결과와 반영은 PR 체크리스트와 일지 "PR 직전 리뷰"다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 마지막 봇 회차의 커밋에 실어 병합 전에 푸시한다(순서 1의 3). 봇 반영이 명세 본문을 고치면 서두의 수를 다시 센다(to-spec 3단계). 일지 docs/journal/2026-10-22-16-model-rerun-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 명세가 병합되면 결정표대로 티켓, 구현으로 잇는다
+```
+
+제목을 `docs/model-rerun-spec (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었다. 워크트리 잠금 풀기는 `is not locked`로 끝났다(이 세션은 `EnterWorktree(path)`로 들어왔다).
+
+open-session을 부른다 2026-10-22T11:38:21Z
+
+## 이어받은 세션 (PR 반영)
+
+open-session이 연 새 세션이다. 첫 메시지는 위 지시문이다. 제목을 `docs/model-rerun-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+- PR #351이 `CONFLICTING`이었다. main에 #350(ticket-for-every-pr 03)이 병합되어 있었고, 충돌은 `.scratch/retro-queue.md` 끝 행뿐이었다(이 브랜치의 430~433과 main의 434). 표지를 지워 번호순으로 이었고 병합 커밋 `d75cef90`의 pre-commit이 모두 통과했다. #350이 바꾼 규약 문서가 이 브랜치의 변경과 겹치지 않았고, `check-ticket`도 통과했다.
+- 푸시 뒤 `@coderabbitai review`를 남겼으나 CodeRabbit은 무료 한도에 걸렸다(`Review rate limited`, 다음 리뷰는 약 39분 뒤). 회차로 세지 않는다.
+- claude-review는 이 PR에서 두 번 돌았다. 첫 회차(11:38Z, 커밋 `0d0ea8f6`)는 지적 없음이다. 둘째 회차(11:49Z, 커밋 `d75cef90`)에 Minor 1, Nit 1이 나왔다. 둘째 회차라 Critical·Major만 고치고 둘 다 보류했다.
+  - Minor: 프로브 README 9행은 원본을 "대개 커밋하지 않는다"고 적는데 `서브-2.jsonl`은 원본 그대로 커밋되어 있고, 예외인 까닭은 README 39행에만 있다. 지적은 맞다. 보류한다. 그 파일의 로컬 경로는 사용자 이름이 `User`인 임시 폴더와 설정 폴더뿐이고, 비밀 꼴은 프로브 폴더 전체에서 없었다(보안 리뷰와 claude-review가 함께 봤다).
+  - Nit: 프로브 한 파일이 약 800줄이다. 일지 "다음"에 적어 구현 티켓으로 넘겼다.
