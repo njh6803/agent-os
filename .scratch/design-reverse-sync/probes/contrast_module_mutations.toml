@@ -1,0 +1,176 @@
+# design-reverse-sync 티켓 01 의 변이 표. `web/tools/contrast-module.test.ts` 의 vitest 사례 둘은 패키지가 짝 표 파일을
+# 그대로 내보내던 때에도 초록이었다(Vite 가 확장자 없는 상대 import 를 풀었다). 그때 루트 타입 검사는 시험의 import 에서
+# 빨갰다(손으로 봤다, 일지 2026-10-22-17). Node 실행의 ERR_UNSUPPORTED_DIR_IMPORT 와 타입 검사의 TS2834·TS2835 는 옮기기
+# 전 판에서 프로브 `tools_import.mjs` 의 as-is 갈래가 낸다(같은 폴더 README). 시험의 단언, Node 를 띄우는 사례, 진입점
+# 스토리의 여섯째 진입점은 빨강을 본 적이 없다.
+# vitest 변이는 단언이 재는 짝 표나 판정 하나를 바꾸고 그 시험 하나로 좁혀(`-t`) 빨개지는지 본다. 타입 검사 변이는 새
+# 모듈에 상대 import 나 DOM 타입을 넣거나 내보내기를 빼서 루트 타입 검사(`nodenext`, `lib` es2024)가 그 자리에서
+# 빨개지는지 본다. `.js` 를 붙인 상대 import 는 타입 검사와 Vite 가 이웃 `.ts` 로 풀어 Node 를 띄우는 사례만 잡는다. 같은
+# 변이를 그 사례의 시험(빨강)과, vitest 안의 사례 둘·루트 타입 검사의 대조군(초록)으로 둔다. 표지는 변이를 손으로 넣어 본
+# 실패 출력에서 골랐다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/contrast_module_mutations.toml [번호 ...]
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[runner.root_tsc]
+command = ["pnpm", "exec", "tsc", "--noEmit"]
+cwd = "web"
+judge = "tsc"
+
+[runner.storybook]
+command = ["pnpm", "exec", "vitest", "run", "--project", "storybook"]
+cwd = "web"
+judge = "vitest"
+
+# --- 시험의 단언 ----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "짝 하나를 빼면 모두 검은 값의 시험이 빨갛다"
+runner = "node"
+tests = ["tools/contrast-module.test.ts", "-t", "모두 검은 값"]
+expect = "red"
+expect_output = ["expected [ 42, 42 ] to deeply equal [ 43, 43 ]"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+  ["bg-raised", "border-control", 3],
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "기준을 넘는 짝도 걸면 흰 글자 시험이 빨갛다"
+runner = "node"
+tests = ["tools/contrast-module.test.ts", "-t", "흰 값으로 바꾸면"]
+expect = "red"
+expect_output = ["text-muted/bg 21.00 < 4.5"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''    return ratio < minimum'''
+new = '''    return ratio < 22'''
+
+# --- Node 실행 ------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "새 모듈에 .js 를 붙인 상대 import 를 넣으면 Node 를 띄우는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/contrast-module.test.ts", "-t", "Node 가 패키지 이름으로"]
+expect = "red"
+expect_output = ["ERR_MODULE_NOT_FOUND"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+export const MODES = ["light", "dark"] as const;
+'''
+new = '''
+import { DEFAULT_THEME } from "../themes.js";
+export const MODES = ["light", "dark"] as const;
+export const FIRST_THEME = DEFAULT_THEME;
+'''
+
+[[mutation]]
+name = "새 모듈에 .js 를 붙인 상대 import 를 넣어도 vitest 안의 사례 둘은 초록이다(대조군)"
+runner = "node"
+tests = ["tools/contrast-module.test.ts", "-t", "값으로"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+export const MODES = ["light", "dark"] as const;
+'''
+new = '''
+import { DEFAULT_THEME } from "../themes.js";
+export const MODES = ["light", "dark"] as const;
+export const FIRST_THEME = DEFAULT_THEME;
+'''
+
+[[mutation]]
+name = "새 모듈에 .js 를 붙인 상대 import 를 넣어도 루트 타입 검사는 초록이다(대조군)"
+runner = "root_tsc"
+expect = "green"
+diagnostic_in = "packages/ui/src/styles/contrast.ts"
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+export const MODES = ["light", "dark"] as const;
+'''
+new = '''
+import { DEFAULT_THEME } from "../themes.js";
+export const MODES = ["light", "dark"] as const;
+export const FIRST_THEME = DEFAULT_THEME;
+'''
+
+# --- 루트 타입 검사 ---------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "새 모듈에 확장자 없는 상대 import 를 넣으면 루트 타입 검사가 빨갛다"
+runner = "root_tsc"
+expect = "red"
+diagnostic_in = "packages/ui/src/styles/contrast.ts"
+expect_output = ["error TS2835"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+export const MODES = ["light", "dark"] as const;
+'''
+new = '''
+import type { ThemeKey } from "../themes";
+export const MODES = ["light", "dark"] as const;
+'''
+
+[[mutation]]
+name = "새 모듈에 DOM 타입을 쓰는 함수를 넣으면 루트 타입 검사가 빨갛다"
+runner = "root_tsc"
+expect = "red"
+diagnostic_in = "packages/ui/src/styles/contrast.ts"
+expect_output = ["error TS2304: Cannot find name 'Element'"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/contrast.ts"
+old = '''
+type Channels = readonly [number, number, number];
+'''
+new = '''
+type Channels = readonly [number, number, number];
+export function idOf(element: Element): string {
+  return element.id;
+}
+'''
+
+[[mutation]]
+name = "패키지가 새 경로를 내보내지 않으면 시험 파일의 루트 타입 검사가 빨갛다"
+runner = "root_tsc"
+expect = "red"
+diagnostic_in = "tools/contrast-module.test.ts"
+expect_output = ["error TS2307: Cannot find module '@agent-os/ui/contrast'"]
+
+[[mutation.edit]]
+file = "web/packages/ui/package.json"
+old = '''
+    "./contrast": "./src/styles/contrast.ts",
+'''
+new = '''
+'''
+
+# --- 진입점 스토리 ---------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "새 경로가 다른 파일을 가리키면 진입점 스토리가 빨갛다"
+runner = "storybook"
+tests = ["packages/ui/src/Entrypoints.stories.tsx", "-t", "진입점 여섯"]
+expect = "red"
+expect_output = ['"contrast": false']
+
+[[mutation.edit]]
+file = "web/packages/ui/package.json"
+old = '''    "./contrast": "./src/styles/contrast.ts",'''
+new = '''    "./contrast": "./src/testing/index.ts",'''
