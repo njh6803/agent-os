@@ -288,6 +288,13 @@ open-session을 부른다 2026-10-22T15:23:32Z
   - Minor(`main()`이 `--ci` 불리언으로 같은 갈래를 두 번 고른다): 고쳤다. PR 값을 받고 입력 줄을 찍고 판정하는 일을 `_run_ci`로 모아 `main`은 `ci`를 한 번만 본다. 동작은 같다. `tests/tools/test_check_ticket.py` 69 passed, ruff·pyright 0, 변이 표 `--check`가 원문 16 그대로다. 이 반영 커밋의 셀프 리뷰는 앞 세션들의 PR 반영 커밋처럼 `/code-review`를 다시 돌리지 않고 다음 푸시의 claude-review 회차에 맡긴다.
   - Minor(ADR 0037에 CI 판정의 이력이 없다): ADR을 고치지 않는다. ADR 0037의 못 보는 것(68행)이 "CI에서도 볼지는 명세가 정한다"로 그 결정을 명세에 맡겼고, 명세의 "CI" 절과 그 검토 주석이 정했다. 결정이 바뀐 것이 아니라 맡긴 것을 채운 것이다. 이 근거를 PR 본문의 계약 영향에 적었다.
   - Nit(`Wording` 값 둘의 자리): 고치지 않는다. 두 값은 `Wording` 정의 바로 아래, 유일한 사용처인 `_blocked` 바로 위에 있어 이미 한 자리다. 파일 머리의 상수 쪽으로 옮기면 정의와 떨어진다. 보류 이유를 PR 코멘트에 남겼다.
+- `7b6e41a0`(병합 커밋과 위 Minor 반영, pre-commit 모두 Passed, pytest 277.8초, web-verify 221.6초)을 푸시하고 보류 코멘트와 `@coderabbitai review`를 남겼다. `wait_ci.py`가 0(`모두 통과. CodeRabbit: Review completed`)으로 끝났다.
+
+### 봇 둘째 회차(claude-review)와 첫 회차(CodeRabbit)
+
+- claude-review 둘째 회차는 Critical·Major 없이 Minor 하나와 Nit 둘이라 고치지 않고 보류 이유를 PR 코멘트에 남겼다(회차 세기). Minor는 `_run_ci`가 입력 줄을 찍는 명령과 `Verdict`를 돌려주는 질의를 함께 한다는 CQS였다. 첫 회차가 `main`의 두 번 고르기를 걷으라고 해 생긴 함수이고, 출력은 판정 전에 찍어야 판정이 git 실패로 끝나도 남는다. Nit 둘(`_out`·`_fields`의 실패 모양 되풀이, `inputs_line`의 이름)은 이 PR이 만든 모양이 아니거나 이 파일의 관례와 맞다고 리뷰가 적었다.
+- CodeRabbit은 앞 머리에서 한도로 리뷰가 없어, 이 머리의 리뷰가 첫 회차다. 지적 하나는 Major(보안)였다. `ticket` 잡이 PR의 병합 커밋에 든 `tools/check_ticket.py`를 돌리므로, PR이 그 파일을 늘 0으로 끝나게 고치면 잡과 `verify`가 지난다는 것이고, 검사기를 신뢰된 고정 ref에서 돌리라고 했다. 코드는 고치지 않았다. 명세의 "CI"가 검사 도구를 그 체크아웃에서 돌리기로 정했고(규약 전에 딴 PR의 머리에는 도구가 없다), 이 잡이 막는 것은 세션의 실수다. 일부러 하는 우회는 이 도구만의 구멍이 아니다. python 잡도 PR의 시험을 돌리고 PR이 워크플로를 고칠 수도 있으며, 그 변경은 PR 리뷰가 본다. 잡은 읽기 권한뿐이라 우회로 얻는 것은 초록 하나다. base 쪽 도구를 돌리면 이 도구를 고친 PR(이 PR처럼)이 옛 판으로 판정받는다. 그 판단(막는 대상과 막지 않는 길)을 `ci.yml`의 `ticket` 잡 주석에 적었다. `.claude/rules/tools.md`가 막는 훅에 요구하는 "실수로 내는 길인지, 일부러 하는 우회까지인지"를 이 잡에도 적은 것이다.
+- 이 반영의 첫 커밋 시도는 pre-commit pytest가 막았다. `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 `_시각`에서 `cancelled` 파일을 빈 채로 읽어 `ValueError`로 빨갰다(1 failed, 4344 passed. pytest 408.0초로 앞 커밋들의 270초대보다 느렸다). 이 커밋이 건드리지 않은 시험이고, 부하에서 빨개지는 시간 시험의 새 사례다. 대기열 306을 닫은 결정(ADR 0036)대로 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
 
 ## 회고
 
