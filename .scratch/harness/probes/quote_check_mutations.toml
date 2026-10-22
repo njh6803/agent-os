@@ -1,5 +1,5 @@
 # 인용 대조 검사의 테스트가 무엇을 재는지 변이로 본다. PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
-# 대기열 51·55·66·67·345·377 과 그 셀프 리뷰가 더한 규칙 하나를 빼면 그 테스트 파일이 빨강이어야 한다.
+# 대기열 51·55·66·67·345·377·398·436 과 그 셀프 리뷰가 더한 규칙 하나를 빼면 그 테스트 파일이 빨강이어야 한다.
 
 [[mutation]]
 name = "51: 제안 표지 뒤의 따옴표도 인용으로 본다"
@@ -190,7 +190,7 @@ expect = "red"
 expect_output = ["tests/tools/test_check_quotes.py::test_감긴_독스트링과_주석을_한_줄로_옮긴_인용도_원문을_찾는다"]
 [[mutation.edit]]
 file = "tools/check_quotes.py"
-old = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:#+[ \t]*)?")'
+old = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:(?:#+|//+)[ \t]*)?")'
 new = '_WRAP = re.compile(r"[ \t]*\n[ \t]*")'
 
 [[mutation]]
@@ -200,5 +200,31 @@ expect = "red"
 expect_output = ["tests/tools/test_check_quotes.py::test_빈_줄로_나뉜_두_문단을_이은_인용은_원문으로_세지_않는다"]
 [[mutation.edit]]
 file = "tools/check_quotes.py"
-old = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:#+[ \t]*)?")'
-new = '_WRAP = re.compile(r"\s*\n\s*(?:#+[ \t]*)?")'
+old = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:(?:#+|//+)[ \t]*)?")'
+new = '_WRAP = re.compile(r"\s*\n\s*(?:(?:#+|//+)[ \t]*)?")'
+
+[[mutation]]
+name = "436: 줄 머리의 `//` 를 이음매로 보지 않는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+expect_output = ["tests/tools/test_check_quotes.py::test_슬래시_주석으로_감긴_원문을_한_줄로_옮긴_인용도_원문을_찾는다"]
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:(?:#+|//+)[ \t]*)?")'
+new = '_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:#+[ \t]*)?")'
+
+[[mutation]]
+name = "398: 넘겨받은 파일을 대조하는 차례에 하나씩 말뭉치에 넣는다"
+tests = ["tests/tools/test_check_quotes.py"]
+expect = "red"
+expect_output = ["tests/tools/test_check_quotes.py::test_넘겨받은_미추적_파일은_차례와_상관없이_서로의_원문이다"]
+[[mutation.edit]]
+file = "tools/check_quotes.py"
+old = """        corpus.setdefault(path.resolve(), normalize(markdown))
+        readable.append((path, relative, markdown))
+    for path, relative, markdown in readable:
+"""
+new = """        readable.append((path, relative, markdown))
+    for path, relative, markdown in readable:
+        corpus.setdefault(path.resolve(), normalize(markdown))
+"""
