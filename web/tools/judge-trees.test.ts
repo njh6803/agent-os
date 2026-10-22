@@ -15,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { makeJudgeTree, removeLeftoverJudgeTrees } from "./judge-trees.ts";
+import { MARKER, makeJudgeTree, removeLeftoverJudgeTrees } from "./judge-trees.ts";
 
 const WEB = dirname(import.meta.dirname);
 const TOOL = join(import.meta.dirname, "judge-trees.ts");
@@ -33,10 +33,13 @@ function temporaryRoot(): { web: string; outside: string } {
   return { web, outside };
 }
 
-/** 판정자 테스트가 쓰는 모양의 트리. 위반 사례 파일 하나와, 앱의 node_modules 에서 패키지로 가는 junction 하나. */
+/**
+ * 판정자 테스트가 쓰는 모양의 트리. 표지, 위반 사례 파일 하나, 앱의 node_modules 에서 패키지로 가는 junction 하나.
+ */
 function leftoverTree(web: string, name: string, outside: string): string {
   const tree = join(web, name);
   mkdirSync(join(tree, "apps/admin/lib"), { recursive: true });
+  writeFileSync(join(tree, MARKER), "");
   writeFileSync(join(tree, "apps/admin/lib/any.ts"), "export const 값: any = 1;\n");
   mkdirSync(join(tree, "apps/admin/node_modules/@agent-os"), { recursive: true });
   symlinkSync(outside, join(tree, "apps/admin/node_modules/@agent-os/api-client"), "junction");
@@ -83,7 +86,7 @@ describe("남은 판정자 트리 지우기", () => {
     expect(removeLeftoverJudgeTrees(web)).toEqual([]);
   });
 
-  test("판정자 트리 이름의 모양이 아닌 디렉터리는 남긴다", () => {
+  test("판정자 트리 이름의 모양이 아닌 디렉터리는 표지가 있어도 남긴다", () => {
     const { web } = temporaryRoot();
     const kept = [
       "judge-notes",
@@ -95,6 +98,7 @@ describe("남은 판정자 트리 지우기", () => {
     ];
     for (const name of kept) {
       mkdirSync(join(web, name));
+      writeFileSync(join(web, name, MARKER), "");
     }
 
     expect(removeLeftoverJudgeTrees(web)).toEqual([]);
@@ -103,8 +107,27 @@ describe("남은 판정자 트리 지우기", () => {
     }
   });
 
+  test("이름이 판정자 트리의 모양이어도 표지가 없는 디렉터리는 안의 파일과 함께 남긴다", () => {
+    // 사람이 지은 여섯 글자 이름(judge-config)도 이름의 모양에는 맞는다. 표지가 디렉터리이거나 링크여도 남긴다.
+    const { web, outside } = temporaryRoot();
+    mkdirSync(join(web, "judge-config"));
+    writeFileSync(join(web, "judge-config", "notes.md"), "커밋하지 않은 메모\n");
+    mkdirSync(join(web, "judge-Dir123", MARKER), { recursive: true });
+    writeFileSync(join(outside, MARKER), "");
+    mkdirSync(join(web, "judge-Lnk123"));
+    symlinkSync(join(outside, MARKER), join(web, "judge-Lnk123", MARKER), "file");
+
+    expect(removeLeftoverJudgeTrees(web)).toEqual([]);
+    expect(readFileSync(join(web, "judge-config", "notes.md"), "utf-8")).toBe(
+      "커밋하지 않은 메모\n",
+    );
+    expect(existsSync(join(web, "judge-Dir123", MARKER))).toBe(true);
+    expect(existsSync(join(web, "judge-Lnk123"))).toBe(true);
+  });
+
   test("판정자 트리 이름의 링크는 링크도 대상도 남긴다", () => {
     const { web, outside } = temporaryRoot();
+    writeFileSync(join(outside, MARKER), "");
     symlinkSync(outside, join(web, "judge-Qw12Er"), "junction");
 
     expect(removeLeftoverJudgeTrees(web)).toEqual([]);
@@ -122,12 +145,13 @@ describe("남은 판정자 트리 지우기", () => {
 });
 
 describe("새 판정자 트리", () => {
-  test("새로 만든 판정자 트리는 다음 실행이 남은 트리로 지우는 이름이다", () => {
+  test("새로 만든 판정자 트리는 다음 실행이 남은 트리로 지우는 이름과 표지를 갖는다", () => {
     const { web } = temporaryRoot();
     const tree = makeJudgeTree(web);
 
     expect(dirname(tree)).toBe(web);
     expect(basename(tree)).toMatch(/^judge-/);
+    expect(existsSync(join(tree, MARKER))).toBe(true);
     expect(removeLeftoverJudgeTrees(web)).toEqual([tree]);
   });
 });

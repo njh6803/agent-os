@@ -73,3 +73,43 @@ open-session을 부른다 2026-10-22T17:46:11Z
 - `uv run ruff check .` 통과, `uv run ruff format --check .` 통과(965파일).
 - `uv run python tools/run_checks.py`(백그라운드): check-ticket, zizmor, check-instructions, lint-imports, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify(346.1초)가 통과했고 pytest가 1 failed, 4344 passed(468.23초)로 빨갰다. 빨간 것은 `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`이고, `_시각`이 `cancelled` 파일을 빈 채로 읽어 `ValueError`가 났다. 이 변경이 건드리지 않은 시험이고, 일지 2026-10-23-03에 같은 시험이 같은 꼴로 빨간 기록이 있다. 그 파일만 다시 돌리니 6 passed(152.24초)였다. 부하에서 빨개지는 시간 시험의 사례라 대기열 306을 닫은 결정(ADR 0036)대로 회차를 더하지 않고 여기에만 적는다. 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음한다.
 - 첫 커밋 시도는 pre-commit의 pytest가 막았다(1 failed, 4344 passed, 547.20초). 이번에 빨간 것은 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`이고, 자식 파이썬이 `drain(0.5)` 안에 한 줄도 내지 못해 `assert lines`가 빈 목록이었다. 앞의 러너에서 빨갰던 `test_interrupt.py` 시험은 이번에 통과했다. 이 변경이 건드리지 않은 시험이고, 일지 2026-10-22-21에 같은 시험이 같은 꼴로 빨갰고 그때 대기열에 기록이 없어 회고 후보로 두었다. 이것이 그 둘째 사례다. 그 파일만 단독으로 치자 15 passed(2.09초)였다. 회고가 셀 수 있게 여기에 적고 같은 커밋을 다시 쳤다.
+- 다시 친 커밋은 pre-commit의 검사가 모두 통과했다(web-verify 512.0초, pytest 579.5초).
+
+## 인계 (커밋 뒤)
+
+경계: 커밋 뒤. 세션 컨텍스트가 309,146 토큰으로 문턱 200,000을 넘었다. 셀프 리뷰를 반영한 변경과 이 일지를 커밋했고, 아직 푸시하지 않았으며 PR이 없다. 이 절은 커밋하지 않은 채 워크트리에 있다. 새 세션은 PR 직전 리뷰부터 한다. 넘기기 전 이 세션의 제목은 `chore/006-eslint-judge-tree-cleanup`이다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/006-eslint-judge-tree-cleanup.md(브랜치에 커밋했고 아직 푸시하지 않았다). 판정자 테스트의 beforeAll과 verify의 첫 단계가 앞 실행이 남긴 web/judge-* 트리를 junction을 따라가지 않고 지운다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 379를 티켓 .scratch/harness/issues/006-eslint-judge-tree-cleanup.md로 쓰고 한다
+브랜치: chore/006-eslint-judge-tree-cleanup
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태). 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md(인계 절은 그 워크트리에 커밋하지 않은 채 있다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경까지 커밋했고 pre-commit이 통과했다. 푸시하지 않았고 PR이 없다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지 셀프 리뷰 절의 목록), 푸시, PR, 봇 회차, 워크트리에서 병합이다. 일지의 인계 절은 다음 커밋에 싣는다. 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-22T18:49:56Z
+인계 못함 커밋 뒤
+
+`tools/open_session.ps1 -Action send`가 `fired=03:50:39.518`, `page=`, `folder=C:\project\agent`, `model=Opus 5.5`, `effort=xhigh`까지 간 뒤 "모델을 고르는 사이 입력창의 지시문이 바뀌었다. 보내지 않았다."로 멈췄다(`sent=` 없음). 같은 때(18:51Z 무렵) 003 브랜치의 인계 세션이 연 새 세션 `chore/003-probe-conclusion-evidence-kind`가 목록에 새로 나타나, 두 딥링크가 겹친 것으로 본다(어림). 같은 파일로 다시 돌리면 세션이 둘 생길 수 있어 다시 열지 않았다. 제목을 `chore/006-eslint-judge-tree-cleanup`로 되돌리고 이 세션에서 PR 직전 리뷰부터 잇는다. 이 세션은 자동 압축이 받는다.
+
+## PR 직전 리뷰
+
+범위는 `975bf04c..HEAD`(커밋 `ec1c54de` 하나)다. origin/main이 `975bf04c` 그대로라 합칠 것이 없었다. CodeRabbit CLI가 `Seat: not assigned`로 돌지 못해 `/security-review`와 `bug-perf-review`(셀프 리뷰 절의 밀 주장 다섯을 브리프에 실었다)를 나란히 띄웠다.
+
+- 보안 축(`/security-review`): 발견 없음. 지우는 대상은 `readdirSync`가 돌려준 바로 아래 항목 가운데 `^judge-[A-Za-z0-9]{6}$`에 맞고 `Dirent.isDirectory()`가 참인 것뿐이라 경로 탐색이 성립하지 않고, 맨 위의 링크는 거르며 트리 안의 링크는 `rmSync`가 따라가지 않는다. 루트 인자는 CLI 값이고 외부 명령을 띄우지 않는다. 같은 체크아웃에서 verify 둘이 겹치는 경우와 판정과 지우기 사이의 바꿔치기는 경쟁 조건이라 제외 기준대로 내지 않았다. 지적이 없어 오탐 필터 서브태스크는 띄우지 않았다.
+- 버그·성능 축(`bug-perf-review`, 호출 40): 유효 1, 보류 2, 오탐 5. (유효, Minor) 정규식 `^judge-[A-Za-z0-9]{6}$`가 사람이 지은 여섯 글자 이름의 폴더(`web/judge-config/`, `web/judge-design/`)까지 지운다. 임시 web/에 두 폴더를 두고 `removeLeftoverJudgeTrees`를 부르자 둘 다 지워졌다(리뷰어가 손으로 봤다). 커밋하지 않은 내용이면 되살릴 수 없다. (보류, Nit) `import.meta.main`은 Node 24.2부터라 `engines`의 `>=24 <25` 가운데 24.0~24.1에서는 명령이 아무것도 하지 않고 0으로 끝난다(리뷰어의 기억, 재지 않았다). (보류, Minor) 독스트링에서 시험을 CI의 Linux에서 본다는 문장은 CI가 아직 돈 적이 없어 근거가 없고, `EPERM`을 `maxRetries`로 견딘다는 문장은 재지 않았다. 밀 주장 일곱 가운데 Prettier 문장, 겹친 verify 문장, 티켓의 횟수, 프로브 문장은 맞음이었다(Prettier는 재지 않았다고 적었다). 손으로 지울 때의 명령 문장은 Windows에서 맞음이고 Linux는 CI 뒤다. 오탐으로 가른 다섯은 링크 따라가기(트리 안 junction, 순환 junction, 끊긴 junction, 바깥 파일과의 하드 링크, 읽기 전용 파일, 판정자 이름의 junction을 임시 web/에서 손으로 지워 봤다), 대소문자, vitest 병렬 워커(`fileParallelism:false`), pytest가 `web/judge-*`를 만들거나 읽는지, 기본 루트다.
+
+반영:
+
+- 고친 것: 정규식 폭은 표지로 가른다. `makeJudgeTree`가 새 트리에 표지 파일 `.judge-tree`(`MARKER`)를 심고, `removeLeftoverJudgeTrees`는 이름이 맞는 디렉터리 가운데 `lstatSync`로 본 표지가 일반 파일인 것만 지운다. 확장자가 없는 이름이라 ESLint와 Prettier가 읽지 않는다. 시험을 먼저 썼다. "이름이 판정자 트리의 모양이어도 표지가 없는 디렉터리는 안의 파일과 함께 남긴다"(`judge-config`와 메모, 표지 자리가 디렉터리인 `judge-Dir123`, 표지 자리가 바깥 파일로 가는 파일 링크인 `judge-Lnk123`)가 판정을 넣기 전에 셋을 모두 지워 빨갰고, 넣은 뒤 파일 하나 12개와 판정자 테스트를 함께 73개가 통과했다. 이름의 꼴 시험과 판정자 이름의 링크 시험에는 표지를 넣어 두 시험이 표지에 기대지 않게 했고, 이름 판정을 뺀 변이와 `isDirectory` 판정을 뺀 변이를 손으로 넣자 각각 그 시험 하나만 빨갰다. 진짜 web/에 표지가 든 `judge-Mrk001`(api-client로 가는 junction 포함)과 메모가 든 `judge-config`를 두고 `pnpm -C web run clean:judge-trees`를 치자 앞의 것만 지웠고, `web/packages/api-client/package.json`과 `git status`는 그대로였으며 메모가 남았다(손으로 봤다, 스크래치패드 `marker_setup.mjs`, 끝에 `judge-config`를 지웠다). 표지가 없는 판정자 트리(표지를 들이기 전에 남은 트리, 만든 뒤 표지를 쓰기 전에 멈춘 빈 트리)도 남기므로 독스트링의 못 보는 것에 적고 손으로 지울 길(표지를 만들고 이 명령)을 적었다. 그 입력은 위 새 시험의 `judge-Dir123`·`judge-config`와 같은 모양이다. 독스트링 두 문장은 근거의 종류대로 고쳤다. "이 PC 의 Windows 에서 통과했고, Linux 에서는 CI 의 web 잡이 같은 시험을 돈다"와 "`maxRetries` 로 다섯 번까지 다시 시도한다(Node `fs.rm` 문서, 재지 않았다)"다. 뒤의 것은 `web/node_modules/@types/node/fs.d.ts`의 `RmOptions.maxRetries` 설명(`EPERM`을 재시도하고, 재시도 횟수이며, `recursive`가 참일 때만 쓴다)을 열어 봤다. 티켓의 수용 기준 1·2에 표지를 더했다.
+- 남긴 것: `import.meta.main`은 이 PR 전부터 `web/tools/check-tsconfig.ts`, `web/tools/generate-api-client.ts`, `web/tools/visual.ts`, `web/apps/admin/tools/start.ts`가 같은 꼴로 써 이 PR이 들인 위험이 아니고, 24.0~24.1에서는 "명령으로 부르기" 시험이 빨개져 드러난다. `engines`를 좁히는 것은 web 전체의 일이라 두었다.
+- 다음 층(PR 봇)에 밀 주장(반영으로 새로 쓴 문장): "사람이 지은 `judge-config` 같은 폴더도 이름의 꼴에는 맞아서 표지로 가른다. 그 이름의 링크와 파일, 꼴이 다른 이름, 표지가 없거나 표지 자리가 디렉터리·링크인 것은 남긴다", "표지가 없는 판정자 트리(표지를 들이기 전에 남은 트리, 만든 뒤 표지를 쓰기 전에 멈춘 빈 트리)도 남긴다. 판정자 트리인 것을 눈으로 확인했으면 그 안에 표지 파일을 만들고 이 명령으로 지운다", "`maxRetries` 로 다섯 번까지 다시 시도한다(Node `fs.rm` 문서, 재지 않았다)".
+
+origin/main이 `e205147d`(harness 004, #359)로 움직여 반영 전에 합쳤다. 겹친 파일 둘(`.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`)은 충돌 없이 합쳐졌고, 이 브랜치의 diff는 바뀌지 않았다. 반영 커밋의 첫 시도는 pre-commit의 web-verify가 Prettier로 막았다(새 시험의 긴 줄 하나, 495.0초). 고친 시험 파일에 Prettier를 돌리지 않고 커밋했다. 나머지 검사(pytest 494.4초 포함)는 통과했다. `prettier --write`로 그 줄을 감싸고, 인용 대조가 경고한 이 절의 따옴표 인용 하나를 서술로 바꾼 뒤 다시 쳤다.
