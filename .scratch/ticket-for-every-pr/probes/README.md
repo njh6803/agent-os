@@ -23,6 +23,8 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 | `card_block/`(탐침 훅 `log_hook.py`, 판정 `card_block_app.py`, 2026-10-21 기록 `2026-10-21-hook-log.jsonl`·`2026-10-21-result.json`) | 데스크톱 앱 세션에서 매처 `mcp__ccd_session__start_session`의 PreToolUse 훅이 `initiation: own_initiative` 호출을 받는지, 그 입력에 `initiation`이 실리는지, `permissionDecision: deny`로 막으면 카드가 생기지 않고 이유가 모델에게 가는지. 양성 대조로 훅이 지나보낸 호출(없는 `proposal_id`)은 도구가 스스로 거절하는지 | `spec.md` "카드 막는 훅" | 사람 한 번(워크트리 폴더에서 새 앱 세션을 열고 정해진 글을 보낸다)과 그 앱 세션 하나. 표준 라이브러리만 쓴다 | Claude Code 2.1.299(판정 때 탐침 세션 기록의 `version`을 손으로 봤다. 그 기록이 지워져 커밋한 출력에는 판이 없다), Windows 데스크톱 앱 |
 | `session_card_hook_mutations.toml` | `tools/hook_session_card.py`의 판정을 하나씩 깼을 때(ASCII 이스케이프, 최상위·`tool_input`이 객체인지, JSON이 아닌 입력, `initiation` 값, `settings.json`의 매처) 그 판정을 지키는 `tests/tools/test_hook_session_card.py`의 사례가 빨개지는지. 구현 뒤에 쓴 시험과 첫 판부터 초록이던 침묵 시험의 빨강이다 | 티켓 `issues/06-hook-blocks-own-cards.md`의 시험 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/session_card_hook_mutations.toml`. 체크아웃을 고치니 도는 동안 그 체크아웃을 쓰지 않는다. 시간은 재지 않았다 | 2026-10-21 이 PC, 변이 여섯 모두 기대대로(다섯은 셀프 리뷰 전에, 매처 변이를 더한 여섯은 셀프 리뷰 반영 뒤에 돌렸다. 일지 2026-10-22-01) |
 | `check_ticket_mutations.toml` | `tools/check_ticket.py`의 판정을 하나씩 깼을 때(판정 5의 맞대기, 면제 모양에서 harness 폴더를 빼는 조건, 전환을 merge-base의 트리로 가르기, 병합을 마무리하는 커밋의 merge-base에서 `MERGE_HEAD` 빼기, `MERGE_HEAD`를 작업 트리 루트의 `.git/MERGE_HEAD` 경로로 찾기, 판정 6이 harness 폴더의 `.md`를 모두 티켓으로 세기, `symbolic-ref`의 git 실패를 분리 HEAD로 읽기) 그 판정을 지키는 `tests/tools/test_check_ticket.py`의 진짜 커밋 사례가 빨개지는지. 대조군으로 경로 변이에서 일반 클론 사례는 초록인지. 첫 판부터 초록이던 시험과 셀프 리뷰를 반영하며 더한 시험의 빨강이다 | 티켓 `issues/03-commit-check-blocks-ticketless.md`의 변이 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/check_ticket_mutations.toml`. 체크아웃을 고치니 도는 동안 그 체크아웃을 쓰지 않는다. 시간은 재지 않았다 | 2026-10-22 이 PC, git 2.32.0.windows.2, 변이 여덟 모두 기대대로(셀프 리뷰 반영 뒤) |
+| `first_turn_time.py` | `tools/hook_prompt_directive.py`의 첫 턴 티켓 알림 한 번의 시간을 래퍼를 거친 등록 모양으로, 이 PC의 가장 큰 트랜스크립트에서 갈래 넷(첫 턴의 새 트랜스크립트, assistant 기록을 뺀 큰 트랜스크립트, 첫 턴이 아닌 큰 트랜스크립트, 헤드리스)마다 다섯 번씩. 알림과 침묵을 표지로 보고, 같은 프롬프트가 알림인 갈래가 침묵 갈래의 대조다 | `.claude/rules/tools.md`의 훅별 시간, 그 훅 독스트링의 "비용" | 가장 큰 트랜스크립트(`~/.claude/projects/*/*.jsonl`, 인자로 바꿀 수 있다)와 그 사본을 둘 임시 폴더. 저장소 루트에서 `uv run python .scratch/ticket-for-every-pr/probes/first_turn_time.py` | 2026-10-22 이 PC, CPython 3.12, 두 번(앞은 다른 세션이 여럿 돌던 때, 뒤는 대조가 아침 기록보다 수십 ms 높았던 때. 아래 결과). 2026-10-23 표지를 본 회차만 모으게 고친 판으로 한 번(스무 회차 모두 측정, 아래 결과의 둘째 문단) |
+| `prompt_directive_mutations.toml` | `tools/hook_prompt_directive.py`의 알림 판정을 하나씩 깼을 때(티켓 알림의 헤드리스 가름, 가름의 표지 변수와 변수 이름, 예약 작업 거르기와 그 앞 공백, 거르기와 트랜스크립트의 차례, 지시문 계기에 건 헤드리스 가름, 따로 쓴 제목 문구, 원천 문서에서 바뀐 번호 명령의 이름) 그 판정을 지키는 `tests/tools/test_hook_prompt_directive.py`와 `tests/tools/test_headless_gate_agreement.py`(두 헤드리스 가름의 대조)의 사례가 고른 단언에서 빨개지는지. 구현 뒤에 썼거나 이음매에서 이미 초록이던 시험의 빨강이다 | 티켓 `issues/05-first-turn-ticket-notice.md`의 시험 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml`. 체크아웃을 고치니 도는 동안 그 체크아웃을 쓰지 않는다. 한 바퀴 약 2분 | 2026-10-22 이 PC, 변이 여덟 모두 표지까지 기대대로(셀프 리뷰 전과 그 반영 뒤, 둘 다 커밋 전). 2026-10-23 대조 시험을 `test_headless_gate_agreement.py`로 옮긴 뒤 전체, 변이 아홉 모두 기대대로(PR #354 봇 회차의 반영을 마친 작업 트리, 커밋 전) |
 | `merge_commit/`(`merge_commit.py`, 2026-10-21 기록 `2026-10-21-result.json`) | 브랜치가 `origin/main`을 합치다 충돌을 풀고 친 커밋의 pre-commit에서, HEAD만으로 구한 merge-base의 색인 차이에 main이 들여온 파일이 섞이는지와, `git merge-base origin/main HEAD <MERGE_HEAD>`로 구하면 빠지는지. 같은 병합을 링크드 워크트리에서 치면 `MERGE_HEAD`를 어디서 찾을 수 있는지(작업 트리 루트의 `.git/MERGE_HEAD`, git 디렉터리의 파일, ref 이름). 충돌 없는 `git merge`에서 pre-commit 훅이 도는지. 양성 대조로 보통 커밋에서 같은 훅이 도는지 | `spec.md` "커밋 검사"의 바뀐 파일(C) | 맨 원격과 클론을 임시 폴더에 넷 만든다(시간은 재지 않았다). 표준 라이브러리만 쓴다 | git 2.32.0.windows.2(결과 줄의 `git`) |
 
 ## 2026-10-21 결과: 카드 막기
@@ -51,6 +53,25 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 - **양성 대조.** `proposal_id`만 든 호출 둘은 결과에 훅 머리말이 없었다. 첫째(`task_doesnotexist0`)는 앱이 형식 검사로 `proposal_id must be the task_id … (format: task_xxxxxxxx)`라며 거절했다. 형식에 맞춘 둘째(`task_00000000`)는 앱이 `No pending proposal with id task_00000000 in this session …`이라며 거절했다. 그래서 거절은 앱이 했다. 훅 머리말이 없다는 관찰만으로는 "훅이 돌고 지나보냈다"와 "그 호출에는 훅이 돌지 않았다"를 가르지 못한다. 같은 세션에서 같은 매처의 `own_initiative` 호출이 막혔고, 매처는 도구 이름만 보므로 앞의 해석을 고른다. 훅이 아무것도 내지 않았다는 것을 직접 보지는 않았다.
 
 못 본 것. `user_asked`와 `offer`는 그 세션에서 부르지 않았다(세션을 열거나 사람에게 묻는다). 그 둘은 훅의 판정 함수 시험과 `tools/hook_payloads.toml`이 본다. 판(Claude Code 버전)은 보지 않았다.
+
+## 2026-10-22 결과: 첫 턴 알림의 시간
+
+측정이었다. `first_turn_time.py`의 스무 회차가 모두 표지(알림 갈래는 `context`이고 알림의 머리로 시작한다, 침묵 갈래는 `silent`)를 냈고 종료 코드는 0이다. 트랜스크립트는 38,790,814바이트이고 첫 assistant 기록 앞이 34줄이었으며, assistant 기록을 뺀 사본은 30,588,434바이트였다.
+
+2026-10-23에 표지를 본 회차의 시간만 범위에 모으고, 측정인 회차가 없는 갈래는 범위 대신 `null`로 적게 고쳤다(PR #354 CodeRabbit. 고치기 전 판은 표지를 보기 전에 시간을 모아, 측정 아닌 회차도 범위에 들고 다섯 회차가 모두 예외면 `min`에서 멈췄다). 아래 두 실행은 스무 회차가 모두 측정이라 고친 판으로 셈해도 범위가 같다. 고친 판을 한 번 돌려 스무 회차가 모두 측정이고 종료 코드가 0인 것을 봤다. 그 실행의 시간은 다른 때 잰 것이라 아래 표에 더하지 않았다.
+
+| 갈래 | 다섯 번 |
+|---|---|
+| 첫 턴, 새 트랜스크립트(알림) | 237~269ms |
+| 첫 턴, assistant 기록을 뺀 큰 트랜스크립트(알림, 끝까지 읽는다) | 431~545ms |
+| 첫 턴 아님, 큰 트랜스크립트(침묵, 첫 assistant 기록에서 멈춘다) | 223~304ms |
+| 헤드리스, 뺀 사본(침묵, 트랜스크립트를 열지 않는다) | 209~239ms |
+
+- **부하.** 바로 뒤 같은 PC에서 대조로 돌린 `.scratch/harness/probes/choice_facts/time_hook.py`가 253~485ms로, 같은 날 아침 그 훅의 기록(189~454ms, `.claude/rules/tools.md`)보다 하한이 64ms, 상한이 31ms 높았다. 그 앞의 실행(첫 assistant 기록 앞의 줄 수를 찍기 전의 판, 재는 길은 같다)은 다른 세션이 여럿 돌던 때라 네 갈래가 634~1820ms였고 같은 때의 대조도 528~1368ms였다. 아래는 둘째 실행으로 읽고, 첫째 실행에서도 갈래 사이의 차례는 같았다.
+- **보통 세션의 비용은 크지 않다.** 트랜스크립트를 열지 않는 헤드리스 갈래와, 큰 트랜스크립트를 열어 첫 assistant 기록에서 멈추는 갈래가 수십 ms 안에서 겹쳤다. 같은 프롬프트가 둘째 갈래(assistant 기록을 뺀 사본)에서는 알림이었으므로, 그 사본을 쓴 넷째 갈래의 침묵은 헤드리스 가름에서, 원본을 쓴 셋째 갈래의 침묵은 원본에만 있는 assistant 기록, 곧 첫 턴 판정에서 왔다.
+- **끝까지 읽는 최악은 약 0.2~0.3초 더 든다.** assistant 기록이 없는 30MB 파일은 실제 첫 턴에 나지 않는다. 이 트랜스크립트에서 첫 턴의 훅이 본 것은 첫 assistant 기록 앞의 34줄이다. 위쪽 한계로 잰 것이다.
+
+못 본 것. 옛 판(지시문이 아니면 트랜스크립트를 열지 않는다)과 번갈아 재지 않았다. 34줄은 이 트랜스크립트 하나의 값이다.
 
 ## 2026-10-21 결과: 병합 커밋
 

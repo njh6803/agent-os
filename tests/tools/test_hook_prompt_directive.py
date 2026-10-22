@@ -5,14 +5,19 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 from tools.hook_prompt_directive import (
+    TITLE_CALL,
+    TITLE_FALLBACK,
     block_reason_for,
     context_for,
+    first_turn_context,
     has_assistant_turn,
     is_first_turn,
 )
 
 NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
+ISSUE_TRACKER = Path(__file__).parents[2] / "docs" / "agents" / "issue-tracker.md"
 
 # 티켓 05 세션이 실제로 받은 첫 메시지(2026-09-23). 앱이 딥링크의 첫 `/` 를 U+FF0F 로 바꿔 넣었고
 # 사람이 고치지 않고 보냈다. 시작 프롬프트 줄의 `/` 는 ASCII 그대로다.
@@ -576,3 +581,170 @@ def test_트랜스크립트_경로를_모르면_첫_턴이라고_하지_않는�
     """잘못 발동하면 엉뚱한 세션의 이름이 조용히 바뀐다. 모를 때는 발동하지 않아야 드러난다."""
     assert is_first_turn(None) is False
     assert is_first_turn("") is False
+
+
+# 첫 턴 티켓 알림(티켓 ticket-for-every-pr 05). 지시문이 아닌 첫 메시지에 티켓·브랜치·제목의 차례를
+# 알린다. 명세는 `.scratch/ticket-for-every-pr/spec.md` 의 "첫 턴 알림"이다.
+PLAIN = "끝났어?"
+USED = '{"type":"user"}\n{"type":"assistant"}\n'
+# 앱의 예약 작업이 연 세션의 첫 메시지 머리. 2026-10-22 의 `morning-report-work` 세션
+# 트랜스크립트에서 옮겼다.
+SCHEDULED = (
+    '<scheduled-task name="morning-report-work" '
+    'file="C:\\Users\\User\\.claude\\scheduled-tasks\\morning-report-work\\SKILL.md">\n'
+    "This is an automated run of a scheduled task. The user is not present to answer questions."
+)
+
+
+def _notice(
+    prompt: str = PLAIN,
+    transcript: str | None = None,
+    attended: str | None = None,
+    marker: str | None = None,
+) -> str | None:
+    return first_turn_context(prompt, None, transcript, attended, marker)
+
+
+def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차례를_알린다(tmp_path: Path) -> None:
+    """낱말은 차례의 자리를 대신한다. 워크트리 먼저, 두는 다른 티켓의 브랜치, 티켓 자리(기능 밖의
+    제품 코드 고침 포함)와 번호 명령과 상태(이미 있는 티켓의 상태 포함), 브랜치 맞추기, 제목,
+    따르지 않는 때 셋(면제 일의 회고 티켓 포함), 커밋 검사와 규약 원천이다. 어순은 보지 않는다(다른
+    티켓의 브랜치만 아래 시험이 본다)."""
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+
+    assert notice is not None
+    for word in (
+        "`EnterWorktree`",
+        "제품 코드",
+        "`.scratch/harness/issues/NNN-<slug>.md`",
+        "`uv run python tools/sibling_overlap.py`",
+        "`in-progress`",
+        "`ready-for-agent`",
+        "`git branch -m",
+        "다른 티켓의 브랜치",
+        TITLE_CALL,
+        "질문",
+        "`docs/<slug>`",
+        "`retro`",
+        "인계",
+        "`tools/check_ticket.py`",
+        "`docs/agents/issue-tracker.md`",
+    ):
+        assert word in notice, word
+
+
+def test_알림의_규약_낱말은_원천_문서에_있다(tmp_path: Path) -> None:
+    """알림은 `docs/agents/issue-tracker.md` 의 규약을 옮긴 사본이다. 원천이 브랜치 모양, 상태 값,
+    번호 명령, 면제 브랜치, 커밋 검사의 이름을 바꾸면 여기서 빨갛다(PR #354 claude-review). 원천에
+    다른 말로 적힌 것(워크트리, 제목 도구)은 대조하지 않는다."""
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+    source = ISSUE_TRACKER.read_text(encoding="utf-8")
+
+    assert notice is not None
+    for word in (
+        "`feature/<NN>-<slug>`",
+        "`chore/<NNN>-<slug>`",
+        "`ready-for-agent`",
+        "`in-progress`",
+        "`uv run python tools/sibling_overlap.py`",
+        "`티켓 NNN`",
+        "`docs/<slug>`",
+        "`tools/check_ticket.py`",
+    ):
+        assert word in notice, word
+        assert word in source, word
+
+
+def test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다(tmp_path: Path) -> None:
+    """다른 티켓의 워크트리에서 연 세션이 다른 일을 받으면, 차례대로 따른 1)이 남의 워크트리에 새
+    티켓을 먼저 쓴다. 그래서 그 조건은 1) 앞에 온다(PR 직전 `bug-perf-review`, 일지
+    2026-10-22-29)."""
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+
+    assert notice is not None
+    assert notice.index("다른 티켓의 브랜치") < notice.index("1) 티켓을 쓴다")
+
+
+def test_첫_턴이_아니면_보통_프롬프트에_알리지_않는다(tmp_path: Path) -> None:
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text(USED, encoding="utf-8")
+
+    assert _notice(transcript=str(transcript)) is None
+
+
+def test_헤드리스_표지가_있으면_알리지_않는다(tmp_path: Path) -> None:
+    """`claude -p` 는 `CLAUDE_CODE_SESSION_ATTENDED=0` 이고, 카나리아는 표지 변수를 붙인다."""
+    new = str(tmp_path / "없음.jsonl")
+
+    assert _notice(transcript=new, attended="0") is None
+    assert _notice(transcript=new, marker="1") is None
+    assert _notice(transcript=new, attended="1", marker="") is not None
+
+
+def test_헤드리스와_예약_작업은_트랜스크립트를_열지_않고_거른다(tmp_path: Path) -> None:
+    """거르기를 트랜스크립트보다 먼저 본다. 폴더는 열 수 없는 트랜스크립트 자리다."""
+    folder = str(tmp_path)
+
+    assert _notice(transcript=folder, attended="0") is None
+    assert _notice(transcript=folder, marker="1") is None
+    assert _notice(SCHEDULED, transcript=folder) is None
+    # 대조: 사람이 보는 세션의 보통 프롬프트는 그 자리를 열려다 실패한다. 위 셋이 열지 않았다는
+    # 표지다.
+    with pytest.raises(OSError):
+        _notice(transcript=folder)
+
+
+def test_예약_작업이_연_세션의_첫_메시지에는_알리지_않는다(tmp_path: Path) -> None:
+    """앱의 예약 작업이 연 세션은 헤드리스 가름으로 헤드리스로 보이지 않는다(명세 "첫 턴 알림"의
+    2026-10-21 검토 주석). 첫 메시지의 머리로 거른다. 문장 속에서 그 꼴을 든 것은 거르지 않는다."""
+    new = str(tmp_path / "없음.jsonl")
+
+    assert _notice(SCHEDULED, transcript=new) is None
+    assert _notice("\n" + SCHEDULED, transcript=new) is None
+    assert _notice("`<scheduled-task ` 로 시작하는 세션을 본다", transcript=new) is not None
+
+
+def test_지시문이면_지금_계기만_있고_티켓_알림은_없다(tmp_path: Path) -> None:
+    """지시문의 계기(제목, tidy-checkouts, 폴더 막기)는 헤드리스 가름과 상관없이 그대로다."""
+    new = str(tmp_path / "없음.jsonl")
+    directive = DIRECTIVE.replace("／", "/", 1)
+    notice = _notice(transcript=new)
+    assert notice is not None
+
+    for attended in (None, "0"):
+        context = _notice(directive, transcript=new, attended=attended)
+        assert context == context_for(directive)
+        assert context is not None
+        assert "`tools/check_ticket.py`" not in context
+        assert notice not in context
+
+
+def test_못_보는_것_질문만_하는_세션에도_알린다(tmp_path: Path) -> None:
+    """첫 메시지만으로는 커밋할 세션인지 가르지 못한다. 알림이 질문을 따르지 않는 때로 든다."""
+    assert _notice("이 훅은 언제 트랜스크립트를 여나?", str(tmp_path / "없음.jsonl")) is not None
+
+
+def test_못_보는_것_슬래시_명령으로_연_세션에도_알린다(tmp_path: Path) -> None:
+    """지시문이 아닌 첫 메시지라 커밋하지 않는 스킬(`/tidy-checkouts`)로 연 세션도 알림을 받는다.
+    알림이 커밋할 일이 없으면 따르지 않는다고 든다."""
+    assert _notice("/tidy-checkouts", str(tmp_path / "없음.jsonl")) is not None
+
+
+def test_못_보는_것_지시문_모양을_붙여_넣고_다른_일을_시키면_알리지_않는다(tmp_path: Path) -> None:
+    """지시문으로 보아 지시문 계기만 낸다."""
+    pasted = DIRECTIVE.replace("／", "/", 1) + "\n\n이건 무시하고 README 오타만 고쳐 줘"
+    context = _notice(pasted, str(tmp_path / "없음.jsonl"))
+
+    assert context is not None
+    assert "`tools/check_ticket.py`" not in context
+
+
+def test_두_계기의_제목_문구가_같다(tmp_path: Path) -> None:
+    """제목 문구는 지시문 계기의 것을 그대로 쓴다(티켓 05). 한쪽만 고치면 여기서 빨갛다."""
+    directive = context_for(DIRECTIVE.replace("／", "/", 1))
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+
+    for context in (directive, notice):
+        assert context is not None
+        assert TITLE_CALL in context
+        assert TITLE_FALLBACK in context
