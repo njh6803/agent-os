@@ -90,3 +90,25 @@ Critical·Major 없음, 범위 넘침 없음, Nit 1. 잰 것: 고치기 전 `che
 
 - 제목을 브랜치 이름으로 바꾸고 주 체크아웃에서 `tidy-checkouts`를 돌았다. 루트는 이미 origin/main `975bf04c`와 같았다. 지운 것: 브랜치 `worktree-003-probe-conclusion-evidence-kind`, 쉬는 세션 셋을 끝낸 뒤 워크트리 `model-rerun-tickets`와 브랜치 `docs/model-rerun-tickets`. 휴지통의 `worktree-overrides-pc-check~~.venv`는 python.exe(pid 41176)가 쥐어 남았다. 나머지는 병합된 PR이 없거나 프로세스가 쥐었거나 앱 표지가 있어 남겼다.
 - `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+- PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 나란히 돌렸다. `/security-review` 지적 0건, `bug-perf-review` 0건(줄 중간 `https://`가 벗겨지지 않는 것을 `unwrap`으로 손으로 재현했다).
+- PR #358을 열고 `@coderabbitai review`를 남겼다. `tools/wait_ci.py 358`을 백그라운드로 띄웠다.
+
+### 봇 1회차
+
+- 검사 모두 초록, CodeRabbit `Review completed`, claude-review 지적 없음.
+- CodeRabbit Minor 하나(`quote_check_mutations.toml` 변이 20·21): 표지가 시험 이름이라 그 시험이 다른 까닭으로 실패해도 맞는다. `.claude/rules/probes.md` 첫 항목(고른 단언이 실패할 때만 나오는 문구)과 맞아 고쳤다. 셀프 리뷰의 Nit 2를 345의 선례로 남겼던 판단을 이것으로 뒤집었다. 변이를 손으로 넣어 실패 출력을 보니 20은 그 시험과 못 보는 것 시험이 빨갛고 경고 문구가 서로 달랐고, 21은 두 차례가 각자 다른 쪽(`adr.md:1`, `journal.md:2`)을 경고했다. 표지를 경고 줄의 인용과 ` — 저장소의` 머리로 바꿨다(시험 원문에는 그 이음이 없다). 21에 두 차례의 표지를 모두 두었더니 `mutate.py`가 첫 실패에서 멈춰(`-x`) 둘째 표지가 없다고 어긋남을 냈고, 첫 차례(`adr.md:1`)의 표지 하나로 줄였다. 첫 재실행은 기준선 pytest가 PC 부하로 600초 제한을 넘겨 변이를 넣지 못했다(평소 약 95초, 다시 돌리니 191초).
+
+## 회고
+
+후보 셋, 승인 1·기각 2·넘김 0.
+
+1. **승인(대기열 439, 1회차).** 사건: 앞 세션이 일지 번호를 06으로 만든 뒤 형제 007과 `tools/sibling_overlap.py --move`를 거의 같은 때 돌려, 두 쪽이 07, 08로 함께 옮겨 두 번 모두 겹쳤다(위 "시작"). 205(받은 번호를 파일 없이 둔다)와 249(형제 PR이 먼저 병합해 밀린다)는 한쪽만 옮기는 경우라 다른 일이다. 층: 도구의 판정이라 검사 층(`tools/sibling_overlap.py`)으로 승인했다. 되돌림: PR 하나. 고침이지만 이 PR의 범위(`tools/check_quotes.py`) 밖이라 지금 반영하지 않고 대기열에 둔다.
+2. **기각.** 일지 52줄이 고치기 전 독스트링 괄호를 따옴표로 옮겨 인용 대조가 경고했다. 이미 있는 검사(pre-commit의 quotes)가 그 자리에서 알렸다.
+3. **기각.** `tidy-checkouts`의 `judge` 인자(`--running`·`--idle` 수십 개)를 세션 목록에서 손으로 지었다. 틀린 것이 없었고 사건이 없다.
+
+만료: `tools/queue_open_rows.py`와 `--ref origin/main` 두 출력 모두 만료할 행이 없었다.
+
+## 다음
+
+- harness 008이 닫혔다. 같은 주제는 남지 않았다. 결정표의 harness 티켓 줄대로 `plan.md` 프론티어에서 고른다. 나란히 연 형제 003~007은 아직 돈다.
+- 대기열 439(형제의 동시 `--move`)는 1회차라 chore 계기가 아니다.
