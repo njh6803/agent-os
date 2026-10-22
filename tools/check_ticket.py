@@ -643,16 +643,21 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _run_ci(cwd: Path) -> Verdict:
+    """`--ci` 의 실행. PR 의 값을 받아 판정 전에 입력 줄을 찍고 판정한다."""
+    pr = pull_request(os.environ)
+    if pr is not None:
+        _write(sys.stdout, inputs_line(cwd, pr))
+    return judge_ci(cwd, pr)
+
+
 def main(argv: list[str]) -> int:
     args = _parser().parse_args(argv[1:])
     ci: bool = args.ci
     where: Path | None = args.cwd
     cwd = Path.cwd() if where is None else where
     try:
-        pr = pull_request(os.environ) if ci else None
-        if pr is not None:
-            _write(sys.stdout, inputs_line(cwd, pr))
-        verdict = judge_ci(cwd, pr) if ci else judge(cwd)
+        verdict = _run_ci(cwd) if ci else judge(cwd)
     except GitError as error:
         _write(sys.stderr, str(error))
         return 2

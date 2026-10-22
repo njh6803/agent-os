@@ -1,0 +1,29 @@
+# `.claude/rules/tools.md` 의 훅 시간 문단에 더한 문장(UserPromptSubmit 의 `hook_prompt_directive`, 첫 턴 티켓 알림을 더한
+# 판의 시간, 티켓 .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md)이 `paths` 에 맞는 파일을 Read 로 열 때
+# 실리는지. 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 둘이다. 트랜스크립트를 열지 않는 헤드리스 갈래의 범위와, assistant 기록을 뺀 사본을 끝까지 읽는 최악의 범위.
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 두 갈래 모두 `e62eb052` 위의 커밋 전 작업 트리, 대조군은 두 물음
+# 모두 "없음", 일지 2026-10-22-29).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_prompt_directive_time.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데에서 둘을 찾아 답하라. 파일을 읽을 때 함께 실린 규칙 파일도 지시로 센다.
+읽은 파일의 코드에서 추측하지 않는다.
+1. UserPromptSubmit 에 붙는 훅의 시간을 적은 문장에서, 트랜스크립트를 열지 않는 헤드리스 갈래의 밀리초 범위를 글자 그대로
+   옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
+2. 같은 문장에서 assistant 기록을 뺀 사본을 끝까지 읽는 최악의 밀리초 범위를 글자 그대로 옮겨라. 그런 문장이 없으면
+   "없음"이라고만 답하라.
+'''
+expect = ["209~239ms", "431~545ms"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

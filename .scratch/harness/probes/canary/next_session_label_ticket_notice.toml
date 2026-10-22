@@ -1,0 +1,26 @@
+# next-session "지시문 형식" 절 끝 문단의, 라벨을 바꾸면 첫 턴 훅이 무엇을 내는지 적은 문장(티켓
+# .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md 가 "예외 없이 침묵"을 티켓 알림으로 고쳤다)이
+# 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 옛 문장이
+# 있다. 병합 뒤에 다시 돌리려면 `# 최신 결과:` 줄의 대조군 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 실험군 `e62eb052` 위의 커밋 전 작업 트리, 대조군 주 체크아웃
+# `c47bedce` 는 옛 문장 "예외 없이 침묵"을 옮겼다, 일지 2026-10-22-29).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_label_ticket_notice.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽고 하나를 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+"지시문 형식" 절에서 새 세션의 UserPromptSubmit 훅이 지시문을 알아보는 법을 적은 문단을 찾고, 그 문단에서 라벨을
+바꾸면 그 훅이 무엇을 하는지 적은 문장을 글자 그대로 옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["지시문 없이 연 세션의 티켓 알림"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
