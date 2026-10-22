@@ -1,4 +1,4 @@
-# 2026-10-21 (13) 모델이 스스로 내는 세션 카드를 훅이 막는다
+# 2026-10-22 (01) 모델이 스스로 내는 세션 카드를 훅이 막는다
 
 브랜치 `feature/06-hook-blocks-own-cards`, 티켓 `.scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md`. 기능
 `ticket-for-every-pr`의 티켓 일곱 가운데 나란히 여는 셋의 둘째다(일지 2026-10-21-07의 "다음").
@@ -123,8 +123,8 @@ else"로 답한 뒤 요청을 끊고 말로 답했다.
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md
 브랜치: feature/06-hook-blocks-own-cards
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-13-hook-blocks-own-cards.md 의 "인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 커밋 949fcbba까지 구현과 셀프 리뷰 반영을 마쳤고 열린 PR은 없다. 일지의 커밋 뒤 수정은 커밋하지 않았다. 남은 단계는 실제 세션의 확인(사람이 이 워크트리 폴더에서 새 앱 세션을 연다), 티켓 Status done, PR 직전 리뷰(일지의 밀 주장), 푸시, PR, 봇 회차, 워크트리에서 병합. docs/journal/2026-10-21-13-hook-blocks-own-cards.md
+읽을 것: docs/journal/2026-10-22-01-hook-blocks-own-cards.md 의 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 949fcbba까지 구현과 셀프 리뷰 반영을 마쳤고 열린 PR은 없다. 일지의 커밋 뒤 수정은 커밋하지 않았다. 남은 단계는 실제 세션의 확인(사람이 이 워크트리 폴더에서 새 앱 세션을 연다), 티켓 Status done, PR 직전 리뷰(일지의 밀 주장), 푸시, PR, 봇 회차, 워크트리에서 병합. docs/journal/2026-10-22-01-hook-blocks-own-cards.md
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -162,3 +162,35 @@ else"로 답한 뒤 요청을 끊고 말로 답했다.
 - 남은 위험: 래퍼와 `settings.json` 등록이 실제 앱 세션에서 막는지 아직 보지 않았다. 막지 않으면 훅은 조용히 아무것도 막지 않는다.
   `.claude/rules/tools.md`·`.claude/settings.json`·`tools/hook_payloads.toml`을 함께 고친 형제 PR(#296, #297)과 워크트리
   (`bug-perf-review-batch`, `measure-word-hook`)가 있어, 뒤에 병합하는 쪽에서 글자 충돌이 날 수 있다.
+
+## 실제 세션의 확인 (이어받은 셋째 세션)
+
+> 사용자: (지시문) 다음 작업: .scratch/ticket-for-every-pr/issues/06-hook-blocks-own-cards.md. 모델이 스스로 내는 세션 카드를 훅이 막는다. 푸시는 됐고 실제 세션의 확인과 PR부터 잇는다
+
+지시문대로 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 이 세션은 주 체크아웃에서 시작해 그 `settings.json`(이 등록이 없다)으로
+떴으므로 여기서는 훅을 볼 수 없었다. 확인할 세션을 누가 열지 선택 화면으로 물었고, 사용자는 아래를 골랐다.
+
+> 사용자: 제가 대신 엽니다 (Recommended) — 제가 그 폴더를 작업 위치로 지정해 새 세션을 바로 시작하고 확인 절차를 보냅니다. 사이드바에 세션 한 줄이 생기고, 그 세션이 끝나면 결과가 이 세션으로 돌아옵니다.
+
+`start_session`(`user_asked`, `cwd`는 이 워크트리 폴더)으로 확인 세션을 열어 정해 둔 호출 둘을 시켰다(아래 양성 대조의
+하나는 결과를 보고 더 시켰다).
+
+- `own_initiative`: 결과가 `PreToolUse:mcp__ccd_session__start_session hook error: ` 뒤에 이 훅의 까닭 글 그대로였고 카드 id가
+  없었다. 래퍼와 `settings.json` 등록이 실제 앱 세션에서 막는다.
+- 양성 대조: `proposal_id`만 든 호출 둘에 훅 머리말이 없었다. 첫 값 `task_doesnotexist0`은 앱의 형식 검사에서 거절되어, 형식에
+  맞춘 `task_00000000`으로 한 번 더 시켰고 앱이 `No pending proposal …`으로 거절했다.
+- 결과는 `.scratch/ticket-for-every-pr/probes/README.md`의 "2026-10-22 결과: 실제 카드 훅의 새 세션 확인"에 적었다. 티켓
+  `Status:`를 `done`으로 바꿨다.
+- PR 직전 리뷰의 보류 Minor 2와 유효 Nit 1은 고치지 않고 PR 체크리스트에 판정과 고치는 값을 적는다(둘째 세션의 판정 그대로).
+
+- 셀프 리뷰: `/code-review` base `39d4731d`, 미커밋 파일 셋, 미추적 0, 커밋 0. 두 축 모두 Critical·Major 0이다.
+  - 고친 것: 두 축이 함께 짚은 Minor(README의 "정해진 호출 셋"은 결과를 보고 하나를 더 시킨 것과 어긋난다)를 "정해 둔 호출 둘을 한 번씩
+    부르고, 둘째가 형식 검사에 걸려 형식에 맞춘 호출 하나를 더 시켰다"로 고쳤다. 표준 축의 판단 거리 넷도 고쳤다. 인용이 확인 세션의
+    보고를 거친 이차 근거라는 것과 그 세션 id, 양성 대조가 "훅이 돌지 않았다"와 갈리지 않는다는 것과 그래도 앞의 해석을 고르는 까닭,
+    주 체크아웃 등록이 없다는 문장의 시점(2026-10-22), 선택 화면의 답을 `> 사용자:` 인용으로. 명세 축 Nit으로 티켓의 체크 줄에
+    사용자가 대신 열기를 골랐다는 괄호를 더했다.
+  - 남긴 것: 앞 절 "못 본 것"에서 새 절로 가는 되돌림 표시(Nit). 그 절은 2026-10-21 결과의 기록이라 고치지 않는다.
+  - 다시 돌린 명령: 문서만 고쳐 커밋의 pre-commit으로 갈음한다.
+  - PR 직전 리뷰에 밀 주장: README 새 절의 고친 문장 셋("정해 둔 호출 둘을 … 하나를 더 시켰다", "아래 인용은 그 보고에서 옮긴 이차
+    근거다", "매처는 도구 이름만 보므로 앞의 해석을 고른다"). PR 직전 리뷰는 둘째 세션이 끝냈고 이 변경은 문서뿐이라 다시 돌지 않고 PR 봇
+    회차에 맡긴다.

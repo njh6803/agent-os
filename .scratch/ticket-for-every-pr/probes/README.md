@@ -21,7 +21,7 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
 | `card_block/`(탐침 훅 `log_hook.py`, 판정 `card_block_app.py`, 2026-10-21 기록 `2026-10-21-hook-log.jsonl`·`2026-10-21-result.json`) | 데스크톱 앱 세션에서 매처 `mcp__ccd_session__start_session`의 PreToolUse 훅이 `initiation: own_initiative` 호출을 받는지, 그 입력에 `initiation`이 실리는지, `permissionDecision: deny`로 막으면 카드가 생기지 않고 이유가 모델에게 가는지. 양성 대조로 훅이 지나보낸 호출(없는 `proposal_id`)은 도구가 스스로 거절하는지 | `spec.md` "카드 막는 훅" | 사람 한 번(워크트리 폴더에서 새 앱 세션을 열고 정해진 글을 보낸다)과 그 앱 세션 하나. 표준 라이브러리만 쓴다 | Claude Code 2.1.299(판정 때 탐침 세션 기록의 `version`을 손으로 봤다. 그 기록이 지워져 커밋한 출력에는 판이 없다), Windows 데스크톱 앱 |
-| `session_card_hook_mutations.toml` | `tools/hook_session_card.py`의 판정을 하나씩 깼을 때(ASCII 이스케이프, 최상위·`tool_input`이 객체인지, JSON이 아닌 입력, `initiation` 값, `settings.json`의 매처) 그 판정을 지키는 `tests/tools/test_hook_session_card.py`의 사례가 빨개지는지. 구현 뒤에 쓴 시험과 첫 판부터 초록이던 침묵 시험의 빨강이다 | 티켓 `issues/06-hook-blocks-own-cards.md`의 시험 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/session_card_hook_mutations.toml`. 체크아웃을 고치니 도는 동안 그 체크아웃을 쓰지 않는다. 시간은 재지 않았다 | 2026-10-21 이 PC, 변이 여섯 모두 기대대로(다섯은 셀프 리뷰 전에, 매처 변이를 더한 여섯은 셀프 리뷰 반영 뒤에 돌렸다. 일지 2026-10-21-13) |
+| `session_card_hook_mutations.toml` | `tools/hook_session_card.py`의 판정을 하나씩 깼을 때(ASCII 이스케이프, 최상위·`tool_input`이 객체인지, JSON이 아닌 입력, `initiation` 값, `settings.json`의 매처) 그 판정을 지키는 `tests/tools/test_hook_session_card.py`의 사례가 빨개지는지. 구현 뒤에 쓴 시험과 첫 판부터 초록이던 침묵 시험의 빨강이다 | 티켓 `issues/06-hook-blocks-own-cards.md`의 시험 | `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/session_card_hook_mutations.toml`. 체크아웃을 고치니 도는 동안 그 체크아웃을 쓰지 않는다. 시간은 재지 않았다 | 2026-10-21 이 PC, 변이 여섯 모두 기대대로(다섯은 셀프 리뷰 전에, 매처 변이를 더한 여섯은 셀프 리뷰 반영 뒤에 돌렸다. 일지 2026-10-22-01) |
 | `merge_commit/`(`merge_commit.py`, 2026-10-21 기록 `2026-10-21-result.json`) | 브랜치가 `origin/main`을 합치다 충돌을 풀고 친 커밋의 pre-commit에서, HEAD만으로 구한 merge-base의 색인 차이에 main이 들여온 파일이 섞이는지와, `git merge-base origin/main HEAD <MERGE_HEAD>`로 구하면 빠지는지. 같은 병합을 링크드 워크트리에서 치면 `MERGE_HEAD`를 어디서 찾을 수 있는지(작업 트리 루트의 `.git/MERGE_HEAD`, git 디렉터리의 파일, ref 이름). 충돌 없는 `git merge`에서 pre-commit 훅이 도는지. 양성 대조로 보통 커밋에서 같은 훅이 도는지 | `spec.md` "커밋 검사"의 바뀐 파일(C) | 맨 원격과 클론을 임시 폴더에 넷 만든다(시간은 재지 않았다). 표준 라이브러리만 쓴다 | git 2.32.0.windows.2(결과 줄의 `git`) |
 
 ## 2026-10-21 결과: 카드 막기
@@ -41,6 +41,15 @@ uv run --no-project python .scratch/ticket-for-every-pr/probes/merge_commit/merg
 - 막힌 뒤 모델이 `initiation`을 바꿔 다시 부르는지는 보지 않았다. 탐침 세션은 값을 바꾸지 말라는 글을 받았다.
 
 손으로 본 것. 세션 도중에 `settings.local.json`에 더한 등록은 그 세션에 실리지 않았다. 명세 세션이 등록한 뒤 `list_start_targets`를 두 번 불렀는데(등록을 한 번 지웠다가 다시 넣은 앞뒤) 두 번 다 훅 기록 파일이 생기지 않았다. 같은 등록이 그 폴더에서 새로 연 탐침 세션에서는 돌았으므로, 등록의 명령이 틀렸다는 해석은 서지 않는다. 그래서 실제 카드 훅을 들이는 티켓은 그 훅을 새 세션에서 확인한다.
+
+## 2026-10-22 결과: 실제 카드 훅의 새 세션 확인
+
+손으로 본 것이다(스크립트 판정과 기록 파일은 없다). 티켓 06의 "실제 세션의 확인"으로, 위 탐침이 재지 않은 두 자리(래퍼 `tools/launch_hook.py`, 추적하는 `settings.json`의 등록)를 닫는다. 그 티켓을 이어받은 세션이 사용자의 지시로 워크트리 폴더 `.claude/worktrees/06-hook-blocks-own-cards`를 작업 위치로 준 새 앱 세션을 열었다. 그 세션이 정해 둔 호출 둘을 한 번씩 부르고, 둘째가 형식 검사에 걸려 형식에 맞춘 호출 하나를 더 시켰다. 그 세션(`local_532f11af-e475-4bbe-8e46-b4a989ead480`)은 도구 결과 원문을 보고로 돌려보냈고, 아래 인용은 그 보고에서 옮긴 이차 근거다. 원본 세션 기록은 커밋하지 않았다(일지 2026-10-22-01). 2026-10-22 이 확인 때 주 체크아웃의 `settings.json`에는 이 등록이 없어, 주 체크아웃에서 시작한 세션으로는 볼 수 없었다.
+
+- **막혔다.** `own_initiative` 호출의 결과는 `PreToolUse:mcp__ccd_session__start_session hook error: ` 뒤에 `tools/hook_session_card.py`의 까닭 글(일지의 "다음", `.scratch/retro-queue.md`, `user_asked`·`offer`로 바꾸지 않는다, ADR 0037)을 그대로 붙인 꼴이었고, 카드 id(`task_id`)가 없었다. 그 글은 이 훅에만 있으므로 막은 것이 이 훅이라는 표지다.
+- **양성 대조.** `proposal_id`만 든 호출 둘은 결과에 훅 머리말이 없었다. 첫째(`task_doesnotexist0`)는 앱이 형식 검사로 `proposal_id must be the task_id … (format: task_xxxxxxxx)`라며 거절했다. 형식에 맞춘 둘째(`task_00000000`)는 앱이 `No pending proposal with id task_00000000 in this session …`이라며 거절했다. 그래서 거절은 앱이 했다. 훅 머리말이 없다는 관찰만으로는 "훅이 돌고 지나보냈다"와 "그 호출에는 훅이 돌지 않았다"를 가르지 못한다. 같은 세션에서 같은 매처의 `own_initiative` 호출이 막혔고, 매처는 도구 이름만 보므로 앞의 해석을 고른다. 훅이 아무것도 내지 않았다는 것을 직접 보지는 않았다.
+
+못 본 것. `user_asked`와 `offer`는 그 세션에서 부르지 않았다(세션을 열거나 사람에게 묻는다). 그 둘은 훅의 판정 함수 시험과 `tools/hook_payloads.toml`이 본다. 판(Claude Code 버전)은 보지 않았다.
 
 ## 2026-10-21 결과: 병합 커밋
 
