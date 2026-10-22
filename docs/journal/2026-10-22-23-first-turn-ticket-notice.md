@@ -1,4 +1,4 @@
-# 2026-10-22 (20) 첫 턴 훅이 티켓 없는 브랜치를 알린다 (ticket-for-every-pr 05)
+# 2026-10-22 (23) 첫 턴 훅이 티켓 없는 브랜치를 알린다 (ticket-for-every-pr 05)
 
 ## 구현
 
@@ -50,7 +50,7 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 ### 명세 축
 
 1. Major. 티켓의 잔존 항목(저장소를 grep 해 이 훅을 지시문일 때만으로 든 살아 있는 자리를 고친다)이 덜 됐다. `.claude/skills/next-session/SKILL.md` 107줄의 "라벨을 바꾸면 훅은 예외 없이 침묵하고"가 이제 거짓이다(라벨을 바꾼 지시문은 사람이 보는 세션에서 티켓 알림을 받는다. 그 축이 함수를 불러 봤다). `.scratch/ticket-for-every-pr/spec.md` 25·217줄도 같은 말이다(Minor). → 스킬은 고친다. 명세 두 줄은 두는데, 명세는 to-spec·to-tickets 가 쓰는 문서이고(CLAUDE.md 지도 표) 그 두 줄은 이 기능이 출발한 상태를 "지금 … 넓힌다"로 적은 문장이라서다. 이 세션이 저장소를 다시 grep 해 `hook_prompt_directive`·"첫 턴 훅"이 든 살아 있는 문서(스킬 셋, ADR 0032·0036·0037 본문, `open_session.ps1`, `hook_pr_head_sync.py`, 프로브 README, 대기열의 열린 행, model-rerun 설계, token-usage 명세)를 한 줄씩 열었고, 지시문 전용이라 거짓이 된 줄은 그 하나였다. ADR 0037 15줄의 첫 턴 훅이 침묵한다는 문장은 결정 시점의 근거라 포인터를 달지 않는다(`.claude/rules/adr.md` 달지 않는 것).
-2. Minor. 카나리아 명세 머리가 "일지 2026-10-22-20"을 드는데 그 일지에 검사 절이 없다. → 검사 절을 쓴다.
+2. Minor. 카나리아 명세 머리가 "일지 2026-10-22-23"을 드는데 그 일지에 검사 절이 없다. → 검사 절을 쓴다.
 3. Minor(갈래). 면제 일을 주 체크아웃에서 시작하면, 알림이 면제를 "따르지 않는 때"에 넣어 주 체크아웃에서 `docs/<slug>` 를 따고 제목을 둘 수 있다. → 면제 일도 워크트리와 제목은 같다고 적는다.
 4. Minor(갈래). 다른 티켓의 워크트리 폴더에서 연 세션이 다른 일을 받으면(이번 확인 세션이 그 길이었다) 2)가 남의 티켓 브랜치 이름을 바꾸게 한다. → 다른 티켓의 브랜치는 두고 사용자에게 알린다고 적는다.
 5. Nit. 프로브 README의 "같은 프롬프트와 같은 사본이 … 셋째와 넷째 갈래의 침묵"이 셋째 갈래도 같은 사본이라고 읽힌다. 셋째는 원본이다. → 고친다.
@@ -93,8 +93,8 @@ Critical·Major 없음. 변이 하나를 넣어 돌리다 170초에 끊었고(�
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
 브랜치: feature/05-first-turn-ticket-notice
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-20-first-turn-ticket-notice.md 전체(셀프 리뷰 반영 절의 새 문장이 PR 직전 리뷰에 밀 주장이다)
-이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 첫 커밋까지 했다(pre-commit 모두 Passed). 남은 단계는 차례로 이렇다. 일지의 인계 절(커밋하지 않았다)을 다음 커밋에 싣는다. 티켓의 체크박스를 표시하고 Status를 done으로 바꾼다. origin/main을 합친다. PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)를 돌리고 반영한다. 반영을 커밋한 뒤 .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml 전체를 다시 돌린다(변이 도구가 커밋 뒤의 전체 실행을 요구했다). 푸시, PR, 봇 회차, 워크트리 길의 병합, 일지 다음과 회고. 첫 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다. 사용자가 "푸시 뒤에 보관 (추천)"을 골랐다(일지의 모델에게 닿는지 절). 일지 docs/journal/2026-10-22-20-first-turn-ticket-notice.md
+읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md 전체(셀프 리뷰 반영 절의 새 문장이 PR 직전 리뷰에 밀 주장이다)
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 첫 커밋까지 했다(pre-commit 모두 Passed). 남은 단계는 차례로 이렇다. 일지의 인계 절(커밋하지 않았다)을 다음 커밋에 싣는다. 티켓의 체크박스를 표시하고 Status를 done으로 바꾼다. origin/main을 합친다. PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2)를 돌리고 반영한다. 반영을 커밋한 뒤 .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml 전체를 다시 돌린다(변이 도구가 커밋 뒤의 전체 실행을 요구했다). 푸시, PR, 봇 회차, 워크트리 길의 병합, 일지 다음과 회고. 첫 푸시 뒤 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)을 보관한다. 사용자가 "푸시 뒤에 보관 (추천)"을 골랐다(일지의 모델에게 닿는지 절). 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -107,3 +107,15 @@ open-session을 부른다 2026-10-22T13:16Z
 
 - 제목을 `feature/05-first-turn-ticket-notice` 로 바꿨다. `git worktree list` 에서 그 브랜치가 `.claude/worktrees/05-first-turn-ticket-notice` 에 있어 `EnterWorktree(path)` 로 들어갔다(잠금에 막히지 않았다).
 - 티켓의 체크박스를 모두 표시하고 상태를 `done` 으로 바꿔 위 인계 절과 한 커밋에 실었다. origin/main 은 그새 #351(`c47bedce`) 하나가 더 들어와 있었다.
+- origin/main 을 합쳤다. #351 의 model-rerun 명세가 이 훅의 `_directive_branch` 를 공개 이름으로 바꿔 import 하겠다고 적었는데, 그 함수는 이 브랜치에도 그대로 있다. 지시문으로 연 headless 세션도 제목 계기를 받는다는 설계 문서(`.scratch/model-rerun/design.md` 162줄)의 전제도, 지시문 계기가 헤드리스 가름을 보지 않아 그대로 맞다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status` 가 `Seat: not assigned` 라 CLI 가 돌지 못해 대체 둘을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 기준은 합친 뒤의 merge-base `c47bedce`.
+
+- **보안(`/security-review`).** 지적 없음. 트랜스크립트 경로는 하네스가 주는 값이고 읽기로만 열어 `type` 칸만 보며, 출력은 고정 상수다. 헤드리스 가름과 예약 작업 거르기는 권한 통제가 아니라 알림을 끄는 조건이다.
+- **버그·성능(`bug-perf-review`, sonnet, 도구 호출 40).** 유효 Minor 둘, 보류 둘, 오탐 일곱. 밀 주장 여덟 문장은 모두 근거와 맞았다(6은 `first_turn_context` 를 라벨을 바꾼 지시문으로 불러 대 봤다).
+  1. Minor. 다른 티켓의 브랜치 조건이 2)에 있어, 차례대로 따르면 1)이 남의 워크트리에 새 티켓을 먼저 쓴다. → 유효. 그 조건을 1) 앞, 주 체크아웃 문장 뒤로 올리고 "아래 셋을 하지 않고 사용자에게 알린다"로 고쳤다. 처음 고친 판에 "워크트리 안의 세션은 `EnterWorktree` 로 새 워크트리를 만들지 못한다"를 까닭으로 넣었다가 뺐다. `EnterWorktree` 로 들어온 세션에 대한 도구 설명이고, 워크트리 폴더에서 시작한 세션에도 맞는지는 재지 않았다.
+  2. Minor. 티켓 자리를 "기능 폴더의 일이면 … 아니면 harness"로 갈라, 끝난 기능의 제품 코드 고침을 harness 로 보낼 수 있다(`docs/agents/issue-tracker.md` 11·13줄). → 유효. "끝난 기능의 동작을 고치는 제품 코드는 그 동작을 만든 기능 폴더다"를 더하고 harness 쪽을 "하네스 일이나 기능에 들지 않는 작은 문서 고침"으로 좁혔다. 명세 221줄의 같은 문구는 두는데, 셀프 리뷰의 명세 1과 같은 까닭이다.
+  - 보류: 깊게 중첩된 JSON 한 줄의 `RecursionError`(실제 트랜스크립트에서 날 입력이 아니고 훅의 예외는 fail-open 이다), 예약 작업의 훅 입력 `prompt` 머리(독스트링이 재지 않았다고 이미 적는다). 둘 다 고치지 않고 PR 체크리스트에 적는다.
+- 반영의 검사: 시험을 먼저 고쳤다(낱말 목록에 "제품 코드", 새 시험 `test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다`). 고치기 전 코드에서 둘 다 빨갰고(낱말 없음, 어순 721 < 238 이 거짓), 고친 뒤 이 훅의 시험 50 이 통과했다. ruff 둘 초록, 이 훅을 겨누는 변이 표 다섯의 `--check` 가 모두 원문을 찾았다. 독스트링의 "주 체크아웃에서 시작했는지는 훅이 가르지 않는다"에 다른 티켓의 브랜치를 더했다.

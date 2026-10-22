@@ -612,14 +612,16 @@ def _notice(
 
 
 def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차례를_알린다(tmp_path: Path) -> None:
-    """낱말은 차례의 자리를 대신한다. 워크트리 먼저, 티켓 자리와 번호 명령과 상태(이미 있는 티켓의
-    상태 포함), 브랜치 맞추기와 두는 다른 티켓의 브랜치, 제목, 따르지 않는 때 셋(면제 일의 회고
-    티켓 포함), 커밋 검사와 규약 원천이다. 어순은 보지 않는다."""
+    """낱말은 차례의 자리를 대신한다. 워크트리 먼저, 두는 다른 티켓의 브랜치, 티켓 자리(기능 밖의
+    제품 코드 고침 포함)와 번호 명령과 상태(이미 있는 티켓의 상태 포함), 브랜치 맞추기, 제목,
+    따르지 않는 때 셋(면제 일의 회고 티켓 포함), 커밋 검사와 규약 원천이다. 어순은 보지 않는다(다른
+    티켓의 브랜치만 아래 시험이 본다)."""
     notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
 
     assert notice is not None
     for word in (
         "`EnterWorktree`",
+        "제품 코드",
         "`.scratch/harness/issues/NNN-<slug>.md`",
         "`uv run python tools/sibling_overlap.py`",
         "`in-progress`",
@@ -635,6 +637,16 @@ def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차
         "`docs/agents/issue-tracker.md`",
     ):
         assert word in notice, word
+
+
+def test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다(tmp_path: Path) -> None:
+    """다른 티켓의 워크트리에서 연 세션이 다른 일을 받으면, 차례대로 따른 1)이 남의 워크트리에 새
+    티켓을 먼저 쓴다. 그래서 그 조건은 1) 앞에 온다(PR 직전 `bug-perf-review`, 일지
+    2026-10-22-23)."""
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+
+    assert notice is not None
+    assert notice.index("다른 티켓의 브랜치") < notice.index("1) 티켓을 쓴다")
 
 
 def test_첫_턴이_아니면_보통_프롬프트에_알리지_않는다(tmp_path: Path) -> None:
