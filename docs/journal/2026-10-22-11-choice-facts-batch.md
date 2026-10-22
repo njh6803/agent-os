@@ -283,3 +283,43 @@ CodeRabbit CLI는 자리가 없어 돌지 못하므로 대체 길로 갔다. ori
 - 이 PR이 병합되면 결정표의 하네스 chore 줄이다. 다음은 `plan.md`의 프론티어이고, 회차 3 이상인 대기열 421·423·227·379·422으로 chore를 잇지 않는다. origin/main `98272c4f` 기준으로 design-reverse-sync는 명세가 있고 티켓이 없으며, web-widget·admin-style·design-card-build는 todo다. 고르기는 병합 뒤 `next-session` 2단계가 실행 중 세션을 빼고 한다.
 - 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 루트를 당기지 않는다(`next-session` "워크트리에서 병합할 때" 4).
 - 대기열 424를 고치기 전에는 `hook_report.py`가 `hook_prompt_directive.py`를 계속 뺄 후보로 낸다. 다음 회고는 그것을 넘기지 않는다.
+
+## 인계 (커밋 뒤)
+
+PR 직전 리뷰의 반영을 커밋 `cade43cb`로 마친 직후 인계 계기가 왔다(`커밋 뒤`, 세션 컨텍스트 323,088 토큰). 첫 커밋 시도(ruff로 막혔다) 뒤에도 계기가 왔지만 그 명령은 실패해 경계가 아니었다. 인계하지 않는 때 다섯 가운데 어디에도 들지 않았다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `chore/choice-facts-batch`였고 `chore/choice-facts-batch (인계함)`으로 바꾼다. 이 세션에서 사람의 새 프롬프트는 없었다.
+
+- `cade43cb`의 pre-commit: 모두 Passed(pytest 234.7초, web-verify 225.1초), 헌법 판만 Skipped. 인용 대조 경고 1건(PR 직전 리뷰 절의 훅 Minor 3 줄)은 `tools/hook_edit_during_commit.py`의 막는 이유가 문자열 여러 줄에 나뉘어 글자로 이어 찾지 못한 것이다(셀프 리뷰 뒤 커밋의 판정과 같다).
+- 남은 단계: origin/main 합치기(이 세션의 마지막 대조에서 `b2f5c61`. 충돌 후보는 `.scratch/retro-queue.md` 끝과 `.scratch/harness/probes/README.md`), 합친 뒤 `sibling_overlap.py`(main에 더 늦은 일지가 들었으면 다시 `--move`), 푸시, PR 열기와 `@coderabbitai review`, 봇 회차, 워크트리의 병합 길, 그 뒤 `next-session` 2~4단계. PR 직전 리뷰는 끝나 다시 돌리지 않는다. PR 본문의 체크리스트에는 위 "PR 직전 리뷰" 절의 결과와 남긴 것(문서 축 오탐 2, 다시 돌리지 않은 런처 탐침)을 적는다.
+- 결정: PR 직전 리뷰의 유효 지적은 모두 PR 전에 고쳤다(고치는 값이 작고 비밀 가드와 탐침 도구의 존재 이유에 닿는다). 보안 후보는 걸러졌지만 버그로 고쳤다.
+- 번복하거나 고친 것: `--move`가 이 일지의 기록 문장 둘의 옛 번호까지 바꿔 손으로 되돌렸다. 첫 커밋 시도가 ruff로 막혀 `_pump`를 나눴다.
+
+지시문:
+
+```
+다음 작업: 하네스 chore 배치. mcp-shutdown이 닫힌 뒤 회차 3 이상인 열린 대기열 행과 같은 대상 파일의 고침 행을 한 PR로 반영한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 394·395·339·412·341·391·396·400·403(회차 3 이상인 열린 행 아홉. 227도 4회차지만 열린 PR #296이 맡았다)을 chore 한 PR로 반영한다. 행의 "어디로" 칸이 대상이고, 같은 대상 파일의 고침 행 368(412보다 먼저 고친다)·369·408(412와 tools/hook_payloads.toml이나 같은 훅 파일을 든다)을 함께 반영한다
+브랜치: chore/choice-facts-batch
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-11-choice-facts-batch.md 의 "PR 직전 리뷰"와 "인계 (커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰, 회고와 "## 다음", PR 직전 리뷰와 그 반영까지 커밋했고(마지막 커밋 cade43cb, 푸시하지 않았고 PR은 없다), 남은 단계는 origin/main 합치기와 합친 뒤의 sibling_overlap.py, 푸시, PR 열기, 봇 회차, 워크트리의 병합 길이다. PR 직전 리뷰는 다시 돌리지 않는다(docs/journal/2026-10-22-11-choice-facts-batch.md). next-session은 워크트리 사본의 SKILL.md를 Read로 열어 따른다
+확인할 선행 조건: .scratch/harness/probes/edit_during_commit_launcher.py는 PR 직전 리뷰를 반영한 뒤(양성 대조 문턱, 시간을 넘긴 커밋 끄기) 다시 돌리지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기 전: 제목을 `chore/choice-facts-batch (인계함)`으로 바꿨고, 이 세션이 띄운 백그라운드 작업은 남은 것이 없었으며(두 커밋 모두 끝났다), `git worktree unlock C:/project/agent/.claude/worktrees/choice-facts-batch`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-22T08:43:17Z
+
+## 이어받은 세션 (커밋 뒤부터)
+
+> 사용자: (위 "인계 (커밋 뒤)" 지시문의 시작 프롬프트와 같다)
+
+`git worktree list`에서 이 브랜치가 `.claude/worktrees/choice-facts-batch`에 있어 `EnterWorktree(path)`로 들어갔고, 세션 제목을 `chore/choice-facts-batch`로 바꿨다. 위 "인계 (커밋 뒤)" 절은 커밋되지 않은 채 작업 트리에 있어 이 세션의 커밋에 실었다.
+
+- origin/main `b2f5c61d`(#345·#346)를 합쳤다. `.scratch/retro-queue.md`가 두 자리에서 충돌했다. 하나는 main이 391행 앞에 426·427행을 더한 자리이고, 다른 하나는 양쪽이 끝에 서로 다른 행(이쪽 420~425, main 415~419·428)을 더한 자리다. main은 391행을 고치지 않았고(공통 조상과 견줬다) 번호도 겹치지 않아, 앞 자리는 426·427 뒤에 이 브랜치가 닫은 391을, 뒤 자리는 번호순으로 두었다. 푼 판은 이 브랜치의 판에 main이 더한 행 여덟만 더한 것이다(`diff`로 봤다). 탐침 README는 저절로 합쳐졌다.
+- 결정: main이 더한 427행을 닫았다. 그 처방(수가 든 선택 화면을 세션에서 처음 부를 때 한 번 거부하고, 대 보지 못한 것은 어림이라고 적어 다시 부르라고 거부 이유에 싣는다)은 394가 이 브랜치에서 반영한 `tools/hook_choice_facts.py`의 `_DENY_BODY`와 같다. 427의 사건은 main의 옛 판(답한 뒤에 읽히는 알림)에서 났다. 열어 두면 다음 chore 배치가 이미 들어간 처방을 다시 맡는다.
+- 합친 뒤 `sibling_overlap.py`: 번호 겹침 없음(origin/main `b2f5c61`, 다음 빈 번호는 일지 2026-10-22-12·대기열 429).
+- 확인할 선행 조건이던 런처 탐침을 다시 돌렸다(`edit_during_commit_launcher.py 30`). 훅의 판정 코드는 앞 판의 30회차를 잰 때와 같다(`cade43cb`는 막는 이유 문장만 늘렸다, `git diff`로 봤다). 종료 0, 360회차가 모두 측정이었다. 런처의 상대 경로 네 갈래에서 옛 판이 29·30·28·30회차 거짓 알림을 내 양성 대조 문턱을 넘었다. 지금 판은 절대 경로 여섯 갈래 0, 런처의 상대 경로 120회차 가운데 하나(`bin` 부하, 자식이 끝난 뒤의 런처), 실제 git 상대 경로 9·30회차였다. 앞 판(둘, 17·30)과 꼴이 같아 둘째 표본으로 `tools/hook_edit_during_commit.py`의 작업 트리 문단과 못 보는 것, 탐침 README 행에 덧붙였다.
+- `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`. PR 직전 리뷰를 대체 둘로 돌린 근거가 이 PR에서도 그대로다.
