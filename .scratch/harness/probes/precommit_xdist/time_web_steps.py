@@ -1,7 +1,8 @@
-"""web verify 의 여섯 단계를 차례로 따로 재서 JSON 한 줄씩 낸다(ADR 0035).
+"""web verify 의 검사 여섯 단계를 차례로 따로 재서 JSON 한 줄씩 낸다(ADR 0035).
 
-`pnpm -C web verify` 는 `&&` 로 여섯 단계를 차례로 잇는다(`web/package.json` 의 `verify`). 그
-단계마다 걸리는 시간을 따로 본다. 단계 하나가 실패해도 다음 단계를 잰다. 단계마다 출력에서 그 단계가
+`pnpm -C web verify` 는 `&&` 로 단계를 차례로 잇는다(`web/package.json` 의 `verify`). 첫 단계인
+판정자 트리 청소(`clean:judge-trees`)는 검사가 아니라 재지 않고, 나머지 검사 여섯 단계마다 걸리는
+시간을 따로 본다. 단계 하나가 실패해도 다음 단계를 잰다. 단계마다 출력에서 그 단계가
 돌았다는 표지를 찾는다. Prettier 와 Vitest 는 성공 요약 줄이 있고, 나머지(ESLint, tsc, 두 검사
 스크립트)는 조용히 끝나 pnpm 이 찍는 명령 줄(`$ <명령>`)이 표지다. 표지가 없거나 종료 코드가 0 이
 아닌 단계가 있으면 그 회차는 측정이 아니므로 종료 코드를 1 로 낸다(`.claude/rules/probes.md` 의 첫
@@ -28,7 +29,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
-# 단계 이름 -> 출력에서 찾을 표지(정규식). 순서는 `web/package.json` 의 verify 가 잇는 차례다.
+# 단계 이름 -> 출력에서 찾을 표지(정규식). 순서는 `web/package.json` 의 verify 가 청소 뒤에 잇는
+# 차례다.
 MARKERS = {
     "check:api-client": re.escape("$ node tools/generate-api-client.ts --check"),
     "lint": re.escape("$ eslint --max-warnings 0"),
