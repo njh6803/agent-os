@@ -27,7 +27,12 @@ Code 2.1.299 로, 출력이 아니라 탐침 세션 기록에서 손으로 봤�
   0037 Consequences). 까닭의 글이 값을 바꿔 다시 부르지 말라고 적는 것이 이 길에 대한 전부다.
 - 앱이 도구 이름을 바꾸면 매처가 맞지 않아 이 훅이 불리지 않고 조용히 지나간다. 매처를 넓히지 않는
   것은 다른 MCP 서버의 같은 이름 도구까지 막을 수 있어서다(명세의 거부한 안).
-- 사람이 카드를 눌러 시작한 것과 다른 세션 도구(`hand_off_to_session` 등)는 보지 않는다.
+- 사람이 카드를 눌러 시작한 것과 다른 세션 도구(`hand_off_to_session` 등)는 보지 않는다. 그것을
+  지키는 것은 매처뿐이고, `output_for` 는 `tool_name` 을 보지 않아 다른 도구의 입력이라도
+  `initiation` 이 `own_initiative` 이면 막는다.
+- `initiation` 값은 글자 그대로 견준다. 대소문자나 앞뒤 공백이 다르면(`Own_Initiative`,
+  ` own_initiative`) 지나간다. 실제 입력은 소문자 enum 그대로였다(위 측정).
+- `tool_input` 이 객체가 아니라 JSON 을 담은 문자열로 오면 풀지 않고 지나간다. 실제 입력은 객체였다.
 """
 
 from __future__ import annotations

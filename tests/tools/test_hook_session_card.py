@@ -86,3 +86,28 @@ def test_다른_세션_도구와_이름이_바뀐_도구는_보지_않는다() -
     assert registered_matchers("hook_session_card.py", "PreToolUse") == [
         "mcp__ccd_session__start_session"
     ]
+
+
+def test_판정은_도구_이름을_보지_않아_매처만이_다른_도구를_뺀다() -> None:
+    """거짓 양성이다. 매처가 넓어지면 다른 세션 도구의 같은 입력도 막는다."""
+    raw = json.dumps(
+        {
+            "tool_name": "mcp__ccd_session__hand_off_to_session",
+            "tool_input": {"initiation": "own_initiative"},
+        }
+    ).encode("utf-8")
+
+    _deny_reason(output_for(raw))
+
+
+def test_대소문자나_공백이_다른_initiation은_지나간다() -> None:
+    """거짓 음성이다. 값은 글자 그대로 견준다."""
+    assert output_for(_payload({"initiation": "Own_Initiative"})) is None
+    assert output_for(_payload({"initiation": " own_initiative"})) is None
+
+
+def test_문자열에_담긴_tool_input은_풀지_않고_지나간다() -> None:
+    """거짓 음성이다. 실제 입력은 객체였다."""
+    inner = json.dumps({"initiation": "own_initiative"})
+
+    assert output_for(_payload(inner)) is None
