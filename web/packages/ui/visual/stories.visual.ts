@@ -9,7 +9,7 @@
 // 명암비가 4.5 이상이다(design-refresh 명세의 "위험 버튼의 누름". 판정의 4.507 은 반올림해 겹친 값이라 실제 픽셀을 본다).
 import { inflateSync } from "node:zlib";
 import type { Locator, Page } from "@playwright/test";
-import { contrastRatio } from "../src/testing/index.ts";
+import { contrastRatio } from "../src/styles/contrast.ts";
 import { DEFAULT_THEME, DENSITIES, type Density } from "../src/themes.ts";
 import {
   MODES,

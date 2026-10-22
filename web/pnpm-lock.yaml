@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@agent-os/ui':
+        specifier: workspace:*
+        version: link:packages/ui
       '@storybook/addon-a11y':
         specifier: ^10.6.1
         version: 10.6.1(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.0))

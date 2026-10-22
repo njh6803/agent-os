@@ -11,6 +11,7 @@ PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/s
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
+| `contrast_module_mutations.toml` | 티켓 01의 변이 표 아홉. `web/tools/contrast-module.test.ts`의 vitest 사례 둘은 패키지가 옛 짝 표 파일을 그대로 내보내던 때에도 초록이었다(손으로 봤다. 같은 때 루트 타입 검사는 시험의 import에서 빨갰다. Node 실행의 빨강은 아래 2026-10-22 결과의 프로브다). 그래서 시험의 단언 둘(짝 하나를 뺀 짝 표, 기준을 넘는 짝도 거는 판정), Node를 띄우는 사례 하나와 그 대조군 둘(새 모듈에 `.js`를 붙인 상대 import. 루트 타입 검사와 vitest 안의 사례 둘은 지난다), 루트 타입 검사 셋(새 모듈에 확장자 없는 상대 import, DOM 타입을 쓰는 함수, 패키지 `exports`에서 새 경로를 뺀 것), 진입점 스토리의 여섯째 진입점(새 경로가 다른 파일을 가리킨다)을 겨눈다. 표지는 변이를 손으로 넣어 본 실패 출력에서 골랐다. `tools/mutate.py`로 돈다 | 티켓 01의 수용 기준(새 모듈이 상대 import 없는 한 파일이고 DOM 함수를 넣지 않는다, `web/tools`의 시험과 그 타입 검사·실행) | 없음 | Node 24.19.0, pnpm 11.24.0, TypeScript 5.9.3, Vitest 5.0.2(node 프로젝트와 Storybook 10.6 스토리 테스트, Chromium). 결과는 일지 2026-10-22-24 |
 | `tools_import.mjs` | `web/tools`의 Node 스크립트(루트 tsconfig: `nodenext`, `lib` es2024)가 디자인 시스템 패키지의 명암비 계산과 짝 표를 부를 수 있는지. 커밋의 `web/`을 임시 폴더에 두 번 꺼내, 두 갈래 모두 루트 `web/package.json`에 `"@agent-os/ui": "workspace:*"`를 더하고 패키지 `exports`에 경로 하나를 더한 뒤 오프라인으로 설치하고, 루트 타입 검사(`tsc --noEmit`)와 `node tools/probe-import.ts` 실행까지 본다. `as-is`는 지금의 `contrast.ts`를 그대로 내보내고, `self-contained`는 `testing/index.ts`의 DOM 없는 앞부분과 `contrast.ts`의 본문을 이어 붙인 상대 import 없는 한 파일을 내보낸다 | 명세 Implementation Decisions의 "명암비 계산과 짝 표를 부르는 길"(ADR 0025 이력 2026-10-21 "명세가 정할 것" (6)) | 기본은 지금 `HEAD`의 `web/`이다. 아래 결과를 그대로 다시 보려면 `--commit 14efe41d`. 사본을 남기려면 `--keep`. 측정 아닌 갈래나 기대와 다른 갈래가 있으면 1로 끝난다 | 커밋 `14efe41d`, Node 24.19.0, pnpm 11.24.0, TypeScript 5.9.3 |
 | `sync_script_mutations.toml` | 티켓 02의 변이 표 42개. 짓기와 맞대기의 시험은 구현 전에 모듈이 없어 모두 빨갰을 뿐 단언 하나하나의 빨강은 보지 못했고, CSS 풀기의 캐스케이드 사례, 진입의 옵션 사례, 받은 저장본 사례와 셀프 리뷰가 더한 사례는 구현 뒤에 썼다. 그래서 변이마다 그 단언이 재는 줄 하나만 바꾸고 사례 하나로 좁혀(`-t`) 빨개지는지 본다. CSS 풀기(특정성, 차례, 레이어, 레이어의 차례, 읽지 않는 선택자 넷, 풀 수 없는 선택자, 줄을 차지한 주석), 짓기(테마 차례, 반투명, 색 차례, 소문자, 설명의 자리, 한도 넷, 글자 크기, 기본 경로, 보고의 토큰 수), 진입과 명령(출력 파일, 종료 코드, 모르는 명령, 읽기 실패, 모르는 옵션, 쓰기 실패), 맞대기(대문자, 반투명의 첫 테마, 페이지 꼴, 자간, 계열 설명, 더하기, 맞대는 값, `prototype`, 같은 이름 둘), 받은 저장본(수 굵기, 자간 기본값). 표지(`expect_output`)는 고른 단언이 실패할 때만 나오는 문구, 곧 실패 머리의 메시지이고, 머리가 값을 줄여(`…(1)`) 같은 사례의 다른 변이와 갈리지 않으면 차이 줄(`+`·`-`)을 함께 적었다 | 티켓 02의 "시험과 검증"(원칙 II) | 소스를 고치면 그 줄을 겨누는 변이의 원문을 함께 고치고 번호로 다시 돈다. 원문이 없거나 기대와 다르거나 표지가 없으면 1로 끝난다. 시험의 기대값을 고치면 그 사례를 겨누는 변이의 표지도 다시 고른다 | 이 표를 더한 커밋(병합 전에는 `8c9fb760` 위의 작업 트리), Node 24.19.0, vitest 5.0.2 |
 
@@ -24,10 +25,14 @@ PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/s
 
 첫 실행은 `as-is`의 `node` 표지를 `ERR_MODULE_NOT_FOUND`로 잘못 골라 그 갈래가 측정 아님이었다. 원본 출력을 본 뒤 표지를 실제 오류(`ERR_UNSUPPORTED_DIR_IMPORT`와 `testing` 폴더 경로)로 고쳐 다시 돌린 것이 위 결과다.
 
+## 2026-10-22 결과 (티켓 01, 옮기기 전 판)
+
+티켓 01이 짝 표 파일을 한 파일 모듈로 옮기기 전 판에서 두 빨강을 보려고 `--commit 96fbe241`(그 브랜치의 base)로 다시 돌렸다. 위 결과와 같다. `as-is`는 타입 검사 2(`TS2834`·`TS2835`), `node` 1(`ERR_UNSUPPORTED_DIR_IMPORT`)이고, `self-contained`는 타입 검사 0, `node` 0(`{"pairs":43,"failures":43}`)이다. 측정 2, 측정 아님 0, 기대와 다름 0, 종료 0. 판은 위와 같다.
+
 ## 재지 못한 것 (`tools_import.mjs`)
 
 - 상대 import에 `.ts` 확장자를 붙여 지금 파일들을 그대로 내보내는 길. 루트 tsconfig는 `allowImportingTsExtensions`를 켜지만 패키지 쪽 설정과 Storybook 빌드에서 그 꼴이 지나는지는 보지 않았다. 명세는 잰 길을 고른다.
-- 패키지 안의 `testing`과 `contrast.ts`가 새 한 파일 모듈을 불러 쓰게 바꾼 뒤에도 패키지의 스토리 테스트가 그대로 초록인지. 패키지는 `bundler` 해석이라 확장자 없는 import가 지금처럼 지난다고 본다(어림). 구현 티켓이 `pnpm -C web verify`로 본다.
+- 패키지 안의 `testing`과 `contrast.ts`가 새 한 파일 모듈을 불러 쓰게 바꾼 뒤에도 패키지의 스토리 테스트가 그대로 초록인지. 패키지는 `bundler` 해석이라 확장자 없는 import가 지금처럼 지난다고 본다(어림). 구현 티켓이 `pnpm -C web verify`로 본다. (2026-10-22 티켓 01: 옮긴 뒤 `pnpm -C web exec vitest run --project storybook`의 스토리 테스트 102개가 초록이었다. 손으로 봤다. 사진 비교(`nodenext`)도 `themes.ts`를 들여, 그 파일은 새 모듈을 `.js` 확장자로 들인다)
 
 ## 2026-10-22 결과: `sync_script_mutations.toml`
 
