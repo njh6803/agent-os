@@ -190,11 +190,11 @@ open-session을 부른다 2026-10-22T05:48:54Z
 10. `tools/hook_payloads.toml` 726행 note: "위 실제 입력의 모양에서 명령·설명·도구 응답(커밋의 gitOperation 을 뺐다)·세션 ID·tool_use_id 를 PR 열기에 맞게 고쳐 지었다".
 11. `tools/hook_scratch_probe_rule.py`: "`hook_edit_during_commit`(도는 커밋. 그 뒤 PreToolUse 에서 막는 훅으로 옮겼다, 대기열 412)".
 12. `.scratch/retro-queue.md` 383행: "1단계의 일지 항목(그때 4, 대기열 341 뒤로 3)을 어겼고", "지침(`next-session` 1단계의 3)".
-13. 카나리아 `code_review_overlap_exit_two.toml` 머리: "통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 `55ba299` …). 대조군은 둘째 물음에 옛 괄호 `1단계 4의 번호 받기`를 옮겼다."
+13. 카나리아 `code_review_overlap_exit_two.toml` 머리: "통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 `55ba299` …). 둘째 물음을 더한 판이다. 대조군은 둘째 물음에 옛 괄호 `1단계 4의 번호 받기`를 옮겼다."
 
 남긴 것: 표준 Minor 1(그 명세는 티켓 아홉이 모두 done인 기록이다), 표준 Minor 5(막는 이유가 백그라운드 커밋의 끝 알림을 기다리라고 시켜 인계 단계가 어긋나지 않는다), ADR 0035의 "검사 여덟"(이력), 판단 항목 둘(`Slot.mark`, `run_branch`, 까닭은 위 판단 항목 줄).
 
-다시 돌린 명령: `uv run pytest -q tests/tools/test_probe_kit.py` 13 passed, `tests/tools/test_hook_choice_facts.py` 31 passed, `tests/tools/test_hook_env_read.py` 165 passed, `tests/tools/test_hook_edit_during_commit.py` 51 passed. `tools/mutate.py`의 `choice_facts_hook_mutations.toml`이 변이 29 모두 기대대로였다. `tools/run_hooks.py`가 146건 어긋남 0이었다. 바꾼 세 파일의 ruff check·format·pyright는 오류 0이었다. probes.md는 본문의 일지 번호만 고쳐 `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_stream_delete_marker.toml`(통과 1)로 갈음했다(같은 PR·같은 판 2.1.302로 앞서 통과 4, 머리말과 명세의 칸은 그대로, 카나리아는 묻는 자리에 남았다). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고, 결과는 커밋 뒤에 적는다.
+다시 돌린 명령: `uv run pytest -q tests/tools/test_probe_kit.py` 13 passed, `tests/tools/test_hook_choice_facts.py` 31 passed, `tests/tools/test_hook_env_read.py` 165 passed, `tests/tools/test_hook_edit_during_commit.py` 51 passed. `tools/mutate.py`의 `choice_facts_hook_mutations.toml`이 변이 29 모두 기대대로였다. `tools/run_hooks.py`가 146건 어긋남 0이었다. 바꾼 세 파일의 ruff check·format·pyright는 오류 0이었다. probes.md는 본문의 일지 번호만 고쳐 `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_stream_delete_marker.toml`(통과 1)로 갈음했다(같은 PR·같은 판 2.1.302로 앞서 통과 4, 머리말과 명세의 칸은 그대로, 카나리아는 묻는 자리에 남았다). 손으로 치는 다섯은 커밋 `7e0cf7df`의 pre-commit으로 갈음했다. ruff check·format, lint-imports, check-instructions, zizmor, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify, 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세가 모두 Passed였고(묶음 360초), 헌법 판 검사만 고친 헌법 파일이 없어 Skipped였다. 인용 대조는 이 일지에서 경고 6건을 냈다. 셋은 셀프 리뷰가 고치기 전의 문구를 든 것이라 저장소에 없는 것이 맞고, 둘은 `tools/hook_edit_during_commit.py`의 막는 이유가 문자열 여러 줄에 나뉘어 있어 글자로 이어 찾지 못한 것이며, 하나(위 13)는 원문의 한 문장을 표시 없이 건너뛴 인용이라 원문대로 고쳤다.
 
 ## 회고
 
