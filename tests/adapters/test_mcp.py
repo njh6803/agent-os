@@ -12,6 +12,7 @@
 뒤 스스로 끝난다.
 """
 
+import subprocess
 import sys
 import time
 from collections.abc import AsyncGenerator, Iterator
@@ -41,6 +42,10 @@ PAGED_WITHIN_SECONDS = 30
 # 겹친 부하(CPU 86%)에서 홀로 돈 명세의 시제품 사례 하나가 12.5초 걸렸고, 20초로 두던 판은 전체
 # 회차에서 그 기다림을 넘겼다(`.claude/rules/tests.md` 의 시간 단언).
 APPEAR_WITHIN_SECONDS = 30
+# 사례 5의 상한. 그 자식은 새 파이썬에서 어댑터와 mcp 를 불러 들인 뒤에야 연결을 연다. 이 PC 에서
+# 홀로 연결 표지까지 9.8~12.3초였고(하트비트 둘은 그보다 먼저 생겼다), 30초로 두던 판은 pre-commit
+# 러너의 부하에서 표지 셋이 모두 생기기 전에 그 기다림을 넘겼다(일지 2026-10-21-14, 손으로 봤다).
+CONNECT_WITHIN_SECONDS = 120
 # 닫은 뒤 하트비트가 멈추기를 기다리는 기한. 판정의 꼴은 `_멈췄다` 다.
 STOP_WITHIN_SECONDS = 15
 
@@ -249,6 +254,71 @@ async def test_도구_호출_도중에_기한이_오면_감싼_프로세스_아�
     assert (folder / "slow").exists(), "서버가 도구 호출을 받지 않았다"
     assert scope.cancelled_caught
     _멈췄다(folder / "wrapper.hb", folder / "stay.hb")
+
+
+async def test_스스로_끝나며_자식을_남기는_서버를_닫으면_그_자식도_내려간다(folder: Path) -> None:
+    """상류는 유예 안에 스스로 끝난 서버의 트리를 끄지 않는다. 윈도우는 Job Object 를 닫아 남은
+    자식을 거두고, POSIX 는 런처가 서버의 프로세스 그룹을 끈다."""
+    async with McpTools().connect(_lingering("leaving", folder)):
+        await _생길_때까지_기다린다(folder / "child.hb")
+
+    _멈췄다(folder / "child.hb")
+
+
+# 사례 5의 자식. 연결을 연 뒤 표지 파일을 남기고 기다린다. 테스트가 그 표지와 서버의 하트비트를 본
+# 뒤 이 프로세스를 강제로 끈다.
+_CONNECTED = "connected"
+_PARENT = """
+import sys
+from pathlib import Path
+
+import anyio
+
+from agent_os.adapters.mcp import McpTools
+from agent_os.sdk import McpServer, PluginName
+
+lingering, folder, connected = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
+server = McpServer(command=sys.executable, args=(lingering, "wrapper", str(folder)))
+
+
+async def main() -> None:
+    async with McpTools().connect({PluginName("lingering"): server}):
+        (folder / connected).touch()
+        await anyio.sleep(120)
+
+
+anyio.run(main)
+"""
+
+
+def test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간다(folder: Path) -> None:
+    """윈도우는 그 프로세스가 끝나며 Job Object 가 닫히고, POSIX 는 런처가 부모가 바뀐 것을 보고
+    서버의 프로세스 그룹을 끈다."""
+    beats = (folder / "wrapper.hb", folder / "stay.hb")
+    ready = (folder / _CONNECTED, *beats)
+    parent = subprocess.Popen(
+        [sys.executable, "-c", _PARENT, str(LINGERING), str(folder), _CONNECTED]
+    )
+    try:
+        end = time.monotonic() + CONNECT_WITHIN_SECONDS
+        while (
+            not all(path.exists() for path in ready)
+            and parent.poll() is None
+            and time.monotonic() < end
+        ):
+            time.sleep(0.05)
+        # 표지가 생기기 전에 끝났으면(연결 실패) 기한을 채우지 않고 그 종료 코드를 든다.
+        exited = parent.poll()
+    finally:
+        parent.kill()
+        parent.wait()
+
+    missing = [path.name for path in ready if not path.exists()]
+    assert not missing, (
+        f"{CONNECT_WITHIN_SECONDS}초 안에 생기지 않았다: {missing}"
+        f"(연결을 여는 프로세스의 종료 코드: {exited})"
+    )
+    _멈췄다(*beats)
 
 
 async def test_연결_안에서_난_예외는_감싸이지_않고_나오며_서버가_내려간다(folder: Path) -> None:

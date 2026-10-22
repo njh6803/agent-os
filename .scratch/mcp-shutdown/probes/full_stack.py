@@ -10,25 +10,30 @@
    lint-imports, pytest(`tests/adapters`·`tests/core`·`tests/channel`)를 돌리고, MCP 어댑터와 CLI
    처리기의 테스트 파일만 한 번 더 돌려 테스트마다 걸린 시간(`--durations=0`)을 찍는다. 끝으로
    core 에 시제품 어댑터를 물린 `write_failure.py --expect closed`를, POSIX 에서는 런처가 뜨기
-   전에 부모가 끝난 회차를 만드는 `stale_parent.py --expect refused`를 돌린다.
+   전에 부모가 끝난 회차를 만드는 `stale_parent.py --expect refused`와 런처를 그룹의 우두머리가
+   아니게 띄우는 `not_leader.py --expect refused`를 돌린다.
 5. 대조군을 돈다. 두 OS 에서 CLI 처리기를 `asyncio.run` 그대로로 바꾼 사본의 처리기 테스트와
    어댑터가 그룹에 싸인 예외를 벗기지 않게 바꾼 사본의 해당 테스트(이름에 "연결_안"이나
    "뜨자마자")와 `write_failure.py --expect escaped`를, POSIX 에서는 어댑터가 런처를 쓰지 않게
-   바꾼 사본과 런처가 부모를 보지 않게 바꾼 사본의 닫기 테스트(이름에 "내려간다")를 돌려 빨강이
-   기대한 테스트에서 기대한 까닭으로 나는지 본다. 부모를 보지 않는 사본에서는
-   `stale_parent.py --expect spawned`도 돈다.
+   바꾼 사본과 런처가 부모를 보지 않게 바꾼 사본과 런처가 우두머리인지 보지 않게 바꾼 사본의 닫기
+   테스트(이름에 "내려간다")를 돌려 빨강이 기대한 테스트에서 기대한 까닭으로 나는지 본다(우두머리를
+   보지 않는 사본은 빨강이 없어야 한다). 부모를 보지 않는 사본에서는 `stale_parent.py --expect
+   spawned`를, 우두머리를 보지 않는 사본에서는 `not_leader.py --expect killed`를 돈다.
 6. 어긋난 단계가 없으면 만든 임시 폴더(사본과 대조군 사본, `.venv` 포함 수백 MB)를 지운다. 있으면
    살펴보도록 남기고 마지막 줄에 경로를 찍는다.
 
-표지: 본 단계와 프로브(POSIX 는 둘, 아니면 `write_failure.py` 하나)는 모두 0으로 끝나야
+표지: 본 단계와 프로브(POSIX 는 셋, 아니면 `write_failure.py` 하나)는 모두 0으로 끝나야
 하고(프로브는 표지와 기대를 스스로 본다),
 대조군의 테스트는 기대한 테스트만 실패하며 각 실패의 요약 줄(`-rf`)에 기대한 문구가 있어야 한다.
-런처 없음은 자식을 남기는 서버와 프로세스가 죽는 사례, 부모를 보지 않음은 프로세스가 죽는 사례이고
-문구는 하트비트 단언의 것이다. 처리기 없음은 두 사례이고 문구는 한 번이면 중단의 한 줄, 두 번이면
-자식이 끝나지 않았다는 것이다. 벗기지 않음은 연결 안의 세 사례와 뜨자마자 끝나는 서버이고 문구는
-pytest 가 하나만 든 그룹을 적는 꼴과 그룹 동일성 단언의 것이다. 문구는 그 사본을 손으로 돌려 실패
-출력을 본 뒤 골랐다. 첫 판은 실패한 테스트의 이름만 봐서 엉뚱한 까닭의 실패도 기대와 맞았다(셀프
-리뷰). 어긋나면 종료 코드 1이다. 네트워크로 패키지를 받는다. 돌리는 명령은 `README.md`에 있다.
+그리고 pytest 의 종료 코드가 실패를 기대하면 1, 빨강이 없어야 하면(우두머리 검사를 뺀 사본) 0이어야
+한다. 실패 줄만 세면 수집 오류(2)나 고른 테스트가 없는 회차(5)도 빨강이 없는 것으로 보인다(셀프
+리뷰). 런처 없음은 자식을 남기는 서버와 프로세스가 죽는 사례, 부모를 보지 않음은 프로세스가 죽는
+사례이고 문구는 하트비트 단언의 것이다. 처리기 없음은 두 사례이고 문구는 한 번이면 중단의 한 줄, 두
+번이면 자식이 끝나지 않았다는 것이다. 벗기지 않음은 연결 안의 세 사례와 뜨자마자 끝나는 서버이고
+문구는 pytest 가 하나만 든 그룹을 적는 꼴과 그룹 동일성 단언의 것이다. 문구는 그 사본을 손으로 돌려
+실패 출력을 본 뒤 골랐다. 첫 판은 실패한 테스트의 이름만 봐서 엉뚱한 까닭의 실패도 기대와
+맞았다(셀프 리뷰). 어긋나면 종료 코드 1이다. 네트워크로 패키지를 받는다. 돌리는 명령은 `README.md`에
+있다.
 """
 
 from __future__ import annotations
@@ -73,6 +78,8 @@ EXPECTED_RED = {
         "test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간다": GROWING,
     },
     "no_parent_watch": {"test_연결을_연_프로세스가_갑자기_죽어도_서버가_내려간다": GROWING},
+    # 상류는 런처를 늘 새 세션으로 띄우므로 이 검사를 꺼도 닫기 테스트는 빨개지지 않는다.
+    "no_leader_check": {},
     "no_unwrap": {
         "test_뜨자마자_끝나는_서버는_서버_이름을_든_연결_오류다": (
             "Connection closed') [single exception in ExceptionGroup]"
@@ -88,9 +95,10 @@ EXPECTED_RED = {
         ),
     },
 }
-POSIX_VARIANTS = {"no_launcher", "no_parent_watch"}
+POSIX_VARIANTS = {"no_launcher", "no_parent_watch", "no_leader_check"}
 WRITE_FAILURE = ["uv", "run", "python", str(HERE / "write_failure.py"), "--expect"]
 STALE_PARENT = ["uv", "run", "python", str(HERE / "stale_parent.py"), "--expect"]
+NOT_LEADER = ["uv", "run", "python", str(HERE / "not_leader.py"), "--expect"]
 UNWRAPPED = "연결_안 or 뜨자마자"
 
 
@@ -167,6 +175,12 @@ def _variant(copy: Path, name: str) -> Path:
             "unwrapped = escaped.unwrap(group)",
             "unwrapped = None",
         )
+    elif name == "no_leader_check":
+        _replace(
+            target / "src/agent_os/adapters/mcp_launcher.py",
+            "if os.getpgrp() != os.getpid():",
+            "if False:",
+        )
     else:
         _replace(
             target / "src/agent_os/adapters/mcp_launcher.py",
@@ -212,6 +226,7 @@ def main() -> int:
     ]
     if os.name == "posix":
         steps.append(("stale parent", [*STALE_PARENT, "refused"], 300))
+        steps.append(("not leader", [*NOT_LEADER, "refused"], 300))
     bad: list[str] = []
     for name, command, timeout in steps:
         result = _run(name, command, copy, timeout)
@@ -233,7 +248,7 @@ def main() -> int:
         result = _run(f"{variant}: pytest", [*pytest, *selected], target, 600)
         result["expected_failed"] = expected
         print(json.dumps(result, ensure_ascii=False))
-        if not _as_expected(result["failed"], expected):
+        if not _as_expected(result["exit"], result["failed"], expected):
             bad.append(variant)
         if variant == "no_unwrap":
             # 벗기지 않으면 결말을 쓴 실행이 그룹을 올리는지 core 에서 본다(양성 대조).
@@ -247,6 +262,12 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False))
             if result["exit"] != 0:
                 bad.append(f"{variant}: stale parent")
+        if variant == "no_leader_check":
+            # 검사를 끄면 우두머리가 아닌 런처가 부른 쪽의 그룹을 끄는지 본다(양성 대조).
+            result = _run(f"{variant}: not leader", [*NOT_LEADER, "killed"], target, 300)
+            print(json.dumps(result, ensure_ascii=False))
+            if result["exit"] != 0:
+                bad.append(f"{variant}: not leader")
     summary: dict[str, object] = {"copy": str(copy), "unexpected": bad, "removed": False}
     if not bad:
         try:
@@ -258,8 +279,11 @@ def main() -> int:
     return 1 if bad else 0
 
 
-def _as_expected(failed: object, expected: dict[str, str]) -> bool:
-    """기대한 테스트만 실패했고, 실패마다 요약 줄에 기대한 문구가 있다."""
+def _as_expected(exit_code: object, failed: object, expected: dict[str, str]) -> bool:
+    """테스트가 돌았고(pytest 의 종료 코드가 실패를 기대하면 1, 아니면 0), 기대한 테스트만
+    실패했으며, 실패마다 요약 줄에 기대한 문구가 있다."""
+    if exit_code != (1 if expected else 0):
+        return False
     if not isinstance(failed, dict) or set(failed) != set(expected):
         return False
     return all(expected[test] in str(failed[test] or "") for test in expected)
