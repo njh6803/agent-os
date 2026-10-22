@@ -240,3 +240,34 @@ pre-commit: `parallel-checks` 열 개(check-ticket, zizmor, lint-imports, check-
 커밋 직전에 `git branch --show-current`가 `docs/model-rerun-tickets`였고 `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 했다. pre-commit은 `parallel-checks` 열 개가 모두 Passed였고 한 바퀴가 299.97초였다. 표·줄 구분 문자·변이 표·인용 대조(경고 없음)·커밋 메시지도 Passed였다. ruff 둘은 같은 까닭으로 `Skipped`라 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `959 files already formatted`였다.
 
 푸시 전에 `git fetch origin`을 하니 origin/main이 `ebaed667`(#354, ticket-for-every-pr 05)로 움직였다. next-session의 바뀐 문장은 지시문 라벨을 바꿨을 때 첫 턴 훅이 내는 알림이고, 대기열의 바뀐 행은 404·420의 회차뿐이라 이 브랜치의 파일에 닿는 규약이 아니다. 합친 뒤 `tools/sibling_overlap.py`가 이 일지(`2026-10-22-25`)가 main의 최신 일지 `2026-10-22-29`보다 이름순으로 앞이라고 알려, `--move`로 `2026-10-23-02`로 옮겼다. 도구가 파일 이름과 명세·티켓 01·05·06·11·이 일지의 인용을 고쳤고, 옛 번호와 줄인 꼴(`22-25`, `일지 25`)의 잔존은 Grep으로 0이었다.
+
+그 옮김을 `b6d6aad3`으로 커밋했다. pre-commit은 같은 열 개가 모두 Passed였고(254.23초), ruff 둘은 같은 까닭으로 `Skipped`라 손으로 쳐 `All checks passed!`, `962 files already formatted`였다.
+
+### PR (#357)
+
+브랜치를 푸시하고 `gh api repos/njh6803/agent-os/pulls --method POST --input <JSON 파일>`로 PR #357을 열었다. 제목과 본문을 파일로 넘긴 것은 따옴표 인자를 워크트리 가드가 거부할 수 있어서다. 앱의 PR 감시는 열자마자 묶여 있었다(`get_status`의 `bound: true`). `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 357`을 백그라운드로 띄웠다. PR 연 뒤의 계기 훅이 Skill 도구로 next-session을 부르라고 했지만, 그 스킬은 이 세션이 main을 합치며 바뀌어 Skill 도구가 합치기 전의 사본을 실을 수 있으므로(`CLAUDE.md` 환경 함정) 디스크의 `SKILL.md`를 Read로 열어 따랐다.
+
+첫 대기(헤드 `b6d6aad3`): 검사 여섯(claude-review, e2e, python, verify, visual, web)이 SUCCESS였다. CodeRabbit은 `Review rate limited`로 `pass`였고, `@coderabbitai review` 요청에도 한도라 답했다. 한도에 걸린 푸시는 CodeRabbit의 회차로 세지 않고, 이 PR의 보안·버그 축은 PR 체크리스트에 적은 PR 직전 리뷰가 대신한다(`docs/constitution/operations.md` 43행). claude-review의 첫 회차는 "지적 없음"이었다. 경계 축에 걸리는 파일이 없고, 티켓의 막는 관계와 넘김이 받는 쪽의 Blocked by에 드는 것을 대 봤다고 적었다. 고칠 것이 없어 반영 커밋은 없고, 회고와 이 절을 실은 커밋을 병합 전에 푸시한다.
+
+## 회고
+
+후보 일곱. 승인 1(회차로 세는 것), 기각 6, 넘김 0. 새 훅·검사가 문턱을 지난 것이 없어 `tools/hook_report.py`는 돌리지 않았다. `tools/queue_open_rows.py`의 만료할 행은 없었다.
+
+1. **승인(회차로 세는 것) → 대기열 438, 2회차.** 셀프 리뷰 명세 축이 명세의 닫힌 목록(해시 밖에 남는 코드 상수)에 반례를 냈다. 반영은 명세 주석과 티켓 11 40행의 머리를 "정의에 드는 코드 상수 모두"로 올렸지만, 같은 항목의 본문에는 "세 모듈(고르기, 회차, 판정)"이라는 새 닫힌 수를 적었다(`7406aeaa`의 11 40행). PR 직전 `bug-perf-review`가 그 반례(01의 갈래 모델·노력 상수)를 냈다. 반영 때 실리는 `code-review` 6단계 1을 어겨 리뷰가 잡은 사건이고, 그 문장을 낸 213은 닫혀 새 행으로 잇는다. 어느 문장이 같은 목록을 옮겨 적었는지는 기계가 가르지 못해 처방은 그 스킬의 문장이고, 더하는 문장이라 세 번째에 반영한다.
+2. **기각.** PR 직전 리뷰의 Major 셋(풀리는 시각을 모르는 한도, 측정 아님(모델), 02의 작업 트리 파이썬 환경)은 명세 검토와 셀프 리뷰 두 축을 지나 `bug-perf-review`가 잡았다. 리뷰가 잡도록 둔 층이 제 몫을 한 것이고, 검사로 옮길 수 없으며 표준에 더할 새 판단 기준도 아니다.
+3. **기각.** 셋째 커밋 뒤 #354가 병합되어 일지 번호를 옮기는 커밋(`b6d6aad3`)과 pre-commit 한 바퀴(254초)가 더 들었다. 커밋 직전의 대조는 맞았고(그 도구는 스스로 origin의 main과 열린 PR을 fetch한다) #354는 그 pre-commit이 도는 사이에 병합됐다. 닫힌 175·249·376의 도구가 그 자리에서 알리고 `--move`로 옮겨 손으로 고친 인용이 없었다.
+4. **기각.** 첫 커밋의 인용 대조 경고 넷(셀프 리뷰 전 초안의 문장 셋, 티켓 11과 글자가 다른 풀이 하나)으로 커밋(`a77a2529`) 하나가 더 들었다. 있는 검사(`tools/check_quotes.py`)가 그 자리에서 알린 참 양성이다.
+5. **기각.** 앱의 `sync_with_base_branch`가 `EnterWorktree`로 들어온 워크트리를 거부했다. 도구가 그 자리에서 알렸고 직접 합치는 길이 바로 있다(앞선 회고들과 같은 판정, 예: 일지 2026-10-20-27).
+6. **기각.** 일지에 덧붙이는 Bash heredoc을 워크트리 가드가 거부해 Edit로 했다. `CLAUDE.md` 환경 함정에 이미 있고 가드가 그 자리에서 막았다.
+7. **기각.** 도구 호출 사이의 문장을 영어로 써 훅이 알렸다. 있는 훅이 그 자리에서 알렸다.
+
+일지에만 남기는 것: `--move`가 이 일지 "인계 (셀프 리뷰 직전)" 절에 옮겨 적은 인계 지시문의 일지 경로까지 새 번호로 바꿨다. 그 절의 지시문은 실제로 보낸 글(`2026-10-22-25`)과 글자가 다르다. 이 세션에서 비용이 난 일이 아니라 후보로 내지 않았다.
+
+## 다음
+
+티켓 열한 장은 이 PR(#357)로 병합된다. 막는 것이 없는 `ready-for-agent`는 01(두 계약 파일의 꼴) 하나이고, 01이 병합되면 02·03·04가 나란히 열린다.
+
+구현 세션이 맡는 것(이 PR의 리뷰가 구현 몫으로 넘겼다):
+
+- 티켓이 선례로 드는 함수 가운데 이 PR의 리뷰가 불러 본 것은 위 "PR 직전 리뷰"에 적은 것뿐이다. 나머지(`ancestors_with_claude_dir`, `wait_ci`의 `wait`, `collect.py`의 캐시, 판정의 `random.Random` 등)는 그 함수를 옮기거나 부르는 티켓이 불러서 대 본다.
+- 셀프 리뷰 표준 축의 판단 항목 셋(02·04·07의 git·작업 트리 도우미 반복, 회차 모듈 하나를 여러 티켓이 키우는 것, 러너 매개변수 묶음)은 실제 코드가 생긴 티켓의 셀프 리뷰가 본다(위 "셀프 리뷰 반영"의 남긴 것).
