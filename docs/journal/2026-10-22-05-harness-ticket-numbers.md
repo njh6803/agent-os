@@ -297,3 +297,39 @@ open-session을 부른다 2026-10-22T06:14:13Z
 
 - **뒤로 넘긴 일: `tools/sibling_overlap.py` 나누기.** PR #345의 claude-review 두 회차가 짚었다. 번호 읽기, 겹침 판정, 인용 고쳐 쓰기, 파일 옮기기와 되돌리기, gh·git 호출, 렌더링, CLI가 한 모듈이고, 번호 종류 하나를 더하면 `Numbers`·`read_numbers`·`fresh`·`unshared`·`clashes`·`moves`·`renumber`·`rewrite`·`_ours_line` 아홉 자리를 함께 고친다. 다음 번호 종류를 더하는 작업보다 먼저 한다.
 - **재지 않은 것: 푸시 직후 gh의 PR head 지연.** PR 직전 버그 축의 보류다(위 "PR 직전 리뷰", PR 본문 "남긴 위험"). 닫으려면 GitHub 원격에서 푸시 직후 `gh api …/pulls`의 `head.sha`와 `ls-remote`의 끝을 몇 번 대 봐야 한다.
+
+## 인계 (봇 회차 반영 커밋 뒤)
+
+봇 회차의 반영과 회고 행을 커밋한 직후(`5db2b971`, pre-commit 모두 Passed) 인계 계기가 왔다(세션 컨텍스트 321,341 토큰, 경계 `커밋 뒤`). 인계하지 않는 다섯 때에 들지 않는다. 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `feature/01-harness-ticket-numbers`다.
+
+이 세션이 번복하거나 고친 것:
+
+- "이어받음 (PR 연 뒤)"에 main의 일지 `2026-10-22-04`가 이 일지보다 이름순으로 뒤라고만 적고 문제없다고 읽었는데, 커밋 전 대조가 그 순서 때문에 1로 끝나 `--move`로 옮겼다. 그 문단을 고쳐 썼다.
+- `--move`가 첫 이동을 적은 문장의 번호까지 `2026-10-22-05`로 옮겨, 그때의 번호 `2026-10-22-03`으로 되돌렸다. PR 본문의 번호 뒤 조사("05으로")는 손으로 고쳤다.
+- `Verdict`는 처음에 부르는 자리만 키워드로 바꿨다가, 회고에서 칸 검사 후보를 보며 `kw_only=True`로 타입 층까지 올렸다.
+- 도구 호출 사이 문장 하나를 영어로 썼다(`hook_midturn_korean`이 알렸다).
+
+남은 단계: 이 일지(이 절)를 새 커밋으로 더해 함께 푸시, 위 "봇 회차"의 보류 일곱을 이유와 함께 PR 코멘트로 남기기, `@coderabbitai review`와 `tools/wait_ci.py`, 봇 회차(claude-review는 셋째, CodeRabbit은 둘째 회차라 Critical·Major만 고친다), "워크트리에서 병합할 때"로 병합, 그 뒤 next-session의 다음 작업. 회고는 이미 돌았다(위 "회고"). PR 본문은 봇 회차 반영과 회고 행 415~419로 넓혀 두었다.
+
+지시문:
+
+다음 작업: .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md. 번호 도구가 harness 티켓 번호를 내주고 겹치면 알리고 옮긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md
+브랜치: feature/01-harness-ticket-numbers
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-05-harness-ticket-numbers.md의 "봇 회차", "회고", "인계 (봇 회차 반영 커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. PR #345의 첫 봇 회차(CodeRabbit 첫 회차, claude-review 둘째 회차까지)를 반영해 커밋했고 그 커밋은 아직 푸시하지 않았다. 일지의 이 인계 절은 커밋하지 않았으니 새 커밋으로 더해 함께 푸시하고, 순서 1의 2(next-session 봇 회차)부터 한다. 그 전에 일지 "봇 회차"의 보류 일곱을 이유와 함께 PR 코멘트로 남긴다. 회고는 이미 돌았고 PR 본문도 넓혀 두었다. docs/journal/2026-10-22-05-harness-ticket-numbers.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `feature/01-harness-ticket-numbers (인계함)`으로 바꿨다. 띄운 대기(`wait_ci.py`)는 이미 끝나 멈출 것이 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-22T06:56:01Z
+
+## 이어받음 (봇 회차 반영 커밋 뒤)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "… 이어받을 상태: 인계: 커밋 뒤. PR #345의 첫 봇 회차(CodeRabbit 첫 회차, claude-review 둘째 회차까지)를 반영해 커밋했고 그 커밋은 아직 푸시하지 않았다 … 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 `feature/01-harness-ticket-numbers`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. HEAD는 `5db2b971`로 원격 브랜치보다 하나 앞섰고, 커밋하지 않은 변경은 위 인계 절 하나였다. origin/main은 `98272c4f` 그대로라 합칠 것이 없었다.
