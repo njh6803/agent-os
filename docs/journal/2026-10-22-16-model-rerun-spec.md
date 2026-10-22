@@ -206,3 +206,21 @@ open-session이 연 새 세션이다. 첫 메시지는 이 일지 맨 위의 첫
 - 대기열 433의 `sibling_overlap.py` 출력 인용: 그 도구는 옮길 번호를 항목마다 종류를 붙여(`대기열 429 → 430, 대기열 430 → 431, …`) 찍는다(`tools/sibling_overlap.py`의 `옮길 번호:` 줄을 읽었다). 인용은 둘째부터 종류가 없어 출력 그대로가 아니고, 그때의 출력은 다시 낼 수 없다. 따옴표를 떼고 풀어 썼다.
 
 `--all-lines`로 본 나머지 경고(이 일지 열셋)는 지금은 없는 옛 문장과 리뷰 지적을 옮긴 것, 그리고 README 문장 안의 큰따옴표를 작은따옴표로 바꾼 인용(100행)이다. 그대로 둔다. 고친 뒤 `tools/check_quotes.py`(기본 모드, 세 파일)는 경고가 없었다.
+
+### PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 CLI가 돌지 못해 대체 둘을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 범위는 기준 `96fbe241`부터 `0145dfdf`까지다.
+
+- 보안(`/security-review`): 신뢰도 0.8 이상 발견 없음. 커밋한 요약 열둘과 원본 `서브-2.jsonl`에서 자격 증명·이메일 꼴을 찾아 0건이었고, init 셋의 `apiKeySource`가 모두 `none`이었다. 프로브의 하위 프로세스는 인자 목록이고 `shell=True`가 없으며, 자식 환경은 허용 목록뿐이다. 기준 밑으로 둔 것은 `shutil.which("claude")`가 윈도에서 현재 폴더를 찾는 것, 앞으로 원본을 더 커밋할 때 값까지 찍힌 `env` 출력이 실릴 수 있는 것이다.
+- 버그·성능(`bug-perf-review`, `[호출 40]`): Minor 2, Nit 1, 오탐 4. 밀 주장 약 스물 가운데 어긋난 것 하나, 닫지 못한 것 넷.
+  - Minor 1. `--prices`가 견준 칸이 하나도 없어도(경로 오타, `model_usage` 없는 요약) 종료 0이었다. `.claude/rules/probes.md` 첫 항목을 그 길만 어겼다. 고쳤다. 견준 칸을 세어 0이면 "견준 칸 없음"을 찍고 1로 끝난다.
+  - Minor 2. `run_arm`의 `finally`에서 `remove_tree`가 `OSError`(살아 남은 자식이 폴더를 쥔 윈도의 `WinError 32`)를 던지면 뒤 갈래와 회차 요약이 사라졌다. 리뷰가 함수 단위로 재현했다. 고쳤다. 잡아서 경로를 stderr에 찍고 남긴 채 다음 갈래로 간다.
+  - Nit 3. 위 "반영" 절의 "`save()`가 갈래마다의 표지(`missing_marker`)를 보고"와 `--judge` 출력 "측정 12 / 12"는 `probe_kit`으로 옮기기 전 판의 사실이다. 지금 판은 `mark()`가 표지를 보고, `--judge`의 끝 세 줄은 마지막 `[측정] <이름>`, "측정 12회차, 측정 아님 0회차", "결과: 표지 있음 12"다. 기록이라 앞 절은 고치지 않는다.
+  - 닫지 못한 밀 주장 가운데 pyright 수는 이 세션이 다시 쟀다(아래). 나머지 셋(스크래치 `ticket_status.py`의 B 쪽 Status, 반대쪽 시험의 스크래치 요약, 커밋하지 않은 원본의 `grep`)은 커밋하지 않은 스크래치에 기댄 손으로 본 사실이라 근거의 종류를 그대로 둔다.
+
+고친 뒤 다시 돌린 것(`claude`는 띄우지 않았다):
+
+- 세션 스크래치 스크립트 `check_fixes.py`(커밋하지 않았다)로 모듈을 불러, `prices`가 커밋한 기록에서 16줄과 종료 0, 없는 폴더와 빈 폴더에서 "견준 칸 없음"과 종료 1인 것을 봤다. 가짜 `drive`와 `PermissionError`를 던지는 `remove_tree`로 `run_arm("모양")`을 돌려, 예외가 올라오지 않고 호출 둘(둘째에 `--resume`)이 돌고 stderr에 "임시 폴더를 지우지 못해 남긴다"가 찍히고 회차 둘이 남는 것을 봤다.
+- `--judge .scratch/model-rerun/probes/headless_flags/2026-10-22`: "측정 12회차, 측정 아님 0회차", 종료 0.
+- 사본을 `tests/`에 잠시 두고 `uv run pyright --outputjson`: `filesAnalyzed` 1, 오류 68개이고 모두 부분 미지 계열이다. 옮긴 뒤의 68개와 같고 이번 고침이 낸 오류는 없다. 사본은 지웠다.
+- `uv run ruff check`·`ruff format --check` 그 파일: 통과.

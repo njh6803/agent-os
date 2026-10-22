@@ -78,8 +78,8 @@
 1로 끝난다. `--prices` 는
 요약의 `modelUsage` 마다 토큰을 공식 단가(`PRICES`)로 셈해 `costUSD` 와 견주고, 캐시 쓰기를 5분
 수명(입력의 1.25배)과 1시간 수명(2배) 가운데 어느 배수로 셈해야 맞는지 찍는다. 맞는 배수가 없는
-모델이 있으면 1로 끝난다. `modelUsage` 는 캐시 쓰기를 수명으로 나누지 않으므로, 한 모델의 쓰기가
-두 수명에 걸쳤으면 어느 배수와도 맞지 않는다.
+모델이 있거나 견준 칸이 하나도 없으면 1로 끝난다. `modelUsage` 는 캐시 쓰기를 수명으로 나누지
+않으므로, 한 모델의 쓰기가 두 수명에 걸쳤으면 어느 배수와도 맞지 않는다.
 """
 
 import argparse
@@ -667,9 +667,12 @@ def prices(directory: Path) -> int:
     찍는다.
 
     한 모델의 캐시 쓰기가 한 수명으로만 났을 때만 한 배수와 맞는다. 맞는 배수가 없는 모델이 하나라도
-    있으면 1, 모두 맞으면 0. 캐시 쓰기가 0이면 두 배수가 함께 맞는다.
+    있으면 1, 모두 맞으면 0. 캐시 쓰기가 0이면 두 배수가 함께 맞는다. 견준 칸이 하나도 없으면(경로를
+    잘못 주었거나 `model_usage` 가 없는 요약뿐) 견주지 않은 것이라 1이다(`.claude/rules/probes.md`
+    첫 항목).
     """
     unmatched = 0
+    compared = 0
     for name, summary in load_summaries(directory).items():
         usage = summary.get("model_usage")
         for model, raw in usage.items() if isinstance(usage, dict) else []:
@@ -688,6 +691,10 @@ def prices(directory: Path) -> int:
                 f"{name} {model} costUSD={cost:.7f} 맞는 캐시 쓰기 배수: {'·'.join(fits) or '없음'}"
             )
             unmatched += not fits
+            compared += 1
+    if compared == 0:
+        print(f"견준 칸 없음: {directory}")
+        return 1
     return 0 if unmatched == 0 else 1
 
 
@@ -744,7 +751,12 @@ def run_arm(arm: str, out: Path, rounds: Rounds) -> None:
                 save(name, out, again)
                 mark(current, name, again, summary)
     finally:
-        remove_tree(root)
+        try:
+            remove_tree(root)
+        except OSError as error:
+            # 끝난 claude 의 자식이 폴더를 작업 폴더로 쥐고 있으면 윈도에서 지우지 못한다. 남기고
+            # 다음 갈래로 간다. 여기서 올리면 뒤 갈래와 회차 요약이 사라진다.
+            print(f"임시 폴더를 지우지 못해 남긴다: {root} ({error})", file=sys.stderr)
 
 
 def main() -> int:

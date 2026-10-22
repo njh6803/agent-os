@@ -19,7 +19,7 @@ uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py --jud
 uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py --prices .scratch/model-rerun/probes/headless_flags/2026-10-22
 ```
 
-`--judge`는 요약마다 그 갈래가 재려던 상황의 표지(아래 표의 "재는 것"마다 하나)가 있는지 보고 `[측정] <이름>`이나 `[측정 아님: <까닭>] <이름>`을 한 줄씩 찍는다. 끝에 회차 셈(`측정 12회차, 측정 아님 0회차`)을 찍고, 하나라도 측정이 아니거나 요약이 없으면 종료 1이다. 회차 셈과 `claude` 출력 읽기는 `tools/probe_kit.py`의 `Rounds`·`LineReader`가 한다(`.claude/rules/probes.md`). `--prices`는 요약의 `modelUsage`마다 `costUSD`가 공식 단가(`docs/model-selection.md` 2절)로 셈한 값과 상대 차이 10억분의 1 안에서 같은지를 캐시 쓰기 배수 둘(5분 1.25배, 1시간 2배)로 보고, 어느 배수와도 맞지 않는 모델이 있으면 종료 1이다.
+`--judge`는 요약마다 그 갈래가 재려던 상황의 표지(아래 표의 "재는 것"마다 하나)가 있는지 보고 `[측정] <이름>`이나 `[측정 아님: <까닭>] <이름>`을 한 줄씩 찍는다. 끝에 회차 셈(`측정 12회차, 측정 아님 0회차`)을 찍고, 하나라도 측정이 아니거나 요약이 없으면 종료 1이다. 회차 셈과 `claude` 출력 읽기는 `tools/probe_kit.py`의 `Rounds`·`LineReader`가 한다(`.claude/rules/probes.md`). `--prices`는 요약의 `modelUsage`마다 `costUSD`가 공식 단가(`docs/model-selection.md` 2절)로 셈한 값과 상대 차이 10억분의 1 안에서 같은지를 캐시 쓰기 배수 둘(5분 1.25배, 1시간 2배)로 보고, 어느 배수와도 맞지 않는 모델이 있거나 견준 칸이 하나도 없으면 종료 1이다.
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
