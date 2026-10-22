@@ -1,4 +1,4 @@
-# 2026-10-22 (22) CI가 PR마다 커밋 검사를 하고 가리키는 티켓이 done인지 본다 (ticket-for-every-pr 04)
+# 2026-10-22 (28) CI가 PR마다 커밋 검사를 하고 가리키는 티켓이 done인지 본다 (ticket-for-every-pr 04)
 
 ## 구현 (첫 세션)
 
@@ -54,8 +54,8 @@
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-22-ci-checks-ticket-done.md의 "구현 (첫 세션)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-22-22-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-22-28-ci-checks-ticket-done.md의 "구현 (첫 세션)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-22-28-ci-checks-ticket-done.md
 확인할 선행 조건: 러너에 uuidgen이 있는지와 ticket 잡의 timeout-minutes 10(어림)은 첫 CI 실행에서 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -119,8 +119,8 @@ open-session을 부른다 2026-10-22T12:41:16Z
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
 브랜치: feature/04-ci-checks-ticket-done
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-22-ci-checks-ticket-done.md의 "구현 (첫 세션)"과 "구현 (둘째 세션)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 f7e30606까지 했고 아직 푸시하지 않았다(열린 PR 없음). 남은 단계는 차례로 origin/main을 합치기, PR 직전 리뷰(CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)와 반영, 반영을 커밋한 뒤 변이 전체 실행 한 번, 티켓의 Status를 in-progress로 둔 채 draft PR을 열어 ticket 잡과 verify의 빨강 보기, gh run rerun --failed, 잡이 찍은 base 값과 병합 커밋의 첫 부모 견주기, done으로 바꿔 푸시해 초록 보기, ci_job_durations.py에 브랜치를 주어 timeout-minutes 고치기, ready와 봇 회차, 병합. 이 티켓만은 PR을 열기 전에 done으로 바꾸지 않는다(티켓의 검증 절). 일지 docs/journal/2026-10-22-22-ci-checks-ticket-done.md
+읽을 것: docs/journal/2026-10-22-28-ci-checks-ticket-done.md의 "구현 (첫 세션)"과 "구현 (둘째 세션)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 f7e30606까지 했고 아직 푸시하지 않았다(열린 PR 없음). 남은 단계는 차례로 origin/main을 합치기, PR 직전 리뷰(CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히, 밀 주장은 일지의 "PR 직전 리뷰에 밀 주장" 목록)와 반영, 반영을 커밋한 뒤 변이 전체 실행 한 번, 티켓의 Status를 in-progress로 둔 채 draft PR을 열어 ticket 잡과 verify의 빨강 보기, gh run rerun --failed, 잡이 찍은 base 값과 병합 커밋의 첫 부모 견주기, done으로 바꿔 푸시해 초록 보기, ci_job_durations.py에 브랜치를 주어 timeout-minutes 고치기, ready와 봇 회차, 병합. 이 티켓만은 PR을 열기 전에 done으로 바꾸지 않는다(티켓의 검증 절). 일지 docs/journal/2026-10-22-28-ci-checks-ticket-done.md
 확인할 선행 조건: 러너에 uuidgen이 있는지(없으면 스텝이 127로 실패한다), ticket 잡의 timeout-minutes 10(어림), 잡이 찍은 base 커밋 값이 병합 커밋의 첫 부모와 같은지(PR을 연 뒤 main이 움직였으면 다음 푸시의 실행에서도 견주고, 다르면 티켓대로 사람에게 묻는다)는 CI 실행에서 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -150,3 +150,59 @@ open-session을 부른다 2026-10-22T13:37:08Z
   - `rebase --onto` 뒤 "푸시하면 지난다"에 강제 푸시(`--force-with-lease`)와 옛 base 브랜치를 지웠을 때 끝 커밋을 주는 것을 더했다.
   - 보류(base 값이 병합 커밋의 첫 부모보다 오래됐을 수 있다)는 계획대로 실제 실행의 "CI 입력" 줄로 본다.
 - 다시 돌린 것: `tests/tools/test_check_ticket.py` 69 passed, pyright 0, 두 파일의 ruff 0.
+
+### 커밋과 PR
+
+- `62fc35f8 fix: CI 의 커밋 검사가 얕은 체크아웃과 빈 머리 브랜치에서 지나지 않는다`. pre-commit 러너의 검사 모두 Passed(pytest 291.5초, web-verify 265.6초, lint-imports·pyright·pyright-linux·zizmor 포함), 카나리아 명세 모양과 헌법 판은 대상 파일이 없어 Skipped, 커밋 메시지 Passed. 인용 대조 경고 셋은 이 일지가 옛 독스트링 문장과 앞 세션의 밀 주장을 인용한 줄이다(막지 않는다).
+- 이 커밋에서 커밋 검사의 인계 계기(`커밋 뒤`)가 왔으나, 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않고 이었다.
+- 변이 전체 실행: `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/check_ticket_mutations.toml`이 `변이 16 모두 기대대로`(`62fc35f8`). 실행 뒤 작업 트리는 깨끗했다.
+- 푸시하고 티켓 `Status:`를 in-progress로 둔 채 draft PR [njh6803/agent-os#355](https://github.com/njh6803/agent-os/pull/355)를 열었다. PR 본문의 남긴 위험 첫 줄(base 값과 첫 부모)과 "필수 검사 `verify`의 판정을 바꿨으면…" 체크박스는 실제 실행 뒤에 갱신할 자리다. 열린 직후 앱의 PR 상태는 검사 1 통과, 5 대기였다.
+
+### 인계 (PR 연 뒤)
+
+PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 303,456 토큰, 경계 `PR 연 뒤`). 인계하지 않는 때 다섯에 들지 않았다: PR이 열렸고, 요청 범위는 병합까지이며, 이어받은 경계는 `커밋 뒤`라 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `feature/04-ci-checks-ticket-done`이고 넘기기 전에 `(인계함)`을 붙인다. 이 일지(셋째 세션 절)는 커밋하지 않은 채 넘긴다.
+
+지시문:
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md. CI가 PR 단위로 커밋 검사를 하고 가리키는 티켓이 done인지 본다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md
+브랜치: feature/04-ci-checks-ticket-done
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-28-ci-checks-ticket-done.md의 "구현 (둘째 세션)"과 "구현 (셋째 세션)" 절
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. draft PR #355를 티켓 Status in-progress로 열었고, PR 직전 리뷰의 반영과 변이 전체 실행은 끝났다. 이 티켓만의 남은 차례는 이렇다. 첫 CI 실행에서 ticket 잡과 verify가 빨간지(막는 글이 티켓 경로, in-progress, done으로 바꿔 다시 푸시하라는 할 일을 드는지) 보고, gh run rerun --failed로 다시 돌린 시도에서도 본다. 두 시도에서 잡이 찍은 "CI 입력" 줄의 base 커밋이 그 시도가 체크아웃한 병합 커밋의 첫 부모와 같은지 견주고, 다르면 일지에 적고 사람에게 묻는다. 실행 번호와 결과를 일지에 적는다. 그 뒤 티켓 Status를 done으로 바꿔 커밋·푸시해 초록을 보고, ci_job_durations.py에 이 브랜치를 주어 ticket 잡의 timeout-minutes를 고친다. PR 본문의 남긴 위험 첫 줄과 verify 판정 체크박스를 결과로 고치고 gh pr ready, 그 뒤 @coderabbitai review와 봇 회차, 병합이다. ready 전에 done이다. 일지 "다음"에 CI의 전환 갈래는 병합 뒤 규약 전에 딴 열린 PR이 다음에 푸시될 때 처음 돈다는 것을 적는다(티켓의 실제 실행 절). 셋째 세션의 일지 절은 커밋하지 않은 채 넘겼다. 일지 docs/journal/2026-10-22-28-ci-checks-ticket-done.md
+확인할 선행 조건: 러너에 uuidgen이 있는지(없으면 ticket 스텝이 127로 실패한다)와, 잡이 찍은 base 커밋 값과 병합 커밋 첫 부모의 견줌(PR을 연 뒤 main이 움직였으면 다음 푸시의 실행에서도 견준다)은 CI 실행에서 본다. 열린 PR #354(05-first-turn-ticket-notice)가 KICKOFF.md와 .scratch/ticket-for-every-pr/probes/README.md를 함께 고쳐, 나중에 병합하는 쪽에서 충돌할 수 있다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-ci-checks-ticket-done (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 잠금 풀기는 `is not locked`로 끝났다(EnterWorktree(path)로 들어온 자리라 이 세션이 잠그지 않았다).
+
+open-session을 부른다 2026-10-22T14:21:26Z
+
+## PR 반영·병합 (넷째 세션)
+
+> 사용자: (open-session이 연 새 세션의 첫 메시지로 위 인계 지시문을 받았다) "다음 작업: .scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md. CI가 PR 단위로 커밋 검사를 하고 가리키는 티켓이 done인지 본다 / 다음 단계: PR 반영·병합 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / … / 이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. … ready 전에 done이다. … / 확인할 선행 조건: 러너에 uuidgen이 있는지 …와, 잡이 찍은 base 커밋 값과 병합 커밋 첫 부모의 견줌 …은 CI 실행에서 본다. 열린 PR #354(05-first-turn-ticket-notice)가 KICKOFF.md와 .scratch/ticket-for-every-pr/probes/README.md를 함께 고쳐, 나중에 병합하는 쪽에서 충돌할 수 있다 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path=.claude/worktrees/04-ci-checks-ticket-done)`로 들어갔다. HEAD와 PR 머리가 `62fc35f8`로 같고 커밋하지 않은 것은 이 일지뿐이었다.
+- 첫 CI 실행(ci `39794764255`, claude-review `39794764554`)은 14:20Z에 생겨 14:23Z에도 `web` 잡만 돌고 나머지는 대기열에 있었다. `tools/wait_ci.py 355`를 백그라운드로 띄웠다. `@coderabbitai review`는 done 푸시 뒤로 미룬다. 그 코멘트 뒤에 푸시하면 CodeRabbit이 아무것도 하지 않는다(리뷰 파이프라인의 초록 착시 목록).
+
+### 실제 실행: 빨강과 다시 돌린 시도
+
+- 첫 시도(ci `39794764255` 시도 1, 머리 `62fc35f8`). `ticket` 잡 `119879193245`이 실패(7초), `verify` `119884424236`이 `ticket: failure`로 실패했고 나머지 넷은 성공이었다. claude-review는 draft라 건너뛰었고 CodeRabbit은 `Review skipped: draft pull request`였다.
+  - 러너에 `uuidgen`이 있다. 스텝이 `marker=$(uuidgen)`을 지났고 로그의 `::stop-commands::` 줄은 토큰이 `***`로 가려져 찍혔다.
+  - 막는 글: `브랜치 feature/04-ci-checks-ticket-done 가 가리키는 티켓이 done 이 아니라 PR 을 막았다.`, `.scratch/ticket-for-every-pr/issues/04-ci-checks-ticket-done.md: 지금 값 \`in-progress\``, `할 일: 그 티켓의 \`Status:\` 를 done 으로 고쳐 커밋하고 다시 푸시한다. 티켓은 PR 을 열기 전에 done 이다.` 티켓 경로, 지금 값, 할 일이 모두 든다.
+  - "CI 입력" 줄: 머리 커밋 `62fc35f8…`, base 커밋 `b104f8fa32c8…`, 체크아웃한 병합 커밋(`4043a2fe`, `Merge 62fc35f8… into b104f8fa…`)의 첫 부모 `b104f8fa32c8…`. base 값과 첫 부모가 같다. PR을 연 뒤 main은 움직이지 않았다(`origin/main` `b104f8fa`).
+  - 곁의 관찰: 이 시도의 `web` 잡이 11.2분(14:20:08~14:31:21)으로, 2026-10-15 프로브의 최대 2.3분보다 훨씬 길고 `timeout-minutes: 15`에 가깝다. 스텝 시각(잡 API)으로 보니 브라우저 캐시를 맞힌 뒤의 `playwright install-deps chromium` 스텝이 9.4분(14:20:35~14:30:00)이고 `pnpm -C web verify`는 1.3분이었다. 이 티켓의 몫이 아니라 적어만 둔다.
+- `gh run rerun 39794764255 --failed`로 시도 2를 띄웠다(`ticket` `119889901066`, `verify` `119889994843`).
+- 시도 2(ci `39794764255` 시도 2). `ticket` `119889901066`이 7초 만에 같은 막는 글로 실패했고, `verify` `119889994843`이 `ticket: failure`로 실패했다. 나머지 넷은 앞 시도의 성공이 옮겨졌다(`verify`가 읽은 잡 목록에 여섯이 모두 들었다). 체크아웃은 시도 1과 같은 병합 커밋 `4043a2f`이고, "CI 입력" 줄의 base 커밋과 첫 부모가 둘 다 `b104f8fa`로 같다. 다시 돌린 시도가 첫 실행의 `GITHUB_SHA`를 그대로 쓴다는 문서의 문장대로였다.
+- 견줌의 결론: 두 시도 모두 base 값(`pull_request.base.sha`)이 체크아웃한 병합 커밋의 첫 부모와 같아, 명세가 가정한 base다. 사람에게 물을 것이 없다. PR을 연 뒤 main이 움직이지 않아, main이 움직인 뒤의 푸시에서 두 값이 어떻게 되는지는 이 PR의 다음 푸시에서 main이 움직였을 때만 다시 견준다.
+
+### done과 초록
+
+- 티켓 `Status:`를 done으로 바꾸고, 이 세션까지 확인한 체크박스를 채웠다. 남긴 셋은 `timeout-minutes`(초록 실행으로 잰 뒤), 실제 실행의 첫 항목(초록을 본 뒤), 일지 "다음"의 전환 갈래(단계를 닫을 때)다.
+- 커밋 직전의 `tools/sibling_overlap.py`가 1로 끝났다. 그사이 main이 `19bbfa0`로 움직여 최신 일지가 `2026-10-22-24`가 되었고, 형제 PR·워크트리가 `-23`·`-25`~`-27`을 쥐어 `--move`로 이 일지를 `-28`로 옮겼다. PR 본문의 일지 경로도 옮긴다.
+- main이 움직였으므로 이 done 커밋은 main을 합치지 않고 푸시한다. 머리가 새 main을 품지 않은 채 GitHub가 새 main 위에 병합 커밋을 지을 때 `pull_request.base.sha`가 그 첫 부모와 같은지가, 두 시도로는 갈리지 않던 명세 검토의 질문(base 값이 첫 부모보다 오래됐을 수 있다)이다. main은 그 견줌 뒤에 합친다.
