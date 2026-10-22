@@ -4,7 +4,7 @@
 
 근거는 `.scratch/model-rerun/spec.md`의 "러너가 기대는 `claude -p`의 동작"(비용, 예산, 결과 글, 기록 파일 찾기와 그 2026-10-22 주석, PowerShell 도구가 없는 것), "명령과 막는 규칙"의 명령, "지시문과 첫 메시지", "이어 가기와 끝"의 결과 커밋, "회차 기록", "자리와 모듈"의 읽기 항목, "모델 확인"의 2026-10-22 주석(띄울 `claude`의 경로), Testing Decisions "회차 하나"의 가짜와 첫 메시지 항목이다. 설계 5절이 원천이고 명세가 고친 자리(비용은 세션마다 마지막 값, 결과 커밋을 고르는 규칙)는 명세가 원천이다. 진짜 `claude`의 동작은 `.scratch/model-rerun/probes/README.md`의 2026-10-22 결과다.
 
-이 티켓은 프로브 `.scratch/model-rerun/probes/headless_flags/headless_flags.py`(약 800줄)의 `drive`, `summarize`, `transcript_effort`, `record`를 `tools/`로 옮긴다. 명세 PR의 claude-review 둘째·셋째 회차가 짚고 보류한 셋을 옮기며 정리한다(그 PR을 병합한 세션이 이 기능의 티켓 세션에 넘긴 시작 지시문, 일지 2026-10-22-25 "사용자 프롬프트". 나누기의 근거는 일지 2026-10-22-16 "이어받은 세션 (PR 반영)"). 옮긴 코드는 요약(스트림 줄 → 값), 판정, 구동(하위 프로세스)으로 나눈다. `run_arm`의 짝 상수 중복(`FIRST_OF`의 거꾸로 된 사본)과 `missing_marker`의 갈래마다의 분기는 프로브의 갈래를 위한 것이라 옮기지 않는다. 다만 `missing_marker`의 첫 분기("init 이나 result 이벤트가 없다")는 러너에도 필요해 08이 측정 아님(호출)으로 옮긴다(명세 "이어 가기와 끝"의 갈래 셋 주석). `record`가 쓰기와 값 만들기를 섞은 것은 나눠 옮긴다.
+이 티켓은 프로브 `.scratch/model-rerun/probes/headless_flags/headless_flags.py`(약 800줄)의 `drive`, `summarize`, `transcript_effort`, `record`를 `tools/`로 옮긴다. 명세 PR의 claude-review 둘째·셋째 회차가 짚고 보류한 셋을 옮기며 정리한다(그 PR을 병합한 세션이 이 기능의 티켓 세션에 넘긴 시작 지시문, 일지 2026-10-23-02 "사용자 프롬프트". 나누기의 근거는 일지 2026-10-22-16 "이어받은 세션 (PR 반영)"). 옮긴 코드는 요약(스트림 줄 → 값), 판정, 구동(하위 프로세스)으로 나눈다. `run_arm`의 짝 상수 중복(`FIRST_OF`의 거꾸로 된 사본)과 `missing_marker`의 갈래마다의 분기는 프로브의 갈래를 위한 것이라 옮기지 않는다. 다만 `missing_marker`의 첫 분기("init 이나 result 이벤트가 없다")는 러너에도 필요해 08이 측정 아님(호출)으로 옮긴다(명세 "이어 가기와 끝"의 갈래 셋 주석). `record`가 쓰기와 값 만들기를 섞은 것은 나눠 옮긴다.
 
 04의 클론과 환경을 쓰고 01의 꼴로 쓴다. 07과 나란히 돌 수 있다. 이 티켓은 08을 막는다.
 

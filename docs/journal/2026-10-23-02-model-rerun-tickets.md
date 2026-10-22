@@ -1,4 +1,4 @@
-# 2026-10-22 (25) 다시 풀기 측정 도구를 티켓으로 쪼갠다
+# 2026-10-23 (02) 다시 풀기 측정 도구를 티켓으로 쪼갠다
 
 ## 사용자 프롬프트
 
@@ -98,8 +98,8 @@ spec-reviewer가 `c47bedce`의 명세를 체크리스트 일곱과 질문 둘로
 시작 프롬프트: /to-tickets .scratch/model-rerun/spec.md
 브랜치: docs/model-rerun-tickets
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-22-25-model-rerun-tickets.md(전체. 특히 "인계 (셀프 리뷰 직전)")
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 명세 검토·사용자 결정·티켓 쓰기는 끝났고 다시 묻지 않는다. docs/journal/2026-10-22-25-model-rerun-tickets.md
+읽을 것: docs/journal/2026-10-23-02-model-rerun-tickets.md(전체. 특히 "인계 (셀프 리뷰 직전)")
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 명세 검토·사용자 결정·티켓 쓰기는 끝났고 다시 묻지 않는다. docs/journal/2026-10-23-02-model-rerun-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 티켓이 병합되면 결정표대로 구현으로 잇는다
 ```
@@ -234,3 +234,9 @@ pre-commit: `parallel-checks` 열 개(check-ticket, zizmor, lint-imports, check-
 - 07: "그 주석의 배수(0.1배)는 2026-10-13의 대조이고, 2.1.302의 결과 이벤트는 Sonnet 캐시 읽기를 공식 0.05배로 셈했다(대기열 432)"
 
 남긴 것: 명세 쪽 리뷰어가 따라가지 못한 앞 세션의 사실 문장 여섯은 이번 반영과 무관하고 티켓 쪽 리뷰어가 경로와 이름이 있는 것까지는 봤다. 동작은 그 함수를 옮기거나 부르는 구현 세션이 본다.
+
+### 커밋 (c4ccf8d6)
+
+커밋 직전에 `git branch --show-current`가 `docs/model-rerun-tickets`였고 `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 했다. pre-commit은 `parallel-checks` 열 개가 모두 Passed였고 한 바퀴가 299.97초였다. 표·줄 구분 문자·변이 표·인용 대조(경고 없음)·커밋 메시지도 Passed였다. ruff 둘은 같은 까닭으로 `Skipped`라 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `959 files already formatted`였다.
+
+푸시 전에 `git fetch origin`을 하니 origin/main이 `ebaed667`(#354, ticket-for-every-pr 05)로 움직였다. next-session의 바뀐 문장은 지시문 라벨을 바꿨을 때 첫 턴 훅이 내는 알림이고, 대기열의 바뀐 행은 404·420의 회차뿐이라 이 브랜치의 파일에 닿는 규약이 아니다. 합친 뒤 `tools/sibling_overlap.py`가 이 일지(`2026-10-22-25`)가 main의 최신 일지 `2026-10-22-29`보다 이름순으로 앞이라고 알려, `--move`로 `2026-10-23-02`로 옮겼다. 도구가 파일 이름과 명세·티켓 01·05·06·11·이 일지의 인용을 고쳤고, 옛 번호와 줄인 꼴(`22-25`, `일지 25`)의 잔존은 Grep으로 0이었다.
