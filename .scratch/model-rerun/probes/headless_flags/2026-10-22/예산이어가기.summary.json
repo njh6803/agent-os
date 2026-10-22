@@ -1,0 +1,240 @@
+{
+  "exit": 0,
+  "lines": 7,
+  "event_types": [
+    "assistant",
+    "rate_limit_event",
+    "result",
+    "system"
+  ],
+  "limited": false,
+  "rate_limit": {
+    "status": "allowed_warning",
+    "rateLimitType": "seven_day",
+    "utilization": 0.97,
+    "unifiedWindows": {
+      "five_hour": {
+        "utilization": 0.01,
+        "resetsAt": 1792663800
+      },
+      "seven_day": {
+        "utilization": 0.97,
+        "resetsAt": 1792962000
+      }
+    }
+  },
+  "init_keys": [
+    "additional_directories",
+    "agents",
+    "analytics_disabled",
+    "apiKeySource",
+    "capabilities",
+    "claude_code_version",
+    "cwd",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "mcp_servers",
+    "memory_paths",
+    "messaging_socket_path",
+    "model",
+    "original_cwd",
+    "output_style",
+    "per_turn_effort_active",
+    "permissionMode",
+    "plugins",
+    "powershell_path",
+    "product_feedback_disabled",
+    "session_id",
+    "skills",
+    "slash_commands",
+    "subtype",
+    "terminal_slash_commands",
+    "tools",
+    "type",
+    "uuid",
+    "view_mode"
+  ],
+  "init": {
+    "model": "claude-sonnet-5-5",
+    "permissionMode": "auto",
+    "mcp_servers": [],
+    "plugins": [
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "claude_code_version": "2.1.302",
+    "per_turn_effort_active": true,
+    "tools": [
+      "Task",
+      "Bash",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "DesignSync",
+      "Edit",
+      "EnterWorktree",
+      "ExitWorktree",
+      "Glob",
+      "Grep",
+      "ListAgents",
+      "Monitor",
+      "NotebookEdit",
+      "PowerShell",
+      "PushNotification",
+      "Read",
+      "RemoteTrigger",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "SendMessage",
+      "Skill",
+      "TaskStop",
+      "ToolSearch",
+      "WebFetch",
+      "WebSearch",
+      "Workflow",
+      "Write"
+    ]
+  },
+  "assistant_models": {
+    "claude-sonnet-5-5": 2
+  },
+  "nested_assistant_models": {},
+  "effort_keys_in_events": [],
+  "result_keys": [
+    "api_error_status",
+    "duration_api_ms",
+    "duration_ms",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "first_content_frame_ms",
+    "is_error",
+    "modelUsage",
+    "num_turns",
+    "permission_denials",
+    "queued_turn_count",
+    "result",
+    "result_index",
+    "safety_stops",
+    "session_id",
+    "stop_reason",
+    "subagent_stats",
+    "subtype",
+    "terminal_reason",
+    "time_to_request_ms",
+    "total_cost_usd",
+    "ttft_ms",
+    "ttft_stream_ms",
+    "type",
+    "usage",
+    "uuid"
+  ],
+  "result": {
+    "subtype": "success",
+    "is_error": false,
+    "terminal_reason": "completed",
+    "num_turns": 1,
+    "total_cost_usd": 0.0324183,
+    "session_id": "7ed3ed37-967f-4f98-97c3-78b8c5b3159c",
+    "permission_denials": [],
+    "result": "다시 적을 한 줄이 없습니다. 앞선 턴에서 Bash 호출이 중간에 끊겨 결과를 받지 못했고, a.txt, b.txt, c.txt는 읽지 못했습니다. 그래서 세 파일의 낱말을 이은 답은 만들지 못했습니다. 직전에 제가 쓴 \"No response requested.\"도 답이 아니었습니다.\n\n도구를 다시 써도 된다면 1단계부터 다시 진행하겠습니다."
+  },
+  "results": [
+    {
+      "subtype": "success",
+      "is_error": false,
+      "terminal_reason": "completed",
+      "num_turns": 1,
+      "total_cost_usd": 0.0324183,
+      "session_id": "7ed3ed37-967f-4f98-97c3-78b8c5b3159c",
+      "permission_denials": [],
+      "result": "다시 적을 한 줄이 없습니다. 앞선 턴에서 Bash 호출이 중간에 끊겨 결과를 받지 못했고, a.txt, b.txt, c.txt는 읽지 못했습니다. 그래서 세 파일의 낱말을 이은 답은 만들지 못했습니다. 직전에 제가 쓴 \"No response requested.\"도 답이 아니었습니다.\n\n도구를 다시 써도 된다면 1단계부터 다시 진행하겠습니다.",
+      "result_index": 0,
+      "stop_reason": "end_turn"
+    }
+  ],
+  "init_count": 1,
+  "model_usage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 4,
+      "outputTokens": 326,
+      "thinkingTokens": 78,
+      "cacheReadInputTokens": 38903,
+      "cacheCreationInputTokens": 6315,
+      "webSearchRequests": 0,
+      "costUSD": 0.0324183,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "tool_uses": [],
+  "arm": "예산이어가기",
+  "args": [
+    "-p",
+    "--model",
+    "claude-sonnet-5-5",
+    "--effort",
+    "low",
+    "--permission-mode",
+    "auto",
+    "--setting-sources",
+    "project,local",
+    "--strict-mcp-config",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--resume",
+    "7ed3ed37-967f-4f98-97c3-78b8c5b3159c",
+    "--max-budget-usd",
+    "0.01"
+  ],
+  "env_names": [
+    "APPDATA",
+    "COMSPEC",
+    "DISABLE_AUTOUPDATER",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PROGRAMDATA",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "transcript": {
+    "files": [
+      "C--Users-User-AppData-Local-Temp-rerun-probe-z1s5cs8a-repo/7ed3ed37-967f-4f98-97c3-78b8c5b3159c.jsonl"
+    ],
+    "effort": {
+      "low": 3,
+      "None": 1
+    },
+    "model": {
+      "claude-sonnet-5-5": 3,
+      "<synthetic>": 1
+    },
+    "nested": {}
+  }
+}

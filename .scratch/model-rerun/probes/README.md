@@ -1,0 +1,55 @@
+# model-rerun 프로브
+
+다시 풀기(지난 티켓을 갈래마다 다시 푸는 측정)의 프로브다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 `.scratch/model-rerun/spec.md`의 "러너가 기대는 `claude -p`의 동작" 결정이다. 설계(`.scratch/model-rerun/design.md`)는 이 동작을 파일럿(8절의 2·3·4·5·7)에서 보겠다고 미뤘다. 결과에 따라 러너의 모양이 달라지므로 명세 단계에서 먼저 쟀다(`to-spec` 3단계). 전용 설정 폴더와 다시 풀기 계정(njh6803)이 드는 확인은 아직 파일럿 몫이다.
+
+본 측정의 사전 등록 절은 아직 없다. 파일럿과 과제 고르기 뒤, 본 측정의 첫 회차 전에 이 파일에 더하고 내용의 해시로 고정한다(설계 6절 머리).
+
+## 돌리는 법
+
+워크트리 루트에서 친다. 출력 디렉터리는 저장소 밖(세션 스크래치패드)에 둔다. 원본(`<갈래>.jsonl`)에는 세션 셸의 환경 변수 이름과 임시 폴더 경로가 실려 대개 커밋하지 않는다.
+
+```sh
+uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py <출력 디렉터리> [--arm <갈래>]
+```
+
+저장한 요약만으로 다시 판정하는 길이 둘 있다. `claude`를 띄우지 않는다.
+
+```sh
+uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py --judge .scratch/model-rerun/probes/headless_flags/2026-10-22
+uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py --prices .scratch/model-rerun/probes/headless_flags/2026-10-22
+```
+
+`--judge`는 요약마다 그 갈래가 재려던 상황의 표지(아래 표의 "재는 것"마다 하나)가 있는지 보고 `[측정] <이름>`이나 `[측정 아님: <까닭>] <이름>`을 한 줄씩 찍는다. 끝에 회차 셈(`측정 12회차, 측정 아님 0회차`)을 찍고, 하나라도 측정이 아니거나 요약이 없으면 종료 1이다. 회차 셈과 `claude` 출력 읽기는 `tools/probe_kit.py`의 `Rounds`·`LineReader`가 한다(`.claude/rules/probes.md`). `--prices`는 요약의 `modelUsage`마다 `costUSD`가 공식 단가(`docs/model-selection.md` 2절)로 셈한 값과 상대 차이 10억분의 1 안에서 같은지를 캐시 쓰기 배수 둘(5분 1.25배, 1시간 2배)로 보고, 어느 배수와도 맞지 않는 모델이 있거나 견준 칸이 하나도 없으면 종료 1이다.
+
+| 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
+|---|---|---|---|---|
+| `headless_flags/`(프로브 `headless_flags.py`, 2026-10-22 기록 `2026-10-22/`: 갈래 일곱의 요약 열 개, `서브` 갈래를 더 돈 요약 둘 `서브-4`·`서브-5`, `서브`의 둘째 실행 원본 `서브-2.jsonl`) | 다시 풀기 러너가 기대는 `claude -p`의 동작. 결과 이벤트의 비용 칸과 그 셈, `--resume`에서 비용이 누적되는지, `--max-budget-usd`가 구독 로그인에서 멈추는지와 무엇을 세는지, 노력과 모델이 실리는 자리, 서브에이전트의 기록과 결과 이벤트의 수, 저장소의 막는 규칙이 auto 모드에서 막는지(양성 대조는 규칙 없는 같은 저장소), `AskUserQuestion`이 있는지, 한도 이벤트의 칸. 저장한 요약으로는 갈래마다의 측정 표지(`--judge`)와, 비용 칸이 공식 단가의 어느 캐시 쓰기 배수와 맞는지(`--prices`) | `spec.md` "러너가 기대는 `claude -p`의 동작", "회차 기록"의 공식 단가 셈 | `claude` CLI와 로그인. sonnet 세션 일곱, 호출 열. 셋째 실행의 결과 비용을 세션마다 마지막 값으로 더하면 약 $0.30이다. 시간은 재지 않았다. `--judge`와 `--prices`는 커밋한 요약만 읽는다 | Claude Code 2.1.302, 기본 설정 폴더의 njh4803(max), Windows 10 이 PC |
+
+## 2026-10-22 결과: headless 동작
+
+측정이었다. 갈래를 더해 가며 갈래마다 두 번에서 네 번 돌렸고(`서브`만 넷), 기록마다 init과 result 이벤트가 있었으며 한도에 막힌 회차가 없었다(프로브의 종료 코드 0). 그때의 프로브는 갈래마다의 표지를 보지 않았다. 갈래마다의 표지를 더한 판의 `--judge`로 커밋한 요약 열둘을 다시 판정하니 열둘 모두 측정이었다(종료 0). 그 뒤 프로브의 회차 셈과 읽기를 `tools/probe_kit.py`로 옮겼다. 옮긴 판은 `claude`를 다시 띄우지 않았다. 커밋한 요약의 `--judge`가 `측정 12회차, 측정 아님 0회차`로 종료 0, `--prices`가 종료 0이었고, 세션 스크래치에 둔 요약 다섯(표지를 지운 넷과 그대로 둔 하나, 커밋하지 않았다)의 `--judge`는 넷을 측정 아님으로 세어 종료 1이었다. 읽기와 회차 셈은 세션 스크래치의 가짜 시험으로 손으로 봤다. 가짜 자식 프로세스로 읽기 넷(보통 끝, 풀 수 없는 바이트, 제한 시간을 넘겨 매달려 64초 뒤 꺼짐, 손자가 stdout을 쥔 채 남아 14초 뒤 돌아옴), 가짜 `drive`로 회차 셈 둘(첫 호출이 예외로 끝나면 이어 부르기가 돌지 않고 측정 아님, 첫 호출이 끝나면 이어 부르기가 돈다)이 모두 기대대로였다. 커밋한 요약은 일곱 갈래를 한 번에 돈 실행(아래에서 셋째 실행)의 판과 그 뒤에 더 돈 `서브-4`·`서브-5`다. 그 판이 요약에 init의 `tools`, 한도 이벤트의 칸, 결과 이벤트 전부를 남긴다. 아래의 수는 그 요약의 것이다. 첫째와 둘째 실행(그 앞의 여섯 갈래를 한 번에 돈 실행과 그 뒤에 따로 돈 `서브`)은 `서브-2.jsonl` 밖의 원본을 커밋하지 않았다. 아래에서 그 실행을 드는 자리마다 무엇으로 봤는지 적는다.
+
+- **결과 이벤트에 비용 칸이 있다.** 결과 이벤트에 `total_cost_usd`와 모델별 `modelUsage`(토큰, `costUSD`, `costBasis: "list"`)가 있다. init의 `apiKeySource`는 `none`이었다(구독 로그인, `서브-2.jsonl`).
+- **비용 칸은 공식 단가로 셈한 값과 같고, 캐시 쓰기의 배수는 그 모델의 응답이 쓴 캐시 수명과 함께 갈렸다.** `--prices`로 커밋한 요약 열둘의 `modelUsage` 열여섯 칸을 공식 단가(`docs/model-selection.md` 2절. 캐시 읽기는 Sonnet $0.10, Haiku $0.01)로 셈해 대니 열여섯 모두 한 배수와 맞았다(종료 0). `claude-sonnet-5-5` 열둘은 모두 1시간(입력의 2배), `서브`·`서브-4`·`서브-5`의 서브에이전트 `claude-haiku-5-5` 셋은 모두 5분(1.25배)이었고, `거부대조`의 Haiku는 캐시 쓰기가 0이라 두 배수가 함께 맞았다. `서브`의 세션 기록(본 세션 파일과 그 아래 `subagents/`)을 응답마다 보니 Sonnet 응답의 `cache_creation`은 모두 `ephemeral_1h_input_tokens`에, Haiku 응답은 모두 `ephemeral_5m_input_tokens`에 실렸다(요약의 세션 id로 기본 설정 폴더의 기록 파일을 열어 손으로 봤다). 이 기록에서는 모델과 수명이 함께 갈려, "배수는 모델이 정한다"는 해석과 "응답의 캐시 수명이 정한다"는 해석을 가르지 못한다. 뒤의 것은 공식 문서의 배수(사용량 장부 `tools/token_report.py`의 단가표 주석과 `_cache_writes`)에 기댄다. 이 기록에서는 응답마다 수명으로 나눠 셈해도 모델마다 한 배수로 셈해도 같은 값이 나오고, 다른 모델(Opus)에서 두 셈이 갈리는지는 보지 않았다. 캐시 읽기를 `docs/model-selection.md` 3절과 장부 단가표의 Sonnet $0.20으로 셈하면 캐시 읽기가 있는 Sonnet 열둘이 모두 맞지 않는다(캐시 읽기 토큰 × $0.10만큼 커진다).
+- **`--resume`의 비용과 토큰은 세션 누적이다.** `모양`(도구 호출 넷, 다섯 차례)이 $0.04218, 같은 세션을 이어 부른 `이어가기`(도구 없는 한 줄 답)가 $0.04503이었고, `modelUsage`의 출력 토큰도 355에서 373으로, 캐시 읽기가 108,182에서 131,538로 늘었다. 그 호출의 몫이었다면 출력 토큰은 한 줄 답의 몫(373 − 355 = 18)에 가까웠을 것이다. `누적이어가기`도 같다($0.02538에서 $0.04858로, 출력 5에서 188로). `num_turns`는 호출의 몫이다(`이어가기` 1). 그래서 회차의 비용은 세션마다 마지막 결과 이벤트의 `total_cost_usd`이고, 결과 이벤트마다 더하면 이어 부른 몫을 두 번 센다.
+- **`--max-budget-usd`는 구독 로그인에서 멈춘다.** `예산`(`모양`과 같은 질문, 예산 $0.01)은 첫 응답 뒤에 결과 `error_max_budget_usd`, `terminal_reason: budget_exhausted`, 종료 코드 1로 끝났다. 비용은 $0.02670으로 예산을 넘었다. 예산은 응답이 끝난 뒤에 재고, 넘긴 응답이 낸 도구 호출(Bash)은 결과 없이 돌지 않았다. 양성 대조는 같은 질문을 예산 없이 마친 `모양`이다.
+- **예산은 세션 누적이 아니라 그 호출의 몫을 센다.** `누적`이 새 세션을 $0.02538에 열고, `누적이어가기`가 그 세션을 예산 $0.02로 이어 불렀다. 시작할 때 이미 누적이 예산을 넘었는데도 첫 응답의 Bash가 돌았고, 둘째 응답 뒤에 `budget_exhausted`로 멈췄다(`num_turns` 2, 둘째 응답의 Read는 돌지 않았다). 그 호출의 몫은 $0.04858 − $0.02538 = $0.02320이다. 누적을 셌다면 첫 응답 뒤에 멈춰 그 응답의 Bash도 돌지 않았을 것이다(`예산`에서 예산을 넘긴 응답의 도구는 돌지 않았다). `예산이어가기`(같은 예산 $0.01로 도구 없는 한 줄 답)도 멈추지 않고 끝났지만, 다음 응답이 없어 멈출 자리가 없었다는 해석과 가르지 못해 `누적`을 더했다.
+- **노력은 stream-json에 없고 세션 기록 파일에 있다.** 커밋한 요약 열둘 모두 이벤트에 `effort` 키가 없었다(이벤트의 키를 모두 훑는 `effort_keys_in_events`가 빈다). 원본을 커밋하지 않은 세 실행의 `.jsonl`을 모두 훑어도 큰따옴표로 싼 문자열 가운데 이름에 effort가 든 것은 `effort`와 `per_turn_effort_active`(init의 칸, 값 `true`) 둘뿐이었고, 앞의 것은 init의 슬래시 명령 목록에 든 명령 이름이었다(세션 스크래치 스크립트 `init_tools.py`로 세고, 셋째 실행 `질문`의 원본을 `grep -o`로 앞뒤까지 봤다. 셋째 실행 `모양`의 원본에서 `grep -c '"effort":'`는 0이었다. 손으로 봤다). 세션 기록 파일(`<설정 폴더>/projects/<작업 폴더 slug>/<세션 id>.jsonl`)의 assistant 줄에 `effort`(`low`)와 `message.model`이 있다. 모델이 `<synthetic>`이고 `effort`가 없는 줄은 `예산이어가기`의 기록에만 있었다(요약의 `transcript.model`이 `예산` `claude-sonnet-5-5` 1, `누적이어가기` 3, `예산이어가기` 3과 `<synthetic>` 1). 예산에 끊긴 세션(`예산`)을 이어 부른 기록이고, 끊긴 뒤 이어 부르지 않은 `누적이어가기`에는 없었다. 무엇이 그 줄을 만드는지는 가르지 않았다. 기록 파일의 폴더 이름은 작업 폴더의 경로에서 나온다.
+- **서브에이전트의 기록은 본 세션 기록 옆의 폴더에 따로 있다.** `서브`는 Task 도구로 `model: haiku`인 서브에이전트를 띄웠다. 서브에이전트의 응답은 stream-json에 `parent_tool_use_id`가 붙은 assistant 이벤트로 `claude-haiku-5-5`였고, 세션 기록은 `<세션 id>/subagents/agent-<id>.jsonl`에 `effort: low`, `claude-haiku-5-5`로 있었다. 본 세션 기록 파일의 assistant 줄은 모두 `claude-sonnet-5-5`였다. 세 요약(`서브`, `서브-4`, `서브-5`)이 모두 그랬다. 서브에이전트에 준 노력은 없었는데 본 세션과 같은 `low`가 실렸다. 모든 본 세션이 `low`였으므로, 그 값이 본 세션에서 물려받은 것인지 서브에이전트의 기본값인지는 가르지 않았다.
+- **한 호출에 결과 이벤트가 여럿일 수 있다.** 네 번 돈 `서브` 가운데 둘째 실행 한 번(`서브-2.jsonl`)에서 Task 도구가 서브에이전트를 백그라운드로 띄웠다(`Async agent launched successfully`). 본 세션이 "아직 실행 중"이라는 답으로 차례를 끝낸 뒤, 서브에이전트가 끝나자 init이 다시 오고 본 세션이 낱말을 답했다. 프로세스는 서브에이전트가 끝날 때까지 기다렸다. 결과 이벤트는 셋이었고(`result_index` 0·1·2), 글은 차례로 "아직 실행 중" 답, 낱말, 빈 글(`num_turns` 0)이었으며, 셋 모두 같은 `total_cost_usd`(세션 누적)를 실었다. 나머지 세 번은 서브에이전트의 보고가 그 차례 안에 돌아와 결과 이벤트가 하나였다. 그래서 마지막 결과 이벤트의 글이 빌 수 있다.
+- **저장소의 막는 규칙이 auto 모드에서 막는다.** `거부`는 저장소의 `.claude/settings.local.json`에 `Bash(gh:*)`, `Bash(git push:*)`, `Bash(*open_session.ps1*)`, 저장소 밖 폴더의 `Read(//c/…/outside/**)`(드라이브 문자는 소문자, 콜론 없음), `Skill(probe-open)`, `WebFetch(domain:github.com)`을 두었다. 여섯 행동이 모두 결과의 `permission_denials`에 들었고, 도구 결과가 오류(`Permission to use Bash with command … has been denied.`, `File is in a directory that is denied by your permission settings.`, `Skill execution blocked by permission rules`, `WebFetch denied access to domain:github.com.`)였으며, 스크립트가 쓰는 표지 파일(`opened.txt`)이 생기지 않았고, 답에 바깥 파일의 표지 낱말이 없었다. 양성 대조 `거부대조`(규칙 없는 같은 저장소)에서는 여섯이 모두 돌았다. `gh --version`이 판을 찍었고, `git push origin main`이 로컬 bare 원격에 `Everything up-to-date`를 냈고, 표지 파일이 생겼고, 바깥 파일과 스킬을 읽었고, WebFetch가 페이지 제목을 냈다. 그래서 auto 모드의 분류기는 이 여섯 가운데 아무것도 스스로 막지 않았고, 막은 것은 규칙이다.
+- **막는 규칙을 둔 세션에는 PowerShell 도구가 없었다.** `거부`의 init `tools`는 27개로, 다른 갈래의 28개에서 `PowerShell`만 빠졌다. 커밋한 요약 열둘 가운데 `PowerShell`이 없는 것은 `거부` 하나다. 원본을 커밋하지 않은 세 실행에서도 그랬다(세 실행의 원본마다 첫 init의 도구 수와 `PowerShell` 유무를 세션 스크래치 스크립트 `init_tools.py`로 찍어 손으로 봤다. `거부`만 27개이고 `PowerShell`이 없었다). 규칙이 Bash 규칙이어서인지 `settings.local.json`이 있어서인지는 가르지 않았다.
+- **`modelUsage`에 갈래 밖의 모델이 실린다.** `거부대조`의 `modelUsage`에 `claude-haiku-5-5`(출력 287토큰, $0.00093)가 있었다. 서브에이전트가 없었고 assistant 줄과 세션 기록의 모델은 모두 `claude-sonnet-5-5`였다. 그 갈래에만 있던 것은 WebFetch의 실행과 auto 모드가 위험할 수 있는 명령(푸시, 스크립트)을 판정한 일이고, 둘 가운데 무엇이 Haiku를 불렀는지는 가르지 않았다. 그래서 `modelUsage`의 모델 목록은 갈래의 모델과 서브에이전트의 모델만이 아니다.
+- **`-p`에는 `AskUserQuestion`이 없다.** 모든 갈래의 init `tools`에 그 도구가 없었다. `질문`에서 모델이 `ToolSearch`로 `select:AskUserQuestion`을 찾았고 결과가 `No matching deferred tools found`였으며, 답은 그 도구를 쓸 수 없다고 했다. init `tools`에는 스키마를 늦게 싣는 도구도 든다. `WebFetch`가 목록에 있으면서 `거부`·`거부대조`에서 `ToolSearch`로 실린 뒤 불렸다.
+- **바깥에 닿는 도구가 init에 있다.** `--strict-mcp-config`로 `mcp_servers`는 비었고, 플러그인은 내장 셋(`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`)이었다. 도구 목록에는 `SendMessage`, `ListAgents`, `RemoteTrigger`, `PushNotification`, `DesignSync`, `CronCreate`, `ScheduleWakeup`, `Workflow`, `Monitor`, `EnterWorktree`, `WebSearch`가 있었다. 이 도구들을 막는 규칙은 재지 않았다.
+- **허용 목록 환경으로 로그인이 된다.** 프로브는 `claude`를 허용 목록(요약의 `env_names`)으로 지은 환경으로 띄웠고 모든 갈래가 구독 로그인으로 돌았다. 세션 셸에는 허용 목록 밖의 이름이 더 있었다(`CLAUDECODE`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_EFFORT`, `MSYSTEM` 등. Claude Code와 Git Bash가 넣는 이름이다). 허용 목록이 토큰을 거르는지는 이 프로브로 보이지 못한다. 프로브를 띄운 셸에 `GH_TOKEN`·`GITHUB_TOKEN`이 처음부터 없었다(이름의 수만 세어 손으로 봤다, 0). 거르는 것은 러너가 허용 목록으로 환경을 짓는 코드의 시험이 본다.
+- **한도 이벤트에 사용률이 있다.** `rate_limit_event`의 `rate_limit_info`에 `status`, `rateLimitType`, `utilization`, `unifiedWindows`(`five_hour`, `seven_day`마다 `utilization`과 `resetsAt`)가 있었다. 그때 njh4803은 `seven_day` 0.97, `status: allowed_warning`이었다. `예산`처럼 첫 응답 뒤에 멈춘 호출에는 그 이벤트가 없었다.
+
+못 본 것.
+
+- 전용 `CLAUDE_CONFIG_DIR`와 njh6803 계정. 기록이 그 폴더 아래에만 생기는지, 그 폴더의 로그인으로 도는지는 파일럿(설계 8절 1)이 본다.
+- 러너의 `--setting-sources user,project,local`. 이 프로브는 사람의 기본 설정 폴더로 돌아, 사람의 사용자 설정(허용 규칙, 훅, 출력 스타일)이 섞이지 않게 `project,local`로 `user`를 뺐다(요약의 `args`). 러너의 `user`는 전용 설정 폴더의 설정이다. 그 설정이 위 동작을 바꾸지 않는지도 파일럿이 본다.
+- 막는 규칙을 다른 꼴의 명령으로 비켜 가는 길(따옴표, 다른 셸, 경로를 바꾼 읽기). 다시 풀기는 오염 검사가 도구 입력을 훑어 그 몫을 받는다.
+- 갈래의 모델과 노력 바꾸기. 이 프로브는 본 세션을 `claude-sonnet-5-5`·`low` 하나로만 돈다. Opus와 다른 노력에서 기록 파일의 `effort` 값이 `--effort`와 같은지, Opus의 `costUSD`가 공식 단가와 같은지는 파일럿(설계 8절 2·4)이 본다.
+- 서브에이전트가 백그라운드로 뜨는 때를 가르는 것. 네 번 가운데 한 번이었고 무엇이 갈랐는지 보지 않았다.
+- 데스크톱 앱 세션. 이 동작은 `claude -p`의 것이다.
