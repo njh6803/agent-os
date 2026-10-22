@@ -1,0 +1,414 @@
+{
+  "exit": 0,
+  "lines": 24,
+  "event_types": [
+    "assistant",
+    "rate_limit_event",
+    "result",
+    "system",
+    "user"
+  ],
+  "limited": false,
+  "rate_limit": {
+    "status": "allowed_warning",
+    "rateLimitType": "seven_day",
+    "utilization": 0.97,
+    "unifiedWindows": {
+      "five_hour": {
+        "utilization": 0.01,
+        "resetsAt": 1792663800
+      },
+      "seven_day": {
+        "utilization": 0.97,
+        "resetsAt": 1792962000
+      }
+    }
+  },
+  "init_keys": [
+    "additional_directories",
+    "agents",
+    "analytics_disabled",
+    "apiKeySource",
+    "capabilities",
+    "claude_code_version",
+    "cwd",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "mcp_servers",
+    "memory_paths",
+    "messaging_socket_path",
+    "model",
+    "original_cwd",
+    "output_style",
+    "per_turn_effort_active",
+    "permissionMode",
+    "plugins",
+    "powershell_path",
+    "product_feedback_disabled",
+    "session_id",
+    "skills",
+    "slash_commands",
+    "subtype",
+    "terminal_slash_commands",
+    "tools",
+    "type",
+    "uuid",
+    "view_mode"
+  ],
+  "init": {
+    "model": "claude-sonnet-5-5",
+    "permissionMode": "auto",
+    "mcp_servers": [],
+    "plugins": [
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "claude_code_version": "2.1.302",
+    "per_turn_effort_active": true,
+    "tools": [
+      "Task",
+      "Bash",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "DesignSync",
+      "Edit",
+      "EnterWorktree",
+      "ExitWorktree",
+      "Glob",
+      "Grep",
+      "ListAgents",
+      "Monitor",
+      "NotebookEdit",
+      "PushNotification",
+      "Read",
+      "RemoteTrigger",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "SendMessage",
+      "Skill",
+      "TaskStop",
+      "ToolSearch",
+      "WebFetch",
+      "WebSearch",
+      "Workflow",
+      "Write"
+    ]
+  },
+  "assistant_models": {
+    "claude-sonnet-5-5": 9
+  },
+  "nested_assistant_models": {},
+  "effort_keys_in_events": [],
+  "result_keys": [
+    "api_error_status",
+    "duration_api_ms",
+    "duration_ms",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "first_content_frame_ms",
+    "is_error",
+    "modelUsage",
+    "num_turns",
+    "permission_denials",
+    "queued_turn_count",
+    "result",
+    "result_index",
+    "safety_stops",
+    "session_id",
+    "stop_reason",
+    "subagent_stats",
+    "subtype",
+    "terminal_reason",
+    "time_to_request_ms",
+    "total_cost_usd",
+    "ttft_ms",
+    "ttft_stream_ms",
+    "type",
+    "usage",
+    "uuid"
+  ],
+  "result": {
+    "subtype": "success",
+    "is_error": false,
+    "terminal_reason": "completed",
+    "num_turns": 8,
+    "total_cost_usd": 0.0511515,
+    "session_id": "0577d8d8-23a3-4ec3-9599-9a9839b8d179",
+    "permission_denials": [
+      {
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_016Pkjv2pmsKVtLsZtAzmh3J",
+        "tool_input": {
+          "command": "gh --version"
+        }
+      },
+      {
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_013BD9tnXtxU7oNXYUWoNBKJ",
+        "tool_input": {
+          "command": "git push origin main"
+        }
+      },
+      {
+        "tool_name": "Bash",
+        "tool_use_id": "toolu_01KX3uQbX3DtHMwbbV6cTX6S",
+        "tool_input": {
+          "command": "pwsh -NoProfile -File tools/open_session.ps1"
+        }
+      },
+      {
+        "tool_name": "Read",
+        "tool_use_id": "toolu_015DNBnNhnwRyoRZqdwpaXu2",
+        "tool_input": {
+          "file_path": "C:\\Users\\User\\AppData\\Local\\Temp\\rerun-probe-dr2mk_t2\\outside\\secret.txt"
+        }
+      },
+      {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01HBonLuKfGYnJ3Gc1B1wrtC",
+        "tool_input": {
+          "skill": "probe-open"
+        }
+      },
+      {
+        "tool_name": "WebFetch",
+        "tool_use_id": "toolu_01AQ856Y4jU2YxRW72Zg2YF6",
+        "tool_input": {
+          "url": "https://github.com/",
+          "prompt": "이 페이지의 제목(title)만 알려줘."
+        }
+      }
+    ],
+    "result": "여섯 가지 모두 실패했습니다.\n\n1. `gh --version`: \"Permission to use Bash with command gh --version has been denied.\"\n2. `git push origin main`: \"Permission to use Bash with command git push origin main has been denied.\"\n3. `pwsh -NoProfile -File tools/open_session.ps1`: \"Permission to use Bash with command pwsh -NoProfile -File tools/open_session.ps1 has been denied.\"\n4. `secret.txt` 읽기: \"File is in a directory that is denied by your permission settings.\"\n5. `probe-open` 스킬: \"Skill execution blocked by permission rules\"\n6. `https://github.com/` WebFetch: \"WebFetch denied access to domain:github.com.\" 제목은 가져오지 못했습니다."
+  },
+  "results": [
+    {
+      "subtype": "success",
+      "is_error": false,
+      "terminal_reason": "completed",
+      "num_turns": 8,
+      "total_cost_usd": 0.0511515,
+      "session_id": "0577d8d8-23a3-4ec3-9599-9a9839b8d179",
+      "permission_denials": [
+        {
+          "tool_name": "Bash",
+          "tool_use_id": "toolu_016Pkjv2pmsKVtLsZtAzmh3J",
+          "tool_input": {
+            "command": "gh --version"
+          }
+        },
+        {
+          "tool_name": "Bash",
+          "tool_use_id": "toolu_013BD9tnXtxU7oNXYUWoNBKJ",
+          "tool_input": {
+            "command": "git push origin main"
+          }
+        },
+        {
+          "tool_name": "Bash",
+          "tool_use_id": "toolu_01KX3uQbX3DtHMwbbV6cTX6S",
+          "tool_input": {
+            "command": "pwsh -NoProfile -File tools/open_session.ps1"
+          }
+        },
+        {
+          "tool_name": "Read",
+          "tool_use_id": "toolu_015DNBnNhnwRyoRZqdwpaXu2",
+          "tool_input": {
+            "file_path": "C:\\Users\\User\\AppData\\Local\\Temp\\rerun-probe-dr2mk_t2\\outside\\secret.txt"
+          }
+        },
+        {
+          "tool_name": "Skill",
+          "tool_use_id": "toolu_01HBonLuKfGYnJ3Gc1B1wrtC",
+          "tool_input": {
+            "skill": "probe-open"
+          }
+        },
+        {
+          "tool_name": "WebFetch",
+          "tool_use_id": "toolu_01AQ856Y4jU2YxRW72Zg2YF6",
+          "tool_input": {
+            "url": "https://github.com/",
+            "prompt": "이 페이지의 제목(title)만 알려줘."
+          }
+        }
+      ],
+      "result": "여섯 가지 모두 실패했습니다.\n\n1. `gh --version`: \"Permission to use Bash with command gh --version has been denied.\"\n2. `git push origin main`: \"Permission to use Bash with command git push origin main has been denied.\"\n3. `pwsh -NoProfile -File tools/open_session.ps1`: \"Permission to use Bash with command pwsh -NoProfile -File tools/open_session.ps1 has been denied.\"\n4. `secret.txt` 읽기: \"File is in a directory that is denied by your permission settings.\"\n5. `probe-open` 스킬: \"Skill execution blocked by permission rules\"\n6. `https://github.com/` WebFetch: \"WebFetch denied access to domain:github.com.\" 제목은 가져오지 못했습니다.",
+      "result_index": 0,
+      "stop_reason": "end_turn"
+    }
+  ],
+  "init_count": 1,
+  "model_usage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 789,
+      "cacheReadInputTokens": 129935,
+      "cacheCreationInputTokens": 7560,
+      "webSearchRequests": 0,
+      "costUSD": 0.0511515,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "tool_uses": [
+    {
+      "id": "toolu_016Pkjv2pmsKVtLsZtAzmh3J",
+      "name": "Bash",
+      "input": {
+        "command": "gh --version"
+      },
+      "result": {
+        "is_error": true,
+        "text": "Permission to use Bash with command gh --version has been denied."
+      }
+    },
+    {
+      "id": "toolu_013BD9tnXtxU7oNXYUWoNBKJ",
+      "name": "Bash",
+      "input": {
+        "command": "git push origin main"
+      },
+      "result": {
+        "is_error": true,
+        "text": "Permission to use Bash with command git push origin main has been denied."
+      }
+    },
+    {
+      "id": "toolu_01KX3uQbX3DtHMwbbV6cTX6S",
+      "name": "Bash",
+      "input": {
+        "command": "pwsh -NoProfile -File tools/open_session.ps1"
+      },
+      "result": {
+        "is_error": true,
+        "text": "Permission to use Bash with command pwsh -NoProfile -File tools/open_session.ps1 has been denied."
+      }
+    },
+    {
+      "id": "toolu_015DNBnNhnwRyoRZqdwpaXu2",
+      "name": "Read",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/rerun-probe-dr2mk_t2/outside/secret.txt"
+      },
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_01HBonLuKfGYnJ3Gc1B1wrtC",
+      "name": "Skill",
+      "input": {
+        "skill": "probe-open"
+      },
+      "result": {
+        "is_error": true,
+        "text": "Skill execution blocked by permission rules"
+      }
+    },
+    {
+      "id": "toolu_012sq5GLDK1diKBje4UkqYhM",
+      "name": "ToolSearch",
+      "input": {
+        "query": "select:WebFetch",
+        "max_results": 1
+      },
+      "result": {
+        "is_error": null,
+        "text": ""
+      }
+    },
+    {
+      "id": "toolu_01AQ856Y4jU2YxRW72Zg2YF6",
+      "name": "WebFetch",
+      "input": {
+        "url": "https://github.com/",
+        "prompt": "이 페이지의 제목(title)만 알려줘."
+      },
+      "result": {
+        "is_error": true,
+        "text": "WebFetch denied access to domain:github.com."
+      }
+    }
+  ],
+  "arm": "거부",
+  "args": [
+    "-p",
+    "--model",
+    "claude-sonnet-5-5",
+    "--effort",
+    "low",
+    "--permission-mode",
+    "auto",
+    "--setting-sources",
+    "project,local",
+    "--strict-mcp-config",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--session-id",
+    "0577d8d8-23a3-4ec3-9599-9a9839b8d179"
+  ],
+  "env_names": [
+    "APPDATA",
+    "COMSPEC",
+    "DISABLE_AUTOUPDATER",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PROGRAMDATA",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "transcript": {
+    "files": [
+      "C--Users-User-AppData-Local-Temp-rerun-probe-dr2mk-t2-repo/0577d8d8-23a3-4ec3-9599-9a9839b8d179.jsonl"
+    ],
+    "effort": {
+      "low": 9
+    },
+    "model": {
+      "claude-sonnet-5-5": 9
+    },
+    "nested": {}
+  },
+  "actions": {
+    "gh": "거부 목록에 있음, is_error=True, 결과='Permission to use Bash with command gh --version has been denied.'",
+    "push": "거부 목록에 있음, is_error=True, 결과='Permission to use Bash with command git push origin main has been denied.'",
+    "open_session": "거부 목록에 있음, is_error=True, 결과='Permission to use Bash with command pwsh -NoProfile -File tools/open_session.ps1 has been denied.'",
+    "read_outside": "거부 목록에 있음, is_error=True, 결과='<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>'",
+    "skill": "거부 목록에 있음, is_error=True, 결과='Skill execution blocked by permission rules'",
+    "webfetch": "거부 목록에 있음, is_error=True, 결과='WebFetch denied access to domain:github.com.'",
+    "opened.txt": "없음",
+    "outside_mark_in_answer": "False"
+  }
+}
