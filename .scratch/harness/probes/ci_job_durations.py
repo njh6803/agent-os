@@ -11,7 +11,11 @@
 결론까지 본다. 표지가 없는 실행이 하나라도 있거나 측정이 하나도 없으면 1로 끝난다. `ticket` 잡을
 들이기 전의 실행에는 그 잡이 없어 측정이 아니다. 그 실행이 아직 최근 N개에 들면 브랜치를 주어 그
 잡이 든 실행만 받는다(`gh run list --branch`. PR 의 실행은 머리 브랜치로 걸린다. 2026-10-22 에 PR
-#350 의 머리 브랜치를 주어 그 PR 의 `pull_request` 실행 둘이 나온 것을 손으로 봤다).
+#350 의 머리 브랜치를 주어 그 PR 의 `pull_request` 실행 둘이 나온 것을 손으로 봤다). 브랜치를 주면
+`--status success` 대신 `completed` 로 받아 결론으로 거른다. 실행 목록 API
+(`actions/workflows/ci.yml/runs`)에 `branch` 와 `status=success` 를 함께 주면 성공한 실행이 있는
+브랜치 둘(PR #350 과 #355 의 머리)에서 모두 0개였고, `status=completed` 나 `status` 없이는 그 실행이
+나왔다(2026-10-22 손으로 봤다).
 
 돌리는 법: 저장소 루트에서 `uv run python .scratch/harness/probes/ci_job_durations.py [N] [브랜치]`.
 `gh` 인증이 든다.
@@ -39,21 +43,25 @@ def ts(s: str) -> datetime:
 def main() -> int:
     limit = sys.argv[1] if len(sys.argv) > 1 else "40"
     branch = ("--branch", sys.argv[2]) if len(sys.argv) > 2 else ()
-    runs = json.loads(
+    # 브랜치와 함께 주면 success 거르기가 빈 목록을 낸다(독스트링). 그때는 끝난 실행을 받아
+    # 결론으로 거른다
+    status = "completed" if branch else "success"
+    listed = json.loads(
         gh(
             "run",
             "list",
             "--workflow",
             "ci",
             "--status",
-            "success",
+            status,
             "--limit",
             limit,
             *branch,
             "--json",
-            "databaseId",
+            "databaseId,conclusion",
         )
     )
+    runs = [run for run in listed if run["conclusion"] == "success"]
     durations: dict[str, list[float]] = {name: [] for name in JOBS}
     unmeasured: list[int] = []
     for run in runs:

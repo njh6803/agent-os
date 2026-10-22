@@ -206,3 +206,13 @@ open-session을 부른다 2026-10-22T14:21:26Z
 - 티켓 `Status:`를 done으로 바꾸고, 이 세션까지 확인한 체크박스를 채웠다. 남긴 셋은 `timeout-minutes`(초록 실행으로 잰 뒤), 실제 실행의 첫 항목(초록을 본 뒤), 일지 "다음"의 전환 갈래(단계를 닫을 때)다.
 - 커밋 직전의 `tools/sibling_overlap.py`가 1로 끝났다. 그사이 main이 `19bbfa0`로 움직여 최신 일지가 `2026-10-22-24`가 되었고, 형제 PR·워크트리가 `-23`·`-25`~`-27`을 쥐어 `--move`로 이 일지를 `-28`로 옮겼다. PR 본문의 일지 경로도 옮긴다.
 - main이 움직였으므로 이 done 커밋은 main을 합치지 않고 푸시한다. 머리가 새 main을 품지 않은 채 GitHub가 새 main 위에 병합 커밋을 지을 때 `pull_request.base.sha`가 그 첫 부모와 같은지가, 두 시도로는 갈리지 않던 명세 검토의 질문(base 값이 첫 부모보다 오래됐을 수 있다)이다. main은 그 견줌 뒤에 합친다.
+- `4412e01f`(pre-commit 모두 Passed, pytest 306.6초, web-verify 290.7초). 푸시를 뒤처짐 훅이 막아(`origin/main`보다 1커밋 뒤) 위 견줌을 위해 `PUSH_BEHIND_OK=1`로 일부러 뒤처진 채 푸시했다. CI가 한 바퀴 더 도는 값은 draft라 claude-review가 건너뛰어 CI 잡만이다.
+- 초록: ci `39800541754`(머리 `4412e01f`)에서 잡 여섯이 모두 성공했다. `ticket` 잡 `119899650912`(7초)은 판정을 지나 0으로 끝났다. CodeRabbit은 draft라 건너뛰었다.
+- **base 값이 첫 부모와 갈렸다.** 그 실행의 "CI 입력" 줄은 base 커밋 `b104f8fa…`, 체크아웃한 병합 커밋(`892ad72`, `Merge 4412e01f… into 19bbfa06…`)의 첫 부모 `19bbfa06…`이다. GitHub는 지금의 main 위에 병합 커밋을 지었는데 `pull_request.base.sha`는 PR을 연 때의 main(=머리와 main의 merge-base)에 머물렀다. `gh pr view 355 --json baseRefOid`도 `b104f8fa`다. 이 머리는 새 main을 품지 않아 `b104f8fa`가 "PR을 연 때의 main"인지 "머리와 main의 merge-base"인지 아직 가를 수 없다. main을 합친 머리를 푸시하면 가른다. 앞의 것이면 base 값이 `b104f8fa`에 남고 바뀐 파일에 main의 변경(`b104f8fa..19bbfa06`)이 섞인다. 뒤의 것이면 `19bbfa06`이 되어 첫 부모와 같다.
+- 이 PR의 판정은 어느 쪽이든 지난다. 기능 티켓 브랜치라 가리키는 티켓이 브랜치 이름의 그 파일 하나이고 done이다. 거짓 양성은 바뀐 파일을 보는 갈래에서 난다. 면제 모양만 고친 `docs/` PR이 main을 합치면 main의 변경이 면제 모양 밖으로 세어지고, `docs/` 브랜치의 판정 6은 main이 바꾼 harness 티켓까지 가리키는 티켓으로 센다.
+
+### timeout-minutes와 잡 시간 프로브
+
+- `ci_job_durations.py 40 feature/04-ci-checks-ticket-done`이 `성공한 실행 0개`로 1이었다. 실행 목록 API에 `branch`와 `status=success`를 함께 주면 성공한 실행이 있는 브랜치 둘(PR #355, PR #350의 머리)에서 모두 `total_count` 0이었고, `status=completed`나 `status` 없이는 그 실행이 나왔다. 둘째 세션이 이 프로브에 브랜치 인자를 더하며 "PR #350의 머리 브랜치를 주어 그 PR의 실행 둘이 나왔다"고 적은 것은 `--status success` 없이 친 결과로 보인다(어림). 브랜치를 주면 `completed`로 받아 결론으로 거르게 고치고 독스트링과 README 행에 적었다.
+- 고친 프로브로 `성공한 실행 1개 중 측정 1개`, `ticket` 0.1분, `verify` 0.1분, python 5.0분, web 1.5분, e2e 6.2분, visual 3.7분이었다. `ticket`의 어림 10분을 `verify`와 같은 5분으로 고쳤다. python·e2e는 2026-10-15 최대의 두 배 남짓이지만 한 실행이라 다른 잡의 값은 고치지 않았다(README 행에 적었다).
+- origin/main(`19bbfa0`)을 합쳤다. 겹친 파일은 없었고 `web/pnpm-lock.yaml`이 바뀌어 `pnpm -C web install --frozen-lockfile`을 쳤다.

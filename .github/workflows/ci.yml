@@ -190,10 +190,11 @@ jobs:
   # 실패해도 이어진다). 근거는 GitHub 문서 "Stopping and starting workflow commands"
   # (https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands)이고, 2026-10-22 에 그 본문을
   # 내려받아 대 봤다. 토큰은 실행마다 무작위로 고유해야 하고, 문서의 ubuntu-latest 예시가 토큰을 uuidgen 으로 짓는다.
-  # timeout-minutes 는 지난 실행이 없을 때 정한 어림이다(머리 주석).
+  # timeout-minutes 는 verify 와 같은 5 다. 처음의 어림 10 을, 이 잡이 든 첫 성공 실행(PR #355)을 잰 0.1분으로
+  # 고쳤다(머리 주석의 프로브).
   ticket:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:

@@ -22,7 +22,7 @@
 
 - [x] **잡 하나를 새로 둔다.** python 잡의 스텝으로 두지 않는다(명세의 거부한 안). 체크아웃은 기본(PR의 병합 커밋)을 `fetch-depth: 0`, `persist-credentials: false`로 받는다. 머리 커밋을 체크아웃하지 않는다(규약 전에 딴 PR의 머리에는 검사 도구가 없다)
 - [x] **PR의 값은 `env`로 넘긴다.** 워크플로 안에서 PR의 값을 식으로 바로 펼치지 않는다(zizmor의 주입 판정, ADR 0027)
-- [ ] **`timeout-minutes`.** 새 잡이라 지난 실행이 없으니 첫 값은 어림으로 정하고, 이 PR의 실행으로 `.scratch/harness/probes/ci_job_durations.py`를 다시 돌려 고친다(`ci.yml` 머리 주석, 대기열 204)
+- [x] **`timeout-minutes`.** 새 잡이라 지난 실행이 없으니 첫 값은 어림으로 정하고, 이 PR의 실행으로 `.scratch/harness/probes/ci_job_durations.py`를 다시 돌려 고친다(`ci.yml` 머리 주석, 대기열 204)
 - [x] **`verify`의 needs에 넣는다.** 잡, needs, 잡 수를 든 문서는 한 커밋에 든다. 빠뜨리면 `verify`가 같은 실행의 잡 목록을 읽어 빨강으로 본다
 
 ### 시험
