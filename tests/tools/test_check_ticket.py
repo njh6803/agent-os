@@ -382,6 +382,28 @@ def test_origin_main이_없으면_알리고_지난다(tmp_path: Path) -> None:
     assert "origin/main" in out
 
 
+def test_얕은_클론에서_merge_base가_없으면_알리고_지난다(저장소: Repo) -> None:
+    """딴 자리가 깊이 밖이면 공통 조상이 없어 보인다. 빈 트리에서 세면 C 가 저장소 전체가 된다."""
+    assert 저장소.pusher is not None
+    저장소.git("switch", "-q", "-c", "chore/002-thing", cwd=저장소.pusher)
+    저장소.write({"tools/b.py": "B = 1\n"}, 저장소.pusher)
+    저장소.git("add", "-A", cwd=저장소.pusher)
+    저장소.git("commit", "-q", "-m", "가지", cwd=저장소.pusher)
+    저장소.git("push", "-q", "origin", "chore/002-thing", cwd=저장소.pusher)
+    저장소.git("switch", "-q", "main", cwd=저장소.pusher)
+    저장소.push_main({"docs/journal/2026-01-02-01-main.md": "main\n"})
+    shallow = 저장소.tmp / "shallow"
+    remote = (저장소.tmp / "origin.git").as_uri()
+    저장소.git("clone", "-q", "--depth", "1", "--no-single-branch", remote, str(shallow))
+    repo = Repo(저장소.tmp, shallow, None, 저장소.env)
+    _shim(repo)
+    repo.git("switch", "-q", "chore/002-thing")
+    _지났다(repo.stage_commit({"docs/journal/2026-01-03-01-x.md": "x\n"}))
+    result = _바로(repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "얕은 클론" in result.stdout
+
+
 def test_고아_브랜치는_첫_커밋만_지나고_그_뒤는_뿌리의_트리로_판정을_받는다(저장소: Repo) -> None:
     # 못 보는 것: 첫 커밋은 HEAD 가 없어 지난다. `--orphan` 은 색인을 두어 뿌리가 검사를 든다
     저장소.git("checkout", "-q", "--orphan", "orphan-topic")

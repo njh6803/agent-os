@@ -15,7 +15,9 @@ pre-commit 에서 HEAD 는 아직 병합 전이라, HEAD 만으로 구하면 C �
 `MERGE_HEAD` 는 작업 트리 루트의 경로가 아니라 ref 이름으로 찾는다. 링크드 워크트리에서는 그
 워크트리의 git 디렉터리에 있어, 루트의 `.git/MERGE_HEAD` 로 찾으면 놓친다
 (`.scratch/ticket-for-every-pr/probes/merge_commit/`). 공통 조상이 없으면(고아 브랜치) 빈 트리에서
-지금 색인까지다. 그 브랜치의 파일은 모두 그 브랜치가 들인 것이다.
+지금 색인까지다. 그 브랜치의 파일은 모두 그 브랜치가 들인 것이다. 얕은 클론(클라우드 세션의 깊이
+50 클론)에서는 딴 자리가 깊이 밖이면 공통 조상이 없어 보여, 빈 트리에서 세면 C 가 저장소 전체가
+된다. 그래서 얕은 클론에서 공통 조상을 찾지 못하면 한 줄을 알리고 판정하지 않고 지난다.
 
 판정. 아래 차례로 처음 맞는 것이다.
 
@@ -84,8 +86,10 @@ pre-commit 은 훅이 도는 동안 스테이지하지 않은 고침을 치워 �
   뿌리 커밋의 트리로 전환을 가른다. 색인을 비우고(`git rm -r --cached .`) 만든 뿌리는 이 파일이 없어
   규약 전으로 지난다.
 - 면제 모양만 고치는 PR 은 고침이 무엇이든 지난다(ADR 의 오타 고침, `CONTEXT.md` 의 말 고침).
-- 지나는 갈래가 내는 한 줄(전환, `origin/main` 없음)은 러너가 통과한 검사의 출력을 찍지 않아
-  커밋과 손으로 친 러너에서 보이지 않고, 이 검사를 바로 칠 때 보인다.
+- 얕은 클론에서 딴 자리가 깊이 밖이면 판정하지 않고 지난다(위 C). 그 클론의 고아 브랜치도 같다.
+  `git fetch --deepen` 이나 `--unshallow` 로 딴 자리를 가져오면 판정을 받는다.
+- 지나는 갈래가 내는 한 줄(전환, `origin/main` 없음, 얕은 클론)은 러너가 통과한 검사의 출력을 찍지
+  않아 커밋과 손으로 친 러너에서 보이지 않고, 이 검사를 바로 칠 때 보인다.
 - 검사가 main 에 들어온 뒤에도 그 전의 main 에서 딴 브랜치(가져오지 않은 `origin/main` 에서 딴 것)는
   딴 자리의 트리에 이 파일이 없어 끝까지 지난다.
 """
@@ -233,12 +237,15 @@ def changes(cwd: Path, base: str) -> list[Change]:
     ]
 
 
-def merge_base(cwd: Path, heads: list[str]) -> str:
-    """C 를 셀 자리. 공통 조상이 없으면(`merge-base` 가 1 로 끝난다) 빈 트리다."""
+def merge_base(cwd: Path, heads: list[str]) -> str | None:
+    """C 를 셀 자리. 공통 조상이 없으면(`merge-base` 가 1 로 끝난다) 빈 트리다. 얕은 클론이면
+    조상이 깊이 밖에 있을 수 있어 자리를 모른다(None)."""
     result = _git(cwd, "merge-base", BASE, *heads)
     if result.returncode == 0:
         return result.stdout.decode("utf-8", "replace").strip()
     if result.returncode == 1:
+        if _out(cwd, "rev-parse", "--is-shallow-repository") == "true":
+            return None
         return _out(cwd, "hash-object", "-t", "tree", "--stdin")
     message = result.stderr.decode("utf-8", "replace").strip()
     raise GitError(f"git merge-base 가 {result.returncode} 로 끝났다: {message}")
@@ -338,7 +345,13 @@ def judge(cwd: Path) -> Verdict:
     merging = merge_head(cwd)
     if merging is not None:
         heads.append(merging)
-    changed = changes(cwd, merge_base(cwd, heads))
+    base = merge_base(cwd, heads)
+    if base is None:
+        return Verdict(
+            passed=True,
+            message="check-ticket: 얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다.",
+        )
+    changed = changes(cwd, base)
     outside = [c.path for c in changed if not exempt(c.path)]
     if not outside:
         return Verdict(passed=True, message="")

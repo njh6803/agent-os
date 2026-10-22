@@ -126,3 +126,13 @@ open-session을 부른다 2026-10-22T10:13:37Z
 
 - 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 브랜치 끝은 `84e5eeec`.
 - 티켓 체크박스를 모두 표시하고 `Status:`를 done으로 바꿨다. 둘째 세션의 셀프 리뷰 명세 축이 빠진 항목을 들지 않았다.
+- done 커밋 `835ea700`. pre-commit 모두 Passed(`check-ticket` 0.7s, pytest 412.5s).
+
+### PR 직전 리뷰
+
+CodeRabbit CLI는 `Seat: not assigned`라 돌지 못해 대체 둘을 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+
+- `/security-review`(기점 `aba71813`): 발견 없음. git 호출은 모두 `_git` 하나를 거쳐 리스트 인자·`shell=False`이고, 브랜치 이름과 diff 경로는 git 인자로 다시 넘기지 않는다.
+- `bug-perf-review`: 밀 주장 다섯은 임시 저장소로 대 보고 모두 맞다고 했다(색인을 비운 뿌리는 코드로만). 유효 Minor 하나: 얕은 클론에서 딴 자리가 깊이 밖이면 `merge-base`가 1로 끝나 빈 트리에서 세고, C가 저장소 전체가 된다. 면제 파일만 바꾼 커밋도 막히고, `docs/` 브랜치는 전체 트리의 harness 티켓으로 거꾸로 지난다. `.claude/rules/tools.md`가 클라우드 세션의 클론을 깊이 50의 얕은 클론이라 적는다. 오탐 셋(러너의 환경 상속, 여러 뿌리, unborn 브랜치의 symbolic-ref).
+
+고친 것: `merge_base`가 종료 1이고 `rev-parse --is-shallow-repository`가 true면 None을 내고, `judge`가 "얕은 클론이라 merge-base 를 찾지 못해 판정하지 않고 지난다" 한 줄로 지난다. 독스트링의 C 문단과 못 보는 것(그 클론의 고아 브랜치도 같다, `fetch --deepen`·`--unshallow`로 판정을 받는다)과 지나는 한 줄 목록을 고쳤다. 시험 `test_얕은_클론에서_merge_base가_없으면_알리고_지난다`(`--depth 1 --no-single-branch` 클론, 면제 파일 커밋)는 고치기 전에 막는 글(면제 밖 5개)로 빨갰고 고친 뒤 초록이다. 파일 43개 모두 초록, 변이 `--check` 8 모두 원문.
