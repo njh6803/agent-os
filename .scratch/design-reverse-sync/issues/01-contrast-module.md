@@ -12,7 +12,7 @@
 
 ### 모듈과 내보내기
 
-- [ ] **새 모듈은 상대 import가 하나도 없는 한 파일이다.** 지금 짝 표 파일(`src/styles/contrast.ts`)을 그대로 내보내면 루트 타입 검사가 확장자 없는 import에서 TS2834·TS2835로 빨갛고, Node가 첫 import를 폴더 import로 읽어 `ERR_UNSUPPORTED_DIR_IMPORT`로 멈췄다(프로브). 그 둘을 먼저 빨강으로 본 뒤 한 파일로 옮긴다. 지금 짝 표 파일은 계산 함수와 `Mode` 타입도 상대 경로로 들이므로, 한 파일에 그 정의를 함께 둔다
+- [ ] **새 모듈은 상대 import가 하나도 없는 한 파일이다.** 지금 짝 표 파일(`src/styles/contrast.ts`)을 그대로 내보내면 루트 타입 검사가 확장자 없는 import에서 TS2834·TS2835로 빨갛고, Node가 첫 import를 폴더 import로 읽어 `ERR_UNSUPPORTED_DIR_IMPORT`로 멈췄다(프로브). 그 둘을 먼저 빨강으로 본 뒤 한 파일로 옮긴다. 지금 짝 표 파일은 계산 함수와 `Mode` 타입도 상대 경로로 들이므로, 한 파일에 그 정의를 함께 둔다. `Mode`는 `themes.ts`의 `MODES`에서 나오므로 `MODES`와 함께 새 모듈로 옮기고 `themes.ts`가 새 모듈에서 들여, 정의가 두 벌로 갈라지지 않게 한다(새 모듈은 상대 import가 없어야 하므로 들이는 쪽이 `themes.ts`다)
 - [ ] **`testing`의 DOM 쪽 함수(`sheetsDefining`, `classesWithoutRules`, `arbitraryClasses`)는 새 모듈에 넣지 않는다.** DOM 타입을 써서 DOM 없는 루트 설정(`lib` es2024)의 타입 검사에서 빨갈 것으로 본다(명세의 어림). 새 모듈이 루트 타입 검사를 지나는 것으로 확인한다
 - [ ] **판정 스토리 Matrix와 `testing`이 새 모듈에서 불러 쓰고, 짝 표와 공식이 한 벌만 남는다.** 같은 함수의 사본이 둘이면 이 티켓의 뜻이 없다
 - [ ] **짝 표 파일 머리의 "패키지 밖으로 내보내지 않는다"를 고친다**(명세의 같은 절)
