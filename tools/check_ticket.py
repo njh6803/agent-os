@@ -73,17 +73,23 @@ CI. `--ci` 로 부르면 PR 의 값을 환경 변수로 받아 PR 단위로 같�
 지난다. 머리 커밋을 체크아웃하지 않는 것은 규약 전에 딴 PR 의 머리에는 이 파일이 없어서다. 병합
 커밋에는 base 쪽의 이 파일이 있다.
 - C 는 base 와 머리의 merge-base 에서 머리 커밋까지의 차이다(색인이 아니라 머리 커밋의 트리).
-  전환의 첫 자기 커밋은 base 에 없는 머리의 커밋 가운데 가장 오래된 것이다(위의 위상 순서). 그래서
-  다른 브랜치를 base 로 둔 PR 은 그 base 브랜치의 커밋을 제 것으로 세지 않는다.
+  전환의 자기 커밋은 base 에 없는 머리의 커밋이고, 첫 자기 커밋은 그 가운데 부모가 모두 base 쪽에
+  있는 것이다(위 전환과 같다). 그래서 다른 브랜치를 base 로 둔 PR 은 그 base 브랜치의 커밋을 제
+  것으로 세지 않는다.
 - 판정 2 의 자리에서 받은 커밋 값이 비었거나 이 저장소에 없으면 git 실패(종료 2)다. CI 의 체크아웃이
-  이력을 덜 받은 것이라 지나지 않는다. MERGE_HEAD 와 HEAD 가 없는 첫 커밋은 CI 에 없다.
+  이력을 덜 받은 것이라 지나지 않는다. 체크아웃이 얕아 base 와 머리의 merge-base 를 찾지 못해도
+  같다. 커밋 검사의 얕은 클론처럼 알리고 지나면 모든 PR 이 판정 없이 초록이 되기 때문이다. 그래서
+  CI 는 전환을 가르기 전에 merge-base 를 구한다. MERGE_HEAD 와 HEAD 가 없는 첫 커밋은 CI 에 없다.
 - 판정 5·6 으로 지나면 가리키는 티켓(판정 5 의 그 파일, `docs/` 브랜치면 판정 6 의 harness 티켓
   전부)의 `Status:` 를 머리 커밋의 그 파일에서 읽고, 하나라도 done 이 아니면 막는다. 티켓은 PR 을
   열기 전에 done 이다(명세 "쓰는 때와 상태").
 - 판정 전에 받은 세 값과 체크아웃한 병합 커밋의 첫 부모를 stdout 에 한 줄 찍는다. base 값이 그 첫
   부모와 같은지 실제 실행에서 견주기 위해서다.
 - `PR_HEAD_REF` 가 비면(PR 이 아닌 실행, main 의 push) 한 줄을 찍고 지난다. 필수 검사 `verify` 가
-  건너뛴 잡을 빨강으로 보므로 이 잡은 push 에서도 돌고 곧바로 끝난다.
+  건너뛴 잡을 빨강으로 보므로 이 잡은 push 에서도 돌고 곧바로 끝난다. 다만 러너가 주는 이벤트
+  이름(`GITHUB_EVENT_NAME`, GitHub 문서 Variables reference 의 기본 환경 변수 표. 2026-10-22 에
+  본문을 내려받아 대 봤다)이 `pull_request` 인데 비면 git 실패(종료 2)다. 워크플로의 env 이름이
+  어긋나거나 식이 빈 것이고, 지나면 모든 PR 이 판정 없이 초록이다.
 
 `Status:` 를 읽는 규칙. 값은 줄 머리가 `Status:` 나 `**Status:**` 인 첫 줄의 첫 낱말이다. 줄
 어디서든 첫 출현을 읽지 않는다. 티켓이 수용 기준 본문(기능을 닫는 판정의 문장)이나 설명에 `Status:`
@@ -106,8 +112,8 @@ done 으로 고쳐 커밋하고 다시 푸시하라는 것이다(이미 done 이
 변경을 마치고 손으로 친 러너에서도 이 검사가 지금 색인으로 돌아, 티켓을 스테이지하기 전이면 빨갛다.
 
 종료 코드. 0 지남, 1 막음, 2 git 이 실패했다(띄우지 못함, 시간 초과, 판정에 쓰는 git 의 0 아닌
-종료. 저장소가 아닌 폴더와, CI 가 받은 커밋 값을 찾지 못한 것도 여기다). 인자를 잘못 준 것도
-argparse 가 2 로 끝낸다.
+종료. 저장소가 아닌 폴더, CI 가 받은 커밋 값을 찾지 못한 것, CI 의 얕은 체크아웃, PR 실행의 빈
+`PR_HEAD_REF` 도 여기다). 인자를 잘못 준 것도 argparse 가 2 로 끝낸다.
 
 못 보는 것.
 - pre-commit 을 거치지 않은 커밋은 커밋 때 지난다. 훅을 깔지 않은 클론, `--no-verify`, 이 id 의
@@ -121,8 +127,9 @@ argparse 가 2 로 끝낸다.
   규약 전으로 지난다.
 - 면제 모양만 고치는 PR 은 고침이 무엇이든 지난다(ADR 의 오타 고침, `CONTEXT.md` 의 말 고침). CI 도
   그 PR 의 티켓 `Status:` 를 보지 않는다.
-- 얕은 클론에서 딴 자리가 깊이 밖이면 판정하지 않고 지난다(위 C). 그 클론의 고아 브랜치도 같다.
-  `git fetch --deepen` 이나 `--unshallow` 로 딴 자리를 가져오면 판정을 받는다.
+- 커밋 검사는 얕은 클론에서 딴 자리가 깊이 밖이면 판정하지 않고 지난다(위 C). 그 클론의 고아
+  브랜치도 같다. `git fetch --deepen` 이나 `--unshallow` 로 딴 자리를 가져오면 판정을 받는다. CI 는
+  지나지 않는다(위 CI).
 - 지나는 갈래가 내는 한 줄(전환, `origin/main` 없음, 얕은 클론)은 러너가 통과한 검사의 출력을 찍지
   않아 커밋과 손으로 친 러너에서 보이지 않고, 이 검사를 바로 칠 때와 CI 잡의 로그에서 보인다.
 - 검사가 main 에 들어온 뒤에도 그 전의 main 에서 딴 브랜치(가져오지 않은 `origin/main` 에서 딴 것)는
@@ -136,9 +143,11 @@ argparse 가 2 로 끝낸다.
   지난다. 다만 base 브랜치가 squash 로 병합되어 PR 의 base 가 main 으로 바뀐 뒤에는, base 브랜치의
   커밋이 main 에 없어 CI 도 그 변경을 이 PR 의 것으로 세어 막는다(거짓 양성). 막는 글의 할 일(티켓
   쓰기, 브랜치 이름 바꾸기)은 이 경우의 길이 아니다.
-  `git rebase --onto origin/main <옛 base 브랜치>` 로 이 브랜치의 커밋만 옮겨 푸시하면 지난다. base
-  만 바꾸는 것은 워크플로의 `pull_request` 기본 계기(opened, synchronize, reopened)가 아니라서 CI 가
-  다시 돌지 않고, 다음 푸시에서 돈다.
+  `git rebase --onto origin/main <옛 base 브랜치>` 로 이 브랜치의 커밋만 옮겨 강제 푸시
+  (`git push --force-with-lease`)하면 지난다. 이미 푸시한 커밋을 고쳐 쓴 것이라 빨리 감기가 아니다.
+  옛 base 브랜치를 이미 지웠으면 그 이름 대신 옛 base 의 끝 커밋을 준다. base 만 바꾸는 것은
+  워크플로의 `pull_request` 기본 계기(opened, synchronize, reopened)가 아니라서 CI 가 다시 돌지
+  않고, 다음 푸시에서 돈다.
 """
 
 from __future__ import annotations
@@ -161,6 +170,8 @@ PREFIX = "check-ticket: "
 PR_HEAD_REF = "PR_HEAD_REF"
 PR_HEAD_SHA = "PR_HEAD_SHA"
 PR_BASE_SHA = "PR_BASE_SHA"
+EVENT_NAME = "GITHUB_EVENT_NAME"
+PR_EVENT = "pull_request"
 DONE = "done"
 CONVENTION = "규약 원천: docs/agents/issue-tracker.md"
 
@@ -559,11 +570,14 @@ def judge_pr(cwd: Path, pr: PullRequest) -> Verdict:
         return _PASS
     head = _received(cwd, PR_HEAD_SHA, pr.head)
     base = _received(cwd, PR_BASE_SHA, pr.base)
-    if before_convention(cwd, head, base):
-        return _transition(pr.branch)
     start = merge_base(cwd, base, [head])
     if start is None:
-        return _SHALLOW
+        raise GitError(
+            "CI 의 체크아웃이 얕아 base 와 머리 커밋의 merge-base 를 찾지 못했다."
+            " 체크아웃을 fetch-depth: 0 으로 받는다."
+        )
+    if before_convention(cwd, head, base):
+        return _transition(pr.branch)
     changed = tree_changes(cwd, start, head)
     outside = _outside(changed)
     if not outside:
@@ -577,11 +591,17 @@ def judge_pr(cwd: Path, pr: PullRequest) -> Verdict:
 
 
 def pull_request(environ: Mapping[str, str]) -> PullRequest | None:
-    """CI 가 받은 PR 의 값. 머리 브랜치가 비었으면(PR 이 아닌 실행) None 이다."""
+    """CI 가 받은 PR 의 값. 머리 브랜치가 비었으면(PR 이 아닌 실행) None 이다. 이벤트가 PR 인데
+    비었으면 워크플로가 값을 넘기지 못한 것이라 git 실패다."""
     branch = environ.get(PR_HEAD_REF, "")
-    if not branch:
-        return None
-    return PullRequest(branch, environ.get(PR_HEAD_SHA, ""), environ.get(PR_BASE_SHA, ""))
+    if branch:
+        return PullRequest(branch, environ.get(PR_HEAD_SHA, ""), environ.get(PR_BASE_SHA, ""))
+    if environ.get(EVENT_NAME, "") == PR_EVENT:
+        raise GitError(
+            f"{EVENT_NAME} 가 {PR_EVENT} 인데 {PR_HEAD_REF} 가 비었다."
+            " 워크플로가 PR 의 값을 env 로 넘기는지 본다."
+        )
+    return None
 
 
 def judge_ci(cwd: Path, pr: PullRequest | None) -> Verdict:
@@ -628,10 +648,10 @@ def main(argv: list[str]) -> int:
     ci: bool = args.ci
     where: Path | None = args.cwd
     cwd = Path.cwd() if where is None else where
-    pr = pull_request(os.environ) if ci else None
-    if pr is not None:
-        _write(sys.stdout, inputs_line(cwd, pr))
     try:
+        pr = pull_request(os.environ) if ci else None
+        if pr is not None:
+            _write(sys.stdout, inputs_line(cwd, pr))
         verdict = judge_ci(cwd, pr) if ci else judge(cwd)
     except GitError as error:
         _write(sys.stderr, str(error))

@@ -604,11 +604,17 @@ def _PR_병합_커밋(repo: Repo, head_ref: str, base: str = "origin/main") -> P
     return PR값(head_ref, head, base_sha)
 
 
-def _CI로_친다(repo: Repo, pr: PR값 | None) -> subprocess.CompletedProcess[str]:
-    """CI 처럼 친다. `pr` 이 없으면 PR 이 아닌 실행(push)이라 PR 의 값이 비어 있다."""
+def _CI로_친다(
+    repo: Repo, pr: PR값 | None, event: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    """CI 처럼 친다. `pr` 이 없으면 PR 이 아닌 실행(push)이라 PR 의 값이 비어 있다. 이벤트 이름
+    (`GITHUB_EVENT_NAME`)을 주지 않으면 `pr` 에 맞춘다. 이 시험이 CI 의 PR 실행에서 돌 때 물려받는
+    값에 기대지 않는다."""
     values = ("", "", "") if pr is None else (pr.head_ref, pr.head, pr.base)
+    name = event if event is not None else ("push" if pr is None else "pull_request")
     env = {
         **repo.env,
+        "GITHUB_EVENT_NAME": name,
         **dict(zip(("PR_HEAD_REF", "PR_HEAD_SHA", "PR_BASE_SHA"), values, strict=True)),
     }
     return subprocess.run(
@@ -764,6 +770,33 @@ def test_CI는_PR이_아닌_실행에서_한_줄을_찍고_지난다(저장소: 
     result = _CI로_친다(저장소, None)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "PR 이 아닌 실행" in result.stdout
+
+
+def test_CI는_PR_실행인데_머리_브랜치가_비면_git_실패로_2를_낸다(저장소: Repo) -> None:
+    # 워크플로의 env 이름이 도구와 어긋나거나 식이 비면, PR 이 push 처럼 판정 없이 지난다
+    result = _CI로_친다(저장소, None, "pull_request")
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "PR_HEAD_REF" in result.stderr
+
+
+def test_CI는_체크아웃이_얕아_merge_base를_찾지_못하면_git_실패로_2를_낸다(저장소: Repo) -> None:
+    # fetch-depth 를 줄이면 base 와 머리의 공통 조상이 깊이 밖이다. 커밋 검사의 얕은 클론처럼
+    # 알리고 지나면 모든 PR 이 판정 없이 초록이다
+    저장소.git("switch", "-q", "-c", "chore/002-thing")
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    저장소.push_main({"docs/journal/2026-01-02-01-main.md": "main\n"})
+    pr = _PR_병합_커밋(저장소, "chore/002-thing")
+    저장소.git("update-ref", "refs/pull/1/merge", "HEAD")
+    shallow = 저장소.tmp / "shallow"
+    저장소.git("init", "-q", str(shallow))
+    source = 저장소.work.as_uri()
+    저장소.git("fetch", "-q", "--depth", "2", source, "refs/pull/1/merge", cwd=shallow)
+    저장소.git("switch", "-q", "--detach", "FETCH_HEAD", cwd=shallow)
+    repo = Repo(저장소.tmp, shallow, None, 저장소.env)
+    assert repo.git("rev-parse", "--is-shallow-repository") == "true"
+    result = _CI로_친다(repo, pr)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "fetch-depth" in result.stderr
 
 
 def test_CI는_base_커밋을_찾지_못하면_git_실패로_2를_낸다(저장소: Repo) -> None:
