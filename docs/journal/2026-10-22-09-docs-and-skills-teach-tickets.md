@@ -150,3 +150,36 @@ CodeRabbit 첫 회차(`3ceecb42`, `Review completed`). Minor 하나. `docs/agent
 - **다음 티켓은 03(`03-commit-check-blocks-ticketless.md`)이다.** 이 PR이 병합되면 막힌 것이 없어지고(01·02 done), 04는 03에, 05는 02·03에 막힌다.
 - **03의 커밋 검사가 브랜치로 티켓을 찾을 때.** 위 CodeRabbit 보류대로 기능 폴더 사이의 stem 겹침은 지금 0건이다. 겹침이 생기면 브랜치 하나에 티켓 파일 둘이 맞는다. 03의 판정이 그 경우를 어떻게 다룰지는 03의 티켓과 명세가 정한다.
 - 주 체크아웃 미갱신: 루트는 main. 병합된 이 워크트리와 브랜치는 다음 주 체크아웃 세션의 `tidy-checkouts`가 지운다.
+
+## 인계 (봇 회차 일지 커밋 뒤)
+
+봇 첫 회차의 판정, 회고, "다음"을 `00e7a6ce`로 커밋했다(pre-commit 모두 통과. ruff 둘, 카나리아 명세 모양, 헌법 판은 대상 파일이 없어 Skipped). 그 직후 인계 계기(`커밋 뒤`, 22만 5천 토큰)가 왔다. 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, 곁 세션이 아니다(`get_session`에 `parentSessionId`가 없다). 이 세션의 지금 제목은 `feature/02-docs-and-skills-teach-tickets`다.
+
+남은 단계. `00e7a6ce`는 푸시하지 않았다. 새 세션은 이 인계 절을 이어 쓰고 커밋한 뒤 함께 푸시하고, `@coderabbitai review`를 남기고 `tools/wait_ci.py`를 띄운다. 이 푸시의 리뷰는 두 봇 모두 둘째 회차라 Critical·Major만 고친다. claude-review는 계정의 주간 사용률이 0.97이라 계정 한도로 빨개질 수 있고, CodeRabbit은 08:47 UTC의 리뷰가 시간당 포함 리뷰를 다 썼다고 적어 그 뒤 한 시간 안에는 한도에 걸릴 수 있다. 초록이면 병합 직전에 `tools/sibling_overlap.py`를 다시 쳐 일지 번호를 보고(이름순으로 앞서는 형제는 PR #347의 10, `choice-facts-batch`의 11), `next-session`의 "워크트리에서 병합할 때"대로 병합한 뒤 `next-session`을 돈다. 다음 티켓은 위 "다음"대로 03이다.
+
+지시문(새 세션에 보낸 것).
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md. 규약 문서와 스킬이 "PR마다 티켓 하나"의 차례를 가르친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md
+브랜치: feature/02-docs-and-skills-teach-tickets
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md의 "봇 회차 (두 번째로 인계받은 세션)", "다음", "인계 (봇 회차 일지 커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차(claude-review 지적 없음, CodeRabbit Minor 하나는 사건 0건이라 보류하고 스레드에 답글)와 회고(후보 여덟 모두 기각), "다음"을 일지에 적어 00e7a6ce로 커밋했고 푸시하지 않았다. 남은 것은 일지의 인계 절을 이어 써 커밋하고 함께 푸시한 뒤 next-session 순서 1의 2(봇 회차, 두 봇 모두 둘째 회차라 Critical·Major만)부터 병합까지, 그리고 next-session이다. claude-review는 계정 주간 사용률 0.97이라 한도로 빨개질 수 있다. 병합 직전에 sibling_overlap.py를 다시 쳐 일지 번호가 더 큰 형제가 먼저 병합됐으면 이 일지 번호를 옮긴다. 일지 docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/02-docs-and-skills-teach-tickets (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며(`tools/wait_ci.py` 대기는 끝났다), `git worktree unlock`은 `is not locked`라 넘어갔다.
+
+open-session을 부른다 2026-10-22T08:57:33Z
+
+## 봇 둘째 회차와 병합 (세 번째로 인계받은 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "… 이번 요청 범위: PR과 병합까지"
+
+제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다(잠금 거부 없음). PR #348은 `OPEN`, `CLEAN`이고 헤드는 `3ceecb42`다. `tools/sibling_overlap.py`는 번호 겹침이 없다고 했고 origin/main은 `b2f5c61d` 그대로다. 일지 번호가 이름순으로 앞서는 형제는 여전히 PR #347의 10, `choice-facts-batch`와 `design-reverse-sync-tickets` 워크트리의 11과 10이다.
+
+앞 세션이 쓰고 커밋하지 않은 인계 절과 이 절을 함께 커밋해 `00e7a6ce`와 같이 푸시한다. 고친 것이 없는 회차의 일지 푸시라, 이 푸시로 도는 리뷰는 두 봇 모두 둘째 회차로 세어 Critical·Major만 고친다. 그 리뷰에서 보류하는 지적과 병합 결과는 일지를 다시 푸시하지 않고 PR 코멘트와 다음 지시문에 적는다(`next-session` 순서 1의 2 "뒤로 넘긴 일").
