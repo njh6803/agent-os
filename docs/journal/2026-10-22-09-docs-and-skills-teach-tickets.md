@@ -26,7 +26,7 @@
 
 고친 것.
 - `docs/agents/issue-tracker.md`. 면제 PR에서 회고가 harness 티켓을 쓰면 브랜치 이름과 맞대지 않고 `docs/<slug>` 그대로라는 예외를 PR마다 티켓 하나 항목과 stem 항목에 더했다(명세 166행 판정 6). 상태 항목의 부정형 문장을 "티켓은 그 일을 하는 PR에 함께 싣는다"로 바꿨다. `operations.md` 브랜치 절의 "티켓을 쓰지 않는 면제 PR"에서 "티켓을 쓰지 않는"을 뺐다.
-- `docs/constitution/operations.md` 문서 위치. `.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않는다는 괄호를 더했다. 001이 done이라 "하네스 기능은 티켓이 모두 done일 때 기록"으로 읽으면 같은 문단의 `.scratch/harness/probes/`와 어긋났다.
+- `docs/constitution/operations.md` 문서 위치. `.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않는다는 괄호를 더했다. 001이 done이라 하네스 기능의 기록 판정(티켓이 있고 모두 done)을 `.scratch/harness/`에 대면 같은 문단의 `.scratch/harness/probes/`와 어긋났다.
 - `next-session` 87행. 병합된 PR의 남은 일을 이 세션에서 이을 때 다음 번호의 새 harness 티켓을 쓰고 새 브랜치를 딴다고 더했다(명세 203행).
 - `next-session` chore 줄. 받는 세션은 `implement`를 싣지 않으므로 "읽을 것" 줄에 `docs/agents/issue-tracker.md`를 둔다고 더했다. 시작 프롬프트의 꼴은 명세 257행이 정해 두었다.
 - `implement`. 티켓 없이 받은 일의 브랜치를 바꾸면 `set_session_title`로 세션 제목도 바꾼다고 더했다(사용자 스토리 25).
@@ -51,3 +51,28 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 문장(코드 리뷰 
 - retro: "지금 PR이 이미 병합됐으면 반영은 새 PR이라 다음 번호의 새 harness 티켓을 쓰고 그 stem으로 브랜치를 딴다."
 
 다시 돌린 것. 카나리아 명세 다섯의 사전 확인이 통과했고, 질문을 고친 `retro_ticket_reflection`은 다시 돌려 통과 4였다. 나머지 넷은 질문이 가리키는 문장이 그대로라 사전 확인으로 갈음했다. 손으로 치는 검증 다섯은 이 커밋의 pre-commit 결과로 갈음한다.
+
+## 인계 (커밋 뒤)
+
+커밋 `19f11896`의 pre-commit은 모두 통과했다(ruff 둘은 `.py`가 없어 Skipped이고, 앞서 손으로 친 ruff 둘이 통과했다. 러너 검사 여덟, 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 헌법 판, 커밋 메시지). 인용 대조가 경고 둘을 냈다. `docs/constitution/README.md` 11행은 고친 판 줄에 원래 있던 이력의 인용이라 두었다. 이 일지의 경고는 내가 풀어 쓴 말에 따옴표를 붙인 것이라 따옴표를 떼었고, 그 고침은 커밋하지 않았다. 그 커밋 뒤 세션 컨텍스트가 29만 6천 토큰으로 인계 문턱을 넘어 `커밋 뒤` 경계에서 넘긴다. 곁 세션이 아니다(`get_session`에 `parentSessionId`가 없다). 이 세션의 지금 제목은 `feature/02-docs-and-skills-teach-tickets`다.
+
+남은 단계. PR은 아직 열지 않았고 푸시도 하지 않았다. CodeRabbit CLI는 `Seat: not assigned`라 PR 직전 리뷰는 대체 둘이다. origin/main을 합친 뒤 `/security-review`를 돌리고, `bug-perf-review` 서브에이전트의 브리프에 위 셀프 리뷰 절의 "밀 주장으로 넘길 새 문장"을 나열한다. 그 뒤 티켓의 마지막 두 체크박스를 체크하고 `Status:`를 `done`으로 바꿔 커밋하고, `/git-pr`로 PR을 열고, `@coderabbitai review`를 남기고, `tools/wait_ci.py`를 띄운다. 봇 회차를 반영한 뒤 `next-session`의 "워크트리에서 병합할 때"대로 병합하고, 회고(`retro`)와 `next-session`을 돈다.
+
+지시문(새 세션에 보낸 것).
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md. 규약 문서와 스킬이 "PR마다 티켓 하나"의 차례를 가르친다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md
+브랜치: feature/02-docs-and-skills-teach-tickets
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md의 "셀프 리뷰"와 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 구현·카나리아·셀프 리뷰 반영을 커밋 19f11896까지 했고, 그 뒤 일지의 인용 따옴표를 뗀 고침 하나가 커밋되지 않았다. PR은 열지 않았고 푸시하지 않았다. 남은 것은 PR 직전 리뷰(CodeRabbit 좌석이 없어 origin/main을 합친 뒤 /security-review와 bug-perf-review, 밀 주장은 일지 셀프 리뷰 절의 목록), 티켓 done 커밋, /git-pr, 봇 회차, 병합, 회고다. 일지 docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md
+확인할 선행 조건: 주 체크아웃(루트, main, caaa062b)의 작업 트리가 깨끗한지는 워크트리 가드가 git -C를 막아 보지 못했다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/02-docs-and-skills-teach-tickets (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`으로 이 워크트리의 잠금을 풀었다.
+
+open-session을 부른다 2026-10-22T08:08:11Z
