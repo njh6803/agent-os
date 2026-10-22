@@ -1,0 +1,627 @@
+# 티켓 04(회차의 자리, `tools/rerun_round.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬,
+# 대기열 29). 이 티켓의 시험은 구현 전에 import 오류로만 빨갰고 판정 하나하나가 빨강을 본 적은 없어서,
+# 뿌리의 머리 견줌과 상위의 .claude, 회차 폴더의 표지와 덮어쓰기 거부, bare 로 미는 것과 클론 대 보기,
+# 막는 규칙과 settings.local, 준비의 멈춤·시간·환경, 세션 환경의 허용 목록, 지우기의 판정과 차례를
+# 하나씩 되돌려 그 단언이 무는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_round_mutations.toml
+
+[[mutation]]
+name = "상대 경로 뿌리를 받는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "상대_경로_뿌리는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if text[:2].replace("\\", "/") == "//" or not Path(text).is_absolute():'''
+new = '''if text[:2].replace("\\", "/") == "//":'''
+
+[[mutation]]
+name = "구분자 둘로 시작하는 장치와 UNC 경로를 받는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "구분자_둘로"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if text[:2].replace("\\", "/") == "//" or not Path(text).is_absolute():'''
+new = '''if not Path(text).is_absolute():'''
+
+[[mutation]]
+name = "주 체크아웃을 머리로 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "주_체크아웃과_그_아래는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if _under(text, main_checkout):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "사용자 claude 를 머리로 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "사용자_claude와_그_아래는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if _under(text, user_claude):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "링크를 푼 꼴을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "링크_아래도_멈춘다"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
+new = '''texts = {os.path.abspath(path)}'''
+
+[[mutation]]
+name = "링크를 풀기 전 글자 그대로의 꼴을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "안의_링크를_거쳐"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
+new = '''texts = {os.path.realpath(path)}'''
+
+# 윈도의 realpath 는 있는 폴더라면 끝의 점과 대소문자를 실제 이름으로 바꿔 준다. 그래서 아래 둘은
+# 아직 없는 머리(시험의 둘째 머리)에서만 빨개진다.
+[[mutation]]
+name = "윈도가 쓸 꼴을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "끝의_점을_떼는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
+new = '''texts = {os.path.normpath(path), os.path.realpath(path)}'''
+
+[[mutation]]
+name = "대소문자를 접지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "대소문자와_구분자만"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''t.replace("\\", "/").casefold().split("/")'''
+new = '''t.replace("\\", "/").split("/")'''
+
+[[mutation]]
+name = "조각이 아니라 글자 접두로 견준다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "이웃_이름은"]
+expect = "red"
+expect_output = ["PlaceError"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''return any(p[: len(h)] == h for p in _forms(path) for h in heads)'''
+new = '''return any("/".join(p).startswith("/".join(h)) for p in _forms(path) for h in heads)'''
+
+[[mutation]]
+name = "상위의 .claude 폴더를 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "상위의_claude_폴더와"]
+expect = "red"
+expect_output = ['>       assert set(found) >= {']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if (parent / ".claude").is_dir() and not _same(parent, home):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "홈의 .claude 폴더도 센다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "홈의_claude_폴더는"]
+expect = "red"
+expect_output = ['>       assert home / ".claude" not in found']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if (parent / ".claude").is_dir() and not _same(parent, home):'''
+new = '''if (parent / ".claude").is_dir():'''
+
+[[mutation]]
+name = "상위의 CLAUDE.md 를 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "상위의_claude_폴더와"]
+expect = "red"
+expect_output = ['>       assert set(found) >= {']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''found += [parent / n for n in ("CLAUDE.md", "CLAUDE.local.md") if (parent / n).exists()]'''
+new = '''found += []'''
+
+[[mutation]]
+name = "뿌리 검사가 상위를 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "뿌리_검사는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    if found:
+        listed'''
+new = '''    if False:
+        listed'''
+
+[[mutation]]
+name = "주 체크아웃을 worktree 목록의 끝 줄로 읽는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "worktree_목록의"]
+expect = "red"
+expect_output = ['>       assert os.path.normcase(found.resolve()) == os.path.normcase(repo.resolve())']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    for line in out.splitlines():
+        if line.startswith("worktree "):'''
+new = '''    for line in reversed(out.splitlines()):
+        if line.startswith("worktree "):'''
+
+[[mutation]]
+name = "표지에 이름을 쓰지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "정해진_이름이고"]
+expect = "red"
+expect_output = ['>       assert (place.path / MARKER).read_text(encoding="utf-8") == place.name']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        f.write(os.path.basename(folder))'''
+new = '''        f.write("")'''
+
+[[mutation]]
+name = "이미 있는 회차 폴더를 덮는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "이미_있는_회차_폴더는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    place.path.mkdir()
+    _plant_marker(place.path)
+    place.gh_config.mkdir()
+    place.stream.mkdir()'''
+new = '''    place.path.mkdir(exist_ok=True)
+    (place.path / MARKER).write_text(name, encoding="utf-8")
+    place.gh_config.mkdir(exist_ok=True)
+    place.stream.mkdir(exist_ok=True)'''
+
+[[mutation]]
+name = "태그도 bare 로 민다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "B까지의_이력만"]
+expect = "red"
+expect_output = ["CloneError"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        f"{base}:refs/heads/main",'''
+new = '''        f"{base}:refs/heads/main", "--tags",'''
+
+[[mutation]]
+name = "B 대신 M 을 bare 로 민다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "B까지의_이력만"]
+expect = "red"
+expect_output = ["CloneError"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        f"{base}:refs/heads/main",'''
+new = '''        f"{merge}:refs/heads/main",'''
+
+[[mutation]]
+name = "B 가 아닌 ref 를 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "다른_ref가"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''wrong = [ref for sha, ref in refs if sha != base]'''
+new = '''wrong: list[str] = []'''
+
+[[mutation]]
+name = "M 개체를 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "M이_들어온"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if not _git(where, "cat-file", "--batch-check", stdin=merge + "\n").endswith(" missing"):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "bare 를 대 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "M이_들어온_bare도"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''for where in (place.clone, place.bare):'''
+new = '''for where in (place.clone,):'''
+
+[[mutation]]
+name = "git 자식 환경에서 저장소 위치 변수를 벗기지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "저장소_위치_변수가_있어도"]
+expect = "red"
+# 물려받은 `GIT_DIR`·`GIT_WORK_TREE`가 bare 를 짓는 `git init --bare`를 128로 끝낸다.
+expect_output = ["CloneError: git init"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''env = {k: v for k, v in os.environ.items() if k not in REPO_LOCATION_VARS}'''
+new = '''env = dict(os.environ)'''
+
+[[mutation]]
+name = "경로 규칙을 권한 규칙의 꼴로 쓰지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "권한_규칙의_절대_경로_꼴"]
+expect = "red"
+expect_output = ['>           assert f"{tool}(//c/project/agent/**)" in rules']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''return f"//{drive[0].lower()}{posix[2:]}"'''
+new = '''return f"/{posix}"'''
+
+[[mutation]]
+name = "막는 도구 하나를 빠뜨린다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "명세의_목록이_모두"]
+expect = "red"
+expect_output = ['>       assert expected <= set(rules)']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''rules.extend(BLOCKED_TOOLS)'''
+new = '''rules.extend(BLOCKED_TOOLS[1:])'''
+
+[[mutation]]
+name = "막는 규칙의 경로에 링크를 푼 꼴을 넣지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "두_꼴이다"]
+expect = "red"
+expect_output = ['>       assert Path(os.path.realpath(main_dir)) in heads']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''for text in (os.path.abspath(head), os.path.realpath(head)):'''
+new = '''for text in (os.path.abspath(head),):'''
+
+[[mutation]]
+name = "settings.local 을 클론의 info/exclude 에 넣지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "settings_local에_쓰고"]
+expect = "red"
+expect_output = ['>       assert status.stdout == ""']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''f.write("\n/.claude/settings.local.json\n")'''
+new = '''f.write("")'''
+
+[[mutation]]
+name = "이미 있는 settings.local 을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "이미_있는_settings_local은"]
+expect = "red"
+expect_output = ["FileExistsError"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if os.path.lexists(local):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "준비가 실패해도 남은 명령을 돌린다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "준비가_실패하면"]
+expect = "red"
+expect_output = ['>       assert done.failed is not None']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''            if failed is not None:
+                end, exit_code = failed'''
+new = '''            if False and failed is not None:
+                end, exit_code = failed'''
+
+[[mutation]]
+name = "시간을 넘긴 준비를 시간 넘김으로 적지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "준비가_시간을_넘기면"]
+expect = "red"
+expect_output = ['>       assert (done.failed.index, done.failed.end, done.failed.exit_code) == (']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    except subprocess.TimeoutExpired:
+        return SetupEnd.TIMED_OUT, None'''
+new = '''    except subprocess.TimeoutExpired:
+        return SetupEnd.NOT_STARTED, None'''
+
+[[mutation]]
+name = "찾지 못한 준비 명령을 종료로 적는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "찾지_못한_준비_명령"]
+expect = "red"
+expect_output = ['>       assert (done.failed.index, done.failed.end, done.failed.exit_code) == (']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    if exe is None:
+        return SetupEnd.NOT_STARTED, None'''
+new = '''    if exe is None:
+        return SetupEnd.EXITED, None'''
+
+[[mutation]]
+name = "준비 명령의 자식 환경에서 저장소 위치 변수를 벗기지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "준비의_git은"]
+expect = "red"
+expect_output = ['>       assert os.path.normcase(Path(found).resolve()) == os.path.normcase(']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''clean = {k: v for k, v in env.items() if k not in REPO_LOCATION_VARS}'''
+new = '''clean = dict(env)'''
+
+[[mutation]]
+name = "벽시계를 준비가 끝난 뒤부터 재지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "벽시계에_들지_않는다"]
+expect = "red"
+expect_output = ['>       assert done.wall_clock_from - before >= 0.4']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    return Setup(None, time.monotonic())'''
+new = '''    return Setup(None, 0.0)'''
+
+[[mutation]]
+name = "세션 환경에 부모 환경을 통째로 넘긴다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "가짜_gh_토큰은"]
+expect = "red"
+expect_output = ['>       assert "GH_TOKEN" not in env']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''env = {n: parent[n] for n in ALLOWED_ENV if n not in RUNNER_SET_ENV and n in parent}'''
+new = '''env = dict(parent)'''
+
+[[mutation]]
+name = "세션 환경의 gh 설정 폴더를 회차 폴더로 두지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "세션_환경은_허용_목록과"]
+expect = "red"
+expect_output = ['>       assert env[GH_CONFIG_VAR] == str(place.gh_config)']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''env[GH_CONFIG_VAR] = str(round_dir.gh_config)'''
+new = '''env[GH_CONFIG_VAR] = ""'''
+
+[[mutation]]
+name = "표지의 내용을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "표지의_내용이"]
+expect = "red"
+expect_output = ['>       assert report.removed == [other.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''return f.read(_MARKER_MAX_BYTES) == entry.name.encode("utf-8")'''
+new = '''return True'''
+
+[[mutation]]
+name = "회차 폴더 이름의 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "끝의_점이_든"]
+expect = "red"
+expect_output = ['>       assert report.not_round == [place.name + "."]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    if parse_round_dir_name(entry.name) is None:
+        return False'''
+new = '''    if False:
+        return False'''
+
+[[mutation]]
+name = "뿌리 바로 아래의 링크를 회차 폴더로 받는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "뿌리_바로_아래의_링크는"]
+expect = "red"
+# 링크를 회차 폴더로 받아도 지우기 직전의 링크 재확인이 지우지 않고 실패로 돌린다(두 번째 지킴).
+# 그래서 빨개지는 것은 지운 것이 없다는 단언이 아니라 회차 폴더가 아니라는 보고다.
+expect_output = ['>       assert report.not_round == [target.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if entry.is_symlink() or entry.is_junction() or not entry.is_dir(follow_symlinks=False):'''
+new = '''if not entry.is_dir():'''
+
+[[mutation]]
+name = "기록이 없는 회차 폴더도 지운다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "기록이_있는_회차_폴더만"]
+expect = "red"
+expect_output = ['>       assert report.removed == [done.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''elif not _recorded(records, entry.name):'''
+new = '''elif False:'''
+
+[[mutation]]
+name = "기록의 회차 폴더 이름을 맞대지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "기록의_폴더_이름이_다르면"]
+expect = "red"
+expect_output = ['>       assert report.removed == []']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''return read_record(path).round_dir_name == name'''
+new = '''return read_record(path).round_dir_name != ""'''
+
+# 대조군. 링크를 먼저 끊지 않아도 `delete_path`의 `shutil.rmtree`가 junction 과 심볼릭 링크를 따라가지
+# 않아 바깥 파일이 남는다(이 PC의 파이썬 3.12에서 초록을 봤다). 링크 끊기는 rmtree 가 아닌 길과,
+# 끊지 못한 링크나 읽지 못한 폴더가 있으면 아무것도 지우기 전에 멈추는 두 번째 지킴이다.
+[[mutation]]
+name = "회차 폴더 안의 링크를 먼저 끊지 않아도 바깥 파일은 남는다(대조군)"
+tests = ["tests/tools/test_rerun_round.py", "-k", "회차_폴더_안의_링크는"]
+expect = "green"
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    left = _cut_links(folder)'''
+new = '''    left: list[str] = []'''
+
+[[mutation]]
+name = "표지를 맨 끝에 지우지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "지우다_막히면"]
+expect = "red"
+expect_output = ['>       assert (place.path / MARKER).exists()']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''            if entry.name != MARKER:'''
+new = '''            if True:'''
+
+# 아래는 커밋 전 반박 검증이 깬 판정을 고친 자리다(일지 2026-10-23-16).
+[[mutation]]
+name = "표지를 글자 그대로의 이름으로 찾지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "대소문자만_다른_표지"]
+expect = "red"
+expect_output = ['>       assert report.not_round == [place.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''if MARKER not in os.listdir(entry.path) or not stat.S_ISREG(os.lstat(marker).st_mode):'''
+new = '''if not stat.S_ISREG(os.lstat(marker).st_mode):'''
+
+[[mutation]]
+name = "빈 폴더를 지우지 못하면 표지를 다시 심지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "마지막_폴더_지우기"]
+expect = "red"
+expect_output = ['>       assert (place.path / MARKER).read_text(encoding="utf-8") == place.name']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        try:
+            _plant_marker(folder)
+        except OSError as replant:'''
+new = '''        try:
+            pass
+        except OSError as replant:'''
+
+[[mutation]]
+name = "폴더의 읽기 전용 특성을 풀지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "읽기_전용_특성이"]
+expect = "red"
+expect_output = ['>       assert remove_round_dirs(root, records).removed == [place.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        os.chmod(folder, stat.S_IWRITE)
+        os.rmdir(folder)'''
+new = '''        os.rmdir(folder)'''
+
+[[mutation]]
+name = "지우기 직전에 링크인지 다시 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "판정_뒤_링크로"]
+expect = "red"
+expect_output = ['>       assert [name for name, _ in report.failed] == [place.name]']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    if os.path.islink(folder) or os.path.isjunction(folder):
+        return "판정한 뒤 링크로 바뀌어 지우지 않았다"'''
+new = '''    if False:
+        return "판정한 뒤 링크로 바뀌어 지우지 않았다"'''
+
+[[mutation]]
+name = "끊지 못한 링크가 있어도 지우기를 이어 간다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "끊지_못한_링크가"]
+expect = "red"
+expect_output = ['>       assert kept.exists()']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    if left:
+        return f"끊지 못한 링크나'''
+new = '''    if False:
+        return f"끊지 못한 링크나'''
+
+[[mutation]]
+name = "파일인 뿌리를 빈 뿌리로 읽는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "파일인_뿌리는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    except NotADirectoryError as e:
+        raise PlaceError(f"뿌리가 폴더가 아니다: {root}") from e'''
+new = '''    except NotADirectoryError:
+        return report'''
+
+# 아래는 셀프 리뷰를 반영해 더한 시험을 무는 변이다(일지 2026-10-23-16).
+[[mutation]]
+name = "사용자 설정의 followTags 를 끄지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "원본의_설정과_훅이"]
+expect = "red"
+expect_output = ["refs/tags/b-태그"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        "-c",
+        "push.followTags=false",
+'''
+new = ''''''
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        "--no-follow-tags",
+'''
+new = ''''''
+
+[[mutation]]
+name = "클론의 원격 이름을 정하지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "원본의_설정과_훅이"]
+expect = "red"
+expect_output = ['>       assert _git(place.clone, "remote") == "origin"']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''"clone", "-q", "--origin", "origin", '''
+new = '''"clone", "-q", '''
+
+[[mutation]]
+name = "원본의 pre-push 훅을 돌린다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "원본의_설정과_훅이"]
+expect = "red"
+expect_output = ["CloneError: git -c push.followTags=false push -q --no-follow-tags"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        "--no-verify",
+'''
+new = ''''''
+
+[[mutation]]
+name = "읽지 못한 뿌리를 그대로 던진다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "읽지_못하는_뿌리는"]
+expect = "red"
+expect_output = ["PermissionError: [Errno 13] 읽기 거부"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    except OSError as e:
+        raise PlaceError(f"뿌리를 읽지 못했다'''
+new = '''    except NotImplementedError as e:
+        raise PlaceError(f"뿌리를 읽지 못했다'''
+
+[[mutation]]
+name = "가운데 조각 끝의 공백과 점을 모두 뗀다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "가운데_조각_끝의"]
+expect = "red"
+expect_output = ["PlaceError: 뿌리가 주 체크아웃"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    return {tuple(s for s in t.replace("\\", "/").casefold().split("/") if s) for t in texts}'''
+new = '''    return {tuple(s.rstrip(" .") for s in t.replace("\\", "/").casefold().split("/") if s) for t in texts}'''

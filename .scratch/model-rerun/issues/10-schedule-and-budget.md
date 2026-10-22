@@ -49,3 +49,10 @@
 
 - 01의 회차 기록은 회차 폴더를 뿌리를 뺀 이름(`round_dir_name`)으로만 든다. 다시 뜬 러너가 측정 아님(중단)으로 쓰는 기록에는 뿌리 아래에서 찾은 그 회차 폴더의 이름을 옮겨 넣는다(2026-10-23 티켓 01의 PR 봇 회차).
 - 01의 `write_record`는 같은 폴더의 임시 파일(`.<기록 파일 이름>.<pid>-<난수>.tmp`)에 다 쓴 뒤 하드 링크로 이름을 붙이고, 예외로 실패하면 임시 파일을 지운다. 러너가 강제로 죽으면 그 임시 파일이 `records/`에 남는다. 기록 파일 이름으로 풀리지 않아 번호 셈과 판정은 그것을 보지 않지만, 커밋 전에 그것을 지울지는 이 티켓이 정한다(01의 `write_record` 독스트링 "못 보는 것").
+
+### 04에서 넘어온 메모
+
+- 뿌리는 `checked_root(text, main_checkout=main_checkout(ROOT), home=Path.home())`로, 전용 설정 폴더는 `checked_place(text, "설정 폴더", main_checkout=..., user_claude=Path.home() / ".claude")`로 본다. `PlaceError`면 아무 회차도 열지 않고 멈춘다. 막는 규칙은 `deny_rules(deny_heads(main_checkout(ROOT), home=Path.home()))`이다(모두 `tools/rerun_round.py`).
+- 번호를 잡은 자리에서 `create_round_dir(root, task_id, arm, round_no)`만 차례로 부르고, `prepare_round`는 회차마다 따로 돈다.
+- 사람이 부르는 지우기는 `python -m tools.rerun_round remove <뿌리> [--records <폴더>]`이고, `records/`의 기본값은 그 모듈의 `RECORDS`다. 이 티켓의 `records/` 기본값 상수와 한 곳에 두도록 맞춘다.
+- 다시 뜬 러너가 찾는 "표지는 있는데 `records/`에 기록이 없는 회차 폴더"는 04의 지우기가 `no_record`로 가르는 판정(`_is_round_dir`, `_recorded`)과 같다. 그 판정을 공개 함수로 꺼내 함께 쓴다.
