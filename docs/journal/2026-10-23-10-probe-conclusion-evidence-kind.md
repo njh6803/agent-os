@@ -131,3 +131,54 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): 위 고�
 - 양성 대조: 15번에 14번 표지, 22번에 21번 표지를 넣은 세션 스크래치패드의 사본 표(`swap_markers.toml`)를 같은 명령으로 돌려 둘 다 "표지 없음"으로 어긋났고(종료 1), 실패 줄이 명령의 단언과 `'## 근거'`의 단언인 것을 손으로 봤다.
 - 잔존: 옛 표현 여덟을 저장소의 `*.md`·`*.py`·`*.toml`에서 Grep으로 찾아 살아 있는 문서에 0곳(남은 것은 기록인 일지와 다른 프로브의 "변이 스물하나").
 - 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
+
+### 커밋
+
+- 커밋 직전: 브랜치 `chore/003-probe-conclusion-evidence-kind`, `sibling_overlap` 번호 겹침 없음(origin/main 그대로, PR #358이 `2026-10-23-11`로 이름순 뒤에 섰다).
+- `ec920f03`(`chore: 프로브 README 계기가 근거의 종류와 결과를 본 뒤 바꾼 기준을 짚는다 (harness 003)`). pre-commit: ruff check·ruff format·checks(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks 299.1s, web-verify 511.2s, pytest 568.8s)·markdown tables·line separators·mutation tables·quotes·commit message 모두 Passed. canary specs와 constitution version은 대상 파일이 없어 Skipped.
+
+### 인계 (커밋 뒤)
+
+- 커밋을 백그라운드로 띄우자 `hook_handoff`가 세션 컨텍스트 276,033 토큰으로 `커밋 뒤` 계기를 냈다. 커밋이 성공해 경계에 왔고, "인계할 때" 1의 다섯 가운데 맞는 것이 없다(요청 범위는 PR과 병합까지, 이어받은 경계는 `셀프 리뷰 직전`이라 다르다, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음). 열린 PR이 없어 다음 단계는 이 세션 지시문의 "구현"을 그대로 옮긴다.
+- 이 세션이 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 변이 실행, 커밋)은 모두 끝났다.
+- 이 세션의 지금 제목: `chore/003-probe-conclusion-evidence-kind`(인계 전).
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md를 잇는다. 셀프 리뷰를 반영해 커밋했고, PR 직전 리뷰와 PR, 병합이 남았다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다
+브랜치: chore/003-probe-conclusion-evidence-kind
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았다(PR 없음). 일지의 둘째 세션 절 가운데 "커밋"과 "인계 (커밋 뒤)"는 커밋 뒤에 적어 워크트리에 커밋하지 않은 채 있으니 다음 커밋에 싣는다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 "반영"의 "PR 직전 리뷰에 밀 주장" 줄), 푸시와 PR, 봇 회차, 병합이다. docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/003-probe-conclusion-evidence-kind (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock C:/project/agent/.claude/worktrees/003-probe-conclusion-evidence-kind`)는 `is not locked`로 끝났다. 이 세션은 `EnterWorktree(path)`로 들어왔는데 그 워크트리가 잠기지 않았다(잠금이 어디서 풀렸는지는 보지 않았다).
+- open-session을 부른다 2026-10-22T18:49:53Z
+
+## PR 직전 리뷰와 병합 (셋째 세션)
+
+> 사용자: (next-session 지시문을 첫 메시지로 받았다) "대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다 / 다음 작업: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md를 잇는다. 셀프 리뷰를 반영해 커밋했고, PR 직전 리뷰와 PR, 병합이 남았다 / 다음 단계: 구현 / 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / 시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다 / 브랜치: chore/003-probe-conclusion-evidence-kind / 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래 / 읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md / 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았다(PR 없음). 일지의 둘째 세션 절 가운데 \"커밋\"과 \"인계 (커밋 뒤)\"는 커밋 뒤에 적어 워크트리에 커밋하지 않은 채 있으니 다음 커밋에 싣는다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 \"반영\"의 \"PR 직전 리뷰에 밀 주장\" 줄), 푸시와 PR, 봇 회차, 병합이다. docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md / 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 브랜치가 워크트리 `003-probe-conclusion-evidence-kind`(`ec920f03`)에 있어 `EnterWorktree(path)`로 들어갔다. 거부 없이 들어갔다. 커밋하지 않은 변경은 이 일지 하나였다.
+- `git fetch origin` 뒤 `HEAD..origin/main`이 비었다.
+
+### PR 직전 리뷰
+
+- `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`. CLI가 돌지 못해 대체 둘을 나란히 돌렸다.
+- `/security-review`: 식별 서브태스크가 "No vulnerabilities found"를 냈다. 런타임 변경이 `_BODY` 상수와 독스트링뿐이고, 페이로드 값이 출력에 실리지 않으며, 표지 파일 이름이 SHA-256 16진이라 경로를 벗어나지 못한다는 것을 따라갔다. 걸러 볼 후보가 없어 오탐을 거르는 서브태스크는 띄우지 않았다.
+- `bug-perf-review`(`[호출 43]`): 유효 0, 보류 1이고, 밀 주장 일곱은 자리를 열어 대 보니 모두 맞아 오탐으로 냈다. 보류는 그 서브에이전트가 띄운 변이 표 재실행이 기준선 일곱 줄 뒤로 출력이 늘지 않아 끝을 보지 못한 것이다. 코드 읽기로는 변이 27과 대조군 1, `expect_output`을 단 변이의 묶음(넷, 열, 둘), 원문 28개가 훅 파일에 한 번씩 있는 것을 대 봤다고 했다. 그 실행은 TaskStop으로 멈췄고, 멈춘 뒤 `git status`에 변이된 파일이 남지 않았다고 했다.
+- 둘째 사례의 README 밖 자리(명세)에서 어긴 문장은 "명령 없이 적은 문장"이 아니라 재지 않은 키 이름 같은 다른 문장이지만, 같은 근거 종류의 위반이라 사례 묶음으로는 맞다고 짚었다. 지적이 아니라 고치지 않았다.
+- 보류의 처리: 이 세션이 저장소 루트에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/probe_conclusion_hook_mutations.toml`을 백그라운드로 다시 돌렸다. 변이 28 모두 기대대로였고(종료 0, `mutate.py`가 찍었다), 끝난 뒤 `git status`에 변이가 남지 않았다. 23번(표지 이름에서 에이전트를 뺀다)의 시험이 70.59초로 길었고 나머지는 2초 안이었다. 서브에이전트의 실행이 멈춘 듯 보인 까닭이 이 긴 시험인지는 보지 않았다(어림).
+- PR 본문의 알림 길이: 서브에이전트가 "약 330자에서 약 800자"로 어림한 것을, 두 커밋의 훅 파일을 `git show`로 읽어 `_BODY.format(lead=LEAD)`의 길이를 세는 세션 스크래치패드 스크립트(`body_len.py`)로 손으로 셌다. `975bf04c` 307자, `ec920f03` 654자.
+
+### origin/main 합치기
+
+- 리뷰 동안 #359(harness 004)가 병합되어 origin/main이 `e205147d`로 움직였다. 함께 고친 파일은 `.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`이고 다른 행이다. `git merge --no-edit origin/main`으로 충돌 없이 합쳤다(`fe8ac791`). 병합 커밋에는 커밋 메시지 검사만 돌았다.
+- #359가 고친 파일을 이 브랜치가 드는 자리는, 첫 세션 절이 인용한 사용자 프롬프트의 티켓 004 경로 하나뿐이다. `git diff -G`로 그 파일 이름들을 찾아 손으로 봤다. 기록된 인용이라 고치지 않았다. #359가 더한 `bool | None` 주석 검사는 다음 커밋의 pre-commit(check-instructions)이 이 브랜치의 코드에도 돈다.
