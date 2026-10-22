@@ -1,4 +1,4 @@
-# 2026-10-23 (10) 프로브 README 계기가 근거의 종류와 결과를 본 뒤 바꾼 기준을 밝히라고 짚는다 (harness 003)
+# 2026-10-23 (13) 프로브 README 계기가 근거의 종류와 결과를 본 뒤 바꾼 기준을 밝히라고 짚는다 (harness 003)
 
 ## 구현 (첫 세션)
 
@@ -55,8 +55,8 @@
 시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다
 브랜치: chore/003-probe-conclusion-evidence-kind
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 티켓과 일지 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main, 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md)부터 한다. docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
+읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 티켓과 일지 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main, 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md)부터 한다. docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
 확인할 선행 조건: 검사 러너(tools/run_checks.py)는 pytest와 web이 끝나기 전에 인계로 멈췄다. 셀프 리뷰를 반영한 뒤 커밋의 pre-commit으로 갈음하거나 다시 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -151,8 +151,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): 위 고�
 시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다
 브랜치: chore/003-probe-conclusion-evidence-kind
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았다(PR 없음). 일지의 둘째 세션 절 가운데 "커밋"과 "인계 (커밋 뒤)"는 커밋 뒤에 적어 워크트리에 커밋하지 않은 채 있으니 다음 커밋에 싣는다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 "반영"의 "PR 직전 리뷰에 밀 주장" 줄), 푸시와 PR, 봇 회차, 병합이다. docs/journal/2026-10-23-10-probe-conclusion-evidence-kind.md
+읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았다(PR 없음). 일지의 둘째 세션 절 가운데 "커밋"과 "인계 (커밋 뒤)"는 커밋 뒤에 적어 워크트리에 커밋하지 않은 채 있으니 다음 커밋에 싣는다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 "반영"의 "PR 직전 리뷰에 밀 주장" 줄), 푸시와 PR, 봇 회차, 병합이다. docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -182,3 +182,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): 위 고�
 
 - 리뷰 동안 #359(harness 004)가 병합되어 origin/main이 `e205147d`로 움직였다. 함께 고친 파일은 `.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`이고 다른 행이다. `git merge --no-edit origin/main`으로 충돌 없이 합쳤다(`fe8ac791`). 병합 커밋에는 커밋 메시지 검사만 돌았다.
 - #359가 고친 파일을 이 브랜치가 드는 자리는, 첫 세션 절이 인용한 사용자 프롬프트의 티켓 004 경로 하나뿐이다. `git diff -G`로 그 파일 이름들을 찾아 손으로 봤다. 기록된 인용이라 고치지 않았다. #359가 더한 `bool | None` 주석 검사는 다음 커밋의 pre-commit(check-instructions)이 이 브랜치의 코드에도 돈다.
+- 일지 커밋 `c4c3e73d`: pre-commit의 checks(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest)·markdown tables·line separators·mutation tables·quotes·commit message 모두 Passed. ruff 둘은 `.py`가 없어 Skipped라 손으로 쳐 둘 다 통과했다. 인용 대조 경고 하나는 서브에이전트 보고의 "No vulnerabilities found"이고, 원문이 저장소 밖(서브에이전트의 보고)이라 그대로 둔다.
+- 그 커밋을 백그라운드로 띄우자 `hook_handoff`가 세션 컨텍스트 237,047 토큰으로 `커밋 뒤` 계기를 냈다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 "인계할 때" 1대로 넘기지 않고 잇는다.
+- 푸시 전에 다시 친 `git fetch origin`에서 #358(harness 008)이 병합되어 있었다(`690de5bf`). `git merge --no-edit origin/main`으로 충돌 없이 합쳤다. 함께 고친 파일은 `.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`이고 다른 행이다.
+- 그 뒤 `sibling_overlap`이 1로 끝났다. 이 일지(`2026-10-23-10`)가 origin/main의 최신 일지 `2026-10-23-11`보다 이름순으로 앞이라, 다음 세션이 이름순 최신 일지의 "다음"을 읽으며 이 일지를 지나친다는 판정이다. `--move`로 `2026-10-23-13`으로 옮겼다. 인용을 고친 파일은 프로브 README의 그 행, 대기열 421, 이 일지다. 이 일지의 `> 사용자:` 인용 둘(둘째·셋째 세션)에 남은 옛 경로는 사용자 프롬프트 원문이라 그대로 둔다.
