@@ -206,6 +206,49 @@ def test_감긴_독스트링과_주석을_한_줄로_옮긴_인용도_원문을_
     assert check([quoting], tmp_path).warnings == []
 
 
+def test_슬래시_주석으로_감긴_원문을_한_줄로_옮긴_인용도_원문을_찾는다(tmp_path: Path) -> None:
+    """TS·JS 의 `//` 주석도 폭 100 으로 감긴다. 다음 줄 머리의 `//` 를 벗기지 않아 경고됐다(대기열
+    436)."""
+    (tmp_path / "tool.mjs").write_text(
+        "// 감긴 슬래시 주석의 첫 줄은 여기서 끊기고\n//   다음 줄에서 이어지는 문장이다\n",
+        encoding="utf-8",
+    )
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '주석은 "감긴 슬래시 주석의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 한다.\n',
+    )
+
+    assert check([quoting], tmp_path).warnings == []
+
+
+@pytest.mark.parametrize("차례", [(0, 1), (1, 0)])
+def test_넘겨받은_미추적_파일은_차례와_상관없이_서로의_원문이다(
+    tmp_path: Path, 차례: tuple[int, int]
+) -> None:
+    """대조하는 차례에 하나씩 말뭉치에 더하면 앞 파일은 뒤 파일의 원문을 보지 못한다(대기열 398)."""
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "base.md").write_text("# 바탕\n", encoding="utf-8")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    adr = tmp_path / "adr.md"
+    일지 = tmp_path / "journal.md"
+    adr.write_text(
+        '사용자가 "일지에 적은 사용자의 원문 한 줄이 여기 그대로 옮겨진다"고 했다.\n'
+        "ADR 이 정한 문장은 이 결정이 다음 세션에도 그대로 이어진다는 것이다.\n",
+        encoding="utf-8",
+    )
+    일지.write_text(
+        "일지에 적은 사용자의 원문 한 줄이 여기 그대로 옮겨진다.\n"
+        'ADR 은 "이 결정이 다음 세션에도 그대로 이어진다는 것이다"라 적었다.\n',
+        encoding="utf-8",
+    )
+    파일 = [adr, 일지]
+
+    report = check([파일[차례[0]], 파일[차례[1]]], tmp_path)
+
+    assert (report.warnings, report.quotes_checked) == ([], 2)
+
+
 def test_빈_줄로_나뉜_두_문단을_이은_인용은_원문으로_세지_않는다(tmp_path: Path) -> None:
     """줄을 펴는 것은 감긴 줄만이다. 빈 줄은 이음매가 둘이라 문단을 넘어 맞지 않는다."""
     quoting = _저장소를_만든다(
@@ -477,6 +520,16 @@ def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path:
         원천="앞 문단의 마지막 줄 끝\n## 제목의 낱말들이 이어진다",
     )
     assert check([제목과_이어진_인용], 제목_자리).warnings == []
+
+    # 줄 머리의 `//` 도 주석 표지로 지워, 주석이 아니었던 `//` 줄과 앞 줄을 잇는다(대기열 436).
+    슬래시_자리 = tmp_path / "슬래시"
+    슬래시_자리.mkdir()
+    슬래시_줄과_이어진_인용 = _저장소를_만든다(
+        슬래시_자리,
+        '"앞 문단의 마지막 줄 끝 경로처럼 보이는 낱말들이 이어진다"\n',
+        원천="앞 문단의 마지막 줄 끝\n// 경로처럼 보이는 낱말들이 이어진다",
+    )
+    assert check([슬래시_줄과_이어진_인용], 슬래시_자리).warnings == []
 
     # 같은 사본은 감긴 문장과 서로 무관한 이웃 줄을 가르지 못해, 한 줄의 끝과 다음 줄의 머리를
     # 잇는다.
