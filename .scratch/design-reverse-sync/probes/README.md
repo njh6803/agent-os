@@ -10,11 +10,11 @@ node .scratch/design-reverse-sync/probes/tools_import.mjs [--commit <커밋>] [-
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
-| `tools_import.mjs` | `web/tools`의 Node 스크립트(루트 tsconfig: `nodenext`, `lib` es2024)가 디자인 시스템 패키지의 명암비 계산과 짝 표를 부를 수 있는지. 커밋의 `web/`을 임시 폴더에 두 번 꺼내, 두 갈래 모두 루트 `web/package.json`에 `"@agent-os/ui": "workspace:*"`를 더하고 패키지 `exports`에 경로 하나를 더한 뒤 오프라인으로 설치하고, 루트 타입 검사(`tsc --noEmit`)와 `node tools/probe-import.ts` 실행까지 본다. `as-is`는 지금의 `contrast.ts`를 그대로 내보내고, `self-contained`는 `testing/index.ts`의 DOM 없는 앞부분과 `contrast.ts`의 본문을 이어 붙인 상대 import 없는 한 파일을 내보낸다 | 명세 Implementation Decisions의 "명암비 계산과 짝 표를 부르는 길"(ADR 0025 이력 2026-10-21 "명세가 정할 것" (6)) | 커밋을 바꾸려면 `--commit`. 사본을 남기려면 `--keep`. 측정 아닌 갈래나 기대와 다른 갈래가 있으면 1로 끝난다 | 커밋 `14efe41d`, Node 24.19.0, pnpm 11.24.0, TypeScript 5.9.3 |
+| `tools_import.mjs` | `web/tools`의 Node 스크립트(루트 tsconfig: `nodenext`, `lib` es2024)가 디자인 시스템 패키지의 명암비 계산과 짝 표를 부를 수 있는지. 커밋의 `web/`을 임시 폴더에 두 번 꺼내, 두 갈래 모두 루트 `web/package.json`에 `"@agent-os/ui": "workspace:*"`를 더하고 패키지 `exports`에 경로 하나를 더한 뒤 오프라인으로 설치하고, 루트 타입 검사(`tsc --noEmit`)와 `node tools/probe-import.ts` 실행까지 본다. `as-is`는 지금의 `contrast.ts`를 그대로 내보내고, `self-contained`는 `testing/index.ts`의 DOM 없는 앞부분과 `contrast.ts`의 본문을 이어 붙인 상대 import 없는 한 파일을 내보낸다 | 명세 Implementation Decisions의 "명암비 계산과 짝 표를 부르는 길"(ADR 0025 이력 2026-10-21 "명세가 정할 것" (6)) | 기본은 지금 `HEAD`의 `web/`이다. 아래 결과를 그대로 다시 보려면 `--commit 14efe41d`. 사본을 남기려면 `--keep`. 측정 아닌 갈래나 기대와 다른 갈래가 있으면 1로 끝난다 | 커밋 `14efe41d`, Node 24.19.0, pnpm 11.24.0, TypeScript 5.9.3 |
 
 ## 2026-10-21 결과
 
-- `as-is`: 설치 0, 링크가 섰다. 타입 검사가 2로 끝났고 오류 번호는 `contrast.ts`의 확장자 없는 import에서 난 TS2834·TS2835 둘뿐이다. `node`는 1로 끝났고 첫 import `"../testing"`을 폴더 import로 읽어 `ERR_UNSUPPORTED_DIR_IMPORT`를 냈다.
+- `as-is`: 설치 0, 링크가 섰다. 타입 검사가 2로 끝났고, 출력 줄의 `tsc.codes`(타입 검사 출력에서 모은 오류 번호)가 TS2834·TS2835 둘뿐이었다. 표지로 단언한 것은 `contrast.ts`의 줄에 그 둘 가운데 하나가 있다는 것이고, 다른 번호가 없다는 것은 출력으로 봤다. `node`는 1로 끝났고 첫 import `"../testing"`을 폴더 import로 읽어 `ERR_UNSUPPORTED_DIR_IMPORT`를 냈다.
 - `self-contained`: 설치 0, 링크가 섰다. 타입 검사 0, 오류 번호 없음. `node`가 0으로 끝나며 `{"pairs":43,"failures":43}`을 찍었다. 모든 쓰임새 토큰을 검정으로 준 실행이라 짝 43개가 모두 실패하는 것이 기대값이고, 계산이 실제로 돌았다는 표지다.
 - 요약: 측정 2, 측정 아님 0, 기대와 다름 0. 종료 0.
 
