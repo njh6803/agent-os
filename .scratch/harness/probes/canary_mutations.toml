@@ -1986,7 +1986,7 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/canary.py"
 old = '''
-    if _registered(base, place) is False:
+    if _registration(base, place) is _Registration.GONE:
 '''
 new = '''
     if False:
