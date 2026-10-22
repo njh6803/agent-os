@@ -340,3 +340,140 @@ old = '''            check=False,
 new = '''            check=False,
         )
     except (OSError, subprocess.TimeoutExpired):'''
+
+# harness 티켓 004(대기열 423)의 `bool | None` 주석 검사. 변이마다 판정의 한 갈래를 끊어 그 갈래를
+# 지키는 시험이 빨강이 되는지 잰다. 표지는 그 시험의 FAILED 줄이다.
+
+[[mutation]]
+name = "Optional 을 합으로 펴지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "세_모양_모두"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_bool_과_None_의_합_주석을_세_모양_모두_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        case ast.Subscript(value=base, slice=inner) if _typing_name(base) == "Optional":'''
+new = '''        case ast.Subscript(value=base, slice=inner) if _typing_name(base) == "Never":'''
+
+[[mutation]]
+name = "Union 을 합으로 펴지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "typing_속성과"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_typing_속성과_Union_과_문자열_주해도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''            _typing_name(base) == "Union"'''
+new = '''            _typing_name(base) == "Never"'''
+
+[[mutation]]
+name = "문자열 주해를 다시 읽지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "typing_속성과"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_typing_속성과_Union_과_문자열_주해도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "키워드 전용 매개변수를 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "키워드_전용과"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_키워드_전용과_가변_인자와_반환도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        *arguments.kwonlyargs,
+'''
+new = ''''''
+
+[[mutation]]
+name = "반환을 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "키워드_전용과"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_키워드_전용과_가변_인자와_반환도_잡는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    if function.returns is not None:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "갈래가 bool 과 None 둘뿐인지 보지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "세_값이_아닌"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_세_값이_아닌_주석은_지나간다[bool | int | None]"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    return {_member_kind(member) for member in members} == {"bool", "None"}'''
+new = '''    return {"bool", "None"} <= {_member_kind(member) for member in members}'''
+
+[[mutation]]
+name = "훑는 범위에서 tests 를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "pyright_의_include"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_bool_None_검사가_훑는_범위는_pyright_의_include_다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''OPTIONAL_BOOL_ROOTS = ("src", "tests", "tools")'''
+new = '''OPTIONAL_BOOL_ROOTS = ("src", "tools")'''
+
+[[mutation]]
+name = "저장소 전체를 훑어 probes 까지 본다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "probes_는_보지_않는다"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_bool_None_주석을_파일과_줄로_보고하고_probes_는_보지_않는다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        (path for directory in OPTIONAL_BOOL_ROOTS for path in (root / directory).rglob("*.py")),'''
+new = '''        (path for directory in ("",) for path in (root / directory).rglob("*.py")),'''
+
+[[mutation]]
+name = "main 에서 bool | None 검사를 뺀다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "CLI_진입점이_bool_None"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_CLI_진입점이_bool_None_주석을_출력한다"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''    problems.extend(optional_bool_annotations(root))
+'''
+new = ''''''
+
+[[mutation]]
+name = "합 안의 합을 펴지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "펴서_잡는다"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_안쪽_합과_갈래_안의_문자열도_펴서_잡는다[Optional[Optional[bool]]]"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        flat.extend(_union_members(member) or [_parsed(member)])'''
+new = '''        flat.extend([_parsed(member)])'''
+
+[[mutation]]
+name = "갈래 안의 문자열을 읽지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "펴서_잡는다"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_안쪽_합과_갈래_안의_문자열도_펴서_잡는다[Optional['bool']]"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        flat.extend(_union_members(member) or [_parsed(member)])'''
+new = '''        flat.extend(_union_members(member) or [member])'''
+
+[[mutation]]
+name = "문자열 주해의 앞뒤 공백을 벗기지 않는다"
+tests = ["tests/tools/test_check_instructions.py", "-k", "펴서_잡는다"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_instructions.py::test_안쪽_합과_갈래_안의_문자열도_펴서_잡는다[' bool | None ']"]
+
+[[mutation.edit]]
+file = "tools/check_instructions.py"
+old = '''        return ast.parse(node.value.strip(), mode="eval").body'''
+new = '''        return ast.parse(node.value, mode="eval").body'''

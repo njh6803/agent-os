@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from tools.check_instructions import (
     CALL_TIMEOUT,
+    OPTIONAL_BOOL_ROOTS,
     PATCHED_SKILLS,
     ROOT,
     SENTINEL,
@@ -29,6 +30,9 @@ from tools.check_instructions import (
     imports_outside_claude_md,
     local_settings_with_guards,
     nested_instruction_files,
+    optional_bool_annotations,
+    optional_bool_lines,
+    optional_bool_sources,
     patched_skills_without_sentinel,
     rules_with_dead_paths,
     rules_without_paths,
@@ -37,6 +41,7 @@ from tools.check_instructions import (
     tool_sources,
     untimed_call_lines,
 )
+from tools.check_type_escapes import scanned_roots
 from tools.run_hooks import REPO_LOCATION_VARS
 
 
@@ -1093,6 +1098,157 @@ def test_이_저장소의_tools_에는_시간_제한_없는_호출이_없다() -
     # 범위가 비면 위반 0 으로 조용히 초록이다(tests.md)
     assert len(tool_sources()) >= 50
     assert calls_without_timeout() == []
+
+
+# 세 값으로 출력을 고르는 `bool | None` 주석(대기열 423). ruff FBT 는 키워드 전용 매개변수를
+# 보지 않아 `output_for(..., first: bool | None)` 이 셀프 리뷰까지 지나갔다.
+
+
+def test_bool_과_None_의_합_주석을_세_모양_모두_잡는다() -> None:
+    source = (
+        "from typing import Optional\n"
+        "def a(x: bool | None) -> int: ...\n"
+        "def b(x: None | bool) -> int: ...\n"
+        "def c(x: Optional[bool]) -> int: ...\n"
+        "def d(x: bool | None | None) -> int: ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (2, "a 의 x"),
+        (3, "b 의 x"),
+        (4, "c 의 x"),
+        (5, "d 의 x"),
+    ]
+
+
+def test_키워드_전용과_가변_인자와_반환도_잡는다() -> None:
+    source = (
+        "def f(a: bool | None, /, b: bool | None, *args: bool | None,\n"
+        "      c: bool | None, **kwargs: bool | None) -> bool | None: ...\n"
+        "class K:\n"
+        "    async def g(self, *, first: bool | None = None) -> None: ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (1, "f 의 a"),
+        (1, "f 의 b"),
+        (1, "f 의 args"),
+        (2, "f 의 c"),
+        (2, "f 의 kwargs"),
+        (2, "f 의 반환"),
+        (4, "g 의 first"),
+    ]
+
+
+def test_typing_속성과_Union_과_문자열_주해도_잡는다() -> None:
+    source = (
+        "import typing\n"
+        "import typing as tp\n"
+        "def a(x: typing.Optional[bool]) -> None: ...\n"
+        "def b(x: tp.Union[bool, None]) -> None: ...\n"
+        "def c(x: 'bool | None') -> 'Optional[bool]': ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (3, "a 의 x"),
+        (4, "b 의 x"),
+        (5, "c 의 x"),
+        (5, "c 의 반환"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "Optional[Optional[bool]]",
+        "Optional[bool | None]",
+        "Union[bool, Optional[bool]]",
+        "Optional['bool']",
+        "bool | 'None'",
+        "' bool | None '",
+    ],
+)
+def test_안쪽_합과_갈래_안의_문자열도_펴서_잡는다(annotation: str) -> None:
+    source = f"def f(x: {annotation}) -> None: ...\n"
+
+    assert optional_bool_lines(source) == [(1, "f 의 x")]
+
+
+def test_잘못_막는_것_typing_이_아닌_Optional_도_잡는다() -> None:
+    """독스트링의 잘못 막는 것. 이름이 어디서 왔는지는 보지 않는다."""
+    source = "def Optional() -> None: ...\ndef f(x: Optional[bool]) -> None: ...\n"
+
+    assert optional_bool_lines(source) == [(2, "f 의 x")]
+
+
+@pytest.mark.parametrize(
+    "parameter",
+    [
+        pytest.param("seen: bool | None = None", id="모듈_변수"),
+        pytest.param("class K:\n    seen: bool | None = None", id="클래스_칸"),
+        pytest.param("Flag = bool | None\ndef a(x: Flag) -> None: ...", id="별칭"),
+        pytest.param("def a(x: list[bool | None]) -> None: ...", id="감싼_주석"),
+        pytest.param(
+            "from typing import Annotated\ndef a(x: Annotated[bool | None, 'm']) -> None: ...",
+            id="Annotated",
+        ),
+        pytest.param("def a(x: builtins.bool | None) -> None: ...", id="builtins_bool"),
+        pytest.param("def a(x: bool | NoneType) -> None: ...", id="NoneType"),
+    ],
+)
+def test_못_보는_것은_지나간다(parameter: str) -> None:
+    """독스트링의 못 보는 것. 함수의 매개변수와 반환의 주석만, 이름 `bool` 과 None 상수로 본다."""
+    assert optional_bool_lines(parameter + "\n") == []
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "bool",
+        "int | None",
+        "bool | int",
+        "bool | int | None",
+        "Optional[int]",
+        "Literal[True, None]",
+        "'not a type ('",
+    ],
+)
+def test_세_값이_아닌_주석은_지나간다(annotation: str) -> None:
+    source = f"def f(x: {annotation}) -> {annotation}: ...\n"
+
+    assert optional_bool_lines(source) == []
+
+
+def test_bool_None_주석을_파일과_줄로_보고하고_probes_는_보지_않는다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/agent_os/x.py", "def f(*, x: bool | None) -> None: ...\n")
+    _파일을_둔다(tmp_path, "tests/test_x.py", "def g() -> bool | None: ...\n")
+    _파일을_둔다(tmp_path, "tools/y.py", "def h(x: bool) -> None: ...\n")
+    _파일을_둔다(tmp_path, ".scratch/a/probes/p.py", "def p(x: bool | None) -> None: ...\n")
+
+    problems = optional_bool_annotations(tmp_path)
+
+    assert len(problems) == 2
+    assert problems[0].startswith("src/agent_os/x.py:1: f 의 x 가 bool | None 이다")
+    assert problems[1].startswith("tests/test_x.py:1: g 의 반환이 bool | None 이다")
+
+
+def test_bool_None_검사가_훑는_범위는_pyright_의_include_다() -> None:
+    assert OPTIONAL_BOOL_ROOTS == scanned_roots()
+
+
+def test_이_저장소에는_bool_None_주석이_없다() -> None:
+    # 범위가 비면 위반 0 으로 조용히 초록이다(tests.md)
+    assert len(optional_bool_sources()) >= 200
+    assert optional_bool_annotations() == []
+
+
+def test_CLI_진입점이_bool_None_주석을_출력한다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "tools/x.py", "def f(*, first: bool | None) -> None: ...\n")
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert "tools/x.py:1: f 의 first 가 bool | None 이다" in process.stdout
+    assert process.returncode == 1
 
 
 def test_CLI_진입점이_시간_제한_없는_호출을_출력한다(tmp_path: Path) -> None:
