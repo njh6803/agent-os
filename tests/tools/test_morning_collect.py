@@ -15,7 +15,7 @@ from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from tools.hook_report import BLOCK, NOTICE, Firing
+from tools.hook_report import AMBIGUOUS, BLOCK, NOTICE, UNKNOWN, Firing
 from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
     Collected,
@@ -868,6 +868,22 @@ def test_훅_표는_판정이_유지인_훅을_빼고_그_수를_줄로_적는�
     assert (table.key, table.report) == ("environment.hooks", "environment")
     assert [r[1] for r in table.rows] == ["hook_old.py"]
     assert any("등록된 훅 1개는 판정이 `유지`" in line for line in section.lines)
+
+
+def test_훅_절은_가르지_못한_막음과_알림을_따로_센다() -> None:
+    # harness 005: 짝 없는 계기 첨부를 세면서 가르지 못한 알림(앱이 넣은 글)이 생겼는데, 이 줄은
+    # 종류를 보지 않고 모두 막음이라 적었다
+    last = date(2026, 10, 19)
+    firings = (
+        Firing(UNKNOWN, BLOCK, last, "플러그인이 막았다"),
+        Firing(UNKNOWN, NOTICE, last, "Also still to do in this turn:"),
+        Firing(AMBIGUOUS, NOTICE, last, "같은 문장"),
+        Firing(UNKNOWN, BLOCK, date(2026, 9, 21), "창 밖"),
+    )
+    scan = HookScan((), {}, {}, firings)
+    section = hook_section(scan, last, None, Sources("장부", "기록")).section
+    expected = "가르지 못한 막음이 2026-09-22 ~ 2026-10-19에 1건, 알림이 2건 있다."
+    assert any(line.endswith(expected) for line in section.lines)
 
 
 def test_작업_칸의_브랜치는_PR_번호를_모으고_PR이_없으면_커밋_제목을_모은다(

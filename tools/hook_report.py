@@ -15,13 +15,28 @@ retro가 새 훅·검사를 승인하기 전과 모델이 바뀐 뒤(`docs/model
   훅만 남는다. stderr만 낸 것(uv의 가상 환경 경고)과 래퍼가 훅을 돌리지 않고 지나간 알림(훅 파일이
   없다, 훅 이름 인자가 하나가 아니다. `launch_hook.skip_reason`의 두 문구)은 세지 않는다(2026-10-19
   이 PC의 기록에서 손으로 봤다).
+- 계기 첨부: 모델에게 간 계기(`additionalContext`)는 명령 없는 `hook_additional_context` 첨부로도
+  남는다. 첨부 하나를 같은 세션·이벤트에서 같은 글을 stdout(JSON)의 `additionalContext`로 낸
+  `hook_success` 하나(명령을 가리지 않는다. 플러그인 훅도)와 짝지어 뺀다. 짝을 `toolUseID`로 짓지
+  않는 것은 SessionStart의 첨부는 그 자리가 이벤트 이름이라 `hook_success`의 것과 달라서다.
+  UserPromptSubmit(`PROMPT_EVENT`)의 계기는 첨부로만 남고 `hook_success`가 없어(대기열 404), 그
+  이벤트의 짝 없는 첨부는 그 이벤트에 등록된 훅의 조각과만 아래 막음처럼 견주어(`fragment_owner`)
+  그 훅의 알림으로 센다. 다른 이벤트에서는 이 저장소의 훅이 `hook_success`를 남겨 짝이 있으니, 짝
+  없는 첨부는 `UNKNOWN` 알림이다. 이벤트를 가리지 않고 모든 훅의 조각과 견주던 판은 앱의 글에 든
+  낱말(경로의 `scratchpad`, `PostToolUse`)이 10자 이상 조각과 맞아 그 훅의 알림이나 `AMBIGUOUS`로
+  셌다(셀프 리뷰가 이 PC의 기록에서 손으로 봤다, 일지 2026-10-23-19). 래퍼의 두 문구는 세지
+  않는다. 2026-10-23 이 PC의 기록 5430개를 커밋하지 않은 스크래치 스크립트로 손으로 봤다. 계기를
+  낸 `hook_success`는 모두 짝이 있었고, 짝 없는 첨부는 UserPromptSubmit 462건(모두
+  `hook_prompt_directive`의 조각으로 갈렸다)과 앱이 넣은 글(SessionStart 72건, PostToolUse
+  15건)이었다. 사용자에게 간 글의 `hook_system_message` 첨부는 모두 같은 글의 `hook_success`와
+  짝이 있어 읽지 않는다.
 - 막음: 도구 호출을 막은 훅은 첨부를 남기지 않고 도구 결과의
   `<이벤트>:<도구> hook error: <이유>`에만 이유가 남는다. 종료 코드 2로 막았으면 이유가
   `[<명령>]: `로 시작해 그 명령의 훅으로 센다. 아니면 이유에 든 글을 등록된 훅 파일의 문자열
   조각(독스트링을 뺀 문자열 상수와 f-문자열의 고정된 부분 가운데 `MIN_FRAGMENT`자 이상)과 견주어
   가장 긴 조각이 든 훅으로 센다. 가장 긴 조각이 두 훅에 같은 길이로 있으면 `AMBIGUOUS`, 든 조각이
   없으면 `UNKNOWN`이다. Stop 등이 막은 `hook_blocking_error` 첨부는 명령을 들어 그 명령의 훅으로
-  센다.
+  센다. `UNKNOWN`과 `AMBIGUOUS`는 알림과 막음으로 나눠 표 밖에 글의 머리와 함께 적는다.
 - 창: 기록 시각의 UTC 날짜가 `--today`(기본 UTC 오늘)로 끝나는 `--days`(기본 28)일 안.
 - 등록 훅: `<루트>/.claude/settings.json`의 명령에서 뽑는다. 들인 날은
   `git log --diff-filter=A`가 그 파일을 마지막으로 더한 커밋의 날짜다(지웠다가 다시 들인 훅은 다시
@@ -34,14 +49,24 @@ retro가 새 훅·검사를 승인하기 전과 모델이 바뀐 뒤(`docs/model
 
 못 보는 것.
 - 알림을 읽은 모델이 따랐는지는 모른다. 무시된 알림도 한 번으로 센다.
-- 막는 훅의 이유가 그 훅 파일 밖(다른 모듈, 실행 중에 읽은 파일)의 글로만 지어지면 `UNKNOWN`이다.
-  그래서 훅 페이로드 표의 막는 사례마다 그 이유를 이 도구가 그 훅으로 세는지 시험이 본다.
-- 훅이 이유 문장을 바꾸면 그 전의 막음은 지금 파일의 조각과 맞지 않아 `UNKNOWN`이다. 2026-10-19 이
-  PC의 기록에서 `hook_bash_python_stub`의 옛 이유(2026-09-22~09-28 판의 "Git Bash 의 python 은")
-  24건이 그랬다.
-- 이유에 다른 훅의 조각이 더 길게 인용되면 그 훅으로 센다.
+- 막는 훅의 이유나 짝 없는 UserPromptSubmit 계기 글이 그 훅 파일 밖(다른 모듈, 실행 중에 읽은
+  파일)의 글로만 지어지면 `UNKNOWN`이다. 그래서 훅 페이로드 표의 막는 사례와 UserPromptSubmit 훅의
+  계기 사례마다 그 글을 이 도구가 그 훅으로 세는지 시험이 본다.
+- 훅이 이유나 계기 문장을 바꾸면 그 전의 막음과 짝 없는 UserPromptSubmit 알림은 지금 파일의 조각과
+  맞지 않아 `UNKNOWN`이다. 2026-10-19 이 PC의 기록에서 `hook_bash_python_stub`의 옛 이유
+  (2026-09-22~09-28 판의 "Git Bash 의 python 은") 24건이 그랬다.
+- 막은 이유에 다른 훅의 조각이 더 길게 인용되면 그 훅으로 센다. 짝 없는 UserPromptSubmit 첨부는
+  조각으로만 훅을 가르므로, 그 이벤트의 훅 조각이 든 다른 글(앱이 그 이벤트에 넣은 글이 있다면)도
+  그 훅의 알림으로 센다.
+- stdout이 JSON이 아니거나 `additionalContext`가 없는 `hook_success`는 짝이 되지 못해, 같은 글의
+  첨부가 짝 없는 첨부로 남아 그 알림을 한 번 더 센다(UserPromptSubmit 밖이면 `UNKNOWN` 알림으로).
+  이 저장소의 훅은 JSON을 낸다.
+- 같은 uuid의 기록이 다른 세션 id로 여러 기록 파일에 있다(2026-10-23 이 PC의 훅 첨부 172개, 손으로
+  봤다). 같은 uuid는 처음 읽은 것만 세므로, 앞 파일에 `hook_success`만 다른 세션 id로 적혀 있으면
+  뒤 파일의 첨부가 짝을 잃어 한 번 더 센다(UserPromptSubmit 밖이면 `UNKNOWN` 알림으로).
 - pre-commit과 CI의 검사는 세지 않는다(세션 기록에 없다). `tools/` 밖의 훅(플러그인 훅)의 알림도
-  세지 않는다. 그 훅이나 앱이 도구 호출을 막은 것은 `UNKNOWN`으로 센다.
+  세지 않는다(그 계기 첨부는 그 훅의 `hook_success`와 짝지어 뺀다). 그 훅이나 앱이 도구 호출을
+  막은 것과 앱이 `hook_success` 없이 넣은 계기(SessionStart의 세션 안내 등)는 `UNKNOWN`으로 센다.
 - 기록 보존 기한(Claude Code 의 `cleanupPeriodDays`, 기본 30일)보다 긴 창은 앞쪽이 비어 0으로 센다.
   그래서 가장 이른 기록 날짜를 함께 찍고, 그 날이 창의 첫날보다 늦으면 비어 있는 날 수를 적고 뺄
   후보는 판정하지 않는다.
@@ -67,10 +92,11 @@ import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import NamedTuple
 
 NOTICE = "알림"
 BLOCK = "막음"
@@ -82,6 +108,7 @@ DEFAULT_DAYS = 28
 GIT_TIMEOUT = 30
 WORKTREE_INFIX = "--claude-worktrees-"
 WRAPPER_NOTICES = ("launch_hook: 훅 파일이 없어", "launch_hook: 등록 명령의 훅 이름 인자가")
+PROMPT_EVENT = "UserPromptSubmit"  # 훅의 계기가 `hook_success` 없이 첨부로만 남는 이벤트
 ROOT = Path(__file__).resolve().parent.parent
 
 HOOK_COMMAND = re.compile(r"(?:launch_hook\.py\"?\s+|tools/)(hook_[A-Za-z0-9_]+\.py)")
@@ -92,9 +119,18 @@ HOOK_ERROR = re.compile(r"^[A-Z][A-Za-z]+(?::[A-Za-z0-9_.-]+)? hook error: (.*)"
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
 
+class ContextKey(NamedTuple):
+    """계기를 맞대는 열쇠. 같은 세션·이벤트에서 낸 같은 글이면 같은 계기다."""
+
+    session: str
+    event: str
+    text: str
+
+
 @dataclass(frozen=True)
 class Firing:
-    """훅 한 번의 발동. `head` 는 막은 이유의 첫 줄 머리이고 알림이면 빈 글이다."""
+    """훅 한 번의 발동. `head` 는 막은 이유나 짝 없는 계기 글의 첫 줄 머리이고, `hook_success` 로
+    센 알림이면 빈 글이다."""
 
     hook: str
     kind: str
@@ -161,11 +197,12 @@ def fingerprints(tools: Path, hooks: Iterable[str]) -> dict[str, frozenset[str]]
     return prints
 
 
-def blocking_hook(reason: str, prints: Mapping[str, frozenset[str]]) -> str:
+def fragment_owner(text: str, prints: Mapping[str, frozenset[str]]) -> str:
+    """막은 이유나 짝 없는 계기 글에 든 가장 긴 조각의 훅."""
     best = 0
     owners: list[str] = []
     for hook, parts in prints.items():
-        length = max((len(part) for part in parts if part in reason), default=0)
+        length = max((len(part) for part in parts if part in text), default=0)
         if length > best:
             best, owners = length, [hook]
         elif length == best and length:
@@ -193,6 +230,16 @@ def _parse_json(text: str) -> Json:
     return json.loads(text)
 
 
+def model_context(stdout: str) -> str | None:
+    """훅 stdout(JSON)이 모델에게 넘긴 `additionalContext`. JSON 이 아니거나 그 값이 없으면 None."""
+    try:
+        output = _parse_json(stdout)
+    except ValueError:  # JSONDecodeError 도 여기 든다
+        return None
+    text = _obj(_obj(output).get("hookSpecificOutput")).get("additionalContext")
+    return text if isinstance(text, str) else None
+
+
 def _day(value: Json) -> date | None:
     try:
         moment = datetime.fromisoformat(_str(value).replace("Z", "+00:00"))
@@ -210,9 +257,10 @@ def _hook_of(command: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _is_notice(stdout: str) -> bool:
-    """래퍼는 처음부터 한글을 이스케이프하지 않고 냈다(`ensure_ascii=False`)."""
-    return bool(stdout.strip()) and not any(notice in stdout for notice in WRAPPER_NOTICES)
+def _is_notice(text: str) -> bool:
+    """훅의 stdout 이나 계기 글이 알림인지. 래퍼가 지나간 두 문구는 빼는데, 래퍼는 처음부터 한글을
+    이스케이프하지 않고 냈다(`ensure_ascii=False`)."""
+    return bool(text.strip()) and not any(notice in text for notice in WRAPPER_NOTICES)
 
 
 def _result_texts(record: dict[str, Json]) -> list[str]:
@@ -244,7 +292,7 @@ def _record_firings(
     if kind == "hook_blocking_error":
         error = _obj(attachment.get("blockingError"))
         reason = _str(error.get("blockingError"))
-        hook = _hook_of(_str(error.get("command"))) or blocking_hook(reason, prints)
+        hook = _hook_of(_str(error.get("command"))) or fragment_owner(reason, prints)
         return [(hook, BLOCK, _head(reason))]
     if record.get("type") != "user":
         return []
@@ -257,17 +305,44 @@ def _record_firings(
         head = COMMAND_HEAD.match(reason)
         hook = _hook_of(head.group(1)) if head else None
         body = reason[head.end() :] if head else reason
-        found.append((hook or blocking_hook(body, prints), BLOCK, _head(body)))
+        found.append((hook or fragment_owner(body, prints), BLOCK, _head(body)))
     return found
 
 
-def scan(files: Iterable[Path], prints: Mapping[str, frozenset[str]]) -> Scan:
+def _context_key(record: dict[str, Json], attachment: dict[str, Json], text: str) -> ContextKey:
+    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)
+
+
+def _given_context(record: dict[str, Json]) -> ContextKey | None:
+    """`hook_success` 의 stdout 이 모델에게 넘긴 계기. 명령을 가리지 않는다."""
+    attachment = _obj(record.get("attachment"))
+    if attachment.get("type") != "hook_success":
+        return None
+    text = model_context(_str(attachment.get("stdout")))
+    return None if text is None else _context_key(record, attachment, text)
+
+
+def _attached_contexts(record: dict[str, Json]) -> list[ContextKey]:
+    """명령 없는 `hook_additional_context` 첨부에 든 계기 글들."""
+    attachment = _obj(record.get("attachment"))
+    if attachment.get("type") != "hook_additional_context":
+        return []
+    texts = [part for part in _list(attachment.get("content")) if isinstance(part, str)]
+    return [_context_key(record, attachment, text) for text in texts]
+
+
+def scan(
+    files: Iterable[Path], prints: Mapping[str, frozenset[str]], prompt_hooks: Collection[str]
+) -> Scan:
+    """`prompt_hooks` 는 `PROMPT_EVENT` 에 등록된 훅이다."""
     firings: list[Firing] = []
     seen: set[str] = set()
     broken = 0
     count = 0
     unreadable = 0
     earliest: date | None = None
+    given: Counter[ContextKey] = Counter()
+    attached: list[tuple[ContextKey, date]] = []
     for path in files:
         count += 1
         try:
@@ -297,13 +372,35 @@ def scan(files: Iterable[Path], prints: Mapping[str, frozenset[str]]) -> Scan:
             earliest = day if earliest is None else min(earliest, day)
             for hook, kind, head in _record_firings(record, prints):
                 firings.append(Firing(hook, kind, day, head))
+            if (sent := _given_context(record)) is not None:
+                given[sent] += 1
+            attached += [(key, day) for key in _attached_contexts(record)]
+    for key, day in attached:  # 짝은 같은 열쇠의 `hook_success` 하나에 첨부 하나다
+        if given[key]:
+            given[key] -= 1
+        elif _is_notice(key.text):
+            owner = _unpaired_owner(key, prints, prompt_hooks)
+            firings.append(Firing(owner, NOTICE, day, _head(key.text)))
     return Scan(tuple(firings), count, broken, earliest, unreadable)
 
 
-def registered_hooks(settings: str) -> list[str]:
-    """settings.json 글의 명령 가운데 훅 명령의 훅 이름. ValueError 는 JSON 이 아닐 때다."""
+def _unpaired_owner(
+    key: ContextKey, prints: Mapping[str, frozenset[str]], prompt_hooks: Collection[str]
+) -> str:
+    """짝 없는 계기 글의 훅. `PROMPT_EVENT` 의 글만 그 이벤트에 등록된 훅의 조각과 견준다. 다른
+    이벤트에서는 이 저장소의 훅이 `hook_success` 를 남겨 짝이 있으니 짝 없는 글은 `UNKNOWN` 이다."""
+    if key.event != PROMPT_EVENT:
+        return UNKNOWN
+    return fragment_owner(key.text, {hook: prints.get(hook, frozenset()) for hook in prompt_hooks})
+
+
+def registered_hooks(settings: str, event: str | None = None) -> list[str]:
+    """settings.json 글의 명령 가운데 훅 명령의 훅 이름. `event` 를 주면 그 이벤트에 등록된
+    것만이다. ValueError 는 JSON 이 아닐 때다."""
     found: set[str] = set()
-    for groups in _obj(_obj(_parse_json(settings)).get("hooks")).values():
+    for name, groups in _obj(_obj(_parse_json(settings)).get("hooks")).items():
+        if event is not None and name != event:
+            continue
         for group in _list(groups):
             for entry in _list(_obj(group).get("hooks")):
                 hook = _hook_of(_str(_obj(entry).get("command")))
@@ -406,9 +503,12 @@ def render(
     if undated:
         out.append(f"들인 날을 모르는 훅: {', '.join(undated)}")
     unattributed = [firing for firing in inside if firing.hook in (UNKNOWN, AMBIGUOUS)]
-    if unattributed:
-        out.append(f"어느 훅인지 가르지 못한 막음 {len(unattributed)}건(이유의 머리마다):")
-        heads = Counter((firing.hook, firing.head) for firing in unattributed)
+    for kind, what in ((NOTICE, "글"), (BLOCK, "이유")):
+        group = [firing for firing in unattributed if firing.kind == kind]
+        if not group:
+            continue
+        out.append(f"어느 훅인지 가르지 못한 {kind} {len(group)}건({what}의 머리마다):")
+        heads = Counter((firing.hook, firing.head) for firing in group)
         for (hook, head), number in heads.most_common():
             out.append(f"  {number}건 {hook} {head}")
     return "\n".join(out)
@@ -464,14 +564,17 @@ def main(argv: list[str]) -> int:
         return 2
     projects: Path = args.projects or Path.home() / ".claude" / "projects"
     try:
-        hooks = registered_hooks((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        settings = (root / ".claude" / "settings.json").read_text(encoding="utf-8")
+        hooks = registered_hooks(settings)
+        prompt_hooks = registered_hooks(settings, PROMPT_EVENT)
         repo: str = args.repo or main_checkout_folder(root)
         introduced = introduced_dates(root, hooks)
     except (OSError, UnicodeDecodeError, ValueError) as error:
         sys.stderr.write(f"settings.json 이나 git 을 읽지 못했다: {error}\n")
         return 2
     prints = fingerprints(root / "tools", hooks)
-    print(render(scan(transcript_files(projects, repo), prints), hooks, introduced, today, days))
+    result = scan(transcript_files(projects, repo), prints, prompt_hooks)
+    print(render(result, hooks, introduced, today, days))
     return 0
 
 
