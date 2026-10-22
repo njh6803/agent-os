@@ -49,7 +49,7 @@ Critical·Major 없음, Minor 1, Nit 3. 잰 것: 시험 57 통과, `mutate.py --
 
 Critical·Major 없음, 범위 넘침 없음, Nit 1. 잰 것: 고치기 전 `check_quotes.py`(975bf04c)를 스크래치 사본으로 꺼내 새 시험을 돌려 398 시험 두 차례가 서로 다른 쪽(`adr.md:1`, `journal.md:2`)을 경고하며 빨갛고, 436 시험과 못 보는 것의 `//` 단언도 빨갛다. 실제 사건 파일 `.scratch/design-reverse-sync/probes/tools_import.mjs`의 `//` 감긴 문장 넷을 한 줄로 옮겨 `_found_elsewhere`로 부르니 옛 판은 넷 모두 False, 새 판은 넷 모두 True였고, 빈 `//` 줄을 넘는 문단 잇기는 두 판 모두 False였다. 변이 20·21을 사본에 넣어 기대한 시험이 빨간 것을 봤다(18·19는 `old`가 한 번 맞는 것만 봤다).
 
-- Nit: 못 보는 것의 괄호 "(제목과 앞 줄이 이어져 원문으로 센다)"가 `//` 줄을 빠뜨리고, 같은 문장에 `//`가 겹친다.
+- Nit: 못 보는 것의 옛 괄호(제목과 앞 줄이 이어진다는 설명)가 `//` 줄을 빠뜨리고, 같은 문장에 `//`가 겹친다.
 
 ### 반영 (명세 축)
 
@@ -60,3 +60,33 @@ Critical·Major 없음, 범위 넘침 없음, Nit 1. 잰 것: 고치기 전 `che
 - `uv run python tools/run_checks.py`(셀프 리뷰 반영 전, 백그라운드): 종료 0. check-ticket, lint-imports, check-instructions, zizmor, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify(413.0s), pytest(491.2s) 모두 Passed.
 - `uv run ruff check .`, `uv run ruff format --check .`: 0.
 - 반영으로 바뀐 것은 대기열 두 행의 마침표와 독스트링 한 문장뿐이라, 커밋 직전의 다섯은 그 커밋의 pre-commit으로 갈음한다.
+- 커밋 `f85a8998`의 pre-commit: 모두 Passed(canary specs·constitution version은 대상 파일이 없어 Skipped). 인용 대조 경고 1건은 이 일지 52줄이 고치기 전 독스트링의 괄호를 따옴표로 옮긴 것이라(그 문구는 이번에 바뀌어 저장소에 없다) 따옴표를 떼고 풀어 썼다. 이 수정은 아직 커밋하지 않았다.
+
+## 인계 (커밋 뒤)
+
+- 커밋 뒤에 `hook_handoff`가 세션 컨텍스트 216,922 토큰(문턱 200,000)으로 인계 계기를 냈다. 이번 요청 범위가 "PR과 병합까지"라 경계에서 끝나지 않고, 인계로 연 세션도 곁 세션도 아니어서 넘긴다.
+- 이 세션의 지금 제목: `chore/008-quote-wrap-slash-comment`. 번복하거나 고친 것: 일지 번호(06→07→08을 지우고 11), 셀프 리뷰 반영 둘(대기열 닫힘 앞 마침표, 독스트링 괄호), 일지 52줄의 인용.
+- 남은 단계: 일지 수정 커밋, 푸시, PR 직전 리뷰 파이프라인, PR, 봇 회차, 워크트리에서 병합, 회고(`retro`)와 "다음".
+
+지시문:
+
+```
+다음 작업: 받는 세션이 쓸 .scratch/harness/issues/008-quote-wrap-slash-comment.md(이미 썼고 done). `tools/check_quotes.py`의 고침 둘(대기열 436·398)을 PR로 내고 병합한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 436·398을 티켓 .scratch/harness/issues/008-quote-wrap-slash-comment.md로 쓰고 한다
+브랜치: chore/008-quote-wrap-slash-comment
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태·번호)
+이어받을 상태: 인계: 커밋 뒤. 구현·셀프 리뷰 반영·전체 검사까지 끝나 커밋 f85a8998에 실었고, 일지 52줄의 인용 경고를 고친 수정이 커밋되지 않은 채 워크트리에 있다. 남은 것은 그 커밋, 푸시, PR 직전 리뷰 파이프라인, PR, 봇 회차, 워크트리에서 병합, 회고와 일지 "다음"이다. 일지 docs/journal/2026-10-23-11-quote-wrap-slash-comment.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+- open-session을 부른다 2026-10-22T17:55:17Z
+
+## 이어받음
+
+> 사용자: (위 지시문을 첫 메시지로 받았다)
+
+- 제목을 브랜치 이름으로 바꾸고 주 체크아웃에서 `tidy-checkouts`를 돌았다. 루트는 이미 origin/main `975bf04c`와 같았다. 지운 것: 브랜치 `worktree-003-probe-conclusion-evidence-kind`, 쉬는 세션 셋을 끝낸 뒤 워크트리 `model-rerun-tickets`와 브랜치 `docs/model-rerun-tickets`. 휴지통의 `worktree-overrides-pc-check~~.venv`는 python.exe(pid 41176)가 쥐어 남았다. 나머지는 병합된 PR이 없거나 프로세스가 쥐었거나 앱 표지가 있어 남겼다.
+- `EnterWorktree(path)`로 이 워크트리에 들어왔다.
