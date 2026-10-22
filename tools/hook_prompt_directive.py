@@ -1,4 +1,5 @@
-"""UserPromptSubmit 훅. 첫 메시지가 next-session 지시문이면 새 세션이 스스로 이름을 붙이게 한다.
+"""UserPromptSubmit 훅. 첫 메시지가 next-session 지시문이면 새 세션이 스스로 이름을 붙이게 하고,
+지시문이 아니면 티켓·브랜치·제목의 차례를 알린다(아래 "첫 턴 티켓 알림").
 
 이름은 여는 쪽(open-session 4단계)이 붙였는데, 첫 줄이 슬래시 명령이면 앱이 딥링크의 `/` 를 전각
 `／`(U+FF0F)로 바꿔 넣어 여는 쪽이 `held=` 에서 멈추고, 사람은 새 세션에서 고쳐 보낸 뒤 옛 세션으로
@@ -61,11 +62,43 @@ open-session 스크립트가 하기도 한다. 이 폴더 가드는 새 훅이 �
 open-session 이 보낸 글과 같아 가르지 못한다(하네스 chore 의 시작 프롬프트가 그 꼴이다). 첫 줄을
 옮기는 쪽은 여는 쪽이 넘긴 루트의 스킬 파일을, 이 판정은 이 세션의 작업 폴더의 스킬 파일을 본다. 그
 스킬이 한쪽에만 있으면 틀린다(작업 폴더에만 있으면 `held=` 뒤 고쳐 보낸 글을 붙여 넣은 것으로 본다).
+
+첫 턴 티켓 알림(ADR 0037, `.scratch/ticket-for-every-pr/spec.md` 의 "첫 턴 알림"). 첫 메시지가
+지시문이 아니면 사람이 손으로 열었거나 사람이 시킨 카드로 열린 세션이다. 그 세션에는 지시문의
+브랜치 줄이 없어, 티켓 없이 커밋하다 커밋 검사(`tools/check_ticket.py`)에 막힌다. 그래서 첫 턴에 한
+번 티켓·브랜치·제목의 차례와 따르지 않는 때를 알린다(`TICKET_NOTICE`). 넷이 모두 맞을 때 낸다.
+첫 턴이고, 첫 메시지가 지시문이 아니고, 사람이 보는 세션이고, 첫 메시지가 `<scheduled-task ` 로
+시작하지 않는다. 헤드리스 가름(`is_attended`)의 원천은 `tools/hook_session_usage.py` 의
+`shows_summary` 다. 훅끼리 import 하지 않아 같은 꼴을 옮겼고 시험이 두 가름을 대조한다. 카나리아가
+새 세션에서 스킬을 불러 보는 동안 이 알림이 끼어들지 않게 하려는 것이다. 앱의 예약 작업이 연 세션은
+그 가름으로 헤드리스로 보이지 않아(2026-10-21 `daily-morning-report` 세션이 사용량 요약을 받았다,
+명세의 검토 주석) 첫 메시지의 머리로 거른다. 그 검토가 본, 첫 메시지가 그 머리인 세션 여덟은 모두
+저장소를 고치지 않는 일이었고(아침 보고는 `tools/morning_tasks/common.md` 가 "저장소의 파일을
+고치거나 커밋하지 않는다"고 적는다), 알림이 할 일을 바꾸지 않는 세션에는 싣지 않는다. 지시문에는
+이 알림을 내지 않는다. 지시문은 티켓 모양이나 `docs/` 브랜치를 주고, 지시문의 계기(제목,
+`tidy-checkouts`, 폴더 막기)는 헤드리스 가름을 보지 않고 전과 같다. 제목
+문구는 두 계기가 같이 쓴다(`TITLE_CALL`, `TITLE_FALLBACK`). 주 체크아웃에서 시작했는지는 훅이
+가르지 않고 조건 문장으로 두어, 모델이 작업 폴더를 보고 가른다.
+
+비용. 이제 지시문이 아닌 프롬프트에서도 트랜스크립트를 연다. `has_assistant_turn` 은 첫 assistant
+기록에서 멈추고, 첫 턴이 지난 트랜스크립트에서 그 기록은 앞쪽에 있다. 헤드리스 가름과 예약 작업
+거르기를 트랜스크립트보다 먼저 본다. 잰 시간은 `.claude/rules/tools.md` 의 훅별 시간이다.
+
+못 보는 것. 첫 메시지만으로는 질문만 하는 세션과 커밋할 세션을 가르지 못해 질문에도 알린다(알림이
+따르지 않는 때로 든다). 커밋하지 않는 스킬의 슬래시 명령(`/tidy-checkouts`)으로 연 세션도 첫
+메시지가 지시문이 아니라 알린다. 첫 assistant 기록이 쓰이기 전에 둘째 프롬프트가 들어오면 그
+프롬프트에도 알리는지는 보지 않았다(지시문 계기도 같다). 지시문 모양의 글을 붙여 넣고 다른 일을
+시키면 지시문으로 보아 이 알림이 뜨지 않는다. `/clear` 뒤의 첫 메시지는 트랜스크립트가 새 파일이라
+새 세션과 같은 입력이고 다시 알린다(이미 티켓과 브랜치가 있는 일을 잇는 것이면 그대로 두라는 줄이
+받는다). 예약 작업이 연 세션의 훅 입력 `prompt` 가 트랜스크립트의 첫 메시지와 같은 머리로 시작한다는
+것은 재지 않았다(트랜스크립트만 읽었다). `daily-morning-report` 밖의 예약 작업이 헤드리스로
+보이는지는 보지 못했다. 예약 작업이 커밋할 일을 맡게 되면 이 알림 없이 커밋 검사가 처음 알린다.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from collections.abc import Iterable
@@ -122,6 +155,48 @@ _DIRECTIVE_LABELS = (
 )
 
 
+# 헤드리스 가름의 두 변수. `tools/hook_session_usage.py` 의 `shows_summary` 와 같은 꼴이고 시험이
+# 대조한다. 뒤의 것은 그 훅의 `HEADLESS_MARKER` 와 `tools/canary.py` 의 `HEADLESS_ENV` 와 같은
+# 이름이다.
+ATTENDED_VAR = "CLAUDE_CODE_SESSION_ATTENDED"
+HEADLESS_MARKER = "AGENT_OS_HEADLESS"
+# 제목을 바꾸라는 두 계기(지시문, 티켓 알림)가 같이 쓰는 문장. 도구를 부르는 꼴 뒤에 브랜치가 온다.
+TITLE_CALL = "`set_session_title` 에 `self` 와"
+TITLE_FALLBACK = (
+    "앱이 지은 제목이면 묻지 않고 바뀐다. 도구가 `self` 를 거부하면(클라우드 세션에서 그랬다) 이 "
+    "세션의 ID 를 찾아 `self` 대신 넘기고, 찾지 못하면 제목을 바꾸지 않고 사용자에게 알린다. "
+    "데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` 는 이 세션을 빼고 `get_session` 은 "
+    "이 세션을 `self` 로만 가리킨다."
+)
+# 앱의 예약 작업이 연 세션의 첫 메시지 머리. 그 세션에는 티켓 알림을 내지 않는다.
+_SCHEDULED_TASK = "<scheduled-task "
+# 지시문이 아닌 첫 메시지에 붙는 알림. 차례의 원천은 ADR 0037 과 `docs/agents/issue-tracker.md` 다.
+TICKET_NOTICE = (
+    "지시문 없이 연 세션의 첫 메시지다. 이 일이 커밋할 일이면 코드를 고치기 전에 티켓, 브랜치, "
+    "세션 제목을 차례로 맞춘다(ADR 0037). 이 세션이 주 체크아웃에서 시작했으면 그보다 먼저, 주 "
+    "체크아웃에서 브랜치를 따지 않고 `EnterWorktree` 로 워크트리에 들어간다 — 주 체크아웃에 먼저 "
+    "쓴 티켓은 새 워크트리에 따라오지 않고, 추적하지 않는 파일로 남아 그 경로를 병합한 main 을 "
+    "당기지 못하게 한다. "
+    "1) 티켓을 쓴다. 받은 일의 티켓 파일이 이미 있으면 새로 쓰지 않고, 상태가 "
+    "`ready-for-agent` 면 `in-progress` 로 바꾼다. 기능 폴더의 일이면 "
+    "`.scratch/<slug>/issues/` 의 다음 두 자리 번호이고, 아니면 "
+    "`.scratch/harness/issues/NNN-<slug>.md` 이며 그 번호는 "
+    "`uv run python tools/sibling_overlap.py` 가 내는 다음 빈 `티켓 NNN` 이다. 상태는 "
+    "`in-progress` 이고, 번호를 받아 쓴 직후에 그 도구를 다시 친다. "
+    "2) 브랜치를 티켓 자리에 맞춘다. 이름은 티켓 파일 이름의 stem 이라(`feature/<NN>-<slug>`, "
+    "`chore/<NNN>-<slug>`), 워크트리에 들어오며 생긴 브랜치나 앱이 만든 `claude/<이름>` 브랜치를 "
+    "`git branch -m <새 이름>` 으로 바꾼다. 지금 브랜치가 이 일이 아닌 다른 티켓의 브랜치(위 "
+    "모양의 다른 이름)면 그 티켓의 것이라 이름을 두고 사용자에게 알린다. "
+    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. " + TITLE_FALLBACK + " "
+    "따르지 않는 때는 셋이다. 커밋할 일이 없으면(질문, 읽기) 따르지 않는다. 면제 일(설계·명세·티켓 "
+    "쓰기, 일지·대기열만 바꾸기)이면 1) 없이 `docs/<slug>` 브랜치로 하고, 워크트리와 제목은 위와 "
+    "같다(그 PR 에서 회고가 고침을 반영할 때 쓰는 harness 티켓은 `retro` 가 정한다). 이미 티켓과 "
+    "브랜치가 있는 일을 잇는 것이면(인계, 끊은 뒤 이어 가기, 열린 PR 반영) 그대로 둔다. "
+    "커밋 검사(`tools/check_ticket.py`)가 티켓 없는 브랜치의 커밋을 막는다. 규약의 원천은 "
+    "`docs/agents/issue-tracker.md` 다."
+)
+
+
 class HookPayload(TypedDict, total=False):
     """Claude Code 가 stdin 으로 주는 훅 입력 중 이 훅이 읽는 부분."""
 
@@ -148,11 +223,8 @@ def context_for(prompt: str, cwd: str | None = None) -> str | None:
         return None
     context = (
         "next-session 지시문으로 연 새 세션이다. 여는 쪽은 이름을 붙이지 않는다. 다른 일보다 먼저 "
-        "이 세션의 제목을 지시문의 브랜치 이름으로 바꾼다 — `set_session_title` 에 "
-        f"`self` 와 `{branch}`. 앱이 지은 제목이면 묻지 않고 바뀐다. 도구가 `self` 를 거부하면"
-        "(클라우드 세션에서 그랬다) 이 세션의 ID 를 찾아 `self` 대신 넘기고, 찾지 못하면 제목을 "
-        "바꾸지 않고 사용자에게 알린다. 데스크톱 앱의 세션 도구로는 찾지 못한다 — `list_sessions` "
-        "는 이 세션을 빼고 `get_session` 은 이 세션을 `self` 로만 가리킨다."
+        f"이 세션의 제목을 지시문의 브랜치 이름으로 바꾼다 — {TITLE_CALL} `{branch}`. "
+        + TITLE_FALLBACK
     )
     stale = _stale_root(prompt)
     tidies = stale and _first_of_bundle(prompt)
@@ -186,6 +258,33 @@ def context_for(prompt: str, cwd: str | None = None) -> str | None:
             "모른다고 적는다."
         )
     return context
+
+
+def first_turn_context(
+    prompt: str,
+    cwd: str | None,
+    transcript_path: str | None,
+    attended: str | None,
+    marker: str | None,
+) -> str | None:
+    """첫 턴에 붙일 계기. 지시문이면 지시문 계기, 아니면 티켓 알림이고 첫 턴이 아니면 None.
+
+    티켓 알림은 사람이 보는 세션이고(`is_attended`) 첫 메시지가 앱의 예약 작업이 아닐 때만 낸다. 그
+    둘을 트랜스크립트보다 먼저 본다. 지시문 계기는 이 둘을 보지 않는다.
+    """
+    context = context_for(prompt, cwd)
+    if context is None:
+        if not is_attended(attended, marker) or prompt.lstrip().startswith(_SCHEDULED_TASK):
+            return None
+        context = TICKET_NOTICE
+    if not is_first_turn(transcript_path):
+        return None
+    return context
+
+
+def is_attended(attended: str | None, marker: str | None) -> bool:
+    """사람이 보는 세션인지. `hook_session_usage.shows_summary` 의 헤드리스 가름과 같다."""
+    return attended != "0" and not marker
 
 
 def pasted_reason(prompt: str, cwd: str | None) -> str | None:
@@ -373,9 +472,14 @@ def main() -> int:
     if reason is not None:
         print(json.dumps({"decision": "block", "reason": reason}))
         return 0
-    context = context_for(prompt, payload.get("cwd"))
-    # 지시문일 때만 트랜스크립트를 연다. 평범한 프롬프트마다 긴 파일을 읽지 않는다.
-    if context is None or not is_first_turn(payload.get("transcript_path")):
+    context = first_turn_context(
+        prompt,
+        payload.get("cwd"),
+        payload.get("transcript_path"),
+        os.environ.get(ATTENDED_VAR),
+        os.environ.get(HEADLESS_MARKER),
+    )
+    if context is None:
         return 0
     print(
         json.dumps(

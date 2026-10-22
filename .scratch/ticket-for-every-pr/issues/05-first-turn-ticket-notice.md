@@ -6,7 +6,7 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 훅
 
