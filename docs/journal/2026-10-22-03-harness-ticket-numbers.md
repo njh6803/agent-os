@@ -1,4 +1,4 @@
-# 2026-10-21 (15) ticket-for-every-pr 티켓 01: 번호 도구가 harness 티켓 번호를 낸다
+# 2026-10-22 (03) ticket-for-every-pr 티켓 01: 번호 도구가 harness 티켓 번호를 낸다
 
 브랜치 `feature/01-harness-ticket-numbers`, 워크트리 `.claude/worktrees/01-harness-ticket-numbers`. 티켓은 `.scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md`.
 
@@ -62,8 +62,8 @@
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md
 브랜치: feature/01-harness-ticket-numbers
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-15-harness-ticket-numbers.md(그 워크트리의 커밋하지 않은 파일)의 "인계"와 "구현"
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`)부터 한다. 구현, 시험, 변이 서른넷(모두 기대대로), ruff 둘은 마쳤고, 러너는 인계로 멈춰 pytest와 web의 결과가 없다. 티켓 01은 아직 `in-progress`다. docs/journal/2026-10-21-15-harness-ticket-numbers.md
+읽을 것: docs/journal/2026-10-22-03-harness-ticket-numbers.md(그 워크트리의 커밋하지 않은 파일)의 "인계"와 "구현"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`)부터 한다. 구현, 시험, 변이 서른넷(모두 기대대로), ruff 둘은 마쳤고, 러너는 인계로 멈춰 pytest와 web의 결과가 없다. 티켓 01은 아직 `in-progress`다. docs/journal/2026-10-22-03-harness-ticket-numbers.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -162,7 +162,27 @@ PR 직전 리뷰에 밀 새 사실 문장(원문):
 시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/01-harness-ticket-numbers.md
 브랜치: feature/01-harness-ticket-numbers
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-21-15-harness-ticket-numbers.md의 "셀프 리뷰"(그 아래 "반영"과 "변이 표")와 "다음"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영 도중 주간 한도로 끊어, 반영 중인 상태를 커밋하고 푸시했다(PR 없음). 남은 단계는 일지 "다음"의 차례이고 변이 표지 고르기(151~190, 172~190은 출력부터 다시 모은다)부터 한다. 다른 계정으로 넘기려고 이 세션은 새 세션을 열지 않았다. docs/journal/2026-10-21-15-harness-ticket-numbers.md
+읽을 것: docs/journal/2026-10-22-03-harness-ticket-numbers.md의 "셀프 리뷰"(그 아래 "반영"과 "변이 표")와 "다음"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영 도중 주간 한도로 끊어, 반영 중인 상태를 커밋하고 푸시했다(PR 없음). 남은 단계는 일지 "다음"의 차례이고 변이 표지 고르기(151~190, 172~190은 출력부터 다시 모은다)부터 한다. 다른 계정으로 넘기려고 이 세션은 새 세션을 열지 않았다. docs/journal/2026-10-22-03-harness-ticket-numbers.md
 확인할 선행 조건: 새 세션이 이 PC가 아니면 그 워크트리가 없다. 그때는 origin의 feature/01-harness-ticket-numbers를 받아 잇는다
 이번 요청 범위: PR과 병합까지
+
+## 이어받음 (2026-10-22)
+
+> 사용자: (위 지시문을 그대로 붙여 넣었다) "… 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영 도중 주간 한도로 끊어, 반영 중인 상태를 커밋하고 푸시했다(PR 없음). 남은 단계는 일지 "다음"의 차례이고 변이 표지 고르기(151~190, 172~190은 출력부터 다시 모은다)부터 한다 … 이번 요청 범위: PR과 병합까지"
+
+다른 계정의 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. HEAD는 원격 브랜치 끝 `75c303d2`와 같았고 작업 트리는 깨끗했다.
+
+### 변이 표지
+
+- **출력 모으기.** 일회용 스크래치 스크립트(도구의 `_run_mutated`로 변이를 넣고 도구와 같은 명령(`-x` 포함)을 돌려 전체 출력을 남긴다)로 151~190을 다시 돌렸다. 마흔 모두 빨강이었고, 끝난 뒤 `git status`가 비었다. 앞 세션이 출력을 얻지 못한 172~190도 이번에는 얻었다.
+- **고르기.** pytest는 실패한 단언까지의 소스와 `E` 줄을 찍고 그 뒤의 줄은 찍지 않는다(151의 출력). 그래서 표지는 소스 조각이 아니라 `E` 줄의 값(`assert '009' == '010'`, `Right contains one more item: …`, `'번호 겹침 없음' is contained here`, diff 줄)으로 골랐다. 출력을 메시지로 단 종료 코드 단언(152·154·157~160·162~164·172·179·180·185~187)은 값이 든 `assert 0 == 1` 줄에, 까닭을 보이는 출력의 줄(비키는 글, `옮길 번호: …`, `이 브랜치의 새 번호 없음`)을 함께 든다.
+- **154·187.** 도구가 2로 끝난 까닭은 stderr에만 있는데 시험이 stdout만 메시지로 실어, 출력에 까닭이 없었다. 두 시험의 첫 단언이 stderr도 싣게 고치고(`out + captured.err`), 다시 모은 출력에서 `번호의 자리가 비었다: .scratch/harness/issues`(154)와 `번호의 자리가 비었다: .scratch/harness/tickets`(187)를 봤다.
+- **대조.** 스크래치 스크립트로 표지 후보마다 자기 출력에 모두 있는지, 같은 시험에서 다른 줄이 실패한 변이의 출력에는 모두 있지 않은지 봤다(어긋남 0). 같은 줄이 실패하는 변이(159·163, 160·162, 164·180, 167~169)는 같은 단언이라 표지가 겹쳐도 된다. 160과 162는 까닭으로 갈랐다(비키는 글은 160의 출력에만 있다). 그 시험을 겨누는 변이가 하나뿐인 단언은 다른 단언이 실패한 출력을 보지 못했고, 값이 든 `E` 줄이라는 꼴에 기댔다.
+- **돌리기.** `--since origin/main`이 고른 마흔여덟(151~190, 원문을 고친 옛 여섯 27~29·73·74·88, 닫힌 PR 읽기 둘 45·51)이 모두 기대대로 빨강이었다. 기준선 서른이 676초, 변이가 195초, 벽시계로 18분 43초였다. 시간은 표 머리 주석과 프로브 README 행에 적었다.
+
+## 검사 (셀프 리뷰 반영 뒤)
+
+- `uv run ruff check .` 0, `uv run ruff format --check .` 0(899파일).
+- `uv run python tools/run_checks.py` 0(6분): zizmor 1.5초, lint-imports 1.8초, check-instructions 2.6초, check-type-escapes 7.2초, pyright 31.7초, run-hooks 72.8초, web-verify 276.3초, pytest 359.7초가 모두 Passed. 티켓 01의 체크박스를 모두 채우고 `Status: done`으로 바꿨다.
+- 커밋 직전의 `uv run python tools/sibling_overlap.py`가 1로 끝났다. origin/main이 `6bd52b0`으로 움직여 main에 든 일지 `2026-10-21-16`보다 이 일지(그때 `2026-10-21-15`)가 이름순으로 앞이었다. 출력대로 `--move`로 `2026-10-22-03`으로 옮겼고(인용은 프로브 README, 변이 표, 이 일지에서 고쳤다), 다시 친 대조는 겹침이 없었다. 그사이 main에 병합된 넷(#338·#340·#341·#342)이 고친 파일은 이 브랜치가 이름으로 든 파일과 겹치지 않았고, ADR 0036과 형제 티켓 07의 변경에도 이 브랜치가 따를 새 규약은 없었다.

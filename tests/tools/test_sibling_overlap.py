@@ -2445,8 +2445,9 @@ def test_merge_base에_harness_폴더가_없어도_2로_끝나지_않고_다음_
 
     code = main([str(work)], today=date(2026, 10, 7))
 
-    out = capsys.readouterr().out
-    assert code == 0, out
+    captured = capsys.readouterr()
+    out = captured.out
+    assert code == 0, out + captured.err  # 2로 끝난 까닭은 stderr 에 있다
     assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
 
     _커밋한다(pusher, {f"{ISSUES}/001-main.md": "# 001: main\n"}, "main 이 첫 티켓을 들인다")
@@ -2743,8 +2744,9 @@ def test_harness_티켓_폴더의_경로가_어긋나면_조용히_겹침_없음
 
     code = main([str(work)], today=date(2026, 10, 7))
 
-    out = capsys.readouterr().out
-    assert code == 0, out
+    captured = capsys.readouterr()
+    out = captured.out
+    assert code == 0, out + captured.err  # 2로 끝난 까닭은 stderr 에 있다
     assert "번호 겹침 없음\n" in out
     assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
 
