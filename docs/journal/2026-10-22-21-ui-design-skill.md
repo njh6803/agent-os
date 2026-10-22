@@ -1,4 +1,4 @@
-# 2026-10-22 (15) /ui-design 스킬과 디자인 폴더 계기 훅을 들인다
+# 2026-10-22 (21) /ui-design 스킬과 디자인 폴더 계기 훅을 들인다
 
 > 사용자: (next-session 지시문을 첫 메시지로 받았다) "ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다 … 이번 요청 범위: PR과 병합까지"
 
@@ -44,7 +44,7 @@
 `/code-review`(base `aba71813`, 추적 13개, 커밋 0, 미추적 10개). 표준 축(sonnet·high)과 명세 축.
 
 고친 것.
-- 스킬 2단계의 계정 판정. 표준 축이 `paths`를 준 `read`의 머리에 "owned by you"가 없고 "published by a writer of the artifact"만 나온 것을 봤다. 고친 문장: "`read`로 `paths` 없이 읽어 머리를 본다. `paths`를 준 읽기의 머리에는 주인 문구가 나오지 않았다(셀프 리뷰 서브에이전트가 봤다, 일지 2026-10-22-15). 머리가 지금 계정을 주인("owned by you")으로 적거나 편집할 수 있다("writer")고 적어야 한다. 누가 올렸는지를 적는 "published by a writer of the artifact"는 이 판정이 아니다."
+- 스킬 2단계의 계정 판정. 표준 축이 `paths`를 준 `read`의 머리에 "owned by you"가 없고 "published by a writer of the artifact"만 나온 것을 봤다. 고친 문장: "`read`로 `paths` 없이 읽어 머리를 본다. `paths`를 준 읽기의 머리에는 주인 문구가 나오지 않았다(셀프 리뷰 서브에이전트가 봤다, 일지 2026-10-22-21). 머리가 지금 계정을 주인("owned by you")으로 적거나 편집할 수 있다("writer")고 적어야 한다. 누가 올렸는지를 적는 "published by a writer of the artifact"는 이 판정이 아니다."
 - `tokens.json`의 경로. 디자인 시스템 아티팩트 안의 경로는 어디에도 정해지지 않았다(명세 축). 스킬 2단계에 두 문장을 더했다. 앞의 것은 `list`의 `files` 범위에서 이름이 `tokens.json`인 파일을 찾아 그 경로로 읽는다는 것이고, 뒤의 것은 그 파일을 올릴 경로를 design-reverse-sync의 구현이 정한다는 것이다(원문은 스킬 2단계). 재지 못한 것에도 더했다.
 - 새 프로젝트의 첫 `design-system` 탐색이 "artifact not found"에 막히는 갈래. 고친 문장: "화면 디자인 절에 디자인 시스템 아티팩트의 주소가 아직 없으면 이 단계를 건너뛴다. 계정은 5에서 만드는 아티팩트의 주인이다."
 - 끊긴 뒤 다시 부르면 아티팩트가 둘이 되는 갈래(두 축). 고친 문장: "시작 프롬프트 끝에 `아티팩트:` 줄이 있으면 끊긴 뒤 다시 부른 것이다. 새로 만들지 않고 그 주소를 `read`해 그 아티팩트에 이어 그린다. … 바로 그 주소를 시작 프롬프트 끝의 `아티팩트:` 줄에 적는다."
@@ -82,8 +82,8 @@
 시작 프롬프트: ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다
 브랜치: chore/002-ui-design-skill
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-15-ui-design-skill.md(셀프 리뷰 절의 고친 것과 인계 절)
-이어받을 상태: 인계: 커밋 뒤. 커밋 9fc49ed5까지 티켓의 수용 기준을 모두 채우고 셀프 리뷰를 반영해 커밋했다(아직 푸시하지 않았고 PR도 없다). 남은 단계는 일지의 인계 절이 든 인용 경고 둘을 고쳐 커밋하는 것, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 셀프 리뷰를 반영하며 새로 쓴 문장은 일지 셀프 리뷰 절의 고친 것 줄에 원문으로 있고 bug-perf-review 브리프에 밀 주장으로 나열한다), 푸시와 PR, 봇 회차, 병합이다. 일지의 "다음" 절과 회고는 아직 없다. docs/journal/2026-10-22-15-ui-design-skill.md
+읽을 것: docs/journal/2026-10-22-21-ui-design-skill.md(셀프 리뷰 절의 고친 것과 인계 절)
+이어받을 상태: 인계: 커밋 뒤. 커밋 9fc49ed5까지 티켓의 수용 기준을 모두 채우고 셀프 리뷰를 반영해 커밋했다(아직 푸시하지 않았고 PR도 없다). 남은 단계는 일지의 인계 절이 든 인용 경고 둘을 고쳐 커밋하는 것, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 셀프 리뷰를 반영하며 새로 쓴 문장은 일지 셀프 리뷰 절의 고친 것 줄에 원문으로 있고 bug-perf-review 브리프에 밀 주장으로 나열한다), 푸시와 PR, 봇 회차, 병합이다. 일지의 "다음" 절과 회고는 아직 없다. docs/journal/2026-10-22-21-ui-design-skill.md
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 함께 고친 파일로 PR #296·#297·#347과 티켓 03 워크트리(KICKOFF.md, docs/agents/issue-tracker.md)를 들었다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 충돌을 본다
 이번 요청 범위: PR과 병합까지
 
@@ -124,8 +124,8 @@ PR 직전 리뷰 지적을 반영한 뒤 커밋 전 셀프 리뷰(`/code-review`
 시작 프롬프트: ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다
 브랜치: chore/002-ui-design-skill
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-15-ui-design-skill.md(이어 한 세션 절, PR 직전 리뷰 절, 인계 (둘째) 절)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경 다섯 파일(PR 직전 리뷰 반영분)이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD, 커밋하지 않은 변경만)부터 한다. origin/main(96fbe241)은 이미 합쳤고, CodeRabbit CLI는 좌석이 없어 대체 둘(/security-review 지적 없음, bug-perf-review Minor 7·Nit 2)을 돌려 반영까지 마쳤다. 남은 단계는 셀프 리뷰 반영, 커밋, 푸시와 PR(PR 체크리스트에 대체 둘의 결과를 적는다), 봇 회차, 병합, 일지의 "다음" 절과 회고다. docs/journal/2026-10-22-15-ui-design-skill.md
+읽을 것: docs/journal/2026-10-22-21-ui-design-skill.md(이어 한 세션 절, PR 직전 리뷰 절, 인계 (둘째) 절)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경 다섯 파일(PR 직전 리뷰 반영분)이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD, 커밋하지 않은 변경만)부터 한다. origin/main(96fbe241)은 이미 합쳤고, CodeRabbit CLI는 좌석이 없어 대체 둘(/security-review 지적 없음, bug-perf-review Minor 7·Nit 2)을 돌려 반영까지 마쳤다. 남은 단계는 셀프 리뷰 반영, 커밋, 푸시와 PR(PR 체크리스트에 대체 둘의 결과를 적는다), 봇 회차, 병합, 일지의 "다음" 절과 회고다. docs/journal/2026-10-22-21-ui-design-skill.md
 확인할 선행 조건: 주 체크아웃은 main이고 origin/main(96fbe241)과 같다(이 세션의 tidy-checkouts). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 함께 고친 파일로 PR #296·#297·#350과 워크트리 bug-perf-review-batch·mcp-shutdown-spec·measure-word-hook을 들었다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 충돌을 본다
 이번 요청 범위: PR과 병합까지
 
@@ -175,8 +175,8 @@ open-session을 부른다 2026-10-22T11:09:34Z
 시작 프롬프트: ADR 0033과 ADR 0025의 2026-10-20 이력이 다음 PR로 넘긴 /ui-design 스킬과 그 "함께 고치는 것"을 티켓 .scratch/harness/issues/002-ui-design-skill.md로 쓰고 한다
 브랜치: chore/002-ui-design-skill
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-15-ui-design-skill.md(PR 직전 리뷰 절, 셀프 리뷰 (둘째) 절, 인계 (셋째) 절)
-이어받을 상태: 인계: 커밋 뒤. 커밋 4c302a9b까지 셀프 리뷰 둘째를 반영해 커밋했다(pre-commit 통과, 시험 21개, 변이 11 모두 기대대로, 카나리아 둘 통과 4). 커밋하지 않은 변경은 일지 하나(인용 경고 고침과 인계 절)이고 아직 푸시하지 않았으며 PR도 없다. 남은 단계는 PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 대체 둘. bug-perf-review 브리프에 일지 셀프 리뷰 (둘째) 절 고친 것 줄의 새 문장을 밀 주장으로 나열한다)와 반영, 일지 커밋, 푸시와 PR(PR 체크리스트에 대체 둘의 결과를 적는다), 봇 회차, 병합, 일지의 "다음" 절과 회고다. docs/journal/2026-10-22-15-ui-design-skill.md
+읽을 것: docs/journal/2026-10-22-21-ui-design-skill.md(PR 직전 리뷰 절, 셀프 리뷰 (둘째) 절, 인계 (셋째) 절)
+이어받을 상태: 인계: 커밋 뒤. 커밋 4c302a9b까지 셀프 리뷰 둘째를 반영해 커밋했다(pre-commit 통과, 시험 21개, 변이 11 모두 기대대로, 카나리아 둘 통과 4). 커밋하지 않은 변경은 일지 하나(인용 경고 고침과 인계 절)이고 아직 푸시하지 않았으며 PR도 없다. 남은 단계는 PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 대체 둘. bug-perf-review 브리프에 일지 셀프 리뷰 (둘째) 절 고친 것 줄의 새 문장을 밀 주장으로 나열한다)와 반영, 일지 커밋, 푸시와 PR(PR 체크리스트에 대체 둘의 결과를 적는다), 봇 회차, 병합, 일지의 "다음" 절과 회고다. docs/journal/2026-10-22-21-ui-design-skill.md
 확인할 선행 조건: 주 체크아웃은 main이고 origin/main(96fbe241)과 같다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 함께 고친 파일로 PR #296·#297·#350과 워크트리 03-commit-check-blocks-ticketless·bug-perf-review-batch·mcp-shutdown-spec·measure-word-hook을 들었다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 충돌을 본다
 이번 요청 범위: PR과 병합까지
 
@@ -232,7 +232,7 @@ origin/main(`e62eb052`)을 충돌 없이 합쳤다. 새 `tools/check_ticket.py`�
 `bug-perf-review`(셀프 리뷰 셋째의 새 문장 여섯을 밀 주장으로)는 Major 1·Minor 1(유효), 보류 1, 오탐 1을 냈다. 예약 이름 주장은 끝 점·탭·`CONIN$`·디렉터리 조각에서도 성립했다.
 
 - Major: 웹 편집 뒤 다시 옮기다 sha256이 어긋나면 "작업 트리에서 지운다"가 커밋된 옛 판을 지우고 다음 커밋이 그 삭제를 담는다. HEAD에 있는 파일은 되돌리고 없는 파일은 지우게 고쳤다(셀프 리뷰 넷째가 명령을 바로잡았다).
-- Minor: 색인에 `a.html`과 `a.html/b.js`가 함께 있으면 둘째를 쓸 때 실패한다. 고친 문장의 끝: "조각의 대소문자만 다르거나 한쪽이 다른 쪽의 폴더 조각일 때는 옮기지 않는다."
+- Minor: 색인에 `a.html`과 `a.html/b.js`가 함께 있으면 둘째를 쓸 때 실패한다. 한쪽이 다른 쪽의 폴더 조각이면 옮기지 않게 고쳤다(셀프 리뷰 넷째가 대소문자 갈래를 더했다).
 - 보류: 7단계의 sha256 대조에는 웹 편집 확인의 CRLF 갈래가 없다. 쓰는 도구가 줄바꿈을 바꾸는지는 읽기로 닫히지 않고, 어긋나면 위의 되돌림과 사람에게 묻는 길을 탄다. 첫 옮기기에서 본다(재지 못한 것의 줄바꿈 줄).
 - 오탐: 대소문자 견줌이 같은 이름의 정상 재이동을 막는다는 것. 같은 철자는 대소문자만 다른 것이 아니다.
 
@@ -249,3 +249,5 @@ origin/main(`e62eb052`)을 충돌 없이 합쳤다. 새 `tools/check_ticket.py`�
 남긴 것: 7단계 한 단락의 sprawl과 일지가 고친 문장을 통째로 인용해 낡기 쉬운 것(표준, smell 판단 항목). 7단계를 쪼개는 일은 첫 옮기기에서 실제 막힘을 본 뒤에 한다.
 
 PR 직전 리뷰는 다시 돌리지 않는다. 이번 문장은 두 축이 명령을 쳐 본 것을 그대로 옮긴 것이고, 다음 층은 PR 봇이다.
+
+커밋 `8eb340da`(pre-commit 통과, 인용 대조 경고 하나는 그 뒤 따옴표를 떼어 고쳤다). 푸시 직전 origin/main이 `c47bedce`(PR #351)로 움직여 합쳤고(충돌 없음), `sibling_overlap.py`가 main의 최신 일지 2026-10-22-16보다 이 일지가 이름순으로 앞선다고 해 `--move`로 이 일지를 2026-10-22-21로 옮겼다. 인용을 고친 파일은 스킬, 프로브 README, 카나리아 명세 셋이고, 옛 번호의 잔존은 0이다.
