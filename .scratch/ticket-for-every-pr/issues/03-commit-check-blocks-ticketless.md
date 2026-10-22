@@ -8,7 +8,7 @@
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 검사
 
