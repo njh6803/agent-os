@@ -162,3 +162,36 @@ PR 직전 리뷰(`bug-perf-review`)에 밀 주장으로 넘길, 이 반영이 �
 - 명세 "자기 `claim`"의 주석: "코드에 이미 옮긴 값은 셋 맞대기에서 이미 들인 것으로 나온다"
 - 명세 "기록"의 크기 주석: "이어받는 `claim`은 기준본을 하나 더 들어 `tokens.json` 한 벌만큼 더 커지는데, 이 어림에는 들지 않았다"
 - 명세 "올리기"의 주석: "옮기기가 만든 파일이 874개였고 그 `publish`는 색인 하나만 고쳤으므로, 판 6의 파일도 874개쯤으로 본다"
+
+### 커밋과 인계 (커밋 뒤)
+
+셀프 리뷰를 반영한 변경을 `85d8d42b`로 커밋했다. 그 pre-commit에서 zizmor, lint-imports, check-instructions, check-type-escapes, pyright, run-hooks, pytest, web-verify, 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 지났다. ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. 이 커밋은 ruff 설정을 바꾸지 않아 손으로 칠 것이 없다. Python 스크립트의 `write_text`가 티켓 파일을 CRLF로 써서, 스테이지하기 전에 LF로 되돌렸다.
+
+인용 대조가 막지 않는 경고 15건을 냈다. PR 직전 리뷰가 하나씩 본다. 티켓 01·05의 "명세가 정할 것 (6)"·"명세가 정할 것 (1)·(4)"는 ADR 0025에 글자 그대로 없다고 했고(앞 세션이 쓴 인용이다), 07의 NOTES 고칠 문장, 명세 190·208·257행의 선택지 라벨과 수용 기준 문장, 이 일지의 사용자 답 설명(선택 화면의 글이라 저장소에 원문이 없다)과 밀 주장 목록의 문장이 나머지다.
+
+커밋 뒤 세션 컨텍스트가 297,795 토큰으로 인계 계기가 왔다. `next-session`을 Read로 열어 인계하지 않는 다섯 때를 봤다. 커밋은 성공했고, 요청 범위("티켓까지")는 PR과 병합까지 가는 단계라 커밋에서 끝나지 않으며, 이 세션의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. `tools/model_sweep.py docs/design-reverse-sync-tickets`는 `스윕 밖`이었다. 이 세션의 지금 제목은 `docs/design-reverse-sync-tickets`이다.
+
+```
+다음 작업: 기능 design-reverse-sync의 티켓. 명세 검토 주석·티켓 열 장·plan.md·일지에 셀프 리뷰를 반영해 커밋했고(85d8d42b), PR 직전 리뷰부터 남았다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/design-reverse-sync/spec.md
+브랜치: docs/design-reverse-sync-tickets
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-22-06-design-reverse-sync-tickets.md 의 "셀프 리뷰 반영"(밀 주장 목록)과 "커밋과 인계" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 85d8d42b까지 했고 푸시하지 않았다. 일지의 "커밋과 인계" 절은 커밋하지 않은 변경으로 워크트리에 있다. 남은 단계는 PR 직전 리뷰(일지 "셀프 리뷰 반영"의 밀 주장 목록과 인용 대조 경고 15건을 브리프에 싣는다), 푸시와 PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. 명세 검토, 사용자 선택 셋, to-tickets 1~5단계, 셀프 리뷰는 끝났다(다시 묻거나 돌리지 않는다). ADR 이력은 없다. origin/main이 caaa062(#345, harness 티켓 번호 도구)로 하나 앞서 있고 이 브랜치와 고친 파일이 겹치지 않는다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다. docs/journal/2026-10-22-06-design-reverse-sync-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다. 띄운 대기는 없었다.
+
+open-session을 부른다 2026-10-22T07:26:10Z
+
+## 이어받은 세션: PR 직전 리뷰
+
+위 지시문으로 연 새 세션이다. 제목을 `docs/design-reverse-sync-tickets`로 바꾸고 `git worktree list`에서 그 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어갔다. `to-tickets`를 디스크의 `SKILL.md`로 읽었고, 1~5단계와 셀프 리뷰는 끝났으니 PR 직전 리뷰부터 했다.
+
+> 사용자: ".claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-reverse-sync/spec.md … 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 85d8d42b까지 했고 푸시하지 않았다. … 남은 단계는 PR 직전 리뷰(일지 "셀프 리뷰 반영"의 밀 주장 목록과 인용 대조 경고 15건을 브리프에 싣는다), 푸시와 PR, 봇 회차, 워크트리 병합 길로 병합, retro, 그 뒤 티켓 01·02를 나란히 여는 지시문 둘이다. … 이번 요청 범위: 티켓까지"
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI는 돌지 못했다. 그래서 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
