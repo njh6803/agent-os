@@ -49,3 +49,9 @@
 - [ ] **원칙 III를 지킨다**
 - [ ] 검증 명령이 모두 초록이다
 - [ ] **기능을 닫지 않는다**
+
+### 메모(02에서 넘긴 것)
+
+- 02의 가르기는 `tools/rerun_hidden.py`의 `sort_candidate(repo, base, merge, out=...)`이고 `Hidden`(숨은 시험 ID, 지원 파일, 빠진 노드와 까닭)이나 `Failure`(까닭)를 돌려준다. 후보 표의 "노드마다 빠진 이유의 요약"은 `Hidden.dropped`의 `condition`·`cause`에서 짓는다. `Failure`인 후보는 그 까닭으로 빠진다.
+- 실제 준비(`uv sync`)는 작업 트리마다 `.venv`를 새로 채워 후보 하나에 작업 트리 둘이 든다. 실제 후보 표를 지을 때 후보마다 몇 분이 걸릴 수 있다.
+- 02의 셀프 리뷰가 판단 항목으로 넘긴 것: `tools/rerun_files.py`와 `tools/rerun_hidden.py`에 이름이 같고 뜻이 다른 `Hidden`·`Outcome`이 있다. 이 티켓이 두 모듈을 함께 import하면 한쪽을 다른 이름으로 들이거나 이름을 바꾼다. `rerun_hidden`의 작업 트리 꺼내기·걷기는 `tools/canary.py`와 모양이 같아, 고르기 모듈이 또 작업 트리를 꺼내면 한 자리로 모을지 본다.
