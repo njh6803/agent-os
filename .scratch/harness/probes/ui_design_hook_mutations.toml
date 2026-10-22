@@ -1,0 +1,112 @@
+# tools/hook_ui_design.py(harness 티켓 002)의 판정과 표지를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/ui_design_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "design 토막의 자리를 .scratch 다음 둘째로 묶지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''        if folded[index] == ".scratch" and folded[index + 2] == "design":'''
+new = '''        if folded[index] == ".scratch" and "design" in folded[index + 1 : -1]:'''
+
+[[mutation]]
+name = ".scratch 토막을 요구하지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''        if folded[index] == ".scratch" and folded[index + 2] == "design":'''
+new = '''        if folded[index + 2] == "design":'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    folded = [part.casefold() for part in parts]'''
+new = '''    folded = parts'''
+
+[[mutation]]
+name = "design 뒤에 파일 토막을 요구하지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    for index in range(len(parts) - 3):'''
+new = '''    for index in range(len(parts) - 2):'''
+
+[[mutation]]
+name = "Edit 을 빼고 Write 만 본다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "문장에 기능 토막을 넣지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    return _BODY.format(lead=LEAD, slug=slug)'''
+new = '''    return _BODY.format(lead=LEAD, slug="<기능>")'''
+
+[[mutation]]
+name = "표지 이름에서 에이전트를 뺀다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = session_id'''
+
+[[mutation]]
+name = "폴더 자리의 파일을 이미 알린 것으로 읽는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return True'''
+new = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+
+[[mutation]]
+name = "표지가 있어도 알린다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''        if directory is not None and not claim_first(name, directory):
+            return 0'''
+new = '''        if directory is not None:
+            claim_first(name, directory)'''
+
+[[mutation]]
+name = "가르기 전에 . 과 .. 토막을 접지 않는다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''posixpath.normpath(_SEPARATORS.sub("/", path))'''
+new = '''_SEPARATORS.sub("/", path)'''
+
+[[mutation]]
+name = "대조군: 알림 문장의 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_ui_design.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_ui_design.py"
+old = '''    " 이 알림은 세션·에이전트마다 한 번이다."'''
+new = '''    " 이 알림은 세션·에이전트마다 한 차례다."'''

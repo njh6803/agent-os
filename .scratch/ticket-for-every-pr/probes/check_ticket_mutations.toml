@@ -1,0 +1,97 @@
+# 티켓 03(feature/03-commit-check-blocks-ticketless)의 커밋 검사 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/check_ticket_mutations.toml
+# tools/check_ticket.py 의 판정을 하나씩 깨서, 첫 판부터 초록이던 tests/tools/test_check_ticket.py 의
+# 진짜 커밋 사례가 빨개지는지 잰다. 표지는 그 시험의 `_막혔다`·`_지났다` 가 실패할 때만 내는 머리 문구다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "판정 5 에서 브랜치의 티켓과 바꾼 티켓을 맞대지 않는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "다른_번호의_티켓은"]
+expect = "red"
+expect_output = ["지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if stem is not None and any(points_at(*stem, path) for path in present):'''
+new = '''    if stem is not None:'''
+
+[[mutation]]
+name = "면제 모양에서 harness 폴더를 빼지 않는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "면제_모양_밖의"]
+expect = "red"
+expect_output = ["지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] != "harness":'''
+new = '''    if len(parts) >= 3 and parts[0] == ".scratch":'''
+
+[[mutation]]
+name = "전환을 merge-base 의 트리로 가른다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "main을_합친_뒤에도"]
+expect = "red"
+expect_output = ["막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    listing = _out(cwd, "rev-list", "--parents", "HEAD", "--not", BASE)'''
+new = '''    return not _has_check(cwd, _out(cwd, "merge-base", BASE, "HEAD"))
+    listing = _out(cwd, "rev-list", "--parents", "HEAD", "--not", BASE)'''
+
+[[mutation]]
+name = "병합을 마무리하는 커밋의 merge-base 에서 MERGE_HEAD 를 뺀다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "충돌을_풀고_친"]
+expect = "red"
+expect_output = ["막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        heads.append(merging)'''
+new = '''        pass'''
+
+[[mutation]]
+name = "MERGE_HEAD 를 작업 트리 루트의 .git/MERGE_HEAD 경로로 찾는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "충돌을_풀고_친 and 링크드_워크트리"]
+expect = "red"
+expect_output = ["막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    return _maybe(cwd, "rev-parse", "-q", "--verify", "MERGE_HEAD^{commit}")'''
+new = '''    path = cwd / ".git" / "MERGE_HEAD"
+    return path.read_text(encoding="utf-8").split()[0] if path.is_file() else None'''
+
+[[mutation]]
+name = "대조군: MERGE_HEAD 경로 변이에서 일반 클론 사례는 초록이다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "충돌을_풀고_친 and 클론"]
+expect = "green"
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    return _maybe(cwd, "rev-parse", "-q", "--verify", "MERGE_HEAD^{commit}")'''
+new = '''    path = cwd / ".git" / "MERGE_HEAD"
+    return path.read_text(encoding="utf-8").split()[0] if path.is_file() else None'''
+
+[[mutation]]
+name = "판정 6 이 harness 폴더의 .md 를 모두 티켓으로 센다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "harness_티켓_모양이_아닌 and README"]
+expect = "red"
+expect_output = ["지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        and ticket_stem(f"chore/{name.removesuffix('.md')}") is not None'''
+new = '''        and bool(name)'''
+
+[[mutation]]
+name = "symbolic-ref 의 git 실패를 분리 HEAD 로 읽는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "저장소가_아닌_폴더"]
+expect = "red"
+expect_output = ["assert 0 == 2"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    result = _git(cwd, "symbolic-ref", "-q", "--short", "HEAD")
+    if result.returncode == 1:'''
+new = '''    result = _git(cwd, "symbolic-ref", "-q", "--short", "HEAD")
+    if result.returncode != 0:'''
