@@ -23,6 +23,7 @@ from tools.hook_session_usage import SUMMARY_SOURCE as USAGE_SOURCE
 from tools.hook_session_usage import shows_summary as usage_shows_summary
 
 NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
+ISSUE_TRACKER = Path(__file__).parents[2] / "docs" / "agents" / "issue-tracker.md"
 TOOLS = Path(__file__).parents[2] / "tools"
 
 # 티켓 05 세션이 실제로 받은 첫 메시지(2026-09-23). 앱이 딥링크의 첫 `/` 를 U+FF0F 로 바꿔 넣었고
@@ -639,6 +640,28 @@ def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차
         assert word in notice, word
 
 
+def test_알림의_규약_낱말은_원천_문서에_있다(tmp_path: Path) -> None:
+    """알림은 `docs/agents/issue-tracker.md` 의 규약을 옮긴 사본이다. 원천이 브랜치 모양, 상태 값,
+    번호 명령, 면제 브랜치, 커밋 검사의 이름을 바꾸면 여기서 빨갛다(PR #354 claude-review). 원천에
+    다른 말로 적힌 것(워크트리, 제목 도구)은 대조하지 않는다."""
+    notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
+    source = ISSUE_TRACKER.read_text(encoding="utf-8")
+
+    assert notice is not None
+    for word in (
+        "`feature/<NN>-<slug>`",
+        "`chore/<NNN>-<slug>`",
+        "`ready-for-agent`",
+        "`in-progress`",
+        "`uv run python tools/sibling_overlap.py`",
+        "`티켓 NNN`",
+        "`docs/<slug>`",
+        "`tools/check_ticket.py`",
+    ):
+        assert word in notice, word
+        assert word in source, word
+
+
 def test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다(tmp_path: Path) -> None:
     """다른 티켓의 워크트리에서 연 세션이 다른 일을 받으면, 차례대로 따른 1)이 남의 워크트리에 새
     티켓을 먼저 쓴다. 그래서 그 조건은 1) 앞에 온다(PR 직전 `bug-perf-review`, 일지
@@ -738,6 +761,8 @@ def test_헤드리스_가름은_세션_사용량_훅과_같다() -> None:
     """훅은 서로 import 하지 않아 가름을 옮겨 왔다. 값의 갈래마다 두 사본을 대조한다.
 
     한쪽만 고치면 여기서 빨갛다. 갈래 하나하나의 근거는 tests/tools/test_hook_session_usage.py 다.
+    마지막 단언은 두 훅이 같은 변수 이름을 읽는지 본다. 값 대조는 이름을 보지 않고, 그 훅에는 그
+    이름의 상수가 없어 소스에서 찾는다.
     """
     values = (None, "", "0", "1", "true")
     for attended in values:

@@ -116,6 +116,74 @@ open-session을 부른다 2026-10-22T13:16Z
 - **보안(`/security-review`).** 지적 없음. 트랜스크립트 경로는 하네스가 주는 값이고 읽기로만 열어 `type` 칸만 보며, 출력은 고정 상수다. 헤드리스 가름과 예약 작업 거르기는 권한 통제가 아니라 알림을 끄는 조건이다.
 - **버그·성능(`bug-perf-review`, sonnet, 도구 호출 40).** 유효 Minor 둘, 보류 둘, 오탐 일곱. 밀 주장 여덟 문장은 모두 근거와 맞았다(6은 `first_turn_context` 를 라벨을 바꾼 지시문으로 불러 대 봤다).
   1. Minor. 다른 티켓의 브랜치 조건이 2)에 있어, 차례대로 따르면 1)이 남의 워크트리에 새 티켓을 먼저 쓴다. → 유효. 그 조건을 1) 앞, 주 체크아웃 문장 뒤로 올리고 "아래 셋을 하지 않고 사용자에게 알린다"로 고쳤다. 처음 고친 판에 "워크트리 안의 세션은 `EnterWorktree` 로 새 워크트리를 만들지 못한다"를 까닭으로 넣었다가 뺐다. `EnterWorktree` 로 들어온 세션에 대한 도구 설명이고, 워크트리 폴더에서 시작한 세션에도 맞는지는 재지 않았다.
-  2. Minor. 티켓 자리를 "기능 폴더의 일이면 … 아니면 harness"로 갈라, 끝난 기능의 제품 코드 고침을 harness 로 보낼 수 있다(`docs/agents/issue-tracker.md` 11·13줄). → 유효. "끝난 기능의 동작을 고치는 제품 코드는 그 동작을 만든 기능 폴더다"를 더하고 harness 쪽을 "하네스 일이나 기능에 들지 않는 작은 문서 고침"으로 좁혔다. 명세 221줄의 같은 문구는 두는데, 셀프 리뷰의 명세 1과 같은 까닭이다.
+  2. Minor. 티켓 자리를 기능 폴더의 일과 그 밖(harness)으로만 갈라, 끝난 기능의 제품 코드 고침을 harness 로 보낼 수 있다(`docs/agents/issue-tracker.md` 11·13줄). → 유효. "끝난 기능의 동작을 고치는 제품 코드는 그 동작을 만든 기능 폴더다"를 더하고 harness 쪽을 "하네스 일이나 기능에 들지 않는 작은 문서 고침"으로 좁혔다. 명세 221줄의 같은 문구는 두는데, 셀프 리뷰의 명세 1과 같은 까닭이다.
   - 보류: 깊게 중첩된 JSON 한 줄의 `RecursionError`(실제 트랜스크립트에서 날 입력이 아니고 훅의 예외는 fail-open 이다), 예약 작업의 훅 입력 `prompt` 머리(독스트링이 재지 않았다고 이미 적는다). 둘 다 고치지 않고 PR 체크리스트에 적는다.
-- 반영의 검사: 시험을 먼저 고쳤다(낱말 목록에 "제품 코드", 새 시험 `test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다`). 고치기 전 코드에서 둘 다 빨갰고(낱말 없음, 어순 721 < 238 이 거짓), 고친 뒤 이 훅의 시험 50 이 통과했다. ruff 둘 초록, 이 훅을 겨누는 변이 표 다섯의 `--check` 가 모두 원문을 찾았다. 독스트링의 "주 체크아웃에서 시작했는지는 훅이 가르지 않는다"에 다른 티켓의 브랜치를 더했다.
+- 반영의 검사: 시험을 먼저 고쳤다(낱말 목록에 "제품 코드", 새 시험 `test_다른_티켓의_브랜치는_티켓을_쓰기_전에_본다`). 고치기 전 코드에서 둘 다 빨갰고(낱말 없음, 어순 721 < 238 이 거짓), 고친 뒤 이 훅의 시험 50 이 통과했다. ruff 둘 초록, 이 훅을 겨누는 변이 표 다섯의 `--check` 가 모두 원문을 찾았다. 주 체크아웃에서 시작했는지를 훅이 가르지 않는다는 독스트링 문장에 다른 티켓의 브랜치를 더했다.
+- 반영을 커밋하고 origin/main(#352, `b104f8fa`)을 합친 뒤(`.claude/rules/tools.md` 의 훅별 시간 줄이 충돌했다. main 은 Write·Edit 목록에 `hook_ui_design` 을, 이 브랜치는 UserPromptSubmit 문장을 더해 자리가 달랐고, main 판에 이 브랜치의 문장을 다시 넣었다) `ccd9968f` 에서 `.scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml` 전체를 다시 돌렸다. 변이 8 모두 기대대로 빨갰다. 시험을 고쳤으므로 고른 것이 아니라 전체다.
+
+## PR 과 인계 (PR 연 뒤)
+
+- 푸시하고 [njh6803/agent-os#354](https://github.com/njh6803/agent-os/pull/354)를 열었다. 체크리스트의 PR 직전 리뷰 줄에 대체 둘의 결과와 보류 둘의 고치는 값을 적었다. 첫 `@coderabbitai review` 코멘트는 남기지 않았다.
+- 확인 세션 "첫 턴 알림 확인 (티켓 05)"은 첫 푸시 뒤에도 보관하지 않았다. 사용자가 고른 "푸시 뒤에 보관 (추천)"의 조건이 커밋하지 않은 작업이 없을 때인데, 푸시할 때 이 일지의 수정(위 PR 직전 리뷰 절의 마지막 줄, 풀어 쓴 말의 따옴표 둘을 뗀 것)이 커밋되지 않은 채였다. `get_session` 으로 보니 그 세션은 `cwd` 가 이 워크트리 폴더이고 워크트리 칸이 없으며 `parentSessionId` 가 앞 세션이다. 보관 도구의 설명은 보관이 그 세션의 워크트리를 기본으로 정리한다고 적는다.
+- PR 을 연 뒤 인계 계기가 왔다. 세션 컨텍스트 332,025 토큰으로 `PR 연 뒤` 경계였다. 앞의 두 번(`커밋 뒤`)은 지시문의 "이어받을 상태"가 같은 경계라 넘기지 않았고, 이번은 경계가 달라 인계하지 않는 때 다섯에 들지 않았다(PR 이 열렸다, 요청 범위는 PR 과 병합까지다, `인계 못함` 줄이 없다, `get_session self` 에 `parentSessionId` 가 없다). 이 세션의 제목은 `feature/05-first-turn-ticket-notice` 이고 `feature/05-first-turn-ticket-notice (인계함)` 으로 바꾼다. 이 세션이 받은 사용자 프롬프트는 위 "인계받은 세션" 절의 지시문 하나다. 번복한 결정은 없다.
+- 주 체크아웃은 `main` 이고 origin/main(`b104f8fa`)과 같은 커밋이다.
+
+지시문:
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md. 첫 턴 훅이 티켓 없는 브랜치를 알린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md
+브랜치: feature/05-first-turn-ticket-notice
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-23-first-turn-ticket-notice.md의 "PR 직전 리뷰"와 "PR 과 인계" 절, .claude/skills/next-session/SKILL.md의 순서 1(Read로 연다)
+이어받을 상태: 인계: PR 연 뒤. PR #354를 열었고 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. 커밋하지 않은 일지 수정(PR 직전 리뷰 절의 마지막 줄, 따옴표 둘을 뗀 것, PR 과 인계 절)이 워크트리에 있으니 첫 반영 커밋이나 회고 커밋에 싣는다. 확인 세션 "첫 턴 알림 확인 (티켓 05)"(local_bb679c5c-6fb3-48dd-b93e-3e4e3b45b94f)은 아직 보관하지 않았다. 사용자가 고른 "푸시 뒤에 보관 (추천)"의 조건이 커밋하지 않은 작업이 없을 때라, 그 일지 수정을 커밋해 푸시한 뒤 보관한다. 일지 docs/journal/2026-10-22-23-first-turn-ticket-notice.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금 풀기는 `is not locked` 로 끝났다(이 세션은 `EnterWorktree(path)` 로 들어왔고 `git worktree list` 에 잠금 표시가 없었다).
+
+open-session을 부른다 2026-10-22T14:09Z
+
+## 인계받은 세션 (PR 연 뒤부터)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/ticket-for-every-pr/issues/05-first-turn-ticket-notice.md / (…) 이어받을 상태: 인계: PR 연 뒤. (…) / 이번 요청 범위: PR과 병합까지"
+
+- 제목을 `feature/05-first-turn-ticket-notice` 로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어갔다(잠금에 막히지 않았다).
+- 첫 `@coderabbitai review` 코멘트를 남겼다. 그때 검사는 모두 pending 이었고 CodeRabbit 줄은 `Review skipped: manual review required for this OSS repository` 였다. `tools/wait_ci.py 354` 를 백그라운드로 띄웠다.
+- 대기가 `모두 통과. CodeRabbit: Review rate limited` 로 끝났다(헤드 `ccd9968`). CodeRabbit 은 한도에 걸려 리뷰가 없어 회차로 세지 않는다. 이 PR 의 보안·버그 축은 PR 체크리스트에 적은 PR 직전 리뷰가 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인).
+- claude-review 첫 회차(Minor 둘, Nit 둘). 첫 회차라 지적마다 판단했다.
+  1. Minor. `TICKET_NOTICE` 는 `docs/agents/issue-tracker.md` 규약의 사본인데 원천과 대조하는 시험이 없다. → 고쳤다. 알림의 백틱 토막 열아홉 가운데 원천에 글자 그대로 있는 규약 낱말 여덟(브랜치 모양 둘, 상태 값 둘, 번호 명령, `티켓 NNN`, `docs/<slug>`, 커밋 검사)을 골라, 알림과 원천에 모두 있는지 보는 계약 시험 `test_알림의_규약_낱말은_원천_문서에_있다` 를 더했다. 처음부터 초록인 가드라 원천 11줄의 번호 명령 이름을 손으로 바꿔 실패 출력을 본 뒤 되돌렸고, 그 변이를 표의 9번으로 더해 `--since HEAD` 로 돌려 기대대로 빨간 것을 봤다. 다른 변이의 `-k` 는 새 시험 이름에 걸리지 않는다.
+  2. Minor. `test_헤드리스_가름은_세션_사용량_훅과_같다` 의 소스 문자열 단언은 지워도 된다. → 두었다. 값 대조는 두 훅이 읽는 환경 변수의 이름을 보지 않고, `tools/hook_session_usage.py` 에는 그 이름의 상수가 없다(311줄이 문자열을 바로 읽는다). 변이 3("헤드리스 가름의 변수 이름이 갈렸다")이 바로 그 단언으로 빨개진다. 그 까닭을 시험 독스트링에 적었다.
+  3. Nit. 모듈 독스트링이 길고 시간 근거가 겹친다. → 두었다. 독스트링은 시간 수치를 적지 않고 `.claude/rules/tools.md` 를 가리키며, 판정과 못 보는 것은 그 규칙이 독스트링에 두라고 한다.
+  4. Nit. `first_turn_context` 가 두 일을 한다. → 두었다. 리뷰가 지금 크기에서는 읽을 만하다고 적었다.
+- 푸시 전에 PR 본문(변경된 영역의 시험과 변이 수, 확인 방법, 회고의 대기열 회차)을 고쳤다.
+
+## 회고
+
+이 일지 전체(구현·셀프 리뷰·PR 직전 리뷰·두 번의 인계)와 이 세션을 읽었다. 후보 열하나, 승인 둘(둘 다 대기열의 열린 행에 회차를 더했다), 넘김 없음, 기각 아홉. 이 세션에서 반영한 것은 없다.
+
+승인.
+
+1. **셀프 리뷰 명세 축 1: 이 훅을 지시문일 때만으로 든 `next-session` 107줄이 거짓으로 남았다.** 티켓의 잔존 항목이 저장소 grep 을 요구했는데 그 줄을 놓쳤다. `CLAUDE.md` 작업 규약 4를 어겨 리뷰가 잡은 사건이라 회차로 센다. 같은 가족의 열린 행 420에 더해 3회차다. 그 행의 처방(3회차에 계기 훅이나 잔존을 세는 도구를 고른다)은 이 티켓의 범위 밖이라 대기열에 두고, 기능의 마지막 티켓 뒤 chore 배치가 고른다.
+2. **`tools/hook_report.py` 가 `hook_prompt_directive.py` 를 뺄 후보로 냈다.** 이 세션도 첫 턴에 그 훅의 문맥(제목을 바꾸라는 계기)을 받았는데, 이 세션의 기록에서 그 문맥은 명령 칸이 없는 `hook_additional_context` 첨부(`hookEvent` 가 `UserPromptSubmit`)로만 남았고 그 훅의 `hook_success` 는 없었다(스크래치 스크립트로 손으로 봤다). 같은 처방의 열린 행 404(고침)에 더해 4회차다. 뺄 후보는 거짓 양성이라 넘기지 않았다.
+
+기각.
+
+3. PR 직전 `bug-perf-review` Minor 1(다른 티켓의 브랜치 조건이 티켓을 쓰는 1) 뒤에 있었다): 그 리뷰의 브리프(`.claude/agents/bug-perf-review.md` 19줄)가 "순서가 뒤바뀐 단계"를 이미 들고 그대로 잡았다. 검사로 옮길 수 없고 새 판단 기준도 아니다.
+4. 셀프 리뷰 표준 2·4(닫힌 주장, 닫힌 현재형): `code-review` 명세 축 브리프의 닫힌 주장 기준이고, 리뷰가 제 몫을 했다.
+5. PR 직전 `bug-perf-review` Minor 2(`docs/agents/issue-tracker.md` 의 티켓 자리가 끝난 기능의 제품 코드를 harness 로 보낸다): 틀린 사실이고 이 PR 이 이미 고쳤다.
+6. CodeRabbit CLI 좌석 미배정: `docs/constitution/operations.md` 리뷰 파이프라인 2가 대체 둘로 보냈고 그대로 돌았다.
+7. 표준 축의 변이 실행이 다른 세션의 `mutate.py` 셋과 겹쳐 170초에 끊었다: 도구가 끊길 때 되돌리고, 끊은 뒤 원문을 다시 봤다. 잃은 것이 없다.
+8. 인용 대조 경고 10건 가운데 둘(옮긴 글자가 달랐다): 검사가 그 자리에서 알렸다.
+9. 변이 표 `hooks_push_help_and_commit_lock_mutations.toml` 16번의 원문이 낡았다: `--check` 가 잡았다.
+10. 이 세션이 `next-session/SKILL.md` 전체(약 2만 3천 자)를 Read 로 열었다(지시문은 순서 1만 가리켰다): `hook_large_result` 가 그 자리에서 알렸다.
+11. 인계가 두 번 났다(`커밋 뒤` 335,245 토큰, `PR 연 뒤` 332,025 토큰): 인계 장치가 설계대로 돌았고, 잃은 것이 없다.
+
+만료할 행은 없었다(`tools/queue_open_rows.py`, 로컬과 `--ref origin/main` 모두). `tools/hook_report.py` 는 420의 문턱 때문에 돌렸다.
+
+## 다음
+
+티켓 05는 이 PR(#354)로 닫힌다. 이 기능에 남은 티켓은 04(CI 가 티켓 done 을 본다)이고, 나란히 연 세션이 `feature/04-ci-checks-ticket-done` 에서 맡고 있다. 04가 이 기능의 마지막 티켓이다.

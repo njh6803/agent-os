@@ -1,6 +1,6 @@
 # 티켓 05(feature/05-first-turn-ticket-notice)의 첫 턴 티켓 알림 변이. 형식은 tools/mutate.py 의 독스트링.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/prompt_directive_mutations.toml
-# tools/hook_prompt_directive.py 의 알림 판정을 하나씩 깨서, 구현 뒤에 썼거나 이음매에서 이미 초록이던
+# tools/hook_prompt_directive.py 의 알림 판정과 그 원천 문서를 하나씩 깨서, 구현 뒤에 썼거나 이음매에서 이미 초록이던
 # 시험이 빨강이 되는지 잰다. 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
 
 [[mutation]]
@@ -102,3 +102,14 @@ expect_output = ["assert '앱이 지은 제목이면"]
 file = "tools/hook_prompt_directive.py"
 old = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. " + TITLE_FALLBACK + " "'''
 new = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. 거부하면 사용자에게 알린다. "'''
+
+[[mutation]]
+name = "원천 문서가 번호 명령의 이름을 바꿨다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "규약_낱말은_원천_문서에"]
+expect = "red"
+expect_output = ["'`uv run python tools/sibling_overlap.py`' in '# 이슈 트래커"]
+
+[[mutation.edit]]
+file = "docs/agents/issue-tracker.md"
+old = '''번호는 `uv run python tools/sibling_overlap.py`가 내는 다음 빈 번호'''
+new = '''번호는 `uv run python tools/next_number.py`가 내는 다음 빈 번호'''
