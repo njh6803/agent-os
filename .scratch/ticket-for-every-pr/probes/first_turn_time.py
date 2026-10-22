@@ -112,7 +112,7 @@ def main() -> int:
     head = lines_before_assistant(source)
     print(f"트랜스크립트: {source.name}, {size:,} 바이트, 첫 assistant 기록 앞 {head}줄")
     rounds = Rounds()
-    ranges: dict[str, list[float]] = {}
+    ranges: dict[str, list[int] | None] = {}
     with tempfile.TemporaryDirectory() as scratch:
         stripped = Path(scratch) / "stripped.jsonl"
         strip_assistant(source, stripped)
@@ -127,19 +127,29 @@ def main() -> int:
             ("헤드리스", stripped, {"CLAUDE_CODE_SESSION_ATTENDED": "0"}, "silent"),
         ]
         for name, transcript, extra_env, expect in cases:
+            # 표지를 본 회차의 시간만 모은다. 결론은 측정인 회차만으로
+            # 낸다(.claude/rules/probes.md).
             times: list[float] = []
             for index in range(RUNS):
                 with rounds.round(f"{name} {index + 1}") as current:
                     elapsed, outcome, message = run_once(transcript, extra_env)
-                    times.append(elapsed)
                     noticed = message.startswith(TICKET_NOTICE[:40])
                     marked = outcome == expect and (noticed if expect == "context" else True)
+                    if marked:
+                        times.append(elapsed)
                     current.mark(
                         measured=marked,
                         result=f"{outcome}" if marked else f"기대 {expect}, 실제 {outcome}",
                     )
+            if not times:
+                ranges[name] = None
+                print(f"{name}: 측정값 없음({RUNS}번 모두 측정 아님, 기대 {expect})")
+                continue
             ranges[name] = [round(min(times)), round(max(times))]
-            print(f"{name}: {min(times):.0f}~{max(times):.0f}ms ({RUNS}번, 기대 {expect})")
+            print(
+                f"{name}: {min(times):.0f}~{max(times):.0f}ms"
+                f" (측정 {len(times)}/{RUNS}번, 기대 {expect})"
+            )
     print(rounds.summary())
     result = {
         "transcript_bytes": size,

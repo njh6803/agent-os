@@ -7,24 +7,17 @@ from pathlib import Path
 
 import pytest
 from tools.hook_prompt_directive import (
-    ATTENDED_VAR,
-    HEADLESS_MARKER,
     TITLE_CALL,
     TITLE_FALLBACK,
     block_reason_for,
     context_for,
     first_turn_context,
     has_assistant_turn,
-    is_attended,
     is_first_turn,
 )
-from tools.hook_session_usage import HEADLESS_MARKER as USAGE_MARKER
-from tools.hook_session_usage import SUMMARY_SOURCE as USAGE_SOURCE
-from tools.hook_session_usage import shows_summary as usage_shows_summary
 
 NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
 ISSUE_TRACKER = Path(__file__).parents[2] / "docs" / "agents" / "issue-tracker.md"
-TOOLS = Path(__file__).parents[2] / "tools"
 
 # 티켓 05 세션이 실제로 받은 첫 메시지(2026-09-23). 앱이 딥링크의 첫 `/` 를 U+FF0F 로 바꿔 넣었고
 # 사람이 고치지 않고 보냈다. 시작 프롬프트 줄의 `/` 는 ASCII 그대로다.
@@ -755,21 +748,3 @@ def test_두_계기의_제목_문구가_같다(tmp_path: Path) -> None:
         assert context is not None
         assert TITLE_CALL in context
         assert TITLE_FALLBACK in context
-
-
-def test_헤드리스_가름은_세션_사용량_훅과_같다() -> None:
-    """훅은 서로 import 하지 않아 가름을 옮겨 왔다. 값의 갈래마다 두 사본을 대조한다.
-
-    한쪽만 고치면 여기서 빨갛다. 갈래 하나하나의 근거는 tests/tools/test_hook_session_usage.py 다.
-    마지막 단언은 두 훅이 같은 변수 이름을 읽는지 본다. 값 대조는 이름을 보지 않고, 그 훅에는 그
-    이름의 상수가 없어 소스에서 찾는다.
-    """
-    values = (None, "", "0", "1", "true")
-    for attended in values:
-        for marker in values:
-            assert is_attended(attended, marker) == usage_shows_summary(
-                USAGE_SOURCE, attended, marker
-            ), (attended, marker)
-    assert HEADLESS_MARKER == USAGE_MARKER
-    source = (TOOLS / "hook_session_usage.py").read_text(encoding="utf-8")
-    assert f'os.environ.get("{ATTENDED_VAR}")' in source

@@ -20,7 +20,7 @@
 
 ### 시험
 
-- [x] **순수 함수 시험**(`tests/tools/test_hook_prompt_directive.py`). 첫 턴의 보통 프롬프트(알림과 그 낱말: 티켓 자리, 번호 명령, `git branch -m`, 제목, 따르지 않는 때), 첫 턴이 아닌 같은 프롬프트(침묵), 헤드리스 표지 둘 각각(침묵), `<scheduled-task `로 시작하는 첫 메시지(침묵), 지시문(지금 계기만 있고 새 알림 없음), 두 헤드리스 가름이 같다는 것, 두 계기의 제목 문구가 같다는 것
+- [x] **순수 함수 시험**(`tests/tools/test_hook_prompt_directive.py`). 첫 턴의 보통 프롬프트(알림과 그 낱말: 티켓 자리, 번호 명령, `git branch -m`, 제목, 따르지 않는 때), 첫 턴이 아닌 같은 프롬프트(침묵), 헤드리스 표지 둘 각각(침묵), `<scheduled-task `로 시작하는 첫 메시지(침묵), 지시문(지금 계기만 있고 새 알림 없음), 두 헤드리스 가름이 같다는 것(이것만 `tests/tools/test_headless_gate_agreement.py`. `KICKOFF.md`가 새 프로젝트에 옮기는 `test_hook_*.py` 글롭 밖에 두어, 옮기지 않는 `hook_session_usage`를 import하지 않게 한다. PR #354 CodeRabbit), 두 계기의 제목 문구가 같다는 것
 - [x] **빨강을 먼저 본다.** 지금 훅으로 보통 프롬프트의 알림 사례가 빨간 것을 본다
 - [x] **실제 입력 표**(`tools/hook_payloads.toml`). 첫 턴의 `보통 프롬프트` 사례(`끝났어?`, 지금 `silent`)를 알림으로 바꾼다. 첫 턴이 아닌 같은 프롬프트(`${USED_TRANSCRIPT}`)의 침묵, 헤드리스 세션의 침묵(`env`로 `CLAUDE_CODE_SESSION_ATTENDED = "0"`), 첫 메시지가 `<scheduled-task name=`으로 시작하는 실제 입력의 침묵을 더한다. 러너는 훅을 띄울 때 그 두 변수(`CLAUDE_CODE_SESSION_ATTENDED`, `AGENT_OS_HEADLESS`)를 벗기므로(`tools/run_hooks.py`의 `hook_environment`), 알림 사례는 `run_hooks`를 부른 세션의 환경과 상관없이 같은 결과가 나오고, 헤드리스 침묵 사례는 사례의 `env`로만 정해진다. `uv run python tools/run_hooks.py`로 돌려 본다
 

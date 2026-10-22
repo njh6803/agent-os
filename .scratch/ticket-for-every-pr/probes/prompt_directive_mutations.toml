@@ -16,7 +16,7 @@ new = '''        if prompt.lstrip().startswith(_SCHEDULED_TASK):'''
 
 [[mutation]]
 name = "헤드리스 가름이 표지 변수를 보지 않는다"
-tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "세션_사용량_훅과_같다"]
+tests = ["tests/tools/test_headless_gate_agreement.py", "-k", "세션_사용량_훅과_같다"]
 expect = "red"
 expect_output = ["where True = is_attended(None, '0')"]
 
@@ -27,7 +27,7 @@ new = '''    return attended != "0"'''
 
 [[mutation]]
 name = "헤드리스 가름의 변수 이름이 갈렸다"
-tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "세션_사용량_훅과_같다"]
+tests = ["tests/tools/test_headless_gate_agreement.py", "-k", "세션_사용량_훅과_같다"]
 expect = "red"
 expect_output = ["""'os.environ.get("CLAUDE_CODE_ATTENDED")' in"""]
 

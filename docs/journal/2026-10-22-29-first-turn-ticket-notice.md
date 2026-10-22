@@ -188,6 +188,10 @@ open-session을 부른다 2026-10-22T14:09Z
 
 티켓 05는 이 PR(#354)로 닫힌다. 이 기능에 남은 티켓은 04(CI 가 티켓 done 을 본다)이고, 나란히 연 세션이 `feature/04-ci-checks-ticket-done` 에서 맡고 있다. 04가 이 기능의 마지막 티켓이다.
 
+PR #354 claude-review 둘째 회차가 조건을 걸고 남긴 일 둘(보류, PR 코멘트에 까닭). 다음에 `tools/hook_prompt_directive.py` 를 고치는 일이 그 조건을 채우면 함께 한다.
+- 헤드리스 가름(`is_attended`, 원천 `tools/hook_session_usage.py` 의 `shows_summary`)의 셋째 사본이 생기면 대조 시험을 한 곳으로 모은다. 지금 대조는 `tests/tools/test_headless_gate_agreement.py` 다.
+- `TICKET_NOTICE` 의 조건 분기가 하나 더 늘면 조건별 조각을 상수로 나눈다.
+
 ## 인계 (커밋 뒤, 셋째 세션)
 
 - 위 봇 첫 회차의 반영, 회고, "다음"을 커밋 `011b803a`(`test: 첫 턴 알림의 규약 낱말을 원천 문서와 대조하고 회고를 싣는다`)에 실었다. pre-commit 모두 Passed(pytest 426.9초, web-verify 362.2초). 인용 대조 경고 1건은 119줄의 인용이 훅의 파이썬 문자열 이음으로 갈라진 새 문장이라 둔다. 아직 푸시하지 않았다. PR 본문은 이 커밋에 맞춰 푸시 전에 고쳤고, 첫 회차에서 고치지 않은 지적의 까닭을 PR 코멘트로 남겼다.
@@ -220,4 +224,8 @@ open-session을 부른다 2026-10-22T14:37Z
 - 위 인계 절을 이 절과 함께 `093e223e` 로 커밋했다. 그 pre-commit 이 도는 사이 #353(`19bbfa06`)이 main 에 들어와, 푸시 훅이 뒤처졌다며 막았다. origin/main 을 합치니 `.scratch/retro-queue.md` 의 420·421행이 충돌했다. 420은 이 브랜치가 3회차로, 421은 main 이 7회차로 올린 것이라 둘 다 살렸다(`aeaee1f0`, pre-commit 모두 Passed).
 - 합친 뒤 `tools/sibling_overlap.py` 가 이 일지(23)가 main 의 최신 일지 24보다 이름순으로 앞이라며 1로 끝났다. `--move` 로 옮기는 사이 형제가 28을 가져가 29로 옮겼다. 인용을 고친 파일은 대기열, 카나리아 명세 둘, 이 훅의 시험 파일, 이 일지이고, 옛 번호(`10-22-23`)를 grep 하니 남은 것이 없었다. PR 본문의 일지 줄도 옮긴다.
 - 옮김의 첫 커밋은 pre-commit 의 `run-hooks` 하나에 막혔다. `hook_journal_retro.py` 의 "다음 빈 순번으로 새 일지를 만든 Write" 사례가 침묵 대신 알렸다. 커밋을 23:59 무렵(KST)에 띄워 러너가 `${TODAY}` 를 10월 22일로 픽스처를 지었고, 그 사례가 돈 것은 자정 뒤라 훅이 부른 `tools/sibling_overlap.py` 는 오늘을 10월 23일로 읽은 것으로 본다(출력 파일 시각 00:06:32, 검사 묶음 408초, `run-hooks` 172초). 이 브랜치는 그 훅과 러너를 고치지 않았다. 자정 뒤 같은 커밋을 다시 돌렸다. 대기열에 같은 꼴(자정에 걸린 검사)의 행은 없다. 회고 후보로 둔다.
-- 그 커밋까지 푸시한다. 이 푸시로 도는 claude-review 는 둘째 회차다.
+- 그 커밋(`89913ce9`)까지 PR 본문의 일지 줄을 먼저 고친 뒤 푸시했다. 커밋하지 않은 작업이 없어 확인 세션 "첫 턴 알림 확인 (티켓 05)"을 보관했다(이 워크트리는 남았다). `@coderabbitai review` 를 남기고 `tools/wait_ci.py 354` 를 띄웠고, `모두 통과. CodeRabbit: Review completed` 로 끝났다.
+- 봇 회차. claude-review 는 둘째 회차(Minor 둘, Nit 하나, Critical·Major 없음)라 고치지 않고 보류 까닭을 PR 코멘트에 남겼다. 조건을 건 둘은 위 "다음"에도 적었다. CodeRabbit 은 이 PR 의 첫 리뷰라 첫 회차로 세고 지적마다 판단했다.
+  1. Major. `tests/tools/test_hook_prompt_directive.py` 가 `tools/hook_session_usage.py` 를 머리에서 import 해, `KICKOFF.md` 284줄대로 `test_hook_*.py` 를 옮기고 283줄대로 그 훅을 옮기지 않은 새 프로젝트의 수집이 멈춘다. → 유효. 이 PR 이 셀프 리뷰 전에 더한 대조 시험의 import 다. 그 시험과 그것만 쓰던 import 를 글롭 밖의 `tests/tools/test_headless_gate_agreement.py` 로 옮겼다. 티켓 15줄의 선례(`test_hook_midturn_korean.py` 의 대조)는 짝 훅 `hook_stop_korean` 도 함께 옮겨져 이 문제가 없다. 변이 표 2·3번의 경로를 바꾸고 `--check` 뒤 표 전체를 돌려 변이 아홉 모두 기대대로였다(시험을 옮겼으므로 전체다. 도구가 커밋 전 전체 실행이라고 알렸는데, 봇 회차의 반영을 마친 작업 트리라 커밋할 내용 그대로를 잰 것이다). 티켓의 시험 체크박스에 새 자리를 적었다.
+  2. Minor. `first_turn_time.py` 가 표지를 보기 전에 시간을 모아, 측정 아닌 회차도 범위에 들고 다섯 회차가 모두 예외면(`Rounds.round` 가 삼킨다) 빈 목록의 `min` 에서 멈춘다. → 유효(`.claude/rules/probes.md` 첫 항목). 표지를 본 회차만 모으고 빈 갈래는 `null` 로 적게 고쳤다. 앞서 기록한 두 실행은 스무 회차가 모두 측정이라 범위가 같아, `.claude/rules/tools.md` 의 인용 값은 두고 그 README 에 고친 사실을 적었다. 고친 판을 한 번 돌려 스무 회차 모두 측정, 종료 0을 봤다.
+- 검사: ruff 둘 초록, 바뀐 두 시험 파일 51 통과, 바뀐 파일의 pyright 0.
