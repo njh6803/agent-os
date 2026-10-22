@@ -1,0 +1,255 @@
+{
+  "exit": 1,
+  "lines": 6,
+  "event_types": [
+    "assistant",
+    "rate_limit_event",
+    "result",
+    "system",
+    "user"
+  ],
+  "limited": false,
+  "rate_limit": {
+    "status": "allowed_warning",
+    "rateLimitType": "seven_day",
+    "utilization": 0.97,
+    "unifiedWindows": {
+      "five_hour": {
+        "utilization": 0.01,
+        "resetsAt": 1792663800
+      },
+      "seven_day": {
+        "utilization": 0.97,
+        "resetsAt": 1792962000
+      }
+    }
+  },
+  "init_keys": [
+    "additional_directories",
+    "agents",
+    "analytics_disabled",
+    "apiKeySource",
+    "capabilities",
+    "claude_code_version",
+    "cwd",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "mcp_servers",
+    "memory_paths",
+    "messaging_socket_path",
+    "model",
+    "original_cwd",
+    "output_style",
+    "per_turn_effort_active",
+    "permissionMode",
+    "plugins",
+    "powershell_path",
+    "product_feedback_disabled",
+    "session_id",
+    "skills",
+    "slash_commands",
+    "subtype",
+    "terminal_slash_commands",
+    "tools",
+    "type",
+    "uuid",
+    "view_mode"
+  ],
+  "init": {
+    "model": "claude-sonnet-5-5",
+    "permissionMode": "auto",
+    "mcp_servers": [],
+    "plugins": [
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "claude_code_version": "2.1.302",
+    "per_turn_effort_active": true,
+    "tools": [
+      "Task",
+      "Bash",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "DesignSync",
+      "Edit",
+      "EnterWorktree",
+      "ExitWorktree",
+      "Glob",
+      "Grep",
+      "ListAgents",
+      "Monitor",
+      "NotebookEdit",
+      "PowerShell",
+      "PushNotification",
+      "Read",
+      "RemoteTrigger",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "SendMessage",
+      "Skill",
+      "TaskStop",
+      "ToolSearch",
+      "WebFetch",
+      "WebSearch",
+      "Workflow",
+      "Write"
+    ]
+  },
+  "assistant_models": {
+    "claude-sonnet-5-5": 2
+  },
+  "nested_assistant_models": {},
+  "effort_keys_in_events": [],
+  "result_keys": [
+    "duration_api_ms",
+    "duration_ms",
+    "errors",
+    "fast_mode_disabled_reason",
+    "fast_mode_state",
+    "is_error",
+    "modelUsage",
+    "num_turns",
+    "permission_denials",
+    "queued_turn_count",
+    "result_index",
+    "safety_stops",
+    "session_id",
+    "stop_reason",
+    "subagent_stats",
+    "subtype",
+    "terminal_reason",
+    "total_cost_usd",
+    "type",
+    "usage",
+    "uuid"
+  ],
+  "result": {
+    "subtype": "error_max_budget_usd",
+    "is_error": true,
+    "terminal_reason": "budget_exhausted",
+    "num_turns": 2,
+    "total_cost_usd": 0.0485848,
+    "session_id": "4a0e54a6-c1f0-4cf7-93a2-a5f082b0a2c4",
+    "permission_denials": [],
+    "result": null
+  },
+  "results": [
+    {
+      "subtype": "error_max_budget_usd",
+      "is_error": true,
+      "terminal_reason": "budget_exhausted",
+      "num_turns": 2,
+      "total_cost_usd": 0.0485848,
+      "session_id": "4a0e54a6-c1f0-4cf7-93a2-a5f082b0a2c4",
+      "permission_denials": [],
+      "result": null,
+      "result_index": 0,
+      "stop_reason": "tool_use"
+    }
+  ],
+  "init_count": 1,
+  "model_usage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 6,
+      "outputTokens": 188,
+      "thinkingTokens": 0,
+      "cacheReadInputTokens": 57768,
+      "cacheCreationInputTokens": 10229,
+      "webSearchRequests": 0,
+      "costUSD": 0.0485848,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "tool_uses": [
+    {
+      "id": "toolu_01PmhjJT9TbS1te53xM5seWQ",
+      "name": "Bash",
+      "input": {
+        "command": "env | cut -d= -f1 | sort | tr '\\n' ' '",
+        "description": "List environment variable names"
+      },
+      "result": {
+        "is_error": false,
+        "text": "AI_AGENT APPDATA CLAUDECODE CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_CODE_SESSION_ATTENDED CLAUDE_CODE_SESSION_ID CLAUDE_EFFORT CLAUDE_PID COMSPEC COREPACK_ENABLE_AUTO_PIN DISABLE_AUTOUPDATER EXEPATH GIT_EDITOR HOME HOMEDRIVE HOMEPATH LOCALAPPDATA MSYSTEM NoDefaultCurrentDirectoryInExePath PATH PATHEXT PLI"
+      }
+    },
+    {
+      "id": "toolu_019hVa75jp1d85mPxTsWAP35",
+      "name": "Read",
+      "input": {
+        "file_path": "C:\\Users\\User\\AppData\\Local\\Temp\\rerun-probe-ut60stj9\\repo\\a.txt"
+      },
+      "result": null
+    }
+  ],
+  "arm": "누적이어가기",
+  "args": [
+    "-p",
+    "--model",
+    "claude-sonnet-5-5",
+    "--effort",
+    "low",
+    "--permission-mode",
+    "auto",
+    "--setting-sources",
+    "project,local",
+    "--strict-mcp-config",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--resume",
+    "4a0e54a6-c1f0-4cf7-93a2-a5f082b0a2c4",
+    "--max-budget-usd",
+    "0.02"
+  ],
+  "env_names": [
+    "APPDATA",
+    "COMSPEC",
+    "DISABLE_AUTOUPDATER",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PROGRAMDATA",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "transcript": {
+    "files": [
+      "C--Users-User-AppData-Local-Temp-rerun-probe-ut60stj9-repo/4a0e54a6-c1f0-4cf7-93a2-a5f082b0a2c4.jsonl"
+    ],
+    "effort": {
+      "low": 3
+    },
+    "model": {
+      "claude-sonnet-5-5": 3
+    },
+    "nested": {}
+  }
+}
