@@ -94,3 +94,59 @@ open-session을 부른다 2026-10-22T08:08:11Z
 
 PR 봇에 밀 주장으로 넘길 새 문장.
 - implement: "형제 거르기(`next-session` 2단계의 1)와 워크트리에 들어가기 전의 세션 확인(`docs/constitution/operations.md` 브랜치와 병합)이 제목만 보고 세션을 찾는다. 터미널이라 그 도구가 없거나 앱이 거절하면 제목은 그대로 두고 잇는다."
+
+리뷰 반영과 티켓 done을 `3ceecb42`로 커밋했다(pre-commit 모두 통과, ruff 둘은 손으로 쳐 통과). 그 커밋 뒤 인계 계기(`커밋 뒤`, 22만 6천 토큰)가 왔지만, 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다(`next-session` "인계할 때" 1).
+
+## 인계 (PR 연 뒤)
+
+`coderabbit auth status`는 이번에도 `Seat: not assigned`였다. base가 움직이지 않아 푸시하고 `/git-pr`로 PR #348을 열었다. 확인 방법에 넣은 `--preflight --control-commit caaa062b` 명령은 열기 전에 쳐서 다섯 모두 통과를 봤다. 앱이 PR을 이 세션에 묶었다. 그 직후 인계 계기(`PR 연 뒤`, 25만 1천 토큰)가 왔고, 넘겨받은 경계(`커밋 뒤`)와 달라 넘긴다. 곁 세션이 아니다(`get_session`에 `parentSessionId`가 없다). 이 세션의 지금 제목은 `feature/02-docs-and-skills-teach-tickets`다.
+
+남은 단계. 첫 `@coderabbitai review` 코멘트와 `tools/wait_ci.py`는 새 세션이 한다. 그 뒤 봇 회차를 반영하고 `next-session`의 "워크트리에서 병합할 때"대로 병합한 뒤 회고(`retro`)와 `next-session`을 돈다. 병합 직전에 `tools/sibling_overlap.py`가 일지 번호가 이 브랜치(09)보다 큰 형제(PR #347의 10, `choice-facts-batch`의 11 등)를 찍었다. 그쪽이 먼저 병합되면 이 일지 번호를 옮긴다. 이 인계 절은 커밋하지 않았다.
+
+지시문(새 세션에 보낸 것).
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md. 규약 문서와 스킬이 "PR마다 티켓 하나"의 차례를 가르친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/02-docs-and-skills-teach-tickets.md
+브랜치: feature/02-docs-and-skills-teach-tickets
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md의 "PR 직전 리뷰 (인계받은 세션)"과 "인계 (PR 연 뒤)" 절, PR #348 본문
+이어받을 상태: 인계: PR 연 뒤. PR #348을 열고 푸시했다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 Minor 셋 가운데 둘을 고치고 하나는 명세 212행대로 둠)는 반영해 PR 체크리스트에 적었다. 첫 @coderabbitai review 코멘트와 tools/wait_ci.py 대기는 아직이다. 남은 것은 next-session 순서 1의 2(봇 회차)부터 병합까지와 회고, 그리고 커밋하지 않은 일지의 인계 절을 이어 쓰고 커밋하는 것이다. 병합 직전에 sibling_overlap.py를 다시 쳐 일지 번호가 더 큰 형제가 먼저 병합됐으면 이 일지 번호를 옮긴다. 일지 docs/journal/2026-10-22-09-docs-and-skills-teach-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/02-docs-and-skills-teach-tickets (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며(리뷰 서브에이전트 둘은 끝났다), `git worktree unlock`은 `is not locked`라 넘어갔다.
+
+open-session을 부른다 2026-10-22T08:38:09Z
+
+## 봇 회차 (두 번째로 인계받은 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "… 이번 요청 범위: PR과 병합까지"
+
+제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 348`을 백그라운드로 띄웠다.
+
+claude-review 첫 회차(`3ceecb42`). 지적 없음. 잡 로그의 `rate_limit_info`가 `seven_day` 사용률 0.97(`allowed_warning`)을 보였다. 다음 푸시의 리뷰는 계정 한도에 걸릴 수 있다.
+
+CodeRabbit 첫 회차(`3ceecb42`, `Review completed`). Minor 하나. `docs/agents/issue-tracker.md` 7~16행에 대해, 기능 폴더마다 번호가 `01`부터 다시 시작하니 서로 다른 기능의 티켓이 같은 stem(`01-login`)을 지으면 같은 브랜치 이름을 요구한다며, stem을 기능 폴더 전체에서 유일하게 하고 만들기 전에 겹침을 거부하라고 했다. 보류했다. 지금 기능 티켓 81개의 파일 이름에 겹치는 것이 없고(`ls .scratch/*/issues/[0-9][0-9]-*.md`를 이름만 남겨 `uniq -d`), 새 지침 문장과 검사는 세 번째나 손상 한 번에서 더하며(`CLAUDE.md` 교정 루프), 만들기 전 거부 검사는 새 도구라 이 티켓의 범위 밖이다(명세 212행이 번호 도구는 기능 폴더의 두 자리 번호를 보지 않는다고 정했다). 이유는 그 스레드의 답글로 남겼다. 고친 것이 없는 회차다.
+
+## 회고
+
+티켓 02 단계(세 세션) 전체를 이 일지와 이 세션으로 봤다. 이 PR이 `retro`를 고쳐, Skill 도구가 실을 주 체크아웃의 옛 사본 대신 워크트리의 `SKILL.md`를 Read로 열어 따랐다. 후보 여덟, 모두 기각이다. 만료할 행은 없었다(`tools/queue_open_rows.py`, `--ref origin/main`도 같다).
+
+1. **기능 폴더 사이의 stem 겹침**(CodeRabbit 첫 회차 Minor). 기각이다. 사건 없이 떠올린 것이다(위 "봇 회차").
+2. **`retro_ticket_reflection` 카나리아의 첫 질문이 "바로 다음 문장"을 물어 실험군 둘이 다른 문장을 옮겼다.** 기각이다. 카나리아 자체가 그 자리에서 실패로 알렸고, 질문을 고쳐 다시 돌렸다. 명세마다의 질문 문구를 일반 검사로 옮길 길이 없다.
+3. **기존 카나리아 서른의 사전 확인이 모두 막혔다.** 기각이다. 프로브 README의 `canary/` 행이 병합 뒤에는 그대로 돌지 않는 명세가 있다고 이미 적었고, 다시 돌릴 때는 옛 판의 커밋을 `--control-commit`으로 준다. 이 티켓이 그 서른을 다시 돌릴 까닭은 없었다.
+4. **`next-session` 87행을 범위 밖이라 두었는데 명세 203행이 이름으로 들었다**(셀프 리뷰 명세 축). 기각이다. 리뷰가 잡도록 둔 기준(명세 축)을 리뷰가 잡아 제 몫을 했고, 검사로 옮길 수도 새 판단 기준도 아니다.
+5. **PR 직전 `bug-perf-review`의 유효 Minor 둘**(chore 줄의 "각자 워크트리", `implement`의 제목 문장). 기각이다. 4와 같다.
+6. **복합 git 명령(`grep … ; git fetch -q; for … git show`)을 워크트리 가드가 거부했다.** 기각이다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 이미 하나씩 치라고 한다.
+7. **Skill 도구가 `code-review`와 `retro`의 옛 사본을 실었다.** 기각이다. `CLAUDE.md` 환경 함정대로 인자로 넘기거나 Read로 열어 따랐고 잃은 것이 없다.
+8. **claude-review 계정의 주간 사용률이 0.97이었다.** 기각이다. 실수가 아니라 정보이고, 한도로 빨개지면 `tools/wait_ci.py`와 리뷰 파이프라인 3이 이미 가른다.
+
+## 다음
+
+- **다음 티켓은 03(`03-commit-check-blocks-ticketless.md`)이다.** 이 PR이 병합되면 막힌 것이 없어지고(01·02 done), 04는 03에, 05는 02·03에 막힌다.
+- **03의 커밋 검사가 브랜치로 티켓을 찾을 때.** 위 CodeRabbit 보류대로 기능 폴더 사이의 stem 겹침은 지금 0건이다. 겹침이 생기면 브랜치 하나에 티켓 파일 둘이 맞는다. 03의 판정이 그 경우를 어떻게 다룰지는 03의 티켓과 명세가 정한다.
+- 주 체크아웃 미갱신: 루트는 main. 병합된 이 워크트리와 브랜치는 다음 주 체크아웃 세션의 `tidy-checkouts`가 지운다.
