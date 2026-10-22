@@ -184,6 +184,35 @@ Critical·Major 없음. Minor 넷과 Nit 하나를 지적마다 판단했다.
 
 변이 파일은 바꾼 줄을 겨누지 않는다(`--check` 8 모두 원문). `tests/tools/test_check_ticket.py` 43개 모두 초록, `ruff check`·`ruff format --check`·pyright 0.
 
+### 커밋과 인계 (커밋 뒤)
+
+- 반영·회고·"다음"을 한 커밋(`refactor: 커밋 검사의 판정 결과를 열거로 두고 회고를 싣는다`)에 실었다. pre-commit 모두 Passed(`check-ticket`, pytest 699.4s, web-verify 615.9s). 아직 푸시하지 않았다. 이 커밋이 단계를 닫는 일지(회고·"다음")를 싣는 마지막 봇 회차의 커밋이다.
+- 커밋 뒤 인계 계기(`커밋 뒤`, 21만 1천 토큰)가 왔다. 이 세션은 `인계: PR 연 뒤`로 열려 경계가 달라 넘긴다. 이 세션의 지금 제목은 `feature/03-commit-check-blocks-ticketless`다. 멈출 백그라운드 작업은 없다(`wait_ci` 대기와 커밋은 끝났다).
+
+새 세션에 남은 것: 푸시 → `@coderabbitai review`와 대기(순서 1의 2) → claude-review 둘째 회차는 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유 → 병합(워크트리 길, `headRefOid` 대조) → `next-session`(04·05). 이 인계 절은 커밋하지 않았다. 새 세션이 이어 쓰고 푸시 전에 커밋한다.
+
+지시문(새 세션에 보낸 것):
+
+```
+다음 작업: .scratch/ticket-for-every-pr/issues/03-commit-check-blocks-ticketless.md. 커밋 검사가 티켓 없는 브랜치의 커밋을 막는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/ticket-for-every-pr/issues/03-commit-check-blocks-ticketless.md
+브랜치: feature/03-commit-check-blocks-ticketless
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-22-14-commit-check-blocks-ticketless.md
+이어받을 상태: 인계: 커밋 뒤. PR #350의 claude-review 첫 회차 반영, 회고, 일지 "다음"을 한 커밋에 실었고 아직 푸시하지 않았다. 커밋하지 않은 일지의 인계 절이 워크트리에 있다. 푸시와 순서 1의 2(봇 회차)부터 하고, 둘째 회차부터는 Critical·Major만 고친다. 남은 단계는 일지의 "커밋과 인계 (커밋 뒤)" 절. 일지 docs/journal/2026-10-22-14-commit-check-blocks-ticketless.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+## 봇 둘째 회차와 병합 (다섯째 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다)
+
+- 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 로컬은 원격보다 커밋 하나(`6d21badd`) 앞서고, 작업 트리에는 위 인계 절만 커밋하지 않은 채 있었다.
+- 인계 절과 이 절을 커밋해 푸시한다. 이 푸시로 도는 claude-review가 둘째 회차이고 Critical·Major만 고친다.
+
 ## 회고
 
 후보 넷. 승인 1, 기각 3, 넘김 0. 원천은 이 일지의 네 세션과 넷째 세션의 대화다.
@@ -200,3 +229,7 @@ Critical·Major 없음. Minor 넷과 Nit 하나를 지적마다 판단했다.
 티켓 03은 이 PR(#350)로 닫힌다. 병합 뒤 이 기능에서 막는 것이 풀리는 티켓은 04(CI가 티켓 done을 본다, Blocked by 03)와 05(첫 턴 티켓 알림, Blocked by 02·03)다. 둘이 나란히 여는 묶음인지는 `next-session` 2단계가 대상 파일로 가른다. 04의 문서 절에는 03이 남긴 메모(operations.md 가드레일과 `CLAUDE.md`의 "아직 pre-commit에서만" 문장을 04가 고친다)가 있다.
 
 claude-review 첫 회차에서 보류한 둘(`Change.deleted`의 열거화, `judge` 쪼개기)은 다음에 `tools/check_ticket.py`를 고치는 티켓(04)이 판정 단계를 늘릴 때 다시 본다.
+
+제목을 `feature/03-commit-check-blocks-ticketless (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`은 `is not locked`였다.
+
+open-session을 부른다 2026-10-22T11:18:59Z
