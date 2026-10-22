@@ -68,7 +68,9 @@ uv run python tools/run_checks.py
 
 ## 관련 티켓
 
-<!-- .scratch/<slug>/issues/NN-<slug>.md 경로. 명세는 .scratch/<slug>/spec.md -->
+<!-- 이 브랜치가 가리키는 티켓 경로. 기능 디렉터리의 티켓은 .scratch/<slug>/issues/NN-<slug>.md(명세는 .scratch/<slug>/spec.md),
+     harness 티켓은 .scratch/harness/issues/NNN-<slug>.md. 티켓을 쓰지 않는 면제 PR이면 면제의 종류(기능의 설계·명세·티켓, 기록만)를 적는다.
+     규약은 docs/agents/issue-tracker.md -->
 
 ## 리뷰어 참고
 
