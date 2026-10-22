@@ -186,3 +186,69 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장): 위 고�
 - 그 커밋을 백그라운드로 띄우자 `hook_handoff`가 세션 컨텍스트 237,047 토큰으로 `커밋 뒤` 계기를 냈다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 "인계할 때" 1대로 넘기지 않고 잇는다.
 - 푸시 전에 다시 친 `git fetch origin`에서 #358(harness 008)이 병합되어 있었다(`690de5bf`). `git merge --no-edit origin/main`으로 충돌 없이 합쳤다. 함께 고친 파일은 `.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`이고 다른 행이다.
 - 그 뒤 `sibling_overlap`이 1로 끝났다. 이 일지(`2026-10-23-10`)가 origin/main의 최신 일지 `2026-10-23-11`보다 이름순으로 앞이라, 다음 세션이 이름순 최신 일지의 "다음"을 읽으며 이 일지를 지나친다는 판정이다. `--move`로 `2026-10-23-13`으로 옮겼다. 인용을 고친 파일은 프로브 README의 그 행, 대기열 421, 이 일지다. 이 일지의 `> 사용자:` 인용 둘(둘째·셋째 세션)에 남은 옛 경로는 사용자 프롬프트 원문이라 그대로 둔다.
+- 번호 이동 커밋 `bd55731c`: pre-commit이 앞 커밋과 같은 검사를 모두 Passed로 냈고, ruff 둘은 `.py`가 없어 Skipped라 손으로 쳐 둘 다 통과했다. 다시 친 `git fetch origin` 뒤 `HEAD..origin/main`이 비었다.
+
+### PR
+
+- 푸시 뒤 [#360](https://github.com/njh6803/agent-os/pull/360)을 draft 없이 열었다. 본문의 알림 길이는 위에서 손으로 센 307자와 654자다. `get_status`: 이 세션에 묶였고, 검사는 통과 1·대기 6이었다. `@coderabbitai review`는 아직 남기지 않았다.
+
+### 인계 (PR 연 뒤)
+
+- PR을 열자 `hook_handoff`가 세션 컨텍스트 262,376 토큰으로 `PR 연 뒤` 계기를 냈다. "인계할 때" 1의 다섯 가운데 맞는 것이 없다. PR은 열렸고, 요청 범위는 PR과 병합까지이고, 이어받은 경계 `커밋 뒤`와 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 함께 온 `hook_pr_next_session`의 계기보다 인계 줄이 앞선다.
+- 이 세션이 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 변이 실행, 커밋 셋)은 모두 끝났다.
+- 이 세션의 지금 제목: `chore/003-probe-conclusion-evidence-kind`(인계 전).
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md를 잇는다. PR #360을 열었고 봇 회차와 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다
+브랜치: chore/003-probe-conclusion-evidence-kind
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
+이어받을 상태: 인계: PR 연 뒤. PR #360을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(아직 없다). 일지의 셋째 세션 절 가운데 "PR"과 "인계 (PR 연 뒤)"는 마지막 푸시 뒤에 적어 워크트리에 커밋하지 않은 채 있으니, 봇 회차의 반영 커밋에 싣거나 고친 것이 없으면 next-session 1단계의 3(일지)대로 다룬다. docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/003-probe-conclusion-evidence-kind (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock C:/project/agent/.claude/worktrees/003-probe-conclusion-evidence-kind`)는 `is not locked`로 끝났다. 이 세션도 `EnterWorktree(path)`로 들어왔는데 잠기지 않았다(둘째 세션과 같다).
+- open-session을 부른다 2026-10-22T19:35:03Z
+
+## 봇 회차와 병합 (넷째 세션)
+
+> 사용자: (next-session 지시문을 첫 메시지로 받았다) "대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다 / 다음 작업: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md를 잇는다. PR #360을 열었고 봇 회차와 병합이 남았다 / 다음 단계: PR 반영·병합 / 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / 시작 프롬프트: 대기열 421을 티켓 .scratch/harness/issues/003-probe-conclusion-evidence-kind.md로 쓰고 한다 / 브랜치: chore/003-probe-conclusion-evidence-kind / 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래 / 읽을 것: .scratch/harness/issues/003-probe-conclusion-evidence-kind.md, docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md / 이어받을 상태: 인계: PR 연 뒤. PR #360을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 ＠coderabbitai review 코멘트도 새 세션이 남긴다(아직 없다). 일지의 셋째 세션 절 가운데 \"PR\"과 \"인계 (PR 연 뒤)\"는 마지막 푸시 뒤에 적어 워크트리에 커밋하지 않은 채 있으니, 봇 회차의 반영 커밋에 싣거나 고친 것이 없으면 next-session 1단계의 3(일지)대로 다룬다. docs/journal/2026-10-23-13-probe-conclusion-evidence-kind.md / 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 브랜치가 워크트리 `003-probe-conclusion-evidence-kind`(`bd55731c`)에 있어 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 변경은 이 일지 하나였다.
+- `git fetch origin` 뒤 origin/main은 셋째 세션이 합친 `690de5bf`(#358) 그대로였다.
+
+### 봇 1회차 (claude-review)
+
+- claude-review가 `bd55731c`에 첫 리뷰를 냈다(Minor 둘, Nit 하나). CodeRabbit은 요청 전이라 `Review skipped: manual review required for this OSS repository`였다.
+- 셋 모두 지적마다 판단해 고치지 않고, 이유를 PR 코멘트로 남겼다(<https://github.com/njh6803/agent-os/pull/360#issuecomment-6349660233>).
+  1. Minor: `.claude/rules/probes.md:12`의 "이 항목을 짚는다"를 새 몫과 맞추라는 것. 그 문장은 지금도 참이고, 그 훅이 짚는 것 전체는 `docs/agents/issue-tracker.md` 프로브와 근거 절의 "프로브를 짓는 규칙" 항목이 적으며 이 PR이 그 문장을 고쳤다. 옮겨 적으면 같은 사실이 두 곳이 된다. 첫 세션의 결정(위 "결정" 셋째 줄)을 따랐다.
+  2. Minor: 시험이 알림 구절 아홉을 글자로 단언해 구현을 복제한다는 것. 셀프 리뷰 두 축이 핵심 구절만 보던 판의 구멍("어림인가", "그 까닭"을 빼도 초록)을 짚어 구절마다 단언과 변이를 둔 것이라, 줄이면 그 구멍이 다시 열린다.
+  3. Nit: `_BODY`의 줄 바꿈. 리뷰가 재량이라 했고 출력이 `additionalContext` 문자열 하나라 효과가 작다.
+- CI: PR 헤드 `bd55731c`의 `ticket` check-run이 `queued`로 남았다. 같은 실행(39841108757)의 `verify`는 19:38:24Z에 성공으로 끝났고, 그 잡 로그가 `needs`를 `ticket: success`로 찍었다(`gh run view 39841108757 --job 120044610658 --log`로 손으로 봤다). check-runs API(`gh api repos/njh6803/agent-os/commits/bd55731c…/check-runs`)는 `verify`를 `completed success`로, `ticket`을 `queued`로 냈고, `gh pr checks 360`은 둘 다 pending, `gh pr view`는 `mergeStateStatus: BLOCKED`였다. `ticket` 잡 로그는 "still in progress"라 받지 못했고, 19:43Z에 다시 본 그 check-run도 `queued`였다. main의 `690de5bf`에서는 `ticket`이 `completed success`였다. `tools/wait_ci.py`는 나타난 검사가 모두 끝나야 끝나므로 이 헤드에 띄우면 기본 30분 시간 초과까지 기다린다고 그 독스트링과 인자 기본값을 읽어 어림했다(돌려 보지 않았다). 그래서 이 헤드에는 대기를 띄우지 않고, 일지와 회고를 실은 커밋을 푸시해 새 헤드의 CI를 본다.
+
+## 회고
+
+후보 여덟, 승인 3·기각 5·넘김 0. 네 세션(구현, 셀프 리뷰, PR 직전 리뷰, 봇 회차)을 함께 본다.
+
+1. **승인(회차, 대기열 421의 8회차).** 사건: 둘째 세션의 셀프 리뷰 두 축이, 프로브 README 행이 커밋하지 않은 스크래치 사본 표로 돌린 양성 대조에 "(`mutate.py`가 찍었다)"를 붙인 것을 잡았다(위 "셀프 리뷰 보고" 표준 5, 명세 4). `docs/agents/issue-tracker.md` 프로브와 근거 절("손으로 돌려 본 것은 그 명령과 함께")을 어긴 것이라 4단계의 회차로 세는 사건이다. 그때 421은 main에서 열려 있었고, 세션에 돈 알림은 주 체크아웃의 옛 판(셋째 항목만)이었다. 421의 처방이 이 PR의 알림이고 그 알림이 이 꼴("손으로 본 것은 그 명령과 함께 적는다")을 짚으므로, 새 행을 쓰지 않고 421 행에 8회차를 더한 채 이 티켓으로 닫는다. 새 알림이 선 뒤에 다시 나면 `421의 9회차`로 새 행을 잇는다.
+2. **승인(대기열 440, 1회차).** 사건: 첫 세션의 `tidy-checkouts`에서 `judge`가, 나란히 연 형제(006·007·008)가 막 딴 브랜치를 "커밋이 모두 origin/main에 있다"며 지우라고 냈다. 형제 세션이 아직 제목을 브랜치로 바꾸지 않아 `--running`에 들지 않았고, 세션이 지우지 않고 목록을 다시 읽어 피했다(위 첫 세션 "시작"). 닫힌 300(실행 중 세션의 제목을 보지 않았다)과 증상이 같고 원인(제목이 아직 없다)이 다르다. 층: 지우는 도구의 판정(`tools/tidy_checkouts.py`). 되돌림: PR 하나. 도는 세션의 브랜치를 지우라고 낸 판정이라 고침이지만, 이 PR의 범위(`tools/hook_probe_conclusion.py`) 밖이라 대기열에 둔다.
+3. **승인(대기열 441, 1회차).** 사건: 이 세션에서 PR 헤드의 `ticket` check-run이 `queued`로 남아 `gh pr checks`가 pending을 냈고, 실행이 이미 끝났다는 것을 가르느라 호출 여덟쯤을 썼다(위 "봇 1회차"). 층: 대기 도구(`tools/wait_ci.py`). 되돌림: PR 하나. 대기 도구에 새 갈래를 더하는 것이라 세 번째에 반영한다. 한 번 본 GitHub 쪽의 어긋남일 수 있어, 다시 나지 않으면 만료로 내린다.
+4. **기각.** 독스트링의 닫힌 수 셋이 틀렸다(첫 세션의 "일곱 번"과 "셋 다 프로브 README에 들었다", 둘째 세션 명세 축이 잡은 "세 번"). 앞의 둘은 세션이 스스로 고쳤고, 뒤의 것은 리뷰가 잡도록 둔 기준(`code-review` 브리프의 주장 검증)이 제 몫을 한 것이라 4단계의 셈에서 뺀다. 검사로 옮길 길이 없다.
+5. **기각.** 알림의 근거 몫 시험이 `"어림" in context`처럼 느슨해 그 낱말을 지워도 초록이었다(셀프 리뷰 표준 1, 명세 2). 리뷰가 잡도록 둔 기준이고, 변이 표가 이제 단언마다 그 구절만 빼는 변이를 든다.
+6. **기각.** 셋째 세션에서 origin/main에 더 늦은 일지가 들어와 이 일지를 10에서 13으로 옮겼다. `tools/sibling_overlap.py`가 그 자리에서 알렸다.
+7. **기각.** 셋째 세션의 `bug-perf-review`가 띄운 변이 표 재실행이 멈춘 듯 보여 TaskStop으로 멈췄고, 본 세션이 같은 명령을 다시 돌려 닫았다. 23번 변이의 시험이 70.59초였지만 그것이 멈춘 듯 보인 까닭인지는 재지 않았고, 틀린 것이 없다.
+8. **기각.** 한 티켓이 세 번 인계했다(셀프 리뷰 직전, 커밋 뒤, PR 연 뒤). ADR 0033의 설계대로 돈 것이고 틀린 것이 없다.
+
+만료: `tools/queue_open_rows.py`와 `--ref origin/main` 두 출력 모두 만료할 행이 없었다.
+
+## 다음
+
+- harness 003이 병합되면 닫힌다. 같은 주제는 남지 않았다. 결정표의 harness 티켓 줄대로 `plan.md` 프론티어에서 고른다. 나란히 연 형제 가운데 005·007과 006(PR #362)은 아직 돈다.
+- 대기열 440·441은 1회차라 chore 계기가 아니다.
