@@ -4,6 +4,7 @@
 # 병합되기 전의 주 체크아웃(`caaa062b`)에는 카나리아가 없다. 병합 뒤에는 주 체크아웃이 새 사본이라, 다시 돌리려면
 # `caaa062b` 를 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `caaa062b`, 일지 2026-10-22-09).
+# 그 뒤 셀프 리뷰와 PR 직전 리뷰가 원천 본문을 고쳐 두 번 모두 사전 확인으로 갈음했다(2026-10-22, 일지 2026-10-22-09).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/implement_ticket_status.toml <출력 디렉터리>
 kind = "skill"
