@@ -135,6 +135,12 @@ pre-commit과 commit-msg 두 git 훅을 깐다(`.pre-commit-config.yaml`의 `def
 토큰이 든다), 플러그인, MCP는 옮기지 않는다. GitHub MCP와 `gh`는 병합된 PR을 읽을 수 있어 답이 샌다. 사용자 메모리도 그 폴더에
 없어 실리지 않는다. 자동 업데이트는 끈다(`DISABLE_AUTOUPDATER=1`). 회차마다 `claude --version`을 적는다.
 
+**환경 변수.** 설정 폴더를 나눠도 러너의 환경 변수는 그대로 물려진다. 러너는 `claude -p`를 물려받은 환경이 아니라 허용 목록으로
+지은 환경으로 띄운다. 목록은 `PATH`, `SYSTEMROOT`·`USERPROFILE`·`HOME`·`TEMP`·`TMP` 같은 OS 기본값, `CLAUDE_CONFIG_DIR`,
+`DISABLE_AUTOUPDATER`, 그리고 uv·pnpm이 쓰는 캐시 경로뿐이다. `GITHUB_TOKEN`·`GH_TOKEN`·클라우드 자격 증명과 `ANTHROPIC_API_KEY`는
+넘기지 않는다. 키를 넘기면 구독이 아니라 API 키로 과금되고, 셸에서 읽힌 토큰이 stream-json 기록에 실린다. 회차의 기록에는 넘긴
+변수의 이름만 적는다(원칙 V).
+
 **명령.** `claude -p --model <claude-opus-5-5|claude-sonnet-5-5> --effort <레벨> --permission-mode auto --setting-sources
 user,project,local --strict-mcp-config --output-format stream-json --verbose`. 모델은 별칭이 아니라 전체 이름이다(별칭은 새 판으로
 풀린다, 지표 문서 1절). 대체 모델(`--fallback-model`)은 주지 않는다. 클론의 `.claude/settings.local.json`에 막는 규칙을 둔다. `gh`,
@@ -181,7 +187,11 @@ user,project,local --strict-mcp-config --output-format stream-json --verbose`. �
 
 **오염 검사.** 회차가 끝나면 stream-json의 도구 입력에서 주 체크아웃 경로, `~/.claude/projects`, GitHub 주소, `gh `를 찾고,
 Skill 도구의 `open-session`과 셸 명령의 `open_session.ps1`·`claude://`를 찾는다.
-하나라도 있으면 그 회차는 측정 아님이고 한 번 다시 돈다. 다시 걸리면 그 과제를 모든 갈래에서 뺀다.
+하나라도 있으면 그 회차는 측정 아님이고 한 번 다시 돈다. 다시 걸리면 그 과제를 모든 갈래에서 뺀다. 찾는 대상은 셸 명령 전체라
+`curl`·`wget`·Python 소켓으로 GitHub에 닿는 길도 든다. OS나 컨테이너 수준의 망 차단은 두지 않는다. 다시 풀기 세션은 같은 PC의 실제
+지시문 세션과 같은 모델, 같은 저장소, 같은 권한 모드로 돌고, 그 세션들이 읽는 프로젝트 설정(`.claude/settings.json`)에도 망을 막는 항목(`sandbox`)이 없다(grep으로 봤다,
+2026-10-22). 막는 규칙의 몫은 답이 새는 길과
+바깥 상태를 바꾸는 길이고, 비밀값은 위 환경 변수 허용 목록이 세션에 넘기지 않는다.
 
 **모델 확인.** 본 세션 응답의 모델과 노력이 갈래와 다른 회차는 측정 아님이다. 서브에이전트는 하네스가 정한 모델(`code-review`
 표준 축의 `sonnet`, `model: sonnet`인 정의)이나 갈래의 모델이면 된다.
@@ -264,7 +274,9 @@ T는 다섯 갈래가 모두 측정인 과제의 모임이다. 갈래 k마다 �
   $24.9, 평균 $27.6, 사분위 $15.7~38.4였다. 2026-10-12 뒤에 시작한 `xhigh` 구현 브랜치 13개는 중앙값 $31, 평균 $41이었다. 앞의
   것은 그 파일을 읽는 세션 스크래치 스크립트로, 뒤의 것은 주 체크아웃 장부의 사본을 `tools/token_report.py`의 단가표로 셈하고 그
   브랜치의 첫 PR 시각 앞의 몫을 더한 세션 스크래치 스크립트(`branch_cost.py`)로 손으로 봤다(둘 다 커밋하지 않았다). 다시 풀기는
-  사람을 기다리며 캐시가 식는 일이 없어 그보다 싸게 나올 수 있다(어림). $35로 잡는다.
+  사람을 기다리며 캐시가 식는 일이 없어 그보다 싸게 나올 수 있다(어림). $35로 잡는다. 이 수들은 예산과 상한의 어림에만 쓰고
+  판정과 과제 고르기에는 쓰지 않는다. 과제 고르기가 쓰는 원래 세션의 PR 앞 비용은 도구를 짓는 PR이 같은 셈을 `probes/`에 커밋해
+  다시 낸다(9절 2).
 - 다른 갈래의 A 대비 비율은 재지 않았다. 공식 측정의 비율(B 0.4, C 0.28)은 이슈 하나짜리 과제의 수라 그대로 옮기지 않고(지표
   문서 2절의 옮길 때의 한계) 넓게 잡는다. B 0.4~0.8, C 0.3~0.7, D 0.4~0.9, E 0.3~0.7.
 
@@ -313,7 +325,10 @@ T는 다섯 갈래가 모두 측정인 과제의 모임이다. 갈래 k마다 �
 3. 구독 로그인에서 `--max-budget-usd`가 멈춘다.
 4. 결과 이벤트에 `total_cost_usd`와 `modelUsage`가 있다. 한도 이벤트에 사용률 칸이 있는지 본다.
 5. 막는 규칙이 auto 모드에서 `gh`, `git push`, 주 체크아웃 읽기, `open-session`과 `tools/open_session.ps1`을 막는다. 시험용
-   지시문으로 일부러 부르게 해 본다. 클론에서 커밋하면 pre-commit과 commit-msg 훅이 돈다.
+   지시문으로 일부러 부르게 해 본다. 클론에서 커밋하면 pre-commit과 commit-msg 훅이 돈다. 프로젝트 설정(`.claude/settings.json`의
+   `enabledPlugins`가 `pyright-lsp`를 켠다)을 읽는 세션에 실제로 실린 플러그인과 MCP 서버를 init 이벤트에서 적고, GitHub에 닿는
+   것이 있으면 막는 규칙에 더하거나 그 플러그인을 클론의 `settings.local.json`에서 끈다. 환경 변수 허용 목록 밖의 이름(예: `GH_TOKEN`)이
+   세션 셸에서 비어 있는지도 본다.
 6. 인계 지시문의 붙여 넣기와 `--resume` 이어 가기가 돈다. 작은 과제는 세션 컨텍스트가 인계 문턱(20만 토큰)에 닿지 않을 수 있다.
    닿지 않으면 러너의 갈래 판정(5절 이어 가기의 1~3)을 시험으로 고정하는 것으로 갈음하고, 실제 인계는 본 측정에서 처음 난 회차
    뒤에 멈춰 본다(5절).
