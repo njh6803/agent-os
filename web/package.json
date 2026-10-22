@@ -19,6 +19,7 @@
     "check:api-client": "node tools/generate-api-client.ts --check"
   },
   "devDependencies": {
+    "@agent-os/ui": "workspace:*",
     "@storybook/addon-a11y": "^10.6.1",
     "@storybook/addon-vitest": "^10.6.1",
     "@storybook/react-vite": "^10.6.1",
