@@ -1,0 +1,25 @@
+# 새 프로젝트 스킬 `/ui-design`(harness 티켓 002, ADR 0033 이력 2026-10-20 "하네스가 스킬을 부르는 자리를 감사하고, 설명에만
+# 기대던 계기를 하네스로 옮긴다")이 새 세션에서 Skill 도구로 불리고 본문이 실리는지. 실험군은 이 워크트리, 대조군은 주
+# 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃(`aba71813`)에는 이 스킬이 없다. 병합 뒤에는 `aba71813` 을
+# `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `aba71813` 은 "없음", 일지 2026-10-22-15).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/ui_design_skill.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+ui-design 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(플러그인 확인, 아티팩트 읽기와 만들기)은 하지 않고 본문만 읽는다.
+본문의 "순서" 절에서 5번 항목의 첫 굵은 글씨와, 그 항목이 디자인 시스템을 붙일 때 쓰라는 폴더 이름을 글자 그대로 옮겨라.
+판단이나 설명은 덧붙이지 않는다. 그런 스킬이나 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["그리기", "agent-os"]
+source = ".claude/skills/ui-design/SKILL.md"
+skill = "ui-design"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

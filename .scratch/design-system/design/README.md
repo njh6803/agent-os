@@ -1,6 +1,6 @@
 # design-system 화면과 탐색
 
-Claude Design에서 그리거나 고른 것을 내보낸 자리다. 규약은 `docs/agents/issue-tracker.md`의 화면 디자인 절이다. 탐색을 시작하는 프롬프트는 `exploration-prompt.md`(2026-10-06 첫 탐색)이고, 관리 화면 기준의 재탐색은 `refresh-prompt.md`(2026-10-12)다.
+단독 Claude Design에서 그리거나 고른 것을 내보냈고, 이제 `/ui-design`이 Design 아티팩트에서 옮기는 자리다. 규약은 `docs/agents/issue-tracker.md`의 화면 디자인 절이다. 탐색을 시작하는 프롬프트는 `exploration-prompt.md`(2026-10-06 첫 탐색)이고, 관리 화면 기준의 재탐색은 `refresh-prompt.md`(2026-10-12)다. 다음 재탐색은 `/ui-design design-system`으로 하고, 화면을 그리며 `frontend-design`과 저장소 규칙이 부딪친 자리는 `frontend-design-conflicts.md`에 쌓인다.
 
 기본 테마: 녹청(`nokcheong`). 2026-10-12 재탐색에서 사용자가 추천을 맨 앞에 둔 선택 화면으로 골랐다(ADR 0026의 2026-10-12 이력 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다"). 코드는 design-refresh(2026-10-13 닫힘)가 녹청으로 옮겼다. 그 전의 기본 테마는 2026-10-06 명세 세션에서 사용자가 Claude Design의 추천대로 고른 것이었다(둘째 2026-10-06 이력).
 

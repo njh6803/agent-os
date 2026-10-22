@@ -1,0 +1,25 @@
+# `next-session` 결정표에 더한 "화면 디자인" 줄(harness 티켓 002, ADR 0033 이력 2026-10-20 "하네스가 스킬을 부르는 자리를
+# 감사하고, 설명에만 기대던 계기를 하네스로 옮긴다")이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다.
+# 이 PR 이 병합되기 전의 주 체크아웃(`aba71813`)에는 카나리아가 없다. 병합 뒤에는 `aba71813` 을 `--control-commit` 으로
+# 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `aba71813` 은 "없음", 일지 2026-10-22-15).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_ui_design_row.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(지시문 내기, 병합, 세션 열기)은 하지 않고 본문만 읽는다.
+본문의 "다음 작업 결정표"에서 "다음 단계" 칸이 "화면 디자인"인 줄의 "시작 프롬프트" 칸을 글자 그대로 옮겨라.
+판단이나 설명은 덧붙이지 않는다. 그런 줄이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["/ui-design <slug>"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

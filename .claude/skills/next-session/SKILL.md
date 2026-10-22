@@ -82,12 +82,13 @@ PR을 열거나 병합하면 다음 작업의 지시문을 낸다(`docs/constitu
 | 기능의 티켓이 아니라 harness 티켓의 PR(`chore/<NNN>-<slug>`)이었고, 그 PR이 든 주제가 남지 않았다 | 프론티어 | `plan.md`의 프론티어에서 고른 기능으로 이 표의 줄 하나(진행 중인 기능에 `ready-for-agent` 티켓이 남았으면 그것이 먼저다). 대기열의 조건이 차 있어도 chore를 잇지 않는다. chore는 기능의 마지막 티켓 뒤에만 연다(위 줄). 하네스 chore PR 뒤에 대기열 조건이 차면 또 chore로 가던 2026-10-19까지의 이 줄이 chore를 잇달아 불렀다(ADR 0036). 같은 주제가 남았으면 아래의 "하네스·문서만 고친 PR" 줄이다 | 새 세션 | 고른 줄의 값 |
 | 그 기능의 마지막 티켓이었다 | 다음 프론티어 기능 | `plan.md`에서 고른 기능으로 아래 줄 중 하나 | 새 세션 | 고른 줄의 값 |
 | 기능에 `.scratch/<slug>/`가 없다 | 설계 인터뷰 | `/grill-with-docs` | 새 세션 | `Opus 5.5 / xhigh` |
+| 설계는 끝났고 `spec.md`가 없으며, `plan.md`의 그 기능 행이 명세 전에 화면을 그린다고 적거나 `.scratch/<slug>/design/`에 시작 프롬프트(`*-prompt.md`)가 있는데, 그 폴더 `README.md`에 그 화면의 줄이 없다. 디자인 시스템의 방향을 다시 탐색할 때도 `spec.md`와 README의 줄이 있든 없든 이 줄이다(slug `design-system`) | 화면 디자인 | `/ui-design <slug>` | 새 세션 | `Opus 5.5 / xhigh` |
 | 설계는 끝났고 `spec.md`가 없다 | 명세 | `/to-spec` | 새 세션 | `Opus 5.5 / xhigh` |
 | `spec.md`는 있고 `issues/`가 없다 | 티켓 | 명세 검토(`spec-reviewer` 서브에이전트)가 안 됐으면 그것부터. 그 뒤 `/to-tickets .scratch/<slug>/spec.md` | 새 세션 | `Opus 5.5 / xhigh` |
 | 하네스·문서만 고친 PR이었고 같은 주제가 남았다. 남은 것은 그 PR이 처음에 맡은 일의 나머지이고, 그 PR을 하며 새로 찾아 대기열에 적은 행은 아니다(ADR 0036) | 이어서 | 남은 것을 한 줄로. 병합된 티켓은 다시 열지 않으므로 남은 일로 다음 번호의 새 harness 티켓을 쓰고 그 stem으로 새 브랜치를 딴다(`docs/agents/issue-tracker.md`) | 이 세션. 컨텍스트가 자산이다 | `없음`. 새 세션으로 열면 `Opus 5.5 / xhigh` |
 | 작업을 마치지 못한 채 끊는다 | 이어서 | 같은 시작 프롬프트. "이어받을 상태"에 어디까지 했는지와 일지의 "다음" | 새 세션 | `Opus 5.5 / xhigh`. 남은 것이 PR 반영·병합뿐이면 `Sonnet 5.5 / high`(스윕 밖의 브랜치만. 스윕 브랜치는 3단계의 갈래) |
 
-`/to-spec`, `/to-tickets`, `/implement`는 사용자만 부르는 스킬이라 모델이 Skill 도구로 부르지 못한다. `/grill-with-docs`는 모델도 부를 수 있다. 어느 쪽이든 시작 프롬프트는 사람이 칠 수 있는 슬래시 명령 그대로 적는다. 새 세션에 어떻게 들어가는지는 `open-session`이 원천이다.
+`/to-spec`, `/to-tickets`, `/implement`는 사용자만 부르는 스킬이라 모델이 Skill 도구로 부르지 못한다. `/grill-with-docs`와 `/ui-design`은 모델도 부를 수 있다. 어느 쪽이든 시작 프롬프트는 사람이 칠 수 있는 슬래시 명령 그대로 적는다. 새 세션에 어떻게 들어가는지는 `open-session`이 원천이다.
 
 ## 지시문 형식
 
