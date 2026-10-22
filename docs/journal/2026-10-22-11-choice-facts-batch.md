@@ -283,6 +283,7 @@ CodeRabbit CLI는 자리가 없어 돌지 못하므로 대체 길로 갔다. ori
 - 이 PR이 병합되면 결정표의 하네스 chore 줄이다. 다음은 `plan.md`의 프론티어이고, 회차 3 이상인 대기열 421·423·227·379·422으로 chore를 잇지 않는다. origin/main `98272c4f` 기준으로 design-reverse-sync는 명세가 있고 티켓이 없으며, web-widget·admin-style·design-card-build는 todo다. 고르기는 병합 뒤 `next-session` 2단계가 실행 중 세션을 빼고 한다.
 - 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 루트를 당기지 않는다(`next-session` "워크트리에서 병합할 때" 4).
 - 대기열 424를 고치기 전에는 `hook_report.py`가 `hook_prompt_directive.py`를 계속 뺄 후보로 낸다. 다음 회고는 그것을 넘기지 않는다.
+- PR #349 claude-review 첫 회차의 Minor 1(`.claude/rules/tools.md`의 훅 시간 문단이 훅마다 수를 한 글머리에 쌓는다. 훅별 표를 따로 두고 규칙에는 재서 표에 더한다는 문장만 남기자는 제안)을 이 배치의 행 밖이라 두었다. 다음 회고가 대기열 후보로 판정한다.
 
 ## 인계 (커밋 뒤)
 
@@ -320,6 +321,9 @@ open-session을 부른다 2026-10-22T08:43:17Z
 
 - origin/main `b2f5c61d`(#345·#346)를 합쳤다. `.scratch/retro-queue.md`가 두 자리에서 충돌했다. 하나는 main이 391행 앞에 426·427행을 더한 자리이고, 다른 하나는 양쪽이 끝에 서로 다른 행(이쪽 420~425, main 415~419·428)을 더한 자리다. main은 391행을 고치지 않았고(공통 조상과 견줬다) 번호도 겹치지 않아, 앞 자리는 426·427 뒤에 이 브랜치가 닫은 391을, 뒤 자리는 번호순으로 두었다. 푼 판은 이 브랜치의 판에 main이 더한 행 여덟만 더한 것이다(`diff`로 봤다). 탐침 README는 저절로 합쳐졌다.
 - 결정: main이 더한 427행을 닫았다. 그 처방(수가 든 선택 화면을 세션에서 처음 부를 때 한 번 거부하고, 대 보지 못한 것은 어림이라고 적어 다시 부르라고 거부 이유에 싣는다)은 394가 이 브랜치에서 반영한 `tools/hook_choice_facts.py`의 `_DENY_BODY`와 같다. 427의 사건은 main의 옛 판(답한 뒤에 읽히는 알림)에서 났다. 열어 두면 다음 chore 배치가 이미 들어간 처방을 다시 맡는다.
-- 합친 뒤 `sibling_overlap.py`: 번호 겹침 없음(origin/main `b2f5c61`, 다음 빈 번호는 일지 2026-10-22-12·대기열 429).
+- 합친 뒤 `sibling_overlap.py`: 번호 겹침 없음(origin/main `b2f5c61`, 다음 빈 번호는 `일지 2026-10-22-12`·대기열 429).
 - 확인할 선행 조건이던 런처 탐침을 다시 돌렸다(`edit_during_commit_launcher.py 30`). 훅의 판정 코드는 앞 판의 30회차를 잰 때와 같다(`cade43cb`는 막는 이유 문장만 늘렸다, `git diff`로 봤다). 종료 0, 360회차가 모두 측정이었다. 런처의 상대 경로 네 갈래에서 옛 판이 29·30·28·30회차 거짓 알림을 내 양성 대조 문턱을 넘었다. 지금 판은 절대 경로 여섯 갈래 0, 런처의 상대 경로 120회차 가운데 하나(`bin` 부하, 자식이 끝난 뒤의 런처), 실제 git 상대 경로 9·30회차였다. 앞 판(둘, 17·30)과 꼴이 같아 둘째 표본으로 `tools/hook_edit_during_commit.py`의 작업 트리 문단과 못 보는 것, 탐침 README 행에 덧붙였다.
 - `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`. PR 직전 리뷰를 대체 둘로 돌린 근거가 이 PR에서도 그대로다.
+- 합치기 커밋 `bcc79e68`의 pre-commit: 모두 Passed(pytest 212.6초, web-verify 222.8초), 카나리아 명세 모양과 헌법 판은 고친 파일이 없어 Skipped. 병합 중이라 ruff는 충돌 파일만 봤고(`Checking merge-conflict files only`), 고친 `tools/hook_edit_during_commit.py`는 그 전에 ruff check·format을 손으로 통과했다. 인용 대조 경고 3건은 모두 main이 쓴 427행의 인용(그 세션의 화면 문구, main의 옛 훅 문구, 처방의 제안 문장)이고 줄을 닫으며 다시 걸렸다. 기록이라 두었다.
+- PR #349를 `gh api repos/njh6803/agent-os/pulls --method POST --input <JSON>`으로 열었다(대기열 382의 길). 지금 도는 훅은 주 체크아웃의 옛 사본이라 이 꼴을 PR 열기로 알아보지 못해(이 PR의 408이 고친다), `PR 연 뒤`의 인계 계기와 `hook_pr_next_session`의 계기가 오지 않았다. 남은 일이 봇 회차와 병합뿐이라 이 세션에서 이었다.
+- 첫 대기의 결과: 검사 모두 통과, CodeRabbit은 `Review rate limited`(리뷰 없음), claude-review는 Critical·Major 없이 Minor 2·Nit 2. 첫 회차라 지적마다 판단했고 넷 모두 두었다. Minor 1은 위 "다음"으로 넘겼고, Minor 2(`tool_name` 검사 세 곳)는 `test_다른_도구는_침묵한다`와 변이 둘이 각 함수의 검사를 고정하며, Nit 둘은 규칙(막는 훅 독스트링)과 리뷰 스스로의 판단으로 두었다. 이유는 PR 코멘트에 남겼다.
