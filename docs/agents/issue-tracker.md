@@ -4,10 +4,16 @@
 
 ## 규약
 
-- 기능 하나에 디렉터리 하나: `.scratch/<feature-slug>/`
+- **PR마다 티켓 하나.** main에 들어가는 PR은 모두 티켓 파일 하나를 가리킨다. 오타 하나만 고치는 PR도 짧은 티켓을 쓴다. 열린 PR에 반영하는 커밋, 셀프 리뷰가 고친 것, 그 PR의 일지, 인계와 끊은 뒤 이어 가기는 그 PR의 티켓에 든다. 면제는 둘이다. 기능의 설계·명세·티켓을 쓰는 PR(그 PR이 티켓을 만드는 일이다)과, 기록(일지·대기열)만 바꾸는 PR이다. 면제 PR은 `docs/<slug>` 브랜치이고 티켓을 쓰지 않는다. 다만 그 PR에서 회고가 고침을 반영하면 harness 티켓 한 장을 같은 PR에 쓰고, 그 티켓은 브랜치 이름과 맞대지 않아 브랜치는 `docs/<slug>` 그대로다(`retro` 4단계, ADR 0037)
+- 기능 하나에 디렉터리 하나: `.scratch/<feature-slug>/`. 명세가 필요한 하네스 기능도 자기 디렉터리를 갖는다
 - 명세는 `.scratch/<feature-slug>/spec.md`
 - 구현 티켓은 티켓 하나에 파일 하나: `.scratch/<feature-slug>/issues/<NN>-<slug>.md`. `01`부터 번호를 매기고, 여러 티켓을 한 파일에 합치지 않는다
-- 상태는 각 이슈 파일 상단의 `Status:` 줄에 적는다. 값은 `ready-for-agent`(to-tickets가 발행 시 씀), `in-progress`, `done`, `wontfix` 넷 중 하나
+- **harness 티켓.** 명세 없이 티켓 하나로 끝나는 하네스 일과 기능에 들지 않는 작은 문서 고침은 `.scratch/harness/issues/<NNN>-<slug>.md`다. `001`부터 세 자리이고, 번호는 `uv run python tools/sibling_overlap.py`가 내는 다음 빈 번호(`티켓 NNN`)로 받는다. 번호를 받은 세션은 티켓 파일을 쓴 직후에 그 도구를 다시 친다. 형제의 대조는 디스크의 파일로 찬 번호를 보므로, 파일을 쓰기 전의 번호는 나란히 도는 세션에게 보이지 않는다. chore 지시문이 브랜치 줄에 미리 준 번호도 같다. 겹치면 그 도구의 출력대로 옮긴다
+- harness 티켓의 서식은 `to-tickets`의 로컬 티켓 서식에서 `Blocked by` 대신 가리키는 대기열 행을 든다. 머리 `# <NNN>: <제목>`, `**What to build:**`, `**대기열:**`(행 번호들, 없으면 `없음`. 행의 내용은 옮기지 않는다), `**Status:**`, 수용 기준 체크박스다. 크기는 새 세션 하나에 들어가는 만큼이다. 대기열 행 하나가 티켓 하나가 기본이고, 같은 파일을 고치는 작은 고침 행(버그·틀린 사실·깨진 경로)만 한 티켓에 묶는다. `001`은 이 서식보다 먼저 쓰여 `Blocked by`를 든다
+- 기능 밖에서 제품 코드를 고치는 일은 그 동작을 만든 기능 디렉터리에 다음 두 자리 번호로 티켓을 더한다. `plan.md`의 그 기능 상태는 done 그대로 둔다
+- **브랜치 이름은 티켓 파일 이름의 stem 그대로다.** 기능 디렉터리의 티켓은 `feature/<NN>-<slug>`, harness 티켓은 `chore/<NNN>-<slug>`다. 브랜치 이름만 보고 티켓 파일을 찾는다. 예외는 위 면제 PR에 회고가 쓴 harness 티켓 하나다
+- 상태는 각 이슈 파일 상단의 `Status:` 줄에 적는다. 값은 `ready-for-agent`(to-tickets가 발행 시 씀), `in-progress`, `done`, `wontfix` 넷 중 하나. 그 일을 하는 세션이 코드를 고치기 전에 티켓을 쓰고 상태는 `in-progress`다. `to-tickets`가 미리 쓴 `ready-for-agent` 티켓은 받는 세션의 첫 편집이 `in-progress`로 바꿔 첫 커밋에 싣는다. PR을 열기 전에 `done`으로 바꾼다. 티켓은 그 일을 하는 PR에 함께 싣는다
+- PR이 병합된 티켓은 다시 열지 않는다. 그 일을 이으면 남은 일로 다음 번호의 새 티켓을 쓰고(harness 티켓을 이으면 새 harness 티켓, 기능 디렉터리의 티켓을 이으면 그 디렉터리의 다음 두 자리) 앞 티켓의 경로를 든다
 - 코멘트와 대화 이력은 파일 끝 `## Comments` 제목 아래에 덧붙인다
 - `.scratch/`는 git에 커밋한다. 이 저장소의 유일한 작업 기록이기 때문이다
 
@@ -24,6 +30,7 @@
 ## 전체 계획
 
 - `.scratch/plan.md`가 전체 계획이다. 슬라이스와 기능(slug) 목록, 기능마다 `Blocked by`와 `Status`(`todo`, `in-progress`, `done`). `in-progress`는 그 기능의 첫 티켓이 병합될 때, `done`은 마지막 티켓이 병합될 때 바꾼다. 명세와 티켓이 생긴 것만으로는 `todo`다. 행에는 다른 기능이 넘긴 것을 적되 계약의 모양은 ADR 번호로만 가리킨다.
+- `plan.md`에는 제품 기능만 둔다. 하네스 기능과 harness 티켓의 상태는 티켓의 `Status:` 줄이고, 하네스 기능은 티켓이 모두 done이면 끝난 것이다(ADR 0037).
 - 기능 하나가 `.scratch/<slug>/` 하나다. `Blocked by`가 비었거나 전부 `done`인 기능이 프론티어이고, 프론티어는 병렬로 돌린다.
 - 계약(`sdk/`, `openapi.json`, 헌법)을 바꾸는 티켓은 그 기능의 첫 티켓이며 다른 티켓을 막는다.
 
@@ -38,7 +45,7 @@ Claude Design에서 그린 화면을 어디에 두고 근거와 어떻게 잇는
   - 맞출지는 날짜가 아니라 커밋으로 가른다. 아티팩트 색인(`project/design-system.json`)의 `lastChange` `via`가 든 커밋 뒤로 빌드의 입력(`web/packages/ui`, `NOTES.md`를 뺀 `.design-sync/`, `.claude/rules/web-design.md`)이 바뀌었으면(`git diff --stat <그 커밋> -- web/packages/ui .design-sync ':!.design-sync/NOTES.md' .claude/rules/web-design.md`) 빌드해 올린다. `via`가 `agent-os main@<짧은 SHA>` 모양이 아니면(커밋이 없거나 부분 올리기) 바뀐 것으로 본다.
   - 빌드는 지금의 `/design-sync` 빌드이고 산출은 `ds-bundle/`이다. 번들 `/design-sync` 스킬은 부르지 않는다. 그 스킬은 끝에 업로드 도구(`DesignSync`)로 그만둔 단독 프로젝트에 올린다. 빌드는 `.design-sync/NOTES.md`의 "돌리는 법"을 따르고, 올리기는 Claude Code가 편집자로 Artifact 도구의 `publish`로 한다. `ds-bundle/<경로>`의 파일이 아티팩트의 `project/<같은 경로>`이고, 바뀐 파일만 보내며 지난 빌드에 있었고 이번 빌드에 없는 경로는 지운다. 올리기는 그 입력을 바꾼 PR이 main에 병합된 뒤, origin/main을 체크아웃한 자리에서 빌드해 한다. 올리기 전에 `git merge-base --is-ancestor <색인 via의 커밋> HEAD`로 아티팩트를 옛 빌드로 되돌리지 않는지 본다. 마지막에 색인을 다시 읽어 다른 값은 그대로 두고 `lastChange`의 넷을 모두 새로 적으며, `via`는 빌드한 그 main HEAD의 `agent-os main@<짧은 SHA>`다. 병합 전에 올리면 squash로 사라질 브랜치 커밋이 남고, 미리 지은 빌드를 병합 뒤에 올리면 그사이 병합된 변경이 빠진 채 `via`만 앞선다. 빌드 산출 전체를 맞춘 때만 `via`를 그 모양으로 적고, 파일 몇 개만 올리면 `agent-os 부분 main@<짧은 SHA>`처럼 적어 다음 동기화가 전체를 맞대게 한다. 호출의 모양, 지우는 것과 두는 것, 거절됐을 때는 `.design-sync/NOTES.md`의 "돌리는 법"이다. 화면의 "Finish the migration" 정리는 하지 않는다.
   - 같은 판인지는 파일마다 sha256으로 맞댄다. Artifact 도구의 `read`가 파일마다 sha256을 내고, 그것이 저장소의 그 커밋의 파일 sha256과 같으면 그 파일이 같은 판이다. 아티팩트의 판 id는 아티팩트 전체에 붙어, 파일이 그대로여도 다른 파일을 올리면 바뀐다. 맞대는 스크립트는 `.scratch/design-artifacts/probes/hash_match.mjs`이고, 기록 파일은 자기 기능의 `probes/`에 새로 두어 `--record`로 준다. 어긋나면 그 파일을 다시 올리고 다시 맞댄다.
-  - 동기화가 바꾼 `.design-sync/`(NOTES, 사용 규약, 포크)와 그것이 고친 패키지 파일은 기능이나 명세 브랜치에 싣지 않고 `chore/` 브랜치의 PR로 먼저 병합한다. 화면의 `README.md` 표의 동기화한 커밋은 아래 표의 절대로 색인 `via`의 커밋이다.
+  - 동기화가 바꾼 `.design-sync/`(NOTES, 사용 규약, 포크)와 그것이 고친 패키지 파일은 기능이나 명세 브랜치에 싣지 않고 harness 티켓 하나의 `chore/<NNN>-<slug>` 브랜치 PR로 먼저 병합한다. 화면의 `README.md` 표의 동기화한 커밋은 아래 표의 절대로 색인 `via`의 커밋이다.
   - 빌드한 뒤 `node .design-sync/check-conventions.mjs`로 사용 규약의 이름이 빌드에 있는지 본다. 배경과 다시 볼 위험은 `.design-sync/NOTES.md`다.
 - 확정한 화면은 기능의 `.scratch/<feature-slug>/design/`에 커밋한다. 디자인 시스템의 방향 탐색(색과 글꼴 짝, 대략의 화면)도 같은 모양으로 `.scratch/design-system/design/`에 둔다. 아티팩트에서 그린 화면은 Claude Code가 Artifact 도구의 `read`로 받아 옮긴다(admin-style이 처음 해 보고 이 줄을 고친다). 단독 Claude Design에서 내보낸 파일을 두는 정해진 자리는 저장소의 바로 위 폴더다. 그때는 그것을 커밋할 세션이 내장 브라우저로 내려받아 그 자리에 두고(내려받기마다 사람의 허락을 받는다), 사람이 원치 않으면 사람이 그 자리에 저장한다. 세션이 그 자리에서 파일 이름으로 찾아 `design/`으로 옮긴다. 저장소 안, 특히 주 체크아웃에 바로 넣지 않는다. 주 체크아웃에 넣으면, 다른 세션이 같은 경로로 커밋해 병합한 뒤 주 체크아웃이 main을 당기지 못한다(같은 경로의 추적되지 않은 파일이 병합을 막는다는 git의 동작에 기댄 어림이다. 워크트리 가드가 임시 저장소로 재는 명령을 거부했다).
 - 그 폴더의 `README.md` 표에 화면마다 한 줄을 둔다. 줄은 파일을 옮긴 세션이 적는다. 칸은 내보낸 파일, 근거 문서의 전체 경로, 기준 커밋, 동기화한 커밋이다. 아티팩트에서 그린 화면은 그 아티팩트의 주소와 받은 판 id를 함께 적는다. 근거 문서는 화면을 그릴 때 있는 것이다. 명세 전에 그리면 ADR과 `plan.md`의 그 기능 행이고, 명세가 생긴 뒤에는 명세가 화면을 가리킨다. 기준 커밋은 그때 읽은 근거 문서의 커밋이고, 동기화한 커밋은 그때 디자인 시스템(단독 Claude Design의 프로젝트나 디자인 시스템 아티팩트)에 올라간 `packages/ui`의 커밋이다. 아티팩트면 색인 `lastChange`의 `via`가 든 main의 커밋이고, `via`가 부분 올리기면 그렇게 적는다. 디자인 시스템 없이 그린 것(디자인 시스템의 방향 탐색)은 동기화한 커밋 칸에 "없음"을 적는다.

@@ -109,8 +109,8 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 Read 도구로 열 때만 실림 |
 | 지침의 로드 시점 표 | `CLAUDE.md` 교정 루프 절 | ADR 0004는 결정의 기록, 런북 3단계 템플릿은 새 프로젝트용 사본 |
 | 현재 구조 | 코드 | 이 README의 트리는 안내 |
-| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | |
-| 기능 명세와 티켓 | `.scratch/<slug>/` | |
+| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | 제품 기능만. 하네스 기능과 harness 티켓의 상태는 티켓의 `Status:` |
+| 기능 명세와 티켓 | `.scratch/<slug>/` | harness 티켓은 `.scratch/harness/issues/`. 규약은 `docs/agents/issue-tracker.md` |
 | 디스크 형식(매니페스트, 이벤트) | `src/agent_os/sdk/`와 `tests/sdk/` | `rules/sdk.md`는 결정만 |
 | 설치된 스킬과 해시 | `skills-lock.json` | |
 | 진행 기록 | `docs/journal/` | 이력이지 원천이 아니다 |
