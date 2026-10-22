@@ -1585,9 +1585,13 @@ def _ours_line(ours: Numbers) -> str:
     return f"이 브랜치의 새 번호: {', '.join(keys)}" if keys else "이 브랜치의 새 번호 없음"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Verdict:
-    """출력과 종료 코드가 함께 읽는 판정. 한 번만 지어 둘이 어긋나지 않게 한다."""
+    """출력과 종료 코드가 함께 읽는 판정. 한 번만 지어 둘이 어긋나지 않게 한다.
+
+    칸이 많고 같은 타입의 칸이 이웃해, 위치 인자로 지으면 순서가 틀려도 타입 검사가 잡지 못한다.
+    그래서 키워드로만 짓는다(PR #345 claude-review).
+    """
 
     found: list[tuple[Sibling, Clash]]
     next_journal: str
@@ -1639,19 +1643,19 @@ def judge(result: Survey, today: str) -> Verdict:
     later = [s for s in result.others if is_behind(result.ours, s.latest)]
     top = highest_version([(s.label, s.version) for s in result.siblings])
     return Verdict(
-        found,
-        journal,
-        row,
-        ticket,
-        yielded,
-        result.own_pull if renamed else None,
-        behind,
-        shifted,
-        later,
-        top,
-        unbumped(result.changed, result.ours),
-        uncanaried(result.harness, result.changed, result.specs),
-        result.dangling,
+        found=found,
+        next_journal=journal,
+        next_row=row,
+        next_ticket=ticket,
+        yielded=yielded,
+        reopen=result.own_pull if renamed else None,
+        behind=behind,
+        shifted=shifted,
+        later=later,
+        top_version=top,
+        unbumped=unbumped(result.changed, result.ours),
+        uncanaried=uncanaried(result.harness, result.changed, result.specs),
+        dangling=result.dangling,
     )
 
 

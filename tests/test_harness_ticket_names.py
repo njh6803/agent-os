@@ -42,8 +42,13 @@ def _ticket_names() -> list[str]:
 
 
 def test_harness_티켓_파일을_하나는_읽는다() -> None:
-    """읽은 것이 없는데 겹침 0 으로 초록이 되는 것을 막는다(tests.md, 대기열 98)."""
-    assert _ticket_names()
+    """읽은 것이 없는데 겹침 0 으로 초록이 되는 것을 막는다(tests.md, 대기열 98).
+
+    파일이 있어도 번호 꼴에 맞는 이름이 없으면 겹침 판정이 본 것이 없으므로 그 꼴로 센다(PR #345
+    CodeRabbit).
+    """
+    names = _ticket_names()
+    assert any(_TICKET_NAME.fullmatch(name) for name in names), f"번호 꼴의 티켓 없음: {names}"
 
 
 def test_이_저장소의_harness_티켓은_번호가_겹치지_않는다() -> None:
