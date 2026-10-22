@@ -1,4 +1,4 @@
-# 2026-10-23 (09) 판정자 테스트가 앞 실행이 남긴 임시 트리를 지운다
+# 2026-10-23 (14) 판정자 테스트가 앞 실행이 남긴 임시 트리를 지운다
 
 > 사용자: (next-session 지시문을 첫 메시지로 받았다) "대기열 379를 티켓 .scratch/harness/issues/006-eslint-judge-tree-cleanup.md로 쓰고 한다 … 어디서: 새 세션. 나란히 여는 6 중 4. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다 … 이번 요청 범위: PR과 병합까지"
 
@@ -40,8 +40,8 @@
 시작 프롬프트: 대기열 379를 티켓 .scratch/harness/issues/006-eslint-judge-tree-cleanup.md로 쓰고 한다
 브랜치: chore/006-eslint-judge-tree-cleanup
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태). 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md(이 워크트리에만 있다)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 티켓 006)부터 한다. 그 뒤 run_checks와 ruff 두 줄, 커밋, PR, 병합. 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md
+읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태). 일지 docs/journal/2026-10-23-14-eslint-judge-tree-cleanup.md(이 워크트리에만 있다)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 티켓 006)부터 한다. 그 뒤 run_checks와 ruff 두 줄, 커밋, PR, 병합. 일지 docs/journal/2026-10-23-14-eslint-judge-tree-cleanup.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -88,8 +88,8 @@ open-session을 부른다 2026-10-22T17:46:11Z
 시작 프롬프트: 대기열 379를 티켓 .scratch/harness/issues/006-eslint-judge-tree-cleanup.md로 쓰고 한다
 브랜치: chore/006-eslint-judge-tree-cleanup
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태). 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md(인계 절은 그 워크트리에 커밋하지 않은 채 있다)
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경까지 커밋했고 pre-commit이 통과했다. 푸시하지 않았고 PR이 없다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지 셀프 리뷰 절의 목록), 푸시, PR, 봇 회차, 워크트리에서 병합이다. 일지의 인계 절은 다음 커밋에 싣는다. 일지 docs/journal/2026-10-23-09-eslint-judge-tree-cleanup.md
+읽을 것: docs/agents/issue-tracker.md(harness 티켓의 서식·상태). 일지 docs/journal/2026-10-23-14-eslint-judge-tree-cleanup.md(인계 절은 그 워크트리에 커밋하지 않은 채 있다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경까지 커밋했고 pre-commit이 통과했다. 푸시하지 않았고 PR이 없다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지 셀프 리뷰 절의 목록), 푸시, PR, 봇 회차, 워크트리에서 병합이다. 일지의 인계 절은 다음 커밋에 싣는다. 일지 docs/journal/2026-10-23-14-eslint-judge-tree-cleanup.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -113,3 +113,5 @@ open-session을 부른다 2026-10-22T18:49:56Z
 - 다음 층(PR 봇)에 밀 주장(반영으로 새로 쓴 문장): "사람이 지은 `judge-config` 같은 폴더도 이름의 꼴에는 맞아서 표지로 가른다. 그 이름의 링크와 파일, 꼴이 다른 이름, 표지가 없거나 표지 자리가 디렉터리·링크인 것은 남긴다", "표지가 없는 판정자 트리(표지를 들이기 전에 남은 트리, 만든 뒤 표지를 쓰기 전에 멈춘 빈 트리)도 남긴다. 판정자 트리인 것을 눈으로 확인했으면 그 안에 표지 파일을 만들고 이 명령으로 지운다", "`maxRetries` 로 다섯 번까지 다시 시도한다(Node `fs.rm` 문서, 재지 않았다)".
 
 origin/main이 `e205147d`(harness 004, #359)로 움직여 반영 전에 합쳤다. 겹친 파일 둘(`.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`)은 충돌 없이 합쳐졌고, 이 브랜치의 diff는 바뀌지 않았다. 반영 커밋의 첫 시도는 pre-commit의 web-verify가 Prettier로 막았다(새 시험의 긴 줄 하나, 495.0초). 고친 시험 파일에 Prettier를 돌리지 않고 커밋했다. 나머지 검사(pytest 494.4초 포함)는 통과했다. `prettier --write`로 그 줄을 감싸고, 인용 대조가 경고한 이 절의 따옴표 인용 하나를 서술로 바꾼 뒤 다시 쳤다.
+
+다시 친 반영 커밋 `e6ab25cf`는 pre-commit의 검사가 모두 통과했다(web-verify 317.8초, pytest 469.1초). ruff 둘은 스테이지된 `.py`가 없어 Skipped라 손으로 쳤고 통과했다(967파일). 푸시 전에 origin/main이 `690de5bf`(harness 008, #358)로 또 움직여 합쳤다. 겹친 파일은 같은 둘이고 충돌이 없었다. 그 PR이 일지 2026-10-23-11을 먼저 들여와, `sibling_overlap.py`가 이 일지를 2026-10-23-09에서 2026-10-23-14로 옮기라고 했고 `--move`로 옮겼다. 옛 번호를 가리킨 인용은 이 브랜치의 변경에 없었다(대기열 379의 닫힘 줄은 티켓 경로를 가리킨다).
