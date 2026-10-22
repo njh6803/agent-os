@@ -12,6 +12,7 @@ import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from typing import IO
 
 import pytest
 from tools.rerun_files import (
@@ -164,7 +165,7 @@ def _기록(**바꿀: object) -> Record:
         round_no=2,
         condition_version=1,
         pilot=False,
-        round_dir="",
+        round_dir_name="",
         claude_version="2.1.302 (Claude Code)",
         account="njh6803",
         env_names=("PATH", "ProgramFiles(x86)", "GH_CONFIG_DIR"),
@@ -208,10 +209,10 @@ def _기록(**바꿀: object) -> Record:
         ),
     )
     기록 = replace(기본, **바꿀)
-    if "round_dir" in 바꿀:
+    if "round_dir_name" in 바꿀:
         return 기록
     폴더 = round_dir_name(기록.task_id, 기록.arm, 기록.round_no, "a1b2c3")
-    return replace(기록, round_dir=f"D:/rerun/{폴더}")
+    return replace(기록, round_dir_name=폴더)
 
 
 def _초록_게이트() -> tuple[Gate, ...]:
@@ -436,8 +437,8 @@ def test_과제_목록의_형이_다른_값은_거부한다(길: tuple[str | int
         (("sessions", 0, "calls", 0, "results", 0, "subtype"), "error: 글"),
         (("sessions", 0, "main_lines", 0, "effort"), "x=1"),
         (("claude_version",), "2.1.302\n글"),
-        (("round_dir",), 'D:/"x"/model-rerun-01-C-2-a1b2c3'),
-        (("round_dir",), "D:/x\ty/model-rerun-01-C-2-a1b2c3"),
+        (("round_dir_name",), 'model-rerun-01-C-2-a"b'),
+        (("round_dir_name",), "model-rerun-01-C-2-a\tb"),
     ],
 )
 def test_회차_기록의_형이_다른_값은_거부한다(길: tuple[str | int, ...], 값: Json) -> None:
@@ -702,10 +703,10 @@ _줄을_끊는_문자 = [
 
 
 @pytest.mark.parametrize("문자", _줄을_끊는_문자, ids=ascii)
-def test_회차_폴더_경로와_실패_노드는_줄을_끊는_문자를_모두_거부한다(문자: str) -> None:
-    폴더 = f"D:/x{문자}y/model-rerun-01-C-2-a1b2c3"
-    with pytest.raises(ShapeError, match="round_dir"):
-        parse_record(_바꿔(dumps_record(_기록()), ("round_dir",), 폴더))
+def test_회차_폴더_이름과_실패_노드는_줄을_끊는_문자를_모두_거부한다(문자: str) -> None:
+    폴더 = f"model-rerun-01-C-2-a1{문자}b2"
+    with pytest.raises(ShapeError, match="round_dir_name"):
+        parse_record(_바꿔(dumps_record(_기록()), ("round_dir_name",), 폴더))
     숨은: Json = {"passed": 2, "total": 3, "failed": [f"tests/a.py::t{문자}글"]}
     with pytest.raises(ShapeError, match="failed"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "hidden"), 숨은))
@@ -719,20 +720,28 @@ def test_숨은_시험의_통과_수와_실패_노드_수의_합이_전체다() 
 @pytest.mark.parametrize(
     "폴더",
     [
-        "D:/rerun/model-rerun-01-C-3-a1b2c3",
-        "D:/rerun/model-rerun-01-A-2-a1b2c3",
-        "D:/rerun/other-01-C-2-a1b2c3",
-        "D:/rerun/note",
+        "model-rerun-01-C-3-a1b2c3",
+        "model-rerun-01-A-2-a1b2c3",
+        "other-01-C-2-a1b2c3",
+        "note",
     ],
 )
-def test_회차_폴더_경로의_끝은_이_회차의_폴더다(폴더: str) -> None:
+def test_회차_폴더_이름은_이_회차의_폴더다(폴더: str) -> None:
     with pytest.raises(ShapeError, match="폴더 이름"):
-        parse_record(_바꿔(dumps_record(_기록()), ("round_dir",), 폴더))
+        parse_record(_바꿔(dumps_record(_기록()), ("round_dir_name",), 폴더))
 
 
-def test_회차_폴더_경로는_윈도_구분자도_받는다() -> None:
-    기록 = _기록(round_dir="E:\\r\\model-rerun-01-C-2-ff")
-    assert parse_record(dumps_record(기록)) == 기록
+@pytest.mark.parametrize(
+    "폴더",
+    [
+        "D:/rerun/model-rerun-01-C-2-a1b2c3",
+        "E:\\r\\model-rerun-01-C-2-ff",
+        "/model-rerun-01-C-2-ff",
+    ],
+)
+def test_회차_폴더_칸은_사람이_준_뿌리_경로를_받지_않는다(폴더: str) -> None:
+    with pytest.raises(ShapeError, match="폴더 이름"):
+        parse_record(_바꿔(dumps_record(_기록()), ("round_dir_name",), 폴더))
 
 
 # --- records/ 의 파일 이름과 덮어쓰기 ---
@@ -752,6 +761,58 @@ def test_이미_있는_기록_파일은_덮지_않는다(tmp_path: Path) -> None
     with pytest.raises(FileExistsError):
         write_record(tmp_path, _기록(condition_version=2, interventions=2))
     assert 경로.read_bytes() == 처음
+
+
+def test_링크한_뒤_임시_파일을_지우기_전에_같은_회차를_다시_써도_기록이_덮이지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 같은 프로세스의 두 스레드가 같은 회차를 쓰는 틈을 차례로 흉내 낸다. 첫 쓰기의 임시 파일이
+    # 남은 채 둘째 쓰기가 같은 이름을 "w"로 열면, 하드 링크라 이미 붙은 기록이 잘리고 덮인다.
+    def 지우지_않는다(self: Path, *, missing_ok: bool = False) -> None:
+        return None
+
+    monkeypatch.setattr(Path, "unlink", 지우지_않는다)
+    경로 = write_record(tmp_path, _기록())
+    처음 = 경로.read_bytes()
+    with pytest.raises(FileExistsError):
+        write_record(tmp_path, _기록(interventions=2))
+    assert 경로.read_bytes() == 처음
+
+
+class _반쯤_쓰고_멈춘다:
+    """디스크가 찬 것처럼 받은 글의 절반만 쓰고 `OSError`를 낸다."""
+
+    def __init__(self, f: IO[str]) -> None:
+        self.f = f
+
+    def __enter__(self) -> _반쯤_쓰고_멈춘다:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.f.close()
+
+    def write(self, s: str) -> int:
+        self.f.write(s[: len(s) // 2])
+        self.f.flush()
+        raise OSError("디스크가 찼다")
+
+
+def test_쓰다_실패하면_기록_파일이_남지_않고_다시_쓸_수_있다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    진짜_open = Path.open
+
+    def 고장난_open(
+        self: Path, mode: str = "r", *, encoding: str | None = None, newline: str | None = None
+    ) -> _반쯤_쓰고_멈춘다:
+        return _반쯤_쓰고_멈춘다(진짜_open(self, mode, encoding=encoding, newline=newline))
+
+    monkeypatch.setattr(Path, "open", 고장난_open)
+    with pytest.raises(OSError, match="디스크가 찼다"):
+        write_record(tmp_path, _기록())
+    monkeypatch.undo()
+    assert list(tmp_path.iterdir()) == []
+    assert read_record(write_record(tmp_path, _기록())) == _기록()
 
 
 # --- 회차 폴더 이름과 다음 회차 번호 ---
@@ -856,7 +917,16 @@ def test_판정이_읽는_게이트와_숨은_시험은_돌지_않았으면_빈_
 
 # --- 하위 프로세스를 끌어오지 않는다 ---
 
-_허용_import = {"__future__", "dataclasses", "json", "math", "re", "pathlib", "collections.abc"}
+_허용_import = {
+    "__future__",
+    "dataclasses",
+    "json",
+    "math",
+    "os",
+    "re",
+    "pathlib",
+    "collections.abc",
+}
 
 
 def test_이_모듈은_표준_라이브러리의_정해진_모듈만_import_한다() -> None:
@@ -870,6 +940,15 @@ def test_이_모듈은_표준_라이브러리의_정해진_모듈만_import_한�
             든.add("." * 마디.level + (마디.module or ""))
     assert 든 <= _허용_import, 든 - _허용_import
     assert "subprocess" not in 든
+    # os 는 통째로 허용했으므로 쓰는 이름을 좁힌다(os.system 같은 하위 프로세스 길을 막는다).
+    os_이름 = {
+        마디.attr
+        for 마디 in ast.walk(나무)
+        if isinstance(마디, ast.Attribute)
+        and isinstance(마디.value, ast.Name)
+        and 마디.value.id == "os"
+    }
+    assert os_이름 <= {"getpid", "urandom", "link"}, os_이름
     assert all(
         m in sys.stdlib_module_names or m.split(".")[0] in sys.stdlib_module_names for m in 든
     )

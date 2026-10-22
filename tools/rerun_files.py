@@ -20,16 +20,16 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
   이름은 영문 식별자, 계정 이름은 이메일의 `@` 앞 꼴(첫 글자는 영소문자나 숫자이고 그 뒤는
   영소문자·숫자·`._-`다. 대문자와 `+`는 받지 않는다), 오염 꼴의 이름은 러너 상수의 꼴이다. 게이트와
   준비의 명령은 명세가 정한 세 명령의 상수(`GATE_COMMANDS`, `SETUP_COMMANDS`)와 같아야 한다. 회차
-  폴더 경로는 마지막 조각이 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더 이름이다. 경로 전체에
-  제어 문자(줄바꿈과 유니코드 줄 구분 문자 포함)·따옴표·`=`가 없고, 앞 경로 부분은 그 밖의 글을
-  받는다. 실패한 숨은 시험의 노드 ID는 겹치지 않고 제어 문자(줄바꿈 포함)가 없다.
+  폴더는 뿌리를 뺀 이름만 담고, 그 이름은 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더
+  이름이다. 뿌리는 사람이 명령 줄로 준 경로라 커밋하는 기록에 남기지 않는다. 실패한 숨은 시험의
+  노드 ID는 겹치지 않고 제어 문자(줄바꿈 포함)가 없다.
 
 못 보는 것. 키와 형, 칸 사이의 맞음(끝의 종류와 하위 이유, 끝남이 아닌 회차의 게이트, 결과 커밋과
 고른 규칙)만 본다. 값이 실제와 맞는지(비용의 합이 세션 비용의 합인지, 노드 ID가 과제 목록의
 것인지)는 그 값을 짓는 도구가 지킨다. 꼴로 좁힌 글 칸도 그 꼴 안의 글은 받으므로, 비밀 토큰과
-우연히 같은 꼴의 글은 칸의 꼴로 막지 못한다. 도구 이름 칸이 `ghp_…`를, 회차 폴더의 앞 경로 부분이
-`sk-ant-…`를 받는 것이 그 예다. 글 칸의 값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는
-도구가 지킨다. 실패한 노드 ID도
+우연히 같은 꼴의 글은 칸의 꼴로 막지 못한다. 도구 이름 칸이 `ghp_…`를, 회차 폴더 이름의 난수 부분이
+길이 상한 없이 영소문자·숫자로 된 긴 글을 받는 것이 그 예다. 글 칸의
+값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는 도구가 지킨다. 실패한 노드 ID도
 매개변수 부분에 공백과 따옴표가 들 수 있어 꼴로 좁히지 않고, 과제 목록의 숨은 시험 ID에서만 옮긴다.
 """
 
@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -143,7 +144,6 @@ _PATTERN_NAME = re.compile(r"[가-힣a-z0-9][가-힣a-z0-9_-]*")  # 오염 꼴�
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_()]*")
 _VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")
 _TOKEN = re.compile(r"[0-9a-z]+")
-_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")
 _NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")
 
 
@@ -166,6 +166,8 @@ class Task:
     tier: str  # TIERS
     size: int  # 크기 지표
     order: int  # 실행 차례(0부터)
+    # 층이 파일럿인지와 같은 사실이지만 명세 "과제 목록의 칸"이 정한 디스크 칸이라 두고, 둘이
+    # 어긋나면 읽기가 거부한다.
     pilot: bool
     pr_cost_usd: float  # 원래 세션의 PR 앞 비용
     round_cap_usd: float  # 회차 상한
@@ -295,6 +297,7 @@ def read_task_list(path: Path) -> TaskList:
 
 
 def write_task_list(path: Path, task_list: TaskList) -> None:
+    """과제 목록을 쓴다. 고르기가 목록을 다시 지으면 덮어쓴다(덮지 않는 것은 회차 기록뿐이다)."""
     path.write_text(dumps_task_list(task_list), encoding="utf-8", newline="\n")
 
 
@@ -452,7 +455,7 @@ class Record:
     round_no: int  # 같은 과제·갈래의 몇째(1부터). 조건 판을 넘어 이어 센다
     condition_version: int
     pilot: bool
-    round_dir: str
+    round_dir_name: str
     # 환경
     claude_version: str | None
     account: str
@@ -527,7 +530,7 @@ _RECORD_KEYS = (
     "round_no",
     "condition_version",
     "pilot",
-    "round_dir",
+    "round_dir_name",
     "claude_version",
     "account",
     "env_names",
@@ -655,7 +658,7 @@ def _record_json(r: Record) -> dict[str, Json]:
         "round_no": r.round_no,
         "condition_version": r.condition_version,
         "pilot": r.pilot,
-        "round_dir": r.round_dir,
+        "round_dir_name": r.round_dir_name,
         "claude_version": r.claude_version,
         "account": r.account,
         "env_names": list(r.env_names),
@@ -848,19 +851,18 @@ def parse_record(text: str) -> Record:
     round_no = o.count("round_no")
     if round_no < 1:
         raise ShapeError("회차 기록.round_no: 1부터 센다")
-    round_dir = o.text("round_dir", _ROUND_DIR)
-    named = parse_round_dir_name(re.split(r"[\\/]", round_dir)[-1])
+    # 꼴은 `parse_round_dir_name`이 본다. 뿌리 경로가 붙으면 과제 id의 꼴에서 걸린다.
+    dir_name = o.text("round_dir_name")
+    named = parse_round_dir_name(dir_name)
     if named is None or (named.task_id, named.arm, named.round_no) != (task_id, arm, round_no):
-        raise ShapeError(
-            f"회차 기록.round_dir: 마지막 조각이 이 회차의 폴더 이름이 아니다: {round_dir!r}"
-        )
+        raise ShapeError(f"회차 기록.round_dir_name: 이 회차의 폴더 이름이 아니다: {dir_name!r}")
     return Record(
         task_id=task_id,
         arm=arm,
         round_no=round_no,
         condition_version=o.count("condition_version"),
         pilot=o.flag("pilot"),
-        round_dir=round_dir,
+        round_dir_name=dir_name,
         claude_version=o.opt_text("claude_version", _VERSION),
         account=o.text("account", _ACCOUNT),
         env_names=o.strs("env_names", _ENV_NAME),
@@ -881,11 +883,27 @@ def read_record(path: Path) -> Record:
 
 def write_record(records_dir: Path, record: Record) -> Path:
     """`records_dir`에 기록을 쓰고 그 경로를 낸다. 이미 있는 파일은 덮지 않고
-    `FileExistsError`다."""
+    `FileExistsError`다.
+
+    같은 폴더의 임시 파일에 다 쓴 뒤 하드 링크로 이름을 붙인다. 그래서 다른 회차가 `records/`를
+    읽는 동안 반쯤 쓴 기록이 보이지 않고, 쓰기가 예외로 실패하면 임시 파일을 지워 기록 파일이 남지
+    않으므로 같은 회차를 다시 쓸 수 있다. 임시 파일 이름은 쓰기마다 난수를 붙여 겹치지 않는다(같은
+    이름을 다시 열면 이미 링크한 기록을 자를 수 있다). 그 이름은 `.json`으로 끝나지 않아 기록 파일
+    이름으로 풀리지 않는다.
+
+    못 보는 것. 프로세스가 죽으면(강제 종료, 전원) `finally`가 돌지 않아 `.….tmp`가 `records/`에
+    남는다. 링크 전에 fsync하지 않아 전원이 나가면 덜 쓴 기록이 최종 이름에 남을 수 있다. 하드
+    링크를 받지 않는 파일 시스템(FAT 등)에서는 `OSError`다(재지 않았다).
+    """
     text = dumps_record(record)
     path = records_dir / record_file_name(record.task_id, record.arm, record.round_no)
-    with path.open("x", encoding="utf-8", newline="\n") as f:
-        f.write(text)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}-{os.urandom(6).hex()}.tmp")
+    try:
+        with tmp.open("x", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        os.link(tmp, path)  # 이미 있으면 FileExistsError. 덮지 않는다
+    finally:
+        tmp.unlink(missing_ok=True)
     return path
 
 
@@ -1073,6 +1091,7 @@ def _no_duplicates(what: str, values: list[str] | list[int]) -> None:
 
 
 def _is_int(v: Json) -> bool:
+    # 부르는 쪽의 `isinstance(v, int)`는 형 좁히기라 이 함수와 겹쳐 보여도 지우지 않는다.
     return isinstance(v, int) and not isinstance(v, bool)
 
 

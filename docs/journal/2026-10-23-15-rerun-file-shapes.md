@@ -1,4 +1,4 @@
-# 2026-10-23 (12) 다시 풀기의 두 계약 파일의 꼴을 짓는다 (model-rerun 01)
+# 2026-10-23 (15) 다시 풀기의 두 계약 파일의 꼴을 짓는다 (model-rerun 01)
 
 ## 사용자 프롬프트
 
@@ -51,8 +51,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/01-rerun-file-shapes.md
 브랜치: feature/01-rerun-file-shapes
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-12-rerun-file-shapes.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(tools/rerun_files.py, tests/tools/test_rerun_files.py, 변이 표와 프로브 README, 명세 주석 둘, 티켓 Status in-progress, 이 일지)이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다. 변이 21은 이미 모두 빨갰고, tools/run_checks.py 전체 실행은 아직 끝까지 보지 못했다. 일지 docs/journal/2026-10-23-12-rerun-file-shapes.md
+읽을 것: docs/journal/2026-10-23-15-rerun-file-shapes.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(tools/rerun_files.py, tests/tools/test_rerun_files.py, 변이 표와 프로브 README, 명세 주석 둘, 티켓 Status in-progress, 이 일지)이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다. 변이 21은 이미 모두 빨갰고, tools/run_checks.py 전체 실행은 아직 끝까지 보지 못했다. 일지 docs/journal/2026-10-23-15-rerun-file-shapes.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 01이 병합되면 결정표대로 02·03·04를 나란히 연다
 ```
@@ -102,8 +102,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장).
 시작 프롬프트: /implement .scratch/model-rerun/issues/01-rerun-file-shapes.md
 브랜치: feature/01-rerun-file-shapes
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-12-rerun-file-shapes.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 04edfe96으로 커밋했고(티켓 Status done, pre-commit 모두 Passed) 아직 푸시하지 않았다. 남은 것은 PR 직전 리뷰(일지 "셀프 리뷰"의 밀 주장 목록을 브리프에 넣는다), /git-pr로 PR 열기, 봇 회차와 병합이다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-12-rerun-file-shapes.md
+읽을 것: docs/journal/2026-10-23-15-rerun-file-shapes.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 04edfe96으로 커밋했고(티켓 Status done, pre-commit 모두 Passed) 아직 푸시하지 않았다. 남은 것은 PR 직전 리뷰(일지 "셀프 리뷰"의 밀 주장 목록을 브리프에 넣는다), /git-pr로 PR 열기, 봇 회차와 병합이다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-15-rerun-file-shapes.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 01이 병합되면 결정표대로 02·03·04를 나란히 연다
 ```
@@ -141,8 +141,8 @@ open-session을 부른다 2026-10-22T18:03:50Z
 시작 프롬프트: /implement .scratch/model-rerun/issues/01-rerun-file-shapes.md
 브랜치: feature/01-rerun-file-shapes
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-12-rerun-file-shapes.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(PR 직전 리뷰 반영분: tools/rerun_files.py, tests/tools/test_rerun_files.py, 변이 표와 프로브 README, 이 일지)이 워크트리에 있고 셀프 리뷰(/code-review HEAD, 범위는 이 반영분, 일지 "세 번째 세션"의 새로 쓴 문장을 주장 검증 목록에)부터 한다. origin/main은 cac5e3e5로 이미 합쳤고, PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 다섯 반영, 변이 44 모두 빨강)는 끝났다. 남은 것은 셀프 리뷰 반영, 커밋(pre-commit), 푸시와 /git-pr(체크리스트에 대체 리뷰 두 줄), 봇 회차와 병합이다. 일지 docs/journal/2026-10-23-12-rerun-file-shapes.md
+읽을 것: docs/journal/2026-10-23-15-rerun-file-shapes.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(PR 직전 리뷰 반영분: tools/rerun_files.py, tests/tools/test_rerun_files.py, 변이 표와 프로브 README, 이 일지)이 워크트리에 있고 셀프 리뷰(/code-review HEAD, 범위는 이 반영분, 일지 "세 번째 세션"의 새로 쓴 문장을 주장 검증 목록에)부터 한다. origin/main은 cac5e3e5로 이미 합쳤고, PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 다섯 반영, 변이 44 모두 빨강)는 끝났다. 남은 것은 셀프 리뷰 반영, 커밋(pre-commit), 푸시와 /git-pr(체크리스트에 대체 리뷰 두 줄), 봇 회차와 병합이다. 일지 docs/journal/2026-10-23-15-rerun-file-shapes.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 01이 병합되면 결정표대로 02·03·04를 나란히 연다
 ```
@@ -176,7 +176,7 @@ open-session을 부른다 2026-10-22T18:37:53Z
 - 모듈 독스트링: "계정 이름은 이메일의 `@` 앞 꼴(첫 글자는 영소문자나 숫자이고 그 뒤는 영소문자·숫자·`._-`다. 대문자와 `+`는 받지 않는다)", "경로 전체에 제어 문자(줄바꿈과 유니코드 줄 구분 문자 포함)·따옴표·`=`가 없고, 앞 경로 부분은 그 밖의 글을 받는다", "노드 ID는 겹치지 않고 제어 문자(줄바꿈 포함)가 없다", "꼴로 좁힌 글 칸도 그 꼴 안의 글은 받으므로, 비밀 토큰과 우연히 같은 꼴의 글은 칸의 꼴로 막지 못한다. 도구 이름 칸이 `ghp_…`를, 회차 폴더의 앞 경로 부분이 `sk-ant-…`를 받는 것이 그 예다", "글 칸의 값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는 도구가 지킨다".
 - 티켓 06의 "01에서 넘어온 메모" 한 줄과 프로브 README "변이"의 셀프 리뷰 반영 문장.
 
-커밋 전 `tools/sibling_overlap.py`가 1로 끝났다. origin/main이 e205147로 움직였고, 이 일지(옛 번호 04)가 origin/main의 최신 일지 2026-10-23-06보다 이름순으로 앞이라 2026-10-23-12로 옮겼다(`--move`). 그 전에 origin/main(e205147, optional-bool 검사)을 합쳤다. 바뀐 파일은 이 브랜치의 파일과 겹치지 않았다.
+커밋 전 `tools/sibling_overlap.py`가 1로 끝났다. origin/main이 e205147로 움직였고, 이 일지(옛 번호 04)가 origin/main의 최신 일지 2026-10-23-06보다 이름순으로 앞이라 2026-10-23-15로 옮겼다(`--move`). 그 전에 origin/main(e205147, optional-bool 검사)을 합쳤다. 바뀐 파일은 이 브랜치의 파일과 겹치지 않았다.
 
 ## 커밋과 네 번째 인계
 
@@ -189,8 +189,8 @@ ddcf16ee로 커밋했다. pre-commit의 검사가 모두 Passed였고(pytest 576
 시작 프롬프트: /implement .scratch/model-rerun/issues/01-rerun-file-shapes.md
 브랜치: feature/01-rerun-file-shapes
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-12-rerun-file-shapes.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 ddcf16ee로 커밋했고(origin/main e205147을 합친 뒤, 티켓 Status done, pre-commit 모두 Passed) 아직 푸시하지 않았고 PR도 없다. PR 직전 리뷰(/security-review, bug-perf-review)는 이 반영 전에 끝났다. 남은 것은 푸시와 /git-pr(체크리스트에 CodeRabbit 대체 리뷰 두 줄), 봇 회차(일지 "네 번째 세션"의 "반영으로 새로 쓴 문장"이 봇이 처음 보는 문장이다)와 병합이다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-12-rerun-file-shapes.md
+읽을 것: docs/journal/2026-10-23-15-rerun-file-shapes.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 ddcf16ee로 커밋했고(origin/main e205147을 합친 뒤, 티켓 Status done, pre-commit 모두 Passed) 아직 푸시하지 않았고 PR도 없다. PR 직전 리뷰(/security-review, bug-perf-review)는 이 반영 전에 끝났다. 남은 것은 푸시와 /git-pr(체크리스트에 CodeRabbit 대체 리뷰 두 줄), 봇 회차(일지 "네 번째 세션"의 "반영으로 새로 쓴 문장"이 봇이 처음 보는 문장이다)와 병합이다. 일지는 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 일지 docs/journal/2026-10-23-15-rerun-file-shapes.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22). 01이 병합되면 결정표대로 02·03·04를 나란히 연다
 ```
@@ -203,3 +203,44 @@ open-session을 부른다 2026-10-22T19:17:55Z
 ## 다섯 번째 세션: 푸시와 PR
 
 지시문대로 `EnterWorktree(path)`로 들어왔다. 커밋 전 `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 했다. origin/main은 690de5b(harness 008, 인용 대조)로 움직였고, 바뀐 파일은 이 브랜치가 이름으로 든 파일과 겹치지 않아 합치지 않았다. 앞 세션의 인계 절과 이 절을 커밋하고 푸시한 뒤 `/git-pr`로 PR을 연다.
+
+## 봇 첫 회차
+
+PR #361을 열고 `@coderabbitai review`를 남긴 뒤 `tools/wait_ci.py`로 기다렸다. 검사 여덟이 모두 통과했고 CodeRabbit은 `Review completed`였다. 두 봇 모두 첫 회차라 Minor·Nit도 지적마다 판단했다.
+
+고친 것.
+- CodeRabbit Major: 회차 기록의 `round_dir`가 사람이 명령 줄로 준 뿌리까지 든 경로라, 뿌리에 비밀이 든 경로를 주면 그것이 `records/`에 커밋된다. `.claude/rules/tools.md`의 허용 목록 항목과 같은 방향이라 받았다. 칸을 뿌리를 뺀 회차 폴더 이름 `round_dir_name`으로 바꾸고, 꼴은 `parse_round_dir_name`이 보게 해 경로 정규식 `_ROUND_DIR`를 지웠다. 명세 248·252행에 주석을, 티켓 06의 메모에 그 칸을 짓는 법을 적었다. 생산자가 아직 없어 지금 바꾸는 값이 가장 작았다.
+- CodeRabbit Minor: `write_record`가 최종 이름에 바로 써서 쓰는 동안 반쯤 쓴 기록이 보이고, 쓰다 실패하면 같은 회차를 다시 쓰지 못했다. 같은 폴더의 임시 파일에 다 쓴 뒤 `os.link`로 이름을 붙이고, 예외로 실패하면 임시 파일을 지운다. 덮지 않는 성질은 `os.link`의 `FileExistsError`가 지킨다. 셀프 리뷰가 06의 메모로 넘겼던 일이라 그 메모를 지웠다. 더한 시험(쓰기 도중 `OSError`)은 고치기 전에 반쯤 쓴 파일이 남아 빨갰다.
+- CodeRabbit Trivial: 표지 없던 변이 여섯에 `expect_output`을 달았다. 변이를 손으로 넣어 실패 출력을 본 뒤 고른 단언에서만 나오는 문구를 골랐다(프로브 README "변이").
+- claude-review Minor·Nit 셋: `Task.pilot`이 층과 겹치는 까닭(명세가 정한 디스크 칸), `write_task_list`가 덮어쓰는 것, 부르는 쪽 `isinstance`가 형 좁히기라는 것을 주석과 독스트링에 적었다.
+
+보류한 것(PR 코멘트에 까닭을 남긴다).
+- claude-review Minor: 칸 하나가 네 자리(데이터클래스, 키 튜플, `_json`, 파서)에 흩어진 산탄총. 셀프 리뷰도 냄새로 두었고, 어긋남은 쓰기 뒤 다시 읽기가 잡는다.
+- claude-review Minor: `write_record`가 경로를 돌려주는 CQS. 부르는 쪽(06)이 그 경로를 바로 쓰고, 이름을 다시 짓게 하면 같은 계산이 두 자리에 생긴다.
+
+다시 돌린 것. `tests/tools/test_rerun_files.py` 130 passed, 변이 44 모두 기대대로(`--check` 통과, 마흔넷 모두 표지). 아래 셀프 리뷰 반영 뒤의 값은 그 절에 적는다.
+
+## 봇 반영분의 셀프 리뷰
+
+`/code-review HEAD`(base d1d5a7ed, 커밋하지 않은 파일 일곱, 커밋 0, 미추적 0)를 두 축으로 돌렸다. 두 축 모두 시험 130 passed였고 경계 입력을 함수로 불러 쟀다.
+
+고친 것.
+- 표준 축 Major: 임시 파일 이름이 pid만 써서 같은 프로세스의 두 스레드가 같은 회차를 쓰면 이름이 겹쳤다. 첫 쓰기가 링크한 뒤 임시 파일을 지우기 전에 둘째 쓰기가 같은 이름을 `"w"`로 열면, 하드 링크라 이미 붙은 기록이 잘리고 덮였다(서브에이전트가 스레드 둘로 재현). 이름에 `os.urandom(6).hex()`를 붙이고 `"x"`로 연다. 그 틈을 `Path.unlink`를 막아 차례로 흉내 낸 시험을 더했다. 둘째 쓰기가 같은 기록을 쓰면 잘린 뒤 같은 바이트로 다시 채워져 변이가 초록이어서, 둘째 쓰기에 다른 기록을 주었다.
+- 두 축 Minor: `write_record` 독스트링의 "쓰다 실패해도 남지 않는다"는 예외 길만 맞았다. 예외로 실패할 때로 좁히고, 프로세스가 죽으면 `.….tmp`가 남는 것, fsync가 없는 것, FAT의 `OSError`(재지 않았다)를 "못 보는 것"에 적었다. 일지의 "언제나 지운다"도 고쳤다. 기록을 쓰는 생산자인 티켓 10에 메모 둘(중단 기록의 회차 폴더 이름, 남는 임시 파일)을 더했다.
+- 두 축 Minor: 명세 248행의 "원본을 찾는 사람은 뿌리를 안다"는 근거 없는 닫힌 말이었고, "그 폴더를 짓는 데 쓰이지 않고"는 263행(번호를 기록 파일 이름과 폴더 이름에서 잡는다)과 부딪혔다. "이 칸은 그 셈에 쓰이지 않는다"로 좁히고, 커밋된 기록만으로는 원본의 자리를 알 수 없다는 대가로 고쳐 썼다.
+- 표준 축 Minor: 시험이 `os`를 통째로 허용해 `os.system`도 지나갔다. 모듈이 쓰는 `os`의 이름을 `getpid`·`urandom`·`link`로 좁히는 단언을 더했다.
+- 표준 축 Minor: 회차 폴더 이름의 난수 부분이 길이 상한 없이 긴 글을 받는 것을 모듈 독스트링 "못 보는 것"의 예로 더했다.
+- 명세 축 Nit: 티켓 06 메모가 `round_dir_name` 함수로 이름을 다시 짓는 것으로 읽혀, 회차를 열 때 지은 폴더 이름을 옮겨 넣는다고 고쳤다.
+- 변이 둘을 더했다(임시 파일 이름이 pid만 쓰고 그 이름을 덮어 연다, os의 하위 프로세스 길을 쓴다). 둘 다 손으로 넣어 실패 출력을 본 뒤 표지(`diff: b'2' != b'1'`, `'system'`)를 골랐다.
+
+남긴 것.
+- 필드 `Record.round_dir_name`과 함수 `round_dir_name`의 같은 이름(Mysterious Name, 판단 항목). 읽기는 지역 이름 `dir_name`으로 피했고, 칸 이름이 디스크 키와 같아야 읽기 쉽다.
+- `round_dir_name` 칸이 과제 id·갈래·번호를 되풀이하는 것(Primitive Obsession, 판단 항목). 사람이 기록에서 폴더 이름을 그대로 읽어 찾을 수 있게 둔다.
+- `_is_int`의 `TypeGuard`(Nit). 주석으로 두었다.
+- 명세 252행 주석을 제자리에서 고친 것(Nit). 이 PR이 처음 단 주석이라 아직 병합된 기록이 아니다.
+
+다시 돌린 것. 시험 131 passed, 변이 46 모두 기대대로(`--check` 통과, 마흔여섯 모두 표지). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+
+반영으로 새로 쓴 문장(봇 둘째 회차가 처음 본다): `write_record` 독스트링의 "쓰기가 예외로 실패하면 임시 파일을 지워 기록 파일이 남지 않으므로", "임시 파일 이름은 쓰기마다 난수를 붙여 겹치지 않는다", 그 "못 보는 것" 세 줄, 명세 248행 주석의 "이 칸은 그 셈에 쓰이지 않는다", 티켓 10의 메모 둘.
+
+커밋 전 `tools/sibling_overlap.py`가 1로 끝났다. origin/main이 db45998(harness 003, 프로브 결론 훅)로 움직였고 그 최신 일지 2026-10-23-13이 이 일지(옛 번호 12)보다 이름순으로 뒤라 2026-10-23-15로 옮겼다(`--move`, PR 본문의 번호도 고쳤다). origin/main을 합쳤고 바뀐 파일은 이 브랜치와 겹치지 않았다. `docs/agents/issue-tracker.md`에 더한 규약(결과를 본 뒤 바꾼 판정 기준과 그 까닭을 결과와 함께 적는다)은 프로브 README의 이번 문장이 이미 따른다.

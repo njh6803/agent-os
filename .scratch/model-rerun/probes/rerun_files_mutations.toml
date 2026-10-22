@@ -88,13 +88,14 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''with path.open("x", encoding="utf-8", newline="\n") as f:'''
-new = '''with path.open("w", encoding="utf-8", newline="\n") as f:'''
+old = '''os.link(tmp, path)  # 이미 있으면 FileExistsError. 덮지 않는다'''
+new = '''os.replace(tmp, path)'''
 
 [[mutation]]
 name = "다음 회차 번호가 회차 폴더를 보지 않는다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "기록이_없는_회차_폴더를"]
 expect = "red"
+expect_output = ["assert 2 == 5"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -105,6 +106,7 @@ new = '''found += []'''
 name = "회차 폴더 이름을 왼쪽에서 자른다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "회차_폴더_이름을_짓고_푼다"]
 expect = "red"
+expect_output = ["assert None is not None"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -115,6 +117,7 @@ new = '''parts = name.split("-", 3)'''
 name = "노드 ID 를 마지막 :: 에서 자른다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "노드_ID_에서"]
 expect = "red"
+expect_output = ["assert 'tests/tools/test_x.py::TestC' == 'tests/tools/test_x.py'"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -197,6 +200,7 @@ new = '''return v if isinstance(v, int) and _is_int(v) else None'''
 name = "게이트가 하나라도 초록이면 초록이다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "판정이_읽는_칸을_모은다"]
 expect = "red"
+expect_output = ["assert True is False", ").gates_green"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -207,6 +211,7 @@ new = '''gates_green = any(g.exit_code == 0 and not g.timed_out for g in o.gates
 name = "숨은 시험이 0개면 통과로 읽는다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "돌지_않았으면_빈_값이다"]
 expect = "red"
+expect_output = ["assert True is False", ").hidden_passed"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -217,6 +222,7 @@ new = '''hidden_passed = o.hidden.passed == o.hidden.total'''
 name = "하위 프로세스 모듈을 import 한다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_모듈만_import"]
 expect = "red"
+expect_output = ["Extra items in the left set", "'subprocess'"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -293,17 +299,6 @@ expect_output = ["DID NOT RAISE"]
 file = "tools/rerun_files.py"
 old = '''_VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")'''
 new = '''_VERSION = re.compile(r"(?s).+")'''
-
-[[mutation]]
-name = "회차 폴더 경로 칸이 아무 글이나 받는다"
-tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
-expect = "red"
-expect_output = ["DID NOT RAISE"]
-
-[[mutation.edit]]
-file = "tools/rerun_files.py"
-old = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")'''
-new = '''_ROUND_DIR = re.compile(r"(?s).+")'''
 
 [[mutation]]
 name = "실패 노드 칸이 아무 글이나 받는다"
@@ -387,7 +382,7 @@ old = '''if end.kind == END_DONE and outcome.commit is None:'''
 new = '''if False:'''
 
 [[mutation]]
-name = "회차 폴더 경로의 끝을 이 회차와 맞대지 않는다"
+name = "회차 폴더 이름을 이 회차와 맞대지 않는다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "이_회차의_폴더다"]
 expect = "red"
 expect_output = ["DID NOT RAISE"]
@@ -456,7 +451,7 @@ new = '''
     )
 '''
 
-# PR 직전 bug-perf-review 를 반영한 갈래(일지 2026-10-23-12 "PR 직전 리뷰").
+# PR 직전 bug-perf-review 를 반영한 갈래(일지 2026-10-23-15 "PR 직전 리뷰").
 
 [[mutation]]
 name = "float 로 담지 못하는 큰 정수가 OverflowError 로 샌다"
@@ -492,17 +487,6 @@ old = '''except ValueError as e:'''
 new = '''except TypeError as e:'''
 
 [[mutation]]
-name = "회차 폴더 경로가 U+2029 를 받는다"
-tests = ["tests/tools/test_rerun_files.py", "-k", "줄을_끊는_문자를"]
-expect = "red"
-expect_output = ["DID NOT RAISE"]
-
-[[mutation.edit]]
-file = "tools/rerun_files.py"
-old = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029\"'=]+")'''
-new = '''_ROUND_DIR = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\"'=]+")'''
-
-[[mutation]]
 name = "실패 노드가 U+0085 를 받는다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "줄을_끊는_문자를"]
 expect = "red"
@@ -512,3 +496,63 @@ expect_output = ["DID NOT RAISE"]
 file = "tools/rerun_files.py"
 old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")'''
 new = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\u2028\u2029]+")'''
+
+[[mutation]]
+name = "기록 파일에 바로 쓴다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰다_실패하면"]
+expect = "red"
+expect_output = ["Left contains one more item"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''with tmp.open("x", encoding="utf-8", newline="\n") as f:'''
+new = '''with path.open("x", encoding="utf-8", newline="\n") as f:'''
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''os.link(tmp, path)  # 이미 있으면 FileExistsError. 덮지 않는다'''
+new = '''pass'''
+
+[[mutation]]
+name = "쓰다 실패한 임시 파일을 지우지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰다_실패하면"]
+expect = "red"
+expect_output = ["Left contains one more item"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''tmp.unlink(missing_ok=True)'''
+new = '''pass'''
+
+[[mutation]]
+name = "임시 파일 이름이 pid 만 쓰고 그 이름을 덮어 연다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "지우기_전에_같은_회차를"]
+expect = "red"
+expect_output = ["diff: b'2' != b'1'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''tmp = path.with_name(f".{path.name}.{os.getpid()}-{os.urandom(6).hex()}.tmp")'''
+new = '''tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")'''
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''with tmp.open("x", encoding="utf-8", newline="\n") as f:'''
+new = '''with tmp.open("w", encoding="utf-8", newline="\n") as f:'''
+
+[[mutation]]
+name = "os 의 하위 프로세스 길을 쓴다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_모듈만_import"]
+expect = "red"
+expect_output = ["'system'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+import os
+'''
+new = '''
+import os
+
+_SYSTEM = os.system
+'''
