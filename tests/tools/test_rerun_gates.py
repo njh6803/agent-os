@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -785,6 +786,32 @@ def test_클론에_없는_결과_커밋이면_GateError이고_남는_것이_없�
         _돌기(place, source, task, "0" * 40)
 
     _걷혔다(place)
+
+
+@pytest.mark.parametrize(
+    ("raised", "said"),
+    [
+        (subprocess.TimeoutExpired(["git"], 60), "가 시간 제한(60초)을 넘겼다"),
+        (OSError("띄우지 못함"), "를 띄우지 못했다: 띄우지 못함"),
+    ],
+    ids=["시간_넘김", "띄우지_못함"],
+)
+def test_git_이_시간을_넘기거나_뜨지_못하면_GateError다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raised: BaseException, said: str
+) -> None:
+    """`.claude/rules/tools.md`의 시간 제한 항목대로 넘김을 이 도구의 실패 갈래로 센다."""
+    place, source, task, commit = _회차(tmp_path, {"calc.py": _M_CALC})
+
+    def 막는_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        raise raised
+
+    monkeypatch.setattr(subprocess, "run", 막는_run)
+    with pytest.raises(GateError, match=re.escape(f"git cat-file blob {task.merge}:")) as caught:
+        _돌기(place, source, task, commit)
+
+    assert said in str(caught.value)
+    assert caught.value.__cause__ is raised
+    assert not (place.path / "gate").exists()
 
 
 def test_원본에서_M의_파일을_읽지_못하면_작업_트리를_짓기_전에_GateError다(tmp_path: Path) -> None:

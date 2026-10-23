@@ -1022,15 +1022,8 @@ def test_링크_끊기는_안의_링크만_끊고_바깥과_안의_파일은_둔
     assert not os.path.lexists(folder / "again")
 
 
-def test_링크_끊기는_읽지_못한_폴더와_끊지_못한_링크를_준다(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    assert cut_links(tmp_path / "없음") == [str(tmp_path / "없음")]
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    folder = tmp_path / "worktree"
-    folder.mkdir()
-    _link(folder / "stuck", outside)
+def _stuck_을_끊지_못하게_한다(monkeypatch: pytest.MonkeyPatch) -> None:
+    """이름이 `stuck`인 링크만 끊지 못하게 `os.unlink`를 바꾼다."""
     진짜_unlink = os.unlink
 
     def 막는_unlink(path: str, *, dir_fd: int | None = None) -> None:
@@ -1039,7 +1032,38 @@ def test_링크_끊기는_읽지_못한_폴더와_끊지_못한_링크를_준다
         진짜_unlink(path, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "unlink", 막는_unlink)
+
+
+def _끊지_못할_링크가_든_작업_트리(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`tmp_path/worktree/stuck`이 바깥을 가리키고 그 링크를 끊지 못하는 작업 트리."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    folder = tmp_path / "worktree"
+    folder.mkdir()
+    _link(folder / "stuck", outside)
+    _stuck_을_끊지_못하게_한다(monkeypatch)
+    return folder
+
+
+def test_링크_끊기는_읽지_못한_폴더와_끊지_못한_링크를_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert cut_links(tmp_path / "없음") == [str(tmp_path / "없음")]
+    folder = _끊지_못할_링크가_든_작업_트리(tmp_path, monkeypatch)
     assert cut_links(folder) == [str(folder / "stuck")]
+
+
+def test_링크_끊기는_끝에_구분자가_붙은_경로에서도_구분자를_겹치지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`long_path`가 끝 구분자를 떼는 경로(상대 경로, 리눅스의 절대 경로)에서 넘긴 머리 뒤에
+    구분자를 하나 더 붙였다(티켓 07의 반영분 셀프 리뷰, PR #372 claude-review 첫 회차의 Nit)."""
+    folder = _끊지_못할_링크가_든_작업_트리(tmp_path, monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    assert cut_links("worktree" + os.sep) == [os.path.join("worktree", "stuck")]
+    assert cut_links(str(folder) + os.sep) == [str(folder / "stuck")]
+    # 읽지 못한 상대 경로 뿌리는 넘긴 꼴 그대로 준다(구분자를 붙이지 않는다)
+    assert cut_links("없음") == ["없음"]
 
 
 def test_링크_끊기는_MAX_PATH_를_넘는_깊이의_링크도_끊고_넘긴_꼴의_경로를_준다(
@@ -1062,14 +1086,7 @@ def test_링크_끊기는_MAX_PATH_를_넘는_깊이의_링크도_끊고_넘긴_
     assert (outside / "keep.txt").read_text(encoding="utf-8") == "남는다"
 
     _link(Path(long_path(deep / "stuck")), outside)
-    진짜_unlink = os.unlink
-
-    def 막는_unlink(path: str, *, dir_fd: int | None = None) -> None:
-        if os.path.basename(path) == "stuck":
-            raise PermissionError(path)
-        진짜_unlink(path, dir_fd=dir_fd)
-
-    monkeypatch.setattr(os, "unlink", 막는_unlink)
+    _stuck_을_끊지_못하게_한다(monkeypatch)
     assert cut_links(folder) == [str(deep / "stuck")]
 
 

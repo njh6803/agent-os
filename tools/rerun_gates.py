@@ -88,6 +88,7 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 from tools.rerun_files import (
     GATE_COMMANDS,
@@ -285,19 +286,7 @@ class _Git:
         """출력이 필요한 git 하나. 손자를 띄우지 않는 명령(`cat-file`, `worktree list`)만 쓴다.
         0이 아니게 끝나거나 띄우지 못하거나 시간을 넘기면 `GateError`다."""
         what = f"git {' '.join(args)}"
-        try:
-            done = subprocess.run(
-                [self.exe, "-C", str(repo), *args],
-                capture_output=True,
-                check=False,
-                timeout=self.timeout,
-                env=dict(self.env),
-                stdin=subprocess.DEVNULL,
-            )
-        except subprocess.TimeoutExpired as error:
-            raise GateError(f"{what} 가 시간 제한({self.timeout:g}초)을 넘겼다") from error
-        except (OSError, ValueError) as error:
-            raise GateError(f"{what} 를 띄우지 못했다: {error}") from error
+        done = self._call(repo, args, what, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if done.returncode != 0:
             raise GateError(f"{what} 가 {done.returncode}로 끝났다: {_last_line(done.stderr)}")
         return done.stdout
@@ -309,22 +298,28 @@ class _Git:
         with log.open("ab") as sink:
             sink.write(f"$ git {' '.join(args)}\n".encode())
             sink.flush()
-            try:
-                done = subprocess.run(
-                    [self.exe, "-C", str(repo), *args],
-                    env=dict(self.env),
-                    stdin=subprocess.DEVNULL,
-                    stdout=sink,
-                    stderr=subprocess.STDOUT,
-                    check=False,
-                    timeout=self.timeout,
-                )
-            except subprocess.TimeoutExpired as error:
-                raise GateError(f"{what} 가 시간 제한({self.timeout:g}초)을 넘겼다") from error
-            except (OSError, ValueError) as error:
-                raise GateError(f"{what} 를 띄우지 못했다: {error}") from error
+            done = self._call(repo, args, what, stdout=sink, stderr=subprocess.STDOUT)
         if done.returncode != 0:
             raise GateError(f"{what} 가 {done.returncode}로 끝났다(출력은 {log})")
+
+    def _call(
+        self, repo: Path, args: Sequence[str], what: str, *, stdout: int | IO[bytes], stderr: int
+    ) -> subprocess.CompletedProcess[bytes]:
+        """git 하나를 띄워 끝나기를 기다린다. 띄우지 못하거나 시간을 넘기면 `GateError`다."""
+        try:
+            return subprocess.run(
+                [self.exe, "-C", str(repo), *args],
+                env=dict(self.env),
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                check=False,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise GateError(f"{what} 가 시간 제한({self.timeout:g}초)을 넘겼다") from error
+        except (OSError, ValueError) as error:
+            raise GateError(f"{what} 를 띄우지 못했다: {error}") from error
 
     def registration(self, clone: Path, place: Path) -> Registration:
         """`place`가 `clone`의 작업 트리로 등록돼 있는지."""

@@ -987,9 +987,9 @@ def cut_links(folder: str | os.PathLike[str]) -> list[str]:
     훑기와 끊기는 `long_path` 로 한다. 윈도에서 긴 경로가 꺼져 있으면 MAX_PATH(260자)에 걸리는 깊은
     폴더(게이트 작업 트리의 `web/node_modules/.pnpm` 아래)를 평범한 경로로 읽지 못해 그 폴더를
     끊지 못한 것으로 냈다(티켓 07의 PR 직전 bug-perf-review). 돌려주는 경로는 넘긴 `folder` 를
-    머리로 두고 그 아래를 운영 체제의 구분자로 잇는다. 끝에 구분자가 붙은 상대 경로면 구분자가
-    겹친다. `..` 이 든 절대 경로는 `long_path` 가 풀지 않아 `folder` 를 읽지 못한 폴더로 준다.
-    그러면 다시 풀기의 세 도구는 지우거나 걷지 않고 알린다.
+    머리로 두고 그 아래를 `os.path.join` 으로 잇는다. 읽지 못한 뿌리는 넘긴 꼴 그대로 준다. `..` 이
+    든 절대 경로는 `long_path` 가 풀지 않아 `folder` 를 읽지 못한 폴더로 준다. 그러면 다시 풀기의
+    세 도구는 지우거나 걷지 않고 알린다.
     """
     root = os.fspath(folder)
     scan_root = long_path(root)
@@ -997,7 +997,10 @@ def cut_links(folder: str | os.PathLike[str]) -> list[str]:
         return [root]
 
     def shown(path: str) -> str:
-        return root + path[len(scan_root) :]
+        # `long_path` 가 끝 구분자를 뗀 뿌리(상대 경로, 리눅스의 절대 경로)에 이어 붙이면
+        # 구분자가 겹친다
+        rest = path[len(scan_root) :].lstrip(os.sep)
+        return os.path.join(root, rest) if rest else root
 
     left: list[str] = []
     pending = [scan_root]

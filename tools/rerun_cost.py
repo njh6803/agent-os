@@ -226,31 +226,47 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
         usd += _usd(price, i, o, c, w5, w1)
         input, output, read, write = input + i, output + o, read + c, write + w5 + w1
         seen.add(model)
-    substituted: dict[str, Tokens] = {}
-    for u in model_usage:
-        model = _canonical(u.model)
-        if model in seen:
-            continue
-        usd += _usd(
-            _price(model),
-            u.input_tokens,
-            u.output_tokens,
-            u.cache_read_tokens,
-            u.cache_write_tokens,
-            0,
-        )
-        used = Tokens(
-            input=u.input_tokens,
-            output=u.output_tokens,
-            cache_read=u.cache_read_tokens,
-            cache_write=u.cache_write_tokens,
-            thinking=u.thinking_tokens,
-        )
-        before = substituted.get(model)
-        substituted[model] = used if before is None else _add_tokens(before, used)
+    # 기록에 응답이 없는 모델만 `modelUsage`로 대신 셈하고, 응답 셈과 같은 누산기에 차례로 더한다.
+    # 대신 셈의 합을 따로 구해 더하면 부동소수점 더하기의 차례가 바뀌어 값이 달라질 수 있다
+    absent = [u for u in model_usage if _canonical(u.model) not in seen]
+    for u in absent:
+        usd += _substitute_usd(u)
     tokens = Tokens(input=input, output=output, cache_read=read, cache_write=write, thinking=None)
-    substitutes = tuple(Substitute(model=m, tokens=t) for m, t in substituted.items())
+    substitutes = _merge_substitutes(_substitute(u) for u in absent)
     return Cost(official_usd=usd, tokens=tokens, substitutes=substitutes)
+
+
+def _substitute_usd(u: ModelUsage) -> float:
+    """`modelUsage` 하나의 대신 셈 금액. 캐시 쓰기는 모두 5분 배수로 셈한다."""
+    return _usd(
+        _price(_canonical(u.model)),
+        u.input_tokens,
+        u.output_tokens,
+        u.cache_read_tokens,
+        u.cache_write_tokens,
+        0,
+    )
+
+
+def _substitute(u: ModelUsage) -> Substitute:
+    """`modelUsage` 하나를 대신 셈한 모델과 그 토큰으로 옮긴다."""
+    tokens = Tokens(
+        input=u.input_tokens,
+        output=u.output_tokens,
+        cache_read=u.cache_read_tokens,
+        cache_write=u.cache_write_tokens,
+        thinking=u.thinking_tokens,
+    )
+    return Substitute(model=_canonical(u.model), tokens=tokens)
+
+
+def _merge_substitutes(substitutes: Iterable[Substitute]) -> tuple[Substitute, ...]:
+    """같은 모델의 토큰을 처음 나온 자리에 한 항목으로 더한다."""
+    merged: dict[str, Tokens] = {}
+    for s in substitutes:
+        before = merged.get(s.model)
+        merged[s.model] = s.tokens if before is None else _add_tokens(before, s.tokens)
+    return tuple(Substitute(model=m, tokens=t) for m, t in merged.items())
 
 
 def round_cost(costs: Iterable[Cost]) -> Cost:
@@ -258,15 +274,12 @@ def round_cost(costs: Iterable[Cost]) -> Cost:
     어느 쪽이든 빈 토큰 칸이 있으면 그 칸의 합은 빈 값이다."""
     usd = 0.0
     tokens = Tokens(input=0, output=0, cache_read=0, cache_write=0, thinking=None)
-    merged: dict[str, Tokens] = {}
+    substitutes: list[Substitute] = []
     for c in costs:
         usd += c.official_usd
         tokens = _add_tokens(tokens, c.tokens)
-        for s in c.substitutes:
-            before = merged.get(s.model)
-            merged[s.model] = s.tokens if before is None else _add_tokens(before, s.tokens)
-    substitutes = tuple(Substitute(model=m, tokens=t) for m, t in merged.items())
-    return Cost(official_usd=usd, tokens=tokens, substitutes=substitutes)
+        substitutes += c.substitutes
+    return Cost(official_usd=usd, tokens=tokens, substitutes=_merge_substitutes(substitutes))
 
 
 def transcript_lines(transcript: Path) -> list[str]:

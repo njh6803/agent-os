@@ -525,6 +525,29 @@ old = '''    scan_root = long_path(root)'''
 new = '''    scan_root = root'''
 
 [[mutation]]
+name = "링크 끊기가 끝 구분자를 뗀 뿌리에 그대로 이어 붙인다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "구분자를_겹치지"]
+expect = "red"
+expect_output = ["At index 0 diff: 'worktree"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        rest = path[len(scan_root) :].lstrip(os.sep)
+        return os.path.join(root, rest) if rest else root'''
+new = '''        return root + path[len(scan_root) :]'''
+
+[[mutation]]
+name = "링크 끊기가 읽지 못한 뿌리에도 구분자를 붙인다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크_끊기는_읽지_못한"]
+expect = "red"
+expect_output = ["없음\\\\' != "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return os.path.join(root, rest) if rest else root'''
+new = '''        return os.path.join(root, rest)'''
+
+[[mutation]]
 name = "숨은 시험 노드가 없어도 pytest 를 띄운다"
 tests = ["tests/tools/test_rerun_gates.py", "-k", "숨은_시험_노드가_없으면"]
 expect = "red"
@@ -547,3 +570,29 @@ expect_output = ["assert Hidden(passed=1, total=3,"]
 file = "tools/rerun_gates.py"
 old = '''    nodes = tuple(dict.fromkeys(nodes))'''
 new = '''    nodes = tuple(nodes)'''
+
+[[mutation]]
+name = "git 의 시간 넘김을 GateError 로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "시간을_넘기거나 and 시간_넘김"]
+expect = "red"
+expect_output = ["subprocess.TimeoutExpired: Command '['git']' timed out after 60 seconds"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        except subprocess.TimeoutExpired as error:
+            raise GateError(f"{what} 가 시간 제한({self.timeout:g}초)을 넘겼다") from error
+'''
+new = ''
+
+[[mutation]]
+name = "git 을 띄우지 못한 것을 GateError 로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "시간을_넘기거나 and 띄우지_못함"]
+expect = "red"
+expect_output = ["OSError: 띄우지 못함"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        except (OSError, ValueError) as error:
+            raise GateError(f"{what} 를 띄우지 못했다: {error}") from error
+'''
+new = ''
