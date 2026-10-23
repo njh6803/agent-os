@@ -2071,6 +2071,7 @@ def test_main_은_모르는_선택을_변이_이름으로_읽지_않고_알린�
 
     assert code == 2
     assert any("모르는 선택: --chek" in 한줄 for 한줄 in 줄)
+    assert any("번호(따옴표 없이" in 한줄 for 한줄 in 줄), 줄
 
 
 def test_main_은_기대대로면_0_어긋나면_1이다(tmp_path: Path) -> None:

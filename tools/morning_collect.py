@@ -76,9 +76,9 @@
 - 기록 파일이 창보다 먼저 바뀐 것은 읽지 않는다(수정 시각으로 거른다). 기록이 지워진 세션은 없다.
 - PR 브랜치 이름을 다시 쓰면 앞 작업의 호출이 뒤 PR에 든다. 병합되지 않은 작업은 작업 표에 없다.
 - 훅의 날짜는 `hook_report`처럼 UTC 날짜다. 알림 뒤 모델이 따랐는지는 모른다(수집 안 됨). 어느
-  훅인지 가르지 못한 막음은 건수만 적는다. `hook_report`가 그 막음을 가르는 이유 머리(막은 이유의
-  첫 줄)에는 막힌 명령의 조각이 들 수 있어, 지우지 않는 수집 JSON에 남기지 않는다(원칙 V,
-  `.claude/rules/tools.md`의 허용 목록 항목).
+  훅인지 가르지 못한 막음과 알림은 종류마다 건수만 적는다. `hook_report`가 그것을 가르는 머리(막은
+  이유나 짝 없는 계기 글의 첫 줄)에는 막힌 명령의 조각이나 경로가 들 수 있어, 지우지 않는 수집
+  JSON에 남기지 않는다(원칙 V, `.claude/rules/tools.md`의 허용 목록 항목).
 - 리뷰 왕복은 커밋 수라, 한 번의 반영을 커밋 여럿으로 나누면 크게 센다. main을 합친 커밋은 머리줄이
   `Merge `로 시작하는 것으로 가르므로, 다른 머리줄로 합치면 센다.
 - 스윕은 지시문의 `모델:` 줄 표지(`레벨 스윕`)를 보지 않아 판정의 모집단보다 넓을 수 있고, 첫 사람
@@ -1306,7 +1306,7 @@ def _waste_piece(p: token_report.Period, main_checkout: Path, wanted: Collection
 def hook_section(
     hooks: HookScan | str, day: date, runs: Sequence[tuple[str, float]] | None, src: Sources
 ) -> Part:
-    """`hooks`는 `_gather_hooks`가 읽은 것이거나 읽지 못한 까닭이다. `runs`는 main의 최근
+    """`hooks`는 `gather_hooks`가 읽은 것이거나 읽지 못한 까닭이다. `runs`는 main의 최근
     CI(`ci_runs`)이고, 읽지 못했으면 None이다."""
     got = Collected()
     source = (
@@ -1350,14 +1350,15 @@ def hook_section(
             )
         )
     start = day - timedelta(days=HOOK_HALF * 2 - 1)
-    unattributed = sum(
-        1
+    unattributed = Counter(
+        f.kind
         for f in hooks.firings
         if f.hook in (hook_report.UNKNOWN, hook_report.AMBIGUOUS) and start <= f.day <= day
     )
     lines = [
         f"- 건수는 최근 {HOOK_HALF}일({day - timedelta(days=HOOK_HALF - 1)} ~ {day}, UTC 날짜)이고,"
-        f" 어느 훅인지 가르지 못한 막음이 {start} ~ {day}에 {unattributed}건 있다.",
+        f" 어느 훅인지 가르지 못한 막음이 {start} ~ {day}에 {unattributed[hook_report.BLOCK]}건,"
+        f" 알림이 {unattributed[hook_report.NOTICE]}건 있다.",
         f"- 발동하고 등록된 훅 {sum(1 for r in hooks.rows if r.verdict == KEEP)}개는 판정이"
         f" `{KEEP}`이라 표에서 뺐다. 표에는 손볼 것이 있는 훅만 남긴다.",
         *hook_legend(hooks.rows),
@@ -2349,18 +2350,19 @@ def _handoff_from(root: Path) -> date | None:
         return None
 
 
-def _gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
+def gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
     """등록된 훅과 그 발동(`hook_report`), 표에 오른 훅 파일의 하는 일. 설정·들인 날·주 체크아웃을
     읽지 못하면 그 까닭이다."""
     try:
         settings = (root / ".claude" / "settings.json").read_text(encoding="utf-8")
         hooks = hook_report.registered_hooks(settings)
+        prompt_hooks = hook_report.registered_hooks(settings, hook_report.PROMPT_EVENT)
         introduced = hook_report.introduced_dates(root, hooks)
         repo = hook_report.main_checkout_folder(root)
     except (OSError, UnicodeDecodeError, ValueError) as error:
         return str(error)
     prints = hook_report.fingerprints(root / "tools", hooks)
-    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints)
+    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints, prompt_hooks)
     rows = hook_rows(scan.firings, hooks, introduced, day, scan.earliest)
     duties: dict[str, str] = {}
     for r in rows:
@@ -2566,7 +2568,7 @@ def collect(
         model = Part(merged_unknown(model.section), Collected())
     active, leftover = _gather_worktrees(root, projects, entries, merged_all, opened, now)
     journal_path, journal = latest_journal(root)
-    hooks = _gather_hooks(root, projects, day)
+    hooks = gather_hooks(root, projects, day)
     runs = ci_runs(root) if isinstance(hooks, HookScan) else None  # 훅 표가 없는 절은 CI 줄도 없다
 
     parts = [

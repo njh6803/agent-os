@@ -1,0 +1,284 @@
+# 티켓 02(숨은 시험 가르기, `tools/rerun_hidden.py`)의 시험이 실제로 무는지 변이로 본다(implement
+# 스킬, 대기열 29). 이 티켓의 시험은 구현 전에 모듈이 없어 수집 오류로만 빨갰고, 갈림 하나하나는 빨강을
+# 본 적이 없다. 티켓이 든 대상(조건 2의 실패 종류 셋, 조건 3의 B 유무)과 함께 조건 1, 오류 요소, junit
+# 의 나쁜 쪽 고르기, 바깥 층의 `git grep` 인자, 모음 오류 뒤 이어 돌기, 링크 끊기, 덮을 자리의 링크,
+# 자식 환경 벗기기를 하나씩 되돌린다. 표지는 고른 단언이 실패할 때만 나오는 문구다(`.claude/rules/probes.md`
+# 첫 항목).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_hidden_mutations.toml
+
+[[mutation]]
+name = "조건 2 가 AttributeError 를 빼지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_2_는_B_에서 and AttributeError"]
+expect = "red"
+expect_output = ["assert ('tests/test_a.py::test_a',) == ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''_NAME_ERRORS = ("AttributeError", "NameError", "TypeError")'''
+new = '''_NAME_ERRORS = ("NameError", "TypeError")'''
+
+[[mutation]]
+name = "조건 2 가 NameError 를 빼지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_2_는_B_에서 and NameError"]
+expect = "red"
+expect_output = ["assert ('tests/test_a.py::test_a',) == ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''_NAME_ERRORS = ("AttributeError", "NameError", "TypeError")'''
+new = '''_NAME_ERRORS = ("AttributeError", "TypeError")'''
+
+[[mutation]]
+name = "조건 2 가 TypeError 를 빼지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_2_는_B_에서 and TypeError"]
+expect = "red"
+expect_output = ["assert ('tests/test_a.py::test_a',) == ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''_NAME_ERRORS = ("AttributeError", "NameError", "TypeError")'''
+new = '''_NAME_ERRORS = ("AttributeError", "NameError")'''
+
+[[mutation]]
+name = "조건 2 가 오류 요소를 남긴다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_2_는_B_에서 and 오류"]
+expect = "red"
+expect_output = ["assert ('tests/test_a.py::test_a',) == ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    if base.kind != FAILED:'''
+new = '''    if base.kind in (PASSED, SKIPPED):'''
+
+[[mutation]]
+name = "조건 3 이 B 에 있는지 보지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_3_은_M_의"]
+expect = "red"
+expect_output = ["assert () == ('tests/test_a.py::test_a',)"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if term.in_merge and not term.in_base:'''
+new = '''        if term.in_merge:'''
+
+[[mutation]]
+name = "조건 1 이 첫째 실행만 본다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "조건_1_은"]
+expect = "red"
+expect_output = ["assert ('tests/test_a.py::test_a',) == ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    for ordinal, run in zip(_ORDINALS, node.merge_runs, strict=True):'''
+new = '''    for ordinal, run in zip(_ORDINALS[:1], node.merge_runs[:1], strict=True):'''
+
+[[mutation]]
+name = "같은 노드의 testcase 둘 가운데 처음 것을 든다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "노드_ID_로_푼다"]
+expect = "red"
+expect_output = ["{'tests/test_a.py::test_pass_then_teardown': Outcome(kind='통과', message='')} !="]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''            if before is None or _SEVERITY[got.kind] > _SEVERITY[before.kind]:'''
+new = '''            if before is None:'''
+
+[[mutation]]
+name = "줄바꿈이 든 문자열을 나누지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "줄바꿈이_든_문자열은"]
+expect = "red"
+expect_output = ["assert ('ab-old\\nc\\ncd-new\\n',) == ('ab-old', 'cd-new')"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''sub.value.split("\n")'''
+new = '''[sub.value]'''
+
+[[mutation]]
+name = "git grep 에 -e 없이 패턴을 넘긴다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "대시로_시작하는"]
+expect = "red"
+expect_output = ["git grep 이 129로 끝났다"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''"-e", text, rev]'''
+new = '''text, rev]'''
+
+[[mutation]]
+name = "이름을 낱말 경계 없이 찾는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "대시로_시작하는"]
+expect = "red"
+expect_output = ["AssertionError: 이름을 낱말 경계 없이 찾았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''*(["-w"] if kind == NAME else [])'''
+new = '''*([] if kind == NAME else [])'''
+
+[[mutation]]
+name = "M 에서 tests 아래도 찾는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "대시로_시작하는"]
+expect = "red"
+expect_output = ["AssertionError: tests/ 안을 찾았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        args += ["--", ":(top,exclude)tests"]'''
+new = '''        pass'''
+
+[[mutation]]
+name = "모음 오류가 난 파일이 있으면 pytest 가 멈춘다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "끝까지_나온다"]
+expect = "red"
+expect_output = ["Extra items in the right set"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        "--continue-on-collection-errors",
+'''
+new = ""
+
+[[mutation]]
+name = "pytest 에 파일 대신 노드 ID 를 넘긴다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "끝까지_나온다"]
+expect = "red"
+expect_output = ["Extra items in the right set"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        *dict.fromkeys(t.file for t in tests),'''
+new = '''        *(t.selector for t in tests),'''
+
+[[mutation]]
+name = "걷기 전에 링크를 끊지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "링크만_끊고"]
+expect = "red"
+expect_output = ["FileNotFoundError"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        left = _cut_links(place)'''
+new = '''        left: list[str] = []'''
+
+[[mutation]]
+name = "덮을 자리의 링크를 보지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "덮을_자리의"]
+expect = "red"
+expect_output = ["AssertionError: 링크를 지나 덮을 자리를 냈다"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if current.is_symlink() or current.is_junction():'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "자식 환경에 VIRTUAL_ENV 를 남긴다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "VIRTUAL_ENV"]
+expect = "red"
+expect_output = ["assert 'VIRTUAL_ENV' not in"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    drop = {*REPO_LOCATION_VARS, "VIRTUAL_ENV"}'''
+new = '''    drop = {*REPO_LOCATION_VARS}'''
+
+[[mutation]]
+name = "자식 환경에 저장소 변수를 남긴다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "VIRTUAL_ENV"]
+expect = "red"
+expect_output = ["AssertionError: Failure(reason="]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    drop = {*REPO_LOCATION_VARS, "VIRTUAL_ENV"}'''
+new = '''    drop = {"VIRTUAL_ENV"}  # 저장소 변수를 남긴다'''
+
+[[mutation]]
+name = "M 에서 돌지 않은 바뀐 시험을 노드로 넣지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "M_결과에서"]
+expect = "red"
+expect_output = ["Right contains one more item: NodeFacts(node_id='tests/test_a.py::test_llm'"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    nodes += [selector for selector in terms if selector not in seen]'''
+new = '''    nodes += []'''
+
+[[mutation]]
+name = "덮을 자리를 쓰지 못한 OSError 를 실패 갈래로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "덮을_자리를_쓰지"]
+expect = "red"
+expect_output = ["FileExistsError"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''            raise CandidateError(f"B 의 작업 트리에 덮지 못했다: {rel}: {error}") from error'''
+new = '''            raise'''
+
+[[mutation]]
+name = "BOM 을 벗기지 않고 푼다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "BOM_으로_시작하는"]
+expect = "red"
+expect_output = ["CandidateError: M 의 시험 파일을 풀지 못했다: tests/test_a.py"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        return ast.parse(source.removeprefix(chr(0xFEFF)))'''
+new = '''        return ast.parse(source)'''
+
+[[mutation]]
+name = "B 의 pytest 가 junit 을 남기지 않아도 실패 갈래로 세지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "불러오지_못하는_conftest"]
+expect = "red"
+expect_output = ["where False = isinstance("]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    except OSError as error:
+        raise CandidateError(
+            f"pytest 가 junit xml 을 남기지 않았다(종료 {code}, {worktree}): {_log_tail(log)}"
+        ) from error'''
+new = '''    except OSError:
+        text = "<testsuites/>"'''
+
+[[mutation]]
+name = "문자열 상수를 값이 아니라 소스 표기로 모은다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "이어_붙이거나_이스케이프"]
+expect = "red"
+expect_output = ["assert ('a\\\\tb', 'long-message') =="]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''                strings.update(line for line in sub.value.split("\n") if len(line) >= 2)'''
+new = '''                strings.update(
+                    line
+                    for line in sub.value.encode("unicode_escape").decode("ascii").split("\n")
+                    if len(line) >= 2
+                )'''
+
+[[mutation]]
+name = "M 의 풀리지 않는 파일을 시험이 없는 것으로 본다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "M_의_시험_파일이_풀리지"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if tree is None:
+            raise CandidateError(f"M 의 시험 파일을 풀지 못했다: {file}")'''
+new = '''        if tree is None:
+            continue'''
+
+[[mutation]]
+name = "M 의 풀리지 않는 파일이 있어도 후보가 성공으로 끝난다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "후보의_실패_갈래이고"]
+expect = "red"
+expect_output = ["AssertionError: Hidden(hidden_tests="]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''        if tree is None:
+            raise CandidateError(f"M 의 시험 파일을 풀지 못했다: {file}")'''
+new = '''        if tree is None:
+            continue'''
