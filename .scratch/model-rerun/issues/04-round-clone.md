@@ -49,4 +49,4 @@
 
 ### 구현 메모
 
-- 상위 검사(18행)는 `.claude/`에 더해 `CLAUDE.md`·`CLAUDE.local.md`도 보고, 홈의 `CLAUDE.md`도 센다(홈의 `.claude/`만 뺀다). 명세의 그 주석과 이 티켓은 검사 대상을 `.claude/`로 적었지만, 둘 다 목적을 "상위의 설정과 `CLAUDE.md`가 세션에 실리는 것을 막는다"로 적었고 상위 폴더의 `CLAUDE.md`는 `.claude/` 없이도 세션에 실린다(`docs/constitution/operations.md` 환경 규약 상세, `.scratch/harness/probes/claude_md_parent.py`). 명세의 글은 고치지 않았다(일지 2026-10-23-16의 셀프 리뷰).
+- 상위 검사(18행)는 `.claude/`에 더해 `CLAUDE.md`·`CLAUDE.local.md`도 보고, 홈의 `CLAUDE.md`도 센다(홈의 `.claude/`만 뺀다). 명세의 그 주석과 이 티켓은 검사 대상을 `.claude/`로 적었지만, 둘 다 목적을 "상위의 설정과 `CLAUDE.md`가 세션에 실리는 것을 막는다"로 적었고 상위 폴더의 `CLAUDE.md`는 `.claude/` 없이도 세션에 실린다(`docs/constitution/operations.md` 환경 규약 상세, `.scratch/harness/probes/claude_md_parent.py`). 명세의 글은 고치지 않았다(일지 2026-10-23-25의 셀프 리뷰).

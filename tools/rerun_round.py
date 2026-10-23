@@ -12,9 +12,8 @@
    `.claude/`(홈의 것은 뺀다)와 `CLAUDE.md`·`CLAUDE.local.md`가 없는지 본다. 머리 견줌은 링크를 풀지
    않은 꼴(`abspath`)과 링크를 푼 꼴(`realpath`)을 둘 다 본다. 윈도의 `abspath`는 윈도가 그 경로를
    열 때처럼 마지막 조각에서는 끝의 점과 공백을 모두 떼고, 가운데 조각에서는 끝에 점이 꼭 하나일
-   때만 그 점을 뗀다. 그래서
-   `agent.\\x`는 `agent` 아래로 읽고, `agent \\x`·`agent..\\x`는 이름이 다른 폴더라 받는다.
-   전용 설정 폴더는 `checked_place`로 앞의 둘만 본다.
+   때만 그 점을 뗀다. 그래서 `agent.\\x`는 `agent` 아래로 읽는다. `realpath`의 꼴은
+   장치 접두(`\\\\?\\`)를 떼고 견준다. 전용 설정 폴더는 `checked_place`로 앞의 둘만 본다.
 2. `create_round_dir`: 뿌리 아래 `<과제 id>-<갈래>-<회차 번호>-<짧은 난수>`(이름은
    `tools/rerun_files.py`의 `round_dir_name`)를 만들고 곧바로 표지 파일을 심는다. 폴더가 이미 있으면
    덮지 않고 `FileExistsError`다. 부르는 쪽(10)은 회차 번호를 잡자마자 이 함수만 차례로 부르고,
@@ -40,7 +39,7 @@
 지운다. 표지는 글자 그대로의 이름으로 찾는다. 이름은 디스크에서 읽은 글자 그대로 `\\\\?\\` 꼴로
 다뤄, 윈도가 끝의 점과 공백을 떼어 다른 폴더를 가리키는 일이 없다. 이 판정들은 커밋 전에 임시 폴더의
 반박 검증(링크와 junction, 커밋하지 않은 파일, 윈도가 바꾸는 이름, 표지의 꼴, 홈 같은 뿌리, 긴 경로,
-명령 줄의 경로 꼴)을 거쳤다(일지 2026-10-23-16).
+명령 줄의 경로 꼴)을 거쳤다(일지 2026-10-23-25).
 
 git을 띄우는 자리는 `tools.run_hooks.REPO_LOCATION_VARS`를 자식 환경에서 벗긴다(`.claude/rules/
 tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있다.
@@ -62,7 +61,7 @@ tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있�
 - 뿌리 바로 아래의 링크는 따라가지도 끊지도 않고 회차 폴더가 아니라고 보고한다. 지우기 직전에 그
   이름이 링크인지 한 번 더 보지만, 그 뒤에 같은 사용자의 다른 프로세스가 그 폴더를 링크로 바꾸는
   일은 막지 않는다. 뿌리 자체나 `records/`가 링크면 따라간다(뿌리는 링크를 푼 꼴도 머리 견줌을
-  거친다).
+  거친다). 대상을 잃은 링크인 뿌리는 없는 뿌리로 읽는다.
 - 윈도에서 회차 폴더 안의 읽기 전용 파일이 바깥 파일의 하드 링크면(uv·pnpm 캐시가 하드 링크로 채울
   수 있다), 지우려고 푼 읽기 전용 특성이 바깥 파일에도 남는다. 내용은 남는다. 리눅스는 읽기 전용
   파일도 특성을 풀지 않고 지운다. 캐시의 파일이 읽기 전용인지는
@@ -73,11 +72,16 @@ tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있�
   링크는 이미 끊은 채 파일과 폴더는 하나도 지우지 않고 멈춘다.
 - 경로 견줌은 리눅스에서도 `\\`를 구분자로 읽는다. 이름에 `\\`가 든 폴더는 다른 경로와 같게 읽혀
   거부될 수 있다(막는 쪽으로 틀린다).
+- 윈도에서 `agent \\x`·`agent..\\x`는 가운데 조각의 끝을 떼지 않아 이름이 다른 폴더를 열고, 그
+  경로가 있으면 받는다. 그 경로가 없으면 `realpath`가 부모 쪽으로 풀며 그 조각을 마지막 조각처럼
+  열어 끝을 떼므로 `agent` 아래로 읽어 거부한다(막는 쪽으로 틀린다). `agent` 아래에 같은 이름의
+  자식(`agent\\x`)이 있든 없든 같다.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import secrets
@@ -190,11 +194,21 @@ class CloneError(RuntimeError):
 # --- 뿌리와 설정 폴더 ---
 
 
+def _without_device_prefix(text: str) -> str:
+    """윈도 `realpath`가 남긴 장치 접두(`\\\\?\\`, `\\\\?\\UNC\\`)를 뗀다. 없는 경로를 풀면 처음
+    오류와 접두를 뗀 경로의 오류가 다를 때 접두를 남겨, 그 꼴이 머리와 맞지 않았다(PR 직전 리뷰)."""
+    if text.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + text[len("\\\\?\\UNC\\") :]
+    if text.startswith("\\\\?\\"):
+        return text[len("\\\\?\\") :]
+    return text
+
+
 def _forms(path: str | os.PathLike[str]) -> set[tuple[str, ...]]:
     """경로를 조각으로 나눈 꼴들. 윈도가 실제로 쓸 경로(`abspath`. 마지막 조각은 끝의 점과 공백을
-    모두 떼고, 가운데 조각은 끝에 점이 꼭 하나일 때만 그 점을 뗀다)와 링크를 푼 경로(`realpath`)를
-    둘 다 낸다. 조각은 대소문자를 접고 `/`·`\\`를 가리지 않는다."""
-    texts = {os.path.abspath(path), os.path.realpath(path)}
+    모두 떼고, 가운데 조각은 끝에 점이 꼭 하나일 때만 그 점을 뗀다)와 링크를 푼 경로(`realpath`.
+    장치 접두를 뗀다)를 둘 다 낸다. 조각은 대소문자를 접고 `/`·`\\`를 가리지 않는다."""
+    texts = {os.path.abspath(path), _without_device_prefix(os.path.realpath(path))}
     return {tuple(s for s in t.replace("\\", "/").casefold().split("/") if s) for t in texts}
 
 
@@ -693,14 +707,15 @@ def _remove(folder: str) -> str | None:
     return None
 
 
-def remove_round_dirs(root: Path, records: Path) -> Removal:
-    """뿌리 바로 아래에서 표지와 기록이 있는 회차 폴더만 지운다. 나머지는 이름을 보고한다."""
+def remove_round_dirs(root: Path, records: Path) -> Removal | None:
+    """뿌리 바로 아래에서 표지와 기록이 있는 회차 폴더만 지운다. 나머지는 이름을 보고한다. 뿌리를
+    읽으려는데 없다고 하면(대상을 잃은 링크 포함) 아무것도 하지 않고 `None`이다."""
     report = Removal()
     base = long_path(os.path.abspath(root))
     try:
         entries = sorted(os.scandir(base), key=lambda e: e.name)
     except FileNotFoundError:
-        return report
+        return None
     except NotADirectoryError as e:
         raise PlaceError(f"뿌리가 폴더가 아니다: {root}") from e
     except OSError as e:
@@ -732,8 +747,9 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """종료 코드: 0 지울 것을 다 지웠다, 1 지우지 못한 폴더가 있다, 2 아무것도 지우지 않고 멈췄다
-    (뿌리를 쓸 수 없거나 읽지 못했다, 주 체크아웃을 찾지 못했다)."""
+    """종료 코드: 0 지울 것을 다 지웠다(뿌리가 없으면 stderr에 한 줄을 남긴다), 1 지우지 못한
+    폴더가 있다, 2 아무것도 지우지 않고 멈췄다(뿌리를 쓸 수 없거나 읽지 못했다, 주 체크아웃을 찾지
+    못했다)."""
     args = _parser().parse_args(argv)
     root_text: str = args.root
     records_text: str = args.records
@@ -746,6 +762,9 @@ def main(argv: list[str] | None = None) -> int:
     except (PlaceError, CloneError) as e:
         print(f"끝: {e}", file=sys.stderr)
         return 2
+    if report is None:
+        print(f"뿌리가 없어 지울 것이 없다: {root}", file=sys.stderr)
+        return 0
     for name in report.removed:
         print(f"지웠다: {name}")
     for name in report.no_record:
@@ -758,4 +777,11 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    # 윈도의 파이프는 PYTHONUTF8·PYTHONIOENCODING 이 없으면 로캘의 인코딩(이 PC 는 cp949)이라, 그
+    # 밖의 글자(이모지 등)가 든 이름을 찍다 `UnicodeEncodeError`로 지운 뒤의 보고를 잃는다(PR 직전
+    # 리뷰. 이 PC 에서 `print`와 `sys.stdout.encoding`으로 손으로 봤다). 선례는 `tools/canary.py`의
+    # 같은 자리다.
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     sys.exit(main())

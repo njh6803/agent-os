@@ -39,6 +39,7 @@ from tools.rerun_round import (
     SETUP_ARGV,
     CloneError,
     PlaceError,
+    Removal,
     RoundDir,
     SetupEnd,
     build_clone,
@@ -57,7 +58,7 @@ from tools.rerun_round import (
     session_env,
     write_deny_rules,
 )
-from tools.tidy_checkouts import delete_path
+from tools.tidy_checkouts import delete_path, long_path
 
 from tools import rerun_round
 
@@ -273,13 +274,41 @@ def test_윈도가_끝의_점을_떼는_이름은_윈도에서_멈춘다(tmp_pat
             assert _자리(text, head, claude) == Path(text)
 
 
-def test_가운데_조각_끝의_공백과_점_둘은_다른_폴더라_받는다(tmp_path: Path) -> None:
-    """윈도도 가운데 조각에서는 끝에 점이 꼭 하나일 때만 그 점을 뗀다. `agent \\rerun`과
-    `agent..\\rerun`은 이름이 다른 폴더를 연다."""
+def test_가운데_조각_끝의_공백과_점_둘은_윈도에서_자식과_상관없이_막는_쪽으로_틀린다(
+    tmp_path: Path,
+) -> None:
+    """못 보는 것: 윈도에서 `agent \\rerun`·`agent..\\rerun`은 이름이 다른 폴더를 열지만, 그 경로가
+    없으면 `realpath`가 부모 쪽으로 풀며 그 조각을 마지막 조각처럼 열어 끝을 떼므로 `agent` 아래로
+    읽어 막는다. `agent` 아래에 같은 이름의 자식이 있든 없든 같다. 리눅스에서는 이름이 다른 폴더라
+    받는다."""
+    main_dir, claude = _금지(tmp_path)
+    (main_dir / "있음").mkdir()
+    for tail in (" ", ".."):
+        for child in ("rerun", "있음"):
+            text = str(main_dir) + tail + os.sep + child
+            if sys.platform == "win32":
+                with pytest.raises(PlaceError, match="주 체크아웃"):
+                    _자리(text, main_dir, claude)
+            else:
+                assert _자리(text, main_dir, claude) == Path(text)
+
+
+def test_가운데_조각_끝의_공백과_점_둘은_그_경로가_있으면_다른_폴더라_받는다(
+    tmp_path: Path,
+) -> None:
+    """윈도도 가운데 조각에서는 끝의 공백과 점 둘을 떼지 않아 `agent \\rerun`·`agent..\\rerun`은
+    이름이 다른 폴더를 연다. 그 경로가 있으면 `realpath`가 그대로 풀어 받는다. 그런 이름의 폴더는
+    `\\\\?\\` 경로로 만들고 지운다. 윈도의 보통 경로로는 마지막 조각의 끝이 떼여 `agent`를
+    가리킨다."""
     main_dir, claude = _금지(tmp_path)
     for tail in (" ", ".."):
-        text = str(main_dir) + tail + os.sep + "rerun"
-        assert _자리(text, main_dir, claude) == Path(text)
+        other = Path(str(main_dir) + tail)
+        text = str(other) + os.sep + "rerun"
+        os.makedirs(long_path(text))
+        try:
+            assert _자리(text, main_dir, claude) == Path(text)
+        finally:
+            delete_path(other)
 
 
 def test_역슬래시는_리눅스에서도_구분자로_읽어_막는_쪽으로_틀린다(tmp_path: Path) -> None:
@@ -780,6 +809,13 @@ def test_허용_목록에는_명세의_이름이_든다() -> None:
 # --- 회차 폴더 지우기 ---
 
 
+def _지우기(root: Path, records: Path) -> Removal:
+    """있는 뿌리에서 지우고 보고를 낸다. 없는 뿌리의 `None`은 따로 본다."""
+    report = remove_round_dirs(root, records)
+    assert report is not None, f"뿌리가 없다고 읽었다: {root}"
+    return report
+
+
 def test_기록이_있는_회차_폴더만_지우고_나머지는_이름을_보고한다(tmp_path: Path) -> None:
     root = tmp_path / "뿌리"
     records = tmp_path / "records"
@@ -789,7 +825,7 @@ def test_기록이_있는_회차_폴더만_지우고_나머지는_이름을_보�
     plain.mkdir()
     (plain / "남길것.txt").write_text("그대로\n", encoding="utf-8")
     (root / "파일.txt").write_text("그대로\n", encoding="utf-8")
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == [done.name]
     assert not done.path.exists()
     assert report.no_record == [waiting.name]
@@ -805,7 +841,7 @@ def test_기록의_폴더_이름이_다르면_지우지_않는다(tmp_path: Path
     records.mkdir()
     place = create_round_dir(root, TASK, "A", 1, token="f1")
     write_record(records, _기록(f"{TASK}-A-1-zz9"))
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == []
     assert report.no_record == [place.name]
     assert place.path.exists()
@@ -817,7 +853,7 @@ def test_읽지_못하는_기록이면_지우지_않는다(tmp_path: Path) -> No
     records.mkdir()
     place = create_round_dir(root, TASK, "A", 1, token="f2")
     (records / record_file_name(TASK, "A", 1)).write_text("{}", encoding="utf-8")
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.no_record == [place.name]
     assert place.path.exists()
 
@@ -833,7 +869,7 @@ def test_표지의_내용이_폴더_이름이_아니거나_표지가_폴더면_�
     folder = _기록된_회차(root, records, "g3", round_no=3)
     (folder.path / MARKER).unlink()
     (folder.path / MARKER).mkdir()
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == [other.name]
     assert report.not_round == sorted([wrong.name, folder.name])
     assert wrong.path.exists() and folder.path.exists()
@@ -847,7 +883,7 @@ def test_회차_폴더_안의_링크는_링크만_끊고_바깥_파일은_남긴
     (outside / "남을것.txt").write_text("바깥\n", encoding="utf-8")
     place = _기록된_회차(root, records, "h1")
     _바깥_링크(place.path / "clone" / "node_modules" / "링크", outside)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == [place.name]
     assert not place.path.exists()
     assert (outside / "남을것.txt").read_text(encoding="utf-8") == "바깥\n"
@@ -860,7 +896,7 @@ def test_뿌리_바로_아래의_링크는_따라가지도_끊지도_않는다(t
     root = tmp_path / "뿌리"
     root.mkdir()
     _바깥_링크(root / target.name, target.path)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == []
     assert report.not_round == [target.name]
     assert (target.path / MARKER).exists()
@@ -878,7 +914,7 @@ def test_읽기_전용_파일과_git_저장소가_든_회차_폴더도_지운다
     locked = place.path / "읽기전용.txt"
     locked.write_text("x\n", encoding="utf-8")
     locked.chmod(0o444)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == [place.name]
     assert not place.path.exists()
 
@@ -891,7 +927,7 @@ def test_뿌리로_준_홈에서도_회차_폴더만_지운다(tmp_path: Path) -
     (home / "문서").mkdir()
     (home / "문서" / "중요.txt").write_text("중요\n", encoding="utf-8")
     place = _기록된_회차(home, records, "k1")
-    report = remove_round_dirs(home, records)
+    report = _지우기(home, records)
     assert report.removed == [place.name]
     assert (home / ".claude" / "settings.json").exists()
     assert (home / "문서" / "중요.txt").read_text(encoding="utf-8") == "중요\n"
@@ -915,7 +951,7 @@ def test_윈도가_접는_끝의_점이_든_이름은_다른_폴더로_본다(tm
         f.write(place.name + ".")
     with open(os.path.join(dotted, "남길것.txt"), "w", encoding="utf-8") as f:
         f.write("그대로\n")
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == [place.name]
     assert report.not_round == [place.name + "."]
     with open(os.path.join(dotted, "남길것.txt"), encoding="utf-8") as f:
@@ -936,12 +972,12 @@ def test_지우다_막히면_표지를_남겨_다시_지울_수_있다(
         delete_path(path)
 
     monkeypatch.setattr(rerun_round, "_delete_entry", blocked)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.removed == []
     assert [name for name, _ in report.failed] == [place.name]
     assert (place.path / MARKER).exists()
     monkeypatch.undo()
-    assert remove_round_dirs(root, records).removed == [place.name]
+    assert _지우기(root, records).removed == [place.name]
 
 
 def test_대소문자만_다른_표지는_표지가_아니다(tmp_path: Path) -> None:
@@ -951,7 +987,7 @@ def test_대소문자만_다른_표지는_표지가_아니다(tmp_path: Path) ->
     records = tmp_path / "records"
     place = _기록된_회차(root, records, "u1")
     os.rename(place.path / MARKER, place.path / MARKER.upper())
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert report.not_round == [place.name]
     assert (place.path / MARKER.upper()).exists()
 
@@ -972,11 +1008,11 @@ def test_마지막_폴더_지우기가_막히면_표지를_다시_심어_다시_
         real(path, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "rmdir", blocked)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert [name for name, _ in report.failed] == [place.name]
     assert (place.path / MARKER).read_text(encoding="utf-8") == place.name
     monkeypatch.undo()
-    assert remove_round_dirs(root, records).removed == [place.name]
+    assert _지우기(root, records).removed == [place.name]
     assert not place.path.exists()
 
 
@@ -988,7 +1024,7 @@ def test_읽기_전용_특성이_붙은_회차_폴더도_지운다(tmp_path: Pat
     if sys.platform == "win32":
         os.chmod(place.path, stat.S_IREAD)
         assert os.stat(place.path).st_file_attributes & stat.FILE_ATTRIBUTE_READONLY
-    assert remove_round_dirs(root, records).removed == [place.name]
+    assert _지우기(root, records).removed == [place.name]
     assert not place.path.exists()
 
 
@@ -1010,7 +1046,7 @@ def test_판정_뒤_링크로_바뀐_회차_폴더는_지우지_않는다(
         return record
 
     monkeypatch.setattr(rerun_round, "read_record", swapped)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert [name for name, _ in report.failed] == [place.name]
     assert (outside / "남을것.txt").read_text(encoding="utf-8") == "바깥\n"
     assert os.path.lexists(place.path)
@@ -1038,14 +1074,14 @@ def test_끊지_못한_링크가_있으면_끊을_수_있던_링크만_끊고_�
         real(path, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "unlink", blocked)
-    report = remove_round_dirs(root, records)
+    report = _지우기(root, records)
     assert [name for name, _ in report.failed] == [place.name]
     assert kept.exists()
     assert "끊지 못한 링크" in report.failed[0][1]
     assert not os.path.lexists(place.path / "끊을링크")
     assert (place.path / MARKER).exists()
     monkeypatch.undo()
-    assert remove_round_dirs(root, records).removed == [place.name]
+    assert _지우기(root, records).removed == [place.name]
     assert (outside / "남을것.txt").read_text(encoding="utf-8") == "바깥\n"
 
 
@@ -1053,7 +1089,7 @@ def test_파일인_뿌리는_멈춘다(tmp_path: Path) -> None:
     root = tmp_path / "뿌리.txt"
     root.write_text("", encoding="utf-8")
     with pytest.raises(PlaceError, match="폴더가 아니다"):
-        remove_round_dirs(root, tmp_path / "records")
+        _지우기(root, tmp_path / "records")
     assert main(["remove", str(root), "--records", str(tmp_path / "records")]) == 2
 
 
@@ -1066,7 +1102,7 @@ def test_읽지_못하는_뿌리는_멈춘다(tmp_path: Path, monkeypatch: pytes
 
     monkeypatch.setattr(os, "scandir", denied)
     with pytest.raises(PlaceError, match="뿌리를 읽지 못했다"):
-        remove_round_dirs(root, tmp_path / "records")
+        _지우기(root, tmp_path / "records")
     assert main(["remove", str(root), "--records", str(tmp_path / "records")]) == 2
 
 
@@ -1076,7 +1112,7 @@ def test_뿌리_자체가_링크면_따라가_그_안의_회차_폴더를_지운
     records = tmp_path / "records"
     place = _기록된_회차(real, records, "y1")
     _바깥_링크(tmp_path / "링크뿌리", real)
-    assert remove_round_dirs(tmp_path / "링크뿌리", records).removed == [place.name]
+    assert _지우기(tmp_path / "링크뿌리", records).removed == [place.name]
     assert not place.path.exists()
 
 
@@ -1086,7 +1122,7 @@ def test_records가_링크면_따라가_기록을_읽는다(tmp_path: Path) -> N
     real_records = tmp_path / "진짜기록"
     place = _기록된_회차(root, real_records, "y2")
     _바깥_링크(tmp_path / "링크기록", real_records)
-    assert remove_round_dirs(root, tmp_path / "링크기록").removed == [place.name]
+    assert _지우기(root, tmp_path / "링크기록").removed == [place.name]
 
 
 def test_바깥_파일의_하드_링크를_지우면_윈도에서만_그_읽기_전용_특성이_풀린다(
@@ -1102,16 +1138,15 @@ def test_바깥_파일의_하드_링크를_지우면_윈도에서만_그_읽기_
     place = _기록된_회차(root, records, "y3")
     os.link(outside, place.path / "링크된.txt")
     try:
-        assert remove_round_dirs(root, records).removed == [place.name]
+        assert _지우기(root, records).removed == [place.name]
         assert outside.read_text(encoding="utf-8") == "캐시\n"
         assert bool(os.stat(outside).st_mode & stat.S_IWRITE) == (sys.platform == "win32")
     finally:
         outside.chmod(stat.S_IREAD | stat.S_IWRITE)
 
 
-def test_없는_뿌리는_빈_보고다(tmp_path: Path) -> None:
-    report = remove_round_dirs(tmp_path / "없음", tmp_path / "records")
-    assert (report.removed, report.no_record, report.not_round, report.failed) == ([], [], [], [])
+def test_없는_뿌리는_보고가_없다(tmp_path: Path) -> None:
+    assert remove_round_dirs(tmp_path / "없음", tmp_path / "records") is None
 
 
 # --- 명령 줄 ---
@@ -1122,6 +1157,42 @@ def test_지우기_명령은_상대_경로_뿌리에서_아무것도_하지_않�
 ) -> None:
     assert main(["remove", "rerun"]) == 2
     assert "절대 경로" in capsys.readouterr().err
+
+
+def test_지우기_명령은_없는_뿌리를_알리고_0으로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """뿌리를 잘못 친 것이 아무 출력 없이 성공처럼 보이지 않게 한다."""
+    root = tmp_path / "없음"
+    assert main(["remove", str(root), "--records", str(tmp_path / "records")]) == 0
+    assert f"뿌리가 없어 지울 것이 없다: {root}" in capsys.readouterr().err
+
+
+def test_지우기_명령은_대상을_잃은_링크_뿌리를_없는_뿌리로_알린다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """뿌리의 이름은 있어도 그 링크가 가리키던 폴더가 없으면 읽을 것이 없는 뿌리다."""
+    target = tmp_path / "대상"
+    target.mkdir()
+    root = tmp_path / "링크뿌리"
+    _바깥_링크(root, target)
+    target.rmdir()
+    assert main(["remove", str(root), "--records", str(tmp_path / "records")]) == 0
+    assert f"뿌리가 없어 지울 것이 없다: {root}" in capsys.readouterr().err
+
+
+def test_지우기_명령은_없다고_가를_수_없는_뿌리에서_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """모든 오류를 없음으로 읽으면 읽지 못한 뿌리가 없는 뿌리처럼 0으로 끝난다. 윈도는 이름에 쓸 수
+    없는 글자로, 리눅스는 파일 아래의 경로로 본다."""
+    (tmp_path / "파일").write_text("", encoding="utf-8")
+    if sys.platform == "win32":
+        root, why = tmp_path / "a<b", "뿌리를 읽지 못했다"
+    else:
+        root, why = tmp_path / "파일" / "아래", "뿌리가 폴더가 아니다"
+    assert main(["remove", str(root), "--records", str(tmp_path / "records")]) == 2
+    assert f"끝: {why}: {root}" in capsys.readouterr().err
 
 
 def test_지우기_명령은_지운_것과_남긴_것을_찍는다(
@@ -1156,3 +1227,23 @@ def test_지우기_명령을_프로세스로_부른다(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert f"지웠다: {done.name}" in result.stdout
     assert not done.path.exists()
+
+
+def test_지우기_명령은_utf8_모드가_없어도_cp949_밖의_이름을_찍는다(tmp_path: Path) -> None:
+    """윈도의 파이프는 PYTHONUTF8·PYTHONIOENCODING 이 없으면 로캘의 인코딩(이 PC 는 cp949)이라,
+    출력을 UTF-8로 고정하지 않으면 이름을 찍다 `UnicodeEncodeError`로 끝난다. UTF-8 모드는 0으로
+    꺼 둔다."""
+    root = tmp_path / "뿌리"
+    (root / "남길😀").mkdir(parents=True)
+    checkout = Path(rerun_round.__file__).resolve().parents[1]
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONIOENCODING"}
+    result = subprocess.run(
+        [sys.executable, "-m", "tools.rerun_round", "remove", str(root)],
+        cwd=checkout,
+        capture_output=True,
+        env={**env, "PYTHONUTF8": "0"},
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    assert "회차 폴더가 아니라 남겼다: 남길😀" in result.stdout.decode("utf-8")

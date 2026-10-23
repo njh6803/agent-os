@@ -57,7 +57,7 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
+old = '''texts = {os.path.abspath(path), _without_device_prefix(os.path.realpath(path))}'''
 new = '''texts = {os.path.abspath(path)}'''
 
 [[mutation]]
@@ -68,8 +68,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
-new = '''texts = {os.path.realpath(path)}'''
+old = '''texts = {os.path.abspath(path), _without_device_prefix(os.path.realpath(path))}'''
+new = '''texts = {_without_device_prefix(os.path.realpath(path))}'''
 
 # 윈도의 realpath 는 있는 폴더라면 끝의 점과 대소문자를 실제 이름으로 바꿔 준다. 그래서 아래 둘은
 # 아직 없는 머리(시험의 둘째 머리)에서만 빨개진다.
@@ -81,8 +81,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
-new = '''texts = {os.path.normpath(path), os.path.realpath(path)}'''
+old = '''texts = {os.path.abspath(path), _without_device_prefix(os.path.realpath(path))}'''
+new = '''texts = {os.path.normpath(path), _without_device_prefix(os.path.realpath(path))}'''
 
 [[mutation]]
 name = "대소문자를 접지 않는다"
@@ -481,7 +481,7 @@ file = "tools/rerun_round.py"
 old = '''            if entry.name != MARKER:'''
 new = '''            if True:'''
 
-# 아래는 커밋 전 반박 검증이 깬 판정을 고친 자리다(일지 2026-10-23-16).
+# 아래는 커밋 전 반박 검증이 깬 판정을 고친 자리다(일지 2026-10-23-25).
 [[mutation]]
 name = "표지를 글자 그대로의 이름으로 찾지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "대소문자만_다른_표지"]
@@ -512,7 +512,7 @@ new = '''        try:
 name = "폴더의 읽기 전용 특성을 풀지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "읽기_전용_특성이"]
 expect = "red"
-expect_output = ['>       assert remove_round_dirs(root, records).removed == [place.name]']
+expect_output = ['>       assert _지우기(root, records).removed == [place.name]']
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
@@ -559,7 +559,7 @@ old = '''    except NotADirectoryError as e:
 new = '''    except NotADirectoryError:
         return report'''
 
-# 아래는 셀프 리뷰를 반영해 더한 시험을 무는 변이다(일지 2026-10-23-16).
+# 아래는 셀프 리뷰를 반영해 더한 시험을 무는 변이다(일지 2026-10-23-25).
 [[mutation]]
 name = "사용자 설정의 followTags 를 끄지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "원본의_설정과_훅이"]
@@ -615,9 +615,35 @@ old = '''    except OSError as e:
 new = '''    except NotImplementedError as e:
         raise PlaceError(f"뿌리를 읽지 못했다'''
 
+# PR 직전 리뷰 뒤: 옛 변이("가운데 조각 끝의 공백과 점을 모두 뗀다")는 접두를 뗀 realpath 가 같은
+# 입력을 늘 막게 되어 결과가 같아졌다. 그 자리를 접두를 떼지 않는 변이로 바꿨다.
+[[mutation]]
+name = "realpath 의 장치 접두를 떼지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "가운데_조각_끝의"]
+expect = "red"
+expect_output = ["DID NOT RAISE PlaceError"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''texts = {os.path.abspath(path), _without_device_prefix(os.path.realpath(path))}'''
+new = '''texts = {os.path.abspath(path), os.path.realpath(path)}'''
+
+[[mutation]]
+name = "없는 뿌리를 알리지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "없는_뿌리를_알리고 or 대상을_잃은_링크_뿌리를"]
+expect = "red"
+expect_output = ['>       assert f"뿌리가 없어 지울 것이 없다: {root}" in capsys.readouterr().err']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        print(f"뿌리가 없어 지울 것이 없다: {root}", file=sys.stderr)'''
+new = '''        pass'''
+
+# 셀프 리뷰(반영분) 뒤: 옛 "가운데 조각 끝의 공백과 점을 모두 뗀다"를 그 경로가 있으면 받는다는
+# 시험에 겨눠 되살렸다. 없는 경로에서는 결과가 원본과 같지만 있는 경로에서는 막는다.
 [[mutation]]
 name = "가운데 조각 끝의 공백과 점을 모두 뗀다"
-tests = ["tests/tools/test_rerun_round.py", "-k", "가운데_조각_끝의"]
+tests = ["tests/tools/test_rerun_round.py", "-k", "그_경로가_있으면_다른_폴더라"]
 expect = "red"
 expect_output = ["PlaceError: 뿌리가 주 체크아웃"]
 
@@ -625,3 +651,14 @@ expect_output = ["PlaceError: 뿌리가 주 체크아웃"]
 file = "tools/rerun_round.py"
 old = '''    return {tuple(s for s in t.replace("\\", "/").casefold().split("/") if s) for t in texts}'''
 new = '''    return {tuple(s.rstrip(" .") for s in t.replace("\\", "/").casefold().split("/") if s) for t in texts}'''
+
+[[mutation]]
+name = "명령 줄의 출력을 UTF-8로 고정하지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "utf8_모드가"]
+expect = "red"
+expect_output = ['>       assert result.returncode == 0', "UnicodeEncodeError: 'cp949' codec"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''            stream.reconfigure(encoding="utf-8")'''
+new = '''            pass'''
