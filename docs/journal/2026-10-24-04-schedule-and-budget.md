@@ -99,3 +99,26 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 ## 다음
 
 model-rerun 티켓 10을 마쳤다. 남은 티켓은 11(파일럿과 사전 등록)이고 막던 03·05·10이 모두 done이다. 11은 사람 단계("사람과 정한다")가 있어 그 세션이 묻고 답을 기다린다. 11의 "09에서 넘어온 메모"와 "10에서 넘어온 메모"(07의 열거화, `round_record` 정리, `_git` 사본 맞추기)를 함께 본다. 이 PR에서 보류한 Minor 둘(Ctrl-C 뒤 남는 일꾼, 한도 시각의 여유)은 PR 체크리스트에 판정과 값을 적었다.
+
+## 인계 (둘째)
+
+PR #380 을 연 뒤 인계 계기(세션 컨텍스트 약 20.6만 토큰, 경계 `PR 연 뒤`)가 왔다. 이 세션의 제목은 `feature/10-schedule-and-budget`이었다. 이 절은 커밋하지 않은 채 워크트리에 있다. 회고와 "다음"은 571056ea 에 실렸다.
+
+다음 작업: .scratch/model-rerun/issues/10-schedule-and-budget.md. 러너 명령이 과제 목록을 실행 차례대로 돌며 동시에 둘, 예산 상한, 한도 기다림, 다시 돌기, 멈춤을 지킨다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md
+브랜치: feature/10-schedule-and-budget
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-04-schedule-and-budget.md의 "PR 직전 리뷰" 절(보류한 Minor 둘은 PR 체크리스트에 판정과 값을 적었다)
+이어받을 상태: 인계: PR 연 뒤. PR #380 을 열었고 571056ea 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. 남은 것은 next-session 순서 1의 2(봇 회차: 대기, 회차 세기, 반영)와 4(병합 길은 워크트리에서 병합할 때)다. 회고와 일지 "다음"은 이미 커밋했다. 이 "인계 (둘째)" 절은 커밋하지 않은 채 워크트리에 있으니 봇 회차의 커밋에 실을지 지울지 정한다. 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다(tools/sibling_overlap.py 가 알렸다). docs/journal/2026-10-24-04-schedule-and-budget.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-10-23T19:06:21Z
+
+## 봇 회차 (인계받은 세션)
+
+> 사용자: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md (인계 지시문 그대로, "이번 요청 범위: PR과 병합까지")
+
+이 세션의 제목은 `feature/10-schedule-and-budget`이다. 첫 `@coderabbitai review`를 남겼고 CodeRabbit은 `Review rate limited`로 리뷰가 없어 회차로 세지 않았다. claude-review의 첫 회차는 Minor 셋과 Nit 둘이었다. `_Runner`의 `self.s`·`self.w`를 `self.settings`·`self.world`로 풀어 쓴 Nit만 고쳤다. `_run_task`의 정책 분기, `_open`·`_close_dead_rounds`의 질의·명령 섞임, `_round`의 길이(Minor 셋)와 `Plan` 래퍼(Nit)는 동작이 같은 구조 정리라 이 티켓의 체크박스 밖으로 보고 보류했다. 이유는 PR 코멘트에 적었고 뒤의 작업으로 넘기지는 않았다.

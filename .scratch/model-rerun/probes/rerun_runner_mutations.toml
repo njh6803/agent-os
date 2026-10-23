@@ -212,8 +212,8 @@ expect_output = ["where 0 = run()"]
 
 [[mutation.edit]]
 file = "tools/rerun_runner.py"
-old = '''        if not self.main_list or self.s.confirmed == self.s.condition_version:'''
-new = '''        if not self.main_list or self.s.confirmed is not None:'''
+old = '''        if not self.main_list or self.settings.confirmed == self.settings.condition_version:'''
+new = '''        if not self.main_list or self.settings.confirmed is not None:'''
 
 [[mutation]]
 name = "본 측정 목록의 해시를 대 보지 않는다"

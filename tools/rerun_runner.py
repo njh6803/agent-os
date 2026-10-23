@@ -320,8 +320,8 @@ def _spend(record: Record, sessions: Sequence[Session], costs: Sequence[Cost]) -
 
 class _Runner:
     def __init__(self, settings: Settings, world: World) -> None:
-        self.s = settings
-        self.w = world
+        self.settings = settings
+        self.world = world
         self.config = Path(settings.config_dir)
         self.rules = deny_rules(deny_heads(settings.main_checkout, home=world.home))
         self.main_list = settings.task_list.kind == LIST_MAIN
@@ -329,7 +329,7 @@ class _Runner:
     # --- 주 스레드 ---
 
     def run(self) -> int:
-        s = self.s
+        s = self.settings
         tasks = sorted(s.task_list.tasks, key=lambda t: t.order)
         s.records.mkdir(parents=True, exist_ok=True)
         if self.main_list:
@@ -373,39 +373,45 @@ class _Runner:
             why = self._run_task(task, plan.arms)
             if why is not None:
                 return self._halt(why)
-        self.w.out("과제 목록을 다 돌았다")
+        self.world.out("과제 목록을 다 돌았다")
         return EXIT_DONE
 
     def _halt(self, why: str) -> int:
-        self.w.out(f"멈춘다: {why}")
+        self.world.out(f"멈춘다: {why}")
         return EXIT_HALTED
 
     def _records(self) -> list[Record]:
         try:
-            names = sorted(os.listdir(self.s.records))
+            names = sorted(os.listdir(self.settings.records))
         except FileNotFoundError:
             return []
         return [
-            read_record(self.s.records / n) for n in names if parse_record_file_name(n) is not None
+            read_record(self.settings.records / n)
+            for n in names
+            if parse_record_file_name(n) is not None
         ]
 
     def _unconfirmed(self, records: Sequence[Record]) -> bool:
-        if not self.main_list or self.s.confirmed == self.s.condition_version:
+        if not self.main_list or self.settings.confirmed == self.settings.condition_version:
             return False
         return any(
-            r.condition_version == self.s.condition_version and not r.pilot and r.handoffs > 0
+            r.condition_version == self.settings.condition_version
+            and not r.pilot
+            and r.handoffs > 0
             for r in records
         )
 
     def _sleep_until(self, until: float) -> None:
-        left = until - self.w.now()
+        left = until - self.world.now()
         if left > 0:
-            self.w.out(f"한도가 풀리는 시각(유닉스 초 {until:.0f})까지 새 회차를 열지 않고 잔다")
-            self.w.sleep(left)
+            self.world.out(
+                f"한도가 풀리는 시각(유닉스 초 {until:.0f})까지 새 회차를 열지 않고 잔다"
+            )
+            self.world.sleep(left)
 
     def _close_dead_rounds(self, tasks: Sequence[Task]) -> str | None:
         """기록 없는 회차 폴더를 측정 아님(중단)으로 적는다. 멈출 까닭이 있으면 그 글이다."""
-        s = self.s
+        s = self.settings
         dead = unrecorded_round_dirs(s.root, s.records)
         if not dead:
             return None
@@ -413,11 +419,11 @@ class _Runner:
         ids = {i for p in dead for i in _session_ids(p)}
         if ids:
             name = Path(s.claude[0]).name
-            pids = self.w.processes(name)
+            pids = self.world.processes(name)
             if pids is None:
                 return f"{name} 프로세스를 훑지 못해 기록 없는 회차({names})가 도는지 모른다"
             for pid in pids:
-                argv = self.w.read_command_line(pid)
+                argv = self.world.read_command_line(pid)
                 if argv is None:
                     return (
                         f"{name} 프로세스 {pid} 의 명령 줄을 읽지 못해 "
@@ -436,7 +442,7 @@ class _Runner:
             except PriceError as e:
                 return f"기록 없는 회차 {place.name} 의 공식 단가를 셈하지 못했다: {e}"
             write_record(s.records, record)
-            self.w.out(f"죽은 러너가 남긴 회차 {place.name} 를 측정 아님(중단)으로 적었다")
+            self.world.out(f"죽은 러너가 남긴 회차 {place.name} 를 측정 아님(중단)으로 적었다")
         return None
 
     def _bare(self, place: RoundDir, task: Task, end: End, env: dict[str, str]) -> Record:
@@ -444,9 +450,9 @@ class _Runner:
         return round_record(
             place,
             task,
-            condition_version=self.s.condition_version,
+            condition_version=self.settings.condition_version,
             claude_version=None,
-            account=self.s.account,
+            account=self.settings.account,
             env=env,
             continued=Continued(runs=(), handoffs=0, interventions=0, asked_at_end=False, end=end),
             config_dir=self.config,
@@ -494,7 +500,7 @@ class _Runner:
 
     def _create(self, task: Task, arm: str) -> RoundDir:
         """회차 번호를 잡고 곧바로 그 폴더를 만든다. 주 스레드에서만 부른다."""
-        s = self.s
+        s = self.settings
         records = os.listdir(s.records) if s.records.exists() else []
         dirs = os.listdir(s.root) if s.root.exists() else []
         number = next_round_no(task.task_id, arm, records, dirs)
@@ -502,7 +508,7 @@ class _Runner:
 
     def _open(self, task: Task, arm: str) -> RoundDir | str:
         """회차를 열기 전의 확인을 지나면 그 회차 폴더, 걸리면 멈출 까닭이다."""
-        s = self.s
+        s = self.settings
         s.root.mkdir(parents=True, exist_ok=True)
         env = session_env(os.environ, config_dir=s.config_dir, round_dir=RoundDir(s.root))
         refusal = before_round(s.claude, env=env, cwd=s.root, account=s.account)
@@ -516,7 +522,7 @@ class _Runner:
 
     def _run_task(self, task: Task, arms: Sequence[str]) -> str | None:
         """과제 하나의 회차를 동시에 둘까지 돈다. 멈출 까닭이 있으면 그 글이다."""
-        s = self.s
+        s = self.settings
         queue = deque(arms)
         running: dict[Future[_Done], str] = {}
         halt: str | None = None
@@ -570,7 +576,7 @@ class _Runner:
                             queue.appendleft(arm)
                         elif not excluded:
                             excluded = True
-                            self.w.out(
+                            self.world.out(
                                 f"{task.task_id} 를 갈래 {arm} 의 오염 두 번으로 모든 갈래에서 뺀다"
                             )
                     elif end.kind == END_NOT_MEASURED:
@@ -589,7 +595,7 @@ class _Runner:
 
     def _round(self, task: Task, arm_name: str, place: RoundDir) -> _Done:
         """회차 하나를 준비부터 기록 쓰기까지 돈다."""
-        s, w = self.s, self.w
+        s, w = self.settings, self.world
         arm = ARM_BY_NAME[arm_name]
         env = session_env(os.environ, config_dir=s.config_dir, round_dir=place)
         try:
@@ -686,7 +692,7 @@ class _Runner:
     def _setup_failed(self, place: RoundDir, task: Task, env: dict[str, str], why: str) -> _Done:
         end = End(END_NOT_MEASURED, REASON_SETUP, None)
         record = self._bare(place, task, end, env)
-        write_record(self.s.records, record)
+        write_record(self.settings.records, record)
         return _Done(record, f"{place.name}: {why}")
 
     def _named_setup(self, failure: SetupFailure | None) -> SetupFailure | None:
@@ -694,7 +700,7 @@ class _Runner:
         자리로 읽는다(정해진 명령은 서로 다르다)."""
         if failure is None:
             return None
-        commands = [" ".join(argv) for argv in self.w.setup]
+        commands = [" ".join(argv) for argv in self.world.setup]
         index = commands.index(failure.command) if failure.command in commands else None
         if index is None:
             return failure
