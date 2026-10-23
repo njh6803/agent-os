@@ -233,3 +233,66 @@ open-session을 부른다 2026-10-23T02:12:03Z
 - 디자인 시스템 색인의 `lastChange.by`에 계정 이름이 들어 있다(2026-10-17의 부분 올리기가 적었다). ADR 0025의 2026-10-20 이력은 계정 이름을 어디에도 적지 않는다고 정했다. 다음 전체 올리기(design-reverse-sync 티켓 08)가 `lastChange`를 새로 적을 때 사라지므로 이 브랜치는 아티팩트를 고치지 않았다.
 
 origin/main에 #364(model-rerun 03)가 병합되어 그 일지(`2026-10-23-23`)가 이 일지를 이름순으로 앞섰다. origin/main을 합치고(이 브랜치가 이름으로 든 파일과 겹치는 변경은 없었다) `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-20`에서 `2026-10-23-26`으로 옮겼다. 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌다.
+
+커밋 `dfb52c07`의 pre-commit은 `checks`(572초)의 열 검사가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. ruff 둘은 커밋 전에 손으로 쳤다("All checks passed!", "985 files already formatted"). 인용 대조는 경고가 없었다. 푸시 직전에 origin/main이 그대로인 것을 보고 푸시한 뒤, `/git-pr`로 PR #368을 열었다. 요청 범위가 병합까지라 PR 생성은 묻지 않았다. `coderabbit auth status`는 이번에도 `Plan: Free`, `Seat: not assigned`였고, PR 체크리스트의 PR 직전 리뷰 줄은 위 "PR 직전 리뷰" 절대로 적었다. 앱의 PR 묶음은 이 세션에 이미 묶여 있었다(`get_status`의 `bound: true`).
+
+## 인계(PR 연 뒤)
+
+PR을 연 뒤 컨텍스트가 인계 문턱(20만)을 넘은 채(21만 5천) `PR 연 뒤` 경계에 와 넘긴다. 이 세션의 지시문은 `인계: 커밋 뒤`로 시작해 같은 경계가 아니고, 요청 범위는 병합까지이며, 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId` 없음), 이 세션이 쓴 `인계 못함` 줄도 없다. 이 세션의 제목은 `docs/web-widget-screens`였다. `tools/model_sweep.py docs/web-widget-screens`는 `스윕 밖`이고 열린 PR이 있어 모델은 `Sonnet 5.5 / high`다. 이 세션이 번복하거나 고친 것은 없다.
+
+지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-26-web-widget-screens.md
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #368은 dfb52c07로 열었고 아직 코멘트를 남기지 않았다. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792716732-6594에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (커밋 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합. 일지의 이 세션 절과 인계 절은 커밋하지 않았다. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367·#366 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-26-web-widget-screens.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/web-widget-screens (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었고, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-23T02:34:17Z
+
+## 이어받은 세션 (PR 연 뒤부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다 … 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합 … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 스킬(`ui-design`, `next-session`, `retro`)은 Read로 디스크의 `SKILL.md`를 열어 따랐다.
+
+- /ui-design 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- /ui-design 2. 디자인 시스템 아티팩트의 머리는 "shared with you from another organization (writer; …)"로 지금 계정이 편집자다. 판은 앞 세션이 본 그대로 `1792715827-ef57`이고, `project/tokens.json`을 읽자 "no file is published at that path"로 없었다. 앞 세션이 대 본 `9b4952f6`이 지금의 origin/main이라 빌드 입력(`web/packages/ui`, `.design-sync/`, `web-design.md`)의 `git diff --stat`은 비었다. 이번에는 더 그리지 않는다. 색인의 `lastChange`는 읽지 않았다(앞 세션이 본 것을 잇는다).
+- 웹 편집 확인. 화면 아티팩트(`VpNLNkpthSzahVCWraANHD`)의 판은 `1792723018-d2f3`로 올라 있었다(앞 세션이 본 것은 `1792716732-6594`). 대조는 서브에이전트에 맡겼고, 보고(아홉 모두 같음)를 믿기 전에 이 세션이 받은 파일로 다시 맞댔다. 받은 `mk-*.dc.html` 여덟에서 CR을 지운 내용과 `git show HEAD:<경로>`에서 CR을 지운 내용의 sha256 앞 16자가 모두 같았고, `canvas.json`은 원본 그대로 같았다. 웹에서 고친 화면은 없어 다시 옮기지 않았다. 파일 이름은 지시문에서 쓰던 `mk-limits`가 아니라 단수 `mk-limit.dc.html`이다(HEAD도 단수). 스크립트는 세션 스크래치에 두었다.
+
+PR #368의 `headRefOid`와 `git rev-parse HEAD`가 모두 `dfb52c07`인 것을 보고 `@coderabbitai review`를 남겼고(이 PR의 첫 요청), `tools/wait_ci.py 368`을 백그라운드로 띄웠다. 대기 중에 `tools/queue_open_rows.py --ref origin/main`을 돌렸다(만료할 행 없음, 사람 몫은 238 하나).
+
+## 봇 회차
+
+대기는 `끝: 모두 통과. CodeRabbit: Review rate limited`로 끝났다. 검사 일곱(`python`, `claude-review`, `e2e`, `ticket`, `verify`, `visual`, `web`)이 모두 SUCCESS였다.
+
+- CodeRabbit: 한도에 걸려 리뷰가 없다(요약 코멘트가 `rate limited`). 한도에 걸린 푸시는 회차로 세지 않는다(next-session 순서 1의 2). 보안·버그·성능 축은 PR 직전에 돈 대체 둘의 결과(위 "PR 직전 리뷰")가 맡는다(`operations.md` 리뷰 파이프라인 3의 "CodeRabbit PR 리뷰는 OSS 시간당 한도에 자주 걸린다" 항목).
+- claude-review: 첫 회차이고 `지적 없음`이다(헤드 `dfb52c07`). 코멘트가 실제로 있고(리뷰 파이프라인 3의 "코멘트가 있는지" 판정), `frontend-design-conflicts.md`가 인용한 `web-design.md` 9행·23행·50행을 대조한 것까지 적었다.
+- 반영할 지적이 없어 고친 것도, 뒤로 넘긴 일도 없다. PR 본문은 이 세션이 범위를 넓히지 않아 고치지 않았다.
+
+## 회고
+
+이 단계(web-widget 화면 디자인)를 닫는 회고다. 원천은 이 일지 전체(세 번 인계한 네 세션)와 이 세션이다. 후보 둘, 승인 0, 기각 둘, 넘김 없음. 이 세션은 지시문대로 봇 회차와 일지, 병합만 해 새로 난 실수가 없었다.
+
+1. **기각.** 이 세션이 `next-session` SKILL.md 전체(약 2.4만 자)와 이 일지 전체(약 2.7만 자)를 Read로 열었다. `hook_large_result`가 두 번 다 그 자리에서 알렸다. 일지는 지시문의 "읽을 것"이 가리킨 대로 열었고, 스킬은 병합 길의 절만 필요했다. 이미 있는 훅이 알렸고 새로 더할 검사가 없다(앞 일지 2026-10-23-23 회고 10과 같은 꼴, 세지 않는다).
+2. **기각.** 서브에이전트에 준 대조 지시문이 파일 이름을 `mk-limits`로 짐작해 적었고 서브에이전트가 단수 `mk-limit`로 바로잡았다. 지시문의 이름은 README 표에서 옮겼어야 했다. 서브에이전트가 목록으로 이름을 확인하는 절차를 이미 따라 손상이 없었고 되풀이 사건도 아니다(사건 없이 떠올린 것에 가깝다).
+
+일지에만 남기는 것: 이 PR은 문서만 바꾸고 `.scratch/`와 일지가 전부라 claude-review가 "원칙 IV에 걸리는 변경이 없다"로 지적 없이 끝났다. 대기열 만료는 `tools/queue_open_rows.py --ref origin/main`에서 없었다(작업 트리 쪽 출력은 이번에 돌리지 않았다).
+
+## 다음
+
+- 병합 뒤의 다음 단계는 명세(`/to-spec web-widget`, 모델 `Opus 5.5 / xhigh`)다. `.scratch/web-widget/`에 `design/`(화면 여덟과 README 표)는 있고 `spec.md`는 없다.
+- 명세가 정할 거리는 `.scratch/web-widget/design/README.md`와 `plan.md` web-widget 행의 2026-10-23 괄호가 원천이다. README의 제안과 탐색용 가정 목록 전부(진행 표시 이름표에 담은 지금 부르는 도구, 409·500 거절 알림의 "다시 보내기", 연결 수 상한 띠의 문구, 첫 화면의 할 수 있는 일 한 줄)와, 셀프 리뷰·PR 직전 리뷰가 더한 자리(알림의 제목, 입력창 위의 띠, 404와 409의 범위, 상한의 종류와 범위, 결정의 거절, 인자의 글자 꼴, 끝내지 못함의 문구)다.
+- 옛 `docs/web-widget-spec` 워크트리(PR 없음, 커밋 `8acd9a48`)가 남아 있다. 이번에는 재료로만 읽었고 같은 `design/README.md`·`screens-prompt.md` 경로를 커밋해 두어 `sibling_overlap.py`의 겹침 목록에 나온다. 명세 세션이 그 브랜치를 어떻게 할지 정한다. `tidy-checkouts`는 PR이 없는 워크트리를 지우지 않는다.
+- 이 PR은 `.scratch/design-system/design/frontend-design-conflicts.md`와 `.scratch/plan.md`를 admin-style 화면 브랜치(PR #367)와 함께 고친다. 나중에 병합하는 쪽이 글자 충돌에서 두 쪽 줄을 다 남긴다.
+- 봇 회차에서 뒤로 넘긴 일은 없다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
