@@ -133,3 +133,44 @@ open-session을 부른다 2026-10-23T15:56:12Z
   - [Nit, 고침] `_feed` 독스트링: 일시정지는 깨우지 않고 신호를 던지며 `run_paused` 는 `_attend` 의 finally 가 흘린다는 문장을 더했다.
   - [Nit, 고침] `test_end_user.py` 머리: 둘째 구동자는 구독이 떠남·타임아웃 뒤 등록부를 떠남에도 쓰여 포괄어 "스트림의 수명"으로 되돌리고 괄호에 다 적었다(`http.md` 의 같은 문장과 맞춤).
   - [Nit, 고침] `_relay` 독스트링: 함께 부른 호출들 사이에는 순서 보장이 서지 않는다는 구절을 더했다.
+
+### PR
+
+- 푸시하고 PR #378을 열었다(98a339e9). 열자마자 CI 2 통과, 5 대기였다. `@coderabbitai review` 코멘트는 아직 남기지 않았다(새 세션이 남긴다).
+- 커밋 98a339e9 뒤 `커밋 뒤` 인계 계기가 왔지만, 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 넘기지 않았다(next-session "인계할 때" 1).
+
+## 인계(PR 연 뒤)
+
+컨텍스트가 문턱을 넘은 채 `PR 연 뒤` 경계에 와서 넘긴다. 이 세션의 제목은 `feature/02-runtime-relays-call-events-live` 였다.
+
+```
+다음 작업: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md. 실행 도중에 모델·도구 호출 이벤트를 소비자에게 바로 중계해 최종 사용자 스트림의 calling 항목과 도구 항목이 결말 전에 오게 한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
+브랜치: feature/02-runtime-relays-call-events-live
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-01-runtime-relays-call-events-live.md
+이어받을 상태: 인계: PR 연 뒤. PR #378을 98a339e9로 열었다. next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰의 Minor(_attend finally 의 GeneratorExit 중 yield)는 바깥 행동이 바뀌지 않아 보류했고 근거는 PR 본문 "남긴 위험"과 일지 "합치기와 PR 직전 리뷰"에 있다 — 봇이 같은 자리를 짚으면 그 근거로 답한다. 일지의 이 인계 절은 커밋하지 않았다. PR #375 claude-review 둘째 회차의 Nit(src/agent_os/http/errors.py의 limit 불변식)은 보류했고 이유는 PR #375 코멘트에 있다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다. 일지 docs/journal/2026-10-24-01-runtime-relays-call-events-live.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목: `feature/02-runtime-relays-call-events-live (인계함)`. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T16:24:47Z
+
+## 이어 받은 세션(PR 연 뒤)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
+
+(지시문은 위 "인계(PR 연 뒤)"와 같다. 워크트리에 EnterWorktree(path)로 들어갔다.)
+
+### 봇 첫 회차
+
+- `@coderabbitai review` 코멘트를 남겼다. CodeRabbit의 자동 리뷰는 무료 OSS 한도에 걸려 리뷰가 없었다.
+- claude-review 첫 회차(98a339e9): Minor 셋, Nit 하나.
+  - [Minor, 고침] `BaseAgent.run` 독스트링에 적은 플러그인 작성자의 몫이 `.claude/rules/sdk.md` 에 없었다. 그 규칙은 `plugins/**` 에도 실려, `agent.py` 를 열지 않는 플러그인 작성 세션은 그 몫을 보지 못한다. `run()` 항목에 셋(정리 코드의 태스크, `contextvars`, 버려진 실행의 취소)을 이름으로 들고 원천을 그 독스트링으로 가리키는 문장을 더했다. 카나리아 `sdk_rule_failure_cause`, `sdk_rule_shortcut_patterns` 를 다시 돌려 둘 다 통과 4(claude 2.1.302)였다.
+  - [Minor, 보류] `_attend` finally 의 `GeneratorExit` 중 yield 를 후속 항목으로 남기라는 권고. 보류 이유는 PR 직전 리뷰 때와 같다 — 그 `RuntimeError` 는 `_connected` 가 붙잡고 `_drive` 가 쓰지 않아 바깥 행동이 바뀌지 않고, 빨강을 낼 시험이 없다. 뒤로 넘기는 일이 아니라 "다음"에 적지 않는다.
+  - [Minor, 보류] 취소는 통과시키고 나머지는 보관하는 갈래가 `_AgentTask.run` 과 `_relay` 두 곳에 있다. 리뷰도 지금 추출은 이르다고 했다.
+  - [Nit, 보류] `_relay` 의 `except` 가 두껍다. 셀프 리뷰 표준 3과 같은 자리이고 같은 이유로 남긴다.
