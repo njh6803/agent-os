@@ -108,7 +108,7 @@ expect_output = ["where False = watch("]
 
 [[mutation.edit]]
 file = "tools/rerun_checks.py"
-old = '''        return event is not None and _is_init(event) and init_problem(event, self._allowed_plugins)'''
+old = '''        return event is not None and _is_init(event) and init_outside(event, self._allowed_plugins)'''
 new = '''        return False'''
 
 [[mutation]]
@@ -176,8 +176,8 @@ expect_output = ["assert None == End(kind='측정 아님', reason='모델', rese
 
 [[mutation.edit]]
 file = "tools/rerun_checks.py"
-old = '''            allowed = {*self._harness_models, *self._chosen.get(session_id, ())}'''
-new = '''            allowed = {*self._harness_models, *(m for c in self._chosen.values() for m in c)}'''
+old = '''        allowed = {*self._harness_models, *self._chosen.get(session_id, ())}'''
+new = '''        allowed = {*self._harness_models, *(m for c in self._chosen.values() for m in c)}'''
 
 [[mutation]]
 name = "code-review 의 sonnet 을 하네스 모델에 넣지 않는다"

@@ -51,7 +51,7 @@ from tools.rerun_checks import (
     command_patterns,
     enabled_plugins,
     harness_models,
-    init_problem,
+    init_outside,
     limit_of,
     model_mismatch,
     path_patterns,
@@ -461,12 +461,12 @@ def test_init은_빈_mcp_servers와_허용_모임_안의_플러그인만_지난�
         "plugins": plugins,
         "mcp_servers": servers,
     }
-    assert init_problem(event, ALLOWED) is not ok
+    assert init_outside(event, ALLOWED) is not ok
 
 
 def test_칸이_목록이_아닌_init은_허용_밖이다() -> None:
-    assert init_problem({"type": "system", "subtype": "init", "plugins": []}, ALLOWED)
-    assert init_problem({"type": "system", "subtype": "init", "mcp_servers": []}, ALLOWED)
+    assert init_outside({"type": "system", "subtype": "init", "plugins": []}, ALLOWED)
+    assert init_outside({"type": "system", "subtype": "init", "mcp_servers": []}, ALLOWED)
 
 
 def test_source가_없는_플러그인은_이름을_허용_키의_골뱅이_앞과_견준다() -> None:
@@ -478,7 +478,7 @@ def test_source가_없는_플러그인은_이름을_허용_키의_골뱅이_앞�
         "plugins": [{"name": "pyright-lsp"}],
         "mcp_servers": [],
     }
-    assert not init_problem(event, ALLOWED)
+    assert not init_outside(event, ALLOWED)
 
 
 def test_허용_모임은_내장_셋과_클론의_settings_json이_켠_플러그인이다(tmp_path: Path) -> None:

@@ -7,7 +7,7 @@
 회차를 다시 돌지, 과제를 뺄지, 러너를 멈출지는 10이 정한다.
 
 판정과 바깥. 판정하는 함수는 값만 받는다(`account_problem`, `settings_env_problem`,
-`init_problem`, `resolve_model`, `agent_model`, `model_mismatch`, `limit_of`, `windows_of`,
+`init_outside`, `resolve_model`, `agent_model`, `model_mismatch`, `limit_of`, `windows_of`,
 `strip_commit_messages`, `command_patterns`, `path_patterns`). 바깥을 읽는 몫은
 `read_auth_status`(하위 프로세스, `AUTH_TIMEOUT`), `before_round`, `allowed_plugins`,
 `harness_models`, `watched_paths`, `Screen`, `screen_for`다.
@@ -19,10 +19,10 @@
 읽지 못함)도 계정 쪽이라 기록 없이 멈춘다. 까닭에는 이메일을 싣지 않는다. 회차 안에서는 `Screen`이
 `tools/rerun_continue.py`의 `run_sessions`에 두 자리로 들어간다. `Screen.watch`는 `drive`가 줄을
 받을 때마다 불려, 허용 밖의 init 을 받은 그 줄에서 호출을 끄게 한다(`tools/rerun_session.py`의
-`Stop.HALTED_*`). `Screen` 자체는 호출이 끝날 때마다 불려 그 호출의 원본 줄과 지금까지의 세션 기록
-파일을 보고 끝을 낸다. 여럿이 걸리면 설정, 모델, 오염, 한도의 차례다. 모델과 오염도 호출마다 보아
-걸리면 다음 호출을 하지 않는다. 기록의 칸(거부 수, 사용률, 오염 적중, 모델 불일치)은
-`Screen.findings`가 낸다.
+`Stop.HALTED_*`). `Screen` 자체는 호출이 끝날 때마다 불려 그 호출의 원본 줄과 그 세션의 기록 파일을
+보고, 앞 세션들에서 쌓아 둔 모델 견줌과 함께 끝을 낸다. 여럿이 걸리면 설정, 모델, 오염, 한도의
+차례다. 모델과 오염도 호출마다 보아 걸리면 다음 호출을 하지 않는다. 기록의 칸(거부 수, 사용률, 오염
+적중, 모델 불일치)은 `Screen.findings`가 낸다.
 
 설정. init 이벤트의 `mcp_servers`가 빈 목록이고 `plugins`의 항목마다 `source`가 허용 모임 안이어야
 한다. 허용 모임은 내장 셋(`<이름>@builtin`)과 클론의 `.claude/settings.json`의 `enabledPlugins`에서
@@ -439,7 +439,7 @@ def _is_init(event: Mapping[str, Json]) -> bool:
     return event.get("type") == "system" and event.get("subtype") == "init"
 
 
-def init_problem(event: Mapping[str, Json], allowed: frozenset[str]) -> bool:
+def init_outside(event: Mapping[str, Json], allowed: frozenset[str]) -> bool:
     """init 이벤트가 허용 밖인가. `mcp_servers`가 빈 목록이 아니거나 `plugins`가 목록이 아니거나 그
     항목 하나라도 허용 모임 밖이면 그렇다."""
     servers = event.get("mcp_servers")
@@ -1150,12 +1150,13 @@ class Screen:
         self._hits: list[Hit] = []
         self._start: dict[str, float] = {}
         self._end: dict[str, float] = {}
+        self._mismatch_by_session: dict[str, tuple[LineCount, ...]] = {}
         self._mismatch: tuple[LineCount, ...] = ()
 
     def watch(self, line: str) -> bool:
         """그 줄이 허용 밖의 init 이면 참이다. 호출을 끄라는 뜻이다."""
         event = parse_event(line)
-        return event is not None and _is_init(event) and init_problem(event, self._allowed_plugins)
+        return event is not None and _is_init(event) and init_outside(event, self._allowed_plugins)
 
     def __call__(self, launched: Launched) -> End | None:
         """호출 하나가 끝난 뒤의 끝. 걸린 것이 없으면 None 이다."""
@@ -1166,7 +1167,7 @@ class Screen:
         for event in events:
             if _is_init(event):
                 self._tools.update(t for t in _list(event.get("tools")) if isinstance(t, str))
-                settings = settings or init_problem(event, self._allowed_plugins)
+                settings = settings or init_outside(event, self._allowed_plugins)
             for window in windows_of(event):
                 self._start.setdefault(window.window, window.utilization)
                 self._end[window.window] = window.utilization
@@ -1180,7 +1181,8 @@ class Screen:
                 if model is not None:
                     chosen.add(model)
         self._record(uses)
-        self._mismatch = self._models()
+        self._mismatch_by_session[launched.session_id] = self._models(launched.session_id)
+        self._mismatch = _summed(c for v in self._mismatch_by_session.values() for c in v)
         if settings:
             return _SETTINGS_END
         if self._mismatch:
@@ -1213,14 +1215,13 @@ class Screen:
                 if hit not in self._hits:
                     self._hits.append(hit)
 
-    def _models(self) -> tuple[LineCount, ...]:
-        """세션마다 그 세션이 Agent 입력으로 고른 모델까지 허용해 견주고 더한다."""
-        found: list[LineCount] = []
-        for session_id in self._sessions:
-            main, side = transcript_counts(self._config_dir, session_id)
-            allowed = {*self._harness_models, *self._chosen.get(session_id, ())}
-            found.extend(model_mismatch(main, side, arm=self._arm, allowed=allowed))
-        return _summed(found)
+    def _models(self, session_id: str) -> tuple[LineCount, ...]:
+        """그 세션의 기록을 그 세션이 Agent 입력으로 고른 모델까지 허용해 견준다. 방금 끝난 호출의
+        세션만 읽는다. 다른 세션의 기록과 고른 모델은 그 세션의 마지막 호출 뒤로 바뀌지 않는다.
+        호출마다 모든 세션을 다시 읽으면 세션을 이을수록 끝난 세션의 기록까지 거듭 읽는다."""
+        main, side = transcript_counts(self._config_dir, session_id)
+        allowed = {*self._harness_models, *self._chosen.get(session_id, ())}
+        return model_mismatch(main, side, arm=self._arm, allowed=allowed)
 
     def findings(self) -> Findings:
         return Findings(
