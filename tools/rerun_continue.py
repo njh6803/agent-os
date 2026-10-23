@@ -12,18 +12,19 @@
 끝남이다(`ends_with_question`).
 
 호출 앞뒤의 끝. 호출 앞에서는 셋째 개입·다섯째 세션·$1 미만의 남은 예산·4시간을 넘긴 벽시계면 그
-호출을 하지 않고 상한으로 끊는다(`before_call`). 호출 뒤에서는 먼저 주입받은 `screen`(09의 한도·설정
-판정이 들어갈 자리)이 낸 끝을 따르고, 그다음 시간을 넘긴 호출, `error_max_budget_usd`, 끄지 않고
-남긴 호출과 init 이나 결과 이벤트가 없는 호출(측정 아님(호출))의 차례로 본다(`call_end`). 결과
-이벤트 없이 끝난 호출을 갈래 3으로 보내면 Claude Code가 죽은 것이 개입으로 셈해진다. 끄지 않고 남긴
-호출 뒤에 이어 가면 살아 있는 프로세스 곁에서 같은 세션을 이어 부르거나 같은 클론에 새 세션을 연다.
+호출을 하지 않고 상한으로 끊는다(`before_call`). 호출 뒤에서는 먼저 주입받은 `screen`(09의
+`tools/rerun_checks.py`가 설정·모델·오염·한도를 본다)이 낸 끝을 따르고, 그다음 시간을 넘긴 호출,
+`error_max_budget_usd`, 끄지 않고 남긴 호출과 줄 판정이 끈 호출과 init 이나 결과 이벤트가 없는
+호출(측정 아님(호출))의 차례로 본다(`call_end`). 결과 이벤트 없이 끝난 호출을 갈래 3으로 보내면
+Claude Code가 죽은 것이 개입으로 셈해진다. 끄지 않고 남긴 호출 뒤에 이어 가면 살아 있는 프로세스
+곁에서 같은 세션을 이어 부르거나 같은 클론에 새 세션을 연다.
 
 예산. 호출마다 넘기는 값은 회차 상한에서 그 호출 전까지 회차가 쓴 것을 뺀 값이다. 쓴 것은 세션마다
 마지막 비용(`session_cost`)의 합이고, `--resume`으로 이어 부를 세션이 이미 쓴 몫도 든다. 예산
 플래그는 그 호출의 몫만 세기 때문이다.
 
 끄기는 `tools/rerun_session.py`의 `drive`가 한다. 이 모듈은 벽시계의 남은 시간을 호출의 시간
-제한으로 넘기고, 시계와 명령 줄 읽기를 주입받아 그대로 넘긴다.
+제한으로 넘기고, 시계와 명령 줄 읽기와 줄 판정(`watch`)을 주입받아 그대로 넘긴다.
 
 못 보는 것.
 - 결과 커밋은 호출이 끝난 뒤의 클론만 본다. 세션이 B 뒤에 커밋하고 그 브랜치를 지웠으면 끝남이
@@ -58,16 +59,18 @@ from tools.rerun_files import (
 )
 from tools.rerun_round import RoundDir
 from tools.rerun_session import (
+    CUT_SHORT,
+    LEFT_RUNNING,
     TIMED_OUT,
     CallRun,
     Continued,
     Launched,
     Opening,
     Picked,
-    Stop,
     first_message,
     launch,
     local_branches,
+    never,
     new_session_id,
     pick_result_commit,
     result_text,
@@ -155,20 +158,79 @@ def before_call(
 
 
 def call_end(launched: Launched) -> End | None:
-    """호출 하나가 끝난 뒤의 끝. 시간을 넘긴 호출, 예산을 다 쓴 호출, 끄지 않고 남긴 호출과 init
-    이나 결과 이벤트가 없는 호출의 차례로 본다. 시간을 넘긴 호출은 러너가 끊으려 한 것이라 결과
-    이벤트가 없어도 측정 아님(호출)이 아니다(명세 "이어 가기와 끝"의 "러너가 끈 것"). 출력을 닫고
-    멈춰 끈 호출은 끄기가 결과 이벤트를 자르지 않았으므로 결과 이벤트가 없으면 측정 아님(호출)이고,
-    끄지 못한 호출은 프로세스가 살아 있어 결과 이벤트가 있어도 측정 아님(호출)이다."""
+    """호출 하나가 끝난 뒤의 끝. 시간을 넘긴 호출, 예산을 다 쓴 호출, 끄지 않고 남긴 호출과 줄
+    판정이 출력 도중에 끈 호출과 init 이나 결과 이벤트가 없는 호출의 차례로 본다. 시간을 넘긴 호출은
+    러너가 끊으려 한 것이라 결과 이벤트가 없어도 측정 아님(호출)이 아니다(명세 "이어 가기와 끝"의
+    "러너가 끈 것"). 출력을 닫고 멈춰 끈 호출은 끄기가 결과 이벤트를 자르지 않았으므로 결과 이벤트가
+    없으면 측정 아님(호출)이다. 끄지 못한 호출(시간 밖의 `LEFT_RUNNING`)은 프로세스가 살아 있고, 줄
+    판정이 끈 호출은 끄기가 결과를 잘랐을 수 있어 결과 이벤트가 있어도 측정 아님(호출)이다. 줄
+    판정이 끄라고 한 까닭의 끝은 `screen`이 먼저 낸다."""
     stop = launched.drove.stop
     if stop in TIMED_OUT:
         return End(END_CAPPED, REASON_TIME, None)
     summary = launched.summary
     if any(r.subtype == BUDGET_SUBTYPE for r in summary.results):
         return End(END_CAPPED, REASON_BUDGET, None)
-    if stop is Stop.HUNG_LEFT or summary.init is None or not summary.results:
+    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:
         return End(END_NOT_MEASURED, REASON_CALL, None)
     return None
+
+
+def _call(
+    place: RoundDir,
+    kind: str,
+    *,
+    claude: Sequence[str],
+    arm: Arm,
+    env: Mapping[str, str],
+    session_id: str,
+    message: str,
+    budget_usd: float,
+    timeout: float,
+    clock: Callable[[], float],
+    read_command_line: CommandLineReader,
+    watch: Callable[[str], bool],
+) -> CallRun:
+    """세션 호출 하나를 띄우고 그 호출의 이어 가기 판정(지시문 담음, 물음표 끝)을 붙인다."""
+    launched = launch(
+        place,
+        claude=claude,
+        arm=arm,
+        env=env,
+        session_id=session_id,
+        opening=_OPENINGS[kind],
+        message=message,
+        budget_usd=budget_usd,
+        timeout=timeout,
+        clock=clock,
+        read_command_line=read_command_line,
+        watch=watch,
+    )
+    text = result_text(launched.summary.results)
+    return CallRun(
+        kind=kind,
+        launched=launched,
+        has_directive=text is not None and directive_branch(text) is not None,
+        ends_with_question=ends_with_question(text),
+    )
+
+
+def _opening(
+    following: str,
+    text: str | None,
+    *,
+    root: str,
+    task: Task,
+    session_id: str,
+    make_session_id: Callable[[], str],
+) -> tuple[str, str]:
+    """다음 호출의 세션 id 와 메시지. 개입은 같은 세션에 한 줄을 넣고, 인계는 새 세션을 결과 글의
+    지시문으로 연다(인계는 결과 글에 지시문이 있을 때만 난다)."""
+    if following == CALL_INTERVENTION:
+        return session_id, INTERVENTION_MESSAGE
+    return make_session_id(), first_message(
+        root, task.ticket, handoff_directive(text or "", task.branch)
+    )
 
 
 def run_sessions(
@@ -181,6 +243,7 @@ def run_sessions(
     directive_text: str,
     wall_clock_from: float,
     screen: Callable[[Launched], End | None],
+    watch: Callable[[str], bool] = never,
     clock: Callable[[], float] = time.monotonic,
     read_command_line: CommandLineReader = command_line,
     make_session_id: Callable[[], str] = new_session_id,
@@ -188,7 +251,9 @@ def run_sessions(
     """회차의 세션을 끝까지 잇는다. 첫 호출은 `directive_text`로 새 세션을 연다.
 
     `wall_clock_from`은 `clock`의 눈금으로 잰 준비가 끝난 때다(04의 `Setup.wall_clock_from`).
-    `screen`은 호출마다 가장 먼저 그 호출의 끝(한도, 설정 등)을 낸다. 끝이 없으면 None 이다."""
+    `screen`은 호출마다 가장 먼저 그 호출의 끝(한도, 설정 등)을 낸다. 끝이 없으면 None 이다.
+    `watch`는 호출 안에서 줄을 받을 때마다 불려, 참이면 그 호출을 끈다(`tools/rerun_session.py`의
+    `drive`). 둘 다 09의 `tools/rerun_checks.py`의 `Screen`이 짓는다."""
     root = str(place.clone)
     deadline = wall_clock_from + WALL_CLOCK_SECONDS
     runs: list[CallRun] = []
@@ -209,48 +274,46 @@ def run_sessions(
         )
         if end is not None:
             break
-        launched = launch(
+        run = _call(
             place,
+            kind,
             claude=claude,
             arm=arm,
             env=env,
             session_id=session_id,
-            opening=_OPENINGS[kind],
             message=message,
             budget_usd=left_usd,
             timeout=left_seconds,
             clock=clock,
             read_command_line=read_command_line,
+            watch=watch,
         )
+        runs.append(run)
         if kind == CALL_HANDOFF:
             handoffs += 1
         elif kind == CALL_INTERVENTION:
             interventions += 1
+        launched = run.launched
         cost, _ = session_cost(launched.summary.results, session_id)
         if cost is not None:
             spent[session_id] = cost
-        text = result_text(launched.summary.results)
-        runs.append(
-            CallRun(
-                kind=kind,
-                launched=launched,
-                has_directive=text is not None and directive_branch(text) is not None,
-                ends_with_question=ends_with_question(text),
-            )
-        )
         end = screen(launched) or call_end(launched)
         if end is not None:
             break
+        text = result_text(launched.summary.results)
         picked = pick_result_commit(local_branches(place.clone, task.base), task.branch)
         following = next_kind(text, task.branch, picked)
         if following is None:
             end = End(END_DONE, None, None)
             break
-        if following == CALL_INTERVENTION:
-            message = INTERVENTION_MESSAGE
-        else:  # 인계는 결과 글에 지시문이 있을 때만 난다
-            session_id = make_session_id()
-            message = first_message(root, task.ticket, handoff_directive(text or "", task.branch))
+        session_id, message = _opening(
+            following,
+            text,
+            root=root,
+            task=task,
+            session_id=session_id,
+            make_session_id=make_session_id,
+        )
         kind = following
     asked = end.kind == END_DONE and runs[-1].ends_with_question
     return Continued(
