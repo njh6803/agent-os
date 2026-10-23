@@ -60,4 +60,13 @@ class AgentContext(Protocol):
 
 
 class BaseAgent(Protocol):
-    def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]: ...
+    def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        """에이전트의 몫. 런타임은 이것을 run()을 부른 쪽이 아닌 제 태스크에서 순회한다(ADR 0039).
+
+        플러그인 작성자가 알아야 할 것은 셋이다. 정리 코드(`finally`)는 에이전트를 돌린 그
+        태스크에서 실행이 끝나기 전에 돈다. 에이전트가 바꾼 컨텍스트 변수(`contextvars`)는 run()을
+        부른 쪽에 보이지 않는다 — 태스크를 띄울 때 복사된다. 버려진 실행(트레이스를 쓰지 못함,
+        소비자가 스트림을 닫음, 실행 타임아웃)에서는 에이전트가 기다리던 자리에 취소가 들어오고,
+        정리 코드 안의 await도 취소된다.
+        """
+        ...

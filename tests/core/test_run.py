@@ -19,10 +19,10 @@ from collections.abc import (
     Mapping,
     Sequence,
 )
-from contextlib import asynccontextmanager
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import fields
 from datetime import UTC, datetime, timedelta
-from typing import Literal, NoReturn
+from typing import Literal, NoReturn, TypeGuard
 
 import anyio
 import pytest
@@ -4464,8 +4464,8 @@ async def test_에이전트가_실패_이벤트를_내면_원인과_무관하게
 
 
 class ClosingAgent:
-    """런타임이 멈추게 하는 자리 뒤에도 끝남을 내려는 에이전트. `finally` 가 돌면 `closed` 이고 그
-    태스크가 `closed_in` 이다.
+    """런타임이 멈추게 하는 자리 뒤에도 끝남을 내려는 에이전트. 처음 돈 태스크가 `ran_in` 이고,
+    `finally` 가 돌면 `closed` 이고 그 태스크가 `closed_in` 이다.
 
     `first` 가 낸 것을 먼저 낸다. 런타임이 그 자리에서 이 제너레이터를 닫지 않고 버리면 `finally` 는
     가비지 수집이 나중에 다른 태스크에서 돌린다(PEP 525).
@@ -4474,9 +4474,11 @@ class ClosingAgent:
     def __init__(self, first: Callable[[AgentContext], Awaitable[Sequence[Event]]]) -> None:
         self._first = first
         self.closed = False
+        self.ran_in: object = None
         self.closed_in: object = None
 
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        self.ran_in = asyncio.current_task()
         try:
             for event in await self._first(ctx):
                 yield event
@@ -4512,15 +4514,15 @@ async def _swallowed_pause(ctx: AgentContext) -> Sequence[Event]:
     ],
     ids=["지어낸 실패", "지어낸 요약", "삼킨 일시정지"],
 )
-async def test_런타임이_멈춘_에이전트의_정리_코드는_실행이_끝나기_전에_같은_태스크에서_돈다(
+async def test_멈춘_에이전트의_정리_코드는_실행이_끝나기_전에_에이전트를_돌린_태스크에서_돈다(
     first: Callable[[AgentContext], Awaitable[Sequence[Event]]],
     last: str,
     trace: FakeTrace,
     clock: FakeClock,
 ) -> None:
-    """몸통이 에이전트의 제너레이터를 그 자리에서 닫는다(이유는 `_closing` 의 독스트링). 이벤트
-    사이에 이벤트 루프에 양보하는 자리가 없어, 닫지 않는 구현에서는 실행이 끝난 바로 그때 정리
-    코드가 아직 돌지 않는다(`contract_mutations.toml` 의 변이가 잰다)."""
+    """에이전트는 몸통이 띄운 제 태스크에서 돌고 그 태스크가 제너레이터를 그 자리에서 닫는다(이유는
+    `_closing` 의 독스트링, ADR 0039). 닫지 않는 구현에서는 실행이 끝난 바로 그때 정리 코드가 아직
+    돌지 않는다(`contract_mutations.toml` 의 변이가 잰다)."""
     agent = ClosingAgent(first)
     model = GenericFakeChatModel(messages=iter([]))
     tools = FakeTools({"send": "sent"})
@@ -4528,7 +4530,8 @@ async def test_런타임이_멈춘_에이전트의_정리_코드는_실행이_�
     events = await _run(agent, model, trace, clock, tools=tools, plugins=_gated_plugins(agent))
 
     assert agent.closed
-    assert agent.closed_in is asyncio.current_task()
+    assert agent.ran_in is not None
+    assert agent.closed_in is agent.ran_in
     assert events[-1].type == last
     assert "run_finished" not in [e.type for e in events]
 
@@ -6407,3 +6410,186 @@ async def test_기한_범위가_아닌_TimeoutError_는_기한이_아니라_결�
         await _continue(last, trace, clock, model=_summarizing_model(), plugins=plugins)
 
     assert [e.type for e in trace.events if e.run_id == "run-1"] == ["run_started"]
+
+
+# --- 실시간 중계 — 호출의 이벤트는 기록하는 자리에서 흘린다(ADR 0039) ---------------
+#
+# 에이전트는 몸통이 띄운 제 태스크에서 돌고, 컨텍스트가 모델·도구 호출의 이벤트를 기록하면 몸통이
+# 그것을 내보낼 때까지 기다린다(맞물림). 시점은 잠이 아니라 소비자가 받은 이벤트로 맞추고 기다리는
+# 시험마다 기한을 둔다.
+
+
+class WitnessConnection(FakeConnection):
+    """도구가 불릴 때마다 소비자가 그때까지 받은 이벤트의 종류를 `seen` 에 적는다."""
+
+    def __init__(self, received: Sequence[Event]) -> None:
+        super().__init__({"add": "4"}, {})
+        self._received = received
+        self.seen: list[list[str]] = []
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self.seen.append([event.type for event in self._received])
+        return await super().call(name, args)
+
+
+def _events_of(
+    agent: BaseAgent, model: ChatModel, trace: TraceStore, clock: Clock, tools: ToolSource
+) -> AsyncIterator[Event]:
+    """`_run` 과 같은 실행이되 모으지 않고 흐름 그대로 준다. 소비자가 받는 시점을 시험이 쥔다."""
+    return run(
+        AgentName("calc"),
+        "2+2?",
+        PRINCIPAL,
+        plugins=FakePlugins({"calc": agent}),
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+
+
+def _closable(events: AsyncIterator[Event]) -> TypeGuard[AsyncGenerator[Event]]:
+    """`run()` 은 `AsyncIterator` 를 약속하지만 실제로는 닫을 수 있는 제너레이터다."""
+    return isinstance(events, AsyncGenerator)
+
+
+async def test_모델이_요청한_도구가_불릴_때_소비자는_이미_그_모델_호출의_이벤트를_받았다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """루프가 `ctx.llm()` 한 번인 에이전트에서도 모델 호출의 이벤트는 그 도구를 부르기 전에, 도구
+    호출의 이벤트는 다음 모델 호출 전에 소비자에게 닿는다. 모으던 판에서는 둘 다 결말 앞에 한꺼번에
+    나와 도구가 불릴 때 소비자는 시작 이벤트만 받았다."""
+    received: list[Event] = []
+    tools = FakeTools()
+    witness = WitnessConnection(received)
+    tools.connection = witness
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _tool_request(), _reply("4")]))
+
+    with anyio.fail_after(PACED):
+        async for event in _events_of(OneShotAgent(), model, trace, clock, tools):
+            received.append(event)
+
+    assert witness.seen == [
+        ["run_started", "llm_called"],
+        ["run_started", "llm_called", "tool_called", "llm_called"],
+    ]
+    assert [e.type for e in received] == [
+        "run_started",
+        *("llm_called", "tool_called") * 2,
+        "llm_called",
+        "run_finished",
+    ]
+
+
+class ModelCallUnwritableTrace(FakeTrace):
+    """모델 호출의 이벤트만 쓰지 못한다."""
+
+    def write(self, event: Event) -> None:
+        if event.type == "llm_called":
+            raise OSError("트레이스를 쓸 수 없다: 디스크가 가득 찼다")
+        super().write(event)
+
+
+async def test_모델_호출의_이벤트를_쓰지_못하면_그_모델이_요청한_도구는_불리지_않는다(
+    clock: FakeClock,
+) -> None:
+    """도구를 요청한 모델 호출의 이벤트는 그 도구를 부르기 전에 트레이스에 쓰인다. 모으던 판에서는
+    루프가 끝난 뒤에 쓰여, 그 쓰기가 실패해도 도구는 이미 불린 뒤였다(ADR 0039)."""
+    tools = FakeTools({"add": "4"})
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+
+    events = await _run(OneShotAgent(), model, ModelCallUnwritableTrace(), clock, tools=tools)
+
+    assert tools.connection.calls == []
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+
+
+class HandshakeConnection(FakeConnection):
+    """도구 둘이 서로를 기다린다. 둘 다 시작해야 둘 다 끝나고, 기한 안에 짝이 오지 않으면
+    실패한다."""
+
+    def __init__(self) -> None:
+        super().__init__({"left": "왼", "right": "오"}, {})
+        self._arrived = {"left": anyio.Event(), "right": anyio.Event()}
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self._arrived[name].set()
+        partner = "right" if name == "left" else "left"
+        with anyio.fail_after(PACED):
+            await self._arrived[partner].wait()
+        return await super().call(name, args)
+
+
+class GatheringAgent:
+    """도구 둘을 `asyncio.gather` 로 함께 부른다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        left, right = await asyncio.gather(ctx.tool("left"), ctx.tool("right"))
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=left + right)
+
+
+async def test_함께_부른_도구_둘은_둘_다_시작한_뒤에야_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """맞물림은 이벤트를 흘리는 동안만 에이전트를 세운다. 도구 호출을 하나씩 들이는 구현이면 먼저 든
+    도구가 짝을 기다리다 기한에 걸려 실패한다(`.scratch/web-widget/probes/relay_mutations.toml`
+    의 변이가 잰다)."""
+    tools = FakeTools()
+    tools.connection = HandshakeConnection()
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(GatheringAgent(), model, trace, clock, tools=tools)
+
+    finished = events[-1]
+    assert isinstance(finished, RunFinished), [e.type for e in events]
+    assert finished.output == "왼오"
+
+
+class AbandonedAgent:
+    """도구 하나를 부른 뒤 끝없이 기다린다. 끊긴 자리의 예외 타입이 `interrupted_by`, 정리 코드가
+    돌면 `cleaned`, 정리 코드 안의 await 가 취소되면 `cleanup_cancelled` 다."""
+
+    def __init__(self) -> None:
+        self.interrupted_by: type[BaseException] | None = None
+        self.cleaned = False
+        self.cleanup_cancelled = False
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            await ctx.tool("add", a=2, b=2)
+            await anyio.sleep_forever()
+            yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
+        except BaseException as error:
+            self.interrupted_by = type(error)
+            raise
+        finally:
+            self.cleaned = True
+            try:
+                await anyio.sleep_forever()
+            except anyio.get_cancelled_exc_class():
+                self.cleanup_cancelled = True
+                raise
+
+
+async def test_소비자가_도중에_스트림을_닫으면_에이전트의_태스크가_취소되고_정리_코드가_돈다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """도구 호출의 이벤트를 받은 소비자가 스트림을 닫는다. 그때 에이전트는 그 도구 호출 안에서
+    맞물림을 기다리므로 몸통이 태스크 그룹을 취소한 것이 그 자리에 취소로 들어간다(ADR 0039
+    Consequences). 실행은 기한 안에 끝난다."""
+    agent = AbandonedAgent()
+    tools = FakeTools({"add": "4"})
+    events = _events_of(agent, GenericFakeChatModel(messages=iter([])), trace, clock, tools)
+    assert _closable(events)
+
+    with anyio.fail_after(PACED) as deadline:
+        async with aclosing(events) as stream:
+            async for event in stream:
+                if event.type == "tool_called":
+                    break
+
+    assert not deadline.cancel_called
+    assert agent.interrupted_by is anyio.get_cancelled_exc_class()
+    assert agent.cleaned
+    assert agent.cleanup_cancelled
+    assert tools.closed

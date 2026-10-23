@@ -69,6 +69,7 @@ from tools.rerun_session import (
     directive,
     first_message,
     local_branches,
+    never,
     outcome_of,
     pick_result_commit,
     round_record,
@@ -185,6 +186,7 @@ def _run(
     *,
     ids: Callable[[], str],
     screen: Callable[[Launched], End | None] = _nothing,
+    watch: Callable[[str], bool] = never,
     clock: Callable[[], float] = time.monotonic,
     read_command_line: CommandLineReader = command_line,
 ) -> Continued:
@@ -197,6 +199,7 @@ def _run(
         directive_text=directive(task, ARM, "그것을 짓는다"),
         wall_clock_from=clock(),
         screen=screen,
+        watch=watch,
         clock=clock,
         read_command_line=read_command_line,
         make_session_id=ids,
@@ -379,6 +382,14 @@ def test_출력을_닫고_멈춘_호출은_끄기와_상관없이_결과로_가�
     assert hung_dead == End(END_NOT_MEASURED, REASON_CALL, None), "멈춰 끈 호출을 시간으로 셌다"
     hung_left = call_end(_launched(results=(_seen(),), stop=Stop.HUNG_LEFT))
     assert hung_left == End(END_NOT_MEASURED, REASON_CALL, None), "살아 있는 호출 뒤에 이었다"
+
+
+@pytest.mark.parametrize("stop", [Stop.HALTED_KILLED, Stop.HALTED_LEFT])
+def test_줄_판정이_끄라고_한_호출은_결과가_있어도_잇지_않는다(stop: Stop) -> None:
+    # 출력 도중에 끈 호출의 결과는 잘렸을 수 있고, 남긴 호출은 프로세스가 살아 있다. 그 판정의 끝은
+    # `screen`이 먼저 내고, 여기는 `screen`이 끝을 내지 않았을 때의 갈래다.
+    got = call_end(_launched(results=(_seen(),), stop=stop))
+    assert got == End(END_NOT_MEASURED, REASON_CALL, None), "줄 판정이 끄라고 한 호출 뒤에 이었다"
 
 
 def test_끝의_하위_이유는_기록이_받는_이유다() -> None:
@@ -722,9 +733,11 @@ def test_벽시계를_넘긴_resume_호출도_명령_줄의_세션_id_를_본_�
         (Stop.DEADLINE_LEFT, False, True),
         (Stop.HUNG_KILLED, False, False),  # 출력이 닫힌 뒤라 끄기가 결과를 자르지 않았다
         (Stop.HUNG_LEFT, False, True),
+        (Stop.HALTED_KILLED, True, False),  # 줄 판정이 출력 도중에 껐다
+        (Stop.HALTED_LEFT, False, True),
     ],
 )
-def test_세션의_끈_표시는_마감에_끈_호출에만_서고_남긴_호출은_호출_칸에_든다(
+def test_세션의_끈_표시는_출력_도중에_끈_호출에만_서고_남긴_호출은_호출_칸에_든다(
     tmp_path: Path, *, stop: Stop, marked: bool, left: bool
 ) -> None:
     runs = [
@@ -799,6 +812,52 @@ def test_명령_줄에_세션_id_가_없거나_읽지_못하면_끄지_않고_�
         records.mkdir()
         [session] = read_record(write_record(records, record)).sessions
         assert session.calls[0].kill_skipped and not session.runner_killed
+    finally:
+        for call in fake.read_calls(config):
+            _end_left(_pid(call), S1)
+
+
+def _on_init(line: str) -> bool:
+    return '"init"' in line
+
+
+def test_줄_판정이_참이면_그_줄에서_명령_줄의_세션_id_를_본_뒤_트리째_끈다(tmp_path: Path) -> None:
+    place, config, task = _setup(tmp_path)
+    fake.write_script(config, calls=[fake.call([fake.init_event()], child=600, hang=600)])
+    seen: list[tuple[str, ...] | None] = []
+
+    got = _run(
+        place, config, task, ids=_ids(S1), watch=_on_init, read_command_line=_recording(seen)
+    )
+
+    assert got.end == End(END_NOT_MEASURED, REASON_CALL, None)
+    [argv] = seen
+    assert argv is not None and _flag(list(argv), "--session-id") == S1
+    [call] = fake.read_calls(config)
+    [child] = fake.read_children(config)
+    assert _gone(_pid(call), S1) and _gone(_pid(child), S1)
+    drove = got.runs[0].launched.drove
+    assert drove.stop is Stop.HALTED_KILLED and drove.exit_code is None
+    record = session_record(S1, got.runs, config)
+    assert record.runner_killed and not record.calls[0].kill_skipped
+
+
+def test_줄_판정이_참이어도_명령_줄에_세션_id_가_없으면_끄지_않고_기록한다(tmp_path: Path) -> None:
+    place, config, task = _setup(tmp_path)
+    fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
+
+    def read(_unused: int) -> tuple[str, ...] | None:
+        return ("python", "다른-프로세스")
+
+    try:
+        got = _run(place, config, task, ids=_ids(S1), watch=_on_init, read_command_line=read)
+
+        assert got.end == End(END_NOT_MEASURED, REASON_CALL, None)
+        assert got.runs[0].launched.drove.stop is Stop.HALTED_LEFT
+        [call] = fake.read_calls(config)
+        assert _alive(_pid(call), S1)  # 끄지 않았다
+        record = session_record(S1, got.runs, config)
+        assert record.calls[0].kill_skipped and not record.runner_killed
     finally:
         for call in fake.read_calls(config):
             _end_left(_pid(call), S1)
