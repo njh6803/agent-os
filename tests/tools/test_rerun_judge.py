@@ -89,7 +89,11 @@ def _과제(번호: int, *, tier: str = TIER_SMALL, original: str | None = None)
         pilot=False,
         pr_cost_usd=10.0,
         round_cap_usd=40.0,
-        hidden_tests=("tests/t.py::test_a", "tests/t.py::test_b", "tests/t.py::test_c"),
+        hidden_tests=(
+            "tests/test_t.py::test_a",
+            "tests/test_t.py::test_b",
+            "tests/test_t.py::test_c",
+        ),
         support_files=(),
         original_model_effort=original,
         arm_plan=tuple(a.name for a in ARMS),
@@ -129,7 +133,7 @@ def _회차(
             ),
             hidden=Hidden(passed=3, total=3, failed=())
             if hidden
-            else Hidden(passed=2, total=3, failed=("tests/t.py::test_c",)),
+            else Hidden(passed=2, total=3, failed=("tests/test_t.py::test_c",)),
         )
     return Record(
         task_id=_과제_id(번호),

@@ -1382,7 +1382,9 @@ def _parse(argv: Sequence[str]) -> _Args:
     flags = [arg for arg in rest if arg.startswith("--")]
     if flags:
         raise _UsageError(
-            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다"
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다. "
+            "변이 몇만 돌리려면 표 뒤에 그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 "
+            "이름을 준다"
         )
     if not rest:
         raise _UsageError(__doc__ or "")
