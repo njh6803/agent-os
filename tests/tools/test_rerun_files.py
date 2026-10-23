@@ -707,16 +707,61 @@ def test_끝남이_아닌_회차에는_게이트와_숨은_시험이_없다() ->
 
 
 def test_결과_작업_트리의_준비가_실패하면_게이트와_숨은_시험이_없다() -> None:
-    실패 = SetupFailure(command=SETUP_COMMANDS[0], exit_code=2)
+    실패 = SetupFailure(command=SETUP_COMMANDS[0], exit_code=2, timed_out=False)
     좋은 = _기록(outcome=replace(_기록().outcome, setup_failure=실패, gates=None, hidden=None))
     assert parse_record(dumps_record(좋은)).outcome.setup_failure == 실패
     with pytest.raises(ShapeError, match="setup_failure.command"):
         parse_record(
             _바꿔(dumps_record(좋은), ("outcome", "setup_failure", "command"), "uv sync; rm")
         )
-    실패_칸: Json = {"command": SETUP_COMMANDS[0], "exit_code": 2}
+    실패_칸: Json = {"command": SETUP_COMMANDS[0], "exit_code": 2, "timed_out": False}
     with pytest.raises(ShapeError, match="준비가 실패한"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "setup_failure"), 실패_칸))
+
+
+def _준비_실패_기록(exit_code: int | None, *, timed_out: bool) -> str:
+    """준비가 실패한 회차 기록의 글. 끝난 꼴의 두 칸만 바꿔 넣는다."""
+    실패 = SetupFailure(command=SETUP_COMMANDS[1], exit_code=1, timed_out=False)
+    좋은 = _기록(outcome=replace(_기록().outcome, setup_failure=실패, gates=None, hidden=None))
+    글 = _바꿔(dumps_record(좋은), ("outcome", "setup_failure", "exit_code"), exit_code)
+    return _바꿔(글, ("outcome", "setup_failure", "timed_out"), timed_out)
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "timed_out"),
+    [(2, False), (None, True), (None, False)],
+    ids=["0이 아닌 종료", "시간 넘김", "띄우지 못함"],
+)
+def test_준비_실패의_끝난_꼴은_종료_코드와_시간_넘김_두_칸이다(
+    exit_code: int | None, *, timed_out: bool
+) -> None:
+    읽은 = parse_record(_준비_실패_기록(exit_code, timed_out=timed_out)).outcome.setup_failure
+    assert 읽은 == SetupFailure(command=SETUP_COMMANDS[1], exit_code=exit_code, timed_out=timed_out)
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "timed_out", "match"),
+    [(2, True, "시간을 넘긴"), (0, False, "0"), (0, True, "시간을 넘긴")],
+)
+def test_준비_실패의_두_칸이_어긋나면_거부한다(
+    exit_code: int, match: str, *, timed_out: bool
+) -> None:
+    with pytest.raises(ShapeError, match=f"setup_failure.*{match}"):
+        parse_record(_준비_실패_기록(exit_code, timed_out=timed_out))
+
+
+def test_시간을_넘긴_게이트에는_종료_코드가_없다() -> None:
+    시간_넘김: Json = True
+    글 = _바꿔(dumps_record(_기록()), ("outcome", "gates", 0, "timed_out"), 시간_넘김)
+    with pytest.raises(ShapeError, match="gates.*시간을 넘긴"):
+        parse_record(글)
+    # 종료 코드도 시간 넘김도 없는 게이트는 띄우지 못했거나 돌지 않은 것이다.
+    돌지_않음 = _바꿔(dumps_record(_기록()), ("outcome", "gates", 0, "exit_code"), None)
+    assert parse_record(돌지_않음).outcome.gates == (
+        Gate(command=GATE_COMMANDS[0], exit_code=None, timed_out=False),
+        Gate(command=GATE_COMMANDS[1], exit_code=1, timed_out=False),
+        Gate(command=GATE_COMMANDS[2], exit_code=None, timed_out=True),
+    )
 
 
 def test_결과_커밋과_고른_규칙이_맞아야_한다() -> None:

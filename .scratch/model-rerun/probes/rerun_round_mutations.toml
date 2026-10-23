@@ -345,7 +345,7 @@ new = '''    except subprocess.TimeoutExpired:
 name = "찾지 못한 준비 명령을 종료로 적는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "찾지_못한_준비_명령"]
 expect = "red"
-expect_output = ['>       assert (done.failed.index, done.failed.end, done.failed.exit_code) == (']
+expect_output = ['ValueError: exited 인 준비 실패에 종료 코드 None 가 맞지 않다']
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
@@ -467,7 +467,7 @@ expect = "green"
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''        left = _cut_links(folder)'''
+old = '''        left = cut_links(folder)'''
 new = '''        left: list[str] = []'''
 
 [[mutation]]
@@ -524,7 +524,7 @@ new = '''        os.rmdir(folder)'''
 name = "지우기 직전에 링크인지 다시 보지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "판정_뒤_링크로"]
 expect = "red"
-expect_output = ['>       assert [name for name, _ in report.failed] == [place.name]']
+expect_output = ["assert '판정한 뒤 링크로 바뀌어' in "]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
@@ -673,11 +673,11 @@ expect_output = ['E           PermissionError: [Errno 5] 항목을 판정하지 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
 old = '''    try:
-        left = _cut_links(folder)
+        left = cut_links(folder)
     except OSError as e:
         raise _RemoveError(f"링크를 찾다 막혔다. {type(e).__name__}: {e}") from e
 '''
-new = '''    left = _cut_links(folder)
+new = '''    left = cut_links(folder)
 '''
 
 [[mutation]]

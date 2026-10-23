@@ -1,4 +1,4 @@
-# 2026-10-23 (44) 이어 가기와 상한 (model-rerun 08)
+# 2026-10-23 (48) 이어 가기와 상한 (model-rerun 08)
 
 ## 사용자 프롬프트
 
@@ -64,8 +64,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
 브랜치: feature/08-continue-and-caps
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-44-continue-and-caps.md. 리뷰 범위는 origin/main 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 08과 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 pytest·web이 끝나기 전에 멈췄으니 반영 뒤 다시 돈다. 변이 표 둘(rerun_continue 35개, rerun_session 27개)은 셀프 리뷰 전 판으로 모두 표지까지 기대대로였고, 반영이 그 시험이나 대상 코드를 바꾸면 해당 변이를 다시 돈다. 일지 44는 커밋하지 않았으니 이어 쓰고 함께 커밋한다
+읽을 것: docs/journal/2026-10-23-48-continue-and-caps.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-48-continue-and-caps.md. 리뷰 범위는 origin/main 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 08과 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 pytest·web이 끝나기 전에 멈췄으니 반영 뒤 다시 돈다. 변이 표 둘(rerun_continue 35개, rerun_session 27개)은 셀프 리뷰 전 판으로 모두 표지까지 기대대로였고, 반영이 그 시험이나 대상 코드를 바꾸면 해당 변이를 다시 돈다. 일지 48은 커밋하지 않았으니 이어 쓰고 함께 커밋한다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -189,8 +189,8 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 문장(반영으로 새�
 시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
 브랜치: feature/08-continue-and-caps
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 f614f00c로 커밋했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계는 PR 직전 리뷰부터다. docs/journal/2026-10-23-44-continue-and-caps.md. CodeRabbit CLI는 좌석이 없어(coderabbit auth status의 Seat: not assigned) 대체 둘을 나란히 돈다. origin/main을 합친 뒤 /security-review를 돌리고, bug-perf-review 서브에이전트의 브리프에는 이 일지 "### 반영"의 밀 주장 열 개를 나열한다. 그 반영을 커밋한 뒤 변이 표 둘(rerun_continue 45개, rerun_session 27개)의 전체를 다시 돈다(시험을 고쳤으므로, tools/mutate.py 독스트링). 커밋의 인용 대조 경고 둘(티켓 10의 76행, 이 일지 "### 표준 축"의 5)은 막지 않는 경고라 넘겼으니 원문과 대 본다. 이 일지는 이어 쓰고 다음 커밋에 싣는다
+읽을 것: docs/journal/2026-10-23-48-continue-and-caps.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 f614f00c로 커밋했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계는 PR 직전 리뷰부터다. docs/journal/2026-10-23-48-continue-and-caps.md. CodeRabbit CLI는 좌석이 없어(coderabbit auth status의 Seat: not assigned) 대체 둘을 나란히 돈다. origin/main을 합친 뒤 /security-review를 돌리고, bug-perf-review 서브에이전트의 브리프에는 이 일지 "### 반영"의 밀 주장 열 개를 나열한다. 그 반영을 커밋한 뒤 변이 표 둘(rerun_continue 45개, rerun_session 27개)의 전체를 다시 돈다(시험을 고쳤으므로, tools/mutate.py 독스트링). 커밋의 인용 대조 경고 둘(티켓 10의 76행, 이 일지 "### 표준 축"의 5)은 막지 않는 경고라 넘겼으니 원문과 대 본다. 이 일지는 이어 쓰고 다음 커밋에 싣는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -248,8 +248,8 @@ CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란�
 시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
 브랜치: feature/08-continue-and-caps
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
-이어받을 상태: 인계: PR 연 뒤. PR #374를 열고 푸시까지 했으나 @coderabbitai review 코멘트와 CI 대기는 아직이다. next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. docs/journal/2026-10-23-44-continue-and-caps.md. 이 일지의 인계 절은 커밋하지 않았으니 이어 쓰고 봇 회차의 커밋에 실어 병합 전에 푸시한다. PR #372(티켓 07)가 같은 파일 넷(티켓 10, 프로브 README, tools/rerun_round.py와 그 시험)을 고쳐 나중에 병합하는 쪽이 글자 충돌을 푼다
+읽을 것: docs/journal/2026-10-23-48-continue-and-caps.md
+이어받을 상태: 인계: PR 연 뒤. PR #374를 열고 푸시까지 했으나 @coderabbitai review 코멘트와 CI 대기는 아직이다. next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. docs/journal/2026-10-23-48-continue-and-caps.md. 이 일지의 인계 절은 커밋하지 않았으니 이어 쓰고 봇 회차의 커밋에 실어 병합 전에 푸시한다. PR #372(티켓 07)가 같은 파일 넷(티켓 10, 프로브 README, tools/rerun_round.py와 그 시험)을 고쳐 나중에 병합하는 쪽이 글자 충돌을 푼다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -309,8 +309,8 @@ CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란�
 시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
 브랜치: feature/08-continue-and-caps
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
-이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차를 반영하고 회고와 "다음"까지 적어 커밋했으나 푸시하지 않았다. PR 본문은 그 커밋의 범위로 이미 고쳤다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. docs/journal/2026-10-23-44-continue-and-caps.md. 푸시 뒤 claude-review 첫 회차의 판정 셋(Nit 하나는 고침, Minor 하나는 09로 넘김, Nit 하나는 이미 있음)을 PR 코멘트로 남긴다(일지 "봇 첫 회차" 절). CodeRabbit은 한도로 이 PR에 낸 리뷰가 아직 없다. 회고와 "다음"은 그 커밋에 들었다. 이 일지의 "커밋 (봇 첫 회차 반영 뒤)"·"인계 (커밋 뒤)" 절은 커밋하지 않았으니 이어 쓰고 다음 봇 회차의 커밋에 싣는다
+읽을 것: docs/journal/2026-10-23-48-continue-and-caps.md
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차를 반영하고 회고와 "다음"까지 적어 커밋했으나 푸시하지 않았다. PR 본문은 그 커밋의 범위로 이미 고쳤다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. docs/journal/2026-10-23-48-continue-and-caps.md. 푸시 뒤 claude-review 첫 회차의 판정 셋(Nit 하나는 고침, Minor 하나는 09로 넘김, Nit 하나는 이미 있음)을 PR 코멘트로 남긴다(일지 "봇 첫 회차" 절). CodeRabbit은 한도로 이 PR에 낸 리뷰가 아직 없다. 회고와 "다음"은 그 커밋에 들었다. 이 일지의 "커밋 (봇 첫 회차 반영 뒤)"·"인계 (커밋 뒤)" 절은 커밋하지 않았으니 이어 쓰고 다음 봇 회차의 커밋에 싣는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -327,10 +327,22 @@ CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란�
 - 제목을 `feature/08-continue-and-caps`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/08-continue-and-caps`에 있어 `EnterWorktree(path)`로 들어왔다. HEAD 는 50912d2f, PR 의 헤드(`origin/feature/08-continue-and-caps`)는 3c4623c8 이었고, 커밋하지 않은 변경은 이 일지 하나였다. `git fetch origin` 뒤 `git log HEAD..origin/main`은 비었다.
 - 인계 지시문은 위 두 절(커밋, 인계)을 다음 봇 회차의 커밋에 실으라고 했으나, 이 절까지를 지금 커밋해 50912d2f 와 함께 한 번에 푸시한다. claude-review 둘째 회차에 고칠 것이 없으면 이 커밋으로 병합 전 `headRefOid` 대조를 지나고, 일지만 올리는 푸시와 그 푸시로 한 번 더 도는 리뷰가 생기지 않는다.
 - 푸시 뒤 claude-review 첫 회차의 판정 셋(위 "봇 첫 회차" 절)을 PR 코멘트로 남기고 순서 1의 2(봇 회차)를 잇는다.
+- 첫 `git push`는 원격이 사유 없이 거부했고(`[remote rejected] … (failed)`) 다시 치니 3c4623c8..89a5bffa 로 올라갔다. 판정 코멘트와 `@coderabbitai review`를 남기고 `tools/wait_ci.py 374`를 백그라운드로 띄웠다.
+
+## 봇 둘째 회차와 main 합치기
+
+- 대기의 끝 줄(89a5bffa): `끝: 충돌. main 을 합치고 푸시한 뒤 다시 띄운다`. 그 앞 줄은 CodeRabbit `Review rate limited`, claude-review·python·ticket·visual·web 통과, e2e 진행 중이었다. PR #372(07)가 15e7b59b 로 main 에 병합되며 이 브랜치와 같은 파일을 고쳤다.
+- claude-review 둘째 회차(89a5bffa 의 실행, 코멘트 2026-10-23T12:31:42Z): Critical·Major 없음, Minor 셋과 Nit 하나. 둘째 회차라 고치지 않고 지적마다 보류 이유를 PR 코멘트에 남긴다.
+  - Minor `run_sessions`가 여러 추상화 수준을 섞는다: 첫 회차와 같은 지적이고 이미 09 로 넘겼다(아래 "다음").
+  - Minor `tools/rerun_session.py`의 `_STOPS`가 불리언 짝 `(timed_out, killing)`으로 `Stop`을 고른다: 두 불리언이 열쇠가 되는 자리는 `_read_process` 하나이고, 네 칸 모두 그 구동을 지나는 시험이 있다(`test_rerun_session.py`에 `DEADLINE_KILLED`·`HUNG_KILLED`·`HUNG_LEFT`, `test_rerun_continue.py`에 `DEADLINE_LEFT`). 리뷰어도 네 칸을 덮으면 지금은 안전하다고 적었다. 뒤로 넘기지 않는다.
+  - Minor 사본임을 두 파일 독스트링이 서로 가리키는지 확인해 두면 좋다: 이미 가리킨다(`tools/proc_command_line.py` 모듈 독스트링 첫 문단, `tools/hook_edit_during_commit.py`의 읽기 문단). 두 독스트링 모두 대조 시험 `tests/tools/test_proc_command_line.py`도 가리킨다.
+  - Nit 결과 글 풀기가 `rerun_continue`와 `rerun_session.result_text`에 나뉜다: 리뷰어가 호출 방향이 한쪽이라 문제가 없다고 적은 관찰이다.
+- `git merge origin/main`(15e7b59b)에서 `.scratch/model-rerun/probes/README.md` 두 곳과 티켓 10 한 곳이 충돌했다. 세 곳 모두 양쪽이 줄을 더한 꼴이었다. 공통 조상(`git show :1:`)과 대 보니 표의 `rerun_session_mutations.toml` 행은 이 브랜치만 고쳤고(한 항목을 `rerun_continue` 행으로 옮겼다), 변이 결과 절의 `rerun_round_mutations.toml` 문단은 main 만 고쳤다. 고친 쪽을 두고, 새 행과 새 문단은 07 의 것 다음에 08 의 것을 두었다. 티켓 10 은 "07에서 넘어온 메모" 절 다음에 "08에서 넘어온 메모" 절을 두었다. 세션 스크래치의 커밋하지 않은 스크립트로 풀었고 `tools/check_md_tables.py`가 두 파일에서 초록이었다.
+- main 에 07 의 일지 2026-10-23-45 가 들어가 이 일지가 이름순으로 앞이 되었다. `tools/sibling_overlap.py --move`로 44 를 48 로 옮겼다(파일 이름, 머리 줄, 티켓 08·10, continue 변이 표, 대기열, 이 일지 안의 인용). 도구가 옮기지 않는 꼴 하나(첫 인계 절 지시문의 "일지 44는")는 손으로 고쳤고, 위 "커밋 (봇 첫 회차 반영 뒤)" 절의 "이 일지(44)"는 그때의 번호라 두었다. PR 본문의 일지 경로는 그 도구가 옮긴 본문으로 올린다(지금 본문과 대 보니 그 한 줄만 달랐다).
+- 합친 뒤 `tools/mutate.py --check` 다섯 표(continue 47, session 27, round 57, gates 48, tidy_checkouts 175)가 모두 원문이 한 번씩이었다.
 
 ## 다음
 
-- 08 이 병합되면 09(Blocked by 08)가 열린다. 07 은 PR #372 로 옆 세션이 하고, 10 은 07·09 를, 11 은 10 을 기다린다.
-- PR #374 claude-review 첫 회차에서 뒤로 넘긴 일: `run_sessions` 쪼개기는 09 가 그 함수를 고칠 때 한다(티켓 09 "08에서 넘어온 메모"의 마지막 줄).
-- PR #370 에서 넘어와 아직 남은 일: `_git`·`_git_env` 사본 셋의 실패 모양은 07 과 06 이 모두 병합된 뒤 하나로 맞춘다(일지 2026-10-23-36 "다음"). 10 에서 볼 둘(`Elsewhere`를 `Spend`의 부분으로 받을지, `claude_version` 매개변수의 가림)은 티켓 10 "08에서 넘어온 메모"에 있다.
-- PR #372(07)가 이 PR 과 같은 파일 넷(티켓 10, 프로브 README, `tools/rerun_round.py`와 그 시험)을 고쳐, 나중에 병합하는 쪽이 글자 충돌을 푼다.
+- 08 이 병합되면 09(Blocked by 08)가 열린다. 07 은 병합되었고(#372), 10 은 09 를, 11 은 10 을 기다린다.
+- PR #374 claude-review 첫 회차에서 뒤로 넘긴 일: `run_sessions` 쪼개기는 09 가 그 함수를 고칠 때 한다(티켓 09 "08에서 넘어온 메모"의 마지막 줄). 둘째 회차는 같은 지적을 되풀이했고 새로 넘긴 일은 없다.
+- PR #370 에서 넘어와 아직 남은 일: `_git`·`_git_env` 사본 셋의 실패 모양 맞추기는 06·07 이 모두 병합되어 이제 할 수 있고, 티켓 10 "08에서 넘어온 메모"의 마지막 항목에 있다. 10 에서 볼 둘(`Elsewhere`를 `Spend`의 부분으로 받을지, `claude_version` 매개변수의 가림)도 같은 항목에 있다.

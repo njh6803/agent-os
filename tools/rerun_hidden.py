@@ -42,7 +42,7 @@
   `tools.run_hooks.REPO_LOCATION_VARS`와 `VIRTUAL_ENV`를 벗긴다.
 - 꺼낸 작업 트리는 성공·실패·시간 넘김 어느 길에서도 걷는다. 걷기 전에 그 안의 링크(심볼릭 링크,
   junction)를 링크만 끊는다. git 2.32의 `git worktree remove --force`가 junction을 따라가 바깥
-  파일까지 지웠다(선례 `tools/canary.py`의 `_cut_links`). 링크를 끊지 못하면 걷지 않고 알린다.
+  파일까지 지웠다(`tools/tidy_checkouts.py`의 `cut_links`). 링크를 끊지 못하면 걷지 않고 알린다.
   임시 폴더에는 이 도구가 지은 이름(작업 트리 둘, junit xml과 로그)만 지운다.
 - 덮을 자리의 상위 폴더나 그 파일이 B의 링크면 작업 트리 바깥에 쓸 수 있어 덮지 않고 실패 갈래로
   센다(`overlay_target`).
@@ -89,6 +89,7 @@ from pathlib import Path
 
 from tools.rerun_files import is_support_file, is_test_file
 from tools.run_hooks import REPO_LOCATION_VARS
+from tools.tidy_checkouts import cut_links
 
 # 실제 준비와 pytest 명령(티켓 "바깥 층"). 시험은 작은 명령을 인자로 넘긴다.
 SETUP_COMMANDS: tuple[tuple[str, ...], ...] = (("uv", "sync"),)
@@ -446,8 +447,10 @@ def term_in(
 
 
 def overlay_target(root: Path, rel: str) -> Path | None:
-    """작업 트리 `root`에 덮을 `rel`(`/`로 가른 상대 경로)의 자리. 상위 폴더나 그 자리가 링크면
-    None이다. 링크를 지나 쓰면 작업 트리 바깥에 쓸 수 있다."""
+    """작업 트리 `root`에 덮을 `rel`(`/`로 가른 상대 경로)의 자리. `root` 자체나 상위 폴더나 그
+    자리가 링크면 None이다. 링크를 지나 쓰면 작업 트리 바깥에 쓸 수 있다."""
+    if root.is_symlink() or root.is_junction():
+        return None
     current = root
     for part in rel.split("/"):
         current = current / part
@@ -456,7 +459,7 @@ def overlay_target(root: Path, rel: str) -> Path | None:
     return current
 
 
-def _kill_tree(process: subprocess.Popen[bytes]) -> None:
+def kill_tree(process: subprocess.Popen[bytes]) -> None:
     """시간을 넘긴 자식과 그 아래 프로세스를 끈다. 아직 거두지 않은 자식이라 pid가 다른 프로세스에
     넘어가지 않았다."""
     if sys.platform == "win32":
@@ -495,7 +498,7 @@ def _run(args: Sequence[str], cwd: Path, log: Path, timeout: float, what: str) -
         try:
             return process.wait(timeout=timeout)
         except subprocess.TimeoutExpired as error:
-            _kill_tree(process)
+            kill_tree(process)
             raise CandidateError(f"{what} 가 시간 제한({timeout:g}초)을 넘겼다") from error
 
 
@@ -504,31 +507,6 @@ def _log_tail(log: Path) -> str:
         return _last_line(_text(log.read_bytes()))
     except OSError:
         return "로그를 읽지 못했다"
-
-
-def _cut_links(folder: Path) -> list[str]:
-    """`folder` 아래의 링크를 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더를 준다.
-
-    `tools/canary.py`의 `_cut_links`와 같은 길이다. 윈도의 junction도 `os.unlink`가 링크만 지운다.
-    """
-    left: list[str] = []
-    pending = [folder]
-    while pending:
-        current = pending.pop()
-        try:
-            entries = list(os.scandir(current))
-        except OSError:
-            left.append(str(current))
-            continue
-        for entry in entries:
-            if entry.is_symlink() or entry.is_junction():
-                try:
-                    os.unlink(entry.path)
-                except OSError:
-                    left.append(entry.path)
-            elif entry.is_dir(follow_symlinks=False):
-                pending.append(Path(entry.path))
-    return left
 
 
 class _Registration(Enum):
@@ -559,7 +537,7 @@ def _registration(repo: Path, place: Path, limits: Limits) -> _Registration:
 def _remove_checkout(repo: Path, place: Path, limits: Limits, out: Callable[[str], None]) -> None:
     """꺼낸 작업 트리를 걷는다. 링크를 먼저 끊고, 끊지 못하면 걷지 않고 알린다."""
     if place.exists():
-        left = _cut_links(place)
+        left = cut_links(place)
         if left:
             out(
                 f"작업 트리를 걷지 않았다: {place}. 안의 링크를 끊지 못해 git 이 그 링크를 따라가 "

@@ -878,6 +878,16 @@ def test_덮을_자리의_상위가_링크면_덮지_않는다(tmp_path: Path) -
     assert overlay_target(root, "tests/test_a.py") == root / "tests" / "test_a.py"
 
 
+def test_작업_트리_자리_자체가_링크면_덮지_않는다(tmp_path: Path) -> None:
+    """게이트(`tools/rerun_gates.py`)는 결과 커밋의 코드가 돈 뒤에 덮는다. 그 사이 작업 트리 자리가
+    바깥을 가리키는 링크로 바뀌면, 그 아래 조각만 봐서는 바깥에 쓴다(티켓 07의 셀프 리뷰)."""
+    바깥 = tmp_path / "바깥"
+    (바깥 / "tests").mkdir(parents=True)
+    root = tmp_path / "root"
+    _바깥_링크(root, 바깥)
+    assert overlay_target(root, "tests/test_a.py") is None, "링크인 작업 트리 자리 아래를 냈다"
+
+
 def test_git_grep_은_대시로_시작하는_문자열과_낱말_경계를_가린다(tmp_path: Path) -> None:
     repo, base, merge = _저장소(tmp_path)
     limits = Limits()

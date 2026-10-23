@@ -11,7 +11,7 @@
 # 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구나 단언의 메시지다. 첫 판은 표지를 없는 문구로
 # 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md` 의 표지 항목). 셀프
 # 리뷰 반영에서 고치거나 더한 변이(멈춘 꼴 `Stop`, 덩이 고르기, 러너가 끊김)는 고른 단언의 꼴에서
-# 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-44).
+# 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-48).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_continue_mutations.toml
 
 [[mutation]]
