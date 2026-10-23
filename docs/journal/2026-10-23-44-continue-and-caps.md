@@ -288,6 +288,46 @@ CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란�
 7. 기각: claude-review Nit(러너가 import 한다는 독스트링 줄)은 이미 있는 줄을 리뷰어가 놓친 것이고, 든 비용은 확인 한 번이다.
 8. 기각: 커밋 f614f00c 의 인용 대조 경고 둘. 이미 있는 검사(`tools/check_quotes.py`)가 그 자리에서 알렸다.
 
+## 커밋 (봇 첫 회차 반영 뒤)
+
+- 푸시 전에 `gh pr edit 374 --body-file`로 PR 본문을 넓힌 범위로 고쳤다(남긴 위험에 `run_sessions`, 바뀐 영역의 시험과 대기열 행 227, 체크리스트에 봇 첫 회차, 확인 방법의 변이 46·47번, 리뷰어 참고의 사본 대조 시험). 대기열 행을 고친 커밋이라 next-session 순서 1의 1 에 든다.
+- 커밋 직전 `git branch --show-current`는 이 브랜치였고 `tools/sibling_overlap.py`는 `번호 겹침 없음`이었다. 이름순으로 이 일지(44)를 앞서는 형제 일지(07 워크트리의 45, 03 워크트리의 46)가 있어, 그쪽이 먼저 병합되면 이 일지를 옮긴다. `git log HEAD..origin/main`은 비었다.
+- 50912d2f `test: 훅에서 옮긴 명령 줄 읽기가 훅의 것과 같은지 대고 봇 첫 회차와 회고를 적는다 (model-rerun 08)`. pre-commit 이 모두 지났다(러너 `parallel-checks` 475.36초, 그 가운데 pytest 474.7초, web-verify 309.3초. 해당 파일이 없는 카나리아 명세와 헌법 판 둘이 Skipped). 푸시하지 않았다.
+
+## 인계 (커밋 뒤)
+
+- 이 세션의 지금 제목: `feature/08-continue-and-caps`.
+- 인계 경계: `커밋 뒤`. 세션 컨텍스트가 문턱(20만)을 넘은 채(약 28.7만) 50912d2f 커밋을 백그라운드로 친 직후 `hook_handoff`가 들어왔고, 커밋이 0으로 끝난 것을 본 뒤 따랐다. 인계하지 않는 다섯 때에 들지 않는다. 커밋은 성공했고, 범위는 PR과 병합까지이며, 이 세션이 이어받은 경계는 `PR 연 뒤`였고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- PR #374 는 `OPEN`이다. 이 세션이 띄운 대기(`tools/wait_ci.py 374`)와 커밋은 모두 끝났다.
+- `tools/model_sweep.py feature/08-continue-and-caps`는 `Opus 5.5 / xhigh`였다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/08-continue-and-caps.md. 06이 띄운 세션의 이어 가기와 끄기·상한을 더한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
+브랜치: feature/08-continue-and-caps
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차를 반영하고 회고와 "다음"까지 적어 커밋했으나 푸시하지 않았다. PR 본문은 그 커밋의 범위로 이미 고쳤다. 푸시와 next-session 순서 1의 2(봇 회차)부터 한다. docs/journal/2026-10-23-44-continue-and-caps.md. 푸시 뒤 claude-review 첫 회차의 판정 셋(Nit 하나는 고침, Minor 하나는 09로 넘김, Nit 하나는 이미 있음)을 PR 코멘트로 남긴다(일지 "봇 첫 회차" 절). CodeRabbit은 한도로 이 PR에 낸 리뷰가 아직 없다. 회고와 "다음"은 그 커밋에 들었다. 이 일지의 "커밋 (봇 첫 회차 반영 뒤)"·"인계 (커밋 뒤)" 절은 커밋하지 않았으니 이어 쓰고 다음 봇 회차의 커밋에 싣는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/08-continue-and-caps (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(대기 하나, 커밋 하나)은 모두 끝나 있어 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+- open-session을 부른다 2026-10-23T12:14:16Z
+
+## 이어받은 세션 (2026-10-23, 푸시부터)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/model-rerun/issues/08-continue-and-caps.md
+>
+> (지시문은 위 "인계 (커밋 뒤)" 절의 "낸 지시문"과 같다)
+
+- 제목을 `feature/08-continue-and-caps`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/08-continue-and-caps`에 있어 `EnterWorktree(path)`로 들어왔다. HEAD 는 50912d2f, PR 의 헤드(`origin/feature/08-continue-and-caps`)는 3c4623c8 이었고, 커밋하지 않은 변경은 이 일지 하나였다. `git fetch origin` 뒤 `git log HEAD..origin/main`은 비었다.
+- 인계 지시문은 위 두 절(커밋, 인계)을 다음 봇 회차의 커밋에 실으라고 했으나, 이 절까지를 지금 커밋해 50912d2f 와 함께 한 번에 푸시한다. claude-review 둘째 회차에 고칠 것이 없으면 이 커밋으로 병합 전 `headRefOid` 대조를 지나고, 일지만 올리는 푸시와 그 푸시로 한 번 더 도는 리뷰가 생기지 않는다.
+- 푸시 뒤 claude-review 첫 회차의 판정 셋(위 "봇 첫 회차" 절)을 PR 코멘트로 남기고 순서 1의 2(봇 회차)를 잇는다.
+
 ## 다음
 
 - 08 이 병합되면 09(Blocked by 08)가 열린다. 07 은 PR #372 로 옆 세션이 하고, 10 은 07·09 를, 11 은 10 을 기다린다.
