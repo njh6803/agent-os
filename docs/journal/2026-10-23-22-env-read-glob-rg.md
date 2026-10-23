@@ -78,3 +78,45 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 ```
 
 open-session을 부른다 2026-10-22T23:16:42Z
+
+## 인계 2(커밋 뒤)
+
+이 세션의 제목은 `chore/007-env-read-glob-matches-rg`였다. 인계로 열려 셀프 리뷰를 반영하고 ADR 0038을 승인받았으며, 티켓을 done으로 닫고 커밋했다(pre-commit 통과, 이 일지의 인계 2 절은 그 커밋 뒤에 쓴 것이라 커밋하지 않았다). 커밋 뒤에 컨텍스트 문턱을 넘어 인계 계기가 왔고, 곁 세션이 아니며(`get_session`에 `parentSessionId` 없음), 넘겨받은 경계(셀프 리뷰 직전)와 지금 경계가 달라 넘긴다. 커밋 통계에서 `docs/constitution/README.md`가 `rewrite (96%)`로 찍혔는데, 한 줄이 1만5천 자가 넘는 파일의 그 한 줄만 바뀐 것이었다(`git diff --stat`은 1줄 더함·1줄 지움).
+
+지시문:
+
+```
+다음 작업: harness 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md 를 잇는다. 셀프 리뷰를 반영하고 ADR 0038 승인을 받아 커밋했다. origin/main 을 합치고 PR 직전 리뷰, PR, 봇 회차, 병합을 한다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+브랜치: chore/007-env-read-glob-matches-rg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-22-env-read-glob-rg.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0038 승인(accepted), 티켓 done 까지 담은 커밋이 있고 푸시하지 않았다. 이 일지의 "인계 2" 절은 커밋하지 않았으니 다음 커밋에 싣는다. 남은 단계는 origin/main 합치기(커밋 전 sibling_overlap 으로 일지·ADR·헌법 판 번호 다시 보기), PR 직전 리뷰(CodeRabbit CLI 가 돌지 못하면 /security-review 와 bug-perf-review. 밀 주장은 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록), PR(본문의 검사 결과는 일지의 다시 돌린 명령 줄), 봇 회차, 워크트리에서 병합. docs/journal/2026-10-23-22-env-read-glob-rg.md
+확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-22T23:54:59Z
+
+## PR 직전 리뷰(새 세션)
+
+> 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+
+origin/main(d0e696c9)을 충돌 없이 합쳤고 `sibling_overlap.py`는 번호 겹침 없음이었다. CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 후보 하나(MEDIUM). `_RG_VALUE_OPTIONS`에 `-r`(바꿀 글)이 없어 `-rg` 의 `g` 를 `-g` 로 읽고, 뒤의 `^` 를 `.env` 가 아닌 고르는 glob 으로 보아 `rg -uu -rg ^ .` 를 지나보냈다. main 은 막던 명령이라 이 브랜치가 연 구멍이다. 오탐 거르기 서브태스크가 두 판을 불러 보고 실제 rg 로 숨김 파일의 줄이 찍히는 것을 재현했지만 확신도를 7로 매겨, 명령의 기준(8 미만은 뺀다)으로는 보고에서 빠졌다. 같은 구멍을 bug-perf-review 도 Major 로 냈으므로 고쳤다.
+- bug-perf-review: 유효 4(Major 2, Minor 2), 보류 1(Nit). 밀 주장 다섯은 모두 맞다고 봤다(1·2·5는 실제 rg 14.1.1 로, 3은 코드로, 4는 일지 2026-10-22-11 로).
+
+고친 것:
+- Major(두 리뷰). `_RG_VALUE_OPTIONS` 를 `rg --help` 의 값 옵션 전부로 채웠다(`-r`·`-d`·`--replace`·`--max-filesize`·`--ignore-file`·`--pre-glob` 등, `--maxdepth` 별칭은 rg 가 받는 것을 손으로 봤다). ag·ack 의 `-r` 는 값을 먹지 않는 재귀라 그 둘은 옛 표(`_AG_VALUE_OPTIONS`)를 쓴다. `-rg .env` 를 거짓 양성으로 적은 독스트링 항목과 시험은 뜻을 잃어 지우고, `rg -uu -rg <패턴> .` 과 `-r X -g .env`·`-d 3 -g .env`·`--replace`·`--max-filesize` 꼴을 실제 rg 와 맞대는 표에 더했다.
+- Major(bug-perf-review). `_rg_excludes_env` 가 마지막 `/` 앞을 떼고 보아 `-g .env -g '!sub/.env'`(루트의 `.env` 를 읽는다)와 `-uu -g '!/.env'`(`sub/.env` 를 읽는다)를 지나보냈다. 앞의 `**/` 를 뗀 뒤 `/` 가 남으면 빼지 않는다고 본다. 그 거짓 양성(`!/.env* !sub/.env*`)을 넓게 막는 표에 더했다.
+- Minor(bug-perf-review). `_is_root` 가 `./.`·`.//`·`././` 를 루트로 보지 않았다. 정규화해 `.` 이면 루트로 본다. 시험이 rg 출력 경로를 `posixpath.normpath` 로 펴게 고쳤다(경로를 준 rg 는 `./.\.env` 처럼 그 경로를 머리에 붙인다).
+- Minor(bug-perf-review). 시험의 rg 호출에 `--no-config` 를 줘 `RIPGREP_CONFIG_PATH` 에 흔들리지 않게 했다.
+
+새 시험 열하나는 커밋된 판(71cfefd0)의 훅으로 되돌려 돌리니 빨갰다(`sub/..` 는 옛 판도 `..` 로 막아 초록). 스크래치패드에 고친 훅을 옮겨 두고 되돌렸다가 복원했다.
+
+남긴 것:
+- Nit·보류(bug-perf-review). Grep 도구가 `a,{.env}` 를 쪼개지 않는다는 규칙은 손으로 본 넷에서 미룬 것이다. ADR 0038 Consequences 가 이미 어림이라고 적었다. 닫으려면 Claude Code 의 Grep 도구로 `a,{.hid}` 를 불러 봐야 한다.
+- 보안 서브태스크가 확신도 미달로 뺀 `{.env, x}`(main 은 막고 이 브랜치는 `{.env,`·`x}` 로 나눠 지나보낸다). 나눈 조각을 받은 rg 가 `.env` 를 읽지 않는 것은 `_GREP_TOOL_SAME` 에 더해 실제 rg 로 봤다(초록). Grep 도구가 그렇게 나눈다는 쪽은 위 Nit 과 같은 어림이다.

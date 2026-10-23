@@ -18,6 +18,7 @@ rg 의 `{.env}` 를 지나보냈고(대기열 422), 손으로 본 꼴만 시험�
 
 from __future__ import annotations
 
+import posixpath
 import shlex
 import shutil
 import subprocess
@@ -72,7 +73,9 @@ def _rg_reads_secret(
 ) -> bool:
     head, executable = rg
     result = subprocess.run(
-        [*head, "-l", *args, _MARKER, *paths],
+        # `--no-config`: 사용자의 `RIPGREP_CONFIG_PATH` 가 `--hidden` 같은 기본값을 바꾸지 않게
+        # 한다.
+        [*head, "--no-config", "-l", *args, _MARKER, *paths],
         executable=executable,
         cwd=repo,
         # 경로를 주지 않은 rg 는 stdin 이 파이프면 stdin 을 찾는다. pytest 의 캡처에 기대지 않는다.
@@ -88,7 +91,8 @@ def _rg_reads_secret(
         and not result.stdout
         and ("No files were searched" in result.stderr or "error parsing glob" in result.stderr)
     ), result.stderr
-    hits = {line.strip().replace("\\", "/").removeprefix("./") for line in result.stdout.split()}
+    # 경로를 준 rg 는 그 경로를 머리에 붙여 낸다(`./.\.env`, `sub/../.env`).
+    hits = {posixpath.normpath(line.strip().replace("\\", "/")) for line in result.stdout.split()}
     return bool(hits & _SECRETS)
 
 
@@ -106,7 +110,7 @@ _GREP_TOOL_SAME = [
     "**/.env", "sub/*", ".en[!x]", ".en[^x]", "{*.md,**}", "*.{md,env}", ".en[!{}]",
     "*.md,.env", "*.md .env", "*.py\t.env", ".env,", "{a,b}.md .env", "!*.md,.env",
     "*.md", "*.py", ".env.example", "{.env.example,*.md}", "!*.md", "{.env", "{*.md},.env",
-    "*.md,*.py",
+    "*.md,*.py", "{.env, x}",
 ]  # fmt: skip
 # 훅이 막는데 rg 는 읽지 않는 것(거짓 양성). 훅이 보수적으로 고른 자리라 막는 쪽을 단언한다.
 # `.ENV`: rg 의 glob 은 대소문자를 가리고 훅은 가리지 않는다(Windows 는 같은 파일이다).
@@ -172,12 +176,17 @@ _BASH_RG_SAME = [
     "rg -ig.env {m} .", "rg -ug .env {m} .", "rg -sg .env {m} .", "rg -Ig .env {m} .",
     "rg -tpy -g .env {m} .", "rg -g .env -g '!.ENV' {m} .", "rg --glob=.env --glob='!.ENV' {m} .",
     "rg -uu -g '!.ENV' {m} .", "rg -g .env -- {m} .",
+    # 표에 없던 값 옵션과 디렉터리가 붙은 빼기(PR 직전 보안 리뷰와 bug-perf-review 가 찾았다).
+    # `-rg` 는 `-r g` 다. 그 `g` 를 `-g` 로 읽은 판이 `-uu -rg ^` 를 지나보냈다.
+    "rg -uu -rg {m} .", "rg -r X -g .env {m}", "rg -d 3 -g .env {m}",
+    "rg --replace X -g .env {m}", "rg --max-filesize 1M -g .env {m}",
+    "rg -g .env -g '!sub/.env' {m} .", "rg -uu -g '!/.env' {m} .", "rg -uu -g '!**/.env*' {m} .",
 ]  # fmt: skip
 # 훅이 막는데 rg 는 읽지 않는 것(거짓 양성). 고르는 쪽의 대소문자, 앞의 `./`, 빼는 쪽의 중괄호,
-# `--iglob` 의 빼기 대소문자다(모듈 독스트링의 못 보는 것).
+# `--iglob` 의 빼기 대소문자, 디렉터리가 붙은 빼기다(모듈 독스트링의 못 보는 것).
 _BASH_RG_STRICTER = [
     "rg -g .ENV {m} .", "rg -g ./.env {m} .", "rg -g .env -g '!{{.env}}' {m} .",
-    "rg -g .env --iglob '!.ENV' {m} .",
+    "rg -g .env --iglob '!.ENV' {m} .", "rg -g '.env*' -g '!/.env*' -g '!sub/.env*' {m} .",
 ]  # fmt: skip
 
 
@@ -200,11 +209,14 @@ def test_Bash_의_rg_판정이_실제_rg_와_같다(
     assert blocks == reads, f"rg 가 읽는가 {reads}, 훅이 막는가 {blocks}, 명령 {command}"
 
 
-def test_표에_없는_값_옵션_뒤의_g_는_glob_으로_읽어_막는다() -> None:
-    """거짓 양성이다. rg 의 `-rg .env` 는 `-r`(바꿀 글)의 값이 `g` 이고 `.env` 는 패턴인데,
-    `_rg_glob_values` 는 `-r` 를 값을 먹는 옵션으로 알지 못한다. rg 로는 맞대지 않는다(인자의 뜻이
-    달라져 표의 꼴로 띄울 수 없다)."""
-    assert deny_reason_for_command(f"rg -rg .env {_MARKER} .", None) is not None
+@pytest.mark.parametrize("경로", ["./.", ".//", "././", "sub/.."])
+def test_점을_다르게_쓴_경로를_루트로_본다(
+    rg: tuple[list[str], str | None], repo: Path, 경로: str
+) -> None:
+    """`_is_root` 가 `_ROOTISH` 에 없는 꼴을 루트가 아니라고 읽어 지나보낸 판이 있었다(PR 직전
+    bug-perf-review). 경로는 패턴 뒤에 와야 해 표(`_BASH_RG_SAME`)의 꼴로 띄우지 않는다."""
+    assert _rg_reads_secret(rg, repo, ["-g", ".env"], (경로,))
+    assert deny_reason_for_command(f"rg -g .env {_MARKER} {경로}", str(repo)) is not None
 
 
 @pytest.mark.parametrize("명령", _BASH_RG_STRICTER)

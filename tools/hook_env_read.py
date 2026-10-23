@@ -65,8 +65,9 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 고르는 쪽의 대소문자(`-g .ENV`), 앞의 `./`(`-g ./.env`), 겹친 묶음(`{{.env}}`), 빼는 쪽의
 중괄호(`-g .env -g '!{.env}'`)와 `--iglob` 의 빼기 대소문자(`_rg_excludes_env`), Grep 도구 glob 칸의
 순서(`.env !.env` 는 뒤의 빼기가 이기지만 순서를 보지 않는다), 마지막 `/` 앞의 디렉터리
-조각(`src/**` 를 `**` 로 읽는다), 값을 먹는데 표에 없는 짧은 옵션 뒤의 `g`(`-rg .env`,
-`_rg_glob_values`)다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대 고정한다. 에이전트
+조각(`src/**` 를 `**` 로 읽는다), 디렉터리가 붙은 빼는 glob(`!sub/.env` 는 그 폴더만 빼지만 빼지
+않는다고 본다, `_rg_excludes_env`)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
+고정한다. 에이전트
 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건 개발용
 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
@@ -148,7 +149,9 @@ _SHORT_CLUSTER = re.compile(r"^-([A-Za-z.]+)\d*$")
 _GREP_VALUE_OPTIONS = frozenset(
     {"-A", "-B", "-C", "-m", "-e", "-f", "-d", "-D", "--include", "--exclude", "--exclude-dir"}
 )
-_RG_VALUE_OPTIONS = frozenset(
+# ag·ack 의 값 옵션. 값을 먹는 짧은 옵션(-A -B -C -g -t 등)이 rg 와 같은 이름이라 rg 의 옛 표를
+# 그대로 쓴다. rg 표의 `-r`·`-d` 는 넣지 않는다 — ag·ack 의 `-r` 는 값을 먹지 않는 재귀다.
+_AG_VALUE_OPTIONS = frozenset(
     {
         "-A", "-B", "-C", "-m", "-e", "-f", "-g", "-t", "-T", "-E", "-j", "-M",
         "--after-context", "--before-context", "--context", "--max-count", "--regexp", "--file",
@@ -156,15 +159,26 @@ _RG_VALUE_OPTIONS = frozenset(
         "--max-columns", "--pre", "--sort", "--sortr", "--color", "--colors", "--max-depth",
     }
 )  # fmt: skip
+# rg 14.1.1 의 `rg --help` 에서 값을 받는 옵션을 모두 옮겼다(`-x VALUE, --long=VALUE` 와
+# `--long=VALUE` 꼴, 2026-10-23 손으로 봤다). `--maxdepth` 는 `--max-depth` 의 숨은 별칭이다. 빠진
+# `-r` 뒤의 `g` 를 `-g` 로 읽어 `rg -uu -rg ^ .` 를 지나보낸 판이 있었다(PR 직전 보안 리뷰).
+_RG_VALUE_OPTIONS = _AG_VALUE_OPTIONS | frozenset(
+    {
+        "-d", "-r",
+        "--context-separator", "--dfa-size-limit", "--engine", "--field-context-separator",
+        "--field-match-separator", "--generate", "--hostname-bin", "--hyperlink-format",
+        "--ignore-file", "--max-filesize", "--maxdepth", "--path-separator", "--pre-glob",
+        "--regex-size-limit", "--replace", "--type-clear",
+    }
+)  # fmt: skip
 _AWK_VALUE_OPTIONS = frozenset({"-F", "-v", "-f"})
-# ag·ack 는 rg 의 옵션표를 그대로 쓴다 — 값을 먹는 짧은 옵션(-A -B -C -g -t 등)이 같은 이름이다.
 _VALUE_OPTIONS = {
     "grep": _GREP_VALUE_OPTIONS,
     "egrep": _GREP_VALUE_OPTIONS,
     "fgrep": _GREP_VALUE_OPTIONS,
     "rg": _RG_VALUE_OPTIONS,
-    "ag": _RG_VALUE_OPTIONS,
-    "ack": _RG_VALUE_OPTIONS,
+    "ag": _AG_VALUE_OPTIONS,
+    "ack": _AG_VALUE_OPTIONS,
     "sed": frozenset({"-e", "-f"}),
     "awk": _AWK_VALUE_OPTIONS,
     "gawk": _AWK_VALUE_OPTIONS,
@@ -447,17 +461,24 @@ def _rg_excludes_env(pattern: str) -> bool:
     """rg 의 빼는 glob(`!` 뒤)이 `.env` 를 빼는가. 펼치지 않고 대소문자를 가려 본다. rg 의 `-g` 는
     대소문자를 가려, Windows 에서도 `-g .env -g '!.ENV'` 가 `.env` 를 읽었다(2026-10-23 rg 14.1.1,
     셀프 리뷰 명세 축이 손으로 봤다). `--iglob` 과 `--glob-case-insensitive` 의 빼기도 가려 보아,
-    `--iglob '!.ENV'` 는 빼지 않는다고 본다(거짓 양성)."""
-    return _matches_env(pattern, case_sensitive=True)
+    `--iglob '!.ENV'` 는 빼지 않는다고 본다(거짓 양성). 앞의 `**/` 를 뗀 뒤에도 `/` 가 남은 glob 은
+    한 폴더만 빼므로 빼지 않는다고 본다. `-g .env -g '!sub/.env'` 는 루트의 `.env` 를,
+    `-uu -g '!/.env'` 는 `sub/.env` 를 읽었는데 마지막 `/` 앞을 떼고 본 판이 둘을
+    지나보냈다(2026-10-23 rg 14.1.1, PR 직전 bug-perf-review 가 손으로 봤다). 그래서 `!sub/**` 처럼
+    그 폴더만 빼는 glob 도 빼지 않는다고 본다(거짓 양성)."""
+    while pattern.startswith("**/"):
+        pattern = pattern[3:]
+    return "/" not in pattern and _matches_env(pattern, case_sensitive=True)
 
 
 def _rg_glob_values(args: list[str]) -> list[str]:
     """rg 의 `-g`·`--glob`·`--iglob` 값들. 차례는 인자의 차례다. 짧은 옵션은 묶음 안의 `g` 도
     본다(`-ig.env`, `-ug .env`). rg 는 묶음을 앞에서부터 읽어 값을 먹는 옵션을 만나면 그 뒤를 값으로
     읽는다(`-tg` 의 `g` 는 `-t` 의 값이다. rg 14.1.1 이 `-t g` 처럼 `unrecognized file type: g` 로
-    끝났다, 2026-10-23 손으로 봤다). 값을 먹는 짧은 옵션은 `_RG_VALUE_OPTIONS` 에 든 것만 알고, 그
-    밖의 값 옵션(`-r`, `-d`)은 값을 먹지 않는 것으로 읽어 `-rg .env` 를 glob 으로 본다(거짓 양성).
-    묶음 꼴을 지나보낸 판이 있었다(셀프 리뷰 두 축, 대기열 422)."""
+    끝났다, 2026-10-23 손으로 봤다). 값을 먹는 짧은 옵션은 `_RG_VALUE_OPTIONS` 에 든 것만 안다. 그
+    표가 rg 의 값 옵션을 다 담지 못하면 그 옵션의 값 `g` 를 `-g` 로 읽어, 뒤의 낱말이 `.env` 가 아닌
+    고르는 glob 이 되어 훑기를 지나보낸다(`-rg ^` 가 그랬다, PR 직전 보안 리뷰). 묶음 꼴을
+    지나보낸 판이 있었다(셀프 리뷰 두 축, 대기열 422)."""
     values: list[str] = []
     index = 0
     while index < len(args):
@@ -596,8 +617,10 @@ def _paths_reach_root(args: list[str], value_options: frozenset[str], cwd: str |
 
 
 def _is_root(path: str, cwd: str | None) -> bool:
-    """경로가 저장소 루트(또는 `.env` 가 있는 디렉터리)인가. 확장 전 변수·홈은 보수적으로 루트."""
-    if path in _ROOTISH:
+    """경로가 저장소 루트(또는 `.env` 가 있는 디렉터리)인가. 확장 전 변수·홈은 보수적으로 루트.
+    `.` 을 다르게 쓴 꼴(`./.`, `.//`)도 루트다. 그 꼴을 루트로 보지 않아 `rg -g .env x ./.` 를
+    지나보낸 판이 있었다(PR 직전 bug-perf-review)."""
+    if path in _ROOTISH or os.path.normpath(path.replace("\\", "/")) in _ROOTISH:
         return True
     if path.startswith(("$", "~")):
         return True
