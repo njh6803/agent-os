@@ -404,6 +404,42 @@ PR 봇 둘째 회차에 밀 주장으로 넘길 새 문장(원문).
 - `_write` 독스트링과 주석: "꼴 거부나 인코딩 실패면 그 자리를 건드리지 않는다", "ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패"
 - 시험 주석: "홀로 선 서로게이트는 JSON 으로 읽히고 과제 목록의 꼴도 지나지만 UTF-8 로 바뀌지 않는다"
 
+## 인계: 커밋 뒤
+
+셀프 리뷰 반영, 아래 회고와 "다음"을 990f79d9로 커밋했다. pre-commit은 모두 통과했다(ruff 둘, `checks`: check-instructions·check-type-escapes·pyright 둘·run-hooks·web-verify 288.9초·pytest 424.7초 등, 마크다운 표, 줄 구분 문자, 변이 표 원문, 커밋 메시지). 카나리아 명세와 헌법 판은 바뀐 파일이 없어 `Skipped`였다. 인용 대조 경고 여섯은 옛 독스트링·주석의 원문(지금은 고쳐져 저장소에 없다), CodeRabbit 원문, 리뷰어가 제안한 문구를 기록으로 옮긴 것이라 두었다. 손으로 치는 다섯은 이 결과로 갈음한다.
+
+커밋 직후 `hook_handoff`가 컨텍스트 336,699 토큰으로 `커밋 뒤` 경계를 알렸다. 넘겨받은 경계(`셀프 리뷰 직전`)와 다르고, 요청 범위는 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없고, `인계 못함` 줄도 없어 인계한다. 아직 푸시하지 않았다. 이 세션의 지금 제목은 `feature/05-task-selection`이다.
+
+남은 순서.
+1. 이 절을 커밋한다(일지만).
+2. 푸시하기 전에 `gh pr edit 371`로 PR 본문을 넓힌다(`next-session` 순서 1의 1). 이 커밋이 PR 본문에 없던 결정(`_write`가 글을 바이트로 바꾼 뒤에 열고 `ValueError`를 받는다, 빈 `top_model_effort` 거부)과 대기열 행(381의 2회차, 새 449·450)을 더했다.
+3. 푸시하고 CodeRabbit 인라인 코멘트(id 4357714959)에 반영을 답한다. 반영 커밋은 990f79d9이고, 지적한 `ShapeError`에 더해 셀프 리뷰가 찾은 인코딩 실패까지 `ValueError`로 받게 넓혔다는 것을 적는다.
+4. `@coderabbitai review`와 `tools/wait_ci.py 371`. 두 봇 모두 이번이 둘째 회차라 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. CodeRabbit 첫 회차는 a5726119였고 시간당 한 번의 한도가 있다.
+5. 병합(이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다)과 next-session.
+
+인계 지시문.
+
+> 다음 작업: .scratch/model-rerun/issues/05-task-selection.md. 병합 기록에서 후보 티켓을 찾아 까닭과 함께 표로 내고, 층과 씨앗으로 파일럿 셋과 본 측정 여덟을 고른다
+> 다음 단계: PR 반영·병합
+> 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /implement .scratch/model-rerun/issues/05-task-selection.md
+> 브랜치: feature/05-task-selection
+> 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+> 읽을 것: docs/journal/2026-10-23-38-task-selection.md의 "인계: 커밋 뒤"(남은 순서)
+> 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영·회고·"다음"을 990f79d9로 커밋했고 아직 푸시하지 않았다. 커밋하지 않은 일지 절 "인계: 커밋 뒤"를 먼저 커밋한 뒤, PR #371 본문을 넓히고(새 결정과 대기열 381·449·450) 푸시, CodeRabbit 인라인 코멘트 4357714959에 답, 봇 둘째 회차(Critical·Major만), 병합을 한다. 회고는 마쳤다. docs/journal/2026-10-23-38-task-selection.md
+> 확인할 선행 조건: 형제 07(PR #372, 워크트리 07-gates-and-official-cost)이 05 티켓·명세·프로브 README·tools/rerun_hidden.py와 그 시험·변이 표를 함께 고친다. 07이 먼저 병합되면 이 PR에 글자 충돌이 날 수 있다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+
+제목을 `feature/05-task-selection (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋과 서브에이전트 둘이 모두 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T09:33Z
+
+## 이어받은 세션: 푸시와 봇 둘째 회차
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (… 위 "인계: 커밋 뒤"의 지시문과 같다 …) 인자: .scratch/model-rerun/issues/05-task-selection.md
+
+`git worktree list`에서 브랜치가 `.claude/worktrees/05-task-selection`(990f79d9)에 있어 `EnterWorktree(path)`로 들어갔다. 세션 제목을 `feature/05-task-selection`으로 바꿨다. 커밋하지 않은 변경은 넘겨받은 대로 이 일지 하나였다. origin/main은 893e0fe8 그대로였고, 형제 07(PR #372)은 d5db123e로 아직 열려 있다. `tools/sibling_overlap.py`는 번호 겹침 없음(0)이었다.
+
 ## 회고
 
 티켓 05를 닫는 세션이라 이 일지 전체(이 티켓의 세션 다섯)를 원천으로 돌렸다. 후보 여덟, 승인 셋(새 행 둘, 회차 하나), 기각 다섯, 넘김 0이다. 이 세션에서 반영한 것은 없다. 만료할 행은 없었다(`tools/queue_open_rows.py`를 작업 트리와 `--ref origin/main`으로 돌려 둘 다 "(없음)").
