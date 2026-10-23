@@ -1,7 +1,8 @@
 # chore/hook-census 의 훅 발동 보고 변이(ADR 0036). 형식은 tools/mutate.py 의 독스트링.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml
 # tools/hook_report.py 의 판정(훅 명령, 알림, 계기 첨부의 짝과 그 조각, 막음과 그 머리, 조각, 날짜, 들인 날,
-# 표)과 tools/morning_collect.py 의 가르지 못한 수를 하나씩 꺼서 그것을 지키는 시험이 빨강이 되는지 잰다.
+# 표)과 tools/morning_collect.py 의 가르지 못한 수, 두 호출부(hook_report 의 main, morning_collect 의 gather_hooks)가
+# UserPromptSubmit 의 훅을 넘기는 배선을 하나씩 꺼서 그것을 지키는 시험이 빨강이 되는지 잰다.
 # 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
 
 [[mutation]]
@@ -368,3 +369,23 @@ expect = "red"
 file = "tools/morning_collect.py"
 old = '''{unattributed[hook_report.BLOCK]}건,"'''
 new = '''{sum(unattributed.values())}건,"'''
+
+[[mutation]]
+name = "훅 보고의 main 이 UserPromptSubmit 의 훅을 scan 에 넘기지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "main을_실제로_불러"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    result = scan(transcript_files(projects, repo), prints, prompt_hooks)'''
+new = '''    result = scan(transcript_files(projects, repo), prints, ())'''
+
+[[mutation]]
+name = "아침 보고가 UserPromptSubmit 의 훅을 scan 에 넘기지 않는다"
+tests = ["tests/tools/test_morning_collect.py", "-k", "UserPromptSubmit_훅의_첨부를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/morning_collect.py"
+old = '''    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints, prompt_hooks)'''
+new = '''    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints, ())'''

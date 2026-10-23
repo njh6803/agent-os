@@ -1306,7 +1306,7 @@ def _waste_piece(p: token_report.Period, main_checkout: Path, wanted: Collection
 def hook_section(
     hooks: HookScan | str, day: date, runs: Sequence[tuple[str, float]] | None, src: Sources
 ) -> Part:
-    """`hooks`는 `_gather_hooks`가 읽은 것이거나 읽지 못한 까닭이다. `runs`는 main의 최근
+    """`hooks`는 `gather_hooks`가 읽은 것이거나 읽지 못한 까닭이다. `runs`는 main의 최근
     CI(`ci_runs`)이고, 읽지 못했으면 None이다."""
     got = Collected()
     source = (
@@ -2350,7 +2350,7 @@ def _handoff_from(root: Path) -> date | None:
         return None
 
 
-def _gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
+def gather_hooks(root: Path, projects: Path, day: date) -> HookScan | str:
     """등록된 훅과 그 발동(`hook_report`), 표에 오른 훅 파일의 하는 일. 설정·들인 날·주 체크아웃을
     읽지 못하면 그 까닭이다."""
     try:
@@ -2568,7 +2568,7 @@ def collect(
         model = Part(merged_unknown(model.section), Collected())
     active, leftover = _gather_worktrees(root, projects, entries, merged_all, opened, now)
     journal_path, journal = latest_journal(root)
-    hooks = _gather_hooks(root, projects, day)
+    hooks = gather_hooks(root, projects, day)
     runs = ci_runs(root) if isinstance(hooks, HookScan) else None  # 훅 표가 없는 절은 CI 줄도 없다
 
     parts = [

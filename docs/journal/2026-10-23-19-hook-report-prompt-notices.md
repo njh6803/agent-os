@@ -136,3 +136,57 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 사실 문장(원문)
 - 커밋 `50218031`의 pre-commit: ruff check·ruff format 통과, 러너(`tools/run_checks.py`)의 열 검사(check-ticket, lint-imports, check-instructions, zizmor, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest) 모두 통과(353.95s), 마크다운 표·줄 구분 문자·변이 표 원문 통과, 카나리아 명세와 헌법 판은 고친 파일이 없어 `Skipped`(이 브랜치는 둘 다 건드리지 않았다). 인용 대조 경고 둘은 막지 않는 경고이고, 하나는 셀프 리뷰가 옛 독스트링을 옮긴 기록(92행), 하나는 main 에만 있던 `docs/agents/issue-tracker.md`의 문장(111행)이라 main 을 합쳐 풀렸다.
 - 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라고 거절해, `git fetch origin` 뒤 `git merge --no-edit origin/main`으로 합쳤다(커밋 `1106dbbe`, 충돌 없음. `.scratch/harness/probes/README.md`는 자동으로 합쳐졌다). 합친 뒤 `tools/sibling_overlap.py`는 번호 겹침 없음.
 - 합친 판에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 35 모두 기대대로. 그런데 `toolUseID` 변이의 출력이 "1 failed, 51 deselected"로, `-k`에 든 두 시험 가운데 앞의 것에서 멈췄다. `tools/mutate.py`가 pytest에 `-x`를 붙이기 때문이다(891행). 셀프 리뷰 반영에서 `-k`에 짝 열쇠 시험을 `or`로 더한 것은 아무것도 더 재지 않았다. 그 변이를 갈래마다 하나로 나눠(서른여섯) `… hook_report_mutations.toml 25 26`으로 돌리니 둘 다 기대대로 빨강이었고, 짝 열쇠 시험(`test_짝은_세션과_이벤트가_모두_같아야_짓는다`)이 혼자서도 그 변이를 잡았다. README 행을 이 사실로 고쳤다.
+- 그 고침을 커밋 `3d43ccca`로 했다. pre-commit: ruff 둘은 `.py`가 없어 `Skipped`(이 커밋은 파이썬을 고치지 않았다), 러너의 열 검사 모두 통과(452.06s, main 을 합친 판의 전체 검사이기도 하다), 마크다운 표·줄 구분 문자·변이 표 원문 통과, 카나리아와 헌법 판은 `Skipped`. 인용 대조 경고 하나는 도구 출력("1 failed, 51 deselected")을 옮긴 것이다.
+- CodeRabbit CLI 는 `coderabbit auth status`가 `Seat: not assigned`라 PR 직전 리뷰는 대체 둘(`/security-review`, `bug-perf-review`)로 한다. 아직 돌리지 않았다.
+
+### 인계 (커밋 뒤)
+
+세션 컨텍스트가 229,830 토큰으로 문턱을 넘은 채 커밋 `3d43ccca` 뒤 경계에 와서 인계 계기가 왔다. 인계하지 않는 때 다섯을 대 봤다. 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션을 연 지시문의 경계는 `셀프 리뷰 직전`이라 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 이 세션의 제목은 `chore/005-hook-report-prompt-notices`다.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/005-hook-report-prompt-notices.md. `tools/hook_report.py`가 UserPromptSubmit 훅의 알림(명령 없는 `hook_additional_context` 첨부)을 그 훅의 알림으로 세어 뺄 후보로 잘못 내지 않는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다
+브랜치: chore/005-hook-report-prompt-notices
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-19-hook-report-prompt-notices.md(셀프 리뷰 반영, 커밋 뒤, 이 인계 절), docs/agents/issue-tracker.md(harness 티켓의 서식·상태·번호)
+이어받을 상태: 인계: 커밋 뒤. 구현과 셀프 리뷰 반영(커밋 50218031), origin/main 합침(1106dbbe), toolUseID 변이 나누기(3d43ccca)까지 커밋했고 아직 푸시하지 않았다(열린 PR 없음). 남은 단계는 PR 직전 리뷰(CodeRabbit CLI 는 좌석 미배정이라 `/security-review`와 `bug-perf-review`를 나란히 돌리고, 일지의 "PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 사실 문장" 목록을 그 브리프에 넘긴다), 반영, 푸시와 PR 열기, 봇 회차, 워크트리에서 병합, next-session 이다. 일지는 이 인계 절까지 커밋하지 않았다. docs/journal/2026-10-23-19-hook-report-prompt-notices.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `chore/005-hook-report-prompt-notices (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, `git worktree unlock`은 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-22T23:34:41Z
+
+## PR 직전 리뷰 (이어받은 둘째 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다 / (…) 이어받을 상태: 인계: 커밋 뒤. 구현과 셀프 리뷰 반영(커밋 50218031), origin/main 합침(1106dbbe), toolUseID 변이 나누기(3d43ccca)까지 커밋했고 아직 푸시하지 않았다(열린 PR 없음). (…) 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 되돌리고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 origin/main 은 `d0e696c9`로 합친 판 그대로였다.
+- `coderabbit auth status`는 앞 세션이 본 대로 좌석 미배정이라, 대체 둘을 나란히 돌렸다. `/security-review`는 커밋 `3d43ccca`(origin/main 합침 뒤)에서 돌렸다.
+
+### PR 직전 리뷰의 보고
+
+`/security-review`: 1단계 서브태스크가 후보를 하나도 내지 않아 2단계(오탐 거르기)를 띄우지 않았다. 바뀐 코드는 개발자 PC의 기록을 읽어 수를 세는 로컬 CLI이고, 새 실행 경로(`eval`, `subprocess` 등)와 경로 탈출이 없으며, 수집 JSON에는 여전히 건수만 든다.
+
+`bug-perf-review`(기준 `975bf04c`, 범위 `origin/main...HEAD`의 10개 파일, 호출 36번):
+- 유효 Minor 1: `main`(`tools/hook_report.py`)과 `_gather_hooks`(`tools/morning_collect.py`)가 UserPromptSubmit 의 훅을 `scan`에 넘기는 배선을 지키는 시험이 없다. 누가 그 인자를 `()`로 바꿔도 시험이 모두 초록이고, 그러면 `hook_prompt_directive`가 다시 뺄 후보로 나온다. `main` 시험의 임시 저장소는 PostToolUse 훅만 등록하고, `_gather_hooks`를 부르는 시험은 없었다.
+- 밀 주장 아홉은 모두 근거와 맞았다. 일곱째(같은 uuid 가 다른 세션 id 로 여러 파일에 있는 것)에는 반대 방향(앞 파일에 첨부만 다른 세션 id 로 있는 것)도 같은 결과라는 보강을 권했고, 리뷰가 센 수는 125개(`hook_success`와 `hook_additional_context`만)였다.
+- 오탐 여섯: 수집 JSON 으로 첨부 머리가 샌다(건수만 직렬화된다), `blocking_hook` 옛 이름의 잔존(일지 한 줄뿐), `content`가 문자열인 첨부의 누락(이 PC의 485건 모두 리스트), 짝 없는 첨부의 날짜가 파일 순서에 따라 하루 어긋날 수 있음(건수는 맞다), ADR 0036 본문의 "변이 스물"(날짜가 붙은 이력), 독스트링의 462건·5430개(날짜가 붙은 손 측정).
+
+### 반영
+
+고친 것:
+- 유효 Minor: `main` 시험의 임시 저장소(`_hook_repository`)가 UserPromptSubmit 에도 훅을 등록하게 하고, 그 훅의 짝 없는 첨부를 기록에 더해 표의 행(`| hook_prompt.py | 1 | 0 | 1 | 2026-10-18 |`)을 단언한다. `morning_collect`에는 임시 git 저장소로 그 함수를 부르는 시험을 더했다. 시험에서 부르려고 `_gather_hooks`를 `gather_hooks`로 바꿨다(pyright strict 가 다른 모듈의 비공개 이름을 막는다. 같은 파일의 `gather_tickets`·`gather_works`와 같은 꼴이다).
+- 두 배선을 깨는 변이 둘(37·38)을 표에 더했다. `… hook_report_mutations.toml 37 38`로 둘 다 기대대로 빨강이었고, 이어 서른여덟 전체를 커밋 전 작업 트리에서 돌려 모두 기대대로 빨강이었다. 프로브 README 행에 적었다.
+- 파이썬 `write_text`로 README 행을 고치자 윈도에서 그 파일 전체가 CRLF 가 됐다(`git ls-files --eol`의 `w/crlf`). `test_hook_report.py`도 같은 꼴이었다(어느 편집에서 바뀌었는지는 가르지 않았다). 둘 다 `sed -i 's/\r$//'`로 LF 로 되돌렸다. 색인은 LF 이고 `.gitattributes`가 `eol=lf`라 커밋에는 영향이 없었다.
+
+남긴 것:
+- 밀 주장 일곱째의 반대 방향 보강: 리뷰가 이 PC의 기록에서 세션 id 를 무시하면 짝이 지어질 첨부가 0이라 지금은 과다 계산이 없다고 봤고, 독스트링에 더하면 시험 하나를 함께 둬야 한다. 판정을 바꾸지 않는 보강이라 이 PR 에서는 더하지 않는다.
+- 172 와 125 의 차이: 앞 세션의 172는 손으로 본 수이고 명령이 남지 않았다. 리뷰의 125는 첨부 종류 둘만 센 것이라 단위가 다르다. 독스트링의 문장(같은 uuid 가 여러 세션 id 에 있다)은 두 수 어느 쪽으로도 참이다.
+
+다시 돌린 명령:
+- `uv run pytest -q tests/tools/test_hook_report.py tests/tools/test_morning_collect.py`: 122 passed.
+- `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 38 모두 기대대로(커밋하지 않은 변경이 있다는 알림이 함께 났다).

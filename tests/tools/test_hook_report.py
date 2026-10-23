@@ -730,12 +730,19 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _hook_repository(root: Path, hooks: list[str]) -> None:
-    """`hooks` 를 래퍼 모양으로 등록하고 2026-09-01 에 커밋한 임시 저장소."""
-    _tools(root, dict.fromkeys(hooks, ""))
-    commands = [{"type": "command", "command": LAUNCH + hook} for hook in hooks]
+def _registration(hooks: list[str]) -> list[Record]:
+    """훅마다 래퍼 모양의 명령 하나를 든 settings.json 의 이벤트 칸."""
+    return [{"hooks": [{"type": "command", "command": LAUNCH + hook} for hook in hooks]}]
+
+
+def _hook_repository(root: Path, hooks: list[str], prompt: dict[str, str] | None = None) -> None:
+    """`hooks` 를 PostToolUse 에, `prompt`(훅 이름과 그 소스)를 UserPromptSubmit 에 래퍼 모양으로
+    등록하고 2026-09-01 에 커밋한 임시 저장소."""
+    prompt = prompt or {}
+    _tools(root, {**dict.fromkeys(hooks, ""), **prompt})
+    events = {"PostToolUse": _registration(hooks), PROMPT_EVENT: _registration(list(prompt))}
     (root / ".claude").mkdir()
-    settings = json.dumps({"hooks": {"PostToolUse": [{"hooks": commands}]}})
+    settings = json.dumps({"hooks": events})
     (root / ".claude" / "settings.json").write_text(settings, encoding="utf-8")
     _git(root, "init", "-q")
     _commit(root, "2026-09-01")
@@ -788,13 +795,17 @@ def test_못_보는_것_이름을_바꾼_훅은_새_이름을_더한_날부터_�
 
 
 def test_main을_실제로_불러_임시_저장소의_표와_뺄_후보를_찍는다(tmp_path: Path) -> None:
+    """UserPromptSubmit 훅의 행은 `main` 이 그 이벤트의 훅을 `scan` 에 넘기는 배선을 지킨다(harness
+    005 PR 직전 버그 축. 넘기지 않으면 그 훅이 다시 뺄 후보로 나온다)."""
     root = tmp_path / "repo"
-    _hook_repository(root, ["hook_a.py", "hook_quiet.py"])
+    prompt = {"hook_prompt.py": f'CONTEXT = "{PROMPT_NOTICE}"\n'}
+    _hook_repository(root, ["hook_a.py", "hook_quiet.py"], prompt)
     projects = tmp_path / "projects"
     _write(
         projects / "R" / "s.jsonl",
         _notice("hook_a.py", "", "u0", "2026-09-20T00:00:00.000Z"),  # 창 앞의 기록
         _notice("hook_a.py", _context("고쳐라"), "u1"),
+        _attached(PROMPT_NOTICE, "u2"),
     )
     done = _run(
         *("--projects", str(projects), "--repo", "R"),
@@ -802,6 +813,7 @@ def test_main을_실제로_불러_임시_저장소의_표와_뺄_후보를_찍�
     )
     assert done.returncode == 0, done.stderr
     assert "| hook_a.py | 1 | 0 | 1 | 2026-10-18 |" in done.stdout
+    assert "| hook_prompt.py | 1 | 0 | 1 | 2026-10-18 |" in done.stdout
     assert "뺄 후보: hook_quiet.py(2026-09-01 들임)" in done.stdout
 
 

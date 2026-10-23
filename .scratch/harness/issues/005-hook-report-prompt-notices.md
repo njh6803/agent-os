@@ -17,3 +17,4 @@
 ## Comments
 
 - 셀프 리뷰가 짝 없는 첨부를 이벤트를 가리지 않고 모든 훅의 조각과 견주면 앱의 글이 훅의 알림으로 잡힌다고 짚어, 조각으로 가르는 것을 UserPromptSubmit 의 첨부와 그 이벤트에 등록된 훅으로 좁혔다. 같은 반영에서 ADR 0036 에 이력을 더했다(사용자 승인, 일지 2026-10-23-19).
+- PR 직전 `bug-perf-review`가 `main`과 `morning_collect`의 훅 모으기가 UserPromptSubmit 의 훅을 `scan`에 넘기는 배선을 지키는 시험이 없다고 짚어(Minor), 두 시험과 그 배선을 깨는 변이 둘을 더했다. 시험에서 부르려고 `_gather_hooks`를 `gather_hooks`로 바꿨다(일지 2026-10-23-19).
