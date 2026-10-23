@@ -54,6 +54,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pyright
       - run: uv run lint-imports
+      # tests/tools/test_hook_env_read_rg.py 가 실제 rg 를 띄운다. 러너 이미지에 없어 깐다(ADR 0038).
+      - run: command -v rg > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q ripgrep; }
       - run: sudo sysctl -w kernel.core_pattern=/tmp/core.%e.%p
       - run: |
           ulimit -c unlimited || echo "::warning::ulimit -c 를 올리지 못해 코어가 남지 않는다."
