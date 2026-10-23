@@ -42,5 +42,6 @@
 | [0036](0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md) | 하네스에 더하는 것은 같은 실수의 세 번째나 손상 한 번에 더하고, 쓰이지 않는 훅은 빼자고 넘기며, 대기열 행은 14일이 지나면 목록에서 내린다 | accepted | 2026-10-19 |
 | [0037](0037-every-pr-points-at-one-ticket.md) | main에 들어가는 PR은 모두 티켓 하나를 가리키고, 하네스의 작은 일은 harness 폴더의 세 자리 티켓이며, 커밋 검사와 첫 턴 알림이 지키고, 모델이 스스로 내는 세션 카드는 막는다 | accepted | 2026-10-20 |
 | [0038](0038-env-read-hook-is-tested-against-real-ripgrep.md) | `.env` 읽기 훅의 glob 판정은 pytest가 실제 rg를 띄워 맞대고, rg는 PATH나 Claude Code 실행 파일에서 찾는다 | accepted | 2026-10-23 |
+| [0039](0039-runtime-relays-call-events-as-recorded.md) | 런타임은 모델·도구 호출의 이벤트를 기록하는 자리에서 흘리고, 에이전트는 몸통과 맞물린 제 태스크에서 돈다 | accepted | 2026-10-23 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
