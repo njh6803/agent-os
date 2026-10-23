@@ -644,6 +644,8 @@ def test_Agent_입력으로_고른_모델은_그_세션의_서브에이전트만
 def test_하네스와_갈래_밖의_서브에이전트_모델이나_다른_노력은_측정_아님_모델과_줄_수다(
     tmp_path: Path,
 ) -> None:
+    # 못 보는 것: 내장 에이전트를 `model` 없이 불러 허용 밖의 모델(haiku)로 돈 줄도
+    # 건다(거짓 양성 쪽)
     room = _room(tmp_path)
     _transcript(
         room.config,

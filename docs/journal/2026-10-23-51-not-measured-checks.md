@@ -73,7 +73,7 @@
 
 ## 셀프 리뷰 (이어받은 세션)
 
-새 세션이 지시문대로 `EnterWorktree(path)`로 이 워크트리에 들어와 `/code-review`를 불렀다. 범위는 기준 07c890c5, diff 파일 10개, 커밋 0개, 미추적 4개(`tools/rerun_checks.py`, `tests/tools/test_rerun_checks.py`, `.scratch/model-rerun/probes/rerun_checks_mutations.toml`, 이 일지)다.
+새 세션이 지시문대로 `EnterWorktree(path)`로 이 워크트리에 들어와 `/code-review`를 불렀다. 이 세션의 첫 메시지는 위 "인계" 절의 낸 지시문 그대로다(`open-session`이 첫 줄의 스킬 명령을 스킬 파일을 읽으라는 한 줄로 옮겼다). 범위는 기준 07c890c5, diff 파일 10개, 커밋 0개, 미추적 4개(`tools/rerun_checks.py`, `tests/tools/test_rerun_checks.py`, `.scratch/model-rerun/probes/rerun_checks_mutations.toml`, 이 일지)다.
 
 ### 표준 축 (sonnet·high)
 
@@ -81,7 +81,7 @@
 
 - Minor. `BOUNDARY` 서술("glob 글자를 더했다")이 코드보다 넓다. glob 글자는 `*?`뿐이라 `~/.claude{,.bak}`, `${X:-~/.claude}`가 걸리지 않는다. 판정: 고친다. 중괄호(`{}`)를 `BOUNDARY`에 더하고 시험으로 고정한다. 대괄호는 한 글자에 맞아 `~/.claude[a]`가 이웃 이름(`~/.claudea`)이라 더하지 않고 그 까닭을 독스트링에 적는다.
 - Minor. 셸 명령의 절대 경로에 든 `..`·`.`(`<뿌리>/<자기 회차>/../<다른 회차>`는 지나가고 `<뿌리>/./<자기 회차>`는 걸린다)가 못 보는 것에 없다. 판정: 고친다. 못 보는 것에 적고 시험으로 고정한다(`.claude/rules/tools.md`의 못 보는 것 항목).
-- Minor. "`Monitor`는 `Bash(gh:*)`에 막히지 않는다"가 잰 것처럼 적혔다. `FIXED_DENY_RULES`를 읽은 것이다. 그리고 `Monitor`의 `ws.url`(웹소켓 주소)은 주소 검사를 받지 않는다. 판정: 고친다. 문장을 코드를 읽은 것으로 고치고, `ws` 입력은 웹 도구처럼 여섯 꼴을 찾는다. `ws` 입력이 있다는 것은 이 세션이 불러온 Monitor 도구의 입력 스키마(`ws.url`, `ws.protocols`)에서 봤다.
+- Minor. `Monitor`가 `Bash(gh:*)`에 막히지 않는다는 문장이 잰 것처럼 적혔다. `FIXED_DENY_RULES`를 읽은 것이다. 그리고 `Monitor`의 `ws.url`(웹소켓 주소)은 주소 검사를 받지 않는다. 판정: 고친다. 문장을 코드를 읽은 것으로 고치고, `ws` 입력은 웹 도구처럼 여섯 꼴을 찾는다. `ws` 입력이 있다는 것은 이 세션이 불러온 Monitor 도구의 입력 스키마(`ws.url`, `ws.protocols`)에서 봤다.
 - Minor. `test_웹_도구의_입력은_여섯_꼴을_모두_찾는다`가 셋만 단언한다. 판정: 고친다. 여섯을 모두 단언한다.
 - 판단. `HAIKU`가 `tools/rerun_cost.py`에 이미 있다. 판정: 고친다. 그 모듈에서 가져온다(그 모듈은 `tools/rerun_files.py`만 가져와 순환이 없다).
 - 판단. `command_patterns`와 `_web_patterns`의 같은 3단 모양. 판정: 고친다. 낱말 `gh`를 찾을 글만 달리 받는 함수 하나로 모은다.
@@ -94,10 +94,10 @@
 
 빠진 요구와 범위 넘침은 없었다. 티켓 사례의 입력은 함수를 직접 불러 모두 티켓대로였다. 지적과 판정은 아래와 같다.
 
-- Minor. 설정 폴더 `settings.json`의 `env` 키를 계정처럼 다룬다. 명세 "설정 폴더의 설정"은 `env` 키와 init 을 묶어 "하나라도 아니면 … 회차를 '측정 아님(설정)'으로 적은 뒤" 멈추라고 하고, 기록 없이 멈추는 것은 계정 불일치뿐이다. 판정: 고친다. `before_round`가 까닭과 함께, 설정 폴더의 잘못이면 그 회차의 끝(측정 아님(설정))을 돌려준다. 10 메모도 고친다.
+- Minor. 설정 폴더 `settings.json`의 `env` 키를 계정처럼 다룬다. 명세 "설정 폴더의 설정"은 `env` 키와 init 을 묶어, 하나라도 아니면 그 호출을 끄고 회차를 측정 아님(설정)으로 적은 뒤 멈추라고 하고, 기록 없이 멈추는 것은 계정 불일치뿐이다. 판정: 고친다. `before_round`가 까닭과 함께, 설정 폴더의 잘못이면 그 회차의 끝(측정 아님(설정))을 돌려준다. 10 메모도 고친다.
 - Minor. Agent 입력으로 고른 모델을 회차 단위로 허용한다. 티켓은 "그 세션이 Agent 도구 입력의 `model`로 직접 고른 모델"이다. 판정: 고친다. 고른 모델을 세션마다 쌓고 그 세션의 서브에이전트 줄과만 견준다.
 - Minor. 11 메모와 모듈 독스트링의 거짓 음성 목록이 닫혀 있는데 반례가 있다(`~/.claude-rerun/projects`, `$HOME/.claude-rerun/...`). 판정: 고친다. 홈 아래의 찾는 경로(설정 폴더, 뿌리, 주 체크아웃)도 대신하는 이름의 꼴을 본다. 목록은 "셸이 글을 풀어야 나오는 경로는 풀지 않는다"는 조항의 예시로 다시 적는다(code-review 6단계 1).
-- Minor. 거짓 양성 목록도 닫혀 있는데 반례 다섯이 있다(따옴표 없는 구분자의 `$(cat <<EOF`, `-F - <<<`, `echo … | git commit -F -`, `{ git commit -m gh; }`, 작은따옴표 안의 `$(gh)`). 판정: 둘은 고친다(치환 없는 본문의 따옴표 없는 구분자, 명령 앞의 셸 예약어). 나머지 셋은 "커밋 메시지 떼기가 나열한 길 밖으로 넘긴 메시지는 떼지 않는다"는 조항의 예시로 못 보는 것에 적고 시험으로 고정한다.
+- Minor. 거짓 양성 목록도 닫혀 있는데 반례 다섯이 있다(따옴표 없는 구분자의 `$(cat <<EOF`, `-F - <<<`, `echo … | git commit -F -`, `{ git commit -m gh; }`, 작은따옴표 안의 `$(gh)`). 판정: 둘은 고친다(치환 없는 본문의 따옴표 없는 구분자, 명령 앞의 셸 예약어). 나머지 셋은 커밋 메시지 떼기가 나열한 길 밖으로 넘긴 메시지는 떼지 않는다는 조항의 예시로 못 보는 것에 적고 시험으로 고정한다.
 - Nit. 프로브 README 의 "끄기 자체는 continue 표의 줄 판정 변이가 본다"와 달리 `drive`의 `if watch(line):`를 없애는 변이가 없다. 판정: 고친다. 그 변이를 더하고 빨강을 본다.
 - Nit. 쓰기 대상을 Git Bash 꼴(`/d/…/clone/tests/x.py`)로 적으면 클론 밖으로 본다. 판정: 고친다. 클론도 `head_forms`의 꼴로 견준다.
 
@@ -117,3 +117,42 @@
   9. 티켓 11의 09 메모: 오염 꼴이 틀리게 가르는 길의 두 조항과 그 예(독스트링 7과 같은 것), "그 세션의 Agent 입력이 고른 모델(앞 세션이 고른 모델은 인계 뒤 세션으로 물려주지 않는다)".
   10. 프로브 README checks 행: "줄 판정이 허용 밖 init 에서 참인지는 이 표의 "줄 판정이 허용 밖 init 에서도 끄라고 하지 않는다"가, 참인 줄에서 읽기를 멈추고 끄는지는 continue 표의 "줄 판정이 참이어도 읽기를 멈추지 않는다"가 본다." continue 행: "그 시험이 마감 30초에 끌 때까지 기다려 약 31초다(2026-10-24 그 변이만 돌린 도구 출력에서 30.88초)."
 - 다시 돌린 명령(2026-10-24, 커밋하지 않은 작업 트리): `uv run pytest tests/tools/test_rerun_checks.py` 211 passed, `tests/tools/test_rerun_session.py`·`test_rerun_continue.py` 265 passed, `uv run pyright`와 바꾼 파일의 ruff 는 오류 0. 변이는 세 표의 `--check`가 모두 원문을 찾았고(checks 46, continue 52, session 27), checks 표 전체에서 마흔셋이 표지까지 기대대로, 셋은 표지가 어긋나 고친 뒤 다시 돌려 기대대로였다(`변이 3 모두 기대대로`). continue 표의 새 변이(46번)도 기대대로였다(`변이 1 모두 기대대로`, 30.88초). 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음하고, 그 결과는 커밋 뒤에 적는다.
+- 커밋 80ab1fb6(기준 07c890c5 위의 첫 커밋). pre-commit 은 ruff check, ruff format, 검사 러너(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify, pytest. 러너 399.7초, pytest 399.4초), 마크다운 표, 줄 구분 문자, 변이 표 원문 모두 Passed 였다. 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped 였다. 인용 대조가 이 일지의 따옴표 인용 셋(84·97·100행, 원문과 글자 그대로가 아닌 풀어 쓴 문장)을 경고해 따옴표를 뗐다. 그 수정은 아직 커밋하지 않았다.
+- 커밋 직전 `tools/sibling_overlap.py`가 번호 겹침 없음으로 끝났고, origin/main 이 51a0417(web-widget 01·03)로 움직였다. `git diff --name-only HEAD...origin/main`에 이 브랜치가 고친 파일은 없고, `CLAUDE.md`·`operations.md`의 변경은 위젯 사진 비교(`pnpm -C web visual:widget`)라 이 브랜치의 검증 명령과 관계가 없다.
+
+## 인계 (둘째)
+
+- 이 세션의 지금 제목: `feature/09-not-measured-checks`.
+- 인계 경계: `커밋 뒤`. 세션 컨텍스트가 문턱(20만)을 넘은 채 커밋을 친 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(커밋은 성공했고, 요청 범위는 병합까지이고, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 다른 경계이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다).
+- 이 브랜치에 열린 PR 은 없고 푸시도 하지 않았다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/09-not-measured-checks.md. 회차마다 계정·설정·모델·오염·한도를 보고 걸린 회차를 그 이유와 함께 측정 아님으로 적는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
+브랜치: feature/09-not-measured-checks
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md의 "셀프 리뷰 (이어받은 세션)"과 "인계 (둘째)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 한 커밋 하나가 브랜치에 있고 푸시도 PR도 아직이다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히. bug-perf-review의 밀 주장은 일지 "반영"의 목록), 그 반영, PR 열기, 봇 회차, 병합이다. 일지의 인용 경고 셋을 고친 수정은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-23-51-not-measured-checks.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-not-measured-checks (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T15:51:28Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+새 세션이 지시문대로 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 이 세션의 첫 메시지는 위 "인계 (둘째)" 절의 낸 지시문 그대로다(`open-session`이 첫 줄의 스킬 명령을 스킬 파일을 읽으라는 한 줄로 옮겼다).
+
+- origin/main(51a0417e, web-widget 01·03)을 병합했다(faafe636). 충돌은 없었고 이 브랜치가 고친 파일과 겹치지 않는다. 위젯 앱이 들어와 `pnpm -C web install --frozen-lockfile`을 쳤다.
+- CodeRabbit CLI 는 `coderabbit auth status`가 `Seat: not assigned`여서 돌지 못해, 대체 둘을 나란히 돌렸다.
+- `/security-review`: 발견 없음. 하위 프로세스(리스트 꼴, 셸 없음, 시간 제한), 줄 판정의 끄기(`ours()` 확인을 거친다), 세션 출력의 JSON 읽기, 기록에 남는 꼴(꼴 이름, 도구 이름, 모델 이름, 사용률), `auth status` 출력과 이메일을 따라갔다.
+- `bug-perf-review`(기준 51a0417e, 파일 14, 호출 39): 유효 1, 보류 2, 오탐 6. 밀 주장 열 가운데 코드가 서술대로 돌지 않는 것은 없었다.
+  - 유효(Minor). 모듈 독스트링 "자리 둘"과 티켓 09 "구현에서 정한 것"의 "기록 없이 멈추는 것은 계정 불일치뿐이다"가 `before_round`와 어긋난다. `end` 없이 멈추는 자리는 셋(설정 폴더 없음, `auth status`를 읽지 못함, 계정 불일치)이다. 판정: 고친다. 그 문장이 명세를 서술한다는 것을 밝히고, 계정을 확인하지 못한 때도 기록 없이 멈춘다고 더했다.
+  - 보류(Minor). 내장 에이전트를 `model` 없이 불렀을 때 무엇으로 도는지가 모듈 독스트링의 못 보는 것에 없다(명세와 티켓 11 메모에는 있다). 판정: 고친다. 못 보는 것에 거짓 양성 쪽으로 적고, 그 꼴을 이미 거는 시험(`test_하네스와_갈래_밖의_서브에이전트_모델이나_다른_노력은_측정_아님_모델과_줄_수다`)에 주석으로 고정점을 달았다. 허용 모임은 티켓 11 이 정한다.
+  - 보류(Minor). 밀 주장 4의 `Monitor` 입력 스키마를 리뷰어가 대 보지 못했다. 판정: 맞다. 이 세션이 ToolSearch 로 불러온 `Monitor`의 스키마에 `ws`(`url` 필수, `protocols`)가 있다.
+  - 오탐 여섯(머리말 `model` 값의 YAML 꼬리 주석, 문자열인 플러그인 항목, `capture_output`과 손자 프로세스, CRLF 종결자, 빈 `settings.json`, `gh.`로 시작하는 파일 이름)은 리뷰어의 판정대로 둔다. 지금 닿는 입력이 없거나 보수적인 쪽이다.
+- 다시 돌린 명령(2026-10-24): 바꾼 두 파이썬 파일의 `ruff check`·`ruff format --check` 초록, `tools/mutate.py --check`로 checks 표 46 모두 원문이 있다, `uv run pytest tests/tools/test_rerun_checks.py -q -n 4` 211 passed.
