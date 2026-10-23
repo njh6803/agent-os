@@ -315,6 +315,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 - 남은 것: `C:\Users\User\AppData\Local`의 junction 셋(`Application Data`, `History`, `Temporary Internet Files`)은 2021년 시각 그대로이고, `AppData\Local`·`AppData\Roaming`의 수정 시각도 9월이다. 훑기는 깊이 우선이고 이름의 역순으로 내려가(`os.scandir` 순서를 쌓고 끝에서 꺼낸다) `C:\Windows`, `C:\Users\User`의 차례였고 `AppData\Local`과 `C:\project`에 닿기 전에 멈춘 것으로 어림한다. 서브에이전트는 주 체크아웃과 07·05 워크트리의 `web/node_modules` 링크 열이 남아 있다고 보고했다.
 - 사고 시간대(18:20~18:36)에 수정된 폴더를 C: 전체에서 찾는 읽기 전용 스캔을 돌리고 있다(`scratchpad/incident/scan_mtime.py`, 커밋하지 않는다). 링크를 지우면 부모 폴더의 수정 시각이 바뀌는 것을 단서로 쓴다.
 - 명세 축 서브에이전트에는 임시 폴더 밖의 실제 경로에 지우는 함수를 부르지 말라고 알렸다. 그 서브에이전트는 자기가 만든 임시 폴더(`scratchpad\spec\tidy_root`, `TemporaryDirectory`) 밖으로 `cut_links`를 부른 일이 없고, 다른 지우는 함수는 부르지 않았다고 보고했다.
+- 스캔 결과: C: 전체 스캔과 사용자 프로필 스캔(`scratchpad/incident/scan_profile.py`, 폴더 793,657개, 255.6초)에서 위의 둘(`C:\Users\User`, 그 `Documents`) 밖의 피해 흔적은 보지 못했다. 사고 시간대에 수정된 나머지 폴더는 앱이 쓰는 자리(브라우저 저장소, `AppData\Local\Packages`, `.claude`, claude 캐시)였고, 훑기 차례로는 `AppData`와 `.claude`가 `Documents` 뒤라 닿기 전에 멈춘 자리다. 수정 시각만 보는 스캔이라, 같은 폴더(`Documents`) 안에서 끊긴 다른 링크가 있었는지는 알 수 없다. NTFS 변경 기록(USN 저널)은 관리자 권한이 있어야 읽는다.
+- 복구: `scratchpad/incident/restore_junctions.ps1`(커밋하지 않는다)이 끊긴 열셋을 Windows 기본값으로 다시 만든다(속성 Hidden·System·NotContentIndexed, 상속하지 않는 Everyone 목록 보기 거부 ACE 하나. 본보기는 `C:\Users\Default`와 `AppData\Local`에 남은 junction). 이미 있는 이름은 건너뛴다. 가짜 프로필(`scratchpad/incident/fake_profile`)에 돌려 본보기와 속성·ACL이 같은 것을 봤다. 실제 프로필에 돌리는 것은 저장소 밖의 사용자 프로필을 바꾸는 일이라 사용자 승인을 기다린다.
 
 ## 봇 첫 회차 반영분의 셀프 리뷰
 
@@ -342,3 +344,41 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
   - 프로브 README의 gates·cost 변이 문단 끝과 gates 행의 겨누는 것 칸.
 - 남긴 것과 이유: 없다. 위 사고의 복구(끊긴 junction 열셋 되살리기)는 이 저장소 밖 사용자 프로필을 바꾸는 일이라 사용자에게 묻는다.
 - 다시 돌린 명령과 결과: 린트 둘과 바뀐 파일의 pyright가 초록이었다. `test_rerun_gates`·`test_tidy_checkouts`·`test_rerun_cost`가 268 통과였다(`-n 4`, 99.7초). 변이는 gates의 40~44·47·48과 cost 27 전부를 돌렸다. gates 일곱과 cost 스물여섯이 고른 표지까지 기대대로였고, cost 16은 빨갰지만 표지가 없어 실패 출력으로 표지를 바꾼 뒤 다시 돌려 기대대로였다(까닭은 프로브 README 변이 절). `--check`는 gates 48, cost 27, round 57, hidden 25, `tidy_checkouts` 166, `tidy_settings_equivalent` 6 모두 원문이 한 번씩 있었다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고, 그 결과는 커밋 뒤에 적는다.
+
+## 인계(커밋 뒤)
+
+- 이 세션의 제목은 `feature/07-gates-and-official-cost`였다. 커밋 04db7e5c 뒤에 컨텍스트가 약 37만 토큰으로 `커밋 뒤` 계기가 왔다. 이 세션의 지시문 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르고, `get_session`의 `self`에 `parentSessionId`가 없으며, 이 세션의 `인계 못함` 줄도 없어 넘긴다.
+- 커밋: 04db7e5c `refactor: PR 봇 첫 회차를 반영해 git 호출과 대신 셈의 같은 모양을 모은다 (model-rerun 07)`. pre-commit이 모두 통과했다(ruff 둘, 러너의 열: check-ticket·lint-imports·zizmor·check-instructions·check-type-escapes·pyright-linux·pyright·run-hooks 218.5초·web-verify 575.1초·pytest 717.2초, 마크다운 표, 줄 구분 문자, 변이 표 원문, 커밋 메시지). 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다. 인용 대조가 막지 않는 경고 둘(인계(PR 연 뒤) 절과 셀프 리뷰 절이 옮긴 옛 문구)을 냈고, 둘 다 지운 문구를 옮긴 기록이라 고치지 않았다.
+- 결정은 위 봇 첫 회차 반영분의 셀프 리뷰 절의 판정이다. 이 세션이 번복하거나 고친 것: 셋째 세션이 뽑은 `_substitutes`·`_merged`를, 셀프 리뷰 명세 축의 Minor(부동소수점 더하기의 차례가 바뀌었다)로 `_substitute_usd`·`_substitute`·`_merge_substitutes`로 다시 나눴다. 셋째 세션이 10의 07 메모에 쓴 "읽기(`_check_end`)만 막고"를 읽기와 쓰기로, "이 티켓이 회차 기록을 처음 쓰기 전에"를 11의 파일럿 전으로 고쳤고, 봇 첫 회차 절의 "독스트링 첫 문장"을 둘째 문장으로 고쳤다.
+- 남은 단계(새 세션).
+  1. 푸시 전에 PR #372 본문을 고친다(`next-session` 순서 1의 1). "남긴 위험"에 `Gate`·`SetupFailure`의 불리언 짝을 10의 07 메모로 넘긴 줄을 더하고, "확인 방법"의 변이 수를 gates 48·cost 27로 바꾸고, 봇 첫 회차 반영분의 셀프 리뷰(기준 d5db123e)와 이 커밋을 적는다.
+  2. 푸시하고, claude-review 첫 회차에서 남긴 셋(`cut_links`의 CQS, `rerun_gates`의 둘째 사본은 05의 메모, `_run`의 `exe is None or why is not None`)의 보류 이유와 10으로 넘긴 불리언 짝을 PR 코멘트로 남긴다. 같은 코멘트에 셀프 리뷰 절 "고친 것"의 새 사실 문장 넷을 밀 주장으로 적는다(CodeRabbit CLI가 없어 PR 직전 층이 이번에는 없다).
+  3. `@coderabbitai review`와 `uv run python tools/wait_ci.py 372`(백그라운드). CodeRabbit은 이 PR에 아직 리뷰가 없어 다음이 첫 회차이고, claude-review는 다음이 둘째 회차라 Critical·Major만 고친다.
+  4. 회고(`retro`)와 이 일지의 "다음". "다음"에는 뒤로 넘긴 일 둘(10의 메모: 불리언 짝, 05의 메모: `rerun_gates`의 둘째 사본)을 적는다. 회고 후보는 인계·셀프 리뷰·인계(PR 연 뒤)·이 절에 있다. 그 뒤 워크트리에서 병합하는 길이다.
+  - 사고 절에 더한 두 줄(스캔 결과, 복구)과 이 절은 커밋하지 않았다. 다음 커밋에 싣는다.
+- 회고 후보(단계를 닫는 세션의 retro가 판정한다). 앞 절들의 후보에 더해 아래 둘이다.
+  - 위 사고. 셀프 리뷰 브리프가 지우는 함수(`cut_links`)를 드라이브 뿌리로 부르라고 시켜, 사용자 프로필의 junction 열셋이 끊겼다. 손상이 한 번 난 것이라 retro 4단계와 `.claude/rules/tools.md`의 막는 훅 예외대로 첫 사건에서 막는 쪽을 본다. 후보는 셋이다. 지우는 함수(`cut_links`, `delete_path`)가 드라이브 뿌리와 홈, 그 조상을 받으면 거부한다. `code-review` 4단계의 주장 검증 10(불러 대 본다)에 지우거나 쓰는 함수는 서브에이전트가 만든 임시 폴더 안에서만 부른다는 조건을 단다. 서브에이전트의 명령이 지우는 함수를 임시 폴더 밖 경로로 부르는 것을 막는 훅을 둔다.
+  - 셋째 세션의 리팩터가 요구 2의 "셈 결과는 바뀌지 않아야 한다"를 부동소수점 더하기의 차례로 깼는데, `test_rerun_cost` 25가 초록이었고 명세 축의 무작위 비교가 잡았다. 셈을 옮기는 리팩터에서 옛 판과 비트까지 대 보는 시험이 없다.
+- 인계 줄로 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/07-gates-and-official-cost.md. 결과 커밋을 새로 꺼낸 작업 트리에서 게이트 셋과 원래 PR의 숨은 시험을 돌고, 세션 기록으로 공식 단가의 비용을 셈한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
+브랜치: feature/07-gates-and-official-cost
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "사고", "봇 첫 회차 반영분의 셀프 리뷰", "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. PR #372의 claude-review 첫 회차 반영과 그 셀프 리뷰를 커밋 04db7e5c로 마쳤고 아직 푸시하지 않았다. 푸시 전에 PR 본문을 고친다(불리언 짝을 10으로 넘긴 줄, 변이 수 gates 48·cost 27, 셀프 리뷰 줄). 그 뒤 푸시, 보류 이유와 밀 주장의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(CodeRabbit은 다음이 첫 회차, claude-review는 둘째 회차), 회고와 일지 "다음", 워크트리에서 병합이다. 일지의 사고 절에 더한 두 줄과 인계(커밋 뒤) 절은 커밋하지 않았다. 셀프 리뷰 중의 사고로 끊긴 사용자 프로필 junction 열셋의 복구는 넘긴 세션이 사용자 승인을 기다린다. 이 세션은 되살리지 않는다. 05의 PR #371과 08의 워크트리가 같은 파일을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-37-gates-and-official-cost.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/07-gates-and-official-cost (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(커밋은 끝났고 `tools/wait_ci.py` 대기는 띄우지 않았다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T10:21:04Z
+
+## 이어 받은 세션(다섯째)
+
+인계(커밋 뒤) 절의 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 사용자 프롬프트는 그 지시문 그대로였다. 들어왔을 때 HEAD는 04db7e5c, 원격 브랜치는 d5db123e였고, 커밋하지 않은 변경은 이 일지 하나(사고 절의 두 줄과 인계(커밋 뒤) 절)였다. origin/main은 합친 뒤로 움직이지 않았다(`git log HEAD..origin/main`이 비었다). 사고의 복구(끊긴 junction 열셋)는 넘긴 세션의 몫이라 이 세션은 손대지 않는다.
+
+- PR 본문: 푸시 전에 `gh pr edit`으로 고쳤다. "왜 이렇게 했나"에 봇 첫 회차 반영의 결정(`_Git._call`, 대신 셈을 나누고 같은 누산기에 더한 것, `cut_links`의 `os.path.join`), "남긴 위험"에 10으로 넘긴 `Gate`·`SetupFailure`의 불리언 짝, 체크리스트에 셋째 셀프 리뷰(기준 d5db123e)와 04db7e5c의 pre-commit 수치, "확인 방법"에 변이 수(gates 48, cost 27. `--check`로 다시 봤다)를 더했다.
