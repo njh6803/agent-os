@@ -1,7 +1,8 @@
 # `.claude/rules/core.md` 의 대화 요약 항목과 이어 가기 항목에 더한 문장(교환 수 기준, 읽기 상한, 이어 가기 판정의
 # 스레드 호출과 취소 때의 기다림)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 04).
 # 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-10-21, 이 PC, claude 2.1.302, 일지 2026-10-21-06).
+# 최신 결과: 통과 4(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-01). web-widget 티켓 02 가 같은 원천의 다른
+# 항목을 고친 뒤 다시 돌렸다.
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/core_rule_read_cap_thread.toml <출력 디렉터리>
 kind = "rule"
 question = '''

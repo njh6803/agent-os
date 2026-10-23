@@ -6,8 +6,9 @@
 주 이음매는 채널 라우터 테스트와 같다 — `create_app()` 에 가짜 포트를 주입하고 httpx `ASGITransport`
 로 밀며, 앱의 수명은 테스트 본문의 `async with` 로 연다(`.claude/rules/tests.md`). 토큰은 테스트가
 `cryptography` 로 만든 키로 직접 서명한다(`tests/signing.py`). 둘째 구동자(같은 앱을 ASGI 로 직접
-부르는 것)는 스트림의 수명에만 쓴다 — 도는 실행에 구독이 붙는 것과, 토큰이 만료돼도 열린 스트림이
-끊기지 않는 것(`.claude/rules/http.md` 의 예외).
+부르는 것)는 스트림의 수명에 쓴다 — 도는 실행에 구독이 붙는 것, 구독이 떠나거나 실행이 타임아웃으로
+등록부를 떠나는 것, 토큰이 만료돼도 열린 스트림이 끊기지 않는 것(`.claude/rules/http.md` 의 예외),
+결말 전에 오는 프레임.
 
 바깥 행동만 본다. 상태 코드와 봉투, 프레임의 `data` 와 `id`, 트레이스에 남은 이벤트, 서버 기록의 한
 줄이다. 등록부의 자료 구조는 보지 않는다. 판정 순서는 core 테스트(`tests/core/test_run.py` 의
@@ -26,9 +27,12 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
+from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
@@ -114,6 +118,7 @@ OPEN_AGENTS = frozenset(
     for name in (
         "echo",
         "asking",
+        "looping",
         "gated",
         "working",
         "silent",
@@ -238,6 +243,7 @@ class ForgingAgent:
 AGENTS: Mapping[str, BaseAgent] = {
     "echo": EchoAgent(),
     "asking": AskingAgent(),
+    "looping": AskingAgent(),
     "gated": ToolAgent(),
     "working": ToolAgent(),
     "silent": SilentAgent(),
@@ -248,6 +254,7 @@ AGENTS: Mapping[str, BaseAgent] = {
 MANIFESTS = {
     "echo": _manifest("echo"),
     "asking": _manifest("asking"),
+    "looping": _manifest("looping", mcp=["calc-server"]),
     "gated": _manifest("gated", mcp=["calc-server"], approval=["add"]),
     "working": _manifest("working", mcp=["calc-server"]),
     "silent": _manifest("silent"),
@@ -435,6 +442,27 @@ def _gated_model(answer: str = "답", *, answers: int = 1) -> GatedModel:
         gate=asyncio.Event(),
         waiting=asyncio.Event(),
     )
+
+
+class ToolAwareModel(GenericFakeChatModel):
+    """도구를 묶어도 자기 자신이다. core 는 연결이 도구를 주면 `bind_tools` 를 부른다."""
+
+    def bind_tools(
+        self,
+        tools: Sequence[object],
+        *,
+        tool_choice: str | None = None,
+        **kwargs: object,
+    ) -> Runnable[LanguageModelInput, AIMessage]:
+        return self
+
+
+def _adding_model() -> ToolAwareModel:
+    """첫 턴에 add 를 요청하고 둘째 턴에 답한다. `looping` 의 루프 하나가 도구 하나를 부른다."""
+    request = AIMessage(
+        content="", tool_calls=[LangchainToolCall(name="add", args={"a": 2, "b": 3}, id="c1")]
+    )
+    return ToolAwareModel(messages=iter([request, AIMessage(content="답")]))
 
 
 def _app(
@@ -1554,6 +1582,31 @@ async def test_도는_실행에_붙은_구독은_그_뒤_항목을_생기는_대
     assert _types(whole.frames()) == [(0, "started"), (2, "finished")]
     assert whole.frames() == starting.frames()
     assert _types(tail.frames()) == [(2, "finished")]
+
+
+async def test_모델이_요청한_도구가_끝나기_전에_부르기_시작함_항목이_도착한다() -> None:
+    """실행 도중의 이벤트는 생기는 대로 온다(ADR 0039). 루프가 `ctx.llm()` 한 번인 에이전트에서도
+    도구를 요청한 모델 호출의 항목(`calling`)이 그 도구가 끝나기 전에 닿는다. 모으던 core 에서는
+    결말 앞에 한꺼번에 나와, 도구가 끝나지 않는 동안 이 항목을 기다리다 기한에 걸린다. 도구를
+    요청하지 않은 둘째 모델 호출은 항목 없이 인덱스만 지난다."""
+    gate = asyncio.Event()
+    app = _app(model=_adding_model(), tools=_gated_tools(gate))
+    starting = _Wire(_start("looping"))
+
+    async with _lifespan(app):
+        start = _call(app, _scope("POST", START, _token()), starting)
+        await _until(lambda: (1, "calling") in _types(starting.frames()))
+        assert not gate.is_set()
+        gate.set()
+        async with asyncio.timeout(5):
+            await start
+
+    assert _types(starting.frames()) == [
+        (0, "started"),
+        (1, "calling"),
+        (2, "progress"),
+        (4, "finished"),
+    ]
 
 
 async def test_구독이_트레이스를_읽는_바로_그때_실행이_움직여도_빠짐도_중복도_없다() -> None:
