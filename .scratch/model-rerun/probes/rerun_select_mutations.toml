@@ -3,7 +3,8 @@
 # 본 적이 없다. 티켓이 든 갈림(푼 티켓, 싼 조건, 되살리기, 날짜 바닥과 거슬러 채우기와 닿지 않은 행의
 # 까닭, 숨은 시험 문턱, 크기 정렬의 동률, 파일럿과 본 측정의 층·씨앗·엇갈린 차례·갈래 계획, 회차 상한,
 # 표의 칸과 끝 줄)과 바깥 층의 갈림(병합 기록 읽기의 첫 부모 줄·PR 번호 꼬리·BOM·둘 이상 푼 커밋, 자식
-# 환경의 저장소 변수, git 호출의 시간 제한, 출력 자리의 폴더와 쓰기 실패, 본 측정 명령의 목록)을 하나씩
+# 환경의 저장소 변수, git 호출의 시간 제한, 출력 자리의 폴더와 쓰기 실패, 글을 바이트로 바꾼 뒤의 열기,
+# 본 측정 명령의 목록)을 하나씩
 # 되돌린다. 표지는 고른 단언이 실패할 때만 나오는 문구다(`.claude/rules/probes.md` 첫 항목).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_select_mutations.toml
 
@@ -415,7 +416,7 @@ expect_output = ["PermissionError: [Errno 13] Permission denied"]  # 이 PC(윈�
 
 [[mutation.edit]]
 file = "tools/rerun_select.py"
-old = '''    except OSError as error:
+old = '''    except (OSError, ValueError) as error:  # ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패
         raise SelectError(f"{what} {path} 를 쓰지 못했다: {error}") from error'''
 new = '''    except ValueError as error:
         raise SelectError(f"{what} {path} 를 쓰지 못했다: {error}") from error'''
@@ -445,3 +446,26 @@ old = '''        return path.resolve().relative_to(repo.resolve()).as_posix()
 new = '''        return path.as_posix()
     except ValueError:
         return path.name'''
+
+[[mutation]]
+name = "글을 바이트로 바꾸기 전에 출력 파일을 연다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "UTF_8로_바꾸지_못하면"]
+expect = "red"
+expect_output = ["AssertionError: 글을 바이트로 바꾸기 전에 파일을 열었다"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''        data = text().encode("utf-8")
+        path.write_bytes(data)'''
+new = '''        path.write_text(text(), encoding="utf-8", newline="\n")'''
+
+[[mutation]]
+name = "인코딩 실패를 고르기의 오류로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "UTF_8로_바꾸지_못하면"]
+expect = "red"
+expect_output = ["UnicodeEncodeError: 'utf-8' codec can't encode character"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''    except (OSError, ValueError) as error:  # ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패'''
+new = '''    except (OSError, ShapeError) as error:'''

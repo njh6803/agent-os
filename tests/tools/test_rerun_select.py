@@ -671,6 +671,11 @@ def test_브랜치_표의_행에서_가지와_PR_과_비용과_모델_레벨을_
             {"branch": "b", "prs": [1], "cost": 1, "cost_post_pr": 0, "top_model_effort": 3},
             "top_model_effort 가 글이나 null 이 아니다",
         ),
+        # 과제 목록은 빈 글을 받지 않아 과제 목록을 쓸 때에야 ShapeError 로 터진다
+        (
+            {"branch": "b", "prs": [1], "cost": 1, "cost_post_pr": 0, "top_model_effort": ""},
+            "top_model_effort 가 빈 글이다",
+        ),
         # PR 앞 비용이 음수이거나 NaN 이면 과제 목록을 쓸 때에야 ShapeError 로 터진다
         (
             {"branch": "b", "prs": [1], "cost": 1, "cost_post_pr": 2},
@@ -1030,11 +1035,11 @@ def test_후보_표를_쓰지_못하면_2로_끝난다(
     assert f"후보 표 {table} 를 쓰지 못했다" in capsys.readouterr().err
 
 
-def _여러_후보_저장소(path: Path, n: int) -> Path:
+def _여러_후보_저장소(path: Path, n: int, slug: str = "a") -> Path:
     """티켓 `n`개를 하나씩 푼 저장소. `i`번 티켓의 크기 지표는 `i`이고 PR 은 100 + i 다."""
     repo = _저장소(path)
     tickets = {
-        f".scratch/a/issues/{i:02d}-t.md": _티켓(
+        f".scratch/{slug}/issues/{i:02d}-t.md": _티켓(
             "ready-for-agent", "".join(f" `f{k}.py`" for k in range(i))
         )
         for i in range(1, n + 1)
@@ -1043,28 +1048,33 @@ def _여러_후보_저장소(path: Path, n: int) -> Path:
     for i in range(1, n + 1):
         _커밋(
             repo,
-            {f".scratch/a/issues/{i:02d}-t.md": _티켓("done")},
+            {f".scratch/{slug}/issues/{i:02d}-t.md": _티켓("done")},
             f"feat: {i} (#{100 + i})",
             _T + timedelta(hours=i),
         )
     return repo
 
 
-def test_파일럿_명령과_본_측정_명령은_목록을_쓰고_0으로_끝나며_본_측정은_파일럿_과제를_뺀다(
-    tmp_path: Path,
-) -> None:
-    repo = _여러_후보_저장소(tmp_path / "repo", 12)
+def _여러_후보_브랜치_표(path: Path, n: int, effort: str = "claude-opus-5-5/xhigh") -> Path:
+    """`_여러_후보_저장소`의 PR 마다 한 행이다."""
     rows: list[dict[str, object]] = [
         {
             "branch": f"feature/{i:02d}-t",
             "prs": [100 + i],
             "cost": 5.0,
             "cost_post_pr": 0.0,
-            "top_model_effort": "claude-opus-5-5/xhigh",
+            "top_model_effort": effort,
         }
-        for i in range(1, 13)
+        for i in range(1, n + 1)
     ]
-    branches = _브랜치_표(tmp_path / "branches.json", rows)
+    return _브랜치_표(path, rows)
+
+
+def test_파일럿_명령과_본_측정_명령은_목록을_쓰고_0으로_끝나며_본_측정은_파일럿_과제를_뺀다(
+    tmp_path: Path,
+) -> None:
+    repo = _여러_후보_저장소(tmp_path / "repo", 12)
+    branches = _여러_후보_브랜치_표(tmp_path / "branches.json", 12)
     pilot, main = tmp_path / "pilot.json", tmp_path / "main.json"
     table = tmp_path / "후보.md"
     common = ["--branches", str(branches), "--table", str(table), "--repo", str(repo)]
@@ -1083,6 +1093,48 @@ def test_파일럿_명령과_본_측정_명령은_목록을_쓰고_0으로_끝�
     pilot_ids = {t.task_id for t in got_pilot.tasks}
     assert pilot_ids <= {f"a-{i:02d}" for i in range(1, 5)}  # 크기 지표의 아래 삼분의 일
     assert not pilot_ids & {t.task_id for t in got_main.tasks}
+
+
+def test_고른_과제가_과제_목록의_꼴에_맞지_않으면_목록을_쓰지_않고_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 대문자 slug 의 과제 id(`A-01`)는 과제 목록이 받지 않아 목록을 쓸 때에야 ShapeError 가 난다
+    repo = _여러_후보_저장소(tmp_path / "repo", 12, slug="A")
+    branches = _여러_후보_브랜치_표(tmp_path / "branches.json", 12)
+    pilot, table = tmp_path / "pilot.json", tmp_path / "후보.md"
+    argv = ["pilot", "--branches", str(branches), "--table", str(table), "--out", str(pilot)]
+
+    code = sel.main(
+        [*argv, "--repo", str(repo), "--rev", "HEAD"], make_sorter=lambda _r, _o: _가르기()
+    )
+
+    err = capsys.readouterr().err
+    assert code == 2
+    assert f"과제 목록 {pilot} 를 쓰지 못했다" in err
+    assert "task_id: 정해진 꼴의 문자열가 아니다: 'A-" in err  # 쓰기 실패가 아니라 꼴 거부다
+    assert table.is_file()
+    assert not pilot.exists()
+
+
+def test_과제_목록의_글을_UTF_8로_바꾸지_못하면_빈_목록_파일을_남기지_않고_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 홀로 선 서로게이트는 JSON 으로 읽히고 과제 목록의 꼴도 지나지만 UTF-8 로 바뀌지 않는다
+    repo = _여러_후보_저장소(tmp_path / "repo", 12)
+    branches = _여러_후보_브랜치_표(tmp_path / "branches.json", 12, effort="\ud800")
+    pilot, table = tmp_path / "pilot.json", tmp_path / "후보.md"
+    argv = ["pilot", "--branches", str(branches), "--table", str(table), "--out", str(pilot)]
+
+    code = sel.main(
+        [*argv, "--repo", str(repo), "--rev", "HEAD"], make_sorter=lambda _r, _o: _가르기()
+    )
+
+    err = capsys.readouterr().err
+    assert code == 2
+    assert f"과제 목록 {pilot} 를 쓰지 못했다" in err
+    assert "surrogates not allowed" in err
+    assert table.is_file()
+    assert not pilot.exists(), "글을 바이트로 바꾸기 전에 파일을 열었다"
 
 
 def _숨은_시험_저장소(path: Path) -> Path:

@@ -52,10 +52,12 @@
 후보마다 작업 트리 둘에 준비를 돌려 오래 걸린다.
 
 종료 코드. 0 후보 표(와 목록)를 썼다, 1 후보 표는 썼지만 고를 후보가 모자라 목록을 쓰지 않았다,
-2 입력(브랜치 표, 되살릴 목록, 파일럿 목록)이 틀렸거나, 출력 자리에 쓰지 못했거나, git이 실패했다.
-브랜치 표의 `cost`·`cost_post_pr`은 0 이상의 유한한 수이고 `cost_post_pr`이 `cost`보다 크지 않아야
-한다. 출력 자리는 숨은 시험을 가르기 전에 본다. 폴더가 있는지, 그 자리가 폴더가 아닌지, 이미 있는
-파일이면 쓸 수 있는지(`os.access`)다.
+2 입력(브랜치 표, 되살릴 목록, 파일럿 목록)이 틀렸거나, 출력 자리에 쓰지 못했거나(고른 값이 과제
+목록의 꼴에 맞지 않거나 글이 UTF-8로 바뀌지 않을 때도 든다), git이 실패했다. 출력은 글을 다 짓고
+바이트로 바꾼 뒤에야 열어, 꼴 거부나 인코딩 실패로 끝나면 그 자리를 건드리지 않는다. 브랜치 표의
+`cost`·`cost_post_pr`은 0 이상의 유한한 수이고 `cost_post_pr`이 `cost`보다 크지 않아야 하며,
+`top_model_effort`는 null이거나 비지 않은 글이어야 한다. 출력 자리는 숨은 시험을 가르기 전에 본다.
+폴더가 있는지, 그 자리가 폴더가 아닌지, 이미 있는 파일이면 쓸 수 있는지(`os.access`)다.
 
 못 보는 것.
 - 푼 티켓은 `Status:` 줄의 값으로만 가린다. 티켓 파일 밖에서 끝난 일(티켓 없는 PR)과 꼬리의
@@ -68,6 +70,9 @@
 - 같은 티켓을 푼 M이 둘이면 과제 id가 겹친다. 고를 후보에 겹친 id가 들면 목록을 짓지 않고 알린다.
 - 출력 자리의 앞선 검사는 가르기 전의 한 번이라, 그 뒤에 쓸 수 없게 된 자리(그사이 그 자리에 생긴
   폴더)는 가르기가 끝나고 쓰는 때에야 2로 끝나 가른 결과를 잃는다.
+- 병합 기록에서 온 slug로 지은 과제 id가 과제 목록의 꼴(`tools/rerun_files.py`의 `_TASK_ID`)에
+  맞는지는 미리 보지 않는다. 맞지 않으면(대문자가 든 slug가 그 예다) 목록을 쓰는 때에야 2로 끝난다.
+  후보 표는 남지만 표에는 숨은 시험의 수만 들어, 목록을 지으려면 가르기를 다시 돈다.
 """
 
 from __future__ import annotations
@@ -101,8 +106,8 @@ from tools.rerun_files import (
     ShapeError,
     Task,
     TaskList,
+    dumps_task_list,
     read_task_list,
-    write_task_list,
 )
 from tools.run_hooks import REPO_LOCATION_VARS
 
@@ -245,6 +250,8 @@ def _branch_row(item: Json, index: int) -> BranchRow:
         raise SelectError(f"{where} 의 cost_post_pr({post:g}) 가 cost({cost:g}) 보다 크다")
     if top is not None and not isinstance(top, str):
         raise SelectError(f"{where}.top_model_effort 가 글이나 null 이 아니다")
+    if top == "":  # 과제 목록이 빈 글을 받지 않는다(위 비용과 같은 까닭)
+        raise SelectError(f"{where}.top_model_effort 가 빈 글이다")
     numbers = tuple(p for p in prs if isinstance(p, int))
     return BranchRow(branch=branch, prs=numbers, cost=cost, cost_post_pr=post, top_model_effort=top)
 
@@ -949,10 +956,13 @@ def _outputs(args: argparse.Namespace) -> list[tuple[Path, str]]:
     return found
 
 
-def _write(path: Path, what: str, write: Callable[[Path], object]) -> None:
+def _write(path: Path, what: str, text: Callable[[], str]) -> None:
+    """글을 다 짓고 UTF-8 바이트로 바꾼 뒤에야 연다. 꼴 거부나 인코딩 실패면 그 자리를 건드리지
+    않는다."""
     try:
-        write(path)
-    except OSError as error:
+        data = text().encode("utf-8")
+        path.write_bytes(data)
+    except (OSError, ValueError) as error:  # ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패
         raise SelectError(f"{what} {path} 를 쓰지 못했다: {error}") from error
 
 
@@ -976,7 +986,7 @@ def _run(args: argparse.Namespace, out: Out, make_sorter: MakeSorter) -> int:
     sha = _rev_sha(args.repo, args.rev)
     rows, listing = select_rows(args.repo, sha, branches, wanted, make_sorter(args.repo, out))
     table = render_table(rows, _header(args, sha, branches_text), listing.ambiguous)
-    _write(args.table, "후보 표", lambda p: p.write_text(table, encoding="utf-8", newline="\n"))
+    _write(args.table, "후보 표", lambda: table)
     out(f"후보 표를 썼다: {args.table}")
     if args.command == "table":
         return 0
@@ -986,7 +996,7 @@ def _run(args: argparse.Namespace, out: Out, make_sorter: MakeSorter) -> int:
     except SelectError as error:
         out(f"목록을 짓지 못했다: {error}")
         return 1
-    _write(args.out, "과제 목록", lambda p: write_task_list(p, chosen))
+    _write(args.out, "과제 목록", lambda: dumps_task_list(chosen))
     out(f"{chosen.kind} 목록을 썼다: {args.out}")
     return 0
 

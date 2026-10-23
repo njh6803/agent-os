@@ -285,3 +285,140 @@ origin/main(893e0fe8. #368 web-widget 문서, #369 model-rerun 04, #366 harness 
 시험 아홉(비용 넷, 출력 자리 둘, git 이름 셋)은 고치기 전에 빨간 것을 봤다. 읽기 전용 갈래는 가르기를 부른 뒤 `Permission denied`로 끝나 리뷰의 시나리오가 그대로 났다. 시험 파일 78 passed, 두 파일 pyright 0 errors, ruff 통과다. 변이 원문 확인 38 모두 한 번씩, 35·36번이 표지까지 기대대로 빨갰다.
 
 남긴 것(오탐·Nit): 11 메모의 "한 줄"(한 문장이 세 줄이 됐다), 변이 문단의 "그 다섯과 … 둘" 문장의 모호함, 변이 표 행에 걸리는 시간이 없는 것, 커밋하지 않은 스크래치 스크립트, `_shown`이 `repo/..`를 `..`으로 적는 것. 모두 뜻을 바꾸지 않아 두었다.
+
+## 인계: PR 연 뒤
+
+반영을 a5726119로 커밋했다. pre-commit은 모두 통과했다(ruff 둘, `checks` 378초: check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright 둘·run-hooks·web-verify·pytest, 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용 대조 경고 없음, 커밋 메시지). 커밋 직후 `hook_handoff`가 `커밋 뒤` 경계를 알렸지만, 이 세션 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘기지 않고 이었다.
+
+푸시하고 PR #371을 열었다(`gh pr create`, 본문은 템플릿대로 채웠다. 실제 후보 표의 결과, 형제 07과의 충돌 가능성, PR 직전 리뷰 셋의 결과를 적었다). 직후 `hook_handoff`가 컨텍스트 346,803 토큰으로 `PR 연 뒤` 경계를 알렸다. 넘겨받은 경계와 다르고, 요청 범위는 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없고, `인계 못함` 줄도 없어 인계한다. `@coderabbitai review` 코멘트는 남기지 않았고 ccd_pr로 묶지도 않았다(앱의 `get_session`은 이 세션에 PR #371을 이미 보인다). 이 절은 커밋하지 않았다. 새 세션이 첫 반영 커밋에 싣는다. 이 세션의 지금 제목은 `feature/05-task-selection`이다.
+
+인계 지시문.
+
+> 다음 작업: .scratch/model-rerun/issues/05-task-selection.md. 병합 기록에서 후보 티켓을 찾아 까닭과 함께 표로 내고, 층과 씨앗으로 파일럿 셋과 본 측정 여덟을 고른다
+> 다음 단계: PR 반영·병합
+> 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /implement .scratch/model-rerun/issues/05-task-selection.md
+> 브랜치: feature/05-task-selection
+> 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+> 읽을 것: docs/journal/2026-10-23-38-task-selection.md의 "PR 직전 리뷰"와 "인계: PR 연 뒤"
+> 이어받을 상태: 인계: PR 연 뒤. PR #371을 a5726119로 열었고 next-session 순서 1의 2(봇 회차)부터 한다. ccd_pr로 PR을 묶고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "인계: PR 연 뒤" 절은 커밋하지 않았으니 첫 반영 커밋에 싣는다(일지 docs/journal/2026-10-23-38-task-selection.md)
+> 확인할 선행 조건: 형제 07(워크트리 07-gates-and-official-cost)이 tools/rerun_hidden.py와 그 시험·변이 표·05 티켓·명세·프로브 README를 함께 고친다. 07이 먼저 병합되면 이 PR에 글자 충돌이 날 수 있다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+
+제목을 `feature/05-task-selection (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋과 서브에이전트 셋이 모두 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T08:31Z
+
+## 이어받은 세션: 봇 회차
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (… 위 "인계: PR 연 뒤"의 지시문과 같다 …) 인자: .scratch/model-rerun/issues/05-task-selection.md
+
+`git worktree list`에서 브랜치가 `.claude/worktrees/05-task-selection`(a5726119)에 있어 `EnterWorktree(path)`로 들어갔다. 세션 제목을 `feature/05-task-selection`으로 바꿨다. 커밋하지 않은 변경은 넘겨받은 대로 이 일지 하나였다. origin/main은 893e0fe8 그대로라 합칠 것이 없었고, 형제 07은 아직 PR이 없다.
+
+PR #371을 `bind_pr`로 이 세션에 묶었다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 371`을 백그라운드로 띄웠다(그때 `python` 잡만 pending이었다).
+
+claude-review 첫 회차(a5726119의 실행): 경계 지적 없음, 유지보수성 Minor 하나. `tools/rerun_select.py` 한 모듈이 값 층, git 읽기 층, 명령 줄 층을 다 담아 1033행이니 git 읽기 층을 다른 모듈로 빼라는 것이다. 고치지 않고 까닭을 PR 코멘트로 남겼다. 같은 계열 도구(`rerun_hidden.py`의 `# --- 바깥 층 ---`, `rerun_round.py`)가 한 파일 안에서 구분선으로 층을 나누는 꼴이고, 값 층 시험이 git 없이 도는 것은 이미 함수 경계가 지킨다(시험 파일의 앞 마흔여 개는 값만 넘기고, git을 띄우는 시험은 700행 뒤에 모였다). 리뷰가 근거로 든 형제 07과의 충돌 범위에도 이 파일은 없다(`git diff --name-only origin/main...refs/heads/feature/07-gates-and-official-cost`의 `tools/` 파일은 `rerun_cost`·`rerun_files`·`rerun_gates`·`rerun_hidden`·`rerun_round`·`tidy_checkouts`). 뒤로 넘기는 일이 아니라 일지 "다음"에는 적지 않는다.
+
+`wait_ci`가 끝났다. 검사 여덟 모두 통과, CodeRabbit `Review completed`. CodeRabbit 첫 회차(a5726119): Minor 하나. `_write`가 `OSError`만 `SelectError`로 바꿔, 과제 목록을 쓸 때 `rerun_files`의 `ShapeError`가 나면 가르기를 다 돈 뒤 트레이스백과 종료 1로 끝난다는 것이다. 근거를 보니 맞았다. 앞 세션이 비용 칸을 막은 뒤에도 그 길이 둘 남았다.
+- 브랜치 표의 `top_model_effort`가 빈 글(`""`)이면 `_branch_row`는 글인지만 보아 지나가고, 과제 목록은 `opt_text`가 빈 글을 받지 않아 쓸 때 터진다. 실제 표 366행에 빈 글은 없다(`uv run python -c`로 값을 셌다. null 19, 나머지는 모두 `claude-…/<레벨>`).
+- 병합 기록에서 온 slug가 과제 id의 꼴(`_TASK_ID`, 영소문자·숫자·`-`)이 아니면(대문자 slug의 `A-01`) 쓸 때 터진다. 이 저장소의 `.scratch` 폴더 이름은 모두 그 꼴이다(`ls .scratch`를 정규식으로 걸렀다).
+
+고친 것(커밋하지 않음).
+1. `_branch_row`가 빈 `top_model_effort`를 `SelectError`("top_model_effort 가 빈 글이다")로 가르기 전에 거부한다. 꼴 검사 매개변수 표에 한 줄을 더했다.
+2. `_write`가 `(OSError, ShapeError)`를 받아 `SelectError`(2)로 바꾼다. 새 시험 `test_고른_과제가_과제_목록의_꼴에_맞지_않으면_목록을_쓰지_않고_2로_끝난다`가 대문자 slug 저장소로 `pilot`을 돌려 2, "과제 목록 … 를 쓰지 못했다", 후보 표는 있고 목록은 없음을 본다. 그 저장소를 지으려고 `_여러_후보_저장소`에 `slug` 인자를 두고, 브랜치 표 행을 `_여러_후보_브랜치_표`로 뺐다(앞의 파일럿·본 측정 시험도 그것을 쓴다).
+3. 독스트링: 종료 코드 문단에 "`top_model_effort`는 null이거나 빈 글이 아니어야 한다", 못 보는 것에 "병합 기록과 가르기에서 온 값이 과제 목록의 꼴(`tools/rerun_files.py`)에 맞는지는 미리 보지 않는다. 맞지 않으면(대문자가 든 slug의 과제 id) 목록을 쓰는 때에야 2로 끝나 가른 결과를 잃는다."
+4. 변이 36번("쓰기의 OSError 를 고르기의 오류로 바꾸지 않는다")의 원문을 새 `except` 줄로, 바꿀 글을 `except ShapeError`(`OSError`를 뺀다)로 맞췄다. 프로브 README의 그 행 끝에 이 반영을 한 문장 더했다.
+
+시험 둘은 고치기 전에 빨간 것을 봤다(빈 글은 거부되지 않았고, 대문자 slug는 `ShapeError: 과제 목록.tasks[0].task_id: 정해진 꼴의 문자열가 아니다: 'A-04'` 트레이스백). 고친 뒤 시험 파일 80 passed, 두 파일 ruff check·format·pyright 0 errors. 변이 원문 확인 38 모두 한 번씩, 36번을 골라 돌려 표지(`PermissionError: [Errno 13] Permission denied`)까지 기대대로 빨갰다.
+
+셀프 리뷰에 밀 주장으로 넘길 새 문장: 위 3의 독스트링 두 문장, 시험 주석 둘("과제 목록은 빈 글을 받지 않아 과제 목록을 쓸 때에야 ShapeError 로 터진다", "대문자 slug 의 과제 id(`A-01`)는 과제 목록이 받지 않아 목록을 쓸 때에야 ShapeError 가 난다"), `_branch_row`의 주석 "과제 목록이 빈 글을 받지 않는다(위 비용과 같은 까닭)", `_write`의 주석 "ShapeError: 고른 값이 과제 목록의 꼴이 아니다", 프로브 README 행 끝의 새 문장, 그리고 claude-review 보류 코멘트(issuecomment-6360926177)의 사실 셋(같은 계열 도구의 구분선, 값 층 시험이 git 없이 돈다, 07의 `tools/` 파일 목록).
+
+CodeRabbit의 인라인 코멘트(id 4357714959)에는 아직 답하지 않았다. 반영을 푸시한 뒤 답한다. CodeRabbit 리뷰 본문이 "Your plan provides up to 1 included review per hour; 0 remain after this review"라고 적어, 다음 `@coderabbitai review`는 한도에 걸릴 수 있다(걸린 푸시는 회차로 세지 않는다).
+
+## 인계: 셀프 리뷰 직전
+
+위 반영을 마치고 `/code-review a5726119`를 부른 직후 `hook_handoff`가 컨텍스트 237,111 토큰으로 `셀프 리뷰 직전` 경계를 알렸다. 넘겨받은 경계(`PR 연 뒤`)와 다르고, 요청 범위는 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없고, `인계 못함` 줄도 없어 인계한다. 셀프 리뷰는 밟지 않았다. 이 세션의 지금 제목은 `feature/05-task-selection`이다.
+
+남은 순서. 셀프 리뷰(`/code-review a5726119`)와 그 반영 → 회고(`retro`)와 `## 다음` → 커밋(이 일지 포함) → 푸시 → CodeRabbit 인라인 코멘트에 답 → `@coderabbitai review`와 `tools/wait_ci.py 371` → 봇 둘째 회차(Critical·Major만) → 병합(이 워크트리 사본의 next-session "워크트리에서 병합할 때").
+
+인계 지시문.
+
+> 다음 작업: .scratch/model-rerun/issues/05-task-selection.md. 병합 기록에서 후보 티켓을 찾아 까닭과 함께 표로 내고, 층과 씨앗으로 파일럿 셋과 본 측정 여덟을 고른다
+> 다음 단계: PR 반영·병합
+> 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /implement .scratch/model-rerun/issues/05-task-selection.md
+> 브랜치: feature/05-task-selection
+> 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+> 읽을 것: docs/journal/2026-10-23-38-task-selection.md의 "이어받은 세션: 봇 회차"와 "인계: 셀프 리뷰 직전"
+> 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 a5726119)부터 한다. 변경은 PR #371 CodeRabbit 첫 회차 반영(_write 가 ShapeError 도 2로, 빈 top_model_effort 거부, 시험 둘, 변이 36번 원문, 프로브 README 한 문장)과 일지 두 절이다. 밀 주장은 일지 "이어받은 세션: 봇 회차"의 목록이다. claude-review 첫 회차의 Minor 는 보류 코멘트를 이미 남겼고, CodeRabbit 인라인 코멘트에는 푸시 뒤 답한다. 그 뒤 회고와 "다음", 커밋, 푸시, 봇 둘째 회차(Critical·Major만), 병합. docs/journal/2026-10-23-38-task-selection.md
+> 확인할 선행 조건: 형제 07(워크트리 07-gates-and-official-cost)이 tools/rerun_hidden.py와 그 시험·변이 표·05 티켓·명세·프로브 README를 함께 고친다. 07이 먼저 병합되면 이 PR에 글자 충돌이 날 수 있다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+
+제목을 `feature/05-task-selection (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(`wait_ci`는 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T08:52Z
+
+## 이어받은 세션: 셀프 리뷰와 봇 둘째 회차
+
+`git worktree list`에서 브랜치가 `.claude/worktrees/05-task-selection`(a5726119)에 있어 `EnterWorktree(path)`로 들어갔다. 세션 제목을 `feature/05-task-selection`으로 바꿨다. 커밋하지 않은 변경은 넘겨받은 대로 다섯 파일(모듈, 시험, 변이 표, 프로브 README, 이 일지)이었다. origin/main은 893e0fe8 그대로였고, 형제 07은 PR #372를 열었다(08:53Z). 07과 이 브랜치가 함께 바꾸는 파일은 05 티켓, 명세, 프로브 README, `rerun_hidden.py`와 그 시험·변이 표다. 07이 바꾸는 `tools/rerun_files.py`는 회차 결과의 `SetupFailure`·`Gate` 쪽이라 이 모듈이 쓰는 과제 목록의 꼴과 겹치지 않는다(`git diff origin/main...refs/remotes/origin/feature/07-gates-and-official-cost -- tools/rerun_files.py`).
+
+`/code-review a5726119`를 기준 a5726119, 커밋 0, 바뀐 추적 파일 5, 미추적 0으로 돌렸다. 명세 출처는 05 티켓, 기능 명세, PR #371의 CodeRabbit 인라인 지적(이 반영의 요구)이다.
+
+### 표준 축
+
+문서화된 표준의 하드 위반은 없었다. 맞다고 본 것: `rerun_files`가 빈 `original_model_effort`를 `정해진 꼴의 문자열가 아니다: ''`로 거부한다(함수를 불러 봤다), 변이 표 38개의 원문이 모두 한 번씩이고 36번의 새 바꿀 글(`except ShapeError`)에서 `PermissionError`가 새어 이름·표지와 맞는다, `branches.json` 366행에 null 19·빈 글 0, `.scratch` 폴더 이름이 모두 과제 id의 slug 꼴이다, 보류 코멘트의 사실 셋(07 브랜치에 d5db123e가 더해졌지만 `tools/` 목록은 같다).
+
+1. [Minor] 독스트링의 못 보는 것 "병합 기록과 가르기에서 온 값이 과제 목록의 꼴에 맞는지는 미리 보지 않는다"는 시험으로 고정된 것이 대문자 slug뿐이다. 가르기에서 온 값(숨은 시험, 준비 파일)은 `rerun_hidden.py`가 `is_test_file`·`is_support_file`로 이미 거른다. slug는 대문자 말고도 `my_slug`·`a.b`·`한글`이 `_TASK_ID`에 맞지 않는다(리뷰어가 `fullmatch`로 봤다). → 고친다. 과제 목록의 칸을 `_task`에서 하나씩 보니 이 모듈이 미리 보지 않는 것은 slug로 지은 `task_id` 하나라(비용·`branch`·`top_model_effort`는 `_branch_row`가 본다), 그 항목을 slug의 과제 id로 좁히고 괄호를 예시로 밝혔다.
+2. [Nit] 새 시험이 `과제 목록 … 를 쓰지 못했다`만 보아 `OSError` 갈래로 빨개져도 지난다. `CODING_STANDARDS.md`의 "실패를 기대하는 테스트는 실패의 까닭까지 단언한다"에 걸린다. → 고친다. `task_id: 정해진 꼴의 문자열가 아니다: 'A-`를 함께 단언한다.
+3. [판단] Shotgun Surgery 기미: `_branch_row`가 `rerun_files`의 꼴 규칙을 조각조각 되풀이한다(비용, 빈 글). → 남긴다. 리뷰어도 지금 크기에서는 이 방식이 낫다고 봤고, 과제를 일찍 지어 꼴을 보는 쪽은 가르기 전에 후보마다 숨은 시험을 알아야 해 지금 순서로는 할 수 없다.
+
+### 명세 축
+
+맞다고 본 것: 새 시험 둘을 a5726119의 옛 모듈에 대 보니 둘 다 빨갰다, 시험 파일 80 passed, 변이 원문 38, 일지의 수(366행, null 19, 빈 글 0, `.scratch` 폴더 22개와 origin/main 첫 부모 기록의 slug 17개가 모두 `_TASK_ID` 꼴, 1033행, 07의 `tools/` 여섯, PR #372 08:53Z, CodeRabbit 한도 문구), 브랜치 표에서 오는 칸은 모두 미리 보고 병합 기록과 가르기에서 오는 칸은 보지 않는 가름. `original_model_effort`는 패턴 없이 `opt_text`라 `"foo"`·`" "`·`"a\nb"`도 목록에 쓰인다(빈 글만 막힌다).
+
+1. [Minor] 지적의 "과제 목록 쓰기 실패가 main의 기존 오류 처리와 종료 코드 2를 따르도록"이 다 닫히지 않았다. 브랜치 표의 `top_model_effort`가 홀로 선 서로게이트(`"\ud800"`)면 `_branch_row`와 `dumps_task_list`를 지나 `write_text`의 `UnicodeEncodeError`가 `_write`를 벗어나, 트레이스백과 종료 1로 끝나고 0바이트 목록 파일이 남는다(리뷰어가 `_write`를 불러 봤다). → 고친다. `(OSError, ShapeError)`는 닫힌 목록이고 이것은 그 반례라, 반례만 덧붙이지 않고 일반 조항으로 고쳤다(`code-review` 6단계 1). `_write`가 글을 다 짓고 UTF-8 바이트로 바꾼 뒤에야 열고(`write_bytes`), 값 오류 전체(`ValueError`. `ShapeError`와 `UnicodeEncodeError`가 그 하위 형식이다)를 2로 바꾼다. 과제 목록은 `write_task_list` 대신 `dumps_task_list`의 글을 받는다.
+2. [Minor] 독스트링 "`top_model_effort`는 null이거나 빈 글이 아니어야 한다"가 같은 모듈의 "글이나 null 이 아니다"와 같은 짜임으로 읽혀 null도 막는 말로 읽힌다(명세: "`top_model_effort` 글 그대로이며 없으면 빈 값이다"). → 고친다. "null이거나 비지 않은 글이어야 한다".
+3. [Nit] 과제 id가 꼴에 맞지 않으면 가르기의 낭비가 그대로 남는다. → 남긴다. 못 보는 것에 적었고, 실제 slug가 모두 맞는 꼴이다.
+4. [Nit] 빈 글이 든 행은 후보가 아니어도 표 전체를 2로 막는다. 빈 글을 null로 읽는 길도 있었다. → 남긴다. 비용 칸의 선례처럼 브랜치 표는 수집 도구의 산출물이고, 수집 도구가 내지 않는 값은 입력이 틀린 것으로 본다.
+5. [Nit] 못 보는 것의 "가른 결과를 잃는다"는 넓다. 후보 표는 남고 잃는 것은 숨은 시험 ID다. → 고친다. 표에는 숨은 시험의 수만 든다(`_hidden_cells`가 `len`만 적는다)고 적었다.
+6. [Nit] 일지 "시험 파일의 앞 마흔여 개는 값만 넘기고"는 a5726119에서 git 절(698행) 앞의 시험 함수 39개, 수집된 사례 61개다. PR 코멘트에는 이 수가 없다. → 기록 문장은 그대로 두고 여기 바로잡는다.
+7. [Nit] 종료 코드 문단이 2의 까닭에 "고른 값이 과제 목록의 꼴에 맞지 않음"을 들지 않는다. → 고친다.
+
+### 반영
+
+고친 것.
+- 모듈: `_write`(바이트로 바꾼 뒤 열기, `ValueError` 받기), 과제 목록은 `dumps_task_list`로, import에서 `write_task_list`를 빼고 `dumps_task_list`를 넣었다. 독스트링의 종료 코드 문단(2의 까닭, 꼴 거부나 인코딩 실패면 그 자리를 건드리지 않는다, "null이거나 비지 않은 글"), 못 보는 것(slug로 지은 과제 id로 좁히고 괄호를 예시로, 후보 표는 남고 숨은 시험은 수만 든다).
+- 시험(80 → 81): 대문자 slug 시험에 꼴 거부의 까닭(`task_id: 정해진 꼴의 문자열가 아니다: 'A-`)을 더했다. 새 시험 `test_과제_목록의_글을_UTF_8로_바꾸지_못하면_빈_목록_파일을_남기지_않고_2로_끝난다`는 고치기 전에 `UnicodeEncodeError: … surrogates not allowed`로 빨간 것을 봤다. 변이 36번의 `-k "쓰지_못하면"`에 걸리지 않게 이름에 그 조각을 넣지 않았다.
+- 변이 표(38 → 40): 36번의 원문을 새 `except` 줄로, 바꿀 글을 `except ValueError`(`OSError`를 뺀다)로 맞췄다. 39번(바이트로 바꾸기 전에 연다), 40번(인코딩 실패를 2로 바꾸지 않는다)을 더하고 머리 주석의 범위에 넣었다. TOML 리터럴 문자열은 이스케이프를 풀지 않아 처음 적은 `"\\n"`을 `"\n"`으로 고쳤다.
+- 프로브 README: 변이 문단 끝에 이 반영의 문장을 더했다.
+
+남긴 것: 표준 3(판단), 명세 3·4(까닭은 위).
+
+다시 돌린 명령: 시험 파일 81 passed(50초), 두 파일 ruff check·format·pyright 0 errors. 변이 원문 확인 40 모두 한 번씩. 36·39·40번을 골라 돌려 36번은 표지까지 기대대로였고, 39·40번은 표지를 비운 첫 실행의 출력에서 `AssertionError: 글을 바이트로 바꾸기 전에 파일을 열었다`와 `UnicodeEncodeError: 'utf-8' codec can't encode character`를 골라 다시 돌려 `변이 2 모두 기대대로`였다. 그 뒤 원문 확인 40 모두 한 번씩. 나머지 검증 명령은 커밋의 pre-commit으로 갈음한다.
+
+곁일: `_write`를 고친 직후 `hook_edit_during_mutate`가 이 체크아웃에서 변이 도구(pid 23936)가 돈다고 알렸다. 이 세션은 변이 도구를 띄우지 않았고, 그때 도는 변이 도구는 `08-continue-and-caps` 워크트리의 `rerun_session_mutations.toml` 하나뿐이었으며(`Get-CimInstance Win32_Process`의 명령 줄), pid 23936·27160은 살아 있지 않았다. 이 워크트리의 git 디렉터리에 오늘 11:50(KST)의 표지 둘(`mutate-running-23936.json`, `mutate-running-27160.json`)이 남아 있었다. 앞 세션이 같은 변이 실행을 겹쳐 띄웠다가 끈 때의 것으로 본다("이어받은 세션: 셀프 리뷰"의 다시 돌린 명령). 훅은 그 pid를 잠깐 다른 프로세스가 받아 산 것으로 읽었다고 본다(그 훅 독스트링의 못 보는 것 "pid 의 재사용"). `git diff`에 변이가 없는 것을 본 뒤 두 표지를 지웠다.
+
+PR 봇 둘째 회차에 밀 주장으로 넘길 새 문장(원문).
+- 모듈 독스트링: "출력 자리에 쓰지 못했거나(고른 값이 과제 목록의 꼴에 맞지 않거나 글이 UTF-8로 바뀌지 않을 때도 든다)", "출력은 글을 다 짓고 바이트로 바꾼 뒤에야 열어, 꼴 거부나 인코딩 실패로 끝나면 그 자리를 건드리지 않는다.", "`top_model_effort`는 null이거나 비지 않은 글이어야 한다"
+- 모듈 독스트링 못 보는 것: "병합 기록에서 온 slug로 지은 과제 id가 과제 목록의 꼴(`tools/rerun_files.py`의 `_TASK_ID`)에 맞는지는 미리 보지 않는다." 와 "후보 표는 남지만 표에는 숨은 시험의 수만 들어, 목록을 지으려면 가르기를 다시 돈다."
+- `_write` 독스트링과 주석: "꼴 거부나 인코딩 실패면 그 자리를 건드리지 않는다", "ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패"
+- 시험 주석: "홀로 선 서로게이트는 JSON 으로 읽히고 과제 목록의 꼴도 지나지만 UTF-8 로 바뀌지 않는다"
+
+## 회고
+
+티켓 05를 닫는 세션이라 이 일지 전체(이 티켓의 세션 다섯)를 원천으로 돌렸다. 후보 여덟, 승인 셋(새 행 둘, 회차 하나), 기각 다섯, 넘김 0이다. 이 세션에서 반영한 것은 없다. 만료할 행은 없었다(`tools/queue_open_rows.py`를 작업 트리와 `--ref origin/main`으로 돌려 둘 다 "(없음)").
+
+1. **승인, 회차.** 같은 체크아웃에서 같은 변이 표의 실행을 두 번 띄워 두 프로세스가 같은 모듈에 변이를 넣었다("이어받은 세션: 셀프 리뷰"의 다시 돌린 명령). 둘 다 끄고 원문 확인 뒤 다시 돌려 손상은 없었고, 겹친 실행의 결과를 버렸다. 열린 381이 같은 처방(같은 git 디렉터리에 산 표지가 있으면 시작하지 않는다)을 들어 그 행의 2회차로 더했다. 구현 때 실리는 지침이 아니라 열린 행이 처방한 사건이라 회차로 센다.
+2. **승인, 새 행 449(1회차).** 1에서 끈 실행이 남긴 표지 둘을, 그 pid를 잠깐 받은 다른 프로세스 때문에 `hook_edit_during_mutate`가 산 것으로 읽어 이 세션에 거짓 경고를 냈다("곁일"). 사건: 프로세스 목록, `git diff`, 표지를 보느라 도구 호출 아홉 번. 층: 도구와 훅(표지에 프로세스 시작 시각을 적고 pid와 함께 본다). 되돌림: PR 하나. 더하는 것이라 문턱 전이어서 대기열에 두었고, 381과 서로 가리킨다(381의 처방이 들면 같은 표지가 측정의 시작도 막는다).
+3. **승인, 새 행 450(1회차).** 후보 표를 짓는 2시간 52분 동안 진행 줄이 몇 번째 후보인지 적지 않아 사용자가 물었고("실제 후보 표"의 인용), 세션은 가를 후보의 수를 스크래치 스크립트로 셌다. 층: 도구 출력(`_sorter`가 `k/N`과 지난 시간을 적는다). 티켓 11의 `pilot`·`main`이 같은 가르기를 저마다 다시 돌아 곧 다시 겪는다. 더하는 것이라 대기열에 두었다.
+4. **기각.** Write 도구가 `U+2028`·`U+2029`·`U+FEFF` 이스케이프를 날것 문자로 저장했다("구현"의 고친 것). 닫힌 22·52·160이 들인 검사(`tools/check_line_separators.py`와 그 훅)가 맡는 꼴이고 그 자리에서 고쳤다. 이 회고 절을 쓴 Edit에서도 세 이스케이프가 날것으로 저장됐고, `hook_line_separators`가 그 편집 직후에 알려 `chr()`로 문자를 지은 스크래치 스크립트로 `U+2028` 꼴로 바꿨다.
+5. **기각.** NUL이 든 문자열이 `git grep`의 인자로 넘어가 후보 하나를 통째로 잃던 결함("실제 후보 표"). 환경이 아니라 이 티켓의 도구 결함이고 이 PR이 고쳤다.
+6. **기각.** 봇 첫 회차 반영이 예외를 닫힌 목록(`OSError, ShapeError`)으로 좁게 고쳐, 인코딩 실패가 남은 것을 이 세션의 셀프 리뷰 명세 축이 잡았다. 리뷰가 제 몫을 한 사건이라 셈에서 뺀다.
+7. **기각.** 이 세션이 변이 표의 TOML 리터럴 문자열에 `"\\n"`을 적었다. 돌리기 전에 스스로 보고 고쳐 비용이 없었다.
+8. **기각.** 앞 세션이 일지에 "시험 파일의 앞 마흔여 개"로 적은 수가 39개였다. 260의 처방대로 다음 층(이 세션의 셀프 리뷰)이 잡았다.
+
+## 다음
+
+- 05가 병합돼도 새로 풀리는 티켓은 없다. 11(파일럿과 사전 등록)은 10을 기다리고, 10은 07·09를 기다린다. 07(PR #372)과 08은 형제 세션이 돈다.
+- 실제 후보 표의 결론(남은 후보 8개로 문턱 12개에 못 미친다)과 사람에게 물을 길은 11 티켓의 "05에서 넘어온 메모"에 있다. 11이 `pilot`을 돌기 전에 대기열 450을 보면 그 가르기의 진행을 알 수 있다.
+- 형제 07이 05 티켓, 명세, 프로브 README, `tools/rerun_hidden.py`와 그 시험·변이 표를 함께 고친다. 05가 먼저 병합되면 07이 main을 합칠 때 그 파일들에서 글자 충돌이 날 수 있다.
