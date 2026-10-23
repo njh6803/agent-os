@@ -12,6 +12,7 @@ import ast
 import json
 import os
 import random
+import stat
 import subprocess
 import sys
 from collections.abc import Callable
@@ -670,6 +671,23 @@ def test_브랜치_표의_행에서_가지와_PR_과_비용과_모델_레벨을_
             {"branch": "b", "prs": [1], "cost": 1, "cost_post_pr": 0, "top_model_effort": 3},
             "top_model_effort 가 글이나 null 이 아니다",
         ),
+        # PR 앞 비용이 음수이거나 NaN 이면 과제 목록을 쓸 때에야 ShapeError 로 터진다
+        (
+            {"branch": "b", "prs": [1], "cost": 1, "cost_post_pr": 2},
+            r"cost_post_pr\(2\) 가 cost\(1\) 보다 크다",
+        ),
+        (
+            {"branch": "b", "prs": [1], "cost": -1, "cost_post_pr": -2},
+            "0 이상의 유한한 수가 아니다",
+        ),
+        (
+            {"branch": "b", "prs": [1], "cost": float("nan"), "cost_post_pr": 0},
+            "0 이상의 유한한 수가 아니다",
+        ),
+        (
+            {"branch": "b", "prs": [1], "cost": float("inf"), "cost_post_pr": 0},
+            "0 이상의 유한한 수가 아니다",
+        ),
     ],
 )
 def test_브랜치_표의_꼴이_다르면_오류다(row: dict[str, object], message: str) -> None:
@@ -920,6 +938,20 @@ def test_git_호출이_시간_제한을_넘기면_고르기의_오류다(
         sel.list_candidates(repo, "HEAD")
 
 
+@pytest.mark.parametrize(
+    ("args", "name"),
+    [
+        (["-c", "core.quotepath=false", "log", "--first-parent", "x"], "git log --first-parent"),
+        (["-c", "a=1", "-c", "b=2", "cat-file", "--batch"], "git cat-file --batch"),
+        (["rev-parse", "--verify", "HEAD"], "git rev-parse --verify"),
+    ],
+)
+def test_알림의_git_이름은_앞의_설정을_건너뛰고_하위_명령을_든다(
+    args: list[str], name: str
+) -> None:
+    assert sel.git_name(args) == name
+
+
 _한_후보_행: dict[str, object] = {
     "branch": "feature/01-t",
     "prs": [2],
@@ -951,17 +983,47 @@ def test_출력_자리의_폴더가_없으면_숨은_시험을_가르기_전에_
     assert "의 폴더가 없다" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize(
+    ("kind", "message"), [("폴더", "가 폴더다"), ("읽기 전용", "에 쓸 수 없다")]
+)
+def test_출력_자리가_폴더이거나_쓸_수_없는_파일이면_숨은_시험을_가르기_전에_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], kind: str, message: str
+) -> None:
+    repo = _한_후보_저장소(tmp_path / "repo")
+    branches = _브랜치_표(tmp_path / "branches.json", [_한_후보_행])
+    table = tmp_path / "후보.md"
+    if kind == "폴더":
+        table.mkdir()
+    else:
+        table.write_text("옛 표", encoding="utf-8")
+        table.chmod(stat.S_IREAD)
+    가르기 = _가르기()
+
+    code = sel.main(
+        ["table", "--branches", str(branches), "--table", str(table)]
+        + ["--repo", str(repo), "--rev", "HEAD"],
+        make_sorter=lambda _r, _o: 가르기,
+    )
+
+    assert code == 2
+    assert 가르기.calls == []
+    assert f"후보 표 {table} {message}" in capsys.readouterr().err
+
+
 def test_후보_표를_쓰지_못하면_2로_끝난다(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repo = _한_후보_저장소(tmp_path / "repo")
     branches = _브랜치_표(tmp_path / "branches.json", [])
     table = tmp_path / "후보.md"
-    table.mkdir()  # 폴더라 파일로 쓰지 못한다
     argv = ["table", "--branches", str(branches), "--table", str(table)]
 
+    def 가르기를_지으며_자리를_막는다(_r: Path, _o: sel.Out) -> sel.Sorter:
+        table.mkdir()  # 앞의 검사를 지난 뒤라 쓰는 때에야 폴더를 만난다
+        return _가르기()
+
     code = sel.main(
-        [*argv, "--repo", str(repo), "--rev", "HEAD"], make_sorter=lambda _r, _o: _가르기()
+        [*argv, "--repo", str(repo), "--rev", "HEAD"], make_sorter=가르기를_지으며_자리를_막는다
     )
 
     assert code == 2

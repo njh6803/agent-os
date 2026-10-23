@@ -53,7 +53,9 @@
 
 종료 코드. 0 후보 표(와 목록)를 썼다, 1 후보 표는 썼지만 고를 후보가 모자라 목록을 쓰지 않았다,
 2 입력(브랜치 표, 되살릴 목록, 파일럿 목록)이 틀렸거나, 출력 자리에 쓰지 못했거나, git이 실패했다.
-출력 자리의 폴더는 숨은 시험을 가르기 전에 본다.
+브랜치 표의 `cost`·`cost_post_pr`은 0 이상의 유한한 수이고 `cost_post_pr`이 `cost`보다 크지 않아야
+한다. 출력 자리는 숨은 시험을 가르기 전에 본다. 폴더가 있는지, 그 자리가 폴더가 아닌지, 이미 있는
+파일이면 쓸 수 있는지(`os.access`)다.
 
 못 보는 것.
 - 푼 티켓은 `Status:` 줄의 값으로만 가린다. 티켓 파일 밖에서 끝난 일(티켓 없는 PR)과 꼬리의
@@ -61,9 +63,11 @@
 - 바깥 검증 낱말은 글자로 찾아 부정문("`-m llm`은 돌리지 않는다")에도 걸린다. 그 거짓 양성은 사람이
   후보 표를 보고 되살릴 목록으로 되살린다. 낱말 목록 밖의 말로 적은 바깥 검증(예: "브라우저로
   본다")은 걸리지 않는다.
-- 브랜치 표는 입력 그대로 믿는다. 표가 낡아 행이 없는 브랜치는 "브랜치 표에 PR #N 의 행이 없다"로
-  빠진다 (명세 "원래 세션의 PR 앞 비용"의 주석. 그래서 수집 도구를 `--refresh`로 다시 돈다).
+- 브랜치 표가 낡았는지는 보지 않는다. 표가 낡아 행이 없는 브랜치는 "브랜치 표에 PR #N 의 행이
+  없다"로 빠진다 (명세 "원래 세션의 PR 앞 비용"의 주석. 그래서 수집 도구를 `--refresh`로 다시 돈다).
 - 같은 티켓을 푼 M이 둘이면 과제 id가 겹친다. 고를 후보에 겹친 id가 들면 목록을 짓지 않고 알린다.
+- 출력 자리의 앞선 검사는 가르기 전의 한 번이라, 그 뒤에 쓸 수 없게 된 자리(그사이 그 자리에 생긴
+  폴더)는 가르기가 끝나고 쓰는 때에야 2로 끝나 가른 결과를 잃는다.
 """
 
 from __future__ import annotations
@@ -71,6 +75,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -232,6 +237,12 @@ def _branch_row(item: Json, index: int) -> BranchRow:
         raise SelectError(f"{where}.prs 가 정수 목록이 아니다")
     if cost is None or post is None:
         raise SelectError(f"{where} 의 cost 나 cost_post_pr 가 수가 아니다")
+    # 과제 목록은 PR 앞 비용을 0 이상의 유한한 수로만 받아(`rerun_files`), 여기서 거르지 않으면
+    # 가르기가 끝난 뒤 목록을 쓸 때 터진다
+    if not all(math.isfinite(n) and n >= 0 for n in (cost, post)):
+        raise SelectError(f"{where} 의 cost 나 cost_post_pr 가 0 이상의 유한한 수가 아니다")
+    if post > cost:
+        raise SelectError(f"{where} 의 cost_post_pr({post:g}) 가 cost({cost:g}) 보다 크다")
     if top is not None and not isinstance(top, str):
         raise SelectError(f"{where}.top_model_effort 가 글이나 null 이 아니다")
     numbers = tuple(p for p in prs if isinstance(p, int))
@@ -696,8 +707,16 @@ def _env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if k not in REPO_LOCATION_VARS}
 
 
+def git_name(args: Sequence[str]) -> str:
+    """알림에 쓰는 git 명령 이름. 앞의 `-c <설정>`을 건너뛰고 하위 명령과 그 다음 낱말을 든다."""
+    rest = list(args)
+    while rest[:1] == ["-c"]:
+        rest = rest[2:]
+    return " ".join(["git", *rest[:2]])
+
+
 def _git(repo: Path, args: Sequence[str], data: bytes | None = None) -> bytes:
-    shown = " ".join(["git", *args[:2]])
+    shown = git_name(args)
     try:
         done = subprocess.run(
             [_GIT, "-C", str(repo), *args],
@@ -941,6 +960,10 @@ def _run(args: argparse.Namespace, out: Out, make_sorter: MakeSorter) -> int:
     for path, what in _outputs(args):  # 오래 걸리는 가르기 전에 본다
         if not path.parent.is_dir():
             raise SelectError(f"{what} {path} 의 폴더가 없다")
+        if path.is_dir():
+            raise SelectError(f"{what} {path} 가 폴더다")
+        if path.exists() and not os.access(path, os.W_OK):
+            raise SelectError(f"{what} {path} 에 쓸 수 없다")
     pilot = None
     if args.command == "main":
         try:

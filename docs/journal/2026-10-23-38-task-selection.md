@@ -266,3 +266,22 @@ open-session을 부른다 2026-10-23T07:45Z
 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 이었다. 세션 제목을 `feature/05-task-selection`으로 바꿨다.
 
 origin/main(893e0fe8. #368 web-widget 문서, #369 model-rerun 04, #366 harness 007, #370 model-rerun 06)을 합쳤다. 글자 충돌은 프로브 README 표 끝 하나였다. 이 브랜치의 세 행(`branches.json`, `candidates.md`, `rerun_select_mutations.toml`)과 main의 두 행(04의 `rerun_round_mutations.toml`, 06의 `rerun_session_mutations.toml`)을 모두 남겨 티켓 번호 차례(04 → 05 → 06)로 놓았다. 명세는 자동으로 합쳐졌다(같은 문단에 이 브랜치가 덧붙인 NUL 주석만 남는다). main이 바꾼 파일을 이 브랜치가 이름으로 든 파일과 대조했다. `tools/rerun_files.py`는 비공개 상수 셋을 공개 이름(`MODEL_FORM`·`IDENT_FORM`·`VERSION_FORM`)으로 바꿨고, `tools/rerun_select.py`는 그 상수를 가져오지 않아 고칠 것이 없다. 게이트 쪽은 harness 007이 pre-commit과 CI에 `rg`를 요구하는 줄(ADR 0038)을 더한 것이 전부다.
+
+병합 커밋 5b1efeca의 pre-commit은 충돌 파일만 보아 ruff 둘이 `Skipped`였고 `checks`는 통과했다(656초: check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright 둘·run-hooks·web-verify·pytest). ruff 둘은 손으로 쳐 통과했다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 CLI가 돌지 못해 대체 둘을 돌렸다. 버그·성능은 `bug-perf-review`를 두 갈래(코드와 시험, 문서와 측정 기록)로 나눠 띄웠다. 한 갈래에 밀 주장 열넷과 파일 열셋을 다 주면 도구 호출 40번 안에 닿지 못할 것으로 봤다. 보안은 내장 `/security-review`다. 기준은 5b1efeca(merge-base 893e0fe8)다.
+
+- 보안: 지적 없음. 하위 프로세스는 셸 없이 인자 목록으로 띄우고, 쓰기 경로는 사람이 주는 CLI 인자이며, `branches.json`에 이메일·토큰·사용자 경로 꼴이 없다. 보고 문턱 아래로 `--rev`가 `-`로 시작해도 막지 않는 것을 적었다(신뢰하는 CLI 인자라 뺐다).
+- 문서·수치 갈래: 유효 0, 보류 2. 밀 주장 아홉(README 결과 절의 수, 어림 문장, 변이 문단, 명세의 NUL 주석, 11 메모 셋, 끝 줄, 2시간 52분)은 모두 근거와 맞았다. 보류 둘은 이 세션이 닫았다. `rerun_hidden_mutations.toml`의 `[[mutation]]`은 25개라 "25 모두"가 맞다. 11 티켓 본문(15·35행)이 파일럿 전과 본 측정 전에 `branches.json`을 다시 모으라고 이미 적어, `--rev` 기본값(`origin/main`)이 05 뒤의 병합까지 드는 것이 의도대로다. 둘 다 오탐이다.
+- 코드 갈래: 유효 Minor 셋, 오탐 다섯. 밀 주장 여덟(파일 이름 되살리기, 날짜, 출력 자리, `_blobs`, 첫 부모 줄, `_shown`, 명령 줄 한도, NUL 나누기)은 모두 사실이었다. 명령 줄 한도는 이 PC에서 3만2천5백 자까지 답하고 3만2천7백 자부터 `WinError 206`이었다(리뷰어가 `term_in`을 불러 봤다).
+
+고친 것(셋 모두 고치는 값이 작아 PR 전에 고쳤다).
+1. 브랜치 표의 한 행이 `cost_post_pr > cost`이거나 NaN이면 PR 앞 비용이 음수나 NaN이 되어, 가르기가 끝난 뒤 과제 목록을 쓸 때 `rerun_files`의 `ShapeError`가 잡히지 않고 트레이스백과 종료 1로 끝났다(리뷰어가 실제 `branches.json`에 그 값을 넣어 재현했다). `_branch_row`가 두 칸이 0 이상의 유한한 수이고 `cost_post_pr`이 `cost`보다 크지 않은지 보고 `SelectError`(2)로 거부한다. 실제 표 366행은 모두 지난다(세션에서 `uv run python -c`로 셌다).
+2. 출력 자리의 앞선 검사가 부모 폴더만 봐, 그 자리가 폴더이거나 읽기 전용 파일이면 가르기를 다 돈 뒤에야 2로 끝나 결과를 잃었다. 그 자리가 폴더인지와, 이미 있는 파일이면 `os.access`로 쓸 수 있는지를 함께 본다. 원래의 쓰기 실패 시험은 넓힌 검사에 먼저 걸리지 않게, 검사 뒤 가르기를 지을 때 그 자리에 폴더를 만들도록 바꿨다. 독스트링의 못 보는 것에 그 뒤에 쓸 수 없게 된 자리를 적었고, 그 시험이 고정한다.
+3. `-c core.quotepath=false log`의 알림이 `git -c core.quotepath=false`로 찍혔다. `rerun_hidden`의 `_git_name`과 같은 규칙의 `git_name`을 두었다.
+
+시험 아홉(비용 넷, 출력 자리 둘, git 이름 셋)은 고치기 전에 빨간 것을 봤다. 읽기 전용 갈래는 가르기를 부른 뒤 `Permission denied`로 끝나 리뷰의 시나리오가 그대로 났다. 시험 파일 78 passed, 두 파일 pyright 0 errors, ruff 통과다. 변이 원문 확인 38 모두 한 번씩, 35·36번이 표지까지 기대대로 빨갰다.
+
+남긴 것(오탐·Nit): 11 메모의 "한 줄"(한 문장이 세 줄이 됐다), 변이 문단의 "그 다섯과 … 둘" 문장의 모호함, 변이 표 행에 걸리는 시간이 없는 것, 커밋하지 않은 스크래치 스크립트, `_shown`이 `repo/..`를 `..`으로 적는 것. 모두 뜻을 바꾸지 않아 두었다.
