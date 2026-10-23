@@ -113,6 +113,10 @@ RECORDS = ROOT / ".scratch" / "model-rerun" / "probes" / "records"
 # 회차 폴더의 표지. 이 도구만 쓰는 이름이고 내용은 그 회차 폴더의 이름이다.
 MARKER = ".agent-os-rerun-round"
 _MARKER_MAX_BYTES = 256
+# 회차 폴더 안에서 띄우기 전에 그 호출의 세션 id를 한 줄씩 덧붙이는 파일. 다시 뜬 러너(10)가 죽은
+# 러너가 남긴 회차에서 init 전에 죽은 호출까지 세션 id를 찾는다(명세 "차례, 동시성, 예산"의
+# 2026-10-23 주석).
+SESSION_IDS = "session-ids.txt"
 
 GIT_TIMEOUT = 300  # git 호출 하나(원본에서 bare로 밀기와 클론이 가장 길다)
 # 준비 명령 하나. `uv sync`가 `.venv`를 복사로 채우면 2분을 넘길 수 있다(`docs/constitution/
@@ -305,6 +309,11 @@ class RoundDir:
     @property
     def setup_log(self) -> Path:
         return self.path / "setup.log"
+
+    @property
+    def session_ids(self) -> Path:
+        """띄우기 전에 세션 id를 덧붙여 적는 파일(`SESSION_IDS`)."""
+        return self.path / SESSION_IDS
 
 
 def _plant_marker(folder: str | os.PathLike[str]) -> None:
@@ -583,6 +592,28 @@ def prepare_round(
 # --- 세션 환경 ---
 
 
+def without_venv_dirs(path: str) -> str:
+    """`PATH` 값에서 가상 환경의 실행 폴더(부모 폴더에 `pyvenv.cfg`가 있는 폴더)를 뺀다.
+
+    러너를 주 체크아웃에서 `uv run`으로 띄우면 그 `.venv`의 실행 폴더가 맨 앞에 와서, 세션이 친 맨
+    `pytest` 같은 명령이 클론이 아니라 주 체크아웃의 환경과 코드로 돈다(04의 PR 직전
+    `/security-review`가 측정의 정확성으로 짚었다). 클론의 `uv run`은 클론의 `.venv`를 쓰므로 빼도
+    준비와 게이트는 그대로다. 빈 조각, 상대 경로 조각, 루트(`/`, `C:\\`)는 그대로 둔다. 상대 조각의
+    부모는 러너의 작업 폴더라 견주지 않는다. 폴더가 있는지는 보지 않아, 부모 폴더에 `pyvenv.cfg`가
+    있으면 없는 실행 폴더도 뺀다. 가상 환경이 아닌 곳(전역 파이썬, `~/.local/bin`)에 깔린 명령은
+    거르지 않는다.
+    """
+
+    def in_venv(part: str) -> bool:
+        folder = part.rstrip("\\/")
+        if not folder or not os.path.isabs(folder):
+            return False
+        parent = os.path.dirname(folder)
+        return parent != folder and os.path.isfile(os.path.join(parent, "pyvenv.cfg"))
+
+    return os.pathsep.join(p for p in path.split(os.pathsep) if not in_venv(p))
+
+
 def session_env(
     parent: Mapping[str, str], *, config_dir: str, round_dir: RoundDir
 ) -> dict[str, str]:
@@ -592,6 +623,8 @@ def session_env(
     글 그대로다(`claude auth status`의 `configDirectory`가 그 글을 그대로 돌려준다, 명세 "계정").
     """
     env = {n: parent[n] for n in ALLOWED_ENV if n not in RUNNER_SET_ENV and n in parent}
+    if "PATH" in env:
+        env["PATH"] = without_venv_dirs(env["PATH"])
     env[CONFIG_DIR_VAR] = config_dir
     env[AUTOUPDATER_VAR] = "1"
     env[GH_CONFIG_VAR] = str(round_dir.gh_config)

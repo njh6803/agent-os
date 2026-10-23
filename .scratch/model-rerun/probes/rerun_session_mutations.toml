@@ -1,0 +1,311 @@
+# 티켓 06(회차의 세션 하나, `tools/rerun_session.py`)의 시험이 실제로 무는지 변이로 본다(implement
+# 스킬, 대기열 29). 이 티켓은 본체를 시험보다 먼저 써서 판정 하나하나가 빨강을 본 적이 없다. 첫 줄의 틀,
+# 지시문의 모델 줄, 명령의 예산(반올림, 이진 부동소수의 버림), 끝난 자식의 구동(EOF 기다리기, 마감의 끈
+# 호출), 호출 칸의 종료 코드, 세션 비용의 마지막 값, 결과 글의 빈 글 건너뛰기, 이벤트 아닌 줄과 깊게 중첩된 줄,
+# 기록 파일 찾기와 `<synthetic>` 빼기, 결과 커밋의 세 규칙과 main 빼기, git 환경 벗기기, 띄우기 전의
+# 세션 id, 기록의 init 도구와 subtype 의 꼴, 세션 환경의 PATH 거르기와 상대 조각을 하나씩 되돌린다.
+# 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구다. 표지를 없는 문구로 바꾼 사본을 돌려 변이마다
+# 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md` 의 표지 항목).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_session_mutations.toml
+
+[[mutation]]
+name = "첫 줄의 틀이 open_session.ps1 과 갈린다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "Convert_StartLine"]
+expect = "red"
+expect_output = ["- .claude/skills/implement/SKILL.md 를 읽어 따른다."]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''"{skill} 를 읽어 그대로 따른다.'''
+new = '''"{skill} 를 읽어 따른다.'''
+
+[[mutation]]
+name = "지시문의 모델 줄이 갈래의 이름이다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "모델_줄만"]
+expect = "red"
+expect_output = ["At index 5 diff: '모델: A' != '모델: Opus 5.5 / xhigh'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''f"모델: {arm.label}",'''
+new = '''f"모델: {arm.name}",'''
+
+[[mutation]]
+name = "예산을 센트 아래에서 반올림한다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "남은_예산을"]
+expect = "red"
+expect_output = ["At index 17 diff: '7.02' != '7.01'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''rounding=ROUND_FLOOR)'''
+new = '''rounding="ROUND_HALF_UP")'''
+
+[[mutation]]
+name = "예산을 이진 부동소수에서 버린다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "다시_넣어도"]
+expect = "red"
+expect_output = ["E         + 0.28"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''Decimal(repr(usd))'''
+new = '''Decimal(usd)'''
+
+[[mutation]]
+name = "끝난 자식을 보지 않고 EOF 를 기다린다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "손자가"]
+expect = "red"
+expect_output = [") < 90"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''            elif process.poll() is not None:'''
+new = '''            elif False:'''
+
+[[mutation]]
+name = "마감에 닿으면 끝난 자식도 끈 호출로 적는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "마감에"]
+expect = "red"
+expect_output = ["E       assert not True"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''timed_out = process.poll() is None'''
+new = '''timed_out = True'''
+
+[[mutation]]
+name = "호출의 칸이 종료 코드를 버린다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "0_이_아닌"]
+expect = "red"
+expect_output = ["AssertionError: assert 0 == 3"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''exit_code=run.launched.drove.exit_code,'''
+new = '''exit_code=run.launched.drove.exit_code and 0,'''
+
+[[mutation]]
+name = "세션 비용을 결과 이벤트마다 더한다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "합이_아니라_마지막"]
+expect = "red"
+expect_output = ["assert 2.5 == 1.2"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    last: SeenResult | None = None
+    for r in results:
+        if r.session_id == session_id and r.cost_usd is not None:
+            last = r
+    if last is None:
+        return None, ()
+    return last.cost_usd, last.usage'''
+new = '''    mine = [r for r in results if r.session_id == session_id and r.cost_usd is not None]
+    if not mine:
+        return None, ()
+    return sum(r.cost_usd or 0 for r in mine), mine[-1].usage'''
+
+[[mutation]]
+name = "세션 id 를 가리지 않고 마지막 비용을 쓴다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "합이_아니라_마지막"]
+expect = "red"
+expect_output = ["assert 9.0 == 1.2"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''if r.session_id == session_id and r.cost_usd is not None:'''
+new = '''if r.cost_usd is not None:'''
+
+[[mutation]]
+name = "결과 글이 빈 마지막 글을 건너뛰지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "빈_마지막_글을"]
+expect = "red"
+expect_output = ["assert '' == '노을고래'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        if r.text is not None and r.text.strip():
+            return r.text'''
+new = '''        return r.text'''
+
+[[mutation]]
+name = "공백만 든 글을 결과 글로 받는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "공백만_든"]
+expect = "red"
+expect_output = ["- '앞 글'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''if r.text is not None and r.text.strip():'''
+new = '''if r.text:'''
+
+[[mutation]]
+name = "type 이 글이 아닌 JSON 객체를 이벤트로 센다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "풀지_못한_줄은"]
+expect = "red"
+expect_output = ["AssertionError: assert 3 == 2"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''if isinstance(value, dict) and isinstance(value.get("type"), str):'''
+new = '''if isinstance(value, dict):'''
+
+[[mutation]]
+name = "노력이 없는 synthetic 줄을 센다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "synthetic_을_뺀"]
+expect = "red"
+expect_output = ["At index 0 diff: LineCount(model='<synthetic>', effort=None, lines=1)"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        if model == SYNTHETIC and effort is None:
+            continue
+'''
+new = ''
+
+[[mutation]]
+name = "서브에이전트 기록을 찾지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "synthetic_을_뺀"]
+expect = "red"
+expect_output = ["Right contains one more item: LineCount(model='claude-sonnet-5-5', effort='high', lines=2)"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''for p in (d / "subagents").glob("*.jsonl")'''
+new = '''for p in (d / "subagents").glob("*.none")'''
+
+[[mutation]]
+name = "기록 파일을 작업 폴더 이름 없이 찾는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "synthetic_을_뺀"]
+expect = "red"
+expect_output = ["Right contains one more item: LineCount(model='claude-opus-5-5', effort='xhigh', lines=3)"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''projects.glob(f"*/{session_id}.jsonl")'''
+new = '''projects.glob(f"{session_id}.jsonl")'''
+
+[[mutation]]
+name = "지시문의 브랜치를 먼저 고르지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "세_규칙"]
+expect = "red"
+expect_output = ["commit: '2222222222222222222222222222222222222222' != None"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    if directive_branch in branches:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "B 뒤 커밋이 있는 브랜치가 둘이어도 하나를 고른다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "세_규칙"]
+expect = "red"
+expect_output = ["At index 0 diff: '1111111111111111111111111111111111111111' != None"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    if len(ahead) == 1:'''
+new = '''    if ahead:'''
+
+[[mutation]]
+name = "로컬 브랜치에 main 을 넣는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "main_을_빼고"]
+expect = "red"
+expect_output = ["{'main': ("]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''if not ref.startswith("refs/heads/") or name == MAIN_BRANCH:'''
+new = '''if not ref.startswith("refs/heads/"):'''
+
+[[mutation]]
+name = "git 의 자식 환경에서 저장소를 가리키는 값을 벗기지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "main_을_빼고"]
+expect = "red"
+expect_output = ["RuntimeError: git for-each-ref", "fatal: not a git repository"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''env = {k: v for k, v in os.environ.items() if k not in REPO_LOCATION_VARS}
+    env["GIT_TERMINAL_PROMPT"] = "0"'''
+new = '''env = dict(os.environ)
+    env["GIT_TERMINAL_PROMPT"] = "0"'''
+
+[[mutation]]
+name = "세션 id 를 띄운 뒤에 적는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "띄우기_전에"]
+expect = "red"
+expect_output = ["assert ['앞선-세션'] == ['앞선-세션', '새-세션']"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    with place.session_ids.open("a", encoding="utf-8", newline="\n") as f:
+        f.write(sid + "\n")
+    calls = len(place.session_ids.read_text(encoding="utf-8").splitlines())'''
+new = '''    calls = 1'''
+
+[[mutation]]
+name = "첫 줄의 연 저장소가 작업 폴더와 다른 글이다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "받은_인자"]
+expect = "red"
+expect_output = ["+ 연 저장소는 `C:/Users/"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        message=first_message(root, ticket, directive_text),'''
+new = '''        message=first_message(root.replace("\\", "/"), ticket, directive_text),'''
+
+[[mutation]]
+name = "기록에 init 의 도구 목록을 옮기지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "정해진_칸만"]
+expect = "red"
+expect_output = ["assert () == ('Bash', 'Read', 'Write')"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''init_tools=init.tools if init else (),'''
+new = '''init_tools=(),'''
+
+[[mutation]]
+name = "꼴 밖의 subtype 을 그대로 옮긴다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "꼴_밖의"]
+expect = "red"
+expect_output = ["subtype: 정해진 꼴의 문자열가 아니다: 'Odd Kind'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''subtype=r.subtype if r.subtype and _IDENT.fullmatch(r.subtype) else UNKNOWN_SUBTYPE,'''
+new = '''subtype=r.subtype or UNKNOWN_SUBTYPE,'''
+
+[[mutation]]
+name = "세션 PATH 에서 가상 환경을 거르지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "가상_환경의"]
+expect = "red"
+expect_output = ['''\\.venv\\Scripts' != ''']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        env["PATH"] = without_venv_dirs(env["PATH"])'''
+new = '''        pass'''
+
+[[mutation]]
+name = "깊게 중첩된 줄의 재귀 오류를 잡지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "풀지_못한"]
+expect = "red"
+expect_output = ["RecursionError"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    except RecursionError:  # 깊게'''
+new = '''    except ArithmeticError:  # 깊게'''
+
+[[mutation]]
+name = "PATH 의 상대 조각을 작업 폴더의 pyvenv.cfg 와 견준다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "상대_조각과"]
+expect = "red"
+expect_output = ["!= 'Scripts'"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        if not folder or not os.path.isabs(folder):'''
+new = '''        if not folder:'''
