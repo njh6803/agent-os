@@ -1,6 +1,6 @@
 # 007: `.env` 읽기 훅의 Grep 도구 glob 판정을 실제 rg와 맞대는 시험을 두고 어긋남을 고친다
 
-**What to build:** `tools/hook_env_read.py`의 `deny_reason_for_grep_tool`이 Grep 도구의 glob이 `.env`에 닿는지 판정할 때, 하류인 rg가 그 glob을 읽는 방식과 같게 읽는지를 실제 rg를 띄워 맞대는 시험을 둔다. gitignore 된 가짜 `.env`가 든 임시 폴더에서 glob 사례 표의 glob마다 rg가 `.env`를 내는지와 훅의 판정이 같은지 본다. 먼저 Grep 도구가 rg에 넘기는 인자(숨김 파일, gitignore)와 CI에 rg가 있는지를 확인하고, rg가 없으면 skip이 아니라 실패로 둔다(`.claude/rules/tests.md`). 시험이 찾은 어긋남을 고친다(대기열 422의 Grep 도구 `{.env}`는 PR #349에서 이미 고쳤고, Bash의 `rg -g '{.env}'`는 아직 지나간다). 같은 값을 견주는 Bash의 rg 판정(`-g`)도 같은 표로 맞댄다. 시험이 rg를 전제하게 되므로 그 전제를 ADR 0038로 남긴다(사용자 결정, 일지 2026-10-23-22).
+**What to build:** `tools/hook_env_read.py`의 `deny_reason_for_grep_tool`이 Grep 도구의 glob이 `.env`에 닿는지 판정할 때, 하류인 rg가 그 glob을 읽는 방식과 같게 읽는지를 실제 rg를 띄워 맞대는 시험을 둔다. gitignore 된 가짜 `.env`가 든 임시 폴더에서 glob 사례 표의 glob마다 rg가 `.env`를 내는지와 훅의 판정이 같은지 본다. 먼저 Grep 도구가 rg에 넘기는 인자(숨김 파일, gitignore)와 CI에 rg가 있는지를 확인하고, rg가 없으면 skip이 아니라 실패로 둔다(`.claude/rules/tests.md`). 시험이 찾은 어긋남을 고친다(대기열 422의 Grep 도구 `{.env}`는 PR #349에서 이미 고쳤고, Bash의 `rg -g '{.env}'`는 아직 지나간다). 같은 값을 견주는 Bash의 rg 판정(`-g`)도 같은 표로 맞댄다. 시험이 rg를 전제하게 되므로 그 전제를 ADR 0038로 남긴다(사용자 결정, 일지 2026-10-23-29).
 
 **대기열:** 422
 
