@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>승인 묻기 완성 화면</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 1968px; height: 760px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex items-start" style="gap: 48px;">
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 결정을 기다림. 긴 인자는 줄을 바꿔 흐른다. 사유가 비어 거부가 막혔다. 360 미만이라 버튼이 위아래로 꽉 찬다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>배송이 늦었으니 우산 값 환불해 주세요.</li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li class="flex items-center gap-2 text-small text-text-muted"><span style="display: flex; color: var(--success);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="14"></x-import></span><span class="font-mono font-medium text-text">orders.lookup</span><span>성공</span></li>
+</ul>
+</li>
+<li><section aria-label="승인 묻기" class="flex flex-col gap-3" style="padding: var(--spacing-4); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<div class="flex items-center gap-2"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-pause" size="16"></x-import><span class="text-body font-semibold">승인이 필요합니다</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">도구</span><span class="text-body font-mono font-medium" style="overflow-wrap: anywhere;">payments.refund</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">인자</span><pre class="text-mono font-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "ORD-2026-10-22-000184", "amount": 18900, "reason": "배송 지연", "note": "예정일보다 하루 늦게 도착해 고객이 우산 값 전액을 돌려받기로 함", "notify": {"channel": "email", "template": "refund-completed-v2"}}</pre></div>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="single" label="거부 사유" help="거부하려면 사유를 적어 주세요."></x-import>
+<div style="display: grid; gap: var(--spacing-2);"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">거부</x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import></div>
+</section></li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>승인이나 거부를 먼저 골라 주세요.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" placeholder="요청을 적어 주세요" disabled="{{yes}}"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 거부 사유를 쓰는 중. 사유가 생기자 거부가 열린다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>배송이 늦었으니 우산 값 환불해 주세요.</li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li class="flex items-center gap-2 text-small text-text-muted"><span style="display: flex; color: var(--success);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="14"></x-import></span><span class="font-mono font-medium text-text">orders.lookup</span><span>성공</span></li>
+</ul>
+</li>
+<li><section aria-label="승인 묻기" class="flex flex-col gap-3" style="padding: var(--spacing-4); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<div class="flex items-center gap-2"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-pause" size="16"></x-import><span class="text-body font-semibold">승인이 필요합니다</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">도구</span><span class="text-body font-mono font-medium" style="overflow-wrap: anywhere;">payments.refund</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">인자</span><pre class="text-mono font-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "ORD-2026-10-22-000184", "amount": 18900, "reason": "배송 지연"}</pre></div>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="single" label="거부 사유" help="거부하려면 사유를 적어 주세요." value="고객센터에 먼저 물"></x-import>
+<div style="display: grid; gap: var(--spacing-2);"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">거부</x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import></div>
+</section></li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>승인이나 거부를 먼저 골라 주세요.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" placeholder="요청을 적어 주세요" disabled="{{yes}}"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 400px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">400 · 결정을 보내는 중. 누른 승인이 불러오는 중이고, 거부와 사유 칸은 막힌다. 360 이상이라 버튼이 나란히 선다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 400px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>배송이 늦었으니 우산 값 환불해 주세요.</li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li class="flex items-center gap-2 text-small text-text-muted"><span style="display: flex; color: var(--success);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="14"></x-import></span><span class="font-mono font-medium text-text">orders.lookup</span><span>성공</span></li>
+</ul>
+</li>
+<li><section aria-label="승인 묻기" class="flex flex-col gap-3" style="padding: var(--spacing-4); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<div class="flex items-center gap-2"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-pause" size="16"></x-import><span class="text-body font-semibold">승인이 필요합니다</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">도구</span><span class="text-body font-mono font-medium" style="overflow-wrap: anywhere;">payments.refund</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">인자</span><pre class="text-mono font-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "ORD-2026-10-22-000184", "amount": 18900, "reason": "배송 지연"}</pre></div>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="single" label="거부 사유" help="거부하려면 사유를 적어 주세요." disabled="{{yes}}"></x-import>
+<div class="flex gap-2" style="justify-content: flex-end;"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">거부</x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="primary" loading="{{yes}}">승인</x-import></div>
+</section></li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>승인이나 거부를 먼저 골라 주세요.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" placeholder="요청을 적어 주세요" disabled="{{yes}}"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 승인한 뒤. 버튼과 사유 칸이 사라지고 한 줄이 남는다. 실행이 이어져 그 도구를 부르고, 띠는 사라진다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>배송이 늦었으니 우산 값 환불해 주세요.</li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li class="flex items-center gap-2 text-small text-text-muted"><span style="display: flex; color: var(--success);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="14"></x-import></span><span class="font-mono font-medium text-text">orders.lookup</span><span>성공</span></li>
+</ul>
+</li>
+<li><section aria-label="승인 묻기" class="flex flex-col gap-3" style="padding: var(--spacing-4); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<div class="flex items-center gap-2"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-pause" size="16"></x-import><span class="text-body font-semibold">승인이 필요합니다</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">도구</span><span class="text-body font-mono font-medium" style="overflow-wrap: anywhere;">payments.refund</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">인자</span><pre class="text-mono font-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "ORD-2026-10-22-000184", "amount": 18900, "reason": "배송 지연"}</pre></div>
+<p class="flex items-center gap-2 text-body" style="margin: 0;"><x-import component-from-global-scope="AgentOsUi.Icon" name="check" size="16"></x-import><span>승인했습니다</span></p>
+</section></li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li><x-import component-from-global-scope="AgentOsUi.Progress" label="payments.refund 부르는 중"></x-import></li>
+</ul>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" placeholder="요청을 적어 주세요"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 거부한 뒤. 사유가 한 줄로 남고, 실행이 거부를 받아 이어지다 끝난다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>배송이 늦었으니 우산 값 환불해 주세요.</li>
+<li class="flex flex-col gap-2">
+<ul aria-label="부른 도구" class="flex flex-col gap-2" style="margin: 0; padding: 0; list-style: none;">
+<li class="flex items-center gap-2 text-small text-text-muted"><span style="display: flex; color: var(--success);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="14"></x-import></span><span class="font-mono font-medium text-text">orders.lookup</span><span>성공</span></li>
+</ul>
+</li>
+<li><section aria-label="승인 묻기" class="flex flex-col gap-3" style="padding: var(--spacing-4); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<div class="flex items-center gap-2"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-pause" size="16"></x-import><span class="text-body font-semibold">승인이 필요합니다</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">도구</span><span class="text-body font-mono font-medium" style="overflow-wrap: anywhere;">payments.refund</span></div>
+<div class="flex flex-col gap-1"><span class="text-small text-text-muted">인자</span><pre class="text-mono font-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-s); white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "ORD-2026-10-22-000184", "amount": 18900, "reason": "배송 지연"}</pre></div>
+<p class="flex items-start gap-2 text-body" style="margin: 0;"><span style="display: flex; padding-top: 3px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="x" size="16"></x-import></span><span>거부했습니다: 고객센터에 먼저 물어보겠습니다</span></p>
+</section></li>
+<li class="flex flex-col gap-2">
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>환불을 요청하지 않았습니다.
+고객센터에 물어본 뒤 다시 요청하시면 바로 처리하겠습니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" placeholder="요청을 적어 주세요"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1968,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true };
+}
+}
+</script>
+</body>
+</html>
