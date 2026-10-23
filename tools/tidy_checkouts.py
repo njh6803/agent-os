@@ -358,13 +358,16 @@ RECREATABLE_FILES = frozenset({"next-env.d.ts"})
 # Git Bash 의 grep·sh 가 죽으며 남기는 덤프(루트 `.gitignore` 의 `*.stackdump`)
 RECREATABLE_SUFFIXES = (".stackdump",)
 # 이름이 흔해 자리째로 본다. 디자인 시스템 패키지의 빌드와 `/design-sync` 의 산출물(ADR 0026. 판정의
-# 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json` 이다), 소급 측정 프로브의 gh 응답 캐시(결과는
-# `branches.json` 에 커밋한다). 모두 루트 `.gitignore` 가 앵커를 붙여 무시한다. 플랜 모드의 계획
-# 파일 `.claude/plans/` 는 산출물이 아니라 세션의 계획 원문이라 넣지 않는다(명세 축 리뷰)
+# 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json` 이다), 위젯의 Storybook 정적 빌드와 시작
+# 래퍼가 복사한 글꼴 파일, 소급 측정 프로브의 gh 응답 캐시(결과는 `branches.json` 에 커밋한다). 모두
+# 루트 `.gitignore` 가 앵커를 붙여 무시한다. 플랜 모드의 계획 파일 `.claude/plans/` 는 산출물이
+# 아니라 세션의 계획 원문이라 넣지 않는다(명세 축 리뷰)
 RECREATABLE_PATHS = frozenset(
     {
         "web/packages/ui/dist/",
         "web/packages/ui/storybook-static/",
+        "web/apps/widget/storybook-static/",
+        "web/apps/widget/public/fonts/",
         ".ds-sync/",
         "ds-bundle/",
         ".design-sync/sb-reference/",

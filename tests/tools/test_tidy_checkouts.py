@@ -416,6 +416,8 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         "web/apps/admin/coverage/",
         "web/packages/ui/dist/",
         "web/packages/ui/storybook-static/",
+        "web/apps/widget/storybook-static/",
+        "web/apps/widget/public/fonts/",
         ".claude/settings.local.json",
         # 2026-10-15 에 병합된 워크트리 다섯을 남긴 것들. 모두 루트 `.gitignore` 가 산출물·캐시라고
         # 적은 자리다

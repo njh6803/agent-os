@@ -8,7 +8,8 @@
     "./fonts.css": "./src/styles/fonts.css",
     "./testing": "./src/testing/index.ts",
     "./contrast": "./src/styles/contrast.ts",
-    "./storybook": "./src/storybook/preview.tsx"
+    "./storybook": "./src/storybook/preview.tsx",
+    "./visual": "./visual/index.ts"
   },
   "publishConfig": {
     "types": "./dist/index.d.ts"
