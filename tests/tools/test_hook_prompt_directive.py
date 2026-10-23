@@ -11,6 +11,7 @@ from tools.hook_prompt_directive import (
     TITLE_FALLBACK,
     block_reason_for,
     context_for,
+    directive_branch,
     first_turn_context,
     has_assistant_turn,
     is_first_turn,
@@ -32,6 +33,13 @@ DIRECTIVE = """／implement .scratch/admin-api/issues/05-traces-list.md
 이어받을 상태: 없음
 확인할 선행 조건: 없음
 이번 요청 범위: 구현·리뷰·커밋까지. PR과 병합은 사용자가 말할 때"""
+
+
+def test_지시문의_브랜치는_다시_풀기_러너도_쓰는_공개_이름으로_읽는다() -> None:
+    """`tools/rerun_continue.py`가 이 함수로 인계 지시문을 알아본다(명세 "이어 가기와 끝")."""
+    assert directive_branch(DIRECTIVE) == "feature/05-traces-list"
+    assert directive_branch(DIRECTIVE.replace("어디서: 새 세션", "어디서: 이 세션")) is None
+    assert directive_branch("브랜치: feature/x 만 있는 글") is None
 
 
 def test_next_session_스킬의_지시문_형식을_채우면_알아본다() -> None:

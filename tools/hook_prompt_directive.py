@@ -220,7 +220,7 @@ def context_for(prompt: str, cwd: str | None = None) -> str | None:
     형식을 인용한 것은 세지 않는다. `cwd` 는 이 세션의 작업 폴더로, 손으로 붙여 넣은 반각 슬래시
     명령을 가를 때 스킬 파일을 찾는 자리다(`pasted_reason`).
     """
-    branch = _directive_branch(prompt)
+    branch = directive_branch(prompt)
     if branch is None:
         return None
     context = (
@@ -335,7 +335,7 @@ def block_reason_for(prompt: str, cwd: str | None) -> str | None:
     안에서는 tests/tools 의 계약 테스트가 잡지만, 두 체크아웃 사이의 머리 변경은 못 잡는다. 버린
     길: ps1 을 절대 경로로 불러 한 체크아웃에 묶으면 워크트리에서 ps1 을 고쳐 시험할 수 없게 된다.
     """
-    if _directive_branch(prompt) is None:
+    if directive_branch(prompt) is None:
         return None
     head = prompt.lstrip()
     match = _OPENED_LINE.match(head)
@@ -386,8 +386,12 @@ def _first_of_bundle(prompt: str) -> bool:
     return True
 
 
-def _directive_branch(prompt: str) -> str | None:
-    """새 세션 지시문이면 `브랜치:` 줄의 값, 아니면 None."""
+def directive_branch(prompt: str) -> str | None:
+    """새 세션 지시문이면 `브랜치:` 줄의 값, 아니면 None.
+
+    공개 이름인 것은 다시 풀기 러너(`tools/rerun_continue.py`)가 세션의 결과 글에서 인계 지시문을
+    알아보는 데 이 함수를 import 하기 때문이다. 받는 쪽(이 훅)과 러너가 같은 판정으로 지시문을
+    알아본다. 훅은 단독 실행이라 이 모듈이 러너를 import 하지는 않는다."""
     lines = [line.strip() for line in prompt.splitlines()]
     if not any(_NEW_SESSION.match(line) for line in lines):
         return None
