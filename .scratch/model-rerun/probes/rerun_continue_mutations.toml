@@ -13,7 +13,7 @@
 # 리뷰 반영에서 고치거나 더한 변이(멈춘 꼴 `Stop`, 덩이 고르기, 러너가 끊김)는 고른 단언의 꼴에서
 # 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-48). 티켓 09가 더한 줄 판정의
 # 변이(`drive`의 `watch`, `Stop.HALTED_*`, `CUT_SHORT`)도 같은 길로 골랐다(`README.md`의 변이 절, 일지
-# 2026-10-23-51).
+# 2026-10-24-03).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_continue_mutations.toml
 
 [[mutation]]

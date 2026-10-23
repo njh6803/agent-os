@@ -1,4 +1,4 @@
-# 2026-10-23 (51) 측정 아님 가르기 (model-rerun 09)
+# 2026-10-24 (03) 측정 아님 가르기 (model-rerun 09)
 
 ## 사용자 프롬프트
 
@@ -62,8 +62,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
 브랜치: feature/09-not-measured-checks
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-51-not-measured-checks.md. 리뷰 범위는 origin/main(07c890c5) 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 09와 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 멈춰 pytest·web 등이 끝나지 않았다(끝난 검사는 일지의 검증 절). 티켓 09는 "검증 명령이 모두 초록이다"만 남았고 Status는 in-progress다(PR 전에 done)
+읽을 것: docs/journal/2026-10-24-03-not-measured-checks.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-24-03-not-measured-checks.md. 리뷰 범위는 origin/main(07c890c5) 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 09와 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 멈춰 pytest·web 등이 끝나지 않았다(끝난 검사는 일지의 검증 절). 티켓 09는 "검증 명령이 모두 초록이다"만 남았고 Status는 in-progress다(PR 전에 done)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -134,8 +134,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
 브랜치: feature/09-not-measured-checks
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md의 "셀프 리뷰 (이어받은 세션)"과 "인계 (둘째)"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 한 커밋 하나가 브랜치에 있고 푸시도 PR도 아직이다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히. bug-perf-review의 밀 주장은 일지 "반영"의 목록), 그 반영, PR 열기, 봇 회차, 병합이다. 일지의 인용 경고 셋을 고친 수정은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-23-51-not-measured-checks.md
+읽을 것: docs/journal/2026-10-24-03-not-measured-checks.md의 "셀프 리뷰 (이어받은 세션)"과 "인계 (둘째)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 한 커밋 하나가 브랜치에 있고 푸시도 PR도 아직이다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 /security-review와 bug-perf-review를 나란히. bug-perf-review의 밀 주장은 일지 "반영"의 목록), 그 반영, PR 열기, 봇 회차, 병합이다. 일지의 인용 경고 셋을 고친 수정은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-24-03-not-measured-checks.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -157,7 +157,7 @@
   - 오탐 여섯(머리말 `model` 값의 YAML 꼬리 주석, 문자열인 플러그인 항목, `capture_output`과 손자 프로세스, CRLF 종결자, 빈 `settings.json`, `gh.`로 시작하는 파일 이름)은 리뷰어의 판정대로 둔다. 지금 닿는 입력이 없거나 보수적인 쪽이다.
 - 다시 돌린 명령(2026-10-24): 바꾼 두 파이썬 파일의 `ruff check`·`ruff format --check` 초록, `tools/mutate.py --check`로 checks 표 46 모두 원문이 있다, `uv run pytest tests/tools/test_rerun_checks.py -q -n 4` 211 passed.
 - 커밋 f01cbbd6. pre-commit 은 ruff check, ruff format, 검사 러너(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 239.5초, pytest 347.8초), 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용, 커밋 메시지 모두 Passed 였다. 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped 였다.
-- 커밋 직전 `tools/sibling_overlap.py`는 번호 겹침 없음으로 끝났다. 다만 형제 워크트리 `02-runtime-relays-call-events-live`의 일지 2026-10-24-01 이 이 브랜치의 일지(2026-10-23-51)보다 이름순으로 뒤라, 그쪽이 먼저 병합되면 이 일지를 옮긴다고 알렸다.
+- 커밋 직전 `tools/sibling_overlap.py`는 번호 겹침 없음으로 끝났다. 다만 형제 워크트리 `02-runtime-relays-call-events-live`의 일지 2026-10-24-01 이 이 브랜치의 일지(2026-10-24-03)보다 이름순으로 뒤라, 그쪽이 먼저 병합되면 이 일지를 옮긴다고 알렸다.
 - 커밋 셋(80ab1fb6, faafe636, f01cbbd6)을 푸시하고 PR #377 을 열었다. 제목은 첫 커밋의 제목 그대로다.
 
 ## 인계 (셋째)
@@ -175,8 +175,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
 브랜치: feature/09-not-measured-checks
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md의 "PR 직전 리뷰 (셋째 세션)"과 "인계 (셋째)"
-이어받을 상태: 인계: PR 연 뒤. PR #377(https://github.com/njh6803/agent-os/pull/377)의 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review, bug-perf-review)와 그 반영은 끝났고 PR 체크리스트에 적었다. 이 PR이 티켓 09를 닫으므로 회고(retro)와 일지 "다음"을 병합 길 전에 푸시해야 하는데 둘 다 아직이다. 형제 워크트리 02-runtime-relays-call-events-live의 일지 2026-10-24-01이 먼저 병합되면 이 일지의 번호를 옮긴다(커밋 직전 tools/sibling_overlap.py가 알렸다). 일지의 "인계 (셋째)" 절은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-23-51-not-measured-checks.md
+읽을 것: docs/journal/2026-10-24-03-not-measured-checks.md의 "PR 직전 리뷰 (셋째 세션)"과 "인계 (셋째)"
+이어받을 상태: 인계: PR 연 뒤. PR #377(https://github.com/njh6803/agent-os/pull/377)의 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review, bug-perf-review)와 그 반영은 끝났고 PR 체크리스트에 적었다. 이 PR이 티켓 09를 닫으므로 회고(retro)와 일지 "다음"을 병합 길 전에 푸시해야 하는데 둘 다 아직이다. 형제 워크트리 02-runtime-relays-call-events-live의 일지 2026-10-24-01이 먼저 병합되면 이 일지의 번호를 옮긴다(커밋 직전 tools/sibling_overlap.py가 알렸다). 일지의 "인계 (셋째)" 절은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-10-24-03-not-measured-checks.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -213,8 +213,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
 브랜치: feature/09-not-measured-checks
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md의 "봇 회차 1 (넷째 세션)"과 "인계 (넷째)"
-이어받을 상태: 인계: 커밋 뒤. PR #377의 봇 회차 1(CodeRabbit 지적 없음, claude-review의 Minor 하나와 Nit 하나 반영, Minor 하나는 티켓 11 메모로 넘김)과 회고(대기열 456에 회차), 일지 "다음"을 0ff233eb로 커밋했고 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 일지의 "인계 (넷째)" 절은 커밋하지 않은 채 워크트리에 있다. 남은 것은 차례로 푸시, @coderabbitai review 코멘트(2026-10-23T16:23Z의 첫 리뷰가 시간당 포함 리뷰를 다 썼다고 적었다), next-session 순서 1의 2(봇 회차)와 4(병합 길)다. 다음 푸시의 리뷰는 claude-review와 CodeRabbit 모두 둘째 회차라 Critical·Major만 고친다. CI python 잡이 대기열 456의 시험(tests/tools/test_proc_command_line.py) 하나로만 다시 빨가면 실패한 잡을 다시 돌릴지, 관리자 우회로 병합할지를 사용자에게 묻는다(일지 "봇 회차 1 (넷째 세션)"의 CI 줄). 형제 PR #378의 일지 2026-10-24-01이 먼저 병합되면 이 일지의 번호를 옮긴다. docs/journal/2026-10-23-51-not-measured-checks.md
+읽을 것: docs/journal/2026-10-24-03-not-measured-checks.md의 "봇 회차 1 (넷째 세션)"과 "인계 (넷째)"
+이어받을 상태: 인계: 커밋 뒤. PR #377의 봇 회차 1(CodeRabbit 지적 없음, claude-review의 Minor 하나와 Nit 하나 반영, Minor 하나는 티켓 11 메모로 넘김)과 회고(대기열 456에 회차), 일지 "다음"을 0ff233eb로 커밋했고 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 일지의 "인계 (넷째)" 절은 커밋하지 않은 채 워크트리에 있다. 남은 것은 차례로 푸시, @coderabbitai review 코멘트(2026-10-23T16:23Z의 첫 리뷰가 시간당 포함 리뷰를 다 썼다고 적었다), next-session 순서 1의 2(봇 회차)와 4(병합 길)다. 다음 푸시의 리뷰는 claude-review와 CodeRabbit 모두 둘째 회차라 Critical·Major만 고친다. CI python 잡이 대기열 456의 시험(tests/tools/test_proc_command_line.py) 하나로만 다시 빨가면 실패한 잡을 다시 돌릴지, 관리자 우회로 병합할지를 사용자에게 묻는다(일지 "봇 회차 1 (넷째 세션)"의 CI 줄). 형제 PR #378의 일지 2026-10-24-01이 먼저 병합되면 이 일지의 번호를 옮긴다. docs/journal/2026-10-24-03-not-measured-checks.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -230,6 +230,10 @@
 
 - 제목을 `feature/09-not-measured-checks`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. origin/main 은 여전히 51a0417e 라 합칠 것이 없었다.
 - 앞 세션의 "인계 (넷째)" 절과 이 절을 한 커밋에 실어 0ff233eb 와 함께 한 번에 푸시한다. 따로 푸시하면 claude-review 가 한 번 더 돈다.
+- 커밋 9c5f1ca6(pre-commit 모두 Passed, 검사 러너 316.5초)을 푸시하고 `@coderabbitai review`를 남겼다. `tools/wait_ci.py 377`의 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited`였다. CI `python` 잡은 이번에는 초록이라 대기열 456 의 시험으로 사용자에게 물을 일이 없었다.
+- 봇 회차 2: CodeRabbit 은 한도로 리뷰가 없어 회차로 세지 않는다. claude-review 둘째 회차(9c5f1ca6)는 Critical·Major 없이 Minor 셋과 Nit 하나였다. 모두 보류하고 이유를 PR 코멘트로 남겼다. Minor 둘(한 모듈의 여러 까닭, 커밋 메시지 파싱의 중복)은 첫 회차에서 넘긴 일과 같아 티켓 11 메모의 마지막 줄과 아래 "다음"에 이미 있다. `Screen.__call__`의 CQS 는 셀프 리뷰의 판정을 그대로 두고, `_record`의 선형 탐색 Nit 은 호출 수가 적어 둔다. 뒤로 새로 넘긴 일은 없다.
+- 병합 직전 `mergeStateStatus`가 `BEHIND`였다. 그새 PR #378(web-widget 02)이 main 에 병합되어 일지 2026-10-24-01 이 들어왔다. 첫 `git merge --no-commit --no-ff origin/main`은 `fatal: unable to write …/worktrees/09-not-measured-checks/index`로 멈췄고, 작업 트리에만 main 쪽 파일 21개가 풀리고 인덱스와 `MERGE_HEAD`는 남지 않았다. 풀린 파일이 origin/main 의 것과 같은지(수정 19개는 `git diff origin/main`이 비었고, 새 파일 둘은 blob 해시가 같았다) 본 뒤 `git restore --worktree`와 `rm`으로 되돌리고 같은 명령을 다시 치자 충돌 없이 합쳐졌다. 원인은 재지 않았다. 다른 프로세스가 그 순간 인덱스를 열고 있어 윈도가 `index.lock`을 `index`로 바꾸지 못했다고 어림한다.
+- 합친 뒤 `tools/sibling_overlap.py`가 이 일지가 main 의 최신 일지보다 이름순으로 앞이라고 알려 `--move`로 `2026-10-23-51`을 2026-10-24-03 으로 옮겼다(`2026-10-24-02`는 형제 워크트리 `04-site-file-feeds-widget-build`가 쥐었다). 인용은 변이 표 둘, 대기열 456 행, 이 일지에서 고쳐졌다. 옛 순번은 저장소 어디에도 남지 않았고, 줄인 꼴(`일지 51`)은 main 의 일지 2026-10-23-49 에 그때 받은 번호를 적은 과거 기록 하나뿐이라 둔다. PR 본문은 도구가 쓴 옮긴 판을 지금 본문과 견준 뒤 올린다.
 
 ## 회고
 
