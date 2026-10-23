@@ -62,7 +62,7 @@ from tools.rerun_runner import (
     run,
 )
 
-from tools import rerun_runner
+from tools import rerun_cost, rerun_runner
 
 GIT_TIMEOUT = 60
 TICKET = ".scratch/rerun-x/issues/03-thing.md"
@@ -1034,7 +1034,7 @@ def test_끄지_못하고_남긴_호출이_든_회차_뒤에_멈춘다(
 
 
 def test_공식_단가가_없는_모델이면_적지_못하고_멈추고_다시_띄워도_같은_자리에서_멈춘다(
-    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     task = _과제(1, 원본, arms=("A",))
     board = 판짜기([task])
@@ -1050,6 +1050,11 @@ def test_공식_단가가_없는_모델이면_적지_못하고_멈추고_다시_
     assert board.run() == 1
     assert any("공식 단가를 셈하지 못했다" in line for line in board.lines)
     assert board.saved() == [] and len(board.calls()) == 1
+    # 단가표에 그 모델을 더한 뒤 다시 띄우면 남은 폴더가 중단으로 적힌다(모듈 독스트링).
+    # 그 뒤 같은 갈래의 2회차는 각본이 없어 무엇으로 끝나든 보지 않는다.
+    monkeypatch.setitem(rerun_cost.PRICES, "claude-made-up-1", rerun_cost.Price(1.0, 1.0, 0.1))
+    board.run()
+    assert _ends(board.saved())[0] == ("A", 1, END_NOT_MEASURED, "중단")
 
 
 def test_조건_판은_러너의_판으로_적는다(
