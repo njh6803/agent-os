@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관리 토큰 넣기</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; box-sizing: border-box; padding: 96px var(--spacing-4) var(--spacing-8); display: flex; justify-content: center; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<main style="width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: var(--spacing-6);">
+<div class="font-semibold text-body">Agent OS</div>
+<div class="flex flex-col gap-2">
+<h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">관리 토큰 넣기</h1>
+<p class="text-body text-text-muted" style="margin: 0;"><code class="font-mono text-mono">agent-os serve</code>를 띄울 때 <code class="font-mono text-mono">AGENT_OS_ADMIN_TOKEN</code>에 준 값이다. 이 탭에만 남고 탭을 닫으면 사라진다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="danger" title="관리 토큰이 거부됐다">서버를 띄울 때 준 값과 같은지 보고 다시 넣는다.</x-import>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="4">
+<div class="flex flex-col gap-4">
+<x-import component-from-global-scope="AgentOsUi.TextField" label="관리 토큰" type="password" autocomplete="off"></x-import>
+<div class="flex justify-between items-center gap-3">
+<span class="text-small text-text-muted">넣으면 플러그인 목록을 한 번 읽어 맞는 토큰인지 본다.</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary" type="submit">넣기</x-import>
+</div>
+</div>
+</x-import>
+<div class="flex items-center justify-between gap-3" style="padding-top: var(--spacing-4); border-top: 1px solid var(--border);">
+<span class="text-body text-text-muted">이 탭에 채널 토큰이 남아 있다.</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">토큰 지우기</x-import>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
