@@ -311,6 +311,13 @@ describe("최종 사용자 스트림 읽기", () => {
     ]);
   });
 
+  test("id 가 안전한 정수의 범위를 넘으면 반올림한 값을 id 로 쓰지 않고 원문으로 낸다", async () => {
+    const started = JSON.stringify(ITEM_STARTED);
+    const text = `data: ${started}\nid: 9007199254740993\n\n`;
+
+    expect(await collectEndUser(streamOf(text))).toEqual([{ kind: "raw", id: null, raw: started }]);
+  });
+
   test("주석만 든 블록은 keepalive 값 하나가 되고 조각 사이에서 갈려도 하나다", async () => {
     const started = `data: ${JSON.stringify(ITEM_STARTED)}\nid: 0\n\n`;
 

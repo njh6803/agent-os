@@ -80,6 +80,22 @@ file = "web/packages/api-client/src/clients.ts"
 old = '  return createClient<WidgetPaths>({ baseUrl: baseUrl.href });'
 new = '  return createClient<WidgetPaths>({ baseUrl: baseUrl.href, headers: bearer("site") });'
 
+# --- api-client: 최종 사용자 스트림의 id ------------------------------------------------
+
+# PR 직전 리뷰가 짚은 갈래다. 정규식을 지난 큰 십진 정수를 `Number` 가 반올림해, 그 값이 결정의 `pause_index` 나
+# 구독의 `Last-Event-ID` 가 되면 다른 자리를 가리킨다.
+[[mutation]]
+name = "안전한 정수의 범위를 넘는 id 를 반올림한 채 쓴다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+expect_output = ["최종 사용자 스트림 읽기 > id 가 안전한 정수의 범위를 넘으면"]
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '  return Number.isSafeInteger(id) ? id : null;'
+new = '  return id;'
+
 # --- api-client: 최종 사용자 스트림의 수명. 위젯은 요청의 signal 로 연결을 끊는다 ----------
 
 [[mutation]]

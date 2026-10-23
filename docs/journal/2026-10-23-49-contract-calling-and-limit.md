@@ -164,6 +164,14 @@ PR 직전 리뷰에 밀 새 문장(원문):
 ## PR 직전 리뷰와 PR (셋째 세션)
 
 - 위 지시문을 `implement` 스킬로 감싼 첫 메시지로 열렸고, 사람의 다른 프롬프트는 없었다. 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 같은 워크트리에 들어왔다. `sibling_overlap.py`는 번호 겹침이 없었다(다음 빈 번호는 일지 51, 대기열 456).
+- 일지를 커밋했다(6fc685ff). pre-commit은 모두 통과했고, 러너의 pytest가 585.6초였다.
+- `coderabbit auth status`는 이번에도 `Plan: Free`, `Seat: not assigned`였다. 그래서 대체 둘을 나란히 돌렸다. 기준은 merge-base 07c890c5다.
+  - `/security-review`(보안): 후보 0건. 하위 작업이 물은 넷을 근거와 함께 닫았다. `calling` 항목은 도구 이름만 싣고(`ToolCall`의 `id`·`args`는 싣지 않는다) 도구 이름은 전부터 `progress`·`paused`가 실었다. 429 봉투는 종류와 문구만 싣는다. 위젯 클라이언트는 토큰을 들지 않고 URL에 싣지 않는다. 미디어 타입을 비운 응답 클래스는 실제 응답을 바꾸지 않는다(fastapi 0.141.1 `routing.py`가 `text/event-stream`을 직접 단다).
+  - `bug-perf-review`(버그·성능): 유효 Minor 2, 보류 0, 오탐 5. 밀 주장은 둘을 빼고 근거와 맞았다. 어긋난 둘이 유효 2다.
+    - Minor 1. `items.py` 주석의 "이것뿐이다"가 넓었다. `PausedItem`도 모델이 요청한 도구 하나의 이름을 든다. 주석을 "모델 호출 하나가 요청한 도구를 모두 싣는 항목은 이것뿐이다"로 좁히고 `PausedItem`이 싣는 것을 함께 적었다.
+    - Minor 2. `stream.ts` 머리 주석과 `EndUserFrame` 독스트링이 `idOf`의 `Number.isSafeInteger` 갈래를 빠뜨렸다. 두 문장에 안전한 정수의 범위를 더했다. 그 갈래를 재는 시험이 없어 `id: 9007199254740993` 시험을 더했다. 구현 뒤에 쓴 시험이라 변이 표에 `안전한 정수의 범위를 넘는 id 를 반올림한 채 쓴다`를 더했고, `mutate.py`로 그 줄을 돌려 그 시험 하나만 빨개지는 것을 봤다(1 failed·40 passed). 표지는 실패 줄의 시험 이름이다. 표는 10개가 됐고, 셀프 리뷰가 하나를 더할 때 그대로 둔 프로브 README의 개수(8)도 맞췄다.
+    - 오탐: 표의 첫 갈래로 가는 `HTTPException(429)`(`src`에 던지는 곳이 없다), 빈 `tool_calls`(None이 없고 빈 것은 거른다), 청크 경계, 읽기 중 에러와 멈춤의 자원(두 읽기 모두 `finally`), 응답 클래스의 `media_type`(문서에만 쓰인다).
+  - 고친 파일을 겨누는 변이 표 넷(`web-widget`·`web-admin`·`end-user-channel`·`end-user-continuation`)을 `--check`로 보니 원문이 모두 한 번씩 있었다.
 
 ## 회고
 
