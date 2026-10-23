@@ -57,6 +57,7 @@ from tools.rerun_round import (
     remove_round_dirs,
     run_setup,
     session_env,
+    without_venv_dirs,
     write_deny_rules,
 )
 from tools.tidy_checkouts import delete_path, long_path
@@ -781,6 +782,34 @@ def test_세션_환경은_허용_목록과_러너가_짓는_셋뿐이다(tmp_pat
     assert env[GH_CONFIG_VAR] == str(place.gh_config)
     assert env["PATH"] == "/bin"
     assert "ghp_가짜토큰" not in env.values()
+
+
+def test_세션의_PATH_에서_가상_환경의_실행_폴더를_뺀다(tmp_path: Path) -> None:
+    """러너를 주 체크아웃에서 `uv run` 으로 띄우면 그 `.venv` 의 실행 폴더가 `PATH` 맨 앞에 와서,
+    세션의 맨 `pytest` 가 클론이 아니라 주 체크아웃의 환경과 코드로 돈다(04 의 메모)."""
+    venv = tmp_path / "주" / ".venv"
+    scripts = venv / ("Scripts" if os.name == "nt" else "bin")
+    scripts.mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    plain = tmp_path / "bin"
+    plain.mkdir()
+    place = create_round_dir(tmp_path / "뿌리", TASK, "A", 1, token="n3")
+    parent = {"PATH": os.pathsep.join([str(scripts), str(plain), "", str(scripts) + os.sep])}
+
+    env = session_env(parent, config_dir="C:/설정", round_dir=place)
+
+    assert env["PATH"].split(os.pathsep) == [str(plain), ""]
+
+
+def test_PATH_의_상대_조각과_루트는_작업_폴더의_pyvenv_cfg_와_견주지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    root = os.path.abspath(os.sep)
+    parts = ["Scripts", "bin", "x", ".", os.sep, root]
+
+    assert without_venv_dirs(os.pathsep.join(parts)).split(os.pathsep) == parts
 
 
 def test_부모_환경의_가짜_gh_토큰은_넘어가지_않는다(
