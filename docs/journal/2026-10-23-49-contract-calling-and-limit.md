@@ -89,9 +89,9 @@
 Critical·Major 없음, Minor 4, Nit 4.
 
 - Minor 1. `tests/channel/http/test_end_user.py`의 시작 시험 독스트링에 "모델 호출은 항목이 없다"가 남았다. `test_main.py`는 '도구를 요청하지 않은'으로 고쳤는데 이 자리가 빠졌다.
-- Minor 2. 문서의 `_ENVELOPE_OF = {429: LimitEnvelope}`와 달리 `failure_for(HTTPException(429), …)`는 `limit` 없는 429(`ErrorEnvelope`)를 낸다. 지금은 "라우트는 `HTTPException(429)`를 던지지 않는다"는 규칙 문장만 막는다.
+- Minor 2. 문서의 `_ENVELOPE_OF = {429: LimitEnvelope}`와 달리 `failure_for(HTTPException(429), …)`는 `limit` 없는 429(`ErrorEnvelope`)를 낸다. 지금은 라우트가 그것을 던지지 않는다는 규칙 문장(`errors.py`의 "`HTTPException(429)` 를 던지지 않는다")만 막는다.
 - Minor 3. `EventSourceWithJsonErrors` 독스트링이 FastAPI가 "셋 가운데 하나"를 바꾸면 미디어 타입을 재는 시험이 빨개진다고 하지만, keepalive는 미디어 타입이 아니고 그것을 재는 시험은 운영자 채널의 `test_모델이_조용한_동안_keepalive_주석이_나간다` 하나다.
-- Minor 4. `readEndUserFrames`의 "수명과 끊는 길은 `readFrames`와 같다"에 "루프에서 멈추면 잠금만 풀고 닫지 않는다"가 드는데, 그 길을 밟는 시험이 `readFrames`에만 있다.
+- Minor 4. `readEndUserFrames`의 "수명과 끊는 길은 `readFrames` 와 같다"에 "루프에서 멈추면 잠금만 풀고 닫지 않는다"가 드는데, 그 길을 밟는 시험이 `readFrames`에만 있다.
 - Nit. `errors.py`에서 `LimitEnvelope`가 `LimitKind`보다 앞에 선언돼 import 때 모델이 덜 지어진다. `http.md` 예외 표 항목의 "그것과 사이트의 발급자"의 "그것"이 흐리다. `errors.py`·`limits.py`의 "문구는 어느 상한인지만"이 `limit` 코드를 빼고 읽힐 수 있다. smell(판단): `error_envelope` 삼항식의 인자 되풀이, 시험의 다섯 칸 튜플 `Refusal`, 두 읽기의 try/finally 틀.
 - 맞은 것: FastAPI 동작 주장, 고아 컴포넌트 하나, 4xx·5xx의 미디어 타입, 429의 `LimitEnvelope`가 최종 사용자 경로 넷뿐, 운영자·관리 계약 불변, ADR 0039 인용, 변이 표 개수(8·25·28), 프로브 README의 판, 대기열 453·454가 가리키는 이름.
 
@@ -111,12 +111,12 @@ Critical·Major 없음, Minor 4, Nit 4.
 고친 것:
 
 - 시작 시험 독스트링의 "모델 호출은 항목이 없다"를 '도구를 요청하지 않은'으로(표준 Minor 1).
-- `EventSourceWithJsonErrors` 독스트링이 FastAPI의 셋을 어느 시험이 지키는지 바로 적게 했다(표준 Minor 3). SSE 판정의 주어도 "이 클래스의 하위 타입"에서 "응답 클래스가 `EventSourceResponse`의 하위 타입"으로 고쳤다.
+- `EventSourceWithJsonErrors` 독스트링이 FastAPI의 셋을 어느 시험이 지키는지 바로 적게 했다(표준 Minor 3). SSE 판정의 주어도 "이 클래스의 하위 타입"에서 "응답 클래스가 `EventSourceResponse` 의 하위 타입"으로 고쳤다.
 - `readEndUserFrames`에 "읽는 쪽이 도중에 멈추면 잠금을 풀어 부른 쪽이 스트림을 닫을 수 있다" 시험을 더했다(표준 Minor 4, 명세 Nit). 빨강을 본 적이 없어 새 변이 표에 `최종 사용자 스트림을 읽다 멈추면 잠금을 풀지 않는다`(끝까지 읽거나 에러일 때만 푼다)를 더했고, 변이를 손으로 넣어 그 시험 하나만 빨개지는 출력을 본 뒤 표지를 골랐다.
-- 시점을 말하던 문장 둘을 시점 없는 목적으로 바꿨다(명세 Minor 1·2). 시험 독스트링 "위젯이 지금 부르는 도구를 보일 길이다"와 `items.py`의 "위젯이 지금 부르는 도구를 알 길은 이것뿐이다", "지금 core 는 모델 호출의 이벤트를 … 모으고"다. 뒤의 것이 02의 병합으로 거짓이 되지 않으니 02 티켓에 넘길 것이 없다.
+- 시점을 말하던 문장들을 시점 없는 목적으로 바꿨다(명세 Minor 1·2). 시험 독스트링의 "위젯이 지금 부르는 도구를 보일 길이다"와, `items.py`의 옛 문장 둘(위젯이 지금 부르는 도구를 알 길이 이것뿐이라는 문장, "지금 core 는 모델 호출의 이벤트를 … 모으고")이다. 뒤의 것이 02의 병합으로 거짓이 되지 않으니 02 티켓에 넘길 것이 없다.
 - 닫히지 않은 마지막 블록(명세 Minor 3). FastAPI는 `data` 다음에 `id`를 싣는다(`fastapi/sse.py` 223·226행을 읽었다). 블록 가르기가 블록이 빈 줄로 닫혔는지를 함께 넘기고, 최종 사용자 쪽만 닫히지 않은 블록을 늘 `id` 없는 원문으로 낸다(`unclosedFrame`). 운영자 쪽 `readFrames`는 그대로다. 시험 둘을 먼저 고쳐 빨강(2 failed)을 보고 구현했다. 이 수정이 `stream.ts`의 원문을 바꿔 새 변이 표의 넷과 관리 화면 표의 `스트림이 끝날 때 남은 프레임을 버린다`를 지금 코드로 맞췄다.
 - `stream.ts` 머리 주석의 닫힌 주장 "두 읽기가 갈리는 것은 `data` 가 없는 블록이다"를, 운영자 쪽은 `data`만 보고 최종 사용자 쪽은 `id`·주석·닫힘도 본다는 일반 조항과 갈리는 블록 셋의 목록으로 바꿨다(명세 Nit).
-- `errors.py`에서 `LimitEnvelope`를 `LimitKind` 뒤로 옮겼다. 계약을 다시 뽑아 `openapi.json`이 그대로인 것을 봤다. `errors.py`·`limits.py`의 "문구는 어느 상한인지만"을 "봉투는 어느 상한인지만(`limit`과 문구)"으로, `http.md`의 "그것과"를 "그 범위와"로 고쳤다(표준 Nit). `http.md`를 원천으로 든 카나리아 명세 둘은 `--preflight`로 갈음했다(통과 2, claude 2.1.302).
+- `errors.py`에서 `LimitEnvelope`를 `LimitKind` 뒤로 옮겼다. 계약을 다시 뽑아 `openapi.json`이 그대로인 것을 봤다. `errors.py`·`limits.py`의 "문구는 어느 상한인지만"을 "봉투는 어느 상한인지만(`limit` 과 문구)"으로, `http.md`의 "그것과"를 "그 범위와"로 고쳤다(표준 Nit). `http.md`를 원천으로 든 카나리아 명세 둘은 `--preflight`로 갈음했다(통과 2, claude 2.1.302).
 - 시험 독스트링의 "(web-widget 스토리 "상한")"을 명세의 "상한" 절과 스토리 34로, 일지와 대기열 454의 훅 문구 인용을 원문의 큰따옴표로 고쳤다(명세 Nit).
 
 남긴 것과 이유:
@@ -137,6 +137,33 @@ PR 직전 리뷰에 밀 새 문장(원문):
 - 전체 러너(`tools/run_checks.py`)는 web 검사 하나만 빨갰다. 새 시험의 한 줄이 Prettier 서식에 맞지 않았다. 고친 뒤 `pnpm -C web verify`가 초록이었다(vitest 423 passed). 나머지 검사는 pytest까지 그 실행에서 모두 통과했다.
 - LLM 시험은 다시 돌리지 않았다. 앞 "검사"의 실행 뒤에 셀프 리뷰가 고친 파이썬은 주석·독스트링과 `errors.py`의 클래스 자리뿐이고, 계약을 다시 뽑아 `openapi.json`이 그대로인 것을 봤다.
 - e2e: 전체가 1 failed·6 passed(2.5분), 결정 파일만 다시 돌린 것이 1 failed·2 passed(1.2분)였다. 둘 다 앞 "검사"의 그 시험이 39행에서 빨갰고, 그때 CPU는 77~98%였다(다른 세션들이 돌았다). 두 번 연속이라 diagnosing-bugs로 갈랐다. 가설은 셋이었다. (1) 부하에서 서버의 재개가 늦어 결말이 시험의 5초 뒤에 난다. (2) 셀프 리뷰가 바꾼 `blocksFrom`이 `readFrames`의 마지막 프레임을 늦추거나 놓친다. (3) 중계가 스트림을 끝에 몰아 보낸다. 첫 실행이 teardown에서 EPERM으로 지우지 못한 임시 폴더(`agent-os-e2e-HSpNAB`)에 그 실행의 트레이스가 남아 있었다. 실패한 실행(4d9be1d0)의 시각은 `approval_granted` 16.84초 → `run_resumed` 21.47초 → `tool_called` 22.45초 → `run_finished` 24.48초였다. 서버가 결말을 허가 7.6초 뒤에 냈으므로 화면이 무엇으로 읽든 5초 안에는 보일 수 없어 (2)는 기각된다. 재개 스트림 영역에 `approval_granted`가 결말보다 먼저 보였으므로(36·37행 통과) (3)도 기각된다. 남은 것은 (1)이다. 지연의 대부분(4.6초)은 허가 뒤 재개까지의 구간이고, 앞 "검사"의 진단과 같은 구간이다. 같은 실행에서 통과한 시험의 두 실행도 그 구간이 4.2~4.5초였다. 고칠 것이 없어 회귀 시험은 없고, 판정은 CI의 `e2e` 잡에 맡긴다. teardown의 EPERM은 부하에서 프로세스가 임시 폴더를 늦게 놓은 것으로 보고 따로 가르지 않았다.
+
+## 인계 (커밋 뒤)
+
+- 이 세션의 첫 메시지는 위 "인계 (셀프 리뷰 직전)"의 지시문을 `implement` 스킬로 감싼 것이고, 사람의 다른 프롬프트는 없었다. 이 세션의 제목은 `feature/01-contract-calling-item-and-limit-kind`이고 `feature/01-contract-calling-item-and-limit-kind (인계함)`으로 바꾼다.
+- 셀프 리뷰를 반영한 뒤 이 세션이 한 것: 티켓을 done으로, `.scratch/plan.md`의 web-widget을 `in-progress`로 바꾸고 프론티어 문단에 한 문장을 더했다(앞선 사례는 design-reverse-sync 01의 커밋 19bbfa06). `sibling_overlap.py`가 main이 일지 48을 먼저 가져간 것을 알려 `--move`로 일지를 47에서 49로 옮겼다. 커밋 제목이 72자를 넘어 줄였다. 커밋 77417bcc의 pre-commit은 모두 통과했고, 인용 대조가 이 일지의 인용 다섯을 경고해 원문대로 고쳤다(커밋하지 않았다). origin/main(07c890c5)을 합쳤고, 대기열 끝의 충돌은 main의 449~452 뒤에 이 브랜치의 453·454를 두어 풀었다. main이 바꾼 파일은 model-rerun 도구와 하네스 프로브뿐이라 이 브랜치가 든 파일·규약과 겹치지 않았다. 병합 커밋 1e7348d0의 pre-commit도 모두 통과했다.
+- 그 커밋 뒤 세션 컨텍스트가 약 25만 토큰으로 문턱을 넘어 인계 계기가 왔다. `next-session` "인계할 때" 1의 다섯에 들지 않는다(요청 범위가 병합까지, 이어받은 경계는 `셀프 리뷰 직전`, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음).
+- 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md. 최종 사용자 스트림의 `calling` 항목과 429의 `limit` 종류를 계약에 싣고 api-client에 위젯 클라이언트를 만든다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md
+브랜치: feature/01-contract-calling-item-and-limit-kind
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-49-contract-calling-and-limit.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 origin/main을 합쳤다(일지 "인계 (커밋 뒤)"). 커밋하지 않은 변경은 이 일지뿐이다(인용 다섯의 고침과 인계 절). 남은 단계는 일지를 커밋하고, PR 직전 리뷰를 돌고(CodeRabbit CLI는 좌석이 없어 `/security-review`와 `bug-perf-review` 서브에이전트를 나란히. 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 새 문장"을 브리프에 넣는다), 트리아지한 지적을 고치고, `/git-pr`로 연 뒤 봇 회차와 워크트리에서 병합하는 것이다. e2e 결정 시험이 로컬 부하에서 빨간 것은 서버 재개 지연으로 진단했고(일지 셀프 리뷰 절의 "다시 돌린 것") CI `e2e` 잡이 판정한다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다. docs/journal/2026-10-23-49-contract-calling-and-limit.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T13:46:03Z
+
+## PR 직전 리뷰와 PR (셋째 세션)
+
+- 위 지시문을 `implement` 스킬로 감싼 첫 메시지로 열렸고, 사람의 다른 프롬프트는 없었다. 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 같은 워크트리에 들어왔다. `sibling_overlap.py`는 번호 겹침이 없었다(다음 빈 번호는 일지 51, 대기열 456).
 
 ## 회고
 
