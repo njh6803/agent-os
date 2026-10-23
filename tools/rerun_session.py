@@ -45,8 +45,8 @@
 본 뒤 트리째 끄는 것은 08이다.
 
 못 보는 것.
-- 세션 기록 파일의 줄에서 `message.model`이 모델의 꼴(`tools/rerun_files.py`의 꼴과 같은
-  `_MODEL`)이 아니면 그 줄을 세지 않는다. 노력이 영소문자
+- 세션 기록 파일의 줄에서 `message.model`이 모델의 꼴(`tools/rerun_files.py`의
+  `MODEL_FORM`)이 아니면 그 줄을 세지 않는다. 노력이 영소문자
   식별자가 아니면 노력 없음으로 센다. 결과 이벤트의 `subtype`이 영소문자 식별자가 아니면
   `unknown`으로, `terminal_reason`이 그렇지 않으면 빈 값으로 적는다. 기록의
   꼴(`tools/rerun_files.py`)이 거부해 기록을 잃지 않으려는 것이고, 그 줄과 이벤트의 원본은 회차
@@ -75,9 +75,12 @@ from typing import IO
 
 from tools.probe_kit import LineReader
 from tools.rerun_files import (
+    IDENT_FORM,
+    MODEL_FORM,
     RULE_BRANCH,
     RULE_NONE,
     RULE_ONLY,
+    VERSION_FORM,
     Arm,
     Call,
     End,
@@ -199,9 +202,6 @@ def session_command(
 
 # --- 요약(스트림 줄 → 값) ---
 
-_IDENT = re.compile(r"[a-z][a-z0-9_]*")  # `tools/rerun_files.py`의 창·subtype·노력의 꼴과 같다
-_MODEL = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")  # 같은 파일의 모델의 꼴
-_VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")  # 같은 파일의 판의 꼴
 SYNTHETIC = "<synthetic>"
 UNKNOWN_SUBTYPE = "unknown"
 
@@ -303,7 +303,7 @@ def _usage(v: Json) -> tuple[ModelUsage, ...]:
             )
         ]
         cost = _num(u.get("costUSD"))
-        if not _MODEL.fullmatch(model) or cost is None or cost < 0:
+        if not MODEL_FORM.fullmatch(model) or cost is None or cost < 0:
             continue
         if any(c is None or c < 0 for c in counts):
             continue
@@ -406,10 +406,10 @@ def count_lines(lines: Iterable[str]) -> tuple[LineCount, ...]:
         if record is None or record.get("type") != "assistant":
             continue
         model = _str(_obj(record.get("message")).get("model"))
-        if model is None or not _MODEL.fullmatch(model):
+        if model is None or not MODEL_FORM.fullmatch(model):
             continue
         effort = _str(record.get("effort"))
-        if effort is not None and not _IDENT.fullmatch(effort):
+        if effort is not None and not IDENT_FORM.fullmatch(effort):
             effort = None
         if model == SYNTHETIC and effort is None:
             continue
@@ -554,15 +554,19 @@ def drive(
     )
     stdin, stdout = process.stdin, process.stdout
     if stdin is None or stdout is None:  # PIPE 를 주었으므로 나지 않는다
-        process.kill()
-        process.wait(timeout=REAP_TIMEOUT)
+        _stop(process)
         raise RuntimeError("자식의 표준 입출력을 열지 못했다")
     try:
         return _read_process(process, stdin, stdout, message, stream_file, timeout, clock)
     finally:
         if process.poll() is None:  # 기록 파일을 열거나 쓰다 예외가 났으면 자식을 남기지 않는다
-            process.kill()
-            process.wait(timeout=REAP_TIMEOUT)
+            _stop(process)
+
+
+def _stop(process: subprocess.Popen[bytes]) -> None:
+    """`Popen`이 쥔 핸들로 그 프로세스 하나를 끄고 거둔다. pid 재사용과 섞이지 않는다."""
+    process.kill()
+    process.wait(timeout=REAP_TIMEOUT)
 
 
 def _read_process(
@@ -599,15 +603,13 @@ def _read_process(
                 break
         code: int | None
         if timed_out:
-            process.kill()  # Popen 이 쥔 핸들이라 pid 재사용과 섞이지 않는다
-            process.wait(timeout=REAP_TIMEOUT)
+            _stop(process)
             code = None
         else:
             try:
                 code = process.wait(timeout=REAP_TIMEOUT)
             except subprocess.TimeoutExpired:  # 출력을 닫고도 끝나지 않았다
-                process.kill()
-                process.wait(timeout=REAP_TIMEOUT)
+                _stop(process)
                 code = None
         for line in reader.drain(DRAIN_TIMEOUT):
             keep(line)
@@ -633,7 +635,7 @@ def claude_version(claude: Sequence[str], *, env: Mapping[str, str], cwd: Path) 
     except (OSError, subprocess.TimeoutExpired):
         return None
     first = done.stdout.strip().splitlines()[:1]
-    if done.returncode != 0 or not first or not _VERSION.fullmatch(first[0].strip()):
+    if done.returncode != 0 or not first or not VERSION_FORM.fullmatch(first[0].strip()):
         return None
     return first[0].strip()
 
@@ -721,10 +723,10 @@ def call_record(run: CallRun) -> Call:
     results = tuple(
         ResultEvent(
             index=i,
-            subtype=r.subtype if r.subtype and _IDENT.fullmatch(r.subtype) else UNKNOWN_SUBTYPE,
+            subtype=r.subtype if r.subtype and IDENT_FORM.fullmatch(r.subtype) else UNKNOWN_SUBTYPE,
             terminal_reason=(
                 r.terminal_reason
-                if r.terminal_reason is not None and _IDENT.fullmatch(r.terminal_reason)
+                if r.terminal_reason is not None and IDENT_FORM.fullmatch(r.terminal_reason)
                 else None
             ),
             num_turns=r.num_turns,
@@ -788,10 +790,10 @@ def round_record(
     named = parse_round_dir_name(place.name)
     if named is None or named.task_id != task.task_id:
         raise ValueError(f"과제 {task.task_id} 의 회차 폴더가 아니다: {place.name}")
-    order: dict[str, list[CallRun]] = {}
+    runs_by_session: dict[str, list[CallRun]] = {}
     for run in runs:
-        order.setdefault(run.launched.session_id, []).append(run)
-    sessions = tuple(session_record(sid, rs, config_dir) for sid, rs in order.items())
+        runs_by_session.setdefault(run.launched.session_id, []).append(run)
+    sessions = tuple(session_record(sid, rs, config_dir) for sid, rs in runs_by_session.items())
     init = next((r.launched.summary.init for r in runs if r.launched.summary.init), None)
     e = elsewhere
     return Record(

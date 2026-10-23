@@ -275,7 +275,7 @@ expect_output = ["subtype: 정해진 꼴의 문자열가 아니다: 'Odd Kind'"]
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''subtype=r.subtype if r.subtype and _IDENT.fullmatch(r.subtype) else UNKNOWN_SUBTYPE,'''
+old = '''subtype=r.subtype if r.subtype and IDENT_FORM.fullmatch(r.subtype) else UNKNOWN_SUBTYPE,'''
 new = '''subtype=r.subtype or UNKNOWN_SUBTYPE,'''
 
 [[mutation]]

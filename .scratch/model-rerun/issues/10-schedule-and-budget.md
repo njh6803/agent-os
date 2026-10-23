@@ -63,6 +63,6 @@
 
 ### 06에서 넘어온 메모
 
-- 회차 하나의 조립은 `tools/rerun_session.py`의 `launch`(호출마다, 08이 이어 부른다)와 `round_record`다. `round_record`가 받는 것 가운데 이 티켓이 넘길 것은 `condition_version`, 한 번 부른 `claude_version(...)`, 명령 줄로 받은 계정 이름, `session_env`의 결과(`env`), 전용 설정 폴더, `prepare_round`의 `Setup.wall_clock_from`과 끝낸 때의 단조 시계 값(`now`)이다. 결과 칸은 `outcome_of(pick_result_commit(...))`가 결과 커밋만 채우고 준비·게이트·숨은 시험은 07이 채운다. 공식 단가·토큰 합·대신 넣은 값(07)과 측정 아님의 칸(09)은 `Elsewhere`로 넘긴다. 쓰기는 01의 `write_record(<records 폴더>, record)`다.
+- 회차 하나의 조립은 `tools/rerun_session.py`의 `launch`(호출마다, 08이 이어 부른다)와 `round_record`다. `round_record`가 받는 것 가운데 이 티켓이 넘길 것은 `condition_version`, 한 번 부른 `claude_version(...)`, 명령 줄로 받은 계정 이름, `session_env`의 결과(`env`), 전용 설정 폴더, `prepare_round`의 `Setup.wall_clock_from`과 끝낸 때의 단조 시계 값(`now`)이다. 결과 칸은 `outcome_of(pick_result_commit(...))`가 결과 커밋만 채우고 준비·게이트·숨은 시험은 07이 채운다. 공식 단가·토큰 합·대신 넣은 값(07)과 측정 아님의 칸(09)은 `Elsewhere`로 넘긴다. 쓰기는 01의 `write_record(<records 폴더>, record)`다. 호출자를 붙인 뒤 `round_record`의 인자 16개(위치 둘, 키워드 전용 열넷)와 07·09가 함께 채우는 `Elsewhere`를 줄일지 다시 본다(PR #370 claude-review 첫 회차의 Minor, 그때는 호출자가 없어 보류했다).
 - 띄우기 전에 적는 세션 id의 파일은 `tools/rerun_round.py`의 `SESSION_IDS`(`RoundDir.session_ids`)다. 한 줄에 세션 id 하나이고 호출마다 덧붙인다. 원본 줄의 파일 이름은 `<호출 차례 두 자리>-<세션 id>.jsonl`이고 차례는 그 파일의 줄 수다.
 - `session_env`는 이제 `PATH`에서 `pyvenv.cfg`가 있는 폴더 바로 아래의 실행 폴더를 뺀다(`without_venv_dirs`). 러너를 `uv run`으로 띄워도 세션의 맨 `pytest`가 주 체크아웃의 `.venv`로 돌지 않게 하려는 것이다(04의 메모).

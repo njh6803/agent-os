@@ -164,3 +164,121 @@ CodeRabbit 좌석이 없어 `/security-review`와 `bug-perf-review`를 나란히
 - `clock` 시험의 15초 쉼: 가짜는 결과를 낸 뒤 바로 끝난다. 흔들리면 `.claude/rules/tests.md`대로 넉넉히 한다.
 
 다시 돌린 명령: `uv run ruff check .`·`uv run ruff format --check .` 초록, 바꾼 파일의 `uv run pyright` 0 errors, `uv run pytest -q tests/tools/test_rerun_session.py tests/tools/test_rerun_round.py` 127 passed. 나머지는 커밋의 pre-commit이 돈다.
+
+### 커밋과 PR (셋째)
+
+- 0a82445a. pre-commit 모두 Passed(pytest 291.8초, web-verify 238.2초, 변이 표 원문 확인 Passed, 카나리아·헌법 판은 해당 파일 없음으로 Skipped).
+- 커밋 뒤 경계에서 인계 계기(컨텍스트 209,500)가 왔다. 이어받을 상태가 `인계: 커밋 뒤`라 같은 경계여서 넘기지 않았다.
+- 푸시하고 PR #370을 열었다. 앱의 PR 연결은 이미 묶여 있었다(`get_status` bound).
+
+### 인계 (셋째)
+
+- PR 연 뒤 경계에서 컨텍스트 231,941 토큰으로 인계 계기가 왔다. 넘겨받은 경계(커밋 뒤)와 다르고 요청 범위가 병합까지라 넘긴다.
+- 이 세션의 제목: `feature/06-round-drive-record`.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/06-round-drive-record.md. 04의 클론에서 실제 지시문 모양의 첫 메시지로 `claude -p`를 띄우고, 스트림과 세션 기록을 읽어 회차 기록을 쓴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/06-round-drive-record.md
+브랜치: feature/06-round-drive-record
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-36-round-drive-record.md
+이어받을 상태: 인계: PR 연 뒤. PR #370을 열었고 PR 직전 리뷰(/security-review, bug-perf-review) 반영까지 커밋·푸시했다(0a82445a). 이 일지의 셋째 인계 절(커밋하지 않음)을 싣고, 순서 1의 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 그 뒤 병합(워크트리에서 병합할 때). docs/journal/2026-10-23-36-round-drive-record.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/06-round-drive-record (인계함)`으로 바꿨다. 백그라운드 작업은 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T06:36:12Z
+
+## 이어받은 세션 (넷째)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (… 위 셋째 인계 지시문과 같다 …) 인자: .scratch/model-rerun/issues/06-round-drive-record.md
+
+- `git worktree list`에서 브랜치가 `.claude/worktrees/06-round-drive-record`(0a82445a)에 있어 EnterWorktree(path)로 들어갔다. PR 머리와 로컬 HEAD가 같은 것을 본 뒤 `@coderabbitai review`를 남기고 `tools/wait_ci.py`를 백그라운드로 띄웠다.
+
+### 봇 첫 회차
+
+- CI의 `python` 잡이 빨갰다. `test_가짜가_받은_인자_표준_입력_환경과_작업_폴더`에서 가짜가 본 환경 이름에 넘기지 않은 `LC_CTYPE`이 더 있었다. 리눅스에서 `LANG`·`LC_ALL` 없이 뜬 파이썬 가짜가 PEP 538의 로캘 강제로 자기 환경에 그 이름을 더한 것이다. 실제 `claude`는 Node라 더하지 않으므로 시험이 넘기지 않은 `LC_CTYPE`만 빼고 견주게 고쳤다. 이 PC(윈도)에서는 재현되지 않아 CI가 처음 잡았다.
+- CodeRabbit: 첫 회차, 지적 없음(`No actionable comments`).
+- claude-review: 첫 회차, Minor 넷과 Nit 하나. 판단은 다음과 같다.
+  - 고침: 죽이고 거두는 네 자리(`drive`의 입출력 확인과 `finally`, `_read_process`의 마감 갈래와 `TimeoutExpired` 갈래)를 `_stop` 하나로 모았다. 08이 트리째 끄기를 넣을 자리가 하나가 된다. 08 메모에 적었다.
+  - 고침: `rerun_session`의 꼴 정규식 사본 셋을 지우고, `rerun_files`가 `MODEL_FORM`·`IDENT_FORM`·`VERSION_FORM`으로 내보내는 것을 가져다 쓴다. 갈라질 길이 없어진다. 이름을 겨누던 변이 넷(`rerun_files` 셋, `rerun_session` 하나)의 원문을 맞추고 두 표를 `--check`로 봤다. `_git` 사본은 `rerun_round`의 것과 실패 갈래(`CloneError`와 `RuntimeError`)가 달라 그대로 둔다. `_git_env`는 세 줄이 글자 그대로 같지만 그 `_git`만 부르므로 함께 둔다.
+  - 고침(Nit): `round_record`의 `order`를 `runs_by_session`으로. `e = elsewhere` 별칭은 여덟 줄을 짧게 해 둔다.
+  - 보류: `round_record`의 인자 16개(위치 둘, 키워드 전용 열넷)와 `Elsewhere`. 호출자가 없어 10이 붙인 뒤 다시 본다. 10 메모에 적었다.
+  - 보류: `launch`가 덧붙인 파일을 다시 읽어 호출 번호를 세는 것. 그 파일은 `launch`만 한 줄씩 덧붙이고 기본 `session_id`(`new_session_id`)는 uuid라 빈 줄과 중복이 생기지 않는다. 시험이 끼우는 `session_id`에 빈 글이나 같은 값을 주면 생기지만, 그것은 끼우는 쪽이 정한다.
+- 이 세션을 열자 변이 도구의 표지(`mutate-running-29688.json`, 14:35)가 남아 편집 훅이 "돌고 있다"고 알렸다. pid 29688의 프로세스는 없었고 `git diff`에 변이가 없어 표지만 지웠다. 앞 세션이 멈춘 실행이 남긴 것이다. 그 훅은 pid 재사용의 거짓 양성을 못 보는 것에 적고 처방대로 확인하게 한다.
+
+다시 돌린 명령: 바꾼 파일의 `uv run ruff check`·`uv run pyright` 초록, `uv run pytest -q`로 `tests/tools/test_rerun_{session,files,round,judge,hidden}.py` 종료 0, 변이 표 둘 `--check` 원문 모두 있음. 나머지는 커밋의 pre-commit이 돈다.
+
+## 회고
+
+후보 다섯. 승인 0, 기각 4, 일지에만 1. 넘긴 것은 없다.
+
+1. 리눅스 CI에서만 빨간 시험(`LC_CTYPE`) — 일지에만. 이 PC에서만 초록인 시험의 꼴은 대기열 403을 닫으며 `.claude/rules/tests.md`의 조항과 CI가 잡는 값을 받아들인 끝이 열린 결함 종류다. 받아들여 닫은 종류의 새 사례라 행을 잇지 않는다.
+2. 죽은 변이 표지에 편집 훅이 "돌고 있다"고 알렸다 — 기각. 그 훅이 pid 재사용의 거짓 양성을 못 보는 것에 적었고, 처방대로 명령 줄과 `git diff`를 확인해 막혔다.
+3. 앞 세션들의 실수 둘(중간 문장을 영어로, 변이 실행 중 편집) — 기각. 이미 있는 훅(`hook_midturn_korean`, `hook_edit_during_mutate`)이 그 자리에서 알렸다.
+4. 꼴 정규식 사본을 claude-review가 짚었다 — 기각. 리뷰가 제 몫을 했고 이 PR에서 사본을 없앴다.
+5. `rerun_session.py`의 고정하지 않은 입력(셀프 리뷰 절의 회고 후보) — 기각. 그 입력으로 난 사건이 없다.
+
+`uv run python tools/queue_open_rows.py`(이 판과 `--ref origin/main`)의 만료할 행은 없었다.
+
+### "다음" 초안 (병합하는 세션이 `## 다음`으로 옮긴다)
+
+- 06이 병합되면 08(Blocked by 06)이 열린다. 07은 옆 세션이 하고, 09는 08을, 10은 07·09를 기다린다(Blocked by의 03은 done).
+- 08에는 끄는 자리가 `_stop` 하나라는 것을, 10에는 `round_record`의 인자 수를 호출자를 붙인 뒤 다시 볼 것을 넘겼다. 받는 티켓의 `### 06에서 넘어온 메모`가 원천이다.
+- `sibling_overlap`이 든 07 워크트리와의 글자 충돌 후보(`tools/rerun_round.py`, `tests/tools/test_rerun_round.py`)는 나중에 병합하는 쪽이 푼다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+
+### 인계 (넷째)
+
+- 봇 첫 회차 반영(위 절)을 커밋하기 전, `/code-review 0a82445a`를 부른 경계(`셀프 리뷰 직전`)에서 인계 계기가 왔다. 넘겨받은 경계(`PR 연 뒤`)와 다르고 요청 범위가 병합까지라 넘긴다. 셀프 리뷰는 밟지 않았다.
+- 회고는 이 세션이 돌았다(위 `## 회고`). 병합하는 세션은 이 세션 뒤의 일만 그 절에 더한다.
+- 이 세션의 제목: `feature/06-round-drive-record`.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/06-round-drive-record.md. 04의 클론에서 실제 지시문 모양의 첫 메시지로 `claude -p`를 띄우고, 스트림과 세션 기록을 읽어 회차 기록을 쓴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/06-round-drive-record.md
+브랜치: feature/06-round-drive-record
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-36-round-drive-record.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 0a82445a)부터 한다. 변경은 봇 첫 회차 반영(CI 리눅스 LC_CTYPE 시험 고침, claude-review Minor 둘과 Nit 하나 반영, 08·10 메모)과 일지의 넷째 절·회고·"다음" 초안이다. 그 뒤 커밋, 푸시, claude-review 보류 둘의 이유를 PR 코멘트로, 봇 둘째 회차(Critical·Major만), "다음" 초안을 `## 다음`으로 옮겨 마지막 회차 커밋에 싣기, 병합(워크트리에서 병합할 때). docs/journal/2026-10-23-36-round-drive-record.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/06-round-drive-record (인계함)`으로 바꿨다. 백그라운드 작업은 없었고(`wait_ci`는 끝났다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T06:56:19Z
+
+## 이어받은 세션 (다섯째)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (… 위 넷째 인계 지시문과 같다 …) 인자: .scratch/model-rerun/issues/06-round-drive-record.md
+
+- `git worktree list`에서 브랜치가 `.claude/worktrees/06-round-drive-record`(0a82445a)에 있어 EnterWorktree(path)로 들어갔다. 커밋하지 않은 변경 여덟 파일이 넘겨받은 대로 있었다.
+
+### 셀프 리뷰 (봇 첫 회차 반영)
+
+`/code-review 0a82445a`. 범위: base 0a82445a, 파일 여덟, 커밋 0, 미추적 0. 두 축 모두 Critical·Major 없음.
+
+명세 축: 빠진 것·범위 넘침 없음. Minor 하나(10 메모의 "키워드 인자 16개"는 키워드 전용 열넷과 위치 둘의 합), Nit 둘("10은 03·07·09를 기다린다"의 03은 done, 08 메모의 "끄는 자리"는 `drive` 계열에 한정). 원칙 II(시험을 고치지 않는다)에 닿는 판단을 적으라는 권고.
+
+표준 축: 하드 위반 없음. 판단 항목: `LC_CTYPE` 주석이 원인(PEP 538)을 본 것처럼 적었다, `_stop` 이름, `_git_env` 사본의 까닭이 `_git`만 설명한다, `e.`는 여덟 줄, 일지의 "빈 줄과 중복이 생기는 길이 없다"의 반례(끼운 `session_id`), `_stop`의 두 갈래(출력을 닫고도 안 끝남, 입출력 없음)를 밟는 시험이 없다.
+
+고친 것:
+- 10 메모와 일지: "`round_record`의 인자 16개(위치 둘, 키워드 전용 열넷)".
+- 08 메모: "`drive`가 띄운 세션을 끄는 자리는 `_stop` 하나로 모였다(PR #370 봇 첫 회차. `claude_version`과 `_git`은 `subprocess.run`의 `timeout`이 끈다)".
+- 시험 주석: "리눅스 CI에서는 넘기지 않은 `LC_CTYPE`이 가짜의 환경에 더 있었다. `LANG`·`LC_ALL`이 없어 로캘이 C인 파이썬이 PEP 538의 로캘 강제로 더한 것으로 읽었다(재지 않았다)".
+- 일지: `_git_env`의 까닭("세 줄이 글자 그대로 같지만 그 `_git`만 부르므로 함께 둔다"), "여덟 줄", 세션 id의 반례("시험이 끼우는 `session_id`에 빈 글이나 같은 값을 주면 생기지만, 그것은 끼우는 쪽이 정한다"), "10은 07·09를 기다린다(Blocked by의 03은 done)".
+
+남긴 것과 이유:
+- 원칙 II: 고친 것은 구현이 아니라 시험의 가정이다. 시험은 러너가 넘긴 환경 이름을 보려는 것이고, 가짜(파이썬)가 스스로 더한 이름까지 단언한 것이 플랫폼에 기댄 결함이었다. 러너 쪽 코드는 바꾸지 않았다.
+- `_stop` 이름: 독스트링이 "끄고 거둔다"를 적고, 08이 트리째 끄기로 바꿔 지을 자리라 그때 이름을 정한다.
+- `_stop`의 두 갈래 시험: 이번에 옮기기만 했고 갈래의 동작은 0a82445a와 같다. 08이 `_stop`을 바꿔 지을 때 함께 고정한다(08 메모의 `_stop` 줄에 더했다. 08은 Blocked by 06).
+- 정규식 상수 셋만 공개인 것: 다른 모듈이 가져다 쓰는 것이 그 셋뿐이다.

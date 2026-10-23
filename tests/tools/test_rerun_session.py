@@ -283,10 +283,15 @@ def test_가짜가_받은_인자_표준_입력_환경과_작업_폴더(
     cwd = seen["cwd"]
     assert isinstance(cwd, str)
     assert cwd.replace("\\", "/").casefold() == str(place.clone).replace("\\", "/").casefold()
-    # 윈도의 자식은 환경 변수 이름을 대문자로 본다(`os.environ`).
+    # 윈도의 자식은 환경 변수 이름을 대문자로 본다(`os.environ`). 리눅스 CI에서는 넘기지 않은
+    # `LC_CTYPE`이 가짜의 환경에 더 있었다. `LANG`·`LC_ALL`이 없어 로캘이 C인 파이썬이 PEP 538의
+    # 로캘 강제로 더한 것으로 읽었다(재지 않았다). 시험이 보려는 것은 러너가 넘긴 이름이므로
+    # 넘기지 않은 그 이름만 뺀다.
     names = seen["env"]
     assert isinstance(names, list)
-    assert sorted(str(n).upper() for n in names) == sorted(n.upper() for n in _env(place, config))
+    expected = sorted(n.upper() for n in _env(place, config))
+    added = {"LC_CTYPE"} - set(expected)
+    assert sorted(str(n).upper() for n in names if str(n).upper() not in added) == expected
     assert "GH_TOKEN" not in names
     assert got.drove.exit_code == 0 and not got.drove.timed_out
 
