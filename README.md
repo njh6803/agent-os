@@ -38,7 +38,7 @@ plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
   disabled.toml    선택. 운영자가 끈 플러그인의 이름(ADR 0017). 없으면 전부 켜짐. 관리 API의 PUT이 쓰고
                    손으로 고쳐도 같다. skill과 model은 로더가 생길 때 그 로더가 켜짐을 본다
-tests/             src를 미러링
+tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
@@ -58,6 +58,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지. app/(라우팅과 레이아웃),
                    components/(아토믹 층, pages/가 화면), lib/(사이트가 준 질의를 읽는 embed), styles/(위젯 CSS),
                    tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하는 시작 래퍼),
+                   tools/site-file.ts(AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수
+                   상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에 싣는다),
                    .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트)
 docs/
   constitution/    헌법 (principles, tech, operations)

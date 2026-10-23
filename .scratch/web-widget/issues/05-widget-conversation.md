@@ -10,6 +10,8 @@
 
 **Blocked by:** 01 (계약 — `calling` 항목과 위젯 클라이언트), 04 (사이트 파일 — 허용 출처와 글자 수 상한)
 
+**04가 넘기는 값.** 위젯 빌드는 사이트 파일에서 끌어낸 두 값을 `next.config.ts`의 `env`로 번들에 싣는다. 합친 허용 출처는 `AGENT_OS_WIDGET_ORIGINS`(출처를 공백 하나로 이은 글. 빈 글이면 빈 목록이고 postMessage를 모두 버린다), 가장 작은 요청 글자 수 상한은 `AGENT_OS_WIDGET_REQUEST_CHARS`(십진수 글)다. 이름은 `web/apps/widget/tools/site-file.ts`의 상수 `WIDGET_ORIGINS_ENV`·`WIDGET_REQUEST_CHARS_ENV`다. 번들에서는 `process.env.AGENT_OS_WIDGET_ORIGINS`처럼 점으로 읽는다. 설치된 Next 16.3.6의 `next-config-js/env.md`는 `env`의 값을 `process.env.이름`의 자리에 빌드 때 바꿔 넣고, `process.env`를 구조 분해하면 동작하지 않는다고 적는다. `guides/environment-variables.md`는 변수로 고른 이름(`process.env[varName]`)과 `process.env`를 다른 이름에 담아 읽는 것(`const env = process.env`)을 바꿔 넣지 않는다고 적는데, 그 예는 `NEXT_PUBLIC_` 변수다. `env`의 값에도 그대로 들어맞는다는 것은 미루어 본 것이다. 글자로 쓴 대괄호(`process.env["…"]`)는 두 문서에 없다.
+
 **Status:** ready-for-agent
 
 ### 토큰
