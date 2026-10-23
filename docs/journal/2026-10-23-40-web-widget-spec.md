@@ -841,3 +841,44 @@ nginx를 요구한다)는 리뷰가 제 몫을 한 것이다. 선택 화면의 �
   확인받고 한다. `tidy-checkouts`는 PR이 없는 워크트리를 지우지 않는다.
 - 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
 - 봇 회차에서 뒤로 넘긴 일은 없다. 대기열 319는 2회차로 열려 있고 3회차를 기다린다.
+
+## 인계 (커밋 뒤, PR 반영 단계)
+
+회고와 "다음"을 쓴 일지 커밋 `6c330c72`가 pre-commit을 모두 지나자(pytest 317.8초, web-verify 334.6초 등) 컨텍스트가 인계
+문턱을 넘은 채 경계 `커밋 뒤`에 와 `hook_handoff`가 왔다. 계기를 낸 커밋은 성공했고, 이 세션이 넘겨받은 경계는 `PR 연 뒤`라 지금
+경계(`커밋 뒤`)와 다르며, 요청 범위("티켓까지")는 병합까지라 이 경계에서 끝나지 않는다. 일지에 이 세션의 `인계 못함` 줄이 없고,
+`get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 그래서 넘긴다. 이 세션의 지금 제목은 `docs/web-widget-spec-2`이고
+`docs/web-widget-spec-2 (인계함)`으로 바꾼다. 띄운 백그라운드 작업은 남지 않았다(`wait_ci`와 커밋은 끝났다).
+`tools/model_sweep.py docs/web-widget-spec-2`는 `스윕 밖`이었다.
+
+`6c330c72`는 푸시하지 않았다. 커밋하지 않은 변경은 이 일지의 이 인계 절이다. 푸시가 한 번이면 claude-review가 한 번 돈다
+(그 워크플로에 경로 거르기가 없다). 그래서 새 세션은 이 절을 일지에서 다듬어 커밋한 뒤 두 커밋을 한 번에 푸시한다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 web-widget. PR #373의 봇 첫 회차와 회고·"다음"을 마쳐 커밋했고(6c330c72), 푸시와 둘째 봇 회차부터 병합까지 간다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec web-widget
+브랜치: docs/web-widget-spec-2
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-40-web-widget-spec.md (끝의 "봇 회차", "회고", "다음", 이 인계 절만)
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차(claude-review 지적 없음, CodeRabbit 한도로 리뷰 없음)는 끝났고 일지에 회고와 "다음"이 있다(대기열 319에 2회차를 더했다). 6c330c72는 푸시하지 않았고 커밋하지 않은 변경은 일지의 이 인계 절이다. 일지에 인계 절을 커밋한 뒤 두 커밋을 한 번에 푸시하고, origin/main이 움직였으면 먼저 합친다(git merge origin/main). 푸시 뒤 둘째 봇 회차는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다(next-session 순서 1의 2의 회차 세기). CodeRabbit은 한도로 51분 뒤에야 풀리므로 다시 청하지 않아도 된다. 병합은 워크트리의 길(next-session "워크트리에서 병합할 때")로 하고 사용자에게 묻지 않는다. 옛 docs/web-widget-spec 브랜치와 워크트리는 명세가 대신하고, 지우기는 병합 뒤 주 체크아웃 세션이 사람에게 확인받고 한다. 병합 뒤 다음 단계는 일지 "다음"의 구현(티켓 01과 03을 나란히)이다. 일지 docs/journal/2026-10-23-40-web-widget-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 바꿨고(`set_session_title`이 묻지 않고 바꿨다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`). PR #373은 앱에 묶여 있다(`bind_pr`).
+
+open-session을 부른다 2026-10-23T10:07:09Z
+
+## 이어받은 세션 (커밋 뒤, PR 반영 단계)
+
+위 지시문으로 연 새 세션이다. 제목을 `docs/web-widget-spec-2`로 바꾸고, `git worktree list`에서 그 브랜치가
+`.claude/worktrees/web-widget-spec-2`에 체크아웃된 것을 보고 EnterWorktree(path)로 들어갔다. `to-spec`을 Read로 열어
+따랐다. `git fetch origin` 뒤 `HEAD..origin/main`이 비어 있어 합칠 것이 없었다. 앱에는 PR #373이 묶여 있지 않아(`get_status`의
+`bound: false`) `bind_pr`로 묶었다. 위 인계 절은 고치지 않고 이 절만 더해 두 커밋을 한 번에 푸시한다.
+
+> 사용자: ".claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 인자: web-widget … 다음 작업: 기능 web-widget.
+> PR #373의 봇 첫 회차와 회고·\"다음\"을 마쳐 커밋했고(6c330c72), 푸시와 둘째 봇 회차부터 병합까지 간다 … 이번 요청 범위: 티켓까지"
