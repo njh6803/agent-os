@@ -894,11 +894,11 @@ def _shown(path: Path, repo: Path) -> str:
 
 def _header(args: argparse.Namespace, sha: str, branches_text: str) -> list[str]:
     digest = hashlib.sha256(branches_text.encode("utf-8")).hexdigest()[:12]
-    revive_path = "없음" if args.revive is None else f"`{_shown(args.revive, args.repo)}`"
+    revive = "없다" if args.revive is None else f"`{_shown(args.revive, args.repo)}`다"
     return [
         f"`tools/rerun_select.py` 가 지었다. main 은 `{sha[:12]}`(`{args.rev}`), 브랜치 표는 "
         f"`{_shown(args.branches, args.repo)}`(SHA-256 앞 12자리 `{digest}`), "
-        f"되살릴 목록은 {revive_path}다.",
+        f"되살릴 목록은 {revive}.",
         f"조건은 그 모듈의 상수다. 날짜 바닥 {DATE_FLOOR.isoformat()}(B 의 커밋 시각), 후보 문턱 "
         f"{MIN_CANDIDATES}개, 숨은 시험 {MIN_HIDDEN}개 이상, PR 앞 비용 ${COST_LIMIT_USD:g} 이하, "
         f"원래 브랜치 `{BRANCH_PREFIX}`. 바깥 검증 낱말은 "

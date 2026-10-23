@@ -22,6 +22,8 @@
     가운데 하나라도 M의 `tests/` 밖 추적 파일에 있고 B의 추적 파일 어디에도 없으면 그 함수의
     노드가 모두 빠진다. 줄바꿈이 든 문자열은 줄마다 나눠 길이가 둘 이상인 줄 하나를 문자열 하나로
     센다. `git grep`이 줄바꿈이 든 패턴을 줄마다 따로 찾아 한 줄만 있어도 있다고 답하기 때문이다.
+    NUL도 그 자리에서 나눈다. NUL이 든 패턴은 명령 줄에 넘길 수 없어, 나누지 않으면 그 후보 전체가
+    실패 갈래였다(05의 실제 후보 표에서 02 자신이 그랬다, 일지 2026-10-23-38).
   - 빠진 노드에는 처음 걸린 조건과 그 까닭(실패 종류, 이름)을 든다. M 두 실행 어디에도 결과가
     없는 바뀐 시험(마커로 빠졌거나 M에서 모으지 못했다)은 함수 노드 ID 하나로 조건 1에서 빠진다.
 - 바깥 층(`sort_candidate`, `term_in`)이 git과 pytest를 부른다. B와 M을 시스템 임시 폴더(또는
@@ -53,8 +55,8 @@
 - 조건 3은 문자열 상수의 값을 소스 글자에서 찾는다. 이어 붙인 문자열(`"ab" "cd"`)과 이스케이프가
   든 문자열(`"a\\tb"`)은 값과 소스 글자가 달라 M에 있어도 없다고 나와, 그 문자열에 기대는 시험이
   조건 3을 지난다.
-- 조건 3의 문자열에 NUL이 들었거나 명령 줄에 넘기지 못할 만큼 길면 `git grep`을 띄우지 못해, 그
-  노드가 아니라 후보 전체가 실패 갈래다.
+- 조건 3의 문자열이 명령 줄에 넘기지 못할 만큼 길면 `git grep`을 띄우지 못해, 그 노드가 아니라
+  후보 전체가 실패 갈래다.
 - 시험 파일과 지원 파일은 `tools/rerun_files.py`의 허용 꼴(`is_test_file`, `is_support_file`)에
   드는 경로만 본다. 그 꼴 밖의 이름(한글이 든 경로 등)으로 바뀐 시험은 숨은 시험 후보가 되지 않는다.
   pytest 설정이 `python_files`로 더 모으는 `tests/` 아래 `*_test.py`는 시험 파일이 아니라 지원
@@ -166,7 +168,9 @@ def _body_terms(node: _Def) -> tuple[tuple[str, ...], tuple[str, ...]]:
             elif isinstance(sub, ast.Attribute):
                 names.add(sub.attr)
             elif isinstance(sub, ast.Constant) and isinstance(sub.value, str):
-                strings.update(line for line in sub.value.split("\n") if len(line) >= 2)
+                lines = sub.value.split("\n")
+                pieces = (piece for line in lines for piece in line.split("\0"))
+                strings.update(piece for piece in pieces if len(piece) >= 2)
     return tuple(sorted(names)), tuple(sorted(strings))
 
 

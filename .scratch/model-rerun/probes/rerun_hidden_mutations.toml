@@ -2,8 +2,8 @@
 # 스킬, 대기열 29). 이 티켓의 시험은 구현 전에 모듈이 없어 수집 오류로만 빨갰고, 갈림 하나하나는 빨강을
 # 본 적이 없다. 티켓이 든 대상(조건 2의 실패 종류 셋, 조건 3의 B 유무)과 함께 조건 1, 오류 요소, junit
 # 의 나쁜 쪽 고르기, 바깥 층의 `git grep` 인자, 모음 오류 뒤 이어 돌기, 링크 끊기, 덮을 자리의 링크,
-# 자식 환경 벗기기를 하나씩 되돌린다. 표지는 고른 단언이 실패할 때만 나오는 문구다(`.claude/rules/probes.md`
-# 첫 항목).
+# 자식 환경 벗기기를 하나씩 되돌린다. 티켓 05가 실제 후보 표에서 찾은 NUL 나누기도 든다. 표지는 고른
+# 단언이 실패할 때만 나오는 문구다(`.claude/rules/probes.md` 첫 항목).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_hidden_mutations.toml
 
 [[mutation]]
@@ -93,6 +93,17 @@ expect_output = ["assert ('ab-old\\nc\\ncd-new\\n',) == ('ab-old', 'cd-new')"]
 file = "tools/rerun_hidden.py"
 old = '''sub.value.split("\n")'''
 new = '''[sub.value]'''
+
+[[mutation]]
+name = "NUL 이 든 문자열을 나누지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "NUL_이_든_문자열은_그_자리에서도"]
+expect = "red"
+expect_output = ["At index 0 diff: 'ab-old\\x00c' != 'ab-old'"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''line.split("\0")'''
+new = '''[line]'''
 
 [[mutation]]
 name = "git grep 에 -e 없이 패턴을 넘긴다"
@@ -250,12 +261,8 @@ expect_output = ["assert ('a\\\\tb', 'long-message') =="]
 
 [[mutation.edit]]
 file = "tools/rerun_hidden.py"
-old = '''                strings.update(line for line in sub.value.split("\n") if len(line) >= 2)'''
-new = '''                strings.update(
-                    line
-                    for line in sub.value.encode("unicode_escape").decode("ascii").split("\n")
-                    if len(line) >= 2
-                )'''
+old = '''                lines = sub.value.split("\n")'''
+new = '''                lines = sub.value.encode("unicode_escape").decode("ascii").split("\n")'''
 
 [[mutation]]
 name = "M 의 풀리지 않는 파일을 시험이 없는 것으로 본다"

@@ -824,6 +824,7 @@ def test_고르기_명령은_후보가_모두_싼_조건에서_빠지면_표를_
 
     assert code == 1
     text = table.read_text(encoding="utf-8")
+    assert "되살릴 목록은 없다." in text
     assert "| a-01 | #2 |" in text
     assert "브랜치 표에 PR #2 의 행이 없다" in text
     assert not out.exists()
