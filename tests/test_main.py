@@ -1965,12 +1965,12 @@ def test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_�
     tmp_path: Path,
 ) -> None:
     """바깥 이음매. 실제 uvicorn 과 사이트 파일과 PyJWT 의 조립을 실제 실행으로 보는 유일한 자리다
-    (end-user-channel 티켓 01). 프레임은 `id:` 를 싣고, 모델 호출은 항목이 없어 그 자리를 건너뛰며,
-    주체는 `발급자|sub` 로 트레이스에 남는다. 토큰은 실제 시각으로 서명한다. 이어 가기는 새 경로가
-    실제 소켓과 실제 서명 토큰과 실제 모델로 지나는 것이다 — 이어 간 답이 첫 요청의 이름을 아는 것은
-    asker 가 트레이스에서 거슬러 읽은 교환을 프롬프트에 엮었기 때문이다(end-user-continuation 스토리
-    1·53). 시작 이벤트의 바로가기(첫 실행은 빈 지도, 이어 간 실행은 asker → 첫 실행)가 실제 디스크에
-    쓰이는 것도 여기서 잰다."""
+    (end-user-channel 티켓 01). 프레임은 `id:` 를 싣고, 도구를 요청하지 않은 모델 호출은 항목이 없어
+    그 자리를 건너뛰며, 주체는 `발급자|sub` 로 트레이스에 남는다. 토큰은 실제 시각으로 서명한다.
+    이어 가기는 새 경로가 실제 소켓과 실제 서명 토큰과 실제 모델로 지나는 것이다 — 이어 간 답이 첫
+    요청의 이름을 아는 것은 asker 가 트레이스에서 거슬러 읽은 교환을 프롬프트에 엮었기
+    때문이다(end-user-continuation 스토리 1·53). 시작 이벤트의 바로가기(첫 실행은 빈 지도, 이어 간
+    실행은 asker → 첫 실행)가 실제 디스크에 쓰이는 것도 여기서 잰다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_plugin(tmp_path, "asker", ASKER_SRC)
     (tmp_path / "sites.toml").write_text(_site_file(_site(agents='["asker"]')), encoding="utf-8")
