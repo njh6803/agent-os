@@ -141,13 +141,13 @@ SETUP_COMMANDS = (
 _TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{2,}")
 _COMMIT = re.compile(r"[0-9a-f]{40}")
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-_MODEL = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")
-_IDENT = re.compile(r"[a-z][a-z0-9_]*")  # 창, subtype, 끝난 까닭, 노력
+MODEL_FORM = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")
+IDENT_FORM = re.compile(r"[a-z][a-z0-9_]*")  # 창, subtype, 끝난 까닭, 노력
 _TOOL = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 _ACCOUNT = re.compile(r"[a-z0-9][a-z0-9._-]*")
 _PATTERN_NAME = re.compile(r"[가-힣a-z0-9][가-힣a-z0-9_-]*")  # 오염 꼴의 이름(러너 상수)
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_()]*")
-_VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")
+VERSION_FORM = re.compile(r"[0-9][0-9A-Za-z .()+-]*")
 _TOKEN = re.compile(r"[0-9a-z]+")
 _NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")
 # 저장소 안의 상대 경로 조각. 점과 `-`로 시작하지 않아 `.`, `..`, 숨은 폴더, 옵션 꼴을 받지 않는다.
@@ -703,7 +703,9 @@ def _record_json(r: Record) -> dict[str, Json]:
 
 def _lines(o: _Obj) -> LineCount:
     return LineCount(
-        model=o.text("model", _MODEL), effort=o.opt_text("effort", _IDENT), lines=o.count("lines")
+        model=o.text("model", MODEL_FORM),
+        effort=o.opt_text("effort", IDENT_FORM),
+        lines=o.count("lines"),
     )
 
 
@@ -719,7 +721,7 @@ def _tokens(o: _Obj) -> Tokens:
 
 def _windows(o: _Obj, key: str) -> tuple[Window, ...]:
     return tuple(
-        Window(window=w.text("window", _IDENT), utilization=w.money("utilization"))
+        Window(window=w.text("window", IDENT_FORM), utilization=w.money("utilization"))
         for w in o.objs(key, _WINDOW_KEYS)
     )
 
@@ -732,8 +734,8 @@ def _call(o: _Obj) -> Call:
         results=tuple(
             ResultEvent(
                 index=r.count("index"),
-                subtype=r.text("subtype", _IDENT),
-                terminal_reason=r.opt_text("terminal_reason", _IDENT),
+                subtype=r.text("subtype", IDENT_FORM),
+                terminal_reason=r.opt_text("terminal_reason", IDENT_FORM),
                 num_turns=r.opt_count("num_turns"),
             )
             for r in o.objs("results", _RESULT_KEYS)
@@ -753,7 +755,7 @@ def _session(o: _Obj) -> Session:
         runner_killed=o.flag("runner_killed"),
         model_usage=tuple(
             ModelUsage(
-                model=u.text("model", _MODEL),
+                model=u.text("model", MODEL_FORM),
                 input_tokens=u.count("input_tokens"),
                 output_tokens=u.count("output_tokens"),
                 cache_read_tokens=u.count("cache_read_tokens"),
@@ -841,7 +843,9 @@ def _spend(o: _Obj) -> Spend:
         official_usd=o.money("official_usd"),
         tokens=_tokens(o.obj("tokens", _TOKENS_KEYS)),
         substitutes=tuple(
-            Substitute(model=x.text("model", _MODEL), tokens=_tokens(x.obj("tokens", _TOKENS_KEYS)))
+            Substitute(
+                model=x.text("model", MODEL_FORM), tokens=_tokens(x.obj("tokens", _TOKENS_KEYS))
+            )
             for x in o.objs("substitutes", _SUBSTITUTE_KEYS)
         ),
         wall_seconds=o.money("wall_seconds"),
@@ -891,7 +895,7 @@ def parse_record(text: str) -> Record:
         condition_version=o.count("condition_version"),
         pilot=o.flag("pilot"),
         round_dir_name=dir_name,
-        claude_version=o.opt_text("claude_version", _VERSION),
+        claude_version=o.opt_text("claude_version", VERSION_FORM),
         account=o.text("account", _ACCOUNT),
         env_names=o.strs("env_names", _ENV_NAME),
         init_tools=o.strs("init_tools", _TOOL),

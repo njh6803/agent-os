@@ -224,3 +224,45 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장(원문).
 - 11 메모: "`pilot`과 `main` 명령은 저마다 표를 처음부터 다시 지으므로" 와 "한 벌을 짓는 데 이 PC에서 2시간 52분(가른 후보 38개)이 들었으니"
 - 11 메모: "05가 고친 것은 값 층의 문자열 나누기 한 줄이라 바깥 층과 겹치지 않고, 그 항목들은 PR 봇이 Minor로 매긴 구조 정리라 05의 수용 기준(후보 표와 고르기)에 닿지 않는다."
 - 시험 주석: "윈도는 명령 줄 전체가 32767자(CreateProcess 의 한도), 리눅스는 인자 하나가 128KiB (MAX_ARG_STRLEN)를 넘으면 띄우지 못한다."
+
+## 인계: 커밋 뒤
+
+반영을 06af4aab로 커밋했다(후보 표, NUL 고침, 셀프 리뷰 반영, 일지 옮기기). pre-commit은 모두 통과했다(ruff 둘, `checks` 440초: check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright 둘·run-hooks·web-verify·pytest, 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용 대조 11건 경고 없음, 커밋 메시지). 카나리아 명세와 헌법 판은 바뀐 파일이 없어 `Skipped`였다. 손으로 치는 다섯은 이 결과로 갈음한다.
+
+커밋 직후 `hook_handoff`가 컨텍스트 278,529 토큰으로 `커밋 뒤` 경계에 왔다고 알렸다. 이 세션이 넘겨받은 경계(`셀프 리뷰 직전`)와 다르고, 요청 범위는 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션도 아니다. 그래서 인계한다. 이 세션의 지금 제목은 `feature/05-task-selection`이다. 이 브랜치에 열린 PR은 없다(`gh pr view`가 "no pull requests found").
+
+남은 순서.
+1. origin/main을 합친다. 겹치는 파일은 `.scratch/model-rerun/probes/README.md`다(#369 model-rerun 04가 행을 더했다). 합친 뒤 `tools/sibling_overlap.py`를 다시 친다.
+2. ruff 둘을 치고 `uv run python tools/run_checks.py`를 백그라운드로 돌린다.
+3. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). `coderabbit auth status`를 보고, 돌지 못하면 `/security-review`와 `bug-perf-review`로 한다. 밀 주장은 이 일지 두 절의 "PR 직전 리뷰에 밀 주장으로 넘길 새 문장" 목록이다("이어받은 세션: 셀프 리뷰"의 일곱과 "셀프 리뷰: NUL 고침과 후보 표"의 일곱). 앞 절의 NUL 독스트링 문장, 프로브 README의 결과 절, 11 메모의 05 항목도 겨눈다.
+4. `/git-pr`로 PR을 연다. PR 설명에 넣을 것.
+   - 후보 표는 NUL 고침 전 도구(de5423bd)로 main c3c2cfcf를 끝으로 지었다. 그 뒤의 병합(03 #364 이후)은 표 밖이다.
+   - 문턱 12개에 남은 후보 8개다. 날짜 안 1개(ticket-for-every-pr-03), 거슬러 채운 7개(http-channel-04·03, admin-api-06·04, interrupts-05·04·03). 거슬러 채운 7개는 모두 B가 2026-09-21~26이고 B에 `web/package.json`과 `tools/run_checks.py`가 둘 다 없다. 길은 티켓 11이 사람에게 묻는다.
+   - model-rerun-02 행은 도구 결함 문구다. 고친 도구로 02만 다시 가르면 숨은 시험 0개, 빠진 노드 99개라 그 행은 여전히 빠진다. 다른 행이 같다는 것은 어림이다. 표는 사용자 결정으로 다시 짓지 않았다.
+   - 이 기능의 티켓(01·02)도 후보로 든다.
+   - 명세가 "B에 티켓 파일 없음"의 예로 든 #335는 세 자리 하네스 티켓이라 `<NN>`에 맞지 않아 표에 행이 없다. 결과는 같다(chore 브랜치).
+   - 형제 07(워크트리 `07-gates-and-official-cost`)이 `tools/rerun_hidden.py`와 그 시험, 변이 표, 05 티켓, 명세를 함께 고친다. 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다.
+5. ccd_pr로 PR을 묶고 CI와 봇 회차를 본 뒤, 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 병합하고 next-session을 부른다.
+
+인계 지시문.
+
+> 다음 작업: .scratch/model-rerun/issues/05-task-selection.md. 병합 기록에서 후보 티켓을 찾아 까닭과 함께 표로 내고, 층과 씨앗으로 파일럿 셋과 본 측정 여덟을 고른다
+> 다음 단계: 구현
+> 어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /implement .scratch/model-rerun/issues/05-task-selection.md
+> 브랜치: feature/05-task-selection
+> 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+> 읽을 것: docs/journal/2026-10-23-38-task-selection.md의 "인계: 커밋 뒤"(남은 순서와 PR 설명에 넣을 것), 같은 일지 두 절의 "PR 직전 리뷰에 밀 주장으로 넘길 새 문장"
+> 이어받을 상태: 인계: 커밋 뒤. 실제 후보 표, NUL 고침, 셀프 리뷰 반영을 커밋했고 pre-commit이 모두 통과했다. PR은 아직 없고, origin/main 합치기, 전체 검사, PR 직전 리뷰, PR, 봇 회차, 병합이 남았다(일지 docs/journal/2026-10-23-38-task-selection.md)
+> 확인할 선행 조건: origin/main에 #369(model-rerun 04)가 들어와 .scratch/model-rerun/probes/README.md가 겹친다. 형제 07(워크트리 07-gates-and-official-cost)이 tools/rerun_hidden.py와 그 시험·변이 표·05 티켓·명세를 함께 고친다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+
+제목을 `feature/05-task-selection (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T07:45Z
+
+## 이어받은 세션: main 합치기
+
+지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 이었다. 세션 제목을 `feature/05-task-selection`으로 바꿨다.
+
+origin/main(893e0fe8. #368 web-widget 문서, #369 model-rerun 04, #366 harness 007, #370 model-rerun 06)을 합쳤다. 글자 충돌은 프로브 README 표 끝 하나였다. 이 브랜치의 세 행(`branches.json`, `candidates.md`, `rerun_select_mutations.toml`)과 main의 두 행(04의 `rerun_round_mutations.toml`, 06의 `rerun_session_mutations.toml`)을 모두 남겨 티켓 번호 차례(04 → 05 → 06)로 놓았다. 명세는 자동으로 합쳐졌다(같은 문단에 이 브랜치가 덧붙인 NUL 주석만 남는다). main이 바꾼 파일을 이 브랜치가 이름으로 든 파일과 대조했다. `tools/rerun_files.py`는 비공개 상수 셋을 공개 이름(`MODEL_FORM`·`IDENT_FORM`·`VERSION_FORM`)으로 바꿨고, `tools/rerun_select.py`는 그 상수를 가져오지 않아 고칠 것이 없다. 게이트 쪽은 harness 007이 pre-commit과 CI에 `rg`를 요구하는 줄(ADR 0038)을 더한 것이 전부다.

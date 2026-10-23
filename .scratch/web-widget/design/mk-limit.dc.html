@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상한에 걸림 완성 화면</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 2336px; height: 760px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex items-start" style="gap: 48px;">
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 동시 실행 수에 걸림(5초). 보낸 요청은 입력창에 남고 보내기가 막힌다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>이미 끝나지 않은 실행이 있습니다. 5초 뒤에 다시 보낼 수 있습니다.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" value="내일 오후까지 안 오면 환불도 되나요?"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 기다리는 시간이 줄어드는 동안. 띠의 초만 바뀐다. 화면 읽기 프로그램에는 매초 읽히지 않는다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>이미 끝나지 않은 실행이 있습니다. 3초 뒤에 다시 보낼 수 있습니다.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" value="내일 오후까지 안 오면 환불도 되나요?"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 다 지난 뒤. 띠가 사라지고 보내기가 다시 열린다. 요청은 입력창에 그대로 있다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" value="내일 오후까지 안 오면 환불도 되나요?"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 시간당 실행 수에 걸림(12분). 60초 이상은 분으로 적는다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<div role="status" class="flex items-start gap-2 text-small shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><span style="display: flex; padding-top: 2px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import></span><span>한 시간에 보낼 수 있는 요청을 다 썼습니다. 12분 뒤에 다시 보낼 수 있습니다.</span></div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="1" label="요청" value="내일 오후까지 안 오면 환불도 되나요?"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">320 · 글자 수 상한 근처. 입력창 아래에 센 글자 수를 보인다. 보내기 버튼의 높이 맞춤은 어림이다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="4" label="요청" value="주문 번호 ORD-2026-10-22-000184 건으로 문의드립니다. 어제 주문한 우산이 아직 도착하지 않았고, 배송 조회 화면에는 오늘 저녁 도착 예정이라고 나옵니다. (이하 붙여 넣은 배송 기록이 길게 이어진다)" help="19,850 / 20,000"></x-import></div>
+<div style="margin-bottom: 24px;"><x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import></div>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 400px;">
+<p class="text-small text-text-muted" style="margin: 0; min-height: 80px;">400 · 글자 수 상한을 넘음. 보내기 전에 막는다.</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 400px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">주문 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">요청: </span>어제 주문한 우산 배송 어디쯤이에요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;"><span class="sr-only">출력: </span>어제 주문하신 우산(주문 번호 ORD-2026-10-22-000184)은 오늘 오전 9시에 물류센터를 떠났습니다.
+지금은 배송 기사에게 넘어가 있고, 오늘 저녁 6시 전에 도착할 예정입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="4" label="요청" value="주문 번호 ORD-2026-10-22-000184 건으로 문의드립니다. 어제 주문한 우산이 아직 도착하지 않았고, 배송 조회 화면에는 오늘 저녁 도착 예정이라고 나옵니다. (이하 붙여 넣은 배송 기록이 길게 이어진다)" error="20,000자를 넘었습니다"></x-import></div>
+<div style="margin-bottom: 24px;"><x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import></div>
+</form>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2336,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true };
+}
+}
+</script>
+</body>
+</html>

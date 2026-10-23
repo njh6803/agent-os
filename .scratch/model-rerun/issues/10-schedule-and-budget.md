@@ -53,3 +53,16 @@
 ### 03에서 넘어온 메모
 
 - 03의 판정 도구(`tools/rerun_judge.py`)는 절 꺼내기 `prereg_section`과 상수 `PREREG_SHA256` 밖에 `prereg_problem(readme_text, expected_sha256)`도 공개 이름으로 둔다. 절 꺼내기와 해시 대조를 함께 하고, 맞으면 빈 값을, 아니면 결론 없음의 까닭 문장(표지의 수, 또는 두 해시)을 돌려준다. 러너가 본 측정 목록을 열기 전의 대조와 멈출 때 알릴 문장에 그대로 쓸 수 있다(2026-10-23 티켓 03의 셀프 리뷰).
+
+### 04에서 넘어온 메모
+
+- 뿌리는 `checked_root(text, main_checkout=main_checkout(ROOT), home=Path.home())`로, 전용 설정 폴더는 `checked_place(text, "설정 폴더", main_checkout=..., user_claude=Path.home() / ".claude")`로 본다. `PlaceError`면 아무 회차도 열지 않고 멈춘다. 막는 규칙은 `deny_rules(deny_heads(main_checkout(ROOT), home=Path.home()))`이다(모두 `tools/rerun_round.py`).
+- 번호를 잡은 자리에서 `create_round_dir(root, task_id, arm, round_no)`만 차례로 부르고, `prepare_round`는 회차마다 따로 돈다.
+- 사람이 부르는 지우기는 `python -m tools.rerun_round remove <뿌리> [--records <폴더>]`이고, `records/`의 기본값은 그 모듈의 `RECORDS`다. 이 티켓의 `records/` 기본값 상수와 한 곳에 두도록 맞춘다.
+- 다시 뜬 러너가 찾는 "표지는 있는데 `records/`에 기록이 없는 회차 폴더"는 04의 지우기가 `no_record`로 가르는 판정(`_is_round_dir`, `_recorded`)과 같다. 그 판정을 공개 함수로 꺼내 함께 쓴다.
+
+### 06에서 넘어온 메모
+
+- 회차 하나의 조립은 `tools/rerun_session.py`의 `launch`(호출마다, 08이 이어 부른다)와 `round_record`다. `round_record`가 받는 것 가운데 이 티켓이 넘길 것은 `condition_version`, 한 번 부른 `claude_version(...)`, 명령 줄로 받은 계정 이름, `session_env`의 결과(`env`), 전용 설정 폴더, `prepare_round`의 `Setup.wall_clock_from`과 끝낸 때의 단조 시계 값(`now`)이다. 결과 칸은 `outcome_of(pick_result_commit(...))`가 결과 커밋만 채우고 준비·게이트·숨은 시험은 07이 채운다. 공식 단가·토큰 합·대신 넣은 값(07)과 측정 아님의 칸(09)은 `Elsewhere`로 넘긴다. 쓰기는 01의 `write_record(<records 폴더>, record)`다. 호출자를 붙인 뒤 `round_record`의 인자 16개(위치 둘, 키워드 전용 열넷)와 07·09가 함께 채우는 `Elsewhere`를 줄일지 다시 본다(PR #370 claude-review 첫 회차의 Minor, 그때는 호출자가 없어 보류했다).
+- 띄우기 전에 적는 세션 id의 파일은 `tools/rerun_round.py`의 `SESSION_IDS`(`RoundDir.session_ids`)다. 한 줄에 세션 id 하나이고 호출마다 덧붙인다. 원본 줄의 파일 이름은 `<호출 차례 두 자리>-<세션 id>.jsonl`이고 차례는 그 파일의 줄 수다.
+- `session_env`는 이제 `PATH`에서 `pyvenv.cfg`가 있는 폴더 바로 아래의 실행 폴더를 뺀다(`without_venv_dirs`). 러너를 `uv run`으로 띄워도 세션의 맨 `pytest`가 주 체크아웃의 `.venv`로 돌지 않게 하려는 것이다(04의 메모).

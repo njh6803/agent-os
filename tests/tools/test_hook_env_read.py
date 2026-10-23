@@ -27,6 +27,60 @@ from tools.hook_env_read import (
         'head -n 1 "C:/project/agent/.env"',
         "grep ANTHROPIC .env",
         "grep -e ANTHROPIC .env",
+        "grep -ie ANTHROPIC .env",
+        "rg -ie ANTHROPIC .env",
+        "sed -ne 1p .env",
+        "rg -ig '*' ANTHROPIC .env",
+        # ag 의 `-t`(--all-text)·`-f`(--follow)는 값을 먹지 않는다. rg 의 표를 쓴 판이 `KEY` 를
+        # 값으로 먹어 `.env` 를 패턴으로 버렸다(푸시 뒤 자동 보안 리뷰, 대기열 422).
+        "ag -it ANTHROPIC .env",
+        "ag -t ANTHROPIC .env",
+        "ag -ft ANTHROPIC .env",
+        # ack 3 의 `-A`·`-B` 는 값이 선택인 숫자라 숫자가 아닌 `KEY` 를 먹지 않는다(ConfigLoader.pm
+        # 의 `A|after-context:-1`). man 페이지의 `-A NUM` 을 따른 판이 지나보냈다(셀프 리뷰).
+        "ack -A ANTHROPIC .env",
+        "ack -B ANTHROPIC .env",
+        "ack --after-context ANTHROPIC .env",
+        # ack 의 `--match` 는 패턴을 따로 줘 남은 위치 인자가 모두 파일이다(셀프 리뷰 명세 축).
+        "ack --match ANTHROPIC .env",
+        "ack --match=ANTHROPIC .env",
+        "ack .env --match ANTHROPIC",
+        # 표의 값 옵션은 값만 먹는다(ag `src/options.c`, ack `ConfigLoader.pm`).
+        "ag -G py ANTHROPIC .env",
+        "ag --workers 2 ANTHROPIC .env",
+        "ack --type python ANTHROPIC .env",
+        "ack --pager less ANTHROPIC .env",
+        # 파일을 값으로 받아 읽는 옵션의 값. `--files-from` 을 값 옵션 표에 넣은 판이 뒤의 `.env` 를
+        # 값으로 먹어 `ack KEY --files-from .env` 를 지나보냈다(셋째 푸시 뒤 자동 보안 리뷰).
+        "ack ANTHROPIC --files-from .env",
+        "ack --files-from=.env ANTHROPIC",
+        "ack --ackrc .env ANTHROPIC src/",
+        "grep -f .env x.txt",
+        "grep --file=.env x.txt",
+        "grep -if.env x.txt",
+        "grep -rn --exclude-from .env KEY src/",
+        "rg -f .env src/",
+        "rg --ignore-file .env KEY src/",
+        "ag -p .env KEY src/",
+        "ag --path-to-ignore=.env KEY src/",
+        "sed -f .env x.txt",
+        "awk -f .env x.txt",
+        # getopt_long 은 파일 옵션의 줄임도 받는다. sed 4.8 이 `--fi=` 를 `--file=` 로 읽었다(셀프
+        # 리뷰 명세 축이 손으로 봤다).
+        "sed --fi=.env x.txt",
+        "grep --exclude-fr .env KEY src/",
+        # sed 의 긴 꼴, gawk 의 `--source`, getopt_long 의 긴 옵션 줄임도 패턴을 옵션으로 준다(같은
+        # 리뷰). 줄임의 최소 길이는 명령마다 달라 sed 는 `--e` 로 `--expression` 을 읽는다(sed 4.8,
+        # 셀프 리뷰 두 축이 손으로 봤다).
+        "sed --expression 1p .env",
+        "sed --expression=1p .env",
+        "sed --exp=1p .env",
+        "sed --e=1p .env",
+        "sed --fil=script.sed .env",
+        "gawk --source='{print}' .env",
+        "gawk --so='{print}' .env",
+        "awk --source '{print}' .env",
+        "grep --reg=ANTHROPIC .env",
         "sed -n 1p ../.env",
         "awk '{print $1}' .env",
         "less .env.local",
@@ -153,6 +207,35 @@ def test_입력_리다이렉션도_읽기다() -> None:
         "rg -nuu KEY",
         "rg -uu KEY 2>/dev/null",
         "rg -uu -g '.env*' KEY",
+        # `.env` 하나만 빼면 `.env.local` 은 읽는다(푸시 뒤 자동 보안 리뷰, 대기열 422).
+        "grep -rn --exclude .env KEY .",
+        "grep -rn --exclude=.env.local KEY .",
+        # grep 의 `--exclude` 는 대소문자를 가린다. GNU grep 3.1 이 `--exclude='.ENV*'` 로 `.env` 를
+        # 읽었다(2026-10-23 손으로 봤다, 푸시 뒤 자동 보안 리뷰).
+        "grep -rn --exclude='.ENV*' KEY .",
+        # 긴 옵션 줄임을 패턴 옵션으로 보는 것은 파일 읽기 판정만이고 훑기 판정은 그대로다. grep 은
+        # `--reg KEY` 를 `--regexp KEY` 로 읽어 경로 없이 루트를 훑는다.
+        "grep -rn --reg KEY",
+        # 값을 먹는 긴 옵션은 값 옵션 표에도 있어야 그 값을 경로로 세지 않는다. 표에 없던 판이
+        # `list.txt` 를 위치 인자로 세어 `KEY` 를 경로로 읽었다(셀프 리뷰 표준 축이 grep 3.1 로
+        # 봤다).
+        "grep -rn --exclude-from list.txt KEY",
+        # GNU grep 의 다른 긴 값 옵션도 같다. 표에 없던 판이 `5` 를 패턴, `KEY` 를 경로로 읽었다
+        # (넷째 푸시 뒤 CodeRabbit·자동 보안 리뷰). 줄임(`--max-c 5`)은 대기열 448 이 닫는다.
+        "grep -rn --max-count 5 KEY",
+        "grep -rn --after-context 3 KEY",
+        "grep -rn --before-context 3 KEY",
+        "grep -rn --context 3 KEY",
+        "grep -rn --binary-files text KEY",
+        "grep -rn --devices read KEY",
+        "grep -rn --directories recurse KEY",
+        "grep -rn --label x KEY",
+        "grep -rn --group-separator x KEY",
+        "grep -rn --file patterns.txt",
+        "grep -rn --regexp KEY",
+        # `--file` 의 앞글자 견줌이 `--files-with-matches` 를 패턴 옵션으로 읽어 `KEY` 를 경로로
+        # 봤다.
+        "grep -rn --files-with-matches KEY",
     ],
 )
 def test_env_를_빼지_않은_저장소_전체_grep_을_막는다(명령: str) -> None:
@@ -190,7 +273,10 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         "stat .env",
         "grep -rn KEY src/ tests/",
         "grep -rn --exclude=.env* KEY .",
-        "grep -rn --exclude .env KEY .",
+        "grep -rn --exclude .env* KEY .",
+        # 값 여럿이 합쳐 `.env` 꼴을 모두 뺀다(셀프 리뷰 두 축, GNU grep 3.1 로 손으로 봤다).
+        "grep -rn --exclude .env --exclude '.env.*' KEY .",
+        "grep -rn --exclude .env --exclude .env.local --exclude .env.production KEY .",
         "grep -rn --include=*.py KEY .",
         "grep -n KEY pyproject.toml",
         "grep -n .env .gitignore",
@@ -208,6 +294,21 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         "rg -uu --glob=!.env* KEY .",
         "rg -uu -t py KEY",
         "rg -uu -g '*.py' KEY",
+        # ack 3 의 `-t` 는 값을 꼭 받아(`t|type=s`) `.env` 가 패턴이다.
+        "ack -t python .env",
+        "ag -G py .env",
+        # ack 의 `--pager` 는 값이 선택인 문자열이고 Getopt::Long 이 `-` 로 시작하지 않는 다음
+        # 낱말을 값으로 먹어 `.env` 가 패턴이다(값이 선택인데 표에 둔 하나뿐인 옵션).
+        "ack --pager ANTHROPIC .env",
+        # 파일을 읽는 옵션이라도 값이 `.env` 가 아니면, 패턴으로 준 `.env` 는 파일이 아니다.
+        "grep -f patterns.txt src/x.py",
+        "ack --files-from list.txt ANTHROPIC",
+        "grep -e .env .gitignore",
+        "sed --expression 1p notes.md",
+        # 패턴 옵션의 줄임은 그 명령의 옵션으로 본다. grep 의 `--ma` 는 `--max-count` 이고 ack 의
+        # `--match` 가 아니다(셀프 리뷰 명세 축). ack 의 `--files-from` 은 `--file` 이 아니다.
+        "grep --ma=2 .env .gitignore",
+        "ack --files-from list.txt .env",
         "echo '.env is secret'",
         "cat <<'EOF' > note.md\ncat .env\nEOF",
         "cat > .env <<'EOF'\nK=v\nEOF",
@@ -361,6 +462,27 @@ def test_대괄호_안의_중괄호는_펼치기_전의_glob_으로도_본다(�
     assert deny_reason_for_command(명령) is not None
 
 
+@pytest.mark.parametrize("glob", ["\\.env", "\\.e\\nv", "**/\\.env*"])
+def test_Grep_도구의_glob_의_역슬래시는_이스케이프로도_읽는다(glob: str) -> None:
+    """Grep 도구는 glob 을 rg 에 넘기고 rg 는 역슬래시를 이스케이프로 읽는다. 역슬래시를 `/` 로만
+    바꿔 본 판이 지나보냈다(셀프 리뷰 표준 축)."""
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
+
+
+@pytest.mark.parametrize(
+    "명령", ["grep -rn --include='\\.env' KEY .", "grep -rn --include='.e\\nv' KEY ."]
+)
+def test_grep_의_include_의_역슬래시는_이스케이프로도_읽는다(명령: str) -> None:
+    """GNU grep 3.1 이 둘 다 `.env` 를 읽었다(2026-10-23 셀프 리뷰 표준 축이 손으로 봤다)."""
+    assert deny_reason_for_command(명령) is not None
+
+
+def test_못_보는_것_grep_의_빼는_glob_의_역슬래시는_풀지_않아_막는다() -> None:
+    """거짓 양성이다. GNU grep 3.1 은 `--exclude='\\.env*'` 로 `.env` 꼴을 뺐다(셀프 리뷰 표준 축이
+    손으로 봤다). rg 의 같은 꼴은 `_BASH_RG_STRICTER` 가 실제 rg 와 맞댄다."""
+    assert deny_reason_for_command("grep -rn --exclude='\\.env*' KEY .") is not None
+
+
 @pytest.mark.parametrize("glob", [".en[!{}]", "**/.en[!{}]", ".en[u-{}]", ".e[a-{][!}]"])
 def test_Grep_도구의_대괄호_안의_중괄호도_막는다(glob: str) -> None:
     assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
@@ -418,6 +540,11 @@ def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린�
         "env -S 'cat .env'",
         "stdbuf -o0 cat .env",
         "sudo --us root cat .env",
+        "grep -rn --max-c 5 KEY",
+        "rg -uu -g '!.env' -g '!.env.local' -g '!.env.production' KEY .",
+        "grep -rn --exclude '.en*[!g]' KEY .",
+        "rg -uu -g '!.en*[!g]' KEY .",
+        "rg -g .env.staging KEY",
     ],
 )
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(명령: str) -> None:
