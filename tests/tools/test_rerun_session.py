@@ -412,6 +412,27 @@ def test_마감에_닿았을_때_이미_끝난_자식은_끈_호출이_아니다
     assert got.exit_code == 0
 
 
+def test_줄_판정이_참이면_마감_전에_그_줄에서_끈다(tmp_path: Path) -> None:
+    # 마감은 가짜가 init 을 낼 만큼만 넉넉하다. 줄 판정을 보지 않으면 마감에 닿아 끈 호출이 된다
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
+
+    got = drive(
+        session_command(fake.claude(), ARM, "s-1", 1.0),
+        cwd=str(place.clone),
+        env=_env(place, config),
+        message="메시지",
+        stream_file=place.stream / "01-s-1.jsonl",
+        timeout=30.0,
+        session_id="s-1",
+        watch=lambda line: '"init"' in line,
+    )
+
+    assert got.stop is Stop.HALTED_KILLED, "줄 판정이 끄라고 한 줄에서 끄지 않았다"
+    assert got.exit_code is None and len(got.lines) == 1
+
+
 def test_기록_파일을_열지_못하면_띄운_자식을_끄고_예외를_올린다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -864,6 +885,31 @@ def test_가짜의_한도_이벤트_꼴은_원본과_카나리아_시험의_꼴�
     assert '"status": "rejected"' in canary and '"api_error": "usage_limit_reached"' in canary
     assert fake.limit_result()["api_error"] == "usage_limit_reached"
     assert _o(fake.rate_limit_event("rejected")["rate_limit_info"])["status"] == "rejected"
+
+
+def test_가짜의_도구_호출과_거부_꼴은_원본과_프로브_결과의_꼴이다() -> None:
+    real = [
+        _o(_load(line))
+        for line in (PROBE / "서브-2.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    uses = [
+        (event, _o(block))
+        for event in real
+        if event["type"] == "assistant"
+        for block in _l(_o(event["message"])["content"])
+        if _o(block)["type"] == "tool_use"
+    ]
+    [(main, main_block)] = [(e, b) for e, b in uses if e["parent_tool_use_id"] is None]
+    nested = [e for e, _ in uses if e["parent_tool_use_id"] is not None]
+    made = fake.tool_use_event("Agent", {"prompt": "x"})
+    [made_block] = _l(_o(made["message"])["content"])
+
+    assert set(made) <= set(main)
+    assert set(_o(made_block)) <= set(main_block)
+    assert nested, "원본에 서브에이전트의 도구 호출이 없다"
+    assert set(fake.tool_use_event("Read", {}, parent="toolu_x")) <= set(nested[0])
+    [real_denial, *_] = _l(_o(_summary("거부")["result"])["permission_denials"])
+    assert set(fake.denial("Bash", "toolu_1", {"command": "x"})) == set(_o(real_denial))
 
 
 def test_가짜는_세션_밖의_부름을_각본대로_답한다(tmp_path: Path) -> None:

@@ -11,7 +11,9 @@
 # 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구나 단언의 메시지다. 첫 판은 표지를 없는 문구로
 # 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md` 의 표지 항목). 셀프
 # 리뷰 반영에서 고치거나 더한 변이(멈춘 꼴 `Stop`, 덩이 고르기, 러너가 끊김)는 고른 단언의 꼴에서
-# 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-48).
+# 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-48). 티켓 09가 더한 줄 판정의
+# 변이(`drive`의 `watch`, `Stop.HALTED_*`, `CUT_SHORT`)도 같은 길로 골랐다(`README.md`의 변이 절, 일지
+# 2026-10-23-51).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_continue_mutations.toml
 
 [[mutation]]
@@ -208,8 +210,8 @@ expect_output = [
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''    if stop is Stop.HUNG_LEFT or summary.init is None or not summary.results:'''
-new = '''    if stop is Stop.HUNG_LEFT or not summary.results:'''
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING | CUT_SHORT or not summary.results:'''
 
 [[mutation]]
 name = "결과 이벤트 없는 호출을 개입으로 보낸다"
@@ -219,8 +221,8 @@ expect_output = ["kind: '상한으로 끊김' != '측정 아님'"]
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''    if stop is Stop.HUNG_LEFT or summary.init is None or not summary.results:'''
-new = '''    if stop is Stop.HUNG_LEFT:'''
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING | CUT_SHORT:'''
 
 [[mutation]]
 name = "끄지 못한 호출 뒤에도 잇는다"
@@ -230,8 +232,19 @@ expect_output = ["AssertionError: 살아 있는 호출 뒤에 이었다"]
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''    if stop is Stop.HUNG_LEFT or summary.init is None or not summary.results:'''
-new = '''    if summary.init is None or not summary.results:'''
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in CUT_SHORT or summary.init is None or not summary.results:'''
+
+[[mutation]]
+name = "줄 판정이 끈 호출 뒤에도 결과가 있으면 잇는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "줄_판정이_끄라고_한_호출은"]
+expect = "red"
+expect_output = ["AssertionError: 줄 판정이 끄라고 한 호출 뒤에 이었다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING or summary.init is None or not summary.results:'''
 
 [[mutation]]
 name = "멈춰 끈 호출을 시간을 넘긴 호출로 본다"
@@ -299,9 +312,8 @@ expect_output = [
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''            session_id = make_session_id()
-            message = first_message(root, task.ticket, handoff_directive(text or "", task.branch))'''
-new = '''            message = first_message(root, task.ticket, handoff_directive(text or "", task.branch))'''
+old = '''    return make_session_id(), first_message('''
+new = '''    return session_id, first_message('''
 
 [[mutation]]
 name = "인계 세션에 결과 글 전체를 넘긴다"
@@ -311,8 +323,8 @@ expect_output = ["+ 셀프 리뷰 앞에서 끊는다. 아래 지시문을 사�
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''handoff_directive(text or "", task.branch))'''
-new = '''(text or ""))'''
+old = '''root, task.ticket, handoff_directive(text or "", task.branch)'''
+new = '''root, task.ticket, (text or "")'''
 
 [[mutation]]
 name = "첫 줄의 연 저장소가 작업 폴더와 다른 글이다"
@@ -443,8 +455,8 @@ expect_output = ["assert (True and not True)", ").runner_killed"]
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''        runner_killed=any(r.launched.drove.stop is Stop.DEADLINE_KILLED for r in runs),'''
-new = '''        runner_killed=any(r.launched.drove.stop in TIMED_OUT for r in runs),'''
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
+new = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT | TIMED_OUT for r in runs),'''
 
 [[mutation]]
 name = "멈춰 끈 호출도 끈 세션으로 표시한다"
@@ -454,8 +466,8 @@ expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르�
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''        runner_killed=any(r.launched.drove.stop is Stop.DEADLINE_KILLED for r in runs),'''
-new = '''        runner_killed=any(r.launched.drove.stop in {Stop.DEADLINE_KILLED, Stop.HUNG_KILLED} for r in runs),'''
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
+new = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT | {Stop.HUNG_KILLED} for r in runs),'''
 
 [[mutation]]
 name = "마감에 끈 세션에도 끈 표시를 세우지 않는다"
@@ -465,8 +477,19 @@ expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르�
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''        runner_killed=any(r.launched.drove.stop is Stop.DEADLINE_KILLED for r in runs),'''
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
 new = '''        runner_killed=False,'''
+
+[[mutation]]
+name = "줄 판정이 끈 세션에 끈 표시를 세우지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르다", "HALTED_KILLED"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''CUT_SHORT = frozenset({Stop.DEADLINE_KILLED, Stop.HALTED_KILLED})'''
+new = '''CUT_SHORT = frozenset({Stop.DEADLINE_KILLED})'''
 
 [[mutation]]
 name = "호출 칸에 끄지 않은 표시를 옮기지 않는다"
@@ -487,8 +510,42 @@ expect_output = ["AssertionError: 남긴 호출의 칸이 멈춘 꼴과 다르�
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT})'''
-new = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT})'''
+old = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT, Stop.HALTED_LEFT})'''
+new = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HALTED_LEFT})'''
+
+[[mutation]]
+name = "줄 판정이 남긴 호출을 호출 칸에 적지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 남긴 호출의 칸이 멈춘 꼴과 다르다", "HALTED_LEFT"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT, Stop.HALTED_LEFT})'''
+new = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT})'''
+
+[[mutation]]
+name = "줄 판정이 끄라고 한 호출을 멈춘 꼴로 가르지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "그_줄에서_명령_줄의"]
+expect = "red"
+expect_output = ["where <Stop.HUNG_KILLED: 'hung_killed'> = Drove("]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''            stop = halt if halted else _STOPS[timed_out, killing]'''
+new = '''            stop = _STOPS[timed_out, killing]'''
+
+[[mutation]]
+name = "줄 판정이 참이어도 읽기를 멈추지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "마감_전에_그_줄에서"]
+expect = "red"
+timeout = 300  # 시험의 마감 30초를 기다린 뒤 마감 끄기로 빨개진다
+expect_output = ["AssertionError: 줄 판정이 끄라고 한 줄에서 끄지 않았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''                if watch(line):'''
+new = '''                if False:'''
 
 [[mutation]]
 name = "이어 부르는 명령이 새 세션을 연다"

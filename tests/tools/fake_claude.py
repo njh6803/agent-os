@@ -98,17 +98,23 @@ def init_event(
     *,
     tools: Sequence[str] = TOOLS,
     plugins: Sequence[str] = BUILTIN_PLUGINS,
+    extra_plugins: Sequence[Json] = (),
     mcp_servers: Sequence[str] = (),
     model: str = "claude-opus-5-5",
     version: str = "2.1.302",
 ) -> dict[str, Json]:
+    """init 이벤트. `plugins`는 내장 꼴(`<이름>@builtin`)로 짓고, `extra_plugins`는 그대로 붙인다.
+    마켓 플러그인이 init 에 실리는 꼴은 재지 않았다."""
     return {
         "type": "system",
         "subtype": "init",
         "model": model,
         "permissionMode": "auto",
         "mcp_servers": [{"name": n, "status": "connected"} for n in mcp_servers],
-        "plugins": [{"name": p, "path": "builtin", "source": f"{p}@builtin"} for p in plugins],
+        "plugins": [
+            *({"name": p, "path": "builtin", "source": f"{p}@builtin"} for p in plugins),
+            *extra_plugins,
+        ],
         "claude_code_version": version,
         "per_turn_effort_active": True,
         "tools": list(tools),
@@ -124,6 +130,35 @@ def assistant_event(model: str, text: str, *, tool_input: Json = None) -> dict[s
         "parent_tool_use_id": None,
         "message": {"model": model, "id": "msg_1", "role": "assistant", "content": content},
     }
+
+
+def tool_use_event(
+    name: str,
+    tool_input: Mapping[str, Json],
+    *,
+    use_id: str = "toolu_1",
+    parent: str | None = None,
+    model: str = "claude-opus-5-5",
+) -> dict[str, Json]:
+    """도구 호출 하나를 든 assistant 이벤트(`서브-2.jsonl`의 꼴). `parent`가 있으면 서브에이전트의
+    것이다."""
+    return {
+        "type": "assistant",
+        "parent_tool_use_id": parent,
+        "message": {
+            "model": model,
+            "id": f"msg_{use_id}",
+            "role": "assistant",
+            "content": [
+                {"type": "tool_use", "id": use_id, "name": name, "input": dict(tool_input)}
+            ],
+        },
+    }
+
+
+def denial(tool_name: str, use_id: str, tool_input: Mapping[str, Json]) -> dict[str, Json]:
+    """결과 이벤트의 `permission_denials` 하나(`거부.summary.json`의 꼴)."""
+    return {"tool_name": tool_name, "tool_use_id": use_id, "tool_input": dict(tool_input)}
 
 
 def model_usage(
@@ -164,9 +199,11 @@ def result_event(
     terminal_reason: str | None = "completed",
     num_turns: int = 1,
     usage: Mapping[str, Json] | None = None,
+    denials: Sequence[Json] = (),
 ) -> dict[str, Json]:
     """결과 이벤트. `cost`는 그 세션의 누적 비용이다(`--resume`의 결과도 누적을 싣는다).
-    `text`가 빈 값이면 `result` 키를 내지 않는다(`예산.summary.json`의 `error_max_budget_usd`)."""
+    `text`가 빈 값이면 `result` 키를 내지 않는다(`예산.summary.json`의 `error_max_budget_usd`).
+    `denials`는 막는 규칙이 거부한 호출(`denial`)이다."""
     event: dict[str, Json] = {
         "type": "result",
         "subtype": subtype,
@@ -176,7 +213,7 @@ def result_event(
         "total_cost_usd": cost,
         "result_index": index,
         "stop_reason": "end_turn",
-        "permission_denials": [],
+        "permission_denials": list(denials),
         "modelUsage": dict(usage) if usage is not None else {},
     }
     if text is not None:
@@ -292,11 +329,15 @@ def write_script(
     version: str = "2.1.302 (Claude Code)",
     logged_in: bool = True,
     email: str = "njh6803@example.com",
+    config_directory: str | None = None,
 ) -> None:
-    """설정 폴더에 각본을 쓴다."""
+    """설정 폴더에 각본을 쓴다. `config_directory`를 주면 `auth status`가 넘겨받은 설정 폴더 대신 그
+    글을 `configDirectory`로 낸다."""
     auth: dict[str, Json] = {"loggedIn": logged_in}
     if logged_in:
         auth["email"] = email
+    if config_directory is not None:
+        auth["configDirectory"] = config_directory
     script: dict[str, Json] = {
         "version": version,
         "auth": auth,
@@ -443,7 +484,7 @@ def main(argv: list[str]) -> int:
         _out(f"{script.get('version')}\n")
         return 0
     if argv[:2] == ["auth", "status"]:
-        auth = {**_obj(script.get("auth")), "configDirectory": os.environ[CONFIG_DIR_VAR]}
+        auth = {"configDirectory": os.environ[CONFIG_DIR_VAR], **_obj(script.get("auth"))}
         _out(json.dumps(auth, ensure_ascii=False) + "\n")
         return 0 if auth.get("loggedIn") is True else 1
     return _session(argv, config_dir, script)
