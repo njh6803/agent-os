@@ -167,3 +167,26 @@ open-session을 부른다 2026-10-23T00:33:01Z
 - 시작 프롬프트 5행: "상한 셋(계약에는 429 하나이고, 어느 상한인지는 봉투의 `message` 글에만 있다. `.claude/rules/http.md`)"
 - 시작 프롬프트 61행 괄호: "404에는 요청한 에이전트가 없거나 열 에이전트 밖인 것이, 409에는 결정을 받을 수 없는 실행의 상태와 끝나지 않은 앞 실행과 범위 밖의 `Last-Event-ID`가 든다."
 - plan.md 괄호: "명세가 정할 것은 이 자리와 그 README의 제안과 탐색용 가정 목록 전부다."
+
+다시 돌린 명령. 커밋 전에 `uv run ruff check .`("All checks passed!")와 `uv run ruff format --check .`("968 files already formatted")를 손으로 쳤다. 나머지 셋은 커밋 `3e9d80ba`의 pre-commit으로 갈음했다. `checks`(744초)의 lint-imports·zizmor·check-ticket·check-instructions·check-type-escapes·pyright·pyright-linux·run-hooks·web-verify·pytest가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. 인용 대조는 경고 10건을 냈다. README의 둘(재접속 띠와 첫 화면의 문구)은 `mk-reconnect.dc.html` 97행과 `mk-conversation.dc.html` 30행에 글자 그대로 있어, 검사가 `.html`을 대조하지 않는 데서 난 것이다. 일지의 여덟은 사용자에게 보인 질문, 바깥 문서의 영어 원문, 이번에 고친 README의 옛 문장을 기록으로 옮긴 것이라 저장소에 없는 것이 맞다.
+
+스테이지할 때 git이 `mk-*.dc.html` 여덟의 CRLF를 LF로 바꾼다고 알렸고 `canvas.json`에는 알리지 않았다(`.gitattributes`의 `text=auto eol=lf`). 작업 트리는 그대로다. 웹 편집 확인은 sha256이 다르면 CRLF를 LF로 바꿔 `diff`로 맞대므로(`.claude/skills/ui-design/SKILL.md` 32행) 다음 세션의 확인은 여덟 파일에서 그 갈래로 간다. 같은 스킬 44행이 모른다고 적은 "Design 아티팩트 파일의 줄바꿈"은, 이번 `.dc.html`에서는 CRLF였다. 작업 트리의 `mk-approval.dc.html`과 `mk-themes.dc.html`을 `file`이 "with CRLF line terminators"로 냈고 `canvas.json`은 "JSON data"뿐이었으며(나머지 여섯은 위 git 경고로 갈음했다), 작업 트리는 받은 결과 머리의 sha256과 같았다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI는 돌지 못해, 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 그 전에 origin/main(`750761b9`, #365까지)을 합쳤다(병합 커밋 `74be9eb0`, 충돌 없음). 들어온 것은 하네스(인용 대조, 프로브 결론 훅, 훅 보고, 판정자 임시 트리)와 model-rerun 01·02이고, 이 브랜치가 따르는 `docs/agents/issue-tracker.md`는 앞서 본 판(`c3c2cfcf`) 뒤로 바뀌지 않았다. 따라야 할 새 규약은 없었다.
+
+- 보안(`/security-review`, 서브태스크 하나): 발견 없음. 목업 파일을 불러오거나 서빙하는 코드·워크플로가 없고(`items.py`의 주석 둘만 기능 이름으로 걸렸다), 화면 파일의 외부 스크립트는 상대 경로 둘(`./support.js`, `ds/agent-os/_ds_bundle.js`)뿐이며 이벤트 핸들러·`javascript:`·`iframe`이 없다. 비밀값 꼴과 숨은 글자, 숨은 지시문 꼴은 0건이었다. 거짓 양성 거르기는 거를 것이 없어 돌지 않았다.
+- 버그·성능(`bug-perf-review`, 기준 `750761b9`, 파일 14, 호출 40에서 멈춤): 유효 Minor 3, 보류 0, 오탐·무시 4. 밀 주장 열하나 가운데 어긋난 문장은 없었다.
+  - Minor 1. "상한의 종류와 범위"가 시간당 실행도 주체별·사이트별 둘이라 시간당 문구("한 시간에 보낼 수 있는 요청을 다 썼습니다.")가 사이트별 상한에서 틀린다는 것을 빠뜨렸다. → 고침. `limits.py`의 `_refusal`(169~184행)이 시간당도 두 범위를 차례로 보는 것을 열어 확인했다. 근거를 그 함수로 바꿨다.
+  - Minor 2. "알림의 제목"이 화면의 알림형 요소를 다 말하지 못한다. 입력창 위 띠 여덟은 `Alert`가 아니라 손으로 엮은 `<div role="status">`다. → 고침. 화면 파일에서 `AgentOsUi.Alert`가 실패 3, 거절 4, 재접속 1이고 `role="status"` 띠가 재접속 2, 상한 3, 승인 묻기 3인 것, 띠 하나만 `Progress`이고 나머지가 아이콘과 글자인 것, `web/packages/ui/src/components`에 띠 부품이 없는 것, `Alert.tsx` 54행의 카드 클래스를 확인했다. "알림의 제목"을 끝내지 못함 알림으로 좁히고 "입력창 위의 띠" 항목을 더했다.
+  - Minor 3. "화면대로면 지나간 결정에도 …"는 그린 화면이 아니라 추론이고, 결정의 거절을 그린 화면이 없다는 것이 명세 거리로 적혀 있지 않다. → 고침. 거절·상한 화면에 승인·거부가 한 번도 나오지 않는 것(실패 화면의 하나는 실패 원인 문구)과 거절 화면 다섯 모습의 글을 확인했다. 그 문장을 "시작 프롬프트의 거절 줄과 그 줄대로 그린 거절 화면을 따르면"으로 고치고 "결정의 거절" 항목을 더했다. 시작 프롬프트 61행의 괄호와 plan.md 괄호도 새 두 항목을 가리키게 넓혔다.
+  - 오탐·무시: `UnfinishedItem` 인용의 생략, plan.md 괄호의 두 목록 합치기, 반투명 틴트와 유리 효과의 구별, `./support.js` 서술. 넷 다 리뷰가 스스로 실해가 없다고 했고 근거를 보니 그렇다.
+  - 따라가지 못한 것: 시작 프롬프트 23~27행의 외부 링크, 4.8절의 "요청:"·"출력:" 머리말, 충돌 목록 첫 열(플러그인 본문이 저장소에 없다), 일지의 아티팩트 판 id·파일 수, `Progress`의 `label`, `mk-conversation`·`mk-dark`·`mk-themes`의 본문.
+
+PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(뒤에 PR 봇이 겨냥할 수 있게 원문으로 둔다):
+
+- README "입력창 위의 띠": "연결이 끊긴 일, 상한, 승인을 기다리는 동안의 안내를 입력창 바로 위에 띄우는 띠 여덟(재접속 둘, 상한 셋, 승인 묻기 셋)은 알림 부품이 아니라 손으로 엮은 `<div role="status">`다. 일곱은 아이콘과 글자이고 재접속의 하나는 진행 표시 부품(`Progress`)이며, 모두 위 테두리 한 줄만 둔다. 디자인 시스템에는 띠 모양의 부품이 없고(`web/packages/ui/src/components`), 알림 부품은 둥근 모서리와 네 변 테두리와 올린 바탕을 가진 카드다(`Alert.tsx`의 `rounded-l border bg-bg-raised`)."
+- README "결정의 거절": "결정을 보낸 뒤 거절되는 모습은 어느 화면에도 없다. 거절 화면과 상한 화면은 모두 시작이나 이어 가기의 요청 글이 대화나 입력창에 남는 모습이다. 결정 경로도 401·404·409·429·500을 내고, 결정도 동시 실행의 칸을 차지하고 시간당 셈에 들어 429를 받을 수 있다"
+- README "상한의 종류와 범위": "동시 실행 상한은 주체별·사이트별·전역 셋, 시간당 실행 상한은 주체별·사이트별 둘이고, 봉투는 그 가운데 어느 것인지 말하지 않는다(`src/agent_os/channel/http/limits.py`의 `_refusal`)." "시간당 문구("한 시간에 보낼 수 있는 요청을 다 썼습니다.")는 사이트별 상한에 걸렸을 때 맞지 않는다."
+- 시작 프롬프트 61행 괄호: "결정의 거절은 이 줄에 들지만 그리지 않았다."
