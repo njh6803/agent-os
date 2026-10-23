@@ -113,6 +113,59 @@ base `8a026f3c`(HEAD 와 같다), 바뀐 추적 파일 26, 커밋 0, 미추적 4
   - 빨간 시험은 `decision.e2e.ts:12`("멈춘 실행을 허가하면…")의 39행이었다. 허가 뒤 5초 안에 이벤트 영역에 `run_finished` 가 붙지 않았다. 남은 임시 폴더의 트레이스에서는 서버가 실행을 끝냈다(`approval_granted` 13:38:54.93, `run_resumed` +2.75초, `tool_called` +0.25초, `run_finished` +2.03초). 허가부터 끝까지가 약 5초라, 서버가 끝낸 뒤 화면이 트레이스를 다시 읽기 전에 창이 닫혔다. 재실행의 다른 두 시험에서는 그 간격이 3.27·3.81초였고, 13:21에 만들어진 다른 e2e 임시 폴더(전체 묶음의 실행 넷이 들었다. 누가 돌렸는지는 가르지 않았다)에서는 4.25~4.63초였다.
   - 가설 넷(PC 부하, 부하와 무관한 윈도의 재개 비용, 이 브랜치의 `themes.ts` 가 화면의 스트림 끝 처리를 깸, 중계가 스트림의 끝을 붙잡음)을 세웠다. 39행의 기다림만 표지를 단 임시 변경으로 20초로 늘리자 7.1초에 초록이었고 서버 로그에 허가 뒤 트레이스 다시 읽기가 찍혀, 셋째와 넷째가 반박됐다. 되돌린 원래 시험도 다음 실행에서 6.5초에 초록이라, 같은 코드에서 결과가 부하에 따라 갈린다(첫째). 빨간 두 번 가운데 첫째는 내가 `sibling_overlap --move` 를 함께 돌린 때였고, 둘째 때의 부하는 재지 않았다. 임시 변경은 되돌렸고(`git diff` 빔, 표지 grep 0), 내 실행이 남긴 임시 폴더는 지웠다.
 
+## 커밋
+
+- 27faaf12. pre-commit 모두 Passed(pytest 563.4초, web-verify 395.5초, run-hooks 197.7초, pyright 56.1초, 변이 표 원문 확인·카나리아 모양·헌법 판 Passed).
+- 인용 대조의 경고 셋은 막지 않는 경고이고 고칠 것이 없다. 헌법 README 11행의 인용은 이 커밋 전부터 있던 문장이다(`git show HEAD~1:` 에서 1건). 이 일지 58행은 고치기 전 `themes.ts` 주석의 인용이라 지금 저장소에 없고, 86행은 `loopback.ts` 에서 줄바꿈으로 갈린 문장이다.
+- git 이 헌법 README 를 `rewrite (96%)` 로 찍었지만 바뀐 줄은 하나다(`git diff --stat` 과 `--ignore-cr-at-eol` 둘 다 1줄). 줄이 적고 긴 파일이라 그렇게 센다.
+- 커밋 전에 main 의 CI(07c890c, 실행 39959108868)에서 `python` 잡이 빨간 것을 봤다. model-rerun 08이 더한 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 가 리눅스에서 `assert argv is not None` 으로 실패했다. 이 브랜치와 무관하고, origin/main 을 합치면 이 PR 의 CI 도 그 자리에서 빨갤 수 있다. 고칠 세션의 제안 카드는 저장소의 훅이 막아(ADR 0037 "세션 카드") 아래 "다음"에 적었다.
+
+## 인계
+
+- 커밋 뒤 경계에서 컨텍스트 288,880 토큰으로 인계 계기가 왔다. 요청 범위가 병합까지이고, 곁 세션이 아니라서(`get_session` 의 `self` 에 `parentSessionId` 가 없다) 넘긴다.
+- 이 세션의 제목: `feature/03-widget-app-skeleton`.
+- 회고와 다음은 커밋 전에 썼다. PR 직전 리뷰와 봇 회차에서 나온 후보는 새 세션이 `## 회고 (…)` 로 더하고 "다음"을 고친다.
+- PR 본문은 PR 템플릿을 따른다. "왜 이렇게 했나"는 티켓의 "이 티켓이 정한 것"과 위 결정 절, "남긴 위험"은 커밋 27faaf12 본문과 위 결정 절의 `WideDark`, 체크리스트는 위 검사 절이 원천이다. 변경된 영역에는 `src/agent_os/main.py`(루프백 목록 위 주석)도 든다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/03-widget-app-skeleton.md. `web/apps/widget` 앱을 세워 `/widget` iframe 페이지가 첫 화면을 사이트가 고른 테마로 그리게 하고 위젯의 Storybook과 사진 비교를 세운다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/03-widget-app-skeleton.md
+브랜치: feature/03-widget-app-skeleton
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-50-widget-app-skeleton.md 의 "인계" 절
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰 반영, 검사, 회고까지 마치고 27faaf12로 커밋했다(푸시하지 않았고 PR은 없다). 그 뒤에 쓴 일지의 커밋·인계 절과 "다음"의 main CI 줄은 커밋하지 않았다. 남은 것은 차례로 origin/main 합치기(ccd_host sync_with_base_branch. 충돌 후보는 .scratch/retro-queue.md, tools/tidy_checkouts.py, tests/tools/test_tidy_checkouts.py), PR 직전 리뷰(coderabbit auth status, 안 되면 /security-review와 bug-perf-review. 밀 주장은 일지 "반영" 절의 1~13), 그 보고와 반영을 일지에 옮기기, PR 열기, 봇 회차, 병합(워크트리에서 병합할 때)이다. docs/journal/2026-10-23-50-widget-app-skeleton.md
+확인할 선행 조건: main의 CI python 잡이 07c890c에서 tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다 로 빨갛다(리눅스만, 이 브랜치와 무관). 합친 뒤 이 PR의 CI도 그 자리에서 빨갤 수 있다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/03-widget-app-skeleton (인계함)` 으로 바꿨다. 띄워 둔 백그라운드 작업은 모두 끝나 있었고, 워크트리 잠금을 풀었다(`git worktree unlock C:/project/agent/.claude/worktrees/03-widget-app-skeleton`, 오류 없음). 이 절의 인계 뒤 줄들은 커밋하지 않았다.
+- open-session을 부른다 2026-10-23T14:02:36Z
+
+## 이어받은 세션 (커밋 뒤)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/03-widget-app-skeleton.md
+>
+> (이어지는 지시문은 위 "인계 지시문"과 같다)
+
+- 제목을 `feature/03-widget-app-skeleton` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다(잠금은 앞 세션이 풀어 두었다).
+- origin/main 합치기: `sync_with_base_branch` 는 앱이 만든 워크트리가 아니라며 거절했다. 그 도구가 미커밋 변경도 거절하므로 일지의 미커밋 33줄을 스크래치 패치로 빼고 파일을 되돌린 뒤, `git fetch origin` 과 `git merge --no-edit origin/main` 으로 #371·#372·#374 를 합쳤다. 충돌은 `.scratch/retro-queue.md` 끝 하나였다(main 의 449~452 와 이 브랜치의 455). main 의 행 뒤에 455 를 두었다. `tools/tidy_checkouts.py` 와 그 시험은 자동으로 합쳐졌고, 이 브랜치의 몫(위젯의 두 자리)이 남은 것을 `git diff --cached origin/main` 으로 봤다. `tools/sibling_overlap.py` 는 번호 겹침 없음. 병합 커밋 3bf4baae 의 pre-commit 은 모두 Passed(pytest 452.9초, web-verify 282.5초. 헌법 판과 카나리아 모양은 볼 파일이 없어 Skipped). 그 뒤 패치를 `git apply` 로 되살렸다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status` 가 `Seat: not assigned` 라 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 신뢰도 8 이상의 HIGH·MEDIUM 없음. 식별 서브태스크가 따라간 길은 질의 값이 DOM 에 닿는 길(텍스트 자식, 목록을 지난 `data-*`), `next.config.ts` 의 `/:path*` 가 `basePath` 아래 경로에 맞는지(설치본 path-to-regexp 로 돌려 봤다), 시작 래퍼의 루프백 판정, 컨테이너의 bind·링크와 셸 인자, CI 의 권한이다. 후보가 없어 거짓 양성 거르기는 돌지 않았다.
+- `bug-perf-review`(기준 07c890c5, 75 파일, 호출 40): Minor 넷(유효 2, 보류 2), 오탐 5. 밀 주장 13 가운데 어긋난 것은 7의 이유 문장과 1의 공백 경계였다.
+  1. 유효, 고쳤다: `embed.ts` 가 공백만 든 `heading`·`intro` 를 준 값으로 읽어(`heading=%20`) 위쪽 띠가 빈 이름으로 섰다. 머리 주석의 까닭("보일 것이 없기 때문이다")이 공백에도 맞는다. 시험 "공백만 든 이름과 할 수 있는 일도…"를 먼저 더해 빨강(`"heading": " ",`)을 보고, `value?.trim() === ""` 로 고쳐 18 이 지났다. 변이 표의 빈 값 변이(4)의 원문을 고치고 공백 변이(5)를 더해 둘을 돌렸고 모두 기대대로였다. 프로브 README 의 수를 33 으로 고쳤다.
+  2. 유효, 고쳤다: `Entrypoints.stories.tsx` 머리가 `./visual` 을 못 부르는 까닭을 `@playwright/test` 로 적었는데, `visual/index.ts` 는 그것을 타입으로만 들이고 브라우저에서 못 도는 까닭은 `node:fs` 다. 위 "반영" 7의 문장을 그렇게 고쳤다.
+  3. 보류, 재고 두었다: 시작 래퍼가 `dev`·`build` 마다 글꼴을 모두 다시 복사한다. 스크래치 `time_copy_fonts.ts` 로 `copyFonts` 를 세 번 불러 보니 386 파일에 385·308·342ms 였다(손으로 봤다). `next dev` 가 서는 시간에 비해 작아 건너뛰기를 더하지 않는다.
+  4. 보류, 대 봤다: "반영" 6의 `themes.ts` 주석. `tsconfig.build.json` 이 `tsconfig.json` 을 이어받아 `rewriteRelativeImportExtensions` 가 켜지고, 이 워크트리의 `dist/themes.js` 는 `./styles/contrast.js`, `dist/themes.d.ts` 는 `./styles/contrast.ts` 를 든다(손으로 봤다). 주석과 맞는다.
+  - 오탐: 글꼴 원본이 없을 때(의도한 실패), 대상 폴더가 있을 때(덮어쓰기, 머리 주석에 있다), `visual.ts` 경로 가드, 위젯 정적 빌드가 실패한 뒤의 비교 단계, CI 위젯 단계의 `if`(설치 실패·건너뜀이면 돌지 않는다). 13의 주석이 거부하는 조각을 `node_modules` 로 읽힐 수 있다는 것은 리뷰도 영향이 없다고 했고, 주석은 경로가 놓인 자리를 말할 뿐이라 남긴다.
+
 ## 회고
 
 후보 여섯. 승인 2(기존 행의 회차 1, 새 행 1), 기각 2, 일지에만 2. 넘긴 것은 없다.
@@ -132,4 +185,5 @@ base `8a026f3c`(HEAD 와 같다), 바뀐 추적 파일 26, 커밋 0, 미추적 4
 - 01(계약)은 나란히 도는 세션이 한다. 02는 01을, 05는 01과 04를 기다린다. 06은 02와 05를, 07·10·11은 06을 기다린다. `frame-ancestors` 의 e2e 는 06이, 글꼴 응답의 `Access-Control-Allow-Origin` e2e 는 10이 든다.
 - 루프백 목록은 세 벌이다(`src/agent_os/main.py`, `web/apps/admin/tools/loopback.ts`, `web/apps/widget/tools/start.ts`). 바꾸면 셋을 함께 고친다. 세 자리 모두에 적었다.
 - `sibling_overlap` 이 든 01 워크트리와의 글자 충돌 후보(`.scratch/web-widget/probes/README.md`, `README.md`)는 나중에 병합하는 쪽이 푼다.
+- main 의 CI `python` 잡이 07c890c 에서 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 로 빨갛다(실행 39959108868, 리눅스만, model-rerun 08이 더한 시험). 이 커밋 때 그 일을 맡은 세션은 보이지 않았다. 리눅스에서 재현 루프를 세워 원인을 가른 뒤 고친다.
 - 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.

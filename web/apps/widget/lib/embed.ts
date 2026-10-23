@@ -6,8 +6,8 @@
 //   못한다. 패턴은 계약의 실행 시작 본문과 같다(embed.test.ts 가 openapi.json 과 맞댄다).
 // - `theme` 과 `mode` 가 목록 밖이면 기본값으로 그린다. 위젯은 그대로 쓸 수 있기 때문이다. 모드가 null 이면 시스템
 //   설정을 따른다.
-// - 보일 글인 `heading`·`intro` 의 빈 값은 주지 않은 것으로 읽는다. 보일 것이 없기 때문이다. `agent`·`theme`·`mode` 의
-//   빈 값은 준 값이라 패턴·목록 밖으로 본다(명세의 "없으면"은 주지 않은 것이다).
+// - 보일 글인 `heading`·`intro` 의 빈 값과 공백만 든 값은 주지 않은 것으로 읽는다. 보일 것이 없기 때문이다.
+//   `agent`·`theme`·`mode` 의 빈 값은 준 값이라 패턴·목록 밖으로 본다(명세의 "없으면"은 주지 않은 것이다).
 
 import { DEFAULT_THEME, MODES, THEMES, type Mode, type ThemeKey } from "@agent-os/ui";
 
@@ -48,7 +48,7 @@ export function readEmbed(read: (name: EmbedName) => string | null): {
 } {
   const shown = (name: "heading" | "intro"): string | null => {
     const value = read(name);
-    return value === "" ? null : value;
+    return value?.trim() === "" ? null : value;
   };
   const problems: EmbedProblem[] = [];
 

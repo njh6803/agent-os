@@ -85,10 +85,27 @@ expect_output = ['"intro": "",']
 [[mutation.edit]]
 file = "web/apps/widget/lib/embed.ts"
 old = '''
-    return value === "" ? null : value;
+    return value?.trim() === "" ? null : value;
 '''
 new = '''
     return value;
+'''
+
+# PR 직전 bug-perf-review 가 공백만 든 값이 준 값으로 지나는 것을 짚어 더했다(일지 2026-10-23-50 "PR 직전 리뷰").
+[[mutation]]
+name = "공백만 든 보일 글을 준 값으로 읽으면 공백 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "공백만 든"]
+expect = "red"
+expect_output = ['"heading": " ",']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+    return value?.trim() === "" ? null : value;
+'''
+new = '''
+    return value === "" ? null : value;
 '''
 
 [[mutation]]

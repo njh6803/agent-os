@@ -54,6 +54,19 @@ test("보일 글인 이름과 할 수 있는 일의 빈 값은 주지 않은 것
   });
 });
 
+test("공백만 든 이름과 할 수 있는 일도 보일 것이 없어 주지 않은 것으로 읽는다", () => {
+  expect(fromQuery("agent=order-helper&heading=+&intro=%20%09")).toEqual({
+    embed: {
+      agent: "order-helper",
+      heading: "order-helper",
+      intro: null,
+      theme: "nokcheong",
+      mode: null,
+    },
+    problems: [],
+  });
+});
+
 test("빈 테마와 빈 모드는 목록 밖이라 기본값으로 그리고 문제가 둘을 든다", () => {
   const { embed, problems } = fromQuery("agent=order-helper&theme=&mode=");
   expect(embed.theme).toBe("nokcheong");
