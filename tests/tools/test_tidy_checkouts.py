@@ -36,6 +36,7 @@ from tools.tidy_checkouts import (
     Worktree,
     blob_ids,
     combine_holders,
+    cut_links,
     cwd_holders,
     delete_path,
     describe_holders,
@@ -999,6 +1000,62 @@ def test_휴지통_지우기는_링크_자체만_지운다(tmp_path: Path) -> No
     delete_path(tmp_path / "node_modules")
     assert not os.path.lexists(tmp_path / "node_modules")
     assert (outside / "keep.txt").exists()
+
+
+def test_링크_끊기는_안의_링크만_끊고_바깥과_안의_파일은_둔다(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("남는다", encoding="utf-8")
+    folder = tmp_path / "worktree"
+    (folder / "deep" / "deeper").mkdir(parents=True)
+    (folder / "deep" / "own.txt").write_text("안", encoding="utf-8")
+    _link(folder / ".venv", outside)
+    _link(folder / "deep" / "deeper" / "link", outside)
+    assert cut_links(folder) == []
+    assert not os.path.lexists(folder / ".venv")
+    assert not os.path.lexists(folder / "deep" / "deeper" / "link")
+    assert (folder / "deep" / "own.txt").read_text(encoding="utf-8") == "안"
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "남는다"
+    # 문자열 경로도 같다
+    _link(folder / "again", outside)
+    assert cut_links(str(folder)) == []
+    assert not os.path.lexists(folder / "again")
+
+
+def test_링크_끊기는_읽지_못한_폴더와_끊지_못한_링크를_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert cut_links(tmp_path / "없음") == [str(tmp_path / "없음")]
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    folder = tmp_path / "worktree"
+    folder.mkdir()
+    _link(folder / "stuck", outside)
+    진짜_unlink = os.unlink
+
+    def 막는_unlink(path: str, *, dir_fd: int | None = None) -> None:
+        if os.path.basename(path) == "stuck":
+            raise PermissionError(path)
+        진짜_unlink(path, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "unlink", 막는_unlink)
+    assert cut_links(folder) == [str(folder / "stuck")]
+
+
+def test_링크_끊기는_뿌리가_링크면_따라가지_않고_그_뿌리를_준다(tmp_path: Path) -> None:
+    """뿌리 자체가 링크면 그 링크가 가리키는 트리 안의 링크를 끊지 않는다(티켓 07의 커밋 전 반박
+    검증에서, 링크로 바뀐 게이트 작업 트리 자리를 따라가 바깥 트리의 링크를 모두 끊었다)."""
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    _link(outside / "inner", elsewhere)
+    root = tmp_path / "worktree"
+    _link(root, outside)
+
+    assert cut_links(root) == [str(root)]
+    assert os.path.islink(outside / "inner") or os.path.isjunction(outside / "inner")
+    assert os.path.islink(root) or os.path.isjunction(root)
 
 
 def test_휴지통_지우기는_읽기_전용_파일도_지운다(tmp_path: Path) -> None:

@@ -60,3 +60,11 @@
 - 번호를 잡은 자리에서 `create_round_dir(root, task_id, arm, round_no)`만 차례로 부르고, `prepare_round`는 회차마다 따로 돈다.
 - 사람이 부르는 지우기는 `python -m tools.rerun_round remove <뿌리> [--records <폴더>]`이고, `records/`의 기본값은 그 모듈의 `RECORDS`다. 이 티켓의 `records/` 기본값 상수와 한 곳에 두도록 맞춘다.
 - 다시 뜬 러너가 찾는 "표지는 있는데 `records/`에 기록이 없는 회차 폴더"는 04의 지우기가 `no_record`로 가르는 판정(`_is_round_dir`, `_recorded`)과 같다. 그 판정을 공개 함수로 꺼내 함께 쓴다.
+
+### 07에서 넘어온 메모
+
+- 끝남인 회차에서 `check_result(place, source=<원본 저장소>, commit=<결과 커밋 40자>, task=<과제>, env=<세션과 같은 허용 목록 환경>, out=<알림>)`를 부른다(`tools/rerun_gates.py`). 환경은 04의 `session_env`처럼 러너의 전체 환경이 아니어야 한다. 결과 커밋과 클론의 `.git`은 세션이 쓴 것이라 그 안의 게이트 스크립트, git 훅과 필터, `conftest.py`가 이 환경으로 돌기 때문이다(그 모듈 독스트링 "자식 환경"). 돌려받는 `Checked`의 `setup_failure`·`gates`·`hidden`을 01의 결과 칸에 옮긴다. 준비가 실패하면 `gates`와 `hidden`이 빈 값이고, 게이트가 하나라도 0으로 끝나지 않으면 `hidden`이 빈 값이다.
+- `GateError`는 결과 칸에 옮길 것이 없는 길이다. 결과 커밋이 40자 해시가 아니거나, 넘긴 환경에서 git을 찾지 못했거나, 원본에서 M의 파일을 읽지 못했거나, 게이트 작업 트리 자리(`<회차 폴더>/gate`)가 이미 있거나, `git worktree add`가 실패했거나, 앞선 junit xml을 지우지 못한 때다. 이것을 측정 아님으로 적을지 그 회차의 실패로 적을지 이 티켓이 정한다. `git worktree add`의 실패는 세션의 커밋 탓(윈도에서 쓸 수 없는 이름, 세션이 바꾼 필터)일 수 있다(그 모듈 독스트링의 못 보는 것). `check_result`는 회차 폴더에 로그를 쓰지 못하면 `GateError`가 아니라 `OSError`를 그대로 올린다. 이것도 결과 칸에 옮길 것이 없는 길이다.
+- 게이트 작업 트리를 다 걷지 못하면 `check_result`는 결과를 그대로 돌려주고 `out`으로만 알린다. 남은 `gate` 폴더는 04의 지우기가 회차 폴더째 지울 때 함께 걷힌다(그 지우기도 링크를 먼저 끊는다).
+- 공식 단가는 세션마다 `session_cost(<본 세션 기록 파일>, <그 세션의 마지막 modelUsage>)`로 셈하고, 회차는 그 셈들을 `round_cost`로 더한다(`tools/rerun_cost.py`). 기록 파일을 세션 id로 찾는 것은 부르는 쪽이다. 끈 호출이나 결과 이벤트 없이 끝난 호출이 든 세션의 비용 칸에 그 세션의 셈을 대신 넣는다. 단가가 없는 모델과 모델이 없는 응답은 `PriceError`다. 본 세션 기록 파일이 없으면 `FileNotFoundError`다. 대신 넣으려는 세션이 바로 그런 세션(기록 파일을 쓰기 전에 끈 호출)일 수 있어, 그때 비용 칸에 무엇을 적을지 이 티켓이 정한다.
+- 로그는 회차 폴더의 `gate-git.log`(꺼내기와 걷기의 git), `gate-setup.log`(결과 작업 트리의 준비), `gate.log`(게이트 셋), `hidden.log`(덮기와 숨은 시험), `hidden.xml`(숨은 시험의 junit)이다.

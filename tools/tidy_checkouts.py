@@ -972,6 +972,41 @@ def delete_path(path: Path) -> None:
             _writable_retry(os.unlink, target, error)
 
 
+def cut_links(folder: str | os.PathLike[str]) -> list[str]:
+    """`folder` 아래의 심볼릭 링크와 junction 을 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더를
+    준다. 링크 안으로는 내려가지 않는다. `folder` 자체가 링크면 아무것도 끊지 않고 그것을 준다.
+
+    git 2.32 의 `git worktree remove --force` 는 꺼낸 자리 안의 junction 을 따라가 그 바깥 폴더의
+    파일까지 지웠다(일지 2026-10-15-19). 그래서 작업 트리나 회차 폴더를 걷기 전에 부른다. 윈도의
+    junction 도 `os.unlink` 가 링크만 지운다. 뿌리가 링크일 때 따라가면 그 링크가 가리키는 바깥
+    트리의 링크를 모두 끊는다(티켓 07의 커밋 전 반박 검증이 링크로 바뀐 게이트 작업 트리 자리로
+    재현했다). 다시 풀기의 도구들(`tools/rerun_round.py`, `tools/rerun_hidden.py`,
+    `tools/rerun_gates.py`)이 함께 쓴다. `tools/canary.py` 는 경로로 띄우는 스크립트라 `tools`
+    패키지를 가져오지 못해 같은 길의 사본(`_cut_links`)을 따로 둔다.
+    """
+    root = os.fspath(folder)
+    if os.path.islink(root) or os.path.isjunction(root):
+        return [root]
+    left: list[str] = []
+    pending = [root]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError:
+            left.append(current)
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                try:
+                    os.unlink(entry.path)
+                except OSError:
+                    left.append(entry.path)
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(entry.path)
+    return left
+
+
 @dataclass(frozen=True)
 class Ops:
     """바깥을 부르는 자리. 테스트가 실패를 넣는다."""

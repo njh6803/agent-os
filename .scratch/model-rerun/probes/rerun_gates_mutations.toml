@@ -1,0 +1,514 @@
+# 티켓 07(게이트와 숨은 시험, `tools/rerun_gates.py`)의 시험이 실제로 무는지 변이로 본다(implement
+# 스킬, 대기열 29). 이 티켓의 게이트 시험은 구현 전에 모듈이 없어 수집 오류로만 빨갰고, 갈림 하나하나는
+# 빨강을 본 적이 없다. 티켓이 든 대상(결과 커밋만 보기, 게이트 셋과 그 몫, 시간 넘김, 숨은 시험의 셈과
+# 시간 넘김, 덮기와 그 자리의 링크, 걷기와 링크 끊기, 자식 환경, 준비 실패)과 함께, 이 티켓이 고친 둘
+# (회차 기록의 끝난 꼴 두 칸 `tools/rerun_files.py`의 `_check_end`, 04의 `SetupFailed` 불변식)과 모은
+# 링크 끊기(`tools/tidy_checkouts.py`의 `cut_links`)를 하나씩 되돌린다. 표지는 고른 단언이 실패할 때만
+# 나오는 문구다(`.claude/rules/probes.md` 첫 항목).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_gates_mutations.toml
+
+[[mutation]]
+name = "게이트를 세션이 일한 클론에서 돈다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "결과_커밋만"]
+expect = "red"
+expect_output = ["exit_code=1, timed_out=False) != Gate("]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        gate_results = _gates(worktree, gates, clean, place.path / _GATE_LOG, limits.gates)'''
+new = '''        gate_results = _gates(place.clone, gates, clean, place.path / _GATE_LOG, limits.gates)'''
+
+[[mutation]]
+name = "숨은 시험을 세션이 일한 클론에서 돈다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "결과_커밋만"]
+expect = "red"
+expect_output = ["assert Hidden(passed=0, total=5,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            hidden = _hidden(
+                worktree,'''
+new = '''            hidden = _hidden(
+                place.clone,'''
+
+[[mutation]]
+name = "게이트 전에 숨은 시험 파일을 덮는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "결과_커밋만"]
+expect = "red"
+expect_output = ["At index 1 diff"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            gate_results = _gates(worktree, gates, clean, place.path / _GATE_LOG, limits.gates)'''
+new = '''            _overlay(worktree, blobs)
+            gate_results = _gates(worktree, gates, clean, place.path / _GATE_LOG, limits.gates)'''
+
+[[mutation]]
+name = "시험 지원 파일을 덮지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "결과_커밋만"]
+expect = "red"
+expect_output = ["assert Hidden(passed=2, total=5,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    files = dict.fromkeys((*hidden_test_files(task), *task.support_files))'''
+new = '''    files = dict.fromkeys(hidden_test_files(task))'''
+
+[[mutation]]
+name = "앞 게이트가 실패하면 남은 게이트를 돌지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_하나가_0이_아니어도"]
+expect = "red"
+expect_output = ["Right contains one more item: (0, False)"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        done.append(Gate(command=" ".join(argv), exit_code=code, timed_out=timed_out))
+    return tuple(done)'''
+new = '''        done.append(Gate(command=" ".join(argv), exit_code=code, timed_out=timed_out))
+        if code != 0:
+            break
+    return tuple(done)'''
+
+[[mutation]]
+name = "게이트마다 몫을 통째로 준다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_몫의"]
+expect = "red"
+expect_output = ["exit_code=0, timed_out=False) != Gate("]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        code, timed_out = _run(argv, worktree, env, log, deadline - time.monotonic())'''
+new = '''        code, timed_out = _run(argv, worktree, env, log, budget)'''
+
+[[mutation]]
+name = "시간을 넘긴 명령을 시간 넘김으로 적지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_몫의"]
+expect = "red"
+expect_output = ["timed_out=False) != Gate(command="]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            return None, True'''
+new = '''            return None, False'''
+
+# 윈도에서만 빨갛다. 손자가 작업 트리를 작업 디렉터리로 쥐어 걷지 못한다. 리눅스는 쥔 폴더도 지운다.
+[[mutation]]
+name = "시간을 넘긴 명령의 자식만 끄고 손자는 남긴다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_몫의"]
+expect = "red"
+expect_output = ["게이트 작업 트리를 다 걷지 못했다"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            kill_tree(process)'''
+new = '''            process.kill()
+            process.wait(timeout=30)'''
+
+[[mutation]]
+name = "숨은 시험이 시간을 넘겨도 xml 을 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "다_쓴_뒤에"]
+expect = "red"
+expect_output = ["assert Hidden(passed=5, total=5, failed=()) == Hidden(passed=0,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if timed_out:
+        return count_hidden(None, nodes)'''
+new = '''    if False:
+        return count_hidden(None, nodes)'''
+
+[[mutation]]
+name = "앞선 junit xml 을 지우지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "앞선_junit_xml은"]
+expect = "red"
+expect_output = ["assert Hidden(passed=1, total=5,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        xml.unlink(missing_ok=True)'''
+new = '''        xml.exists()'''
+
+[[mutation]]
+name = "덮을 자리의 링크를 보지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "덮을_자리가"]
+expect = "red"
+expect_output = ["At index 0 diff: 'conftest.py' != 'keep.txt'"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        target = overlay_target(worktree, rel)'''
+new = '''        target = worktree / rel'''
+
+[[mutation]]
+name = "걷기 전에 링크를 끊지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "작업_트리_안의_링크는"]
+expect = "red"
+expect_output = ["FileNotFoundError"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    left = cut_links(worktree) if os.path.lexists(worktree) else []'''
+new = '''    left: list[str] = []'''
+
+[[mutation]]
+name = "끊지 못한 링크가 남아도 걷는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "링크를_끊지_못하면"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        left += cut_links(admin)
+    if left:'''
+new = '''        left += cut_links(admin)
+    if False:'''
+
+[[mutation]]
+name = "작업 트리를 걷지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "결과_커밋만"]
+expect = "red"
+expect_output = ["AssertionError: 게이트 작업 트리 폴더가 남았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if not os.path.lexists(worktree) and git.registration(clone, worktree) is Registration.ABSENT:
+        return'''
+new = '''    if True:
+        return'''
+
+# 커밋 전 반박 검증이 재현한 두 길(일지 2026-10-23의 티켓 07). 클론의 관리 폴더 안의 링크와 링크로
+# 바뀐 작업 트리 자리다.
+[[mutation]]
+name = "클론의 관리 폴더 안의 링크를 끊지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "관리_폴더_안의"]
+expect = "red"
+expect_output = ["FileNotFoundError", "keep.txt"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        left += cut_links(admin)'''
+new = '''        pass'''
+
+[[mutation]]
+name = "작업 트리 자리가 링크인지 보지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "자리나_클론의 and not clone-git"]
+expect = "red"
+expect_output = ["assert ('링크다' in '게이트 작업 트리를 걷지 않았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    linked = [str(p) for p in (worktree, clone / ".git", admin) if _is_link(p)]'''
+new = '''    linked = [str(p) for p in (clone / ".git", admin) if _is_link(p)]'''
+
+[[mutation]]
+name = "클론의 git 폴더가 링크인지 보지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "자리나_클론의 and clone-git"]
+expect = "red"
+expect_output = ["assert ('링크다' in '게이트 작업 트리를 다 걷지 못했다"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    linked = [str(p) for p in (worktree, clone / ".git", admin) if _is_link(p)]'''
+new = '''    linked = [str(p) for p in (worktree, admin) if _is_link(p)]'''
+
+[[mutation]]
+name = "링크 끊기가 뿌리 링크를 따라간다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "뿌리가_링크면"]
+expect = "red"
+expect_output = ["Right contains one more item: ", "worktree'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if os.path.islink(root) or os.path.isjunction(root):
+        return [root]'''
+new = '''    if False:
+        return [root]'''
+
+[[mutation]]
+name = "자식 환경에 저장소 변수를 남긴다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "자식_환경에서"]
+expect = "red"
+expect_output = ["GateError: git worktree add"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''_DROPPED_ENV = frozenset({*REPO_LOCATION_VARS, "VIRTUAL_ENV"})'''
+new = '''_DROPPED_ENV = frozenset({"VIRTUAL_ENV"})'''
+
+[[mutation]]
+name = "자식 환경에 VIRTUAL_ENV 를 남긴다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "자식_환경에서"]
+expect = "red"
+expect_output = ["assert SetupFailure("]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''_DROPPED_ENV = frozenset({*REPO_LOCATION_VARS, "VIRTUAL_ENV"})'''
+new = '''_DROPPED_ENV = frozenset(REPO_LOCATION_VARS)'''
+
+[[mutation]]
+name = "결과 커밋의 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "해시_꼴이_아니면"]
+expect = "red"
+expect_output = ["Regex pattern did not match"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if not _COMMIT.fullmatch(commit):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "준비가 실패해도 게이트를 돈다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "준비가_실패하면"]
+expect = "red"
+expect_output = ["timed_out=False)) is None"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        if done.failed is None:
+            gate_results = _gates('''
+new = '''        if True:
+            gate_results = _gates('''
+
+[[mutation]]
+name = "띄우지 못한 준비를 시간 넘김으로 옮긴다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "두_칸으로_옮긴다"]
+expect = "red"
+expect_output = ["timed_out: True != False"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        timed_out=failed.end is SetupEnd.TIMED_OUT,'''
+new = '''        timed_out=failed.exit_code is None,'''
+
+# 셀프 리뷰 반영이 더한 갈림(일지 2026-10-23-37의 셀프 리뷰 절). 띄우기 전의 작업 트리 자리 링크,
+# 게이트가 모두 0일 때만 도는 숨은 시험, UTF-8 이 아닌 junit xml 이다.
+[[mutation]]
+name = "작업 트리 자리가 링크여도 게이트를 띄운다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "준비_뒤에_작업_트리_자리가"]
+expect = "red"
+expect_output = ["exit_code=0, timed_out=False) != Gate("]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if _is_link(cwd):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "게이트가 0이 아니어도 숨은 시험을 돈다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_하나가_0이_아니어도"]
+expect = "red"
+expect_output = ["AssertionError: assert Hidden(passed=0, total=5,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        if gate_results is not None and all(g.exit_code == 0 for g in gate_results):'''
+new = '''        if gate_results is not None:'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 junit xml 에서 멈춘다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "UTF_8이_아닌"]
+expect = "red"
+expect_output = ["UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    except (OSError, UnicodeDecodeError):'''
+new = '''    except OSError:'''
+
+# --- junit 셈 ---
+
+[[mutation]]
+name = "매개변수의 :: 에서도 노드를 자른다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "classname과_name으로"]
+expect = "red"
+expect_output = ["assert Hidden(passed=3, total=4,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    path, bracket, params = node.partition("[")
+    names = path.split("::")'''
+new = '''    names = node.split("::")
+    bracket = params = ""'''
+
+[[mutation]]
+name = "같은 노드의 testcase 가 둘이면 뒤의 것을 든다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "차례와_상관없이"]
+expect = "red"
+expect_output = ["assert Hidden(passed=1, total=2,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            passed_keys[key] = passed_keys.get(key, True) and clean'''
+new = '''            passed_keys[key] = clean'''
+
+[[mutation]]
+name = "같은 노드의 testcase 가 둘이면 앞의 것을 든다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "차례와_상관없이"]
+expect = "red"
+expect_output = ["assert Hidden(passed=1, total=2,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''            passed_keys[key] = passed_keys.get(key, True) and clean'''
+new = '''            passed_keys.setdefault(key, clean)'''
+
+[[mutation]]
+name = "건너뜀을 통과로 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "실패_오류_건너뜀 and 건너뜀"]
+expect = "red"
+expect_output = ["assert Hidden(passed=2, total=2, failed=())"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''_BAD_CHILDREN = frozenset({"failure", "error", "skipped"})'''
+new = '''_BAD_CHILDREN = frozenset({"failure", "error"})'''
+
+[[mutation]]
+name = "error 를 통과로 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "실패_오류_건너뜀 and error"]
+expect = "red"
+expect_output = ["assert Hidden(passed=2, total=2, failed=())"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''_BAD_CHILDREN = frozenset({"failure", "error", "skipped"})'''
+new = '''_BAD_CHILDREN = frozenset({"failure", "skipped"})'''
+
+[[mutation]]
+name = "failure 를 통과로 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "실패_오류_건너뜀 and failure"]
+expect = "red"
+expect_output = ["assert Hidden(passed=2, total=2, failed=())"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''_BAD_CHILDREN = frozenset({"failure", "error", "skipped"})'''
+new = '''_BAD_CHILDREN = frozenset({"error", "skipped"})'''
+
+[[mutation]]
+name = "xml 에 없는 노드를 통과로 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "xml에_없는_노드와"]
+expect = "red"
+expect_output = ["assert Hidden(passed=2, total=2, failed=())"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    failed = tuple(n for n in nodes if not passed_keys.get(_junit_key(n), False))'''
+new = '''    failed = tuple(n for n in nodes if not passed_keys.get(_junit_key(n), True))'''
+
+[[mutation]]
+name = "풀리지 않는 xml 에서 멈춘다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "풀리지_않거나_비면"]
+expect = "red"
+expect_output = ["ParseError"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''        try:
+            root = ElementTree.fromstring(text)
+        except ElementTree.ParseError:
+            root = None'''
+new = '''        root = ElementTree.fromstring(text)'''
+
+# --- 이 티켓이 고친 다른 모듈 ---
+
+[[mutation]]
+name = "시간을 넘긴 명령의 종료 코드를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "시간을_넘긴_게이트에는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''    if timed_out and exit_code is not None:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "실패한 준비의 종료 코드 0 을 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "두_칸이_어긋나면 and 0-False"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''        if setup.exit_code == 0:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "준비 실패의 시간 넘김 칸을 읽지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "끝난_꼴은_종료_코드와_시간_넘김"]
+expect = "red"
+expect_output = ["timed_out: False != True"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''            timed_out=setup_obj.flag("timed_out"),'''
+new = '''            timed_out=setup_obj.flag("timed_out") and False,'''
+
+[[mutation]]
+name = "SetupFailed 가 끝난 꼴과 종료 코드의 짝을 보지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "끝까지_돈_명령에만"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        if not valid:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "링크 끊기가 링크를 끊지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크_끊기는_안의"]
+expect = "red"
+expect_output = ["assert not True"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if entry.is_symlink() or entry.is_junction():
+                try:
+                    os.unlink(entry.path)'''
+new = '''            if False:
+                try:
+                    os.unlink(entry.path)'''
+
+[[mutation]]
+name = "링크 끊기가 끊지 못한 링크를 알리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크_끊기는_읽지_못한"]
+expect = "red"
+expect_output = ["Right contains one more item: ", "stuck'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''                except OSError:
+                    left.append(entry.path)
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(entry.path)'''
+new = '''                except OSError:
+                    pass
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(entry.path)'''
+
+[[mutation]]
+name = "링크 끊기가 읽지 못한 폴더를 알리지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크_끊기는_읽지_못한"]
+expect = "red"
+expect_output = ["Right contains one more item: ", "없음'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            entries = list(os.scandir(current))
+        except OSError:
+            left.append(current)
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                try:
+                    os.unlink(entry.path)'''
+new = '''            entries = list(os.scandir(current))
+        except OSError:
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                try:
+                    os.unlink(entry.path)'''

@@ -1,0 +1,279 @@
+# 티켓 07(공식 단가, `tools/rerun_cost.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬, 대기열
+# 29). 이 티켓의 공식 단가 시험은 구현 전에 모듈이 없어 수집 오류로만 빨갰고, 갈림 하나하나는 빨강을 본
+# 적이 없다(대신 셈 이름의 정규화만 시험을 먼저 고쳐 빨강을 봤다). 티켓이 든 대상(응답을 한 번만 세기와
+# 그 키, 출력이 가장 큰 usage, 캐시 쓰기의 두 배수와 남는 몫, Haiku 의 높은 단가와 그 경계, synthetic,
+# 이름 꼬리, 대신 셈과 그 배수, subagents, 회차 합)을 하나씩 되돌린다. 표지는 고른 단언이 실패할 때만
+# 나오는 문구다(`.claude/rules/probes.md` 첫 항목).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_cost_mutations.toml
+
+[[mutation]]
+name = "응답을 message id 로 가르지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "같은_message_id_의_줄은"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>(0.001638"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        key = _str(m.get("id")) or _str(d.get("uuid")) or f"#{index}"'''
+new = '''        key = _str(d.get("uuid")) or f"#{index}"'''
+
+[[mutation]]
+name = "id 가 없는 응답을 uuid 로 가르지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "id_가_없는_응답은"]
+expect = "red"
+expect_output = ["where 44 = Tokens("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        key = _str(m.get("id")) or _str(d.get("uuid")) or f"#{index}"'''
+new = '''        key = _str(m.get("id")) or f"#{index}"'''
+
+[[mutation]]
+name = "id 도 uuid 도 없는 줄을 한 응답으로 센다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "id_가_없는_응답은"]
+expect = "red"
+expect_output = ["where 27 = Tokens("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        key = _str(m.get("id")) or _str(d.get("uuid")) or f"#{index}"'''
+new = '''        key = _str(m.get("id")) or _str(d.get("uuid")) or ""'''
+
+[[mutation]]
+name = "같은 id 의 첫 usage 를 쓴다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "같은_message_id_의_줄은"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>(0.000146"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        elif _int(usage.get("output_tokens")) > _int(seen.usage.get("output_tokens")):'''
+new = '''        elif False:'''
+
+[[mutation]]
+name = "같은 id 의 마지막 usage 를 쓴다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "같은_message_id_의_줄은"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>(0.000496"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        elif _int(usage.get("output_tokens")) > _int(seen.usage.get("output_tokens")):'''
+new = '''        elif True:'''
+
+[[mutation]]
+name = "1시간 캐시 쓰기를 5분 배수로 셈한다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "응답마다_입력_출력"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        + w1 * price.input * WRITE_1H'''
+new = '''        + w1 * price.input * WRITE_5M'''
+
+[[mutation]]
+name = "나눈 캐시 쓰기의 합이 맞지 않아도 나눈 몫을 그대로 쓴다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "나눈_캐시_쓰기의"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>(0.0024"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    if w5 + w1 != total:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "1시간 몫을 캐시 쓰기 합으로 자르지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "나눈_캐시_쓰기의"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>(0.0057"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        w1 = min(w1, total)'''
+new = '''        w1 = w1'''
+
+[[mutation]]
+name = "Haiku 의 경계 10만 토큰을 높은 단가로 센다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "Haiku_는_응답의 and 90000"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        if model == HAIKU and i + c + w5 + w1 > HAIKU_LONG_PROMPT:'''
+new = '''        if model == HAIKU and i + c + w5 + w1 >= HAIKU_LONG_PROMPT:'''
+
+[[mutation]]
+name = "Haiku 의 높은 단가를 쓰지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "Haiku_는_응답의 and 100000"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''            price = HAIKU_LONG_PRICE'''
+new = '''            price = price'''
+
+[[mutation]]
+name = "Haiku 의 프롬프트에서 캐시 쓰기를 뺀다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "Haiku_는_응답의 and 30000"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        if model == HAIKU and i + c + w5 + w1 > HAIKU_LONG_PROMPT:'''
+new = '''        if model == HAIKU and i + c > HAIKU_LONG_PROMPT:'''
+
+[[mutation]]
+name = "synthetic 응답을 센다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "synthetic_과"]
+expect = "red"
+expect_output = ["공식 단가가 없는 모델이다: <synthetic>"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        if not isinstance(usage, dict) or model == _SYNTHETIC:'''
+new = '''        if not isinstance(usage, dict):'''
+
+[[mutation]]
+name = "모델이 없는 응답을 빼고 센다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "모델이_없는_응답은"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''            raise PriceError(f"모델이 없는 응답이다(기록 줄 {index + 1})")'''
+new = '''            continue'''
+
+[[mutation]]
+name = "1m 꼬리를 떼지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "날짜나_1m_꼬리가"]
+expect = "red"
+expect_output = ["공식 단가가 없는 모델이다: claude-opus-5-5[1m]"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    return _DATE_TAIL.sub("", model.removesuffix(_WIDE_TAIL))'''
+new = '''    return _DATE_TAIL.sub("", model)'''
+
+[[mutation]]
+name = "날짜 꼬리를 떼지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "날짜나_1m_꼬리가"]
+expect = "red"
+expect_output = ["공식 단가가 없는 모델이다: claude-sonnet-5-5-20261001"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    return _DATE_TAIL.sub("", model.removesuffix(_WIDE_TAIL))'''
+new = '''    return model.removesuffix(_WIDE_TAIL)'''
+
+[[mutation]]
+name = "modelUsage 의 이름을 떼지 않고 응답의 모델과 견준다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "modelUsage_의_1m_꼬리는"]
+expect = "red"
+expect_output = ["공식 단가가 없는 모델이다: claude-opus-5-5[1m]"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        model = _canonical(u.model)'''
+new = '''        model = u.model'''
+
+[[mutation]]
+name = "기록에 응답이 없는 모델을 대신 셈하지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "기록에_응답이_없는_모델은"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        if model in seen:'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "기록에 응답이 있는 모델도 대신 셈한다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "modelUsage_의_1m_꼬리는"]
+expect = "red"
+expect_output = ["Left contains one more item: Substitute(model='claude-opus-5-5', tokens=Tokens(input=0, output=500,"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        if model in seen:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "대신 셈의 캐시 쓰기를 1시간 배수로 셈한다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "기록에_응답이_없는_모델은"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''            u.cache_write_tokens,
+            0,
+        )'''
+new = '''            0,
+            u.cache_write_tokens,
+        )'''
+
+[[mutation]]
+name = "대신 셈의 이름을 떼지 않고 적는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "회차의_합은"]
+expect = "red"
+expect_output = ["Left contains one more item: Substitute(model='claude-haiku-5-5-20261001',"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''                model=model,'''
+new = '''                model=u.model,'''
+
+[[mutation]]
+name = "subagents 기록을 읽지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "subagents_를_함께"]
+expect = "red"
+expect_output = ["where False = <built-in function isclose>("]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    files = [transcript, *sorted((transcript.with_suffix("") / "subagents").glob("*.jsonl"))]'''
+new = '''    files = [transcript]'''
+
+[[mutation]]
+name = "본 세션 기록 파일이 없으면 건너뛴다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "본_세션_기록_파일이_없으면"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    for path in files:
+        lines += path.read_text(encoding="utf-8", errors="replace").splitlines()'''
+new = '''    for path in files:
+        if not path.exists():
+            continue
+        lines += path.read_text(encoding="utf-8", errors="replace").splitlines()'''
+
+[[mutation]]
+name = "회차 합에서 대신 셈한 같은 모델을 더하지 않고 덮는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "회차의_합은"]
+expect = "red"
+expect_output = ["tokens=Tokens(input=10, output=20, cache_read=0, cache_write=0, thinking=None)"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        merged[s.model] = s.tokens if before is None else _add_tokens(before, s.tokens)'''
+new = '''        merged[s.model] = s.tokens'''
+
+[[mutation]]
+name = "회차 합에서 빈 토큰 칸을 0으로 더한다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "회차의_합은"]
+expect = "red"
+expect_output = ["thinking=0"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    return None if a is None or b is None else a + b'''
+new = '''    return (a or 0) + (b or 0)'''

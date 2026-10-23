@@ -158,7 +158,7 @@ expect_output = ["FileNotFoundError"]
 
 [[mutation.edit]]
 file = "tools/rerun_hidden.py"
-old = '''        left = _cut_links(place)'''
+old = '''        left = cut_links(place)'''
 new = '''        left: list[str] = []'''
 
 [[mutation]]
@@ -171,6 +171,19 @@ expect_output = ["AssertionError: 링크를 지나 덮을 자리를 냈다"]
 file = "tools/rerun_hidden.py"
 old = '''        if current.is_symlink() or current.is_junction():'''
 new = '''        if False:'''
+
+[[mutation]]
+name = "작업 트리 자리 자체의 링크를 보지 않는다"
+tests = ["tests/tools/test_rerun_hidden.py", "-k", "자리_자체가"]
+expect = "red"
+expect_output = ["AssertionError: 링크인 작업 트리 자리 아래를 냈다"]
+
+[[mutation.edit]]
+file = "tools/rerun_hidden.py"
+old = '''    if root.is_symlink() or root.is_junction():
+        return None'''
+new = '''    if False:
+        return None'''
 
 [[mutation]]
 name = "자식 환경에 VIRTUAL_ENV 를 남긴다"
