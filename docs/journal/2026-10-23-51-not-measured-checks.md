@@ -197,6 +197,39 @@
 - CI `python` 잡이 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 하나로 빨갰고(1 failed, 5426 passed, 실행 39985803864), 필수 검사 `verify`가 그것을 모아 빨갰다. 이 브랜치가 건드리지 않은 시험이고 대기열 456 이다. main 도 51a0417e(실행 39979667386)와 07c890c(실행 39959108868)에서 같은 시험으로 빨갰다. 실패한 잡을 다시 돌리거나 관리자 우회로 병합하는 것은 게이트를 느슨하게 하는 길이라 고르지 않는다(일지 2026-10-23-50 의 같은 판단). 반영 커밋의 푸시로 CI 가 새로 돌고, 그때도 이 시험 하나로만 빨가면 사용자에게 묻는다.
 - 다시 돌린 명령(커밋하지 않은 작업 트리): 바꾼 두 파이썬 파일의 `ruff check`·`ruff format --check` 초록, `uv run pytest tests/tools/test_rerun_checks.py tests/tools/test_rerun_continue.py -q -n 4` 258 passed, 두 파일의 `uv run pyright` 오류 0, `tools/mutate.py --check`로 checks 표 46 모두 원문이 있다, 바꾼 코드를 겨누는 변이 둘(8번 "줄 판정이 허용 밖 init 에서도 끄라고 하지 않는다", 14번 "Agent 입력이 고른 모델을 회차의 모든 세션에 허용한다")이 기대대로 빨갰다(`변이 2 모두 기대대로`).
 - PR 본문의 "남긴 위험"에 뒤로 넘긴 모듈 쪼개기와 CI 의 456 을 더한다(푸시 전에 `gh pr edit`).
+- 커밋 0ff233eb. pre-commit 은 ruff check, ruff format, 검사 러너(zizmor, check-ticket, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 374.6초, pytest 469.7초), 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용, 커밋 메시지 모두 Passed 였다. 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped 였다. 커밋 직전 `tools/sibling_overlap.py`는 번호 겹침 없음이었고, PR #378 과 형제 워크트리 `02-runtime-relays-call-events-live`의 일지 2026-10-24-01 이 먼저 병합되면 이 일지를 옮긴다고 알렸다.
+
+## 인계 (넷째)
+
+- 이 세션의 지금 제목: `feature/09-not-measured-checks`.
+- 인계 경계: `커밋 뒤`. 세션 컨텍스트가 문턱(20만)을 넘은 채 커밋을 친 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(커밋은 성공했고, 요청 범위는 병합까지이고, 이 세션의 지시문은 `인계: PR 연 뒤`라 다른 경계이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다).
+- 0ff233eb 는 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 고쳤다(`gh pr edit`). PR #377 은 이 세션에 묶여 있다(`get_session`의 `prNumber`).
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/09-not-measured-checks.md. 회차마다 계정·설정·모델·오염·한도를 보고 걸린 회차를 그 이유와 함께 측정 아님으로 적는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/09-not-measured-checks.md
+브랜치: feature/09-not-measured-checks
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-51-not-measured-checks.md의 "봇 회차 1 (넷째 세션)"과 "인계 (넷째)"
+이어받을 상태: 인계: 커밋 뒤. PR #377의 봇 회차 1(CodeRabbit 지적 없음, claude-review의 Minor 하나와 Nit 하나 반영, Minor 하나는 티켓 11 메모로 넘김)과 회고(대기열 456에 회차), 일지 "다음"을 0ff233eb로 커밋했고 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 일지의 "인계 (넷째)" 절은 커밋하지 않은 채 워크트리에 있다. 남은 것은 차례로 푸시, @coderabbitai review 코멘트(2026-10-23T16:23Z의 첫 리뷰가 시간당 포함 리뷰를 다 썼다고 적었다), next-session 순서 1의 2(봇 회차)와 4(병합 길)다. 다음 푸시의 리뷰는 claude-review와 CodeRabbit 모두 둘째 회차라 Critical·Major만 고친다. CI python 잡이 대기열 456의 시험(tests/tools/test_proc_command_line.py) 하나로만 다시 빨가면 실패한 잡을 다시 돌릴지, 관리자 우회로 병합할지를 사용자에게 묻는다(일지 "봇 회차 1 (넷째 세션)"의 CI 줄). 형제 PR #378의 일지 2026-10-24-01이 먼저 병합되면 이 일지의 번호를 옮긴다. docs/journal/2026-10-23-51-not-measured-checks.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-not-measured-checks (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(CI 대기, 커밋)은 모두 끝나 있었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T16:45:02Z
+
+## 이어받은 세션 (다섯째)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/model-rerun/issues/09-not-measured-checks.md
+>
+> (이어지는 지시문은 위 "인계 (넷째)"의 낸 지시문과 같다)
+
+- 제목을 `feature/09-not-measured-checks`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. origin/main 은 여전히 51a0417e 라 합칠 것이 없었다.
+- 앞 세션의 "인계 (넷째)" 절과 이 절을 한 커밋에 실어 0ff233eb 와 함께 한 번에 푸시한다. 따로 푸시하면 claude-review 가 한 번 더 돈다.
 
 ## 회고
 
