@@ -45,8 +45,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트의
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다), visual(사진 비교를 판을 고정한 Playwright
                    이미지의 Docker 컨테이너에서 돌린다)
-  packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
-                   재개 스트림을 프레임으로 읽는 것(ADR 0021)
+  packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널·위젯 클라이언트 셋,
+                   운영자·최종 사용자 스트림을 프레임으로 읽는 것(ADR 0021·0024)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답

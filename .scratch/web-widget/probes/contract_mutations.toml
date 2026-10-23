@@ -1,0 +1,171 @@
+# 티켓 01(calling 항목과 limit 종류, 위젯 클라이언트)의 변이 표. 구현 뒤에 쓴 테스트와 구현 전부터 초록이던 가드가
+# 빨강을 볼 수 있는지 잰다. 빨강의 판정은 `tools/mutate.py` 의 독스트링이다. tsc 는 변이마다 적은 파일
+# (`diagnostic_in`)에서 진단이 날 때만 빨강이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/contract_mutations.toml [이름 ...]
+# 네트워크를 타지 않는다. TS 변이는 `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[runner.tsc]
+command = ["pnpm", "exec", "tsc", "--noEmit", "-p", "packages/api-client"]
+cwd = "web"
+judge = "tsc"
+
+# --- 계약: 스트림 라우트의 에러 문서와 429 의 봉투 ----------------------------------------
+
+[[mutation]]
+name = "스트림 라우트의 에러 문서가 이벤트 스트림 아래에 실린다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "경로_넷이_지은_operation_id"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/routes.py"
+old = '''
+    media_type = None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "상한의 실패가 종류를 봉투로 넘기지 않는다"
+tests = ["tests/test_server.py", "-k", "상한의_문구는_세_가지이고"]
+expect = "red"
+
+[[mutation.edit]]
+file = "src/agent_os/http/errors.py"
+old = '''
+                limit=error.limit,
+'''
+new = '''
+'''
+
+# --- api-client: 위젯 클라이언트 ---------------------------------------------------------
+
+[[mutation]]
+name = "위젯 클라이언트가 운영자와 관리의 경로도 안다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = 'export type WidgetPaths = Pick<paths, EndUserPath>;'
+new = 'export type WidgetPaths = paths;'
+
+[[mutation]]
+name = "429 의 limit 이 아무 문자열이다"
+runner = "tsc"
+tests = []
+expect = "red"
+diagnostic_in = "clients.test-d.ts"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/generated/openapi.ts"
+old = '      limit: components["schemas"]["LimitKind"];'
+new = '      limit: string;'
+
+[[mutation]]
+name = "위젯 클라이언트가 토큰을 들고 요청마다 싣는다"
+runner = "vitest"
+tests = ["packages/api-client/src/clients.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/clients.ts"
+old = '  return createClient<WidgetPaths>({ baseUrl: baseUrl.href });'
+new = '  return createClient<WidgetPaths>({ baseUrl: baseUrl.href, headers: bearer("site") });'
+
+# --- api-client: 최종 사용자 스트림의 수명. 위젯은 요청의 signal 로 연결을 끊는다 ----------
+
+[[mutation]]
+name = "최종 사용자 스트림이 에러로 끝나면 에러를 삼킨다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } finally {'''
+new = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } catch (error) {
+    void error;
+  } finally {'''
+
+[[mutation]]
+name = "최종 사용자 스트림이 에러로 끝나면 잠금을 풀지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } finally {
+    reader.releaseLock();
+  }'''
+new = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } catch (error) {
+    throw error;
+  }
+  reader.releaseLock();'''
+
+# 끝까지 읽거나 에러로 끝날 때만 풀고, 루프에서 멈춘 반복자의 `return()` 에서는 풀지 않는다. 독스트링의
+# "수명과 끊는 길은 `readFrames` 와 같다"에 드는 세 길 가운데 셀프 리뷰가 짚은 셋째다.
+[[mutation]]
+name = "최종 사용자 스트림을 읽다 멈추면 잠금을 풀지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+expect_output = ["최종 사용자 스트림 읽기 > 읽는 쪽이 도중에 멈추면"]
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } finally {
+    reader.releaseLock();
+  }'''
+new = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } catch (error) {
+    reader.releaseLock();
+    throw error;
+  }
+  reader.releaseLock();'''
+
+[[mutation]]
+name = "최종 사용자 스트림의 잠금을 풀지 않는다"
+runner = "vitest"
+tests = ["packages/api-client/src/stream.test.ts"]
+expect = "red"
+
+[[mutation.edit]]
+file = "web/packages/api-client/src/stream.ts"
+old = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } finally {
+    reader.releaseLock();
+  }'''
+new = '''
+      yield closed ? endUserFrame(lines) : unclosedFrame(lines);
+    }
+  } finally {
+    void reader;
+  }'''

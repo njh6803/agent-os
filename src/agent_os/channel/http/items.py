@@ -6,10 +6,12 @@
 비우는 안은 빈 값이 원래 빈 것인지 숨긴 것인지 타입으로 가를 수 없어 거부됐다. 운영자
 채널(`/runs`)은 그대로 원문 이벤트를 싣는다.
 
-**투영은 종류로만 가른다.** 에이전트가 낸 같은 종류의 이벤트도 같은 항목이다 — 이벤트에는 누가
-냈는지 표시가 없다(ADR 0009 의 2026-10-03 이력). 항목이 없는 종류(모델 호출, 재개의 경계, 대화
-요약)는 프레임을 내지 않고 트레이스 인덱스만 지난다. 그래서 프레임의 `id` 는 단조 증가하되 빈자리가
-있다. 모르는 종류는 여기 닿지 않는다 — 자기 실행 읽기의 손상 판정이 그런 트레이스를 먼저 거절한다.
+**투영은 종류로 가르고, 모델 호출에서만 조건 하나가 붙는다.** 에이전트가 낸 같은 종류의 이벤트도
+같은 항목이다 — 이벤트에는 누가 냈는지 표시가 없다(ADR 0009 의 2026-10-03 이력). 모델 호출은 도구를
+요청했을 때만 항목이 있다(ADR 0023 의 2026-10-23 이력). 항목이 없는 것(도구를 요청하지 않은 모델
+호출, 재개의 경계, 대화 요약)은 프레임을 내지 않고 트레이스 인덱스만 지난다. 그래서 프레임의 `id` 는
+단조 증가하되 빈자리가 있다. 모르는 종류는 여기 닿지 않는다 — 자기 실행 읽기의 손상 판정이 그런
+트레이스를 먼저 거절한다.
 
 **계약에 박히는 모델이라 독스트링은 한 줄이고 논증은 `#` 주석에 둔다**(`.claude/rules/http.md`).
 컴포넌트 이름은 기존 것(특히 본문 `Decision`·`Approve`·`Deny` 와 이벤트 `RunStarted` 같은 것)과
@@ -63,8 +65,25 @@ class StartedItem(BaseModel):
     run_id: RunId
 
 
+# 모델이 도구를 요청한 모델 호출이다(ADR 0023 의 2026-10-23 이력). 도구 항목(`ProgressItem`)은
+# 도구 호출이 끝난 것을 싣고, 모델이 어느 도구를 요청했는지를 싣는 항목은 이것뿐이다. 이름만 요청한
+# 차례대로 싣는다 — 인자는 모델이 지은 것이고 화면이 쓰지 않으며, 도구 호출 식별자는 최종 사용자가
+# 할 일이 없다. 도구마다 항목을 하나씩 내지 않고 목록 하나로 싣는 것은 이벤트 하나가 항목 하나 또는
+# 없음이라는 규칙을 지키기 위해서다. 그래야 프레임의 `id` 가 그 이벤트의 인덱스이고 `Last-Event-ID`
+# 의 뜻이 그대로다. 도구를 요청하지 않은 모델 호출은 항목이 없으므로 목록은 늘 하나 이상이다. 계약에
+# 실리는 설명은 이 항목이 언제 오는지를 말하지 않는다 — 모델 호출의 이벤트가 실행의 어느 때에
+# 나오는지는 core 가 정하고(ADR 0039), 투영은 받은 이벤트를 옮길 뿐이다.
+class CallingItem(BaseModel):
+    """모델이 도구를 요청했다. 모델이 요청한 도구의 이름을 요청한 차례대로 든다."""
+
+    model_config = _ITEM_CONFIG
+
+    type: Literal["calling"] = "calling"
+    tools: Annotated[tuple[str, ...], Field(min_length=1)]
+
+
 # 도구 하나가 불렸다. 인자와 결과는 싣지 않는다 — 결과는 도구 서버의 원문이고 인자는 모델이 지은
-# 것이다. 진행은 도구 단위다. 모델 호출은 항목이 없다.
+# 것이다. 진행은 도구 단위다.
 class ProgressItem(BaseModel):
     """도구 하나가 불렸다. 도구 이름과 성패만 든다."""
 
@@ -141,6 +160,7 @@ class UnfinishedItem(BaseModel):
 # 판별자 술어로 이 유니온에 좁힌다(ADR 0021·0023).
 type EndUserItem = Annotated[
     StartedItem
+    | CallingItem
     | ProgressItem
     | PausedItem
     | DecidedItem
@@ -152,10 +172,13 @@ type EndUserItem = Annotated[
 
 
 def project(event: Event) -> EndUserItem | None:
-    """이벤트 하나를 항목 하나 또는 없음으로(질의). 종류로만 가른다."""
+    """이벤트 하나를 항목 하나 또는 없음으로(질의). 종류로 가르고 모델 호출은 도구 요청이 있는지
+    본다."""
     match event:
         case RunStarted(run_id=run_id):
             return StartedItem(run_id=run_id)
+        case LlmCalled(tool_calls=tool_calls) if tool_calls:
+            return CallingItem(tools=tuple(call.name for call in tool_calls))
         case ToolCalled(tool=tool, ok=ok):
             return ProgressItem(tool=tool, ok=ok)
         case RunPaused(tool=tool, args=args):
