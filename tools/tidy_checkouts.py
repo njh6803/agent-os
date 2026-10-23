@@ -961,11 +961,36 @@ def _writable_retry(function: Callable[[str], object], target: str, error: BaseE
     function(target)
 
 
+def holds_home(path: str | os.PathLike[str], home: str | os.PathLike[str]) -> bool:
+    """`path` 가 드라이브 뿌리이거나 `home` 이거나 그 조상인지. 링크, 짧은 이름, `..`, 상대 경로는
+    `os.path.realpath` 로 가리키는 자리로 풀어 견준다.
+
+    티켓 07의 셀프 리뷰에서 서브에이전트가 브리프대로 `cut_links("C:\\")` 를 불러 사용자 프로필의
+    junction 열셋을 끊었다(일지 2026-10-23-45 사고 절). 그래서 지우는 두 함수(`cut_links`,
+    `delete_path`)는 이 자리를 받으면 지우지 않는다.
+
+    못 보는 것: `realpath` 로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다. 홈 아래의
+    폴더(그 안의 링크는 끊는다), 홈 밖의 다른 자리(이 저장소의 주 체크아웃, 홈이 없는 드라이브의
+    폴더), 같은 자리를 다른 꼴로 가리키는 경로(UNC 관리 공유 `\\\\localhost\\C$\\Users\\<이름>`)가
+    그 예다. 지우는 두 함수는 홈을 `os.path.expanduser("~")` 로 얻어, 그 값이 홈이 아니면 그 값의
+    자리를 대신 견준다. 윈도에서 `USERPROFILE` 이 빈 값이면 그 값이 빈 문자열이라 작업 폴더와 그
+    조상을 막고 홈은 막지 않는다.
+    """
+    target = os.path.realpath(path)
+    if os.path.dirname(target) == target:
+        return True
+    return is_within(os.path.realpath(home), target)
+
+
 def delete_path(path: Path) -> None:
-    """무시된 항목 하나를 지운다. 링크는 따라가지 않고 링크 자체만 지운다. 막히면 OSError."""
+    """무시된 항목 하나를 지운다. 링크는 따라가지 않고 링크 자체만 지운다. 막히면 OSError. 링크가
+    아닌 드라이브 뿌리나 홈, 그 조상(`holds_home`)이면 지우지 않고 PermissionError 다. 링크는 홈이나
+    그 조상을 가리켜도, 홈 자체가 링크여도 그 링크만 지운다."""
     target = long_path(path)
     if os.path.islink(target) or os.path.isjunction(target):
         os.unlink(target)
+    elif holds_home(path, os.path.expanduser("~")):
+        raise PermissionError(f"드라이브 뿌리나 홈, 그 조상은 지우지 않는다: {path}")
     elif os.path.isdir(target):
         shutil.rmtree(target, onexc=_writable_retry)
     elif os.path.lexists(target):
@@ -973,6 +998,62 @@ def delete_path(path: Path) -> None:
             os.unlink(target)
         except PermissionError as error:
             _writable_retry(os.unlink, target, error)
+
+
+def cut_links(folder: str | os.PathLike[str]) -> list[str]:
+    """`folder` 아래의 심볼릭 링크와 junction 을 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더를
+    준다. 링크 안으로는 내려가지 않는다. `folder` 자체가 링크이거나 드라이브 뿌리나 홈, 그
+    조상(`holds_home`)이면 아무것도 끊지 않고 그것을 준다.
+
+    git 2.32 의 `git worktree remove --force` 는 꺼낸 자리 안의 junction 을 따라가 그 바깥 폴더의
+    파일까지 지웠다(일지 2026-10-15-19). 그래서 작업 트리나 회차 폴더를 걷기 전에 부른다. 윈도의
+    junction 도 `os.unlink` 가 링크만 지운다. 뿌리가 링크일 때 따라가면 그 링크가 가리키는 바깥
+    트리의 링크를 모두 끊는다(티켓 07의 커밋 전 반박 검증이 링크로 바뀐 게이트 작업 트리 자리로
+    재현했다). 다시 풀기의 도구들(`tools/rerun_round.py`, `tools/rerun_hidden.py`,
+    `tools/rerun_gates.py`)이 함께 쓴다. `tools/canary.py` 는 경로로 띄우는 스크립트라 `tools`
+    패키지를 가져오지 못해 사본(`_cut_links`)을 따로 둔다. 그 사본에는 뿌리 링크, 긴 경로, 홈
+    가드의 고침이 없다(대기열 451).
+
+    훑기와 끊기는 `long_path` 로 한다. 윈도에서 긴 경로가 꺼져 있으면 MAX_PATH(260자)에 걸리는 깊은
+    폴더(게이트 작업 트리의 `web/node_modules/.pnpm` 아래)를 평범한 경로로 읽지 못해 그 폴더를
+    끊지 못한 것으로 냈다(티켓 07의 PR 직전 bug-perf-review). 돌려주는 경로는 넘긴 `folder` 를
+    머리로 두고 그 아래를 `os.path.join` 으로 잇는다. 읽지 못한 뿌리는 넘긴 꼴 그대로 준다. `..` 이
+    든 절대 경로는 `long_path` 가 풀지 않아 `folder` 를 읽지 못한 폴더로 준다. 그러면 다시 풀기의
+    세 도구는 지우거나 걷지 않고 알린다.
+    """
+    root = os.fspath(folder)
+    scan_root = long_path(root)
+    if (
+        os.path.islink(scan_root)
+        or os.path.isjunction(scan_root)
+        or holds_home(root, os.path.expanduser("~"))
+    ):
+        return [root]
+
+    def shown(path: str) -> str:
+        # `long_path` 가 끝 구분자를 뗀 뿌리(상대 경로, 리눅스의 절대 경로)에 이어 붙이면
+        # 구분자가 겹친다
+        rest = path[len(scan_root) :].lstrip(os.sep)
+        return os.path.join(root, rest) if rest else root
+
+    left: list[str] = []
+    pending = [scan_root]
+    while pending:
+        current = pending.pop()
+        try:
+            entries = list(os.scandir(current))
+        except OSError:
+            left.append(shown(current))
+            continue
+        for entry in entries:
+            if entry.is_symlink() or entry.is_junction():
+                try:
+                    os.unlink(entry.path)
+                except OSError:
+                    left.append(shown(entry.path))
+            elif entry.is_dir(follow_symlinks=False):
+                pending.append(entry.path)
+    return left
 
 
 @dataclass(frozen=True)

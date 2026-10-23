@@ -32,7 +32,7 @@
 폴더이고, 이름이 회차 폴더 꼴이며, 표지가 그 폴더 이름을 담은 보통 파일이고, `records/`에 그 회차의
 기록이 있어 그 기록의 회차 폴더 이름이 이 폴더인 것만 지운다. 기록이 없는 회차 폴더는 비용이 아직
 원본에만 있어 남긴다(명세 "차례, 동시성, 예산"의 2026-10-23 주석). 지울 때는 먼저 안의 링크
-(심볼릭 링크, junction)를 링크만 끊고(선례 `tools/canary.py`의 `_cut_links`), 표지를 뺀 항목을
+(심볼릭 링크, junction)를 링크만 끊고(`tools/tidy_checkouts.py`의 `cut_links`), 표지를 뺀 항목을
 지운 뒤 표지를 맨 끝에 지운다(`tools/tidy_checkouts.py`의 `delete_path`). 그래서 지우다 막혀도
 표지가 남아 다시 부르면 마저 지운다. 안을 다 지운 뒤 빈 폴더만 지우지 못하면(다른 프로세스가 작업
 디렉터리로 쥐었다) 표지를 다시 심고, 윈도에서 폴더의 읽기 전용 특성에 막히면 특성을 풀고 한 번 더
@@ -105,7 +105,7 @@ from tools.rerun_files import (
     round_dir_name,
 )
 from tools.run_hooks import REPO_LOCATION_VARS
-from tools.tidy_checkouts import delete_path, long_path
+from tools.tidy_checkouts import cut_links, delete_path, long_path
 
 ROOT = Path(__file__).resolve().parents[1]
 RECORDS = ROOT / ".scratch" / "model-rerun" / "probes" / "records"
@@ -315,6 +315,19 @@ class RoundDir:
         """띄우기 전에 세션 id를 덧붙여 적는 파일(`SESSION_IDS`)."""
         return self.path / SESSION_IDS
 
+    def append_session_id(self, session_id: str) -> None:
+        """호출 하나의 세션 id를 `session_ids`에 덧붙인다. 한 줄이 호출 하나라 `--resume`으로 이어
+        부른 세션은 같은 id가 다시 적힌다."""
+        with self.session_ids.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(session_id + "\n")
+
+    def call_count(self) -> int:
+        """`session_ids`에 적힌 호출의 수. 덧붙인 직후에 세면 그 호출의 차례(1부터)다. 파일이
+        없으면 0이다."""
+        if not self.session_ids.exists():
+            return 0
+        return len(self.session_ids.read_text(encoding="utf-8").splitlines())
+
 
 def _plant_marker(folder: str | os.PathLike[str]) -> None:
     """`folder`에 표지를 심는다. 내용은 그 폴더의 이름이다. 이미 있으면 `FileExistsError`다."""
@@ -509,7 +522,17 @@ class SetupFailed:
     index: int  # 준비 명령의 차례(0부터)
     command: str  # 인자를 공백으로 이은 글. 실제 준비면 `SETUP_COMMANDS`의 하나다
     end: SetupEnd
-    exit_code: int | None  # `SetupEnd.EXITED`일 때만 값이 있다
+    exit_code: int | None  # `SetupEnd.EXITED`일 때만 값이 있고 0이 아니다
+
+    def __post_init__(self) -> None:
+        if self.end is SetupEnd.EXITED:
+            valid = self.exit_code is not None and self.exit_code != 0
+        else:
+            valid = self.exit_code is None
+        if not valid:
+            raise ValueError(
+                f"{self.end.value} 인 준비 실패에 종료 코드 {self.exit_code} 가 맞지 않다"
+            )
 
 
 @dataclass(frozen=True)
@@ -673,28 +696,6 @@ def _recorded(records: Path, name: str) -> bool:
         return False
 
 
-def _cut_links(folder: str) -> list[str]:
-    """`folder` 아래의 심볼릭 링크와 junction을 링크만 끊는다. 끊지 못한 링크와 읽지 못한 폴더."""
-    left: list[str] = []
-    pending = [folder]
-    while pending:
-        current = pending.pop()
-        try:
-            entries = list(os.scandir(current))
-        except OSError:
-            left.append(current)
-            continue
-        for entry in entries:
-            if entry.is_symlink() or entry.is_junction():
-                try:
-                    os.unlink(entry.path)
-                except OSError:
-                    left.append(entry.path)
-            elif entry.is_dir(follow_symlinks=False):
-                pending.append(entry.path)
-    return left
-
-
 class _RemoveError(Exception):
     """회차 폴더 하나를 지우지 못했다. 메시지가 그 까닭이다."""
 
@@ -722,7 +723,7 @@ def _remove(folder: str) -> None:
     if os.path.islink(folder) or os.path.isjunction(folder):
         raise _RemoveError("판정한 뒤 링크로 바뀌어 지우지 않았다")
     try:
-        left = _cut_links(folder)
+        left = cut_links(folder)
     except OSError as e:
         raise _RemoveError(f"링크를 찾다 막혔다. {type(e).__name__}: {e}") from e
     if left:

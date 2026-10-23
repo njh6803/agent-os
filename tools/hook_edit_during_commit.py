@@ -48,8 +48,10 @@ git 인 것의 명령 줄에서 전역 옵션(`-C <경로>`, `-c <설정>` 등)�
 `os.path.realpath` 로 펴서 대고, 윈도에서는 대소문자를 가리지 않는다. 윈도는 Toolhelp 스냅숏으로
 프로세스 이름을 훑고 git 만 열어 실행 파일의 전체 경로와 PEB 의 작업 디렉터리와 명령 줄을 읽는다.
 PEB 를 읽는 자리는 `tools/tidy_checkouts.py` 와 같고, 훅은 단독 실행 스크립트라 그 모듈을 import
-하지 않고 옮겨 적었다(`.claude/rules/tools.md`). 리눅스는 `/proc/<pid>/` 의 `comm`·`stat`(부모
-pid)·`cmdline`·`cwd` 를 읽는다. 읽다 실패하면 막지 않는다(fail-open).
+하지 않고 옮겨 적었다(`.claude/rules/tools.md`). 명령 줄을 읽는 자리는 다시 풀기 러너의 끄기가
+`tools/proc_command_line.py` 로 옮겨 적었다. 고치면 그 사본도 고치고, 두 사본이 같은지는
+`tests/tools/test_proc_command_line.py` 가 댄다. 리눅스는 `/proc/<pid>/` 의
+`comm`·`stat`(부모 pid)·`cmdline`·`cwd` 를 읽는다. 읽다 실패하면 막지 않는다(fail-open).
 
 못 보는 것.
 - 커밋이 아닌 검사(`uv run pre-commit run`, `uv run pytest`)가 도는 동안의 편집. git 의 `commit`

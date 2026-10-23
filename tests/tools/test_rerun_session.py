@@ -11,10 +11,13 @@ import json
 import os
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import IO
 
 import pytest
 from tests.tools import fake_claude as fake
+from tools.proc_command_line import command_line
 from tools.rerun_files import (
     ARMS,
     CALL_FIRST,
@@ -34,8 +37,11 @@ from tools.rerun_files import (
 from tools.rerun_round import ROOT, RoundDir, create_round_dir, session_env
 from tools.rerun_session import (
     CallRun,
+    Continued,
     Elsewhere,
     Launched,
+    Opening,
+    Stop,
     budget_text,
     call_record,
     claude_version,
@@ -107,12 +113,18 @@ def _launch(place: RoundDir, config: Path, *, timeout: float = 60.0, sid: str = 
         claude=fake.claude(),
         arm=ARM,
         env=_env(place, config),
-        ticket=TICKET,
-        directive_text=directive(TASK, ARM, "그것을 짓는다"),
+        session_id=sid or new_session_id(),
+        opening=Opening.NEW,
+        message=first_message(str(place.clone), TICKET, directive(TASK, ARM, "그것을 짓는다")),
         budget_usd=12.345,
         timeout=timeout,
-        session_id=(lambda: sid) if sid else new_session_id,
     )
+
+
+def _alone(got: Launched, end: End) -> Continued:
+    """첫 호출 하나로 끝난 회차."""
+    run = CallRun(CALL_FIRST, got, has_directive=False, ends_with_question=False)
+    return Continued(runs=(run,), handoffs=0, interventions=0, asked_at_end=False, end=end)
 
 
 def _jsonl(*events: object) -> list[str]:
@@ -237,6 +249,14 @@ def test_명령은_설계의_것에_세션_id_와_남은_예산을_붙이고_모
     ]
 
 
+def test_이어_부르는_명령은_세션_id_자리에_resume_을_쓰고_나머지는_같다() -> None:
+    first = session_command(["claude.exe"], ARMS[3], "s-1", 7.019)
+    again = session_command(["claude.exe"], ARMS[3], "s-1", 7.019, opening=Opening.RESUME)
+
+    assert again == ["--resume" if word == "--session-id" else word for word in first]
+    assert "--session-id" not in again
+
+
 @pytest.mark.parametrize(
     ("usd", "text"),
     [
@@ -293,7 +313,7 @@ def test_가짜가_받은_인자_표준_입력_환경과_작업_폴더(
     added = {"LC_CTYPE"} - set(expected)
     assert sorted(str(n).upper() for n in names if str(n).upper() not in added) == expected
     assert "GH_TOKEN" not in names
-    assert got.drove.exit_code == 0 and not got.drove.timed_out
+    assert got.drove.exit_code == 0 and got.drove.stop is Stop.EXITED
 
 
 def test_띄우기_전에_세션_id_를_회차_폴더의_파일에_덧붙인다(tmp_path: Path) -> None:
@@ -306,11 +326,11 @@ def test_띄우기_전에_세션_id_를_회차_폴더의_파일에_덧붙인다(
             claude=[str(tmp_path / "없는-claude")],
             arm=ARM,
             env=_env(place, tmp_path / "설정"),
-            ticket=TICKET,
-            directive_text="지시문",
+            session_id="새-세션",
+            opening=Opening.NEW,
+            message="메시지",
             budget_usd=5.0,
             timeout=10.0,
-            session_id=lambda: "새-세션",
         )
 
     assert place.session_ids.name == "session-ids.txt"
@@ -339,7 +359,7 @@ def test_시간_제한을_넘긴_호출은_끄고_종료_코드를_비운다(tmp
 
     got = _launch(place, config, timeout=20.0)
 
-    assert got.drove.timed_out
+    assert got.drove.stop is Stop.DEADLINE_KILLED
     assert got.drove.exit_code is None
     assert got.summary.init is not None  # 끄기 전에 받은 줄은 남는다
     assert time.monotonic() - started < 200
@@ -355,7 +375,7 @@ def test_손자가_출력을_쥐어도_스스로_끝난_호출은_끈_호출이_
 
     got = _launch(place, config, timeout=120.0)
 
-    assert not got.drove.timed_out
+    assert got.drove.stop is Stop.EXITED
     assert got.drove.exit_code == 0
     assert got.summary.results  # 끝나기 전에 낸 줄은 받았다
     assert time.monotonic() - started < 90
@@ -366,12 +386,15 @@ def test_마감에_닿았을_때_이미_끝난_자식은_끈_호출이_아니다
     config = tmp_path / "설정"
     fake.write_script(config, calls=[fake.call(_events_done(0.4), linger=60)])
     ticks = iter([0.0])
+    rested: list[bool] = []
 
-    def clock() -> float:  # 마감을 잡는 첫 부름 뒤에는 자식이 끝날 만큼 쉬고 마감을 넘긴다
+    def clock() -> float:  # 마감을 잡는 첫 부름 뒤 한 번만 자식이 끝날 만큼 쉬고 마감을 넘긴다
         first = next(ticks, None)
         if first is not None:
             return first
-        time.sleep(15)
+        if not rested:
+            rested.append(True)
+            time.sleep(15)
         return 1e9
 
     got = drive(
@@ -381,10 +404,11 @@ def test_마감에_닿았을_때_이미_끝난_자식은_끈_호출이_아니다
         message="메시지",
         stream_file=place.stream / "01-s-1.jsonl",
         timeout=10.0,
+        session_id="s-1",
         clock=clock,
     )
 
-    assert not got.timed_out
+    assert got.stop is Stop.EXITED
     assert got.exit_code == 0
 
 
@@ -396,21 +420,7 @@ def test_기록_파일을_열지_못하면_띄운_자식을_끄고_예외를_올
     fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
     started: list[subprocess.Popen[bytes]] = []
 
-    class Recording(subprocess.Popen[bytes]):
-        def __init__(
-            self,
-            args: list[str],
-            *,
-            cwd: str,
-            env: dict[str, str],
-            stdin: int,
-            stdout: int,
-            stderr: int,
-        ) -> None:
-            super().__init__(args, cwd=cwd, env=env, stdin=stdin, stdout=stdout, stderr=stderr)
-            started.append(self)
-
-    monkeypatch.setattr(subprocess, "Popen", Recording)
+    monkeypatch.setattr(subprocess, "Popen", _popen_double(started))
     try:
         with pytest.raises(FileNotFoundError):
             drive(
@@ -420,14 +430,221 @@ def test_기록_파일을_열지_못하면_띄운_자식을_끄고_예외를_올
                 message="메시지",
                 stream_file=place.stream / "없는-폴더" / "01-s-1.jsonl",
                 timeout=600.0,
+                session_id="s-1",
             )
         assert len(started) == 1
         assert started[0].poll() is not None  # 가짜는 600초를 멈추려 했다
     finally:
-        for process in started:
-            if process.poll() is None:
-                process.kill()
-                process.wait(timeout=60)
+        _end_started(started)
+
+
+def test_러너가_끊기면_띄운_자식을_끄고_KeyboardInterrupt_를_올린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
+    started: list[subprocess.Popen[bytes]] = []
+    ticks = iter([0.0])
+
+    def clock() -> float:  # 마감을 잡은 뒤 처음 시간을 볼 때 러너의 터미널에서 Ctrl+C 를 친다
+        first = next(ticks, None)
+        if first is None:
+            raise KeyboardInterrupt
+        return first
+
+    monkeypatch.setattr(subprocess, "Popen", _popen_double(started))
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            drive(
+                session_command(fake.claude(), ARM, "s-1", 1.0),
+                cwd=str(place.clone),
+                env=_env(place, config),
+                message="메시지",
+                stream_file=place.stream / "01-s-1.jsonl",
+                timeout=600.0,
+                session_id="s-1",
+                clock=clock,
+            )
+        assert len(started) == 1
+        assert started[0].poll() is not None, "끊긴 러너가 띄운 자식을 남겼다"
+    finally:
+        _end_started(started)
+
+
+def _popen_double(
+    started: list[subprocess.Popen[bytes]], kept: list[IO[bytes]] | None = None
+) -> type[subprocess.Popen[bytes]]:
+    """`subprocess.Popen`의 대역. 가짜를 띄운 것만 `started`에 모은다. 끄는 길(`_kill_tree`)의
+    `taskkill`도 이 대역으로 띄워지기 때문이다. `kept`를 주면 가짜의 표준 출력을 떼어 그 목록에
+    쥔다(입출력이 없는 자식)."""
+
+    class Double(subprocess.Popen[bytes]):
+        def __init__(
+            self,
+            args: list[str],
+            *,
+            stdin: int | None = None,
+            stdout: int | None = None,
+            stderr: int | None = None,
+            cwd: str | None = None,
+            env: dict[str, str] | None = None,
+            start_new_session: bool = False,
+        ) -> None:
+            super().__init__(
+                args,
+                cwd=cwd,
+                env=env,
+                stdin=stdin,
+                stdout=stdout,
+                stderr=stderr,
+                start_new_session=start_new_session,
+            )
+            if str(fake.FAKE) not in args:
+                return
+            started.append(self)
+            if kept is not None and self.stdout is not None:
+                kept.append(self.stdout)
+                self.stdout = None
+
+    return Double
+
+
+def _end_started(started: list[subprocess.Popen[bytes]]) -> None:
+    for process in started:
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=60)
+
+
+def _reading(seen: list[tuple[str, ...] | None]) -> Callable[[int], tuple[str, ...] | None]:
+    def read(pid: int) -> tuple[str, ...] | None:
+        argv = command_line(pid)
+        seen.append(argv)
+        return argv
+
+    return read
+
+
+def test_자식의_표준_입출력이_없으면_명령_줄을_본_뒤_끄고_예외를_올린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
+    started: list[subprocess.Popen[bytes]] = []
+    kept: list[IO[bytes]] = []  # 파이프를 닫지 않게 쥔다. 닫으면 가짜가 쓰다 스스로 죽는다
+
+    seen: list[tuple[str, ...] | None] = []
+    monkeypatch.setattr(subprocess, "Popen", _popen_double(started, kept))
+    try:
+        with pytest.raises(RuntimeError, match="표준 입출력"):
+            drive(
+                session_command(fake.claude(), ARM, "s-1", 1.0),
+                cwd=str(place.clone),
+                env=_env(place, config),
+                message="메시지",
+                stream_file=place.stream / "01-s-1.jsonl",
+                timeout=600.0,
+                session_id="s-1",
+                read_command_line=_reading(seen),
+            )
+        [argv] = seen
+        assert argv is not None and "s-1" in argv
+        assert started[0].poll() is not None  # 가짜는 600초를 멈추려 했다
+    finally:
+        _end_started(started)
+        for pipe in kept:
+            pipe.close()
+
+
+def _jumps_after(stream_file: Path, mark: str, late: float) -> Callable[[], float]:
+    """`stream_file`에 `mark`가 든 뒤로는 `late`를, 그 전에는 0을 내는 시계."""
+
+    def clock() -> float:
+        landed = stream_file.exists() and mark in stream_file.read_text(encoding="utf-8")
+        return late if landed else 0.0
+
+    return clock
+
+
+def test_출력을_닫고도_거둘_시간_안에_끝나지_않은_호출은_명령_줄을_본_뒤_끈다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call(_events_done(0.4), close_stdout=True, hang=600)])
+    monkeypatch.setattr("tools.rerun_session.REAP_TIMEOUT", 2.0)
+    seen: list[tuple[str, ...] | None] = []
+
+    got = drive(
+        session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+        cwd=str(place.clone),
+        env=_env(place, config),
+        message="메시지",
+        stream_file=place.stream / "01-s-1.jsonl",
+        timeout=600.0,
+        session_id="s-1",
+        read_command_line=_reading(seen),
+    )
+
+    # 마감이 아니라 거두는 기다림이 먼저 끝났다
+    assert got.stop is Stop.HUNG_KILLED and got.exit_code is None
+    [argv] = seen
+    assert argv is not None and "s-1" in argv
+    assert summarize_call(got.lines).results  # 출력을 닫기 전에 낸 줄은 남는다
+
+
+def test_출력을_닫고_멈춘_호출의_명령_줄에_세션_id_가_없으면_끄지_않고_남긴다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call(_events_done(0.4), close_stdout=True, hang=600)])
+    monkeypatch.setattr("tools.rerun_session.REAP_TIMEOUT", 2.0)
+    started: list[subprocess.Popen[bytes]] = []
+    monkeypatch.setattr(subprocess, "Popen", _popen_double(started))
+    try:
+        got = drive(
+            session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+            cwd=str(place.clone),
+            env=_env(place, config),
+            message="메시지",
+            stream_file=place.stream / "01-s-1.jsonl",
+            timeout=600.0,
+            session_id="s-1",
+            read_command_line=lambda pid: ("python", "다른-프로세스"),
+        )
+
+        assert got.stop is Stop.HUNG_LEFT, "명령 줄이 다른 호출을 끈 호출로 적었다"
+        assert got.exit_code is None
+        assert started[0].poll() is None, "명령 줄이 다른 프로세스를 껐다"
+    finally:
+        _end_started(started)
+
+
+def test_출력을_닫은_뒤_거두는_기다림도_호출의_마감을_넘지_않는다(tmp_path: Path) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call(_events_done(0.4), close_stdout=True, hang=600)])
+    stream_file = place.stream / "01-s-1.jsonl"
+    started = time.monotonic()
+
+    got = drive(
+        session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+        cwd=str(place.clone),
+        env=_env(place, config),
+        message="메시지",
+        stream_file=stream_file,
+        timeout=600.0,
+        session_id="s-1",
+        # 결과 줄이 오면 마감이 2초 남는다. 거두는 기다림(60초)을 다 쓰면 마감을 넘긴다
+        clock=_jumps_after(stream_file, '"type": "result"', 598.0),
+    )
+
+    assert got.stop is Stop.DEADLINE_KILLED and got.exit_code is None
+    assert summarize_call(got.lines).results
+    assert time.monotonic() - started < 45
 
 
 def test_0_이_아닌_종료_코드는_그대로_호출의_칸에_든다(tmp_path: Path) -> None:
@@ -437,7 +654,7 @@ def test_0_이_아닌_종료_코드는_그대로_호출의_칸에_든다(tmp_pat
 
     got = _launch(place, config)
 
-    assert got.drove.exit_code == 3 and not got.drove.timed_out
+    assert got.drove.exit_code == 3 and got.drove.stop is Stop.EXITED
     assert got.summary.results  # 결과 이벤트를 낸 뒤 3으로 끝났다
     made = call_record(CallRun(CALL_FIRST, got, has_directive=False, ends_with_question=False))
     assert made.exit_code == 3
@@ -817,12 +1034,8 @@ def test_회차_기록은_정해진_칸만_남기고_모델의_글과_도구_입
         claude_version=claude_version(fake.claude(), env=env, cwd=place.clone),
         account="njh6803",
         env=env,
-        runs=[CallRun(CALL_FIRST, got, has_directive=False, ends_with_question=False)],
+        continued=_alone(got, End(kind=END_DONE, reason=None, resets_at=None)),
         config_dir=config,
-        handoffs=0,
-        interventions=0,
-        asked_at_end=False,
-        end=End(kind=END_DONE, reason=None, resets_at=None),
         outcome=outcome_of(pick_result_commit({"feature/03-thing": ("d" * 40, 2)}, TASK.branch)),
         wall_clock_from=100.0,
         now=163.456,
@@ -871,12 +1084,8 @@ def test_꼴_밖의_subtype_과_끝난_까닭은_기록이_받는_꼴로_적는�
         claude_version=None,
         account="njh6803",
         env={},
-        runs=[CallRun(CALL_FIRST, got, has_directive=False, ends_with_question=False)],
+        continued=_alone(got, End(kind="측정 아님", reason="호출", resets_at=None)),
         config_dir=config,
-        handoffs=0,
-        interventions=0,
-        asked_at_end=False,
-        end=End(kind="측정 아님", reason="호출", resets_at=None),
         outcome=outcome_of(pick_result_commit({}, TASK.branch)),
         wall_clock_from=0.0,
         now=1.0,
@@ -901,12 +1110,14 @@ def test_다른_과제의_회차_폴더로는_기록을_짓지_않는다(tmp_pat
             claude_version=None,
             account="njh6803",
             env={},
-            runs=[],
+            continued=Continued(
+                runs=(),
+                handoffs=0,
+                interventions=0,
+                asked_at_end=False,
+                end=End(kind="측정 아님", reason="호출", resets_at=None),
+            ),
             config_dir=tmp_path,
-            handoffs=0,
-            interventions=0,
-            asked_at_end=False,
-            end=End(kind="측정 아님", reason="호출", resets_at=None),
             outcome=outcome_of(pick_result_commit({}, TASK.branch)),
             wall_clock_from=0.0,
             now=1.0,

@@ -396,17 +396,22 @@ class End:
 
 @dataclass(frozen=True)
 class Gate:
+    """게이트 하나가 끝난 꼴. 종료 코드가 있으면 끝까지 돌았다. 빈 값이면 시간을 넘겼거나
+    (`timed_out`), 띄우지 못했거나 앞 게이트가 게이트 몫의 시간을 다 써 돌지 않았다."""
+
     command: str
-    exit_code: int | None  # 시간을 넘겼으면 빈 값
-    timed_out: bool
+    exit_code: int | None
+    timed_out: bool  # 참이면 종료 코드는 빈 값이다
 
 
 @dataclass(frozen=True)
 class SetupFailure:
-    """결과 작업 트리의 준비가 실패한 명령(07)."""
+    """결과 작업 트리의 준비가 실패한 명령(07). 끝난 꼴은 `Gate`와 같은 두 칸이다. 종료 코드가
+    있으면 0이 아닌 값으로 끝났고, 빈 값이면 시간을 넘겼거나(`timed_out`) 띄우지 못했다."""
 
     command: str
-    exit_code: int | None  # 시간을 넘겼으면 빈 값
+    exit_code: int | None
+    timed_out: bool  # 참이면 종료 코드는 빈 값이다
 
 
 @dataclass(frozen=True)
@@ -533,7 +538,7 @@ _SESSION_KEYS = (
 )
 _END_KEYS = ("kind", "reason", "resets_at")
 _GATE_KEYS = ("command", "exit_code", "timed_out")
-_SETUP_KEYS = ("command", "exit_code")
+_SETUP_KEYS = ("command", "exit_code", "timed_out")
 _HIDDEN_KEYS = ("passed", "total", "failed")
 _OUTCOME_KEYS = ("commit", "rule", "commits_after_base", "setup_failure", "gates", "hidden")
 _TOKENS_KEYS = ("input", "output", "cache_read", "cache_write", "thinking")
@@ -637,7 +642,11 @@ def _session_json(s: Session) -> dict[str, Json]:
 def _outcome_json(o: Outcome) -> dict[str, Json]:
     setup: Json = None
     if o.setup_failure is not None:
-        setup = {"command": o.setup_failure.command, "exit_code": o.setup_failure.exit_code}
+        setup = {
+            "command": o.setup_failure.command,
+            "exit_code": o.setup_failure.exit_code,
+            "timed_out": o.setup_failure.timed_out,
+        }
     gates: Json = None
     if o.gates is not None:
         gates = [
@@ -784,6 +793,12 @@ def _end(o: _Obj) -> End:
     return End(kind=kind, reason=reason, resets_at=resets_at)
 
 
+def _check_end(where: str, exit_code: int | None, *, timed_out: bool) -> None:
+    """게이트와 준비 실패가 끝난 꼴의 두 칸. 시간을 넘긴 명령에는 종료 코드가 없다."""
+    if timed_out and exit_code is not None:
+        raise ShapeError(f"{where}: 시간을 넘긴 명령에 종료 코드 {exit_code}가 있다")
+
+
 def _outcome(o: _Obj) -> Outcome:
     commit = o.opt_text("commit", _COMMIT)
     rule = o.opt_choice("rule", RULES)
@@ -793,7 +808,11 @@ def _outcome(o: _Obj) -> Outcome:
         setup = SetupFailure(
             command=setup_obj.choice("command", SETUP_COMMANDS),
             exit_code=setup_obj.opt_integer("exit_code"),
+            timed_out=setup_obj.flag("timed_out"),
         )
+        _check_end(f"{o.where}.setup_failure", setup.exit_code, timed_out=setup.timed_out)
+        if setup.exit_code == 0:
+            raise ShapeError(f"{o.where}.setup_failure: 실패한 준비의 종료 코드가 0이다")
     gates: tuple[Gate, ...] | None = None
     if not o.is_null("gates"):
         gates = tuple(
@@ -804,6 +823,8 @@ def _outcome(o: _Obj) -> Outcome:
             )
             for g in o.objs("gates", _GATE_KEYS)
         )
+        for i, g in enumerate(gates):
+            _check_end(f"{o.where}.gates[{i}]", g.exit_code, timed_out=g.timed_out)
         if tuple(g.command for g in gates) != GATE_COMMANDS:
             raise ShapeError(f"{o.where}.gates: 게이트는 {GATE_COMMANDS} 셋이 이 차례로 든다")
     hidden_obj = o.opt_obj("hidden", _HIDDEN_KEYS)
