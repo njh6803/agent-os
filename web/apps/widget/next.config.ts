@@ -28,7 +28,8 @@ const config: NextConfig = {
   agentRules: false,
   env: {
     [WIDGET_ORIGINS_ENV]: input.allowedOrigins.join(" "),
-    [WIDGET_REQUEST_CHARS_ENV]: String(input.requestChars),
+    // String(n) 은 10^21 부터 지수 꼴(1e+21)이라 BigInt 로 십진수 글을 짓는다.
+    [WIDGET_REQUEST_CHARS_ENV]: BigInt(input.requestChars).toString(),
   },
   headers() {
     return Promise.resolve([

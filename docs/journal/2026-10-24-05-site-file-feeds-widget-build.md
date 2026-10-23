@@ -128,4 +128,56 @@ PR 직전 `bug-perf-review` 에 밀 주장(반영으로 새로 쓴 사실 문장
 - 반영 뒤 `pnpm -C web visual:widget`(Docker): 5 passed(16.0초).
 - 반영 뒤 변이: 위 변이 절(40 모두 기대대로).
 - 첫 커밋 시도는 pre-commit 에 막혔다. 둘이었다. web-verify 의 ESLint 가 `site-file.ts` 의 `[...host]` 를 `@typescript-eslint/no-misused-spread` 로 막았다(반영으로 호스트 규칙을 다시 쓰며 들인 줄이라 반영 전의 `run_checks` 는 보지 못했다). `Array.from(host)` 로 바꾸고, 앞의 idn 규칙이 ASCII 밖을 막아 글자 하나가 코드 단위 하나라는 주석을 달았다. 변이 표 검사는 `.scratch/end-user-channel/probes/contract_mutations.toml` 의 27(허용 출처의 와일드카드를 받는다)이 옛 `"*"` 검사를 겨눠 원문이 0번이라고 막았다. `*` 는 이제 모양 규칙에도 막혀 `wildcard` 판정만 바꾸면 그 시험이 빨개지지 않으므로, `_origin_rule` 의 `return "wildcard"` 를 `return None` 으로 바꾸는 변이로 옮겼다. 그 27과 `site_file_mutations.toml` 의 22~25(금지된 글자의 Node 쪽)를 다시 돌려 5 모두 기대대로였고, Node 위젯 시험은 222 passed 였다. 그 표의 README 행에 적었다.
+- 둘째 커밋 시도의 pre-commit: ruff 둘, `run_checks` 의 검사 열(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 242.9초, pytest 302.3초), 마크다운 표, 줄 구분 문자, 변이 표, 헌법 판, 인용 대조(경고만 내는 검사다. 일지 아홉 줄과 헌법 README 한 줄에 경고 10건을 냈고, 하나씩 가르지 않았다), 커밋 메시지가 모두 Passed. 카나리아 명세는 대상 파일이 없어 Skipped. 반영 전 `run_checks` 에서 빨갰던 `test_hook_edit_during_commit` 의 시험은 두 번의 pre-commit 에서 모두 지났다.
 - 관리 화면 e2e 는 로컬에서 치지 않았다. 건드린 시작 래퍼는 위젯의 것이고, 관리 화면의 e2e 는 사이트 파일을 쓰지 않는다(`web/apps/admin` 에 `site-file` 이 없다). CI 의 `e2e` 잡이 본다.
+
+## 인계
+
+커밋 뒤에 세션 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `hook_handoff` 의 계기가 왔다(`커밋 뒤`). 인계하지 않는 때 다섯에 들지 않았다. 커밋이 pre-commit 을 지났고, 요청 범위가 병합까지이고, 이어받은 상태가 없고, `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없었다. 이 세션의 지금 제목은 `feature/04-site-file-feeds-widget-build` 이다. 이 절은 커밋하지 않고, `## 다음` 은 새 세션이 쓴다.
+
+지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md. 서버와 위젯 빌드가 같은 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수 상한을 읽고, 허용 출처의 표기를 파이썬과 Node가 같은 픽스처로 판정한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+브랜치: feature/04-site-file-feeds-widget-build
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-05-site-file-feeds-widget-build.md 전체(특히 "반영" 끝의 PR 직전 bug-perf-review 에 밀 주장 열셋과 "검사"). 막힌 티켓(05~11)은 .scratch/plan.md 의 web-widget 행
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 변이, -m llm, visual:widget, 커밋(pre-commit 통과)까지 마쳤고 남은 단계는 implement 의 커밋 다음부터다, 일지 docs/journal/2026-10-24-05-site-file-feeds-widget-build.md. 남은 차례: origin/main 병합(.scratch/web-widget/probes/README.md 에서 main 이 더한 relay_mutations 행과 글자 충돌이 난다), 일지의 커밋 절, PR 직전 리뷰(bug-perf-review 브리프에 일지 "반영"의 밀 주장 열셋을 싣는다), PR, 봇 회차, 병합, next-session. 일지의 "인계" 절은 이 세션이 커밋하지 않고 남겼다. 일지 "다음"에 넘길 것: 반영 전 run_checks 에서 test_hook_edit_during_commit 이 다른 세션의 git 프로세스와 겹쳐 한 번 빨갰던 일(일지 "검사")
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-site-file-feeds-widget-build (인계함)` 으로 바꿨고, 멈출 백그라운드 작업은 없었고, `git worktree unlock` 으로 이 워크트리의 잠금을 풀었다.
+
+open-session을 부른다 2026-10-23T18:09:05Z
+
+## 이어 받은 세션(커밋 뒤)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+
+(지시문은 위 "인계"의 것과 같다. 제목을 `feature/04-site-file-feeds-widget-build` 로 바꾸고 워크트리에 `EnterWorktree(path)` 로 들어갔다.)
+
+### 합치기
+
+- `git merge origin/main` 으로 `7496a830`(PR #378, #377)을 합쳤다(405511c0). `.scratch/web-widget/probes/README.md` 는 자동으로 합쳐졌고, main 이 더한 `relay_mutations.toml` 행 아래에 이 브랜치의 `site_file_mutations.toml` 행이 든다. 앞 세션과 같은 까닭으로 앱의 `sync_with_base_branch` 는 쓰지 않았다(일지 2026-10-24-01, 앱이 만든 워크트리가 아니다).
+- `sibling_overlap`: 번호 겹침 없음. 함께 고친 파일은 `.scratch/plan.md` 하나(PR #356, 워크트리 `02-build-tokens-json`·`mcp-shutdown-spec`)다.
+- 합친 뒤 `uv run python tools/run_checks.py`: 종료 코드 0(web-verify 257.0초, pytest 342.4초).
+
+### PR 직전 리뷰
+
+CodeRabbit CLI 는 `Seat: not assigned`(Plan: Free)라 대체 둘을 나란히 돌렸다.
+
+- `/security-review`(합친 뒤): 지적 없음. 판정을 지난 값에 공백·CR·LF·제어 문자가 들지 못해 CSP 헤더를 쪼개거나 출처를 덧붙일 수 없고, 서버의 CORS 는 Starlette 의 글자 그대로 비교라 넓어지지 않으며, 두 언어의 진단에 값이 실리지 않고, smol-toml 은 `unsafeKeyBehaviour: "throw"` 로 `__proto__` 를 거절한다. `;`·`,` 가 든 호스트가 판정을 지나는 것은 운영자 구성에서만 나고 좁히는 쪽이라 지적이 아니라고 봤다(LOW 강화안).
+- `bug-perf-review`: 두 언어의 `originRule`·`_origin_rule` 에 무작위 입력 30만 개를 넣어 규칙 이름이 어긋난 것이 0 이었다. 유효 Minor 다섯, 보류 셋. 밀 주장 열셋 가운데 어긋난 것은 7 하나(지적 1)다.
+  - [Minor, 고침] `site-file.ts` 머리의 서버만 보는 제약 열거에 발급자의 빈 값과 `|` 가 빠졌다. "발급자의 빈 값·겹침·`|`" 로 고쳤다. `main.py` 주석과 티켓 04 는 "서버만 읽는 값의 뜻" 이라는 포괄어라 두었다.
+  - [Minor, 고침] 줄 끝이 `\r` 하나인 파일을 서버는 받고 빌드는 거절했다. 서버의 `path.read_text` 는 텍스트 모드라 보편 줄바꿈으로 `\r\n`·`\r` 을 `\n` 으로 바꾼다. `site-file.ts` 의 `readSiteFile` 이 `universalNewlines` 로 같게 바꾼 뒤 `siteFileInput` 에 넘긴다. 변이 표가 원문으로 겨누는 `textOf` 의 `TextDecoder` 줄은 그대로 둔다. `next.config.test.ts` 에 시험을 먼저 더해 빨강(`each key-value declaration must be followed by an end-of-line (1행 21열)`)을 본 뒤 고쳤다.
+  - [Minor, 남김] `;`·`,` 가 든 호스트(`https://shop.example,other.example`)가 두 언어의 `host` 규칙을 지나고, `frame-ancestors` 헤더에서 그 글자부터 뒤의 출처가 빠진다. 막지 않는다. 명세의 규칙 목록 밖의 금지이고(셀프 리뷰 명세 축 1 과 같은 까닭), 결과는 출처가 줄어드는 쪽이다. 픽스처 README 의 CSP 문단에 그 효과를 적었다. 헤더를 가르는 글자는 CSP3 2026-09-16 Working Draft 를 WebFetch 로 읽은 웹 요약으로 봤다(지시문은 `;`, 정책은 `,`).
+  - [Minor, 고침] `request_chars` 가 10^21 이상이면 `String(number)` 가 `1e+21` 을 실었다. tomllib 과 smol-toml(`integersAsBigInt`) 모두 10^21 을 받는 것을 손으로 봤다. `next.config.ts` 가 `BigInt(input.requestChars).toString()` 으로 십진수 글을 짓는다. 시험을 먼저 더해 빨강(`Received "1e+21"`)을 본 뒤 고쳤다. 2^53 을 넘는 상한은 `number` 를 거쳐 가까운 정수가 되는 것을 `WIDGET_REQUEST_CHARS_ENV` 의 독스트링에 적었다.
+  - [Minor, 고침] `tests/test_main.py` 의 `_toml_strings` 가 BMP 밖 글자를 서로게이트 쌍 이스케이프로 적어 tomllib 이 거절한다(`Escaped character is not a Unicode scalar value` 를 손으로 봤다). 표기 픽스처에 그런 글자가 없어 독스트링에 한계를 적었다.
+  - [보류] 파이썬 3.13 부터 `IPv6Address.compressed` 가 IPv4 를 품은 주소를 점 표기로 적는다는 리뷰어의 기억. 이 프로젝트는 `requires-python = "==3.12.*"` 이고 3.12.10 은 `::ffff:102:304` 를 냈다. 이 PC 에 3.13 이 없어 확인하지 못했다. PR 의 "남긴 위험"에 적는다.
+  - [보류] 빈 파일·BOM·잘못된 UTF-8·실수·겹친 출처를 두 프로세스에 같은 파일로 먹이는 대조는 리뷰어가 스크립트 쓰기 거부로 하지 못했다. 각 갈래는 두 언어의 시험이 따로 고정한다.
+  - [보류] 밀 주장 10(dev·start 를 손으로 봄)과 11(CSP3 원문)은 원문을 열지 못한 보류다. 앞 세션이 손으로 보고 내려받아 읽은 것이 근거다.
+- 반영 뒤: `pnpm -C web exec vitest run --project node apps/widget/next.config.test.ts apps/widget/tools/site-file.test.ts` 190 passed, Prettier 통과, `tools/mutate.py --check` 로 `site_file_mutations.toml`(40)·`widget_app_mutations.toml`(34) 모두 원문이 한 번씩 있다. 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.

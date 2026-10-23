@@ -1575,7 +1575,9 @@ _ORIGIN_CASES = _OriginCases.model_validate_json(
 
 def _toml_strings(*values: str) -> str:
     """TOML 배열 하나. JSON 의 문자열 표기를 TOML 의 기본 문자열로 쓴다. 보이는 ASCII 밖(제어 문자,
-    DEL, 비ASCII)은 모두 이스케이프로 적는다. TOML 은 기본 문자열 안의 날 DEL 을 받지 않는다."""
+    DEL, 비ASCII)은 모두 이스케이프로 적는다. TOML 은 기본 문자열 안의 날 DEL 을 받지 않는다. BMP 밖
+    글자는 JSON 이 서로게이트 쌍(`\\ud83d\\ude00`)으로 적어 TOML 이 거절하므로 쓰지 못한다. 표기
+    픽스처에는 그런 글자가 없다."""
     return "[" + ", ".join(json.dumps(value) for value in values) + "]"
 
 

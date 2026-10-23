@@ -137,6 +137,26 @@ test("사이트가 있어도 합친 허용 출처가 비면 어떤 사이트도 
   expect(config.env).toEqual({ [WIDGET_ORIGINS_ENV]: "", [WIDGET_REQUEST_CHARS_ENV]: "20000" });
 });
 
+test("줄 끝을 CR 하나로 적은 사이트 파일도 서버처럼 읽는다", async () => {
+  const config = await loadConfig(siteFile(site().replaceAll("\n", "\r")));
+
+  expect(config.env).toEqual({
+    [WIDGET_ORIGINS_ENV]: "https://shop.example",
+    [WIDGET_REQUEST_CHARS_ENV]: "20000",
+  });
+});
+
+test("가장 작은 상한이 아주 커도 지수 꼴이 아닌 십진수 글로 싣는다", async () => {
+  const config = await loadConfig(
+    siteFile(site({ extra: "[sites.limits]\nrequest_chars = 1000000000000000000000" })),
+  );
+
+  expect(config.env).toEqual({
+    [WIDGET_ORIGINS_ENV]: "https://shop.example",
+    [WIDGET_REQUEST_CHARS_ENV]: "1000000000000000000000",
+  });
+});
+
 describe("변수가 준 사이트 파일을 읽지 못하면 빌드가 실패한다", () => {
   test("변수가 비었다", async () => {
     await expect(loadConfig("")).rejects.toThrow(`${SITE_FILE_ENV} 가 비었다`);

@@ -9,8 +9,8 @@
  * 파일이 없거나 읽지 못하면 빌드가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
  * 것이다. TOML 이 깨졌거나, 판이 "1" 이 아니거나, 모르는 키가 있거나, 필수 키가 빠졌거나, 값의 타입이 엄격한 타입과
  * 다르면 그렇다. 다른 하나는 빌드가 읽는 두 값이 서버가 거절할 값인 것이다(아래 표기 밖의 허용 출처, 1 보다 작은
- * `request_chars`). 서버만 보는 제약(공개 키의 수, 다른 상한의 범위, 발급자의 겹침, 공개 키의 PEM 과 `kid`, 열 에이전트의
- * 이름)은 다시 판정하지 않는다. smol-toml 은 TOML 1.1 을 따라 파이썬 tomllib(TOML 1.0)이 거절하는 문법(여러 줄 인라인
+ * `request_chars`). 서버만 보는 제약(공개 키의 수, 다른 상한의 범위, 발급자의 빈 값·겹침·`|`, 공개 키의 PEM 과 `kid`,
+ * 열 에이전트의 이름)은 다시 판정하지 않는다. smol-toml 은 TOML 1.1 을 따라 파이썬 tomllib(TOML 1.0)이 거절하는 문법(여러 줄 인라인
  * 표, `\e` 이스케이프 등)도 받는다. 그런 파일로는 빌드가 지나도 serve 가 뜨지 못해, 조용히 지나가지 않는다.
  *
  * 허용 출처의 표기는 브라우저가 `Origin` 헤더에 싣는 직렬화 그대로여야 한다. 규칙의 이름과 차례와 사례는
@@ -29,7 +29,10 @@ import { parse, TomlError, type TomlTable, type TomlValue } from "smol-toml";
 export const SITE_FILE_ENV = "AGENT_OS_SITE_FILE";
 /** 빌드가 싣는 합친 허용 출처. 공백으로 잇는다. 표기 규칙을 지난 출처에는 공백이 없다. */
 export const WIDGET_ORIGINS_ENV = "AGENT_OS_WIDGET_ORIGINS";
-/** 빌드가 싣는 가장 작은 요청 글자 수 상한. 십진수 글이다. */
+/**
+ * 빌드가 싣는 가장 작은 요청 글자 수 상한. 지수 꼴이 아닌 십진수 글이다. 2^53 을 넘는 상한은 `number` 를 거쳐 가까운
+ * 정수로 싣는다.
+ */
 export const WIDGET_REQUEST_CHARS_ENV = "AGENT_OS_WIDGET_REQUEST_CHARS";
 /** 서버의 기본값(`src/agent_os/channel/http/limits.py` 의 `DEFAULT_REQUEST_CHARS`). 두 언어의 시험이 같은 값을 본다. */
 export const DEFAULT_REQUEST_CHARS = 20_000;
@@ -63,7 +66,15 @@ export function buildInput(env: Readonly<Record<string, string | undefined>>): B
 
 function readSiteFile(path: string): BuildInput | SiteFileProblems {
   const text = textOf(path);
-  return typeof text === "string" ? siteFileInput(text) : text;
+  return typeof text === "string" ? siteFileInput(universalNewlines(text)) : text;
+}
+
+/**
+ * 줄 끝 `\r\n` 과 `\r` 을 `\n` 으로 바꾼 글. 서버는 파일을 텍스트 모드(`Path.read_text`)로 읽어 TOML 파서에 넘기기
+ * 전에 이렇게 바꾼다(보편 줄바꿈). 바꾸지 않으면 줄 끝이 `\r` 하나인 파일을 서버는 받고 smol-toml 은 거절한다.
+ */
+function universalNewlines(text: string): string {
+  return text.replace(/\r\n?/g, "\n");
 }
 
 /** 파일의 글. 서버처럼 UTF-8 로 엄격하게 풀고 머리의 BOM 을 그대로 둔다. */
