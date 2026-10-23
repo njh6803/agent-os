@@ -188,12 +188,16 @@ _BASH_RG_SAME = [
     "rg -g '.env*' -g '!.env' {m} .", "rg -uu -g '!.env' {m} .", "rg -uu -g '!.env.local' {m} .",
     # 빼기 여럿이 합쳐 `.env` 꼴을 모두 뺀다(grep 의 같은 꼴, 셀프 리뷰 두 축).
     "rg -uu -g '!.env' -g '!.env.*' {m} .",
+    # 역슬래시는 rg 가 이스케이프로 읽어 `\.env` 가 `.env` 다(푸시 뒤 자동 보안 리뷰. 2026-10-23
+    # Windows 의 rg 14.1.1 도 그렇게 읽었다).
+    "rg -g '\\.env' {m} .", "rg -g '\\.e\\nv' {m} .",
 ]  # fmt: skip
 # 훅이 막는데 rg 는 읽지 않는 것(거짓 양성). 고르는 쪽의 대소문자, 앞의 `./`, 빼는 쪽의 중괄호,
 # `--iglob` 의 빼기 대소문자, 디렉터리가 붙은 빼기다(모듈 독스트링의 못 보는 것).
 _BASH_RG_STRICTER = [
     "rg -g .ENV {m} .", "rg -g ./.env {m} .", "rg -g .env -g '!{{.env}}' {m} .",
     "rg -g .env --iglob '!.ENV' {m} .", "rg -g '.env*' -g '!/.env*' -g '!sub/.env*' {m} .",
+    "rg -uu -g '!\\.env*' {m} .",
 ]  # fmt: skip
 
 

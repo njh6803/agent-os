@@ -73,8 +73,11 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 중괄호(`-g .env -g '!{.env}'`)와 `--iglob` 의 빼기 대소문자(`_rg_excludes`), Grep 도구 glob 칸의
 순서(`.env !.env` 는 뒤의 빼기가 이기지만 순서를 보지 않는다), 마지막 `/` 앞의 디렉터리
 조각(`src/**` 를 `**` 로 읽는다), 디렉터리가 붙은 빼는 glob(`!sub/.env` 는 그 폴더만 빼지만 빼지
-않는다고 본다, `_rg_excludes`)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
-고정한다. 에이전트
+않는다고 본다, `_rg_excludes`), 빼는 glob 의 역슬래시(`!\\.env*` 는 rg 가 이스케이프로 읽어 `.env`
+꼴을 빼지만 풀어 보지 않는다)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
+고정한다. grep 의 `--exclude='\\.env*'` 도 grep 이 `.env` 꼴을 빼는데(2026-10-23 GNU grep 3.1, 셀프
+리뷰 표준 축이 손으로 봤다) 풀어 보지 않아 막는다. ag·ack 의 값 옵션 표(`_AG_VALUE_OPTIONS`,
+`_ACK_VALUE_OPTIONS`)는 두 도구의 파서 소스를 읽어 지었고 실제로 재지 않았다. 에이전트
 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건 개발용
 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
@@ -155,30 +158,55 @@ _ENV_FILE = re.compile(r"(?<![\w.-])(?:[\w.:~${}-]+/)*(\.env(?:\.[\w-]+)?)(?![\w
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
 _SHORT_CLUSTER = re.compile(r"^-([A-Za-z.]+)\d*$")
+_ESCAPE = re.compile(r"\\(.)")
 # 값을 하나 더 먹는 옵션. 그 값은 경로도 패턴도 아니다.
 _GREP_VALUE_OPTIONS = frozenset(
     {"-A", "-B", "-C", "-m", "-e", "-f", "-d", "-D", "--include", "--exclude", "--exclude-dir"}
 )
-# ag·ack 의 값 옵션. 값을 먹는 짧은 옵션(-A -B -C -g -t 등)이 rg 와 같은 이름이라 rg 의 옛 표를
-# 그대로 쓴다. rg 표의 `-r`·`-d` 는 넣지 않는다 — ag·ack 의 `-r` 는 값을 먹지 않는 재귀다.
-_AG_VALUE_OPTIONS = frozenset(
-    {
-        "-A", "-B", "-C", "-m", "-e", "-f", "-g", "-t", "-T", "-E", "-j", "-M",
-        "--after-context", "--before-context", "--context", "--max-count", "--regexp", "--file",
-        "--glob", "--iglob", "--type", "--type-not", "--type-add", "--encoding", "--threads",
-        "--max-columns", "--pre", "--sort", "--sortr", "--color", "--colors", "--max-depth",
-    }
-)  # fmt: skip
 # rg 14.1.1 의 `rg --help` 에서 값을 받는 옵션을 모두 옮겼다(`-x VALUE, --long=VALUE` 와
 # `--long=VALUE` 꼴, 2026-10-23 손으로 봤다). `--maxdepth` 는 `--max-depth` 의 숨은 별칭이다. 빠진
 # `-r` 뒤의 `g` 를 `-g` 로 읽어 `rg -uu -rg ^ .` 를 지나보낸 판이 있었다(PR 직전 보안 리뷰).
-_RG_VALUE_OPTIONS = _AG_VALUE_OPTIONS | frozenset(
+_RG_VALUE_OPTIONS = frozenset(
     {
-        "-d", "-r",
+        "-A", "-B", "-C", "-m", "-e", "-f", "-g", "-t", "-T", "-E", "-j", "-M", "-d", "-r",
+        "--after-context", "--before-context", "--context", "--max-count", "--regexp", "--file",
+        "--glob", "--iglob", "--type", "--type-not", "--type-add", "--encoding", "--threads",
+        "--max-columns", "--pre", "--sort", "--sortr", "--color", "--colors", "--max-depth",
         "--context-separator", "--dfa-size-limit", "--engine", "--field-context-separator",
         "--field-match-separator", "--generate", "--hostname-bin", "--hyperlink-format",
         "--ignore-file", "--max-filesize", "--maxdepth", "--path-separator", "--pre-glob",
         "--regex-size-limit", "--replace", "--type-clear",
+    }
+)  # fmt: skip
+# ag·ack 의 값 옵션. 다음 낱말을 값으로 먹는 것만 두고, 근거는 man 페이지가 아니라 파서의 정의다
+# (ag 는 `src/options.c` 의 getopt 문자열과 `required_argument`, ack 3 은
+# `lib/App/Ack/ConfigLoader.pm` 의 Getopt::Long 명세. 2026-10-23 원문을 받아 읽었다). 이 PC 와 CI
+# 에 둘 다 없어 실제로 재지 않았다. 값을 먹지 않는 옵션을 표에 두면 그 뒤의 패턴을 값으로 먹어
+# 파일을 패턴으로 버리고(거짓 음성), 값을 먹는 옵션을 빼면 그 값을 패턴으로 버려 파일을 파일로
+# 본다(막는 쪽). 그래서 모르면 뺀다. 값이 선택인 것도 뺀다. ag 의 `--after`·`--before`·`--context`
+# 는 `=` 로 붙인 값만 받고(짧은 `-A`·`-B`·`-C` 는 값을 꼭 받는다), ack 의 `-A`·`-B`·`-C`·`-p` 는
+# 숫자가 아닌 다음 낱말을 먹지 않는다. ack 의 `--pager` 는 값이 선택이지만 Getopt::Long 이 `-` 로
+# 시작하지 않는 다음 낱말을 값으로 먹어 둔다. 패턴을 주는 값 옵션(ack 의 `--match`)은 표에 두면서
+# `_pattern_given_by_option` 에도 알려야 한다. 이 표의 앞선 두 판이 틀렸다. rg 의 표를 함께 쓴 판은
+# ag 의 `-t`(--all-text)·`-f`(--follow)를 값 옵션으로 읽어 `ag -t KEY .env` 를 지나보냈고(푸시 뒤
+# 자동 보안 리뷰, 대기열 422), man 페이지의 `-A NUM`·`-g PATTERN` 을 따른 판은 ack 의 `-A`·`-B`(값이
+# 선택인 숫자)와 `-g`(값 없는 플래그)를 값 옵션으로 읽어 `ack -A KEY .env` 를 지나보냈다(셀프 리뷰).
+_AG_VALUE_OPTIONS = frozenset(
+    {
+        "-A", "-B", "-C", "-G", "-g", "-m", "-p", "-W",
+        "--file-search-regex", "--filename-pattern", "--max-count", "--path-to-ignore", "--width",
+        "--ignore", "--ignore-dir", "--depth", "--pager", "--workers", "--color-line-number",
+        "--color-match", "--color-path", "--ackmate-dir-filter",
+    }
+)  # fmt: skip
+_ACK_VALUE_OPTIONS = frozenset(
+    {
+        "-m", "-t", "-T",
+        "--max-count", "--type", "--match", "--output", "--and", "--or", "--not", "--range-start",
+        "--range-end", "--files-from", "--ignore-dir", "--ignore-directory", "--noignore-dir",
+        "--noignore-directory", "--ignore-file", "--type-add", "--type-set", "--type-del",
+        "--color-match", "--color-filename", "--color-colno", "--color-lineno", "--ackrc",
+        "--pager",
     }
 )  # fmt: skip
 _AWK_VALUE_OPTIONS = frozenset({"-F", "-v", "-f"})
@@ -188,7 +216,7 @@ _VALUE_OPTIONS = {
     "fgrep": _GREP_VALUE_OPTIONS,
     "rg": _RG_VALUE_OPTIONS,
     "ag": _AG_VALUE_OPTIONS,
-    "ack": _AG_VALUE_OPTIONS,
+    "ack": _ACK_VALUE_OPTIONS,
     "sed": frozenset({"-e", "-f"}),
     "awk": _AWK_VALUE_OPTIONS,
     "gawk": _AWK_VALUE_OPTIONS,
@@ -277,9 +305,7 @@ def deny_reason_for_grep_tool(path: str | None, glob: str | None) -> str | None:
         name = env_file_name(path.replace("\\", "/"))
         if name is not None:
             return _grep_tool_reason(f"경로 `{name}`")
-    if glob is not None and any(
-        _reaches_env(piece.replace("\\", "/")) for piece in grep_tool_globs(glob)
-    ):
+    if glob is not None and any(_reaches_env(piece) for piece in grep_tool_globs(glob)):
         return _grep_tool_reason(f"glob `{glob}`(glob 에 맞는 gitignore 된 파일도 읽는다)")
     return None
 
@@ -417,9 +443,11 @@ def _shell_c_argument(args: list[str]) -> str | None:
 
 
 def _pattern_given_by_option(args: list[str], value_options: frozenset[str]) -> bool:
-    """패턴을 `-e`·`-f` 로 줬는가. 묶음 속의 것(`-ie KEY`)도 `_positionals` 와 같이 읽는다."""
+    """패턴을 `-e`·`-f`·`--match`(ack) 로 줬는가. 묶음 속의 것(`-ie KEY`)도 `_positionals` 와 같이
+    읽는다. `--match` 를 값 옵션 표에만 둔 판이 패턴을 값으로 먹고 `.env` 를 패턴으로 버려 `ack
+    --match KEY .env` 를 지나보냈다(셀프 리뷰 명세 축)."""
     for arg in args:
-        if arg in {"-e", "-f"} or arg.startswith(("--regexp", "--file")):
+        if arg in {"-e", "-f"} or arg.startswith(("--regexp", "--file", "--match")):
             return True
         if arg.startswith("-") and not arg.startswith("--"):
             found = _short_value_option(arg, value_options)
@@ -482,14 +510,18 @@ def _rg_reads(globs: list[str], sample: str, *, unrestricted: bool) -> bool:
 
 def _rg_selects(pattern: str, sample: str) -> bool:
     """rg 의 고르는 glob 이 견본에 닿는가. 중괄호 갈래마다 대소문자 없이 본다(`_reaches_env` 와 같은
-    너그러움, 모듈 독스트링의 거짓 양성). 갈래가 너무 많으면 닿는다고 본다."""
-    candidates = _candidates(pattern)
-    if candidates is None:
-        return True
-    return any(
-        fnmatch.fnmatch(sample, branch.rsplit("/", 1)[-1].replace("[^", "[!").lower())
-        for branch in candidates
-    )
+    너그러움, 모듈 독스트링의 거짓 양성). 갈래가 너무 많으면 닿는다고 본다. 역슬래시는
+    `_glob_readings` 의 글을 모두 본다."""
+    for reading in _glob_readings(pattern):
+        candidates = _candidates(reading)
+        if candidates is None:
+            return True
+        if any(
+            fnmatch.fnmatch(sample, branch.rsplit("/", 1)[-1].replace("[^", "[!").lower())
+            for branch in candidates
+        ):
+            return True
+    return False
 
 
 def _rg_excludes(pattern: str, sample: str) -> bool:
@@ -563,28 +595,51 @@ def _excludes_every_env(patterns: list[str]) -> bool:
     `grep -r --exclude .env` 를 지나보냈고(푸시 뒤 자동 보안 리뷰가 rg 의 같은 판정에서 찾았다,
     대기열 422), 값마다 견본 모두를 요구한 판은 합쳐야 모두 빼는 명령을 막았다(셀프 리뷰 두 축.
     GNU grep 3.1 로 `--exclude .env` 가 `.env.local` 을 읽고 둘을 합치면 읽지 않는 것을 손으로
-    봤다). rg 도 견본마다 본다(`_rg_reads`)."""
-    matched = [_env_samples_matched(pattern) for pattern in patterns]
+    봤다). rg 도 견본마다 본다(`_rg_reads`). 빼기는 대소문자를 가려 본다. GNU grep 3.1 이
+    `--exclude='.ENV*'` 로 `.env` 를 읽었는데 대소문자 없이 견준 판이 뺀다고 봤다(2026-10-23 손으로
+    봤다, 푸시 뒤 자동 보안 리뷰)."""
+    matched = [_env_samples_excluded(pattern) for pattern in patterns]
     return bool(matched) and all(any(row[i] for row in matched) for i in range(len(_ENV_SAMPLES)))
 
 
 def _env_samples_matched(pattern: str) -> list[bool]:
-    """glob 의 마지막 조각이 `.env` 꼴의 견본마다 맞는가. 대소문자는 가리지 않는다."""
+    """glob 의 마지막 조각이 `.env` 꼴의 견본마다 맞는가. 닿는지 보는 자리라 대소문자는 가리지
+    않는다(거짓 양성 쪽)."""
     leaf = pattern.rsplit("/", 1)[-1].replace("[^", "[!").lower()
     return [fnmatch.fnmatch(sample, leaf) for sample in _ENV_SAMPLES]
+
+
+def _env_samples_excluded(pattern: str) -> list[bool]:
+    """grep 의 빼는 glob 의 마지막 조각이 견본마다 맞는가. 대소문자를 가린다
+    (`_excludes_every_env`)."""
+    leaf = pattern.rsplit("/", 1)[-1].replace("[^", "[!")
+    return [fnmatch.fnmatchcase(sample, leaf) for sample in _ENV_SAMPLES]
 
 
 def _reaches_env(pattern: str) -> bool:
     """중괄호 갈래 가운데 하나라도 `.env` 에 닿는가(`.env.example` 만 맞는 갈래는 아니다). 닿는지
     보는 자리(Grep 도구의 glob, rg 의 glob, grep 의 `--include`)가 쓴다. 갈래가 너무 많으면 닿는다고
-    본다(`_brace_branches`)."""
-    candidates = _candidates(pattern)
-    if candidates is None:
-        return True
-    return any(
-        branch.rsplit("/", 1)[-1].lower() not in ALLOWED_ENV_FILES and _matches_env(branch)
-        for branch in candidates
-    )
+    본다(`_brace_branches`). 역슬래시는 `_glob_readings` 의 글을 모두 본다."""
+    for reading in _glob_readings(pattern):
+        candidates = _candidates(reading)
+        if candidates is None:
+            return True
+        if any(
+            branch.rsplit("/", 1)[-1].lower() not in ALLOWED_ENV_FILES and _matches_env(branch)
+            for branch in candidates
+        ):
+            return True
+    return False
+
+
+def _glob_readings(pattern: str) -> set[str]:
+    """닿는지 볼 glob 의 글들. 그대로의 글, 역슬래시를 이스케이프로 지운 글, 경로 구분자로 `/` 로
+    바꾼 글이다. 하나라도 닿으면 닿는다고 본다(`.claude/rules/tools.md` 의 이스케이프 항목). 실제 rg
+    14.1.1 이 Windows 에서도 `-g '\\.env'`·`-g '\\.e\\nv'` 로 `.env` 를 읽고(`_BASH_RG_SAME`), GNU
+    grep 3.1 이 `--include='\\.env'`·`--include='.e\\nv'` 로 읽었는데(2026-10-23 셀프 리뷰 표준 축이
+    손으로 봤다), 역슬래시를 글자나 `/` 로만 본 판이 rg·Grep 도구·grep 의 셋을 지나보냈다(푸시 뒤
+    자동 보안 리뷰, 셀프 리뷰 표준 축)."""
+    return {pattern, _ESCAPE.sub(r"\1", pattern), pattern.replace("\\", "/")}
 
 
 def _candidates(pattern: str) -> list[str] | None:

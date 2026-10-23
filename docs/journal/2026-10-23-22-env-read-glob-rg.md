@@ -201,3 +201,92 @@ open-session을 부른다 2026-10-23T00:45:36Z
 다시 돌린 명령: 두 시험 파일 291개 초록, 바뀐 파일의 `ruff check`·`ruff format --check` 초록. 나머지 손으로 치는 검증은 커밋의 pre-commit 으로 갈음한다.
 
 첫 커밋 시도의 pre-commit 이 셋을 냈다. 변이 표 `.scratch/harness/probes/env_read_wrappers_mutations.toml` 의 두 변이(짧은 옵션 묶음, 긴 옵션의 값)가 고친 `_option_width` 의 옛 원문을 가리켜 그 원문을 새 코드로 옮겼고 `tools/mutate.py` 로 다시 돌렸다. pytest 의 `test_probe_kit.py` 배출 시험과 `test_interrupt.py` 의 닫기 시험이 빨갰는데 두 시험만 홀로 돌리니 초록이었다(이 변경이 닿지 않는 시험이고, 다른 세션과 겹친 부하로 본다). 인용 대조 경고는 이 절의 인용 하나를 따옴표를 떼어 고쳤다. 앞 절(푸시 뒤 보안 리뷰 반영)의 인용 둘은 그때의 독스트링 원문이라 두었다.
+
+## 인계 5(커밋 뒤)
+
+이 세션의 제목은 `chore/007-env-read-glob-matches-rg`였다. 인계 4 로 열려 셀프 리뷰를 반영하고 커밋했다(`e1550a0b`, pre-commit 통과: pytest 583.3초, web-verify 455.4초). 커밋 뒤에 인계 계기가 왔고, 넘겨받은 경계(`셀프 리뷰 직전`)와 달라 넘긴다. 곁 세션이 아니다(`get_session` 에 `parentSessionId` 없음). PR 본문은 푸시 전에 `gh pr edit` 으로 고쳤다(견본마다 가르기, 푸시 뒤 보안 리뷰 반영, grep `--exclude .env` 를 이제 막는다는 결정, 남긴 위험 둘, 체크리스트의 셀프 리뷰와 pre-commit 수치). 아직 푸시하지 않았다. 이 절은 커밋하지 않았다.
+
+변이 표를 돌리는 동안 백그라운드 보안 리뷰(security-guidance)가 `_option_width` 를 `index += 1` 로 바꾼 diff 를 MEDIUM 으로 냈다. `tools/mutate.py` 가 시험 도중 넣은 변이를 본 것이다. 끝난 뒤 `git diff` 에 남은 변이가 없었고 `_positionals` 는 `_option_width` 를 쓴다. 고칠 것이 없다.
+
+지시문:
+
+```
+다음 작업: harness 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md 를 잇는다. PR #366 의 푸시 뒤 보안 리뷰 반영과 그 셀프 리뷰를 커밋했다(e1550a0b). 푸시하고 봇 회차, 반영, 워크트리에서 병합을 한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+브랜치: chore/007-env-read-glob-matches-rg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-22-env-read-glob-rg.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 e1550a0b 까지 했고 푸시하지 않았다. PR #366(https://github.com/njh6803/agent-os/pull/366) 본문은 이 커밋의 범위로 이미 고쳤으니 바로 푸시하고, 첫 `@coderabbitai review` 코멘트를 남겨 순서 1의 2(봇 회차)대로 대기를 띄운다. 이 일지의 "인계 5" 절은 커밋하지 않았으니 다음 커밋(봇 회차 반영이나 회고를 실은 일지)에 싣는다. 셀프 리뷰가 범위 밖으로 넘긴 옛 거짓 음성 셋(`grep -f .env x` 등)은 일지 셀프 리뷰 절의 남긴 것에 있고 회고 후보다. docs/journal/2026-10-23-22-env-read-glob-rg.md
+확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T01:38:57Z
+
+## 푸시와 둘째 푸시 뒤 보안 리뷰 반영(새 세션, 커밋 전)
+
+> 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+
+인계 5 로 열려 워크트리에 들어왔다. 푸시가 `hook_push_behind_main` 에 막혀(origin/main 이 2커밋 앞) origin/main(750761b9, harness 005 와 model-rerun 02)을 충돌 없이 합쳤고 `sibling_overlap.py` 는 번호 겹침 없음이었다. `tools/run_checks.py` 는 pytest 하나를 뺀 아홉이 Passed 였고, pytest 는 4725 가운데 `test_probe_kit.py` 의 배출 시험 하나가 빨갰다. 그 파일만 홀로 돌리니 15개 초록이었다(인계 4 절의 첫 커밋 시도와 같은 시험, 다른 세션과 겹친 부하로 본다). 린트 둘 초록. 푸시(b471dc75)하고 `@coderabbitai review` 를 남겼다. `wait_ci.py` 는 `끝: 모두 통과. CodeRabbit: Review rate limited` 로 끝났다(CodeRabbit 회차는 세지 않는다).
+
+푸시 뒤 자동 보안 리뷰(security-guidance)가 `tools/hook_env_read.py` 에 MEDIUM 셋을 냈다. 훅 함수로 셋 다 지나가는 것을 봤고, 둘은 실제 도구로 봤다(스크래치 스크립트, git init 한 임시 폴더의 gitignore 된 가짜 `.env`).
+- rg 고르는 glob 의 역슬래시. Windows 의 rg 14.1.1(Claude Code 실행 파일)이 `-g '\.env'` 로 `.env` 를 읽었고 실제 rg 표에 더한 `-g '\.e\nv'` 도 읽었다. `_rg_selects` 가 이스케이프를 지운 글과 `\` 를 `/` 로 바꾼 글도 본다(`_ESCAPE`). 빼는 쪽의 `!\.env*` 는 풀지 않아 막는다(거짓 양성, 모듈 독스트링과 `_BASH_RG_STRICTER`).
+- grep `--exclude` 의 대소문자. GNU grep 3.1 이 `--exclude='.ENV*'` 로 `.env` 를 읽었다. `_excludes_every_env` 가 대소문자를 가리는 `_env_samples_excluded` 를 쓴다.
+- ag·ack 의 값 옵션 표. 이 PC 에 둘 다 없어 재지 않았다. ag 의 `-t`(--all-text)·`-f`(--follow)를 값 옵션으로 읽어 `ag -t KEY .env` 를 지나보냈다(훅 함수로 봤다). 문서가 값을 꼭 받는다고 적은 것만 든 `_AG_VALUE_OPTIONS`·`_ACK_VALUE_OPTIONS` 로 갈랐고, rg 표는 홀로 섰다. 모르면 빼는 쪽이 막는 쪽이라는 판단을 표 위 주석에 적었다.
+새 시험 일곱(`ag -it`·`ag -t`·`ag -ft`·`ack -t` 막기, `grep --exclude='.ENV*'` 막기, 실제 rg 표의 `\.env`·`\.e\nv`)과 거짓 양성 하나. 여섯이 빨갰다가(`ag -ft` 는 원래 막혔다) 두 시험 파일 299개 초록, 바뀐 세 파일의 ruff 둘 초록.
+
+claude-review 둘째 회차(02:01, Minor 3·Nit 2)와, 처리 기록이 없던 첫 회차(00:29, Minor 2·Nit 2)를 읽었다. 둘째 회차라 Minor·Nit 은 PR 코멘트에 보류 이유를 남기고 병합한다(아직 남기지 않았다). 첫 회차는 지적마다 판단했다.
+- 고친 것: 첫 회차 Minor(불리언 플래그). 그 함수는 이미 없었지만 이번 반영이 `_env_samples_matched(…, case_sensitive=…)` 로 같은 꼴을 다시 지어, 함수 둘로 나눴다. 첫 회차 Nit(ag·ack 표 주석의 방향)은 표를 가르며 풀렸다.
+- 남길 것: 첫 회차 Minor(짧은 옵션 파서가 `_SHORT_CLUSTER` 와 `_short_value_option` 둘)와 둘째 회차 Minor(`_rg_glob_values` 와 `_positionals` 의 getopt 읽기 중복), 둘째 회차 Minor(`_rg_reads` 의 `unrestricted` 불리언), 두 회차의 독스트링 나누기·이력 덜기, 둘째 회차 Nit(시험의 `args` 거르기 헬퍼). 보안 훅의 판정 경로 전체를 다시 짜는 리팩터링이라 이 PR 에서 새 어긋남을 낼 위험이 크다고 봤다. 뒤로 넘기면 일지 "다음"이나 회고 후보에 적는다.
+
+반영으로 새로 쓴 문장(셀프 리뷰에 밀 주장): `_rg_selects` 독스트링의 "rg 14.1.1 이 Windows 에서도 `-g '\.env'` 와 `-g '\.e\nv'` 로 `.env` 를 읽었는데"(첫째는 스크래치 스크립트로, 둘째는 실제 rg 시험으로 봤다), `_excludes_every_env` 독스트링의 "GNU grep 3.1 이 `--exclude='.ENV*'` 로 `.env` 를 읽었는데", `_AG_VALUE_OPTIONS` 위 주석의 "값을 꼭 받는다고 문서(ag 와 ack 의 man 페이지)가 적은 것만 둔다"(man 페이지를 이 세션에서 열지 않았고 기억에 기댄 것이다. 셀프 리뷰가 원문으로 잰다), 모듈 독스트링의 "빼는 glob 의 역슬래시(`!\.env*` 는 rg 가 이스케이프로 읽어 `.env` 꼴을 빼지만 풀어 보지 않는다)".
+
+`/code-review` 를 부른 직후 컨텍스트 문턱을 넘어 `셀프 리뷰 직전` 경계에서 인계 계기가 왔다. 곁 세션이 아니다(`get_session` 에 `parentSessionId` 없음). 띄운 대기는 끝났다.
+
+## 인계 6(셀프 리뷰 직전)
+
+이 세션의 제목은 `chore/007-env-read-glob-matches-rg`였다.
+
+지시문:
+
+```
+다음 작업: harness 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md 를 잇는다. PR #366 의 둘째 푸시 뒤 보안 리뷰 지적 셋과 claude-review 첫 회차 Minor 를 고친 미커밋 변경을 셀프 리뷰하고 커밋·푸시한 뒤 봇 회차, 반영, 워크트리에서 병합을 한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+브랜치: chore/007-env-read-glob-matches-rg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-22-env-read-glob-rg.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD b471dc75, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py·test_hook_env_read_rg.py)부터 한다. 밀 주장은 일지 "푸시와 둘째 푸시 뒤 보안 리뷰 반영" 절의 목록이다(ag·ack man 페이지 주장은 원문으로 잰다). 반영 뒤 커밋(이 일지의 인계 5·6 절도 싣는다)하고, ag·ack 표를 가른 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 PR 본문을 고친 뒤 푸시한다. claude-review 둘째 회차(02:01)의 Minor·Nit 은 보류 이유를 PR 코멘트에 남기고, 뒤로 넘기는 리팩터링(옵션 파서 하나로 합치기 등)은 일지 "다음"이나 회고 후보에 적는다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. docs/journal/2026-10-23-22-env-read-glob-rg.md
+확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T02:17:05Z
+
+## 셀프 리뷰(새 세션, 기점 b471dc75, 커밋 0·바뀐 파일 4·미추적 0)
+
+> 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+
+인계 6 으로 열려 워크트리에 들어왔다. 두 축을 띄우기 전에 밀 주장 가운데 ag·ack man 페이지 주장을 원문으로 쟀다. man 페이지(`doc/ag.1.md`, ack 3 의 POD)와 함께 파서의 정의(ag `src/options.c`, ack 3 `lib/App/Ack/ConfigLoader.pm`)를 받아 읽었다(세션 스크래치패드, 2026-10-23).
+
+- 반영 전 판의 주장은 틀렸다. ack 3 의 man 페이지는 `-A NUM`·`-g PATTERN` 으로 적지만 파서는 `A|after-context:-1`(값이 선택인 숫자)이고 `g` 는 값 없는 플래그다. 그 판의 ack 표가 `-A`·`-B`·`--after-context`·`--before-context`·`-g` 를 값 옵션으로 두어, 훅 함수가 `ack -A ANTHROPIC .env`·`ack -B ANTHROPIC .env`·`ack --after-context ANTHROPIC .env` 를 지나보냈다(훅 함수로 봤다. ack 는 이 PC 에 없어 실제로는 재지 않았고, ack 가 `KEY` 를 패턴으로 `.env` 를 파일로 읽는다는 것은 파서 정의와 Getopt::Long 의 값이 선택인 숫자 규칙에서 읽은 것이다). b471dc75 의 판도 같은 꼴(rg 표를 함께 쓴 `-A`·`-B`)이라 이 PR 이 연 구멍은 아니다.
+- 고친 것: 표의 근거를 파서 정의로 바꿨다. ack 표는 값 필수(`=s`·`=i`)인 것과 `--pager`(값이 선택인 문자열. Getopt::Long 이 `-` 로 시작하지 않는 다음 낱말을 먹는다)만 두고 `-t`·`-T`·`--type` 등을 더했다. ag 표는 getopt 문자열의 `A:B:C:` 와 `required_argument` 인 긴 옵션(`--workers`·`--color-*` 등)을 더했다. 막는 표에 ack `-A`·`-B`·`--after-context` 셋을, 막지 않는 표에 `ack -t python .env`(`.env` 가 패턴)를 더했고, 옛 막는 사례 `ack -t ANTHROPIC .env` 는 `-t` 가 값을 먹어 뺐다. 두 시험 파일 302개 초록.
+
+두 축을 띄웠다(표준 sonnet·high, 명세는 본 세션 모델). 표준 축은 Major 1, Minor 4, Nit 2를, 명세 축은 Major 1, Minor 1을 냈다. 밀 주장 넷(`_rg_selects` 의 rg 14.1.1, `_excludes_every_env` 의 GNU grep 3.1, 역슬래시 빼기, ag·ack 표와 파서 소스)은 두 축 모두 맞다고 봤다(rg·grep 은 실제 도구로, 표는 받아 둔 소스 발췌로).
+
+고친 것:
+- Major(명세). `--match` 를 ack 표에 넣자 `_pattern_given_by_option` 이 그것을 몰라 `ack --match KEY .env` 를 새로 지나보냈다(기점 판은 막았다. `--match=KEY` 와 `.env --match KEY` 는 기점 판도 지나보냈다). `_pattern_given_by_option` 이 `--match` 를 패턴을 주는 옵션으로 안다. 표 위 주석에 패턴을 주는 값 옵션의 조건을 적었다.
+- Major(표준). 역슬래시 이스케이프를 rg 의 고르는 glob 에서만 풀어, Grep 도구 glob `\.e\nv` 와 grep `--include='\.env'`·`--include='.e\nv'` 를 지나보냈다(GNU grep 3.1 이 둘 다 `.env` 를 읽은 것을 표준 축이 손으로 봤다). `_glob_readings` 로 모아 `_rg_selects`·`_reaches_env` 가 함께 쓴다.
+- Minor(표준). grep `--exclude='\.env*'` 의 거짓 양성을 모듈 독스트링과 시험에 적었다. 모듈 독스트링의 "문서로만 지었다"를 파서 소스로 고치고 `_ACK_VALUE_OPTIONS` 를 더했다(명세 Minor 와 같은 지적). 표 항목(ag `-G`·`--workers`, ack `--type`·`--pager`)을 막는 표와 막지 않는 표에 고정했다. 주석의 "두 판이 틀렸다"를 "이 표의 앞선 두 판이"로, `_rg_selects` 의 근거를 시험으로 고쳤다.
+- 기점 판(b471dc75)의 훅을 스크래치패드에 꺼내 같은 입력을 대니 막을 것 여덟(`ack -A`·`-B`·`--after-context`, `--match` 둘, grep `--include` 둘, Grep 도구 `\.e\nv`)을 지나보냈고 지금 판은 모두 막는다.
+
+남긴 것:
+- Nit(표준). `_env_samples_matched` 와 `_env_samples_excluded` 의 leaf 계산이 겹친다. 불리언 인자를 피하려고 나눈 것이라 둔다.
+- 범위 밖으로 넘기는 것(회고 후보): ack `--files-from .env` 처럼 값 옵션의 값으로 준 `.env` 를 보지 않는 꼴은 grep `-f .env` 와 같은 부류다(인계 4 의 셀프 리뷰 절 남긴 것). ag·ack 로 경로 없이 저장소를 훑는 꼴을 판정하지 않는 것은 기점 판과 같다.
+
+반영으로 새로 쓴 문장(PR 봇 회차에 밀 주장): `_glob_readings` 독스트링의 "GNU grep 3.1 이 `--include='\.env'`·`--include='.e\nv'` 로 읽었는데"(표준 축이 손으로 봤다), 모듈 독스트링의 "grep 의 `--exclude='\.env*'` 도 grep 이 `.env` 꼴을 빼는데"(같은 축), `_AG_VALUE_OPTIONS` 위 주석의 ack `--pager` 와 Getopt::Long 규칙.
+
+다시 돌린 명령: 두 시험 파일 317개 초록, 바뀐 파일의 ruff 둘 초록(format 하나를 고쳤다), `tools/mutate.py --check` 로 변이 표 원문 확인. 나머지 손으로 치는 검증은 커밋의 pre-commit 으로 갈음한다.

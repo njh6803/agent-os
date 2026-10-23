@@ -31,6 +31,25 @@ from tools.hook_env_read import (
         "rg -ie ANTHROPIC .env",
         "sed -ne 1p .env",
         "rg -ig '*' ANTHROPIC .env",
+        # ag 의 `-t`(--all-text)·`-f`(--follow)는 값을 먹지 않는다. rg 의 표를 쓴 판이 `KEY` 를
+        # 값으로 먹어 `.env` 를 패턴으로 버렸다(푸시 뒤 자동 보안 리뷰, 대기열 422).
+        "ag -it ANTHROPIC .env",
+        "ag -t ANTHROPIC .env",
+        "ag -ft ANTHROPIC .env",
+        # ack 3 의 `-A`·`-B` 는 값이 선택인 숫자라 숫자가 아닌 `KEY` 를 먹지 않는다(ConfigLoader.pm
+        # 의 `A|after-context:-1`). man 페이지의 `-A NUM` 을 따른 판이 지나보냈다(셀프 리뷰).
+        "ack -A ANTHROPIC .env",
+        "ack -B ANTHROPIC .env",
+        "ack --after-context ANTHROPIC .env",
+        # ack 의 `--match` 는 패턴을 따로 줘 남은 위치 인자가 모두 파일이다(셀프 리뷰 명세 축).
+        "ack --match ANTHROPIC .env",
+        "ack --match=ANTHROPIC .env",
+        "ack .env --match ANTHROPIC",
+        # 표의 값 옵션은 값만 먹는다(ag `src/options.c`, ack `ConfigLoader.pm`).
+        "ag -G py ANTHROPIC .env",
+        "ag --workers 2 ANTHROPIC .env",
+        "ack --type python ANTHROPIC .env",
+        "ack --pager less ANTHROPIC .env",
         "sed -n 1p ../.env",
         "awk '{print $1}' .env",
         "less .env.local",
@@ -160,6 +179,9 @@ def test_입력_리다이렉션도_읽기다() -> None:
         # `.env` 하나만 빼면 `.env.local` 은 읽는다(푸시 뒤 자동 보안 리뷰, 대기열 422).
         "grep -rn --exclude .env KEY .",
         "grep -rn --exclude=.env.local KEY .",
+        # grep 의 `--exclude` 는 대소문자를 가린다. GNU grep 3.1 이 `--exclude='.ENV*'` 로 `.env` 를
+        # 읽었다(2026-10-23 손으로 봤다, 푸시 뒤 자동 보안 리뷰).
+        "grep -rn --exclude='.ENV*' KEY .",
     ],
 )
 def test_env_를_빼지_않은_저장소_전체_grep_을_막는다(명령: str) -> None:
@@ -218,6 +240,12 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         "rg -uu --glob=!.env* KEY .",
         "rg -uu -t py KEY",
         "rg -uu -g '*.py' KEY",
+        # ack 3 의 `-t` 는 값을 꼭 받아(`t|type=s`) `.env` 가 패턴이다.
+        "ack -t python .env",
+        "ag -G py .env",
+        # ack 의 `--pager` 는 값이 선택인 문자열이고 Getopt::Long 이 `-` 로 시작하지 않는 다음
+        # 낱말을 값으로 먹어 `.env` 가 패턴이다(값이 선택인데 표에 둔 하나뿐인 옵션).
+        "ack --pager ANTHROPIC .env",
         "echo '.env is secret'",
         "cat <<'EOF' > note.md\ncat .env\nEOF",
         "cat > .env <<'EOF'\nK=v\nEOF",
@@ -369,6 +397,27 @@ def test_대괄호_안의_중괄호는_펼치기_전의_glob_으로도_본다(�
     펼친 갈래만 본 판은 `[!{}]` 를 `[!]` 로 깨뜨려 지나보냈다(옛 판은 막았다. PR 직전 보안 리뷰가
     판정 함수와 가짜 숨김 파일로 봤다)."""
     assert deny_reason_for_command(명령) is not None
+
+
+@pytest.mark.parametrize("glob", ["\\.env", "\\.e\\nv", "**/\\.env*"])
+def test_Grep_도구의_glob_의_역슬래시는_이스케이프로도_읽는다(glob: str) -> None:
+    """Grep 도구는 glob 을 rg 에 넘기고 rg 는 역슬래시를 이스케이프로 읽는다. 역슬래시를 `/` 로만
+    바꿔 본 판이 지나보냈다(셀프 리뷰 표준 축)."""
+    assert deny_reason_for_grep_tool("C:/project/agent", glob) is not None
+
+
+@pytest.mark.parametrize(
+    "명령", ["grep -rn --include='\\.env' KEY .", "grep -rn --include='.e\\nv' KEY ."]
+)
+def test_grep_의_include_의_역슬래시는_이스케이프로도_읽는다(명령: str) -> None:
+    """GNU grep 3.1 이 둘 다 `.env` 를 읽었다(2026-10-23 셀프 리뷰 표준 축이 손으로 봤다)."""
+    assert deny_reason_for_command(명령) is not None
+
+
+def test_못_보는_것_grep_의_빼는_glob_의_역슬래시는_풀지_않아_막는다() -> None:
+    """거짓 양성이다. GNU grep 3.1 은 `--exclude='\\.env*'` 로 `.env` 꼴을 뺐다(셀프 리뷰 표준 축이
+    손으로 봤다). rg 의 같은 꼴은 `_BASH_RG_STRICTER` 가 실제 rg 와 맞댄다."""
+    assert deny_reason_for_command("grep -rn --exclude='\\.env*' KEY .") is not None
 
 
 @pytest.mark.parametrize("glob", [".en[!{}]", "**/.en[!{}]", ".en[u-{}]", ".e[a-{][!}]"])
