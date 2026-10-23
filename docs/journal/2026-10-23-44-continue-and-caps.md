@@ -1,4 +1,4 @@
-# 2026-10-23 (41) 이어 가기와 상한 (model-rerun 08)
+# 2026-10-23 (44) 이어 가기와 상한 (model-rerun 08)
 
 ## 사용자 프롬프트
 
@@ -64,8 +64,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
 브랜치: feature/08-continue-and-caps
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-41-continue-and-caps.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-41-continue-and-caps.md. 리뷰 범위는 origin/main 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 08과 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 pytest·web이 끝나기 전에 멈췄으니 반영 뒤 다시 돈다. 변이 표 둘(rerun_continue 35개, rerun_session 27개)은 셀프 리뷰 전 판으로 모두 표지까지 기대대로였고, 반영이 그 시험이나 대상 코드를 바꾸면 해당 변이를 다시 돈다. 일지 41은 커밋하지 않았으니 이어 쓰고 함께 커밋한다
+읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-44-continue-and-caps.md. 리뷰 범위는 origin/main 이후의 커밋하지 않은 변경과 미추적 파일 전체이고 명세는 티켓 08과 .scratch/model-rerun/spec.md다. tools/run_checks.py는 인계로 pytest·web이 끝나기 전에 멈췄으니 반영 뒤 다시 돈다. 변이 표 둘(rerun_continue 35개, rerun_session 27개)은 셀프 리뷰 전 판으로 모두 표지까지 기대대로였고, 반영이 그 시험이나 대상 코드를 바꾸면 해당 변이를 다시 돈다. 일지 44는 커밋하지 않았으니 이어 쓰고 함께 커밋한다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -93,7 +93,7 @@ Critical·Major 없음. Minor 이하:
 2. Minor 불리언 플래그: `launch(..., resume)`, `session_command(..., *, resume=False)`, `Drove`의 `timed_out`·`killed`·`kill_skipped` 세 칸.
 3. Minor: `drive` 독스트링의 Ctrl+C·`KeyboardInterrupt`에서 끈다는 길(`except BaseException`)을 거는 시험이 없다.
 4. Minor: "끄기 몫만 828줄에서 906줄"은 거짓이다(`Continued`와 `resume` 배선도 들었다). 일지와 티켓 08.
-5. Minor: `rerun_session.py` 독스트링의 "마감 뒤에 더 쓰는 시간은 거둠과 배출"에 `taskkill`(`KILL_TIMEOUT`)이 빠졌다.
+5. Minor: `rerun_session.py` 독스트링에서 마감 뒤에 더 쓰는 시간을 적은 문장이 거둠과 배출만 들고 `taskkill`(`KILL_TIMEOUT`)을 빠뜨렸다.
 6. Minor: `proc_command_line.py`의 "다른 사용자의 프로세스(열지 못한다)"는 리눅스 `/proc/<pid>/cmdline`에는 틀리다(훅 사본의 `cwd` readlink 때문에 붙은 말).
 7. Minor: `handoff_directive`가 `다음 작업:` 앞의 산문은 떼지만, 머리 줄이 없을 때 산문과 코드 펜스까지 싣는다. 시험이 없다.
 8. Minor: 8.09초·0.03초를 "스크래치 탐침으로 손으로 쟀다"고 적었다. 커밋한 프로브가 아니면 "손으로 봤다"로 쓴다(`docs/agents/issue-tracker.md`).
@@ -166,3 +166,61 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길 문장(반영으로 새�
 - 두 표 전체는 시험을 고쳤으므로 PR 직전 리뷰를 반영해 커밋한 뒤 다시 돈다(`tools/mutate.py` 독스트링).
 - `uv run ruff check .`, `uv run ruff format --check .`: 초록.
 - `uv run python tools/run_checks.py`: 검사 열 모두 Passed(pytest 421.6초, web-verify 262.0초, Skipped 없음). 티켓 08의 "검증 명령이 모두 초록이다"를 채웠다.
+
+## 커밋 (셀프 리뷰 반영 뒤)
+
+- 커밋 직전 `uv run python tools/sibling_overlap.py`가 1로 끝났다. origin/main 에 일지 2026-10-23-40 이 먼저 들어가 이 일지(39)가 이름순으로 앞이 되어, `--move`로 39를 41로 옮겼다(파일 이름, 머리 줄, 티켓 08과 continue 변이 표와 이 일지 안의 인용). 도구가 옮기지 않는 줄인 꼴 하나(위 인계 절 지시문의 "일지 39는")는 손으로 고쳤다.
+- origin/main 이 893e0fe8 에서 8a026f3 으로 움직였다. `git diff --name-only HEAD...origin/main`의 파일은 web-widget 의 명세·티켓·ADR·일지 40과 `CONTEXT.md`·`.scratch/plan.md`·`.scratch/retro-queue.md`이고, 이 브랜치가 고치거나 이름으로 든 파일과 겹치지 않았다. 06의 PR도 `plan.md`를 고치지 않아(기능을 닫는 티켓이 아니다) 이 PR도 건드리지 않는다.
+- f614f00c `feat: 회차의 세션을 갈래 셋으로 잇고 상한과 끄기를 더한다 (model-rerun 08)`. pre-commit 이 모두 지났다(카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped). 인용 대조가 막지 않는 경고 둘을 냈다. 티켓 10의 76행 메모(같은 티켓 37행 체크박스의 문구를 끝을 바꿔 따옴표로 옮겼다)와, 이 일지 96행 셀프 리뷰 표준 축 5(리뷰어가 고치기 전의 독스트링을 줄여 옮긴 말을 따옴표로 적었다)다. 이 커밋에서는 고치지 않고 넘겼다(아래 PR 직전 절에서 고쳤다).
+- PR 직전 리뷰의 길: `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 는 돌지 못한다. 대체 둘(`/security-review`, `bug-perf-review`)을 돈다.
+
+## 인계 (커밋 뒤)
+
+- 이 세션의 지금 제목: `feature/08-continue-and-caps`.
+- 인계 경계: `커밋 뒤`. 세션 컨텍스트가 문턱(20만)을 넘은 채 f614f00c 커밋을 친 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않는다. 커밋은 성공했고, 범위는 PR과 병합까지이며, 이 세션이 이어받은 경계는 `셀프 리뷰 직전`이었고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 커밋은 푸시하지 않았고 이 브랜치에 열린 PR 은 없다. 주 체크아웃은 main 이고 origin/main(8a026f3)과 같다(`git worktree list --porcelain`).
+- `tools/model_sweep.py feature/08-continue-and-caps`는 `Opus 5.5 / xhigh`였다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/08-continue-and-caps.md. 06이 띄운 세션의 이어 가기와 끄기·상한을 더한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
+브랜치: feature/08-continue-and-caps
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 f614f00c로 커밋했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계는 PR 직전 리뷰부터다. docs/journal/2026-10-23-44-continue-and-caps.md. CodeRabbit CLI는 좌석이 없어(coderabbit auth status의 Seat: not assigned) 대체 둘을 나란히 돈다. origin/main을 합친 뒤 /security-review를 돌리고, bug-perf-review 서브에이전트의 브리프에는 이 일지 "### 반영"의 밀 주장 열 개를 나열한다. 그 반영을 커밋한 뒤 변이 표 둘(rerun_continue 45개, rerun_session 27개)의 전체를 다시 돈다(시험을 고쳤으므로, tools/mutate.py 독스트링). 커밋의 인용 대조 경고 둘(티켓 10의 76행, 이 일지 "### 표준 축"의 5)은 막지 않는 경고라 넘겼으니 원문과 대 본다. 이 일지는 이어 쓰고 다음 커밋에 싣는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/08-continue-and-caps (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업 셋(변이 묶음, run_checks, 커밋)은 모두 끝나 있어 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+- open-session을 부른다 2026-10-23T10:52:49Z
+
+## 이어받은 세션 (2026-10-23, PR 직전 리뷰부터)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/model-rerun/issues/08-continue-and-caps.md
+>
+> (지시문은 위 "인계 (커밋 뒤)" 절의 "낸 지시문"과 같다)
+
+- `git worktree list`에서 `feature/08-continue-and-caps`가 `.claude/worktrees/08-continue-and-caps`에 있어 `EnterWorktree(path)`로 들어왔다. HEAD 는 f614f00c 이고 커밋하지 않은 변경은 이 일지 하나였다.
+- `git merge origin/main`으로 8a026f3c 를 합쳤다(2746ac57). 충돌은 없었다.
+- 인용 대조 경고 둘을 원문과 대 봤다. 티켓 10의 76행은 같은 티켓 37행 체크박스의 "훑어"를 "훑는"으로 바꿔 옮긴 인용이었고, 이 일지 96행은 커밋하지 않은 판의 독스트링(지금은 `KILL_TIMEOUT`이 든 문장으로 바뀌었다)을 리뷰어가 줄여 옮긴 말이었다. 둘 다 따옴표를 떼고 서술로 고쳤고, 그 둘을 다시 적은 위 커밋 절의 줄도 같이 고쳤다. `tools/check_quotes.py`가 두 파일에서 경고 없음이었다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란히 돌렸다. 기준은 합친 뒤의 merge-base `8a026f3c`다.
+
+- `/security-review`: 식별 서브태스크가 후보 0건을 냈다(확신 7 이상 없음). 그래서 오탐 거르기 서브태스크는 띄울 것이 없었다. 하위 프로세스는 모두 리스트 인자이고, 결과 글은 다음 세션의 stdin 메시지로만 가며 명령 인자·경로·git 인자에 들지 않는다. 기준 아래로 남긴 관찰은 `taskkill`을 이름으로 띄우는 것(하드닝, `tools/mutate.py`에도 같은 모양)이다.
+- `bug-perf-review`(sonnet, 호출 37): 유효 1(Minor), 보류 0, 오탐 4. 밀 주장 열 개는 모두 근거와 맞았다.
+  - 유효(Minor): 마감에 닿아 끈 호출(`Stop.DEADLINE_KILLED`)은 결과 이벤트가 나기 전에 끊겨 비용을 모른다는 문장이 한 길에서 거짓이다. 결과 이벤트를 내고 출력을 닫은 뒤 거두는 기다림 중에 마감이 오면(마감까지 60초 미만) `reap < REAP_TIMEOUT`이라 마감에 닿은 호출이 되는데, 결과 이벤트와 비용이 있다. 시험 `test_출력을_닫은_뒤_거두는_기다림도_호출의_마감을_넘지_않는다`가 그 둘을 함께 단언한다. 티켓 10의 체크박스는 `runner_killed`로 대신 넣을 세션을 고르라고 하므로, 그대로 따르면 아는 비용을 덮어쓴다.
+  - 판정: 코드의 분류(마감이 먼저 오면 마감에 닿은 호출, 회차는 상한(시간))는 밀 주장 1대로 의도한 것이라 두고, 문장을 고쳤다. `session_record`와 `tools/rerun_continue.py`의 독스트링, 티켓 08 "구현에서 정한 것"에 한 항목, 티켓 10 "08에서 넘어온 메모"에 한 항목(대신 넣을지는 끈 호출의 `Call.results`가 빈지로 가른다)과 한 낱말(대개)이다. 리뷰어는 세션의 `cost_usd`가 빈지로 가르자고 제안했으나, `--resume`으로 이어 부른 호출이 끊긴 세션은 앞 호출의 값이 남아 그 기준으로는 대신 넣지 않으므로 끈 호출 자신의 결과 이벤트로 적었다(시간의 끄기는 회차를 끝내므로 끈 호출은 그 세션의 마지막 호출이다).
+  - 남긴 판단: 그 길의 회차는 결과 글이 끝남(갈래 2)이어도 상한(시간)으로 적힌다. 세션은 일을 마쳤고 프로세스의 종료만 멈춘 경우다. 마감이 먼저 오면 마감에 닿은 호출이라는 설계를 따른 것이고, 마감까지 60초 미만에서만 나는 드문 길이라 바꾸지 않았다.
+  - 오탐 넷: `.cmd` 심의 명령 줄(이 PC 의 `claude`는 `claude.exe`), POSIX `start_new_session`의 고아(운영 러너는 윈도, 고아는 10의 몫), 일지 22행의 옛 `Drove.kill_skipped`(뒤의 반영 절이 대체), `_directive_branch` 옛 이름의 잔존(명세·티켓의 이름 바꾸기 설명뿐).
+- 반영 뒤 `tools/mutate.py --check`가 두 표(continue 45, session 27)에서 원문이 모두 한 번씩이었다(고친 것은 독스트링뿐이다).
+
+## 커밋 (PR 직전 리뷰 반영 뒤)
+
+- 커밋 직전 `tools/sibling_overlap.py`가 1로 끝났다. origin/main 이 062e9734(model-rerun 05, #371)로 움직여 일지 2026-10-23-43 이 먼저 들어갔고, 이 일지(41)가 이름순으로 앞이 됐다. `git merge origin/main`을 다시 쳤고 `.scratch/model-rerun/probes/README.md`의 표 한 곳이 충돌했다. main 쪽은 행 셋(`branches.json`, `candidates.md`, `rerun_select_mutations.toml`)을 더했고, 이 브랜치는 `rerun_session` 행에서 "첫 줄의 연 저장소" 항목을 `rerun_continue` 행으로 옮기고 그 행을 더했다. 두 `rerun_session` 행이 그 한 항목만 다른 것을 낱말 diff 로 본 뒤, main 의 새 행 셋 뒤에 이 브랜치의 두 행을 두어 풀었다(세션 스크래치의 커밋하지 않은 스크립트, `tools/check_md_tables.py` 초록). main 이 고친 명세 줄은 숨은 시험 가르기(티켓 02·05)의 한 줄이라 08과 상관없었다.
+- `--move`로 41을 44로 옮겼다(파일 이름, 머리 줄, 티켓 08·10과 continue 변이 표와 이 일지 안의 인용). 도구가 옮기지 않는 꼴 하나(첫 인계 절 지시문의 "일지 41은")는 손으로 고쳤다.

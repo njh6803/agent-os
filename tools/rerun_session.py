@@ -859,8 +859,10 @@ def call_record(run: CallRun) -> Call:
 
 def session_record(session_id: str, runs: Sequence[CallRun], config_dir: Path) -> Session:
     """세션 하나의 칸. `runs`는 그 세션의 호출들이고 차례대로다. 마감에 닿아 러너가 끈 호출이
-    있으면 `runner_killed`를 세운다. 그 호출은 결과 이벤트가 나기 전에 끊겨 그 세션의 Claude Code
-    셈을 모른다. 그 셈을 공식 단가로 대신 넣는 것(`cost_substituted`)은 10이다. 출력을 닫고 멈춰
+    있으면 `runner_killed`를 세운다. 그 호출은 대개 결과 이벤트가 나기 전에 끊겨 그 세션의 Claude
+    Code 셈을 모른다. 결과 이벤트를 내고 출력을 닫은 뒤 거두는 기다림 중에 마감이 온 호출은 결과
+    이벤트가 있어 셈을 안다. 그래서 셈을 공식 단가로 대신 넣는 것(`cost_substituted`, 10)은 이
+    표시가 아니라 끈 호출의 결과 이벤트가 없는지로 가른다. 출력을 닫고 멈춰
     끈 호출(`Stop.HUNG_KILLED`)은 세우지 않는다. 출력이 이미 끝나 끄기가 결과 이벤트를 자르지
     않았고, 결과 이벤트가 없으면 그 회차는 측정 아님(호출)이다(`tools/rerun_continue.py`의
     `call_end`)."""
