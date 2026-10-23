@@ -281,7 +281,7 @@ file = "tools/rerun_gates.py"
 old = '''        timed_out=failed.end is SetupEnd.TIMED_OUT,'''
 new = '''        timed_out=failed.exit_code is None,'''
 
-# 셀프 리뷰 반영이 더한 갈림(일지 2026-10-23-37의 셀프 리뷰 절). 띄우기 전의 작업 트리 자리 링크,
+# 셀프 리뷰 반영이 더한 갈림(일지 2026-10-23-42의 셀프 리뷰 절). 띄우기 전의 작업 트리 자리 링크,
 # 게이트가 모두 0일 때만 도는 숨은 시험, UTF-8 이 아닌 junit xml 이다.
 [[mutation]]
 name = "작업 트리 자리가 링크여도 게이트를 띄운다"

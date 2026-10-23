@@ -1,4 +1,4 @@
-# 2026-10-23 (37) 게이트와 숨은 시험, 공식 단가를 짓는다 (model-rerun 07)
+# 2026-10-23 (42) 게이트와 숨은 시험, 공식 단가를 짓는다 (model-rerun 07)
 
 ## 사용자 프롬프트
 
@@ -68,8 +68,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "인계" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-37-gates-and-official-cost.md. 구현·변이·커밋 전 반박 검증은 마쳤고 일지에 셀프 리뷰·회고·다음 절이 아직 없다. 인계 직전에 돌던 run_checks를 멈췄고, 멈추기 전에 check-instructions가 tools/rerun_gates.py:294의 listed 반환(bool | None)을 열거로 두라고 빨갰다. 셀프 리뷰 반영에 함께 고치고, 고친 뒤 rerun_gates_mutations.toml의 원문이 그 자리를 가리키면 맞춘다. pytest와 web은 결과를 보지 못했다. 리뷰 반영 뒤 손댄 변이 표 넷(rerun_gates, rerun_cost, rerun_hidden, rerun_round)을 다시 돈다. 회고 후보 셋은 일지 인계 절
+읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-42-gates-and-official-cost.md. 구현·변이·커밋 전 반박 검증은 마쳤고 일지에 셀프 리뷰·회고·다음 절이 아직 없다. 인계 직전에 돌던 run_checks를 멈췄고, 멈추기 전에 check-instructions가 tools/rerun_gates.py:294의 listed 반환(bool | None)을 열거로 두라고 빨갰다. 셀프 리뷰 반영에 함께 고치고, 고친 뒤 rerun_gates_mutations.toml의 원문이 그 자리를 가리키면 맞춘다. pytest와 web은 결과를 보지 못했다. 리뷰 반영 뒤 손댄 변이 표 넷(rerun_gates, rerun_cost, rerun_hidden, rerun_round)을 다시 돈다. 회고 후보 셋은 일지 인계 절
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -148,8 +148,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "인계(커밋 뒤)" 절과 셀프 리뷰 절의 "반영"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 변이 표 넷의 재실행을 마치고 5030de40으로 커밋했다(pre-commit 모두 통과). 아직 푸시하지 않았고 PR이 없다. 일지의 커밋 절과 인계 절은 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review. bug-perf-review의 밀 주장은 일지 셀프 리뷰 절 "고친 것" 줄의 원문), /git-pr, 봇 회차, 워크트리 병합 길이다. docs/journal/2026-10-23-37-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계(커밋 뒤)" 절과 셀프 리뷰 절의 "반영"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 변이 표 넷의 재실행을 마치고 5030de40으로 커밋했다(pre-commit 모두 통과). 아직 푸시하지 않았고 PR이 없다. 일지의 커밋 절과 인계 절은 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review. bug-perf-review의 밀 주장은 일지 셀프 리뷰 절 "고친 것" 줄의 원문), /git-pr, 봇 회차, 워크트리 병합 길이다. docs/journal/2026-10-23-42-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -244,8 +244,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "인계(PR 연 뒤)" 절
-이어받을 상태: 인계: PR 연 뒤. PR #372를 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(CodeRabbit CLI는 이 PR에서도 Seat: not assigned였고 PR 직전 리뷰는 대체 둘로 마쳤다). 일지의 "인계(PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다. 회고(retro)와 일지 "다음"은 아직이고, 회고 후보는 일지의 인계·셀프 리뷰·인계(PR 연 뒤) 세 절에 있다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-37-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계(PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #372를 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(CodeRabbit CLI는 이 PR에서도 Seat: not assigned였고 PR 직전 리뷰는 대체 둘로 마쳤다). 일지의 "인계(PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다. 회고(retro)와 일지 "다음"은 아직이고, 회고 후보는 일지의 인계·셀프 리뷰·인계(PR 연 뒤) 세 절에 있다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -293,8 +293,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "봇 첫 회차"와 "인계(셀프 리뷰 직전)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. PR #372의 claude-review 첫 회차를 반영한 커밋하지 않은 변경(아홉 파일)이 워크트리에 있고 셀프 리뷰(/code-review d5db123e)부터 한다. 그 뒤 PR 본문 고치기(10으로 넘긴 불리언 짝, 변이 수), 커밋(일지의 커밋하지 않은 네 절을 함께), 푸시, 보류 이유의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py, 회고와 일지 "다음", 워크트리에서 병합이다. CodeRabbit은 한도로 아직 리뷰가 없어 다음 리뷰가 첫 회차이고, claude-review는 다음이 둘째 회차다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-37-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "봇 첫 회차"와 "인계(셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. PR #372의 claude-review 첫 회차를 반영한 커밋하지 않은 변경(아홉 파일)이 워크트리에 있고 셀프 리뷰(/code-review d5db123e)부터 한다. 그 뒤 PR 본문 고치기(10으로 넘긴 불리언 짝, 변이 수), 커밋(일지의 커밋하지 않은 네 절을 함께), 푸시, 보류 이유의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py, 회고와 일지 "다음", 워크트리에서 병합이다. CodeRabbit은 한도로 아직 리뷰가 없어 다음 리뷰가 첫 회차이고, claude-review는 다음이 둘째 회차다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -317,6 +317,11 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 - 명세 축 서브에이전트에는 임시 폴더 밖의 실제 경로에 지우는 함수를 부르지 말라고 알렸다. 그 서브에이전트는 자기가 만든 임시 폴더(`scratchpad\spec\tidy_root`, `TemporaryDirectory`) 밖으로 `cut_links`를 부른 일이 없고, 다른 지우는 함수는 부르지 않았다고 보고했다.
 - 스캔 결과: C: 전체 스캔과 사용자 프로필 스캔(`scratchpad/incident/scan_profile.py`, 폴더 793,657개, 255.6초)에서 위의 둘(`C:\Users\User`, 그 `Documents`) 밖의 피해 흔적은 보지 못했다. 사고 시간대에 수정된 나머지 폴더는 앱이 쓰는 자리(브라우저 저장소, `AppData\Local\Packages`, `.claude`, claude 캐시)였고, 훑기 차례로는 `AppData`와 `.claude`가 `Documents` 뒤라 닿기 전에 멈춘 자리다. 수정 시각만 보는 스캔이라, 같은 폴더(`Documents`) 안에서 끊긴 다른 링크가 있었는지는 알 수 없다. NTFS 변경 기록(USN 저널)은 관리자 권한이 있어야 읽는다.
 - 복구: `scratchpad/incident/restore_junctions.ps1`(커밋하지 않는다)이 끊긴 열셋을 Windows 기본값으로 다시 만든다(속성 Hidden·System·NotContentIndexed, 상속하지 않는 Everyone 목록 보기 거부 ACE 하나. 본보기는 `C:\Users\Default`와 `AppData\Local`에 남은 junction). 이미 있는 이름은 건너뛴다. 가짜 프로필(`scratchpad/incident/fake_profile`)에 돌려 본보기와 속성·ACL이 같은 것을 봤다. 실제 프로필에 돌리는 것은 저장소 밖의 사용자 프로필을 바꾸는 일이라 사용자 승인을 기다린다.
+- 복구함: 인계한 뒤 이 세션(넷째)에서 사용자가 승인했다.
+
+  > 사용자: 복구해
+
+  돌리기 전에 열셋이 모두 없는 것을 봤다. 가리킬 폴더 가운데 `C:\Users\User\Pictures`만 없었다. 레지스트리 `User Shell Folders`의 `My Pictures`가 `C:\Users\User\OneDrive\사진`이라, 사진 폴더가 OneDrive로 옮겨지며 그 폴더가 사라졌고 `Documents\My Pictures`는 사고 전에도 없는 폴더를 가리켰던 것으로 판단했다. 이 세션의 트랜스크립트에서 그 폴더가 링크였다는 흔적은 찾지 못했다. 그래서 원래 모양대로 그 폴더를 가리키게 되살렸다. 가리킬 폴더가 없을 때도 세 명령이 통과하는지는 스크래치 폴더(`scratchpad/incident/test_dangling.ps1`)에서 먼저 봤다. 19:36에 스크립트를 돌려 열셋을 되살렸고, `scratchpad/incident/verify_restore.ps1`로 열셋 모두 남아 있던 본보기(`C:\Users\User\AppData\Local\Application Data`)와 종류·속성·DACL이 같은 것을 봤다.
 
 ## 봇 첫 회차 반영분의 셀프 리뷰
 
@@ -368,8 +373,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-37-gates-and-official-cost.md의 "사고", "봇 첫 회차 반영분의 셀프 리뷰", "인계(커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. PR #372의 claude-review 첫 회차 반영과 그 셀프 리뷰를 커밋 04db7e5c로 마쳤고 아직 푸시하지 않았다. 푸시 전에 PR 본문을 고친다(불리언 짝을 10으로 넘긴 줄, 변이 수 gates 48·cost 27, 셀프 리뷰 줄). 그 뒤 푸시, 보류 이유와 밀 주장의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(CodeRabbit은 다음이 첫 회차, claude-review는 둘째 회차), 회고와 일지 "다음", 워크트리에서 병합이다. 일지의 사고 절에 더한 두 줄과 인계(커밋 뒤) 절은 커밋하지 않았다. 셀프 리뷰 중의 사고로 끊긴 사용자 프로필 junction 열셋의 복구는 넘긴 세션이 사용자 승인을 기다린다. 이 세션은 되살리지 않는다. 05의 PR #371과 08의 워크트리가 같은 파일을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-37-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "사고", "봇 첫 회차 반영분의 셀프 리뷰", "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. PR #372의 claude-review 첫 회차 반영과 그 셀프 리뷰를 커밋 04db7e5c로 마쳤고 아직 푸시하지 않았다. 푸시 전에 PR 본문을 고친다(불리언 짝을 10으로 넘긴 줄, 변이 수 gates 48·cost 27, 셀프 리뷰 줄). 그 뒤 푸시, 보류 이유와 밀 주장의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(CodeRabbit은 다음이 첫 회차, claude-review는 둘째 회차), 회고와 일지 "다음", 워크트리에서 병합이다. 일지의 사고 절에 더한 두 줄과 인계(커밋 뒤) 절은 커밋하지 않았다. 셀프 리뷰 중의 사고로 끊긴 사용자 프로필 junction 열셋의 복구는 넘긴 세션이 사용자 승인을 기다린다. 이 세션은 되살리지 않는다. 05의 PR #371과 08의 워크트리가 같은 파일을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -382,3 +387,5 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 인계(커밋 뒤) 절의 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 사용자 프롬프트는 그 지시문 그대로였다. 들어왔을 때 HEAD는 04db7e5c, 원격 브랜치는 d5db123e였고, 커밋하지 않은 변경은 이 일지 하나(사고 절의 두 줄과 인계(커밋 뒤) 절)였다. origin/main은 합친 뒤로 움직이지 않았다(`git log HEAD..origin/main`이 비었다). 사고의 복구(끊긴 junction 열셋)는 넘긴 세션의 몫이라 이 세션은 손대지 않는다.
 
 - PR 본문: 푸시 전에 `gh pr edit`으로 고쳤다. "왜 이렇게 했나"에 봇 첫 회차 반영의 결정(`_Git._call`, 대신 셈을 나누고 같은 누산기에 더한 것, `cut_links`의 `os.path.join`), "남긴 위험"에 10으로 넘긴 `Gate`·`SetupFailure`의 불리언 짝, 체크리스트에 셋째 셀프 리뷰(기준 d5db123e)와 04db7e5c의 pre-commit 수치, "확인 방법"에 변이 수(gates 48, cost 27. `--check`로 다시 봤다)를 더했다.
+- 커밋: f5b6a58b `docs: 셀프 리뷰 중의 사고와 인계, PR 본문 고침을 일지에 적는다 (model-rerun 07)`. pre-commit이 모두 통과했다(러너의 열: run-hooks 166.6초, web-verify 306.7초, pytest 410.0초). ruff 둘은 `.py`가 없어 `Skipped`였다.
+- origin/main 합치기: 푸시하려 하자 `hook_push_behind_main`이 origin/main(web-widget 명세의 PR #373, 8a026f3c)보다 1커밋 뒤처졌다고 막았다. 겹치는 파일이 없어 충돌 없이 합쳤고, 합친 뒤 린트 둘이 초록이었다. 이어서 `sibling_overlap`이 main의 일지 2026-10-23-40이 이 일지(옛 번호 37)보다 이름순으로 뒤라고 알려, 띄운 `run_checks`를 멈추고 `--move`로 이 일지를 2026-10-23-42로 옮겼다. 고친 인용은 변이 표 한 줄과 이 일지 안의 인계 지시문 줄이다. PR 본문의 일지 경로는 도구가 지은 본문을 지금 본문과 견줘(번호 밖의 차이 없음) `gh api`로 올렸다.
