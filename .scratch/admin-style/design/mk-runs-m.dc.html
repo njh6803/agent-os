@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>실행 목록 · 모바일</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<header style="height: var(--spacing-top-bar); box-sizing: border-box; padding: 0 var(--spacing-4); display: flex; align-items: center; gap: var(--spacing-2); background: var(--bg-raised); border-bottom: 1px solid var(--border);">
+<span class="font-semibold text-body" style="margin-right: auto;">Agent OS</span>
+<nav aria-label="관리 화면" class="flex items-center gap-1">
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">플러그인</a>
+<a href="#" aria-current="page" class="flex items-center text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;">실행</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">설정</a>
+</nav>
+</header>
+<main style="box-sizing: border-box; padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); display: flex; flex-direction: column; gap: var(--spacing-4);">
+<header class="flex items-start justify-between gap-3">
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">실행</h1><span class="text-body text-text-muted">24</span></div>
+<p class="text-body text-text-muted" style="margin: 0;">트레이스로 남은 실행이다. 새로 시작한 것이 위에 온다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+</header>
+<fieldset class="flex flex-wrap items-center gap-2" style="margin: 0; padding: 0; border: 0;">
+<legend class="text-small text-text-muted" style="padding: 0; margin-bottom: var(--spacing-2);">상태</legend>
+<label class="flex items-center gap-2 text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--text); border-radius: var(--radius-full); background: var(--bg-selected);"><input type="radio" name="status-m" checked="{{yes}}">전부</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status-m">일시정지</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status-m">끝남</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status-m">실패</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status-m">결말 없음</label>
+</fieldset>
+<ul class="flex flex-col gap-3" style="list-style: none; margin: 0; padding: 0;">
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2"><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="paused"></x-import><span class="font-mono text-mono text-text-muted">2026-10-12 14:03:22</span></div>
+<a href="#" class="font-mono text-mono" style="overflow-wrap: anywhere;">7f3a2c91-4b8e-4d1a-9c2f-0e6b5a8d3f12</a>
+<div class="flex flex-col gap-1 text-table">
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">에이전트</span><span>support-bot</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">주체</span><span>operator</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">마지막</span><span class="font-mono text-mono">2026-10-12 14:03:25</span></div>
+</div>
+</div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2"><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import><span class="font-mono text-mono text-text-muted">2026-10-12 13:58:07</span></div>
+<a href="#" class="font-mono text-mono" style="overflow-wrap: anywhere;">0b9e5d14-2a7c-4f3e-8d61-c4a2b9e07f5d</a>
+<div class="flex flex-col gap-1 text-table">
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">에이전트</span><span>calc</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">주체</span><span>operator</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">마지막</span><span class="font-mono text-mono">2026-10-12 13:58:11</span></div>
+</div>
+</div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2"><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="failed"></x-import><span class="font-mono text-mono text-text-muted">2026-10-12 13:41:50</span></div>
+<a href="#" class="font-mono text-mono" style="overflow-wrap: anywhere;">c51f8a07-9d3b-4e2a-b6f4-17e8d0c3a92b</a>
+<div class="flex flex-col gap-1 text-table">
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">에이전트</span><span>support-bot</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">주체</span><span>operator</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">마지막</span><span class="font-mono text-mono">2026-10-12 13:42:31</span></div>
+</div>
+</div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex items-start gap-2 text-table text-warning"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import><span style="min-width: 0; overflow-wrap: anywhere;">읽을 수 없는 트레이스: <span class="font-mono text-mono">traces/9a0c6e12.jsonl</span> 첫 줄의 형식 버전이 없다</span></div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2"><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="no-outcome"></x-import><span class="font-mono text-mono text-text-muted">2026-10-12 11:20:03</span></div>
+<a href="#" class="font-mono text-mono" style="overflow-wrap: anywhere;">5d27e3b0-6c1f-4a8d-93e5-b8f0a4c6d211</a>
+<div class="flex flex-col gap-1 text-table">
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">에이전트</span><span>calc</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">주체</span><span>operator</span></div>
+<div class="flex gap-2"><span class="text-text-muted" style="width: 64px; flex-shrink: 0;">마지막</span><span class="font-mono text-mono">2026-10-12 11:20:04</span></div>
+</div>
+</div>
+</x-import>
+</li>
+</ul>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">더 보기</x-import>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

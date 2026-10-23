@@ -1,0 +1,61 @@
+{
+  "artifact": "https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH",
+  "recordedAt": "2026-10-22",
+  "source": "Claude Code의 Artifact 도구(read, paths)가 파일마다 낸 판 id, 바이트 수, sha256을 옮겨 적었다. 계정은 편집자(writer)다. 저장소 쪽은 줄의 commit(그리기 직전의 main b104f8fa)에서 꺼낸다. 마지막 줄은 음성 대조로, c41adad가 머리 문장을 고치기 전(df705c17)의 web-design.md와 다르다고 나와야 한다.",
+  "reads": [
+    {
+      "version": "1792677911-3a99",
+      "path": "project/guidelines/web-design.md",
+      "bytes": 13438,
+      "sha256": "b583d9a3abcc230e222f872e600224bf7d18dfe8ab4da794ddc6339c5c619ccf",
+      "repo": ".claude/rules/web-design.md",
+      "commit": "b104f8fa",
+      "expect": "same"
+    },
+    {
+      "version": "1792677911-3a99",
+      "path": "project/foundations/colors/index.html",
+      "bytes": 16048,
+      "sha256": "0d3ac3078ef8c0593ab7a24db77aabcb208010fe1c12a0c045cee6840708f98a",
+      "repo": ".design-sync/foundations/colors/index.html",
+      "commit": "b104f8fa",
+      "expect": "same"
+    },
+    {
+      "version": "1792677911-3a99",
+      "path": "project/foundations/density/index.html",
+      "bytes": 4916,
+      "sha256": "4f8c4b15ba6052b59cd61a9903a6ac40bb8641b92237a7e34de92943573e122f",
+      "repo": ".design-sync/foundations/density/index.html",
+      "commit": "b104f8fa",
+      "expect": "same"
+    },
+    {
+      "version": "1792677911-3a99",
+      "path": "project/foundations/spacing/index.html",
+      "bytes": 3974,
+      "sha256": "5815d6c402d0574433bbc18c1ab51d99a6f2cc367dbd89ab78b5d7cd60362b30",
+      "repo": ".design-sync/foundations/spacing/index.html",
+      "commit": "b104f8fa",
+      "expect": "same"
+    },
+    {
+      "version": "1792677911-3a99",
+      "path": "project/foundations/type/index.html",
+      "bytes": 4312,
+      "sha256": "8b3bd99f400b89186d4c95c241a24f31d6cfcc49557c3ea39f91b45723d5b23d",
+      "repo": ".design-sync/foundations/type/index.html",
+      "commit": "b104f8fa",
+      "expect": "same"
+    },
+    {
+      "version": "1792677911-3a99",
+      "path": "project/guidelines/web-design.md",
+      "bytes": 13438,
+      "sha256": "b583d9a3abcc230e222f872e600224bf7d18dfe8ab4da794ddc6339c5c619ccf",
+      "repo": ".claude/rules/web-design.md",
+      "commit": "df705c17",
+      "expect": "differ"
+    }
+  ]
+}

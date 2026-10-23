@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 · 모바일</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<header style="height: var(--spacing-top-bar); box-sizing: border-box; padding: 0 var(--spacing-4); display: flex; align-items: center; gap: var(--spacing-2); background: var(--bg-raised); border-bottom: 1px solid var(--border);">
+<span class="font-semibold text-body" style="margin-right: auto;">Agent OS</span>
+<nav aria-label="관리 화면" class="flex items-center gap-1">
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">플러그인</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">실행</a>
+<a href="#" aria-current="page" class="flex items-center text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;">설정</a>
+</nav>
+</header>
+<main style="box-sizing: border-box; padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); display: flex; flex-direction: column; gap: var(--spacing-8);">
+<header class="flex flex-col gap-2">
+<h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">설정</h1>
+<p class="text-body text-text-muted" style="margin: 0;">테마는 이 브라우저에, 토큰은 이 탭에만 남는다. 서버의 구성은 바꾸지 않는다.</p>
+</header>
+
+<fieldset class="flex flex-col gap-3" style="margin: 0; padding: 0; border: 0; min-width: 0;">
+<legend class="text-body font-semibold" style="padding: 0; margin-bottom: var(--spacing-3);">테마</legend>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-3);">
+<label class="flex flex-col gap-3" style="padding: var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-l); background: var(--bg-raised);">
+<span class="flex items-center gap-2 text-body font-medium"><input type="radio" name="theme-m">군청</span>
+<span inert data-theme="guncheong" data-mode="light" class="flex flex-col items-start gap-2" style="padding: var(--spacing-2); border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); color: var(--text);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+<x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import>
+<span class="font-mono text-mono" style="overflow-wrap: anywhere;">payments.refund</span>
+</span>
+</label>
+<label class="flex flex-col gap-3" style="padding: var(--spacing-3); border: 2px solid var(--accent); border-radius: var(--radius-l); background: var(--bg-selected);">
+<span class="flex items-center gap-2 text-body font-medium"><input type="radio" name="theme-m" checked="{{yes}}">녹청</span>
+<span inert data-theme="nokcheong" data-mode="light" class="flex flex-col items-start gap-2" style="padding: var(--spacing-2); border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); color: var(--text);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+<x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import>
+<span class="font-mono text-mono" style="overflow-wrap: anywhere;">payments.refund</span>
+</span>
+</label>
+<label class="flex flex-col gap-3" style="padding: var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-l); background: var(--bg-raised);">
+<span class="flex items-center gap-2 text-body font-medium"><input type="radio" name="theme-m">자초</span>
+<span inert data-theme="jacho" data-mode="light" class="flex flex-col items-start gap-2" style="padding: var(--spacing-2); border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); color: var(--text);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+<x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import>
+<span class="font-mono text-mono" style="overflow-wrap: anywhere;">payments.refund</span>
+</span>
+</label>
+<label class="flex flex-col gap-3" style="padding: var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-l); background: var(--bg-raised);">
+<span class="flex items-center gap-2 text-body font-medium"><input type="radio" name="theme-m">쪽빛</span>
+<span inert data-theme="jjokbit" data-mode="light" class="flex flex-col items-start gap-2" style="padding: var(--spacing-2); border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); color: var(--text);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+<x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import>
+<span class="font-mono text-mono" style="overflow-wrap: anywhere;">payments.refund</span>
+</span>
+</label>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">모드(라이트·다크)는 시스템 설정을 따른다.</p>
+</fieldset>
+
+<section class="flex flex-col gap-3">
+<div class="flex flex-col gap-1">
+<h2 class="text-body font-semibold" style="margin: 0;">채널 토큰</h2>
+<p class="text-body text-text-muted" style="margin: 0;">일시정지한 실행에 결정을 낼 때 쓴다. <code class="font-mono">agent-os serve</code>를 띄울 때 <code class="font-mono" style="overflow-wrap: anywhere;">AGENT_OS_CHANNEL_TOKEN</code>에 준 값이다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<p class="flex items-center gap-2 text-body" style="margin: 0;"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="16"></x-import>채널 토큰을 넣었다</p>
+</x-import>
+</section>
+
+<section class="flex flex-col gap-3">
+<div class="flex flex-col gap-1">
+<h2 class="text-body font-semibold" style="margin: 0;">토큰 지우기</h2>
+<p class="text-body text-text-muted" style="margin: 0;">관리 토큰과 채널 토큰을 이 탭에서 모두 지운다.</p>
+</div>
+<div><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">토큰 지우기</x-import></div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

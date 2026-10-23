@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>플러그인 하나 · 모바일</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<header style="height: var(--spacing-top-bar); box-sizing: border-box; padding: 0 var(--spacing-4); display: flex; align-items: center; gap: var(--spacing-2); background: var(--bg-raised); border-bottom: 1px solid var(--border);">
+<span class="font-semibold text-body" style="margin-right: auto;">Agent OS</span>
+<nav aria-label="관리 화면" class="flex items-center gap-1">
+<a href="#" aria-current="page" class="flex items-center text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;">플러그인</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">실행</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">설정</a>
+</nav>
+</header>
+<main style="box-sizing: border-box; padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); display: flex; flex-direction: column; gap: var(--spacing-6);">
+<a href="#" class="text-body" style="align-self: flex-start;">플러그인 목록</a>
+<header class="flex flex-col gap-3">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3 min-w-0"><h1 class="font-mono" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight); overflow-wrap: anywhere;">everything</h1><span class="flex items-center gap-1 text-body"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-check" size="16"></x-import>켜짐</span></div>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+</div>
+<p class="text-body text-text-muted" style="margin: 0;">MCP. 켜고 끄기는 플러그인 목록에서 한다.</p>
+</header>
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">매니페스트</h2>
+<pre class="font-mono text-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-m); line-height: var(--table-lh); white-space: pre-wrap; overflow-wrap: anywhere;">{
+  "schema_version": "1",
+  "kind": "mcp",
+  "name": "everything",
+  "version": "0.1.0",
+  "server": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-everything"
+    ],
+    "secret_args": {}
+  }
+}</pre>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

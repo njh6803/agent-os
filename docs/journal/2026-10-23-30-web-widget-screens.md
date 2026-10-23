@@ -1,4 +1,4 @@
-# 2026-10-23 (26) web-widget 화면을 /ui-design으로 그려 고르고 옮긴다
+# 2026-10-23 (30) web-widget 화면을 /ui-design으로 그려 고르고 옮긴다
 
 > 사용자: (next-session 지시문을 첫 메시지로 받았다) "다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다 … 이어받을 상태: 없음. 옛 docs/web-widget-spec 워크트리가 남아 있으나 PR이 없다 … 이번 요청 범위: PR과 병합까지"
 
@@ -105,8 +105,8 @@ README 표에 화면마다 한 줄을 채웠다. 동기화한 커밋은 디자�
 시작 프롬프트: /ui-design web-widget
 브랜치: docs/web-widget-screens
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-23-26-web-widget-screens.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main)부터 한다. 일지 docs/journal/2026-10-23-26-web-widget-screens.md. /ui-design의 1~7단계는 끝났다. README에 화면 여덟 줄이 있어 그 스킬은 1~2와 웹 편집 확인만 하는데, 화면 파일이 아직 커밋 전이라 HEAD와 맞대지 못하고 "옮긴 뒤 아직 커밋하지 않은 것"으로 알리게 된다. 앞 세션은 아티팩트의 새 판 1792715269-9eb4와 작업 트리의 canvas.json·mk-*.dc.html 아홉의 sha256이 같은 것을 봤다. run_checks.py는 pytest와 web의 결과를 보지 못하고 멈췄다. 충돌 목록(.scratch/design-system/design/frontend-design-conflicts.md)의 표 끝에는 docs/admin-style-screens 브랜치도 네 줄을 더해, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main)부터 한다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md. /ui-design의 1~7단계는 끝났다. README에 화면 여덟 줄이 있어 그 스킬은 1~2와 웹 편집 확인만 하는데, 화면 파일이 아직 커밋 전이라 HEAD와 맞대지 못하고 "옮긴 뒤 아직 커밋하지 않은 것"으로 알리게 된다. 앞 세션은 아티팩트의 새 판 1792715269-9eb4와 작업 트리의 canvas.json·mk-*.dc.html 아홉의 sha256이 같은 것을 봤다. run_checks.py는 pytest와 web의 결과를 보지 못하고 멈췄다. 충돌 목록(.scratch/design-system/design/frontend-design-conflicts.md)의 표 끝에는 docs/admin-style-screens 브랜치도 네 줄을 더해, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -199,7 +199,7 @@ PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(뒤에 PR 봇이 겨�
 
 이 세션이 번복하거나 고친 것은 셀프 리뷰와 PR 직전 리뷰의 반영(위 두 절)과, 처음에 "손으로 봤다"로 적었다가 `file`로 다시 보고 고친 줄바꿈 문장이다.
 
-`sibling_overlap.py`(origin/main `750761b`)는 번호 겹침이 없다고 했다. 이 일지(`2026-10-23-26`)를 이름순으로 앞서는 형제는 PR #367(`2026-10-23-21`, admin-style 화면), #366(`-22`), #364(`-23`)와 워크트리 `04-round-clone`(`-25`)·`05-task-selection`(`-24`) 등이고, 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다. PR #367은 충돌 목록과 `plan.md`도 함께 고쳐, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다. 옛 `docs/web-widget-spec` 워크트리(PR 없음, 커밋 `8acd9a48`)가 같은 `design/README.md`·`screens-prompt.md` 경로를 커밋해 두어 겹침 목록에 나온다. 그 브랜치는 이번에 재료로만 읽었다.
+`sibling_overlap.py`(origin/main `750761b`)는 번호 겹침이 없다고 했다. 이 일지(`2026-10-23-30`)를 이름순으로 앞서는 형제는 PR #367(`2026-10-23-21`, admin-style 화면), #366(`-22`), #364(`-23`)와 워크트리 `04-round-clone`(`-25`)·`05-task-selection`(`-24`) 등이고, 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다. PR #367은 충돌 목록과 `plan.md`도 함께 고쳐, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다. 옛 `docs/web-widget-spec` 워크트리(PR 없음, 커밋 `8acd9a48`)가 같은 `design/README.md`·`screens-prompt.md` 경로를 커밋해 두어 겹침 목록에 나온다. 그 브랜치는 이번에 재료로만 읽었다.
 
 지시문:
 
@@ -210,8 +210,8 @@ PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(뒤에 PR 봇이 겨�
 시작 프롬프트: /ui-design web-widget
 브랜치: docs/web-widget-screens
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-23-26-web-widget-screens.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋 3e9d80ba, origin/main(750761b9)을 합친 74be9eb0, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review 발견 없음, bug-perf-review 유효 Minor 셋을 고침)를 반영한 088f0a7f까지 했다. 푸시하지 않았고 PR도 없다. 일지의 "인계(커밋 뒤)" 절은 커밋하지 않았다. 남은 것: /ui-design의 1~2와 웹 편집 확인(이제 HEAD에 화면 파일이 있다. mk-*.dc.html은 커밋 때 CRLF가 LF로 바뀌어 sha256이 달라 그 스킬 32행의 줄바꿈 갈래로 맞댄다), 푸시와 /git-pr(PR 체크리스트의 PR 직전 리뷰 줄은 일지 "PR 직전 리뷰" 절), @coderabbitai review와 tools/wait_ci.py, 봇 회차, 회고와 일지의 "다음" 절, next-session "워크트리에서 병합할 때"대로 병합. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-26-web-widget-screens.md
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋 3e9d80ba, origin/main(750761b9)을 합친 74be9eb0, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review 발견 없음, bug-perf-review 유효 Minor 셋을 고침)를 반영한 088f0a7f까지 했다. 푸시하지 않았고 PR도 없다. 일지의 "인계(커밋 뒤)" 절은 커밋하지 않았다. 남은 것: /ui-design의 1~2와 웹 편집 확인(이제 HEAD에 화면 파일이 있다. mk-*.dc.html은 커밋 때 CRLF가 LF로 바뀌어 sha256이 달라 그 스킬 32행의 줄바꿈 갈래로 맞댄다), 푸시와 /git-pr(PR 체크리스트의 PR 직전 리뷰 줄은 일지 "PR 직전 리뷰" 절), @coderabbitai review와 tools/wait_ci.py, 봇 회차, 회고와 일지의 "다음" 절, next-session "워크트리에서 병합할 때"대로 병합. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -232,7 +232,7 @@ open-session을 부른다 2026-10-23T02:12:03Z
 - 이 확인으로 그 스킬의 "재지 못한 것" 가운데 둘을 Design 아티팩트에서 봤다. `read` 결과 머리에 파일마다 sha256이 나오고, `.dc.html`은 CRLF라 커밋한 판과 sha256이 늘 어긋나 줄바꿈 갈래로 간다. 그 절은 admin-style의 첫 그리기가 고치기로 되어 있어 이 브랜치는 스킬을 고치지 않았다.
 - 디자인 시스템 색인의 `lastChange.by`에 계정 이름이 들어 있다(2026-10-17의 부분 올리기가 적었다). ADR 0025의 2026-10-20 이력은 계정 이름을 어디에도 적지 않는다고 정했다. 다음 전체 올리기(design-reverse-sync 티켓 08)가 `lastChange`를 새로 적을 때 사라지므로 이 브랜치는 아티팩트를 고치지 않았다.
 
-origin/main에 #364(model-rerun 03)가 병합되어 그 일지(`2026-10-23-23`)가 이 일지를 이름순으로 앞섰다. origin/main을 합치고(이 브랜치가 이름으로 든 파일과 겹치는 변경은 없었다) `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-20`에서 `2026-10-23-26`으로 옮겼다. 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌다.
+origin/main에 #364(model-rerun 03)가 병합되어 그 일지(`2026-10-23-23`)가 이 일지를 이름순으로 앞섰다. origin/main을 합치고(이 브랜치가 이름으로 든 파일과 겹치는 변경은 없었다) `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-20`에서 `2026-10-23-30`으로 옮겼다. 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌다.
 
 커밋 `dfb52c07`의 pre-commit은 `checks`(572초)의 열 검사가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. ruff 둘은 커밋 전에 손으로 쳤다("All checks passed!", "985 files already formatted"). 인용 대조는 경고가 없었다. 푸시 직전에 origin/main이 그대로인 것을 보고 푸시한 뒤, `/git-pr`로 PR #368을 열었다. 요청 범위가 병합까지라 PR 생성은 묻지 않았다. `coderabbit auth status`는 이번에도 `Plan: Free`, `Seat: not assigned`였고, PR 체크리스트의 PR 직전 리뷰 줄은 위 "PR 직전 리뷰" 절대로 적었다. 앱의 PR 묶음은 이 세션에 이미 묶여 있었다(`get_status`의 `bound: true`).
 
@@ -249,8 +249,8 @@ PR을 연 뒤 컨텍스트가 인계 문턱(20만)을 넘은 채(21만 5천) `PR
 시작 프롬프트: /ui-design web-widget
 브랜치: docs/web-widget-screens
 모델: Sonnet 5.5 / high
-읽을 것: docs/journal/2026-10-23-26-web-widget-screens.md
-이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #368은 dfb52c07로 열었고 아직 코멘트를 남기지 않았다. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792716732-6594에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (커밋 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합. 일지의 이 세션 절과 인계 절은 커밋하지 않았다. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367·#366 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-26-web-widget-screens.md
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #368은 dfb52c07로 열었고 아직 코멘트를 남기지 않았다. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792716732-6594에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (커밋 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합. 일지의 이 세션 절과 인계 절은 커밋하지 않았다. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367·#366 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -296,3 +296,47 @@ PR #368의 `headRefOid`와 `git rev-parse HEAD`가 모두 `dfb52c07`인 것을 �
 - 이 PR은 `.scratch/design-system/design/frontend-design-conflicts.md`와 `.scratch/plan.md`를 admin-style 화면 브랜치(PR #367)와 함께 고친다. 나중에 병합하는 쪽이 글자 충돌에서 두 쪽 줄을 다 남긴다.
 - 봇 회차에서 뒤로 넘긴 일은 없다.
 - 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+
+## 인계(커밋 뒤, 둘째)
+
+위 회고와 "다음" 절을 실은 커밋 `63313c1e`(pre-commit의 열 검사가 모두 통과, pytest 748초, web-verify 494초. 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`)를 만든 직후 세션 컨텍스트가 약 20만 3천 토큰으로 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와 `hook_handoff` 계기가 왔다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `docs/web-widget-screens`였다. 이 세션에 사용자 프롬프트는 첫 메시지(위 "이어받은 세션 (PR 연 뒤부터)"의 인용) 밖에 없었다. `gh pr view 368 --json state`는 `OPEN`이고 PR의 `headRefOid`는 아직 `dfb52c07`이다. `tools/model_sweep.py docs/web-widget-screens`는 `스윕 밖`이라 열린 PR이 있는 `Sonnet 5.5 / high`다.
+
+이 세션이 번복하거나 고친 것은 일지의 한 문장이다. 처음에 쓴 "operations.md 리뷰 파이프라인 3, 마지막 줄 바로 앞 항목"이 어느 항목인지 알 수 없어, 그 항목의 제목 문장으로 바꿨다. 서브에이전트의 웹 편집 대조 보고는 이 세션이 받은 파일로 다시 맞대 같은 결론을 확인했다(위 절).
+
+이 세션이 한 것: /ui-design 1~2와 웹 편집 확인, `@coderabbitai review` 요청과 `wait_ci` 대기, 봇 회차 판정(고칠 지적 없음), 회고(승인 0), 일지의 "다음" 절, 커밋 `63313c1e`. 푸시는 하지 않았다.
+
+남은 단계(새 세션):
+1. 커밋 `63313c1e`는 푸시하지 않았다. 이 "인계(커밋 뒤, 둘째)" 절은 커밋하지 않았다. 새 세션이 자기 절을 이 절 뒤에 더하고 한 커밋으로 올려 푸시한다. 푸시할 때마다 claude-review가 한 번 더 도므로 푸시를 두 번 이상 하지 않는다. 푸시 전에 PR 본문을 고칠 일은 없다(범위가 같다).
+2. 푸시 뒤 `@coderabbitai review` 코멘트와 `tools/wait_ci.py 368` 대기. claude-review는 이 푸시가 둘째 회차이고 문서·일지만 바뀌어 Critical·Major가 아니면 보류 이유를 PR 코멘트에 남기고 일지 "다음"에도 옮긴다. CodeRabbit은 앞 요청이 한도에 걸렸으므로 이 푸시도 한도에 걸릴 수 있고, 걸리면 회차로 세지 않는다.
+3. PR #367(admin-style 화면)이 이 인계 직전에 병합됐다(`origin/main`의 `8575f57d`, 이 브랜치는 아직 합치지 않았다). 이 일지 `2026-10-23-30`이 `origin/main`의 최신 일지 `2026-10-23-27`보다 이름순으로 앞서므로, 푸시하기 전에 먼저 `origin/main`을 합친다. #367이 고친 `.scratch/plan.md`와 `.scratch/design-system/design/frontend-design-conflicts.md`에서 글자 충돌이 나면 두 쪽 줄을 다 남긴다. 합친 뒤 `sibling_overlap.py --move`로 이 일지 번호를 옮기고(지금의 다음 빈 번호는 `2026-10-23-28`) 인용을 고친다. 병합 직전에 `sibling_overlap.py`를 한 번 더 쳐 다른 형제가 먼저 병합됐는지 본다.
+4. 워크트리 길로 병합한다(next-session "워크트리에서 병합할 때"). 병합 뒤의 다음 단계는 명세(`/to-spec web-widget`)다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md (맨 끝 "인계(커밋 뒤, 둘째)" 절부터. 앞 절들은 필요할 때만)
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-10-23-30-web-widget-screens.md. 봇 첫 회차는 끝났다(claude-review 지적 없음, CodeRabbit 한도로 리뷰 없음). 일지의 봇 회차·회고·"다음" 절을 커밋 63313c1e로 만들었고 푸시하지 않았다. 일지의 "인계(커밋 뒤, 둘째)" 절은 커밋하지 않았다. PR #367이 origin/main(8575f57d)에 병합되어 이 브랜치는 아직 합치지 않았고, 일지 번호 -26이 origin/main의 최신 -27보다 앞선다. 푸시 전에 origin/main을 합치고(plan.md와 frontend-design-conflicts.md의 글자 충돌은 두 쪽 줄을 다 남긴다) sibling_overlap.py --move로 일지 번호를 옮긴다. 남은 것은 그 절 아래 "남은 단계" 넷이다: origin/main 합치기와 번호 옮기기 뒤 자기 절을 더해 한 커밋으로 푸시, @coderabbitai review와 wait_ci, 병합 직전 sibling_overlap.py 재확인, 워크트리 길 병합. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792723018-d2f3에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (PR 연 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T02:56:22Z
+
+## 이어받은 세션 (커밋 뒤, 둘째부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: 커밋 뒤. … 푸시 전에 origin/main을 합치고(plan.md와 frontend-design-conflicts.md의 글자 충돌은 두 쪽 줄을 다 남긴다) sibling_overlap.py --move로 일지 번호를 옮긴다. … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다.
+
+- /ui-design 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- /ui-design 2. 디자인 시스템 아티팩트는 다시 읽지 않았다. 앞 세션이 대 본 `9b4952f6`에서 지금의 origin/main(`8575f57d`)까지 빌드 입력(`web/packages/ui`, `.design-sync/`, `web-design.md`)의 `git diff --stat`이 비었다.
+- 웹 편집 확인. 화면 아티팩트의 판은 앞 세션이 본 `1792723018-d2f3` 그대로였다. 받은 `canvas.json`의 sha256이 작업 트리의 파일과 같았고, `mk-*.dc.html` 여덟은 CR을 지우고 맞대 모두 같았다. 다시 옮길 화면은 없다.
+- origin/main(`8575f57d`, PR #367)을 합쳤다. `frontend-design-conflicts.md`에서 글자 충돌이 하나 났고 두 쪽 줄을 다 남겨 날짜순(admin-style 10-22, web-widget 10-23)으로 두었다. `plan.md`는 자동으로 합쳐졌다.
+- `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-26`에서 `2026-10-23-30`으로 옮겼다(PR #369 등이 28·29를 가져갔다). 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌고 옛 번호의 잔존은 없다. PR #368 본문의 일지 이름도 `gh api`로 새 번호로 고쳤다(다른 차이는 끝 줄바꿈뿐이었다).
+- 내 임시 보관 항목(`wws-journal-wip`) 하나를 만들었다가 필요 없어 바로 풀고 내 항목만 지웠다.
