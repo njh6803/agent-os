@@ -50,6 +50,10 @@
 - 01의 회차 기록은 회차 폴더를 뿌리를 뺀 이름(`round_dir_name`)으로만 든다. 다시 뜬 러너가 측정 아님(중단)으로 쓰는 기록에는 뿌리 아래에서 찾은 그 회차 폴더의 이름을 옮겨 넣는다(2026-10-23 티켓 01의 PR 봇 회차).
 - 01의 `write_record`는 같은 폴더의 임시 파일(`.<기록 파일 이름>.<pid>-<난수>.tmp`)에 다 쓴 뒤 하드 링크로 이름을 붙이고, 예외로 실패하면 임시 파일을 지운다. 러너가 강제로 죽으면 그 임시 파일이 `records/`에 남는다. 기록 파일 이름으로 풀리지 않아 번호 셈과 판정은 그것을 보지 않지만, 커밋 전에 그것을 지울지는 이 티켓이 정한다(01의 `write_record` 독스트링 "못 보는 것").
 
+### 03에서 넘어온 메모
+
+- 03의 판정 도구(`tools/rerun_judge.py`)는 절 꺼내기 `prereg_section`과 상수 `PREREG_SHA256` 밖에 `prereg_problem(readme_text, expected_sha256)`도 공개 이름으로 둔다. 절 꺼내기와 해시 대조를 함께 하고, 맞으면 빈 값을, 아니면 결론 없음의 까닭 문장(표지의 수, 또는 두 해시)을 돌려준다. 러너가 본 측정 목록을 열기 전의 대조와 멈출 때 알릴 문장에 그대로 쓸 수 있다(2026-10-23 티켓 03의 셀프 리뷰).
+
 ### 04에서 넘어온 메모
 
 - 뿌리는 `checked_root(text, main_checkout=main_checkout(ROOT), home=Path.home())`로, 전용 설정 폴더는 `checked_place(text, "설정 폴더", main_checkout=..., user_claude=Path.home() / ".claude")`로 본다. `PlaceError`면 아무 회차도 열지 않고 멈춘다. 막는 규칙은 `deny_rules(deny_heads(main_checkout(ROOT), home=Path.home()))`이다(모두 `tools/rerun_round.py`).

@@ -58,6 +58,8 @@ from tools.rerun_files import (
     dumps_task_list,
     hidden_test_file,
     hidden_test_files,
+    is_support_file,
+    is_test_file,
     judge_view,
     next_round_no,
     parse_record,
@@ -552,6 +554,80 @@ def test_숨은_시험_ID_가_노드_ID_가_아니면_목록_읽기가_거부한
         parse_task_list(글)
 
 
+@pytest.mark.parametrize(
+    ("노드", "까닭"),
+    [
+        ("C:/x/tests/test_a.py::test_a", "드라이브 문자"),
+        ("/tmp/tests/test_a.py::test_a", "절대 경로"),
+        ("tests/../src/test_a.py::test_a", "위로 가는 조각"),
+        ("tests/./test_a.py::test_a", "제자리 조각"),
+        ("tests\\test_a.py::test_a", "역슬래시"),
+        ("src/test_a.py::test_a", "tests 밖"),
+        ("tests/helpers.py::test_a", "test_ 로 시작하지 않는 파일"),
+        ("tests/test_a.txt::test_a", "파이썬 파일이 아니다"),
+        ("tests//test_a.py::test_a", "빈 조각"),
+        ("tests/test_a.py::test_a\n", "줄바꿈"),
+        ("tests/test_a.py::test_a[\u2028]", "줄 구분 문자"),
+        ("tests/te\nst_a.py::test_a", "파일 부분의 줄바꿈"),
+    ],
+)
+def test_숨은_시험의_파일_부분은_tests_아래_상대_경로만_받는다(노드: str, 까닭: str) -> None:
+    with pytest.raises(ShapeError, match="노드 ID"):
+        hidden_test_file(노드)
+    글 = _바꿔(dumps_task_list(_목록()), ("tasks", 0, "hidden_tests"), [노드])
+    with pytest.raises(ShapeError, match="노드 ID"):
+        parse_task_list(글)
+
+
+@pytest.mark.parametrize(
+    "경로",
+    [
+        "tests/conftest.py",
+        "tests/tools/helpers.py",
+        "tests/tools/_fixture-data.py",
+        "conftest.py",
+        "src/agent_os/conftest.py",
+    ],
+)
+def test_시험_지원_파일은_conftest_와_tests_아래_시험_아닌_파이썬_파일이다(경로: str) -> None:
+    assert is_support_file(경로)
+    글 = _바꿔(dumps_task_list(_목록()), ("tasks", 0, "support_files"), [경로])
+    assert parse_task_list(글).tasks[0].support_files == (경로,)
+
+
+@pytest.mark.parametrize(
+    ("경로", "까닭"),
+    [
+        ("tests/test_a.py", "시험 파일"),
+        ("src/agent_os/helpers.py", "tests 밖의 conftest 아닌 파일"),
+        ("tests/data.json", "파이썬 파일이 아니다"),
+        ("/abs/tests/conftest.py", "절대 경로"),
+        ("C:/x/tests/conftest.py", "드라이브 문자"),
+        ("tests/../conftest.py", "위로 가는 조각"),
+        ("tests\\conftest.py", "역슬래시"),
+        ("tests/.hidden/conftest.py", "점으로 시작하는 조각"),
+        ("tests/con\ntest.py", "줄바꿈"),
+        ("tests/conftest\u2029.py", "문단 구분 문자"),
+    ],
+)
+def test_시험_지원_파일_칸은_허용_꼴_밖을_거부한다(경로: str, 까닭: str) -> None:
+    assert not is_support_file(경로)
+    글 = _바꿔(dumps_task_list(_목록()), ("tasks", 0, "support_files"), [경로])
+    with pytest.raises(ShapeError, match="support_files"):
+        parse_task_list(글)
+
+
+def test_시험_파일은_tests_아래_test_로_시작하는_py_뿐이다() -> None:
+    assert is_test_file("tests/test_a.py")
+    assert is_test_file("tests/tools/test_rerun-x.py")
+    assert not is_test_file("tests/conftest.py")
+    assert not is_test_file("test_a.py")
+    assert not is_test_file("tests/../tests/test_a.py")
+    # 못 보는 것: pytest 설정이 더 모으는 `*_test.py` 는 지원 파일이다
+    assert not is_test_file("tests/a_test.py")
+    assert is_support_file("tests/a_test.py")
+
+
 # --- 끝 ---
 
 
@@ -677,7 +753,7 @@ def test_게이트는_정해진_셋이_이_차례로_든다(게이트: Json) -> 
 
 
 def test_실패한_숨은_시험_노드는_겹치지_않는다() -> None:
-    숨은: Json = {"passed": 1, "total": 3, "failed": ["tests/a.py::t", "tests/a.py::t"]}
+    숨은: Json = {"passed": 1, "total": 3, "failed": ["tests/test_a.py::t", "tests/test_a.py::t"]}
     with pytest.raises(ShapeError, match="겹친다"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "hidden"), 숨은))
 
@@ -686,8 +762,8 @@ def test_실패한_숨은_시험_노드는_겹치지_않는다() -> None:
     ("노드", "까닭"),
     [
         ("tests/a.py", "노드 ID"),
-        ("tests/a.py::t\n글", "failed"),
-        ("tests/a.py::t\t글", "failed"),
+        ("tests/test_a.py::t\n글", "failed"),
+        ("tests/test_a.py::t\t글", "failed"),
     ],
 )
 def test_실패한_숨은_시험은_노드_ID_꼴이고_제어_문자가_없다(노드: str, 까닭: str) -> None:
@@ -707,7 +783,7 @@ def test_회차_폴더_이름과_실패_노드는_줄을_끊는_문자를_모두
     폴더 = f"model-rerun-01-C-2-a1{문자}b2"
     with pytest.raises(ShapeError, match="round_dir_name"):
         parse_record(_바꿔(dumps_record(_기록()), ("round_dir_name",), 폴더))
-    숨은: Json = {"passed": 2, "total": 3, "failed": [f"tests/a.py::t{문자}글"]}
+    숨은: Json = {"passed": 2, "total": 3, "failed": [f"tests/test_a.py::t{문자}글"]}
     with pytest.raises(ShapeError, match="failed"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "hidden"), 숨은))
 
