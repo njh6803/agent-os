@@ -1,0 +1,391 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-22T14:29:21Z"
+  },
+  "title": "admin-style 화면 · screens-prompt.md",
+  "launch": {
+    "view": "canvas",
+    "page": "wireframes"
+  },
+  "pages": [
+    {
+      "id": "wireframes",
+      "name": "와이어프레임"
+    },
+    {
+      "id": "mockups",
+      "name": "완성 화면"
+    }
+  ],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "1 관리 토큰 넣기 · 데스크톱",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-token-m.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "1 관리 토큰 넣기 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-plugins-a.dc.html": {
+      "x": 0,
+      "y": 932,
+      "w": 1280,
+      "h": 1040,
+      "title": "2 플러그인 목록 · 데스크톱 A 종류마다 묶은 행",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-plugins-b.dc.html": {
+      "x": 1360,
+      "y": 932,
+      "w": 1280,
+      "h": 860,
+      "title": "2 플러그인 목록 · 데스크톱 B 표 하나",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-plugins-m.dc.html": {
+      "x": 2720,
+      "y": 932,
+      "w": 375,
+      "h": 1560,
+      "title": "2 플러그인 목록 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-plugin.dc.html": {
+      "x": 0,
+      "y": 2612,
+      "w": 1280,
+      "h": 860,
+      "title": "3 플러그인 하나 · 데스크톱",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-plugin-m.dc.html": {
+      "x": 2720,
+      "y": 2612,
+      "w": 375,
+      "h": 1100,
+      "title": "3 플러그인 하나 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-runs.dc.html": {
+      "x": 0,
+      "y": 3832,
+      "w": 1280,
+      "h": 900,
+      "title": "4 실행 목록 · 데스크톱",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-runs-m.dc.html": {
+      "x": 2720,
+      "y": 3832,
+      "w": 375,
+      "h": 1500,
+      "title": "4 실행 목록 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-run-a.dc.html": {
+      "x": 0,
+      "y": 5452,
+      "w": 1280,
+      "h": 2000,
+      "title": "5 실행 하나 · 데스크톱 A 결정 자리가 아래",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-run-b.dc.html": {
+      "x": 1360,
+      "y": 5452,
+      "w": 1280,
+      "h": 1500,
+      "title": "5 실행 하나 · 데스크톱 B 결정 자리가 오른쪽 옆 칸",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-run-m.dc.html": {
+      "x": 2720,
+      "y": 5452,
+      "w": 375,
+      "h": 2700,
+      "title": "5 실행 하나 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-settings-a.dc.html": {
+      "x": 0,
+      "y": 8272,
+      "w": 1280,
+      "h": 900,
+      "title": "6 설정 · 데스크톱 A 테마 카드 한 줄",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-settings-b.dc.html": {
+      "x": 1360,
+      "y": 8272,
+      "w": 1280,
+      "h": 1080,
+      "title": "6 설정 · 데스크톱 B 테마 카드 2×2",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "wf-settings-m.dc.html": {
+      "x": 2720,
+      "y": 8272,
+      "w": 375,
+      "h": 1500,
+      "title": "6 설정 · 모바일",
+      "page": "wireframes",
+      "expand": "fill"
+    },
+    "mk-token.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "1 관리 토큰 넣기 · 데스크톱 · 관리 토큰이 거부됨",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-token-m.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "1 관리 토큰 넣기 · 모바일 · 서버에 닿지 못함",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-plugins.dc.html": {
+      "x": 0,
+      "y": 932,
+      "w": 1280,
+      "h": 1100,
+      "title": "2 플러그인 목록 · 데스크톱 (A) · 켜고 끄기 실패",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-plugins-m.dc.html": {
+      "x": 2720,
+      "y": 932,
+      "w": 375,
+      "h": 1600,
+      "title": "2 플러그인 목록 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-plugin.dc.html": {
+      "x": 0,
+      "y": 2652,
+      "w": 1280,
+      "h": 860,
+      "title": "3 플러그인 하나 · 데스크톱 · 다시 확인하는 중",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-plugin-m.dc.html": {
+      "x": 2720,
+      "y": 2652,
+      "w": 375,
+      "h": 1100,
+      "title": "3 플러그인 하나 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-runs.dc.html": {
+      "x": 0,
+      "y": 3872,
+      "w": 1280,
+      "h": 900,
+      "title": "4 실행 목록 · 데스크톱 · 라이트",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-runs-dark.dc.html": {
+      "x": 1360,
+      "y": 3872,
+      "w": 1280,
+      "h": 900,
+      "title": "4 실행 목록 · 데스크톱 · 다크",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-runs-m.dc.html": {
+      "x": 2720,
+      "y": 3872,
+      "w": 375,
+      "h": 1500,
+      "title": "4 실행 목록 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-runs-empty.dc.html": {
+      "x": 0,
+      "y": 5492,
+      "w": 1280,
+      "h": 700,
+      "title": "4 실행 목록 · 고른 상태의 실행이 없음",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-runs-loading.dc.html": {
+      "x": 1360,
+      "y": 5492,
+      "w": 1280,
+      "h": 700,
+      "title": "4 실행 목록 · 처음 불러오는 중",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-run.dc.html": {
+      "x": 0,
+      "y": 6312,
+      "w": 1280,
+      "h": 1500,
+      "title": "5 실행 하나 · 데스크톱 (B) · 결정 자리",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-run-resumed.dc.html": {
+      "x": 1360,
+      "y": 6312,
+      "w": 1280,
+      "h": 1800,
+      "title": "5 실행 하나 · 데스크톱 (B) · 승인 뒤 재개 스트림이 끊김",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-run-m.dc.html": {
+      "x": 2720,
+      "y": 6312,
+      "w": 375,
+      "h": 2800,
+      "title": "5 실행 하나 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-decision.dc.html": {
+      "x": 0,
+      "y": 9232,
+      "w": 2140,
+      "h": 1000,
+      "title": "5 실행 하나 · 결정 자리의 변형",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-settings.dc.html": {
+      "x": 0,
+      "y": 10352,
+      "w": 1280,
+      "h": 900,
+      "title": "6 설정 · 데스크톱 (A)",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "mk-settings-m.dc.html": {
+      "x": 2720,
+      "y": 10352,
+      "w": 375,
+      "h": 1500,
+      "title": "6 설정 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "wf-token-m.dc.html",
+    "wf-plugins-a.dc.html",
+    "wf-plugins-b.dc.html",
+    "wf-plugins-m.dc.html",
+    "wf-plugin.dc.html",
+    "wf-plugin-m.dc.html",
+    "wf-runs.dc.html",
+    "wf-runs-m.dc.html",
+    "wf-run-a.dc.html",
+    "wf-run-b.dc.html",
+    "wf-run-m.dc.html",
+    "wf-settings-a.dc.html",
+    "wf-settings-b.dc.html",
+    "wf-settings-m.dc.html",
+    "mk-token.dc.html",
+    "mk-token-m.dc.html",
+    "mk-plugins.dc.html",
+    "mk-plugins-m.dc.html",
+    "mk-plugin.dc.html",
+    "mk-plugin-m.dc.html",
+    "mk-runs.dc.html",
+    "mk-runs-dark.dc.html",
+    "mk-runs-m.dc.html",
+    "mk-runs-empty.dc.html",
+    "mk-runs-loading.dc.html",
+    "mk-run.dc.html",
+    "mk-run-resumed.dc.html",
+    "mk-run-m.dc.html",
+    "mk-decision.dc.html",
+    "mk-settings.dc.html",
+    "mk-settings-m.dc.html"
+  ],
+  "notes": {
+    "wf-title": {
+      "x": 0,
+      "y": -300,
+      "text": "와이어프레임",
+      "kind": "title1",
+      "maxW": 3095,
+      "page": "wireframes"
+    },
+    "wf-how": {
+      "x": 3200,
+      "y": 0,
+      "w": 380,
+      "maxH": 760,
+      "page": "wireframes",
+      "fill": "gray",
+      "text": "회색조로 자리, 크기, 차례만 보인다. 부품은 디자인 시스템(Agent OS)의 버튼, 아이콘 버튼, 글 입력, 스위치, 상태 배지, 알림, 카드, 아이콘이고, 표·링크·탐색 항목·코드 칸·테마 카드는 디자인 시스템의 크기 단계(행 높이, 조작 높이, 탐색 폭)로 그렸다.\n\nA·B를 그린 화면은 셋이다: 2 플러그인 목록, 5 실행 하나, 6 설정. 고른 안은 고른 뒤 이 옆에 적는다.\n\n가정: 플러그인 행의 스위치는 디자인 시스템 스위치라 보이는 이름을 스스로 든다. 그래서 행의 이름은 스위치의 이름으로 두고, 플러그인 하나로 가는 링크는 같은 행의 '매니페스트'다. 명세가 다시 정한다.\n\n설정 아이콘(Lucide settings)은 디자인 시스템의 아이콘 집합에 없어 선 아이콘을 그 자리에 그렸다. 쓰려면 디자인 시스템에 더한다.\n\n고른 안(2026-10-23): 2 플러그인 목록은 A(종류마다 묶은 행), 5 실행 하나는 B(결정 자리가 오른쪽 옆 칸), 6 설정은 A(테마 카드 한 줄). 완성 화면 쪽은 이 안으로 그렸다."
+    },
+    "mk-title": {
+      "x": 0,
+      "y": -300,
+      "text": "완성 화면",
+      "kind": "title1",
+      "maxW": 3095,
+      "page": "mockups"
+    },
+    "mk-how": {
+      "x": 3200,
+      "y": 0,
+      "w": 380,
+      "maxH": 1100,
+      "page": "mockups",
+      "fill": "gray",
+      "text": "디자인 시스템의 기본 테마(녹청) 라이트로 그렸다. 실행 목록 하나만 다크로 한 벌 더 그렸다.\n\n와이어프레임에서 고른 안: 2 플러그인 목록 A, 5 실행 하나 B, 6 설정 A. 모바일은 두 안이 같았다.\n\n5의 결정 자리는 변형을 한 판에 모았다: 기본, 꺼진 플러그인으로 막힘, 최종 사용자의 실행, 채널 토큰 없음, 형식 1 트레이스.\n\n와이어프레임의 가정 둘(스위치 이름과 '매니페스트' 링크, 설정 아이콘)은 그대로다. 테마는 고르는 즉시 적용되고 저장 버튼이 없다는 것도 탐색용 가정이다.\n\n승인 뒤 끊긴 화면은 트레이스를 다시 읽은 뒤의 모습이다. 결말 이벤트가 없어 머리의 배지를 '결말 없음'으로 두었다(어림, 명세가 정한다). 결정할 것이 없어 오른쪽 옆 칸이 걷히고 이벤트 칸이 880px로 선다.\n\n처음 불러오는 중의 뼈대는 0.3초를 넘길 때만 보이고 움직이지 않는다(web-design.md).\n\n실행 목록의 첫 행(7f3a2c91…)은 실행 하나 화면과 같은 실행이라 주체를 operator로 맞췄다. 와이어프레임 쪽은 최종 사용자로 적혀 있다."
+    }
+  },
+  "designSystems": [
+    {
+      "title": "Agent OS 디자인 시스템",
+      "namespace": "agent-os",
+      "artifact": "https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH",
+      "version": "1792677911-3a99",
+      "copiedAt": "2026-10-22T14:29:21Z"
+    }
+  ]
+}
