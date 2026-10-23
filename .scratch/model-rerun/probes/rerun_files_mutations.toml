@@ -117,7 +117,7 @@ new = '''parts = name.split("-", 3)'''
 name = "노드 ID 를 마지막 :: 에서 자른다"
 tests = ["tests/tools/test_rerun_files.py", "-k", "노드_ID_에서"]
 expect = "red"
-expect_output = ["assert 'tests/tools/test_x.py::TestC' == 'tests/tools/test_x.py'"]
+expect_output = ["ShapeError: 노드 ID가 아니다: 'tests/tools/test_x.py::TestC::test_m[1-2]'"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
@@ -556,3 +556,25 @@ import os
 
 _SYSTEM = os.system
 '''
+
+[[mutation]]
+name = "숨은 시험의 파일 부분을 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "파일_부분은_tests_아래"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if not sep or not is_test_file(file) or not _NODE.fullmatch(rest):'''
+new = '''if not sep or not file or not _NODE.fullmatch(rest):'''
+
+[[mutation]]
+name = "시험 지원 파일 칸을 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "허용_꼴_밖을"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''support_files=o.paths("support_files", is_support_file),'''
+new = '''support_files=o.strs("support_files"),'''

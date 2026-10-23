@@ -22,15 +22,20 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
   준비의 명령은 명세가 정한 세 명령의 상수(`GATE_COMMANDS`, `SETUP_COMMANDS`)와 같아야 한다. 회차
   폴더는 뿌리를 뺀 이름만 담고, 그 이름은 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더
   이름이다. 뿌리는 사람이 명령 줄로 준 경로라 커밋하는 기록에 남기지 않는다. 실패한 숨은 시험의
-  노드 ID는 겹치지 않고 제어 문자(줄바꿈 포함)가 없다.
+  노드 ID는 겹치지 않고, 숨은 시험 ID와 같은 꼴(아래 허용 목록, 제어 문자(줄바꿈 포함) 없음)이다.
+- 숨은 시험 노드 ID의 파일 부분과 시험 지원 파일은 게이트(07)가 결과 작업 트리에 덮는 경로라 허용
+  목록으로 좁힌다. 둘 다 `/`로 가른 상대 경로이고, 조각은 영문·숫자·`_.-`로 되며 영문·숫자·`_`로
+  시작한다(`..`, 숨은 폴더, `-`로 시작하는 조각을 받지 않는다). 시험 파일은 `tests/` 아래
+  `test_*.py`, 지원 파일은 어디의 `conftest.py`이거나 `tests/` 아래 시험 파일이 아닌 `.py`다.
 
 못 보는 것. 키와 형, 칸 사이의 맞음(끝의 종류와 하위 이유, 끝남이 아닌 회차의 게이트, 결과 커밋과
 고른 규칙)만 본다. 값이 실제와 맞는지(비용의 합이 세션 비용의 합인지, 노드 ID가 과제 목록의
 것인지)는 그 값을 짓는 도구가 지킨다. 꼴로 좁힌 글 칸도 그 꼴 안의 글은 받으므로, 비밀 토큰과
 우연히 같은 꼴의 글은 칸의 꼴로 막지 못한다. 도구 이름 칸이 `ghp_…`를, 회차 폴더 이름의 난수 부분이
 길이 상한 없이 영소문자·숫자로 된 긴 글을 받는 것이 그 예다. 글 칸의
-값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는 도구가 지킨다. 실패한 노드 ID도
-매개변수 부분에 공백과 따옴표가 들 수 있어 꼴로 좁히지 않고, 과제 목록의 숨은 시험 ID에서만 옮긴다.
+값을 그 값이 나오는 자리에서만 옮기는 것은 그 값을 짓는 도구가 지킨다. 숨은 시험과 실패한 노드
+ID의 매개변수 부분(`::` 뒤)은 공백과 따옴표가 들 수 있어 제어 문자 밖의 꼴로 좁히지 않고, 실패한
+노드 ID는 과제 목록의 숨은 시험 ID에서만 옮긴다.
 """
 
 from __future__ import annotations
@@ -145,6 +150,11 @@ _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_()]*")
 _VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")
 _TOKEN = re.compile(r"[0-9a-z]+")
 _NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")
+# 저장소 안의 상대 경로 조각. 점과 `-`로 시작하지 않아 `.`, `..`, 숨은 폴더, 옵션 꼴을 받지 않는다.
+_SEGMENT = r"[A-Za-z0-9_][A-Za-z0-9_.-]*"
+_TEST_FILE = re.compile(rf"tests/(?:{_SEGMENT}/)*test_[A-Za-z0-9_.-]*\.py")
+_TESTS_PY = re.compile(rf"tests/(?:{_SEGMENT}/)*{_SEGMENT}\.py")
+_CONFTEST = re.compile(rf"(?:{_SEGMENT}/)*conftest\.py")
 
 
 class ShapeError(ValueError):
@@ -183,10 +193,28 @@ class TaskList:
     tasks: tuple[Task, ...]
 
 
+def is_test_file(path: str) -> bool:
+    """숨은 시험 파일이 될 수 있는 경로. `tests/` 아래 `test_`로 시작하는 `.py`의 상대 경로다."""
+    return _TEST_FILE.fullmatch(path) is not None
+
+
+def is_support_file(path: str) -> bool:
+    """시험 지원 파일이 될 수 있는 경로. 어디의 `conftest.py`이거나 `tests/` 아래 시험 파일이 아닌
+    `.py`의 상대 경로다."""
+    if _CONFTEST.fullmatch(path):
+        return True
+    return _TESTS_PY.fullmatch(path) is not None and not is_test_file(path)
+
+
 def hidden_test_file(node_id: str) -> str:
-    """노드 ID의 첫 `::` 앞, 곧 숨은 시험 파일. 매개변수의 `::`는 첫 `::` 뒤라 건드리지 않는다."""
+    """노드 ID의 첫 `::` 앞, 곧 숨은 시험 파일. 매개변수의 `::`는 첫 `::` 뒤라 건드리지 않는다.
+
+    파일 부분은 `is_test_file`의 꼴이고 나머지에는 제어 문자(줄바꿈 포함)가 없어야 한다.
+    게이트(07)가 이 파일을 결과 작업 트리에 덮으므로, 절대 경로와 `..`가 든 경로는 읽기에서
+    거부한다.
+    """
     file, sep, rest = node_id.partition("::")
-    if not sep or not file or not rest:
+    if not sep or not is_test_file(file) or not _NODE.fullmatch(rest):
         raise ShapeError(f"노드 ID가 아니다: {node_id!r}")
     return file
 
@@ -259,7 +287,7 @@ def _task(o: _Obj) -> Task:
         pr_cost_usd=o.money("pr_cost_usd"),
         round_cap_usd=o.money("round_cap_usd"),
         hidden_tests=hidden,
-        support_files=o.strs("support_files"),
+        support_files=o.paths("support_files", is_support_file),
         original_model_effort=o.opt_text("original_model_effort"),
         arm_plan=plan,
     )
@@ -1190,6 +1218,13 @@ class _Obj:
                 raise ShapeError(f"{self.where}.{key}[{i}]: 정해진 꼴의 문자열이 아니다: {v!r}")
             out.append(v)
         return tuple(out)
+
+    def paths(self, key: str, ok: Callable[[str], bool]) -> tuple[str, ...]:
+        out = self.strs(key)
+        for i, v in enumerate(out):
+            if not ok(v):
+                raise ShapeError(f"{self.where}.{key}[{i}]: 받는 꼴의 경로가 아니다: {v!r}")
+        return out
 
     def obj(self, key: str, keys: tuple[str, ...]) -> _Obj:
         return _Obj(self._value[key], f"{self.where}.{key}", keys)
