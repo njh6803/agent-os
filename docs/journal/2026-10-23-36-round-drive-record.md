@@ -226,12 +226,7 @@ CodeRabbit 좌석이 없어 `/security-review`와 `bug-perf-review`를 나란히
 
 `uv run python tools/queue_open_rows.py`(이 판과 `--ref origin/main`)의 만료할 행은 없었다.
 
-### "다음" 초안 (병합하는 세션이 `## 다음`으로 옮긴다)
-
-- 06이 병합되면 08(Blocked by 06)이 열린다. 07은 옆 세션이 하고, 09는 08을, 10은 07·09를 기다린다(Blocked by의 03은 done).
-- 08에는 끄는 자리가 `_stop` 하나라는 것을, 10에는 `round_record`의 인자 수를 호출자를 붙인 뒤 다시 볼 것을 넘겼다. 받는 티켓의 `### 06에서 넘어온 메모`가 원천이다.
-- `sibling_overlap`이 든 07 워크트리와의 글자 충돌 후보(`tools/rerun_round.py`, `tests/tools/test_rerun_round.py`)는 나중에 병합하는 쪽이 푼다.
-- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+다섯째 세션(셀프 리뷰와 봇 둘째 회차)의 후보는 없다. 셀프 리뷰가 넷째 세션이 쓴 사실 문장 넷(인자 수, 기다리는 티켓, `_git_env`의 까닭, 세션 id의 반례)을 잡아 고쳤고, 리뷰가 제 몫을 한 것이라 기각과 같은 까닭이다.
 
 ### 인계 (넷째)
 
@@ -282,3 +277,24 @@ CodeRabbit 좌석이 없어 `/security-review`와 `bug-perf-review`를 나란히
 - `_stop` 이름: 독스트링이 "끄고 거둔다"를 적고, 08이 트리째 끄기로 바꿔 지을 자리라 그때 이름을 정한다.
 - `_stop`의 두 갈래 시험: 이번에 옮기기만 했고 갈래의 동작은 0a82445a와 같다. 08이 `_stop`을 바꿔 지을 때 함께 고정한다(08 메모의 `_stop` 줄에 더했다. 08은 Blocked by 06).
 - 정규식 상수 셋만 공개인 것: 다른 모듈이 가져다 쓰는 것이 그 셋뿐이다.
+
+다시 돌린 명령: 커밋 7e6287ed의 pre-commit이 모두 Passed(pytest 392.8초, web-verify 284.9초, 변이 표 원문 확인 Passed, 카나리아·헌법 판은 해당 파일 없음으로 Skipped). 그 앞에 `uv run ruff check`(바꾼 파이썬 셋)와 `uv run pytest -q tests/tools/test_rerun_session.py`(44 passed)를 쳤다.
+
+### 봇 둘째 회차
+
+- 7e6287ed를 푸시하고 claude-review 보류 둘의 이유를 PR 코멘트로 남겼다. PR 머리가 로컬 HEAD와 같은 것을 본 뒤 `@coderabbitai review`를 남기고 `tools/wait_ci.py 370`을 백그라운드로 띄웠다.
+- 검사는 모두 통과. CodeRabbit은 `Review rate limited`라 이 푸시는 CodeRabbit의 회차로 세지 않는다.
+- claude-review: 둘째 회차(7e6287ed의 실행). Critical·Major 없음, Minor 셋과 Nit 둘. 둘째 회차라 모두 보류하고 이유를 PR 코멘트에 남긴다. 뒤로 넘기는 것은 아래 `## 다음`에도 적었다.
+  - Minor `_git`·`_git_env` 사본이 `rerun_round`·`rerun_hidden`까지 셋: 07이 `rerun_round.py`를 함께 고치고 있어 이 PR에서 합치면 충돌한다. 07과 06이 모두 병합된 뒤 합친다.
+  - Minor `budget_text`의 `nan`·`inf`: 넷째 세션의 PR 직전 리뷰에서도 남긴 것이다. 예산을 셈하는 호출부는 10이고 그때 막는다.
+  - Minor `REAP_TIMEOUT`이 호출의 `timeout` 뒤에 최대 60초를 더 쓴다: 출력을 닫고도 끝나지 않는 갈래이고, 끄는 자리(`_stop`)를 바꿔 짓는 08이 그 갈래를 함께 고정한다(08 메모).
+  - Nit `drive`가 stdin·stdout을 닫지 않는다: 넷째 세션 PR 직전 리뷰에서 남긴 것과 같다(윈도에서 읽는 스레드가 있는 파이프를 닫으면 막힐 수 있다).
+  - Nit `round_record`의 08 몫 인자 넷과 `Elsewhere`의 묶음 기준: 10 메모의 인자 수 재검토와 함께 본다.
+
+## 다음
+
+- 06이 병합되면 08(Blocked by 06)이 열린다. 07은 옆 세션이 하고, 09는 08을, 10은 07·09를 기다린다(Blocked by의 03은 done).
+- 08에는 끄는 자리가 `_stop` 하나라는 것과 그 두 갈래의 시험을, 10에는 `round_record`의 인자 수를 호출자를 붙인 뒤 다시 볼 것을 넘겼다. 받는 티켓의 `### 06에서 넘어온 메모`가 원천이다.
+- PR #370 claude-review 둘째 회차에서 뒤로 넘긴 일: 08은 `REAP_TIMEOUT`이 호출의 `timeout` 뒤에 더 쓰는 시간과 `round_record`의 08 몫 인자 넷의 묶음을, 10은 `budget_text`가 `nan`·`inf`를 받지 않게 막는 것을 함께 본다. `_git`·`_git_env` 사본 셋(`rerun_round`, `rerun_session`, `rerun_hidden`)은 07과 06이 모두 병합된 뒤 하나로 합친다.
+- `sibling_overlap`이 든 07 워크트리와의 글자 충돌 후보(`tools/rerun_files.py`, `tools/rerun_round.py`, `tests/tools/test_rerun_round.py`, 10 티켓, `spec.md`, 프로브 README)는 나중에 병합하는 쪽이 푼다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
