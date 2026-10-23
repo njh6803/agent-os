@@ -1,4 +1,4 @@
-# 2026-10-23 (21) admin-style 화면을 /ui-design으로 그려 고르고 옮긴다
+# 2026-10-23 (27) admin-style 화면을 /ui-design으로 그려 고르고 옮긴다
 
 > 사용자: (next-session 지시문을 첫 메시지로 받았다) "다음 작업: 기능 admin-style. 관리 화면의 와이어프레임과 완성 화면을 `/ui-design admin-style`로 그려 고르고 저장소로 옮긴다 … 이번 요청 범위: PR과 병합까지"
 
@@ -68,7 +68,7 @@
 ## main 합치기와 스킬 고침
 
 - 커밋하기 전에 `origin/main`을 받아 이 브랜치를 `d0e696c9`로 앞당겼다(이 브랜치에는 아직 커밋이 없었다). 그 사이 들어온 커밋 검사(`tools/check_ticket.py`, ADR 0037)는 `docs/` 브랜치가 면제 모양 밖의 파일을 바꾸면 harness 티켓을 요구한다. 스킬 파일은 면제 밖이라 harness 티켓 009를 썼다.
-- 이 일지는 처음에 2026-10-22-27로 썼는데, main의 최신 일지(2026-10-23-15)보다 이름순으로 앞섰다. `uv run python tools/sibling_overlap.py --move`로 2026-10-23-21로 옮기고 인용을 고쳤다.
+- 이 일지는 처음에 2026-10-22-27로 썼는데, main의 최신 일지(2026-10-23-15)보다 이름순으로 앞섰다. `uv run python tools/sibling_overlap.py --move`로 2026-10-23-27로 옮기고 인용을 고쳤다.
 - 스킬 고침(harness 009)의 요지.
   - 6단계: 고른 안을 캔버스 메모에도 적고, 두 안이 없는 차례의 확정 질문에 옮길 것과 남을 것을 적는다.
   - 7단계: 머리 문장이 무엇을 옮기는지 정하고, 받기, 경로 가드, 대조와 되돌림, 표 채우기로 나눴다. 경로 가드와 대조는 막히지 않았지만, 한 문단이던 것을 읽기 쉽게 나눴다.
@@ -93,8 +93,8 @@
 시작 프롬프트: /ui-design admin-style
 브랜치: docs/admin-style-screens
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-23-21-admin-style-screens.md 전체(특히 "인계 (셀프 리뷰 직전)"과 "/ui-design 7단계: 옮기기")
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기점 origin/main)부터 한다. /ui-design의 1~7단계는 모두 끝났으니 다시 그리거나 옮기지 않는다. 셀프 리뷰의 명세는 harness 티켓 `.scratch/harness/issues/009-ui-design-first-move.md`(스킬 고침)와 이 지시문의 "다음 작업" 줄, 일지에 인용한 사용자 답 넷이다. 그 뒤 티켓 009의 마지막 수용 기준과 `Status: done`, 커밋, PR, 병합으로 간다. 회고와 "다음"은 이미 썼다. PR #352 claude-review가 보류한 `.claude/rules/tools.md` 훅 시간 줄 정리는 이 기능 밖이라 손대지 않는다. 일지 docs/journal/2026-10-23-21-admin-style-screens.md
+읽을 것: docs/journal/2026-10-23-27-admin-style-screens.md 전체(특히 "인계 (셀프 리뷰 직전)"과 "/ui-design 7단계: 옮기기")
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(`/code-review`, 기점 origin/main)부터 한다. /ui-design의 1~7단계는 모두 끝났으니 다시 그리거나 옮기지 않는다. 셀프 리뷰의 명세는 harness 티켓 `.scratch/harness/issues/009-ui-design-first-move.md`(스킬 고침)와 이 지시문의 "다음 작업" 줄, 일지에 인용한 사용자 답 넷이다. 그 뒤 티켓 009의 마지막 수용 기준과 `Status: done`, 커밋, PR, 병합으로 간다. 회고와 "다음"은 이미 썼다. PR #352 claude-review가 보류한 `.claude/rules/tools.md` 훅 시간 줄 정리는 이 기능 밖이라 손대지 않는다. 일지 docs/journal/2026-10-23-27-admin-style-screens.md
 확인할 선행 조건: 대기열 404에 이 브랜치가 6회차를 더했는데, 형제 워크트리 `005-hook-report-prompt-notices`(harness 티켓 005)가 그 행을 닫는 중으로 보인다(티켓 파일 이름만 봤다). 그쪽이 먼저 병합되면 병합 때 그 닫힌 행에 맞춰 푼다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -193,8 +193,8 @@ open-session을 부른다 2026-10-22T23:51:34Z
 시작 프롬프트: /ui-design admin-style
 브랜치: docs/admin-style-screens
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-23-21-admin-style-screens.md의 "셀프 리뷰 (인계받은 세션)"과 "인계 (커밋 뒤)"
-이어받을 상태: 인계: 커밋 뒤. 커밋 33bdfe9b까지 /ui-design 1~7단계, 셀프 리뷰(/code-review)와 그 반영, 티켓 009의 done이 끝났고 pre-commit을 모두 지났다. 아직 푸시하지 않았고 PR이 없다. 남은 것은 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히 돌리고, bug-perf-review의 밀 주장은 일지의 "반영으로 새로 쓴 사실 문장" 열 줄이다), PR 열기, 봇 회차, 병합이다. 다시 그리거나 옮기지 않는다. web/judge-fv02uT/는 판정자 임시 트리라 커밋하지 않는다. 회고와 "다음"은 이미 썼고, 첫 커밋 시도에서 셋째로 빨간 test_probe_kit 시간 시험은 일지에 회고 후보로 적었다. 일지 docs/journal/2026-10-23-21-admin-style-screens.md
+읽을 것: docs/journal/2026-10-23-27-admin-style-screens.md의 "셀프 리뷰 (인계받은 세션)"과 "인계 (커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 커밋 33bdfe9b까지 /ui-design 1~7단계, 셀프 리뷰(/code-review)와 그 반영, 티켓 009의 done이 끝났고 pre-commit을 모두 지났다. 아직 푸시하지 않았고 PR이 없다. 남은 것은 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히 돌리고, bug-perf-review의 밀 주장은 일지의 "반영으로 새로 쓴 사실 문장" 열 줄이다), PR 열기, 봇 회차, 병합이다. 다시 그리거나 옮기지 않는다. web/judge-fv02uT/는 판정자 임시 트리라 커밋하지 않는다. 회고와 "다음"은 이미 썼고, 첫 커밋 시도에서 셋째로 빨간 test_probe_kit 시간 시험은 일지에 회고 후보로 적었다. 일지 docs/journal/2026-10-23-27-admin-style-screens.md
 확인할 선행 조건: 형제 PR #365(chore/005-hook-report-prompt-notices, 대기열 404를 맡은 harness 티켓 005)가 먼저 병합되면 이 브랜치가 404에 더한 6회차를 그 행에 맞춰 푼다(2026-10-23 sibling_overlap.py로 보니 그 PR은 .scratch/retro-queue.md를 고치지 않았다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -245,8 +245,8 @@ PR을 연 직후 `hook_handoff`가 세션 컨텍스트 340,087 토큰으로 `PR 
 시작 프롬프트: /ui-design admin-style
 브랜치: docs/admin-style-screens
 모델: Sonnet 5.5 / high
-읽을 것: docs/journal/2026-10-23-21-admin-style-screens.md의 "PR 직전 리뷰 (인계받은 둘째 세션)"과 "인계 (PR 연 뒤)"
-이어받을 상태: 인계: PR 연 뒤. PR #367을 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 3·보류 2를 반영하거나 닫음)와 카나리아(통과 4)는 끝났고 결과는 PR 체크리스트에 있다. 다시 그리거나 옮기지 않는다. 워크트리에 커밋하지 않은 일지 변경("인계 (PR 연 뒤)" 절)이 있어 첫 반영 커밋이나 일지만 실은 커밋으로 병합 전에 푸시한다. 회고와 "다음"은 이미 썼고, 카나리아 질문이 두 갈래로 읽혀 한 번 실패 2를 낸 것과 test_probe_kit 시간 시험은 일지에 다음 회고의 후보로 적었다. 일지 docs/journal/2026-10-23-21-admin-style-screens.md
+읽을 것: docs/journal/2026-10-23-27-admin-style-screens.md의 "PR 직전 리뷰 (인계받은 둘째 세션)"과 "인계 (PR 연 뒤)"
+이어받을 상태: 인계: PR 연 뒤. PR #367을 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 3·보류 2를 반영하거나 닫음)와 카나리아(통과 4)는 끝났고 결과는 PR 체크리스트에 있다. 다시 그리거나 옮기지 않는다. 워크트리에 커밋하지 않은 일지 변경("인계 (PR 연 뒤)" 절)이 있어 첫 반영 커밋이나 일지만 실은 커밋으로 병합 전에 푸시한다. 회고와 "다음"은 이미 썼고, 카나리아 질문이 두 갈래로 읽혀 한 번 실패 2를 낸 것과 test_probe_kit 시간 시험은 일지에 다음 회고의 후보로 적었다. 일지 docs/journal/2026-10-23-27-admin-style-screens.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```

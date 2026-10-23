@@ -14,7 +14,7 @@ node .scratch/design-artifacts/probes/hash_match.mjs --record .scratch/admin-sty
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
-| `artifact_reads.json` | 빌드가 저장소 원본을 그대로 옮기는 다섯(`.claude/rules/web-design.md`, `.design-sync/foundations/` 아래 기초 카드 넷)이 디자인 시스템 아티팩트의 `project/guidelines/web-design.md`, `project/foundations/<이름>/index.html`과 바이트까지 같은지(양성 다섯). 음성 대조 하나는 `c41adad`가 머리 문장을 고치기 전(`df705c17`)의 `web-design.md`가 다르다고 나오는지다. 빌드 산출 전체(카드, 번들, 글꼴)는 맞대지 않는다 | `.scratch/admin-style/design/README.md` 표의 동기화한 커밋 칸(`agent-os 부분 main@c41adad`)과 일지 2026-10-23-21의 맞추기 판단 | 아티팩트를 다시 읽어(`read`의 `paths`) 줄의 판 id와 sha256을 새로 적고, 받은 폴더를 `--saved`로 준다 | 아티팩트 판 `1792677911-3a99`, 저장소 `b104f8fa`, Node 24 |
+| `artifact_reads.json` | 빌드가 저장소 원본을 그대로 옮기는 다섯(`.claude/rules/web-design.md`, `.design-sync/foundations/` 아래 기초 카드 넷)이 디자인 시스템 아티팩트의 `project/guidelines/web-design.md`, `project/foundations/<이름>/index.html`과 바이트까지 같은지(양성 다섯). 음성 대조 하나는 `c41adad`가 머리 문장을 고치기 전(`df705c17`)의 `web-design.md`가 다르다고 나오는지다. 빌드 산출 전체(카드, 번들, 글꼴)는 맞대지 않는다 | `.scratch/admin-style/design/README.md` 표의 동기화한 커밋 칸(`agent-os 부분 main@c41adad`)과 일지 2026-10-23-27의 맞추기 판단 | 아티팩트를 다시 읽어(`read`의 `paths`) 줄의 판 id와 sha256을 새로 적고, 받은 폴더를 `--saved`로 준다 | 아티팩트 판 `1792677911-3a99`, 저장소 `b104f8fa`, Node 24 |
 
 ## 2026-10-22 결과
 
