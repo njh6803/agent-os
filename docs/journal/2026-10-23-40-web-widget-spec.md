@@ -674,3 +674,69 @@ open-session을 부른다 2026-10-23T09:07:04Z
 `git fetch origin` 뒤 `origin/main`은 그대로 `893e0fe8`이었고, `git merge origin/main`이 충돌 없이 병합 커밋을 만들었다
 (model-rerun 06의 파일 15개, 이 브랜치가 바꾼 파일과 겹치지 않는다). `tools/sibling_overlap.py`는 번호 겹침 없음이었다.
 함께 고친 파일 후보는 `.scratch/plan.md` 하나(PR #356, 워크트리 `02-build-tokens-json`·`mcp-shutdown-spec`)다.
+
+이 일지를 `a5364812`로 커밋했다. pre-commit은 검사 러너 열(pytest 332.4초, web-verify 280.3초 등), 마크다운 표, 줄 구분 문자,
+변이 표, 인용 대조, 커밋 메시지가 Passed였고, ruff 둘과 카나리아 명세·헌법 판은 대상 파일이 없어 Skipped였다.
+
+### ruff 서식이 명세의 코드 블록을 짚었다
+
+Skipped인 ruff 둘을 CLAUDE.md 검증 명령 절대로 손으로 쳤다. `uv run ruff check .`는 초록이었고 `uv run ruff format
+--check .`가 1로 끝났다. ruff 0.16.8이 마크다운 안의 파이썬 코드 블록까지 서식을 판정해, 명세의 시제품 조각(최상위 함수
+둘 사이의 빈 줄 하나)을 짚었다. pre-commit의 ruff 훅은 `types: [python]`이라 스테이지된 `.py`만 받고, CI는 `ruff format
+--check .`로 저장소 전체를 본다. 그래서 앞 커밋 `d91df0b1`에서 ruff 둘이 Passed였어도 명세는 보지 않았고, 푸시했으면 CI의
+`python` 잡이 빨갰다. `uv run ruff format .scratch/web-widget/spec.md`로 빈 줄 하나를 더해 고쳤다(1018 파일 초록).
+
+회고 후보: pre-commit의 ruff 훅이 CI와 같은 파일을 보지 않는다. `.md`만 바꾼 커밋은 ruff가 Skipped라 손으로 쳐서 잡히지만,
+`.py`와 `.md`를 함께 바꾼 커밋은 Passed로 나와 갈음으로 읽힌다. 고침은 훅의 `types`를 `types_or: [python, markdown]`으로
+넓히는 것이고, 그 전에 ruff가 실제로 보는 확장자를 재야 한다. 단계를 닫는 회고에 넘긴다.
+
+### PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`(Plan Free)라 CLI 축이 돌지 못해 대체 둘을 돌렸다. `bug-perf-review`는 변경
+파일 26개를 둘로 나눠 나란히 띄웠다(A: 명세·티켓 01~05·ADR 0039·0023·0010·용어집·core 프로브, B: 티켓 06~11·ADR
+0024·plan.md·프로브 README·`pnpm_spawn.py`·일지). 밀 주장은 위 세 반영 절의 목록을 스물둘로 나눠 넘겼다. 호출 예산
+40을 A는 41, B는 40에서 마쳤다. `/security-review`는 일지를 커밋하고 origin/main을 합친 뒤에 돌렸다.
+
+- `/security-review`: 후보 하나(Medium, 확신 7). 페이지 안 번들이 `document.currentScript`의 `src`에서 기준 주소를 읽는데,
+  사이트 페이지의 `<img name="currentScript" src="https://<다른 출처>/">`가 그 자리를 가리면(DOM clobbering) 요청마다
+  서명 토큰이 그 출처로 간다. 거짓 양성 거르기가 확신 6을 줘 스킬의 문턱(8) 밖이라 보고는 "발견 없음"이다. 구현이
+  `instanceof`로 좁힐지 `getAttribute`로 좁힐지 문서가 정하지 않았고 고치는 값이 작아 고쳤다.
+- `bug-perf-review` A: 유효 Minor 4, 보류 1. 밀 주장 열하나는 모두 근거와 맞았다(5번은 수치는 맞고 전제가 어긋났다).
+  - Minor: `256k`의 근거 "서버가 받는 가장 큰 본문"이 틀렸다. 결정 본문의 거부 사유는 최대 길이가 없다(결정 본문
+    모델을 읽어 확인했다).
+  - Minor: classic 스크립트가 CORS 없이 실리는 것은 `crossorigin` 속성이 없을 때뿐이다.
+  - Minor: 허용 출처 표기 규칙에 포트의 범위가 없다. 이 세션이 `node`로 재니 Node 24.19.0의 `new URL`이 65536과
+    99999를 `ERR_INVALID_URL`로 거절하고 65535와 0은 받았다.
+  - Minor: 티켓 04의 빌드 실패 갈래에 필수 키 빠짐이 없다(서버의 사이트 파일 모델에서 기본값 없는 다섯을 grep했다).
+  - 보류: IPv4를 품은 IPv6의 `compressed`가 브라우저와 갈릴 수 있다. 이 세션이 재니 파이썬 3.12.10과 Node 24.19.0이
+    모두 `::ffff:102:304`를 냈다. 오탐이지만 판에 따라 갈릴 수 있는 자리라 막히는 사례로 픽스처에 넣었다.
+- `bug-perf-review` B: 유효 Major 1, Minor 1, 보류 1. 밀 주장은 맞다 8, 어긋난다 1(9번, 아래 Minor), 확인 못 함 2.
+  - Major: 티켓 11이 Playwright 프로젝트 `llm`을 CI에서만 빼, 11이 병합된 뒤로 06의 로컬 명령(프로젝트를 지정하지
+    않은 `playwright test`)이 실제 모델을 부른다. 07~10의 검증이 그 명령이다(티켓을 읽어 확인했다).
+  - Minor: 닫힌 문장의 지금 아는 자리 목록이 `stack.ts` 머리 주석, `tests/test_main.py`의 둘, `tests/test_conftest.py`,
+    `tools/llm_tokens.py`, `.coderabbit.yaml`, `tools/hook_env_read.py`를 빠뜨렸다. grep으로 줄마다 확인했다.
+  - 보류: Windows의 nginx는 master와 worker가 따로라 `stack.ts`의 `kill()`로는 다 내리지 못할 수 있다.
+
+고친 것.
+
+- 명세 "API의 기준 주소"와 티켓 10: `HTMLScriptElement`의 인스턴스일 때만 `src` 속성에서 읽고, 아니면 요청도 토큰
+  함수도 부르지 않고 위험 알림을 보인다. e2e에 가리는 `<img>`를 둔 페이지 사례를 더했다.
+- 명세 "번들의 꼴"·"글꼴"과 티켓 10: 번들 응답에도 `Access-Control-Allow-Origin: *`를 단다. e2e에
+  `crossorigin="anonymous"` 사례를 더했다.
+- 명세 "승인 묻기"와 티켓 08: 사유에 입력창과 같은 상한을 둔다. 새 결정이라 표시 "(명세가 정했다: 사유의 상한)"을 달고
+  `256k`의 근거를 요청 글자 수로 묶인 본문으로 좁혔다. 티켓 06의 틀 주석에 413의 갈래를 더했다.
+- 명세 "허용 출처의 표기 검사"와 티켓 04: 포트는 65535 이하, 막히는 사례 둘(`:65536`, `[::ffff:1.2.3.4]`), 필수 키 빠짐.
+- 명세 Testing Decisions 6과 티켓 11: 프로젝트 `llm`은 감싸는 시험이 준 `AGENT_OS_WIDGET_LLM=1`이 있을 때만 서고,
+  위젯 앱의 vitest `node` 시험이 그 목록을 본다.
+- 명세 Testing Decisions 4·6과 티켓 06·11: 닫힌 문장의 자리를 더하고 grep 말에 백틱 없는 llm 마커와 `-m llm`을 넣었다.
+  "구동자"가 ASGI로 직접 부르는 시험의 이름과 겹친다는 것을 적었다.
+- 티켓 06: nginx는 master와 worker를 함께 거두고, 이 PC에서 돌린 뒤 남은 프로세스와 포트를 본다.
+- 서두의 수: 명세가 정한 것 예순에서 예순하나. "(명세가 정했다" 표시는 62개이고 서두 자신의 하나를 빼면 61이며, 묶음의
+  합(승인 셋)도 61이다.
+
+ADR 0023 54행과 ADR 0024 49행의 "nginx 상한은 사이트 파일의 요청 크기보다 크게 두어 파이썬의 422가 답하게 한다"는 요청 크기
+초과의 문장이라 결정 본문의 사유에는 닿지 않아 글자 그대로 참이다. 포인터를 달지 않았다.
+
+다시 돌린 명령: `tools/check_md_tables.py`와 `tools/check_line_separators.py`(바뀐 문서 여섯, 출력 없음),
+`tools/check_quotes.py`(같은 여섯, 인용 19건에 경고 없음), `tools/check_adr_pointers.py`(0), `uv run ruff format --check .`(1018
+파일 초록).

@@ -13,8 +13,10 @@
 ### 번들
 
 - [ ] **element 번들은 모듈이 아니라 즉시 실행되는 classic 스크립트 하나(IIFE)다.** 청크로 나뉘지 않는다. 빌드가 Next의 `public/`에 넣어 `/widget/element.js`로 나간다
+- [ ] **번들 응답에도 글꼴과 같은 `Access-Control-Allow-Origin: *`를 `next.config`의 헤더로 단다.** 사이트가 `<script>`에 `crossorigin="anonymous"`를 붙이면 classic 스크립트도 CORS로 받아, 그 헤더가 없으면 번들이 실리지 않는다. 자격 증명 없는 공개 파일이라 `*`로 둔다
 - [ ] **디자인 토큰 CSS만 `?inline`으로 싣는다.** 글꼴 파일은 번들에 박지 않는다(라이브러리 모드는 `?url` 자산도 박는다)
-- [ ] **API의 기준 주소는 번들 스크립트의 출처다.** 번들이 처음 실행될 때 `document.currentScript`의 `src`에서 출처를 읽어 둔다. 최종 사용자 경로는 그 아래 `/end-user`다
+- [ ] **API의 기준 주소는 번들 스크립트의 출처다.** 번들이 처음 실행될 때 `document.currentScript`가 `HTMLScriptElement`의 인스턴스일 때만 그 `src` 속성(property)에서 출처를 읽어 둔다. 최종 사용자 경로는 그 아래 `/end-user`다
+- [ ] **인스턴스가 아니면 요청을 보내지도 토큰 함수를 부르지도 않는다.** `document`의 이름 있는 속성이 내장 속성을 가려(DOM clobbering), 사이트 페이지의 `<img name="currentScript" src="https://<다른 출처>/">`가 `document.currentScript` 자리에 설 수 있다. 그 `src`를 기준 주소로 쓰면 요청마다 서명 토큰이 그 출처로 간다. 그래서 `getAttribute("src")`나 `"src" in`으로 좁히지 않고, 인스턴스가 아니면(없음, 다른 요소, 컬렉션) 잘못 준 속성과 같은 위험 알림과 `console.error`를 남긴다(명세 "API의 기준 주소")
 
 ### 요소
 
@@ -38,7 +40,7 @@
 ### 시험
 
 - [ ] **단위 시험.** shadow root에 마운트되는 것만 본다. 화면 동작은 05~09의 `widget-pages`가 light DOM에서 이미 본다
-- [ ] **위젯 e2e(06의 준비 위).** 다른 출처의 사이트 페이지에서 `<script src>` 한 줄로 번들이 실리고 번들이 읽은 기준 주소로 최종 사용자 경로를 부른다. `tokenProvider`로 토큰을 넘긴다. 페이지 안 방식의 CORS는 허용 출처의 페이지에서 읽히고 허용 밖 출처에서 읽히지 않는다. 사이트의 `letter-spacing`과 `html { font-size: 10px }`가 위젯의 크기를 바꾸지 않고, 위젯의 CSS가 사이트로 새지 않으며, 호스트에 `data-density`가 있다. 글꼴이 위젯 출처에서 `Access-Control-Allow-Origin`과 함께 온다
+- [ ] **위젯 e2e(06의 준비 위).** 다른 출처의 사이트 페이지에서 `<script src>` 한 줄로 번들이 실리고 번들이 읽은 기준 주소로 최종 사용자 경로를 부른다. `crossorigin="anonymous"`를 붙인 `<script>`로도 실린다. 번들의 `<script>` 앞에 `<img name="currentScript" src="https://<다른 출처>/">`를 둔 페이지에서는 그 출처로 요청이 하나도 가지 않고 `tokenProvider`가 불리지 않으며 위젯이 위험 알림을 보인다. `tokenProvider`로 토큰을 넘긴다. 페이지 안 방식의 CORS는 허용 출처의 페이지에서 읽히고 허용 밖 출처에서 읽히지 않는다. 사이트의 `letter-spacing`과 `html { font-size: 10px }`가 위젯의 크기를 바꾸지 않고, 위젯의 CSS가 사이트로 새지 않으며, 호스트에 `data-density`가 있다. 글꼴이 위젯 출처에서 `Access-Control-Allow-Origin`과 함께 온다
 - [ ] **CSP가 `style-src 'self'`인 사이트 페이지에서 페이지 안 위젯이 스타일을 갖는지 본다.** 막히면 임베드 안내의 CSP 자리에 `style-src`를 더하고, 이 사례는 그 자리를 열어 둔 페이지에서 스타일이 서는 것을 본다. 어느 쪽이었는지 일지에 적는다
 
 ### 검증
