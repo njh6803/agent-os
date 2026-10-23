@@ -121,3 +121,15 @@ open-session을 부른다 2026-10-23T15:56:12Z
 > 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
 
 (지시문은 위 "인계(커밋 뒤)"와 같다. 워크트리에 EnterWorktree(path)로 들어갔다.)
+
+### 합치기와 PR 직전 리뷰
+
+- 일지의 인계 절을 4d89d6f8로 커밋했다. 앱의 `sync_with_base_branch` 는 "앱이 만든 워크트리가 아니다"로 거절해 `git merge origin/main` 으로 합쳤다(f3c28fc3). `.scratch/web-widget/probes/README.md` 는 자동으로 합쳐졌고 relay_mutations 행이 이 일지를 가리킨다. sibling_overlap: 번호 겹침 없음, 함께 고친 파일 없음.
+- 합친 뒤 `uv run python tools/run_checks.py`: 종료 코드 0.
+- CodeRabbit CLI는 `Seat: not assigned`(Plan: Free)라 대체 둘을 돌렸다.
+- `/security-review`(합친 뒤): 지적 없음. 이벤트의 집합과 마스킹은 그대로이고 때만 앞당겨졌으며, 최종 사용자 투영(`items.py` 의 `project`)이 이벤트 하나씩 가르므로 새로 새는 것이 없다.
+- `bug-perf-review`: 밀 주장 넷 가운데 `runs.py`·`run.py` 둘은 맞음, `_feed` 와 `test_end_user.py` 머리 둘은 Nit. 지적 셋(Minor 1, Nit 2).
+  - [Minor, 보류] 소비자가 스트림을 닫을 때 `asyncio.gather` 로 함께 돌던 다른 호출이 이벤트를 줄에 세워 두었으면 `_attend` 의 finally 가 `GeneratorExit` 도중에 yield 해 `RuntimeError` 가 난다. 시험(도구 `right` 가 먼저 들고 `left` 가 끝난 뒤 소비자가 `right` 의 반환을 기다렸다 닫는다)과 finally 의 임시 출력으로 재현했다 — `pending ['tool_called'] <class 'GeneratorExit'>`. 그러나 그 `RuntimeError` 는 `_connected` 의 `except Exception` 이 `_hold` 로 붙잡고, `_drive` 는 `GeneratorExit` 로 나가 붙잡은 것을 쓰지 않는다. 그래서 시험은 고치기 전에도 초록이었고(트레이스 `run_started`, `tool_called`, 도구 연결 닫힘) 바깥 행동이 바뀌지 않는다. 리뷰가 든 영향(트레이스 쓰기 실패 경로에서 `run_failed` 를 건너뜀)은 오탐이다 — `_drive` 의 `except` 가 `_write_held()` 로 결말을 먼저 쓰고 그 뒤에 `aclosing` 이 안쪽을 닫는다. 빨강을 낼 수 없어(원칙 II) 코드와 시험을 되돌리고 보류했다. 고치는 값은 finally 의 갈래 몇 줄이다.
+  - [Nit, 고침] `_feed` 독스트링: 일시정지는 깨우지 않고 신호를 던지며 `run_paused` 는 `_attend` 의 finally 가 흘린다는 문장을 더했다.
+  - [Nit, 고침] `test_end_user.py` 머리: 둘째 구동자는 구독이 떠남·타임아웃 뒤 등록부를 떠남에도 쓰여 포괄어 "스트림의 수명"으로 되돌리고 괄호에 다 적었다(`http.md` 의 같은 문장과 맞춤).
+  - [Nit, 고침] `_relay` 독스트링: 함께 부른 호출들 사이에는 순서 보장이 서지 않는다는 구절을 더했다.
