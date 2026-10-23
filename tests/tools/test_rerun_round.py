@@ -396,6 +396,14 @@ def test_회차마다_경로가_다르다(tmp_path: Path) -> None:
     assert one.path.parent == two.path.parent == tmp_path
 
 
+def test_호출의_수는_덧붙인_세션_id_의_줄_수이고_파일이_없으면_0이다(tmp_path: Path) -> None:
+    place = create_round_dir(tmp_path, TASK, "A", 1, token="n1")
+    assert place.call_count() == 0, "파일이 없는데 호출을 셌다"
+    place.append_session_id("s-1")
+    place.append_session_id("s-1")  # 이어 부른 호출도 한 줄이다
+    assert place.call_count() == 2, "덧붙인 줄과 호출의 수가 다르다"
+
+
 def test_이미_있는_회차_폴더는_덮지_않고_실패한다(tmp_path: Path) -> None:
     place = create_round_dir(tmp_path, TASK, "A", 1, token="x1")
     (place.path / "남길것.txt").write_text("그대로\n", encoding="utf-8")

@@ -315,6 +315,19 @@ class RoundDir:
         """띄우기 전에 세션 id를 덧붙여 적는 파일(`SESSION_IDS`)."""
         return self.path / SESSION_IDS
 
+    def append_session_id(self, session_id: str) -> None:
+        """호출 하나의 세션 id를 `session_ids`에 덧붙인다. 한 줄이 호출 하나라 `--resume`으로 이어
+        부른 세션은 같은 id가 다시 적힌다."""
+        with self.session_ids.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(session_id + "\n")
+
+    def call_count(self) -> int:
+        """`session_ids`에 적힌 호출의 수. 덧붙인 직후에 세면 그 호출의 차례(1부터)다. 파일이
+        없으면 0이다."""
+        if not self.session_ids.exists():
+            return 0
+        return len(self.session_ids.read_text(encoding="utf-8").splitlines())
+
 
 def _plant_marker(folder: str | os.PathLike[str]) -> None:
     """`folder`에 표지를 심는다. 내용은 그 폴더의 이름이다. 이미 있으면 `FileExistsError`다."""
