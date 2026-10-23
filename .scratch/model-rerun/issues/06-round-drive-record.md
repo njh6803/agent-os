@@ -59,4 +59,4 @@
 - 회차 폴더는 04의 `create_round_dir`가 돌려준 `RoundDir`이다. 작업 폴더는 `RoundDir.clone`, 원본 stream-json의 자리는 `RoundDir.stream`(빈 폴더), 세션의 `GH_CONFIG_DIR`은 `RoundDir.gh_config`이다. 띄우기 전에 세션 id를 덧붙여 적을 파일 이름은 아직 없어 이 티켓이 `RoundDir`에 더한다.
 - 세션 환경은 `session_env(os.environ, config_dir=<명령 줄로 받은 글>, round_dir=place)`이다. 회차 기록에 적는 "넘긴 환경 변수의 이름"은 그 결과의 키다.
 - 벽시계는 `prepare_round`가 돌려준 `Setup.wall_clock_from`(단조 시계 값)부터 잰다. 준비가 실패하면 `Setup.failed`가 비지 않고 그 회차는 측정 아님(준비)이다.
-- `session_env`는 부모의 `PATH`를 그대로 넘긴다. 러너를 주 체크아웃에서 `uv run`으로 띄우면 그 `PATH` 맨 앞에 주 체크아웃의 `.venv\Scripts`가 와서, 세션이 맨 `pytest` 같은 명령을 치면 클론이 아니라 주 체크아웃의 환경과 코드가 돌 수 있다. 04의 PR 직전 `/security-review`가 보안이 아니라 측정의 정확성으로 짚었고 재지는 않았다(일지 2026-10-23-25의 커밋과 PR 직전 리뷰). 세션을 띄우는 이 티켓이 넘길 `PATH`에서 그 자리를 뺄지 정한다.
+- `session_env`는 부모의 `PATH`를 그대로 넘긴다. 러너를 주 체크아웃에서 `uv run`으로 띄우면 그 `PATH` 맨 앞에 주 체크아웃의 `.venv\Scripts`가 와서, 세션이 맨 `pytest` 같은 명령을 치면 클론이 아니라 주 체크아웃의 환경과 코드가 돌 수 있다. 04의 PR 직전 `/security-review`가 보안이 아니라 측정의 정확성으로 짚었고 재지는 않았다(일지 2026-10-23-32의 커밋과 PR 직전 리뷰). 세션을 띄우는 이 티켓이 넘길 `PATH`에서 그 자리를 뺄지 정한다.

@@ -467,8 +467,8 @@ expect = "green"
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''    left = _cut_links(folder)'''
-new = '''    left: list[str] = []'''
+old = '''        left = _cut_links(folder)'''
+new = '''        left: list[str] = []'''
 
 [[mutation]]
 name = "표지를 맨 끝에 지우지 않는다"
@@ -481,7 +481,7 @@ file = "tools/rerun_round.py"
 old = '''            if entry.name != MARKER:'''
 new = '''            if True:'''
 
-# 아래는 커밋 전 반박 검증이 깬 판정을 고친 자리다(일지 2026-10-23-25).
+# 아래는 커밋 전 반박 검증이 깬 판정을 고친 자리다(일지 2026-10-23-32).
 [[mutation]]
 name = "표지를 글자 그대로의 이름으로 찾지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "대소문자만_다른_표지"]
@@ -529,9 +529,9 @@ expect_output = ['>       assert [name for name, _ in report.failed] == [place.n
 [[mutation.edit]]
 file = "tools/rerun_round.py"
 old = '''    if os.path.islink(folder) or os.path.isjunction(folder):
-        return "판정한 뒤 링크로 바뀌어 지우지 않았다"'''
+        raise _RemoveError("판정한 뒤 링크로 바뀌어 지우지 않았다")'''
 new = '''    if False:
-        return "판정한 뒤 링크로 바뀌어 지우지 않았다"'''
+        raise _RemoveError("판정한 뒤 링크로 바뀌어 지우지 않았다")'''
 
 [[mutation]]
 name = "끊지 못한 링크가 있어도 지우기를 이어 간다"
@@ -542,9 +542,9 @@ expect_output = ['>       assert kept.exists()']
 [[mutation.edit]]
 file = "tools/rerun_round.py"
 old = '''    if left:
-        return f"끊지 못한 링크나'''
+        raise _RemoveError(f"끊지 못한 링크나'''
 new = '''    if False:
-        return f"끊지 못한 링크나'''
+        raise _RemoveError(f"끊지 못한 링크나'''
 
 [[mutation]]
 name = "파일인 뿌리를 빈 뿌리로 읽는다"
@@ -559,7 +559,7 @@ old = '''    except NotADirectoryError as e:
 new = '''    except NotADirectoryError:
         return report'''
 
-# 아래는 셀프 리뷰를 반영해 더한 시험을 무는 변이다(일지 2026-10-23-25).
+# 아래는 셀프 리뷰를 반영해 더한 시험을 무는 변이다(일지 2026-10-23-32).
 [[mutation]]
 name = "사용자 설정의 followTags 를 끄지 않는다"
 tests = ["tests/tools/test_rerun_round.py", "-k", "원본의_설정과_훅이"]
@@ -662,3 +662,31 @@ expect_output = ['>       assert result.returncode == 0', "UnicodeEncodeError: '
 file = "tools/rerun_round.py"
 old = '''            stream.reconfigure(encoding="utf-8")'''
 new = '''            pass'''
+
+# 봇 첫 회차의 반영분을 셀프 리뷰한 뒤 더한 시험을 무는 변이다(일지 2026-10-23-32).
+[[mutation]]
+name = "링크를 찾다 막힌 것을 그 폴더의 실패로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "링크를_찾다_막힌"]
+expect = "red"
+expect_output = ['E           PermissionError: [Errno 5] 항목을 판정하지 못했다']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''    try:
+        left = _cut_links(folder)
+    except OSError as e:
+        raise _RemoveError(f"링크를 찾다 막혔다. {type(e).__name__}: {e}") from e
+'''
+new = '''    left = _cut_links(folder)
+'''
+
+[[mutation]]
+name = "지우다 막힌 까닭을 알리지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "지우다_막히면"]
+expect = "red"
+expect_output = ['>       assert report.failed[0][1] == "PermissionError: 다른 프로세스가 쥐었다"']
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        raise _RemoveError(f"{type(e).__name__}: {e}") from e'''
+new = '''        raise _RemoveError("") from e'''

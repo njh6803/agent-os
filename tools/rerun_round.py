@@ -39,7 +39,7 @@
 지운다. 표지는 글자 그대로의 이름으로 찾는다. 이름은 디스크에서 읽은 글자 그대로 `\\\\?\\` 꼴로
 다뤄, 윈도가 끝의 점과 공백을 떼어 다른 폴더를 가리키는 일이 없다. 이 판정들은 커밋 전에 임시 폴더의
 반박 검증(링크와 junction, 커밋하지 않은 파일, 윈도가 바꾸는 이름, 표지의 꼴, 홈 같은 뿌리, 긴 경로,
-명령 줄의 경로 꼴)을 거쳤다(일지 2026-10-23-25).
+명령 줄의 경로 꼴)을 거쳤다(일지 2026-10-23-32).
 
 git을 띄우는 자리는 `tools.run_hooks.REPO_LOCATION_VARS`를 자식 환경에서 벗긴다(`.claude/rules/
 tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있다.
@@ -662,8 +662,8 @@ def _cut_links(folder: str) -> list[str]:
     return left
 
 
-# 항목 하나를 지운다. 링크는 링크만, 폴더는 통째로, 읽기 전용 파일은 쓰기를 켜고 지운다.
-_delete_entry = delete_path
+class _RemoveError(Exception):
+    """회차 폴더 하나를 지우지 못했다. 메시지가 그 까닭이다."""
 
 
 def _rmdir(folder: str) -> None:
@@ -678,23 +678,29 @@ def _rmdir(folder: str) -> None:
         os.rmdir(folder)
 
 
-def _remove(folder: str) -> str | None:
-    """회차 폴더 하나를 지운다. 링크를 먼저 끊고 표지를 맨 끝에 지운다. 실패면 그 까닭.
+def _remove(folder: str) -> None:
+    """회차 폴더 하나를 지운다. 링크를 먼저 끊고 표지를 맨 끝에 지운다. OS가 막아(`OSError`)
+    지우지 못하면 그 까닭을 든 `_RemoveError`다.
 
     판정한 뒤 그 이름이 링크로 바뀌었으면 지우지 않는다. 안을 다 지운 뒤 빈 폴더만 지우지 못하면
-    (다른 프로세스가 작업 디렉터리로 쥐었다) 표지를 다시 심는다."""
+    (다른 프로세스가 작업 디렉터리로 쥐었다) 표지를 다시 심는다. 항목은 `delete_path`로 지운다.
+    링크는 링크만, 폴더는 통째로 지우고, 읽기 전용 파일에 지우기가 막히면(윈도) 쓰기를 켜고 다시
+    지운다."""
     if os.path.islink(folder) or os.path.isjunction(folder):
-        return "판정한 뒤 링크로 바뀌어 지우지 않았다"
-    left = _cut_links(folder)
+        raise _RemoveError("판정한 뒤 링크로 바뀌어 지우지 않았다")
+    try:
+        left = _cut_links(folder)
+    except OSError as e:
+        raise _RemoveError(f"링크를 찾다 막혔다. {type(e).__name__}: {e}") from e
     if left:
-        return f"끊지 못한 링크나 읽지 못한 폴더 {len(left)}개(첫째 {left[0]})"
+        raise _RemoveError(f"끊지 못한 링크나 읽지 못한 폴더 {len(left)}개(첫째 {left[0]})")
     try:
         for entry in sorted(os.scandir(folder), key=lambda e: e.name):
             if entry.name != MARKER:
-                _delete_entry(Path(entry.path))
-        _delete_entry(Path(folder) / MARKER)
+                delete_path(Path(entry.path))
+        delete_path(Path(folder) / MARKER)
     except OSError as e:
-        return f"{type(e).__name__}: {e}"
+        raise _RemoveError(f"{type(e).__name__}: {e}") from e
     try:
         _rmdir(folder)
     except OSError as e:
@@ -702,9 +708,12 @@ def _remove(folder: str) -> str | None:
         try:
             _plant_marker(folder)
         except OSError as replant:
-            return f"빈 폴더를 지우지 못했고 표지도 다시 심지 못했다. {e}; {replant}"
-        return f"빈 폴더를 지우지 못했다(표지를 다시 심었다). {type(e).__name__}: {e}"
-    return None
+            raise _RemoveError(
+                f"빈 폴더를 지우지 못했고 표지도 다시 심지 못했다. {e}; {replant}"
+            ) from replant
+        raise _RemoveError(
+            f"빈 폴더를 지우지 못했다(표지를 다시 심었다). {type(e).__name__}: {e}"
+        ) from e
 
 
 def remove_round_dirs(root: Path, records: Path) -> Removal | None:
@@ -725,10 +734,13 @@ def remove_round_dirs(root: Path, records: Path) -> Removal | None:
             report.not_round.append(entry.name)
         elif not _recorded(records, entry.name):
             report.no_record.append(entry.name)
-        elif (why := _remove(entry.path)) is not None:
-            report.failed.append((entry.name, why))
         else:
-            report.removed.append(entry.name)
+            try:
+                _remove(entry.path)
+            except _RemoveError as e:
+                report.failed.append((entry.name, str(e)))
+            else:
+                report.removed.append(entry.name)
     return report
 
 

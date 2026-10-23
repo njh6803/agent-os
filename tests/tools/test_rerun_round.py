@@ -971,13 +971,38 @@ def test_지우다_막히면_표지를_남겨_다시_지울_수_있다(
             raise PermissionError("다른 프로세스가 쥐었다")
         delete_path(path)
 
-    monkeypatch.setattr(rerun_round, "_delete_entry", blocked)
+    monkeypatch.setattr(rerun_round, "delete_path", blocked)
     report = _지우기(root, records)
     assert report.removed == []
     assert [name for name, _ in report.failed] == [place.name]
+    assert report.failed[0][1] == "PermissionError: 다른 프로세스가 쥐었다"
     assert (place.path / MARKER).exists()
     monkeypatch.undo()
     assert _지우기(root, records).removed == [place.name]
+
+
+def test_링크를_찾다_막힌_회차_폴더만_실패로_알리고_다음_폴더는_지운다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """링크를 찾는 걸음(`_cut_links`)이 항목을 판정하다 OSError를 내는 길을 흉내 낸다. 새 회차
+    폴더에는 링크가 없으니 막지 않는 폴더에서는 끊지 못한 것이 없다고 돌려준다."""
+    root = tmp_path / "뿌리"
+    records = tmp_path / "records"
+    stuck = _기록된_회차(root, records, "k1", round_no=1)
+    next_one = _기록된_회차(root, records, "k2", round_no=2)
+
+    def blocked(folder: str) -> list[str]:
+        if os.path.basename(folder) == stuck.name:
+            raise PermissionError(5, "항목을 판정하지 못했다")
+        return []
+
+    monkeypatch.setattr(rerun_round, "_cut_links", blocked)
+    report = _지우기(root, records)
+    assert [name for name, _ in report.failed] == [stuck.name]
+    assert "PermissionError" in report.failed[0][1]
+    assert (stuck.path / MARKER).exists()
+    assert report.removed == [next_one.name]
+    assert not next_one.path.exists()
 
 
 def test_대소문자만_다른_표지는_표지가_아니다(tmp_path: Path) -> None:
