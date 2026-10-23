@@ -58,3 +58,10 @@
 - 노력과 모델의 수는 `transcript_counts(config_dir, 세션 id)`가 본 세션과 서브에이전트로 나눠 내고(`<synthetic>`이고 노력이 없는 줄은 뺐다), 기록의 `main_lines`·`subagent_lines`에 든다. 불일치 판정은 그 수와 갈래의 모델·노력을 견준다.
 - `summarize_call`은 init과 결과 이벤트와 이벤트 수만 남기고 한도 이벤트(`rate_limit_event`)는 남기지 않는다. 한도의 판정은 원본 줄(`launched.drove.lines`나 `launched.stream_file`)에서 `parse_event`로 읽는다.
 - 가짜(`tests/tools/fake_claude.py`)는 `write_script(..., logged_in=..., email=...)`로 `auth status`의 답(로그아웃이면 종료 1과 `email` 없는 JSON), `version=...`으로 `--version`의 답, `init_event(tools=..., plugins=..., mcp_servers=...)`로 init의 칸을 정한다. 한도 이벤트는 `rate_limit_event(status=...)`와 `limit_result()`가 짓는다.
+
+### 08에서 넘어온 메모
+
+- 이 티켓의 판정이 들어갈 자리는 `tools/rerun_continue.py`의 `run_sessions(..., screen=...)`이다. `screen(launched)`는 호출이 끝날 때마다 가장 먼저 불리고, 돌려준 `End`가 그 회차의 끝이다(끝이 아니면 `None`). 08의 `call_end`(시간, `error_max_budget_usd`, init이나 결과 이벤트 없음)보다 앞이라, 한도 표지가 든 호출이 결과 이벤트가 없어도 측정 아님(호출)이 되지 않는다(시험 `test_막는_판정이_낸_끝이_측정_아님_호출보다_앞선다`).
+- 설정 항목의 "08의 끄기로 그 호출을 끄고"에 맞는 자리는 아직 없다. 08의 끄기는 `drive`가 마감을 넘기거나 출력을 닫고도 끝나지 않은 호출에서만 한다. `screen`은 호출이 끝난 뒤에 불리므로, init을 받은 직후에 끄려면 `drive`에 줄을 받을 때마다 부르는 판정(끄라고 답하면 끈다)을 더해야 한다. 끄는 함수는 `tools/rerun_session.py`의 `_ours`(끄기 직전에 명령 줄에 그 호출의 세션 id가 있는지 본다)와 `_kill`(나무째 끄고 거둔다)을 그대로 쓴다. 호출이 멈춘 꼴은 `Stop`이고, 지금 세션의 `runner_killed`는 마감에 닿아 끈 호출(`Stop.DEADLINE_KILLED`)에만 선다. 설정으로 끈 호출을 `Stop`의 어느 꼴로 적고 `runner_killed`를 세울지는 이 티켓이 정한다.
+- 측정 아님의 끝은 `End(END_NOT_MEASURED, "<이유>", <풀리는 시각>)`이다. 08의 하위 이유 상수(`REASON_*`)는 `tools/rerun_continue.py`에 있고, 시험이 그 값이 `tools/rerun_files.py`의 `CAP_REASONS`·`NOT_MEASURED_REASONS`에 드는지 본다.
+- `run_sessions`는 한 함수 안에서 호출 앞의 끝, `launch`, 비용 누적, 호출 기록 짓기, 갈래 고르기, 다음 메시지 짓기를 모두 한다. PR #374의 claude-review가 `CODING_STANDARDS.md`의 추상화 수준 줄로 짚었고(Minor), 08은 고치지 않고 넘겼다. 이 티켓이 그 함수를 고칠 때 호출 하나를 돌려 `CallRun`을 짓는 부분(`launch`부터 `runs.append`까지)과 다음 메시지를 짓는 부분(`if following == CALL_INTERVENTION` 이하)을 함수로 뽑아 고리에 순서만 남긴다. 옮기면 `.scratch/model-rerun/probes/rerun_continue_mutations.toml`의 원문을 `tools/mutate.py --check`로 본다.

@@ -68,7 +68,7 @@ new = '''            elif False:'''
 name = "마감에 닿으면 끝난 자식도 끈 호출로 적는다"
 tests = ["tests/tools/test_rerun_session.py", "-k", "마감에"]
 expect = "red"
-expect_output = ["E       assert not True"]
+expect_output = ["<Stop.DEADLINE_LEFT: 'deadline_left'> is <Stop.EXITED: 'exited'>"]
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
@@ -240,21 +240,9 @@ expect_output = ["assert ['앞선-세션'] == ['앞선-세션', '새-세션']"]
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''    with place.session_ids.open("a", encoding="utf-8", newline="\n") as f:
-        f.write(sid + "\n")
-    calls = len(place.session_ids.read_text(encoding="utf-8").splitlines())'''
-new = '''    calls = 1'''
-
-[[mutation]]
-name = "첫 줄의 연 저장소가 작업 폴더와 다른 글이다"
-tests = ["tests/tools/test_rerun_session.py", "-k", "받은_인자"]
-expect = "red"
-expect_output = ["+ 연 저장소는 `C:/Users/"]
-
-[[mutation.edit]]
-file = "tools/rerun_session.py"
-old = '''        message=first_message(root, ticket, directive_text),'''
-new = '''        message=first_message(root.replace("\\", "/"), ticket, directive_text),'''
+old = '''    place.append_session_id(session_id)
+    calls = place.call_count()'''
+new = '''    calls = place.call_count() + 1'''
 
 [[mutation]]
 name = "기록에 init 의 도구 목록을 옮기지 않는다"
@@ -330,5 +318,7 @@ expect_output = ["assert None is not None"]
 
 [[mutation.edit]]
 file = "tools/rerun_session.py"
-old = '''        if process.poll() is None:  # 기록 파일을'''
-new = '''        if False:  # 기록 파일을'''
+old = '''        # 기록 파일을 열거나 쓰다 예외가 났거나 러너가 끊겼으면 자식을 남기지 않는다
+        if process.poll() is None and ours():'''
+new = '''        # 기록 파일을 열거나 쓰다 예외가 났거나 러너가 끊겼으면 자식을 남기지 않는다
+        if False:'''

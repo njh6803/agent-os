@@ -15,6 +15,15 @@
 - 구동(하위 프로세스): `drive`(세션 호출 하나), `launch`(세션 id를 적고 띄운다), `claude_version`,
   `local_branches`(클론의 로컬 브랜치). 호출마다 시간 제한이 있다.
 
+끄기(명세 "상한과 끄기"). 마감을 넘긴 호출과 출력을 닫고도 끝나지 않은 호출은 끄기 직전에 그 pid 의
+명령 줄(`tools/proc_command_line.py`, 주입받는다)에 그 호출의 세션 id 가 있을 때만(`_ours`)
+프로세스 나무째 끈다(`_kill`). 없거나 읽지 못하면 끄지 않고 남긴다. 호출이 멈춘 꼴은 `Stop`이다.
+나무째 끄는 것은 윈도 venv 의 `python.exe`처럼 진짜 프로그램을 자식으로 띄우는 런처가 있어서다. 그
+하나만 끄면 진짜가 남는다. 출력이 닫힌 뒤 끝나기를 기다리는 것(`REAP_TIMEOUT`)도 호출의 마감을
+넘지 않고, 마감이 먼저 오면 시간을 넘긴 호출이다. 마감 뒤에 더 쓰는 시간은 끄기(윈도 `taskkill`
+한 번, `KILL_TIMEOUT`), 끈 프로세스를 거두는 기다림(`REAP_TIMEOUT`), 남은 줄의
+배출(`DRAIN_TIMEOUT`)이다.
+
 첫 메시지. 첫 줄은 `tools/open_session.ps1`의 `Convert-StartLine`이 `/implement <티켓 경로>`를 옮긴
 꼴이고(시험이 그 함수를 pwsh로 불러 같은지 본다), 빈 줄, 지시문이 뒤따른다. 첫 줄의 연 저장소는
 `launch`가 세션의 작업 폴더로 넘긴 글 그대로다. 클론의 첫 턴 훅(`tools/hook_prompt_directive.py`)이
@@ -38,11 +47,10 @@
 옮긴다. init의 도구 목록은 init 이벤트의 `tools`, 판은 `claude --version`의 첫 줄, 계정 이름과 환경
 변수의 이름은 러너가 받은 값이다.
 
-이 티켓 밖의 칸. 이어 가기(인계·개입 수, 물으며 끝남, 호출의 지시문 담음·물음표 끝, 끝의 종류)는
-08, 공식 단가·토큰 합·대신 넣은 값은 07, 거부 수·사용률·오염·모델 불일치는 09가 짓는다.
-`round_record`는 그 칸을 인자로 받는다(`Elsewhere`). 08이 짓기 전에는 끄기도 `Popen`이 쥔 핸들로 그
-프로세스 하나만 끈다 (pid 재사용과 섞이지 않는다). 그 프로세스가 띄운 자식은 남을 수 있고, 명령 줄을
-본 뒤 트리째 끄는 것은 08이다.
+이 모듈 밖의 칸. 이어 가기(호출의 종류, 인계·개입 수, 물으며 끝남, 호출의 지시문 담음·물음표 끝,
+끝의 종류)는 `tools/rerun_continue.py`가 짓고 `Continued`로 넘긴다. 공식 단가·토큰 합·대신 넣은
+값은 07, 거부 수·사용률·오염·모델 불일치는 09가 짓는다. `round_record`는 그 칸을 인자로
+받는다(`Elsewhere`).
 
 못 보는 것.
 - 세션 기록 파일의 줄에서 `message.model`이 모델의 꼴(`tools/rerun_files.py`의
@@ -58,11 +66,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 import os
 import re
+import signal
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -70,10 +81,12 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import ROUND_FLOOR, Decimal
+from enum import Enum
 from pathlib import Path
 from typing import IO
 
 from tools.probe_kit import LineReader
+from tools.proc_command_line import CommandLineReader, command_line
 from tools.rerun_files import (
     IDENT_FORM,
     MODEL_FORM,
@@ -107,6 +120,7 @@ VERSION_TIMEOUT = 60
 # 끝난 자식을 거두는 기다림과 남은 줄의 배출. 손자가 출력을 쥐고 남으면 EOF 가 오지 않는다.
 REAP_TIMEOUT = 60
 DRAIN_TIMEOUT = 10
+KILL_TIMEOUT = 60  # 윈도의 `taskkill` 한 번
 _READ_SLICE = 5.0  # 줄 하나를 기다리는 한 번. 마감은 호출의 시간 제한이다
 
 # --- 첫 메시지와 지시문(명세 "지시문과 첫 메시지") ---
@@ -181,10 +195,23 @@ def budget_text(usd: float) -> str:
     return f"{max(Decimal(0), cents):.2f}"  # 같으면 앞의 것이라 `-0.0`도 "0.00"이다
 
 
+class Opening(Enum):
+    """세션 호출이 세션을 여는 꼴. 값이 그 명령의 플래그다."""
+
+    NEW = "--session-id"  # 러너가 지은 id 로 새 세션을 연다
+    RESUME = "--resume"  # 그 세션을 이어 부른다
+
+
 def session_command(
-    claude: Sequence[str], arm: Arm, session_id: str, budget_usd: float
+    claude: Sequence[str],
+    arm: Arm,
+    session_id: str,
+    budget_usd: float,
+    *,
+    opening: Opening = Opening.NEW,
 ) -> list[str]:
-    """첫 호출의 명령. 모델은 전체 이름이고 `claude`는 명령 줄로 받은 실행 파일(과 그 인자)이다."""
+    """세션 호출의 명령. 세션은 `opening`의 플래그로 연다. 이어 부를 때도 모델·노력·예산을 다시
+    준다. 모델은 전체 이름이고 `claude`는 명령 줄로 받은 실행 파일(과 그 인자)이다."""
     return [
         *claude,
         SESSION_FLAGS[0],
@@ -193,7 +220,7 @@ def session_command(
         "--effort",
         arm.effort,
         *SESSION_FLAGS[1:],
-        "--session-id",
+        opening.value,
         session_id,
         "--max-budget-usd",
         budget_text(budget_usd),
@@ -512,11 +539,34 @@ def local_branches(clone: Path, base: str) -> dict[str, tuple[str, int]]:
 # --- 구동 ---
 
 
+class Stop(Enum):
+    """세션 호출 하나가 멈춘 꼴(모듈 독스트링의 끄기). 러너가 끄려 하는 것은 살아 있는 채 마감에
+    닿은 호출(`DEADLINE_*`)과 출력을 닫고도 거두는 기다림 안에 끝나지 않은 호출(`HUNG_*`)이고,
+    명령 줄에 그 세션 id 가 없거나 읽지 못하면 끄지 않고 남긴다(`*_LEFT`)."""
+
+    EXITED = "exited"  # 스스로 끝났다. 종료 코드가 있다
+    DEADLINE_KILLED = "deadline_killed"  # 마감에 닿아 나무째 껐다
+    DEADLINE_LEFT = "deadline_left"  # 마감에 닿았지만 끄지 않았다
+    HUNG_KILLED = "hung_killed"  # 출력을 닫고 멈춰 나무째 껐다
+    HUNG_LEFT = "hung_left"  # 출력을 닫고 멈췄지만 끄지 않았다
+
+
+TIMED_OUT = frozenset({Stop.DEADLINE_KILLED, Stop.DEADLINE_LEFT})  # 시간을 넘긴 호출
+LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT})  # 끄지 않고 남긴 호출
+# 끄려 한 호출의 꼴. 열쇠는 (시간을 넘겼는가, 껐는가)
+_STOPS = {
+    (True, True): Stop.DEADLINE_KILLED,
+    (True, False): Stop.DEADLINE_LEFT,
+    (False, True): Stop.HUNG_KILLED,
+    (False, False): Stop.HUNG_LEFT,
+}
+
+
 @dataclass(frozen=True)
 class Drove:
     lines: tuple[str, ...]
-    exit_code: int | None  # 끈 호출이면 빈 값
-    timed_out: bool  # 시간 제한에 닿아 러너가 끈 호출
+    exit_code: int | None  # `Stop.EXITED`일 때만 값이 있다
+    stop: Stop
 
 
 def _feed(stdin: IO[bytes], data: bytes) -> None:
@@ -535,14 +585,18 @@ def drive(
     message: str,
     stream_file: Path,
     timeout: float,
+    session_id: str,
     clock: Callable[[], float] = time.monotonic,
+    read_command_line: CommandLineReader = command_line,
 ) -> Drove:
     """세션 호출 하나. 메시지를 표준 입력으로 넣고 줄을 받는 대로 `stream_file`에 쓴다.
 
     출력은 `tools/probe_kit.py`의 `LineReader`로 읽고(줄 하나마다 제한 시간, 끝에 남은 줄은
-    `drain`), 읽지 않는 stderr는 버린다. `timeout`을 넘기면 `Popen`이 쥔 핸들로 그 프로세스를 끈다.
-    자식이 스스로 끝났으면 손자가 출력을 쥐어 EOF가 오지 않아도 기다리지 않고, 끈 호출로 적지
-    않는다.
+    `drain`), 읽지 않는 stderr는 버린다. `timeout`을 넘기면 명령 줄에 `session_id`가 있는지 본 뒤
+    프로세스 나무째 끈다(모듈 독스트링의 끄기). 멈춘 꼴은 `Drove.stop`이다. 자식이 스스로 끝났으면
+    손자가 출력을 쥐어 EOF가 오지 않아도 기다리지 않고, 시간을 넘긴 호출로 적지 않는다. POSIX 에서는
+    자식이 새 세션(프로세스 그룹)을 이끌게 띄워 그 그룹을 끈다. 그래서 러너의 터미널에서 친 Ctrl+C
+    가 자식에 닿지 않고, 러너가 끊길 때(`KeyboardInterrupt`도) 이 함수가 같은 규칙으로 끈다.
     """
     process = subprocess.Popen(
         list(command),
@@ -551,22 +605,61 @@ def drive(
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        start_new_session=True,  # 윈도에서는 쓰지 않는 인자다
     )
+
+    def ours() -> bool:
+        return _ours(process, session_id, read_command_line)
+
     stdin, stdout = process.stdin, process.stdout
     if stdin is None or stdout is None:  # PIPE 를 주었으므로 나지 않는다
-        _stop(process)
+        if ours():
+            _kill(process)
         raise RuntimeError("자식의 표준 입출력을 열지 못했다")
     try:
-        return _read_process(process, stdin, stdout, message, stream_file, timeout, clock)
-    finally:
-        if process.poll() is None:  # 기록 파일을 열거나 쓰다 예외가 났으면 자식을 남기지 않는다
-            _stop(process)
+        return _read_process(process, stdin, stdout, message, stream_file, timeout, clock, ours)
+    except BaseException:
+        # 기록 파일을 열거나 쓰다 예외가 났거나 러너가 끊겼으면 자식을 남기지 않는다
+        if process.poll() is None and ours():
+            _kill(process)
+        raise
 
 
-def _stop(process: subprocess.Popen[bytes]) -> None:
-    """`Popen`이 쥔 핸들로 그 프로세스 하나를 끄고 거둔다. pid 재사용과 섞이지 않는다."""
-    process.kill()
+def _ours(
+    process: subprocess.Popen[bytes], session_id: str, read_command_line: CommandLineReader
+) -> bool:
+    """끄기 직전에 볼 것. 그 pid 의 명령 줄에 그 호출의 세션 id 가 있는가. 읽지 못하면 거짓이다.
+    모르는 프로세스를 끄지 않는 쪽이 안전하다(명세 "상한과 끄기"). 거두기 전이라 그 pid 는 다른
+    프로세스에 가지 않았다(`tools/proc_command_line.py`)."""
+    argv = read_command_line(process.pid)
+    return argv is not None and session_id in argv
+
+
+def _kill(process: subprocess.Popen[bytes]) -> None:
+    """프로세스 나무째 끄고 거둔다."""
+    _kill_tree(process)
     process.wait(timeout=REAP_TIMEOUT)
+
+
+def _kill_tree(process: subprocess.Popen[bytes]) -> None:
+    """그 프로세스와 그 아래 프로세스를 끈다. 윈도는 `taskkill /T`가 부모를 따라 찾고, POSIX 는 그
+    프로세스가 이끄는 그룹을 끈다(`drive`의 `start_new_session`). `taskkill`을 띄우지 못했거나
+    시간을 넘겼어도, 그룹을 끄지 못했어도 그 프로세스는 `Popen`의 핸들로 끈다. 선례는
+    `tools/mutate.py`의 `_kill_tree`다."""
+    if sys.platform == "win32":
+        with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,  # 출력을 붙잡으면 남은 손자가 파이프를 쥘 때 멈춘다
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=KILL_TIMEOUT,
+            )
+    else:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(process.pid, signal.SIGKILL)
+    process.kill()
 
 
 def _read_process(
@@ -577,6 +670,7 @@ def _read_process(
     stream_file: Path,
     timeout: float,
     clock: Callable[[], float],
+    ours: Callable[[], bool],
 ) -> Drove:
     reader = LineReader(stdout)
     threading.Thread(target=_feed, args=(stdin, message.encode("utf-8")), daemon=True).start()
@@ -593,7 +687,7 @@ def _read_process(
         while not reader.ended:
             left = deadline - clock()
             if left <= 0:
-                timed_out = process.poll() is None  # 마감 전에 스스로 끝났으면 끈 호출이 아니다
+                timed_out = process.poll() is None  # 마감 전에 스스로 끝났으면 넘긴 호출이 아니다
                 break
             line = reader.readline(min(left, _READ_SLICE))
             if line is not None:
@@ -601,19 +695,22 @@ def _read_process(
             elif process.poll() is not None:
                 # 자식은 끝났는데 손자가 출력을 쥐어 EOF 가 오지 않는다. 남은 줄은 drain 이 받는다
                 break
-        code: int | None
-        if timed_out:
-            _stop(process)
-            code = None
-        else:
+        code: int | None = None
+        if not timed_out:
+            reap = min(REAP_TIMEOUT, deadline - clock())  # 거두는 기다림도 마감을 넘지 않는다
             try:
-                code = process.wait(timeout=REAP_TIMEOUT)
+                code = process.wait(timeout=max(reap, 0.0))
             except subprocess.TimeoutExpired:  # 출력을 닫고도 끝나지 않았다
-                _stop(process)
-                code = None
+                timed_out = reap < REAP_TIMEOUT  # 거둠의 제한보다 마감이 먼저 왔다
+        stop = Stop.EXITED
+        if code is None:
+            killing = ours()
+            if killing:
+                _kill(process)
+            stop = _STOPS[timed_out, killing]
         for line in reader.drain(DRAIN_TIMEOUT):
             keep(line)
-    return Drove(lines=tuple(lines), exit_code=code, timed_out=timed_out)
+    return Drove(lines=tuple(lines), exit_code=code, stop=stop)
 
 
 def claude_version(claude: Sequence[str], *, env: Mapping[str, str], cwd: Path) -> str | None:
@@ -659,31 +756,36 @@ def launch(
     claude: Sequence[str],
     arm: Arm,
     env: Mapping[str, str],
-    ticket: str,
-    directive_text: str,
+    session_id: str,
+    opening: Opening,
+    message: str,
     budget_usd: float,
     timeout: float,
-    session_id: Callable[[], str] = new_session_id,
+    clock: Callable[[], float] = time.monotonic,
+    read_command_line: CommandLineReader = command_line,
 ) -> Launched:
-    """회차 폴더의 클론에서 새 세션을 띄운다. 띄우기 전에 세션 id를 회차 폴더의 `session_ids`에
-    덧붙여 적는다. 첫 줄의 연 저장소와 세션의 작업 폴더는 같은 글(`str(place.clone)`)이다."""
-    sid = session_id()
-    with place.session_ids.open("a", encoding="utf-8", newline="\n") as f:
-        f.write(sid + "\n")
-    calls = len(place.session_ids.read_text(encoding="utf-8").splitlines())
-    root = str(place.clone)
+    """회차 폴더의 클론에서 세션 호출 하나를 띄운다. 띄우기 전에 세션 id를 회차 폴더의
+    `session_ids`에 덧붙이고(`RoundDir.append_session_id`), 원본 줄은 `<호출 차례 두 자리>-<세션
+    id>.jsonl`에 받는다. 세션은 `opening`대로 새로 열거나 이어 부른다. 세션의 작업 폴더는
+    `str(place.clone)`이라, 새 세션의 메시지(`first_message`)도 그 글을 연 저장소로 지어야 첫 턴
+    훅의 폴더 견줌을 지난다."""
+    place.append_session_id(session_id)
+    calls = place.call_count()
     budget = float(budget_text(budget_usd))
-    stream_file = place.stream / f"{calls:02d}-{sid}.jsonl"
+    stream_file = place.stream / f"{calls:02d}-{session_id}.jsonl"
     drove = drive(
-        session_command(claude, arm, sid, budget),
-        cwd=root,
+        session_command(claude, arm, session_id, budget, opening=opening),
+        cwd=str(place.clone),
         env=env,
-        message=first_message(root, ticket, directive_text),
+        message=message,
         stream_file=stream_file,
         timeout=timeout,
+        session_id=session_id,
+        clock=clock,
+        read_command_line=read_command_line,
     )
     return Launched(
-        session_id=sid,
+        session_id=session_id,
         budget_usd=budget,
         stream_file=stream_file,
         drove=drove,
@@ -696,12 +798,23 @@ def launch(
 
 @dataclass(frozen=True)
 class CallRun:
-    """호출 하나와 그 호출의 이어 가기 판정(08이 결과 글에서 낸다)."""
+    """호출 하나와 그 호출의 이어 가기 판정(`tools/rerun_continue.py`가 결과 글에서 낸다)."""
 
     kind: str  # `tools/rerun_files.py`의 CALL_KINDS
     launched: Launched
     has_directive: bool
     ends_with_question: bool
+
+
+@dataclass(frozen=True)
+class Continued:
+    """회차의 호출들과 이어 가기의 셈. `tools/rerun_continue.py`의 `run_sessions`가 짓는다."""
+
+    runs: tuple[CallRun, ...]  # 차례대로
+    handoffs: int
+    interventions: int
+    asked_at_end: bool
+    end: End
 
 
 @dataclass(frozen=True)
@@ -740,12 +853,19 @@ def call_record(run: CallRun) -> Call:
         results=results,
         has_directive=run.has_directive,
         ends_with_question=run.ends_with_question,
-        kill_skipped=False,
+        kill_skipped=run.launched.drove.stop in LEFT_RUNNING,
     )
 
 
 def session_record(session_id: str, runs: Sequence[CallRun], config_dir: Path) -> Session:
-    """세션 하나의 칸. `runs`는 그 세션의 호출들이고 차례대로다."""
+    """세션 하나의 칸. `runs`는 그 세션의 호출들이고 차례대로다. 마감에 닿아 러너가 끈 호출이
+    있으면 `runner_killed`를 세운다. 그 호출은 대개 결과 이벤트가 나기 전에 끊겨 그 세션의 Claude
+    Code 셈을 모른다. 결과 이벤트를 내고 출력을 닫은 뒤 거두는 기다림 중에 마감이 온 호출은 결과
+    이벤트가 있어 셈을 안다. 그래서 셈을 공식 단가로 대신 넣는 것(`cost_substituted`, 10)은 이
+    표시가 아니라 끈 호출의 결과 이벤트가 없는지로 가른다. 출력을 닫고 멈춰
+    끈 호출(`Stop.HUNG_KILLED`)은 세우지 않는다. 출력이 이미 끝나 끄기가 결과 이벤트를 자르지
+    않았고, 결과 이벤트가 없으면 그 회차는 측정 아님(호출)이다(`tools/rerun_continue.py`의
+    `call_end`)."""
     cost, usage = session_cost(
         (r for run in runs for r in run.launched.summary.results), session_id
     )
@@ -755,7 +875,7 @@ def session_record(session_id: str, runs: Sequence[CallRun], config_dir: Path) -
         calls=tuple(call_record(r) for r in runs),
         cost_usd=cost,
         cost_substituted=False,
-        runner_killed=any(r.launched.drove.timed_out for r in runs),
+        runner_killed=any(r.launched.drove.stop is Stop.DEADLINE_KILLED for r in runs),
         model_usage=usage,
         main_lines=main,
         subagent_lines=side,
@@ -770,12 +890,8 @@ def round_record(
     claude_version: str | None,
     account: str,
     env: Mapping[str, str],
-    runs: Sequence[CallRun],
+    continued: Continued,
     config_dir: Path,
-    handoffs: int,
-    interventions: int,
-    asked_at_end: bool,
-    end: End,
     outcome: Outcome,
     wall_clock_from: float,
     now: float,
@@ -785,11 +901,12 @@ def round_record(
 
     벽시계는 준비가 끝난 뒤(`wall_clock_from`, 04의 `Setup.wall_clock_from`)부터 `now`까지다.
     Claude Code의 셈은 세션마다 마지막 비용의 합이고, 비용을 모르는 세션은 더하지 않는다(대신 넣는
-    것은 08·10).
+    것은 10).
     """
     named = parse_round_dir_name(place.name)
     if named is None or named.task_id != task.task_id:
         raise ValueError(f"과제 {task.task_id} 의 회차 폴더가 아니다: {place.name}")
+    runs = continued.runs
     runs_by_session: dict[str, list[CallRun]] = {}
     for run in runs:
         runs_by_session.setdefault(run.launched.session_id, []).append(run)
@@ -808,10 +925,10 @@ def round_record(
         env_names=tuple(sorted(env)),
         init_tools=init.tools if init else (),
         sessions=sessions,
-        handoffs=handoffs,
-        interventions=interventions,
-        asked_at_end=asked_at_end,
-        end=end,
+        handoffs=continued.handoffs,
+        interventions=continued.interventions,
+        asked_at_end=continued.asked_at_end,
+        end=continued.end,
         outcome=outcome,
         spend=Spend(
             claude_code_usd=sum(s.cost_usd for s in sessions if s.cost_usd is not None),
