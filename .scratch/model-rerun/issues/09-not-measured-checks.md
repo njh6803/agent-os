@@ -50,3 +50,11 @@
 
 - 04의 막는 규칙은 주 체크아웃과 사용자의 `~/.claude`만 막는다. 같은 뿌리 아래의 다른 회차 폴더(함께 도는 갈래와 앞선 갈래의 클론, 원본 stream-json)와 전용 설정 폴더의 세션 기록은 막지 않아, 세션이 다른 갈래의 풀이를 읽을 수 있다. 명세의 오염 목록에 없는 길이라 그 두 경로를 오염 꼴로 더할지 이 티켓이 정한다. 자기 회차 폴더 안은 오염이 아니므로, 뿌리를 찾는 꼴은 자기 회차 폴더를 빼야 한다.
 - 04의 막는 규칙은 경로마다 그대로의 꼴과 링크를 푼 꼴(`deny_heads`)을 함께 건다. 오염 찾기가 두 꼴을 다 볼지도 이 티켓이 정한다.
+
+### 06에서 넘어온 메모
+
+- 이 티켓이 내는 칸(`denied_calls`, `utilization_start`·`utilization_end`, `contamination`, `model_mismatch`)은 `tools/rerun_session.py`의 `Elsewhere`로 `round_record`에 들어간다. 06은 그 칸을 짓지 않는다.
+- 첫 init의 칸은 `launched.summary.init`(`Init`)의 `tools`·`plugins`·`mcp_servers`·`version`이다. 기록에는 `tools`만 `init_tools`로 옮긴다. `claude --version`은 `claude_version(claude, env=..., cwd=...)`이 첫 줄을 판의 꼴로 내고, 읽지 못하면 `None`이다.
+- 노력과 모델의 수는 `transcript_counts(config_dir, 세션 id)`가 본 세션과 서브에이전트로 나눠 내고(`<synthetic>`이고 노력이 없는 줄은 뺐다), 기록의 `main_lines`·`subagent_lines`에 든다. 불일치 판정은 그 수와 갈래의 모델·노력을 견준다.
+- `summarize_call`은 init과 결과 이벤트와 이벤트 수만 남기고 한도 이벤트(`rate_limit_event`)는 남기지 않는다. 한도의 판정은 원본 줄(`launched.drove.lines`나 `launched.stream_file`)에서 `parse_event`로 읽는다.
+- 가짜(`tests/tools/fake_claude.py`)는 `write_script(..., logged_in=..., email=...)`로 `auth status`의 답(로그아웃이면 종료 1과 `email` 없는 JSON), `version=...`으로 `--version`의 답, `init_event(tools=..., plugins=..., mcp_servers=...)`로 init의 칸을 정한다. 한도 이벤트는 `rate_limit_event(status=...)`와 `limit_result()`가 짓는다.
