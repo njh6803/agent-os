@@ -1,4 +1,4 @@
-# 2026-10-23 (42) 게이트와 숨은 시험, 공식 단가를 짓는다 (model-rerun 07)
+# 2026-10-23 (45) 게이트와 숨은 시험, 공식 단가를 짓는다 (model-rerun 07)
 
 ## 사용자 프롬프트
 
@@ -68,8 +68,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-42-gates-and-official-cost.md. 구현·변이·커밋 전 반박 검증은 마쳤고 일지에 셀프 리뷰·회고·다음 절이 아직 없다. 인계 직전에 돌던 run_checks를 멈췄고, 멈추기 전에 check-instructions가 tools/rerun_gates.py:294의 listed 반환(bool | None)을 열거로 두라고 빨갰다. 셀프 리뷰 반영에 함께 고치고, 고친 뒤 rerun_gates_mutations.toml의 원문이 그 자리를 가리키면 맞춘다. pytest와 web은 결과를 보지 못했다. 리뷰 반영 뒤 손댄 변이 표 넷(rerun_gates, rerun_cost, rerun_hidden, rerun_round)을 다시 돈다. 회고 후보 셋은 일지 인계 절
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "인계" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. docs/journal/2026-10-23-45-gates-and-official-cost.md. 구현·변이·커밋 전 반박 검증은 마쳤고 일지에 셀프 리뷰·회고·다음 절이 아직 없다. 인계 직전에 돌던 run_checks를 멈췄고, 멈추기 전에 check-instructions가 tools/rerun_gates.py:294의 listed 반환(bool | None)을 열거로 두라고 빨갰다. 셀프 리뷰 반영에 함께 고치고, 고친 뒤 rerun_gates_mutations.toml의 원문이 그 자리를 가리키면 맞춘다. pytest와 web은 결과를 보지 못했다. 리뷰 반영 뒤 손댄 변이 표 넷(rerun_gates, rerun_cost, rerun_hidden, rerun_round)을 다시 돈다. 회고 후보 셋은 일지 인계 절
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -148,8 +148,8 @@
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계(커밋 뒤)" 절과 셀프 리뷰 절의 "반영"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 변이 표 넷의 재실행을 마치고 5030de40으로 커밋했다(pre-commit 모두 통과). 아직 푸시하지 않았고 PR이 없다. 일지의 커밋 절과 인계 절은 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review. bug-perf-review의 밀 주장은 일지 셀프 리뷰 절 "고친 것" 줄의 원문), /git-pr, 봇 회차, 워크트리 병합 길이다. docs/journal/2026-10-23-42-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "인계(커밋 뒤)" 절과 셀프 리뷰 절의 "반영"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 변이 표 넷의 재실행을 마치고 5030de40으로 커밋했다(pre-commit 모두 통과). 아직 푸시하지 않았고 PR이 없다. 일지의 커밋 절과 인계 절은 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review. bug-perf-review의 밀 주장은 일지 셀프 리뷰 절 "고친 것" 줄의 원문), /git-pr, 봇 회차, 워크트리 병합 길이다. docs/journal/2026-10-23-45-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -244,8 +244,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "인계(PR 연 뒤)" 절
-이어받을 상태: 인계: PR 연 뒤. PR #372를 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(CodeRabbit CLI는 이 PR에서도 Seat: not assigned였고 PR 직전 리뷰는 대체 둘로 마쳤다). 일지의 "인계(PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다. 회고(retro)와 일지 "다음"은 아직이고, 회고 후보는 일지의 인계·셀프 리뷰·인계(PR 연 뒤) 세 절에 있다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "인계(PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #372를 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(CodeRabbit CLI는 이 PR에서도 Seat: not assigned였고 PR 직전 리뷰는 대체 둘로 마쳤다). 일지의 "인계(PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다. 회고(retro)와 일지 "다음"은 아직이고, 회고 후보는 일지의 인계·셀프 리뷰·인계(PR 연 뒤) 세 절에 있다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-45-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -293,8 +293,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "봇 첫 회차"와 "인계(셀프 리뷰 직전)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. PR #372의 claude-review 첫 회차를 반영한 커밋하지 않은 변경(아홉 파일)이 워크트리에 있고 셀프 리뷰(/code-review d5db123e)부터 한다. 그 뒤 PR 본문 고치기(10으로 넘긴 불리언 짝, 변이 수), 커밋(일지의 커밋하지 않은 네 절을 함께), 푸시, 보류 이유의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py, 회고와 일지 "다음", 워크트리에서 병합이다. CodeRabbit은 한도로 아직 리뷰가 없어 다음 리뷰가 첫 회차이고, claude-review는 다음이 둘째 회차다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "봇 첫 회차"와 "인계(셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. PR #372의 claude-review 첫 회차를 반영한 커밋하지 않은 변경(아홉 파일)이 워크트리에 있고 셀프 리뷰(/code-review d5db123e)부터 한다. 그 뒤 PR 본문 고치기(10으로 넘긴 불리언 짝, 변이 수), 커밋(일지의 커밋하지 않은 네 절을 함께), 푸시, 보류 이유의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py, 회고와 일지 "다음", 워크트리에서 병합이다. CodeRabbit은 한도로 아직 리뷰가 없어 다음 리뷰가 첫 회차이고, claude-review는 다음이 둘째 회차다. 05의 PR #371이 같은 파일 여섯을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-45-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -373,8 +373,8 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
 브랜치: feature/07-gates-and-official-cost
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-23-42-gates-and-official-cost.md의 "사고", "봇 첫 회차 반영분의 셀프 리뷰", "인계(커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. PR #372의 claude-review 첫 회차 반영과 그 셀프 리뷰를 커밋 04db7e5c로 마쳤고 아직 푸시하지 않았다. 푸시 전에 PR 본문을 고친다(불리언 짝을 10으로 넘긴 줄, 변이 수 gates 48·cost 27, 셀프 리뷰 줄). 그 뒤 푸시, 보류 이유와 밀 주장의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(CodeRabbit은 다음이 첫 회차, claude-review는 둘째 회차), 회고와 일지 "다음", 워크트리에서 병합이다. 일지의 사고 절에 더한 두 줄과 인계(커밋 뒤) 절은 커밋하지 않았다. 셀프 리뷰 중의 사고로 끊긴 사용자 프로필 junction 열셋의 복구는 넘긴 세션이 사용자 승인을 기다린다. 이 세션은 되살리지 않는다. 05의 PR #371과 08의 워크트리가 같은 파일을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-42-gates-and-official-cost.md
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "사고", "봇 첫 회차 반영분의 셀프 리뷰", "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. PR #372의 claude-review 첫 회차 반영과 그 셀프 리뷰를 커밋 04db7e5c로 마쳤고 아직 푸시하지 않았다. 푸시 전에 PR 본문을 고친다(불리언 짝을 10으로 넘긴 줄, 변이 수 gates 48·cost 27, 셀프 리뷰 줄). 그 뒤 푸시, 보류 이유와 밀 주장의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(CodeRabbit은 다음이 첫 회차, claude-review는 둘째 회차), 회고와 일지 "다음", 워크트리에서 병합이다. 일지의 사고 절에 더한 두 줄과 인계(커밋 뒤) 절은 커밋하지 않았다. 셀프 리뷰 중의 사고로 끊긴 사용자 프로필 junction 열셋의 복구는 넘긴 세션이 사용자 승인을 기다린다. 이 세션은 되살리지 않는다. 05의 PR #371과 08의 워크트리가 같은 파일을 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. docs/journal/2026-10-23-45-gates-and-official-cost.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -388,4 +388,108 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 
 - PR 본문: 푸시 전에 `gh pr edit`으로 고쳤다. "왜 이렇게 했나"에 봇 첫 회차 반영의 결정(`_Git._call`, 대신 셈을 나누고 같은 누산기에 더한 것, `cut_links`의 `os.path.join`), "남긴 위험"에 10으로 넘긴 `Gate`·`SetupFailure`의 불리언 짝, 체크리스트에 셋째 셀프 리뷰(기준 d5db123e)와 04db7e5c의 pre-commit 수치, "확인 방법"에 변이 수(gates 48, cost 27. `--check`로 다시 봤다)를 더했다.
 - 커밋: f5b6a58b `docs: 셀프 리뷰 중의 사고와 인계, PR 본문 고침을 일지에 적는다 (model-rerun 07)`. pre-commit이 모두 통과했다(러너의 열: run-hooks 166.6초, web-verify 306.7초, pytest 410.0초). ruff 둘은 `.py`가 없어 `Skipped`였다.
-- origin/main 합치기: 푸시하려 하자 `hook_push_behind_main`이 origin/main(web-widget 명세의 PR #373, 8a026f3c)보다 1커밋 뒤처졌다고 막았다. 겹치는 파일이 없어 충돌 없이 합쳤고, 합친 뒤 린트 둘이 초록이었다. 이어서 `sibling_overlap`이 main의 일지 2026-10-23-40이 이 일지(옛 번호 37)보다 이름순으로 뒤라고 알려, 띄운 `run_checks`를 멈추고 `--move`로 이 일지를 2026-10-23-42로 옮겼다. 고친 인용은 변이 표 한 줄과 이 일지 안의 인계 지시문 줄이다. PR 본문의 일지 경로는 도구가 지은 본문을 지금 본문과 견줘(번호 밖의 차이 없음) `gh api`로 올렸다.
+- origin/main 합치기: 푸시하려 하자 `hook_push_behind_main`이 origin/main(web-widget 명세의 PR #373, 8a026f3c)보다 1커밋 뒤처졌다고 막았다. 겹치는 파일이 없어 충돌 없이 합쳤고, 합친 뒤 린트 둘이 초록이었다. 이어서 `sibling_overlap`이 main의 일지 2026-10-23-40이 이 일지(옛 번호 37)보다 이름순으로 뒤라고 알려, 띄운 `run_checks`를 멈추고 `--move`로 이 일지를 2026-10-23-42로 옮겼다(아래 05 병합 뒤에 45로 다시 옮겼다). 고친 인용은 변이 표 한 줄과 이 일지 안의 인계 지시문 줄이다. PR 본문의 일지 경로는 도구가 지은 본문을 지금 본문과 견줘(번호 밖의 차이 없음) `gh api`로 올렸다.
+- 커밋: 67eb5567 `docs: main 의 일지 40 뒤로 이 일지를 42로 옮긴다 (model-rerun 07)`. pre-commit이 모두 통과했다(러너의 열: run-hooks 175.6초, web-verify 422.6초, pytest 621.2초). 합친 뒤의 검증은 이 러너로 갈음했다. 이 커밋 뒤에 컨텍스트가 약 24만 토큰으로 `커밋 뒤` 계기가 왔지만, 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해(넘겨받은 경계에 다시 왔다) 넘기지 않고 이었다.
+- 푸시(d5db123e..67eb5567) 뒤 PR 코멘트 둘을 남겼다. 하나는 claude-review 첫 회차의 판정(고친 넷, 남긴 셋의 이유, 10으로 넘긴 불리언 짝)과 04db7e5c가 새로 쓴 사실 문장 넷을 밀 주장으로 든 것이고(PR 직전 층이 없어서다), 다른 하나는 `@coderabbitai review`다. 상태를 한 번 읽으니 python·web·e2e·visual·claude-review가 pending이라 `tools/wait_ci.py 372`를 백그라운드로 띄웠다.
+- CI(67eb5567): visual이 첫 시도에서 사진 하나(`molecules-alert--showcase-run-failed-light-regular`)의 6픽셀 차이로 빨갰다. 이 PR은 웹 코드를 건드리지 않아 대기열 414의 흔들림으로 보고 실패한 잡만 다시 돌렸고(`gh run rerun 39941987396 --failed`), 다시 돈 visual은 초록이었다. 나머지 잡과 CodeRabbit, claude-review도 초록이었다.
+- 봇 둘째 회차(claude-review는 둘째, CodeRabbit은 첫째, 둘 다 67eb5567): claude-review는 Critical·Major가 없어 고친 것이 없다. Minor 셋과 Nit 둘은 넘긴다. `cut_links`가 `tools/tidy_checkouts.py`에 놓인 자리(삭제 판정과 파일 시스템 정리를 함께 진다)는 `delete_path`·`long_path`도 같은 자리라 이 PR이 처음 만든 모양이 아니고, 모듈을 가르면 import하는 도구 셋과 그 시험, 변이 표 원문을 함께 옮겨야 해 "다음"에 후속으로 적는다. `rerun_gates`와 `rerun_hidden`의 둘째 사본이 지우는 길에서 갈라진 것은 11의 메모로 옮겼다(아래). `exit_code`와 `timed_out`의 짝은 10의 메모 그대로다. `_run`의 `exe is None`은 pyright가 `exe`를 좁히는 데 쓰여 둔다. `.claude/rules/tools.md`의 선례가 canary의 `_cut_links`를 가리키는 것은 회고의 대기열 451에 함께 든다. CodeRabbit의 지적 하나(`rerun_hidden`의 `_remove_checkout`이 뿌리 링크를 "안의 링크를 끊지 못해"로 알린다)는 맞지만 동작은 지우지 않아 안전하고, 그 함수는 11 메모의 바깥 층 묶음이라 같은 메모에 더해 넘긴다. 이 판정을 PR 코멘트로 남긴다.
+- 05 병합과 충돌: CI를 기다리는 동안 05의 PR #371(062e9734)이 main에 병합되어 `tools/wait_ci.py`가 "충돌"로 끝났다. origin/main을 합치며 충돌 둘을 풀었다. `.scratch/model-rerun/probes/README.md`의 hidden 행과 문단은 이 브랜치의 판에 05의 NUL 문장을 더하고 합친 뒤 변이가 26이라고 적었다. `.scratch/model-rerun/issues/05-task-selection.md`의 바깥 층 줄은 main의 판에 07의 괄호를 붙였다. `rerun_hidden_mutations.toml`은 저절로 합쳐져 26이고 `--check`가 원문을 모두 찾았다. 합치기 커밋 4caf15c2의 pre-commit이 모두 통과했다(러너의 열: run-hooks 104.6초, web-verify 297.0초, pytest 421.7초).
+- 일지 번호: main에 05의 일지 43이 들어와 `sibling_overlap --move`로 이 일지를 42에서 45로 다시 옮겼다(08 워크트리가 44를 쓴다). PR 본문은 일지 경로만 달랐다. `--move`가 위 "42로 옮겼다" 문장의 번호까지 45로 바꿔 그 문장은 손으로 되돌렸다.
+- 넘긴 항목의 자리: 05가 병합되어 05 티켓의 07 괄호에 든 항목(둘째 사본의 지우는 길, 뿌리 링크 알림)을 11의 "05에서 넘어온 메모"에 한 항목으로 옮기고, 05의 괄호 끝에 옮겼다고 적었다.
+- 회고 반영(아래 회고의 첫 후보): `tools/tidy_checkouts.py`에 `holds_home`을 더해, 지우는 두 함수가 드라이브 뿌리와 홈, 그 조상을 받으면 지우지 않는다. `cut_links`는 아무것도 끊지 않고 그 뿌리를 돌려주고, `delete_path`는 `PermissionError`를 낸다. 링크, 짧은 이름, `..`, 상대 경로는 `os.path.realpath`로 풀어 견준다. 지우는 함수를 부르는 시험 둘은 홈 환경 변수(`USERPROFILE`, `HOME`)를 `tmp_path` 아래로 바꾸고, 판정 시험 하나는 홈을 인자로 넘기며 드라이브 뿌리는 판정 함수에만 넣어, 지우는 함수가 진짜 홈이나 드라이브 뿌리에 닿지 않는다(아래 셀프 리뷰 명세 축의 Nit으로 "시험 셋은 … 바꾸고"를 고쳤다). 구현 전에 셋이 빨간 것을 봤다. 변이 다섯(`tidy_checkouts_mutations.toml` 167~171)은 임시 표지로 한 번 돌려 실패 출력을 본 뒤 고른 단언에서만 나오는 문구로 표지를 달았고, 다시 돌려 모두 기대대로였다(`--check` 171 모두 원문이 한 번씩 있다). 첫 두 실행에서 168의 기준선만 103초·55초가 걸렸는데, 그 시험을 홀로 돌리면 1초 안이고 변이 168만 돌린 기준선도 0.69초였다. 앞선 pre-commit이 pytest 임시 폴더에 남긴 큰 폴더를 다음 세션이 치우는 시간으로 어림한다(재지 않았다).
+
+## 회고
+
+후보 열넷, 승인 여섯(이 세션에서 반영 하나, 새 행 둘, 회차를 더한 행 셋), 기각 여덟, 넘김 0. 근거는 이 일지의 인계·셀프 리뷰·인계(PR 연 뒤)·사고·인계(커밋 뒤) 절과 이 세션이다.
+
+승인.
+- 셀프 리뷰 브리프가 지우는 함수(`cut_links`)를 드라이브 뿌리로 부르라고 시켜, 표준 축 서브에이전트가 사용자 프로필의 junction 열셋을 끊었다(사고 절). 사건이 있고, 다른 세션이나 체크아웃 밖의 상태(사용자 프로필)를 망가뜨린 손상이라 더하는 것이지만 첫 사건에서 반영한다. 층은 지우는 함수 자체의 가드로 골랐다. 인계(커밋 뒤) 절이 든 다른 두 길 가운데 `code-review`의 주장 검증에 조건을 다는 것은 지침이라 가드보다 낮은 층이고, 서브에이전트의 명령을 막는 훅은 Bash에 보이는 것이 `uv run python <스크립트>`뿐이라 스크립트 파일을 열어 파이썬을 풀어야 하고(`hook_bash_commit_msg`가 `-F` 파일을 읽는 꼴), 경로가 계산되는 호출은 그렇게 풀어도 가르기 어렵다(셀프 리뷰 명세 축의 Nit으로 "그 안의 호출을 볼 수 없다"를 고쳤다). PR 하나로 되돌릴 수 있다. 이 세션에서 반영했다(위 "회고 반영" 줄, 티켓 07의 수용 기준). 못 보는 것: 홈 아래의 폴더와 홈 밖의 자리, 이 가드를 쓰지 않는 다른 지우는 코드(canary의 사본은 아래 451). 그 밖은 `holds_home`의 독스트링이 원천이다.
+- `tools/canary.py`의 `_cut_links` 사본에 07이 `cut_links`에 더한 고침 셋(뿌리 링크, 긴 경로, 홈 가드)이 없다. 고침이라 사건 하나로 반영하는 종류지만, canary는 이 PR의 수용 기준 밖이고 그 시험과 변이를 함께 맞춰야 해 대기열 451(1회차)에 둔다. PR #372 claude-review 둘째 회차의 Nit(`.claude/rules/tools.md`의 선례 문장)도 같은 행에 든다.
+- `tools/rerun_cost.py`가 JSONL 기록을 `splitlines()`로 갈라 U+2028이 든 응답이 셈에서 빠지는 것을 셀프 리뷰와 반박 검증이 놓치고 PR 직전 `bug-perf-review`가 잡았다. 같은 꼴은 `tools/`의 파이썬에서 AST로 찾을 수 있어 검사로 승인하고, 더하는 것의 첫 회차라 대기열 452(1회차)에 둔다.
+- `cut_links`가 MAX_PATH에 걸리는 깊은 폴더를 읽지 못하는 길도 PR 직전 `bug-perf-review`에서야 나왔다. 지우는 도구의 반박 시험이 판정을 깨는 입력을 넣지 않은 같은 꼴이라 열린 대기열 442에 회차를 더했다(2회차, 361의 4회차).
+- PR 직전 리뷰의 보고를 받은 턴에 일지로 옮기지 않아 압축 뒤 트랜스크립트를 뒤졌다(인계(PR 연 뒤) 절). `code-review` 6단계 끝을 어긴 회차라 그 자리를 처방한 열린 대기열 250에 회차를 더했다(2회차).
+- visual이 웹 코드를 건드리지 않은 이 PR에서 사진 하나의 6픽셀 차이로 빨갰고 다시 돌리자 초록이었다. 열린 대기열 414에 회차를 더했다(3회차. chore 배치 조건에 든다).
+
+기각.
+- 변이 표지를 실패 출력을 보기 전에 짐작으로 달았다(열여섯이 어긋났고, 짝 변이 셋에서 다시 났다). `tools/mutate.py`가 그 자리에서 어긋남과 빠진 표지를 알렸다.
+- `git worktree remove --force`가 관리 폴더 안의 junction도 따라간다. 커밋 전 반박 검증이 그 자리에서 재현해 막았다.
+- 겹친 방어(`cut_links`의 뿌리 확인과 04의 지우기 직전 확인)가 옛 변이 하나를 초록으로 만들었다. `tools/mutate.py`가 어긋남으로 알렸다.
+- 새 시험이 옛 변이의 `-k` 낱말에 걸려 표지가 어긋났다. `tools/mutate.py`가 알렸고, 원인은 어림이다.
+- 링크로 바뀐 자리 시험의 첫 판이 윈도에서 `WinError 32`로 실패했다. 막을 실수가 아니라 환경의 사실이고 티켓 구현 메모에 적었다.
+- 셋째 세션의 리팩터가 부동소수점 더하기의 차례를 바꿨다. 셀프 리뷰 명세 축이 무작위 비교로 잡아 리뷰가 제 몫을 했고, 검사로 옮길 꼴도 새 판단 기준도 아니다.
+- 일지 번호가 main과 형제보다 앞서 두 번 옮겼다. `tools/sibling_overlap.py`와 `hook_push_behind_main`이 그 자리에서 알렸다.
+- `--move`가 지난 일을 적은 문장("42로 옮겼다")의 번호까지 바꿨다. 기록 문장 속의 번호와 살아 있는 인용은 같은 꼴이라 도구가 가를 길이 없고, 손으로 한 줄 되돌리는 값이 작다.
+
+## 인계(셀프 리뷰 직전, 둘째)
+
+- 이 세션의 제목은 `feature/07-gates-and-official-cost`였다. 회고 반영분의 셀프 리뷰(`/code-review HEAD`)를 부르자 컨텍스트가 약 26만 토큰으로 `셀프 리뷰 직전` 계기가 왔다. 이 세션의 지시문 "이어받을 상태"는 `인계: 커밋 뒤`로 시작해 경계가 다르고, `get_session`의 `self`에 `parentSessionId`가 없으며, 이 세션의 `인계 못함` 줄도 없어 넘긴다. 셀프 리뷰의 단계는 밟지 않았다.
+- 커밋하지 않은 변경(합치기 커밋 4caf15c2 뒤): `tools/tidy_checkouts.py`, `tests/tools/test_tidy_checkouts.py`, `.scratch/harness/probes/tidy_checkouts_mutations.toml`(위 "회고 반영" 줄), `.scratch/model-rerun/issues/07-gates-and-official-cost.md`(회고 반영 수용 기준), `.scratch/model-rerun/issues/11-pilot-and-prereg.md`(07이 넘긴 항목), `.scratch/model-rerun/issues/05-task-selection.md`(옮겼다는 괄호), `.scratch/retro-queue.md`(451·452 새 행, 414·442·250 회차), 이 일지(`--move`로 42에서 45로 이름이 바뀌었다. 옛 이름의 지움까지 `git add -A`로 스테이지한다). `.scratch/model-rerun/probes/rerun_gates_mutations.toml`과 `tools/tidy_checkouts.py`의 일지 인용도 `--move`가 45로 고쳤다.
+- 회고는 이 세션이 마쳤다(위 `## 회고`). 다시 돌지 않는다. 셀프 리뷰가 회고 반영을 바꾸면 회고 절과 대기열 행만 맞춘다. 대기열의 회차는 이미 더했다(414는 3회차, 442는 2회차(361의 4회차), 250은 2회차).
+- 이 세션이 번복하거나 고친 것: `--move`가 이 일지의 "42로 옮겼다" 문장까지 45로 바꾼 것을 손으로 되돌렸다.
+- 남은 단계(새 세션).
+  1. 셀프 리뷰 `/code-review HEAD`(기준 4caf15c2, 커밋하지 않은 위 변경). 명세는 티켓 07의 회고 반영 줄과 위 회고 절의 첫 후보다. 두 축 브리프에 "지우는 함수(`cut_links`, `delete_path`, `shutil.rmtree` 등)는 서브에이전트가 스스로 만든 임시 폴더 안에서만 부르고, 홈이나 드라이브 뿌리를 넣어 보는 것은 판정 함수 `holds_home`에만 한다. 시험을 돌릴 때 홈 환경 변수는 시험이 `tmp_path` 아래로 바꾼다"를 넣는다(위 사고 절).
+  2. 반영 뒤 일지의 "다음"을 쓴다. 뒤로 넘긴 일은 넷이다. 10의 메모(`Gate`·`SetupFailure`의 불리언 짝), 11의 "05에서 넘어온 메모"(둘째 사본의 지우는 길과 뿌리 링크 알림), `cut_links`·`delete_path`·`long_path`를 파일 시스템 정리 모듈로 가르는 일(PR #372 claude-review 둘째 회차 Minor, 후속), 대기열 451·452다.
+  3. 커밋 전에 PR 본문을 고친다(`next-session` 순서 1의 1). 일지 경로를 `docs/journal/2026-10-23-45-gates-and-official-cost.md`로 바꾸고, 회고 반영(지우는 두 함수의 홈 가드)과 05 병합 뒤의 충돌 풀기를 "왜 이렇게 했나"·"변경된 영역"에 더한다.
+  4. 커밋, 푸시, 위 "봇 둘째 회차" 줄의 판정을 PR 코멘트로 남기기, `@coderabbitai review`, `tools/wait_ci.py 372`(백그라운드). 다음 회차는 claude-review 셋째, CodeRabbit 둘째라 둘 다 Critical·Major만 고친다.
+  5. 워크트리에서 병합하는 길과 `next-session`.
+- 03 워크트리(`03-widget-app-skeleton`)도 `tools/tidy_checkouts.py`와 그 시험을 고치고 있어, 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다(`sibling_overlap`의 함께 고친 파일).
+- 인계 줄로 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/07-gates-and-official-cost.md. 결과 커밋을 새로 꺼낸 작업 트리에서 게이트 셋과 원래 PR의 숨은 시험을 돌고, 세션 기록으로 공식 단가의 비용을 셈한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
+브랜치: feature/07-gates-and-official-cost
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "이어 받은 세션(다섯째)", "회고", "인계(셀프 리뷰 직전, 둘째)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review HEAD)부터 한다. 변경은 회고 반영(tools/tidy_checkouts.py의 지우는 두 함수가 드라이브 뿌리와 홈, 그 조상을 거부하는 홈 가드와 그 시험, 변이 다섯)과 티켓 05·07·11, 대기열, 일지다. 회고는 마쳤으니 다시 돌지 않는다. 셀프 리뷰의 서브에이전트는 지우는 함수를 자기가 만든 임시 폴더 안에서만 부르게 브리프에 적는다. 그 뒤 일지 "다음", PR 본문 고치기(일지 경로 45, 회고 반영), 커밋·푸시, 봇 둘째 회차 판정의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(claude-review 셋째, CodeRabbit 둘째 회차), 워크트리에서 병합이다. 이 일지 파일은 --move로 이름이 바뀌어 옛 이름의 지움까지 스테이지한다. docs/journal/2026-10-23-45-gates-and-official-cost.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/07-gates-and-official-cost (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(CI 대기와 합치기 커밋은 끝났다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T11:30:21Z
+
+## 이어 받은 세션(여섯째)
+
+인계(셀프 리뷰 직전, 둘째) 절의 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 사용자 프롬프트는 그 지시문 그대로였다. 들어왔을 때 HEAD는 합치기 커밋 4caf15c2, 원격 브랜치는 67eb5567이었고, origin/main은 합친 뒤로 움직이지 않았다(`git log HEAD..origin/main`이 비었다). 커밋하지 않은 변경은 인계 절이 적은 대로였다.
+
+## 회고 반영분의 셀프 리뷰
+
+범위: 기준 4caf15c2, 바뀐 파일 9(일지의 42→45 이름 바꾸기를 스테이지해 diff에 넣었다), 커밋 0, 미추적 0. 표준 축은 sonnet·high, 명세 축은 본 세션 모델이다. 명세는 티켓 07의 회고 반영 줄과 회고 절의 첫 승인 항목이고, 요구는 그 반영(R1), 05·11 메모 옮기기(R2), 대기열 행과 회차(R3), 일지 번호 옮김(R4)이다. 두 브리프의 머리에 안전 조건을 두었다. 지우는 함수는 서브에이전트가 스스로 만든 임시 폴더 안에서만 부르고, 홈이나 드라이브 뿌리는 판정 함수 `holds_home`에만 넣으며, 가짜 홈을 쓰려면 부르기 전에 `USERPROFILE`·`HOME`을 임시 폴더로 바꾸고 `expanduser("~")`를 `assert`로 확인한다. 표준 축은 그대로 따랐다고 보고했다.
+
+표준 축이 낸 것과 판정. Critical·Major는 없다.
+- Minor, 고친다: `delete_path` 독스트링의 "드라이브 뿌리나 홈, 그 조상이면 지우지 않고 PermissionError"는 링크 갈래가 홈 가드보다 먼저 돌아 틀린다. 임시 폴더에서 가짜 홈을 junction으로 만들거나 홈의 조상을 가리키는 junction을 넣으면 오류 없이 junction만 지워졌다. 링크만 지우는 것은 맞는 동작이라 순서는 두고 문장을 좁힌다.
+- Minor, 고친다: `holds_home`의 "못 보는 것"이 닫힌 목록으로 모자란다. 홈 아래의 폴더(시험이 그대로 끊는다고 고정한다), UNC 관리 공유 별칭(`\localhost\C$\Users\User`가 거짓), 홈을 찾지 못할 때(`USERPROFILE`이 빈 값이면 `expanduser("~")`가 `''`를 주어 홈 대신 작업 폴더와 그 조상을 막는다)가 빠졌다. 이 세션도 판정 함수에만 넣어 셋을 다시 봤다. 반례를 덧붙이지 않고 거르는 성질(가리키는 자리로 풀어 드라이브 뿌리나 홈, 그 조상이 되지 않는 자리)을 적고 목록을 그 예로 둔다(`code-review` 6단계 1).
+- Minor, 고친다: "짧은 이름"을 고정하는 시험이 없다(`.claude/rules/tools.md`의 못 보는 것 항목은 새로 적은 항목을 시험 하나로 고정하라고 한다). 서브에이전트가 임시 폴더의 짧은 이름으로 홈과 조상 모두 참인 것을 봤다.
+- Minor, 고친다: 티켓 11의 새 메모 "`rerun_gates`는 `core.longpaths`를 켜고 … `rerun_hidden`에는 셋 다 없다"는 거짓이다. `tools/rerun_hidden.py`의 `worktree add`·`remove`도 `core.longpaths=true`를 주고, 뿌리가 링크면 `cut_links`가 뿌리를 돌려줘 걷지 않는 것도 같다. 갈린 것은 `rerun_gates`가 클론의 `.git`과 `.git/worktrees`가 링크면 걷지 않고 그 관리 폴더 안의 링크를 끊는 것, 작업 트리 자리가 링크면 게이트를 띄우지 않는 것(`_not_started`)이다. 이 세션이 두 파일을 grep해 봤다.
+- Nit, 고친다: `_가짜_홈` 독스트링의 "진짜 홈과 드라이브 뿌리를 부르는 시험은 두지 않는다"는 판정 시험이 드라이브 뿌리를 `holds_home`에 넣으므로 "지우는 함수에"를 넣어야 맞다. 시험 이름 `…_OSError_다`는 코드와 독스트링의 `PermissionError`와 다르다.
+- Nit, 남긴다: `holds_home(x, os.path.expanduser("~"))`가 두 자리에 있다(Duplicated Code). 두 자리뿐이고, 홈을 인자로 받아 두면 판정 시험이 환경 변수를 바꾸지 않고 홈을 바로 넘긴다(같은 까닭으로 `home` 인자의 Speculative Generality도 남긴다).
+- Nit, 남긴다: `holds_home`이라는 이름이 다른 드라이브의 뿌리도 막는다는 것을 말하지 않는다(Mysterious Name). 독스트링 첫 문장이 드라이브 뿌리를 먼저 적고, 이름을 바꾸면 변이 표 원문과 시험 다섯을 함께 옮겨야 한다.
+- 주장 대조: `holds_home`의 풀이(링크, `..`, 상대 경로, 대소문자, `\?\`, 슬래시, 끝의 점·공백, UNC 뿌리), 다른 드라이브 뿌리 시험의 주석, `_가짜_홈`의 `expanduser` 서술, 회고 절의 수(14 = 승인 6 + 기각 8)와 대기열 행, 451·452의 괄호, 옛 일지 이름의 잔존 0, `--check` 171이 맞았다. 452에는 `tools/canary.py`의 `_verdict`가 `claude -p` 출력을 `result.stdout.splitlines()`로 가르는 같은 꼴이 하나 더 있다(코드를 읽어 봤고 U+2028로 재현하지 않았다). 그 행의 근거에 더한다. "구현 전에 셋이 빨갰다"와 168 기준선 시간은 손으로 다시 재지 못했다.
+
+명세 축이 낸 것과 판정. 빠진 요구와 요청 밖 동작은 없고, 안전 조건은 그대로 따랐다고 보고했다(`scratchpad\spec2\work`의 `TemporaryDirectory`).
+- Minor, 고친다(표준 축 첫 Minor와 같다): `delete_path`의 링크 갈래가 홈 가드보다 먼저 돈다. 홈 자신이 junction, 홈의 조상이 junction, 홈의 조상을 가리키는 별명 링크(`C:\Documents and Settings` 꼴) 셋을 임시 폴더에서 재현했고, 셋 다 링크만 지워지고 가리키는 폴더의 내용은 남았다. 고칠 길로 판정을 링크 갈래 앞으로 옮기는 것과 독스트링을 좁히는 것을 들었다. 좁히는 쪽을 골랐다. 링크를 지워도 그 아래 파일은 지워지지 않고, `cut_links`도 폴더 안의 링크는 가리키는 곳을 보지 않고 끊어(가드는 넘겨받은 뿌리만 본다) 판정을 앞으로 옮기면 두 함수의 링크 다루기가 갈린다. 이 반영의 첫 판은 "옮기면 `tools/rerun_round.py`가 링크를 남긴다"를 이유로 적었는데, 그 `_remove`는 `delete_path` 전에 `cut_links`로 폴더 안의 링크를 다 끊어 틀린 이유였다(코드를 열어 보고 고쳤다). 진짜 `C:\Documents and Settings` 같은 시스템 junction은 관리자 권한이 없으면 지워지지 않는다(사고 절의 넷째 세션은 관리자가 아니었고 그 링크가 남았다).
+- Minor, 고친다(표준 축 둘째 Minor와 같다): 못 보는 것에 홈 아래의 폴더가 빠졌다. 가짜 홈에서 `cut_links(<홈>\Documents)`가 `My Music` junction을 끊었다.
+- Minor, 고친다(표준 축 넷째 Minor와 같다): 티켓 11의 새 메모 "`rerun_hidden`에는 셋 다 없다"가 틀린다. 원래 문장은 PR #372 claude-review 둘째 회차의 Minor("`rerun_gates`는 `core.longpaths`, 관리 폴더 링크 끊기, 자리 링크 거부를 더했는데 `rerun_hidden`에는 없다")였고, 이 세션이 대 보지 않고 옮겼다. 같은 줄의 "모으라고 했다"도 원문("한 자리로 모으는 일을 티켓으로 못박아 두는 것이 좋다")과 다르다(Nit, 고친다).
+- Nit, 고친다(표준 축과 같다): 시험이 `pytest.raises(OSError, …)`로 봐서 `OSError`를 내게 바꾼 변이가 초록으로 남는다.
+- Nit, 고친다: 일지 "이어 받은 세션(다섯째)"의 "시험 셋은 홈 환경 변수를 … 바꾸고"는 둘뿐이다. 판정 시험은 홈을 인자로 넘긴다.
+- Nit, 고친다: `cut_links` 독스트링 끝의 "같은 길의 사본(`_cut_links`)"은 이 diff 전의 문장이지만, 홈 가드로 두 판이 더 갈라져 사실에서 멀어졌다.
+- Nit, 고친다: 회고 절의 "서브에이전트의 명령을 막는 훅은 스크래치 스크립트 안의 호출을 볼 수 없다"는 지나치다. 훅은 스크립트 경로를 열어 읽을 수 있다(`hook_bash_commit_msg`가 `-F` 파일을 읽는 꼴). 층을 고른 결정은 그대로 선다.
+- 주장 대조: `holds_home`의 풀이(짧은 이름, `..`, 대문자, 끝 구분자, `\?\`)와 `cut_links` 독스트링, `_가짜_홈`의 환경 변수 문장, 같은 드라이브 뿌리 주석, 변이 수와 `--check` 171, 대기열 451·452, R2(11의 Blocked by는 03·05·10이고 10이 07을 품는다), R3(14 = 6 + 8, 대기열 행과 회차, 414 3회차의 실행 `39941987396`을 gh로 봤다), R4(살아 있는 문서의 `2026-10-23-42` 인용 0)가 맞았다. "구현 전에 셋이 빨간 것을 봤다"는 저장소에 근거가 없어 대 보지 못했다.
+
+반영.
+- 고친 것: 위 "고친다"를 모두 고쳤다. `holds_home`의 못 보는 것을 거르는 성질(`realpath`로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다)과 그 예(홈 아래의 폴더, 홈 밖의 다른 자리, UNC 관리 공유 별칭, 빈 `USERPROFILE`)로 다시 썼고, `delete_path` 독스트링을 링크가 아닌 자리로 좁히며 링크는 그 링크만 지운다고 적었다. 새로 적은 못 보는 것과 짧은 이름은 `.claude/rules/tools.md`의 못 보는 것 항목대로 시험으로 고정했다. 판정 시험에 짧은 이름(`GetShortPathNameW`, 윈도 갈래)을 더했고, 새 시험 둘(`test_못_보는_것_홈_판정은_다른_꼴의_같은_자리를_지나가고_빈_홈이면_작업_폴더를_막는다`, `test_못_보는_것_휴지통_지우기는_홈을_가리키는_링크와_링크인_홈을_링크만_지운다`)을 두었다. 시험 이름과 `pytest.raises`를 `PermissionError`로 바꿨다. 새 시험은 처음부터 초록이라 변이 넷(`tidy_checkouts_mutations.toml` 172~175: 링크보다 홈 가드를 먼저 본다, 빈 홈이면 모든 자리를 막는다, UNC 관리 공유를 드라이브 경로로 푼다, 짧은 이름을 풀지 않는다)을 임시 표지로 한 번 돌려 고른 단언에서 빨간 것을 보고, 그 단언에서만 나오는 문구로 표지를 달았다. 반영으로 새로 쓴 사실 문장은 아래다. PR 직전 층(`bug-perf-review`)을 이 반영에는 돌리지 않으니, PR의 봇 회차가 겨누게 PR 코멘트에 밀 주장으로 적는다.
+  - `holds_home` 못 보는 것: "`realpath` 로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다. 홈 아래의 폴더(그 안의 링크는 끊는다), 홈 밖의 다른 자리(이 저장소의 주 체크아웃, 홈이 없는 드라이브의 폴더), 같은 자리를 다른 꼴로 가리키는 경로(UNC 관리 공유 `\localhost\C$\Users\<이름>`)가 그 예다. 지우는 두 함수는 홈을 `os.path.expanduser("~")` 로 얻어, 그 값이 홈이 아니면 그 값의 자리를 대신 견준다. 윈도에서 `USERPROFILE` 이 빈 값이면 그 값이 빈 문자열이라 작업 폴더와 그 조상을 막고 홈은 막지 않는다."
+  - `delete_path`: "링크가 아닌 드라이브 뿌리나 홈, 그 조상(`holds_home`)이면 지우지 않고 PermissionError 다. 링크는 홈이나 그 조상을 가리켜도, 홈 자체가 링크여도 그 링크만 지운다."
+- 반영 중에 더 찾은 것: 반영 뒤 `tools/tidy_checkouts.py`를 겨누는 표 셋을 `--check`로 보니 `rerun_gates_mutations.toml`의 18(링크 끊기가 뿌리 링크를 따라간다)이 원문 0번이었다. 다섯째 세션의 회고 반영이 `cut_links`의 뿌리 링크 조건을 여러 줄로 바꿨는데 그 세션은 `tidy_checkouts` 표만 `--check`로 봤고, 셀프 리뷰 두 축도 그 표만 봤다. 홈 가드는 남기고 링크 조건만 빼는 원문으로 고쳐 18을 다시 돌렸고 고른 표지까지 기대대로 빨갰다. 프로브 README 둘(`.scratch/harness/probes/README.md`의 `tidy_checkouts` 행, `.scratch/model-rerun/probes/README.md`의 gates 문단)에 이 결과를 적었다. pre-commit의 `mutate.py --staged`가 이 커밋이 고친 파일을 가리키는 변이의 원문을 보므로, 고치지 않았어도 커밋에서 막혔을 것이다(그 독스트링을 읽었다. 이번에는 돌려 보지 않았다).
+- 남긴 것과 이유: 표준 축의 Nit 둘(두 자리의 같은 호출과 `home` 인자, `holds_home`의 이름)은 위 판정대로 남긴다. 둘 다 이 PR의 범위 안의 이름과 인자 모양이라 다른 티켓으로 넘기지 않는다.
+- 다시 돌린 명령과 결과: `uv run ruff check .`과 `uv run ruff format --check .`이 0, 바뀐 파이썬 파일 둘의 `uv run pyright`가 0, `test_tidy_checkouts` 204 통과(`-n 4`, 27.4초). 변이는 홈 가드의 아홉(`tidy_checkouts_mutations.toml` 167~175)이 모두 기대대로였고 `rerun_gates_mutations.toml`의 18이 기대대로였다. `--check`는 `tidy_checkouts` 175, `tidy_settings_equivalent` 6, gates 48, hidden 26, round 57, cost 27 모두 원문이 한 번씩 있었다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고, 그 결과는 커밋 뒤에 적는다.
+
+## 다음
+
+- 07이 병합돼도 새로 풀리는 티켓은 없다. 10은 03·07·09를 기다리고, 09는 08을 기다린다(08은 형제 워크트리가 돈다).
+- 이 PR이 뒤로 넘긴 일은 넷이다. 10의 "07에서 넘어온 메모"의 `Gate`·`SetupFailure` 불리언 짝(실제 회차 기록을 처음 남기는 11의 파일럿 전에 본다), 11의 "05에서 넘어온 메모"에 옮긴 07 항목(`rerun_gates`와 `rerun_hidden`의 둘째 사본의 지우는 길이 갈라진 것과 뿌리 링크 알림 문구), `tools/tidy_checkouts.py`의 `cut_links`·`delete_path`·`long_path`·`holds_home`을 파일 시스템 정리 모듈로 가르는 일(PR #372 claude-review 둘째 회차의 Minor. import하는 도구 셋과 그 시험, 변이 표 원문을 함께 옮겨야 해 이 PR에서는 두었다. 받는 티켓은 아직 없다), 대기열 451·452다.
+- 03 워크트리(`03-widget-app-skeleton`)도 `tools/tidy_checkouts.py`와 그 시험을 고친다. 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다.
+- 회고 뒤에 난 후보 하나: PR 봇 코멘트의 사실 문장("`rerun_hidden`에는 없다")을 대 보지 않고 티켓 11의 메모로 옮겼고, 회고 반영분의 셀프 리뷰 두 축이 잡았다. 이 단계의 회고는 마쳤으니 다음 회고가 판정한다.

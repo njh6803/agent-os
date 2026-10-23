@@ -43,6 +43,7 @@ from tools.tidy_checkouts import (
     dos_path,
     hold_for_strangers,
     holders_in,
+    holds_home,
     is_within,
     judge,
     judge_branch,
@@ -1104,6 +1105,132 @@ def test_링크_끊기는_뿌리가_링크면_따라가지_않고_그_뿌리를_
     assert cut_links(root) == [str(root)]
     assert os.path.islink(outside / "inner") or os.path.isjunction(outside / "inner")
     assert os.path.islink(root) or os.path.isjunction(root)
+
+
+def _가짜_홈(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`tmp_path/home/user`를 홈으로 삼는다. 윈도의 `expanduser`는 `USERPROFILE`을, 나머지는
+    `HOME`을 읽는다. 진짜 홈과 드라이브 뿌리를 지우는 함수에 넣는 시험은 두지 않는다(티켓 07의
+    셀프 리뷰 서브에이전트가 `cut_links("C:\\")`를 불러 사용자 프로필의 junction 열셋을 끊었다)."""
+    home = tmp_path / "home" / "user"
+    home.mkdir(parents=True)
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("HOME", str(home))
+    assert os.path.expanduser("~") == str(home)
+    return home
+
+
+def test_링크_끊기는_홈이나_그_조상이면_아무것도_끊지_않고_그_뿌리를_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    home = _가짜_홈(tmp_path, monkeypatch)
+    _link(home / "Application Data", outside)
+
+    assert cut_links(home) == [str(home)]
+    assert cut_links(home.parent) == [str(home.parent)]
+    assert os.path.isjunction(home / "Application Data") or os.path.islink(
+        home / "Application Data"
+    )
+    # 홈 아래의 폴더는 그대로 끊는다
+    (home / "sub").mkdir()
+    _link(home / "sub" / "link", outside)
+    assert cut_links(home / "sub") == []
+    assert not os.path.lexists(home / "sub" / "link")
+
+
+def test_홈을_품은_자리는_드라이브_뿌리와_홈과_그_조상이다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """지우는 함수를 부르지 않고 판정만 본다. 드라이브 뿌리는 이 판정에만 넣는다."""
+    home = tmp_path / "home" / "user"
+    (home / "AppData").mkdir(parents=True)
+    other = tmp_path / "other"
+    other.mkdir()
+    assert holds_home(tmp_path.anchor, home)
+    assert holds_home(home, home)
+    assert holds_home(home.parent, home)
+    assert holds_home(str(home) + os.sep, home)
+    assert holds_home(home / "AppData" / "..", home)
+    assert not holds_home(home / "AppData", home)
+    assert not holds_home(other, home)
+    assert not holds_home(tmp_path / "home2", home)
+    # 상대 경로와 링크 별명도 가리키는 자리로 본다
+    monkeypatch.chdir(home.parent)
+    assert holds_home("user", home)
+    assert holds_home(".", home)
+    _link(tmp_path / "alias", home.parent)
+    assert holds_home(tmp_path / "alias" / "user", home)
+    if sys.platform == "win32":
+        assert holds_home(str(home).upper(), home)
+        # 짧은 이름(8.3)도 가리키는 자리로 본다. 이 PC의 임시 폴더 볼륨은 짧은 이름을 만든다
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.GetShortPathNameW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_ulong]
+        kernel.GetShortPathNameW.restype = ctypes.c_ulong
+        buffer = ctypes.create_unicode_buffer(32768)
+        if not kernel.GetShortPathNameW(str(tmp_path), buffer, len(buffer)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        assert buffer.value != str(tmp_path), "임시 폴더에 짧은 이름이 없어 이 갈래를 재지 못한다"
+        assert holds_home(buffer.value, home)
+        assert holds_home(os.path.join(buffer.value, "home", "user"), home)
+        # 홈이 없는 드라이브의 뿌리도 막는다. 같은 드라이브의 뿌리는 홈의 조상이라 이 갈래를
+        # 가르지 못한다
+        other_drive = "Y:\\" if tmp_path.anchor.upper().startswith("Z") else "Z:\\"
+        assert holds_home(other_drive, home)
+
+
+def test_못_보는_것_홈_판정은_다른_꼴의_같은_자리를_지나가고_빈_홈이면_작업_폴더를_막는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`holds_home` 독스트링의 못 보는 것. 판정 함수만 부른다."""
+    home = tmp_path / "home" / "user"
+    (home / "AppData").mkdir(parents=True)
+    work = tmp_path / "work"
+    work.mkdir()
+    assert not holds_home(home / "AppData", home)
+    if sys.platform == "win32":
+        unc = f"\\\\localhost\\{home.drive[0]}$" + str(home)[len(home.drive) :]
+        assert not holds_home(unc, home)
+        monkeypatch.setenv("USERPROFILE", "")
+        monkeypatch.chdir(work)
+        seen = os.path.expanduser("~")
+        assert seen == ""
+        assert holds_home(work, seen)
+        assert holds_home(tmp_path, seen)
+        assert not holds_home(home, seen)
+
+
+def test_휴지통_지우기는_홈이나_그_조상이면_지우지_않고_PermissionError_다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = _가짜_홈(tmp_path, monkeypatch)
+    (home / "keep.txt").write_text("남는다", encoding="utf-8")
+    for target in (home, home.parent):
+        with pytest.raises(PermissionError, match="홈"):
+            delete_path(target)
+    assert (home / "keep.txt").read_text(encoding="utf-8") == "남는다"
+
+
+def test_못_보는_것_휴지통_지우기는_홈을_가리키는_링크와_링크인_홈을_링크만_지운다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`delete_path` 독스트링의 끝 문장. 링크 갈래가 홈 가드보다 먼저 돈다."""
+    real = tmp_path / "real" / "user"
+    real.mkdir(parents=True)
+    (real / "keep.txt").write_text("남는다", encoding="utf-8")
+    home = tmp_path / "home"
+    _link(home, real)
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("HOME", str(home))
+    assert os.path.expanduser("~") == str(home)
+    alias = tmp_path / "alias"
+    _link(alias, real.parent)
+
+    delete_path(alias)
+    delete_path(home)
+    assert not os.path.lexists(alias)
+    assert not os.path.lexists(home)
+    assert (real / "keep.txt").read_text(encoding="utf-8") == "남는다"
 
 
 def test_휴지통_지우기는_읽기_전용_파일도_지운다(tmp_path: Path) -> None:

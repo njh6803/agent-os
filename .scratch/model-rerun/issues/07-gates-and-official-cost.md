@@ -37,6 +37,7 @@
 - [x] **원칙 III를 지킨다**
 - [x] 검증 명령이 모두 초록이다
 - [x] **기능을 닫지 않는다**
+- [x] 회고 반영: `tools/tidy_checkouts.py`의 지우는 두 함수(`cut_links`, `delete_path`)가 드라이브 뿌리와 홈, 그 조상을 받으면 지우지 않는다(`holds_home`. 셀프 리뷰 서브에이전트가 `cut_links("C:\\")`를 불러 사용자 프로필의 junction 열셋을 끊은 사고), 일지 2026-10-23-45-gates-and-official-cost.md
 
 ### 01에서 넘어온 메모
 
