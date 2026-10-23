@@ -383,6 +383,48 @@ def test_마감에_닿았을_때_이미_끝난_자식은_끈_호출이_아니다
     assert got.exit_code == 0
 
 
+def test_기록_파일을_열지_못하면_띄운_자식을_끄고_예외를_올린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    place = _round(tmp_path)
+    config = tmp_path / "설정"
+    fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
+    started: list[subprocess.Popen[bytes]] = []
+
+    class Recording(subprocess.Popen[bytes]):
+        def __init__(
+            self,
+            args: list[str],
+            *,
+            cwd: str,
+            env: dict[str, str],
+            stdin: int,
+            stdout: int,
+            stderr: int,
+        ) -> None:
+            super().__init__(args, cwd=cwd, env=env, stdin=stdin, stdout=stdout, stderr=stderr)
+            started.append(self)
+
+    monkeypatch.setattr(subprocess, "Popen", Recording)
+    try:
+        with pytest.raises(FileNotFoundError):
+            drive(
+                session_command(fake.claude(), ARM, "s-1", 1.0),
+                cwd=str(place.clone),
+                env=_env(place, config),
+                message="메시지",
+                stream_file=place.stream / "없는-폴더" / "01-s-1.jsonl",
+                timeout=600.0,
+            )
+        assert len(started) == 1
+        assert started[0].poll() is not None  # 가짜는 600초를 멈추려 했다
+    finally:
+        for process in started:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=60)
+
+
 def test_0_이_아닌_종료_코드는_그대로_호출의_칸에_든다(tmp_path: Path) -> None:
     place = _round(tmp_path)
     config = tmp_path / "설정"
@@ -502,6 +544,22 @@ def test_세션_id_로_찾은_기록_파일에서_synthetic_을_뺀_모델과_�
 
     assert got_main == (LineCount(model="claude-opus-5-5", effort="xhigh", lines=3),)
     assert got_side == (LineCount(model="claude-sonnet-5-5", effort="high", lines=2),)
+
+
+def test_글_안의_U2028_은_기록_줄을_가르지_않는다(tmp_path: Path) -> None:
+    """Node 의 `JSON.stringify` 는 U+2028·U+2029 를 이스케이프하지 않는다. 기록은 `\\n` 으로만
+    가른다."""
+    config = tmp_path / "설정"
+    sid = "44444444-2222-4333-8444-555555555555"
+    path = config / "projects" / "클론" / f"{sid}.jsonl"
+    path.parent.mkdir(parents=True)
+    text = "앞" + chr(0x2028) + "가운데" + chr(0x2029) + "뒤" + chr(0x85) + "끝"
+    line = fake.transcript_line("claude-opus-5-5", "xhigh", text)
+    path.write_text(json.dumps(line, ensure_ascii=False) + "\n", "utf-8")
+
+    got_main, _ = transcript_counts(config, sid)
+
+    assert got_main == (LineCount(model="claude-opus-5-5", effort="xhigh", lines=1),)
 
 
 def test_노력이_없는_보통_줄은_노력_없음으로_센다() -> None:

@@ -141,3 +141,26 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 > 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. (… 위 둘째 인계 지시문과 같다 …) 인자: .scratch/model-rerun/issues/06-round-drive-record.md
 
 - `git worktree list`에서 브랜치가 `.claude/worktrees/06-round-drive-record`(80d57021)에 있어 EnterWorktree(path)로 들어갔다.
+- `sync_with_base_branch`는 앱이 만든 워크트리가 아니라며 거부해 `git fetch origin main`과 `git merge --no-edit origin/main`으로 db92d68a(harness 007, `.env` 읽기 훅과 rg)를 합쳤다. 이 티켓의 파일과 겹치지 않았다.
+
+### PR 직전 리뷰
+
+CodeRabbit 좌석이 없어 `/security-review`와 `bug-perf-review`를 나란히 돌렸다.
+
+보안 축: 발견 없음. 참고(확신 3/10): `_git`이 러너의 전체 환경으로 세션이 손댄 클론에서 돈다. 07이 같은 클론에서 게이트를 돌릴 때 하드닝 후보다.
+
+버그·성능 축(Minor 4, Nit 3). 밀 주장 넷(`budget_text`, `drive`, `without_venv_dirs`, README의 150초·130.81초)은 모두 맞다고 했다.
+
+고친 것:
+- `_read_lines`가 `splitlines()`로 기록을 갈라, Node가 이스케이프하지 않은 글 안의 U+2028·U+2029·U+0085에서 줄이 쪼개져 그 assistant 줄을 세지 않았다(서브에이전트가 재현). `split("\n")`으로 바꿨다. 시험을 먼저 써 빨강을 봤다.
+- `drive`가 `Popen` 뒤 기록 파일을 열거나 쓰다 예외가 나면 자식을 남겼다. 읽기를 `_read_process`로 빼고 `try/finally`에서 살아 있으면 끈다. 시험은 `Popen`을 기록하는 하위 클래스로 바꿔 끼우고 없는 폴더의 기록 파일로 `FileNotFoundError`를 낸 뒤 자식이 끝났는지 본다.
+- 변이 둘(`splitlines`로 되돌리기, `finally`의 끄기 빼기)을 없는 표지로 한 번 돌려 실패 출력을 본 뒤 표지를 골랐다. 둘 다 표지까지 기대대로 빨갰고, 나머지 스물여섯은 원문 확인(`--check`)만 했다. 변이 표 머리 주석과 README 행을 맞췄다.
+
+남긴 것과 이유:
+- 출력을 닫고 `REAP_TIMEOUT` 안에 끝나지 않아 끈 갈래가 `timed_out=False`, `exit_code=None`이다: `Drove`의 `timed_out`은 "시간 제한에 닿아 끈"이고 `exit_code`는 "끈 호출이면 빈 값"이라 주석과 맞는다. 08이 끈 호출을 읽을 칸을 정할 때 이 갈래를 함께 본다.
+- 손자 갈래의 `LineReader` 스레드와 stdout 핸들, `_feed`의 `OSError` 뒤 stdin: 윈도에서 읽는 스레드가 있는 파이프를 닫으면 막힐 수 있고, 러너는 회차마다 프로세스를 새로 띄운다.
+- `budget_text`의 무한대·NaN·1e30: 호출부(10)가 예산을 셈한다. 그때 막는다.
+- `_usage`가 토큰 키 하나가 빠진 모델 항목을 버린다: 실제 스트림(`headless_flags/` 원본)에는 네 키가 늘 있었다.
+- `clock` 시험의 15초 쉼: 가짜는 결과를 낸 뒤 바로 끝난다. 흔들리면 `.claude/rules/tests.md`대로 넉넉히 한다.
+
+다시 돌린 명령: `uv run ruff check .`·`uv run ruff format --check .` 초록, 바꾼 파일의 `uv run pyright` 0 errors, `uv run pytest -q tests/tools/test_rerun_session.py tests/tools/test_rerun_round.py` 127 passed. 나머지는 커밋의 pre-commit이 돈다.

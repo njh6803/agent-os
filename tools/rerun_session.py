@@ -421,9 +421,10 @@ def count_lines(lines: Iterable[str]) -> tuple[LineCount, ...]:
 
 
 def _read_lines(paths: Iterable[Path]) -> list[str]:
+    """`\\n`으로만 가른다. `splitlines`는 Node가 이스케이프하지 않은 글 안의 U+2028에서도 가른다."""
     out: list[str] = []
     for p in paths:
-        out.extend(p.read_text(encoding="utf-8", errors="replace").splitlines())
+        out.extend(p.read_text(encoding="utf-8", errors="replace").split("\n"))
     return out
 
 
@@ -556,6 +557,23 @@ def drive(
         process.kill()
         process.wait(timeout=REAP_TIMEOUT)
         raise RuntimeError("자식의 표준 입출력을 열지 못했다")
+    try:
+        return _read_process(process, stdin, stdout, message, stream_file, timeout, clock)
+    finally:
+        if process.poll() is None:  # 기록 파일을 열거나 쓰다 예외가 났으면 자식을 남기지 않는다
+            process.kill()
+            process.wait(timeout=REAP_TIMEOUT)
+
+
+def _read_process(
+    process: subprocess.Popen[bytes],
+    stdin: IO[bytes],
+    stdout: IO[bytes],
+    message: str,
+    stream_file: Path,
+    timeout: float,
+    clock: Callable[[], float],
+) -> Drove:
     reader = LineReader(stdout)
     threading.Thread(target=_feed, args=(stdin, message.encode("utf-8")), daemon=True).start()
     lines: list[str] = []

@@ -1,8 +1,9 @@
 # 티켓 06(회차의 세션 하나, `tools/rerun_session.py`)의 시험이 실제로 무는지 변이로 본다(implement
 # 스킬, 대기열 29). 이 티켓은 본체를 시험보다 먼저 써서 판정 하나하나가 빨강을 본 적이 없다. 첫 줄의 틀,
 # 지시문의 모델 줄, 명령의 예산(반올림, 이진 부동소수의 버림), 끝난 자식의 구동(EOF 기다리기, 마감의 끈
-# 호출), 호출 칸의 종료 코드, 세션 비용의 마지막 값, 결과 글의 빈 글 건너뛰기, 이벤트 아닌 줄과 깊게 중첩된 줄,
-# 기록 파일 찾기와 `<synthetic>` 빼기, 결과 커밋의 세 규칙과 main 빼기, git 환경 벗기기, 띄우기 전의
+# 호출, 예외 뒤 자식 끄기), 호출 칸의 종료 코드, 세션 비용의 마지막 값, 결과 글의 빈 글 건너뛰기, 이벤트 아닌
+# 줄과 깊게 중첩된 줄, 기록 파일 찾기와 `<synthetic>` 빼기, 기록 줄 가르기(U+2028), 결과 커밋의 세 규칙과
+# main 빼기, git 환경 벗기기, 띄우기 전의
 # 세션 id, 기록의 init 도구와 subtype 의 꼴, 세션 환경의 PATH 거르기와 상대 조각을 하나씩 되돌린다.
 # 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구다. 표지를 없는 문구로 바꾼 사본을 돌려 변이마다
 # 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md` 의 표지 항목).
@@ -309,3 +310,25 @@ expect_output = ["!= 'Scripts'"]
 file = "tools/rerun_round.py"
 old = '''        if not folder or not os.path.isabs(folder):'''
 new = '''        if not folder:'''
+
+[[mutation]]
+name = "세션 기록을 splitlines 로 가른다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "U2028"]
+expect = "red"
+expect_output = ["assert () == (LineCount(mo"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''errors="replace").split("\n"))'''
+new = '''errors="replace").splitlines())'''
+
+[[mutation]]
+name = "예외가 나도 띄운 자식을 끄지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "기록_파일을_열지_못하면"]
+expect = "red"
+expect_output = ["assert None is not None"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        if process.poll() is None:  # 기록 파일을'''
+new = '''        if False:  # 기록 파일을'''
