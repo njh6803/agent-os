@@ -226,3 +226,71 @@ CodeRabbit CLI 는 좌석이 없어(`Seat: not assigned`) 대체 둘을 나란�
 - `--move`로 41을 44로 옮겼다(파일 이름, 머리 줄, 티켓 08·10과 continue 변이 표와 이 일지 안의 인용). 도구가 옮기지 않는 꼴 하나(첫 인계 절 지시문의 "일지 41은")는 손으로 고쳤다.
 - 33785252 `docs: 마감에 끈 호출의 결과 이벤트 문장을 고치고 main 을 합친다 (model-rerun 08)`. pre-commit 이 합치는 중의 커밋에서 충돌 파일만 본다고 알려(`Checking merge-conflict files only`) ruff 둘을 손으로 다시 쳐 초록이었다. 러너(`parallel-checks`)는 모두 Passed(pytest 381.9초, web-verify 251.9초)였고, Skipped 는 해당 파일이 없는 카나리아 명세와 헌법 판 둘이다. 이 커밋에서 인계 계기(`커밋 뒤`)가 들어왔지만 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해(넘겨받은 경계에 다시 왔다) next-session "인계할 때" 1대로 넘기지 않았다.
 - 변이 표 둘의 전체를 33785252 에서 차례로 돌렸다(두 표가 `tools/rerun_session.py`를 함께 바꾸므로 나란히 돌리지 않았다). `rerun_continue_mutations.toml`은 `변이 45 모두 기대대로`, `rerun_session_mutations.toml`은 `변이 27 모두 기대대로`였고 두 번 다 끝난 뒤 작업 트리가 깨끗했다. 프로브 README 의 변이 절에 적었다.
+- 3c4623c8 `docs: 리뷰 반영 뒤 변이 표 둘의 전체 실행을 적는다 (model-rerun 08)`. pre-commit 이 모두 지났다(`.py`가 없어 ruff 둘, 해당 파일이 없어 카나리아 명세와 헌법 판이 Skipped). 이 커밋에서도 `커밋 뒤` 인계 계기가 들어왔고 같은 까닭으로 넘기지 않았다.
+
+## PR
+
+- 열기 전 `git fetch origin main` 뒤 `git log HEAD..origin/main`이 비어 rebase 할 것이 없었다. 커밋 넷(f614f00c, 병합 2746ac57, 33785252, 3c4623c8)을 `git push -u origin feature/08-continue-and-caps`로 올리고 `gh pr create`로 PR #374 를 열었다. 본문은 템플릿을 채웠고, PR 직전 리뷰의 결과와 변이 표 둘의 전체 실행을 체크리스트와 확인 방법에 적었다.
+
+## 인계 (PR 연 뒤)
+
+- 이 세션의 지금 제목: `feature/08-continue-and-caps`.
+- 인계 경계: `PR 연 뒤`. 세션 컨텍스트가 문턱(20만)을 넘은 채(약 31.8만) `gh pr create`가 성공한 직후 `hook_handoff`와 `hook_pr_next_session`이 함께 들어왔고 인계 줄을 따랐다. 인계하지 않는 다섯 때에 들지 않는다. PR 은 열렸고, 범위는 PR과 병합까지이며, 이 세션이 이어받은 경계는 `커밋 뒤`였고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- PR #374 는 `OPEN`이고 아직 `@coderabbitai review` 코멘트를 남기지 않았으며 CI 대기(`tools/wait_ci.py`)도 띄우지 않았다. 봇 회차는 새 세션이 처음부터 한다.
+- 이 인계 절은 커밋하지 않았다. 병합 전 `headRefOid` 대조를 지나려면 새 세션이 이 일지를 이어 쓰고 봇 회차의 커밋에 실어 푸시한다.
+- `tools/model_sweep.py feature/08-continue-and-caps`는 `Opus 5.5 / xhigh`였다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/08-continue-and-caps.md. 06이 띄운 세션의 이어 가기와 끄기·상한을 더한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/08-continue-and-caps.md
+브랜치: feature/08-continue-and-caps
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-44-continue-and-caps.md
+이어받을 상태: 인계: PR 연 뒤. PR #374를 열고 푸시까지 했으나 @coderabbitai review 코멘트와 CI 대기는 아직이다. next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. docs/journal/2026-10-23-44-continue-and-caps.md. 이 일지의 인계 절은 커밋하지 않았으니 이어 쓰고 봇 회차의 커밋에 실어 병합 전에 푸시한다. PR #372(티켓 07)가 같은 파일 넷(티켓 10, 프로브 README, tools/rerun_round.py와 그 시험)을 고쳐 나중에 병합하는 쪽이 글자 충돌을 푼다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/08-continue-and-caps (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 커밋 둘, 변이 실행 둘)은 모두 끝나 있어 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+- open-session을 부른다 2026-10-23T11:48:27Z
+
+## 이어받은 세션 (2026-10-23, 봇 회차부터)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/model-rerun/issues/08-continue-and-caps.md
+>
+> (지시문은 위 "인계 (PR 연 뒤)" 절의 "낸 지시문"과 같다)
+
+- 제목을 `feature/08-continue-and-caps`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/08-continue-and-caps`에 있어 `EnterWorktree(path)`로 들어왔다. HEAD 는 3c4623c8 로 PR 의 `headRefOid`와 같았고, 커밋하지 않은 변경은 이 일지 하나였다.
+- `@coderabbitai review` 코멘트를 남기고 `gh pr checks`를 한 번 읽었다. claude-review·e2e·web·ticket 은 통과, python·visual 은 pending 이었고, CodeRabbit 줄은 코멘트 전의 `Review skipped: manual review required for this OSS repository`였다. `tools/wait_ci.py 374`를 백그라운드로 띄웠다.
+
+## 봇 첫 회차
+
+- 대기의 끝 줄(3c4623c8): `끝: 모두 통과. CodeRabbit: Review rate limited`. CodeRabbit 은 PR 을 연 때의 자동 리뷰도 `Review limit reached`였고 요청 코멘트에도 `Review rate limited`로 답해, 이 PR 에 낸 리뷰가 없어 회차로 세지 않는다.
+- claude-review 첫 회차(3c4623c8 의 실행, 코멘트 2026-10-23T11:48:16Z): Critical·Major 없음, Minor 하나와 Nit 둘. 첫 회차라 지적마다 판단했다.
+  - Minor `tools/rerun_continue.py`의 `run_sessions`가 한 함수에서 호출 앞의 끝, `launch`, 비용 누적, 기록 짓기, 갈래 고르기, 다음 메시지 짓기를 모두 한다(`CODING_STANDARDS.md`의 추상화 수준 줄): 넘긴다. 09 가 `screen` 자리를 채우며 그 함수를 고치고, 지금 뽑으면 continue 변이 표의 원문이 옮겨 가 표 전체를 다시 돌아야 한다. 리뷰어도 후속 정리로 충분하다고 적었다. 티켓 09 "08에서 넘어온 메모"의 마지막 줄과 아래 "다음"에 적었다.
+  - Nit 훅 `tools/hook_edit_during_commit.py`와 사본 `tools/proc_command_line.py`가 같은 입력에서 같은 낱말을 내는지 견주는 시험이 없다: 고쳤다. `test_훅에서_옮긴_명령_줄_읽기가_훅의_것과_같다`가 두 파일을 `ast`로 풀어, 맨 위와 그 바로 아래 `if`(플랫폼 갈래)의 이름이 같은 정의 열하나를 독스트링을 뗀 덤프로 대고, `_windows_api`는 사본의 문장이 모두 훅에 있는지 본다(훅은 Toolhelp 와 실행 파일 경로의 원형을 더 적는다). import 대신 소스를 푸는 것은 윈도 갈래가 `sys.platform` 아래에서만 정의되어 리눅스 CI 에서는 import 로 볼 수 없기 때문이다. 두 사본의 이름이 같은 함수 여섯 가운데 `_windows_api`만 본문이 다른 것은 커밋하지 않은 스크래치 스크립트로 손으로 먼저 봤다. 변이 둘(46·47번)이 고른 표지까지 기대대로 빨갰고, 두 독스트링에 이 시험을 가리키는 문장을 더했다.
+  - Nit `tools/hook_prompt_directive.py`의 `directive_branch` 독스트링에 러너가 import 한다는 줄이 있으면 이름을 바꿀 때 놓치지 않는다: 그 줄은 이미 있다(독스트링 둘째 문단 "공개 이름인 것은 다시 풀기 러너(`tools/rerun_continue.py`)가 … import 하기 때문이다"). 고치지 않고 PR 코멘트로 알린다.
+- 다시 돌린 명령: `uv run pytest -q tests/tools/test_proc_command_line.py`(5 passed), `tools/mutate.py`로 46·47번(`변이 2 모두 기대대로`), `tools/mutate.py --check` 두 표(continue 47, session 27 모두 원문이 한 번씩), 고친 파이썬 셋의 `ruff check`, `tools/check_md_tables.py` 프로브 README.
+
+## 회고
+
+후보 여덟, 승인 하나(회차로 세는 것), 기각 일곱, 넘김 없음. 대기열 만료는 `uv run python tools/queue_open_rows.py`를 그대로와 `git fetch origin` 뒤 `--ref origin/main`으로 두 번 돌려 둘 다 만료할 행이 없었다.
+
+1. 승인(회차로 세는 것): 첫 세션이 커밋하지 않은 스크래치 탐침으로 본 런처의 시간(8.09초, 0.03초)을 "손으로 쟀다"로 적었고, 셀프 리뷰 표준 축 8 이 `docs/agents/issue-tracker.md` 프로브와 근거 절대로 "손으로 봤다"로 고치게 했다. `CLAUDE.md`의 Issue tracker 줄이 근거 문장에서 따르라고 가리키는 구현 때의 지침을 어겨 리뷰가 잡은 사건이다. 손으로 돌린 것을 잰 것처럼 적은 같은 실수의 열린 행 227 에 회차를 더했다(6회차). 227 이 처방한 계기 훅의 조건은 같은 줄에 `손으로`가 있으면 알리지 않아 이 꼴("손으로 쟀다")을 놓친다. 반영하는 세션이 그 조건을 볼 것이다.
+2. 기각: 중간 문장을 영어로 써 `hook_midturn_korean`이 앞 세션들에서 세 번(위 "실수"의 첫째와 다섯째), 이 세션에서 두 번(일지의 회고 절을 쓰는 Edit 직전과 대기열을 여는 Read 직전) 알렸다. 이미 있는 훅이 그 자리에서 알렸다(닫힌 83·94 의 처방이 그 훅이다).
+3. 기각: 변이가 도는 동안 같은 체크아웃의 티켓 09 를 고쳐 `hook_edit_during_mutate`가 알렸다. 이미 있는 훅이 알렸고 변이 대상 파일이 아니었다.
+4. 기각: `rerun_continue.py` 첫 판의 없는 이름(`launch_call`)과 함수를 가린 매개변수. 커밋 전에 스스로 봤고 pyright 와 시험이 잡는 꼴이다.
+5. 기각: 이 세션의 일지 덧붙이기(heredoc 뒤 `git status`)와 스크래치 스크립트 짓기(`mkdir`·heredoc·`uv run`의 사슬)를 워크트리 가드가 거부했다. `CLAUDE.md` 환경 함정이 이미 적은 모양이고 앱 가드가 그 자리에서 막았다. Edit·Write 도구로 옮겨 호출이 한 번씩 더 들었다.
+6. 기각: 셀프 리뷰를 지나 PR 직전 `bug-perf-review`가 잡은 Minor(마감에 끈 호출의 결과 이벤트 문장)와 PR claude-review 의 Minor(`run_sessions`의 추상화 수준)·Nit(사본 대조 시험). 리뷰가 제 몫을 한 것이다. 사본 대조를 `.claude/rules/tools.md`의 사본 항목으로 올릴지 보았으나 사본이 실제로 갈린 사건이 없다. `tools/tidy_checkouts.py`의 PEB 사본은 다른 칸(작업 폴더, 환경)을 읽어 견줄 짝이 아니다.
+7. 기각: claude-review Nit(러너가 import 한다는 독스트링 줄)은 이미 있는 줄을 리뷰어가 놓친 것이고, 든 비용은 확인 한 번이다.
+8. 기각: 커밋 f614f00c 의 인용 대조 경고 둘. 이미 있는 검사(`tools/check_quotes.py`)가 그 자리에서 알렸다.
+
+## 다음
+
+- 08 이 병합되면 09(Blocked by 08)가 열린다. 07 은 PR #372 로 옆 세션이 하고, 10 은 07·09 를, 11 은 10 을 기다린다.
+- PR #374 claude-review 첫 회차에서 뒤로 넘긴 일: `run_sessions` 쪼개기는 09 가 그 함수를 고칠 때 한다(티켓 09 "08에서 넘어온 메모"의 마지막 줄).
+- PR #370 에서 넘어와 아직 남은 일: `_git`·`_git_env` 사본 셋의 실패 모양은 07 과 06 이 모두 병합된 뒤 하나로 맞춘다(일지 2026-10-23-36 "다음"). 10 에서 볼 둘(`Elsewhere`를 `Spend`의 부분으로 받을지, `claude_version` 매개변수의 가림)은 티켓 10 "08에서 넘어온 메모"에 있다.
+- PR #372(07)가 이 PR 과 같은 파일 넷(티켓 10, 프로브 README, `tools/rerun_round.py`와 그 시험)을 고쳐, 나중에 병합하는 쪽이 글자 충돌을 푼다.

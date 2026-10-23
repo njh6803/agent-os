@@ -4,8 +4,8 @@
 # 개입·예산의 경계), 호출 뒤의 끝(시간, 예산, init, 결과 없음, 멈춰 끈 호출, 끄지 못한 호출, 막는 판정의
 # 차례), 예산의 쓴 몫, 개입의 `--resume`과 그 수, 인계의 새 세션과 지시문, 첫 줄의 연 저장소, 물으며
 # 끝남, 지시문 담음, 끄기(명령 줄 확인, 읽지 못함, 나무째, 거두는 기다림의 마감, 멈춘 꼴, 끄지 않은
-# 기록, 끈 세션의 표시, 러너가 끊김), 이어 부르는 명령, 호출 차례, 명령 줄 읽기(PEB 의 자리, NUL)를
-# 하나씩 되돌린다. 나무째 끄기의 변이는 `taskkill` 줄이라 윈도에서만 뜻이 있다. POSIX 의 그룹
+# 기록, 끈 세션의 표시, 러너가 끊김), 이어 부르는 명령, 호출 차례, 명령 줄 읽기(PEB 의 자리, NUL, 훅
+# 사본과의 대조)를 하나씩 되돌린다. 나무째 끄기의 변이는 `taskkill` 줄이라 윈도에서만 뜻이 있다. POSIX 의 그룹
 # 끄기(`start_new_session`, `os.killpg`)는 이 PC 에서 변이로 볼 수 없고 리눅스 CI 의 같은 시험(끈 뒤
 # 가짜와 그 자식이 남지 않는다)이 본다.
 # 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구나 단언의 메시지다. 첫 판은 표지를 없는 문구로
@@ -533,3 +533,25 @@ expect_output = ["Left contains one more item: ''"]
 file = "tools/proc_command_line.py"
 old = '''    if parts and parts[-1] == b"":'''
 new = '''    if False:'''
+
+[[mutation]]
+name = "사본의 함수가 훅의 것과 갈린다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "훅에서_옮긴"]
+expect = "red"
+expect_output = ["AssertionError: _unicode_string"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''        length = int.from_bytes(raw[0:2], "little")'''
+new = '''        length = int.from_bytes(raw[0:4], "little")'''
+
+[[mutation]]
+name = "사본의 API 원형이 훅에 없는 문장을 든다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "훅에서_옮긴"]
+expect = "red"
+expect_output = ["AssertionError: 훅의 API 원형에 없는 문장"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''        kernel.LocalFree.argtypes = [pointer]'''
+new = '''        kernel.LocalFree.argtypes = [handle]'''

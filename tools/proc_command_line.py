@@ -4,8 +4,9 @@
 
 리눅스는 `/proc/<pid>/cmdline`을, 윈도는 그 프로세스의 PEB 에 든 `CommandLine`을 읽어
 `CommandLineToArgvW`로 나눈다. 둘 다 `tools/hook_edit_during_commit.py`의 읽기를 옮긴 사본이다. 훅은
-단독 실행 스크립트라 서로와 이 모듈을 import 하지 않는다(`.claude/rules/tools.md`). 그 훅이 이름이
-git 인 프로세스를 모두 훑는 것과 달리 여기서는 pid 하나만 연다.
+단독 실행 스크립트라 서로와 이 모듈을 import 하지 않는다(`.claude/rules/tools.md`). 두 사본이
+같은지는 `tests/tools/test_proc_command_line.py`가 두 파일의 소스를 풀어 댄다. 그 훅이 이름이 git 인
+프로세스를 모두 훑는 것과 달리 여기서는 pid 하나만 연다.
 
 러너가 띄운 자식은 거두기 전까지 그 pid 가 다른 프로세스에 가지 않는다. POSIX 는 끝난 자식을 좀비로
 남기고, 윈도는 `Popen`이 프로세스 핸들을 쥔다. 그래서 읽은 명령 줄과 끄는 프로세스가 갈리지 않는다.
