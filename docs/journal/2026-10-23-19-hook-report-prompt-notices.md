@@ -239,6 +239,39 @@ open-session을 부른다 2026-10-23T00:26:38Z
 - `uv run pyright tools/hook_report.py`: 0 errors. `uv run ruff check`·`uv run ruff format --check`(그 파일): 통과.
 - `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 38 모두 기대대로. 커밋할 내용 그대로의 작업 트리(합치기 전)에서 돌아, 커밋하지 않은 변경이 있다는 알림이 함께 났다.
 
+### 커밋 뒤 (셋째 세션)
+
+- 커밋 `32875e0c`의 pre-commit: ruff check·ruff format 통과, 러너의 열 검사 모두 통과(pytest 508.9s, web-verify 497.2s. origin/main 을 합친 판의 전체 검사다), 마크다운 표·줄 구분 문자·변이 표 원문·인용 대조 통과, 카나리아 명세와 헌법 판은 `Skipped`.
+- 커밋 뒤 `gh pr edit 365 --body-file`로 PR 본문의 두 줄(위 반영 절)을 고쳤다. 아직 푸시하지 않았다.
+
+### 인계 (커밋 뒤)
+
+커밋 `32875e0c` 뒤 `hook_handoff`가 `커밋 뒤` 경계에서 왔다(세션 컨텍스트 283,839 토큰). 인계하지 않는 때 다섯을 대 봤다. 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션을 연 지시문의 경계는 `PR 연 뒤`라 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 이 세션의 제목은 `chore/005-hook-report-prompt-notices`다. `tools/model_sweep.py chore/005-hook-report-prompt-notices`는 `Opus 5.5 / xhigh`였다.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/005-hook-report-prompt-notices.md. `tools/hook_report.py`가 UserPromptSubmit 훅의 알림(명령 없는 `hook_additional_context` 첨부)을 그 훅의 알림으로 세어 뺄 후보로 잘못 내지 않는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다
+브랜치: chore/005-hook-report-prompt-notices
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-19-hook-report-prompt-notices.md(봇 회차, 커밋 뒤, 이 인계 절), docs/agents/issue-tracker.md(harness 티켓의 서식·상태·번호)
+이어받을 상태: 인계: 커밋 뒤. claude-review 1회차의 Minor 반영과 회고·"다음"까지 마친 일지(커밋 32875e0c, origin/main 합침 5933b991 위)를 아직 푸시하지 않았고, PR 본문은 이미 고쳤다. 푸시와 순서 1의 2(봇 회차)부터 한다. claude-review 는 다음 푸시가 둘째 회차이고, CodeRabbit 은 4f0e72dd 에서 한도로 리뷰가 없어 아직 첫 회차 전이다. 일지는 "커밋 뒤 (셋째 세션)"과 이 인계 절을 커밋하지 않았다. docs/journal/2026-10-23-19-hook-report-prompt-notices.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `chore/005-hook-report-prompt-notices (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 워크트리 잠금 풀기는 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-23T01:07:07Z
+
+## 봇 둘째 회차 (이어받은 넷째 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다 / (…) 다음 단계: PR 반영·병합 / (…) 이어받을 상태: 인계: 커밋 뒤. claude-review 1회차의 Minor 반영과 회고·"다음"까지 마친 일지(커밋 32875e0c, origin/main 합침 5933b991 위)를 아직 푸시하지 않았고, PR 본문은 이미 고쳤다. 푸시와 순서 1의 2(봇 회차)부터 한다. (…) 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 되돌리고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 origin/main 은 `c3c2cfcf`로 합친 판 그대로였고, PR 은 `4f0e72dd`에서 `BEHIND`였다.
+- 앞 세션이 커밋하지 않은 일지 두 절("커밋 뒤 (셋째 세션)", 그 인계 절)과 이 절의 머리를 일지만 실은 커밋으로 `32875e0c` 위에 올려 한 번에 푸시한다. 따로 푸시하면 claude-review 가 한 번 더 돈다.
+
 ## 회고
 
 후보 열, 승인 둘(둘 다 회차로 세는 것), 기각 여덟, 넘김 없음. 이 세션에서 반영한 것은 없다. 새 훅의 문턱에 닿은 행(362)이 있어 `uv run python tools/hook_report.py`를 돌렸고 `뺄 후보: (없음)`이었다(UTC 2026-09-26~2026-10-23 창, `hook_prompt_directive.py`가 알림 486건).
