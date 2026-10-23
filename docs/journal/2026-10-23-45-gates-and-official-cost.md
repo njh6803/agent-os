@@ -461,7 +461,7 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 
 표준 축이 낸 것과 판정. Critical·Major는 없다.
 - Minor, 고친다: `delete_path` 독스트링의 "드라이브 뿌리나 홈, 그 조상이면 지우지 않고 PermissionError"는 링크 갈래가 홈 가드보다 먼저 돌아 틀린다. 임시 폴더에서 가짜 홈을 junction으로 만들거나 홈의 조상을 가리키는 junction을 넣으면 오류 없이 junction만 지워졌다. 링크만 지우는 것은 맞는 동작이라 순서는 두고 문장을 좁힌다.
-- Minor, 고친다: `holds_home`의 "못 보는 것"이 닫힌 목록으로 모자란다. 홈 아래의 폴더(시험이 그대로 끊는다고 고정한다), UNC 관리 공유 별칭(`\localhost\C$\Users\User`가 거짓), 홈을 찾지 못할 때(`USERPROFILE`이 빈 값이면 `expanduser("~")`가 `''`를 주어 홈 대신 작업 폴더와 그 조상을 막는다)가 빠졌다. 이 세션도 판정 함수에만 넣어 셋을 다시 봤다. 반례를 덧붙이지 않고 거르는 성질(가리키는 자리로 풀어 드라이브 뿌리나 홈, 그 조상이 되지 않는 자리)을 적고 목록을 그 예로 둔다(`code-review` 6단계 1).
+- Minor, 고친다: `holds_home`의 "못 보는 것"이 닫힌 목록으로 모자란다. 홈 아래의 폴더(시험이 그대로 끊는다고 고정한다), UNC 관리 공유 별칭(`\\localhost\C$\Users\User`가 거짓), 홈을 찾지 못할 때(`USERPROFILE`이 빈 값이면 `expanduser("~")`가 `''`를 주어 홈 대신 작업 폴더와 그 조상을 막는다)가 빠졌다. 이 세션도 판정 함수에만 넣어 셋을 다시 봤다. 반례를 덧붙이지 않고 거르는 성질(가리키는 자리로 풀어 드라이브 뿌리나 홈, 그 조상이 되지 않는 자리)을 적고 목록을 그 예로 둔다(`code-review` 6단계 1).
 - Minor, 고친다: "짧은 이름"을 고정하는 시험이 없다(`.claude/rules/tools.md`의 못 보는 것 항목은 새로 적은 항목을 시험 하나로 고정하라고 한다). 서브에이전트가 임시 폴더의 짧은 이름으로 홈과 조상 모두 참인 것을 봤다.
 - Minor, 고친다: 티켓 11의 새 메모 "`rerun_gates`는 `core.longpaths`를 켜고 … `rerun_hidden`에는 셋 다 없다"는 거짓이다. `tools/rerun_hidden.py`의 `worktree add`·`remove`도 `core.longpaths=true`를 주고, 뿌리가 링크면 `cut_links`가 뿌리를 돌려줘 걷지 않는 것도 같다. 갈린 것은 `rerun_gates`가 클론의 `.git`과 `.git/worktrees`가 링크면 걷지 않고 그 관리 폴더 안의 링크를 끊는 것, 작업 트리 자리가 링크면 게이트를 띄우지 않는 것(`_not_started`)이다. 이 세션이 두 파일을 grep해 봤다.
 - Nit, 고친다: `_가짜_홈` 독스트링의 "진짜 홈과 드라이브 뿌리를 부르는 시험은 두지 않는다"는 판정 시험이 드라이브 뿌리를 `holds_home`에 넣으므로 "지우는 함수에"를 넣어야 맞다. 시험 이름 `…_OSError_다`는 코드와 독스트링의 `PermissionError`와 다르다.
@@ -481,11 +481,45 @@ CodeRabbit CLI는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-pe
 
 반영.
 - 고친 것: 위 "고친다"를 모두 고쳤다. `holds_home`의 못 보는 것을 거르는 성질(`realpath`로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다)과 그 예(홈 아래의 폴더, 홈 밖의 다른 자리, UNC 관리 공유 별칭, 빈 `USERPROFILE`)로 다시 썼고, `delete_path` 독스트링을 링크가 아닌 자리로 좁히며 링크는 그 링크만 지운다고 적었다. 새로 적은 못 보는 것과 짧은 이름은 `.claude/rules/tools.md`의 못 보는 것 항목대로 시험으로 고정했다. 판정 시험에 짧은 이름(`GetShortPathNameW`, 윈도 갈래)을 더했고, 새 시험 둘(`test_못_보는_것_홈_판정은_다른_꼴의_같은_자리를_지나가고_빈_홈이면_작업_폴더를_막는다`, `test_못_보는_것_휴지통_지우기는_홈을_가리키는_링크와_링크인_홈을_링크만_지운다`)을 두었다. 시험 이름과 `pytest.raises`를 `PermissionError`로 바꿨다. 새 시험은 처음부터 초록이라 변이 넷(`tidy_checkouts_mutations.toml` 172~175: 링크보다 홈 가드를 먼저 본다, 빈 홈이면 모든 자리를 막는다, UNC 관리 공유를 드라이브 경로로 푼다, 짧은 이름을 풀지 않는다)을 임시 표지로 한 번 돌려 고른 단언에서 빨간 것을 보고, 그 단언에서만 나오는 문구로 표지를 달았다. 반영으로 새로 쓴 사실 문장은 아래다. PR 직전 층(`bug-perf-review`)을 이 반영에는 돌리지 않으니, PR의 봇 회차가 겨누게 PR 코멘트에 밀 주장으로 적는다.
-  - `holds_home` 못 보는 것: "`realpath` 로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다. 홈 아래의 폴더(그 안의 링크는 끊는다), 홈 밖의 다른 자리(이 저장소의 주 체크아웃, 홈이 없는 드라이브의 폴더), 같은 자리를 다른 꼴로 가리키는 경로(UNC 관리 공유 `\localhost\C$\Users\<이름>`)가 그 예다. 지우는 두 함수는 홈을 `os.path.expanduser("~")` 로 얻어, 그 값이 홈이 아니면 그 값의 자리를 대신 견준다. 윈도에서 `USERPROFILE` 이 빈 값이면 그 값이 빈 문자열이라 작업 폴더와 그 조상을 막고 홈은 막지 않는다."
+  - `holds_home` 못 보는 것: "`realpath` 로 푼 자리가 드라이브 뿌리나 홈, 그 조상이 아니면 막지 않는다. 홈 아래의 폴더(그 안의 링크는 끊는다), 홈 밖의 다른 자리(이 저장소의 주 체크아웃, 홈이 없는 드라이브의 폴더), 같은 자리를 다른 꼴로 가리키는 경로(UNC 관리 공유 `\\localhost\C$\Users\<이름>`)가 그 예다. 지우는 두 함수는 홈을 `os.path.expanduser("~")` 로 얻어, 그 값이 홈이 아니면 그 값의 자리를 대신 견준다. 윈도에서 `USERPROFILE` 이 빈 값이면 그 값이 빈 문자열이라 작업 폴더와 그 조상을 막고 홈은 막지 않는다."
   - `delete_path`: "링크가 아닌 드라이브 뿌리나 홈, 그 조상(`holds_home`)이면 지우지 않고 PermissionError 다. 링크는 홈이나 그 조상을 가리켜도, 홈 자체가 링크여도 그 링크만 지운다."
 - 반영 중에 더 찾은 것: 반영 뒤 `tools/tidy_checkouts.py`를 겨누는 표 셋을 `--check`로 보니 `rerun_gates_mutations.toml`의 18(링크 끊기가 뿌리 링크를 따라간다)이 원문 0번이었다. 다섯째 세션의 회고 반영이 `cut_links`의 뿌리 링크 조건을 여러 줄로 바꿨는데 그 세션은 `tidy_checkouts` 표만 `--check`로 봤고, 셀프 리뷰 두 축도 그 표만 봤다. 홈 가드는 남기고 링크 조건만 빼는 원문으로 고쳐 18을 다시 돌렸고 고른 표지까지 기대대로 빨갰다. 프로브 README 둘(`.scratch/harness/probes/README.md`의 `tidy_checkouts` 행, `.scratch/model-rerun/probes/README.md`의 gates 문단)에 이 결과를 적었다. pre-commit의 `mutate.py --staged`가 이 커밋이 고친 파일을 가리키는 변이의 원문을 보므로, 고치지 않았어도 커밋에서 막혔을 것이다(그 독스트링을 읽었다. 이번에는 돌려 보지 않았다).
 - 남긴 것과 이유: 표준 축의 Nit 둘(두 자리의 같은 호출과 `home` 인자, `holds_home`의 이름)은 위 판정대로 남긴다. 둘 다 이 PR의 범위 안의 이름과 인자 모양이라 다른 티켓으로 넘기지 않는다.
 - 다시 돌린 명령과 결과: `uv run ruff check .`과 `uv run ruff format --check .`이 0, 바뀐 파이썬 파일 둘의 `uv run pyright`가 0, `test_tidy_checkouts` 204 통과(`-n 4`, 27.4초). 변이는 홈 가드의 아홉(`tidy_checkouts_mutations.toml` 167~175)이 모두 기대대로였고 `rerun_gates_mutations.toml`의 18이 기대대로였다. `--check`는 `tidy_checkouts` 175, `tidy_settings_equivalent` 6, gates 48, hidden 26, round 57, cost 27 모두 원문이 한 번씩 있었다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고, 그 결과는 커밋 뒤에 적는다.
+
+## 인계(커밋 뒤, 둘째)
+
+- 이 세션의 제목은 `feature/07-gates-and-official-cost`였다. 커밋 e193e05b 뒤에 컨텍스트가 약 32만 토큰으로 `커밋 뒤` 계기가 왔다. 이 세션의 지시문 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르고, `get_session`의 `self`에 `parentSessionId`가 없으며, 이 세션의 `인계 못함` 줄도 없고, 요청 범위가 "PR과 병합까지"라 넘긴다.
+- 커밋: e193e05b `fix: 지우는 두 함수가 드라이브 뿌리와 홈, 그 조상을 받으면 지우지 않는다 (model-rerun 07)`. pre-commit이 모두 통과했다(ruff 둘, 러너의 열: lint-imports·check-ticket·zizmor·check-instructions·check-type-escapes·pyright-linux 46.0초·pyright 53.6초·run-hooks 96.1초·web-verify 356.8초·pytest 570.6초, 마크다운 표, 줄 구분 문자, 변이 표 원문, 커밋 메시지). 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다. 인용 대조가 막지 않는 경고 하나(위 셀프 리뷰 절이 옮긴 옛 문구 "같은 길의 사본")를 냈고, 지운 문구를 옮긴 기록이라 고치지 않았다.
+- 결정은 위 회고 반영분의 셀프 리뷰 절의 판정이다. 이 세션이 번복하거나 고친 것: 다섯째 세션이 티켓 11에 옮긴 메모의 거짓 문장(봇 코멘트에서 온 것), 다섯째 세션이 이 일지에 쓴 "시험 셋은 … 바꾸고"와 회고 절의 "그 안의 호출을 볼 수 없다", 다섯째 세션이 놓친 `rerun_gates` 표 18의 원문. 이 세션이 셀프 리뷰 절에 처음 적은 이유("옮기면 `tools/rerun_round.py`가 링크를 남긴다")는 근거를 열어 보고 고쳤다. 커밋 뒤에 이 일지의 UNC 인용 두 곳에서 빠진 역슬래시를 고쳤다(커밋하지 않았다).
+- 남은 단계(새 세션).
+  1. 푸시 전에 PR #372 본문을 고친다(`next-session` 순서 1의 1). "왜 이렇게 했나"에 회고 반영(지우는 두 함수의 홈 가드. 링크는 그대로 링크만 지운다)과 05 병합 뒤의 충돌 풀기(`.scratch/model-rerun/probes/README.md`의 hidden 행과 문단, 05 티켓의 바깥 층 줄)를 더한다. "남긴 위험"에 홈 가드의 못 보는 것(`holds_home` 독스트링이 원천)을 더하고, canary 사본 줄은 홈 가드도 없다며 대기열 451로, `rerun_hidden` 둘째 사본 줄은 05가 아니라 11의 메모로 고친다. "변경된 영역"의 하네스 줄은 홈 가드와 변이 표 다섯(gates·cost·hidden·round·`tidy_checkouts`)으로, 체크리스트에는 넷째 셀프 리뷰(기준 4caf15c2)와 e193e05b의 pre-commit 수치를 더하고, "결정을 바꿨다면" 줄은 `.claude/rules/tools.md`의 선례 문장을 대기열 451로 넘겼다고 고친다. "확인 방법"에 `tidy_checkouts` 175(167~175가 새것)와 gates 18의 원문 고침을, "리뷰어 참고"의 일지 경로를 45로 바꾼다.
+  2. 이 일지(이 절과 UNC 인용 고침)를 커밋해 함께 푸시한다. 그 뒤 PR 코멘트 하나에, 다섯째 세션 "봇 둘째 회차" 줄의 판정(claude-review 둘째 회차의 Minor 셋·Nit 둘과 CodeRabbit 첫 회차의 하나를 어디로 넘겼는지)과, 위 셀프 리뷰 절 "반영"의 새 사실 문장 둘(`holds_home`의 못 보는 것, `delete_path`)을 밀 주장으로 적는다. 이 반영에는 PR 직전 층을 돌리지 않았다.
+  3. `@coderabbitai review`와 `uv run python tools/wait_ci.py 372`(백그라운드). 다음은 claude-review 셋째, CodeRabbit 둘째 회차라 둘 다 Critical·Major만 고친다.
+  4. 워크트리에서 병합하는 길(`next-session`의 "워크트리에서 병합할 때")과 `next-session`. 회고와 이 일지의 "다음"은 이 세션이 마쳤다.
+- 인계 줄로 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/07-gates-and-official-cost.md. 결과 커밋을 새로 꺼낸 작업 트리에서 게이트 셋과 원래 PR의 숨은 시험을 돌고, 세션 기록으로 공식 단가의 비용을 셈한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/07-gates-and-official-cost.md
+브랜치: feature/07-gates-and-official-cost
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-45-gates-and-official-cost.md의 "회고 반영분의 셀프 리뷰", "인계(커밋 뒤, 둘째)", "다음" 절
+이어받을 상태: 인계: 커밋 뒤. 회고 반영과 그 셀프 리뷰를 커밋 e193e05b로 마쳤고 아직 푸시하지 않았다. 커밋하지 않은 변경은 일지 하나(인계 절과 UNC 인용 고침)다. 푸시 전에 PR #372 본문을 고친다(회고 반영의 홈 가드, 05 병합 뒤 충돌 풀기, 남긴 위험의 못 보는 것과 대기열 451, 넷째 셀프 리뷰와 pre-commit 수치, 변이 수, 일지 경로 45). 그 뒤 일지 커밋과 푸시, 봇 둘째 회차 판정과 밀 주장 둘의 PR 코멘트, @coderabbitai review와 tools/wait_ci.py(claude-review 셋째, CodeRabbit 둘째 회차라 Critical·Major만), 워크트리에서 병합과 next-session이다. 회고와 일지 "다음"은 마쳤다. docs/journal/2026-10-23-45-gates-and-official-cost.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/07-gates-and-official-cost (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고(서브에이전트 둘과 커밋은 끝났다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T12:12:29Z
+
+## 이어 받은 세션(일곱째)
+
+인계(커밋 뒤, 둘째) 절의 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 사용자 프롬프트는 그 지시문 그대로였다. 들어왔을 때 HEAD는 e193e05b, 원격 브랜치는 67eb5567이었고, origin/main은 합친 뒤로 움직이지 않았다(`git log HEAD..origin/main`이 비었다). 커밋하지 않은 변경은 이 일지 하나였다.
+
+- PR 본문: 푸시 전에 `gh pr edit --body-file`로 고쳤다. 인계 절 1의 항목을 모두 넣었다("왜 이렇게 했나"의 회고 반영과 05 병합 뒤 충돌 풀기, "남긴 위험"의 홈 가드 못 보는 것과 11 메모·대기열 451로 고친 두 줄, 모듈 가르기 후속, 하네스 줄의 변이 표 다섯, 넷째 셀프 리뷰와 e193e05b의 pre-commit 수치, 선례 문장의 대기열 451, 변이 수, 일지 경로). 본문의 일지 경로는 아직 42였다. 끝의 CodeRabbit 요약 블록은 그대로 두었다.
 
 ## 다음
 
