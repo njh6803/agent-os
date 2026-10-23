@@ -29,7 +29,7 @@ date: 2026-10-19
 
 **`hook_report.py`가 읽는 것.** 2026-10-19의 기록 파일과 Claude Code가 쓰는 첨부의 모양을 손으로 봤고, 판정은 `tests/tools/test_hook_report.py`가 고정한다. 그 독스트링이 원천이고 여기에는 결정에 닿는 것만 적는다.
 
-- 알림은 훅이 stdout을 낸 호출이다. 그 호출은 기록에 `hook_success` 첨부를 남기고, 훅 이름은 그 명령에서 읽는다. stdout을 내지 않은 호출은 기록에 남지 않는다. 그래서 0건은 "부르지 않았다"가 아니라 "알리지도 막지도 않았다"이다.
+- 알림은 훅이 stdout을 낸 호출이다. 그 호출은 기록에 `hook_success` 첨부를 남기고, 훅 이름은 그 명령에서 읽는다. (바뀜: 이력 2026-10-23 "UserPromptSubmit 훅의 알림은 hook_success 없이 첨부로만 남아 글의 조각으로 센다") stdout을 내지 않은 호출은 기록에 남지 않는다. 그래서 0건은 "부르지 않았다"가 아니라 "알리지도 막지도 않았다"이다.
 - 막음은 도구 결과의 `PreToolUse:<도구> hook error: <이유>`다. 종료 코드 2로 막으면 이유가 `[<명령>]: `로 시작해 그 명령에서 훅을 고른다. 아니면 이유를 훅 소스의 문자열 조각(10자 이상, 독스트링 제외)과 대 가장 긴 조각이 맞는 훅을 고르고, 못 고르면 "모름"이나 "여럿"으로 따로 센다.
 - 들인 날은 훅 파일을 마지막으로 더한 커밋의 날짜다. 지웠다가 다시 들인 훅은 다시 들인 날부터, 이름을 바꾼 훅은 새 이름을 더한 날부터 센다. 창 안에 들인 훅은 아직 판단하지 않는다.
 - 시험이 판정 규칙을 실제로 지키는지는 변이 표 `.scratch/harness/probes/hook_report_mutations.toml`이 잰다. 규칙 하나씩을 깬 변이 스물이 모두 시험을 빨갛게 했다(2026-10-20).
@@ -65,3 +65,13 @@ date: 2026-10-19
 - **헌법 판은 그대로다.** 원칙과 `docs/constitution/`을 고치지 않았다.
 - **바뀌는 곳.** `tools/hook_report.py`와 그 시험·변이 표, `tools/queue_open_rows.py`(사람 몫, 만료할 행, 날짜를 찾지 못한 행, `--today`)와 그 시험, retro 4·5단계, `next-session` 결정표의 세 줄, `CLAUDE.md` 교정 루프의 셋째 줄, `.claude/rules/tools.md`의 막는 훅 예외, `docs/model-selection.md` 4절, 런북(`KICKOFF.md`, `kickoff/claude-md-template.md`), 옛 예외를 지금의 규칙처럼 인용하던 훅 독스트링 둘(`hook_user_settings_read`, `hook_bash_cd_outside`), 카나리아 명세(새 넷과 질문을 고친 둘, `.scratch/harness/probes/canary/`)와 프로브 README의 행, 대기열의 처음 적용(위)이다.
 - **못 보는 것.** `hook_report.py`는 stdout을 내지 않은 발동, 이 PC 밖(클라우드 세션, 다른 PC)의 기록, 지운 기록 파일을 보지 못한다. `queue_open_rows.py`는 승인 칸의 날짜만 보고 그 날짜가 회차의 날짜인지 가르지 않으며, "무엇"과 "어디로" 칸의 날짜는 보지 않는다(그 독스트링).
+
+## 이력
+
+### 2026-10-23 UserPromptSubmit 훅의 알림은 hook_success 없이 첨부로만 남아 글의 조각으로 센다
+
+`hook_report.py`가 위 "`hook_report.py`가 읽는 것"의 첫 줄대로 알림을 명령 든 `hook_success` 첨부로만 세자, 첫 턴마다 알린 `hook_prompt_directive`를 창 안에서 알리지도 막지도 않았다며 뺄 후보로 냈다(대기열 404, harness 티켓 005). UserPromptSubmit 훅이 모델에게 넘긴 글(`additionalContext`)은 세션 기록에 명령 없는 `hook_additional_context` 첨부로만 남고 `hook_success`가 없다. 다른 이벤트의 훅이 모델에게 넘긴 글은 `hook_success`와 같은 글의 첨부로 함께 남는다(2026-10-23 이 PC의 기록에서 손으로 봤다, 일지 2026-10-23-19).
+
+- 알림을 두 자리에서 센다. 명령 든 `hook_success`는 그 명령의 훅이다. 명령 없는 첨부는 같은 세션·이벤트에서 같은 글을 낸 `hook_success`와 짝지어 빼고, 짝 없는 UserPromptSubmit 첨부는 막음처럼 훅 소스의 문자열 조각과 대되 그 이벤트에 등록된 훅의 것과만 대어 고른다. 다른 이벤트의 짝 없는 첨부(앱이 넣은 글)와 고르지 못한 것은 "모름"으로 따로 센다.
+- 0건의 뜻("알리지도 막지도 않았다")과 뺄 후보의 판정은 그대로다.
+- 판정과 못 보는 것의 원천은 그대로 `tools/hook_report.py`의 독스트링이다.

@@ -15,7 +15,15 @@ from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from tools.hook_report import BLOCK, NOTICE, Firing
+from tools.hook_report import (
+    AMBIGUOUS,
+    BLOCK,
+    NOTICE,
+    PROMPT_EVENT,
+    UNKNOWN,
+    Firing,
+    main_checkout_folder,
+)
 from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
     Collected,
@@ -39,6 +47,7 @@ from tools.morning_collect import (
     day_period,
     day_rows,
     duty_of,
+    gather_hooks,
     gather_limit,
     gather_tickets,
     gather_works,
@@ -868,6 +877,60 @@ def test_훅_표는_판정이_유지인_훅을_빼고_그_수를_줄로_적는�
     assert (table.key, table.report) == ("environment.hooks", "environment")
     assert [r[1] for r in table.rows] == ["hook_old.py"]
     assert any("등록된 훅 1개는 판정이 `유지`" in line for line in section.lines)
+
+
+def test_훅_절은_가르지_못한_막음과_알림을_따로_센다() -> None:
+    # harness 005: 짝 없는 계기 첨부를 세면서 가르지 못한 알림(앱이 넣은 글)이 생겼는데, 이 줄은
+    # 종류를 보지 않고 모두 막음이라 적었다
+    last = date(2026, 10, 19)
+    firings = (
+        Firing(UNKNOWN, BLOCK, last, "플러그인이 막았다"),
+        Firing(UNKNOWN, NOTICE, last, "Also still to do in this turn:"),
+        Firing(AMBIGUOUS, NOTICE, last, "같은 문장"),
+        Firing(UNKNOWN, BLOCK, date(2026, 9, 21), "창 밖"),
+    )
+    scan = HookScan((), {}, {}, firings)
+    section = hook_section(scan, last, None, Sources("장부", "기록")).section
+    expected = "가르지 못한 막음이 2026-09-22 ~ 2026-10-19에 1건, 알림이 2건 있다."
+    assert any(line.endswith(expected) for line in section.lines)
+
+
+def test_훅을_모을_때_UserPromptSubmit_훅의_첨부를_그_훅의_알림으로_센다(tmp_path: Path) -> None:
+    # harness 005 PR 직전 버그 축: 이 함수가 UserPromptSubmit 의 훅을 hook_report.scan 에 넘기는
+    # 배선을 지키는 시험이 없었다. 넘기지 않으면 그 훅이 알림 0건으로 다시 뺄 후보가 된다
+    root = tmp_path / "repo"
+    notice = "지시문으로 연 새 세션이다. 제목을 브랜치 이름으로 바꾼다"
+    (root / "tools").mkdir(parents=True)
+    (root / "tools" / "hook_prompt.py").write_text(f'CONTEXT = "{notice}"\n', encoding="utf-8")
+    command = 'uv run python "${CLAUDE_PROJECT_DIR}/tools/launch_hook.py" hook_prompt.py'
+    entry = {"type": "command", "command": command}
+    settings = {"hooks": {PROMPT_EVENT: [{"hooks": [entry]}]}}
+    (root / ".claude").mkdir()
+    (root / ".claude" / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
+    for args in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "훅"]):
+        identity = ["-c", "user.name=t", "-c", "user.email=t@t"]
+        subprocess.run(["git", *identity, *args], cwd=root, check=True, capture_output=True)
+    attachment = {
+        "type": "hook_additional_context",
+        "content": [notice],
+        "hookName": PROMPT_EVENT,
+        "toolUseID": "hook-1",
+        "hookEvent": PROMPT_EVENT,
+    }
+    record = {
+        "type": "attachment",
+        "uuid": "u1",
+        "timestamp": "2026-10-18T04:00:00.000Z",
+        "sessionId": "s1",
+        "attachment": attachment,
+    }
+    log = tmp_path / "projects" / main_checkout_folder(root) / "s.jsonl"
+    log.parent.mkdir(parents=True)
+    log.write_text(json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
+    got = gather_hooks(root, tmp_path / "projects", date(2026, 10, 19))
+    assert not isinstance(got, str), got
+    assert got.firings == (Firing("hook_prompt.py", NOTICE, date(2026, 10, 18), notice),)
+    assert [(r.hook, r.recent) for r in got.rows] == [("hook_prompt.py", 1)]
 
 
 def test_작업_칸의_브랜치는_PR_번호를_모으고_PR이_없으면_커밋_제목을_모은다(
