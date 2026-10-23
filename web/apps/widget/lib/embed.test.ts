@@ -83,9 +83,10 @@ test("에이전트가 없으면 쓸 수 없는 설정이고 문제가 agent 를 
 });
 
 for (const agent of ["", "Order", "1order", "a", "order_helper", "order helper", "a".repeat(64)]) {
-  test(`플러그인 이름의 패턴 밖인 에이전트 ${JSON.stringify(agent)} 는 쓸 수 없는 설정이다`, () => {
+  test(`플러그인 이름의 패턴 밖인 에이전트 ${JSON.stringify(agent)} 는 쓸 수 없는 설정이고 이름으로도 보이지 않는다`, () => {
     const { embed, problems } = fromQuery(new URLSearchParams({ agent }).toString());
     expect(embed.agent).toBeNull();
+    expect(embed.heading).toBe("");
     expect(problems.map((problem) => problem.name)).toEqual(["agent"]);
     expect(problems[0]?.reason).toContain(JSON.stringify(agent));
   });

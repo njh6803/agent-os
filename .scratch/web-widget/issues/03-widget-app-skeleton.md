@@ -52,4 +52,5 @@
 3. **글꼴은 래퍼가 `dev`·`build` 전에 `public/fonts/`로 복사한다.** Next의 `public/`은 워크스페이스 패키지의 파일을 가리킬 수 없다. 복사본은 `.gitignore`가 무시하고 `tools/tidy_checkouts.py`가 다시 만들 수 있는 자리로 본다.
 4. **디자인 시스템 `themes.ts`는 `./styles/contrast.ts`를 `.ts` 확장자로 들인다.** 위젯의 `next build`(Turbopack)가 `.js`를 이웃 `.ts`로 풀지 못했다. 패키지 tsconfig에 `rewriteRelativeImportExtensions`를 켰고 컴포넌트와 토큰은 바뀌지 않았다.
 5. **컨테이너 안에서 위젯이 `workspace:`로 기대는 패키지는 복사하지 않고 `/web/...`로 링크를 건다**(`web/tools/visual.ts`). Playwright 1.63이 실제 경로가 `node_modules` 아래인 파일을 TypeScript로 바꾸지 않기 때문이다.
-6. **빈 질의 값.** 보일 글인 `heading`·`intro`의 빈 값만 주지 않은 것으로 읽고, `agent`·`theme`·`mode`의 빈 값은 준 값이라 패턴·목록 밖으로 본다(셀프 리뷰 명세 축).
+6. **빈 질의 값.** 보일 글인 `heading`·`intro`의 빈 값과 공백만 든 값만 주지 않은 것으로 읽고, `agent`·`theme`·`mode`의 빈 값은 준 값이라 패턴·목록 밖으로 본다(셀프 리뷰 명세 축, 공백은 PR 직전 리뷰).
+7. **이름의 기본값은 패턴을 지난 에이전트다.** `agent`가 없거나 패턴 밖이면 `heading`을 주지 않았을 때 이름은 빈 값이고 위쪽 띠에 제목이 서지 않는다. 설정이 잘못된 화면에 사이트가 준 틀린 이름을 보이지 않는다(PR 봇 리뷰).

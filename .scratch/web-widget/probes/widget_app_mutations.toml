@@ -166,10 +166,26 @@ expect_output = ['"heading": "",']
 [[mutation.edit]]
 file = "web/apps/widget/lib/embed.ts"
 old = '''
-      heading: shown("heading") ?? agentValue ?? "",
+      heading: shown("heading") ?? agent ?? "",
 '''
 new = '''
       heading: shown("heading") ?? "",
+'''
+
+[[mutation]]
+name = "패턴을 지나지 않은 에이전트 값을 이름의 기본값으로 쓰면 패턴 밖 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "패턴 밖인 에이전트 \"Order\" 는"]
+expect = "red"
+expect_output = ["expected 'Order' to be ''"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+      heading: shown("heading") ?? agent ?? "",
+'''
+new = '''
+      heading: shown("heading") ?? agentValue ?? "",
 '''
 
 [[mutation]]

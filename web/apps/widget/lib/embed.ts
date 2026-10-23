@@ -19,7 +19,10 @@ export type EmbedName = (typeof EMBED_NAMES)[number];
 export interface Embed {
   /** null 이면 설정이 잘못돼 요청을 보내지 못한다. */
   readonly agent: string | null;
-  /** 위쪽 띠의 이름. 주지 않았으면 받은 `agent` 값이다. */
+  /**
+   * 위쪽 띠의 이름. 주지 않았으면 패턴을 지난 `agent` 값이고, `agent` 가 없거나 패턴 밖이면 빈 값이다. 설정이 잘못된
+   * 화면의 띠에 사이트가 준 틀린 이름을 보이지 않는다.
+   */
   readonly heading: string;
   /** 첫 화면의 할 수 있는 일 한 줄. null 이면 그 줄을 그리지 않는다. */
   readonly intro: string | null;
@@ -95,7 +98,7 @@ export function readEmbed(read: (name: EmbedName) => string | null): {
   return {
     embed: {
       agent,
-      heading: shown("heading") ?? agentValue ?? "",
+      heading: shown("heading") ?? agent ?? "",
       intro: shown("intro"),
       theme,
       mode,
