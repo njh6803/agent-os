@@ -397,8 +397,8 @@ open-session을 부른다 2026-10-23T03:23:43Z
 
 ## 다음
 
-- 대기열 448(4회차)이 `next-session` 결정표의 chore 계기다. `tools/hook_env_read.py` 의 옵션 읽기를 명령마다 레코드 하나와 getopt 읽기 함수 하나로 합친다. claude-review 둘째·셋째 회차가 낸 Minor(짧은 옵션 읽기가 세 곳, `_rg_reads` 의 `unrestricted` 불리언, 모듈·함수 독스트링의 이력 덜기와 나누기)와 Nit(`_env_samples_*` 둘의 이름, 시험의 `args` 거르기 헬퍼), 셀프 리뷰 표준 축의 smell(명령 이름으로 갈리는 표 넷, `_rg_glob_values` 의 한 줄 위임)을 그 리팩터링에서 함께 본다(보류 이유는 PR #366 코멘트).
-- 같은 리팩터링이 닫을 남은 사례: `diff --from-file=.env`·`--to-file`, `sort --files0-from=.env`, gawk `-i`/`--include`·`-E`/`--exec`, `grep -- --file .env`(`--` 뒤), `rg -uueKEY_X`, `grep -r --max-count 1 KEY`(GNU grep 의 긴 값 옵션과 그 줄임이 값 옵션 표에 없다, 넷째 푸시 뒤 자동 보안 리뷰).
+- 대기열 448(4회차)이 `next-session` 결정표의 chore 계기다. `tools/hook_env_read.py` 의 옵션 읽기를 명령마다 레코드 하나와 getopt 읽기 함수 하나로 합친다. claude-review 둘째·셋째 회차가 낸 Minor(짧은 옵션 읽기가 세 곳, `_rg_reads` 의 `unrestricted` 불리언, 모듈·함수 독스트링의 이력 덜기와 나누기)와 Nit(`_env_samples_*` 둘의 이름, 시험의 `args` 거르기 헬퍼), 넷째 회차가 낸 Minor(견본에 glob 을 대 보는 마지막 조각 견줌이 `_env_samples_matched`·`_env_samples_excluded`·`_rg_selects`·`_rg_excludes` 네 곳에 있어 대소문자 가림과 디렉터리 조각 처리를 한 곳에서 정하기, `_getopt_values` 의 `abbreviations` 불리언), 셀프 리뷰 표준 축의 smell(명령 이름으로 갈리는 표 넷, `_rg_glob_values` 의 한 줄 위임)을 그 리팩터링에서 함께 본다(보류 이유는 PR #366 코멘트).
+- 같은 리팩터링이 닫을 남은 사례: `diff --from-file=.env`·`--to-file`, `sort --files0-from=.env`, gawk `-i`/`--include`·`-E`/`--exec`, `grep -- --file .env`(`--` 뒤), `rg -uueKEY_X`, `grep -rn --max-c 5 KEY`(GNU grep 의 긴 값 옵션을 줄여 값을 띄어 쓴 꼴).
 - ag·ack 는 이 PC 와 CI 에 없어 그 표는 파서 소스로만 지었다. 실제로 맞대려면 ADR 0038 이력이 필요하다.
 - 이 PR 은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
 
@@ -429,4 +429,11 @@ open-session을 부른다 2026-10-23T03:56:10Z
 
 인계 9 의 지시문으로 열렸다. `sibling_overlap.py` 는 겹침 없음, origin/main 은 934f8dfa 그대로라 `3804284c` 를 푸시하고 `@coderabbitai review` 를 남겼다. claude-review 셋째 회차(03:11)의 지적 다섯 가운데 `_glob_readings` 독스트링 Nit 은 `3804284c` 에서 이미 고쳤고, 남은 Minor 셋·Nit 하나는 448 리팩터링으로 보류한다고 PR 코멘트에 남겼다.
 
-넷째 푸시 뒤 자동 보안 리뷰가 둘을 냈다. 훅 스크립트를 페이로드로 불러 봤다. (1) `grep -r --max-count 1 KEY`·`--context 2`·`--label x`·`--binary-files text` 와 줄임(`--max-c 1`)이 지나간다. GNU grep 의 긴 값 옵션이 `_GREP_VALUE_OPTIONS` 에 없어 값을 패턴으로, 패턴을 경로로 읽는다. main 의 표에도 없어 이 PR 이 연 구멍이 아니다. `--color` 는 값이 선택이라 지나가는 것이 맞다. (2) gawk 는 리뷰가 든 꼴(`gawk -E prog.awk .env`, `gawk -i inc .env`)이 이미 막힌다. 448 이 사례를 하나씩 고치지 않고 옵션 읽기를 합쳐 종류를 없애기로 했으므로 (1)을 448 의 남은 사례와 "다음"에 더했다.
+넷째 푸시 뒤 자동 보안 리뷰가 둘을 냈다. 훅 스크립트를 페이로드로 불러 봤다. (1) `grep -r --max-count 1 KEY`·`--context 2`·`--label x`·`--binary-files text` 와 줄임(`--max-c 1`)이 지나간다. GNU grep 의 긴 값 옵션이 `_GREP_VALUE_OPTIONS` 에 없어 값을 패턴으로, 패턴을 경로로 읽는다. main 의 표에도 없어 이 PR 이 연 구멍이 아니다. `--color` 는 값이 선택이라 지나가는 것이 맞다. (2) gawk 는 리뷰가 든 꼴(`gawk -E prog.awk .env`, `gawk -i inc .env`)이 이미 막힌다. 448 이 사례를 하나씩 고치지 않고 옵션 읽기를 합쳐 종류를 없애기로 했으므로 (1)을 448 의 남은 사례와 "다음"에 더해 커밋했다(`docs:` 커밋).
+
+번복: `3804284c` 의 CI 가 모두 초록으로 끝난 뒤 CodeRabbit 이 같은 구멍을 Major(인라인, `tools/hook_env_read.py:167`)로 냈다. 봇 회차는 둘째 회차부터도 Critical·Major 를 고치므로 이름 그대로인 긴 값 옵션 아홉(`--max-count`·`--after-context`·`--before-context`·`--context`·`--binary-files`·`--devices`·`--directories`·`--label`·`--group-separator`)을 `_GREP_VALUE_OPTIONS` 에 더했다. GNU grep 3.1 이 아홉 꼴(`grep -rn <옵션> <값> KEY`) 모두에서 `.env` 를 읽는 것을 임시 폴더에서 손으로 봤고, 시험을 먼저 더해 빨강을 본 뒤 고쳤다. 줄임(`--max-c 5`)은 줄임 읽기를 바꾸는 일이라 448 에 남기고, 모듈 독스트링 못 보는 것과 `test_독스트링이_못_본다고_적은_것은_정말_못_본다` 에 고정했다. claude-review 넷째 회차(03:59)는 Critical·Major 가 없고 Minor 셋·Nit 둘이 모두 448 리팩터링의 몫이라 보류 이유를 PR 코멘트로 남긴다.
+
+셀프 리뷰(기점 04f0e43d, 커밋 0·바뀐 파일 4·미추적 0): 표준 축 하드 위반 0·Nit 2, 명세 축 지적 0. 두 축이 `grep --help`(3.1)의 값 받는 긴 옵션 열넷과 `--group-separator` 가 모두 표에 있는 것, 아홉 꼴과 `--max-c 5`·`--cont 3` 이 실제로 `.env` 를 읽는 것, 훅이 `--max-c 5`·`--cont 3`·`--color always` 를 지나보내고 `--max-count=5`·`-m5`·egrep·fgrep 꼴을 막는 것을 다시 쳐 봤다.
+- 고친 것: 없음.
+- 남긴 것: Nit 둘(`--max-count=5`·egrep 꼴의 시험이 없다, 다시 감은 모듈 독스트링의 줄 하나가 짧게 끊긴다). 동작은 맞고 448 의 getopt 합치기에서 함께 본다.
+- 다시 돌린 것: 커밋의 pre-commit 으로 갈음한다.

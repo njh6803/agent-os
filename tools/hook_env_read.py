@@ -55,11 +55,13 @@ cat`), 언어 안의 읽기(`python -c "open('.env')"`), `cp .env x` 뒤의 `cat
 shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 목록 밖의 래퍼(`stdbuf -o0 cat .env`)와
 명령을 문자열 하나로 받는 래퍼 (`env -S 'cat .env'`), 래퍼의 긴 옵션을 줄여 쓴
 꼴(`sudo --us root cat .env` — getopt_long 은 모호하지 않은 머리를 받지만 이 훅은 표에 적은 이름
-그대로만 값 옵션으로 본다), PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만
-막고 `[IO.File]::ReadAllText` 같은 읽기는 지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의
-비밀 파일(사용자 설정의 env 값 등), gitignore 하지 않은 `.env` 가 든 폴더를 glob 없이 훑는 Grep
-도구(숨김 파일을 읽는다), 견본(`.env`·`.env.local`·`.env.production`, `_ENV_SAMPLES`) 밖의 `.env`
-꼴만 고르거나 남기는 glob. 판정이 견본에만 glob 을 대 보기 때문이다. 견본을 하나씩 모두 뺀 빼기
+그대로만 값 옵션으로 본다), grep 의 긴 값 옵션을 줄여 값을 띄어 쓴 훑기(`grep -rn --max-c 5 KEY`
+— 같은 까닭으로 `5` 를 패턴, `KEY` 를 경로로 읽는다. 대기열 448), PowerShell 도구(권한 deny 가
+`Get-Content`·`Select-String` 과 그 별칭만 막고 `[IO.File]::ReadAllText` 같은 읽기는 지나간다 —
+2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등), gitignore 하지 않은
+`.env` 가 든 폴더를 glob 없이 훑는 Grep 도구(숨김 파일을 읽는다),
+견본(`.env`·`.env.local`·`.env.production`, `_ENV_SAMPLES`) 밖의 `.env` 꼴만 고르거나 남기는 glob.
+판정이 견본에만 glob 을 대 보기 때문이다. 견본을 하나씩 모두 뺀 빼기
 (`rg -uu -g '!.env' -g '!.env.local' -g '!.env.production'`), 견본만 빼는 한 glob
 (`grep -r --exclude '.en*[!g]'`), 견본 밖을 고르는 glob(`rg -g .env.staging`)이 그 예이고, 셋 다
 `.env.staging` 을 읽는다. 거짓 양성으로는 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호가 있다. 펼치지
@@ -77,9 +79,9 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 꼴을 빼지만 풀어 보지 않는다)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
 고정한다. grep 의 `--exclude='\\.env*'` 도 grep 이 `.env` 꼴을 빼는데(2026-10-23 GNU grep 3.1, 셀프
 리뷰 표준 축이 손으로 봤다) 풀어 보지 않아 막는다. ag·ack 의 값 옵션 표(`_AG_VALUE_OPTIONS`,
-`_ACK_VALUE_OPTIONS`)는 두 도구의 파서 소스를 읽어 지었고 실제로 재지 않았다. 에이전트
-층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건 개발용
-키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
+`_ACK_VALUE_OPTIONS`)는 두 도구의 파서 소스를 읽어 지었고 실제로 재지 않았다. 에이전트 층의 두
+장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건 개발용 키만 두고,
+도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
 """
 
 from __future__ import annotations
@@ -164,7 +166,9 @@ _ESCAPE = re.compile(r"\\(.)")
 _GREP_VALUE_OPTIONS = frozenset(
     {
         "-A", "-B", "-C", "-m", "-e", "-f", "-d", "-D", "--include", "--exclude", "--exclude-dir",
-        "--exclude-from", "--regexp", "--file",
+        "--exclude-from", "--regexp", "--file", "--max-count", "--after-context",
+        "--before-context", "--context", "--binary-files", "--devices", "--directories",
+        "--label", "--group-separator",
     }
 )  # fmt: skip
 # rg 14.1.1 의 `rg --help` 에서 값을 받는 옵션을 모두 옮겼다(`-x VALUE, --long=VALUE` 와

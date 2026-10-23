@@ -220,6 +220,17 @@ def test_입력_리다이렉션도_읽기다() -> None:
         # `list.txt` 를 위치 인자로 세어 `KEY` 를 경로로 읽었다(셀프 리뷰 표준 축이 grep 3.1 로
         # 봤다).
         "grep -rn --exclude-from list.txt KEY",
+        # GNU grep 의 다른 긴 값 옵션도 같다. 표에 없던 판이 `5` 를 패턴, `KEY` 를 경로로 읽었다
+        # (넷째 푸시 뒤 CodeRabbit·자동 보안 리뷰). 줄임(`--max-c 5`)은 대기열 448 이 닫는다.
+        "grep -rn --max-count 5 KEY",
+        "grep -rn --after-context 3 KEY",
+        "grep -rn --before-context 3 KEY",
+        "grep -rn --context 3 KEY",
+        "grep -rn --binary-files text KEY",
+        "grep -rn --devices read KEY",
+        "grep -rn --directories recurse KEY",
+        "grep -rn --label x KEY",
+        "grep -rn --group-separator x KEY",
         "grep -rn --file patterns.txt",
         "grep -rn --regexp KEY",
         # `--file` 의 앞글자 견줌이 `--files-with-matches` 를 패턴 옵션으로 읽어 `KEY` 를 경로로
@@ -529,6 +540,7 @@ def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린�
         "env -S 'cat .env'",
         "stdbuf -o0 cat .env",
         "sudo --us root cat .env",
+        "grep -rn --max-c 5 KEY",
         "rg -uu -g '!.env' -g '!.env.local' -g '!.env.production' KEY .",
         "grep -rn --exclude '.en*[!g]' KEY .",
         "rg -uu -g '!.en*[!g]' KEY .",
