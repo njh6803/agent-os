@@ -4,7 +4,17 @@
 // (`apps/admin/components/pages/RunPage.decision.test.tsx`)가 잰다.
 
 import { describe, expect, test } from "vitest";
-import { EVENT_TYPES, isEvent, readFrames, splitFrames, type StreamFrame } from "./stream";
+import {
+  END_USER_ITEM_TYPES,
+  EVENT_TYPES,
+  isEndUserItem,
+  isEvent,
+  readEndUserFrames,
+  readFrames,
+  splitFrames,
+  type EndUserFrame,
+  type StreamFrame,
+} from "./stream";
 
 describe("SSE 프레임 파서", () => {
   test("빈 줄로 끝난 프레임의 data 를 떼어 내고 끝나지 않은 프레임은 남긴다", () => {
@@ -223,6 +233,156 @@ describe("재개 스트림 읽기", () => {
 
     for await (const frame of readFrames(stream)) {
       expect(frame.kind).toBe("event");
+      break;
+    }
+
+    expect(stream.locked).toBe(false);
+    await expect(stream.cancel()).resolves.toBeUndefined();
+  });
+});
+
+describe("최종 사용자 항목의 판별자 술어", () => {
+  test("계약의 항목 종류마다 참이다", () => {
+    for (const type of Object.keys(END_USER_ITEM_TYPES)) {
+      expect(isEndUserItem({ type }), type).toBe(true);
+    }
+  });
+
+  test("모르는 type 과 운영자 이벤트의 type 과 객체의 기본 속성 이름은 거짓이다", () => {
+    for (const type of ["exploded", "run_started", "toString", "__proto__"]) {
+      expect(isEndUserItem({ type }), type).toBe(false);
+    }
+  });
+
+  test("객체가 아니거나 type 이 문자열이 아니면 거짓이다", () => {
+    for (const value of [null, "started", [], {}, { type: 1 }]) {
+      expect(isEndUserItem(value), JSON.stringify(value)).toBe(false);
+    }
+  });
+});
+
+async function collectEndUser(stream: ReadableStream<Uint8Array>): Promise<EndUserFrame[]> {
+  const frames: EndUserFrame[] = [];
+  for await (const frame of readEndUserFrames(stream)) {
+    frames.push(frame);
+  }
+  return frames;
+}
+
+const ITEM_STARTED = { type: "started", run_id: "r1" };
+const ITEM_CALLING = { type: "calling", tools: ["orders.lookup", "add"] };
+
+describe("최종 사용자 스트림 읽기", () => {
+  test("프레임마다 id 를 십진 정수로 읽어 항목과 함께 낸다", async () => {
+    const started = `data: ${JSON.stringify(ITEM_STARTED)}\nid: 0\n\n`;
+    const calling = `data: ${JSON.stringify(ITEM_CALLING)}\nid: 12\n\n`;
+    const text = started + calling;
+
+    expect(await collectEndUser(streamOf(text.slice(0, 30), text.slice(30)))).toEqual([
+      { kind: "item", id: 0, item: ITEM_STARTED },
+      { kind: "item", id: 12, item: ITEM_CALLING },
+    ]);
+  });
+
+  test("모르는 type 의 프레임은 id 와 원문으로 내고 다음 프레임을 계속 읽는다", async () => {
+    const stranger = '{"type":"exploded"}';
+    const text = `data: ${stranger}\nid: 3\n\ndata: ${JSON.stringify(ITEM_STARTED)}\nid: 4\n\n`;
+
+    expect(await collectEndUser(streamOf(text))).toEqual([
+      { kind: "raw", id: 3, raw: stranger },
+      { kind: "item", id: 4, item: ITEM_STARTED },
+    ]);
+  });
+
+  test("JSON 이 아닌 프레임도 원문으로 낸다", async () => {
+    expect(await collectEndUser(streamOf("data: {깨진\nid: 5\n\n"))).toEqual([
+      { kind: "raw", id: 5, raw: "{깨진" },
+    ]);
+  });
+
+  test("id 가 없거나 십진 정수가 아닌 프레임은 항목이어도 원문으로 낸다", async () => {
+    const started = JSON.stringify(ITEM_STARTED);
+    const text = `data: ${started}\n\ndata: ${started}\nid: 0x1\n\ndata: ${started}\nid: -1\n\n`;
+
+    expect(await collectEndUser(streamOf(text))).toEqual([
+      { kind: "raw", id: null, raw: started },
+      { kind: "raw", id: null, raw: started },
+      { kind: "raw", id: null, raw: started },
+    ]);
+  });
+
+  test("id 가 안전한 정수의 범위를 넘으면 반올림한 값을 id 로 쓰지 않고 원문으로 낸다", async () => {
+    const started = JSON.stringify(ITEM_STARTED);
+    const text = `data: ${started}\nid: 9007199254740993\n\n`;
+
+    expect(await collectEndUser(streamOf(text))).toEqual([{ kind: "raw", id: null, raw: started }]);
+  });
+
+  test("주석만 든 블록은 keepalive 값 하나가 되고 조각 사이에서 갈려도 하나다", async () => {
+    const started = `data: ${JSON.stringify(ITEM_STARTED)}\nid: 0\n\n`;
+
+    expect(await collectEndUser(streamOf(": pi", "ng\n\n", started, ": ping\n\n"))).toEqual([
+      { kind: "keepalive" },
+      { kind: "item", id: 0, item: ITEM_STARTED },
+      { kind: "keepalive" },
+    ]);
+  });
+
+  test("data 없이 주석 아닌 줄이 든 블록은 버리지 않고 그 줄들을 원문으로 낸다", async () => {
+    expect(await collectEndUser(streamOf("id: 9\nretry: 10\n\n"))).toEqual([
+      { kind: "raw", id: 9, raw: "id: 9\nretry: 10" },
+    ]);
+  });
+
+  test("스트림이 프레임을 닫는 빈 줄 없이 끝나면 남은 프레임은 id 가 잘렸을 수 있어 id 없는 원문으로 낸다", async () => {
+    // 서버는 `data` 다음에 `id` 를 싣는다. `id: 123` 을 보내다 끊기면 `id: 12` 가 남는다.
+    const text = `data: ${JSON.stringify(ITEM_STARTED)}\nid: 12`;
+
+    expect(await collectEndUser(streamOf(text))).toEqual([
+      { kind: "raw", id: null, raw: JSON.stringify(ITEM_STARTED) },
+    ]);
+  });
+
+  test("닫히지 않은 남은 것이 주석뿐이어도 원문으로 낸다", async () => {
+    expect(await collectEndUser(streamOf(": pi"))).toEqual([
+      { kind: "raw", id: null, raw: ": pi" },
+    ]);
+  });
+
+  test("다 읽으면 스트림의 잠금을 푼다", async () => {
+    const stream = streamOf(": ping\n\n");
+
+    await collectEndUser(stream);
+
+    expect(stream.locked).toBe(false);
+  });
+
+  test("요청을 끊어 다음 조각을 기다리던 스트림이 에러로 끝나면 그 에러를 던지고 잠금을 푼다", async () => {
+    let abort: (reason: unknown) => void = () => undefined;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(ITEM_STARTED)}\nid: 0\n\n`));
+        abort = (reason) => {
+          controller.error(reason);
+        };
+      },
+    });
+    const frames = readEndUserFrames(stream);
+    expect((await frames.next()).value).toEqual({ kind: "item", id: 0, item: ITEM_STARTED });
+
+    const waiting = frames.next();
+    abort(new DOMException("위젯이 요청을 끊었다", "AbortError"));
+
+    await expect(waiting).rejects.toThrow("위젯이 요청을 끊었다");
+    expect(stream.locked).toBe(false);
+  });
+
+  test("읽는 쪽이 도중에 멈추면 잠금을 풀어 부른 쪽이 스트림을 닫을 수 있다", async () => {
+    const started = `data: ${JSON.stringify(ITEM_STARTED)}\nid: 0\n\n`;
+    const stream = streamOf(started, started);
+
+    for await (const frame of readEndUserFrames(stream)) {
+      expect(frame.kind).toBe("item");
       break;
     }
 
