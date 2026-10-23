@@ -172,6 +172,34 @@ PR 직전 리뷰에 밀 새 문장(원문):
     - Minor 2. `stream.ts` 머리 주석과 `EndUserFrame` 독스트링이 `idOf`의 `Number.isSafeInteger` 갈래를 빠뜨렸다. 두 문장에 안전한 정수의 범위를 더했다. 그 갈래를 재는 시험이 없어 `id: 9007199254740993` 시험을 더했다. 구현 뒤에 쓴 시험이라 변이 표에 `안전한 정수의 범위를 넘는 id 를 반올림한 채 쓴다`를 더했고, `mutate.py`로 그 줄을 돌려 그 시험 하나만 빨개지는 것을 봤다(1 failed·40 passed). 표지는 실패 줄의 시험 이름이다. 표는 10개가 됐고, 셀프 리뷰가 하나를 더할 때 그대로 둔 프로브 README의 개수(8)도 맞췄다.
     - 오탐: 표의 첫 갈래로 가는 `HTTPException(429)`(`src`에 던지는 곳이 없다), 빈 `tool_calls`(None이 없고 빈 것은 거른다), 청크 경계, 읽기 중 에러와 멈춤의 자원(두 읽기 모두 `finally`), 응답 클래스의 `media_type`(문서에만 쓰인다).
   - 고친 파일을 겨누는 변이 표 넷(`web-widget`·`web-admin`·`end-user-channel`·`end-user-continuation`)을 `--check`로 보니 원문이 모두 한 번씩 있었다.
+- 반영을 커밋했다(140ce6ed). 새 시험 한 줄이 Prettier 서식에 맞지 않아 커밋 전에 `prettier --write`로 고쳤다. pre-commit은 모두 통과했다(러너의 pytest 521.2초).
+- 그 커밋 뒤 `커밋 뒤` 경계의 인계 계기가 왔다. 이 세션의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해, `next-session` "인계할 때" 1의 같은 경계라 넘기지 않고 이었다.
+- origin/main은 합친 07c890c5에서 움직이지 않았다. 브랜치를 푸시하고 `/git-pr`로 PR #375를 열었다. 본문은 PR 템플릿을 채운 것이고, 결정의 원천(ADR 0023의 2026-10-23 이력, 명세 일지 2026-10-23-40에서 사용자가 승인)을 "왜 이렇게 했나"와 "계약 영향"에 적었다. PR 직전 리뷰의 결과는 체크리스트의 그 줄에 있다.
+- PR을 연 직후 `PR 연 뒤` 경계의 인계 계기가 왔다(세션 컨텍스트 약 28만 토큰). 넘긴다. 1의 다섯에 들지 않는다(PR이 열렸다, 요청 범위가 병합까지, 이어받은 경계는 `커밋 뒤`, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음). `@coderabbitai review` 코멘트는 남기지 않았다(새 세션이 남긴다).
+- 넘기는 세션의 제목은 `feature/01-contract-calling-item-and-limit-kind`이고 `feature/01-contract-calling-item-and-limit-kind (인계함)`으로 바꾼다. 띄워 둔 백그라운드 작업은 없다(커밋 둘과 서브에이전트 둘이 모두 끝났다).
+- 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md. 최종 사용자 스트림의 `calling` 항목과 429의 `limit` 종류를 계약에 싣고 api-client에 위젯 클라이언트를 만든다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md
+브랜치: feature/01-contract-calling-item-and-limit-kind
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-49-contract-calling-and-limit.md
+이어받을 상태: 인계: PR 연 뒤. PR #375를 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 이 일지뿐이다(셋째 세션 절과 회고 18~21). 봇 회차에 고칠 것이 없어도 회고와 "다음"까지 마친 일지를 headRefOid 대조 전에 푸시한다(순서 1의 3). PR 직전 리뷰는 끝났다(`/security-review` 0건, `bug-perf-review` 유효 Minor 2를 140ce6ed로 반영). e2e 결정 시험이 로컬 부하에서 빨간 것은 서버 재개 지연으로 진단했고 CI `e2e` 잡이 판정한다. 병합은 워크트리에서 하고(next-session "워크트리에서 병합할 때"), 계약 변경의 결정은 ADR 0023의 2026-10-23 이력으로 이미 승인됐다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다. docs/journal/2026-10-23-49-contract-calling-and-limit.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T14:15:03Z
+
+## 봇 회차와 병합 (넷째 세션)
+
+- 위 지시문을 `implement` 스킬로 감싼 첫 메시지로 열렸고, 사람의 다른 프롬프트는 없었다. 제목을 브랜치 이름으로 바꾸고 `EnterWorktree(path)`로 같은 워크트리에 들어왔다. origin/main은 07c890c5에서 움직이지 않았고 `sibling_overlap.py`는 번호 겹침이 없었다.
+- 140ce6ed에 대한 claude-review 첫 회차는 지적이 없었다(경계·유지보수성 두 축). CodeRabbit은 별 열 개 미만 저장소라 자동 리뷰를 건너뛰었다(`Review skipped: manual review required`).
+- 이 일지를 커밋해 푸시한 뒤 `@coderabbitai review`를 남긴다. 그 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit의 첫 리뷰는 첫 회차다.
 
 ## 회고
 
@@ -194,6 +222,13 @@ PR 직전 리뷰에 밀 새 문장(원문):
 15. 일지에만. 3과 같은 결정 시험이 셀프 리뷰 뒤 부하(CPU 77~98%)에서 두 번 더 빨갰다. 서버 트레이스로 결말이 기한 뒤에 났음을 봤다(셀프 리뷰 절의 "다시 돌린 것"). 3과 같은 종류다.
 16. 기각. 셀프 리뷰가 더한 시험 한 줄이 Prettier 서식에 맞지 않았다. 전체 러너의 web 검사가 그 자리에서 잡았다.
 17. 기각. 커밋 제목 초안이 72자를 넘었다. 커밋 전에 `tools/check_commit_msg.py`로 대 봐서 잡았다(커밋 훅도 막는다, 대기열 222).
+
+셋째 세션(PR 직전 리뷰와 PR)이 덧붙인 후보 넷, 기각 4.
+
+18. 기각. 셀프 리뷰를 반영하며 새로 쓴 사실 문장 둘(`items.py`의 "이것뿐이다", `stream.ts`의 `id` 갈래)이 코드와 어긋났다. 대기열 260이 둔 장치(그 문장을 PR 직전 리뷰 브리프에 밀 주장으로 나열한다)대로 `bug-perf-review`가 두 문장을 겨냥해 잡았다. 설계한 층에서 잡혔다.
+19. 기각. 셀프 리뷰가 새 변이 표에 하나를 더할 때 프로브 README의 개수(8)를 고치지 않았다. 이 세션이 표를 더 고치며 README 행을 열어 봤다. 개수가 README와 표에 따로 적힌 것은 이 표만의 일이 아니고, 1회라 회차를 세지 않는다.
+20. 기각. 새 시험 한 줄이 Prettier 서식에 맞지 않았다(16과 같다). 커밋 전 `prettier --check`가 잡았고 pre-commit의 web 검사도 막는다.
+21. 기각. 시험을 돌리려고 `cd .../web`을 치자 훅이 막았다(하위 폴더로 옮기는 `cd`, 대기열 225·252). `pnpm -C`로 다시 쳤다.
 
 `queue_open_rows.py`는 로컬과 `--ref origin/main` 모두 만료할 행이 없었다.
 
