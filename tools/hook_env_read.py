@@ -24,14 +24,17 @@ Bash 에서 막는 모양 셋.
 - 입력 리다이렉션 `< .env`.
 - 저장소 전체를 훑는 grep. `grep -r` 이 경로 없이, 또는 `.`·`..`·절대 경로·`$PWD` 같은 루트 표기로
   돌면서 `--exclude=.env*` 도 `--include=*.py` 같은 좁힘도 없다. grep 은 숨김 파일을 건너뛰지 않는다
-  (`*` 는 셸이 점파일을 빼므로 훑기가 아니다). rg 는 기본으로 숨김·gitignore 파일을 건너뛰므로
-  `--hidden` 과 `--no-ignore`(`-u` 하나가 `--no-ignore`, `-uu` 가 둘 다)가 함께 있고 `-g '!.env*'`
-  도 `-t py` 같은 좁힘도 없을 때, 또는 `-g`(`--glob`·`--iglob`, 붙여 쓴 `-g.env`, 묶은
+  (`*` 는 셸이 점파일을 빼므로 훑기가 아니다). 빼기는 `.env` 꼴(`_ENV_SAMPLES`)을 모두 빼야 뺀
+  것이다(`--exclude .env` 는 `.env.local` 을 읽는다). rg 는 기본으로 숨김·gitignore 파일을
+  건너뛰므로 `--hidden` 과 `--no-ignore`(`-u` 하나가 `--no-ignore`, `-uu` 가 둘 다)가 함께 있고
+  `-g '!.env*'` 도 `-t py` 같은 좁힘도 없을 때, 또는 `-g`(`--glob`·`--iglob`, 붙여 쓴 `-g.env`, 묶은
   `-ig .env`)가 `.env` 를 고를 때 같은 판정이다. rg 의 `-g` 는 무시·숨김 규칙과 `-t` 를 이기고 뒤에
-  온 glob 이 이긴다 (`_rg_globs_include_env`. `--hidden` 없는 `rg -g .env x .` 를 지나보낸 판이
-  있었다, 대기열 422). 루트인지는 페이로드의 `cwd` 기준으로 푼 경로가 cwd·`CLAUDE_PROJECT_DIR`
-  이거나 그 안에 `.env` 파일이 있는지(이름만 본다)로 가른다. `.`·`..` 는 조각마다의 cwd 를 모르므로
-  언제나 루트로 본다 — `cd src && grep -r x .` 는 오탐이다.
+  온 glob 이 이기므로 `.env` 꼴의 견본마다 맞는 마지막 glob 으로 가른다(`_rg_reads`. `--hidden` 없는
+  `rg -g .env x .` 를 지나보낸 판이 있었다, 대기열 422). 묶은 짧은 옵션은 getopt 처럼 앞에서 읽어
+  값 옵션의 값을 위치 인자로 세지 않는다(`rg -ig .env KEY` 는 경로가 없다). 루트인지는 페이로드의
+  `cwd` 기준으로 푼 경로가 cwd·`CLAUDE_PROJECT_DIR` 이거나 그 안에 `.env` 파일이 있는지(이름만
+  본다)로 가른다. `.`·`..` 는 조각마다의 cwd 를 모르므로 언제나 루트로 본다 —
+  `cd src && grep -r x .` 는 오탐이다.
 토큰은 shlex 로 나눈다 — 인용 안의 `|` 는 분리자가 아니고 `cat ".env"` 의 인자는 보인다. grep·sed·
 awk 류의 첫 위치 인자는 패턴이라 파일로 보지 않는다(`grep .env .gitignore` 는 `.gitignore` 를 읽는
 것이다). 리다이렉션 대상은 인자가 아니다(`cat x > .env` 는 쓰기다).
@@ -55,7 +58,11 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 그대로만 값 옵션으로 본다), PowerShell 도구(권한 deny 가 `Get-Content`·`Select-String` 과 그 별칭만
 막고 `[IO.File]::ReadAllText` 같은 읽기는 지나간다 — 2026-09-29 가짜 `.env` 로 실측), `.env` 밖의
 비밀 파일(사용자 설정의 env 값 등), gitignore 하지 않은 `.env` 가 든 폴더를 glob 없이 훑는 Grep
-도구(숨김 파일을 읽는다). 거짓 양성으로는 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호가 있다. 펼치지
+도구(숨김 파일을 읽는다), 견본(`.env`·`.env.local`·`.env.production`, `_ENV_SAMPLES`) 밖의 `.env`
+꼴만 고르거나 남기는 glob. 판정이 견본에만 glob 을 대 보기 때문이다. 견본을 하나씩 모두 뺀 빼기
+(`rg -uu -g '!.env' -g '!.env.local' -g '!.env.production'`), 견본만 빼는 한 glob
+(`grep -r --exclude '.en*[!g]'`), 견본 밖을 고르는 glob(`rg -g .env.staging`)이 그 예이고, 셋 다
+`.env.staging` 을 읽는다. 거짓 양성으로는 빼는 자리(`--exclude`, rg 의 `!`)의 중괄호가 있다. 펼치지
 않아, 따옴표 없이 bash 가 펼쳐 `.env` 를 빼는 `--exclude={.env*,x}` 도 막는다. 인용된 중괄호는 grep
 이 글자로 읽어 `.env` 를 빼지 않으므로 펼쳐서 뺀다고 보지 않는다. 닿는지 보는 자리는 거꾸로 펼쳐
 본다. 토큰은 shlex 가 인용을 벗긴 뒤라, bash 가 펼치지 않는 인용된 중괄호(`cat '.{env,x}'`)와 쉼표
@@ -63,10 +70,10 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 256 을 넘는 glob(`{a,b}` 아홉)은 어느 갈래도 `.env` 에 닿지 않아도 막는다. 다 펼쳐 판정하면 훅의
 시간 제한을 넘어 지나가기 때문이다. rg·Grep 도구의 glob 에서 rg 는 읽지 않는데 막는 자리도 있다.
 고르는 쪽의 대소문자(`-g .ENV`), 앞의 `./`(`-g ./.env`), 겹친 묶음(`{{.env}}`), 빼는 쪽의
-중괄호(`-g .env -g '!{.env}'`)와 `--iglob` 의 빼기 대소문자(`_rg_excludes_env`), Grep 도구 glob 칸의
+중괄호(`-g .env -g '!{.env}'`)와 `--iglob` 의 빼기 대소문자(`_rg_excludes`), Grep 도구 glob 칸의
 순서(`.env !.env` 는 뒤의 빼기가 이기지만 순서를 보지 않는다), 마지막 `/` 앞의 디렉터리
 조각(`src/**` 를 `**` 로 읽는다), 디렉터리가 붙은 빼는 glob(`!sub/.env` 는 그 폴더만 빼지만 빼지
-않는다고 본다, `_rg_excludes_env`)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
+않는다고 본다, `_rg_excludes`)이다. `tests/tools/test_hook_env_read_rg.py` 가 실제 rg 와 맞대
 고정한다. 에이전트
 층의 두 장치(권한 deny, 이 훅)가 못 보는 것은 셋째 층이 맡는다. 키 자체다 — 사용 한도를 건 개발용
 키만 두고, 도구 출력에 실린 키는 회전한다(`docs/constitution/operations.md` 가드레일).
@@ -140,6 +147,9 @@ _WRAPPERS: dict[str, frozenset[str]] = {
     "builtin": frozenset(),
 }
 _ROOTISH = frozenset({".", "./", "..", "../"})
+# `.env` 꼴의 견본. 견본 하나라도 읽으면 닿는다고 본다. 빼는지는 견본마다 본다(grep 은
+# `_excludes_every_env`, rg 는 `_rg_reads`).
+_ENV_SAMPLES = (".env", ".env.local", ".env.production")
 # `.env`, `.env.local`, `../.env`, `$PWD/.env`, `C:/x/.env`. `.envrc`·`config.env` 는 아니다.
 _ENV_FILE = re.compile(r"(?<![\w.-])(?:[\w.:~${}-]+/)*(\.env(?:\.[\w-]+)?)(?![\w.-])", re.I)
 _HEREDOC_OPENER = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
@@ -327,8 +337,9 @@ def _segment_reason(words: list[str], inputs: list[str], cwd: str | None) -> str
     if cmd == "eval":
         return deny_reason_for_command(" ".join(args), cwd)
     if cmd in READERS:
-        positionals = _positionals(args, _VALUE_OPTIONS.get(cmd, frozenset()))
-        if cmd in PATTERN_COMMANDS and not _pattern_given_by_option(args):
+        value_options = _VALUE_OPTIONS.get(cmd, frozenset())
+        positionals = _positionals(args, value_options)
+        if cmd in PATTERN_COMMANDS and not _pattern_given_by_option(args, value_options):
             positionals = positionals[1:]
         for positional in positionals:
             name = env_file_name(positional) or _glob_reaching_env(positional)
@@ -380,11 +391,17 @@ def _option_width(option: str, value_options: frozenset[str]) -> int:
     나오면 그 뒤의 글자가 값이고(`-n5`, `-uroot`), 뒤가 비었으면 다음 낱말이 값이다(`-iu root`)."""
     if option.startswith("--"):
         return 2 if option in value_options else 1
-    letters = option[1:]
-    for index, letter in enumerate(letters):
+    found = _short_value_option(option, value_options)
+    return 2 if found is not None and not found[1] else 1
+
+
+def _short_value_option(option: str, value_options: frozenset[str]) -> tuple[str, str] | None:
+    """짧은 옵션 묶음(`-ig.env`)을 getopt 처럼 앞에서 읽어 처음 만난 값 옵션의 글자와 그 뒤에 붙은
+    값. 값이 비었으면 다음 낱말이 값이다. 값 옵션이 없으면 None 이다."""
+    for index, letter in enumerate(option[1:], start=1):
         if f"-{letter}" in value_options:
-            return 1 if letters[index + 1 :] else 2
-    return 1
+            return letter, option[index + 1 :]
+    return None
 
 
 def _command_name(word: str) -> str:
@@ -399,8 +416,16 @@ def _shell_c_argument(args: list[str]) -> str | None:
     return None
 
 
-def _pattern_given_by_option(args: list[str]) -> bool:
-    return any(arg in {"-e", "-f"} or arg.startswith(("--regexp", "--file")) for arg in args)
+def _pattern_given_by_option(args: list[str], value_options: frozenset[str]) -> bool:
+    """패턴을 `-e`·`-f` 로 줬는가. 묶음 속의 것(`-ie KEY`)도 `_positionals` 와 같이 읽는다."""
+    for arg in args:
+        if arg in {"-e", "-f"} or arg.startswith(("--regexp", "--file")):
+            return True
+        if arg.startswith("-") and not arg.startswith("--"):
+            found = _short_value_option(arg, value_options)
+            if found is not None and found[0] in {"e", "f"}:
+                return True
+    return False
 
 
 def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
@@ -411,7 +436,7 @@ def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
     )
     if not recursive:
         return False
-    if any(_matches_env(value) for value in _option_values(args, {"--exclude"})):
+    if _excludes_every_env(_option_values(args, {"--exclude"})):
         return False
     includes = _option_values(args, {"--include"})
     if includes and not any(_reaches_env(value) for value in includes):
@@ -420,45 +445,55 @@ def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
 
 
 def _rg_sweeps_root(args: list[str], cwd: str | None) -> bool:
-    globs = _rg_glob_values(args)
-    if _rg_globs_include_env(globs):
-        return _paths_reach_root(args, _RG_VALUE_OPTIONS, cwd)
     clusters = [match.group(1) for arg in args if (match := _SHORT_CLUSTER.match(arg))]
     u_count = sum(cluster.count("u") for cluster in clusters) + args.count("--unrestricted")
     hidden = "--hidden" in args or any("." in cluster for cluster in clusters) or u_count >= 2
     no_ignore = u_count >= 1 or any(
         arg.startswith("--no-ignore") and arg != "--no-ignore-messages" for arg in args
     )
-    if not (hidden and no_ignore):
-        return False
-    if any(arg in {"-t", "--type"} or arg.startswith("--type=") for arg in args):
-        return False
-    if any(_rg_excludes_env(glob[1:]) for glob in globs if glob.startswith("!")):
-        return False
-    positives = [glob for glob in globs if not glob.startswith("!")]
-    if positives and not any(_reaches_env(glob) for glob in positives):
+    typed = any(arg in {"-t", "--type"} or arg.startswith("--type=") for arg in args)
+    unrestricted = hidden and no_ignore and not typed
+    globs = _rg_glob_values(args)
+    if not any(_rg_reads(globs, sample, unrestricted=unrestricted) for sample in _ENV_SAMPLES):
         return False
     return _paths_reach_root(args, _RG_VALUE_OPTIONS, cwd)
 
 
-def _rg_globs_include_env(globs: list[str]) -> bool:
-    """rg 의 glob 가운데 `.env` 를 두고 마지막으로 말한 것이 고르는 glob 인가. rg 의 `-g` 는 무시
-    규칙과 숨김 규칙을 이기고(`--hidden`·`--no-ignore` 없이 `-g .env` 가 gitignore 된 `.env` 를
+def _rg_reads(globs: list[str], sample: str, *, unrestricted: bool) -> bool:
+    """rg 가 `.env` 꼴의 견본 하나를 읽는가. 그 견본에 맞는 마지막 glob 이 정한다. rg 의 `-g` 는
+    무시 규칙과 숨김 규칙을 이기고(`--hidden`·`--no-ignore` 없이 `-g .env` 가 gitignore 된 `.env` 를
     읽었다), `-t` 로 좁혀도 읽으며, 뒤에 온 glob 이 이긴다(`-g '!.env*' -g .env` 는 읽고 거꾸로는
     읽지 않았다). 2026-10-23 rg 14.1.1 로 손으로 봤고 `tests/tools/test_hook_env_read_rg.py` 가
-    실제 rg 와 맞댄다(대기열 422). 빼는 glob 은 `_rg_excludes_env` 로 본다."""
-    included = False
+    실제 rg 와 맞댄다(대기열 422). 맞는 glob 이 없으면 고르는 glob 이 하나도 없고 무시·숨김 규칙을
+    모두 끄고 `-t` 로 좁히지 않은(`unrestricted`) 때만 읽는다. 견본마다 보지 않고 `.env` 꼴 하나라도
+    빼면 뺀다고 본 판이 `-g '.env*' -g '!.env'`·`-uu -g '!.env'` 의 `.env.local` 을 지나보냈다(푸시
+    뒤 자동 보안 리뷰)."""
+    decision: bool | None = None
     for glob in globs:
         if glob.startswith("!"):
-            if _rg_excludes_env(glob[1:]):
-                included = False
-        elif _reaches_env(glob):
-            included = True
-    return included
+            if _rg_excludes(glob[1:], sample):
+                decision = False
+        elif _rg_selects(glob, sample):
+            decision = True
+    if decision is not None:
+        return decision
+    return unrestricted and all(glob.startswith("!") for glob in globs)
 
 
-def _rg_excludes_env(pattern: str) -> bool:
-    """rg 의 빼는 glob(`!` 뒤)이 `.env` 를 빼는가. 펼치지 않고 대소문자를 가려 본다. rg 의 `-g` 는
+def _rg_selects(pattern: str, sample: str) -> bool:
+    """rg 의 고르는 glob 이 견본에 닿는가. 중괄호 갈래마다 대소문자 없이 본다(`_reaches_env` 와 같은
+    너그러움, 모듈 독스트링의 거짓 양성). 갈래가 너무 많으면 닿는다고 본다."""
+    candidates = _candidates(pattern)
+    if candidates is None:
+        return True
+    return any(
+        fnmatch.fnmatch(sample, branch.rsplit("/", 1)[-1].replace("[^", "[!").lower())
+        for branch in candidates
+    )
+
+
+def _rg_excludes(pattern: str, sample: str) -> bool:
+    """rg 의 빼는 glob(`!` 뒤)이 견본을 빼는가. 펼치지 않고 대소문자를 가려 본다. rg 의 `-g` 는
     대소문자를 가려, Windows 에서도 `-g .env -g '!.ENV'` 가 `.env` 를 읽었다(2026-10-23 rg 14.1.1,
     셀프 리뷰 명세 축이 손으로 봤다). `--iglob` 과 `--glob-case-insensitive` 의 빼기도 가려 보아,
     `--iglob '!.ENV'` 는 빼지 않는다고 본다(거짓 양성). 앞의 `**/` 를 뗀 뒤에도 `/` 가 남은 glob 은
@@ -468,7 +503,7 @@ def _rg_excludes_env(pattern: str) -> bool:
     그 폴더만 빼는 glob 도 빼지 않는다고 본다(거짓 양성)."""
     while pattern.startswith("**/"):
         pattern = pattern[3:]
-    return "/" not in pattern and _matches_env(pattern, case_sensitive=True)
+    return "/" not in pattern and fnmatch.fnmatchcase(sample, pattern.replace("[^", "[!"))
 
 
 def _rg_glob_values(args: list[str]) -> list[str]:
@@ -500,30 +535,43 @@ def _rg_glob_values(args: list[str]) -> list[str]:
             continue
         if not arg.startswith("-") or len(arg) < 2:
             continue
-        for position in range(1, len(arg)):
-            if f"-{arg[position]}" not in _RG_VALUE_OPTIONS:
-                continue
-            rest = arg[position + 1 :]
-            if not rest:
-                index += 1
-                rest = nxt or ""
-            if arg[position] == "g" and (rest or nxt is not None):
-                values.append(rest)
-            break
+        found = _short_value_option(arg, _RG_VALUE_OPTIONS)
+        if found is None:
+            continue
+        letter, rest = found
+        if not rest:
+            index += 1
+            rest = nxt or ""
+        if letter == "g" and (rest or nxt is not None):
+            values.append(rest)
     return values
 
 
-def _matches_env(pattern: str, *, case_sensitive: bool = False) -> bool:
+def _matches_env(pattern: str) -> bool:
     """glob 이 `.env` 나 `.env.<무엇>` 에 닿는가. `**/.env*` 는 앞의 디렉터리 조각을 뗀다. 중괄호는
-    펼치지 않는다. 빼는 자리(`--exclude`, rg 의 `!`)가 이것을 써, 인용된 중괄호를 글자로 읽는 도구가
-    `.env` 를 빼지 않는데도 뺀다고 보지 않게 한다. 대괄호의 `[^` 는 `[!` 로 읽는다. bash·GNU grep·
-    ripgrep 은 둘 다 부정으로 읽고 fnmatch 는 `^` 를 글자로 읽어, `.en[^x]` 를 지나보내고
-    `--exclude=.en[^v]` 가 `.env` 를 뺀다고 봤다(PR 직전 보안 리뷰). `case_sensitive` 면 대소문자를
-    가린다(`_rg_excludes_env`)."""
-    leaf = pattern.rsplit("/", 1)[-1].replace("[^", "[!")
-    if not case_sensitive:
-        return any(fnmatch.fnmatch(sample, leaf.lower()) for sample in (".env", ".env.local"))
-    return any(fnmatch.fnmatchcase(sample, leaf) for sample in (".env", ".env.local"))
+    펼치지 않는다. 대괄호의 `[^` 는 `[!` 로 읽는다. bash·GNU grep·ripgrep 은 둘 다 부정으로 읽고
+    fnmatch 는 `^` 를 글자로 읽어, `.en[^x]` 를 지나보내고 `--exclude=.en[^v]` 가 `.env` 를 뺀다고
+    봤다(PR 직전 보안 리뷰)."""
+    return any(_env_samples_matched(pattern))
+
+
+def _excludes_every_env(patterns: list[str]) -> bool:
+    """grep 의 `--exclude` 값들이 합쳐 `.env` 꼴의 견본을 모두 빼는가. 견본마다 그것을 빼는 값이
+    하나라도 있어야 한다(`--exclude .env --exclude '.env.*'` 는 모두 뺀다). 중괄호는 펼치지 않아,
+    인용된 중괄호를 글자로 읽는 grep 이 `.env` 를 빼지 않는데도 뺀다고 보지 않게 한다. 하나만 빼는
+    glob(`.env`, `.env.local`)은 남은 꼴을 읽는다. 값 하나라도 견본 하나에 맞으면 뺀다고 본 판이
+    `grep -r --exclude .env` 를 지나보냈고(푸시 뒤 자동 보안 리뷰가 rg 의 같은 판정에서 찾았다,
+    대기열 422), 값마다 견본 모두를 요구한 판은 합쳐야 모두 빼는 명령을 막았다(셀프 리뷰 두 축.
+    GNU grep 3.1 로 `--exclude .env` 가 `.env.local` 을 읽고 둘을 합치면 읽지 않는 것을 손으로
+    봤다). rg 도 견본마다 본다(`_rg_reads`)."""
+    matched = [_env_samples_matched(pattern) for pattern in patterns]
+    return bool(matched) and all(any(row[i] for row in matched) for i in range(len(_ENV_SAMPLES)))
+
+
+def _env_samples_matched(pattern: str) -> list[bool]:
+    """glob 의 마지막 조각이 `.env` 꼴의 견본마다 맞는가. 대소문자는 가리지 않는다."""
+    leaf = pattern.rsplit("/", 1)[-1].replace("[^", "[!").lower()
+    return [fnmatch.fnmatch(sample, leaf) for sample in _ENV_SAMPLES]
 
 
 def _reaches_env(pattern: str) -> bool:
@@ -612,7 +660,7 @@ def _first_group(pattern: str) -> tuple[str, list[str], str] | None:
 
 def _paths_reach_root(args: list[str], value_options: frozenset[str], cwd: str | None) -> bool:
     positionals = _positionals(args, value_options)
-    paths = positionals if _pattern_given_by_option(args) else positionals[1:]
+    paths = positionals if _pattern_given_by_option(args, value_options) else positionals[1:]
     return not paths or any(_is_root(path, cwd) for path in paths)
 
 
@@ -645,19 +693,18 @@ def _same_path(left: str, right: str) -> bool:
 
 
 def _positionals(args: list[str], value_options: frozenset[str]) -> list[str]:
-    """옵션과 옵션 값을 뺀 위치 인자들."""
+    """옵션과 옵션 값을 뺀 위치 인자들. 옵션 낱말은 getopt 처럼 읽는다(`_option_width`). 묶음 속의
+    값 옵션을 보지 않은 판이 `rg -ig .env KEY` 의 `.env` 를 패턴, `KEY` 를 경로로 읽어, 경로 없이
+    루트를 훑는 명령을 지나보냈다(푸시 뒤 자동 보안 리뷰, 대기열 422)."""
     positionals: list[str] = []
-    skip = False
-    for arg in args:
-        if skip:
-            skip = False
-            continue
-        if arg in value_options:
-            skip = True
-            continue
+    index = 0
+    while index < len(args):
+        arg = args[index]
         if arg.startswith("-") and arg != "-":
+            index += _option_width(arg, value_options)
             continue
         positionals.append(arg)
+        index += 1
     return positionals
 
 

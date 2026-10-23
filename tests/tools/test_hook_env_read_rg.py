@@ -181,6 +181,13 @@ _BASH_RG_SAME = [
     "rg -uu -rg {m} .", "rg -r X -g .env {m}", "rg -d 3 -g .env {m}",
     "rg --replace X -g .env {m}", "rg --max-filesize 1M -g .env {m}",
     "rg -g .env -g '!sub/.env' {m} .", "rg -uu -g '!/.env' {m} .", "rg -uu -g '!**/.env*' {m} .",
+    # 경로 없는 묶은 짧은 옵션과 `.env` 하나만 빼는 빼기(푸시 뒤 자동 보안 리뷰가 찾았다).
+    # `-ig .env {m}` 의 `.env` 는 `-g` 의 값이라 `{m}` 이 패턴이고 경로가 없다. `!.env` 는
+    # `.env.local` 을 빼지 않는다.
+    "rg -ig .env {m}", "rg -ug .env {m}", "rg -ig.env {m}",
+    "rg -g '.env*' -g '!.env' {m} .", "rg -uu -g '!.env' {m} .", "rg -uu -g '!.env.local' {m} .",
+    # 빼기 여럿이 합쳐 `.env` 꼴을 모두 뺀다(grep 의 같은 꼴, 셀프 리뷰 두 축).
+    "rg -uu -g '!.env' -g '!.env.*' {m} .",
 ]  # fmt: skip
 # 훅이 막는데 rg 는 읽지 않는 것(거짓 양성). 고르는 쪽의 대소문자, 앞의 `./`, 빼는 쪽의 중괄호,
 # `--iglob` 의 빼기 대소문자, 디렉터리가 붙은 빼기다(모듈 독스트링의 못 보는 것).

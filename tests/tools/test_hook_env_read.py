@@ -27,6 +27,10 @@ from tools.hook_env_read import (
         'head -n 1 "C:/project/agent/.env"',
         "grep ANTHROPIC .env",
         "grep -e ANTHROPIC .env",
+        "grep -ie ANTHROPIC .env",
+        "rg -ie ANTHROPIC .env",
+        "sed -ne 1p .env",
+        "rg -ig '*' ANTHROPIC .env",
         "sed -n 1p ../.env",
         "awk '{print $1}' .env",
         "less .env.local",
@@ -153,6 +157,9 @@ def test_입력_리다이렉션도_읽기다() -> None:
         "rg -nuu KEY",
         "rg -uu KEY 2>/dev/null",
         "rg -uu -g '.env*' KEY",
+        # `.env` 하나만 빼면 `.env.local` 은 읽는다(푸시 뒤 자동 보안 리뷰, 대기열 422).
+        "grep -rn --exclude .env KEY .",
+        "grep -rn --exclude=.env.local KEY .",
     ],
 )
 def test_env_를_빼지_않은_저장소_전체_grep_을_막는다(명령: str) -> None:
@@ -190,7 +197,10 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         "stat .env",
         "grep -rn KEY src/ tests/",
         "grep -rn --exclude=.env* KEY .",
-        "grep -rn --exclude .env KEY .",
+        "grep -rn --exclude .env* KEY .",
+        # 값 여럿이 합쳐 `.env` 꼴을 모두 뺀다(셀프 리뷰 두 축, GNU grep 3.1 로 손으로 봤다).
+        "grep -rn --exclude .env --exclude '.env.*' KEY .",
+        "grep -rn --exclude .env --exclude .env.local --exclude .env.production KEY .",
         "grep -rn --include=*.py KEY .",
         "grep -n KEY pyproject.toml",
         "grep -n .env .gitignore",
@@ -418,6 +428,10 @@ def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린�
         "env -S 'cat .env'",
         "stdbuf -o0 cat .env",
         "sudo --us root cat .env",
+        "rg -uu -g '!.env' -g '!.env.local' -g '!.env.production' KEY .",
+        "grep -rn --exclude '.en*[!g]' KEY .",
+        "rg -uu -g '!.en*[!g]' KEY .",
+        "rg -g .env.staging KEY",
     ],
 )
 def test_독스트링이_못_본다고_적은_것은_정말_못_본다(명령: str) -> None:
