@@ -38,6 +38,24 @@
 - 넘긴 세션: feature/02-runtime-relays-call-events-live → `feature/02-runtime-relays-call-events-live (인계함)`
 - 이어 받은 세션: `feature/02-runtime-relays-call-events-live`
 
+
+## 인계 지시문
+
+```
+다음 작업: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md. 실행 도중에 모델·도구 호출 이벤트를 소비자에게 바로 중계해 최종 사용자 스트림의 calling 항목과 도구 항목이 결말 전에 오게 한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
+브랜치: feature/02-runtime-relays-call-events-live
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-01-runtime-relays-call-events-live.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, origin/main 기준, 미추적 relay_mutations.toml 포함)부터 한다. 그 뒤 티켓 done 처리, 일지의 probes/README 경로 고침, 카나리아 명세 갱신, 검사, 커밋, PR, 병합. 일지 docs/journal/2026-10-24-01-runtime-relays-call-events-live.md. PR #375 claude-review 둘째 회차의 Nit(src/agent_os/http/errors.py의 limit 불변식)은 보류했고 이유는 PR #375 코멘트에 있다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T15:28:28Z
+
 ## 이어 받은 세션
 
 > 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
@@ -68,7 +86,18 @@
 
 PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): 위 "고친 것"의 `runs.py`·`run.py`·`_feed`·`test_end_user.py` 문장 넷.
 
-## 인계 지시문
+### 검사(이어 받은 세션)
+
+- 바꾼 시험 파일 셋(`tests/core/test_run.py`, `tests/channel/http/test_end_user.py`, `tests/channel/http/test_router.py`): 506 passed(`-n 4`).
+- 린트 둘: 초록.
+- 커밋 ca7a22ff의 pre-commit: 모두 Passed(pytest 369.0초). 헌법 판 검사는 고친 헌법 파일이 없어 Skipped. 인용 대조 경고 넷은 이 일지가 고치기 전의 옛 문장과 아직 없는 새 문장을 인용한 것이라 그대로 둔다.
+- `uv run --env-file ../../../.env pytest -m llm -q`: 7 passed, 5214 deselected in 217.75s. LLM 토큰 합계 47,924(입력 46,855, 출력 1,069). 트레이스 10개, 모델 호출 20건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다.
+- 카나리아(claude 2.1.302): `core_rule_runtime_only_events`, `core_rule_read_cap_thread`, `core_rule_pre_owner_damage`, `channel_rule_pre_owner_damage`, `channel_rule_end_user_paths` 는 통과 4. `core_rule_shortcuts` 는 두 번 돌려 통과 5 · 실패 3이었다. 실패 셋은 모두 실험군이고 (1)의 굵은 문장 "옛 대화는 지도 없음이 이어진다"를 옮겨 규칙은 실렸으며, (2)를 `_follow` 대신 옛 대화 갈래의 `_walk` 로 답했다. 이 명세 머리가 2026-10-21에 적은 같은 오답이고 이번 변경은 그 문장을 고치지 않았다. 회고 후보: 그 명세의 (2) 질문이 두 갈래를 가르지 못한다.
+- sibling_overlap: origin/main이 51a0417(PR #376, web-widget 03)로 전진했고 `.scratch/web-widget/probes/README.md` 를 함께 고쳤다(글자 충돌 후보). 그 PR이 CLAUDE.md·operations.md에서 바꾼 것은 위젯 사진 비교 명령뿐이라 이 브랜치가 따를 새 규약은 없다.
+
+## 인계(커밋 뒤)
+
+컨텍스트가 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 열린 PR은 없다.
 
 ```
 다음 작업: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md. 실행 도중에 모델·도구 호출 이벤트를 소비자에게 바로 중계해 최종 사용자 스트림의 calling 항목과 도구 항목이 결말 전에 오게 한다
@@ -78,9 +107,17 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): 위 "고친 것"
 브랜치: feature/02-runtime-relays-call-events-live
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
 읽을 것: docs/journal/2026-10-24-01-runtime-relays-call-events-live.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, origin/main 기준, 미추적 relay_mutations.toml 포함)부터 한다. 그 뒤 티켓 done 처리, 일지의 probes/README 경로 고침, 카나리아 명세 갱신, 검사, 커밋, PR, 병합. 일지 docs/journal/2026-10-24-01-runtime-relays-call-events-live.md. PR #375 claude-review 둘째 회차의 Nit(src/agent_os/http/errors.py의 limit 불변식)은 보류했고 이유는 PR #375 코멘트에 있다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 티켓 done, 카나리아 명세 여섯 갱신, -m llm(7 passed)까지 커밋 ca7a22ff에 들었고 푸시하지 않았다. 열린 PR은 없다. 남은 단계: 일지의 이 인계 절을 커밋에 싣기, origin/main(51a0417, PR #376)을 sync_with_base_branch로 합치기(.scratch/web-widget/probes/README.md 글자 충돌 후보), 합친 뒤 uv run python tools/run_checks.py, PR 직전 리뷰(일지 "PR 직전 리뷰에 밀 주장" 넷을 브리프에), PR, 봇 회차, 병합. 일지 docs/journal/2026-10-24-01-runtime-relays-call-events-live.md. PR #375 claude-review 둘째 회차의 Nit(src/agent_os/http/errors.py의 limit 불변식)은 보류했고 이유는 PR #375 코멘트에 있다. 원격 브랜치 docs/web-widget-spec-2는 사람이 확인하기 전에는 지우지 않는다
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
 
-open-session을 부른다 2026-10-23T15:28:28Z
+- 제목: `feature/02-runtime-relays-call-events-live (인계함)`. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T15:56:12Z
+
+## 이어 받은 세션(커밋 뒤)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/02-runtime-relays-call-events-live.md
+
+(지시문은 위 "인계(커밋 뒤)"와 같다. 워크트리에 EnterWorktree(path)로 들어갔다.)
