@@ -242,8 +242,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''_MODEL = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")'''
-new = '''_MODEL = re.compile(r"(?s).+")'''
+old = '''MODEL_FORM = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")'''
+new = '''MODEL_FORM = re.compile(r"(?s).+")'''
 
 [[mutation]]
 name = "식별자 칸(창·subtype·노력)이 아무 글이나 받는다"
@@ -253,8 +253,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''_IDENT = re.compile(r"[a-z][a-z0-9_]*")'''
-new = '''_IDENT = re.compile(r"(?s).+")'''
+old = '''IDENT_FORM = re.compile(r"[a-z][a-z0-9_]*")'''
+new = '''IDENT_FORM = re.compile(r"(?s).+")'''
 
 [[mutation]]
 name = "도구 이름 칸이 아무 글이나 받는다"
@@ -297,8 +297,8 @@ expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''_VERSION = re.compile(r"[0-9][0-9A-Za-z .()+-]*")'''
-new = '''_VERSION = re.compile(r"(?s).+")'''
+old = '''VERSION_FORM = re.compile(r"[0-9][0-9A-Za-z .()+-]*")'''
+new = '''VERSION_FORM = re.compile(r"(?s).+")'''
 
 [[mutation]]
 name = "실패 노드 칸이 아무 글이나 받는다"
