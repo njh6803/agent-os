@@ -1,0 +1,342 @@
+# 2026-10-23 (30) web-widget 화면을 /ui-design으로 그려 고르고 옮긴다
+
+> 사용자: (next-session 지시문을 첫 메시지로 받았다) "다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다 … 이어받을 상태: 없음. 옛 docs/web-widget-spec 워크트리가 남아 있으나 PR이 없다 … 이번 요청 범위: PR과 병합까지"
+
+## 체크아웃 정리
+
+제목을 `docs/web-widget-screens`로 바꾸고 `tidy-checkouts`를 돌았다. 루트는 main이고 깨끗해 `975bf04c`에서 `e205147d`로 당겼다(#359). 지운 워크트리와 브랜치는 없다. `004-optional-bool-annotation-check`는 병합됐지만 그 세션이 돌아 남았고, 다섯은 쥔 프로세스(셸, 쉬는 세션의 `claude.exe`, PyCharm)가 있어 남았으며, 나머지는 병합된 PR이 없거나 앱의 표지가 있다. 휴지통의 `worktree-overrides-pc-check~~.venv`는 python.exe(pid 41176)가 모듈을 쥐어 `empty-trash`가 종료 1로 남겼다. 그 뒤 `EnterWorktree`(이름 `web-widget-screens`)로 들어가 브랜치 `docs/web-widget-screens`를 땄다.
+
+## /ui-design 1~2단계
+
+- 1. `claude plugin list`에서 `frontend-design@claude-plugins-official`이 `enabled`(user 범위)였다.
+- 2. 디자인 시스템 아티팩트를 `paths` 없이 `read`하자 머리가 "shared with you from another organization (writer; …)"였다. 지금 계정이 편집자다. 파일 목록(판 `1792677911-3a99`, 875개)에 `tokens.json`은 없다. 색인 `lastChange.via`는 `agent-os 부분 main@c41adad`다. admin-style 화면 세션(브랜치 `docs/admin-style-screens`의 일지. 이 줄을 쓸 때는 `2026-10-22-27`이었고 그 브랜치가 `2026-10-23-21`로 옮겼다)이 본 판과 같다.
+- 화면 디자인 절은 부분 `via`를 바뀐 것으로 보고 빌드해 올리라고 적는다. 첫 전체 올리기는 design-reverse-sync 티켓 08(`ready-for-agent`)이 맡는다. 바뀐 것이 실제로 있는지 봤다.
+  - 마지막 전체 올리기 PR #239(`983bf491`)에서 지금(`e205147d`)까지의 빌드 입력 변경은 `web-design.md`(c41adad가 따로 올렸고 그 뒤 그대로다), 패키지의 명암비 모듈(`styles/contrast.ts`, `./contrast` 내보내기, `themes.ts`가 `MODES`를 그 모듈에서 다시 내보냄, `testing/index.ts`), `index.ts`의 주석, `Entrypoints.stories.tsx`, `visual/` 아래 사진 비교 시험이다. 컴포넌트 폴더와 `theme.css`는 그대로다. admin-style이 본 `b104f8fa` 뒤로 #353(design-reverse-sync 01)이 명암비 모듈을 더했다.
+- 사람에게 물었다. 질문은 "위젯 화면을 그리기 전에 디자인 시스템 아티팩트를 코드에서 전체 다시 올릴까요? 지금 아티팩트의 컴포넌트와 색은 코드와 같지만, 기록에는 '부분 올리기'로 남아 있습니다. 관리 화면 세션도 같은 질문에 '다시 올리지 않고 그린다'를 골랐습니다."였다. 첫 화면은 훅이 사실 대조로 막아, 위 `git diff --stat 983bf491`과 `themes.ts`·`index.ts`·`package.json`의 차이를 대 보고 설명에 넣었으며 걸리는 시간은 어림으로 적었다.
+
+> 사용자: (선택 화면) "다시 올리지 않고 그린다 (Recommended)" — "지금 아티팩트로 바로 그립니다. 마지막 전체 올리기(PR #239) 뒤로 컴포넌트 폴더와 색 파일(theme.css)은 그대로이고, 바뀐 것은 명암비 계산 코드의 자리와 주석, 사진 비교 시험뿐입니다(git diff로 봤습니다). 화면 표의 '동기화한 커밋' 칸에는 규약대로 '부분 main@c41adad'를 적고, 전체 올리기는 원래 계획대로 design-reverse-sync 티켓 08에 맡깁니다."
+
+고르지 않은 쪽은 "먼저 전체를 다시 올린다"(빌드, 파일마다 대조, 바뀐 것만 올리기, 빌드 명령과 산출 목록을 `.design-sync/`에 적는 별도 chore PR 병합 뒤에 그린다)였다.
+
+## /ui-design 3단계: 참고 디자인
+
+`design/`에 시작 프롬프트가 없다. 옛 `docs/web-widget-spec` 브랜치의 커밋 `8acd9a48`(2026-10-12)에 단독 Claude Design용 `screens-prompt.md`가 있으나, 디자인 시스템 재탐색(design-refresh)과 end-user-continuation의 실패 원인 전이고 참고 디자인 조사가 없어 재료로만 읽었다. 참고는 `kickoff/prompting.md` "참고 디자인 조사"대로 먼저 사람에게 물었다. 기준 화면은 관리 화면이고 위젯은 같은 시스템이 남의 사이트 안에서도 맞는지 보는 표본이다(`plan.md` web-widget 행의 2026-10-12 괄호).
+
+> 사용자: (선택 화면) "찾아서 제안해 주세요 (Recommended)" — "세션이 사이트에 넣는 채팅 위젯과 대화형 도구 화면으로 이름난 제품을 셋에서 다섯 개 찾아(절차가 정한 수), 배치·밀도·진행 표시·알림 같은 규칙을 출처와 함께 정리해 선택 화면으로 보여 드립니다."
+
+고르지 않은 쪽은 "직접 줄 참고가 있다"였다.
+
+조사는 서브에이전트에 맡겼다. 원문을 curl로 받아 읽었고, 다섯은 OpenAI ChatKit, Intercom Messenger(Fin), Vercel AI Elements, GitHub Copilot Chat(VS Code), Microsoft Bot Framework Web Chat이다. Claude(claude.ai)는 대화 안 승인 화면의 문구와 배치를 밝힌 공개 문서가 없어 빼고, 재연결과 접근성 규칙을 가장 자세히 적은 Web Chat을 넣었다. 뽑은 공통 규칙 여덟과 출처, 가져오지 않을 것은 시작 프롬프트의 "참고 디자인"에 옮겼다. 서브에이전트의 추천안은 접힌 진행 요약에 걸린 시간("도구 3번 · 12초")을 넣었는데, 위젯이 받는 진행 항목(`ProgressItem`)은 도구 이름과 성패뿐이라 개수만 적게 고쳐 보였다. 진행 줄의 "실행 중"도 용어집이 피하는 말이라 옮기지 않았다.
+
+질문은 둘이었다. "위젯 대화를 어떤 배치로 그릴까요? 색과 글꼴은 디자인 시스템 그대로이고, 요청·출력·도구 진행·알림의 모양만 바뀝니다."와 "참고 제품의 모양 가운데 위젯에 들이고 싶지 않은 것이 있나요?"다. 첫 화면은 훅이 사실 대조로 막아, 진행 항목의 필드(`openapi.json`)와 도는 표시의 움직임 줄이기(`web-design.md`)를 대 보고 320px에서의 폭 비교는 재지 않은 어림이라고 설명에 적었다.
+
+> 사용자: (선택 화면, 방향) "조용한 기록형 (Recommended)" — "요청만 오른쪽의 옅은 회색 상자에 담고, 출력은 상자 없이 위젯 폭을 다 씁니다. 도구는 이름과 성공·실패만 보이는 한 줄로 쌓이다가, 끝나면 '도구 3개를 불렀습니다'(개수는 예시) 한 줄로 접힙니다. 위젯이 받는 진행 항목에는 걸린 시간이 없어 개수로만 적습니다. 승인은 테두리 카드에서 묻고, 연결·상한 알림은 입력창 바로 위의 띠에 뜹니다. 출력에 말풍선 여백이 없어 좁은 폭(320px)에서도 출력과 인자 JSON이 가장 넓게 씁니다(어림, 재지 않았습니다). 참고: Vercel AI Elements, VS Code Copilot Chat, OpenAI ChatKit."
+
+> 사용자: (선택 화면, 뺄 것) "추천 목록대로 뺀다 (Recommended)" — "로고·브랜드 색·글꼴, 위젯을 여닫는 둥근 런처 단추, 상담원 사진, 마크다운 렌더링(출력은 글자 그대로 보입니다), 첨부·좋아요·모델 고르기, '항상 허용' 같은 범위 승인을 들이지 않습니다. 도구를 부르는 동안의 움직임은 디자인 시스템의 도는 표시 하나만 쓰고, 그 표시는 움직임 줄이기 설정에서 멈춥니다(디자인 시스템 규칙)."
+
+고르지 않은 쪽은 방향의 "메신저형"(양쪽 말풍선, 이름 첫 글자 동그라미)과 "작업 기록형"(모두 왼쪽, 도구 줄을 접지 않음), 뺄 것의 "움직임을 모두 뺀다"와 "도구 이름을 숨긴다"였다.
+
+## /ui-design 4~6단계: 와이어프레임
+
+4단계의 frontend-design 스킬은 저장소 규칙이 비워 둔 축(새 화면의 배치 세부, 문구 다듬기)에만 썼다. 스킬과 규칙이 부딪친 네 곳(팔레트 hex, 서체, 작은 라벨 고정폭, 찍어 보고 고치기)은 `.scratch/design-system/design/frontend-design-conflicts.md` 표 끝에 2026-10-23 web-widget 줄로 더했다.
+
+5단계는 아티팩트(Design 형식) 캔버스에 와이어프레임 일곱 판을 그렸다. 진입 판(1 대화)은 손으로 쓰고, 나머지 여섯(대화 A·B, 승인 묻기, 승인 묻기 A·B, 실패 여덟 경우, 재접속 중, 상한에 걸림)은 머리 띠·대화·입력창이 되풀이되어 스크래치의 생성 스크립트로 찍었다. 디자인 시스템 파일과 woff2 글꼴 384개는 디자인 시스템 아티팩트에서 서버 복사로 붙였다(한 번에 255개 한도라 두 번). 캔버스 기록 `designSystems`에는 판 `1792710522-c178`을 적었고 `tokens.json`은 만들지 않았다.
+
+- 판에 쓸 유틸리티 클래스가 번들(`_ds_bundle.css`)에 있는지 대 보니 `items-end`, `justify-end`, `text-title`, `sr-only`가 없었다. 번들은 컴포넌트가 쓰는 클래스만 담는다. 앞의 둘은 인라인 스타일로, `sr-only`는 판의 `<style>`에 정의해 대신했다.
+- 지금 부르는 도구는 진행 표시(값 모름)의 `label`에 "<도구 이름> 부르는 중"으로 두었다. 그 이름표는 글자열이라 도구 이름을 고정폭으로 보일 수 없다. 명세가 정할 거리다.
+- 409·500 거절 알림의 "다시 보내기"와 첫 화면의 "할 수 있는 일 한 줄"은 프롬프트에 없던 제안·가정이라 판의 설명 글에 그렇게 적었다.
+
+6단계는 A·B 두 갈래를 물었다. 첫 화면은 훅이 사실 대조로 막았다. 디자인 시스템 부품 여덟에 메뉴가 없는 것(`web/packages/ui/src`에도 없다)과 연결·상한 띠의 자리(시작 프롬프트 65행)는 맞았다. 그러나 A안 설명의 "결정한 뒤에도 화면이 움직이지 않는다"는 틀렸다. 결정하면 안내 띠 한 줄이 사라진다. 그래서 질문 설명과 승인 A·B 판의 설명 글을 "입력창 자리는 그대로이고 결정 뒤에는 띠 한 줄만 사라진다"로 고쳐 다시 올렸다.
+
+> 사용자: (선택 화면, 새 대화) "늘 보이는 버튼 (Recommended)" — "위쪽 띠 오른쪽에 '새 대화' 글자 버튼이 늘 보이고, 한 번 누르면 비워집니다. 디자인 시스템 부품 여덟 가지에 메뉴가 없어 새로 만들 부품이 없습니다. 대신 띠에 버튼 하나만큼 글자가 늘어납니다."
+
+> 사용자: (선택 화면, 승인 중 입력) "막힌 채 두고 위에 안내 띠 (Recommended)" — "입력창이 막힌 채 남고, 그 위 띠에 '승인이나 거부를 먼저 골라 주세요.'가 뜹니다. 연결이 끊겼을 때나 상한에 걸렸을 때 뜨는 띠와 같은 자리라 규칙이 하나로 읽힙니다. 입력창 자리는 그대로이고, 결정한 뒤에는 띠 한 줄만 사라집니다."
+
+고르지 않은 쪽은 "줄임표 메뉴 안에"(띠에 '…' 단추만, 두 번 누름, 메뉴 부품을 새로 만듦)와 "입력창을 숨김"(카드 자리가 늘지만 결정 뒤 입력창이 다시 나타나 화면이 움직임)이었다.
+
+## /ui-design 5~6단계 두 번째: 완성 화면
+
+고른 두 안으로 완성 화면 여덟 판을 같은 아티팩트의 "완성 화면" 쪽에 그렸다(녹청 라이트, 밀도 보통, 위젯 뿌리에 테마·모드·밀도를 함께 단다). 판은 대화, 승인 묻기, 실패(알림 하나와 원인 일곱의 목록), 보낼 때의 거절, 재접속 중, 상한에 걸림, 다크, 테마 넷이다. 키보드와 화면 읽기 프로그램, 명세가 정할 제안은 판 오른쪽 메모 둘에 적었다. 제안은 409·500 거절 알림의 다시 보내기, 연결 수 상한 띠의 문구, 기다리는 초를 매초 읽지 않기, 첫 화면의 할 수 있는 일 한 줄이다.
+
+확정 질문의 첫 화면은 훅이 사실 대조로 막았다. 판마다 그린 모습의 수(대화 넷, 승인 묻기 다섯, 재접속 넷)를 생성된 파일에서 세어 맞췄고, 360px 기준(시작 프롬프트 74행), 409·500에 버튼이 없는 것(106행), 연결 수 상한의 문구가 없는 것(107행)을 대 봤다. 설명의 오타 하나("꽉 찬니다")만 고쳐 다시 물었다.
+
+> 사용자: (선택 화면, 대화) "이대로 확정 (Recommended)" — "첫 화면, 실행이 도는 동안, 끝난 뒤 다음 요청을 쓰는 중, 요약을 펼친 모습의 네 가지를 이대로 명세에 씁니다. 다크와 테마 넷은 같은 색 토큰이 모드와 테마를 따라 바뀐 모습입니다."
+
+> 사용자: (선택 화면, 승인 묻기) "이대로 확정 (Recommended)" — "결정을 기다림(사유가 비면 거부가 막힘), 사유를 쓰는 중, 보내는 중(누른 승인에 도는 표시), 승인한 뒤, 거부한 뒤의 다섯 모습입니다. 버튼은 거부가 먼저, 승인이 나중이고 폭 360px 미만에서 위아래로 꽉 찹니다."
+
+> 사용자: (선택 화면, 실패) "이대로 확정 (Recommended)" — "실행 실패는 원인마다 문구와 버튼만 바뀌는 위험 알림이고, 그 아래에 실행 식별자를 고정폭 글자로 보입니다. 409와 500 거절 알림의 '다시 보내기' 버튼은 시작 프롬프트에 없던 제안이라 명세가 다시 정합니다."
+
+> 사용자: (선택 화면, 재접속) "이대로 확정 (Recommended)" — "다시 잇는 중(입력창 위 띠와 도는 표시), 다시 붙은 뒤, 연결 수 상한으로 5초 뒤 다시 붙음, 끝내지 못함의 네 모습입니다. 연결 수 상한 띠의 문구('연결이 끊겨 5초 뒤에 다시 잇습니다')는 프롬프트에 없어 제가 지은 제안입니다."
+
+고르지 않은 쪽은 화면마다 "고친 뒤 다시 보기"였다.
+
+상한 화면은 한 번에 묻는 수(넷)를 넘어 따로 물었다. 첫 화면은 훅이 막아, 모습의 수(여섯)와 5초·12분·"19,850 / 20,000"·넘음 문구(시작 프롬프트 108행)를 대 보고, 줄어드는 동안의 3초는 예시라고 설명에 밝혔다.
+
+> 사용자: (선택 화면, 상한) "이대로 확정 (Recommended)" — "동시 실행 수(5초), 기다리는 초가 줄어드는 동안(3초는 예시), 다 지나 보내기가 다시 열린 뒤, 시간당 실행 수(12분), 글자 수 근처('19,850 / 20,000'), 넘음('20,000자를 넘었습니다'와 막힌 보내기)의 여섯 모습입니다. 보낸 요청은 입력창에 남고, 글자 수 화면의 보내기 버튼 높이 맞춤은 어림입니다."
+
+고르지 않은 쪽은 "고친 뒤 다시 보기"였다.
+
+## /ui-design 7단계: 옮기기
+
+`read`의 `paths`로 `project/canvas.json`과 완성 화면 여덟(`mk-*.dc.html`)을 받아 `.scratch/web-widget/design/`에 옮겼다. 받은 결과 머리의 sha256과 옮긴 파일의 `sha256sum`이 아홉 모두 같았다. 옮기지 않은 것은 셋이다.
+
+- 와이어프레임 일곱(`Main.dc.html`, `wf-*.dc.html`): 고른 안으로 완성 화면을 그렸고 와이어프레임은 아티팩트에만 남겼다. 옮긴 `canvas.json`의 `boards`와 `order`가 이 파일들도 가리킨다는 것을 README에 적었다.
+- `project/ds/`: 스킬이 뺀다.
+- `./support.js`: 화면 파일마다 부르지만, 아티팩트의 파일 목록에 없고 `project/support.js`를 `read`하면 그 경로에 파일이 없다고 나온다. 관리 화면 브랜치(`docs/admin-style-screens`, 아직 열린 채)의 harness 티켓 009가 같은 것을 보고 7단계의 받기 항목에 "형식이 내준다"고 적어, 이 브랜치는 스킬을 고치지 않았다.
+
+README 표에 화면마다 한 줄을 채웠다. 동기화한 커밋은 디자인 시스템 아티팩트 색인의 `agent-os 부분 main@c41adad`다. 충돌 목록의 네 줄은 4단계에 적은 그대로이고, 그 뒤로 새로 부딪친 자리는 없었다.
+
+옮긴 뒤 파일 목록을 다시 보자 판이 내가 마지막으로 올린 `1792713765-da9a`에서 `1792715269-9eb4`로 올라 있었다. 새 판에서 아홉 파일을 다시 받아 sha256을 대 보니 모두 같았다. 사람이 고치지 않아도 판 id가 오른다는 ADR 0025의 2026-10-21 이력과 맞는다.
+
+`plan.md` web-widget 행 끝에 2026-10-23 괄호를 더했다. 명세가 정할 것(진행 표시 이름표에 담은 지금 부르는 도구, README의 제안 넷)을 거기 들었다.
+
+## 인계(셀프 리뷰 직전)
+
+검증 명령 가운데 ruff 둘과 마크다운 표·줄 구분 문자 검사(바뀐 파일)는 손으로 쳐 통과했다. `tools/run_checks.py`는 백그라운드로 띄웠고, 인계하며 멈출 때까지 커밋 검사·zizmor·경계·지침·타입 우회·pyright 둘이 통과했으며 pytest와 web은 결과를 보지 못했다. 그 뒤 `/code-review`를 부르자 컨텍스트가 인계 문턱(20만)을 넘은 채 `셀프 리뷰 직전` 경계에 와 넘긴다. 이 세션의 제목은 `docs/web-widget-screens`였다. 곁 세션이 아니고(`parentSessionId` 없음), 주 체크아웃은 `origin/main`과 같은 `d0e696c9`였으며, `tools/model_sweep.py`는 `스윕 밖`이었다.
+
+이 세션이 번복하거나 고친 것은 위 절들의 선택 화면 설명 셋(훅이 사실 대조로 막아 고쳤다)과 와이어프레임 승인 A·B 판의 설명 글이다.
+
+지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: 화면 디자인
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main)부터 한다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md. /ui-design의 1~7단계는 끝났다. README에 화면 여덟 줄이 있어 그 스킬은 1~2와 웹 편집 확인만 하는데, 화면 파일이 아직 커밋 전이라 HEAD와 맞대지 못하고 "옮긴 뒤 아직 커밋하지 않은 것"으로 알리게 된다. 앞 세션은 아티팩트의 새 판 1792715269-9eb4와 작업 트리의 canvas.json·mk-*.dc.html 아홉의 sha256이 같은 것을 봤다. run_checks.py는 pytest와 web의 결과를 보지 못하고 멈췄다. 충돌 목록(.scratch/design-system/design/frontend-design-conflicts.md)의 표 끝에는 docs/admin-style-screens 브랜치도 네 줄을 더해, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/web-widget-screens (인계함)`으로 바꾸고, 백그라운드 러너를 멈추고, 워크트리 잠금을 풀었다.
+
+open-session을 부른다 2026-10-23T00:33:01Z
+
+## 이어받은 세션 (셀프 리뷰부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main)부터 한다 … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리(`.claude/worktrees/web-widget-screens`)를 찾아 `EnterWorktree(path)`로 들어갔다. 스킬은 Read로 디스크의 `SKILL.md`를 열어 따랐다.
+
+- 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- 2. 디자인 시스템 아티팩트의 머리는 "shared with you from another organization (writer; …)"로 지금 계정이 편집자다. 판은 `1792715827-ef57`로 올랐지만 색인 `lastChange`는 그대로 `agent-os 부분 main@c41adad`이고, 파일 목록(875개)에 `tokens.json`은 없다. 앞 세션이 대 본 `e205147d`에서 지금의 origin/main(`c3c2cfcf`)까지 빌드 입력(`web/packages/ui`, `.design-sync/`, `web-design.md`)의 `git diff --stat`은 비었다. 다시 올리지 않고 그린다는 앞 세션의 선택이 그대로 맞고, 이번에는 더 그리지 않는다.
+- 웹 편집 확인. README 표의 아티팩트(`VpNLNkpthSzahVCWraANHD`)에서 `canvas.json`과 `mk-*.dc.html` 여덟을 받았다. HEAD에는 아홉 모두 없고 `git status --short`가 `?? .scratch/web-widget/design/`을 내어, 옮긴 뒤 아직 커밋하지 않은 것이다. 스킬은 HEAD와만 맞대라고 하므로 그 판정은 하지 않았고, 커밋할 작업 트리의 파일이 아티팩트의 지금 판(`1792715269-9eb4`)과 같은지만 따로 봤다. 받은 결과 머리의 sha256과 작업 트리의 `sha256sum`이 아홉 모두 같았다.
+
+`/code-review`(고정점 origin/main)를 부르자 인계 계기(`셀프 리뷰 직전`, 205,253 토큰)가 왔다. 이 세션의 지시문이 이미 `인계: 셀프 리뷰 직전`으로 시작해 `next-session` "인계할 때" 1의 넘기지 않는 때라 잇는다. 아티팩트 파일 목록(875개)을 통째로 받은 것이 컨텍스트를 키웠다.
+
+### 셀프 리뷰
+
+범위는 base `e205147d`, 고친 파일 둘(`frontend-design-conflicts.md`, `plan.md`), 커밋 0개, 미추적 둘(`.scratch/web-widget/design/` 열한 파일, 이 일지)이다. 티켓이 없어(바뀐 파일이 모두 `tools/check_ticket.py`의 면제 모양) 명세는 앞 세션의 지시문, `/ui-design` 3~7단계와 화면 디자인 절, plan의 web-widget 행, 사용자의 답 원문이다. 외부 근거는 두 곳만 본 세션이 curl로 받아 발췌를 실었다(Fin의 "Designing the front door"에서 "about a dozen aesthetic directions … Distinctive AI styles tend to age fast", AI Elements Confirmation 예제의 `outline` Reject → `default` Approve).
+
+표준 축(sonnet·high): Major 1, Minor 6, Nit 3.
+
+- Major 1. 실패·거절·재접속 화면의 알림이 `Alert`의 필수 `title`을 비우고 문구를 본문에 넣었다. → 고침. `Alert.tsx`의 `title: string`과 늘 그리는 제목 자리, `Alert.md`의 "제목에 일어난 일을, 본문에 까닭이나 할 일을 적습니다."를 열어 확인했다. 화면 파일은 sha256 대조 때문에 고치지 않고 README에 명세가 정할 거리로 적었다.
+- Minor 2. README의 "401·409·404·500은 … 출력이 올 자리에 알림이 선다"가 404 판(대화를 비우고 정보 알림, 새 대화로 다시 보냄)과 다르다. → 고침.
+- Minor 3. 일지가 인용한 `2026-10-22-27` 일지가 어디에도 없다(`sibling_overlap.py`도 짚었다). admin-style 화면 브랜치가 `2026-10-23-21`로 옮겼다. → 고침(브랜치를 가리키고 두 번호를 코드 스팬으로).
+- Minor 4. 시작 프롬프트 39행의 Intercom 서술이 원문보다 단단하다("열두"와 "about a dozen", 따옴표 안의 번역, 규칙 7의 근거로 든 Intercom이 실제로 고른 것은 페이지 강조색의 반투명 배경). → 고침. fin.html에서 "a soft, translucent backdrop tint behind the composer that picks up the accent colour of the page"를 확인했다.
+- Minor 5. "세션이 다섯 제품의 원문을 읽었다"(서브에이전트가 읽었다), "공개 문서가 없어"(닫힌 부정), 규칙 4의 근거 VS Code. → 셋 다 고침. VS Code `approvals.md`를 curl로 받아 보니 도구 이름과 입력 인자를 보고 승인한다는 문장(규칙 5)은 있고 결정 뒤 버튼을 없애고 한 줄을 남긴다는 문장은 없었다.
+- Minor 6. plan.md 괄호가 README 제안 넷만 든다. → 고침(목록 전부를 가리키고 셀프 리뷰가 더한 자리를 든다).
+- Minor 7. 429를 가르는 길을 밝히지 않았다. → 고침(명세 축 2와 한 항목).
+- Nit 8. 충돌 목록의 "web-design.md 23행" 가운데 "값은 디자인 토큰 CSS 한 자리"는 9행이다. → 고침("9행과 23행").
+- Nit 9. 첫 화면의 둘째 문장 "아래에 요청을 적어 보내 주세요."가 README에 없다. → 고침.
+- Nit 10. 이 일지와 사용자에게 보인 선택지 설명의 "디자인 시스템 부품 여덟"은 `web/packages/ui`의 아홉(Switch 포함)과 다르다. → 남김. 앞 세션의 기록과 사용자의 답 원문이라 고치지 않고, 결론(메뉴 부품이 없다)은 그대로다.
+
+명세 축(Opus): Major 1, Minor 5, Nit 2. 요구의 누락은 없다고 했다.
+
+- Major 1. 시작 프롬프트 61행의 거절 줄이 404·409를 좁게 읽었다. 계약의 409에는 결정을 받을 수 없는 상태(`NotResumable`), 끝나지 않은 앞 실행, 범위 밖 `Last-Event-ID`가, 404에는 없거나 열 에이전트 밖인 에이전트가 든다. → 고침. `end_user.py`의 라우트 주석과 `.claude/rules/channel.md`·`http.md`를 열어 확인했다. 화면은 그대로 두고 README에 적었으며, 프롬프트 61행 끝에 셀프 리뷰가 더한 괄호를 붙였다.
+- Minor 2. 동시 실행 문구가 주체별·사이트별·전역 가운데 주체별만 맞고, "openapi.json의 … 상한 셋"은 계약에 없다. → 고침. `limits.py` 모듈 독스트링의 "봉투의 문구는 어느 상한인지만 들고"를 확인했다.
+- Minor 3. 인자 객체(`PausedItem.args`)를 글자로 바꾸는 꼴이 명세 거리로 적혀 있지 않다. → 고침(README).
+- Minor 4. "서버가 다시 시작해 …"가 원인을 단정한다(`UnfinishedItem` 설명은 "끝내지 못하고 사라졌다"뿐). → 고침(README).
+- Minor 5. 표준 축 6과 같다. → 고침.
+- Minor 6. README 표의 근거 문서 칸에 ADR 0022·0023·0026과 `openapi.json`이 없다. → 고침(표 여덟 줄과 프롬프트 "고른 뒤" 1의 목록).
+- Nit 7·8. 표준 축 9·4·8과 같다. → 고침.
+- 판정하지 못한 것. 시작 프롬프트 44행 "가져오지 않을 것"의 인자 편집·대화 목록 패널 등은 사용자가 고른 선택지의 설명에 없고, 그 질문 화면의 전체 원문이 일지에 없어 대조하지 못했다. → 남김. 나머지 외부 링크(ChatKit, Intercom 메신저 갱신·접근성, AI Elements Tool, Web Chat)도 대조 불가로 남긴다.
+
+고친 것에서 새로 쓴 사실 문장(PR 직전 `bug-perf-review`에 밀 주장으로 넘긴다):
+
+- README "알림의 제목": "실패·거절·재접속 화면의 알림은 모두 알림 부품(`Alert`)의 필수 `title`을 비우고 문구를 본문에 넣었다. 부품은 제목 자리를 늘 그리고 본문을 흐린 글자(`text-text-muted`)로 그리므로(`web/packages/ui/src/components/molecules/Alert.tsx`), 화면의 문구는 제목 없이 흐린 글자로 선다."
+- README "404와 409의 범위": "최종 사용자 면의 404에는 요청한 에이전트가 없거나 그 사이트의 열 에이전트 밖인 것도 들고, 409에는 꺼진 에이전트 말고도 결정을 받을 수 없는 실행의 상태(일시정지가 아니거나 지나간 자리 등), 아직 끝나지 않은 앞 실행, 구독의 `Last-Event-ID`가 트레이스의 마지막 자리보다 큰 것이 든다." "화면대로면 지나간 결정에도 "에이전트를 지금 쓸 수 없습니다."가 뜨고, 에이전트가 없어 난 404에도 대화를 비우고 새 대화로 다시 보내 같은 404를 또 받는다."
+- README "상한의 종류와 범위": "계약의 429는 에러 코드 `too_many_requests` 하나이고, 어느 상한(동시 실행 수, 시간당 실행 수, 구독 수)인지는 봉투의 `message` 글에만 있다." "동시 실행 상한은 주체별·사이트별·전역 셋이고 봉투는 그 가운데 어느 것인지 말하지 않는다." "동시 실행 문구("이미 끝나지 않은 실행이 있습니다.")는 사이트별·전역 상한에 걸렸을 때 맞지 않는다."
+- README "인자의 글자 꼴": "계약의 일시정지 항목은 인자를 객체(`PausedItem.args`)로 준다. 화면은 그것을 JSON 글자로 그렸고, …"
+- README "끝내지 못함의 문구": "첫 이벤트 뒤에 트레이스를 쓰지 못해 결말 없이 끝난 실행도 구독에서 이 항목이 된다(… 규칙을 읽은 것이고 재지 않았다)."
+- README 거절 줄: "실행 실패와 401·409·500은 요청이 대화에 남은 채 출력이 올 자리에 알림이 선다. 404는 한 번 더 시도한 뒤 저장한 대화를 비우고, 정보 알림을 남긴 채 같은 요청을 새 대화로 보낸다."
+- 시작 프롬프트 7: "Intercom은 Fin의 Spotlight 화면에서 글래스모피즘, 터미널풍 고정폭, 브랜드 그라데이션을 포함한 열두 가지쯤의 방향을 시험하고 모두 버렸다고 적었다. 까닭으로 든 문장은 "Distinctive AI styles tend to age fast"이고, 고른 것은 페이지의 강조색을 따르는 옅은 반투명 배경이다."
+- 시작 프롬프트 5행: "상한 셋(계약에는 429 하나이고, 어느 상한인지는 봉투의 `message` 글에만 있다. `.claude/rules/http.md`)"
+- 시작 프롬프트 61행 괄호: "404에는 요청한 에이전트가 없거나 열 에이전트 밖인 것이, 409에는 결정을 받을 수 없는 실행의 상태와 끝나지 않은 앞 실행과 범위 밖의 `Last-Event-ID`가 든다."
+- plan.md 괄호: "명세가 정할 것은 이 자리와 그 README의 제안과 탐색용 가정 목록 전부다."
+
+다시 돌린 명령. 커밋 전에 `uv run ruff check .`("All checks passed!")와 `uv run ruff format --check .`("968 files already formatted")를 손으로 쳤다. 나머지 셋은 커밋 `3e9d80ba`의 pre-commit으로 갈음했다. `checks`(744초)의 lint-imports·zizmor·check-ticket·check-instructions·check-type-escapes·pyright·pyright-linux·run-hooks·web-verify·pytest가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. 인용 대조는 경고 10건을 냈다. README의 둘(재접속 띠와 첫 화면의 문구)은 `mk-reconnect.dc.html` 97행과 `mk-conversation.dc.html` 30행에 글자 그대로 있어, 검사가 `.html`을 대조하지 않는 데서 난 것이다. 일지의 여덟은 사용자에게 보인 질문, 바깥 문서의 영어 원문, 이번에 고친 README의 옛 문장을 기록으로 옮긴 것이라 저장소에 없는 것이 맞다.
+
+스테이지할 때 git이 `mk-*.dc.html` 여덟의 CRLF를 LF로 바꾼다고 알렸고 `canvas.json`에는 알리지 않았다(`.gitattributes`의 `text=auto eol=lf`). 작업 트리는 그대로다. 웹 편집 확인은 sha256이 다르면 CRLF를 LF로 바꿔 `diff`로 맞대므로(`.claude/skills/ui-design/SKILL.md` 32행) 다음 세션의 확인은 여덟 파일에서 그 갈래로 간다. 같은 스킬 44행이 모른다고 적은 "Design 아티팩트 파일의 줄바꿈"은, 이번 `.dc.html`에서는 CRLF였다. 작업 트리의 `mk-approval.dc.html`과 `mk-themes.dc.html`을 `file`이 "with CRLF line terminators"로 냈고 `canvas.json`은 "JSON data"뿐이었으며(나머지 여섯은 위 git 경고로 갈음했다), 작업 트리는 받은 결과 머리의 sha256과 같았다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI는 돌지 못해, 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 그 전에 origin/main(`750761b9`, #365까지)을 합쳤다(병합 커밋 `74be9eb0`, 충돌 없음). 들어온 것은 하네스(인용 대조, 프로브 결론 훅, 훅 보고, 판정자 임시 트리)와 model-rerun 01·02이고, 이 브랜치가 따르는 `docs/agents/issue-tracker.md`는 앞서 본 판(`c3c2cfcf`) 뒤로 바뀌지 않았다. 따라야 할 새 규약은 없었다.
+
+- 보안(`/security-review`, 서브태스크 하나): 발견 없음. 목업 파일을 불러오거나 서빙하는 코드·워크플로가 없고(`items.py`의 주석 둘만 기능 이름으로 걸렸다), 화면 파일의 외부 스크립트는 상대 경로 둘(`./support.js`, `ds/agent-os/_ds_bundle.js`)뿐이며 이벤트 핸들러·`javascript:`·`iframe`이 없다. 비밀값 꼴과 숨은 글자, 숨은 지시문 꼴은 0건이었다. 거짓 양성 거르기는 거를 것이 없어 돌지 않았다.
+- 버그·성능(`bug-perf-review`, 기준 `750761b9`, 파일 14, 호출 40에서 멈춤): 유효 Minor 3, 보류 0, 오탐·무시 4. 밀 주장 열하나 가운데 어긋난 문장은 없었다.
+  - Minor 1. "상한의 종류와 범위"가 시간당 실행도 주체별·사이트별 둘이라 시간당 문구("한 시간에 보낼 수 있는 요청을 다 썼습니다.")가 사이트별 상한에서 틀린다는 것을 빠뜨렸다. → 고침. `limits.py`의 `_refusal`(169~184행)이 시간당도 두 범위를 차례로 보는 것을 열어 확인했다. 근거를 그 함수로 바꿨다.
+  - Minor 2. "알림의 제목"이 화면의 알림형 요소를 다 말하지 못한다. 입력창 위 띠 여덟은 `Alert`가 아니라 손으로 엮은 `<div role="status">`다. → 고침. 화면 파일에서 `AgentOsUi.Alert`가 실패 3, 거절 4, 재접속 1이고 `role="status"` 띠가 재접속 2, 상한 3, 승인 묻기 3인 것, 띠 하나만 `Progress`이고 나머지가 아이콘과 글자인 것, `web/packages/ui/src/components`에 띠 부품이 없는 것, `Alert.tsx` 54행의 카드 클래스를 확인했다. "알림의 제목"을 끝내지 못함 알림으로 좁히고 "입력창 위의 띠" 항목을 더했다.
+  - Minor 3. "화면대로면 지나간 결정에도 …"는 그린 화면이 아니라 추론이고, 결정의 거절을 그린 화면이 없다는 것이 명세 거리로 적혀 있지 않다. → 고침. 거절·상한 화면에 승인·거부가 한 번도 나오지 않는 것(실패 화면의 하나는 실패 원인 문구)과 거절 화면 다섯 모습의 글을 확인했다. 그 문장을 "시작 프롬프트의 거절 줄과 그 줄대로 그린 거절 화면을 따르면"으로 고치고 "결정의 거절" 항목을 더했다. 시작 프롬프트 61행의 괄호와 plan.md 괄호도 새 두 항목을 가리키게 넓혔다.
+  - 오탐·무시: `UnfinishedItem` 인용의 생략, plan.md 괄호의 두 목록 합치기, 반투명 틴트와 유리 효과의 구별, `./support.js` 서술. 넷 다 리뷰가 스스로 실해가 없다고 했고 근거를 보니 그렇다.
+  - 따라가지 못한 것: 시작 프롬프트 23~27행의 외부 링크, 4.8절의 "요청:"·"출력:" 머리말, 충돌 목록 첫 열(플러그인 본문이 저장소에 없다), 일지의 아티팩트 판 id·파일 수, `Progress`의 `label`, `mk-conversation`·`mk-dark`·`mk-themes`의 본문.
+
+PR 직전 리뷰를 반영하며 새로 쓴 사실 문장(뒤에 PR 봇이 겨냥할 수 있게 원문으로 둔다):
+
+- README "입력창 위의 띠": "연결이 끊긴 일, 상한, 승인을 기다리는 동안의 안내를 입력창 바로 위에 띄우는 띠 여덟(재접속 둘, 상한 셋, 승인 묻기 셋)은 알림 부품이 아니라 손으로 엮은 `<div role="status">`다. 일곱은 아이콘과 글자이고 재접속의 하나는 진행 표시 부품(`Progress`)이며, 모두 위 테두리 한 줄만 둔다. 디자인 시스템에는 띠 모양의 부품이 없고(`web/packages/ui/src/components`), 알림 부품은 둥근 모서리와 네 변 테두리와 올린 바탕을 가진 카드다(`Alert.tsx`의 `rounded-l border bg-bg-raised`)."
+- README "결정의 거절": "결정을 보낸 뒤 거절되는 모습은 어느 화면에도 없다. 거절 화면과 상한 화면은 모두 시작이나 이어 가기의 요청 글이 대화나 입력창에 남는 모습이다. 결정 경로도 401·404·409·429·500을 내고, 결정도 동시 실행의 칸을 차지하고 시간당 셈에 들어 429를 받을 수 있다"
+- README "상한의 종류와 범위": "동시 실행 상한은 주체별·사이트별·전역 셋, 시간당 실행 상한은 주체별·사이트별 둘이고, 봉투는 그 가운데 어느 것인지 말하지 않는다(`src/agent_os/channel/http/limits.py`의 `_refusal`)." "시간당 문구("한 시간에 보낼 수 있는 요청을 다 썼습니다.")는 사이트별 상한에 걸렸을 때 맞지 않는다."
+- 시작 프롬프트 61행 괄호: "결정의 거절은 이 줄에 들지만 그리지 않았다."
+
+반영은 커밋 `088f0a7f`다. pre-commit은 `checks`(612초)의 열 검사가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. 인용 대조 경고 셋 가운데 둘("968 files already formatted", "with CRLF line terminators")은 명령 출력을 옮긴 것이고, 하나("연결이 끊긴 일, …")는 따옴표 안에 든 `role="status"`의 따옴표가 인용을 잘라 난 것으로 README에 글자 그대로 있다.
+
+## 인계(커밋 뒤)
+
+커밋 `088f0a7f` 뒤에 컨텍스트가 인계 문턱(20만)을 넘은 채(25만 5천) `커밋 뒤` 경계에 와 넘긴다. 이 세션의 지시문은 `인계: 셀프 리뷰 직전`으로 시작해 같은 경계가 아니고, 요청 범위는 병합까지이며, 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId` 없음), 이 세션이 쓴 `인계 못함` 줄도 없다. 이 세션의 제목은 `docs/web-widget-screens`였다. 브랜치에 열린 PR이 없고(`gh pr view`가 "no pull requests found"), `tools/model_sweep.py docs/web-widget-screens`는 `스윕 밖`이다.
+
+이 세션이 번복하거나 고친 것은 셀프 리뷰와 PR 직전 리뷰의 반영(위 두 절)과, 처음에 "손으로 봤다"로 적었다가 `file`로 다시 보고 고친 줄바꿈 문장이다.
+
+`sibling_overlap.py`(origin/main `750761b`)는 번호 겹침이 없다고 했다. 이 일지(`2026-10-23-30`)를 이름순으로 앞서는 형제는 PR #367(`2026-10-23-21`, admin-style 화면), #366(`-22`), #364(`-23`)와 워크트리 `04-round-clone`(`-25`)·`05-task-selection`(`-24`) 등이고, 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다. PR #367은 충돌 목록과 `plan.md`도 함께 고쳐, 나중에 병합하는 쪽이 두 쪽 줄을 다 남긴다. 옛 `docs/web-widget-spec` 워크트리(PR 없음, 커밋 `8acd9a48`)가 같은 `design/README.md`·`screens-prompt.md` 경로를 커밋해 두어 겹침 목록에 나온다. 그 브랜치는 이번에 재료로만 읽었다.
+
+지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: 화면 디자인
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋 3e9d80ba, origin/main(750761b9)을 합친 74be9eb0, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review 발견 없음, bug-perf-review 유효 Minor 셋을 고침)를 반영한 088f0a7f까지 했다. 푸시하지 않았고 PR도 없다. 일지의 "인계(커밋 뒤)" 절은 커밋하지 않았다. 남은 것: /ui-design의 1~2와 웹 편집 확인(이제 HEAD에 화면 파일이 있다. mk-*.dc.html은 커밋 때 CRLF가 LF로 바뀌어 sha256이 달라 그 스킬 32행의 줄바꿈 갈래로 맞댄다), 푸시와 /git-pr(PR 체크리스트의 PR 직전 리뷰 줄은 일지 "PR 직전 리뷰" 절), @coderabbitai review와 tools/wait_ci.py, 봇 회차, 회고와 일지의 "다음" 절, next-session "워크트리에서 병합할 때"대로 병합. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/web-widget-screens (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었고, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-23T02:12:03Z
+
+## 이어받은 세션 (커밋 뒤부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: 커밋 뒤. … 남은 것: /ui-design의 1~2와 웹 편집 확인(이제 HEAD에 화면 파일이 있다. mk-*.dc.html은 커밋 때 CRLF가 LF로 바뀌어 sha256이 달라 그 스킬 32행의 줄바꿈 갈래로 맞댄다), 푸시와 /git-pr … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 스킬은 Read로 디스크의 `SKILL.md`를 열어 따랐다.
+
+- 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- 2. 디자인 시스템 아티팩트의 머리는 그대로 "shared with you from another organization (writer; …)"라 지금 계정이 편집자다. 판은 앞 세션과 같은 `1792715827-ef57`이고 색인 `lastChange.via`도 그대로 `agent-os 부분 main@c41adad`다. 파일 목록은 컨텍스트를 아끼려고 서브에이전트에 받게 해 이름만 보고받았다. 875개이고 이름이 `tokens.json`인 파일은 없다. README는 받아 머리만 읽었다(이번에는 그리지 않는다). 앞 세션이 대 본 `c3c2cfcf`에서 지금의 origin/main(`9b4952f6`)까지 빌드 입력의 `git diff --stat`은 비었다.
+- 웹 편집 확인. 화면 아티팩트의 판은 `1792716732-6594`로 올라 있었다(앞 세션이 본 것은 `1792715269-9eb4`). `mk-*.dc.html` 여덟은 받은 결과 머리의 sha256이 HEAD의 파일과 달랐고, 받은 파일에서 CR을 지워 HEAD의 파일과 `diff`로 맞대니 여덟 모두 같았다. `canvas.json`은 sha256부터 같았다. 웹에서 고친 화면은 없어 다시 옮기지 않았다. 스크립트는 세션 스크래치에 두었다.
+- 이 확인으로 그 스킬의 "재지 못한 것" 가운데 둘을 Design 아티팩트에서 봤다. `read` 결과 머리에 파일마다 sha256이 나오고, `.dc.html`은 CRLF라 커밋한 판과 sha256이 늘 어긋나 줄바꿈 갈래로 간다. 그 절은 admin-style의 첫 그리기가 고치기로 되어 있어 이 브랜치는 스킬을 고치지 않았다.
+- 디자인 시스템 색인의 `lastChange.by`에 계정 이름이 들어 있다(2026-10-17의 부분 올리기가 적었다). ADR 0025의 2026-10-20 이력은 계정 이름을 어디에도 적지 않는다고 정했다. 다음 전체 올리기(design-reverse-sync 티켓 08)가 `lastChange`를 새로 적을 때 사라지므로 이 브랜치는 아티팩트를 고치지 않았다.
+
+origin/main에 #364(model-rerun 03)가 병합되어 그 일지(`2026-10-23-23`)가 이 일지를 이름순으로 앞섰다. origin/main을 합치고(이 브랜치가 이름으로 든 파일과 겹치는 변경은 없었다) `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-20`에서 `2026-10-23-30`으로 옮겼다. 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌다.
+
+커밋 `dfb52c07`의 pre-commit은 `checks`(572초)의 열 검사가 모두 통과했고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. ruff 둘은 커밋 전에 손으로 쳤다("All checks passed!", "985 files already formatted"). 인용 대조는 경고가 없었다. 푸시 직전에 origin/main이 그대로인 것을 보고 푸시한 뒤, `/git-pr`로 PR #368을 열었다. 요청 범위가 병합까지라 PR 생성은 묻지 않았다. `coderabbit auth status`는 이번에도 `Plan: Free`, `Seat: not assigned`였고, PR 체크리스트의 PR 직전 리뷰 줄은 위 "PR 직전 리뷰" 절대로 적었다. 앱의 PR 묶음은 이 세션에 이미 묶여 있었다(`get_status`의 `bound: true`).
+
+## 인계(PR 연 뒤)
+
+PR을 연 뒤 컨텍스트가 인계 문턱(20만)을 넘은 채(21만 5천) `PR 연 뒤` 경계에 와 넘긴다. 이 세션의 지시문은 `인계: 커밋 뒤`로 시작해 같은 경계가 아니고, 요청 범위는 병합까지이며, 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId` 없음), 이 세션이 쓴 `인계 못함` 줄도 없다. 이 세션의 제목은 `docs/web-widget-screens`였다. `tools/model_sweep.py docs/web-widget-screens`는 `스윕 밖`이고 열린 PR이 있어 모델은 `Sonnet 5.5 / high`다. 이 세션이 번복하거나 고친 것은 없다.
+
+지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #368은 dfb52c07로 열었고 아직 코멘트를 남기지 않았다. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792716732-6594에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (커밋 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합. 일지의 이 세션 절과 인계 절은 커밋하지 않았다. 병합 직전에 sibling_overlap.py를 다시 쳐 번호가 앞서는 형제(PR #367·#366 등)가 먼저 병합됐으면 이 일지 번호를 옮기고, 충돌 목록·plan.md의 글자 충돌은 두 쪽 줄을 다 남긴다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다. 일지 docs/journal/2026-10-23-30-web-widget-screens.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/web-widget-screens (인계함)`으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었고, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-23T02:34:17Z
+
+## 이어받은 세션 (PR 연 뒤부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다 … 남은 것: 봇 회차, 회고와 일지의 "다음" 절(이 단계를 닫는 세션이다), next-session "워크트리에서 병합할 때"대로 병합 … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 스킬(`ui-design`, `next-session`, `retro`)은 Read로 디스크의 `SKILL.md`를 열어 따랐다.
+
+- /ui-design 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- /ui-design 2. 디자인 시스템 아티팩트의 머리는 "shared with you from another organization (writer; …)"로 지금 계정이 편집자다. 판은 앞 세션이 본 그대로 `1792715827-ef57`이고, `project/tokens.json`을 읽자 "no file is published at that path"로 없었다. 앞 세션이 대 본 `9b4952f6`이 지금의 origin/main이라 빌드 입력(`web/packages/ui`, `.design-sync/`, `web-design.md`)의 `git diff --stat`은 비었다. 이번에는 더 그리지 않는다. 색인의 `lastChange`는 읽지 않았다(앞 세션이 본 것을 잇는다).
+- 웹 편집 확인. 화면 아티팩트(`VpNLNkpthSzahVCWraANHD`)의 판은 `1792723018-d2f3`로 올라 있었다(앞 세션이 본 것은 `1792716732-6594`). 대조는 서브에이전트에 맡겼고, 보고(아홉 모두 같음)를 믿기 전에 이 세션이 받은 파일로 다시 맞댔다. 받은 `mk-*.dc.html` 여덟에서 CR을 지운 내용과 `git show HEAD:<경로>`에서 CR을 지운 내용의 sha256 앞 16자가 모두 같았고, `canvas.json`은 원본 그대로 같았다. 웹에서 고친 화면은 없어 다시 옮기지 않았다. 파일 이름은 지시문에서 쓰던 `mk-limits`가 아니라 단수 `mk-limit.dc.html`이다(HEAD도 단수). 스크립트는 세션 스크래치에 두었다.
+
+PR #368의 `headRefOid`와 `git rev-parse HEAD`가 모두 `dfb52c07`인 것을 보고 `@coderabbitai review`를 남겼고(이 PR의 첫 요청), `tools/wait_ci.py 368`을 백그라운드로 띄웠다. 대기 중에 `tools/queue_open_rows.py --ref origin/main`을 돌렸다(만료할 행 없음, 사람 몫은 238 하나).
+
+## 봇 회차
+
+대기는 `끝: 모두 통과. CodeRabbit: Review rate limited`로 끝났다. 검사 일곱(`python`, `claude-review`, `e2e`, `ticket`, `verify`, `visual`, `web`)이 모두 SUCCESS였다.
+
+- CodeRabbit: 한도에 걸려 리뷰가 없다(요약 코멘트가 `rate limited`). 한도에 걸린 푸시는 회차로 세지 않는다(next-session 순서 1의 2). 보안·버그·성능 축은 PR 직전에 돈 대체 둘의 결과(위 "PR 직전 리뷰")가 맡는다(`operations.md` 리뷰 파이프라인 3의 "CodeRabbit PR 리뷰는 OSS 시간당 한도에 자주 걸린다" 항목).
+- claude-review: 첫 회차이고 `지적 없음`이다(헤드 `dfb52c07`). 코멘트가 실제로 있고(리뷰 파이프라인 3의 "코멘트가 있는지" 판정), `frontend-design-conflicts.md`가 인용한 `web-design.md` 9행·23행·50행을 대조한 것까지 적었다.
+- 반영할 지적이 없어 고친 것도, 뒤로 넘긴 일도 없다. PR 본문은 이 세션이 범위를 넓히지 않아 고치지 않았다.
+
+## 회고
+
+이 단계(web-widget 화면 디자인)를 닫는 회고다. 원천은 이 일지 전체(세 번 인계한 네 세션)와 이 세션이다. 후보 둘, 승인 0, 기각 둘, 넘김 없음. 이 세션은 지시문대로 봇 회차와 일지, 병합만 해 새로 난 실수가 없었다.
+
+1. **기각.** 이 세션이 `next-session` SKILL.md 전체(약 2.4만 자)와 이 일지 전체(약 2.7만 자)를 Read로 열었다. `hook_large_result`가 두 번 다 그 자리에서 알렸다. 일지는 지시문의 "읽을 것"이 가리킨 대로 열었고, 스킬은 병합 길의 절만 필요했다. 이미 있는 훅이 알렸고 새로 더할 검사가 없다(앞 일지 2026-10-23-23 회고 10과 같은 꼴, 세지 않는다).
+2. **기각.** 서브에이전트에 준 대조 지시문이 파일 이름을 `mk-limits`로 짐작해 적었고 서브에이전트가 단수 `mk-limit`로 바로잡았다. 지시문의 이름은 README 표에서 옮겼어야 했다. 서브에이전트가 목록으로 이름을 확인하는 절차를 이미 따라 손상이 없었고 되풀이 사건도 아니다(사건 없이 떠올린 것에 가깝다).
+
+일지에만 남기는 것: 이 PR은 문서만 바꾸고 `.scratch/`와 일지가 전부라 claude-review가 "원칙 IV에 걸리는 변경이 없다"로 지적 없이 끝났다. 대기열 만료는 `tools/queue_open_rows.py --ref origin/main`에서 없었다(작업 트리 쪽 출력은 이번에 돌리지 않았다).
+
+## 다음
+
+- 병합 뒤의 다음 단계는 명세(`/to-spec web-widget`, 모델 `Opus 5.5 / xhigh`)다. `.scratch/web-widget/`에 `design/`(화면 여덟과 README 표)는 있고 `spec.md`는 없다.
+- 명세가 정할 거리는 `.scratch/web-widget/design/README.md`와 `plan.md` web-widget 행의 2026-10-23 괄호가 원천이다. README의 제안과 탐색용 가정 목록 전부(진행 표시 이름표에 담은 지금 부르는 도구, 409·500 거절 알림의 "다시 보내기", 연결 수 상한 띠의 문구, 첫 화면의 할 수 있는 일 한 줄)와, 셀프 리뷰·PR 직전 리뷰가 더한 자리(알림의 제목, 입력창 위의 띠, 404와 409의 범위, 상한의 종류와 범위, 결정의 거절, 인자의 글자 꼴, 끝내지 못함의 문구)다.
+- 옛 `docs/web-widget-spec` 워크트리(PR 없음, 커밋 `8acd9a48`)가 남아 있다. 이번에는 재료로만 읽었고 같은 `design/README.md`·`screens-prompt.md` 경로를 커밋해 두어 `sibling_overlap.py`의 겹침 목록에 나온다. 명세 세션이 그 브랜치를 어떻게 할지 정한다. `tidy-checkouts`는 PR이 없는 워크트리를 지우지 않는다.
+- 이 PR은 `.scratch/design-system/design/frontend-design-conflicts.md`와 `.scratch/plan.md`를 admin-style 화면 브랜치(PR #367)와 함께 고친다. 나중에 병합하는 쪽이 글자 충돌에서 두 쪽 줄을 다 남긴다.
+- 봇 회차에서 뒤로 넘긴 일은 없다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+
+## 인계(커밋 뒤, 둘째)
+
+위 회고와 "다음" 절을 실은 커밋 `63313c1e`(pre-commit의 열 검사가 모두 통과, pytest 748초, web-verify 494초. 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`)를 만든 직후 세션 컨텍스트가 약 20만 3천 토큰으로 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와 `hook_handoff` 계기가 왔다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `docs/web-widget-screens`였다. 이 세션에 사용자 프롬프트는 첫 메시지(위 "이어받은 세션 (PR 연 뒤부터)"의 인용) 밖에 없었다. `gh pr view 368 --json state`는 `OPEN`이고 PR의 `headRefOid`는 아직 `dfb52c07`이다. `tools/model_sweep.py docs/web-widget-screens`는 `스윕 밖`이라 열린 PR이 있는 `Sonnet 5.5 / high`다.
+
+이 세션이 번복하거나 고친 것은 일지의 한 문장이다. 처음에 쓴 "operations.md 리뷰 파이프라인 3, 마지막 줄 바로 앞 항목"이 어느 항목인지 알 수 없어, 그 항목의 제목 문장으로 바꿨다. 서브에이전트의 웹 편집 대조 보고는 이 세션이 받은 파일로 다시 맞대 같은 결론을 확인했다(위 절).
+
+이 세션이 한 것: /ui-design 1~2와 웹 편집 확인, `@coderabbitai review` 요청과 `wait_ci` 대기, 봇 회차 판정(고칠 지적 없음), 회고(승인 0), 일지의 "다음" 절, 커밋 `63313c1e`. 푸시는 하지 않았다.
+
+남은 단계(새 세션):
+1. 커밋 `63313c1e`는 푸시하지 않았다. 이 "인계(커밋 뒤, 둘째)" 절은 커밋하지 않았다. 새 세션이 자기 절을 이 절 뒤에 더하고 한 커밋으로 올려 푸시한다. 푸시할 때마다 claude-review가 한 번 더 도므로 푸시를 두 번 이상 하지 않는다. 푸시 전에 PR 본문을 고칠 일은 없다(범위가 같다).
+2. 푸시 뒤 `@coderabbitai review` 코멘트와 `tools/wait_ci.py 368` 대기. claude-review는 이 푸시가 둘째 회차이고 문서·일지만 바뀌어 Critical·Major가 아니면 보류 이유를 PR 코멘트에 남기고 일지 "다음"에도 옮긴다. CodeRabbit은 앞 요청이 한도에 걸렸으므로 이 푸시도 한도에 걸릴 수 있고, 걸리면 회차로 세지 않는다.
+3. PR #367(admin-style 화면)이 이 인계 직전에 병합됐다(`origin/main`의 `8575f57d`, 이 브랜치는 아직 합치지 않았다). 이 일지 `2026-10-23-30`이 `origin/main`의 최신 일지 `2026-10-23-27`보다 이름순으로 앞서므로, 푸시하기 전에 먼저 `origin/main`을 합친다. #367이 고친 `.scratch/plan.md`와 `.scratch/design-system/design/frontend-design-conflicts.md`에서 글자 충돌이 나면 두 쪽 줄을 다 남긴다. 합친 뒤 `sibling_overlap.py --move`로 이 일지 번호를 옮기고(지금의 다음 빈 번호는 `2026-10-23-28`) 인용을 고친다. 병합 직전에 `sibling_overlap.py`를 한 번 더 쳐 다른 형제가 먼저 병합됐는지 본다.
+4. 워크트리 길로 병합한다(next-session "워크트리에서 병합할 때"). 병합 뒤의 다음 단계는 명세(`/to-spec web-widget`)다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 직전에 위젯 화면(대화, 승인 묻기, 실패, 재접속 중, 상한에 걸림)을 디자인 시스템을 붙여 그린다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design web-widget
+브랜치: docs/web-widget-screens
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-30-web-widget-screens.md (맨 끝 "인계(커밋 뒤, 둘째)" 절부터. 앞 절들은 필요할 때만)
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-10-23-30-web-widget-screens.md. 봇 첫 회차는 끝났다(claude-review 지적 없음, CodeRabbit 한도로 리뷰 없음). 일지의 봇 회차·회고·"다음" 절을 커밋 63313c1e로 만들었고 푸시하지 않았다. 일지의 "인계(커밋 뒤, 둘째)" 절은 커밋하지 않았다. PR #367이 origin/main(8575f57d)에 병합되어 이 브랜치는 아직 합치지 않았고, 일지 번호 -26이 origin/main의 최신 -27보다 앞선다. 푸시 전에 origin/main을 합치고(plan.md와 frontend-design-conflicts.md의 글자 충돌은 두 쪽 줄을 다 남긴다) sibling_overlap.py --move로 일지 번호를 옮긴다. 남은 것은 그 절 아래 "남은 단계" 넷이다: origin/main 합치기와 번호 옮기기 뒤 자기 절을 더해 한 커밋으로 푸시, @coderabbitai review와 wait_ci, 병합 직전 sibling_overlap.py 재확인, 워크트리 길 병합. 시작 프롬프트의 /ui-design은 README 표가 있어 1~2와 웹 편집 확인만 한다. 이 세션이 화면 아티팩트의 판 1792723018-d2f3에서 맞대 웹 편집이 없음을 봤고(일지 "이어받은 세션 (PR 연 뒤부터)"), 그 뒤 판이 올랐어도 줄바꿈 갈래로 같으면 넘어간다. 병합 뒤의 다음 단계는 명세(/to-spec)이고, 옛 docs/web-widget-spec 워크트리(PR 없음)가 남아 있다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T02:56:22Z
+
+## 이어받은 세션 (커밋 뒤, 둘째부터)
+
+> 사용자: (지시문을 첫 메시지로 받았다) "이어받을 상태: 인계: 커밋 뒤. … 푸시 전에 origin/main을 합치고(plan.md와 frontend-design-conflicts.md의 글자 충돌은 두 쪽 줄을 다 남긴다) sibling_overlap.py --move로 일지 번호를 옮긴다. … 이번 요청 범위: PR과 병합까지"
+
+제목을 `docs/web-widget-screens`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다.
+
+- /ui-design 1. `frontend-design@claude-plugins-official`은 `enabled`(user 범위)다.
+- /ui-design 2. 디자인 시스템 아티팩트는 다시 읽지 않았다. 앞 세션이 대 본 `9b4952f6`에서 지금의 origin/main(`8575f57d`)까지 빌드 입력(`web/packages/ui`, `.design-sync/`, `web-design.md`)의 `git diff --stat`이 비었다.
+- 웹 편집 확인. 화면 아티팩트의 판은 앞 세션이 본 `1792723018-d2f3` 그대로였다. 받은 `canvas.json`의 sha256이 작업 트리의 파일과 같았고, `mk-*.dc.html` 여덟은 CR을 지우고 맞대 모두 같았다. 다시 옮길 화면은 없다.
+- origin/main(`8575f57d`, PR #367)을 합쳤다. `frontend-design-conflicts.md`에서 글자 충돌이 하나 났고 두 쪽 줄을 다 남겨 날짜순(admin-style 10-22, web-widget 10-23)으로 두었다. `plan.md`는 자동으로 합쳐졌다.
+- `tools/sibling_overlap.py --move`로 이 일지를 `2026-10-23-26`에서 `2026-10-23-30`으로 옮겼다(PR #369 등이 28·29를 가져갔다). 인용은 `plan.md`, `design/README.md`, `screens-prompt.md`, 이 일지에서 고쳐졌고 옛 번호의 잔존은 없다. PR #368 본문의 일지 이름도 `gh api`로 새 번호로 고쳤다(다른 차이는 끝 줄바꿈뿐이었다).
+- 내 임시 보관 항목(`wws-journal-wip`) 하나를 만들었다가 필요 없어 바로 풀고 내 항목만 지웠다.
