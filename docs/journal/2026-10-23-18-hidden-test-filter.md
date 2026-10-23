@@ -187,6 +187,33 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): "변이 몇만 �
 
 `tools/sibling_overlap.py`가 `.claude/rules/probes.md`를 원천으로 든 카나리아 명세 넷을 이 브랜치에서 고치지 않았다며 1로 끝났다. 넷은 다른 PR에서 통과해 사전 확인으로 갈음하는 조건("같은 PR 안에서 통과")에 맞지 않고, 넷의 카나리아는 새 항목의 글이 아니다. 그래서 새 항목을 재는 명세 `.scratch/harness/probes/canary/probes_rule_uncommitted_edit.toml`을 더해 돌렸다. 통과 4(claude 2.1.302, 실험군 셋이 머리 문장과 까닭을 옮겼고 paths 밖 대조군은 "없음"). 인계에 남았던 "probes.md 항목을 새 세션에서 불러 보는 확인"이 이것이다.
 
+커밋 ff937822의 pre-commit은 모두 Passed였다(pytest 490.4초, web-verify 322.5초). 푸시했고(6ba3747e..ff937822), PR 본문을 고쳤다(봇 반영 줄의 범위, 변이 24, 회고 반영과 카나리아 명세, 둘째 셀프 리뷰, pre-commit 시간과 시험 수).
+
+## 넷째 인계
+
+커밋 뒤 인계 계기(`커밋 뒤`, 컨텍스트 203,724 토큰)가 왔다. 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 요청 범위(PR과 병합까지)도 여기서 끝나지 않아 넘긴다. 새 세션이 다시 쓰기 어려운 PR 본문 수정이 이 세션의 스크래치에만 있어 푸시와 본문 갱신은 넘기기 전에 했다. 보류한 claude-review Minor(`_cut_links` 사본과 모듈 크기)의 이유를 PR 코멘트로 남기는 일은 아직 하지 않았다. 이 세션은 백그라운드 작업이 남지 않았다. 이 세션의 제목은 `feature/02-hidden-test-filter`였고 `feature/02-hidden-test-filter (인계함)`으로 바꾼다. 낸 지시문은 아래다.
+
+```
+다음 작업: .scratch/model-rerun/issues/02-hidden-test-filter.md. 후보 하나의 원래 PR 시험 가운데 흔들리지 않고 B에서 단언으로 실패하며 새 이름에 기대지 않는 노드만 숨은 시험으로 남긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/02-hidden-test-filter.md
+브랜치: feature/02-hidden-test-filter
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-18-hidden-test-filter.md
+이어받을 상태: 인계: 커밋 뒤. 둘째 셀프 리뷰를 반영한 커밋 ff937822를 이미 푸시했고 PR #363 본문도 고쳤다. 남은 것은 보류한 claude-review Minor(_cut_links 가 tools/canary.py 의 사본이고 모듈이 바뀌는 이유 셋을 진다, 티켓 05 메모로 넘김)의 이유를 PR 코멘트로 남기기, @coderabbitai review 코멘트, 대기(tools/wait_ci.py), 둘째 회차(Critical·Major만), 병합이다. 회고와 "다음"은 일지에 이미 썼다. probes.md 항목의 카나리아는 통과 4다. 일지 docs/journal/2026-10-23-18-hidden-test-filter.md
+확인할 선행 조건: 없음(주 체크아웃은 main이고 origin/main과 같다). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지. 사용자는 측정 도구 짓기까지 이어 가라고 했다(2026-10-22)
+```
+
+워크트리는 이미 잠기지 않았다(`is not locked`).
+
+open-session을 부른다 2026-10-23T00:09:15Z
+
+## 다섯째 세션(PR 반영·병합)
+
+인계 지시문으로 열어 워크트리에 들어왔다. ff937822에 claude-review의 둘째 리뷰(2026-10-23T00:09:30Z)가 와 있었고 Critical·Major는 없었다. 둘째 회차라 Minor·Nit은 고치지 않는다. 뒤로 넘기는 Minor 셋과 첫 회차에 보류한 둘을 티켓 05 메모에 더하고, 앞 세션이 커밋하지 않은 이 일지의 인계 절과 함께 실어 푸시한다. 지적마다의 보류 이유는 PR 코멘트에 남긴다.
+
 ## 회고
 
 후보 다섯. 승인 둘(둘 다 이 세션에서 반영), 기각 셋, 넘김 없음.
@@ -202,5 +229,5 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): "변이 몇만 �
 ## 다음
 
 - 티켓 02 병합 뒤 05(과제 고르기, Blocked by 02)가 풀린다. 03·04는 형제 워크트리에서 도는 중이다.
-- 05에 넘긴 판단 항목(같은 이름의 `Hidden`·`Outcome`, `tools/canary.py`와 겹치는 `_cut_links`·작업 트리 걷기, `rerun_hidden.py`의 바깥 층 떼기)은 티켓 05 메모에 있다. claude-review가 첫 회차에 같은 것을 짚었다.
+- 05에 넘긴 판단 항목(같은 이름의 `Hidden`·`Outcome`, `tools/canary.py`와 겹치는 `_cut_links`·작업 트리 걷기, `rerun_hidden.py`의 바깥 층 떼기)은 티켓 05 메모에 있다. claude-review가 첫 회차에 같은 것을 짚었다. 둘째 회차가 Minor로 짚은 셋(`term_in`의 불리언 플래그, `_terms`의 출력 인자 `cache`, `_remove_checkout`의 `try` 범위)도 같은 메모에 더했다.
 - 형제 03·04가 `.scratch/model-rerun/probes/README.md`와 티켓 07을 함께 고쳐, 나중에 병합하는 쪽에서 글자 충돌 후보다.
