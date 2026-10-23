@@ -4,7 +4,7 @@ web-widget 명세의 Testing Decisions 6 은 위젯 e2e 의 Playwright 프로젝
 시험 하나가 자식 프로세스로 돌린다고 정했다. 그 시험은 `uv run --env-file .env pytest -m llm`
 아래에서 돌고, 키는 `.env` 에서 그 pytest 의 환경으로 들어와 pnpm → Playwright 로 넘어가야 한다. 이
 프로브는 그 사슬의 앞 두 고리를 잰다. 같은 판의 uv 가 `pnpm` 을 이름으로 띄우지 못한 것을 손으로
-봤고(일지 2026-10-23-34), 그것이 uv 의 몫인지 Windows 의 실행 파일 찾기 몫인지 가르지 않은 채였다.
+봤고(일지 2026-10-23-40), 그것이 uv 의 몫인지 Windows 의 실행 파일 찾기 몫인지 가르지 않은 채였다.
 
 회차는 넷이다.
 - uv 직접: `uv run --env-file <파일> pnpm --version`. 손으로 본 `Failed to spawn: pnpm` 을 다시
