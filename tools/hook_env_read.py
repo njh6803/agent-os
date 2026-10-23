@@ -90,6 +90,7 @@ import os
 import re
 import shlex
 import sys
+from collections.abc import Iterable
 from typing import NamedTuple, TypedDict
 
 READERS = frozenset(
@@ -161,8 +162,11 @@ _SHORT_CLUSTER = re.compile(r"^-([A-Za-z.]+)\d*$")
 _ESCAPE = re.compile(r"\\(.)")
 # 값을 하나 더 먹는 옵션. 그 값은 경로도 패턴도 아니다.
 _GREP_VALUE_OPTIONS = frozenset(
-    {"-A", "-B", "-C", "-m", "-e", "-f", "-d", "-D", "--include", "--exclude", "--exclude-dir"}
-)
+    {
+        "-A", "-B", "-C", "-m", "-e", "-f", "-d", "-D", "--include", "--exclude", "--exclude-dir",
+        "--exclude-from", "--regexp", "--file",
+    }
+)  # fmt: skip
 # rg 14.1.1 의 `rg --help` 에서 값을 받는 옵션을 모두 옮겼다(`-x VALUE, --long=VALUE` 와
 # `--long=VALUE` 꼴, 2026-10-23 손으로 봤다). `--maxdepth` 는 `--max-depth` 의 숨은 별칭이다. 빠진
 # `-r` 뒤의 `g` 를 `-g` 로 읽어 `rg -uu -rg ^ .` 를 지나보낸 판이 있었다(PR 직전 보안 리뷰).
@@ -209,7 +213,7 @@ _ACK_VALUE_OPTIONS = frozenset(
         "--pager",
     }
 )  # fmt: skip
-_AWK_VALUE_OPTIONS = frozenset({"-F", "-v", "-f"})
+_AWK_VALUE_OPTIONS = frozenset({"-F", "-v", "-f", "--file", "--source"})
 _VALUE_OPTIONS = {
     "grep": _GREP_VALUE_OPTIONS,
     "egrep": _GREP_VALUE_OPTIONS,
@@ -217,13 +221,55 @@ _VALUE_OPTIONS = {
     "rg": _RG_VALUE_OPTIONS,
     "ag": _AG_VALUE_OPTIONS,
     "ack": _ACK_VALUE_OPTIONS,
-    "sed": frozenset({"-e", "-f"}),
+    "sed": frozenset({"-e", "-f", "--expression", "--file"}),
     "awk": _AWK_VALUE_OPTIONS,
     "gawk": _AWK_VALUE_OPTIONS,
     "head": frozenset({"-n", "-c"}),
     "tail": frozenset({"-n", "-c"}),
     "cut": frozenset({"-d", "-f", "-c"}),
 }
+_RG_GLOB_OPTIONS = frozenset({"-g", "--glob", "--iglob"})
+# 파일을 값으로 받아 그 파일을 읽는 옵션. 값이 `.env` 면 읽는다고 본다. 값 옵션 표가 그 값을 먹어
+# 위치 인자로 보지 않으므로 따로 본다. 여기 든 옵션은 그 명령의 값 옵션 표에도 있어야 한다. 표에
+# 없던 `--exclude-from` 의 값을 경로로 세어 `grep -rn --exclude-from list.txt KEY` 가 루트를 훑지
+# 않는다고 본 판이 있었다(셀프 리뷰 표준 축). `--files-from` 을 값 옵션 표에 넣은 판이 `ack KEY
+# --files-from .env` 를 지나보냈고, `grep -f .env`·`sed -f .env` 는 그 전부터 지나갔다(셋째 푸시 뒤
+# 자동 보안 리뷰). ack 3 의 `--ignore-file` 은 파일이 아니라 거름 명세(`--ignore-file=FILTER:ARGS`,
+# ack 3 의 POD)라 넣지 않는다.
+_GREP_FILE_OPTIONS = frozenset({"-f", "--file", "--exclude-from"})
+_SCRIPT_FILE_OPTIONS = frozenset({"-f", "--file"})
+_FILE_OPTIONS = {
+    "grep": _GREP_FILE_OPTIONS,
+    "egrep": _GREP_FILE_OPTIONS,
+    "fgrep": _GREP_FILE_OPTIONS,
+    "rg": frozenset({"-f", "--file", "--ignore-file"}),
+    "ag": frozenset({"-p", "--path-to-ignore"}),
+    "ack": frozenset({"--files-from", "--ackrc"}),
+    "sed": _SCRIPT_FILE_OPTIONS,
+    "awk": _SCRIPT_FILE_OPTIONS,
+    "gawk": _SCRIPT_FILE_OPTIONS,
+}
+# 패턴(sed·awk 는 스크립트)을 따로 줘 위치 인자가 모두 파일이 되는 긴 옵션. 명령마다 다르다. 모든
+# 명령에 같은 표를 쓴 판은 `--file` 의 앞글자 견줌으로 grep 의 `--files-with-matches` 를 패턴
+# 옵션으로 읽어 `grep -rn --files-with-matches KEY` 를 지나보냈고, ack 의 `--match` 를 grep 에도
+# 견줘 `grep --ma=2 .env .gitignore`(`--max-count`)를 막았다(셀프 리뷰 두 축). 이 옵션들은 값 옵션
+# 표에도 있다.
+_GREP_PATTERN_LONG_OPTIONS = ("--regexp", "--file")
+_SCRIPT_PATTERN_LONG_OPTIONS = ("--file", "--source")
+_PATTERN_LONG_OPTIONS = {
+    "grep": _GREP_PATTERN_LONG_OPTIONS,
+    "egrep": _GREP_PATTERN_LONG_OPTIONS,
+    "fgrep": _GREP_PATTERN_LONG_OPTIONS,
+    "rg": _GREP_PATTERN_LONG_OPTIONS,
+    "ack": ("--match",),
+    "sed": ("--expression", "--file"),
+    "awk": _SCRIPT_PATTERN_LONG_OPTIONS,
+    "gawk": _SCRIPT_PATTERN_LONG_OPTIONS,
+}
+# 긴 옵션의 줄임을 받지 않는 명령. 나머지(GNU grep·sed·gawk 와 ag 의 getopt_long, ack 의
+# Getopt::Long)는 겹치지 않는 앞글자를 줄임으로 받는다고 본다(ag·ack 는 재지 않았다). 줄임으로 보면
+# 파일 읽기 판정은 막는 쪽으로만 기운다.
+_NO_ABBREVIATION = frozenset({"rg"})
 
 
 class ToolInput(TypedDict, total=False):
@@ -365,9 +411,21 @@ def _segment_reason(words: list[str], inputs: list[str], cwd: str | None) -> str
     if cmd in READERS:
         value_options = _VALUE_OPTIONS.get(cmd, frozenset())
         positionals = _positionals(args, value_options)
-        if cmd in PATTERN_COMMANDS and not _pattern_given_by_option(args, value_options):
+        if (
+            cmd in PATTERN_COMMANDS
+            and not _pattern_given_by_option(
+                args, value_options, _PATTERN_LONG_OPTIONS.get(cmd, ())
+            )
+            and not _abbreviates_pattern_option(cmd, args)
+        ):
             positionals = positionals[1:]
-        for positional in positionals:
+        file_values = _getopt_values(
+            args,
+            value_options,
+            _FILE_OPTIONS.get(cmd, frozenset()),
+            abbreviations=cmd not in _NO_ABBREVIATION,
+        )
+        for positional in [*positionals, *file_values]:
             name = env_file_name(positional) or _glob_reaching_env(positional)
             if name is not None:
                 return _file_reason(cmd, name)
@@ -442,18 +500,44 @@ def _shell_c_argument(args: list[str]) -> str | None:
     return None
 
 
-def _pattern_given_by_option(args: list[str], value_options: frozenset[str]) -> bool:
-    """패턴을 `-e`·`-f`·`--match`(ack) 로 줬는가. 묶음 속의 것(`-ie KEY`)도 `_positionals` 와 같이
-    읽는다. `--match` 를 값 옵션 표에만 둔 판이 패턴을 값으로 먹고 `.env` 를 패턴으로 버려 `ack
-    --match KEY .env` 를 지나보냈다(셀프 리뷰 명세 축)."""
+def _pattern_given_by_option(
+    args: list[str], value_options: frozenset[str], long_options: tuple[str, ...]
+) -> bool:
+    """패턴을 `-e`·`-f` 나 그 명령의 패턴 긴 옵션(`long_options`, 이름이 같거나 `=` 로 값을
+    붙인 꼴)으로 줬는가. 묶음 속의 것(`-ie KEY`)도 `_positionals` 와 같이 읽는다. `--match` 를 값
+    옵션 표에만 둔 판이 패턴을 값으로 먹고 `.env` 를 패턴으로 버려 `ack --match KEY .env` 를
+    지나보냈다(셀프 리뷰 명세 축)."""
     for arg in args:
-        if arg in {"-e", "-f"} or arg.startswith(("--regexp", "--file", "--match")):
+        if arg in {"-e", "-f"} or arg.partition("=")[0] in long_options:
             return True
         if arg.startswith("-") and not arg.startswith("--"):
             found = _short_value_option(arg, value_options)
             if found is not None and found[0] in {"e", "f"}:
                 return True
     return False
+
+
+def _abbreviates_pattern_option(cmd: str, args: list[str]) -> bool:
+    """그 명령의 패턴 긴 옵션을 줄여 썼는가(`--reg=KEY`, `--e=1p`). getopt_long 은 겹치지 않는
+    줄임을 받아(GNU grep 3.1 의 `--reg=` 와 sed 4.8 의 `--exp=`·`--e=` 가 파일을 읽었다, 2026-10-23
+    이 세션과 셀프 리뷰 두 축이 손으로 봤다), 이것을 몰랐던 판이 `grep --reg=KEY .env`·`sed --exp=1p
+    .env` 의 `.env` 를 패턴으로 버렸다(셋째 푸시 뒤 자동 보안 리뷰). 줄임의 최소 길이는 명령마다
+    달라(sed 는 `--e`, grep 의 `--r` 은 겹쳐 거부한다) 앞글자 하나부터 본다. 겹쳐 하류가 거부하는
+    줄임도 줄임으로 보니 막는 쪽으로 기운다. 파일 읽기 판정만 쓴다. 참이면 첫 위치 인자도 파일로
+    보아 막는 쪽으로만 기운다. 훑기 판정(`_paths_reach_root`)에 쓰면 `grep -rn --reg KEY` 의 `KEY`
+    를 경로로 읽어 루트를 훑지 않는다고 볼 것이라 쓰지 않는다."""
+    if cmd in _NO_ABBREVIATION:
+        return False
+    return any(_long_option(arg, _PATTERN_LONG_OPTIONS.get(cmd, ())) for arg in args)
+
+
+def _long_option(arg: str, options: Iterable[str]) -> str | None:
+    """긴 옵션 낱말(`--opt`, `--opt=값`)이 줄임까지 쳐서 맞는 `options` 의 옵션. 이름이 `--` 와 한
+    글자 이상이어야 하고, 여럿에 맞으면 처음 것이다."""
+    name = arg.partition("=")[0]
+    if not name.startswith("--") or len(name) < 3:
+        return None
+    return next((option for option in options if option.startswith(name)), None)
 
 
 def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
@@ -469,7 +553,7 @@ def _grep_sweeps_root(args: list[str], cwd: str | None) -> bool:
     includes = _option_values(args, {"--include"})
     if includes and not any(_reaches_env(value) for value in includes):
         return False
-    return _paths_reach_root(args, _GREP_VALUE_OPTIONS, cwd)
+    return _paths_reach_root(args, _GREP_VALUE_OPTIONS, _GREP_PATTERN_LONG_OPTIONS, cwd)
 
 
 def _rg_sweeps_root(args: list[str], cwd: str | None) -> bool:
@@ -484,7 +568,7 @@ def _rg_sweeps_root(args: list[str], cwd: str | None) -> bool:
     globs = _rg_glob_values(args)
     if not any(_rg_reads(globs, sample, unrestricted=unrestricted) for sample in _ENV_SAMPLES):
         return False
-    return _paths_reach_root(args, _RG_VALUE_OPTIONS, cwd)
+    return _paths_reach_root(args, _RG_VALUE_OPTIONS, _GREP_PATTERN_LONG_OPTIONS, cwd)
 
 
 def _rg_reads(globs: list[str], sample: str, *, unrestricted: bool) -> bool:
@@ -546,6 +630,21 @@ def _rg_glob_values(args: list[str]) -> list[str]:
     표가 rg 의 값 옵션을 다 담지 못하면 그 옵션의 값 `g` 를 `-g` 로 읽어, 뒤의 낱말이 `.env` 가 아닌
     고르는 glob 이 되어 훑기를 지나보낸다(`-rg ^` 가 그랬다, PR 직전 보안 리뷰). 묶음 꼴을
     지나보낸 판이 있었다(셀프 리뷰 두 축, 대기열 422)."""
+    return _getopt_values(args, _RG_VALUE_OPTIONS, _RG_GLOB_OPTIONS)
+
+
+def _getopt_values(
+    args: list[str],
+    value_options: frozenset[str],
+    wanted: frozenset[str],
+    *,
+    abbreviations: bool = False,
+) -> list[str]:
+    """`wanted` 에 든 값 옵션의 값들을 getopt 처럼 읽는다. 차례는 인자의 차례다. 긴 옵션은
+    `--opt 값`·`--opt=값`, 짧은 옵션은 묶음을 앞에서 읽어 처음 만난 값 옵션의 뒤나 다음 낱말이
+    값이다 (`_short_value_option`). 짧은 옵션은 `value_options` 에도 있어야 묶음에서 찾는다. `--`
+    뒤는 보지 않는다. `abbreviations` 면 `value_options` 의 이름과 같지 않은 긴 옵션을 `wanted` 의
+    줄임으로도 본다(`sed --fi=.env`, `_long_option`)."""
     values: list[str] = []
     index = 0
     while index < len(args):
@@ -556,25 +655,30 @@ def _rg_glob_values(args: list[str]) -> list[str]:
             break
         if arg.startswith("--"):
             name, eq, value = arg.partition("=")
-            if name in {"--glob", "--iglob"}:
+            abbreviated = (
+                abbreviations
+                and name not in value_options
+                and _long_option(arg, sorted(wanted)) is not None
+            )
+            if name in wanted or abbreviated:
                 if eq:
                     values.append(value)
                 elif nxt is not None:
                     values.append(nxt)
                     index += 1
-            elif not eq and name in _RG_VALUE_OPTIONS:
+            elif not eq and name in value_options:
                 index += 1
             continue
         if not arg.startswith("-") or len(arg) < 2:
             continue
-        found = _short_value_option(arg, _RG_VALUE_OPTIONS)
+        found = _short_value_option(arg, value_options)
         if found is None:
             continue
         letter, rest = found
         if not rest:
             index += 1
             rest = nxt or ""
-        if letter == "g" and (rest or nxt is not None):
+        if f"-{letter}" in wanted and (rest or nxt is not None):
             values.append(rest)
     return values
 
@@ -633,7 +737,7 @@ def _reaches_env(pattern: str) -> bool:
 
 
 def _glob_readings(pattern: str) -> set[str]:
-    """닿는지 볼 glob 의 글들. 그대로의 글, 역슬래시를 이스케이프로 지운 글, 경로 구분자로 `/` 로
+    """닿는지 볼 glob 의 글들. 그대로의 글, 역슬래시를 이스케이프로 지운 글, `\\` 를 `/` 로
     바꾼 글이다. 하나라도 닿으면 닿는다고 본다(`.claude/rules/tools.md` 의 이스케이프 항목). 실제 rg
     14.1.1 이 Windows 에서도 `-g '\\.env'`·`-g '\\.e\\nv'` 로 `.env` 를 읽고(`_BASH_RG_SAME`), GNU
     grep 3.1 이 `--include='\\.env'`·`--include='.e\\nv'` 로 읽었는데(2026-10-23 셀프 리뷰 표준 축이
@@ -713,9 +817,15 @@ def _first_group(pattern: str) -> tuple[str, list[str], str] | None:
     return None
 
 
-def _paths_reach_root(args: list[str], value_options: frozenset[str], cwd: str | None) -> bool:
+def _paths_reach_root(
+    args: list[str],
+    value_options: frozenset[str],
+    pattern_options: tuple[str, ...],
+    cwd: str | None,
+) -> bool:
     positionals = _positionals(args, value_options)
-    paths = positionals if _pattern_given_by_option(args, value_options) else positionals[1:]
+    given = _pattern_given_by_option(args, value_options, pattern_options)
+    paths = positionals if given else positionals[1:]
     return not paths or any(_is_root(path, cwd) for path in paths)
 
 

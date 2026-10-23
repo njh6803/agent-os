@@ -1,4 +1,4 @@
-# 2026-10-23 (29) `.env` 읽기 훅의 Grep 도구 glob 판정을 실제 rg와 맞댄다
+# 2026-10-23 (33) `.env` 읽기 훅의 Grep 도구 glob 판정을 실제 rg와 맞댄다
 
 > 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 
@@ -71,8 +71,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main 의 merge-base)부터 한다. 리뷰를 반영한 뒤 ADR 0038 초안(status proposed)을 사용자에게 보이고 승인받는다. origin/main 이 앞서 있어 커밋 전에 sibling_overlap 으로 일지 번호를 다시 본다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main 의 merge-base)부터 한다. 리뷰를 반영한 뒤 ADR 0038 초안(status proposed)을 사용자에게 보이고 승인받는다. origin/main 이 앞서 있어 커밋 전에 sibling_overlap 으로 일지 번호를 다시 본다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -92,8 +92,8 @@ open-session을 부른다 2026-10-22T23:16:42Z
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0038 승인(accepted), 티켓 done 까지 담은 커밋이 있고 푸시하지 않았다. 이 일지의 "인계 2" 절은 커밋하지 않았으니 다음 커밋에 싣는다. 남은 단계는 origin/main 합치기(커밋 전 sibling_overlap 으로 일지·ADR·헌법 판 번호 다시 보기), PR 직전 리뷰(CodeRabbit CLI 가 돌지 못하면 /security-review 와 bug-perf-review. 밀 주장은 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록), PR(본문의 검사 결과는 일지의 다시 돌린 명령 줄), 봇 회차, 워크트리에서 병합. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0038 승인(accepted), 티켓 done 까지 담은 커밋이 있고 푸시하지 않았다. 이 일지의 "인계 2" 절은 커밋하지 않았으니 다음 커밋에 싣는다. 남은 단계는 origin/main 합치기(커밋 전 sibling_overlap 으로 일지·ADR·헌법 판 번호 다시 보기), PR 직전 리뷰(CodeRabbit CLI 가 돌지 못하면 /security-review 와 bug-perf-review. 밀 주장은 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 목록), PR(본문의 검사 결과는 일지의 다시 돌린 명령 줄), 봇 회차, 워크트리에서 병합. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -138,8 +138,8 @@ origin/main(d0e696c9)을 충돌 없이 합쳤고 `sibling_overlap.py`는 번호 
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: PR 연 뒤. PR #366(https://github.com/njh6803/agent-os/pull/366)을 열었고 푸시까지 했다(머리 f2058cdd). PR 직전 리뷰(/security-review, bug-perf-review)는 반영했고 결과는 PR 체크리스트에 있다. 푸시 뒤 자동 보안 리뷰(security-guidance 플러그인)의 지적 둘을 아직 고치지 않았으니 먼저 고쳐 커밋·푸시한다(일지 "인계 3" 절의 푸시 뒤 보안 리뷰). 첫 `@coderabbitai review` 코멘트를 아직 남기지 않았으니 그 푸시 뒤에 남기고, 순서 1의 2(봇 회차)대로 대기를 띄운다. 이 일지의 "인계 3" 절은 커밋하지 않았으니 다음 커밋에 싣는다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: PR 연 뒤. PR #366(https://github.com/njh6803/agent-os/pull/366)을 열었고 푸시까지 했다(머리 f2058cdd). PR 직전 리뷰(/security-review, bug-perf-review)는 반영했고 결과는 PR 체크리스트에 있다. 푸시 뒤 자동 보안 리뷰(security-guidance 플러그인)의 지적 둘을 아직 고치지 않았으니 먼저 고쳐 커밋·푸시한다(일지 "인계 3" 절의 푸시 뒤 보안 리뷰). 첫 `@coderabbitai review` 코멘트를 아직 남기지 않았으니 그 푸시 뒤에 남기고, 순서 1의 2(봇 회차)대로 대기를 띄운다. 이 일지의 "인계 3" 절은 커밋하지 않았으니 다음 커밋에 싣는다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -172,8 +172,8 @@ open-session을 부른다 2026-10-23T00:29:17Z
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD f2058cdd, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py·test_hook_env_read_rg.py)부터 한다. 반영 뒤 검증 명령을 돌리고 커밋(이 일지의 인계 3, 푸시 뒤 보안 리뷰 반영, 인계 4 절도 싣는다)한다. grep `--exclude .env` 를 막게 바꾼 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 PR 본문을 고친 뒤 푸시하고, 첫 `@coderabbitai review` 코멘트를 남겨 순서 1의 2(봇 회차)대로 대기를 띄운다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD f2058cdd, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py·test_hook_env_read_rg.py)부터 한다. 반영 뒤 검증 명령을 돌리고 커밋(이 일지의 인계 3, 푸시 뒤 보안 리뷰 반영, 인계 4 절도 싣는다)한다. grep `--exclude .env` 를 막게 바꾼 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 PR 본문을 고친 뒤 푸시하고, 첫 `@coderabbitai review` 코멘트를 남겨 순서 1의 2(봇 회차)대로 대기를 띄운다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -217,8 +217,8 @@ open-session을 부른다 2026-10-23T00:45:36Z
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 커밋 뒤. 커밋 e1550a0b 까지 했고 푸시하지 않았다. PR #366(https://github.com/njh6803/agent-os/pull/366) 본문은 이 커밋의 범위로 이미 고쳤으니 바로 푸시하고, 첫 `@coderabbitai review` 코멘트를 남겨 순서 1의 2(봇 회차)대로 대기를 띄운다. 이 일지의 "인계 5" 절은 커밋하지 않았으니 다음 커밋(봇 회차 반영이나 회고를 실은 일지)에 싣는다. 셀프 리뷰가 범위 밖으로 넘긴 옛 거짓 음성 셋(`grep -f .env x` 등)은 일지 셀프 리뷰 절의 남긴 것에 있고 회고 후보다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 e1550a0b 까지 했고 푸시하지 않았다. PR #366(https://github.com/njh6803/agent-os/pull/366) 본문은 이 커밋의 범위로 이미 고쳤으니 바로 푸시하고, 첫 `@coderabbitai review` 코멘트를 남겨 순서 1의 2(봇 회차)대로 대기를 띄운다. 이 일지의 "인계 5" 절은 커밋하지 않았으니 다음 커밋(봇 회차 반영이나 회고를 실은 일지)에 싣는다. 셀프 리뷰가 범위 밖으로 넘긴 옛 거짓 음성 셋(`grep -f .env x` 등)은 일지 셀프 리뷰 절의 남긴 것에 있고 회고 후보다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -258,8 +258,8 @@ claude-review 둘째 회차(02:01, Minor 3·Nit 2)와, 처리 기록이 없던 �
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD b471dc75, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py·test_hook_env_read_rg.py)부터 한다. 밀 주장은 일지 "푸시와 둘째 푸시 뒤 보안 리뷰 반영" 절의 목록이다(ag·ack man 페이지 주장은 원문으로 잰다). 반영 뒤 커밋(이 일지의 인계 5·6 절도 싣는다)하고, ag·ack 표를 가른 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 PR 본문을 고친 뒤 푸시한다. claude-review 둘째 회차(02:01)의 Minor·Nit 은 보류 이유를 PR 코멘트에 남기고, 뒤로 넘기는 리팩터링(옵션 파서 하나로 합치기 등)은 일지 "다음"이나 회고 후보에 적는다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD b471dc75, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py·test_hook_env_read_rg.py)부터 한다. 밀 주장은 일지 "푸시와 둘째 푸시 뒤 보안 리뷰 반영" 절의 목록이다(ag·ack man 페이지 주장은 원문으로 잰다). 반영 뒤 커밋(이 일지의 인계 5·6 절도 싣는다)하고, ag·ack 표를 가른 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 PR 본문을 고친 뒤 푸시한다. claude-review 둘째 회차(02:01)의 Minor·Nit 은 보류 이유를 PR 코멘트에 남기고, 뒤로 넘기는 리팩터링(옵션 파서 하나로 합치기 등)은 일지 "다음"이나 회고 후보에 적는다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션(003~006, 008)이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -291,7 +291,7 @@ open-session을 부른다 2026-10-23T02:17:05Z
 
 다시 돌린 명령: 두 시험 파일 317개 초록, 바뀐 파일의 ruff 둘 초록(format 하나를 고쳤다), `tools/mutate.py --check` 로 변이 표 원문 확인. 나머지 손으로 치는 검증은 커밋의 pre-commit 으로 갈음한다.
 
-커밋했다(`1a66f249`, pre-commit 통과: pytest 599.3초, web-verify 427.2초). 인용 대조 경고 여섯은 앞 절(푸시와 둘째 푸시 뒤 보안 리뷰 반영)의 그때 독스트링 원문 넷과 이 절의 둘이었고, 이 절의 둘은 커밋 뒤 따옴표를 떼어 고쳤다(커밋하지 않았다). 커밋 직전 `sibling_overlap.py` 가 종료 1로 origin/main(9b4952f)이 앞서 이 일지가 이름순으로 뒤처진다며 일지 2026-10-23-29 → 2026-10-23-28 을 옮기라고 했다. 아직 합치지도 옮기지도 않았다.
+커밋했다(`1a66f249`, pre-commit 통과: pytest 599.3초, web-verify 427.2초). 인용 대조 경고 여섯은 앞 절(푸시와 둘째 푸시 뒤 보안 리뷰 반영)의 그때 독스트링 원문 넷과 이 절의 둘이었고, 이 절의 둘은 커밋 뒤 따옴표를 떼어 고쳤다(커밋하지 않았다). 커밋 직전 `sibling_overlap.py` 가 종료 1로 origin/main(9b4952f)이 앞서 이 일지가 이름순으로 뒤처진다며 일지 2026-10-23-33 → 2026-10-23-28 을 옮기라고 했다. 아직 합치지도 옮기지도 않았다.
 
 ## 인계 7(커밋 뒤)
 
@@ -306,8 +306,8 @@ open-session을 부른다 2026-10-23T02:17:05Z
 시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 브랜치: chore/007-env-read-glob-matches-rg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-29-env-read-glob-rg.md
-이어받을 상태: 인계: 커밋 뒤. 커밋 1a66f249 까지 했고 푸시하지 않았다. origin/main 이 앞서 있어 합친 뒤 `uv run python tools/sibling_overlap.py --move` 로 일지 번호를 옮기고(이 일지의 인계 7 절 머리), 이 일지의 "셀프 리뷰(새 세션, 기점 b471dc75" 절 끝과 인계 7 절(커밋하지 않았다)을 그 커밋에 싣는다. ag·ack 표를 파서 소스로 가른 것과 ack `--match`·역슬래시 읽기는 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 `gh pr edit` 으로 본문을 고친 뒤 푸시한다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. claude-review 둘째 회차(02:01)의 Minor·Nit 은 아직 PR 코멘트에 보류 이유를 남기지 않았다(일지 "푸시와 둘째 푸시 뒤 보안 리뷰 반영" 절의 남길 것). 뒤로 넘기는 리팩터링(옵션 파서 하나로 합치기 등)과 값 옵션의 값으로 준 `.env`(grep `-f`, ack `--files-from`)는 일지 "다음"이나 회고 후보에 적는다. docs/journal/2026-10-23-29-env-read-glob-rg.md
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 1a66f249 까지 했고 푸시하지 않았다. origin/main 이 앞서 있어 합친 뒤 `uv run python tools/sibling_overlap.py --move` 로 일지 번호를 옮기고(이 일지의 인계 7 절 머리), 이 일지의 "셀프 리뷰(새 세션, 기점 b471dc75" 절 끝과 인계 7 절(커밋하지 않았다)을 그 커밋에 싣는다. ag·ack 표를 파서 소스로 가른 것과 ack `--match`·역슬래시 읽기는 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 `gh pr edit` 으로 본문을 고친 뒤 푸시한다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. claude-review 둘째 회차(02:01)의 Minor·Nit 은 아직 PR 코멘트에 보류 이유를 남기지 않았다(일지 "푸시와 둘째 푸시 뒤 보안 리뷰 반영" 절의 남길 것). 뒤로 넘기는 리팩터링(옵션 파서 하나로 합치기 등)과 값 옵션의 값으로 준 `.env`(grep `-f`, ack `--files-from`)는 일지 "다음"이나 회고 후보에 적는다. docs/journal/2026-10-23-33-env-read-glob-rg.md
 확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션이 같은 날 나란히 돈다
 이번 요청 범위: PR과 병합까지
 ```
@@ -318,4 +318,86 @@ open-session을 부른다 2026-10-23T02:54:30Z
 
 > 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
 
-인계 7 로 열려 워크트리에 들어왔다. origin/main(8575f57d, model-rerun 03 과 harness 009)을 충돌 없이 합쳤고, `sibling_overlap.py --move` 가 일지를 2026-10-23-22 → 2026-10-23-29 로 옮기며 티켓·ADR 0038·rg 시험·이 일지의 인용을 고쳤다. 남은 옛 번호 인용은 0 이다. main 에서 `tools/mutate.py` 가 바뀌어 `mutate.py --check` 로 변이 표 원문 열둘을 다시 확인했다. PR 본문은 푸시 전에 고쳤다(둘째 푸시 뒤 보안 리뷰 반영, ag·ack 표를 파서 소스로 가른 결정, ack `--match`, 역슬래시 읽기, 남긴 위험 둘, 체크리스트의 `1a66f249` pre-commit 수치와 둘째 셀프 리뷰).
+인계 7 로 열려 워크트리에 들어왔다. origin/main(8575f57d, model-rerun 03 과 harness 009)을 충돌 없이 합쳤고, `sibling_overlap.py --move` 가 일지를 2026-10-23-22 → 2026-10-23-33 로 옮기며 티켓·ADR 0038·rg 시험·이 일지의 인용을 고쳤다. 남은 옛 번호 인용은 0 이다. main 에서 `tools/mutate.py` 가 바뀌어 `mutate.py --check` 로 변이 표 원문 열둘을 다시 확인했다. PR 본문은 푸시 전에 고쳤다(둘째 푸시 뒤 보안 리뷰 반영, ag·ack 표를 파서 소스로 가른 결정, ack `--match`, 역슬래시 읽기, 남긴 위험 둘, 체크리스트의 `1a66f249` pre-commit 수치와 둘째 셀프 리뷰).
+
+이 절까지 커밋했다(`854549ff`, pre-commit 통과: pytest 631.1초, web-verify 457.2초). PR 본문을 고친 뒤 푸시했고, claude-review 둘째 회차(02:01)의 Minor 셋·Nit 둘과 첫 회차의 남긴 지적에 보류 이유를 PR 코멘트로 남겼다(https://github.com/njh6803/agent-os/pull/366#issuecomment-6356458194). 넘기는 리팩터링(옵션 파서 하나로 합치기, `_rg_reads` 의 불리언, 독스트링 나누기, 시험의 `args` 헬퍼)은 이 일지 "다음"에 적기로 했다. `@coderabbitai review` 를 남기고 `wait_ci.py` 를 띄웠으며, 그 결과는 읽지 않고 인계하며 멈췄다.
+
+## 셋째 푸시 뒤 보안 리뷰 반영(커밋 전)
+
+푸시(854549ff) 뒤 자동 보안 리뷰(security-guidance)가 `tools/hook_env_read.py` 에 MEDIUM 둘을 냈다. 둘 다 고쳤다.
+
+- 파일을 값으로 받아 읽는 옵션. `--files-from` 을 ack 값 옵션 표에 넣은 이 PR 이 `ack KEY --files-from .env` 를 새로 지나보냈다(기점 판은 `.env` 를 위치 인자로 보아 막았다). `grep -f .env`·`sed -f .env`·`awk -f .env`·`rg --ignore-file .env` 등은 그 전부터 지나갔다. `_FILE_OPTIONS`(명령마다 파일 옵션)를 두고 그 값을 위치 인자와 함께 본다. ack 의 `--ignore-file` 은 거름 명세(`ext:md`)라 넣지 않았다. 값을 읽는 데는 `_rg_glob_values` 의 getopt 읽기를 `_getopt_values` 로 올려 함께 쓴다(리뷰가 짚은 중복을 늘리지 않으려고).
+- 패턴을 주는 긴 옵션. `sed --expression=1p .env`(sed 의 긴 꼴)와 `grep --reg=KEY .env`·`sed --exp=1p .env`(getopt_long 의 줄임)가 `.env` 를 패턴으로 버렸다. `_PATTERN_LONG_OPTIONS` 에 `--expression` 을 더했고, 줄임은 `_abbreviates_pattern_option` 이 파일 읽기 판정에서만 본다. 훑기 판정(`_paths_reach_root`)에 쓰면 `grep -rn --reg KEY` 의 `KEY` 를 경로로 읽어 루트를 훑지 않는다고 볼 것이라 쓰지 않았다(훑기 표에 두 사례로 고정). GNU grep 3.1 의 `--reg=` 와 sed 4.8 의 `--exp=` 가 파일을 읽는 것은 스크래치 스크립트(`secret.txt`)로 손으로 봤다.
+
+새 시험 스물넷(막는 표 열여덟, 훑기 표 둘, 막지 않는 표 넷)을 먼저 썼다. 고치기 전에 돌린 판에서 막는 표의 열넷이 빨갰다(`grep --reg=`·`grep --fil=` 는 그 뒤에 바꿔 넣어 빨강을 보지 않았다). 고친 뒤 두 시험 파일 341개 초록, 바뀐 두 파일의 ruff 둘 초록, `mutate.py --check` 로 변이 표 원문 열둘 확인.
+
+반영으로 새로 쓴 문장(셀프 리뷰에 밀 주장): `_FILE_OPTIONS` 위 주석의 "ack 의 `--ignore-file` 은 파일이 아니라 거름 명세"(ack 3 문서를 이 세션에서 열지 않았고 기억에 기댄 것이다. 원문으로 잰다), 같은 주석의 "`grep -f .env`·`sed -f .env` 는 그 전부터 지나갔다", `_abbreviates_pattern_option` 독스트링의 GNU grep 3.1·sed 4.8 문장.
+
+`/code-review` 를 부른 직후 컨텍스트 문턱을 넘어 `셀프 리뷰 직전` 경계에서 인계 계기가 왔다. 곁 세션이 아니다(`get_session` 에 `parentSessionId` 없음).
+
+회고 준비(판정 전, 새 세션이 retro 로 판정한다). 이 세션이 본 후보: (1) 같은 결함 종류(래퍼 파서가 하류와 다르게 읽음)가 푸시마다 새 사례로 나왔다. 422 를 이 티켓이 닫으므로 `.claude/rules/tools.md` 하류 판정 항목을 어긴 새 사례로 `422의 4회차` 행을 쓰고, 처방은 옵션 읽기를 (옵션, 값) 쌍 함수 하나로 합치는 리팩터링과 ag·ack 도 실제 도구로 맞대는 것(ADR 0038 이력이 필요할 수 있다)이 후보다. (2) ag·ack 표의 man 페이지 주장을 기억으로 썼다가 셀프 리뷰가 원문으로 고쳤다(밀 주장 목록이 제 몫을 함). (3) `test_probe_kit.py` 배출 시험이 부하에서 두 번 빨갰다(306 은 받아들여 닫힌 종류라 일지에만). (4) 일지 번호를 세 번 옮겼다(`sibling_overlap.py --move` 가 처리). `queue_open_rows.py` 는 두 기준 모두 만료할 행이 없었다. 다음 빈 대기열 번호는 448 이었다(쓰기 직전에 다시 받는다). 대기열 422 는 아직 닫지 않았다(이 티켓 경로로 닫는다).
+
+854549ff 의 `wait_ci.py` 는 `끝: 모두 통과. CodeRabbit: Review rate limited` 로 끝났다(CodeRabbit 회차는 세지 않는다). claude-review 셋째 회차(03:11, https://github.com/njh6803/agent-os/pull/366#issuecomment-6356469790)는 Critical·Major 0, Minor 3(`_rg_reads` 의 불리언, 짧은 옵션 읽기가 세 곳, 모듈 독스트링과 함수 독스트링의 이력·나누기)·Nit 2(`_env_samples_*` 둘의 이름, `_glob_readings` 독스트링의 어긋난 문장)였다. Nit 하나(`_glob_readings` 의 "경로 구분자로 `/` 로 바꾼 글" → "`\` 를 `/` 로 바꾼 글")는 커밋하지 않은 변경에 고쳤다. 나머지 Minor 셋·Nit 하나는 둘째 회차와 같은 지적이라 보류 이유를 PR 코멘트로 남겨야 한다(아직 남기지 않았다). 그 Minor 둘(파서 합치기, 독스트링 이력 덜기)은 일지 "다음"에 적는다.
+
+## 인계 8(셀프 리뷰 직전)
+
+이 세션의 제목은 `chore/007-env-read-glob-matches-rg`였다. 인계 7 로 열려 합치기·번호 옮기기·PR 본문·푸시·보류 코멘트를 했고, 셋째 푸시 뒤 보안 리뷰 반영을 커밋 전까지 했다.
+
+지시문:
+
+```
+다음 작업: harness 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md 를 잇는다. PR #366 의 셋째 푸시 뒤 보안 리뷰 지적 둘(파일 옵션의 값, 패턴 긴 옵션)을 고친 미커밋 변경을 셀프 리뷰하고, 회고와 일지 "다음"을 실어 커밋·푸시한 뒤 봇 회차, 워크트리에서 병합을 한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+브랜치: chore/007-env-read-glob-matches-rg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: .scratch/harness/issues/007-env-read-glob-matches-rg.md, docs/adr/0038-env-read-hook-is-tested-against-real-ripgrep.md, docs/journal/2026-10-23-33-env-read-glob-rg.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 HEAD 854549ff, 범위 tools/hook_env_read.py 와 tests/tools/test_hook_env_read.py)부터 한다. 밀 주장은 일지 "셋째 푸시 뒤 보안 리뷰 반영" 절의 목록이다(ack `--ignore-file` 주장은 원문으로 잰다). 이 PR 이 단계를 닫으므로 반영 뒤 retro 를 돌고(후보는 같은 절의 "회고 준비", 대기열 422 를 티켓 경로로 닫는다) 일지 "다음"에 넘기는 리팩터링과 셀프 리뷰가 범위 밖으로 넘긴 옛 거짓 음성을 적어 한 커밋에 싣는다. 파일 옵션의 값을 보게 한 것은 PR 본문이 말하지 않은 결정이라 순서 1의 1대로 푸시 전에 `gh pr edit` 으로 본문을 고친다(남긴 위험의 "값 옵션의 값으로 준 `.env`" 줄은 이제 고쳤다). claude-review 셋째 회차(03:11)의 Minor 셋·Nit 하나는 보류 이유를 PR 코멘트로 아직 남기지 않았다. 푸시 뒤 `@coderabbitai review` 를 남기고 순서 1의 2대로 대기를 띄운다. docs/journal/2026-10-23-33-env-read-glob-rg.md
+확인할 선행 조건: 주 체크아웃은 main이다. 형제 세션이 같은 날 나란히 돈다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-23T03:23:43Z
+
+## 셀프 리뷰(새 세션, 기점 854549ff, 커밋 0·바뀐 파일 3·미추적 0)
+
+> 사용자: 대기열 422를 티켓 .scratch/harness/issues/007-env-read-glob-matches-rg.md로 쓰고 한다
+
+인계 8 로 열려 워크트리에 들어왔다. 밀 주장 가운데 ack `--ignore-file` 은 ack3 dev 브랜치의 `ack` POD 를 받아 읽었다(1547행 `--ignore-file=FILTER:ARGS`, 1435행 `--files-from=FILE`, 1326행 `--ackrc`). 두 축을 띄웠다(표준 sonnet·high, 명세는 본 세션 모델). 표준 축은 Major 2, Minor 3, smell 셋을, 명세 축은 Major 2, Minor 3, Nit 1을 냈다. 두 축이 같은 Major 둘(세 글자 줄임 `sed --e=1p .env`, gawk `--source`)을 따로 찾았고, 둘 다 GNU grep 3.1·sed 4.8·gawk 5.0 을 손으로 불러 봤다. 밀 주장(`ack KEY --files-from .env` 를 기점 판이 지나보냈다, `grep -f`·`sed -f` 는 그 전부터, `--reg=`·`--exp=`)은 두 축 모두 맞다고 봤다.
+
+고친 것:
+- Major(두 축). `_abbreviates_pattern_option` 의 문턱(`--` 뒤 두 글자)이 틀려 `sed --e=1p .env` 를 지나보냈다. 줄임의 최소 길이는 명령마다 다르다. 명령마다 패턴 긴 옵션 표(`_PATTERN_LONG_OPTIONS`)를 두고 앞글자 하나부터 견준다(`_long_option`). 줄임을 받지 않는 rg 는 뺀다(`_NO_ABBREVIATION`).
+- Major(두 축). gawk 의 `--source` 가 빠져 `gawk --source='{print}' .env`·`--so=` 를 지나보냈다. awk·gawk 의 패턴 긴 옵션과 값 옵션 표에 더했다.
+- Major(표준). `--exclude-from` 이 grep 값 옵션 표에 없어 `grep -rn --exclude-from list.txt KEY` 가 훑기 판정을 지나갔다. 파일 옵션과 패턴 긴 옵션을 그 명령의 값 옵션 표에도 두었다(grep 의 `--exclude-from`·`--regexp`·`--file`, sed 의 `--expression`·`--file`). 그래서 옛 거짓 음성 `grep -rn --file patterns.txt`·`grep -rn --regexp KEY` 도 막는다.
+- Minor(두 축). 패턴 옵션의 앞글자 견줌을 모든 명령에 같이 써 `grep --ma=2 .env .gitignore` 를 막았고(ack 의 `--match`), `--file` 이 `--files-with-matches` 에 맞아 `grep -rn --files-with-matches KEY` 를 지나보냈으며, ack `--files-from list.txt .env` 를 막았다. 정확한 이름 판정(`_pattern_given_by_option`)도 명령마다의 표와 이름이 같은지로 본다.
+- Minor(명세). 파일 옵션의 줄임(`sed --fi=.env x.txt`, `grep --exclude-fr .env`)을 지나보냈다. `_getopt_values` 가 값 옵션과 이름이 같지 않은 긴 옵션을 줄임으로도 본다(rg 는 빼고).
+- Minor(명세). 출처 "둘째 푸시 뒤 자동 보안 리뷰" 세 곳을 셋째로 고쳤다. Minor·Nit(두 축). 실제 하류가 모호하다고 거부하는 `grep --fil=` 시험을 `sed --fil=` 로, 변경 없이도 막히던 `grep -rn --reg KEY .` 를 뺐다.
+
+새 시험 열하나가 빨갰다가 두 시험 파일 352개 초록, 바뀐 두 파일의 ruff 둘·pyright·`check_type_escapes.py` 초록, `mutate.py --check` 로 변이 표 원문 열둘 확인. 고치는 도중 Python 치환 스크립트의 `write_text` 가 `tools/hook_env_read.py` 의 줄 끝을 CRLF 로 바꿨고 `mutate.py --check` 가 바로 알려 LF 로 되돌렸다.
+
+남긴 것:
+- smell(표준). 명령 이름으로 갈리는 표가 넷(`_VALUE_OPTIONS`·`_FILE_OPTIONS`·`_PATTERN_LONG_OPTIONS`·`READERS`)이라 옵션 하나에 두세 표를 고친다(Repeated Switches·Shotgun Surgery). 명령마다 레코드 하나로 모으는 것은 앞 회차가 넘긴 옵션 파서 합치기와 같은 리팩터링이라 "다음"에 적는다. `_rg_glob_values` 가 한 줄 위임(Middle Man, Nit)인 것도 그때 함께 본다.
+- 범위 밖의 옛 거짓 음성(명세 축과 이 세션이 훅 함수로 봤다): `diff --from-file=.env`·`--to-file`(내용을 그대로 찍는다), `sort --files0-from=.env`, gawk `-i`/`--include`·`-E`/`--exec`, `grep -- --file .env`(`--` 뒤), `rg -uueKEY_X`. 이 PR 이 연 구멍이 아니다. 회고 후보와 "다음"으로 넘긴다.
+
+반영으로 새로 쓴 문장(PR 봇 회차에 밀 주장): `_abbreviates_pattern_option` 독스트링의 "sed 4.8 의 `--exp=`·`--e=` 가 파일을 읽었다"(이 세션과 셀프 리뷰 두 축이 손으로 봤다)와 "grep 의 `--r` 은 겹쳐 거부한다"(이 세션이 grep 3.1 로 `ambiguous option -- r` 을 봤다. 이 세션의 sed 호출은 워크트리 가드가 거부해 `--e=` 는 두 축의 관찰에 기댄다), `_NO_ABBREVIATION` 위 주석의 "ag·ack 는 재지 않았다", `_FILE_OPTIONS` 위 주석의 ack 3 POD 인용.
+
+## 회고
+
+이 PR 이 harness 티켓 007 을 닫아 단계가 닫힌다. 후보 여섯, 승인 1(회차로 세는 것)·기각 3·일지에만 2, 넘김 0.
+
+1. 승인(회차로 세는 것). 같은 결함 종류(훅의 옵션 읽기가 하류와 다르게 읽는다)가 이 PR 의 푸시마다 새 자리에서 나왔다(묶은 짧은 옵션의 위치 인자, 일부만 빼는 빼기, ag·ack 값 옵션 표, 파일 옵션의 값, 패턴 긴 옵션과 명령마다 다른 줄임 문턱, 값 옵션 표에 없는 긴 옵션). 구현 때 실리는 `.claude/rules/tools.md` 의 하류 판정 항목을 어겨 리뷰가 잡은 사건이고, 그 항목을 처방한 422 를 이 티켓이 닫으므로 새 행 448 에 `422의 4회차`로 이었다(4회차). 끝이 열린 결함 종류라 처방은 사례가 아니라 종류를 없애는 고침(명령마다 레코드 하나와 getopt 읽기 함수 하나로 합치기)이다. 실제 도구 맞대기를 grep·sed·gawk 로 넓히는 것은 ADR 0038 이력이 필요해 그 chore 가 묻는다.
+2. 기각. ag·ack 표를 man 페이지 기억으로 썼다가 셀프 리뷰가 파서 원문으로 고쳤다. 리뷰가 잡도록 둔 기준(`code-review` 두 브리프의 주장 검증, 밀 주장 목록)이 제 몫을 한 것이라 셈에서 빼고, 검사로 옮길 수 없다.
+3. 기각. 일지 번호를 세 번 옮겼다. `sibling_overlap.py --move` 가 그 자리에서 알리고 옮겼다.
+4. 기각. 이 세션의 Python 치환 스크립트(`Path.write_text`)가 Windows 에서 `tools/hook_env_read.py` 의 줄 끝을 CRLF 로 바꿨다. `mutate.py --check` 가 바로 알려 되돌렸다. 이 세션의 영어 중간 문장 둘도 훅이 그 자리에서 알렸다.
+5. 일지에만. `test_probe_kit.py` 배출 시험이 부하에서 두 번 빨갰다. 306 이 받아들여 닫은 종류의 새 사례다.
+6. 일지에만. 범위 밖의 옛 거짓 음성(`diff --from-file=.env` 등)은 448 의 남은 사례로 적었다.
+
+대기열 422 는 티켓 경로로 닫았다. `queue_open_rows.py` 는 로컬과 `--ref origin/main` 모두 만료할 행이 없었다.
+
+## 다음
+
+- 대기열 448(4회차)이 `next-session` 결정표의 chore 계기다. `tools/hook_env_read.py` 의 옵션 읽기를 명령마다 레코드 하나와 getopt 읽기 함수 하나로 합친다. claude-review 둘째·셋째 회차가 낸 Minor(짧은 옵션 읽기가 세 곳, `_rg_reads` 의 `unrestricted` 불리언, 모듈·함수 독스트링의 이력 덜기와 나누기)와 Nit(`_env_samples_*` 둘의 이름, 시험의 `args` 거르기 헬퍼), 셀프 리뷰 표준 축의 smell(명령 이름으로 갈리는 표 넷, `_rg_glob_values` 의 한 줄 위임)을 그 리팩터링에서 함께 본다(보류 이유는 PR #366 코멘트).
+- 같은 리팩터링이 닫을 남은 사례: `diff --from-file=.env`·`--to-file`, `sort --files0-from=.env`, gawk `-i`/`--include`·`-E`/`--exec`, `grep -- --file .env`(`--` 뒤), `rg -uueKEY_X`.
+- ag·ack 는 이 PC 와 CI 에 없어 그 표는 파서 소스로만 지었다. 실제로 맞대려면 ADR 0038 이력이 필요하다.
+- 이 PR 은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.

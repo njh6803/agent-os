@@ -5,7 +5,7 @@ date: 2026-10-23
 
 # `.env` 읽기 훅의 glob 판정은 pytest가 실제 rg를 띄워 맞대고, rg는 PATH나 Claude Code 실행 파일에서 찾는다
 
-`tools/hook_env_read.py`는 Grep 도구와 Bash의 rg가 `.env`를 읽으려 하면 막는 훅이다. 그 판정은 하류(rg)가 glob을 읽는 그대로 읽는다는 주장이고, 그 주장을 손으로 본 꼴의 시험으로만 지켜 왔다. 그래서 중괄호를 bash처럼 읽은 판이 Grep 도구의 `{.env}`를 지나보냈고, 다른 일로 그 함수를 고치던 PR #349의 셀프 리뷰가 잡아 그 PR에서 고쳤다(일지 2026-10-22-11, 대기열 422, 239의 3회차. `.claude/rules/tools.md`의 하류 판정 항목을 어겼다). 이 결정을 쓰며 실제 rg와 맞대 보니 구멍이 더 있었다. Grep 도구는 glob 칸을 공백과 쉼표로 나눠 rg의 `--glob` 여럿으로 넘기는데 훅은 통째로 봐 `*.md,.env`·`*.md .env`를 지나보냈다. rg의 `-g`는 무시·숨김 규칙을 이기는데 훅의 Bash 길은 `--hidden`과 `--no-ignore`가 함께 있을 때만 rg를 막아 `rg -g .env KEY .`와 `rg -g '{.env}' KEY .`를 지나보냈다(일지 2026-10-23-29. 2026-10-23 claude 2.1.302의 Grep 도구와 rg 14.1.1로 손으로 봤다). 셀프 리뷰가 이 시험으로 묶은 짧은 옵션 속의 `-g`(`rg -ig .env`)와 대소문자를 가리는 빼기(`-g .env -g '!.ENV'`)를 더 찾았다. **`tests/tools/test_hook_env_read_rg.py`가 `git init`한 임시 폴더에 gitignore 된 가짜 `.env`를 두고, glob 사례마다 실제 rg가 그것을 내는지와 훅의 판정이 같은지 본다. rg는 PATH의 `rg`를 먼저 쓰고, 없으면 PATH의 `claude` 실행 파일을 실행 이름 `rg`로 띄운다. CI의 `python` 잡은 pytest 전에 apt로 ripgrep을 깐다. 어느 rg도 없으면 건너뛰지 않고 실패한다(원칙 II).**
+`tools/hook_env_read.py`는 Grep 도구와 Bash의 rg가 `.env`를 읽으려 하면 막는 훅이다. 그 판정은 하류(rg)가 glob을 읽는 그대로 읽는다는 주장이고, 그 주장을 손으로 본 꼴의 시험으로만 지켜 왔다. 그래서 중괄호를 bash처럼 읽은 판이 Grep 도구의 `{.env}`를 지나보냈고, 다른 일로 그 함수를 고치던 PR #349의 셀프 리뷰가 잡아 그 PR에서 고쳤다(일지 2026-10-22-11, 대기열 422, 239의 3회차. `.claude/rules/tools.md`의 하류 판정 항목을 어겼다). 이 결정을 쓰며 실제 rg와 맞대 보니 구멍이 더 있었다. Grep 도구는 glob 칸을 공백과 쉼표로 나눠 rg의 `--glob` 여럿으로 넘기는데 훅은 통째로 봐 `*.md,.env`·`*.md .env`를 지나보냈다. rg의 `-g`는 무시·숨김 규칙을 이기는데 훅의 Bash 길은 `--hidden`과 `--no-ignore`가 함께 있을 때만 rg를 막아 `rg -g .env KEY .`와 `rg -g '{.env}' KEY .`를 지나보냈다(일지 2026-10-23-33. 2026-10-23 claude 2.1.302의 Grep 도구와 rg 14.1.1로 손으로 봤다). 셀프 리뷰가 이 시험으로 묶은 짧은 옵션 속의 `-g`(`rg -ig .env`)와 대소문자를 가리는 빼기(`-g .env -g '!.ENV'`)를 더 찾았다. **`tests/tools/test_hook_env_read_rg.py`가 `git init`한 임시 폴더에 gitignore 된 가짜 `.env`를 두고, glob 사례마다 실제 rg가 그것을 내는지와 훅의 판정이 같은지 본다. rg는 PATH의 `rg`를 먼저 쓰고, 없으면 PATH의 `claude` 실행 파일을 실행 이름 `rg`로 띄운다. CI의 `python` 잡은 pytest 전에 apt로 ripgrep을 깐다. 어느 rg도 없으면 건너뛰지 않고 실패한다(원칙 II).**
 
 **Claude Code 실행 파일을 쓰는 까닭.** 이 PC의 PATH에는 rg가 없다. Claude Code 실행 파일(`~/.local/bin/claude.exe`)을 실행 이름 `rg`로 띄우면 `ripgrep 14.1.1 (rev 0049fd75eb)`로 답했다(손으로 봤다). Grep 도구는 PATH에 rg가 없는데도 돌므로 그 내장 rg를 쓴다고 본다(어림이다. Claude Code의 코드는 읽지 않았다). 그래서 Claude Code로 일하는 기계라면 따로 깔 것이 없고, 시험이 맞대는 rg가 Grep 도구의 rg와 같은 판이다.
 
@@ -14,7 +14,7 @@ date: 2026-10-23
 ## Considered Options
 
 - **PyPI의 `ripgrep` 휠을 dev 의존성으로 잠근다.** 판을 `uv.lock`이 고정해 두 자리가 같은 rg로 돈다. 그러나 15.1.0의 파일은 macOS arm64와 manylinux x86_64 휠과 소스뿐이라(2026-10-23 PyPI JSON을 받아 봤다), 이 PC(Windows)에서는 소스를 빌드하다 실패했다(`uv run --no-project --with ripgrep`이 maturin 휠 설치에서 멈췄다). 거부했다.
-- **실제 rg는 프로브로만 맞대고, 시험은 손으로 본 규칙을 표로 고정한다.** ADR과 CI 변경이 없지만, Claude Code나 rg가 glob을 다르게 읽게 되어도 시험은 모른다. 대기열 422가 적은 처방보다 약하다. 사용자가 두 안을 견주어 이 결정을 골랐다(일지 2026-10-23-29).
+- **실제 rg는 프로브로만 맞대고, 시험은 손으로 본 규칙을 표로 고정한다.** ADR과 CI 변경이 없지만, Claude Code나 rg가 glob을 다르게 읽게 되어도 시험은 모른다. 대기열 422가 적은 처방보다 약하다. 사용자가 두 안을 견주어 이 결정을 골랐다(일지 2026-10-23-33).
 - **rg가 없으면 건너뛴다.** 원칙 II에 걸린다. 거부했다.
 
 ## Consequences
