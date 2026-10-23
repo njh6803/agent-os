@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum, StrEnum
-from typing import TextIO
+from typing import TextIO, assert_never
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
@@ -137,13 +137,14 @@ class _Failure:
 
     헤더가 여기 있는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다. 405 의 `Allow` 는
     라우터가 예외에 붙여 주는데, 봉투를 새 응답으로 만들면서 버리면 RFC 9110 이 요구하는 것을
-    잃는다.
+    잃는다. `limit` 은 상한에 걸린 것일 때만 있고, 그때 봉투가 `LimitEnvelope` 가 된다.
     """
 
     status: int
     message: str
     violations: tuple[Violation, ...] = ()
     headers: Mapping[str, str] | None = None
+    limit: LimitKind | None = None
 
 
 # 상태 코드 하나가 어휘 하나다. 표 밖의 상태 코드는 계열로 접는다 — 그것은 우리가 고른 것이
@@ -159,17 +160,43 @@ _CODE_BY_STATUS = {
 }
 
 
-class Limit(Enum):
-    """요청하는 쪽이 걸린 상한이 어느 것인가. 값은 봉투의 문구에 드는 이름이다.
+# 요청하는 쪽이 걸린 상한이 어느 것인가. 셋뿐이다 — 주체별인지 사이트별인지 전역인지는 여기 들지
+# 않는다. 동시 실행의 세 범위는 모두 `concurrent_runs` 이고 시간당의 두 범위는 `hourly_runs` 다.
+# 범위를 알아도 최종 사용자가 할 일(기다렸다가 다시 보낸다)은 같고, 사이트별·전역 상한에 걸렸다는
+# 말은 같은 사이트의 다른 사람들이 얼마나 쓰는지를 드러낸다(ADR 0023 의 2026-10-23 이력). 범위는
+# 서버 기록에만 간다(`LimitExceeded` 의 문구). 값이 봉투에 코드로 실리고(`LimitEnvelope`) 위젯이
+# 종류마다 제 문구를 고른다. 사람이 읽는 이름은 `label` 이고 봉투의 `message` 와 서버 기록에 든다.
+# StrEnum 인 이유는 `ErrorCode` 와 같다.
+class LimitKind(StrEnum):
+    """상한의 종류. 동시 실행 수, 시간당 실행 수, 구독 수다."""
 
-    셋뿐이다 — 주체별인지 사이트별인지 전역인지는 여기 들지 않는다. 봉투는 어느 상한인지만 말하고,
-    사이트 전체가 바쁘다는 것을 한 사용자에게 말할 이유가 없다(end-user-channel 명세 "상한"). 범위는
-    서버 기록에만 간다(`LimitExceeded` 의 문구).
-    """
+    CONCURRENT_RUNS = "concurrent_runs"
+    HOURLY_RUNS = "hourly_runs"
+    SUBSCRIPTIONS = "subscriptions"
 
-    CONCURRENT_RUNS = "동시 실행 수"
-    HOURLY_RUNS = "시간당 실행 수"
-    SUBSCRIPTIONS = "구독 수"
+    @property
+    def label(self) -> str:
+        """봉투의 문구와 서버 기록에 드는 이름(질의)."""
+        match self:
+            case LimitKind.CONCURRENT_RUNS:
+                return "동시 실행 수"
+            case LimitKind.HOURLY_RUNS:
+                return "시간당 실행 수"
+            case LimitKind.SUBSCRIPTIONS:
+                return "구독 수"
+            case _:
+                assert_never(self)
+
+
+# 상한에 걸린 429 의 봉투다(ADR 0023 의 2026-10-23 이력). 네 필드는 `ErrorEnvelope` 의 것 그대로이고
+# `code` 는 늘 `too_many_requests` 다. 봉투에 선택 필드를 더하지 않고 스키마를 가른 까닭은, 생성
+# 클라이언트에서 429 응답의 `limit` 이 늘 있는 값으로 좁혀지고 다른 상태 코드의 봉투가 네 필드
+# 그대로 남기 때문이다. 계약에서 이 스키마를 가리키는 것은 429 를 적는 라우트(최종 사용자 면의
+# 넷)뿐이다 (`routes` 의 `documented_errors`).
+class LimitEnvelope(ErrorEnvelope):
+    """상한에 걸린 429 의 에러 응답. 봉투의 네 필드에 어느 상한인지를 더한다."""
+
+    limit: LimitKind
 
 
 class LimitExceeded(Exception):
@@ -177,12 +204,12 @@ class LimitExceeded(Exception):
 
     이 층이 소유하고 채널이 던진다. 표는 채널의 타입을 import 할 수 없고(원칙 IV) 라우트는 상태
     코드를 스스로 정하지 않으므로(`HTTPException(429)` 를 던지지 않는다) 타입 하나가 둘 사이에 선다.
-    `limit` 은 어느 상한인지이고 봉투의 문구가 된다. `retry_after_seconds` 는 다시 보내도 되기까지의
-    초이고 1 이상의 정수다. 예외의 문구는 서버 기록에만 간다 — 사이트의 발급자와 상한의 범위와 값을
-    들되 주체(`sub`)는 들지 않는다(감사 로그는 비목표다).
+    `limit` 은 어느 상한인지이고 봉투의 `limit` 과 문구가 된다. `retry_after_seconds` 는 다시 보내도
+    되기까지의 초이고 1 이상의 정수다. 예외의 문구는 서버 기록에만 간다 — 사이트의 발급자와 상한의
+    범위와 값을 들되 주체(`sub`)는 들지 않는다(감사 로그는 비목표다).
     """
 
-    def __init__(self, detail: str, *, limit: Limit, retry_after_seconds: int) -> None:
+    def __init__(self, detail: str, *, limit: LimitKind, retry_after_seconds: int) -> None:
         super().__init__(detail)
         self.limit = limit
         self.retry_after_seconds = retry_after_seconds
@@ -230,8 +257,8 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
     500 인 이유는 4xx 를 내는 하위 타입 밖의 것이 "서버의 구성이나 기록이 깨졌다"뿐이기 때문이다.
     주인을 확인하기 전의 손상도 깨진 것이라 운영자 면에서는 500 원문이다. 운영자 면에서는
     마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의 말은 내부 사정을 담는다. 요청하는 쪽의
-    상한(`LimitExceeded`)은 면과 무관하게 429 이고 문구는 어느 상한인지만 들며 `Retry-After` 를
-    싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
+    상한(`LimitExceeded`)은 면과 무관하게 429 이고 봉투는 어느 상한인지만(`limit` 과 문구) 들며
+    `Retry-After` 를 싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
 
     최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05·2026-10-16 이력). 404 는 전부 고정
     문구 하나다. 다른 주체(409)는 없는 실행과 같은 404 다. 주인을 확인하기 전의 손상(500)도 404 다
@@ -267,8 +294,9 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
         case LimitExceeded():
             return _Failure(
                 status=429,
-                message=f"{error.limit.value}의 상한을 넘었다",
+                message=f"{error.limit.label}의 상한을 넘었다",
                 headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
+                limit=error.limit,
             )
         case TraceDamagedBeforePrincipal():
             if operator:
@@ -322,17 +350,28 @@ def error_envelope(
     message: str,
     violations: Sequence[Violation] = (),
     headers: Mapping[str, str] | None = None,
+    limit: LimitKind | None = None,
 ) -> JSONResponse:
     """에러 봉투 하나(질의). 기록하지 않는다.
 
     헤더를 받는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다 — 405 의 `Allow`, 401 의
-    `WWW-Authenticate`. 봉투가 본문만 나르면 그것들이 응답에서 사라진다.
+    `WWW-Authenticate`. 봉투가 본문만 나르면 그것들이 응답에서 사라진다. 상한의 종류를 받으면
+    봉투가 그것을 든 `LimitEnvelope` 다.
     """
-    envelope = ErrorEnvelope(
-        code=_code_for(status),
-        message=message,
-        violations=tuple(violations),
-        request_id=request_id_of(request),
+    code = _code_for(status)
+    request_id = request_id_of(request)
+    envelope = (
+        ErrorEnvelope(
+            code=code, message=message, violations=tuple(violations), request_id=request_id
+        )
+        if limit is None
+        else LimitEnvelope(
+            code=code,
+            message=message,
+            violations=tuple(violations),
+            request_id=request_id,
+            limit=limit,
+        )
     )
     return JSONResponse(
         status_code=status,
@@ -440,6 +479,7 @@ def _enveloped(request: Request, failure: _Failure) -> JSONResponse:
         message=failure.message,
         violations=failure.violations,
         headers=failure.headers,
+        limit=failure.limit,
     )
 
 

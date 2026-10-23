@@ -1873,18 +1873,22 @@ END_USER_OPERATIONS = (
     ("/end-user/runs/{run_id}/subscription", "get"),
     ("/end-user/runs/{run_id}/continuation", "post"),
 )
-# 최종 사용자 면이 계약에 더한 컴포넌트. 항목 유니온과 멤버 일곱, 그리고 프레임에 `id` 를 싣는
-# 모양의 대가로 FastAPI 가 남기는 고아 `ServerSentEvent` 하나다(ADR 0023, 명세의 프레임 절).
+# 최종 사용자 면이 계약에 더한 컴포넌트. 항목 유니온과 멤버 여덟, 상한에 걸린 429 의 봉투와 상한의
+# 종류, 그리고 프레임에 `id` 를 싣는 모양의 대가로 FastAPI 가 남기는 고아 `ServerSentEvent` 하나다
+# (ADR 0023 과 그 2026-10-23 이력, 명세의 프레임 절).
 END_USER_COMPONENTS = frozenset(
     {
         "EndUserItem",
         "StartedItem",
+        "CallingItem",
         "ProgressItem",
         "PausedItem",
         "DecidedItem",
         "FinishedItem",
         "FailedItem",
         "UnfinishedItem",
+        "LimitEnvelope",
+        "LimitKind",
         "ServerSentEvent",
     }
 )

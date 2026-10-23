@@ -71,7 +71,7 @@ const ICON_SET_IMPORT = {
 };
 const OPENAPI_FETCH_IMPORT = {
   name: "openapi-fetch",
-  message: `클라이언트를 직접 만들지 않는다. 토큰을 고르는 것은 ${API_CLIENT} 의 클라이언트 둘이다(ADR 0021)`,
+  message: `클라이언트를 직접 만들지 않는다. 토큰을 고르는 것은 ${API_CLIENT} 의 클라이언트 셋이다(ADR 0021·0024)`,
 };
 // 상대 경로로 패키지 안을 import 하면 로컬로 분류되어 층 경계의 모듈 이름 정책을 피한다(티켓 03 의 셀프 리뷰).
 const API_CLIENT_INTERNALS = {
@@ -223,7 +223,7 @@ export default defineConfig(
     },
   },
   {
-    // 생성 클라이언트 패키지는 openapi-fetch 로 클라이언트 둘을 만드는 유일한 자리다. 여기서만 그 import 를 푼다.
+    // 생성 클라이언트 패키지는 openapi-fetch 로 클라이언트 셋을 만드는 유일한 자리다. 여기서만 그 import 를 푼다.
     files: ["**/packages/api-client/**"],
     rules: {
       "no-restricted-imports": [

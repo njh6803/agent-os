@@ -77,8 +77,8 @@ from agent_os.http.errors import (
     INTERNAL_MESSAGE,
     REQUEST_ID_HEADER,
     UNAUTHORIZED_MESSAGE,
-    Limit,
     LimitExceeded,
+    LimitKind,
     Surface,
     failure_for,
 )
@@ -1411,7 +1411,7 @@ async def test_상한_초과는_429와_Retry_After_이고_범위는_서버_기�
     사이트별인지 전역인지는 말하지 않는다 — 사이트 전체가 바쁘다는 것을 한 사용자에게 말할 이유가
     없다. 운영자는 서버 기록에서 어느 사이트가 어느 범위의 상한에 걸렸는지 본다(스토리 53)."""
     detail = "사이트 https://shop.example — 사이트별 시간당 실행 수 상한 1000"
-    exceeded = LimitExceeded(detail, limit=Limit.HOURLY_RUNS, retry_after_seconds=42)
+    exceeded = LimitExceeded(detail, limit=LimitKind.HOURLY_RUNS, retry_after_seconds=42)
     _route_that_raises(app, "/busy", exceeded)
 
     response = await client.get("/busy", headers=BEARER)
@@ -1420,6 +1420,7 @@ async def test_상한_초과는_429와_Retry_After_이고_범위는_서버_기�
     assert response.headers["Retry-After"] == "42"
     assert response.json()["code"] == "too_many_requests"
     assert response.json()["message"] == "시간당 실행 수의 상한을 넘었다"
+    assert response.json()["limit"] == "hourly_runs"
     assert "사이트별" not in response.text
     assert "shop.example" not in response.text
     assert f"status=429 LimitExceeded: {detail}" in stderr.getvalue()
@@ -1428,19 +1429,19 @@ async def test_상한_초과는_429와_Retry_After_이고_범위는_서버_기�
 @pytest.mark.parametrize(
     ("limit", "message"),
     [
-        (Limit.CONCURRENT_RUNS, "동시 실행 수의 상한을 넘었다"),
-        (Limit.HOURLY_RUNS, "시간당 실행 수의 상한을 넘었다"),
-        (Limit.SUBSCRIPTIONS, "구독 수의 상한을 넘었다"),
+        (LimitKind.CONCURRENT_RUNS, "동시 실행 수의 상한을 넘었다"),
+        (LimitKind.HOURLY_RUNS, "시간당 실행 수의 상한을 넘었다"),
+        (LimitKind.SUBSCRIPTIONS, "구독 수의 상한을 넘었다"),
     ],
 )
-def test_상한의_문구는_세_가지이고_범위를_들지_않는다(limit: Limit, message: str) -> None:
+def test_상한의_문구는_세_가지이고_범위를_들지_않는다(limit: LimitKind, message: str) -> None:
     """어느 상한인지는 셋으로 갈린다. 운영자 면이든 최종 사용자 면이든 같은 429 다."""
     exceeded = LimitExceeded("기록", limit=limit, retry_after_seconds=5)
 
     for surface in Surface:
         failure = failure_for(exceeded, surface)
 
-        assert (failure.status, failure.message) == (429, message)
+        assert (failure.status, failure.message, failure.limit) == (429, message, limit)
         assert failure.headers == {"Retry-After": "5"}
 
 
@@ -1729,9 +1730,12 @@ def test_경로에_거는_이름_패턴이_sdk_가_매니페스트에_거는_그
 def test_문서화된_에러_응답이_전부_봉투이고_내는_에러를_빠뜨리지_않는다(app: FastAPI) -> None:
     """라우트를 더하며 적는 것을 잊으면 이 테스트가 깨진다. 401 은 미들웨어가 내는 것이라
     프레임워크가 적어 주지 않고, FastAPI 가 파라미터 있는 라우트에 붙이는 제 422 모양은 우리 봉투가
-    아니라 그대로 두면 계약이 거짓말을 한다."""
+    아니라 그대로 두면 계약이 거짓말을 한다. 429 는 상한의 종류를 더 든 봉투이고 그것을 적는 것은
+    최종 사용자 면의 경로뿐이다(ADR 0023 의 2026-10-23 이력)."""
     document = app.openapi()
     envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+    limited = {"$ref": "#/components/schemas/LimitEnvelope"}
+    refusing: list[str] = []
 
     for path, operations in document["paths"].items():
         for method, operation in operations.items():
@@ -1743,9 +1747,14 @@ def test_문서화된_에러_응답이_전부_봉투이고_내는_에러를_빠�
                 assert "401" in errors, where
             if operation.get("parameters"):
                 assert "422" in errors, where
+            if "429" in errors:
+                refusing.append(path)
             for status in errors:
-                schema = responses[status]["content"]["application/json"]["schema"]
-                assert schema == envelope, (where, status)
+                content = responses[status]["content"]
+                expected = limited if status == "429" else envelope
+                assert content == {"application/json": {"schema": expected}}, (where, status)
+    assert len(refusing) == 4
+    assert all(path.startswith(f"{END_USER_PREFIX}/") for path in refusing), refusing
     assert "404" in document["paths"]["/plugins/{kind}/{name}"]["get"]["responses"]
     assert "404" in document["paths"]["/plugins/{kind}/{name}/enabled"]["put"]["responses"]
     assert "404" in document["paths"]["/traces/{run_id}"]["get"]["responses"]

@@ -57,7 +57,7 @@ from typing import Annotated
 
 from anyio.streams.memory import MemoryObjectReceiveStream
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, Request
-from fastapi.sse import EventSourceResponse, ServerSentEvent
+from fastapi.sse import ServerSentEvent
 from pydantic.json_schema import SkipJsonSchema
 
 from agent_os.channel.http.bodies import Decision, StartRun
@@ -79,7 +79,7 @@ from agent_os.core.ports import (
 from agent_os.core.run import read_own_run, resume, run
 from agent_os.http.auth import end_user_of
 from agent_os.http.errors import request_id_of
-from agent_os.http.routes import documented_stream_errors
+from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.http.sites import EndUser
 from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
 
@@ -120,7 +120,7 @@ def end_user_router(
 
     구독 수의 셈은 이 라우터가 든다 — 앱 하나에 하나다.
     """
-    router = APIRouter(prefix=END_USER_PREFIX, responses=documented_stream_errors(500))
+    router = APIRouter(prefix=END_USER_PREFIX, responses=documented_errors(500))
     subscriptions = SubscriptionQuota()
 
     async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
@@ -168,10 +168,8 @@ def end_user_router(
         _RUNS,
         operation_id="start_end_user_run",
         summary="서명한 최종 사용자로 실행 하나를 일으켜 그 항목을 생기는 대로 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(
-            401, 404, 409, 422, 429, descriptions={422: _START_INVALID}
-        ),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429, descriptions={422: _START_INVALID}),
     )
     async def start_end_user_run(
         stream: Annotated[RunStream, Depends(start_stream)],
@@ -222,8 +220,8 @@ def end_user_router(
         f"{_RUNS}/{{run_id:verbatim}}/approval",
         operation_id="decide_end_user_approval",
         summary="서명한 최종 사용자의 멈춘 실행에 결정 하나를 내고 결정 항목부터 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422, 429),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429),
     )
     async def decide_end_user_approval(
         stream: Annotated[RunStream, Depends(decide_stream)],
@@ -282,8 +280,8 @@ def end_user_router(
         f"{_RUNS}/{{run_id:verbatim}}/subscription",
         operation_id="subscribe_end_user_run",
         summary="서명한 최종 사용자의 실행에 다시 붙어 놓친 항목부터 결말까지 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422, 429),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429),
     )
     async def subscribe_end_user_run(
         subscribed: Annotated[_Subscription, Depends(subscription)],
@@ -313,10 +311,8 @@ def end_user_router(
         f"{_RUNS}/{{run_id:verbatim}}/continuation",
         operation_id="continue_end_user_run",
         summary="서명한 최종 사용자의 끝난 실행을 이어 가는 새 실행을 일으켜 그 항목을 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(
-            401, 404, 409, 422, 429, descriptions={422: _START_INVALID}
-        ),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429, descriptions={422: _START_INVALID}),
     )
     async def continue_end_user_run(
         stream: Annotated[RunStream, Depends(continue_stream)],

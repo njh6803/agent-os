@@ -37,7 +37,6 @@ from collections.abc import AsyncIterator
 from typing import Annotated, TextIO
 
 from fastapi import APIRouter, Body, Depends, Path, Request
-from fastapi.sse import EventSourceResponse
 
 from agent_os import sdk
 from agent_os.channel.http.bodies import Decision, StartRun
@@ -46,7 +45,7 @@ from agent_os.channel.http.runs import Runs, RunStream
 from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
 from agent_os.core.run import resume, run
 from agent_os.http.errors import request_id_of
-from agent_os.http.routes import documented_stream_errors
+from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.sdk import RUN_ID_PATTERN, Principal, RunId
 
 # 채널 토큰이 여는 접두사이자 운영자 채널 라우트의 접두사(ADR 0015). 한 값이라 운영자 채널의
@@ -130,7 +129,7 @@ def _operator_router(
     상한이 없다 — 실행은 등록부의 칸을 차지하지 않고 429 를 내지 않는다(ADR 0023). 연결마다의
     백로그(`runs`)만 최종 사용자 면과 같다.
     """
-    router = APIRouter(prefix=CHANNEL_PREFIX, responses=documented_stream_errors(500))
+    router = APIRouter(prefix=CHANNEL_PREFIX, responses=documented_errors(500))
 
     async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
         """새 실행을 일으키고 첫 이벤트를 받는다. 시작과 이어 가기가 앞 실행 하나만 다르게 준다."""
@@ -166,8 +165,8 @@ def _operator_router(
         "",
         operation_id="start_run",
         summary="실행 하나를 일으켜 그 이벤트를 생기는 대로 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422),
     )
     async def start_run(stream: Annotated[RunStream, Depends(run_stream)]) -> AsyncIterator[Event]:
         async for item in stream.items():
@@ -217,8 +216,8 @@ def _operator_router(
         "/{run_id:verbatim}/approval",
         operation_id="decide_approval",
         summary="멈춘 실행에 결정 하나를 내고 재개된 실행의 이벤트를 생기는 대로 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422),
     )
     async def decide_approval(
         stream: Annotated[RunStream, Depends(resume_stream)],
@@ -249,8 +248,8 @@ def _operator_router(
         "/{run_id:verbatim}/continuation",
         operation_id="continue_run",
         summary="끝난 실행을 이어 가는 새 실행을 일으켜 그 이벤트를 생기는 대로 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422),
     )
     async def continue_run(
         stream: Annotated[RunStream, Depends(continue_stream)],

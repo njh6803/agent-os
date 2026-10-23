@@ -426,7 +426,7 @@ describe("실제 생성 클라이언트 자리", () => {
   });
 
   test("생성 클라이언트 패키지의 실제 파일은 openapi-fetch 를 import 해도 아무것도 보고되지 않는다", async () => {
-    // 클라이언트 둘을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
+    // 클라이언트 셋을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
     // 설치되지 않아 타입 기반 규칙이 풀리지 않은 import 를 빨갛게 보므로 실제 자리에서 잰다.
     const path = join(API_CLIENT, "src", "clients.ts");
     const source = readFileSync(path, "utf-8");
