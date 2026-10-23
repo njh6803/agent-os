@@ -211,6 +211,43 @@ base `8a026f3c`(HEAD 와 같다), 바뀐 추적 파일 26, 커밋 0, 미추적 4
   3. Nit, 보류: 위젯 래퍼의 `bindingProblem` 이 관리 화면의 것과 문장까지 같다. 1과 같은 대가이고 리뷰도 그대로 두어도 된다고 했다.
 - CodeRabbit: 요청에 한도로 답했다(`Review rate limited`, 요약 코멘트의 "Next included review available in 47 minutes"). 이 회차에는 리뷰가 없다.
 - CI(실행 39970768876, 헤드 6a6a2a0c): `web`·`e2e`·`visual`·`ticket` 초록. `python` 은 main 과 같은 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 하나로 빨갰고(1 failed, 5205 passed), 필수 검사 `verify` 가 그것을 모아 빨갰다. 위 "다음"의 main CI 줄과 같은 일이다. `visual` 잡은 위젯 단계를 더해 5분 11초였다(`timeout-minutes: 20` 안).
+- 반영 커밋 22a9b2b6(푸시하지 않았다). pre-commit 모두 Passed(pytest 552.8초, web-verify 410.3초. `.py` 가 없어 ruff 둘과 헌법 판·카나리아 모양은 Skipped). 인용 대조 경고 하나는 CodeRabbit 요약 코멘트에서 옮긴 문구라 저장소에 원문이 없는 것이다. 푸시 전에 PR 본문을 이 커밋의 범위(정한 것 7, 변이 34, 봇 회차 1)로 고쳤다.
+- 커밋 직전의 `sibling_overlap` 에서 origin/main 이 96d3e1d 로 움직였다. #375(web-widget 01, 계약)가 병합됐고, `.scratch/retro-queue.md`·`.scratch/web-widget/probes/README.md`·`README.md` 를 이 브랜치와 함께 고쳤으며 `web/eslint.config.mjs` 도 바꿨다. 아직 합치지 않았다.
+
+## 인계 (커밋 뒤)
+
+- 커밋 22a9b2b6 직후 컨텍스트 260,652 토큰으로 인계 계기가 왔다. 넘겨받은 경계는 `PR 연 뒤` 라 같은 경계가 아니고, 곁 세션이 아니어서(`get_session` 의 `self` 에 `parentSessionId` 가 없다) 넘긴다.
+- 이 세션의 제목: `feature/03-widget-app-skeleton`.
+- 판정하지 않고 넘기는 것: 필수 검사 `verify` 가 대기열 456 의 시험(`python` 잡) 하나로만 빨가면 병합 길 1("`gh pr checks` 에 실패가 없다")을 지나지 못한다. 실패한 잡을 다시 돌려 초록을 얻는 것과 관리자 우회(`gh pr merge --admin`)는 둘 다 게이트를 느슨하게 하는 길이라 이 세션이 고르지 않았다. 그 자리에 오면 사용자에게 묻는다.
+- 띄워 둔 백그라운드 작업은 없다(`wait_ci` 대기와 커밋 모두 끝났다).
+
+인계 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/03-widget-app-skeleton.md. `web/apps/widget` 앱을 세워 `/widget` iframe 페이지가 첫 화면을 사이트가 고른 테마로 그리게 하고 위젯의 Storybook과 사진 비교를 세운다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/03-widget-app-skeleton.md
+브랜치: feature/03-widget-app-skeleton
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-50-widget-app-skeleton.md 의 "이어받은 세션 (PR 연 뒤)"와 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. PR #376의 봇 회차 1(claude-review Minor 하나 반영, Minor·Nit 하나씩 보류)을 22a9b2b6으로 커밋했고 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 회고("## 회고 (PR 연 뒤)", 대기열 456)와 "다음"도 그 커밋에 들었다. 일지의 "인계 (커밋 뒤)" 절과 그 위 두 줄(반영 커밋, origin/main 이동)은 커밋하지 않았다. 남은 것은 차례로 origin/main 합치기(#375가 병합됐다. 충돌 후보 .scratch/retro-queue.md, .scratch/web-widget/probes/README.md, README.md이고 web/eslint.config.mjs가 바뀌어 위젯 린트도 본다), 푸시, @coderabbitai review 코멘트(14:37Z 무렵 한도가 47분 뒤에 풀린다고 했다), next-session 순서 1의 2(봇 회차)와 4(병합 길)다. claude-review는 다음 푸시의 리뷰가 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 아직 리뷰가 없어 그 첫 리뷰가 첫 회차다. python 잡이 대기열 456의 시험 하나로만 빨가면 실패한 잡을 다시 돌릴지, 관리자 우회로 병합할지를 사용자에게 묻는다(일지 "인계 (커밋 뒤)"). docs/journal/2026-10-23-50-widget-app-skeleton.md
+확인할 선행 조건: main의 CI가 96d3e1d(#375)에서 초록인지 이 세션은 보지 않았다. 07c890c에서는 대기열 456의 시험으로 빨갰다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/03-widget-app-skeleton (인계함)` 으로 바꿨다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-23T15:05:19Z
+
+## 이어받은 세션 (커밋 뒤, 둘째)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/03-widget-app-skeleton.md
+>
+> (이어지는 지시문은 위 "인계 (커밋 뒤)"의 인계 지시문과 같다)
+
+- 제목을 `feature/03-widget-app-skeleton` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다.
+- 선행 조건: main 의 CI 는 96d3e1d(#375)에서 초록이었다(실행 39973287061). 07c890c 에서 대기열 456 의 시험으로 빨간 것이 다음 커밋에서 초록이 되어, 그 시험이 간헐적이라는 것과 맞는다.
+- origin/main 합치기: 앞 세션과 같이 일지의 미커밋 27줄을 스크래치 패치로 빼고 파일을 되돌린 뒤 `git merge --no-commit --no-ff origin/main` 으로 #375 를 합쳤다. 충돌은 `.scratch/retro-queue.md` 끝 하나였다(main 의 453·454 와 이 브랜치의 455·456). main 의 행 뒤에 이 브랜치의 행을 두었다. `README.md` 와 `.scratch/web-widget/probes/README.md` 는 자동으로 합쳐졌고 두 쪽의 줄이 모두 남은 것을 `git diff HEAD` 로 봤다. `web/eslint.config.mjs` 의 main 쪽 변경은 `openapi-fetch` 금지 메시지와 주석의 "둘"을 "셋"으로 고친 글자뿐이라 위젯 린트의 규칙은 그대로다. `sibling_overlap` 은 번호 겹침 없음. 병합 커밋 26b3a14b 의 pre-commit 은 모두 Passed(pytest 419.0초, web-verify 257.2초. `.py` 가 없어 ruff 둘과 헌법 판·카나리아 모양은 Skipped). 그 뒤 패치를 `git apply` 로 되살렸다.
 
 ## 회고
 
@@ -241,8 +278,7 @@ base `8a026f3c`(HEAD 와 같다), 바뀐 추적 파일 26, 커밋 0, 미추적 4
 ## 다음
 
 - 03이 병합되면 04(Blocked by 03)가 열린다. 시작 래퍼의 자리는 `web/apps/widget/tools/start.ts` 이고(티켓의 "이 티켓이 정한 것" 1), 04는 그 래퍼가 `AGENT_OS_SITE_FILE` 을 넘기게 하고 `next.config.ts` 의 `frame-ancestors 'none'` 을 합친 허용 출처로 바꾸며 Node 의 TOML 파서를 정한다(04 티켓 15·16·19행).
-- 01(계약)은 나란히 도는 세션이 한다. 02는 01을, 05는 01과 04를 기다린다. 06은 02와 05를, 07·10·11은 06을 기다린다. `frame-ancestors` 의 e2e 는 06이, 글꼴 응답의 `Access-Control-Allow-Origin` e2e 는 10이 든다.
+- 01(계약)은 #375 로 병합됐다. 02는 01을, 05는 01과 04를 기다린다. 06은 02와 05를, 07·10·11은 06을 기다린다. `frame-ancestors` 의 e2e 는 06이, 글꼴 응답의 `Access-Control-Allow-Origin` e2e 는 10이 든다.
 - 루프백 목록은 세 벌이다(`src/agent_os/main.py`, `web/apps/admin/tools/loopback.ts`, `web/apps/widget/tools/start.ts`). 바꾸면 셋을 함께 고친다. 세 자리 모두에 적었다.
-- `sibling_overlap` 이 든 01 워크트리와의 글자 충돌 후보(`.scratch/web-widget/probes/README.md`, `README.md`)는 나중에 병합하는 쪽이 푼다.
-- main 의 CI `python` 잡이 07c890c 에서 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 로 빨갛다(실행 39959108868, 리눅스만, model-rerun 08이 더한 시험). 이 PR 의 CI 에서도 같은 자리로 빨갰고, PR CI 에서는 초록이던 간헐적 실패다. 대기열 456. 리눅스에서 재현 루프를 세워 원인을 가른 뒤 고친다.
+- main 의 CI `python` 잡이 07c890c 에서 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 로 빨갰고(실행 39959108868, 리눅스만, model-rerun 08이 더한 시험) 다음 커밋 96d3e1d 에서는 초록이었다(실행 39973287061). 이 PR 의 CI 에서도 같은 자리로 빨갰고, PR CI 에서는 초록이던 간헐적 실패다. 대기열 456. 리눅스에서 재현 루프를 세워 원인을 가른 뒤 고친다.
 - 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
