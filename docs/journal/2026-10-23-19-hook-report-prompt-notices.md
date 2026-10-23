@@ -190,3 +190,74 @@ open-session을 부른다 2026-10-22T23:34:41Z
 다시 돌린 명령:
 - `uv run pytest -q tests/tools/test_hook_report.py tests/tools/test_morning_collect.py`: 122 passed.
 - `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 38 모두 기대대로(커밋하지 않은 변경이 있다는 알림이 함께 났다).
+
+### 커밋 뒤와 PR
+
+- 커밋 `4f0e72dd`의 pre-commit: ruff check·ruff format 통과, 러너의 열 검사(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify, pytest) 모두 통과(pytest 619.2s, web-verify 542.4s), 마크다운 표·줄 구분 문자·변이 표 원문·인용 대조 통과, 카나리아 명세와 헌법 판은 고친 파일이 없어 `Skipped`.
+- 그 커밋 뒤 `hook_handoff`가 `커밋 뒤` 경계에서 왔다(세션 컨텍스트 254,166 토큰). 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계라 넘기지 않았다.
+- 푸시하고 PR [#365](https://github.com/njh6803/agent-os/pull/365)를 열었다. 본문의 PR 직전 리뷰 줄에 대체 둘의 결과와 반영을 적었다. 앱의 PR 막대가 이 세션에 PR 을 묶었다(`get_status`의 `bound: true`).
+
+### 인계 (PR 연 뒤)
+
+PR 을 연 뒤 `hook_handoff`가 `PR 연 뒤` 경계에서 왔다(세션 컨텍스트 288,470 토큰). 인계하지 않는 때 다섯을 대 봤다. PR 은 열렸고, 요청 범위는 병합까지이며, 이 세션을 연 지시문의 경계는 `커밋 뒤`라 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 이 세션의 제목은 `chore/005-hook-report-prompt-notices`다. `tools/model_sweep.py chore/005-hook-report-prompt-notices`는 `Opus 5.5 / xhigh`였다.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/005-hook-report-prompt-notices.md. `tools/hook_report.py`가 UserPromptSubmit 훅의 알림(명령 없는 `hook_additional_context` 첨부)을 그 훅의 알림으로 세어 뺄 후보로 잘못 내지 않는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다
+브랜치: chore/005-hook-report-prompt-notices
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-23-19-hook-report-prompt-notices.md(PR 직전 리뷰, 커밋 뒤와 PR, 이 인계 절), docs/agents/issue-tracker.md(harness 티켓의 서식·상태·번호)
+이어받을 상태: 인계: PR 연 뒤. PR #365 를 열었고(커밋 4f0e72dd 까지 푸시), 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 하고, 병합은 워크트리라 "워크트리에서 병합할 때"의 길이다. 일지는 PR 직전 리뷰 절까지 커밋했고 "커밋 뒤와 PR"·이 인계 절은 커밋하지 않았다. 회고(retro)와 일지 "다음"은 아직이다. docs/journal/2026-10-23-19-hook-report-prompt-notices.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `chore/005-hook-report-prompt-notices (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 워크트리 잠금 풀기는 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-23T00:26:38Z
+
+## 봇 회차 (이어받은 셋째 세션)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 404를 티켓 .scratch/harness/issues/005-hook-report-prompt-notices.md로 쓰고 한다 / (…) 다음 단계: PR 반영·병합 / (…) 이어받을 상태: 인계: PR 연 뒤. PR #365 를 열었고(커밋 4f0e72dd 까지 푸시), 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. (…) 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 되돌리고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 앞 세션이 잠금을 풀어 두어 거부되지 않았다.
+- `@coderabbitai review` 코멘트를 남기고(00:29Z) 상태를 한 번 읽으니 python·visual 이 pending 이라 `tools/wait_ci.py 365`를 백그라운드로 띄웠다. 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited`였다.
+- CodeRabbit 은 OSS 시간당 한도로 리뷰를 내지 않았다. 한도에 걸린 푸시는 회차로 세지 않고, 보안·버그 축은 PR 본문에 적은 PR 직전 리뷰(대체 둘)가 갈음한다(`docs/constitution/operations.md` 리뷰 파이프라인).
+- claude-review 1회차(`4f0e72dd`)는 Minor 하나를 냈다. `scan`이 기록 파일 읽기·파싱·uuid 거르기와 첨부의 짝짓기를 한 함수에서 해 `CODING_STANDARDS.md`의 추상화 수준 줄에 걸리니, 짝짓기를 함수로 빼라는 것이다(후속으로 해도 된다고 적었다).
+
+### 반영
+
+- claude-review Minor: 고쳤다. 짝짓기 루프를 `_unpaired_notices(given, attached, prints, prompt_hooks)`로 뺐다. 넘겨받은 `Counter`를 줄이지 않도록 복사본(`left`)을 줄이고, 그 줄을 원문으로 든 변이 "짝이 있는지만 보고 남는 첨부를 세지 않는다"의 원문을 `left[key] -= 1`로 고쳤다. 함수 본문의 들여쓰기가 `scan` 안의 루프와 같아 나머지 원문은 그대로 맞는다. 리뷰가 든 "떼어 시험한다"는 하지 않았다. 다른 모듈에서 비공개 이름을 부르면 pyright strict 가 막고, 짝짓기는 `scan`을 거치는 시험 여럿이 이미 고정한다.
+- PR 본문: 푸시 전에 "리뷰어 참고"의 짝짓기 자리를 `_unpaired_notices`로 고치고, "변경된 영역"의 문서 줄에 대기열 404 닫기와 회고의 회차 둘을 더했다.
+- origin/main 이 `c3c2cfcf`(#363)로 움직였고 main 의 브랜치 보호가 `strict: true`라, 반영을 커밋하기 전에 `git merge --no-edit origin/main`으로 합쳤다(커밋 `5933b991`, 충돌 없음). `git diff --name-only HEAD...origin/main`을 이 브랜치가 고친 파일과 맞대니 겹치는 파일은 없었다. 새로 선 규약은 `.claude/rules/probes.md`의 "아직 커밋하지 않은 프로브 파일은 Edit 도구로 고친다"이고, 이 브랜치의 변이 표는 이미 추적되는 파일이며 Edit 도구로 고쳤다.
+- 변이 표를 백그라운드로 돌리는 동안 회고의 `tools/hook_report.py`를 돌렸다가, 그 파일이 디스크에서 바뀌었다는 앱의 알림으로 변이가 든 코드를 돌렸을 수 있다는 것을 알았다. 그 출력은 버리고 변이가 끝난 뒤 다시 돌렸다. 같은 동안 대기열을 고친 편집에는 `hook_edit_during_mutate`가 알렸다(변이가 건드리지 않는 파일이라 되돌림과 겹치지 않았다).
+
+다시 돌린 명령:
+- `uv run pytest -q tests/tools/test_hook_report.py tests/tools/test_morning_collect.py`: 122 passed.
+- `uv run pyright tools/hook_report.py`: 0 errors. `uv run ruff check`·`uv run ruff format --check`(그 파일): 통과.
+- `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml`: 변이 38 모두 기대대로. 커밋할 내용 그대로의 작업 트리(합치기 전)에서 돌아, 커밋하지 않은 변경이 있다는 알림이 함께 났다.
+
+## 회고
+
+후보 열, 승인 둘(둘 다 회차로 세는 것), 기각 여덟, 넘김 없음. 이 세션에서 반영한 것은 없다. 새 훅의 문턱에 닿은 행(362)이 있어 `uv run python tools/hook_report.py`를 돌렸고 `뺄 후보: (없음)`이었다(UTC 2026-09-26~2026-10-23 창, `hook_prompt_directive.py`가 알림 486건).
+
+1. 승인(회차로 세는 것): 구현 세션이 `.claude/rules/tools.md`의 못 보는 것 항목을 어겼다. 독스트링에 적은 판정("앱이 넣은 계기는 `UNKNOWN`")이 코드와 달랐고(셀프 리뷰 두 축의 Major), 새로 적은 항목 셋(`hook_system_message`를 읽지 않는다, JSON 이지만 `additionalContext`가 없는 갈래, `toolUseID`로 짓지 않는 까닭)에 시험이 없었다(명세 축 Minor). 구현 때 실리는 rules 를 어겨 리뷰가 잡은 사건이라, 닫힌 187을 이은 열린 362에 회차를 더했다(3회차). 그 행의 처방대로 3회차라 계기 훅을 고를 차례이고, chore 배치의 계기다.
+2. 승인(회차로 세는 것): 판정이 바뀐 뒤 ADR 0036 32행("훅 이름은 그 명령에서 읽는다")이 옛 표현으로 남았다. 구현 세션은 그 절이 독스트링을 원천으로 든다며 고치지 않기로 했고, 셀프 리뷰 두 축이 거짓이 된 문장으로 잡았다. `CLAUDE.md` 작업 규약 4를 어긴 사건이라 열린 420에 회차를 더했다(4회차).
+3. 기각: `tools/mutate.py`가 빨강을 기대한 변이에 `-x`를 붙여, `-k`에 시험을 `or`로 더한 것이 아무것도 더 재지 않았다. 그 도구의 독스트링(하는 일 3)이 `-x`를 적고, 출력의 `1 failed, 51 deselected`로 그 세션이 스스로 알았다.
+4. 기각: 파이썬 `write_text`가 윈도에서 README 와 시험 파일을 CRLF 로 바꿨다. `.gitattributes`의 `eol=lf`로 커밋에는 영향이 없었고, CRLF 가 실패를 내는 자리(변이 원문 대조)는 닫힌 264가 이미 줄 끝을 알린다.
+5. 기각: PR 직전 `bug-perf-review`가 `main`과 `gather_hooks`의 배선을 지키는 시험이 없다고 잡았다. 리뷰가 제 몫을 한 사건이고, 어느 배선에 변이를 둘지는 검사로 옮길 수 없는 판단이다.
+6. 기각: claude-review 1회차의 Minor(`scan`의 추상화 수준)는 `CODING_STANDARDS.md`의 기준을 리뷰가 잡은 것이다.
+7. 기각: 변이 실행 중에 그 대상 파일을 돌리거나 같은 체크아웃을 고쳤다. 앱의 바뀐 파일 알림과 `hook_edit_during_mutate`가 그 자리에서 알렸다.
+8. 기각: 첫 세션의 Grep 부정 glob(`hook_env_read`가 막았다), 스크래치패드로의 `cd`(`hook_bash_cd_outside`가 막았다), 파이프를 쓴 pytest(`hook_bash_gate_pipe`가 경고했다), 이 세션의 큰 Read 결과(`hook_large_result`가 알렸다). 모두 이미 있는 훅이 그 자리에서 막거나 알렸다.
+9. 기각: 앱의 `sync_with_base_branch`가 앱이 만든 워크트리가 아니라고 거절했다. 거절이 바로 왔고, 직접 합치는 길은 메모리에 있다.
+10. 기각: 한 티켓에서 인계가 세 번(셀프 리뷰 직전, 커밋 뒤, PR 연 뒤) 났다. 인계 계기가 설계대로 돈 것이다(ADR 0033).
+
+대기열: 404를 이 티켓 경로로 닫았다. 362는 3회차, 420은 4회차가 됐다. `uv run python tools/queue_open_rows.py`와 `git fetch origin` 뒤 `--ref origin/main`의 두 출력 모두 만료할 행이 없었다.
+
+## 다음
+
+- harness 005를 이 PR(#365)로 닫는다. 같은 주제는 남지 않는다. 다음 작업은 결정표의 harness 티켓 줄대로 `plan.md` 프론티어에서 고른다. 나란히 연 형제 가운데 007(PR #366)은 아직 돈다.
+- 이 회고로 대기열 362가 3회차가 되어 chore 계기가 됐다(420은 이미 3회차를 넘었다).
+- claude-review 1회차의 Minor 는 고쳐서 뒤로 넘긴 봇 지적은 없다.

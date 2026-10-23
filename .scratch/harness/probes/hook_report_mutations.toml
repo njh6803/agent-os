@@ -277,7 +277,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/hook_report.py"
-old = '''            given[key] -= 1'''
+old = '''            left[key] -= 1'''
 new = '''            pass'''
 
 [[mutation]]

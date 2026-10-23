@@ -375,13 +375,26 @@ def scan(
             if (sent := _given_context(record)) is not None:
                 given[sent] += 1
             attached += [(key, day) for key in _attached_contexts(record)]
-    for key, day in attached:  # 짝은 같은 열쇠의 `hook_success` 하나에 첨부 하나다
-        if given[key]:
-            given[key] -= 1
+    firings += _unpaired_notices(given, attached, prints, prompt_hooks)
+    return Scan(tuple(firings), count, broken, earliest, unreadable)
+
+
+def _unpaired_notices(
+    given: Counter[ContextKey],
+    attached: Iterable[tuple[ContextKey, date]],
+    prints: Mapping[str, frozenset[str]],
+    prompt_hooks: Collection[str],
+) -> list[Firing]:
+    """짝 없는 계기 첨부의 알림. 짝은 같은 열쇠의 `hook_success` 하나에 첨부 하나다."""
+    left = Counter(given)
+    firings: list[Firing] = []
+    for key, day in attached:
+        if left[key]:
+            left[key] -= 1
         elif _is_notice(key.text):
             owner = _unpaired_owner(key, prints, prompt_hooks)
             firings.append(Firing(owner, NOTICE, day, _head(key.text)))
-    return Scan(tuple(firings), count, broken, earliest, unreadable)
+    return firings
 
 
 def _unpaired_owner(
