@@ -1042,6 +1042,37 @@ def test_링크_끊기는_읽지_못한_폴더와_끊지_못한_링크를_준다
     assert cut_links(folder) == [str(folder / "stuck")]
 
 
+def test_링크_끊기는_MAX_PATH_를_넘는_깊이의_링크도_끊고_넘긴_꼴의_경로를_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """윈도에서 긴 경로(`LongPathsEnabled`)가 꺼져 있으면 260자를 넘는 폴더를 평범한 경로로 훑지
+    못한다. 게이트 작업 트리의 `web/node_modules/.pnpm` 아래가 그 깊이다(티켓 07의 PR 직전
+    bug-perf-review)."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("남는다", encoding="utf-8")
+    folder = tmp_path / "worktree"
+    deep = folder.joinpath(*["d" * 40] * 8)
+    assert len(str(deep)) > 300
+    os.makedirs(long_path(deep))
+    _link(Path(long_path(deep / "link")), outside)
+
+    assert cut_links(folder) == []
+    assert not os.path.lexists(long_path(deep / "link"))
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "남는다"
+
+    _link(Path(long_path(deep / "stuck")), outside)
+    진짜_unlink = os.unlink
+
+    def 막는_unlink(path: str, *, dir_fd: int | None = None) -> None:
+        if os.path.basename(path) == "stuck":
+            raise PermissionError(path)
+        진짜_unlink(path, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "unlink", 막는_unlink)
+    assert cut_links(folder) == [str(deep / "stuck")]
+
+
 def test_링크_끊기는_뿌리가_링크면_따라가지_않고_그_뿌리를_준다(tmp_path: Path) -> None:
     """뿌리 자체가 링크면 그 링크가 가리키는 트리 안의 링크를 끊지 않는다(티켓 07의 커밋 전 반박
     검증에서, 링크로 바뀐 게이트 작업 트리 자리를 따라가 바깥 트리의 링크를 모두 끊었다)."""

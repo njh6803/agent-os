@@ -21,7 +21,8 @@
   - Haiku 5.5는 응답마다 프롬프트(입력, 캐시 읽기, 캐시 쓰기의 합)가 `HAIKU_LONG_PROMPT`를 넘으면
     그 응답의 모든 토큰을 `HAIKU_LONG_PRICE`로 셈한다.
   - 기록 줄에 응답이 없는 모델이 `modelUsage`에 있으면 그 모델의 토큰을 캐시 쓰기 5분 배수로 셈해
-    더하고(어림), 그 모델(아래 꼬리를 뗀 이름)과 토큰을 `substitutes`에 따로 든다.
+    더하고(어림), 그 모델(아래 꼬리를 뗀 이름)과 토큰을 `substitutes`에 따로 든다. 꼬리만 다른
+    이름(`X`와 `X[1m]`)은 한 항목으로 더한다.
   - 토큰 합은 응답 셈에서만 낸다. 대신 셈한 모델의 토큰은 `substitutes`에만 들고 합에는 없다.
   - 모델 이름은 끝의 `[1m]`과 날짜(`-YYYYMMDD`)를 떼고 단가를 찾고, 응답과 `modelUsage`의 같은
     모델을 가른다. 단가가 없는 모델도 `PriceError`다.
@@ -30,6 +31,8 @@
 - 파일 층(`session_cost`)은 본 세션 기록 파일 `<세션 id>.jsonl`과 그 옆 `<세션 id>/subagents/`의
   `*.jsonl`을 읽어 `cost_of`에 넘긴다. 기록 파일을 세션 id로 찾는 것은 부르는 쪽이다(명세 "러너가
   기대는 `claude -p`의 동작"의 2026-10-22 주석). 본 세션 기록 파일이 없으면 `FileNotFoundError`다.
+  줄은 `\\n`으로만 가른다. 글 안의 U+2028에서 가르면 그 응답이 셈에서 빠진다(장부의 `read_records`와
+  `tools/rerun_session.py`의 기록 줄 읽기와 같다).
 
 단가 상수는 `docs/model-selection.md` 2절의 표에서 옮겼고 그 문서와 묶지 않는다. 본 측정의 단가는
 사전 등록 절(11)이 고정하고 그 뒤 바꾸지 않는데, 그 문서는 단가가 바뀌면 고쳐지는 살아 있는 문서다.
@@ -192,6 +195,20 @@ def _usd(price: Price, input: int, output: int, read: int, w5: int, w1: int) -> 
     ) / 1e6
 
 
+def _add(a: int | None, b: int | None) -> int | None:
+    return None if a is None or b is None else a + b
+
+
+def _add_tokens(a: Tokens, b: Tokens) -> Tokens:
+    return Tokens(
+        input=_add(a.input, b.input),
+        output=_add(a.output, b.output),
+        cache_read=_add(a.cache_read, b.cache_read),
+        cache_write=_add(a.cache_write, b.cache_write),
+        thinking=_add(a.thinking, b.thinking),
+    )
+
+
 def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
     """세션 하나의 기록 줄과 그 세션의 마지막 `modelUsage`의 공식 단가 셈."""
     usd = 0.0
@@ -209,7 +226,7 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
         usd += _usd(price, i, o, c, w5, w1)
         input, output, read, write = input + i, output + o, read + c, write + w5 + w1
         seen.add(model)
-    substitutes: list[Substitute] = []
+    substituted: dict[str, Tokens] = {}
     for u in model_usage:
         model = _canonical(u.model)
         if model in seen:
@@ -222,34 +239,18 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
             u.cache_write_tokens,
             0,
         )
-        substitutes.append(
-            Substitute(
-                model=model,
-                tokens=Tokens(
-                    input=u.input_tokens,
-                    output=u.output_tokens,
-                    cache_read=u.cache_read_tokens,
-                    cache_write=u.cache_write_tokens,
-                    thinking=u.thinking_tokens,
-                ),
-            )
+        used = Tokens(
+            input=u.input_tokens,
+            output=u.output_tokens,
+            cache_read=u.cache_read_tokens,
+            cache_write=u.cache_write_tokens,
+            thinking=u.thinking_tokens,
         )
+        before = substituted.get(model)
+        substituted[model] = used if before is None else _add_tokens(before, used)
     tokens = Tokens(input=input, output=output, cache_read=read, cache_write=write, thinking=None)
-    return Cost(official_usd=usd, tokens=tokens, substitutes=tuple(substitutes))
-
-
-def _add(a: int | None, b: int | None) -> int | None:
-    return None if a is None or b is None else a + b
-
-
-def _add_tokens(a: Tokens, b: Tokens) -> Tokens:
-    return Tokens(
-        input=_add(a.input, b.input),
-        output=_add(a.output, b.output),
-        cache_read=_add(a.cache_read, b.cache_read),
-        cache_write=_add(a.cache_write, b.cache_write),
-        thinking=_add(a.thinking, b.thinking),
-    )
+    substitutes = tuple(Substitute(model=m, tokens=t) for m, t in substituted.items())
+    return Cost(official_usd=usd, tokens=tokens, substitutes=substitutes)
 
 
 def round_cost(costs: Iterable[Cost]) -> Cost:
@@ -273,7 +274,8 @@ def transcript_lines(transcript: Path) -> list[str]:
     files = [transcript, *sorted((transcript.with_suffix("") / "subagents").glob("*.jsonl"))]
     lines: list[str] = []
     for path in files:
-        lines += path.read_text(encoding="utf-8", errors="replace").splitlines()
+        # `splitlines`는 Node 가 이스케이프하지 않은 글 안의 U+2028 에서도 가른다
+        lines += path.read_text(encoding="utf-8", errors="replace").split("\n")
     return lines
 
 

@@ -227,8 +227,21 @@ expect_output = ["Left contains one more item: Substitute(model='claude-haiku-5-
 
 [[mutation.edit]]
 file = "tools/rerun_cost.py"
-old = '''                model=model,'''
-new = '''                model=u.model,'''
+old = '''        before = substituted.get(model)
+        substituted[model] = used if before is None else _add_tokens(before, used)'''
+new = '''        before = substituted.get(u.model)
+        substituted[u.model] = used if before is None else _add_tokens(before, used)'''
+
+[[mutation]]
+name = "대신 셈에서 같은 모델을 더하지 않고 덮는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "꼬리만_다른_두_이름은"]
+expect = "red"
+expect_output = ["tokens=Tokens(input=3, output=4, cache_read=5, cache_write=0, thinking=2)"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        substituted[model] = used if before is None else _add_tokens(before, used)'''
+new = '''        substituted[model] = used'''
 
 [[mutation]]
 name = "subagents 기록을 읽지 않는다"
@@ -250,11 +263,12 @@ expect_output = ["DID NOT RAISE"]
 [[mutation.edit]]
 file = "tools/rerun_cost.py"
 old = '''    for path in files:
-        lines += path.read_text(encoding="utf-8", errors="replace").splitlines()'''
+        # `splitlines`는 Node 가 이스케이프하지 않은 글 안의 U+2028 에서도 가른다
+        lines += path.read_text(encoding="utf-8", errors="replace").split("\n")'''
 new = '''    for path in files:
         if not path.exists():
             continue
-        lines += path.read_text(encoding="utf-8", errors="replace").splitlines()'''
+        lines += path.read_text(encoding="utf-8", errors="replace").split("\n")'''
 
 [[mutation]]
 name = "회차 합에서 대신 셈한 같은 모델을 더하지 않고 덮는다"
@@ -277,3 +291,14 @@ expect_output = ["thinking=0"]
 file = "tools/rerun_cost.py"
 old = '''    return None if a is None or b is None else a + b'''
 new = '''    return (a or 0) + (b or 0)'''
+
+[[mutation]]
+name = "기록 줄을 splitlines 로 가른다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "글_안의_줄_구분_문자"]
+expect = "red"
+expect_output = ["assert 3 == (7 + 3)"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''errors="replace").split("\n")'''
+new = '''errors="replace").splitlines()'''

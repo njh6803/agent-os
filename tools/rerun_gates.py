@@ -20,8 +20,9 @@
    자리가 링크로 바뀌어 띄우지 않은 게이트는 종료 코드도 시간 넘김도 없다. 링크인 자리에서 띄우면
    결과 커밋이 아니라 그 링크가 가리키는 바깥에서 돈다.
 5. 게이트가 모두 0으로 끝났을 때만 숨은 시험을 돈다. 판정(`tools/rerun_judge.py`의 `solved`)이
-   게이트가 초록일 때만 숨은 시험을 읽어, 다른 회차의 숨은 시험은 쓰이지 않는다. 1에서 읽은 파일을
-   작업 트리에 덮는다. 작업 트리 자리나 덮을 자리의 상위 폴더나 그 자리가 링크면
+   게이트 초록을 먼저 요구해, 게이트가 초록이 아닌 회차의 숨은 시험은 판정에 쓰이지 않는다. 노드가
+   없는 과제면 돌지 않고 0개로 센다. 노드 없이 띄운 pytest는 결과 커밋의 시험 전체를 돈다. 1에서
+   읽은 파일을 작업 트리에 덮는다. 작업 트리 자리나 덮을 자리의 상위 폴더나 그 자리가 링크면
    (`tools/rerun_hidden.py`의 `overlay_target`) 덮지 않고 모든 노드를 실패로 센다. 쓰지 못해도
    같다. 까닭은 숨은 시험 로그에 적는다.
 6. 숨은 시험의 노드 ID만 pytest로 돌려 junit xml을 회차 폴더에 남기고 센다(`count_hidden`). 앞선
@@ -179,8 +180,9 @@ def count_hidden(text: str | None, nodes: Sequence[str]) -> Hidden:
 
     노드의 `testcase`가 하나라도 있고 모두 통과일 때만 통과다. 같은 노드의 `testcase`가
     둘이면(통과한 뒤 정리에서 난 오류) 나쁜 쪽을 든다. `text`가 빈 값이거나 풀리지 않으면 모든
-    노드가 실패다.
+    노드가 실패다. `nodes`에 겹친 노드는 한 번만 센다. 회차 기록 읽기가 겹친 실패 노드를 거부한다.
     """
+    nodes = tuple(dict.fromkeys(nodes))
     passed_keys: dict[tuple[str, str], bool] = {}
     root = None
     if text:
@@ -383,6 +385,11 @@ def _hidden(
     timeout: float,
 ) -> Hidden:
     log = folder / _HIDDEN_LOG
+    if not nodes:
+        # 노드 없이 띄우면 결과 커밋의 시험 전체를 돈다
+        with log.open("ab") as sink:
+            sink.write("(숨은 시험의 노드가 없어 돌지 않았다)\n".encode())
+        return count_hidden(None, nodes)
     try:
         _overlay(worktree, blobs)
     except _NotOverlaid as refused:
@@ -511,7 +518,8 @@ def check_result(
         if done.failed is None:
             gate_results = _gates(worktree, gates, clean, place.path / _GATE_LOG, limits.gates)
         hidden = None
-        # 판정(`tools/rerun_judge.py`의 `solved`)은 게이트가 모두 0일 때만 숨은 시험을 읽는다
+        # 판정(`tools/rerun_judge.py`의 `solved`)이 게이트 초록을 먼저 요구해, 게이트가 초록이
+        # 아닌 회차의 숨은 시험은 판정에 쓰이지 않는다
         if gate_results is not None and all(g.exit_code == 0 for g in gate_results):
             hidden = _hidden(
                 worktree,

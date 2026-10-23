@@ -219,7 +219,7 @@ expect_output = ["Right contains one more item: ", "worktree'"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if os.path.islink(root) or os.path.isjunction(root):
+old = '''    if os.path.islink(scan_root) or os.path.isjunction(scan_root):
         return [root]'''
 new = '''    if False:
         return [root]'''
@@ -481,7 +481,7 @@ expect_output = ["Right contains one more item: ", "stuck'"]
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''                except OSError:
-                    left.append(entry.path)
+                    left.append(shown(entry.path))
             elif entry.is_dir(follow_symlinks=False):
                 pending.append(entry.path)'''
 new = '''                except OSError:
@@ -499,7 +499,7 @@ expect_output = ["Right contains one more item: ", "없음'"]
 file = "tools/tidy_checkouts.py"
 old = '''            entries = list(os.scandir(current))
         except OSError:
-            left.append(current)
+            left.append(shown(current))
             continue
         for entry in entries:
             if entry.is_symlink() or entry.is_junction():
@@ -512,3 +512,38 @@ new = '''            entries = list(os.scandir(current))
             if entry.is_symlink() or entry.is_junction():
                 try:
                     os.unlink(entry.path)'''
+
+[[mutation]]
+name = "링크 끊기가 긴 경로를 평범한 경로로 훑는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "MAX_PATH"]
+expect = "red"
+expect_output = ["Left contains one more item: ", "dddd'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    scan_root = long_path(root)'''
+new = '''    scan_root = root'''
+
+[[mutation]]
+name = "숨은 시험 노드가 없어도 pytest 를 띄운다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "숨은_시험_노드가_없으면"]
+expect = "red"
+expect_output = ["AssertionError: 노드 없이 pytest 를 띄웠다"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if not nodes:
+        # 노드 없이 띄우면 결과 커밋의 시험 전체를 돈다'''
+new = '''    if False:
+        # 노드 없이 띄우면 결과 커밋의 시험 전체를 돈다'''
+
+[[mutation]]
+name = "겹친 노드를 겹친 채 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-vvv", "-k", "겹친_노드는"]
+expect = "red"
+expect_output = ["assert Hidden(passed=1, total=3,"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    nodes = tuple(dict.fromkeys(nodes))'''
+new = '''    nodes = tuple(nodes)'''

@@ -983,25 +983,37 @@ def cut_links(folder: str | os.PathLike[str]) -> list[str]:
     재현했다). 다시 풀기의 도구들(`tools/rerun_round.py`, `tools/rerun_hidden.py`,
     `tools/rerun_gates.py`)이 함께 쓴다. `tools/canary.py` 는 경로로 띄우는 스크립트라 `tools`
     패키지를 가져오지 못해 같은 길의 사본(`_cut_links`)을 따로 둔다.
+
+    훑기와 끊기는 `long_path` 로 한다. 윈도에서 긴 경로가 꺼져 있으면 MAX_PATH(260자)에 걸리는 깊은
+    폴더(게이트 작업 트리의 `web/node_modules/.pnpm` 아래)를 평범한 경로로 읽지 못해 그 폴더를
+    끊지 못한 것으로 냈다(티켓 07의 PR 직전 bug-perf-review). 돌려주는 경로는 넘긴 `folder` 를
+    머리로 두고 그 아래를 운영 체제의 구분자로 잇는다. 끝에 구분자가 붙은 상대 경로면 구분자가
+    겹친다. `..` 이 든 절대 경로는 `long_path` 가 풀지 않아 `folder` 를 읽지 못한 폴더로 준다.
+    그러면 다시 풀기의 세 도구는 지우거나 걷지 않고 알린다.
     """
     root = os.fspath(folder)
-    if os.path.islink(root) or os.path.isjunction(root):
+    scan_root = long_path(root)
+    if os.path.islink(scan_root) or os.path.isjunction(scan_root):
         return [root]
+
+    def shown(path: str) -> str:
+        return root + path[len(scan_root) :]
+
     left: list[str] = []
-    pending = [root]
+    pending = [scan_root]
     while pending:
         current = pending.pop()
         try:
             entries = list(os.scandir(current))
         except OSError:
-            left.append(current)
+            left.append(shown(current))
             continue
         for entry in entries:
             if entry.is_symlink() or entry.is_junction():
                 try:
                     os.unlink(entry.path)
                 except OSError:
-                    left.append(entry.path)
+                    left.append(shown(entry.path))
             elif entry.is_dir(follow_symlinks=False):
                 pending.append(entry.path)
     return left

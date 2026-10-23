@@ -296,7 +296,7 @@ def _표지_명령(mark: Path) -> tuple[str, ...]:
 
 
 def test_게이트_하나가_0이_아니어도_셋을_다_돌고_숨은_시험은_돌지_않는다(tmp_path: Path) -> None:
-    """판정(`tools/rerun_judge.py`의 `solved`)은 게이트가 초록일 때만 숨은 시험을 읽는다."""
+    """판정(`tools/rerun_judge.py`의 `solved`)이 게이트 초록을 먼저 요구한다."""
     place, source, task, commit = _회차(tmp_path, {"calc.py": _M_CALC})
     third = tmp_path / "셋째.txt"
     gates = (_OK, _명령("import sys; sys.exit(3)"), _명령(f"open({str(third)!r}, 'w').write('3')"))
@@ -463,6 +463,21 @@ def test_앞선_junit_xml은_지우고_돈다(tmp_path: Path) -> None:
     got, _ = _돌기(place, source, task, commit, pytest_argv=_명령("pass"))
 
     assert got.hidden == Hidden(passed=0, total=5, failed=_NODES)
+
+
+def test_숨은_시험_노드가_없으면_pytest_를_띄우지_않는다(tmp_path: Path) -> None:
+    """노드 없이 띄우면 결과 커밋의 시험 전체를 숨은 시험의 시간 제한까지 돈다. 과제 목록 읽기는 빈
+    목록을 막지 않는다(티켓 07의 PR 직전 bug-perf-review)."""
+    place, source, task, commit = _회차(tmp_path, {"calc.py": _M_CALC})
+    task = replace(task, hidden_tests=(), support_files=())
+    ran = tmp_path / "돌았다.txt"
+
+    got, notes = _돌기(place, source, task, commit, pytest_argv=_표지_명령(ran))
+
+    assert got.hidden == Hidden(passed=0, total=0, failed=())
+    assert not ran.exists(), "노드 없이 pytest 를 띄웠다"
+    assert notes == []
+    _걷혔다(place)
 
 
 # --- 준비 ---
@@ -846,33 +861,46 @@ def test_xml이_없거나_풀리지_않거나_비면_모든_노드가_실패다(
     assert count_hidden(text, nodes) == Hidden(passed=0, total=1, failed=nodes)
 
 
+def test_겹친_노드는_한_번만_센다() -> None:
+    """회차 기록 읽기는 실패 노드가 겹치면 거부한다(`tools/rerun_files.py`의 `_outcome`). 과제 목록
+    읽기는 겹친 노드를 막지 않는다(티켓 07의 PR 직전 bug-perf-review)."""
+    nodes = ("tests/test_a.py::test_x", "tests/test_a.py::test_x", "tests/test_a.py::test_y")
+    text = _xml('<testcase classname="tests.test_a" name="test_y"/>')
+    assert count_hidden(text, nodes) == Hidden(passed=1, total=2, failed=nodes[:1])
+    assert count_hidden(None, nodes) == Hidden(passed=0, total=2, failed=nodes[1:])
+
+
+_CASE = '<testcase classname="tests.test_a" name="test_x"/>'
+
+
 def _엔터티(declaration: str) -> str:
-    """`test_x`의 이름을 엔터티 `name`으로 적은 junit xml."""
-    return f'<?xml version="1.0"?><!DOCTYPE testsuites [{declaration}]>' + _xml(
-        '<testcase classname="tests.test_a" name="&name;"/>'
-    )
+    """`test_x`의 `testcase` 요소를 엔터티 `case`로 적은 junit xml. 엔터티를 풀면 통과로 읽힌다."""
+    return f'<?xml version="1.0"?><!DOCTYPE testsuites [{declaration}]>' + _xml("&case;")
 
 
 def test_안의_엔터티는_풀고_바깥_엔터티는_풀지_않는다(tmp_path: Path) -> None:
     """모듈 독스트링의 `ElementTree`가 바깥 엔터티를 풀지 않는다는 주장. 안의 엔터티로 같은 xml 이
-    통과로 읽히는 것을 먼저 보여, 바깥 엔터티의 실패가 풀지 않아서임을 가른다."""
+    통과로 읽히는 것을 먼저 보여, 바깥 엔터티의 실패가 풀지 않아서임을 가른다. 엔터티를 요소 본문에
+    쓴다. 속성 값 안의 바깥 엔터티 참조는 푸는 파서에서도 오류라 그 주장을 가르지 못한다(티켓 07의
+    PR 직전 bug-perf-review)."""
     nodes = ("tests/test_a.py::test_x",)
-    name_file = tmp_path / "name.txt"
-    name_file.write_text("test_x", encoding="utf-8")
+    case_file = tmp_path / "case.xml"
+    case_file.write_text(_CASE, encoding="utf-8")
 
-    inner = _엔터티('<!ENTITY name "test_x">')
-    outer = _엔터티(f'<!ENTITY name SYSTEM "{name_file.as_uri()}">')
+    inner = _엔터티(f"<!ENTITY case '{_CASE}'>")
+    outer = _엔터티(f'<!ENTITY case SYSTEM "{case_file.as_uri()}">')
 
     assert count_hidden(inner, nodes) == Hidden(passed=1, total=1, failed=())
     assert count_hidden(outer, nodes) == Hidden(passed=0, total=1, failed=nodes)
 
 
 def test_엔터티_증폭은_풀리지_않아_모든_노드가_실패다() -> None:
-    """모듈 독스트링의 expat 2.4.1부터 엔터티 증폭(billion laughs)이 막힌다는 주장."""
+    """모듈 독스트링의 expat 2.4.1부터 엔터티 증폭(billion laughs)이 막힌다는 주장. 가장 안의
+    엔터티가 통과하는 `testcase`라, 다 풀면 통과로 읽힌다."""
     nodes = ("tests/test_a.py::test_x",)
-    levels = ['<!ENTITY lol0 "test_x">']
+    levels = [f"<!ENTITY lol0 '{_CASE}'>"]
     levels += [f'<!ENTITY lol{i} "{f"&lol{i - 1};" * 10}">' for i in range(1, 10)]
-    levels.append('<!ENTITY name "&lol9;">')
+    levels.append('<!ENTITY case "&lol9;">')
 
     started = time.monotonic()
     got = count_hidden(_엔터티("".join(levels)), nodes)

@@ -283,6 +283,25 @@ def test_modelUsage_의_1m_꼬리는_기록의_이름과_같은_모델로_본다
     assert math.isclose(got.official_usd, _usd(PRICES[OPUS], output=1), rel_tol=1e-12)
 
 
+def test_modelUsage_에서_꼬리만_다른_두_이름은_대신_셈의_한_항목으로_더한다() -> None:
+    """회차 합(`round_cost`)이 같은 모델을 한 항목으로 더하는 것과 같다(PR 직전 bug-perf-review)."""
+    got = cost_of(
+        (),
+        (
+            _사용(OPUS, input=1, output=2, thinking=1),
+            _사용(f"{OPUS}[1m]", input=3, output=4, read=5, thinking=2),
+        ),
+    )
+    assert got.substitutes == (
+        Substitute(
+            model=OPUS,
+            tokens=Tokens(input=4, output=6, cache_read=5, cache_write=0, thinking=3),
+        ),
+    )
+    want = _usd(PRICES[OPUS], input=1, output=2) + _usd(PRICES[OPUS], input=3, output=4, read=5)
+    assert math.isclose(got.official_usd, want, rel_tol=1e-12)
+
+
 def _기록_파일(folder: Path, name: str, lines: list[str]) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / name
@@ -313,6 +332,19 @@ def test_세션_하나는_본_세션_기록과_그_subagents_를_함께_셈한�
     )
     assert math.isclose(got.official_usd, want, rel_tol=1e-12)
     assert got.tokens == Tokens(input=4, output=41, cache_read=0, cache_write=21682, thinking=None)
+
+
+def test_기록_줄은_글_안의_줄_구분_문자에서_가르지_않는다(tmp_path: Path) -> None:
+    """Node 의 JSON 직렬화는 U+2028·U+2029·U+0085 를 이스케이프하지 않아 기록 줄에 그대로
+    실린다. `splitlines`로 가르면 그 응답이 풀리지 않는 조각 둘이 되어 셈에서 빠진다(PR 직전
+    bug-perf-review, 선례는 `tools/rerun_session.py`의 기록 줄 읽기)."""
+    구분 = [chr(0x2028), chr(0x2029), chr(0x85)]
+    줄 = json.loads(_응답("m1", OPUS, output=7))
+    줄["message"]["content"] = [{"type": "text", "text": "앞" + "가운데".join(구분) + "끝"}]
+    글 = json.dumps(줄, ensure_ascii=False)
+    assert all(c in 글 for c in 구분)
+    본 = _기록_파일(tmp_path, "s.jsonl", [글, _응답("m2", OPUS, output=3)])
+    assert session_cost(본, ()).tokens.output == 7 + 3
 
 
 def test_subagents_가_없는_세션도_셈한다(tmp_path: Path) -> None:
