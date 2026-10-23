@@ -904,7 +904,7 @@ def test_못_보는_것_명령_줄에_넘기지_못할_만큼_긴_문자열은_g
     assert term_in(repo, base, STRING, "a" * 10, outside_tests=False, limits=Limits()) is False
     # 윈도는 명령 줄 전체가 32767자(CreateProcess 의 한도), 리눅스는 인자 하나가 128KiB
     # (MAX_ARG_STRLEN)를 넘으면 띄우지 못한다. 둘 다 문서의 상수이고 재지 않았다. 이 PC 에서는
-    # 셀프 리뷰가 2만 자는 띄워지고 4만 자는 WinError 206 인 것을 손으로 봤다(일지 2026-10-23-38)
+    # 셀프 리뷰가 2만 자는 띄워지고 4만 자는 WinError 206 인 것을 손으로 봤다(일지 2026-10-23-43)
     with pytest.raises(CandidateError, match="띄우지 못했다"):
         term_in(repo, base, STRING, "a" * 300_000, outside_tests=False, limits=Limits())
 
@@ -913,7 +913,7 @@ def test_NUL_이_든_문자열이_있어도_후보가_실패하지_않고_조각
     tmp_path: Path,
 ) -> None:
     # 02 의 시험이 NUL 이 든 문자열을 들어, 실제 후보 표에서 02 가 git grep 을 띄우지 못하고
-    # 통째로 실패 갈래였다(일지 2026-10-23-38)
+    # 통째로 실패 갈래였다(일지 2026-10-23-43)
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q", "-b", "main")
