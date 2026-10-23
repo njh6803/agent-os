@@ -1,10 +1,10 @@
 # web-widget 화면
 
-위젯의 완성 화면이다. `/ui-design web-widget`이 Design 아티팩트에 그리고 사람이 확정한 것을 그 스킬의 7단계가 옮겼다(일지 2026-10-23-20). 규약은 `docs/agents/issue-tracker.md`의 화면 디자인 절이고, 그린 순서와 화면은 시작 프롬프트 `screens-prompt.md`다. 그리며 `frontend-design`과 저장소 규칙이 부딪친 자리는 `.scratch/design-system/design/frontend-design-conflicts.md`의 2026-10-23 web-widget 행이다.
+위젯의 완성 화면이다. `/ui-design web-widget`이 Design 아티팩트에 그리고 사람이 확정한 것을 그 스킬의 7단계가 옮겼다(일지 2026-10-23-26). 규약은 `docs/agents/issue-tracker.md`의 화면 디자인 절이고, 그린 순서와 화면은 시작 프롬프트 `screens-prompt.md`다. 그리며 `frontend-design`과 저장소 규칙이 부딪친 자리는 `.scratch/design-system/design/frontend-design-conflicts.md`의 2026-10-23 web-widget 행이다.
 
 아티팩트에는 쪽이 둘이다. "와이어프레임"(아트보드 일곱, 회색조)과 "완성 화면"(아트보드 여덟)이고, 여기 옮긴 것은 완성 화면 여덟과 캔버스 색인 `canvas.json`이다. 와이어프레임은 아티팩트에만 남겼다. 그래서 `canvas.json`의 `boards`와 `order`는 여기 없는 와이어프레임 파일(`Main.dc.html`, `wf-*.dc.html`)도 가리킨다. 와이어프레임을 다시 보려면 아티팩트를 연다. 화면 파일은 디자인 시스템을 `ds/agent-os/` 아래에서 불러오고 그 폴더는 옮기지 않았다(스킬 7단계가 `project/ds/`를 뺀다). 화면 파일이 함께 부르는 `./support.js`는 아티팩트의 파일 목록(`list` `scope: "files"`)에 없고 `project/support.js`를 `read`하면 그 경로에 파일이 없다고 나와, 옮길 지원 파일이 아니다. 저장소에서 브라우저로 그려지는지는 보지 않았다.
 
-와이어프레임에서 A·B 두 안을 그린 갈래는 둘이고, 사람이 고른 안(일지 2026-10-23-20의 6단계)으로 완성 화면을 그렸다.
+와이어프레임에서 A·B 두 안을 그린 갈래는 둘이고, 사람이 고른 안(일지 2026-10-23-26의 6단계)으로 완성 화면을 그렸다.
 
 - 대화의 위쪽 띠: A('새 대화'를 글자 버튼으로 늘 보인다). 고르지 않은 B는 줄임표 아이콘 버튼의 메뉴 안에 두는 것이었다. 디자인 시스템에 메뉴 부품이 없다.
 - 승인을 기다리는 동안의 입력창: A(막힌 채 남기고 그 위 띠에 "승인이나 거부를 먼저 골라 주세요."). 고르지 않은 B는 입력창을 숨기는 것이었다.
