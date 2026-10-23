@@ -59,6 +59,8 @@ ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
 CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
+# 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
+# `web/apps/widget/tools/start.ts`)가 같은 목록을 따로 든다. 바꾸면 셋을 함께 고친다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 # 서버를 멈출 때 연결이 남은 응답을 기다리는 상한(초). uvicorn 의 기본값은 연결이 전부 끝날
 # 때까지 앱의 수명을 닫지 않아, 멈추라는 명령이 실행 하나가 끝나기를 제한 없이 기다린다(ADR 0014
