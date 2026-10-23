@@ -569,7 +569,7 @@ sonnet·high. Major 1, Minor 4, Nit 3. Node의 출처 다섯, jsdom 둘, `trim`�
 - 명세 360행과 티켓 02: 553개가 둘째 실행이고 첫 실행에서 Ctrl+C 시험 둘이 부하 아래 실패했으며 패치 몫은 가르지 못했다는
   단서를 더했다.
 - 닫힌 문장의 잔존(표준 축 tech.md, 명세 축 넷): 반례만 덧붙이지 않고 일반 조항으로 적었다. 명세 Testing Decisions 4와 6,
-  티켓 06과 11에 "새 잡(새 마커)이 거짓으로 만드는 닫힌 문장을 그런 말로 grep해 잔존 0"을 두고, 지금 아는 자리를 예로 들었다
+  티켓 06과 11에 새 잡(새 마커)이 거짓으로 만드는 닫힌 문장을 그런 말로 grep해 잔존이 0인지 보는 조항을 두고, 지금 아는 자리를 예로 들었다
   (`tech.md`의 "잡 다섯", `http.md` 문장 셋, `tests/test_main.py` 독스트링, `tests.md`, `operations.md` 6행 둘). 헌법
   문서는 판을 patch로 올린다는 것(`tools/check_constitution_version.py`)과 바꾼 rules를 새 세션에서 확인한다는 것도 적었다.
 - 티켓 11: conftest의 셈을 pytester 시험이 먼저 빨갛게 보는 기준(선례 `tests/test_conftest.py`의 토큰 합계 시험 둘)을 더했다.
@@ -578,7 +578,7 @@ sonnet·high. Major 1, Minor 4, Nit 3. Node의 출처 다섯, jsdom 둘, `trim`�
 - 티켓 05: iframe의 API 기준 주소(같은 출처, CORS 없음)와, 대화 목록 자체에 `aria-live`·`role="log"`를 달지 않는 것을
   더했다. 명세 접근성 절에도 그 한 줄을 넣었다(`mk-a11y` 메모의 "대화 목록 자체는 읽히지 않는다").
 - 티켓 06: "도구 줄이 결말 전에 선다"와 iframe 산출물의 CSS를 수용 기준으로 더하고, 첫 사례에 같은 출처의 요청을 더했다.
-  "07이 사례를 더한다"를 "07과 08은 이 e2e로 회귀를 본다"로 고쳤다. 명세 e2e 목록의 "SSE가 결말 전에 흐르는 것"에 그것을
+  "07이 사례를 더한다"를 "07과 08은 사례를 더하지 않고 이 e2e로 회귀를 본다"로 고쳤다. 명세 e2e 목록의 "SSE가 결말 전에 흐르는 것"에 그것을
   위젯 화면에서 보는 법을 붙였다.
 - 서두의 수: 사진 비교 도우미는 결정을 승인받을 때 사용자가 고른 것이라 191행을 사용자 선택으로 표시하고, 서두를 여섯과
   예순으로, 배치와 빌드 묶음을 여덟로 고쳤다. "(명세가 정했다" 표시는 61개이고 서두 자신의 하나를 빼면 60이며, 묶음
@@ -621,3 +621,56 @@ sonnet·high. Major 1, Minor 4, Nit 3. Node의 출처 다섯, jsdom 둘, `trim`�
 `plan.md`, 프로브 `pnpm_spawn.py`, 이 일지의 인용을 함께 고쳤다. 도구가 옮기지 않는 꼴을 grep해 이 일지의 "일지 34"
 하나를 "이 일지"로 고쳤다. origin/main이 `db92d68a`에서 `893e0fe8`로 움직였고 그사이 바뀐 파일은 모두 model-rerun의 것이라
 이 브랜치가 따를 새 규약은 없었다(`git diff --name-only HEAD...origin/main`).
+
+커밋 `d91df0b1`(파일 19, +1240 −348). pre-commit은 모두 통과했다. ruff 둘, `tools/run_checks.py`의 검사 열(zizmor,
+check-ticket, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 323.7초,
+pytest 342.2초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지다. 카나리아 명세 모양과 헌법 판은 대상 파일이
+없어 `Skipped`였다(이 커밋은 헌법 문서를 고치지 않았다). 그래서 손으로 치는 검증 명령 다섯은 이 결과로 갈음한다.
+
+인용 대조 경고 다섯 가운데 421·424행은 위 "남긴 것"대로 둔다. 600행은 명세 187행과 글자가 같은데 원문 안의 따옴표와 코드
+스팬 때문에 경고가 났다. 572행은 요약을 따옴표로 감싼 것이라 따옴표를 뗐고, 581행은 티켓 06 5행의 "사례를 더하지 않고"를
+빠뜨려 원문대로 고쳤다. 이 두 고침은 커밋 뒤라 아직 커밋하지 않았다.
+
+## 인계 (커밋 뒤)
+
+커밋 `d91df0b1`이 지나자 컨텍스트가 인계 문턱을 넘은 채 경계 `커밋 뒤`에 와 `hook_handoff`가 왔다. 커밋은 성공했고, 지금
+경계(`커밋 뒤`)는 이 세션이 넘겨받은 경계(`셀프 리뷰 직전`)와 다르며, 요청 범위("티켓까지")는 PR과 병합까지라 이 경계에서
+끝나지 않는다. 일지에 이 세션의 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다.
+그래서 넘긴다. 이 세션의 지금 제목은 `docs/web-widget-spec-2`이고 `docs/web-widget-spec-2 (인계함)`으로 바꾼다. 띄운
+백그라운드 작업은 남지 않았다(커밋 명령은 끝났다). `tools/model_sweep.py docs/web-widget-spec-2`는 `스윕 밖`이었고, 브랜치에
+열린 PR이 없다(`gh pr view`가 `no pull requests found`). 커밋은 아직 푸시하지 않았다.
+
+커밋하지 않은 변경: 이 일지(인용 두 줄 고침, 커밋 결과, 이 인계 절).
+
+인계 지시문:
+
+```
+다음 작업: 기능 web-widget. 명세 검토 반영과 티켓 열하나를 커밋했고(d91df0b1), origin/main을 합친 뒤 PR 직전 리뷰부터 PR과 병합까지 간다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec web-widget
+브랜치: docs/web-widget-spec-2
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-23-40-web-widget-spec.md
+이어받을 상태: 인계: 커밋 뒤. 둘째 셀프 리뷰를 반영해 d91df0b1로 커밋했고 pre-commit은 모두 통과했다(카나리아 명세 모양과 헌법 판은 대상 파일이 없어 Skipped). 푸시하지 않았고 열린 PR은 없다. 커밋하지 않은 변경은 이 일지(인용 두 줄 고침, 커밋 결과, 인계 절)다. 남은 단계는 origin/main을 합치고(git merge origin/main), 일지를 커밋하고, PR 직전 /security-review와 bug-perf-review를 나란히 돌려(밀 주장은 일지의 "셀프 리뷰 반영", "명세 검토 반영", "둘째 셀프 리뷰 반영" 절) 반영한 뒤, PR을 열고 반영과 병합까지 가는 것이다. 옛 docs/web-widget-spec 브랜치는 명세가 대신하고, 지우기는 병합 뒤 주 체크아웃 세션이 사람에게 확인받고 한다. 일지 docs/journal/2026-10-23-40-web-widget-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 바꿨고(`set_session_title`이 묻지 않고 바꿨다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T09:07:04Z
+
+## 이어받은 세션 (커밋 뒤, 둘째)
+
+위 지시문으로 연 새 세션이다. 제목을 `docs/web-widget-spec-2`로 바꾸고, `git worktree list`에서 그 브랜치가
+`.claude/worktrees/web-widget-spec-2`에 체크아웃된 것을 보고 EnterWorktree(path)로 들어갔다. `to-spec`을 Read로 열어
+따랐다.
+
+> 사용자: ".claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 인자: web-widget … 이어받을 상태: 인계: 커밋
+> 뒤 … 남은 단계는 origin/main을 합치고(git merge origin/main), 일지를 커밋하고, PR 직전 /security-review와
+> bug-perf-review를 나란히 돌려 … 반영한 뒤, PR을 열고 반영과 병합까지 가는 것이다 … 이번 요청 범위: 티켓까지"
+
+`git fetch origin` 뒤 `origin/main`은 그대로 `893e0fe8`이었고, `git merge origin/main`이 충돌 없이 병합 커밋을 만들었다
+(model-rerun 06의 파일 15개, 이 브랜치가 바꾼 파일과 겹치지 않는다). `tools/sibling_overlap.py`는 번호 겹침 없음이었다.
+함께 고친 파일 후보는 `.scratch/plan.md` 하나(PR #356, 워크트리 `02-build-tokens-json`·`mcp-shutdown-spec`)다.
