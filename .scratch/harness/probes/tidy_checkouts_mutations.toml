@@ -1846,3 +1846,129 @@ expect_output = ["끄기 전에 다시 판정했다: 잠금 pid 9 가 살아 있
 file = "tools/tidy_checkouts.py"
 old = '''    found = with_lock(holders_in(ops.processes(), wt.path), wt, ops.pid_alive)'''
 new = '''    found = holders_in(ops.processes(), wt.path)'''
+
+# 티켓 07의 회고 반영: 지우는 두 함수가 드라이브 뿌리와 홈, 그 조상을 거부한다(셀프 리뷰 서브에이전트가
+# cut_links("C:\\") 를 불러 사용자 프로필의 junction 을 끊은 사고, 일지 2026-10-23-45). 시험은 홈 환경
+# 변수를 tmp_path 아래로 바꾸고 드라이브 뿌리는 판정 함수에만 넣어, 변이가 가드를 꺼도 진짜 홈을
+# 건드리지 않는다.
+
+[[mutation]]
+name = "홈 가드: 링크 끊기가 홈을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크_끊기는_홈이나"]
+expect = "red"
+expect_output = ["assert [] == ['", "user']"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        or holds_home(root, os.path.expanduser("~"))
+    ):'''
+new = '''    ):'''
+
+[[mutation]]
+name = "홈 가드: 휴지통 지우기가 홈을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "휴지통_지우기는_홈이나"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    elif holds_home(path, os.path.expanduser("~")):'''
+new = '''    elif False:'''
+
+[[mutation]]
+name = "홈 가드: 드라이브 뿌리를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "홈을_품은_자리는"]
+expect = "red"
+# 윈도에서만 빨개진다. 임시 폴더가 Z: 에 있으면 시험이 Y:\ 를 넣어 이 표지가 빠진다
+expect_output = ["holds_home('Z:\\\\'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if os.path.dirname(target) == target:
+        return True
+    return is_within(os.path.realpath(home), target)'''
+new = '''    return is_within(os.path.realpath(home), target)'''
+
+[[mutation]]
+name = "홈 가드: 링크를 풀지 않고 글자로 견준다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "홈을_품은_자리는"]
+expect = "red"
+expect_output = ["/ 'alias') / 'user')"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    target = os.path.realpath(path)
+    if os.path.dirname(target) == target:'''
+new = '''    target = os.path.abspath(path)
+    if os.path.dirname(target) == target:'''
+
+[[mutation]]
+name = "홈 가드: 조상을 보지 않고 홈 자신만 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "홈을_품은_자리는"]
+expect = "red"
+expect_output = ["home/user').parent"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return is_within(os.path.realpath(home), target)'''
+new = '''    return same_path(os.path.realpath(home), target)'''
+
+# 회고 반영분의 셀프 리뷰가 독스트링에 더한 못 보는 것과 짧은 이름(일지 2026-10-23-45의 회고 반영분의
+# 셀프 리뷰 절). 못 보는 것의 변이는 판정을 넓혀, 지나간다고 단언한 자리가 빨개지는지 본다. 빈 홈,
+# UNC, 짧은 이름의 셋은 그 단언이 윈도 갈래에 있어 윈도에서만 빨개진다.
+
+[[mutation]]
+name = "홈 가드: 휴지통 지우기가 링크보다 홈 가드를 먼저 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크인_홈을_링크만"]
+expect = "red"
+expect_output = ["PermissionError: 드라이브 뿌리나 홈", "alias"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if os.path.islink(target) or os.path.isjunction(target):
+        os.unlink(target)
+    elif holds_home(path, os.path.expanduser("~")):
+        raise PermissionError(f"드라이브 뿌리나 홈, 그 조상은 지우지 않는다: {path}")
+'''
+new = '''    if holds_home(path, os.path.expanduser("~")):
+        raise PermissionError(f"드라이브 뿌리나 홈, 그 조상은 지우지 않는다: {path}")
+    elif os.path.islink(target) or os.path.isjunction(target):
+        os.unlink(target)
+'''
+
+[[mutation]]
+name = "홈 가드: 빈 홈이면 모든 자리를 막는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다른_꼴의_같은_자리"]
+expect = "red"
+expect_output = ["assert not True", "/home/user'), '')"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return is_within(os.path.realpath(home), target)'''
+new = '''    return not os.fspath(home) or is_within(os.path.realpath(home), target)'''
+
+[[mutation]]
+name = "홈 가드: UNC 관리 공유를 드라이브 경로로 푼다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다른_꼴의_같은_자리"]
+expect = "red"
+expect_output = ["assert not True", "holds_home('\\\\\\\\localhost"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    target = os.path.realpath(path)
+'''
+new = '''    target = os.path.realpath(re.sub(r"^\\\\localhost\\(\w)\$", r"\1:", os.fspath(path)))
+'''
+
+[[mutation]]
+name = "홈 가드: 짧은 이름을 풀지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "홈을_품은_자리는"]
+expect = "red"
+expect_output = ["assert False", "~1', WindowsPath("]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    target = os.path.realpath(path)
+'''
+new = '''    target = os.path.realpath(path) if "~" not in os.fspath(path) else os.path.abspath(path)
+'''

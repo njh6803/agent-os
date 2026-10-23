@@ -42,6 +42,7 @@ from tools.rerun_round import (
     Removal,
     RoundDir,
     SetupEnd,
+    SetupFailed,
     build_clone,
     check_clone,
     checked_place,
@@ -676,6 +677,22 @@ def test_찾지_못한_준비_명령도_실패다(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("end", "exit_code"),
+    [
+        (SetupEnd.EXITED, None),
+        (SetupEnd.EXITED, 0),
+        (SetupEnd.TIMED_OUT, 1),
+        (SetupEnd.NOT_STARTED, 1),
+    ],
+)
+def test_준비_실패의_종료_코드는_끝까지_돈_명령에만_있고_0이_아니다(
+    end: SetupEnd, exit_code: int | None
+) -> None:
+    with pytest.raises(ValueError, match="종료 코드"):
+        SetupFailed(0, "uv sync", end, exit_code)
+
+
 def test_준비_시간은_회차의_벽시계에_들지_않는다(tmp_path: Path) -> None:
     before = time.monotonic()
     done = run_setup(
@@ -1013,7 +1030,7 @@ def test_지우다_막히면_표지를_남겨_다시_지울_수_있다(
 def test_링크를_찾다_막힌_회차_폴더만_실패로_알리고_다음_폴더는_지운다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """링크를 찾는 걸음(`_cut_links`)이 항목을 판정하다 OSError를 내는 길을 흉내 낸다. 새 회차
+    """링크를 찾는 걸음(`cut_links`)이 항목을 판정하다 OSError를 내는 길을 흉내 낸다. 새 회차
     폴더에는 링크가 없으니 막지 않는 폴더에서는 끊지 못한 것이 없다고 돌려준다."""
     root = tmp_path / "뿌리"
     records = tmp_path / "records"
@@ -1025,7 +1042,7 @@ def test_링크를_찾다_막힌_회차_폴더만_실패로_알리고_다음_폴
             raise PermissionError(5, "항목을 판정하지 못했다")
         return []
 
-    monkeypatch.setattr(rerun_round, "_cut_links", blocked)
+    monkeypatch.setattr(rerun_round, "cut_links", blocked)
     report = _지우기(root, records)
     assert [name for name, _ in report.failed] == [stuck.name]
     assert "PermissionError" in report.failed[0][1]
@@ -1102,6 +1119,8 @@ def test_판정_뒤_링크로_바뀐_회차_폴더는_지우지_않는다(
     monkeypatch.setattr(rerun_round, "read_record", swapped)
     report = _지우기(root, records)
     assert [name for name, _ in report.failed] == [place.name]
+    # 링크 끊기(`cut_links`)도 뿌리가 링크면 멈추므로, 지우기 직전의 확인이 막았는지는 까닭으로 본다
+    assert "판정한 뒤 링크로 바뀌어" in report.failed[0][1]
     assert (outside / "남을것.txt").read_text(encoding="utf-8") == "바깥\n"
     assert os.path.lexists(place.path)
 

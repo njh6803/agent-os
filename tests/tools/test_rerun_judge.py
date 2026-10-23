@@ -686,7 +686,7 @@ def _비용_대신(r: Record) -> Record:
 
 
 def _준비_실패(r: Record) -> Record:
-    실패 = SetupFailure(command=SETUP_COMMANDS[0], exit_code=1)
+    실패 = SetupFailure(command=SETUP_COMMANDS[0], exit_code=1, timed_out=False)
     return replace(r, outcome=replace(r.outcome, setup_failure=실패, gates=None, hidden=None))
 
 
