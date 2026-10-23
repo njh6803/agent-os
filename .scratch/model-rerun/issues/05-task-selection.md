@@ -10,7 +10,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 후보를 찾는다
 
