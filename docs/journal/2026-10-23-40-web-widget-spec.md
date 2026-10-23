@@ -734,9 +734,110 @@ Skipped인 ruff 둘을 CLAUDE.md 검증 명령 절대로 손으로 쳤다. `uv r
 - 서두의 수: 명세가 정한 것 예순에서 예순하나. "(명세가 정했다" 표시는 62개이고 서두 자신의 하나를 빼면 61이며, 묶음의
   합(승인 셋)도 61이다.
 
-ADR 0023 54행과 ADR 0024 49행의 "nginx 상한은 사이트 파일의 요청 크기보다 크게 두어 파이썬의 422가 답하게 한다"는 요청 크기
+ADR 0023 54행과 ADR 0024 49행(nginx의 본문 상한을 사이트 파일의 요청 크기보다 크게 두어 파이썬의 422가 답하게 한다)은 요청 크기
 초과의 문장이라 결정 본문의 사유에는 닿지 않아 글자 그대로 참이다. 포인터를 달지 않았다.
 
 다시 돌린 명령: `tools/check_md_tables.py`와 `tools/check_line_separators.py`(바뀐 문서 여섯, 출력 없음),
 `tools/check_quotes.py`(같은 여섯, 인용 19건에 경고 없음), `tools/check_adr_pointers.py`(0), `uv run ruff format --check .`(1018
 파일 초록).
+
+### 커밋과 PR
+
+커밋 직전 `git branch --show-current`는 `docs/web-widget-spec-2`였고 `tools/sibling_overlap.py`는 번호 겹침 없음(origin/main
+`893e0fe`)이었다. `443eb66f`로 커밋했다(파일 7, +98 −25). pre-commit은 검사 러너 열(pytest 383.5초, web-verify 275.5초,
+run-hooks 94.1초 등), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed였고, ruff 둘과 카나리아 명세·헌법
+판은 대상 파일이 없어 Skipped였다. ruff 둘은 위에서 손으로 쳤다. 인용 대조 경고 1건(이 일지의 ADR 0023·0024 요약을 따옴표로
+감싼 줄)은 따옴표를 떼고 괄호로 고쳤다. 이 고침은 커밋 뒤라 아직 커밋하지 않았다.
+
+`git fetch origin` 뒤 origin/main은 그대로 `893e0fe8`이었다. 브랜치를 푸시하고 PR [#373](https://github.com/njh6803/agent-os/pull/373)을
+열었다(제목 `docs: 위젯 명세와 티켓 열하나를 쓰고 런타임이 호출 이벤트를 흘린다는 결정을 올린다 (web-widget)`). PR 체크리스트에
+PR 직전 리뷰 셋의 결과와 반영을 적었다. `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+PR을 열자 컨텍스트가 인계 문턱을 넘은 채 경계 `PR 연 뒤`에 와 `hook_handoff`가 왔다(`hook_pr_next_session`도 함께 왔다).
+PR은 열렸고, 지금 경계(`PR 연 뒤`)는 이 세션이 넘겨받은 경계(`커밋 뒤`)와 다르며, 요청 범위("티켓까지")는 병합까지라 이
+경계에서 끝나지 않는다. 일지에 이 세션의 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이
+아니다. 그래서 넘긴다. 앞서 `443eb66f` 커밋 때 온 `커밋 뒤` 계기는 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 넘기지 않았다.
+
+이 세션의 지금 제목은 `docs/web-widget-spec-2`이고 `docs/web-widget-spec-2 (인계함)`으로 바꾼다. 띄운 백그라운드 작업은 남지
+않았다(커밋 둘과 리뷰 서브에이전트 넷은 끝났다). `tools/model_sweep.py docs/web-widget-spec-2`는 `스윕 밖`이었다.
+
+커밋하지 않은 변경: 이 일지(인용 한 줄 고침, 커밋과 PR 절, 이 인계 절).
+
+인계 지시문:
+
+```
+다음 작업: 기능 web-widget. PR #373(명세와 티켓 열하나)을 열었고, 봇 회차부터 반영과 병합까지 간다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec web-widget
+브랜치: docs/web-widget-spec-2
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-23-40-web-widget-spec.md
+이어받을 상태: 인계: PR 연 뒤. PR #373을 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 일지(인용 한 줄 고침, "커밋과 PR" 절, 인계 절)이고 봇 회차의 반영 커밋이나 단계를 닫는 일지 커밋에 싣는다. 이 세션이 명세 단계를 닫으므로 병합 전에 회고(retro)와 일지 "다음"을 마쳐 푸시한다. 회고에 넘길 후보는 일지 "ruff 서식이 명세의 코드 블록을 짚었다" 절(pre-commit의 ruff 훅이 .md의 코드 블록을 보지 않는다)이다. 옛 docs/web-widget-spec 브랜치와 워크트리는 명세가 대신하고, 지우기는 병합 뒤 주 체크아웃 세션이 사람에게 확인받고 한다. 일지 docs/journal/2026-10-23-40-web-widget-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 바꿨고(`set_session_title`이 묻지 않고 바꿨다), 워크트리 잠금은 이미 풀려 있었다(`is not locked`). PR #373은 앱에 묶여 있다(`get_status`의 `bound: true`).
+
+open-session을 부른다 2026-10-23T09:51:55Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+위 지시문으로 연 새 세션이다. 제목을 `docs/web-widget-spec-2`로 바꾸고, `git worktree list`에서 그 브랜치가
+`.claude/worktrees/web-widget-spec-2`에 체크아웃된 것을 보고 EnterWorktree(path)로 들어갔다. `to-spec`을 Read로 열어
+따랐다. 앱에는 PR #373이 묶여 있지 않아(`get_status`의 `bound: false`) `bind_pr`로 묶었다.
+
+> 사용자: ".claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 인자: web-widget … 다음 작업: 기능 web-widget.
+> PR #373(명세와 티켓 열하나)을 열었고, 봇 회차부터 반영과 병합까지 간다 … 이번 요청 범위: 티켓까지"
+
+## 봇 회차
+
+`gh pr view`의 `headRefOid`가 로컬 HEAD와 같은 `443eb66f`인 것을 보고 `@coderabbitai review`를 남긴 뒤 `tools/wait_ci.py 373`을
+백그라운드로 띄웠다. 대기는 `끝: 모두 통과. CodeRabbit: Review rate limited`로 끝났다. 검사 여덟(`python`, `claude-review`,
+`e2e`, `ticket`, `verify`, `visual`, `web`, `CodeRabbit`)이 모두 SUCCESS였다.
+
+- CodeRabbit: 한도에 걸려 리뷰가 없다(요약 코멘트가 `Review limit reached`, 다음 무료 리뷰까지 51분). 한도에 걸린 푸시는 회차로
+  세지 않는다(next-session 순서 1의 2). 보안·버그·성능 축은 PR 직전에 돈 대체 둘(`/security-review`, `bug-perf-review` 둘)의 결과가 맡는다
+  (`operations.md` 리뷰 파이프라인 3의 "CodeRabbit PR 리뷰는 OSS 시간당 한도에 자주 걸린다" 항목). 51분을 기다려 다시 청하지 않는다.
+- claude-review: 첫 회차이고 `지적 없음`이다(헤드 `443eb66f`). 코멘트가 실제로 있고, ADR 포인터 달림(0023·0024)과 ADR 0039가
+  거짓으로 만드는 `core.md` 문장의 고침 자리(티켓 02)까지 대조해 적었다. 문서만 바뀐 PR이라 `sdk`·`openapi.json`의 계약 변경과
+  디스크 형식 변경이 없다는 것도 적었다.
+- 반영할 지적이 없어 고친 것도, 뒤로 넘긴 일도 없다. PR 본문은 이 세션이 범위를 넓히지 않아 고치지 않았다.
+
+## 회고
+
+이 단계(web-widget 명세와 티켓)를 닫는 회고다. 원천은 이 일지 전체(다섯 번 인계한 여섯 세션)와 이 세션이다. 후보 하나, 승인 1,
+기각 0, 넘김 없음. 이 세션은 지시문대로 봇 회차와 일지, 병합만 해 새로 난 실수가 없었다. 일지에 "번복"이나 "갈린 곳" 절은 없다.
+
+1. **승인(대기열 319에 2회차).** 일지 "ruff 서식이 명세의 코드 블록을 짚었다" 절의 사건이다. pre-commit의 ruff 훅이 `types:
+   [python]`이라 스테이지된 `.py`만 받는데 CI는 `ruff format --check .`로 저장소 전체를 본다. 명세(`.md`)의 시제품 조각을 ruff 0.16.8이
+   짚었고, 앞 커밋 `d91df0b1`에서 ruff 둘이 Passed였어도 명세는 보지 않았다. 푸시했으면 CI의 `python` 잡이 빨갰다. 손으로 쳐서
+   푸시 전에 잡았다. 대기열 319(병합 커밋 뒤 전체 린트를 돌리지 않아 CI가 잡은 사건, 1회차)와 같은 가족이라 새 행을 쓰지 않고 그
+   행에 회차를 더했다. 4단계의 세 조건은 다음과 같다. 사건: 위. 층: 훅(pre-push의 전체 린트)이 지침보다 높다. 되돌림: PR 하나.
+   더하는 것의 문턱(세 번째 또는 손상)에 아직 닿지 않아(손상은 없었다) 지금 반영하지 않는다. 처방에 `ruff format --check .`와 `.md`
+   코드 블록, 훅의 `types_or`로 넓히는 길이 병합 커밋 뒤의 전체 린트를 덮지 못한다는 것, 넓히기 전에 ruff가 실제로 보는 확장자를
+   잰다는 것을 더했다.
+
+일지에만 남기는 것: 인용 대조(`check_quotes`)가 일지가 옮긴 인용을 여러 번 짚었고, 그때마다 훅이 그 자리에서 알려 고쳤다. 이미 있는
+검사가 잡은 것이라 후보로 세지 않는다. 스펙 검토(`spec-reviewer`)가 낸 blocker(실제 모델 e2e를 `-m llm`에 두면 원칙 I의 판정이
+nginx를 요구한다)는 리뷰가 제 몫을 한 것이다. 선택 화면의 설명에 틀린 기술 조건이 들어 한 번 바로잡아 다시 물은 일은 `grilling`의 '옮길 때'가
+이미 처방한 절차를 따른 것이다. 대기열 만료는 `tools/queue_open_rows.py`와 `git fetch origin` 뒤 `--ref origin/main`
+둘 다에서 없었다(두 출력 모두 열린 행 106개).
+
+## 다음
+
+- 병합 뒤의 다음 단계는 구현이다. `.scratch/web-widget/issues/`의 티켓 열하나 가운데 `Blocked by`가 없는 것은 01(계약: `calling`
+  항목과 `Limit` 종류, api-client의 위젯 클라이언트)과 03(위젯 앱의 뼈대, `/widget` iframe 페이지)이다. 둘은 서로 막지 않아 나란히 여는
+  묶음이다(`next-session` 2단계의 1). 시작 프롬프트는 `/implement .scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md`와
+  `/implement .scratch/web-widget/issues/03-widget-app-skeleton.md`, 모델 `Opus 5.5 / xhigh`다. 02는 01이, 04는 03이, 05는 01·04가
+  막고, 06은 02·05가 막는다.
+- 01은 계약 티켓이라 `sdk`·`openapi.json`·ADR 0023·0010의 포인터를 건드린다. 02(core)가 `.claude/rules/core.md`의 "같은 태스크에서 돈다"와
+  `tests/core/test_run.py`의 단언을 ADR 0039대로 고친다. 병합 직후 01과 02 사이의 틈에서 문서와 코드가 어긋나지 않게 01은 `calling`의
+  한 줄 설명이 시점을 말하지 않는다(티켓 01의 "병합 뒤에 틈이 있다" 문단).
+- 옛 `docs/web-widget-spec` 브랜치와 워크트리(PR 없음, 커밋 `8acd9a48`)는 이 명세가 대신한다. 지우기는 병합 뒤 주 체크아웃 세션이 사람에게
+  확인받고 한다. `tidy-checkouts`는 PR이 없는 워크트리를 지우지 않는다.
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+- 봇 회차에서 뒤로 넘긴 일은 없다. 대기열 319는 2회차로 열려 있고 3회차를 기다린다.
