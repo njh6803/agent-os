@@ -53,3 +53,10 @@
 ### 03에서 넘어온 메모
 
 - 03의 판정 도구(`tools/rerun_judge.py`)는 절 꺼내기 `prereg_section`과 상수 `PREREG_SHA256` 밖에 `prereg_problem(readme_text, expected_sha256)`도 공개 이름으로 둔다. 절 꺼내기와 해시 대조를 함께 하고, 맞으면 빈 값을, 아니면 결론 없음의 까닭 문장(표지의 수, 또는 두 해시)을 돌려준다. 러너가 본 측정 목록을 열기 전의 대조와 멈출 때 알릴 문장에 그대로 쓸 수 있다(2026-10-23 티켓 03의 셀프 리뷰).
+
+### 04에서 넘어온 메모
+
+- 뿌리는 `checked_root(text, main_checkout=main_checkout(ROOT), home=Path.home())`로, 전용 설정 폴더는 `checked_place(text, "설정 폴더", main_checkout=..., user_claude=Path.home() / ".claude")`로 본다. `PlaceError`면 아무 회차도 열지 않고 멈춘다. 막는 규칙은 `deny_rules(deny_heads(main_checkout(ROOT), home=Path.home()))`이다(모두 `tools/rerun_round.py`).
+- 번호를 잡은 자리에서 `create_round_dir(root, task_id, arm, round_no)`만 차례로 부르고, `prepare_round`는 회차마다 따로 돈다.
+- 사람이 부르는 지우기는 `python -m tools.rerun_round remove <뿌리> [--records <폴더>]`이고, `records/`의 기본값은 그 모듈의 `RECORDS`다. 이 티켓의 `records/` 기본값 상수와 한 곳에 두도록 맞춘다.
+- 다시 뜬 러너가 찾는 "표지는 있는데 `records/`에 기록이 없는 회차 폴더"는 04의 지우기가 `no_record`로 가르는 판정(`_is_round_dir`, `_recorded`)과 같다. 그 판정을 공개 함수로 꺼내 함께 쓴다.
