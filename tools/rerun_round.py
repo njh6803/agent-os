@@ -750,19 +750,39 @@ def _remove(folder: str) -> None:
         ) from e
 
 
-def remove_round_dirs(root: Path, records: Path) -> Removal | None:
-    """뿌리 바로 아래에서 표지와 기록이 있는 회차 폴더만 지운다. 나머지는 이름을 보고한다. 뿌리를
-    읽으려는데 없다고 하면(대상을 잃은 링크 포함) 아무것도 하지 않고 `None`이다."""
-    report = Removal()
+def _root_entries(root: Path) -> list[os.DirEntry[str]] | None:
+    """뿌리 바로 아래의 항목(이름 차례). 뿌리를 읽으려는데 없다고 하면(대상을 잃은 링크 포함)
+    `None`이다."""
     base = long_path(os.path.abspath(root))
     try:
-        entries = sorted(os.scandir(base), key=lambda e: e.name)
+        return sorted(os.scandir(base), key=lambda e: e.name)
     except FileNotFoundError:
         return None
     except NotADirectoryError as e:
         raise PlaceError(f"뿌리가 폴더가 아니다: {root}") from e
     except OSError as e:
         raise PlaceError(f"뿌리를 읽지 못했다: {root} ({type(e).__name__}: {e})") from e
+
+
+def unrecorded_round_dirs(root: Path, records: Path) -> list[RoundDir]:
+    """뿌리 바로 아래에서 표지는 있는데 `records/`에 그 회차의 기록이 없는 회차 폴더(이름 차례).
+    지우기가 남기는 `no_record`와 같은 판정이다. 다시 뜬 러너(10)가 죽은 러너가 돌리던 회차를
+    찾는다. 뿌리가 없으면 빈 목록이다."""
+    entries = _root_entries(root) or []
+    return [
+        RoundDir(root / e.name)
+        for e in entries
+        if _is_round_dir(e) and not _recorded(records, e.name)
+    ]
+
+
+def remove_round_dirs(root: Path, records: Path) -> Removal | None:
+    """뿌리 바로 아래에서 표지와 기록이 있는 회차 폴더만 지운다. 나머지는 이름을 보고한다. 뿌리를
+    읽으려는데 없다고 하면(대상을 잃은 링크 포함) 아무것도 하지 않고 `None`이다."""
+    report = Removal()
+    entries = _root_entries(root)
+    if entries is None:
+        return None
     for entry in entries:
         if not _is_round_dir(entry):
             report.not_round.append(entry.name)

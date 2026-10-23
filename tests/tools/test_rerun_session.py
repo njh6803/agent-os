@@ -277,6 +277,13 @@ def test_예산은_센트_아래만_버리고_다시_넣어도_같다(usd: float
     assert session_command(["c"], ARM, "s", float(text))[-1] == text
 
 
+@pytest.mark.parametrize("usd", [float("nan"), float("inf"), float("-inf")])
+def test_예산은_유한한_값만_받는다(usd: float) -> None:
+    # 넘긴 글이 `--max-budget-usd nan`이 되면 Claude Code 가 그 값을 어떻게 읽는지 모른다
+    with pytest.raises(ValueError, match="유한한"):
+        budget_text(usd)
+
+
 def test_가짜가_받은_인자_표준_입력_환경과_작업_폴더(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -57,6 +57,7 @@ from tools.rerun_round import (
     remove_round_dirs,
     run_setup,
     session_env,
+    unrecorded_round_dirs,
     without_venv_dirs,
     write_deny_rules,
 )
@@ -887,6 +888,20 @@ def test_기록이_있는_회차_폴더만_지우고_나머지는_이름을_보�
     assert sorted(report.not_round) == ["파일.txt", "표지없음"]
     assert (plain / "남길것.txt").read_text(encoding="utf-8") == "그대로\n"
     assert report.failed == []
+
+
+def test_기록_없는_회차_폴더는_지우기의_기록_없음과_같은_판정이다(tmp_path: Path) -> None:
+    root = tmp_path / "뿌리"
+    records = tmp_path / "records"
+    _기록된_회차(root, records, "u1")
+    waiting = create_round_dir(root, TASK, "A", 2, token="u2")
+    other = create_round_dir(root, TASK, "B", 1, token="u3")
+    (root / "표지없음").mkdir()
+    (root / "파일.txt").write_text("그대로\n", encoding="utf-8")
+    found = unrecorded_round_dirs(root, records)
+    assert [p.name for p in found] == sorted([waiting.name, other.name])
+    assert [p.path for p in found] == [root / p.name for p in found]
+    assert unrecorded_round_dirs(tmp_path / "없음", records) == []
 
 
 def test_기록의_폴더_이름이_다르면_지우지_않는다(tmp_path: Path) -> None:

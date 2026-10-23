@@ -12,7 +12,7 @@ import time
 import uuid
 from pathlib import Path
 
-from tools.proc_command_line import argv_from_cmdline, command_line
+from tools.proc_command_line import argv_from_cmdline, command_line, pids_named
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,6 +54,65 @@ def test_끝났지만_거두지_않은_자식은_빈_값이다() -> None:
         process.wait(timeout=60)
 
     assert argv is None
+
+
+def test_실행_파일_이름으로_살아_있는_프로세스의_pid_를_훑는다() -> None:
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(120)"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        found = pids_named(sys.executable)
+        # 이름만 견주므로 폴더와 대소문자가 달라도 같다(윈도). 리눅스는 대소문자를 가린다
+        other = pids_named(str(Path("다른곳") / Path(sys.executable).name))
+        missing = pids_named(f"없는-이름-{uuid.uuid4().hex[:6]}")
+    finally:
+        process.kill()
+        process.wait(timeout=60)
+
+    assert found is not None and process.pid in found
+    assert other is not None and process.pid in other
+    assert missing == []
+
+
+def _잠든_자식(argv: list[str]) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+
+
+def test_리눅스는_링크로_띄운_이름과_스스로_바꾼_이름을_놓치고_앞_15바이트가_같은_이름을_함께_든다(
+    tmp_path: Path,
+) -> None:
+    """`pids_named`의 못 보는 것 셋. 셋 다 리눅스의 comm 에서만 나므로 리눅스에서만 단언하고, 이
+    PC(윈도)에서는 이 시험이 재는 것이 없다. 리눅스 CI 가 잰다."""
+    if sys.platform != "linux":
+        return
+    link = tmp_path / "aliasprobe12345"  # comm 의 상한인 15바이트
+    link.symlink_to(sys.executable)
+    sleep = "import time; time.sleep(120)"
+    rename = "open('/proc/self/comm', 'w').write('renamedprobe'); import time; time.sleep(120)"
+    linked = _잠든_자식([str(link), "-c", sleep])
+    renamed = _잠든_자식([sys.executable, "-c", rename])
+    try:
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            seen = pids_named("renamedprobe")
+            if seen is not None and renamed.pid in seen:
+                break
+            time.sleep(0.1)
+        by_python = pids_named(sys.executable)
+        by_longer = pids_named("aliasprobe12345-그-뒤가-다르다")
+    finally:
+        for process in (linked, renamed):
+            process.kill()
+            process.wait(timeout=60)
+
+    assert by_python is not None
+    assert linked.pid not in by_python and renamed.pid not in by_python
+    assert by_longer is not None and linked.pid in by_longer
 
 
 def test_없는_pid_와_0_이하의_pid_는_빈_값이다() -> None:
@@ -103,6 +162,9 @@ def test_훅에서_옮긴_명령_줄_읽기가_훅의_것과_같다() -> None:
 
     assert shared == {
         "argv_from_cmdline",
+        "_SNAPSHOT_PROCESSES",
+        "_INVALID_HANDLE",
+        "_ProcessEntry",
         "_QUERY_LIMITED",
         "_VM_READ",
         "_INHERIT_HANDLE",
@@ -117,7 +179,7 @@ def test_훅에서_옮긴_명령_줄_읽기가_훅의_것과_같다() -> None:
     }
     for name in sorted(shared - {"_windows_api"}):
         assert ast.dump(copy[name]) == ast.dump(hook[name]), name
-    # API 원형은 이 모듈이 쓰는 것만 적는다. 훅은 Toolhelp 와 실행 파일 경로를 더 쓴다
+    # API 원형은 이 모듈이 쓰는 것만 적는다. 훅은 실행 파일 경로를 더 쓴다
     copied, original = copy["_windows_api"], hook["_windows_api"]
     assert isinstance(copied, ast.FunctionDef)
     assert isinstance(original, ast.FunctionDef)
