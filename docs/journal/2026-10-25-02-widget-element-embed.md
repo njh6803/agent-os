@@ -699,6 +699,61 @@ open-session을 부른다 2026-10-24T17:54:52Z
 
 커밋 직전 `tools/sibling_overlap.py` 는 번호 겹침이 없었다(이 브랜치의 새 번호는 일지 `2026-10-25-02`, 대기열 467·468·469). 함께 고친 파일은 앞 절들과 같다. PR #385 와 그 워크트리가 다섯 파일을, PR #296·#297 이 `.scratch/retro-queue.md` 를 함께 고친다.
 
+커밋 `be3eb38c` 의 pre-commit 은 검사 열(`web-verify` 311.9초, pytest 385.2초 포함)과 마크다운 표·줄 구분 문자·변이 표·인용 대조(경고 없음)·커밋 메시지가 지났다. ruff 둘과 카나리아 명세·헌법 판은 대상 파일이 없어 Skipped 라, 커밋 뒤에 ruff 둘을 손으로 쳐 통과했다(`All checks passed!`, `1050 files already formatted`). `git log HEAD..origin/main` 이 비어 합칠 것이 없었고, 커밋 아홉을 푸시해 PR #386 을 열었다(머리 `be3eb38c`).
+
+PR 본문은 앞 세션의 초안에 체크리스트·확인 방법·리뷰어 참고를 채운 것이다. 초안과 달리 고친 것은 셋이다. 남긴 위험의 08 줄을 PR #385 로 적고 대기열 214 행과 PR #297 의 겹침을 더했다. 리뷰어 참고에서 07 합치기의 셀프 리뷰가 새로 쓴 코드 주석 둘을 뺐다. 그 둘은 `d4392b58` 의 PR 직전 리뷰가 밀 주장으로 대 봤기 때문이다. 위험 알림을 띄우는 자리를 `base.ts` 가 아니라 `WidgetElement.tsx` 로 바로잡았다(grep 으로 봤다).
+
+## 인계 (PR 연 뒤)
+
+PR #386 을 연 직후 `hook_handoff`(약 21.6만 토큰, 경계 `PR 연 뒤`)가 와서 새 세션에 넘긴다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 커밋 뒤` 라 같은 경계가 아니고, 일지에 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니고, 요청 범위는 PR과 병합까지다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+- PR #386 의 머리는 `be3eb38c` 이고 로컬 HEAD 와 같다. 첫 `@coderabbitai review` 코멘트는 남기지 않았다. 새 세션이 남기고 `next-session` 순서 1의 2(봇 회차)부터 한다.
+- 커밋하지 않은 것은 이 절 하나다. 일지만 따로 푸시하면 claude-review 가 한 번 더 돌므로, 이 절은 봇 회차의 반영 커밋에 싣거나 고친 것이 없는 회차면 병합 길 전에 일지만 실어 푸시한다(`next-session` 순서 1의 3).
+- PR 본문의 원본은 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/c9528e0b-6c47-4783-bf24-766afa6b7177/scratchpad/pr-body.md` 이고, `gh pr view 386` 로도 읽힌다. 범위를 넓히는 커밋을 푸시하기 전에는 `gh pr edit` 로 본문을 먼저 고친다(`next-session` 순서 1의 1).
+- 08 의 PR #385 는 열린 채다. 그쪽이 먼저 병합되면 이 브랜치가 origin/main 을 합치며 08 이 `WidgetPage.tsx` 에 더한 것을 `ConnectedWidget.tsx` 로 옮긴다("다음" 첫 줄). 대기열 214 행과 PR #297 의 겹침은 "다음" 셋째 줄이다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-02-widget-element-embed.md
+이어받을 상태: 인계: PR 연 뒤. PR #386 을 머리 be3eb38c 로 열었고 첫 @coderabbitai review 코멘트는 아직 없다. next-session 순서 1의 2(봇 회차)부터 한다. 커밋하지 않은 일지의 인계 절 하나가 워크트리에 있어 봇 회차의 반영 커밋이나 병합 길 전의 일지 푸시에 싣는다. PR 본문의 원본 자리와 08(PR #385)과의 겹침은 일지 "인계 (PR 연 뒤)" 절에 있다. 일지 docs/journal/2026-10-25-02-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(커밋의 백그라운드 작업은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T18:08:29Z
+
+## 이어받은 세션 (PR 연 뒤 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 "인계 (PR 연 뒤)" 의 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 앱이 지은 것이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. `git fetch origin` 뒤에도 origin/main 은 `1ef75a12` 그대로였고 08 의 PR #385 는 열린 채였다. HEAD 와 PR 머리는 둘 다 `be3eb38c` 였다.
+
+### 봇 회차
+
+- claude-review(첫 회차): 푸시 때 돈 리뷰가 "지적 없음" 으로 통과했다. 유지보수성 넷과 경계(원칙 IV)를 봤고, PR 본문이 판정을 적은 Minor 셋은 다시 짚지 않았다고 적었다.
+- CodeRabbit: 푸시 때는 `Review skipped`(별 열 개 미만 저장소)라 `@coderabbitai review` 를 남기고 `tools/wait_ci.py 386` 을 백그라운드로 띄웠다. 그때 python·visual 잡이 돌고 있었다. 대기는 종료 0, `끝: 모두 통과. CodeRabbit: Review rate limited` 로 끝났다. 한도에 걸려 리뷰가 없던 이 푸시는 CodeRabbit 의 회차로 세지 않는다. 이 PR 의 보안·버그 축은 PR 체크리스트의 PR 직전 리뷰 세 회차(`/security-review`, `bug-perf-review`)가 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인, 초록 착시 목록의 한도 항목).
+- 고친 것이 없는 회차라, 이 절과 앞 세션의 인계 절, 아래 회고를 실은 일지 커밋만 푸시한다(`next-session` 순서 1의 3).
+
+## 회고 (PR 연 뒤 → 병합 세션의 몫)
+
+이 세션과, 회고 없이 PR 을 열고 넘긴 앞 세션("이어받은 세션 (커밋 뒤, 다섯째 → 병합)")의 몫이다. 후보 여섯, 승인 1·넘김 0·기각 5. `tools/queue_open_rows.py` 를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 만료할 행이 둘 다 없었다.
+
+1. 인계 지시문의 "읽을 것" 이 일지 파일만 들어, 이 세션이 739행 일지의 머리부터 253행(약 25,000자)을 읽고서야 제목을 grep 해 마지막 인계 절로 갔다. `hook_large_result` 는 읽은 뒤에 알렸다. 같은 일지의 앞 인계 지시문 셋은 읽을 절을 이름으로 들었고 뒤의 둘은 파일만 들었다. 승인(더하는 것, 1회차): 비용이 실제로 났고, 지시문을 쓰는 쪽의 문장에 기대지 않고 첫 턴 훅이 마지막 인계 절의 줄 번호를 실어 주는 층으로 고쳐 쓸 수 있으며, PR 하나로 되돌린다. 새 훅 문장이라 세 번째 전에는 반영하지 않고 대기열 470(1회차)에 두었다. 인계 비용을 다룬 330 과 날짜를 다룬 175 는 다른 일이었다.
+2. `implement` 스킬을 읽기 직전의 산문을 영어로 한 번 썼다. 기각: `hook_midturn_korean` 이 그 자리에서 알렸다(닫힌 대기열 94 의 처방). 다음 회고가 셀 수 있게 횟수를 적는다.
+3. Grep 결과의 긴 줄이 두 번(`operations.md`, `.scratch/retro-queue.md`) `[Omitted long matching line]` 으로 나왔다. 기각: `hook_grep_omitted` 가 알렸고 Read 로 그 줄을 열었다.
+4. CodeRabbit 이 한도로 리뷰하지 않았다. 기각: `operations.md` 가 그 경우와 대체(PR 체크리스트의 PR 직전 리뷰)를 이미 적고, 그 대체가 본문에 있어 사건이 없다.
+5. 앞 세션이 PR 본문 초안에 위험 알림을 띄우는 자리를 `base.ts` 로 적었다가 grep 으로 `WidgetElement.tsx` 로 바로잡았다. 기각: PR 을 열기 전에 스스로 잡아 비용이 작았다(사건 없음).
+6. 커밋 직전의 `tools/sibling_overlap.py` 를 `grep` 파이프 앞에 두어 종료 코드를 가렸다. 기각: 훅이 그 자리에서 알렸고, 출력의 판정 줄("번호 겹침 없음", 이 브랜치의 새 번호 467~470)로 결과를 봤다.
+
 ## 다음
 
 - web-widget 은 07·10·11 이 병합되면 08(승인 묻기)과 그 뒤의 09(저장과 재접속)가 남는다. 티켓 10 이 "그 티켓들이 더하는 화면은 두 방식에 함께 선다"고 적은 대로, 08 이 더하는 화면도 `ConnectedWidget` 을 거쳐야 두 방식에 함께 선다. 08 티켓은 이것을 들지 않고, 08 은 10 이 없는 `1ef75a12` 위에서 돈다(워크트리 `08-widget-approval`). 그래서 08 이 `WidgetPage.tsx` 에 더한 것은 뒤에 병합하는 쪽이 이번 07 합치기처럼 `ConnectedWidget.tsx` 로 옮긴다.
