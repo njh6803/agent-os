@@ -309,6 +309,49 @@ open-session을 부른다 2026-10-23T19:07:20Z
 ## 다음
 
 - 04 가 병합되면 05(Blocked by 01·04)가 열린다. 01·02·03 은 병합됐다. 06 은 02 와 05 를, 07·10·11 은 06 을, 08 은 07 을, 09 는 08 을 기다린다(`.scratch/plan.md` 의 web-widget 행).
-- 봇 회차 1에서 뒤로 넘긴 것: 출처 표기 판정(파이썬 `_origin_rule`·`_serialized_ipv6` 등, Node `originRule`·`serializedIpv6` 등)을 두 언어 모두 사이트 파일 모듈 밖으로 옮길지(claude-review Minor 둘). 한쪽만 옮기면 두 언어의 배치가 갈리고, 변이 표 `site_file_mutations.toml` 의 `file` 과 독스트링이 함께 옮겨진다. 따로의 리팩터로 한다.
+- 봇 회차 1에서 뒤로 넘긴 것: 출처 표기 판정(파이썬 `_origin_rule`·`_serialized_ipv6` 등, Node `originRule`·`serializedIpv6` 등)을 두 언어 모두 사이트 파일 모듈 밖으로 옮길지(claude-review Minor 둘). 한쪽만 옮기면 두 언어의 배치가 갈리고, 변이 표 `site_file_mutations.toml` 의 `file` 과 독스트링이 함께 옮겨진다. 따로의 리팩터로 한다. 봇 회차 2의 claude-review 가 같은 리팩터에서 함께 볼 것 둘을 더 냈다. ① 규칙 문구 열셋이 `main.py` 의 `_ORIGIN_RULES`, `site-file.ts` 의 `ORIGIN_RULES`, 픽스처 README 세 곳에 손으로 복제되어 한쪽만 고쳐도 아무 검사가 빨개지지 않는다(Minor. 문구를 픽스처 JSON 에 두고 두 언어가 읽거나, 두 언어의 문구를 견주는 시험을 둔다). ② TS `splitHost` 가 `startsWith("[")` 를 두 번 평가해 파이썬 `_split_host` 와 분기 모양이 다르다(Nit).
 - 반영 전 `run_checks` 에서 `test_hook_edit_during_commit` 이 한 번 빨갰던 일은 대기열 459, CI 의 `test_proc_command_line` 은 대기열 456(3회차)이다.
 - 이 PR 은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
+
+### 커밋과 PR 본문(셀프 리뷰 직전에 이어 받은 세션)
+
+- 셀프 리뷰 반영, 회고, "다음"을 d2d6b993 으로 커밋했다(아직 푸시하지 않았다). pre-commit: ruff 둘, `run_checks` 의 검사 열(web-verify 234.8초, pytest 312.5초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지가 Passed. 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped. 인용 대조는 경고 7건을 냈다. 일곱 모두 이 일지가 고치기 전의 옛 문장(봇 회차 1 절의 독스트링·PR 본문 문구, 셀프 리뷰 절의 티켓 괄호)을 인용한 것이라 원문이 이제 저장소에 없다.
+- 푸시 전에 `gh pr edit 379 --body-file` 로 PR 본문을 고쳤다. "왜 이렇게 했나"에 IPv6 직렬화와 `Literal`, 원문 줄에 봇 회차 1·셀프 리뷰 절과 대기열 457~459·420·445·456, "남긴 위험"의 IPv6 항목을 CI 와 이 PC 의 패치 판 차이(대기열 457)로, 체크리스트의 보류 줄·셀프 리뷰 줄·`-m llm` 줄, "확인 방법"의 변이 43, "리뷰어 참고"의 IPv6 글 짓기, 변경된 영역의 `_serialized_ipv6`.
+
+## 인계(커밋 뒤)
+
+컨텍스트가 문턱을 넘은 채(342,908 토큰) `커밋 뒤` 경계에 와서 넘긴다. 인계하지 않는 때 다섯에 들지 않았다. 커밋이 pre-commit 을 지났고, 요청 범위가 병합까지이고, 이어받은 상태가 `인계: 셀프 리뷰 직전` 이라 이번 경계와 다르고, `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없었다. 이 세션의 지금 제목은 `feature/04-site-file-feeds-widget-build` 이다. 이 절과 위 "커밋과 PR 본문" 절은 커밋하지 않았다.
+
+```
+다음 작업: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md. 서버와 위젯 빌드가 같은 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수 상한을 읽고, 허용 출처의 표기를 파이썬과 Node가 같은 픽스처로 판정한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+브랜치: feature/04-site-file-feeds-widget-build
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-05-site-file-feeds-widget-build.md 의 "봇 회차 1"부터 끝까지. 막힌 티켓(05~11)은 .scratch/plan.md 의 web-widget 행
+이어받을 상태: 인계: 커밋 뒤. PR #379 봇 회차 1의 반영(IPv6 직렬화, Literal), 그 셀프 리뷰와 반영, 회고와 일지 "다음"을 d2d6b993 으로 커밋했고 아직 푸시하지 않았다. PR 본문은 이미 gh pr edit 로 넓힌 범위에 맞췄다. 남은 단계는 푸시와 next-session 순서 1의 2(봇 회차)부터다: @coderabbitai review 코멘트와 tools/wait_ci.py 대기, claude-review 첫 회차 넷의 판정(일지 "봇 회차 1"의 넷)을 PR 코멘트로 남기기, 둘째 회차부터는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트로, 병합. 반영 푸시의 CI가 test_proc_command_line(대기열 456) 하나로만 빨가면 사용자에게 묻는다. 일지의 "커밋과 PR 본문" 절과 이 인계 절은 커밋하지 않았다. 다음에 커밋할 일이 생기면 함께 싣는다. docs/journal/2026-10-24-05-site-file-feeds-widget-build.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목: `feature/04-site-file-feeds-widget-build (인계함)`. 멈출 백그라운드 작업은 없었다(`-m llm` 과 커밋은 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-24T04:15:37Z
+
+## 이어 받은 세션(커밋 뒤에 넘겨받음)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+
+(지시문은 위 "인계(커밋 뒤)"의 것과 같다. 제목을 `feature/04-site-file-feeds-widget-build` 로 바꾸고 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 7496a830 그대로라 합칠 것이 없었다.)
+
+### 봇 회차 2
+
+- d2d6b993 을 푸시하고 `@coderabbitai review` 코멘트를 남겼다(6379774715). 상태를 한 번 읽으니 ticket 만 끝났고 나머지는 pending 이라 `tools/wait_ci.py 379` 를 백그라운드로 띄웠다.
+- claude-review 첫 회차 넷의 판정(위 "봇 회차 1")을 PR 코멘트로 남겼다(6379779913).
+- `wait_ci` 의 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited` 였다. python 도 초록이라 대기열 456 의 `test_proc_command_line` 은 이번에 빨개지지 않았다. CodeRabbit 은 한도에 걸려 리뷰가 없어 회차로 세지 않는다.
+- claude-review 둘째 회차(코멘트 6379781461, 헤드 d2d6b993): Critical·Major 없음. 둘째 회차라 고치지 않고 셋 모두 보류 이유를 PR 코멘트로 남겼다(6379861959).
+  - [Minor, 뒤로 넘긴다] `main.py` 에 출처 표기 판정이 들어가 바뀌는 이유가 둘로 늘었다. 첫 회차의 Minor 와 같은 일이다.
+  - [Minor, 뒤로 넘긴다] 규칙 문구 열셋이 세 곳에 손으로 복제되어 한쪽만 고쳐도 검사가 빨개지지 않는다. 판정은 갈라지지 않고 진단 글만 갈라질 수 있다. 규칙 표를 새 모듈로 옮기는 리팩터에서 함께 정한다.
+  - [Nit, 뒤로 넘긴다] TS `splitHost` 가 `startsWith("[")` 를 두 번 평가해 파이썬과 분기 모양이 다르다(`site-file.ts` 420행에서 봤다). 결과는 같다.
+  - 셋 모두 일지 "다음" 의 출처 표기 리팩터 항목에 더했다. 고친 것이 없는 회차라 이 일지만 실은 커밋을 푸시한다(next-session 순서 1의 2 "뒤로 넘긴 일"). 그 푸시로 도는 셋째 회차에서 보류하는 것은 일지에 다시 적지 않고 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다.
