@@ -122,3 +122,12 @@ open-session을 부른다 2026-10-23T19:06:21Z
 > 사용자: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md (인계 지시문 그대로, "이번 요청 범위: PR과 병합까지")
 
 이 세션의 제목은 `feature/10-schedule-and-budget`이다. 첫 `@coderabbitai review`를 남겼고 CodeRabbit은 `Review rate limited`로 리뷰가 없어 회차로 세지 않았다. claude-review의 첫 회차는 Minor 셋과 Nit 둘이었다. `_Runner`의 `self.s`·`self.w`를 `self.settings`·`self.world`로 풀어 쓴 Nit만 고쳤다. `_run_task`의 정책 분기, `_open`·`_close_dead_rounds`의 질의·명령 섞임, `_round`의 길이(Minor 셋)와 `Plan` 래퍼(Nit)는 동작이 같은 구조 정리라 이 티켓의 체크박스 밖으로 보고 보류했다. 이유는 PR 코멘트에 적었고 뒤의 작업으로 넘기지는 않았다.
+
+`58cb139f`를 푸시했다. claude-review 둘째 회차는 Critical·Major 없이 Minor 여섯과 Nit 둘이었고 모두 보류해 이유를 PR 코멘트로 남겼다(첫 회차와 같은 구조 정리, 티켓 11로 이미 넘긴 정리, 읽기 편의). 뒤로 새로 넘긴 일은 없다. CodeRabbit은 다시 `Review rate limited`였다.
+
+CI `python` 잡이 두 푸시(571056ea, 58cb139f) 모두 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다` 하나로 빨갰다(실행 40008655492, 40011075707). 이 브랜치가 고치지 않은 시험이고 대기열 456 이다. main 의 실행 39959108868·39979667386 도 같은 시험으로 빨갰다. 일지 2026-10-24-03 의 판단대로 사용자에게 물었다.
+
+> 질문: PR #380이 이 PR과 무관한 간헐적 실패 시험 하나(대기열 456) 때문에 병합되지 못하고 있습니다. 어떻게 할까요?
+> 사용자: 실패한 잡만 다시 돌리기 — "GitHub에서 python 잡을 다시 실행합니다(gh run rerun --failed). 초록이 되면 그대로 병합합니다. 대신 '빨갰다가 다시 돌려서 통과' 선례가 남아 게이트가 느슨해지는 비용이 있습니다."
+
+이 절을 실은 커밋의 푸시로 CI 가 새로 돈다. 그때도 그 시험 하나로만 빨가면 실패한 잡만 다시 돌린다.
