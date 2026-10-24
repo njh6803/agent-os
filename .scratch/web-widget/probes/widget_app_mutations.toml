@@ -299,10 +299,10 @@ expect_output = ['></textarea> to have property "disabled" with value true']
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.tsx"
 old = '''
-      composer={<Composer disabled={misconfigured} />}
+          disabled={misconfigured || paused}
 '''
 new = '''
-      composer={<Composer disabled={false} />}
+          disabled={paused}
 '''
 
 [[mutation]]
