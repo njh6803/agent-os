@@ -167,7 +167,7 @@ Content-Security-Policy: script-src 'self' https://widget.example; connect-src '
 ```
 
 - **위 예처럼 `tokenProvider`를 인라인 `<script>`로 주면 그 script도 `script-src`에 막힌다.** 사이트의 파일로 옮기거나 nonce·해시로 연다. 막히면 위젯은 토큰을 받지 못해 "로그인 정보를 받지 못했습니다." 알림을 보인다.
-- **Chromium에서는 `style-src`에 더할 것이 없었다.** 위젯의 스타일은 shadow root에 붙인 구성 스타일시트이고, 사이트의 `style-src 'self'`가 그것을 막지 않았다. 위젯 e2e가 `default-src 'none'`에 위의 세 자리와 `style-src 'self'`, `img-src 'self'`(브라우저가 스스로 받는 파비콘)만 연 페이지에서 위젯이 디자인 토큰으로 칠해지고 CSP 위반이 하나도 없는 것을 본다. Firefox·Safari는 재지 않았다.
+- **Chromium에서는 `style-src`에 더할 것이 없었다.** 위젯의 스타일은 shadow root에 붙인 구성 스타일시트이고, 사이트의 `style-src 'self'`가 그것을 막지 않았다. 위젯 e2e가 `default-src 'none'`에 위의 세 자리와 `style-src 'self'`만 연 페이지에서 위젯이 디자인 토큰으로 칠해지고 CSP 위반이 하나도 없는 것을 본다. Firefox·Safari는 재지 않았다.
 - **CSP가 글꼴을 막으면 시스템 글꼴로 그린다.** 위젯은 그대로 쓸 수 있다.
 
 ## 지킬 것

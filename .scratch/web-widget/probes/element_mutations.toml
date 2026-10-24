@@ -1,8 +1,11 @@
 # web-widget 티켓 10 의 변이 표. 페이지 안 방식(web/apps/widget/element/, tools/element.ts, 시작 래퍼, next 설정)의 시험
 # 가운데 구현과 함께 쓰거나 구현 뒤에 써서 빨강을 본 적이 없는 것을 겨눈다. 위젯 e2e 의 페이지 안 사례
 # (web/apps/widget/e2e/element.e2e.ts)는 구현 뒤에 써 처음부터 초록이었다(크기 사례는 측정 범위를 고친 뒤 초록, 일지).
-# `expect_output` 은 겨눈 단언이 실패할 때만 나오는 문구(실패 머리, `Received:`·`Locator:` 줄, 차이의 `+`·`-` 줄)로 고른다.
-# 거른 시험 안에 단언이 하나뿐이면 그 단언의 실패 머리로 족하다.
+# `expect_output` 은 변이가 겨눈 실패에서만 나오는 문구로 고른다. 대개 겨눈 단언의 실패 문구(실패 머리, `Received:`·
+# `Locator:` 줄, 차이의 `+`·`-` 줄)이고, 거른 시험 안에 단언이 하나뿐이면 그 단언의 실패 머리로 족하다. 변이가 단언에
+# 닿기 전에 시험을 멈추면(기다리던 응답이 오지 않아 `waitForResponse` 가 시간 제한에 끝나는 것이 그 예다) 그 멈춤의
+# 실패 머리를 고르고, 거른 시험 안에 그렇게 멈출 자리가 그 하나뿐인지 본다. 그 변이는 멈춘 자리 뒤의 단언을 재지 않으므로
+# 뒤의 단언은 거기 닿는 다른 변이가 겨눈다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml [번호 ...]
 # node·pages 러너는 `pnpm -C web install` 이 된 체크아웃에서 돈다. pages 러너는 jsdom 을 띄우는 데 1분쯤 걸린다. e2e
 # 러너는 준비가 위젯을 다시 빌드해 변이 하나가 1~2분이고, Playwright 의 chromium 과 uv 의 가상 환경이 있어야 한다.
@@ -108,7 +111,7 @@ old = '''
   if (!(current instanceof HTMLScriptElement)) {
 '''
 new = '''
-  if (!(current instanceof HTMLElement && "src" in current)) {
+  if (!(current instanceof HTMLElement && "src" in current && typeof current.src === "string")) {
 '''
 
 # --- 요소(element/WidgetElement.tsx) -------------------------------------------------------------------------
@@ -215,6 +218,21 @@ old = '''
 new = '''
 '''
 
+[[mutation]]
+name = "감싼 요소가 mono 를 위젯의 이름으로 다시 정하지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/fonts.test.ts", "-t", "위젯만 쓰는 이름은"]
+expect = "red"
+expect_output = ["to contain '--mono:"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/styles.ts"
+old = '''
+    `  --mono: "${WIDGET_MONO}", ui-monospace, monospace;`,
+'''
+new = '''
+'''
+
 # --- 번들의 빌드(tools/element.ts) ----------------------------------------------------------------------------
 
 [[mutation]]
@@ -284,21 +302,23 @@ new = '''
 # --- next 설정과 시작 래퍼(next.config.ts, tools/start.ts) -------------------------------------------------------
 
 [[mutation]]
-name = "next 설정이 번들 응답에 ACAO 를 달지 않으면 빨갛다"
+name = "next 설정이 번들 응답의 출처 허용을 좁히면 빨갛다"
 runner = "node"
 tests = ["apps/widget/next.config.test.ts", "-t", "페이지 안 번들 응답도"]
 expect = "red"
-expect_output = ["AssertionError: expected"]
+# 규칙 덩어리를 통째로 지운 첫 판은 단언에 닿기 전에 시험의 도우미가 던졌다. 값만 바꿔 단언에 닿게 한다(선례는
+# widget_app_mutations.toml 의 글꼴 응답).
+expect_output = ['"Access-Control-Allow-Origin": "null"']
 
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-      {
         source: "/element.js",
         headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
-      },
 '''
 new = '''
+        source: "/element.js",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
 '''
 
 [[mutation]]
@@ -320,11 +340,30 @@ new = '''
 # --- 위젯 e2e 의 페이지 안 사례(e2e/element.e2e.ts) ----------------------------------------------------------------
 
 [[mutation]]
-name = "번들 응답에 ACAO 가 없으면 crossorigin 사례가 빨갛다"
+name = "기준 주소를 번들 스크립트가 아니라 사이트 문서의 출처로 잡으면 요청이 결말까지 가지 않아 첫 사례가 빨갛다"
+runner = "e2e"
+tests = ["-g", "script 한 줄로"]
+expect = "red"
+expect_output = ["Locator: getByRole('region', { name: '대화' }).getByText('출력: chars:7', { exact: true })"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/base.ts"
+old = '''
+    return new URL(new URL(current.src).origin);
+'''
+new = '''
+    return new URL(location.origin);
+'''
+
+[[mutation]]
+name = "번들 응답에 ACAO 가 없으면 crossorigin 을 붙인 script 의 응답을 기다리다 시간 제한에 끝나 빨갛다"
 runner = "e2e"
 tests = ["-g", "crossorigin"]
 expect = "red"
-expect_output = ["Received: undefined"]
+# 헤더 단언에 닿기 전에 번들 응답을 기다리던 `waitForResponse` 가 30초 시간 제한에 끝났다(손으로 넣어 실패 출력을 봤다.
+# 브라우저가 CORS 로 그 응답을 버린다고 어림한다). 이 시험의 `waitForResponse` 는 그 하나뿐이다. 이 사례의 헤더 단언
+# `toBe("*")` 에 닿아 빨갛게 하는 변이는 표에 없다. 번들 응답의 헤더 값은 17 이 next 설정의 시험으로 본다.
+expect_output = ["Error: page.waitForResponse: Test timeout of 30000ms exceeded."]
 
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
@@ -342,6 +381,7 @@ name = "기준 주소가 src 가 있는지만 보면 가려진 페이지의 위�
 runner = "e2e"
 tests = ["-g", "가려진"]
 expect = "red"
+# e2e 의 준비가 위젯을 `next build` 로 지어 타입을 본다. `src` 를 문자열로 좁히지 않은 첫 판은 TS2345 로 빌드가 멈췄다.
 expect_output = ["Locator: getByText('위젯 설정이 올바르지 않습니다.')"]
 
 [[mutation.edit]]
@@ -350,7 +390,7 @@ old = '''
   if (!(current instanceof HTMLScriptElement)) {
 '''
 new = '''
-  if (!(current instanceof HTMLElement && "src" in current)) {
+  if (!(current instanceof HTMLElement && "src" in current && typeof current.src === "string")) {
 '''
 
 [[mutation]]
@@ -403,7 +443,26 @@ new = '''
 '''
 
 [[mutation]]
-name = "감싼 요소가 sans 를 다시 정하지 않으면 위젯이 사이트의 글꼴 이름으로 그려져 e2e 가 빨갛다"
+name = "감싼 요소가 sans 를 다시 정하지 않으면 글꼴 응답을 기다리다 시간 제한에 끝나 e2e 가 빨갛다"
+runner = "e2e"
+tests = ["-g", "글꼴은"]
+expect = "red"
+# 글꼴 응답을 기다리던 `waitForResponse` 가 30초 시간 제한에 끝났다(손으로 넣어 실패 출력을 봤다. 위젯 글꼴로 그릴
+# 글자가 없어 브라우저가 글꼴 파일을 받지 않는다고 어림한다). 이 시험의 `waitForResponse` 는 그 하나뿐이다. 그 뒤의
+# 이름 순서 단언은 26 이 겨눈다. 헤더 단언 `toBe("*")` 에 닿는 변이는 표에 없고, 글꼴 응답의 헤더 값은
+# widget_app_mutations.toml 의 글꼴 응답 변이가 next 설정의 시험으로 본다.
+expect_output = ["Error: page.waitForResponse: Test timeout of 30000ms exceeded."]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/styles.ts"
+old = '''
+    `  --sans: "${WIDGET_SANS}", system-ui, sans-serif;`,
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "감싼 요소가 sans 의 맨 앞에 위젯 밖의 이름을 두면 위젯 글꼴을 받아도 그 이름으로 그려 빨갛다"
 runner = "e2e"
 tests = ["-g", "글꼴은"]
 expect = "red"
@@ -415,21 +474,53 @@ old = '''
     `  --sans: "${WIDGET_SANS}", system-ui, sans-serif;`,
 '''
 new = '''
+    `  --sans: "site-sans", "${WIDGET_SANS}", system-ui, sans-serif;`,
 '''
 
 [[mutation]]
-name = "CSP 판에서 파비콘의 자리를 닫으면 위반이 하나 생겨 위반 단언이 빨갛다"
+name = "위젯의 시트를 shadow root 안의 style 요소로 실으면 사이트의 style-src 가 막아 칠하기 단언이 빨갛다"
 runner = "e2e"
 tests = ["-g", "style-src"]
 expect = "red"
-expect_output = ['Received: "img-src']
+# 티켓의 "막히면" 갈래다. 같은 변이를 넣고 CSP 가 없는 크기 사례(`-g "뿌리 글자 크기"`)를 돌리면 통과해, style 요소로도
+# 시트가 서므로 이 사례의 빨강은 사이트의 style-src 가 그것을 막은 것으로 본다(둘 다 손으로 넣어 출력을 봤다. 시험이
+# 칠하기 단언에서 멈춰 위반 기록은 보지 않았다).
+expect_output = ['Expected: not "rgba(0, 0, 0, 0)"']
 
 [[mutation.edit]]
-file = "web/apps/widget/e2e/element-site.ts"
+file = "web/apps/widget/element/WidgetElement.tsx"
 old = '''
-    "img-src 'self'",
+      shadow.adoptedStyleSheets = [...setup.sheets];
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute(UI_ROOT_ATTRIBUTE, "");
+      shadow.replaceChildren(wrapper);
 '''
 new = '''
+      const styles = setup.sheets.map((sheet) => {
+        const style = document.createElement("style");
+        style.textContent = Array.from(sheet.cssRules, (rule) => rule.cssText).join(" ");
+        return style;
+      });
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute(UI_ROOT_ATTRIBUTE, "");
+      shadow.replaceChildren(...styles, wrapper);
+'''
+
+[[mutation]]
+name = "위젯이 감싼 요소에 style 속성을 글로 달면 사이트의 style-src 가 막아 위반 단언이 빨갛다"
+runner = "e2e"
+tests = ["-g", "style-src"]
+expect = "red"
+expect_output = ['Received: "style-src-attr']
+
+[[mutation.edit]]
+file = "web/apps/widget/element/WidgetElement.tsx"
+old = '''
+      shadow.replaceChildren(wrapper);
+'''
+new = '''
+      shadow.replaceChildren(wrapper);
+      wrapper.setAttribute("style", "min-height: 0");
 '''
 
 [[mutation]]

@@ -209,6 +209,136 @@ open-session을 부른다 2026-10-24T13:50:53Z
 
 - 바꾼 파일의 `prettier --check`(0), `eslint`(0), `vitest --project widget-pages apps/widget/element/WidgetElement.test.tsx`(7 통과).
 - 커밋의 pre-commit 첫 번: `web-verify`(312.9초)를 포함한 검사 열하나 가운데 pytest 하나만 빨갰다(587.7초, 5585 통과 1 실패). 실패는 `tests/adapters/test_filesystem.py::test_다른_스레드가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다` 의 `PermissionError`(WinError 5)였고 따로 돌리면 1.26초에 지났다. 이 커밋은 파이썬을 바꾸지 않았고, 대기열 306 이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)라 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+- 커밋 `e5e22e9c` 의 pre-commit 둘째 번: 검사 열하나(`web-verify` 299.8초, pytest 344.1초 포함)와 마크다운 표·줄 구분 문자·변이 표·인용·커밋 메시지가 모두 지났다. ruff 둘과 카나리아 명세·헌법 판은 해당 파일이 없어 `Skipped` 였다(`.py` 와 ruff 설정을 바꾸지 않았다). 위젯 e2e 와 `visual:widget` 은 이 반영 뒤에 아직 돌리지 않았다.
+
+## 인계 (커밋 뒤, 둘째)
+
+커밋 `e5e22e9c` 뒤에 `hook_handoff`(약 25만 토큰, 경계 `커밋 뒤`)가 와서 새 세션에 넘긴다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전` 이라 같은 경계가 아니다. `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-14-widget-element-embed.md의 "이어받은 세션 (셀프 리뷰 직전 → 병합)" 절(셀프 리뷰의 고친 것·남긴 것·밀 주장, 다시 돌린 것). 나란히 도는 티켓 .scratch/web-widget/issues/07-widget-failures-and-rejections.md, .scratch/web-widget/issues/11-widget-real-model-e2e.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 e5e22e9c 에 PR 직전 리뷰(/security-review, bug-perf-review)의 반영과 그 반영의 셀프 리뷰(/code-review 945b2931)의 반영이 들었고 pre-commit 이 모두 지났다. 아직 푸시하지 않았고 PR 도 없다. 셀프 리뷰는 시험의 동작을 고치지 않아(시험 주석 한 줄) PR 직전 리뷰는 다시 돌리지 않는다. 남은 단계는 차례로 위젯 e2e(pnpm -C web/apps/widget exec playwright test)와 pnpm -C web visual:widget(Docker)을 이 반영 뒤에 다시 치기, 변이 전체(PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml, 25, 백그라운드. e2e 변이 여덟이 하나에 1~2분이라 위젯 e2e 와 겹쳐 돌리지 않는다)를 돌려 실제 출력으로 표지를 맞추고 .scratch/web-widget/probes/README.md 의 element_mutations.toml 행 "잰 판" 칸 채우기, 티켓 49행 [x]와 Status done, 일지 마무리(회고 포함) 커밋, PR(/git-pr. 체크리스트의 PR 직전 리뷰 줄에 일지 "이어받은 세션 (커밋 뒤 → 셀프 리뷰 직전)"의 결과를 옮기고, 셀프 리뷰 절의 "이 반영으로 새로 쓴 사실 문장"은 PR 본문에 적어 봇이 겨냥하게 한다), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다. 변이 표의 새 표지 셋(가린 페이지와 CORS 사례의 Locator: getByText(…) 줄, 시트 사례의 `+   "adopted": 0,`)은 출력을 보지 않고 Playwright 의 출력 꼴로 짐작해 골랐다. 일지 docs/journal/2026-10-24-14-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘과 커밋은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T14:24:52Z
+
+## 이어받은 세션 (커밋 뒤, 둘째 → 병합)
+
+> 사용자: /implement .scratch/web-widget/issues/10-widget-element-embed.md (위 인계 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 PR 및 병합` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 기준 148652ef 에서 움직이지 않았다. 나란한 07 은 자기 브랜치에서 티켓을 닫는 커밋(08bbdcc8)까지 갔고, 11 은 인계 커밋(cfeeb3b4)에 있으며 둘 다 아직 병합되지 않았다.
+
+### 다시 돌린 것
+
+- `pnpm -C web/apps/widget exec playwright test`: 13 이 모두 통과했다(48.9초, 페이지 안 사례 일곱과 iframe 사례 여섯).
+- `pnpm -C web visual:widget`(Docker): 13 이 모두 통과했다(23.3초). 위젯의 사진 정답은 바꾸지 않았다.
+
+### 변이 전체 실행 (첫째)
+
+커밋 e5e22e9c 에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml` 을 돌렸다. 25 가운데 20 이 기대대로였고 다섯(16·18·19·23·24)이 어긋났다(도구가 판정했다). 도구의 출력은 실패의 끝만 실어 까닭을 가를 수 없어, 세션 스크래치패드의 스크립트(변이 하나를 넣고 그 러너와 시험을 돌려 전체 출력을 남긴 뒤 원래 바이트로 되돌린다)로 다섯을 손으로 다시 넣어 전체 출력을 봤다.
+
+- 16(next 설정의 번들 ACAO): 빨갛지만 표지 `AssertionError: expected` 가 없었다. 변이가 `/element.js` 규칙 덩어리를 통째로 지워, 단언에 닿기 전에 시험의 도우미가 `Error: /element.js 에 헤더 규칙이 없다` 를 던졌다. 표지를 그 실패 머리로 바꿨다.
+- 18(crossorigin 사례): 빨갛지만 표지 `Received: undefined` 가 없었다. 헤더 단언에 닿기 전에 번들 응답을 기다리던 `page.waitForResponse` 가 30초 시간 제한에 끝났다. 브라우저가 CORS 로 그 응답을 버린 것으로 어림한다. 이 시험의 `waitForResponse` 는 그 하나라 표지를 `Error: page.waitForResponse: Test timeout of 30000ms exceeded.` 로, 이름을 그 까닭으로 바꿨다. 앞 세션의 PR 직전 리뷰 판정(이 표지가 맞을 것이라는 보류 → 그대로)은 짐작이었고 출력과 달랐다.
+- 19(가린 페이지 사례): 결과가 오류였다. 변이 `"src" in current` 가 `src` 를 `unknown` 으로 좁혀, e2e 준비의 `next build` 가 타입 검사에서 TS2345 로 멈췄다. 같은 원문을 vitest 러너로 도는 변이 5 는 타입을 보지 않아 빨갰었다. 둘 다 `typeof current.src === "string"` 을 더한 꼴로 고쳐 다시 넣으니, 19 는 표지 `Locator: getByText('위젯 설정이 올바르지 않습니다.')` 로, 5 는 `to be null` 로 빨갰다.
+- 23(글꼴 사례): 빨갛지만 표지 `Expected pattern: …` 이 없었다. `--sans` 를 다시 정하지 않으면 위젯 글꼴로 그릴 글자가 없어 글꼴 파일을 받지 않고, 글꼴 응답을 기다리던 `waitForResponse` 가 30초에 끝났다. 표지를 18 과 같은 실패 머리로, 이름을 그 까닭으로 바꿨다. 그래서 글꼴 사례의 `toMatch(/^"?agent-os-widget-sans"?,/)` 를 빨갛게 하는 변이는 표에 없다.
+- 24(CSP 판): 초록이었다. 시험 페이지의 정책에서 `img-src 'self'` 를 닫아도 위반이 없었다. 진단 두 갈래(대조는 그대로, 갈래는 `img-src` 를 닫음)에 요청·요청 실패·콘솔 기록과 3초 기다림을 더해 돌리니, 두 갈래 모두 파비콘 요청이 기록에 없었고 콘솔 메시지와 위반도 없었다. 기록기는 문서·스타일시트·스크립트 둘·글꼴 아홉·토큰·실행 요청을 모두 잡았다. 브라우저가 파비콘을 받지 않는지, 받았지만 페이지의 기록에 보이지 않는지는 가르지 않았다. 어느 쪽이든 이 시험에서 `img-src 'self'` 는 하는 일이 없어 시험 페이지의 정책에서 뺐고(더 좁은 정책에서도 사례가 초록인 것을 진단의 갈래가 보였다), "파비콘의 위반을 막는다"는 `elementCsp()` 주석과 임베드 안내의 괄호를 고쳤다. 이 일지의 앞 절(CSP 의 결과, 셀프 리뷰)에 적힌 "`img-src 'self'`(파비콘)"는 그때의 판이다. 위반 단언은 위젯이 감싼 요소에 `style` 속성을 글로 다는 변이로 겨눴다. 손으로 넣으니 그 단언만 `Received: "style-src-attr inline` 으로 빨갰고 앞의 칠하기·요청·글꼴 단언은 지났다.
+
+시험 페이지의 정책을 바꿨으니(시험을 고쳤다) 셀프 리뷰를 반영해 커밋한 뒤 표 전체를 다시 돈다(`tools/mutate.py` 독스트링 "언제 전체를 돌리나").
+
+커밋하지 않은 변경(기준 e5e22e9c):
+
+- `.scratch/web-widget/probes/element_mutations.toml`: 16·18·23 의 표지와 18·23 의 이름, 5·19 의 원문(`typeof current.src === "string"` 을 더함), 16·18·19·23 위의 주석, 24 를 새 변이(감싼 요소의 `style` 속성)로 바꿈.
+- `web/apps/widget/e2e/element-site.ts`: `elementCsp()` 에서 `img-src 'self'` 를 빼고 주석을 본 것으로 고침.
+- `web/apps/widget/EMBED.md` 170행: "`img-src 'self'`(브라우저가 스스로 받는 파비콘)" 를 뺌.
+- `.scratch/web-widget/probes/README.md`: `element_mutations.toml` 행 설명의 "CSP 판의 파비콘" 을 "CSP 판에서 위젯이 글로 단 style 속성" 으로.
+
+다시 돌린 것: 바꾼 web 파일 둘의 `prettier --check`(지남), `element-site.ts` 의 `eslint`(0), `mutate.py --check`(25 모두 원문이 한 번씩 있다). 위젯 e2e 전체는 `element-site.ts` 를 바꾼 뒤 아직 돌리지 않았다(CSP 사례만 진단의 갈래로 초록을 봤다).
+
+이 반영으로 새로 쓴 사실 문장(셀프 리뷰와 PR 봇에 밀 주장):
+
+- `e2e/element-site.ts`: "이 시험의 chromium 에서는 `img-src 'self'` 를 열 때와 닫을 때 모두 페이지의 요청 기록에 파비콘이 없었고 콘솔 메시지와 위반도 없었다(손으로 봤다, 일지 2026-10-24-14)".
+- `element_mutations.toml`: 16 "규칙 덩어리를 통째로 지워 단언에 닿기 전에 시험의 도우미가 던진다", 18 "헤더 단언에 닿기 전에 번들 응답을 기다리던 `waitForResponse` 가 30초 시간 제한에 끝났다 … 브라우저가 CORS 로 그 응답을 버린다고 어림한다. 이 시험의 `waitForResponse` 는 그 하나뿐이다", 19 "e2e 의 준비가 위젯을 `next build` 로 지어 타입을 본다. `src` 를 문자열로 좁히지 않은 첫 판은 TS2345 로 빌드가 멈췄다", 23 "위젯 글꼴로 그릴 글자가 없어 브라우저가 글꼴 파일을 받지 않고, 글꼴 응답을 기다리던 `waitForResponse` 가 30초 시간 제한에 끝났다".
+- `EMBED.md`: "위젯 e2e가 `default-src 'none'`에 위의 세 자리와 `style-src 'self'`만 연 페이지에서 위젯이 디자인 토큰으로 칠해지고 CSP 위반이 하나도 없는 것을 본다."
+
+## 인계 (셀프 리뷰 직전, 둘째)
+
+위 반영의 셀프 리뷰로 `/code-review e5e22e9c` 를 불렀을 때 `hook_handoff`(약 28만 토큰, 경계 `셀프 리뷰 직전`)가 와서 새 세션에 넘긴다. 셀프 리뷰는 밟지 않았다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 커밋 뒤` 라 같은 경계가 아니고, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다. 변이 하나를 손으로 넣는 스크래치 스크립트는 세션 스크래치패드에 있어 새 세션에 넘어가지 않는다(일지의 설명대로 다시 지으면 된다).
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-14-widget-element-embed.md의 "이어받은 세션 (커밋 뒤, 둘째 → 병합)" 절(변이 전체 실행 첫째의 진단, 커밋하지 않은 변경, 새로 쓴 사실 문장). 나란히 도는 티켓 .scratch/web-widget/issues/07-widget-failures-and-rejections.md, .scratch/web-widget/issues/11-widget-real-model-e2e.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review e5e22e9c, 이 반영만)부터 한다. 변경은 e5e22e9c 에서 돈 변이 전체 실행(25 중 어긋남 다섯: 16·18·19·23·24)의 반영이다: 표지 셋(16·18·23)과 이름 둘, 원문 둘(5·19)을 타입이 맞게, 24 를 새 변이(감싼 요소의 style 속성)로, 시험 페이지의 CSP(e2e/element-site.ts 의 elementCsp)에서 근거가 없던 img-src 'self' 를 빼고 그 주석과 EMBED.md 170행 괄호를 고침. 고친 표지와 원문은 변이를 손으로 넣어 출력을 본 뒤 골랐다. element-site.ts 를 바꾼 뒤의 위젯 e2e 전체는 아직이다. 셀프 리뷰를 반영해 커밋하고, CSP 의 시험과 안내 문장을 바꿨으므로 PR 직전 리뷰(coderabbit auth status 부터, 좌석이 없으면 대체 둘)를 이 변경(기준 e5e22e9c)에 돌려 반영해 커밋한 뒤, 시험을 고쳤으므로 변이 전체(PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml, 백그라운드)를 다시 돌려 .scratch/web-widget/probes/README.md 의 element_mutations.toml 행 "잰 판" 칸을 채운다. 이어서 위젯 e2e(e2e 변이와 겹치지 않게), 티켓 49행 [x]와 Status done, 일지 마무리(회고 포함) 커밋, PR(/git-pr. PR 직전 리뷰 줄에 일지 "이어받은 세션 (커밋 뒤 → 셀프 리뷰 직전)"과 이번 회차의 결과를, 셀프 리뷰 절들의 "새로 쓴 사실 문장"은 PR 본문에), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-24-14-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(변이 전체 실행과 손 실행은 모두 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다. 이 세션도 도구 호출 사이의 산문을 영어로 썼고 `hook_midturn_korean` 이 세 번 알렸다(회고가 셀 수 있게 적는다).
+
+open-session을 부른다 2026-10-24T14:54:33Z
+
+## 이어받은 세션 (셀프 리뷰 직전, 둘째 → 병합)
+
+> 사용자: /implement .scratch/web-widget/issues/10-widget-element-embed.md (위 인계 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 구현` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 기준 148652ef 에서 7cbeb263 으로 움직였다(나란한 11 의 병합, #383). 11 이 바꾼 파일 가운데 이 브랜치와 겹치는 것은 `.scratch/web-widget/probes/README.md` 와 `web/apps/widget/e2e/stack.ts` 이고, `tools/mutate.py` 도 바뀌었다. 07 은 자기 브랜치에서 티켓을 닫는 커밋(08bbdcc8)에 있고 아직 병합되지 않았다.
+
+### 셀프 리뷰 (변이 전체 실행 첫째의 반영)
+
+`/code-review e5e22e9c`, 기준 e5e22e9c, 바뀐 파일 5, 미추적 0, 커밋 0. 표준 축(sonnet·high)과 명세 축을 나란히 돌렸다.
+
+표준 축은 Major 이상이 없고 Minor 둘·Nit 둘이었다. 밀 주장은 대 본 것이 모두 맞았다(16 의 도우미가 `` `${source} 에 헤더 규칙이 없다` `` 를 던짐, 18·23 의 시험마다 `waitForResponse` 가 하나씩, e2e 준비가 `tools/start.ts build` 로 `next build` 를 부르고 `ignoreBuildErrors` 가 없음, 5·19 의 `new` 에 단언이 없음, 24 의 원문이 한 번이고 위반 수집기가 `violatedDirective` 를 앞에 남김, `EMBED.md` 의 "위의 세 자리", 잔존 0). `next build` 가 기본으로 타입을 본다는 것과 5·19 의 `new` 가 타입 검사를 지난다는 것은 그 축이 코드를 읽어 낸 판단이고 `tsc` 를 돌리지 않았다고 적었다.
+
+명세 축은 Major 이상이 없고 Minor 셋·Nit 셋이었다. 밀 주장은 대 본 것이 모두 맞았다(위와 같은 다섯에 더해, 30초가 설정에 timeout 이 없어 기본값인 것, 위젯이 `<img>` 도 CSS `url()` 이미지도 쓰지 않아 `img-src` 를 빼도 사이트가 잃는 정보가 없는 것, origin/main 의 `stack.ts` 에서도 원문이 한 번씩인 것). 범위를 넘친 동작은 없다고 했다. 확인할 것으로 `img-src` 를 뺀 정책의 위젯 e2e 전체가 아직이라는 것을 들었다.
+
+아래 번호는 고친 뒤의 표 차례다(첫 판의 16·18·19·23·24 는 17·20·21·25·28 이 됐다).
+
+고친 것:
+
+- [Minor, 두 축] 프로브 README 의 `element_mutations.toml` 행 "잰 판" 칸 "아직 전체를 돌리지 않았다"가 e5e22e9c 의 첫 실행과 어긋났다. 첫 실행의 결과(도구가 20 을 기대대로로 판정, 어긋난 다섯의 처리, 첫 결과를 본 뒤 바꾼 기준)와 반영 뒤 전체는 아직이라는 것으로 고쳤다.
+- [Minor, 표준] 표 머리의 표지 기준이 "겨눈 단언이 실패할 때만 나오는 문구"로 닫혀 있었는데, 16·18·23 은 단언에 닿기 전에 멈춘 자리(도우미의 예외, `waitForResponse` 의 시간 초과)를 표지로 골랐다. 머리를 일반 조항으로 고쳤다: 변이가 겨눈 실패에서만 나오는 문구로 고르고, 단언에 닿기 전에 시험을 멈추는 변이는 그 멈춤의 실패 머리를 고르되 거른 시험 안에 멈출 자리가 그 하나뿐인지 보며, 멈춘 자리 뒤의 단언은 다른 변이가 겨눈다.
+- [Minor·Nit, 두 축] 빨강을 본 적 없는 단언에 닿는 변이를 더하고 고쳤다. 모두 손으로 넣어(세션 스크래치패드의 스크립트가 변이 하나를 넣고 그 러너와 시험을 돌려 전체 출력을 남긴 뒤 원래 바이트로 되돌린다) 실패 출력을 본 뒤 표지를 골랐다.
+  - 17(첫 판 16): next 설정의 번들 규칙을 통째로 지우던 것을 값만 `"null"` 로 바꾸게 고쳐 `toEqual` 에 닿게 했다(선례는 `widget_app_mutations.toml` 의 글꼴 응답 변이). 표지 `"Access-Control-Allow-Origin": "null"` 은 차이의 `+` 줄에만 있었다.
+  - 12(새): 감싼 요소의 `--mono` 를 지우면 `fonts.test.ts` 의 "위젯만 쓰는 이름은"이 `to contain '--mono:` 로 빨갰다(명세 축: 티켓 34행의 `--mono` 를 겨눈 변이가 없었다).
+  - 19(새): 첫 e2e 사례(script 한 줄로 요청 하나를 결말까지)를 겨눈 변이가 없었다(명세 축 Nit: README 의 "사례 일곱을 겨눈 변이 여덟"은 실제로 여섯이었다). 기준 주소를 `location.origin`(사이트 문서의 출처)으로 잡게 하니 출력 단언이 `Locator: getByRole('region', { name: '대화' }).getByText('출력: chars:7', { exact: true })` 로 빨갰고, 화면 기록(`error-context.md`)에 위젯의 "요청을 처리하지 못했습니다." 알림이 있었다.
+  - 26(새): 글꼴 사례의 이름 순서 단언 `toMatch(/^"?agent-os-widget-sans"?,/)` 에 닿는 변이가 없었다(표준 축). `--sans` 맨 앞에 `"site-sans"` 를 두니 위젯 글꼴을 받은 뒤 그 단언만 `Expected pattern:` 으로 빨갰다(`Received string:  "site-sans, agent-os-widget-sans, system-ui, sans-serif"`).
+  - 27(새): CSP 판의 칠하기 단언을 빨갛게 하는 변이가 없었다(명세 축 Minor: 티켓 45행 "스타일을 갖는지 본다"). 티켓의 "막히면" 갈래대로 시트를 shadow root 안의 `<style>` 로 실으니 `Expected: not "rgba(0, 0, 0, 0)"` 로 빨갰다. 양성 대조로 같은 변이를 넣고 CSP 가 없는 크기 사례(`-g "뿌리 글자 크기"`)를 돌리니 통과해(1 passed, 29.4초), `<style>` 로도 시트가 서는 것을 봤다. 그래서 그 빨강은 사이트의 `style-src` 가 막은 것으로 본다. 시험이 칠하기 단언에서 멈춰 위반 기록은 보지 않았다.
+- [Minor·Nit, 두 축] 20·25(첫 판 18·23)의 이름과 주석이 까닭(CORS 로 버림, 그릴 글자가 없어 받지 않음)을 사실로 적었다. 이름을 본 것(응답을 기다리다 시간 제한에 끝남)으로 낮추고 까닭은 어림이라고 적었다. 두 사례의 헤더 단언 `toBe("*")` 에 닿는 변이는 표에 없고 헤더 값은 next 설정의 시험(17, `widget_app_mutations.toml` 의 글꼴 응답 변이)이 본다는 것을 그 주석에 적었다(명세 축 Nit 3 의 처리).
+- README 행의 설명을 변이 29, 글꼴 등록의 `--mono`, e2e 사례 일곱을 모두 겨눈 변이 열하나로 고쳤다.
+
+남긴 것:
+
+- [Nit, 표준] 20·25 위 주석의 "이 시험의 `waitForResponse` 는 그 하나뿐이다"가 두 번 나온다. 각 변이의 표지가 기대는 조건이라 변이마다 둔다.
+- [Nit, 명세] e2e 의 헤더 단언 `toBe("*")` 둘에 닿는 변이. crossorigin 을 붙인 script 와 글꼴은 값이 다르면 응답부터 오지 않는 것으로 보이고(20·25 의 관찰), 사이트의 출처와 같은 값은 그 포트가 실행마다 달라 표에 적을 수 없다. 헤더 값은 next 설정의 시험이 변이로 본다.
+
+이 반영으로 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장):
+
+- `element_mutations.toml` 머리: "변이가 단언에 닿기 전에 시험을 멈추면(기다리던 응답이 오지 않아 `waitForResponse` 가 시간 제한에 끝나는 것이 그 예다) 그 멈춤의 실패 머리를 고르고, 거른 시험 안에 그렇게 멈출 자리가 그 하나뿐인지 본다."
+- 17 위: "규칙 덩어리를 통째로 지운 첫 판은 단언에 닿기 전에 시험의 도우미가 던졌다."
+- 20 위: "이 사례의 헤더 단언 `toBe("*")` 에 닿아 빨갛게 하는 변이는 표에 없다. 번들 응답의 헤더 값은 17 이 next 설정의 시험으로 본다."
+- 25 위: "그 뒤의 이름 순서 단언은 26 이 겨눈다. 헤더 단언 `toBe("*")` 에 닿는 변이는 표에 없고, 글꼴 응답의 헤더 값은 widget_app_mutations.toml 의 글꼴 응답 변이가 next 설정의 시험으로 본다."
+- 27 위: "같은 변이를 넣고 CSP 가 없는 크기 사례(`-g "뿌리 글자 크기"`)를 돌리면 통과해, style 요소로도 시트가 서므로 이 사례의 빨강은 사이트의 style-src 가 그것을 막은 것으로 본다."
+- 프로브 README 의 `element_mutations.toml` 행 전체(특히 "사례 일곱을 모두 겨눈 변이 열하나"와 "잰 판" 칸).
+
+다시 돌린 것: 고친 표의 `mutate.py --check`(29 모두 원문이 한 번씩 있다)와 위의 손 실행 여섯(12·17·19·26·27, 27 의 양성 대조). 나머지 검증은 커밋의 pre-commit 으로 갈음한다.
 
 ## 다음
 
