@@ -1,4 +1,4 @@
-# 2026-10-24 (04) 러너 명령: 과제 차례, 동시에 둘, 예산, 한도 기다림, 다시 돌기, 멈춤 (model-rerun 10)
+# 2026-10-24 (07) 러너 명령: 과제 차례, 동시에 둘, 예산, 한도 기다림, 다시 돌기, 멈춤 (model-rerun 10)
 
 ## 사용자 프롬프트
 
@@ -110,8 +110,8 @@ PR #380 을 연 뒤 인계 계기(세션 컨텍스트 약 20.6만 토큰, 경계
 시작 프롬프트: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md
 브랜치: feature/10-schedule-and-budget
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-24-04-schedule-and-budget.md의 "PR 직전 리뷰" 절(보류한 Minor 둘은 PR 체크리스트에 판정과 값을 적었다)
-이어받을 상태: 인계: PR 연 뒤. PR #380 을 열었고 571056ea 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. 남은 것은 next-session 순서 1의 2(봇 회차: 대기, 회차 세기, 반영)와 4(병합 길은 워크트리에서 병합할 때)다. 회고와 일지 "다음"은 이미 커밋했다. 이 "인계 (둘째)" 절은 커밋하지 않은 채 워크트리에 있으니 봇 회차의 커밋에 실을지 지울지 정한다. 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다(tools/sibling_overlap.py 가 알렸다). docs/journal/2026-10-24-04-schedule-and-budget.md
+읽을 것: docs/journal/2026-10-24-07-schedule-and-budget.md의 "PR 직전 리뷰" 절(보류한 Minor 둘은 PR 체크리스트에 판정과 값을 적었다)
+이어받을 상태: 인계: PR 연 뒤. PR #380 을 열었고 571056ea 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. 남은 것은 next-session 순서 1의 2(봇 회차: 대기, 회차 세기, 반영)와 4(병합 길은 워크트리에서 병합할 때)다. 회고와 일지 "다음"은 이미 커밋했다. 이 "인계 (둘째)" 절은 커밋하지 않은 채 워크트리에 있으니 봇 회차의 커밋에 실을지 지울지 정한다. 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다(tools/sibling_overlap.py 가 알렸다). docs/journal/2026-10-24-07-schedule-and-budget.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -154,8 +154,8 @@ CI `python` 잡이 두 푸시(571056ea, 58cb139f) 모두 `tests/tools/test_proc_
 시작 프롬프트: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md
 브랜치: feature/10-schedule-and-budget
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-24-04-schedule-and-budget.md의 "봇 회차 (인계받은 세션)" 절부터 끝까지
-이어받을 상태: 인계: 커밋 뒤. PR #380 의 봇 회차를 cd1fe06b 로 커밋했고 푸시하지 않았다(CodeRabbit 첫 회차: Minor 하나 고침, Major 하나는 티켓 11 메모로 넘김, Major 하나는 이미 처리되어 있어 고치지 않음. claude-review 셋째 회차는 모두 보류). 남은 것은 차례로 일지의 "인계 (셋째)" 절을 커밋에 싣기(cd1fe06b 와 함께 한 번에 푸시), 푸시, CodeRabbit 첫 회차의 보류 이유와 claude-review 셋째 회차의 보류 이유를 PR 코멘트로 남기기(일지 "봇 회차" 절의 마지막 목록이 그 판정이다. 아직 코멘트하지 않았다), @coderabbitai review, next-session 순서 1의 2(봇 회차. 다음 리뷰는 두 봇 모두 둘째 회차 이상이라 Critical·Major만 고친다)와 4(병합 길은 워크트리에서 병합할 때)다. CI 나 pre-commit 이 대기열 456 의 시험(tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다) 하나로만 빨가면 사용자가 고른 대로 다시 돌린다(CI 는 gh run rerun --failed, pre-commit 은 커밋을 다시 친다). 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다. docs/journal/2026-10-24-04-schedule-and-budget.md
+읽을 것: docs/journal/2026-10-24-07-schedule-and-budget.md의 "봇 회차 (인계받은 세션)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. PR #380 의 봇 회차를 cd1fe06b 로 커밋했고 푸시하지 않았다(CodeRabbit 첫 회차: Minor 하나 고침, Major 하나는 티켓 11 메모로 넘김, Major 하나는 이미 처리되어 있어 고치지 않음. claude-review 셋째 회차는 모두 보류). 남은 것은 차례로 일지의 "인계 (셋째)" 절을 커밋에 싣기(cd1fe06b 와 함께 한 번에 푸시), 푸시, CodeRabbit 첫 회차의 보류 이유와 claude-review 셋째 회차의 보류 이유를 PR 코멘트로 남기기(일지 "봇 회차" 절의 마지막 목록이 그 판정이다. 아직 코멘트하지 않았다), @coderabbitai review, next-session 순서 1의 2(봇 회차. 다음 리뷰는 두 봇 모두 둘째 회차 이상이라 Critical·Major만 고친다)와 4(병합 길은 워크트리에서 병합할 때)다. CI 나 pre-commit 이 대기열 456 의 시험(tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다) 하나로만 빨가면 사용자가 고른 대로 다시 돌린다(CI 는 gh run rerun --failed, pre-commit 은 커밋을 다시 친다). 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다. docs/journal/2026-10-24-07-schedule-and-budget.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -168,3 +168,9 @@ CI `python` 잡이 두 푸시(571056ea, 58cb139f) 모두 `tests/tools/test_proc_
 > 사용자: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md (인계 지시문 그대로, "이번 요청 범위: PR과 병합까지")
 
 이 세션의 제목은 `feature/10-schedule-and-budget`이다. "인계 (셋째)" 절을 이 절과 함께 커밋해 cd1fe06b 와 한 번에 푸시한다.
+
+`5b703d49`를 푸시하고 CodeRabbit 첫 회차와 claude-review 셋째 회차의 보류 이유를 PR 코멘트로 남겼다. 그 푸시에서 CodeRabbit 은 다시 `Review rate limited`라 회차로 세지 않았다. claude-review 넷째 회차는 Critical·Major 없이 Minor 다섯과 Nit 둘이라 모두 보류했다. 그 가운데 `_unconfirmed`와 `_run_task` 끝의 인계 확인 조건이 `pilot`에서 갈린다는 지적은 결함인지 코드로 봤다. 본 측정 목록에는 파일럿 과제가 들 수 없어(`tools/rerun_files.py`가 목록을 읽을 때 막는다) 두 조건은 같은 판정이고, 시작 점검만 기록 폴더 전체를 훑어 파일럿과 옛 조건 판을 거른다.
+
+CI `python` 잡이 대기열 456 의 시험 하나로 다시 빨갰다(1 failed, 5491 passed, 실행 40063556854). 사용자가 고른 대로 `gh run rerun --failed`로 실패한 잡만 다시 돌렸고 모두 초록이 됐다.
+
+형제 PR #379 가 먼저 병합되어 `tools/sibling_overlap.py --move`로 이 일지를 2026-10-24-04 에서 2026-10-24-07 로 옮겼다(06 은 워크트리 `05-widget-conversation`이 쓰고 있다). PR 본문의 일지 경로도 그 도구가 낸 본문으로 고쳤다.
