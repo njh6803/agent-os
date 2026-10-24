@@ -204,3 +204,24 @@ open-session을 부른다 2026-10-24T13:40:38Z
 ## 이어받은 세션(커밋 뒤)
 
 인계 지시문으로 연 새 세션이 같은 워크트리에 들어와 이었다. `origin/main`은 `148652ef`에서 움직이지 않았고(`git fetch` 뒤 `git log 148652ef..origin/main`이 비었다), `tools/sibling_overlap.py`는 번호 겹침이 없었다. 위 인계 절과 이 절을 커밋한 뒤 푸시하고 PR을 연다.
+
+PR #383을 열었다. CodeRabbit CLI는 이 PR에서도 `coderabbit auth status`가 `Seat: not assigned`였다.
+
+## 봇 회차 1
+
+헤드 `cfeeb3b4`에서 `tools/wait_ci.py`가 모두 통과로 끝났다(CodeRabbit `Review completed`). 두 봇 모두 첫 회차라 Minor·Nit도 지적마다 판단했다.
+
+CodeRabbit(Critical 1, Minor 3):
+
+- Critical: `tests/test_widget_llm.py` 199행 키 확인 단언이 실패하면 `os.environ`의 repr을 찍는다(경로 지침의 "로그에 비밀이 실릴 수 있는 경로는 Critical"). → 고침. 이 PR이 새로 쓴 줄이라 `if … not in os.environ: pytest.fail(…)`로 바꿨다. 회고 1이 대기열 463으로 넘긴 나머지 일곱 곳(`tests/test_main.py` 여섯, `tests/core/test_model.py`)은 그대로이고, 463 행을 일곱 곳으로 고쳤다. 키 없이 친 `uv run pytest -m llm_widget -p no:cacheprovider -vv`가 `Failed: ANTHROPIC_API_KEY 가 없다. .env 를 확인한다`로 끝났고 출력에 `environ(`이 0번이었다(손으로 봤다).
+- Minor: 211행 단언이 종료 코드를 보지 않는다. 시험이 통과해도 정리가 던지면 Playwright 는 0이 아닌 코드로 끝난다. → 고침. `_failures`가 종료 코드를 받아 `Playwright 가 종료 코드 {code} 로 끝났다`를 다른 기준과 함께 모은다. 어긋난 것이 하나라도 있으면 리포트의 `errors`도 싣는다. 변이 9(정리 끝에서 던지기)를 더했고 `PYTHONUTF8=1 uv run --env-file ../../../.env python tools/mutate.py .scratch/web-widget/probes/widget_llm_mutations.toml 9`가 기준선 `1 passed, 3 deselected in 71.34s`, 변이 `1 failed`로 기대대로였다(표지 `Playwright 가 종료 코드 1 로 끝났다`). 기준선의 통과가 정상 실행의 종료 코드가 0인 것도 보였다. 앞의 번호를 일지와 PR 본문이 가리켜 9는 표 끝에 두었다.
+- Minor: `.scratch/harness/probes/llm_tokens_mutations.toml` 변이 1에 표지가 없다(`.claude/rules/probes.md` 첫 항목). → 고침. 변이를 손으로 넣고 친 실패 출력에서 마지막 단언의 설명 줄 `'LLM 토큰 합계' is contained here:`를 골랐고, `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/llm_tokens_mutations.toml 1`이 기대대로였다(기준선 `1 passed … in 204.83s`. 변이 9와 함께 돌아 늦었다). 나머지 열하나에 표지가 없는 것은 이 브랜치가 고치지 않은 변이라 두었다.
+- Minor: 제한 시간 시험의 `_stops_growing`(표지 파일이 1초 자라지 않으면 끝난 것으로 본다) 대신 손자의 PID 를 적고 끝났는지 직접 보라. → 고치지 않는다. 그 꼴은 `.claude/rules/tests.md`가 선례로 든 `tests/tools/test_run_checks.py`의 같은 이름 함수이고, 손자가 산 채로 1초 동안 한 번도 쓰지 못해야 거짓 통과다. PID 로 보려면 윈도우에서 pid 의 생사를 보는 새 길이 든다(파이썬 `os.kill` 문서가 윈도우에서 두 콘솔 신호 밖의 값은 `TerminateProcess`로 끝낸다고 적은 것으로 기억한다. 이 세션에서 다시 열지 않았다). 두 시험을 함께 바꿔야 해 이 PR 밖이고, 거짓 통과가 사건이 되면 그때 센다. PR 코멘트에 남겼다.
+
+claude-review(Minor 3, Nit 1, Critical·Major 0):
+
+- Minor `_run_tree`와 러너의 겹침, Minor 두 언어의 상수 셋 → 둔다. 셀프 리뷰의 판정(위 "셀프 리뷰"의 표준 축 Minor 3·Nit 6)과 같고 PR 코멘트에 남겼다.
+- Minor 키 확인 단언 → 위 CodeRabbit Critical 과 같은 자리이고 고쳤다.
+- Nit 머리 독스트링은 "기준 다섯"인데 `_failures`는 "기준 셋"이다. → 고침("기준 다섯 가운데 한 바퀴의 결과인 앞의 셋"). 머리 독스트링의 첫째 기준에 종료 코드 0을 더했다.
+
+검사: `uv run ruff check`·`ruff format --check`·`uv run pyright tests/test_widget_llm.py` 초록, `uv run pytest -q -p no:cacheprovider tests/test_widget_llm.py`가 `3 passed, 1 deselected`, 두 변이 표의 `--check`가 원문을 모두 한 번씩 찾았다. 나머지는 이 반영 커밋의 pre-commit 으로 갈음한다.

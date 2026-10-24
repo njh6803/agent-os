@@ -7,6 +7,8 @@
 name = "두 LLM 마커를 보지 않는다"
 tests = ["tests/test_conftest.py", "-k", "두_LLM_마커를_돌리지_않고"]
 expect = "red"
+# 그 시험의 단언 셋 가운데 마지막(합계 줄이 없다)만 내는 문구다. 변이를 손으로 넣어 실패 출력에서 골랐다.
+expect_output = ["'LLM 토큰 합계' is contained here:"]
 
 [[mutation.edit]]
 file = "tests/conftest.py"

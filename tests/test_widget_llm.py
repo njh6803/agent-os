@@ -16,12 +16,12 @@
   `.scratch/web-widget/probes/pnpm_spawn.py`). 그 경로(`pnpm.CMD`)는 cmd.exe 가 명령 줄을 다시
   읽으므로 넘기는 인자는 고정 글자이고 cmd.exe 의 메타 문자(`&`, `^`, `%`)가 들지 않는다. 바뀌는
   값(앱 폴더, 트레이스와 리포트의 자리)은 작업 폴더와 환경으로 준다.
-- 기준 다섯. Playwright 의 JSON 리포터로 통과 1, 건너뜀 0(종료 코드 0 만 보면 모두 건너뛴 실행이
-  초록이다). 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다). 화면에 선 출력이
-  그 트레이스의 `run_finished` 의 `output` 과 같다. pnpm 을 찾지 못하면 깔라는 문구로 실패한다. 제한
-  시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다. 앞의 셋은 실제 모델과 빌드를 쓰는 한
-  바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다. 뒤의 둘은 모델 없이 기본
-  실행에서 잰다.
+- 기준 다섯. Playwright 의 종료 코드 0 과 JSON 리포터의 통과 1, 건너뜀 0(종료 코드 0 만 보면 모두
+  건너뛴 실행이 초록이다). 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다).
+  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 과 같다. pnpm 을 찾지 못하면 깔라는
+  문구로 실패한다. 제한 시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다. 앞의 셋은 실제
+  모델과 빌드를 쓰는 한 바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다. 뒤의 둘은
+  모델 없이 기본 실행에서 잰다.
 
 못 보는 것: POSIX 에서 제 세션을 따로 연 손자는 프로세스 그룹으로 끝내지
 못한다(`tools/run_checks.py` 의 `kill_tree`). 제한 시간에 끊으면 준비(globalSetup)의 정리가 돌지
@@ -158,15 +158,20 @@ def _error_messages(objects: Sequence[dict[str, Json]]) -> Iterator[str]:
                 yield message
 
 
-def _failures(report: _Report | None, traces: Path) -> list[str]:
-    """기준 셋(통과 1·건너뜀 0, `llm_called`, 화면과 트레이스의 출력)에서 어긋난 것을 모두."""
+def _failures(report: _Report | None, traces: Path, code: int) -> list[str]:
+    """기준 다섯 가운데 한 바퀴의 결과인 앞의 셋(종료 0·통과 1·건너뜀 0, `llm_called`, 화면과
+    트레이스의 출력)에서 어긋난 것을 모두. 시험이 통과해도 정리(globalSetup 이 돌려준 함수)가 던지면
+    종료 코드만 0 이 아니다."""
     failures: list[str] = []
+    if code != 0:
+        failures.append(f"Playwright 가 종료 코드 {code} 로 끝났다")
     if report is None:
         failures.append("Playwright 의 JSON 리포트가 없다")
     else:
         played = {key: report.stats.get(key) for key in PASSED_ONCE}
         if played != PASSED_ONCE:
             failures.append(f"프로젝트 llm 이 통과 1, 건너뜀 0 이 아니다: {played}")
+        if failures:
             failures.extend(f"  {message}" for message in report.errors)
     files = sorted(traces.glob("*.jsonl")) if traces.is_dir() else []
     events = [event for file in files for event in _read_trace(file).events]
@@ -196,7 +201,9 @@ def test_위젯에서_보낸_요청_하나에_계산_에이전트가_실제_모�
     실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운 프로세스의 출력이
     `web/apps/widget/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리 독스트링의 못 보는
     것)."""
-    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        # assert 로 두면 pytest 가 실패 출력에 os.environ 의 repr 을 싣는다(대기열 463).
+        pytest.fail("ANTHROPIC_API_KEY 가 없다. .env 를 확인한다")
     pnpm = _pnpm()
     traces = tmp_path / "traces"
     report = tmp_path / "report.json"
@@ -207,7 +214,7 @@ def test_위젯에서_보낸_요청_하나에_계산_에이전트가_실제_모�
 
     output = log.read_text(encoding="utf-8", errors="replace")
     assert code is not None, f"{TIMEOUT}초 안에 끝나지 않아 프로세스 트리를 끝냈다:\n{output}"
-    failures = _failures(_read_report(report), traces)
+    failures = _failures(_read_report(report), traces, code)
     assert not failures, "\n".join([*failures, f"Playwright 종료 {code}, 출력:", output])
 
 

@@ -1,7 +1,7 @@
 # web-widget 티켓 11 의 변이 표. 실제 모델 e2e 를 감싸는 시험(tests/test_widget_llm.py)의 기준 다섯과, 프로젝트 llm 을
 # 세우는 조건(web/apps/widget/playwright.config.ts), 토큰 합계와 기본 실행의 제외(tests/conftest.py, pyproject.toml)를
-# 되돌려 빨개지는지 본다(원칙 II). 앞의 셋은 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다(2 는 키를
-# 빼서 부르지 못한다).
+# 되돌려 빨개지는지 본다(원칙 II). 앞의 셋과 9 는 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다(2 는
+# 키를 빼서 부르지 못한다).
 #   PYTHONUTF8=1 uv run --env-file ../../../.env python tools/mutate.py .scratch/web-widget/probes/widget_llm_mutations.toml [번호 ...]
 # 워크트리(.claude/worktrees/<이름>/)에서 친다. 주 체크아웃이면 --env-file .env 다. chromium 이 Playwright 의 브라우저
 # 캐시에 있어야 한다.
@@ -117,3 +117,25 @@ expect_output = ["nomatch: '*= 1 passed, 2 deselected in *'"]
 file = "pyproject.toml"
 old = '''addopts = "-m \"not llm and not llm_widget\" --import-mode=importlib --strict-markers"'''
 new = '''addopts = "-m \"not llm\" --import-mode=importlib --strict-markers"'''
+
+# --- 실제 모델 e2e 의 종료 코드(PR #383 의 CodeRabbit 첫 회차가 더했다. 앞의 번호를 옮기지 않으려 끝에 둔다) ---------
+
+[[mutation]]
+name = "시험이 통과해도 정리가 던지면 종료 코드 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["Playwright 가 종료 코드 1 로 끝났다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/stack.ts"
+old = '''
+    rmSync(work, { recursive: true, force: true });
+  };
+  try {
+'''
+new = '''
+    rmSync(work, { recursive: true, force: true });
+    throw new Error("정리 뒤에 던지는 변이");
+  };
+  try {
+'''
