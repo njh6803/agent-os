@@ -409,7 +409,7 @@ main 이 들인 `CLAUDE.md` 의 테스트 줄은 위젯을 건드린 변경에 �
 
 - `.scratch/web-widget/probes/README.md`: 이 브랜치의 두 행 뒤에 07 의 `failures_mutations.toml` 행을 두었다.
 - `web/apps/widget/api/runs/index.ts`: 07 의 `limitOf` 를 살리고, 이 브랜치가 걷은 `apiBaseUrl` 은 다시 들이지 않았다. `sendRun` 은 이 브랜치의 `baseUrl` 인자 그대로다.
-- `web/apps/widget/components/pages/WidgetPage.tsx`: 이 브랜치의 꼴(`Connection` 을 지어 `ConnectedWidget` 에 넘긴다)을 살렸다. 07 이 이 파일에 더한 것(`useConversation` 의 `onReturn` 으로 `setDraft`, `restarted`·`wait`·`invalid`, 기다림이 남은 동안 보내기 막기, "다시 보내기" 주석)은 `ConnectedWidget.tsx` 로 옮겼다. 두 방식이 같은 `ConnectedWidget` 을 그리므로 페이지 안 방식에도 07 의 화면이 선다. 이것은 구성으로 한 말이고, 페이지 안 방식에서 07 의 화면을 그려 본 시험은 없다. 07 의 시험은 `testing/widget.tsx` 를 거쳐 `WidgetPage` 만 그리고, 티켓 10 의 단위 시험 항목이 화면 동작을 `widget-pages` 에 맡긴다.
+- `web/apps/widget/components/pages/WidgetPage.tsx`: 이 브랜치의 꼴(`Connection` 을 지어 `ConnectedWidget` 에 넘긴다)을 살렸다. 07 이 이 파일에 더한 것(`useConversation` 의 `onReturn` 으로 `setDraft`, `restarted`·`wait`·`invalid`, 기다림이 남은 동안 보내기 막기, "다시 보내기" 주석)은 `ConnectedWidget.tsx` 로 옮겼다. 두 방식이 같은 `ConnectedWidget` 을 그리므로 페이지 안 방식에도 07 의 화면이 선다. 이것은 구성으로 한 말이고, 페이지 안 방식에서 07 의 화면을 그려 본 시험은 없다. 07 의 화면 동작 시험(`widget-pages` 의 `WidgetFailures.test.tsx`·`WidgetConversation.test.tsx`)은 `testing/widget.tsx` 를 거쳐 `WidgetPage` 를 그리고, 07 의 스토리(`widget-storybook`)는 `WidgetScreen` 과 그 아래를 그린다. 티켓 10 의 단위 시험 항목은 화면 동작을 `widget-pages` 에 맡긴다.
 - `web/apps/widget/components/pages/useConversation.ts`: 인자를 `(agent, connection, onReturn)` 으로 합쳤다. 07 의 이어 가기 재시도·422·429 처리는 그대로 두고, 토큰은 `connection.token()` 으로, 기준 주소는 `attempt` 에 `connection.baseUrl` 로 넘긴다. 합친 뒤 `git diff origin/main` 의 차이는 이 브랜치의 길(`Connection`, `baseUrl`)과 머리 주석(토큰을 받는 길을 고친 첫 문장과 새 셋째 줄)뿐이었다.
 
 07 은 티켓 10 을 고치지 않았다(`git diff 7cbeb263 origin/main` 으로 봤다).
@@ -512,7 +512,155 @@ open-session을 부른다 2026-10-24T16:36:07Z
 
 커밋 직전 `tools/sibling_overlap.py` 가 1 로 끝났다. 07 의 일지 `2026-10-24-15` 가 main 에 먼저 들어가 이 일지(그때 `2026-10-24-14`)가 이름순으로 그보다 앞섰기 때문이다. 출력대로 `--move` 를 쳐 `2026-10-25-02` 로 옮겼고, 도구가 프로브 README 와 `e2e/element-site.ts` 의 인용도 함께 고쳤다. 옮긴 뒤 `git grep "10-24-14"` 는 0 건이었다. 같은 출력에서 08 의 워크트리가 커밋하지 않은 채 다섯 파일(프로브 README, `api/runs/index.ts`, `WidgetPage.tsx`, `WidgetScreen.tsx`, `useConversation.ts`)을 이 브랜치와 함께 고치고 있었다. 뒤에 병합하는 쪽이 글자 충돌을 푼다.
 
+커밋 `d4392b58` 의 pre-commit 은 검사 열(`web-verify` 324.5초, pytest 322.9초 포함)과 마크다운 표·줄 구분 문자·변이 표·커밋 메시지가 모두 지났다. ruff 둘과 카나리아 명세·헌법 판은 해당 파일이 없어 `Skipped` 였다. 인용 대조는 경고 다섯을 냈고, 271행 하나를 뺀 넷은 이 절이 고치기 전의 옛 문장을 따옴표로 든 것이라 원문이 없어진 것이 맞다. 271행은 앞 세션이 쓴 줄이고, `e2e/element-site.ts` 26~28행의 주석을 줄바꿈과 주석 표지(` * `) 없이 옮긴 것이라 거짓 양성이다(다음 세션이 두 글을 대 봤다).
+
+## 인계 (커밋 뒤, 넷째)
+
+커밋 `d4392b58` 뒤에 `hook_handoff`(약 24만 토큰, 경계 `커밋 뒤`)가 와서 새 세션에 넘긴다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전` 이라 같은 경계가 아니고, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니며, 요청 범위는 PR과 병합까지다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+- HEAD 는 `d4392b58` 이고 아직 푸시하지 않았으며 PR 도 없다. 커밋하지 않은 것은 이 절 하나다.
+- PR 직전 리뷰는 다시 돌린다. 이 세션의 판단이다. 받은 리뷰는 `5fbdcbbe` 까지이고, 그 뒤 07 합치기(`f9c8b65c`)가 `useConversation.ts`·`ConnectedWidget.tsx`·`api/runs/index.ts` 의 코드를 바꿨다. `docs/constitution/operations.md` 리뷰 파이프라인 2 의 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌리고, 범위는 `git diff dff2ff1a d4392b58` 가운데 이 브랜치의 몫(해소한 파일은 `git diff origin/main -- <파일>`)으로 좁힌다. `bug-perf-review` 의 브리프에는 위 "셀프 리뷰 (07 합치기의 해소)" 절의 "이 반영으로 새로 쓴 사실 문장" 을 밀 주장으로 싣는다.
+- 남은 단계는 차례로 PR 직전 리뷰와 그 반영, 이 일지의 마무리 커밋(회고는 "회고 (이어받은 세션들)" 에서 마쳤고 새 세션은 제 몫의 후보만 더한다), 커밋 직전 `tools/sibling_overlap.py`, 푸시, PR(`/git-pr`), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다.
+- PR 본문에 실을 것은 "인계 (셀프 리뷰 직전, 셋째)" 절의 목록 그대로이고, 이 세션의 셀프 리뷰 결과(위 절)를 더한다.
+- 08 의 워크트리(`08-widget-approval`)가 같은 다섯 파일을 커밋하지 않은 채 고치고 있다(위 절 끝). 10 이 먼저 병합되면 08 이 푼다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-02-widget-element-embed.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 d4392b58 까지 했고(푸시 전, PR 없음), 커밋하지 않은 일지의 인계 절 하나가 워크트리에 있다. 남은 단계는 차례로 PR 직전 리뷰(대체 둘을 07 해소와 d4392b58 에 다시 돌린다), 그 반영, 일지 마무리 커밋, 푸시, PR(/git-pr), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다. 범위와 밀 주장, PR 본문에 실을 것은 일지 "인계 (커밋 뒤, 넷째)" 절에 있다. 일지 docs/journal/2026-10-25-02-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘과 커밋은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T17:04:23Z
+
+## 이어받은 세션 (커밋 뒤, 넷째 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 "인계 (커밋 뒤, 넷째)" 의 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 PR 및 병합` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. `git fetch origin` 뒤에도 origin/main 은 `1ef75a12` 그대로였다.
+
+### PR 직전 리뷰 (07 해소와 d4392b58)
+
+`coderabbit auth status` 가 여전히 `Seat: not assigned` 라 대체 둘을 나란히 돌렸다. 범위는 07 합치기와 이 브랜치가 함께 건드린 파일 여덟이다. `git diff --name-only dff2ff1a d4392b58` 와 `git diff --name-only origin/main d4392b58` 에 함께 든 파일(`ConnectedWidget.tsx`, `useConversation.ts`, `api/runs/index.ts`, `WidgetScreen.tsx`, `e2e/element-site.ts`, 프로브 README, `widget_app_mutations.toml`, 이 일지)이고, 파일마다 그 두 diff 를 보게 했다. `/security-review` 에는 이 일지를 뺀 일곱을 주었다.
+
+- `/security-review`: 신뢰도 8 이상의 High·Medium 이 없었다. 토큰이 `connection.baseUrl`(iframe 은 `window.location.origin`, 페이지 안은 번들의 출처)로만 가는 것, 걷은 `apiBaseUrl` 이 되살아나지 않은 것, 422·429 의 `limit` 은 고정 문구 표의 키로만 쓰이고 `Retry-After` 는 `^\d+$` 로 거른 정수만 쓰이는 것, `element-site.ts` 가 e2e 에서만 쓰이는 것을 따라갔다. 지적이 없어 거짓 양성 거르기는 돌 것이 없었다.
+- `bug-perf-review`(호출 47): 유효 1(Minor), 보류 1(Minor), 오탐 5. 옮긴 동작이 07 의 `WidgetPage` 와 같다고 했다. `WidgetScreen` 에 넘기는 속성이 모두 같고, 되돌린 요청은 `onReturn={setDraft}` 로 입력창에 들어가며, `useConversation` 의 이어 가기 404 재시도·422·429·끊김 가드가 그대로다. 다른 곳은 `misconfigured` 에 `connection === null` 이 더해진 것과 같은 글의 `console.error` 를 다시 남기지 않는 것이고, 둘 다 머리 주석이 밝힌 의도다. 밀 주장 여덟 가운데 일곱이 근거와 맞았다.
+
+판정과 반영:
+
+- [Minor, 유효] 밀 주장 "07 의 시험은 `testing/widget.tsx` 를 거쳐 `WidgetPage` 만 그리고" 가 07 의 시험 전체에는 맞지 않았다. 07 은 `WidgetScreen`·`FailureAlert`·`ComposerBand`·`Conversation` 의 스토리(`widget-storybook`)도 더했고, 그 스토리는 `WidgetPage` 없이 그린다(`git show 1ef75a12 --stat` 과, 스토리 파일에 `WidgetPage` 가 없는 것을 grep 으로 봤다). `testing/widget.tsx` 를 쓰는 것은 `WidgetFailures.test.tsx` 와 `WidgetConversation.test.tsx` 둘이다(grep). 고침: "origin/main 합치기 (둘째, 07)" 절의 그 문장을 화면 동작 시험과 스토리로 갈라 적었다. 위 "셀프 리뷰 (07 합치기의 해소)" 절의 밀 주장 목록은 그때 쓴 문장을 옮긴 기록이라 두었다.
+- [Minor, 보류 → 그대로] 페이지 안 방식에서 07 의 거절·상한 화면을 브라우저로 돌린 시험이 없다. 다른 출처에서 읽어야 하는 `Retry-After` 는 서버가 CORS 로 노출한다(`src/agent_os/http/cors.py` 44행의 `EXPOSE_HEADERS`, 열어 봤다). 고치지 않는다. 티켓 10 의 시험 항목(43행)이 화면 동작을 `widget-pages` 에 맡기고 e2e 항목(44행)에 거절 사례가 없어 이 티켓의 체크박스 밖이고, 위젯 e2e 에서 429 를 내려면 서버 한도를 채우거나 응답을 가로채는 사례를 새로 지어야 한다. PR 체크리스트의 그 줄에 적는다.
+
+`bug-perf-review` 는 예산 40 을 넘겨 47 을 불렀다. 보고 첫 줄에는 응답마다 적을 `[호출 n]` 표지를 빠뜨렸다고 스스로 적었지만, 그 기록에서는 도구를 부른 응답 17 개 모두에 표지가 있었다. 표지는 `[호출 4]` 에서 `[호출 59]` 까지 이어지며 증분이 10 번 어긋나 마지막 표지 59 가 실제 47 보다 컸고, `[호출 41]` 뒤에도 여덟 응답을 더 불렀다(다음 세션의 셀프 리뷰가 잡아 `PYTHONUTF8=1 uv run python .scratch/harness/probes/reviewer_call_count.py --since 2026-10-24T17:00 --until 2026-10-24T17:30` 의 첫 줄과, 그 서브에이전트 기록에서 표지를 차례로 뽑은 grep 으로 봤다). 47 은 앱이 센 도구 호출 48(그 서브에이전트의 끝 알림 `usage` 에 든 `tool_uses`)에서 보고를 넘긴 호출 하나를 뺀 값과 같다.
+
+이 반영으로 새로 쓴 사실 문장: "07 의 화면 동작 시험(`widget-pages` 의 `WidgetFailures.test.tsx`·`WidgetConversation.test.tsx`)은 `testing/widget.tsx` 를 거쳐 `WidgetPage` 를 그리고, 07 의 스토리(`widget-storybook`)는 `WidgetScreen` 과 그 아래를 그린다."
+
+## 회고 (커밋 뒤, 넷째 → 병합 세션의 몫)
+
+위 "회고 (이어받은 세션들)" 뒤의 이 세션 몫이다. 후보 셋, 승인 1·넘김 0·기각 2. `tools/queue_open_rows.py` 를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 만료할 행이 둘 다 없었다.
+
+14. `bug-perf-review` 가 호출 예산 40 을 넘겨 47 을 불렀다. 표지는 응답마다 달았지만 셈이 실제보다 앞섰고, `[호출 41]` 뒤에도 여덟 응답을 더 불렀다(위 "PR 직전 리뷰 (07 해소와 d4392b58)" 절). 승인(회차로 세는 것): 정의 파일의 보고 형식 절(예산 문단)을 어긴 사건이고, 열린 대기열 214 가 같은 일을 처방하며 그 처방의 갈래 "표지가 40에 닿은 뒤에도 이어 부르면" 이 이 기록에서 났다. 214 에 회차를 더해 3회차가 됐다.
+15. 워크트리 가드가 프로세스 치환(`<(…)`)과 `;` 로 이은 git 명령을 거부했다. 기각: 앱 가드가 그 자리에서 막았다. `;` 로 이은 git 명령은 `CLAUDE.md` 환경 함정이 적는 git 복합 명령이다. 프로세스 치환은 그 줄과 `docs/constitution/operations.md` 의 거부된 모양 목록에 없지만, 같은 줄이 거부되는 모양을 "미리 알 수 없다" 고 적고 명령을 하나씩 치라고 한다. 명령 둘로 나눠 이었다.
+16. `next-session` 스킬의 한 절을 `grep -A 30` 으로 꺼내 14,304자가 실렸다. 기각: 큰 결과 훅이 그 자리에서 알렸다.
+
+## 인계 (셀프 리뷰 직전, 넷째)
+
+PR 직전 리뷰의 반영을 커밋하기 전에 `/code-review` 를 고정점 `d4392b58` 로 부른 직후 `hook_handoff`(약 22.3만 토큰, 경계 `셀프 리뷰 직전`)가 와서 새 세션에 넘긴다. 셀프 리뷰는 밟지 않았다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 커밋 뒤` 라 같은 경계가 아니고, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니며, 요청 범위는 PR과 병합까지다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+- HEAD 는 `d4392b58` 이고 아직 푸시하지 않았으며 PR 도 없다(`gh pr view` 가 `no pull requests found`).
+- 커밋하지 않은 것은 둘이다. 이 일지(앞 세션의 "인계 (커밋 뒤, 넷째)" 절, "origin/main 합치기 (둘째, 07)" 절의 한 문장 고침, "이어받은 세션 (커밋 뒤, 넷째 → 병합)" 절, 이 절)와 `.scratch/retro-queue.md` 214 행의 회차 칸(2회차를 3회차로 올리고 이 일지 파일명을 더했다)이다.
+- 셀프 리뷰의 범위는 그 둘이다. 고정점은 `d4392b58` 이고 명세는 티켓 10 과 `.scratch/web-widget/spec.md` 다. 대 볼 사실 문장은 새 절의 것이다(PR 직전 리뷰 대체 둘의 결과, 07 의 스토리와 `testing/widget.tsx` 를 쓰는 시험 둘, `cors.py` 44행, 티켓 43·44행, 호출 47 과 48).
+- PR 직전 리뷰는 07 해소와 `d4392b58` 에 다시 돌려 반영까지 마쳤다. 셀프 리뷰가 코드를 바꾸지 않으면 다시 돌리지 않는다.
+- 회고는 이 세션까지 "회고 (이어받은 세션들)" 과 "회고 (커밋 뒤, 넷째 → 병합 세션의 몫)" 에서 마쳤다. 대기열 214 가 3회차가 되어 `next-session` 결정표 chore 배치 줄의 회차 조건을 채웠다. 그 줄은 그 기능의 마지막 티켓이었을 것도 함께 요구하고, 티켓 10 뒤에 08·09 가 남아 이 병합은 chore 배치의 계기가 아니다.
+- PR 본문에 실을 것: "인계 (셀프 리뷰 직전, 셋째)" 절의 목록, "셀프 리뷰 (07 합치기의 해소)" 절의 결과, 이 세션의 PR 직전 리뷰 결과와 보류 하나(페이지 안 방식의 거절·상한 화면을 브라우저로 돌린 시험이 없다. 판정과 고치는 값은 그 절에 있다).
+- 08 의 워크트리가 같은 다섯 파일을 커밋하지 않은 채 고치고 있다("셀프 리뷰 (07 합치기의 해소)" 절 끝). 10 이 먼저 병합되면 08 이 푼다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-02-widget-element-embed.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(일지, 대기열 214 행의 회차 칸)이 워크트리에 있고 셀프 리뷰(/code-review d4392b58)부터 한다. PR 직전 리뷰는 07 해소와 d4392b58 에 다시 돌려 반영까지 마쳤다. 남은 단계는 차례로 셀프 리뷰 반영, 일지 마무리 커밋(회고는 이 세션까지 마쳤다), 푸시, PR(/git-pr), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다. 범위와 PR 본문에 실을 것은 일지 "인계 (셀프 리뷰 직전, 넷째)" 절에 있다. 일지 docs/journal/2026-10-25-02-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T17:19:16Z
+
+## 이어받은 세션 (셀프 리뷰 직전, 넷째 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 "인계 (셀프 리뷰 직전, 넷째)" 의 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 PR 병합` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. `git fetch origin` 뒤에도 origin/main 은 `1ef75a12` 그대로였다.
+
+### 셀프 리뷰 (PR 직전 리뷰의 반영과 회고)
+
+`/code-review d4392b58`, 기준 d4392b58(HEAD 와 같다), 바뀐 파일 2(이 일지, 대기열 214 행), 미추적 0, 커밋 0. 명세는 티켓 10 과 기능 명세다. 표준 축(sonnet·high)과 명세 축을 나란히 돌렸다.
+
+표준 축은 하드 위반 넷(Major 하나, Minor 셋)을 냈고 baseline smell 은 없었다. 밀 주장 가운데 `testing/widget.tsx` 를 쓰는 시험 둘과 `render(<WidgetPage />)`, 07 의 스토리 네 파일에 `WidgetPage` 가 없는 것, `cors.py` 44행의 `EXPOSE_HEADERS` 가 `Retry-After` 를 담는 것, 티켓 43·44행, 파일 여덟의 교집합, `queue_open_rows.py` 두 번(만료할 행 없음), `lib/limit.ts` 27행의 `^\d+$` 를 대 보고 맞다고 했다. 인용 대조(`check_quotes.py`)는 경고가 없었다고 했다.
+
+명세 축은 빠진 요구와 넘친 범위가 없고, 틀려 보이는 것 일곱(Minor 넷, Nit 셋)을 냈다. 밀 주장 가운데 티켓 43·44행, `testing/widget.tsx` 18행의 `render(<WidgetPage />)` 와 그것을 쓰는 시험 둘, 스토리의 그림 범위, `cors.py` 44행, 토큰이 `sendRun` 하나로만 가는 것, `ConnectedWidget` 머리 주석, 파일 여덟과 47·48 을 대 보고 맞다고 했다. `retryAfterSeconds`·`limitSentence` 는 경계 입력으로 불러 봤다고 했다. `Retry-After` 의 노출은 `tests/channel/http/test_end_user.py` 의 `test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_헤더_셋을_받는다` 가 429 응답에도 단언한다(2285행, 열어 봤다).
+
+고친 것:
+
+- [Major, 표준] "인계 (셀프 리뷰 직전, 넷째)" 절의 "대기열 214 가 3회차가 되어 `next-session` 결정표의 chore 배치 조건에 든다" 가 결정표 81행의 조건 하나만 보았다. 그 줄은 "그 기능의 마지막 티켓이었고" 와 회차 3 이상을 함께 요구하고, 티켓 10 뒤에 08·09 가 남는다(이 일지 "다음"). 회차 조건만 채웠고 이 병합은 그 계기가 아니라고 고쳤다. 다음 세션 지시문이 chore 로 가지 않게 하려는 고침이다.
+- [Minor, 표준] 회고 15 의 기각 근거 "`CLAUDE.md` 환경 함정이 그 모양을 적는다" 가 프로세스 치환에는 맞지 않았다. 환경 함정 줄과 `docs/constitution/operations.md` 73행의 거부된 모양 목록에 `<(…)` 가 없다(grep 0건). `;` 로 이은 git 명령은 git 복합 명령이라 그 목록에 든다. 프로세스 치환은 목록에 없고 같은 줄의 일반 조항("미리 알 수 없다", 명령을 하나씩 친다)이 덮는다고 고쳤다. 기각은 그대로다(앱 가드가 그 자리에서 막았다).
+- [Minor, 표준] "앱이 센 도구 호출 48" 의 출처가 없었다. 앞 세션의 트랜스크립트에서 "PR 직전 버그·성능 리뷰" 서브에이전트의 끝 알림 `<usage>` 에 `<tool_uses>48</tool_uses>` 가 든 것을 grep 으로 다시 찾았다. 그 출처를 괄호로 적었다.
+- [Minor, 명세] "PR 직전 리뷰 (07 해소와 d4392b58)" 절의 "`[호출 n]` 표지를 빠뜨렸다고" 와 회고 14 가 서브에이전트의 자기 보고를 사실처럼 옮겼다. 214 행이 처방에 든 프로브를 `PYTHONUTF8=1 uv run python .scratch/harness/probes/reviewer_call_count.py --since 2026-10-24T17:00 --until 2026-10-24T17:30` 으로 돌리니 첫 줄이 `호출 47 응답 17 표지 17(증분 어긋남 10, 마지막 59/실제 47)` 이었다. 그 서브에이전트 기록(`agent-a529c340f0e7d86bf.jsonl`)에서 표지를 차례로 뽑으니 4·9·14·18·23·29·36·38·41·44·48·51·53·54·56·58·59 와 보고의 47 둘이었다. 두 자리를 기록대로 고쳤다. 표지가 41 에 이른 뒤에도 여덟 응답을 더 불렀으니 214 의 처방이 훅으로 가는 갈래("표지가 40에 닿은 뒤에도 이어 부르면")가 이 기록에서 났다. 회고 14 의 판정(승인, 214 의 3회차)은 그대로다.
+- [Minor, 명세] retro 4단계는 새 훅·검사가 문턱을 지나면 대기열에 두더라도 `tools/hook_report.py` 를 먼저 돌리라고 하는데(그 스킬 42행), 214 가 3회차로 훅 처방의 문턱을 지난 회고 14 에 그 실행이 없었다. 돌렸다: 창 2026-09-27~2026-10-24, "뺄 후보: (없음)". 넘길 것이 없다.
+- [Minor, 명세] 214 행의 승인 칸은 열린 PR #297(`chore/bug-perf-review-batch`. PR 의 머리는 `ed690429`, 그 워크트리의 로컬 브랜치는 푸시하지 않은 커밋을 더한 `2f106f59` 이고 둘 다 2026-10-19 이다)도 고쳐 쓴다. 그 브랜치는 2026-10-18 까지의 기록을 재어 이 행의 계기가 나지 않았다고 적고, 훅을 어디에 등록할지가 구조 결정이라 행을 ADR 초안으로 따로 둔다고 적었다(두 머리에 모두 있는 글이다, `git show` 로 봤다). 이 브랜치의 214 행 고침과 글자 충돌이 난다. 뒤에 병합하는 쪽이 그 칸을 합치며 이번 기록에서 계기가 났다는 것을 싣도록 "다음" 에 적었다.
+- [Nit, 명세] 앞 세션의 회고 절 제목이 `### 회고 (이 세션의 몫)` 이었다. retro 5단계가 `## 회고 (…)` 로 쓰라고 해 `## 회고 (커밋 뒤, 넷째 → 병합 세션의 몫)` 으로 바꾸고 인계 절의 인용도 맞췄다.
+- [Nit, 명세] "셀프 리뷰 (07 합치기의 해소)" 절 끝의 "271행은 앞 세션이 쓴 줄이다" 에 판정이 없었다. `e2e/element-site.ts` 26~28행의 주석을 줄바꿈과 주석 표지 없이 옮긴 거짓 양성이라고 적었다(두 글을 대 봤다).
+- [Nit, 명세] 인계 절의 "PR 직전 리뷰 두 회차의 결과" 는 회차 하나에 대체 리뷰 둘이었다. "대체 둘의 결과" 로 고쳤다.
+
+남긴 것:
+
+- [Minor, 표준] 대기열 214 행이 3회차를 더하며 날짜를 더하지 않았다는 지적(350 행의 꼴과 견줌). retro 스킬 5단계가 "기존 행에 회차를 더할 때는 회차 수와 일지 파일명만 더한다" 고 정해 규약대로다. 일지 파일명 표기가 확장자 있는 것과 없는 것으로 섞인 것은 이 변경 전부터 그 칸에 있던 꼴이고 `queue_open_rows.py` 의 셈에 영향이 없다.
+- [Minor, 명세] 08 의 상태가 인계 절과 지금 다르다. `feature/08-widget-approval` 은 같은 다섯 파일을 커밋했고(`ca2774e6`, 부모 `1ef75a12`), 셀프 리뷰를 반영하는 동안 PR #385 를 열었다(머리 `1181b5f2`, 2026-10-24T17:43:56Z, `gh pr view 385`). "`1ef75a12` 위에서 돈다" 는 지금도 맞다. 인계 절은 그때의 기록이라 고치지 않고 여기 적는다.
+
+이 반영으로 새로 쓴 사실 문장(셀프 리뷰가 시험과 코드를 바꾸지 않아 PR 직전 리뷰는 다시 돌리지 않고, PR 본문에 적어 봇이 겨냥하게 한다):
+
+- "PR 직전 리뷰 (07 해소와 d4392b58)" 절: "그 기록에서는 도구를 부른 응답 17 개 모두에 표지가 있었다. 표지는 `[호출 4]` 에서 `[호출 59]` 까지 이어지며 증분이 10 번 어긋나 마지막 표지 59 가 실제 47 보다 컸고, `[호출 41]` 뒤에도 여덟 응답을 더 불렀다", "앱이 센 도구 호출 48(그 서브에이전트의 끝 알림 `usage` 에 든 `tool_uses`)".
+- 회고 14·15: "표지는 응답마다 달았지만 셈이 실제보다 앞섰고", "프로세스 치환은 그 줄과 `docs/constitution/operations.md` 의 거부된 모양 목록에 없지만, 같은 줄이 거부되는 모양을 "미리 알 수 없다" 고 적고 명령을 하나씩 치라고 한다."
+- 인계 절: "그 줄은 그 기능의 마지막 티켓이었을 것도 함께 요구하고, 티켓 10 뒤에 08·09 가 남아 이 병합은 chore 배치의 계기가 아니다."
+- "셀프 리뷰 (07 합치기의 해소)" 절 끝: "`e2e/element-site.ts` 26~28행의 주석을 줄바꿈과 주석 표지(` * `) 없이 옮긴 것이라 거짓 양성이다".
+- 이 절과 "다음": `test_end_user.py` 2285행의 단언, PR #297 이 2026-10-18 까지의 기록으로 계기가 나지 않았다고 적은 것, 2026-10-24T17:07 에 시작한 리뷰에서 그 계기가 난 것.
+
+## 회고 (셀프 리뷰 직전, 넷째 → 병합 세션의 몫)
+
+이 세션 몫이다. 후보 열하나, 승인 4(그 가운데 회차로 세는 것 셋)·넘김 0·기각 7. `tools/queue_open_rows.py` 를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 만료할 행이 둘 다 없었다. 새 훅·검사의 문턱을 지난 행(214 의 3회차, 445 의 11회차)이 있어 `tools/hook_report.py` 를 돌렸고 뺄 후보는 없었다(위 셀프 리뷰 절).
+
+1. 앞 세션의 인계 절이 기능의 중간 티켓에서 대기열 214 의 3회차를 chore 배치 조건에 든다고 적었다. retro 5단계 끝 문장이 결정표 줄의 앞 조건("그 기능의 마지막 티켓이었고")을 빼고 회차 조건만 적는다. 승인(고침, 사건 하나): 스킬의 문장이 원천인 결정표와 어긋난 틀린 사실이고, 이 세션의 셀프 리뷰가 잡아 커밋 전에 고쳤다. 스스로 승인하는 기준이 아니라 chore 의 계기를 옮겨 적은 문장이라 넘김의 넷째에 들지 않는다. 이 PR 은 티켓 10 의 것이라 반영하지 않고 대기열 467(1회차)에 두었다.
+2. 앞 세션이 `bug-perf-review` 의 자기 보고("표지를 빠뜨렸다")를 그 기록을 보지 않고 사실처럼 일지에 적었다(기록에는 응답마다 표지가 있었다). 승인(회차로 세는 것): 열린 대기열 445 가 일지가 보지 않은 것을 본 것처럼 적는 일을 처방한다. 445 에 회차를 더해 11회차(421의)가 됐다.
+3. 앞 세션의 회고가 214 를 3회차로 올리며 retro 4단계의 `tools/hook_report.py` 실행을 빠뜨렸다. 승인(회차로 세는 것): 스킬의 지침을 어겨 리뷰가 잡은 사건이다. 그 지침은 ADR 0036(#315)이 직접 들여 처방한 행이 없어 새 행 468(1회차)을 썼다.
+4. 앞 세션이 회고 절 제목을 `###` 로 썼다. 승인(회차로 세는 것): retro 5단계의 제목 규정(닫힌 대기열 78 이 들였다)을 어겨 리뷰가 잡았다. 78 을 이은 열린 행이 없어 새 행 469(78의 2회차)를 썼다.
+5. 앞 세션의 "앱이 센 도구 호출 48" 에 출처가 없었다. 기각: 리뷰가 잡도록 둔 기준(`code-review` 두 브리프의 근거의 종류)을 어겨 표준 축이 잡았다. 리뷰가 제 몫을 했다.
+6. 앞 세션의 회고 15 가 기각 근거로 적은 "환경 함정이 그 모양을 적는다" 가 프로세스 치환에는 맞지 않았다. 기각: 같은 까닭(두 브리프의 닫힌 주장 검증)으로 표준 축이 잡았다.
+7. 표준 축이 대기열 214 의 승인 칸에 날짜가 없다고 낸 지적은 retro 5단계와 어긋난 오탐이었다. 기각: 규정을 열어 보고 남겨 비용이 작았다(사건 없음).
+8. 도구 호출 사이의 산문을 영어로 두 번 썼다(`/code-review` 를 부르기 직전, 일지를 고치기 직전). 기각: `hook_midturn_korean` 이 그 자리에서 알렸다(닫힌 대기열 94 의 처방). 다음 회고가 셀 수 있게 횟수를 적는다.
+9. Git Bash 가 `git show <브랜치>:.scratch/…` 의 인자를 경로 목록으로 바꿔 git 이 실패했다. 기각: `hook_bash_msys_pathconv` 가 알렸고 `:./` 로 다시 쳤다.
+10. Grep 결과의 긴 줄이 두 번 `[Omitted long matching line]` 으로 나왔다. 기각: `hook_grep_omitted` 가 알렸고 Read 로 그 줄을 열었다.
+11. PR 본문 초안을 스크래치패드에 쓰자 보안 훅이 `<script>` 의 SRI 를 권했다. 기각: 임베드 안내를 인용한 글이라 사건이 없고, 첫 세션의 회고 10 과 같은 알림이다.
+
 ## 다음
 
 - web-widget 은 07·10·11 이 병합되면 08(승인 묻기)과 그 뒤의 09(저장과 재접속)가 남는다. 티켓 10 이 "그 티켓들이 더하는 화면은 두 방식에 함께 선다"고 적은 대로, 08 이 더하는 화면도 `ConnectedWidget` 을 거쳐야 두 방식에 함께 선다. 08 티켓은 이것을 들지 않고, 08 은 10 이 없는 `1ef75a12` 위에서 돈다(워크트리 `08-widget-approval`). 그래서 08 이 `WidgetPage.tsx` 에 더한 것은 뒤에 병합하는 쪽이 이번 07 합치기처럼 `ConnectedWidget.tsx` 로 옮긴다.
 - 페이지 안 방식의 시험(`element/WidgetElement.test.tsx`, `e2e/element.e2e.ts`)은 화면 동작을 다시 재지 않고 임베드의 몫만 본다. 티켓 10 의 단위 시험 항목이 화면 동작을 `widget-pages` 에 맡겼다.
+- 대기열 214 행의 승인 칸은 열린 PR #297(`chore/bug-perf-review-batch`)도 고쳐 쓴다. 그 PR 은 2026-10-18 까지의 기록으로 행의 계기(표지가 40 에 닿은 뒤에도 이어 부르는 것)가 나지 않았다고 적었는데, 2026-10-24T17:07 에 시작한 이 일지의 PR 직전 `bug-perf-review` 에서 그 계기가 났다(`[호출 41]` 뒤에 여덟 응답, 위 "셀프 리뷰 (PR 직전 리뷰의 반영과 회고)"). 둘 가운데 뒤에 병합하는 쪽이 그 칸을 합치며 이 사실을 싣는다.
