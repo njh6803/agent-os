@@ -94,6 +94,122 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 11. 임베드 안내의 값을 원천 여러 곳(`sites.py`, `main.py`, ADR 0023, 사이트 파일 픽스처 README, 테마 목록)에서 모아 대 봤다. 기각: 틀린 값이나 헛걸음이 없었다(사건 없음).
 12. 첫 커밋이 pre-commit 의 변이 표 검사(`tools/mutate.py --staged`)에 막혔다. 앞 티켓의 `widget_app_mutations.toml` 에서 이 브랜치가 옮기거나 고친 코드를 가리키던 원문 셋(`WidgetPage.tsx` 의 `console.error`, 두 번이 된 `next.config.ts` 의 ACAO 줄, `start.ts` 의 준비 부르기)이 맞지 않았다. 기각: 검사가 그 자리에서 잡았다.
 
+## 인계 (커밋 뒤)
+
+커밋 `945b2931` 뒤에 세션 컨텍스트가 인계 문턱을 넘어(`hook_handoff`, 약 33만 토큰) 새 세션에 넘긴다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-14-widget-element-embed.md의 "셀프 리뷰"(밀 주장 목록 포함)·"회고"·"인계" 절. 나란히 도는 티켓 .scratch/web-widget/issues/07-widget-failures-and-rejections.md, .scratch/web-widget/issues/11-widget-real-model-e2e.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 945b2931 에 구현, 셀프 리뷰 반영, 검증(verify, ruff 두 줄, 위젯 e2e, visual:widget), 앞 티켓 widget_app_mutations.toml 의 원문 셋 맞춤이 들었다. 아직 푸시하지 않았고 PR 도 없다. 남은 단계는 차례로 변이 전체(PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml, 25. e2e 변이 여덟은 하나에 1~2분)를 백그라운드로 돌려 실제 출력으로 표지를 맞추고 .scratch/web-widget/probes/README.md 의 element_mutations.toml 행 "잰 판" 칸("아직 전체를 돌리지 않았다")을 채우기, 티켓 49행 검증 줄 [x]와 Status done, 일지 마무리(이 인계 절 포함) 커밋, PR(/git-pr. PR 직전 리뷰에 일지의 "PR 직전 리뷰에 밀 주장" 목록을 넘긴다), 병합(next-session "워크트리에서 병합할 때")이다. 새 표지 가운데 셋(가린 페이지와 CORS 사례의 Locator: getByText(…) 줄, 시트 사례의 `+   "adopted": 0,`)은 변이를 손으로 넣어 출력을 보지 않고 Playwright 의 출력 꼴로 짐작해 골랐다. 일지 docs/journal/2026-10-24-14-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꾸고 워크트리 잠금을 풀었다(`git worktree unlock C:/project/agent/.claude/worktrees/10-widget-element-embed`, 오류 없음). 멈출 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-24T13:27:38Z
+
+## 이어받은 세션 (커밋 뒤 → 셀프 리뷰 직전)
+
+> 사용자: /implement .scratch/web-widget/issues/10-widget-element-embed.md (위 인계 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `feature/10-widget-element-embed` 다. 워크트리 `C:/project/agent/.claude/worktrees/10-widget-element-embed` 에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 기준 148652ef 에서 움직이지 않았다.
+
+### 차례를 바꾼 것
+
+인계 지시문은 변이 전체 실행을 PR 직전 리뷰보다 앞에 두었지만, `tools/mutate.py` 독스트링이 "전체 실행은 셀프 리뷰와 PR 직전 리뷰(보안·버그·성능)를 반영해 커밋한 뒤에 한 번 돈다"고 정한다(대기열 265·359). 그래서 PR 직전 리뷰를 먼저 돌렸다. 변이 전체는 아직 돌리지 않았다.
+
+### PR 직전 리뷰
+
+`coderabbit auth status` 가 `Seat: not assigned` 라 CLI 대신 대체 둘을 나란히 돌렸다(operations.md 리뷰 파이프라인 2).
+
+- `/security-review`(기준 148652ef, 커밋 945b2931): 신뢰도 8 이상의 High·Medium 없음. 기준 주소와 토큰이 가는 곳, 토큰 함수, 요청 경로(자격 증명 없음), React 출력, 글꼴·CSS 의 상수, `/element.js` 의 ACAO `*`, 빌드 도구를 따라갔다. 기록만 한 설계상 선택은 open shadow root(같은 페이지 스크립트는 `tokenProvider` 를 직접 부를 수 있어 `closed` 가 막지 못한다)와 번들이 두 번 실릴 때 먼저 정의한 쪽이 이기는 것이다.
+- `bug-perf-review`(기준 148652ef, 범위 43, 호출 40): 유효 1, 보류 3, 오탐 5. 밀 주장(이 일지 "PR 직전 리뷰에 밀 주장")은 대 본 것이 모두 맞았다(빌더 1605행, gzip 70,921·24,891바이트와 차 46,030, 11분, 포트·`;`·`,` 문장). Vite 문서 인용과 CSP3 원문, `lib/token.ts` 의 `type` 둘은 대 보지 못했다고 적었다.
+
+판정과 반영:
+
+- [Major, 유효] Vite 의 `build` 가 `NODE_ENV` 를 production 으로 채우고 되돌리지 않아, 시작 래퍼가 같은 프로세스에서 이어 부르는 `next dev` 가 production 으로 선다. `vite/dist/node/chunks/node.js` 37262행(`if (!isNodeEnvSet) process.env.NODE_ENV = defaultNodeEnv;`)과 `next/dist/bin/next` 의 `preAction`(값이 있으면 그대로 두고 `dev` 에 production 이면 경고)을 열어 확인했다. 고침: `buildElement` 가 빌드 전의 값으로 되돌린다(`tools/element.ts`). 시험 "빌드는 비어 있던 NODE_ENV 를 비운 채로 둔다"를 먼저 써서 `expected 'production' to be undefined` 로 빨강을 본 뒤 고쳤다. Next 의 타입이 `NODE_ENV` 를 늘 있는 값으로 적어 ESLint `no-unnecessary-condition` 에 걸려, `process.env` 를 `Record<string, string | undefined>` 변수로 받았다(단언 없음). `next dev` 를 실제로 띄워 경고가 사라진 것은 보지 않았다.
+- [Minor, 보류 → 일부 유효] `site_file_mutations.toml` 43 "래퍼가 풀어 낸 경로를 next 에 넘기지 않으면…"이 살아남을 것이라는 지적. 돌려 보니 빨갛고 표지도 맞았다. 그러나 손으로 넣어 출력을 보니 실패한 단언은 진단의 절대 경로(`사이트 파일 sites.toml 을 받아들일 수 없다` 를 받음)였고, 표지 "파일이 없다"는 실패 줄 옆에 보인 시험의 주석(`// 앱 폴더에서 풀었다면 "파일이 없다" 다.`)에서만 맞았다. 이름과 표지를 `+ 사이트 파일 sites.toml 을 받아들일 수 없다` 로 바꾸고 다시 돌려 기대대로였다(종료 0).
+- [Minor, 보류 → 유효] 대화 도중 `agent` 속성이 바뀌면 앞 에이전트의 `continueFrom` 을 새 에이전트로 이어 보낸다. 서버의 이어 가기는 주체와 결말만 보고 에이전트가 같은지 보지 않는다(`core/continuation.py` 의 판정). 고침: 요소가 `ConnectedWidget` 에 `key={embed.agent ?? ""}` 를 주어 에이전트가 바뀌면 위젯 한 벌을 새로 띄운다. 시험 "agent 를 바꾸면 위젯을 새로 띄워 대화를 새로 시작하고, 다른 속성은 그 자리에서 다시 그린다"(입력창이 새 요소인지)를 먼저 써서 빨강(`not to be <textarea …>`)을 본 뒤 고쳤다. `WidgetElement.tsx` 머리 주석과 `EMBED.md` 속성 절에 한 문단씩 더했다.
+- [Minor, 보류 → 그대로] `element_mutations.toml` 의 표지 셋(`AssertionError: expected`, `to be null`, `Received: undefined`). 앞의 둘은 고른 시험 안의 단언이 하나뿐이라 표 머리의 기준에 맞고, 셋째는 같은 시험의 다른 단언이 `toBeVisible` 실패라 `Received: undefined` 를 내지 않는다. 전체 실행으로 실제 출력을 본다.
+
+이 반영으로 새로 쓴 사실 문장(셀프 리뷰와 다음 PR 직전 리뷰에 밀 주장):
+
+- `tools/element.ts`: "Vite 의 `build` 는 `NODE_ENV` 가 비었으면 production 으로 채우고 되돌리지 않는다(vite 8.3.1 의 `resolveConfig`)", "Next 의 타입은 NODE_ENV 를 늘 있는 값으로 적는다".
+- `element/WidgetElement.tsx`: "서버의 이어 가기는 앞 실행의 에이전트가 같은지 보지 않아(core/continuation.py), 그대로 두면 앞 에이전트와 나눈 대화가 새 에이전트의 실행으로 이어진다", "iframe 방식은 질의가 바뀌면 문서가 새로 뜬다".
+- `EMBED.md`: "페이지 안 방식에서 속성을 바꾸면 위젯이 곧바로 다시 그린다. `agent`를 바꾸면 대화를 새로 시작하고, 앞 에이전트와 나눈 대화는 새 에이전트로 이어지지 않는다."
+- `site_file_mutations.toml` 43 위 주석: "번들 빌드가 next 보다 먼저, 앱 폴더로 옮기기 전에 사이트 파일을 읽는다", "옛 표지 "파일이 없다" 는 실패 줄 옆에 보이는 시험의 주석에서만 맞았다".
+
+다시 돌린 것: 바꾼 네 파일의 `eslint`(종료 0)와 `prettier --check`(0), `vitest --project node apps/widget/tools/element.test.ts`(7 통과), `vitest --project widget-pages apps/widget/element/WidgetElement.test.tsx`(통과), `mutate.py --check` 로 세 표(site_file 43, element 25, widget_app 34)의 원문이 모두 한 번씩 맞았다. `pnpm -C web verify`, `tools/run_checks.py`, 위젯 e2e 는 이 반영 뒤에 돌리지 않았다.
+
+## 인계 (셀프 리뷰 직전)
+
+PR 직전 리뷰를 반영한 변경을 커밋하기 전에 `/code-review 945b2931` 을 불렀을 때 `hook_handoff`(약 29만 토큰, 경계 `셀프 리뷰 직전`)가 와서 새 세션에 넘긴다. 셀프 리뷰는 밟지 않았다. 이 세션의 제목은 `feature/10-widget-element-embed (인계함)` 으로 바꾼다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-14-widget-element-embed.md의 "PR 직전 리뷰에 밀 주장"과 "이어받은 세션 (커밋 뒤 → 셀프 리뷰 직전)" 절(새 밀 주장 목록 포함). 나란히 도는 티켓 .scratch/web-widget/issues/07-widget-failures-and-rejections.md, .scratch/web-widget/issues/11-widget-real-model-e2e.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 945b2931, 이 반영만)부터 한다. 변경은 PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 1·보류 3)의 반영이다: buildElement 의 NODE_ENV 되돌리기, agent 가 바뀌면 ConnectedWidget 을 새로 띄우는 key, site_file_mutations.toml 43 의 이름과 표지, 그리고 시험 둘과 EMBED.md 한 문단. 셀프 리뷰를 반영한 뒤 커밋하고, 그 뒤에 변이 전체(PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml, 25, 백그라운드)를 돌려 실제 출력으로 표지를 맞추고 .scratch/web-widget/probes/README.md 의 element_mutations.toml 행 "잰 판" 칸을 채운다. 이어서 티켓 49행 [x]와 Status done, 일지 마무리(회고 포함) 커밋, PR(/git-pr. 체크리스트의 PR 직전 리뷰 줄에 이 일지의 결과를 옮긴다. 셀프 리뷰가 시험을 고치지 않았으면 PR 직전 리뷰를 다시 돌리지 않는다), 병합(next-session "워크트리에서 병합할 때")이다. pnpm -C web verify·run_checks·위젯 e2e 는 이 반영 뒤에 돌리지 않았다. 일지 docs/journal/2026-10-24-14-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T13:50:53Z
+
+## 이어받은 세션 (셀프 리뷰 직전 → 병합)
+
+> 사용자: /implement .scratch/web-widget/issues/10-widget-element-embed.md (위 인계 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 구현` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 기준 148652ef 에서 움직이지 않았다. 나란한 07 과 11 은 둘 다 브랜치에 커밋이 있고 아직 병합되지 않았다.
+
+### 셀프 리뷰 (PR 직전 리뷰의 반영)
+
+`/code-review 945b2931`, 기준 945b2931, 바뀐 파일 7, 미추적 0, 커밋 0. 표준 축(sonnet·high)과 명세 축을 나란히 돌렸다. 표준 축은 Major 하나·Minor 둘·Nit 하나, 명세 축은 Minor 둘·Nit 셋이었다. 두 축 모두 밀 주장 가운데 Vite 의 `NODE_ENV`(34306행의 `"production"`, 37262행), Next 의 `preAction` 과 타입(`next/types/global.d.ts` 23행), 시작 래퍼가 같은 프로세스에서 빌드 뒤 `chdir` 하고 next 를 부르는 것, 변이 표 43 의 주석을 대 보고 맞다고 했다. 표준 축은 43 을 `mutate.py` 로 돌려 기대대로 빨간 것도 봤다.
+
+고친 것:
+
+- [Major·Minor, 두 축] `WidgetElement.tsx` 머리 주석의 "그대로 두면 앞 에이전트와 나눈 대화가 새 에이전트의 실행으로 이어진다"가 core 와 어긋났다. 거슬러 읽기는 지금 에이전트의 교환만 모아 새 에이전트는 앞 에이전트의 교환을 받지 않는다(`continuation.py` 모듈 독스트링 "거슬러 읽기", `tests/core/test_run.py` 의 `test_에이전트를_바꿔_쓰면_각자_자기_교환만_받는다`). 앞 세션의 PR 직전 리뷰 판정 줄("서버의 이어 가기는 주체와 결말만 보고 에이전트가 같은지 보지 않는다")은 맞았고, 주석으로 옮기며 뒤 절반을 덧붙인 것이 틀렸다. `key` 를 다는 까닭을 화면과 상태의 어긋남으로 고쳤다: 화면의 대화와 이어 갈 실행은 위젯 한 벌(`useConversation` 의 `useReducer`)이 들어, 그대로 두면 새 에이전트 아래에 앞 대화가 보이고 다음 요청이 앞 에이전트의 실행을 이어 가는데 새 에이전트는 그 대화를 받지 못한다.
+- [Minor, 두 축] `EMBED.md` 의 "iframe 방식에서 질의를 바꾸면 위젯 페이지가 새로 뜨는 것과 같다"는 `agent` 에만 맞았다. iframe 은 질의의 어느 값을 바꾸든 새로 뜨고 페이지 안 방식은 `agent` 밖의 속성에서 대화를 둔다. 명세 축은 "대화를 새로 시작"이 09 의 저장(키가 에이전트)이 들어오면 거짓이 된다고도 짚었다. 문단을 "속성을 바꾸면 그 자리에서 다시 그리고 대화는 그대로 둔다. `agent` 만 다르다. `agent` 를 바꾸면 위젯을 새로 띄워, 앞 에이전트와 나눈 대화를 새 에이전트 아래에 두지도 이어 가지도 않는다. iframe 방식은 질의의 어느 값을 바꾸든 위젯 페이지가 새로 뜬다"로 고쳤다. 저장이 들어와도 앞 에이전트의 대화를 새 에이전트 아래에 두지 않는 것은 그대로라 09 에 넘길 것은 없다.
+- [Minor, 표준] 시험 주석 "jsdom 의 shadow root 에서는 글을 넣을 수 없어"가 넓었다. ADR 0024 의 근거는 user-event 로 친 글자가 React 의 `onChange` 에 닿지 않았고 `fireEvent.input` 은 닿았다는 것이다. user-event 로 좁혔다(주석만, 시험의 동작은 그대로).
+
+남긴 것:
+
+- [Nit, 명세] 시험 이름의 "다른 속성"과 달리 바꾸는 것은 `heading`·`theme` 둘이다. `key` 가 `embed.agent` 하나만 보므로 둘로 그 자리 다시 그리기를 보면 되고, 속성마다의 다시 그리기는 앞 시험 "호스트에 테마와 모드와 보통 밀도가 달리고, 속성을 바꾸면 다시 그린다"가 본다.
+- [Nit, 명세] 사이트가 응답 도중 `agent` 를 바꾸면 "새 대화"의 막힘이 걸리지 않고 그 응답이 끊긴다. 사이트가 속성을 바꾸는 때는 사이트의 몫이고, iframe 방식에서 질의를 바꿔 문서가 새로 뜰 때와 같다.
+- [Nit, 명세] 새로 띄운 위젯은 그대로인 `theme`·`mode`·기준 주소 문제를 `console.error` 로 다시 남긴다. 새로 띄운 한 벌의 첫 그리기이고 iframe 문서가 새로 뜰 때와 같다. `ConnectedWidget.tsx` 머리의 "다시 그려도 글이 같으면 다시 남기지 않는다"는 같은 한 벌의 다시 그리기를 말한다.
+- [Nit, 명세] `agent` 를 바꾸면 대화를 새로 띄우는 것이 명세에 없는 새 약속이라는 지적. 티켓의 "이름과 뜻은 03의 질의와 같다"와 iframe 의 질의 바꾸기가 그 뜻이라 명세를 고치지 않는다.
+- [Nit, 표준] `process.env` 를 넓은 타입으로 받는 줄이 구현과 시험에 한 벌씩이다(Duplicated Code). 시험 쪽은 그 시험의 준비이고 구현의 도우미에 기대게 하지 않는다.
+
+이 반영으로 새로 쓴 사실 문장(PR 봇에 밀 주장):
+
+- `element/WidgetElement.tsx`: "화면의 대화와 이어 갈 실행은 위젯 한 벌(useConversation)이 들어, 그대로 두면 새 에이전트 아래에 앞 에이전트와 나눈 대화가 보이고 다음 요청이 앞 에이전트의 실행을 이어 간다", "서버의 이어 가기는 앞 실행의 에이전트가 같은지 보지 않고 지금 에이전트의 교환만 모아(core/continuation.py), 새 에이전트는 화면에 보인 그 대화를 받지 못한다".
+- `element/WidgetElement.test.tsx`: "jsdom 의 shadow root 에서는 user-event 로 친 글자가 React 의 onChange 에 닿지 않아(ADR 0024)".
+- `EMBED.md`: "페이지 안 방식에서 속성을 바꾸면 위젯이 그 자리에서 다시 그리고 대화는 그대로 둔다. `agent`만 다르다. `agent`를 바꾸면 위젯을 새로 띄워, 앞 에이전트와 나눈 대화를 새 에이전트 아래에 두지도 이어 가지도 않는다. iframe 방식은 질의의 어느 값을 바꾸든 위젯 페이지가 새로 뜬다."
+
+셀프 리뷰가 시험의 동작을 고치지 않아(주석 한 줄만) PR 직전 리뷰는 다시 돌리지 않는다.
+
+다시 돌린 것:
+
+- 바꾼 파일의 `prettier --check`(0), `eslint`(0), `vitest --project widget-pages apps/widget/element/WidgetElement.test.tsx`(7 통과).
+- 커밋의 pre-commit 첫 번: `web-verify`(312.9초)를 포함한 검사 열하나 가운데 pytest 하나만 빨갰다(587.7초, 5585 통과 1 실패). 실패는 `tests/adapters/test_filesystem.py::test_다른_스레드가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다` 의 `PermissionError`(WinError 5)였고 따로 돌리면 1.26초에 지났다. 이 커밋은 파이썬을 바꾸지 않았고, 대기열 306 이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)라 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+
 ## 다음
 
 - web-widget 07(실패와 거절)과 11(실제 모델 e2e)이 나란히 돈다. 07 이 화면을 더하면 두 방식에 함께 선다(`ConnectedWidget`). 07 과 `useConversation`·`api/runs/index.ts`·`WidgetPage.tsx` 가, 11 과 `e2e/stack.ts`·`.scratch/web-widget/probes/README.md` 가 겹쳐(커밋 직전 `tools/sibling_overlap.py`) 뒤에 병합하는 쪽이 글자 충돌을 푼다.

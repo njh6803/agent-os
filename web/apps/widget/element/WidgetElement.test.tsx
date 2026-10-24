@@ -77,6 +77,24 @@ test("호스트에 테마와 모드와 보통 밀도가 달리고, 속성을 바
   expect(within(wrapper(host)).getByRole("heading", { name: "주문 도우미" })).toBeTruthy();
 });
 
+test("agent 를 바꾸면 위젯을 새로 띄워 대화를 새로 시작하고, 다른 속성은 그 자리에서 다시 그린다", () => {
+  // 대화의 상태(이어 갈 실행, 초안)는 위젯 한 벌이 든다. jsdom 의 shadow root 에서는 user-event 로 친 글자가 React 의
+  // onChange 에 닿지 않아(ADR 0024) 초안 대신 입력창이 새 요소인지로 본다.
+  const host = mount(define(), { agent: "order-helper" });
+  const first = within(wrapper(host)).getByRole("textbox", { name: "요청" });
+
+  act(() => {
+    host.setAttribute("heading", "주문 도우미");
+    host.setAttribute("theme", "jacho");
+  });
+  expect(within(wrapper(host)).getByRole("textbox", { name: "요청" })).toBe(first);
+
+  act(() => {
+    host.setAttribute("agent", "refund-helper");
+  });
+  expect(within(wrapper(host)).getByRole("textbox", { name: "요청" })).not.toBe(first);
+});
+
 test("잘못 준 agent 는 위험 알림과 막힌 입력창, 그 속성 이름을 든 console.error 를 남긴다", () => {
   const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
   const host = mount(define(), { agent: "Order Helper", mode: "sepia" });

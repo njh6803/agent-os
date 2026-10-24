@@ -84,3 +84,23 @@ test("빌드한 번들은 모듈이 아닌 스크립트 하나이고, 빌드 때
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("빌드는 비어 있던 NODE_ENV 를 비운 채로 둔다", async () => {
+  // 시작 래퍼는 빌드한 프로세스에서 이어 `next dev` 를 부른다. NODE_ENV 가 production 으로 남으면 next 가 경고를 내고
+  // 그 값으로 개발 서버를 띄운다. vitest 가 NODE_ENV 를 채워 두므로 지운 뒤 빌드한다.
+  const out = mkdtempSync(join(tmpdir(), "widget-element-"));
+  // Next 의 타입은 NODE_ENV 를 늘 있는 값으로 적는다. 비운 자리를 보려고 넓은 타입으로 받는다.
+  const processEnv: Record<string, string | undefined> = process.env;
+  const before = processEnv["NODE_ENV"];
+  delete processEnv["NODE_ENV"];
+  try {
+    await buildElement({}, out);
+
+    expect(processEnv["NODE_ENV"]).toBeUndefined();
+  } finally {
+    if (before !== undefined) {
+      processEnv["NODE_ENV"] = before;
+    }
+    rmSync(out, { recursive: true, force: true });
+  }
+});

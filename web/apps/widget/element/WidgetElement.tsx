@@ -3,7 +3,11 @@
 // 같은 위젯 한 벌(components/pages/ConnectedWidget)이다. 번들 입구(index.ts)가 이 클래스를 정의한다.
 //
 // - 속성(attribute)은 다섯이고 이름과 뜻은 iframe 의 질의와 같다(lib/embed.ts). 바뀌면 다시 그린다. 잘못 준 속성은
-//   하나마다 그 이름을 든 console.error 로 남는다.
+//   하나마다 그 이름을 든 console.error 로 남는다. `agent` 가 바뀌면 위젯 한 벌을 새로 띄운다. 화면의 대화와 이어 갈
+//   실행은 위젯 한 벌(useConversation)이 들어, 그대로 두면 새 에이전트 아래에 앞 에이전트와 나눈 대화가 보이고 다음
+//   요청이 앞 에이전트의 실행을 이어 간다. 서버의 이어 가기는 앞 실행의 에이전트가 같은지 보지 않고 지금 에이전트의
+//   교환만 모아(core/continuation.py), 새 에이전트는 화면에 보인 그 대화를 받지 못한다. iframe 방식은 질의가 바뀌면
+//   문서가 새로 뜬다.
 // - `open` 모드의 shadow root 에 그린다. 페이지 스크립트는 이미 위젯과 같은 출처의 권한으로 돌아 `closed` 가 막는 것이
 //   없다(명세 "Shadow DOM"). 그 안의 감싼 요소(`data-ui-root`) 하나가 React 의 뿌리이고, 상속 속성은 디자인 토큰 CSS 가
 //   거기서 다시 정한다(ADR 0026).
@@ -105,7 +109,12 @@ export function widgetElement(setup: ElementSetup): CustomElementConstructor {
         messages.push(BASE_URL_PROBLEM);
       }
       root.render(
-        <ConnectedWidget embed={embed} problems={messages} connection={this.#connection} />,
+        <ConnectedWidget
+          key={embed.agent ?? ""}
+          embed={embed}
+          problems={messages}
+          connection={this.#connection}
+        />,
       );
     }
   };
