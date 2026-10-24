@@ -123,11 +123,14 @@ export function useConversation(
     dispatch({ type: "reset" });
   }, []);
 
+  // `waitingApproval` 은 렌더마다 새 객체를 돌려주므로, 콜백은 원시값인 멈춘 자리에만 기댄다.
+  // 결정을 받을 수 없으면(기다리는 승인 묻기가 없거나 이미 보내는 중) `null` 이다.
   const waiting = waitingApproval(conversation);
+  const pauseId = waiting === null || waiting.state.sending !== null ? null : waiting.pauseId;
   const runId = conversation.exchanges.at(-1)?.runId ?? null;
   const decide = useCallback(
     (decision: Decision) => {
-      if (waiting === null || waiting.state.sending !== null || runId === null) {
+      if (pauseId === null || runId === null) {
         return;
       }
       open.current?.abort();
@@ -137,9 +140,9 @@ export function useConversation(
       dispatch({ type: "deciding", decision: decision.decision });
       const body: DecisionBody =
         decision.decision === "approve"
-          ? { decision: "approve", pause_index: waiting.pauseId }
-          : { decision: "deny", reason: decision.reason, pause_index: waiting.pauseId };
-      void runDecision(runId, waiting.pauseId, body, abort.signal, {
+          ? { decision: "approve", pause_index: pauseId }
+          : { decision: "deny", reason: decision.reason, pause_index: pauseId };
+      void runDecision(runId, pauseId, body, abort.signal, {
         dispatch: (action) => {
           if (!abort.signal.aborted) {
             dispatch(action);
@@ -154,7 +157,7 @@ export function useConversation(
         },
       });
     },
-    [waiting, runId],
+    [pauseId, runId],
   );
 
   return { conversation, send, reset, decide, wait, invalid };

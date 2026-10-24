@@ -25,7 +25,8 @@ name = "사유를 JS trim 으로 가르면 다듬는 글자의 시험이 빨갛�
 runner = "pages"
 tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "는 '거부'가"]
 expect = "red"
-expect_output = ["U+0085 만 든 사유는 '거부'가 막힌다", "U+FEFF 만 든 사유는 '거부'가 막히지 않는다"]
+# 시험 이름만 적으면 통과한 시험도 트리 줄(`✓ 이름`)에 실려 표지가 되지 못한다. 실패 머리(`FAIL … > 이름`)의 `> ` 까지 든다.
+expect_output = ["> U+0085 만 든 사유는 '거부'가 막힌다", "> U+FEFF 만 든 사유는 '거부'가 막히지 않는다"]
 
 [[mutation.edit]]
 file = "web/apps/widget/lib/approval.ts"
@@ -46,10 +47,10 @@ expect_output = ["+   \"reason\": \"고객센터에 먼저 물어보겠습니다
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/useConversation.ts"
 old = '''
-          : { decision: "deny", reason: decision.reason, pause_index: waiting.pauseId };
+          : { decision: "deny", reason: decision.reason, pause_index: pauseId };
 '''
 new = '''
-          : { decision: "deny", reason: decision.reason.trim(), pause_index: waiting.pauseId };
+          : { decision: "deny", reason: decision.reason.trim(), pause_index: pauseId };
 '''
 
 [[mutation]]
