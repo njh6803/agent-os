@@ -1,5 +1,6 @@
-// 위젯의 시작 래퍼가 받는 인자. 래퍼가 루프백 판정을 거쳐 next 에 넘길 인자를 다시 짓는지, 어느 명령 앞에서 글꼴을
-// 준비하는지, 판정을 지난 명령을 그 차례로 따르는지를 본다. 프로세스를 띄우지 않는다(띄우는 것은 start.spawn.test.ts).
+// 위젯의 시작 래퍼가 받는 인자. 래퍼가 루프백 판정을 거쳐 next 에 넘길 인자를 다시 짓는지, 어느 명령 앞에서 빌드의
+// 입력(글꼴 파일과 페이지 안 번들)을 준비하는지, 판정을 지난 명령을 그 차례로 따르는지를 본다. 프로세스를 띄우지
+// 않는다(띄우는 것은 start.spawn.test.ts).
 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -43,7 +44,7 @@ describe("래퍼가 받는 인자", () => {
     });
   }
 
-  test("빌드는 글꼴을 준비한 뒤 next build 를 부르고, 서지 않으므로 호스트와 포트를 받지 않는다", () => {
+  test("빌드는 입력을 준비한 뒤 next build 를 부르고, 서지 않으므로 호스트와 포트를 받지 않는다", () => {
     expect(nextCommand(["build"], "3000")).toEqual({ args: ["build"], prepare: true });
     expect(refusal(["build", "--port", "3100"])).toContain("build");
   });
@@ -62,19 +63,38 @@ describe("판정을 지난 명령을 따르기", () => {
     ["build", ["준비", "next build"]],
     ["start", ["next start"]],
   ] as const) {
-    test(`${command} 는 ${expected.join(" 뒤에 ")} 를 부른다`, () => {
+    test(`${command} 는 ${expected.join(" 뒤에 ")} 를 부른다`, async () => {
       const judged = nextCommand([command], "3000");
       if ("problem" in judged) {
         throw new Error(`${command} 가 거부됐다: ${judged.problem}`);
       }
       const calls: string[] = [];
-      launch(judged, {
-        prepare: () => calls.push("준비"),
+      await launch(judged, {
+        // 페이지 안 번들의 빌드는 비동기다. 준비가 끝난 뒤에야 next 를 부른다.
+        prepare: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          calls.push("준비");
+        },
         run: (args) => calls.push(`next ${args[0] ?? ""}`),
       });
       expect(calls).toEqual(expected);
     });
   }
+
+  test("준비가 실패하면 next 를 부르지 않는다", async () => {
+    const judged = nextCommand(["build"], "3000");
+    if ("problem" in judged) {
+      throw new Error(`build 가 거부됐다: ${judged.problem}`);
+    }
+    const calls: string[] = [];
+    await expect(
+      launch(judged, {
+        prepare: () => Promise.reject(new Error("사이트 파일을 받아들일 수 없다")),
+        run: (args) => calls.push(`next ${args[0] ?? ""}`),
+      }),
+    ).rejects.toThrow("사이트 파일을 받아들일 수 없다");
+    expect(calls).toEqual([]);
+  });
 });
 
 describe("사이트 파일의 경로", () => {

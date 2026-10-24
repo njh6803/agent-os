@@ -1,4 +1,4 @@
-// 위젯을 품는 사이트(web-widget 명세 "임베드"의 iframe 방식). 위젯과 다른 출처에 선다. 같은 서버가 두 호스트 이름으로
+// 위젯을 품는 사이트(web-widget 명세 "임베드"의 두 방식). 위젯과 다른 출처에 선다. 같은 서버가 두 호스트 이름으로
 // 불리며 출처 둘을 낸다. `site.localhost` 는 사이트 파일의 허용 출처이고 `other.localhost` 는 아니다.
 //
 // - `/` 는 iframe 위젯을 품은 페이지다. 질의 `agent` 가 위젯의 에이전트다. 위젯이 토큰을 물으면 이 서버의 `/token` 에서
@@ -7,10 +7,12 @@
 //   로 가짜 토큰을 위젯에 먼저 보낸다. 둘이 보냈다고 알린 뒤 0.5초를 더 기다려 페이지가 진짜 토큰을 보낸다. 위젯이
 //   가짜를 받으면 401 이 되고, 버리면 진짜로 실행이 끝난다.
 // - `/token` 은 사이트의 키로 서명한 새 토큰이다. 시험이 서버에 직접 보내는 요청도 이것을 쓴다.
+// - `/element` 와 그 아래는 페이지 안 방식의 페이지다(element-site.ts).
 //
-// 페이지의 스크립트는 인라인이다. 사이트 페이지에는 CSP 를 두지 않는다.
+// iframe 페이지의 스크립트는 인라인이고 CSP 를 두지 않는다. CSP 를 다는 페이지는 페이지 안 방식의 한 판뿐이다.
 
 import { createServer, type Server } from "node:http";
+import { elementAnswer } from "./element-site";
 import { signToken, type SiteKey } from "./token";
 
 export const INTRUDER_TOKEN = "intruder-token";
@@ -123,6 +125,12 @@ export async function startSite(port: number, origins: SiteOrigins, key: SiteKey
       const intruders = url.searchParams.get("intruders") === "1";
       outgoing.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       outgoing.end(page(origins.widget, agent, intruders, origins.other));
+      return;
+    }
+    const answer = elementAnswer(url, origins);
+    if (answer !== null) {
+      outgoing.writeHead(answer.status, answer.headers);
+      outgoing.end(answer.body);
       return;
     }
     outgoing.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });

@@ -699,11 +699,13 @@ new = '''
 '''
 
 [[mutation]]
-name = "래퍼가 풀어 낸 경로를 next 에 넘기지 않으면 설정 파일이 앱 폴더에서 찾아 빌드 시험이 빨갛다"
+# web-widget 10 뒤로 번들 빌드가 next 보다 먼저, 앱 폴더로 옮기기 전에 사이트 파일을 읽는다. 그래서 이 변이는 파일을
+# 찾고 진단이 준 그대로의 상대 경로를 든다. 옛 표지 "파일이 없다" 는 실패 줄 옆에 보이는 시험의 주석에서만 맞았다.
+name = "래퍼가 풀어 낸 경로를 변수에 되쓰지 않으면 빌드의 진단이 준 그대로의 상대 경로를 들어 빨갛다"
 runner = "node"
 tests = ["apps/widget/tools/start.spawn.test.ts", "-t", "상대 경로로 준"]
 expect = "red"
-expect_output = ["파일이 없다"]
+expect_output = ["+ 사이트 파일 sites.toml 을 받아들일 수 없다"]
 
 [[mutation.edit]]
 file = "web/apps/widget/tools/start.ts"

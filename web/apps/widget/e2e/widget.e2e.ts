@@ -1,5 +1,6 @@
 // 위젯 e2e 의 iframe 사례(web-widget 티켓 06). 준비(stack.ts)가 띄운 실제 serve·위젯 Next·같은 출처의 중계 앞에서,
-// 다른 출처의 사이트 페이지(site.ts)가 iframe 위젯을 품는다. 페이지 안 방식의 사례는 티켓 10, 다시 붙기는 09 가 더한다.
+// 다른 출처의 사이트 페이지(site.ts)가 iframe 위젯을 품는다. 페이지 안 방식의 사례는 element.e2e.ts 이고, 다시 붙기는
+// 09 가 더한다.
 //
 // postMessage 거르기의 "허용 밖 출처" 몫은 여기서 따로 가르지 못한다. 부모가 허용 밖 출처면 `frame-ancestors` 가 먼저
 // iframe 을 막아, 부모이면서 허용 밖인 보낸 쪽을 만들 수 없기 때문이다. 그 갈래는 페이지 시험(jsdom)이 본다. 여기의
@@ -7,8 +8,9 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
+import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { stack } from "./env";
+import { loopback, recordRequests, send } from "./helpers";
 import { HTML_OUTPUT } from "./plugins";
 
 const REQUEST_CHARS = 20_000;
@@ -20,30 +22,6 @@ function widget(page: Page): FrameLocator {
 /** 도구 에이전트가 둘째 도구 앞에서 기다리는 문을 연다. */
 function openGate(name: string): void {
   writeFileSync(join(stack().gates, name), "");
-}
-
-async function send(frame: FrameLocator, request: string): Promise<void> {
-  await frame.getByRole("textbox", { name: "요청" }).fill(request);
-  await frame.getByRole("button", { name: "보내기" }).click();
-}
-
-/** 그 페이지(iframe 포함)가 보낸 요청을 모은다. */
-function recordRequests(page: Page): Request[] {
-  const requests: Request[] = [];
-  page.on("request", (request) => {
-    requests.push(request);
-  });
-  return requests;
-}
-
-/**
- * 시험 프로세스가 직접 부를 주소. `*.localhost` 를 루프백으로 푸는 것은 브라우저의 규칙이라(playwright.config.ts) node 의
- * 요청은 같은 포트의 127.0.0.1 로 보낸다.
- */
-function loopback(origin: string): string {
-  const url = new URL(origin);
-  url.hostname = "127.0.0.1";
-  return url.origin;
 }
 
 async function siteToken(page: Page): Promise<string> {
