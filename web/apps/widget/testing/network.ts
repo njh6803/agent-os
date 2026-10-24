@@ -69,6 +69,23 @@ export function gate(): { readonly wait: Promise<void>; readonly open: () => voi
   return { wait, open };
 }
 
+/**
+ * 상한에 걸린 429. 봉투에 어느 상한인지(`limit`)를 더하고 `Retry-After` 를 단다. 계약 밖의 상한도 적을 수 있게
+ * `limit` 은 글자이고, `retryAfter` 가 null 이면 헤더를 달지 않는다.
+ */
+export function limited(limit: string, retryAfter: string | null): Response {
+  return HttpResponse.json(
+    {
+      code: "too_many_requests",
+      limit,
+      message: "봉투의 문구",
+      request_id: "req-0001",
+      violations: [],
+    },
+    { status: 429, headers: retryAfter === null ? {} : { "Retry-After": retryAfter } },
+  );
+}
+
 /** 서버가 내는 에러 봉투. 위젯은 상태 코드로만 가른다. */
 export function rejection(status: number): Response {
   const codes: Record<number, string> = {

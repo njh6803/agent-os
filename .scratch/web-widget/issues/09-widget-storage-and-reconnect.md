@@ -8,7 +8,7 @@
 
 **Blocked by:** 08 (승인 묻기)
 
-**05가 넘기는 자리.** 스트림이 결말 없이 끝나면 지금은 `lib/conversation.ts`의 `ended` 동작이 그 교환을 `rejected`로 닫는다(05가 정한 것 2). 재접속은 마지막 항목으로 가르는 이 자리를 바꾼다. 받은 프레임의 `id`는 지금 버린다(`components/pages/useConversation.ts`).
+**05가 넘기는 자리.** 스트림이 결말 없이 끝나면 지금은 `lib/conversation.ts`의 `ended` 동작이 그 교환을 처리하지 못한 것(`error`)으로 닫고 처리하지 못한 거절의 셈(`errorStreak`)을 하나 올린다(05가 정한 것 2를 07이 거절 표의 500 행으로 바꿨다). 읽는 도중에 끊긴 스트림도 `components/pages/useConversation.ts`의 `attempt`가 `ended`로 넘긴다. 그래서 시작 항목 뒤의 끊김도 그 셈에 들어, 세 번째로 거듭되면 알림에 "새 대화"가 붙는다. 재접속은 마지막 항목으로 가르는 이 자리를 바꾼다. 받은 프레임의 `id`는 지금 버린다(`components/pages/useConversation.ts`).
 
 **Status:** ready-for-agent
 

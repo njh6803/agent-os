@@ -8,11 +8,17 @@
 // - 다음 요청은 마지막으로 끝난(`finished`) 실행의 이어 가기다. 실패한 교환은 이어 갈 실행을 바꾸지 않는다.
 // - 화면 읽기 프로그램이 읽을 글(새 도구 줄, 끝난 출력)을 생긴 차례로 쌓는다. 진행 표시의 "부르는 중"은 쌓지 않는다.
 //
-// 실패 원인마다의 알림과 거절의 표는 티켓 07, 승인 묻기는 08, 재접속은 09 가 들인다. 그동안 실패(`failed`)와 끝내지
-// 못함(`unfinished`)은 한 결말 `failed` 이고, 401 과 토큰을 받지 못한 것은 `unauthorized`, 그 밖의 거절과 결말 없이
-// 끝난 스트림은 `rejected` 다.
+// - 시작과 이어 가기의 거절은 상태 코드로 가른다(명세 "요청이 거절될 때"). 401·404·409 와 처리하지 못한 것은 요청을
+//   남긴 채 결말이 되고, 422 와 429 는 요청을 입력창으로 되돌리므로 교환을 뺀다. 처리하지 못한 것이 결말을 받은 요청
+//   없이 세 번째로 거듭되면 그 알림에 "새 대화"가 붙는다.
+// - 이어 가기가 두 번 404 면 대화를 비우고 같은 요청의 교환 하나로 다시 시작한다. 다시 보내는 것은 부르는 쪽이다.
+//
+// 승인 묻기는 티켓 08, 재접속은 09 가 들인다. 그때까지 시작 항목 뒤에 결말 없이 끝난 스트림은 처리하지 못한 것이다.
 
 import type { EndUserItem } from "../api/runs";
+
+/** 실패 항목의 원인(ADR 0031). */
+export type FailureCause = NonNullable<Extract<EndUserItem, { type: "failed" }>["cause"]>;
 
 export interface ToolCall {
   readonly tool: string;
@@ -22,11 +28,22 @@ export interface ToolCall {
 /** 교환의 결말. 도는 동안에는 없다. */
 export type Outcome =
   | { readonly kind: "finished"; readonly output: string }
-  | { readonly kind: "failed" }
+  /** 실패 항목. 원인은 받은 그대로다. 계약 밖의 값도 그대로 들고, 그리는 쪽이 모르는 값으로 다룬다. */
+  | { readonly kind: "failed"; readonly cause: FailureCause | null; readonly runId: string }
+  /** 끝내지 못함 항목. 그 항목은 실행 식별자를 들지 않아 `started` 의 것을 쓴다. */
+  | { readonly kind: "unfinished"; readonly runId: string | null }
   | { readonly kind: "paused" }
+  /** 401, 또는 토큰을 받지 못했다. */
   | { readonly kind: "unauthorized" }
-  /** 401 밖의 거절과 결말 없이 끝난 스트림(`ended`). 뒤의 것은 티켓 09 가 재접속으로 갈라낸다. */
-  | { readonly kind: "rejected" };
+  /** 시작의 404. 에이전트가 없거나 그 사이트의 열 에이전트 밖이다. */
+  | { readonly kind: "not-found" }
+  /** 409. 꺼진 에이전트와 끝나지 않은 앞 실행이 같은 코드다. */
+  | { readonly kind: "unavailable" }
+  /**
+   * 처리하지 못했다. 500, 표 밖의 상태, 응답 전의 네트워크 실패, 결말 없이 끝난 스트림이다. 같은 대화에서 세 번째로
+   * 거듭된 것이면 `offerNew` 가 참이고 알림에 "새 대화"가 붙는다.
+   */
+  | { readonly kind: "error"; readonly offerNew: boolean };
 
 export interface Exchange {
   /** 대화 안에서 겹치지 않는 번호. 화면의 key 다. */
@@ -49,17 +66,29 @@ export interface Conversation {
   /** 숨긴 읽기 영역이 차례로 읽을 글. */
   readonly announcements: readonly string[];
   readonly nextId: number;
+  /** 처리하지 못한 거절(`error`)이 결말을 받은 요청 없이 거듭된 수. */
+  readonly errorStreak: number;
+  /** 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작했다. 대화의 맨 위에 정보 알림이 선다. */
+  readonly restarted: boolean;
 }
 
 export type Action =
   | { readonly type: "sent"; readonly request: string }
   | { readonly type: "item"; readonly item: EndUserItem }
-  /** 스트림이 끝났다. 결말 없이 끝났으면 거절과 같다(재접속은 티켓 09). */
+  /**
+   * 스트림이 끝났다. 결말 없이 끝났으면 처리하지 못한 것이다. 시작 항목 전이면 거절 표의 500 행이고, 뒤면 티켓 09 가
+   * 재접속으로 갈라낼 때까지 같은 알림이다.
+   */
   | { readonly type: "ended" }
   /** 실행이 받아들여지지 않았다. 상태 코드이고 응답 전의 네트워크 실패면 null 이다. */
   | { readonly type: "rejected"; readonly status: number | null }
   /** 토큰을 받지 못했다. 요청을 보내지 않는다. */
   | { readonly type: "no-token" }
+  /**
+   * 이어 가기가 두 번 404 였다. 화면과 기억을 비우고 도는 교환 하나만 남긴다. 그 요청은 시작으로 다시 간다(ADR 0024
+   * 이력 2026-10-23).
+   */
+  | { readonly type: "restarted" }
   /** 새 대화. */
   | { readonly type: "reset" };
 
@@ -68,7 +97,12 @@ export const INITIAL: Conversation = {
   continueFrom: null,
   announcements: [],
   nextId: 0,
+  errorStreak: 0,
+  restarted: false,
 };
+
+/** 이만큼째 거듭된 처리하지 못한 거절에 "새 대화"를 단다. */
+const OFFER_NEW_AT = 3;
 
 /** 대화가 어디에 있는가. 마지막 교환으로 가른다. */
 export type Phase = "idle" | "running" | "paused";
@@ -112,13 +146,53 @@ export function reduce(state: Conversation, action: Action): Conversation {
       };
     case "no-token":
       return settle(state, { kind: "unauthorized" });
+    case "restarted": {
+      const running = state.exchanges.at(-1);
+      if (running?.outcome !== null) {
+        return state;
+      }
+      return { ...INITIAL, exchanges: [running], nextId: state.nextId, restarted: true };
+    }
     case "rejected":
-      return settle(state, { kind: action.status === 401 ? "unauthorized" : "rejected" });
+      switch (action.status) {
+        case 401:
+          return settle(state, { kind: "unauthorized" });
+        case 404:
+          return settle(state, { kind: "not-found" });
+        case 409:
+          return settle(state, { kind: "unavailable" });
+        // 요청을 입력창으로 되돌리므로 대화에서 뺀다. 되돌리는 것은 부르는 쪽이다.
+        case 422:
+        case 429:
+          return withdraw(state);
+        default:
+          return settleError(state);
+      }
     case "ended":
-      return settle(state, { kind: "rejected" });
+      return settleError(state);
     case "item":
       return applyItem(state, action.item);
   }
+}
+
+/** 도는 교환을 대화에서 뺀다. */
+function withdraw(state: Conversation): Conversation {
+  if (state.exchanges.at(-1)?.outcome !== null) {
+    return state;
+  }
+  return { ...state, exchanges: state.exchanges.slice(0, -1) };
+}
+
+/** 처리하지 못한 것으로 끝낸다. 셈을 하나 올리고, 세 번째로 거듭된 것이면 "새 대화"를 단다. */
+function settleError(state: Conversation): Conversation {
+  if (state.exchanges.at(-1)?.outcome !== null) {
+    return state;
+  }
+  const errorStreak = state.errorStreak + 1;
+  return {
+    ...settle(state, { kind: "error", offerNew: errorStreak >= OFFER_NEW_AT }),
+    errorStreak,
+  };
 }
 
 /** 도는 교환에 결말을 준다. 이미 결말이 있으면 그대로다. */
@@ -162,13 +236,21 @@ function applyItem(state: Conversation, item: EndUserItem): Conversation {
       return state;
     case "paused":
       return settle(state, { kind: "paused" });
+    // 결말을 받은 요청이 오면 처리하지 못한 거절의 셈이 처음으로 돌아간다.
     case "finished": {
       const next = settle(state, { kind: "finished", output: item.output });
-      return announce({ ...next, continueFrom: running.runId ?? state.continueFrom }, item.output);
+      return announce(
+        { ...next, continueFrom: running.runId ?? state.continueFrom, errorStreak: 0 },
+        item.output,
+      );
     }
     case "failed":
+      return {
+        ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        errorStreak: 0,
+      };
     case "unfinished":
-      return settle(state, { kind: "failed" });
+      return { ...settle(state, { kind: "unfinished", runId: running.runId }), errorStreak: 0 };
   }
 }
 
