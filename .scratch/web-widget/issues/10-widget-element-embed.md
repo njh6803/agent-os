@@ -14,6 +14,7 @@
 
 - [ ] **element 번들은 모듈이 아니라 즉시 실행되는 classic 스크립트 하나(IIFE)다.** 청크로 나뉘지 않는다. 빌드가 Next의 `public/`에 넣어 `/widget/element.js`로 나간다
 - [ ] **번들 응답에도 글꼴과 같은 `Access-Control-Allow-Origin: *`를 `next.config`의 헤더로 단다.** 사이트가 `<script>`에 `crossorigin="anonymous"`를 붙이면 classic 스크립트도 CORS로 받아, 그 헤더가 없으면 번들이 실리지 않는다. 자격 증명 없는 공개 파일이라 `*`로 둔다
+- [ ] **element 번들의 입력창 상한도 04의 값이다.** Vite 빌드 설정이 `web/apps/widget/tools/site-file.ts`의 `buildInput`을 불러 가장 작은 요청 글자 수 상한을 싣고, 변수가 준 파일을 읽지 못하면 빌드가 실패하는 것도 같다(fail-closed, ADR 0024). 페이지 안 방식은 postMessage를 쓰지 않아 허용 출처는 싣지 않는다. 상대 경로의 `AGENT_OS_SITE_FILE`은 시작 래퍼가 푼다(04)
 - [ ] **디자인 토큰 CSS만 `?inline`으로 싣는다.** 글꼴 파일은 번들에 박지 않는다(라이브러리 모드는 `?url` 자산도 박는다)
 - [ ] **API의 기준 주소는 번들 스크립트의 출처다.** 번들이 처음 실행될 때 `document.currentScript`가 `HTMLScriptElement`의 인스턴스일 때만 그 `src` 속성(property)에서 출처를 읽어 둔다. 최종 사용자 경로는 그 아래 `/end-user`다
 - [ ] **인스턴스가 아니면 요청을 보내지도 토큰 함수를 부르지도 않는다.** `document`의 이름 있는 속성이 내장 속성을 가려(DOM clobbering), 사이트 페이지의 `<img name="currentScript" src="https://<다른 출처>/">`가 `document.currentScript` 자리에 설 수 있다. 그 `src`를 기준 주소로 쓰면 요청마다 서명 토큰이 그 출처로 간다. 그래서 `getAttribute("src")`나 `"src" in`으로 좁히지 않고, 인스턴스가 아니면(없음, 다른 요소, 컬렉션) 잘못 준 속성과 같은 위험 알림과 `console.error`를 남긴다(명세 "API의 기준 주소")
@@ -34,7 +35,7 @@
 
 ### 임베드 안내(위젯 앱 폴더의 마크다운 하나)
 
-- [ ] **목차.** 두 방식의 태그와 속성. 서명 토큰(RS256, 클레임 다섯 `iss`·`sub`·`aud`·`exp`·`iat`, 수명 600초 이하, 키 교체의 `kid`, `sub`는 사이트가 인증한 오래 가는 사용자 식별자여야 한다는 사이트의 의무). 허용 출처의 표기(04의 규칙). postMessage에서 사이트가 지킬 것(그 iframe의 창에만, 위젯 출처를 대상으로 보낸다). 사이트의 CSP에서 열어 둘 자리(`script-src`·`connect-src`·`font-src`에 위젯 출처, iframe 방식은 `frame-src`). CSP가 글꼴을 막으면 시스템 글꼴로 그려진다는 것. 같은 에이전트를 한 페이지에 둘 두지 않는 것. 사이트가 기대는 공개 표면(속성 다섯, postMessage의 `type` 둘)을 바꿀 때는 옛 이름을 한동안 함께 받는다는 것
+- [ ] **목차.** 두 방식의 태그와 속성. 서명 토큰(RS256, 클레임 다섯 `iss`·`sub`·`aud`·`exp`·`iat`, 수명 600초 이하, 키 교체의 `kid`, `sub`는 사이트가 인증한 오래 가는 사용자 식별자여야 한다는 사이트의 의무). 허용 출처의 표기(04의 규칙. IP 호스트의 출처와 CSP의 문법 밖인 호스트(밑줄, `$`, 빈 라벨이 든 것)의 출처는 iframe 방식에서 맞지 않을 수 있어, 영문자·숫자·하이픈으로 된 호스트 이름을 쓰라고 적는다. CSP3 2026-09-16 Working Draft의 문법은 호스트 글자를 그 셋으로 두고, host-part 대조는 host가 domain이 아니면 맞지 않는다, `tests/fixtures/site_file/README.md`). postMessage에서 사이트가 지킬 것(그 iframe의 창에만, 위젯 출처를 대상으로 보낸다). 사이트의 CSP에서 열어 둘 자리(`script-src`·`connect-src`·`font-src`에 위젯 출처, iframe 방식은 `frame-src`). CSP가 글꼴을 막으면 시스템 글꼴로 그려진다는 것. 같은 에이전트를 한 페이지에 둘 두지 않는 것. 사이트가 기대는 공개 표면(속성 다섯, postMessage의 `type` 둘)을 바꿀 때는 옛 이름을 한동안 함께 받는다는 것
 - [ ] 안내가 드는 값(클레임, 수명, 경로, 메시지의 `type`)이 코드와 같은지를 이 티켓을 마치기 전에 대 본다
 
 ### 시험
