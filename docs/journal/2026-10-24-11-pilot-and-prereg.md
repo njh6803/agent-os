@@ -93,3 +93,7 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 - 옛 표를 `.scratch/model-rerun/probes/branches-2026-10-23.json`으로 고정했다(`git show db3e90db^:…`).
 - 되살릴 목록에서 end-user-channel-05·04 와 conversation-04 를 뺐다. 셋은 `-m llm`으로만 걸려 낱말을 뺀 뒤에는 거르기에 걸리지 않고, 되살리기는 낱말에 걸린 후보만 받아 첫 실행이 "바깥 검증 낱말에 걸리지 않았다"로 2를 냈다. 되살리지 않아도 후보로 돌아오므로 사람이 고른 결과와 같다. 남은 넷은 model-rerun-10·05, end-user-continuation-06, web-admin-01 이다.
 - 후보 표를 `--rev 80ff61f1`(브랜치 표를 모은 때)로 다시 짓기 시작했다(2026-10-24T09:06Z, 백그라운드).
+
+### 다시 지은 후보 표
+
+2026-10-24T12:36Z 에 끝났다(띄운 때 09:06Z, 약 3시간 30분). 끝 줄: 날짜 안 남은 후보 9개(문턱 12개), 거슬러 채워 남은 후보 3개, 그 3개 모두 B 에 `tools/run_checks.py`가 없다(`web/package.json`은 있다). 날짜 안 9개는 model-rerun-10(되살림), web-widget-02·01, ticket-for-every-pr-03, mcp-shutdown-02·01, end-user-continuation-02·05·03 이다. 거슬러 채운 3개는 end-user-channel-04, conversation-02·01(B 2026-10-04~06)이다. 되살린 model-rerun-05·end-user-continuation-06 과 web-widget-04, mcp-shutdown-03, end-user-continuation-04 는 숨은 시험 가르기에서 빠졌다. ticket-for-every-pr-03 의 PR 앞 비용은 옛 표의 $22.60 이 쓰였다.
