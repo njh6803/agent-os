@@ -5,7 +5,8 @@ calc 는 컨텍스트 멤버(자기 대화 요약과 그 뒤 교환)를 "앞 대
 프롬프트는 그 결정 전과 글자 그대로 같아야 해서 그 문자열을 여기 박아 둔다 — 블록이 빈 대화에 새면
 여기서 잡힌다(명세 "calc"의 2026-10-04 명세 검토, 스토리 40). 도구 포트는 가짜라 도구가 없고,
 calc 의 매니페스트가 가리키는 mcp(`everything`)는 실물 루트에서 읽힌다. 실제 모델과 실제 서버로
-도는 것은 `tests/test_main.py` 의 `-m llm` 사례다.
+도는 것은 `tests/test_main.py` 의 `-m llm` 사례와, 위젯 화면에서 도는 `-m llm_widget` 의
+`tests/test_widget_llm.py` 다.
 """
 
 from collections.abc import AsyncGenerator, Mapping, Sequence

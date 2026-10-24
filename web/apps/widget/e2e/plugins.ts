@@ -1,4 +1,4 @@
-// 위젯 e2e 의 임시 플러그인 루트(web-widget 명세 Testing Decisions 4). 에이전트는 모델 없이 돈다. MCP 매니페스트가 이
+// 위젯 e2e 의 임시 플러그인 루트(web-widget 명세 Testing Decisions 4). 픽스처 에이전트는 모델 없이 돈다. MCP 매니페스트가 이
 // 기계의 파이썬 인터프리터 경로를 들어야 해서 커밋하지 않고 임시 디렉터리에 쓴다(관리 화면 e2e 의 stack.ts 와 같다).
 //
 // - `tools` 는 MCP 픽스처 서버의 add 를 `ctx.tool()` 로 직접 두 번 부른다. 둘째 앞에서 문 폴더에 요청과 같은 이름의
@@ -8,11 +8,24 @@
 //
 // TOML 기본 문자열과 파이썬 문자열 리터럴은 JSON 문자열과 이스케이프가 같아 경로를 `JSON.stringify` 로 적는다(윈도우
 // 경로의 역슬래시).
+//
+// 실제 모델 e2e(티켓 11)에서는 준비가 그 앞에 저장소의 플러그인 루트를 통째로 옮긴다(`copyRepoPlugins`). 저장소의 계산
+// 에이전트가 그것이 쓰는 MCP 서버와 함께 오고, 픽스처는 그 위에 쓴다.
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 
 export const AGENTS = ["tools", "html", "echo"] as const;
+/** 저장소의 계산 에이전트(`plugins/agents/calc`). 실제 모델을 부른다. */
+export const LLM_AGENT = "calc";
+
+/** 저장소의 `plugins/` 를 `root` 에 옮긴다. 파이썬이 남긴 바이트코드 캐시는 옮기지 않는다. */
+export function copyRepoPlugins(repo: string, root: string): void {
+  cpSync(join(repo, "plugins"), root, {
+    recursive: true,
+    filter: (source) => basename(source) !== "__pycache__",
+  });
+}
 /** `html` 에이전트의 출력. 실행되면 iframe 창의 `__widgetE2ePwned` 가 선다. */
 export const HTML_OUTPUT =
   '<img src="x" onerror="window.__widgetE2ePwned = 1"><script>window.__widgetE2ePwned = 2</script>';
