@@ -6,12 +6,12 @@
 // - 교환이 없으면 첫 화면이고, 있으면 대화 목록이다. 다시 시작한 대화는 교환이 비어도(그 시작이 422·429 로
 //   입력창에 돌아왔을 때) 대화 목록이다. 맨 위의 정보 알림을 남긴 채 보내기 때문이다(web-widget 명세 "요청이 거절될
 //   때"의 이어 가기 404).
-// - 숨긴 role="status" 영역 하나가 새 도구 줄과 끝난 출력을 생긴 차례로 한 번씩 읽는다. 글마다 문단 하나를 덧붙여,
+// - 숨긴 role="status" 영역 하나가 새 도구 줄, 승인 묻기, 끝난 출력을 생긴 차례로 한 번씩 읽는다. 글마다 문단 하나를 덧붙여,
 //   화면 읽기 프로그램은 더해진 문단만 읽는다. 영역은 처음부터 서 있어야 더해진 것을 읽으므로 늘 그린다.
 // - 포커스 차례는 문서의 차례 그대로다. 위쪽 띠의 "새 대화" → 대화 영역 → 대화 안의 버튼 → 입력창 → 보내기.
 //   대화 영역이 포커스를 받는 까닭은 organisms/Conversation 의 머리 주석이다.
 import { Alert } from "@agent-os/ui";
-import type { Exchange } from "../../lib/conversation";
+import type { Exchange, Decision } from "../../lib/conversation";
 import type { LimitWait } from "../../lib/limit";
 import { Welcome } from "../molecules/Welcome";
 import { Composer } from "../organisms/Composer";
@@ -35,8 +35,10 @@ export interface WidgetScreenProps {
   readonly wait: LimitWait | null;
   /** 앞 요청이 422 로 되돌아왔다. */
   readonly invalid: boolean;
-  /** 승인을 기다리며 멈춰 있다. 입력창도 막는다(승인 묻기는 티켓 08). */
+  /** 승인 묻기가 결정을 기다리며 멈춰 있다. 입력창을 막고 그 위 띠가 먼저 고르라고 한다. */
   readonly paused: boolean;
+  /** 결정을 기다리는 승인 묻기에 결정을 보낸다. */
+  readonly onDecide: (decision: Decision) => void;
   /** 응답이 결말 전이라 새 대화를 막는다. */
   readonly newConversationDisabled: boolean;
   readonly draft: string;
@@ -65,6 +67,7 @@ export function WidgetScreen({
   wait,
   invalid,
   paused,
+  onDecide,
   newConversationDisabled,
   draft,
   onDraftChange,
@@ -93,6 +96,9 @@ export function WidgetScreen({
         retryBlocked={sendBlocked}
         onNewConversation={onNewConversation}
         newConversationBlocked={newConversationDisabled}
+        reasonLimit={requestChars}
+        decisionBlocked={wait !== null && wait.purpose === "decide" && wait.remaining > 0}
+        onDecide={onDecide}
       />
     );
   }
@@ -128,6 +134,7 @@ export function WidgetScreen({
           focusFor={focusFor(exchanges)}
           wait={wait}
           invalid={invalid}
+          awaitingDecision={paused}
         />
       }
     />

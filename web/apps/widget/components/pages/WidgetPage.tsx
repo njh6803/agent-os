@@ -12,7 +12,7 @@ import "@agent-os/ui/fonts.css";
 import "../../styles/widget.css";
 import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { requestCharLimit } from "../../lib/build";
-import { phaseOf } from "../../lib/conversation";
+import { phaseOf, waitingApproval } from "../../lib/conversation";
 import { readEmbed } from "../../lib/embed";
 import { useConversation } from "./useConversation";
 import { WidgetScreen } from "./WidgetScreen";
@@ -39,7 +39,7 @@ export function WidgetPage() {
   }, [search]);
   const [draft, setDraft] = useState("");
   // 되돌아온 요청(422, 429)은 입력창에 넣는다.
-  const { conversation, send, reset, wait, invalid } = useConversation(
+  const { conversation, send, reset, decide, wait, invalid } = useConversation(
     read?.embed.agent ?? null,
     setDraft,
   );
@@ -85,7 +85,11 @@ export function WidgetPage() {
       wait={wait}
       invalid={invalid}
       paused={phase === "paused"}
-      newConversationDisabled={phase === "running"}
+      onDecide={decide}
+      // 결정을 보내는 동안은 결정 응답이 결말 전이라 막는다. 결정을 기다리기만 할 때는 열려 있다.
+      newConversationDisabled={
+        phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
+      }
       draft={draft}
       onDraftChange={setDraft}
       onSend={(request) => {
