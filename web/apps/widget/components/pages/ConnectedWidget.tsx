@@ -22,8 +22,13 @@ export interface ConnectedWidgetProps {
 }
 
 export function ConnectedWidget({ embed, problems, connection }: ConnectedWidgetProps) {
-  const { conversation, send, reset } = useConversation(embed.agent, connection);
   const [draft, setDraft] = useState("");
+  // 되돌아온 요청(422, 429)은 입력창에 넣는다.
+  const { conversation, send, reset, wait, invalid } = useConversation(
+    embed.agent,
+    connection,
+    setDraft,
+  );
 
   // 배열은 그릴 때마다 새로 올 수 있어 앞서 남긴 글과 견준다.
   const logged = useRef<string | null>(null);
@@ -45,8 +50,11 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
       intro={embed.intro}
       misconfigured={embed.agent === null || connection === null}
       exchanges={conversation.exchanges}
+      restarted={conversation.restarted}
       announcements={conversation.announcements}
-      sendBlocked={phase !== "idle"}
+      sendBlocked={phase !== "idle" || (wait !== null && wait.remaining > 0)}
+      wait={wait}
+      invalid={invalid}
       paused={phase === "paused"}
       newConversationDisabled={phase === "running"}
       draft={draft}
@@ -55,7 +63,8 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
         setDraft("");
         send(request);
       }}
-      // "다시 보내기"는 그 교환의 요청을 다시 보낼 뿐이라, 사용자가 입력창에 쓰던 글은 그대로 둔다.
+      // "다시 보내기"는 그 교환의 요청을 다시 보낼 뿐이라 입력창을 비우지 않는다. 그 요청이 422·429 로 돌아오면
+      // 명세대로 입력창에 넣어, 쓰던 글을 덮는다(위 useConversation 의 onReturn).
       onRetry={send}
       onNewConversation={reset}
       requestChars={requestCharLimit()}

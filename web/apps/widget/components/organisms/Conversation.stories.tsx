@@ -49,7 +49,14 @@ const RUNNING = exchange(1, "늦으면 환불 받을 수 있어요?", {
 const meta = {
   title: "organisms/Conversation",
   component: Conversation,
-  args: { exchanges: [FINISHED, RUNNING], onRetry: fn(), retryBlocked: false },
+  args: {
+    exchanges: [FINISHED, RUNNING],
+    restarted: false,
+    onRetry: fn(),
+    retryBlocked: false,
+    onNewConversation: fn(),
+    newConversationBlocked: false,
+  },
   decorators: [
     (Story, { parameters }) => (
       <Sized width={parameters["width"] === 400 ? 400 : 320}>
@@ -110,7 +117,10 @@ export const LongWord: Story = {
   },
 };
 
-/** 틈 동안의 실패와 거절 알림(티켓 07 이 원인마다의 문구로 바꾼다). 다크 모드다. */
+/**
+ * 대화 안의 실패와 거절 알림(화면 디자인 mk-failure, mk-rejection). 출력이 올 자리에 서고, 요청 글은 대화에 남는다.
+ * 다크 모드다. 알림마다의 문구는 organisms/FailureAlert 의 스토리가 늘어놓는다.
+ */
 export const Failures: Story = {
   parameters: { width: 400 },
   globals: { mode: "dark" },
@@ -118,11 +128,26 @@ export const Failures: Story = {
     exchanges: [
       exchange(0, "배송 어디쯤이에요?", {
         tools: [{ tool: "orders.lookup", ok: true }],
-        outcome: { kind: "failed" },
+        outcome: { kind: "failed", cause: "timeout", runId: "run_01JA7Q8M2K" },
       }),
-      exchange(1, "다시 물어볼게요", { outcome: { kind: "rejected" } }),
-      exchange(2, "한 번 더요", { outcome: { kind: "unauthorized" } }),
+      exchange(1, "다시 물어볼게요", { runId: null, outcome: { kind: "error", offerNew: false } }),
+      exchange(2, "한 번 더요", { runId: null, outcome: { kind: "unauthorized" } }),
     ],
+  },
+};
+
+/**
+ * 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작한 뒤(화면 디자인 mk-rejection 의 셋째). 맨 위에 정보 알림이 서고,
+ * 같은 요청이 시작으로 돈다.
+ */
+export const Restarted: Story = {
+  args: {
+    restarted: true,
+    exchanges: [exchange(3, "늦으면 환불 받을 수 있어요?", { calling: ["orders.lookup"] })],
+  },
+  play: async ({ canvasElement }) => {
+    const notice = within(canvasElement).getByRole("status");
+    await expect(notice).toHaveTextContent("이전 대화를 이어 갈 수 없어 새 대화로 시작합니다.");
   },
 };
 
@@ -147,7 +172,14 @@ function Growing({ start }: { readonly start: number }) {
   );
   return (
     <div ref={root} className="flex min-h-0 flex-1 flex-col">
-      <Conversation exchanges={exchanges} onRetry={() => {}} retryBlocked={false} />
+      <Conversation
+        exchanges={exchanges}
+        restarted={false}
+        onRetry={() => {}}
+        retryBlocked={false}
+        onNewConversation={() => {}}
+        newConversationBlocked={false}
+      />
     </div>
   );
 }
