@@ -6,7 +6,8 @@
 `CommandLineToArgvW`로 나눈다. 둘 다 `tools/hook_edit_during_commit.py`의 읽기를 옮긴 사본이다. 훅은
 단독 실행 스크립트라 서로와 이 모듈을 import 하지 않는다(`.claude/rules/tools.md`). 두 사본이
 같은지는 `tests/tools/test_proc_command_line.py`가 두 파일의 소스를 풀어 댄다. 그 훅이 이름이 git 인
-프로세스를 모두 훑는 것과 달리 여기서는 pid 하나만 연다.
+프로세스를 모두 훑는 것과 달리 여기서는 pid 하나만 연다. 다시 뜬 러너가 쓰는 `pids_named`는 이름으로
+pid 만 훑고 열지 않는다(윈도 Toolhelp 스냅숏의 원형과 구조도 그 훅의 사본이다).
 
 러너가 띄운 자식은 거두기 전까지 그 pid 가 다른 프로세스에 가지 않는다. POSIX 는 끝난 자식을 좀비로
 남기고, 윈도는 `Popen`이 프로세스 핸들을 쥔다. 그래서 읽은 명령 줄과 끄는 프로세스가 갈리지 않는다.
@@ -44,13 +45,48 @@ def _linux_command_line(pid: int) -> tuple[str, ...] | None:
     return argv_from_cmdline(raw) or None
 
 
+def _linux_pids(name: str) -> list[int]:
+    """`/proc/<pid>/comm`이 `name`의 앞 15바이트와 같은 프로세스. comm 은 띄운 실행 파일 경로의 끝
+    이름을 15바이트로 자른 것이다. 읽을 수 없는 것(그새 끝난 것)은 건너뛴다."""
+    want = name.encode("utf-8")[:15]
+    found: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            comm = (entry / "comm").read_bytes().rstrip(b"\n")
+        except OSError:
+            continue
+        if comm == want:
+            found.append(int(entry.name))
+    return found
+
+
 if sys.platform == "win32":
+    _SNAPSHOT_PROCESSES = 0x2  # TH32CS_SNAPPROCESS
     _QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
     _VM_READ = 0x0010  # PROCESS_VM_READ
     _INHERIT_HANDLE = False  # bInheritHandle. 자식 프로세스에 핸들을 물려주지 않는다
     # x64 의 자리: PEB.ProcessParameters, 그 안의 CommandLine(UNICODE_STRING)
     _PEB_PARAMS = 0x20
     _PARAMS_COMMAND_LINE = 0x70
+    _INVALID_HANDLE = ctypes.c_void_p(-1).value
+
+    class _ProcessEntry(ctypes.Structure):
+        """PROCESSENTRY32W."""
+
+        _fields_ = [
+            ("size", ctypes.c_ulong),
+            ("usage", ctypes.c_ulong),
+            ("pid", ctypes.c_ulong),
+            ("heap", ctypes.c_size_t),
+            ("module", ctypes.c_ulong),
+            ("threads", ctypes.c_ulong),
+            ("parent", ctypes.c_ulong),
+            ("priority", ctypes.c_long),
+            ("flags", ctypes.c_ulong),
+            ("exe", ctypes.c_wchar * 260),
+        ]
 
     class _BasicInformation(ctypes.Structure):
         """PROCESS_BASIC_INFORMATION. `peb` 가 그 프로세스 안의 PEB 주소다."""
@@ -70,6 +106,10 @@ if sys.platform == "win32":
         ntdll = ctypes.WinDLL("ntdll")
         shell = ctypes.WinDLL("shell32")
         dword, handle, pointer = ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p
+        kernel.CreateToolhelp32Snapshot.restype = handle
+        kernel.CreateToolhelp32Snapshot.argtypes = [dword, dword]
+        kernel.Process32FirstW.argtypes = [handle, ctypes.POINTER(_ProcessEntry)]
+        kernel.Process32NextW.argtypes = [handle, ctypes.POINTER(_ProcessEntry)]
         kernel.OpenProcess.restype = handle
         kernel.OpenProcess.argtypes = [dword, ctypes.c_int, dword]
         kernel.CloseHandle.argtypes = [handle]
@@ -146,6 +186,47 @@ if sys.platform == "win32":
         if line is None:
             return None
         return tuple(_split_command_line(kernel, shell, line)) or None
+
+    def _windows_pids(name: str) -> list[int] | None:
+        """Toolhelp 스냅숏에서 실행 파일 이름이 `name`과 대소문자를 빼고 같은 프로세스. 스냅숏을
+        뜨지 못하면 None 이다."""
+        kernel, _, _ = _windows_api()
+        snapshot = kernel.CreateToolhelp32Snapshot(_SNAPSHOT_PROCESSES, 0)
+        if snapshot is None or snapshot == _INVALID_HANDLE:
+            return None
+        want = name.casefold()
+        pids: list[int] = []
+        try:
+            entry = _ProcessEntry()
+            entry.size = ctypes.sizeof(entry)
+            more = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
+            while more:
+                if entry.exe.casefold() == want:
+                    pids.append(int(entry.pid))
+                more = kernel.Process32NextW(snapshot, ctypes.byref(entry))
+        finally:
+            kernel.CloseHandle(snapshot)
+        return pids
+
+
+def pids_named(executable: str) -> list[int] | None:
+    """실행 파일 `executable`(경로여도 끝 이름만 본다)과 이름이 같은 프로세스의 pid. 다시 뜬
+    러너가 죽은 러너의 세션이 아직 도는지 훑는 데 쓴다(`tools/rerun_runner.py`). 훑지 못하면(그
+    밖의 OS, DLL 이나 스냅숏의 실패) None 이다.
+
+    윈도는 Toolhelp 스냅숏의 실행 파일 이름을 대소문자를 빼고 견주고, 리눅스는 `/proc/<pid>/comm`을
+    끝 이름의 앞 15바이트와 견준다. 못 보는 것: 리눅스의 comm 은 띄운 경로의 끝 이름이라, 링크를
+    거쳐 다른 이름으로 띄운 프로세스와 스스로 이름을 바꾼 프로세스는 놓친다. 앞 15바이트가 같은 다른
+    이름은 함께 든다(셋은 리눅스에서만 나고, 리눅스 CI 에서 시험이 고정한다)."""
+    name = executable.replace("\\", "/").rsplit("/", 1)[-1]
+    try:
+        if sys.platform == "win32":
+            return _windows_pids(name)
+        if sys.platform == "linux":
+            return _linux_pids(name)
+    except (OSError, AttributeError, ValueError, OverflowError, ctypes.ArgumentError):
+        return None
+    return None
 
 
 def command_line(pid: int) -> tuple[str, ...] | None:
