@@ -65,7 +65,7 @@ function forward(incoming: IncomingMessage, outgoing: ServerResponse, upstreams:
     }
     outgoing.end(`same-origin relay: ${error.message}\n`);
   });
-  // 브라우저가 끊으면 상류도 끊는다. 서버가 스트림의 끊김을 보게 하기 위해서다.
+  // 브라우저가 끊으면 상류도 끊는다. 서버가 스트림의 끊김을 보게 하기 위해서다. 정상 종료 뒤에도 불리지만 끝난 요청이라 무해하다.
   outgoing.on("close", () => {
     upstream.destroy();
   });

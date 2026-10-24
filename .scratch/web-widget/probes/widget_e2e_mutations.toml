@@ -65,7 +65,8 @@ name = "frame-ancestors 를 * 로 두면 허용 밖 출처의 페이지가 위�
 runner = "e2e"
 tests = ["-g", "품지 못한다"]
 expect = "red"
-expect_output = ["chrome-error://chromewebdata/"]
+# 기대 배열의 "chrome-error://…" 는 실패 줄 둘레의 코드 조각에도 실려 다른 단언이 빨개져도 맞는다. 받은 쪽 줄을 본다.
+expect_output = ['+   "http://widget.localhost:']
 
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
