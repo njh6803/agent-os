@@ -1,0 +1,714 @@
+# web-widget 티켓 04 의 변이 표. 사이트 파일을 두 언어가 같은 규칙으로 읽는다는 시험 가운데 빨강을 본 적이 없는 것을
+# 겨눈다. 파이썬의 지나는 표기와 TOML 픽스처 시험은 구현 전부터 초록이었고(지금 코드는 '*' 만 막았다), Node 의 지나는
+# 표기와 URL 파서 대조와 시작 래퍼의 경로 풀기는 판정 없는 껍데기에서도 초록이거나 구현과 함께 썼다. 막히는 표기와 모양의
+# 시험은 판정 없는 껍데기와 구현 전 코드에서 빨강을 봤다(일지 2026-10-24-05). 끝 점의 사례는 CSP3 를 읽은 뒤 더해 두 언어에서
+# 넷씩 빨강을 본 뒤 고쳤고, 끝 점 변이 넷은 그 고침의 자리(끝 점을 라벨로 세지 않기, IPv4 정규형은 끝 점째 보기)를 겨눈다.
+# 호스트 규칙을 WHATWG URL 의 금지된 도메인 글자로 되돌린 뒤(셀프 리뷰 명세 축 1), 금지된 글자의 경계(공백, %, DEL, 밑줄)를
+# 두 언어에서 하나씩 겨누고, 필수 키를 보는 Node 시험(셀프 리뷰 명세 축 5)을 겨눈다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/site_file_mutations.toml [번호 ...]
+# 네트워크를 타지 않는다. node 러너는 `pnpm -C web install` 이 된 체크아웃에서 돈다. 마지막 변이는 실제 next build 를
+# 띄운다(설정 파일을 읽다 멈춘다).
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 파이썬: 진단과 지나는 표기(src/agent_os/main.py) --------------------------------------------------------
+
+[[mutation]]
+name = "진단에 출처의 값을 실으면 사용자 정보의 비밀번호가 진단에 실린다"
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[https://user:pw@shop.example]"]
+expect = "red"
+expect_output = ["assert 'pw@' not in"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            f"(규칙 {rule}). {_ORIGIN_RULES[rule]}"
+'''
+new = '''
+            f"(규칙 {rule}). {_ORIGIN_RULES[rule]} {origin}"
+'''
+
+[[mutation]]
+name = "파이썬이 포트 0 을 막으면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://example.com:0]"]
+expect = "red"
+expect_output = ["(규칙 port)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_PORT = re.compile(r"0|[1-9][0-9]{0,4}")
+'''
+new = '''
+_PORT = re.compile(r"[1-9][0-9]{0,4}")
+'''
+
+[[mutation]]
+name = "파이썬이 밑줄을 금지된 글자로 세면 밑줄이 든 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://my_host:3000]"]
+expect = "red"
+expect_output = ["(규칙 host)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f]")
+'''
+new = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f_]")
+'''
+
+[[mutation]]
+name = "파이썬이 공백을 금지된 글자에서 빼면 공백이 든 호스트가 지나 막는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[https://a b.example]"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f]")
+'''
+new = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x1f#%/:<>?@\[\\\]^|\x7f]")
+'''
+
+[[mutation]]
+name = "파이썬이 % 를 금지된 글자에서 빼면 퍼센트 인코딩이 든 호스트가 지나 막는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[https://a%41.example]"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f]")
+'''
+new = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#/:<>?@\[\\\]^|\x7f]")
+'''
+
+[[mutation]]
+name = "파이썬이 DEL 을 금지된 글자에서 빼면 DEL 이 든 호스트가 지나 막는 시험이 빨갛다"
+# 시험 id 를 이스케이프하지 않아(pyproject.toml) DEL 이 든 id 는 고르지 못하고 막는 시험 전체를 돈다. 이 변이로 바뀌는
+# 사례는 DEL 이 든 것뿐이다.
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f]")
+'''
+new = '''
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|]")
+'''
+
+[[mutation]]
+name = "파이썬이 끝 라벨 대신 첫 라벨로 IPv4 를 가르면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://1.2.3.example]"]
+expect = "red"
+expect_output = ["(규칙 ipv4)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if _NUMERIC_LABEL.fullmatch(names[-1]):
+'''
+new = '''
+    if _NUMERIC_LABEL.fullmatch(names[0]):
+'''
+
+[[mutation]]
+name = "파이썬이 끝 점을 라벨로 세면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[http://127.0.0.1.]"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    names = labels[:-1] if len(labels) > 1 and not labels[-1] else labels
+'''
+new = '''
+    names = labels
+'''
+
+[[mutation]]
+name = "파이썬이 끝 점을 뗀 라벨로 IPv4 정규형을 보면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[http://127.0.0.1.]"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+        return None if _is_canonical_ipv4(labels) else "ipv4"
+'''
+new = '''
+        return None if _is_canonical_ipv4(names) else "ipv4"
+'''
+
+[[mutation]]
+name = "파이썬이 IPv6 를 풀어 쓴 꼴과 견주면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://[::1]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    return _serialized_ipv6(address) == inner
+'''
+new = '''
+    return address.exploded == inner
+'''
+
+[[mutation]]
+name = "파이썬이 표준 라이브러리의 압축형과 견주면 IPv4 를 점으로 적는 판에서 16진수로 적은 표기가 빨갛다"
+tests = ["tests/test_main.py::test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다[http://[::ffff:102:304]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    return _serialized_ipv6(address) == inner
+'''
+new = '''
+    return address.compressed == inner
+'''
+
+[[mutation]]
+name = "파이썬이 0 하나도 :: 로 줄이면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[https://[2001:db8:0:1:1:1:1:1]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    best_start, best_length, start = -1, 1, -1
+'''
+new = '''
+    best_start, best_length, start = -1, 0, -1
+'''
+
+[[mutation]]
+name = "파이썬이 길이가 같은 0 의 열 가운데 뒤의 것을 줄이면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[https://[2001:db8::1:0:0:1]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+        if index - start + 1 > best_length:
+'''
+new = '''
+        if index - start + 1 >= best_length:
+'''
+
+[[mutation]]
+name = "파이썬의 기본 포트가 스킴과 엇갈리면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://example.com:443]"]
+expect = "red"
+expect_output = ["(규칙 default-port)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_DEFAULT_PORTS: dict[str, int] = {"http": 80, "https": 443}
+'''
+new = '''
+_DEFAULT_PORTS: dict[str, int] = {"http": 443, "https": 80}
+'''
+
+[[mutation]]
+name = "파이썬이 IPv4 의 255 를 막으면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://255.255.255.255]"]
+expect = "red"
+expect_output = ["(규칙 ipv4)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+_MAX_IPV4_PART = 255
+'''
+new = '''
+_MAX_IPV4_PART = 254
+'''
+
+# --- 파이썬: 두 언어가 함께 읽는 TOML 픽스처 ------------------------------------------------------------------
+
+[[mutation]]
+name = "사이트 파일의 request_chars 가 사이트 항목에 닿지 않으면 함께 읽는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다"]
+expect = "red"
+expect_output = ["가장 긴 요청을 넘긴 길이를 거절한 사이트가 하나가 아니다"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+            request_chars=self.request_chars,
+'''
+new = '''
+            request_chars=None,
+'''
+
+[[mutation]]
+name = "서버가 합친 허용 출처를 다른 차례로 내면 함께 읽는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다"]
+expect = "red"
+expect_output = ["At index 0 diff"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/sites.py"
+old = '''
+        return tuple(dict.fromkeys(o for site in self.entries for o in site.allowed_origins))
+'''
+new = '''
+        return tuple(sorted(dict.fromkeys(o for site in self.entries for o in site.allowed_origins)))
+'''
+
+[[mutation]]
+name = "서버의 기본 상한이 픽스처의 기본값과 달라지면 함께 읽는 시험이 빨갛다"
+tests = ["tests/test_main.py::test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다"]
+expect = "red"
+expect_output = ["assert 20000 == 20001"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/limits.py"
+old = '''
+DEFAULT_REQUEST_CHARS = 20_000
+'''
+new = '''
+DEFAULT_REQUEST_CHARS = 20_001
+'''
+
+# --- Node: 지나는 표기(web/apps/widget/tools/site-file.ts) ----------------------------------------------------
+
+[[mutation]]
+name = "Node 가 포트 0 을 막으면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'port' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+const PORT = /^(?:0|[1-9][0-9]{0,4})$/u;
+'''
+new = '''
+const PORT = /^(?:[1-9][0-9]{0,4})$/u;
+'''
+
+[[mutation]]
+name = "Node 가 0 하나도 :: 로 줄이면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'ipv6' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+  let bestLength = 1;
+'''
+new = '''
+  let bestLength = 0;
+'''
+
+[[mutation]]
+name = "Node 가 길이가 같은 0 의 열 가운데 뒤의 것을 줄이면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'ipv6' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    if (index - start + 1 > bestLength) {
+'''
+new = '''
+    if (index - start + 1 >= bestLength) {
+'''
+
+[[mutation]]
+name = "Node 가 끝 라벨 대신 첫 라벨로 IPv4 를 가르면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'ipv4' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+  if (NUMERIC_LABEL.test(names.at(-1) ?? "")) {
+'''
+new = '''
+  if (NUMERIC_LABEL.test(names[0] ?? "")) {
+'''
+
+[[mutation]]
+name = "Node 가 끝 점을 라벨로 세면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
+expect = "red"
+expect_output = ["expected null to be 'ipv4'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+  const names = labels.length > 1 && labels.at(-1) === "" ? labels.slice(0, -1) : labels;
+'''
+new = '''
+  const names = labels;
+'''
+
+[[mutation]]
+name = "Node 가 끝 점을 뗀 라벨로 IPv4 정규형을 보면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
+expect = "red"
+expect_output = ["expected null to be 'ipv4'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return isCanonicalIpv4(labels) ? null : "ipv4";
+'''
+new = '''
+    return isCanonicalIpv4(names) ? null : "ipv4";
+'''
+
+[[mutation]]
+name = "Node 가 밑줄을 금지된 글자로 세면 밑줄이 든 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'host' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|";
+'''
+new = '''
+const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|_";
+'''
+
+[[mutation]]
+name = "Node 가 % 를 금지된 글자에서 빼면 퍼센트 인코딩이 든 호스트가 지나 막는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+expect = "red"
+expect_output = ["expected null to be 'host'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|";
+'''
+new = '''
+const FORBIDDEN_DOMAIN_SIGNS = "#/:<>?@[\\]^|";
+'''
+
+[[mutation]]
+name = "Node 가 공백을 금지된 글자에서 빼면 공백이 든 호스트가 지나 막는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+expect = "red"
+expect_output = ["expected null to be 'host'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return code <= SPACE || code === DELETE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
+'''
+new = '''
+    return code < SPACE || code === DELETE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
+'''
+
+[[mutation]]
+name = "Node 가 DEL 을 금지된 글자에서 빼면 DEL 이 든 호스트가 지나 막는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+expect = "red"
+expect_output = ["expected null to be 'host'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return code <= SPACE || code === DELETE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
+'''
+new = '''
+    return code <= SPACE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
+'''
+
+[[mutation]]
+name = "Node 의 기본 포트가 스킴과 엇갈리면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'default-port' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+  if (after === `:${scheme === "http" ? "80" : "443"}`) {
+'''
+new = '''
+  if (after === `:${scheme === "http" ? "443" : "80"}`) {
+'''
+
+[[mutation]]
+name = "Node 가 IPv4 의 255 를 막으면 지나는 표기가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+expect = "red"
+expect_output = ["expected 'ipv4' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+const MAX_IPV4_PART = 255;
+'''
+new = '''
+const MAX_IPV4_PART = 254;
+'''
+
+# --- Node: 픽스처와 URL 파서의 대조(tests/fixtures/site_file/origins.json) ----------------------------------------
+
+[[mutation]]
+name = "브라우저가 바꾸는 표기를 지나는 사례에 두면 URL 파서 대조가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "URL 파서가 바꾸지 않는다"]
+expect = "red"
+expect_output = ["to be 'http://127.1'"]
+
+[[mutation.edit]]
+file = "tests/fixtures/site_file/origins.json"
+old = '''
+    { "origin": "http://127.0.0.1", "note": "정규형 IPv4" },
+'''
+new = '''
+    { "origin": "http://127.1", "note": "정규형 IPv4" },
+'''
+
+[[mutation]]
+name = "브라우저가 그대로 싣는 표기를 표기 규칙의 막힘으로 적으면 URL 파서 대조가 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "다른 값으로 바꾸거나 거절한다"]
+expect = "red"
+expect_output = ["not to be 'https://*.shop.example'"]
+
+[[mutation.edit]]
+file = "tests/fixtures/site_file/origins.json"
+old = '''
+    { "origin": "https://*.shop.example", "rule": "wildcard", "note": "하위 도메인 와일드카드" },
+'''
+new = '''
+    { "origin": "https://*.shop.example", "rule": "host", "note": "하위 도메인 와일드카드" },
+'''
+
+# --- Node: 빌드 입력과 설정(site-file.ts, next.config.ts) -----------------------------------------------------
+
+[[mutation]]
+name = "합친 허용 출처가 빌 때 'none' 을 쓰지 않으면 빈 목록 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "합친 허용 출처가 비면"]
+expect = "red"
+expect_output = ['"frame-ancestors ",']
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+'''
+new = '''
+const ancestors = input.allowedOrigins.join(" ");
+'''
+
+[[mutation]]
+name = "겹친 허용 출처를 한 번으로 줄이지 않으면 함께 읽는 설정 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "두 언어가 함께 읽는"]
+expect = "red"
+expect_output = ["http://localhost:3000 https://shop.example"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    allowedOrigins: [...new Set(sites.flatMap(({ origins }) => origins))],
+'''
+new = '''
+    allowedOrigins: sites.flatMap(({ origins }) => origins),
+'''
+
+[[mutation]]
+name = "가장 작은 상한을 기본값에서 세기 시작하면 기본값보다 큰 상한의 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "기본값보다 큰 상한"]
+expect = "red"
+expect_output = ['"requestChars": 20000']
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    requestChars: Number(limits.reduce((smallest, limit) => (limit < smallest ? limit : smallest))),
+'''
+new = '''
+    requestChars: Number(
+      limits.reduce((smallest, limit) => (limit < smallest ? limit : smallest), BigInt(DEFAULT_REQUEST_CHARS)),
+    ),
+'''
+
+[[mutation]]
+name = "Node 의 기본 상한이 픽스처의 기본값과 달라지면 함께 읽는 설정 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "두 언어가 함께 읽는"]
+expect = "red"
+expect_output = ["expected 20001 to be 20000"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+export const DEFAULT_REQUEST_CHARS = 20_000;
+'''
+new = '''
+export const DEFAULT_REQUEST_CHARS = 20_001;
+'''
+
+[[mutation]]
+name = "사이트 항목의 필수 키를 보지 않으면 키마다의 필수 키 시험이 모두 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "사이트 항목의 필수 키"]
+expect = "red"
+# 실패한 시험의 이름은 실패 목록에만 실린다. 다섯이 모두 있어야 키마다의 시험이 그 키의 판정에 기댄다.
+expect_output = [
+  "받아들일 수 없는 사이트 파일을 받아들였다",
+  "필수 키 issuer 가 빠지면",
+  "필수 키 audience 가 빠지면",
+  "필수 키 allowed_origins 가 빠지면",
+  "필수 키 agents 가 빠지면",
+  "필수 키 public_keys 가 빠지면",
+]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+const REQUIRED_SITE_KEYS: readonly string[] = [
+  "issuer",
+  "audience",
+  "public_keys",
+  "allowed_origins",
+  "agents",
+];
+'''
+new = '''
+const REQUIRED_SITE_KEYS: readonly string[] = [];
+'''
+
+[[mutation]]
+name = "빠진 schema_version 을 보지 않으면 판이 빠진 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "판 schema_version 이 빠지면"]
+expect = "red"
+expect_output = ["받아들일 수 없는 사이트 파일을 받아들였다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return ["schema_version: 빠졌다"];
+'''
+new = '''
+    return [];
+'''
+
+[[mutation]]
+name = "BOM 을 따로 막지 않으면 smol-toml 이 받아 BOM 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/site-file.test.ts", "-t", "BOM"]
+expect = "red"
+expect_output = ["받아들일 수 없는 사이트 파일을 받아들였다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return { problems: ["TOML 이 아니다: 파일 머리에 BOM 이 있다. BOM 없는 UTF-8 로 저장한다"] };
+'''
+new = '''
+    text = text.slice(1);
+'''
+
+[[mutation]]
+name = "파일을 풀 때 BOM 을 떼면 BOM 이 든 파일로 빌드가 지나 설정 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "파일 머리에 BOM"]
+expect = "red"
+expect_output = ["instead of rejecting"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+'''
+new = '''
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
+'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 바이트를 바꿔 넣으면 UTF-8 시험이 다른 진단을 보고 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "UTF-8 이 아니다"]
+expect = "red"
+expect_output = ["TOML 이 아니다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+'''
+new = '''
+    return new TextDecoder("utf-8", { fatal: false, ignoreBOM: true }).decode(bytes);
+'''
+
+# --- Node: 시작 래퍼(web/apps/widget/tools/start.ts) ----------------------------------------------------------
+
+[[mutation]]
+name = "상대 경로를 그대로 두면 경로 풀기 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "상대 경로는"]
+expect = "red"
+expect_output = ["expected 'conf/sites.toml' to be"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+  return value === undefined || value === "" ? value : resolve(cwd, value);
+'''
+new = '''
+  return value;
+'''
+
+[[mutation]]
+name = "래퍼가 풀어 낸 경로를 next 에 넘기지 않으면 설정 파일이 앱 폴더에서 찾아 빌드 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.spawn.test.ts", "-t", "상대 경로로 준"]
+expect = "red"
+expect_output = ["파일이 없다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+    process.env[SITE_FILE_ENV] = siteFile;
+'''
+new = '''
+'''

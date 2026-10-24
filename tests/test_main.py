@@ -20,6 +20,7 @@ import tomllib
 from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from ipaddress import IPv6Address
 from pathlib import Path
 
 import pytest
@@ -27,20 +28,23 @@ import uvicorn
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.sse import KEEPALIVE_COMMENT
 from httpx import ASGITransport, AsyncClient, Client, Timeout
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
+from pydantic import BaseModel, ConfigDict, Field
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
 from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
+from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
-from agent_os.http.sites import Site, SiteKey, SiteLimits
+from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
 from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     AgentName,
@@ -1525,6 +1529,204 @@ def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_
             subscriptions_per_principal=6,
         )
     ]
+
+
+# 허용 출처의 표기와 두 언어가 함께 읽는 사이트 파일(web-widget 티켓 04, ADR 0024). 픽스처와 규칙의
+# 이름은 `tests/fixtures/site_file/README.md` 가 원천이다. 위젯 빌드의 판정은 같은 파일을
+# `web/apps/widget/tools/site-file.test.ts` 와 `web/apps/widget/next.config.test.ts` 가 읽어
+# 고정한다.
+
+SITE_FILE_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "site_file"
+
+
+class _PassingOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    origin: str
+    note: str
+
+
+class _BlockedOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    origin: str
+    rule: str
+    note: str
+
+
+class _OriginCases(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    passing: tuple[_PassingOrigin, ...] = Field(alias="pass", min_length=1)
+    block: tuple[_BlockedOrigin, ...] = Field(min_length=1)
+
+
+class _SiteFileExpectation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    allowed_origins: tuple[str, ...]
+    request_chars: int
+    default_request_chars: int
+
+
+_ORIGIN_CASES = _OriginCases.model_validate_json(
+    (SITE_FILE_FIXTURES / "origins.json").read_text(encoding="utf-8")
+)
+
+
+def _toml_strings(*values: str) -> str:
+    """TOML 배열 하나. JSON 의 문자열 표기를 TOML 의 기본 문자열로 쓴다. 보이는 ASCII 밖(제어 문자,
+    DEL, 비ASCII)은 모두 이스케이프로 적는다. TOML 은 기본 문자열 안의 날 DEL 을 받지 않는다. BMP 밖
+    글자는 JSON 이 서로게이트 쌍(`\\ud83d\\ude00`)으로 적어 TOML 이 거절하므로 쓰지 못한다. 표기
+    픽스처에는 그런 글자가 없다."""
+    return "[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.passing],
+    ids=[case.origin for case in _ORIGIN_CASES.passing],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다(
+    origin: str, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("origin", "rule"),
+    [(case.origin, case.rule) for case in _ORIGIN_CASES.block],
+    ids=[case.origin for case in _ORIGIN_CASES.block],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다(
+    origin: str,
+    rule: str,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """막힌 값은 둘째 자리에 두어, 진단이 가리키는 항목이 그 자리이고 지나는 첫째는 말하지 않는다는
+    것까지 본다. 값은 진단에 싣지 않는다 — 사용자 정보에 비밀번호가 들 수 있다."""
+    origins = _toml_strings("https://ok.example", origin)
+    Path("sites.toml").write_text(_site_file(_site(origins=origins)), encoding="utf-8")
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    problem = "브라우저가 Origin 헤더에 싣는 표기가 아니다"
+    assert f"sites[0].allowed_origins[1]: {problem}(규칙 {rule})" in err
+    assert "allowed_origins[0]" not in err
+    assert "pw@" not in err
+    assert uvicorn_calls == []
+
+
+@pytest.fixture
+def dotted_ipv4_mapped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IPv4 매핑 주소(`::ffff:0:0/96`)를 `::ffff:1.2.3.4` 처럼 점으로 적는 파이썬 판(CI 의
+    3.12.15)을 흉내 낸다. 그 판의 `IPv6Address.__str__` 이 `_ipv4_mapped_ipv6_to_str` 로 그렇게
+    적고, 이 PC 의 3.12.10 은 `::ffff:102:304` 로 적는다(`src/agent_os/main.py` 의
+    `_serialized_ipv6`). `compressed` 는 `str` 을 부르므로 `__str__` 만 바꾼다."""
+    plain = IPv6Address.__str__
+
+    def dotted(address: IPv6Address) -> str:
+        mapped = address.ipv4_mapped
+        return plain(address) if mapped is None else f"::ffff:{mapped}"
+
+    monkeypatch.setattr(IPv6Address, "__str__", dotted)
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+    ids=[case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다(
+    origin: str, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """브라우저는 IPv6 주소를 판과 무관하게 16진수 그룹으로 싣는다. 판정이 표준 라이브러리의 글 꼴에
+    기대면 파이썬 판에 따라 `[::ffff:102:304]` 를 막는다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+    ids=[case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지_않는_IPv6_허용_출처는_막힌다(
+    origin: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """점으로 적은 IPv4(`[::ffff:1.2.3.4]`)는 그 판의 압축형과 같아도 브라우저가 싣는 꼴이
+    아니다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert (
+        "sites[0].allowed_origins[0]: 브라우저가 Origin 헤더에 싣는 표기가 아니다(규칙 ipv6)" in err
+    )
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """위젯 빌드는 합친 허용 출처와 가장 작은 상한을 쓰고, 서버는 사이트마다의 상한으로 요청을 잰다.
+    그래서 서버 쪽은 읽은 사이트 목록의 합친 출처와, 모든 사이트가 받는 가장 긴 요청이 기대값인지를
+    채널의 검사로 본다. Node 의 파서가 키 경로를 잘못 읽으면 위젯은 조용히 기본값을 쓰고 서버는
+    422 를 내는데, 그 갈림을 두 언어가 같은 기대값으로 막는다."""
+    expected = _SiteFileExpectation.model_validate_json(
+        (SITE_FILE_FIXTURES / "sites.json").read_text(encoding="utf-8")
+    )
+    received: list[Sites] = []
+
+    def recording(*, sites: Sites, **_: object) -> FastAPI:
+        received.append(sites)
+        return FastAPI()
+
+    monkeypatch.setattr(main_module, "create_app", recording)
+
+    code = main(["serve", "--site-file", str(SITE_FILE_FIXTURES / "sites.toml")])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    (sites,) = received
+    assert len(sites.entries) == 2
+    assert sites.origins() == expected.allowed_origins
+    longest = "x" * expected.request_chars
+    for site in sites.entries:
+        check_request_chars(longest, site)
+    refused: list[str] = []
+    for site in sites.entries:
+        try:
+            check_request_chars(longest + "x", site)
+        except RequestValidationError:
+            refused.append(site.issuer)
+    assert len(refused) == 1, f"가장 긴 요청을 넘긴 길이를 거절한 사이트가 하나가 아니다: {refused}"
+    assert expected.default_request_chars == DEFAULT_REQUEST_CHARS
 
 
 # --- 실행 타임아웃 -----------------------------------------------------------------------

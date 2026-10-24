@@ -464,10 +464,10 @@ expect_output = ["\"Content-Security-Policy\": \"frame-ancestors 'self'\""]
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }],
+const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
 '''
 new = '''
-        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'" }],
+const ancestors = input.allowedOrigins.length === 0 ? "'self'" : input.allowedOrigins.join(" ");
 '''
 
 [[mutation]]

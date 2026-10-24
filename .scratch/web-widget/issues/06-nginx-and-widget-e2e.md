@@ -24,6 +24,7 @@
 - [ ] **키와 토큰은 `node:crypto`가 짓고, 자체 서명 인증서는 파이썬 `cryptography`가 짓는다**(`pyjwt[crypto]`로 이미 든다)
 - [ ] **에이전트는 임시 플러그인 루트에 짓는, 모델 없이 도는 것들이다.** 이 티켓의 사례가 쓰는 것은 도구를 직접 부르는 것과 출력에 HTML 조각을 내는 것이다. 승인 대상에서 멈추는 것과 새로 고치는 동안 끝나지 않는 것은 그것을 쓰는 티켓이 더한다
 - [ ] **사이트 페이지는 위젯과 다른 출처**에서 서빙한다. 허용 출처의 페이지 하나와 허용 밖 출처의 페이지 하나다
+- [ ] **사이트 페이지의 출처는 호스트 이름으로 둔다**(`localhost`나 `*.localhost`). 표기 규칙(04)은 IP 호스트의 출처와 CSP의 문법 밖인 호스트(밑줄, `$`, 빈 라벨이 든 것)의 출처도 지나보낸다. 그런데 CSP3(2026-09-16 Working Draft)의 문법은 호스트 글자를 영문자·숫자·하이픈으로 두고, host-part 대조는 host가 domain이 아니면 맞지 않는다고 적는다. 그래서 그런 출처는 `frame-ancestors`에서 맞지 않을 수 있다(04가 원문을 내려받아 읽었다. 브라우저에서는 재지 않았다, `tests/fixtures/site_file/README.md`). 위젯 빌드의 `AGENT_OS_SITE_FILE`이 상대 경로면 시작 래퍼를 부른 자리에서 푼다(04)
 - [ ] **로컬의 nginx는 환경 변수 `AGENT_OS_NGINX`가 주는 실행 파일을 쓰고, 없으면 PATH의 `nginx`를 쓴다.** 둘 다 없으면 건너뛰지 않고, 그 변수와 nginx를 받을 곳을 말하는 문구로 실패한다. 이 PC의 PATH에는 nginx가 없다. 설계의 측정은 nginx.org의 윈도우 zip을 받아 경로로 줬다(`.scratch/web-widget/probes/` README의 `nginx_relay` 행)
 - [ ] **nginx는 master와 worker를 함께 거둔다.** 선례인 관리 화면 준비의 거두기(`stack.ts`의 `stop()`)는 자식 하나를 `kill()`할 뿐이다. Windows의 nginx는 master와 worker가 따로 뜨므로 master만 끊으면 worker가 포트를 쥔 채 남을 수 있다. 설계의 측정(`nginx_relay/measure.py`)은 `nginx -s stop`과 프로세스 트리째 끊기(`taskkill /T /F`)로 내렸다. 이 PC에서 e2e를 한 번 돌린 뒤 nginx 프로세스와 그 포트가 남지 않았는지 보고 일지에 적는다(PR 직전 리뷰가 짚었고, 이 PC에 nginx가 없어 재지 못했다)
 

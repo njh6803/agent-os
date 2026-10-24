@@ -5,8 +5,11 @@
  *   오류로 끝나고 SSH 포트 포워딩을 안내한다. 호스트를 주지 않으면 `127.0.0.1` 이다. `next dev`·`next start` 는 인자
  *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다.
  * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 지금은 글꼴 파일을 `public/fonts/` 에 복사하는
- *   것이다(`fonts.ts`). 사이트 파일(티켓 04)과 페이지 안 번들(티켓 10)이 이 자리에 든다. `start` 는 빌드 산출물과 그
- *   `public/` 을 그대로 낸다.
+ *   것이다(`fonts.ts`). 페이지 안 번들(티켓 10)이 이 자리에 든다. `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
+ * - 사이트 파일(티켓 04)은 준비하지 않고 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. next 를 이
+ *   프로세스에서 부르므로 변수는 그대로 이어지고, 래퍼는 상대 경로를 부른 자리 기준의 절대 경로로 바꿔 넘긴다. 읽지
+ *   못하면 next 가 그 진단을 찍고 종료 코드 1로 끝난다. `build` 는 `start.spawn.test.ts` 가 보고, `dev`·`start` 는 손으로
+ *   봤다(일지 2026-10-24-05).
  *
  * 받는 인자는 `--hostname`(`-H`)과 `--port`(`-p`) 둘뿐이고 `build` 는 둘 다 받지 않는다. next 에 넘기는 인자는 받은
  * 것을 옮기지 않고 판정한 값으로 다시 짓는다. 다른 인자가 필요하면 `next` 를 직접 띄운다. 그것은 래퍼가 막지 못한다.
@@ -22,9 +25,10 @@
  */
 
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { copyFonts } from "./fonts.ts";
+import { SITE_FILE_ENV } from "./site-file.ts";
 
 const APP = dirname(import.meta.dirname);
 // 순서가 진단의 문장이 된다. serve 의 진단과 같은 순서다.
@@ -95,10 +99,23 @@ function parse(argv: readonly string[]) {
   }
 }
 
+/**
+ * 사이트 파일의 경로를 래퍼를 부른 자리 기준의 절대 경로로 바꾼다. next 를 부르기 전에 작업 폴더를 앱으로 옮기므로, 상대
+ * 경로를 그대로 두면 설정 파일이 앱 폴더에서 풀어 운영자가 준 파일을 찾지 못한다. 비었거나 없으면 그대로 둔다. 그
+ * 판정은 설정 파일(tools/site-file.ts)이 한다.
+ */
+export function absoluteSiteFile(value: string | undefined, cwd: string): string | undefined {
+  return value === undefined || value === "" ? value : resolve(cwd, value);
+}
+
 /** 판정을 지난 인자로 next CLI 를 이 프로세스에서 부른다. next 의 진입점은 적재될 때 `process.argv` 를 읽는다. */
 function runNext(args: readonly string[]): void {
   const load = createRequire(import.meta.url);
   const bin = load.resolve("next/dist/bin/next");
+  const siteFile = absoluteSiteFile(process.env[SITE_FILE_ENV], process.cwd());
+  if (siteFile !== undefined) {
+    process.env[SITE_FILE_ENV] = siteFile;
+  }
   process.chdir(APP);
   process.argv = [process.execPath, bin, ...args];
   load(bin);

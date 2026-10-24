@@ -1,0 +1,48 @@
+# 사이트 둘. 파이썬의 사이트 파일 읽기(tests/test_main.py)와 위젯 빌드 설정의 시험
+# (web/apps/widget/next.config.test.ts)이 함께 읽고, 기대값은 sites.json 하나다. 읽는 법은 README.md.
+schema_version = "1"
+
+[[sites]]
+issuer = "https://shop.example"
+audience = "agent-os"
+allowed_origins = ["https://shop.example", "https://www.shop.example"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+kid = "shop-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAidz9jKWqEB8cbJnGvTDY
+ggiDwV8F3HbLynTn7l8/Nacy57lLFE7ntT9xIhRUcF6X83v5u577ywbiuFQDu0Fe
+2xAk2SkXzPTxuPoGJM0j1HA2pdmLbOMYnZGXYFysmQSETCE8HVvfDYfxWbZYEcIz
+YUmEyKFRkfKwv9AUK/3KHCKHCInseeAiPiaOVwJDsmD4yDwXZMSN8IZ9gXxDjacx
+hMzhdNJBO9tCvWe2YTC6r5Db8VrEqDMMHfmYRSdyG0yqxRnZ96GhdX9SUfgrFTq8
+ekx4FVGPtqwi5NY7TBrSF93yN9lbA+tHYKQPLhjFlJdD6s09lHpxjolQNAN0qtjz
+xwIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+hourly_runs_per_principal = 30
+
+[[sites]]
+issuer = "https://blog.example"
+audience = "agent-os"
+allowed_origins = ["http://localhost:3000", "https://shop.example"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3IH9ofWaGrlx3qsVnwTF
+KS4jeUv0H8nx0+/DPBlCx9LUr5XiTx4vtAmeFROOwRyam6gNY5z+2AEDdw9diUAg
+fR9SoVaz6dnisuhXPaMVHVDugfCuKb+NmlWDJaxwzihIVNGvbo22/16cUDKFmL3r
+5n7EjuBHSBw1KuL4Lwmh0xDXavVo0fz7Mq8i3RUPC5cpWILCCgXwDYYTW2Sp+wio
+ax94W9jIWWQDm/wXBVzXNS2zL0V3fG/vnzp0sExJSksY3/u0hvBHfV73F/00je1N
+ZvPZrsTyEBzG3iH0reJrFWZpkd7oP5RBx++MI+wpkGlQIwGlnWSiiCIIhiEsrY6X
+FQIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+request_chars = 4000

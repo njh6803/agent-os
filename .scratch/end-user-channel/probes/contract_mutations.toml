@@ -429,10 +429,10 @@ expect = "red"
 [[mutation.edit]]
 file = "src/agent_os/main.py"
 old = '''
-            if origin == "*"
+        return "wildcard"
 '''
 new = '''
-            if origin == "**"
+        return None
 '''
 
 [[mutation]]

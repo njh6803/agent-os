@@ -1,8 +1,10 @@
 // 위젯의 시작 래퍼가 받는 인자. 래퍼가 루프백 판정을 거쳐 next 에 넘길 인자를 다시 짓는지, 어느 명령 앞에서 글꼴을
 // 준비하는지, 판정을 지난 명령을 그 차례로 따르는지를 본다. 프로세스를 띄우지 않는다(띄우는 것은 start.spawn.test.ts).
 
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, test } from "vitest";
-import { launch, nextCommand } from "./start.ts";
+import { absoluteSiteFile, launch, nextCommand } from "./start.ts";
 
 function refusal(argv: readonly string[]): string {
   const command = nextCommand(argv, "3000");
@@ -73,4 +75,22 @@ describe("판정을 지난 명령을 따르기", () => {
       expect(calls).toEqual(expected);
     });
   }
+});
+
+describe("사이트 파일의 경로", () => {
+  test("상대 경로는 래퍼를 부른 자리에서 푼다. next 를 부르기 전에 작업 폴더를 앱으로 옮기기 때문이다", () => {
+    const operator = join(tmpdir(), "operator");
+
+    expect(absoluteSiteFile("conf/sites.toml", operator)).toBe(
+      resolve(operator, "conf", "sites.toml"),
+    );
+  });
+
+  test("절대 경로와 빈 값과 없는 값은 그대로 넘긴다. 판정은 설정 파일이 한다", () => {
+    const absolute = resolve(tmpdir(), "sites.toml");
+
+    expect(absoluteSiteFile(absolute, join(tmpdir(), "operator"))).toBe(absolute);
+    expect(absoluteSiteFile("", join(tmpdir(), "operator"))).toBe("");
+    expect(absoluteSiteFile(undefined, join(tmpdir(), "operator"))).toBeUndefined();
+  });
 });
