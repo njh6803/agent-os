@@ -104,7 +104,8 @@ name = "위젯의 기본 글자 수 상한이 서버와 다르면 빨갛다"
 runner = "e2e"
 tests = ["-g", "글자 수 상한은"]
 expect = "red"
-expect_output = ["20,000자를 넘었습니다"]
+# 안내 글자는 165 행의 toHaveCount 가 빨개져도 Locator 줄에 실린다. 161 행 하나뿐인 toBeVisible 의 실패 머리를 본다.
+expect_output = ["Error: expect(locator).toBeVisible() failed"]
 
 [[mutation.edit]]
 file = "web/apps/widget/tools/site-file.ts"
