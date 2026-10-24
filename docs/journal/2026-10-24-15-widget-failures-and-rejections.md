@@ -178,6 +178,7 @@ CodeRabbit CLI 는 `coderabbit auth status` 가 `Plan: Free`, `Seat: not assigne
 
 - 손으로 치는 다섯은 6cfbfe81 의 pre-commit 으로 갈음하고, `Skipped` 였던 ruff 둘은 손으로 쳐서 초록이었다. 표지를 고친 뒤의 커밋은 `.py` 와 코드를 고치지 않는다.
 - 위젯 e2e(`pnpm -C web/apps/widget exec playwright test`)의 첫 실행은 6 가운데 1 이 빨갰다. 첫 시험(iframe 위젯이 첫 도구 줄을 결말 전에 보인다)에서 `add` 도구 줄이 5초 안에 서지 않았고, 실패 때의 화면 기록(`error-context.md`)에는 그 줄이 서 있었다. 바로 다시 돌리니 6 모두 통과였다(42.9초). 다시 돌리기 직전에 PowerShell `Get-CimInstance Win32_Processor` 의 CPU 사용률이 96% 였고 node·python 프로세스가 161 개 떠 있었다(손으로 봤다). 부하로 늦어졌다는 것은 어림이다. 앞 세션은 같은 코드에서 6 모두 통과였고, 그 뒤 코드의 변경은 `WidgetPage.tsx` 의 주석뿐이다.
+- PR 뒤 main 을 합친 2ac8cbf2 에서 `uv run --env-file ../../../.env pytest -m llm_widget -q` 가 `1 passed, 5597 deselected in 277.85s` 였다. `LLM 토큰 합계 6,555(입력 6,483, 출력 72). 트레이스 1개, 모델 호출 2건.`
 
 ## 회고
 
@@ -220,6 +221,8 @@ PR #384 를 열었다. 08bbdcc 의 첫 CI 에서 `visual` 만 빨갰다(`pages-w
 ### main 합치기와 일지 번호
 
 origin/main 이 web-widget 11(#383)로 움직였다. `tools/sibling_overlap.py` 가 main 의 새 일지 2026-10-24-13 이 이 일지를 이름순으로 앞선다고 알려 `--move` 로 12 → 15 를 옮겼다(파일 이름과 인용 다섯 파일, 옛 번호의 잔존 0 을 새 번호의 양성 대조와 함께 Grep 으로 봤다). PR 본문의 옛 번호도 고친다.
+
+반영 커밋 69916f8e 뒤에 origin/main 을 직접 합쳤다(2ac8cbf2. 앱의 `sync_with_base_branch` 는 이 워크트리를 앱이 만들지 않았다며 거부했다). 충돌은 `.scratch/retro-queue.md` 와 `.scratch/web-widget/probes/README.md` 에서 양쪽이 같은 자리에 행을 더한 것뿐이라 둘 다 살렸고, 대기열은 main 의 463 을 이 브랜치의 464~466 앞에 두었다. 합치기 커밋의 pre-commit 은 충돌한 파일만 봐 ruff 둘이 `Skipped` 였고, 손으로 쳐서 초록이었다. main 이 `CLAUDE.md` 검증 명령에 세운 계기(위젯을 건드렸으면 `-m llm_widget`)에 이 PR 이 들어, 합친 상태에서 돌린 결과를 아래 "검증"에 적었다.
 
 ### 회고 덧붙임
 
