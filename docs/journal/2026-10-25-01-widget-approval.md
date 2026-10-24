@@ -111,3 +111,24 @@ CodeRabbit CLI 는 `Seat: not assigned` 로 돌지 못해 대체 둘을 나란�
 ```
 
 open-session을 부른다 2026-10-24T16:40:18Z
+
+## 인계(둘째 세션)
+
+이 세션은 첫 인계 지시문(`인계: 셀프 리뷰 직전`)으로 열렸고 제목은 `feature/08-widget-approval` 이었다. 셀프 리뷰 반영, 검증 명령, 커밋 둘(ca2774e6, accbf49c), PR 직전 리뷰(위 절)까지 했다. 컨텍스트가 문턱을 넘은 채 `커밋 뒤` 에 와서 인계한다. 둘째 커밋(accbf49c)의 pre-commit 은 모두 통과했다. 아직 푸시하지 않았고 PR 도 없다.
+
+### 인계 지시문
+
+```
+다음 작업: .scratch/web-widget/issues/08-widget-approval.md. 위젯이 승인 묻기를 대화 안에서 묻고 답을 보낸다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/08-widget-approval.md
+브랜치: feature/08-widget-approval
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-01-widget-approval.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영·검증 명령·티켓 done·커밋 둘(ca2774e6, accbf49c)·PR 직전 리뷰(security-review 0건, bug-perf-review 유효 0)까지 했다. 남은 것은 푸시, PR 열기(/git-pr. 체크리스트에 CodeRabbit CLI 좌석 미배정으로 대체 둘을 돌린 것과 보류 1건 — 409 뒤 다시 구독의 404 — 을 적는다), 봇 회차, 병합이다. 사진 비교는 로컬에서 다시 돌리지 않았고 CI의 visual 잡에 맡긴다. 일지의 회고와 "다음"은 아직 없다. docs/journal/2026-10-25-01-widget-approval.md
+확인할 선행 조건: 티켓 10(feature/10-widget-element-embed)이 .scratch/web-widget/probes/README.md, web/apps/widget/api/runs/index.ts, WidgetPage.tsx, WidgetScreen.tsx, useConversation.ts 를 함께 고쳐 나중에 병합하는 쪽에서 글자 충돌이 날 수 있고, 그쪽 일지 2026-10-25-02 가 이 브랜치의 일지 번호보다 뒤라 번호는 겹치지 않는다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-24T17:34:10Z
