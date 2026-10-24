@@ -171,3 +171,36 @@ CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다(`docs/const
 - 이 티켓으로 web-widget의 실제 모델 e2e가 섰다. 남은 web-widget 티켓 07·10은 형제 세션이 돌고 있고(이 세션을 연 묶음), 08·09는 `ready-for-agent`다. 다음 작업은 병합 뒤 `next-session` 결정표가 정한다.
 - 형제 워크트리 `10-widget-element-embed`가 `web/apps/widget/e2e/stack.ts`를 함께 고친다. 나중에 병합하는 쪽이 글자 충돌을 푼다(`tools/sibling_overlap.py`).
 - 뒤로 넘긴 일: 대기열 463(키 확인 단언). 셀프 리뷰가 둔 `_run_tree`와 `tools/run_checks.py`의 겹침(러너의 계약을 넓혀야 한다)과, PR 직전 리뷰가 낸 "제한 시간에 끊겨도 serve·Next 로그를 남기기"(CI의 `e2e-widget`과 함께 쓰는 준비 `e2e/stack.ts`를 고쳐야 한다)는 대기열에 올리지 않았다. 사건이 비용이 되면 그때 센다.
+
+## 인계(커밋 뒤)
+
+PR 직전 리뷰 반영과 회고를 실은 커밋 뒤에 세션 컨텍스트가 문턱을 넘은 채(328,266 토큰) 인계 계기(`hook_handoff`, 경계 `커밋 뒤`)가 왔다. 그 커밋은 pre-commit을 모두 지났다(헌법 판은 고친 파일이 없어 Skipped). 이 세션은 앞 세션이 셀프 리뷰 직전에 넘긴 것을 이어받은 세션이고 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 이 세션의 제목은 `feature/11-widget-real-model-e2e`였고 `feature/11-widget-real-model-e2e (인계함)`으로 바꾼다. 넘길 때의 상태:
+
+- 커밋은 둘이고(구현, PR 직전 리뷰 반영·회고) 아직 푸시하지 않았다. PR도 없다. 이 절만 커밋하지 않았고 새 세션이 다음 커밋에 싣는다.
+- 셀프 리뷰, PR 직전 리뷰(보안·버그 성능), 회고, 일지 "다음"은 마쳤다. 남은 것은 푸시, `/git-pr`로 PR 열기, `@coderabbitai review`, `tools/wait_ci.py` 대기, `/git-pr-feedback`, 워크트리 병합 길, 그 뒤 `next-session`이다.
+- PR 본문의 "남긴 위험"에 키 확인 단언을 적을 때는 "기본은 `os.environ`의 앞뒤를, `-vv`면 전체를 찍는다"로 쓴다. 구현 커밋의 메시지는 "전체를 찍는"이라 틀렸다(위 PR 직전 리뷰 절). PR 체크리스트의 PR 직전 리뷰 줄은 위 "## PR 직전 리뷰"를 옮긴다.
+- 이 세션이 고쳐 적은 것: PR 직전 리뷰 절의 "전체" 판정을 처음에 맞다로 적었다가, 탐침의 표지(첫 값·마지막 값)가 잘린 출력에도 남는 것을 보고 가운데 값으로 다시 봐 유효로 고쳤다(회고 3).
+- 멈출 백그라운드 작업은 없다(서브에이전트 둘과 커밋은 끝났다).
+
+인계 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/11-widget-real-model-e2e.md. 실제 모델을 부르는 위젯 e2e
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/11-widget-real-model-e2e.md
+브랜치: feature/11-widget-real-model-e2e
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-13-widget-real-model-e2e.md의 "## PR 직전 리뷰", "## 회고", "## 다음", "## 인계(커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 구현 커밋과 PR 직전 리뷰 반영·회고 커밋까지 했고 푸시하지 않았으며 PR이 없다. 셀프 리뷰, PR 직전 리뷰, 회고, 일지 "다음"은 마쳤다. 일지의 "## 인계(커밋 뒤)" 절만 커밋하지 않았다. 남은 것은 푸시와 /git-pr로 PR 열기(본문의 남긴 위험에 키 확인 단언은 "기본은 os.environ의 앞뒤를, -vv면 전체를 찍는다"로 적는다. 구현 커밋 메시지의 "전체"는 틀렸다), @coderabbitai review와 tools/wait_ci.py 대기, /git-pr-feedback, 워크트리 병합 길, 그 뒤 next-session이다. docs/journal/2026-10-24-13-widget-real-model-e2e.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock C:/project/agent/.claude/worktrees/11-widget-real-model-e2e`는 이미 풀렸다는 오류(`is not locked`)라 넘어갔다.
+
+open-session을 부른다 2026-10-24T13:40:38Z
+
+## 이어받은 세션(커밋 뒤)
+
+인계 지시문으로 연 새 세션이 같은 워크트리에 들어와 이었다. `origin/main`은 `148652ef`에서 움직이지 않았고(`git fetch` 뒤 `git log 148652ef..origin/main`이 비었다), `tools/sibling_overlap.py`는 번호 겹침이 없었다. 위 인계 절과 이 절을 커밋한 뒤 푸시하고 PR을 연다.
