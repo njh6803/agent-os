@@ -1,21 +1,33 @@
 # 다시 풀기 후보 표
 
-`tools/rerun_select.py` 가 지었다. main 은 `c3c2cfcfa14f`(`c3c2cfcf`), 브랜치 표는 `.scratch/model-rerun/probes/branches.json`(SHA-256 앞 12자리 `261a4650719e`), 되살릴 목록은 없음다.
+`tools/rerun_select.py` 가 지었다. main 은 `80ff61f1d831`(`80ff61f1`), 브랜치 표는 `.scratch/model-rerun/probes/branches.json`(SHA-256 앞 12자리 `847604d8400a`), 되살릴 목록은 없다.
 조건은 그 모듈의 상수다. 날짜 바닥 2026-10-12T00:00:00+09:00(B 의 커밋 시각), 후보 문턱 12개, 숨은 시험 3개 이상, PR 앞 비용 $70 이하, 원래 브랜치 `feature/`. 바깥 검증 낱말은 `-m llm`, `playwright`, `pnpm -C web visual`, `사진 비교`, `Claude Design`, `사람이 확인`(대소문자를 가리지 않는다)과 파일 이름의 `human-verification`이다.
 행은 M 이 늦은 차례다. 자리의 `거슬러 채움`은 남은 후보가 모자라 B 가 날짜 바닥 앞인 후보를 늦은 것부터 더해 본 행이고, `닿지 않음`은 채운 뒤라 보지 않은 행이다. 빠진 노드는 숨은 시험 가르기(`tools/rerun_hidden.py`)가 뺀 노드를 조건과 까닭으로 묶어 센 것이다.
 
 | 과제 id | PR | B | M | B 시각 | 원래 브랜치 | 자리 | 남음 | 빠진 까닭 | 바깥 검증 낱말 | PR 앞 비용 | 크기 | 숨은 시험 | 빠진 노드 | B 의 `web/package.json` | B 의 `tools/run_checks.py` |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| model-rerun-02 | #363 | d0e696c9 | c3c2cfcf | 2026-10-23T06:15+09:00 | feature/02-hidden-test-filter | 날짜 안 | 빠짐 | 숨은 시험을 가르지 못했다: git grep -q 를 띄우지 못했다: embedded null character | — | $30.27 | 7 | — | — | 있음 | 있음 |
-| model-rerun-01 | #361 | 04ea401d | d0e696c9 | 2026-10-23T05:28+09:00 | feature/01-rerun-file-shapes | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $33.73 | 4 | 0 | 조건 2 결과 없음(모음 실패) ×131 | 있음 | 있음 |
-| ticket-for-every-pr-04 | #355 | 9999e83e | 975bf04c | 2026-10-23T01:47+09:00 | feature/04-ci-checks-ticket-done | 날짜 안 | 빠짐 | 숨은 시험이 1개라 3개보다 적다 | — | $38.21 | 9 | 1 | 조건 2 통과 ×1; 조건 3 이름 '_CI가_막았다' ×12; 조건 3 이름 '_CI가_지났다' ×6; 조건 3 이름 '_CI로_친다' ×4; 조건 3 이름 'PR값' ×2 | 있음 | 있음 |
-| ticket-for-every-pr-05 | #354 | 19bbfa06 | ebaed667 | 2026-10-22T23:44+09:00 | feature/05-first-turn-ticket-notice | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $36.27 | 17 | 0 | 조건 2 결과 없음(모음 실패) ×13 | 있음 | 있음 |
-| design-reverse-sync-01 | #353 | b104f8fa | 19bbfa06 | 2026-10-22T22:32+09:00 | feature/01-contrast-module | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(pnpm -C web visual, 사진 비교) | pnpm -C web visual, 사진 비교 | $36.78 | 10 | — | — | 있음 | 있음 |
-| ticket-for-every-pr-03 | #350 | 96fbe241 | e62eb052 | 2026-10-22T19:30+09:00 | feature/03-commit-check-blocks-ticketless | 날짜 안 | 남음 | — | — | $22.60 | 20 | 3 | 조건 3 이름 '_막혔다' ×24; 조건 3 이름 '_지났다' ×16 | 있음 | 있음 |
-| ticket-for-every-pr-02 | #348 | b2f5c61d | 8f8c54f8 | 2026-10-22T17:06+09:00 | feature/02-docs-and-skills-teach-tickets | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $32.46 | 19 | 0 | — | 있음 | 있음 |
-| ticket-for-every-pr-01 | #345 | 98272c4f | caaa062b | 2026-10-22T14:39+09:00 | feature/01-harness-ticket-numbers | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $62.53 | 4 | 0 | 조건 2 결과 없음(모음 실패) ×39; 조건 2 통과 ×3 | 있음 | 있음 |
+| model-rerun-10 | #380 | f1ed4be7 | 80ff61f1 | 2026-10-24T13:47+09:00 | feature/10-schedule-and-budget | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(사람이 확인) | 사람이 확인 | $30.05 | 27 | — | — | 있음 | 있음 |
+| web-widget-04 | #379 | 7496a830 | f1ed4be7 | 2026-10-24T02:26+09:00 | feature/04-site-file-feeds-widget-build | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $61.85 | 5 | — | — | 있음 | 있음 |
+| model-rerun-09 | #377 | eec99a51 | 7496a830 | 2026-10-24T01:53+09:00 | feature/09-not-measured-checks | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $55.83 | 20 | 0 | 조건 2 결과 없음(모음 실패) ×222; 조건 2 TypeError ×1; 조건 2 통과 ×1 | 있음 | 있음 |
+| web-widget-02 | #378 | 51a0417e | eec99a51 | 2026-10-24T00:36+09:00 | feature/02-runtime-relays-call-events-live | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $27.30 | 16 | — | — | 있음 | 있음 |
+| web-widget-03 | #376 | 96d3e1df | 51a0417e | 2026-10-23T23:51+09:00 | feature/03-widget-app-skeleton | 날짜 안 | 빠짐 | PR 앞 비용 $73.22 가 $70 를 넘는다; 바깥 검증 낱말에 걸렸다(pnpm -C web visual, 사진 비교) | pnpm -C web visual, 사진 비교 | $73.22 | 6 | — | — | 있음 | 있음 |
+| web-widget-01 | #375 | 07c890c5 | 96d3e1df | 2026-10-23T22:11+09:00 | feature/01-contract-calling-item-and-limit-kind | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $65.49 | 11 | — | — | 있음 | 있음 |
+| model-rerun-08 | #374 | 15e7b59b | 07c890c5 | 2026-10-23T21:42+09:00 | feature/08-continue-and-caps | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $57.55 | 10 | 0 | 조건 2 결과 없음(모음 실패) ×63; 조건 2 AttributeError ×1 | 있음 | 있음 |
+| model-rerun-07 | #372 | 062e9734 | 15e7b59b | 2026-10-23T20:01+09:00 | feature/07-gates-and-official-cost | 날짜 안 | 빠짐 | PR 앞 비용 $82.99 가 $70 를 넘는다 | — | $82.99 | 11 | — | — | 있음 | 있음 |
+| model-rerun-05 | #371 | 8a026f3c | 062e9734 | 2026-10-23T19:31+09:00 | feature/05-task-selection | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm, playwright, pnpm -C web visual, 사진 비교, Claude Design, 사람이 확인) | -m llm, playwright, pnpm -C web visual, 사진 비교, Claude Design, 사람이 확인 | $52.53 | 13 | — | — | 있음 | 있음 |
+| model-rerun-06 | #370 | db92d68a | 893e0fe8 | 2026-10-23T13:35+09:00 | feature/06-round-drive-record | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $19.12 | 15 | 0 | 조건 2 결과 없음(모음 실패) ×46 | 있음 | 있음 |
+| model-rerun-04 | #369 | 934f8dfa | c2c03eae | 2026-10-23T12:18+09:00 | feature/04-round-clone | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $1.44 | 9 | 0 | 조건 2 결과 없음(모음 실패) ×81 | 있음 | 있음 |
+| model-rerun-03 | #364 | 750761b9 | 9b4952f6 | 2026-10-23T10:35+09:00 | feature/03-rerun-judge | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $0.35 | 7 | 0 | 조건 2 결과 없음(모음 실패) ×55 | 있음 | 있음 |
+| model-rerun-02 | #363 | d0e696c9 | c3c2cfcf | 2026-10-23T06:15+09:00 | feature/02-hidden-test-filter | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $0.31 | 7 | 0 | 조건 2 결과 없음(모음 실패) ×98; 조건 3 문자열 '번호(따옴표 없이' ×1 | 있음 | 있음 |
+| model-rerun-01 | #361 | 04ea401d | d0e696c9 | 2026-10-23T05:28+09:00 | feature/01-rerun-file-shapes | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $0.24 | 4 | 0 | 조건 2 결과 없음(모음 실패) ×131 | 있음 | 있음 |
+| ticket-for-every-pr-04 | #355 | 9999e83e | 975bf04c | 2026-10-23T01:47+09:00 | feature/04-ci-checks-ticket-done | 날짜 안 | 빠짐 | 숨은 시험이 1개라 3개보다 적다 | — | $0.25 | 9 | 1 | 조건 2 통과 ×1; 조건 3 이름 '_CI가_막았다' ×12; 조건 3 이름 '_CI가_지났다' ×6; 조건 3 이름 '_CI로_친다' ×4; 조건 3 이름 'PR값' ×2 | 있음 | 있음 |
+| ticket-for-every-pr-05 | #354 | 19bbfa06 | ebaed667 | 2026-10-22T23:44+09:00 | feature/05-first-turn-ticket-notice | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $1.85 | 17 | 0 | 조건 2 결과 없음(모음 실패) ×13 | 있음 | 있음 |
+| design-reverse-sync-01 | #353 | b104f8fa | 19bbfa06 | 2026-10-22T22:32+09:00 | feature/01-contrast-module | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(pnpm -C web visual, 사진 비교) | pnpm -C web visual, 사진 비교 | $0.18 | 10 | — | — | 있음 | 있음 |
+| ticket-for-every-pr-03 | #350 | 96fbe241 | e62eb052 | 2026-10-22T19:30+09:00 | feature/03-commit-check-blocks-ticketless | 날짜 안 | 남음 | — | — | $0.19 | 20 | 3 | 조건 3 이름 '_막혔다' ×24; 조건 3 이름 '_지났다' ×16 | 있음 | 있음 |
+| ticket-for-every-pr-02 | #348 | b2f5c61d | 8f8c54f8 | 2026-10-22T17:06+09:00 | feature/02-docs-and-skills-teach-tickets | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $2.30 | 19 | 0 | — | 있음 | 있음 |
+| ticket-for-every-pr-01 | #345 | 98272c4f | caaa062b | 2026-10-22T14:39+09:00 | feature/01-harness-ticket-numbers | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $42.15 | 4 | 0 | 조건 2 결과 없음(모음 실패) ×39; 조건 2 통과 ×3 | 있음 | 있음 |
 | ticket-for-every-pr-06 | #343 | 6bd52b06 | 82ba6866 | 2026-10-22T12:54+09:00 | feature/06-hook-blocks-own-cards | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $23.84 | 15 | 0 | 조건 2 결과 없음(모음 실패) ×12 | 있음 | 있음 |
-| ticket-for-every-pr-07 | #342 | c1e05e96 | 6bd52b06 | 2026-10-22T12:46+09:00 | feature/07-morning-report-harness-branches | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $12.63 | 7 | 0 | 조건 2 결과 없음(모음 실패) ×1 | 있음 | 있음 |
+| ticket-for-every-pr-07 | #342 | c1e05e96 | 6bd52b06 | 2026-10-22T12:46+09:00 | feature/07-morning-report-harness-branches | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $11.87 | 7 | 0 | 조건 2 결과 없음(모음 실패) ×1 | 있음 | 있음 |
 | mcp-shutdown-03 | #338 | 14efe41d | c1e05e96 | 2026-10-21T21:53+09:00 | feature/03-posix-launcher | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $5.33 | 16 | — | — | 있음 | 있음 |
 | mcp-shutdown-02 | #340 | 303e8fb5 | f1e6516b | 2026-10-21T20:19+09:00 | feature/02-boundary-exceptions | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $19.99 | 7 | — | — | 있음 | 있음 |
 | mcp-shutdown-01 | #337 | c2c2105f | 5040230c | 2026-10-21T16:15+09:00 | feature/01-mcp-2-and-cli-interrupt | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(-m llm) | -m llm | $56.97 | 20 | — | — | 있음 | 있음 |
@@ -71,9 +83,9 @@
 | http-channel-03 | #75 | 42a2d3a6 | 6cf2595d | 2026-09-26T06:37+09:00 | feature/03-start-run-streams-events | 거슬러 채움 | 남음 | — | — | $30.63 | 7 | 6 | 조건 2 TypeError ×34; 조건 2 결과 없음(모음 실패) ×5; 조건 2 통과 ×2 | 없음 | 없음 |
 | http-channel-02 | #73 | be757ab6 | 260affd0 | 2026-09-26T03:16+09:00 | feature/02-channel-token | 거슬러 채움 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $10.86 | 0 | 0 | 조건 2 결과 없음(모음 실패) ×14; 조건 2 오류 ×5; 조건 2 TypeError ×3 | 없음 | 없음 |
 | http-channel-01 | #70 | edc7ecd8 | ead03573 | 2026-09-25T11:02+09:00 | feature/01-contract-shared-http-layer-and-pre-run-failures | 거슬러 채움 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $21.99 | 15 | 0 | 조건 2 결과 없음(모음 실패) ×20; 조건 2 통과 ×1; 조건 3 문자열 'python -m agent_os.main' ×1 | 없음 | 없음 |
-| admin-api-06 | #63 | f9b85e10 | 19bcc2f7 | 2026-09-23T23:38+09:00 | feature/06-trace-detail | 거슬러 채움 | 남음 | — | — | $13.35 | 1 | 9 | 조건 2 AttributeError ×1; 조건 2 통과 ×1; 조건 3 문자열 'TraceEvent' ×3; 조건 3 문자열 '#/components/schemas/TraceEvent' ×1 | 없음 | 없음 |
-| admin-api-05 | #56 | 007aa22c | 09cb2981 | 2026-09-23T12:24+09:00 | feature/05-traces-list | 거슬러 채움 | 빠짐 | 숨은 시험이 1개라 3개보다 적다 | — | $15.66 | 1 | 1 | 조건 2 결과 없음(모음 실패) ×26; 조건 2 통과 ×4 | 없음 | 없음 |
-| admin-api-04 | #51 | 526ad97b | 6442f95d | 2026-09-23T11:39+09:00 | feature/04-plugins | 거슬러 채움 | 남음 | — | — | $28.30 | 1 | 9 | 조건 2 TypeError ×3; 조건 2 통과 ×2; 조건 2 AttributeError ×1; 조건 3 문자열 '#/components/schemas/PluginManifest' ×1; 조건 3 문자열 'HTTPValidationError' ×1 | 없음 | 없음 |
+| admin-api-06 | #63 | f9b85e10 | 19bcc2f7 | 2026-09-23T23:38+09:00 | feature/06-trace-detail | 거슬러 채움 | 남음 | — | — | $12.01 | 1 | 9 | 조건 2 AttributeError ×1; 조건 2 통과 ×1; 조건 3 문자열 'TraceEvent' ×3; 조건 3 문자열 '#/components/schemas/TraceEvent' ×1 | 없음 | 없음 |
+| admin-api-05 | #56 | 007aa22c | 09cb2981 | 2026-09-23T12:24+09:00 | feature/05-traces-list | 거슬러 채움 | 빠짐 | 숨은 시험이 1개라 3개보다 적다 | — | $14.74 | 1 | 1 | 조건 2 결과 없음(모음 실패) ×26; 조건 2 통과 ×4 | 없음 | 없음 |
+| admin-api-04 | #51 | 526ad97b | 6442f95d | 2026-09-23T11:39+09:00 | feature/04-plugins | 거슬러 채움 | 남음 | — | — | $27.23 | 1 | 9 | 조건 2 TypeError ×3; 조건 2 통과 ×2; 조건 2 AttributeError ×1; 조건 3 문자열 '#/components/schemas/PluginManifest' ×1; 조건 3 문자열 'HTTPValidationError' ×1 | 없음 | 없음 |
 | admin-api-03 | #48 | 29e00fa0 | c6e1ffa2 | 2026-09-23T10:03+09:00 | — | 거슬러 채움 | 빠짐 | 원래 브랜치 docs/ticket-03-bookkeeping 가 feature/ 로 시작하지 않는다 | — | — | 2 | — | — | 없음 | 없음 |
 | admin-api-02 | #44 | ea7c2562 | 7ff73ff5 | 2026-09-22T22:55+09:00 | feature/02-server-stands-fail-closed | 거슬러 채움 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $21.34 | 4 | 0 | 조건 2 결과 없음(모음 실패) ×29 | 없음 | 없음 |
 | admin-api-01 | #42 | 41b12aed | 0442f884 | 2026-09-22T19:06+09:00 | feature/01-contract-list-ports-and-run-summary | 거슬러 채움 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $33.73 | 8 | 0 | 조건 2 결과 없음(모음 실패) ×34 | 없음 | 없음 |
