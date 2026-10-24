@@ -1,10 +1,11 @@
 """실제 모델 e2e 를 감싸는 pytest 가 Windows 에서 pnpm 을 자식 프로세스로 띄우는지 잰다.
 
-web-widget 명세의 Testing Decisions 6 은 위젯 e2e 의 Playwright 프로젝트 `llm` 을 `-m llm` 파이썬
-시험 하나가 자식 프로세스로 돌린다고 정했다. 그 시험은 `uv run --env-file .env pytest -m llm`
-아래에서 돌고, 키는 `.env` 에서 그 pytest 의 환경으로 들어와 pnpm → Playwright 로 넘어가야 한다. 이
-프로브는 그 사슬의 앞 두 고리를 잰다. 같은 판의 uv 가 `pnpm` 을 이름으로 띄우지 못한 것을 손으로
-봤고(일지 2026-10-23-40), 그것이 uv 의 몫인지 Windows 의 실행 파일 찾기 몫인지 가르지 않은 채였다.
+web-widget 명세의 Testing Decisions 6 은 위젯 e2e 의 Playwright 프로젝트 `llm` 을 마커 `llm_widget`
+을 단 파이썬 시험 하나가 자식 프로세스로 돌린다고 정했다. 그 시험은
+`uv run --env-file .env pytest -m llm_widget` 아래에서 돌고, 키는 `.env` 에서 그 pytest 의 환경으로
+들어와 pnpm → Playwright 로 넘어가야 한다. 이 프로브는 그 사슬의 앞 두 고리를 잰다. 같은 판의 uv 가
+`pnpm` 을 이름으로 띄우지 못한 것을 손으로 봤고(일지 2026-10-23-40), 그것이 uv 의 몫인지 Windows 의
+실행 파일 찾기 몫인지 가르지 않은 채였다.
 
 회차는 넷이다.
 - uv 직접: `uv run --env-file <파일> pnpm --version`. 손으로 본 `Failed to spawn: pnpm` 을 다시
@@ -23,7 +24,7 @@ web-widget 명세의 Testing Decisions 6 은 위젯 e2e 의 Playwright 프로젝
 못 보는 것.
 - Playwright 가 띄우는 손자(관리 화면 e2e 의 `stack.ts` 가 띄우는 `uv run … serve`)까지 값이 닿는지.
   node 의 `child_process.spawn` 은 환경을 주지 않으면 제 환경을 물려준다(node 문서). 재지 않았다.
-- pytest 의 `-m llm` 표지와 `tests/conftest.py`. 저장소의 pytest 설정을 피하려고 임시 폴더의 빈
+- pytest 의 `llm_widget` 표지와 `tests/conftest.py`. 저장소의 pytest 설정을 피하려고 임시 폴더의 빈
   `pytest.ini` 로 돈다. 실제 시험은 `tests/` 안에서 그 설정과 함께 돈다.
 - Linux(CI). CI 는 매 푸시에서 이 시험을 돌리지 않는다(`docs/constitution/operations.md` LLM
   테스트).
