@@ -4,11 +4,14 @@
  * - `dev`·`start` 는 관리 화면의 래퍼와 같은 모양이다. 바인딩 호스트가 루프백이 아니면 next 를 부르기 전에 구성
  *   오류로 끝나고 SSH 포트 포워딩을 안내한다. 호스트를 주지 않으면 `127.0.0.1` 이다. `next dev`·`next start` 는 인자
  *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다.
- * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 지금은 글꼴 파일을 `public/fonts/` 에 복사하는
- *   것이다(`fonts.ts`). 페이지 안 번들(티켓 10)이 이 자리에 든다. `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
- * - 사이트 파일(티켓 04)은 준비하지 않고 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. next 를 이
- *   프로세스에서 부르므로 변수는 그대로 이어지고, 래퍼는 상대 경로를 부른 자리 기준의 절대 경로로 바꿔 넘긴다. 읽지
- *   못하면 next 가 그 진단을 찍고 종료 코드 1로 끝난다. `build` 는 `start.spawn.test.ts` 가 보고, `dev`·`start` 는 손으로
+ * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`fonts.ts`),
+ *   페이지 안 번들을 `public/element.js` 로 짓는다(`element.ts`). `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
+ *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다.
+ * - 사이트 파일(티켓 04)은 페이지 안 번들의 빌드와 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. 래퍼는
+ *   상대 경로를 부른 자리 기준의 절대 경로로 바꿔 둘에 넘긴다. next 를 이 프로세스에서 부르므로 변수는 그대로 이어진다.
+ *   읽지 못하면 번들의 빌드가 먼저 그 진단을 찍고 next 를 부르지 않은 채 종료 코드 1로 끝난다. next 만 부르는 `start` 는
+ *   next 가 같은 진단으로 끝난다. `build` 는 `start.spawn.test.ts` 가 실제 프로세스로 보고, `dev` 가 `build` 와 같은
+ *   준비를 먼저 거치는 것과 준비가 실패하면 next 를 부르지 않는 것은 `start.test.ts` 가 본다. `start` 는 손으로
  *   봤다(일지 2026-10-24-05).
  *
  * 받는 인자는 `--hostname`(`-H`)과 `--port`(`-p`) 둘뿐이고 `build` 는 둘 다 받지 않는다. next 에 넘기는 인자는 받은
@@ -27,6 +30,7 @@
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { buildElement } from "./element.ts";
 import { copyFonts } from "./fonts.ts";
 import { SITE_FILE_ENV } from "./site-file.ts";
 
@@ -112,10 +116,6 @@ export function absoluteSiteFile(value: string | undefined, cwd: string): string
 function runNext(args: readonly string[]): void {
   const load = createRequire(import.meta.url);
   const bin = load.resolve("next/dist/bin/next");
-  const siteFile = absoluteSiteFile(process.env[SITE_FILE_ENV], process.cwd());
-  if (siteFile !== undefined) {
-    process.env[SITE_FILE_ENV] = siteFile;
-  }
   process.chdir(APP);
   process.argv = [process.execPath, bin, ...args];
   load(bin);
@@ -123,24 +123,25 @@ function runNext(args: readonly string[]): void {
 
 /** 빌드의 입력 준비와 next 부르기. 시험은 둘을 바꿔 끼워 차례를 본다. */
 export interface LaunchSteps {
-  readonly prepare: () => void;
+  readonly prepare: () => Promise<void>;
   readonly run: (args: readonly string[]) => void;
 }
 
 const REAL_STEPS: LaunchSteps = {
-  prepare: () => {
+  prepare: async () => {
     copyFonts(join(APP, "public", "fonts"));
+    await buildElement(process.env);
   },
   run: runNext,
 };
 
-/** 판정을 지난 명령을 따른다. 준비할 명령이면 빌드의 입력을 준비한 뒤 next 를 부른다. */
-export function launch(
+/** 판정을 지난 명령을 따른다. 준비할 명령이면 빌드의 입력을 준비한 뒤 next 를 부르고, 준비가 실패하면 부르지 않는다. */
+export async function launch(
   command: Exclude<NextCommand, { readonly problem: string }>,
   steps: LaunchSteps = REAL_STEPS,
-): void {
+): Promise<void> {
   if (command.prepare) {
-    steps.prepare();
+    await steps.prepare();
   }
   steps.run(command.args);
 }
@@ -151,6 +152,14 @@ if (import.meta.main) {
     console.error(command.problem);
     process.exitCode = 1;
   } else {
-    launch(command);
+    // 번들의 빌드와 설정 파일이 같은 파일을 읽는다. 둘 다 부르기 전에 푼다.
+    const siteFile = absoluteSiteFile(process.env[SITE_FILE_ENV], process.cwd());
+    if (siteFile !== undefined) {
+      process.env[SITE_FILE_ENV] = siteFile;
+    }
+    launch(command).catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    });
   }
 }

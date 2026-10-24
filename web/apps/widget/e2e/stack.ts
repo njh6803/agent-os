@@ -1,7 +1,7 @@
 /**
  * 위젯 e2e 의 준비(globalSetup, web-widget 티켓 06). 실제 `serve`, 같은 사이트 파일로 빌드한 실제 위젯 Next, 둘을 한
- * 출처 아래에 모으는 같은 출처의 중계(`relay.ts`), 위젯을 품는 다른 출처의 사이트(`site.ts`)를 띄운다. 모델은 부르지
- * 않는다. 선례는 관리 화면 e2e 의 준비(`apps/admin/e2e/stack.ts`)다.
+ * 출처 아래에 모으는 같은 출처의 중계(`relay.ts`), 두 방식으로 위젯을 품는 다른 출처의 사이트(`site.ts`)를 띄운다.
+ * 모델은 부르지 않는다. 선례는 관리 화면 e2e 의 준비(`apps/admin/e2e/stack.ts`)다.
  *
  * - 출처는 모두 `*.localhost` 호스트 이름이다. 위젯은 `widget.localhost`, 허용 출처의 사이트는 `site.localhost`, 허용 밖
  *   출처의 사이트는 `other.localhost` 이고 포트로 가른다. 표기 규칙은 IP 호스트의 출처도 지나보내지만 CSP3 의 문법은
@@ -236,8 +236,9 @@ async function until<T>(
 }
 
 /**
- * 그 사이트 파일로 위젯을 빌드한다. 허용 출처와 글자 수 상한이 빌드에 박힌다. 시작 래퍼로 빌드해 글꼴 파일의 복사까지
- * 운영과 같은 길을 지난다. 빌드는 앱의 `.next/` 와 `public/fonts/` 를 다시 쓴다.
+ * 그 사이트 파일로 위젯을 빌드한다. 허용 출처와 글자 수 상한이 빌드에 박힌다. 시작 래퍼로 빌드해 글꼴 파일의 복사와
+ * 페이지 안 번들의 빌드까지 운영과 같은 길을 지난다. 빌드는 앱의 `.next/`, `public/fonts/`, `public/element.js` 를 다시
+ * 쓴다.
  */
 async function build(siteFile: string, launched: Launched[]): Promise<void> {
   // 시작 래퍼가 next 를 같은 프로세스에서 부르므로 next 의 진입점이 깔렸는지만 먼저 본다.

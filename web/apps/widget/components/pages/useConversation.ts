@@ -1,11 +1,11 @@
-// 대화를 돌린다. 요청마다 부모 창에서 새 토큰을 받아 최종 사용자 경로로 실행을 일으키고, 스트림의 항목을 대화의
-// 규칙(lib/conversation)에 넘긴다. 열린 스트림은 하나이고, 새 대화와 페이지를 떠나는 것이 그것을 끊는다.
+// 대화를 돌린다. 요청마다 임베드가 준 길(lib/connection)로 새 토큰을 받아 최종 사용자 경로로 실행을 일으키고, 스트림의
+// 항목을 대화의 규칙(lib/conversation)에 넘긴다. 열린 스트림은 하나이고, 새 대화와 페이지를 떠나는 것이 그것을 끊는다.
+// 에이전트나 길이 없으면(설정이 잘못됐다) 토큰도 묻지 않고 요청도 보내지 않는다.
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { RunRejected, sendRun } from "../../api/runs";
-import { allowedOrigins } from "../../lib/build";
+import type { Connection } from "../../lib/connection";
 import { INITIAL, reduce, type Action, type Conversation } from "../../lib/conversation";
-import { requestToken } from "../../lib/token";
 
 export interface ConversationControls {
   readonly conversation: Conversation;
@@ -15,7 +15,10 @@ export interface ConversationControls {
   readonly reset: () => void;
 }
 
-export function useConversation(agent: string | null): ConversationControls {
+export function useConversation(
+  agent: string | null,
+  connection: Connection | null,
+): ConversationControls {
   const [conversation, dispatch] = useReducer(reduce, INITIAL);
   const open = useRef<AbortController | null>(null);
 
@@ -29,20 +32,20 @@ export function useConversation(agent: string | null): ConversationControls {
   const { continueFrom } = conversation;
   const send = useCallback(
     (request: string) => {
-      if (agent === null) {
+      if (agent === null || connection === null) {
         return;
       }
       open.current?.abort();
       const abort = new AbortController();
       open.current = abort;
       dispatch({ type: "sent", request });
-      void run(agent, request, continueFrom, abort.signal, (action) => {
+      void run(connection, agent, request, continueFrom, abort.signal, (action) => {
         if (!abort.signal.aborted) {
           dispatch(action);
         }
       });
     },
-    [agent, continueFrom],
+    [agent, connection, continueFrom],
   );
 
   const reset = useCallback(() => {
@@ -57,13 +60,14 @@ export function useConversation(agent: string | null): ConversationControls {
 type Dispatch = (action: Action) => void;
 
 async function run(
+  connection: Connection,
   agent: string,
   request: string,
   continueFrom: string | null,
   signal: AbortSignal,
   dispatch: Dispatch,
 ): Promise<void> {
-  const token = await requestToken(allowedOrigins());
+  const token = await connection.token();
   if (signal.aborted) {
     return;
   }
@@ -72,7 +76,7 @@ async function run(
     return;
   }
   try {
-    const frames = await sendRun(token, agent, request, continueFrom, signal);
+    const frames = await sendRun(connection.baseUrl, token, agent, request, continueFrom, signal);
     for await (const frame of frames) {
       if (frame.kind === "item") {
         dispatch({ type: "item", item: frame.item });

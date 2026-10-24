@@ -1,0 +1,449 @@
+# web-widget 티켓 10 의 변이 표. 페이지 안 방식(web/apps/widget/element/, tools/element.ts, 시작 래퍼, next 설정)의 시험
+# 가운데 구현과 함께 쓰거나 구현 뒤에 써서 빨강을 본 적이 없는 것을 겨눈다. 위젯 e2e 의 페이지 안 사례
+# (web/apps/widget/e2e/element.e2e.ts)는 구현 뒤에 써 처음부터 초록이었다(크기 사례는 측정 범위를 고친 뒤 초록, 일지).
+# `expect_output` 은 겨눈 단언이 실패할 때만 나오는 문구(실패 머리, `Received:`·`Locator:` 줄, 차이의 `+`·`-` 줄)로 고른다.
+# 거른 시험 안에 단언이 하나뿐이면 그 단언의 실패 머리로 족하다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml [번호 ...]
+# node·pages 러너는 `pnpm -C web install` 이 된 체크아웃에서 돈다. pages 러너는 jsdom 을 띄우는 데 1분쯤 걸린다. e2e
+# 러너는 준비가 위젯을 다시 빌드해 변이 하나가 1~2분이고, Playwright 의 chromium 과 uv 의 가상 환경이 있어야 한다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.e2e]
+command = ["pnpm", "exec", "playwright", "test"]
+cwd = "web/apps/widget"
+judge = "playwright"
+
+# --- 토큰 함수(element/token.ts) ------------------------------------------------------------------------------
+
+[[mutation]]
+name = "토큰 함수가 문자열이 아닌 답을 그대로 넘기면 숫자 답이 토큰이 되어 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/token.test.ts", "-t", "숫자로 답한다"]
+expect = "red"
+expect_output = ["expected 42 to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/token.ts"
+old = '''
+        resolve(typeof token === "string" ? token : null);
+'''
+new = '''
+        resolve(token as string);
+'''
+
+[[mutation]]
+name = "토큰 함수의 시간 제한이 10초를 넘기면 늦은 답을 받아 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/token.test.ts", "-t", "10초 안에"]
+expect = "red"
+expect_output = ["expected 'late.token.value' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/token.ts"
+old = '''
+    }, TOKEN_TIMEOUT_MS);
+'''
+new = '''
+    }, TOKEN_TIMEOUT_MS + 1);
+'''
+
+[[mutation]]
+name = "답을 받고 시계를 걷지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/token.test.ts", "-t", "시계를 걷는다"]
+expect = "red"
+expect_output = ["expected 1 to be +0"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/token.ts"
+old = '''
+      (token: unknown) => {
+        clearTimeout(timer);
+'''
+new = '''
+      (token: unknown) => {
+'''
+
+[[mutation]]
+name = "던지는 토큰 함수를 잡지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/token.test.ts", "-t", "던진다"]
+expect = "red"
+expect_output = ["Error: 사이트의 버그"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/token.ts"
+old = '''
+  try {
+    answer = provider();
+  } catch {
+    return Promise.resolve(null);
+  }
+'''
+new = '''
+  answer = provider();
+'''
+
+# --- 기준 주소(element/base.ts) ------------------------------------------------------------------------------
+
+[[mutation]]
+name = "기준 주소가 src 가 있는지만 보면 가린 img 의 출처를 써서 빨갛다"
+runner = "pages"
+tests = ["apps/widget/element/base.test.tsx", "-t", "img 가 그 자리를 가렸다"]
+expect = "red"
+expect_output = ["to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/base.ts"
+old = '''
+  if (!(current instanceof HTMLScriptElement)) {
+'''
+new = '''
+  if (!(current instanceof HTMLElement && "src" in current)) {
+'''
+
+# --- 요소(element/WidgetElement.tsx) -------------------------------------------------------------------------
+
+[[mutation]]
+name = "호스트에 보통 밀도를 달지 않으면 빨갛다"
+runner = "pages"
+tests = ["apps/widget/element/WidgetElement.test.tsx", "-t", "보통 밀도"]
+expect = "red"
+expect_output = ['"density": "regular"']
+
+[[mutation.edit]]
+file = "web/apps/widget/element/WidgetElement.tsx"
+old = '''
+      this.dataset["density"] = "regular";
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "정의되기 전에 단 tokenProvider 를 옮겨 담지 않으면 빨갛다"
+runner = "pages"
+tests = ["apps/widget/element/WidgetElement.test.tsx", "-t", "정의되기 전에"]
+expect = "red"
+expect_output = ["expected true to be false"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/WidgetElement.tsx"
+old = '''
+      if (Object.hasOwn(this, PROVIDER)) {
+        const provider: unknown = Reflect.get(this, PROVIDER);
+        Reflect.deleteProperty(this, PROVIDER);
+        this.#provider = provider;
+      }
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "기준 주소가 없을 때 그 글을 남기지 않으면 빨갛다"
+runner = "pages"
+tests = ["apps/widget/element/WidgetElement.test.tsx", "-t", "기준 주소가 없으면"]
+expect = "red"
+expect_output = ["expected [] to have a length of 1 but got +0"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/WidgetElement.tsx"
+old = '''
+      if (this.#connection === null) {
+        messages.push(BASE_URL_PROBLEM);
+      }
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "떼도 React 뿌리를 걷지 않으면 빨갛다"
+runner = "pages"
+tests = ["apps/widget/element/WidgetElement.test.tsx", "-t", "떼면"]
+expect = "red"
+expect_output = ["to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/WidgetElement.tsx"
+old = '''
+      this.#root?.unmount();
+'''
+new = '''
+'''
+
+# --- 글꼴과 호스트 규칙(element/fonts.ts, element/styles.ts) -----------------------------------------------------
+
+[[mutation]]
+name = "모르는 family 도 그 이름 그대로 등록하면 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/fonts.test.ts", "-t", "모르는 family"]
+expect = "red"
+expect_output = ["to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/fonts.ts"
+old = '''
+    const family = FAMILIES.get(face.family);
+    if (family === undefined) {
+      continue;
+    }
+'''
+new = '''
+    const family = FAMILIES.get(face.family) ?? face.family;
+'''
+
+[[mutation]]
+name = "감싼 요소가 sans 를 위젯의 이름으로 다시 정하지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/element/fonts.test.ts", "-t", "위젯만 쓰는 이름은"]
+expect = "red"
+expect_output = ["to contain '--sans:"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/styles.ts"
+old = '''
+    `  --sans: "${WIDGET_SANS}", system-ui, sans-serif;`,
+'''
+new = '''
+'''
+
+# --- 번들의 빌드(tools/element.ts) ----------------------------------------------------------------------------
+
+[[mutation]]
+name = "번들 빌드가 NODE_ENV 를 박지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/element.test.ts", "-t", "모듈이 아닌 스크립트"]
+expect = "red"
+expect_output = ['not to match /\bprocess\.env\b/']
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/element.ts"
+old = '''
+      "process.env.NODE_ENV": JSON.stringify("production"),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "한글 글꼴의 범위를 굵기마다 실으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/element.test.ts", "-t", "모듈이 아닌 스크립트"]
+expect = "red"
+expect_output = ["expected 3 to be 1"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/element.ts"
+old = '''
+    load: (id) => (id === resolved ? fontsSource(faces) : null),
+'''
+new = '''
+    load: (id) => (id === resolved ? `export const FONT_FACES = ${JSON.stringify(faces)};` : null),
+'''
+
+[[mutation]]
+name = "위젯의 CSS 가 글꼴 CSS 를 들이면 글꼴 파일이 data URL 로 번들에 박혀 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/element.test.ts", "-t", "모듈이 아닌 스크립트"]
+expect = "red"
+expect_output = ["not to contain 'data:font/'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/styles/widget.css"
+old = '''
+@import "@agent-os/ui/theme.css";
+'''
+new = '''
+@import "@agent-os/ui/theme.css";
+@import "@agent-os/ui/fonts.css";
+'''
+
+[[mutation]]
+name = "번들 빌드가 변수의 사이트 파일을 읽지 않으면 픽스처의 상한이 실리지 않아 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/element.test.ts", "-t", "가장 작은 상한을 싣고"]
+expect = "red"
+expect_output = ["""expected '"20000"' to be"""]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/element.ts"
+old = '''
+  const input = buildInput(env);
+'''
+new = '''
+  const input = buildInput({});
+'''
+
+# --- next 설정과 시작 래퍼(next.config.ts, tools/start.ts) -------------------------------------------------------
+
+[[mutation]]
+name = "next 설정이 번들 응답에 ACAO 를 달지 않으면 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "페이지 안 번들 응답도"]
+expect = "red"
+expect_output = ["AssertionError: expected"]
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+      {
+        source: "/element.js",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "시작 래퍼가 준비를 기다리지 않으면 next 가 먼저 불려 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "dev 는"]
+expect = "red"
+expect_output = ["'next dev'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+    await steps.prepare();
+'''
+new = '''
+    void steps.prepare();
+'''
+
+# --- 위젯 e2e 의 페이지 안 사례(e2e/element.e2e.ts) ----------------------------------------------------------------
+
+[[mutation]]
+name = "번들 응답에 ACAO 가 없으면 crossorigin 사례가 빨갛다"
+runner = "e2e"
+tests = ["-g", "crossorigin"]
+expect = "red"
+expect_output = ["Received: undefined"]
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+      {
+        source: "/element.js",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "기준 주소가 src 가 있는지만 보면 가려진 페이지의 위젯이 서서 빨갛다"
+runner = "e2e"
+tests = ["-g", "가려진"]
+expect = "red"
+expect_output = ["Locator: getByText('위젯 설정이 올바르지 않습니다.')"]
+
+[[mutation.edit]]
+file = "web/apps/widget/element/base.ts"
+old = '''
+  if (!(current instanceof HTMLScriptElement)) {
+'''
+new = '''
+  if (!(current instanceof HTMLElement && "src" in current)) {
+'''
+
+[[mutation]]
+name = "호스트가 블록이 아니면 사이트가 준 크기를 받지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "뿌리 글자 크기"]
+expect = "red"
+expect_output = ['-   "height": 600,']
+
+[[mutation.edit]]
+file = "web/apps/widget/element/styles.ts"
+old = '''
+    ":host { display: block; }",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "감싼 요소가 글자 간격을 다시 정하지 않으면 사이트의 글자 간격이 위젯에 물려 빨갛다"
+runner = "e2e"
+tests = ["-g", "뿌리 글자 크기"]
+expect = "red"
+expect_output = ['"letterSpacing": "3px"']
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+    letter-spacing: normal;
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "위젯의 시트를 사이트 문서에도 실으면 사이트의 계산값이 바뀌어 빨갛다"
+runner = "e2e"
+tests = ["-g", "뿌리 글자 크기"]
+expect = "red"
+expect_output = ['+   "adopted": 0,']
+
+[[mutation.edit]]
+file = "web/apps/widget/element/index.ts"
+old = '''
+    widgetElement({ sheets: [...shadowSheets(css), host], baseUrl }),
+  );
+'''
+new = '''
+    widgetElement({ sheets: [...shadowSheets(css), host], baseUrl }),
+  );
+  document.adoptedStyleSheets = [...shadowSheets(css)];
+'''
+
+[[mutation]]
+name = "감싼 요소가 sans 를 다시 정하지 않으면 위젯이 사이트의 글꼴 이름으로 그려져 e2e 가 빨갛다"
+runner = "e2e"
+tests = ["-g", "글꼴은"]
+expect = "red"
+expect_output = ['Expected pattern: /^"?agent-os-widget-sans"?,/']
+
+[[mutation.edit]]
+file = "web/apps/widget/element/styles.ts"
+old = '''
+    `  --sans: "${WIDGET_SANS}", system-ui, sans-serif;`,
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "CSP 판에서 파비콘의 자리를 닫으면 위반이 하나 생겨 위반 단언이 빨갛다"
+runner = "e2e"
+tests = ["-g", "style-src"]
+expect = "red"
+expect_output = ['Received: "img-src']
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/element-site.ts"
+old = '''
+    "img-src 'self'",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "허용 밖 출처를 사이트 파일에 더하면 그 페이지의 요청이 읽혀 CORS 사례가 빨갛다"
+runner = "e2e"
+tests = ["-g", "페이지 안 방식의 CORS"]
+expect = "red"
+expect_output = ["Locator: getByText('요청을 처리하지 못했습니다.')"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/stack.ts"
+old = '''
+    `allowed_origins = [${JSON.stringify(siteOrigin)}]`,
+'''
+new = '''
+    `allowed_origins = [${JSON.stringify(siteOrigin)}, ${JSON.stringify(siteOrigin.replace("site.", "other."))}]`,
+'''
