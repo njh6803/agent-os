@@ -926,6 +926,27 @@ open-session을 부른다 2026-10-24T19:27:45Z
 
 푸시 전에 `gh pr edit 386` 으로 본문을 위 인계 절이 든 자리대로 고쳤다. 변경사항에 08 합치기 줄, 남긴 위험의 시험 없는 화면에 08 의 승인 묻기와 preflight 시험 둘, 열린 08 줄을 09 줄로, 계약 영향의 함수 셋, 변경된 영역의 변이 표 넷(`git diff --name-only origin/main...HEAD` 로 넷을 봤다), 체크리스트의 셀프 리뷰 다섯 회차와 남긴 Minor 둘, PR 직전 리뷰의 08 해소 회차, `-m llm_widget` 과 확인 방법의 수치를 08 합치기 뒤의 것으로, 리뷰어 참고에 `ConnectedWidget.tsx` 의 08 몫과 `useConversation.ts` 줄이다. 본문의 원본은 이 세션 스크래치패드의 `pr-body.md` 다.
 
+이 절을 실은 일지 커밋 `3ba02497` 은 pre-commit 을 지났다(`web-verify` 325.6초, pytest 345.3초 포함. 인용 대조는 경고 없음). ruff 둘은 Skipped 라 손으로 쳐 통과했다(`All checks passed!`, `1051 files already formatted`). 푸시 직전에 `git fetch origin` 을 다시 쳐 origin/main 이 그대로인 것을 보고 `be3eb38c..3ba02497` 네 커밋을 한 번에 푸시했다.
+
+### 봇 회차 (08 합치기 푸시)
+
+- claude-review(둘째 회차): "지적 없음". 유지보수성(`ConnectedWidget.tsx` 로 옮긴 07·08 의 몫, `connection` 이 `send`·`decide`·`run`·`runDecision`·`follow` 에 흐르는 것), 경계, 비밀(`scriptBaseUrl` 의 `instanceof HTMLScriptElement`)을 봤고, 일지가 남긴 Minor 는 후속으로 두어도 된다고 적었다.
+- CodeRabbit(첫 회차): `@coderabbitai review` 를 남기고 `tools/wait_ci.py 386` 을 백그라운드로 띄웠다. 대기는 종료 0, `끝: 모두 통과. CodeRabbit: Review completed` 로 끝났다. 요약 코멘트의 범위가 `cb6d9c39` 에서 `3ba02497` 까지(파일 47)이고 "No actionable comments were generated" 였으며, 리뷰 객체와 인라인 코멘트는 0 이었다(`gh api …/pulls/386/reviews`, `…/comments`). 같은 코멘트가 시간당 포함 리뷰 하나를 썼고 남은 것이 0 이라고 적었다.
+- 고친 것이 없는 회차라, 이 절과 아래 회고, 회고가 더한 대기열 471 을 실은 커밋만 푸시한다(`next-session` 순서 1의 3). "다음" 은 이 회차로 바뀐 것이 없다. 대기열 행을 더하는 커밋이라 푸시 전에 `gh pr edit 386` 으로 본문의 "변경된 영역" 줄을 467~471 로 고쳤다(`next-session` 순서 1의 1).
+
+## 회고 (병합 세션 셋의 몫)
+
+단계를 닫는 이 세션이 회고 없이 넘긴 앞 두 세션("이어받은 세션 (커밋 뒤, 여섯째 → 병합)", "이어받은 세션 (셀프 리뷰 직전, 다섯째 → 병합)")과 이 세션의 몫을 함께 센다. 재료는 앞 두 세션의 인계 절이 남긴 "회고 재료" 와 이 세션이다. 후보 여덟, 승인 1·넘김 0·기각 7. `tools/queue_open_rows.py` 를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 만료할 행이 둘 다 없었다. 승인한 것은 훅의 알림 문장에 더하는 것이고 새 훅·검사가 아니라 `tools/hook_report.py` 는 돌리지 않았다.
+
+1. 백그라운드로 띄운 위젯 e2e 를 `| tail -30` 파이프 앞에 두어 `hook_bash_gate_pipe` 가 띄운 뒤에 알렸고, 세션이 `TaskStop` 으로 멈춘 뒤 리다이렉트로 다시 띄우자 globalSetup 의 위젯 빌드가 `Another next build process is already running.` 으로 종료 1 이었다(위 "origin/main 합치기 (셋째, 08)"). e2e 는 다음 세션에서야 쟀다. 승인(더하는 것, 1회차): 비용이 실제로 났고, 알림 문장의 대안(파일로 리다이렉트)은 다음 실행만 다루고 이미 도는 실행을 어떻게 할지는 말하지 않아, 그 자리의 계기 훅 문장으로 고쳐 쓸 수 있으며, PR 하나로 되돌린다. 세 번째 전에는 반영하지 않고 대기열 471(1회차)에 두었다. 행을 찾느라 대기열을 `TaskStop`·`next build`·`백그라운드`·`gate_pipe` 로 grep 했고, 맞은 348(`run_hooks.py --help`)·358(`mutate.py` 의 표 묶음)·95(게이트 목록)는 다른 일이었다.
+2. 판정 명령을 파이프 앞에 둔 것이 두 번 더 있었다(위 1 의 위젯 e2e, `pytest -k preflight` 의 `| tail -3`). 기각: `hook_bash_gate_pipe` 가 그 자리에서 알렸다. 이 일지에서 앞 회고(PR 연 뒤) 6 과 함께 세 번째다.
+3. 도구 호출 사이의 산문을 영어로 한 번 썼다(`ConnectedWidget.tsx` 로 옮기기 직전). 기각: 인계 절이 앞 회고(PR 연 뒤) 2 와 같은 일로 적었고, 그 회고는 `hook_midturn_korean` 이 그 자리에서 알렸다고 적었다(닫힌 대기열 94 의 처방). 이 일지에서 세 번째다.
+4. Grep 의 glob 에 `!node_modules/**` 를 주자 `.env` 를 읽는 길이라며 `hook_env_read` 가 막았다. 기각: 훅이 그 자리에서 막았다.
+5. 인용 대조가 791행의 "origin/main 보다 1커밋 뒤처졌다" 를 저장소에 없다고 경고했다. 원문은 `tools/hook_push_behind_main.py` 의 f-문자열이라 실행해 채운 글이다. 기각: 막지 않는 검사이고, 독스트링의 못 보는 것에 든 "원문이 저장소 밖인 인용" 의 꼴이며, 판정에 문장 하나가 들었다.
+6. 08 해소의 셀프 리뷰가 일지·프로브 README 의 손질 여섯을 잡았다(낡은 "다음" 첫 줄, "위"·"아래", 맞지 않게 된 파일의 수, README 행의 기점, 적지 않은 변이 여섯의 결과, CORS 근거의 시험). 기각: `code-review` 두 축의 기준을 어긴 것을 리뷰가 잡아 제 몫을 했고, 검사로 옮길 수 있는 꼴도 표준에 더할 새 판단 기준도 아니다. README 행의 기점은 명세 축이 든 기준이고 `docs/agents/issue-tracker.md` 의 프로브와 근거 절에는 없다(grep 으로 봤다).
+7. Grep 결과의 긴 줄이 `next-session` 의 `SKILL.md` 에서 셋 `[Omitted long matching line]` 으로 나왔다. 기각: `hook_grep_omitted` 가 알렸고 Read 로 그 줄들을 열었다.
+8. 이 세션이 도구를 여러 번 이어 부르는 동안 사람에게 말하지 않아 앱이 세 번 알렸다. 기각: 앱이 그 자리에서 알렸고, 사건이 하네스의 빈자리에서 난 것이 아니다.
+
 ## 다음
 
 - web-widget 은 07·08·11 이 병합됐고(#384, #385, #383) 10(이 PR #386)이 병합되면 09(저장과 재접속)가 남는다. 08 이 `WidgetPage.tsx` 에 더한 것은 이 브랜치가 08 을 합치며 `ConnectedWidget.tsx` 로 옮겼다(위 "origin/main 합치기 (셋째, 08)"). 티켓 10 이 "그 티켓들이 더하는 화면은 두 방식에 함께 선다"고 적은 대로, 09 가 더하는 화면도 `ConnectedWidget` 을 거쳐야 두 방식에 함께 선다. 09 는 10 이 없는 `cb6d9c39` 위에서 돈다(워크트리 `09-widget-storage-and-reconnect`, 그 워크트리의 티켓은 `in-progress`). 그래서 09 가 `WidgetPage.tsx` 나 `useConversation.ts` 에 더한 것은 뒤에 병합하는 쪽이 07·08 합치기처럼 `ConnectedWidget.tsx` 와 `connection` 을 받는 꼴로 옮긴다.
