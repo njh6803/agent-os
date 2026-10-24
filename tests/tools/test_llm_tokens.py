@@ -1,6 +1,6 @@
 """tools/llm_tokens.py 의 트레이스 토큰 합계.
 
-`-m llm` 실행의 끝 줄은 `tests/conftest.py` 가 이것으로 찍는다.
+`-m llm` 과 `-m llm_widget` 실행의 끝 줄은 `tests/conftest.py` 가 이것으로 찍는다.
 """
 
 from __future__ import annotations
