@@ -153,7 +153,8 @@ name = "기다리는 동안 끊겨도 이어 가면 떠난 뒤의 시험이 빨�
 runner = "pages"
 tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "기다리는 동안 페이지를 떠나면"]
 expect = "red"
-# 떠난 뒤 토큰을 한 번 더 청한다(이어 가기의 수를 보는 뒤 단언은 "of 1 but got 2" 다).
+# 떠난 뒤 토큰을 한 번 더 청한다. 청한 뒤의 끊김 확인에서 돌아와 이어 가기는 보내지 않으므로, 이어 가기의 수를 보는
+# 뒤 단언은 이 변이에서 지나간다. 토큰의 수를 보는 단언만 이 변이를 잡는다.
 expect_output = ["expected [ …(3) ] to have a length of 2 but got 3"]
 
 [[mutation.edit]]

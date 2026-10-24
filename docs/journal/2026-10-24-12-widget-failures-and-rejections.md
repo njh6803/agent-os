@@ -118,7 +118,7 @@
   - 09 티켓 11행: "스트림이 결말 없이 끝나면 지금은 `lib/conversation.ts`의 `ended` 동작이 그 교환을 처리하지 못한 것(`error`)으로 닫고 처리하지 못한 거절의 셈(`errorStreak`)을 하나 올린다(05가 정한 것 2를 07이 거절 표의 500 행으로 바꿨다). 읽는 도중에 끊긴 스트림도 `components/pages/useConversation.ts`의 `attempt`가 `ended`로 넘긴다. 그래서 시작 항목 뒤의 끊김도 그 셈에 들어, 세 번째로 거듭되면 알림에 "새 대화"가 붙는다."
   - 05 티켓 7행: "실패 원인마다의 알림과 거절의 표는 07이 들였고 … 07 전까지 이 티켓은 … 그렸고 … 그렸다." 28행: "상한의 기다림으로 막히는 것은 07이 더했다."
   - 07 티켓 13행: "05가 넘길 때 실패 항목의 `cause`와 `run_id`는 상태에 담기지 않았다."
-  - 변이 표: 머리 주석의 "앞의 여덟은 화면 동작 테스트(`widget-pages`), 뒤의 일곱은 위젯 스토리", "빨강을 기대한 열넷은 모두 고른 단언이 빨개졌다는 것을 그 단언의 실패 머리나 값이 든 줄(`expect_output`)로 본다.", "첫 판은 열셋 가운데 셋에만 표지가 있어", 12번 "보내기의 아래 끝이 입력창보다 16px(두 줄 글의 둘째 줄) 낮다", 14번 "20px(칸과 글 사이 4px 와 글 한 줄 16px) 낮다", 8번 "이어 가기의 수를 보는 뒤 단언은 "of 1 but got 2" 다".
+  - 변이 표: 머리 주석의 "앞의 여덟은 화면 동작 테스트(`widget-pages`), 뒤의 일곱은 위젯 스토리", "빨강을 기대한 열넷은 모두 고른 단언이 빨개졌다는 것을 그 단언의 실패 머리나 값이 든 줄(`expect_output`)로 본다.", "첫 판은 열셋 가운데 셋에만 표지가 있어", 12번 "보내기의 아래 끝이 입력창보다 16px(두 줄 글의 둘째 줄) 낮다", 14번 "20px(칸과 글 사이 4px 와 글 한 줄 16px) 낮다", 8번 괄호의 이어 가기 수 단언(PR 직전 리뷰가 거짓으로 짚어 고쳤다, 아래 "PR 직전 리뷰").
 - **사진 비교의 "30 통과"(표준 축 Nit).** 다시 돌린 `visual:widget` 이 "30 passed" 였다. 30 은 Playwright 시험의 수이고 시험 하나가 스토리 하나의 그려진 모드를 모두 찍어, 정답 사진의 장수와 다르다. 어긋남이 아니다.
 - **남긴 것과 이유.** 위 두 축의 "남긴다" 줄이다(Divergent Change, 빈 `catch`, `RunRejected` 의 인자 차례, `LimitWait.remaining`, `refuse` 의 끊긴 요청 시험, `hourly_runs` 의 초, 알림과 띠의 읽는 차례).
 - **다시 돌린 명령.** 위젯 화면 동작·스토리 121(91·30), 위젯의 eslint·tsc·prettier, ruff 둘, `visual:widget` 30, 위젯 e2e 6 이 모두 초록이었다. 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
@@ -129,3 +129,42 @@
 - 첫 커밋 시도의 pre-commit 에서 검사 열(pytest 531초, web-verify 394초 포함)과 마크다운 표·줄 구분 문자는 통과했고, ruff 둘은 `.py` 가 없어 `Skipped` 였다. 변이 표 검사(`tools/mutate.py --staged`)가 앞 티켓의 변이 표 둘에서 원문 일곱이 깨졌다고 막았다. `conversation_mutations.toml`(티켓 05)의 여섯은 이 티켓이 거절의 결말을 상태 코드로 가르고(`settleError`, `withdraw`), 실패 항목에 원인과 실행 식별자를 담고, 보내기 버튼을 잰 값으로 올리고, "다시 보내기"를 `FailureAlert` 로 옮긴 데서 났다. `widget_app_mutations.toml` 의 하나는 다크 모드 스토리(`LimitedHourlyWideDark`)를 더해 같은 줄이 둘이 된 데서 났다.
 - 일곱 모두 같은 뜻의 변이를 지금 코드에 다시 걸었다. 결말 없이 끝난 스트림의 시험은 `WidgetFailures.test.tsx` 의 거절 표로 옮겨 가, 그 변이는 `tests` 도 바꿨다. 다시 건 변이를 도구로 돌리니 `conversation_mutations.toml` 의 여섯(7·8·9·16·22·26)과 `widget_app_mutations.toml` 의 하나(26)가 모두 표지까지 기대대로였다. 뒤의 것의 필터 `wide-dark 를` 은 이제 사진 시험 넷을 고르지만, 변이가 바꾸는 스토리는 `WideDark` 하나라 빨강도 하나였다.
 - 인용 대조 경고 일곱 가운데 여섯을 고쳤다. 넷은 리뷰 지적이나 이미 고친 옛 문장을 따옴표로 적은 것이라 따옴표를 뗐고, 둘은 변이 표 머리 주석을 줄여 옮긴 것이라 원문 그대로 고쳤다. 남은 하나(`lib/limit.ts` 머리의 인용)는 원문과 같고, 원문이 주석의 줄바꿈으로 갈려 있어 검사가 맞추지 못한다.
+- 다시 친 커밋의 pre-commit 은 검사 열(pytest 343초, web-verify 335초 포함)과 변이 표 검사까지 모두 통과했다. ruff 둘은 `.py` 가 없어 `Skipped` 였고, 이 커밋은 `.py` 를 고치지 않았다. 셀프 리뷰를 반영한 커밋은 여기서 들었고 푸시는 하지 않았다.
+
+## 둘째 인계
+
+이 세션(제목 `feature/07-widget-failures-and-rejections`)은 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 첫 커밋 시도에서도 계기가 왔지만 그 커밋이 pre-commit 에 막혀 경계가 아니었다(next-session "인계할 때" 1). 이 세션이 번복하거나 고친 것은 위 "첫 커밋이 막힌 것"의 변이 표 둘과 일지의 인용이다.
+
+```
+다음 작업: .scratch/web-widget/issues/07-widget-failures-and-rejections.md. 위젯의 실패와 거절(입력창 위의 띠 부품과 거절 알림)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/07-widget-failures-and-rejections.md
+브랜치: feature/07-widget-failures-and-rejections
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-12-widget-failures-and-rejections.md의 "## 둘째 인계"와 "### 반영"의 "PR 직전 리뷰에 밀 주장"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경을 한 커밋으로 들었고 푸시하지 않았으며 PR은 없다. 남은 단계는 차례로 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 일지의 "PR 직전 리뷰에 밀 주장"을 브리프에 싣는다)와 그 반영 커밋, failures_mutations.toml의 고르지 않은 전체 실행 한 번, .scratch/web-widget/probes/README.md에 그 표의 줄, 티켓 07의 검증 체크박스와 Status done, 일지의 "다음", /git-pr로 PR을 열고 봇 회차, next-session "워크트리에서 병합할 때"로 병합이다(docs/journal/2026-10-24-12-widget-failures-and-rejections.md)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/07-widget-failures-and-rejections (인계함)` 으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-24T13:31:45Z
+
+## 셋째 세션
+
+> 사용자: /implement .scratch/web-widget/issues/07-widget-failures-and-rejections.md (위 "둘째 인계"의 지시문. PR 직전 리뷰부터, 범위는 PR과 병합까지)
+
+워크트리 `07-widget-failures-and-rejections` 에 `EnterWorktree(path)` 로 들어왔다. origin/main 은 148652ef 그대로라 합칠 것이 없었다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI 는 `coderabbit auth status` 가 `Plan: Free`, `Seat: not assigned` 라 돌지 못했다. 대체 둘(`operations.md` 리뷰 파이프라인 2)을 나란히 돌렸다. 기준은 148652ef 이고 커밋 85f9ddbb 를 봤다.
+
+- **보안(`/security-review`).** 지적 없음. 서버가 준 값(`limit`, `Retry-After`, `run_id`, `cause`)은 정한 표에서 고른 문장이나 React 텍스트로만 그려지고, 토큰은 `location.origin` 에만 가며, 시작 404 의 `console.error` 는 에이전트 이름만 적는다.
+- **버그·성능(`bug-perf-review`, sonnet).** 유효 Minor 둘, 보류 하나, 오탐 셋. 밀 주장 열 가운데 아홉은 맞았고 하나(변이 표 8번의 괄호)가 어긋났다.
+  - 유효 Minor. 실패한 교환의 "다시 보내기"가 422·429 를 받으면 쓰던 글을 덮는데, `WidgetPage.tsx` 의 주석은 "쓰던 글은 그대로 둔다"고 적었다. → 주석을 고쳤다. 동작은 둔다. 명세 표의 422·429 행이 시작과 이어 가기 모두 "요청을 입력창으로 되돌리고"라고 정해 "다시 보내기"를 가르지 않고, 이 일지의 결정 7번째 줄이 그것을 골랐다. 바꾸려면 명세를 고쳐야 한다(리뷰의 제안은 "다시 보내기"는 되돌리지 않는 것이다. 실패한 교환과 그 버튼이 남아 요청을 잃지 않는다). PR 체크리스트에 적는다.
+  - 유효 Minor. 변이 표 8번의 괄호가 이어 가기 수의 뒤 단언도 빨개지는 것처럼 적었다. 그 변이는 토큰을 한 번 더 청한 뒤 `signal.aborted` 확인에서 돌아와 `attempt` 에 닿지 않아 이어 가기의 수는 1로 남는다(`useConversation.ts` 의 `run`). → 괄호를 그 동작대로 고쳤다.
+  - 보류. 띠의 `role="status"` 는 `aria-atomic` 이 기본(참)이고 안의 `aria-hidden` 숫자가 매초 바뀐다. 화면 읽기 프로그램이 숨긴 숫자의 변경에도 영역을 다시 읽는지는 코드로 닫히지 않는다. 시험은 `aria-hidden` 을 뗀 DOM 의 글만 본다. → 둔다. NVDA 같은 실제 화면 읽기 프로그램으로 한 번 재야 하고, PR 체크리스트에 적는다.
+  - 오탐. 둘째 404 뒤 끊김을 보기 전에 토큰을 청하는 틈, `ResizeObserver` 의 반복 그리기와 정리, 매초의 다시 그리기와 타이머 정리.
+- 고친 뒤 `tools/mutate.py --check` 로 표 셋(failures 15, conversation 26, widget_app 34)의 원문이 모두 한 번씩 있는 것을 봤다.
