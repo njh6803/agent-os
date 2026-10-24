@@ -1,6 +1,7 @@
 /**
  * e2e 의 준비(globalSetup). 실제 `serve` 와, 시작 래퍼로 띄운 실제 관리 화면을 띄운다(web-admin 명세 "e2e").
- * e2e 는 실제 `serve` 의 둘째 구동자이고 모델을 부르지 않는다. 첫째는 `tests/test_main.py` 의 `-m llm` 테스트다.
+ * 이 e2e 는 모델을 부르지 않고 실제 `serve` 를 띄운다. 실제 `serve` 를 띄우는 것은 이것과 위젯 e2e
+ * (`apps/widget/e2e/stack.ts`), `tests/test_main.py` 의 `-m llm` 테스트다.
  *
  * - 픽스처 플러그인 루트는 임시 디렉터리에 쓴다. MCP 매니페스트가 이 기계의 파이썬 인터프리터 경로를 들어야 해서
  *   커밋할 수 없다. 인터프리터는 `uv run` 이 쓰는 가상 환경의 것이다(`tests/test_main.py` 가 `sys.executable` 로

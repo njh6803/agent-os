@@ -4,11 +4,11 @@
 
 05가 남긴 틈(모든 실패를 마지막 행 문구로, 401 밖의 거절을 한 문구로 그린 것)을 이 티켓이 닫는다. 결정 경로의 거절은 08, 구독 경로의 거절은 09가 더한다.
 
-이 티켓은 06 뒤에 온다. 06의 위젯 e2e가 CI에서 실제 serve·Next·nginx 뒤의 iframe 위젯을 매번 돌리므로, 화면을 크게 바꾸는 이 티켓부터 그 위에서 회귀를 본다.
+이 티켓은 06 뒤에 온다. 06의 위젯 e2e가 CI에서 실제 serve·Next 앞의 같은 출처 중계 뒤의 iframe 위젯을 매번 돌리므로, 화면을 크게 바꾸는 이 티켓부터 그 위에서 회귀를 본다.
 
 근거는 `.scratch/web-widget/spec.md`의 "실패 원인의 문구", "요청이 거절될 때"(경로가 넷 모두, 시작, 이어 가기인 행), "상한", "입력창 위의 띠", "접근성" 절과 Testing Decisions 1·3이다. ADR 0031(실패 원인), ADR 0023과 그 이력 2026-10-23(`limit`), ADR 0024 이력 2026-10-23(이어 가기의 404를 한 번 더 시도)이 앞선 결정이다. 화면은 `.scratch/web-widget/design/`의 `mk-failure`, `mk-rejection`, `mk-limit`이다.
 
-**Blocked by:** 06 (nginx 틀과 위젯 e2e)
+**Blocked by:** 06 (위젯 e2e)
 
 **05가 넘기는 자리.** 틈 동안의 결말은 `lib/conversation.ts`의 `Outcome`(`failed`는 실패와 끝내지 못함을 함께 들고, `unauthorized`는 401과 토큰을 받지 못한 것, `rejected`는 그 밖의 거절과 결말 없이 끝난 스트림. 시작 항목 전에 끝났든 뒤에 끝났든 같다)이고, 알림은 `components/organisms/Conversation.tsx`의 교환 응답이 그린다. 원인마다의 문구와 거절의 표는 이 둘을 가른다. 실패 항목의 `cause`와 `run_id`는 지금 상태에 담기지 않는다.
 

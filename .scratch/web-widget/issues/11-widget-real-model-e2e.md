@@ -1,12 +1,12 @@
 # 11: 실제 모델 e2e — `uv run --env-file .env pytest -m llm_widget`이 저장소의 계산 에이전트로 위젯에서 요청 하나를 끝까지 보낸다
 
-**What to build:** 개발자가 `uv run --env-file .env pytest -m llm_widget`을 치면, 마커 `llm_widget`을 단 파이썬 시험 하나가 위젯 e2e의 Playwright 프로젝트 `llm`을 자식 프로세스로 돌린다. 그 프로젝트는 06의 준비(실제 serve·Next·nginx)에 실제 모델 키를 넘겨, 저장소의 계산 에이전트(`plugins/agents/calc`)로 iframe 위젯에서 요청 하나를 보내 출력이 서는 것까지 본다. 키가 없으면 실패하고, 실행 끝에 토큰 합계 줄이 찍힌다. 이 명령은 원칙 I의 판정 명령(`-m llm`)과 따로다. 기본 실행과 `-m llm`은 이 시험을 돌리지 않는다. 프로젝트 `llm`은 감싸는 시험이 준 `AGENT_OS_WIDGET_LLM=1`이 있을 때만 서므로, 06이 정한 로컬 명령과 CI의 `e2e-widget`은 그 프로젝트를 돌리지 않는다.
+**What to build:** 개발자가 `uv run --env-file .env pytest -m llm_widget`을 치면, 마커 `llm_widget`을 단 파이썬 시험 하나가 위젯 e2e의 Playwright 프로젝트 `llm`을 자식 프로세스로 돌린다. 그 프로젝트는 06의 준비(실제 serve·Next와 같은 출처의 중계)에 실제 모델 키를 넘겨, 저장소의 계산 에이전트(`plugins/agents/calc`)로 iframe 위젯에서 요청 하나를 보내 출력이 서는 것까지 본다. 키가 없으면 실패하고, 실행 끝에 토큰 합계 줄이 찍힌다. 이 명령은 원칙 I의 판정 명령(`-m llm`)과 따로다. 기본 실행과 `-m llm`은 이 시험을 돌리지 않는다. 프로젝트 `llm`은 감싸는 시험이 준 `AGENT_OS_WIDGET_LLM=1`이 있을 때만 서므로, 06이 정한 로컬 명령과 CI의 `e2e-widget`은 그 프로젝트를 돌리지 않는다.
 
 아래 목록은 한 티켓에 든다. 갈라 들이면 키 없는 CI가 실제 모델을 부르거나, 아무도 돌리지 않는 프로젝트가 생긴다(명세 검토).
 
 근거는 `.scratch/web-widget/spec.md`의 Testing Decisions 6이다. ADR 0024 이력 2026-10-23 "실제 모델을 부르는 위젯 e2e는 LLM 시험 하나가 감싼다"가 앞선 결정이고, 명령을 원칙 I의 판정과 떼는 까닭과 거부한 안 넷이 거기 있다. 측정은 `.scratch/web-widget/probes/pnpm_spawn.py`와 그 README의 2026-10-23 결과다.
 
-**Blocked by:** 06 (nginx 틀과 위젯 e2e)
+**Blocked by:** 06 (위젯 e2e)
 
 **Status:** ready-for-agent
 

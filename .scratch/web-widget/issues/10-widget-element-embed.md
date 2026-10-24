@@ -6,7 +6,7 @@
 
 근거는 `.scratch/web-widget/spec.md`의 "임베드"(번들의 꼴, 페이지 안 방식, 토큰을 받지 못한 경우, 잘못 준 속성, 크기, Shadow DOM, API의 기준 주소, 같은 에이전트 둘, 임베드 안내), "테마·모드·밀도·글꼴", "위젯 앱의 배치와 빌드"(경로, 스타일) 절과 Testing Decisions 1·4다. ADR 0024(한 앱 폴더에서 두 산출물, 페이지 안 번들, 사이트의 의무)와 ADR 0026과 그 이력(호스트 속성, `:host(...)`, 상속 속성)이 앞선 결정이다. 설계 인터뷰가 IIFE 번들과 shadow root 안의 Tailwind를 잰 것이 `.scratch/web-widget/probes/`의 `widget_stack/`과 `widget_tailwind/`이다(README의 2026-10-03·2026-10-04 결과).
 
-**Blocked by:** 06 (nginx 틀과 위젯 e2e)
+**Blocked by:** 06 (위젯 e2e)
 
 **Status:** ready-for-agent
 
