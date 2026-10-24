@@ -60,7 +60,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하는 시작 래퍼),
                    tools/site-file.ts(AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수
                    상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에 싣는다),
-                   .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트)
+                   .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
+                   e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 iframe 위젯을 미는 e2e)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/

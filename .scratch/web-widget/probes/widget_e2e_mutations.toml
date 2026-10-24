@@ -1,0 +1,113 @@
+# web-widget 티켓 06 의 변이 표. 위젯 e2e(web/apps/widget/e2e/widget.e2e.ts)의 사례는 구현이 이미 있는 코드를 지키는
+# 시험이라 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 한 번 돌릴 때마다
+# 준비가 위젯을 다시 빌드하므로 변이 하나가 1~2분 걸린다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/widget_e2e_mutations.toml [번호 ...]
+# chromium 이 Playwright 의 브라우저 캐시에 있어야 하고 uv 의 가상 환경이 서 있어야 한다.
+
+[runner.e2e]
+command = ["pnpm", "exec", "playwright", "test"]
+cwd = "web/apps/widget"
+judge = "playwright"
+
+[[mutation]]
+name = "중계가 응답을 모아 보내면 첫 도구 줄이 결말 전에 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "첫 도구 줄을 결말 전에"]
+expect = "red"
+expect_output = ["getByText('add', { exact: true })"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/relay.ts"
+old = '''
+      response.pipe(outgoing);
+'''
+new = '''
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk: Buffer) => chunks.push(chunk));
+      response.on("end", () => outgoing.end(Buffer.concat(chunks)));
+'''
+
+[[mutation]]
+name = "위젯의 CSS 를 싣지 않으면 토큰이 풀리지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "디자인 토큰의 값으로"]
+expect = "red"
+expect_output = ['Expected: not "rgba(0, 0, 0, 0)"']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetPage.tsx"
+old = '''
+import "../../styles/widget.css";
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "보낸 창을 보지 않으면 형제 프레임의 가짜 토큰을 받아 빨갛다"
+runner = "e2e"
+tests = ["-g", "부모가 아닌 프레임"]
+expect = "red"
+expect_output = ["getByText('5/9', { exact: true })"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+      if (event.source !== parent || !allowedOrigins.includes(event.origin)) {
+'''
+new = '''
+      if (!allowedOrigins.includes(event.origin)) {
+'''
+
+[[mutation]]
+name = "frame-ancestors 를 * 로 두면 허용 밖 출처의 페이지가 위젯을 품어 빨갛다"
+runner = "e2e"
+tests = ["-g", "품지 못한다"]
+expect = "red"
+expect_output = ["chrome-error://chromewebdata/"]
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+'''
+new = '''
+const ancestors = "*";
+'''
+
+[[mutation]]
+name = "출력을 HTML 로 그리면 조각이 글로 보이지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "HTML 조각은"]
+expect = "red"
+expect_output = ["getByText('출력: <img"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+          <p className="text-body wrap-anywhere whitespace-pre-wrap">
+            <span className="sr-only">출력: </span>
+            {outcome.output}
+          </p>
+'''
+new = '''
+          <p
+            className="text-body wrap-anywhere whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: outcome.output }}
+          />
+'''
+
+[[mutation]]
+name = "위젯의 기본 글자 수 상한이 서버와 다르면 빨갛다"
+runner = "e2e"
+tests = ["-g", "글자 수 상한은"]
+expect = "red"
+expect_output = ["20,000자를 넘었습니다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+export const DEFAULT_REQUEST_CHARS = 20_000;
+'''
+new = '''
+export const DEFAULT_REQUEST_CHARS = 19_999;
+'''
