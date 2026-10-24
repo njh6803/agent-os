@@ -25,7 +25,7 @@ export interface Answer {
  * CSP 판의 사이트 정책. 임베드 안내(EMBED.md)가 페이지 안 방식에 열라고 한 자리(`script-src`·`connect-src`·`font-src`에
  * 위젯 출처)만 열고 `style-src` 는 `'self'` 다. 나머지는 `default-src 'none'` 이 막는다. `img-src` 는 열지 않는다. 이
  * 시험의 chromium 에서는 `img-src 'self'` 를 열 때와 닫을 때 모두 페이지의 요청 기록에 파비콘이 없었고 콘솔 메시지와
- * 위반도 없었다(손으로 봤다, 일지 2026-10-24-14).
+ * 위반도 없었다(손으로 봤다, 일지 2026-10-25-02).
  */
 export function elementCsp(widgetOrigin: string): string {
   return [
