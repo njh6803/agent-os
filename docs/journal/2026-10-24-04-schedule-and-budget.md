@@ -139,3 +139,32 @@ CI `python` 잡이 두 푸시(571056ea, 58cb139f) 모두 `tests/tools/test_proc_
 - CodeRabbit Minor(`tests/tools/test_proc_command_line.py`, 이름을 바꾼 자식을 봤는지 단언하지 않는다): 고쳤다. 리눅스에서만 단언하는 시험이라 이 PC 에서는 재는 것이 없고 CI 가 잰다.
 
 이 반영 커밋의 첫 pre-commit 에서 대기열 456 의 시험이 이 PC(윈도)에서도 같은 단언(`assert argv is not None`, 34행)으로 빨갰다(1 failed, 5491 passed). 456 행은 리눅스 CI 만 적었는데 윈도의 PEB 읽기도 띄운 직후에 None 을 낸다. 456 을 고칠 세션은 두 플랫폼을 함께 본다. 사용자가 고른 "다시 돌리기"대로 커밋을 한 번 더 쳤다.
+
+## 인계 (셋째)
+
+- 이 세션의 지금 제목: `feature/10-schedule-and-budget`.
+- 인계 경계: `커밋 뒤`. 세션 컨텍스트 약 24.2만 토큰에서 cd1fe06b 커밋 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(커밋은 성공했고, 요청 범위는 병합까지이고, 이 세션의 지시문은 `인계: PR 연 뒤`라 다른 경계이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다).
+- cd1fe06b 는 푸시하지 않았다. 이 절은 커밋하지 않은 채 워크트리에 있다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/10-schedule-and-budget.md. 러너 명령이 과제 목록을 실행 차례대로 돌며 동시에 둘, 예산 상한, 한도 기다림, 다시 돌기, 멈춤을 지킨다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md
+브랜치: feature/10-schedule-and-budget
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-04-schedule-and-budget.md의 "봇 회차 (인계받은 세션)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. PR #380 의 봇 회차를 cd1fe06b 로 커밋했고 푸시하지 않았다(CodeRabbit 첫 회차: Minor 하나 고침, Major 하나는 티켓 11 메모로 넘김, Major 하나는 이미 처리되어 있어 고치지 않음. claude-review 셋째 회차는 모두 보류). 남은 것은 차례로 일지의 "인계 (셋째)" 절을 커밋에 싣기(cd1fe06b 와 함께 한 번에 푸시), 푸시, CodeRabbit 첫 회차의 보류 이유와 claude-review 셋째 회차의 보류 이유를 PR 코멘트로 남기기(일지 "봇 회차" 절의 마지막 목록이 그 판정이다. 아직 코멘트하지 않았다), @coderabbitai review, next-session 순서 1의 2(봇 회차. 다음 리뷰는 두 봇 모두 둘째 회차 이상이라 Critical·Major만 고친다)와 4(병합 길은 워크트리에서 병합할 때)다. CI 나 pre-commit 이 대기열 456 의 시험(tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다) 하나로만 빨가면 사용자가 고른 대로 다시 돌린다(CI 는 gh run rerun --failed, pre-commit 은 커밋을 다시 친다). 형제 PR #379 의 일지 2026-10-24-05 가 먼저 병합되면 병합 전에 이 일지의 번호를 옮긴다. docs/journal/2026-10-24-04-schedule-and-budget.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/10-schedule-and-budget (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-24T04:35:46Z
+
+## 봇 회차 (넷째 세션)
+
+> 사용자: /implement .scratch/model-rerun/issues/10-schedule-and-budget.md (인계 지시문 그대로, "이번 요청 범위: PR과 병합까지")
+
+이 세션의 제목은 `feature/10-schedule-and-budget`이다. "인계 (셋째)" 절을 이 절과 함께 커밋해 cd1fe06b 와 한 번에 푸시한다.
