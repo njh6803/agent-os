@@ -8,7 +8,7 @@
 
 **Blocked by:** 06 (위젯 e2e)
 
-**Status:** in-progress
+**Status:** done
 
 ### 번들
 
@@ -46,4 +46,4 @@
 
 ### 검증
 
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이고, 위젯 e2e를 로컬에서 친다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이고, 위젯 e2e를 로컬에서 친다

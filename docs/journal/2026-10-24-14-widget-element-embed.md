@@ -340,6 +340,69 @@ open-session을 부른다 2026-10-24T14:54:33Z
 
 다시 돌린 것: 고친 표의 `mutate.py --check`(29 모두 원문이 한 번씩 있다)와 위의 손 실행 여섯(12·17·19·26·27, 27 의 양성 대조). 나머지 검증은 커밋의 pre-commit 으로 갈음한다.
 
+- 커밋 `5fbdcbbe` 의 pre-commit: 검사 열하나(`web-verify` 277.4초, pytest 321.0초 포함)와 마크다운 표·줄 구분 문자·변이 표·커밋 메시지가 모두 지났다. ruff 둘과 카나리아 명세·헌법 판은 해당 파일이 없어 `Skipped` 였다(`.py` 와 ruff 설정을 바꾸지 않았다). 인용 대조는 경고 10건(막지 않는다)이었고 모두 이 일지가 표·주석의 문장을 줄바꿈과 주석 표지 없이 옮긴 것이거나, 이번에 고쳐 저장소에서 사라진 옛 표 머리의 글이다. 위젯 e2e 전체는 `element-site.ts` 를 바꾼 뒤 아직 돌리지 않았다.
+
+PR 직전 리뷰를 위해 `coderabbit auth status` 를 쳤고 `Seat: not assigned` 였다(대체 둘을 쓸 차례다).
+
+## 인계 (커밋 뒤, 셋째)
+
+커밋 `5fbdcbbe` 뒤에 `hook_handoff`(약 26만 토큰, 경계 `커밋 뒤`)가 와서 새 세션에 넘긴다. 이 세션이 받은 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전` 이라 같은 경계가 아니다. `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다. 변이 하나를 손으로 넣는 스크래치 스크립트(`hand_mutate.py`: 표 경로와 변이 번호를 받아 그 러너와 시험을 돌리고 전체 출력을 파일로 남긴 뒤 원래 바이트로 되돌린다)는 세션 스크래치패드에 있어 새 세션에 넘어가지 않는다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-14-widget-element-embed.md, .scratch/web-widget/issues/07-widget-failures-and-rejections.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 5fbdcbbe 에 변이 전체 실행 첫째(e5e22e9c, 25 중 어긋남 다섯)의 반영과 그 반영의 셀프 리뷰(/code-review e5e22e9c, 두 축 Major 없음)의 반영이 들었다: element_mutations.toml 이 변이 29(새 넷 12·19·26·27, 단언에 닿게 고친 17), 표 머리의 표지 기준을 일반 조항으로, 시험 페이지 CSP 에서 img-src 'self' 를 뺌. pre-commit 이 모두 지났다. 아직 푸시하지 않았고 PR 도 없다. origin/main 은 7cbeb263(티켓 11 병합 #383)으로 움직였고 아직 합치지 않았다. 남은 단계는 차례로 (1) origin/main 합치기(sync_with_base_branch. 글자 충돌 후보는 .scratch/web-widget/probes/README.md 의 이웃한 행과 web/apps/widget/e2e/stack.ts 머리 주석 첫 문단: 이 브랜치의 "두 방식으로 위젯을 품는" 과 main 의 "기본은 모델을 부르지 않는다" 와 새 문단을 함께 살린다), (2) PR 직전 리뷰: coderabbit auth status 가 Seat: not assigned 였으므로 대체 둘(/security-review 와 bug-perf-review 서브에이전트)을 나란히, 범위는 e5e22e9c 이후(커밋 5fbdcbbe)로 좁히고 일지 두 절의 밀 주장 목록을 넘긴다, 반영해 커밋, (3) 변이 전체(PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml, 29, 백그라운드. e2e 변이 열하나가 하나에 1~2분)를 돌려 .scratch/web-widget/probes/README.md 의 element_mutations.toml 행 "잰 판" 칸의 "반영 뒤의 전체는 아직 돌리지 않았다" 를 결과로 바꾸기, (4) 위젯 e2e 전체(pnpm -C web/apps/widget exec playwright test, 변이 실행과 겹치지 않게. element-site.ts 의 CSP 를 바꾼 뒤 아직이다), (5) 티켓 49행 [x]와 Status done, 일지 마무리(회고 포함) 커밋, (6) PR(/git-pr. PR 직전 리뷰 줄에 일지 "이어받은 세션 (커밋 뒤 → 셀프 리뷰 직전)"과 이번 회차의 결과를, 셀프 리뷰 절들의 "새로 쓴 사실 문장"은 PR 본문에), 봇 회차, 병합(next-session "워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-24-14-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘과 커밋은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다. 이 세션도 도구 호출 사이의 산문을 영어로 썼고 `hook_midturn_korean` 이 한 번 알렸다(회고가 셀 수 있게 적는다).
+
+open-session을 부른다 2026-10-24T15:24:19Z
+
+첫 시도는 `tools/open_session.ps1` 이 URL 8482자(상한 8000)로 쏘기 전에 거부해 세션이 생기지 않았다. 지시문의 "읽을 것"을 경로 목록으로 줄여 다시 연다.
+
+## 이어받은 세션 (커밋 뒤, 셋째 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 인계 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 `위젯 요소 임베드 구현` 이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 7cbeb263(11 의 병합, #383)에 있었고, 07 은 PR #384 로 열려 있다.
+
+### origin/main 합치기
+
+`sync_with_base_branch` 는 이 세션이 앱이 만든 워크트리에서 돌지 않는다며 거절해 `git merge --no-edit origin/main` 을 직접 쳤다. 커밋하지 않은 이 일지(앞 세션의 인계 절)는 합치기 전에 세션 스크래치패드에 옮기고 작업 트리에서 되돌렸다가, 합치기 커밋 뒤에 다시 놓았다. 공유 stash 를 쓰지 않으려고 고른 길이다.
+
+글자 충돌은 인계 지시문이 예고한 두 곳이었다. `web/apps/widget/e2e/stack.ts` 머리 주석의 첫 문단은 이 브랜치의 "두 방식으로 위젯을 품는"과 main 의 "기본은 모델을 부르지 않는다", 그리고 main 이 더한 실제 모델 문단을 함께 살렸다. `.scratch/web-widget/probes/README.md` 는 이 브랜치의 두 행(`element_mutations.toml`, `font_list_size.mjs`) 뒤에 main 의 네 행(`widget_llm_mutations.toml`, 카나리아 셋)을 두었다. 합친 뒤 `mutate.py --check` 로 web-widget 의 변이 표 여섯(element 29, widget_llm 9, widget_e2e 6, widget_app 34, site_file 43, conversation 26)의 원문이 모두 한 번씩 맞는 것을 봤다. 합치기 커밋 `91ae670e` 의 pre-commit 은 검사 열하나(`web-verify` 286.0초, pytest 346.9초 포함)와 마크다운 표·줄 구분 문자·변이 표·인용·커밋 메시지가 모두 지났다. ruff 둘과 카나리아 명세·헌법 판은 해당 파일이 없어 `Skipped` 였다.
+
+main 이 들인 `CLAUDE.md` 의 테스트 줄은 위젯을 건드린 변경에 위젯의 실제 모델 e2e(`-m llm_widget`)도 치라고 한다. 이 브랜치는 위젯을 건드렸으므로 위젯 e2e 뒤에 그것도 친다.
+
+### PR 직전 리뷰 (커밋 5fbdcbbe)
+
+앞 세션이 `coderabbit auth status` 에서 `Seat: not assigned` 를 봐서, CLI 대신 대체 둘을 합치기 커밋 뒤에 나란히 돌렸다. 범위는 둘 다 `git diff e5e22e9c 5fbdcbbe`(파일 다섯)로 좁혔다. `/security-review` 의 프롬프트는 merge-base 부터 브랜치 전체(945b2931 부터)를 실었지만, 앞 두 커밋은 이미 그 리뷰를 받았다.
+
+- `/security-review`: 신뢰도 0.7 을 넘는 High·Medium 이 없었다. 시험 페이지와 임베드 안내의 CSP 는 `img-src 'self'` 를 빼 더 좁아졌고, 변이 표는 바깥 입력이 들어오는 길이 없으며, 일지에 비밀 값이 없다고 했다. 지적이 없어 거짓 양성 거르기 단계는 돌 것이 없었다.
+- `bug-perf-review`(호출 26): 이슈 없음(유효 0, 오탐 2, 참고 2). 밀 주장 아홉(이 일지의 두 절 "이 반영으로 새로 쓴 사실 문장")을 모두 근거와 대 보고 맞다고 했다. 시험마다 `waitForResponse` 가 하나뿐인 것(`element.e2e.ts` 147·254·276행), 17 의 도우미(`next.config.test.ts` 37~39행), `ignoreBuildErrors` 가 없는 것, `-g` 거르기가 모두 시험 하나에만 맞는 것, 사례 일곱을 모두 겨누는 e2e 변이 열하나, 27·28 의 표지가 서로의 실패에 실리지 않는 것을 봤다. 참고 하나는 주석의 "17 이"·"26 이" 가 차례 번호라 표 가운데에 변이를 더하면 어긋난다는 것이다. 지금은 맞아 두었다.
+
+고칠 것이 없어 반영 커밋은 없다.
+
+### 다시 돌린 것 (91ae670e)
+
+- 변이 전체: `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/element_mutations.toml`. 도구가 29 모두 기대대로로 판정했다(기준선 모두 초록). 끝난 뒤 `git status --porcelain` 에 변이가 남지 않았다. 프로브 README 의 그 행 "잰 판" 칸을 이 결과로 바꿨다.
+- `pnpm -C web/apps/widget exec playwright test`: 13 이 모두 통과했다(27.9초, 페이지 안 사례 일곱과 iframe 사례 여섯). `img-src 'self'` 를 뺀 시험 페이지 정책의 CSP 사례도 지났다.
+- `PYTHONUTF8=1 uv run --env-file ../../../.env pytest -m llm_widget -q`: 1 통과(43.48초). `LLM 토큰 합계 6,555(입력 6,483, 출력 72). 트레이스 1개, 모델 호출 2건.`
+- `uv run ruff check .`(All checks passed!)와 `uv run ruff format --check .`(1049 files already formatted). 합치기 커밋의 pre-commit 에서 ruff 둘이 `Skipped` 였어서 손으로 쳤다.
+
+티켓 49행을 `[x]` 로, Status 를 `done` 으로 바꿨다.
+
+이 기록의 커밋은 pre-commit 첫 번에 pytest 하나만 빨갰다(362.5초, 5589 통과 1 실패). 실패는 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다` 의 `assert 1 == 0` 이었고 따로 돌리면 49.16초에 지났다. 이 브랜치는 파이썬을 바꾸지 않았고 바로 앞의 합치기 커밋에서는 같은 시험이 지났다. 대기열 306 이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시험)라 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+
 ## 다음
 
 - web-widget 07(실패와 거절)과 11(실제 모델 e2e)이 나란히 돈다. 07 이 화면을 더하면 두 방식에 함께 선다(`ConnectedWidget`). 07 과 `useConversation`·`api/runs/index.ts`·`WidgetPage.tsx` 가, 11 과 `e2e/stack.ts`·`.scratch/web-widget/probes/README.md` 가 겹쳐(커밋 직전 `tools/sibling_overlap.py`) 뒤에 병합하는 쪽이 글자 충돌을 푼다.
