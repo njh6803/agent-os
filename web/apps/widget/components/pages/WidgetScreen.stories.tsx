@@ -33,6 +33,7 @@ const meta = {
     onSend: fn(),
     onRetry: fn(),
     onNewConversation: fn(),
+    onDecide: fn(),
     requestChars: 20_000,
   },
   decorators: [
@@ -100,6 +101,7 @@ export const Conversing: Story = {
         runId: "run_0",
         calling: ["refunds.policy"],
         tools: [{ tool: "orders.lookup", ok: true }],
+        approvals: [],
         outcome: null,
       },
     ],
@@ -113,6 +115,71 @@ export const Conversing: Story = {
     await expect(
       canvas.getByRole("progressbar", { name: "refunds.policy 부르는 중" }),
     ).toBeVisible();
+  },
+};
+
+const PAUSED_EXCHANGE: Exchange = {
+  id: 0,
+  request: "배송이 늦었으니 우산 값 환불해 주세요.",
+  runId: "run_0",
+  calling: ["payments.refund"],
+  tools: [{ tool: "orders.lookup", ok: true }],
+  approvals: [
+    {
+      pauseId: 3,
+      tool: "payments.refund",
+      args: JSON.stringify(
+        { order_id: "ORD-2026-10-22-000184", amount: 18900, reason: "배송 지연" },
+        null,
+        2,
+      ),
+      after: 1,
+      state: { kind: "waiting", sending: null, notice: null },
+    },
+  ],
+  outcome: { kind: "paused" },
+};
+
+/**
+ * 승인 묻기가 결정을 기다리는 화면(화면 디자인 mk-approval 의 첫째). 입력창과 보내기가 막히고 그 위 띠가 먼저 고르라고
+ * 하며, 새 대화는 열려 있다. 입력창에는 글을 넣지 않는다(위 RETURNED_NARROW 의 주석).
+ */
+export const Paused: Story = {
+  args: {
+    exchanges: [PAUSED_EXCHANGE],
+    paused: true,
+    sendBlocked: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("group", { name: "승인 묻기" })).toBeVisible();
+    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "보내기" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "새 대화" })).toBeEnabled();
+    await expect(canvas.getByText("승인이나 거부를 먼저 골라 주세요.")).toBeVisible();
+    // 포커스는 카드의 제목으로 가지만 대화를 굴리지 않아, 대화는 끝(카드의 버튼)을 보고 있다.
+    await expect(document.activeElement?.textContent).toBe("승인이 필요합니다");
+    const region = canvas.getByRole("region", { name: "대화" });
+    await expect(region.scrollHeight).toBeGreaterThan(region.clientHeight);
+    await expect(region.scrollHeight - region.scrollTop - region.clientHeight).toBeLessThanOrEqual(
+      2,
+    );
+  },
+};
+
+/** 기준 폭을 넘는 폭에서 결정의 상한을 기다리는 화면. 띠가 "다시 고를 수 있습니다"로 끝맺고 결정 버튼이 막힌다. */
+export const PausedLimitedWide: Story = {
+  parameters: { width: 400 },
+  args: {
+    exchanges: [PAUSED_EXCHANGE],
+    paused: true,
+    sendBlocked: true,
+    wait: { purpose: "decide", limit: "concurrent_runs", seconds: 5, until: 0, remaining: 5 },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "승인" })).toBeDisabled();
+    await expect(canvas.getByText(/다시 고를 수 있습니다\.$/)).toBeVisible();
   },
 };
 
@@ -149,6 +216,7 @@ const FINISHED_EXCHANGE: Exchange = {
   runId: "run_0",
   calling: [],
   tools: [{ tool: "shipping.track", ok: true }],
+  approvals: [],
   outcome: { kind: "finished", output: "오늘 저녁 6시 전에 도착할 예정입니다." },
 };
 
@@ -160,7 +228,7 @@ export const Limited: Story = {
   args: {
     exchanges: [FINISHED_EXCHANGE],
     draft: RETURNED_NARROW,
-    wait: { limit: "concurrent_runs", seconds: 5, until: 0, remaining: 3 },
+    wait: { purpose: "send", limit: "concurrent_runs", seconds: 5, until: 0, remaining: 3 },
     sendBlocked: true,
   },
   play: async ({ canvasElement }) => {
@@ -179,7 +247,7 @@ export const LimitedHourlyWideDark: Story = {
   args: {
     exchanges: [FINISHED_EXCHANGE],
     draft: RETURNED,
-    wait: { limit: "hourly_runs", seconds: 720, until: 0, remaining: 720 },
+    wait: { purpose: "send", limit: "hourly_runs", seconds: 720, until: 0, remaining: 720 },
     sendBlocked: true,
   },
 };
@@ -190,7 +258,7 @@ export const LimitReady: Story = {
   args: {
     exchanges: [FINISHED_EXCHANGE],
     draft: RETURNED,
-    wait: { limit: "concurrent_runs", seconds: 5, until: 0, remaining: 0 },
+    wait: { purpose: "send", limit: "concurrent_runs", seconds: 5, until: 0, remaining: 0 },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -235,11 +303,12 @@ export const FailureWithLimit: Story = {
         runId: null,
         calling: [],
         tools: [],
+        approvals: [],
         outcome: { kind: "error", offerNew: false },
       },
     ],
     draft: RETURNED,
-    wait: { limit: "concurrent_runs", seconds: 5, until: 0, remaining: 5 },
+    wait: { purpose: "send", limit: "concurrent_runs", seconds: 5, until: 0, remaining: 5 },
     sendBlocked: true,
   },
   play: async ({ canvasElement }) => {

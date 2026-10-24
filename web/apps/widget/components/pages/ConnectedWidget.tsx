@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { requestCharLimit } from "../../lib/build";
 import type { Connection } from "../../lib/connection";
-import { phaseOf } from "../../lib/conversation";
+import { phaseOf, waitingApproval } from "../../lib/conversation";
 import type { Embed } from "../../lib/embed";
 import { useConversation } from "./useConversation";
 import { WidgetScreen } from "./WidgetScreen";
@@ -24,7 +24,7 @@ export interface ConnectedWidgetProps {
 export function ConnectedWidget({ embed, problems, connection }: ConnectedWidgetProps) {
   const [draft, setDraft] = useState("");
   // 되돌아온 요청(422, 429)은 입력창에 넣는다.
-  const { conversation, send, reset, wait, invalid } = useConversation(
+  const { conversation, send, reset, decide, wait, invalid } = useConversation(
     embed.agent,
     connection,
     setDraft,
@@ -56,7 +56,11 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
       wait={wait}
       invalid={invalid}
       paused={phase === "paused"}
-      newConversationDisabled={phase === "running"}
+      onDecide={decide}
+      // 결정을 보내는 동안은 결정 응답이 결말 전이라 막는다. 결정을 기다리기만 할 때는 열려 있다.
+      newConversationDisabled={
+        phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
+      }
       draft={draft}
       onDraftChange={setDraft}
       onSend={(request) => {

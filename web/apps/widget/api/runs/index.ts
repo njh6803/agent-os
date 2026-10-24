@@ -84,6 +84,64 @@ export async function sendRun(
           ...init,
           params: { path: { run_id: continueFrom } },
         });
+  return framesOf(call, signal);
+}
+
+/** 결정 하나. 거부에만 사유가 있다. `pause_index` 는 그 승인 묻기의 `paused` 프레임의 `id` 다. */
+export type DecisionBody =
+  | { readonly decision: "approve"; readonly pause_index: number }
+  | { readonly decision: "deny"; readonly reason: string; readonly pause_index: number };
+
+/**
+ * 멈춘 실행에 결정 하나를 낸다(`POST /runs/{run_id}/approval`). 받아들여지면 결정 항목부터 실행을 흘리는 반복자를
+ * 돌려주고, 아니면 RunRejected 를 던진다. 끊는 것과 에러는 `sendRun` 과 같다.
+ */
+export async function sendDecision(
+  baseUrl: URL,
+  token: string,
+  runId: string,
+  body: DecisionBody,
+  signal: AbortSignal,
+): Promise<AsyncGenerator<EndUserFrame, void, undefined>> {
+  const call = createWidgetClient(baseUrl).POST("/end-user/runs/{run_id}/approval", {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { path: { run_id: runId } },
+    body,
+    parseAs: "stream",
+    signal,
+  });
+  return framesOf(call, signal);
+}
+
+/**
+ * 실행을 다시 구독한다(`GET /runs/{run_id}/subscription`). `lastEventId` 프레임 뒤부터 받는다. 끊는 것과
+ * 에러는 `sendRun` 과 같다.
+ */
+export async function subscribeRun(
+  baseUrl: URL,
+  token: string,
+  runId: string,
+  lastEventId: number,
+  signal: AbortSignal,
+): Promise<AsyncGenerator<EndUserFrame, void, undefined>> {
+  const call = createWidgetClient(baseUrl).GET("/end-user/runs/{run_id}/subscription", {
+    headers: { Authorization: `Bearer ${token}`, "Last-Event-ID": String(lastEventId) },
+    params: { path: { run_id: runId } },
+    parseAs: "stream",
+    signal,
+  });
+  return framesOf(call, signal);
+}
+
+/** 보낸 요청의 응답이 받아들여졌으면 스트림의 블록을 받는 대로 내는 반복자이고, 아니면 RunRejected 를 던진다. */
+async function framesOf(
+  call: Promise<{
+    readonly data?: ReadableStream<Uint8Array> | null;
+    readonly error?: unknown;
+    readonly response: Response;
+  }>,
+  signal: AbortSignal,
+): Promise<AsyncGenerator<EndUserFrame, void, undefined>> {
   const { data, error, response } = await call.catch((cause: unknown) => {
     if (signal.aborted) {
       throw cause;

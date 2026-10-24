@@ -241,7 +241,7 @@ expect = "red"
 expect_output = ["-note' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/organisms/Composer.tsx"
+file = "web/apps/widget/lib/chars.ts"
 old = '''
 const NEAR_LIMIT = 0.9;
 '''
@@ -257,12 +257,12 @@ expect = "red"
 expect_output = ["expected '19 / 20' to be '18 / 20'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/organisms/Composer.tsx"
+file = "web/apps/widget/lib/chars.ts"
 old = '''
-  const count = Array.from(value).length;
+  const count = Array.from(text).length;
 '''
 new = '''
-  const count = value.length;
+  const count = text.length;
 '''
 
 [[mutation]]
@@ -275,10 +275,10 @@ expect_output = ['to have property "disabled" with value true']
 [[mutation.edit]]
 file = "web/apps/widget/components/organisms/Composer.tsx"
 old = '''
-  const sendable = !disabled && !blocked && !over && value.trim() !== "";
+  const sendable = !disabled && !blocked && !note.over && value.trim() !== "";
 '''
 new = '''
-  const sendable = !disabled && !blocked && !over && value !== "";
+  const sendable = !disabled && !blocked && !note.over && value !== "";
 '''
 
 [[mutation]]

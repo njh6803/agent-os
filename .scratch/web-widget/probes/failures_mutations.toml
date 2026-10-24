@@ -139,13 +139,10 @@ expect_output = ["expected '' to be '동시에 처리할 수 있는 요청이 �
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/useConversation.ts"
 old = '''
-    setInvalid(false);
-    dispatch({ type: "reset" });
+    setWait((current) => (current?.purpose === "decide" ? null : current));
 '''
 new = '''
-    setInvalid(false);
     setWait(null);
-    dispatch({ type: "reset" });
 '''
 
 # --- 이어 가기 404 의 기다림 ---------------------------------------------------------------------------------------
@@ -162,12 +159,14 @@ expect_output = ["expected [ …(3) ] to have a length of 2 but got 3"]
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/useConversation.ts"
 old = '''
-        if (!(await sleep(CONTINUATION_RETRY_MS, signal))) {
+        // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
+        if (!(await sleep(NOT_FOUND_RETRY_MS, signal))) {
           return;
         }
 '''
 new = '''
-        await sleep(CONTINUATION_RETRY_MS, signal);
+        // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
+        await sleep(NOT_FOUND_RETRY_MS, signal);
 '''
 
 # --- 띠 부품 -----------------------------------------------------------------------------------------------------
