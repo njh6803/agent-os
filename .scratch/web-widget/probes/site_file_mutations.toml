@@ -162,10 +162,55 @@ expect_output = ["(규칙 ipv6)"]
 [[mutation.edit]]
 file = "src/agent_os/main.py"
 old = '''
-        return IPv6Address(inner).compressed == inner
+    return _serialized_ipv6(address) == inner
 '''
 new = '''
-        return IPv6Address(inner).exploded == inner
+    return address.exploded == inner
+'''
+
+[[mutation]]
+name = "파이썬이 표준 라이브러리의 압축형과 견주면 IPv4 를 점으로 적는 판에서 16진수로 적은 표기가 빨갛다"
+tests = ["tests/test_main.py::test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다[http://[::ffff:102:304]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    return _serialized_ipv6(address) == inner
+'''
+new = '''
+    return address.compressed == inner
+'''
+
+[[mutation]]
+name = "파이썬이 0 하나도 :: 로 줄이면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[https://[2001:db8:0:1:1:1:1:1]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    best_start, best_length, start = -1, 1, -1
+'''
+new = '''
+    best_start, best_length, start = -1, 0, -1
+'''
+
+[[mutation]]
+name = "파이썬이 길이가 같은 0 의 열 가운데 뒤의 것을 줄이면 지나는 표기가 빨갛다"
+tests = ["tests/test_main.py::test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[https://[2001:db8::1:0:0:1]]"]
+expect = "red"
+expect_output = ["(규칙 ipv6)"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+        if index - start + 1 > best_length:
+'''
+new = '''
+        if index - start + 1 >= best_length:
 '''
 
 [[mutation]]

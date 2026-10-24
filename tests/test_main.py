@@ -20,6 +20,7 @@ import tomllib
 from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from ipaddress import IPv6Address
 from pathlib import Path
 
 import pytest
@@ -1625,6 +1626,67 @@ def test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세�
     assert f"sites[0].allowed_origins[1]: {problem}(규칙 {rule})" in err
     assert "allowed_origins[0]" not in err
     assert "pw@" not in err
+    assert uvicorn_calls == []
+
+
+@pytest.fixture
+def dotted_ipv4_mapped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IPv4 매핑 주소(`::ffff:0:0/96`)를 `::ffff:1.2.3.4` 처럼 점으로 적는 파이썬 판(CI 의
+    3.12.15)을 흉내 낸다. 그 판의 `IPv6Address.__str__` 이 `_ipv4_mapped_ipv6_to_str` 로 그렇게
+    적고, 이 PC 의 3.12.10 은 `::ffff:102:304` 로 적는다(`src/agent_os/main.py` 의
+    `_serialized_ipv6`). `compressed` 는 `str` 을 부르므로 `__str__` 만 바꾼다."""
+    plain = IPv6Address.__str__
+
+    def dotted(address: IPv6Address) -> str:
+        mapped = address.ipv4_mapped
+        return plain(address) if mapped is None else f"::ffff:{mapped}"
+
+    monkeypatch.setattr(IPv6Address, "__str__", dotted)
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+    ids=[case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다(
+    origin: str, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """브라우저는 IPv6 주소를 판과 무관하게 16진수 그룹으로 싣는다. 판정이 표준 라이브러리의 글 꼴에
+    기대면 파이썬 판에 따라 `[::ffff:102:304]` 를 막는다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+    ids=[case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지_않는_IPv6_허용_출처는_막힌다(
+    origin: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """점으로 적은 IPv4(`[::ffff:1.2.3.4]`)는 그 판의 압축형과 같아도 브라우저가 싣는 꼴이
+    아니다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert (
+        "sites[0].allowed_origins[0]: 브라우저가 Origin 헤더에 싣는 표기가 아니다(규칙 ipv6)" in err
+    )
     assert uvicorn_calls == []
 
 

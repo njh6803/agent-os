@@ -356,7 +356,7 @@ const ORIGIN_RULES: Readonly<Record<OriginRule, string>> = {
   port: "포트는 앞에 0 이 없는 65535 이하의 십진수다",
   "default-port": "기본 포트(http 의 80, https 의 443)는 적지 않는다",
   idn: "국제화 도메인은 퓨니코드(xn--)로 적는다",
-  ipv6: "IPv6 주소는 대괄호 안의 RFC 5952 압축형으로 적는다",
+  ipv6: "IPv6 주소는 대괄호 안에 앞의 0 이 없는 소문자 16진수 그룹으로 적고, 0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 :: 로 줄인다. IPv4 를 품은 주소도 점으로 적지 않는다",
   host: "호스트는 비지 않고, 브라우저가 거절하거나 바꾸는 글자(공백, 제어 문자, %, <, >, ^, |, \\ 등)가 없다",
   ipv4: "IPv4 주소는 앞에 0 이 없는 0~255 의 십진수 넷을 점으로 잇는다",
 };
@@ -466,17 +466,17 @@ function isCanonicalIpv4(parts: readonly string[]): boolean {
   );
 }
 
-/** 대괄호 안이 파이썬 `ipaddress.IPv6Address(…).compressed` 와 같은 압축형인가. 영역 식별자(`%`)는 받지 않는다. */
+/** 대괄호 안이 브라우저가 적는 꼴과 같은가. 영역 식별자(`%`)는 받지 않는다. */
 function isCanonicalIpv6(host: string): boolean {
   if (!host.endsWith("]") || host.includes("%")) {
     return false;
   }
   const inner = host.slice(1, -1);
   const groups = ipv6Groups(inner);
-  return groups !== null && compressedIpv6(groups) === inner;
+  return groups !== null && serializedIpv6(groups) === inner;
 }
 
-/** 16진수 그룹과 `::` 하나로 적은 IPv6 주소의 그룹 여덟. 압축형에 들지 않는 꼴(점으로 적은 IPv4)은 읽지 않는다. */
+/** 16진수 그룹과 `::` 하나로 적은 IPv6 주소의 그룹 여덟. 브라우저가 적지 않는 꼴(점으로 적은 IPv4)은 읽지 않는다. */
 function ipv6Groups(text: string): readonly number[] | null {
   const halves = text.split("::");
   const [head = "", tail = ""] = halves;
@@ -506,8 +506,11 @@ function hexGroups(text: string): readonly number[] | null {
     : null;
 }
 
-/** RFC 5952 압축형. 0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 `::` 로 줄인다(파이썬과 WHATWG URL 이 같다). */
-function compressedIpv6(groups: readonly number[]): string {
+/**
+ * 브라우저가 적는 IPv6 주소(WHATWG URL 의 IPv6 serializer). 0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 `::` 로
+ * 줄인다. 서버(`src/agent_os/main.py` 의 `_serialized_ipv6`)도 같은 차례로 짓는다.
+ */
+function serializedIpv6(groups: readonly number[]): string {
   let bestStart = -1;
   let bestLength = 1;
   let start = -1;

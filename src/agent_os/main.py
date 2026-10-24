@@ -489,7 +489,22 @@ def _key_id_problems(place: str, entries: Sequence[_PublicKeyEntry]) -> list[str
 # 규칙의 이름과 차례와 사례는 `tests/fixtures/site_file/` 가 원천이고, 위젯 빌드
 # (`web/apps/widget/tools/site-file.ts`)가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께 어긴
 # 값에서 두 언어가 다른 이름을 낸다.
-_ORIGIN_RULES: dict[str, str] = {
+type _OriginRule = Literal[
+    "wildcard",
+    "null",
+    "shape",
+    "scheme",
+    "case",
+    "path",
+    "userinfo",
+    "port",
+    "default-port",
+    "idn",
+    "ipv6",
+    "host",
+    "ipv4",
+]
+_ORIGIN_RULES: dict[_OriginRule, str] = {
     "wildcard": "'*' 를 적지 않는다. 출처를 하나씩 적는다",
     "null": "'null' 은 불투명한 출처라 받지 않는다",
     "shape": "'스킴://호스트' 꼴로 적는다",
@@ -500,7 +515,10 @@ _ORIGIN_RULES: dict[str, str] = {
     "port": "포트는 앞에 0 이 없는 65535 이하의 십진수다",
     "default-port": "기본 포트(http 의 80, https 의 443)는 적지 않는다",
     "idn": "국제화 도메인은 퓨니코드(xn--)로 적는다",
-    "ipv6": "IPv6 주소는 대괄호 안의 RFC 5952 압축형으로 적는다",
+    "ipv6": (
+        "IPv6 주소는 대괄호 안에 앞의 0 이 없는 소문자 16진수 그룹으로 적고, 0 이 둘 이상 이어진"
+        " 가장 긴 열 가운데 앞의 것을 :: 로 줄인다. IPv4 를 품은 주소도 점으로 적지 않는다"
+    ),
     "host": (
         "호스트는 비지 않고, 브라우저가 거절하거나 바꾸는 글자"
         "(공백, 제어 문자, %, <, >, ^, |, \\ 등)가 없다"
@@ -523,7 +541,7 @@ _IPV4_PARTS = 4
 _MAX_IPV4_PART = 255
 
 
-def _origin_rule(origin: str) -> str | None:
+def _origin_rule(origin: str) -> _OriginRule | None:
     """허용 출처가 어긴 첫 규칙의 이름, 또는 없음(질의). 규칙의 뜻은 `_ORIGIN_RULES`."""
     if "*" in origin:
         return "wildcard"
@@ -565,7 +583,7 @@ def _is_port(text: str) -> bool:
     return _PORT.fullmatch(text) is not None and int(text) <= _MAX_PORT
 
 
-def _host_rule(host: str) -> str | None:
+def _host_rule(host: str) -> _OriginRule | None:
     """호스트가 어긴 규칙의 이름, 또는 없음(질의). 대소문자는 부르는 쪽이 먼저 봤다."""
     if not host.isascii():
         return "idn"
@@ -584,15 +602,44 @@ def _host_rule(host: str) -> str | None:
 
 
 def _is_canonical_ipv6(host: str) -> bool:
-    """대괄호 안이 파이썬의 압축형과 같은가. 영역 식별자(`%`)는 그 압축형도 그대로 두어 따로
-    막는다."""
+    """대괄호 안이 브라우저가 적는 꼴과 같은가. 영역 식별자(`%`)는 파이썬이 받아 그대로 두므로
+    따로 막는다."""
     if not host.endswith("]") or "%" in host:
         return False
     inner = host[1:-1]
     try:
-        return IPv6Address(inner).compressed == inner
+        address = IPv6Address(inner)
     except ValueError:
         return False
+    return _serialized_ipv6(address) == inner
+
+
+def _serialized_ipv6(address: IPv6Address) -> str:
+    """브라우저가 적는 IPv6 주소(WHATWG URL 의 IPv6 serializer)(질의). 16진수 그룹 여덟을 앞의 0
+    없이 소문자로 적고, 0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 `::` 로 줄인다.
+
+    `IPv6Address.compressed` 는 쓰지 않는다. 같은 3.12 에서도 판에 따라 IPv4 매핑 주소
+    (`::ffff:0:0/96`)를 달리 적는다. CPython v3.12.15 의 `IPv6Address.__str__` 은 그 주소를
+    `_ipv4_mapped_ipv6_to_str` 로 `::ffff:1.2.3.4` 처럼 점으로 적고, v3.12.10 에는 그 갈래가 없어
+    `::ffff:102:304` 로 적는다(두 판의 `Lib/ipaddress.py` 를 `gh api` 로 받아 읽었다). 점 표기는
+    RFC 5952 5절이 권하는 꼴이고 브라우저는 그렇게 적지 않는다(두 원문의 웹 요약을 봤다, 픽스처
+    README 의 `ipv6`).
+    """
+    packed = address.packed
+    groups = [int.from_bytes(packed[at : at + 2]) for at in range(0, len(packed), 2)]
+    best_start, best_length, start = -1, 1, -1
+    for index, group in enumerate(groups):
+        if group:
+            start = -1
+            continue
+        if start < 0:
+            start = index
+        if index - start + 1 > best_length:
+            best_start, best_length = start, index - start + 1
+    hexes = [f"{group:x}" for group in groups]
+    if best_start < 0:
+        return ":".join(hexes)
+    return f"{':'.join(hexes[:best_start])}::{':'.join(hexes[best_start + best_length :])}"
 
 
 def _is_canonical_ipv4(parts: Sequence[str]) -> bool:

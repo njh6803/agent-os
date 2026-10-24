@@ -181,3 +181,134 @@ CodeRabbit CLI 는 `Seat: not assigned`(Plan: Free)라 대체 둘을 나란히 �
   - [보류] 빈 파일·BOM·잘못된 UTF-8·실수·겹친 출처를 두 프로세스에 같은 파일로 먹이는 대조는 리뷰어가 스크립트 쓰기 거부로 하지 못했다. 각 갈래는 두 언어의 시험이 따로 고정한다.
   - [보류] 밀 주장 10(dev·start 를 손으로 봄)과 11(CSP3 원문)은 원문을 열지 못한 보류다. 앞 세션이 손으로 보고 내려받아 읽은 것이 근거다.
 - 반영 뒤: `pnpm -C web exec vitest run --project node apps/widget/next.config.test.ts apps/widget/tools/site-file.test.ts` 190 passed, Prettier 통과, `tools/mutate.py --check` 로 `site_file_mutations.toml`(40)·`widget_app_mutations.toml`(34) 모두 원문이 한 번씩 있다. 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
+
+### PR
+
+- 반영을 200b77d6 으로 커밋했다. pre-commit: ruff 둘, `run_checks` 의 검사 열(web-verify 239.7초, pytest 335.5초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조(경고 없음), 커밋 메시지가 모두 Passed. 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped.
+- 커밋 뒤 `커밋 뒤` 인계 계기가 왔지만, 이 세션의 지시문이 `인계: 커밋 뒤` 로 시작해 넘기지 않았다(next-session "인계할 때" 1).
+- 푸시하고 PR #379 를 200b77d6 으로 열었다. 연 직후 CI 2 통과, 5 대기였다. 앱의 PR 감시는 이 세션에 묶였다(`get_status` 의 `bound: true`). `@coderabbitai review` 코멘트는 남기지 않았다(새 세션이 남긴다).
+
+## 인계(PR 연 뒤)
+
+컨텍스트가 문턱을 넘은 채 `PR 연 뒤` 경계에 와서 넘긴다. 인계하지 않는 때 다섯에 들지 않았다. PR 이 열렸고, 요청 범위가 병합까지이고, 이어받은 상태가 `인계: 커밋 뒤` 라 이번 경계와 다르고, `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없었다. 이 세션의 지금 제목은 `feature/04-site-file-feeds-widget-build` 이다. 이 절은 커밋하지 않았다.
+
+```
+다음 작업: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md. 서버와 위젯 빌드가 같은 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수 상한을 읽고, 허용 출처의 표기를 파이썬과 Node가 같은 픽스처로 판정한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+브랜치: feature/04-site-file-feeds-widget-build
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-05-site-file-feeds-widget-build.md 의 "이어 받은 세션(커밋 뒤)"부터 끝까지. 막힌 티켓(05~11)은 .scratch/plan.md 의 web-widget 행
+이어받을 상태: 인계: PR 연 뒤. PR #379를 200b77d6으로 열었고 next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰에서 남긴 Minor(;·, 가 든 호스트가 판정을 지난다. 명세의 규칙 목록 밖이라 막지 않았다)와 보류(파이썬 3.13의 IPv6 표기)는 PR 본문 "남긴 위험"에 근거가 있다. 봇이 같은 자리를 짚으면 그 근거로 답한다. 일지 "다음"에 넘길 것: 반영 전 run_checks 에서 test_hook_edit_during_commit 이 다른 세션의 git 프로세스와 겹쳐 한 번 빨갰던 일(일지 "검사"). 일지의 이 인계 절은 커밋하지 않았다. 일지 docs/journal/2026-10-24-05-site-file-feeds-widget-build.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목: `feature/04-site-file-feeds-widget-build (인계함)`. 멈출 백그라운드 작업은 없었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T18:40:16Z
+
+## 이어 받은 세션(PR 연 뒤)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+
+(지시문은 위 "인계(PR 연 뒤)"의 것과 같다. 제목을 `feature/04-site-file-feeds-widget-build` 로 바꾸고 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 7496a830 그대로라 합칠 것이 없었다.)
+
+### 봇 회차 1
+
+- `@coderabbitai review` 코멘트를 남기고(6372203760) `tools/wait_ci.py 379` 를 백그라운드로 띄웠다. 끝 줄은 `끝: 실패 python, verify` 였다. CodeRabbit 은 `Review completed`, claude-review·e2e·web·visual·ticket 은 초록이었다.
+- CI `python`(실행 40004989726): 3 failed, 5509 passed. 실패는 셋이다.
+  - `test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다[http://[::ffff:102:304]]`(`assert 1 == 0`)와 `test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다[http://[::ffff:1.2.3.4]]`(`assert 0 == 1`). CI 의 파이썬은 `cpython-3.12.15`(잡 로그의 `Installed Python 3.12.15`)이고 이 PC 는 3.12.10 이다. 이 PC 에서 `IPv6Address('::ffff:1.2.3.4').compressed` 는 `::ffff:102:304` 였다(손으로 봤다). CI 의 두 실패는 3.12.15 가 그 주소를 `::ffff:1.2.3.4` 로 적을 때 나는 결과와 맞는다. PR 직전 리뷰에서 3.13 의 일로 보류한 위험이 3.12 의 패치 판에서 먼저 났다.
+  - `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다`(`assert None is not None`). 이 브랜치가 건드리지 않은 시험이고 대기열 456 이다. 일지 2026-10-24-03 과 같은 판단으로 잡을 다시 돌리지 않는다. 반영 푸시의 CI 가 이 시험 하나로만 빨가면 사용자에게 묻는다.
+- CodeRabbit 첫 회차: 지적 없음(`No actionable comments`).
+- claude-review 첫 회차(코멘트 6372157187): Critical·Major 없음. 판정은 지적마다 했다.
+  - [Minor, 뒤로 넘긴다] `main.py` 의 출처 표기 판정(약 120줄)을 조합 층 밖의 모듈로 옮기라. 사이트 파일 읽기와 검증 전체(pydantic 모델, `_sites_of`, `_keys_of`, `_key_id_problems`)가 `main.py` 에 있고 출처 표기 판정은 그 검증의 하나다. 판정만 옮기면 사이트 파일 검증이 두 모듈로 갈리고, 읽기 전체를 옮기는 일은 변이 표 `site_file_mutations.toml` 의 `file` 과 독스트링을 함께 옮기는 따로의 리팩터다. 일지 "다음"에 적는다.
+  - [Minor, 뒤로 넘긴다] `site-file.ts`(532줄)의 출처 표기 부분을 `origin-rule.ts` 같은 파일로 빼라. 위와 같은 일이라 함께 넘긴다. 한쪽만 옮기면 두 언어의 배치가 갈린다.
+  - [Minor, 고쳤다] 파이썬의 규칙 이름이 `str` 이라 오타가 타입에서 잡히지 않는다. `type _OriginRule = Literal[...]` 로 닫고 `_ORIGIN_RULES`, `_origin_rule`, `_host_rule` 에 붙였다(이 저장소의 별칭은 `type` 문을 쓴다, `admin/http.py` 의 `PluginRow` 등).
+  - [Nit, 보류] 규칙 문구 열셋이 두 언어에 이중으로 있고 픽스처는 이름만 단언한다. 문구는 판정에 들지 않아 두 언어의 결과(받느냐 막느냐, 어느 규칙이냐)를 바꾸지 않고, 픽스처의 계약은 이름·차례·사례다(픽스처 README 머리). 이번에 고친 `ipv6` 문구는 두 언어에 같은 글로 넣었다.
+  - 넷의 판정은 푸시 뒤 PR 코멘트로 남긴다(아직 남기지 않았다).
+
+### 반영(커밋하지 않았다)
+
+- 결정: 서버는 `ipaddress.IPv6Address` 로 주소를 읽기만 하고 글은 `packed` 에서 직접 짓는다(`_serialized_ipv6`). Node 의 `compressedIpv6` 와 같은 차례다(0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 `::`). 근거: RFC 5952 는 5절에서 IPv4 를 품은 주소의 점 표기를 권하고, WHATWG URL 의 IPv6 serializer 는 늘 소문자 16진수로 적는다(두 원문 모두 WebFetch 의 웹 요약으로 봤다, `https://www.rfc-editor.org/rfc/rfc5952.txt`, `https://url.spec.whatwg.org/`). 브라우저 쪽은 Node 의 시험이 지나는 사례 `[::ffff:102:304]` 를 `new URL(v).origin` 에 넣어 같은 값인지 이미 본다.
+- 시험을 먼저 썼다. `tests/test_main.py` 의 `dotted_ipv4_mapped` 픽스처가 `IPv6Address.__str__` 을 바꿔 점으로 적는 판을 흉내 내고(`compressed` 는 `str` 을 부른다), 시험 둘이 픽스처의 대괄호 사례로 판정이 그 글 꼴에 기대지 않는지 본다. 고치기 전 이 PC 에서 CI 와 같은 두 사례가 빨갰다(2 failed, 10 passed). 고친 뒤 새 시험과 표기 픽스처 시험이 90 passed 였다.
+- 고친 파일: `src/agent_os/main.py`(판정, `Literal`, `ipv6` 문구), `web/apps/widget/tools/site-file.ts`(`ipv6` 문구와 독스트링 셋. 파이썬의 `compressed` 를 기준으로 든 문장을 뺐다), `tests/fixtures/site_file/README.md`(`ipv6` 행과 RFC 5952 와 갈리는 갈래의 문단), 티켓 04 의 규칙 줄과 `spec.md` 187행(살아 있는 문서다. "파이썬 `compressed` 와 같다"가 3.12.15 에서 틀린 사실이 되어 고쳤다), 변이 표(원문이 바뀐 하나와 새 셋 10~13, 40 → 43), 프로브 README 행.
+- 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장으로 넘길 것): ① `_serialized_ipv6` 독스트링의 "3.12.15 는 `::ffff:1.2.3.4`, 3.12.10 은 `::ffff:102:304`" 와 "앞의 것은 RFC 5952 5절의 권고이고 브라우저는 그렇게 적지 않는다", ② 픽스처 README 의 "RFC 5952 는 4.2.3절에서 가장 긴 0의 열(같으면 앞의 것)을 줄이라고 하고, 5절에서 IPv4를 품은 주소는 끝 32비트를 점으로 적으라고 권한다", ③ `dotted_ipv4_mapped` 의 "`compressed` 는 `str` 을 부르므로". 3.12.15 의 표기는 CI 의 실패 모양에서 끌어낸 것이고 3.12.15 를 띄워 직접 보지는 않았다.
+- 다시 돌린 것: 새 시험과 표기 시험 90 passed, `uv run pyright src/agent_os/main.py tests/test_main.py` 0 errors, 두 파일의 `ruff check` 통과, `tools/mutate.py --check` 로 표 둘(43, 34) 모두 원문이 한 번씩 있다, `tools/mutate.py … site_file_mutations.toml 10 11 12 13` 이 `변이 4 모두 기대대로`. 돌리지 않은 것: `run_checks` 전체, `site-file.ts` 의 Vitest·Prettier(문구와 주석만 바꿨다).
+- 워크트리 가드가 heredoc 으로 스크래치에 스크립트를 쓰고 바로 돌리는 한 명령을 거부했다(`too complex to verify`). Edit 도구로 고쳤다.
+- PR 본문에 고칠 자리(푸시 전 `gh pr edit`): "남긴 위험"의 "파이썬 판을 올리면 IPv6 판정을 다시 본다" 항목(이제 고쳤다), 체크리스트의 PR 직전 리뷰 줄에 있는 "보류: 파이썬 3.13 의 IPv6 표기", "확인 방법"의 변이 40, "리뷰어 참고"의 "Node 쪽은 RFC 5952 를 손으로 지었다".
+
+### 일지 "다음"에 넘길 것
+
+- 앞 인계가 넘긴 것: 반영 전 `run_checks` 에서 `test_hook_edit_during_commit` 이 다른 세션의 git 프로세스와 겹쳐 한 번 빨갰던 일(위 "검사").
+- 봇 회차 1에서 뒤로 넘긴 것: 출처 표기 판정을 두 언어 모두 사이트 파일 모듈 밖으로 옮길지(위 claude-review Minor 둘).
+
+이 세션의 지금 제목은 `feature/04-site-file-feeds-widget-build` 이다.
+
+## 인계(셀프 리뷰 직전)
+
+컨텍스트가 문턱을 넘은 채 `셀프 리뷰 직전` 경계에 와서 넘긴다. 인계하지 않는 때 다섯에 들지 않았다. `code-review` 를 부르는 데 성공했고, 요청 범위가 병합까지이고, 이어받은 상태가 `인계: PR 연 뒤` 라 이번 경계와 다르고, `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없었다. 이 절은 커밋하지 않았다.
+
+```
+다음 작업: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md. 서버와 위젯 빌드가 같은 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수 상한을 읽고, 허용 출처의 표기를 파이썬과 Node가 같은 픽스처로 판정한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+브랜치: feature/04-site-file-feeds-widget-build
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-24-05-site-file-feeds-widget-build.md 의 "이어 받은 세션(PR 연 뒤)"부터 끝까지. 막힌 티켓(05~11)은 .scratch/plan.md 의 web-widget 행
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 200b77d6)부터 한다. docs/journal/2026-10-24-05-site-file-feeds-widget-build.md. 그 변경은 PR #379 봇 회차 1의 반영분이다(CI 파이썬 3.12.15에서 빨개진 IPv6 판정을 서버가 글을 직접 짓게 고침, claude-review Minor 하나 반영). 리뷰를 반영한 뒤 단계를 닫는 세션으로 회고와 일지 "다음"을 마쳐 같은 커밋에 싣고, 푸시 전에 gh pr edit로 PR 본문을 고치고(고칠 자리는 일지), 푸시 뒤 claude-review 첫 회차 넷의 판정을 PR 코멘트로 남긴다. 반영 푸시의 CI가 test_proc_command_line(대기열 456) 하나로만 빨가면 사용자에게 묻는다. 일지의 이 세션 절은 커밋하지 않았다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목: `feature/04-site-file-feeds-widget-build (인계함)`. 멈출 백그라운드 작업은 없었다(`wait_ci` 는 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-23T19:07:20Z
+
+## 이어 받은 세션(셀프 리뷰 직전)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/04-site-file-feeds-widget-build.md
+
+(지시문은 위 "인계(셀프 리뷰 직전)"의 것과 같다. 제목을 `feature/04-site-file-feeds-widget-build` 로 바꾸고 워크트리에 `EnterWorktree(path)` 로 들어갔다. origin/main 은 7496a830 그대로라 합칠 것이 없었다.)
+
+### 셀프 리뷰(봇 회차 1 반영분)
+
+`/code-review 200b77d6`. 범위: base 200b77d6, 파일 9, 커밋 0, 미추적 0(모두 커밋하지 않은 작업). 표준 축은 sonnet·high, 명세 축은 이 세션의 모델로 나란히 돌렸다. 두 축 모두 Critical·Major 가 없다.
+
+- [Minor, 고침] 두 축이 함께 짚었다. 3.12.15 의 표기를 CI 실패의 모양에서 끌어냈는데 `_serialized_ipv6` 독스트링, 픽스처 README, `dotted_ipv4_mapped` 독스트링에 관측처럼 적었다. 명세 축이 `gh api` 로 CPython v3.12.15 의 `Lib/ipaddress.py` 를 받아 읽었고, 이 세션도 v3.12.15 와 v3.12.10 의 같은 파일을 `gh api repos/python/cpython/contents/Lib/ipaddress.py?ref=<태그>` 로 받아 `_ipv4_mapped_ipv6_to_str` 를 셌다(v3.12.15 에 둘, v3.12.10 에 0). v3.12.15 의 `IPv6Address.__str__` 은 `ipv4_mapped` 가 있으면 그 함수로 `::ffff:1.2.3.4` 꼴을 짓는다. 그래서 세 자리의 근거를 두 판의 원문 읽기로 바꿨다. 명세 축이 함께 짚은 범위도 좁혔다. 점으로 적는 것은 IPv4 매핑 주소(`::ffff:0:0/96`)뿐이고 `::1.2.3.4` 는 16진수로 적는다. 티켓 04 의 규칙 줄과 `spec.md` 187행의 "그 주소를 점으로 적어"도 "IPv4 매핑 주소(`::ffff:0:0/96`)를 점으로 적어"로 고쳤다.
+- [Nit, 고침] `_serialized_ipv6` 독스트링이 RFC 5952 와 WHATWG URL 을 근거의 종류 없이 들었다(표준 축). "두 원문의 웹 요약을 봤다, 픽스처 README 의 `ipv6`" 를 붙였다. 픽스처 README 의 5절 요약도 조건("잘 알려진 접두사로 그것을 알 수 있을 때")을 더했다.
+- [Nit, 고침] 새 `ipv6` 문구에 "앞의 0 없이"가 빠져 `[2001:db8::01]` 이 막혀도 문구가 까닭을 말하지 않는다(명세 축). 두 언어의 문구에 "앞의 0 이 없는"을 같은 글로 넣었다. 변이 표와 시험은 문구가 아니라 규칙 이름을 본다(grep 으로 봤다).
+- [Nit, 고침] 티켓 04 의 "`http://[::ffff:1.2.3.4]`(Node와 파이썬 3.12.10이 모두 `[::ffff:102:304]`로 바꾼다)"는 이제 기준이 아닌 파이썬을 막는 까닭으로 든다(명세 축). "(Node의 `new URL(v).origin`이 `[::ffff:102:304]`로 바꾼다)"로 고쳤다. `spec.md` 의 같은 관측 문장은 판과 날짜가 붙은 관측 기록이고 바로 앞 괄호가 파이썬을 기준에서 뺀다고 적어 두었다.
+- [Nit, 고침] TS 의 `compressedIpv6` 가 파이썬의 `_serialized_ipv6` 와 이름이 갈린다(표준 축 Mysterious Name). `serializedIpv6` 로 바꿨다. 변이 표는 그 이름을 겨누지 않는다(grep 으로 봤다).
+- [Nit, 남김] `dict[_OriginRule, str]` 은 오타는 막아도 빠진 키는 pyright 가 잡지 않는다(두 축). 픽스처의 막히는 사례가 규칙 열셋을 모두 지나 문구를 찾으므로 빠진 키는 시험에서 `KeyError` 로 빨개진다. 타입으로 막으려면 dict 를 다른 꼴로 바꿔야 해 두 언어의 대칭이 깨진다.
+- [Nit, 남김] `_serialized_ipv6` 한 함수에 바이트를 그룹으로 읽기, 가장 긴 0 열 찾기, 글 짓기가 섞였다(표준 축). Node 의 `serializedIpv6` 와 같은 모양이라 두 언어를 나란히 읽기 쉽다. 출처 표기 판정을 모듈 밖으로 옮기는 일(봇 회차 1에서 뒤로 넘긴 것)에서 함께 본다.
+- 확인해서 맞은 것: 두 축이 파이썬 `_origin_rule` 과 Node `originRule` 에 픽스처 전부와 경계 입력(모두 0, 0 하나, 같은 길이의 0 열 둘, 끝의 0 열, 점 표기 셋 등)을 대어 어긋난 것이 0 이었다. 명세 축은 보통 판과 점 표기 흉내 판 둘 다로 돌렸다. `compressed` 가 `str(self)` 인 것은 이 세션이 3.12.10 에서 `inspect.getsource` 로, 명세 축이 v3.12.15 원문으로 봤다. 변이 표의 변이는 43 이고 10~13 이 겨누는 시험 id 가 collect 에 있다. 옛 표현의 잔존은 살아 있는 문서에 없다.
+- 반영 뒤 다시 돌린 것: 표기 시험 91 passed, `uv run ruff check`·`ruff format --check`·`pyright`(두 파일) 통과, `pnpm -C web exec vitest run --project node apps/widget/tools/site-file.test.ts apps/widget/next.config.test.ts` 190 passed, Prettier 통과, `tools/mutate.py --check` 로 표 둘(43, 34) 모두 원문이 한 번씩 있다. `main.py` 를 건드려 `uv run --env-file ../../../.env pytest -m llm` 도 돌렸다: 7 passed(282.14초), LLM 토큰 합계 51,554(입력 50,473, 출력 1,081), 트레이스 10개, 모델 호출 21건. 트레이스를 남기지 않은 LLM 시험 1개는 세지 못했다. 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
+- 이 반영으로 새로 쓴 사실 문장: ① `_serialized_ipv6` 독스트링의 "CPython v3.12.15 의 `IPv6Address.__str__` 은 그 주소를 `_ipv4_mapped_ipv6_to_str` 로 `::ffff:1.2.3.4` 처럼 점으로 적고, v3.12.10 에는 그 갈래가 없어 `::ffff:102:304` 로 적는다", ② 픽스처 README 의 "그래서 `compressed`와 견주던 판정이 CI의 3.12.15에서는 `[::ffff:102:304]`를 막고 `[::ffff:1.2.3.4]`를 지나보냈고". PR 이 이미 열려 PR 직전 리뷰는 돌지 않는다. 이 커밋을 푸시하면 claude-review 둘째 회차가 본다.
+
+## 회고
+
+이 단계를 닫는 세션(셀프 리뷰 직전에 이어 받은 세션)이 이 일지 전체와 이 세션을 보고 돌렸다. 후보 열, 승인 다섯, 넘김 하나, 기각 넷이다. 이 세션에서 반영한 것은 없고, 승인한 것은 모두 대기열에 두었다.
+
+1. **넘김 → 대기열 457(1회차).** CI 의 `uv python install 3.12` 가 가장 새 3.12 패치(3.12.15)를 깔고 이 PC 는 3.12.10 이라, 표준 라이브러리 `ipaddress` 가 IPv4 매핑 주소를 적는 꼴이 갈려 이 PC 에서 초록인 시험이 PR CI 에서만 빨갰다(봇 회차 1). 처방(CI 와 로컬의 판을 정확한 패치로 고정)은 `docs/constitution/tech.md` 의 스택 결정이라 ADR 이 들어 넘겼다.
+   > 사용자: (선택) "회차만 센다 (권장)" — "지금은 아무것도 바꾸지 않고, 대기열에 1회차로 적어 둡니다. 같은 일이 세 번째 나면 판 고정을 ADR로 올립니다."
+2. **승인, 더하는 것 → 대기열 458(1회차).** 사건: PR 직전 `bug-perf-review` 가 낸 판에 따른 상류 동작 주장(리뷰어는 3.13 으로 기억했다)을 이 PC 에 그 판이 없다며 보류했는데, 같은 변화가 CI 의 3.12.15 에서 났다. 그 판의 원문은 `gh api` 한 번으로 읽혔다(위 셀프 리뷰). 층: 보류를 다루는 자리(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 문장이다. 판에 따른 동작의 갈래는 검사로 잡을 수 없다. 첫 회차라 반영하지 않는다.
+3. **승인, 회차로 세는 것 → 대기열 445에 10회차(421의).** 사건: 3.12.15 의 표기를 CI 실패의 모양에서 끌어내고 코드 독스트링·시험 독스트링·픽스처 README 에 본 것처럼 적어 셀프 리뷰 두 축이 Minor 로 잡았다(위 셀프 리뷰). `CLAUDE.md` 가 근거 문장에 따르라는 `docs/agents/issue-tracker.md` 프로브와 근거 절을 어겼다. 445 의 처방은 일지를 쓸 때의 계기 훅인데 이번 자리는 일지 밖이었다. 반영하는 chore 가 범위를 고를 때 이 자리를 함께 본다.
+4. **승인, 회차로 세는 것 → 대기열 420에 5회차.** 사건: 파이썬의 `compressed` 를 기준에서 뺀 뒤에도 티켓 04 의 막히는 사례 괄호가 "Node와 파이썬 3.12.10이 모두"로 파이썬을 막는 까닭으로 들어 셀프 리뷰 명세 축이 Nit 로 잡았다. `CLAUDE.md` 작업 규약 4(옛 표현의 잔존을 grep 해 0 인지 본다)를 어겼다.
+5. **승인, 고침 → 대기열 456에 3회차.** 사건: `tests/tools/test_proc_command_line.py` 의 시험이 PR #379 의 CI(실행 40004989726)에서 다시 빨갰다(봇 회차 1). 이 브랜치가 건드리지 않은 시험이다. 3회차라 chore 배치의 조건이 찼다.
+6. **승인, 고침 → 대기열 459(1회차).** 사건: 반영 전 `run_checks` 에서 `tests/tools/test_hook_edit_during_commit.py` 의 실행 파일 경로 단언이 한 번 빨갰다(위 "검사"). 그 단언은 그 시험이 세운 커밋이 아니라 그때 도는 모든 커밋의 프로세스에 걸려, 다른 세션의 `git.exe` 가 상대 경로로 떠 있으면 빨개진다(코드를 읽어 본 것이고 재현하지 않았다). 고침이라 사건 하나로 반영할 수 있지만, 봇 회차 중인 기능 PR 의 범위를 넓히지 않으려 이 PR 에 싣지 않았다.
+7. **기각.** 워크트리 가드가 거부한 명령 둘(앞 세션의 스크래치 스크립트 heredoc, 이 세션의 `for`·`sed` 루프)은 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정에 이미 있다.
+8. **기각.** 파이프 뒤의 판정 명령, WebFetch 웹 요약, 큰 Read 결과는 훅이 그 자리에서 알렸다.
+9. **기각.** 새 `ipv6` 문구가 "앞의 0 없이"를 빠뜨린 것은 리뷰가 잡도록 둔 기준이라 리뷰가 제 몫을 했고, 문구의 뜻을 검사로 옮길 수 없다.
+10. **기각.** 변이 시험 하나가 1분을 넘긴 회차가 셋이었지만(위 "변이") 느린 까닭을 가르지 않아 처방의 층을 고를 근거가 없다.
+
+만료: `uv run python tools/queue_open_rows.py` 와 `git fetch origin` 뒤 `--ref origin/main` 모두 만료할 행이 없었다.
+
+## 다음
+
+- 04 가 병합되면 05(Blocked by 01·04)가 열린다. 01·02·03 은 병합됐다. 06 은 02 와 05 를, 07·10·11 은 06 을, 08 은 07 을, 09 는 08 을 기다린다(`.scratch/plan.md` 의 web-widget 행).
+- 봇 회차 1에서 뒤로 넘긴 것: 출처 표기 판정(파이썬 `_origin_rule`·`_serialized_ipv6` 등, Node `originRule`·`serializedIpv6` 등)을 두 언어 모두 사이트 파일 모듈 밖으로 옮길지(claude-review Minor 둘). 한쪽만 옮기면 두 언어의 배치가 갈리고, 변이 표 `site_file_mutations.toml` 의 `file` 과 독스트링이 함께 옮겨진다. 따로의 리팩터로 한다.
+- 반영 전 `run_checks` 에서 `test_hook_edit_during_commit` 이 한 번 빨갰던 일은 대기열 459, CI 의 `test_proc_command_line` 은 대기열 456(3회차)이다.
+- 이 PR 은 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다.
