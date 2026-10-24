@@ -5,9 +5,9 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 // 관리 화면과 위젯의 페이지 테스트(web-admin·web-widget 명세의 주 이음매)는 jsdom 에서 돈다. 그 밖의 테스트(판정자,
 // 생성 스크립트, 시작 래퍼와 설정의 단위 테스트)는 node 환경에 남는다. 화면을 그리는 테스트는 components/ 아래의
-// .test.tsx 다.
+// .test.tsx 다. 위젯의 커스텀 요소(element/)도 DOM 이 있어야 해 .test.tsx 를 jsdom 에서 돌린다.
 const PAGES = "apps/admin/components/**/*.test.tsx";
-const WIDGET_PAGES = "apps/widget/components/**/*.test.tsx";
+const WIDGET_PAGES = ["apps/widget/components/**/*.test.tsx", "apps/widget/element/**/*.test.tsx"];
 // 디자인 시스템과 위젯의 스토리 테스트(design-system·web-widget 명세의 주 이음매). 스토리마다 실제 chromium 에서 그리고
 // play, 미리보기의 afterEach(클래스 판정), axe(addon-a11y)를 돈다. 브라우저는 Playwright 의 브라우저 캐시에 깔린 것을
 // 쓴다. 프로젝트의 이름이 겹치면 Vitest 가 거부한다.
@@ -34,7 +34,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: "node", exclude: [...configDefaults.exclude, PAGES, WIDGET_PAGES] },
+        test: { name: "node", exclude: [...configDefaults.exclude, PAGES, ...WIDGET_PAGES] },
       },
       {
         extends: true,
@@ -49,7 +49,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "widget-pages",
-          include: [WIDGET_PAGES],
+          include: WIDGET_PAGES,
           environment: "jsdom",
           setupFiles: ["apps/widget/testing/setup.ts"],
         },

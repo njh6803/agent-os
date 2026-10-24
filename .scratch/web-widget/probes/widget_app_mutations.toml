@@ -281,12 +281,12 @@ expect = "red"
 expect_output = ["expected [] to deeply equal [ Array(2) ]"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/WidgetPage.tsx"
+file = "web/apps/widget/components/pages/ConnectedWidget.tsx"
 old = '''
-      console.error(`위젯 질의 ${problem.name}: ${problem.reason}`);
+      console.error(problem);
 '''
 new = '''
-      console.warn(`위젯 질의 ${problem.name}: ${problem.reason}`);
+      console.warn(problem);
 '''
 
 [[mutation]]
@@ -485,9 +485,11 @@ expect_output = ['"Access-Control-Allow-Origin": "null"']
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
+        source: "/fonts/:path*",
         headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
 '''
 new = '''
+        source: "/fonts/:path*",
         headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
 '''
 
@@ -565,12 +567,12 @@ expect_output = [
 file = "web/apps/widget/tools/start.ts"
 old = '''
   if (command.prepare) {
-    steps.prepare();
+    await steps.prepare();
   }
 '''
 new = '''
   if (command.prepare && command.args.length === 0) {
-    steps.prepare();
+    await steps.prepare();
   }
 '''
 

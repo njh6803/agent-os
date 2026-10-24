@@ -1,6 +1,7 @@
-// 대화를 돌린다. 요청마다 부모 창에서 새 토큰을 받아 최종 사용자 경로로 실행을 일으키고, 스트림의 항목을 대화의
-// 규칙(lib/conversation)에 넘긴다. 열린 스트림은 하나이고, 새 요청이나 결정이 앞의 것을 끊고 자리를 잇는다. 새 대화와
-// 페이지를 떠나는 것도 그것을 끊는다.
+// 대화를 돌린다. 요청마다 임베드가 준 길(lib/connection)로 새 토큰을 받아 최종 사용자 경로로 실행을 일으키고, 스트림의
+// 항목을 대화의 규칙(lib/conversation)에 넘긴다. 열린 스트림은 하나이고, 새 요청이나 결정이 앞의 것을 끊고 자리를 잇는다.
+// 새 대화와 위젯이 걷히는 것(iframe 페이지를 떠나거나 사이트가 요소를 뗀다)도 그것을 끊는다. 에이전트나 길이 없으면(설정이
+// 잘못됐다) 토큰도 묻지 않고 요청도 결정도 보내지 않는다.
 //
 // 요청을 입력창으로 되돌리는 거절(422, 429)은 대화 밖의 상태다. 되돌린 요청은 부르는 쪽(`onReturn`)이 입력창에 넣고,
 // 422 는 입력창 아래 안내를, 429 는 상한의 기다림(lib/limit)을 세운다. 둘 다 다음에 보낼 때 걷힌다. 기다림은 새
@@ -18,7 +19,7 @@ import {
   type DecisionBody,
   type EndUserFrame,
 } from "../../api/runs";
-import { allowedOrigins } from "../../lib/build";
+import type { Connection } from "../../lib/connection";
 import {
   INITIAL,
   reduce,
@@ -28,7 +29,6 @@ import {
   type Decision,
 } from "../../lib/conversation";
 import { remainingAt, startWait, untilNextTick, type LimitWait } from "../../lib/limit";
-import { requestToken } from "../../lib/token";
 
 export interface ConversationControls {
   readonly conversation: Conversation;
@@ -47,6 +47,7 @@ export interface ConversationControls {
 /** `onReturn` 은 입력창으로 되돌릴 요청을 받는다(422, 429). */
 export function useConversation(
   agent: string | null,
+  connection: Connection | null,
   onReturn: (request: string) => void,
 ): ConversationControls {
   const [conversation, dispatch] = useReducer(reduce, INITIAL);
@@ -82,7 +83,7 @@ export function useConversation(
   const { continueFrom } = conversation;
   const send = useCallback(
     (request: string) => {
-      if (agent === null) {
+      if (agent === null || connection === null) {
         return;
       }
       open.current?.abort();
@@ -91,7 +92,7 @@ export function useConversation(
       setWait(null);
       setInvalid(false);
       dispatch({ type: "sent", request });
-      void run(agent, request, continueFrom, abort.signal, {
+      void run(connection, agent, request, continueFrom, abort.signal, {
         dispatch: (action) => {
           if (!abort.signal.aborted) {
             dispatch(action);
@@ -112,7 +113,7 @@ export function useConversation(
         },
       });
     },
-    [agent, continueFrom, onReturn],
+    [agent, connection, continueFrom, onReturn],
   );
 
   const reset = useCallback(() => {
@@ -130,7 +131,7 @@ export function useConversation(
   const runId = conversation.exchanges.at(-1)?.runId ?? null;
   const decide = useCallback(
     (decision: Decision) => {
-      if (pauseId === null || runId === null) {
+      if (pauseId === null || runId === null || connection === null) {
         return;
       }
       open.current?.abort();
@@ -142,7 +143,7 @@ export function useConversation(
         decision.decision === "approve"
           ? { decision: "approve", pause_index: pauseId }
           : { decision: "deny", reason: decision.reason, pause_index: pauseId };
-      void runDecision(runId, pauseId, body, abort.signal, {
+      void runDecision(connection, runId, pauseId, body, abort.signal, {
         dispatch: (action) => {
           if (!abort.signal.aborted) {
             dispatch(action);
@@ -157,7 +158,7 @@ export function useConversation(
         },
       });
     },
-    [pauseId, runId],
+    [connection, pauseId, runId],
   );
 
   return { conversation, send, reset, decide, wait, invalid };
@@ -177,6 +178,7 @@ const NOT_FOUND_RETRY_MS = 1_000;
  * 기억을 비운 뒤 같은 요청을 시작으로 보낸다. 그 시작의 404 는 시작의 404 이고 더 보내지 않는다.
  */
 async function run(
+  connection: Connection,
   agent: string,
   request: string,
   continueFrom: string | null,
@@ -186,7 +188,7 @@ async function run(
   let target = continueFrom;
   let retried = false;
   for (;;) {
-    const token = await requestToken(allowedOrigins());
+    const token = await connection.token();
     if (signal.aborted) {
       return;
     }
@@ -195,7 +197,15 @@ async function run(
       return;
     }
     // 끊은 뒤에 온 결과는 부르는 쪽의 dispatch 가 버린다.
-    const rejected = await attempt(token, agent, request, target, signal, dispatch);
+    const rejected = await attempt(
+      connection.baseUrl,
+      token,
+      agent,
+      request,
+      target,
+      signal,
+      dispatch,
+    );
     if (rejected === null) {
       return;
     }
@@ -229,6 +239,7 @@ async function run(
  * 처리하지 못한 것으로 끝낸다(재접속은 티켓 09).
  */
 async function attempt(
+  baseUrl: URL,
   token: string,
   agent: string,
   request: string,
@@ -238,7 +249,7 @@ async function attempt(
 ): Promise<RunRejected | null> {
   let frames;
   try {
-    frames = await sendRun(token, agent, request, continueFrom, signal);
+    frames = await sendRun(baseUrl, token, agent, request, continueFrom, signal);
   } catch (error) {
     // 끊어서 난 에러도 여기로 온다. 그 뒤의 결과는 부르는 쪽이 버린다.
     return error instanceof RunRejected
@@ -289,6 +300,7 @@ interface DecisionReport {
  * - 401 이나 토큰을 받지 못한 것, 429, 그 밖(422, 500, 표 밖, 응답 전의 네트워크 실패)은 다시 결정을 받는다.
  */
 async function runDecision(
+  connection: Connection,
   runId: string,
   pauseId: number,
   body: DecisionBody,
@@ -297,7 +309,7 @@ async function runDecision(
 ): Promise<void> {
   let retried = false;
   for (;;) {
-    const token = await requestToken(allowedOrigins());
+    const token = await connection.token();
     if (signal.aborted) {
       return;
     }
@@ -307,7 +319,7 @@ async function runDecision(
     }
     let frames;
     try {
-      frames = await sendDecision(token, runId, body, signal);
+      frames = await sendDecision(connection.baseUrl, token, runId, body, signal);
     } catch (error) {
       const status = error instanceof RunRejected ? error.status : null;
       if (status === 404 && !retried) {
@@ -320,7 +332,7 @@ async function runDecision(
       if (status === 404) {
         dispatch({ type: "expired" });
       } else if (status === 409) {
-        await follow(runId, pauseId, signal, dispatch);
+        await follow(connection, runId, pauseId, signal, dispatch);
       } else if (status === 429 && error instanceof RunRejected) {
         limited(error);
         dispatch({ type: "decision-refused", notice: null });
@@ -341,12 +353,13 @@ async function runDecision(
  * 그 밖의 거절은 처리하지 못한 것이다.
  */
 async function follow(
+  connection: Connection,
   runId: string,
   pauseId: number,
   signal: AbortSignal,
   dispatch: Report["dispatch"],
 ): Promise<void> {
-  const token = await requestToken(allowedOrigins());
+  const token = await connection.token();
   if (signal.aborted) {
     return;
   }
@@ -356,7 +369,7 @@ async function follow(
   }
   let frames;
   try {
-    frames = await subscribeRun(token, runId, pauseId, signal);
+    frames = await subscribeRun(connection.baseUrl, token, runId, pauseId, signal);
   } catch (error) {
     const status = error instanceof RunRejected ? error.status : null;
     dispatch({ type: "decision-refused", notice: status === 401 ? "unauthorized" : "error" });

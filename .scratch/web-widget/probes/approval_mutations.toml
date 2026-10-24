@@ -98,7 +98,7 @@ expect = "red"
 expect_output = ["to have property \"disabled\" with value true"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/WidgetPage.tsx"
+file = "web/apps/widget/components/pages/ConnectedWidget.tsx"
 old = '''
         phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
 '''
@@ -150,10 +150,10 @@ expect_output = ["Received: \"6\""]
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/useConversation.ts"
 old = '''
-    frames = await subscribeRun(token, runId, pauseId, signal);
+    frames = await subscribeRun(connection.baseUrl, token, runId, pauseId, signal);
 '''
 new = '''
-    frames = await subscribeRun(token, runId, pauseId - 1, signal);
+    frames = await subscribeRun(connection.baseUrl, token, runId, pauseId - 1, signal);
 '''
 
 [[mutation]]
