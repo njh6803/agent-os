@@ -226,7 +226,8 @@ async function until<T>(
     if (found !== null) {
       return found;
     }
-    if (launched.child.exitCode !== null) {
+    // 신호로 죽으면 exitCode 는 null 이고 signalCode 만 찬다.
+    if (launched.child.exitCode !== null || launched.child.signalCode !== null) {
       break;
     }
     await sleep(100);

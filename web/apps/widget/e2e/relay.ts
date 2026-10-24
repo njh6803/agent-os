@@ -13,6 +13,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
+import { pipeline } from "node:stream";
 
 export interface Upstreams {
   /** serve 의 주소(`http://127.0.0.1:<포트>`). */
@@ -52,7 +53,10 @@ function forward(incoming: IncomingMessage, outgoing: ServerResponse, upstreams:
     },
     (response) => {
       outgoing.writeHead(response.statusCode ?? 502, response.headers);
-      response.pipe(outgoing);
+      // `pipe` 는 상류가 응답 도중 끊겨도 브라우저 쪽을 닫지 않는다. `pipeline` 은 한쪽이 끊기면 양쪽을 destroy 한다.
+      pipeline(response, outgoing, () => {
+        // 끊김은 destroy 된 응답으로 브라우저에 그대로 보인다. 여기서 더 할 일은 없다.
+      });
     },
   );
   upstream.on("error", (error) => {
