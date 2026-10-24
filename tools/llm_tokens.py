@@ -1,12 +1,12 @@
-"""`-m llm` 실행이 남긴 트레이스의 토큰 합계(대기열 113).
+"""`-m llm` 과 `-m llm_widget` 실행이 남긴 트레이스의 토큰 합계(대기열 113).
 
 `docs/constitution/operations.md` LLM 테스트 절이 일지 검사 절에 토큰 합계를 적으라는데 세는 법이
 없어, 세션마다 스크래치에 합계 스크립트를 새로 지었다(일지 2026-10-05-01·2026-10-06-06).
 `--basetemp` 없이 돌린 세션은 같은 사용자의 다른 세션과 나눠 쓰는 `pytest-current` 에서 섞인 실행을
-모델 이름으로 걸러 셌다(일지 2026-10-06-11). 그래서 `tests/conftest.py` 가 llm 마커 테스트마다 그
-`tmp_path` 를 이것으로 세어, 실행 끝의 결과 요약(`short test summary info` 와 통과 수 줄) 바로 위에
-찍는다. `tmp_path` 는 그 실행만의 basetemp(`pytest-N`) 아래에 테스트마다 따로 생겨 다른 세션의
-실행이 섞이지 않는다.
+모델 이름으로 걸러 셌다(일지 2026-10-06-11). 그래서 `tests/conftest.py` 가 두 마커(`llm`,
+`llm_widget`)의 테스트마다 그 `tmp_path` 를 이것으로 세어, 실행 끝의 결과
+요약(`short test summary info` 와 통과 수 줄) 바로 위에 찍는다. `tmp_path` 는 그 실행만의
+basetemp(`pytest-N`) 아래에 테스트마다 따로 생겨 다른 세션의 실행이 섞이지 않는다.
 
 토큰 이벤트는 종류 이름이 아니라 모양으로 고른다. 최상위에 정수 `input_tokens` 와 `output_tokens`
 를 든 줄이면 모델 호출 하나다. 지금은 `llm_called` 와 `conversation_summarized` 이고, sdk 에 토큰을

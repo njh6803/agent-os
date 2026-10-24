@@ -1,7 +1,12 @@
 /**
  * 위젯 e2e 의 준비(globalSetup, web-widget 티켓 06). 실제 `serve`, 같은 사이트 파일로 빌드한 실제 위젯 Next, 둘을 한
- * 출처 아래에 모으는 같은 출처의 중계(`relay.ts`), 위젯을 품는 다른 출처의 사이트(`site.ts`)를 띄운다. 모델은 부르지
- * 않는다. 선례는 관리 화면 e2e 의 준비(`apps/admin/e2e/stack.ts`)다.
+ * 출처 아래에 모으는 같은 출처의 중계(`relay.ts`), 위젯을 품는 다른 출처의 사이트(`site.ts`)를 띄운다. 기본은
+ * 모델을 부르지 않는다. 선례는 관리 화면 e2e 의 준비(`apps/admin/e2e/stack.ts`)다.
+ *
+ * 실제 모델 e2e(티켓 11)를 감싸는 파이썬 시험이 `LLM_ENV` 를 `1` 로 주면 둘이 더해진다. 임시 플러그인 루트에 저장소의
+ * 플러그인 루트를 먼저 옮기고(`plugins.ts`), 사이트 파일의 에이전트에 계산 에이전트를 넣는다. 그 에이전트만 모델을 부르고,
+ * 키는 아래의 serve 환경이 물려준다. 그 시험이 `TRACES_ENV` 로 준 자리에 serve 가 트레이스를 남기고, 주지 않으면 작업
+ * 폴더에 남겨 끝에 지운다.
  *
  * - 출처는 모두 `*.localhost` 호스트 이름이다. 위젯은 `widget.localhost`, 허용 출처의 사이트는 `site.localhost`, 허용 밖
  *   출처의 사이트는 `other.localhost` 이고 포트로 가른다. 표기 규칙은 IP 호스트의 출처도 지나보내지만 CSP3 의 문법은
@@ -26,8 +31,15 @@ import { createRequire } from "node:module";
 import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { GATES_ENV, OTHER_ORIGIN_ENV, SITE_ORIGIN_ENV, WIDGET_ORIGIN_ENV } from "./env";
-import { AGENTS, writeFixturePlugins } from "./plugins";
+import {
+  GATES_ENV,
+  LLM_ENV,
+  OTHER_ORIGIN_ENV,
+  SITE_ORIGIN_ENV,
+  TRACES_ENV,
+  WIDGET_ORIGIN_ENV,
+} from "./env";
+import { AGENTS, copyRepoPlugins, LLM_AGENT, writeFixturePlugins } from "./plugins";
 import { startRelay } from "./relay";
 import { startSite } from "./site";
 import { AUDIENCE, ISSUER, KEY_ID, siteKey } from "./token";
@@ -78,14 +90,20 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const siteOrigin = `http://site.localhost:${String(sitePort)}`;
     const otherOrigin = `http://other.localhost:${String(sitePort)}`;
 
+    const llm = process.env[LLM_ENV] === "1";
     const python = interpreter();
     const plugins = join(work, "plugins");
     const gates = join(work, "gates");
     mkdirSync(gates);
+    if (llm) {
+      copyRepoPlugins(REPO, plugins);
+    }
     writeFixturePlugins(plugins, python, MCP_FIXTURE_SERVER, gates);
     const key = siteKey();
     const siteFile = join(work, "sites.toml");
-    writeFileSync(siteFile, siteToml(siteOrigin, key.publicPem));
+    const agents: readonly string[] = llm ? [...AGENTS, LLM_AGENT] : AGENTS;
+    writeFileSync(siteFile, siteToml(siteOrigin, key.publicPem, agents));
+    const traces = process.env[TRACES_ENV] ?? join(work, "traces");
 
     const serve = launch(
       "serve",
@@ -99,7 +117,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         "--plugins-root",
         plugins,
         "--traces",
-        join(work, "traces"),
+        traces,
         "--site-file",
         siteFile,
       ],
@@ -151,7 +169,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 }
 
 /** 사이트 하나. 허용 출처는 `site.localhost` 하나이고 글자 수 상한은 기본값이다. */
-function siteToml(siteOrigin: string, publicPem: string): string {
+function siteToml(siteOrigin: string, publicPem: string, agents: readonly string[]): string {
   return [
     'schema_version = "1"',
     "",
@@ -159,7 +177,7 @@ function siteToml(siteOrigin: string, publicPem: string): string {
     `issuer = ${JSON.stringify(ISSUER)}`,
     `audience = ${JSON.stringify(AUDIENCE)}`,
     `allowed_origins = [${JSON.stringify(siteOrigin)}]`,
-    `agents = [${AGENTS.map((name) => JSON.stringify(name)).join(", ")}]`,
+    `agents = [${agents.map((name) => JSON.stringify(name)).join(", ")}]`,
     "",
     "[[sites.public_keys]]",
     `kid = ${JSON.stringify(KEY_ID)}`,

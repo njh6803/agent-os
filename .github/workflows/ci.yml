@@ -2,7 +2,8 @@
 # e2e(e2e-widget), 사진 비교(visual), 커밋 검사(ticket)가 잡 여섯으로 함께 돌고, 필수 검사는 그 결과를 모으는 verify
 # 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘, ADR 0037, ADR 0024의 2026-10-24 이력). 잡을 더하면 verify 의 needs 에
 # 넣는다. 빠뜨리면 verify 가 빨갛다. 두 e2e 와 사진 비교는 pre-commit 에 없고 CI 에만 있다(ADR 0026).
-# LLM 호출 테스트(-m llm)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다.
+# LLM 호출 테스트(-m llm, -m llm_widget)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다. e2e-widget 은
+# AGENT_OS_WIDGET_LLM 을 두지 않아 실제 모델을 부르는 Playwright 프로젝트 llm 이 서지 않는다.
 # 체크아웃하는 잡은 모두 persist-credentials: false 다. 모두 PR 의 코드를 짓고 돌리는데 체크아웃 뒤에 github.com 을 상대로
 # 한 git 명령(push, 인증된 fetch)이 없어서, 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
 # 워크플로 하드닝은 zizmor 가 판정한다(ADR 0027, 설정은 .github/zizmor.yml). 빠뜨리면 artipacked 가, 서드파티 액션을 해시
