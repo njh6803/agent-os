@@ -37,8 +37,12 @@ export function WidgetPage() {
     const params = new URLSearchParams(search);
     return readEmbed((name) => params.get(name));
   }, [search]);
-  const { conversation, send, reset } = useConversation(read?.embed.agent ?? null);
   const [draft, setDraft] = useState("");
+  // 되돌아온 요청(422, 429)은 입력창에 넣는다.
+  const { conversation, send, reset, wait, invalid } = useConversation(
+    read?.embed.agent ?? null,
+    setDraft,
+  );
 
   useLayoutEffect(() => {
     if (read === null) {
@@ -75,8 +79,11 @@ export function WidgetPage() {
       intro={read.embed.intro}
       misconfigured={read.embed.agent === null}
       exchanges={conversation.exchanges}
+      restarted={conversation.restarted}
       announcements={conversation.announcements}
-      sendBlocked={phase !== "idle"}
+      sendBlocked={phase !== "idle" || (wait !== null && wait.remaining > 0)}
+      wait={wait}
+      invalid={invalid}
       paused={phase === "paused"}
       newConversationDisabled={phase === "running"}
       draft={draft}

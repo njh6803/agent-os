@@ -2,6 +2,9 @@
 # 무엇을 재는지 변이로 본다. 첫 20 의 시험은 구현 뒤에 써서 빨강을 본 적이 없으므로, 단언마다 그 단언이 겨눈 변경에서
 # 빨개지는지 본다. 끝의 여섯은 셀프 리뷰 뒤에 더했다. 넷(id, 다시 보내기, 멈춘 입력창, aria-atomic)은 고치기 전에 시험이
 # 빨갰고, 둘(떠나면 끊기, 시작 뒤에 결말 없이 끝난 스트림)은 이미 있던 코드를 지키는 시험이라 처음부터 초록이었다.
+# 티켓 07 이 거절의 결말과 보내기 버튼의 자리를 바꿔 여섯 변이(이어 가기 둘, 401, 칸 아래 글, 다시 보내기, 결말 없이
+# 끝난 스트림)의 원문을 지금 코드로 다시 걸었다. 다시 보내기는 organisms/FailureAlert 로, 결말 없이 끝난 스트림의
+# 시험은 WidgetFailures.test.tsx 의 거절 표로 옮겨 갔다(일지 2026-10-24-12).
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/conversation_mutations.toml [번호 ...]
 # stories 러너는 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다.
 
@@ -135,10 +138,10 @@ expect_output = ['Unable to find role="alert"']
 [[mutation.edit]]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
-      return announce({ ...next, continueFrom: running.runId ?? state.continueFrom }, item.output);
+        { ...next, continueFrom: running.runId ?? state.continueFrom, errorStreak: 0 },
 '''
 new = '''
-      return announce(next, item.output);
+        { ...next, errorStreak: 0 },
 '''
 
 [[mutation]]
@@ -151,14 +154,13 @@ expect_output = ["expected [ [ …(2) ], [ …(2) ] ] to deeply equal"]
 [[mutation.edit]]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
-    case "failed":
-    case "unfinished":
-      return settle(state, { kind: "failed" });
+        ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        errorStreak: 0,
 '''
 new = '''
-    case "failed":
-    case "unfinished":
-      return { ...settle(state, { kind: "failed" }), continueFrom: running.runId };
+        ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        errorStreak: 0,
+        continueFrom: running.runId,
 '''
 
 [[mutation]]
@@ -171,10 +173,10 @@ expect_output = ["to contain '로그인 정보를 받지 못했습니다.'"]
 [[mutation.edit]]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
-      return settle(state, { kind: action.status === 401 ? "unauthorized" : "rejected" });
+        case 401:
+          return settle(state, { kind: "unauthorized" });
 '''
 new = '''
-      return settle(state, { kind: "rejected" });
 '''
 
 [[mutation]]
@@ -290,10 +292,10 @@ expect_output = ["expected 531 to be 527"]
 [[mutation.edit]]
 file = "web/apps/widget/components/organisms/Composer.tsx"
 old = '''
-      <div className={note ? "mb-4 pb-1" : undefined}>
+        <div style={{ marginBottom: lift }}>
 '''
 new = '''
-      <div className={note ? "mb-4" : undefined}>
+        <div style={{ marginBottom: lift - 4 }}>
 '''
 
 # --- 대화 목록(components/organisms/Conversation.tsx) ----------------------------------------------------------
@@ -400,11 +402,12 @@ expect = "red"
 expect_output = ['<button type="button" …(1)>…(1)</button> to have property "disabled" with value true']
 
 [[mutation.edit]]
-file = "web/apps/widget/components/organisms/Conversation.tsx"
+file = "web/apps/widget/components/organisms/FailureAlert.tsx"
 old = '''
-      disabled={blocked}
+      <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
 '''
 new = '''
+      <Button key={step} variant="secondary" onClick={onRetry}>
 '''
 
 [[mutation]]
@@ -461,7 +464,7 @@ new = '''
 [[mutation]]
 name = "결말 없이 끝난 스트림을 그대로 두면 시작 뒤에 끝난 스트림의 시험이 빨갛다"
 runner = "pages"
-tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "시작 항목 뒤에 결말 없이"]
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "시작 항목 뒤에 결말 없이"]
 expect = "red"
 # 그 시험에서 알림을 찾는 자리는 하나뿐이다.
 expect_output = ['Unable to find role="alert"']
@@ -470,7 +473,7 @@ expect_output = ['Unable to find role="alert"']
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
     case "ended":
-      return settle(state, { kind: "rejected" });
+      return settleError(state);
 '''
 new = '''
     case "ended":

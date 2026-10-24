@@ -2,89 +2,20 @@
 // 경로로 실행을 일으키고, 도는 동안 부르는 도구를 보이고, 출력을 받아 이어 가는지를 화면에 보이는 글과 역할로 본다.
 // 가짜는 HTTP(MSW)와 부모 창(testing/site.ts)뿐이다.
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent, { type UserEvent } from "@testing-library/user-event";
-import { http } from "msw";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import {
-  api,
-  gate,
-  items,
-  KEEPALIVE,
-  frame,
-  network,
-  rejection,
-  stream,
-} from "../../testing/network";
+import { gate, items, KEEPALIVE, frame, rejection, stream } from "../../testing/network";
 import { onTokenRequest, post, serveTokens } from "../../testing/site";
-import { WidgetPage } from "./WidgetPage";
-
-const QUERY = new URLSearchParams({ agent: "order-helper", heading: "주문 도우미" }).toString();
-
-function openWidget(query = QUERY): UserEvent {
-  window.history.replaceState(null, "", `/widget?${query}`);
-  const user = userEvent.setup();
-  render(<WidgetPage />);
-  return user;
-}
-
-function requestBox(): HTMLElement {
-  return screen.getByRole("textbox", { name: "요청" });
-}
-
-function sendButton(): HTMLElement {
-  return screen.getByRole("button", { name: "보내기" });
-}
-
-/** 대화 목록에 선 출력. 읽기 영역의 같은 글과 가른다. */
-function findOutput(text: string): Promise<HTMLElement> {
-  return screen.findByText(text, { selector: "ol p" });
-}
-
-async function ask(user: UserEvent, text: string): Promise<void> {
-  await user.type(requestBox(), text);
-  await user.keyboard("{Enter}");
-}
-
-interface Seen {
-  readonly url: string;
-  readonly authorization: string | null;
-  readonly body: unknown;
-}
-
-/** 시작 경로에 응답을 걸고, 받은 요청을 차례로 적어 돌려준다. */
-function onStart(respond: () => Response): Seen[] {
-  const seen: Seen[] = [];
-  network.use(
-    http.post(api("/runs"), async ({ request }) => {
-      seen.push({
-        url: request.url,
-        authorization: request.headers.get("Authorization"),
-        body: await request.json(),
-      });
-      return respond();
-    }),
-  );
-  return seen;
-}
-
-function onContinue(respond: () => Response): Seen[] {
-  const seen: Seen[] = [];
-  network.use(
-    http.post(api("/runs/:runId/continuation"), async ({ request }) => {
-      seen.push({
-        url: request.url,
-        authorization: request.headers.get("Authorization"),
-        body: await request.json(),
-      });
-      return respond();
-    }),
-  );
-  return seen;
-}
-
-const FINISHED = () =>
-  items({ type: "started", run_id: "run_1" }, { type: "finished", output: "도착 예정입니다." });
+import {
+  ask,
+  FINISHED,
+  findOutput,
+  onContinue,
+  onStart,
+  openWidget,
+  requestBox,
+  sendButton,
+} from "../../testing/widget";
 
 // --- 토큰 ---
 
@@ -654,57 +585,6 @@ test("페이지를 떠나면 열린 스트림을 끊는다", async () => {
   expect(request.signal.aborted).toBe(true);
 });
 
-// --- 틈 동안의 실패와 거절 ---
-
-for (const [label, last] of [
-  ["실패", { type: "failed", message: "실행이 실패했다", run_id: "run_1", cause: "timeout" }],
-  ["끝내지 못함", { type: "unfinished" }],
-] as const) {
-  test(`${label} 항목은 "실행이 실패로 끝났습니다."와 "다시 보내기"의 위험 알림이다`, async () => {
-    serveTokens();
-    onStart(() => items({ type: "started", run_id: "run_1" }, last));
-    const user = openWidget();
-
-    await ask(user, "요청");
-
-    const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText("실행이 실패로 끝났습니다.")).toBeTruthy();
-    expect(within(alert).getByRole("button", { name: "다시 보내기" })).toBeTruthy();
-    expect(alert.textContent).not.toContain("실행이 실패했다");
-  });
-}
-
-for (const [label, respond] of [
-  ["404", () => rejection(404)],
-  ["409", () => rejection(409)],
-  ["429", () => rejection(429)],
-  ["500", () => rejection(500)],
-  ["시작 항목 전에 끝난 스트림", () => stream([])],
-  ["시작 항목 뒤에 결말 없이 끝난 스트림", () => items({ type: "started", run_id: "run_1" })],
-] as const) {
-  test(`${label} 는 "요청을 처리하지 못했습니다."와 "다시 보내기"의 위험 알림이다`, async () => {
-    serveTokens();
-    onStart(respond);
-    const user = openWidget();
-
-    await ask(user, "요청");
-
-    const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText("요청을 처리하지 못했습니다.")).toBeTruthy();
-    expect(within(alert).getByRole("button", { name: "다시 보내기" })).toBeTruthy();
-  });
-}
-
-test("응답 전의 네트워크 실패도 같은 알림이다", async () => {
-  serveTokens();
-  network.use(http.post(api("/runs"), () => Response.error()));
-  const user = openWidget();
-
-  await ask(user, "요청");
-
-  expect((await screen.findByRole("alert")).textContent).toContain("요청을 처리하지 못했습니다.");
-});
-
 // --- 접근성 ---
 
 test("포커스 차례는 새 대화, 대화 영역, 대화 안의 버튼, 입력창, 보내기다", async () => {
@@ -753,11 +633,14 @@ test("숨긴 status 영역 하나가 새 도구 줄과 끝난 출력을 차례�
   await ask(user, "요청");
   await findOutput("도착 예정입니다.");
 
+  // status 는 숨긴 읽기 영역과 입력창 위의 띠 둘이다. 띠는 비어 있다.
   const statuses = screen.getAllByRole("status");
-  expect(statuses).toHaveLength(1);
+  expect(statuses).toHaveLength(2);
+  const [reader, band] = statuses;
+  expect(band?.textContent).toBe("");
   // role="status" 의 aria-atomic 은 기본이 true 라 끄지 않으면 문단이 붙을 때마다 영역 전체를 다시 읽는다.
-  expect(statuses[0]?.getAttribute("aria-atomic")).toBe("false");
-  const read = [...(statuses[0]?.querySelectorAll("p") ?? [])].map((line) => line.textContent);
+  expect(reader?.getAttribute("aria-atomic")).toBe("false");
+  const read = [...(reader?.querySelectorAll("p") ?? [])].map((line) => line.textContent);
   expect(read).toEqual(["orders.lookup 성공", "shipping.track 실패", "도착 예정입니다."]);
   const conversation = screen.getByRole("region", { name: "대화" });
   expect(conversation.closest("[aria-live], [role='log']")).toBeNull();
@@ -773,5 +656,6 @@ test("새 대화는 읽기 영역도 비운다", async () => {
   await findOutput("도착 예정입니다.");
   await user.click(screen.getByRole("button", { name: "새 대화" }));
 
-  expect(screen.getByRole("status").textContent).toBe("");
+  // 읽기 영역과 입력창 위의 띠다.
+  expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(["", ""]);
 });

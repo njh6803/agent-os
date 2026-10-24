@@ -445,10 +445,15 @@ expect_output = ['Received: "jacho"']
 
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.stories.tsx"
+# 티켓 07 이 다크 모드의 스토리(LimitedHourlyWideDark)를 더해 같은 줄이 둘이라, 스토리의 머리 줄부터 잡는다.
 old = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
   globals: { mode: "dark" },
 '''
 new = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
   globals: { mode: "dark", theme: "jacho" },
 '''
 

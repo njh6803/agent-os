@@ -10,26 +10,38 @@
 // - 스크롤 자리는 이름 "대화"의 영역이고 포커스를 받는다. 도구 줄이 없는 교환만 있으면 안에 포커스 받는 것이 없어,
 //   키보드로 스크롤할 길이 없다(axe 의 scrollable-region-focusable 이 스토리에서 잡았다). 그래서 포커스 차례는
 //   "새 대화" → 이 영역 → 대화 안의 버튼 → 입력창 → 보내기다.
-//
-// 실패와 거절의 알림은 티켓 07 이 들이기 전의 틈 문구다. 실패와 끝내지 못함은 실패 원인 표의 마지막 행 문구와
-// "다시 보내기", 401 과 토큰을 받지 못한 것은 버튼 없는 위험 알림, 그 밖의 거절은 "다시 보내기" 가 붙은 위험 알림이다.
-import { Alert, Button, Icon, Progress } from "@agent-os/ui";
+// - 실패와 거절의 알림은 출력이 올 자리에 선다(organisms/FailureAlert). 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시
+//   시작했으면 맨 위에 정보 알림이 선다(화면 디자인 mk-rejection).
+import { Alert, Icon, Progress } from "@agent-os/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import { progressLabel, type Exchange } from "../../lib/conversation";
 import { ToolRow } from "../molecules/ToolRow";
+import { FailureAlert } from "./FailureAlert";
 
 export interface ConversationProps {
   readonly exchanges: readonly Exchange[];
+  /** 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작했다. 맨 위에 정보 알림을 둔다. */
+  readonly restarted: boolean;
   /** 그 교환의 요청을 같은 규칙으로 다시 보낸다. */
   readonly onRetry: (request: string) => void;
-  /** "다시 보내기"를 막는다. 보내기와 같은 규칙이라 실행이 돌거나 멈춰 있을 때다. */
+  /** "다시 보내기"를 막는다. 보내기와 같은 규칙이다. */
   readonly retryBlocked: boolean;
+  /** 알림의 "새 대화". 위쪽 띠의 것과 같다. */
+  readonly onNewConversation: () => void;
+  readonly newConversationBlocked: boolean;
 }
 
 // 끝에서 이만큼(px) 안이면 끝을 보고 있는 것으로 친다. 소수점 스크롤 위치의 오차를 받는다.
 const BOTTOM_SLACK = 2;
 
-export function Conversation({ exchanges, onRetry, retryBlocked }: ConversationProps) {
+export function Conversation({
+  exchanges,
+  restarted,
+  onRetry,
+  retryBlocked,
+  onNewConversation,
+  newConversationBlocked,
+}: ConversationProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
 
@@ -54,12 +66,19 @@ export function Conversation({ exchanges, onRetry, retryBlocked }: ConversationP
       className="flex min-h-0 flex-1 flex-col overflow-y-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
     >
       <ol className="mt-auto flex flex-col gap-4 p-4">
+        {restarted ? (
+          <li>
+            <Alert title="이전 대화를 이어 갈 수 없어 새 대화로 시작합니다." />
+          </li>
+        ) : null}
         {exchanges.map((exchange) => (
           <ExchangeItems
             key={exchange.id}
             exchange={exchange}
             onRetry={onRetry}
             retryBlocked={retryBlocked}
+            onNewConversation={onNewConversation}
+            newConversationBlocked={newConversationBlocked}
           />
         ))}
       </ol>
@@ -71,13 +90,12 @@ function ExchangeItems({
   exchange,
   onRetry,
   retryBlocked,
+  onNewConversation,
+  newConversationBlocked,
 }: {
   readonly exchange: Exchange;
-  readonly onRetry: (request: string) => void;
-  readonly retryBlocked: boolean;
-}) {
+} & Omit<ConversationProps, "exchanges" | "restarted">) {
   const { outcome } = exchange;
-  const retry = <RetryButton request={exchange.request} onRetry={onRetry} blocked={retryBlocked} />;
   const settled = outcome !== null && outcome.kind !== "paused";
   return (
     <>
@@ -99,43 +117,19 @@ function ExchangeItems({
             {outcome.output}
           </p>
         ) : null}
-        {outcome?.kind === "failed" ? (
-          <Alert tone="danger" title="실행이 실패로 끝났습니다." actions={retry} />
-        ) : null}
-        {outcome?.kind === "rejected" ? (
-          <Alert tone="danger" title="요청을 처리하지 못했습니다." actions={retry}>
-            잠시 뒤 다시 보내 주세요.
-          </Alert>
-        ) : null}
-        {outcome?.kind === "unauthorized" ? (
-          <Alert tone="danger" title="로그인 정보를 받지 못했습니다.">
-            페이지를 새로 고쳐 주세요.
-          </Alert>
-        ) : null}
+        {outcome === null ? null : (
+          <FailureAlert
+            outcome={outcome}
+            onRetry={() => {
+              onRetry(exchange.request);
+            }}
+            retryBlocked={retryBlocked}
+            onNewConversation={onNewConversation}
+            newConversationBlocked={newConversationBlocked}
+          />
+        )}
       </li>
     </>
-  );
-}
-
-function RetryButton({
-  request,
-  onRetry,
-  blocked,
-}: {
-  readonly request: string;
-  readonly onRetry: (request: string) => void;
-  readonly blocked: boolean;
-}) {
-  return (
-    <Button
-      variant="secondary"
-      disabled={blocked}
-      onClick={() => {
-        onRetry(request);
-      }}
-    >
-      다시 보내기
-    </Button>
   );
 }
 

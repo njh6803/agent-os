@@ -3,13 +3,16 @@
 //
 // - 설정이 잘못됐으면(에이전트가 없거나 패턴 밖) 대화 자리에 위험 알림을 보이고 입력 자리를 막는다(web-widget 명세
 //   "임베드"의 잘못 준 속성).
-// - 교환이 없으면 첫 화면이고, 있으면 대화 목록이다.
+// - 교환이 없으면 첫 화면이고, 있으면 대화 목록이다. 다시 시작한 대화는 교환이 비어도(그 시작이 422·429 로
+//   입력창에 돌아왔을 때) 대화 목록이다. 맨 위의 정보 알림을 남긴 채 보내기 때문이다(web-widget 명세 "요청이 거절될
+//   때"의 이어 가기 404).
 // - 숨긴 role="status" 영역 하나가 새 도구 줄과 끝난 출력을 생긴 차례로 한 번씩 읽는다. 글마다 문단 하나를 덧붙여,
 //   화면 읽기 프로그램은 더해진 문단만 읽는다. 영역은 처음부터 서 있어야 더해진 것을 읽으므로 늘 그린다.
 // - 포커스 차례는 문서의 차례 그대로다. 위쪽 띠의 "새 대화" → 대화 영역 → 대화 안의 버튼 → 입력창 → 보내기.
 //   대화 영역이 포커스를 받는 까닭은 organisms/Conversation 의 머리 주석이다.
 import { Alert } from "@agent-os/ui";
 import type { Exchange } from "../../lib/conversation";
+import type { LimitWait } from "../../lib/limit";
 import { Welcome } from "../molecules/Welcome";
 import { Composer } from "../organisms/Composer";
 import { Conversation } from "../organisms/Conversation";
@@ -22,10 +25,16 @@ export interface WidgetScreenProps {
   /** 요청을 보낼 수 없는 설정이다. */
   readonly misconfigured: boolean;
   readonly exchanges: readonly Exchange[];
+  /** 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작했다. */
+  readonly restarted: boolean;
   /** 숨긴 읽기 영역이 읽을 글. 생긴 차례다. */
   readonly announcements: readonly string[];
-  /** 실행이 돌거나 멈춰 있어 보내지 못한다. 보내기와 "다시 보내기"를 막는다. */
+  /** 실행이 돌거나 멈춰 있거나 상한의 기다림이 남아 보내지 못한다. 보내기와 "다시 보내기"를 막는다. */
   readonly sendBlocked: boolean;
+  /** 상한(429)에 걸려 기다리는 중. 입력창 위 띠가 선다. */
+  readonly wait: LimitWait | null;
+  /** 앞 요청이 422 로 되돌아왔다. */
+  readonly invalid: boolean;
   /** 승인을 기다리며 멈춰 있다. 입력창도 막는다(승인 묻기는 티켓 08). */
   readonly paused: boolean;
   /** 응답이 결말 전이라 새 대화를 막는다. */
@@ -39,13 +48,22 @@ export interface WidgetScreenProps {
   readonly requestChars: number;
 }
 
+/** 마지막 교환이 단계 상한(`loop_limit`)으로 실패했으면 그 번호. 그 알림은 버튼 없이 입력창으로 포커스를 보낸다. */
+function focusFor(exchanges: readonly Exchange[]): number | null {
+  const last = exchanges.at(-1);
+  return last?.outcome?.kind === "failed" && last.outcome.cause === "loop_limit" ? last.id : null;
+}
+
 export function WidgetScreen({
   heading,
   intro,
   misconfigured,
   exchanges,
+  restarted,
   announcements,
   sendBlocked,
+  wait,
+  invalid,
   paused,
   newConversationDisabled,
   draft,
@@ -64,11 +82,18 @@ export function WidgetScreen({
         </Alert>
       </div>
     );
-  } else if (exchanges.length === 0) {
+  } else if (exchanges.length === 0 && !restarted) {
     conversation = <Welcome intro={intro} />;
   } else {
     conversation = (
-      <Conversation exchanges={exchanges} onRetry={onRetry} retryBlocked={sendBlocked} />
+      <Conversation
+        exchanges={exchanges}
+        restarted={restarted}
+        onRetry={onRetry}
+        retryBlocked={sendBlocked}
+        onNewConversation={onNewConversation}
+        newConversationBlocked={newConversationDisabled}
+      />
     );
   }
   return (
@@ -100,6 +125,9 @@ export function WidgetScreen({
           limit={requestChars}
           disabled={misconfigured || paused}
           blocked={sendBlocked}
+          focusFor={focusFor(exchanges)}
+          wait={wait}
+          invalid={invalid}
         />
       }
     />
