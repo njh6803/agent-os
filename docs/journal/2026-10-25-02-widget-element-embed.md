@@ -881,6 +881,50 @@ open-session을 부른다 2026-10-24T18:54:44Z
 - `pnpm -C web visual:widget`(Docker): 종료 0, 38 passed(57.1초). 07 합치기 뒤에는 30 이었고 늘어난 시험이 무엇인지는 가르지 않았다. 정답 사진은 08 이 들인 것 그대로이고 `git status` 에서 바뀐 사진이 없다. `packages/ui` 를 건드리지 않아 `pnpm -C web visual` 은 돌리지 않았다.
 - PR 직전 리뷰는 해소 범위(위 일곱 파일, 기준 `c5c1d4d3`)에 `bug-perf-review` 만 돌린다. 해소가 바꾼 것은 08 의 두 요청이 기준 주소와 토큰을 `connection` 에서 받는 것이고, 토큰을 보내는 곳은 이 브랜치의 `sendRun` 이 이미 쓰는 `connection.baseUrl` 이다. 그 `sendRun` 의 길은 07 해소(`d4392b58`)의 `/security-review` 가 지적 없이 봤다. 그래서 보안 축은 다시 돌리지 않고, 푸시 뒤 CodeRabbit 이 PR 전체를 본다. 셀프 리뷰를 반영하며 새로 쓴 사실 문장 넷을 브리프에 밀 주장으로 실었다.
 - `bug-perf-review` 결과: 이슈 없음, 유효 0·오탐 1, 보고의 마지막 `[호출 40]`(중간 표기가 실제보다 적게 적혀 다시 센 총합이라고 했다). 따라가 본 것은 `connection` 이 두 임베드에서 같은 객체로 남아 다시 그려도 `send`·`decide` 의 의존 배열이 바뀌지 않는 것(`WidgetPage.tsx` 의 `useMemo([hydrated])`, `WidgetElement.tsx` 생성자의 `#connection`), `connection === null` 이면 두 함수가 끊기·dispatch 앞에서 돌아가 토큰도 요청도 나가지 않는 것, 끊은 뒤의 결과를 `dispatch`·`limited` 래퍼가 버리는 것, CORS(`cors.py` 42~44행), 충돌 표지와 `apiBaseUrl` 의 잔존 0 이다. 밀 주장 넷은 모두 맞았다. 오탐 하나는 "맞지 않게 된 파일이 둘" 이 `ConnectedWidget.tsx` 를 빠뜨렸다는 의심이고, 그 손질은 `WidgetPage.tsx` 충돌을 옮긴 자리라 일지가 그 묶음으로 적었다. 보고가 확인하지 못했다고 든 것 가운데 PR 번호 #386 은 이 세션이 `gh pr view 386` 으로 봤다(`OPEN`, 머리 `be3eb38c`). 08 티켓과 일지 2026-10-25-01 이 `WidgetPage.tsx` 를 옛 자리로 적은 것은 기록이라 고치지 않는다(`docs/constitution/operations.md` 문서 위치).
+- 합치기 커밋 `0d452f2c`(메시지는 스크래치패드의 파일을 `git commit -F` 로 넘겼다): pre-commit 의 검사 열(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 340.6초, web-verify 347.6초)과 마크다운 표·줄 구분 문자·변이 표·커밋 메시지가 Passed 였다. ruff 둘·카나리아 명세·헌법 판은 대상 파일이 없어 Skipped 라, 커밋 뒤에 ruff 둘을 손으로 쳐 통과했다(`All checks passed!`, `1051 files already formatted`). 인용 대조의 경고 하나(791행의 "origin/main 보다 1커밋 뒤처졌다")는 `tools/hook_push_behind_main.py` 224행의 f-string 에 `count` 1 이 든 글이라 거짓 양성이다.
+
+## 인계 (커밋 뒤, 일곱째)
+
+합치기 커밋 `0d452f2c` 를 친 뒤 `hook_handoff`(약 25.8만 토큰, 경계 `커밋 뒤`)가 와서 새 세션에 넘긴다. 커밋은 pre-commit 을 지나 성공했다. 이 세션이 받은 지시문의 "이어받을 상태" 는 `인계: 셀프 리뷰 직전` 이라 같은 경계가 아니고, 일지에 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니고, 요청 범위는 PR과 병합까지다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+- HEAD 는 `0d452f2c` 이고 아직 푸시하지 않았다. PR #386 의 머리는 `be3eb38c` 이고, 푸시할 커밋은 `9ea70dd8`, `c5c1d4d3`, `0d452f2c` 와 새 세션이 이 절을 이어 쓴 일지 커밋이다. 한 번에 푸시해 봇이 한 번만 돌게 한다.
+- 08 을 합쳐 범위가 넓어졌으므로 푸시 전에 `gh pr edit 386` 으로 본문을 고친다(`next-session` 순서 1의 1). 지금 본문은 `gh pr view 386 --json body -q .body` 로 읽힌다. 고칠 자리:
+  - 변경사항: 07 합치기 줄 뒤에 08 합치기 줄(08(#385)이 `WidgetPage.tsx` 에 더한 결정 보내기와 결정을 보내는 동안 "새 대화" 막기를 `ConnectedWidget.tsx` 로 옮기고, `sendDecision`·`subscribeRun` 이 기준 주소를, `runDecision`·`follow` 가 `connection` 의 토큰과 기준 주소를 받게 했다).
+  - 남긴 위험: 07 의 거절·상한 화면 줄에 08 의 승인 묻기 화면도 같다는 것(페이지 안 방식에서 그려 본 시험이 없고 구성으로 한 말이다. 두 경로의 CORS 는 위 "origin/main 합치기 (셋째, 08)" 의 pytest 시험 둘이 본다). 열린 08 줄은 09 줄로 바꾼다(09 는 10 없는 `cb6d9c39` 위에서 돌아, 뒤에 병합하는 쪽이 `ConnectedWidget.tsx` 와 `connection` 꼴로 옮긴다. 일지 "다음").
+  - 계약 영향: "`sendRun`이 기준 주소를 인자로" 를 `sendRun`·`sendDecision`·`subscribeRun` 으로.
+  - 변경된 영역: 변이 표 셋을 넷으로(`approval_mutations.toml` 이 더해졌다. `git diff --name-only cb6d9c39` 로 봤다).
+  - 체크리스트: 셀프 리뷰 회차를 다섯으로(08 합치기의 해소), PR 직전 리뷰에 08 해소 회차(기준 `c5c1d4d3`, 커밋 전 작업 트리): `bug-perf-review` 이슈 없음·오탐 1, 보안 축은 위 "커밋 전 검사와 PR 직전 리뷰 (08 해소)" 의 이유로 다시 돌리지 않았다. `-m llm_widget` 을 08 합치기 뒤의 결과(1 통과 92.55초, 토큰 줄은 위)로, 머리 커밋의 pre-commit 을 `0d452f2c` 의 것으로.
+  - 확인 방법: 마지막으로 코드가 바뀐 커밋을 `0d452f2c` 로. 위젯 e2e 13 통과(27.4초), `visual:widget` 38 통과(57.1초), `vitest run --project widget-pages` 파일 6·시험 143, `mutate.py --check` 변이 189, 합친 두 소스를 겨누는 변이 열셋이 모두 기대대로.
+  - 리뷰어 참고: `ConnectedWidget.tsx` 의 08 몫(`onDecide`, `newConversationDisabled`)과 `useConversation.ts` 의 `runDecision`·`follow` 가 `connection` 을 받는 자리를 더한다. 이번 회차가 새로 쓴 사실 문장 넷은 PR 직전 `bug-perf-review` 가 밀 주장으로 대 봤다.
+- 푸시 뒤: `@coderabbitai review`, `tools/wait_ci.py` 대기, 봇 회차(claude-review 는 둘째 회차라 Critical·Major 만, CodeRabbit 은 처음 리뷰하는 회차가 첫 회차), 병합(`next-session` "워크트리에서 병합할 때")이다.
+- 회고 재료(단계를 닫는 세션이 센다): `pytest -k preflight` 를 `| tail -3` 파이프 앞에 두어 훅이 알렸다(앞 회고 6 과 같은 일, 이 세션에서 한 번). Grep 의 glob 에 `!node_modules/**` 를 주어 `.env` 를 읽는 훅이 막았다. 인용 대조가 f-string 을 채운 글을 거짓 양성으로 냈다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-02-widget-element-embed.md의 마지막 "인계 (커밋 뒤, 일곱째)" 절(파일 끝 "다음" 바로 앞. 그 앞 절들은 필요할 때만 제목을 grep 해 연다)
+이어받을 상태: 인계: 커밋 뒤. 08(cb6d9c39, #385) 합치기를 셀프 리뷰·PR 직전 bug-perf-review·위젯 e2e·-m llm_widget·visual:widget 까지 마치고 합치기 커밋 0d452f2c 를 쳤다(pre-commit 통과, ruff 둘은 손으로 통과). 아직 푸시하지 않았다(PR #386 머리는 be3eb38c). 커밋하지 않은 일지의 인계 절이 워크트리에 있다. 남은 단계는 차례로 그 절을 이어 쓴 일지 커밋, gh pr edit 386(고칠 자리는 그 절에 있다), 네 커밋을 한 번에 푸시, @coderabbitai review, tools/wait_ci.py 대기, 봇 회차(claude-review 는 둘째 회차라 Critical·Major 만, CodeRabbit 은 처음 리뷰하는 회차가 첫 회차), 병합(next-session "워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-25-02-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(위젯 e2e, `-m llm_widget`, `visual:widget`, 합치기 커밋, 리뷰 서브에이전트 셋이 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T19:27:45Z
+
+## 이어받은 세션 (커밋 뒤, 일곱째 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 "인계 (커밋 뒤, 일곱째)" 의 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 앱이 지은 것("위젯 요소 임베드 PR 병합")이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다(잠금 거부 없음). 일지는 절 제목을 grep 한 뒤 706행부터 열었다. `git fetch origin` 뒤에도 origin/main 은 `cb6d9c39` 그대로였다. HEAD 는 `0d452f2c`, PR 머리는 `be3eb38c` 였고, 그 머리로는 PR 이 `CONFLICTING`·`DIRTY` 였다(08 합치기를 아직 푸시하지 않았다).
+
+푸시 전에 `gh pr edit 386` 으로 본문을 위 인계 절이 든 자리대로 고쳤다. 변경사항에 08 합치기 줄, 남긴 위험의 시험 없는 화면에 08 의 승인 묻기와 preflight 시험 둘, 열린 08 줄을 09 줄로, 계약 영향의 함수 셋, 변경된 영역의 변이 표 넷(`git diff --name-only origin/main...HEAD` 로 넷을 봤다), 체크리스트의 셀프 리뷰 다섯 회차와 남긴 Minor 둘, PR 직전 리뷰의 08 해소 회차, `-m llm_widget` 과 확인 방법의 수치를 08 합치기 뒤의 것으로, 리뷰어 참고에 `ConnectedWidget.tsx` 의 08 몫과 `useConversation.ts` 줄이다. 본문의 원본은 이 세션 스크래치패드의 `pr-body.md` 다.
 
 ## 다음
 
