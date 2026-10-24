@@ -84,7 +84,7 @@ export function useConversation(
           onReturn(request);
           if (rejected.status === 422) {
             setInvalid(true);
-          } else {
+          } else if (rejected.status === 429) {
             setWait(startWait(rejected.detail.limit, rejected.detail.retryAfter, Date.now()));
           }
         },

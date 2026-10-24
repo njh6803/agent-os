@@ -1,4 +1,4 @@
-# 2026-10-24 (12) 위젯의 실패와 거절(web-widget 07)
+# 2026-10-24 (15) 위젯의 실패와 거절(web-widget 07)
 
 ## 사용자 프롬프트
 
@@ -59,8 +59,8 @@
 시작 프롬프트: /implement .scratch/web-widget/issues/07-widget-failures-and-rejections.md
 브랜치: feature/07-widget-failures-and-rejections
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-24-12-widget-failures-and-rejections.md의 "## 인계"
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세 .scratch/web-widget/spec.md)부터 한다(docs/journal/2026-10-24-12-widget-failures-and-rejections.md). run_checks.py는 인계하며 멈춰 pytest·web의 끝을 보지 못했고 위젯 e2e는 돌리지 않았다. 티켓의 검증 줄과 Status done, 일지의 셀프 리뷰·"다음"이 남았다
+읽을 것: docs/journal/2026-10-24-15-widget-failures-and-rejections.md의 "## 인계"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 명세 .scratch/web-widget/spec.md)부터 한다(docs/journal/2026-10-24-15-widget-failures-and-rejections.md). run_checks.py는 인계하며 멈춰 pytest·web의 끝을 보지 못했고 위젯 e2e는 돌리지 않았다. 티켓의 검증 줄과 Status done, 일지의 셀프 리뷰·"다음"이 남았다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -142,8 +142,8 @@
 시작 프롬프트: /implement .scratch/web-widget/issues/07-widget-failures-and-rejections.md
 브랜치: feature/07-widget-failures-and-rejections
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-24-12-widget-failures-and-rejections.md의 "## 둘째 인계"와 "### 반영"의 "PR 직전 리뷰에 밀 주장"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경을 한 커밋으로 들었고 푸시하지 않았으며 PR은 없다. 남은 단계는 차례로 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 일지의 "PR 직전 리뷰에 밀 주장"을 브리프에 싣는다)와 그 반영 커밋, failures_mutations.toml의 고르지 않은 전체 실행 한 번, .scratch/web-widget/probes/README.md에 그 표의 줄, 티켓 07의 검증 체크박스와 Status done, 일지의 "다음", /git-pr로 PR을 열고 봇 회차, next-session "워크트리에서 병합할 때"로 병합이다(docs/journal/2026-10-24-12-widget-failures-and-rejections.md)
+읽을 것: docs/journal/2026-10-24-15-widget-failures-and-rejections.md의 "## 둘째 인계"와 "### 반영"의 "PR 직전 리뷰에 밀 주장"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 변경을 한 커밋으로 들었고 푸시하지 않았으며 PR은 없다. 남은 단계는 차례로 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 일지의 "PR 직전 리뷰에 밀 주장"을 브리프에 싣는다)와 그 반영 커밋, failures_mutations.toml의 고르지 않은 전체 실행 한 번, .scratch/web-widget/probes/README.md에 그 표의 줄, 티켓 07의 검증 체크박스와 Status done, 일지의 "다음", /git-pr로 PR을 열고 봇 회차, next-session "워크트리에서 병합할 때"로 병합이다(docs/journal/2026-10-24-15-widget-failures-and-rejections.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -195,6 +195,35 @@ CodeRabbit CLI 는 `coderabbit auth status` 가 `Plan: Free`, `Seat: not assigne
 - 일지에만. 위젯 e2e 의 첫 시험이 부하 아래에서 한 번 빨갰고 다시 돌려 초록이었다(위 "검증"). 대기열 306 이 받아들여 닫은 종류(부하에서만 빨간 시간 시험)의 새 사례라 행을 잇지 않는다.
 
 `tools/queue_open_rows.py`(작업 트리와 `--ref origin/main`)의 만료할 행은 둘 다 없었다. 350 이 새 검사의 문턱을 넘어 `tools/hook_report.py` 를 돌렸고, 뺄 후보는 없었다.
+
+## PR 뒤
+
+PR #384 를 열었다. 08bbdcc 의 첫 CI 에서 `visual` 만 빨갰다(`pages-widgetscreen--limited-light` 2픽셀). CodeRabbit 은 무료 한도로 리뷰하지 않았고(`Review rate limited`), claude-review 의 첫 회차는 Minor 넷과 Nit 하나였다.
+
+### 사진 비교의 흔들림
+
+- 로컬 `pnpm -C web visual:widget` 에서도 같은 스토리가 빨갰는데 이번에는 다크 1픽셀이었다. 남은 실제·정답 사진을 커밋하지 않은 스크래치 스크립트(pngjs)로 맞대니 다른 픽셀 22개가 모두 보내기 버튼 테두리의 색 값 1 차이였다(손으로 봤다).
+- 같은 시험이 두 번 연달아 빨개 `diagnosing-bugs` 를 따랐다. 고리는 `pnpm -C web visual:widget -g widgetscreen--limited --grep-invert hourly --repeat-each=30` 이고 30 가운데 14 가 빨갰다(모두 다크 1픽셀). 처음 친 `-g "widgetscreen--limited\s"` 는 Windows 셸을 지나며 깨져 시험을 하나도 고르지 못했다.
+- 가설 1(`Composer` 가 `ResizeObserver` 로 잰 `lift` 가 실행마다 다르다)은 틀렸다. 사진 비교 시험에 표지(`[DEBUG-lift7]`)를 단 임시 기록을 넣고 20번 찍으니 `lift` 는 늘 `0px` 이고 버튼·입력창의 좌표와 `scrollTop` 도 같았는데 14 번 빨갰다(다크 12, 라이트 2).
+- 한 요소씩 뺀 임시 스토리를 한 빌드에 넣어 20번씩 찍었다. 첫 회차는 정답 사진을 쓰느라 빨강으로 세어져 뺀다. 대조군 13(다크), `play` 뺀 대조군 16, 띠 없음 14, 열린 버튼 5, 폭 320px 에서 입력창을 넘치지 않는 짧은 글 0. 흔들림에 필요한 것은 입력창을 넘치는 글이었다. 레이아웃이 같은데 그림이 갈리는 Chromium 안의 기전은 재지 않았다(어림: 넘쳐 스크롤되는 입력창이 옆 버튼의 그리기를 바꾼다).
+- 고침: `Limited` 스토리의 요청을 폭 320px 에서 한 줄에 드는 글("환불도 되나요?")로 바꾸고 `visual:widget:update` 로 정답 두 장을 다시 만들었다. 폭은 띠 문장의 꺾임을 사진으로 지키려 320 으로 둔다. 임시 스토리·기록·정답 사진은 지웠다(`DEBUG-lift7` 로 찾아 0).
+- 회귀 시험을 둘 이음매는 없다. 사진 비교는 한 번 찍어 흔들림을 반쯤만 잡고, 되풀이는 CI 의 한 바퀴에 넣지 않았다. → 아래 회고 덧붙임.
+- 확인: 고친 뒤 위젯 사진 비교 전체를 `--repeat-each=10` 으로 돌렸다. 300 가운데 299 가 초록이고 `Limited` 는 10 모두 초록이었다. 빨간 하나는 같은 PR 이 들인 `Invalid`(폭 320px 에 입력창을 넘치는 같은 요청)의 다크 1픽셀이었고, CI 의 한 바퀴는 지나쳤던 것이다. 그 스토리만 30번 돌리니 5 가 빨갰다. 요청을 같은 한 줄 글로 바꾸고(상수 `RETURNED_NARROW` 로 묶었다) 정답 두 장을 다시 만든 뒤 30 모두 초록이었다. 폭 400px 에서 같은 글을 넣는 스토리 셋(`LimitReady`, `FailureWithLimit`, `LimitedHourlyWideDark`)은 전체 되풀이에서 10 모두 초록이라 그대로 둔다.
+
+### claude-review 첫 회차
+
+- [Minor] `refuse` 가 422 가 아니면 429 로 본다. → 고쳤다(`else if (rejected.status === 429)`). 422·429 의 동작은 같고, 이 줄은 변이 표 어디에도 원문이 없다.
+- [Minor] "다시 보내기"의 덮어쓰기에 코드 주석이 없다. → 이미 있다(6cfbfe81 의 `WidgetPage.tsx` `onRetry` 자리). PR 코멘트로 답한다.
+- [Minor] `attempt` 가 명령과 질의를 섞는다, [Minor] `run` 이 한 함수에서 셋을 한다, [Nit] `lib/limit.ts` 머리의 티켓 09. → 보류하고 이유를 PR 코멘트에 적는다. 뒤로 넘기는 일은 없다.
+- 이 반영 커밋(위 고침과 사진 비교의 흔들림)에는 앞 세션들의 PR 반영 커밋처럼 `/code-review` 를 다시 돌리지 않고 다음 푸시의 claude-review 회차에 맡긴다.
+
+### main 합치기와 일지 번호
+
+origin/main 이 web-widget 11(#383)로 움직였다. `tools/sibling_overlap.py` 가 main 의 새 일지 2026-10-24-13 이 이 일지를 이름순으로 앞선다고 알려 `--move` 로 12 → 15 를 옮겼다(파일 이름과 인용 다섯 파일, 옛 번호의 잔존 0 을 새 번호의 양성 대조와 함께 Grep 으로 봤다). PR 본문의 옛 번호도 고친다.
+
+### 회고 덧붙임
+
+- **승인(더하는 것, 1회차). 새 정답 사진 31장을 한 번씩만 찍어 들여, 찍을 때마다 1~2픽셀 갈리는 스토리가 PR 의 CI `visual` 에서야 빨갰다.** 층은 지침보다 도구가 높다(`web/tools/visual.ts` 의 `--update` 가 새로 쓰거나 바꾼 사진을 몇 번 더 찍어 본다). → 대기열 466.
 
 ## 다음
 

@@ -138,6 +138,11 @@ export const NearLimit: Story = {
 
 const RETURNED = "내일 오후까지 안 오면 환불도 되나요?";
 
+// 폭 320px 에서 한 줄에 드는 요청이다. 입력창을 넘치는 글(RETURNED)이면 레이아웃은 같은데도 옆의 보내기 버튼
+// 가장자리 픽셀이 찍을 때마다 색 값 1씩 갈려 사진 비교가 흔들렸다(손으로 봤다, 일지 2026-10-24-15 의 "사진
+// 비교의 흔들림"). 가장 좁은 폭의 스토리는 이 글을 넣는다.
+const RETURNED_NARROW = "환불도 되나요?";
+
 const FINISHED_EXCHANGE: Exchange = {
   id: 0,
   request: "어제 주문한 우산 배송 어디쯤이에요?",
@@ -154,7 +159,7 @@ const FINISHED_EXCHANGE: Exchange = {
 export const Limited: Story = {
   args: {
     exchanges: [FINISHED_EXCHANGE],
-    draft: RETURNED,
+    draft: RETURNED_NARROW,
     wait: { limit: "concurrent_runs", seconds: 5, until: 0, remaining: 3 },
     sendBlocked: true,
   },
@@ -201,7 +206,7 @@ export const LimitReady: Story = {
  * 아래 끝에 맞는다.
  */
 export const Invalid: Story = {
-  args: { exchanges: [FINISHED_EXCHANGE], draft: RETURNED, invalid: true },
+  args: { exchanges: [FINISHED_EXCHANGE], draft: RETURNED_NARROW, invalid: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const box = canvas.getByRole("textbox", { name: "요청" });
