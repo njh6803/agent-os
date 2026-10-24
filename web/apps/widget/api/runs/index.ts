@@ -1,0 +1,69 @@
+// 최종 사용자 경로의 요청 함수(web-widget 티켓 05). 위젯 클라이언트만 쓴다. iframe 방식의 기준 주소는 자기 페이지의
+// 출처이고 최종 사용자 경로는 그 아래 `/end-user` 다(web-widget 명세 "임베드"의 API 의 기준 주소). 위젯 페이지와 같은
+// 출처라 그 요청은 CORS 를 지나지 않는다. 토큰은 클라이언트가 들지 않고 요청마다 `Authorization` 으로 넘긴다.
+
+import {
+  createWidgetClient,
+  readEndUserFrames,
+  type EndUserFrame,
+  type EndUserItem,
+} from "@agent-os/api-client";
+
+export type { EndUserFrame, EndUserItem };
+
+/** 실행이 받아들여지지 않았다. 응답의 상태 코드이고, 응답 전에 네트워크가 실패했으면 null 이다. */
+export class RunRejected extends Error {
+  readonly status: number | null;
+
+  constructor(status: number | null, options?: ErrorOptions) {
+    super(status === null ? "응답 전에 네트워크가 실패했다" : `상태 ${String(status)}`, options);
+    this.name = "RunRejected";
+    this.status = status;
+  }
+}
+
+/** iframe 페이지의 기준 주소. 자기 페이지의 출처다. 계약의 경로 키가 `/end-user` 를 이미 든다. */
+export function apiBaseUrl(): URL {
+  return new URL(location.origin);
+}
+
+/**
+ * 실행 하나를 일으킨다. `continueFrom` 이 있으면 그 실행의 이어 가기(`POST /runs/{run_id}/continuation`)이고 없으면
+ * 시작(`POST /runs`)이다. 받아들여지면 스트림의 블록을 받는 대로 내는 반복자를 돌려주고, 아니면 RunRejected 를
+ * 던진다. 스트림 경로에서도 에러는 스트림이 시작되기 전에 JSON 봉투로 온다(.claude/rules/http.md). 위젯은 상태 코드로만
+ * 가르고 봉투의 `message` 는 읽지 않는다(web-widget 명세 "요청이 거절될 때").
+ *
+ * 연결은 `signal` 로 끊는다. 응답 전이면 이 함수가, 응답 뒤면 반복자가 그 에러를 던진다(`readEndUserFrames`).
+ */
+export async function sendRun(
+  token: string,
+  agent: string,
+  request: string,
+  continueFrom: string | null,
+  signal: AbortSignal,
+): Promise<AsyncGenerator<EndUserFrame, void, undefined>> {
+  const client = createWidgetClient(apiBaseUrl());
+  const init = {
+    headers: { Authorization: `Bearer ${token}` },
+    body: { agent, request },
+    parseAs: "stream" as const,
+    signal,
+  };
+  const call =
+    continueFrom === null
+      ? client.POST("/end-user/runs", init)
+      : client.POST("/end-user/runs/{run_id}/continuation", {
+          ...init,
+          params: { path: { run_id: continueFrom } },
+        });
+  const { data, response } = await call.catch((cause: unknown) => {
+    if (signal.aborted) {
+      throw cause;
+    }
+    throw new RunRejected(null, { cause });
+  });
+  if (data === undefined || data === null) {
+    throw new RunRejected(response.status);
+  }
+  return readEndUserFrames(data);
+}

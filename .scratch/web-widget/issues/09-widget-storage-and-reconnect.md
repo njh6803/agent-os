@@ -8,6 +8,8 @@
 
 **Blocked by:** 08 (승인 묻기)
 
+**05가 넘기는 자리.** 스트림이 결말 없이 끝나면 지금은 `lib/conversation.ts`의 `ended` 동작이 그 교환을 `rejected`로 닫는다(05가 정한 것 2). 재접속은 마지막 항목으로 가르는 이 자리를 바꾼다. 받은 프레임의 `id`는 지금 버린다(`components/pages/useConversation.ts`).
+
 **Status:** ready-for-agent
 
 ### 저장

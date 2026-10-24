@@ -10,6 +10,8 @@
 
 **Blocked by:** 06 (nginx 틀과 위젯 e2e)
 
+**05가 넘기는 자리.** 틈 동안의 결말은 `lib/conversation.ts`의 `Outcome`(`failed`는 실패와 끝내지 못함을 함께 들고, `unauthorized`는 401과 토큰을 받지 못한 것, `rejected`는 그 밖의 거절과 결말 없이 끝난 스트림. 시작 항목 전에 끝났든 뒤에 끝났든 같다)이고, 알림은 `components/organisms/Conversation.tsx`의 교환 응답이 그린다. 원인마다의 문구와 거절의 표는 이 둘을 가른다. 실패 항목의 `cause`와 `run_id`는 지금 상태에 담기지 않는다.
+
 **Status:** ready-for-agent
 
 ### 실패 원인의 알림

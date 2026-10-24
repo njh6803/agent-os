@@ -1,0 +1,193 @@
+// 대화 목록(화면 디자인 mk-conversation). 교환마다 오른쪽의 옅은 상자에 요청을, 그 아래에 응답을 쌓는다. 응답은 도는
+// 동안 도구 줄과 진행 표시이고, 결말이 오면 도구 줄이 "도구 N개를 불렀습니다" 한 줄로 접히고 출력이나 알림이 선다.
+//
+// - 출력은 글자 그대로, 줄바꿈을 지키고 긴 낱말은 줄 끝에서 꺾어 그린다. 마크다운으로 그리지 않고 HTML 조각은 글자로
+//   보인다(ADR 0024). React 가 글자를 글자로 넣는다.
+// - 목록 자체에는 aria-live 나 role="log" 를 달지 않는다. 읽는 일은 화면의 숨긴 읽기 영역 하나가 맡는다(둘 다 읽히면
+//   같은 줄이 두 번 들린다).
+// - 이 부품이 스크롤하는 자리다. 새 내용이 오면, 최종 사용자가 대화의 끝을 보고 있었을 때만 끝으로 내린다. 스토리
+//   시험이 잰다(jsdom 은 레이아웃을 하지 않는다).
+// - 스크롤 자리는 이름 "대화"의 영역이고 포커스를 받는다. 도구 줄이 없는 교환만 있으면 안에 포커스 받는 것이 없어,
+//   키보드로 스크롤할 길이 없다(axe 의 scrollable-region-focusable 이 스토리에서 잡았다). 그래서 포커스 차례는
+//   "새 대화" → 이 영역 → 대화 안의 버튼 → 입력창 → 보내기다.
+//
+// 실패와 거절의 알림은 티켓 07 이 들이기 전의 틈 문구다. 실패와 끝내지 못함은 실패 원인 표의 마지막 행 문구와
+// "다시 보내기", 401 과 토큰을 받지 못한 것은 버튼 없는 위험 알림, 그 밖의 거절은 "다시 보내기" 가 붙은 위험 알림이다.
+import { Alert, Button, Icon, Progress } from "@agent-os/ui";
+import { useLayoutEffect, useRef, useState } from "react";
+import { progressLabel, type Exchange } from "../../lib/conversation";
+import { ToolRow } from "../molecules/ToolRow";
+
+export interface ConversationProps {
+  readonly exchanges: readonly Exchange[];
+  /** 그 교환의 요청을 같은 규칙으로 다시 보낸다. */
+  readonly onRetry: (request: string) => void;
+  /** "다시 보내기"를 막는다. 보내기와 같은 규칙이라 실행이 돌거나 멈춰 있을 때다. */
+  readonly retryBlocked: boolean;
+}
+
+// 끝에서 이만큼(px) 안이면 끝을 보고 있는 것으로 친다. 소수점 스크롤 위치의 오차를 받는다.
+const BOTTOM_SLACK = 2;
+
+export function Conversation({ exchanges, onRetry, retryBlocked }: ConversationProps) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const atBottom = useRef(true);
+
+  useLayoutEffect(() => {
+    const element = scroller.current;
+    if (element !== null && atBottom.current) {
+      element.scrollTop = element.scrollHeight;
+    }
+  });
+
+  return (
+    <div
+      ref={scroller}
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        atBottom.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_SLACK;
+      }}
+      role="region"
+      aria-label="대화"
+      tabIndex={0}
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
+    >
+      <ol className="mt-auto flex flex-col gap-4 p-4">
+        {exchanges.map((exchange) => (
+          <ExchangeItems
+            key={exchange.id}
+            exchange={exchange}
+            onRetry={onRetry}
+            retryBlocked={retryBlocked}
+          />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function ExchangeItems({
+  exchange,
+  onRetry,
+  retryBlocked,
+}: {
+  readonly exchange: Exchange;
+  readonly onRetry: (request: string) => void;
+  readonly retryBlocked: boolean;
+}) {
+  const { outcome } = exchange;
+  const retry = <RetryButton request={exchange.request} onRetry={onRetry} blocked={retryBlocked} />;
+  const settled = outcome !== null && outcome.kind !== "paused";
+  return (
+    <>
+      <li className="max-w-5/6 self-end rounded-l bg-bg-selected px-3 py-2 text-body wrap-anywhere whitespace-pre-wrap">
+        <span className="sr-only">요청: </span>
+        {exchange.request}
+      </li>
+      <li className="flex flex-col gap-2">
+        {settled ? (
+          exchange.tools.length === 0 ? null : (
+            <ToolSummary tools={exchange.tools} />
+          )
+        ) : (
+          <ToolList tools={exchange.tools} running={outcome === null ? exchange : null} />
+        )}
+        {outcome?.kind === "finished" ? (
+          <p className="text-body wrap-anywhere whitespace-pre-wrap">
+            <span className="sr-only">출력: </span>
+            {outcome.output}
+          </p>
+        ) : null}
+        {outcome?.kind === "failed" ? (
+          <Alert tone="danger" title="실행이 실패로 끝났습니다." actions={retry} />
+        ) : null}
+        {outcome?.kind === "rejected" ? (
+          <Alert tone="danger" title="요청을 처리하지 못했습니다." actions={retry}>
+            잠시 뒤 다시 보내 주세요.
+          </Alert>
+        ) : null}
+        {outcome?.kind === "unauthorized" ? (
+          <Alert tone="danger" title="로그인 정보를 받지 못했습니다.">
+            페이지를 새로 고쳐 주세요.
+          </Alert>
+        ) : null}
+      </li>
+    </>
+  );
+}
+
+function RetryButton({
+  request,
+  onRetry,
+  blocked,
+}: {
+  readonly request: string;
+  readonly onRetry: (request: string) => void;
+  readonly blocked: boolean;
+}) {
+  return (
+    <Button
+      variant="secondary"
+      disabled={blocked}
+      onClick={() => {
+        onRetry(request);
+      }}
+    >
+      다시 보내기
+    </Button>
+  );
+}
+
+/** 도는 동안(또는 승인을 기다리며 멈춘 동안)의 도구 줄. 도는 동안에는 끝에 진행 표시가 선다. */
+function ToolList({
+  tools,
+  running,
+}: {
+  readonly tools: Exchange["tools"];
+  readonly running: Exchange | null;
+}) {
+  if (tools.length === 0 && running === null) {
+    return null;
+  }
+  return (
+    <ul aria-label="부른 도구" className="flex flex-col gap-2">
+      {tools.map((call, index) => (
+        // 같은 도구가 여러 번 불릴 수 있고 줄은 뒤에만 붙어 자리가 곧 줄의 이름이다.
+        <ToolRow key={index} tool={call.tool} ok={call.ok} />
+      ))}
+      {running === null ? null : (
+        <li>
+          <Progress label={progressLabel(running)} />
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/** 결말 뒤의 접힌 도구 줄. 누르면 편다. */
+function ToolSummary({ tools }: { readonly tools: Exchange["tools"] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => {
+          setExpanded(!expanded);
+        }}
+        className="flex min-h-6 cursor-pointer items-center gap-2 self-start rounded-s text-small text-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+      >
+        <Icon name="wrench" size="14" />
+        <span>{`도구 ${String(tools.length)}개를 불렀습니다`}</span>
+      </button>
+      {expanded ? (
+        <ul aria-label="부른 도구" className="flex flex-col gap-2 pl-6">
+          {tools.map((call, index) => (
+            <ToolRow key={index} tool={call.tool} ok={call.ok} />
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
