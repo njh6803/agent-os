@@ -85,6 +85,7 @@ export function WidgetPage() {
         setDraft("");
         send(request);
       }}
+      // "다시 보내기"는 그 교환의 요청을 다시 보낼 뿐이라, 사용자가 입력창에 쓰던 글은 그대로 둔다.
       onRetry={send}
       onNewConversation={reset}
       requestChars={requestCharLimit()}

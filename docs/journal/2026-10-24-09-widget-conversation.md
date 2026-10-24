@@ -168,3 +168,36 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 
 
 open-session을 부른다 2026-10-24T06:37:11Z
+
+## PR과 봇 회차(셋째 세션)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/05-widget-conversation.md (둘째 인계 지시문 그대로. 위 "둘째 인계 지시문")
+
+- 이 세션의 제목은 `feature/05-widget-conversation` 이다.
+- 인계 절을 커밋(`043ebf41`)했다. 그 pre-commit 에서 손으로 치는 다섯(ruff 둘은 스테이지된 `.py` 가 없어 Skipped, 손으로 쳐 초록)이 Passed 였다.
+- origin/main(`80ff61f1`, model-rerun 10)을 합쳤다. main 쪽 변경은 `tools/rerun_*`·`tools/proc_command_line.py` 와 그 시험, `.scratch/model-rerun/` 이라 이 브랜치의 파일과 겹치지 않았다. 병합 커밋 뒤 검증은 CI 에 맡겼다.
+- PR 직전 리뷰: `coderabbit auth status` 가 `Seat: not assigned` 라 대체 둘을 돌렸다. `/security-review` 는 지적 없음. `bug-perf-review` 는 유효 Nit 둘(토큰을 기다리는 중 언마운트되면 리스너와 타이머가 최대 10초 남는다, 입력 상태가 바뀔 때마다 대화 목록이 다시 렌더된다)과 보류 하나(`pagehide`)였고, 둘 다 두고 판정과 값을 PR 체크리스트에 적었다. 셀프 리뷰가 넘긴 사실 주장 다섯 가운데 넷이 맞았고, 변이 표 머리의 "고치기 전에 빨갰다"는 코드 읽기로 확인할 수 없는 문장이라 위 "다시 돌린 명령"이 근거다.
+- PR #381 을 열었다. 첫 CI 에서 `python` 잡이 `tests/tools/test_proc_command_line.py::test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다`(`assert argv is not None`)로 빨갰다. main 의 같은 커밋(`80ff61f1`)에서는 초록이었고 이 브랜치가 건드리지 않은 시험이라, 대기열 456 의 같은 흔들림으로 보고 실패한 잡만 다시 돌렸다.
+- 봇 첫 회차: CodeRabbit 은 지적 없음(`Review completed`, `80ff61f1..e40ce02`). claude-review 는 Minor 둘과 Nit 둘이었다.
+  - Minor(둔다): `useConversation` 의 `run` 의 `try` 가 정상 흐름까지 감싼다. 셀프 리뷰에서 같은 판단을 했다. 스트림 읽기(`for await`)가 던지는 에러도 같은 거절로 보는 자리라, 가르면 같은 `catch` 가 둘이 된다.
+  - Minor(고침): `ended` 가 `rejected` 로 접히는 뜻을 `Outcome` 의 `rejected` 옆에 한 줄로 적었다.
+  - Nit(고침): `WidgetPage` 의 `onRetry` 가 입력창의 글을 건드리지 않는 의도를 한 줄로 적었다.
+  - Nit(이미 PR 본문에 둔다고 적은 토큰·재렌더): 그대로다.
+- 반영 커밋 직전의 `sibling_overlap.py` 첫 실행이 종료 2(`형제를 대조하지 못했다. git diff (종료 129): warning: Not a git repository`)로 끝났고, 곧바로 다시 치니 종료 0(번호 겹침 없음)이었다. 어느 형제였는지 출력에 없어 원인은 가르지 않았다.
+
+## 회고
+
+후보 열, 승인 둘(회차로 세는 것 둘), 기각 여덟, 넘김 없음.
+
+- 승인: `test_proc_command_line` 의 리눅스 흔들림이 이 PR 의 CI 를 빨갛게 했다. 열린 행 456 이 같은 처방(리눅스 갈래를 재현 루프로 가른 뒤 고친다)을 들어 그 행에 회차를 더했다. 대기열 456, 4회차. 손상(무관한 PR 의 필수 검사를 막는다)이 이미 났고 회차 3 이상이라 chore 배치의 대상이다.
+- 승인: 첫 세션이 대화의 화면 동작 시험 첫 판을 구현 뒤에 써 변이로야 빨강을 봤다(원칙 II, 늘 실리는 지침을 어긴 사건이라 회차로 센다). `tools/` 만 겨눈 열린 행 242 와 처방 자리가 달라 새 행을 쓰고 둘이 서로 가리키게 했다. 대기열 460, 1회차.
+- 기각: 하위 폴더로 옮기는 `cd web`, 스크래치패드로 옮기는 `cd`, 판정 명령 뒤의 파이프. 이미 있는 훅이 그 자리에서 막거나 알렸다.
+- 기각: 첫 세션의 스크래치 스크립트가 되돌리며 쓴 CRLF, 03 의 변이 표가 옛 줄을 겨눈 것, Prettier 두 파일과 `web/tools/visual.test.ts`. 각각 `mutate.py --check`, pre-commit 의 변이 표 검사, run_checks 가 그 자리에서 잡았다.
+- 기각: claude-review 의 `ended` 이름 지적. 리뷰가 잡도록 둔 판단 기준이라 리뷰가 제 몫을 했고, 검사로 옮길 수 없으며 표준에 더할 새 기준도 아니다.
+- 만료할 행은 이 브랜치와 `--ref origin/main` 두 출력 모두 없었다.
+
+## 다음
+
+- 이 PR 이 병합되면 web-widget 에서 막힌 것이 없는 티켓은 06(`.scratch/web-widget/issues/06-nginx-and-widget-e2e.md`) 하나다. 07·10·11 은 06 이, 08 은 07 이, 09 는 08 이 막는다.
+- 이 PR 에서 둔 지적: `bug-perf-review` 의 Nit 둘(토큰 요청이 `signal` 을 받지 않는다, 입력 상태가 대화 목록을 다시 렌더한다)과 claude-review 의 Minor 하나(`run` 의 `try` 범위)는 PR #381 체크리스트와 이 일지 위 절에 있다. 09 가 `useConversation` 을 재접속으로 다시 쓸 때 함께 본다.
+- `test_proc_command_line` 의 리눅스 흔들림은 대기열 456(4회차)이다. 고치기 전까지 이 시험을 건드리지 않은 PR 의 CI 도 빨개질 수 있다.

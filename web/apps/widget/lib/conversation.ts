@@ -25,6 +25,7 @@ export type Outcome =
   | { readonly kind: "failed" }
   | { readonly kind: "paused" }
   | { readonly kind: "unauthorized" }
+  /** 401 밖의 거절과 결말 없이 끝난 스트림(`ended`). 뒤의 것은 티켓 09 가 재접속으로 갈라낸다. */
   | { readonly kind: "rejected" };
 
 export interface Exchange {
