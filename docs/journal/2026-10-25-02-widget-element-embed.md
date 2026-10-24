@@ -748,11 +748,45 @@ open-session을 부른다 2026-10-24T18:08:29Z
 이 세션과, 회고 없이 PR 을 열고 넘긴 앞 세션("이어받은 세션 (커밋 뒤, 다섯째 → 병합)")의 몫이다. 후보 여섯, 승인 1·넘김 0·기각 5. `tools/queue_open_rows.py` 를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 만료할 행이 둘 다 없었다.
 
 1. 인계 지시문의 "읽을 것" 이 일지 파일만 들어, 이 세션이 739행 일지의 머리부터 253행(약 25,000자)을 읽고서야 제목을 grep 해 마지막 인계 절로 갔다. `hook_large_result` 는 읽은 뒤에 알렸다. 같은 일지의 앞 인계 지시문 셋은 읽을 절을 이름으로 들었고 뒤의 둘은 파일만 들었다. 승인(더하는 것, 1회차): 비용이 실제로 났고, 지시문을 쓰는 쪽의 문장에 기대지 않고 첫 턴 훅이 마지막 인계 절의 줄 번호를 실어 주는 층으로 고쳐 쓸 수 있으며, PR 하나로 되돌린다. 새 훅 문장이라 세 번째 전에는 반영하지 않고 대기열 470(1회차)에 두었다. 인계 비용을 다룬 330 과 날짜를 다룬 175 는 다른 일이었다.
-2. `implement` 스킬을 읽기 직전의 산문을 영어로 한 번 썼다. 기각: `hook_midturn_korean` 이 그 자리에서 알렸다(닫힌 대기열 94 의 처방). 다음 회고가 셀 수 있게 횟수를 적는다.
+2. 도구 호출 사이의 산문을 영어로 두 번 썼다(`implement` 스킬을 읽기 직전, 인계하며 제목을 바꾸기 직전. 뒤의 것은 커밋 `9ea70dd8` 뒤라 커밋하지 않은 이 줄에만 실린다). 기각: `hook_midturn_korean` 이 그 자리에서 알렸다(닫힌 대기열 94 의 처방). 다음 회고가 셀 수 있게 횟수를 적는다.
 3. Grep 결과의 긴 줄이 두 번(`operations.md`, `.scratch/retro-queue.md`) `[Omitted long matching line]` 으로 나왔다. 기각: `hook_grep_omitted` 가 알렸고 Read 로 그 줄을 열었다.
 4. CodeRabbit 이 한도로 리뷰하지 않았다. 기각: `operations.md` 가 그 경우와 대체(PR 체크리스트의 PR 직전 리뷰)를 이미 적고, 그 대체가 본문에 있어 사건이 없다.
 5. 앞 세션이 PR 본문 초안에 위험 알림을 띄우는 자리를 `base.ts` 로 적었다가 grep 으로 `WidgetElement.tsx` 로 바로잡았다. 기각: PR 을 열기 전에 스스로 잡아 비용이 작았다(사건 없음).
 6. 커밋 직전의 `tools/sibling_overlap.py` 를 `grep` 파이프 앞에 두어 종료 코드를 가렸다. 기각: 훅이 그 자리에서 알렸고, 출력의 판정 줄("번호 겹침 없음", 이 브랜치의 새 번호 467~470)로 결과를 봤다.
+
+## 인계 (커밋 뒤, 여섯째)
+
+커밋 `9ea70dd8`(위 봇 회차와 회고, 대기열 470)을 친 뒤 `hook_handoff`(약 22.3만 토큰, 경계 `커밋 뒤`)가 와서 새 세션에 넘긴다. 커밋은 pre-commit 을 지나 성공했다. 이 세션이 받은 지시문의 "이어받을 상태" 는 `인계: PR 연 뒤` 라 같은 경계가 아니고, 일지에 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 곁 세션도 아니고, 요청 범위는 PR과 병합까지다. 이 세션의 지금 제목은 `feature/10-widget-element-embed` 이고 넘기며 `feature/10-widget-element-embed (인계함)` 으로 바꾼다. 이 절은 커밋하지 않았다.
+
+- HEAD 는 `9ea70dd8` 이고 아직 푸시하지 않았다. PR #386 의 머리는 `be3eb38c` 다. 대기열 470 을 더한 커밋이라 `gh pr edit` 로 PR 본문의 "변경된 영역" 줄을 먼저 고쳤다(`next-session` 순서 1의 1). 고친 본문은 `gh pr view 386` 으로 읽힌다.
+- `9ea70dd8` 의 pre-commit: 검사 열(`web-verify` 449.2초, pytest 574.4초 포함)과 마크다운 표·줄 구분 문자·변이 표·인용 대조(경고 없음)·커밋 메시지가 Passed 였다. ruff 둘과 카나리아 명세·헌법 판은 대상 파일이 없어 Skipped 라, 커밋 뒤에 ruff 둘을 손으로 쳐 통과했다(`All checks passed!`, `1050 files already formatted`).
+- 남은 단계는 차례로 이 절을 이어 쓴 일지 커밋, 푸시(그 커밋과 `9ea70dd8` 을 한 번에 실어 봇이 한 번만 돌게 한다), `@coderabbitai review`, `tools/wait_ci.py` 대기, 봇 회차, 병합(`next-session` "워크트리에서 병합할 때")이다. claude-review 는 그 푸시가 둘째 회차라 Critical·Major 만 고친다. CodeRabbit 은 첫 푸시에 한도로 리뷰가 없어, 그 푸시에서 처음 리뷰하면 그것이 첫 회차다.
+- 이 세션까지의 회고는 위 "회고 (PR 연 뒤 → 병합 세션의 몫)" 에서 마쳤다. 새 세션은 자기 몫만 회고한다.
+
+지시문:
+
+```text
+다음 작업: .scratch/web-widget/issues/10-widget-element-embed.md. 위젯의 요소 임베드
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/10-widget-element-embed.md
+브랜치: feature/10-widget-element-embed
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-25-02-widget-element-embed.md의 마지막 "인계 (커밋 뒤, 여섯째)" 절(파일 끝 "다음" 바로 앞. 그 앞 절들은 필요할 때만 제목을 grep 해 연다)
+이어받을 상태: 인계: 커밋 뒤. 봇 회차와 회고, 대기열 470 을 실은 커밋 9ea70dd8 까지 했고 아직 푸시하지 않았다(PR #386 머리는 be3eb38c, 본문은 대기열 470 까지 고쳤다). 커밋하지 않은 일지의 인계 절이 워크트리에 있다. 남은 단계는 차례로 그 절을 이어 쓴 일지 커밋, 두 커밋을 한 번에 푸시, @coderabbitai review, tools/wait_ci.py 대기, 봇 회차(claude-review 는 둘째 회차라 Critical·Major 만, CodeRabbit 은 처음 리뷰하는 회차가 첫 회차), 병합(next-session "워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-25-02-widget-element-embed.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 바꿨다. 멈출 백그라운드 작업은 없었다(대기와 커밋은 끝났다). 잠금 풀기는 `is not locked` 로 넘어갔다.
+
+open-session을 부른다 2026-10-24T18:31:08Z
+
+## 이어받은 세션 (커밋 뒤, 여섯째 → 병합)
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/web-widget/issues/10-widget-element-embed.md (위 "인계 (커밋 뒤, 여섯째)" 의 지시문 그대로. 이번 요청 범위는 PR과 병합까지)
+
+이 세션의 처음 제목은 앱이 지은 것("위젯 요소 임베드 PR 병합")이었고 `feature/10-widget-element-embed` 로 바꿨다. 워크트리에 `EnterWorktree(path)` 로 들어갔다(잠금 거부 없음). 지시문의 "읽을 것" 이 마지막 인계 절을 이름으로 들어, 일지는 절 제목을 grep 한 뒤 그 절부터 열었다. `git fetch origin` 뒤에도 origin/main 은 `1ef75a12` 그대로였고 08 의 PR #385 는 열린 채였다. HEAD 는 `9ea70dd8`, PR 머리는 `be3eb38c` 였다.
 
 ## 다음
 
