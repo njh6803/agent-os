@@ -538,7 +538,9 @@ function spyRequests(): () => Request {
   };
 }
 
-test("승인 묻기로 멈추면 진행 표시를 걷고 입력창과 보내기를 막아 두며, '새 대화'는 열려 누르면 열린 스트림을 끊는다", async () => {
+// 05 는 멈춘 동안 입력창을 막아 두기만 했다. 카드와 결정은 08 이 들였고 그 규칙은 WidgetApproval.test 가 본다. 여기는
+// 스트림이 닫히지 않은 채 멈췄을 때 "새 대화"가 그 스트림을 끊는 것을 본다.
+test("승인 묻기로 멈추면 진행 표시를 걷고 카드를 세워 입력창과 보내기를 막고, '새 대화'는 열려 누르면 열린 스트림을 끊는다", async () => {
   serveTokens();
   const firstRequest = spyRequests();
   onStart(() =>
@@ -552,9 +554,8 @@ test("승인 묻기로 멈추면 진행 표시를 걷고 입력창과 보내기�
   const user = openWidget();
 
   await ask(user, "환불해 주세요");
-  await waitFor(() => {
-    expect(screen.queryByRole("progressbar")).toBeNull();
-  });
+  await screen.findByRole("group", { name: "승인 묻기" });
+  expect(screen.queryByRole("progressbar")).toBeNull();
   expect(requestBox()).toHaveProperty("disabled", true);
   expect(sendButton()).toHaveProperty("disabled", true);
   const newConversation = screen.getByRole("button", { name: "새 대화" });
@@ -566,6 +567,7 @@ test("승인 묻기로 멈추면 진행 표시를 걷고 입력창과 보내기�
 
   expect(request.signal.aborted).toBe(true);
   expect(screen.queryByText("환불해 주세요")).toBeNull();
+  expect(screen.queryByRole("group", { name: "승인 묻기" })).toBeNull();
   expect(requestBox()).toHaveProperty("disabled", false);
 });
 

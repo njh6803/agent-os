@@ -24,6 +24,7 @@ function exchange(id: number, request: string, rest: Partial<Exchange> = {}): Ex
     runId: `run_${String(id)}`,
     calling: [],
     tools: [],
+    approvals: [],
     outcome: null,
     ...rest,
   };
@@ -56,6 +57,9 @@ const meta = {
     retryBlocked: false,
     onNewConversation: fn(),
     newConversationBlocked: false,
+    reasonLimit: 20_000,
+    decisionBlocked: false,
+    onDecide: fn(),
   },
   decorators: [
     (Story, { parameters }) => (
@@ -179,6 +183,9 @@ function Growing({ start }: { readonly start: number }) {
         retryBlocked={false}
         onNewConversation={() => {}}
         newConversationBlocked={false}
+        reasonLimit={20_000}
+        decisionBlocked={false}
+        onDecide={() => {}}
       />
     </div>
   );

@@ -1,0 +1,288 @@
+# web-widget 티켓 08 의 변이 표. 승인 묻기의 시험 가운데 구현 뒤에 쓰거나 처음부터 초록이던 것이 무엇을 재는지
+# 변이로 본다. 앞의 열셋은 화면 동작 테스트(`widget-pages`), 뒤의 셋은 위젯 스토리(`widget-storybook`)다.
+# 처음부터 빨강을 본 시험(카드, 인자의 글, pause_index, 결정 뒤 한 줄, 거절의 알림 문구)은 넣지 않았다.
+# 빨강을 기대한 변이는 모두 고른 단언이 빨개졌다는 것을 그 단언의 실패 머리나 값이 든 줄(`expect_output`)로 본다.
+# 표지는 변이를 하나씩 스크래치 스크립트로 넣어 실패 출력을 손으로 본 뒤 골랐다. 첫째는 고른 시험 둘(U+0085, U+FEFF)이
+# 저마다 단언 하나라 시험 이름을 표지로 쓰고, 열여섯째는 같은 스토리의 다른 `toBeLessThanOrEqual`(가로 스크롤)과 가르려고
+# 실패한 단언의 자리를 쓴다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/approval_mutations.toml [번호 ...]
+# stories 러너는 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다.
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.stories]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-storybook"]
+cwd = "web"
+judge = "vitest"
+
+# --- 사유 ---------------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "사유를 JS trim 으로 가르면 다듬는 글자의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "는 '거부'가"]
+expect = "red"
+expect_output = ["U+0085 만 든 사유는 '거부'가 막힌다", "U+FEFF 만 든 사유는 '거부'가 막히지 않는다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/approval.ts"
+old = '''
+  return Array.from(reason).every((char) => PYTHON_SPACE.has(char));
+'''
+new = '''
+  return reason.trim() === "";
+'''
+
+[[mutation]]
+name = "사유를 다듬어 보내면 적은 그대로 보내는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "적은 그대로 보낸다"]
+expect = "red"
+expect_output = ["+   \"reason\": \"고객센터에 먼저 물어보겠습니다\","]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+          : { decision: "deny", reason: decision.reason, pause_index: waiting.pauseId };
+'''
+new = '''
+          : { decision: "deny", reason: decision.reason.trim(), pause_index: waiting.pauseId };
+'''
+
+[[mutation]]
+name = "상한을 넘은 사유로도 거부할 수 있으면 상한의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "상한의 90%"]
+expect = "red"
+expect_output = ["to have property \"disabled\" with value true"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/ApprovalCard.tsx"
+old = '''
+            disabled={blocked || state.sending === "approve" || note.over || blankReason(reason)}
+'''
+new = '''
+            disabled={blocked || state.sending === "approve" || blankReason(reason)}
+'''
+
+# --- 멈춤과 입력 자리 -------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "멈출 때 부르는 중인 도구를 비우면 승인 뒤 이름표의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "이름표가 멈췄던 도구"]
+expect = "red"
+expect_output = ["Unable to find role=\"progressbar\" and name \"payments.refund 부르는 중\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        approvals: [...exchange.approvals, approval],
+        outcome: { kind: "paused" },
+'''
+new = '''
+        approvals: [...exchange.approvals, approval],
+        calling: [],
+        outcome: { kind: "paused" },
+'''
+
+[[mutation]]
+name = "보내는 동안에도 새 대화가 열려 있으면 새 대화를 막는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "보내는 동안에는 '새 대화'가 막힌다"]
+expect = "red"
+expect_output = ["to have property \"disabled\" with value true"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetPage.tsx"
+old = '''
+        phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
+'''
+new = '''
+        phase === "running"
+'''
+
+[[mutation]]
+name = "새 대화가 결정의 기다림을 남기면 새 대화로 기다림을 걷는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "그 기다림이 걷혀"]
+expect = "red"
+expect_output = ["+ 한 시간 동안 받을 수 있는 요청 수에 닿았습니다. 12분 뒤에 다시 고를 수 있습니다."]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+    setWait((current) => (current?.purpose === "decide" ? null : current));
+'''
+new = '''
+    setWait((current) => current);
+'''
+
+# --- 결정의 거절 ------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "404 를 다시 보내지 않으면 다시 보내기의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "1초 뒤 한 번 더 보내고"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 환불했습니다."]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+      if (status === 404 && !retried) {
+'''
+new = '''
+      if (status === 404 && retried) {
+'''
+
+[[mutation]]
+name = "다시 구독할 때 Last-Event-ID 가 일시정지 프레임보다 앞이면 따라가기의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "Last-Event-ID 를 일시정지 프레임의 id 로"]
+expect = "red"
+expect_output = ["Received: \"6\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+    frames = await subscribeRun(token, runId, pauseId, signal);
+'''
+new = '''
+    frames = await subscribeRun(token, runId, pauseId - 1, signal);
+'''
+
+[[mutation]]
+name = "빈 구독을 처리하지 못한 것으로 그리면 충돌 알림의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "아무것도 없이 닫히면"]
+expect = "red"
+expect_output = ["expected '요청을 처리하지 못했습니다.잠시 뒤 다시 보내 주세요.' to be '결정을 보내지"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+  if (!read.any) {
+    dispatch({ type: "decision-refused", notice: "conflict" });
+'''
+new = '''
+  if (!read.any) {
+    dispatch({ type: "decision-refused", notice: "error" });
+'''
+
+[[mutation]]
+name = "결정 항목 없이 끝난 스트림을 결말로 받으면 스트림 행의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "decided 항목 전에 끝난 스트림"]
+expect = "red"
+expect_output = ["Unable to find role=\"alert\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+    dispatch(read.decided ? { type: "ended" } : { type: "decision-refused", notice: "error" });
+'''
+new = '''
+    dispatch({ type: "ended" });
+'''
+
+[[mutation]]
+name = "결정의 기다림을 보내기의 문구로 적으면 429 의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "결정이 429 면"]
+expect = "red"
+expect_output = ["2초 뒤에 다시 보낼…' to be"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+  const { before, after } = limitSentence(wait.limit, wait.purpose);
+'''
+new = '''
+  const { before, after } = limitSentence(wait.limit, "send");
+'''
+
+[[mutation]]
+name = "결정의 기다림 동안 버튼을 막지 않으면 429 의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "결정이 429 면"]
+expect = "red"
+expect_output = ["to have property \"disabled\" with value true"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.tsx"
+old = '''
+        decisionBlocked={wait !== null && wait.purpose === "decide" && wait.remaining > 0}
+'''
+new = '''
+        decisionBlocked={false}
+'''
+
+[[mutation]]
+name = "결정의 기다림이 끝나면 준비 문구를 세우면 429 의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetApproval.test.tsx", "-t", "결정이 429 면"]
+expect = "red"
+expect_output = ["Received: \"이제 다시 보낼 수 있습니다.\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+    return wait.purpose === "decide" ? null : { kind: "notice", icon: "info", text: READY };
+'''
+new = '''
+    return { kind: "notice", icon: "info", text: READY };
+'''
+
+# --- 포커스(스토리) -----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "제목으로 포커스를 옮기며 대화를 굴리면 멈춤 화면의 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "^Paused$"]
+expect = "red"
+expect_output = ["to be less than or equal to 2"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/ApprovalCard.tsx"
+old = '''
+      title.current?.focus({ preventScroll: true });
+'''
+new = '''
+      title.current?.focus();
+'''
+
+[[mutation]]
+name = "이미 결정된 카드가 포커스를 가져가면 결정 뒤 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/organisms/ApprovalCard.stories.tsx", "-t", "Decided"]
+expect = "red"
+expect_output = ["expected true to be false"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/ApprovalCard.tsx"
+old = '''
+  const waited = useRef(state.kind === "waiting");
+'''
+new = '''
+  const waited = useRef(true);
+'''
+
+[[mutation]]
+name = "좁은 폭에서도 버튼을 나란히 세우면 기다림 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/organisms/ApprovalCard.stories.tsx", "-t", "^Waiting$"]
+expect = "red"
+expect_output = ["ApprovalCard.stories.tsx:97:"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/ApprovalCard.tsx"
+old = '''
+        <div className="grid gap-2 @wide:flex @wide:justify-end">
+'''
+new = '''
+        <div className="flex gap-2 justify-end">
+'''

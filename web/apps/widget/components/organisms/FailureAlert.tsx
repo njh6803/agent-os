@@ -117,8 +117,10 @@ interface Shown {
 /** 결말에 맞는 알림. 실패나 거절이 아니면 null 이다. */
 function shownFor(outcome: Outcome): Shown | null {
   switch (outcome.kind) {
+    // 승인 묻기의 결말은 카드(organisms/ApprovalCard)가 그린다.
     case "finished":
     case "paused":
+    case "expired":
       return null;
     case "failed":
       return { notice: causeNotice(outcome.cause), runId: outcome.runId };

@@ -8,10 +8,13 @@
 //   보인다. 넘었다는 글이 먼저다.
 // - 상한(429)에 걸리면 띠가 상한의 문구와 기다릴 시간을 보인다. 숫자는 매초 줄지만 `aria-hidden` 이고, 화면 읽기
 //   프로그램은 숨긴 사본의 처음 시간을 읽는다. 그래서 띠가 설 때 한 번, 시간이 다 되어 글이 바뀔 때 한 번 읽힌다.
+// - 승인 묻기가 결정을 기다리는 동안 입력창은 막힌 채 남고, 띠가 승인이나 거부를 먼저 고르라고 한다. 결정이 429 를
+//   받으면 상한의 띠가 앞서고, 그 시간이 다 되면 걷혀 승인 기다림의 띠로 돌아온다.
 // - 보내기는 입력이 비었거나(앞뒤 공백만 있는 것도), 글자 수 상한을 넘었거나, 부르는 쪽이 막았을 때(실행이 돌거나
 //   멈춰 있거나, 상한의 기다림이 남았거나, 설정이 잘못됐을 때) 막힌다.
 import { IconButton, TextField } from "@agent-os/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { charNote } from "../../lib/chars";
 import { limitSentence, READY, waitText, type LimitWait } from "../../lib/limit";
 import { ComposerBand, type Band } from "../molecules/ComposerBand";
 
@@ -35,24 +38,26 @@ export interface ComposerProps {
   readonly wait: LimitWait | null;
   /** 앞 요청이 422 로 되돌아왔다. */
   readonly invalid: boolean;
+  /** 승인 묻기가 결정을 기다린다. 띠가 승인이나 거부를 먼저 고르라고 한다. */
+  readonly awaitingDecision: boolean;
 }
-
-const NUMBER = new Intl.NumberFormat("ko-KR");
-
-/** 센 수를 보이기 시작하는 비율. */
-const NEAR_LIMIT = 0.9;
 
 const INVALID = "요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요.";
 
-/** 상한의 띠. 남은 시간이 있으면 상한의 문구이고, 다 됐으면 다시 보낼 수 있다는 글이다. */
+const APPROVAL: Band = { kind: "notice", icon: "info", text: "승인이나 거부를 먼저 골라 주세요." };
+
+/**
+ * 상한의 띠. 남은 시간이 있으면 상한의 문구이고, 다 됐으면 다시 보낼 수 있다는 글이다. 결정의 기다림은 다 되면
+ * 걷혀, 승인 기다림의 띠가 다시 선다.
+ */
 function limitBand(wait: LimitWait | null): Band | null {
   if (wait === null) {
     return null;
   }
   if (wait.remaining === 0) {
-    return { kind: "notice", icon: "info", text: READY };
+    return wait.purpose === "decide" ? null : { kind: "notice", icon: "info", text: READY };
   }
-  const { before, after } = limitSentence(wait.limit);
+  const { before, after } = limitSentence(wait.limit, wait.purpose);
   return {
     kind: "notice",
     icon: "info",
@@ -77,6 +82,7 @@ export function Composer({
   focusFor,
   wait,
   invalid,
+  awaitingDecision,
 }: ComposerProps) {
   const box = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -85,23 +91,15 @@ export function Composer({
     }
   }, [focusFor]);
 
-  // 코드 포인트로 센다. 이모지 하나는 UTF-16 으로 둘이지만 하나다.
-  const count = Array.from(value).length;
-  const over = count > limit;
-  const near = count >= limit * NEAR_LIMIT;
-  const sendable = !disabled && !blocked && !over && value.trim() !== "";
+  const note = charNote(value, limit);
+  const sendable = !disabled && !blocked && !note.over && value.trim() !== "";
   const send = () => {
     if (sendable) {
       onSend(value);
     }
   };
-  let error = null;
-  if (over) {
-    error = `${NUMBER.format(limit)}자를 넘었습니다`;
-  } else if (invalid) {
-    error = INVALID;
-  }
-  const help = near ? `${NUMBER.format(count)} / ${NUMBER.format(limit)}` : null;
+  const error = note.overText ?? (invalid ? INVALID : null);
+  const help = note.count;
 
   // 칸 아래 글만큼 버튼을 올린다. 글이 칸의 폭에서 몇 줄로 꺾일지 몰라(422 의 글은 400px 에서도 두 줄이다) 칸 묶음과
   // 입력창의 아래 끝 사이를 잰다. 글이 서거나 바뀌거나, 폭이나 늦게 실린 글꼴로 다시 꺾이면 칸 묶음의 높이가 바뀌므로
@@ -131,7 +129,11 @@ export function Composer({
 
   return (
     <>
-      <ComposerBand reconnect={null} limit={limitBand(wait)} approval={null} />
+      <ComposerBand
+        reconnect={null}
+        limit={limitBand(wait)}
+        approval={awaitingDecision ? APPROVAL : null}
+      />
       <form
         className="flex shrink-0 items-end gap-2 p-3"
         onSubmit={(event) => {

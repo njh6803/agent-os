@@ -53,6 +53,28 @@ export function onContinue(respond: () => Response): Seen[] {
   return onPost("/runs/:runId/continuation", respond);
 }
 
+/** 결정 경로에 응답을 걸고, 받은 요청을 차례로 적어 돌려준다. */
+export function onDecide(respond: () => Response): Seen[] {
+  return onPost("/runs/:runId/approval", respond);
+}
+
+export interface Subscribed {
+  readonly url: string;
+  readonly lastEventId: string | null;
+}
+
+/** 구독 경로에 응답을 걸고, 받은 요청의 주소와 `Last-Event-ID` 를 차례로 적어 돌려준다. */
+export function onSubscribe(respond: () => Response): Subscribed[] {
+  const seen: Subscribed[] = [];
+  network.use(
+    http.get(api("/runs/:runId/subscription"), ({ request }) => {
+      seen.push({ url: request.url, lastEventId: request.headers.get("Last-Event-ID") });
+      return respond();
+    }),
+  );
+  return seen;
+}
+
 function onPost(path: string, respond: () => Response): Seen[] {
   const seen: Seen[] = [];
   network.use(
