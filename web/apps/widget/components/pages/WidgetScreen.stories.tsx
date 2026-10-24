@@ -132,13 +132,17 @@ export const NearLimit: Story = {
   },
 };
 
-/** 글자 수 상한을 넘음(화면 디자인 mk-limit 의 여섯째). 넘었다는 글을 위험 색으로 보이고 보내기가 막힌다. */
+/**
+ * 글자 수 상한을 넘음(화면 디자인 mk-limit 의 여섯째). 넘었다는 글을 위험 색으로 보이고 보내기가 막힌다.
+ * 상한을 20자로 작게 준다. 2만 자를 넣어 입력창이 넘치던 판은 사진 비교가 실행마다 보내기 버튼 둥근 모서리의
+ * 픽셀 몇 개를 한 단계씩 다르게 그려 흔들렸다(일지 2026-10-24-09).
+ */
 export const OverLimit: Story = {
   parameters: { width: 400 },
-  args: { draft: `${NEAR}${"가".repeat(151)}` },
+  args: { draft: "가".repeat(21), requestChars: 20 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("20,000자를 넘었습니다")).toBeVisible();
+    await expect(canvas.getByText("20자를 넘었습니다")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "보내기" })).toBeDisabled();
   },
 };
