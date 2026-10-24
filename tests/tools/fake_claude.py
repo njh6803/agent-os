@@ -11,14 +11,16 @@
   글 그대로)를 더한 JSON을 낸다. 로그아웃이면 `email` 없이 종료 1이다(명세 "계정"의 주석, 2.1.302의
   빈 설정 폴더에서 손으로 본 꼴).
 - 세션(`-p`): 표준 입력을 다 읽고, 받은 인자·표준 입력·환경 변수의 이름·작업 폴더·자기 pid를 설정
-  폴더의 `fake-calls.jsonl`에 한 줄로 덧붙인 뒤, 그 호출의 각본대로 한다. 각본은 세션
-  id(`--session-id`나 `--resume`의 값)마다 줄 수 있고(`sessions`), 없으면 세션 부름의 차례대로
-  고른다(`calls`). 같은 세션의 둘째 부름은 그 세션 각본의 둘째 것이다. 각본 하나는 stream-json
-  줄(`events`. 사전이면 `session_id`가 없을 때 넣고, 글이면 그대로 낸다), 설정 폴더 아래의 세션 기록
-  파일(`main`, `subagents`), 작업 폴더에서 칠 git 명령(`git`, 커밋을 남기는 각본), 이벤트를 내기
-  전에 띄워 두는 자식의 초(`child`. 명령 줄에 세션 id를 싣고 pid를 `fake-children.jsonl`에 적는다),
-  이벤트를 낸 뒤 표준 출력을 닫는지(`close_stdout`), 멈출 초(`hang`), 표준 출력을 쥐고 남는 손자의
-  초(`linger`), 종료 코드(`exit`)다.
+  폴더의 `fake-calls.jsonl`에 한 줄로 덧붙인 뒤, 그 호출의 각본대로 한다. 그 줄에는 이 부름을
+  포함해 같은 설정 폴더에서 함께 도는 부름의 수(`running`)도 든다. 각본은 세션
+  id(`--session-id`나 `--resume`의 값)마다 줄 수 있고(`sessions`), 그다음 작업 폴더의 회차
+  폴더(`round_key`)마다 줄 수 있으며(`rounds`, 함께 도는 회차의 차례에 기대지 않는다), 없으면 세션
+  부름의 차례대로 고른다(`calls`). 같은 세션이나 회차의 둘째 부름은 그 각본의 둘째 것이다. 각본
+  하나는 stream-json 줄(`events`. 사전이면 `session_id`가 없을 때 넣고, 글이면 그대로 낸다), 설정
+  폴더 아래의 세션 기록 파일(`main`, `subagents`), 작업 폴더에서 칠 git 명령(`git`, 커밋을 남기는
+  각본), 이벤트를 내기 전에 띄워 두는 자식의 초(`child`. 명령 줄에 세션 id를 싣고 pid를
+  `fake-children.jsonl`에 적는다), 이벤트를 낸 뒤 표준 출력을 닫는지(`close_stdout`), 멈출
+  초(`hang`), 표준 출력을 쥐고 남는 손자의 초(`linger`), 종료 코드(`exit`)다.
 
 세션 기록 파일은 `<설정 폴더>/projects/<작업 폴더에서 지은 이름>/<세션 id>.jsonl`과
 `<세션 id>/subagents/<이름>.jsonl`에 덧붙인다. 이름은 작업 폴더의 영문·숫자 밖의 글자를 `-`로 바꾼
@@ -49,7 +51,9 @@ FAKE = Path(__file__).resolve()
 SCRIPT = "fake-claude.json"
 CALLS = "fake-calls.jsonl"
 CHILDREN = "fake-children.jsonl"
+RUNNING = "fake-running"
 CONFIG_DIR_VAR = "CLAUDE_CONFIG_DIR"
+EMAIL = "njh6803@example.com"  # `auth status`가 내는 계정의 기본값
 GIT_TIMEOUT = 60
 # 기록 폴더 이름의 길이. 시험의 임시 폴더는 길어(한글 시험 이름) 작업 폴더 전체로 지으면 윈도의 경로
 # 상한(260자)을 넘겨 가짜가 기록을 쓰다 죽었다. 끝의 이만큼만 쓴다.
@@ -326,13 +330,15 @@ def write_script(
     *,
     calls: Sequence[Json] = (),
     sessions: Mapping[str, Sequence[Json]] | None = None,
+    rounds: Mapping[str, Sequence[Json]] | None = None,
     version: str = "2.1.302 (Claude Code)",
     logged_in: bool = True,
-    email: str = "njh6803@example.com",
+    email: str = EMAIL,
     config_directory: str | None = None,
 ) -> None:
     """설정 폴더에 각본을 쓴다. `config_directory`를 주면 `auth status`가 넘겨받은 설정 폴더 대신 그
-    글을 `configDirectory`로 낸다."""
+    글을 `configDirectory`로 낸다. `rounds`는 `<과제 id>-<갈래>-<회차 번호>`(`round_key`)마다의
+    각본이다."""
     auth: dict[str, Json] = {"loggedIn": logged_in}
     if logged_in:
         auth["email"] = email
@@ -343,6 +349,7 @@ def write_script(
         "auth": auth,
         "calls": list(calls),
         "sessions": {k: list(v) for k, v in (sessions or {}).items()},
+        "rounds": {k: list(v) for k, v in (rounds or {}).items()},
     }
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / SCRIPT).write_text(json.dumps(script, ensure_ascii=False), encoding="utf-8")
@@ -401,13 +408,27 @@ def _append(path: Path, lines: Sequence[Json]) -> None:
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
+def round_key(cwd: str) -> str | None:
+    """작업 폴더(`<뿌리>/<회차 폴더>/clone`)의 회차 폴더 이름에서 짧은 난수를 뗀
+    `<과제 id>-<갈래>-<회차 번호>`. 그 꼴이 아니면 빈 값."""
+    path = Path(cwd)
+    if path.name != "clone" or "-" not in path.parent.name:
+        return None
+    return path.parent.name.rsplit("-", 1)[0]
+
+
 def _pick(script: dict[str, Json], config_dir: Path, session_id: str) -> dict[str, Json]:
     """이 부름의 각본. 이 부름은 이미 `fake-calls.jsonl`에 적혀 있다."""
     seen = read_calls(config_dir)
     sessions = _obj(script.get("sessions"))
+    rounds = _obj(script.get("rounds"))
+    key = round_key(os.getcwd())
     if session_id in sessions:
         nth = sum(1 for c in seen if c.get("session_id") == session_id) - 1
         mine = _list(sessions[session_id])
+    elif key is not None and key in rounds:
+        nth = sum(1 for c in seen if c.get("round") == key) - 1
+        mine = _list(rounds[key])
     else:
         nth = len(seen) - 1
         mine = _list(script.get("calls"))
@@ -418,15 +439,31 @@ def _session(argv: list[str], config_dir: Path, script: dict[str, Json]) -> int:
     stdin = sys.stdin.buffer.read().decode("utf-8", errors="replace")
     session_id = _flag(argv, "--session-id") or _flag(argv, "--resume") or "모름"
     cwd = os.getcwd()
+    # 도는 동안 표지 파일을 두어, 같은 설정 폴더에서 함께 도는 부름의 수를 센다
+    running = config_dir / RUNNING
+    running.mkdir(parents=True, exist_ok=True)
+    mine = running / str(os.getpid())
+    mine.touch()
     entry: dict[str, Json] = {
         "argv": [a for a in argv],
         "stdin": stdin,
         "env": [n for n in sorted(os.environ)],
         "cwd": cwd,
+        "round": round_key(cwd),
         "session_id": session_id,
         "pid": os.getpid(),
+        "running": len(os.listdir(running)),
     }
     _append(config_dir / CALLS, [entry])
+    try:
+        return _play(entry, config_dir, script)
+    finally:
+        mine.unlink(missing_ok=True)
+
+
+def _play(entry: dict[str, Json], config_dir: Path, script: dict[str, Json]) -> int:
+    session_id = str(entry["session_id"])
+    cwd = str(entry["cwd"])
     plan = _pick(script, config_dir, session_id)
     folder = config_dir / "projects" / re.sub(r"[^A-Za-z0-9]", "-", cwd)[-SLUG_MAX:]
     _append(folder / f"{session_id}.jsonl", _list(plan.get("main")))

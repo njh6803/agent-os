@@ -191,7 +191,10 @@ SESSION_FLAGS = (
 def budget_text(usd: float) -> str:
     """`--max-budget-usd`에 넘길 글. 센트 아래를 버려 남은 값을 넘지 않는다. 음수는 0이다.
     버림은 `repr`의 십진 글에서 한다. `math.floor(0.29 * 100)`은 28이라 정확히 센트로 떨어지는
-    값도 한 센트를 잃는다. 그래서 돌려준 글을 `float`로 다시 넣어도 같은 글이 나온다."""
+    값도 한 센트를 잃는다. 그래서 돌려준 글을 `float`로 다시 넣어도 같은 글이 나온다. `nan`과
+    무한대는 `ValueError`다. 넘긴 글이 `nan`이면 Claude Code 가 그것을 어떻게 읽는지 모른다."""
+    if not math.isfinite(usd):
+        raise ValueError(f"예산은 유한한 값이어야 한다: {usd!r}")
     cents = Decimal(repr(usd)).quantize(Decimal("0.01"), rounding=ROUND_FLOOR)
     return f"{max(Decimal(0), cents):.2f}"  # 같으면 앞의 것이라 `-0.0`도 "0.00"이다
 
