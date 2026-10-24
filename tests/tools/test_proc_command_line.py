@@ -26,7 +26,13 @@ def test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다() -> No
         stderr=subprocess.DEVNULL,
     )
     try:
+        # 리눅스의 Popen 은 exec 가 close-on-exec 파이프를 닫는 순간 돌아오고, 새 인자 영역은 그
+        # 뒤에 채워진다. 그 틈의 cmdline 은 비어 None 이라 기한까지 거듭 읽는다
+        deadline = time.monotonic() + 60
         argv = command_line(process.pid)
+        while argv is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+            argv = command_line(process.pid)
     finally:
         process.kill()
         process.wait(timeout=60)

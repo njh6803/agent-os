@@ -41,3 +41,4 @@
 ### 검증
 
 - [x] `CLAUDE.md`의 검증 명령이 모두 초록이고, 위젯 e2e를 로컬에서 한 번 돌려 초록이다
+- [x] PR CI를 막은 `tests/tools/test_proc_command_line.py`의 경합을 고친다: `Popen` 직후 한 번만 읽던 리눅스 cmdline을 기한까지 거듭 읽는다, 일지 2026-10-24-10-widget-e2e.md
