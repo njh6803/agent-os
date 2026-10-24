@@ -84,7 +84,7 @@ open-session을 부른다 2026-10-24T12:04:08Z
 
 표준 축(Critical·Major 0, Minor 3, Nit 4)과 판정:
 
-- Minor 1: `tests/test_main.py`의 `uvicorn_calls` 독스트링(838~839행)과 `test_토큰과_루프백이_갖춰지면_…` 독스트링(1007~1008행)이 포트를 실제로 여는 것을 "`-m llm` 과 두 e2e"가 잰다고 닫았다. `-m llm_widget`도 실제 `serve`를 띄운다. 일지 "한 것"의 "옛 표현의 grep 잔존은 0"은 티켓이 든 말로 센 것이라 이 문장을 잡지 못했다. → 고침. 목록에 하나를 더하지 않고, 실제 `serve` 서브프로세스를 띄우는 시험들이 잰다는 일반 조항으로 쓰고 목록은 `.claude/rules/http.md`의 테스트 줄 하나에 둔다. `web/apps/admin/e2e/stack.ts` 머리의 "실제 `serve` 를 띄우는 것은 이것과 위젯 e2e(`apps/widget/e2e/stack.ts`), `-m llm` 테스트다"는 `-m llm_widget`도 같은 `stack.ts`가 `serve`를 띄우므로 참이라 둔다.
+- Minor 1: `tests/test_main.py`의 `uvicorn_calls` 독스트링(838~839행)과 `test_토큰과_루프백이_갖춰지면_…` 독스트링(1007~1008행)이 포트를 실제로 여는 것을 "`-m llm` 과 두 e2e"가 잰다고 닫았다. `-m llm_widget`도 실제 `serve`를 띄운다. 일지 "한 것"의 "옛 표현의 grep 잔존은 0"은 티켓이 든 말로 센 것이라 이 문장을 잡지 못했다. → 고침. 목록에 하나를 더하지 않고, 실제 `serve` 서브프로세스를 띄우는 시험들이 잰다는 일반 조항으로 쓰고 목록은 `.claude/rules/http.md`의 테스트 줄 하나에 둔다. `web/apps/admin/e2e/stack.ts` 머리의 "실제 `serve` 를 띄우는 것은 이것과 위젯 e2e (`apps/widget/e2e/stack.ts`), `tests/test_main.py` 의 `-m llm` 테스트다"(주석 두 줄에 걸친다)는 `-m llm_widget`도 같은 `stack.ts`가 `serve`를 띄우므로 참이라 둔다.
 - Minor 2: 치는 때가 문서마다 다르다. `docs/constitution/operations.md`, ADR 0024 이력, 명세, 티켓 36행은 "서버의 최종 사용자 경로와 항목의 투영"인데 `CLAUDE.md` 47행과 PR 템플릿 54행은 "항목의 투영"이 없다. → 고침. 바뀐 `CLAUDE.md` 문장은 카나리아(`claude_md_llm_widget.toml`)를 다시 돌린다.
 - Minor 3: `tests/test_widget_llm.py`의 `_run_tree`가 `tools/run_checks.py`의 `run_one`·`_wait`와 겹친다(Duplicated Code 판단). → 보류. 공유할 핵심(`kill_tree`)은 이미 가져다 쓴다. 남은 겹침은 `Popen`과 기다림 열 줄 남짓이고, `run_one`은 환경을 받지 않으며(`Check`에 칸이 없다) 출력을 파이프로 받아 `_drain`의 제한 시간으로 끊는다. 이 시험은 손자(serve, Next, chromium)가 파이프를 쥐는 일을 피하려고 파일로 받는다(독스트링). 맞추려면 러너의 계약을 이 티켓에서 넓혀야 한다.
 - Nit 4: `web/apps/widget/e2e/stack.ts` 머리 "모델은 부르지 않는다."와 `e2e/plugins.ts` 머리 "에이전트는 모델 없이 돈다."가 바로 아래 문단의 실제 모델 모드와 어긋난다. → 고침("기본은", "픽스처 에이전트는"으로 좁힌다). `.claude/rules/http.md`의 "모델을 부르지 않는 두 e2e" 괄호는 같은 문장이 바로 뒤에 `-m llm_widget`을 따로 들어 둔다.
@@ -94,7 +94,7 @@ open-session을 부른다 2026-10-24T12:04:08Z
 
 명세 축(Minor 4, Nit 4. 확인한 것: 티켓 38행의 열 곳, 기준 다섯마다 시험과 그 기준만 짓는 글로 빨개지는 변이, `playwright.config.test.ts`가 vitest `node` 프로젝트에서 3 통과, 운영 문서의 다섯 요소, `CLAUDE.md` 두 곳, 헌법 판 3.0.56, `-m llm`으로 모으면 6개이고 이 시험은 빠진다)과 판정:
 
-- Minor (a): `.scratch/web-widget/probes/pnpm_spawn.py` 독스트링이 "Testing Decisions 6 은 … `-m llm` 파이썬 시험 하나가 … 돌린다고 정했다"와 "pytest 의 `-m llm` 표지"를 적었다. 진행 중인 기능의 프로브 독스트링은 살아 있는 문서다(`docs/constitution/operations.md` 문서 위치). ADR 0024 이력 2026-10-23 "실제 모델을 부르는 위젯 e2e는 LLM 시험 하나가 감싼다"가 마커를 `llm_widget`으로 정했다. → 고침. 일지 "한 것"의 잔존 0은 프로브를 훑지 않은 셈이었다.
+- Minor (a): `.scratch/web-widget/probes/pnpm_spawn.py` 독스트링(`148652ef`의 판)이 "Testing Decisions 6 은 … `-m llm` 파이썬 시험 하나가 … 돌린다고 정했다"와 "pytest 의 `-m llm` 표지"를 적었다. 진행 중인 기능의 프로브 독스트링은 살아 있는 문서다(`docs/constitution/operations.md` 문서 위치). ADR 0024 이력 2026-10-23 "실제 모델을 부르는 위젯 e2e는 LLM 시험 하나가 감싼다"가 마커를 `llm_widget`으로 정했다. → 고침. 일지 "한 것"의 잔존 0은 프로브를 훑지 않은 셈이었다.
 - Nit (a): `CLAUDE.md`·PR 템플릿에 "항목의 투영"이 없다. → 표준 축 Minor 2와 같은 것이고 고쳤다.
 - Nit (b): PR 템플릿에 `-m llm_widget` 계기를 더한 것은 요청 밖이고 셋째 사본이다. → 둔다. 그 줄은 PR이 칠 검증 명령의 목록이고, LLM 테스트를 `-m llm` 하나로 닫았다(티켓 38행이 고치라는 닫힌 문장의 꼴이다). 빼면 위젯을 건드린 PR이 그 명령을 떠올릴 자리가 없다. 사본 사이의 어긋남은 위 Minor 2에서 맞췄다.
 - Minor (c): 프로브 README의 `widget_llm_mutations.toml` 행이 앞의 세 변이가 "각각 기준 하나…만 빨개지는지" 본다고 적었다. `tools/mutate.py`의 `expect_output`은 표지가 있는지만 보고, 1은 요청을 보내지 않아 트레이스와 화면의 출력도 없다. → 고침(그 기준이 빨개지는 것을 그 기준만 짓는 글로 본다고 쓴다).
@@ -133,3 +133,41 @@ open-session을 부른다 2026-10-24T12:04:08Z
 - `uv run python tools/sibling_overlap.py`: 번호 겹침 없음. 형제 워크트리 `10-widget-element-embed`가 `web/apps/widget/e2e/stack.ts`를 함께 고쳐, 나중에 병합하는 쪽에서 글자 충돌 후보다.
 - 손으로 치는 다섯(pytest, 린트 둘, pyright, 경계, web)은 커밋의 pre-commit 결과로 갈음한다. 결과는 커밋 뒤 아래에 적는다.
 - 첫 커밋 시도는 pre-commit의 `mutation tables`(`tools/mutate.py --staged`)에서 막혔다. `.scratch/harness/probes/llm_tokens_mutations.toml`의 "llm 마커를 보지 않는다"가 원문으로 든 `if item.get_closest_marker("llm") is None:`을 이 브랜치가 두 마커 판정으로 바꿨고, 그 변이의 `-k 돌지_않으면`이 고르던 시험 이름도 바꿨다. 같은 시도에서 다른 검사(ruff 둘, 병렬 검사 열, 마크다운 표, 줄 구분 문자, 카나리아 모양, 헌법 판, 인용)는 모두 Passed였다. 원문을 새 판정 줄로, `-k`를 `두_LLM_마커를_돌리지_않고`로 옮기고 머리와 README 행에 `-m llm_widget`을 더했다. `--check`는 변이 12 모두 원문이 한 번씩 있었고, `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/llm_tokens_mutations.toml 1`은 기준선 `1 passed, 6 deselected in 53.44s`, 변이 `1 failed`로 기대대로였다. 빨개진 까닭은 코드를 읽은 것이다(`if False:`면 마커 없는 시험도 세어 합계 줄이 찍히고, 마지막 단언 `"LLM 토큰 합계" not in`이 빨개진다). 셀프 리뷰 두 축과 일지 "한 것"의 잔존 grep이 이 표를 보지 못했다. 표가 든 것은 바뀐 줄의 옛 글자였고, 그것을 찾는 것은 pre-commit의 이 검사다.
+- 둘째 커밋 시도(`b29b6094`): pre-commit이 모두 Passed였다. 병렬 검사 열(`parallel-checks` 405.72s) 가운데 pytest 405.2s, web-verify 295.0s, run-hooks 86.4s, pyright 45.3s, pyright-linux 43.5s였고, 변이 표 원문 확인과 카나리아 모양, 헌법 판, 커밋 메시지도 Passed였다. 인용 대조는 경고 3건이었다. 둘은 이 일지의 87·97행(옛 문장 인용)이라 아래 PR 직전 리뷰 반영에서 원문 그대로 고치고 판을 밝혔고, 하나는 `docs/constitution/README.md` 11행이 긴 한 줄이라 그 줄의 옛 인용까지 더한 줄로 잡힌 것이다. 손으로 치는 다섯은 이 결과로 갈음한다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어 대체 둘을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 기준 `148652ef`, 범위는 커밋 `b29b6094` 하나다. `origin/main`이 `148652ef`에서 움직이지 않아(`git fetch` 뒤) 합칠 것이 없었다.
+
+보안(`/security-review`, 식별 서브태스크 하나): 후보 0이라 거르기 서브태스크는 띄우지 않았다. 따라간 길은 `.env` 읽기 훅(안내 문구만 바뀌었다), `ci.yml`(머리 주석만 바뀌었고 `pull_request`·`contents: read`이며 `e2e-widget`이 `AGENT_OS_WIDGET_LLM`을 주지 않아 프로젝트 `llm`이 서지 않는다), 키의 길(pytest → pnpm → Playwright → serve. 인자·단언 메시지·주석·리포트에 실리지 않는다), Next 빌드 환경(`next.config.ts`가 클라이언트에 넘기는 것은 두 값이고 `NEXT_PUBLIC_*`가 없다), pnpm 인자의 cmd.exe 다시 읽기(고정 글자), `copyRepoPlugins`와 `siteToml`이다.
+
+버그·성능(`bug-perf-review`, 호출 40): 밀 주장 열둘 가운데 여덟(1·2·3·4·5·6·8·9)이 맞고 7은 오탐, 10·11·12는 일부만 봤다. 지적과 판정:
+
+- Minor(유효): `tests/test_widget_llm.py`의 실제 모델 시험 독스트링 "준비가 띄운 프로세스의 출력은 끝에 `web/apps/widget/test-results/` 에 남는다"가 제한 시간 갈래에서 거짓이다. 그 로그는 준비의 정리(`e2e/stack.ts`의 teardown)가 쓰고, `kill_tree`로 끊으면 정리가 돌지 않는다. → 고침. 새 문장 둘: 시험 독스트링 "끝까지 돈 실행이면 준비가 띄운 프로세스의 출력이 `web/apps/widget/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리 독스트링의 못 보는 것)." 머리 "못 보는 것" "제한 시간에 끊으면 … 그 임시 폴더(`agent-os-widget-e2e-*`)가 남고, serve·Next 의 출력도 `test-results/` 에 쓰이지 않을 것이다(정리가 쓴다). 그때 실패 메시지에 실리는 것은 Playwright 가 표준 출력에 낸 것뿐이다. … 셋 다 코드를 읽은 것이고 재지 않았다." `LOGS`가 `join(APP, "test-results")`이고 쓰기가 teardown 안에만 있는 것을 `stack.ts`에서 열어 봤다. 출력을 파일에 이어 쓰게 바꾸는 안은 CI의 `e2e-widget`이 함께 쓰는 준비를 고쳐야 해 이 티켓 밖으로 둔다.
+- Minor(보류 → 오탐): 모델 없는 시험 셋이 86.81초. → 손으로 쳐 봤다. `uv run pytest tests/test_widget_llm.py -q -p no:cacheprovider --durations=5`가 `3 passed, 1 deselected in 66.55s`였고 시험 본문은 제한 시간 시험 6.60s와 나머지 0.09s 이하였다. 같은 시험(`-k 끝난_명령의`) 하나만 친 두 번이 57.76초와 0.83초로 갈렸고 그 본문은 0.06초였다. 모으기만 친 것(`--collect-only`)은 0.71초, `tests/test_calc_plugin.py`는 1.52초였다. 시험 코드가 늦은 것이 아니다. 늦은 회차의 원인(기계 부하, 첫 실행의 비용)은 가르지 않았다(어림이다).
+- Nit(보류 → 유효): 커밋 메시지 "키 확인 단언이 실패하면 pytest 가 os.environ 전체를 찍는" 관례의 "전체". → 스크래치 스크립트(커밋하지 않았다)로 봤다. 그 탐침이 `os.environ`을 가짜 값 200개(`FAKE_000`~`FAKE_199`)로 바꾼 뒤 같은 꼴의 단언을 실패시켰다(pytest 9.1.1, 설정 파일 없음. 저장소의 `addopts`에도 출력 길이를 바꾸는 선택이 없다). 첫 판은 표지를 첫 값과 마지막 값으로 골라 기본 출력에 둘 다 있는 것을 "전체"로 읽었는데, 기본 출력은 가운데를 `...`로 줄여 앞뒤를 남기는 꼴이라 그 표지로는 가를 수 없었다. 가운데 값 `FAKE_100`으로 다시 보니 기본 출력에는 0번, `-vv`에는 4번이었다. 기본은 앞뒤만, `-vv`면 전체다(위 변이 절의 "기본은 잘리고 `-vv`면 다 찍힌다"와 같다). 커밋 메시지는 고치지 않고(이미 커밋했다) PR 본문의 남긴 위험에 바른 꼴로 적는다. 앞뒤만 찍혀도 그 자리에 든 다른 비밀이 실릴 수 있다는 어림이라 후속 후보의 취지는 그대로다.
+- Nit(유효): `.claude/rules/http.md` 테스트 줄의 "모델을 부르지 않는 두 e2e(… 위젯 `web/apps/widget/e2e/`)"인데 그 폴더에 실제 모델을 부르는 `calc.llm.ts`가 있다. → 고침("위젯 `web/apps/widget/e2e/`의 Playwright 프로젝트 `chromium`"). 바뀐 rules라 카나리아 `http_rule_llm_widget.toml`을 커밋하기 전의 작업 트리로 다시 돌려 `통과 4 · 실패 0`이었다(claude 2.1.302. 실험군은 그 나열의 마지막 항목을 옮기고 대조군은 "없음"). 명세의 최신 결과 줄에 더했고 `--shape`도 통과했다.
+- 밀 주장 10·11: 10의 카나리아 둘은 이 세션이 셀프 리뷰 뒤(`claude_md_llm_widget.toml`)와 위 반영 뒤(`http_rule_llm_widget.toml`)에 다시 돌렸다. 11에서 리뷰가 보지 못한 `tests/tools/test_llm_tokens.py`는 이 브랜치가 머리 독스트링 한 줄만 바꿔, 변이 표의 `-k` 조각이 고르는 시험 이름이 그대로다(`git diff 148652ef HEAD`).
+- 오탐 여섯(잘린 리포트의 `json.loads`, 화면 출력의 공백, 대화 영역의 `alert`, Windows의 `start_new_session`, `pnpm.CMD`를 띄우는 길, vitest가 `playwright.config.test.ts`를 고르는지)은 리뷰가 근거를 적은 대로 둔다. 마지막 것은 셀프 리뷰의 명세 축이 `node` 프로젝트에서 3 통과로 확인했다.
+
+## 회고
+
+후보 아홉, 승인 셋(새 행 하나, 회차 둘), 기각 여섯, 넘김 없음. 심각도 순이다.
+
+1. **승인(고침, 새 행 463, 1회차).** LLM 시험의 키 확인 `assert "ANTHROPIC_API_KEY" in os.environ, …` 여덟 곳이 실패하면 pytest 가 `os.environ`의 repr을 찍는다(위 변이 절과 PR 직전 리뷰 절의 스크래치 스크립트). 사건: 앞 세션의 키 없는 실행이 그 출력을 냈다. 층: 시험 코드를 고친다(키 확인을 `pytest.fail`로 실패하는 함수 하나로 모은다). 되돌림: PR 하나. 이 티켓 밖의 두 파일과 `-m llm` 재실행이 들어, 이 PR에 싣지 않고 대기열에 둔다.
+2. **승인(회차, 420의 6회차).** 새 마커가 거짓으로 만든 닫힌 문장 셋(`tests/test_main.py` 독스트링 둘, `.scratch/web-widget/probes/pnpm_spawn.py` 독스트링)을 구현의 잔존 grep이 놓쳐 셀프 리뷰가 잡았다. `CLAUDE.md` 작업 규약 4(구현 때 실리는 지침)를 어긴 것이다. 셀프 리뷰가 둔 `.claude/rules/http.md` 괄호를 PR 직전 리뷰가 다시 짚은 것도 같은 낱말을 놓친 일이라 이 회차에 함께 센다.
+3. **승인(회차, 367의 3회차).** 이 세션의 스크래치 탐침이 "전체를 찍는가"의 표지를 첫 값과 마지막 값으로 골라, 가운데를 `...`로 줄인 기본 출력도 "전체"로 읽고 일지에 적었다. 회고를 쓰려고 일지 변이 절을 다시 읽다가 어긋남을 보고 가운데 값으로 다시 봤다. `.claude/rules/probes.md` 첫 항목(표지는 재려는 상황에서만 나는 문구)을 어긴 것이고, 스크래치 훅이 그 규칙을 알린 뒤였다. 367이 처방한 문장(고친 판의 표지는 고치기 전 판에서 나지 않는 관찰)과 같은 꼴이라 그 행에 세고, 행의 "어디로"에 3회차가 일반 조항을 요구한다고 덧붙였다. 367은 3회차가 되어 chore 계기다.
+4. **기각.** 변이 표 `llm_tokens_mutations.toml`의 원문이 바뀐 코드 줄을 들어 첫 커밋이 막혔다. pre-commit의 `tools/mutate.py --staged`(대기열 312의 고침)가 그 자리에서 막았다. pre-commit은 실패한 훅 뒤에도 나머지를 다 돌아, 그 훅을 앞으로 옮겨도 기다린 시간은 줄지 않는다.
+5. **기각.** 실제 모델 시험 독스트링의 "출력은 끝에 남는다"가 제한 시간 갈래에서 거짓이었다. `code-review` 두 브리프의 주장 검증 1(닫힌 주장)이 잡도록 둔 것을 PR 직전 리뷰가 잡았다. 검사로 옮길 수 없고 새 판단 기준도 아니다.
+6. **기각.** 셀프 리뷰가 Nit(`http.md` 괄호)을 두기로 한 판단을 PR 직전 리뷰가 뒤집었다(그 문장의 잔존은 2에 셌다). 든 값은 카나리아 한 번이고 PR을 열기 전이라 푸시가 더 들지 않았다. 리뷰 층이 제 몫을 했다.
+7. **기각.** 커밋 메시지의 "os.environ 전체를 찍는"이 일지 변이 절("기본은 잘리고")과 어긋났다. PR 직전 리뷰가 보류로 짚었고 PR 본문에서 바로잡는다. 리뷰가 잡도록 둔 기준이다.
+8. **기각.** PR 직전 리뷰가 본 86.81초는 시험 코드의 결함이 아니었다(같은 시험 하나가 57.76초와 0.83초로 갈렸다). 사건이 비용이 아니다.
+9. **기각.** 앱의 워크트리 가드가 일지에 덧붙이는 Bash heredoc을, 훅이 스크래치패드로 옮기는 `cd`를 막았다. 이미 있는 가드와 훅이 그 자리에서 막았고 Edit 도구와 경로 인자로 바로 쳤다.
+
+만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`(`git fetch origin` 뒤) 모두 만료할 행이 없었다. 새 훅·검사가 문턱을 새로 지난 것이 없어 `tools/hook_report.py`는 돌리지 않았다(420은 이미 문턱을 지났고 처방이 정해지지 않았다).
+
+## 다음
+
+- 이 티켓으로 web-widget의 실제 모델 e2e가 섰다. 남은 web-widget 티켓 07·10은 형제 세션이 돌고 있고(이 세션을 연 묶음), 08·09는 `ready-for-agent`다. 다음 작업은 병합 뒤 `next-session` 결정표가 정한다.
+- 형제 워크트리 `10-widget-element-embed`가 `web/apps/widget/e2e/stack.ts`를 함께 고친다. 나중에 병합하는 쪽이 글자 충돌을 푼다(`tools/sibling_overlap.py`).
+- 뒤로 넘긴 일: 대기열 463(키 확인 단언). 셀프 리뷰가 둔 `_run_tree`와 `tools/run_checks.py`의 겹침(러너의 계약을 넓혀야 한다)과, PR 직전 리뷰가 낸 "제한 시간에 끊겨도 serve·Next 로그를 남기기"(CI의 `e2e-widget`과 함께 쓰는 준비 `e2e/stack.ts`를 고쳐야 한다)는 대기열에 올리지 않았다. 사건이 비용이 되면 그때 센다.

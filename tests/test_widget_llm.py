@@ -25,9 +25,11 @@
 
 못 보는 것: POSIX 에서 제 세션을 따로 연 손자는 프로세스 그룹으로 끝내지
 못한다(`tools/run_checks.py` 의 `kill_tree`). 제한 시간에 끊으면 준비(globalSetup)의 정리가 돌지
-않아 그 임시 폴더(`agent-os-widget-e2e-*`)가 남을 것이다. POSIX 에서 이 pytest 를 Ctrl-C 로 끊으면
-SIGINT 가 제 세션을 연 자식에 닿지 않고 `_run_tree` 는 제한 시간만 받아, Playwright 와 그것이 띄운
-serve·Next 가 시험을 마칠 때까지 남을 것이다. 둘 다 코드를 읽은 것이고 재지 않았다.
+않아 그 임시 폴더(`agent-os-widget-e2e-*`)가 남고, serve·Next 의 출력도 `test-results/` 에 쓰이지
+않을 것이다(정리가 쓴다). 그때 실패 메시지에 실리는 것은 Playwright 가 표준 출력에 낸 것뿐이다.
+POSIX 에서 이 pytest 를 Ctrl-C 로 끊으면 SIGINT 가 제 세션을 연 자식에 닿지 않고 `_run_tree` 는
+제한 시간만 받아, Playwright 와 그것이 띄운 serve·Next 가 시험을 마칠 때까지 남을 것이다. 셋 다
+코드를 읽은 것이고 재지 않았다.
 """
 
 import json
@@ -191,8 +193,9 @@ def _read_trace(trace_file: Path) -> Trace:
 @pytest.mark.llm_widget
 def test_위젯에서_보낸_요청_하나에_계산_에이전트가_실제_모델로_답한다(tmp_path: Path) -> None:
     """바깥 이음매. 실제 브라우저, 실제 serve 와 Next, 같은 출처의 중계, 사이트 파일과 서명 토큰,
-    실제 모델이 한 길에 든다. 준비가 띄운 프로세스의 출력은 끝에 `web/apps/widget/test-results/` 에
-    남는다."""
+    실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운 프로세스의 출력이
+    `web/apps/widget/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리 독스트링의 못 보는
+    것)."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     pnpm = _pnpm()
     traces = tmp_path / "traces"
