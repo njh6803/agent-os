@@ -96,11 +96,13 @@ def test_리눅스는_링크로_띄운_이름과_스스로_바꾼_이름을_놓�
     rename = "open('/proc/self/comm', 'w').write('renamedprobe'); import time; time.sleep(120)"
     linked = _잠든_자식([str(link), "-c", sleep])
     renamed = _잠든_자식([sys.executable, "-c", rename])
+    observed = False
     try:
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             seen = pids_named("renamedprobe")
             if seen is not None and renamed.pid in seen:
+                observed = True
                 break
             time.sleep(0.1)
         by_python = pids_named(sys.executable)
@@ -110,6 +112,7 @@ def test_리눅스는_링크로_띄운_이름과_스스로_바꾼_이름을_놓�
             process.kill()
             process.wait(timeout=60)
 
+    assert observed, "이름을 바꾼 자식을 기한 안에 보지 못했다"
     assert by_python is not None
     assert linked.pid not in by_python and renamed.pid not in by_python
     assert by_longer is not None and linked.pid in by_longer

@@ -98,7 +98,7 @@ CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assign
 
 ## 다음
 
-model-rerun 티켓 10을 마쳤다. 남은 티켓은 11(파일럿과 사전 등록)이고 막던 03·05·10이 모두 done이다. 11은 사람 단계("사람과 정한다")가 있어 그 세션이 묻고 답을 기다린다. 11의 "09에서 넘어온 메모"와 "10에서 넘어온 메모"(07의 열거화, `round_record` 정리, `_git` 사본 맞추기)를 함께 본다. 이 PR에서 보류한 Minor 둘(Ctrl-C 뒤 남는 일꾼, 한도 시각의 여유)은 PR 체크리스트에 판정과 값을 적었다.
+model-rerun 티켓 10을 마쳤다. 남은 티켓은 11(파일럿과 사전 등록)이고 막던 03·05·10이 모두 done이다. 11은 사람 단계("사람과 정한다")가 있어 그 세션이 묻고 답을 기다린다. 11의 "09에서 넘어온 메모"와 "10에서 넘어온 메모"(07의 열거화, `round_record` 정리, `_git` 사본 맞추기)를 함께 본다. 이 PR에서 보류한 Minor 둘(Ctrl-C 뒤 남는 일꾼, 한도 시각의 여유)은 PR 체크리스트에 판정과 값을 적었다. PR #380 CodeRabbit 첫 회차에서 뒤로 넘긴 일: npm으로 깐 `claude`(`claude.cmd`, `#!` 스크립트)는 프로세스 이름이 `node`라 죽은 회차 훑기가 살아 있는 세션을 놓친다. 티켓 11 "10에서 넘어온 메모" 둘째 줄에 적었다.
 
 ## 인계 (둘째)
 
@@ -131,3 +131,11 @@ CI `python` 잡이 두 푸시(571056ea, 58cb139f) 모두 `tests/tools/test_proc_
 > 사용자: 실패한 잡만 다시 돌리기 — "GitHub에서 python 잡을 다시 실행합니다(gh run rerun --failed). 초록이 되면 그대로 병합합니다. 대신 '빨갰다가 다시 돌려서 통과' 선례가 남아 게이트가 느슨해지는 비용이 있습니다."
 
 이 절을 실은 커밋의 푸시로 CI 가 새로 돈다. 그때도 그 시험 하나로만 빨가면 실패한 잡만 다시 돌린다.
+
+`bd656ec5`의 CI 는 모두 초록이었다(이번에는 대기열 456 의 시험도 지나 잡을 다시 돌릴 일이 없었다). CodeRabbit 이 이 PR 에 처음 리뷰를 냈다(첫 회차, Major 둘과 Minor 하나). claude-review 셋째 회차는 Critical·Major 없이 Minor 셋과 Nit 둘이라 모두 보류했다.
+
+- CodeRabbit Major(`tools/proc_command_line.py` `pids_named`, 인터프리터로 뜬 `claude`를 이름으로 못 찾는다): 보류하고 티켓 11 로 넘겼다. 모듈 독스트링의 못 보는 것(래퍼, 셸 스크립트)에 이미 있고, 이 PC 의 `claude`는 네이티브 `claude.EXE`이며, 티켓 11 파일럿이 진짜 `claude`의 이름을 보고 고치기로 되어 있다.
+- CodeRabbit Major(`tools/rerun_round.py` `_recorded`, 손상된 기록이 미기록 회차로 넘어가 `FileExistsError`): 이미 처리되어 있어 고치지 않았다. 러너 진입점 `run`이 `OSError`(그 하위의 `FileExistsError`)를 받아 경로를 든 `멈춘다:` 줄과 종료 1로 끝내고 덮지 않는다. 기록 자리에 `{반쯤`을 둔 시험을 써 보니 처음부터 초록이었고, 빨강을 본 적 없는 가드라 넣지 않고 되돌렸다.
+- CodeRabbit Minor(`tests/tools/test_proc_command_line.py`, 이름을 바꾼 자식을 봤는지 단언하지 않는다): 고쳤다. 리눅스에서만 단언하는 시험이라 이 PC 에서는 재는 것이 없고 CI 가 잰다.
+
+이 반영 커밋의 첫 pre-commit 에서 대기열 456 의 시험이 이 PC(윈도)에서도 같은 단언(`assert argv is not None`, 34행)으로 빨갰다(1 failed, 5491 passed). 456 행은 리눅스 CI 만 적었는데 윈도의 PEB 읽기도 띄운 직후에 None 을 낸다. 456 을 고칠 세션은 두 플랫폼을 함께 본다. 사용자가 고른 "다시 돌리기"대로 커밋을 한 번 더 쳤다.
