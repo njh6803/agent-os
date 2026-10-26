@@ -444,6 +444,128 @@ describe("멈춘 올리기를 다시 하는 올리기", () => {
   });
 });
 
+describe("한 경로가 드는 칸", () => {
+  const CHIP = "project/components/Chip/README.md";
+  const LOCAL = "로컬\n";
+  const OTHER = "다른 판\n";
+  const SLOTS = ["send", "landed", "unchanged", "delete", "gone", "ignored"] as const;
+  /** 지난 산출 목록. 몇 파일만 보내는 올리기, 빌드 산출 전체를 맞춘 두 올리기(그 경로가 없다·있다)다. */
+  const PREVIOUS: readonly (readonly string[] | null)[] = [null, [], [CHIP]];
+
+  type Change = "removed" | "changed" | "added" | null;
+
+  /**
+   * 확인(`check.ts` 의 `classifyFile`)이 한 경로에 낼 수 있는 `pending` 의 자리, 분류, 웹의 바뀜의 짝. `removed`·`changed`
+   * 는 기록에 있는 파일의, `added` 는 기록에 없는 파일의 바뀜이다. 그 함수가 짝을 더하면 이 표에도 더한다.
+   */
+  const VERDICTS: readonly {
+    readonly role: "none" | "file" | "delete";
+    readonly pending: PendingClass | null;
+    readonly change: Change;
+  }[] = [
+    { role: "none", pending: null, change: null },
+    { role: "none", pending: null, change: "removed" },
+    { role: "none", pending: null, change: "changed" },
+    { role: "none", pending: null, change: "added" },
+    { role: "file", pending: "sent", change: null },
+    { role: "file", pending: "unsent", change: null },
+    { role: "file", pending: "edited", change: "removed" },
+    { role: "file", pending: "edited", change: "changed" },
+    { role: "file", pending: "edited", change: "added" },
+    { role: "delete", pending: "deleted", change: null },
+    { role: "delete", pending: "remaining", change: null },
+    { role: "delete", pending: "edited", change: "changed" },
+    { role: "delete", pending: "edited", change: "added" },
+  ];
+
+  interface Case {
+    readonly name: string;
+    readonly given: UploadInput;
+    /** 되돌릴 파일이 이번 산출에도, 코드가 뺀 경로로 알려진 자리(지난 산출 목록, `pending` 의 지울 경로)에도 없다. */
+    readonly stray: boolean;
+  }
+
+  /** 앞 기록의 해시, 이번 산출, `pending` 의 목표, 확인의 짝, 지난 산출 목록의 모든 조합. */
+  function cases(): Case[] {
+    const found: Case[] = [];
+    for (const before of [null, LOCAL, OTHER]) {
+      for (const local of [null, LOCAL]) {
+        for (const target of [LOCAL, OTHER]) {
+          for (const verdict of VERDICTS) {
+            for (const previousOutput of PREVIOUS) {
+              const { role, change } = verdict;
+              if (
+                (role !== "file" && target === OTHER) ||
+                (change !== null && (change === "added") !== (before === null))
+              ) {
+                continue;
+              }
+              const pending =
+                role === "none"
+                  ? null
+                  : {
+                      files: new Map(role === "file" ? [[CHIP, entry(CHIP, target)]] : []),
+                      delete: role === "delete" ? [CHIP] : [],
+                      index: INDEX,
+                    };
+              const given = input({
+                record: record({
+                  files: new Map(before === null ? [] : [[CHIP, entry(CHIP, before)]]),
+                  pending,
+                }),
+                output: local === null ? new Map() : output({ [CHIP]: local }),
+                previousOutput,
+                revert: change === "changed" ? [CHIP] : [],
+                webRemoved: change === "removed" ? [CHIP] : [],
+                webAdded: change === "added" ? [CHIP] : [],
+                pendingState: verdict.pending === null ? null : new Map([[CHIP, verdict.pending]]),
+              });
+              const shown = (text: string | null): string =>
+                text === null ? "없음" : text === LOCAL ? "로컬" : "다른 판";
+              found.push({
+                name: `기록 ${shown(before)}, 산출 ${shown(local)}, 목표 ${shown(target)}, ${role}/${String(verdict.pending)}/${String(change)}, 지난 산출 ${JSON.stringify(previousOutput)}`,
+                given,
+                stray:
+                  local === null &&
+                  (change === "removed" || change === "changed") &&
+                  role !== "delete" &&
+                  previousOutput?.includes(CHIP) !== true,
+              });
+            }
+          }
+        }
+      }
+    }
+    return found;
+  }
+
+  test("확인이 낼 수 있는 어느 조합에서도 한 경로는 많아야 한 칸에 든다", () => {
+    const overlaps: string[] = [];
+    for (const { name, given, stray } of cases()) {
+      if (stray) {
+        continue;
+      }
+      const plan = planUpload(given);
+      const slots = SLOTS.filter((slot) => plan[slot].includes(CHIP));
+      if (slots.length > 1) {
+        overlaps.push(`${name}: ${slots.join(", ")}`);
+      }
+    }
+
+    expect(overlaps).toEqual([]);
+  });
+
+  test("되돌릴 파일이 갈 데 없는 조합에서만 멈춘다", () => {
+    const wrong = cases()
+      .filter(
+        ({ given, stray }) => caught(() => planUpload(given)) instanceof CommandError !== stray,
+      )
+      .map(({ name, stray }) => `${name}: ${stray ? "멈추지 않았다" : "멈췄다"}`);
+
+    expect(wrong).toEqual([]);
+  });
+});
+
 describe("빌드가 필요한지", () => {
   test("패키지 아래가 바뀌면 빌드가 필요하다", () => {
     expect(needsBuild(["web/packages/ui/src/Button.tsx"], [])).toEqual({

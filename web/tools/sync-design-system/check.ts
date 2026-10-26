@@ -60,6 +60,7 @@ import {
   readJson,
   sortedPaths,
   stringList,
+  unknownList,
 } from "./io.ts";
 import {
   INDEX_KEYS,
@@ -232,11 +233,7 @@ function docPaths(index: IndexRead): string[] {
   if (!isRecord(docs)) {
     return [];
   }
-  const sections: unknown = docs.sections;
-  const listed = [
-    docs.readme,
-    ...(Array.isArray(sections) ? sections.map((item: unknown) => item) : []),
-  ];
+  const listed = [docs.readme, ...(unknownList(docs.sections) ?? [])];
   return listed.filter((path): path is string => typeof path === "string" && isArtifactPath(path));
 }
 
@@ -594,7 +591,7 @@ function readReads(path: string | undefined): Pick<WebFiles, "absent" | "failed"
 }
 
 /** 확인 명령. */
-export function check(args: readonly string[]): ReportFields {
+export function runCheck(args: readonly string[]): ReportFields {
   const { values, positionals } = parsedArgs(() =>
     parseArgs({
       args: [...args],

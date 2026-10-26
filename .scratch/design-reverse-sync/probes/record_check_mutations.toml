@@ -595,7 +595,7 @@ expect_output = ['+       "message": "r 를 읽을 수 없다']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/record.ts"
-old = '''  if (!Array.isArray(raw.files)) {
+old = '''  if (files === undefined) {
     throw inputError(path, "files 로 바뀐 파일의 배열을 들지 않는다");
   }
 '''
@@ -603,8 +603,8 @@ new = ''''''
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/record.ts"
-old = '''  for (const item of raw.files.map((value: unknown) => value)) {'''
-new = '''  for (const item of Array.isArray(raw.files) ? raw.files : []) {'''
+old = '''  for (const item of files) {'''
+new = '''  for (const item of files ?? []) {'''
 
 # --- PR 직전 리뷰 반영 ---------------------------------------------------------------------------------------
 
@@ -631,3 +631,29 @@ expect_output = ['-   "project/assets/notes/plan.md",']
 file = "web/tools/sync-design-system/upload.ts"
 old = '''    delete: sortedPaths([...deletes, ...droppedTargets]),'''
 new = '''    delete: sortedPaths(deletes),'''
+
+# --- 봇 회차 반영 ------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "빌드 산출 전체에 없는 보낸 목표를 이어 적으면 칸이 겹치지 않는다는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "어느 조합에서도 한 경로는 많아야 한 칸에"]
+expect = "red"
+expect_output = ['+   "기록 없음, 산출 없음, 목표 로컬, file/sent/null, 지난 산출 [\"project/components/Chip/README.md\"]: landed, delete",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''      (input.previousOutput === null ? landed : droppedTargets).push(path);'''
+new = '''      landed.push(path);'''
+
+[[mutation]]
+name = "코드가 뺀 경로로 알려진 되돌릴 파일에서도 멈추면 멈추는 조합의 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "되돌릴 파일이 갈 데 없는 조합에서만"]
+expect = "red"
+expect_output = ['none/null/removed, 지난 산출 [\"project/components/Chip/README.md\"]: 멈췄다",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const stray = [...revert].filter((path) => !output.has(path) && !leftByCode.has(path));'''
+new = '''  const stray = [...revert].filter((path) => !output.has(path));'''

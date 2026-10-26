@@ -41,6 +41,7 @@ import {
   readPathList,
   sortedPaths,
   stringList,
+  unknownList,
 } from "./io.ts";
 import {
   indexLists,
@@ -138,7 +139,8 @@ function pendingOf(path: string, value: unknown): PendingState | null {
 
 /** 웹 편집 있음 보고의 `files` 와 `tokens`. 토큰 편집이 있으면 `tokens.json` 도 되돌린다. */
 function webEdits(path: string, raw: Readonly<Record<string, unknown>>): WebEdits {
-  if (!Array.isArray(raw.files)) {
+  const files = unknownList(raw.files);
+  if (files === undefined) {
     throw inputError(path, "files 로 바뀐 파일의 배열을 들지 않는다");
   }
   if (!Array.isArray(raw.tokens)) {
@@ -147,7 +149,7 @@ function webEdits(path: string, raw: Readonly<Record<string, unknown>>): WebEdit
   const revert: string[] = [];
   const webRemoved: string[] = [];
   const webAdded: string[] = [];
-  for (const item of raw.files.map((value: unknown) => value)) {
+  for (const item of files) {
     const editPath = isRecord(item) ? item.path : undefined;
     const change = isRecord(item) ? item.change : undefined;
     if (typeof editPath !== "string" || !isArtifactPath(editPath)) {

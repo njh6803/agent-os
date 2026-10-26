@@ -65,12 +65,20 @@ export function jsonValue(value: unknown): JsonValue | undefined {
   return undefined;
 }
 
+/**
+ * 배열이면 항목을 `unknown` 으로 둔 사본, 아니면 undefined. `Array.isArray` 는 `unknown` 을 `any[]` 로 좁혀, 그대로 쓰면
+ * 타입 검사가 항목을 보지 않는다.
+ */
+export function unknownList(value: unknown): unknown[] | undefined {
+  return Array.isArray(value) ? value.map((item: unknown) => item) : undefined;
+}
+
 /** 항목이 모두 문자열인 배열이면 그 배열, 아니면 undefined. */
 export function stringList(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
+  const items = unknownList(value);
+  if (items === undefined) {
     return undefined;
   }
-  const items = value.map((item: unknown) => item);
   return items.every((item): item is string => typeof item === "string") ? items : undefined;
 }
 
