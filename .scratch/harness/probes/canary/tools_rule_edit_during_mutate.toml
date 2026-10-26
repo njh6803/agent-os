@@ -13,7 +13,7 @@ Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은
 Write·Edit·NotebookEdit 에 붙는다고 적힌 PostToolUse 훅 가운데 `tools/mutate.py` 의 표지를 찾는 훅이 있으면, 그 훅이
 표지를 찾은 뒤 무엇만 본다고 적혔는지 그 구절을 글자 그대로 옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
 '''
-expect = ["표지의 pid가 살았는지만 본다"]
+expect = ["표지의 pid가 살았는지와 그 pid의 시작 시각이 표지의 것과 같은지만 본다"]
 source = ".claude/rules/tools.md"
 
 [[arm]]
