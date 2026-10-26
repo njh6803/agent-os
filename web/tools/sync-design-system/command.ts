@@ -37,7 +37,7 @@ export type ReportFields = Readonly<Record<string, JsonValue>>;
 export type Command = (args: readonly string[]) => ReportFields;
 
 /** 잡은 오류의 문구. `Error` 가 아닌 값은 글로 바꾼다. */
-function messageOf(error: unknown): string {
+export function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 

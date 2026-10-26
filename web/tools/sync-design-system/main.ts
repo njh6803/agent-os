@@ -14,6 +14,7 @@
 import { build } from "./build.ts";
 import { runCheck } from "./check.ts";
 import { CommandError, type Command, type ErrorKind } from "./command.ts";
+import { importCommand } from "./import.ts";
 import { record } from "./record.ts";
 import type { JsonValue } from "./tokens-json.ts";
 
@@ -21,6 +22,7 @@ import type { JsonValue } from "./tokens-json.ts";
 const COMMANDS: ReadonlyMap<string, Command> = new Map([
   ["build", build],
   ["check", runCheck],
+  ["import", importCommand],
   ["record", record],
 ]);
 

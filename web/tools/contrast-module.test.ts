@@ -5,7 +5,13 @@
 // 둔다. 값은 합성한다. 이 시험은 디자인 토큰 CSS 를 풀지 않는다.
 import { spawnSync } from "node:child_process";
 import { dirname } from "node:path";
-import { CONTRAST_PAIRS, contrastFailures, type SemanticToken } from "@agent-os/ui/contrast";
+import {
+  CONTRAST_PAIRS,
+  contrastFailures,
+  contrastRatio,
+  measureContrast,
+  type SemanticToken,
+} from "@agent-os/ui/contrast";
 import { describe, expect, test } from "vitest";
 
 const WEB = dirname(import.meta.dirname);
@@ -44,6 +50,32 @@ describe("패키지 이름으로 부른 명암비 모듈", () => {
     ]);
     expect(mutedWhite).toEqual(allBlack.filter((message) => mutedWhite.includes(message)));
     expect(mutedWhite).toHaveLength(37);
+  });
+
+  test("짝마다 잰 값은 짝, 바탕 쪽의 이름, 겹친 두 색, 명암비를 들고 걸린 목록과 같은 짝을 기준 밑으로 낸다", () => {
+    const value = (name: SemanticToken): string =>
+      name === MUTED ? WHITE : name === "bg-selected" ? "#ffffff80" : BLACK;
+    const measured = measureContrast(value, CONTRAST_PAIRS);
+    const selected = measured.find(
+      ({ pair, surface }) => pair[0] === MUTED && surface === "bg-selected+bg",
+    );
+
+    expect(measured).toHaveLength(43);
+    expect(selected).toEqual({
+      pair: [MUTED, ["bg-selected", "bg"], 4.5],
+      surface: "bg-selected+bg",
+      foregroundColor: WHITE,
+      backgroundColor: "#808080",
+      ratio: contrastRatio(WHITE, "#808080"),
+    });
+    expect(
+      measured
+        .filter(({ pair, ratio }) => ratio < pair[2])
+        .map(
+          ({ pair, surface, ratio }) =>
+            `nokcheong/light ${pair[0]}/${surface} ${(Math.floor(ratio * 100) / 100).toFixed(2)} < ${String(pair[2])}`,
+        ),
+    ).toEqual(contrastFailures("nokcheong", "light", value));
   });
 
   test("Node 가 패키지 이름으로 모듈을 바로 불러 짝 43개를 모두 판정한다", () => {
