@@ -113,3 +113,32 @@ open-session을 부른다 2026-10-26T08:56Z
 - **변이 표.** `45e489b1`의 분리 워크트리(스크래치패드의 `mut`, `uv sync`)에서 세 표를 `--since origin/main`으로 돌렸다. 새 표 열둘 가운데 8·9(두 사본의 `STILL_ACTIVE` 확인)는 고른 시험이 빨갰지만 표지 `… - assert`가 `-q` 요약 줄에 없어 어긋났다. 요약 줄이 `FAILED …[훅]`으로 끝나는 것을 그 로그에서 보고, 시험 원문에 없는 `…읽히지_않는다[도구]`·`[훅]`으로 바꿔 둘만 다시 돌려 기대대로였다. 옛 표 둘의 바뀐 변이 다섯(러너 표 둘, 표 가드 셋)은 모두 기대대로 빨강. 결과는 `.scratch/harness/probes/README.md`의 새 행과 옛 두 행에 적었다.
 - **카나리아 여섯.** 넷은 바로 통과 4. `probes_rule_conclusion_hook`·`probes_rule_kill_and_snapshot`은 `--control-commit` 없이 돌려 대조군이 새 사본이라 실패했고, 머리 주석의 `77ecd319`·`528bd257`을 주어 다시 돌려 둘 다 통과 4였다(claude 2.1.302). `kill_and_snapshot`은 2026-10-17에 한도로 사전 확인만 했던 것의 첫 실제 통과다. 여섯의 `# 최신 결과:` 줄을 고쳤다.
 - **PR 직전 리뷰.** CodeRabbit CLI는 `Seat: not assigned`라 대체 둘을 돌렸다. `/security-review`는 발견 없음. `bug-perf-review`는 세 주장을 이 PC에서 직접 돌려 대 봤다: 1(끝난 프로세스는 핸들이 남으면 열린다)과 2(Popen을 쥐면 pid를 다시 주지 않는다)는 맞고, 3(리눅스는 시험 안에 pid가 돌아오지 않는다)은 확률이라 "`pid_max` 만큼 프로세스가 뜨기 전에는"으로 고쳤다. 유효 Minor 하나: 윈도에서 종료 코드 259로 끝난 프로세스는 `STILL_ACTIVE`와 값이 같아 산 것으로 읽힌다(그 서브에이전트가 `sys.exit(259)`로 손으로 봤다). 코드는 두고 훅 독스트링의 못 보는 것에 적고 `test_종료_코드_259로_끝난_프로세스는_윈도에서_산_것으로_읽힌다`(훅·도구, 리눅스는 None)로 고정했다. `WaitForSingleObject`로 가르는 길은 변이 도구가 0·1·2로만 끝나 값이 맞지 않아 두었다.
+- **검증.** `tools/run_checks.py` 모두 통과(pytest 650초, web-verify 553초), ruff 둘 통과. 그 뒤 마크다운(일지·티켓)만 고쳐 `SKIP=pytest,web-verify`로 커밋 `3b96d5ce`. 나머지 pre-commit 검사는 지났다. 티켓 011은 `done`.
+- **PR.** [njh6803/agent-os#388](https://github.com/njh6803/agent-os/pull/388)을 열었다. `@coderabbitai review` 코멘트는 아직 남기지 않았다(새 세션이 남긴다). 분리 워크트리는 걷었다.
+- **인계.** `커밋 뒤` 계기는 앞 지시문이 `인계: 커밋 뒤`라 넘기지 않고 이었다. `PR 연 뒤` 계기(컨텍스트 약 24만)에서 넘긴다. 이 세션의 제목은 `chore/011-mutate-check-and-marker`였다.
+
+## 인계 지시문 (셋째)
+
+- 다음 작업: .scratch/harness/issues/011-mutate-check-and-marker.md의 PR #388을 봇 회차부터 반영하고 병합한다
+- 다음 단계: PR 반영·병합
+- 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+- 시작 프롬프트: 대기열 417·449를 티켓 .scratch/harness/issues/011-mutate-check-and-marker.md로 쓰고 한다
+- 브랜치: chore/011-mutate-check-and-marker
+- 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+- 읽을 것: docs/journal/2026-10-26-09-mutate-check-and-marker.md의 "이어서 (셋째 세션, 커밋 뒤부터)", docs/constitution/operations.md 리뷰 파이프라인 3·4
+- 이어받을 상태: 인계: PR 연 뒤. PR #388(머리 3b96d5ce)을 열었고 첫 `@coderabbitai review` 코멘트부터 순서 1의 2(봇 회차)를 한다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. docs/journal/2026-10-26-09-mutate-check-and-marker.md
+- 확인할 선행 조건: 없음
+- 이번 요청 범위: PR과 병합까지
+
+잠금 풀기: 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T09:53Z
+
+## 이어서 (넷째 세션, PR 연 뒤부터)
+
+> 사용자: 대기열 417·449를 티켓 .scratch/harness/issues/011-mutate-check-and-marker.md로 쓰고 한다
+
+- **봇 첫 회차(머리 `3b96d5ce`).** CI 모두 통과. CodeRabbit은 `92b61458..3b96d5ce`를 보고 "No actionable comments"였다. claude-review는 Minor 셋과 Nit 하나를 냈고 첫 회차라 지적마다 판단했다.
+  - 고친 것: `staged()`의 `authored`를 위치 튜플에서 이름 있는 칸 `_Authored`(NamedTuple)로 바꿨다. 변이 표 `mutate_echo_and_start_mutations.toml`이 원문으로 든 `found += _echo_problems(root, fresh, index)` 줄은 글자 그대로 두려고 아래 루프는 튜플 풀기를 남겼다.
+  - 둔 것: `process_started`를 플랫폼 갈래 함수 둘로 나누기(두 사본의 `STILL_ACTIVE` 변이가 그 원문을 들어, 나누면 변이를 다시 돌려야 한다. 두 사본의 값은 시험이 대조한다). 고르지 않은 `--check`가 메아리를 보지 않는 시험은 이미 `test_고르지_않은_원문_확인은_옛_변이의_표지를_소급하지_않는다`가 고정한다. Nit(훅이 프로세스를 두 번 연다)은 동작에 문제가 없어 둔다. 뒤로 넘긴 일은 없다.
+- **다시 돌린 명령.** ruff·포맷·pyright(`tools/mutate.py`), `pytest tests/tools/test_mutate.py -k "색인 or staged"` 23 통과. 나머지는 커밋의 pre-commit으로 갈음한다.

@@ -272,7 +272,7 @@ import tomllib
 from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -1362,6 +1362,14 @@ class _Watched:
     same: tuple[str, ...]
 
 
+class _Authored(NamedTuple):
+    """이 커밋이 더했거나 고친 표. `fresh` 는 그 표에서 어느 부모 판의 같은 표와도 다른 변이다."""
+
+    table: str
+    spec: Spec
+    fresh: Spec | None
+
+
 def staged(*, root: Path, out: Callable[[str], None]) -> int:
     """커밋에 들 판(색인)의 변이 표 원문을 본다. 모두 맞으면 0, 하나라도 틀리면 2.
 
@@ -1384,7 +1392,7 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
     relative = _Relative(root)
     lines: list[str] = []
     problems = 0
-    authored: list[tuple[str, Spec, Spec | None]] = []
+    authored: list[_Authored] = []
     authored_count = 0
     watched: list[_Watched] = []
     for table in tables:
@@ -1404,7 +1412,7 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
             continue
         if not same:
             olds = [texts.get(f"{parent}:{table}") for parent in parents]
-            authored.append((table, spec, _fresh(spec, olds)))
+            authored.append(_Authored(table, spec, _fresh(spec, olds)))
             continue
         for mutation in spec.mutation:
             files = relative.files(mutation)
@@ -1412,16 +1420,16 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
                 watched.append(_Watched(table, mutation, same))
     wanted = [
         f":{name}"
-        for _, spec, _ in authored
-        for mutation in spec.mutation
+        for item in authored
+        for mutation in item.spec.mutation
         for name in relative.files(mutation) or ()
     ]
     wanted += [
         f":{name}"
-        for _, _, fresh in authored
-        if fresh is not None
-        for mutation in fresh.mutation
-        for arg in _test_args(_runners(fresh), mutation)
+        for item in authored
+        if item.fresh is not None
+        for mutation in item.fresh.mutation
+        for arg in _test_args(_runners(item.fresh), mutation)
         if (name := relative(arg)) is not None
     ]
     wanted += [
