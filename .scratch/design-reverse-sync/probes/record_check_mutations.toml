@@ -193,8 +193,8 @@ expect_output = ['-   "project/components/Badge/README.md",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''    if (revert.has(path) || kind === "edited" || kind === "deleted") {'''
-new = '''    if (kind === "edited" || kind === "deleted") {'''
+old = '''    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
+new = '''    if (kind === "edited" || kind === "claimed" || kind === "deleted") {'''
 
 [[mutation]]
 name = "보낸 목표를 로컬과 맞대지 않으면 그 사례가 빨갛다"
@@ -327,7 +327,7 @@ expect_output = ['+     "project/guidelines/index.md": "edited",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/check.ts"
-old = '''  if (target !== null && hash === target) {'''
+old = '''  if (hash === target) {'''
 new = '''  if (target !== null && hash === before) {'''
 
 [[mutation]]
@@ -357,14 +357,14 @@ new = '''  return judged("edited", { diffs, mixed: false, removed: false });'''
 [[mutation]]
 name = "claim 을 보지 않으면 claim 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/check.test.ts", "-t", "들이기의 claim 이 든 기록은"]
+tests = ["tools/sync-design-system/check.test.ts", "-t", "claim 과 같은 웹은 그 브랜치가 들이는 중이고"]
 expect = "red"
-expect_output = ["AssertionError: expected null to be 'claim'"]
+expect_output = ['+   "result": "clean",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/check.ts"
-old = '''  if (record.claim !== null) {'''
-new = '''  if (record.claim === "claim") {'''
+old = '''  if (claim !== null) {'''
+new = '''  if (claim === "claim") {'''
 
 [[mutation]]
 name = "색인 목록을 키 차례째 맞대면 키 차례 사례가 빨갛다"
@@ -387,7 +387,8 @@ expect_output = ['+         "readme": "project/README.md",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/check.ts"
-old = '''      !sameJson(after[key], before[key]) && (target === null || !sameJson(after[key], target[key])),'''
+old = '''      !sameJson(after[key], before[key]) &&
+      others.every((lists) => !sameJson(after[key], lists[key])),'''
 new = '''      !sameJson(after[key], before[key]),'''
 
 [[mutation]]
@@ -522,8 +523,8 @@ expect_output = ["CommandError: 되돌릴 project/components/Card/README.md 가 
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''  const stray = [...revert].filter((path) => !output.has(path) && !leftByCode.has(path));'''
-new = '''  const stray = [...revert].filter((path) => !output.has(path));'''
+old = '''  const stray = [...revert].filter((path) => !input.output.has(path) && !leftByCode.has(path));'''
+new = '''  const stray = [...revert].filter((path) => !input.output.has(path));'''
 
 [[mutation]]
 name = "pending 의 지울 경로를 코드가 뺀 것으로 보지 않으면 웹이 고친 지울 경로 사례가 빨갛다"
@@ -582,27 +583,27 @@ expect_output = ['+     "project/guidelines/web-design.md",', '-   "webRemoved":
 timeout = 300
 
 [[mutation.edit]]
-file = "web/tools/sync-design-system/record.ts"
-old = '''      webRemoved.push(editPath);'''
-new = '''      revert.push(editPath);'''
+file = "web/tools/sync-design-system/check-report.ts"
+old = '''    lists[known].push(editPath);'''
+new = '''    lists[known === "removed" ? "changed" : known].push(editPath);'''
 
 [[mutation]]
 name = "바뀐 파일의 배열이 없는 보고를 빈 목록으로 지나가면 그 사례가 빨갛다"
 runner = "node"
 tests = ["tools/sync-design-system/record-check.test.ts", "-t", "바뀐 파일의 배열이 없으면"]
 expect = "red"
-expect_output = ['+       "message": "r 를 읽을 수 없다']
+expect_output = ['+       "message": "no-files.json 가 index 로 바뀐 색인 목록의 배열을 들지 않는다",']
 
 [[mutation.edit]]
-file = "web/tools/sync-design-system/record.ts"
+file = "web/tools/sync-design-system/check-report.ts"
 old = '''  if (files === undefined) {
-    throw inputError(path, "files 로 바뀐 파일의 배열을 들지 않는다");
+    throw inputError(path, `${where}files 로 바뀐 파일의 배열을 들지 않는다`);
   }
 '''
 new = ''''''
 
 [[mutation.edit]]
-file = "web/tools/sync-design-system/record.ts"
+file = "web/tools/sync-design-system/check-report.ts"
 old = '''  for (const item of files) {'''
 new = '''  for (const item of files ?? []) {'''
 
@@ -655,5 +656,5 @@ expect_output = ['none/null/removed, 지난 산출 [\"project/components/Chip/RE
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''  const stray = [...revert].filter((path) => !output.has(path) && !leftByCode.has(path));'''
-new = '''  const stray = [...revert].filter((path) => !output.has(path));'''
+old = '''  const stray = [...revert].filter((path) => !input.output.has(path) && !leftByCode.has(path));'''
+new = '''  const stray = [...revert].filter((path) => !input.output.has(path));'''

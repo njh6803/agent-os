@@ -1,10 +1,11 @@
-// 확인의 테스트(design-reverse-sync 명세 Testing Decisions "확인"과 그 2026-10-22 주석에서 `claim` 이 든 사례를 뺀
+// 확인의 테스트(design-reverse-sync 명세 Testing Decisions "확인"과 그 2026-10-22 주석, `claim` 이 든 사례는 06 티켓의
 // 것). 페이지의 저장 꼴은 02 가 임시 아티팩트에서 받은 시험 자료(`fixtures/`)다.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { judge, nextFetch, type CheckReport, type WebFiles } from "./check.ts";
+import type { CheckReport, EditLists, PendingReport } from "./check-report.ts";
+import { judge, judgeWithInherit, nextFetch, type CheckContext, type WebFiles } from "./check.ts";
 import { CommandError } from "./command.ts";
 import {
   fileHash,
@@ -17,6 +18,7 @@ import {
 import { jsonValue } from "./io.ts";
 import {
   serializeRecord,
+  type Claim,
   type FileEntry,
   type IndexLists,
   type Pending,
@@ -664,14 +666,6 @@ describe("판단할 수 없음", () => {
     ).toBe("recordMalformed");
   });
 
-  test("들이기의 claim 이 든 기록은 06 이 들어올 때까지 가르지 못한다", () => {
-    expect(
-      reason(
-        judge(web(unchanged({ record: serializeRecord(lastRecord({ claim: { files: {} } })) }))),
-      ),
-    ).toBe("claim");
-  });
-
   test("기준본이 없다", () => {
     expect(
       reason(judge(web(unchanged({ record: serializeRecord(lastRecord({ baseline: null })) })))),
@@ -749,5 +743,174 @@ describe("받은 폴더의 꼴", () => {
       kind: "input",
       message: `받은 파일과 읽지 못한 경로가 겹친다: ${GUIDE}`,
     });
+  });
+});
+
+describe("들이기의 claim", () => {
+  const ME = "feature/12-me";
+  const OTHER = "feature/11-other";
+  /** 웹이 값 하나를 더 고친 tokens.json. claim 의 사본(PAGE_SAVED) 뒤에 더 고친 몫이다. */
+  const FURTHER = PAGE_SAVED.replace('"nokcheong-dark": "#f4f8fb"', '"nokcheong-dark": "#000000"');
+  const WEB_BUTTON = "# 버튼\n\n웹에서 고친 글.\n";
+
+  /** 웹의 tokens.json 과 버튼 README 를 들인 남의 claim. */
+  function claimOf(overrides: Partial<Claim> = {}): Claim {
+    return {
+      branch: OTHER,
+      ticket: ".scratch/x/issues/11-other.md",
+      at: "2026-10-27T00:00:00.000Z",
+      tokens: parsed(PAGE_SAVED),
+      changed: new Map([[BUTTON, entry(BUTTON, WEB_BUTTON).hash]]),
+      added: new Map(),
+      removed: [],
+      index: LISTS,
+      base: null,
+      ...overrides,
+    };
+  }
+
+  function claimed(record: Partial<SyncRecord> = {}): string {
+    return serializeRecord(lastRecord({ claim: claimOf(), ...record }));
+  }
+
+  /** claim 과 같은 웹. */
+  function importing(overrides: Partial<Artifact> = {}): Artifact {
+    return unchanged({
+      record: claimed(),
+      tokens: PAGE_SAVED,
+      files: { ...MARKDOWN, [BUTTON]: WEB_BUTTON },
+      ...overrides,
+    });
+  }
+
+  function context(code: string = UPLOADED, branch: string = ME): CheckContext {
+    return { branch, codeTokens: readTokens(parsed(code)) };
+  }
+
+  const NO_FURTHER: EditLists = { tokens: [], tokensMixed: false, files: [], index: [] };
+
+  const SUMMARY = {
+    branch: OTHER,
+    ticket: ".scratch/x/issues/11-other.md",
+    at: "2026-10-27T00:00:00.000Z",
+    own: false,
+    changed: [BUTTON, TOKENS_PATH],
+    added: [],
+    removed: [],
+  };
+
+  function inProgress(
+    further: Partial<EditLists> = {},
+    pending: PendingReport | null = null,
+  ): CheckReport {
+    return {
+      result: "importing",
+      claim: SUMMARY,
+      further: { ...NO_FURTHER, ...further },
+      pending,
+      inherit: null,
+    };
+  }
+
+  const STOPPED: Pending = {
+    files: new Map([[TOKENS_PATH, entry(TOKENS_PATH, FURTHER)]]),
+    delete: [],
+    index: LISTS,
+  };
+
+  test("claim 과 같은 웹은 그 브랜치가 들이는 중이고 더 고친 몫이 없다", () => {
+    expect(judge(web(importing()), context())).toEqual(inProgress());
+  });
+
+  test("페이지가 꼴만 다시 쓴 claim 과 같은 웹도 더 고친 몫이 없다", () => {
+    const rewritten = JSON.stringify(JSON.parse(PAGE_SAVED), null, 4);
+
+    expect(judge(web(importing({ tokens: rewritten })), context())).toEqual(inProgress());
+  });
+
+  test("claim 뒤에 더 고친 몫만 웹 편집으로 낸다", () => {
+    const files = { ...MARKDOWN, [BUTTON]: WEB_BUTTON, [GUIDE]: "고침\n" };
+    const report = judge(web(importing({ tokens: FURTHER, files })), context());
+
+    expect(report).toEqual(
+      inProgress({
+        tokens: diffTokens(readTokens(parsed(PAGE_SAVED)), readTokens(parsed(FURTHER))),
+        files: [{ path: GUIDE, change: "changed" }],
+      }),
+    );
+  });
+
+  test("claim 의 브랜치가 지금 브랜치와 같으면 자기 것이다", () => {
+    expect(judge(web(importing()), context(UPLOADED, OTHER))).toEqual({
+      ...inProgress(),
+      claim: { ...SUMMARY, own: true },
+    });
+  });
+
+  test("claim 이 지운 파일이 웹에 없으면 웹 편집이 아니다", () => {
+    const record = claimed({ claim: claimOf({ removed: [GUIDE] }) });
+    const files = { ...MARKDOWN, [BUTTON]: WEB_BUTTON, [GUIDE]: undefined };
+
+    expect(judge(web(importing({ record, files })), context())).toEqual({
+      ...inProgress(),
+      claim: { ...SUMMARY, removed: [GUIDE] },
+    });
+  });
+
+  test("claim 의 색인 목록과 같은 웹 색인은 웹 편집이 아니다", () => {
+    const docs = { readme: README_PATH, sections: [GUIDE] };
+    const record = claimed({ claim: claimOf({ index: { ...LISTS, docs } }) });
+
+    expect(judge(web(importing({ record, index: index({ docs }) })), context())).toEqual(
+      inProgress(),
+    );
+  });
+
+  test("claim 이 있는데 지금 브랜치나 지금 코드의 tokens.json 이 없으면 usage 오류다", () => {
+    expect(caught(() => judge(web(importing())))).toMatchObject({
+      kind: "usage",
+      message:
+        "기록에 claim 이 있어 지금 브랜치(--branch)와 지금 코드에서 지은 tokens.json(--code-tokens)이 있어야 한다",
+    });
+  });
+
+  test("pending 과 claim 이 함께 있고 tokens.json 이 pending 의 목표와 같으면 더 고친 몫이 아니다", () => {
+    const record = claimed({ pending: STOPPED });
+
+    expect(judge(web(importing({ record, tokens: FURTHER })), context())).toEqual(
+      inProgress({}, { [TOKENS_PATH]: "sent" }),
+    );
+  });
+
+  test("pending 과 claim 이 함께 있고 아직 보내지 않은 tokens.json 은 claim 의 것으로 가른다", () => {
+    const record = claimed({ pending: STOPPED });
+
+    expect(judge(web(importing({ record })), context())).toEqual(
+      inProgress({}, { [TOKENS_PATH]: "claimed" }),
+    );
+  });
+
+  test("병합된 claim 뒤에 웹이 코드와 같아진 몫은 더 고친 몫이 아니다", () => {
+    expect(judge(web(importing({ tokens: FURTHER })), context(FURTHER))).toEqual(inProgress());
+  });
+
+  test("열린 PR 때 덮어써 웹이 기준본과 같아진 뒤 그 PR 이 병합되어도 더 고친 몫이 아니다", () => {
+    const overwritten = importing({ tokens: UPLOADED, files: MARKDOWN });
+
+    expect(judge(web(overwritten), context(PAGE_SAVED))).toEqual(inProgress());
+  });
+
+  test("남의 claim 에 더 고친 몫이 있으면 그 몫만 claim 의 사본 값으로 바꾼 이어받을 기준본을 낸다", () => {
+    const { report, inherit } = judgeWithInherit(web(importing({ tokens: FURTHER })), context());
+
+    expect(report.result).toBe("importing");
+    expect(inherit === null ? null : readTokens(inherit)).toEqual(readTokens(parsed(PAGE_SAVED)));
+  });
+
+  test("자기 claim 이나 더 고친 몫이 없는 claim 은 이어받을 기준본을 내지 않는다", () => {
+    const further = web(importing({ tokens: FURTHER }));
+
+    expect(judgeWithInherit(further, context(UPLOADED, OTHER)).inherit).toBeNull();
+    expect(judgeWithInherit(web(importing()), context()).inherit).toBeNull();
   });
 });

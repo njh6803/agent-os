@@ -19,17 +19,9 @@
  */
 
 import { CommandError } from "./command.ts";
-import { fileHash, isRecorded, RECORD_PATH, sha256, TOKENS_PATH } from "./file-hash.ts";
-import { sortedPaths } from "./io.ts";
-import type { RecordChanges, SyncRecord } from "./sync-record.ts";
-
-/**
- * 확인이 `pending` 의 경로마다 낸 분류. 보낼 파일은 목표와 같으면 `sent`, 앞 해시와 같거나 웹에 아직 없으면 `unsent`,
- * 어디와도 다르면 `edited` 다. 지울 경로는 웹에 없으면 `deleted`, 아직 있으면 `remaining` 이다.
- */
-export type PendingClass = "sent" | "unsent" | "edited" | "deleted" | "remaining";
-
-export type PendingState = ReadonlyMap<string, PendingClass>;
+import { fileHash, isRecorded, RECORD_PATH, TOKENS_PATH } from "./file-hash.ts";
+import { sha256, sortedPaths } from "./io.ts";
+import type { PendingState, RecordChanges, SyncRecord } from "./sync-record.ts";
 
 export interface UploadInput {
   readonly record: SyncRecord | null;
@@ -71,7 +63,25 @@ function checkedState(record: SyncRecord | null, given: PendingState | null): Pe
   return given;
 }
 
-/** 이번 올리기가 보낼 파일과 지울 경로. */
+/** 되돌리거나 되살릴 경로. 이번 산출에 없으면 코드가 뺀 경로로 알려진 것만 받고, 아니면 `input` 오류다. */
+function checkedReverts(input: UploadInput): Set<string> {
+  const pendingDelete = input.record?.pending?.delete ?? [];
+  const leftByCode = new Set([...(input.previousOutput ?? []), ...pendingDelete]);
+  const revert = new Set([...input.revert, ...input.webRemoved]);
+  const stray = [...revert].filter((path) => !input.output.has(path) && !leftByCode.has(path));
+  if (stray.length > 0) {
+    throw new CommandError(
+      "input",
+      `되돌릴 ${sortedPaths(stray).join(", ")} 가 이번 산출에 없고 지난 산출 목록과 pending 의 지울 경로에도 없다`,
+    );
+  }
+  return revert;
+}
+
+/**
+ * 이번 올리기가 보낼 파일과 지울 경로. 확인이 웹 편집(`edited`)이나 들이는 `claim` 의 것(`claimed`)으로 가른 `pending`
+ * 파일은 웹의 값이 코드와 다를 수 있어 늘 보낸다.
+ */
 export function planUpload(input: UploadInput): UploadPlan {
   const { record, output, artifactSha256 } = input;
   const state = checkedState(record, input.pendingState);
@@ -79,15 +89,7 @@ export function planUpload(input: UploadInput): UploadPlan {
     throw new CommandError("usage", "기록이 없으면 아티팩트에서 받은 sha256 으로 맞대야 한다");
   }
   const pendingDelete = record?.pending?.delete ?? [];
-  const leftByCode = new Set([...(input.previousOutput ?? []), ...pendingDelete]);
-  const revert = new Set([...input.revert, ...input.webRemoved]);
-  const stray = [...revert].filter((path) => !output.has(path) && !leftByCode.has(path));
-  if (stray.length > 0) {
-    throw new CommandError(
-      "input",
-      `되돌릴 ${sortedPaths(stray).join(", ")} 가 이번 산출에 없고 지난 산출 목록과 pending 의 지울 경로에도 없다`,
-    );
-  }
+  const revert = checkedReverts(input);
 
   const unchangedOnWeb = (path: string, data: Uint8Array): boolean => {
     if (record === null) {
@@ -108,7 +110,7 @@ export function planUpload(input: UploadInput): UploadPlan {
       continue;
     }
     const kind = state.get(path);
-    if (revert.has(path) || kind === "edited" || kind === "deleted") {
+    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {
       send.push(path);
     } else if (kind === "sent") {
       const target = record?.pending?.files.get(path);

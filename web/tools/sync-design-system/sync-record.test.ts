@@ -1,5 +1,5 @@
 // 기록의 꼴과 다음 기록 짓기의 테스트(design-reverse-sync 명세 "기록"과 그 2026-10-22 주석 둘, Testing Decisions
-// "기록"에서 `claim` 을 넣고 비우는 것(06)을 뺀 것).
+// "기록"). `claim` 을 넣고 고쳐 쓰는 것은 `claim.test.ts` 다.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,6 +13,7 @@ import {
   readRecord,
   RECORD_LIMIT,
   serializeRecord,
+  type Claim,
   type FileEntry,
   type IndexLists,
   type RecordChanges,
@@ -92,6 +93,26 @@ function previousRecord(overrides: Partial<SyncRecord> = {}): SyncRecord {
   };
 }
 
+/** 들이기가 쓴 claim. 웹이 버튼 카드를 고치고 지침 하나를 더하고 카드 하나를 지웠다. */
+const CLAIM: Claim = {
+  branch: "feature/11-web-edit-gray",
+  ticket: ".scratch/design-reverse-sync/issues/11-web-edit-gray.md",
+  at: "2026-10-26T00:30:00.000Z",
+  tokens: parsed(TOKENS),
+  changed: new Map([
+    [
+      "project/components/Button/README.md",
+      fileHash("project/components/Button/README.md", bytes("웹의 버튼\n")),
+    ],
+  ]),
+  added: new Map([
+    ["project/guidelines/new.md", fileHash("project/guidelines/new.md", bytes("새 지침\n"))],
+  ]),
+  removed: ["project/components/Card/README.md"],
+  index: INDEX,
+  base: null,
+};
+
 const OUTPUT = new Map<string, Uint8Array>([
   ["project/components/Button/README.md", bytes("새 버튼\n")],
   ["project/tokens.json", bytes(TOKENS)],
@@ -110,6 +131,7 @@ describe("다음 기록", () => {
       }),
       index: INDEX,
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     expect([...next.files.keys()]).toEqual([
@@ -142,6 +164,7 @@ describe("다음 기록", () => {
       changes: changes({ send: [...output.keys()] }),
       index: indexLists({ ...INDEX, title: "제목", editing: "off", lastChange: { via: "x" } }),
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     expect([...next.files.keys()]).toEqual([
@@ -171,6 +194,7 @@ describe("다음 기록", () => {
       changes: changes({ send: ["project/tokens.json"] }),
       index: INDEX,
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     expect(next.baseline).toEqual(parsed(changed));
@@ -190,6 +214,7 @@ describe("다음 기록", () => {
       }),
       index: target,
       call: { kind: "first" },
+      clearClaim: false,
     });
 
     expect(first.files).toEqual(previous.files);
@@ -216,6 +241,7 @@ describe("다음 기록", () => {
       changes: changes({ send: ["project/components/Button/README.md"] }),
       index: INDEX,
       call: { kind: "first" },
+      clearClaim: false,
     });
     const last = nextRecord({
       previous: first,
@@ -224,6 +250,7 @@ describe("다음 기록", () => {
       changes: changes({ send: ["project/components/Button/README.md"] }),
       index: INDEX,
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     expect(first.pending).not.toBeNull();
@@ -258,6 +285,7 @@ describe("다음 기록", () => {
       changes: changes({ landed, unchanged: ["project/tokens.json"] }),
       index: INDEX,
       call,
+      clearClaim: false,
     });
     const last = nextRecord({
       previous: again,
@@ -266,6 +294,7 @@ describe("다음 기록", () => {
       changes: changes({ landed, unchanged: ["project/tokens.json"] }),
       index: INDEX,
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     const button = entry("project/components/Button/README.md", "새 버튼\n");
@@ -284,6 +313,7 @@ describe("다음 기록", () => {
       changes: changes({ gone: ["project/components/Card/README.md"] }),
       index: INDEX,
       call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+      clearClaim: false,
     });
 
     expect(next.files.has("project/components/Card/README.md")).toBe(false);
@@ -302,15 +332,15 @@ describe("다음 기록", () => {
       changes: changes({ gone: ["project/components/Card/README.md"] }),
       index: INDEX,
       call: { kind: "first" },
+      clearClaim: false,
     });
 
     expect(again.files.has("project/components/Card/README.md")).toBe(true);
     expect(again.pending?.delete).toEqual(["project/components/Card/README.md"]);
   });
 
-  test("claim 칸은 받은 그대로 지킨다", () => {
-    const claim = { branch: "feature/11-web-edit-gray", at: "2026-10-26T00:30:00.000Z" };
-    const previous = previousRecord({ claim });
+  test("덮어쓰기를 포함한 올리기는 claim 을 비우지 않는다", () => {
+    const previous = previousRecord({ claim: CLAIM });
     for (const call of [
       { kind: "first" } as const,
       { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" } as const,
@@ -319,12 +349,35 @@ describe("다음 기록", () => {
         previous,
         output: OUTPUT,
         artifact: new Map(),
-        changes: changes({}),
+        changes: changes({ send: ["project/tokens.json"] }),
         index: INDEX,
         call,
+        clearClaim: false,
       });
-      expect(next.claim).toEqual(claim);
+      expect(next.claim).toEqual(CLAIM);
     }
+  });
+
+  test("병합된 claim 의 여러 호출 올리기는 첫 기록에서 claim 과 pending 을 함께 두고 마지막 기록에서만 비운다", () => {
+    const previous = previousRecord({ claim: CLAIM });
+    const input = {
+      output: OUTPUT,
+      artifact: new Map<string, Uint8Array>(),
+      changes: changes({ send: ["project/components/Button/README.md", "project/tokens.json"] }),
+      index: INDEX,
+      clearClaim: true,
+    };
+    const first = nextRecord({ ...input, previous, call: { kind: "first" } });
+    expect(first.claim).toEqual(CLAIM);
+    expect(first.pending).not.toBeNull();
+
+    const last = nextRecord({
+      ...input,
+      previous: first,
+      call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+    });
+    expect(last.claim).toBeNull();
+    expect(last.pending).toBeNull();
   });
 
   test("보낼 파일이 이번 산출에 없으면 input 오류다", () => {
@@ -336,6 +389,7 @@ describe("다음 기록", () => {
         changes: changes({ send: ["project/components/Missing/README.md"] }),
         index: INDEX,
         call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+        clearClaim: false,
       }),
     );
     expect(thrown).toBeInstanceOf(CommandError);
@@ -354,6 +408,7 @@ describe("다음 기록", () => {
         changes: changes({ send: ["project/components/Button/README.md"] }),
         index: INDEX,
         call: { kind: "last", commit: "2222222", at: "2026-10-26T01:00:00.000Z" },
+        clearClaim: false,
       }),
     );
     expect(thrown).toBeInstanceOf(CommandError);
@@ -367,13 +422,33 @@ describe("다음 기록", () => {
 describe("기록 읽기와 쓰기", () => {
   test("쓴 기록을 다시 읽으면 같은 기록이고 들여쓰기 없는 JSON 이다", () => {
     const record = previousRecord({
-      claim: { branch: "feature/11-web-edit-gray" },
+      claim: { ...CLAIM, base: parsed(TOKENS) },
       pending: { files: new Map(), delete: ["project/a.md"], index: INDEX },
     });
     const text = serializeRecord(record);
 
     expect(text).not.toContain("\n");
     expect(readRecord(text)).toEqual({ kind: "ok", record });
+  });
+
+  test("claim 의 칸이 어긋나면 어긋난 꼴이다", () => {
+    const good = parsed(serializeRecord(previousRecord({ claim: CLAIM })));
+    const claim = jsonObject(good) ? (good.claim ?? null) : null;
+    if (!jsonObject(good) || !jsonObject(claim)) {
+      throw new Error("기록이나 claim 이 객체가 아니다");
+    }
+    const cases: [string, unknown][] = [
+      ["문자열 claim", "feature/11-web-edit-gray"],
+      ["빈 브랜치", { ...claim, branch: "" }],
+      ["티켓 없음", { ...claim, ticket: undefined }],
+      ["짧은 해시", { ...claim, changed: { "project/a.md": "짧다" } }],
+      ["project 밖의 더한 경로", { ...claim, added: { "밖.md": "a".repeat(64) } }],
+      ["수가 든 지운 경로", { ...claim, removed: [3] }],
+      ["색인 목록 없음", { ...claim, index: null }],
+    ];
+    for (const [label, item] of cases) {
+      expect(readRecord(JSON.stringify({ ...good, claim: item })).kind, label).toBe("malformed");
+    }
   });
 
   test("파일 목록은 경로 차례로 적는다", () => {
@@ -484,10 +559,11 @@ describe("기록의 크기", () => {
         ticket: ".scratch/design-reverse-sync/issues/11-web-edit-gray-50.md",
         at: "2026-10-26T00:30:00.000Z",
         tokens,
-        baseline: tokens,
-        files: { "project/README.md": "e".repeat(64) },
-        added: [],
+        changed: new Map([["project/README.md", "e".repeat(64)]]),
+        added: new Map(),
         removed: [],
+        index: INDEX,
+        base: tokens,
       },
     };
     const text = serializeRecord(record);
@@ -499,14 +575,16 @@ describe("기록의 크기", () => {
 
   test("한도는 512,000 바이트이고 넘는 기록은 쓰지 않고 limit 오류다", () => {
     expect(RECORD_LIMIT).toBe(512_000);
-    const record = previousRecord();
+    const record = previousRecord({ claim: CLAIM });
     const room = RECORD_LIMIT - new TextEncoder().encode(serializeRecord(record)).byteLength;
-    // claim 의 글 하나로 꼭 한도까지 채운다. 따옴표 둘과 null 을 바꾼 몫을 뺀다.
-    const filler = "x".repeat(room + "null".length - 2);
-    const atLimit = { ...record, claim: filler };
+    // claim 의 티켓 경로 하나로 꼭 한도까지 채운다.
+    const filler = CLAIM.ticket + "x".repeat(room);
+    const atLimit = { ...record, claim: { ...CLAIM, ticket: filler } };
 
     expect(new TextEncoder().encode(serializeRecord(atLimit)).byteLength).toBe(RECORD_LIMIT);
-    const thrown = caught(() => serializeRecord({ ...record, claim: `${filler}x` }));
+    const thrown = caught(() =>
+      serializeRecord({ ...record, claim: { ...CLAIM, ticket: `${filler}x` } }),
+    );
     expect(thrown).toBeInstanceOf(CommandError);
     expect(thrown).toMatchObject({
       kind: "limit",

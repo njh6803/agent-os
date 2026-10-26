@@ -1,0 +1,359 @@
+# design-reverse-sync 티켓 06 의 변이 표(`web/tools/sync-design-system`). claim 쓰기·비우기(`claim.ts`, `sync-record.ts`),
+# 확인의 claim 맞대기(`check.ts`), 이어받을 기준본(`tokens-overlay.ts`), 보낼 것(`upload.ts`), 기록 명령(`record.ts`),
+# 결정표(`decide.ts`)의 시험은 구현 뒤에 쓰거나 모듈이 없어 빨갰을 뿐이라 단언 하나하나의 빨강은 보지 못했다. 변이마다
+# 그 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/claim_mutations.toml [번호 ...]
+# 재지 않은 것: 이 표는 단언이 재는 줄이 있는 갈래에만 변이를 둔다. 시험 사례가 없거나 사례가 오류 문구만 보는
+# 갈래는 변이가 없다. 예는 기록 명령이 병합된 claim 에 더 고친 몫이 있을 때 --overwrite 없는 --claim-merged 를 거절하는
+# 갈래, 웹의 tokens.json 이 없고 claim 의 사본도 없을 때 claimed 로 가르는 갈래, claim.ts 의 usage·input 거절(웹 편집
+# 있음에 덮을 claim 이나 이어받을 기준본을 준 것, 들이는 중에 덮을 claim 이 없는 것, 자기 claim 에 기준본을 준 것, 받은
+# tokens.json 이 풀리지 않는 것), record claim --clear 가 다른 옵션을 거절하는 갈래, check paths 가 --branch 를 거절하는
+# 갈래, check judge --inherit-out 이 파일을 쓰고 보고에 경로를 싣는 명령 수준의 길이다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- claim 쓰기와 비우기 -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "기록의 claim 을 덮을 claim 과 맞대지 않으면 어긋남 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/claim.test.ts", "-t", "기록의 claim 이 덮을 claim 과 다르면"]
+expect = "red"
+expect_output = ['''AssertionError: expected null to be an instance of CommandError''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''  if (!sameClaim(current.claim, expected)) {'''
+new = '''  if (current.claim === undefined) {'''
+
+[[mutation]]
+name = "웹에서 더했다가 지운 경로를 지운 것으로 들면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/claim.test.ts", "-t", "웹에서 더했다가 다시 지운 경로는"]
+expect = "red"
+expect_output = ['''AssertionError: expected [ 'project/guidelines/new.md' ] to deeply equal []''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''    } else if (!wasAdded) {'''
+new = '''    } else {'''
+
+[[mutation]]
+name = "자기 claim 을 고쳐 쓸 때 이어받은 기준본을 버리면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/claim.test.ts", "-t", "자기 claim 을 고쳐 쓰면"]
+expect = "red"
+expect_output = ['''+   "base": null,''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''        return claimOf(head, web, claimedPaths(expected, reading.further), expected.base);'''
+new = '''        return claimOf(head, web, claimedPaths(expected, reading.further), null);'''
+
+[[mutation]]
+name = "남의 claim 을 기준본 없이 덮으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/claim.test.ts", "-t", "남의 claim 은 이어받을 기준본 없이"]
+expect = "red"
+expect_output = ['''AssertionError: expected null to match object { kind: 'usage' }''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''      if (inherit === null) {'''
+new = '''      if (inherit === undefined) {'''
+
+[[mutation]]
+name = "이어받기가 앞 claim 의 파일 목록을 합치지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/claim.test.ts", "-t", "이어받는 claim 은 앞 claim 의 파일 목록과"]
+expect = "red"
+expect_output = ['''-     "project/components/Button/README.md" =>''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''  for (const path of [...(previous?.changed.keys() ?? []), ...(previous?.removed ?? [])]) {'''
+new = '''  for (const path of [...(previous?.removed ?? [])]) {'''
+
+[[mutation]]
+name = "마지막 기록이 claim 을 비우지 않으면 여러 호출 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "병합된 claim 의 여러 호출 올리기는"]
+expect = "red"
+expect_output = ['''AssertionError: expected { …(9) } to be null''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''    claim: input.clearClaim ? null : claim,'''
+new = '''    claim,'''
+
+# --- 확인의 claim 맞대기 -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "파일을 claim 의 해시와 맞대지 않으면 claim 과 같은 웹 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "claim 과 같은 웹은 그 브랜치가 들이는 중이고"]
+expect = "red"
+expect_output = ['''+         "path": "project/components/Button/README.md",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  if (hash === claimed) {'''
+new = '''  if (hash === "claimed") {'''
+
+[[mutation]]
+name = "claim 이 지운 경로를 보지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "claim 이 지운 파일이 웹에 없으면"]
+expect = "red"
+expect_output = ['''+         "change": "removed",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''    if (claim?.removed.includes(path) === true) {'''
+new = '''    if (claim?.removed.includes(path) === false) {'''
+
+[[mutation]]
+name = "더 고친 몫을 지금 코드와 맞대지 않으면 코드와 같아진 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "병합된 claim 뒤에 웹이 코드와 같아진"]
+expect = "red"
+expect_output = ['''+         "after": "#000000",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  const further = code === null ? unclaimed : unclaimed.filter((diff) => !holds(code, diff));'''
+new = '''  const further = unclaimed;'''
+
+[[mutation]]
+name = "claim 의 브랜치를 지금 브랜치와 맞대지 않으면 자기 것 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "claim 의 브랜치가 지금 브랜치와 같으면"]
+expect = "red"
+expect_output = ['''+     "own": false,''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''    own: claim.branch === branch,'''
+new = '''    own: false,'''
+
+[[mutation]]
+name = "자기 claim 에도 이어받을 기준본을 내면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "자기 claim 이나 더 고친 몫이 없는 claim 은"]
+expect = "red"
+expect_output = ['''AssertionError: expected { version: 1, color: { …(2) }, …(3) } to be null''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''      summary.own || editsEmpty(edits) || webTokens === undefined'''
+new = '''      editsEmpty(edits) || webTokens === undefined'''
+
+[[mutation]]
+name = "색인 목록을 claim 의 목록과 맞대지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "claim 의 색인 목록과 같은 웹 색인은"]
+expect = "red"
+expect_output = ['''+         "key": "docs",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  const others: IndexLists[] = [record.pending?.index, record.claim?.index].filter('''
+new = '''  const others: IndexLists[] = [record.pending?.index].filter('''
+
+# --- 이어받을 기준본 -----------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "이어받을 기준본의 두 벌을 바꿔 쓰면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-overlay.test.ts", "-t", "더 고친 몫의 자리만 claim 사본의 값이고"]
+expect = "red"
+expect_output = ['''+     "after": "#666666",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-overlay.ts"
+old = '''  return tokensFileOf(withSpots(readTokens(web), readTokens(copy), diffs));'''
+new = '''  return tokensFileOf(withSpots(readTokens(copy), readTokens(web), diffs));'''
+
+[[mutation]]
+name = "벌을 옮기지 않으면 벌 지우기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-overlay.test.ts", "-t", "벌을 지운 차이를 옮기면"]
+expect = "red"
+expect_output = ['''+   "jjokbit-dark",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-overlay.ts"
+old = '''      moveTheme(draft, source, diff.theme);'''
+new = '''      void diff.theme;'''
+
+[[mutation]]
+name = "빈 묶음을 더하지 않으면 묶음 없는 글자 스타일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-overlay.test.ts", "-t", "묶음이 없는 글자 스타일은"]
+expect = "red"
+expect_output = ['''AssertionError: expected undefined to be '없는 묶음'''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-overlay.ts"
+old = '''      groups.set(style.group, { family: "", note: "" });'''
+new = '''      void style;'''
+
+# --- 보낼 것과 기록 명령 -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "claimed 로 가른 pending 파일을 보내지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "들이는 claim 의 것으로 가른 pending 의 파일은"]
+expect = "red"
+expect_output = ['''AssertionError: expected [] to deeply equal [ 'project/components/Card/README.md' ]''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
+new = '''    if (revert.has(path) || kind === "edited" || kind === "deleted") {'''
+
+[[mutation]]
+name = "병합된 claim 의 계획이 claim 을 비우지 않으면 흐름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "들이기가 claim 을 쓰면"]
+expect = "red"
+expect_output = ['''+   "clearClaim": false,''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''        clearClaim: claimMerged,'''
+new = '''        clearClaim: false,'''
+
+# --- 결정표 -------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "닫힌 자기 claim 에 기다리는 선택지를 내면 그 칸이 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "own/closed/no 에서 screen"]
+expect = "red"
+expect_output = ['''AssertionError: expected 'ask:그 들이기를 기다린다|그 claim을 지운다' to be 'ask:멈춘다|그 claim을 지운다'''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''    ? STOP_CHOICE'''
+new = '''    ? { label: WAIT, effect: "", act: "wait" }'''
+
+[[mutation]]
+name = "남의 열린 PR 의 들이기가 더 고친 몫을 적지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "남의 열린 PR 의 들이기는"]
+expect = "red"
+expect_output = ['''-   "더 고친 몫은 그 병합 뒤에 다시 부른다",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''        ...(isEmpty(reading.further) ? [] : ["더 고친 몫은 그 병합 뒤에 다시 부른다"]),'''
+new = '''        ...[],'''
+
+[[mutation]]
+name = "병합된 자기 브랜치에서 이어받으면 그 칸이 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "병합된 자기 브랜치의 들이기는"]
+expect = "red"
+expect_output = ['''AssertionError: expected '이어받을 기준본이 없다. check judge 를 --inherit…' to be''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      if (reading.claim.own) {'''
+new = '''      if (reading.claim.own === undefined) {'''
+
+[[mutation]]
+name = "병합된 claim 의 덮어쓰기가 claim 을 비우지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "병합된 claim 에 더 고친 몫이 있으면 먼저"]
+expect = "red"
+expect_output = ['''+   "overwrite",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      act: inherit ? "overwriteClaimMerged" : "overwrite",'''
+new = '''      act: "overwrite",'''
+
+[[mutation]]
+name = "판단할 수 없음의 까닭을 가르지 않으면 읽기 실패 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "아티팩트를 읽지 못한 판단할 수 없음"]
+expect = "red"
+expect_output = ['''+   "ask:코드로 덮어쓰고 기록을 새로 쓴다|멈춘다",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      return fromRecord'''
+new = '''      return !fromRecord'''
+
+[[mutation]]
+name = "PR 상태에서 병합을 열림보다 앞세우면 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "열림, 병합, 닫힘 차례로"]
+expect = "red"
+expect_output = ['''+   "kind": "merged",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''    ["OPEN", "open"],
+    ["MERGED", "merged"],'''
+new = '''    ["MERGED", "merged"],
+    ["OPEN", "open"],'''
+
+[[mutation]]
+name = "웹 편집 있음의 들이기가 들이지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "웹 편집 있음"]
+expect = "red"
+expect_output = ['''+   "act:stop",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      return caller === "import" ? act("import") : ask(foundChoices(caller, false));'''
+new = '''      return caller === "import" ? act("stop") : ask(foundChoices(caller, false));'''
+
+# --- 셀프 리뷰 반영(2026-10-27) -------------------------------------------------------------------------------
+
+[[mutation]]
+name = "병합된 claim 의 알림에서 병합 커밋을 빼면 병합 커밋 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "병합 커밋을 보이고"]
+expect = "red"
+expect_output = ['''to include 'PR #7 가 병합됐다(병합 커밋 abc1234)''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      const commit = pr.mergeCommit === null ? "" : `(병합 커밋 ${pr.mergeCommit})`;'''
+new = '''      const commit = "";'''
+
+[[mutation]]
+name = "더 고친 몫이 있어 묻는 올리기가 병합 커밋 안내를 빼면 병합 커밋 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/decide.test.ts", "-t", "병합 커밋을 보이고"]
+expect = "red"
+expect_output = ['''to include '그 병합 커밋이 지금 HEAD 의 조상이 아니면''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/decide.ts"
+old = '''      return further ? ask(foundChoices("upload", true), base) : act("uploadClaimMerged", base);'''
+new = '''      return further ? ask(foundChoices("upload", true), notes) : act("uploadClaimMerged", base);'''
+
+[[mutation]]
+name = "자기 claim 을 고쳐 쓸 때 옛 브랜치를 지키면 번호를 옮기는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "번호를 옮겨"]
+expect = "red"
+expect_output = ['''+     "branch": "feature/11-web-edit",''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/claim.ts"
+old = '''        return claimOf(head, web, claimedPaths(expected, reading.further), expected.base);'''
+new = '''        return claimOf(
+          { ...head, branch: expected.branch },
+          web,
+          claimedPaths(expected, reading.further),
+          expected.base,
+        );'''
