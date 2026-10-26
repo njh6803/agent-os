@@ -51,7 +51,7 @@ def _끝난_프로세스() -> subprocess.Popen[bytes]:
     """끝난 프로세스. 시험이 이것을 쥔 동안 파이썬이 그 핸들을 쥐어, 윈도는 그 pid 를 다른
     프로세스에 주지 않는다. pid 만 돌려주던 때 부하 아래에서 그 pid 를 다른 프로세스가 받아 남은
     표지를 산 것으로 읽었다(셀프 리뷰, 일지 2026-10-26-09). 리눅스는 `wait` 가 거둔 pid 를 다시
-    줄 수 있지만 pid 를 차례로 돌려 써 시험 한 번 안에 돌아오지 않는다."""
+    줄 수 있지만 pid 를 차례로 돌려 써, `pid_max` 만큼 프로세스가 뜨기 전에는 돌아오지 않는다."""
     process = subprocess.Popen([sys.executable, "-c", "pass"])
     process.wait(timeout=60)
     return process
@@ -135,6 +135,26 @@ def test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_�
     끝난 = _끝난_프로세스()
 
     assert process_started_of(끝난.pid) is None
+
+
+@pytest.mark.parametrize(
+    "process_started_of",
+    [process_started, mutate.process_started],
+    ids=["훅", "도구"],
+)
+def test_종료_코드_259로_끝난_프로세스는_윈도에서_산_것으로_읽힌다(
+    process_started_of: Callable[[int], int | None],
+) -> None:
+    """못 보는 것: 259 는 `STILL_ACTIVE` 와 같은 값이라 `GetExitCodeProcess` 로 가르지 못하고,
+    핸들이 남은 동안 시작 시각을 낸다(거짓 양성, PR 직전 리뷰가 손으로 봤다). 리눅스는 거둔
+    pid 의 `/proc` 이 없어 읽히지 않는다."""
+    끝난 = subprocess.Popen([sys.executable, "-c", "raise SystemExit(259)"])
+    끝난.wait(timeout=60)
+
+    if sys.platform == "win32":
+        assert process_started_of(끝난.pid) is not None
+    else:
+        assert process_started_of(끝난.pid) is None
 
 
 def test_시작_시각까지_맞는_표지만_센다(tmp_path: Path) -> None:

@@ -82,7 +82,7 @@ new = '''            pass'''
 name = "도구가 끝난 프로세스의 시작 시각을 낸다"
 tests = ["tests/tools/test_hook_edit_during_mutate.py::test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다"]
 expect = "red"
-expect_output = ["test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다[도구] - assert"]
+expect_output = ["시작_시각은_핸들이_남아도_읽히지_않는다[도구]"]
 [[mutation.edit]]
 file = "tools/mutate.py"
 old = '''            if code.value != _STILL_ACTIVE:
@@ -94,7 +94,7 @@ new = '''            if code.value != _STILL_ACTIVE:
 name = "훅이 끝난 프로세스의 시작 시각을 낸다"
 tests = ["tests/tools/test_hook_edit_during_mutate.py::test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다"]
 expect = "red"
-expect_output = ["test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다[훅] - assert"]
+expect_output = ["시작_시각은_핸들이_남아도_읽히지_않는다[훅]"]
 [[mutation.edit]]
 file = "tools/hook_edit_during_mutate.py"
 old = '''            if code.value != _STILL_ACTIVE:
