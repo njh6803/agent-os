@@ -136,6 +136,53 @@ Critical·Major 없음. 수용 기준 1~7이 채워졌다고 봤다. 병합된 P
 - `2bfe41a1`. 다시 친 커밋의 pre-commit 에서 ruff 둘, 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 798.0초, pytest 1363.8초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed 였다. 카나리아 명세와 헌법 판 검사는 고친 파일이 없어 Skipped 다. 인용 대조가 위 "반영하며 새로 쓴 사실 문장" 첫 줄의 따옴표 인용을 저장소에 글자 그대로 없다고 경고했다. 독스트링 61~64줄과 대 보니 낱말은 같고, 줄바꿈 자리(`접는다` 와 `(`fold_ignored`)` 사이)의 공백만 달랐다.
 - 변이 표 전체: `2bfe41a1` 을 꺼낸 임시 워크트리(세션 스크래치패드)에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/tidy_checkouts_mutations.toml` 를 돌려 187 가운데 186 이 기대대로였다. 어긋난 183(앞날 기록을 막 딴 것으로 보지 않는다)은 pytest 가 stdout 과 stderr 에 아무것도 내지 않고 종료 코드 1로 끝나 표지가 없었다(`출력 없음(종료 코드 1)`). 형제 세션 여럿이 시험을 돌리던 때였다. 같은 자리에서 183 을 번호로 골라 홀로 다시 돌리자 기대대로(5.93초)였다. 빈 출력의 원인은 가르지 못했다. probes README 의 그 표 행에 결과를 적었다.
 
+## main 합치기와 PR
+
+- `c13cf4f6`(변이 표 결과, 회고, 다음). pre-commit 에서 검사 열(web-verify 690.5초, pytest 857.9초)과 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조(경고 없음), 커밋 메시지가 Passed 였다. ruff 둘과 카나리아 명세, 헌법 판 검사는 고친 파일이 없어 Skipped 다.
+- 푸시하려 하자 `hook_push_behind_main` 이 두 커밋 뒤처졌다고 막았다(#388 harness 011, #389 harness 013). `git merge origin/main` 은 충돌 없이 됐다. 들어온 `tools/mutate.py` 의 원문 확인이 시험 원문에 글자 그대로 있는 표지도 알리게 되어(`.claude/rules/probes.md` 첫 항목, 대기열 417), 이 표를 `mutate.py --check` 로 다시 봤고 187 모두 원문이 한 번씩이며 표지 경고가 없었다. 린트 둘도 통과했다.
+- `sibling_overlap.py` 가 1로 끝났다. main 의 최신 일지 2026-10-26-09 가 이 일지보다 이름순으로 뒤라서, `--move` 로 2026-10-26-06 을 2026-10-26-15 로 옮기고 인용 셋(probes README, 카나리아 명세, 대기열)을 고쳤다. 옮기기 전에 돌던 `run_checks.py` 는 멈췄고, 옮긴 커밋 `cefbc789` 의 pre-commit 이 합친 판의 전체 검사를 돌려 통과했다(pytest 932.2초, web-verify 723.9초).
+- 다시 푸시하려 하자 한 커밋(#356 design-reverse-sync 02) 뒤처져 또 합쳤다. 이 브랜치와 겹치는 파일은 대기열 하나라, 로컬에서는 마크다운 표 검사와 `sibling_overlap.py`(겹침 없음)만 돌리고 전체는 CI 에 맡겼다. PR 본문 체크리스트에 그렇게 적었다.
+- 푸시하고 PR #392 를 열었다. 첫 `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+## 인계 (PR 연 뒤)
+
+- 경계는 `PR 연 뒤` 다. 계기가 281,735 토큰으로 왔다. 그 앞의 `커밋 뒤` 계기 둘(246,180 토큰, 273,664 토큰)은 이 세션의 지시문의 "이어받을 상태" 가 `인계: 커밋 뒤` 로 시작해 넘기지 않았다.
+- 인계하지 않는 때가 아니다. PR 이 열렸고, 요청 범위가 병합까지이며, 경계가 지시문의 `커밋 뒤` 와 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없다.
+- 이 세션의 지금 제목은 `chore/017-tidy-collapsed-and-fresh-branches` 다.
+- 이 절과 위 "main 합치기와 PR" 절은 커밋하지 않았다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md. tools/tidy_checkouts.py 가 접힌 무시 폴더(대기열 464)와 막 딴 형제 브랜치(대기열 440)를 바로 가르는 PR #392 를 봇 회차부터 병합까지 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다
+브랜치: chore/017-tidy-collapsed-and-fresh-branches
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "main 합치기와 PR", "인계 (PR 연 뒤)", "다음"
+이어받을 상태: 인계: PR 연 뒤. PR #392 를 열었고 이 브랜치의 커밋은 모두 푸시했다(마지막은 #356 을 합친 커밋). 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 회고와 다음은 이미 커밋했다(c13cf4f6, 일지 번호를 옮긴 cefbc789). 일지에 "main 합치기와 PR"·"인계 (PR 연 뒤)" 절을 더한 것은 커밋하지 않았으니 병합 전 마지막 봇 회차의 커밋에 싣거나 일지만 실은 커밋으로 푸시한다. 두 번째 main 합치기(71433a0d) 뒤에는 로컬 전체 검사를 돌리지 않았고 CI 가 그 몫이다. 병합은 워크트리에서 하므로 "워크트리에서 병합할 때"를 따른다. 일지 docs/journal/2026-10-26-15-tidy-collapsed-and-fresh-branches.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/017-tidy-collapsed-and-fresh-branches (인계함)` 으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-26T13:14:37Z
+
+## 이어받음 (PR 연 뒤)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다 / 다음 작업: … PR #392 를 봇 회차부터 병합까지 잇는다 … 이어받을 상태: 인계: PR 연 뒤. … 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 바꾸고, `git worktree list` 에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)` 로 들어갔다(잠금 거부 없음). 이 세션의 제목은 `chore/017-tidy-collapsed-and-fresh-branches` 다.
+- **봇 첫 회차(머리 `e7d0e9c3`).** `@coderabbitai review` 를 남기고 `tools/wait_ci.py` 로 기다렸다. CodeRabbit 은 "Review rate limited" 라 리뷰가 없어 회차로 세지 않는다. 이 머리의 보안·버그 축은 PR 체크리스트에 적은 `/security-review` 와 `bug-perf-review` 의 결과가 대신한다(`docs/constitution/operations.md` 초록 착시). claude-review 는 Minor 둘과 Nit 둘을 냈고, 첫 회차라 지적마다 판단했다.
+  - 고친 것(Nit): `fold_ignored` 가 루프 변수 `entry` 에 접은 자리를 다시 대입하던 것을 `place` 로 나눴다. 변이 184~187 이 원문으로 드는 줄은 글자 그대로 두었다.
+  - 둔 것(Minor, 키워드 불리언 셋): `contained`·`behind`·`fresh` 는 순수 판정 함수에 넣는 브랜치의 사실이고, 함수가 두 가지 일을 하게 하는 모드 플래그가 아니다. `CODING_STANDARDS.md` 의 불리언 플래그 줄이 겨누는 꼴은 뒤의 것이다. 셀프 리뷰 표준 축의 "남김(Minor, Data Clumps)" 과 같은 판단이다.
+  - 둔 것(Minor, `_fresh` 의 조건이 판정 1과 겹친다): `_fresh` 의 조건은 reflog 읽기(한 번에 0.13~0.45초, `bug-perf-review` 가 쟀다)를 그 값을 보는 길로만 좁히는 비용 가드다. 한 곳으로 모으려면 판정 함수가 reflog 를 늦게 읽는 호출을 받아야 해, 순수 판정 시험과 변이 원문 넷이 함께 바뀐다. 두 자리는 각자의 독스트링이 같은 길(병합된 PR 이 없고 끝이 `origin/main` 에 있다)을 적는다.
+  - 둔 것(Nit, 파일 크기): `tools/tidy_checkouts.py` 를 판정·읽기·지우기로 나누는 것은 이 PR 의 범위 밖이다. claude-review 가 별도 티켓 후보로 냈으므로 "다음" 에 적었다.
+- **visual 흔들림.** 같은 머리의 `visual` 잡이 웹 코드를 건드리지 않은 이 PR 에서 `molecules-alert--showcase-run-failed-dark-compact` 의 6픽셀 차이로 빨갰다(108장 가운데 107장 통과, 1장 실패, 실행 `40328574861`). 대기열 414 의 3회차와 같은 스토리의 다른 모드·밀도 사진이다. 그 흔들림은 형제 harness 016(`chore/016-visual-focus-flake`, 아직 PR 이 없다)이 고치고 있어, 이 브랜치는 그 행을 고치지 않는다. 실패한 잡만 다시 돌리자(`gh run rerun 40328574861 --failed`) `visual` 과 `verify` 가 초록이었다.
+- **다시 돌린 명령.** `tools/tidy_checkouts.py` 의 ruff·포맷·pyright 와 `pytest tests/tools/test_tidy_checkouts.py -k "접 or 링크 or grimp or fold"`(22 통과). 나머지는 커밋의 pre-commit 으로 갈음한다.
+- **반영 커밋의 첫 시도**는 pytest 하나로 막혔다(5642 통과, 1 실패, 881초). 이 브랜치가 건드리지 않은 `tests/channel/cli/test_interrupt.py` 의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다` 가 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다" 였다. 홀로 돌리니 통과했다(247초. 시험 하나에 그만큼 걸릴 만큼 형제 세션의 부하가 컸다). 같은 파일의 닫기 시험이 부하에서 빨갛던 기록(위 "다시 돌린 것", 일지 2026-10-23-33)과 같은 종류라 ADR 0036 대로 고치지 않고 커밋을 다시 쳤다. 커밋이 막혀 그때 온 인계 계기(`커밋 뒤`)는 경계가 아니었다.
+- **둘째 시도**도 pytest 하나로 막혔다(5642 통과, 1 실패, 969초). 이번에는 첫 커밋 때와 같은 `tests/tools/test_rerun_runner.py` 의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`assert 1 == 0`)였고, 홀로 돌리니 통과했다(499초). 두 시도의 색인은 이 줄들을 뺀 일지 한 절만 달랐고, 두 전체 실행을 합치면 모든 시험이 적어도 한 번 통과했으며 빨간 둘은 각자 다른 시도에서 초록이었다. web-verify 도 두 시도 모두 통과했다. 그래서 셋째 시도는 `SKIP=pytest,web-verify` 로 쳤다. 이 PR 의 최종 판정은 CI 의 `python` 과 `web` 잡이다.
+
 ## 회고
 
 후보 일곱. 승인 1(회차로 세는 것), 기각 4, 일지에만 2. 넘긴 것은 없다. 대기열의 만료는 이 워크트리와 `origin/main` 의 두 출력 모두 없었다.
@@ -153,4 +200,5 @@ Critical·Major 없음. 수용 기준 1~7이 채워졌다고 봤다. 병합된 P
 - 이 PR 이 병합되면 harness 017 은 닫힌다. harness 티켓의 PR 이라 결정표는 프론티어 줄이다. `.scratch/plan.md` 의 진행 중 기능 `design-reverse-sync` 에 `ready-for-agent` 티켓(02~10)이 남아 그것이 먼저이고, 어느 티켓을 열지는 병합 뒤 `next-session` 2단계가 막힌 것과 이미 도는 세션을 걸러 정한다.
 - 대기열 442 가 3회차라 다음 기능의 마지막 티켓 뒤 하네스 chore 배치에서 고를 수 있다(위 회고 1).
 - PR 의 남긴 둘(`judge` 가 브랜치마다 `git log -g` 를 띄우는 비용, `git log -g` 가 실패하면 기록 없음으로 보아 지울 후보로 내는 것)은 이 PR 이 판정을 남기고 이유를 PR 체크리스트에 적은 것이다. 뒤로 넘긴 일이 아니다.
+- 봇 첫 회차에서 claude-review 가 `tools/tidy_checkouts.py`(2300줄 남짓)를 판정(`judge_*`)·읽기(`gather*`)·지우기(`remove*`)로 나누는 것을 별도 티켓 후보로 냈다. 이 PR 은 나누지 않았다. 고를지는 다음 하네스 chore 배치가 정한다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts` 가 한다.

@@ -1235,12 +1235,13 @@ def fold_ignored(entries: Sequence[str], is_link: Callable[[str], bool]) -> tupl
     folded: dict[str, None] = {}
     for entry in entries:
         parts = entry.rstrip("/").split("/")
+        place = entry
         for depth in range(1, len(parts)):
             ancestor = "/".join(parts[:depth])
             if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):
-                entry = ancestor + "/"
+                place = ancestor + "/"
                 break
-        folded[entry] = None
+        folded[place] = None
     return tuple(folded)
 
 
