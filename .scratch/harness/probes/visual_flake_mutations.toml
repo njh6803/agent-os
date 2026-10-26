@@ -1,0 +1,68 @@
+# harness 티켓 016(대기열 414)의 변이 표. 사진 비교의 브라우저 실행 인자 `BROWSER_ARGS`(web/packages/ui/visual/index.ts)
+# 의 회귀를 두 겹으로 본다. 정답 사진이 그 인자로 찍은 그림이라 인자를 빼면 패키지의 사진이 빨갛고, 두 설정
+# (`visual/playwright.config.ts`)이 그 인자를 넘기지 않으면 브라우저의 명령줄을 보는 시험(`missingBrowserArgs`)이 빨갛다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/visual_flake_mutations.toml [이름 ...]
+# visual 러너는 정적 빌드부터 다시 지어 Docker 컨테이너에서 돈다. Docker 와 판을 고정한 이미지가 있어야 한다.
+# 사진 변이가 고르는 스위치 포커스는 이 PC 에서 부분 래스터를 켠 채로 찍으면 곧바로 찍든 기다려 찍든 늘 옛 정답의
+# 그림이 나왔다(프로브 visual_flake/, README 의 그 행). CI 에서는 켠 채로도 새 정답의 그림이 찍힌 회차가 있어(흔들린
+# 첫 실행의 실제 그림), 이 변이는 이 PC 에서 돌린다. 알림은 이 PC 에서도 켠 채로 찍는 때에 따라 새 정답의 그림이 나와
+# 고르지 않는다. 위젯의 화면 사진도 고르지 않는다. 인자를 비운 작업 트리에서 `-g pages-widgetscreen--` 로 고른 19개
+# 시험을 세 번 돌렸고 이 표의 첫 판에서 대화 화면 변이를 한 번 돌렸는데, 이 PC 에서 네 번 모두 초록이었다(2026-10-26,
+# 일지 2026-10-26-07). 그래서 위젯은 설정의 변이로만 본다.
+
+[runner.visual]
+command = ["pnpm", "-C", "web", "visual"]
+judge = "playwright"
+
+[runner.widget]
+command = ["pnpm", "-C", "web", "visual:widget"]
+judge = "playwright"
+
+[[mutation]]
+name = "부분 래스터를 켜면 스위치 포커스의 사진이 빨갛다"
+runner = "visual"
+tests = ["-g", "molecules-switch--off 를 실제"]
+expect = "red"
+expect_output = ["Snapshot: molecules-switch--off-", "-focus.png"]
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/index.ts"
+old = '''
+export const BROWSER_ARGS: readonly string[] = ["--disable-partial-raster"];
+'''
+new = '''
+export const BROWSER_ARGS: readonly string[] = [];
+'''
+
+[[mutation]]
+name = "패키지 설정이 인자를 넘기지 않으면 실행 인자 시험이 빨갛다"
+runner = "visual"
+tests = ["-g", "실행 인자를 모두"]
+expect = "red"
+# 받지 못한 인자가 toEqual 의 Received 차이 줄에 실린다. 시험 코드 조각에는 인자의 글자가 없다(손으로 넣어 봤다).
+expect_output = ['+   "--disable-partial-raster",']
+
+[[mutation.edit]]
+file = "web/packages/ui/visual/playwright.config.ts"
+old = '''
+    launchOptions: { args: [...BROWSER_ARGS] },
+'''
+new = '''
+    launchOptions: { args: [] },
+'''
+
+[[mutation]]
+name = "위젯 설정이 인자를 넘기지 않으면 실행 인자 시험이 빨갛다"
+runner = "widget"
+tests = ["-g", "실행 인자를 모두"]
+expect = "red"
+expect_output = ['+   "--disable-partial-raster",']
+
+[[mutation.edit]]
+file = "web/apps/widget/visual/playwright.config.ts"
+old = '''
+    launchOptions: { args: [...BROWSER_ARGS] },
+'''
+new = '''
+    launchOptions: { args: [] },
+'''
