@@ -431,9 +431,10 @@ inline이 아닌 `@theme` 블록의 토큰 이름을 읽어 모두 문서 뿌리
   나는 틀과 본문의 어긋남은 자동으로 잡히지 않는다.
 - 임의값(`@[784px]:`)은 스토리 테스트의 클래스 판정이 막으므로 이름 있는 디자인 토큰으로 둔다. 이미 있는 `--container-wide`(360px,
   승인 묻기의 자리 폭)와 같은 꼴이다.
-- 디자인 시스템 올리기가 디자인 토큰 CSS에서 `tokens.json`을 짓는 함수(design-reverse-sync 티켓 02, `web/tools/sync-design-system`의
-  `buildTokensJson`)는 `--container-*`를 무시한다. 명세의 셀프 리뷰 서브에이전트가 그 함수를 지금의 디자인 토큰 CSS에
-  `--container-split: 784px`를 넣은 판과 뺀 판으로 돌려 출력이 바이트까지 같은 것을 손으로 봤다(일지 2026-10-26-16).
+- 디자인 시스템 올리기가 디자인 토큰 CSS에서 `tokens.json`을 짓는 명령(design-reverse-sync 티켓 02, `web/tools/sync-design-system`의
+  `build`. 그 명령이 부르는 `buildTokensFile`)은 `--container-*`를 무시한다. 명세의 셀프 리뷰 서브에이전트가 같은 두 함수
+  (`buildTokensFile`, `serializeTokensFile`)를 잇는 `buildTokensJson`을 지금의 디자인 토큰 CSS에 `--container-split: 784px`를 넣은 판과
+  뺀 판으로 돌려 출력이 바이트까지 같은 것을 손으로 봤다(일지 2026-10-26-16).
 
 거부한 안은 셋이다.
 

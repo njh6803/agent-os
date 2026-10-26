@@ -31,6 +31,8 @@
 //   시각 이전에 콜백이 돈 마지막 프레임이다. 표지는 테마 코드가 저장 키를 읽어 jjokbit 을 받은 것, `first-paint` 항목,
 //   그 이전의 프레임 하나 이상, 하이드레이션 표지, 테마 넷의 기준 `--accent` 가 서로 다른 것이다.
 //   양성 대조: useEffect 갈래는 첫 그림 뒤에 단다(방법이 늦은 것을 잡는다).
+//   결과를 본 뒤 바꾼 기준: 넷째 실행부터 `paintTime` 이 있는 것도 표지에 든다. 셋째 실행까지는 없으면 거친 `startTime` 으로
+//   쟀고, 그 값으로는 따뜻한 useEffect 한 회차가 첫 그림 전으로 잘못 판정된다(README). PR 직전 리뷰가 짚었다.
 // 3 하이드레이션 뒤: 같은 빌드에서 하이드레이션 표지 뒤와 `Link` 로 다른 화면에 옮긴 뒤 속성과 변이 기록을 읽는다. 표지는
 //   속성이 하이드레이션 전에 달린 것(불일치가 있었다)과, 옮긴 뒤 같은 window 인 것(전체 새로 고침이 아니다)이다.
 //   덧붙인 갈래: 글이 서버와 다른 클라이언트 컴포넌트가 든 화면(`/mismatch`)에서 하이드레이션이 실패한 뒤의 속성. 표지는
@@ -48,7 +50,9 @@
 //   data-theme 줄은 없어야 한다(그 속성이 html 하나의 경고만 끈다). `/mismatch` 는 글 불일치가 하이드레이션 오류로 잡히는 것이다.
 //   결과를 본 뒤 바꾼 기준: 첫 실행(2026-10-26)의 `/mismatch` 대조는 콘솔의 error 만 세어 두 서버 모두 기대와 달랐다. 글
 //   불일치는 콘솔이 아니라 `pageerror`("Hydration failed because the server rendered text didn't match the client")로 왔다.
-//   그래서 그 대조는 콘솔과 pageerror 를 함께 세고, 속성 불일치를 콘솔로 내는 `/attr-mismatch` 대조를 더했다.
+//   그래서 그 대조는 콘솔과 pageerror 를 함께 세고, 속성 불일치를 콘솔로 내는 `/attr-mismatch` 대조를 더했다. 넷째 실행부터
+//   없는 뿌리의 경고는 하나이고 그 경고에 data-theme 줄이 있기를 기대한다. 셋째 실행까지는 하나 이상이었고, PR 직전 리뷰가
+//   명세의 "하나"를 판정하지 않는다고 짚었다.
 // 6 저장 값과 예외: 목록에 없는 값, `getItem` 이 던질 때, `localStorage` 접근자가 던질 때. 표지는 각각 테마 코드가 그 값을
 //   읽은 기록, 던진 횟수다. 양성 대조: 예외를 받지 않는 스크립트를 같은 자리로 바꿔 내면 `pageerror` 가 잡힌다.
 // 7 ESLint: 레이아웃 후보와 `public/theme.js` 후보를 표준 입력으로 실제 판정자에 넣는다. 표지는 결과가 그 경로 하나로
@@ -58,7 +62,7 @@
 // 기대(코드 읽기와 어림에서 온 것): 1 막는 태그가 `<head>` 에 그대로 있다. 2 후보는 첫 그림 전에 jjokbit 을 달고 첫 그림의
 // `--accent` 가 jjokbit 의 값이다. useEffect 는 첫 그림 뒤에 단다. 3 하이드레이션 뒤와 옮긴 뒤에도 남고 변이는 하나다.
 // 하이드레이션이 실패하면 `/mismatch` 는 지워진 채 남고 `/mismatch-restore` 는 되살린다(셋째 실행부터, 결과를 본 뒤의 기대).
-// 4 없는 뿌리만 data-theme 을 든 하이드레이션 오류를 낸다. 5 beforeInteractive 는 `__next_s` 로 미뤄 첫 그림 뒤에 단다
+// 4 없는 뿌리만 data-theme 을 든 하이드레이션 오류를 하나 낸다. 5 beforeInteractive 는 `__next_s` 로 미뤄 첫 그림 뒤에 단다
 // (`next/dist/client/script.js` 를 읽었다). 6 셋 다 오류 없이 속성을 달지 않고 첫 그림이 nokcheong 의 `--accent` 다.
 // 7 후보 둘은 아무것도 보고되지 않는다.
 //
@@ -891,6 +895,7 @@ async function paintRounds(browser, base, variant) {
       const measurement =
         result.hydratedOk &&
         s.fpTime !== null &&
+        s.hasPaintTime &&
         s.framesBeforePaint > 0 &&
         s.distinctRefs &&
         s.keyGetValues.includes(CHOSEN) &&
@@ -1078,7 +1083,7 @@ async function devRound(browser, base, suppress) {
     item: 4,
     round: `dev / ${suppress ? "suppressHydrationWarning 있음" : "suppressHydrationWarning 없음"}`,
     measurement,
-    expected: suppress ? errors.length === 0 : errors.length > 0 && errors.some((m) => m.includes("data-theme")),
+    expected: suppress ? errors.length === 0 : errors.length === 1 && errors[0].includes("data-theme"),
     setAt: round2(s.setAt),
     hydratedAt: round2(s.hydratedAt),
     themeAfter: s.finalTheme,
@@ -1169,15 +1174,17 @@ symlinkSync(widgetModules, link, "junction");
 if (!lstatSync(link).isSymbolicLink()) {
   throw new Error(`${link} 가 lstat 에서 링크로 보이지 않는다. 지우기 안전을 판정하지 못하므로 멈춘다`);
 }
-for (const [relative, content] of Object.entries(APP_FILES)) {
-  write(app, relative, content);
-}
-console.log(`임시 앱: ${app}`);
-
-const browser = await chromium.launch();
-console.log(`chromium ${browser.version()}`);
+// 여기부터는 junction 이 있으므로 실패해도 finally 의 정리(링크를 먼저 떼고 지운다)를 지난다. 위의 링크 확인 throw 는 일부러
+// 밖이다. 링크로 보이지 않는 것을 지우는 정리가 돌지 않게 한다.
+let browser = null;
 const servers = [];
 try {
+  for (const [relative, content] of Object.entries(APP_FILES)) {
+    write(app, relative, content);
+  }
+  console.log(`임시 앱: ${app}`);
+  browser = await chromium.launch();
+  console.log(`chromium ${browser.version()}`);
   const phases = [
     { name: "head", command: "start", layout: LAYOUT_HEAD(false) },
     { name: "effect", command: "start", layout: LAYOUT_EFFECT },
@@ -1240,7 +1247,7 @@ try {
     const stopped = await stop(server, app, port);
     console.log(`  (finally) 서버 끔: ${stopped.how}, 포트 열림 ${stopped.portStillOpen}`);
   }
-  await browser.close();
+  await browser?.close();
   if (process.platform === "win32") {
     const left = processesMentioning(marker);
     console.log(`임시 폴더를 명령줄에 든 남은 프로세스: ${left.length === 0 ? "없음" : left.join(",")}`);
