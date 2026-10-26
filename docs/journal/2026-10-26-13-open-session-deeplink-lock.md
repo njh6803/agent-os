@@ -168,3 +168,14 @@
   - 유효, 고쳤다: 모델을 고른 뒤 끊긴 열기의 버려진 잠금을 받은 열기는 그 열기가 고른 값을 원래 값으로 읽어 되돌린다(`Read-DraftDefaults`가 새 세션 화면의 값을 읽는다). 잠금 전에도 있던 일이라 `$note`와 스킬 3단계에 그 말을 더하는 데서 그쳤다. 변이 4의 `old`도 같은 문구로 고쳤다.
   - 보류, 두었다: `split`·`focus`가 잠금 밖이라, 잠금을 놓은 열기의 세션이 이어 거는 행 누르기(Invoke)와 메뉴 키(Enter, →, Esc)가 막 쏜 뒤 열기의 새 세션 화면을 옮기거나 그 입력창에 들어갈 수 있다. 잠금은 그 차례를 만든다(앞 열기가 놓자마자 뒤 열기가 쏜다). 겹친 회차는 세지 않았다. 고치려면 `focus`가 행 제목을 기다리는 동안(스킬은 90초) 잠금을 쥐지 않게 `Focus-Session`을 갈라야 하고, 시험·변이와 스킬 5단계의 시간 제한까지 바뀐다. `Invoke-SendLocked`의 못 보는 것을 이 길로 고쳐 적고 새 작업으로 제안한다.
   - 보류, CI에서 본다: 리눅스 pwsh가 `[Environment]::Exit(0)`로 끝난 프로세스의 뮤텍스를 버려진 것으로 알리는지. 인계 지시문의 선행 조건과 같다.
+- 반영 뒤 `uv run pytest -q tests/tools/test_open_session.py`: 111 passed in 53.54s. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_lock_mutations.toml 4`(원문을 고친 변이): 기대대로 빨강.
+- 반영을 이 세션이 따로 `/code-review`로 돌리지 않았다. 고친 것은 주석·스킬 문구와 알림 문자열 하나이고, 형제 013(일지 2026-10-26-03)도 PR 직전 리뷰의 반영을 그대로 커밋했다.
+
+### 커밋과 그 뒤
+
+- `ebf562bf`(PR 직전 리뷰 반영과 일지 옮김): pre-commit이 모두 지났다. pytest 1179.9초, web-verify 632.2초, run-hooks 250.7초, pyright-linux 64.5초이고 Skipped는 헌법 판 하나(고친 파일 없음)다. 이 나무에서 pytest 전체가 한 번에 다 지난 첫 실행이다(앞 절 "커밋"의 선행 조건).
+- 커밋 직후 `hook_handoff`가 컨텍스트 283,150 토큰으로 `커밋 뒤` 계기를 냈다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 next-session "인계할 때" 1의 같은 경계 줄에 들어 넘기지 않았다.
+- `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`.
+- 변이 표 전체(`ebf562bf`의 판): 변이 12 모두 기대대로, 종료 코드 0. 기준선 셋(`놓을_때까지` 394.79초, `제한_시간에` 169.42초, `놓지_않고_끝나도` 224.08초)이 길었고 변이는 모두 26초 안이었다. README 행에 적었다.
+- 스킬을 고쳐 카나리아를 다시 돌렸다. `uv run python tools/canary.py .scratch/harness/probes/canary/open_session_lock.toml <스크래치>`(claude 2.1.302): 통과 4, 실패 0, "없음" 섞인 통과 0. 실험군 `ebf562bf`는 세 문구를 그대로 옮겼고, 대조군 주 체크아웃(`71433a0d`, 그새 main을 당겼다)은 셋 다 "없음"이었다. 명세 머리의 `# 최신 결과:` 줄을 이 실행으로 고쳤다.
+- `git fetch origin main` 뒤 origin/main이 `71433a0d`(design-reverse-sync 02, #356)로 움직여 다시 합쳤다(충돌 없음). 바뀐 파일은 design-reverse-sync와 web 도구, 대기열이라 이 브랜치가 이름으로 든 파일과 겹치지 않았다. `sibling_overlap`은 번호 겹침 없음이었고, 이 일지(13)를 앞서는 형제(PR #391·#392 등의 14~17)는 그쪽이 먼저 병합되면 이 일지를 옮기라는 알림이다.
