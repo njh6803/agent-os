@@ -230,6 +230,7 @@ CodeRabbit은 아직 요청하지 않아 "Review skipped: manual review required
 
 - 대기열 474(`.claude/rules/probes.md` 첫 항목 나누기)는 형제 #388이 먼저 병합됐으므로 이 PR이 병합되면 막는 것이 없다. 나누면 첫 항목에 조각이 든 카나리아(`probes_rule.toml`, `probes_rule_stream_delete_marker.toml`, `probes_rule_marker_other_reading.toml`)의 조각 자리가 움직이니 셋을 다시 돈다.
 - 회고 1의 부하 비용(306의 받아들인 종류)을 다시 열지는 사용자가 정한다.
+- `.scratch/harness/probes/precommit_xdist/mutate_ctrl_c.py`를 다시 잴 때는 `passed_past_first_window`를 그 독스트링이 적은 기준으로 좁힌다(PR #390의 CodeRabbit 첫 회차를 보류한 몫). 다시 잴 계기는 정하지 않았다.
 
 ## 인계 (커밋 뒤, 넷째 세션)
 
@@ -275,3 +276,14 @@ open-session을 부른다 2026-10-26T11:41:56Z
 - 카나리아: 이 PR의 `probes_rule_marker_other_reading.toml`은 같은 PR에서 같은 claude 판(2.1.302, 지금도 같다)으로 통과 4였고, 그 뒤 고친 것은 규칙 본문뿐이며 `expect`와 머리말은 그대로라 operations.md 카나리아 항목대로 사전 확인으로 갈음했다. 같은 규칙을 원천으로 든 나머지 다섯(`probes_rule.toml`, `probes_rule_conclusion_hook.toml`, `probes_rule_kill_and_snapshot.toml`, `probes_rule_stream_delete_marker.toml`, `probes_rule_uncommitted_edit.toml`)은 #388이 `45e489b1`에서 실제로 돌려 통과 4였고, 이 PR이 main 대비 바꾸는 문장을 재지 않는다. 조각이 제자리에 남았는지만 보려고 여섯을 함께 `--preflight`로 돌려 통과 6이었다. 이 PR의 명세에만 `# 최신 결과:` 줄에 갈음을 덧붙였다(대기열 473의 교훈).
 - 합친 뒤의 `sibling_overlap.py`가 1로 끝났다. 이 브랜치의 일지 04가 main의 최신 일지 2026-10-26-09(#388)보다 이름순으로 앞서, 다음 세션이 이름순 최신 일지의 "다음"을 읽어 이 일지를 지나친다는 것이다. `--move`로 2026-10-26-12로 옮겼다. 인용은 카나리아 명세, 대기열(367·473·474 행), 이 일지에서 고쳐졌고, 줄인 꼴로 남은 것은 첫 세션의 시작 기록("일지 04도 같은 대조가…")뿐이라 그때 받은 번호를 적은 기록으로 두었다. PR 본문의 일지 경로도 도구가 옮긴 판과 견주어 고쳤다(차이는 그 한 줄이었다).
 - 일지 "다음"의 #388 줄은 이 절로 닫혀 지웠고, 대기열 474 줄은 막는 것이 이 PR 하나로 줄었다고 고쳤다.
+- 병합 커밋 `2bdb633f`의 pre-commit은 병렬 검사 열(pytest 834.6초, web-verify 740.9초, run-hooks 170.8초 등), 표, 줄 구분 문자, 변이 표, 인용, 커밋 메시지가 `Passed`였다. ruff 둘, 카나리아 명세 모양, 헌법 판은 `Skipped`였다. 충돌을 푼 병합 커밋에서 pre-commit은 충돌 난 파일만 보므로, 옮긴 일지와 대기열·카나리아 명세는 파일마다 도는 검사를 받지 않았다. 그래서 표(`tools/check_md_tables.py`)와 줄 구분 문자(`tools/check_line_separators.py`)를 일지·대기열·규칙(줄 구분 문자는 카나리아 명세까지)에, `tools/canary.py --shape`를 카나리아 명세에, ruff 둘을 저장소 전체에 손으로 쳐 모두 통과했다.
+- 그 커밋을 띄운 명령에서 `hook_handoff`가 세션 컨텍스트 242,422 토큰으로 경계 `커밋 뒤`를 알렸다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 next-session "인계하지 않는 때"대로 넘기지 않고 이었다.
+- 푸시 전에 PR 본문을 다시 고쳤다(#388 합침과 충돌 풀기, 일지 번호 옮김, "남긴 위험"에서 #388 충돌을 뺀 것, 체크리스트의 pytest 줄은 `2bdb633f`). 푸시하고 `@coderabbitai review`를 남긴 뒤, claude-review 첫 회차의 처리(Nit 고침, Minor 보류와 그 이유)를 PR 코멘트로 남겼다.
+
+### 봇 회차 (`2bdb633f`)
+
+`tools/wait_ci.py`가 "모두 통과. CodeRabbit: Review completed"로 끝났다. 두 봇 모두 `2bdb633f`를 읽었다(`gh run list`의 `headSha`, CodeRabbit 리뷰의 `commit_id`).
+
+- claude-review 둘째 회차: Critical·Major 0. Minor 1은 첫 회차와 같은 첫 항목 길이이고(대기열 474), Nit 1은 일반 조항 두 문장과 367 사례가 앞 문장을 다시 풀어 쓴다는 것이다. 둘째 회차라 고치지 않고 PR 코멘트에 보류 이유를 남긴다. 둘 다 474에서 첫 항목을 나눌 때 함께 본다.
+- CodeRabbit 첫 회차(이 PR에 낸 첫 리뷰다. 앞서는 "Review skipped: manual review required"였다): Minor 1. `mutate_ctrl_c.py`의 `passed_past_first_window`를 걸린 시간이 아니라 고치기 전 판정의 0.5초 관찰 안에서 실제로 자란 회차로 세라는 지적이다. 지적이 든 틈 둘(부하로 첫 `time.sleep(1)`이 늘어진 회차, 0.5~1초 사이에만 자란 회차)은 이 PR이 이미 그 독스트링에 적었다. 셈은 이 PR에서 고치지 않았다. 셈을 바꾸면 README 행과 ADR 0035 2026-10-18 이력이 적은 결과의 뜻이 바뀌고, 무거운 부하 아래에서 다시 재야 확인되며, 이 티켓(규칙 문장)의 범위 밖이다. ADR 0035 87행이 표지로 든 두 회차는 "러너가 돌아온 뒤 기록 파일이 자라" 다음 창으로 간 회차라 결론이 그 셈 하나에만 기대지 않는다(87행을 열어 봤다). 작게 고칠 것 둘은 고쳤다. 다음에 재는 사람이 읽을 독스트링에 좁힐 기준(러너가 돌아온 뒤 0.5초 안의 표본에서 기록 파일이 자란 회차)을 한 문장으로 적었고, README 행의 정의(무엇을 세는지)에 뒤의 셈이 느슨하다는 단서와 독스트링 가리킴을 붙였다. 그 README 행은 PR 직전 리뷰 때 지난 결과의 행으로 보고 두었으나, 셈의 정의도 함께 적고 있어 단서를 붙였다.
+- 다시 돌린 것: 실험군 대상(`mutate_ctrl_c.py`)의 독스트링만 바뀌어 `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_marker_other_reading.toml`로 갈음했다(통과 1). 더한 문장에는 `expect`의 두 조각이 없다. 명세의 `# 최신 결과:` 줄에 덧붙였다. 그 프로브 파일에 ruff 둘을 쳐 통과했다.
