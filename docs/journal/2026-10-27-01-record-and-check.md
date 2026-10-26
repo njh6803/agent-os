@@ -191,9 +191,52 @@ claude-review의 첫 리뷰(코멘트 2026-10-26T19:16:53Z)는 Critical·Major 0
 - 검사: 이 폴더의 vitest 9파일 198개 통과, ESLint·Prettier 깨끗, `web` 루트의 `tsc --noEmit` 깨끗. 변이 47·50·51을 돌려 "변이 3 모두 기대대로"였다. 반영을 푸시하기 전에 PR 본문의 "왜 이렇게 했나", "남긴 위험", "변경된 영역", "확인 방법", "리뷰어 참고"를 이 회차에 맞게 고쳤다(next-session 순서 1의 1).
 - 형제: `tools/sibling_overlap.py`는 번호 겹침 없음과 다음 빈 번호(대기열 485)를 냈고, 04가 PR #398로 열려 `main.ts`·`command.ts`·07 티켓·probes README를 함께 고친다고 알렸다. 이 회차의 `main.ts` 두 줄(`runCheck`)은 뒤에 병합하는 쪽의 글자 충돌 후보다.
 
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤 경계에 와서(`hook_handoff`가 31.7만 토큰이라고 알렸다) 새 세션으로 넘긴다. 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 같은 경계가 아니고, 다른 세션이 연 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 이 절은 커밋하지 않았고, 받는 세션이 이어 쓰고 봇 회차의 커밋에 싣는다.
+
+- 이 세션의 제목은 `feature/05-record-and-check`였고 넘기기 전에 `feature/05-record-and-check (인계함)`으로 바꾼다.
+- claude-review 첫 회차의 반영을 `3b2ff56e`로 커밋했다. pre-commit은 모두 통과했다(pytest 568초, web-verify 583초). ruff 둘은 `.py`가 없어 건너뛰어 커밋 전에 손으로 쳐서 통과를 봤다. 인용 대조가 경고 한 건을 냈다. 위 절이 따옴표로 옮긴 앱의 옛 제목은 `set_session_title`의 결과 문구라 저장소에 없다. 막지 않는 경고라 그대로 두었다.
+- 푸시하지 않았다. PR 본문은 이 회차에 맞게 이미 고쳤다(`gh pr edit`. 그 회차의 지적을 반영한 문장이 본문에 든 것을 봤다).
+- 남은 단계: 푸시, `@coderabbitai review` 코멘트와 `tools/wait_ci.py` 대기(next-session 순서 1의 2), 첫 회차의 판정(고친 셋, 보류 하나와 그 이유, 위 "claude-review 첫 회차")을 PR 코멘트로 남기기, 반영, 봇 회차의 사건을 아래 `## 회고`에 더하기(이 인계 절과 함께 그 회차 커밋에 싣는다), 병합 직전에 04(PR #398)가 병합됐는지 보고 "다음"의 PR #356 줄을 맞추기, "워크트리에서 병합할 때", 다음 지시문이다. CodeRabbit은 이 PR에 아직 리뷰가 없어 다음 리뷰가 첫 회차이고, claude-review는 둘째 회차다.
+
+### 지시문
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/05-record-and-check.md. 기록 명령과 확인 명령. PR #397 의 claude-review 첫 회차를 반영해 커밋했고 푸시·봇 회차·병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/05-record-and-check.md
+브랜치: feature/05-record-and-check
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-01-record-and-check.md 의 "이어받은 세션 (PR 연 뒤)"와 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차의 반영을 3b2ff56e 로 커밋했고 아직 푸시하지 않았다(PR 본문은 이미 고쳤다). 푸시와 순서 1의 2(봇 회차)부터 한다. 푸시한 뒤 @coderabbitai review 를 남기고, 첫 회차의 판정(고친 셋과 보류 하나의 이유, 일지 "claude-review 첫 회차")을 PR 코멘트로 남긴다. CodeRabbit 은 다음 리뷰가 첫 회차, claude-review 는 둘째 회차다. 봇 회차의 사건은 일지 회고 절에 더해 커밋하지 않은 인계 절과 함께 그 회차 커밋에 싣는다. 일지 docs/journal/2026-10-27-01-record-and-check.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+띄운 백그라운드 작업(`tools/wait_ci.py` 대기, 커밋)은 모두 끝나 있었다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T19:53:43Z
+
+## 이어받은 세션 (커밋 뒤)
+
+인계 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `feature/05-record-and-check`로 바꾸고(앱이 지은 제목을 묻지 않고 바꿨다), `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다(잠금에 막히지 않았다).
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-reverse-sync/issues/05-record-and-check.md (위 "인계 (커밋 뒤)"의 "지시문" 절 열 줄을 그대로 붙였다. 이어받을 상태 "인계: 커밋 뒤. claude-review 첫 회차의 반영을 3b2ff56e 로 커밋했고 아직 푸시하지 않았다. …", 이번 요청 범위 "PR과 병합까지")
+
+- `3b2ff56e`를 푸시하려 하자 훅이 막았다. 그새 origin/main이 `0aff6d15`(#394, harness 016)로 옮겨 이 브랜치가 한 커밋 뒤처졌고, strict 보호라 병합 전에 어차피 합쳐야 한다는 것이다. `git merge --no-edit origin/main`으로 충돌 없이 합쳤다. #394와 함께 고친 파일은 대기열 하나였고, 합친 대기열이 main과 다른 행은 445·455의 회차와 483~485뿐인 것을 `git diff origin/main -- .scratch/retro-queue.md`로 봤다. 합친 뒤 `tools/sibling_overlap.py`는 번호 겹침 없음과 다음 빈 번호(대기열 486)를 냈다.
+- 충돌 없는 합치기라 pre-commit이 검사를 돌지 않아, 훅의 말대로 푸시 전에 검증 명령을 손으로 쳤다. `tools/run_checks.py`는 모두 통과했고(pytest 446초, web-verify 497초) ruff 둘도 통과했다. PR 본문의 PR 직전 리뷰 줄에 #394를 합친 것을 한 문장 더했다(`gh pr edit`).
+- `eeacdb66`을 푸시하고 `@coderabbitai review`와 claude-review 첫 회차의 판정(고친 셋, 보류 하나와 그 이유)을 PR 코멘트로 남겼다. 상태를 한 번 읽으니 검사와 CodeRabbit(`Review in progress`)이 pending이라 `tools/wait_ci.py 397`을 백그라운드로 띄웠다.
+- 대기의 끝 줄은 `끝: 실패 web, verify`였다. `web` 잡이 이 PR이 건드리지 않은 위젯 시험 하나(`web/apps/widget/components/pages/WidgetApproval.test.tsx`의 "사유가 상한의 90% 이상이면 …", `Unable to find an element with the text: 18,000 / 20,000`, 1119개 가운데 1개)로 빨갰다. 이 브랜치의 `web/tools/sync-design-system/` 밖 web 파일은 origin/main과 같고(`git diff --stat origin/main -- web/ ':!web/tools/sync-design-system'`이 비었다), main의 최근 CI 여섯은 모두 초록이었다. 실패한 잡만 다시 돌렸다(`gh run rerun 40392542841 --failed`). 그 사례만 로컬에서 스무 번 돌린 스크래치 스크립트(회차마다 사례 이름의 ✓ 줄과 `Tests 1 passed`, 또는 CI와 같은 실패 머리를 표지로 보고, 둘 다 없는 회차를 측정 아님으로 센다)는 `{"runs": 20, "pass": 18, "fail": 2, "not_measured": 0}`을 냈다. 사유 칸은 `ApprovalCard`의 `useState` 하나이고 센 수(`lib/chars.ts`의 `charNote`)는 동기 계산이라, 원인은 시험 쪽일 것으로 어림하고 가르지 않았다(대기열 486).
+- 봇 회차(헤드 `eeacdb6`). CodeRabbit의 첫 리뷰는 PR 기점부터 `eeacdb66`까지를 보고 고칠 지적을 내지 않았다("No actionable comments"). claude-review 둘째 회차는 Critical·Major 0, Minor 넷, Nit 하나였다. 둘째 회차라 고치지 않고 지적마다 보류 이유를 PR 코멘트로 남겼다. 넷(`PENDING_CLASSES`의 사본, `classifyFile`의 중첩 삼항, `planUpload` 나누기, 기록 진입 `record`의 이름)은 06이 그 자리를 고칠 때 정하게 06 티켓의 "05가 넘긴 것"과 아래 "다음"에 넘겼고, 남은 하나(`check.ts` 한 파일)는 첫 회차에서 보류한 것과 같다.
+- 다시 돈 `web`가 끝나기 전에 대기가 `끝: 충돌`로 끝났다. 04(PR #398, `5f084486`)가 먼저 병합되어 PR이 `CONFLICTING`이었다. origin/main을 합치니 `main.ts`(두 쪽이 import와 명령 표에 줄을 더했다. 모두 살리고 이름 차례로 두었다), 07 티켓(두 쪽의 "넘긴 것" 메모. 날짜 차례로 05 다음 04), 프로브 README(명령 블록과 표는 티켓 번호 차례, 결과 절은 날짜 차례)에서 글자 충돌이 났다. `command.ts`는 저절로 합쳐졌다. 푼 뒤 `web` 루트의 `tsc --noEmit`이 깨끗했고, 이 폴더의 vitest는 11파일 312개(04가 더한 둘 포함)가 통과했으며, 이 폴더를 겨누는 변이 표 셋(`record_check`, `import_command`, `sync_script`)의 `tools/mutate.py --check`가 모두 원문이 한 번씩 있다고 냈다.
+- 합치기를 `bfed1191`로 커밋했다. pre-commit은 모두 통과했고(pytest 322초, web-verify 378초) ruff 둘은 `.py`가 없어 건너뛰어 손으로 쳐서 통과를 봤다. 커밋 직후 인계 계기(`커밋 뒤`, 30.6만 토큰)가 왔으나, 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 next-session "인계할 때" 1대로 넘기지 않았다.
+- 04가 먼저 병합되어 뒤에 병합하는 이 PR이 PR #356의 보류 둘을 아래 "다음"에 넘긴다. 04의 `plan.md` 문장에 이어 05의 문장을 더했다.
+
 ## 회고
 
-인계한 세션이 retro 1~4단계를 돌아 판정한 후보 일곱(위 "회고 후보" 절, 판정의 근거도 그 절이다)을 이 세션의 사건으로 받고, 이 세션의 사건(합치기, PR 직전 리뷰, 커밋)에서 넷을 더 냈다. 낸 후보 열하나, 승인 넷(모두 회차), 기각 일곱, 넘김 없음이다. 봇 회차를 이어받은 세션이 claude-review 첫 회차의 사건에서 셋을 더 냈다(12~14, 아래). 합치면 낸 후보 열넷, 승인 다섯, 기각 아홉, 넘김 없음이다.
+인계한 세션이 retro 1~4단계를 돌아 판정한 후보 일곱(위 "회고 후보" 절, 판정의 근거도 그 절이다)을 이 세션의 사건으로 받고, 이 세션의 사건(합치기, PR 직전 리뷰, 커밋)에서 넷을 더 냈다. 낸 후보 열하나, 승인 넷(모두 회차), 기각 일곱, 넘김 없음이다. 봇 회차를 이어받은 세션이 claude-review 첫 회차의 사건에서 셋을 더 냈다(12~14, 아래). 그 뒤를 이어받은 세션이 푸시, 봇 회차, 04와의 합치기에서 넷을 더 냈다(15~18, 아래). 합치면 낸 후보 열여덟, 승인 여섯, 기각 열둘, 넘김 없음이다.
 
 승인한 것이 간 자리(인계한 세션의 1~4):
 
@@ -217,12 +260,19 @@ claude-review의 첫 리뷰(코멘트 2026-10-26T19:16:53Z)는 Critical·Major 0
 13. 기각. 하위 폴더로 `cd`하는 Bash 명령을 훅(`tools/hook_bash_cd_outside.py`)이 돌리기 전에 막아, 서브셸 `( cd … )`로 다시 쳤다. 이미 있는 훅이 그 자리에서 막은 것이다.
 14. 기각. 도구 호출 사이에 영어로 쓴 중간 문장을 `hook_midturn_korean`이 다음 호출에서 알렸다. 이미 있는 훅이 그 자리에서 알린 것이다.
 
-만료. `uv run python tools/queue_open_rows.py`(origin/main을 합친 뒤의 작업 트리)와 `--ref origin/main`의 두 출력에 모두 든 170·172·173·183·208·210을 `만료 2026-10-27`로 닫았다. 닫은 뒤 다시 돌린 출력에 만료할 행이 없었다.
+커밋 뒤를 이어받은 세션이 낸 후보(15~18):
+
+15. 승인(고침, 대기열 486을 새로 썼다, 1회차). 위젯 승인 시험의 "상한의 90%" 사례가 이 PR의 CI `web` 잡을 막아 잡 하나를 다시 돌렸고(약 10분), 로컬에서도 스무 번에 두 번 빨갰다(위 "이어받은 세션 (커밋 뒤)"). 사건이 있고, 층은 그 시험의 고침이며, PR 하나로 되돌릴 수 있다. 고침이라 사건 하나로 반영할 수 있지만, 위젯 코드는 이 기능 티켓의 범위 밖이라 여기서 고치지 않고 대기열에 둔다. 대기열 전체를 `WidgetApproval`, `paste`, `charNote`, `apps/widget`으로 grep해, 위젯 페이지 시험의 흔들림을 다룬 472(`sessionStorage`를 저장 효과보다 먼저 읽는다)가 처방이 다른 일인 것을 봤다. 끝이 열린 결함 종류로 받아들여 닫은 306(부하에서만 빨간 시간 시험)은 시간 단언이 아니라 이 사례와 다른 종류로 봤다.
+16. 기각. main이 움직인 뒤의 푸시를 `hook_push_behind_main`이 막았다. 이미 있는 훅이 그 자리에서 막은 것이다.
+17. 기각. 도구 호출 사이에 영어로 쓴 중간 문장을 `hook_midturn_korean`이 여러 번 알렸다(이 줄을 쓸 때까지 네 번). 14와 같이 이미 있는 훅이 그 자리에서 알린 것이다.
+18. 기각. 판정 명령(`tools/sibling_overlap.py`)을 파이프에 물려 훅이 알렸다. 출력의 판정 줄("번호 겹침 없음")은 보였고, 이미 있는 훅이 그 자리에서 알린 것이다.
+
+만료. `uv run python tools/queue_open_rows.py`(origin/main을 합친 뒤의 작업 트리)와 `--ref origin/main`의 두 출력에 모두 든 170·172·173·183·208·210을 `만료 2026-10-27`로 닫았다. 닫은 뒤 다시 돌린 출력에 만료할 행이 없었다. 커밋 뒤를 이어받은 세션이 두 출력을 다시 보니 만료할 행이 없었다.
 
 ## 다음
 
-- 05가 병합되면 06(`claim`)이 풀린다. 07은 04와 06을 기다린다.
-- PR #356의 보류 셋 가운데 이 티켓에 걸린 둘(`tokens-json.ts`를 정규 꼴과 차이 목록으로 나누기, `diffType`의 added/removed 되풀이 줄이기)은 04·05 가운데 뒤에 병합하는 쪽이 넘긴다. 2026-10-27 이 PR을 열 때 04는 PR이 없었고, 봇 회차 동안 04가 PR #398로 열렸다. 이 PR이 먼저 병합되면 04가 넘긴다.
-- PR #397의 claude-review 첫 회차가 짚은 `check.ts`·`record.ts`의 가르기는 06이 정한다(06 티켓의 "05가 넘긴 것"). 06이 `claim`의 되돌릴 파일이나 지울 경로를 더하면 `upload.test.ts`의 "한 경로가 드는 칸" 표(`VERDICTS`)에도 짝을 더한다.
-- 04와 글자 충돌 후보는 probes README, `command.ts`, `main.ts`, 07 티켓이고, 03(PR #396)과는 probes README다(`tools/sibling_overlap.py`, 2026-10-27).
+- 05가 병합되면 06(`claim`)이 풀린다. 07은 06을 기다린다(04는 PR #398로 병합됐다).
+- PR #356의 보류 셋 가운데 이 티켓에 걸린 둘(`tokens-json.ts`를 정규 꼴과 차이 목록으로 나누기, `diffType`의 added/removed 되풀이 줄이기)은 하지 않았다. 04가 먼저 병합되어 04·05 가운데 뒤에 병합하는 이 PR이 여기서 넘긴다. 04 일지(2026-10-26-19) "다음"의 `import.ts` 나누기와 함께 본다.
+- PR #397의 claude-review 첫 회차가 짚은 `check.ts`·`record.ts`의 가르기는 06이 정한다(06 티켓의 "05가 넘긴 것"). 06이 `claim`의 되돌릴 파일이나 지울 경로를 더하면 `upload.test.ts`의 "한 경로가 드는 칸" 표(`VERDICTS`)에도 짝을 더한다. 둘째 회차가 짚고 보류한 넷(`PENDING_CLASSES`를 `PendingClass`의 원천 하나로 모으기, `classifyFile`의 중첩 삼항 풀기, `planUpload` 나누기, 기록 진입 `record`의 이름)도 06이 그 자리를 고칠 때 정한다(06 티켓의 같은 메모).
+- 03(PR #396)과는 probes README가 글자 충돌 후보다(`tools/sibling_overlap.py`, 2026-10-27). 04와의 충돌은 합치기 커밋 `bfed1191`에서 풀었다.
 - 명세의 "색인이 드는 컴포넌트마다의 `components/<이름>/README.md`" 문장은 실제 색인에 컴포넌트 목록이 없어 지을 입력이 없다(위 "판정과 반영"의 남김). 명세를 고칠지는 다음 기능 세션이 정한다. 웹이 더한 그림·글꼴을 덮어쓰기가 지울지는 07이 정한다.
