@@ -229,6 +229,44 @@
 
 - 반영 커밋의 첫 `git commit -F`는 pytest 하나로 막혔다. 1075.02초에 5626 통과, `test_open_session.py::test_focus_는_스킬이_넘긴_시간만큼_행을_기다린다`가 `assert 9.6945747 < 9`였다(1초 제한을 줬는데 9.69초를 기다렸다. 기본값 10초를 썼다면 10초를 넘었어야 한다). 같은 실행의 web-verify가 797.7초였다. 그 시험만 혼자 돌리니 5.72초에 지났다. 이 커밋이 고친 `tools/open_session.ps1`은 주석 접기뿐이고 `focus`는 잠금 밖이다. 나머지 검사는 지났고, 건너뛴 둘(카나리아 명세, 헌법 판)은 고친 파일이 없었다.
 - 그래서 다시 친 커밋은 `SKIP=pytest`로 그 검사만 뺐다. 같은 나무에서 그 시험 하나 말고 모두 지났고, 그 시험은 혼자 지났으며, CI가 리눅스에서 전체를 다시 돈다(앞 "커밋" 절의 셋째 커밋과 같은 판단). 그 사이 고친 것은 이 일지 하나다.
+- 다시 친 커밋 `a238ac63`: pytest 말고 모두 지났다(web-verify 484.0초, run-hooks 207.8초, pyright-linux 58.5초).
+- claude-review 첫 회차의 판정을 PR 코멘트로 남겼다(https://github.com/njh6803/agent-os/pull/393#issuecomment-6418287488).
+
+### 인계 (커밋 뒤)
+
+- 첫 커밋 시도 때와 `a238ac63` 때 `hook_handoff`가 컨텍스트 277,408·303,558 토큰으로 `커밋 뒤` 계기를 냈다. 첫 시도는 실패해 경계가 아니었다. `a238ac63`은 성공했고 next-session "인계할 때" 1의 다섯에 들지 않는다. 요청 범위는 병합까지이고, 이 세션의 지시문은 `인계: PR 연 뒤`라 다른 경계이며, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다.
+- 이 세션의 지금 제목: `chore/014-open-session-deeplink-lock`. 넘기며 `chore/014-open-session-deeplink-lock (인계함)`으로 바꾼다.
+- 모델 줄: `uv run python tools/model_sweep.py chore/014-open-session-deeplink-lock`이 `Opus 5.5 / xhigh`를 냈다.
+- PR 본문의 새 판 초안을 세션 스크래치패드에 두었다(`C:\Users\User\AppData\Local\Temp\claude\C--project-agent\b0a6f005-304d-45c3-8b3d-526772a4189d\scratchpad\pr_body_new.md`). 지금 본문과 다른 곳은 넷이다. 변경사항에 봇 회차 반영과 대기열 478·479의 두 줄, 남긴 위험의 리눅스 줄을 `748b9605`의 CI에서 지났다는 줄로, 체크리스트와 확인 방법에 반영 커밋의 표기다. 체크리스트 첫 줄의 커밋 표기는 `a238ac63`으로 고쳐야 한다.
+- 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/014-open-session-deeplink-lock.md. PR #393(open-session 이 딥링크를 쏘기 전에 기계 전체의 잠금을 잡는다)의 봇 회차와 병합
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다
+브랜치: chore/014-open-session-deeplink-lock
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-13-open-session-deeplink-lock.md의 "이어서 (봇 회차부터)" 절과 "다음" 절, docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. a238ac63에 claude-review 첫 회차 반영, 회고(대기열 478·479), 일지 "다음"을 담았고 아직 푸시하지 않았다(pre-commit은 SKIP=pytest, 까닭은 일지 "이어서 (봇 회차부터)"의 "커밋" 절). 첫 회차 판정은 PR 코멘트로 남겼다. 그 뒤 일지에 "인계 (커밋 뒤)" 절을 더했고 커밋하지 않았다. 남은 것은 그 절의 커밋, 푸시 전 PR 본문 고치기(초안 경로와 고칠 곳은 그 절), 푸시와 순서 1의 2(봇 회차, claude-review는 둘째 회차부터 Critical·Major만), 워크트리에서 병합, 병합 뒤 일지 "다음"의 새 작업 카드 둘이다. docs/journal/2026-10-26-13-open-session-deeplink-lock.md
+확인할 선행 조건: a238ac63의 나무에서 pytest 전체는 이 PC의 pre-commit에서 부하 시간 시험 하나(혼자 지남) 말고 지났고, 한 번에 다 지난 실행은 아직 없다. CI의 python 잡이 본다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/014-open-session-deeplink-lock (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. `git worktree unlock`은 `is not locked`였다.
+- open-session을 부른다 2026-10-26T14:44:53Z
+
+## 이어서 (커밋 뒤부터)
+
+> 사용자: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다 (위 "커밋 뒤" 인계 지시문. 범위는 PR과 병합까지)
+
+### 시작
+
+- 제목을 `chore/014-open-session-deeplink-lock`으로 바꿨다. `git worktree list`에서 브랜치가 `.claude/worktrees/014-open-session-deeplink-lock`에 있어 `EnterWorktree(path)`로 들어갔다. HEAD는 `a238ac63`(origin보다 하나 앞섬), 커밋하지 않은 변경은 이 일지 하나였다.
+- `git fetch origin main` 뒤 origin/main은 `c7efd9ba`(harness 015 #390)였고 PR은 `BEHIND`였다. `git merge --no-edit origin/main`이 충돌 없이 합쳤다. main에서 온 규약은 `.claude/rules/probes.md`의 표지 문장(표지는 그것으로 가르려는 다른 해석 아래에서는 나지 않는 관찰)이다. 이 브랜치의 표지를 대 보았다. `deeplink_overlap.py`의 측정 표지(자기 딥링크의 줄)와 겹침 판정은 README 행이 다른 해석(PC가 바빴다)이 낼 칸 둘을 이미 세고 있고, 변이 표의 `expect_output`은 고른 단언의 실패 문구라 고칠 것이 없었다.
+- `uv run python tools/sibling_overlap.py`: 번호 겹침 없음(종료 코드 0).
+- PR 본문: 지금 본문은 앞 세션의 옛 판과 같았다(`gh pr view --json body`를 대 보았다). 앞 세션의 초안에 체크리스트 첫 줄의 `a238ac63` 표기와, pytest 줄에 `a238ac63`의 `SKIP=pytest`와 그 까닭을 더해 푸시 전에 `gh pr edit --body-file`로 바꿨다.
 
 ## 회고
 
