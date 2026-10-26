@@ -142,3 +142,24 @@ open-session을 부른다 2026-10-26T09:53Z
   - 고친 것: `staged()`의 `authored`를 위치 튜플에서 이름 있는 칸 `_Authored`(NamedTuple)로 바꿨다. 변이 표 `mutate_echo_and_start_mutations.toml`이 원문으로 든 `found += _echo_problems(root, fresh, index)` 줄은 글자 그대로 두려고 아래 루프는 튜플 풀기를 남겼다.
   - 둔 것: `process_started`를 플랫폼 갈래 함수 둘로 나누기(두 사본의 `STILL_ACTIVE` 변이가 그 원문을 들어, 나누면 변이를 다시 돌려야 한다. 두 사본의 값은 시험이 대조한다). 고르지 않은 `--check`가 메아리를 보지 않는 시험은 이미 `test_고르지_않은_원문_확인은_옛_변이의_표지를_소급하지_않는다`가 고정한다. Nit(훅이 프로세스를 두 번 연다)은 동작에 문제가 없어 둔다. 뒤로 넘긴 일은 없다.
 - **다시 돌린 명령.** ruff·포맷·pyright(`tools/mutate.py`), `pytest tests/tools/test_mutate.py -k "색인 or staged"` 23 통과. 나머지는 커밋의 pre-commit으로 갈음한다.
+- **반영 커밋 `245ca816`.** pre-commit 모두 통과(pytest 1641초, web-verify 624초). 푸시 뒤 `@coderabbitai review`.
+- **봇 둘째 회차(머리 `245ca816`).** CI 모두 통과. CodeRabbit은 "Review rate limited"라 이 커밋의 보안·버그 축은 비었다(변경은 `_Authored`와 일지뿐). claude-review는 Nit 둘(`check_picked`의 `read` 인자, `process_started` 두 사본)이고, 둘째 회차라 보류 이유를 PR 코멘트에 적었다. 뒤로 넘긴 일은 없다.
+
+## 회고
+
+후보 여섯. 승인 하나(회차로 세는 것), 기각 다섯, 넘김 없음. 일지의 네 세션과 이 세션을 봤다.
+
+- **승인(회차로 세는 것): 대기열 행 찾기에서 긴 행이 잘려, `grep … | sed`로 승인 칸만 따로 찍었다.** 425와 같은 꼴이다. 425에 회차를 더해 3회차다(이 일지). 고칠 자리는 `tools/queue_open_rows.py`라 새 훅·검사가 아니어서 `hook_report.py`는 돌리지 않았다.
+- **기각: 변이 표지를 실제 출력에 없는 글로 골랐다.** 변이 7의 `Right contains 1 more item`과 8·9의 `… - assert`가 그 예다. 7은 셀프 리뷰가 잡았고, 8·9는 변이 실행이 "표지 없음"으로 그 자리에서 알렸다. 이미 있는 검사가 잡은 것이다. 이 PR이 고친 417은 다른 꼴(원문에 그대로 있는 표지)을 다룬다.
+- **기각: 부하 아래의 시간 시험이 pre-commit을 세 번 막았다.** `test_rerun_runner.py`의 오염 시험과 `WidgetFailures.test.tsx`의 초 단위 띠 시험이 그 예다. 306이 받아들여 닫은 종류의 새 사례라 일지에만 적는다.
+- **기각: 카나리아 둘을 `--control-commit` 없이 돌렸다.** 대조군이 새 사본이라 러너가 실패로 알렸고, 머리 주석의 커밋을 주어 다시 돌렸다. 러너가 그 자리에서 알린 것이다.
+- **기각: 윈도의 끝난 프로세스가 핸들이 남으면 시작 시각을 낸다, 종료 코드 259.** 둘 다 시험과 리뷰가 잡았고 독스트링의 못 보는 것과 시험으로 고정했다. 리뷰가 제 몫을 한 것이고 검사로 옮길 꼴이 아니다.
+- **기각: CodeRabbit CLI가 `Seat: not assigned`.** `docs/constitution/operations.md` 리뷰 파이프라인 2가 적은 상태 그대로이고 대체 둘을 돌렸다.
+
+만료할 행은 없었다(`tools/queue_open_rows.py`). 대기열 417·449는 이 티켓으로 닫았다.
+
+## 다음
+
+- 이 PR이 harness 티켓 011의 마지막이고 남은 주제가 없다. 다음 작업은 `next-session` 결정표의 harness 티켓 PR 줄대로 `.scratch/plan.md`의 프론티어에서 고른다.
+- 나란히 연 형제 티켓(010, 012~017)은 각자의 세션이 맡는다.
+- 대기열 425가 3회차가 되었다. 다음 기능의 마지막 티켓 뒤 chore 배치에서 고른다.
