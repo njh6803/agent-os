@@ -231,3 +231,38 @@ CodeRabbit은 아직 요청하지 않아 "Review skipped: manual review required
 - 대기열 474(`.claude/rules/probes.md` 첫 항목 나누기)는 이 PR과 형제 #388이 모두 병합된 뒤의 일이다. 그 행의 카나리아를 다시 돈다.
 - 형제 #388이 이 PR보다 늦게 병합되면 그쪽이 첫 항목의 글자 충돌을 풀고, 두 문장이 남았는지 본 뒤 카나리아 둘(`probes_rule_marker_other_reading.toml`, `probes_rule_stream_delete_marker.toml`)을 `--preflight`로 본다.
 - 회고 1의 부하 비용(306의 받아들인 종류)을 다시 열지는 사용자가 정한다.
+
+## 인계 (커밋 뒤, 넷째 세션)
+
+- claude-review 첫 회차의 반영과 회고·다음을 `c68fd594`로 커밋했다. pre-commit은 병렬 검사 열(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright 둘, run-hooks 153.7초, web-verify 482.3초, pytest 499.9초), 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 인용, 커밋 메시지가 `Passed`였다. ruff 둘은 스테이지된 `.py`가 없어, 헌법 판은 고친 헌법 파일이 없어 `Skipped`였다. `SKIP`은 쓰지 않았다. 아직 푸시하지 않았다.
+- 그 커밋을 띄운 명령에서 `hook_handoff`가 세션 컨텍스트 256,473 토큰으로 경계 `커밋 뒤`를 알렸다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 이어받을 상태(`인계: PR 연 뒤`)는 같은 경계가 아니고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 그래서 넘긴다. 이 세션의 지금 제목은 `chore/015-probes-marker-rule`이고, 넘기기 전에 `chore/015-probes-marker-rule (인계함)`으로 바꾼다.
+- 남은 단계: 이 인계 절을 새 세션의 시작 기록과 함께 커밋한 뒤 한 번에 푸시한다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다). 푸시 전에 PR 본문을 넓힌다(순서 1의 1. 대기열 473·474, #389 합침, 첫 항목 길이의 보류, 체크리스트의 pytest 줄). 그 뒤 `@coderabbitai review`, 대기, 봇 회차, claude-review 첫 회차 Minor의 보류 이유 PR 코멘트, 병합(워크트리 길)이다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/015-probes-marker-rule.md. .claude/rules/probes.md 첫 항목에, 고친 길을 지났다는 표지는 다른 해석 아래에서는 나지 않는 관찰로 정한다는 일반 조항을 더한다(대기열 367)
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
+브랜치: chore/015-probes-marker-rule
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차(d6f9c51f)의 Nit을 반영하고 origin/main(#389)을 합친 뒤 회고와 "다음"까지 실어 c68fd594로 커밋했다(pre-commit 통과). 아직 푸시하지 않았다. 일지 끝의 인계 절은 커밋하지 않았으니 새 세션의 시작 기록과 함께 커밋한 뒤 한 번에 푸시한다. 푸시 전에 순서 1의 1대로 gh pr edit으로 PR 본문을 넓힌다(대기열 473·474를 더했다, 리뷰어 참고의 첫 항목 길이는 대기열 474로 두었다, #389를 합쳤다, 체크리스트의 pytest 줄은 새 머리의 pre-commit). 그 뒤 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트는 아직 없다. claude-review 첫 회차의 Minor(첫 항목이 길다)를 보류한 이유를 PR 코멘트로 남긴다(일지의 "claude-review 첫 회차" 절). 형제 #388과의 첫 항목 충돌은 일지 "다음". 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/015-probes-marker-rule (인계함)`으로 바꿨다. 돌던 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/015-probes-marker-rule`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-26T11:41:56Z
+
+## 봇 회차와 병합 (다섯째 세션)
+
+> 사용자: (인계 지시문을 첫 메시지로 받았다) "대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다 / … / 다음 단계: PR 반영·병합 / … / 이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차(d6f9c51f)의 Nit을 반영하고 origin/main(#389)을 합친 뒤 회고와 "다음"까지 실어 c68fd594로 커밋했다(pre-commit 통과). 아직 푸시하지 않았다. … / 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 `chore/015-probes-marker-rule`은 `.claude/worktrees/015-probes-marker-rule`(`c68fd594`)이라 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 것은 이 일지의 넷째 세션 끝 인계 절이었다.
+- `git fetch origin` 뒤 `git log HEAD..origin/main`이 비었다(origin/main은 합친 `9805a5a7` 그대로다). 형제 PR #388은 아직 열려 있다.
+- 순서 1의 1대로 푸시 전에 `gh pr edit`으로 PR 본문을 넓혔다(대기열 473·474, #389 합침, 리뷰어 참고의 첫 항목 길이는 대기열 474, 체크리스트의 pytest 줄은 `c68fd594`의 pre-commit).
