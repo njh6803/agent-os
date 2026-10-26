@@ -133,3 +133,24 @@ Critical·Major 없음. 수용 기준 1~7이 채워졌다고 봤다. 병합된 P
 - `uv run pytest tests/tools/test_tidy_checkouts.py -q -n 4`: 227 passed.
 - 변이: 184 를 `fold_ignored` 의 다시 만들 수 있는 폴더 조건으로 옮기고, 링크 조건(185), 가장 바깥으로 접기(186), `gather` 의 접기(187)를 더했다. 맞지 않을 임시 표지로 한 번 돌려 고른 단언에서 빨간 것과 그 출력을 본 뒤 그 단언에서만 나오는 문구로 표지를 달았고, 번호로 고른 넷 모두 기대대로(`--check` 187개 원문 한 번씩).
 - 반영 커밋의 첫 시도는 pre-commit 둘로 막혔다. 하나는 `pyright-linux` 다. 새 링크 시험이 `sys.platform` 갈래의 `reason` 을 `is not None` 으로 견줬는데, 리눅스 판정에서는 윈도 갈래가 빠져 그 값이 늘 문자열이라 `reportUnnecessaryComparison` 이었다. 갈래마다 (판정, 이유 꼬리, 종료 코드)를 받아 견줌 없이 단언하게 고쳤고 `uv run pyright --pythonplatform Linux tests/tools/test_tidy_checkouts.py` 가 0 이었다. 다른 하나는 이 브랜치가 건드리지 않은 `tests/channel/cli/test_interrupt.py` 의 `test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다` 다("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다", 5612 통과, 1 실패). 형제 워크트리 넷의 `pytest -n 8` 이 함께 돌던 때이고, 홀로 돌리니 통과 점이 찍혔다. 같은 시험이 부하에서 빨갛던 기록(일지 2026-10-23-33)이 있어 ADR 0036 대로 고치지 않고 커밋을 다시 쳤다.
+- `2bfe41a1`. 다시 친 커밋의 pre-commit 에서 ruff 둘, 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 798.0초, pytest 1363.8초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed 였다. 카나리아 명세와 헌법 판 검사는 고친 파일이 없어 Skipped 다. 인용 대조가 위 "반영하며 새로 쓴 사실 문장" 첫 줄의 따옴표 인용을 저장소에 글자 그대로 없다고 경고했다. 독스트링 61~64줄과 대 보니 낱말은 같고, 줄바꿈 자리(`접는다` 와 `(`fold_ignored`)` 사이)의 공백만 달랐다.
+- 변이 표 전체: `2bfe41a1` 을 꺼낸 임시 워크트리(세션 스크래치패드)에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/tidy_checkouts_mutations.toml` 를 돌려 187 가운데 186 이 기대대로였다. 어긋난 183(앞날 기록을 막 딴 것으로 보지 않는다)은 pytest 가 stdout 과 stderr 에 아무것도 내지 않고 종료 코드 1로 끝나 표지가 없었다(`출력 없음(종료 코드 1)`). 형제 세션 여럿이 시험을 돌리던 때였다. 같은 자리에서 183 을 번호로 골라 홀로 다시 돌리자 기대대로(5.93초)였다. 빈 출력의 원인은 가르지 못했다. probes README 의 그 표 행에 결과를 적었다.
+
+## 회고
+
+후보 일곱. 승인 1(회차로 세는 것), 기각 4, 일지에만 2. 넘긴 것은 없다. 대기열의 만료는 이 워크트리와 `origin/main` 의 두 출력 모두 없었다.
+
+1. 승인, 회차로 세는 것(Major): 지우는 도구의 반박 시험이 지우는 자리 안의 링크를 넣지 않았다. `.claude/rules/tools.md` 의 지우거나 덮어쓰는 도구 항목이 그 입력(심볼릭 링크, junction)을 예로 드는데, 셀프 리뷰와 커밋 전 반박 시험이 `status --ignored=matching` 이 정션 안까지 찍는 길을 넣지 않았고 PR 직전 `bug-perf-review` 가 Major 로 잡았다. 구현 때 실리는 지침을 어겨 리뷰가 잡은 사건이라 그 지침의 회차를 세는 열린 행에 더했다. 대기열 442 가 3회차(361의 5회차)가 되었다. 처방(지우는 호출을 쓰는 `tools/`·`web/tools/` 편집에 반박 문맥을 넣는 계기 훅)이 문턱을 지나 `uv run python tools/hook_report.py` 를 돌렸고 뺄 후보는 없었다. 반영은 이 PR 의 범위 밖이라 대기열에 둔다.
+2. 기각: 링크 시험이 `sys.platform` 갈래의 값을 견줘 `pyright-linux` 가 `reportUnnecessaryComparison` 으로 커밋을 막았다. 이미 있는 검사가 그 자리에서 막았다.
+3. 일지에만: `tests/channel/cli/test_interrupt.py` 가 형제 세션 넷의 부하에서 빨갰다(위 "다시 돌린 것"). 받아들여 닫은 종류(대기열 306, ADR 0036)의 새 사례라 행을 잇지 않는다. 첫 커밋의 `tests/tools/test_rerun_runner.py` 사례(위 "검사")도 같다.
+4. 기각: 인계 계기가 이 세션에서 두 번(307k, 335k 토큰) 왔다. 지시문의 "이어받을 상태" 가 `인계: 커밋 뒤` 라 `next-session` "인계할 때" 1 대로 지나갔다. 계기 훅이 판정을 세션에 맡기도록 지어졌고 세션이 그 판정대로 했다. 실수가 없다.
+5. 기각: 변이 표를 전부 돌리는 법을 보려고 `tools/mutate.py` 의 사용법 오류 출력(독스트링 전체, 약 1.3만 자)을 한 번 띄웠다. `hook_large_result` 가 그 자리에서 알렸다.
+6. 기각: 인용 대조 경고(위 "다시 돌린 것"의 `2bfe41a1`). 낱말은 원문과 같고 줄바꿈 공백만 달랐다. 경고만 하는 검사가 제 몫을 했다.
+7. 일지에만: 변이 표 전체 실행에서 183 의 pytest 가 아무 출력 없이 1로 끝났다(위 "다시 돌린 것"). 홀로 다시 돌리면 기대대로였고 원인을 가르지 못해 고칠 자리를 고를 수 없다. 다시 나면 이 일지를 가리켜 행을 쓴다.
+
+## 다음
+
+- 이 PR 이 병합되면 harness 017 은 닫힌다. harness 티켓의 PR 이라 결정표는 프론티어 줄이다. `.scratch/plan.md` 의 진행 중 기능 `design-reverse-sync` 에 `ready-for-agent` 티켓(02~10)이 남아 그것이 먼저이고, 어느 티켓을 열지는 병합 뒤 `next-session` 2단계가 막힌 것과 이미 도는 세션을 걸러 정한다.
+- 대기열 442 가 3회차라 다음 기능의 마지막 티켓 뒤 하네스 chore 배치에서 고를 수 있다(위 회고 1).
+- PR 의 남긴 둘(`judge` 가 브랜치마다 `git log -g` 를 띄우는 비용, `git log -g` 가 실패하면 기록 없음으로 보아 지울 후보로 내는 것)은 이 PR 이 판정을 남기고 이유를 PR 체크리스트에 적은 것이다. 뒤로 넘긴 일이 아니다.
+- 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts` 가 한다.
