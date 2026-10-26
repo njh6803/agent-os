@@ -18,7 +18,7 @@ import threading
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
-from typing import IO
+from typing import IO, Literal
 
 import pytest
 from tools.hook_prompt_directive import block_reason_for
@@ -1344,3 +1344,269 @@ def test_보이는_폴더가_Folder_가_아니면_보내지_않고_멈춘다(sho
     assert out.startswith("멈춤: "), out
     assert cause in out
     assert "보내지 않았다" in out
+
+
+# 기계 전체의 열기 잠금(대기열 360, harness 티켓 014). 잠금을 쥔 쪽은 따로 띄운 pwsh 다. 같은
+# 프로세스의 다른 스레드도 막히지만, 실제로 겨루는 것은 다른 세션의 pwsh 라 프로세스로 잰다. 잠금
+# 이름은 사례마다 새로 지어 실제 열기와 겨루지 않고, `Global\` 머리는 실제 이름과 같게 둔다. 쥔 쪽은
+# 잡았다는 표지 파일을 쓰고, 놓으라는 표지 파일이 생길 때까지(최대 60초) 쥐고 있다가 갈래대로
+# 놓거나(`release`, 놓기 직전의 시각을 적는다) 놓지 않고 끝난다(`abandon`).
+_HOLDER = r"""
+$m = [System.Threading.Mutex]::new($false, $env:LOCK_NAME)
+[void]$m.WaitOne()
+Set-Content -LiteralPath $env:LOCK_HELD -Value held
+$deadline = (Get-Date).AddSeconds(60)
+while (-not (Test-Path -LiteralPath $env:LOCK_GO) -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 50
+}
+if ($env:LOCK_MODE -eq 'abandon') { [Environment]::Exit(0) }
+Set-Content -LiteralPath $env:LOCK_RELEASED -Value ([DateTime]::UtcNow.Ticks)
+$m.ReleaseMutex()
+"""
+
+_LOCKED = r"""
+Invoke-SendLocked $given.name ([int]$given.timeout) { "acquired=$([DateTime]::UtcNow.Ticks)" }
+"""
+
+# 놓으라는 표지는 서버 안에서 핸들 하나를 열어 둔 뒤 1초 있다가 쓴다. 테스트 프로세스의 타이머로
+# 쓰던 첫 판은 PC 가 바빠 서버가 늦게 뜨자 쥔 쪽이 먼저 놓거나 끝나 `waited=0s` 로 잡았다
+# (2026-10-26. 쥔 쪽이 끝나면 핸들이 없어 뮤텍스도 사라진다). 그래서 기다림도 버려짐도 재지 못했다.
+_AFTER_GO = (
+    r"""
+$keep = [System.Threading.Mutex]::new($false, $given.name)
+$signal = Start-ThreadJob -ArgumentList $given.go -ScriptBlock {
+    param($go)
+    Start-Sleep -Milliseconds 1000
+    Set-Content -LiteralPath $go -Value go
+}
+try {
+"""
+    + _LOCKED
+    + r"""
+} finally {
+    $signal | Receive-Job -Wait -AutoRemoveJob
+    $keep.Dispose()
+}
+"""
+)
+
+
+class _Holder:
+    """잠금을 쥔 다른 pwsh 프로세스."""
+
+    def __init__(self, tmp_path: Path, name: str, mode: Literal["release", "abandon"]) -> None:
+        self.held = tmp_path / "held"
+        self.go = tmp_path / "go"
+        self.released = tmp_path / "released"
+        env = {
+            **os.environ,
+            "LOCK_NAME": name,
+            "LOCK_MODE": mode,
+            "LOCK_HELD": str(self.held),
+            "LOCK_GO": str(self.go),
+            "LOCK_RELEASED": str(self.released),
+        }
+        self.proc = subprocess.Popen(
+            ["pwsh", "-NoProfile", "-NonInteractive", "-Command", _HOLDER],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        deadline = time.monotonic() + _TIMEOUT_SEC
+        while not self.held.exists():
+            if self.proc.poll() is not None or time.monotonic() > deadline:
+                self.close()
+                pytest.fail("잠금을 쥘 pwsh 가 잡았다는 표지를 쓰지 못했다")
+            time.sleep(0.05)
+
+    def close(self) -> None:
+        self.go.touch()
+        try:
+            self.proc.wait(timeout=_TIMEOUT_SEC)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait(timeout=10)
+
+
+def _lock_name() -> str:
+    return f"Global\\agent-os-open-session-test-{os.getpid()}-{time.monotonic_ns()}"
+
+
+def _acquired(stdout: str) -> int:
+    found = re.search(r"^acquired=(\d+)$", stdout, re.MULTILINE)
+    assert found, stdout
+    return int(found.group(1))
+
+
+# 던질 때까지의 시간을 pwsh 안에서 잰다. 서버를 띄우는 시간이 들지 않는다. 쥔 쪽은 최대 60초 쥐므로,
+# 받은 제한을 버리고 더 오래 기다린 판은 그만큼 늦게 던진다.
+_LOCKED_TIMED = (
+    "$watch = [System.Diagnostics.Stopwatch]::StartNew()\ntry {\n"
+    + _LOCKED
+    + '} catch { "threw=$($watch.ElapsedMilliseconds)|$($_.Exception.Message)" }\n'
+)
+
+
+def test_다른_프로세스가_잠금을_쥐고_있으면_제한_시간에_몸을_돌지_않고_멈춘다(
+    tmp_path: Path,
+) -> None:
+    name = _lock_name()
+    holder = _Holder(tmp_path, name, "release")
+    try:
+        completed = _call("Invoke-SendLocked", _LOCKED_TIMED, {"name": name, "timeout": 1})
+    finally:
+        holder.close()
+
+    assert completed.returncode == 0, completed.stderr
+    assert "acquired=" not in completed.stdout, "잠금을 잡지 못하고도 몸이 돌았다"
+    found = re.search(r"^threw=(\d+)\|(.*)$", completed.stdout, re.MULTILINE)
+    assert found, completed.stdout
+    elapsed, message = int(found.group(1)), found.group(2)
+    assert "1초 안에 잠금" in message
+    assert "쏘지 않았다" in message
+    # 제한은 1초다. 상한은 넉넉히 둔다(`.claude/rules/tests.md` 의 시간 단언).
+    assert elapsed < 10_000, f"제한을 넘겨 기다렸다: {elapsed}ms"
+
+
+def test_쥔_프로세스가_놓을_때까지_기다렸다가_잡고_몸을_돈다(tmp_path: Path) -> None:
+    name = _lock_name()
+    holder = _Holder(tmp_path, name, "release")
+    given: dict[str, object] = {"name": name, "timeout": 30, "go": str(holder.go)}
+    try:
+        completed = _call("Invoke-SendLocked", _AFTER_GO, given)
+    finally:
+        holder.close()
+
+    assert completed.returncode == 0, completed.stderr
+    lock_line = re.search(r"^lock=\d\d:\d\d:\d\d\.\d{3} waited=[\d.]+s$", completed.stdout, re.M)
+    assert lock_line, f"잡은 시각의 줄이 없다: {completed.stdout}"
+    # 쥔 쪽이 놓기 직전에 적은 시각보다 몸이 늦게 돌았다. 기다리지 않은 판은 그 앞에 돈다.
+    released = int(holder.released.read_text().strip())
+    assert _acquired(completed.stdout) >= released, "쥔 쪽이 놓기 전에 몸이 돌았다"
+
+
+def test_쥔_프로세스가_놓지_않고_끝나도_잡고_그_사실을_알린다(tmp_path: Path) -> None:
+    name = _lock_name()
+    holder = _Holder(tmp_path, name, "abandon")
+    given: dict[str, object] = {"name": name, "timeout": 30, "go": str(holder.go)}
+    try:
+        completed = _call("Invoke-SendLocked", _AFTER_GO, given)
+    finally:
+        holder.close()
+
+    assert completed.returncode == 0, completed.stderr
+    assert "앞선 열기가 잠금을 놓지 않고 끝났다" in completed.stdout, completed.stdout
+    _acquired(completed.stdout)
+
+
+# 몸이 끝나거나 던져도 잠금을 놓는다. 같은 스레드는 쥔 잠금을 다시 잡을 수 있어 다른 스레드에서
+# 잡아 본다. 그동안 핸들 하나를 열어 둔다. 마지막 핸들이 닫히면 잡은 스레드가 살아 있어도 뮤텍스가
+# 사라져 다음 핸들이 새 뮤텍스를 잡으므로, 열어 두지 않으면 놓지 않은 판도 놓은 판처럼 보인다
+# (2026-10-26 에 같은 이름을 잡고 놓지 않은 채 핸들을 닫은 pwsh 에서, 다른 pwsh 가 열어 둔 핸들이
+# 없을 때는 잡았고 있을 때는 잡지 못한 것을 손으로 봤다).
+_RELEASED = r"""
+$keep = [System.Threading.Mutex]::new($false, $given.name)
+try {
+    try { Invoke-SendLocked $given.name 5 { if ($given.fail) { throw '몸이 던졌다' } } }
+    catch { "threw=$($_.Exception.Message)" }
+    $probe = Start-ThreadJob -ArgumentList $given.name -ScriptBlock {
+        param($name)
+        $m = [System.Threading.Mutex]::new($false, $name)
+        try { if ($m.WaitOne(0)) { 'free'; $m.ReleaseMutex() } else { 'held' } }
+        catch [System.Threading.AbandonedMutexException] { 'abandoned' }
+        finally { $m.Dispose() }
+    }
+    "state=$($probe | Receive-Job -Wait -AutoRemoveJob)"
+} finally { $keep.Dispose() }
+"""
+
+
+@pytest.mark.parametrize("body", ["끝남", "던짐"])
+def test_몸이_끝나거나_던지면_잠금을_놓는다(body: str) -> None:
+    given: dict[str, object] = {"name": _lock_name(), "fail": body == "던짐"}
+    completed = _call("Invoke-SendLocked", _RELEASED, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert ("threw=몸이 던졌다" in completed.stdout) == (body == "던짐"), completed.stdout
+    found = re.search(r"^state=(\w*)$", completed.stdout, re.MULTILINE)
+    assert found, completed.stdout
+    assert found.group(1) == "free", f"몸 뒤에 잠금을 놓지 않았다: {found.group(1)}"
+
+
+# 몸(과 몸이 부르는 함수)은 `Invoke-SendLocked` 의 인자와 지역 변수를 보지 않는다. PowerShell 은
+# 변수를 부른 쪽의 범위로 거슬러 찾으므로, 막지 않으면 `Send-Prompt` 의 `Wait-For` 기본값
+# `$TimeoutSec` 이 그 함수의 `$timeoutSec` 이 된다(셀프 리뷰). 몸 안에서 보이는 이름을 바깥에서
+# 보이는 이름과 견준다. 이름은 대소문자를 가리지 않아 `$timeoutSec` 은 바깥의 `$TimeoutSec` 과 같은
+# 이름으로 세이므로, 그 값은 따로 본다.
+_PRIVATE = r"""
+$TimeoutSec = 30
+$outer = $null
+$outer = @(Get-Variable | ForEach-Object Name)
+Invoke-SendLocked $given.name 5 {
+    "timeout=$TimeoutSec"
+    $inner = @(Get-Variable | ForEach-Object Name)
+    "leaked=$(@($inner | Where-Object { $_ -notin $outer } | Sort-Object) -join ',')"
+}
+"""
+
+
+def test_몸은_잠금_함수의_인자와_지역_변수를_보지_않는다() -> None:
+    completed = _call("Invoke-SendLocked", _PRIVATE, {"name": _lock_name()})
+
+    assert completed.returncode == 0, completed.stderr
+    found = re.search(r"^leaked=(.*)$", completed.stdout, re.MULTILINE)
+    assert found, completed.stdout
+    assert found.group(1) == "", f"몸에 샌 이름: {found.group(1)}"
+    timeout = re.search(r"^timeout=(\d*)$", completed.stdout, re.MULTILINE)
+    assert timeout, completed.stdout
+    assert timeout.group(1) == "30", f"몸이 바깥의 TimeoutSec 대신 {timeout.group(1)}을 봤다"
+
+
+# 딥링크는 잠금 안에서만 쏜다. 이 스크립트의 `Start-Process` 는 딥링크만 연다. 스크립트의 AST 에서
+# `Start-Process` 를 부르는 함수와 그 함수를 거쳐 부르는 함수를 모두 모으고(`fires=`), 함수 밖에서
+# 그것들을 부르는 자리마다 그것을 감싼 `Invoke-SendLocked` 가 있는지 본다. 함수 안의 호출은 그
+# 함수가 다시 모은 쪽에 들어 그 함수를 부르는 자리에서 본다. 보낸 뒤 기본값을 되돌리는 표지 딥링크
+# (`Restore-DraftDefaults`)도 그렇게 잠금 안에 든다(2026-10-19 11:50:28 에 끼어든 것이 그 딥링크다).
+_LOCKED_CALLS = r"""
+$commandType = 'System.Management.Automation.Language.CommandAst' -as [type]
+$functionType = 'System.Management.Automation.Language.FunctionDefinitionAst' -as [type]
+$isCommand = { param($n) $n -is $commandType }.GetNewClosure()
+$functions = @($ast.FindAll({ param($n) $n -is $functionType }.GetNewClosure(), $true))
+$calls = @{}
+foreach ($f in $functions) {
+    $calls[$f.Name] = @($f.Body.FindAll($isCommand, $true) | ForEach-Object { $_.GetCommandName() })
+}
+$fires = @('Start-Process')
+do {
+    $more = @($functions | Where-Object {
+        $_.Name -notin $fires -and @($calls[$_.Name] | Where-Object { $_ -in $fires }).Count
+    } | ForEach-Object Name)
+    $fires += $more
+} while ($more.Count)
+"fires=$((@($fires | Where-Object { $_ -ne 'Start-Process' }) | Sort-Object) -join ',')"
+$isTarget = { param($n) $n -is $commandType -and $n.GetCommandName() -in $fires }.GetNewClosure()
+foreach ($call in $ast.FindAll($isTarget, $true)) {
+    $inFunction = $false
+    $locked = $false
+    for ($p = $call.Parent; $p; $p = $p.Parent) {
+        if ($p -is $functionType) { $inFunction = $true }
+        $isLock = $p -is $commandType -and $p.GetCommandName() -eq 'Invoke-SendLocked'
+        if ($isLock) { $locked = $true }
+    }
+    if (-not $inFunction) { "$($call.GetCommandName())=$locked" }
+}
+"""
+
+
+def test_딥링크는_잠금_안에서만_쏜다() -> None:
+    completed = _call("", _LOCKED_CALLS, {})
+
+    assert completed.returncode == 0, completed.stderr
+    lines = completed.stdout.split()
+    fires = [line.removeprefix("fires=") for line in lines if line.startswith("fires=")]
+    assert len(fires) == 1, completed.stdout
+    known = {"Open-MarkerDraft", "Restore-DraftDefaults", "Send-Prompt", "Set-Defaults"}
+    assert known <= set(fires[0].split(",")), completed.stdout
+    calls = [line for line in lines if not line.startswith("fires=")]
+    assert {"Send-Prompt=True", "Set-Defaults=True"} <= set(calls), completed.stdout
+    assert all(call.endswith("=True") for call in calls), completed.stdout
