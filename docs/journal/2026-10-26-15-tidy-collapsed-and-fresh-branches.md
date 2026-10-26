@@ -1,4 +1,4 @@
-# 2026-10-26 (06) tidy_checkouts 가 접힌 무시 폴더와 막 딴 브랜치를 바로 가른다 (harness 017)
+# 2026-10-26 (15) tidy_checkouts 가 접힌 무시 폴더와 막 딴 브랜치를 바로 가른다 (harness 017)
 
 ## 구현
 
@@ -41,7 +41,7 @@
 Critical·Major 없음. 주장 검증에서 `touched_at` 의 경계 입력과 일지 "손으로 본 것"의 git 2.32 사실 문장을 임시 저장소로 다시 봐 모두 맞았고, 변이 번호와 대기열 닫힘 줄도 맞았다.
 
 - 고침(Minor): `.scratch/harness/probes/README.md` 의 변이 표 줄이 "표는 백일흔다섯" 그대로였다. 2026-10-26 결과와 일지 번호를 더했다.
-- 고침(Minor): 카나리아 명세의 "최신 결과 … 일지 2026-10-26-06" 이 일지에 없었다. 위 검사 절에 적었다.
+- 고침(Minor): 카나리아 명세의 "최신 결과 … 일지 2026-10-26-15" 이 일지에 없었다. 위 검사 절에 적었다.
 - 고침(Minor): 변이 178의 표지 `widget/public/element.js` 는 값 문구이고, 181의 `assert 0 == 1` 은 반환 코드를 견주는 단언이면 어디서나 나온다. 맞지 않을 임시 표지로 한 번 돌려 실패 출력을 본 뒤, 178은 `등록 없는 폴더에 커밋에 없는 파일이 1개 있다: web/apps/widget/public/element.js`, 181은 `where 0 = main(['remove-branch', 'worktree-x'` 로 바꿔 다시 돌렸고 기대대로였다.
 - 고침(Minor, 갈래 밟기): `judge` 가 두 목록을 읽는 사이에 형제 세션이 체크아웃한 오래된 브랜치(reflog 가 창 밖)는 지울 후보로 찍힌다. `remove-branch` 가 등록을 다시 읽어 막아 잃는 것은 없다. 독스트링 못 보는 것에 "체크아웃은 그 브랜치의 reflog 에 기록을 남기지 않아 지울 후보로 찍힌다. `remove-branch` 가 워크트리 등록을 다시 읽어 남긴다" 를 적고, git 호출을 감싸 브랜치 목록을 읽기 직전에 `git worktree add <경로> chore/old` 를 치는 시험으로 고정했다.
 - 남김(Minor, Data Clumps): `contained`·`behind`·`fresh` 세 키워드 불리언이 판정 함수 넷을 함께 다닌다. `CODING_STANDARDS.md` 의 불리언 플래그 줄은 함수가 두 가지 일을 하는 모드 플래그를 겨누고, 이 셋은 순수 판정 함수에 넣는 브랜치의 사실이다. 앞의 둘은 이 변경 전부터 있었고 묶는 것은 따로 할 정리라 남긴다.
@@ -92,7 +92,7 @@ Critical·Major 없음. 수용 기준 1~7이 채워졌다고 봤다. 병합된 P
 브랜치: chore/017-tidy-collapsed-and-fresh-branches
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
 읽을 것: 일지의 "셀프 리뷰"(특히 "반영하며 새로 쓴 사실 문장")와 "인계"
-이어받을 상태: 인계: 커밋 뒤. 커밋 91f02b96 에 티켓 017(done), 구현, 시험, 변이 176~184, 카나리아, tidy-checkouts 스킬 3단계 한 문장, 대기열 440·464 닫기, 셀프 리뷰 반영이 들었고 pre-commit 이 통과했다. 그 뒤 일지에 "커밋"과 "인계" 절을 더한 것은 커밋하지 않았다. 푸시하지 않았고 PR 은 없다. 남은 단계는 PR 직전 리뷰(coderabbit-review, 돌지 못하면 bug-perf-review. 일지 "반영하며 새로 쓴 사실 문장" 여섯을 밀 주장으로 넣는다)와 /security-review, 그 반영, 변이 표 전체 실행과 probes README 결과 줄, 일지의 PR·회고·다음, 푸시와 PR, 봇 회차, "워크트리에서 병합할 때"의 병합이다. 일지 docs/journal/2026-10-26-06-tidy-collapsed-and-fresh-branches.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 91f02b96 에 티켓 017(done), 구현, 시험, 변이 176~184, 카나리아, tidy-checkouts 스킬 3단계 한 문장, 대기열 440·464 닫기, 셀프 리뷰 반영이 들었고 pre-commit 이 통과했다. 그 뒤 일지에 "커밋"과 "인계" 절을 더한 것은 커밋하지 않았다. 푸시하지 않았고 PR 은 없다. 남은 단계는 PR 직전 리뷰(coderabbit-review, 돌지 못하면 bug-perf-review. 일지 "반영하며 새로 쓴 사실 문장" 여섯을 밀 주장으로 넣는다)와 /security-review, 그 반영, 변이 표 전체 실행과 probes README 결과 줄, 일지의 PR·회고·다음, 푸시와 PR, 봇 회차, "워크트리에서 병합할 때"의 병합이다. 일지 docs/journal/2026-10-26-15-tidy-collapsed-and-fresh-branches.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
