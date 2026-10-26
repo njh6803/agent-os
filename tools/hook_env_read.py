@@ -1,4 +1,6 @@
 """PreToolUse 훅(Bash|Grep). `.env` 를 읽는 명령과 `.env` 를 경로로 준 Grep 을 막는다.
+막는 대상은 실수로 내는 길(무심코 친 명령이 `.env` 의 값을 도구 출력에 싣는 것)이다. 일부러 하는
+우회는 막지 않고, 그 대표 길을 아래 못 보는 것에 든다.
 
 이 저장소의 `permissions.deny` 는 모든 위치의 `.env` 에 Read·Edit 를 막고(`//**/.env`. `./` 는
 세션 cwd 기준이라 워크트리 세션에서 주 체크아웃에 닿지 않았다), PowerShell 의 `Get-Content`·
@@ -63,7 +65,9 @@ shlex 가 이스케이프로 읽는다), 래퍼 스크립트 안의 읽기, 위 
 명령을 문자열 하나로 받는 래퍼 (`env -S 'cat .env'`), 레코드가 없는 명령의 옵션 값(`cat` 류는
 값 옵션을 모르니 값이 `.env` 면 위치 인자로 보아 막는 쪽이다), PowerShell 도구(권한 deny 가
 `Get-Content`·`Select-String` 과 그 별칭만 막고 `[IO.File]::ReadAllText` 같은 읽기는 지나간다 —
-2026-09-29 가짜 `.env` 로 실측), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등), gitignore 하지 않은
+2026-09-29 가짜 `.env` 로 실측), 내용을 내지 않고 출력의 모양만 그 파일에 기대는 읽기(`sort -R
+--random-source .env x` 는 `x` 의 줄 순서가 `.env` 의 바이트로 정해져, 되풀이하면 몇 비트씩 맞혀
+볼 수 있다. 일부러 하는 우회다), `.env` 밖의 비밀 파일(사용자 설정의 env 값 등), gitignore 하지 않은
 `.env` 가 든 폴더를 glob 없이 훑는 Grep 도구(숨김 파일을 읽는다),
 견본(`.env`·`.env.local`·`.env.production`, `_ENV_SAMPLES`) 밖의 `.env` 꼴만 고르거나 남기는 glob.
 판정이 견본에만 glob 을 대 보기 때문이다. 견본을 하나씩 모두 뺀 빼기

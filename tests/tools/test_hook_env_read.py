@@ -367,6 +367,7 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         "diff --label .env a.txt b.txt",
         # `sort --random-source` 는 그 파일을 난수로 읽을 뿐 내용을 내지 않는다(coreutils 의
         # `sort --help` 가 "get random bytes from FILE" 로 적는다). 파일 옵션에 넣지 않았다.
+        # 출력 순서가 그 바이트로 정해지는 일부러 하는 우회는 모듈 독스트링의 못 보는 것이다.
         "sort -R --random-source .env notes.txt",
         "grep -d skip KEY .",
         "git -C sub status .env",
