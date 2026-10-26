@@ -26,6 +26,7 @@ import pytest
 from tools.hook_worktree_skill_overrides import KEY_PREFIX as HOOK_KEY_PREFIX
 from tools.tidy_checkouts import (
     APP_MARKER,
+    FRESH_SECONDS,
     SESSION_ENV,
     WORKTREE_OVERRIDE_PREFIX,
     Facts,
@@ -44,6 +45,7 @@ from tools.tidy_checkouts import (
     hold_for_strangers,
     holders_in,
     holds_home,
+    is_fresh,
     is_within,
     judge,
     judge_branch,
@@ -62,6 +64,7 @@ from tools.tidy_checkouts import (
     session_in,
     settings_equivalent,
     tasklist_has,
+    touched_at,
     unrecreatable,
 )
 
@@ -418,6 +421,8 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         "web/packages/ui/storybook-static/",
         "web/apps/widget/storybook-static/",
         "web/apps/widget/public/fonts/",
+        # 위젯 시작 래퍼가 짓는 페이지 안 번들(티켓 web-widget 10, 대기열 464)
+        "web/apps/widget/public/element.js",
         ".claude/settings.local.json",
         # 2026-10-15 에 병합된 워크트리 다섯을 남긴 것들. 모두 루트 `.gitignore` 가 산출물·캐시라고
         # 적은 자리다
@@ -427,13 +432,23 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         ".design-sync/.cache/",
         ".scratch/harness/probes/session_cost/cache/",
         "grep.exe.stackdump",
+        # 안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
+        # `.grimp_cache/` 안의 `.gitignore` 에 `*` 를 둔다(셀프 리뷰 명세 축)
+        ".grimp_cache/.gitignore",
+        ".grimp_cache/CACHEDIR.TAG",
+        ".grimp_cache/sub/",
+        "src/.grimp_cache/a.data.json",
+        "web/apps/widget/public/fonts/a.woff2",
     ]
     assert unrecreatable(entries, settings_same=True) == []
 
 
 def test_다시_만들_수_없는_무시된_것을_돌려준다() -> None:
-    """자리째로 보는 폴더는 같은 이름이 다른 자리에 있으면 다시 만들 수 없는 것이다. 플랜 모드의
-    계획 파일은 세션의 계획 원문이라 산출물이 아니다."""
+    """자리째로 보는 폴더와 파일은 같은 이름이 다른 자리에 있으면 다시 만들 수 없는 것이다. 플랜
+    모드의 계획 파일은 세션의 계획 원문이라 산출물이 아니다. 접힌 폴더(`web/apps/widget/public/`)는
+    그 안을 모르니 다시 만들 수 없는 것이다. 그래서 `gather` 가 접지 않고 읽는다(대기열 464). 조상
+    폴더는 다시 만들 수 있는 폴더의 이름이나 폴더 자리와 맞아야 하고, 파일 자리는 조상이 되지
+    않는다."""
     entries = [
         ".env",
         "traces/",
@@ -444,6 +459,15 @@ def test_다시_만들_수_없는_무시된_것을_돌려준다() -> None:
         ".venv/",
         "x.pyc",
         "stackdump",
+        "web/apps/widget/public/",
+        "web/apps/admin/public/element.js",
+        "element.js",
+        "web/apps/widget/public/element.js/",
+        "a.grimp_cache/x.json",
+        "x/.grimp_cache",
+        "notes/.gitignore",
+        "web/apps/widget/public/fontsx/a.woff2",
+        "web/apps/widget/public/element.js/x",
     ]
     assert unrecreatable(entries, settings_same=True) == [
         ".env",
@@ -454,6 +478,15 @@ def test_다시_만들_수_없는_무시된_것을_돌려준다() -> None:
         "web/apps/admin/dist/",
         "x.pyc",
         "stackdump",
+        "web/apps/widget/public/",
+        "web/apps/admin/public/element.js",
+        "element.js",
+        "web/apps/widget/public/element.js/",
+        "a.grimp_cache/x.json",
+        "x/.grimp_cache",
+        "notes/.gitignore",
+        "web/apps/widget/public/fontsx/a.woff2",
+        "web/apps/widget/public/element.js/x",
     ]
 
 
@@ -787,6 +820,48 @@ def test_브랜치_끝이_병합된_PR_머리의_조상이면_지운다() -> Non
     assert judge_branch("chore/x", _HEAD, moved, (), behind=True).action == "delete"
     assert judge_branch("chore/x", _HEAD, moved, ()).action == "human"
     assert judge_branch("chore/x", _HEAD, moved, ("chore/x",), behind=True).action == "keep"
+
+
+def test_막_딴_브랜치는_PR_없이_origin_main_에_있어도_남긴다() -> None:
+    """대기열 440. 막 딴 것인지는 `judge` 와 `remove-branch` 가 reflog 로 읽어 `fresh` 로 넣는다.
+    병합된 PR 로 지우는 두 길(머리와 같은 끝, 머리보다 뒤인 끝)은 보지 않는다. 주 체크아웃에서
+    병합하고 main 으로 옮긴 직후의 정리가 그 브랜치를 바로 지운다."""
+    kept = judge_branch("worktree-x", _HEAD, {}, (), contained=True, fresh=True)
+    assert kept.action == "keep", kept
+    assert "막 딴 브랜치다" in kept.reason
+    assert judge_branch("chore/x", _HEAD, _MERGED, (), fresh=True).action == "delete"
+    moved = {"chore/x": frozenset({_OLD})}
+    assert judge_branch("chore/x", _HEAD, moved, (), behind=True, fresh=True).action == "delete"
+    main_branch = judge_branch("main", _HEAD, {}, (), contained=True, fresh=True)
+    assert main_branch.reason == "지우지 않는 브랜치다"
+
+
+def test_reflog_의_마지막_기록이_창_안이거나_앞날이면_막_딴_것이다() -> None:
+    """앞날 시각의 기록은 시계가 어긋난 PC 가 남긴 것이라 잰 나이를 믿지 않고 남기는 쪽이다. 기록이
+    없으면 막 딴 것인지 모른다(못 보는 것)."""
+    now = 1_800_000_000.0
+    assert is_fresh(int(now) - FRESH_SECONDS + 1, now)
+    assert not is_fresh(int(now) - FRESH_SECONDS, now)
+    assert is_fresh(int(now) + 600, now)
+    assert not is_fresh(None, now)
+
+
+@pytest.mark.parametrize(
+    ("printed", "expected"),
+    [
+        ("chore/x@{1792996632}\n", 1792996632),
+        # git 은 브랜치 이름에 `@` 를 허락하고 `@{` 는 허락하지 않는다
+        ("a@b@{1792996632}\n", 1792996632),
+        ("", None),
+        ("chore/x@{now}\n", None),
+        ("chore/x\n", None),
+    ],
+    ids=["기록", "이름에_골뱅이", "기록_없음", "숫자가_아니다", "선택자가_없다"],
+)
+def test_reflog_의_선택자에서_기록_시각을_읽는다(printed: str, expected: int | None) -> None:
+    """`git log -g -n 1 --format=%gd --date=unix` 의 출력. git 2.32 가 `chore/x@{1792996632}` 로
+    찍는 것을 임시 저장소에서 손으로 봤다."""
+    assert touched_at(printed) == expected
 
 
 def test_앱의_표지가_있는_워크트리는_넘기지_않고_앱의_정리에_맡긴다() -> None:
@@ -1339,14 +1414,36 @@ def _안_잔다(_seconds: float) -> None:
     return None
 
 
-def _ops(merged: dict[str, frozenset[str]]) -> Ops:
+def _나중() -> float:
+    """막 딴 브랜치의 창(`FRESH_SECONDS`)이 지난 때. 브랜치를 따고 바로 판정하는 시험이 떠난 세션이
+    오래전에 남긴 브랜치를 그린다."""
+    return time.time() + 2 * FRESH_SECONDS
+
+
+def _ops(merged: dict[str, frozenset[str]], now: Callable[[], float] = _나중) -> Ops:
     """모듈 훑기는 한 번에 1초 안팎이라(`.scratch/harness/probes/module_holder.py` 에서 0.90~1.22초)
-    가짜로 준다. 실제 훑기는 따로 잰다."""
+    가짜로 준다. 실제 훑기는 따로 잰다. 막 딴 브랜치를 재는 시험만 `now` 에 지금 시각을 준다."""
 
     def merged_source(_root: Path) -> dict[str, frozenset[str]]:
         return merged
 
-    return Ops(merged=merged_source, pid_alive=_죽었다, modules=_모듈_없음, sleep=_안_잔다)
+    return Ops(merged=merged_source, pid_alive=_죽었다, modules=_모듈_없음, sleep=_안_잔다, now=now)
+
+
+def _git_at(when: float, *args: str, cwd: Path) -> None:
+    """reflog 의 기록 시각을 `when`(유닉스 초)으로 두고 git 을 친다. reflog 는 커미터 시각을
+    적는다."""
+    env = {**os.environ, "GIT_COMMITTER_DATE": f"{int(when)} +0000"}
+    result = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_judge_는_지울_후보와_명령을_찍는다(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1848,6 +1945,26 @@ def test_judge_는_커밋에_없는_파일이_든_등록_없는_폴더를_남긴
     assert relative in line
 
 
+def test_judge_는_등록_없는_폴더의_위젯_페이지_안_번들을_다시_만들_수_있는_것으로_본다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 464 의 둘째(일지 2026-10-26-01 회고 1). 워크트리 판정과 같은 자리를 다시 만들 수 있는
+    것으로 본다. 자리째로 보므로 다른 앱의 같은 이름은 커밋에 없는 파일이다."""
+    stray = _stray(repo)
+    bundle = stray / "web" / "apps" / "widget" / "public" / "element.js"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_bytes(b"bundle")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _stray_line(capsys.readouterr().out).startswith("지운다")
+    other = stray / "web" / "apps" / "admin" / "public" / "element.js"
+    other.parent.mkdir(parents=True)
+    other.write_bytes(b"bundle")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = _stray_line(capsys.readouterr().out)
+    assert line.startswith("남긴다"), line
+    assert "web/apps/admin/public/element.js" in line
+
+
 def test_judge_는_다른_브랜치에만_있는_내용도_커밋에_있는_것으로_본다(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2175,6 +2292,113 @@ def test_remove_는_무시된_것을_휴지통으로_옮긴_뒤_워크트리와_
     assert not path.exists()
     assert _git("branch", "--list", "chore/done", cwd=repo) == ""
     assert _trash(repo) == []
+
+
+_WIDGET_PUBLIC = "web/apps/widget/public"
+
+
+def _위젯을_띄운_워크트리(repo: Path, name: str) -> tuple[Path, str]:
+    """위젯 시작 래퍼가 글꼴을 복사하고 페이지 안 번들을 지은 워크트리. 루트 `.gitignore` 처럼 그
+    둘만 앵커로 무시하고 `public/` 은 추적하지 않으며, 그 위 `web/apps/widget/` 은 추적한다."""
+    ignore = repo / ".gitignore"
+    rules = f"/{_WIDGET_PUBLIC}/fonts/\n/{_WIDGET_PUBLIC}/element.js\n"
+    ignore.write_bytes(ignore.read_bytes() + rules.encode())
+    (repo / "web" / "apps" / "widget").mkdir(parents=True)
+    (repo / "web" / "apps" / "widget" / "package.json").write_bytes(b"{}\n")
+    _git("add", ".", cwd=repo)
+    _git(*_IDENTITY, "commit", "-q", "-m", "위젯", cwd=repo)
+    _git("update-ref", "refs/remotes/origin/main", "HEAD", cwd=repo)
+    path, head = _add(repo, name)
+    public = path / _WIDGET_PUBLIC
+    (public / "fonts").mkdir(parents=True)
+    (public / "fonts" / "a.woff2").write_bytes(b"font")
+    (public / "element.js").write_bytes(b"bundle")
+    return path, head
+
+
+def test_judge_와_remove_는_무시된_것만_든_미추적_폴더를_풀어_보고_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 464. git 의 기본 `--ignored`(traditional)는 무시된 것만 든 미추적 폴더를 그 폴더로
+    접어 찍어, 위젯을 띄운 병합된 워크트리 아홉이 `web/apps/widget/public/` 때문에 남았다(일지
+    2026-10-26-01 "정리"). 첫 단언은 그 접힘이 이 git 에서 나는지(재려는 상황의 표지)다. 풀어 읽은
+    두 항목은 따로 휴지통으로 옮겨진다."""
+    path, head = _위젯을_띄운_워크트리(repo, "widget")
+    folded = _git("status", "--porcelain", "--ignored", cwd=path).splitlines()
+    assert f"!! {_WIDGET_PUBLIC}/" in folded, folded
+    merged = {"chore/widget": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/widget" in line)
+    assert line.startswith("지운다"), line
+    moved: list[str] = []
+
+    def rename(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            moved.append(Path(dst).name)
+        os.rename(src, dst)
+
+    ops = replace(_ops(merged), rename=rename)
+    assert main(["remove", path.as_posix(), "chore/widget", head], cwd=repo, ops=ops) == 0
+    assert not path.exists()
+    assert _trash(repo) == []
+    public = "widget~~web%2Fapps%2Fwidget%2Fpublic"
+    assert f"{public}%2Ffonts" in moved, moved
+    assert f"{public}%2Felement.js" in moved, moved
+
+
+@pytest.mark.parametrize(
+    ("relative", "reason"),
+    [
+        ("notes.txt", "바뀐 파일이 있다"),
+        (".env", f"다시 만들 수 없는 무시된 항목: {_WIDGET_PUBLIC}/.env"),
+    ],
+    ids=["무시되지_않은_새_파일", "무시된_env"],
+)
+def test_judge_와_remove_는_풀어_본_폴더_안의_다시_만들_수_없는_것을_보고_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str], relative: str, reason: str
+) -> None:
+    """반박 시험(`.claude/rules/tools.md`). 접힌 폴더를 풀어 읽는 길이 그 안의 커밋하지 않은 파일과,
+    무시됐지만 다시 만들 수 없는 파일을 지나치지 않는다. `.env` 는 픽스처의 `.gitignore` 가 어느
+    깊이에서나 무시한다."""
+    path, head = _위젯을_띄운_워크트리(repo, "widget")
+    (path / _WIDGET_PUBLIC / relative).write_text("x", encoding="utf-8")
+    merged = {"chore/widget": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/widget" in line)
+    assert line.startswith("남긴다"), line
+    assert line.endswith(f" — {reason}"), line
+    assert main(["remove", path.as_posix(), "chore/widget", head], cwd=repo, ops=_ops(merged)) == 1
+    assert (path / _WIDGET_PUBLIC / relative).exists()
+    assert (path / _WIDGET_PUBLIC / "element.js").exists()
+
+
+@pytest.mark.parametrize(
+    ("folder", "action", "code"),
+    [(".grimp_cache", "지운다", 0), ("notes", "남긴다", 1)],
+    ids=["grimp_캐시", "다시_만들_수_없는_폴더"],
+)
+def test_judge_와_remove_는_안쪽_gitignore_로만_무시된_폴더를_조상_폴더로_가른다(
+    repo: Path, capsys: pytest.CaptureFixture[str], folder: str, action: str, code: int
+) -> None:
+    """셀프 리뷰 명세 축. Grimp 는 `.grimp_cache/` 안에 `*` 줄이 든 `.gitignore` 를 두고(주
+    체크아웃의 것을 손으로 봤다) 루트 `.gitignore` 는 그 폴더를 무시하지 않아, `matching` 은 그 안을
+    하나씩 찍는다. 첫 단언은 그렇게 찍히는지(재려는 상황의 표지)다. 다시 만들 수 있는 폴더 아래면
+    지우고, 같은 꼴이어도 그 밖의 폴더면 남긴다(반박 시험)."""
+    path, head = _add(repo, "cachewt")
+    cache = path / folder
+    (cache / "sub").mkdir(parents=True)
+    (cache / ".gitignore").write_text("# Automatically created by Grimp.\n*\n", encoding="utf-8")
+    (cache / "CACHEDIR.TAG").write_text("Signature: x\n", encoding="utf-8")
+    (cache / "sub" / "a.data.json").write_text("{}", encoding="utf-8")
+    listed = _git("status", "--porcelain", "--ignored=matching", cwd=path).splitlines()
+    assert f"!! {folder}/.gitignore" in listed, listed
+    merged = {"chore/cachewt": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/cachewt" in line)
+    assert line.startswith(action), line
+    argv = ["remove", path.as_posix(), "chore/cachewt", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == code
+    assert path.exists() == (code == 1)
 
 
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:
@@ -2532,6 +2756,113 @@ def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_�
     assert main(["remove-branch", "worktree-x", tip], cwd=repo, ops=_ops({})) == 0
     assert _git("branch", "--list", "worktree-x", cwd=repo) == ""
     assert _git("branch", "--list", "ahead", cwd=repo) != ""
+
+
+def _branch_line(out: str, name: str) -> str:
+    return next(line for line in out.splitlines() if f" {name} " in line)
+
+
+def test_judge_와_remove_branch_는_막_딴_브랜치를_남기고_창이_지나면_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 440. 나란히 연 형제 세션이 `git worktree add -b` 로 딴 브랜치는 등록이 생기기 전이나
+    `judge` 가 워크트리 목록을 읽은 뒤에 생기면 체크아웃되지 않은 것으로 보인다. 첫 세션의 정리가
+    형제 셋의 브랜치를 PR 없이 origin/main 에 있다며 지울 후보로 냈다(일지 2026-10-23-13).
+    `remove-branch` 의 재판정도 같은 창을 본다."""
+    _git("branch", "worktree-x", cwd=repo)
+    tip = _git("rev-parse", "worktree-x", cwd=repo)
+    now = _ops({}, now=time.time)
+    assert main(["judge"], cwd=repo, ops=now) == 0
+    kept = _branch_line(capsys.readouterr().out, "worktree-x")
+    assert kept.startswith("브랜치를 남긴다 worktree-x — 막 딴 브랜치다"), kept
+    assert "remove-branch" not in kept
+    assert main(["remove-branch", "worktree-x", tip], cwd=repo, ops=now) == 1
+    assert "막 딴 브랜치다" in capsys.readouterr().out
+    assert _git("branch", "--list", "worktree-x", cwd=repo) != ""
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    gone = _branch_line(capsys.readouterr().out, "worktree-x")
+    assert gone.startswith("브랜치를 지운다"), gone
+    assert main(["remove-branch", "worktree-x", tip], cwd=repo, ops=_ops({})) == 0
+    assert _git("branch", "--list", "worktree-x", cwd=repo) == ""
+
+
+def test_judge_와_remove_branch_는_이름을_바꾼_지_얼마_안_됐거나_앞날_기록이면_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """반박 시험(`.claude/rules/tools.md`). `EnterWorktree` 가 딴 `worktree-*` 를 세션이 `git branch
+    -m` 으로 바꾼다. 바꾼 기록이 reflog 의 맨 위에 와(git 2.32 에서 손으로 봤다) 딴 지 오래된
+    브랜치도 막 바꿨으면 막 딴 것이다. 앞날 시각의 기록(시계가 어긋난 PC)도 남긴다. 판정은 지금
+    시각으로 한다. 같은 입력을 `remove-branch` 의 재판정에도 넣는다(셀프 리뷰 명세 축)."""
+    old = time.time() - 2 * FRESH_SECONDS
+    _git_at(old, "branch", "stale", cwd=repo)
+    _git_at(old, "branch", "worktree-y", cwd=repo)
+    _git("branch", "-m", "worktree-y", "chore/renamed", cwd=repo)
+    _git_at(time.time() + 24 * FRESH_SECONDS, "branch", "ahead-clock", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({}, now=time.time)) == 0
+    out = capsys.readouterr().out
+    assert _branch_line(out, "stale").startswith("브랜치를 지운다")
+    assert _branch_line(out, "chore/renamed").startswith("브랜치를 남긴다")
+    assert _branch_line(out, "ahead-clock").startswith("브랜치를 남긴다")
+    for name in ("chore/renamed", "ahead-clock"):
+        tip = _git("rev-parse", name, cwd=repo)
+        assert main(["remove-branch", name, tip], cwd=repo, ops=_ops({}, now=time.time)) == 1, name
+        assert _git("rev-parse", name, cwd=repo) == tip
+
+
+def test_못_보는_것_reflog_가_없는_브랜치는_막_딴_것인지_몰라_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """reflog 를 남기지 않는 저장소(`core.logAllRefUpdates=false`)와 기록이 만료된 브랜치. 잃는
+    것은 이름이고 커밋은 origin/main 에 있다."""
+    _git("-c", "core.logAllRefUpdates=false", "branch", "nolog", cwd=repo)
+    assert _git("log", "-g", "--format=%gd", "refs/heads/nolog", "--", cwd=repo) == ""
+    tip = _git("rev-parse", "nolog", cwd=repo)
+    now = _ops({}, now=time.time)
+    assert main(["judge"], cwd=repo, ops=now) == 0
+    assert _branch_line(capsys.readouterr().out, "nolog").startswith("브랜치를 지운다")
+    assert main(["remove-branch", "nolog", tip], cwd=repo, ops=now) == 0
+
+
+def test_못_보는_것_judge_가_두_목록_사이에_체크아웃된_오래된_브랜치는_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`judge` 는 워크트리 목록을 읽은 뒤에 브랜치 목록을 읽는다. 그사이 형제 세션이 reflog 의
+    마지막 기록이 창 밖인 브랜치를 체크아웃하면 체크아웃은 그 브랜치의 reflog 에 기록을 남기지 않아
+    지울 후보로 찍힌다. `remove-branch` 가 등록을 다시 읽어 남긴다(셀프 리뷰 표준 축)."""
+    _git_at(time.time() - 2 * FRESH_SECONDS, "branch", "chore/old", cwd=repo)
+    tip = _git("rev-parse", "chore/old", cwd=repo)
+    path = repo / ".claude" / "worktrees" / "old"
+
+    def sibling_checks_out(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+        listing_branches = "--format=%(refname:short) %(objectname)" in args
+        if args[0] == "for-each-ref" and listing_branches and not path.exists():
+            _git("worktree", "add", str(path), "chore/old", cwd=repo)
+        return real_git(args, cwd)
+
+    ops = replace(_ops({}, now=time.time), git=sibling_checks_out)
+    assert main(["judge"], cwd=repo, ops=ops) == 0
+    assert path.exists()
+    line = _branch_line(capsys.readouterr().out, "chore/old")
+    assert line.startswith("브랜치를 지운다"), line
+    assert main(["remove-branch", "chore/old", tip], cwd=repo, ops=_ops({}, now=time.time)) == 1
+    assert _git("rev-parse", "HEAD", cwd=path) == tip
+
+
+def test_judge_와_remove_branch_는_대소문자가_바뀌어_찍힌_막_딴_브랜치도_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """반박 시험(같은 값을 견주는 다른 자리). 윈도에서 `for-each-ref` 가 `chore/Upper` 로 찍은
+    브랜치의 reflog 를 찍힌 이름으로 읽는다(git 2.32 에서 손으로 봤다)."""
+    _git("branch", "chore/x", cwd=repo)
+    _git("branch", "Chore/Upper", cwd=repo)
+    listed = _git("for-each-ref", "refs/heads", "--format=%(refname:short)", cwd=repo)
+    printed = next(name for name in listed.splitlines() if name.lower() == "chore/upper")
+    tip = _git("rev-parse", f"refs/heads/{printed}", cwd=repo)
+    now = _ops({}, now=time.time)
+    assert main(["judge"], cwd=repo, ops=now) == 0
+    assert _branch_line(capsys.readouterr().out, printed).startswith("브랜치를 남긴다")
+    assert main(["remove-branch", printed, tip], cwd=repo, ops=now) == 1
+    assert _git("rev-parse", f"refs/heads/{printed}", cwd=repo) == tip
 
 
 def test_judge_는_실행_중인_세션의_제목인_체크아웃되지_않은_브랜치를_남긴다(

@@ -517,9 +517,9 @@ expect_output = [") = _ops({})", "지웠다 브랜치 chore/loose"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
+old = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind, fresh=fresh)
     if verdict.action != "delete":'''
-new = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
+new = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind, fresh=fresh)
     if False:'''
 
 [[mutation]]
@@ -574,8 +574,8 @@ expect_output = ["AssertionError: 브랜치를 지운다 chore/loose"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''                branch, tip, merged, running, contained=branch in contained, behind=behind'''
-new = '''                branch, tip, merged, (), contained=branch in contained, behind=behind'''
+old = '''                branch, tip, merged, running, contained=inside, behind=behind, fresh=fresh'''
+new = '''                branch, tip, merged, (), contained=inside, behind=behind, fresh=fresh'''
 
 [[mutation]]
 name = "remove: 옮기기 직전에 다시 거르지 않는다(셀프 리뷰 Major)"
@@ -1972,3 +1972,109 @@ old = '''    target = os.path.realpath(path)
 '''
 new = '''    target = os.path.realpath(path) if "~" not in os.fspath(path) else os.path.abspath(path)
 '''
+
+# 2026-10-26(chore/017-tidy-collapsed-and-fresh-branches): 접힌 무시 폴더, 페이지 안 번들, 막 딴 브랜치
+
+[[mutation]]
+name = "무시된 항목: 접어 찍는 기본 모드로 읽는다(대기열 464)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "풀어_보고_지운다"]
+expect = "red"
+expect_output = ["AssertionError: 남긴다 ", "무시된 항목: web/apps/widget/public/"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    listed = git(["status", "--porcelain", "-z", "--ignored=matching"], path)'''
+new = '''    listed = git(["status", "--porcelain", "-z", "--ignored"], path)'''
+
+[[mutation]]
+name = "다시 만들 수 있는 자리: 워크트리 판정이 파일 자리를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다시_만들_수_있는_무시된_것만"]
+expect = "red"
+expect_output = ["Left contains one more item: 'web/apps/widget/public/element.js'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            entry in RECREATABLE_PATHS
+            or name in RECREATABLE_FILES'''
+new = '''            name in RECREATABLE_FILES'''
+
+[[mutation]]
+name = "다시 만들 수 있는 자리: 등록 없는 폴더 판정이 파일 자리를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "위젯_페이지_안_번들"]
+expect = "red"
+expect_output = ["등록 없는 폴더에 커밋에 없는 파일이 1개 있다: web/apps/widget/public/element.js"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''in RECREATABLE_FILES or relative in RECREATABLE_PATHS:'''
+new = '''in RECREATABLE_FILES:'''
+
+[[mutation]]
+name = "막 딴 브랜치: 판정 1이 창을 보지 않는다(대기열 440)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치는_PR_없이"]
+expect = "red"
+expect_output = ["AssertionError: Verdict(action='delete', path='worktree-x'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if contained and fresh:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "막 딴 브랜치: judge 가 reflog 를 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치를_남기고"]
+expect = "red"
+expect_output = ["AssertionError: 브랜치를 지운다 worktree-x"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            fresh = _fresh(root, branch, merged, ops.git, now, contained=inside)'''
+new = '''            fresh = False'''
+
+[[mutation]]
+name = "막 딴 브랜치: remove-branch 의 재판정이 reflog 를 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치를_남기고"]
+expect = "red"
+expect_output = ["where 0 = main(['remove-branch', 'worktree-x'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    fresh = _fresh(root, branch, merged, ops.git, ops.now(), contained=contained)'''
+new = '''    fresh = False'''
+
+[[mutation]]
+name = "막 딴 브랜치: reflog 의 가장 오래된 기록(딴 때)을 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞날_기록이면"]
+expect = "red"
+expect_output = ["브랜치를 지운다 chore/renamed"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    args = ["log", "-g", "-n", "1", "--format=%gd", "--date=unix", f"refs/heads/{branch}", "--"]'''
+new = '''    args = ["log", "-g", "--format=%gd", "--date=unix", f"refs/heads/{branch}", "--"]'''
+
+[[mutation]]
+name = "막 딴 브랜치: 앞날 기록을 막 딴 것으로 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞날_기록이면"]
+expect = "red"
+expect_output = ["브랜치를 지운다 ahead-clock"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return touched is not None and now - touched < FRESH_SECONDS'''
+new = '''    return touched is not None and 0 <= now - touched < FRESH_SECONDS'''
+
+# 셀프 리뷰 명세 축: `matching` 이 안쪽 `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)를 하나씩 찍는다
+
+[[mutation]]
+name = "다시 만들 수 있는 폴더: 조상 폴더를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "안쪽_gitignore_로만"]
+expect = "red"
+expect_output = ["다시 만들 수 없는 무시된 항목: .grimp_cache/.gitignore"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if _under_recreatable_dir(entry):
+            continue
+'''
+new = ''

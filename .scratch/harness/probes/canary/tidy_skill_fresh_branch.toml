@@ -1,0 +1,23 @@
+# tidy-checkouts 스킬 3의 체크아웃되지 않은 로컬 브랜치 문장에 더한 막 딴 브랜치(대기열 440)가 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 카나리아가 없다.
+# 그 PR 이 병합된 뒤에 다시 돌리면 주 체크아웃에도 카나리아가 있으므로, 옛 판의 커밋을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4(2026-10-26, 이 PC, 대조군 주 체크아웃 `92b61458`, 일지 2026-10-26-06).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_fresh_branch.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+tidy-checkouts 스킬을 Skill 도구로 불러 본문을 읽어라. 3에서 체크아웃되지 않은 로컬 브랜치를 다루는 문장 가운데, 병합된 PR 이 없어도 끝이 origin/main 에 있는 브랜치를 어떻게 하는지 적은 문장을 글자 그대로 옮겨라(지우는 조건과 남기는 조건, 괄호까지).
+본문에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["reflog의 마지막 기록이 한 시간 안이면 막 딴 브랜치라 남기고"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
