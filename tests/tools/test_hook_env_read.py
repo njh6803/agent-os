@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 from tools.hook_env_read import (
+    OPTION_SPECS,
+    WRAPPERS,
     deny_reason_for_command,
     deny_reason_for_grep_tool,
     env_file_name,
@@ -22,6 +24,38 @@ from tools.hook_env_read import (
 @pytest.mark.parametrize(
     "명령",
     [
+        # 대기열 448 에 남았던 사례. 옵션 읽기를 명령마다의 레코드와 getopt 읽기 함수 하나로 합쳐
+        # 닫았다(harness 티켓 012). 파일 옵션(diff·sort·gawk), `--` 뒤의 위치 인자, 긴 값 옵션의
+        # 줄임이다.
+        "diff --from-file=.env x.txt",
+        "diff --to-file .env x.txt",
+        "sort --files0-from=.env",
+        "gawk -i .env '{print}' x.txt",
+        "gawk -E .env x.txt",
+        "gawk --exec=.env x.txt",
+        "grep -- --file .env",
+        # `--` 를 모르면 `-e` 가 `.env` 를 패턴으로 먹는다. 앞의 것은 `--file` 이 파일 옵션이라
+        # `--` 를 몰라도 막혀 `--` 처리를 재지 못했다(변이 표 `env_read_wrappers_mutations.toml`).
+        "grep -- -e .env",
+        "sudo --us root cat .env",
+        # 표에 없는 플래그(ack·ag 의 `--color`, ag 의 `--ackmate`)가 값 옵션 이름의 머리이고 같은
+        # 명령에 진짜 줄임이 함께 있다. 모든 옵션을 플래그로 읽은 글과 모두 줄임으로 읽은 글 둘만 본
+        # 판이 지나보냈다(셀프 리뷰 명세 축). 옵션마다의 조합을 모두 본다.
+        "ack .env --color --mat X",
+        "ack --color --files-f .env KEY",
+        "ag --color --path .env KEY",
+        "ag --ackmate --path .env KEY",
+        # 셸·git 의 옵션도 레코드로 읽는다. `--norc` 의 `c` 를 `-c` 로 세거나 하위 명령을 첫
+        # 인자로만 본 판이 지나보냈다(셀프 리뷰 표준 축). `+o` 는 옛 읽기가 맡는다.
+        "bash --norc -c 'cat .env'",
+        "bash --rcfile x -c 'cat .env'",
+        "bash -x -c 'cat .env'",
+        # `-c` 뒤의 옵션. bash 는 `-e` 를 옵션으로 읽고 첫 위치 인자를 돌린다. `-c` 다음 낱말만 보는
+        # 옛 읽기는 `-e` 를 명령 글로 집는다.
+        "bash -c -e 'cat .env'",
+        "bash +o posix -c 'cat .env'",
+        "git -C . diff --no-index .env x",
+        "git -c core.pager=cat show HEAD:.env",
         "cat .env",
         "cat '.env'",
         'head -n 1 "C:/project/agent/.env"',
@@ -152,6 +186,11 @@ def test_env_를_읽는_명령을_막는다(명령: str) -> None:
         "exec -a x cat .env",
         "time -p cat .env",
         "command nice timeout 5 rev .env",
+        # 값 옵션(`--login-class`)의 머리인 플래그. `flags` 에 없어도 플래그로 읽은 글이 막으므로 이
+        # 입력은 `flags` 를 재지 않는다. 옛 판도 막던 것을 고정한다(harness 티켓 012).
+        "sudo --login cat .env",
+        "sudo -- cat .env",
+        "env - cat .env",
     ],
 )
 def test_묻지_않고_도는_읽기_명령과_옵션이_붙은_래퍼도_막는다(명령: str) -> None:
@@ -221,7 +260,7 @@ def test_입력_리다이렉션도_읽기다() -> None:
         # 봤다).
         "grep -rn --exclude-from list.txt KEY",
         # GNU grep 의 다른 긴 값 옵션도 같다. 표에 없던 판이 `5` 를 패턴, `KEY` 를 경로로 읽었다
-        # (넷째 푸시 뒤 CodeRabbit·자동 보안 리뷰). 줄임(`--max-c 5`)은 대기열 448 이 닫는다.
+        # (넷째 푸시 뒤 CodeRabbit·자동 보안 리뷰). 줄임(`--max-c 5`)은 아래에 있다(대기열 448).
         "grep -rn --max-count 5 KEY",
         "grep -rn --after-context 3 KEY",
         "grep -rn --before-context 3 KEY",
@@ -236,6 +275,16 @@ def test_입력_리다이렉션도_읽기다() -> None:
         # `--file` 의 앞글자 견줌이 `--files-with-matches` 를 패턴 옵션으로 읽어 `KEY` 를 경로로
         # 봤다.
         "grep -rn --files-with-matches KEY",
+        # 긴 값 옵션의 줄임과, 묶음 속 값 옵션 뒤의 글자. 옛 판은 `5` 를 패턴, `KEY` 를 경로로
+        # 읽었고, `_` 가 든 묶음을 묶음으로 보지 않아 `-uu` 를 세지 못했다(대기열 448).
+        "grep -rn --max-c 5 KEY",
+        "grep -n --recur KEY",
+        "rg -uueKEY_X",
+        "rg -uue KEY_X",
+        # `-d recurse` 는 `-r` 과 같다. `-r`·`-R` 만 본 판이 지나보냈다(셀프 리뷰 표준 축).
+        "grep -d recurse KEY .",
+        "grep --directories=rec KEY",
+        "grep -nd recurse KEY",
     ],
 )
 def test_env_를_빼지_않은_저장소_전체_grep_을_막는다(명령: str) -> None:
@@ -309,6 +358,20 @@ def test_루트를_절대_경로나_상위_체인으로_줘도_훑기다(tmp_pat
         # `--match` 가 아니다(셀프 리뷰 명세 축). ack 의 `--files-from` 은 `--file` 이 아니다.
         "grep --ma=2 .env .gitignore",
         "ack --files-from list.txt .env",
+        # 값 옵션 이름의 머리이기도 한 플래그는 getopt_long 이 그대로의 이름으로 읽는다. `--binary`
+        # 를 `--binary-files` 의 줄임으로 읽으면 `KEY` 를 값으로 먹어 루트를 훑는다고 본다.
+        "grep -rn --binary KEY src/",
+        "sudo --login cat notes.md",
+        # 값을 먹는 옵션의 값은 파일이 아니다. `sort -o` 는 쓰는 자리다.
+        "sort -o .env notes.txt",
+        "diff --label .env a.txt b.txt",
+        # `sort --random-source` 는 그 파일을 난수로 읽을 뿐 내용을 내지 않는다(coreutils 의
+        # `sort --help` 가 "get random bytes from FILE" 로 적는다). 파일 옵션에 넣지 않았다.
+        # 출력 순서가 그 바이트로 정해지는 일부러 하는 우회는 모듈 독스트링의 못 보는 것이다.
+        "sort -R --random-source .env notes.txt",
+        "grep -d skip KEY .",
+        "git -C sub status .env",
+        "bash --norc -c 'cat notes.md'",
         "echo '.env is secret'",
         "cat <<'EOF' > note.md\ncat .env\nEOF",
         "cat > .env <<'EOF'\nK=v\nEOF",
@@ -531,6 +594,42 @@ def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린�
 @pytest.mark.parametrize(
     "명령",
     [
+        "grep -rn --co KEY src/",
+        "grep -rn --inc=*.py KEY .",
+    ],
+)
+def test_못_보는_것_줄임은_두_글로_읽어_어느_쪽이든_걸리면_막는다(명령: str) -> None:
+    """거짓 양성이다. 줄임을 받는 명령에서 표의 이름과 그대로 같지 않은 긴 옵션은 값 옵션의 줄임으로
+    읽은 글과 플래그로 읽은 글을 모두 판정한다(harness 티켓 012). `--co` 는 grep 의 `--context`·
+    `--count`·`--color` 의 머리라 grep 이 모호하다고 거부하는데, 값 옵션으로 읽은 글이 `KEY` 를 먹어
+    루트를 훑는다고 본다. `--inc` 는 grep 이 `--include` 로 읽어 좁히는데, 플래그로 읽은 글이 좁히지
+    않는다."""
+    reason = deny_reason_for_command(명령)
+    assert reason is not None
+    assert "저장소 전체를 훑으며" in reason
+
+
+def test_못_보는_것_가를_긴_옵션이_여덟을_넘으면_읽는_명령을_막는다() -> None:
+    """거짓 양성이다. 옵션마다 플래그로 읽을지 줄임으로 읽을지의 조합이 2 의 여덟제곱을 넘으면 다
+    판정하지 않고 막는다(`_MAX_AMBIGUOUS`). `--af` 는 grep 이 `--after-context` 로 읽어 `.env` 를
+    읽지 않는다. 여덟이면 판정한다."""
+    reason = deny_reason_for_command("grep" + " --af 1" * 9 + " KEY notes.md")
+    assert reason is not None
+    assert "다 판정하지 못한다" in reason
+    assert deny_reason_for_command("grep" + " --af 1" * 8 + " KEY notes.md") is None
+
+
+def test_레코드의_파일_옵션과_패턴_옵션은_값_옵션이다() -> None:
+    """`OptionSpec` 독스트링의 불변식. 파일·패턴 옵션이 값 옵션 표에 없으면 그 값을 위치 인자로
+    센다."""
+    for spec in [*OPTION_SPECS.values(), *WRAPPERS.values()]:
+        assert spec.files <= spec.values
+        assert spec.patterns <= spec.values
+
+
+@pytest.mark.parametrize(
+    "명령",
+    [
         'for f in .env*; do cat "$f"; done',
         "ls -a | xargs cat",
         "python -c \"print(open('.env').read())\"",
@@ -539,8 +638,6 @@ def test_Bash_를_막으면_묶은_다른_명령도_돌지_않았다고_알린�
         "cat C:\\Users\\me\\.env",
         "env -S 'cat .env'",
         "stdbuf -o0 cat .env",
-        "sudo --us root cat .env",
-        "grep -rn --max-c 5 KEY",
         "rg -uu -g '!.env' -g '!.env.local' -g '!.env.production' KEY .",
         "grep -rn --exclude '.en*[!g]' KEY .",
         "rg -uu -g '!.en*[!g]' KEY .",
