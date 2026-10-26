@@ -195,3 +195,37 @@ origin/main에 #356(design-reverse-sync 02)이 병합되어 병합 전에 합쳤
 ## 다음
 
 PR #391을 병합한다. 이 세션은 워크트리에서 병합하므로 주 체크아웃을 당기지 않는다. 다음 세션은 next-session 지시문을 따른다. claude-review의 보류한 지적(`_Choices`를 불변 값으로 바꾸기)은 뒤로 넘긴 일이 아니라 고치지 않기로 한 것이다.
+
+합치기 커밋 `21617e93`(`SKIP=pytest,web-verify`, 나머지 검사 모두 Passed). 아직 푸시하지 않았다.
+
+## 인계 (커밋 뒤)
+
+합치기 커밋 뒤 `hook_handoff`가 세션 컨텍스트 238,220 토큰으로 `커밋 뒤` 경계의 인계 계기를 냈다. 첫 시도(실패한 커밋)에서 온 계기는 명령이 실패해 경계가 아니었다. next-session "인계할 때" 1의 다섯 경우에 들지 않았다. 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, 요청 범위는 PR과 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `chore/012-env-read-option-records`였고 `chore/012-env-read-option-records (인계함)`으로 바꾼다. 이 인계 절은 커밋하지 않은 채 워크트리에 있다.
+
+넘기는 지시문:
+
+```
+다음 작업: 받는 세션이 쓸 .scratch/harness/issues/012-env-read-option-records.md. tools/hook_env_read.py의 옵션 읽기를 명령마다 레코드 하나와 getopt 읽기 함수 하나로 합쳐, 하류 도구와 다르게 읽는 사례의 종류를 없앤다(대기열 448)
+다음 단계: 푸시, 봇 회차, 병합
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 448을 티켓 .scratch/harness/issues/012-env-read-option-records.md로 쓰고 한다
+브랜치: chore/012-env-read-option-records
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-26-14-env-read-option-records.md의 "이어받은 세션 (PR 반영부터)" 절부터
+이어받을 상태: 인계: 커밋 뒤. 합치기 커밋 21617e93(origin/main #356을 합쳤고, 일지의 회고·다음 절과 대기열 477을 실었다)까지 했고 아직 푸시하지 않았다. 남은 단계는 푸시, 마지막 푸시 뒤 @coderabbitai review 코멘트, 봇 회차(CodeRabbit, claude-review, CI), 병합이다. claude-review는 이미 두 회차를 받아 셋째 회차부터는 Critical·Major만 고치고 나머지는 PR 코멘트로 닫는다. CodeRabbit은 e294337d에서 지적 없이 리뷰를 마쳤고 시간당 한 번이라 한도에 걸리면 한도 문구의 시각 뒤에 다시 요청한다. 회고와 "다음"은 이미 일지에 있다. 이 인계 절은 커밋하지 않은 채 워크트리에 있어 다음 커밋에 싣는다(고친 것이 없는 회차라 일지만 푸시할 때의 규칙은 next-session 1단계 2의 "뒤로 넘긴 일"). pre-commit 러너가 도는 동안 작업 트리의 파일을 고치지 않는다. pre-commit pytest와 web-verify는 이 브랜치와 무관한 부하 시험으로 빨간 적이 있다(일지에 진단). docs/journal/2026-10-26-14-env-read-option-records.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에 있어 주 체크아웃을 당기지 않았다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-26T14:31:34Z
+
+open-session이 폴더 확인에서 멈췄다(새 세션 화면의 입력창 묶음에서 폴더 경로를 찾지 못했다, fired=23:32:49 KST). 지시문은 보내지 않은 채 새 세션 화면에 남아, 사람이 폴더 C:\project\agent와 모델 Opus 5.5 / medium을 고르고 보낸다.
+사용자가 "다시 시도"라고 해서 같은 프롬프트 파일로 다시 열었다. sent=00:07:42 KST, 새 세션 local_e33c53f1는 제목 chore/012-env-read-option-records, 폴더 C:/project/agent, Opus 5.5 / medium으로 열렸다. 옆 패널 붙이기는 됐고 포커스 되돌리기는 사이드바 행을 찾지 못해 실패했다.
+
+## 이어받은 세션 (푸시부터)
+
+> 사용자: 대기열 448을 티켓 .scratch/harness/issues/012-env-read-option-records.md로 쓰고 한다
+
+주 체크아웃 세션에서 `tidy-checkouts`를 돌았다. 루트 main을 71433a0d에서 c7efd9ba로 당겼고, 판정은 워크트리를 모두 남기고 로컬 브랜치 `worktree-03-token-comments` 하나를 지웠다. 그 뒤 이 워크트리에 들어왔다.
+
+PR #391이 `BEHIND`라 origin/main(c7efd9ba, #390 015-probes-marker-rule)을 다시 합쳤다. 함께 고친 `.scratch/retro-queue.md`와 `.scratch/harness/probes/README.md`는 자동으로 합쳐졌다. 이 합치기 커밋에 앞 세션의 인계 절과 이 절을 싣는다.
