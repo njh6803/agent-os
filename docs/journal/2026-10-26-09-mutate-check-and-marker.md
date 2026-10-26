@@ -163,3 +163,32 @@ open-session을 부른다 2026-10-26T09:53Z
 - 이 PR이 harness 티켓 011의 마지막이고 남은 주제가 없다. 다음 작업은 `next-session` 결정표의 harness 티켓 PR 줄대로 `.scratch/plan.md`의 프론티어에서 고른다.
 - 나란히 연 형제 티켓(010, 012~017)은 각자의 세션이 맡는다.
 - 대기열 425가 3회차가 되었다. 다음 기능의 마지막 티켓 뒤 chore 배치에서 고른다.
+
+## 넷째 인계 (커밋 뒤)
+
+- 회고와 "다음"을 실은 커밋 `d2e25598`(`SKIP=pytest,web-verify`, 마크다운만. 일지·대기열·티켓을 읽는 시험 다섯 파일 237 통과)을 만들었고 아직 푸시하지 않았다. 이 절은 커밋하지 않았다.
+- 남은 단계: 이 절을 커밋에 싣고 푸시, `@coderabbitai review`, 봇 셋째 회차(Critical·Major만 고친다), "워크트리에서 병합할 때"로 병합.
+- 이 세션의 제목은 `chore/011-mutate-check-and-marker`였다.
+
+## 인계 지시문 (넷째)
+
+- 다음 작업: .scratch/harness/issues/011-mutate-check-and-marker.md의 PR #388을 푸시부터 반영하고 병합한다
+- 다음 단계: PR 반영·병합
+- 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+- 시작 프롬프트: 대기열 417·449를 티켓 .scratch/harness/issues/011-mutate-check-and-marker.md로 쓰고 한다
+- 브랜치: chore/011-mutate-check-and-marker
+- 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+- 읽을 것: docs/journal/2026-10-26-09-mutate-check-and-marker.md의 "넷째 인계 (커밋 뒤)", .claude/skills/next-session/SKILL.md 순서 1의 2와 "워크트리에서 병합할 때"
+- 이어받을 상태: 인계: 커밋 뒤. 봇 둘째 회차까지 반영했고 회고와 "다음"을 실은 커밋을 아직 푸시하지 않았다. 커밋하지 않은 일지 절("넷째 인계")을 커밋에 싣고 푸시와 순서 1의 2(봇 회차, 셋째 회차라 Critical·Major만)부터 한 뒤 병합한다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. docs/journal/2026-10-26-09-mutate-check-and-marker.md
+- 확인할 선행 조건: 없음
+- 이번 요청 범위: PR과 병합까지
+
+잠금 풀기: 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T11:05Z
+
+## 이어서 (다섯째 세션, 커밋 뒤부터)
+
+> 사용자: 대기열 417·449를 티켓 .scratch/harness/issues/011-mutate-check-and-marker.md로 쓰고 한다
+
+- 워크트리에 `EnterWorktree(path)`로 들어왔다(잠금 거부 없음). 넷째 인계 절과 이 절을 한 커밋에 싣고 푸시한 뒤 봇 셋째 회차를 본다. 이 세션의 제목은 `chore/011-mutate-check-and-marker`다.
