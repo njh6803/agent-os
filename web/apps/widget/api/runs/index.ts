@@ -114,18 +114,22 @@ export async function sendDecision(
 }
 
 /**
- * 실행을 다시 구독한다(`GET /runs/{run_id}/subscription`). `lastEventId` 프레임 뒤부터 받는다. 끊는 것과
- * 에러는 `sendRun` 과 같다.
+ * 실행을 다시 구독한다(`GET /runs/{run_id}/subscription`). `lastEventId` 프레임 뒤부터 받고, null 이면 헤더 없이
+ * 처음부터 받는다. 끊는 것과 에러는 `sendRun` 과 같다.
  */
 export async function subscribeRun(
   baseUrl: URL,
   token: string,
   runId: string,
-  lastEventId: number,
+  lastEventId: number | null,
   signal: AbortSignal,
 ): Promise<AsyncGenerator<EndUserFrame, void, undefined>> {
+  const authorization = { Authorization: `Bearer ${token}` };
   const call = createWidgetClient(baseUrl).GET("/end-user/runs/{run_id}/subscription", {
-    headers: { Authorization: `Bearer ${token}`, "Last-Event-ID": String(lastEventId) },
+    headers:
+      lastEventId === null
+        ? authorization
+        : { ...authorization, "Last-Event-ID": String(lastEventId) },
     params: { path: { run_id: runId } },
     parseAs: "stream",
     signal,

@@ -157,16 +157,16 @@ expect = "red"
 expect_output = ["expected [ …(3) ] to have a length of 2 but got 3"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/useConversation.ts"
+file = "web/apps/widget/components/pages/drivers.ts"
 old = '''
         // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
-        if (!(await sleep(NOT_FOUND_RETRY_MS, signal))) {
+        if (!(await sleep(NOT_FOUND_RETRY_MS, session.signal))) {
           return;
         }
 '''
 new = '''
         // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
-        await sleep(NOT_FOUND_RETRY_MS, signal);
+        await sleep(NOT_FOUND_RETRY_MS, session.signal);
 '''
 
 # --- 띠 부품 -----------------------------------------------------------------------------------------------------

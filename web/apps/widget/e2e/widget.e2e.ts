@@ -1,6 +1,6 @@
-// 위젯 e2e 의 iframe 사례(web-widget 티켓 06). 준비(stack.ts)가 띄운 실제 serve·위젯 Next·같은 출처의 중계 앞에서,
-// 다른 출처의 사이트 페이지(site.ts)가 iframe 위젯을 품는다. 페이지 안 방식의 사례는 element.e2e.ts 이고, 다시 붙기는
-// 09 가 더한다.
+// 위젯 e2e 의 iframe 사례(web-widget 티켓 06·09). 준비(stack.ts)가 띄운 실제 serve·위젯 Next·같은 출처의 중계 앞에서,
+// 다른 출처의 사이트 페이지(site.ts)가 iframe 위젯을 품는다. 페이지 안 방식의 사례는 element.e2e.ts 이다. 새로 고친 뒤
+// 다시 붙는 사례(09)는 사이트 페이지의 토큰 주체를 고정한다(site.ts).
 //
 // postMessage 거르기의 "허용 밖 출처" 몫은 여기서 따로 가르지 못한다. 부모가 허용 밖 출처면 `frame-ancestors` 가 먼저
 // iframe 을 막아, 부모이면서 허용 밖인 보낸 쪽을 만들 수 없기 때문이다. 그 갈래는 페이지 시험(jsdom)이 본다. 여기의
@@ -8,7 +8,7 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type FrameLocator, type Page, test } from "@playwright/test";
+import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
 import { stack } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
 import { HTML_OUTPUT } from "./plugins";
@@ -126,6 +126,65 @@ test("출력의 HTML 조각은 글로 보이고 실행되지 않는다", async (
   await expect(conversation.getByText(`출력: ${HTML_OUTPUT}`, { exact: true })).toBeVisible();
   const pwned = await frame.locator("body").evaluate(() => "__widgetE2ePwned" in window);
   expect(pwned).toBe(false);
+});
+
+/** 위젯이 보낸 구독 요청. */
+function subscriptions(requests: readonly Request[]): Request[] {
+  const { widgetOrigin } = stack();
+  return requests.filter(
+    (request) =>
+      request.method() === "GET" &&
+      request.url().startsWith(`${widgetOrigin}/end-user/runs/`) &&
+      request.url().endsWith("/subscription"),
+  );
+}
+
+test("새로 고친 뒤 도는 실행에 처음부터 다시 붙어 받은 도구 줄을 다시 짓고 결말을 받는다", async ({
+  page,
+}) => {
+  const requests = recordRequests(page);
+  await page.goto(`${stack().siteOrigin}/?agent=tools&sub=reload-running`);
+  const frame = widget(page);
+  await send(frame, "reload-running");
+  const tools = frame.getByRole("list", { name: "부른 도구" });
+  await expect(tools.getByText("add", { exact: true })).toHaveCount(1);
+
+  await page.reload();
+
+  // 저장한 요청과, 처음부터 받은 항목으로 다시 지은 첫 도구 줄이 선다. 에이전트는 아직 문 앞에서 기다린다.
+  const conversation = frame.getByRole("region", { name: "대화" });
+  await expect(conversation.getByText("reload-running")).toBeVisible();
+  await expect(tools.getByText("add", { exact: true })).toHaveCount(1);
+  await expect(frame.getByText("5/9", { exact: true })).toHaveCount(0);
+  const [subscription, ...more] = subscriptions(requests);
+  expect(more).toEqual([]);
+  expect(subscription?.headers()["last-event-id"]).toBeUndefined();
+
+  openGate("reload-running");
+  await expect(conversation.getByText("출력: 5/9", { exact: true })).toBeVisible();
+  await expect(frame.getByRole("button", { name: "도구 2개를 불렀습니다" })).toBeVisible();
+});
+
+test("새로 고친 뒤 멈춘 실행에 다시 붙으면 승인 카드가 다시 서고, 그 카드로 승인해 결말을 받는다", async ({
+  page,
+}) => {
+  const requests = recordRequests(page);
+  await page.goto(`${stack().siteOrigin}/?agent=approval&sub=reload-paused`);
+  const frame = widget(page);
+  await send(frame, "reload-paused");
+  const card = frame.getByRole("group", { name: "승인 묻기" });
+  await expect(card).toBeVisible();
+
+  await page.reload();
+
+  await expect(card).toBeVisible();
+  const [subscription, ...more] = subscriptions(requests);
+  expect(more).toEqual([]);
+  expect(subscription?.headers()["last-event-id"]).toBeUndefined();
+
+  await card.getByRole("button", { name: "승인" }).click();
+  const conversation = frame.getByRole("region", { name: "대화" });
+  await expect(conversation.getByText("출력: total:5", { exact: true })).toBeVisible();
 });
 
 test("입력창의 글자 수 상한은 서버의 기본값과 같다", async ({ page }) => {

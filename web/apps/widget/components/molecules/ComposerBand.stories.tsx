@@ -1,6 +1,7 @@
 // 입력창 위의 띠를 폭 320px 과 400px 에서 그린다(web-widget 티켓 07, 화면 디자인 mk-limit, mk-reconnect, mk-approval).
-// 미리보기의 afterEach 가 클래스를, addon-a11y 가 접근성을, 사진 비교(visual/)가 그림을 판정한다. 재접속의 글은 09 가
-// 채울 명세의 문구이고 승인 기다림의 글은 08 이 채운 문구다. 여기서는 하나만 서는 차례를 보이려고 쓴다.
+// 미리보기의 afterEach 가 클래스를, addon-a11y 가 접근성을, 사진 비교(visual/)가 그림을 판정한다. 띠마다의 글은 명세의
+// 문구이고, 여기서는 하나만 서는 차례를 보이려고 쓴다. 띠를 고르는 것은 organisms/Composer 이고, 재접속의 두 모양(끊김,
+// 구독의 상한)은 pages/WidgetScreen 의 스토리가 그린다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";

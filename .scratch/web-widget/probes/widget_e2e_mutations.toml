@@ -1,6 +1,6 @@
-# web-widget 티켓 06 의 변이 표. 위젯 e2e(web/apps/widget/e2e/widget.e2e.ts)의 사례는 구현이 이미 있는 코드를 지키는
+# web-widget 티켓 06·09 의 변이 표. 위젯 e2e(web/apps/widget/e2e/widget.e2e.ts)의 사례는 구현이 이미 있는 코드를 지키는
 # 시험이라 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 한 번 돌릴 때마다
-# 준비가 위젯을 다시 빌드하므로 변이 하나가 1~2분 걸린다.
+# 준비가 위젯을 다시 빌드하므로 변이 하나가 1~2분 걸린다. 뒤의 둘은 티켓 09 의 새로 고침 사례다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/widget_e2e_mutations.toml [번호 ...]
 # chromium 이 Playwright 의 브라우저 캐시에 있어야 하고 uv 의 가상 환경이 서 있어야 한다.
 
@@ -104,7 +104,7 @@ name = "위젯의 기본 글자 수 상한이 서버와 다르면 빨갛다"
 runner = "e2e"
 tests = ["-g", "글자 수 상한은"]
 expect = "red"
-# 안내 글자는 165 행의 toHaveCount 가 빨개져도 Locator 줄에 실린다. 161 행 하나뿐인 toBeVisible 의 실패 머리를 본다.
+# 안내 글자는 202 행의 toHaveCount 가 빨개져도 Locator 줄에 실린다. 198 행 하나뿐인 toBeVisible 의 실패 머리를 본다.
 expect_output = ["Error: expect(locator).toBeVisible() failed"]
 
 [[mutation.edit]]
@@ -114,4 +114,40 @@ export const DEFAULT_REQUEST_CHARS = 20_000;
 '''
 new = '''
 export const DEFAULT_REQUEST_CHARS = 19_999;
+'''
+
+[[mutation]]
+name = "되돌린 뒤 도는 실행에 다시 붙지 않으면 새로 고친 뒤 도구 줄이 다시 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "새로 고친 뒤 도는 실행에"]
+expect = "red"
+# 같은 로케이터의 toHaveCount(1) 가 새로 고치기 전에도 있어, 새로 고친 뒤의 줄(157 행)의 자리를 본다.
+expect_output = ["Error: expect(locator).toHaveCount(expected) failed", "widget.e2e.ts:157:57"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/drivers.ts"
+old = '''
+  if (saved.reattach !== null) {
+    await reconnect(
+'''
+new = '''
+  if (saved.reattach === "") {
+    await reconnect(
+'''
+
+[[mutation]]
+name = "멈출 때 다시 붙을 실행을 비우면 새로 고친 뒤 승인 카드가 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "새로 고친 뒤 멈춘 실행에"]
+expect = "red"
+# 카드의 toBeVisible 은 새로 고치기 전에도 있어, 새로 고친 뒤의 줄(180 행)의 자리를 본다.
+expect_output = ["Error: expect(locator).toBeVisible() failed", "widget.e2e.ts:180:22"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+      return announce(next, `승인이 필요합니다: ${item.tool}`);
+'''
+new = '''
+      return announce({ ...next, reattach: null }, `승인이 필요합니다: ${item.tool}`);
 '''

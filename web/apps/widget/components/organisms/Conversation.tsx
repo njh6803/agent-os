@@ -14,6 +14,9 @@
 //   아래에 이어진다(화면 디자인 mk-approval). 결말이 오면 카드 사이의 도구 줄도 저마다 한 줄로 접힌다.
 // - 실패와 거절의 알림은 출력이 올 자리에 선다(organisms/FailureAlert). 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시
 //   시작했으면 맨 위에 정보 알림이 선다(화면 디자인 mk-rejection).
+// - 연결이 끊겨 다시 잇는 동안 목록에는 받은 도구 줄만 남고 진행 표시는 입력창 위 띠가 맡는다(화면 디자인 mk-reconnect).
+// - 저장의 용량 때문에 요청 글을 빼고 되돌린 교환(lib/storage 의 `conversationOf`)은 요청 상자를 그리지 않고, 다시 보낼 글이
+//   없어 알림에 "다시 보내기"도 두지 않는다. 보낸 요청은 비어 있을 수 없다.
 import { Alert, Icon, Progress } from "@agent-os/ui";
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { progressLabel, type Exchange, type Decision } from "../../lib/conversation";
@@ -38,6 +41,8 @@ export interface ConversationProps {
   readonly decisionBlocked: boolean;
   /** 결정을 기다리는 승인 묻기에 결정을 보낸다. */
   readonly onDecide: (decision: Decision) => void;
+  /** 연결이 끊겨 다시 잇는 중이라 도는 교환의 진행 표시를 숨긴다. */
+  readonly reconnecting: boolean;
 }
 
 // 끝에서 이만큼(px) 안이면 끝을 보고 있는 것으로 친다. 소수점 스크롤 위치의 오차를 받는다.
@@ -53,6 +58,7 @@ export function Conversation({
   reasonLimit,
   decisionBlocked,
   onDecide,
+  reconnecting,
 }: ConversationProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const atBottom = useRef(true);
@@ -94,6 +100,7 @@ export function Conversation({
             reasonLimit={reasonLimit}
             decisionBlocked={decisionBlocked}
             onDecide={onDecide}
+            reconnecting={reconnecting}
           />
         ))}
       </ol>
@@ -110,6 +117,7 @@ function ExchangeItems({
   reasonLimit,
   decisionBlocked,
   onDecide,
+  reconnecting,
 }: {
   readonly exchange: Exchange;
 } & Omit<ConversationProps, "exchanges" | "restarted">) {
@@ -126,10 +134,12 @@ function ExchangeItems({
     (outcome.kind !== "paused" && outcome.kind !== "expired");
   return (
     <>
-      <li className="max-w-5/6 self-end rounded-l bg-bg-selected px-3 py-2 text-body wrap-anywhere whitespace-pre-wrap">
-        <span className="sr-only">요청: </span>
-        {exchange.request}
-      </li>
+      {exchange.request === "" ? null : (
+        <li className="max-w-5/6 self-end rounded-l bg-bg-selected px-3 py-2 text-body wrap-anywhere whitespace-pre-wrap">
+          <span className="sr-only">요청: </span>
+          {exchange.request}
+        </li>
+      )}
       {approvals.map((approval, index) => {
         const tools = before[index] ?? [];
         return (
@@ -163,6 +173,7 @@ function ExchangeItems({
           retryBlocked={retryBlocked}
           onNewConversation={onNewConversation}
           newConversationBlocked={newConversationBlocked}
+          reconnecting={reconnecting}
         />
       ) : null}
     </>
@@ -178,13 +189,14 @@ function ExchangeTail({
   retryBlocked,
   onNewConversation,
   newConversationBlocked,
+  reconnecting,
 }: {
   readonly exchange: Exchange;
   readonly tools: Exchange["tools"];
   readonly settled: boolean;
 } & Pick<
   ConversationProps,
-  "onRetry" | "retryBlocked" | "onNewConversation" | "newConversationBlocked"
+  "onRetry" | "retryBlocked" | "onNewConversation" | "newConversationBlocked" | "reconnecting"
 >) {
   const { outcome } = exchange;
   return (
@@ -195,7 +207,7 @@ function ExchangeTail({
             <ToolSummary tools={tools} />
           )
         ) : (
-          <ToolList tools={tools} running={outcome === null ? exchange : null} />
+          <ToolList tools={tools} running={outcome === null && !reconnecting ? exchange : null} />
         )}
         {outcome?.kind === "finished" ? (
           <p className="text-body wrap-anywhere whitespace-pre-wrap">
@@ -206,9 +218,13 @@ function ExchangeTail({
         {outcome === null ? null : (
           <FailureAlert
             outcome={outcome}
-            onRetry={() => {
-              onRetry(exchange.request);
-            }}
+            onRetry={
+              exchange.request === ""
+                ? null
+                : () => {
+                    onRetry(exchange.request);
+                  }
+            }
             retryBlocked={retryBlocked}
             onNewConversation={onNewConversation}
             newConversationBlocked={newConversationBlocked}
