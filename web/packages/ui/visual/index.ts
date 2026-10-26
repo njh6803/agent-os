@@ -66,15 +66,12 @@ export function photographedStories(site: string): StoryEntry[] {
 /**
  * 사진 비교의 브라우저 실행 인자. 패키지와 위젯의 `visual/playwright.config.ts` 가 `launchOptions.args` 로 쓴다.
  *
- * 부분 래스터를 끈다(`--disable-partial-raster`). 이미지의 chromium 은 GPU 없이 소프트웨어로 래스터한다. 부분 래스터를
- * 켠 채로는 같은 코드의 사진이 둥근 모서리의 중간색 픽셀 몇 개(채널마다 1~3)만 달라 흔들렸다(대기열 414). 웹 코드를
- * 건드리지 않은 PR 에서 세 번 났고, 세 번 모두 실패한 사진이 이 인자로 찍은 사진과 바이트까지 같았다. 그 회차가 왜 부분
- * 래스터를 거치지 않은 그림을 찍었는지는 재지 않았다. 이 인자를 주면 곧바로 찍든 기다려 찍든 같은 그림이고, 주지 않으면
- * 알림의 창 밖 띠는 찍는 때에 따라 갈렸다(프로브 .scratch/harness/probes/visual_flake/). 찍기 전에 기다리는 것으로는
- * 고치지 못한다. 글 입력의 올림은 기다려도 부분 래스터의 그림 그대로였다. 정답 사진은 이 인자로 찍은 것이라, 이 PC 에서
- * 인자를 빼면 스위치의 포커스 같은 사진이 빨갰다. 위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 친
- * 두 판이고 두 판 모두 실행 인자 시험이 빨갰다, 변이 표 머리). 그래서 설정이 인자를 넘기는지는 사진이 아니라
- * `missingBrowserArgs` 의 시험이 본다(변이 표 .scratch/harness/probes/visual_flake_mutations.toml).
+ * 부분 래스터를 끈다(`--disable-partial-raster`). 이미지의 chromium 은 GPU 없이 소프트웨어로 래스터하고, 부분 래스터를
+ * 켠 채로는 같은 코드의 사진이 둥근 모서리의 중간색 픽셀 몇 개만 달라 흔들렸다(대기열 414). 이 PC 에서 프로브로 재
+ * 보니 흔들린 세 사진은 이 인자를 주면 찍는 때와 상관없이 그림이 하나였고, 찍기 전에 기다리는 것으로는 고치지 못했다.
+ * 정답 사진은 이 인자로 찍은 것이다. 다만 위젯의 화면 사진은 이 PC 에서 인자를 빼고 손으로 돌려도 정답과 맞아,
+ * 설정이 인자를 넘기는지는 사진이 아니라 `missingBrowserArgs` 의 시험이 본다. 잰 것과 재지 않은 것은
+ * .scratch/harness/probes/README.md 의 `visual_flake/` 행, 변이는 .scratch/harness/probes/visual_flake_mutations.toml 이다.
  */
 export const BROWSER_ARGS: readonly string[] = ["--disable-partial-raster"];
 
