@@ -80,3 +80,56 @@ PR 직전 리뷰에 밀 주장으로 넘길, 반영 중에 새로 쓴 문장이�
 - 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다. 첫 커밋 시도(2026-10-27)의 pre-commit은 열 가운데 아홉이 지났고(web-verify 756.2초), pytest가 앞에서 흔들린 같은 시험(`tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`, `assert 1 == 0`) 하나로 빨개 커밋이 막혔다(1 failed, 5619 passed, 893.79초). 이 브랜치는 그 시험이 보는 `tools/`를 건드리지 않는다. 막지 않는 인용 경고 셋(옛 문구를 따옴표로 든 줄 둘, 고친 README 문장과 달라진 줄 하나)을 고쳐 다시 커밋했다. 결과는 아래에 이어 적는다.
 - 사진 비교: 2026-10-27에 Docker 엔진이 살아나(`docker version`의 서버 쪽이 Docker Desktop 4.26.1을 냈다) `pnpm -C web visual`을 돌렸다. 108개 가운데 106개가 지났고, 알림의 보여 주기 스토리 둘(`molecules-alert--showcase-run-failed` 라이트·촘촘 6픽셀, `molecules-alert--showcase-notices` 라이트·촘촘 12픽셀)이 빨갰다. 차이 그림은 카드 오른쪽 둥근 모서리의 몇 픽셀이었다. 주석이 그림을 바꿨다는 해석과 흔들림이라는 해석을 가르려고 같은 코드로 알림 스토리만 세 번씩 다시 찍었다(`pnpm -C web visual -g molecules-alert --repeat-each 3`). 둘째 회차에서 두 스토리가 모두 정답과 같았고, 빨간 회차의 사진은 첫 실행과 달랐다(`showcase-run-failed`의 다크·보통 6픽셀 등). 주석이 그림을 바꿨다면 같은 코드가 정답과 같게 찍힌 회차가 나올 수 없으므로 흔들림으로 본다. 모양은 harness 016(`016-visual-focus-flake` 워크트리, 아직 병합되지 않았다)이 크롬의 부분 래스터로 잰 것과 같다(둥근 모서리, 알림 보여 주기의 라이트 6픽셀). 또 지은 Storybook에서 알림을 칠하는 `iframe-*.css`에는 설명 글이 없었고, 설명 글은 원문을 읽는 판정 스토리 `DesignTokens.stories`의 JS에만 있었다(그 스토리는 `judgment`라 사진을 찍지 않는다).
 - 위젯의 사진 비교 `pnpm -C web visual:widget`은 42개가 모두 지났다.
+- 다시 친 커밋(`68322a90`)의 pre-commit은 열 검사가 모두 지났다(pytest 746.1초, web-verify 694.7초). ruff 둘은 바뀐 `.py`가 없어 `Skipped`였고, 인용 대조는 경고가 없었다. 커밋 직전의 `tools/sibling_overlap.py`는 번호 겹침이 없었고, 함께 고친 파일로 04 워크트리의 넷(프로브 README, 변이 표, `build.test.ts`, `tokens-json.test.ts`)과 05 워크트리의 프로브 README를 알렸다. 그 사이 origin/main에 든 셋(#390 프로브 표지 규칙, #393 `open-session` 잠금, #391 `.env` 읽기 훅)은 이 브랜치의 파일과 겹치지 않았다. #390이 `.claude/rules/probes.md`의 표지 항목에 "다른 해석 아래에서는 나지 않는 관찰"을 더했는데, 이 브랜치의 표지는 이미 갈래마다 자기 표지만 나오고 이웃 표지는 나오지 않는 것을 봤으므로 고치지 않았다. 커밋 뒤 `open-session`의 새 판(#393)을 받으려고 origin/main을 합쳤다(충돌 없음).
+
+## 인계 (커밋 뒤)
+
+커밋 뒤 경계에서 세션 컨텍스트가 약 28.5만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기가 왔다. 이 세션의 범위는 PR과 병합까지이고, 곁 세션이 아니며(`get_session`의 `self`에 `parentSessionId`가 없다), 이어받을 상태가 인계가 아니고, `인계 못함` 줄이 없어 넘긴다. 첫 계기는 pytest의 흔들림으로 커밋이 막힌 시도에서 왔고(경계가 아니다), 다시 친 커밋이 성공한 뒤 넘긴다.
+
+- 사용자 프롬프트는 시작 절의 첫 메시지 하나뿐이다. 그 밖에 받은 것은 백그라운드 작업과 서브에이전트의 알림이다.
+- 결정: `--bg-active` 설명은 `var()` 줄의 100칸에 묶여 지금 문구로 두고 PR에서 사람에게 묻는다. `toHaveLength(112)`는 티켓과 명세의 수라 둔다. 사진 비교의 알림 둘은 흔들림으로 판정했다(위 검증). 끝난 기능(design-refresh, design-system)의 프로브 README는 기록이라 고치지 않았다.
+- 고친 것: 원색 가운데 가리키는 쓰임새 토큰이 없는 수를 처음 36으로 적었다가 41로 고쳤다(한 것 절). 티켓 03의 구현 메모에도 41로 적었다.
+- 이 세션의 지금 제목: `feature/03-token-comments`. 넘기기 전에 `feature/03-token-comments (인계함)`으로 바꾼다.
+- 남은 단계(새 세션이 한다):
+  1. 이 인계 절을 이어 쓰고 커밋한다.
+  2. PR 직전 리뷰. `coderabbit auth status`가 `Seat: not assigned`라 CLI가 돌지 못한다. 대체 둘을 나란히 돌린다. origin/main은 이미 합쳤으니 `/security-review`를 바로 돌린다. `bug-perf-review`의 브리프에는 위 "PR 직전 리뷰에 밀 주장"의 문장과 티켓 03의 구현 메모 셋을 나열한다.
+  3. PR을 연다. 본문에 적을 것: 주석 112개를 사람이 리뷰해 달라는 부탁(리뷰에서 고친 설명은 같은 PR에 싣는다), `--bg-active` 문구에 대한 질문(아이콘 버튼의 두 변형까지 적는 판은 100칸에 들지 않는다), 로컬 사진 비교의 흔들림 판정과 위젯 42개 통과, 다른 표 셋의 원문 여섯을 옮긴 것, 커밋을 막은 pytest의 흔들림. 체크리스트의 ruff 줄은 바뀐 `.py`가 없어 pre-commit에서 `Skipped`였다.
+  4. 봇 회차, 병합(이 워크트리 사본의 next-session "워크트리에서 병합할 때"), next-session. 기능은 닫지 않는다.
+- 04가 같은 파일 넷을 고치므로 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/03-token-comments.md. 디자인 토큰 CSS의 선언 줄마다 쓰임 설명 주석 112개를 달아, 지은 tokens.json에 설명이 빈 토큰이 없게 한다
+다음 단계: 구현
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/03-token-comments.md
+브랜치: feature/03-token-comments
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-26-18-token-comments.md 의 "인계 (커밋 뒤)" 절. 나란히 도는 티켓은 .scratch/design-reverse-sync/issues/04-import-command.md, .scratch/design-reverse-sync/issues/05-record-and-check.md
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 로컬 사진 비교, 커밋까지 마쳤고 그 뒤 origin/main을 합쳤다. 아직 푸시하지 않았고 PR이 없다. 남은 단계는 커밋하지 않은 인계 절의 커밋, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 대체 둘), PR 열기, 봇 회차, 병합, next-session이다. 리뷰에 밀 주장과 PR 본문에 적을 것은 일지에 있다: docs/journal/2026-10-26-18-token-comments.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/03-token-comments (인계함)`으로 바꿨고(앱이 묻지 않고 바꿨다), 돌던 백그라운드 작업은 없었으며, `git worktree unlock C:/project/agent/.claude/worktrees/03-token-comments`가 오류 없이 끝났다. 합친 main이 `open-session`을 바꿔(#393) Skill 도구의 옛 사본 대신 디스크의 `SKILL.md`를 Read로 열어 따른다.
+
+open-session을 부른다 2026-10-26T16:19:00Z
+
+## 이어받은 세션 (커밋 뒤)
+
+> 사용자: /implement .scratch/design-reverse-sync/issues/03-token-comments.md (인계로 연 세션. 이어받을 상태: "인계: 커밋 뒤. 구현, 셀프 리뷰와 그 반영, 로컬 사진 비교, 커밋까지 마쳤고 그 뒤 origin/main을 합쳤다. 아직 푸시하지 않았고 PR이 없다", 확인할 선행 조건: "병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다", 이번 요청 범위: PR과 병합까지)
+
+이 세션의 제목을 `feature/03-token-comments`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다(잠금 거부 없음). origin/main은 앞 세션이 합친 `b84691e0`에서 움직이지 않았다.
+
+- 남은 단계의 1(인계 절 커밋)과 2(PR 직전 리뷰)의 차례를 바꿨다. 커밋마다 pre-commit이 십여 분 돌아, 리뷰가 고칠 것을 낼 수 있는 동안 커밋을 둘로 나누지 않으려고 리뷰를 먼저 돌리고 인계 절과 리뷰 반영을 한 커밋에 실었다. `/security-review`는 구현 커밋과 origin/main 병합 커밋이 이미 있어 바로 돌았다.
+- PR 직전 리뷰: `coderabbit auth status`가 다시 `Plan: Free`, `Seat: not assigned`라 대체 둘을 나란히 돌렸다.
+  - `/security-review`: 찾기 서브태스크가 "No findings"를 내 거르기 서브태스크를 띄우지 않았다. 주석 112개는 커밋되는 고정 문구이고 `*/`·줄바꿈·`<`가 없으며, 짓기는 그 글을 `tokens.json`의 `usage` 칸에 평문으로 옮길 뿐이고, `DesignTokens.stories`는 원문 CSS에서 토큰 이름만 뽑는다. HTML로 그리는 길이 없다.
+  - `bug-perf-review`(밀 주장은 앞 절의 "PR 직전 리뷰에 밀 주장" 일곱 줄과 티켓 03의 구현 메모 셋, 호출 40): Critical·Major 0, 유효 Minor 2, 보류 1, 확인하고 문제없다고 본 것 아홉쯤이다. 코드와 시험의 새 버그는 없었다. Prettier 확인, 줄 끝 주석 112개, 주석을 벗긴 판과 origin/main의 차이 0, 변이 표 넷과 `theme.css`를 건드리는 다른 표 둘의 `--check`, 원색 41의 셈, `text-small`·`bg-*`·모서리·간격 설명과 실제 클래스 사용이 모두 맞았다.
+  - 유효 1: 02 티켓 26행의 "그 전에는 대부분 없어"가 틀렸다. 옛 CSS(`b84691e0`)를 `git grep -n -E ";[[:space:]]*/\*"`로 보니 줄 끝 주석이 0이었다(손으로 봤다). 셀프 리뷰 반영이 고치기 전 문구의 "대부분"을 옮겨 적은 것이다. "하나도 없어 설명이 모두 빈 칸으로"로 고쳤다.
+  - 유효 2: 프로브 README의 "빨강을 본 적 없는 다섯"에 토큰 수 단언(`toHaveLength(112)`)이 빠졌다. 이 단언도 이 티켓이 새로 썼고 토큰 수는 주석 전후 모두 112라 빨강을 본 적이 없었다(`build.test.ts`의 diff에서 손으로 봤다). 간격 줄 하나의 이름을 숫자 단계 밖으로 바꾸는 변이 50을 더하고 README의 행·2026-10-26 항목을 고치고 2026-10-27 항목을 더했다. 표지 고르기와 결과는 그 항목이다.
+  - 보류 1: 티켓 03 사진 메모의 "빨간 사진은 회차마다 달라"는 이 일지(사진 비교 줄)의 "빨간 회차의 사진은 첫 실행과 달랐다"보다 넓다. 사진을 다시 찍지 않고 일지 문장으로 맞췄다.
+- `.scratch/plan.md`는 고치지 않았다. 기능 상태가 바뀌지 않고(`in-progress` 그대로), 나란히 도는 04·05가 같은 행을 고치면 충돌이 난다. 행의 "다음은 막힌 것이 없는 03·04·05다"는 이 PR이 병합되면 03만큼 낡는다.
+- 리뷰 반영의 첫 커밋 시도(2026-10-27)는 pre-commit의 둘로 막혔다. 둘 다 이 브랜치가 건드리지 않은 시간 시험이다. web-verify(551.3초)에서 `apps/widget/components/pages/WidgetApproval.test.tsx`의 "사유가 상한의 90% 이상이면 칸 아래에 센 수를, …" 사례가 `18,000 / 20,000` 글을 찾지 못했고(977 통과 1 실패), pytest(1108.01초, 앞 커밋의 746.1초보다 느렸다)에서 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 0.5초 배출에서 줄을 하나도 받지 못했다(`assert []`, 5666 통과 1 실패). 둘을 홀로 다시 돌리자 모두 지났다(위젯 사례 1 통과, pytest 1 통과 194.19초). 그때 이 PC에는 다른 세션이 함께 돌았다. 대기열 306이 닫은 종류(전체 스위트의 부하 아래에서 따로 돌리면 지나는 시간 시험이 상관없는 커밋을 막는다)의 새 사례 둘이라 회고에 넘긴다. 스테이지를 그대로 두고 다시 커밋했다.
+- 둘째 시도는 web-verify가 지났고(657.1초) pytest(723.07초)에서 또 다른 시간 시험 하나가 빨갰다. `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 1초씩 걸리는 두 회차가 겹치기를 기대했는데 `running`의 최댓값이 1이었다(`assert 1 == 2`, 5666 통과 1 실패). 홀로 돌리자 8.89초에 지났다. 같은 파일의 다른 시험이 앞 세션의 첫 커밋 시도와 셀프 리뷰 전 검증에서 흔들렸다(위 검증 절). 이것도 306 종류의 새 사례라 회고에 넘긴다. 막지 않는 인용 경고 하나(README의 도구 출력 인용)는 따옴표를 떼어 고쳤다.
+- 셋째 시도는 `SKIP=pytest`로 쳤다. 이 트리(둘째 시도와 다른 것은 이 일지와 README의 인용 한 줄)에서 pytest는 두 번 모두 5666개가 지났고, 빨간 것은 회차마다 다른 시간 시험 하나였으며, 그 둘도 홀로 돌려 지났다. 그래서 모든 시험이 이 트리에서 한 번 이상 지났다. 나머지 검사는 이 커밋의 pre-commit이 돌고, pytest의 최종 판정은 CI다.
