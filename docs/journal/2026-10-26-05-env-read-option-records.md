@@ -1,0 +1,88 @@
+# 2026-10-26 (05) 환경 읽기 훅의 옵션 레코드
+
+## 사용자 프롬프트
+
+> 사용자: 대기열 448을 티켓 .scratch/harness/issues/012-env-read-option-records.md로 쓰고 한다
+
+나란히 여는 여덟 세션 가운데 셋째다(티켓 010~017). 지시문의 범위는 PR과 병합까지다.
+
+## 결정
+
+- 옵션을 읽는 자리가 여덟이었다(`_positionals`, `_option_width`, `_short_value_option`, `_getopt_values`, `_pattern_given_by_option`, `_abbreviates_pattern_option`, `_option_values`, `_SHORT_CLUSTER`로 센 묶음). 이것을 명령마다의 레코드 `OptionSpec`(값 옵션, 파일 옵션, 패턴 옵션, 줄임 판정에 쓰는 플래그, 줄임을 받는지)과 읽기 함수 `_read_options` 하나로 합쳤다. 판정(파일 읽기, grep·rg 훑기, 래퍼 벗기기)은 그 함수가 낸 (옵션, 값) 쌍과 위치 인자만 본다. 래퍼 표 `_WRAPPERS`도 같은 레코드로 옮겼다.
+- 줄임을 받는 명령에서 표의 이름과 그대로 같지 않은 긴 옵션은 하류가 어떻게 읽을지 훅이 다 알 수 없다(하류의 플래그를 모두 옮기지 않았다). 그래서 쓴 이름 그대로 두어 플래그로 읽은 글과, 머리가 맞는 표의 옵션 모두로 읽은 글을 함께 판정하고 어느 쪽이든 걸리면 막는다(`_readings`, 래퍼는 `_command_words`). `.claude/rules/tools.md`의 "다르게 읽은 글을 모두 본다" 항목을 옵션 줄임에 쓴 것이다. 이 값으로 생기는 거짓 양성(하류가 모호하다고 거부하는 `--co`, 하류가 받아 좁히는 `--inc=*.py`)은 독스트링의 못 보는 것에 적고 시험으로 고정했다.
+- getopt_long은 그대로의 이름을 줄임보다 먼저 읽는다. 값 옵션 이름의 머리인 플래그(grep의 `--binary`, sudo의 `--login`)는 레코드의 `flags`에 두어 줄임으로 읽지 않는다. 판정이 이름을 보는 플래그(grep의 `--recursive`)도 줄임으로 찾으려고 둔다.
+- 실제 도구와 맞대는 시험을 grep·sed·gawk로 넓히는 일은 하지 않았다(넓히면 ADR 0038의 이력 초안이 든다). 레코드의 근거는 각 도구의 `--help`와 파서를 읽은 것이고 이 세션은 GNU 도구로 재지 않았다.
+
+## 한 것
+
+- 티켓 `.scratch/harness/issues/012-env-read-option-records.md`를 썼다. 번호는 `tools/sibling_overlap.py`가 낸 다음 빈 번호다. 일지 순번은 나란히 도는 형제(016·017)와 두 번 겹쳐 그 도구의 `--move`로 비켜 갔고 05에 섰다.
+- 시험을 먼저 썼다. 남은 사례 여섯(`diff --from-file=.env`, `sort --files0-from=.env`, gawk `-i`·`-E`, `grep -- --file .env`, `rg -uueKEY_X`, `grep -rn --max-c 5 KEY`)과 `sudo --us root cat .env`를 막는 쪽으로 옮기고, 두 글의 거짓 양성(`--co`, `--inc`)과 값 옵션의 값이 파일이 아닌 사례(`sort -o .env`, `diff --label .env`)와 `flags`의 사례(`grep -rn --binary KEY src/`)를 더했다. 고치기 전에 열둘이 빨갰다.
+- `tools/hook_env_read.py`: 옵션 표를 `OptionSpec` 레코드(`_GREP`, `_RG`, `_AG`, `_ACK`, `_SED`, `_AWK`, `_DIFF`, `_SORT`, `_HEAD`, `_TAIL`, `_CUT`, `_WRAPPERS`)로, 읽기를 `_read_options`·`_long_names`·`_readings`로 바꿨다. 판정 함수는 `Reading`만 받는다. 옛 표와 함수 열 가지가 남지 않는다. 모듈 독스트링의 못 보는 것에서 `sudo --us`와 `--max-c`를 빼고 두 글의 거짓 양성을 더했다.
+- 레코드의 근거를 손으로 봤다(2026-10-26, 이 PC의 Git Bash). `--help`로 GNU grep 3.1, sed 4.8, gawk 5.0.0, diffutils 3.7, coreutils 8.32의 옵션 이름을 대 봤고, 가짜 파일 `secret.txt`로 grep이 `--max-c 1`을 받고 `--binary`를 그대로 읽으며 `--co`를 모호하다고 거부하는 것, `grep -- --file`이 `--file`을 패턴으로 읽는 것, `diff --from-file=`이 내용을 차이로, `sort --files0-from=`이 내용을 오류 문구로 내는 것, `gawk -i`가 위치 인자의 프로그램도 돌리는 것을 봤다(스크래치 스크립트 `behave.sh`, 커밋하지 않았다).
+- 변이 표 `.scratch/harness/probes/env_read_wrappers_mutations.toml`의 원문을 새 코드에 맞게 옮기고 변이 여섯을 더했다. 첫 실행에서 `--` 변이가 초록이라(`grep -- --file .env`는 `--file`이 파일 옵션이라 `--`를 몰라도 막힌다) `grep -- -e .env`를 시험에 더했다. 그 뒤 열여덟 모두 기대대로였다.
+- 대기열 448을 이 티켓으로 닫았다.
+
+## 고친 것(이 세션 안의 번복)
+
+- 처음 쓴 티켓은 상태를 `done`, 수용 기준을 체크한 채로 써서 곧 `in-progress`와 빈 체크박스로 되돌렸다.
+- `sudo --login cat .env`를 처음에는 두 글의 거짓 양성 시험에 넣었다가, 옛 판도 막던 막아야 맞는 입력이라 래퍼를 막는 시험으로 옮겼다.
+- `grep -rn --recur KEY`는 `-r`이 이미 있어 줄임을 재지 못해 `grep -n --recur KEY`로 바꿨다.
+
+## 검사
+
+- `uv run python tools/run_checks.py`: pytest 하나 말고 모두 Passed. 실패는 이 변경과 무관한 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`assert board.run() == 0`이 1)였고, 홀로 다시 돌리니 초록이었다(49초). 나란히 도는 세션 여덟이 이 PC를 함께 쓰던 때다.
+- 레코드 구간을 `# fmt: skip` 없이 넣어 `ruff format`이 옵션 집합을 한 줄에 하나씩 풀었다. 옛 코드는 문장 끝의 `# fmt: skip`으로 막았던 것이라 같은 자리에 붙여 다시 썼다. 그 뒤 두 시험 파일과 `tests/tools/test_run_hooks.py` 436개 초록, pyright 0, ruff 초록, 변이 열여덟 기대대로.
+
+## 인계 (셀프 리뷰 직전)
+
+`/code-review`를 부르자 `hook_handoff`가 세션 컨텍스트 316,802 토큰으로 `셀프 리뷰 직전` 경계의 인계 계기를 냈다. next-session "인계할 때" 1의 다섯 경우에 들지 않았다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 셀프 리뷰는 밟지 않고 넘긴다. 커밋하지 않았다. 이 세션의 제목은 `chore/012-env-read-option-records`였고 `chore/012-env-read-option-records (인계함)`으로 바꾼다. 티켓의 상태는 아직 `in-progress`이고 수용 기준 체크박스도 비어 있다(PR 전에 새 세션이 `done`과 체크로 바꾼다).
+
+넘기는 지시문:
+
+```
+다음 작업: 받는 세션이 쓸 .scratch/harness/issues/012-env-read-option-records.md. tools/hook_env_read.py의 옵션 읽기를 명령마다 레코드 하나와 getopt 읽기 함수 하나로 합쳐, 하류 도구와 다르게 읽는 사례의 종류를 없앤다(대기열 448)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 448을 티켓 .scratch/harness/issues/012-env-read-option-records.md로 쓰고 한다
+브랜치: chore/012-env-read-option-records
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-26-05-env-read-option-records.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 티켓 파일과 구현, 시험, 변이 표, 대기열 448 닫힘, 일지가 워크트리에 커밋하지 않은 채 있고, 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 티켓은 아직 in-progress라 PR 전에 done과 수용 기준 체크로 바꾼다. 전체 검사(run_checks)는 셀프 리뷰 전에 한 번 돌아 무관한 test_rerun_runner 하나만 빨갰고 홀로는 초록이었다. 일지 번호 05는 형제 016·017과 겹쳐 옮긴 것이니 커밋 직전에 sibling_overlap.py를 다시 친다. docs/journal/2026-10-26-05-env-read-option-records.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 같은 묶음의 010이 tools/hook_payloads.toml과 .claude/settings.json을 고친다. 이 티켓은 그 둘을 고치지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-26T07:46:03Z
+
+## 이어받은 세션 (셀프 리뷰부터)
+
+> 사용자: 대기열 448을 티켓 .scratch/harness/issues/012-env-read-option-records.md로 쓰고 한다
+
+이 세션의 제목은 `chore/012-env-read-option-records`다. 첫 턴에 주 체크아웃에서 `tidy-checkouts`를 돌았다. 루트는 이미 `origin/main`(92b61458)과 같아 당기지 않았다. `judge`가 지울 것을 내지 않았다. 위젯 워크트리 아홉은 다시 만들 수 없는 `web/apps/widget/public/`이 남아, 묶음의 010~017은 병합된 PR이 없어, 앱이 만든 둘은 앱의 표지로, 임시 폴더의 하나는 쥔 프로세스로 남겼다.
+
+### 셀프 리뷰 (기점 92b61458, 커밋 0, 바뀐 파일 다섯, 미추적 둘)
+
+명세 축:
+- Major: 모든 긴 옵션을 플래그로 읽은 글과 모두 줄임으로 읽은 글 둘만 보아, 표에 없는 플래그(ack·ag `--color`, ag `--ackmate`)와 진짜 줄임이 섞인 `ack .env --color --mat X`, `ack --color --files-f .env KEY`, `ag --color --path .env KEY`를 옛 판은 막았는데 새 판이 지나보냈다. → 고쳤다. 모호한 긴 옵션마다의 조합을 모두 본다(`_Choices`, `_every_choice`). 조합이 2의 여덟제곱을 넘으면 막는다(`_MAX_AMBIGUOUS`, 갈래가 256을 넘는 glob을 막는 것과 같은 까닭). 래퍼 벗기기(`_command_words`)도 같은 열거를 쓴다.
+- Minor: `sort -R --random-source .env x`를 옛 판은 막고 새 판은 지나보내는데 시험이 없다. → 지나가는 시험을 더했다. 근거는 coreutils의 `sort --help`가 "get random bytes from FILE"로 적는 것이다.
+- Minor: 래퍼 시험 주석의 `--login` 동작 주장이 틀렸다. → 그 입력은 `flags`를 재지 않는다고 고쳐 적었다.
+- Minor: 프로브 README의 변이 수가 낡았다. Nit: 시험 주석의 미래형("대기열 448 이 닫는다"), 모듈 독스트링의 레코드 칸 나열에 `flags`가 빠졌다. → 셋 다 고쳤다.
+
+표준 축:
+- Major: 옵션 읽기가 `_read_options` 하나라는 주장과 달리 손으로 짠 읽기 셋이 남았다(`bash --norc -c 'cat .env'`, `git -C . diff --no-index .env x`, `grep -d recurse KEY .`가 지나갔다. 옛 판도 지나갔다). → 고쳤다. git 전역 옵션은 `_GIT` 레코드로, 셸 `-c`는 `_SHELL` 레코드로 읽고 `+o posix`를 읽으려고 옛 읽기도 함께 본다(`_shell_c_arguments`). grep은 `-d`·`--directories`의 값이 `recurse`의 머리면 훑기로 본다(`_grep_recurses_directories`).
+- Minor: 불리언 플래그 인자·칸(`CODING_STANDARDS.md`). → `OptionSpec.abbreviations`를 열거 `Abbreviation`으로, `until_command`를 `_Order`로, `abbreviated`를 `_Choices`로 바꿨다.
+- Minor: Duplicated Code(두 글 만들기, 첫 위치 인자를 패턴으로 빼기). → 열거는 `_every_choice` 하나, 패턴 빼기는 `_operands` 하나로 모았다. Feature Envy(`_rg_sweeps_root`의 `-u` 세기) → `Reading.count`. `Reading.values`와 `OptionSpec.values`의 이름 겹침 → `values_of`로 바꿨다.
+- Minor: 레코드 불변식(파일·패턴 옵션은 값 옵션)의 시험이 없다, `--pager` 예외가 독스트링에 없다, "표에 없는 플래그가 값 옵션 이름의 머리이면 같은 꼴로 막는다"에 시험이 없다. → 불변식 시험을 더했다(그러려고 `OPTION_SPECS`·`WRAPPERS`를 공개 이름으로 바꿨다). `--pager` 예외를 적었다. 그 문장은 지우고 상한의 거짓 양성(`grep --af 1` 아홉)을 적어 시험으로 고정했다.
+- 남긴 것: Nit `_GREP` 주석의 "손으로 봤다"에 명령이 없다(스크래치 `behave.sh`는 커밋하지 않았다). 같은 파일의 앞선 근거들과 같은 꼴이라 두었다. Nit `sudo -- -v cat .env`는 지나가고 `timeout -- -v cat .env`는 막는다. 막는 쪽이 보수적이라 두었다. Nit 레코드 주석의 변경 이력은 저장소 관행이라 두었다. `OptionSpec.flags`의 이름은 독스트링이 뜻을 적어 두었다.
+
+반영 뒤 검사:
+- 변이 표에 반영분 변이 여섯을 더해 스물넷을 돌렸다. 셸 `-c`의 레코드 읽기를 버리는 변이가 초록이었다(고친 옛 읽기가 `bash --norc -c`도 잡았다). 실제 bash가 `bash -c -e '…'`의 뒤 글을 명령으로 돌리는 것을 스크래치 `bash_c.sh`로 손으로 보고, 옛 읽기는 놓치고 레코드만 잡는 그 입력을 시험에 더했다. 그 변이만 다시 돌려 빨강이었다. 스물넷 모두 기대대로다.
+- 변이 표의 원문을 옮긴 스크래치 스크립트가 `Path.write_text`로 줄 끝을 CRLF로 바꿔, `sed`로 LF로 되돌렸다.
+- 첫 rg 시험 실행이 변이 실행과 겹쳤다(`tools/mutate.py`는 이 체크아웃을 제자리에서 고친다). 변이가 끝난 뒤 `tests/tools/test_hook_env_read.py`와 `test_hook_env_read_rg.py`를 다시 돌려 402개 초록이었다. pyright 0, ruff 초록, `check_type_escapes` 초록.
+
+PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
+- "모호한 긴 옵션마다 플래그로 읽을지 줄임으로 읽을지를 정한 조합을 모두 판정한다"(`_readings`, 모듈 독스트링)와 `_every_choice` 독스트링의 "늘린 한계 안의 마스크가 모든 길을 덮는다".
+- "레코드가 있는 명령과 래퍼·git·셸의 옵션 읽기는 모두 이 함수 하나"(`_read_options`)와 "셸은 옛 읽기도 함께 본다".
+- "`r`·`re`는 `read`와 겹쳐 grep이 거부한다"(`_grep_recurses_directories`). 스크래치 스크립트 `grep_d.sh`(커밋하지 않았다)로 GNU grep 3.1에서 `grep -d rec FAKEKEY .`가 하위 폴더를 훑고 `-d r`·`-d re`가 `ambiguous argument`로 끝난 것을 손으로 봤다.
+- `sort --random-source`는 "내용을 내지 않는다"(시험 주석. `sort --help`의 문구에 기댄 것이고 재지 않았다).
+- "git 은 줄임을 받지 않는다"(`_GIT` 주석). 같은 스크립트에서 git 2.32가 `git --git-d=x status`를 `unknown option`으로 거부한 것을 손으로 봤다.
