@@ -67,6 +67,7 @@ from tools.tidy_checkouts import (
     tasklist_has,
     touched_at,
     tracked_dirs,
+    tracked_links,
     unrecreatable,
 )
 
@@ -590,6 +591,22 @@ def test_tracked_dirs_는_추적_파일이_든_폴더를_모두_든다() -> None
     assert tracked_dirs(listing) == frozenset(expected)
     upper = os.path.normcase("COVERAGE") in tracked_dirs("coverage/keep.txt\0")
     assert upper == (sys.platform == "win32")
+
+
+def test_tracked_links_는_추적_파일이_든_폴더_가운데_링크를_든다() -> None:
+    """PR 직전 bug-perf-review 의 대체 리뷰. 추적 폴더를 갈음한 정션은 안에 무시된 것이 없으면
+    `status` 에 아무것도 찍히지 않는다. 그래서 무시된 항목이 아니라 추적 파일이 든 폴더에서 링크를
+    찾는다. 폴더마다 한 번만 보고, 링크 안의 폴더는 보지 않는다."""
+    links = {"a/b", "coverage", "coverage/sub"}
+    listing = "README.md\0a/b/c.py\0a/b/d.py\0a/x.py\0coverage/keep.txt\0coverage/sub/y.txt\0"
+    seen: list[str] = []
+
+    def is_link(relative: str) -> bool:
+        seen.append(relative)
+        return relative in links
+
+    assert tracked_links(listing, is_link) == ("a/b/", "coverage/")
+    assert seen == ["a", "a/b", "coverage"]
 
 
 _HOOK_KEY = f"{HOOK_KEY_PREFIX}x:tdd"
@@ -2623,12 +2640,15 @@ def test_judge_와_remove_는_링크_안의_무시된_것을_링크째로_보고
     )
 
 
+@pytest.mark.parametrize("ignored", [(".env",), ()], ids=["무시된_env", "무시된_것_없음"])
 def test_judge_와_remove_는_추적_폴더를_갈음한_링크가_있으면_남긴다(
-    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str], ignored: tuple[str, ...]
 ) -> None:
-    """셀프 리뷰 명세 축(반박 시험, 지우는 자리 안의 링크). 커밋한 `coverage/` 를 링크로 갈음하면
-    윈도의 git 2.32 는 정션을 따라가 추적 파일을 바뀌지 않은 것으로 보고 무시된 `coverage/.env` 만
-    찍는다(첫 단언이 그 표지다). 링크째로 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히므로
+    """셀프 리뷰 명세 축과 PR 직전 bug-perf-review 의 대체 리뷰(반박 시험, 지우는 자리 안의 링크).
+    커밋한 `coverage/` 를 링크로 갈음하면 윈도의 git 2.32 는 정션을 따라가 추적 파일을 바뀌지 않은
+    것으로 보고, 무시된 것이 있으면 `coverage/.env` 만, 없으면 아무것도 찍지 않는다(첫 단언이 그
+    표지다). 링크째로 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히고, 옮길 것이 없으면
+    `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지운다. 그래서 무시된 것과 상관없이
     남긴다. 리눅스의 git 은 심볼릭 링크를 따라가지 않아 바뀐 파일로 남긴다."""
     path, _ = _add(repo, "pinwt")
     (path / "coverage").mkdir()
@@ -2639,13 +2659,15 @@ def test_judge_와_remove_는_추적_폴더를_갈음한_링크가_있으면_남
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "keep.txt").write_bytes(b"keep\n")
-    (outside / ".env").write_text("SECRET=1", encoding="utf-8")
+    for name in ignored:
+        (outside / name).write_text("SECRET=1", encoding="utf-8")
     shutil.rmtree(path / "coverage")
     _link(path / "coverage", outside)
     if sys.platform == "win32":
         listed = _git("status", "--porcelain", "--ignored=matching", cwd=path).splitlines()
-        assert [entry for entry in listed if "coverage" in entry] == ["!! coverage/.env"], listed
-        suffix = " — 옮길 무시된 자리에 추적 파일이 든다: coverage/"
+        expected = [f"!! coverage/{name}" for name in ignored]
+        assert [entry for entry in listed if "coverage" in entry] == expected, listed
+        suffix = " — 추적 폴더를 링크가 갈음했다: coverage/"
     else:
         assert _git("status", "--porcelain", cwd=path), "리눅스의 git 이 바뀐 것을 찍지 않았다"
         suffix = " — 바뀐 파일이 있다"
@@ -2656,8 +2678,65 @@ def test_judge_와_remove_는_추적_폴더를_갈음한_링크가_있으면_남
     assert line.endswith(suffix), line
     argv = ["remove", path.as_posix(), "chore/pinwt", head]
     assert main(argv, cwd=repo, ops=_ops(merged)) == 1
-    assert (path / "coverage" / ".env").exists()
-    assert sorted(p.name for p in outside.iterdir()) == [".env", "keep.txt"]
+    assert (path / "coverage" / "keep.txt").exists()
+    assert sorted(p.name for p in outside.iterdir()) == sorted([*ignored, "keep.txt"])
+
+
+@pytest.mark.parametrize(
+    ("name", "committed", "layout", "reason"),
+    [
+        ("coverage", ("keep.txt",), {"keep.txt": "keep\n"}, "추적 폴더를 링크가 갈음했다"),
+        ("foo", (), {"node_modules/pkg/index.js": "x"}, "다시 만들 수 없는 무시된 항목"),
+    ],
+    ids=["추적_폴더_자리의_링크", "무시된_것이_든_링크"],
+)
+def test_judge_와_remove_는_MAX_PATH_를_넘는_링크도_링크로_본다(
+    repo: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    name: str,
+    committed: tuple[str, ...],
+    layout: dict[str, str],
+    reason: str,
+) -> None:
+    """셀프 리뷰 명세 축(반박 시험, 윈도 경로 정규화가 바꾸는 이름). 링크 경로가 MAX_PATH(260자)를
+    넘으면 `\\\\?\\` 없이 물은 링크 판정이 거짓이라(`LongPathsEnabled=0` 인 이 PC), 추적 폴더를
+    갈음한 링크를 찾지 못해 `git worktree remove` 가 링크 바깥을 지웠고, 무시된 것이 든 링크를
+    접지 못해 그 안의 `node_modules/` 를 옮겼다. 첫 단언(경로 길이)이 그 표지다. 리눅스의 git 은
+    심볼릭 링크를 따라가지 않아 바뀐 파일로 남긴다."""
+    path, head = _add(repo, "deepwt")
+    link = "/".join(["d" * 40] * 5) + f"/{name}"
+    assert len(str(path / link)) > 260
+    if committed:
+        Path(long_path(path / link)).mkdir(parents=True)
+        for relative in committed:
+            Path(long_path(path / link / relative)).write_bytes(layout[relative].encode())
+        _git("add", link, cwd=path)
+        _git(*_IDENTITY, "commit", "-m", "deep", cwd=path)
+        head = _git("rev-parse", "HEAD", cwd=path)
+        shutil.rmtree(long_path(path / link))
+    else:
+        Path(long_path(path / link)).parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    for relative, text in layout.items():
+        (outside / relative).parent.mkdir(parents=True, exist_ok=True)
+        (outside / relative).write_bytes(text.encode())
+    _link(Path(long_path(path / link)), outside)
+    if sys.platform == "win32":
+        suffix = f" — {reason}: {link}/"
+    else:
+        assert _git("status", "--porcelain", cwd=path), "리눅스의 git 이 바뀐 것을 찍지 않았다"
+        suffix = " — 바뀐 파일이 있다"
+    merged = {"chore/deepwt": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/deepwt" in line)
+    assert line.startswith("남긴다"), line
+    assert line.endswith(suffix), line
+    argv = ["remove", path.as_posix(), "chore/deepwt", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == 1
+    assert sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*") if p.is_file()) == (
+        sorted(layout)
+    )
 
 
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:

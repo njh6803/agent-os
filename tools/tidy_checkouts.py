@@ -65,9 +65,16 @@
   않는다(`ls-files`). 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히고, 그 뒤 휴지통을 비우며
   함께 옮긴 다시 만들 수 없는 것(`.env`)도 지운다(PR 봇 CodeRabbit. 고치기 전 판을 셀프 리뷰 표준
   축이 임시 저장소로 밟았다). 그래서 추적 파일이 든 폴더로는 접지 않고 그 안의 항목을 제 이름이나 더
-  안쪽 조상으로 판정하며, 접은 자리에 추적 파일이 들면(추적 폴더를 갈음한 링크)
-  남긴다(`holding_tracked`). 윈도의 git 은 추적 폴더를 갈음한 정션을 따라가 바뀐 것으로 찍지
-  않는다(셀프 리뷰 명세 축이 재현했다).
+  안쪽 조상으로 판정한다. 추적 폴더를 갈음한 링크가 있으면 그 안에 무시된 것이 있든 없든
+  남긴다(`tracked_links`). 윈도의 git 은 그 정션을 따라가 안의 파일이 체크아웃한 바이트와 같으면
+  바뀐 것으로 찍지 않고(셀프 리뷰 명세 축이 재현했다), 링크째로 옮기면 추적 파일이 빠지며, 옮길 것이
+  없으면 `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지운다(PR 직전 bug-perf-review 의
+  대체 리뷰가 임시 저장소로 재현했다). 바이트가 다르면(`core.autocrlf` 의 줄 끝만 달라도) 바뀐
+  파일로 남는다(그 대체 리뷰와 그 반영의 셀프 리뷰가 임시 저장소로 봤다). 링크인지는 `\\\\?\\`
+  경로로 묻는다. MAX_PATH 를 넘는 링크가 링크가 아닌 것으로 보여 링크 바깥을 지웠다(그 셀프 리뷰가
+  재현했다). 워크트리를 읽을 때마다(`gather`) `ls-files` 를 한 번 띄우고 그 추적 폴더마다 링크인지
+  한 번씩 본다. 이 저장소(추적 폴더 375개)의 워크트리 하나에서 앞의 것은 0.02~0.1초, 뒤의 것은
+  0.07~0.34초였다(그 셀프 리뷰 때 손으로 열 번 봤다).
   설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
   `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
@@ -486,8 +493,7 @@ class Facts:
     탐침의 옆 이름 폴더가 있다는 뜻이고, `contained` 는 HEAD 가 `origin/main` 에서 닿는다는 뜻이다
     (분리 HEAD 에서만 읽는다). `behind` 는 브랜치 끝이 이름이 같은 병합된 PR 의 머리 가운데 하나의
     조상이라는 뜻이고(끝이 머리와 같으면 읽지 않는다), `app_marker` 는 앱의 표지(`APP_MARKER`)가
-    있다는 뜻이다. `holding_tracked` 는 `ignored` 가운데 추적 파일이 든 자리다(추적 폴더를 갈음한
-    링크)."""
+    있다는 뜻이다. `tracked_links` 는 추적 파일이 든 폴더 가운데 링크인 것이다(같은 이름의 함수)."""
 
     exists: bool
     toplevel: str | None
@@ -500,7 +506,7 @@ class Facts:
     has_git: bool = True
     behind: bool = False
     app_marker: bool = False
-    holding_tracked: tuple[str, ...] = ()
+    tracked_links: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1245,7 +1251,7 @@ def fold_ignored(
     접어, 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다(둘 다 PR 직전 bug-perf-review 가
     임시 저장소로 재현했다). 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다(PR 봇
     CodeRabbit). 그 폴더 안의 항목은 제 이름으로 판정되거나 더 안쪽 조상으로 접힌다. 추적 파일이 든
-    링크로 접은 자리는 `gather` 가 `holding_tracked` 로 따로 모아 남긴다."""
+    링크는 `gather` 가 `tracked_links` 로 따로 모아 남긴다."""
     folded: dict[str, None] = {}
     for entry in entries:
         parts = entry.rstrip("/").split("/")
@@ -1272,6 +1278,30 @@ def tracked_dirs(listing: str) -> frozenset[str]:
         for depth in range(1, len(parts) + 1):
             dirs.add(os.path.normcase("/".join(parts[:depth])))
     return frozenset(dirs)
+
+
+def tracked_links(listing: str, is_link: Callable[[str], bool]) -> tuple[str, ...]:
+    """`ls-files -z` 의 출력에서 추적 파일이 든 폴더 가운데 링크(심볼릭 링크, 정션)인 것을 끝에 `/`
+    를 붙여 처음 나온 차례로 든다. 폴더마다 한 번만 보고 링크 안의 폴더는 보지 않는다. 윈도의 git
+    은 추적 폴더를 갈음한 정션을 따라가 안의 파일이 체크아웃한 바이트와 같으면 바뀐 것으로 찍지
+    않고, 안에 무시된 것도 미추적 파일도 없으면 `status` 에 아무것도 찍히지 않는다. 그때
+    `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지운다(PR 직전 bug-perf-review 의 대체
+    리뷰가 임시 저장소로 재현했다). 그래서 무시된 항목이 아니라 추적 파일이 든 폴더에서 찾는다."""
+    found: dict[str, None] = {}
+    seen: set[str] = set()
+    for name in listing.split("\0"):
+        parts = name.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            folder = "/".join(parts[:depth])
+            if folder in seen:
+                if folder + "/" in found:
+                    break
+                continue
+            seen.add(folder)
+            if is_link(folder):
+                found[folder + "/"] = None
+                break
+    return tuple(found)
 
 
 def same_path(left: str, right: str) -> bool:
@@ -1418,9 +1448,9 @@ def judge(
         return verdict("keep", "바뀐 파일이 있다")
     if facts.status_err:
         return verdict("keep", f"git 이 경고를 냈다: {facts.status_err.strip()[:120]}")
-    if facts.holding_tracked:
-        places = ", ".join(facts.holding_tracked[:5])
-        return verdict("keep", f"옮길 무시된 자리에 추적 파일이 든다: {places}")
+    if facts.tracked_links:
+        places = ", ".join(facts.tracked_links[:5])
+        return verdict("keep", f"추적 폴더를 링크가 갈음했다: {places}")
     extra = unrecreatable(facts.ignored, settings_same=facts.settings_same)
     if extra:
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
@@ -1751,14 +1781,14 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
     holding = tracked_dirs(tracked.stdout)
 
     def is_link(relative: str) -> bool:
-        return _is_link(path / relative)
+        # MAX_PATH 를 넘는 링크는 `\\?\` 없이 물으면 링크가 아닌 것으로 보인다(셀프 리뷰 명세 축)
+        return _is_link(Path(long_path(path / relative)))
 
     def holds_tracked(relative: str) -> bool:
         return os.path.normcase(relative) in holding
 
     ignored = fold_ignored(found, is_link, holds_tracked)
-    # 윈도의 git 은 추적 폴더를 갈음한 정션을 따라가 바뀐 것으로 찍지 않는다(셀프 리뷰 명세 축)
-    holding_tracked = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))
+    links = tracked_links(tracked.stdout, is_link)
     settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     behind = (
         wt.branch is not None
@@ -1775,7 +1805,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
         contained=contained,
         behind=behind,
         app_marker=_has_app_marker(path, git),
-        holding_tracked=holding_tracked,
+        tracked_links=links,
     )
 
 

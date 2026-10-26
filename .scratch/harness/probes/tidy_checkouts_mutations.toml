@@ -2157,8 +2157,10 @@ expect_output = ["Extra items in the right set:"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        for depth in range(1, len(parts) + 1):'''
-new = '''        for depth in range(1, len(parts)):'''
+old = '''        for depth in range(1, len(parts) + 1):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))'''
+new = '''        for depth in range(1, len(parts)):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))'''
 
 [[mutation]]
 name = "추적 파일이 든 폴더: ls-files 를 읽지 못해도 지나간다"
@@ -2173,26 +2175,68 @@ old = '''    if tracked.returncode != 0 and not status_err:
 new = '''    if False:
         status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"'''
 
-# 셀프 리뷰 명세 축: 추적 폴더를 갈음한 링크로 접은 자리를 옮기면 추적 파일이 빠진다
+# 셀프 리뷰 명세 축과 PR 직전 bug-perf-review 의 대체 리뷰: 추적 폴더를 갈음한 링크는 링크째로 옮기면
+# 추적 파일이 빠지고, 옮길 것이 없으면 git worktree remove 가 링크 바깥을 지운다
 
 [[mutation]]
-name = "추적 파일이 든 자리: judge 가 보지 않는다"
+name = "추적 폴더를 갈음한 링크: judge 가 보지 않는다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
 expect = "red"
-expect_output = ["AssertionError: 지운다 "]
+expect_output = ["AssertionError: 지운다 ", "[무시된_env]"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if facts.holding_tracked:'''
+old = '''    if facts.tracked_links:'''
 new = '''    if False:'''
 
 [[mutation]]
-name = "추적 파일이 든 자리: 접은 자리의 끝 / 를 떼지 않고 견준다"
+name = "추적 폴더를 갈음한 링크: 무시된 항목을 접은 자리에서만 찾는다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
 expect = "red"
-expect_output = ["AssertionError: 지운다 "]
+expect_output = ["AssertionError: 지운다 ", "[무시된_것_없음]"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    holding_tracked = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))'''
-new = '''    holding_tracked = tuple(place for place in ignored if holds_tracked(place))'''
+old = '''    links = tracked_links(tracked.stdout, is_link)'''
+new = '''    links = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))'''
+
+[[mutation]]
+name = "추적 폴더를 갈음한 링크: 링크 안의 폴더까지 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "tracked_links"]
+expect = "red"
+expect_output = ["Left contains one more item: 'coverage/sub/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if folder in seen:
+                if folder + "/" in found:
+                    break
+                continue'''
+new = '''            if folder in seen:
+                continue'''
+
+# 셀프 리뷰 명세 축(기점 e6c7c7ae): MAX_PATH 를 넘는 링크는 `\\?\` 없이 물으면 링크가 아닌 것으로
+# 보여, 추적 폴더를 갈음한 링크를 놓치고(196) 무시된 것이 든 링크를 접지 못한다(197). 같은 고침을
+# 시험의 두 갈래가 따로 잡는지 보려고 갈래마다 하나씩 둔다
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 추적 폴더 자리의 링크를 찾지 못한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "MAX_PATH and 추적_폴더_자리"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[추적_폴더_자리의_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return _is_link(Path(long_path(path / relative)))'''
+new = '''        return _is_link(path / relative)'''
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 무시된 것이 든 링크를 접지 못한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "MAX_PATH and 무시된_것이_든"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_것이_든_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return _is_link(Path(long_path(path / relative)))'''
+new = '''        return _is_link(path / relative)'''
