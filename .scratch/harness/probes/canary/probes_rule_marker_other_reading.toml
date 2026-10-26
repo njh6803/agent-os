@@ -1,0 +1,25 @@
+# `.claude/rules/probes.md` 첫 항목의 표지 일반 조항(대기열 367, harness 015)이
+# `paths`(`.scratch/**/probes/**`)에 맞는 파일을 Read 로 열 때 실리는지.
+# 실험군은 규칙의 paths 안(그 조항의 선례 프로브), 대조군은 같은 `.scratch/` 의 paths 밖(plan.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 둘이다. 고친 길의 표지를 어떤 관찰로 정하는지의 조각과, 두 해석에 모두 나는 관찰을 어떻게 다루는지의 조각이다.
+# 최신 결과: 통과 4(2026-10-26, 이 PC, claude 2.1.302, 두 갈래 모두 `92b61458` 위의 커밋하지 않은 판, 일지 2026-10-26-04). 셀프 리뷰가 규칙 본문의 선례 문장을 고친 뒤 사전 확인으로 갈음했다(2026-10-26, 일지 2026-10-26-04).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/probes_rule_marker_other_reading.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 측정 스크립트에서 고친 판이 고친 길을 지났다는 표지를 어떤 관찰로 정하라는 문장이 있으면,
+그 문장과, 어떤 관찰은 표지로 쓸 수 없다고 일반적으로 정하는 문장을 각각 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["고치기 전 판이라면 실패했을 회차에서만 나는 관찰", "두 해석 아래에서 모두 나는 관찰은 표지가 못 된다"]
+source = ".claude/rules/probes.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = ".scratch/harness/probes/precommit_xdist/mutate_ctrl_c.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = ".scratch/plan.md"
