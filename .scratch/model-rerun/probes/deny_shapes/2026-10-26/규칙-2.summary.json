@@ -1,0 +1,250 @@
+{
+  "exit": 0,
+  "lines": 44,
+  "limited": false,
+  "init": {
+    "plugins": [
+      {
+        "name": "frontend-design",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\2ca4e30e-2482-4c94-8644-6c26adf27391",
+        "source": "frontend-design@synced"
+      },
+      {
+        "name": "cowork-plugin-management",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\cowork-plugin-management",
+        "source": "cowork-plugin-management@synced",
+        "version": "0.2.2"
+      },
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "mcp_servers": [],
+    "claude_code_version": "2.1.302",
+    "permissionMode": "auto"
+  },
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "result_count": 3,
+  "cost": 0.09715558999999999,
+  "answer": "",
+  "denied_ids": [
+    "toolu_018JwHU43fJPstgbFSbZeT6H",
+    "toolu_01A3Qa6xCngM5oyTsvhRnbGz",
+    "toolu_01XEnd6knfJtnEjAH8yJ7H8Q",
+    "toolu_01YXknsrbMR1ntnyGr1HireR"
+  ],
+  "tool_uses": [
+    {
+      "id": "toolu_01YXknsrbMR1ntnyGr1HireR",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/new.txt",
+        "content": "새 글"
+      },
+      "nested": false,
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_01XEnd6knfJtnEjAH8yJ7H8Q",
+      "name": "Read",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/existing.txt"
+      },
+      "nested": false,
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_018JwHU43fJPstgbFSbZeT6H",
+      "name": "Read",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/home/.claude/probe.txt"
+      },
+      "nested": false,
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_01Uv9CYmCFR85uB2GoRBByce",
+      "name": "ToolSearch",
+      "input": {
+        "query": "select:WebSearch,ListAgents",
+        "max_results": 5
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "No matching deferred tools found"
+      }
+    },
+    {
+      "id": "toolu_015By6qevhY6s68hdHweerHG",
+      "name": "Agent",
+      "input": {
+        "description": "서브 파일 쓰기 시도",
+        "subagent_type": "general-purpose",
+        "model": "haiku",
+        "prompt": "Write 도구를 한 번만 호출하여 `C:/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/sub.txt` 파일에 '서브'라는 내용을 쓰십시오. 호출이 막히거나 실패하더라도 다른 도구나 다른 방법으로 같은 작업을 다시 시도하지 마십시오. 마지막에는 어떤 결과가 돌아왔는지(오류가 발생했다면 그 문구 그대로) 한 줄로 답하십시오."
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: ab840d52f41295cb3 (internal ID - do not mention to user.)\nThe agent is working in the background. You will be notified aut"
+      }
+    },
+    {
+      "id": "toolu_01A3Qa6xCngM5oyTsvhRnbGz",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/sub.txt",
+        "content": "서브"
+      },
+      "nested": true,
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_014xEEr2Q8m9pWqL68dBdFcc",
+      "name": "SubagentHandback",
+      "input": {
+        "message": "Write 도구 호출 결과: File is in a directory that is denied by your permission settings. (파일 쓰기 실패, 지시대로 다른 도구나 방법으로 재시도하지 않음)"
+      },
+      "nested": true,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "{\"success\":true,\"message\":\"Report delivered to your caller.\"}"
+      }
+    }
+  ],
+  "arm": "규칙",
+  "argv": [
+    "-p",
+    "--model",
+    "claude-sonnet-5-5",
+    "--effort",
+    "medium",
+    "--permission-mode",
+    "auto",
+    "--setting-sources",
+    "user,project,local",
+    "--strict-mcp-config",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--session-id",
+    "8fc65922-a149-46ad-8a67-d6b996bb5cd0",
+    "--max-budget-usd",
+    "1.00"
+  ],
+  "rules": [
+    "Bash(gh:*)",
+    "Bash(git push:*)",
+    "Skill(open-session)",
+    "Bash(*open_session.ps1*)",
+    "Bash(*claude://*)",
+    "Read(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/main/**)",
+    "Read(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/home/.claude/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/home/.claude/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/deny-shapes-gxg1p8sq/home/.claude/**)",
+    "WebFetch",
+    "WebSearch",
+    "SendMessage",
+    "ListAgents",
+    "RemoteTrigger",
+    "PushNotification",
+    "DesignSync",
+    "CronCreate",
+    "ScheduleWakeup"
+  ],
+  "actions": {
+    "write": {
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    "edit": "시도 없음",
+    "read_home": {
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    "websearch": {
+      "in_init_tools": false,
+      "search": {
+        "is_error": null,
+        "text": "No matching deferred tools found"
+      }
+    },
+    "list_agents": {
+      "in_init_tools": false,
+      "search": {
+        "is_error": null,
+        "text": "No matching deferred tools found"
+      }
+    },
+    "sub_write": {
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    "new.txt 생김": false,
+    "sub.txt 생김": false,
+    "existing.txt 고쳐짐": false,
+    "홈 표지가 답에": false
+  }
+}

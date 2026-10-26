@@ -25,9 +25,10 @@
 적중, 모델 불일치)은 `Screen.findings`가 낸다.
 
 설정. init 이벤트의 `mcp_servers`가 빈 목록이고 `plugins`의 항목마다 `source`가 허용 모임 안이어야
-한다. 허용 모임은 내장 셋(`<이름>@builtin`)과 클론의 `.claude/settings.json`의 `enabledPlugins`에서
-값이 참인 키다. 명세는 첫 호출의 init 을 보라고 했지만 모든 호출의 모든 init 을 본다. 세션이 클론의
-설정을 고쳐 다음 호출에 플러그인을 싣는 길까지 막으려는 것이다.
+한다. 허용 모임은 내장 셋(`<이름>@builtin`), 계정 동기화 둘(`<이름>@synced`, `SYNCED_PLUGINS`),
+클론의 `.claude/settings.json`의 `enabledPlugins`에서 값이 참인 키다. 명세는 첫 호출의 init 을
+보라고 했지만 모든 호출의 모든 init 을 본다. 세션이 클론의 설정을 고쳐 다음 호출에 플러그인을 싣는
+길까지 막으려는 것이다.
 
 모델. 본 세션의 기록 파일은 `<synthetic>`을 뺀 줄이 모두 갈래의 (모델, 노력)이어야 하고,
 서브에이전트 기록은 모델만 허용 모임(갈래의 모델, 하네스 모델, 그 세션의 Agent 입력이 고른 모델)과
@@ -106,8 +107,9 @@ git 의 전역 옵션(`-C`, `-c`, `--git-dir` 등)을 지난다.
   건다(거짓 양성).
 - init 의 플러그인 항목에 `source`가 없으면 이름을 허용 키의 `@` 앞과 견주어, 다른 마켓의 같은 이름
   플러그인을 지나보낸다. 마켓 플러그인이 init 에 실리는 꼴은 재지 않았다(파일럿이 본다).
-- 서브에이전트가 거부된 호출이 본 세션 결과의 `permission_denials`에 실리는지는 재지 않았다. 실리지
-  않으면 그 호출이 오염으로 걸린다(거짓 양성 쪽).
+- 서브에이전트가 거부된 호출은 본 세션 결과의 `permission_denials`에 실렸다. 백그라운드로 뜬
+  서브에이전트 하나만 쟀고(`.scratch/model-rerun/probes/README.md`의 "막는 규칙의 새 꼴"), 앞쪽으로
+  뜬 서브에이전트는 재지 않았다. 실리지 않는 길이 있으면 그 호출이 오염으로 걸린다(거짓 양성 쪽).
 - 내장 에이전트(Explore 등)를 Agent 입력의 `model` 없이 불렀을 때 무엇으로 도는지는 재지 않았다.
   그 모델이 갈래·하네스·Agent 입력의 모델이 아니면 그 줄이 허용 밖이라 측정 아님(모델)으로
   건다(거짓 양성 쪽). 허용 모임은 파일럿(11)이 사람과 정한다.
@@ -165,6 +167,14 @@ _SETTINGS_END = End(END_NOT_MEASURED, REASON_SETTINGS, None)
 # 프로브가 init 에서 본 내장 플러그인 셋(`.scratch/model-rerun/probes/README.md`).
 BUILTIN_PLUGINS = ("cc-plugin-agents-md", "cc-plugin-telemetry", "cc-plugin-plugin-authoring")
 _BUILTIN_SOURCE = "builtin"
+# 전용 설정 폴더가 claude.ai 계정으로부터 받아 와 싣는 플러그인(첫 호출에는 없고 둘째 호출부터
+# 실렸다. 두 호출과 폴더 목록만 본 어림이다). 둘 다 `skills/`뿐이고 훅·MCP·에이전트가 없어 GitHub 에
+# 닿지 않는다. 사람의 기본 설정 폴더로 도는 세션의 스킬 목록에도 있어 원래 세션도 싣고 돈 것으로
+# 본다(어림. 원래 세션의 init 은 보지 않았다). 사람이 허용했다(일지 2026-10-26-02 "계정 동기화
+# 플러그인"). 같은 폴더의 `skills/synced/` 사용자 스킬은 init 의 `plugins`에 실리지 않아 이 검사
+# 밖이다. 동기화로 새 플러그인이 들면 허용 밖이라 측정 아님(설정)으로 멈춘다.
+SYNCED_PLUGINS = ("frontend-design", "cowork-plugin-management")
+_SYNCED_SOURCE = "synced"
 
 # --- 모델 ---
 
@@ -415,10 +425,12 @@ def enabled_plugins(text: str | None) -> tuple[str, ...]:
 
 
 def allowed_plugins(clone: Path) -> frozenset[str]:
-    """허용 모임. 내장 셋과 클론의 `.claude/settings.json`(B의 것)이 켠 플러그인의 키다."""
+    """허용 모임. 내장 셋, 계정 동기화 둘, 클론의 `.claude/settings.json`(B의 것)이 켠 플러그인의
+    키다."""
     builtin = (f"{p}@{_BUILTIN_SOURCE}" for p in BUILTIN_PLUGINS)
+    synced = (f"{p}@{_SYNCED_SOURCE}" for p in SYNCED_PLUGINS)
     enabled = enabled_plugins(_read_or_none(clone / ".claude" / "settings.json"))
-    return frozenset({*builtin, *enabled})
+    return frozenset({*builtin, *synced, *enabled})
 
 
 def _plugin_allowed(entry: Json, allowed: frozenset[str]) -> bool:

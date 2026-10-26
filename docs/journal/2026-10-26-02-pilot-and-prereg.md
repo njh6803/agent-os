@@ -164,3 +164,122 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 - 고치며 찾은 것: `tools/mutate.py --check`가 세 표에서 원문 여섯이 어긋났다고 냈다. 기록 29는 셋째 세션이 `_outcome`의 견줌과 시험 이름을 바꾸고 표를 맞추지 않은 것이고(셋째 세션의 "변이 여섯" 확인은 그 여섯만 번호로 돌려 이것을 보지 못했다), 게이트 4는 이 세션의 편집이 `files = ` 뒤 공백을 지운 것이며, 나머지 넷은 이 세션의 고침이 바꾼 원문이다. 맞춘 뒤 고친 일곱을 번호로 돌려 모두 기대대로였다. 프로브 README 변이 절에 한 문단을 더했다.
 - 남긴 것: 상수를 리터럴로 복제한 시험(Nit)은 그대로 둔다. 옛 묶음의 글을 고정하는 것이 그 시험의 뜻이다. `SETUP_COMMANDS` 문구(Nit)는 표준 축이 맞다고 했다.
 - PR 직전 리뷰에 밀 주장: 위 "고친 것"의 명세 240행 두 문장과 "층과 수" 주석 문장, 티켓 28행 문장, `has_gate_file` 독스트링의 링크 문장.
+
+### 커밋과 인계 (넷째 세션)
+
+- 리뷰를 반영한 뒤 `uv run ruff check .`, `uv run ruff format --check .`(러너 한 파일을 포맷한 뒤)은 초록이다. `tools/sibling_overlap.py`가 이 일지(옛 2026-10-24-11)가 origin/main 의 최신 일지보다 이름순으로 앞이라고 해 `--move`로 2026-10-26-02 로 옮겼다. 커밋 1dd42c39 의 pre-commit 이 손으로 치는 다섯을 갈음했고 모두 통과했다(`Skipped`는 카나리아 명세 모양과 헌법 판, 둘 다 해당 파일 없음). origin/main 은 이 브랜치의 기점보다 앞서 있고(`git diff --name-only HEAD...origin/main`에 `tools/mutate.py`, `CLAUDE.md`, `docs/constitution/operations.md` 등), 이 브랜치가 이름으로 든 `tools/rerun_*` 와는 겹치지 않는다. PR 전에 main 을 합친다.
+- 이 세션의 지금 제목: `feature/11-pilot-and-prereg`(지시문대로 바꿨다).
+- 인계 경계: `커밋 뒤`. 컨텍스트 약 24.1만 토큰에서 커밋 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(커밋은 성공했고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 다른 경계이고, `인계 못함` 줄이 없고, 지시문으로 연 세션이다).
+- 이 세션이 번복하거나 고친 것: 셋째 세션이 맞추지 않은 변이 원문(기록 29)과, 이 세션의 편집이 지운 공백(게이트 4)을 `--check`로 찾아 고쳤다(위 "셀프 리뷰 (넷째 세션)").
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/11-pilot-and-prereg.md. 파일럿을 돌리고 사전 등록을 사람과 정한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
+브랜치: feature/11-pilot-and-prereg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-02-pilot-and-prereg.md의 "넷째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "사람과 정한다" 다섯째 체크박스부터
+이어받을 상태: 인계: 커밋 뒤. 1dd42c39 까지 넷째 체크박스(옛 게이트 묶음)와 그 셀프 리뷰 반영을 커밋했다(푸시하지 않았다, PR 없음). 남은 단계는 다섯째 체크박스(전용 설정 폴더의 njh6803 로그인과 설정 옮기기)를 사람에게 묻는 것부터다. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄에 있다. 이 일지의 "커밋과 인계 (넷째 세션)" 절은 커밋하지 않았다. docs/journal/2026-10-26-02-pilot-and-prereg.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+- 잠금 풀기: 이미 풀려 있었다(`is not locked`). open-session을 부른다 2026-10-26T02:42:39Z
+
+## 다섯째 세션 (2026-10-26)
+
+> 사용자: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
+
+넷째 세션의 지시문으로 연 세션이다. `EnterWorktree`로 워크트리 `11-pilot-and-prereg`(1dd42c39, 커밋하지 않은 변경은 이 일지 하나)에 들어와 이었다.
+
+### 다시 풀기 계정
+
+다섯째 체크박스를 물으려고 빈 전용 설정 폴더 `C:\Users\User\.claude-rerun`으로 `claude auth status --json`(2.1.302)을 쳤다. 종료 1, `loggedIn` 거짓, `email` 키 없음, `configDirectory`는 넘긴 문자열 그대로였다(손으로 봤다. 명세 "계정"의 주석과 같다). 사람에게 로그인을 물었다.
+
+> 사용자: njh6803는 한도가 없는데?
+
+한도가 아예 없는 계정인지, 남은 한도가 없는지 되물었다.
+
+> 사용자: njh6803 계정 주간한도가 꽉차서 njh4803 계정으로 진행해야해
+
+그래서 다시 풀기 계정을 njh4803으로 바꾼다. 전용 설정 폴더는 그대로 둔다. 기록은 기본 설정 폴더와 갈리지만(브랜치 표의 수집이 읽는 `~/.claude/projects/`에 회차가 섞이지 않는다), 한도는 사람의 평소 작업과 같은 주간 창을 쓴다. 그때 `get_usage`는 Max 플랜, 주간(모든 모델) 2%, 초기화 2026-11-01T20:59:59Z(KST 2026-11-02 06:00)였다(손으로 봤다). 고친 자리는 설계 11절(주석), 명세 37·58·77·166·276·317행, 프로브 README 3·65행, 티켓 11의 5·19·20행이다. 저장소 이름 `njh6803/agent-os`(오염 꼴)와 끝난 티켓 09는 계정 이야기가 아니라 그대로 둔다. 러너는 `--account`로 이름을 받으므로 코드는 바뀌지 않는다.
+
+### 전용 설정 폴더
+
+> 사용자: 전용 설정 폴더에 njh4803으로 로그인했고 설정 세 가지도 옮겼어. 확인해 줘.
+
+- 폴더 `C:\Users\User\.claude-rerun`으로 친 `claude auth status --json`이 종료 0, `loggedIn` 참, `authMethod` `claude.ai`, `email`의 `@` 앞이 njh4803, `configDirectory`가 그 폴더였다(PowerShell로 그 칸만 찍어 손으로 봤다. 이메일 전체는 찍지 않았다).
+- 폴더에는 `.claude.json`, `.credentials.json`, `backups/`, `output-styles/fluent-korean-explanatory.md`, `settings.json`이 있었다. `settings.json`은 `$schema`, `outputStyle`, `language`, `autoCompactWindow`(400000)뿐이라 `env`·플러그인·MCP 키가 없다(Read로 봤다. 사람이 옮긴 파일이라 `hook_user_settings_read`의 대상이 아니었다). `.claude.json`의 최상위 키에 `mcp`·`plugin`·`env`가 든 이름이 없었다(PowerShell로 키 이름만 찍었다). `projects/`는 아직 없었다.
+
+### 판 고정
+
+- `~/.local/share/claude/versions/`에는 2.1.299·2.1.300·2.1.302 실행 파일이 있고, PATH 의 `claude`는 `~/.local/bin/claude.exe`다.
+- `versions/2.1.302`를 파이썬 `subprocess`로 바로 띄우면 `--version`이 `2.1.302 (Claude Code)`로 종료 0이다. PowerShell 의 `&`는 확장자가 없어 "문서"로 보고 띄우지 못했다. 러너는 `subprocess`로 띄우므로 상관없다.
+- 그렇게 띄운 프로세스를 `tools.proc_command_line.pids_named("2.1.302")`가 잡았고, `claude.exe`로는 잡히지 않았다. 같은 때 `claude.exe`라는 이름의 프로세스는 17개였다(사람의 다른 세션들). 그래서 러너의 `--claude`를 PATH 의 `claude.exe`로 주면 죽은 러너를 다시 띄울 때 남의 세션을 "아직 도는 회차"로 볼 수 있고, 판 이름 경로로 주면 그 이름으로만 훑는다(커밋하지 않은 스크래치 스크립트 `pin_name.py`로 손으로 봤다. stdin 을 열어 둔 `-p`라 모델을 부르지 않았고, 빈 임시 설정 폴더였다).
+- 같은 경로로 전용 설정 폴더, `DISABLE_AUTOUPDATER=1`, `--model haiku --max-budget-usd 0.05 --strict-mcp-config`로 한 번 부르니 init 의 `claude_code_version`이 2.1.302, `mcp_servers` 빈 목록, `plugins`가 내장 셋(`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`)이었고 결과는 `success`, $0.0086 였다(스크래치 스크립트 `pin_init.py`로 손으로 봤다. 작업 폴더는 세션 스크래치패드다).
+- 못 본 것: 사람의 `claude.exe`가 판을 올릴 때 업데이터가 옛 판 파일을 지우는지. 지금 셋이 남아 있다는 것만 안다.
+
+사람에게 여섯째와 일곱째를 함께 물었다(질문 "njh4803 한도로 파일럿($65~115)과 본 측정(상한 $900, 주간의 약 33%로 어림)을 함께 돌려도 괜찮을까요?", "측정 기간에 Claude Code 판(2.1.302)을 어떻게 고정할까요?").
+
+> 사용자(선택): "그대로 진행 (Recommended)" — 상한 $900을 유지합니다(설계 11절의 값). 측정 기간에는 평소 작업을 줄여 한도 여유를 남겨 둡니다. 33%는 재 본 적 없는 환산(1% ≈ $27)입니다.
+> 사용자(선택): "복사본을 따로 둠 (Recommended)" — 2.1.302 파일(약 290MB)을 versions 밖 폴더(예: C:\Users\User\.claude-rerun-bin\2.1.302)로 복사해 러너에 그 경로를 줍니다. 업데이터가 versions 밖을 건드리지 않는다는 것은 어림입니다. 복사본이 같은 판으로 도는지는 제가 복사한 뒤 다시 확인합니다. 평소 claude는 계속 업데이트됩니다.
+
+- 복사본 `C:\Users\User\.claude-rerun-bin\2.1.302`를 만들었다. 원본과 SHA-256 이 같다(`Get-FileHash`). 위 두 스크래치 스크립트를 복사본 경로로 바꿔 다시 돌리니, `pids_named("2.1.302")`가 그 pid 를 잡았고 init 의 판은 2.1.302, 결과는 `success`($0.0087)였다(손으로 봤다).
+
+### 계정 동기화 플러그인
+
+- 복사본으로 친 둘째 호출의 init `plugins`에 내장 셋 말고 `frontend-design`(`source` `frontend-design@synced`)과 `cowork-plugin-management`(`cowork-plugin-management@synced`, 0.2.2)가 더 실렸다. 첫 호출에는 없었다. 첫 호출 뒤 그 폴더에 `plugins/synced/<id>/`와 `skills/synced/<id>/`(built-in-browser, chrome-browser, computer-use, deep-research, docs, docx, google-workspace, import-memory, morning, pdf, pptx, skill-creator, xlsx)가 생겼다. claude.ai 계정에 걸린 플러그인과 스킬을 첫 실행에서 받아 와 다음 실행부터 싣는 것으로 본다(두 호출과 폴더 목록만 본 어림이다. 언제 다시 받는지는 보지 않았다). `settings.json`은 그대로였다.
+- 두 플러그인에는 `hooks`, `.mcp.json`, `agents`, `commands`가 없고 `skills/`뿐이다(`find`로 봤다). `github`이 든 `.md`·`.json`도 없었다(`grep -ril`).
+- 지금 러너의 허용 모임(`tools/rerun_checks.py`의 `BUILTIN_PLUGINS`와 클론의 `enabledPlugins`)에는 둘이 없다. 그래서 파일럿의 첫 회차가 "측정 아님(설정)"으로 멈춘다(코드 읽기). 사람의 기본 설정 폴더로 도는 이 세션의 스킬 목록에도 두 플러그인이 있어, 원래 세션도 이것을 싣고 돈 것으로 본다(어림).
+
+> 사용자: 둘을 허용하는데, 작업 난이도도 구분이 돼?
+
+- `tools/rerun_checks.py`에 `SYNCED_PLUGINS`와 `_SYNCED_SOURCE`를 두어 허용 모임에 `<이름>@synced` 둘을 더했다. 시험을 먼저 고쳐(`_synced`, 허용 둘·새 동기화 이름·다른 마켓의 같은 이름) import 오류로 빨간 것을 본 뒤 고쳤다. 명세 "설정 폴더의 설정"에 주석을 달았다. `tools/mutate.py --check`로 `rerun_checks_mutations.toml` 원문 46개가 그대로인 것을 봤다.
+- 세 파일(`test_rerun_checks`, `test_rerun_session`, `test_rerun_runner`)을 한 프로세스로 돌리니 `test_rerun_session.py`의 `test_자식의_표준_입출력이_없으면_명령_줄을_본_뒤_끄고_예외를_올린다`가 명령 줄을 읽지 못해(`None`) 빨갰고, 홀로 다시 돌리니 초록이었다(73초). 이 세션은 그 파일을 고치지 않았다. 부하 아래의 흔들림으로 본다(어림).
+- 난이도는 따로 재지 않는다고 답했다. 층은 크기 지표(티켓이 든 파일 경로 수)로 나누고, 그것이 원래 비용과 순위 상관 0.65인 대리 지표다(설계 3절). 층별 결과는 판정이 아니라 탐색으로 낸다(설계 6절 "크기 층별 결과").
+
+### 파일럿 고르기와 막는 규칙 탐침
+
+- 파일럿 고르기를 백그라운드로 띄웠다: `uv run python -m tools.rerun_select pilot --branches .scratch/model-rerun/probes/branches.json --earlier-branches .scratch/model-rerun/probes/branches-2026-10-23.json --revive .scratch/model-rerun/probes/revive.json --table .scratch/model-rerun/probes/candidates.md --rev 80ff61f1 --out .scratch/model-rerun/probes/pilot.json`(입력은 셋째 세션의 후보 표와 같고, 출력은 세션 스크래치패드의 `pilot_select.log`).
+- 그동안 막는 규칙의 새 꼴을 `.scratch/model-rerun/probes/deny_shapes/deny_shapes.py`로 쟀다. 러너의 `deny_rules`를 가짜 주 체크아웃·홈에 걸고 러너의 `session_command`(갈래 E)로 돈다. 세 번 돌았고(첫째는 이름 규칙의 도구를 `ToolSearch`에서 못 찾아 시도 없음, 둘째의 `규칙`은 Edit 미시도), 셋째가 두 갈래 모두 측정이었다. 결과는 프로브 README 의 새 절이다. 세 실행의 비용은 약 $0.14·$0.23·$0.23 이다.
+- 2026-10-26T03:49Z 에 그 로그에는 `숨은 시험을 가른다` 줄이 둘(B f1ed4be7 M 80ff61f1, B 7496a830 M f1ed4be7)이었다. 첫째 뒤에 임시 작업 트리 `b`·`m`을 걷지 못했다는 줄(`failed to delete … Invalid argument`)과 임시 폴더 `rerun-hidden-85tz413a`가 남았다는 줄이 찍혔다. `%TEMP%`에는 `rerun-hidden-*` 폴더가 아홉 있다(앞 세션들의 것이 섞였을 수 있다. 어느 것이 이 실행의 것인지는 가르지 않았다).
+
+### 인계 (다섯째 세션)
+
+- 인계 경계: `셀프 리뷰 직전`. `/code-review`(base 1dd42c39)를 부른 직후 `hook_handoff`가 컨텍스트 약 33.4만 토큰에서 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(이 세션 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 다른 경계이고, `인계 못함` 줄이 없고, 지시문으로 연 세션이다). 셀프 리뷰는 새 세션이 한다.
+- 이 세션의 지금 제목: `feature/11-pilot-and-prereg`.
+- 이 세션이 번복한 것: 다시 풀기 계정(njh6803 → njh4803, 사람이 정했다). 막는 규칙 탐침의 표지(첫 실행 뒤 `ToolSearch`도 시도로 세고 init tools를 적게 고쳤다).
+- 커밋하지 않은 변경: 설계 11절, 명세, 프로브 README, 티켓 11, `tools/rerun_checks.py`, `tests/tools/test_rerun_checks.py`, 미추적 `.scratch/model-rerun/probes/deny_shapes/`, 이 일지.
+- 파일럿 고르기 백그라운드는 이 세션과 함께 멈춘다. 새 세션이 위 명령으로 다시 띄운다.
+- 낸 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/11-pilot-and-prereg.md. 파일럿을 돌리고 사전 등록을 사람과 정한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
+브랜치: feature/11-pilot-and-prereg
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-02-pilot-and-prereg.md의 "다섯째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "러너로 파일럿 목록을 돈다" 체크박스부터
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(설계·명세·프로브 README·티켓 11·tools/rerun_checks.py·그 시험·미추적 probes/deny_shapes/·일지)이 워크트리에 있고 셀프 리뷰(/code-review, base 1dd42c39)부터 한다. 파일럿 고르기 백그라운드는 멈췄으니 다시 띄운다: uv run python -m tools.rerun_select pilot --branches .scratch/model-rerun/probes/branches.json --earlier-branches .scratch/model-rerun/probes/branches-2026-10-23.json --revive .scratch/model-rerun/probes/revive.json --table .scratch/model-rerun/probes/candidates.md --rev 80ff61f1 --out .scratch/model-rerun/probes/pilot.json (약 3시간, 남은 %TEMP%\rerun-hidden-* 폴더는 일지 참고). 러너 인자: --account njh4803 --config-dir C:\Users\User\.claude-rerun --claude C:\Users\User\.claude-rerun-bin\2.1.302 --cap 900. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄과 다섯째 세션이 새로 쓴 문장(설계 11절 주석, 명세 167행 주석, 프로브 README "막는 규칙의 새 꼴" 절)이다. docs/journal/2026-10-26-02-pilot-and-prereg.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+- 잠금 풀기: 이미 풀려 있었다(`is not locked`). 파일럿 고르기 백그라운드를 멈췄다. open-session을 부른다 2026-10-26T03:50:21Z
+
+## 여섯째 세션 (2026-10-26)
+
+> 사용자: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
+
+다섯째 세션의 지시문으로 연 세션이다. `EnterWorktree`로 워크트리 `11-pilot-and-prereg`(1dd42c39, 커밋하지 않은 변경 7파일과 미추적 `deny_shapes/`)에 들어와 이었다. 파일럿 고르기를 같은 명령으로 백그라운드에 다시 띄웠고(출력은 세션 스크래치패드의 `pilot_select.log`), 셀프 리뷰(`code-review`, base 1dd42c39)의 두 축을 띄웠다.
+
+### 셀프 리뷰 (여섯째 세션)
+
+범위: base 1dd42c39, 파일 7개, 커밋 0개, 미추적 1개(`deny_shapes/`, 파일 5개). 표준 축은 sonnet·high, 명세 축은 본 세션 모델이다.
+
+- 표준 축: Major 1(`SYNCED_PLUGINS` 주석과 명세 167행 주석이 일지의 어림 둘("원래 세션과 조건이 같다", 첫 실행에서 받아 와 다음 실행에 싣는다)을 사실로 적었다. 같은 폴더의 `skills/synced/` 스킬은 언급이 없다). Minor 6(ADR 0029 317행의 njh6803, `source` 없는 플러그인 항목은 마켓을 보지 않는다, README "서브에이전트는 두 갈래 모두 백그라운드"가 `대조-2`에서 틀리다, 18/28 차를 커밋하지 않은 스크립트로 냈고 요약 파일 이름을 손으로 바꾼 것이 README 에 없다, "오염으로 세지 않는다"가 코드를 대 보지 않은 추론이다, 탐침이 거부 표지를 단언하지 않는다). Nit 넷(지역 변수 `main`, `find_use`·`searched`의 같은 순회, `ACTIONS` 튜플, `session_env` 복제).
+- 명세 축: Major 1(티켓 26행의 "표지를 단언한다"를 `missing_marker`가 지키지 않는다. 시도만 본다). Minor 5(명세 240행 "그때 `run_checks.py`가 없어 돌지 않던 검사"가 거짓이다. B 4112d2b8 의 CLAUDE.md 51행이 그 셋을 pre-commit 이 돌린다고 적는다, 티켓 66행이 백그라운드 서브에이전트만으로 일반화했다, `rerun_checks.py` 110행과 명세 179행의 미래형, 설계 318행의 전용 계정 탐색이 계정 변경으로 서지 않는다, 명세 167행 어림). Nit 2(요약 파일 이름, 티켓 21행의 복사본 `--version`은 근거가 없다).
+- 고친 것: `deny_shapes.py`에 갈래마다의 기대 표지(`expected`, `DENY_TEXT`)와 저장한 요약을 다시 판정하는 `--rejudge`를 더했다. 다시 판정하니 셋째 실행의 두 갈래와 `대조-2`가 측정, `규칙-2`는 Edit 미시도로 측정 아님(종료 1)이고, 넷의 갈래를 맞바꾼 사본(세션 스크래치 `swap_arms.py`)은 두 갈래 모두 여섯 행동이 표지 없음으로 걸렸다(손으로 봤다). README 결과 절에 "둘째·셋째 실행의 요약은 `2026-10-26/`에 `<갈래>-<실행 차례>.summary.json`으로 손으로 옮겨 커밋했다", 판을 바꾼 까닭과 다시 판정한 결과, "`--rejudge`가 찍는 init `tools`의 차. 둘째 실행도 같다", "이 꼴의 서브에이전트 거부를 오염으로 세지 않는다고 본다(코드 읽기", "셋째 실행의 서브에이전트는 두 갈래 모두 백그라운드로 떴다 … 둘째 실행의 `대조`는 서브에이전트 보고가 Agent 결과로 바로 돌아왔다", 못 본 것에 "앞쪽으로 뜬 서브에이전트의 거부가 `permission_denials`에 실리는지는 재지 않았다"를 넣었다. `SYNCED_PLUGINS` 주석을 "첫 호출에는 없고 둘째 호출부터 실렸다. 두 호출과 폴더 목록만 본 어림이다", "원래 세션도 싣고 돈 것으로 본다(어림. 원래 세션의 init 은 보지 않았다)", "같은 폴더의 `skills/synced/` 사용자 스킬은 init 의 `plugins`에 실리지 않아 이 검사 밖이다"로, 명세 167행 주석을 같은 뜻으로 고쳤다. `rerun_checks.py` 못 보는 것의 서브에이전트 항목을 "실렸다. 백그라운드로 뜬 서브에이전트 하나만 쟀고 … 앞쪽으로 뜬 서브에이전트는 재지 않았다"로, 명세 179행에 2026-10-26 주석을, 명세 240행을 "그때 pre-commit 이 돌리던 검사(지침, 타입 우회, 훅 러너. 세 B 에 그 파일이 있다)가 들지 않아"로, 설계 318행에 "측정 앞뒤의 % 차에 평소 작업이 섞인다. 이 탐색은 측정 기간에 평소 작업을 멈춘 때만 선다"를, 티켓 21행을 "복사본이 원본(`--version` 2.1.302)과 SHA-256 이 같고"로, 티켓 66행을 "백그라운드로 뜬 서브에이전트에서 실렸다. 앞쪽으로 뜬 서브에이전트는 재지 않았다"로 고쳤다.
+- 남긴 것: ADR 0029 317행은 2026-10-20 이력 항목 안이라 기록이다(`.claude/rules/adr.md` "지난 이력 항목은 기록이다"). 계정은 설계 11절이 원천이고 그 절에 주석을 달았다. `source` 없는 플러그인 항목은 이미 `rerun_checks.py` 못 보는 것(108행)에 있다. Nit 넷(탐침의 이름과 모양)은 판단 항목이라 두었다.
+- PR 직전 리뷰에 밀 주장: 위 "고친 것"의 따옴표 문장 모두와, 앞 세션들이 넘긴 것(넷째 세션 셀프 리뷰의 마지막 줄, 설계 11절 주석, 명세 167행 주석, 프로브 README "막는 규칙의 새 꼴" 절).
