@@ -8,7 +8,8 @@
 //   N 과 같다. Playwright 의 비교(pixelmatch)는 안티에일리어싱으로 본 픽셀을 노랑(255,255,0)으로 칠하고 N 에서 뺀다.
 // - 이 디코더가 실제·정답에서 RGBA 가 다르다고 센 픽셀의 자리가 차이 그림의 빨강과 노랑을 합친 자리와 같다.
 // 첫 판은 N 과 디코더의 수를 바로 맞댔는데 세 짝 모두 디코더 쪽이 많았다(1·2, 3·29, 6·17). 차이 그림의 노랑을 보고
-// 위 두 표지로 바꿨다. 짝을 하나도 찾지 못한 폴더(내려받기가 비었다)도 측정 아님이다.
+// 위 두 표지로 바꿨다. 짝을 하나도 찾지 못한 폴더(내려받기가 비었다)와 읽거나 맞대지 못한 짝(크기가 다르다)도
+// 측정 아님이다.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { differingPixels, readPng } from "./png.mjs";
@@ -40,25 +41,35 @@ for (const root of roots) {
       notMeasured += 1;
       continue;
     }
-    const actual = readPng(actualPath);
-    const expected = readPng(expectedPath);
-    const found = differingPixels(expected, actual);
+    // 읽기나 맞대기가 던지면(크기가 다르다, 모르는 PNG) 그 짝만 측정 아님으로 세고 뒤의 짝을 잇는다.
+    let actual;
+    let found;
+    const marks = new Map();
+    try {
+      actual = readPng(actualPath);
+      found = differingPixels(readPng(expectedPath), actual);
+      const diffPath = join(dirname(actualPath), `${name}-diff.png`);
+      if (existsSync(diffPath)) {
+        const diff = readPng(diffPath);
+        for (let i = 0; i < diff.width * diff.height; i += 1) {
+          const [r, g, b] = diff.rgba.subarray(i * 4, i * 4 + 3);
+          if (r === 255 && g === 0 && b === 0) marks.set(i, "빨강");
+          else if (r === 255 && g === 255 && b === 0) marks.set(i, "노랑");
+        }
+      }
+    } catch (error) {
+      console.log(
+        `측정 아님: ${name} 을 읽거나 맞대지 못했다(${error instanceof Error ? error.message : String(error)})`,
+      );
+      notMeasured += 1;
+      continue;
+    }
     const contextPath = join(dirname(actualPath), "error-context.md");
     const reported = existsSync(contextPath)
       ? /(\d+) pixels \(ratio [\d.]+ of all image pixels\) are different/.exec(
           readFileSync(contextPath, "utf-8"),
         )
       : null;
-    const diffPath = join(dirname(actualPath), `${name}-diff.png`);
-    const marks = new Map();
-    if (existsSync(diffPath)) {
-      const diff = readPng(diffPath);
-      for (let i = 0; i < diff.width * diff.height; i += 1) {
-        const [r, g, b] = diff.rgba.subarray(i * 4, i * 4 + 3);
-        if (r === 255 && g === 0 && b === 0) marks.set(i, "빨강");
-        else if (r === 255 && g === 255 && b === 0) marks.set(i, "노랑");
-      }
-    }
     const red = [...marks.values()].filter((mark) => mark === "빨강").length;
     const sameSpots =
       marks.size === found.length && found.every(({ x, y }) => marks.has(y * actual.width + x));
