@@ -213,8 +213,35 @@ open-session을 부른다 2026-10-26T15:55:14Z
 `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 돌렸다. 밀 주장이 열둘이라 `bug-perf-review`를 둘로 나눴다(프로브 쪽, 명세·ADR·plan 쪽). 둘 다 병합 커밋의 pre-commit이 도는 동안 띄워, 기준을 `88d446d9`로 주고 무거운 명령을 치지 말라고 했다.
 
 - 보안(`/security-review`): 지적 없음. 그 명령이 모은 커밋 목록에 합친 뒤 main에 들어온 `b84691e0`(harness 012)이 섞였으나, diff는 merge-base부터라 이 브랜치의 열 파일뿐이었다. 식별 서브태스크에 범위를 그 열 파일로 좁혀 주었다.
-- 명세·ADR 쪽(Minor 넷, 보류 넷): 넷 모두 고쳤다. 명세 243줄은 TS 판정자 밖의 앱 파일이 그리기 전 스크립트와 PostCSS 설정 둘이고 브라우저에서 도는 것이 스크립트 하나라고 고쳤다(`web/eslint.config.mjs`의 `TYPESCRIPT`가 `ts,tsx,mts,cts`다). ADR 0026 2026-10-26 이력의 짓는 함수는 명령 `build`와 그것이 부르는 `buildTokensFile`로 고쳤다. `buildTokensJson`은 시험만 부르는 두 함수의 이음이다(`web/tools/sync-design-system/build.ts` 232·247~272줄을 읽었다). 사용자가 승인한 이력이지만 결정은 그대로이고 함수 이름만 고친 것이다. 명세 134줄에 본문 칸을 틀이 컨테이너로 선언한다는 것, 286줄에 틀 없이 그리는 organisms 스토리를 데코레이터가 같은 컨테이너로 두른다는 것을 더했다(조상에 컨테이너가 없으면 갈래가 서지 않는다는 것은 어림). 178줄에 거부 사유 칸이 받는 위반을 필드 `body.deny.reason`으로 가렸다(`tests/channel/http/test_router.py`가 그 이름을 고정한다). 보류 넷은 직접 대 보니 모두 명세가 맞았다. 재개 스트림은 끝나면 `rereadTrace()` 뒤에 `setFrames([])`로 걷히고 끊김 알림은 결정 자리 뒤에 선다(`hooks/queries/approval/index.ts`, `RunDecision.tsx`). `mk-runs-loading`의 뼈대 행은 넷이고 `mk-run-m`의 `h2`는 이벤트 → 결정 → 재개 스트림 차례다.
+- 명세·ADR 쪽(Minor 넷, 보류 넷): 넷 모두 고쳤다. 명세 243줄은 TS 판정자 밖의 앱 파일이 그리기 전 스크립트와 PostCSS 설정 둘이고 브라우저에서 도는 것이 스크립트 하나라고 고쳤다(`web/eslint.config.mjs`의 `TYPESCRIPT`가 `ts,tsx,mts,cts`다). ADR 0026 2026-10-26 이력의 짓는 함수는 명령 `build`와 그것이 부르는 `buildTokensFile`로 고쳤다. `buildTokensJson`은 시험만 부르는 두 함수의 이음이다(`web/tools/sync-design-system/build.ts` 232·247~272줄을 읽었다). 사용자가 승인한 이력이지만 결정은 그대로이고 함수 이름만 고친 것이다. 명세 134줄에 본문 칸을 틀이 컨테이너로 선언한다는 것, 286줄에 틀 없이 그리는 organisms 스토리를 데코레이터가 같은 컨테이너로 두른다는 것을 더했다(조상에 컨테이너가 없으면 갈래가 서지 않는다는 것은 어림). 178줄에 거부 사유 칸이 받는 위반을 필드 `body.deny.reason`으로 가렸다(`tests/channel/http/test_router.py`가 그 이름을 고정한다). 보류 넷은 모두 명세가 맞았다. 재개 스트림과 그림 두 장은 코드와 그림을 직접 대 봤다. 재개 스트림은 끝나면 `rereadTrace()` 뒤에 `setFrames([])`로 걷히고 끊김 알림은 결정 자리 뒤에 선다(`hooks/queries/approval/index.ts`, `RunDecision.tsx`). `mk-runs-loading`의 뼈대 행은 넷이고 `mk-run-m`의 `h2`는 이벤트 → 결정 → 재개 스트림 차례다. 나머지 둘은 직접 대 보지 않았다. `plan.md` 행의 열아홉은 셀프 리뷰 표준 축이 센 수이고, 명세 서두의 사용자가 고른 일곱이 모두 추천이었다는 것은 이 일지 20~54줄의 답 원문 일곱이 모두 "(추천)"인 것으로 닫았다.
 - 프로브 쪽(Minor 다섯, 보류 하나): `prepaint_theme.mjs`의 `chromium.launch()`와 앱 파일 쓰기를 `try` 안으로 옮겨, 브라우저를 띄우지 못해도 junction이 든 임시 폴더를 정리하게 했다(링크 확인 `throw`는 그대로 밖이다). 첫 그림 회차는 `paintTime`이 있을 때만 측정으로 세고, dev의 없는 뿌리 경고는 하나이고 그 경고에 `data-theme` 줄이 있기를 기대하게 했다. 둘 다 결과를 본 뒤 바꾼 기준이라 머리 주석에 적었다. README 28줄(판 줄 대조)과 31줄(콘솔 오류 0)은 프로브가 찍고 판정하는 만큼으로 좁혔다. 보류(막는 요청의 지연)는 명세 241줄에 재지 않았다고 적었다.
 - 명세 서두의 수: 다시 세어 그대로다. 표시는 서두 15줄을 빼고 마흔아홉이고, 새 문장은 이미 표시가 있는 줄(134·178·243·286) 안에 들었다.
 
 고친 `prepaint_theme.mjs`를 다시 돌려 측정 44(관찰 2), 측정 아님 0, 기대와 다름 0이었다(넷째 실행, 탐침이 찍었다). 첫 그림 열여덟 회차 모두 `paintTime`이 있었고 없는 뿌리의 dev 경고는 하나였다. 결과는 프로브 README "2026-10-27 PR 직전 리뷰 뒤 결과"에 적었다.
+
+반영 커밋 `a5973b2b`는 pre-commit을 모두 지났다(pytest 663초, web-verify 625초, ruff 둘은 스테이지된 `.py`가 없어 Skipped, 카나리아 명세와 헌법 판도 대상 파일이 없어 Skipped). 인용 대조 경고 둘(명세 178줄의 관리 토큰 알림 본문 둘)은 그림 `mk-token.dc.html`과 `mk-token-m.dc.html`의 27줄에 글자 그대로 있어 거짓 양성으로 두었다.
+
+## 회고
+
+이 단계의 세 세션(명세, 셀프 리뷰, PR과 병합)과 이 일지를 읽었다. 이 일지에 "번복"과 "갈린 곳" 절은 없다. 후보 여덟, 승인 둘, 기각 여섯, 넘김 0이다.
+
+승인:
+
+1. **프로브가 `.claude/rules/probes.md` 첫 항목(재려는 상황의 표지와 기대를 단언한다)을 어겼다.** 이 단계의 프로브 셋이다. 셀프 리뷰 표준 축이 `storybook_viewport.mjs`·`storybook_next_link.mjs`가 명세가 "쟀다"로 드는 것을 기대로 두지 않았다고 Major 둘로 잡았고, PR 직전 `bug-perf-review`가 `prepaint_theme.mjs`의 첫 그림 회차가 `paintTime` 없이도 측정으로 세이고 dev 경고의 수를 보지 않는다고 Minor로 잡았다. 구현 때 실리는 rules를 어겨 리뷰가 잡은 사건이라 회차로 센다(4단계). 그 항목을 처방한 339는 닫혔고 339를 이은 열린 430이 맞아, 새 행 대신 430에 회차 하나를 더했다(6회차). 세 프로브는 첫 세션의 측정 서브에이전트가 지었고, 그 서브에이전트에 probes.md가 실렸는지는 보지 않았다. 이 단계의 프로브는 Node(`.mjs`)라 430의 처방(`.scratch/**/probes/*.py`가 `tools.probe_kit`의 `Rounds`를 가져오는지 보는 훅)이 닿지 않고, Node 프로브에는 `probe_kit`에 맞먹는 것이 없다. 430을 반영하는 chore가 이 갈래를 함께 본다. 430은 이미 회차 3을 넘은 행이라 이번에 문턱을 새로 지나는 훅이 없어 `tools/hook_report.py`는 돌리지 않았다.
+2. **임시 앱의 `node_modules`를 junction으로 위젯의 것에 이은 프로브의 첫 회차가 그 아래(`web/apps/widget/node_modules`)에 vitest 캐시를 남겼다**(`storybook_viewport.mjs`. 첫 세션이 보고 지웠고, 프로브가 뿌리 `cacheDir`를 임시 폴더로 두게 고쳐 다시 쟀다). 사건(정리와 다시 재기), 층(probes.md의 문장. 이 남김을 잡는 검사가 없고 `node_modules`는 git이 보지 않는다), 되돌림을 모두 지나 승인한다. 더하는 것이고 첫 사건이라 대기열 481에 1회차로 두었다. 처음 쓴 480은 형제 워크트리 `016-visual-focus-flake`가 먼저 써서 `tools/sibling_overlap.py`의 "옮길 번호"대로 옮겼다.
+
+기각:
+
+3. pre-commit pytest의 시간 시험이 부하로 두 번 커밋을 막았다. 첫 커밋 시도에서 둘(`test_interrupt`, `test_rerun_runner`), 이 회고 커밋의 첫 시도에서 `tests/tools/test_rerun_runner.py`의 둘(`test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`는 함께 돈 회차 수가 1이었고, `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`는 종료 1이었다. 2 failed, 5665 passed, 14분 27초)이다. 둘 다 따로 돌리면 지났다(뒤의 둘은 22초에 2 passed). 306이 받아들여 닫은 끝이 열린 결함 종류의 새 사례라 회차를 더하지 않고 일지에만 적고, 커밋을 다시 쳤다(5단계 행의 종류).
+4. ADR 0026 2026-10-26 이력이 `tokens.json`을 짓는 쪽을 두 번 틀리게 불렀다(`/design-sync` → `buildTokensJson` → 명령 `build`와 `buildTokensFile`). 첫째는 커밋 전에 이 단계가 스스로, 둘째는 PR 직전 리뷰가 밀 주장을 대 보며 잡았다. 밀 주장을 대 보는 것은 리뷰 브리프에 둔 기준이라 리뷰가 제 몫을 한 것이다. 부르는 쪽을 가리는 검사로 옮길 길이 없고, 근거 문장은 이미 `docs/agents/issue-tracker.md`의 근거 절이 다룬다.
+5. 선택 화면 넷(1·2·3회차, ADR 이력 승인)을 훅이 사실 대조로 처음 한 번씩 막았다. 이미 있는 훅이 그 자리에서 막은 것이다.
+6. 프로브 README에 근거 없는 문장("나머지 회차는 두 실행이 같았다")을 적었다가 첫 세션이 스스로 로그를 다시 보고 고쳤다. 리뷰에 닿기 전에 잡았다.
+7. origin/main을 합칠 때 `.scratch/plan.md`의 프론티어 문단이 부딪혔다. 나란히 도는 PR이 같은 문단 끝에 한 줄씩 붙인 것이고 한 번에 풀렸다. 처방할 층이 없다.
+8. 인계가 두 번 났다(`셀프 리뷰 직전` 350,055 토큰, `커밋 뒤` 약 27만 토큰). 인계 계기가 설계대로 돈 것이고 실수가 아니다.
+
+만료: `tools/queue_open_rows.py`를 작업 트리와 `--ref origin/main`(fetch 뒤)으로 돌려 두 출력에 모두 든 여섯(170·172·173·183·208·210, 승인 칸의 가장 늦은 날짜가 모두 2026-10-12)을 `만료 2026-10-27`로 닫았다. 날짜를 찾지 못한 행은 없었다.
+
+## 다음
+
+- 단계는 티켓이다. `spec-reviewer`로 명세를 먼저 검토하고, 그 뒤 `/to-tickets .scratch/admin-style/spec.md`로 쪼갠다.
+- 화면 Design 아티팩트의 웹 편집 확인은 이 단계의 계정으로 하지 못했다. 명세 머리대로 화면 코드를 짜는 첫 티켓 전에 계정을 맞춰 다시 대 본다.
