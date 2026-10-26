@@ -902,18 +902,30 @@ function checkAnswers(
   }
 }
 
-/** 웹, 기준본, 지금 디자인 토큰 CSS 와 답으로 들인다. 풀 수 없는 입력과 답할 수 없는 답은 `input` 오류다. */
-export function importTokens(input: ImportInput): ImportResult {
-  const parsed = parseThemeCss(input.css);
-  const code: Code = {
+/** 자리 id 로 답 파일의 답을 찾는다. 없으면 undefined 다. */
+type AnswerOf = (id: string) => string | undefined;
+
+/** 디자인 토큰 CSS 를 맞대기와 다시 쓰기에 쓸 꼴로 푼다. */
+function codeOf(css: string): Code {
+  const parsed = parseThemeCss(css);
+  return {
     benches: pageThemes(parsed),
     themeStatic: parsed.themeStatic,
-    tokens: readTokens(buildTokensFile(input.css)),
-    lines: input.css.split("\n"),
+    tokens: readTokens(buildTokensFile(css)),
+    lines: css.split("\n"),
   };
-  const base = readTokens(input.base);
-  const web = readTokens(input.web);
+}
 
+/** 웹의 차이를 이미 들인 것과 들일 것으로 가르고, 코드만 바뀐 차이를 모은다. */
+function classified(
+  base: CanonicalTokens,
+  web: CanonicalTokens,
+  code: Code,
+): {
+  readonly alreadyImported: Settled[];
+  readonly pending: Pending[];
+  readonly codeOnly: Settled[];
+} {
   const alreadyImported: Settled[] = [];
   const pending: Pending[] = [];
   for (const diff of diffTokens(base, web)) {
@@ -927,24 +939,30 @@ export function importTokens(input: ImportInput): ImportResult {
   const codeOnly = diffTokens(base, code.tokens)
     .filter((diff) => same(valueAt(web, diff), diff.before))
     .map((diff) => settled(diff, diff.after));
+  return { alreadyImported, pending, codeOnly };
+}
 
-  const plans = plansOf(slotsOf(code, pending), base, web, code);
-  const answerOf = (id: string): string | undefined =>
-    Object.hasOwn(input.answers, id) ? input.answers[id] : undefined;
-
-  // 둘이 다르게 바뀐 자리의 답을 먼저 따른다. 웹 값이나 제안 값을 고른 자리는 웹 값으로 판정에 든다.
-  const firstMoves: Move[] = plans.flatMap(({ slot, ask, move }) => {
+/**
+ * 처음 판정에 드는 옮길 것. 둘이 다르게 바뀐 자리의 답을 먼저 따르고, 웹 값이나 제안 값을 고른 자리는 웹 값으로 판정에
+ * 든다.
+ */
+function firstMovesOf(plans: readonly Plan[], answerOf: AnswerOf): Move[] {
+  return plans.flatMap(({ slot, ask, move }) => {
     const choice = answerOf(slot.id);
     return move !== undefined && (ask === undefined || choice === "web" || choice === "suggested")
       ? [{ slot, ...move }]
       : [];
   });
-  const first = contrastOf(code, firstMoves);
-  checkAnswers(input.answers, answerableOf(plans, first.suggestions));
-  const suggested = new Map(first.suggestions.map((suggestion) => [suggestion.id, suggestion]));
+}
 
-  // 제안이 난 자리의 답을 따른다.
-  const moves = firstMoves.flatMap((move): Move[] => {
+/** 제안이 난 자리의 답을 따른 옮길 것. 코드 값을 고르면 옮기지 않고, 제안 값을 고르면 그 값을 옮긴다. */
+function finalMovesOf(
+  firstMoves: readonly Move[],
+  suggestions: readonly Suggestion[],
+  answerOf: AnswerOf,
+): Move[] {
+  const suggested = new Map(suggestions.map((suggestion) => [suggestion.id, suggestion]));
+  return firstMoves.flatMap((move): Move[] => {
     const suggestion = suggested.get(move.slot.id);
     const choice = suggestion === undefined ? undefined : answerOf(move.slot.id);
     if (choice === "code") {
@@ -953,11 +971,18 @@ export function importTokens(input: ImportInput): ImportResult {
     const value = choice === "suggested" ? suggestion?.value : undefined;
     return [value === undefined || value === null ? move : { ...move, text: value }];
   });
-  const final = contrastOf(code, moves);
-  const css = written(code, moves);
+}
 
-  const renamed = renamedFamilies(pending);
-  const asked = plans.flatMap((plan) => {
+/** 답을 받지 않은 묻는 것. 둘이 다르게 바뀐 자리는 답을 받았으면 묻지 않는다. */
+function unansweredOf(
+  plans: readonly Plan[],
+  answerOf: AnswerOf,
+  base: CanonicalTokens,
+  web: CanonicalTokens,
+  code: Code,
+  renamed: ReadonlySet<string>,
+): Asked[] {
+  return plans.flatMap((plan) => {
     if (
       plan.ask === undefined ||
       (plan.ask.reason === "conflict" && answerOf(plan.slot.id) !== undefined)
@@ -966,7 +991,15 @@ export function importTokens(input: ImportInput): ImportResult {
     }
     return [askedOf(plan.slot, plan.ask, base, web, code, renamed)];
   });
-  const answered = plans.flatMap(({ slot }): Answered[] => {
+}
+
+/** 따른 답과 그 답으로 남은 값. 코드 값을 골랐으면 코드의 값, 다른 답이면 옮긴 값이다. */
+function answeredOf(
+  plans: readonly Plan[],
+  moves: readonly Move[],
+  answerOf: AnswerOf,
+): Answered[] {
+  return plans.flatMap(({ slot }): Answered[] => {
     const choice = answerOf(slot.id);
     if (choice === undefined || !isChoice(choice)) {
       return [];
@@ -975,13 +1008,31 @@ export function importTokens(input: ImportInput): ImportResult {
     const value = choice === "code" ? (slot.entries[0]?.code ?? null) : (kept?.text ?? null);
     return [{ id: slot.id, choice, value }];
   });
+}
+
+/** 웹, 기준본, 지금 디자인 토큰 CSS 와 답으로 들인다. 풀 수 없는 입력과 답할 수 없는 답은 `input` 오류다. */
+export function importTokens(input: ImportInput): ImportResult {
+  const code = codeOf(input.css);
+  const base = readTokens(input.base);
+  const web = readTokens(input.web);
+  const answerOf: AnswerOf = (id) =>
+    Object.hasOwn(input.answers, id) ? input.answers[id] : undefined;
+
+  const { alreadyImported, pending, codeOnly } = classified(base, web, code);
+  const plans = plansOf(slotsOf(code, pending), base, web, code);
+  const firstMoves = firstMovesOf(plans, answerOf);
+  const first = contrastOf(code, firstMoves);
+  checkAnswers(input.answers, answerableOf(plans, first.suggestions));
+  const moves = finalMovesOf(firstMoves, first.suggestions, answerOf);
+  const final = contrastOf(code, moves);
+  const css = written(code, moves);
 
   return {
     css,
     report: {
       changed: css !== input.css,
       moved: moves.map(movedOf),
-      asked,
+      asked: unansweredOf(plans, answerOf, base, web, code, renamedFamilies(pending)),
       alreadyImported,
       codeOnly,
       contrast: {
@@ -989,7 +1040,7 @@ export function importTokens(input: ImportInput): ImportResult {
         failures: final.failures,
         suggestions: final.suggestions,
       },
-      answered,
+      answered: answeredOf(plans, moves, answerOf),
     },
   };
 }
