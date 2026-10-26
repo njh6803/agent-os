@@ -15,8 +15,8 @@
 // - 실패와 거절의 알림은 출력이 올 자리에 선다(organisms/FailureAlert). 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시
 //   시작했으면 맨 위에 정보 알림이 선다(화면 디자인 mk-rejection).
 // - 연결이 끊겨 다시 잇는 동안 목록에는 받은 도구 줄만 남고 진행 표시는 입력창 위 띠가 맡는다(화면 디자인 mk-reconnect).
-// - 저장의 용량 때문에 요청 글을 빼고 되돌린 교환(lib/storage 의 `conversationOf`)은 요청 상자를 그리지 않는다. 보낸 요청은
-//   비어 있을 수 없다.
+// - 저장의 용량 때문에 요청 글을 빼고 되돌린 교환(lib/storage 의 `conversationOf`)은 요청 상자를 그리지 않고, 다시 보낼 글이
+//   없어 알림에 "다시 보내기"도 두지 않는다. 보낸 요청은 비어 있을 수 없다.
 import { Alert, Icon, Progress } from "@agent-os/ui";
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { progressLabel, type Exchange, type Decision } from "../../lib/conversation";
@@ -218,9 +218,13 @@ function ExchangeTail({
         {outcome === null ? null : (
           <FailureAlert
             outcome={outcome}
-            onRetry={() => {
-              onRetry(exchange.request);
-            }}
+            onRetry={
+              exchange.request === ""
+                ? null
+                : () => {
+                    onRetry(exchange.request);
+                  }
+            }
             retryBlocked={retryBlocked}
             onNewConversation={onNewConversation}
             newConversationBlocked={newConversationBlocked}

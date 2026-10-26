@@ -529,6 +529,17 @@ test("구독의 429 가 Retry-After 0 이어도 곧바로 되풀이하지 않고
   expect(gaps(subscribed[0]?.at ?? 0, subscribed.slice(1))).toEqual([1]);
 });
 
+test("구독의 429 가 Retry-After 를 타이머가 받는 가장 긴 시간보다 길게 주어도 곧바로 되풀이하지 않는다", async () => {
+  // 시험의 가짜 타이머는 2^31-1ms(약 24.8일)를 넘는 지연을 1ms 로 바꾼다. 3,000,000초는 그보다 길다.
+  const { subscribed } = await afterCut(
+    inTurn(() => limited("subscriptions", "3000000"), finishedAt(2)),
+  );
+
+  await advance(1_000 + 60_000);
+
+  expect(subscribed).toHaveLength(1);
+});
+
 for (const [label, status] of [
   ["500", 500],
   ["422", 422],

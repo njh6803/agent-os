@@ -369,6 +369,33 @@ test("다시 붙을 교환의 요청 글까지 빼면, 새로 고친 뒤 요청 
   expect(subscribed.map((request) => request.lastEventId)).toEqual([null]);
 });
 
+test("요청 글을 빼고 다시 붙은 실행이 실패하면 다시 보낼 글이 없어 알림에 '다시 보내기'가 없다", async () => {
+  limitStorage(1_000);
+  serveTokens();
+  const running = gate();
+  onStart(() =>
+    stream([
+      frame(0, { type: "started", run_id: "run_1" }),
+      frame(1, { type: "progress", tool: "orders.lookup", ok: true }),
+      running.wait,
+    ]),
+  );
+  onSubscribe(() =>
+    items(
+      { type: "started", run_id: "run_1" },
+      { type: "failed", message: "고정 문구", run_id: "run_1", cause: "timeout" },
+    ),
+  );
+  await askLong(openWidget(), LONG_FIRST);
+  await screen.findByText("orders.lookup");
+
+  reload();
+
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByRole("button", { name: "새 대화" })).toBeTruthy();
+  expect(within(alert).queryByRole("button", { name: "다시 보내기" })).toBeNull();
+});
+
 test("묶음과 run_id 도 넘으면 앞서 저장한 것을 지우고 메모리로만 이어 간다", async () => {
   const setQuota = limitStorage(100_000);
   serveTokens();

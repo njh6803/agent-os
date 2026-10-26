@@ -104,8 +104,8 @@ const UNAVAILABLE: Notice = {
 
 export interface FailureAlertProps {
   readonly outcome: Outcome;
-  /** "다시 보내기". 그 교환의 요청을 같은 규칙으로 다시 보낸다. */
-  readonly onRetry: () => void;
+  /** "다시 보내기". 그 교환의 요청을 같은 규칙으로 다시 보낸다. 다시 보낼 요청 글이 없으면 null 이고 버튼을 두지 않는다. */
+  readonly onRetry: (() => void) | null;
   readonly retryBlocked: boolean;
   /** "새 대화". 위쪽 띠의 것과 같다. */
   readonly onNewConversation: () => void;
@@ -164,11 +164,15 @@ export function FailureAlert({
     return null;
   }
   const { notice, runId } = shown;
-  const actions = notice.steps.map((step) =>
+  const actions = notice.steps.flatMap((step) =>
     step === "retry" ? (
-      <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
-        다시 보내기
-      </Button>
+      onRetry === null ? (
+        []
+      ) : (
+        <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
+          다시 보내기
+        </Button>
+      )
     ) : (
       <Button
         key={step}

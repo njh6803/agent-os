@@ -56,7 +56,11 @@ type Authorized =
   | { readonly kind: "no-token" }
   | { readonly kind: "aborted" };
 
-/** 임베드가 준 길로 토큰을 새로 받아 묶음을 견준다. */
+/**
+ * 임베드가 준 길로 토큰을 새로 받아 묶음을 앞서 든 것과 견주고, 토큰을 받았으면 그 묶음을 든다(`hold`). 다음 견주기는
+ * 받은 묶음과 한다. 견주기만 하는 질의가 아니라 드는 것까지 하는 명령이다. 토큰을 받지 못했거나 끊겼으면 앞서 든 묶음이
+ * 그대로 남는다.
+ */
 async function authorize(session: Session): Promise<Authorized> {
   const token = await session.connection.token();
   if (session.signal.aborted) {
@@ -559,6 +563,7 @@ export async function restore(
   saved: Saved,
   settled: (restored: Restored) => void,
 ): Promise<void> {
+  // 받은 토큰을 저장한 묶음과 견주도록 먼저 든다. 토큰을 받으면 `authorize` 가 그것을 받은 묶음으로 바꿔 든다.
   session.hold(saved.bundle);
   const authorized = await authorize(session);
   if (authorized.kind === "aborted") {
@@ -584,6 +589,12 @@ export async function restore(
   }
 }
 
+/**
+ * 타이머가 받는 가장 긴 지연(약 24.8일). 타이머는 지연을 부호 있는 32비트 정수로 바꿔, 이보다 길면 넘친 값으로 울린다.
+ * 브라우저에서는 곧바로이거나 엉뚱한 때이고 Node 에서는 곧바로다.
+ */
+const LONGEST_TIMER_MS = 2 ** 31 - 1;
+
 /** 기다린다. 끝까지 기다렸으면 참이고, 끊으면 곧바로 거짓으로 돌아온다. */
 function sleep(ms: number, signal: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
@@ -596,11 +607,15 @@ function sleep(ms: number, signal: AbortSignal): Promise<boolean> {
       clearTimeout(timer);
       resolve(false);
     };
-    const timer = setTimeout(() => {
-      // 다시 잇는 동안 30초마다 잠들어, 떼지 않으면 일이 끝날 때까지 리스너가 쌓인다.
-      signal.removeEventListener("abort", stop);
-      resolve(true);
-    }, ms);
+    // 429 의 `Retry-After` 는 서버 밖의 값일 수 있어 타이머가 받는 가장 긴 지연으로 자른다.
+    const timer = setTimeout(
+      () => {
+        // 다시 잇는 동안 30초마다 잠들어, 떼지 않으면 일이 끝날 때까지 리스너가 쌓인다.
+        signal.removeEventListener("abort", stop);
+        resolve(true);
+      },
+      Math.min(ms, LONGEST_TIMER_MS),
+    );
     signal.addEventListener("abort", stop, { once: true });
   });
 }

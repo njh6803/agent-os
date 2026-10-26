@@ -183,6 +183,89 @@ PR 직전 리뷰의 반영을 돌리다 `WidgetStorage.test.tsx` 의 "판과 모
 - 어긋난 1·3(토큰 손잡이의 보낸 창, `id`)은 고른 단언이 빨갛지만 표지 `Bearer from-other-window`·`Bearer for-other-request` 가 없었다. 변이를 손으로 넣어 실패 출력을 보니 받은 값 줄이 `Bearer <머리>.<페이로드>.from-other-window` 였다. 이 티켓이 시험의 토큰을 서명 자리가 이름인 JWT 꼴로 바꿔서다. 표지를 `.from-other-window",`·`.for-other-request",` 로 바꾸고(첫 결과를 본 뒤 바꾼 기준이다) 1·3 을 다시 돌려 도구가 둘 모두 기대대로로 판정했다.
 - 프로브 README 의 여섯 행(storage, widget_e2e, failures, approval, widget_app, conversation)의 "잰 판" 칸에 위를 적었다. 임시 워크트리는 지웠다.
 
+## 봇 회차와 인계 (셋째 세션, 셀프 리뷰 직전)
+
+커밋 2d0e3276(회고와 다음)을 푸시하기 전에 PR 본문의 변이 줄을 최종 결과로 고치고 `.scratch/` 의 영역을 더했다. 푸시 뒤 PR 머리가 2d0e3276 인 것을 보고 `@coderabbitai review` 를 남겼고, `tools/wait_ci.py 387` 이 `끝: 모두 통과. CodeRabbit: Review completed` 로 끝났다. 회차는 봇마다 센다. CodeRabbit 은 이것이 첫 리뷰다(3b96b7bb 는 건너뛰었다). claude-review 는 3b96b7bb 의 코멘트(6407931482)가 첫 회차이고 2d0e3276 의 코멘트(6408477620)가 둘째 회차다. 첫 회차의 Minor·Nit 은 그때 판단하지 않아 이번에 함께 판단했다. 두 봇 모두 Critical·Major 가 없었다.
+
+고친 것(커밋하지 않았다):
+
+- CodeRabbit 4374075063(Minor, `Conversation.tsx:137`): 용량이 묶음과 `run_id` 만 남긴 저장에서 되돌린 교환은 요청 글이 빈 문자열이라, 다시 붙은 실행이 실패하면 알림의 "다시 보내기"가 빈 요청을 새 실행으로 보냈다(타당. 명세 `"다시 보내기"는 같은 요청 글을 같은 규칙으로 보내고`). `WidgetStorage.test.tsx` 에 시험을 먼저 써서 빨강(`within(alert).queryByRole("button", { name: "다시 보내기" })` 의 Received 가 그 버튼)을 본 뒤, `FailureAlert` 의 `onRetry` 를 `null` 로 받을 수 있게 하고(그러면 그 단계를 뺀다) `Conversation` 이 요청 글이 빈 교환에 `null` 을 넘기게 고쳤다. 새 화면 문구는 없다. 포커스를 입력창으로 보내는 알림은 `loop_limit` 하나뿐이라(`WidgetScreen.tsx` 의 `focusFor`) 버튼을 빼도 포커스의 자리는 그대로다. `Conversation.tsx` 머리 주석에 한 문장을 더했다.
+- CodeRabbit 4374075074(Minor, `drivers.ts:529`): 구독 429 의 `Retry-After` 가 2^31-1ms 를 넘으면 타이머가 넘친 값으로 울려(Node 는 곧바로, 브라우저는 곧바로이거나 엉뚱한 때) 다시 구독을 되풀이할 수 있었다(타당. 앞서 고친 `Retry-After: 0` 과 같은 종류). vitest 5.0.2 의 fake-timers 는 그 지연을 1ms 로 바꾼다(번들 `chunks/index.DGdajAO2.js` 4915행 `timer.delay > maxTimeout ? 1 : timer.delay` 를 읽었다). `WidgetReconnect.test.tsx` 에 `Retry-After: 3000000` 시험을 먼저 써서 빨강(구독 2번)을 본 뒤, 상한을 429 한 자리가 아니라 `sleep` 에 두었다. `drivers.ts` 에서 서버의 값으로 기다리는 길이 모두 `sleep` 을 지난다. 시작·이어 가기·결정의 429 는 `useConversation.ts` 의 `useCountdown` 이 1초 이하의 타이머로 세어 큰 지연이 타이머에 들어가지 않는다.
+- claude-review 첫·둘째 회차의 `authorize` CQS(Minor): `authorize` 독스트링에 받은 묶음을 든다는 것과 명령이라는 것을, `restore` 의 `session.hold(saved.bundle)` 앞에 그 순서의 까닭을 적었다. `hold` 를 부르는 쪽으로 옮기지 않은 까닭은 아래 보류 첫 줄이다.
+
+보류(이유를 PR 코멘트로 아직 남기지 않았다. 새 세션이 남긴다). 모두 뒤의 작업으로 넘기는 것이 아니라 지금 꼴을 두는 판단이라 일지 "다음"과 티켓에는 넣지 않는다.
+
+- `authorize` 의 `hold` 를 부르는 쪽 다섯(`run`·`decide`·`follow`·`reconnect`·`restore`)으로 옮기기: 다섯 자리가 같은 `hold` 를 되풀이해, 같은 리뷰가 낸 "같은 꼴 분기 넷"을 늘린다. 부작용과 순서는 위처럼 주석으로 드러냈다.
+- `authorize` 뒤의 같은 꼴 분기 넷(첫·둘째 회차 Minor): 셀프 리뷰가 남긴 판단(위 "셀프 리뷰"의 남긴 것)이다. 토큰을 받지 못했을 때와 묶음이 바뀌었을 때 할 일이 부르는 쪽마다 다르다.
+- `reconnect()` 의 길이와 상태 다섯(첫·둘째 회차 Minor): 셀프 리뷰가 남긴 판단이다. 거절 표 하나를 그대로 옮겼고 갈래마다 시험이 있다. 봇도 후속으로 충분하다고 적었다.
+- `Received` 의 공개 가변 필드(첫 회차 Minor, 둘째 회차 Nit): 필드를 쓰는 자리는 `take` 안뿐이고 부르는 쪽은 읽기만 한다(`drivers.ts` 에서 `received.` 뒤에 대입이 없다). 클래스 독스트링이 "무엇을 받았는지는 부르는 쪽이 필드로 묻는다"고 정한 꼴이고 PR #385 보류 둘째를 닫은 모양이다.
+- `restore()` 의 `settled` 콜백(첫 회차 Nit): `restore` 는 `settled("ready")` 로 화면을 세운 뒤 다시 붙는 `reconnect` 를 기다린다. 반환값으로 주면 화면은 다시 붙기가 끝난 뒤에야 선다.
+
+다시 돌린 것(반영 뒤의 작업 트리):
+
+- `pnpm -C web exec vitest run --project widget-pages`: 파일 8, 시험 199 통과.
+- `pnpm -C web/apps/widget exec tsc --noEmit -p .`, `eslint`·`prettier --check`(`apps/widget/components`·`lib`·`testing`): 모두 지났다.
+- `PYTHONUTF8=1 uv run python tools/mutate.py --check` 로 web-widget 표 열하나: 모두 원문이 한 번씩 있었다. 시험은 더하기만 했고, 새 시험 둘은 빨강을 먼저 봐서 변이를 더하지 않았다.
+- `pnpm -C web/apps/widget exec playwright test`: 15 passed(1.1분). `pnpm -C web visual:widget`: 42 passed(1.0분). `uv run --env-file ../../../.env pytest -m llm_widget -q`: 1 passed. 토큰 6,555(입력 6,483, 출력 72), 트레이스 1, 모델 호출 2.
+
+인계: 반영의 셀프 리뷰(`/code-review`, 고정점 `HEAD`)를 부르자 `셀프 리뷰 직전` 계기(세션 컨텍스트 282,454 토큰)가 왔다. 인계하지 않는 다섯에 들지 않는다(이 세션을 연 지시문의 "이어받을 상태"는 `인계: 커밋 뒤` 다. `get_session` 의 `self` 에 `parentSessionId` 가 없다). `/code-review` 의 단계는 밟지 않았다. 이 세션의 지금 제목은 `feature/09-widget-storage-and-reconnect` 다.
+
+넘긴 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/09-widget-storage-and-reconnect.md. 위젯 저장과 재접속(web-widget 의 마지막 티켓)의 PR #387 봇 회차 반영을 셀프 리뷰부터 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/09-widget-storage-and-reconnect.md
+브랜치: feature/09-widget-storage-and-reconnect
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md 의 "봇 회차와 인계 (셋째 세션, 셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 고정점은 HEAD(PR #387 의 헤드)이고 변경은 그 PR 봇 회차의 반영이다(CodeRabbit 첫 회차 Minor 둘을 TDD 로 고침, claude-review 의 authorize CQS 를 주석으로 드러냄). 남은 단계는 차례로 ① 셀프 리뷰와 그 반영 ② 셀프 리뷰가 위젯을 고쳤으면 e2e-widget, visual:widget, -m llm_widget 을 다시 돈다(반영 뒤의 작업 트리에서 셋 모두 지났다) ③ 푸시 전에 PR 본문의 "왜 이렇게 했나"에 빈 요청 교환의 "다시 보내기" 없음과 sleep 의 상한을 넓힌다(next-session 순서 1의 1) ④ 커밋·푸시, 일지 그 절의 보류 다섯을 PR 코멘트로 남기기, @coderabbitai review, wait_ci ⑤ 봇 회차(다음 회차는 두 봇 모두 둘째 이상이라 Critical·Major 만 고친다) ⑥ "워크트리에서 병합할 때"로 병합, next-session. 일지의 회고와 다음은 이미 커밋됐고, 이 회차의 사건(워크트리 가드가 `gh pr comment --body` 의 이스케이프한 인자를 거부했다 등)은 회고 절에 더한다. 일지: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-widget-storage-and-reconnect (인계함)` 으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 남지 않았다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-26T05:14:51Z
+
+## 봇 회차 반영의 셀프 리뷰 (넷째 세션)
+
+위 지시문으로 연 넷째 세션이 워크트리에 들어가 `/code-review` 를 고정점 HEAD(2d0e3276)로 돌렸다. 범위는 커밋하지 않은 파일 여섯이고 커밋과 미추적 파일은 없다. 코드 주석이 근거로 드는 타이머의 상한은 MDN `setTimeout` 의 "Maximum delay value" 절을 원문 마크다운(`mdn/content` 의 `files/en-us/web/api/window/settimeout/index.md`)으로 내려받아 grep 으로 읽고 두 브리프에 발췌를 실었다. 원문은 브라우저가 지연을 부호 있는 32비트 정수로 바꿔 `2**32 - 5000` 은 곧바로, `2**32 + 5000` 은 약 5초 뒤에 울린다고 적고, Node 는 2,147,483,647ms 를 넘으면 곧바로 울린다고 적는다.
+
+표준 축(sonnet·high): 하드 위반이 없었다.
+
+고친 것:
+
+- `sleep` 의 주석, 시험 주석, 위 고친 것 둘째 줄이 2^31-1ms 를 넘는 지연을 타이머가 곧바로 울린다고 적었다(타당). 위젯이 도는 브라우저에서는 넘친 값으로 울려, 2^32 를 넘는 지연은 곧바로가 아니라 엉뚱한 때에 울린다. 자르기는 두 경우 모두 맞는 고침이고 틀린 것은 설명이다. `sleep` 앞의 새 상수 `LONGEST_TIMER_MS` 의 독스트링에 브라우저와 Node 를 갈라 적고, 시험 주석은 시험의 가짜 타이머가 1ms 로 바꾼다는 것으로, 일지 줄은 두 환경을 갈라 고쳤다.
+- 위 고친 것 둘째 줄이 서버의 값으로 기다리는 길이 모두 `sleep` 을 지난다고 적었다(타당). 시작·이어 가기·결정의 429 는 `useConversation.ts` 의 `useCountdown` 이 1초 이하의 타이머(`untilNextTick`)를 되풀이해 센다. 그 길은 큰 지연이 타이머에 들어가지 않아 안전하고, 문장의 "모두"만 틀렸다. 그 줄을 `drivers.ts` 로 좁히고 다른 길을 덧붙였다.
+- `authorize` 독스트링과 `restore` 주석이 `authorize` 가 언제나 받은 묶음을 드는 것처럼 적었다(타당). 토큰을 받은 갈래에서만 든다. `aborted`·`no-token` 에서는 앞서 든 묶음이 남는다. 두 자리에 "토큰을 받았으면"을 붙이고 독스트링에 남는 갈래를 적었다.
+- `sleep` 의 이름 없는 `2 ** 31 - 1`(판단, Mysterious Name). 위 상수로 두었다.
+
+남긴 것:
+
+- `Conversation.tsx` 의 `exchange.request === ""` 두 자리(판단, Duplicated Code). 같은 파일 안이고, 빈 요청 글이 무엇인지는 그 파일 머리 주석 한 곳이 정한다. 하나는 요청 상자를, 하나는 "다시 보내기"를 가른다. 술어를 `lib/conversation` 에 두면 한 파일의 약속에 내보내는 이름이 하나 는다.
+- `FailureAlert` 의 `flatMap` 안 중첩 삼항(판단). 표준 문서에 삼항의 기준이 없고(`CODING_STANDARDS.md` 에 "삼항" 0건), 갈래를 함수로 빼도 `onRetry` 의 null 좁히기가 같은 자리에 남는다.
+
+명세 축(본 세션의 모델): 타이머·"모두"·`authorize` 셋은 표준 축과 같은 지적이라 위에서 고쳤다.
+
+고친 것:
+
+- 위 고친 것 첫째 줄의 명세 인용이 원문과 달랐다(타당). 명세 242행은 따옴표가 "다시 보내기" 만 감싼다. 원문 글자 그대로 옮겼다.
+
+남긴 것:
+
+- 요청 글을 빼고 되돌린 교환의 알림을 명세가 정하지 않았다(명세 축이 사람이 판단할 일이라고 냈다). 명세는 용량 규칙으로 그런 교환이 생기게 해 두었고("교환을 다 빼도 넘으면 묶음과 run_id만 두고"), 실패 표의 버튼과 `"다시 보내기"는 같은 요청 글을 같은 규칙으로 보내고` 는 그 교환에서 함께 지킬 수 없다. 이 반영은 버튼을 빼는 쪽을 골랐다. 그래서 버튼이 "다시 보내기" 하나뿐인 결말(명세의 실패 원인 표에서 `tool_connection`·`model_call`·`tool_failure`·`resume_mismatch`·`agent_code`·`other` 여섯 행과 `unfinished`. 명세 축은 일곱이라 냈지만 그 행은 여섯이고 `other` 행이 `null` 과 모르는 값을 함께 든다)은 버튼 없는 알림이 되고, 본문의 "다시 보내 주세요."·"잠시 뒤 다시 보내 주세요."는 그대로 남는다. 입력창은 열려 있어 다시 적어 보낼 수 있다. 명세 13행은 결정이 더 필요해지면 멈추고 ADR 의 이력을 제안하라고 하지만, 이 PR 은 명세 밖의 작은 판단을 일지 "결정"과 PR 본문에 적고 잇는 선례를 따랐고(간격을 처음부터 세는 때), 명세를 고칠지는 사용자 승인이 먼저라 "다음"에 넘긴다. 앞서 들어간 "요청 상자를 그리지 않는다"도 같은 자리다. 그것은 커밋 e9ecae81 의 셀프 리뷰와 PR 직전 리뷰를 지났다.
+- 버튼이 하나도 남지 않는 원인을 보는 시험이 없다(명세 축). 새 시험은 "새 대화"가 남는 `timeout` 하나를 본다. 버튼이 없을 때 알림이 `actions` 를 `null` 로 그리는 갈래는 `loop_limit` 가 이미 지나는 같은 갈래(`actions.length === 0`)다.
+- `sleep` 의 상한으로 띠의 기다릴 시간과 실제로 다시 붙는 때가 갈린다(명세 축, Nit). 3,000,000초면 띠는 50000분을 보이고 약 35,791분 뒤에 다시 붙는다. 명세는 `Retry-After` 의 초라고만 하고, 그런 값은 서버가 내지 않는다(많아야 시간당 창의 3,600초, `channel/http/limits.py` 독스트링). PR 본문 "왜 이렇게 했나"에 적는다.
+
+다시 돌린 것(셀프 리뷰 반영 뒤의 작업 트리):
+
+- `pnpm -C web/apps/widget exec tsc --noEmit -p .`, `eslint`·`prettier --check`(`apps/widget/components`·`lib`·`testing`): 모두 지났다.
+- `pnpm -C web exec vitest run --project widget-pages`: 파일 8, 시험 199 통과.
+- `PYTHONUTF8=1 uv run python tools/mutate.py --check` 로 web-widget 표 열하나: 모두 원문이 한 번씩 있었다.
+- 셀프 리뷰가 위젯 코드(`drivers.ts`)를 고쳐 셋을 다시 돌렸다. 바뀐 것은 주석과 같은 값의 상수라 동작은 같다. `pnpm -C web/apps/widget exec playwright test`: 15 passed(37.9초). `pnpm -C web visual:widget`: 42 passed(1.1분). `uv run --env-file ../../../.env pytest -m llm_widget -q`: 1 passed. 토큰 6,555(입력 6,483, 출력 72), 트레이스 1, 모델 호출 2.
+- 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
+
 ## 회고
 
 셋째 세션이 이 일지와 그 세션을 원천으로 돌렸다. 후보 열, 승인 넷(모두 대기열, 이 세션에서 반영한 것 없음), 기각 여섯, 넘김 0. 넘긴 것이 없어 사용자에게 묻지 않았다.
@@ -205,9 +288,16 @@ PR 직전 리뷰의 반영을 돌리다 `WidgetStorage.test.tsx` 의 "판과 모
 
 만료: `tools/queue_open_rows.py` 와 `--ref origin/main` 두 출력에 모두 든 168 을 닫았다.
 
+봇 회차와 그 셀프 리뷰(셋째·넷째 세션)의 사건. 모두 기각이다.
+
+- 워크트리 가드가 `gh pr comment --body` 의 이스케이프한 인자를 거부했다(셋째 세션). 가드가 그 자리에서 막았고, `CLAUDE.md` 환경 함정의 길(따옴표가 필요한 인자는 파일로 쓴다)대로 넷째 세션은 `--body-file` 로 남긴다.
+- 셀프 리뷰가 고친 사실 문장 셋(타이머가 곧바로 울린다, 서버의 값이 모두 `sleep` 을 지난다, `authorize` 가 언제나 묶음을 든다)은 셋째 세션이 봇 지적을 반영하며 새로 쓴 문장이다. `code-review` 6단계 1이 처방한 것을 셀프 리뷰가 그 자리에서 잡았고, 외부 근거를 원문으로 내려받아 두 브리프에 실은 것(대기열 156의 처방)이 타이머 문장을 잡았다.
+- 명세 축 서브에이전트가 실패 원인 표의 행 수를 일곱이라 냈다(여섯이다). 판정하며 명세의 표를 직접 세어 그 자리에서 잡았다.
+- 스크래치패드로 옮기는 `cd` 를 훅이 다시 막았고, 판정 명령을 파이프로 줄인 것을 훅이 경고했다. 둘 다 훅이 그 자리에서 알렸다.
+
 ## 다음
 
 - 이 PR(#387)이 병합되면 web-widget 은 닫힌다. 다음 프론티어는 `.scratch/plan.md` 가 원천이다.
 - 대기열 464 가 3회차라 `next-session` 결정표의 하네스 chore 배치 조건에 닿았다. 위 회고 1의 두 가지(접힌 `public/` 와 `RECREATABLE_PATHS` 에 없는 `public/element.js`)를 함께 고쳐야, 위젯 워크트리 아홉(위 "정리")이 다음 정리에서 지워진다.
-- PR #387 의 남긴 위험 둘은 명세가 정하지 않은 자리다. 45초 무응답이 응답 머리를 기다리는 시간도 덮는지(덮으면 시작·이어 가기의 길도 바뀐다), 처리하지 못한 거절 "세 번"이 이어진 세 번인지(지금은 붙어서 새 항목을 받을 때만 처음으로 돌아간다). 정하려면 명세를 고치는 사용자 승인이 먼저다.
+- PR #387 의 남긴 위험 셋은 명세가 정하지 않은 자리다. 45초 무응답이 응답 머리를 기다리는 시간도 덮는지(덮으면 시작·이어 가기의 길도 바뀐다), 처리하지 못한 거절 "세 번"이 이어진 세 번인지(지금은 붙어서 새 항목을 받을 때만 처음으로 돌아간다), 용량 때문에 요청 글을 빼고 되돌린 교환이 실패했을 때의 알림(지금은 요청 상자와 "다시 보내기"를 빼고 본문의 "다시 보내 주세요."는 남긴다. 위 "봇 회차 반영의 셀프 리뷰"). 정하려면 명세를 고치는 사용자 승인이 먼저다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts` 가 한다.
