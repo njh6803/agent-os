@@ -541,6 +541,46 @@ Critical·Major 없음. 변이 198 의 출력과 `-k`, 303자 정션에서 접�
 - 새 시험 하나(`-k 한_토막_한도`) 1 passed. 지금 동작을 고정하는 시험이라 고치기 전 판에서 빨갛지 않다. 고치기 전 판(변이 198 의 꼴)에서는 같은 배치의 `remove` 가 0 으로 끝나 이 시험의 `== 1` 이 빨개진다(위 명세 축 리뷰어의 `probe_mutated.log`).
 - 두 파일의 ruff·포맷·pyright(윈도, `--pythonplatform Linux`) 0. `tests/tools/test_tidy_checkouts.py` 전체(`-n 4`) 239 passed(191초).
 - 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다(결과는 커밋 뒤 아래에 적는다). 변이 표 전체는 커밋 뒤 그 커밋을 꺼낸 임시 워크트리에서 돌린다.
+- 커밋 전 `sibling_overlap.py` 는 0 으로 끝났으나 `origin/main` 이 `0aff6d15`(#394 harness 016, 사진 비교의 부분 래스터 끄기)로 나아갔다. 들어온 파일 가운데 이 브랜치가 고친 것은 probes README 와 대기열이고, 이 브랜치가 따를 규약 파일은 없다. `git merge --no-edit origin/main` 은 충돌 없이 됐다. 번호 겹침은 없었다(그 일지는 2026-10-26-17).
+- `922f1262`. pre-commit 에서 ruff 둘, 검사 열(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 330.2초, web-verify 356.6초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed 였다. 카나리아 명세와 헌법 판은 고친 파일이 없어 Skipped 다. 인용 대조가 이 일지의 인용 하나("나머지 접두 없는 `lexists` …짧은 자리다")를 저장소에 글자 그대로 없다고 경고했다. 이 커밋이 고친 옛 문장을 위 표준 축 줄이 인용한 기록이다.
+- PR 본문의 "왜 이렇게 했나" 셋째 항목, 남긴 위험 둘(빈 폴더만 든 미추적 정션, 휴지통 자리 이름의 길이), 변경된 영역(변이 176~198, 반박 입력), 체크리스트(넷째 회차와 대체 리뷰, 이 셀프 리뷰)를 고쳤다(`gh pr edit`, 푸시 전). 확인 방법의 변이 표 전체 결과는 아직 `2bfe41a1` 기준이다.
+
+## 인계 (커밋 뒤, 다섯째)
+
+- 경계는 `커밋 뒤` 다. 커밋을 띄운 호출에 계기가 268,095 토큰으로 왔고, 그 커밋 `922f1262` 가 성공해 경계다.
+- 인계하지 않는 때가 아니다. 커밋이 성공했고, 요청 범위가 병합까지이며, 이 세션의 지시문의 "이어받을 상태" 가 `인계: 셀프 리뷰 직전` 으로 이번 경계와 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없다.
+- 이 세션의 지금 제목은 `chore/017-tidy-collapsed-and-fresh-branches` 다.
+- 위 "이어받음 (셀프 리뷰 직전, 셋째)" 부터의 절 가운데 커밋 줄 뒤(합치기, `922f1262`, PR 본문 줄)와 이 절은 커밋하지 않았다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md. tools/tidy_checkouts.py 가 접힌 무시 폴더(대기열 464)와 막 딴 형제 브랜치(대기열 440)를 바로 가르는 PR #392 를 MAX_PATH 링크 옮기기 반영 커밋의 푸시부터 병합까지 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다
+브랜치: chore/017-tidy-collapsed-and-fresh-branches
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "셀프 리뷰 (기점 35481b0b)", "인계 (커밋 뒤, 다섯째)"
+이어받을 상태: 인계: 커밋 뒤. 커밋 922f1262(머리 35481b0b 의 대체 bug-perf-review Major 인 _move_aside 의 long_path 묻기, 그 셀프 리뷰 명세 축 Minor 인 휴지통 자리 이름 길이를 못 보는 것으로 고정한 시험, origin/main 0aff6d15 합치기)를 아직 푸시하지 않았다. pre-commit 전체가 통과했고 PR 본문은 확인 방법의 변이 결과 말고는 이미 고쳤다. 푸시와 순서 1의 2(봇 회차)부터 한다. 푸시 뒤 @coderabbitai review 와, 머리 35481b0b 의 CodeRabbit 한도와 대체 리뷰 결과(유효 2, 오탐 1. Major 는 고쳤고 Minor 빈 폴더만 든 미추적 정션은 남겼다), 셀프 리뷰 결과(두 축 Critical·Major 없음, 명세 축 Minor 는 못 보는 것으로 고정)를 922f1262 와 함께 든 PR 코멘트를 남긴다. 변이 표 전체(198)를 922f1262 를 꺼낸 임시 워크트리에서 돌려 probes README 그 행(아직 "(표는 백아흔일곱)")과 PR 본문 확인 방법에 적는다. 다음 리뷰는 claude-review 다섯째 회차와 CodeRabbit 둘째 회차라 둘 다 Critical·Major 만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. visual 이 흔들리면(대기열 414) 실패한 잡만 다시 돌린다. 일지의 커밋 줄 뒤와 이 절은 커밋하지 않았으니 병합 전 마지막 커밋에 싣는다. 병합은 워크트리에서 하므로 "워크트리에서 병합할 때"를 따른다. 일지 docs/journal/2026-10-27-02-tidy-collapsed-and-fresh-branches.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/017-tidy-collapsed-and-fresh-branches (인계함)` 으로 바꿨고, 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 시험, 커밋)은 모두 끝나 멈출 것이 없었으며, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-26T20:17:13Z
+
+## 이어받음 (커밋 뒤, 다섯째)
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다 / 다음 작업: … PR #392 를 MAX_PATH 링크 옮기기 반영 커밋의 푸시부터 병합까지 잇는다 … 이어받을 상태: 인계: 커밋 뒤. … 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 바꾸고, `git worktree list` 에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)` 로 들어갔다(잠금 거부 없음). 이 세션의 제목은 `chore/017-tidy-collapsed-and-fresh-branches` 다. `git fetch origin` 뒤 `origin/main` 은 이미 합친 `0aff6d15` 그대로였다.
+- 푸시(`922f1262`), 머리 대조, `@coderabbitai review`, 머리 `35481b0b` 의 CodeRabbit 한도와 대체 리뷰 결과, 셀프 리뷰 결과를 든 PR 코멘트(`issuecomment-6426402305`)를 남겼다.
+
+## 봇 회차 (머리 `922f1262`)
+
+- **claude-review 다섯째 회차.** Critical·Major 없음. Minor 둘(키워드 불리언 셋과 `_fresh`·`_judge_branch_merged` 의 조건, 독스트링의 재현 이력)과 Nit 하나(`_fresh` 의 인자 여섯과 `merged.get` 두 번)는 다섯째 회차라 고치지 않고 보류 이유를 PR 코멘트(`issuecomment-6426604097`)로 남겼다. 새로 짚은 두 자리의 조건은, `_fresh` 의 앞 조건이 그 값을 쓰지 않는 길에서 reflog 를 읽지 않으려는 비용 거르기이고 판정은 `_judge_branch_merged` 한 곳이라는 것으로 답했다. 두 자리가 어긋나면 막 딴 브랜치를 남기는지 단언하는 실제 git 시험 셋(3162·3186·3248행)이 빨개진다. 처음 올린 코멘트는 "넷" 이라 적어 지우는 쪽을 고정한 `test_못_보는_것_reflog_가_없는_브랜치는_막_딴_것인지_몰라_지운다` 까지 셌고, 그 시험은 어긋나도 빨개지지 않아 "셋" 으로 고쳤다.
+- **CodeRabbit.** 이 머리의 `@coderabbitai review` 도 "Review rate limited" 로 끝나 둘째 회차가 없다. `tools/wait_ci.py` 는 "모두 통과. CodeRabbit: Review rate limited" 로 끝났다(CI 와 claude-review 모두 `922f1262` 에서 돌았다, `gh run list`).
+- **대체 리뷰는 돌리지 않았다.** 이 머리에서 바뀐 코드는 `_move_aside` 의 한 줄(`os.path.lexists(long_path(source))`)이고, 앞 대체 리뷰가 낸 Major 를 고친 것이다. 그 한 줄의 동작은 셀프 리뷰 명세 축이 재현해 봤다(303자 정션의 `lexists` 참·거짓, 휴지통 자리가 같을 때의 `[WinError 183]`). 그래서 버그 축은 그 둘로 갈음하고 그 판단을 같은 PR 코멘트에 적었다.
 
 ## 회고
 
@@ -554,10 +594,32 @@ Critical·Major 없음. 변이 198 의 출력과 `-k`, 303자 정션에서 접�
 6. 기각: 인용 대조 경고(위 "다시 돌린 것"의 `2bfe41a1`). 낱말은 원문과 같고 줄바꿈 공백만 달랐다. 경고만 하는 검사가 제 몫을 했다.
 7. 일지에만: 변이 표 전체 실행에서 183 의 pytest 가 아무 출력 없이 1로 끝났다(위 "다시 돌린 것"). 홀로 다시 돌리면 기대대로였고 원인을 가르지 못해 고칠 자리를 고를 수 없다. 다시 나면 이 일지를 가리켜 행을 쓴다.
 
+## 회고 (PR 뒤)
+
+위 회고는 PR 을 열기 전(`c13cf4f6`)에 썼다. 그 뒤의 claude-review 다섯 회차, 셀프 리뷰 셋, 대체 리뷰 둘, 인계 여덟을 이 단계를 닫는 마지막 세션이 이 일지 전체를 읽고 돌았다(`next-session` "인계할 때" 2). 후보 열. 승인 1(회차로 세는 것), 기각 5, 일지에만 4. 넘긴 것은 없다. 대기열의 만료는 이 워크트리와 `origin/main` 의 두 출력 모두 없었다.
+
+1. 승인, 회차로 세는 것(Major): PR 을 연 뒤에도 지우는 도구의 반박 시험이 판정을 깨는 입력을 넣지 않아, 리뷰가 다섯 번 더 잡았다. 모두 구현 때 실리는 `.claude/rules/tools.md` 의 지우거나 덮어쓰는 도구 항목을 어긴 것이다.
+   - 4회차: 추적 파일이 든 다시 만들 수 있는 이름의 폴더 안의 `.env`(커밋하지 않은 파일). `fold_ignored` 가 폴더째 접어 휴지통을 비우며 `.env` 까지 지우는 퇴행을 CodeRabbit 첫 회차가 잡았다(위 "봇 회차 (머리 `c754007e`)").
+   - 5회차: 추적 폴더를 갈음한 정션(지우는 자리 안의 링크). 그 반영의 셀프 리뷰 명세 축이 잡았다(위 "셀프 리뷰 (기점 `c754007e`)").
+   - 6회차: 안에 무시된 것이 없는 같은 정션. 그 반영의 반박이 `.env` 가 든 갈래만 넣어, 대체 `bug-perf-review` 가 `git worktree remove` 가 링크 바깥을 지우는 길로 잡았다(위 "봇 회차 (머리 `e6c7c7ae`)").
+   - 7회차: MAX_PATH 를 넘는 링크 경로. `is_link` 가 `\\?\` 없이 물어 링크 바깥을 지우는 길을 셀프 리뷰 명세 축이 잡았다(위 "셀프 리뷰 (기점 `e6c7c7ae`)").
+   - 8회차: 7회차의 입력을 같은 값을 묻는 다른 자리(`_move_aside` 의 `lexists`)에 넣지 않았다. 그 항목의 끝 문장(대기열 361)을 어긴 것이고, 대체 `bug-perf-review` 가 잡았다(위 "봇 회차 (머리 `35481b0b`)").
+
+   같은 처방을 든 열린 행 442 에 더해 8회차(361의 10회차)가 되었다. 2회차에 이어 7·8회차도 MAX_PATH 라, 처방(계기 훅이 넣을 반박 입력)에 MAX_PATH 를 넘는 경로와 다른 자리에 넣어 보기를 더했다. 그 행은 위 회고 1에서 이미 문턱을 지나 `hook_report.py` 를 돌렸고, 이번에 새로 문턱을 지나는 것이 아니라 다시 돌리지 않았다. 반영은 이 PR 의 범위 밖이라 대기열에 둔다.
+2. 일지에만: 휴지통 자리 이름이 경로 한 토막의 한도를 넘는 항목(위 "셀프 리뷰 (기점 `35481b0b`)" 명세 축). 반박에 넣지 않은 입력이지만 `remove` 가 남기는 쪽으로 멈춰, 그 항목이 막으려는 지우기의 길이 아니다. 못 보는 것으로 고정했고 근본 고침은 "다음" 의 하네스 chore 후보다.
+3. 기각: `open_session.ps1` 이 "입력창 묶음에서 폴더 경로를 찾지 못했다" 로 멈췄다(위 "인계 (커밋 뒤, 둘째)"). 같은 때(32초 사이) 일지 2026-10-26-14 의 열기도 같은 문구로 멈춰 딥링크 겹침(대기열 360)으로 보이고, 그 뒤 병합된 harness 014(#393)의 기계 전체 잠금이 그 겹침을 막는다. 앱 로그로 가르지는 않아 겹침이라는 것은 어림이다.
+4. 기각: `open-session` 의 URL 이 8092자로 상한(8000)을 넘었다(위 "인계 (셀프 리뷰 직전, 둘째)"). 스크립트가 쏘기 전에 막았고, 일지 2026-10-20-01 회고 5 와 같은 판정이다.
+5. 일지에만: 부하에서 빨간 시험 셋(`tests/channel/cli/test_interrupt.py` 의 닫기 시험, `tests/tools/test_rerun_runner.py`, `web/apps/widget/components/pages/WidgetApproval.test.tsx`). 셋 다 홀로 다시 돌리자 통과했다. 받아들여 닫은 종류(대기열 306, ADR 0036)의 새 사례라 행을 잇지 않는다.
+6. 기각: claude-review 가 같은 Minor(키워드 불리언 셋)를 다섯 회차 내내 냈다. `next-session` 의 회차 세기가 회차마다 코멘트 하나로 닫게 해 그 자리에서 처리했다.
+7. 기각: CodeRabbit 요청 다섯 가운데 넷이 "Review rate limited" 였다. `docs/constitution/operations.md` 리뷰 파이프라인과 `tools/wait_ci.py` 의 통과 줄이 알렸고, 대체 리뷰가 그 자리를 맡았다.
+8. 일지에만: 이 세션의 다섯째 회차 PR 코멘트가 막 딴 브랜치 시험을 "넷" 으로 적었다가, 지우는 쪽을 고정한 시험 하나를 빼 "셋" 으로 고쳤다(위 "봇 회차 (머리 `922f1262`)"). 올린 직후 시험을 다시 열어 스스로 잡았고 리뷰가 잡은 사건이 아니다.
+9. 기각: 변이 표를 돌리려 임시 워크트리로 `cd` 하자 `hook_bash_cd_outside` 가 막고 스크립트로 부르는 길을 알렸다. 그 길로 돌렸다.
+10. 일지에만: `922f1262` 의 표 전체 실행에서는 183 의 빈 출력(위 회고 7)이 나지 않았다. 원인은 여전히 가르지 못했다.
+
 ## 다음
 
 - 이 PR 이 병합되면 harness 017 은 닫힌다. harness 티켓의 PR 이라 결정표는 프론티어 줄이다. `.scratch/plan.md` 의 진행 중 기능 `design-reverse-sync` 에 `ready-for-agent` 티켓(02~10)이 남아 그것이 먼저이고, 어느 티켓을 열지는 병합 뒤 `next-session` 2단계가 막힌 것과 이미 도는 세션을 걸러 정한다.
-- 대기열 442 가 3회차라 다음 기능의 마지막 티켓 뒤 하네스 chore 배치에서 고를 수 있다(위 회고 1).
+- 대기열 442 가 8회차(361의 10회차)라 다음 기능의 마지막 티켓 뒤 하네스 chore 배치에서 고를 수 있다(위 회고 1, 회고 (PR 뒤) 1).
 - PR 의 남긴 둘(`judge` 가 브랜치마다 `git log -g` 를 띄우는 비용, `git log -g` 가 실패하면 기록 없음으로 보아 지울 후보로 내는 것)은 이 PR 이 판정을 남기고 이유를 PR 체크리스트에 적은 것이다. 뒤로 넘긴 일이 아니다.
 - 봇 첫 회차에서 claude-review 가 `tools/tidy_checkouts.py`(2300줄 남짓)를 판정(`judge_*`)·읽기(`gather*`)·지우기(`remove*`)로 나누는 것을 별도 티켓 후보로 냈다. 이 PR 은 나누지 않았다. 고를지는 다음 하네스 chore 배치가 정한다. 셋째 회차가 낸 `gather` 의 무시된 항목 읽기(`status`·`ls-files` 읽기, 접기, `holding_tracked`)를 함수 하나로 빼는 것도 그 읽기 쪽 정리에 든다.
 - 하네스 chore 후보(`tools/tidy_checkouts.py` 의 `remove` 길, 이 PR 의 리뷰가 낸 Minor 둘). 하나는 추적 파일도 무시된 것도 미추적 파일도 없는 미추적 정션(대상이 빈 폴더뿐)이다. `status` 에 아무것도 찍히지 않아 `지운다` 이고 `git worktree remove` 가 바깥의 빈 폴더를 지운다(머리 `35481b0b` 의 대체 `bug-perf-review`, 위 "봇 회차 (머리 `35481b0b`)"). 근본 고침은 `git worktree remove` 앞에서 `cut_links` 로 링크를 끊거나, 옮기기가 건너뛴 항목이 있으면 멈추는 것이다. 다른 하나는 휴지통 자리 이름이 경로 한 토막의 한도를 넘는 항목을 `remove` 가 옮기지 못해 `judge` 와 매번 엇갈리는 것이다(위 "셀프 리뷰 (기점 `35481b0b`)" 명세 축, 못 보는 것으로 고정했다). 자리 이름을 줄이면 `origin_of` 의 역산이 바뀐다. 둘 다 파일은 잃지 않는다.
