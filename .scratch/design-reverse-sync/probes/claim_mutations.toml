@@ -58,7 +58,7 @@ name = "남의 claim 을 기준본 없이 덮으면 그 사례가 빨갛다"
 runner = "node"
 tests = ["tools/sync-design-system/claim.test.ts", "-t", "남의 claim 은 이어받을 기준본 없이"]
 expect = "red"
-expect_output = ['''AssertionError: expected null to match object { kind: 'usage' }''']
+expect_output = ['''AssertionError: expected null to match object { kind: 'usage', …(1) }''']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/claim.ts"
