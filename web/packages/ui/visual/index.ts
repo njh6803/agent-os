@@ -12,12 +12,14 @@
 //   `userEvent` 가 빈 것은 패키지의 storybook.visual.ts 가 고정한다.
 // - 판정 스토리(태그 `judgment`)는 색인에서 뺀다. 태그는 정적 빌드의 `index.json` 항목에 그대로 실린다. 기본 테마가
 //   아닌 테마에서 값을 재는 스토리도 그 태그를 단다(사진은 기본 테마만, ADR 0026 의 2026-10-06 이력).
+// - 사진을 찍는 브라우저의 실행 인자(`BROWSER_ARGS`)와, 브라우저가 그것을 받고 떴는지 보는 `missingBrowserArgs`. 까닭은
+//   `BROWSER_ARGS` 의 주석이다.
 //
 // `@playwright/test` 는 타입만 들인다. 쓰는 쪽이 자기 `test` 를 넘긴다. 로컬의 사진 비교는 쓰는 쪽에 깔린 Playwright 만
 // 컨테이너에 복사하고(web/tools/visual.ts), 이 파일이 놓인 패키지의 pnpm 링크는 컨테이너 안에서 풀리지 않는다.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
-import type { Page, test as playwrightTest } from "@playwright/test";
+import type { Browser, Page, test as playwrightTest } from "@playwright/test";
 import { DEFAULT_THEME, type Density, type ThemeKey } from "../src/themes.ts";
 
 export const ORIGIN = "http://storybook.invalid";
@@ -59,6 +61,34 @@ export function photographedStories(site: string): StoryEntry[] {
   return Object.values(entries)
     .filter(isStoryEntry)
     .filter((entry) => !entry.tags.includes(JUDGMENT_TAG));
+}
+
+/**
+ * 사진 비교의 브라우저 실행 인자. 패키지와 위젯의 `visual/playwright.config.ts` 가 `launchOptions.args` 로 쓴다.
+ *
+ * 부분 래스터를 끈다(`--disable-partial-raster`). 이미지의 chromium 은 GPU 없이 소프트웨어로 래스터하고, 부분 래스터를
+ * 켠 채로는 같은 코드의 사진이 둥근 모서리의 중간색 픽셀 몇 개만 달라 흔들렸다(대기열 414). 이 PC 에서 프로브로 재
+ * 보니 흔들린 세 사진은 이 인자를 주면 찍는 때와 상관없이 그림이 하나였고, 찍기 전에 기다리는 것으로는 고치지 못했다.
+ * 정답 사진은 이 인자로 찍은 것이다. 다만 위젯의 화면 사진은 이 PC 에서 인자를 빼고 손으로 돌려도 정답과 맞아,
+ * 설정이 인자를 넘기는지는 사진이 아니라 `missingBrowserArgs` 의 시험이 본다. 잰 것과 재지 않은 것은
+ * .scratch/harness/probes/README.md 의 `visual_flake/` 행, 변이는 .scratch/harness/probes/visual_flake_mutations.toml 이다.
+ */
+export const BROWSER_ARGS: readonly string[] = ["--disable-partial-raster"];
+
+/**
+ * 브라우저가 받은 명령줄(CDP `SystemInfo.getInfo` 의 `commandLine`)에 없는 `BROWSER_ARGS`. 패키지와 위젯의 사진 비교가
+ * 시험 하나로 이것이 빈 것을 본다. 명령줄은 공백으로 가른다. 지금 인자에는 공백이 없고, 인자는 명령줄에 낱말 하나로
+ * 실렸다(프로브 visual_flake/run.mjs 가 출력 폴더에 남기는 meta.json, 프로브 README 의 그 행).
+ */
+export async function missingBrowserArgs(browser: Browser): Promise<string[]> {
+  const session = await browser.newBrowserCDPSession();
+  try {
+    const { commandLine } = await session.send("SystemInfo.getInfo");
+    const given = new Set(commandLine.split(" "));
+    return BROWSER_ARGS.filter((arg) => !given.has(arg));
+  } finally {
+    await session.detach();
+  }
 }
 
 /** 스토리가 globals 로 모드를 정하지 않았을 때 찍는 모드. 테마는 기본 테마(녹청)다(ADR 0026 의 2026-10-06 이력). */
