@@ -161,10 +161,43 @@ function surfaceName(surface: Surface): string {
   return typeof surface === "string" ? surface : surface.join("+");
 }
 
+/** 짝 하나를 잰 것. 두 색은 그 아래 바탕에 겹쳐 채널마다 반올림한 `#rrggbb` 이다. */
+export interface PairMeasure {
+  readonly pair: ContrastPair;
+  /** 바탕 쪽의 이름. 겹친 바탕은 위에서 아래로 `+` 로 잇는다. */
+  readonly surface: string;
+  readonly foregroundColor: string;
+  readonly backgroundColor: string;
+  readonly ratio: number;
+}
+
+/**
+ * 한 벌(테마·모드)의 쓰임새 토큰 값으로 짝마다 잰 것. `value` 는 그 쓰임새 토큰의 계산값(`#RRGGBB`, 반투명은
+ * `#RRGGBBAA`)을 돌려준다. 반투명은 아래 바탕에 겹쳐 채널마다 반올림한 색으로 잰다(`composite`). 차례는 짝 표의 차례다.
+ */
+export function measureContrast(
+  value: (name: SemanticToken) => string,
+  pairs: readonly ContrastPair[],
+): PairMeasure[] {
+  const surfaceColor = (surface: Surface): string =>
+    typeof surface === "string" ? value(surface) : composite(value(surface[0]), value(surface[1]));
+  return pairs.map((pair) => {
+    const [foreground, background] = pair;
+    const backgroundColor = surfaceColor(background);
+    const foregroundColor = composite(value(foreground), backgroundColor);
+    return {
+      pair,
+      surface: surfaceName(background),
+      foregroundColor,
+      backgroundColor,
+      ratio: contrastRatio(foregroundColor, backgroundColor),
+    };
+  });
+}
+
 /**
  * 한 벌(테마·모드)의 쓰임새 토큰 값으로 기준에 못 미치는 짝마다 메시지 하나. 메시지는 테마, 모드, 짝, 잰 값, 기준을
- * 든다. `value` 는 그 쓰임새 토큰의 계산값(`#RRGGBB`, 반투명은 `#RRGGBBAA`)을 돌려준다. 반투명은 아래 바탕에 겹쳐 채널마다
- * 반올림한 색으로 잰다(`composite`).
+ * 든다. 재는 법은 `measureContrast` 다.
  */
 export function contrastFailures(
   theme: string,
@@ -172,15 +205,13 @@ export function contrastFailures(
   value: (name: SemanticToken) => string,
   pairs: readonly ContrastPair[] = CONTRAST_PAIRS,
 ): string[] {
-  const surfaceColor = (surface: Surface): string =>
-    typeof surface === "string" ? value(surface) : composite(value(surface[0]), value(surface[1]));
-  return pairs.flatMap(([foreground, background, minimum]) => {
-    const behind = surfaceColor(background);
-    const ratio = contrastRatio(composite(value(foreground), behind), behind);
-    // 잰 값은 두 자리로 내려 적는다. 반올림하면 4.497 이 "4.50 < 4.5" 로 찍혀 메시지가 기준을 넘은 것처럼 읽힌다.
-    const shown = (Math.floor(ratio * 100) / 100).toFixed(2);
-    return ratio < minimum
-      ? [`${theme}/${mode} ${foreground}/${surfaceName(background)} ${shown} < ${String(minimum)}`]
-      : [];
-  });
+  return measureContrast(value, pairs).flatMap(
+    ({ pair: [foreground, , minimum], surface, ratio }) => {
+      // 잰 값은 두 자리로 내려 적는다. 반올림하면 4.497 이 "4.50 < 4.5" 로 찍혀 메시지가 기준을 넘은 것처럼 읽힌다.
+      const shown = (Math.floor(ratio * 100) / 100).toFixed(2);
+      return ratio < minimum
+        ? [`${theme}/${mode} ${foreground}/${surface} ${shown} < ${String(minimum)}`]
+        : [];
+    },
+  );
 }

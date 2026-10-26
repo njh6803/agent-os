@@ -134,6 +134,101 @@ describe("스크립트 진입", () => {
     expect(errorMessage(outcome.report)).toContain("bogus");
   });
 
+  test("들이기는 고친 디자인 토큰 CSS 를 출력 파일에 쓰고 보고에 옮긴 것과 따른 답을 낸다", () => {
+    // 녹청의 accent-600 은 웹만, gray-300 은 웹과 코드가 다르게 바꿨다. 두 값은 지은 tokens.json 에 녹청 두 벌로만 있다.
+    const code = CSS.replace("--gray-300: #9b9fa1;", "--gray-300: #999999;");
+    const built = buildTokensJson(CSS);
+    const web = built.replaceAll('"#056868"', '"#04605f"').replaceAll('"#9b9fa1"', '"#aaaaaa"');
+    expect([built.split('"#056868"').length, built.split('"#9b9fa1"').length]).toEqual([3, 3]);
+    const file = (name: string, text: string): string => {
+      writeFileSync(join(scratch, name), text);
+      return name;
+    };
+    const answers = { "color/gray-300@nokcheong-light+nokcheong-dark": "code" };
+    const outcome = invoke(
+      "import",
+      "--css",
+      file("theme.css", code),
+      "--base",
+      file("base.json", built),
+      "--web",
+      file("web.json", web),
+      "--answers",
+      file("answers.json", JSON.stringify(answers)),
+      "--out",
+      "out/theme.css",
+    );
+
+    expect(outcome).toMatchObject({
+      status: 0,
+      lines: 1,
+      report: {
+        command: "import",
+        ok: true,
+        out: join(scratch, "out", "theme.css"),
+        changed: true,
+        moved: [{ token: "accent-600", after: "#04605f" }],
+        asked: [],
+        answered: [
+          { id: "color/gray-300@nokcheong-light+nokcheong-dark", choice: "code", value: "#999999" },
+        ],
+      },
+    });
+    expect(readFileSync(join(scratch, "out", "theme.css"), "utf-8")).toBe(
+      code.replace("--accent-600: #056868;", "--accent-600: #04605f;"),
+    );
+  });
+
+  test("들이기에 웹이나 기준본이나 출력 파일을 주지 않으면 usage 오류다", () => {
+    const outcome = invoke("import", "--web", "web.json", "--out", "theme.css");
+
+    expect(outcome.status).toBe(1);
+    expect(outcome.report).toMatchObject({
+      command: "import",
+      ok: false,
+      error: { kind: "usage" },
+    });
+    expect(errorMessage(outcome.report)).toContain("--base <tokens.json>");
+  });
+
+  test("JSON 으로 풀 수 없는 입력은 input 오류다", () => {
+    writeFileSync(join(scratch, "tokens.json"), buildTokensJson(CSS));
+    writeFileSync(join(scratch, "broken.json"), "{");
+    const broken = invoke(
+      "import",
+      "--web",
+      "broken.json",
+      "--base",
+      "tokens.json",
+      "--out",
+      "a.css",
+    );
+
+    expect(broken.report).toMatchObject({ command: "import", ok: false, error: { kind: "input" } });
+    expect(errorMessage(broken.report)).toContain("broken.json 를 JSON 으로 풀 수 없다");
+  });
+
+  test("객체가 아닌 답 파일은 input 오류다", () => {
+    writeFileSync(join(scratch, "tokens.json"), buildTokensJson(CSS));
+    writeFileSync(join(scratch, "list.json"), "[]");
+    const list = invoke(
+      "import",
+      "--web",
+      "tokens.json",
+      "--base",
+      "tokens.json",
+      "--answers",
+      "list.json",
+      "--out",
+      "a.css",
+    );
+
+    expect(list.report).toMatchObject({ command: "import", ok: false, error: { kind: "input" } });
+    expect(errorMessage(list.report)).toContain(
+      "list.json 는 자리 id 에서 답으로 가는 객체여야 한다",
+    );
+  });
+
   test("모르는 명령은 usage 오류이고 아는 명령을 문구에 든다", () => {
     // 명령 이름에 build 가 들지 않아야 문구의 build 가 아는 명령 목록에서 온 것이다.
     const outcome = invoke("deploy");
