@@ -99,3 +99,63 @@ open-session을 부른다 2026-10-26T06:48:18Z
 - 둘째 시도도 pytest에서 막혔다(844.0초, 5588 통과 2 실패). 같은 파일의 다른 시험 둘(`test_본_측정에서_첫_인계_뒤_멈추고_확인_인자를_주면_잇는다`의 안내 줄 단언, `test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`의 `assert 1 == 0`)이었고, 둘을 따로 돌리니 48.16초에 지났다. 대기열 306의 닫힘(ADR 0036)이 이 종류는 커밋을 다시 치는 값을 받아들이고 사례를 고치지 않는다고 정해 두어, 시험을 고치지 않고 셋째로 다시 쳤다. 이 파일의 시험이 다른 세션 둘(일지 2026-10-24-10, 2026-10-25-02)과 이 세션 두 번에서 모두 넷 빨갰다는 것은 회고가 볼 수 있게 여기 적어 둔다.
 - 셋째 시도도 pytest에서 막혔다(1195.8초, 5588 통과 2 실패). `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")와, 둘째 시도에서도 빨갰던 `test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`다. 같은 시험이 두 번 연속 빨갰으므로 그대로 다시 치지 않고 부하를 봤다. CPU 100%, python 119개·node 92개·claude 35개가 떠 있었다(형제 세션들의 pre-commit이 함께 돌던 때다). ADR 0036이 받아들인 길(다시 친다)을 따르되, CPU가 20초 간격으로 세 번 연달아 60% 아래일 때까지 기다린 뒤 친다(스크래치패드의 `wait_load.ps1`, 최대 45분). 시험은 고치지 않는다.
 - 45분 동안 부하가 내려가지 않았다(끝에 CPU 100%, python 74개). 그래서 pytest를 pre-commit에서 빼고(`SKIP=pytest`, `tools/run_checks.py`가 같은 id로 읽는다) 손으로 쳤다. 스테이지된 판(작업 트리와 같다)에서 `uv run pytest -q -p no:cacheprovider`를 한 프로세스로 돌려 5590 통과, 8 deselected(LLM 마커)로 지났다(4421.92초). 그 뒤 이 일지 줄만 더하고 `SKIP=pytest`로 커밋했다. 이 일지 고침은 pre-commit의 표·줄 구분 문자 검사가 본다.
+- `SKIP=pytest` 커밋이 `b39a3698`로 지났다. ruff 둘, lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright 둘, run-hooks(317.2초), web-verify(734.7초), 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 인용, 커밋 메시지가 `Passed`이고, pytest는 `Skipped`(위 손으로 친 한 프로세스 실행이 갈음한다), 헌법 판은 고친 파일이 없어 `Skipped`다. `-m llm`·`-m llm_widget`·e2e·사진 비교는 이 변경(규칙 문장, 독스트링, 티켓, 카나리아 명세, 대기열, 일지)이 닿지 않아 돌리지 않았다.
+
+### 인계 (커밋 뒤)
+
+`SKIP=pytest` 커밋에서 `hook_handoff`가 세션 컨텍스트 300,760 토큰으로 경계 `커밋 뒤`를 알렸다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 그래서 넘긴다. 브랜치에 열린 PR은 없다(`gh pr view`가 "no pull requests found"). 이 세션의 지금 제목은 `chore/015-probes-marker-rule`이고, 넘기기 전에 `chore/015-probes-marker-rule (인계함)`으로 바꾼다.
+
+남은 단계:
+
+1. 푸시(아직 하지 않았다).
+2. PR 직전 리뷰. CodeRabbit CLI는 이 세션의 `coderabbit auth status`에서 `Seat: not assigned`였다. 그래서 operations.md 리뷰 파이프라인 2의 대체 둘을 돈다. `/security-review`는 origin/main을 합친 뒤에 돌고, `bug-perf-review`의 브리프에는 위 셀프 리뷰 절의 "고친 것" 1~4를 밀 주장으로 넘긴다.
+3. 티켓을 `done`으로 바꾸고 마지막 수용 기준(검증 명령)에 표시한다. 손으로 치는 다섯은 커밋 `b39a3698`의 pre-commit과 위 한 프로세스 pytest로 갈음했다.
+4. PR, 봇 회차, 병합(워크트리라 next-session의 "워크트리에서 병합할 때").
+
+주의: 형제 011의 PR #388도 `.claude/rules/probes.md`를 고친다. 그쪽이 먼저 병합되면 origin/main을 합칠 때 첫 항목에서 글자 충돌을 푼다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/015-probes-marker-rule.md. .claude/rules/probes.md 첫 항목에, 고친 길을 지났다는 표지는 다른 해석 아래에서는 나지 않는 관찰로 정한다는 일반 조항을 더한다(대기열 367)
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
+브랜치: chore/015-probes-marker-rule
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 b39a3698로 커밋했고(pytest는 부하로 세 번 막혀 SKIP=pytest로 빼고 한 프로세스로 손으로 쳐 초록) 아직 푸시하지 않았다. 열린 PR은 없다. 푸시, PR 직전 리뷰(CodeRabbit CLI 좌석 없음이라 /security-review와 bug-perf-review, 밀 주장은 일지의 셀프 리뷰 "고친 것" 1~4), 티켓 done, PR, 봇 회차, 병합이 남았다. 일지에 커밋하지 않은 인계 절이 있다. PR #388도 .claude/rules/probes.md를 고친다. 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/015-probes-marker-rule (인계함)`으로 바꿨다. 돌던 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/015-probes-marker-rule`은 `is not locked`로 끝나 넘어갔다(첫 세션이 푼 뒤 이 세션의 `EnterWorktree(path)`는 잠그지 않은 것으로 보인다).
+
+open-session을 부른다 2026-10-26T10:41:36Z
+
+## PR과 병합 (셋째 세션)
+
+> 사용자: (인계 지시문을 첫 메시지로 받았다) "대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다 / … / 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 b39a3698로 커밋했고(pytest는 부하로 세 번 막혀 SKIP=pytest로 빼고 한 프로세스로 손으로 쳐 초록) 아직 푸시하지 않았다. … / 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 `chore/015-probes-marker-rule`은 `.claude/worktrees/015-probes-marker-rule`(`b39a3698`)이라 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 것은 이 일지의 인계 절 하나였다.
+- `git fetch origin` 뒤 `git log 92b61458..origin/main`이 비어, origin/main은 기준에서 움직이지 않았다. 합칠 것이 없다.
+- 형제 011의 PR #388은 아직 열려 있고, `.claude/rules/probes.md`의 같은 첫 항목 한 줄을 고친다(`gh pr diff 388`). 늦게 병합되는 쪽에서 그 줄의 글자 충돌이 난다.
+- 푸시했다(`chore/015-probes-marker-rule`, 원격 새 브랜치).
+
+### PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 operations.md 리뷰 파이프라인 2의 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: origin/main이 기준과 같아 합치지 않고 돌렸다. 식별 서브태스크가 "No findings"를 내 거를 후보가 없었다. 바뀐 파일 가운데 실행되는 것은 카나리아 명세뿐이고, 그 값은 커밋된 고정 상수이며 `tools/canary.py`가 셸 인자나 `eval`에 넘기지 않는다고 그 서브태스크가 따라가 봤다.
+- `bug-perf-review`(기준 `92b61458`, 호출 36): 유효 2, 보류 2, 오탐 4. 밀 주장 넷(셀프 리뷰 절의 "고친 것" 1~4)은 모두 근거와 맞았다.
+
+트리아지와 처리:
+
+1. 유효(고쳤다): 규칙의 선례 문장이 멈춘 사례의 비교 값을 "가장 긴 값"으로만 적어 프로브 독스트링의 "(두 판 가운데 긴 것)"이 빠졌다. `summarize`가 판(파일)마다 `waited_ms`를 따로 내므로 한 측정에 max가 둘이다(`open_session_pattern_timed.py` 22~24행, 316~324행을 열어 봤다). 규칙에 그 구절을 더했다.
+2. 유효(고쳤다): `mutate_ctrl_c.py` 독스트링 70~73행이 `passed_past_first_window`를 단서 없이 고친 길의 표지로 적어 규칙과 어긋났다. `.scratch/harness/probes/`는 살아 있는 문서라(operations.md 문서 위치) 그 문단 끝에 단서 한 문장을 더했다. 같은 지적이 함께 든 ADR 0035 87행은 `### 2026-10-18` 이력 항목 안이라 기록이어서 고치지 않았다. 프로브 README 166행도 그 프로브의 지난 결과를 적은 행이라 두고, 정의의 원천인 독스트링만 고쳤다.
+3. 보류였던 것(고쳤다): 걸린 시간 가늠이 느슨한 방향이 0.5~1초 하나만이 아니다. 지금 `_멈추는지`는 크기를 읽고 `time.sleep(1)` 뒤 한 번 견주고 같으면 참이다(`tests/tools/test_mutate.py` 424~437행). 부하로 그 sleep이 1.5초를 넘기면 자람이 없어도 `past_first_window`가 참이고, 그 회차는 고치기 전 판도 통과한다. 코드로 닫혀 2의 단서 문장에 함께 적었다. 규칙은 이미 "가늠하고"로 한정했고 틈 하나를 예로 들어 두었다.
+4. 보류(병합 때 한다): PR #388과의 글자 충돌. 늦게 병합되는 쪽에서 풀고 두 문장이 모두 남았는지 본 뒤, 카나리아 둘(`probes_rule_marker_other_reading.toml`, `probes_rule_stream_delete_marker.toml`)을 사전 확인으로 다시 본다.
+
+다시 돌린 것: 규칙 본문과 실험군 대상 파일(`mutate_ctrl_c.py`)이 바뀌었고 claude 판·명세의 칸·`expect`가 그대로라, `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_marker_other_reading.toml`로 갈음했다. 통과 1. 더한 독스트링 문장에는 `expect`의 두 조각이 없다. `uv run ruff check`와 `uv run ruff format --check`를 그 프로브 파일에 쳐 통과했다.

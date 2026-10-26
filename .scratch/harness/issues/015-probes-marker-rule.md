@@ -4,11 +4,11 @@
 
 **대기열:** 367
 
-**Status:** in-progress
+**Status:** done
 
 ## 수용 기준
 
 - [x] `.claude/rules/probes.md` 첫 항목에 일반 조항(다른 해석 아래에서는 나지 않는 관찰)이 있고, 세 경우와 선례 둘이 그 예로 든다
 - [x] 대기열 367 행이 닫히고, 그 행을 가리키는 339의 꼬리와 살아 있는 문서의 잔존을 grep해 고칠 것이 없다
 - [x] 새 세션에서 `.scratch/**/probes/**`의 파일을 Read로 열 때 바꾼 첫 항목이 실리는 것을 본다 (2026-10-26: 카나리아 `.scratch/harness/probes/canary/probes_rule_marker_other_reading.toml` 통과 4, 대조군 paths 밖 `plan.md`는 "없음")
-- [ ] 검증 명령이 모두 초록이다
+- [x] 검증 명령이 모두 초록이다
