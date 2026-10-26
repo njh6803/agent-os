@@ -1,72 +1,56 @@
 /**
- * 확인 명령. 아티팩트에서 받은 파일을 기록(`sync-record.ts`)과 맞대 웹 편집이 있는지 가른다(design-reverse-sync 명세
- * "확인"과 그 2026-10-22 주석 둘, "기록"). 받기는 두 번이다. 스킬은 이 명령의 `paths` 가 낸 경로를 받고 읽지 못한 것을
- * 적기를 `paths` 가 빌 때까지 되풀이한 뒤 `judge` 로 결과를 얻는다. 처음 `paths` 는 첫 받기(`tokens.json`, 색인, 기록)를,
- * 다음 `paths` 는 첫 받기의 내용으로 고른 그 뒤에 받을 경로를 낸다. 스킬은 받을 경로를 손으로 짓지 않는다.
+ * 확인의 판정. 아티팩트에서 받은 파일을 기록(`sync-record.ts`)과 맞대 웹 편집이 있는지 가른다(design-reverse-sync 명세
+ * "확인"과 그 2026-10-22 주석 둘, "기록", "겹침"). 명령의 인자는 `check-command.ts`, 결과의 꼴은 `check-report.ts` 다.
  *
- * 그 뒤에 받을 경로는 편집이 켜졌으면 기록에 든 마크다운 가운데 `api/` 밖, 색인 `docs` 의 `readme`·`sections`, 기록의
- * 컴포넌트 폴더마다의 README(`lib` 은 뺀다), 기록의 `pending` 이 든 경로다. 편집이 꺼졌으면 `pending` 이 든 경로만이다.
- *
- * 결과는 넷 가운데 하나다(`result`). 명세의 다섯째인 들이는 중(`importing`)은 06 이 더한다.
- *
- * - `clean`(웹 편집 없음). `record` 는 기록의 상태, `pending` 은 `pending` 의 경로마다의 분류(`upload.ts` 의
- *   `PendingClass`)이고 `pending` 이 없으면 null 이다.
- * - `edited`(웹 편집 있음). `tokens` 는 기준본과 맞댄 토큰의 차이(`tokens-json.ts` 의 `diffTokens`), `files` 는 파일의
- *   편집(`changed`, `added`, `removed`. 웹이 `tokens.json` 을 지웠으면 그것도 `removed` 로 든다), `index` 는 기록과 다른
- *   색인 목록이다. `tokensMixed` 는 웹의 `tokens.json` 이 `pending` 의 목표와도 기준본과도 달라, 멈춘 올리기가 보낸
- *   값이 `tokens` 에 섞일 수 있다는 표시다.
- * - `beforeRecord`(기록 전). 편집이 꺼진 색인에 기록도 `tokens.json` 도 없다.
- * - `undecidable`(판단할 수 없음). `reason` 이 까닭이다. 편집이 켜진 뒤 기록이 없거나(`noRecord`), JSON 으로 풀리지
- *   않거나(`recordUnreadable`), 꼴 판을 모르거나(`unknownVersion`), 꼴이 어긋났거나(`recordMalformed`), 들이기의
- *   `claim` 이 들었거나(`claim`. 06 이 가른다), 기준본이 없거나(`noBaseline`), 웹의 `tokens.json` 이 풀리지 않거나
- *   (`tokensUnreadable`), 색인이 없거나 풀리지 않거나(`noIndex`, `indexUnreadable`), 없다는 까닭이 아닌 까닭으로 읽지
- *   못한 경로가 있다(`readFailed`). 확인은 스스로 덮어쓰지 않고 멈춰 사람에게 묻는다.
+ * 받기는 두 번이다. 처음 `nextFetch` 는 첫 받기(`tokens.json`, 색인, 기록)를, 다음은 첫 받기의 내용으로 고른 그 뒤에
+ * 받을 경로를 낸다. 그 뒤에 받을 경로는 편집이 켜졌으면 기록에 든 마크다운 가운데 `api/` 밖, 색인 `docs` 의
+ * `readme`·`sections`, 기록의 컴포넌트 폴더마다의 README(`lib` 은 뺀다), 기록의 `pending` 과 `claim` 이 든 경로다.
+ * 편집이 꺼졌으면 `pending` 이 든 경로만이다.
  *
  * 편집이 꺼진 동안(색인의 `editing` 이 `"off"`)에는 사람이 고칠 수 없어 맞대지 않는다. 기록이 없거나 읽히지 않아도
  * 웹 편집 없음이고, 그때 보낼 것은 `upload.ts` 가 아티팩트의 sha256 과 맞대 고른다. `claim` 도 쓰이지 않는다.
  *
- * 맞대는 값은 `file-hash.ts` 의 것이다. `tokens.json` 은 기준본과 정규 꼴로 맞대고, 색인 목록은 객체의 키 차례를
- * 가리지 않고 맞댄다. `pending` 이 있으면 파일마다 목표 해시, 앞 해시 차례로 맞대고, 색인 목록은 그 목표와도 맞댄다.
+ * 맞대는 값은 `file-hash.ts` 의 것이다. 파일마다 `pending` 의 목표 해시, `claim` 의 해시, 기록의 앞 해시 차례로 맞대고
+ * 어디와도 다르면 웹 편집이다. `tokens.json` 은 목표 해시와 다르면 토큰·벌마다 `claim` 의 사본, 기록의 기준본 차례로
+ * 대 보아 어디와도 다른 몫만 웹 편집이다. 색인 목록은 객체의 키 차례를 가리지 않고 기록, `pending` 의 목표,
+ * `claim` 의 목록과 맞댄다.
  *
- * 명령: `check paths --web <받은 폴더> [--reads <읽지 못한 것>]`, `check judge --web <받은 폴더> [--reads <읽지 못한 것>]`.
- * 받은 폴더는 받은 파일을 아티팩트 경로 그대로(`project/…`) 둔 폴더다. 읽지 못한 것은 JSON
- * `{"absent": [경로, …], "failed": {경로: 문구}}` 이고, `absent` 는 없다는 까닭으로 읽지 못한 경로, `failed` 는 다른
- * 까닭으로 읽지 못한 경로와 그 문구다. `judge` 는 받을 경로가 폴더에도 읽지 못한 것에도 없으면 `input` 오류다. 보고는
- * `paths` 면 아직 받지 않은 경로(`paths`), `judge` 면 위 결과의 칸이다.
+ * 기록에 `claim` 이 있으면 결과는 들이는 중이다. `claim` 의 브랜치가 지금 브랜치와 같으면 자기 것이다. 더 고친 몫은
+ * 위 차례로 웹 편집인 몫이고, `tokens.json` 은 그 가운데 지금 코드에서 지은 `tokens.json` 과도 다른 몫만 든다(웹이
+ * 코드와 같은 몫은 들인 것과 같다). 남의 `claim` 에 더 고친 몫이 있으면 이어받을 기준본(`tokens-overlay.ts`)도 짓는다.
+ * 브랜치의 PR 상태는 보지 않는다. 그것은 결정표(`decide.ts`)가 스킬이 넘긴 PR 상태로 가른다.
  *
  * 못 보는 것: 마크다운이 아닌 파일(그림, 글꼴, 카드의 HTML)과 `api/` 아래 마크다운의 웹 편집, 기록에도 색인 `docs` 에도
- * 없고 기록의 컴포넌트 폴더의 README 도 아닌 경로에 웹이 더한 파일(웹이 새 컴포넌트 폴더에 둔 README 가 그 예다.
- * 명세는 색인이 드는 컴포넌트마다의 README 를 받으라 하지만 2026-10-26 에 받은 색인에는 컴포넌트 목록이 없었다), 색인의 목록 밖
- * 칸(제목, `lastChange` 등)의 편집. 웹이 더한 그림·글꼴은 색인 목록(`index`)의 편집으로만 나오고 `files` 에는 들지
- * 않는다. 웹 편집이 없을 때 아직 보내지 않은 `pending` 파일의 분류는 웹의 파일이 앞 기록의 값과 같은지로만 가른다.
+ * `claim` 에도 없고 기록의 컴포넌트 폴더의 README 도 아닌 경로에 웹이 더한 파일(웹이 새 컴포넌트 폴더에 둔 README 가
+ * 그 예다. 명세는 색인이 드는 컴포넌트마다의 README 를 받으라 하지만 2026-10-26 에 받은 색인에는 컴포넌트 목록이
+ * 없었다), 색인의 목록 밖 칸(제목, `lastChange` 등)의 편집. 웹이 더한 그림·글꼴은 색인 목록(`index`)의 편집으로만
+ * 나오고 `files` 에는 들지 않는다. 웹 편집이 없을 때 아직 보내지 않은 `pending` 파일의 분류는 웹의 파일이 앞 기록의
+ * 값과 같은지로만 가른다. `claim` 이 든 토큰이나 마크다운을 사람이 웹에서 기준본이나 앞 해시의 값으로 되돌린 편집은
+ * 보이지 않는다(명세 "`pending` 과 함께 있으면"의 주석이 받은 값이다). 더 고친 몫의 마크다운은 지금 코드와 맞대지
+ * 않는다(명세는 `tokens.json` 만 코드와 맞댄다).
  */
 
-import { parseArgs } from "node:util";
-import { CommandError, parsedArgs, type ReportFields } from "./command.ts";
 import {
-  fileHash,
-  INDEX_PATH,
-  isRecorded,
-  parseJson,
-  RECORD_PATH,
-  TOKENS_PATH,
-} from "./file-hash.ts";
-import {
-  byPath,
-  inputError,
-  isArtifactPath,
-  isRecord,
-  readFolder,
-  readJson,
-  sortedPaths,
-  stringList,
-  unknownList,
-} from "./io.ts";
+  type CheckReport,
+  type ClaimSummary,
+  type EditLists,
+  type FileChange,
+  type FileEdit,
+  type IndexEdit,
+  type PendingReport,
+  type RecordStatus,
+  type UndecidableReason,
+} from "./check-report.ts";
+import { CommandError } from "./command.ts";
+import { fileHash, INDEX_PATH, isRecorded, RECORD_PATH, TOKENS_PATH } from "./file-hash.ts";
+import { byPath, isArtifactPath, isRecord, parseJson, sortedPaths, unknownList } from "./io.ts";
 import {
   INDEX_KEYS,
   indexLists,
   readRecord,
-  type IndexKey,
+  type Claim,
+  type IndexLists,
+  type PendingClass,
   type RecordRead,
   type SyncRecord,
 } from "./sync-record.ts";
@@ -74,10 +58,12 @@ import {
   comparisonHash,
   diffTokens,
   readTokens,
+  type CanonicalTokens,
   type JsonValue,
   type TokenDiff,
+  valueAt,
 } from "./tokens-json.ts";
-import type { PendingClass } from "./upload.ts";
+import { inheritedBaseline } from "./tokens-overlay.ts";
 
 /** 받은 파일과 읽지 못한 경로. 경로는 아티팩트 경로다. */
 export interface WebFiles {
@@ -88,55 +74,21 @@ export interface WebFiles {
   readonly failed: ReadonlyMap<string, string>;
 }
 
-export type RecordStatus = "ok" | "absent" | "unreadable" | "unknownVersion" | "malformed";
+/** `claim` 을 가르는 데 드는 이 체크아웃의 것. `claim` 이 든 기록을 판정할 때만 있어야 한다. */
+export interface CheckContext {
+  /** 지금 브랜치. */
+  readonly branch: string | null;
+  /** 지금 코드에서 지은 `tokens.json` 의 정규 꼴. */
+  readonly codeTokens: CanonicalTokens | null;
+}
 
-export type UndecidableReason =
-  | "readFailed"
-  | "noIndex"
-  | "indexUnreadable"
-  | "noRecord"
-  | "recordUnreadable"
-  | "unknownVersion"
-  | "recordMalformed"
-  | "claim"
-  | "noBaseline"
-  | "tokensUnreadable";
+export const NO_CONTEXT: CheckContext = { branch: null, codeTokens: null };
 
-export type FileChange = "changed" | "added" | "removed";
-
-export type FileEdit = { readonly path: string; readonly change: FileChange };
-
-export type IndexEdit = {
-  readonly key: IndexKey;
-  readonly before: JsonValue;
-  readonly after: JsonValue;
-};
-
-/** `pending` 의 경로마다의 분류. */
-export type PendingReport = Readonly<Record<string, PendingClass>>;
-
-export type CheckReport =
-  | {
-      readonly result: "clean";
-      readonly editing: "on" | "off";
-      readonly record: RecordStatus;
-      readonly pending: PendingReport | null;
-    }
-  | {
-      readonly result: "edited";
-      readonly tokens: readonly TokenDiff[];
-      readonly tokensMixed: boolean;
-      readonly files: readonly FileEdit[];
-      readonly index: readonly IndexEdit[];
-      readonly pending: PendingReport | null;
-    }
-  | { readonly result: "beforeRecord"; readonly editing: "off" }
-  | {
-      readonly result: "undecidable";
-      readonly reason: UndecidableReason;
-      readonly message: string;
-      readonly paths: readonly string[];
-    };
+/** 판정과 이어받을 기준본. 기준본은 남의 `claim` 에 더 고친 몫이 있을 때만 있다. */
+export interface Judged {
+  readonly report: CheckReport;
+  readonly inherit: JsonValue | null;
+}
 
 /** 첫 받기의 경로. */
 const FIRST = [INDEX_PATH, RECORD_PATH, TOKENS_PATH];
@@ -216,15 +168,16 @@ function recordOf(web: WebFiles): RecordRead | null {
 }
 
 function statusOf(read: RecordRead | null): RecordStatus {
-  if (read === null) {
-    return "absent";
-  }
-  return read.kind;
+  return read === null ? "absent" : read.kind;
 }
 
 function pendingPaths(record: SyncRecord | null): string[] {
   const pending = record?.pending ?? null;
   return pending === null ? [] : [...pending.files.keys(), ...pending.delete];
+}
+
+function claimPaths(claim: Claim | null): string[] {
+  return claim === null ? [] : [...claim.changed.keys(), ...claim.added.keys(), ...claim.removed];
 }
 
 /** 색인 `docs` 의 `readme`·`sections` 가운데 아티팩트 경로인 것. */
@@ -262,7 +215,7 @@ function fetchList(web: WebFiles): string[] {
   const record = read?.kind === "ok" ? read.record : null;
   const paths = new Set(pendingPaths(record));
   if (!(index.kind === "ok" && editingOff(index.index))) {
-    for (const path of docPaths(index)) {
+    for (const path of [...docPaths(index), ...claimPaths(record?.claim ?? null)]) {
       paths.add(path);
     }
     if (record !== null) {
@@ -334,30 +287,47 @@ interface FileVerdict {
   readonly change: FileChange | null;
 }
 
+/** 파일 하나를 `pending` 의 목표, `claim`, 기록의 앞 해시 차례로 맞댄다. */
 function classifyFile(path: string, data: Uint8Array | undefined, record: SyncRecord): FileVerdict {
   const before = record.files.get(path)?.hash ?? null;
   const target = record.pending?.files.get(path)?.hash ?? null;
   const toDelete = record.pending?.delete.includes(path) ?? false;
+  const { claim } = record;
+  const claimed = claim?.changed.get(path) ?? claim?.added.get(path) ?? null;
+  const inPending = target !== null || toDelete;
+  /** 웹 편집이 아닌 것. */
+  const quiet = (pending: PendingClass): FileVerdict => ({
+    pending: inPending ? pending : null,
+    change: null,
+  });
+  const edit = (change: FileChange): FileVerdict => ({
+    pending: inPending ? "edited" : null,
+    change,
+  });
+
   if (data === undefined) {
     if (toDelete) {
-      return { pending: "deleted", change: null };
+      return quiet("deleted");
     }
-    if (before === null) {
-      return { pending: target === null ? null : "unsent", change: null };
+    if (claim?.removed.includes(path) === true) {
+      return quiet("claimed");
     }
-    return { pending: target === null ? null : "edited", change: "removed" };
+    return before === null ? quiet("unsent") : edit("removed");
   }
   const hash = fileHash(path, data);
-  if (target !== null && hash === target) {
-    return { pending: "sent", change: null };
+  if (hash === target) {
+    return quiet("sent");
   }
-  if (hash === before || (before === null && toDelete)) {
-    return { pending: toDelete ? "remaining" : target === null ? null : "unsent", change: null };
+  if (hash === claimed) {
+    return quiet("claimed");
   }
-  return {
-    pending: target === null && !toDelete ? null : "edited",
-    change: before === null ? "added" : "changed",
-  };
+  if (hash === before) {
+    return quiet(toDelete ? "remaining" : "unsent");
+  }
+  if (before === null) {
+    return toDelete ? quiet("remaining") : edit("added");
+  }
+  return edit("changed");
 }
 
 /** 웹의 tokens.json 편집. `mixed` 는 `diffs` 에 멈춘 올리기가 보낸 값이 섞일 수 있다는 표시다. */
@@ -374,8 +344,35 @@ type TokensVerdict =
   | ({ readonly kind: "judged"; readonly pending: PendingClass | null } & TokensEdit)
   | { readonly kind: "undecidable"; readonly report: CheckReport };
 
-/** 웹의 tokens.json 을 기준본과 `pending` 의 목표와 맞댄다. */
-function judgeTokens(web: WebFiles, record: SyncRecord): TokensVerdict {
+/**
+ * 기준본과 다른 웹의 차이 가운데 `claim` 의 사본과도, 지금 코드와도 다른 것. `claim` 의 사본과 같은 자리가 있었는지도
+ * 낸다. `claim` 이 없으면 차이 그대로다.
+ */
+function beyondClaim(
+  diffs: readonly TokenDiff[],
+  claim: Claim | null,
+  code: CanonicalTokens | null,
+): { readonly diffs: readonly TokenDiff[]; readonly claimed: boolean } {
+  if (claim === null) {
+    return { diffs, claimed: false };
+  }
+  const copy = claim.tokens === null ? null : readTokens(claim.tokens);
+  const unclaimed = diffs.filter((diff) => copy === null || !holds(copy, diff));
+  const further = code === null ? unclaimed : unclaimed.filter((diff) => !holds(code, diff));
+  return { diffs: further, claimed: unclaimed.length < diffs.length };
+}
+
+/** `tokens` 의 그 차이 자리가 차이의 뒤 값과 같은가. */
+function holds(tokens: CanonicalTokens, diff: TokenDiff): boolean {
+  return JSON.stringify(valueAt(tokens, diff)) === JSON.stringify(diff.after);
+}
+
+/** 웹의 tokens.json 을 `pending` 의 목표, `claim` 의 사본, 기준본 차례로 맞댄다. */
+function judgeTokens(
+  web: WebFiles,
+  record: SyncRecord,
+  code: CanonicalTokens | null,
+): TokensVerdict {
   const target = record.pending?.files.get(TOKENS_PATH);
   const judged = (pending: PendingClass, edit: TokensEdit = NO_TOKEN_EDIT): TokensVerdict => ({
     kind: "judged",
@@ -384,9 +381,12 @@ function judgeTokens(web: WebFiles, record: SyncRecord): TokensVerdict {
   });
   const data = web.files.get(TOKENS_PATH);
   if (data === undefined) {
-    return record.files.has(TOKENS_PATH)
-      ? judged("edited", { ...NO_TOKEN_EDIT, removed: true })
-      : judged("unsent");
+    if (!record.files.has(TOKENS_PATH)) {
+      return judged("unsent");
+    }
+    return record.claim !== null && record.claim.tokens === null
+      ? judged("claimed")
+      : judged("edited", { ...NO_TOKEN_EDIT, removed: true });
   }
   const parsed = parseJson(text(data));
   if (parsed === undefined) {
@@ -411,9 +411,13 @@ function judgeTokens(web: WebFiles, record: SyncRecord): TokensVerdict {
       ),
     };
   }
-  const diffs = diffTokens(readTokens(record.baseline), tokens);
+  const { diffs, claimed } = beyondClaim(
+    diffTokens(readTokens(record.baseline), tokens),
+    record.claim,
+    code,
+  );
   if (diffs.length === 0) {
-    return judged("unsent");
+    return judged(claimed ? "claimed" : "unsent");
   }
   return judged("edited", { diffs, mixed: target !== undefined, removed: false });
 }
@@ -441,25 +445,45 @@ function sameJson(left: JsonValue, right: JsonValue): boolean {
   return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
 }
 
-/** 기록과도 `pending` 의 목표와도 다른 색인 목록. 기록에 색인 목록이 없으면 맞대지 않는다. */
+/** 기록, `pending` 의 목표, `claim` 의 목록과 모두 다른 색인 목록. 기록에 색인 목록이 없으면 맞대지 않는다. */
 function indexEdits(index: Readonly<Record<string, unknown>>, record: SyncRecord): IndexEdit[] {
   const before = record.index;
   if (before === null) {
     return [];
   }
   const after = indexLists(index);
-  const target = record.pending?.index ?? null;
+  const others: IndexLists[] = [record.pending?.index, record.claim?.index].filter(
+    (lists): lists is IndexLists => lists !== undefined,
+  );
   return INDEX_KEYS.filter(
     (key) =>
-      !sameJson(after[key], before[key]) && (target === null || !sameJson(after[key], target[key])),
+      !sameJson(after[key], before[key]) &&
+      others.every((lists) => !sameJson(after[key], lists[key])),
   ).map((key) => ({ key, before: before[key], after: after[key] }));
 }
 
-function judgeOn(
-  web: WebFiles,
-  index: Readonly<Record<string, unknown>>,
-  read: RecordRead | null,
-): CheckReport {
+/** 들이는 중의 `claim`. `tokens.json` 은 사본이 있으면 고친 것, 없고 기록에 있으면 지운 것으로 든다. */
+function claimSummary(claim: Claim, record: SyncRecord, branch: string | null): ClaimSummary {
+  const tokensRemoved = claim.tokens === null && record.files.has(TOKENS_PATH);
+  return {
+    branch: claim.branch,
+    ticket: claim.ticket,
+    at: claim.at,
+    own: claim.branch === branch,
+    changed: sortedPaths([
+      ...claim.changed.keys(),
+      ...(claim.tokens === null ? [] : [TOKENS_PATH]),
+    ]),
+    added: sortedPaths(claim.added.keys()),
+    removed: sortedPaths([...claim.removed, ...(tokensRemoved ? [TOKENS_PATH] : [])]),
+  };
+}
+
+function editsEmpty(edits: EditLists): boolean {
+  return edits.tokens.length === 0 && edits.files.length === 0 && edits.index.length === 0;
+}
+
+function recordOrUndecidable(read: RecordRead | null): CheckReport | SyncRecord {
   if (read === null) {
     return undecidable("noRecord", "웹 편집이 켜졌는데 기록이 없어 웹 편집을 가를 수 없다", [
       RECORD_PATH,
@@ -477,24 +501,37 @@ function judgeOn(
     case "malformed":
       return undecidable("recordMalformed", `기록의 꼴이 어긋났다: ${read.message}`, [RECORD_PATH]);
     case "ok":
-      break;
+      return read.record;
   }
-  const { record } = read;
-  if (record.claim !== null) {
-    return undecidable("claim", "기록에 들이기의 claim 이 있다. claim 을 가르는 것은 06 이다", [
-      RECORD_PATH,
-    ]);
+}
+
+function judgeOn(
+  web: WebFiles,
+  index: Readonly<Record<string, unknown>>,
+  read: RecordRead | null,
+  context: CheckContext,
+): Judged {
+  const record = recordOrUndecidable(read);
+  if ("result" in record) {
+    return { report: record, inherit: null };
+  }
+  const { claim } = record;
+  if (claim !== null && (context.branch === null || context.codeTokens === null)) {
+    throw new CommandError(
+      "usage",
+      "기록에 claim 이 있어 지금 브랜치(--branch)와 지금 코드에서 지은 tokens.json(--code-tokens)이 있어야 한다",
+    );
   }
   const paths = fetchList(web);
   requireFetched(web, paths);
   const failed = failedReads(web, paths);
   if (failed !== null) {
-    return failed;
+    return { report: failed, inherit: null };
   }
 
-  const tokens = judgeTokens(web, record);
+  const tokens = judgeTokens(web, record, context.codeTokens);
   if (tokens.kind === "undecidable") {
-    return tokens.report;
+    return { report: tokens.report, inherit: null };
   }
   const classes = new Map<string, PendingClass>();
   if (tokens.pending !== null) {
@@ -511,104 +548,56 @@ function judgeOn(
     }
   }
   const pending = record.pending === null ? null : sortedReport(classes);
-  const changedIndex = indexEdits(index, record);
-  if (tokens.diffs.length === 0 && files.length === 0 && changedIndex.length === 0) {
-    return { result: "clean", editing: "on", record: "ok", pending };
-  }
-  return {
-    result: "edited",
+  const edits: EditLists = {
     tokens: tokens.diffs,
     tokensMixed: tokens.mixed,
     files: files.sort((left, right) => byPath(left.path, right.path)),
-    index: changedIndex,
-    pending,
+    index: indexEdits(index, record),
   };
+
+  if (claim !== null) {
+    const summary = claimSummary(claim, record, context.branch);
+    const webTokens = web.files.get(TOKENS_PATH);
+    const inherit =
+      summary.own || editsEmpty(edits) || webTokens === undefined
+        ? null
+        : inheritedBaseline(parseJson(text(webTokens)), claim.tokens, edits.tokens);
+    return {
+      report: { result: "importing", claim: summary, further: edits, pending, inherit: null },
+      inherit,
+    };
+  }
+  if (editsEmpty(edits)) {
+    return { report: { result: "clean", editing: "on", record: "ok", pending }, inherit: null };
+  }
+  return { report: { result: "edited", ...edits, pending }, inherit: null };
 }
 
-/** 받은 파일을 기록과 맞댄 결과. 받을 경로를 다 받지 않았으면 `input` 오류다. */
-export function judge(web: WebFiles): CheckReport {
+/** 받은 파일을 기록과 맞댄 결과와 이어받을 기준본. 받을 경로를 다 받지 않았으면 `input` 오류다. */
+export function judgeWithInherit(web: WebFiles, context: CheckContext = NO_CONTEXT): Judged {
   checkConsistent(web);
   requireFetched(web, FIRST);
   const failed = failedReads(web, FIRST);
   if (failed !== null) {
-    return failed;
+    return { report: failed, inherit: null };
   }
   const index = readIndex(web);
   if (index.kind === "absent") {
-    return undecidable("noIndex", "색인이 없다", [INDEX_PATH]);
+    return { report: undecidable("noIndex", "색인이 없다", [INDEX_PATH]), inherit: null };
   }
   if (index.kind === "unreadable") {
-    return undecidable("indexUnreadable", "색인이 JSON 객체로 풀리지 않는다", [INDEX_PATH]);
+    return {
+      report: undecidable("indexUnreadable", "색인이 JSON 객체로 풀리지 않는다", [INDEX_PATH]),
+      inherit: null,
+    };
   }
   const read = recordOf(web);
-  return editingOff(index.index) ? judgeOff(web, read) : judgeOn(web, index.index, read);
+  return editingOff(index.index)
+    ? { report: judgeOff(web, read), inherit: null }
+    : judgeOn(web, index.index, read, context);
 }
 
-function diffJson(diff: TokenDiff): JsonValue {
-  const fields: Record<string, JsonValue> = { kind: diff.kind, family: diff.family };
-  for (const key of ["token", "theme", "group", "field"] as const) {
-    const value = diff[key];
-    if (value !== undefined) {
-      fields[key] = value;
-    }
-  }
-  return { ...fields, before: diff.before, after: diff.after };
-}
-
-/** 확인 결과의 보고 칸. */
-export function reportFields(report: CheckReport): ReportFields {
-  return report.result === "edited" ? { ...report, tokens: report.tokens.map(diffJson) } : report;
-}
-
-/** 읽지 못한 것의 파일. 주지 않으면 비었다. */
-function readReads(path: string | undefined): Pick<WebFiles, "absent" | "failed"> {
-  if (path === undefined) {
-    return { absent: new Set(), failed: new Map() };
-  }
-  const raw = readJson(path);
-  if (!isRecord(raw) || Object.keys(raw).some((key) => key !== "absent" && key !== "failed")) {
-    throw inputError(path, "absent 와 failed 만 든 JSON 객체가 아니다");
-  }
-  const absent = raw.absent === undefined ? [] : stringList(raw.absent);
-  if (absent === undefined || !absent.every(isArtifactPath)) {
-    throw inputError(path, "absent 로 project/ 아래 경로의 배열을 들지 않는다");
-  }
-  const failedRaw = raw.failed ?? {};
-  if (!isRecord(failedRaw)) {
-    throw inputError(path, "failed 로 경로마다 문구를 든 객체를 들지 않는다");
-  }
-  const failed = new Map<string, string>();
-  for (const [failedPath, message] of Object.entries(failedRaw)) {
-    if (!isArtifactPath(failedPath) || typeof message !== "string") {
-      throw inputError(
-        path,
-        `failed 의 ${JSON.stringify(failedPath)} 가 project/ 아래 경로와 문구가 아니다`,
-      );
-    }
-    failed.set(failedPath, message);
-  }
-  return { absent: new Set(absent), failed };
-}
-
-/** 확인 명령. */
-export function runCheck(args: readonly string[]): ReportFields {
-  const { values, positionals } = parsedArgs(() =>
-    parseArgs({
-      args: [...args],
-      options: { web: { type: "string" }, reads: { type: "string" } },
-      strict: true,
-      allowPositionals: true,
-    }),
-  );
-  const [action, ...rest] = positionals;
-  if ((action !== "paths" && action !== "judge") || rest.length > 0) {
-    throw new CommandError("usage", "check 는 paths 나 judge 하나를 받는다");
-  }
-  if (values.web === undefined) {
-    throw new CommandError("usage", `check ${action} 에는 --web <받은 폴더> 가 있어야 한다`);
-  }
-  const web: WebFiles = { files: readFolder(values.web, ""), ...readReads(values.reads) };
-  return action === "paths"
-    ? { action, paths: nextFetch(web) }
-    : { action, ...reportFields(judge(web)) };
+/** 받은 파일을 기록과 맞댄 결과. */
+export function judge(web: WebFiles, context: CheckContext = NO_CONTEXT): CheckReport {
+  return judgeWithInherit(web, context).report;
 }

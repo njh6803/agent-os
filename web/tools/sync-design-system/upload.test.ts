@@ -4,9 +4,10 @@
 
 import { describe, expect, test } from "vitest";
 import { CommandError } from "./command.ts";
-import { fileHash, sha256 } from "./file-hash.ts";
-import type { FileEntry, SyncRecord } from "./sync-record.ts";
-import { needsBuild, planUpload, type PendingClass, type UploadInput } from "./upload.ts";
+import { fileHash } from "./file-hash.ts";
+import { sha256 } from "./io.ts";
+import type { FileEntry, PendingClass, SyncRecord } from "./sync-record.ts";
+import { needsBuild, planUpload, type UploadInput } from "./upload.ts";
 
 function bytes(text: string): Uint8Array {
   return new TextEncoder().encode(text);
@@ -339,6 +340,18 @@ describe("멈춘 올리기를 다시 하는 올리기", () => {
     expect(plan.send).toEqual([CARD]);
   });
 
+  test("들이는 claim 의 것으로 가른 pending 의 파일은 코드가 그대로여도 보낸다", () => {
+    const plan = planUpload(
+      input({
+        record: record({ pending }),
+        output: output({ [CARD]: "카드\n" }),
+        pendingState: state({ [CARD]: "claimed" }),
+      }),
+    );
+
+    expect(plan.send).toEqual([CARD]);
+  });
+
   test("이번 산출에 없는 보낸 목표는 목표대로 이어 적는다", () => {
     const plan = planUpload(
       input({ record: record({ pending }), output: output({}), pendingState: state() }),
@@ -476,6 +489,13 @@ describe("한 경로가 드는 칸", () => {
     { role: "delete", pending: "remaining", change: null },
     { role: "delete", pending: "edited", change: "changed" },
     { role: "delete", pending: "edited", change: "added" },
+    // 들이는 중의 올리기는 claim 이 든 파일을 되돌릴 파일, 지운 경로, 더한 경로로 넘긴다
+    { role: "file", pending: "claimed", change: null },
+    { role: "file", pending: "claimed", change: "changed" },
+    { role: "file", pending: "claimed", change: "removed" },
+    { role: "file", pending: "claimed", change: "added" },
+    { role: "delete", pending: "claimed", change: "changed" },
+    { role: "delete", pending: "claimed", change: "added" },
   ];
 
   interface Case {

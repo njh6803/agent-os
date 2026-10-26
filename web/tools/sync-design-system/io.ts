@@ -1,16 +1,32 @@
 /**
  * 기록·확인 명령의 입력 읽기. 입력 파일과 폴더를 읽고, 푼 JSON 을 꼴을 본 값으로 옮긴다. 읽을 수 없으면 `input`
- * 오류다(`command.ts`).
+ * 오류다(`command.ts`). 파일 종류를 가리지 않는 sha256 과 JSON 풀기도 여기 둔다(파일 종류마다의 맞대는 값은
+ * `file-hash.ts`).
  *
  * 경로는 아티팩트의 경로(`project/` 로 시작하고 `/` 로 가른다)다. 기록과 색인은 아티팩트의 쓰는 사람이 쓴 데이터라,
  * 그 안의 경로는 `isArtifactPath` 를 지난 것만 받는다. 그래서 받은 폴더 밖을 읽지 않는다.
  */
 
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { CommandError } from "./command.ts";
-import { parseJson } from "./file-hash.ts";
 import type { JsonValue } from "./tokens-json.ts";
+
+/** 바이트의 sha256(16 진수). */
+export function sha256(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+/** JSON 글을 푼다. 풀리지 않으면 undefined. */
+export function parseJson(text: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
 
 /** 경로 차례(UTF-16 코드 단위). 기록과 보고의 경로 목록이 이 차례다. */
 export function byPath(left: string, right: string): number {

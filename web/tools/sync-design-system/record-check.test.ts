@@ -100,7 +100,7 @@ function webFolder(
  * 스킬처럼 확인을 돌린다. `paths` 가 빌 때까지 낸 경로를 받는다. 폴더에 이미 둔 파일은 받은 것이고, 낸 경로는 폴더에
  * 없으니 없다는 까닭으로 읽지 못한 것으로 적는다.
  */
-function judged(folder: string): Outcome {
+function judged(folder: string, ...judgeArgs: string[]): Outcome {
   const reads = `${folder}-reads.json`;
   const absent: string[] = [];
   writeFileSync(join(scratch, reads), JSON.stringify({ absent }));
@@ -111,7 +111,7 @@ function judged(folder: string): Outcome {
       ? paths.report.paths.map((path: unknown) => String(path))
       : [];
     if (listed.length === 0) {
-      return invoke("check", "judge", "--web", folder, "--reads", reads);
+      return invoke("check", "judge", "--web", folder, "--reads", reads, ...judgeArgs);
     }
     absent.push(...listed);
     writeFileSync(join(scratch, reads), JSON.stringify({ absent }));
@@ -391,11 +391,175 @@ describe("기록과 확인 명령", () => {
     });
   });
 
+  test("들이기가 claim 을 쓰면 다른 세션의 확인은 들이는 중이고, 병합된 claim 의 올리기가 claim 파일을 보내고 비운다", () => {
+    bundle("bundle");
+    writeFileSync(join(scratch, "index.json"), JSON.stringify(INDEX));
+    writeFileSync(join(scratch, "sha.json"), "{}");
+    const first = invoke("record", "plan", "--local", "bundle", "--artifact-sha256", "sha.json");
+    const write = (plan: string, out: string): Outcome =>
+      invoke(
+        "record",
+        ...["write", "--local", "bundle", "--plan", plan, "--index", "index.json", "--out", out],
+        ...["--commit", "abc1234", "--at", "2026-10-26T12:00:00.000Z"],
+      );
+    expect(write(saved("plan.json", first), "record.json").report).toMatchObject({ claim: false });
+
+    webFolder("edited", "bundle", "on", "record.json");
+    put("edited", { "project/README.md": `${README}웹에서 더한 줄.\n` });
+    const found = saved("found.json", judged("edited"));
+    const claimArgs = (check: string, web: string): string[] => [
+      ...["--check", check, "--web", web, "--branch", "feature/11-web-edit"],
+      ...["--ticket", ".scratch/design-reverse-sync/issues/11-web-edit.md"],
+      ...["--at", "2026-10-27T09:00:00.000Z"],
+    ];
+    const claimed = invoke(
+      "record",
+      ...["claim", "--record", "record.json", "--expect", "record.json", "--out", "claimed.json"],
+      ...claimArgs(found, "edited"),
+    );
+    expect(claimed.report).toMatchObject({ ok: true, action: "claim", claim: true });
+
+    const stale = invoke(
+      "record",
+      ...["claim", "--record", "claimed.json", "--expect", "record.json", "--out", "x.json"],
+      ...claimArgs(found, "edited"),
+    );
+    expect(stale.report).toMatchObject({
+      ok: false,
+      error: {
+        kind: "input",
+        message:
+          "기록의 claim 이 덮을 claim 과 다르다(지금 기록의 claim 은 feature/11-web-edit 의 것이다). 그사이 다른 세션이 쓰거나 지웠으니 확인부터 다시 한다",
+      },
+    });
+
+    webFolder("importing", "bundle", "on", "claimed.json");
+    put("importing", { "project/README.md": `${README}웹에서 더한 줄.\n` });
+    const code = join("bundle", "tokens.json");
+    expect(judged("importing").report).toMatchObject({
+      ok: false,
+      error: {
+        kind: "usage",
+        message:
+          "기록에 claim 이 있어 지금 브랜치(--branch)와 지금 코드에서 지은 tokens.json(--code-tokens)이 있어야 한다",
+      },
+    });
+    const importing = judged("importing", "--branch", "feature/12-other", "--code-tokens", code);
+    expect(importing.report).toMatchObject({
+      ok: true,
+      result: "importing",
+      claim: {
+        branch: "feature/11-web-edit",
+        own: false,
+        changed: ["project/README.md", "project/tokens.json"],
+        added: [],
+        removed: [],
+      },
+      further: { tokens: [], files: [], index: [] },
+      inherit: null,
+    });
+    const check = saved("importing.json", importing);
+
+    const plain = invoke("record", "plan", "--local", "bundle", "--record", "claimed.json");
+    expect(plain.report).toMatchObject({ ok: true, send: [], clearClaim: false });
+    const refused = invoke(
+      "record",
+      ...["plan", "--local", "bundle", "--record", "claimed.json", "--check", check],
+    );
+    expect(refused.report).toMatchObject({
+      ok: false,
+      error: {
+        kind: "usage",
+        message:
+          "확인이 들이는 중이다. 병합된 claim 에 더 고친 몫이 없으면 --claim-merged 로, 아니면 사람이 덮어쓰기를 고른 때만 --overwrite 를 더해 올린다",
+      },
+    });
+
+    writeFileSync(join(scratch, "pr.json"), JSON.stringify([{ number: 7, state: "MERGED" }]));
+    const decided = invoke("decide", "--caller", "upload", "--check", check, "--pr", "pr.json");
+    expect(decided.report).toMatchObject({ ok: true, kind: "act", act: "uploadClaimMerged" });
+
+    const merged = invoke(
+      "record",
+      ...["plan", "--local", "bundle", "--record", "claimed.json", "--check", check],
+      "--claim-merged",
+    );
+    expect(merged.report).toMatchObject({
+      ok: true,
+      send: ["project/README.md", "project/tokens.json"],
+      revert: ["project/README.md", "project/tokens.json"],
+      clearClaim: true,
+    });
+    const after = write(saved("merged-plan.json", merged), "after.json");
+    expect(after.report).toMatchObject({ ok: true, claim: false, pending: false });
+
+    const cleared = invoke(
+      "record",
+      ...["claim", "--record", "claimed.json", "--expect", "claimed.json", "--out", "cleared.json"],
+      "--clear",
+    );
+    expect(cleared.report).toMatchObject({ ok: true, claim: false });
+  });
+
+  test("번호를 옮겨 브랜치 이름을 바꾼 들이기는 옛 브랜치로 확인해 자기 claim 을 새 브랜치와 티켓으로 고쳐 쓴다", () => {
+    bundle("bundle");
+    writeFileSync(join(scratch, "index.json"), JSON.stringify(INDEX));
+    writeFileSync(join(scratch, "sha.json"), "{}");
+    const first = invoke("record", "plan", "--local", "bundle", "--artifact-sha256", "sha.json");
+    invoke(
+      "record",
+      ...[
+        "write",
+        "--local",
+        "bundle",
+        "--plan",
+        saved("plan.json", first),
+        "--index",
+        "index.json",
+      ],
+      ...["--out", "record.json", "--commit", "abc1234", "--at", "2026-10-26T12:00:00.000Z"],
+    );
+    webFolder("edited", "bundle", "on", "record.json");
+    put("edited", { "project/README.md": `${README}웹에서 더한 줄.\n` });
+    const claimFor = (check: string, record: string, out: string, number: string): Outcome =>
+      invoke(
+        "record",
+        ...["claim", "--record", record, "--expect", record, "--out", out, "--check", check],
+        ...["--web", "edited", "--branch", `feature/${number}-web-edit`],
+        ...["--ticket", `.scratch/design-reverse-sync/issues/${number}-web-edit.md`],
+        ...["--at", "2026-10-27T09:00:00.000Z"],
+      );
+    const found = saved("found.json", judged("edited"));
+    expect(claimFor(found, "record.json", "claimed.json", "11").report).toMatchObject({ ok: true });
+
+    webFolder("importing", "bundle", "on", "claimed.json");
+    put("importing", { "project/README.md": `${README}웹에서 더한 줄.\n` });
+    const code = join("bundle", "tokens.json");
+    const reading = (branch: string): Outcome =>
+      judged("importing", "--branch", branch, "--code-tokens", code);
+    expect(reading("feature/12-web-edit").report).toMatchObject({ claim: { own: false } });
+    const own = saved("own.json", reading("feature/11-web-edit"));
+    expect(claimFor(own, "claimed.json", "moved.json", "12").report).toMatchObject({ ok: true });
+
+    webFolder("moved", "bundle", "on", "moved.json");
+    put("moved", { "project/README.md": `${README}웹에서 더한 줄.\n` });
+    const moved = judged("moved", "--branch", "feature/12-web-edit", "--code-tokens", code);
+    expect(moved.report).toMatchObject({
+      ok: true,
+      result: "importing",
+      claim: {
+        branch: "feature/12-web-edit",
+        ticket: ".scratch/design-reverse-sync/issues/12-web-edit.md",
+        own: true,
+      },
+    });
+  });
+
   test.each([
     [
       "모르는 하위 명령",
       ["record", "erase"],
-      "record 는 plan, needs-build, write 가운데 하나를 받는다",
+      "record 는 plan, needs-build, write, claim 가운데 하나를 받는다",
     ],
     [
       "하위 명령이 받지 않는 인자",

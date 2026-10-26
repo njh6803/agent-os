@@ -19,7 +19,7 @@
  * 그 판의 `app.js` 에서 `Read this README first` 와 `api\/(?:icons` 를 찾아 다시 옮긴다.
  */
 
-import { createHash } from "node:crypto";
+import { parseJson, sha256 } from "./io.ts";
 import { comparisonHash, readTokens } from "./tokens-json.ts";
 
 export const RECORD_PATH = "project/sync-record.json";
@@ -96,21 +96,6 @@ function manifestTail(text: string): number {
 export function humanPart(text: string): string {
   const cuts = [HEAD_AT.exec(text)?.index ?? -1, manifestTail(text)].filter((at) => at !== -1);
   return cuts.length === 0 ? text : text.slice(0, Math.min(...cuts));
-}
-
-/** 바이트의 sha256(16 진수). */
-export function sha256(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
-
-/** JSON 글을 푼다. 풀리지 않으면 undefined. */
-export function parseJson(text: string): unknown {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return parsed;
-  } catch {
-    return undefined;
-  }
 }
 
 /** 파일의 맞대는 값(16 진수 64 자). */

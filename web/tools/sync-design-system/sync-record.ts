@@ -11,16 +11,24 @@
  *   목록(`assetGroups`, `blobs`, `docs`, `sections`. 색인에 없는 칸은 null). 페이지가 저장할 때 색인을 다시 계산하므로
  *   해시하지 않고 목록만 적는다.
  * - `pending`: 여러 호출로 나뉜 올리기의 첫 호출이 적는 목표. 이번에 보낼 파일의 목표(`files`), 지울 경로(`delete`),
- *   색인 목록의 목표(`index`)다. 마지막 호출이 비운다(null). `claim`: 들이기가 쓰는 겹침 표지(06). 이 모듈은 받은
- *   그대로 지킨다.
+ *   색인 목록의 목표(`index`)다. 마지막 호출이 비운다(null). `claim`: 들이기가 쓰는 겹침 표지(`Claim`). 넣고 고쳐
+ *   쓰는 것은 `claim.ts` 이고, 다음 기록은 앞 기록의 것을 지키다 병합된 `claim` 의 올리기의 마지막 기록에서 비운다.
  *
  * 기록은 들여쓰기 없는 JSON 으로 쓰고, 512,000 바이트를 넘으면 쓰지 않고 `limit` 오류다. 형식 설명이 표 밖 파일마다
  * "≤512 KB" 라고 적고 KB 의 단위를 밝히지 않아 작은 쪽으로 본다(티켓 05).
  */
 
 import { CommandError } from "./command.ts";
-import { fileHash, isRecorded, parseJson, TOKENS_PATH } from "./file-hash.ts";
-import { byPath, isArtifactPath, isRecord, jsonValue, sortedPaths, stringList } from "./io.ts";
+import { fileHash, isRecorded, TOKENS_PATH } from "./file-hash.ts";
+import {
+  byPath,
+  isArtifactPath,
+  isRecord,
+  jsonValue,
+  parseJson,
+  sortedPaths,
+  stringList,
+} from "./io.ts";
 import type { JsonValue } from "./tokens-json.ts";
 
 export const RECORD_VERSION = 1;
@@ -40,10 +48,55 @@ export type IndexKey = (typeof INDEX_KEYS)[number];
 /** 색인의 그림과 문서 목록. 색인에 없는 칸은 null 이다. */
 export type IndexLists = Readonly<Record<IndexKey, JsonValue>>;
 
+/**
+ * 확인이 `pending` 의 경로마다 낸 분류. 보낼 파일은 목표와 같으면 `sent`, 앞 해시와 같거나 웹에 아직 없으면 `unsent`,
+ * 어디와도 다르면 `edited` 다. 지울 경로는 웹에 없으면 `deleted`, 아직 있으면 `remaining` 이다. 목표와는 다르고
+ * `claim` 의 해시나 사본과 같으면(들이는 중의 웹 편집) `claimed` 다. 확인이 내고 올리기의 계획(`upload.ts`)이 받는다.
+ */
+export const PENDING_CLASSES = [
+  "sent",
+  "unsent",
+  "edited",
+  "claimed",
+  "deleted",
+  "remaining",
+] as const;
+
+export type PendingClass = (typeof PENDING_CLASSES)[number];
+
+export type PendingState = ReadonlyMap<string, PendingClass>;
+
+export function isPendingClass(value: unknown): value is PendingClass {
+  return PENDING_CLASSES.some((known) => known === value);
+}
+
 export interface Pending {
   readonly files: ReadonlyMap<string, FileEntry>;
   readonly delete: readonly string[];
   readonly index: IndexLists;
+}
+
+/**
+ * 들이기의 겹침 표지(명세 "겹침"). 들이기를 시작하는 세션이 쓰고 들이기 뒤의 올리기가 비운다(`claim.ts`). 해시는
+ * `file-hash.ts` 의 맞대는 값이다.
+ */
+export interface Claim {
+  readonly branch: string;
+  /** 들이기 티켓의 저장소 경로. */
+  readonly ticket: string;
+  readonly at: string;
+  /** 들이는 때 웹의 `tokens.json` 내용 그대로(푼 JSON 값). 웹에 없었으면 null 이다. */
+  readonly tokens: JsonValue | null;
+  /** 웹이 고친 파일(`tokens.json` 밖)의 맞대는 값. */
+  readonly changed: ReadonlyMap<string, string>;
+  /** 웹에서 더한 파일의 맞대는 값. */
+  readonly added: ReadonlyMap<string, string>;
+  /** 웹에서 지운 경로. */
+  readonly removed: readonly string[];
+  /** 들이는 때 웹 색인의 그림과 문서 목록. */
+  readonly index: IndexLists;
+  /** 병합된 `claim` 을 이어받은 들이기의 기준본(푼 JSON 값). 이어받지 않았으면 null 이다. */
+  readonly base: JsonValue | null;
 }
 
 export interface SyncRecord {
@@ -54,7 +107,7 @@ export interface SyncRecord {
   readonly baseline: JsonValue | null;
   readonly index: IndexLists | null;
   readonly pending: Pending | null;
-  readonly claim: JsonValue | null;
+  readonly claim: Claim | null;
 }
 
 /** 기록 읽기의 결과. */
@@ -149,6 +202,55 @@ function storedJson(value: unknown, where: string): JsonValue {
   return converted;
 }
 
+function hashes(value: unknown, where: string): Map<string, string> {
+  if (!isRecord(value)) {
+    throw new Malformed(`${where} 가 객체가 아니다`);
+  }
+  const found = new Map<string, string>();
+  for (const [path, hash] of Object.entries(value)) {
+    if (!isArtifactPath(path) || typeof hash !== "string" || !HASH.test(hash)) {
+      throw new Malformed(
+        `${where} 의 ${JSON.stringify(path)} 가 project/ 아래 경로와 hash(16 진수 64 자)가 아니다`,
+      );
+    }
+    found.set(path, hash);
+  }
+  return found;
+}
+
+function storedClaim(value: unknown): Claim | null {
+  if (value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new Malformed("claim 이 객체나 null 이 아니다");
+  }
+  const { branch, ticket, at } = value;
+  if (
+    typeof branch !== "string" ||
+    branch === "" ||
+    typeof ticket !== "string" ||
+    typeof at !== "string"
+  ) {
+    throw new Malformed("claim 이 branch, ticket, at 을 문자열로 들지 않는다");
+  }
+  const removed = stringList(value.removed);
+  if (removed === undefined || !removed.every(isArtifactPath)) {
+    throw new Malformed("claim.removed 가 project/ 아래 경로의 배열이 아니다");
+  }
+  return {
+    branch,
+    ticket,
+    at,
+    tokens: storedJson(value.tokens ?? null, "claim.tokens"),
+    changed: hashes(value.changed, "claim.changed"),
+    added: hashes(value.added, "claim.added"),
+    removed,
+    index: storedIndex(value.index, "claim.index"),
+    base: storedJson(value.base ?? null, "claim.base"),
+  };
+}
+
 /** 기록의 글을 읽는다. */
 export function readRecord(text: string): RecordRead {
   const parsed = parseJson(text);
@@ -171,7 +273,7 @@ export function readRecord(text: string): RecordRead {
         baseline: storedJson(parsed.baseline ?? null, "baseline"),
         index: index === null ? null : storedIndex(index, "index"),
         pending: storedPending(parsed.pending ?? null),
-        claim: storedJson(parsed.claim ?? null, "claim"),
+        claim: storedClaim(parsed.claim ?? null),
       },
     };
   } catch (error) {
@@ -190,8 +292,27 @@ function entriesJson(entries: ReadonlyMap<string, FileEntry>): JsonValue {
   );
 }
 
+function hashesJson(hashes: ReadonlyMap<string, string>): JsonValue {
+  return Object.fromEntries([...hashes].sort(([left], [right]) => byPath(left, right)));
+}
+
+/** 기록에 쓰는 `claim` 의 JSON. 파일 목록은 경로 차례다. */
+export function claimJson(claim: Claim): JsonValue {
+  return {
+    branch: claim.branch,
+    ticket: claim.ticket,
+    at: claim.at,
+    tokens: claim.tokens,
+    changed: hashesJson(claim.changed),
+    added: hashesJson(claim.added),
+    removed: sortedPaths(claim.removed),
+    index: claim.index,
+    base: claim.base,
+  };
+}
+
 function recordJson(record: SyncRecord): JsonValue {
-  const { pending } = record;
+  const { pending, claim } = record;
   return {
     v: record.v,
     commit: record.commit,
@@ -203,7 +324,7 @@ function recordJson(record: SyncRecord): JsonValue {
       pending === null
         ? null
         : { files: entriesJson(pending.files), delete: [...pending.delete], index: pending.index },
-    claim: record.claim,
+    claim: claim === null ? null : claimJson(claim),
   };
 }
 
@@ -251,6 +372,11 @@ export interface NextRecordInput {
   /** 이번 올리기가 보내는 색인의 그림과 문서 목록. */
   readonly index: IndexLists;
   readonly call: RecordCall;
+  /**
+   * 병합된 `claim` 의 올리기다. 마지막 기록이 `claim` 을 비운다. 그 밖의 올리기("덮어쓴다" 포함)와 여러 호출의 첫
+   * 기록은 `claim` 을 지킨다(명세 "겹침"의 "열린 PR 이 있으면"의 주석).
+   */
+  readonly clearClaim: boolean;
 }
 
 function entryOf(path: string, data: Uint8Array): FileEntry {
@@ -276,8 +402,8 @@ function outputBaseline(output: ReadonlyMap<string, Uint8Array>): JsonValue | un
 
 /**
  * 다음 기록. 첫 호출은 앞 기록에 이번 목표를 `pending` 으로 얹고, 마지막 호출은 앞 기록에 이번에 보낸 것과 지운 것을
- * 합치고 `pending` 을 비운다. `claim` 은 앞 기록의 것을 그대로 지킨다. 보낼 파일이 이번 산출에 없거나, 마지막 기록에
- * 기준본이 없으면 `input` 오류다.
+ * 합치고 `pending` 을 비운다. `claim` 은 앞 기록의 것을 그대로 지키고, 병합된 `claim` 의 올리기면 마지막 기록에서만
+ * 비운다. 보낼 파일이 이번 산출에 없거나, 마지막 기록에 기준본이 없으면 `input` 오류다.
  */
 export function nextRecord(input: NextRecordInput): SyncRecord {
   const { previous, output, changes, call } = input;
@@ -342,6 +468,6 @@ export function nextRecord(input: NextRecordInput): SyncRecord {
     baseline,
     index: input.index,
     pending: null,
-    claim,
+    claim: input.clearClaim ? null : claim,
   };
 }
