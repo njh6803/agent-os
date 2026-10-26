@@ -266,6 +266,39 @@ PR 직전 리뷰의 반영을 돌리다 `WidgetStorage.test.tsx` 의 "판과 모
 - 셀프 리뷰가 위젯 코드(`drivers.ts`)를 고쳐 셋을 다시 돌렸다. 바뀐 것은 주석과 같은 값의 상수라 동작은 같다. `pnpm -C web/apps/widget exec playwright test`: 15 passed(37.9초). `pnpm -C web visual:widget`: 42 passed(1.1분). `uv run --env-file ../../../.env pytest -m llm_widget -q`: 1 passed. 토큰 6,555(입력 6,483, 출력 72), 트레이스 1, 모델 호출 2.
 - 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
 
+## 인계 (커밋 뒤, 넷째 세션)
+
+넷째 세션(지금 제목 `feature/09-widget-storage-and-reconnect`)이 푸시하기 전에 `gh pr edit 387 --body-file` 로 PR 본문을 이 반영의 범위로 넓혔다. "왜 이렇게 했나"에 요청 글 없는 교환의 "다시 보내기" 없음, `sleep` 의 상한, `authorize` 의 주석을, "남긴 위험"에 요청 글 없는 교환의 알림이 명세 밖이라는 것을, 체크리스트와 확인 방법에 이 셀프 리뷰와 시험 199 를 더했다. 그 뒤 커밋 42d004a1 을 만들자 인계 계기(세션 컨텍스트 274,564 토큰, 문턱 200,000, 경계 `커밋 뒤`)가 왔다. 인계하지 않는 다섯에 들지 않는다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전` 이고, `get_session` 의 `self` 에 `parentSessionId` 가 없다. 이 절은 커밋하지 않았고 새 세션이 이어 쓰고 커밋한다.
+
+- 커밋 42d004a1 의 pre-commit: run_checks 의 열(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify)과 마크다운 표, 줄 구분 문자, 변이 표 원문, 인용 대조, 커밋 메시지 검사가 지났다. ruff 둘은 스테이지된 `.py` 가 없어 Skipped 였고, 손으로 친 `uv run ruff check .`·`uv run ruff format --check .` 가 지났다.
+- 아직 푸시하지 않았다. PR 의 헤드는 2d0e3276 그대로다.
+- 일지 "봇 회차와 인계" 절의 보류 다섯을 PR 코멘트로 남길 초안을 이 세션의 스크래치패드에 썼다(`C:/Users/User/AppData/Local/Temp/claude/C--project-agent/d0b6346b-9d5c-4da0-b13f-30ba9577c65b/scratchpad/pr387_holds.md`). 둘째 항목의 부르는 쪽마다 다른 할 일은 `drivers.ts` 의 다섯 자리를 grep 해 맞췄다. 워크트리 가드가 `--body` 인자를 거부한 적이 있어 `--body-file` 로 넘긴다.
+- 넘긴 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/09-widget-storage-and-reconnect.md. 위젯 저장과 재접속(web-widget 의 마지막 티켓)의 PR #387 봇 첫 회차 반영 커밋을 푸시하고 다음 봇 회차와 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/09-widget-storage-and-reconnect.md
+브랜치: feature/09-widget-storage-and-reconnect
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md 의 "봇 회차 반영의 셀프 리뷰 (넷째 세션)"과 "인계 (커밋 뒤, 넷째 세션)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 42d004a1(PR #387 봇 첫 회차의 반영과 그 셀프 리뷰)까지 마쳤고 아직 푸시하지 않았다. PR 본문은 이 커밋의 범위로 이미 넓혔다. 일지의 "인계 (커밋 뒤, 넷째 세션)" 절은 커밋하지 않은 채 작업 트리에 있다. 남은 단계는 차례로 ① 푸시 ② 일지 "봇 회차와 인계" 절의 보류 다섯을 PR 코멘트로 남긴다(`gh pr comment 387 --body-file <파일>`. 초안은 인계 절이 든 경로에 있고, 읽지 못하면 일지에서 다시 쓴다) ③ `@coderabbitai review` 를 남기고 상태를 한 번 읽어 pending 이면 `tools/wait_ci.py 387` 을 백그라운드로 띄운다 ④ 봇 회차. CodeRabbit 은 둘째, claude-review 는 셋째 회차라 두 봇 모두 Critical·Major 만 고치고 나머지는 보류 이유를 PR 코멘트로 남긴다 ⑤ 일지의 인계 절은 마지막 봇 회차의 커밋에 싣고, 고친 것이 없으면 일지만 실은 커밋을 병합 전에 푸시한다 ⑥ "워크트리에서 병합할 때"로 병합하고 next-session. 일지: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-widget-storage-and-reconnect (인계함)` 으로 바꿨다. 띄운 백그라운드 작업은 모두 끝나 남지 않았다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-26T05:40:26Z
+
+## 봇 둘째 회차 (다섯째 세션)
+
+위 지시문으로 연 다섯째 세션이 제목을 `feature/09-widget-storage-and-reconnect` 로 바꾸고 워크트리에 들어갔다. 42d004a1 을 푸시했고(PR 의 헤드가 2d0e3276 에서 42d004a1 로), 넷째 세션의 초안을 `drivers.ts` 의 `authorize` 다섯 자리와 `received.` 대입 0건으로 다시 맞춘 뒤 보류 다섯을 PR 코멘트(6409128274)로 남겼다. `@coderabbitai review` 도 `--body-file` 로 남겼고(6409131883), 상태를 한 번 읽어 pending 이라 `tools/wait_ci.py 387` 을 백그라운드로 띄웠다.
+
+- `tools/wait_ci.py 387`: `끝: 모두 통과. CodeRabbit: Review rate limited`. CodeRabbit 은 이 푸시를 리뷰하지 않아 회차로 세지 않는다(그 봇의 리뷰는 2d0e3276 의 첫 회차 하나다). 42d004a1 의 보안·버그 축은 넷째 세션의 셀프 리뷰가 대신했다.
+- claude-review 셋째 회차(6409132547): Critical·Major 없음. Minor 넷, Nit 하나를 고치지 않고 이유를 PR 코멘트(6409264551)로 남겼다. 넷은 앞 회차와 같은 지적(`authorize` 의 CQS, `restore` 의 `hold` 두 번, 같은 꼴 분기)이고 새 지적은 `drivers.ts` 한 파일이 넷의 이유로 바뀐다는 Minor 와 `lib/storage.ts:160` 의 단락 평가 Nit 이다. 앞의 것은 이 PR 이 비동기 일을 모으려고 만든 파일이고 다섯 일이 머리 주석의 같은 뼈대를 나눠 쓴다는 것, 뒤의 것은 tsc strict 가 `last` 를 좁혀 받아들인 것이라는 판단이다. 모두 지금 꼴을 두는 판단이라 "다음"에 넣지 않는다.
+- 고친 것이 없는 회차라 이 일지만 실은 커밋을 푸시한다(next-session 순서 1의 3). 그 푸시로 도는 리뷰에서 보류한 일은 일지에 다시 적지 않고 PR 코멘트에 남긴다.
+
 ## 회고
 
 셋째 세션이 이 일지와 그 세션을 원천으로 돌렸다. 후보 열, 승인 넷(모두 대기열, 이 세션에서 반영한 것 없음), 기각 여섯, 넘김 0. 넘긴 것이 없어 사용자에게 묻지 않았다.
