@@ -122,3 +122,62 @@ PR 직전 리뷰에 밀 주장으로 넘기는 새 문장(원문):
 - 보류 둘(`tokens-json.ts`를 정규 꼴과 차이 목록으로 나누기, `diffType`의 되풀이 줄이기)은 04·05 가운데 뒤에 병합하는 쪽이 일지 "다음"에 넘긴다(이어받은 지시문 그대로).
 
 다시 돌린 명령: `pnpm -C web exec vitest run --project node tools/sync-design-system`(169 통과), 타입 검사·ESLint·Prettier 깨끗, 변이 표의 `--check`("변이 87 모두 원문이 한 번씩 있다"), 새로 더하거나 표지를 바꾼 변이 20을 번호로 돌려 "변이 20 모두 기대대로"(기준선은 모두 초록). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고, 결과는 커밋 뒤에 적는다.
+
+## 인계 (커밋 뒤)
+
+커밋 `0d697c35`(`feat: 웹 편집을 디자인 토큰 CSS 로 들이고 명암비 제안을 낸다 (design-reverse-sync 04)`, 19개 파일)의 pre-commit은 모두 지났다. 병렬 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest)이 Passed였고 한 바퀴에 872초가 걸렸다. 마크다운 표, 줄 구분 문자, 변이 표 원문(`--staged`), 커밋 메시지 검사도 Passed였다. ruff 둘은 스테이지된 `.py`가 없어 Skipped였으므로 커밋 뒤에 손으로 쳤고 `uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 1061개 파일이 이미 서식대로였다. 인용 대조 경고 3건(이 일지 25·75·124행)은 막지 않는 경고이고, 셋 모두 변이 도구의 출력과 셀프 리뷰 전의 옛 문장을 옮긴 것이라 저장소에 글자 그대로 없는 것이다. 고치지 않았다.
+
+그 직후 세션 컨텍스트가 345,912 토큰으로 문턱을 넘은 채 `커밋 뒤` 경계에 와서 인계 계기가 왔다. 이 세션의 제목은 `feature/04-import-command`였다. 커밋은 푸시하지 않았고 이 브랜치에 열린 PR은 없다(`gh pr view`가 "no pull requests found"였다).
+
+새 세션이 남은 것:
+
+- origin/main 합치기. 합친 뒤 harness 015(PR #390)의 `.claude/rules/probes.md` 표지 문장("가르려는 다른 해석 아래에서는 나지 않는 관찰")으로 들이기 변이 표의 표지 87을 다시 본다.
+- `packages/ui`를 고쳤으므로 Docker로 `pnpm -C web visual`과 `pnpm -C web visual:widget`.
+- 변이 표 전체 실행(들이기 표 87, sync 표의 변이 14, 명암비 표)과 프로브 README의 결과 절.
+- PR 직전 리뷰(`coderabbit-review`. CLI가 돌지 못하면 `/security-review`와 `bug-perf-review`). 밀 주장은 위 "### 반영"의 원문 목록이다.
+- `/git-pr`, 첫 `@coderabbitai review` 코멘트, 봇 회차와 반영, next-session의 "워크트리에서 병합할 때"로 병합하고 다음 지시문을 낸다.
+- 보류 둘(`tokens-json.ts` 나누기, `diffType` 줄이기)은 04·05 가운데 뒤에 병합하는 쪽이 일지 "다음"에 넘긴다. 05 워크트리가 07 티켓, 프로브 README, `command.ts`, `main.ts`를 함께 고치고, 03 워크트리가 프로브 README, `sync_script_mutations.toml`, `build.test.ts`, `tokens-json.test.ts`를 함께 고친다(`sibling_overlap.py`). 뒤에 병합하는 쪽에서 글자 충돌이 날 수 있다.
+
+낸 지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/04-import-command.md. 들이기 명령이 웹·기준본·코드를 셋으로 맞대 값과 설명을 디자인 토큰 CSS의 그 줄로 옮기고, 명암비에 걸리면 가장 가까운 통과 값을 낸다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/04-import-command.md
+브랜치: feature/04-import-command
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-19-import-command.md 의 "인계 (커밋 뒤)" 절(그 절은 커밋하지 않았고 이 브랜치의 워크트리에 있다)
+이어받을 상태: 인계: 커밋 뒤. 커밋 0d697c35까지 셀프 리뷰와 반영, 커밋을 마쳤고 pre-commit과 손으로 친 ruff 둘이 초록이다. 푸시하지 않았고 열린 PR이 없다. 남은 단계는 origin/main 합치기와 변이 표지 다시 보기, Docker 사진 비교 둘, 변이 표 전체 실행과 프로브 README 결과 절, PR 직전 리뷰, PR과 봇 회차, 병합이다(일지 docs/journal/2026-10-26-19-import-command.md). 보류 둘(tokens-json.ts 나누기, diffType 줄이기)은 04·05 가운데 뒤에 병합하는 쪽이 일지 "다음"에 넘긴다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-import-command (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 끝난 커밋뿐이라 멈출 것이 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T17:12:20Z
+
+## 커밋 뒤를 이은 세션 (2026-10-27)
+
+> 사용자: (지시문) 이어받을 상태: 인계: 커밋 뒤. 커밋 0d697c35까지 셀프 리뷰와 반영, 커밋을 마쳤고 pre-commit과 손으로 친 ruff 둘이 초록이다. 푸시하지 않았고 열린 PR이 없다. 남은 단계는 origin/main 합치기와 변이 표지 다시 보기, Docker 사진 비교 둘, 변이 표 전체 실행과 프로브 README 결과 절, PR 직전 리뷰, PR과 봇 회차, 병합이다. 이번 요청 범위: PR과 병합까지
+
+제목을 `feature/04-import-command`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. origin/main(harness 012·014·015, `b84691e0`까지)을 합쳤고 이 브랜치의 파일과 겹치지 않아 충돌이 없었다.
+
+### 변이 표지 다시 보기
+
+harness 015가 `.claude/rules/probes.md`에 더한 문장("가르려는 다른 해석 아래에서는 나지 않는 관찰")으로 들이기 표의 표지 87을 다시 봤다. 여기서 가르려는 다른 해석은 "고른 단언이 아니라 같은 시험의 다른 단언이 빨개졌다"이다. 표지가 값이 든 차이 줄이거나 실패 머리에 받은 값이 실린 것은 그 해석 아래에서 나지 않는다. 걸린 것은 셋이고, 셋 다 한 시험 안에 같은 꼴의 단언이 둘 있어 어느 쪽이 빨개져도 출력이 같았다.
+
+- 41(걸린 짝에 옮긴 원색을 적지 않는다): 표지 `Error: 하나가 아니라 0 개다`는 같은 시험의 `only(report.moved)`와 `only(report.contrast.suggestions)`가 모두 낸다. 게다가 빨강은 겨눈 단언(걸린 짝마다 `tokens`에 gray-100이 드는가)이 아니라 그 앞의 제안 `only`에서 났다. 시험을 고쳐 걸린 짝 단언을 `filter(...)`가 남긴 짝을 `toEqual([])`로 보는 꼴로 바꾸고 제안 `only`를 그 뒤로 옮겼다. 표지는 받은 짝의 `+     "tokens": [],`다.
+- 64·65(풀 수 없는 JSON, 배열 답 파일): 한 시험이 두 호출의 보고를 같은 `toMatchObject`로 봐, 표지 `+     "kind": "usage",`·`+   "ok": true,`가 어느 호출에서 났는지 가르지 못했다. 시험을 "JSON 으로 풀 수 없는 입력은 input 오류다"와 "객체가 아닌 답 파일은 input 오류다"로 나누고 두 변이의 `-t`를 하나씩 겨누게 했다.
+
+고른 실행(`tools/mutate.py … 41 64 65`)은 기준선 셋이 초록이고 "변이 3 모두 기대대로"였다. `--check`는 "변이 3 모두 원문이 한 번씩 있다"였고 메아리 경고는 없었다. `vitest run --project node tools/sync-design-system`은 170개 통과, 고친 두 시험 파일의 Prettier 검사는 깨끗했다.
+
+나머지 표지 가운데 값이 없는 머리만 쓰는 것(38 `expected false to be true`, 54 `expected [] to deeply equal [ …(4) ]`, 61 `+   "status": 1,`)은 그 시험에서 같은 출력을 낼 수 있는 다른 단언이 없거나(38의 다른 `toBe(true)`는 변이가 닿지 않는 원본 CSS를 보고 기준선이 초록이다. 54는 기대가 넷인 단언이 하나다), 표지가 가르려는 것이 출력 파일을 먼저 읽어 난 ENOENT와 보고의 어긋남이라(61) 그대로 두었다.
+
+### 사진 비교
+
+Docker Desktop의 프로세스는 00:06부터 떠 있었지만 엔진이 `docker info`에 `Internal Server Error`를 냈다(`default`와 `desktop-linux` 컨텍스트 둘 다). Docker Desktop을 다시 시작하려 했더니 자동 모드 분류기가 "Interfere With Workloads"로 막았다.
+
+### 커밋
+
+표지 고침의 첫 커밋 시도는 pre-commit의 pytest가 막았다(1 failed, 5666 passed, 1014.19초. 앞 커밋의 러너 한 바퀴는 872초였다). 빨간 것은 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`의 `Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`였고, 같은 실행에서 xdist 일꾼 하나가 `Windows fatal exception: code 0x80070006`으로 내려갔다. 그 파일만 따로 돌리니 6 passed(195.71초)였다. 이 커밋이 닿지 않는 시험이고 부하에서만 빨개지는 시간 시험이라, 대기열 306을 닫은 결정(ADR 0036)대로 회차를 더하지 않고 여기에만 적고 같은 커밋을 다시 쳤다.

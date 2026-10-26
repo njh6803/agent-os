@@ -191,10 +191,9 @@ describe("스크립트 진입", () => {
     expect(errorMessage(outcome.report)).toContain("--base <tokens.json>");
   });
 
-  test("JSON 으로 풀 수 없는 입력과 객체가 아닌 답 파일은 input 오류다", () => {
+  test("JSON 으로 풀 수 없는 입력은 input 오류다", () => {
     writeFileSync(join(scratch, "tokens.json"), buildTokensJson(CSS));
     writeFileSync(join(scratch, "broken.json"), "{");
-    writeFileSync(join(scratch, "list.json"), "[]");
     const broken = invoke(
       "import",
       "--web",
@@ -204,6 +203,14 @@ describe("스크립트 진입", () => {
       "--out",
       "a.css",
     );
+
+    expect(broken.report).toMatchObject({ command: "import", ok: false, error: { kind: "input" } });
+    expect(errorMessage(broken.report)).toContain("broken.json 를 JSON 으로 풀 수 없다");
+  });
+
+  test("객체가 아닌 답 파일은 input 오류다", () => {
+    writeFileSync(join(scratch, "tokens.json"), buildTokensJson(CSS));
+    writeFileSync(join(scratch, "list.json"), "[]");
     const list = invoke(
       "import",
       "--web",
@@ -216,8 +223,6 @@ describe("스크립트 진입", () => {
       "a.css",
     );
 
-    expect(broken.report).toMatchObject({ command: "import", ok: false, error: { kind: "input" } });
-    expect(errorMessage(broken.report)).toContain("broken.json 를 JSON 으로 풀 수 없다");
     expect(list.report).toMatchObject({ command: "import", ok: false, error: { kind: "input" } });
     expect(errorMessage(list.report)).toContain(
       "list.json 는 자리 id 에서 답으로 가는 객체여야 한다",

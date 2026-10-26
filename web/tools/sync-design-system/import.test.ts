@@ -720,7 +720,6 @@ describe("판정과 제안", () => {
   test("녹청 다크의 글자 원색을 바탕에 가깝게 바꾸면 걸린 짝과 그 원색의 가장 가까운 통과 값을 낸다", () => {
     const report = darkText(START);
     const moved = only(report.moved);
-    const suggestion = only(report.contrast.suggestions);
 
     expect(moved.id).toBe(GRAY_100);
     expect(
@@ -729,11 +728,12 @@ describe("판정과 제안", () => {
       ),
     ).toContain("nokcheong-dark text/bg");
     expect(
-      report.contrast.failures.every(
+      report.contrast.failures.filter(
         ({ theme, ratio, minimum, tokens }) =>
-          theme === "nokcheong-dark" && ratio < minimum && tokens.includes(GRAY_100),
+          theme !== "nokcheong-dark" || ratio >= minimum || !tokens.includes(GRAY_100),
       ),
-    ).toBe(true);
+    ).toEqual([]);
+    const suggestion = only(report.contrast.suggestions);
     expect(suggestion).toMatchObject({
       id: GRAY_100,
       token: "gray-100",

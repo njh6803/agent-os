@@ -506,7 +506,7 @@ name = "걸린 짝에 옮긴 원색을 적지 않으면 판정 사례가 빨갛�
 runner = "node"
 tests = ["tools/sync-design-system/import.test.ts", "-t", "녹청 다크의 글자 원색을"]
 expect = "red"
-expect_output = ['Error: 하나가 아니라 0 개다']
+expect_output = ['+     "tokens": [],']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/import.ts"
@@ -800,7 +800,7 @@ new = '''  if (web === undefined || out === undefined) {'''
 [[mutation]]
 name = "풀 수 없는 JSON 을 usage 로 내면 JSON 입력 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/main.test.ts", "-t", "JSON 으로 풀 수 없는 입력과"]
+tests = ["tools/sync-design-system/main.test.ts", "-t", "JSON 으로 풀 수 없는 입력은"]
 expect = "red"
 expect_output = ['+     "kind": "usage",']
 
@@ -810,9 +810,9 @@ old = '''    throw new CommandError("input", `${path} 를 JSON 으로 풀 수 �
 new = '''    throw new CommandError("usage", `${path} 를 JSON 으로 풀 수 없다: ${messageOf(error)}`);'''
 
 [[mutation]]
-name = "배열 답 파일을 받으면 JSON 입력 사례가 빨갛다"
+name = "배열 답 파일을 받으면 객체가 아닌 답 파일 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/main.test.ts", "-t", "JSON 으로 풀 수 없는 입력과"]
+tests = ["tools/sync-design-system/main.test.ts", "-t", "객체가 아닌 답 파일은"]
 expect = "red"
 expect_output = ['+   "ok": true,']
 
