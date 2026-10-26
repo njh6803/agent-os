@@ -15,10 +15,12 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 않고, 고른 변이마다 원문이 파일에 정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을
 모두 알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
 파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고
-주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다.
+주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. 이름·번호·`--since` 로
+고른 `--check` 는 표지의 메아리(아래 표지 절)도 본다.
 
 `--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
-고친 표(`*_mutations.toml`)는 모든 원문을 본다. 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
+고친 표(`*_mutations.toml`)는 모든 원문을 보고, 그 표에서 어느 부모 판과도 다른 변이는 표지의
+메아리를 색인의 시험 파일로 본다. 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
 표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 표는 이 커밋이 고친 파일(지우거나 옮긴
 것 포함)을 가리키는 변이만 보고, 부모 판에서 맞던 원문이 색인에서 깨졌을 때 알린다. 표가 가리키는
 코드만 바뀌고 표는 커밋에 들지 않아, 커밋에 든 표만 보던 확인을 지나 원문이 0번인 표가 남았다(대기열
@@ -129,6 +131,17 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
 않는다. 못 보는 것: 판정 낱말이 아닌 낱말이 하나라도 섞이면 받는다(`test failed` 의 `test`). exit
 러너의 명령이 pytest 여도 그 출력의 판정 낱말을 거르지 않는다(`["failed"]` 를 받는다).
 
+표지의 메아리. 빨강이나 처리하지 않은 에러를 기대한 변이의 표지가 그 시험 파일(`tests` 인자 가운데
+옵션이 아닌 것을 러너의 자리 기준으로 이은 경로, `::` 뒤는 뗀다)의 원문에 글자 그대로 있으면
+알린다. 시험 함수 이름은 실패 머리에, 기대 값의 글자는 실패 줄 둘레의 코드 조각에 늘 실려, 그
+시험의 어느 단언이 빨개져도 표지가 맞는다. 표지 스물여덟을 시험 함수 이름으로 골랐고, 기대 배열의
+글자가 코드 조각에 실린 일도 있었다(대기열 417). 이름·번호·`--since` 로 고른 `--check` 와
+`--staged` 의 새 변이만 본다. 옛 변이는 소급하지 않고 그 변이를 고칠 때 본다. 초록을 기대한 변이는
+실패 머리와 코드 조각을 찍지 않아 보지 않는다. 못 보는 것: 파일 단위로 맞대어, 같은 파일의 다른
+시험에만 있는 글자도 알린다(거짓 양성, 그 시험이 빨개질 때는 실리지 않는다). 폴더 인자는 그 안의
+파일을 보지 않는다(거짓 음성). 원문의 이스케이프(`\\"`)와 출력의 글자가 달라 글자 그대로 맞지 않는
+메아리는 놓친다.
+
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
    자리와 되돌릴 파일이 저장소 안에 있는지 본다. 하나라도 틀리면 아무 파일도 쓰지 않고 끝낸다.
@@ -177,9 +190,12 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
 경로이고, 일지 2026-10-19-13 이 그랬다) 가장 위의 것을 `taskkill /T /F` 로 끝내고, 변이가 남았는지
 `git status` 로 본다. 그래서 도는 동안(기준선부터 마지막 되돌림까지) 이 체크아웃의 git
 디렉터리(워크트리면 `.git` 파일이 가리키는 곳)에 `mutate-running-<pid>.json`(pid 와 표의 절대
-경로)을 두고 끝나면 예외로 끝나도 지운다. PostToolUse 계기 훅 `tools/hook_edit_during_mutate.py` 가
-그 체크아웃의 파일을 고칠 때 표지의 pid 가 살아 있으면 알린다. 강제로 끝나 남은 표지는 pid 가 죽어
-알리지 않는다. 원문만 보는 `--check` 와 `--staged` 는 파일을 쓰지 않아 표지를 두지 않는다.
+경로와 이 프로세스의 시작 시각)을 두고 끝나면 예외로 끝나도 지운다. PostToolUse 계기 훅
+`tools/hook_edit_during_mutate.py` 가 그 체크아웃의 파일을 고칠 때 표지의 pid 가 살아 있고 그
+시작 시각이 같으면 알린다. 강제로 끝나 남은 표지는 pid 가 죽었거나, 그 pid 를 받은 다른 프로세스의
+시작 시각이 달라 알리지 않는다(대기열 449). 시작 시각을 읽지 못하는 OS 에서는 그 칸을 적지 않아
+훅이 pid 만으로 본다(그 훅의 못 보는 것). 원문만 보는 `--check` 와 `--staged` 는 파일을 쓰지 않아
+표지를 두지 않는다.
 
     git worktree add --detach <임시 경로> HEAD
     (그 경로에서) uv sync
@@ -241,6 +257,7 @@ lastfailed 에 남지 않게 한다.
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import errno
 import io
 import json
@@ -255,7 +272,7 @@ import tomllib
 from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -789,6 +806,55 @@ def _file_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[st
     return problems
 
 
+# 표지를 시험 원문과 맞대는 기대. 초록의 출력은 실패 머리와 코드 조각을 찍지 않는다
+_ECHO_EXPECTS = frozenset({"red", "unhandled"})
+
+
+def _test_args(runners: Mapping[str, RunnerSpec], mutation: Mutation) -> list[str]:
+    """변이의 `tests` 인자 가운데 옵션이 아닌 것을 러너의 자리 기준으로 이은 경로. `::` 뒤의 시험
+    이름은 뗀다. 파일인지(`-k` 의 식, 폴더)는 보지 않는다."""
+    cwd = Path(runners[mutation.runner].cwd)
+    return [
+        (cwd / arg.split("::", 1)[0]).as_posix()
+        for arg in mutation.tests
+        if not arg.startswith("-")
+    ]
+
+
+def _echo_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[str]:
+    """빨강이나 처리하지 않은 에러를 기대한 변이의 표지 가운데 그 시험 파일의 원문(`read` 가 읽은
+    바이트)에 글자 그대로 있는 것(대기열 417). 읽지 못하는 인자(폴더, `-k` 의 식, 없는 파일)는
+    넘는다."""
+    runners = _runners(spec)
+    base = root.resolve()
+    problems: list[str] = []
+    for mutation in spec.mutation:
+        if (
+            mutation.expect not in _ECHO_EXPECTS
+            or not mutation.expect_output
+            or mutation.runner not in runners
+        ):
+            continue
+        for candidate in dict.fromkeys(_test_args(runners, mutation)):
+            path = _inside(root, candidate)
+            if path is None:
+                continue
+            try:
+                text = read(path).decode("utf-8", "replace")
+            except OSError:
+                continue
+            echoed = [marker for marker in mutation.expect_output if marker in text]
+            if echoed:
+                problems.append(
+                    f"{mutation.name}: expect_output 의 표지 {', '.join(map(repr, echoed))} 가"
+                    f" {path.relative_to(base).as_posix()} 의 시험 원문에 글자 그대로 있다."
+                    " 실패 출력의 머리(시험 이름)나 실패 줄 둘레의 코드 조각에 늘 실려, 고른"
+                    " 단언이 빨개졌다는 표지가 되지 못한다(대기열 417). 변이가 낸 받은 값처럼"
+                    " 그 단언이 빨개질 때만 찍히는 문구로 고른다"
+                )
+    return problems
+
+
 def _validate(root: Path, spec: Spec) -> None:
     problems = _file_problems(root, spec)
     if problems:
@@ -1004,7 +1070,16 @@ def _report_mutation(
 
 def check(spec: Spec, *, root: Path, out: Callable[[str], None], read: Reader = _read_disk) -> int:
     """원문만 본다. 명령을 돌리지 않는다. 모두 맞으면 0, 하나라도 틀리면 틀린 것을 모두 알리고 2."""
-    problems = _file_problems(root, spec, read)
+    return _report_check(spec, _file_problems(root, spec, read), out)
+
+
+def check_picked(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
+    """이름·번호·`--since` 로 고른 변이의 원문 확인. `check` 에 더해 표지가 시험 원문에 글자
+    그대로 있는지도 본다(옛 변이는 소급하지 않아 고른 변이에만 쓴다)."""
+    return _report_check(spec, _file_problems(root, spec) + _echo_problems(root, spec), out)
+
+
+def _report_check(spec: Spec, problems: list[str], out: Callable[[str], None]) -> int:
     for problem in problems:
         out(f"!! {problem}")
     if problems:
@@ -1261,6 +1336,22 @@ def _parents(root: Path) -> list[str]:
     return found
 
 
+def _fresh(spec: Spec, olds: Sequence[bytes | None]) -> Spec | None:
+    """커밋에 든 표에서 어느 부모 판의 같은 표와도 다른 변이(`changed_names`)만 남긴 표. 없으면
+    None. 부모 판에 표가 없거나 지금의 도구로 읽지 못하면 그 부모와는 모두 다르다고 본다. 표지의
+    메아리는 이 변이만 본다(옛 변이는 소급하지 않는다, 대기열 417)."""
+    names = {m.name for m in spec.mutation}
+    for old in olds:
+        if old is None:
+            continue
+        try:
+            names &= set(changed_names(load_spec(old.decode("utf-8")), spec))
+        except (UnicodeDecodeError, SpecError):
+            continue
+    kept = [m for m in spec.mutation if m.name in names]
+    return Spec(runner=spec.runner, mutation=kept) if kept else None
+
+
 @dataclass(frozen=True)
 class _Watched:
     """커밋에 들지 않은 표의 변이 가운데 이 커밋이 고친 파일을 가리키는 것. `same` 은 표가 색인과
@@ -1269,6 +1360,14 @@ class _Watched:
     table: str
     mutation: Mutation
     same: tuple[str, ...]
+
+
+class _Authored(NamedTuple):
+    """이 커밋이 더했거나 고친 표. `fresh` 는 그 표에서 어느 부모 판의 같은 표와도 다른 변이다."""
+
+    table: str
+    spec: Spec
+    fresh: Spec | None
 
 
 def staged(*, root: Path, out: Callable[[str], None]) -> int:
@@ -1289,11 +1388,11 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
         path for found in status.values() for path, letter in found.items() if letter == "D"
     )
     tables = _names(_git_out(root, "ls-files", "-z", "--", _TABLES))
-    texts = _blobs(root, [f":{table}" for table in tables])
+    texts = _blobs(root, [f"{rev}:{table}" for table in tables for rev in (_INDEX, *parents)])
     relative = _Relative(root)
     lines: list[str] = []
     problems = 0
-    authored: list[tuple[str, Spec]] = []
+    authored: list[_Authored] = []
     authored_count = 0
     watched: list[_Watched] = []
     for table in tables:
@@ -1312,7 +1411,8 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
                 problems += 1
             continue
         if not same:
-            authored.append((table, spec))
+            olds = [texts.get(f"{parent}:{table}") for parent in parents]
+            authored.append(_Authored(table, spec, _fresh(spec, olds)))
             continue
         for mutation in spec.mutation:
             files = relative.files(mutation)
@@ -1320,9 +1420,17 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
                 watched.append(_Watched(table, mutation, same))
     wanted = [
         f":{name}"
-        for _, spec in authored
-        for mutation in spec.mutation
+        for item in authored
+        for mutation in item.spec.mutation
         for name in relative.files(mutation) or ()
+    ]
+    wanted += [
+        f":{name}"
+        for item in authored
+        if item.fresh is not None
+        for mutation in item.fresh.mutation
+        for arg in _test_args(_runners(item.fresh), mutation)
+        if (name := relative(arg)) is not None
     ]
     wanted += [
         f"{rev}:{name}"
@@ -1332,8 +1440,10 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
     ]
     blobs = _blobs(root, wanted)
     index = _reader(root, blobs, _INDEX, deleted)
-    for table, spec in authored:
+    for table, spec, fresh in authored:
         found = _file_problems(root, spec, index)
+        if fresh is not None:
+            found += _echo_problems(root, fresh, index)
         lines += [f"{table}: !! {problem}" for problem in found]
         problems += len(found)
     for item in watched:
@@ -1420,13 +1530,7 @@ def _watched_paths(root: Path, spec: Spec) -> list[str]:
     base = root.resolve()
     found: dict[str, None] = {}
     for mutation in spec.mutation:
-        candidates = [edit.file for edit in mutation.edit]
-        cwd = Path(runners[mutation.runner].cwd)
-        candidates += [
-            (cwd / arg.split("::", 1)[0]).as_posix()
-            for arg in mutation.tests
-            if not arg.startswith("-")
-        ]
+        candidates = [edit.file for edit in mutation.edit] + _test_args(runners, mutation)
         for relative in candidates:
             path = _inside(root, relative)
             if path is not None and path.exists():
@@ -1471,15 +1575,75 @@ def git_dir_of(root: Path) -> Path | None:
     return (root / target).resolve() if target else None
 
 
+_QUERY_LIMITED = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
+_INHERIT_HANDLE = False  # bInheritHandle. 자식 프로세스에 핸들을 물려주지 않는다
+_STILL_ACTIVE = 259  # GetExitCodeProcess 가 아직 도는 프로세스에 내는 값
+
+
+def process_started(pid: int) -> int | None:
+    """그 pid 프로세스의 시작 시각. 윈도는 `GetProcessTimes` 의 만든 시각(100ns 단위), 리눅스는
+    `/proc/<pid>/stat` 의 `starttime`(부팅 뒤 클록 틱)이다. 프로세스가 없거나 끝났거나 읽지
+    못하거나 다른 OS 면 None. 윈도는 끝난 프로세스도 누가 핸들을 쥐고 있으면 열리고 만든 시각을
+    내므로 끝났는지(`STILL_ACTIVE`)를 함께 본다. 편집 훅 `tools/hook_edit_during_mutate.py` 의 같은
+    이름과 같은 값을 내야 한다(훅은 단독 실행 스크립트라 사본을 든다)."""
+    if pid <= 0:
+        return None
+    if sys.platform == "win32":
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.restype = ctypes.c_void_p
+        kernel.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        kernel.GetExitCodeProcess.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+        times = ctypes.POINTER(ctypes.c_ulonglong)
+        kernel.GetProcessTimes.argtypes = [ctypes.c_void_p, times, times, times, times]
+        kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = kernel.OpenProcess(_QUERY_LIMITED, _INHERIT_HANDLE, pid)
+        if not handle:
+            return None
+        try:
+            code = ctypes.c_ulong()
+            if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return None
+            if code.value != _STILL_ACTIVE:
+                return None
+            created, ended, kernel_time, user_time = (ctypes.c_ulonglong() for _ in range(4))
+            if not kernel.GetProcessTimes(
+                handle,
+                ctypes.byref(created),
+                ctypes.byref(ended),
+                ctypes.byref(kernel_time),
+                ctypes.byref(user_time),
+            ):
+                return None
+            return created.value
+        finally:
+            kernel.CloseHandle(handle)
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    # 둘째 칸(실행 파일 이름)은 괄호에 싸여 공백을 들 수 있어 마지막 `)` 뒤에서 센다. 그 뒤 첫 칸이
+    # 셋째 칸(state)이고 starttime 은 스물두째 칸이다(proc(5))
+    fields = stat.rsplit(")", 1)[-1].split()
+    return int(fields[19]) if len(fields) > 19 and fields[19].isdigit() else None
+
+
 @contextlib.contextmanager
 def _running_marker(root: Path, table: Path) -> Generator[None]:
-    """도는 동안 그 체크아웃의 git 디렉터리에 pid 와 표를 든 표지를 두고, 끝나면(예외로 끝나도)
-    지운다. 편집 훅이 이것을 보고 변이가 든 체크아웃의 편집을 알린다(대기열 358). git 디렉터리를
-    찾지 못했거나 쓰지 못하면 표지 없이 돈다."""
+    """도는 동안 그 체크아웃의 git 디렉터리에 pid 와 표와 이 프로세스의 시작 시각을 든 표지를
+    두고, 끝나면(예외로 끝나도) 지운다. 편집 훅이 이것을 보고 변이가 든 체크아웃의 편집을
+    알린다(대기열 358). 시작 시각은 남은 표지의 pid 를 다른 프로세스가 받았을 때 가른다(대기열
+    449). 읽지 못하면 그 칸을 적지 않는다. git 디렉터리를 찾지 못했거나 쓰지 못하면 표지 없이
+    돈다."""
     git_dir = git_dir_of(root)
     marker = git_dir / f"{MARKER_PREFIX}{os.getpid()}.json" if git_dir is not None else None
     if marker is not None:
-        content = {"pid": os.getpid(), "table": str(table.resolve())}
+        content: dict[str, str | int] = {"pid": os.getpid(), "table": str(table.resolve())}
+        started: int | None = None
+        # 프로세스를 볼 DLL 이나 함수를 싣지 못해도 표지 없이 돌지 않고 시작 시각만 뺀다
+        with contextlib.suppress(OSError, AttributeError, ValueError, ctypes.ArgumentError):
+            started = process_started(os.getpid())
+        if started is not None:
+            content["started"] = started
         try:
             marker.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
         except OSError:
@@ -1503,7 +1667,8 @@ def _run_table(args: _Args, *, root: Path, runner: Runner, out: Callable[[str], 
         out(f"--since {args.since}: 바뀌거나 더한 변이 {len(fresh)}{listed}")
     selected = select(spec, [*args.picks, *fresh])
     if args.checking:
-        return check(selected, root=root, out=out)
+        # 여기 오는 `--check` 는 이름·번호나 `--since` 로 고른 것이다(고르지 않으면 `_check_files`)
+        return check_picked(selected, root=root, out=out)
     if not args.picks and args.since is None:
         _note_uncommitted(root, selected, table, out)
     with _running_marker(root, table):

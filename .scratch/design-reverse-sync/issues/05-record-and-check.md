@@ -6,6 +6,8 @@
 
 02의 뼈대와 맞대기를 쓴다. 04와 나란히 돌고, 겹치는 곳은 진입 파일의 명령 표 한 줄이다. 이 티켓은 06을 막는다. 02가 임시 아티팩트에서 손으로 본 결과가 저장 꼴의 다른 점이나 `publish` 거부의 결과를 넘겼으면 이 티켓이 받는다.
 
+**02가 넘긴 것(2026-10-22).** 임시 아티팩트(형식 판 `1792632348-7c2b`. 문법과 페이지 스크립트를 읽은 판은 `1792564314-af13`이다)에서 받은 저장 꼴은 02가 페이지 스크립트에서 옮긴 꼴(`tokens-json.test.ts`의 `pageRewrite`)과 다른 점이 없었다. 명세 "페이지 스크립트를 읽은 것"이 든 셋(문자열 색 값을 첫 테마의 객체로, 빈 설명 칸, 소문자) 밖에 글자 스타일의 기본값 채우기와 굵기의 문자열화가 더 있었고, 그 꼴에 이미 들어 있어 정규 꼴이 같은 값으로 읽는다. 시험 자료는 `web/tools/sync-design-system/fixtures/`의 셋이다. `page-saved-tokens.json`은 사람이 값 하나와 설명 하나를 고친 뒤 페이지가 저장한 것이고(아래 확인의 사례 끝의 "02가 임시 아티팩트에서 받은 저장 꼴"), `uploaded-tokens.json`은 그 전에 올린 것이다. `page-saved-README.md`는 사람 몫만 올린 README에 페이지가 저장하며 `\n\n---\n\n`과 생성 몫을 붙인 것이다(아래 확인의 사례의 "02가 받은 실제 꼴"). 생성 머리는 "## Consuming this system (generated — do not edit)"였고 "## Quick start"는 나오지 않았다. 이 파일은 Prettier가 빈 줄 둘을 하나로 줄여 `web/.prettierignore`가 빼며, 세 파일의 sha256은 `tokens-json.test.ts`가 대 본다. 판 id, 페이지가 함께 쓴 파일, `publish` 거부의 결과(06·07에 넘겼다)는 `.scratch/design-reverse-sync/probes/README.md`의 "임시 아티팩트에서 손으로 본 것"이다.
+
 **Blocked by:** 02
 
 **Status:** ready-for-agent
