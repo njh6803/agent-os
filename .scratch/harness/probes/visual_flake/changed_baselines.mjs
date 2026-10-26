@@ -83,7 +83,11 @@ for (const path of changed) {
     bytesOnly += 1;
     continue;
   }
-  const delta = Math.max(...diff.flatMap(({ a, b }) => a.map((value, c) => Math.abs(value - b[c]))));
+  // 인자 펼치기는 갈린 픽셀이 많으면 인자 수 한도에 걸린다
+  const delta = diff.reduce(
+    (most, { a, b }) => a.reduce((inner, value, c) => Math.max(inner, Math.abs(value - b[c])), most),
+    0,
+  );
   console.log(`  ${name}: ${diff.length}픽셀, 채널 차 최대 ${delta}`);
   pixelChanged += 1;
 }

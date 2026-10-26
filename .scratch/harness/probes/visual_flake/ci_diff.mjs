@@ -8,7 +8,7 @@
 //   N 과 같다. Playwright 의 비교(pixelmatch)는 안티에일리어싱으로 본 픽셀을 노랑(255,255,0)으로 칠하고 N 에서 뺀다.
 // - 이 디코더가 실제·정답에서 RGBA 가 다르다고 센 픽셀의 자리가 차이 그림의 빨강과 노랑을 합친 자리와 같다.
 // 첫 판은 N 과 디코더의 수를 바로 맞댔는데 세 짝 모두 디코더 쪽이 많았다(1·2, 3·29, 6·17). 차이 그림의 노랑을 보고
-// 위 두 표지로 바꿨다.
+// 위 두 표지로 바꿨다. 짝을 하나도 찾지 못한 폴더(내려받기가 비었다)도 측정 아님이다.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { differingPixels, readPng } from "./png.mjs";
@@ -29,8 +29,10 @@ if (roots.length === 0) {
 
 let notMeasured = 0;
 for (const root of roots) {
+  let pairs = 0;
   for (const actualPath of walk(root)) {
     if (!actualPath.endsWith("-actual.png")) continue;
+    pairs += 1;
     const name = basename(actualPath).slice(0, -"-actual.png".length);
     const expectedPath = join(dirname(actualPath), `${name}-expected.png`);
     if (!existsSync(expectedPath)) {
@@ -72,6 +74,10 @@ for (const root of roots) {
         `  (${x}, ${y}) ${mark} 정답 rgba(${a.join(",")}) 실제 rgba(${b.join(",")}) 차 [${delta.join(",")}]`,
       );
     }
+  }
+  if (pairs === 0) {
+    console.log(`측정 아님: ${root} 에 실제 그림(-actual.png)이 없다`);
+    notMeasured += 1;
   }
 }
 process.exit(notMeasured === 0 ? 0 : 1);

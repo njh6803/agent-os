@@ -13,7 +13,8 @@
 //
 // 측정의 표지: 실행 기록마다 실행 인자 시험이 받지 못한 인자를 Received 차이 줄로 찍었고(그 실행의 브라우저가 인자 없이
 // 떴다), 실패는 그 시험 하나뿐이며 통과 줄이 있다. 다른 시험이 실패하면 그 사진은 다시 쓰이지 않아 새 정답 그대로 남으므로
-// 측정이 아니다. 표지가 어긋난 기록이 있거나, 두 판의 정답이 그림 폴더에 없으면 종료 코드가 1 이다.
+// 측정이 아니다. 표지가 어긋난 기록이 있거나, 어느 판에 정답 사진이 하나도 없거나, 두 판의 정답이 그림 폴더에 없으면
+// 종료 코드가 1 이다.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -79,6 +80,15 @@ const oldCommit = resolveRev(oldRev);
 const newCommit = resolveRev(newRev);
 const oldIds = blobIds(oldCommit);
 const newIds = blobIds(newCommit);
+for (const [commit, ids] of [
+  [oldCommit, oldIds],
+  [newCommit, newIds],
+]) {
+  if (ids.size === 0) {
+    notMeasured += 1;
+    console.log(`측정 아님: ${commit.slice(0, 8)} 에 정답 사진이 없다`);
+  }
+}
 const groups = { "옛 정답과 같다": [], "새 정답과 같다": [], "둘 다 아니다": [] };
 const unchangedDiffer = [];
 const onlyOneSide = [];
