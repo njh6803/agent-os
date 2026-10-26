@@ -7,14 +7,17 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "verify": "pnpm run check:api-client && pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
+    "verify": "pnpm run clean:judge-trees && pnpm run check:api-client && pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
     "lint": "eslint --max-warnings 0",
     "format": "prettier --check . --ignore-path ../.gitignore --ignore-path .prettierignore",
-    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual",
+    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual && tsc --noEmit -p apps/widget/visual",
     "test": "vitest run",
     "visual": "node tools/visual.ts packages/ui",
     "visual:update": "node tools/visual.ts packages/ui --update",
+    "visual:widget": "node tools/visual.ts apps/widget",
+    "visual:widget:update": "node tools/visual.ts apps/widget --update",
     "check:tsconfig": "node tools/check-tsconfig.ts",
+    "clean:judge-trees": "node tools/judge-trees.ts",
     "generate:api-client": "node tools/generate-api-client.ts",
     "check:api-client": "node tools/generate-api-client.ts --check"
   },

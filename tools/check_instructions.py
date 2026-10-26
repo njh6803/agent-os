@@ -24,6 +24,9 @@
 - `tools/` 의 파이썬은 외부 명령을 기다리는 호출(`subprocess.run`, `communicate`, `wait` 등)에
   시간 제한을 둔다. 멈춘 호출은 루프의 시간 제한으로 끊지 못한다(대기열 342). 판정과 빼는 표지는
   `calls_without_timeout` 의 독스트링이 원천이다.
+- `src`·`tests`·`tools` 의 파이썬은 매개변수와 반환의 주석을 `bool | None` 으로 두지 않는다. 세
+  값으로 갈래를 고르는 꼴이고 ruff FBT 는 키워드 전용 매개변수를 보지 않는다(대기열 423). 판정은
+  `optional_bool_annotations` 의 독스트링이 원천이다.
 - 루트 밖에 `CLAUDE.md` 와 `AGENTS.md` 가 없다. `next dev` 가 앱 폴더에 두 파일을 만든다(ADR 0021,
   web-admin 티켓 01).
 - rules 파일과 임포트된 파일 안에도 `@` 임포트가 없다. 그것들도 따라가서 실린다.
@@ -62,6 +65,8 @@ PATCHED_SKILLS = (
 )
 SENTINEL = "프로젝트 사본"
 NESTED_INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
+# `bool | None` 검사가 훑는 디렉터리. pyright 의 `include` 와 같고 시험이 맞댄다.
+OPTIONAL_BOOL_ROOTS = ("src", "tests", "tools")
 SETTINGS = Path(".claude") / "settings.json"
 LOCAL_SETTINGS = Path(".claude") / "settings.local.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"
@@ -855,6 +860,149 @@ def calls_without_timeout(root: Path = ROOT) -> list[str]:
     return problems
 
 
+def _parsed(node: ast.expr) -> ast.expr:
+    """문자열로 쓴 주해는 표현식으로 다시 읽는다. 읽지 못하거나 문자열이 아니면 그대로다."""
+    if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
+        return node
+    try:
+        return ast.parse(node.value.strip(), mode="eval").body
+    except SyntaxError:
+        return node
+
+
+def _union_members(node: ast.expr) -> list[ast.expr] | None:
+    """합 주석의 갈래들. 합이 아니면 None 이다.
+
+    `a | b`, `Optional[a]`(`a` 와 None), `Union[a, b]` 를 펴고, 갈래가 다시 합이거나 문자열이면
+    그것도 끝까지 편다.
+    """
+    match _parsed(node):
+        case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+            direct = [left, right]
+        case ast.Subscript(value=base, slice=inner) if _typing_name(base) == "Optional":
+            direct = [inner, ast.Constant(value=None)]
+        case ast.Subscript(value=base, slice=ast.Tuple(elts=elements)) if (
+            _typing_name(base) == "Union"
+        ):
+            direct = list(elements)
+        case _:
+            return None
+    flat: list[ast.expr] = []
+    for member in direct:
+        flat.extend(_union_members(member) or [_parsed(member)])
+    return flat
+
+
+def _typing_name(node: ast.expr) -> str | None:
+    """`Optional` 도 `typing.Optional` 도 `tp.Optional` 도 같은 이름으로 본다."""
+    match node:
+        case ast.Name(id=name) | ast.Attribute(attr=name):
+            return name
+        case _:
+            return None
+
+
+def _member_kind(node: ast.expr) -> str | None:
+    match node:
+        case ast.Name(id="bool"):
+            return "bool"
+        case ast.Constant(value=None):
+            return "None"
+        case _:
+            return None
+
+
+def _is_optional_bool(annotation: ast.expr) -> bool:
+    """주석이 `bool` 과 None 두 갈래만으로 된 합인가."""
+    members = _union_members(annotation)
+    if members is None:
+        return False
+    return {_member_kind(member) for member in members} == {"bool", "None"}
+
+
+def _annotated_slots(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> Iterator[tuple[ast.expr, str]]:
+    """함수의 주석 자리와 그 이름. 매개변수 다섯 갈래와 반환이다."""
+    arguments = function.args
+    every = [
+        *arguments.posonlyargs,
+        *arguments.args,
+        *([arguments.vararg] if arguments.vararg else []),
+        *arguments.kwonlyargs,
+        *([arguments.kwarg] if arguments.kwarg else []),
+    ]
+    for argument in every:
+        if argument.annotation is not None:
+            yield argument.annotation, f"{function.name} 의 {argument.arg}"
+    if function.returns is not None:
+        yield function.returns, f"{function.name} 의 반환"
+
+
+def optional_bool_lines(source: str) -> list[tuple[int, str]]:
+    """`bool | None` 주석의 줄과 자리(`<함수> 의 <매개변수>`·`<함수> 의 반환`). 판정은
+    `optional_bool_annotations`.
+    """
+    found: list[tuple[int, int, str]] = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        for annotation, place in _annotated_slots(node):
+            if _is_optional_bool(annotation):
+                found.append((annotation.lineno, annotation.col_offset, place))
+    return [(line, place) for line, _, place in sorted(found)]
+
+
+def optional_bool_sources(root: Path = ROOT) -> list[Path]:
+    """`bool | None` 검사가 훑는 파일. `OPTIONAL_BOOL_ROOTS` 아래(하위 폴더까지)의 파이썬이다."""
+    return sorted(
+        (path for directory in OPTIONAL_BOOL_ROOTS for path in (root / directory).rglob("*.py")),
+        key=lambda path: path.relative_to(root).as_posix(),
+    )
+
+
+def optional_bool_annotations(root: Path = ROOT) -> list[str]:
+    """매개변수와 반환의 주석이 `bool` 과 None 두 갈래인 자리(대기열 423).
+
+    세 값(`True`·`False`·`None`)으로 출력을 고르는 꼴이다. `CODING_STANDARDS.md` 의 불리언 플래그
+    줄이 막는 것인데, ruff FBT 는 키워드 전용 매개변수를 보지 않는다. 그래서
+    `tools/hook_choice_facts.py` 의 `output_for(..., first: bool | None)` 이 셀프 리뷰 표준 축까지
+    지나갔고 `Seen` 열거로 고쳤다(일지 2026-10-22-11). 갈래는 열거(`enum.Enum`)로 둔다.
+
+    잡는 모양: `bool | None`, `None | bool`, `Optional[bool]`, `Union[bool, None]`(`Optional`·
+    `Union` 은 `typing.`·별칭 접두를 가리지 않는다), 같은 갈래를 거듭 쓴 `bool | None | None`, 합
+    안의 합(`Optional[bool | None]`, `Union[bool, Optional[bool]]`), 그리고 주석 전체나 갈래 하나를
+    문자열로 쓴 주해(`'bool | None'`, `Optional['bool']`. 앞뒤 공백은 벗긴다). 자리는
+    함수(`async def` 포함)의 위치 전용·위치·`*args`·키워드 전용·`**kwargs` 매개변수와 반환이다. 훑는
+    범위는 `OPTIONAL_BOOL_ROOTS`(pyright 의 `include` 와 같다. 시험이 맞댄다)이고,
+    `.scratch/**/probes/` 는 pyright 와 타입 우회 검사처럼 보지 않는다. 들인 때(2026-10-23) 잡힌
+    곳은 범위 안에 하나(`tools/canary.py` 의 `_registered` 반환. 열거로 고치며 이름을
+    `_registration` 으로 바꿨다), probes 에 셋이었다(probes 는 이 판정 함수를 커밋하지 않은
+    스크립트로 돌려 손으로 셌다).
+
+    잘못 막는 것: "모른다" 를 None 으로 돌려주는 반환도 잡는다. 그것도 세 갈래이므로 열거로 둔다.
+    뺄 표지는 두지 않았다. 들인 때 범위 안에서 잡힌 하나가 바로 그 반환이었고 열거로 고쳤다.
+    이름 `Optional`·`Union` 이 typing 의 것인지 보지 않아, 같은 이름의 다른 것으로 쓴 주석도
+    잡는다.
+
+    못 보는 것: 함수의 매개변수와 반환만 보고, 합이 아닌 것으로 감싸면 안을 열지 않는다. 감싼
+    주석(`list[bool | None]`, `Annotated[bool | None, ...]`), 별칭(`Flag = bool | None` 뒤의
+    `x: Flag`), 변수와 클래스 칸(데이터클래스 칸 포함)의 주석(`seen: bool | None`)은 지나간다.
+    갈래는 이름 `bool` 과 상수 None 으로만 알아봐서 `builtins.bool | None` 과 `bool | NoneType`
+    도 지나간다. 세 갈래가 아닌 합(`bool | int | None`)은 이 검사의 대상이 아니다.
+    """
+    problems: list[str] = []
+    for path in optional_bool_sources(root):
+        relative = path.relative_to(root).as_posix()
+        for lineno, place in optional_bool_lines(path.read_text(encoding="utf-8")):
+            subject = f"{place}이" if place.endswith("반환") else f"{place} 가"
+            problems.append(
+                f"{relative}:{lineno}: {subject} bool | None 이다. 세 값으로 갈래를 고르는 꼴이라"
+                " 열거(enum.Enum)로 둔다(CODING_STANDARDS.md 불리언 플래그 인자)"
+            )
+    return problems
+
+
 def nested_instruction_files(root: Path = ROOT) -> list[str]:
     """루트 밖의 `CLAUDE.md` 와 `AGENTS.md`.
 
@@ -910,6 +1058,7 @@ def main(root: Path = ROOT) -> int:
     problems.extend(skills_with_sentinel_not_listed(root))
     problems.extend(hooks_reading_text_stdin(root))
     problems.extend(calls_without_timeout(root))
+    problems.extend(optional_bool_annotations(root))
     problems.extend(nested_instruction_files(root))
     problems.extend(imports_outside_claude_md(root))
     for problem in problems:

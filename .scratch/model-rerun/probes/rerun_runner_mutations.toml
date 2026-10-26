@@ -1,0 +1,306 @@
+# 티켓 10(러너 명령, `tools/rerun_runner.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬, 대기열
+# 29). 다시 띄우기의 판정(측정 아님, 판, 판을 올림, id, 오염의 둘째), 어림과 예산, 과제의 차례, 동시에
+# 둘, 회차 번호(뿌리 아래 폴더), 한도의 기다림(돌던 동안, 다시 뜬 때), 오염의 다시 돌기, 측정 아님의
+# 멈춤, 인계의 확인(돌던 동안, 다시 뜬 때), 사전 등록 해시, 끈 세션의 비용 대신 넣기, 기록의 게이트
+# 이름, 죽은 회차(프로세스, 비용 대신 넣기), 판을 내린 러너의 id 갈래, 게이트를 돌지 못한 회차와 끄지
+# 못한 호출 뒤의 멈춤을 하나씩 되돌린다.
+# 표지는 표지를 없는 문구로 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md`
+# 의 표지 항목).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_runner_mutations.toml
+
+[[mutation]]
+name = "남은 회차에서 측정 아님을 끝난 회차로 센다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "측정_아님은_다시_돈다"]
+expect = "red"
+expect_output = ["arms: () != ('B',)"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        and r.end.kind != END_NOT_MEASURED
+    )'''
+new = '''    )'''
+
+[[mutation]]
+name = "남은 회차를 판과 상관없이 센다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "올린_판에서_돈다"]
+expect = "red"
+expect_output = ["arms: () != ('A', 'B')"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        and r.condition_version == version
+        and r.end.kind != END_NOT_MEASURED'''
+new = '''        and r.end.kind != END_NOT_MEASURED'''
+
+[[mutation]]
+name = "낮은 판에서 다 마치지 못한 과제를 id 없이 올린 판에서 돈다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "멈추고_id_를_낸다"]
+expect = "red"
+expect_output = ["isinstance(Plan(arms=('A', 'B')), Halt)"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    if top == condition:'''
+new = '''    if top <= condition:'''
+
+[[mutation]]
+name = "id 를 준 과제를 다른 과제처럼 다룬다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "id_를_준_과제는 or 오염의_둘째는"]
+expect = "red"
+expect_output = ["arms: () != ('A', 'B')"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    if rerun:
+        return Plan(_remaining(task, records, condition))'''
+new = '''    if False:
+        return Plan(_remaining(task, records, condition))'''
+
+[[mutation]]
+name = "오염 셋째에야 뺀다(판정)"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "오염의_둘째는"]
+expect = "red"
+expect_output = ["arms: ('A', 'B') != ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    return any(_contaminated(task, records, version, a) >= 2 for a in set(task.arm_plan))'''
+new = '''    return any(_contaminated(task, records, version, a) >= 3 for a in set(task.arm_plan))'''
+
+[[mutation]]
+name = "어림을 남은 회차가 아니라 갈래 계획 전체로 셈한다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "어림"]
+expect = "red"
+expect_output = ["Obtained: 20.0"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    return task.pr_cost_usd * sum(ARM_RATIOS[a] for a in arms)'''
+new = '''    return task.pr_cost_usd * sum(ARM_RATIOS[a] for a in task.arm_plan)'''
+
+[[mutation]]
+name = "예산에서 쓴 것을 빼고 어림만 견준다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "상한을_넘으면"]
+expect = "red"
+expect_output = ["AssertionError: assert 2 == 0"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''            if spent + estimate > s.cap_usd:'''
+new = '''            if estimate > s.cap_usd:'''
+
+[[mutation]]
+name = "과제를 실행 차례가 아니라 목록 차례로 돈다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "실행_차례대로"]
+expect = "red"
+expect_output = ["At index 0 diff: 'rerun-x-01' != 'rerun-x-02'"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        tasks = sorted(s.task_list.tasks, key=lambda t: t.order)'''
+new = '''        tasks = list(s.task_list.tasks)'''
+
+[[mutation]]
+name = "동시에 셋까지 연다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "동시에_둘까지"]
+expect = "red"
+expect_output = ["assert 3 == 2"]
+
+# 자리 판정만 넓히면 일꾼 수(`ThreadPoolExecutor(MAX_PARALLEL)`)가 그대로 둘을 지켜 초록이었다. 둘을 함께 넓힌다
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    and len(running) < MAX_PARALLEL'''
+new = '''                    and len(running) < MAX_PARALLEL + 1'''
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        with ThreadPoolExecutor(MAX_PARALLEL) as pool:'''
+new = '''        with ThreadPoolExecutor(MAX_PARALLEL + 1) as pool:'''
+
+[[mutation]]
+name = "회차 번호에 뿌리 아래 폴더를 보지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "번호가_다르다"]
+expect = "red"
+expect_output = ["where 1 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        dirs = os.listdir(s.root) if s.root.exists() else []'''
+new = '''        dirs: list[str] = []'''
+
+[[mutation]]
+name = "한도 뒤 풀리는 시각 전에도 새 회차를 연다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "풀리는_시각까지_기다린_뒤"]
+expect = "red"
+expect_output = ["At index 0 diff: 2 != 1"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    and limit_until is None
+                    and queue'''
+new = '''                    and queue'''
+
+[[mutation]]
+name = "풀리는 시각을 모르는 한도에서 멈추지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "풀리는_시각을_모르는"]
+expect = "red"
+expect_output = ["where 0 = run()"]
+
+# 첫 판의 `None or` 는 halt 가 비었을 때 원문과 같아 초록이었다(동치 변이). `and` 로 멈춤을 버린다
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                        if end.resets_at is None:
+                            halt = halt or ('''
+new = '''                        if end.resets_at is None:
+                            halt = halt and ('''
+
+[[mutation]]
+name = "다시 뜬 때 한도 기록의 풀리는 시각을 기다리지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "다시_뜬_때_풀리는"]
+expect = "red"
+expect_output = ["where [] = 시계("]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        if resets:
+            self._sleep_until(max(resets))'''
+new = '''        if False:
+            self._sleep_until(max(resets))'''
+
+[[mutation]]
+name = "오염 셋째에야 뺀다(돌던 동안)"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "오염이_한_번이면"]
+expect = "red"
+expect_output = ["where 1 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                        if count < 2:'''
+new = '''                        if count < 3:'''
+
+[[mutation]]
+name = "설정·호출·모델의 측정 아님에서 멈추지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "설정_멈춤 or 호출과_모델"]
+expect = "red"
+expect_output = ["where 0 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    elif end.kind == END_NOT_MEASURED:
+                        halt = halt or f'''
+new = '''                    elif False:
+                        halt = halt or f'''
+
+[[mutation]]
+name = "인계 확인을 판과 견주지 않는다(돌던 동안)"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "첫_인계"]
+expect = "red"
+expect_output = ["where False = any(<generator object test_다른_판의_확인을_쥐고"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                        and s.confirmed != s.condition_version
+                    ):'''
+new = '''                        and s.confirmed is None
+                    ):'''
+
+[[mutation]]
+name = "인계 확인을 판과 견주지 않는다(다시 뜬 때)"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "확인_인자를_주면"]
+expect = "red"
+expect_output = ["where 0 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        if not self.main_list or self.settings.confirmed == self.settings.condition_version:'''
+new = '''        if not self.main_list or self.settings.confirmed is not None:'''
+
+[[mutation]]
+name = "본 측정 목록의 해시를 대 보지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "해시가_맞지_않는"]
+expect = "red"
+expect_output = ["where 0 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        if self.main_list:
+            problem = prereg_problem('''
+new = '''        if False:
+            problem = prereg_problem('''
+
+[[mutation]]
+name = "결과 이벤트 없는 세션의 비용을 대신 넣지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "설정_멈춤"]
+expect = "red"
+expect_output = ["assert (True and False)"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        if any(not c.results for c in s.calls):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "기록의 게이트를 갈아 끼운 명령 그대로 적는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "정해진_이름으로"]
+expect = "red"
+expect_output = ["where 1 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    gates=_named_gates(checked.gates),'''
+new = '''                    gates=checked.gates,'''
+
+[[mutation]]
+name = "기록 없는 회차의 세션이 돌아도 지나간다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "그_세션이_돌거나"]
+expect = "red"
+expect_output = ["where 0 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                if ids & set(argv):'''
+new = '''                if False:'''
+
+[[mutation]]
+name = "죽은 회차에서 결과 이벤트 없는 세션의 비용을 비운다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "측정_아님_중단으로"]
+expect = "red"
+expect_output = ["assert (True and None is not None)"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    cost_usd=official.official_usd if cost is None else cost,'''
+new = '''                    cost_usd=cost,'''
+
+[[mutation]]
+name = "id 를 주면 러너의 판보다 큰 판을 보지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "큰_판의_기록이"]
+expect = "red"
+expect_output = ["isinstance(Plan(arms=('A', 'B')), Halt)"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    if top > condition:'''
+new = '''    if top > condition and not rerun:'''
+
+[[mutation]]
+name = "게이트를 돌지 못한 까닭을 내지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "게이트를_돌지"]
+expect = "red"
+expect_output = ["where False = any(<generator object test_게이트를_돌지"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                note = f"{place.name} 의 게이트를 돌지 못했다: {e}"'''
+new = '''                note = None'''
+
+[[mutation]]
+name = "끄지 못하고 남긴 호출이 든 회차 뒤에 멈추지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "끄지_못하고_남긴"]
+expect = "red"
+expect_output = ["where False = any(<generator object test_끄지_못하고"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        if any(r.launched.drove.stop in LEFT_RUNNING for r in continued.runs):'''
+new = '''        if False:'''

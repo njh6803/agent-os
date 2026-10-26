@@ -1,0 +1,614 @@
+# 티켓 08(이어 가기와 상한, `tools/rerun_continue.py`와 `tools/rerun_session.py`의 끄기)의 시험이 실제로
+# 무는지 변이로 본다(implement 스킬, 대기열 29). 물음표 끝(빈 줄, 끝 공백, 전각), 인계 지시문 옮기기(머리
+# 줄, 끝 줄, 덩이 고르기, 덩이가 없을 때), 다음 호출의 종류(같은 브랜치, B 뒤 커밋), 호출 앞의 끝(세션·
+# 개입·예산의 경계), 호출 뒤의 끝(시간, 예산, init, 결과 없음, 멈춰 끈 호출, 끄지 못한 호출, 막는 판정의
+# 차례), 예산의 쓴 몫, 개입의 `--resume`과 그 수, 인계의 새 세션과 지시문, 첫 줄의 연 저장소, 물으며
+# 끝남, 지시문 담음, 끄기(명령 줄 확인, 읽지 못함, 나무째, 거두는 기다림의 마감, 멈춘 꼴, 끄지 않은
+# 기록, 끈 세션의 표시, 러너가 끊김), 이어 부르는 명령, 호출 차례, 명령 줄 읽기(PEB 의 자리, NUL, 훅
+# 사본과의 대조)를 하나씩 되돌린다. 나무째 끄기의 변이는 `taskkill` 줄이라 윈도에서만 뜻이 있다. POSIX 의 그룹
+# 끄기(`start_new_session`, `os.killpg`)는 이 PC 에서 변이로 볼 수 없고 리눅스 CI 의 같은 시험(끈 뒤
+# 가짜와 그 자식이 남지 않는다)이 본다.
+# 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구나 단언의 메시지다. 첫 판은 표지를 없는 문구로
+# 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md` 의 표지 항목). 셀프
+# 리뷰 반영에서 고치거나 더한 변이(멈춘 꼴 `Stop`, 덩이 고르기, 러너가 끊김)는 고른 단언의 꼴에서
+# 표지를 고른 뒤 그 변이를 돌려 표지가 출력에 있는지 봤다(일지 2026-10-23-48). 티켓 09가 더한 줄 판정의
+# 변이(`drive`의 `watch`, `Stop.HALTED_*`, `CUT_SHORT`)도 같은 길로 골랐다(`README.md`의 변이 절, 일지
+# 2026-10-24-03).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_continue_mutations.toml
+
+[[mutation]]
+name = "물음표 끝에서 공백만 든 줄을 빼지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "물음표_끝은"]
+expect = "red"
+expect_output = ['''where False = ends_with_question('다 했다. 커밋할까요?\n\n   \n')''']
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    lines = [line.rstrip() for line in (text or "").splitlines() if line.strip()]'''
+new = '''    lines = [line.rstrip() for line in (text or "").splitlines()]'''
+
+[[mutation]]
+name = "물음표 끝에서 끝 공백을 떼지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "물음표_끝은"]
+expect = "red"
+expect_output = ['''where False = ends_with_question('확인할까요?  \t')''']
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    lines = [line.rstrip() for line in (text or "").splitlines() if line.strip()]'''
+new = '''    lines = [line for line in (text or "").splitlines() if line.strip()]'''
+
+[[mutation]]
+name = "전각 물음표를 보지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "물음표_끝은"]
+expect = "red"
+expect_output = ['''where False = ends_with_question('다 했다. 커밋할까요？')''']
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''_QUESTION_MARKS = ("?", "？")'''
+new = '''_QUESTION_MARKS = ("?",)'''
+
+[[mutation]]
+name = "인계 지시문을 글의 처음부터 옮긴다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "인계_지시문은_다음_작업_줄부터"]
+expect = "red"
+expect_output = [
+    "- 다음 작업: .scratch/rerun-x/issues/03-thing.md. 나머지를 짓는다",
+    "+ 셀프 리뷰 앞에서 끊는다.",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    heads = [i for i, line in enumerate(lines) if line.startswith(_DIRECTIVE_HEAD)]'''
+new = '''    heads = [0]'''
+
+[[mutation]]
+name = "인계 지시문을 글의 끝까지 옮긴다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "인계_지시문은_다음_작업_줄부터"]
+expect = "red"
+expect_output = ["- 이번 요청 범위: 구현·리뷰·커밋까지", "+ 사람이 새 세션에 붙여 넣는다."]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''if lines[i].startswith(_DIRECTIVE_TAIL)),'''
+new = '''if False),'''
+
+[[mutation]]
+name = "인계 지시문을 첫 머리 줄의 덩이에서만 찾는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "앞쪽_설명에"]
+expect = "red"
+expect_output = ["AssertionError: 설명의 덩이를 지시문으로 옮겼다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    for head in reversed(heads):'''
+new = '''    for head in heads[:1]:'''
+
+[[mutation]]
+name = "같은 브랜치의 덩이가 둘이면 앞의 덩이를 옮긴다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "마지막_덩이를"]
+expect = "red"
+expect_output = ["AssertionError: 앞선 덩이를 옮겼다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    for head in reversed(heads):'''
+new = '''    for head in heads:'''
+
+[[mutation]]
+name = "그 브랜치의 덩이가 없으면 빈 글을 옮긴다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "머리_줄과_끝_줄이_없는"]
+expect = "red"
+expect_output = ["assert '' == '어디서: 새 세션"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    return "\n".join(lines).strip()'''
+new = '''    return ""'''
+
+[[mutation]]
+name = "다른 브랜치의 지시문도 인계로 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "다음_호출의_종류는"]
+expect = "red"
+expect_output = ["assert '인계' is None", "= _handoff_out('feature/04-other')"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if text is not None and directive_branch(text) == branch:'''
+new = '''    if text is not None and directive_branch(text) is not None:'''
+
+[[mutation]]
+name = "B 뒤 커밋이 없는 지시문 브랜치도 끝남이다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "다음_호출의_종류는"]
+expect = "red"
+expect_output = ["assert None == '개입'", "commits_after_base=0)"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if picked.commit is not None and (picked.commits_after_base or 0) > 0:'''
+new = '''    if picked.commit is not None:'''
+
+[[mutation]]
+name = "세션 상한을 하나 늦게 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_전의_끝은"]
+expect = "red"
+expect_output = [
+    "assert None == End(kind='상한으로 끊김', reason='세션', resets_at=None)",
+    "('인계', h=3)",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''handoffs >= MAX_SESSIONS - 1:'''
+new = '''handoffs >= MAX_SESSIONS:'''
+
+[[mutation]]
+name = "개입 상한을 하나 늦게 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_전의_끝은"]
+expect = "red"
+expect_output = [
+    "assert None == End(kind='상한으로 끊김', reason='개입', resets_at=None)",
+    "('개입', i=2)",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''interventions >= MAX_INTERVENTIONS:'''
+new = '''interventions > MAX_INTERVENTIONS:'''
+
+[[mutation]]
+name = "남은 예산이 딱 1달러여도 끊는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_전의_끝은"]
+expect = "red"
+expect_output = [
+    "assert End(kind='상한으로 끊김', reason='예산', resets_at=None) is None",
+    "('첫', usd=1.0)",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if left_usd < MIN_BUDGET_USD:'''
+new = '''    if left_usd <= MIN_BUDGET_USD:'''
+
+[[mutation]]
+name = "시간을 넘긴 호출을 상한으로 끊지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_뒤의_끝은"]
+expect = "red"
+expect_output = [
+    "AssertionError: 러너가 끈 호출을 측정 아님(호출)으로 봤다",
+    "kind: '측정 아님' != '상한으로 끊김'",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in TIMED_OUT:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "예산을 다 쓴 호출을 잇는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_뒤의_끝은"]
+expect = "red"
+expect_output = [
+    "assert None == End(kind='상한으로 끊김', reason='예산', resets_at=None)",
+    "where None = call_end(",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if any(r.subtype == BUDGET_SUBTYPE for r in summary.results):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "init 없는 호출을 측정 아님으로 보지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출_뒤의_끝은"]
+expect = "red"
+expect_output = [
+    "assert None == End(kind='측정 아님', reason='호출', resets_at=None)",
+    "_launched(init=False, results=",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING | CUT_SHORT or not summary.results:'''
+
+[[mutation]]
+name = "결과 이벤트 없는 호출을 개입으로 보낸다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "결과_이벤트_없이_끝난"]
+expect = "red"
+expect_output = ["kind: '상한으로 끊김' != '측정 아님'"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING | CUT_SHORT:'''
+
+[[mutation]]
+name = "끄지 못한 호출 뒤에도 잇는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "출력을_닫고_멈춘_호출은"]
+expect = "red"
+expect_output = ["AssertionError: 살아 있는 호출 뒤에 이었다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in CUT_SHORT or summary.init is None or not summary.results:'''
+
+[[mutation]]
+name = "줄 판정이 끈 호출 뒤에도 결과가 있으면 잇는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "줄_판정이_끄라고_한_호출은"]
+expect = "red"
+expect_output = ["AssertionError: 줄 판정이 끄라고 한 호출 뒤에 이었다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    if stop in LEFT_RUNNING | CUT_SHORT or summary.init is None or not summary.results:'''
+new = '''    if stop in LEFT_RUNNING or summary.init is None or not summary.results:'''
+
+[[mutation]]
+name = "멈춰 끈 호출을 시간을 넘긴 호출로 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "출력을_닫고_멈춘_호출은"]
+expect = "red"
+expect_output = ["assert End(kind='상한으로 끊김', reason='시간', resets_at=None) is None"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''TIMED_OUT = frozenset({Stop.DEADLINE_KILLED, Stop.DEADLINE_LEFT})'''
+new = '''TIMED_OUT = frozenset({Stop.DEADLINE_KILLED, Stop.DEADLINE_LEFT, Stop.HUNG_KILLED})'''
+
+[[mutation]]
+name = "막는 판정을 끝 판정 뒤에 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "막는_판정이"]
+expect = "red"
+expect_output = ["reason: '호출' != '한도'"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''        end = screen(launched) or call_end(launched)'''
+new = '''        end = call_end(launched) or screen(launched)'''
+
+[[mutation]]
+name = "이어 부를 세션이 쓴 몫을 예산에서 빼지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "호출마다_넘긴_예산은"]
+expect = "red"
+expect_output = ["At index 1 diff: '40.00' != '29.50'"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''        left_usd = task.round_cap_usd - sum(spent.values())'''
+new = '''        left_usd = task.round_cap_usd - sum(v for k, v in spent.items() if k != session_id)'''
+
+[[mutation]]
+name = "개입을 이어 부르지 않고 새 세션으로 연다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "그_밖이면_resume"]
+expect = "red"
+expect_output = ["assert (None == '00000000-0000-4000-8000-000000000001')", "'--resume')"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    CALL_INTERVENTION: Opening.RESUME,'''
+new = '''    CALL_INTERVENTION: Opening.NEW,'''
+
+[[mutation]]
+name = "개입 수를 세지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "그_밖이면_resume"]
+expect = "red"
+expect_output = ["assert (0, 0) == (0, 1)"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''            interventions += 1'''
+new = '''            pass'''
+
+[[mutation]]
+name = "인계에 새 세션 id 를 받지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "같은_브랜치_지시문이면"]
+expect = "red"
+expect_output = [
+    "- 00000000-0000-4000-8000-000000000002",
+    "+ 00000000-0000-4000-8000-000000000001",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    return make_session_id(), first_message('''
+new = '''    return session_id, first_message('''
+
+[[mutation]]
+name = "인계 세션에 결과 글 전체를 넘긴다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "같은_브랜치_지시문이면"]
+expect = "red"
+expect_output = ["+ 셀프 리뷰 앞에서 끊는다. 아래 지시문을 사람이 새 세션에 붙여 넣는다."]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''root, task.ticket, handoff_directive(text or "", task.branch)'''
+new = '''root, task.ticket, (text or "")'''
+
+[[mutation]]
+name = "첫 줄의 연 저장소가 작업 폴더와 다른 글이다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "같은_브랜치_지시문이면"]
+expect = "red"
+expect_output = ["+ 연 저장소는 `"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    root = str(place.clone)'''
+new = '''    root = str(place.clone).replace("\\", "/")'''
+
+[[mutation]]
+name = "끝남이 아닌 회차도 물으며 끝남으로 적는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "개입이_셋째가"]
+expect = "red"
+expect_output = ["assert not True", ").asked_at_end"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    asked = end.kind == END_DONE and runs[-1].ends_with_question'''
+new = '''    asked = runs[-1].ends_with_question'''
+
+[[mutation]]
+name = "지시문 담음을 같은 브랜치의 지시문으로만 본다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "다른_브랜치_지시문은"]
+expect = "red"
+expect_output = ["assert (False)", ").has_directive"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''has_directive=text is not None and directive_branch(text) is not None,'''
+new = '''has_directive=text is not None and directive_branch(text) == task.branch,'''
+
+[[mutation]]
+name = "명령 줄을 보지 않고 끈다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션_id_없는_명령_줄"]
+expect = "red"
+expect_output = ["assert <Stop.DEADLINE_KILLED: 'deadline_killed'> is <Stop.DEADLINE_LEFT: 'deadline_left'>"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    return argv is not None and session_id in argv'''
+new = '''    return True'''
+
+[[mutation]]
+name = "명령 줄을 읽지 못해도 끈다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "읽지_못함"]
+expect = "red"
+expect_output = ["assert <Stop.DEADLINE_KILLED: 'deadline_killed'> is <Stop.DEADLINE_LEFT: 'deadline_left'>"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    return argv is not None and session_id in argv'''
+new = '''    return session_id in (argv or (session_id,))'''
+
+[[mutation]]
+name = "나무째 끄지 않고 그 프로세스만 끈다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "벽시계를_넘긴_첫_호출은"]
+expect = "red"
+expect_output = ["and   False = _gone("]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''["taskkill", "/F", "/T", "/PID", str(process.pid)],'''
+new = '''["taskkill", "/F", "/PID", str(process.pid)],'''
+
+[[mutation]]
+name = "거두는 기다림이 호출의 마감을 넘는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "거두는_기다림도"]
+expect = "red"
+expect_output = ["<Stop.HUNG_KILLED: 'hung_killed'> is <Stop.DEADLINE_KILLED: 'deadline_killed'>"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''            reap = min(REAP_TIMEOUT, deadline - clock())'''
+new = '''            reap = REAP_TIMEOUT'''
+
+[[mutation]]
+name = "거둠의 제한이 먼저 끝나도 시간을 넘긴 호출로 적는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "거둘_시간_안에"]
+expect = "red"
+expect_output = ["<Stop.DEADLINE_KILLED: 'deadline_killed'> is <Stop.HUNG_KILLED: 'hung_killed'>"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''                timed_out = reap < REAP_TIMEOUT'''
+new = '''                timed_out = True'''
+
+[[mutation]]
+name = "마감에 닿아 끄지 않은 호출을 끈 호출로 적는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션_id_없는_명령_줄"]
+expect = "red"
+expect_output = ["assert <Stop.DEADLINE_KILLED: 'deadline_killed'> is <Stop.DEADLINE_LEFT: 'deadline_left'>"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    (True, False): Stop.DEADLINE_LEFT,'''
+new = '''    (True, False): Stop.DEADLINE_KILLED,'''
+
+[[mutation]]
+name = "출력을 닫고 멈춰 끄지 않은 호출을 끈 호출로 적는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "끄지_않고_남긴다"]
+expect = "red"
+expect_output = ["AssertionError: 명령 줄이 다른 호출을 끈 호출로 적었다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    (False, False): Stop.HUNG_LEFT,'''
+new = '''    (False, False): Stop.HUNG_KILLED,'''
+
+[[mutation]]
+name = "러너가 끊겨도 띄운 자식을 끄지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "KeyboardInterrupt"]
+expect = "red"
+expect_output = ["AssertionError: 끊긴 러너가 띄운 자식을 남겼다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''    except BaseException:'''
+new = '''    except Exception:'''
+
+[[mutation]]
+name = "끄지 않은 세션도 끈 세션으로 표시한다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션_id_없는_명령_줄"]
+expect = "red"
+expect_output = ["assert (True and not True)", ").runner_killed"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
+new = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT | TIMED_OUT for r in runs),'''
+
+[[mutation]]
+name = "멈춰 끈 호출도 끈 세션으로 표시한다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
+new = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT | {Stop.HUNG_KILLED} for r in runs),'''
+
+[[mutation]]
+name = "마감에 끈 세션에도 끈 표시를 세우지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        runner_killed=any(r.launched.drove.stop in CUT_SHORT for r in runs),'''
+new = '''        runner_killed=False,'''
+
+[[mutation]]
+name = "줄 판정이 끈 세션에 끈 표시를 세우지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 세션의 끈 표시가 멈춘 꼴과 다르다", "HALTED_KILLED"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''CUT_SHORT = frozenset({Stop.DEADLINE_KILLED, Stop.HALTED_KILLED})'''
+new = '''CUT_SHORT = frozenset({Stop.DEADLINE_KILLED})'''
+
+[[mutation]]
+name = "호출 칸에 끄지 않은 표시를 옮기지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션_id_없는_명령_줄"]
+expect = "red"
+expect_output = ["where False = Call(", ").kill_skipped"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        kill_skipped=run.launched.drove.stop in LEFT_RUNNING,'''
+new = '''        kill_skipped=False,'''
+
+[[mutation]]
+name = "출력을 닫고 멈춰 남긴 호출을 호출 칸에 적지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 남긴 호출의 칸이 멈춘 꼴과 다르다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT, Stop.HALTED_LEFT})'''
+new = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HALTED_LEFT})'''
+
+[[mutation]]
+name = "줄 판정이 남긴 호출을 호출 칸에 적지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "세션의_끈_표시는"]
+expect = "red"
+expect_output = ["AssertionError: 남긴 호출의 칸이 멈춘 꼴과 다르다", "HALTED_LEFT"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT, Stop.HALTED_LEFT})'''
+new = '''LEFT_RUNNING = frozenset({Stop.DEADLINE_LEFT, Stop.HUNG_LEFT})'''
+
+[[mutation]]
+name = "줄 판정이 끄라고 한 호출을 멈춘 꼴로 가르지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "그_줄에서_명령_줄의"]
+expect = "red"
+expect_output = ["where <Stop.HUNG_KILLED: 'hung_killed'> = Drove("]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''            stop = halt if halted else _STOPS[timed_out, killing]'''
+new = '''            stop = _STOPS[timed_out, killing]'''
+
+[[mutation]]
+name = "줄 판정이 참이어도 읽기를 멈추지 않는다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "마감_전에_그_줄에서"]
+expect = "red"
+timeout = 300  # 시험의 마감 30초를 기다린 뒤 마감 끄기로 빨개진다
+expect_output = ["AssertionError: 줄 판정이 끄라고 한 줄에서 끄지 않았다"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''                if watch(line):'''
+new = '''                if False:'''
+
+[[mutation]]
+name = "이어 부르는 명령이 새 세션을 연다"
+tests = ["tests/tools/test_rerun_session.py", "-k", "이어_부르는_명령은"]
+expect = "red"
+expect_output = ["At index 14 diff: '--session-id' != '--resume'"]
+
+[[mutation.edit]]
+file = "tools/rerun_session.py"
+old = '''        opening.value,'''
+new = '''        "--session-id",'''
+
+[[mutation]]
+name = "호출 차례를 세지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "그_밖이면_resume"]
+expect = "red"
+expect_output = ["Right contains one more item: '02-00000000-0000-4000-8000-000000000001.jsonl'"]
+
+[[mutation.edit]]
+file = "tools/rerun_round.py"
+old = '''        return len(self.session_ids.read_text(encoding="utf-8").splitlines())'''
+new = '''        return 1'''
+
+[[mutation]]
+name = "명령 줄 대신 작업 폴더를 읽는다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "살아_있는"]
+expect = "red"
+expect_output = ["assert '표지 ", "' in ('"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''    _PARAMS_COMMAND_LINE = 0x70'''
+new = '''    _PARAMS_COMMAND_LINE = 0x38'''
+
+[[mutation]]
+name = "proc 의 끝 NUL 을 떼지 않는다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "NUL"]
+expect = "red"
+expect_output = ["Left contains one more item: ''"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''    if parts and parts[-1] == b"":'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "사본의 함수가 훅의 것과 갈린다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "훅에서_옮긴"]
+expect = "red"
+expect_output = ["AssertionError: _unicode_string"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''        length = int.from_bytes(raw[0:2], "little")'''
+new = '''        length = int.from_bytes(raw[0:4], "little")'''
+
+[[mutation]]
+name = "사본의 API 원형이 훅에 없는 문장을 든다"
+tests = ["tests/tools/test_proc_command_line.py", "-k", "훅에서_옮긴"]
+expect = "red"
+expect_output = ["AssertionError: 훅의 API 원형에 없는 문장"]
+
+[[mutation.edit]]
+file = "tools/proc_command_line.py"
+old = '''        kernel.LocalFree.argtypes = [pointer]'''
+new = '''        kernel.LocalFree.argtypes = [handle]'''

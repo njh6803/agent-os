@@ -1,0 +1,580 @@
+# 티켓 01(두 계약 파일의 꼴)의 시험이 실제로 무는지 변이로 본다(implement 스킬, 대기열 29). 이 티켓의
+# 시험은 구현 전에 import 오류로만 빨갰고 거부하는 갈림 하나하나가 빨강을 본 적은 없어서, 읽기의 거부,
+# 칸 사이의 맞음, 덮어쓰기 거부, 이름 풀기, 판정 칸, import 경계를 하나씩 되돌려 그 단언이 무는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_files_mutations.toml
+
+[[mutation]]
+name = "모르는 키를 거부하지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "모르는_키는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''unknown = [k for k in value if k not in keys]'''
+new = '''unknown: list[str] = []'''
+
+[[mutation]]
+name = "참거짓 판을 1로 읽는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "모르는_판은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if not _is_int(version) or version != SHAPE_VERSION:'''
+new = '''if version != SHAPE_VERSION:'''
+
+[[mutation]]
+name = "끝의 종류와 하위 이유를 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "종류와_맞지_않는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if (reason is None) != (not reasons) or (reason is not None and reason not in reasons):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "한도가 아닌 끝의 resets_at 을 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "한도가_아닌_끝에는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if resets_at is not None and reason != REASON_LIMIT:'''
+new = '''if False:'''
+
+[[mutation]]
+name = "목록의 종류와 과제의 파일럿인지를 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "파일럿_목록에_든"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if t.pilot != (kind == LIST_PILOT):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "파일럿 과제의 층을 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "파일럿_과제의_층은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if pilot != (tier == TIER_PILOT):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "겹친 과제 id 와 실행 차례를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "겹친_과제_id"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if v in seen:'''
+new = '''if False:'''
+
+[[mutation]]
+name = "이미 있는 기록 파일을 덮는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "덮지_않는다"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''os.link(tmp, path)  # 이미 있으면 FileExistsError. 덮지 않는다'''
+new = '''os.replace(tmp, path)'''
+
+[[mutation]]
+name = "다음 회차 번호가 회차 폴더를 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "기록이_없는_회차_폴더를"]
+expect = "red"
+expect_output = ["assert 2 == 5"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''found += [parse_round_dir_name(n) for n in round_dir_names]'''
+new = '''found += []'''
+
+[[mutation]]
+name = "회차 폴더 이름을 왼쪽에서 자른다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_폴더_이름을_짓고_푼다"]
+expect = "red"
+expect_output = ["assert None is not None"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''parts = name.rsplit("-", 3)'''
+new = '''parts = name.split("-", 3)'''
+
+[[mutation]]
+name = "노드 ID 를 마지막 :: 에서 자른다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "노드_ID_에서"]
+expect = "red"
+expect_output = ["ShapeError: 노드 ID가 아니다: 'tests/tools/test_x.py::TestC::test_m[1-2]'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''file, sep, rest = node_id.partition("::")'''
+new = '''file, sep, rest = node_id.rpartition("::")'''
+
+[[mutation]]
+name = "끝남이 아닌 회차의 게이트를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "끝남이_아닌_회차에는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if end.kind != END_DONE and ('''
+new = '''if False and ('''
+
+[[mutation]]
+name = "준비가 실패한 회차의 게이트를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "준비가_실패하면"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if setup is not None and (gates is not None or hidden is not None):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "결과 커밋과 고른 규칙을 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "고른_규칙이_맞아야"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if (commit is None) != (rule in (None, RULE_NONE)):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "숨은 시험의 수를 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "합이_전체다"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if hidden.passed + len(hidden.failed) != hidden.total:'''
+new = '''if False:'''
+
+
+[[mutation]]
+name = "쓰기가 읽기로 다시 풀어 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "읽기가_거부할_값을"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+    text = _dumps(_record_json(record))
+    parse_record(text)
+'''
+new = '''
+    text = _dumps(_record_json(record))
+'''
+
+[[mutation]]
+name = "음수 토큰을 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "형이_다른_값은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''return v if isinstance(v, int) and _is_int(v) and v >= 0 else None'''
+new = '''return v if isinstance(v, int) and _is_int(v) else None'''
+
+[[mutation]]
+name = "게이트가 하나라도 초록이면 초록이다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "판정이_읽는_칸을_모은다"]
+expect = "red"
+expect_output = ["assert True is False", ").gates_green"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''gates_green = all(g.exit_code == 0 and not g.timed_out for g in o.gates)'''
+new = '''gates_green = any(g.exit_code == 0 and not g.timed_out for g in o.gates)'''
+
+[[mutation]]
+name = "숨은 시험이 0개면 통과로 읽는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "돌지_않았으면_빈_값이다"]
+expect = "red"
+expect_output = ["assert True is False", ").hidden_passed"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''hidden_passed = o.hidden.total > 0 and o.hidden.passed == o.hidden.total'''
+new = '''hidden_passed = o.hidden.passed == o.hidden.total'''
+
+[[mutation]]
+name = "하위 프로세스 모듈을 import 한다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_모듈만_import"]
+expect = "red"
+expect_output = ["Extra items in the left set", "'subprocess'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+import json
+'''
+new = '''
+import json
+import subprocess  # noqa: F401
+'''
+
+[[mutation]]
+name = "모델 이름 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''MODEL_FORM = re.compile(r"claude-[a-z0-9.-]+(?:\[1m\])?|<synthetic>")'''
+new = '''MODEL_FORM = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "식별자 칸(창·subtype·노력)이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''IDENT_FORM = re.compile(r"[a-z][a-z0-9_]*")'''
+new = '''IDENT_FORM = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "도구 이름 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_TOOL = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")'''
+new = '''_TOOL = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "계정 이름 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_ACCOUNT = re.compile(r"[a-z0-9][a-z0-9._-]*")'''
+new = '''_ACCOUNT = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "오염 꼴의 이름 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_PATTERN_NAME = re.compile(r"[가-힣a-z0-9][가-힣a-z0-9_-]*")'''
+new = '''_PATTERN_NAME = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "claude 판 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "회차_기록의_형이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''VERSION_FORM = re.compile(r"[0-9][0-9A-Za-z .()+-]*")'''
+new = '''VERSION_FORM = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "실패 노드 칸이 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "노드_ID_꼴이고"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")'''
+new = '''_NODE = re.compile(r"(?s).+")'''
+
+[[mutation]]
+name = "과제 id 가 유니코드 숫자를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "형이_다른_값은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{2,}")'''
+new = '''_TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-\d{2,}")'''
+
+[[mutation]]
+name = "게이트의 수와 차례를 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_셋이"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if tuple(g.command for g in gates) != GATE_COMMANDS:'''
+new = '''if False:'''
+
+[[mutation]]
+name = "준비 명령을 상수와 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "준비가_실패하면"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''command=setup_obj.choice("command", SETUP_COMMANDS),'''
+new = '''command=setup_obj.text("command"),'''
+
+[[mutation]]
+name = "실패 노드가 겹쳐도 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "겹치지_않는다"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if len(set(hidden.failed)) != len(hidden.failed):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "실패 노드의 노드 ID 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "노드_ID_꼴이고"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+        for n in hidden.failed:
+            hidden_test_file(n)
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "끝남인데 결과 커밋이 없어도 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "끝남인_회차에는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if end.kind == END_DONE and outcome.commit is None:'''
+new = '''if False:'''
+
+[[mutation]]
+name = "회차 폴더 이름을 이 회차와 맞대지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "이_회차의_폴더다"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if named is None or (named.task_id, named.arm, named.round_no) != (task_id, arm, round_no):'''
+new = '''if False:'''
+
+[[mutation]]
+name = "무한대와 NaN 을 돈으로 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "형이_다른_값은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''return f if math.isfinite(f) and f >= 0 else None'''
+new = '''return f if f >= 0 else None'''
+
+[[mutation]]
+name = "깊은 중첩이 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "JSON_이_아니거나"]
+expect = "red"
+expect_output = ["RecursionError"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except (ValueError, RecursionError) as e:'''
+new = '''except ValueError as e:'''
+
+[[mutation]]
+name = "UTF-8 이 아닌 파일이 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "UTF_8_이_아닌"]
+expect = "red"
+expect_output = ["UnicodeDecodeError"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+    except UnicodeDecodeError as e:
+        raise ShapeError(f"{what}: UTF-8이 아니다({e})") from e
+'''
+new = '''
+    except OSError:
+        raise
+'''
+
+[[mutation]]
+name = "과제 목록 쓰기가 읽기로 다시 풀어 보지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "읽기가_거부할_값을"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+            "tasks": [_task_json(t) for t in task_list.tasks],
+        }
+    )
+    parse_task_list(text)
+'''
+new = '''
+            "tasks": [_task_json(t) for t in task_list.tasks],
+        }
+    )
+'''
+
+# PR 직전 bug-perf-review 를 반영한 갈래(일지 2026-10-23-15 "PR 직전 리뷰").
+
+[[mutation]]
+name = "float 로 담지 못하는 큰 정수가 OverflowError 로 샌다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "형이_다른_값은"]
+expect = "red"
+expect_output = ["OverflowError"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except OverflowError:'''
+new = '''except ZeroDivisionError:'''
+
+[[mutation]]
+name = "자릿수 한도를 넘는 정수 리터럴이 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "JSON_이_아니거나"]
+expect = "red"
+expect_output = ["Exceeds the limit"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except (ValueError, RecursionError) as e:'''
+new = '''except (json.JSONDecodeError, RecursionError) as e:'''
+
+[[mutation]]
+name = "쓰기의 유한하지 않은 수가 ShapeError 가 아니다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰기는_유한하지"]
+expect = "red"
+expect_output = ["Out of range float"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''except ValueError as e:'''
+new = '''except TypeError as e:'''
+
+[[mutation]]
+name = "실패 노드가 U+0085 를 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "줄을_끊는_문자를"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\x85\u2028\u2029]+")'''
+new = '''_NODE = re.compile(r"[^\x00-\x1f\x7f\u2028\u2029]+")'''
+
+[[mutation]]
+name = "기록 파일에 바로 쓴다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰다_실패하면"]
+expect = "red"
+expect_output = ["Left contains one more item"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''with tmp.open("x", encoding="utf-8", newline="\n") as f:'''
+new = '''with path.open("x", encoding="utf-8", newline="\n") as f:'''
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''os.link(tmp, path)  # 이미 있으면 FileExistsError. 덮지 않는다'''
+new = '''pass'''
+
+[[mutation]]
+name = "쓰다 실패한 임시 파일을 지우지 않는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "쓰다_실패하면"]
+expect = "red"
+expect_output = ["Left contains one more item"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''tmp.unlink(missing_ok=True)'''
+new = '''pass'''
+
+[[mutation]]
+name = "임시 파일 이름이 pid 만 쓰고 그 이름을 덮어 연다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "지우기_전에_같은_회차를"]
+expect = "red"
+expect_output = ["diff: b'2' != b'1'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''tmp = path.with_name(f".{path.name}.{os.getpid()}-{os.urandom(6).hex()}.tmp")'''
+new = '''tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")'''
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''with tmp.open("x", encoding="utf-8", newline="\n") as f:'''
+new = '''with tmp.open("w", encoding="utf-8", newline="\n") as f:'''
+
+[[mutation]]
+name = "os 의 하위 프로세스 길을 쓴다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_모듈만_import"]
+expect = "red"
+expect_output = ["'system'"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''
+import os
+'''
+new = '''
+import os
+
+_SYSTEM = os.system
+'''
+
+[[mutation]]
+name = "숨은 시험의 파일 부분을 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "파일_부분은_tests_아래"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''if not sep or not is_test_file(file) or not _NODE.fullmatch(rest):'''
+new = '''if not sep or not file or not _NODE.fullmatch(rest):'''
+
+[[mutation]]
+name = "시험 지원 파일 칸을 아무 글이나 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "허용_꼴_밖을"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''support_files=o.paths("support_files", is_support_file),'''
+new = '''support_files=o.strs("support_files"),'''

@@ -4,6 +4,11 @@
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-system/probes/visual_mutations.toml [이름 ...]
 # visual 러너는 정적 빌드부터 다시 지어 Docker 컨테이너에서 돈다(-g 로 좁힌 실행 하나에 십여 초였다. 손으로 봤다).
 # Docker 와 판을 고정한 이미지가 있어야 한다. 정답 사진이 커밋돼 있어야 기준선이 초록이다.
+# 2026-10-23(web-widget 03): 정적 빌드를 여는 길이 `visual/storybook.ts` 에서 위젯과 나눠 쓰는 `visual/index.ts` 로 옮겨
+# 그 변이 둘의 `file` 과 원문(들여쓰기)을 옮겼다. 표를 고치며 design-refresh 가 테마와 스토리를 다시 지어 원문이 0번이 된
+# 변이 일곱도 지금 코드로 고쳤다. 먹은 없어졌고 기본 테마는 녹청이며 주 버튼은 회색 900 바탕이라, 원색 변이는 녹청의
+# `--gray-900` 을, `:root` 변이는 녹청 블록을 겨눈다. 올림 색은 `primary-hover`, judgment 태그는 군청 스토리, 모드 가드는
+# `renderedAs`, 던지는 스토리는 작은 버튼이 없어져 아이콘을 단 버튼(`WithIcon`)이다. 일지 2026-10-23-50.
 
 [runner.visual]
 command = ["pnpm", "-C", "web", "visual"]
@@ -25,42 +30,42 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.tsx"
 old = '''
-  primary: "hover:bg-accent-hover active:bg-accent-press",
+  primary: "hover:bg-primary-hover active:bg-primary-active",
 '''
 new = '''
-  primary: "hover:bg-accent-press active:bg-accent-press",
+  primary: "hover:bg-primary-active active:bg-primary-active",
 '''
 
 # 파랑 한 단위가 사진에서 빨간 것은 threshold 0 의 몫이다. 바로 아래 대조는 같은 변이에 기준을 Playwright 의
 # 기본값(0.2)으로 돌려 지나는 것을 본다.
 [[mutation]]
-name = "먹의 강조 원색을 파랑 한 단위 바꾸면 주 버튼의 사진이 빨갛다"
+name = "녹청의 회색 900 원색을 파랑 한 단위 바꾸면 주 버튼의 사진이 빨갛다"
 runner = "visual"
-tests = ["-g", "atoms-button--primary 를 먹의"]
+tests = ["-g", "atoms-button--primary 를 기본"]
 expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
 old = '''
-    --accent-600: #285cc2;
+    --gray-900: #171a1c;
 '''
 new = '''
-    --accent-600: #285cc3;
+    --gray-900: #171a1d;
 '''
 
 [[mutation]]
 name = "대조: 색 차이 기준이 기본값이면 파랑 한 단위는 지난다"
 runner = "visual"
-tests = ["-g", "atoms-button--primary 를 먹의"]
+tests = ["-g", "atoms-button--primary 를 기본"]
 expect = "green"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
 old = '''
-    --accent-600: #285cc2;
+    --gray-900: #171a1c;
 '''
 new = '''
-    --accent-600: #285cc3;
+    --gray-900: #171a1d;
 '''
 
 [[mutation.edit]]
@@ -75,27 +80,28 @@ new = '''
 [[mutation]]
 name = "다른 테마를 정한 스토리의 judgment 태그를 떼면 기본 테마 확인이 빨갛다"
 runner = "visual"
-tests = ["-g", "atoms-button--(focus|primary) 를 먹의"]
+tests = ["-g", "atoms-button--primary(-guncheong)? 를 기본"]
 expect = "red"
+expect_output = ['Received: "guncheong"']
 
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.stories.tsx"
 old = '''
-  name: "Tab 으로 포커스하면 focus 색의 실선 테두리가 바깥에 그려진다",
+  name: "군청의 주 버튼도 primary 바탕에 on-primary 글자다",
   tags: ["judgment"],
 '''
 new = '''
-  name: "Tab 으로 포커스하면 focus 색의 실선 테두리가 바깥에 그려진다",
+  name: "군청의 주 버튼도 primary 바탕에 on-primary 글자다",
 '''
 
 [[mutation]]
 name = "판정 스토리를 거르지 않으면 정답 없는 사진이 생겨 빨갛다"
 runner = "visual"
-tests = ["-g", "먹의 라이트·다크로 찍은"]
+tests = ["-g", "를 기본 테마의 그려진 모드와 밀도마다 찍은"]
 expect = "red"
 
 [[mutation.edit]]
-file = "web/packages/ui/visual/storybook.ts"
+file = "web/packages/ui/visual/index.ts"
 old = '''
     .filter((entry) => !entry.tags.includes(JUDGMENT_TAG));
 '''
@@ -108,14 +114,17 @@ name = "스토리가 정한 모드와 다른 차례도 찍으면 정답 없는 �
 runner = "visual"
 tests = ["-g", "atoms-button--primary-dark 를"]
 expect = "red"
+expect_output = ["atoms-button--primary-dark-light-"]
 
 [[mutation.edit]]
 file = "web/packages/ui/visual/stories.visual.ts"
 old = '''
-      if ((await renderedMode(page)) !== mode) {
+      await openInDefault(storybook, page, story.id, mode, density);
+      if (!(await renderedAs(page, mode, density))) {
 '''
 new = '''
-      if ((await renderedMode(page)) === "none") {
+      await openInDefault(storybook, page, story.id, mode, density);
+      if (!(await renderedAs(page, mode, density)) && story.id === "") {
 '''
 
 # 첫 판은 play 의 기대값을 바꿨는데 초록이었다. 정적 빌드는 play 의 실패에 오류 화면을 띄우지 않는다(일지
@@ -123,18 +132,19 @@ new = '''
 [[mutation]]
 name = "그리다 던지는 스토리는 오류 화면 확인에서 빨갛다"
 runner = "visual"
-tests = ["-g", "atoms-button--small 를"]
+tests = ["-g", "atoms-button--with-icon 를"]
 expect = "red"
+expect_output = ["스토리 atoms-button--with-icon 를 그리다"]
 
 [[mutation.edit]]
 file = "web/packages/ui/src/components/atoms/Button.stories.tsx"
 old = '''
-  name: "작은 버튼의 높이는 32px 이다",
-  args: { size: "s" },
+  name: "아이콘은 글자 앞에 있고 이름에 들지 않는다",
+  args: { icon: "check" },
 '''
 new = '''
-  name: "작은 버튼의 높이는 32px 이다",
-  args: { size: "s" },
+  name: "아이콘은 글자 앞에 있고 이름에 들지 않는다",
+  args: { icon: "check" },
   render: () => {
     throw new Error("그리다 실패한 스토리");
   },
@@ -178,14 +188,15 @@ name = "정적 빌드 밖으로 나간 요청이 있으면 빨갛다"
 runner = "visual"
 tests = ["-g", "시스템 모드에서"]
 expect = "red"
+expect_output = ["나간 요청: http://storybook.invalid/"]
 
 [[mutation.edit]]
-file = "web/packages/ui/visual/storybook.ts"
+file = "web/packages/ui/visual/index.ts"
 old = '''
-      if (url.origin !== ORIGIN) {
+        if (url.origin !== ORIGIN) {
 '''
 new = '''
-      if (url.origin !== ORIGIN || url.pathname.endsWith(".woff2")) {
+        if (url.origin !== ORIGIN || url.pathname.endsWith(".woff2")) {
 '''
 
 # --- 미디어 특성 --------------------------------------------------------------------------------------------
@@ -254,7 +265,7 @@ new = '''
 '''
 
 [[mutation]]
-name = "먹의 원색을 :root 에 두지 않으면 속성 없는 문서 뿌리가 빨갛다"
+name = "녹청의 원색을 :root 에 두지 않으면 속성 없는 문서 뿌리가 빨갛다"
 runner = "visual"
 tests = ["-g", "문서 뿌리에서"]
 expect = "red"
@@ -264,11 +275,11 @@ file = "web/packages/ui/src/styles/theme.css"
 old = '''
   :root,
   :host,
-  [data-theme="muk"],
+  [data-theme="nokcheong"],
 '''
 new = '''
   :host,
-  [data-theme="muk"],
+  [data-theme="nokcheong"],
 '''
 
 [[mutation]]

@@ -2,7 +2,8 @@
 
 표준 출력, 표준 에러, 종료 코드, 트레이스 파일을 본다.
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
-llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥 이음매다.
+이 파일에서는 llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥
+이음매다. 위젯 화면에서 실제 모델까지 가는 것은 llm_widget 마커의 `tests/test_widget_llm.py` 다.
 """
 
 import asyncio
@@ -20,6 +21,7 @@ import tomllib
 from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from ipaddress import IPv6Address
 from pathlib import Path
 
 import pytest
@@ -27,20 +29,23 @@ import uvicorn
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.sse import KEEPALIVE_COMMENT
 from httpx import ASGITransport, AsyncClient, Client, Timeout
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
+from pydantic import BaseModel, ConfigDict, Field
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
 from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
+from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
-from agent_os.http.sites import Site, SiteKey, SiteLimits
+from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
 from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
 from agent_os.sdk import (
     AgentName,
@@ -830,8 +835,8 @@ def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     구성 오류는 서버가 서기 전에 끝나므로 그때 이 목록은 비어 있어야 한다. 검사 순서가 뒤집히면
     운영자는 진단 대신 401 을 보게 되는데, 그것이 ADR 0011 이 막으려던 바로 그 실패다.
 
-    uvicorn 이 실제로 포트를 여는 것은 기본 스위트가 증명하지 않고 실제 serve 를 띄우는 둘이 잰다.
-    `-m llm` 의 실제 serve 테스트와, 매 푸시에서 도는 관리 화면의 e2e(실제 serve 의 둘째 구동자)다.
+    uvicorn 이 실제로 포트를 여는 것은 기본 스위트가 증명하지 않고 실제 serve 서브프로세스를 띄우는
+    시험들이 잰다. 그 목록은 `.claude/rules/http.md` 의 테스트 줄 하나에 둔다.
     여기서 재는 것은 그 앞까지다 — 판정이 막았나 지나갔나, 지나갔다면 무엇을 들려 보냈나.
     """
     calls: list[dict[str, object]] = []
@@ -999,9 +1004,9 @@ def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포�
 ) -> None:
     """실패 경로만 재면 판정이 늘 막는 회귀가 초록으로 지나가고 `serve` 는 영영 뜨지 않는다.
 
-    기본 스위트가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이고 그것은 `-m llm` 과
-    관리 화면의 e2e 가 잰다. 갖춰진 구성이 판정을 통과하는지는 면제 대상이 아니고, 기본값이 자기
-    정책에 막히지 않는다는 것도 여기서 닫힌다.
+    기본 스위트가 면제한 것은 좁다 — uvicorn 이 **포트를 실제로 여는 것**이고 그것은 실제 serve 를
+    띄우는 시험들이 잰다(`uvicorn_calls` 의 독스트링). 갖춰진 구성이 판정을 통과하는지는 면제 대상이
+    아니고, 기본값이 자기 정책에 막히지 않는다는 것도 여기서 닫힌다.
     """
     code = main([*argv, "--port", "9999"])
 
@@ -1527,6 +1532,204 @@ def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_
     ]
 
 
+# 허용 출처의 표기와 두 언어가 함께 읽는 사이트 파일(web-widget 티켓 04, ADR 0024). 픽스처와 규칙의
+# 이름은 `tests/fixtures/site_file/README.md` 가 원천이다. 위젯 빌드의 판정은 같은 파일을
+# `web/apps/widget/tools/site-file.test.ts` 와 `web/apps/widget/next.config.test.ts` 가 읽어
+# 고정한다.
+
+SITE_FILE_FIXTURES = REPO_ROOT / "tests" / "fixtures" / "site_file"
+
+
+class _PassingOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    origin: str
+    note: str
+
+
+class _BlockedOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    origin: str
+    rule: str
+    note: str
+
+
+class _OriginCases(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    passing: tuple[_PassingOrigin, ...] = Field(alias="pass", min_length=1)
+    block: tuple[_BlockedOrigin, ...] = Field(min_length=1)
+
+
+class _SiteFileExpectation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    allowed_origins: tuple[str, ...]
+    request_chars: int
+    default_request_chars: int
+
+
+_ORIGIN_CASES = _OriginCases.model_validate_json(
+    (SITE_FILE_FIXTURES / "origins.json").read_text(encoding="utf-8")
+)
+
+
+def _toml_strings(*values: str) -> str:
+    """TOML 배열 하나. JSON 의 문자열 표기를 TOML 의 기본 문자열로 쓴다. 보이는 ASCII 밖(제어 문자,
+    DEL, 비ASCII)은 모두 이스케이프로 적는다. TOML 은 기본 문자열 안의 날 DEL 을 받지 않는다. BMP 밖
+    글자는 JSON 이 서로게이트 쌍(`\\ud83d\\ude00`)으로 적어 TOML 이 거절하므로 쓰지 못한다. 표기
+    픽스처에는 그런 글자가 없다."""
+    return "[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.passing],
+    ids=[case.origin for case in _ORIGIN_CASES.passing],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다(
+    origin: str, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("origin", "rule"),
+    [(case.origin, case.rule) for case in _ORIGIN_CASES.block],
+    ids=[case.origin for case in _ORIGIN_CASES.block],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다(
+    origin: str,
+    rule: str,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """막힌 값은 둘째 자리에 두어, 진단이 가리키는 항목이 그 자리이고 지나는 첫째는 말하지 않는다는
+    것까지 본다. 값은 진단에 싣지 않는다 — 사용자 정보에 비밀번호가 들 수 있다."""
+    origins = _toml_strings("https://ok.example", origin)
+    Path("sites.toml").write_text(_site_file(_site(origins=origins)), encoding="utf-8")
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    problem = "브라우저가 Origin 헤더에 싣는 표기가 아니다"
+    assert f"sites[0].allowed_origins[1]: {problem}(규칙 {rule})" in err
+    assert "allowed_origins[0]" not in err
+    assert "pw@" not in err
+    assert uvicorn_calls == []
+
+
+@pytest.fixture
+def dotted_ipv4_mapped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IPv4 매핑 주소(`::ffff:0:0/96`)를 `::ffff:1.2.3.4` 처럼 점으로 적는 파이썬 판(CI 의
+    3.12.15)을 흉내 낸다. 그 판의 `IPv6Address.__str__` 이 `_ipv4_mapped_ipv6_to_str` 로 그렇게
+    적고, 이 PC 의 3.12.10 은 `::ffff:102:304` 로 적는다(`src/agent_os/main.py` 의
+    `_serialized_ipv6`). `compressed` 는 `str` 을 부르므로 `__str__` 만 바꾼다."""
+    plain = IPv6Address.__str__
+
+    def dotted(address: IPv6Address) -> str:
+        mapped = address.ipv4_mapped
+        return plain(address) if mapped is None else f"::ffff:{mapped}"
+
+    monkeypatch.setattr(IPv6Address, "__str__", dotted)
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+    ids=[case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다(
+    origin: str, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """브라우저는 IPv6 주소를 판과 무관하게 16진수 그룹으로 싣는다. 판정이 표준 라이브러리의 글 꼴에
+    기대면 파이썬 판에 따라 `[::ffff:102:304]` 를 막는다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+    ids=[case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
+)
+@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지_않는_IPv6_허용_출처는_막힌다(
+    origin: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """점으로 적은 IPv4(`[::ffff:1.2.3.4]`)는 그 판의 압축형과 같아도 브라우저가 싣는 꼴이
+    아니다."""
+    Path("sites.toml").write_text(
+        _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
+    )
+
+    code = main(["serve", "--site-file", "sites.toml"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert (
+        "sites[0].allowed_origins[0]: 브라우저가 Origin 헤더에 싣는 표기가 아니다(규칙 ipv6)" in err
+    )
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """위젯 빌드는 합친 허용 출처와 가장 작은 상한을 쓰고, 서버는 사이트마다의 상한으로 요청을 잰다.
+    그래서 서버 쪽은 읽은 사이트 목록의 합친 출처와, 모든 사이트가 받는 가장 긴 요청이 기대값인지를
+    채널의 검사로 본다. Node 의 파서가 키 경로를 잘못 읽으면 위젯은 조용히 기본값을 쓰고 서버는
+    422 를 내는데, 그 갈림을 두 언어가 같은 기대값으로 막는다."""
+    expected = _SiteFileExpectation.model_validate_json(
+        (SITE_FILE_FIXTURES / "sites.json").read_text(encoding="utf-8")
+    )
+    received: list[Sites] = []
+
+    def recording(*, sites: Sites, **_: object) -> FastAPI:
+        received.append(sites)
+        return FastAPI()
+
+    monkeypatch.setattr(main_module, "create_app", recording)
+
+    code = main(["serve", "--site-file", str(SITE_FILE_FIXTURES / "sites.toml")])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    (sites,) = received
+    assert len(sites.entries) == 2
+    assert sites.origins() == expected.allowed_origins
+    longest = "x" * expected.request_chars
+    for site in sites.entries:
+        check_request_chars(longest, site)
+    refused: list[str] = []
+    for site in sites.entries:
+        try:
+            check_request_chars(longest + "x", site)
+        except RequestValidationError:
+            refused.append(site.issuer)
+    assert len(refused) == 1, f"가장 긴 요청을 넘긴 길이를 거절한 사이트가 하나가 아니다: {refused}"
+    assert expected.default_request_chars == DEFAULT_REQUEST_CHARS
+
+
 # --- 실행 타임아웃 -----------------------------------------------------------------------
 # `serve --run-timeout SECONDS` 가 실행 하나의 시간을 정한다(end-user-channel 티켓 03). 빼면 core 의
 # 기본값이다 — `serve` 는 기본값을 따로 두지 않는다. 기한의 동작은 core 테스트가 재고, 여기서는
@@ -1964,13 +2167,15 @@ ASKER_NAME = "서하늘"
 def test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_사용자_경로로_이어_가면_앞_대화를_안다(
     tmp_path: Path,
 ) -> None:
-    """바깥 이음매. 실제 uvicorn 과 사이트 파일과 PyJWT 의 조립을 실제 실행으로 보는 유일한 자리다
-    (end-user-channel 티켓 01). 프레임은 `id:` 를 싣고, 모델 호출은 항목이 없어 그 자리를 건너뛰며,
-    주체는 `발급자|sub` 로 트레이스에 남는다. 토큰은 실제 시각으로 서명한다. 이어 가기는 새 경로가
-    실제 소켓과 실제 서명 토큰과 실제 모델로 지나는 것이다 — 이어 간 답이 첫 요청의 이름을 아는 것은
-    asker 가 트레이스에서 거슬러 읽은 교환을 프롬프트에 엮었기 때문이다(end-user-continuation 스토리
-    1·53). 시작 이벤트의 바로가기(첫 실행은 빈 지도, 이어 간 실행은 asker → 첫 실행)가 실제 디스크에
-    쓰이는 것도 여기서 잰다."""
+    """바깥 이음매. 실제 uvicorn 과 사이트 파일과 PyJWT 의 조립을 실제 모델과 함께 원칙 I 의 판정
+    (`-m llm`)에서 보는 자리다(end-user-channel 티켓 01). 같은 조립을 모델 없이 지나는 것은 위젯
+    e2e(web-widget 티켓 06)이고, 위젯 화면에서 실제 모델로 지나는 것은 따로 치는 `-m llm_widget`
+    의 `tests/test_widget_llm.py`(티켓 11)다. 프레임은 `id:` 를 싣고, 도구를 요청하지 않은 모델
+    호출은 항목이 없어 그 자리를 건너뛰며, 주체는 `발급자|sub` 로 트레이스에 남는다. 토큰은 실제
+    시각으로 서명한다. 이어 가기는 새 경로가 실제 소켓과 실제 서명 토큰과 실제 모델로 지나는 것이다
+    — 이어 간 답이 첫 요청의 이름을 아는 것은 asker 가 트레이스에서 거슬러 읽은 교환을 프롬프트에
+    엮었기 때문이다(end-user-continuation 스토리 1·53). 시작 이벤트의 바로가기(첫 실행은 빈 지도,
+    이어 간 실행은 asker → 첫 실행)가 실제 디스크에 쓰이는 것도 여기서 잰다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_plugin(tmp_path, "asker", ASKER_SRC)
     (tmp_path / "sites.toml").write_text(_site_file(_site(agents='["asker"]')), encoding="utf-8")

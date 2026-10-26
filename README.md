@@ -13,7 +13,7 @@ uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`pnpm -C web visual`, `web/packages/ui`를 건드렸을 때)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030).
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`과 `pnpm -C web visual:widget`, `web/apps/widget`을 건드렸을 때 뒤의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
 
 ## 구조
 
@@ -38,23 +38,34 @@ plugins/
   agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
   disabled.toml    선택. 운영자가 끈 플러그인의 이름(ADR 0017). 없으면 전부 켜짐. 관리 API의 PUT이 쓰고
                    손으로 고쳐도 같다. skill과 model은 로더가 생길 때 그 로더가 켜짐을 본다
-tests/             src를 미러링
+tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
   tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트의
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다), visual(사진 비교를 판을 고정한 Playwright
                    이미지의 Docker 컨테이너에서 돌린다)
-  packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널 클라이언트 둘,
-                   재개 스트림을 프레임으로 읽는 것(ADR 0021)
+  packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널·위젯 클라이언트 셋,
+                   운영자·최종 사용자 스트림을 프레임으로 읽는 것(ADR 0021·0024)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
-                   사진 snapshots/). 스토리 테스트는 뿌리 vitest.config.ts 의 storybook 프로젝트가 실제 chromium 에서
-                   돈다(ADR 0026)
+                   사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
+                   storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
                    (요청 함수와 SWR 훅), stores/(토큰), next.config.ts(/api 중계), tools/start.ts(루프백에만 띄우는
                    시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리), e2e/(실제 serve 를 지나는 Playwright)
+  apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지와 사이트 페이지 안에 서는 커스텀
+                   요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
+                   lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
+                   `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
+                   tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
+                   tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정),
+                   tools/site-file.ts(AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수
+                   상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
+                   .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
+                   e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e),
+                   EMBED.md(사이트 개발자가 읽는 임베드 안내)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/

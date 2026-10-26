@@ -11,11 +11,11 @@
       uv run python tools/mutate.py --check <변이 파일.toml> <변이 파일.toml> ...
       uv run python tools/mutate.py --staged
 LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/mutate.py …` 이고 tests 에
-`-m llm` 을 넣는다. `--check` 는 원문만 본다 — 명령을 돌리지 않고, 고른 변이마다 원문이 파일에
-정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을 모두 알린다. 코드를 고친 뒤 다른
-변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이 파일 여럿(`.toml` 로 끝나는
-인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고 주면 줄마다 그 파일의 경로가
-붙고 읽지 못한 파일이 있어도 나머지를 본다.
+`-m llm`(위젯의 실제 모델 e2e 면 `-m llm_widget`)을 넣는다. `--check` 는 원문만 본다 — 명령을 돌리지
+않고, 고른 변이마다 원문이 파일에 정확히 한 번 있는지(와 러너의 자리, 되돌릴 파일)를 보고 틀린 것을
+모두 알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
+파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고
+주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다.
 
 `--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
 고친 표(`*_mutations.toml`)는 모든 원문을 본다. 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
@@ -185,7 +185,11 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
     (그 경로에서) uv sync
     (그 경로에서) pnpm -C web install --frozen-lockfile --offline    # web 변이일 때
     (그 경로에서) PYTHONUTF8=1 uv run python tools/mutate.py <변이 파일>
-    git worktree remove <임시 경로>
+    git -c core.longpaths=true worktree remove <임시 경로>
+
+지우기는 `core.longpaths` 를 켜고 친다. 끄고 치면 깊은 경로에서 `Filename too long` 으로 멈춰
+등록만 빠지고 폴더가 남는다(`.scratch/harness/probes/worktree_longpath.py`). `uv sync` 를 친 임시
+워크트리에서 그렇게 남았다(일지 2026-10-23-23).
 
 바이트코드 캐시는 소스의 수정 시각(초)과 크기로만 맞춰 보므로, 크기가 같은 변이가 같은 초에 쓰이면
 낡은 캐시가 돈다. 그래서 변이를 쓴 직후와 되돌린 직후에 그 소스의 `__pycache__/<이름>.*.pyc`(CPython
@@ -1378,7 +1382,9 @@ def _parse(argv: Sequence[str]) -> _Args:
     flags = [arg for arg in rest if arg.startswith("--")]
     if flags:
         raise _UsageError(
-            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다"
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다. "
+            "변이 몇만 돌리려면 표 뒤에 그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 "
+            "이름을 준다"
         )
     if not rest:
         raise _UsageError(__doc__ or "")

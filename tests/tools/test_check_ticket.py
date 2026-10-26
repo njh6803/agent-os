@@ -556,10 +556,347 @@ def test_저장소가_아닌_폴더에서는_git_실패로_2를_낸다(tmp_path:
     assert "symbolic-ref" in result.stderr
 
 
+def test_인자를_잘못_주면_argparse가_접두_없이_2로_끝낸다(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [sys.executable, str(CHECK), "--모르는-인자"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=_TIMEOUT,
+        check=False,
+    )
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert result.stderr.startswith("usage:") and "check-ticket:" not in result.stderr
+
+
 def test_바로_치면_전환의_한_줄이_보인다(규약_전_브랜치: Repo) -> None:
     result = _바로(규약_전_브랜치)
     assert result.returncode == 0
     assert "규약 전" in result.stdout
+
+
+# --- CI ------------------------------------------------------------------------
+#
+# CI 는 PR 의 병합 커밋(첫 부모 base, 둘째 부모 머리)을 분리 HEAD 로 체크아웃하고, PR 의 값은 환경
+# 변수로 받는다. 아래는 작업 클론에서 그 병합 커밋을 지어 체크아웃한 뒤 `--ci` 로 바로 친다.
+
+DONE = "# 02: 일\n\n**Status:** done\n"
+IN_PROGRESS = READY.replace("ready-for-agent", "in-progress")
+CI_BLOCKED = "PR 을 막았다"
+
+
+@dataclass(frozen=True)
+class PR값:
+    head_ref: str
+    head: str
+    base: str
+
+
+def _PR_병합_커밋(repo: Repo, head_ref: str, base: str = "origin/main") -> PR값:
+    """`head_ref` 를 `base` 에 합친 병합 커밋을 분리 HEAD 로 체크아웃한다(GitHub 의 PR 병합
+    커밋)."""
+    head = repo.git("rev-parse", head_ref)
+    base_sha = repo.git("rev-parse", base)
+    repo.git("switch", "-q", "--detach", base_sha)
+    repo.git("merge", "-q", "--no-ff", "--no-edit", head)
+    return PR값(head_ref, head, base_sha)
+
+
+def _CI로_친다(
+    repo: Repo, pr: PR값 | None, event: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    """CI 처럼 친다. `pr` 이 없으면 PR 이 아닌 실행(push)이라 PR 의 값이 비어 있다. 이벤트 이름
+    (`GITHUB_EVENT_NAME`)을 주지 않으면 `pr` 에 맞춘다. 이 시험이 CI 의 PR 실행에서 돌 때 물려받는
+    값에 기대지 않는다."""
+    values = ("", "", "") if pr is None else (pr.head_ref, pr.head, pr.base)
+    name = event if event is not None else ("push" if pr is None else "pull_request")
+    env = {
+        **repo.env,
+        "GITHUB_EVENT_NAME": name,
+        **dict(zip(("PR_HEAD_REF", "PR_HEAD_SHA", "PR_BASE_SHA"), values, strict=True)),
+    }
+    return subprocess.run(
+        [sys.executable, str(CHECK), "--ci"],
+        cwd=repo.work,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=_TIMEOUT,
+        check=False,
+    )
+
+
+def _CI가_막았다(result: subprocess.CompletedProcess[str]) -> str:
+    out = result.stdout + result.stderr
+    assert result.returncode == 1, f"CI 가 막아야 한다: {out}"
+    assert CI_BLOCKED in out, f"CI 의 막는 글이 아니다: {out}"
+    return out
+
+
+def _CI가_지났다(result: subprocess.CompletedProcess[str]) -> str:
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, f"CI 가 지나야 한다: {out}"
+    return out
+
+
+def _티켓_브랜치(repo: Repo, ticket: str) -> None:
+    """`feature/02-thing` 이 그 티켓과 면제 밖 파일 하나를 실은 커밋을 든다."""
+    repo.git("switch", "-q", "-c", "feature/02-thing")
+    _지났다(
+        repo.stage_commit({".scratch/feat/issues/02-thing.md": ticket, "tools/b.py": "B = 1\n"})
+    )
+
+
+def _훅을_건너뛰고_커밋한다(repo: Repo, files: dict[str, str]) -> None:
+    """`--no-verify` 커밋. 커밋 검사를 거치지 않은 커밋이 PR 에 드는 길이다."""
+    repo.write(files)
+    repo.git("add", "-A")
+    repo.git("commit", "-q", "--no-verify", "-m", "훅을 건너뛰었다")
+
+
+def test_CI는_done이_아닌_티켓을_막고_경로와_값과_할_일을_든다(저장소: Repo) -> None:
+    _티켓_브랜치(저장소, IN_PROGRESS)
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert ".scratch/feat/issues/02-thing.md" in out
+    assert "in-progress" in out
+    assert "done 으로" in out and "푸시" in out
+
+
+@pytest.mark.parametrize("line", ["**Status:** done", "Status: done"])
+def test_CI는_done인_티켓을_지난다(저장소: Repo, line: str) -> None:
+    _티켓_브랜치(저장소, f"# 02: 일\n\n{line}\n")
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+
+
+@pytest.mark.parametrize("line", ["**Status:** in-progress", "Status: in-progress"])
+def test_CI는_두_꼴의_상태_줄을_모두_읽는다(저장소: Repo, line: str) -> None:
+    _티켓_브랜치(저장소, f"# 02: 일\n\n{line}\n")
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert "in-progress" in out
+
+
+def test_CI는_본문의_Status가_아니라_줄_머리의_상태_줄을_읽는다(저장소: Repo) -> None:
+    # 기능을 닫는 판정의 문장처럼 본문이 상태 줄보다 먼저 `Status:` 를 다른 값과 함께 든다. 줄
+    # 어디서든 첫 출현을 읽으면 done 을 읽는다
+    ticket = (
+        "# 02: 일\n\n- [ ] 기능을 닫으면 모든 티켓이 Status: done 이다\n\n**Status:** in-progress\n"
+    )
+    _티켓_브랜치(저장소, ticket)
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert "in-progress" in out
+
+
+def test_CI는_상태_줄이_없는_티켓을_막는다(저장소: Repo) -> None:
+    _티켓_브랜치(저장소, "# 02: 일\n\n본문만 있다\n")
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert "상태 줄이 없다" in out
+
+
+def test_CI는_상태_줄의_값이_빈_티켓을_막는다(저장소: Repo) -> None:
+    _티켓_브랜치(저장소, "# 02: 일\n\n**Status:**\n")
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert "상태 줄의 값이 비었다" in out
+
+
+def test_CI는_docs_브랜치의_harness_티켓이_모두_done이어야_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "docs/retro")
+    done = ".scratch/harness/issues/009-a.md"
+    open_ = ".scratch/harness/issues/010-b.md"
+    _지났다(
+        저장소.stage_commit(
+            {
+                done: "# 009\n\n**Status:** done\n",
+                open_: "# 010\n\n**Status:** in-progress\n",
+                "tools/b.py": "B = 1\n",
+            }
+        )
+    )
+    pr = _PR_병합_커밋(저장소, "docs/retro")
+    out = _CI가_막았다(_CI로_친다(저장소, pr))
+    assert open_ in out and done not in out
+    저장소.git("switch", "-q", "docs/retro")
+    _지났다(저장소.stage_commit({open_: "# 010\n\n**Status:** done\n"}))
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/retro")))
+
+
+def test_CI는_면제_모양만_바꾼_PR을_티켓_상태와_상관없이_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "feature/02-thing")
+    _지났다(
+        저장소.stage_commit(
+            {
+                ".scratch/feat/issues/02-thing.md": IN_PROGRESS,
+                "docs/journal/2026-01-02-01-x.md": "x\n",
+            }
+        )
+    )
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+
+
+def test_CI는_분리_HEAD인_병합_커밋에서도_티켓_없는_PR을_막는다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/002-thing")
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "chore/002-thing")))
+    assert 저장소.git("rev-parse", "--abbrev-ref", "HEAD") == "HEAD"
+    assert "tools/b.py" in out
+    assert ".scratch/harness/issues/002-thing.md" in out
+    assert NUMBER_COMMAND in out and BRANCH_COMMAND in out and CONVENTION in out
+
+
+def test_CI는_머리_커밋에는_있지만_PR의_변경에_들지_않은_티켓을_알린다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "feature/02-thing")
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+    assert ".scratch/feat/issues/02-thing.md" in out
+    assert "PR 의 변경에 들지 않는다" in out
+    # 그 티켓이 이미 done 이면(앞서 닫힌 티켓의 브랜치를 다시 쓴 PR) done 으로 고칠 것이 없다
+    assert "이미 done 이면" in out and "새로 쓴다" in out
+
+
+def test_CI는_판정_전에_받은_값과_병합_커밋의_첫_부모를_찍는다(저장소: Repo) -> None:
+    _티켓_브랜치(저장소, DONE)
+    pr = _PR_병합_커밋(저장소, "feature/02-thing")
+    first_parent = 저장소.git("rev-parse", "HEAD^1")
+    result = _CI로_친다(저장소, pr)
+    line = next(x for x in result.stdout.splitlines() if "CI 입력" in x)
+    for value in ("feature/02-thing", pr.head, pr.base, first_parent):
+        assert value in line, line
+
+
+def test_CI는_PR이_아닌_실행에서_한_줄을_찍고_지난다(저장소: Repo) -> None:
+    result = _CI로_친다(저장소, None)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PR 이 아닌 실행" in result.stdout
+
+
+def test_CI는_PR_실행인데_머리_브랜치가_비면_git_실패로_2를_낸다(저장소: Repo) -> None:
+    # 워크플로의 env 이름이 도구와 어긋나거나 식이 비면, PR 이 push 처럼 판정 없이 지난다
+    result = _CI로_친다(저장소, None, "pull_request")
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "PR_HEAD_REF" in result.stderr
+
+
+def test_CI는_체크아웃이_얕아_merge_base를_찾지_못하면_git_실패로_2를_낸다(저장소: Repo) -> None:
+    # fetch-depth 를 줄이면 base 와 머리의 공통 조상이 깊이 밖이다. 커밋 검사의 얕은 클론처럼
+    # 알리고 지나면 모든 PR 이 판정 없이 초록이다
+    저장소.git("switch", "-q", "-c", "chore/002-thing")
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    저장소.push_main({"docs/journal/2026-01-02-01-main.md": "main\n"})
+    pr = _PR_병합_커밋(저장소, "chore/002-thing")
+    저장소.git("update-ref", "refs/pull/1/merge", "HEAD")
+    shallow = 저장소.tmp / "shallow"
+    저장소.git("init", "-q", str(shallow))
+    source = 저장소.work.as_uri()
+    저장소.git("fetch", "-q", "--depth", "2", source, "refs/pull/1/merge", cwd=shallow)
+    저장소.git("switch", "-q", "--detach", "FETCH_HEAD", cwd=shallow)
+    repo = Repo(저장소.tmp, shallow, None, 저장소.env)
+    assert repo.git("rev-parse", "--is-shallow-repository") == "true"
+    result = _CI로_친다(repo, pr)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "fetch-depth" in result.stderr
+
+
+def test_CI는_base_커밋을_찾지_못하면_git_실패로_2를_낸다(저장소: Repo) -> None:
+    _티켓_브랜치(저장소, DONE)
+    pr = _PR_병합_커밋(저장소, "feature/02-thing")
+    result = _CI로_친다(저장소, PR값(pr.head_ref, pr.head, "0" * 40))
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "PR_BASE_SHA" in result.stderr
+
+
+def test_CI는_머리_브랜치가_main인_PR을_지난다(저장소: Repo) -> None:
+    # 못 보는 것: 포크의 main 에서 연 PR 은 판정 1 로 지난다
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    head = 저장소.git("rev-parse", "HEAD")
+    base = 저장소.git("rev-parse", "origin/main")
+    저장소.git("switch", "-q", "--detach", base)
+    저장소.git("merge", "-q", "--no-ff", "--no-edit", head)
+    _CI가_지났다(_CI로_친다(저장소, PR값("main", head, base)))
+
+
+def test_CI는_다른_브랜치를_base로_둔_PR의_변경에_base_브랜치의_커밋을_세지_않는다(
+    저장소: Repo,
+) -> None:
+    # base 브랜치는 면제 밖 파일과 기능 티켓을 들었고, 그 위의 docs 브랜치는 일지만 고쳤다.
+    # origin/main 을 기준으로 세면 docs 브랜치의 변경에 면제 밖 파일이 섞여 막힌다
+    _티켓_브랜치(저장소, DONE)
+    저장소.git("switch", "-q", "-c", "docs/on-top")
+    # 커밋 검사는 이 커밋을 막는다(아래 쌓은 브랜치 사례)
+    _훅을_건너뛰고_커밋한다(저장소, {"docs/journal/2026-01-02-01-x.md": "x\n"})
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/on-top", base="feature/02-thing")))
+
+
+def test_커밋_검사는_다른_브랜치_위에_쌓은_브랜치의_커밋을_base_브랜치의_변경까지_세어_막는다(
+    저장소: Repo,
+) -> None:
+    # 못 보는 것(거짓 양성): 커밋 검사는 origin/main 에 견주므로, 면제 모양만 고친 커밋도 base
+    # 브랜치가 든 면제 밖 파일 때문에 막힌다. 그 PR 은 CI 가 base 커밋에 견줘 지난다(위 사례)
+    _티켓_브랜치(저장소, DONE)
+    저장소.git("switch", "-q", "-c", "docs/on-top")
+    out = _막혔다(저장소.stage_commit({"docs/journal/2026-01-02-01-x.md": "x\n"}))
+    assert "tools/b.py" in out
+
+
+def test_CI는_base_브랜치가_병합되어_main을_base로_둔_쌓은_PR을_막고_rebase_onto로_지난다(
+    저장소: Repo,
+) -> None:
+    # 못 보는 것(거짓 양성): base 브랜치를 squash 로 병합하면 그 커밋은 main 에 없어, base 가
+    # main 으로 바뀐 쌓은 PR 은 base 브랜치의 변경까지 제 것으로 세어 막힌다. 독스트링이 안내한
+    # 길(`git rebase --onto origin/main <옛 base 브랜치>`)로 옮기면 지난다
+    _티켓_브랜치(저장소, DONE)
+    저장소.git("switch", "-q", "-c", "docs/on-top")
+    _훅을_건너뛰고_커밋한다(저장소, {"docs/journal/2026-01-02-01-x.md": "x\n"})
+    저장소.push_main({".scratch/feat/issues/02-thing.md": DONE, "tools/b.py": "B = 1\n"})
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/on-top")))
+    assert "tools/b.py" in out
+    저장소.git("switch", "-q", "docs/on-top")
+    저장소.git("rebase", "-q", "--onto", "origin/main", "feature/02-thing")
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/on-top")))
+
+
+def test_CI는_다른_브랜치를_base로_둔_PR의_전환에_base_브랜치의_커밋을_세지_않는다(
+    규약_전_브랜치: Repo,
+) -> None:
+    # base 브랜치는 규약 전에 땄고 그 뒤 main 을 합쳐 검사를 들였다. 그 위에서 딴 머리는 규약
+    # 뒤라 판정을 받는다. origin/main 을 기준으로 세면 base 브랜치의 첫 커밋이 머리의 첫 자기 커밋이
+    # 되고, 그 부모(검사가 없던 main)로 전환이 되어 지난다
+    repo = 규약_전_브랜치
+    _지났다(repo.stage_commit({"tools/b.py": "B = 1\n"}))
+    repo.git("merge", "-q", "--no-edit", "origin/main")
+    repo.git("switch", "-q", "-c", "chore/002-thing")
+    _훅을_건너뛰고_커밋한다(repo, {"tools/c.py": "C = 1\n"})
+    out = _CI가_막았다(_CI로_친다(repo, _PR_병합_커밋(repo, "chore/002-thing", base="topic")))
+    assert "tools/c.py" in out and "tools/b.py" not in out
+
+
+def test_CI의_전환은_base에_검사가_없던_자리에서_딴_머리를_지난다(규약_전_브랜치: Repo) -> None:
+    repo = 규약_전_브랜치
+    _지났다(repo.stage_commit({"tools/b.py": "B = 1\n"}))
+    out = _CI가_지났다(_CI로_친다(repo, _PR_병합_커밋(repo, "topic")))
+    assert "규약 전" in out
+
+
+def test_CI는_검사가_든_base로_rebase한_규약_전_머리를_판정한다(규약_전_브랜치: Repo) -> None:
+    repo = 규약_전_브랜치
+    _지났다(repo.stage_commit({"tools/b.py": "B = 1\n"}))
+    repo.git("rebase", "-q", "origin/main")
+    out = _CI가_막았다(_CI로_친다(repo, _PR_병합_커밋(repo, "topic")))
+    assert "tools/b.py" in out
+
+
+def test_CI의_첫_자기_커밋은_날짜가_아니라_위상_순서로_고른다(규약_전_브랜치: Repo) -> None:
+    repo = 규약_전_브랜치
+    _지났다(repo.stage_commit(CHECK_MARK))
+    early = "2020-01-01T00:00:00+0000"
+    repo.env["GIT_COMMITTER_DATE"] = early
+    repo.env["GIT_AUTHOR_DATE"] = early
+    _지났다(repo.stage_commit({"tools/b.py": "B = 1\n"}))
+    del repo.env["GIT_COMMITTER_DATE"], repo.env["GIT_AUTHOR_DATE"]
+    out = _CI가_지났다(_CI로_친다(repo, _PR_병합_커밋(repo, "topic")))
+    assert "규약 전" in out
 
 
 # --- 진짜 pre-commit ------------------------------------------------------------

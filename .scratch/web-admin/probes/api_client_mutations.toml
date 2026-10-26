@@ -105,8 +105,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = 'return [value.startsWith(" ") ? value.slice(1) : value];'
-new = 'return [value];'
+old = 'value: value.startsWith(" ") ? value.slice(1) : value };'
+new = 'value: value };'
 
 [[mutation]]
 name = "data: 뒤의 공백을 모두 벗긴다"
@@ -116,8 +116,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = 'return [value.startsWith(" ") ? value.slice(1) : value];'
-new = 'return [value.trimStart()];'
+old = 'value: value.startsWith(" ") ? value.slice(1) : value };'
+new = 'value: value.trimStart() };'
 
 [[mutation]]
 name = "여러 data 줄을 줄바꿈 없이 잇는다"
@@ -127,8 +127,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = 'data.push(values.join("\n"));'
-new = 'data.push(values.join(""));'
+old = 'values.join("\n") : null;'
+new = 'values.join("") : null;'
 
 [[mutation]]
 name = "data 가 아닌 필드도 값으로 읽는다"
@@ -138,14 +138,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = '''
-  if (name !== "data") {
-    return [];
-  }'''
-new = '''
-  if (name === "") {
-    return [];
-  }'''
+old = '(field.name === "data" ? [field.value] : [])'
+new = '(field.name !== "" ? [field.value] : [])'
 
 [[mutation]]
 name = "끝나지 않은 프레임의 앞부분을 남기지 않는다"
@@ -155,8 +149,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = '  return { data, rest: buffer.slice(frameStart) };'
-new = '  return { data, rest: buffer.slice(lineStart) };'
+old = '  return { blocks, rest: buffer.slice(blockStart) };'
+new = '  return { blocks, rest: buffer.slice(lineStart) };'
 
 [[mutation]]
 name = "술어가 프로토타입의 이름을 종류로 본다"
@@ -166,8 +160,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = '    Object.hasOwn(EVENT_TYPES, value.type)'
-new = '    value.type in EVENT_TYPES'
+old = '    Object.hasOwn(types, value.type)'
+new = '    value.type in types'
 
 [[mutation]]
 name = "술어가 판별자 밖의 필드를 요구한다"
@@ -201,8 +195,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
-old = '    buffer += done ? `${decoder.decode()}\n\n` : decoder.decode(value, { stream: true });'
-new = '    buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });'
+old = '      const { blocks } = splitBlocks(`${buffer}${decoder.decode()}\n\n`);'
+new = '      const { blocks } = splitBlocks(`${buffer}${decoder.decode()}`);'
 
 [[mutation]]
 name = "조각을 이어 해독하지 않는다"
@@ -224,12 +218,14 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
 old = '''
-  try {
-    yield* framesFrom(reader);
+        yield classify(data);
+      }
+    }
   } finally {'''
 new = '''
-  try {
-    yield* framesFrom(reader);
+        yield classify(data);
+      }
+    }
   } catch (error) {
     void error;
   } finally {'''
@@ -243,14 +239,16 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
 old = '''
-  try {
-    yield* framesFrom(reader);
+        yield classify(data);
+      }
+    }
   } finally {
     reader.releaseLock();
   }'''
 new = '''
-  try {
-    yield* framesFrom(reader);
+        yield classify(data);
+      }
+    }
   } catch (error) {
     throw error;
   }
@@ -265,10 +263,16 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/api-client/src/stream.ts"
 old = '''
+        yield classify(data);
+      }
+    }
   } finally {
     reader.releaseLock();
   }'''
 new = '''
+        yield classify(data);
+      }
+    }
   } finally {
     void reader;
   }'''
@@ -282,8 +286,8 @@ diagnostic_in = "clients.test-d.ts"
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/clients.ts"
-old = 'export type AdminPaths = Omit<paths, ChannelPath>;'
-new = 'export type AdminPaths = paths;'
+old = 'export type AdminPaths = Omit<paths, ChannelPath | EndUserPath>;'
+new = 'export type AdminPaths = Omit<paths, EndUserPath>;'
 
 [[mutation]]
 name = "채널 클라이언트가 실행을 일으키는 경로도 안다"

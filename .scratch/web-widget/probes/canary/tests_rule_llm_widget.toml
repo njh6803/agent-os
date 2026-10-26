@@ -1,0 +1,23 @@
+# 티켓 11이 `.claude/rules/tests.md` 의 LLM 마커 항목 첫 문장에 더한 `llm_widget` 마커가 `paths` 에 맞는 파일을
+# Read 로 열 때 실리는지. 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-13).
+# 돌리는 법: uv run python tools/canary.py .scratch/web-widget/probes/canary/tests_rule_llm_widget.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 실제 모델을 부르는 테스트에 붙이는 마커를 다루는 항목이 있으면,
+그 항목의 첫 문장을 글자 그대로 옮겨라.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["위젯 e2e를 실제 모델로 돌리는 시험만 llm_widget 마커를 붙인다"]
+source = ".claude/rules/tests.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tests/test_plugins_boundary.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

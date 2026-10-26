@@ -1,7 +1,8 @@
 # `.claude/rules/http.md` 의 상태 코드 표 항목을 고친 문장(최종 사용자 경로끼리는 가르지 않는다, 그 밖의 PluginError 가
 # 최종 사용자 면에서 500 고정 문구인 이유)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 05).
 # 실험군은 규칙의 paths 안(src/agent_os/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 일지 2026-10-20-20).
+# 최신 결과: 통과 4(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-10). web-widget 티켓 06 이 같은 규칙의 테스트 항목
+# (실제 `serve` 를 띄우는 것들에 위젯 e2e 를 더했다)을 고친 뒤 커밋하기 전의 사본으로 다시 돌렸다.
 # 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/http_rule_pre_owner_damage.toml <출력 디렉터리>
 kind = "rule"
 question = '''

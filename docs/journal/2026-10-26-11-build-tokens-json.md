@@ -1,4 +1,4 @@
-# 2026-10-22 (26) design-reverse-sync 02 tokens.json 짓기와 맞대기
+# 2026-10-26 (11) design-reverse-sync 02 tokens.json 짓기와 맞대기
 
 ## 시작
 
@@ -8,7 +8,7 @@
 
 ## 임시 아티팩트 승인
 
-티켓의 임시 아티팩트 단계 앞에서, 만들 것(`claude auth status`로 본 계정 njh4803에 Design System 형식의 비공개 임시 아티팩트, 편집이 켜진 채 지은 `tokens.json`과 사람 몫만 든 README)과 부탁할 것 셋(고치지 않고 열기, `gray-50` 녹청 라이트 값을 `#f0f4f8`로 바꾸고 `radius-m` 설명에 `버튼과 카드의 모서리`를 넣어 저장, 지우기 확인)을 보이고 물었다.
+티켓의 임시 아티팩트 단계 앞에서, 만들 것(`claude auth status`로 본 로그인 계정에 Design System 형식의 비공개 임시 아티팩트, 편집이 켜진 채 지은 `tokens.json`과 사람 몫만 든 README)과 부탁할 것 셋(고치지 않고 열기, `gray-50` 녹청 라이트 값을 `#f0f4f8`로 바꾸고 `radius-m` 설명에 `버튼과 카드의 모서리`를 넣어 저장, 지우기 확인)을 보이고 물었다.
 
 > 사용자: 만들고 진행 (추천) — 비공개 임시 아티팩트를 만들어 링크를 드립니다. 이어서 1) 고치지 않고 열기, 2) gray-50 녹청 라이트 값(지금 #f4f8fb)과 radius-m 설명(지금 빈 칸) 고쳐 저장, 3) 지우기 확인을 차례로 부탁드립니다.
 
@@ -59,8 +59,8 @@
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md
 브랜치: feature/02-build-tokens-json
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-26-build-tokens-json.md 의 "인계 (셀프 리뷰 직전)" 절(커밋하지 않았고 이 브랜치의 워크트리에 있다)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(일지 docs/journal/2026-10-22-26-build-tokens-json.md). 리뷰 기점은 origin/main과의 merge-base이고 범위는 커밋 8c9fb760과 커밋하지 않은 변경 전부다. 임시 아티팩트 단계는 사람의 몫까지 끝났고 아티팩트는 지웠다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다
+읽을 것: docs/journal/2026-10-26-11-build-tokens-json.md 의 "인계 (셀프 리뷰 직전)" 절(커밋하지 않았고 이 브랜치의 워크트리에 있다)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(일지 docs/journal/2026-10-26-11-build-tokens-json.md). 리뷰 기점은 origin/main과의 merge-base이고 범위는 커밋 8c9fb760과 커밋하지 않은 변경 전부다. 임시 아티팩트 단계는 사람의 몫까지 끝났고 아티팩트는 지웠다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -89,7 +89,7 @@ open-session을 부른다 2026-10-22T12:57:37Z
 - Minor 6. `tokens-json.ts`의 `readFamily`가 인자 `taken`을 변형한다(출력 인자, CQS).
 - Minor 7. 03이 주석을 달면 깨질 시험(`build.test.ts` 199·256~258, `tokens-json.test.ts` 201)이 03 티켓에 없다.
 - Minor 8. 독스트링과 코드가 다르다(실행으로 확인): 테마 차례가 빌림을 거쳐 해시를 바꾼다, 레이어가 사용자 정의 속성을 든 블록에서만 등록된다(`@layer a{:root{color:red}} @layer b{…--x:1} @layer a{…--x:2}`가 `2`), 자기 별칭과 함수가 든 글꼴 스택이 남는다, 앞의 `.`를 떼지 않는다, `zIndex`를 낮추지 않는다.
-- Nit. 한도 시험이 `kind`만 본다, `LIMITS.name` 120이 caps에 없다, `limit()`은 동사 표의 `check`다, `Bench`라는 이름, added/removed 블록의 반복, `buildTokensJson`은 시험만 쓴다, `.prettierignore` 대신 확장자를 바꿀 수 있다, `issue-tracker.md`는 Claude Code 계정을 njh6803이라 적는다.
+- Nit. 한도 시험이 `kind`만 본다, `LIMITS.name` 120이 caps에 없다, `limit()`은 동사 표의 `check`다, `Bench`라는 이름, added/removed 블록의 반복, `buildTokensJson`은 시험만 쓴다, `.prettierignore` 대신 확장자를 바꿀 수 있다, `issue-tracker.md`가 적은 Claude Code 계정 이름이 `claude auth status`와 다르다.
 
 ### 명세 축 보고
 
@@ -124,7 +124,7 @@ open-session을 부른다 2026-10-22T12:57:37Z
 - 표준 Minor 8의 앞 `.`: 오탐이다. 판 `af13`의 `app.js`가 토큰 이름에서 `--`만 뗀다. 독스트링에 적었다.
 - `parse`·`read` 동사가 섞인 것: `CONTEXT.md` 동사 표의 `read`는 포트 읽기라 판단 항목으로 남긴다. `Bench`라는 이름, added·removed 블록의 반복, 시험만 쓰는 `buildTokensJson`도 판단 항목이다.
 - `.prettierignore` 대신 확장자를 바꾸는 길: 규칙의 예외 조건(경로와 까닭을 적는다)을 지키므로 그대로 둔다.
-- `issue-tracker.md` 41행의 계정 이름(njh6803, `claude auth status`는 njh4803): 이 PR 밖이다. 회고 후보로 넘긴다.
+- `issue-tracker.md` 41행의 계정 이름(`claude auth status`가 보인 이름과 다르다): 이 PR 밖이다. 회고 후보로 넘긴다.
 - 명세 축 탐침이 만든 `C:\c\…\scratchpad\spec\…` 폴더: 서브에이전트의 지우기가 막혔다. 사용자에게 알린다.
 
 PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
@@ -147,7 +147,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
 
 - pre-commit: `parallel-checks`(lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify, 299초), 마크다운 표, 줄 구분 문자, 변이 표 원문, 커밋 메시지가 통과했다. ruff 둘은 커밋에 `.py`가 없어 `Skipped`였고, 손으로 친 `uv run ruff check .`·`uv run ruff format --check .`는 0이었다. 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다.
 - 인용 대조 경고 셋은 막지 않는 경고라 그대로 둔다. 프로브 README 47행은 Artifact 도구의 거부 문구를 옮긴 것이라 저장소에 원문이 없다. 이 일지 86·98행은 셀프 리뷰 두 축이 반영 전의 README와 07 문장을 인용한 보고의 기록이고, 반영으로 그 문장을 고쳐 지금은 없다.
-- 커밋 직전 `tools/sibling_overlap.py`가 형제(01, 04, 05, model-rerun 워크트리)의 일지 22~25가 이 일지보다 이름순으로 뒤라고 알려, `--move`로 2026-10-22-18을 2026-10-22-26으로 옮겼다(파일 이름, 머리 줄, 프로브 README의 인용).
+- 커밋 직전 `tools/sibling_overlap.py`가 형제(01, 04, 05, model-rerun 워크트리)의 일지 22~25가 이 일지보다 이름순으로 뒤라고 알려, `--move`로 2026-10-22-18을 2026-10-26-11으로 옮겼다(파일 이름, 머리 줄, 프로브 README의 인용).
 - origin/main이 `b104f8f`로 나아갔다. 그사이 main이 이 브랜치가 고친 `spec.md`(Out of Scope의 `/ui-design` 두 항목)와 07(`/ui-design` 상자 한 줄)을 고쳤는데, 이 브랜치가 고친 줄(spec 183행, 07의 "02가 넘긴 것" 메모)과는 떨어져 있다. PR #353과 01 워크트리가 프로브 README를 함께 고친다(나중에 병합하는 쪽의 글자 충돌 후보). 커밋 검사 `tools/check_ticket.py`도 main에서 바뀌었다.
 
 ## 인계 (커밋 뒤)
@@ -158,7 +158,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
 2. PR 직전 리뷰. `/security-review`와 `bug-perf-review`를 나란히 돌리고, 뒤의 브리프에 위 "셀프 리뷰"의 판정 절에 있는 밀 주장 11개를 싣는다.
 3. 티켓 02의 남은 상자. "검증 명령이 모두 초록이다"는 이 커밋의 pre-commit과 손으로 친 ruff가 근거이고, 합친 뒤 다시 본다. PR을 열기 전에 Status를 `done`으로 바꾼다. `plan.md` 행은 병합 직전에 origin/main의 그 행이 아직 `todo`인지 보고 판정한다. "기능을 닫지 않는다".
 4. `/git-pr`로 PR을 열고 봇 회차를 거쳐 next-session "워크트리에서 병합할 때"로 병합한다.
-5. 일지 "다음"과 회고. 회고 후보 하나: `docs/agents/issue-tracker.md` 41행이 Claude Code 계정을 njh6803이라 적지만 `claude auth status`는 njh4803이다(이 PR 밖).
+5. 일지 "다음"과 회고. 회고 후보 하나: `docs/agents/issue-tracker.md` 41행이 적은 Claude Code 계정 이름이 `claude auth status`와 다르다(이 PR 밖).
 
 명세 축 서브에이전트가 Git Bash 경로 변환으로 `C:\c\Users\User\AppData\Local\Temp\claude\…\scratchpad\spec\…` 폴더를 만들었고 그 지우기는 막혔다. 이 세션이 사람에게 지워 달라고 알렸다.
 
@@ -171,8 +171,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 원문):
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md
 브랜치: feature/02-build-tokens-json
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-26-build-tokens-json.md 의 "인계 (커밋 뒤)" 절과 "셀프 리뷰"의 판정 절(PR 직전 리뷰에 밀 주장 11개). 그 일지의 "커밋 뒤 (c19c5abd)"와 "인계 (커밋 뒤)" 절은 커밋하지 않았고 이 브랜치의 워크트리에 있다
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 c19c5abd까지 했다(pre-commit 통과, 푸시하지 않았고 PR은 없다). 남은 단계는 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review), 티켓 02의 남은 상자와 Status, PR, 봇 회차, 병합, 일지 "다음"과 회고다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-22-26-build-tokens-json.md)
+읽을 것: docs/journal/2026-10-26-11-build-tokens-json.md 의 "인계 (커밋 뒤)" 절과 "셀프 리뷰"의 판정 절(PR 직전 리뷰에 밀 주장 11개). 그 일지의 "커밋 뒤 (c19c5abd)"와 "인계 (커밋 뒤)" 절은 커밋하지 않았고 이 브랜치의 워크트리에 있다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 c19c5abd까지 했다(pre-commit 통과, 푸시하지 않았고 PR은 없다). 남은 단계는 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review), 티켓 02의 남은 상자와 Status, PR, 봇 회차, 병합, 일지 "다음"과 회고다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-26-11-build-tokens-json.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -206,7 +206,7 @@ PR을 연 뒤에 세션 컨텍스트가 문턱을 넘은 채 인계 계기("PR �
 
 1. 봇 회차(next-session 순서 1의 2). 첫 `@coderabbitai review` 코멘트부터 남긴다.
 2. 병합 직전에 `git fetch` 뒤 origin/main의 `.scratch/plan.md` design-reverse-sync 행이 아직 `todo`인지 본다. 이 PR은 그 행과 프론티어 문단을 `in-progress`로 바꿨다. PR #353(01)이 먼저 병합되면 같은 줄이 부딪치므로, origin/main을 합치며 그쪽을 따르고 이 PR의 두 줄은 되돌린다.
-3. 일지 "다음"과 회고. 회고 후보 하나: `docs/agents/issue-tracker.md` 41행이 Claude Code 계정을 njh6803이라 적지만 `claude auth status`는 njh4803이다(이 PR 밖).
+3. 일지 "다음"과 회고. 회고 후보 하나: `docs/agents/issue-tracker.md` 41행이 적은 Claude Code 계정 이름이 `claude auth status`와 다르다(이 PR 밖).
 4. "워크트리에서 병합할 때"로 병합.
 
 낸 지시문:
@@ -218,8 +218,8 @@ PR을 연 뒤에 세션 컨텍스트가 문턱을 넘은 채 인계 계기("PR �
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md
 브랜치: feature/02-build-tokens-json
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-26-build-tokens-json.md 의 "인계 (PR 연 뒤)" 절. 그 일지의 "커밋 뒤 (b117c0fa)"와 "인계 (PR 연 뒤)" 절은 커밋하지 않았고 이 브랜치의 워크트리에 있다
-이어받을 상태: 인계: PR 연 뒤. PR #356을 열었고(b117c0fa까지 푸시했다) next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 병합 직전에 origin/main의 plan.md design-reverse-sync 행을 다시 보고, 일지 "다음"과 회고를 병합 전에 푸시한다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-22-26-build-tokens-json.md)
+읽을 것: docs/journal/2026-10-26-11-build-tokens-json.md 의 "인계 (PR 연 뒤)" 절. 그 일지의 "커밋 뒤 (b117c0fa)"와 "인계 (PR 연 뒤)" 절은 커밋하지 않았고 이 브랜치의 워크트리에 있다
+이어받을 상태: 인계: PR 연 뒤. PR #356을 열었고(b117c0fa까지 푸시했다) next-session 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 병합 직전에 origin/main의 plan.md design-reverse-sync 행을 다시 보고, 일지 "다음"과 회고를 병합 전에 푸시한다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-26-11-build-tokens-json.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -233,6 +233,12 @@ open-session을 부른다 2026-10-22T14:38:49Z
 > 사용자: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md (인계로 연 세션. 이어받을 상태: "인계: PR 연 뒤. PR #356을 열었고(b117c0fa까지 푸시했다) next-session 순서 1의 2(봇 회차)부터 한다", 이번 요청 범위: PR과 병합까지)
 
 이 세션의 제목은 `feature/02-build-tokens-json`이다. `EnterWorktree(path)`로 이 워크트리에 들어왔다(잠금 거부 없음).
+- `@coderabbitai review` 코멘트를 남기고 상태를 한 번 읽으니 검사 넷이 진행 중이라 `tools/wait_ci.py 356`을 띄웠다. 그것이 "충돌"로 끝났다. PR #353(01)이 먼저 병합되어 origin/main이 `19bbfa06`이 됐다. CodeRabbit 줄은 `Review rate limited`였다.
+- origin/main을 합치며 `.scratch/plan.md`와 프로브 README가 부딪쳤다.
+  - `plan.md`: 인계 메모는 main 쪽을 따르고 이 PR의 두 줄을 되돌리라고 했지만, main 쪽은 "다음은 02"라 이 PR이 병합되면 곧 틀린다. 그래서 main 쪽을 받은 뒤 셋을 고쳤다. 행에서 02의 손으로 본 것을 과거형과 README 인용으로, 01 문장 뒤에 "이어 02가 병합됐다(일지 2026-10-26-11)"와 이 PR의 스크립트 문장을, "다음은"을 막힌 것이 없는 03·04·05로 바꿨다. 프론티어 문단도 같은 뜻으로 고쳤다. 03·05는 02에, 04는 01·02에 막혀 있었다(티켓의 Blocked by).
+  - 프로브 README: main 쪽의 "2026-10-22 결과 (티켓 01, 옮기기 전 판)" 절과 "재지 못한 것" 둘째 항목의 덧붙임을 살리고, 이 브랜치가 좁힌 제목 "재지 못한 것 (`tools_import.mjs`)"과 그 뒤 02의 절 셋을 이었다.
+- main이 `web/pnpm-lock.yaml`을 바꿔 `pnpm -C web install --frozen-lockfile`을 쳤다. `web/tools`의 vitest node 시험 115개가 통과했다.
+- (위 네 항목은 이 세션이 병합 커밋의 첫 pre-commit이 도는 동안 Bash `cat >>`로 덧붙였다가 아래 롤백으로 잃었다. 다음 세션이 세션 기록에서 그 명령의 원문을 꺼내 되살렸다. 회고 절 참조.)
 - 병합 커밋의 첫 pre-commit은 검사 열이 모두 통과했는데(`parallel-checks` 469초) "files were modified by this hook"로 1이었다. 그 뒤 "Stashed changes conflicted with hook auto-fixes... Rolling back fixes"라 무엇이 바뀌었는지 남지 않았다. 치워 둔 미스테이지 변경은 이 일지뿐이었다. 그래서 일지를 스크래치패드로 옮겨 작업 트리를 깨끗하게 하고 다시 커밋했다.
 
 ## claude-review 첫 회차 (`b117c0f`)
@@ -260,7 +266,7 @@ CodeRabbit은 `b117c0f`에서 한도(`Review rate limited`)로 리뷰가 없었�
 2. PR 본문을 고친다(그 절의 "반영한 뒤 할 것"). 병합 커밋과 반영 커밋을 함께 푸시하는 편이 낫다. 병합 커밋만 먼저 푸시하면 claude-review가 반영 전의 코드로 둘째 회차를 돈다.
 3. 푸시한 뒤 `@coderabbitai review`를 남기고 봇 회차(next-session 순서 1의 2)를 잇는다. CodeRabbit은 이 PR에 아직 리뷰가 없어 다음 리뷰가 첫 회차다. claude-review는 다음이 둘째 회차다. 보류 셋의 이유는 그때 PR 코멘트에 남긴다.
 4. 병합 직전에 origin/main의 `.scratch/plan.md` design-reverse-sync 행을 다시 본다. 이 병합 커밋이 01과 02의 병합을 함께 적고 "다음은 막힌 것이 없는 03·04·05"로 고쳤다.
-5. 일지 "다음"과 회고. 회고 후보: `docs/agents/issue-tracker.md` 41행의 계정 이름(njh6803과 `claude auth status`의 njh4803, 이 PR 밖), 미스테이지 파일을 치운 채 훅이 무언가를 고쳐 흔적 없이 롤백된 pre-commit 실패(원인을 찾지 못했다), 자정을 넘는 pre-commit에서 `${TODAY}` 사례가 어긋난 것.
+5. 일지 "다음"과 회고. 회고 후보: `docs/agents/issue-tracker.md` 41행의 계정 이름(`claude auth status`와 다르다, 이 PR 밖), 미스테이지 파일을 치운 채 훅이 무언가를 고쳐 흔적 없이 롤백된 pre-commit 실패(원인을 찾지 못했다), 자정을 넘는 pre-commit에서 `${TODAY}` 사례가 어긋난 것.
 6. "워크트리에서 병합할 때"로 병합.
 
 낸 지시문:
@@ -272,8 +278,8 @@ CodeRabbit은 `b117c0f`에서 한도(`Review rate limited`)로 리뷰가 없었�
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md
 브랜치: feature/02-build-tokens-json
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-22-26-build-tokens-json.md 의 "claude-review 첫 회차 (b117c0f)"와 "인계 (병합 커밋 뒤)" 절. 그 일지의 "커밋 뒤 (b117c0fa)" 절부터 끝까지는 커밋하지 않았고 이 브랜치의 워크트리에 있다
-이어받을 상태: 인계: 커밋 뒤. PR #356이 01(PR #353)의 병합으로 충돌해 origin/main을 합친 병합 커밋 00528d63을 만들었고(pre-commit 통과) 푸시하지 않았다. claude-review 첫 회차의 지적 일곱을 판정했고 고칠 넷은 아직 고치지 않았다. 남은 단계는 넷의 반영과 변이 표·프로브 README 갱신, PR 본문 고치기, 푸시와 봇 회차(CodeRabbit은 아직 리뷰가 없다), 일지 "다음"과 회고, 병합이다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-22-26-build-tokens-json.md)
+읽을 것: docs/journal/2026-10-26-11-build-tokens-json.md 의 "claude-review 첫 회차 (b117c0f)"와 "인계 (병합 커밋 뒤)" 절. 그 일지의 "커밋 뒤 (b117c0fa)" 절부터 끝까지는 커밋하지 않았고 이 브랜치의 워크트리에 있다
+이어받을 상태: 인계: 커밋 뒤. PR #356이 01(PR #353)의 병합으로 충돌해 origin/main을 합친 병합 커밋 00528d63을 만들었고(pre-commit 통과) 푸시하지 않았다. claude-review 첫 회차의 지적 일곱을 판정했고 고칠 넷은 아직 고치지 않았다. 남은 단계는 넷의 반영과 변이 표·프로브 README 갱신, PR 본문 고치기, 푸시와 봇 회차(CodeRabbit은 아직 리뷰가 없다), 일지 "다음"과 회고, 병합이다. 디자인 시스템 아티팩트의 편집은 이 기능이 닫히기 전까지 꺼 둔다(일지 docs/journal/2026-10-26-11-build-tokens-json.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -295,3 +301,42 @@ open-session을 부른다 2026-10-22T15:14:59Z
   4. `command.ts`: 오류 문구를 `messageOf` 하나로 모았다.
 - 변이 표: `--check`가 원문을 잃은 일곱(4, 8, 26~30)을 짚어 새 코드에 맞췄고, 새 사례의 변이를 번호가 밀리지 않게 표의 끝(43)에 더했다. 43의 표지(`+   "jacho" => "자쵸",`)는 변이를 손으로 넣어 받은 실패 출력의 차이 줄이다. 여덟을 번호로 돌려 "변이 8 모두 기대대로"였다. 리팩터가 같은 파일의 다른 줄을 겨누는 변이를 흔들지 않았는지 보려고 표 전부를 다시 돌려 "변이 43 모두 기대대로"(종료 0, 기준선 43 모두 초록)였다.
 - 검증(반영 뒤, 커밋 전): 이 폴더의 vitest node 프로젝트 56개 통과, `pnpm -C web run typecheck` 0, 이 폴더의 ESLint 0, Prettier 바뀐 것 없음.
+
+## 커밋 뒤 (`fb65f01f`)
+
+- pre-commit: `parallel-checks`(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest 434초), 마크다운 표, 줄 구분 문자, 변이 표 원문, 커밋 메시지가 통과했다. ruff 둘은 `.py`가 없어 `Skipped`였고 손으로 친 둘은 0이었다. 인용 대조 경고 둘은 막지 않는 경고라 그대로 둔다(이 일지가 옮긴 pre-commit 출력과, 이 커밋이 고친 `build.ts`의 옛 주석).
+- 커밋 뒤에 인계 계기("커밋 뒤")가 왔지만, 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 넘기지 않고 이었다(next-session "인계할 때" 1).
+- 푸시 전에 PR 본문을 고쳤다(남긴 위험의 `plan.md` 항목과 테마 이름 표 항목, 변경된 영역의 web, 확인 방법의 56개·변이 43, 체크리스트의 커밋과 봇 회차 줄). 병합 커밋 `00528d63`과 반영 커밋을 함께 푸시했다(`b117c0fa..fb65f01f`).
+- 보류한 셋의 까닭을 PR 코멘트로 남겼고, `@coderabbitai review`를 남겼다. CodeRabbit의 체크는 푸시 직후 `Review skipped: manual review required for this OSS repository`였다.
+
+## 이어받은 세션 (봇 둘째 회차 뒤)
+
+> 사용자: /implement .scratch/design-reverse-sync/issues/02-build-tokens-json.md (next-session 지시문으로 연 세션. 다음 단계: PR 반영·병합, 이어받을 상태: "PR #356은 2026-10-22 claude-review 둘째 회차의 보류 코멘트(Minor 2·Nit 1)를 남긴 뒤 병합되지 않았다. 그 뒤 main이 크게 움직여 mergeable이 UNKNOWN이다. 병합하지 않은 까닭은 이 세션이 알지 못한다", 확인할 선행 조건: 주 체크아웃 미갱신, 이번 요청 범위: PR과 병합까지)
+
+- 이 세션의 제목을 `feature/02-build-tokens-json`으로 바꾸고, 주 체크아웃에서 `tidy-checkouts`를 돌았다. 루트(main, 깨끗함)를 `92b61458`에서 `9805a5a7`로 당겼고 지운 것은 없다. 병합된 워크트리 열하나는 `web/apps/widget/public/`을 다시 만들 수 없는 무시된 항목으로 보아 남겼고(대기열 464), 앱의 표지가 있는 둘은 앱의 정리에 맡겼으며, 다른 세션 스크래치패드의 분리 HEAD 워크트리 `mutwt`는 그 커밋이 origin/main에 없어 넘겼다. 그 뒤 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+- 작업 트리에 커밋하지 않은 수정 둘이 있었다. 이 일지에서 계정 이름을 지우고 롤백으로 잃었던 네 항목을 되살린 것과, 프로브 README에서 계정 이름을 지운 것이다. main의 `docs/agents/issue-tracker.md` 41행이 저장소 어디에도 계정을 적지 않는다고 정하므로 그대로 받아 병합 커밋에 실었다. 누가 언제 고쳤는지는 이 세션이 알지 못한다.
+- PR #356의 봇 회차는 끝나 있었다. claude-review 둘째 회차(`fb65f01f`)는 Critical·Major 0이었고, Minor 둘(`writeOutput`의 CQS, `benches()`의 이름과 반환 모양)과 Nit 하나(`THEME_NAMES` 복제)의 보류 까닭이 PR 코멘트(2026-10-22 15:52Z)에 있었다. CodeRabbit은 두 회차 모두 한도로 리뷰가 없었다. PR은 main과 충돌했다(`CONFLICTING`, `DIRTY`).
+- origin/main(`9805a5a7`, 이 브랜치보다 34커밋 앞)을 합쳤다. 충돌은 `.scratch/plan.md`의 프론티어 문단 하나였다. main 쪽은 web-widget이 닫혔다는 문장들을 더했고, 이 브랜치는 "다음은 02 다."를 02의 병합과 "다음은 막힌 것이 없는 03·04·05 다."로 바꿨다. 그래서 main 쪽 줄을 받고 그 한 문장만 옮겼다. 합친 뒤 이 브랜치 자체의 변경(`plan.md`, 이 일지, 프로브 README를 뺀 파일)의 `+`/`-` 줄이 합치기 전(`19bbfa06..fb65f01f`)과 같았다(두 쪽 줄의 md5를 손으로 맞댔다). 그래서 이 병합에는 셀프 리뷰를 다시 돌리지 않았다.
+- main이 `web/pnpm-lock.yaml`과 `pyproject.toml`을 바꿔 `uv sync`와 `pnpm -C web install --frozen-lockfile`을 쳤다(패키지 +3). `web/tools/sync-design-system`의 vitest 56개가 통과했다.
+- `tools/sibling_overlap.py`가 이 일지의 번호를 옮기라고 했다. 이 일지가 이름순으로 main의 최신 일지 2026-10-26-03보다 앞서, 다음 세션이 이름순 최신 일지의 "다음"을 읽으며 이 일지를 지나치기 때문이다. `--move`로 2026-10-22-26을 2026-10-26-11로 옮겼고, 도구가 `plan.md`·프로브 README·이 일지의 인용을 고쳤다. PR 본문의 인용은 푸시 전에 고친다.
+
+## 회고
+
+후보 일곱이고, 승인 둘(대기열 475·476), 기각 넷, 대기열에 적지 않은 회차 하나다. 넘긴 것은 없다.
+
+1. **승인(손상).** 병합 커밋의 pre-commit이 도는 동안 Bash `cat >>`로 일지에 덧붙인 네 항목이 롤백으로 사라졌다(2026-10-22, 위 "이어받은 세션 (PR 연 뒤)"). 앞 세션이 원인을 찾지 못했다고 넘긴 회고 후보가 이것이다. 작업을 잃었으니 손상이고, 층은 이미 있는 막는 훅(`tools/hook_edit_during_commit.py`)을 셸 편집까지 넓히는 것이며, PR 하나로 되돌릴 수 있다. 닫힌 412(293의 4회차)를 이어 대기열 475이고 5회차다. 이 PR은 기능 티켓이라 여기서는 반영하지 않는다.
+2. **승인(고침).** 자정을 넘긴 커밋에서 `run_hooks`의 날짜 사례가 어긋났다(위 "claude-review 첫 회차 (`b117c0f`)"). 다시 쳐서 지나 손상은 아니고 원인은 어림이다. 시험 러너의 버그를 고치는 것이라 사건 하나로 승인하되, 먼저 원인을 가르라고 적었다. 대기열 476이고 1회차다.
+3. **회차로 세는 것이지만 대기열에 더하지 않았다.** 이 세션의 `tidy-checkouts`가 병합된 워크트리 열하나를 `web/apps/widget/public/` 때문에 남겼다. 처방한 열린 행은 464(3회차)인데, 그 행을 닫는 chore 017(`chore/017-tidy-collapsed-and-fresh-branches`, 그 티켓의 "대기열 464·440 을 닫는다"가 이미 체크됐다)이 돌고 있다. 회차를 더해도 바뀌는 판정이 없고, 같은 행을 고친 그 브랜치와 글자 충돌만 만든다.
+4. **기각.** `issue-tracker.md` 41행의 계정 이름(앞 세션의 회고 후보). main이 이미 그 줄을 계정을 적지 않는다는 규칙으로 고쳤다.
+5. **기각.** 이 세션의 큰 출력 둘(`git grep`의 약 1.9만 자, next-session 앞 50줄의 약 1.3만 자). 큰 결과 알림 훅이 그 자리에서 알렸다.
+6. **기각.** `origin/main:.claude/...`를 Git Bash가 경로 목록으로 바꿔 `git show`가 실패했다. PreToolUse 훅이 그 자리에서 알렸다(대기열 195).
+7. **기각.** 앞 세션이 보류 코멘트를 남긴 뒤 커밋하지 않은 수정을 둔 채 병합하지 않았다. 까닭을 알 수 없어 세울 처방이 없다.
+
+`tools/queue_open_rows.py`(이 브랜치와 `--ref origin/main` 둘)에 만료할 행은 없었다.
+
+## 다음
+
+- 이 PR은 워크트리에서 병합한다. 주 체크아웃은 다음 세션의 `tidy-checkouts`가 당긴다.
+- 02의 병합으로 design-reverse-sync 03·04·05가 함께 풀린다(03·05는 02에, 04는 01·02에 막혀 있었다). 셋을 나란히 연다.
+- PR #356에서 보류한 것 가운데 뒤의 티켓에 걸리는 것은 둘이다. `tokens-json.ts`의 `readTokens` 길이와 `added`/`removed` 분기 넷(첫 회차), `build.ts`의 `benches()` 이름과 반환 모양(둘째 회차). 04·05가 그 파일에 계열이나 명령을 더할 때 함께 본다.
+- 대기열 475(5회차)는 하네스 chore 배치의 조건이다. 결정표대로 design-reverse-sync의 마지막 티켓 뒤에 고른다.

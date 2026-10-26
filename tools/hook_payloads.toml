@@ -522,8 +522,15 @@ payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\
 [[case]]
 hook = "hook_probe_conclusion.py"
 expect = "context"
-note = "프로브 README 의 결론 행을 고쳤다(대기열 346. 일지 2026-10-20-17 의 꼴)"
-contains = [".claude/rules/probes.md", "양성 대조"]
+note = "프로브 README 의 결론 행을 고쳤다(대기열 346·421. 일지 2026-10-20-17 의 꼴)"
+contains = [
+    ".claude/rules/probes.md",
+    "양성 대조",
+    "근거의 종류",
+    "그 명령과 함께",
+    "결과를 본 뒤 판정 기준",
+    "docs/agents/issue-tracker.md",
+]
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\README.md", old_string = "| a |", new_string = "| b |" } }
 
 [[case]]
@@ -625,9 +632,36 @@ payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서:
 
 [[case]]
 hook = "hook_prompt_directive.py"
-expect = "silent"
-note = "보통 프롬프트"
+expect = "context"
+contains = ["`.scratch/harness/issues/NNN-<slug>.md`", "`git branch -m", "`set_session_title` 에 `self` 와", "`tools/check_ticket.py`"]
+note = "사람이 보는 세션의 첫 턴 보통 프롬프트 — 티켓·브랜치·제목의 차례를 알린다(티켓 ticket-for-every-pr 05). 러너가 헤드리스 변수 둘을 벗겨 러너를 띄운 세션과 상관없다"
 payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "같은 보통 프롬프트지만 첫 턴이 아니다(assistant 기록이 있는 트랜스크립트)"
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${USED_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "헤드리스 세션(`claude -p` 의 `CLAUDE_CODE_SESSION_ATTENDED=0`)의 첫 턴 보통 프롬프트"
+env = { CLAUDE_CODE_SESSION_ATTENDED = "0" }
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "카나리아 도구가 표지 변수를 붙여 띄운 세션의 첫 턴 보통 프롬프트"
+env = { AGENT_OS_HEADLESS = "1" }
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "앱의 예약 작업이 연 세션의 첫 메시지 — 헤드리스로 보이지 않아 머리로 거른다. 2026-10-22 `morning-report-work` 세션 트랜스크립트의 첫 메시지 머리"
+payload = { prompt = "<scheduled-task name=\"morning-report-work\" file=\"C:\\Users\\User\\.claude\\scheduled-tasks\\morning-report-work\\SKILL.md\">\nThis is an automated run of a scheduled task. The user is not present to answer questions. For implementation details, execute autonomously without asking clarifying questions — make reasonable choices and note them in your output.", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 
 # --- hook_stop_korean (Stop) ---
 [[case]]

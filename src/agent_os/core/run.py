@@ -71,8 +71,8 @@ BaseException 이라 몸통과 요약의 `except Exception` 을 지나쳐 범위
 런타임 이벤트(재개 이벤트 따위)는 결말 앞에 흘린다. 테스트가 기한을 떨어뜨린 자리는 요약 호출, 모델
 호출, 도구 호출, 도구 연결의 닫기이고 도구 연결을 여는 자리는 같은 모양이라는 어림이다. 재개마다
 다시 센다 — 멈춰 있는 시간은 세지 않는다(ADR 0009). 기한은 시계 포트가 아니라 이벤트 루프의 시계로
-센다. 범위가 yield 를 건너므로 부르는 쪽은 이벤트 사이에 await 하지 않는다 — 도구 연결의 취소 범위가
-이미 요구하던 것이다(`.claude/rules/channel.md`).
+센다. 범위와 몸통이 에이전트를 돌리는 태스크 그룹(ADR 0039)이 yield 를 건너므로 부르는 쪽은 이벤트
+사이에 await 하지 않는다 — 도구 연결의 취소 범위가 이미 요구하던 것이다(`.claude/rules/channel.md`).
 
 실패 원인(ADR 0031, end-user-continuation 명세 "실패 원인"): 런타임이 쓰는 run_failed 는 모두
 원인 아홉 가운데 하나를 들고, 원인은 실패가 처음 생긴 자리로 정한다. 요약 호출은 대화 요약, 기한은
@@ -91,7 +91,15 @@ BaseException 이라 몸통과 요약의 `except Exception` 을 지나쳐 범위
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, AsyncIterator, Generator, Mapping, Sequence
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Generator,
+    Mapping,
+    Sequence,
+)
 from contextlib import aclosing, asynccontextmanager, contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -99,6 +107,7 @@ from typing import Literal, NoReturn, TypeGuard, assert_never, get_args
 
 import anyio
 import anyio.to_thread
+from anyio.streams.memory import MemoryObjectSendStream
 from langchain_core.messages import AIMessage, BaseMessage
 
 from agent_os.core.continuation import (
@@ -322,6 +331,39 @@ class _Prepared:
     instance: BaseAgent
 
 
+# 에이전트 태스크가 몸통에 울리는 초인종은 다음을 청하는 신호(`anyio.Event`) 하나다. 이벤트는 싣지
+# 않는다 — 컨텍스트의 `_pending` 에 있고 몸통이 꺼낸다. 흐름에 실은 항목은 받는 쪽이 깨어나기 전에
+# asyncio 의 날 취소로 끝나면 사라지지만, 줄에 남은 이벤트는 몸통이 끝날 때의 정리(`_attend` 의
+# finally)가 받는다(ADR 0039 의 거부한 안 넷째). 끝남은 초인종 줄을 닫는 것이다.
+type _Ring = anyio.Event
+
+
+class _AgentTask:
+    """몸통이 띄운 에이전트 태스크. 에이전트의 몫을 돌리고 끝나면 초인종 줄을 닫는다.
+
+    취소가 아닌 예외는 붙잡아 그 객체 그대로 `error` 에 든다. 몸통이 태스크 그룹 밖에서 다시
+    던지므로 런타임이 던진 예외의 동일성 판정(`_Thrown`)이 그대로 서고, 일시정지 신호도 이 길로
+    몸통에 닿는다. 그룹 안에서 빠져나가면 anyio 가 예외 그룹으로 감싸 받는 자리의 타입 판정이
+    깨진다. 취소는 붙잡지 않는다 — 그룹을 취소한 쪽의 것이다.
+    """
+
+    def __init__(
+        self, feed: Callable[[], Awaitable[None]], bell: MemoryObjectSendStream[_Ring]
+    ) -> None:
+        self._feed = feed
+        self._bell = bell
+        self.error: BaseException | None = None
+
+    async def run(self) -> None:
+        async with self._bell:
+            try:
+                await self._feed()
+            except anyio.get_cancelled_exc_class():
+                raise
+            except BaseException as error:
+                self.error = error
+
+
 class _Paused(BaseException):
     """게이트가 실행을 멈추는 신호. 에이전트의 제너레이터를 지나 실행 조립부까지 올라간다.
 
@@ -390,6 +432,27 @@ class _Context:
         self._replay = replay
         self._verdict = verdict
         self._pending: list[Event] = []
+        self._bell: MemoryObjectSendStream[_Ring] | None = None
+
+    def bind(self, bell: MemoryObjectSendStream[_Ring]) -> None:
+        """몸통이 에이전트 태스크를 띄우기 전에 초인종을 건넨다."""
+        self._bell = bell
+
+    def queue(self, event: Event) -> None:
+        """에이전트가 낸 이벤트를 런타임 이벤트와 같은 줄에 세운다. 에이전트 태스크가 부른다."""
+        self._pending.append(event)
+
+    async def release(self) -> None:
+        """쌓인 이벤트가 있으면 몸통을 깨우고, 몸통이 그것을 흘린 뒤 다음을 청할 때까지 기다린다.
+
+        이벤트는 `_pending` 에 남아 있고 몸통이 꺼낸다. 이 자리에서 취소를 받아도 꺼내지 않은 것은
+        `_attend` 의 finally 가 흘린다.
+        """
+        if not self._pending or self._bell is None:
+            return
+        proceed = anyio.Event()
+        await self._bell.send(proceed)
+        await proceed.wait()
 
     @property
     def paused(self) -> bool:
@@ -478,9 +541,11 @@ class _Context:
             )
             raise self._thrown.remember(mismatch, "resume_mismatch")
         self._resume()
+        await self.release()
         with self._thrown.blamed("model_call"):
             message = await invoke(messages)
             self._record_model_call(reply_from(message), prompt)
+        await self.release()
         return message
 
     async def _call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
@@ -511,15 +576,19 @@ class _Context:
             # 결정의 종류마다 갈래가 있어야 한다. 폴스루로 승인하면 새 결정이 조용히 승인으로 돈다.
             match verdict.decision:
                 case Deny(reason=reason):
-                    return self._deny(name, masked, reason)
+                    denied = self._deny(name, masked, reason)
+                    await self.release()
+                    return denied
                 case Approve():
                     pass
                 case _:
                     assert_never(verdict.decision)
+        await self.release()
         with self._thrown.blamed("resume_mismatch"):
             _reject_masked_args(name, args, self._policy.secrets)
         result = await _call_safely(self._tools, name, args)
         self._record_tool_call(name, masked, result)
+        await self.release()
         return result
 
     def _take_verdict(self) -> _Verdict | None:
@@ -668,8 +737,11 @@ async def run(
     )
     seconds = _timeout_of(timeout_seconds)
     with anyio.move_on_after(seconds) as deadline:
-        async for event in body.events():
-            yield event
+        # 몸통을 이 자리에서 닫는다. 소비자가 스트림을 닫으면 그 예외가 이 yield 에 드는데, 몸통이
+        # 태스크 그룹 안의 yield 에 멈춘 채 남으면 기한의 범위를 나가는 자리에서 anyio 가 거부한다.
+        async with aclosing(body.events()) as events:
+            async for event in events:
+                yield event
     if deadline.cancelled_caught:
         failure = body.deadline_failure(seconds)
         if failure is not None:
@@ -740,8 +812,11 @@ async def resume(
     )
     seconds = _timeout_of(timeout_seconds)
     with anyio.move_on_after(seconds) as deadline:
-        async for event in body.events():
-            yield event
+        # 몸통을 이 자리에서 닫는다. 소비자가 스트림을 닫으면 그 예외가 이 yield 에 드는데, 몸통이
+        # 태스크 그룹 안의 yield 에 멈춘 채 남으면 기한의 범위를 나가는 자리에서 anyio 가 거부한다.
+        async with aclosing(body.events()) as events:
+            async for event in events:
+                yield event
     if deadline.cancelled_caught:
         failure = body.deadline_failure(seconds)
         if failure is not None:
@@ -817,7 +892,7 @@ class _Body:
             run_id=self._started.run_id, ts=self._clock.now(), error=error, cause="timeout"
         )
 
-    async def events(self) -> AsyncIterator[Event]:
+    async def events(self) -> AsyncGenerator[Event]:
         """요약(필요하면)과 에이전트의 이벤트와 결말. 런타임이 내는 것은 트레이스에 쓴 뒤에 낸다."""
         conversation = self._conversation
         if isinstance(conversation, Fold):
@@ -828,8 +903,9 @@ class _Body:
                 self._settled = True
                 return
             conversation = conversation.conversation(outcome.summary)
-        async for event in self._drive(conversation):
-            yield event
+        async with aclosing(self._drive(conversation)) as driven:
+            async for event in driven:
+                yield event
 
     def _emit(self, event: Event) -> Event:
         self._trace.write(event)
@@ -867,7 +943,7 @@ class _Body:
         self._trace.write(held)
         return held
 
-    async def _drive(self, conversation: Conversation) -> AsyncIterator[Event]:
+    async def _drive(self, conversation: Conversation) -> AsyncGenerator[Event]:
         """도구를 연결한 채 에이전트를 돌리고 결말을 붙인다."""
         # 안쪽 제너레이터를 여기서 닫는다. 트레이스 쓰기가 실패하면 예외가 이 몸통에서 나고, 그때
         # 안쪽은 도구 연결 안의 yield 에 멈춰 있다. 가비지 수집에 맡기면 다른 태스크가 그것을 닫아
@@ -980,7 +1056,45 @@ class _Body:
         self._settled = self._settled or (finished and self._held is None)
 
     async def _relay(self, agent: BaseAgent, ctx: _Context) -> AsyncGenerator[Event]:
-        """에이전트가 낸 이벤트를 흘린다. 그 앞에 호출 안에서 쌓인 이벤트를 먼저 흘린다.
+        """에이전트를 제 태스크에서 돌리고, 초인종이 울릴 때마다 쌓인 이벤트를 흘린다(ADR 0039).
+
+        에이전트 태스크와 몸통은 맞물려 한 번에 한쪽만 움직인다. 에이전트 태스크는 이벤트를 쌓고
+        울린 뒤 몸통이 그것을 흘리고 다음을 청할 때까지 기다리고, 몸통은 울림을 기다리는 동안만
+        쉰다. 그래서 역압이 그대로이고, 도구를 요청한 모델 호출의 이벤트는 그 도구를 부르기 전에
+        트레이스에 쓰인다. 함께 부른 호출(`asyncio.gather`)은 맞물림의 기다림 밖에서 겹쳐 돌아, 그
+        호출들 사이에는 이 순서가 서지 않는다.
+
+        몸통 자신의 예외(트레이스 쓰기가 실패해 바깥이 닫으며 넣은 `GeneratorExit`, 소비자가
+        스트림을 닫음)는 그룹 안에서 붙잡아 그룹을 취소하고, 에이전트 태스크가 정리를 마치기를
+        기다린 뒤 그룹 밖에서 다시 던진다 — 그룹 안에서 나가면 anyio 가 예외 그룹으로 감싼다. 그래서
+        버려진 실행의 에이전트는 기다리던 자리에서 취소된다. 몸통의 예외가 에이전트 태스크의 것보다
+        먼저다. 남은 이벤트(멈춘 실행의 run_paused 따위)는 `_attend` 의 finally 가 흘린다.
+        """
+        bell, rings = anyio.create_memory_object_stream[_Ring]()
+        ctx.bind(bell)
+        task = _AgentTask(lambda: self._feed(agent, ctx), bell)
+        failure: BaseException | None = None
+        async with anyio.create_task_group() as group, rings:
+            group.start_soon(task.run)
+            try:
+                async for ring in rings:
+                    for pending in ctx.take_events():
+                        yield pending
+                    ring.set()
+            except BaseException as error:
+                if isinstance(error, anyio.get_cancelled_exc_class()):
+                    raise
+                group.cancel_scope.cancel()
+                failure = error
+        if failure is None:
+            failure = task.error
+        if failure is not None:
+            raise failure
+
+    async def _feed(self, agent: BaseAgent, ctx: _Context) -> None:
+        """에이전트가 낸 이벤트를 줄에 세우고 몸통을 깨운다. 호출 안의 이벤트는 컨텍스트가 기록하는
+        자리에서 같은 줄에 세우고 그 뒤의 `release()` 가 깨운다. 일시정지(`_pause`)는 깨우지 않고
+        신호를 던지며, 세워 둔 `run_paused` 는 `_attend` 의 finally 가 흘린다.
 
         일시정지가 기록되면 에이전트가 신호를 삼키고 이어 가도 그 뒤의 이벤트를 통과시키지 않는다.
         재생 구간에서 에이전트가 낸 이벤트는 기록과 맞춰 소비하고 흘리지 않는다.
@@ -991,8 +1105,6 @@ class _Body:
             # 먼저 난 실패가 결말이다 — 도구 연결의 닫기와 같은 기준이다.
             with self._holding("agent", ctx):
                 async for event in from_agent:
-                    for pending in ctx.take_events():
-                        yield pending
                     if ctx.paused:
                         return
                     _reject_stray(event)
@@ -1000,7 +1112,8 @@ class _Body:
                     if ctx.replaying:
                         ctx.replay_event(event)
                         continue
-                    yield event
+                    ctx.queue(event)
+                    await ctx.release()
 
 
 @asynccontextmanager

@@ -1,6 +1,7 @@
 // 판정자(eslint.config.mjs)의 변이 테스트. 원칙 III 의 TS 판정자(ADR 0020)와 web 의 층 경계(ADR 0021).
 //
-// 위반을 담은 코드는 이 테스트가 web/ 아래 임시 트리에 쓰고 끝나면 지운다. 커밋한 파일에 위반을 두면 그
+// 위반을 담은 코드는 이 테스트가 web/ 아래 임시 트리에 쓰고 끝나면 지운다. 앞 실행이 끝나기 전에 멈춰 남긴 트리는
+// 시작할 때 지운다(tools/judge-trees.ts). 커밋한 파일에 위반을 두면 그
 // 파일을 판정에서 빼는 목록이 생긴다(ADR 0013 이 경계한 모양).
 //
 // 임시 트리는 워크스페이스의 자리(apps/<이름>/…, packages/<이름>/…)를 흉내 내고, 앱과 패키지마다 기준
@@ -9,11 +10,12 @@
 // 실측). 그래서 사례마다 "빨갛다"가 아니라 기대한 규칙이 보고됐는지를 본다.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { ESLint, type Linter } from "eslint";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { GENERATED } from "./tools/generate-api-client.ts";
+import { makeJudgeTree, removeLeftoverJudgeTrees } from "./tools/judge-trees.ts";
 
 const WEB = import.meta.dirname;
 const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
@@ -336,7 +338,9 @@ let fixture = "";
 const messages = new Map<string, readonly Linter.LintMessage[]>();
 
 beforeAll(async () => {
-  fixture = mkdtempSync(join(WEB, "judge-"));
+  // 앞 실행이 afterAll 전에 멈춰 남긴 트리를 junction 을 따라가지 않고 지운다(tools/judge-trees.ts).
+  removeLeftoverJudgeTrees(WEB);
+  fixture = makeJudgeTree(WEB);
   for (const project of PROJECTS) {
     mkdirSync(join(fixture, project), { recursive: true });
     writeFileSync(join(fixture, project, "tsconfig.json"), projectTsconfig(project));
@@ -422,7 +426,7 @@ describe("실제 생성 클라이언트 자리", () => {
   });
 
   test("생성 클라이언트 패키지의 실제 파일은 openapi-fetch 를 import 해도 아무것도 보고되지 않는다", async () => {
-    // 클라이언트 둘을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
+    // 클라이언트 셋을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
     // 설치되지 않아 타입 기반 규칙이 풀리지 않은 import 를 빨갛게 보므로 실제 자리에서 잰다.
     const path = join(API_CLIENT, "src", "clients.ts");
     const source = readFileSync(path, "utf-8");

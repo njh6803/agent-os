@@ -1,7 +1,7 @@
-// 정적 빌드를 내는 route(storybook.ts)의 성질.
+// 정적 빌드를 내는 route(index.ts)의 성질.
 // - 경계. 인코딩한 `/`(`%2F`)는 URL 파서가 dot segment 로 접지 않아, 디코딩한 뒤 이어 붙이면 정적 빌드 밖을 가리킬 수 있다.
 // - play 맥락의 `userEvent` 가 비어 있는 것. 이 출처는 보안 맥락이 아니라 `navigator.clipboard` 가 없고, Storybook 10.6.1 은
-//   그것이 있을 때만 play 맥락의 `userEvent` 를 채운다(storybook.ts 머리 주석). 그래서 사진은 play 가 그 `userEvent` 로 바꾼
+//   그것이 있을 때만 play 맥락의 `userEvent` 를 채운다(index.ts 머리 주석). 그래서 사진은 play 가 그 `userEvent` 로 바꾼
 //   상태를 담지 않는다. 출처가 보안 맥락이 되거나 Storybook 이 clipboard 없이도 채우게 바뀌면 play 가 그 호출을 지나 이어
 //   돌고, 기존 사진이 그 뒤 상태가 든 그림으로 한꺼번에 바뀌어 사진 비교가 빨개진다. 사진만으로는 까닭이 보이지 않아 이
 //   테스트가 그 까닭을 이름으로 알린다.

@@ -44,11 +44,8 @@ tests = ["tests/tools/test_hook_env_read.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_env_read.py"
-old = '''    letters = option[1:]
-    for index, letter in enumerate(letters):
-        if f"-{letter}" in value_options:
-            return 1 if letters[index + 1 :] else 2
-    return 1'''
+old = '''    found = _short_value_option(option, value_options)
+    return 2 if found is not None and not found[1] else 1'''
 new = '''    return 2 if option in value_options else 1'''
 
 [[mutation]]
@@ -58,9 +55,9 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_env_read.py"
 old = '''        return 2 if option in value_options else 1
-    letters = option[1:]'''
+    found = _short_value_option(option, value_options)'''
 new = '''        return 1
-    letters = option[1:]'''
+    found = _short_value_option(option, value_options)'''
 
 [[mutation]]
 name = "command -v 를 명령을 돌리는 것으로 본다(거짓 양성)"

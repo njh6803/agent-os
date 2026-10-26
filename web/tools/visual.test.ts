@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { IMAGE, locatePackage, playwrightPackages } from "./visual.ts";
+import { IMAGE, locatePackage, playwrightPackages, workspaceLinks } from "./visual.ts";
 
 const WEB = dirname(import.meta.dirname);
 const CI = join(dirname(WEB), ".github", "workflows", "ci.yml");
@@ -32,6 +32,7 @@ describe("사진 비교의 이미지", () => {
     const installed = [
       ...Object.values(playwrightPackages(join(WEB, "packages", "ui"))),
       ...Object.values(playwrightPackages(join(WEB, "apps", "admin"))),
+      ...Object.values(playwrightPackages(join(WEB, "apps", "widget"))),
       locatePackage(WEB, "playwright"),
     ];
 
@@ -43,5 +44,18 @@ describe("사진 비교의 이미지", () => {
     const job = /^ {2}visual:\n((?: {4}.*\n|\n)*)/m.exec(readFileSync(CI, "utf-8"))?.[1] ?? "";
 
     expect(job).toContain(`    container:\n      image: ${IMAGE}\n`);
+  });
+});
+
+describe("컨테이너 안의 워크스페이스 패키지", () => {
+  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
+    expect(workspaceLinks(join(WEB, "apps", "widget"))).toEqual({
+      "@agent-os/api-client": "/web/packages/api-client",
+      "@agent-os/ui": "/web/packages/ui",
+    });
+  });
+
+  test("워크스페이스 패키지에 기대지 않는 디자인 시스템 패키지는 이을 것이 없다", () => {
+    expect(workspaceLinks(join(WEB, "packages", "ui"))).toEqual({});
   });
 });

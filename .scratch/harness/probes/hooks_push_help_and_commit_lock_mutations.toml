@@ -247,10 +247,14 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_prompt_directive.py"
 old = '''
-    context = context_for(prompt, payload.get("cwd"))
+    context = first_turn_context(
+        prompt,
+        payload.get("cwd"),
 '''
 new = '''
-    context = context_for(prompt)
+    context = first_turn_context(
+        prompt,
+        None,
 '''
 
 [[mutation]]

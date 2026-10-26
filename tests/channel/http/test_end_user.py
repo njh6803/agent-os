@@ -6,8 +6,9 @@
 주 이음매는 채널 라우터 테스트와 같다 — `create_app()` 에 가짜 포트를 주입하고 httpx `ASGITransport`
 로 밀며, 앱의 수명은 테스트 본문의 `async with` 로 연다(`.claude/rules/tests.md`). 토큰은 테스트가
 `cryptography` 로 만든 키로 직접 서명한다(`tests/signing.py`). 둘째 구동자(같은 앱을 ASGI 로 직접
-부르는 것)는 스트림의 수명에만 쓴다 — 도는 실행에 구독이 붙는 것과, 토큰이 만료돼도 열린 스트림이
-끊기지 않는 것(`.claude/rules/http.md` 의 예외).
+부르는 것)는 스트림의 수명에 쓴다 — 도는 실행에 구독이 붙는 것, 구독이 떠나거나 실행이 타임아웃으로
+등록부를 떠나는 것, 토큰이 만료돼도 열린 스트림이 끊기지 않는 것(`.claude/rules/http.md` 의 예외),
+결말 전에 오는 프레임.
 
 바깥 행동만 본다. 상태 코드와 봉투, 프레임의 `data` 와 `id`, 트레이스에 남은 이벤트, 서버 기록의 한
 줄이다. 등록부의 자료 구조는 보지 않는다. 판정 순서는 core 테스트(`tests/core/test_run.py` 의
@@ -26,9 +27,12 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
+from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
@@ -79,6 +83,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     RunStarted,
+    ToolCall,
     ToolCalled,
     parse_manifest,
 )
@@ -113,6 +118,7 @@ OPEN_AGENTS = frozenset(
     for name in (
         "echo",
         "asking",
+        "looping",
         "gated",
         "working",
         "silent",
@@ -237,6 +243,7 @@ class ForgingAgent:
 AGENTS: Mapping[str, BaseAgent] = {
     "echo": EchoAgent(),
     "asking": AskingAgent(),
+    "looping": AskingAgent(),
     "gated": ToolAgent(),
     "working": ToolAgent(),
     "silent": SilentAgent(),
@@ -247,6 +254,7 @@ AGENTS: Mapping[str, BaseAgent] = {
 MANIFESTS = {
     "echo": _manifest("echo"),
     "asking": _manifest("asking"),
+    "looping": _manifest("looping", mcp=["calc-server"]),
     "gated": _manifest("gated", mcp=["calc-server"], approval=["add"]),
     "working": _manifest("working", mcp=["calc-server"]),
     "silent": _manifest("silent"),
@@ -436,6 +444,27 @@ def _gated_model(answer: str = "답", *, answers: int = 1) -> GatedModel:
     )
 
 
+class ToolAwareModel(GenericFakeChatModel):
+    """도구를 묶어도 자기 자신이다. core 는 연결이 도구를 주면 `bind_tools` 를 부른다."""
+
+    def bind_tools(
+        self,
+        tools: Sequence[object],
+        *,
+        tool_choice: str | None = None,
+        **kwargs: object,
+    ) -> Runnable[LanguageModelInput, AIMessage]:
+        return self
+
+
+def _adding_model() -> ToolAwareModel:
+    """첫 턴에 add 를 요청하고 둘째 턴에 답한다. `looping` 의 루프 하나가 도구 하나를 부른다."""
+    request = AIMessage(
+        content="", tool_calls=[LangchainToolCall(name="add", args={"a": 2, "b": 3}, id="c1")]
+    )
+    return ToolAwareModel(messages=iter([request, AIMessage(content="답")]))
+
+
 def _app(
     *,
     plugins: PluginSource | None = None,
@@ -559,7 +588,8 @@ def _paused(run_id: str) -> RunPaused:
 
 async def test_시작은_서명한_주체로_실행을_일으키고_프레임마다_data_와_id_두_줄이다() -> None:
     """주체는 `발급자|sub` 이고 시작 이벤트에 그대로 남는다(ADR 0023). 본문에서 받지 않는다.
-    프레임의 `id` 는 그 항목의 근거인 트레이스 인덱스라 빈자리가 있다 — 모델 호출은 항목이 없다."""
+    프레임의 `id` 는 그 항목의 근거인 트레이스 인덱스라 빈자리가 있다 — 도구를 요청하지 않은 모델
+    호출은 항목이 없다."""
     trace = FakeTrace()
     app = _app(trace=trace)
 
@@ -1303,6 +1333,49 @@ async def test_요약_이벤트는_항목이_없고_인덱스만_지난다() -> 
     assert "앞 대화의 요약" not in response.text
 
 
+async def test_도구를_요청한_모델_호출은_그_도구_이름을_차례대로_든_calling_항목이다() -> None:
+    """모델이 어느 도구를 요청했는지를 싣는 항목이다(ADR 0023 의 2026-10-23 이력). 모델이 요청한
+    도구의 이름만 요청한 차례대로 싣고, 인자와 도구 호출 식별자는 싣지 않는다. 도구를 요청하지 않은
+    모델 호출은 지금처럼 항목이 없다. 이벤트 하나가 항목 하나라 프레임의 `id` 는 그 이벤트의
+    인덱스다. 모델 호출 이벤트는 손으로 쓴다."""
+    trace = FakeTrace()
+    asked = LlmCalled(
+        run_id=RunId("calls"),
+        ts=T0,
+        model="m",
+        input_tokens=1,
+        output_tokens=1,
+        prompt=PROMPT,
+        tool_calls=(
+            ToolCall(id="call-첫째", name="orders.lookup", args={"order": "주문-원문"}),
+            ToolCall(id="call-둘째", name="add", args={"a": 2, "b": 3}),
+        ),
+    )
+    _write(
+        trace,
+        "calls",
+        _started("calls", agent="working"),
+        asked,
+        ToolCalled(run_id=RunId("calls"), ts=T0, tool="orders.lookup", ok=True),
+        ToolCalled(run_id=RunId("calls"), ts=T0, tool="add", ok=False),
+        _llm("calls"),
+        _finished("calls"),
+    )
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _subscribe(client, "calls")
+
+    assert _frames(response.text) == [
+        (0, {"type": "started", "run_id": "calls"}),
+        (1, {"type": "calling", "tools": ["orders.lookup", "add"]}),
+        (2, {"type": "progress", "tool": "orders.lookup", "ok": True}),
+        (3, {"type": "progress", "tool": "add", "ok": False}),
+        (5, {"type": "finished", "output": "끝"}),
+    ]
+    for hidden in ("call-첫째", "주문-원문", PROMPT):
+        assert hidden not in response.text
+
+
 @pytest.mark.parametrize(
     ("cause", "expected"),
     [(None, None), ("timeout", "timeout")],
@@ -1311,7 +1384,7 @@ async def test_요약_이벤트는_항목이_없고_인덱스만_지난다() -> 
 async def test_구독이_다시_보내는_실패_항목은_트레이스의_원인을_그대로_옮긴다(
     cause: FailureCause | None, expected: str | None
 ) -> None:
-    """투영은 종류로만 가르고 실패 이벤트의 원인을 옮긴다(ADR 0031). 원인이 기록되지 않은 실패(이
+    """투영은 실패 이벤트의 원인을 그대로 옮긴다(ADR 0031). 원인이 기록되지 않은 실패(이
     기능 전의 트레이스 따위)는 `null` 이고 위젯은 고정 문구로 내려간다. 실패 이벤트는 손으로
     쓴다."""
     trace = FakeTrace()
@@ -1511,6 +1584,31 @@ async def test_도는_실행에_붙은_구독은_그_뒤_항목을_생기는_대
     assert _types(tail.frames()) == [(2, "finished")]
 
 
+async def test_모델이_요청한_도구가_끝나기_전에_부르기_시작함_항목이_도착한다() -> None:
+    """실행 도중의 이벤트는 생기는 대로 온다(ADR 0039). 루프가 `ctx.llm()` 한 번인 에이전트에서도
+    도구를 요청한 모델 호출의 항목(`calling`)이 그 도구가 끝나기 전에 닿는다. 모으던 core 에서는
+    결말 앞에 한꺼번에 나와, 도구가 끝나지 않는 동안 이 항목을 기다리다 기한에 걸린다. 도구를
+    요청하지 않은 둘째 모델 호출은 항목 없이 인덱스만 지난다."""
+    gate = asyncio.Event()
+    app = _app(model=_adding_model(), tools=_gated_tools(gate))
+    starting = _Wire(_start("looping"))
+
+    async with _lifespan(app):
+        start = _call(app, _scope("POST", START, _token()), starting)
+        await _until(lambda: (1, "calling") in _types(starting.frames()))
+        assert not gate.is_set()
+        gate.set()
+        async with asyncio.timeout(5):
+            await start
+
+    assert _types(starting.frames()) == [
+        (0, "started"),
+        (1, "calling"),
+        (2, "progress"),
+        (4, "finished"),
+    ]
+
+
 async def test_구독이_트레이스를_읽는_바로_그때_실행이_움직여도_빠짐도_중복도_없다() -> None:
     """트레이스 읽기와 등록부 보기 사이에 await 가 없다는 것을 잰다. 트레이스를 읽는 바로 그
     자리에서 모델의 문을 연다 — 둘 사이에 await 가 하나라도 끼면 실행이 그 틈에 결말까지 가 등록부를
@@ -1614,20 +1712,44 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
 # 상한 — 너무 길거나 잦은 요청은 422·429 로 거절된다(ADR 0023, end-user-channel 티켓 02). 셈은
 # 채널이 프로세스 메모리에 든다. 동시 실행과 구독은 열린 채 남은 응답이 칸을 쥐고 있어야 하므로
 # 둘째 구동자로 붙잡고(`_held`), 거절될 요청은 `ASGITransport` 로 민다 — 429 는 응답이 곧 끝난다.
-# 거절되지 않으면 끝나지 않을 요청은 기한 안에서 민다.
+# 거절되지 않으면 끝나지 않을 요청은 기한 안에서 민다. 429 봉투의 상한의 종류(`limit`)는 범위와
+# 무관하다 — 동시 실행의 세 범위는 모두 `concurrent_runs`, 시간당의 두 범위는 `hourly_runs` 다(ADR
+# 0023 의 2026-10-23 이력).
 
-CONCURRENT = (429, "too_many_requests", "동시 실행 수의 상한을 넘었다", "5")
-SUBSCRIPTIONS = (429, "too_many_requests", "구독 수의 상한을 넘었다", "5")
+type Refusal = tuple[int, object, object, object, str | None]
+
+CONCURRENT: Refusal = (
+    429,
+    "too_many_requests",
+    "동시 실행 수의 상한을 넘었다",
+    "concurrent_runs",
+    "5",
+)
+SUBSCRIPTIONS: Refusal = (429, "too_many_requests", "구독 수의 상한을 넘었다", "subscriptions", "5")
 
 
-def _hourly(retry_after: int) -> tuple[int, str, str, str]:
-    return (429, "too_many_requests", "시간당 실행 수의 상한을 넘었다", str(retry_after))
+def _hourly(retry_after: int) -> Refusal:
+    return (
+        429,
+        "too_many_requests",
+        "시간당 실행 수의 상한을 넘었다",
+        "hourly_runs",
+        str(retry_after),
+    )
 
 
-def _refusal(response: Response) -> tuple[int, object, object, str | None]:
-    """거절 응답의 상태 코드, 어휘, 문구, `Retry-After`."""
+def _refusal(response: Response) -> Refusal:
+    """거절 응답의 상태 코드, 어휘, 문구, 상한의 종류, `Retry-After`. 봉투는 네 필드에 상한의 종류
+    하나를 더한 것이다."""
     body = response.json()
-    return response.status_code, body["code"], body["message"], response.headers.get("Retry-After")
+    assert set(body) == {"code", "message", "violations", "request_id", "limit"}, body
+    return (
+        response.status_code,
+        body["code"],
+        body["message"],
+        body["limit"],
+        response.headers.get("Retry-After"),
+    )
 
 
 def _starting(token: str) -> Scope:
@@ -1856,7 +1978,7 @@ async def test_주체별_시간당_실행은_미끄러지는_창이고_Retry_Aft
     clock = StepClock()
     app = _app(clock=clock, sites=_site(limits=SiteLimits(hourly_runs_per_principal=2)))
     statuses: list[int] = []
-    refusals: list[tuple[int, object, object, str | None]] = []
+    refusals: list[Refusal] = []
 
     async with _serving(app) as client:
         for seconds in (0, 600, 1799.5, 3599, 3600, 3600):
@@ -2195,10 +2317,12 @@ async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_COR
         )
 
     responses = {401: refused, 404: missing, 409: paused, 422: invalid, 429: busy, 500: broken}
+    fields = {"code", "message", "violations", "request_id"}
     for status, response in responses.items():
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json", status
-        assert set(response.json()) == {"code", "message", "violations", "request_id"}, status
+        expected = fields | {"limit"} if status == 429 else fields
+        assert set(response.json()) == expected, status
         assert response.headers["access-control-allow-origin"] == ORIGIN, status
 
 
@@ -2213,6 +2337,7 @@ END_USER_OPERATIONS = (
 )
 ITEMS = {
     "StartedItem": "started",
+    "CallingItem": "calling",
     "ProgressItem": "progress",
     "PausedItem": "paused",
     "DecidedItem": "decided",
@@ -2223,9 +2348,11 @@ ITEMS = {
 
 
 def test_경로_넷이_지은_operation_id_와_봉투_에러_문서와_항목_유니온을_든다() -> None:
-    """에러는 스트림이 시작되기 전의 JSON 봉투다. 429 는 `Retry-After` 를 문서에 든다(ADR 0023)."""
+    """에러는 스트림이 시작되기 전의 JSON 봉투다. 429 는 상한의 종류를 더 든 봉투이고
+    `Retry-After` 를 문서에 든다(ADR 0023 과 그 2026-10-23 이력)."""
     paths = _app().openapi()["paths"]
     envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+    limited = {"$ref": "#/components/schemas/LimitEnvelope"}
 
     for path, method, operation_id in END_USER_OPERATIONS:
         operation = paths[path][method]
@@ -2234,12 +2361,36 @@ def test_경로_넷이_지은_operation_id_와_봉투_에러_문서와_항목_�
         assert errors == {"401", "404", "409", "422", "429", "500"}, path
         for status in errors:
             content = operation["responses"][status]["content"]
-            assert content == {"application/json": {"schema": envelope}}, (path, status)
+            expected = limited if status == "429" else envelope
+            assert content == {"application/json": {"schema": expected}}, (path, status)
         assert set(operation["responses"]["429"]["headers"]) == {"Retry-After"}, path
         item = operation["responses"]["200"]["content"]["text/event-stream"]["itemSchema"]
         assert item["properties"]["data"]["contentSchema"] == {
             "$ref": "#/components/schemas/EndUserItem"
         }, path
+
+
+def test_429_봉투는_ErrorEnvelope_의_네_필드에_상한의_종류_limit_을_더한다() -> None:
+    """위젯이 상한의 종류마다 제 문구를 고른다(web-widget 명세의 "상한" 절, 스토리 34). 다른 상태
+    코드의 봉투는 네 필드 그대로이고, 누구 몫으로 센 상한인지(주체별, 사이트별, 전역)는 싣지
+    않는다(ADR 0023 의 2026-10-23 이력)."""
+    schemas = _app().openapi()["components"]["schemas"]
+    envelope = schemas["ErrorEnvelope"]
+    limited = schemas["LimitEnvelope"]
+    kind = schemas["LimitKind"]
+
+    assert limited["properties"] == {
+        **envelope["properties"],
+        "limit": {"$ref": "#/components/schemas/LimitKind"},
+    }
+    assert set(limited["required"]) == set(limited["properties"])
+    assert limited["additionalProperties"] is False
+    assert (kind["type"], kind["enum"]) == (
+        "string",
+        ["concurrent_runs", "hourly_runs", "subscriptions"],
+    )
+    for schema in (limited, kind):
+        assert "\n" not in schema["description"]
 
 
 def test_시작과_이어_가기의_422_설명은_요청_글자_수의_단위와_기본값을_적는다() -> None:
@@ -2300,10 +2451,16 @@ def test_실패_원인과_바로가기는_required_이고_null_을_허락하며_
     ]
 
 
-def test_항목_유니온은_판별자_type_의_이름_있는_컴포넌트이고_멤버가_일곱이다() -> None:
-    """생성 타입에서 판별자 술어를 만든다(스토리 28). 멤버 이름은 기존 컴포넌트와 겹치지 않는다."""
+def test_항목_유니온은_판별자_type_의_이름_있는_컴포넌트이고_멤버가_여덟이다() -> None:
+    """생성 타입에서 판별자 술어를 만든다(스토리 28). 멤버 이름은 기존 컴포넌트와 겹치지 않는다.
+    여덟째인 `calling` 의 도구 목록은 늘 하나 이상이고 계약이 그것을 말한다 — 도구를 요청하지 않은
+    모델 호출은 항목이 없다(web-widget 명세 "계약")."""
     schemas = _app().openapi()["components"]["schemas"]
     union = schemas["EndUserItem"]
+    tools = schemas["CallingItem"]["properties"]["tools"]
+
+    assert len(ITEMS) == 8
+    assert (tools["type"], tools["items"], tools["minItems"]) == ("array", {"type": "string"}, 1)
 
     assert union["discriminator"] == {
         "propertyName": "type",

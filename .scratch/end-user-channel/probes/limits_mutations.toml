@@ -119,12 +119,12 @@ expect = "red"
 file = "src/agent_os/channel/http/limits.py"
 old = '''
                 return _exceeded(
-                    Limit.CONCURRENT_RUNS, scope, limit, issuer, BUSY_RETRY_AFTER_SECONDS
+                    LimitKind.CONCURRENT_RUNS, scope, limit, issuer, BUSY_RETRY_AFTER_SECONDS
                 )
 '''
 new = '''
                 return _exceeded(
-                    Limit.CONCURRENT_RUNS, scope, limit, user.principal, BUSY_RETRY_AFTER_SECONDS
+                    LimitKind.CONCURRENT_RUNS, scope, limit, user.principal, BUSY_RETRY_AFTER_SECONDS
                 )
 '''
 
