@@ -162,3 +162,52 @@ PR 직전 리뷰의 반영을 돌리다 `WidgetStorage.test.tsx` 의 "판과 모
 - `pnpm -C web exec vitest run --project widget-pages`: 파일 8, 시험 197 이 모두 통과했다.
 - `pnpm -C web/apps/widget exec tsc --noEmit -p .`, `pnpm -C web exec eslint apps/widget/components/pages apps/widget/lib apps/widget/testing`, 같은 폴더의 `prettier --check`: 모두 지났다.
 - `PYTHONUTF8=1 uv run python tools/mutate.py --check` 로 web-widget 표 여섯(storage, conversation, widget_app, failures, approval, widget_e2e): 모두 원문이 한 번씩 있었다.
+
+## 검사 (셋째 세션, PR 직전 리뷰 반영 뒤)
+
+커밋 3b96b7bb 에서 돌렸다.
+
+- 커밋 3b96b7bb 의 pre-commit: run_checks 의 열(zizmor, check-ticket, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify)과 변이 표 원문 검사, 마크다운 표, 줄 구분 문자, 인용 대조, 커밋 메시지 검사가 지났다. ruff 둘은 스테이지된 `.py` 가 없어 Skipped 였고, 손으로 친 `uv run ruff check .`·`uv run ruff format --check .` 가 지났다.
+- `pnpm -C web/apps/widget exec playwright test`: 15 passed(47.0초). 이번에는 플레이크가 나지 않았다.
+- `uv run --env-file ../../../.env pytest -m llm_widget -q`: 1 passed. 토큰 6,555(입력 6,483, 출력 72), 트레이스 1, 모델 호출 2.
+- `pnpm -C web visual:widget`(Docker): 42 passed.
+- 푸시하고 PR #387 을 열었다. 변이는 PR 을 연 뒤에도 임시 워크트리에서 돌았다(아래 "변이").
+- PR #387 의 첫 CI(헤드 3b96b7b): CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web 이 모두 SUCCESS 였다. CodeRabbit 은 "manual review required for this OSS repository" 로 리뷰를 건너뛰었다.
+
+## 변이 (셋째 세션)
+
+지시문은 storage 전체와 원문을 고친 변이(conversation 7·8·23, widget_app 17, failures 8, approval 5·7·8·9·10), widget_e2e 7·8 을 골랐다. 이 브랜치가 conversation·failures·approval 의 시험 파일 자체를 고쳤으므로(풀 수 있는 토큰, 시험 행 하나를 재접속 시험으로 옮김) `tools/mutate.py` 독스트링의 "시험을 고치거나 지웠으면 전체"를 따라 그 셋과 widget_e2e(e2e 의 사이트 페이지와 픽스처 플러그인을 고쳤다)를 전체로 넓혔다. widget_app 은 그 시험이 바뀌지 않아 17 만 돌렸다. element 표는 사이트 페이지의 변경이 `?sub=` 를 줄 때만 달라지는 덧붙임이라 돌리지 않았다. 모두 커밋 3b96b7bb 를 임시 워크트리(`git worktree add --detach`)에서 그 워크트리의 도구로 돌렸다.
+
+- storage 13, failures 15, approval 16, widget_app 17, widget_e2e 8: 도구가 모두 기대대로로 판정했다.
+- conversation: 26 의 기준선이 고를 시험이 없어 오류였고, 표 전체가 변이를 넣지 않고 멈췄다. 그 변이가 고르던 "시작 항목 뒤에 결말 없이" 시험은 이 티켓이 재접속 시험으로 옮겼다. 지시문이 고른 번호만 돌렸다면 보지 못했을 썩음이다. 26 이 `ended` 의 남은 갈래("시작 항목 전에 끝난 스트림")를 겨누게 고쳤다. 고르기 전에 변이를 이 워크트리에 손으로 넣고 `-t "시작 항목 전에 끝난 스트림"` 의 실패 머리에 표지 `Unable to find role="alert"` 가 있는 것을 본 뒤 되돌렸다. 고친 표(작업 트리 판)를 임시 워크트리의 도구로 전체 돌리니 26 가운데 24 가 기대대로였다.
+- 어긋난 1·3(토큰 손잡이의 보낸 창, `id`)은 고른 단언이 빨갛지만 표지 `Bearer from-other-window`·`Bearer for-other-request` 가 없었다. 변이를 손으로 넣어 실패 출력을 보니 받은 값 줄이 `Bearer <머리>.<페이로드>.from-other-window` 였다. 이 티켓이 시험의 토큰을 서명 자리가 이름인 JWT 꼴로 바꿔서다. 표지를 `.from-other-window",`·`.for-other-request",` 로 바꾸고(첫 결과를 본 뒤 바꾼 기준이다) 1·3 을 다시 돌려 도구가 둘 모두 기대대로로 판정했다.
+- 프로브 README 의 여섯 행(storage, widget_e2e, failures, approval, widget_app, conversation)의 "잰 판" 칸에 위를 적었다. 임시 워크트리는 지웠다.
+
+## 회고
+
+셋째 세션이 이 일지와 그 세션을 원천으로 돌렸다. 후보 열, 승인 넷(모두 대기열, 이 세션에서 반영한 것 없음), 기각 여섯, 넘김 0. 넘긴 것이 없어 사용자에게 묻지 않았다.
+
+승인(심각도 순):
+
+1. **`tools/tidy_checkouts.py` 가 접힌 `web/apps/widget/public/` 때문에 병합된 위젯 워크트리를 남긴다**(위 "정리"의 두 판에서 여덟과 아홉). 사건이 있고, 고칠 자리가 도구이며(층), PR 하나로 되돌린다. 도구의 버그라 고침이지만 이 PR 의 범위(위젯)가 아니라 대기열 464 에 회차를 더했다(3회차). `.gitignore` 의 `web/apps/widget/public/element.js`(티켓 10)도 `RECREATABLE_PATHS` 에 없어, 접힌 폴더를 풀어도 element.js 를 빌드한 워크트리는 남는다.
+2. **위젯 페이지 시험이 출력을 찾은 직후 `sessionStorage` 를 읽어 저장 효과보다 앞섰다**(위 "진단: 저장 시험의 플레이크"). 사건이 있고, 같은 꼴을 막을 수 있는 가장 높은 층은 린트 규칙이며, PR 하나로 되돌린다. 새 검사라 더하는 것이고 첫 번째라 대기열 472 새 행(1회차)에 두었다. 시험 다섯 자리의 고침은 이 PR 에 실렸다. 대기열 306(부하에서만 빨간 시간 시험)의 종류는 아니다. 시계가 아니라 시험이 효과를 기다리지 않은 논리의 경합이고, 기다리면 부하에서도 400회 모두 지났다.
+3. **`tools/mutate.py` 의 "시험을 고치거나 지웠으면 전체"가 표 넷 전체(conversation 26, failures 15, approval 16, widget_e2e 8)를 요구했다**(위 "변이"). 썩은 셋(26 의 기준선, 1·3 의 표지)은 모두 고친 시험 파일을 쓰는 변이라, 그 행이 처방한 `--since` 의 고친 시험 파일 고르기로도 잡힌다. 열린 행이 이미 처방한 사건이라 회차로 세어 대기열 418 에 더했다(2회차).
+4. **`tools/mutate.py` 의 `_details` 가 끝 10줄만 보여, 표지가 없는 1·3 의 실패 머리를 보려고 변이를 손으로 넣었다**(위 "변이"). 열린 행이 처방한 사건이라 대기열 455 에 더했다(2회차).
+
+기각:
+
+- 워크트리 가드가 리다이렉트와 이스케이프한 공백이 든 vitest 명령을 거부했다. 앱 가드가 그 자리에서 막았고, `CLAUDE.md` 환경 함정의 길(파일로 쓰고 경로를 넘긴다)로 바로 풀었다.
+- 스크래치패드로 옮기는 `cd` 를 훅이 막았다. 훅이 그 자리에서 막았다.
+- 8.8MB 세션 기록에 앞뒤 600자를 뽑는 grep 이 2분 제한을 넘겼다. Bash 의 시간 제한이 그 자리에서 멈췄고, 한 번 쓴 조회라 고칠 층이 없다.
+- `mutate.py --help` 가 없는 옵션이었고 표 없는 `--check` 가 독스트링을 찍었다. 도구가 그 자리에서 쓰는 법을 알렸다.
+- Edit 의 `Found 3 matches`(대기열 파일). 도구가 그 자리에서 알렸다.
+- `@coderabbitai review` 를 남기기 전에 띄운 `tools/wait_ci.py` 가 종료 4로 끝났다. `next-session` 순서 1의 2가 정한 순서를 어긴 것이지만, 리뷰가 아니라 도구가 그 자리에서 할 일을 끝 줄로 알렸다.
+
+만료: `tools/queue_open_rows.py` 와 `--ref origin/main` 두 출력에 모두 든 168 을 닫았다.
+
+## 다음
+
+- 이 PR(#387)이 병합되면 web-widget 은 닫힌다. 다음 프론티어는 `.scratch/plan.md` 가 원천이다.
+- 대기열 464 가 3회차라 `next-session` 결정표의 하네스 chore 배치 조건에 닿았다. 위 회고 1의 두 가지(접힌 `public/` 와 `RECREATABLE_PATHS` 에 없는 `public/element.js`)를 함께 고쳐야, 위젯 워크트리 아홉(위 "정리")이 다음 정리에서 지워진다.
+- PR #387 의 남긴 위험 둘은 명세가 정하지 않은 자리다. 45초 무응답이 응답 머리를 기다리는 시간도 덮는지(덮으면 시작·이어 가기의 길도 바뀐다), 처리하지 못한 거절 "세 번"이 이어진 세 번인지(지금은 붙어서 새 항목을 받을 때만 처음으로 돌아간다). 정하려면 명세를 고치는 사용자 승인이 먼저다.
+- 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts` 가 한다.
