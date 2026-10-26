@@ -6,6 +6,7 @@
 // 쓰는 visual 잡이다. 정답 사진을 다시 만드는 것은 `pnpm -C web visual:widget:update` 다.
 import { existsSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
+import { BROWSER_ARGS } from "@agent-os/ui/visual";
 
 const IMAGE_MARKER = "/ms-playwright/.docker-info";
 if (!existsSync(IMAGE_MARKER)) {
@@ -33,6 +34,8 @@ export default defineConfig({
   },
   use: {
     browserName: "chromium",
+    // 부분 래스터를 끈다. 까닭은 BROWSER_ARGS(`@agent-os/ui/visual`)의 주석이다.
+    launchOptions: { args: [...BROWSER_ARGS] },
     // 스토리는 위젯을 폭 400px 까지, 높이 560px 로 그린다. 창은 그것과 Storybook 의 여백을 담는다.
     viewport: { width: 480, height: 640 },
     deviceScaleFactor: 1,
