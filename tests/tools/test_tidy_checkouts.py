@@ -66,6 +66,7 @@ from tools.tidy_checkouts import (
     settings_equivalent,
     tasklist_has,
     touched_at,
+    tracked_dirs,
     unrecreatable,
 )
 
@@ -497,6 +498,10 @@ def _링크_없음(_relative: str) -> bool:
     return False
 
 
+def _추적_없음(_relative: str) -> bool:
+    return False
+
+
 def test_무시된_항목을_가장_바깥의_다시_만들_수_있는_폴더로_접는다() -> None:
     """안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
     `.grimp_cache/` 안의 `.gitignore` 에 `*` 를 둔다(셀프 리뷰 명세 축). 폴더째 접어야 옮기기가 그
@@ -512,7 +517,7 @@ def test_무시된_항목을_가장_바깥의_다시_만들_수_있는_폴더로
         ".venv/",
         "web/apps/widget/public/element.js",
     ]
-    assert fold_ignored(entries, _링크_없음) == (
+    assert fold_ignored(entries, _링크_없음, _추적_없음) == (
         ".grimp_cache/",
         "src/.grimp_cache/",
         "web/apps/widget/public/fonts/",
@@ -531,7 +536,7 @@ def test_다시_만들_수_있는_폴더가_아닌_조상으로는_접지_않는
         "web/apps/widget/public/fontsx/a.woff2",
         "web/apps/widget/public/element.js/x",
     ]
-    assert fold_ignored(entries, _링크_없음) == tuple(entries)
+    assert fold_ignored(entries, _링크_없음, _추적_없음) == tuple(entries)
 
 
 def test_무시된_항목을_가장_바깥의_링크로_접는다() -> None:
@@ -548,7 +553,7 @@ def test_무시된_항목을_가장_바깥의_링크로_접는다() -> None:
         ".grimp_cache/l/x.json",
         "bar/.grimp_cache/a.json",
     ]
-    assert fold_ignored(entries, links.__contains__) == (
+    assert fold_ignored(entries, links.__contains__, _추적_없음) == (
         "foo/",
         "a/b/",
         "a/y.stackdump",
@@ -556,6 +561,35 @@ def test_무시된_항목을_가장_바깥의_링크로_접는다() -> None:
         "bar/",
     )
     assert unrecreatable(["foo/", "a/b/"], settings_same=True) == ["foo/", "a/b/"]
+
+
+def test_추적_파일이_든_조상으로는_링크가_아니면_접지_않는다() -> None:
+    """PR 봇 CodeRabbit. 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다. 그 폴더는
+    건너뛰고 더 안쪽 조상을 본다. 링크는 추적 파일이 든 것으로 보여도 링크째로 접는다. 안을 하나씩
+    옮기면 링크 바깥이 옮겨진다."""
+    tracked = {"coverage", "a", "a/node_modules", "lnk"}
+    links = {"lnk"}
+    entries = [
+        "coverage/.env",
+        "coverage/node_modules/pkg/index.js",
+        "a/node_modules/b/x.js",
+        "lnk/x.json",
+    ]
+    assert fold_ignored(entries, links.__contains__, tracked.__contains__) == (
+        "coverage/.env",
+        "coverage/node_modules/",
+        "a/node_modules/b/x.js",
+        "lnk/",
+    )
+
+
+def test_tracked_dirs_는_추적_파일이_든_폴더를_모두_든다() -> None:
+    """견줄 쪽과 함께 `normcase` 로 맞춰, 윈도에서는 대소문자만 다른 자리도 든 것으로 본다."""
+    listing = "README.md\0coverage/keep.txt\0a/b/c.py\0"
+    expected = {os.path.normcase(folder) for folder in ("coverage", "a", "a/b")}
+    assert tracked_dirs(listing) == frozenset(expected)
+    upper = os.path.normcase("COVERAGE") in tracked_dirs("coverage/keep.txt\0")
+    assert upper == (sys.platform == "win32")
 
 
 _HOOK_KEY = f"{HOOK_KEY_PREFIX}x:tdd"
@@ -2471,6 +2505,70 @@ def test_judge_와_remove_는_안쪽_gitignore_로만_무시된_폴더를_조상
 
 
 @pytest.mark.parametrize(
+    ("inner", "action", "code"),
+    [(".env", "남긴다", 1), ("node_modules/pkg/index.js", "지운다", 0)],
+    ids=["무시된_env", "다시_만들_수_있는_안쪽_폴더"],
+)
+def test_judge_와_remove_는_추적_파일이_든_폴더로_접지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str], inner: str, action: str, code: int
+) -> None:
+    """PR 봇 CodeRabbit 첫 회차(반박 시험, `.claude/rules/tools.md`). 다시 만들 수 있는 이름의
+    폴더에 추적 파일이 있으면 git 은 그 안의 무시된 항목을 하나씩 찍는다(첫 단언이 그 표지다). 그
+    폴더로 접으면 옮기기가 추적 파일까지 옮겨 `git worktree remove` 가 막힌다. 접지 않으면 무시된
+    항목은 제 이름으로 판정되고, 그 안의 다시 만들 수 있는 폴더는 그 폴더로 접힌다."""
+    path, _ = _add(repo, "trackedwt")
+    (path / "coverage").mkdir()
+    (path / "coverage" / "keep.txt").write_bytes(b"keep\n")
+    _git("add", "coverage/keep.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-m", "keep", cwd=path)
+    head = _git("rev-parse", "HEAD", cwd=path)
+    target = path / "coverage" / inner
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("x", encoding="utf-8")
+    listed = _git("status", "--porcelain", "--ignored=matching", cwd=path).splitlines()
+    first = inner.split("/", 1)[0]
+    assert any(entry.startswith(f"!! coverage/{first}") for entry in listed), listed
+    merged = {"chore/trackedwt": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/trackedwt" in line)
+    assert line.startswith(action), line
+    if code == 1:
+        assert line.endswith(" — 다시 만들 수 없는 무시된 항목: coverage/.env"), line
+    moved: list[str] = []
+
+    def rename(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            moved.append(Path(dst).name)
+        os.rename(src, dst)
+
+    argv = ["remove", path.as_posix(), "chore/trackedwt", head]
+    assert main(argv, cwd=repo, ops=replace(_ops(merged), rename=rename)) == code
+    assert path.exists() == (code == 1)
+    coverage_moves = sorted(name for name in moved if "coverage" in name)
+    expected = ["trackedwt~~coverage%2Fnode_modules"] if code == 0 else []
+    assert coverage_moves == expected, moved
+
+
+def test_judge_는_ls_files_를_읽지_못하면_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """추적 파일이 든 폴더를 모르면 무시된 항목을 어디로 접을지 가를 수 없다. `status` 를 읽지
+    못한 때와 같이 남긴다."""
+    path, head = _add(repo, "lsfail")
+
+    def git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+        if list(args[:1]) == ["ls-files"]:
+            return subprocess.CompletedProcess(list(args), 128, "", "fatal: ls-files 막힘\n")
+        return real_git(args, cwd)
+
+    merged = {"chore/lsfail": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=replace(_ops(merged), git=git)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/lsfail" in line)
+    assert line.endswith(" — git 이 경고를 냈다: ls-files: fatal: ls-files 막힘"), line
+    assert path.exists()
+
+
+@pytest.mark.parametrize(
     ("link", "layout", "windows"),
     [
         (
@@ -2523,6 +2621,43 @@ def test_judge_와_remove_는_링크_안의_무시된_것을_링크째로_보고
     assert sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*") if p.is_file()) == (
         sorted(layout)
     )
+
+
+def test_judge_와_remove_는_추적_폴더를_갈음한_링크가_있으면_남긴다(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 명세 축(반박 시험, 지우는 자리 안의 링크). 커밋한 `coverage/` 를 링크로 갈음하면
+    윈도의 git 2.32 는 정션을 따라가 추적 파일을 바뀌지 않은 것으로 보고 무시된 `coverage/.env` 만
+    찍는다(첫 단언이 그 표지다). 링크째로 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히므로
+    남긴다. 리눅스의 git 은 심볼릭 링크를 따라가지 않아 바뀐 파일로 남긴다."""
+    path, _ = _add(repo, "pinwt")
+    (path / "coverage").mkdir()
+    (path / "coverage" / "keep.txt").write_bytes(b"keep\n")
+    _git("add", "coverage/keep.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-m", "keep", cwd=path)
+    head = _git("rev-parse", "HEAD", cwd=path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"keep\n")
+    (outside / ".env").write_text("SECRET=1", encoding="utf-8")
+    shutil.rmtree(path / "coverage")
+    _link(path / "coverage", outside)
+    if sys.platform == "win32":
+        listed = _git("status", "--porcelain", "--ignored=matching", cwd=path).splitlines()
+        assert [entry for entry in listed if "coverage" in entry] == ["!! coverage/.env"], listed
+        suffix = " — 옮길 무시된 자리에 추적 파일이 든다: coverage/"
+    else:
+        assert _git("status", "--porcelain", cwd=path), "리눅스의 git 이 바뀐 것을 찍지 않았다"
+        suffix = " — 바뀐 파일이 있다"
+    merged = {"chore/pinwt": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/pinwt" in line)
+    assert line.startswith("남긴다"), line
+    assert line.endswith(suffix), line
+    argv = ["remove", path.as_posix(), "chore/pinwt", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == 1
+    assert (path / "coverage" / ".env").exists()
+    assert sorted(p.name for p in outside.iterdir()) == [".env", "keep.txt"]
 
 
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:

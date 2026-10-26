@@ -61,7 +61,13 @@
   임시 저장소에서 두 모드를 손으로 봤고, 시험이 그 접힘을 표지로 고정한다). 그래서 안쪽
   `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)와 윈도의 정션은 그 안의 항목이 하나씩 찍히고,
   판정과 옮기기 전에 그 항목을 가장 바깥의 링크나 다시 만들 수 있는 폴더인 조상으로 접는다
-  (`fold_ignored`). 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다.
+  (`fold_ignored`). 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다. 추적 파일이 든 자리는 옮기지
+  않는다(`ls-files`). 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히고, 그 뒤 휴지통을 비우며
+  함께 옮긴 다시 만들 수 없는 것(`.env`)도 지운다(PR 봇 CodeRabbit. 고치기 전 판을 셀프 리뷰 표준
+  축이 임시 저장소로 밟았다). 그래서 추적 파일이 든 폴더로는 접지 않고 그 안의 항목을 제 이름이나 더
+  안쪽 조상으로 판정하며, 접은 자리에 추적 파일이 들면(추적 폴더를 갈음한 링크)
+  남긴다(`holding_tracked`). 윈도의 git 은 추적 폴더를 갈음한 정션을 따라가 바뀐 것으로 찍지
+  않는다(셀프 리뷰 명세 축이 재현했다).
   설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
   `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
@@ -480,7 +486,8 @@ class Facts:
     탐침의 옆 이름 폴더가 있다는 뜻이고, `contained` 는 HEAD 가 `origin/main` 에서 닿는다는 뜻이다
     (분리 HEAD 에서만 읽는다). `behind` 는 브랜치 끝이 이름이 같은 병합된 PR 의 머리 가운데 하나의
     조상이라는 뜻이고(끝이 머리와 같으면 읽지 않는다), `app_marker` 는 앱의 표지(`APP_MARKER`)가
-    있다는 뜻이다."""
+    있다는 뜻이다. `holding_tracked` 는 `ignored` 가운데 추적 파일이 든 자리다(추적 폴더를 갈음한
+    링크)."""
 
     exists: bool
     toplevel: str | None
@@ -493,6 +500,7 @@ class Facts:
     has_git: bool = True
     behind: bool = False
     app_marker: bool = False
+    holding_tracked: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -528,9 +536,10 @@ def real_git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]
     """`GIT_OPTIONAL_LOCKS=0`: 남의 워크트리에서 친 `status` 가 색인을 고쳐 쓰며 잠그지 않는다.
     시간 제한을 두지 않는다. 지우는 git(`worktree remove`, `branch -D`)도 이 길로 가고, 큰
     `node_modules` 를 지우는 중에 끊으면 지우다 만 폴더가 남는다. 이 도구의 git 은 모두 이 함수
-    하나로 가서 읽기만 하는 git(`status --ignored=matching`, `for-each-ref`, `log -g`, `merge-base`,
-    `rev-parse`, `rev-list`, `worktree list` 등)도 함께 시간 제한이 없다. 그것만 끊으려면 `Ops.git`
-    을 지우는 길과 읽는 길로 가르거나, 이 함수가 하위 명령으로 갈라 읽는 길에만 시간 제한을 준다."""
+    하나로 가서 읽기만 하는 git(`status --ignored=matching`, `ls-files`, `for-each-ref`, `log -g`,
+    `merge-base`, `rev-parse`, `rev-list`, `worktree list` 등)도 함께 시간 제한이 없다. 그것만
+    끊으려면 `Ops.git` 을 지우는 길과 읽는 길로 가르거나, 이 함수가 하위 명령으로 갈라 읽는 길에만
+    시간 제한을 준다."""
     return subprocess.run(  # 시간 제한 없음: 지우는 git 도 이 길로 가 도중에 끊지 않는다(독스트링)
         ["git", "-c", "core.longpaths=true", *args],
         cwd=cwd,
@@ -1221,28 +1230,48 @@ def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
     return kept
 
 
-def fold_ignored(entries: Sequence[str], is_link: Callable[[str], bool]) -> tuple[str, ...]:
-    """`status --ignored=matching` 의 `!!` 항목을 가장 바깥의 조상 가운데 링크(심볼릭 링크, 정션.
-    `is_link` 는 워크트리 기준의 상대 경로를 받는다)이거나 다시 만들 수 있는
-    폴더(`_recreatable_dir`) 인 것으로 접는다. 접은 자리는 처음 나온 차례로 한 번만 든다.
+def fold_ignored(
+    entries: Sequence[str], is_link: Callable[[str], bool], holds_tracked: Callable[[str], bool]
+) -> tuple[str, ...]:
+    """`status --ignored=matching` 의 `!!` 항목을 가장 바깥의 조상 가운데 링크(심볼릭 링크, 정션)
+    이거나 다시 만들 수 있는 폴더(`_recreatable_dir`) 인 것으로 접는다. 추적 파일이 든 조상은 링크가
+    아니면 건너뛴다. 두 판정은 워크트리 기준의 상대 경로를 받는다. 접은 자리는 처음 나온 차례로 한
+    번만 든다.
 
     안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
     `.grimp_cache/` 안에 `*` 줄이 든 `.gitignore` 를 둔다(셀프 리뷰 명세 축). 하나씩 옮기다 막히면
     먼저 옮긴 그 `.gitignore` 가 빠져 남은 것이 미추적이 되므로 폴더째 접는다. 윈도의 git 2.32 는
     정션을 따라가 그 안도 하나씩 찍는다. 그대로 옮기면 링크 바깥의 파일이 옮겨지므로 링크째로
     접어, 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다(둘 다 PR 직전 bug-perf-review 가
-    임시 저장소로 재현했다)."""
+    임시 저장소로 재현했다). 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다(PR 봇
+    CodeRabbit). 그 폴더 안의 항목은 제 이름으로 판정되거나 더 안쪽 조상으로 접힌다. 추적 파일이 든
+    링크로 접은 자리는 `gather` 가 `holding_tracked` 로 따로 모아 남긴다."""
     folded: dict[str, None] = {}
     for entry in entries:
         parts = entry.rstrip("/").split("/")
         place = entry
         for depth in range(1, len(parts)):
             ancestor = "/".join(parts[:depth])
+            if holds_tracked(ancestor) and not is_link(ancestor):
+                continue
             if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):
                 place = ancestor + "/"
                 break
         folded[place] = None
     return tuple(folded)
+
+
+def tracked_dirs(listing: str) -> frozenset[str]:
+    """`ls-files -z` 의 출력에서 추적 파일이 든 폴더(워크트리 기준의 상대 경로). 견줄 쪽과 함께
+    `os.path.normcase` 로 맞춘다. `normcase` 가 대소문자를 접는 윈도에서는 대소문자만 다른 자리도
+    추적 파일이 든 폴더로 보아 접지 않는 쪽이다. 리눅스와 macOS 의 `normcase` 는 대소문자를 바꾸지
+    않는다."""
+    dirs: set[str] = set()
+    for name in listing.split("\0"):
+        parts = name.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))
+    return frozenset(dirs)
 
 
 def same_path(left: str, right: str) -> bool:
@@ -1388,7 +1417,10 @@ def judge(
     if facts.status:
         return verdict("keep", "바뀐 파일이 있다")
     if facts.status_err:
-        return verdict("keep", f"git status 가 경고를 냈다: {facts.status_err.strip()[:120]}")
+        return verdict("keep", f"git 이 경고를 냈다: {facts.status_err.strip()[:120]}")
+    if facts.holding_tracked:
+        places = ", ".join(facts.holding_tracked[:5])
+        return verdict("keep", f"옮길 무시된 자리에 추적 파일이 든다: {places}")
     extra = unrecreatable(facts.ignored, settings_same=facts.settings_same)
     if extra:
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
@@ -1712,8 +1744,21 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
     listed = git(["status", "--porcelain", "-z", "--ignored=matching"], path)
     if listed.returncode != 0 and not status_err:
         status_err = listed.stderr or f"exit {listed.returncode}"
+    tracked = git(["ls-files", "-z"], path)
+    if tracked.returncode != 0 and not status_err:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"
     found = [item[3:] for item in listed.stdout.split("\0") if item.startswith("!! ")]
-    ignored = fold_ignored(found, lambda relative: _is_link(path / relative))
+    holding = tracked_dirs(tracked.stdout)
+
+    def is_link(relative: str) -> bool:
+        return _is_link(path / relative)
+
+    def holds_tracked(relative: str) -> bool:
+        return os.path.normcase(relative) in holding
+
+    ignored = fold_ignored(found, is_link, holds_tracked)
+    # 윈도의 git 은 추적 폴더를 갈음한 정션을 따라가 바뀐 것으로 찍지 않는다(셀프 리뷰 명세 축)
+    holding_tracked = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))
     settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     behind = (
         wt.branch is not None
@@ -1730,6 +1775,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
         contained=contained,
         behind=behind,
         app_marker=_has_app_marker(path, git),
+        holding_tracked=holding_tracked,
     )
 
 

@@ -2111,5 +2111,88 @@ expect_output = ["무시된 항목: .grimp_cache/.gitignore, .grimp_cache/a.json
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    ignored = fold_ignored(found, lambda relative: _is_link(path / relative))'''
+old = '''    ignored = fold_ignored(found, is_link, holds_tracked)'''
 new = '''    ignored = tuple(found)'''
+
+# PR 봇 CodeRabbit 첫 회차: 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다
+
+[[mutation]]
+name = "무시된 항목 접기: 추적 파일이 든 조상으로 접는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_조상으로는"]
+expect = "red"
+expect_output = ["At index 0 diff: 'coverage/' != 'coverage/.env'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if holds_tracked(ancestor) and not is_link(ancestor):'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "무시된 항목 접기: 추적 파일이 든 링크로 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_조상으로는"]
+expect = "red"
+expect_output = ["At index 3 diff: 'lnk/x.json' != 'lnk/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if holds_tracked(ancestor) and not is_link(ancestor):'''
+new = '''            if holds_tracked(ancestor):'''
+
+[[mutation]]
+name = "무시된 항목 접기: gather 가 추적 파일을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_폴더로"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_env]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return os.path.normcase(relative) in holding'''
+new = '''        return False'''
+
+[[mutation]]
+name = "추적 파일이 든 폴더: 바로 위 폴더를 빼먹는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "tracked_dirs"]
+expect = "red"
+expect_output = ["Extra items in the right set:"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        for depth in range(1, len(parts) + 1):'''
+new = '''        for depth in range(1, len(parts)):'''
+
+[[mutation]]
+name = "추적 파일이 든 폴더: ls-files 를 읽지 못해도 지나간다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "ls_files_를_읽지_못하면"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if tracked.returncode != 0 and not status_err:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"'''
+new = '''    if False:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"'''
+
+# 셀프 리뷰 명세 축: 추적 폴더를 갈음한 링크로 접은 자리를 옮기면 추적 파일이 빠진다
+
+[[mutation]]
+name = "추적 파일이 든 자리: judge 가 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.holding_tracked:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "추적 파일이 든 자리: 접은 자리의 끝 / 를 떼지 않고 견준다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    holding_tracked = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))'''
+new = '''    holding_tracked = tuple(place for place in ignored if holds_tracked(place))'''
