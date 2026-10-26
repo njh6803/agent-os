@@ -1,0 +1,607 @@
+# design-reverse-sync 티켓 05 의 변이 표(`web/tools/sync-design-system`). 맞대는 값, 기록, 보낼 것, 확인, 기록 명령의
+# 시험은 구현 전에 모듈이 없어 모두 빨갰을 뿐 단언 하나하나의 빨강은 보지 못했다. 변이마다 그 단언이 재는 줄 하나만
+# 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/record_check_mutations.toml [번호 ...]
+# 재지 않은 것: 기록이 없을 때 원 바이트의 sha256 과 맞대는 자리에 맞대는 값을 쓰는 변이. 시험의 파일이 뿌리 README 와
+# tokens.json 밖이라 두 값이 같다. 그 변이는 늘 더 보내는 쪽이라 틀린 판정을 내지 않는다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 맞대는 값(file-hash.ts) ----------------------------------------------------------------------------------
+
+[[mutation]]
+name = "생성 카드를 기록에서 빼지 않으면 기록에 드는 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "project/api/tokens.md 는 기록에 드는가"]
+expect = "red"
+expect_output = ["AssertionError: expected true to be false"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''  return !PAGE_BUILT.includes(inProject) && !GENERATED_CARD.test(inProject);'''
+new = '''  return !PAGE_BUILT.includes(inProject);'''
+
+[[mutation]]
+name = "구분선 뒤 생성 머리에서 자르지 않으면 Consuming 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "생성 머리 Consuming 이 오면"]
+expect = "red"
+expect_output = ["+ ## Consuming this system (generated — do not edit)"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''  const cuts = [HEAD_AT.exec(text)?.index ?? -1, manifestTail(text)].filter((at) => at !== -1);'''
+new = '''  const cuts = [-1, manifestTail(text)].filter((at) => at !== -1);'''
+
+[[mutation]]
+name = "manifest 뒤 생성 몫을 보지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "manifest 블록 뒤에 다시 생성 몫이"]
+expect = "red"
+expect_output = ['+   "manifestVersion": 3']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''    if (rest.trim() === "" || GENERATED_NEXT.test(rest)) {'''
+new = '''    if (rest.trim() === "") {'''
+
+[[mutation]]
+name = "CRLF 구분선을 모르면 CRLF 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "CRLF 줄 끝의 구분선"]
+expect = "red"
+expect_output = ['''\r\n\r\n---\…' to be '# 디자인 시스템''']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''const SEPARATOR = "\\r?\\n\\r?\\n---\\r?\\n\\r?\\n";'''
+new = '''const SEPARATOR = "\\n\\n---\\n\\n";'''
+
+[[mutation]]
+name = "tokens.json 을 바이트로 재면 꼴만 다시 쓴 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "tokens.json 은 맞대는 몫의 값이라"]
+expect = "red"
+expect_output = ['Received: "191da4dc98d92e537243767fc8c3f0b22a5b9e75b0b83b5e7751590e51f90251"']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''      return comparisonHash(readTokens(parsed));'''
+new = '''      return sha256(bytes);'''
+
+[[mutation]]
+name = "뿌리 README 를 바이트로 재면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "뿌리 README 는 사람 몫의"]
+expect = "red"
+expect_output = ['Received: "722364875f64e983326b281e60eca55990fe5ba72b38223c8877395ef38010c0"']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/file-hash.ts"
+old = '''  if (path === README_PATH) {'''
+new = '''  if (path === "project/other.md") {'''
+
+# --- 기록(sync-record.ts) -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "한도와 같은 크기를 넘는 것으로 보면 한도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "한도는 512,000 바이트이고"]
+expect = "red"
+expect_output = ["CommandError: 기록이 512000 바이트로 한도 512000 바이트를 넘어"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''  if (size > RECORD_LIMIT) {'''
+new = '''  if (size >= RECORD_LIMIT) {'''
+
+[[mutation]]
+name = "첫 기록이 pending 목표를 비우면 첫 기록 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "여러 호출의 첫 기록은"]
+expect = "red"
+expect_output = ["AssertionError: expected { files: Map{}, …(2) } to deeply equal { files: Map{ …(1) }, …(2) }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''        files: new Map(targets.map((path) => [path, entry(path)])),'''
+new = '''        files: new Map(),'''
+
+[[mutation]]
+name = "지운 경로를 기록에서 빼지 않으면 합치기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "앞 기록에 이번에 보낸 것과 지운 것을 합치고"]
+expect = "red"
+expect_output = ['+   "project/components/Card/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''  for (const path of [...changes.delete, ...changes.gone]) {'''
+new = '''  for (const path of changes.gone) {'''
+
+[[mutation]]
+name = "이미 지워진 경로를 기록에서 빼지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "이미 지워진 pending 의 지울 경로는"]
+expect = "red"
+expect_output = ["AssertionError: expected true to be false"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''  for (const path of [...changes.delete, ...changes.gone]) {'''
+new = '''  for (const path of changes.delete) {'''
+
+[[mutation]]
+name = "보내지 않은 목표를 이어 적지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "다시 한 올리기가 목표와 같아"]
+expect = "red"
+expect_output = ["CommandError: 기록에 적을 project/components/Badge/README.md 가 이번 산출에 없다"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''    if (target !== undefined && changes.landed.includes(path)) {'''
+new = '''    if (target !== undefined && changes.send.includes(path)) {'''
+
+[[mutation]]
+name = "꼴 판을 보지 않으면 모르는 꼴 판 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "꼴 판이 1 이 아니거나"]
+expect = "red"
+expect_output = ["to deeply equal { kind: 'unknownVersion', version: 2 }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''  if (!isRecord(parsed) || version !== RECORD_VERSION) {'''
+new = '''  if (!isRecord(parsed)) {'''
+
+[[mutation]]
+name = "해시의 꼴을 보지 않으면 어긋난 꼴 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "꼴 판은 1 인데 칸이 어긋나면"]
+expect = "red"
+expect_output = ["AssertionError: 짧은 해시: expected 'ok' to be 'malformed'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''      !HASH.test(hash) ||'''
+new = ''''''
+
+[[mutation]]
+name = "claim 을 비우면 claim 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "claim 칸은 받은 그대로"]
+expect = "red"
+expect_output = ["AssertionError: expected null to deeply equal { …(2) }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''  const claim = previous?.claim ?? null;'''
+new = '''  const claim = null;'''
+
+# --- 보낼 것과 빌드(upload.ts) --------------------------------------------------------------------------------
+
+[[mutation]]
+name = "되돌릴 파일을 보내지 않으면 되돌리기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "되돌릴 파일은 코드가 그대로여도 보낸다"]
+expect = "red"
+expect_output = ['-   "project/components/Badge/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    if (revert.has(path) || kind === "edited" || kind === "deleted") {'''
+new = '''    if (kind === "edited" || kind === "deleted") {'''
+
+[[mutation]]
+name = "보낸 목표를 로컬과 맞대지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "목표대로 이미 보낸 파일은 다시 보내지 않고"]
+expect = "red"
+expect_output = ['+   "project/components/Card/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''      (target !== undefined && target.hash === fileHash(path, data) ? landed : send).push(path);'''
+new = '''      (target !== undefined ? landed : send).push(path);'''
+
+[[mutation]]
+name = "지난 산출을 맞대지 않으면 지울 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "지난 산출에 있었고 이번 산출에 없는 경로를 지운다"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ 'project/components/Card/README.md' ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const deletes = [...(input.previousOutput ?? []), ...input.webAdded, ...pendingDelete].filter('''
+new = '''  const deletes = [...input.webAdded, ...pendingDelete].filter('''
+
+[[mutation]]
+name = "이미 지워진 경로를 지울 것에 넣으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "지울 경로가 아직 있으면 지우고"]
+expect = "red"
+expect_output = ['+   "project/assets/notes/old.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    (path) => isRecorded(path) && !output.has(path) && !gone.includes(path),'''
+new = '''    (path) => isRecorded(path) && !output.has(path),'''
+
+[[mutation]]
+name = "지울 경로의 분류가 빠진 것을 보지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "확인의 분류가 pending 의 경로 하나를 빠뜨리면"]
+expect = "red"
+expect_output = ["AssertionError: expected null to be an instance of CommandError"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const missing = [...pending.files.keys(), ...pending.delete].filter((path) => !given.has(path));'''
+new = '''  const missing = [...pending.files.keys()].filter((path) => !given.has(path));'''
+
+[[mutation]]
+name = "기록 없이 sha256 을 맞대지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "아티팩트에서 받은 sha256 과 원 바이트로"]
+expect = "red"
+expect_output = ['+   "project/components/Badge/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''      return artifactSha256?.get(path) === sha256(data);'''
+new = '''      return artifactSha256?.has(path) === true;'''
+
+[[mutation]]
+name = "설정 폴더의 원본과 노트도 빌드로 보면 빌드 필요 없음 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "그대로 옮기는 원본과 패키지 밖만"]
+expect = "red"
+expect_output = ['+       "path": ".design-sync/NOTES.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    } else if (path.startsWith(BUILD_CONFIG) && !startsWithAny(path, NOT_BUILD_CONFIG)) {'''
+new = '''    } else if (path.startsWith(BUILD_CONFIG)) {'''
+
+[[mutation]]
+name = "패키지 경로의 끝 빗금을 빼면 이웃 패키지가 빌드로 잡혀 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "그대로 옮기는 원본과 패키지 밖만"]
+expect = "red"
+expect_output = ['+       "path": "web/packages/ui-extra/index.ts",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''const PACKAGE = "web/packages/ui/";'''
+new = '''const PACKAGE = "web/packages/ui";'''
+
+[[mutation]]
+name = "그대로 옮기는 다섯의 되돌리기도 빌드로 보면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "되돌릴 파일이 tokens.json 과 그대로 옮기는 다섯뿐이면"]
+expect = "red"
+expect_output = ['+       "path": "project/guidelines/web-design.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    if (path !== TOKENS_PATH && path !== RECORD_PATH && !startsWithAny(path, COPIED)) {'''
+new = '''    if (path !== TOKENS_PATH && path !== RECORD_PATH) {'''
+
+# --- 확인(check.ts) -------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "편집 꺼짐을 모르면 기록 없는 편집 꺼짐 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "기록은 없고 tokens.json 은 있으면"]
+expect = "red"
+expect_output = ['+   "reason": "noRecord",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  return index.editing === "off";'''
+new = '''  return false;'''
+
+[[mutation]]
+name = "tokens.json 을 보지 않고 기록 전으로 가르면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "기록은 없고 tokens.json 은 있으면"]
+expect = "red"
+expect_output = ['+   "result": "beforeRecord",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  if (read === null && !web.files.has(TOKENS_PATH)) {'''
+new = '''  if (read === null) {'''
+
+[[mutation]]
+name = "목표와 같은 파일을 보낸 것으로 보지 않으면 pending 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "목표와 같은 파일은 보낸 것이고"]
+expect = "red"
+expect_output = ['+     "project/guidelines/index.md": "edited",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  if (target !== null && hash === target) {'''
+new = '''  if (target !== null && hash === before) {'''
+
+[[mutation]]
+name = "웹에 없는 지울 경로를 지워진 것으로 보지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "지울 경로가 웹에 없으면 지워진 것이고"]
+expect = "red"
+expect_output = ['-     "project/assets/notes/old.md": "deleted",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''    if (toDelete) {'''
+new = '''    if (!toDelete) {'''
+
+[[mutation]]
+name = "섞일 수 있다는 표시를 달지 않으면 보낸 뒤 더 고친 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "보낸 뒤 더 고친 tokens.json"]
+expect = "red"
+expect_output = ['+   "tokensMixed": false,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  return judged("edited", { diffs, mixed: target !== undefined, removed: false });'''
+new = '''  return judged("edited", { diffs, mixed: false, removed: false });'''
+
+[[mutation]]
+name = "claim 을 보지 않으면 claim 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "들이기의 claim 이 든 기록은"]
+expect = "red"
+expect_output = ["AssertionError: expected null to be 'claim'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  if (record.claim !== null) {'''
+new = '''  if (record.claim === "claim") {'''
+
+[[mutation]]
+name = "색인 목록을 키 차례째 맞대면 키 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "색인 목록의 키 차례만 바뀐 것은"]
+expect = "red"
+expect_output = ['+         "notes": {']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));'''
+new = '''  return JSON.stringify(left) === JSON.stringify(right);'''
+
+[[mutation]]
+name = "색인 목록을 pending 의 목표와 맞대지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "색인 목록이 pending 의 목표와 같으면"]
+expect = "red"
+expect_output = ['+         "readme": "project/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''      !sameJson(after[key], before[key]) && (target === null || !sameJson(after[key], target[key])),'''
+new = '''      !sameJson(after[key], before[key]),'''
+
+[[mutation]]
+name = "api 아래 마크다운도 받으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "api 아래 마크다운과 마크다운이 아닌 파일은"]
+expect = "red"
+expect_output = ['+       "path": "project/api/notes.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''        if (MARKDOWN.test(path) && !path.startsWith(API)) {'''
+new = '''        if (MARKDOWN.test(path)) {'''
+
+[[mutation]]
+name = "공용 폴더 lib 의 README 도 받으면 받을 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "기록의 api 밖 마크다운, 색인의 문서"]
+expect = "red"
+expect_output = ['+   "project/components/lib/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''      name !== "lib" &&
+'''
+new = ''''''
+
+[[mutation]]
+name = "편집이 꺼진 색인에서도 문서를 받으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "편집이 꺼진 색인에서는 pending 의 경로만"]
+expect = "red"
+expect_output = ['+   "project/README.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  if (!(index.kind === "ok" && editingOff(index.index))) {'''
+new = '''  if (index.kind === "ok") {'''
+
+[[mutation]]
+name = "편집이 꺼진 동안 웹에 있기만 하면 보낸 것으로 보면 첫 올리기 멈춤 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "앞 해시가 없는 첫 올리기가 멈춘 기록은"]
+expect = "red"
+expect_output = ['+     "project/guidelines/index.md": "sent",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''data !== undefined && fileHash(path, data) === target.hash ? "sent" : "unsent"'''
+new = '''data !== undefined ? "sent" : "unsent"'''
+
+[[mutation]]
+name = "그 뒤에 받은 경로의 읽기 실패를 보지 않으면 읽기 실패 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "없다는 까닭이 아닌 까닭으로 읽지 못한 경로가 있으면"]
+expect = "red"
+expect_output = ['-   "reason": "readFailed",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''
+  const paths = fetchList(web);
+  requireFetched(web, paths);
+  const failed = failedReads(web, paths);
+'''
+new = '''
+  const paths = fetchList(web);
+  requireFetched(web, paths);
+  const failed = failedReads(web, []);
+'''
+
+[[mutation]]
+name = "첫 받기의 경로를 내지 않으면 첫 받기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/check.test.ts", "-t", "첫 받기 전에는 첫 받기의 경로를 낸다"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ 'project/design-system.json', …(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/check.ts"
+old = '''  const first = unfetched(web, FIRST);'''
+new = '''  const first = unfetched(web, []);'''
+
+# --- 기록 명령(record.ts) -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "덮어쓰기를 고르지 않은 웹 편집도 올리면 흐름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "첫 올리기의 기록 뒤 확인은"]
+expect = "red"
+expect_output = ['-       "kind": "usage",', '+     "ok": true,']
+timeout = 300
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  if (!overwrite) {'''
+new = '''  if (overwrite === null) {'''
+
+[[mutation]]
+name = "따옴표로 싼 줄을 받으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "따옴표로 싼 경로 줄은"]
+expect = "red"
+expect_output = ['-       "kind": "input",', '+     "ok": true,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const quoted = lines.find((line) => line.startsWith('"'));'''
+new = '''  const quoted = lines.find((line) => line.startsWith("#"));'''
+
+# --- 셀프 리뷰 반영(2026-10-27) ----------------------------------------------------------------------------------
+# 셀프 리뷰가 찾은 길을 고치며 더한 사례들. 앞 번호가 일지와 README 에 인용되어 있어 끝에 붙인다.
+
+[[mutation]]
+name = "다시 한 첫 기록이 이미 지워진 경로를 pending 에서 빼면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "다시 한 올리기의 첫 기록은 이미 지워진"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ 'project/components/Card/README.md' ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/sync-record.ts"
+old = '''        delete: sortedPaths([...changes.delete, ...changes.gone]),'''
+new = '''        delete: sortedPaths(changes.delete),'''
+
+[[mutation]]
+name = "지난 산출 목록을 보지 않고 산출에 없는 되돌릴 파일을 멈추면 코드가 뺀 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "웹이 고친 파일을 코드가 뺐으면"]
+expect = "red"
+expect_output = ["CommandError: 되돌릴 project/components/Card/README.md 가 이번 산출에 없고"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const stray = [...revert].filter((path) => !output.has(path) && !leftByCode.has(path));'''
+new = '''  const stray = [...revert].filter((path) => !output.has(path));'''
+
+[[mutation]]
+name = "pending 의 지울 경로를 코드가 뺀 것으로 보지 않으면 웹이 고친 지울 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "웹이 고친 지울 경로는"]
+expect = "red"
+expect_output = ["CommandError: 되돌릴 project/components/Badge/README.md 가 이번 산출에 없고"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const leftByCode = new Set([...(input.previousOutput ?? []), ...pendingDelete]);'''
+new = '''  const leftByCode = new Set(input.previousOutput ?? []);'''
+
+[[mutation]]
+name = "어디에도 없는 되돌릴 파일을 받으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "되돌릴 파일이 이번 산출에도 지울 경로에도 없으면"]
+expect = "red"
+expect_output = ["AssertionError: expected null to be an instance of CommandError"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  if (stray.length > 0) {'''
+new = '''  if (stray.length > 1) {'''
+
+[[mutation]]
+name = "웹이 지운 파일을 기록에서만 빼지 않으면 코드도 뺀 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "웹이 지운 파일을 코드도 뺐으면"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ 'project/components/Card/README.md' ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    ...input.webRemoved,'''
+new = ''''''
+
+[[mutation]]
+name = "웹이 지운 파일을 되살리지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "덮어쓰기는 웹이 지운 파일을"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ Array(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const revert = new Set([...input.revert, ...input.webRemoved]);'''
+new = '''  const revert = new Set(input.revert);'''
+
+[[mutation]]
+name = "웹이 지운 파일을 되돌릴 파일로 내면 흐름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "첫 올리기의 기록 뒤 확인은"]
+expect = "red"
+expect_output = ['+     "project/guidelines/web-design.md",', '-   "webRemoved": [']
+timeout = 300
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''      webRemoved.push(editPath);'''
+new = '''      revert.push(editPath);'''
+
+[[mutation]]
+name = "바뀐 파일의 배열이 없는 보고를 빈 목록으로 지나가면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "바뀐 파일의 배열이 없으면"]
+expect = "red"
+expect_output = ['+       "message": "r 를 읽을 수 없다']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  if (!Array.isArray(raw.files)) {
+    throw inputError(path, "files 로 바뀐 파일의 배열을 들지 않는다");
+  }
+'''
+new = ''''''
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  for (const item of raw.files.map((value: unknown) => value)) {'''
+new = '''  for (const item of Array.isArray(raw.files) ? raw.files : []) {'''
