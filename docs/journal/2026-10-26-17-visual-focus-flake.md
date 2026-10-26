@@ -10,6 +10,8 @@
 
 > 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (아래 "인계 (셀프 리뷰 직전, 셋째 세션)" 절의 지시문으로 연 넷째 세션. 같은 워크트리에 EnterWorktree(path)로 들어가 셀프 리뷰(기점 90a89c13)부터 잇는다. 범위는 PR과 병합까지)
 
+> 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (아래 "인계 (커밋 뒤, 넷째 세션)" 절의 지시문으로 연 다섯째 세션. 같은 워크트리에 EnterWorktree(path)로 들어가 origin/main 합치기부터 잇는다. 범위는 PR과 병합까지)
+
 ## 결정
 
 - **고침은 찍기 전 대기가 아니라 브라우저 실행 인자 `--disable-partial-raster`다.** 대기열 414와 지시문은 원인을 포커스 링 전환의 찍는 시점으로 보고 찍기 전 대기를 처방했다. 재 보니 흔들린 그림은 크롬의 부분 래스터가 낸 그림과 타일 전체를 다시 그린 그림 둘 가운데 하나였고, 어느 쪽이 찍히는지가 시점에 달렸다(아래 "진단"). 글 입력의 올림은 기다려도 부분 래스터의 그림 그대로라 대기로는 고쳐지지 않는다. 문턱을 넓히지 않는다는 행의 선은 지켰다.
@@ -272,3 +274,51 @@ PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 문장):
 - README 변이 행: "화면 시험 19개(정답 35장)", "다르면 잇단 두 사진이 같아질 때까지 찍어 그 사진을 정답과 맞댄다. `all` 모드는 정답 없이 잇단 두 사진이 같을 때까지 찍는다. 같은 위젯 설정에서 안정된 사진은 옛 그림이었으므로(`all` 판), 비교 모드가 지난 것은 첫 사진이 새 정답의 그림이었기 때문으로 어림한다"
 - 대기열 414: "인자로 부분 래스터를 끄면 찍는 때와 상관없이 그림이 하나였고, CI의 실패한 그림 셋이 끈 그림과 바이트까지 같았다(그 회차가 왜 끈 그림을 찍었는지는 재지 않았다)"
 - 이 일지 "셋째 세션": "첫 사진이 다르거나 정답이 없으면 잇단 두 사진이 같을 때까지 0·100·250·500ms, 그 뒤로는 1000ms씩 쉬며 찍고, 정답이 있으면 그 안정된 사진을 다시 정답과 맞댄다", "첫 사진이 달랐다면 안정된 옛 그림을 새 정답과 맞대 빨갰을 것이다"
+
+다시 친 커밋 `5f25f59b`(`chore: 바뀐 정답의 까닭과 최종 프로브를 적고 티켓을 닫는다 (harness 016)`, 7 files)의 pre-commit은 모두 통과했다(pytest 812.2초, web-verify 736.0초, run-hooks 274.2초, 변이 표·마크다운 표·줄 구분 문자·인용·커밋 메시지·check-ticket 통과). ruff 둘은 `.py`가 없어 Skipped였고 커밋 전에 손으로 친 결과가 초록이다(`All checks passed!`, `1054 files already formatted`).
+
+## 인계 (커밋 뒤, 넷째 세션)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 와서(`hook_handoff`) 넘긴다. 이 세션의 제목은 `chore/016-visual-focus-flake`이고 넘기며 `chore/016-visual-focus-flake (인계함)`으로 바꾼다. 푸시하지 않았고 PR은 없다.
+
+이 세션이 번복하거나 고친 것: 위 "셀프 리뷰 (넷째 세션)"의 "고친다" 전부. 앞 세션들의 서술 가운데 "화면 사진 19개"(시험 19개, 정답 35장), "96번 중 95번"(끊긴 판을 빼면 88번 중 87번), 비교 모드의 반쪽 서술(첫 사진이 다를 때의 갈래), 옛 주석 문장의 인용(원문과 글자가 달랐다), 티켓 본문의 기전 서술을 고쳤다. 티켓 기준 4의 체크를 풀었다가 PR 본문의 초안(아래)을 쓴 뒤 다시 체크했다. 일지 번호를 `2026-10-26-07`에서 `2026-10-26-17`로 옮겼다(`sibling_overlap.py --move`).
+
+남은 일(차례대로):
+
+1. origin/main을 합친다(`git fetch origin`, `git merge origin/main`). 이 세션이 볼 때 origin/main은 `71433a0d`(#356)였고, `.scratch/harness/probes/README.md`와 `.scratch/retro-queue.md`를 함께 고쳐 글자 충돌 후보다. 합친 뒤 `PYTHONUTF8=1 uv run python tools/mutate.py --check .scratch/harness/probes/visual_flake_mutations.toml`에 이 표의 변이 이름을 골라, #388이 더한 "시험 원문의 표지" 알림에 걸리지 않는지 본다(코드로는 걸리지 않는다고 읽었다, 위 "셀프 리뷰 (넷째 세션)"의 고친 것 줄). 합친 뒤에도 `uv run python tools/sibling_overlap.py`를 친다.
+2. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). `coderabbit auth status`로 좌석을 보고, 없으면 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)이다. `bug-perf-review`의 브리프에 밀 주장은 "셀프 리뷰 (둘째 세션)"의 "PR 직전 리뷰에 밀 주장", "인계 (셀프 리뷰 직전, 셋째 세션)"의 "셀프 리뷰에 밀 주장", 위 "셀프 리뷰 (넷째 세션)"의 "PR 직전 리뷰에 밀 주장"이다.
+3. PR 본문을 채우고 푸시와 PR. 제목은 첫 커밋과 같은 `chore: 사진 비교가 부분 래스터를 끄고 그 인자로 다시 만든 정답과 맞댄다 (harness 016)`. 본문 초안은 저장소 밖(아래)에 있고 자리표 셋이 남았다. `CHECKLIST`(템플릿의 체크리스트 줄에 커밋 `5f25f59b`의 pre-commit 결과, 손으로 친 ruff 둘, `-m llm`·`-m llm_widget`·e2e를 치지 않은 까닭(파이썬과 위젯 앱·api-client·서버 경로를 건드리지 않았다), 셀프 리뷰, 2의 결과), `VERIFY_NOTES`(두 사진 비교가 고친 설정으로 초록이었다: `pnpm -C web visual` 109 passed 12.2분, `pnpm -C web visual:widget` 43 passed 2.5분. 그 뒤의 변경은 주석·기록 문장뿐이다), `CI_TIMING`(PR의 `visual` 잡의 두 단계 걸린 시간을 main의 직전 실행 `40279175497`의 패키지 3분 18초, 위젯 53초와 맞댄 결과. CI 뒤에 `gh pr edit`로 채운다). 채우기는 `node <스크래치패드>/fill.cjs <본문> <자리표> <내용 파일 또는 -문자열>`. PR을 연 뒤 next-session 순서 1의 2(봇 회차)대로 한다.
+4. 이 단계를 닫는 회고(`retro`)와 일지 "다음"을 병합 전에 푸시하고, 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 회고 후보(앞 세션들 것에 더해): pre-commit의 pytest에서 이 브랜치가 건드리지 않은 시험 둘이 부하로 빨갰다(위 첫 시도 줄. `test_filesystem.py`의 교체 재시도 시험은 프로브 README의 `mutate_no_grandchild_bound` 행이 부하 아래에서 빨간 것을 이미 적었고, `test_rerun_runner.py`의 오염 시험은 이 세션이 처음 봤다), 셀프 리뷰 두 축이 앞 세션이 쓴 수(19개, 96번)를 다시 세어 단위와 표지 없는 판을 잡았다.
+
+이 세션만 아는 것: 저장소 밖의 출력은 이 세션 스크래치패드 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/0215ba90-4e0b-41ee-9633-39b1c3a2d5f8/scratchpad/`에 있다. PR 본문 초안 `pr-body.md`(자리표 `CHECKLIST`, `VERIFY_NOTES`, `CI_TIMING`), 자리표를 채우는 `fill.cjs`, 바뀐 정답 목록 `changed.txt`(이미 본문에 넣었다), 두 사진 비교의 기록 `visual-ui.log`·`visual-widget.log`, 두 커밋 시도의 기록 `commit.log`(막힌 첫 시도)·`commit2.log`(`5f25f59b`), 커밋 메시지 `commit-msg.txt`, 명세 축 서브에이전트가 남긴 `count.cjs`·`agg2.cjs`. 앞 세션의 출력(`53f51b7a-…/scratchpad/`)과 CI 아티팩트(`8a058eeb-…/scratchpad/ci/`)의 자리는 위 "인계 (셀프 리뷰 직전, 셋째 세션)"이고 그대로 있다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/016-visual-focus-flake.md. 사진 비교가 몇 픽셀 차이로 흔들리는 원인(크롬의 부분 래스터)을 재서 브라우저 실행 인자와 다시 만든 정답으로 고친다(대기열 414)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다
+브랜치: chore/016-visual-focus-flake
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-17-visual-focus-flake.md 의 "넷째 세션" 절과 "인계 (커밋 뒤, 넷째 세션)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 5f25f59b로 커밋했고(티켓 done, 대기열 414 닫힘) 푸시와 PR은 아직이다. 일지의 인계 절은 커밋하지 않았다. 남은 단계(origin/main 합치기와 변이 표의 원문 확인, PR 직전 리뷰, PR 본문 자리표 채우기와 PR, 회고, 병합)와 저장소 밖 PR 본문 초안의 자리는 일지의 "인계 (커밋 뒤, 넷째 세션)" 절이다. docs/journal/2026-10-26-17-visual-focus-flake.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(세션에 실리는 스킬은 세션을 시작한 체크아웃의 사본이다)
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기: 제목을 `chore/016-visual-focus-flake (인계함)`으로 바꿨다. 도는 백그라운드 작업은 없었다(리뷰 서브에이전트 둘, 두 사진 비교, 두 커밋 시도는 모두 끝났다). `docker ps`는 Docker 엔진의 Internal Server Error로 답하지 않아 남은 컨테이너를 보지 못했다(두 사진 비교는 종료 0으로 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T13:57:25Z
+
+## 다섯째 세션
+
+제목을 `chore/016-visual-focus-flake`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 EnterWorktree(path)로 들어왔다.
+
+### origin/main 합치기
+
+`71433a0d`(#356)까지 합치자 `.scratch/harness/probes/README.md`가 글자 충돌이었다. 두 쪽 모두 표 끝에 행을 더한 것이라 충돌 표지만 지워 두 쪽 행을 모두 남겼다(이 브랜치의 두 행이 main의 세 행 앞에 온다). 병합 커밋의 첫 시도는 pre-commit의 pytest가 1 failed, 5619 passed(1430.4초)로 막았다. 빨간 것은 넷째 세션 첫 시도와 같은 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`board.run()`이 1)이고, 그 시험만 따로 치자 1 passed(15.5초)였다. 같은 커밋을 다시 쳐 `a87b4f71`이 모두 통과했다(pytest 688.5초, web-verify 597.7초). 그 시험은 B 갈래를 3초 붙잡는 동안 A 갈래가 두 번 오염되는 차례에 기대어, 부하가 크면 차례가 바뀐다고 어림한다(시험 코드를 읽었다. 재지 않았다).
+
+`sibling_overlap.py`를 치자 origin/main이 `c7efd9ba`(#390, harness 015)로 또 움직였고, 그 커밋이 `.claude/rules/probes.md` 첫 항목에 "표지는 그것으로 가르려는 다른 해석 아래에서는 나지 않는 관찰로 고른다"를 더했다(대기열 367). 그래서 합친 뒤 이 브랜치의 표지를 그 조항에 대 봤다. `run.mjs`의 `argsMatched`, `attribution.mjs`의 실행 인자 시험 Received 줄, 설정 변이 둘의 `+   "--disable-partial-raster",`는 인자가 없거나 그 시험이 다른 까닭으로 빨개진 해석 아래에서는 나지 않는다. 사진 변이의 표지(`Snapshot: molecules-switch--off-`와 `-focus.png`)는 그렇지 않았다. Playwright 1.63.0의 `toHaveScreenshot`은 정답이 있을 때 시간 초과(`Timeout …`, `Failed to take two consecutive stable screenshots.`)로 끝나도 같은 `handleDifferent`로 `Snapshot:` 줄을 찍는다(`expect.js`의 `handleDifferent`와 `coreBundle.js`의 `expectScreenshot`을 읽었다). 그래서 표지를 실패 머리의 `are different.` 바로 뒤에 빈 줄과 여섯 칸 들여쓴 `Snapshot: molecules-switch--off-` 줄이 이어진 문구로 바꿨다(호출 기록의 `are different.`는 `- `로 시작하고 `Snapshot:` 줄 뒤에 온다). 변이 도구는 출력을 텍스트 모드로 읽어 줄바꿈이 `\n`이다(`run_command`를 읽었다).
+
+바꾼 표지로 변이를 다시 돌리지 못했다. `docker ps`와 `docker version`이 엔진의 `Internal Server Error`로 답했고(Docker Desktop의 프로세스는 오전 11시 10분부터 떠 있었다), 다른 세션도 쓰는 Docker를 다시 시작하지 않았다. 대신 앞선 세션들이 저장한 사진 비교 기록 열다섯을 스크래치 스크립트(`C:/Users/User/AppData/Local/Temp/claude/C--project-agent/48c35404-50ee-4b17-b3d3-ac8dfc1a64ff/scratchpad/marker_check.cjs`)로 훑었다. `Snapshot:` 줄이 있는 기록 여섯(첫 세션의 `ui-flag1.log`·`visual-once.log`·`widget-flag1.log` 등)의 `Snapshot:` 줄 24개가 모두 픽셀 차이 갈래였고, 새 표지는 그 24개에만 맞았다(손으로 봤다). 시간 초과 갈래의 `Snapshot:` 줄은 열다섯 어디에도 없어, 시간 초과에 맞지 않는다는 쪽은 코드를 읽은 것이다. 고른 변이 셋의 `tools/mutate.py --check`는 "원문 확인: 변이 3 모두 원문이 한 번씩 있다"였고 #388의 표지 메아리 알림은 나지 않았다. 프로브 README의 변이 행에 바꾼 까닭과 이 확인을 적었다.
