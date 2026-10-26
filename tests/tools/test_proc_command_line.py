@@ -162,7 +162,8 @@ def test_끝났지만_거두지_않은_자식은_빈_값이다() -> None:
     finally:
         process.wait(timeout=60)
 
-    assert argv is None and again is None
+    assert argv is None
+    assert again is None
     assert elapsed < SETTLE_SECONDS / 2
 
 

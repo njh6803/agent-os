@@ -130,3 +130,55 @@ origin/main 은 이 브랜치의 기준(92b61458)에서 움직이지 않아 합�
 반영 커밋의 첫 pre-commit 은 `tests/tools/test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다` 하나만 빨갰다(0.5초 배출에 줄이 하나도 없었다, pytest 한 바퀴 604초). `tools/probe_kit.py`는 `command_line`을 쓰지 않는다(grep 0). 그 파일을 홀로 돌려 15개가 모두 지났고 858초가 걸렸다. 이 PC 에 다른 세션이 여럿 돌던 때의 흔들림으로 보고 다시 커밋했다(어림이다).
 
 둘째 pre-commit 은 위 회고 후보의 `test_rerun_runner.py` 오염 시험 하나만 빨갰다(pytest 한 바퀴 1015초). 앞 세션이 origin/main 판으로도 부하 아래 10/16 빨갛다고 갈랐고, `_readable`은 64비트 윈도에서 참이라 이 PC 의 동작을 바꾸지 않는다(코드를 읽은 것). 다시 커밋했다.
+
+셋째 pre-commit 이 모두 지나 `8fbc5338`로 커밋했다(Skipped 는 커밋에 파일이 없는 카나리아 명세·헌법 판 둘뿐). 푸시하고 PR #389 를 열었다.
+
+## 인계 (PR 연 뒤)
+
+- 이 세션의 지금 제목: `chore/013-proc-cmdline-linux`. 인계하며 `chore/013-proc-cmdline-linux (인계함)`으로 바꾼다.
+- PR #389 를 연 직후 인계 계기(세션 컨텍스트 203,311 토큰, 경계 `PR 연 뒤`)가 왔다. `@coderabbitai review` 코멘트는 아직 남기지 않았다. 띄운 백그라운드 작업은 없다.
+- 커밋하지 않은 변경: 이 일지의 이 절과 바로 위 문단.
+- 남은 단계: 봇 회차(첫 `@coderabbitai review` 코멘트부터), 병합. 회고 후보(흔들리는 `test_rerun_runner` 시험, 그리고 이번에 한 번 빨갰던 `test_probe_kit`의 0.5초 배출 시험)는 위에 있다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/013-proc-cmdline-linux.md. 리눅스 CI에서 tools/proc_command_line.py가 띄운 직후의 자식 명령 줄을 None으로 읽는 까닭을 재현 루프로 가르고 고친다(대기열 456)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 456을 티켓 .scratch/harness/issues/013-proc-cmdline-linux.md로 쓰고 한다
+브랜치: chore/013-proc-cmdline-linux
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-26-03-proc-cmdline-settle.md
+이어받을 상태: 인계: PR 연 뒤. PR #389를 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 마지막 두 문단(셋째 pre-commit과 인계 절)은 커밋하지 않았다. docs/journal/2026-10-26-03-proc-cmdline-settle.md
+확인할 선행 조건: 주 체크아웃: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-26T10:48:43Z
+
+## 이어받은 세션: 봇 회차와 병합
+
+> 사용자: 대기열 456을 티켓 .scratch/harness/issues/013-proc-cmdline-linux.md로 쓰고 한다
+
+워크트리 `013-proc-cmdline-linux`에 `EnterWorktree(path)`로 들어왔다. 이 세션의 제목은 `chore/013-proc-cmdline-linux`다. PR #389 에는 claude-review 의 첫 리뷰가 있었고, CodeRabbit 은 별이 열 개 미만이라 자동 리뷰를 건너뛰어 아직 리뷰가 없었다.
+
+claude-review 첫 회차의 지적 셋을 하나씩 판단했다.
+
+- Minor(예외 튜플이 `pids_named`·`_read_once`·`_alive`에 세 번 되풀이된다): 고쳤다. 모듈 상수 `_PLATFORM_ERRORS` 하나로 모았다.
+- Minor(배선 시험 둘이 비공개 함수 `_read_once`·`_alive`·`_readable`을 `monkeypatch`로 갈아 끼운다): 보류했다. 없애려면 `command_line`에 읽기·생존 판정을 받는 공개 인자를 새로 열어야 하는데, 호출자(`tools/rerun_runner.py`)가 쓰지 않는 표면을 시험만을 위해 넓히게 된다. 순수한 갈래는 이미 `settled`가 주입받는 인자로 시험되고, 배선 시험은 그 셋을 잇는 자리만 본다. 뒤로 넘기는 일은 아니다.
+- Nit(`assert argv is None and again is None`): 단언을 둘로 나눴다.
+
+## 회고
+
+후보 넷, 승인 0·기각 4·넘김 0. 대기열 만료 확인(`tools/queue_open_rows.py`를 이 브랜치와 `--ref origin/main`으로)에서 만료할 행은 없었다.
+
+- 부하 아래에서 따로 돌리면 지나는 시험이 이 변경과 무관하게 pre-commit 을 막았다(`test_rerun_runner.py`의 오염 시험 세 번, `test_interrupt.py` 둘, `test_check_ticket.py` 하나, `test_probe_kit.py`의 0.5초 배출 하나): 기각. 대기열 306 이 받아들여 닫은 끝이 열린 결함 종류(부하에서 빨간 시간 시험)의 새 사례라, 회차를 더하지 않고 여기에만 적는다. 앞 세션이 셀프 리뷰 절에 적은 `test_rerun_runner` 고침 후보도 같은 종류로 본다.
+- CodeRabbit 이 저장소의 별이 열 개 미만이라 자동 리뷰를 건너뛰었다: 기각. `next-session` 1의 2(대기)가 이미 `@coderabbitai review` 코멘트를 남기게 한다.
+- 판정 명령(pytest, pyright)을 파이프 앞에 두었다: 기각. 이미 있는 훅이 그 자리에서 알렸고, 출력에 실패가 없음을 보고 넘어갔다.
+- 셀프 리뷰가 "남긴 것"으로 둔 예외 튜플의 되풀이를 claude-review 가 Minor 로 다시 짚어 고쳤다: 기각. 리뷰가 제 몫을 한 사건이고, 자동 검사로 옮길 꼴도 표준에 더할 새 기준도 아니다.
+
+## 다음
+
+- 이 티켓(harness 013)과 대기열 456 은 PR #389 의 병합으로 닫힌다. 범위 밖으로 둔 `tools/hook_edit_during_commit.py`의 리눅스 cmdline 틈은 티켓의 Comments 에 있고, 그 훅은 이 PC(윈도)에서만 돌아 행을 따로 두지 않았다.
+- 다음 작업은 `next-session` 결정표가 정한다.

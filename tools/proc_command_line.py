@@ -263,6 +263,11 @@ if sys.platform == "win32":
         return pids
 
 
+# 플랫폼 호출이 내는 실패. DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지
+# 못했다. 세 진입점(`pids_named`, `_read_once`, `_alive`)이 함께 쓴다
+_PLATFORM_ERRORS = (OSError, AttributeError, ValueError, OverflowError, ctypes.ArgumentError)
+
+
 def pids_named(executable: str) -> list[int] | None:
     """실행 파일 `executable`(경로여도 끝 이름만 본다)과 이름이 같은 프로세스의 pid. 다시 뜬
     러너가 죽은 러너의 세션이 아직 도는지 훑는 데 쓴다(`tools/rerun_runner.py`). 훑지 못하면(그
@@ -278,7 +283,7 @@ def pids_named(executable: str) -> list[int] | None:
             return _windows_pids(name)
         if sys.platform == "linux":
             return _linux_pids(name)
-    except (OSError, AttributeError, ValueError, OverflowError, ctypes.ArgumentError):
+    except _PLATFORM_ERRORS:
         return None
     return None
 
@@ -309,8 +314,7 @@ def _read_once(pid: int) -> tuple[str, ...] | None:
             return _windows_command_line(pid)
         if sys.platform == "linux":
             return _linux_command_line(pid)
-    except (OSError, AttributeError, ValueError, OverflowError, ctypes.ArgumentError):
-        # DLL 이나 함수를 싣지 못했거나(OSError, AttributeError) 인자를 바꾸지 못했다
+    except _PLATFORM_ERRORS:
         return None
     return None
 
@@ -321,7 +325,7 @@ def _alive(pid: int) -> bool:
             return _windows_alive(pid)
         if sys.platform == "linux":
             return _linux_alive(pid)
-    except (OSError, AttributeError, ValueError, OverflowError, ctypes.ArgumentError):
+    except _PLATFORM_ERRORS:
         return False
     return False
 
