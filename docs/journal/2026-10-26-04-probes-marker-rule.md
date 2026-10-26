@@ -159,3 +159,75 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`
 4. 보류(병합 때 한다): PR #388과의 글자 충돌. 늦게 병합되는 쪽에서 풀고 두 문장이 모두 남았는지 본 뒤, 카나리아 둘(`probes_rule_marker_other_reading.toml`, `probes_rule_stream_delete_marker.toml`)을 사전 확인으로 다시 본다.
 
 다시 돌린 것: 규칙 본문과 실험군 대상 파일(`mutate_ctrl_c.py`)이 바뀌었고 claude 판·명세의 칸·`expect`가 그대로라, `uv run python tools/canary.py --preflight .scratch/harness/probes/canary/probes_rule_marker_other_reading.toml`로 갈음했다. 통과 1. 더한 독스트링 문장에는 `expect`의 두 조각이 없다. `uv run ruff check`와 `uv run ruff format --check`를 그 프로브 파일에 쳐 통과했다.
+
+### 커밋과 PR
+
+- 커밋 직전 `git branch --show-current`가 `chore/015-probes-marker-rule`이었고, `uv run python tools/sibling_overlap.py`가 "번호 겹침 없음"이었다.
+- 반영과 티켓 done(마지막 수용 기준 표시)을 `d6f9c51f`로 커밋했다. pre-commit은 ruff 둘, lint-imports, zizmor, check-ticket, check-instructions, check-type-escapes, pyright 둘, run-hooks(368.3초), web-verify(772.9초), pytest(913.2초), 표, 줄 구분 문자, 변이 표, 인용, 커밋 메시지가 `Passed`였다. 카나리아 명세 모양과 헌법 판은 스테이지된 해당 파일이 없어 `Skipped`였다. 이 세션은 `SKIP`을 쓰지 않았다.
+- 그 커밋에서 `hook_handoff`가 세션 컨텍스트 246,042 토큰으로 경계 `커밋 뒤`를 알렸다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해(같은 경계에 다시 왔다) next-session "인계할 때" 1대로 넘기지 않고 이었다.
+- 푸시하고 PR #390을 열었다(`gh pr create --body-file`). 앱의 PR 바가 이 세션에 묶었다(`get_status`의 `bound: true`). 연 직후 검사는 통과 2, 대기 6이었다.
+
+### 인계 (PR 연 뒤)
+
+PR을 연 명령에서 `hook_handoff`가 세션 컨텍스트 267,118 토큰으로 경계 `PR 연 뒤`를 알렸다. PR이 열렸고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 이어받을 상태(`인계: 커밋 뒤`)는 같은 경계가 아니고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 그래서 넘긴다. 함께 온 `hook_pr_next_session`의 계기보다 인계 줄이 앞선다. `@coderabbitai review` 코멘트는 남기지 않았다(새 세션 몫). 이 세션의 지금 제목은 `chore/015-probes-marker-rule`이고, 넘기기 전에 `chore/015-probes-marker-rule (인계함)`으로 바꾼다.
+
+이 절과 바로 위 "커밋과 PR" 절은 커밋하지 않았다. 새 세션이 봇 회차의 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/015-probes-marker-rule.md. .claude/rules/probes.md 첫 항목에, 고친 길을 지났다는 표지는 다른 해석 아래에서는 나지 않는 관찰로 정한다는 일반 조항을 더한다(대기열 367)
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
+브랜치: chore/015-probes-marker-rule
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
+이어받을 상태: 인계: PR 연 뒤. PR #390을 d6f9c51f로 열었다(PR 직전 리뷰 반영과 티켓 done까지 든 커밋, pre-commit 전부 통과). 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지에 커밋하지 않은 셋째 세션 끝의 두 절(커밋과 PR, 인계)이 있어 병합 전에 봇 회차의 커밋에 싣는다. 형제 PR #388이 같은 규칙 첫 항목을 고쳐, 늦게 병합하는 쪽에서 글자 충돌을 풀고 두 문장이 남았는지 본 뒤 카나리아 둘(probes_rule_marker_other_reading.toml, probes_rule_stream_delete_marker.toml)을 --preflight로 다시 본다. 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/015-probes-marker-rule (인계함)`으로 바꿨다. 돌던 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/015-probes-marker-rule`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-26T11:20:13Z
+
+## 봇 회차와 병합 (넷째 세션)
+
+> 사용자: (인계 지시문을 첫 메시지로 받았다) "대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다 / … / 다음 단계: PR 반영·병합 / … / 이어받을 상태: 인계: PR 연 뒤. PR #390을 d6f9c51f로 열었다(PR 직전 리뷰 반영과 티켓 done까지 든 커밋, pre-commit 전부 통과). 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. … / 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+### 시작
+
+- 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 `chore/015-probes-marker-rule`은 `.claude/worktrees/015-probes-marker-rule`(`d6f9c51f`)이라 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 것은 이 일지의 셋째 세션 끝 두 절이었다.
+- `git fetch origin` 뒤 `git log 92b61458..origin/main`이 비었다. 형제 PR #388은 아직 열려 있다.
+
+### claude-review 첫 회차 (`d6f9c51f`)
+
+CodeRabbit은 아직 요청하지 않아 "Review skipped: manual review required"였다. claude-review가 Critical·Major 0, Minor 1, Nit 1을 냈다.
+
+- Nit(고쳤다): `passed_past_first_window`의 틈을 규칙 본문과 `mutate_ctrl_c.py` 독스트링이 둘 다 적는다. 한 뜻을 한 곳에 두려고 규칙 쪽은 "그보다 느슨하다"와 까닭 한 구절만 남기고 세부는 그 독스트링을 가리키게 줄였다. 세부를 독스트링에 둔 것은 그 셈을 짓는 코드 바로 위라 셈을 바꿀 때 함께 고치기 때문이다.
+- Minor(보류): 첫 항목이 지침 문장, 사례, 일반 조항을 한 불릿에 담아 길다. 이 규칙이 이미 그 꼴이고(셀프 리뷰의 판단 항목, PR 본문의 리뷰어 참고), 나누면 형제 PR #388이 고치는 같은 줄과 겹치며 두 카나리아의 조각 자리가 함께 움직인다. 두 PR이 병합된 뒤의 일로 넘기고 "다음"에 적는다.
+
+다시 돌린 것: 고친 곳이 규칙 본문뿐이고 claude 판·명세의 칸·`expect`가 그대로라 `uv run python tools/canary.py --preflight`로 갈음했다. `probes_rule_marker_other_reading.toml` 통과 1, 같은 규칙의 `probes_rule_stream_delete_marker.toml`도 통과 1. 앞의 명세의 `# 최신 결과:` 줄에 셋째 세션과 이 세션의 갈음을 덧붙였다(셋째 세션은 일지에만 적었다).
+
+### main 합치기
+
+회고에서 친 `uv run python tools/sibling_overlap.py`가 origin/main을 `9805a5a`로 적었다. 시작 때의 fetch 뒤에 형제 013(#389)이 병합됐다. 겹친 파일은 `.scratch/retro-queue.md` 하나였고(#389는 456행만 닫았다) `git merge --no-edit origin/main`이 충돌 없이 끝났다. 이 저장소는 `pre-merge-commit` 훅을 깔지 않아 병합 커밋에서는 commit-msg 검사만 돌았다.
+
+## 회고
+
+후보 다섯. 승인 둘(둘 다 대기열에 둔다), 기각 셋, 넘김 없음.
+
+1. 기각(306의 받아들인 종류, 일지에만). 나란히 여는 여덟이 함께 돌던 동안 이 티켓의 커밋이 pre-commit의 pytest에서 세 번 막혔다(1141.1초, 844.0초, 1195.8초). 빨간 시험은 모두 이 브랜치가 건드리지 않은 시간 시험이었고, CPU 100%가 45분 동안 내려가지 않아 `SKIP=pytest`로 빼고 한 프로세스 pytest를 손으로 쳤다(4421.92초). 한 문단짜리 규칙 고침에 벽시계로 세 시간 넘게 들었다. 대기열 306이 받아들여 닫은 종류(부하에서 시간 시험이 빨개지면 다시 친다)의 새 사례라 회차를 더하지 않는다. 다만 이번에는 다시 쳐도 형제들의 부하가 이어져 수렴하지 않았다. `tools/run_checks.py` 독스트링이 "세션 둘이 같은 시각에 커밋하면 … 잠금은 두지 않았다"고 적는 틈이 그 까닭이다. 그 종류를 다시 열지는 사용자가 정한다.
+2. 승인(더하는 것, 1회차). 셋째 세션이 PR 직전 리뷰 반영 뒤 카나리아를 `--preflight`로 갈음하고 일지에만 적었고, 명세의 `# 최신 결과:` 줄에 덧붙이지 않았다(`docs/constitution/operations.md` 카나리아 항목). 이 세션이 명세를 열어서야 알고 덧붙였다. 층은 갈음하는 순간에 그 명령의 출력이 알리는 것이 가장 높다. 문턱 전이라 대기열 473(1회차)에 둔다.
+3. 승인(고침, 대기열에 둔다). `.claude/rules/probes.md` 첫 항목이 지침, 일반 조항, 사례 다섯을 한 불릿에 담아 길다. 셀프 리뷰의 판단 항목과 claude-review Minor가 같은 자리를 짚었다. 형제 #388이 같은 줄을 고치고 있어 지금 나누면 충돌이 커지고 두 카나리아의 조각 자리가 함께 움직여, 두 PR이 병합된 뒤의 일로 대기열 474(1회차)에 둔다.
+4. 기각(사건 미확인). 첫 세션의 일지에 규칙을 고치기 전 `writing-for-agents`를 부른 기록이 없다고 셀프 리뷰가 적었다(`.claude/rules/agent-docs.md`). 기록이 없을 뿐 부르지 않았는지는 확인하지 못했고, 둘째 세션이 고치기 전에 불러 새 문장을 다시 봤다.
+5. 기각(원인을 가리지 못했다). 한 문단 고침이 세션 넷(인계 셋)으로 이어졌다. 인계는 ADR 0033대로 돌았고, 첫 세션이 셀프 리뷰 전에 21만 토큰을 어디에 썼는지는 이 세션이 그 기록을 보지 않아 가리지 못했다. 둘째 세션의 30만 토큰은 위 1의 pytest 세 번과 기다림이 컸다.
+
+`uv run python tools/queue_open_rows.py`와 `--ref origin/main`(fetch 뒤) 모두 만료할 행이 없었다. 새 훅·검사가 문턱을 지난 것이 없어 `tools/hook_report.py`는 돌리지 않았다.
+
+## 다음
+
+- 대기열 474(`.claude/rules/probes.md` 첫 항목 나누기)는 이 PR과 형제 #388이 모두 병합된 뒤의 일이다. 그 행의 카나리아를 다시 돈다.
+- 형제 #388이 이 PR보다 늦게 병합되면 그쪽이 첫 항목의 글자 충돌을 풀고, 두 문장이 남았는지 본 뒤 카나리아 둘(`probes_rule_marker_other_reading.toml`, `probes_rule_stream_delete_marker.toml`)을 `--preflight`로 본다.
+- 회고 1의 부하 비용(306의 받아들인 종류)을 다시 열지는 사용자가 정한다.
