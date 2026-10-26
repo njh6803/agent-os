@@ -8,9 +8,15 @@
 
 > 사용자: feature/09-widget-storage-and-reconnect 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
 
+이어받은 세션이 커밋 e9ecae81 뒤에 인계했고, 셋째 세션이 아래 "인계 (커밋 뒤)"의 지시문으로 시작했다.
+
+> 사용자: /implement .scratch/web-widget/issues/09-widget-storage-and-reconnect.md (next-session 지시문. PR 직전 리뷰부터 PR과 병합까지)
+
 ## 정리(tidy-checkouts)
 
 주 체크아웃을 `origin/main` 으로 당겼다(1ef75a12 → cb6d9c39). 지운 것은 없다. 병합된 위젯 워크트리 여덟이 접힌 `web/apps/widget/public/` 때문에 남았고(tidy_checkouts 의 버그, 아래 "다음"), pwsh 가 쥔 워크트리 셋과 python(pid 41176)이 쥔 휴지통의 `worktree-overrides-pc-check~~.venv` 가 남았다.
+
+셋째 세션의 정리: 주 체크아웃을 cb6d9c39 → 8ad99ca6 으로 당겼다. 워크트리 셋(`01-harness-ticket-numbers`, `07-morning-report-harness-branches`, `design-reverse-sync-spec`)과 그 브랜치, 체크아웃되지 않은 브랜치 `worktree-09-widget-storage-and-reconnect`, 휴지통의 `worktree-overrides-pc-check~~.venv` 를 지웠다. 위젯 워크트리 아홉은 같은 `public/` 버그로, `06-round-drive-record` 는 바뀐 파일이 있어 남았다.
 
 ## 결정
 
@@ -67,8 +73,8 @@ main 을 합친 작업 트리에서 돌렸다.
 - 결정의 둘째 404 뒤 새로 고치면 구독하지 않는 것, 다시 잇기가 멈춘 뒤(세 번의 500, 401) 새로 고치면 처음부터 다시 붙는 것, 용량이 다시 붙을 교환의 요청 글까지 뺀 뒤 새로 고치면 요청 상자 없이 다시 붙는 것을 시험하지 않았다(명세). 셋을 더했다. 위의 넷은 고친 판에서 처음부터 초록이라 변이 일곱(`storage_mutations.toml` 7~13)을 더했다. 변이를 손으로 넣고 `pnpm -C web exec vitest run --project widget-pages <파일> -t <이름>` 의 실패 출력을 본 뒤 표지를 골랐다.
 - 409 뒤 따라가기의 거절 갈래를 순수 함수 `followNotice` 로 뺐다(명세, 판단 항목).
 - `pump` 주석이 측정과 어림을 섞었다(표준). 탐침이 잰 것과 소스를 읽은 어림을 갈랐다.
-- `msw_abort_order.mjs` 머리의 "그 셋 가운데 하나라도 빼면 초록이었다"는 셋이 무엇인지 없었고 README 와도 달랐다(표준). README 와 같은 사실(둘은 빼면 초록, `signal` 은 빼도 빨강, 손으로 본 것)로 고쳤다.
-- 프로브 README 의 "`widget-pages` 전체(174개)"가 어느 판의 수인지 없었다(표준). main 을 합치기 전의 판이라고 적었다.
+- `msw_abort_order.mjs` 머리는 셋 가운데 하나라도 빼면 초록이었다고만 적어 셋이 무엇인지 없었고 README 와도 달랐다(표준). README 와 같은 사실(둘은 빼면 초록, `signal` 은 빼도 빨강, 손으로 본 것)로 고쳤다.
+- 프로브 README 가 든 `widget-pages` 전체의 수(174개)가 어느 판의 수인지 없었다(표준). main 을 합치기 전의 판이라고 적었다.
 - `bundleOf` 주석이 `sub` 가 빈 글자인 토큰도 거절한다는 것을 빠뜨렸다(표준). 더했다.
 - 불리언 인자 `reconnect(…, fromStart)`(표준, 판단 항목)를 `"after-cut" | "after-reload"` 로 바꾸고 e2e 변이 7 의 원문을 맞췄다. `Session.claim` 이 묻기와 바꾸기를 함께 했다(표준, CQS). `matches`·`hold` 로 나눴다. `Restore` 가 drivers 의 `Restored` 를 되풀이했다(표준). `"loading" | Restored` 로 두었다. `runStep`·`decisionStep` 의 불리언 위치 인자(표준)를 `subscriptionStep` 처럼 객체 인자로 바꿨다.
 - 원문이 옮겨 간 변이 표 원문을 맞췄다(`storage_mutations.toml` 1 의 import 자리). 표 열하나의 `--check` 가 모두 지났다.
@@ -101,3 +107,58 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 - `pnpm -C web/apps/widget exec tsc --noEmit -p .`, `pnpm -C web exec eslint apps/widget/components/pages apps/widget/lib`, `pnpm -C web exec prettier --check apps/widget/components/pages apps/widget/lib`: 모두 지났다(Prettier 가 `useConversation.ts` 하나를 고친 뒤).
 - `PYTHONUTF8=1 uv run python tools/mutate.py --check` 로 web-widget 표 열하나: 모두 원문이 한 번씩 있었다.
 - 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
+
+## 인계 (커밋 뒤)
+
+이 세션(지금 제목 `feature/09-widget-storage-and-reconnect`)이 커밋 e9ecae81 뒤에 인계 계기를 받았다(세션 컨텍스트 336,273 토큰, 문턱 200,000). 곁 세션이 아니고(`get_session` 의 `self` 에 `parentSessionId` 가 없다) 범위가 PR과 병합까지라 새 세션에 넘긴다. 이 절과 위 고친 것의 두 줄(인용의 따옴표를 뗐다)은 커밋하지 않았고, 새 세션이 이어 쓰고 커밋한다.
+
+- 커밋 e9ecae81 의 pre-commit: run_checks 의 열(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify)이 모두 지났다. ruff 둘은 스테이지된 `.py` 가 없어 Skipped 였다(이 변경에 `.py` 가 없다). 변이 표 원문 검사(`mutate.py --staged`), 마크다운 표, 줄 구분 문자, 커밋 메시지 검사도 지났다.
+- 같은 커밋의 인용 대조가 이 일지의 인용 둘(고친 것의 `msw_abort_order.mjs` 줄과 README 의 수 줄)을 경고했다. 둘 다 고치기 전의 글이라 저장소에 남지 않은 인용이어서 따옴표를 뗐다.
+- 넘긴 지시문:
+
+```
+다음 작업: .scratch/web-widget/issues/09-widget-storage-and-reconnect.md. 위젯 저장과 재접속(web-widget 의 마지막 티켓)을 PR 직전 리뷰부터 PR과 병합까지 마친다
+다음 단계: 구현
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/web-widget/issues/09-widget-storage-and-reconnect.md
+브랜치: feature/09-widget-storage-and-reconnect
+모델: Opus 5.5 / xhigh
+읽을 것: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md 의 "셀프 리뷰" 절(특히 "PR 직전 리뷰에 밀 주장")과 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 e9ecae81 까지 구현, 셀프 리뷰와 그 반영(TDD 고침 하나, 시험 넷, 변이 일곱), 티켓 done, plan.md 의 기능 done 을 마쳤다. 일지의 인계 절과 인용 둘의 따옴표 떼기는 커밋하지 않은 채 작업 트리에 있다. 남은 단계는 차례로 ① 스태시 `09-widget-storage-before-main-merge-1a02f1d4`(759a2eae64cb5b2285fdcd30c3efbdc29b07fa11, main 을 합치기 전에 떠 둔 사본이고 합친 결과는 e9ecae81 에 들었다)를 이름표로 stash@{n}을 다시 찾아 drop ② PR 직전 리뷰(CodeRabbit CLI, 안 되면 /security-review 와 bug-perf-review). 브리프에 일지의 "PR 직전 리뷰에 밀 주장"을 넣고, 반영을 커밋 ③ 변이 실행: storage_mutations 전체(13), 원문을 고친 변이(conversation 7·8·23, widget_app 17, failures 8, approval 5·7·8·9·10), widget_e2e 7·8. 그 결과로 probes/README 의 "잰 판" 칸을 채운다 ④ 셀프 리뷰가 위젯을 고친 판에서 위젯 e2e, -m llm_widget, pnpm -C web visual:widget 을 다시 돈다(일지의 검사 절은 셀프 리뷰 전의 판이다) ⑤ 일지의 검사 절, 회고(retro), ## 다음(정리 절의 tidy_checkouts 가 접힌 web/apps/widget/public/ 때문에 병합된 워크트리를 남기는 버그 포함) ⑥ 푸시, PR(본문에 사진 7장이 새로 서고 FailureAlert 의 4장이 바뀌었다고 적는다), ccd_pr get_status·bind_pr, 봇 회차, "워크트리에서 병합할 때"로 병합, next-session. 일지: docs/journal/2026-10-26-01-widget-storage-and-reconnect.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `feature/09-widget-storage-and-reconnect (인계함)` 으로 바꿨다. 띄운 백그라운드 작업은 남지 않았다(커밋이 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+- open-session을 부른다 2026-10-26T02:59:38Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+스태시 `09-widget-storage-before-main-merge-1a02f1d4` 를 이름표로 다시 찾아 지웠다. 브랜치는 이미 origin/main(8ad99ca6) 위라 다시 합칠 것이 없었다. CodeRabbit CLI 는 로그인은 됐지만 좌석이 없었다(`coderabbit auth status` 의 `Seat : not assigned`, Free). 그래서 보안은 `/security-review`, 버그·성능은 `bug-perf-review` 서브에이전트가 봤고, 브리프에 위 "PR 직전 리뷰에 밀 주장" 여덟을 넣었다.
+
+- `/security-review`: 발견이 없었다. `bundleOf` 는 무엇을 그리고 지울지만 가르고 권한을 주지 않는다, 토큰은 저장하지 않는다, HTML 로 그리는 글이 없다, 실행의 주인은 서버가 `read_own_run` 으로 본다.
+- `bug-perf-review`: Critical·Major 가 없었다. 밀 주장 여덟은 모두 맞았다.
+
+고친 것:
+
+- 구독의 429 가 `Retry-After: 0` 이면 기다림 없이 곧바로 다시 구독해 되풀이했다(타당). 서버는 1 이상만 보내지만 사이의 프록시가 0 을 보낼 수 있다. 시험을 먼저 써서 빨강(간격이 `[ +0 ]`)을 본 뒤, 기다림의 바닥을 재접속의 첫 간격(1초)으로 두었다.
+- `drivers.ts` 의 `sleep` 이 시간이 다 돼 깨어날 때 `abort` 리스너를 떼지 않았다(타당). 다시 잇는 동안 30초마다 잠들어 일이 끝날 때까지 리스너가 쌓인다. 떼게 고쳤다. 화면에서 보이는 차이가 없어 시험은 없고, 기존 시험이 그대로 지났다.
+- 프로브 README 의 저장 표 행이 커밋 전 작업 트리에서 판정한 변이 여섯을 "잰 판"으로 들었다(타당). 아래 변이 실행 뒤에 다시 쓴다.
+
+남긴 것(보류):
+
+- 응답 머리를 기다리는 동안에는 45초 무응답의 끊기가 걸리지 않는다. 명세의 45초가 머리를 기다리는 시간도 덮는지 정해야 하고, 덮으면 시작·이어 가기의 길도 함께 바뀐다. PR 본문의 남긴 위험에 적는다.
+- 처리하지 못한 거절의 셈(`errors`)이 붙어서 새 항목을 받을 때만 처음으로 돌아간다. 붙은 구독에서 처음으로 돌리는 기존 시험과 같은 뜻이고, 명세는 "세 번"이 이어진 세 번인지 정하지 않았다.
+- 용량이 찬 저장소에 쓰기를 세 단계로 되풀이한다. 실제 크기에서는 드물어 성능 문제로 보지 않았다.
+
+## 진단: 저장 시험의 플레이크 (셋째 세션)
+
+PR 직전 리뷰의 반영을 돌리다 `WidgetStorage.test.tsx` 의 "판과 모양" 사례가 가끔 빨갰다. 새로 고친 뒤 WELCOME 대신 앞 대화가 그려졌다. diagnosing-bugs 로 좁혔다. 사례를 200회 되풀이하는 임시 탐침을 node 바쁜 루프 열 개의 부하 아래 돌려 재현률을 올렸고, 같은 탐침을 고치기 전 판(e9ecae81 의 임시 워크트리)에서 대조로 돌렸다. 두 판 모두 200회 가운데 1회 빨갰다. 이 세션의 고침 탓이 아니라 앞부터 있던 경합이다. 빨간 회차마다 시험이 읽은 저장에 출력이 아직 없었고, 걷기(`cleanup`)가 저장을 다시 썼다. 지난 회차는 모두 그 반대였다.
+
+까닭: 저장은 그린 뒤의 효과(`useEffect`)가 쓴다. `findOutput` 은 출력이 DOM 에 선 순간 풀려, 그 커밋의 저장이 밀린 채 시험이 저장을 읽고 고친다. 그 뒤 `reload` 의 걷기가 밀린 효과를 비우며 멀쩡한 저장으로 시험이 고친 값을 덮는다. 고침은 시험 쪽이다. `testing/widget.tsx` 에 저장이 조건을 지날 때까지 기다리는 `untilSaved` 를 두고, 저장을 읽거나 저장이 비었는지 보는 자리 다섯(`WidgetStorage.test.tsx` 넷, `WidgetReconnect.test.tsx` 하나)에 걸었다. 같은 부하에서 같은 고친 판을 기다림만 켜고 끄고 400회씩 돌리자, 기다리지 않으면 7회 빨갰고 기다리면 400회 모두 지났다. 탐침과 `[DEBUG-st09]` 표지는 지웠다(grep 0).
+
+다시 돌린 것:
+
+- `pnpm -C web exec vitest run --project widget-pages`: 파일 8, 시험 197 이 모두 통과했다.
+- `pnpm -C web/apps/widget exec tsc --noEmit -p .`, `pnpm -C web exec eslint apps/widget/components/pages apps/widget/lib apps/widget/testing`, 같은 폴더의 `prettier --check`: 모두 지났다.
+- `PYTHONUTF8=1 uv run python tools/mutate.py --check` 로 web-widget 표 여섯(storage, conversation, widget_app, failures, approval, widget_e2e): 모두 원문이 한 번씩 있었다.

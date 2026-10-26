@@ -27,6 +27,7 @@ import {
   spoken,
   STORAGE_KEY,
   type Subscribed,
+  untilSaved,
 } from "../../testing/widget";
 
 const CUT = "연결이 끊겨 다시 잇고 있습니다. 받은 내용은 그대로 있습니다.";
@@ -428,7 +429,9 @@ test("구독이 두 번 404 면 저장과 화면을 비우고 정보 알림을 �
   expect(screen.queryByText("주문 어디쯤?")).toBeNull();
   expect(screen.queryByText("orders.lookup")).toBeNull();
   expect(cutBand()).toBeNull();
-  expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+  await untilSaved((value) => {
+    expect(value).toBeNull();
+  });
   await advance(60_000);
   expect(subscribed).toHaveLength(2);
 });
@@ -514,6 +517,16 @@ test("구독이 429 면 재접속 띠가 상한의 기다릴 시간을 보이고
 
   await findOutput("도착 예정입니다.");
   expect(gaps(subscribed[0]?.at ?? 0, subscribed.slice(1))).toEqual([7]);
+});
+
+test("구독의 429 가 Retry-After 0 이어도 곧바로 되풀이하지 않고 재접속의 첫 간격인 1초 뒤에 다시 구독한다", async () => {
+  // 서버는 1 이상만 보내지만 사이의 프록시가 0 을 보낼 수 있다.
+  const { subscribed } = await afterCut(inTurn(() => limited("subscriptions", "0"), finishedAt(2)));
+
+  await advance(1_000 + 1_000);
+
+  await findOutput("도착 예정입니다.");
+  expect(gaps(subscribed[0]?.at ?? 0, subscribed.slice(1))).toEqual([1]);
 });
 
 for (const [label, status] of [

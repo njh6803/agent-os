@@ -35,6 +35,7 @@ import {
   requestBox,
   sendButton,
   STORAGE_KEY,
+  untilSaved,
 } from "../../testing/widget";
 
 const WELCOME = "아래에 요청을 적어 보내 주세요.";
@@ -169,7 +170,9 @@ for (const [label, claims] of [
 
     expect(await screen.findByText(WELCOME)).toBeTruthy();
     expect(screen.queryByText("첫째")).toBeNull();
-    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    await untilSaved((value) => {
+      expect(value).toBeNull();
+    });
   });
 }
 
@@ -259,7 +262,9 @@ test("결정을 보낼 때 받은 토큰의 sub 가 바뀌었으면 결정을 �
 
   expect(await screen.findByText(WELCOME)).toBeTruthy();
   expect(decided).toEqual([]);
-  expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+  await untilSaved((value) => {
+    expect(value).toBeNull();
+  });
 });
 
 // --- 용량 ---
@@ -410,6 +415,9 @@ for (const [label, edit] of [
       ),
     );
     await afterFinished(openWidget());
+    await untilSaved((value) => {
+      expect(value).toContain("도착 예정입니다.");
+    });
     const saved = sessionStorage.getItem(STORAGE_KEY);
     if (saved === null) {
       throw new Error("저장이 없다");
@@ -467,7 +475,9 @@ test("이어 가기의 마지막 404 는 그 순간 저장도 비우고, 그 뒤
   await ask(user, "둘째");
   await advance(1_000);
   await screen.findByText("이전 대화를 이어 갈 수 없어 새 대화로 시작합니다.");
-  expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+  await untilSaved((value) => {
+    expect(value).toBeNull();
+  });
   restart.open();
   await findOutput("새로 끝");
 

@@ -525,7 +525,8 @@ async function reconnect(
           Date.now(),
         );
         session.reconnecting({ kind: "limited", wait });
-        delay = wait.seconds * 1_000;
+        // 서버는 1 이상만 보내지만 사이의 프록시가 0 을 보내면 기다림 없이 되풀이한다. 재접속의 첫 간격을 바닥으로 둔다.
+        delay = Math.max(wait.seconds * 1_000, reconnectDelay(0));
         continue;
       }
       case "error":
@@ -591,16 +592,15 @@ function sleep(ms: number, signal: AbortSignal): Promise<boolean> {
       resolve(false);
       return;
     }
+    const stop = () => {
+      clearTimeout(timer);
+      resolve(false);
+    };
     const timer = setTimeout(() => {
+      // 다시 잇는 동안 30초마다 잠들어, 떼지 않으면 일이 끝날 때까지 리스너가 쌓인다.
+      signal.removeEventListener("abort", stop);
       resolve(true);
     }, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve(false);
-      },
-      { once: true },
-    );
+    signal.addEventListener("abort", stop, { once: true });
   });
 }

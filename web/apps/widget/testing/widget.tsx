@@ -1,7 +1,7 @@
 // 위젯 페이지 시험(widget-pages)이 함께 쓰는 조작. 질의를 준 iframe 페이지를 그리고, 요청을 적어 보내고, 최종 사용자
 // 경로에 응답을 건다. 가짜는 HTTP(testing/network)와 부모 창(testing/site)뿐이다.
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { http } from "msw";
 import { vi } from "vitest";
@@ -120,6 +120,18 @@ export function onSubscribe(respond: () => Response): Subscribed[] {
 
 /** 위젯의 저장 키. 에이전트는 `QUERY` 의 것이다. */
 export const STORAGE_KEY = "agent-os-widget:order-helper";
+
+/**
+ * 저장한 값이 `check` 를 지날 때까지 기다린다. 저장은 그린 뒤의 효과(`useEffect`)가 쓴다. 스트림이나 토큰 응답이 그린 글을
+ * `findBy` 로 찾은 직후에는 그 커밋의 저장이 아직 밀려 있을 수 있어, 곧바로 읽으면 앞 판을 본다. 밀린 채 `reload` 하면
+ * 걷기(`cleanup`)가 그 효과를 비워 시험이 고친 값을 덮는다. 부하를 건 탐침에서 기다리지 않으면 400회 가운데 7회 그랬고
+ * 기다리면 400회 모두 지났다(일지 2026-10-26-01).
+ */
+export async function untilSaved(check: (saved: string | null) => void): Promise<void> {
+  await waitFor(() => {
+    check(sessionStorage.getItem(STORAGE_KEY));
+  });
+}
 
 /** 같은 탭에서 새로 고친다. 그린 것을 걷고(열린 스트림도 끊긴다) 같은 질의로 다시 그린다. 저장은 남는다. */
 export function reload(query = QUERY): UserEvent {
