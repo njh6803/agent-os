@@ -348,11 +348,39 @@ describe("멈춘 올리기를 다시 하는 올리기", () => {
     expect(plan.send).toEqual([]);
   });
 
+  test("빌드 산출 전체를 맞춘 산출에 없는 보낸 목표는 이어 적지 않고 지운다", () => {
+    const plan = planUpload(
+      input({
+        record: record({ pending }),
+        output: output({ [CARD]: "카드\n" }),
+        previousOutput: [BUTTON, CARD],
+        pendingState: state(),
+      }),
+    );
+
+    expect(plan.landed).toEqual([]);
+    expect(plan.delete).toEqual([BADGE, BUTTON]);
+  });
+
+  test("멈춘 올리기가 더한 보낸 목표를 코드가 뺐으면 지난 산출 목록에 없어도 지운다", () => {
+    const plan = planUpload(
+      input({
+        record: record({ pending }),
+        output: output({ [BUTTON]: TARGET_BUTTON, [CARD]: "카드\n" }),
+        previousOutput: [BUTTON, CARD],
+        pendingState: state({ [NOTES]: "sent" }),
+      }),
+    );
+
+    expect(plan.landed).toEqual([BUTTON]);
+    expect(plan.delete).toEqual([NOTES, BADGE]);
+  });
+
   test("지울 경로가 아직 있으면 지우고, 이미 지워졌으면 기록에서만 뺀다", () => {
     const plan = planUpload(
       input({
         record: record({ pending }),
-        output: output({}),
+        output: output({ [BUTTON]: TARGET_BUTTON }),
         previousOutput: [BADGE, OLD],
         pendingState: state(),
       }),

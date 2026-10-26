@@ -9,7 +9,9 @@
  * 전체를 맞춘 올리기만 넘긴다. 몇 파일만 보내는 올리기의 산출에는 빌드 산출이 없어, 그 목록과 맞대면 다 지운다.
  *
  * 앞 기록에 `pending` 이 있으면(멈춘 올리기를 다시 하는 올리기) 확인이 그 경로마다 낸 분류를 받는다. 목표대로 이미
- * 보낸 파일은 로컬이 목표와 같으면 다시 보내지 않고(`landed`), 이미 지워진 경로는 기록에서만 뺀다(`gone`).
+ * 보낸 파일은 로컬이 목표와 같으면 다시 보내지 않고(`landed`), 이미 지워진 경로는 기록에서만 뺀다(`gone`). 이번
+ * 산출에 없는 보낸 목표는 몇 파일만 보내는 올리기면 코드에 남았을 수 있어 목표대로 이어 적고, 빌드 산출 전체를 맞춘
+ * 올리기면 코드가 뺀 것이라 지운다.
  *
  * 덮어쓰기의 되돌릴 파일(웹이 고친 것)과 웹이 지운 파일은 이번 산출에 있으면 보낸다. 이번 산출에 없으면 코드가 뺀
  * 경로로 알려진 것(지난 산출 목록이나 `pending` 의 지울 경로에 든 것)만 받아, 고친 것은 지우고 지운 것은 기록에서만
@@ -99,6 +101,7 @@ export function planUpload(input: UploadInput): UploadPlan {
   const landed: string[] = [];
   const unchanged: string[] = [];
   const ignored: string[] = [];
+  const droppedTargets: string[] = [];
   for (const [path, data] of output) {
     if (!isRecorded(path)) {
       ignored.push(path);
@@ -116,7 +119,8 @@ export function planUpload(input: UploadInput): UploadPlan {
   }
   for (const path of record?.pending?.files.keys() ?? []) {
     if (!output.has(path) && state.get(path) === "sent") {
-      landed.push(path);
+      // 빌드 산출 전체를 맞춘 산출에 없으면 코드가 뺀 것이라 지운다. 이어 적으면 마지막 기록이 지운 경로를 되살린다
+      (input.previousOutput === null ? landed : droppedTargets).push(path);
     }
   }
 
@@ -133,7 +137,7 @@ export function planUpload(input: UploadInput): UploadPlan {
     send: sortedPaths(send),
     landed: sortedPaths(landed),
     unchanged: sortedPaths(unchanged),
-    delete: sortedPaths(deletes),
+    delete: sortedPaths([...deletes, ...droppedTargets]),
     gone: sortedPaths(gone),
     ignored: sortedPaths(ignored),
   };

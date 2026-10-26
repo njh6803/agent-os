@@ -84,3 +84,56 @@ Critical은 없었다. 명세 축 (c)의 둘(이미 지워진 경로, 웹이 고
 - `pnpm -C web exec eslint --max-warnings 0 tools/sync-design-system`, `pnpm -C web exec tsc --noEmit`, Prettier: 깨끗했다.
 - 변이 표: `--check`로 원문 47개를 본 뒤, 바뀐 표지의 일곱과 새 여덟을 하나씩 넣어 전체 실패 출력을 받고 표지를 골랐다. 표 전부를 다시 돌려 "변이 47 모두 기대대로"였다(probes README의 2026-10-27 줄).
 - 첫 커밋의 pre-commit(14분, 그 가운데 web 검증이 13분)에서 pytest가 이 변경과 무관한 `tests/tools/`의 시간 시험 둘로 빨갰다. `test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`(배출이 빈 목록)와 `test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(종료 코드 1)다. 두 파일만 따로 돌리니 68개 통과였다(그것도 13분 걸렸다. 이 PC에 다른 세션이 여럿 돌던 때다). 대기열 306이 받아들여 닫은 종류(부하에서 빨개지는 시간 시험)라 회차를 더하지 않고 여기에만 적고, 커밋을 다시 쳤다.
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤 경계에 와서(`hook_handoff`) 새 세션으로 넘긴다. 이 절은 커밋하지 않았고, 받는 세션이 이어 쓰고 커밋한다.
+
+- 이 세션의 제목은 `feature/05-record-and-check`였고 넘기기 전에 `feature/05-record-and-check (인계함)`으로 바꾼다.
+- 커밋 `2833d75a`까지 한 것: 구현, 셀프 리뷰 두 축과 반영, 변이 표 47개(커밋하지 않은 작업 트리에서 "변이 47 모두 기대대로"), 위 일지 본문. 다시 친 커밋의 pre-commit은 모두 통과했고 ruff 둘은 `.py`가 없어 건너뛰었다(커밋 전에 손으로 쳐서 통과를 봤다).
+- 남은 단계: origin/main 합치기(직접 merge. 2026-10-27에 `b84691e`였고 이 브랜치와 겹치는 파일은 없었다), 커밋한 판으로 변이 표 전체 다시 돌리기(앞의 실행은 커밋 전 작업 트리에서 돌았다), 아래 회고 후보를 받아 `## 회고` 절과 대기열 쓰기, 일지 "다음", PR, PR 직전 리뷰, 봇 회차, 병합(이 워크트리 사본의 next-session "워크트리에서 병합할 때"), 다음 지시문.
+- "다음"에 넣을 것: 05가 병합되면 06(claim)이 풀리고 07은 04와 06을 기다린다. PR #356의 보류 셋 가운데 이 티켓에 걸린 둘(tokens-json 나누기, diffType 되풀이 줄이기)은 04·05 가운데 뒤에 병합하는 쪽이 넘긴다. 병합 직전에 04의 PR이 병합됐는지 본다. 04와 글자 충돌 후보는 probes README, `command.ts`, `main.ts`, 07 티켓이고 03과는 probes README다(`tools/sibling_overlap.py`, 2026-10-27). 명세의 "색인이 드는 컴포넌트마다의 README" 문장은 실제 색인에 컴포넌트 목록이 없어 지을 입력이 없다(위 "판정과 반영"의 남김). 명세를 고칠지는 다음 기능 세션이 정한다. 웹이 더한 그림·글꼴의 덮어쓰기는 07이 정한다.
+
+### 회고 후보 (이 세션이 판정했고 대기열에는 아직 적지 않았다)
+
+이 세션이 retro 1~4단계를 돌았다. origin/main의 대기열에 이 브랜치에 없는 행이 들어와 있어서, 대기열은 origin/main을 합친 뒤에 고친다. 받는 세션의 retro는 이 목록을 이 세션의 사건으로 받고, 자기 세션의 사건(PR 직전 리뷰, 봇 회차)과 함께 `## 회고` 절을 쓴다. 넘긴 것은 없다. 낸 후보 일곱, 승인 넷(모두 회차), 기각 셋이다.
+
+1. 승인(회차, 대기열 455). 표지가 없는 변이에서 `tools/mutate.py`가 실패 출력의 끝 10줄만 보여 vitest의 실패 머리가 잘렸다. 표지를 고르려고 변이를 하나씩 넣어 전체 실패 출력을 받는 스크래치 스크립트(`full_outputs.py`, `heads.py`, `markers.py`, `lines.py`)를 지었다. 455와 같은 처방이라 그 행에 회차를 더한다(2회차에서 3회차로, 이 일지).
+2. 승인(회차, 대기열 445). 근거 문장을 재거나 기록하지 않고 적었다. 실패한 줄이 39개 모두 겨눈 단언이라는 probes README의 문장(11은 준비 호출에서 던졌다, 셀프 리뷰 표준 축), `file-hash.ts` 머리의 손으로 봤다는 문장에 명령과 기록이 없던 것(같은 축), 07의 "스킬이 맡는 것은 넷"과 06의 "자리는 넷"이 수를 세지 않은 것(두 축), 일지 초안의 색인 키 다섯(사본을 JSON으로 풀어 열넷으로 스스로 고쳤다)이다. `docs/agents/issue-tracker.md` 프로브와 근거 절(구현 때 따르는 지침)을 어긴 것이라 회차로 센다. 열린 445(421의 11회차)에 회차를 더한다(12회차, 이 일지).
+3. 승인(회차, 285의 6회차 새 행). TypeScript의 불리언 플래그 인자(`readCheck(path, overwrite: boolean)`, `decisionOf(check, overwrite: boolean)`)를 셀프 리뷰 표준 축이 잡았다. `CODING_STANDARDS.md`의 그 줄은 ruff FBT와 `tools/check_instructions.py`(파이썬)만 말하고, `web/eslint.config.mjs`에는 불리언 매개변수를 보는 규칙이 없다(grep으로 봤다). 리뷰가 잡도록 둔 기준이지만 검사로 옮길 수 있어 승인의 세 조건으로 갈랐다(사건, 층은 린터, 되돌림). 닫힌 285(4회차)와 그것을 이은 423(5회차, 닫힘)을 이어 6회차라 문턱을 넘었다. 처방: `web/eslint.config.mjs`의 `RESTRICTED_SYNTAX`에 타입 주석이 `boolean`인 매개변수를 잡는 selector를 더하고 `web/eslint.config.test.ts`에 걸리는 사례와 지나는 사례를 붙인다. 켜기 전에 `web/`의 위반 수를 잰다. 기능 티켓 PR이라 여기서 반영하지 않고 chore에 둔다. `uv run python tools/hook_report.py`(창 2026-09-29~2026-10-26)의 뺄 후보는 없었다.
+4. 승인(회차, 40의 2회차 새 행). 내려받은 아티팩트 사본을 읽는 스크래치 스크립트를 환경 지침대로 `uv run python -I`로 돌리자, `-I`가 `PYTHONUTF8`을 무시해 한글 출력이 cp949 `UnicodeEncodeError`로 죽었다. `-X utf8`을 함께 줘 풀었다. 닫힌 40(설정 `env`의 `PYTHONUTF8`)의 처방을 `-I`가 비켜 가는 길이다. 처방은 세 번째에 `docs/constitution/operations.md` 환경 규약 상세에 한 줄(`-I`는 `PYTHON*` 환경 변수를 모두 무시하니 `-X utf8`을 함께 준다)이다. 더하는 것이라 2회차에서는 반영하지 않는다.
+5. 기각. Prettier가 `upload.ts`의 줄을 모아 변이 17·18의 원문이 사라진 것은 `tools/mutate.py --check`가 그 자리에서 알렸다(이미 있는 검사).
+6. 기각. 명세 축의 Major 둘(이미 지워진 경로, 웹이 고친 지울 경로)과 표준 축의 출력 인자, 실패 문구 단언은 리뷰가 잡도록 둔 기준을 리뷰가 잡은 것이다. 출력 인자와 `caught(...)?.kind` 꼴의 단언은 린터로 옮길 길이 없다(`vitest/require-to-throw-message`는 `toThrow`만 본다).
+7. 기각. 압축 전 계획(산출에 없는 되돌릴 파일은 모두 지운다)을 다시 보고 좁힌 것은 커밋 전에 스스로 잡았고 손상이나 비용이 없다.
+
+만료: `uv run python tools/queue_open_rows.py`와 `git fetch origin` 뒤 `--ref origin/main`의 두 출력에 모두 170·172·173·183·208·210이 들었다. origin/main을 합친 뒤 다시 돌려 대 보고 `만료 2026-10-27`로 닫는다. 새 행 번호는 합친 뒤 `tools/sibling_overlap.py`의 다음 빈 번호로 받는다(2026-10-27 이 세션에서는 482였다).
+
+### 지시문
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/05-record-and-check.md. 기록 명령과 확인 명령. 커밋까지 했고 회고·PR·병합이 남았다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/05-record-and-check.md
+브랜치: feature/05-record-and-check
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-01-record-and-check.md 의 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 2833d75a 까지 구현·셀프 리뷰 반영·일지 본문을 했고 PR 은 아직 없다. 남은 단계와 이 세션이 판정한 회고 후보(대기열은 origin/main 을 합친 뒤에 쓴다)는 일지의 인계 절에 있다. 일지 docs/journal/2026-10-27-01-record-and-check.md
+확인할 선행 조건: 주 체크아웃은 이 세션이 당기지 않았고, 묶음의 첫 세션이 tidy-checkouts 를 돌았는지 보지 않았다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-26T17:28:32Z
+
+## 이어받은 세션
+
+인계 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `feature/05-record-and-check`로 바꾸고, `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다(잠금에 막히지 않았다).
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-reverse-sync/issues/05-record-and-check.md (위 "지시문" 절의 열 줄을 그대로 붙였다. 이어받을 상태 "인계: 커밋 뒤. …", 이번 요청 범위 "PR과 병합까지")
+
+- origin/main(`b84691e0`, harness 012·014·015)을 직접 합쳤다(`8494a8cc`). 이 브랜치와 함께 고친 파일은 대기열 하나였는데 이 브랜치는 아직 대기열을 고치지 않아 충돌이 없었다. 합친 뒤 `tools/sibling_overlap.py`는 번호 겹침 없음과 다음 빈 번호(대기열 482)를 냈다.
+- PR 직전 리뷰. CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+  - 보안(`/security-review`, 합친 뒤라 `origin/HEAD`가 `b84691e0`): 기준을 넘는 지적이 없었다. 찾는 서브태스크가 따라간 흐름은 넷이다. 새 소스에 프로세스 실행과 동적 코드 실행이 없다. 파일 시스템에 닿는 경로는 모두 명령 인자다. 기록·색인·확인 보고에서 온 경로는 `Map` 조회와 출력 JSON에만 쓰이고, `check paths`가 내는 경로는 `isArtifactPath`로 거른 것이다. 보낼 파일은 로컬 산출 폴더에 있는 것뿐이다. 지적이 없어 거짓 양성을 거르는 단계는 돌 것이 없었다.
+  - 버그·성능(`bug-perf-review`, 호출 39): 유효 1(Major), 오탐 0, 보류 0. 셀프 리뷰를 반영하며 새로 쓴 사실 문장 일곱(밀 주장)은 모두 코드와 맞는다고 냈다.
+    - Major. 빌드 산출 전체를 맞춘 올리기(`--previous-output`을 준다)가 멈춘 뒤 코드가 `pending`의 보낸 목표를 빼면, `planUpload`가 그 경로를 `landed`(산출에 없는 `sent` 목표, `upload.ts`의 옛 117-121행)와 `delete`(지난 산출 목록에 있고 산출에 없다, 128-130행)에 함께 넣었다. `nextRecord`의 마지막 호출은 `files.delete` 뒤에 `landed`를 `pending` 목표로 다시 적어, 웹에서 지운 파일이 기록에 남았다. 다음 확인은 그 파일을 웹이 지운 것으로 내고, 덮어쓰기는 그 경로가 이번 산출에도 지난 산출 목록에도 없어 `input` 오류로 멈춰 도구로 풀 길이 없었다. 리뷰는 `node -e`로 두 함수를 불러 재현했다. 나는 두 파일의 그 줄을 읽어 겹침과 차례를 확인했다. 같은 뿌리로, 멈춘 올리기가 새로 더한 목표를 코드가 빼면 어느 지난 산출 목록에도 없어 지워지지 않았다.
+    - 고침. 이번 산출에 없는 `sent` 목표는 지난 산출 목록이 없을 때(몇 파일만 보내는 올리기)만 `landed`로 이어 적고, 있으면 코드가 뺀 것이라 지울 경로에 더한다(`droppedTargets`). 시험 둘(겹침 사례, 지난 산출 목록에 없는 목표)을 먼저 써 `landed` 단언에서 빨강을 본 뒤 고쳤다. 앞 시험 "지울 경로가 아직 있으면 지우고, 이미 지워졌으면 기록에서만 뺀다"는 지난 산출 목록을 주고 산출을 비워, 고친 규칙으로는 보낸 목표 버튼도 지울 경로에 든다. 그 사례가 보려는 것은 `pending`의 지울 경로라 산출에 버튼의 목표를 넣어 버튼을 그 판정에서 뺐다(기대값은 그대로다). 변이 둘(48·49)을 더해 손으로 넣은 실패 출력에서 표지를 골랐고, 48의 표지는 고치기 전 판의 시험 실행이 낸 실패 머리다. 둘을 돌려 "변이 2 모두 기대대로"였다. 이 폴더의 vitest는 9파일 196개 초록, ESLint와 Prettier는 깨끗했다.

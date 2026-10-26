@@ -605,3 +605,29 @@ new = ''''''
 file = "web/tools/sync-design-system/record.ts"
 old = '''  for (const item of raw.files.map((value: unknown) => value)) {'''
 new = '''  for (const item of Array.isArray(raw.files) ? raw.files : []) {'''
+
+# --- PR 직전 리뷰 반영 ---------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "빌드 산출 전체에 없는 보낸 목표를 이어 적으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "빌드 산출 전체를 맞춘 산출에 없는 보낸 목표는"]
+expect = "red"
+expect_output = ["AssertionError: expected [ Array(1) ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''      (input.previousOutput === null ? landed : droppedTargets).push(path);'''
+new = '''      landed.push(path);'''
+
+[[mutation]]
+name = "코드가 뺀 보낸 목표를 지울 경로에 합치지 않으면 지난 산출 목록에 없는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "멈춘 올리기가 더한 보낸 목표를"]
+expect = "red"
+expect_output = ['-   "project/assets/notes/plan.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    delete: sortedPaths([...deletes, ...droppedTargets]),'''
+new = '''    delete: sortedPaths(deletes),'''
