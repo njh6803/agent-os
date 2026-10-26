@@ -173,3 +173,25 @@ PR #391의 claude-review 첫 회차(머리 5be11750)가 Minor 셋과 Nit 하나�
 - Minor(셸 `-c` 의 옛 읽기가 남아 완료 조건과 어긋난다): 수용 기준 첫째가 이름으로 든 옛 표와 함수에는 들지 않지만, 예외라는 것을 티켓 Comments에 적었다.
 - Minor(`_Choices` 가 질의와 명령을 섞는다): 고치지 않았다. 상태는 `_every_choice` 의 한 회 호출 안에서만 살고, 막는 훅의 읽기 경로를 다시 짜는 값에 견주어 얻는 것이 작다. 까닭은 PR 코멘트에 남긴다.
 - Nit(독스트링과 주석의 이력): 고치지 않았다. `.claude/rules/tools.md` 가 못 보는 것과 그 근거를 독스트링에 적으라고 한다.
+
+`@coderabbitai review`(e294337d 푸시 뒤)는 시간당 한도에 걸려(`Next included review available in 42 minutes`) 13:34 UTC에 다시 남겼고, 그 리뷰는 e294337d까지 보고 지적이 없었다(`No actionable comments`). claude-review의 둘째 회차(e294337d)는 Minor 둘(`_Choices` 출력 인자, `OptionSpec` 불변식을 생성 때 검사하지 않음)과 Nit 둘(공개 이름 `OPTION_SPECS`·`WRAPPERS`, 독스트링 길이)이었고, 회차 세기대로 고치지 않고 지적마다 보류 까닭을 PR 코멘트에 남겼다. 공개 이름은 시험이 import한다.
+
+CI의 `e2e-widget`이 첫 실행에서 취소됐다. `playwright install-deps chromium` 단계가 12:50:25부터 13:04:43까지 걸려 잡 시간 제한을 다 썼고, 시험 15개는 모두 지났다. 실패한 잡만 다시 돌려 모두 초록이 됐다(대기열 477).
+
+pre-commit 러너는 반영 커밋(e294337d)에서 pytest를 포함해 모두 Passed였다(pytest 1682초, web-verify 878초). 봇 반영 커밋 앞에 `/code-review`를 다시 돌리지 않았다. 바뀐 것이 시험 단언 둘과 기록이었다.
+
+origin/main에 #356(design-reverse-sync 02)이 병합되어 병합 전에 합쳤다. 충돌은 없었다. 합치기 커밋의 첫 시도는 pre-commit 러너에서 둘이 빨갰다. pytest의 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다`(1341초, 5659 통과 1 실패)는 홀로 돌리니 지났다(463초). 대기열 306이 받아들여 닫은 종류라 회차를 더하지 않는다. web-verify의 `WidgetApproval.test.tsx` 하나(`18,000 / 20,000` 글자를 찾지 못함, 그 파일 48초)는 그 파일을 홀로 돌리니 37개 모두 지났다(44초). 이 브랜치는 위젯을 건드리지 않았다. 그래서 러너의 `SKIP=pytest,web-verify`로 그 둘만 빼고 커밋했고, 뺀 둘의 전체는 PR의 CI가 본다.
+
+## 회고
+
+후보 다섯. 승인 하나, 기각 넷, 넘김 없음.
+
+1. 승인(대기열 477, 1회차): `e2e-widget`의 apt 설치가 잡 시간을 다 써 다 지난 시험이 취소됐다. 사건은 위 CI 실행이고, 층은 CI 설정(검사)이며, PR 하나로 되돌릴 수 있다. 더하는 것이라 세 번째에 반영한다.
+2. 기각: CodeRabbit 시간당 한도로 약 40분을 기다렸다. `docs/constitution/operations.md` 리뷰 파이프라인 3과 `tools/wait_ci.py`의 통과 줄이 이미 알렸다.
+3. 기각: 인라인 `uv run python -c`가 워크트리 가드에 거부됐다. `CLAUDE.md` 환경 함정이 적은 대로 앱 가드가 그 자리에서 막았고, 시험을 고쳐 그 시험으로 확인했다.
+4. 기각: 형제가 먼저 병합한 일지와 번호가 앞뒤로 엇갈렸다. `tools/sibling_overlap.py`가 커밋 전에 잡아 `--move`로 옮겼고 PR 본문도 그 도구의 파일로 고쳤다.
+5. 기각: 도구 호출 사이의 영어 문장 하나를 `hook_midturn_korean`이 그 자리에서 알렸다.
+
+## 다음
+
+PR #391을 병합한다. 이 세션은 워크트리에서 병합하므로 주 체크아웃을 당기지 않는다. 다음 세션은 next-session 지시문을 따른다. claude-review의 보류한 지적(`_Choices`를 불변 값으로 바꾸기)은 뒤로 넘긴 일이 아니라 고치지 않기로 한 것이다.
