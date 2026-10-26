@@ -871,8 +871,9 @@ function Get-AppQuitMarker {
 # 열기의 딥링크가 덮는다. `split`·`focus` 는 딥링크를 쏘지 않아 잠그지 않는다. 그 둘은 사이드바 행을 누르고(Invoke) 메뉴에
 # 포커스를 준 뒤 키(Enter, →, Esc)를 보내는데, 그것이 다른 열기의 새 세션 화면을 옮겨 놓거나 그 입력창에 키를 넣는지는 재지
 # 않았다. 잠금은 앞 열기가 놓자마자 기다리던 열기를 쏘게 해, 앞 열기를 부른 세션이 이어 거는 `split`·`focus` 가 뒤 열기와
-# 겹치는 차례를 만든다(PR 직전 bug-perf-review 가 코드를 읽어 짚었다. 겹친 회차는 세지 않았다). 이 잠금을 잡지 않고 새 세션 화면을 쓰는 것과는 겨루지 않는다. 잠금을 모르는 옛 사본의 스크립트(다른 워크트리), 딥링크를
-# 쏘는 진단 프로브(`.scratch/harness/probes/` 의 `composer_*.ps1`·`probe_deeplink.ps1`), 사람의 클릭과 손으로 쓰는 글이 그 예다.
+# 겹치는 차례를 만든다(PR 직전 bug-perf-review 가 코드를 읽어 짚었다. 겹친 회차는 세지 않았다). 이 잠금을 잡지 않고
+# 새 세션 화면을 쓰는 것과는 겨루지 않는다. 잠금을 모르는 옛 사본의 스크립트(다른 워크트리), 딥링크를 쏘는 진단 프로브
+# (`.scratch/harness/probes/` 의 `composer_*.ps1`·`probe_deeplink.ps1`), 사람의 클릭과 손으로 쓰는 글이 그 예다.
 $SendLockName = 'Global\agent-os-open-session'
 
 function Invoke-SendLocked([string] $name, [int] $timeoutSec, [scriptblock] $body) {

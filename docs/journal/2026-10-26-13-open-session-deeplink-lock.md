@@ -179,3 +179,75 @@
 - 변이 표 전체(`ebf562bf`의 판): 변이 12 모두 기대대로, 종료 코드 0. 기준선 셋(`놓을_때까지` 394.79초, `제한_시간에` 169.42초, `놓지_않고_끝나도` 224.08초)이 길었고 변이는 모두 26초 안이었다. README 행에 적었다.
 - 스킬을 고쳐 카나리아를 다시 돌렸다. `uv run python tools/canary.py .scratch/harness/probes/canary/open_session_lock.toml <스크래치>`(claude 2.1.302): 통과 4, 실패 0, "없음" 섞인 통과 0. 실험군 `ebf562bf`는 세 문구를 그대로 옮겼고, 대조군 주 체크아웃(`71433a0d`, 그새 main을 당겼다)은 셋 다 "없음"이었다. 명세 머리의 `# 최신 결과:` 줄을 이 실행으로 고쳤다.
 - `git fetch origin main` 뒤 origin/main이 `71433a0d`(design-reverse-sync 02, #356)로 움직여 다시 합쳤다(충돌 없음). 바뀐 파일은 design-reverse-sync와 web 도구, 대기열이라 이 브랜치가 이름으로 든 파일과 겹치지 않았다. `sibling_overlap`은 번호 겹침 없음이었고, 이 일지(13)를 앞서는 형제(PR #391·#392 등의 14~17)는 그쪽이 먼저 병합되면 이 일지를 옮기라는 알림이다.
+- `748b9605`(변이 표·카나리아 결과와 이 일지): pre-commit이 모두 지났다(pytest 880.0초, web-verify 710.5초. ruff 둘은 `.py`가 없어 Skipped이고 `ebf562bf`의 pre-commit에서 지났다).
+- 푸시하고 PR #393(https://github.com/njh6803/agent-os/pull/393)을 열었다. 본문 체크리스트에 대체 리뷰 둘의 결과와 첫 커밋 `1ecdb2a2`의 `SKIP=pyright-linux,pytest` 근거(다음 커밋의 pre-commit에서 둘 다 지났다)를 적었다. `get_status`가 PR을 이 세션에 묶었다고 냈다(검사 2 통과, 6 대기).
+
+### 인계 (PR 연 뒤)
+
+- PR을 연 직후 `hook_handoff`가 컨텍스트 326,862 토큰으로 `PR 연 뒤` 계기를 냈다. next-session "인계할 때" 1의 다섯에 들지 않는다. PR은 열렸고, 요청 범위는 병합까지이며, 이 세션의 지시문은 `인계: 커밋 뒤`라 다른 경계이고, 이 세션이 쓴 `인계 못함` 줄은 없으며, `get_session self`에 `parentSessionId`가 없다.
+- 이 세션의 지금 제목: `chore/014-open-session-deeplink-lock`. 넘기며 `chore/014-open-session-deeplink-lock (인계함)`으로 바꾼다.
+- 모델 줄: `uv run python tools/model_sweep.py chore/014-open-session-deeplink-lock`이 `Opus 5.5 / xhigh`를 냈다.
+- 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/014-open-session-deeplink-lock.md. PR #393(open-session 이 딥링크를 쏘기 전에 기계 전체의 잠금을 잡는다)의 봇 회차와 병합
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다
+브랜치: chore/014-open-session-deeplink-lock
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-13-open-session-deeplink-lock.md의 "이어서 (PR 직전 리뷰부터)" 절, docs/agents/issue-tracker.md
+이어받을 상태: 인계: PR 연 뒤. PR #393을 열었고(head 748b9605) 첫 @coderabbitai review 코멘트는 아직 남기지 않았다. next-session 순서 1의 2(봇 회차)부터 한다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 넷은 ebf562bf에서 반영, 보류 둘)의 판정은 일지에 있다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 병합 뒤 새 작업 카드로 낼 것이 둘이다. split·focus를 잠금 안에서 돌리는 일(bug-perf-review의 보류, 고치는 값은 일지 "PR 직전 리뷰" 절)과 Select-QuitLogs·Get-AppQuitMarker가 main1.log를 옆 돌림 파일로 전제하는 것의 고침이다. 둘 다 tools/open_session.ps1을 고치므로 이 PR이 병합된 뒤에 낸다. docs/journal/2026-10-26-13-open-session-deeplink-lock.md
+확인할 선행 조건: 잠금 시험(특히 버려진 뮤텍스)이 CI의 리눅스 pwsh에서 지나는지는 이 PR의 CI가 처음 본다. 빨가면 .claude/rules/tests.md의 리눅스 조항대로 판정한다
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/014-open-session-deeplink-lock (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. `git worktree unlock`은 `is not locked`였다.
+- open-session을 부른다 2026-10-26T13:47:43Z
+
+## 이어서 (봇 회차부터)
+
+> 사용자: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다 (위 "PR 연 뒤" 인계 지시문. 범위는 PR과 병합까지)
+
+### 시작
+
+- 제목을 `chore/014-open-session-deeplink-lock`으로 바꿨다. `git worktree list`에서 브랜치가 `.claude/worktrees/014-open-session-deeplink-lock`에 있어 `EnterWorktree(path)`로 들어갔다. HEAD는 `748b9605`, 커밋하지 않은 변경은 이 일지 하나였다.
+
+### 봇 회차 1
+
+- `748b9605`에는 claude-review의 첫 리뷰(Minor 셋, Nit 하나)가 있었고, CodeRabbit은 별이 열 개 미만이라 자동 리뷰를 건너뛰었다. `@coderabbitai review`를 남기고 `uv run python tools/wait_ci.py 393`을 백그라운드로 띄웠다. 끝 줄은 `모두 통과. CodeRabbit: Review rate limited`였고, CodeRabbit의 답 코멘트도 한도였다. 그 회차의 보안·버그 축은 PR 직전의 대체 둘이 갈음하고(`docs/constitution/operations.md` 리뷰 파이프라인), CodeRabbit의 회차로 세지 않는다.
+- CI의 `python` 잡(리눅스)이 지났다. 잠금 시험 일곱(버려진 뮤텍스 포함)이 리눅스 pwsh에서도 지나, 인계 지시문의 선행 조건이 섰다.
+- claude-review 첫 회차의 판정:
+  - Minor(`Invoke-SendLocked` 머리 주석이 22줄이고 874행이 접히지 않았으며, 측정 이력이 README·일지와 겹친다): 줄 접기는 고쳤다(874행이 136자, 이웃 줄은 74~105자였다). 내용은 두었다. 측정은 잠금이 되돌리기까지 쥐는 까닭을, 동적 범위 사연은 `Set-Variable -Option Private` 세 줄을 지우면 안 되는 까닭을 드는 근거이고, 수는 근거 규약대로 프로브를 가리킨다.
+  - Minor(스킬 3단계가 더 길어졌다): 두었다. 3단계는 이 PR 전에도 한 문단이었고, 카나리아가 새 세션이 잠금 문장 셋을 그대로 옮기는 것을 봤다. 3단계 전체를 다시 짜는 일은 이 티켓보다 크다. 뒤로 넘기는 일은 아니다.
+  - Minor(`test_딥링크는_잠금_안에서만_쏜다`가 `fires=` 목록을 그대로 단언한다): 고쳤다. 알려진 넷을 포함하는지와, 함수 밖의 호출이 알려진 둘을 포함하고 모두 `=True`인지로 바꿨다. 딥링크를 쏘는 함수를 더해도 그 호출이 잠금 안이면 지난다.
+  - Nit(`Invoke-SendLocked`가 잠금과 `lock=` 출력을 함께 한다): 두었다. 리뷰도 호출부가 하나인 지금은 값이 있다고 했다.
+- `uv run pytest -q tests/tools/test_open_session.py -k "잠금_안에서만"`: 1 passed. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_lock_mutations.toml 7 8 9`(그 시험을 쓰는 변이): 변이 3 모두 기대대로이고 `표지 없음` 줄이 없었다. 같은 셋의 `--check`: 원문이 한 번씩 있다.
+
+### 커밋
+
+- 반영 커밋의 첫 `git commit -F`는 pytest 하나로 막혔다. 1075.02초에 5626 통과, `test_open_session.py::test_focus_는_스킬이_넘긴_시간만큼_행을_기다린다`가 `assert 9.6945747 < 9`였다(1초 제한을 줬는데 9.69초를 기다렸다. 기본값 10초를 썼다면 10초를 넘었어야 한다). 같은 실행의 web-verify가 797.7초였다. 그 시험만 혼자 돌리니 5.72초에 지났다. 이 커밋이 고친 `tools/open_session.ps1`은 주석 접기뿐이고 `focus`는 잠금 밖이다. 나머지 검사는 지났고, 건너뛴 둘(카나리아 명세, 헌법 판)은 고친 파일이 없었다.
+- 그래서 다시 친 커밋은 `SKIP=pytest`로 그 검사만 뺐다. 같은 나무에서 그 시험 하나 말고 모두 지났고, 그 시험은 혼자 지났으며, CI가 리눅스에서 전체를 다시 돈다(앞 "커밋" 절의 셋째 커밋과 같은 판단). 그 사이 고친 것은 이 일지 하나다.
+
+## 회고
+
+후보 아홉, 승인 둘·기각 일곱·넘김 0. 대기열 만료 확인(`tools/queue_open_rows.py`를 이 브랜치와, `git fetch origin` 뒤 `--ref origin/main`으로)에서 만료할 행은 없었다.
+
+- pre-commit의 `pyright-linux`가 멈춰 손으로 끌 때까지 2093.6초를 기다렸다("커밋" 절): 승인. 사건이 있고, 평소 1분 남짓인 검사에 러너 기본 제한 4200초가 걸린 것이라 고침으로 보며, 검사의 시간 제한(도구 설정)으로 쓴다. PR 하나로 되돌릴 수 있다. 이 PR의 범위 밖이라 대기열 478(1회차)에 둔다. 같은 파일의 192(한 검사가 실패한 뒤에도 기다린다)와는 다른 일이다.
+- `Invoke-SendLocked`의 인자와 지역 변수가 동적 범위로 몸에 샜다("셀프 리뷰" 절의 리뷰 밖 Major): 승인. 셀프 리뷰 두 축이 놓쳤고, 스크립트 블록을 받아 부르는 함수가 그 스크립트에 더 있다(`Invoke-Action`). 꼴이 기계적이라 검사로 쓴다. 더하는 것의 첫 사건이라 대기열 479(1회차)에 둔다.
+- 변이 표의 기준선이 572초까지 늘었다("반영" 절의 시간이 튄 회차): 기각. 남의 큰 임시 트리를 지우느라 그랬다는 것은 어림이고 재지 않아, 층을 고를 처방이 없다. 변이 도구의 600초 제한에 닿으면 그때 원인을 재고 적는다.
+- 부하 아래에서만 빨간 시간 시험 넷(`test_probe_kit.py`, `test_interrupt.py`, `test_rerun_runner.py`, 봇 회차 반영 커밋의 `test_open_session.py` focus 시험)이 세 커밋의 pre-commit을 막았다: 기각. 대기열 306이 받아들여 닫은 종류의 새 사례라 회차를 더하지 않고 일지에만 적는다(두 "커밋" 절이 같은 판단을 적었다).
+- 시험의 첫 판 둘이 재려던 것을 재지 못했다(마지막 핸들과 함께 뮤텍스가 사라진다, 바쁜 PC에서 쥔 쪽이 먼저 끝났다): 기각. 변이 표가 그 자리에서 빨갛게 잡았다.
+- 변이 도구가 도는 동안 같은 파일의 주석을 고쳤다: 기각. `hook_edit_during_mutate`가 그 자리에서 알렸다.
+- PR 직전 `bug-perf-review`가 128초를 열기라 부른 것과 "막히면"의 출력 줄 모양을 짚었다: 기각. 리뷰가 제 몫을 한 사건이고, 검사로 옮길 꼴도 표준에 더할 새 기준도 아니다.
+- claude-review가 시험의 목록 단언과 긴 주석을 짚었다: 기각. 앞의 것은 `CODING_STANDARDS.md` 판단 기준 4(행동을 검증하는가)가 잡도록 둔 것이고, 뒤의 것은 유지보수성 축의 판단이다.
+- CodeRabbit이 한도로 리뷰하지 않았다: 기각. 리뷰 파이프라인이 그 회차를 PR 직전 대체 리뷰로 갈음하게 정해 두었다.
+
+## 다음
+
+- 이 티켓(harness 014)과 대기열 360은 PR #393의 병합으로 닫힌다.
+- 뒤로 넘긴 일 둘은 병합 뒤 새 작업 카드로 낸다. 둘 다 `tools/open_session.ps1`을 고치므로 차례로 한다.
+  - `split`·`focus`를 잠금 안에서 돌린다(PR 직전 `bug-perf-review`의 보류). 고치는 값은 "PR 직전 리뷰" 절의 그 보류 항목이다.
+  - `Select-QuitLogs`·`Get-AppQuitMarker`가 `main1.log`를 옆 돌림 파일로 전제한다(셀프 리뷰 명세 축 Minor. 로그 폴더의 모양은 "반영" 절의 남긴 것).
+- 다음 작업은 `next-session` 결정표가 정한다.

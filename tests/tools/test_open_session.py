@@ -1603,7 +1603,10 @@ def test_딥링크는_잠금_안에서만_쏜다() -> None:
 
     assert completed.returncode == 0, completed.stderr
     lines = completed.stdout.split()
-    fires = "fires=Open-MarkerDraft,Restore-DraftDefaults,Send-Prompt,Set-Defaults"
-    assert fires in lines, completed.stdout
-    calls = sorted(line for line in lines if not line.startswith("fires="))
-    assert calls == ["Send-Prompt=True", "Set-Defaults=True"]
+    fires = [line.removeprefix("fires=") for line in lines if line.startswith("fires=")]
+    assert len(fires) == 1, completed.stdout
+    known = {"Open-MarkerDraft", "Restore-DraftDefaults", "Send-Prompt", "Set-Defaults"}
+    assert known <= set(fires[0].split(",")), completed.stdout
+    calls = [line for line in lines if not line.startswith("fires=")]
+    assert {"Send-Prompt=True", "Set-Defaults=True"} <= set(calls), completed.stdout
+    assert all(call.endswith("=True") for call in calls), completed.stdout
