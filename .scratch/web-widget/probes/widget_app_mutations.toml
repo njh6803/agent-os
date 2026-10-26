@@ -281,12 +281,12 @@ expect = "red"
 expect_output = ["expected [] to deeply equal [ Array(2) ]"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/WidgetPage.tsx"
+file = "web/apps/widget/components/pages/ConnectedWidget.tsx"
 old = '''
-      console.error(`위젯 질의 ${problem.name}: ${problem.reason}`);
+      console.error(problem);
 '''
 new = '''
-      console.warn(`위젯 질의 ${problem.name}: ${problem.reason}`);
+      console.warn(problem);
 '''
 
 [[mutation]]
@@ -299,10 +299,10 @@ expect_output = ['></textarea> to have property "disabled" with value true']
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.tsx"
 old = '''
-      composer={<Composer disabled={misconfigured} />}
+          disabled={misconfigured || paused}
 '''
 new = '''
-      composer={<Composer disabled={false} />}
+          disabled={paused}
 '''
 
 [[mutation]]
@@ -445,10 +445,15 @@ expect_output = ['Received: "jacho"']
 
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.stories.tsx"
+# 티켓 07 이 다크 모드의 스토리(LimitedHourlyWideDark)를 더해 같은 줄이 둘이라, 스토리의 머리 줄부터 잡는다.
 old = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
   globals: { mode: "dark" },
 '''
 new = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
   globals: { mode: "dark", theme: "jacho" },
 '''
 
@@ -480,9 +485,11 @@ expect_output = ['"Access-Control-Allow-Origin": "null"']
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
+        source: "/fonts/:path*",
         headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
 '''
 new = '''
+        source: "/fonts/:path*",
         headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
 '''
 
@@ -560,12 +567,12 @@ expect_output = [
 file = "web/apps/widget/tools/start.ts"
 old = '''
   if (command.prepare) {
-    steps.prepare();
+    await steps.prepare();
   }
 '''
 new = '''
   if (command.prepare && command.args.length === 0) {
-    steps.prepare();
+    await steps.prepare();
   }
 '''
 

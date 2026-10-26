@@ -35,7 +35,8 @@ test("첫 화면은 위쪽 띠에 이름과 새 대화를, 대화 자리에 할 
   expect(screen.getByText("주문, 배송, 환불을 물어볼 수 있습니다.")).toBeTruthy();
   expect(screen.getByText("아래에 요청을 적어 보내 주세요.")).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", false);
-  expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty("disabled", false);
+  // 입력이 비어 보내기는 막혀 있다(티켓 05). 글을 넣으면 열리는 것은 WidgetConversation.test.tsx 가 본다.
+  expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty("disabled", true);
   expect(screen.queryByRole("alert")).toBeNull();
   expect(errors).toEqual([]);
 });

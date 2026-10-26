@@ -1,0 +1,481 @@
+# web-widget 티켓 05 의 변이 표. 대화 화면의 시험(토큰 손잡이, 대화 규칙, 입력 자리, 읽기 영역, 스크롤, 빌드 값)이
+# 무엇을 재는지 변이로 본다. 첫 20 의 시험은 구현 뒤에 써서 빨강을 본 적이 없으므로, 단언마다 그 단언이 겨눈 변경에서
+# 빨개지는지 본다. 끝의 여섯은 셀프 리뷰 뒤에 더했다. 넷(id, 다시 보내기, 멈춘 입력창, aria-atomic)은 고치기 전에 시험이
+# 빨갰고, 둘(떠나면 끊기, 시작 뒤에 결말 없이 끝난 스트림)은 이미 있던 코드를 지키는 시험이라 처음부터 초록이었다.
+# 티켓 07 이 거절의 결말과 보내기 버튼의 자리를 바꿔 여섯 변이(이어 가기 둘, 401, 칸 아래 글, 다시 보내기, 결말 없이
+# 끝난 스트림)의 원문을 지금 코드로 다시 걸었다. 다시 보내기는 organisms/FailureAlert 로, 결말 없이 끝난 스트림의
+# 시험은 WidgetFailures.test.tsx 의 거절 표로 옮겨 갔다(일지 2026-10-24-15).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/conversation_mutations.toml [번호 ...]
+# stories 러너는 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.stories]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-storybook"]
+cwd = "web"
+judge = "vitest"
+
+# --- 토큰 손잡이(lib/token.ts) ---------------------------------------------------------------------------------
+
+[[mutation]]
+name = "보낸 창을 보지 않으면 다른 iframe 의 답을 받아 거르기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "부모가 아닌 창"]
+expect = "red"
+expect_output = ["Bearer from-other-window"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+      if (event.source !== parent || !allowedOrigins.includes(event.origin)) {
+'''
+new = '''
+      if (!allowedOrigins.includes(event.origin)) {
+'''
+
+[[mutation]]
+name = "출처를 보지 않으면 허용 출처가 빈 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "허용 출처가 비면"]
+expect = "red"
+# 버려야 할 답의 토큰으로 요청이 나가, 처리하지 않은 요청이 남는다.
+expect_output = ["처리하지 않은 요청이 있다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+      if (event.source !== parent || !allowedOrigins.includes(event.origin)) {
+'''
+new = '''
+      if (event.source !== parent) {
+'''
+
+[[mutation]]
+name = "id 를 보지 않으면 거르기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "부모가 아닌 창"]
+expect = "red"
+expect_output = ["Bearer for-other-request"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+        !("id" in data) ||
+        data.id !== id
+'''
+new = '''
+        !("id" in data)
+'''
+
+[[mutation]]
+name = "기다림이 10초보다 길면 시간 초과 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "10초 안에 답이 없으면"]
+expect = "red"
+expect_output = ['Unable to find role="alert"']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+export const TOKEN_TIMEOUT_MS = 10_000;
+'''
+new = '''
+export const TOKEN_TIMEOUT_MS = 20_000;
+'''
+
+[[mutation]]
+# jsdom 의 부모는 위젯 자신이라, 출처가 다른 대상이면 메시지가 버려져 출력 단언이 먼저 빨개진다. 전달되는 자기 출처로
+# 바꿔 대상 출처의 단언을 겨눈다.
+name = "토큰 요청의 대상 출처를 \"*\" 가 아닌 것으로 두면 첫 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "대상 출처 \\* 로"]
+expect = "red"
+expect_output = ["to be called with arguments: [ { …(2) }, '*' ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+    parent.postMessage({ type: "agent-os/token-request", id }, "*");
+'''
+new = '''
+    parent.postMessage({ type: "agent-os/token-request", id }, location.origin);
+'''
+
+# --- 대화 규칙(lib/conversation.ts) ----------------------------------------------------------------------------
+
+[[mutation]]
+name = "progress 가 같은 이름을 모두 빼면 같은 이름이 둘인 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "같은 이름이 줄에 둘이면"]
+expect = "red"
+expect_output = ['name "refunds.issue 부르는 중"']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        calling: withoutFirst(exchange.calling, item.tool),
+'''
+new = '''
+        calling: exchange.calling.filter((name) => name !== item.tool),
+'''
+
+[[mutation]]
+name = "끝난 실행을 이어 갈 실행으로 두지 않으면 이어 가기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "끝난 실행이 있으면"]
+expect = "red"
+# 둘째 요청이 이어 가기 대신 시작 경로로 가서 끝난 출력을 받아, 기다리던 실패 알림이 서지 않는다.
+expect_output = ['Unable to find role="alert"']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        { ...next, continueFrom: running.runId ?? state.continueFrom, errorStreak: 0 },
+'''
+new = '''
+        { ...next, errorStreak: 0 },
+'''
+
+[[mutation]]
+name = "실패가 이어 갈 실행을 바꾸면 이어 가기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "끝난 실행이 있으면"]
+expect = "red"
+expect_output = ["expected [ [ …(2) ], [ …(2) ] ] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        errorStreak: 0,
+'''
+new = '''
+        ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        errorStreak: 0,
+        continueFrom: running.runId,
+'''
+
+[[mutation]]
+name = "401 을 다른 거절로 보면 401 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "서버의 401"]
+expect = "red"
+expect_output = ["to contain '로그인 정보를 받지 못했습니다.'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        case 401:
+          return settle(state, { kind: "unauthorized" });
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "도구 줄을 읽기 영역에 쌓지 않으면 status 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "숨긴 status 영역"]
+expect = "red"
+expect_output = ["expected [ '도착 예정입니다.' ] to deeply equal [ 'orders.lookup 성공'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+      return announce(next, `${item.tool} ${item.ok ? "성공" : "실패"}`);
+'''
+new = '''
+      return next;
+'''
+
+# --- 대화 돌리기(components/pages/useConversation.ts) ------------------------------------------------------------
+
+[[mutation]]
+name = "새 대화가 열린 스트림을 끊지 않으면 멈춤 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "승인 묻기로 멈추면"]
+expect = "red"
+# 시험에서 `toBe(true)` 는 요청의 signal 이 끊겼는지 보는 단언 하나뿐이다.
+expect_output = ["expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+  const reset = useCallback(() => {
+    open.current?.abort();
+'''
+new = '''
+  const reset = useCallback(() => {
+'''
+
+# --- 입력 자리(components/organisms/Composer.tsx) ---------------------------------------------------------------
+
+[[mutation]]
+name = "조합 중의 Enter 를 보내면 Enter 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "Enter 는 보내고"]
+expect = "red"
+expect_output = ["expected [ { …(3) } ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+'''
+new = '''
+            if (event.key === "Enter" && !event.shiftKey) {
+'''
+
+[[mutation]]
+name = "센 수를 80% 에서 보이면 90% 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "상한의 90% 이상이면"]
+expect = "red"
+expect_output = ["-note' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/chars.ts"
+old = '''
+const NEAR_LIMIT = 0.9;
+'''
+new = '''
+const NEAR_LIMIT = 0.8;
+'''
+
+[[mutation]]
+name = "UTF-16 단위로 세면 90% 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "상한의 90% 이상이면"]
+expect = "red"
+expect_output = ["expected '19 / 20' to be '18 / 20'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/chars.ts"
+old = '''
+  const count = Array.from(text).length;
+'''
+new = '''
+  const count = text.length;
+'''
+
+[[mutation]]
+name = "공백만 든 입력을 보낼 수 있으면 빈 입력 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "앞뒤 공백만 있을 때"]
+expect = "red"
+expect_output = ['to have property "disabled" with value true']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+  const sendable = !disabled && !blocked && !note.over && value.trim() !== "";
+'''
+new = '''
+  const sendable = !disabled && !blocked && !note.over && value !== "";
+'''
+
+[[mutation]]
+name = "칸 아래 글만큼 버튼을 띄우지 않으면 NearLimit 의 정렬 단언이 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Near Limit"]
+expect = "red"
+# 칸 아래 글의 줄 높이 16px 와 사이 4px 가운데 4px 만큼 버튼이 입력창 아래 끝보다 내려간다.
+expect_output = ["expected 531 to be 527"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+        <div style={{ marginBottom: lift }}>
+'''
+new = '''
+        <div style={{ marginBottom: lift - 4 }}>
+'''
+
+# --- 대화 목록(components/organisms/Conversation.tsx) ----------------------------------------------------------
+
+[[mutation]]
+name = "끝을 보고 있었는지 보지 않고 늘 내리면 Scroll 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/organisms/Conversation.stories.tsx", "-t", "Scroll"]
+expect = "red"
+# 위로 올려 둔 뒤 새 내용이 와도 scrollTop 이 0 이어야 하는데 끝으로 내려간다.
+expect_output = ["to be +0 // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+    if (element !== null && atBottom.current) {
+'''
+new = '''
+    if (element !== null) {
+'''
+
+[[mutation]]
+name = "대화 영역이 포커스를 받지 않으면 포커스 차례 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "포커스 차례는"]
+expect = "red"
+expect_output = ["expected [ <button …(2)>…(1)</button>, …(4) ] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+      aria-label="대화"
+      tabIndex={0}
+'''
+new = '''
+      aria-label="대화"
+'''
+
+[[mutation]]
+# 넘치는 내용이 있어야 axe 가 그 영역을 본다. 도구 줄 없는 끝난 교환이 넘치는 Scroll 이 그 자리다.
+name = "대화 영역이 포커스를 받지 않으면 도구 줄 없이 넘치는 대화의 axe 가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/organisms/Conversation.stories.tsx", "-t", "Scroll"]
+expect = "red"
+expect_output = ["scrollable-region-focusable"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+      aria-label="대화"
+      tabIndex={0}
+'''
+new = '''
+      aria-label="대화"
+'''
+
+# --- 빌드 값(lib/build.ts) -------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "빌드 값을 구조 분해로 읽으면 글자 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/build.test.ts", "-t", "점 표기로 읽는다"]
+expect = "red"
+expect_output = ["to contain 'process.env.AGENT_OS_WIDGET_ORIGINS'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/build.ts"
+old = '''
+  const joined = process.env.AGENT_OS_WIDGET_ORIGINS ?? "";
+'''
+new = '''
+  const { AGENT_OS_WIDGET_ORIGINS } = process.env;
+  const joined = AGENT_OS_WIDGET_ORIGINS ?? "";
+'''
+
+# --- 셀프 리뷰 뒤에 더한 시험(일지 2026-10-24-09 "셀프 리뷰") ------------------------------------------------------
+
+[[mutation]]
+name = "id 를 만들지 못한 것을 잡지 않으면 보안 맥락 밖의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "요청의 id 를 만들지 못하면"]
+expect = "red"
+expect_output = ["Unhandled Rejection", "TypeError: crypto.randomUUID is not a function"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+  let id: string;
+  try {
+    id = crypto.randomUUID();
+  } catch {
+    return Promise.resolve(null);
+  }
+'''
+new = '''
+  const id = crypto.randomUUID();
+'''
+
+[[mutation]]
+name = "다시 보내기를 막지 않으면 도는 동안의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "뒤 교환이 도는 동안 막히고"]
+expect = "red"
+expect_output = ['<button type="button" …(1)>…(1)</button> to have property "disabled" with value true']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/FailureAlert.tsx"
+old = '''
+      <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
+'''
+new = '''
+      <Button key={step} variant="secondary" onClick={onRetry}>
+'''
+
+[[mutation]]
+name = "멈춘 동안 입력창을 막지 않으면 승인 묻기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "승인 묻기로 멈추면"]
+expect = "red"
+expect_output = ['<textarea …(4)></textarea> to have property "disabled" with value true']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.tsx"
+old = '''
+          disabled={misconfigured || paused}
+'''
+new = '''
+          disabled={misconfigured}
+'''
+
+[[mutation]]
+name = "읽기 영역의 aria-atomic 을 끄지 않으면 읽기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "숨긴 status 영역 하나가"]
+expect = "red"
+expect_output = ["expected null to be 'false'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.tsx"
+old = '''
+          <div role="status" aria-atomic="false" className="sr-only">
+'''
+new = '''
+          <div role="status" className="sr-only">
+'''
+
+[[mutation]]
+name = "언마운트가 끊지 않으면 페이지를 떠나는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetConversation.test.tsx", "-t", "페이지를 떠나면"]
+expect = "red"
+# 끊기기 전의 단언은 false 를 기대해, 이 문구는 떠난 뒤의 단언에서만 난다.
+expect_output = ["expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+    () => () => {
+      open.current?.abort();
+    },
+'''
+new = '''
+    () => () => {},
+'''
+
+[[mutation]]
+name = "결말 없이 끝난 스트림을 그대로 두면 시작 뒤에 끝난 스트림의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "시작 항목 뒤에 결말 없이"]
+expect = "red"
+# 그 시험에서 알림을 찾는 자리는 하나뿐이다.
+expect_output = ['Unable to find role="alert"']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+    case "ended":
+      return settleError(state);
+'''
+new = '''
+    case "ended":
+      return state;
+'''

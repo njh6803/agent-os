@@ -55,12 +55,17 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
                    (요청 함수와 SWR 훅), stores/(토큰), next.config.ts(/api 중계), tools/start.ts(루프백에만 띄우는
                    시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리), e2e/(실제 serve 를 지나는 Playwright)
-  apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지. app/(라우팅과 레이아웃),
-                   components/(아토믹 층, pages/가 화면), lib/(사이트가 준 질의를 읽는 embed), styles/(위젯 CSS),
-                   tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하는 시작 래퍼),
+  apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지와 사이트 페이지 안에 서는 커스텀
+                   요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
+                   lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
+                   `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
+                   tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
+                   tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정),
                    tools/site-file.ts(AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수
-                   상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에 싣는다),
-                   .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트)
+                   상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
+                   .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
+                   e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e),
+                   EMBED.md(사이트 개발자가 읽는 임베드 안내)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/

@@ -1,21 +1,20 @@
 // 위젯의 설정 파일. next dev·build·start 가 읽는 그 파일을 사이트 파일 변수마다 새로 읽어, iframe 페이지가 어디에 서고
 // 어떤 응답 헤더를 다는지, 사이트 파일에서 무엇을 빌드에 싣는지 본다(web-widget 티켓 04). 헤더가 basePath 아래의 실제
-// 경로에 붙는지는 빌드한 앱의 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴 응답의
+// 경로에 붙는지는 빌드한 앱의 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴과 페이지 안 번들 응답의
 // `Access-Control-Allow-Origin` 은 10 이 본다. 표기와 모양의 판정 하나하나는 tools/site-file.test.ts 가 본다.
 
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { NextConfig } from "next";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { expectedSiteFile, SITE_FILE_FIXTURES } from "./testing/site-file.ts";
 import {
   DEFAULT_REQUEST_CHARS,
   SITE_FILE_ENV,
   WIDGET_ORIGINS_ENV,
   WIDGET_REQUEST_CHARS_ENV,
 } from "./tools/site-file.ts";
-
-const FIXTURES = join(import.meta.dirname, "..", "..", "..", "tests", "fixtures", "site_file");
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -68,35 +67,6 @@ function site({
   ].join("\n");
 }
 
-interface Expected {
-  readonly allowedOrigins: readonly string[];
-  readonly requestChars: number;
-  readonly defaultChars: number;
-}
-
-/** 두 언어가 함께 읽는 기대값(sites.json). */
-function expectedValues(): Expected {
-  const parsed: unknown = JSON.parse(readFileSync(join(FIXTURES, "sites.json"), "utf-8"));
-  if (typeof parsed !== "object" || parsed === null) {
-    throw new Error("sites.json 이 객체가 아니다");
-  }
-  const origins: unknown = "allowed_origins" in parsed ? parsed.allowed_origins : undefined;
-  const chars = "request_chars" in parsed ? parsed.request_chars : undefined;
-  const defaultChars = "default_request_chars" in parsed ? parsed.default_request_chars : undefined;
-  const allowedOrigins = Array.isArray(origins)
-    ? origins.filter((origin: unknown): origin is string => typeof origin === "string")
-    : [];
-  if (
-    !Array.isArray(origins) ||
-    allowedOrigins.length !== origins.length ||
-    typeof chars !== "number" ||
-    typeof defaultChars !== "number"
-  ) {
-    throw new Error("sites.json 의 모양이 다르다");
-  }
-  return { allowedOrigins, requestChars: chars, defaultChars };
-}
-
 test("iframe 페이지는 basePath /widget 아래에 선다", async () => {
   expect((await loadConfig(undefined)).basePath).toBe("/widget");
 });
@@ -114,9 +84,9 @@ test("사이트 파일을 주지 않으면 어떤 사이트도 iframe 페이지�
 });
 
 test("두 언어가 함께 읽는 사이트 파일의 합친 허용 출처가 frame-ancestors 에, 가장 작은 상한이 빌드에 든다", async () => {
-  const expected = expectedValues();
+  const expected = expectedSiteFile();
 
-  const config = await loadConfig(join(FIXTURES, "sites.toml"));
+  const config = await loadConfig(join(SITE_FILE_FIXTURES, "sites.toml"));
 
   expect(await headersOf(config, "/:path*")).toEqual({
     "Content-Security-Policy": `frame-ancestors ${expected.allowedOrigins.join(" ")}`,
@@ -206,6 +176,12 @@ describe("변수가 준 사이트 파일을 읽지 못하면 빌드가 실패한
 
 test("글꼴 응답은 자격 증명 없이 어느 출처에서나 읽힌다", async () => {
   expect(await headersOf(await loadConfig(undefined), "/fonts/:path*")).toEqual({
+    "Access-Control-Allow-Origin": "*",
+  });
+});
+
+test("페이지 안 번들 응답도 어느 출처에서나 읽힌다. crossorigin 을 붙인 script 는 CORS 로 받는다", async () => {
+  expect(await headersOf(await loadConfig(undefined), "/element.js")).toEqual({
     "Access-Control-Allow-Origin": "*",
   });
 });

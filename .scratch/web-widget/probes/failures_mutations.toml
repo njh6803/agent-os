@@ -1,0 +1,293 @@
+# web-widget 티켓 07 의 변이 표. 실패 알림, 거절의 갈래, 상한의 띠의 시험 가운데 구현 뒤에 쓰거나 처음부터 초록이던
+# 것이 무엇을 재는지 변이로 본다. 앞의 여덟은 화면 동작 테스트(`widget-pages`), 뒤의 일곱은 위젯 스토리
+# (`widget-storybook`)다.
+# 처음부터 빨강을 본 시험(원인마다의 알림, 404·409, 422·429 의 되돌림, 띠의 읽기와 숫자)은 넣지 않았다.
+# 빨강을 기대한 열넷은 모두 고른 단언이 빨개졌다는 것을 그 단언의 실패 머리나 값이 든 줄(`expect_output`)로 본다.
+# 첫 판은 열셋 가운데 셋에만 표지가 있어 셀프 리뷰가 짚었고, 변이를 하나씩 손으로 넣어 실패 출력을 본 뒤 골랐다.
+# 여덟째(기다림 도중의 끊김)는 셀프 리뷰를 반영하며 더했다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/failures_mutations.toml [번호 ...]
+# stories 러너는 chromium 이 Playwright 의 브라우저 캐시에 있어야 한다.
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.stories]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-storybook"]
+cwd = "web"
+judge = "vitest"
+
+# --- 처리하지 못한 것(500 행) ---------------------------------------------------------------------------------
+
+[[mutation]]
+name = "표 밖의 상태를 409 로 그리면 500 행의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "요청을 처리하지 못했습니다"]
+expect = "red"
+expect_output = ["에이전트를 지금 쓸 수 없습니다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+        default:
+          return settleError(state);
+'''
+new = '''
+        default:
+          return settle(state, { kind: "unavailable" });
+'''
+
+[[mutation]]
+name = "결말 없이 끝난 스트림을 409 로 그리면 스트림 행의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "끝난 스트림"]
+expect = "red"
+expect_output = ["에이전트를 지금 쓸 수 없습니다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+    case "ended":
+      return settleError(state);
+'''
+new = '''
+    case "ended":
+      return settle(state, { kind: "unavailable" });
+'''
+
+# --- 실패 알림의 버튼과 포커스 ----------------------------------------------------------------------------------
+
+[[mutation]]
+name = "모든 실패가 입력창으로 포커스를 보내면 다른 원인의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "다른 원인의 실패는 포커스를 옮기지 않는다"]
+expect = "red"
+expect_output = ['to be <div role="region"']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.tsx"
+old = '''
+  return last?.outcome?.kind === "failed" && last.outcome.cause === "loop_limit" ? last.id : null;
+'''
+new = '''
+  return last?.outcome?.kind === "failed" ? last.id : null;
+'''
+
+[[mutation]]
+name = "알림의 새 대화가 다시 보내면 새 대화 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "알림의 '새 대화'"]
+expect = "red"
+expect_output = ["<span …(1)></span></li> to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/FailureAlert.tsx"
+old = '''
+        disabled={newConversationBlocked}
+        onClick={onNewConversation}
+'''
+new = '''
+        disabled={newConversationBlocked}
+        onClick={onRetry}
+'''
+
+[[mutation]]
+name = "알림의 다시 보내기를 포커스 차례에서 빼면 포커스 차례 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "포커스 차례에 알림의 버튼이"]
+expect = "red"
+expect_output = ["to deeply equal [ <button"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/FailureAlert.tsx"
+old = '''
+      <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
+'''
+new = '''
+      <Button key={step} variant="secondary" tabIndex={-1} disabled={retryBlocked} onClick={onRetry}>
+'''
+
+# --- 422 의 안내와 상한의 기다림 --------------------------------------------------------------------------------
+
+[[mutation]]
+name = "보낼 때 422 의 안내를 걷지 않으면 걷히는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "422 의 안내는 다음에 보낼 때 걷힌다"]
+expect = "red"
+expect_output = ["요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요."]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+      setInvalid(false);
+      dispatch({ type: "sent", request });
+'''
+new = '''
+      dispatch({ type: "sent", request });
+'''
+
+[[mutation]]
+name = "새 대화가 상한의 기다림을 걷으면 남는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "새 대화를 열어도 상한의 기다림은 남는다"]
+expect = "red"
+# chai 가 실패 머리의 긴 기대 글을 잘라(`… 다시 보낼…`) 찍어, 표지는 잘리지 않는 앞부분만 본다. 빈 띠(`''`)를 받았다는
+# 것이 이 단언의 실패에서만 나온다. 아래 코드 조각의 줄은 큰따옴표로 시작해 맞지 않는다.
+expect_output = ["expected '' to be '동시에 처리할 수 있는 요청이 가득 찼습니다."]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+    setWait((current) => (current?.purpose === "decide" ? null : current));
+'''
+new = '''
+    setWait(null);
+'''
+
+# --- 이어 가기 404 의 기다림 ---------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "기다리는 동안 끊겨도 이어 가면 떠난 뒤의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "기다리는 동안 페이지를 떠나면"]
+expect = "red"
+# 떠난 뒤 토큰을 한 번 더 청한다. 청한 뒤의 끊김 확인에서 돌아와 이어 가기는 보내지 않으므로, 이어 가기의 수를 보는
+# 뒤 단언은 이 변이에서 지나간다. 토큰의 수를 보는 단언만 이 변이를 잡는다.
+expect_output = ["expected [ …(3) ] to have a length of 2 but got 3"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+        // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
+        if (!(await sleep(NOT_FOUND_RETRY_MS, signal))) {
+          return;
+        }
+'''
+new = '''
+        // 기다리는 동안 끊겼으면 토큰을 다시 청하지 않는다.
+        await sleep(NOT_FOUND_RETRY_MS, signal);
+'''
+
+# --- 띠 부품 -----------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "상한이 재접속보다 앞서면 재접속이 먼저인 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/molecules/ComposerBand.stories.tsx", "-t", "Reconnect First"]
+expect = "red"
+# 뒤의 두 부정 단언("not to have")이 아니라 앞의 긍정 단언이 빨개졌다는 것을 본다.
+expect_output = ["Expected element to have text content:"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/molecules/ComposerBand.tsx"
+old = '''
+  const band = reconnect ?? limit ?? approval;
+'''
+new = '''
+  const band = limit ?? reconnect ?? approval;
+'''
+
+[[mutation]]
+name = "승인 기다림이 상한보다 앞서면 상한이 먼저인 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/molecules/ComposerBand.stories.tsx", "-t", "Limit Before Approval"]
+expect = "red"
+expect_output = ["Expected element to have text content:"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/molecules/ComposerBand.tsx"
+old = '''
+  const band = reconnect ?? limit ?? approval;
+'''
+new = '''
+  const band = reconnect ?? approval ?? limit;
+'''
+
+[[mutation]]
+name = "띠의 틀에서 위 테두리를 빼면 빈 띠 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/molecules/ComposerBand.stories.tsx", "-t", "Empty"]
+expect = "red"
+expect_output = ["expected '0px' to be '1px'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/molecules/ComposerBand.tsx"
+old = '''
+    <div role="status" className="shrink-0 border-t border-border">
+'''
+new = '''
+    <div role="status" className="shrink-0">
+'''
+
+# --- 보내기 버튼의 자리 -------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "칸 아래 글 한 줄만큼만 올리면 두 줄로 꺾인 422 의 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Invalid"]
+expect = "red"
+# 보내기의 아래 끝이 입력창보다 16px(두 줄 글의 둘째 줄) 낮다.
+expect_output = ["expected 527 to be 511"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+        <div style={{ marginBottom: lift }}>
+'''
+new = '''
+        <div className="mb-4 pb-1">
+'''
+
+# 대조군. 한 줄짜리 글에서는 한 줄만큼 올리던 옛 판도 맞았다. 위 변이의 빨강이 두 줄 때문이라는 것을 가른다.
+[[mutation]]
+name = "칸 아래 글 한 줄만큼만 올려도 한 줄인 글자 수 스토리는 초록이다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Near Limit"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+        <div style={{ marginBottom: lift }}>
+'''
+new = '''
+        <div className="mb-4 pb-1">
+'''
+
+[[mutation]]
+name = "칸 아래 글을 재지 않으면 글자 수 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Near Limit"]
+expect = "red"
+# 보내기의 아래 끝이 입력창보다 20px(칸과 글 사이 4px 와 글 한 줄 16px) 낮다.
+expect_output = ["expected 547 to be 527"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Composer.tsx"
+old = '''
+      setLift(bottom === undefined ? 0 : wrapper.getBoundingClientRect().bottom - bottom);
+'''
+new = '''
+      setLift(0);
+'''
+
+# --- 실패 알림 스토리 ------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "단계 상한에 다시 보내기를 달면 원인 스토리가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/organisms/FailureAlert.stories.tsx", "-t", "Causes"]
+expect = "red"
+expect_output = ["to have a length of +0 but got 1"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/FailureAlert.tsx"
+old = '''
+    sentence: "요청을 나눠 보내 주세요.",
+    steps: [],
+'''
+new = '''
+    sentence: "요청을 나눠 보내 주세요.",
+    steps: ["retry"],
+'''

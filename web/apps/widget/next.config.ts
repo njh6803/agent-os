@@ -11,8 +11,10 @@
 //   대해 적은 것과 같다).
 // - env 에 합친 허용 출처(공백으로 이은 글)와 가장 작은 요청 글자 수 상한(십진수 글)을 싣는다. 번들에서 읽는 법은
 //   티켓 05 의 머리에 적었다. Next 는 env 의 값을 빌드 때 번들에 박는다(Next 16.3.6 설치본의 env 문서).
-// - 글꼴 파일은 시작 래퍼가 public/fonts/ 에 복사한다(tools/fonts.ts). 자격 증명 없이 받는 공개 파일이라
-//   Access-Control-Allow-Origin 을 * 로 단다. 페이지 안 번들(티켓 10)이 사이트 문서에서 FontFace 로 받는다.
+// - 글꼴 파일(public/fonts/, tools/fonts.ts)과 페이지 안 번들(public/element.js, tools/element.ts)은 시작 래퍼가 빌드
+//   전에 짓는다. 둘 다 자격 증명 없이 받는 공개 파일이라 Access-Control-Allow-Origin 을 * 로 단다. 글꼴은 페이지 안
+//   번들이 사이트 문서에서 FontFace 로 받고, 번들은 사이트가 script 에 crossorigin 을 붙이면 CORS 로 받는다. 그 헤더가
+//   없으면 그때 번들이 실리지 않는다(web-widget 명세 "번들의 꼴").
 // - rewrites 를 두지 않는다. API 는 nginx 가 파이썬에 바로 넘기므로, 처음 바깥에 열리는 Next 가 중계가 되지 않게
 //   하기 위해서다(ADR 0024).
 // - agentRules: false. next dev 가 에이전트를 감지하면 앱 폴더에 AGENTS.md 와 CLAUDE.md 를 만든다(ADR 0021).
@@ -39,6 +41,10 @@ const config: NextConfig = {
       },
       {
         source: "/fonts/:path*",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+      {
+        source: "/element.js",
         headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
       },
     ]);

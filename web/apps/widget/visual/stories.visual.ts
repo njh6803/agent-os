@@ -46,3 +46,24 @@ for (const story of photographedStories(SITE)) {
     expect(shot, "찍은 모드").not.toEqual([]);
   });
 }
+
+// 대화의 진행 표시(값 모름)는 디자인 시스템의 도는 표시다. 움직임 줄이기는 그 패키지의 미디어 특성 테스트가 부품
+// 하나로 재고, 여기서는 위젯이 엮은 자리에서도 그 설정이 닿는지 본다(web-widget 티켓 05 의 접근성).
+test("대화의 진행 표시가 움직임 줄이기에서 멈추고 줄이기가 없으면 돈다", async ({
+  page,
+  storybook,
+}) => {
+  for (const [reducedMotion, name] of [
+    ["no-preference", "spin"],
+    ["reduce", "none"],
+  ] as const) {
+    await page.emulateMedia({ reducedMotion });
+    await storybook.open("organisms-conversation--running", inDefaultTheme("light", "regular"));
+    const spinner = page.locator("[role=progressbar]:not([aria-valuenow]) > svg");
+    await expect(spinner, reducedMotion).toHaveCount(1);
+    expect(
+      await spinner.evaluate((element) => getComputedStyle(element).animationName),
+      reducedMotion,
+    ).toBe(name);
+  }
+});
