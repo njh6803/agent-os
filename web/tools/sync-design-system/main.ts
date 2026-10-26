@@ -13,10 +13,14 @@
 
 import { build } from "./build.ts";
 import { CommandError, type Command, type ErrorKind } from "./command.ts";
+import { importCommand } from "./import.ts";
 import type { JsonValue } from "./tokens-json.ts";
 
 /** 명령 표. 명령을 더하는 티켓은 모듈 하나와 이 표의 한 줄을 더한다. */
-const COMMANDS: ReadonlyMap<string, Command> = new Map([["build", build]]);
+const COMMANDS: ReadonlyMap<string, Command> = new Map([
+  ["build", build],
+  ["import", importCommand],
+]);
 
 interface Outcome {
   readonly report: JsonValue;

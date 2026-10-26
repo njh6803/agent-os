@@ -1,0 +1,1097 @@
+# design-reverse-sync 티켓 04 의 변이 표(`web/tools/sync-design-system` 의 들이기 명령과 색 변환). 들이기와 색 변환의
+# 테스트는 구현 전에 모듈이 없어 모두 빨갰을 뿐 단언 하나하나의 빨강은 보지 못했고, 일부 사례(색상의 0~360, 벌마다 다르게
+# 바꾼 원색, 기준본이 벌마다 다르던 자리, 그리고 셀프 리뷰를 반영하며 더한 §7.3 의 파랑·노랑, 쉼표 꼴, hsl() 의 음수 채도,
+# 가장 가까운 통과 값의 차례, 소수 끝에 0 이 붙은 px, 충돌의 webReason, 제안 자리의 답)는 구현 뒤에 썼다. 변이마다 그
+# 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/import_command_mutations.toml [번호 ...]
+# 재지 않은 것: 답 파일의 글이 아닌 답, 통과 값이 없는 제안 자리에서 suggested 를 고르는 답, 판정한 명암비를 둘째 자리에서
+# 내리는 것(정확한 비를 단언하는 사례가 없다). 도는 별칭과 없는 토큰은 명암비 모듈 안에서 풀려, 그 오류를
+# CommandError 가 아닌 Error 로 던져도 `measure` 가 `input` 오류로 감싸 문구가 남는다(그 변이가 초록이었다). 그래서
+# 도는 별칭의 변이는 오류 대신 값을 돌려준다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 셋 맞대기와 옮기기(import.ts) ------------------------------------------------------------------------------
+
+[[mutation]]
+name = "바뀐 것이 없어도 바뀌었다고 내면 왕복 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "지은 tokens.json 을 그대로 들이면"]
+expect = "red"
+expect_output = ['+   "changed": true,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      changed: css !== input.css,'''
+new = '''      changed: true,'''
+
+[[mutation]]
+name = "기준을 넘는 짝도 걸면 왕복 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "지은 tokens.json 을 그대로 들이면"]
+expect = "red"
+expect_output = ['+     "failures": [']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      if (ratio >= minimum) {'''
+new = '''      if (ratio >= minimum + 100) {'''
+
+[[mutation]]
+name = "옮긴 줄 번호를 밀면 원색 라이트·다크 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "원색의 라이트·다크를 같은 값으로"]
+expect = "red"
+expect_output = ['+     "line": ']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    line: parts.line,'''
+new = '''    line: parts.line + 1,'''
+
+[[mutation]]
+name = "일부 벌만 바꾼 것을 묻지 않으면 원색 한 벌 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "원색 한 벌만 바꾸면"]
+expect = "red"
+expect_output = ['+     --accent-600: #04605f;']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (values.some((item) => same(item.web, item.base)) || webValues.size > 1) {'''
+new = '''    if (false) {'''
+
+[[mutation]]
+name = "일부 벌만 바꾼 것을 묻지 않으면 반투명 일부 벌 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "반투명의 일부 벌만"]
+expect = "red"
+expect_output = ['+     --overlay-black-4: #00000008;']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (values.some((item) => same(item.web, item.base)) || webValues.size > 1) {'''
+new = '''    if (false) {'''
+
+[[mutation]]
+name = "벌마다 다른 웹 값을 보지 않으면 서로 다른 값 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "서로 다른 값으로 바꾸면"]
+expect = "red"
+expect_output = ['+     --accent-600: #04605f;']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (values.some((item) => same(item.web, item.base)) || webValues.size > 1) {'''
+new = '''    if (values.some((item) => same(item.web, item.base))) {'''
+
+[[mutation]]
+name = "기준본과 같은 벌을 보지 않으면 기준본이 벌마다 다르던 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "기준본이 벌마다 다르던"]
+expect = "red"
+expect_output = ['+     --accent-600: #04605f;']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (values.some((item) => same(item.web, item.base)) || webValues.size > 1) {'''
+new = '''    if (webValues.size > 1) {'''
+
+[[mutation]]
+name = "자리를 벌 하나로 지으면 반투명 첫 테마 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "반투명의 첫 테마만"]
+expect = "red"
+expect_output = ['+     "id": "color/overlay-black-4@nokcheong-light",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''              .filter((bench) => bench.winners.get(declaration.property)?.line === declaration.line)'''
+new = '''              .filter((bench) => bench.theme.id === diff.theme)'''
+
+[[mutation]]
+name = "rem 을 옮기면 간격·모서리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "간격과 모서리는"]
+expect = "red"
+expect_output = ['+     "0.5rem",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?px$|^0$/;'''
+new = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?(?:px|rem)$|^0$/;'''
+
+[[mutation]]
+name = "단위 없는 0 을 받지 않으면 간격·모서리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "간격과 모서리는"]
+expect = "red"
+expect_output = ['-     "spacing/spacing-0",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?px$|^0$/;'''
+new = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?px$/;'''
+
+[[mutation]]
+name = "단위 없는 수를 옮기면 글자 스타일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "글자 스타일의 크기"]
+expect = "red"
+expect_output = ['+     "type/text-title#lineHeight",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?px$|^0$/;'''
+new = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?(?:px)?$|^0$/;'''
+
+[[mutation]]
+name = "굵기 범위를 옮기면 글자 스타일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "글자 스타일의 크기"]
+expect = "red"
+expect_output = ['+     "type/text-badge#fontWeight",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return /^\d+$/.test(value) ? { text: value, parts } : { reason: "weightRange" };'''
+new = '''    return /^\d+(?: \d+)?$/.test(value) ? { text: value, parts } : { reason: "weightRange" };'''
+
+[[mutation]]
+name = "줄 높이를 굵기 줄에 옮기면 글자 스타일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "글자 스타일의 크기"]
+expect = "red"
+expect_output = ['-     "16px",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''        ? "--line-height"'''
+new = '''        ? "--font-weight"'''
+
+[[mutation]]
+name = "3 자리 hex 를 펴지 않으면 색 변환 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "3 자리 hex 는 hex 로"]
+expect = "red"
+expect_output = ['+     "#abc",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  const expanded = expandHex(value);'''
+new = '''  const expanded = value.startsWith("#") ? value : undefined;'''
+
+[[mutation]]
+name = "색 함수를 hex 로 바꾸지 않으면 색 변환 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "3 자리 hex 는 hex 로"]
+expect = "red"
+expect_output = ['+     "hsl(180 100% 20%)",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  return hex === undefined ? { reason: "outOfGamut" } : { hex };'''
+new = '''  return hex === undefined ? { reason: "outOfGamut" } : { hex: value };'''
+
+[[mutation]]
+name = "sRGB 밖을 읽지 못한 값으로 물으면 묻는 까닭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "sRGB 밖의 값"]
+expect = "red"
+expect_output = ['-     "outOfGamut",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  return hex === undefined ? { reason: "outOfGamut" } : { hex };'''
+new = '''  return hex === undefined ? { reason: "unreadableColor" } : { hex };'''
+
+[[mutation]]
+name = "color() 를 다른 색 공간으로 보지 않으면 묻는 까닭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "sRGB 밖의 값"]
+expect = "red"
+expect_output = ['-     "colorSpace",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return { reason: /^(?:lab|lch|color)\(/.test(value) ? "colorSpace" : "unreadableColor" };'''
+new = '''    return { reason: /^(?:lab|lch)\(/.test(value) ? "colorSpace" : "unreadableColor" };'''
+
+[[mutation]]
+name = "반투명 쓰임새 토큰도 불투명으로 세면 투명도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "불투명한 쓰임새 토큰이 가리키는"]
+expect = "red"
+expect_output = ['+     "color/overlay-black-7@']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''        !translucentTokens.includes(name) && chainOf(code.tokens, name, bench).includes(token),'''
+new = '''        chainOf(code.tokens, name, bench).includes(token),'''
+
+[[mutation]]
+name = "투명도를 준 원색을 묻지 않으면 투명도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "불투명한 쓰임새 토큰이 가리키는"]
+expect = "red"
+expect_output = ['CommandError: nokcheong-dark 의 명암비를 잴 수 없다: #RRGGBB 가 아니다: "#ecf1f380"']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return translucent(color.hex) && opaqueUse(code, slot)'''
+new = '''    return translucent(color.hex) && false'''
+
+[[mutation]]
+name = "별칭을 알아보지 않으면 별칭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "다른 토큰을 가리키는 별칭으로"]
+expect = "red"
+expect_output = ['-     "alias",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (value.startsWith("{")) {'''
+new = '''  if (value.startsWith("{{")) {'''
+
+[[mutation]]
+name = "코드 값의 별칭을 보지 않으면 대응 바꾸기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "대응 바꾸기로 묻는다"]
+expect = "red"
+expect_output = ['+     "reason": "partial",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (values.some((item) => typeof item.code === "string" && item.code.startsWith("{"))) {'''
+new = '''    if (values.some((item) => typeof item.code === "string" && item.code.startsWith("var("))) {'''
+
+[[mutation]]
+name = "이름 바꾸기를 더하기가 없는 계열에 적으면 더하기·지우기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "토큰을 더하거나 지우면"]
+expect = "red"
+expect_output = ['+     "이름을 바꾼 것일 수 있다",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  return new Set([...kinds("removed")].filter((family) => added.has(family)));'''
+new = '''  return new Set([...kinds("removed")].filter((family) => !added.has(family)));'''
+
+[[mutation]]
+name = "글자 스타일의 다른 칸을 그 종류로 묻지 않으면 종류 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "자간"]
+expect = "red"
+expect_output = ['-     "typeField",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (kind === "added" || kind === "removed" || kind === "typeField" || kind === "familyNote") {'''
+new = '''  if (kind === "added" || kind === "removed" || kind === "familyNote") {'''
+
+[[mutation]]
+name = "계열 설명을 그 종류로 묻지 않으면 종류 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "자간"]
+expect = "red"
+expect_output = ['-     "familyNote",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (kind === "added" || kind === "removed" || kind === "typeField" || kind === "familyNote") {'''
+new = '''  if (kind === "added" || kind === "removed" || kind === "typeField") {'''
+
+[[mutation]]
+name = "둘 다 다르게 바뀐 것을 보지 않으면 네 갈래 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "네 갈래로"]
+expect = "red"
+expect_output = ['+   "color/gray-300@nokcheong-light+nokcheong-dark",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      pending.push({ diff, code: codeValue, conflict: !same(codeValue, diff.before) });'''
+new = '''      pending.push({ diff, code: codeValue, conflict: false });'''
+
+[[mutation]]
+name = "이미 들인 것을 가르지 않으면 네 갈래 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "네 갈래로"]
+expect = "red"
+expect_output = ['+     "id": "color/gray-200@nokcheong-light+nokcheong-dark",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (same(codeValue, diff.after)) {'''
+new = '''    if (false) {'''
+
+[[mutation]]
+name = "코드만 바뀐 것을 거꾸로 거르면 네 갈래 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "네 갈래로"]
+expect = "red"
+expect_output = ['+     "gray-300",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    .filter((diff) => same(valueAt(web, diff), diff.before))'''
+new = '''    .filter((diff) => !same(valueAt(web, diff), diff.before))'''
+
+[[mutation]]
+name = "옮길 수 없는 웹 값도 고르게 하면 코드 값만 고르는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "웹 값을 옮길 수 없으면"]
+expect = "red"
+expect_output = ['+       "web",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const choices: readonly Choice[] = move === undefined ? ["code"] : ["web", "code"];'''
+new = '''      const choices: readonly Choice[] = ["web", "code"];'''
+
+[[mutation]]
+name = "주석 앞의 공백을 빼면 설명 고침 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "설명 고침은"]
+expect = "red"
+expect_output = ['+     "--text-title: 24px;/* 제목 글자 */",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
+new = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : `/* ${usage} */`;'''
+
+[[mutation]]
+name = "설명의 전을 값으로 내면 설명 고침 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "설명 고침은"]
+expect = "red"
+expect_output = ['+     "var(--gray-50)",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    before: usage ? parts.comment : parts.value,'''
+new = '''    before: parts.value,'''
+
+[[mutation]]
+name = "빈 설명에도 주석을 쓰면 설명 비우기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "웹에서 설명을 비우면"]
+expect = "red"
+expect_output = ['+     "--radius-m: 8px; /*  */",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
+new = '''      const tail = usage === undefined ? parts.tail : ` /* ${usage} */`;'''
+
+[[mutation]]
+name = "설명의 주석 끝 글자를 보지 않으면 설명 글 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "주석을 끝내는 글자나"]
+expect = "red"
+expect_output = ['+   "color/gray-900#usage",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return value.includes("*/") || /[\n\r\f\u2028\u2029]/.test(value) || value !== value.trim()'''
+new = '''    return /[\n\r\f\u2028\u2029]/.test(value) || value !== value.trim()'''
+
+[[mutation]]
+name = "설명의 줄바꿈을 보지 않으면 설명 글 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "주석을 끝내는 글자나"]
+expect = "red"
+expect_output = ['+   "color/gray-800#usage",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return value.includes("*/") || /[\n\r\f\u2028\u2029]/.test(value) || value !== value.trim()'''
+new = '''    return value.includes("*/") || value !== value.trim()'''
+
+[[mutation]]
+name = "설명의 앞뒤 공백을 보지 않으면 설명 글 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "주석을 끝내는 글자나"]
+expect = "red"
+expect_output = ['+   "color/gray-700#usage",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return value.includes("*/") || /[\n\r\f\u2028\u2029]/.test(value) || value !== value.trim()'''
+new = '''    return value.includes("*/") || /[\n\r\f\u2028\u2029]/.test(value)'''
+
+[[mutation]]
+name = "줄의 꼬리를 보지 않으면 옮길 줄 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "여러 줄에 걸친 선언과"]
+expect = "red"
+expect_output = ['+     --gray-50: #f0f4f7; --gray-100: #ecf1f3;']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (tail.trim() !== "") {'''
+new = '''  if (false) {'''
+
+[[mutation]]
+name = "꼬리 주석의 끝 글자를 보지 않으면 옮길 줄 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "여러 줄에 걸친 선언과"]
+expect = "red"
+expect_output = ['+     --gray-200: #dddddd; /* 하나 */ /* 둘 */']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (comment === null || (comment[1] ?? "").includes("*/")) {'''
+new = '''    if (comment === null) {'''
+
+[[mutation]]
+name = "줄 끝의 CR 을 떼지 않으면 CRLF 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "CRLF"]
+expect = "red"
+expect_output = [
+  'AssertionError: expected [] to deeply equal [ …(2) ]',
+  '-   "color/accent-600@nokcheong-light+nokcheong-dark",',
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  const end = raw.endsWith("\r") ? "\r" : "";'''
+new = '''  const end = "";'''
+
+[[mutation]]
+name = "세미콜론 앞에 공백을 넣으면 Prettier 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "Prettier"]
+expect = "red"
+expect_output = ['AssertionError: expected false to be true']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      return `${parts.head}${value};${tail}${parts.end}`;'''
+new = '''      return `${parts.head}${value} ;${tail}${parts.end}`;'''
+
+[[mutation]]
+name = "소수 끝에 0 이 붙은 px 를 옮기면 Prettier 가 고쳐 쓰는 px 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "소수 끝에 0 이 붙은 px"]
+expect = "red"
+expect_output = ['+     "20.50px",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''const PIXELS = /^-?\d+(?:\.\d*[1-9])?px$|^0$/;'''
+new = '''const PIXELS = /^-?\d+(?:\.\d+)?px$|^0$/;'''
+
+[[mutation]]
+name = "충돌에서 웹 값을 옮기지 못하는 까닭을 버리면 대응 바꾸기 충돌 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "대응 바꾸기를 코드와 웹이 다르게"]
+expect = "red"
+expect_output = ['+     "webReason": null,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const webReason = "reason" in decision ? decision.reason : null;'''
+new = '''      const webReason = null;'''
+
+# --- 판정과 제안(import.ts) ------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "걸린 짝에 옮긴 원색을 적지 않으면 판정 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "녹청 다크의 글자 원색을"]
+expect = "red"
+expect_output = ['+     "tokens": [],']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''          tokens: [...new Set(owned)],'''
+new = '''          tokens: [],'''
+
+[[mutation]]
+name = "제안이 기준에 조금 못 미쳐도 지나게 하면 다시 들이기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "제안 값으로 다시 들이면"]
+expect = "red"
+expect_output = ["AssertionError: expected [ { theme: 'nokcheong-dark', …(5) } ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''        ({ pair, ratio }) => ratio >= pair[2],'''
+new = '''        ({ pair, ratio }) => ratio >= pair[2] - 0.1,'''
+
+[[mutation]]
+name = "투명도를 색의 바이트에서 읽으면 투명도 제안 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "투명도를 1/255 씩"]
+expect = "red"
+expect_output = ["AssertionError: expected '#ffffff3c' to be '#ffffff09'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  const start = Number.parseInt(hex.slice(7, 9), 16);'''
+new = '''  const start = Number.parseInt(hex.slice(5, 7), 16);'''
+
+[[mutation]]
+name = "통과 값이 없을 때 단계를 0 으로 내면 통과 값 없음 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "통과하는 값이 없으면"]
+expect = "red"
+expect_output = ['+     "steps": 0,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    steps: found?.steps ?? null,'''
+new = '''    steps: found?.steps ?? 0,'''
+
+# --- 사람이 고른 답(import.ts) ---------------------------------------------------------------------------------
+
+[[mutation]]
+name = "제안 값 답을 따르지 않으면 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답을 주면 웹 값과 제안 값으로"]
+expect = "red"
+expect_output = ['+     "#282f31",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    const value = choice === "suggested" ? suggestion?.value : undefined;'''
+new = '''    const value = choice === "web" ? suggestion?.value : undefined;'''
+
+[[mutation]]
+name = "충돌의 웹 값 답을 따르지 않으면 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답을 주면 웹 값과 제안 값으로"]
+expect = "red"
+expect_output = ['+     "#cccccc",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return move !== undefined && (ask === undefined || choice === "web" || choice === "suggested")'''
+new = '''    return move !== undefined && (ask === undefined || choice === "code" || choice === "suggested")'''
+
+[[mutation]]
+name = "코드 값 답의 값을 옮긴 값에서 찾으면 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답을 주면 웹 값과 제안 값으로"]
+expect = "red"
+expect_output = ['+     "value": null,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    const value = choice === "code" ? (slot.entries[0]?.code ?? null) : (kept?.text ?? null);'''
+new = '''    const value = kept?.text ?? null;'''
+
+[[mutation]]
+name = "답한 충돌을 묻는 목록에 남기면 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답을 주면 웹 값과 제안 값으로"]
+expect = "red"
+expect_output = ['+     "reason": "conflict",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      (plan.ask.reason === "conflict" && answerOf(plan.slot.id) !== undefined)'''
+new = '''      false'''
+
+[[mutation]]
+name = "제안 자리의 코드 값 답을 따르지 않으면 제안 자리 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "제안이 난 자리에서"]
+expect = "red"
+expect_output = ['AssertionError: expected [ { …(9) } ] to deeply equal []', '+     "after": "#282f31",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (choice === "code") {'''
+new = '''    if (choice === "never") {'''
+
+[[mutation]]
+name = "모르는 자리의 답을 받으면 답 오류 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답이 이번 들이기에 없는"]
+expect = "red"
+expect_output = ['Error: 들이기가 오류 없이 끝났다(답 {"color/none@x":"web"})']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    const choices = answerable.get(id);'''
+new = '''    const choices = answerable.get(id) ?? ["web"];'''
+
+[[mutation]]
+name = "모르는 답 글을 받으면 답 오류 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "답이 이번 들이기에 없는"]
+expect = "red"
+expect_output = ['Error: 들이기가 오류 없이 끝났다(답 {"color/gray-300@nokcheong-light+nokcheong-dark":"maybe"})']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (!isChoice(choice) || !choices.includes(choice)) {'''
+new = '''    if (isChoice(choice) && !choices.includes(choice)) {'''
+
+[[mutation]]
+name = "제안이 난 충돌 자리에서 제안 값 답을 받지 않으면 충돌 자리 제안 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "둘 다 다르게 바뀐 자리도 웹 값을 골라"]
+expect = "red"
+expect_output = [
+  'CommandError: 답의 자리 color/gray-100@nokcheong-light+nokcheong-dark 에서 suggested 는 고를 수 없다. 고를 수 있는 답: web, code',
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    const added: readonly Choice[] = value === null ? ["code"] : ["code", "suggested"];'''
+new = '''    const added: readonly Choice[] = value === null ? ["code"] : ["code"];'''
+
+[[mutation]]
+name = "제안이 난 자리에서 걸린 웹 값 답을 받으면 제안 자리 답 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "제안이 난 자리에서"]
+expect = "red"
+expect_output = [
+  'Error: 들이기가 오류 없이 끝났다(답 {"color/gray-300@nokcheong-light+nokcheong-dark":"code","color/gray-200@nokcheong-light+nokcheong-dark":"code","color/gray-100@nokcheong-light+nokcheong-dark":"web"})',
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    const added: readonly Choice[] = value === null ? ["code"] : ["code", "suggested"];'''
+new = '''    const added: readonly Choice[] = value === null ? ["code"] : ["code", "web", "suggested"];'''
+
+# --- 이어받는 기준본(import.ts) --------------------------------------------------------------------------------
+
+[[mutation]]
+name = "코드만 바뀐 것을 거꾸로 거르면 이어받는 기준본 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "더 고친 몫만 들어온다"]
+expect = "red"
+expect_output = ['AssertionError: expected [] to deeply equal [ …(4) ]']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    .filter((diff) => same(valueAt(web, diff), diff.before))'''
+new = '''    .filter((diff) => !same(valueAt(web, diff), diff.before))'''
+
+[[mutation]]
+name = "둘 다 다르게 바뀐 것을 보지 않으면 기록의 기준본 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "기록의 기준본을 주면"]
+expect = "red"
+expect_output = [
+  'AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]',
+  '+   "color/gray-600@nokcheong-light+nokcheong-dark",',
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      pending.push({ diff, code: codeValue, conflict: !same(codeValue, diff.before) });'''
+new = '''      pending.push({ diff, code: codeValue, conflict: false });'''
+
+[[mutation]]
+name = "모두 둘 다 다르게 바뀐 것으로 보면 claim 기준본 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "claim 사본을 기준본으로"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ [ 'gray-600', '#4a4a4a' ], …(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      pending.push({ diff, code: codeValue, conflict: !same(codeValue, diff.before) });'''
+new = '''      pending.push({ diff, code: codeValue, conflict: true });'''
+
+# --- 판정하지 못하는 코드(import.ts) ---------------------------------------------------------------------------
+
+[[mutation]]
+name = "명암비 모듈의 오류를 그대로 던지면 반투명 바탕 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "불투명해야 할 바탕에"]
+expect = "red"
+expect_output = ['Error: #RRGGBB 가 아니다: "#ecf1f380"']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    throw new CommandError("input", `${bench} 의 명암비를 잴 수 없다: ${error.message}`);'''
+new = '''    throw error;'''
+
+[[mutation]]
+name = "없는 토큰을 보지 않으면 없는 쓰임새 토큰 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "쓰임새 토큰이 없다"]
+expect = "red"
+expect_output = ["AssertionError: expected 'nokcheong-light 의 명암비를 잴 수 없다: Cannot…' to contain 'bg-raised"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    if (value === undefined) {'''
+new = '''    if (value === "never") {'''
+
+[[mutation]]
+name = "도는 별칭을 검정으로 풀면 도는 별칭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "별칭이 돈다"]
+expect = "red"
+expect_output = ['Error: 들이기가 오류 없이 끝났다(답 {})']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  throw new CommandError(
+    "input",
+    `${bench} 에서 ${name} 를 푸는 별칭이'''
+new = '''  return { hex: "#000000", names };
+  throw new CommandError(
+    "input",
+    `${bench} 에서 ${name} 를 푸는 별칭이'''
+
+[[mutation]]
+name = "hex 로 읽지 못한 원색을 보지 않으면 lab 원색 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "원색을 sRGB 의 hex 로 읽지 못한다"]
+expect = "red"
+expect_output = ["AssertionError: expected 'nokcheong-light 의 명암비를 잴 수 없다: Cannot…' to contain 'gray-0"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      if (hex === undefined) {'''
+new = '''      if (hex === "never") {'''
+
+# --- 명령 진입(import.ts, main.ts) -----------------------------------------------------------------------------
+
+[[mutation]]
+name = "명령 표에 들이기가 없으면 들이기 진입 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "들이기는 고친 디자인 토큰 CSS 를"]
+expect = "red"
+expect_output = ['+   "status": 1,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/main.ts"
+old = '''  ["import", importCommand],'''
+new = '''  ["build-import", importCommand],'''
+
+[[mutation]]
+name = "고친 CSS 를 쓰지 않으면 들이기 진입 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "들이기는 고친 디자인 토큰 CSS 를"]
+expect = "red"
+expect_output = ["AssertionError: expected '' to be '/*"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  return { out: writeOutput(out, result.css), ...result.report };'''
+new = '''  return { out: writeOutput(out, ""), ...result.report };'''
+
+[[mutation]]
+name = "기준본 없이도 들이면 들이기 usage 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "들이기에 웹이나 기준본이나"]
+expect = "red"
+expect_output = ['+     "kind": "input",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (web === undefined || base === undefined || out === undefined) {'''
+new = '''  if (web === undefined || out === undefined) {'''
+
+[[mutation]]
+name = "풀 수 없는 JSON 을 usage 로 내면 JSON 입력 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "JSON 으로 풀 수 없는 입력은"]
+expect = "red"
+expect_output = ['+     "kind": "usage",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    throw new CommandError("input", `${path} 를 JSON 으로 풀 수 없다: ${messageOf(error)}`);'''
+new = '''    throw new CommandError("usage", `${path} 를 JSON 으로 풀 수 없다: ${messageOf(error)}`);'''
+
+[[mutation]]
+name = "배열 답 파일을 받으면 객체가 아닌 답 파일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "객체가 아닌 답 파일은"]
+expect = "red"
+expect_output = ['+   "ok": true,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {'''
+new = '''  if (typeof parsed !== "object" || parsed === null) {'''
+
+# --- 색 변환(color.ts) ------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "4 자리 hex 를 펴지 않으면 hex 펴기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "hex 펴기는 #ABCD"]
+expect = "red"
+expect_output = ["AssertionError: expected '#abcd' to be '#aabbccdd'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  return digits.length <= 4 ? '''
+new = '''  return digits.length < 4 ? '''
+
+[[mutation]]
+name = "불투명한 투명도도 8 자리로 내면 hex 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "hex #ffffffff 는"]
+expect = "red"
+expect_output = ["AssertionError: expected '#ffffffff' to be '#ffffff'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    ...(alpha === 255 ? [] : [alpha]),'''
+new = '''    alpha,'''
+
+[[mutation]]
+name = "반 단계를 받지 않으면 sRGB 경계 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "반 단계 안쪽은"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to be '#ff0080'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  if (bytes.some((byte) => !Number.isFinite(byte) || byte < -0.5 || byte >= 255.5)) {'''
+new = '''  if (bytes.some((byte) => !Number.isFinite(byte) || byte < 0 || byte > 255)) {'''
+
+[[mutation]]
+name = "turn 을 180 도로 읽으면 각도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "0.5turn"]
+expect = "red"
+expect_output = ["AssertionError: expected '#80ff00' to be '#00ffff'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  turn: 360,'''
+new = '''  turn: 180,'''
+
+[[mutation]]
+name = "none 을 읽지 않으면 none 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "none 0 0"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to be '#000000'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''function component(text: string, percent: number, number: number): number | undefined {
+  if (text.toLowerCase() === "none") {'''
+new = '''function component(text: string, percent: number, number: number): number | undefined {
+  if (text.toLowerCase() === "never") {'''
+
+[[mutation]]
+name = "lab() 을 읽으면 다른 색 공간 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "다른 색 공간이나 읽지 못하는 값"]
+expect = "red"
+expect_output = ['AssertionError: expected { red: -36.14820082357968, …(3) } to be undefined']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''const FUNCTION = /^(rgba?|hsla?|oklab|oklch)\((.*)\)$/i;'''
+new = '''const FUNCTION = /^(rgba?|hsla?|oklab|oklch|lab)\((.*)\)$/i;'''
+
+[[mutation]]
+name = "OKLab 행렬의 계수 하나를 틀리면 빨강의 OKLCH 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "빨강의 OKLCH 는"]
+expect = "red"
+expect_output = ['AssertionError: expected 0.56833708980595 to be close to 0.627955']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,'''
+new = '''    0.2104542553 * l + 0.693617785 * m - 0.0040720468 * s,'''
+
+[[mutation]]
+name = "음수 색상을 360 안으로 옮기지 않으면 파랑 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "파랑처럼"]
+expect = "red"
+expect_output = ['AssertionError: expected -95.94797936194497 to be close to 264.052']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    hue: degrees < 0 ? degrees + 360 : degrees,'''
+new = '''    hue: degrees,'''
+
+[[mutation]]
+name = "oklch() 를 sRGB 를 거쳐 읽으면 적힌 값 그대로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "적힌 값 그대로"]
+expect = "red"
+expect_output = ['+   "lightness": 0.29999999807850475,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  if (parsed?.name === "oklch") {'''
+new = '''  if (false) {'''
+
+[[mutation]]
+name = "OKLCH 의 밝기와 채도를 자르지 않으면 적힌 값 그대로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "적힌 값 그대로"]
+expect = "red"
+expect_output = ['+   "lightness": 1.2,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    : { lightness: clamp(lightness, 0, 1), chroma: Math.max(0, chroma), hue, alpha };'''
+new = '''    : { lightness, chroma, hue, alpha };'''
+
+[[mutation]]
+name = "hsl() 의 음수 채도를 자르지 않으면 음수 채도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", 'hsl\(0 -50% 50%\)']
+expect = "red"
+expect_output = ["AssertionError: expected '#40bfbf' to be '#808080'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''      : srgb(hslToSrgb(hue, Math.max(0, saturation), light), alpha);'''
+new = '''      : srgb(hslToSrgb(hue, saturation, light), alpha);'''
+
+[[mutation]]
+name = "쉼표 꼴을 읽지 않으면 쉼표 꼴의 못 보는 것 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "쉼표 꼴에서 CSS 가 받지 않는"]
+expect = "red"
+expect_output = [
+  "AssertionError: expected undefined to be '#ff0000'",
+  "AssertionError: expected undefined to be '#00ff00'",
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  return LEGACY.has(name) && !parts.some((part) => part.toLowerCase() === "none")'''
+new = '''  return LEGACY.has(name) && parts.length < 0'''
+
+[[mutation]]
+name = "쉼표 꼴의 none 을 받으면 읽지 않는 값 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", '값 rgb\(none']
+expect = "red"
+expect_output = ['AssertionError: expected { red: +0, green: +0, blue: +0, …(1) } to be undefined']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  return LEGACY.has(name) && !parts.some((part) => part.toLowerCase() === "none")'''
+new = '''  return LEGACY.has(name)'''
+
+[[mutation]]
+name = "oklch() 의 쉼표 꼴을 받으면 읽지 않는 값 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", '값 oklch\(0\.5,']
+expect = "red"
+expect_output = ['AssertionError: expected { red: 0.5791996905788112, …(3) } to be undefined']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  return LEGACY.has(name) && !parts.some((part) => part.toLowerCase() === "none")'''
+new = '''  return !parts.some((part) => part.toLowerCase() === "none")'''
+
+[[mutation]]
+name = "공백 꼴의 값 넷을 받으면 읽지 않는 값 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", '값 rgb\(1 2 3 4\)']
+expect = "red"
+expect_output = ['AssertionError: expected { red: 0.00392156862745098, …(3) } to be undefined']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''  if (extra !== undefined || alpha === "" || parts.length !== 3) {'''
+new = '''  if (extra !== undefined || alpha === "" || parts.length < 3) {'''
+
+[[mutation]]
+name = "파랑 채널의 계수를 틀리면 §7.3 의 파랑 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "§7.3"]
+expect = "red"
+expect_output = ['AssertionError: expected 0.45678806634328517 to be close to 0.452']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''0.0514459929 * blue'''
+new = '''0.0614459929 * blue'''
+
+[[mutation]]
+name = "초록 채널의 계수를 틀리면 §7.3 의 노랑 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "§7.3"]
+expect = "red"
+expect_output = ['AssertionError: expected 0.9750078972030719 to be close to 0.968']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''0.5363325363 * green'''
+new = '''0.6363325363 * green'''
+
+[[mutation]]
+name = "밝기 제안이 어두운 쪽을 먼저 보면 밝기 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "밝기는 0.001 씩"]
+expect = "red"
+expect_output = [
+  "AssertionError: expected { steps: -1, value: '#808080' } to deeply equal { steps: 1, value: '#808080' }",
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    for (const direction of [1, -1]) {'''
+new = '''    for (const direction of [-1, 1]) {'''
+
+[[mutation]]
+name = "투명도 제안이 불투명한 쪽을 먼저 보면 투명도 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "투명도는 1/255 씩"]
+expect = "red"
+expect_output = [
+  "AssertionError: expected { steps: 1, value: '#ffffffcd' } to deeply equal { steps: -1, value: '#ffffffcb' }",
+]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''    for (const direction of [-1, 1]) {'''
+new = '''    for (const direction of [1, -1]) {'''
+
+[[mutation]]
+name = "불투명에 닿아도 8 자리로 내면 6 자리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "불투명에 닿은"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to deeply equal { steps: 1, value: '#000000' }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''      const candidate = alpha === 255 ? color : `${color}${alpha.toString(16).padStart(2, "0")}`;'''
+new = '''      const candidate = `${color}${alpha.toString(16).padStart(2, "0")}`;'''
+
+[[mutation]]
+name = "밝기 제안이 통과를 보지 않으면 지나는 값 없음 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "지나는 값이 없으면"]
+expect = "red"
+expect_output = ["AssertionError: expected { steps: 1, value: '#808080' } to be undefined"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''      if (hex !== undefined && passes(hex)) {'''
+new = '''      if (hex !== undefined) {'''
+
+[[mutation]]
+name = "투명도 제안이 통과를 보지 않으면 지나는 값 없음 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/color.test.ts", "-t", "지나는 값이 없으면"]
+expect = "red"
+expect_output = ["AssertionError: expected { steps: -1, value: '#ffffffcb' } to be undefined"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/color.ts"
+old = '''      if (passes(candidate)) {'''
+new = '''      if (candidate !== "") {'''

@@ -4,8 +4,9 @@
  *
  * - 페이지 테마는 디자인 토큰 CSS 의 테마 × 모드 둘의 벌이고 id 는 `<테마>-<모드>` 다. 테마는 CSS 에 처음 나온
  *   차례이고(기본 테마의 블록이 앞이다), 한 테마의 라이트가 다크보다 앞이다.
- * - 색은 벌마다 문서 뿌리에서 이기는 선언(`theme-css.ts`)의 값이다. hex 나 색 함수인 속성이 원색과 반투명이고, 다른
- *   색 토큰을 `var()` 로 가리키는 속성이 쓰임새 토큰이다. 길이와 글꼴 같은 다른 값의 속성(밀도, 글꼴 변수)은 내지 않는다.
+ * - 색은 벌마다 문서 뿌리에서 이기는 선언(`theme-css.ts`)의 값이다. 페이지가 색으로 읽는 값(`tokens-json.ts` 의
+ *   `colorLiteral`, hex 와 색 함수)인 속성이 원색과 반투명이고, 다른 색 토큰을 `var()` 로 가리키는 속성이 쓰임새
+ *   토큰이다. 길이와 글꼴 같은 다른 값의 속성(밀도, 글꼴 변수)은 내지 않는다.
  *   여덟 벌이 한 선언을 나누면 값은 문자열 하나이고(반투명), 아니면 벌마다 적는다(원색, 쓰임새 토큰). 차례는 원색,
  *   반투명, 쓰임새 토큰이고 그 안에서 CSS 의 차례다.
  * - 설명은 첫 벌(기본 테마의 라이트)에서 이기는 선언의 줄 끝 주석이다. 원색은 기본 테마 블록, 쓰임새 토큰은 라이트
@@ -23,8 +24,9 @@
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { CommandError, parsedArgs, readInput, writeOutput, type ReportFields } from "./command.ts";
-import { MODES, parseThemeCss, type Declaration, type Mode } from "./theme-css.ts";
+import { MODES, parseThemeCss, type Declaration, type Mode, type ThemeCss } from "./theme-css.ts";
 import {
+  colorLiteral,
   comparisonHash,
   LIMITS,
   readTokens,
@@ -51,14 +53,13 @@ export const THEME_NAMES: ReadonlyMap<string, string> = new Map([
 
 const MODE_NAMES: Readonly<Record<Mode, string>> = { light: "라이트", dark: "다크" };
 
-const LITERAL =
-  /^(?:#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch|color)\(.*\))$/i;
 const REFERENCE = /^var\(\s*--([A-Za-z0-9][A-Za-z0-9_.-]*)\s*\)$/;
 const TEXT_SIZE = /^--(text-[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*)$/;
 const SPACING = /^--(spacing-\d+)$/;
 const RADIUS = /^--(radius-[A-Za-z0-9_.-]+)$/;
 
-interface Bench {
+/** 페이지 테마 하나(벌)와 그 벌의 문서 뿌리에서 이기는 선언. */
+export interface Bench {
   readonly theme: Theme;
   readonly winners: ReadonlyMap<string, Declaration>;
 }
@@ -82,11 +83,8 @@ function checkLimit(what: string, count: number, cap: number): void {
   }
 }
 
-function benches(css: string): {
-  readonly benches: readonly Bench[];
-  readonly css: ReturnType<typeof parseThemeCss>;
-} {
-  const parsed = parseThemeCss(css);
+/** 푼 디자인 토큰 CSS 의 벌. 테마 차례이고 한 테마의 라이트가 다크보다 앞이다. 첫째가 첫 테마다. */
+export function pageThemes(parsed: ThemeCss): Bench[] {
   if (parsed.themes.length === 0) {
     throw new CommandError("input", "디자인 토큰 CSS 에 [data-theme] 테마가 없다");
   }
@@ -97,7 +95,7 @@ function benches(css: string): {
     })),
   );
   checkLimit("페이지 테마(테마 × 모드)", found.length, LIMITS.themes);
-  return { benches: found, css: parsed };
+  return found;
 }
 
 /** 모든 벌에서 색이거나 다른 색 토큰을 가리키는 속성을 색 토큰 후보로 고른다. */
@@ -107,8 +105,9 @@ function colorCandidates(found: readonly Bench[]): ColorCandidate[] {
     const declarations = found.map((bench) => bench.winners.get(property));
     const values = declarations.map((declaration): ColorValue | undefined => {
       const value = declaration?.value ?? "";
-      if (LITERAL.test(value)) {
-        return { literal: value.toLowerCase() };
+      const literal = colorLiteral(value);
+      if (literal !== undefined) {
+        return { literal };
       }
       const reference = REFERENCE.exec(value);
       return reference === null ? undefined : { reference: reference[1] ?? "" };
@@ -209,7 +208,8 @@ function family(
 
 /** 디자인 토큰 CSS 에서 tokens.json 을 짓는다. 풀 수 없으면 `input`, 한도를 넘으면 `limit` 오류다. */
 export function buildTokensFile(css: string): TokensFile {
-  const { benches: found, css: parsed } = benches(css);
+  const parsed = parseThemeCss(css);
+  const found = pageThemes(parsed);
   const color = colorTokens(found);
   checkLimit("색 토큰", color.length, LIMITS.colors);
   const sans = found[0]?.winners.get("--sans")?.value;
@@ -234,7 +234,7 @@ export function buildTokensJson(css: string): string {
 }
 
 /** 패키지의 디자인 토큰 CSS. */
-const DEFAULT_CSS = join(
+export const DEFAULT_CSS = join(
   dirname(dirname(import.meta.dirname)),
   "packages",
   "ui",

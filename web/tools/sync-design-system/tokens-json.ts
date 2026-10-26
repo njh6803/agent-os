@@ -181,14 +181,26 @@ function tokenName(value: unknown): string {
   return typeof value === "string" ? value.trim().replace(/^--/, "") : "";
 }
 
+/**
+ * 색 리터럴(hex 와 색 함수)을 페이지처럼 읽어 소문자로 낸다. 페이지가 색으로 읽지 않는 값이면 undefined 다. 짓기가 디자인
+ * 토큰 CSS 의 값을 고를 때와 맞대기가 tokens.json 을 읽을 때 같이 쓴다. 그래서 짓기는 페이지가 읽으며 버릴 값을 내지 않는다.
+ */
+export function colorLiteral(value: string): string | undefined {
+  const lower = value.trim().toLowerCase();
+  if (HEX.test(lower) || (COLOR_FUNCTION.test(lower) && !/url|var|expression/.test(lower))) {
+    return lower;
+  }
+  return undefined;
+}
+
 /** 색 값. hex 와 색 함수는 소문자, 다른 토큰을 가리키는 값은 `{이름}` 이다. 읽지 못하면 undefined. */
 function colorValue(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const lower = value.trim().toLowerCase();
-  if (HEX.test(lower) || (COLOR_FUNCTION.test(lower) && !/url|var|expression/.test(lower))) {
-    return lower;
+  const literal = colorLiteral(value);
+  if (literal !== undefined) {
+    return literal;
   }
   const alias = value.trim().replace(/^\{--/, "{");
   return ALIAS.test(alias) ? alias : undefined;
@@ -777,6 +789,76 @@ export function diffTokens(before: CanonicalTokens, after: CanonicalTokens): Tok
     diffs.push(...diffFamily(name, left, right, shared));
   }
   return diffs;
+}
+
+/** 글자 계열에서 차이가 가리키는 자리의 값. */
+function typeValueAt(type: CanonicalType, diff: TokenDiff): JsonValue {
+  const { kind, token, group, field = "" } = diff;
+  if (token !== undefined) {
+    const style = type.styles.get(token);
+    if (style === undefined) {
+      return null;
+    }
+    if (kind === "added" || kind === "removed") {
+      return styleJson(style);
+    }
+    if (kind === "usage") {
+      return style.usage;
+    }
+    const found = [...STYLE_VALUES, ...STYLE_FIELDS].find((name) => name === field);
+    return found === undefined ? null : style[found];
+  }
+  if (group !== undefined) {
+    const entry = type.groups.get(group);
+    if (entry === undefined) {
+      return null;
+    }
+    if (kind === "added" || kind === "removed") {
+      return { family: entry.family, note: entry.note };
+    }
+    return kind === "familyNote" ? entry.note : entry.family;
+  }
+  if (field === "fonts") {
+    return fontsJson(type.fonts);
+  }
+  return type.families.get(field.replace(/^families\./, "")) ?? null;
+}
+
+/**
+ * 차이 하나가 가리키는 자리(계열, 토큰, 벌, 글자 묶음, 칸)의 값을 다른 벌에서 읽는다. 꼴은 차이의 `before`·`after` 와
+ * 같다. 그래서 `diffTokens(a, b)` 의 차이마다 `valueAt(a, 차이)` 는 그 `before`, `valueAt(b, 차이)` 는 그 `after` 다.
+ * 자리가 없으면(토큰이나 계열이 없다) null 이다. 차이의 종류가 꼴을 정한다. 더하거나 지운 것은 그 토큰·묶음·계열 전체,
+ * 값과 설명과 칸은 그 칸 하나다.
+ */
+export function valueAt(tokens: CanonicalTokens, diff: TokenDiff): JsonValue {
+  const { kind, family: name, token, theme } = diff;
+  if (name === "type") {
+    return typeValueAt(tokens.type, diff);
+  }
+  if (token === undefined && theme !== undefined) {
+    return tokens.themes.includes(theme) ? theme : null;
+  }
+  const family = tokens.families.get(name);
+  if (family === undefined) {
+    return null;
+  }
+  if (token === undefined) {
+    return kind === "familyNote" ? family.note : familyJson(family);
+  }
+  const found = family.tokens.get(token);
+  if (found === undefined) {
+    return null;
+  }
+  if (kind === "added" || kind === "removed") {
+    return tokenJson(found);
+  }
+  if (kind === "usage") {
+    return found.usage;
+  }
+  if (theme === undefined || typeof found.value === "string") {
+    return valueJson(found.value);
+  }
+  return found.value.get(theme) ?? null;
 }
 
 /** 맞대는 몫을 정규 꼴로 적은 JSON. 키와 목록의 차례가 정해져 있다. */
