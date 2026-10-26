@@ -1,0 +1,274 @@
+# 2026-10-26 (17) 사진 비교가 몇 픽셀 차이로 흔들리는 원인을 재서 고친다 (harness 016)
+
+## 사용자 프롬프트
+
+> 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (next-session 지시문. 나란히 여는 여덟 가운데 일곱째이고, 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(016-visual-focus-flake)로 들어가 브랜치를 바꾼다. 브랜치 chore/016-visual-focus-flake, 범위는 PR과 병합까지. 처방은 "포커스 링 전환을 찍는 시점을 재서 찍기 전 대기로 고친다")
+
+> 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (아래 "인계" 절의 지시문으로 연 둘째 세션. `git worktree list`에서 찾은 이 워크트리에 EnterWorktree(path)로 들어가 셀프 리뷰부터 잇는다. 범위는 PR과 병합까지)
+
+> 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (아래 "인계 (커밋 뒤)" 절의 지시문으로 연 셋째 세션. 같은 워크트리에 EnterWorktree(path)로 들어가 바뀐 정답의 까닭 재기부터 잇는다. 범위는 PR과 병합까지)
+
+> 사용자: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다 (아래 "인계 (셀프 리뷰 직전, 셋째 세션)" 절의 지시문으로 연 넷째 세션. 같은 워크트리에 EnterWorktree(path)로 들어가 셀프 리뷰(기점 90a89c13)부터 잇는다. 범위는 PR과 병합까지)
+
+## 결정
+
+- **고침은 찍기 전 대기가 아니라 브라우저 실행 인자 `--disable-partial-raster`다.** 대기열 414와 지시문은 원인을 포커스 링 전환의 찍는 시점으로 보고 찍기 전 대기를 처방했다. 재 보니 흔들린 그림은 크롬의 부분 래스터가 낸 그림과 타일 전체를 다시 그린 그림 둘 가운데 하나였고, 어느 쪽이 찍히는지가 시점에 달렸다(아래 "진단"). 글 입력의 올림은 기다려도 부분 래스터의 그림 그대로라 대기로는 고쳐지지 않는다. 문턱을 넓히지 않는다는 행의 선은 지켰다.
+- **인자는 `@agent-os/ui/visual`의 `BROWSER_ARGS` 한 자리에 두고 패키지와 위젯의 설정이 함께 쓴다.** 두 설정은 "같은 조건"이고, 한쪽만 바뀌면 다시 흔들린다.
+- **설정이 인자를 넘기는지는 사진이 아니라 브라우저의 명령줄로 본다.** 인자를 빼면 패키지의 스위치 포커스 사진은 빨갛지만, 위젯의 화면 사진은 인자 없이 세 번 돌려도 초록이었다. 그래서 두 사진 비교에 브라우저가 받은 명령줄(CDP `SystemInfo.getInfo`)에 `BROWSER_ARGS`가 모두 있는지 보는 시험을 하나씩 두었다(`missingBrowserArgs`). 사진은 회차에 따라 달라도 명령줄은 늘 같다.
+- **ADR 0026의 이력은 두지 않는다.** 정답 사진은 한 벌이고 고정한 이미지 안에서만 찍는다는 결정은 그대로이고, 인자는 그 결정 안에서 결정성을 지키는 구현 세부다.
+- **정답 사진은 `--update-snapshots=all`로 전부 다시 쓴다.** `visual:update`(`changed`)는 비교가 실패한 사진만 다시 쓰는데, pixelmatch가 갈린 픽셀을 모두 안티에일리어싱으로 보아 빼면 비교가 통과해 옛 바이트가 남는다(여러 줄 글 입력의 라이트 올림이 그랬다). 그러면 정답이 "이 인자로 찍은 그림"이라는 말이 사진마다 참이 아니다. 픽셀이 같은 사진은 다시 써도 바이트가 그대로라 diff에 들지 않았다.
+
+## 진단
+
+흔들린 세 번(웹 코드를 건드리지 않은 PR의 `visual` 잡)의 아티팩트를 받아 `ci_diff.mjs`로 풀었다. 세 사진 모두 갈린 픽셀이 둥근 모서리에서 테두리와 바탕 사이의 중간색으로 칠한 픽셀 몇 개였고(알파는 모두 255) 채널 차가 1~3이었다. 실패 머리의 N(1, 3, 6)은 차이 그림의 빨강 수와 같았고, 노랑(pixelmatch가 안티에일리어싱으로 보아 뺀 픽셀)까지 더하면 디코더가 센 갈린 자리와 같았다. 첫 판은 N과 디코더 수를 바로 맞대 셋 다 어긋났다(1·2, 3·29, 6·17).
+
+그다음 같은 이미지에서 세 사진의 스토리를 프로브(`flake.probe.mts`)로 되풀이해 찍었다. 찍은 바이트를 옛 정답과 맞대 같으면 A, 다르면 B로 갈랐다.
+
+- 인자 없이(지금의 설정) 알림은 곧바로 찍으면 거의 늘 A였고(88번 중 87번. 첫 실행 `flake-smoke`에서 한 번 B. 결과 줄이 16/36에서 끊긴 판 `flake-final-before`의 8번은 세지 않는다) 1.5초 기다려 찍으면 늘 B였다. 한 페이지에서 차례로 찍으면 0~100ms는 대체로 A, 200~400ms 사이에 B로 넘어가 3200ms까지 B였다. 창을 정답 폭(496px)으로 열면 기다려도 A였지만(창 밖 띠의 가설) 곧바로 찍으면 사진마다 12번 중 1~2번 B였고, 애니메이션 프레임 둘을 기다려도 A였다.
+- 글 입력과 스위치는 인자 없이 곧바로 찍든 기다려 찍든 늘 A였다. 그런데 CI에서는 그 둘도 B가 찍혔다.
+- 컨테이너의 chromium은 GPU 없이 소프트웨어로 래스터한다(`SystemInfo.getInfo`의 `rasterization: disabled_software`). 크롬은 바뀐 영역만 다시 그리는 부분 래스터를 켜 두는데, 부분 래스터로 그린 타일과 타일 전체를 그린 타일이 가장자리의 중간색 픽셀에서 반올림이 갈릴 수 있다는 가설을 세웠다.
+- `--disable-partial-raster`를 주자 알림은 곧바로 찍든 기다려 찍든 B, 글 입력의 올림과 스위치의 포커스도 B였다(글 입력의 포커스와 스위치의 올림은 A 그대로). 인자를 준 갈래는 찍는 때에 따라 갈리지 않았다.
+- 양성 대조: CI가 올린 실제 그림 셋의 sha256이 인자를 준 갈래가 찍은 사진과 바이트까지 같았다. CI에서 흔들린 그림은 타일 전체를 그린 그림이다. 왜 그 회차에 전체를 그렸는지(기계의 부하, 타일 작업의 순서)는 재지 않았고 어림이다.
+
+그래서 흔들림은 "포커스 링 전환을 찍는 시점"이 아니라 "부분 래스터 그림과 전체 그림 가운데 어느 쪽이 찍히느냐"였다. 찍기 전 대기는 알림만 B로 옮기고 글 입력·스위치는 A에 남겨, 다른 쪽으로 흔들릴 자리를 남긴다. 인자로 부분 래스터를 끄면 그림이 하나뿐이다. 최종 측정의 수는 `.scratch/harness/probes/README.md`의 `visual_flake/` 행이 적는다.
+
+## 한 것
+
+- `web/packages/ui/visual/index.ts`에 `BROWSER_ARGS`(`--disable-partial-raster`)를 두고 패키지와 위젯의 `visual/playwright.config.ts`가 `launchOptions.args`로 쓴다. 문턱(`maxDiffPixels: 0`, `threshold: 0`)은 그대로다.
+- 같은 파일에 `missingBrowserArgs(browser)`를 두고, 패키지의 `storybook.visual.ts`와 위젯의 `stories.visual.ts`에 "브라우저가 사진 비교의 실행 인자를 모두 받고 떠 있다"를 하나씩 더했다.
+- 정답 사진을 그 인자로 컨테이너 안에서 전부 다시 썼다. 패키지 422장 가운데 70장, 위젯 75장 가운데 6장의 픽셀이 바뀌었고 바이트만 바뀐 사진은 없었다(`changed_baselines.mjs`). 바뀐 것은 버튼·아이콘 버튼의 포커스 링(1픽셀)과 누름 바탕, 버튼 모음(`atoms-button--showcase-admin-actions`), 알림, 스위치의 포커스, 글 입력의 올림, 글 입력의 오류 아이콘, 위젯의 대화 화면이다. 오류 아이콘만 채널 차가 45(다크)·46(라이트)이었고(느낌표 획의 세로 한 줄 6픽셀) 나머지는 1~5였다.
+- 프로브 `.scratch/harness/probes/visual_flake/`(CI 아티팩트 풀기, 컨테이너 안의 되풀이 찍기, 바이트 맞대기, 바뀐 정답 세기)와 변이 표 `visual_flake_mutations.toml`을 커밋했다.
+
+## 검사
+
+- 결정성: 인자를 켠 설정으로 정답을 `--update-snapshots=all`로 두 번 전부 다시 썼다. 두 번째 실행은 다시 쓴 사진이 0장이었고, 첫 번째 결과의 사본과 `diff -rq`로 패키지 422장, 위젯 75장이 바이트까지 같았다. 두 번째 실행의 알림 시험 넷이 30초 시간 초과로 끝나 알림만(`-g molecules-alert--`) 한 번 더 다시 써서 0장, 바이트까지 같은 것을 봤다. `--update-snapshots=all`은 바이트가 다른 사진만 다시 쓰고 알린다(첫 실행의 알림 47장이 `changed_baselines.mjs`의 수와 맞았다). 비교 모드는 pixelmatch가 안티에일리어싱으로 보는 픽셀을 빼서 흔들려도 지날 수 있어, 결정성은 이 바이트 대조로 봤다.
+- 시간 초과는 그 시각의 기계 부하로 본다. 같은 실행에서 60~72번 시험이 줄줄이 느려졌고(알림 밖의 시험 포함), 첫 실행에서는 27~31번이 그랬다. 인자를 켠 비교 모드 실행에서 알림 시험은 5~7초였다. 나란히 여는 여덟 세션이 함께 돌던 때다. 인자가 CI의 시간을 늘리는지는 PR의 `visual` 잡을 main의 직전 실행과 맞대 본다.
+- 변이(`visual_flake_mutations.toml`): 셋 모두 기대대로 빨강이었다. `BROWSER_ARGS`를 비우면 스위치 포커스의 사진이, 패키지와 위젯의 설정이 `args: []`를 넘기면 각자의 실행 인자 시험이 빨갰다. 표지는 손으로 변이를 넣어 실패 출력을 본 뒤 `Received` 차이 줄(`+   "--disable-partial-raster",`)로 골랐다. 시험 코드 조각에는 인자의 글자가 없다. 표의 첫 판은 위젯 대화 화면의 사진 변이를 두었는데 초록이라 어긋났다. 인자를 비운 작업 트리에서 `-g pages-widgetscreen--`로 고른 19개 시험을 세 번 더 돌려도 모두 통과해, 그 변이를 빼고 설정 변이로 바꿨다(이 PC에서 본 것이다. 기점의 CI는 인자 없이 옛 위젯 정답으로 초록이었고, 옛 정답은 새 정답과 3~21픽셀이 달라 CI의 인자 없는 그림은 이 PC의 것과 갈린다. 명세 축 리뷰가 커밋하지 않은 스크래치 스크립트로 Playwright의 비교기에 대 본 수이고 이 세션이 다시 돌려 같았다).
+
+## 인계 (셀프 리뷰 직전)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 셀프 리뷰 직전에 와서(`hook_handoff`) 넘긴다. 이 세션의 제목은 `chore/016-visual-focus-flake`이고 넘기며 `chore/016-visual-focus-flake (인계함)`으로 바꾼다. 아무것도 커밋하지 않았다.
+
+이 세션이 번복하거나 고친 것:
+
+- 대기열 414와 지시문의 처방(찍기 전 대기)을 번복했다(위 "결정"과 "진단").
+- 정답 다시 쓰기를 `visual:update`(`changed`)에서 `--update-snapshots=all`로 바꿨다(위 "결정"). `changed`로 한 번 다시 쓴 뒤 안티에일리어싱으로만 갈린 사진이 옛 바이트로 남은 것을 보고 바꿨다.
+- 변이 표의 첫 판에 둔 위젯 대화 화면의 사진 변이가 초록이라, 그것을 빼고 실행 인자 시험(`missingBrowserArgs`)과 두 설정의 변이로 바꿨다(위 "검사"). `index.ts` 주석의 "인자를 빼면 그 사진들이 늘 빨갛다"도 그에 맞게 고쳤다.
+
+남은 일(차례대로):
+
+1. 셀프 리뷰(`/code-review`, 기점 `origin/main`, 티켓 `.scratch/harness/issues/016-visual-focus-flake.md`)와 반영. 미추적 파일이 많다(프로브 폴더, 변이 표, 티켓, 일지).
+2. 검증 명령 전부(`CLAUDE.md`). 사진 비교 둘은 이미 이 판에서 초록이었지만 리뷰 반영 뒤에 다시 친다.
+3. 커밋. 그 뒤 최종 프로브 두 판을 돈다. 고치기 전은 `--browser-args none --baseline 92b61458`, 고친 뒤는 `--browser-args config --baseline HEAD`이고, 둘 다 `--reps 4 --cases alert,textfield,switch --conditions now,wait,timeline`(이 세션이 고치기 전 판을 7/37에서 인계로 멈췄다). 출력 폴더는 저장소 밖 절대 경로로 준다. 이어 `same_bytes.mjs <CI 폴더> --baseline HEAD <두 출력 폴더>`와 `ci_diff.mjs <CI 폴더>`.
+4. `.scratch/harness/probes/README.md`에 행 둘(`visual_flake/`, `visual_flake_mutations.toml`). 근거의 종류, 이미지 판(chromium headless shell 153.0.8010.12), 날짜, 결과의 수를 적는다. 변이 표의 2026-10-26 결과는 셋 모두 기대대로 빨강이다.
+5. 티켓의 수용 기준 체크와 Status `done`, 대기열 414 행 닫기(`**닫힘 (.scratch/harness/issues/016-visual-focus-flake.md, …)**`).
+6. PR. 본문의 바뀐 사진 목록은 `node .scratch/harness/probes/visual_flake/changed_baselines.mjs 92b61458`의 출력이다(패키지 70장, 위젯 6장). PR의 `visual` 잡에서 알림 시험의 걸린 시간을 main의 직전 실행과 맞대 본다(위 "검사"의 시간 초과). 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다.
+
+이 세션만 아는 것: 흔들린 세 실행(`39725276747`, `39786765789`, `39941987396`)의 아티팩트를 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/8a058eeb-cbf3-4b50-930c-96c245c3b5dc/scratchpad/ci/`(r1·r2·r3)에 풀어 두었다. 없어졌으면 `gh run download <실행> -D <새 빈 폴더>`로 다시 받는다. 같은 스크래치패드에 앞선 탐색 실행의 출력(`flake-*`)과 두 번 다시 쓴 정답의 첫 사본(`ref-ui-1`, `ref-widget-1`)이 있다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/016-visual-focus-flake.md. 사진 비교가 몇 픽셀 차이로 흔들리는 원인(크롬의 부분 래스터)을 재서 브라우저 실행 인자와 다시 만든 정답으로 고친다(대기열 414)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다
+브랜치: chore/016-visual-focus-flake
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-17-visual-focus-flake.md 의 "인계 (셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 남은 단계, 멈춘 프로브, CI 아티팩트의 자리는 일지의 "인계 (셀프 리뷰 직전)" 절이다. docs/journal/2026-10-26-17-visual-focus-flake.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(세션에 실리는 스킬은 세션을 시작한 체크아웃의 사본이다)
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기: 제목을 바꿨고, 고치기 전 프로브를 멈춘 뒤 그 실행이 남긴 컨테이너(마운트 `/out`이 `flake-final-before`인 것을 보고)를 `docker stop`으로 껐다. 그 실행이 Playwright를 복사한 임시 폴더 `C:/Users/User/AppData/Local/Temp/visual-flake-nwxFqI`가 남았을 수 있다. 워크트리 잠금을 풀었다.
+
+open-session을 부른다 2026-10-26T09:56:36Z
+
+## 셀프 리뷰 (둘째 세션)
+
+이어받은 세션이 `/code-review`를 돌렸다. 기점 `92b61458`, 바뀐 텍스트 파일 6과 사진 76, 커밋 0, 미추적 11. 앞 세션이 남긴 임시 폴더(`visual-flake-nwxFqI`)는 이미 없었고 사진 비교 컨테이너도 돌지 않았다.
+
+표준 축(sonnet, high):
+
+- Major: 코드 주석과 변이 표가 프로브를 근거로 드는데 README 행이 없다. → 고친다. 남은 단계 4이고 최종 프로브 두 판 뒤에 쓴다.
+- Major: 정답을 다시 만드는 `visual:update`가 `--update-snapshots=changed`라, 이 세션이 밟은 함정(안티에일리어싱으로만 갈린 사진이 옛 바이트로 남는다)을 다음 사람이 다시 밟는다. → 남긴다. 대기열 215(사용자 승인 2026-10-13)가 그 고침(`--update`를 `all`로, 그 시험, "픽셀까지 비교" 문장, ADR 0026 이력)을 이미 든다. 이 PR은 `all`로 직접 다시 썼고, 215의 2회차로 그 행에 센다.
+- Minor: "오류 아이콘만 채널 차가 45"는 다크 45, 라이트 46이다. → 고친다.
+- Minor: 위젯 화면을 인자 없이 돌린 횟수가 `index.ts`는 세 번, 변이 표는 네 번이다. → 고친다. 네 번(화면 스토리 19개를 세 번, 첫 판 변이 한 번)이고 이 PC에서 손으로 돌린 것이다.
+- 판단: 인과 서술이 잰 것보다 앞선다(CI의 그 회차가 왜 전체 그림을 찍었는지는 어림). → 고친다. `BROWSER_ARGS` 주석에 재지 않았다는 구절을 둔다. 프로브의 `now` 갈래가 `toHaveScreenshot`의 경로가 아니라는 지적은 남긴다. 그 갈래는 두 그림을 끌어내려는 것이고, 실제 경로의 결정성은 `toHaveScreenshot`으로 정답을 두 번 다시 쓴 바이트 대조(위 "검사")가 본다.
+- Nit: `index.ts` 머리 주석이 브라우저 인자를 말하지 않는다. → 고친다.
+- Nit: 두 실행 인자 시험의 본문이 같다. → 남긴다. 두 사진 비교가 각자의 설정으로 브라우저를 띄워 시험도 각자 둔다. 함수는 함께 쓴다.
+- Nit: `BROWSER_ARGS`를 비우면 실행 인자 시험이 헛돈다. → 남긴다. 그 변이는 패키지의 사진이 잡고(변이 표 첫 변이), 시험이 인자의 글자를 다시 적으면 같은 사실이 두 자리에 선다.
+- Nit: `run.mjs`가 `meta.json`이 없거나 명령줄이 요청한 인자와 다른 실행도 측정으로 센다. → 고친다(`.claude/rules/probes.md` 첫 항목).
+- Nit: `png.mjs`의 `const path = label;` 별칭. → 고친다.
+
+명세 축(Opus, 상속):
+
+- Minor: "인자를 빼면 빨갛다·빼도 초록"이 이 PC에서 본 것인데 늘 그런 일처럼 적혔다. 옛 위젯 정답 6장은 새 정답과 안티에일리어싱을 빼고도 3~21픽셀이 달라, 인자 없이 옛 정답으로 초록이던 기점의 CI(`40279175497`)와 이 PC의 인자 없는 그림이 갈린다. CI r1의 실제 그림(인자 없이 찍힘)도 새 스위치 포커스 정답과 바이트까지 같다. → 고친다. `index.ts`, 위젯 시험 주석, 티켓 기준 3의 괄호, 변이 표 머리를 "이 PC에서"로 좁힌다.
+- Minor: 바뀐 76장의 까닭을 재는 단계가 없다(오류 아이콘 4장과 버튼 모음 4장은 일지의 분류에도 없다). → 고친다. 커밋 뒤 인자 없이 정답을 전부 다시 써 옛 정답과 대 보는 판을 더하고, 일지의 분류에 버튼 모음을 더한다.
+- Minor: 패키지 설정의 "픽셀 하나, 색 차이 하나도 허용하지 않는다"와 `web/tools/visual.ts`의 "`--update` 는 정답과 다른 사진과 없는 사진만 다시 쓴다"가 이 PR의 측정으로 거짓임이 드러난다. → 남긴다. 둘 다 대기열 215의 몫이다. 뒤의 것은 215의 `--update` 고침이 맡고, 앞의 것은 215의 문장 목록에 없어 그 행에 더한다.
+- Nit: 채널 차 45·46(위와 같다), 갈린 픽셀은 알파 255라 "반투명 픽셀"이 아니다, "화면 스토리 셋…19개"의 "셋"이 개수로 읽힌다, `missingBrowserArgs` 주석의 `meta.json`은 커밋된 파일이 아니라 `run.mjs`의 출력이다, 정답 폭 창에서 곧바로 찍은 갈래(`wide`)의 B가 일지에서 빠졌다. → 모두 고친다. 앞 세션의 탐색 출력을 다시 세어 보니 `wide`는 사진마다 12번 중 1~2번 B(넷을 합쳐 48번 중 6번)였고, 인자 없이 곧바로 찍은 알림도 첫 실행(`flake-smoke`)에서 8번 중 1번 B였다. 이 둘도 고친다. 갈린 픽셀의 알파는 `ci_diff.log`의 세 짝 48픽셀 모두 255였다.
+
+고친 것: 위 "고친다" 전부(실행 인자를 다시 재는 판과 README 행은 커밋 뒤). 남긴 것: 대기열 215의 몫 둘(갱신 모드, 설정과 도구의 문장)과 Nit 셋(시험 본문, 헛도는 변이, 프로브의 `now` 갈래), 까닭은 위 줄마다. 대기열 215 행에 2회차와 설정의 문장을 더했다.
+
+PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 문장):
+
+- `index.ts`: "그 회차가 왜 부분 래스터를 거치지 않은 그림을 찍었는지는 재지 않았다", "이 PC 에서 인자를 빼면 스위치의 포커스 같은 사진이 빨갰다", "위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 네 번, 변이 표 머리)", "둥근 모서리의 중간색 픽셀 몇 개(채널마다 1~3)"
+- `visual_flake_mutations.toml` 머리: "CI 에서는 켠 채로도 새 정답의 그림이 찍힌 회차가 있어(흔들린 첫 실행의 실제 그림)", "`-g pages-widgetscreen--` 로 고른 19개 시험을 세 번 돌렸고 … 이 PC 에서 네 번 모두 초록이었다"
+- 이 일지의 "진단"·"한 것"·"검사": "96번 중 95번. 첫 실행 `flake-smoke`에서 한 번 B", "곧바로 찍으면 사진마다 12번 중 1~2번 B", "알파는 모두 255", "채널 차가 45(다크)·46(라이트)", "옛 정답은 새 정답과 3~21픽셀이 달라"
+- 티켓 Comments: "중간색으로 칠한 불투명 픽셀(알파 255)"
+- `run.mjs` 머리와 표지: 명령줄이 없거나 요청과 다르면 결과 전부를 측정 아님으로 센다. `config`는 패키지 설정의 `BROWSER_ARGS`가 그 인자를 든다고 본다
+- 대기열 215: 2회차와 설정의 문장
+
+반영 뒤 검증: ruff 둘 초록. `tools/run_checks.py`는 pytest 하나로 빨갰다(1 failed, 5589 passed, 536.07초. 나머지 아홉 검사는 통과, web-verify 520.0초). 빨간 것은 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`이고 자식 파이썬이 `drain(0.5)` 안에 한 줄도 내지 못해 `assert lines`가 빈 목록이었다. 이 브랜치는 파이썬을 건드리지 않았다. 같은 시험이 같은 꼴로 빨간 것은 일지 2026-10-22-21, 2026-10-23-14, 2026-10-23-27에 이어 넷째이고 대기열에 행이 없다. 회고 후보로 둔다. 그 시험만 단독으로 치자 1 passed였다(209.97초). `pnpm -C web visual`은 108 passed, 1 failed(17.6분)였고, 빨간 것은 `molecules-textfield--single`의 사진 시험이 `page.goto`에서 30초 시간 초과로 끝난 것이다(사진 차이가 아니다). 그 시험만 `-g`로 다시 치자 1 passed(5.8초)였다. `pnpm -C web visual:widget`은 43 passed(2.0분)였다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다. 위젯 e2e와 `-m llm_widget`은 치지 않았다. 바꾼 것은 위젯의 사진 비교 설정과 정답이고 위젯 앱·api-client·서버 경로는 아니다.
+
+커밋 `90a89c13`(`chore: 사진 비교가 부분 래스터를 끄고 그 인자로 다시 만든 정답과 맞댄다 (harness 016)`, 95 files). pre-commit은 모두 통과했다(pytest 457.0초, web-verify 466.5초, 변이 표·마크다운 표·줄 구분 문자·인용·커밋 메시지 통과). ruff 둘은 `.py`가 없어 Skipped였고 위에서 손으로 친 결과가 초록이다.
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤에 와서(`hook_handoff`) 넘긴다. 이 세션의 제목은 `chore/016-visual-focus-flake`이고 넘기며 `chore/016-visual-focus-flake (인계함)`으로 바꾼다. 푸시하지 않았고 PR은 없다.
+
+이 세션이 번복하거나 고친 것: 위 "셀프 리뷰 (둘째 세션)"의 "고친다" 전부. 앞 세션의 일지 서술 가운데 "곧바로 찍으면 늘 A"(96번 중 95번이었다), "정답 폭으로 열면 기다려도 A"(곧바로 찍으면 사진마다 12번 중 1~2번 B였다), "반투명 픽셀"(알파 255였다), "채널 차가 45"(45·46)를 고쳤다. 인계 지시문의 남은 일 3에 바뀐 76장의 까닭을 재는 판(아래 1)을 더했다.
+
+남은 일(차례대로):
+
+1. 바뀐 정답의 까닭 재기(명세 축 Minor). 두 설정(`web/packages/ui/visual/playwright.config.ts`, `web/apps/widget/visual/playwright.config.ts`)의 `launchOptions: { args: [...BROWSER_ARGS] },`를 Edit로 `launchOptions: { args: [] },`로 바꾸고, `pnpm -C web visual --update-snapshots=all`과 `pnpm -C web visual:widget --update-snapshots=all`을 차례로 백그라운드로 쳐 출력을 저장소 밖 파일 둘에 받는다(이 세션의 비교 모드 실행은 패키지 17.6분, 위젯 2.0분이었다). 두 정답 폴더를 저장소 밖 폴더 `<그림 폴더>/web/packages/ui/visual/snapshots`, `<그림 폴더>/web/apps/widget/visual/snapshots`로 복사하고, `git checkout -- web/packages/ui/visual web/apps/widget/visual`로 되돌린 뒤 `git status`가 깨끗한지 본다. 그다음 `node .scratch/harness/probes/visual_flake/attribution.mjs 92b61458 90a89c13 <그림 폴더> <패키지 기록> <위젯 기록>`. 각 기록에서 실패는 실행 인자 시험 하나여야 하고(그것이 인자 없이 떴다는 표지다), 시간 초과가 섞이면 그 기록이 측정 아님이 되니 그 판을 다시 돈다. 결과의 세 갈래 수를 PR 본문의 "까닭"과 README 행에 적는다.
+2. 최종 프로브 두 판(앞 세션이 고치기 전 판을 7/37에서 멈췄다). 1에서 설정을 되돌린 뒤에 돈다. 정적 빌드가 있어야 한다(`pnpm -C web visual`이 짓는다). 고치기 전은 `node .scratch/harness/probes/visual_flake/run.mjs --out <저장소 밖 절대 경로 A> --browser-args none --baseline 92b61458 --reps 4 --cases alert,textfield,switch --conditions now,wait,timeline`, 고친 뒤는 `--out <B> --browser-args config --baseline 90a89c13`에 나머지 같은 인자. 러너는 이제 명령줄이 요청과 다르면 측정 아님으로 센다(`argsMatched`). 이어 `node .scratch/harness/probes/visual_flake/same_bytes.mjs <CI 폴더> --baseline 90a89c13 <A> <B>`와 `node .scratch/harness/probes/visual_flake/ci_diff.mjs <CI 폴더>`.
+3. `.scratch/harness/probes/README.md`에 행 둘(`visual_flake/`, `visual_flake_mutations.toml`). 표의 열은 파일, 재는 것, 근거로 드는 자리, 다시 돌 때다. 근거의 종류, 이미지 판(chromium headless shell 153.0.8010.12), 날짜, 결과의 수(1과 2, 앞 세션의 탐색 실행 수는 위 "진단")를 적는다. 변이 표의 2026-10-26 결과는 셋 모두 기대대로 빨강이다. `visual_flake/`의 파일은 `ci_diff.mjs`, `png.mjs`, `run.mjs`·`probe.config.mts`·`flake.probe.mts`, `same_bytes.mjs`, `changed_baselines.mjs`, `attribution.mjs`, `sizes.mjs`(창보다 큰 정답 사진을 센다)다.
+4. 티켓의 수용 기준 체크와 Status `done`, 대기열 414 행 닫기(`**닫힘 (.scratch/harness/issues/016-visual-focus-flake.md, …)**`).
+5. 둘째 커밋. 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(이 세션이 볼 때 일지 08~10을 쓴 형제가 넷 있었다. 먼저 병합되면 이 일지 번호를 옮긴다).
+6. 푸시와 PR. 본문의 바뀐 사진 목록은 `node .scratch/harness/probes/visual_flake/changed_baselines.mjs 92b61458`의 출력(패키지 70장, 위젯 6장)이고 까닭은 1의 결과다. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 브리프에 위 "PR 직전 리뷰에 밀 주장"을 나열한다. PR의 `visual` 잡에서 두 사진 비교 단계의 걸린 시간을 main의 직전 실행(`40279175497`: 패키지 3분 18초, 위젯 53초)과 맞대 본다.
+7. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다.
+
+이 세션만 아는 것: 흔들린 세 실행의 아티팩트는 여전히 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/8a058eeb-cbf3-4b50-930c-96c245c3b5dc/scratchpad/ci/`(r1·r2·r3)에 있다. 앞 세션의 탐색 출력(`flake-*`)도 같은 스크래치패드에 있고, 갈래별 수는 이 세션의 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/f519b5fe-5550-4ba7-8295-b168cb61137a/scratchpad/wide_counts.cjs <그 스크래치패드>`가 찍는다. 명세 축이 옛·새 정답을 Playwright 비교기로 대 본 스크립트는 같은 스크래치패드의 `aa_check.cjs`다. 회고 후보: `test_probe_kit.py`의 배출 시험 흔들림 넷째(위 "반영 뒤 검증"), 대기열 215 2회차(행에 셌다).
+
+인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/016-visual-focus-flake.md. 사진 비교가 몇 픽셀 차이로 흔들리는 원인(크롬의 부분 래스터)을 재서 브라우저 실행 인자와 다시 만든 정답으로 고친다(대기열 414)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다
+브랜치: chore/016-visual-focus-flake
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-17-visual-focus-flake.md 의 "셀프 리뷰 (둘째 세션)" 절과 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 90a89c13으로 커밋했고 푸시와 PR은 아직이다. 남은 단계(바뀐 정답의 까닭 재기, 최종 프로브 두 판, 프로브 README 행, 티켓과 대기열 닫기, 둘째 커밋, PR, 병합)와 CI 아티팩트의 자리는 일지의 "인계 (커밋 뒤)" 절이다. docs/journal/2026-10-26-17-visual-focus-flake.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(세션에 실리는 스킬은 세션을 시작한 체크아웃의 사본이다)
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기: 제목을 `chore/016-visual-focus-flake (인계함)`으로 바꿨다. 도는 백그라운드 작업은 없었다(리뷰 서브에이전트 둘과 검증·커밋 명령은 모두 끝났다). 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T11:28:16Z
+
+## 셋째 세션
+
+제목을 `chore/016-visual-focus-flake`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 EnterWorktree(path)로 들어왔다. 그사이 origin/main이 `9805a5a7`(#389, harness 013, 파이썬 쪽)로 한 커밋 움직였다.
+
+### 바뀐 정답의 까닭
+
+두 설정의 `launchOptions`를 `{ args: [] }`로 바꾸고 `pnpm -C web visual --update-snapshots=all`(108 passed, 1 failed, 9.2분)과 `pnpm -C web visual:widget --update-snapshots=all`(42 passed, 1 failed, 1.4분)을 차례로 쳤다. 두 기록 모두 실패는 실행 인자 시험 하나이고 그 Received 차이 줄이 `+   "--disable-partial-raster",`였다(브라우저가 인자 없이 떴다는 표지). 시간 초과는 없었다. 두 정답 폴더를 저장소 밖에 복사하고 `git checkout -- web/packages/ui/visual web/apps/widget/visual`로 되돌렸다. `git status`에는 이 일지만 남았다.
+
+`attribution.mjs 92b61458 90a89c13 <그림 폴더> <두 기록>`(종료 0, 측정 아님 0): 바뀐 76장이 모두 "옛 정답과 같다"였다(새 정답과 같다 0, 둘 다 아니다 0). 바뀌지 않은 정답과 인자 없는 그림이 다른 사진도 0이었다. 그래서 76장은 이 PC에서 인자가 그 그림을 바꾼 것이고, 인자 밖의 까닭으로 바뀐 사진은 없다.
+
+이 판에서 위젯 화면 6장도 인자 없이 옛 정답의 그림으로 찍혔다. 앞 세션이 `index.ts` 주석에 적은 "위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 네 번, 변이 표 머리)"와 어긋난다. 그 네 번은 `BROWSER_ARGS`를 비운 뒤 `-g pages-widgetscreen--`로 화면 시험만 골라 돌린 판이라 실행 인자 시험이 돌지 않았고, 브라우저가 인자 없이 떴는지 보는 표지가 없었다. 가르려고 위젯 설정만 `args: []`로 바꿔 비교 모드를 두 번 돌렸다. 두 번 모두 42 passed, 1 failed(2.4분, 2.9분)였고 실패는 실행 인자 시험 하나였다. 표지가 있는 판에서도 화면 시험 19개(정답 35장)는 정답과 맞았다. 그 뒤 설정을 `git checkout`으로 되돌렸다.
+
+두 모드가 갈린 까닭은 Playwright의 반복에 있다고 본다. 설치본 1.63.0의 `toHaveScreenshot`은 `all` 모드에서 정답을 넘기지 않고(`expectScreenshotOptions.expected = helper.updateSnapshots === "all" ? void 0 : expected`), 서버 쪽 `expectScreenshot`은 정답이 있으면 첫 사진을 정답과 맞대 같으면 곧바로 끝내고, 첫 사진이 다르거나 정답이 없으면 잇단 두 사진이 같을 때까지 0·100·250·500ms, 그 뒤로는 1000ms씩 쉬며 찍고, 정답이 있으면 그 안정된 사진을 다시 정답과 맞댄다(`playwright/lib/matchers/expect.js`, `playwright-core/lib/coreBundle.js`를 읽었다). 그래서 인자 없는 위젯은 첫 사진이 새 정답의 그림이라 비교를 지나고, 안정된 사진은 옛 그림이라 다시 쓰는 판에 옛 그림이 남았다고 어림한다. 첫 사진이 달랐다면 안정된 옛 그림을 새 정답과 맞대 빨갰을 것이다. 사진의 차례는 재지 않았다. 고친 것: 변이 표 머리의 위젯 문장을 표지가 있는 두 번으로 바꿨다. `index.ts` 주석의 "손으로 네 번"은 최종 프로브가 그 파일을 들이는 설정을 읽는 동안이라 프로브 뒤에 고친다.
+
+### 최종 프로브
+
+`run.mjs --reps 4 --cases alert,textfield,switch --conditions now,wait,timeline`을 두 판 돌렸다. 둘 다 결과 줄 36/36, `argsMatched` 참, 종료 0이었다.
+
+- 고치기 전(`--browser-args none --baseline 92b61458`, 662초, 부분 래스터 끔 false): 알림 `now` A 15·B 1, `wait` A 0·B 16, `timeline` 0ms 16·0, 100ms 12·4, 200ms 11·5, 400ms 0·16, 800ms 1·15, 1600ms·3200ms 0·16. 글 입력과 스위치는 올림·포커스 모두 모든 갈래·시각에서 A 16·B 0.
+- 고친 뒤(`--browser-args config --baseline 90a89c13`, 590초, 부분 래스터 끔 true): 세 사례의 모든 갈래·시각에서 B 0(사진 720장). `meta.json`의 명령줄에 `--disable-partial-raster`가 낱말 하나로 있었다.
+- `same_bytes.mjs <CI 폴더> --baseline 90a89c13 <두 판>`(종료 0): CI의 실제 그림 셋이 모두 새 정답과 바이트까지 같았고, 고친 뒤 판의 같은 사진 36장씩과도 같았다. 알림의 실제 그림은 고치기 전 판의 B 21장과도 같았다.
+- `ci_diff.mjs <CI 폴더>`(종료 0): 세 짝 모두 측정이었다(스위치 2, 글 입력 29, 알림 17픽셀. 일지 "진단"과 같다).
+
+그 뒤 `index.ts` 주석을 "실행 인자 시험이 빨간 판으로 두 번"으로 고치고, 프로브 README에 행 둘을 더하고, 티켓 기준 1~7을 체크하고 대기열 414를 닫았다. 기준 8은 고친 설정으로 두 사진 비교를 다시 돌려 본다.
+
+## 인계 (셀프 리뷰 직전, 셋째 세션)
+
+셋째 세션이 커밋하지 않은 변경에 셀프 리뷰(`/code-review`, 기점 `90a89c13`)를 부르자 세션 컨텍스트가 인계 문턱을 넘은 채 `셀프 리뷰 직전`에 와서(`hook_handoff`) 넘긴다. 이 세션의 제목은 `chore/016-visual-focus-flake`이고 넘기며 `chore/016-visual-focus-flake (인계함)`으로 바꾼다. 셀프 리뷰의 단계는 밟지 않았다(서브에이전트를 띄우지 않았다).
+
+이 세션이 번복하거나 고친 것: 앞 세션의 "위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 네 번, 변이 표 머리)"는 실행 인자 시험이 돌지 않아 표지가 없던 판이었다. 표지가 있는 두 판으로 다시 세어 `index.ts` 주석과 변이 표 머리를 고쳤다(위 "바뀐 정답의 까닭"). 결론(위젯은 비교 모드로는 인자 없이도 지난다)은 그대로다.
+
+커밋하지 않은 변경(셀프 리뷰의 범위, `git diff 90a89c13`과 미추적 0):
+
+- `web/packages/ui/visual/index.ts`: `BROWSER_ARGS` 주석의 "손으로 네 번"을 "실행 인자 시험이 빨간 판으로 두 번"으로.
+- `.scratch/harness/probes/visual_flake_mutations.toml`: 머리의 위젯 문장을 표지가 있는 두 판으로.
+- `.scratch/harness/probes/README.md`: 행 둘(`visual_flake/`, `visual_flake_mutations.toml`).
+- `.scratch/harness/issues/016-visual-focus-flake.md`: 기준 1~7 체크, Comments에 바뀐 정답의 까닭. 기준 8과 Status는 그대로(in-progress).
+- `.scratch/retro-queue.md`: 414 행 닫기.
+- 이 일지의 "셋째 세션" 절.
+
+셀프 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장. 나열 밖도 잰다): README 두 행의 수 전부(최종 프로브의 A:B, 사진 720장, `same_bytes`의 36장·57장 가운데 B 21장, `ci_diff`의 2·29·17, `attribution`의 76·0·0, `changed_baselines`의 76·70·6, `sizes`의 12·14, 탐색 실행의 96번 중 95번·48번 중 6번), "인자를 준 그림이 타일 전체를 그린 그림이라는 것은 인자의 이름에서 읽은 어림이다", 변이 표 머리의 "두 번 모두 실행 인자 시험만 빨갛고 … 화면 사진 19개는 이 PC에서 초록이었다", 티켓 Comments의 "기준 3의 괄호가 말하는 '인자를 빼도 초록'은 비교 모드의 일이다", 대기열 414 닫힘 문장, Playwright 1.63.0의 두 모드에 대한 서술(`expect.js`의 `expectScreenshotOptions.expected = helper.updateSnapshots === "all" ? void 0 : expected`와 `coreBundle.js`의 `expectScreenshot`).
+
+남은 일(차례대로):
+
+1. 셀프 리뷰(`/code-review`, 기점 `90a89c13`, 티켓 `.scratch/harness/issues/016-visual-focus-flake.md`)와 반영.
+2. 두 사진 비교를 고친 설정 그대로 다시 친다(`pnpm -C web visual`, `pnpm -C web visual:widget`). 이 세션이 띄운 판은 18/109에서 인계로 멈췄다. 초록이면 티켓 기준 8을 체크하고 Status를 `done`으로. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+3. 둘째 커밋. 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`. origin/main은 `9805a5a7`(#389)로 움직였다.
+4. origin/main을 합치고 PR 직전 리뷰. CodeRabbit CLI는 좌석이 없어(`coderabbit auth status`의 `Seat: not assigned`, 이 세션이 봤다) 대체 둘(`/security-review`, `bug-perf-review`)이고, 그 브리프에 앞 세션의 "PR 직전 리뷰에 밀 주장"(위 "셀프 리뷰 (둘째 세션)")과 이 절의 주장, 1의 반영으로 새로 쓴 문장을 나열한다.
+5. 푸시와 PR. 본문의 바뀐 사진 목록은 `node .scratch/harness/probes/visual_flake/changed_baselines.mjs 92b61458 90a89c13`의 출력(패키지 70장, 위젯 6장)이고, 까닭은 위 "바뀐 정답의 까닭"이다. PR의 `visual` 잡에서 두 사진 비교 단계의 걸린 시간을 main의 직전 실행(`40279175497`: 패키지 3분 18초, 위젯 53초)과 맞대 본다.
+6. 이 단계를 닫는 회고(`retro`)와 일지 "다음"을 병합 전에 푸시하고, 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다.
+
+이 세션만 아는 것: 저장소 밖의 출력은 이 세션 스크래치패드 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/53f51b7a-3211-4ade-b04c-2648496cf52c/scratchpad/`에 있다. 인자 없이 다시 쓴 그림 `renders-noargs/`와 그 기록 `attr-ui.log`·`attr-widget.log`, 인자 없는 위젯 비교 `widget-noargs-1.log`·`widget-noargs-2.log`, 최종 프로브 `final-before/`·`final-after/`와 기록, 사례별 합을 찍는 `agg.cjs <run.mjs 출력 폴더>…`. 흔들린 세 실행의 CI 아티팩트는 여전히 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/8a058eeb-cbf3-4b50-930c-96c245c3b5dc/scratchpad/ci/`(r1·r2·r3)다. 회고 후보(앞 세션 것에 더해): 표지 없는 수동 판의 결과가 주석·변이 표의 근거 문장으로 들어갔다가 표지 있는 판에서 어긋났다(probes 규칙 첫 항목의 수동 판 갈래).
+
+인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/016-visual-focus-flake.md. 사진 비교가 몇 픽셀 차이로 흔들리는 원인(크롬의 부분 래스터)을 재서 브라우저 실행 인자와 다시 만든 정답으로 고친다(대기열 414)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 414를 티켓 .scratch/harness/issues/016-visual-focus-flake.md로 쓰고 한다
+브랜치: chore/016-visual-focus-flake
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-17-visual-focus-flake.md 의 "셋째 세션" 절과 "인계 (셀프 리뷰 직전, 셋째 세션)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(바뀐 정답의 까닭 재기와 최종 프로브 두 판의 결과, 프로브 README 행 둘, 티켓 기준 1~7, 대기열 414 닫기)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 90a89c13)부터 한다. 남은 단계(두 사진 비교 다시 치기, 둘째 커밋, PR 직전 리뷰, PR, 회고, 병합)와 저장소 밖 출력의 자리는 일지의 "인계 (셀프 리뷰 직전, 셋째 세션)" 절이다. docs/journal/2026-10-26-17-visual-focus-flake.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(세션에 실리는 스킬은 세션을 시작한 체크아웃의 사본이다)
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기: 제목을 `chore/016-visual-focus-flake (인계함)`으로 바꿨다. 두 사진 비교를 다시 치던 백그라운드 작업을 TaskStop으로 멈추고, 그 실행이 남긴 컨테이너(마운트 `/web`이 이 워크트리의 `web`인 것을 보고)를 `docker stop`으로 껐다. 그 실행의 임시 폴더(`agent-os-visual-NihL9s`)는 남지 않았다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-26T12:35:46Z
+
+## 넷째 세션
+
+제목을 `chore/016-visual-focus-flake`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 EnterWorktree(path)로 들어왔다. origin/main은 그사이 `3acbd867`(#388, harness 011. `.claude/rules/probes.md` 첫 항목, `tools/mutate.py`, 프로브 README, 대기열을 건드렸다)까지 움직였다.
+
+### 셀프 리뷰 (넷째 세션)
+
+`/code-review`, 기점 `90a89c13`, 바뀐 파일 6, 커밋 0, 미추적 0. 리뷰가 도는 동안 두 사진 비교를 고친 설정 그대로 백그라운드로 다시 쳤다(반영이 동작을 바꾸면 다시 친다).
+
+표준 축(sonnet, high). 밀 주장의 수는 앞 세션의 저장소 밖 출력으로 모두 대 보아 맞았다(최종 프로브의 A:B와 720장, `same_bytes`의 36장·21장, `ci_diff`, `changed_baselines`, `attribution`, `sizes`, 두 기록, 위젯 비교 모드 두 번, 탐색 실행의 96번 중 95번·48번 중 6번).
+
+- Minor: 티켓 기준 4가 체크됐는데 PR 본문은 아직 없다. → 고친다. 체크를 풀고, PR 본문을 파일로 쓴 뒤 커밋 전에 다시 체크한다.
+- Minor: README 변이 행의 "비교 모드는 첫 사진이 정답과 같으면 곧바로 지나고"는 반쪽이다. 첫 사진이 다르면 잇단 두 사진이 같아질 때까지 찍고 그 사진을 정답과 맞댄다(`coreBundle.js` 22787~22806행을 이 세션이 열어 봤다). → 고친다. README 행과 이 일지 "셋째 세션"의 같은 문장에 그 갈래를 더한다.
+- Minor: 위젯 비교 모드 두 번이 손으로 친 판이라는 것이 `index.ts` 주석, 변이 표 머리, 티켓 Comments에서 빠졌다(`docs/agents/issue-tracker.md` 프로브와 근거). → 고친다.
+- Minor: README의 `ci_diff` 줄이 표지를 최종형으로만 적고, 첫 판의 기준(N과 디코더 수를 바로 맞대 셋 다 어긋났다)과 바꾼 까닭이 없다(같은 절 셋째 항목). → 고친다.
+- Nit: 대기열 414 닫힘 문장의 "원인은 크롬의 부분 래스터였고"가 재지 않은 부분(그 회차가 왜 끈 그림을 찍었는지)까지 단정한다. → 고친다. 잰 것(인자를 주면 그림이 하나다, CI의 그림이 끈 그림과 같다)과 재지 않은 것을 나눠 적는다.
+- Nit: origin/main의 #388이 변이 도구에 "시험 원문의 표지" 알림을 더했다. → 합친 뒤 `visual_flake_mutations.toml`의 표지가 그 알림에 걸리는지 본다.
+
+명세 축(Opus, 상속). 밀 주장의 수는 원본으로 다시 셌고 아래 말고는 맞았다.
+
+- Minor: 기준 4의 체크가 앞당겨졌다(표준 축과 같다). → 고친다(위).
+- Minor: "화면 사진 19개"의 19는 시험 수이고 그 정답은 35장이다(`widget-noargs-1.log`·`-2.log`의 `✓ … pages-widgetscreen--` 줄 19개씩, `web/apps/widget/visual/snapshots/`의 `pages-widgetscreen--*` 35장. 이 세션이 `grep -c`와 `ls`로 다시 셌다). → 고친다. 변이 표 머리, README 변이 행, 이 일지 "셋째 세션"을 "화면 시험 19개(정답 35장)"로.
+- Nit: 비교 모드 서술의 빠진 갈래(표준 축과 같다)와, 어림이 그 갈래에서도 서는 까닭(첫 사진이 달랐다면 안정된 옛 그림을 맞대 빨갰을 것이다), 0·100·250·500ms 뒤의 1000ms. → 고친다.
+- Nit: 탐색 실행의 "96번 중 95번"에 결과 줄이 16/36에서 끊긴 판(`flake-final-before`)의 8번이 들었다. 빼면 88번 중 87번이다(이 세션이 서브에이전트의 스크래치 스크립트 `agg2.cjs`를 읽고 앞 세션의 탐색 출력에 돌려 다시 셌다: `flake-alert1` 48, `flake-alert3` 32, `flake-smoke` 8 가운데 B 1, `flake-final-before` 8). → 고친다. README와 이 일지 "진단".
+- Nit: 이 일지 "셋째 세션"과 그 인계 절이 옮긴 옛 주석 문장이 원문(`90a89c13`의 `index.ts`)과 글자가 다르다. → 고친다. 원문 그대로 옮긴다.
+- Nit: 티켓 본문의 "(바뀐 자리만 다시 그리는 그림이 시점에 따라 갈린다)"가 어림인 기전을 사실처럼 쓰고, README의 "고친 뒤의 최종 판 둘"이 두 판 모두 고친 판처럼 읽힌다. → 고친다. 티켓은 잰 것(두 그림 가운데 하나로 찍혔고 알림은 시점에 따라 갈렸다, 끄면 하나였다)으로, README는 "최종 판 둘(고치기 전과 고친 뒤, …)"로.
+
+고친 것: 두 축의 지적 전부(위 "고친다"). 표준 축 Nit의 #388 확인은 코드로 했다. origin/main의 `tools/mutate.py`의 `_echo_problems`는 변이의 `tests` 인자 가운데 `-`로 시작하지 않는 것을 러너 자리 기준의 파일 경로로 읽고 읽지 못하면 넘는다. 이 표의 인자는 `-g`와 시험 이름 조각이라 파일로 읽히지 않아 알림에 걸리지 않는다(코드를 읽었다. 합친 뒤 그 도구의 `--check`로 이 표를 골라 실제로 넘는지 본다).
+
+커밋 첫 시도는 pre-commit의 pytest가 2 failed, 5588 passed(929.4초)로 막았다. 빨간 둘은 `tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다`(교체가 `PermissionError`로 재시도 안에 끝나지 못했다)와 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`board.run()`이 1)이고, 이 브랜치는 파이썬을 건드리지 않았다. 둘만 따로 치자 2 passed(40.7초)였다. 앞 시도의 pytest가 457초였던 것의 두 배라 다른 세션들이 함께 돈 부하로 본다(어림). 앞의 것은 프로브 README의 `mutate_no_grandchild_bound` 행이 pytest 부하 아래에서 빨간 것을 이미 적었다. 회고 후보로 둔다. 같은 커밋을 다시 쳤다. 다시 돌린 명령: 리뷰가 도는 동안 친 두 사진 비교가 고친 설정 그대로 초록이었다(`pnpm -C web visual` 109 passed 12.2분, `pnpm -C web visual:widget` 43 passed 2.5분). 반영은 주석과 기록 문장뿐이라(`index.ts`는 주석 한 문장) 그 결과로 티켓 기준 8의 사진 비교 몫을 본다. 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+
+PR 직전 리뷰에 밀 주장(반영하며 새로 쓴 문장):
+
+- `index.ts`: "손으로 친 두 판이고 두 판 모두 실행 인자 시험이 빨갰다"
+- 변이 표 머리: "을 손으로 두 번 돌렸는데 … 화면 시험 19개(정답 35장)는 이 PC 에서 초록이었다"
+- 티켓: "(인자 없이는 같은 코드의 사진이 두 그림 가운데 하나로 찍혔고 알림은 찍는 시점에 따라 갈렸다. 부분 래스터를 끄면 그림이 하나였다)", Comments의 "손으로 친 두 판이고 두 판 모두 실행 인자 시험이 빨갰다"
+- README `visual_flake/` 행: "첫 판은 N과 디코더가 센 수를 바로 맞댔는데 세 짝 모두 디코더 쪽이 많아(1·2, 3·29, 6·17)", "88번 중 87번 A(결과 줄이 16/36에서 끊긴 판의 8번은 세지 않았다)", "최종 판 둘(고치기 전과 고친 뒤, …)"
+- README 변이 행: "화면 시험 19개(정답 35장)", "다르면 잇단 두 사진이 같아질 때까지 찍어 그 사진을 정답과 맞댄다. `all` 모드는 정답 없이 잇단 두 사진이 같을 때까지 찍는다. 같은 위젯 설정에서 안정된 사진은 옛 그림이었으므로(`all` 판), 비교 모드가 지난 것은 첫 사진이 새 정답의 그림이었기 때문으로 어림한다"
+- 대기열 414: "인자로 부분 래스터를 끄면 찍는 때와 상관없이 그림이 하나였고, CI의 실패한 그림 셋이 끈 그림과 바이트까지 같았다(그 회차가 왜 끈 그림을 찍었는지는 재지 않았다)"
+- 이 일지 "셋째 세션": "첫 사진이 다르거나 정답이 없으면 잇단 두 사진이 같을 때까지 0·100·250·500ms, 그 뒤로는 1000ms씩 쉬며 찍고, 정답이 있으면 그 안정된 사진을 다시 정답과 맞댄다", "첫 사진이 달랐다면 안정된 옛 그림을 새 정답과 맞대 빨갰을 것이다"

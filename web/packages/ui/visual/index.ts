@@ -72,9 +72,9 @@ export function photographedStories(site: string): StoryEntry[] {
  * 래스터를 거치지 않은 그림을 찍었는지는 재지 않았다. 이 인자를 주면 곧바로 찍든 기다려 찍든 같은 그림이고, 주지 않으면
  * 알림의 창 밖 띠는 찍는 때에 따라 갈렸다(프로브 .scratch/harness/probes/visual_flake/). 찍기 전에 기다리는 것으로는
  * 고치지 못한다. 글 입력의 올림은 기다려도 부분 래스터의 그림 그대로였다. 정답 사진은 이 인자로 찍은 것이라, 이 PC 에서
- * 인자를 빼면 스위치의 포커스 같은 사진이 빨갰다. 위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 네 번,
- * 변이 표 머리). 그래서 설정이 인자를 넘기는지는 사진이 아니라 `missingBrowserArgs` 의 시험이 본다(변이 표
- * .scratch/harness/probes/visual_flake_mutations.toml).
+ * 인자를 빼면 스위치의 포커스 같은 사진이 빨갰다. 위젯의 화면은 이 PC 에서 인자를 빼도 사진 비교를 지났다(손으로 친
+ * 두 판이고 두 판 모두 실행 인자 시험이 빨갰다, 변이 표 머리). 그래서 설정이 인자를 넘기는지는 사진이 아니라
+ * `missingBrowserArgs` 의 시험이 본다(변이 표 .scratch/harness/probes/visual_flake_mutations.toml).
  */
 export const BROWSER_ARGS: readonly string[] = ["--disable-partial-raster"];
 
