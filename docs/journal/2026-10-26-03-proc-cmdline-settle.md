@@ -87,3 +87,46 @@ open-session을 부른다 2026-10-26T06:48:15Z
 넷째 번 pre-commit 은 `test_interrupt.py`의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다` 하나만 빨갰다(Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다). 위의 둘과 같은 시험 파일의 다른 시험이고, 이 변경이 닿지 않는다.
 
 PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): 모듈 독스트링의 "두 실행에서 500회차 가운데 44회차와 8회차", "두 실행 모두 1200회차 가운데 1회차", "두 번째 실행의 빈 값 아홉(리눅스 8, 윈도 1)은 모두 그 다시 읽기가 메웠다", "윈도에서 읽기 권한으로 열지 못하는 프로세스(다른 사용자의 것 등) … 기다리지 않고 None"; `_windows_alive` 독스트링의 프로세스 이름들; README 두 행의 결과 문장과 "넷을 함께 띄운 방법은 적히지 않았다"; 티켓 Comments 의 새 두 줄.
+
+다섯째 번 pre-commit 이 모두 지나 `762ebacd`로 커밋했다. 셀프 리뷰를 반영한 뒤 커밋 직전의 손으로 치는 다섯은 이 pre-commit 결과로 갈음한다.
+
+## 인계 (커밋 뒤)
+
+- 이 세션의 지금 제목: `chore/013-proc-cmdline-linux`. 인계하며 `chore/013-proc-cmdline-linux (인계함)`으로 바꾼다.
+- 커밋 `762ebacd` 뒤 인계 계기(세션 컨텍스트 약 29만 토큰, 경계 `커밋 뒤`)가 왔다. 푸시하지 않았고 열린 PR 은 없다.
+- 남은 단계: origin/main 을 합친 뒤 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. CLI 가 돌지 못하면 `/security-review`와 `bug-perf-review`), PR, 봇 회차, 병합. PR 직전 리뷰에 밀 주장은 위 "이어받은 세션: 셀프 리뷰" 절의 목록이다. 회고 후보(흔들리는 `test_rerun_runner` 시험)도 위에 있다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/013-proc-cmdline-linux.md. 리눅스 CI에서 tools/proc_command_line.py가 띄운 직후의 자식 명령 줄을 None으로 읽는 까닭을 재현 루프로 가르고 고친다(대기열 456)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 456을 티켓 .scratch/harness/issues/013-proc-cmdline-linux.md로 쓰고 한다
+브랜치: chore/013-proc-cmdline-linux
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-26-03-proc-cmdline-settle.md
+이어받을 상태: 인계: 커밋 뒤. 762ebacd 커밋까지 셀프 리뷰 반영과 검증(그 커밋의 pre-commit)을 마쳤고, 푸시하지 않았으며 열린 PR이 없다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(밀 주장은 일지의 셀프 리뷰 절), PR, 봇 회차, 병합이다. docs/journal/2026-10-26-03-proc-cmdline-settle.md
+확인할 선행 조건: 주 체크아웃: 루트는 main이고 이 세션의 첫 턴(tidy-checkouts)에 origin/main과 같았다. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-26T09:36:35Z
+
+## 이어받은 세션: PR 과 병합
+
+> 사용자: 대기열 456을 티켓 .scratch/harness/issues/013-proc-cmdline-linux.md로 쓰고 한다
+
+워크트리 `013-proc-cmdline-linux`에 `EnterWorktree(path)`로 들어왔다. HEAD 는 `762ebacd`이고, 커밋하지 않은 변경은 이 일지의 인계 절뿐이었다.
+
+origin/main 은 이 브랜치의 기준(92b61458)에서 움직이지 않아 합칠 것이 없었다. CodeRabbit CLI 는 `Seat: not assigned`라 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌렸다.
+
+- `/security-review`: 지적 없음(식별 서브태스크가 신뢰도 8 이상 후보를 내지 않아 거르는 단계는 돌리지 않았다).
+- `bug-perf-review`: 유효 셋(Minor 1, Nit 2), 오탐·보류 0.
+  - Minor: 32비트 파이썬의 윈도에서 `_windows_alive`가 64비트 검사 없이 참을 내 부를 때마다 5초를 기다리는데, 독스트링은 "기다리지 않고 None"이라 적었다. 코드를 읽어 맞다고 봤다. `_readable()`(윈도는 64비트일 때만, 그 밖은 리눅스만)을 두고 `command_line`이 읽지 못하는 플랫폼에서 곧바로 None 을 내게 고쳤다. 시험 `test_command_line_은_읽지_못하는_플랫폼에서_기다리지_않는다`를 먼저 써서 빨간 것을 본 뒤 고쳤고, 그 가드를 빼는 변이를 손으로 넣어 그 시험만 빨개지는 것을 보고 되돌렸다.
+  - Nit: 독스트링의 "윈도는 넷을 함께 돌린 부하 아래 두 실행 모두"는 첫 실행에 근거가 없다. 둘째 실행만 넷을 함께 돌렸다고 좁혔다.
+  - Nit: 실제 프로세스 시험은 틈이 날 때만 `settled`를 잰다. 고정은 가짜 시계 시험과 배선 시험이 하므로 고칠 것이 없다.
+
+반영 커밋의 첫 pre-commit 은 `tests/tools/test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다` 하나만 빨갰다(0.5초 배출에 줄이 하나도 없었다, pytest 한 바퀴 604초). `tools/probe_kit.py`는 `command_line`을 쓰지 않는다(grep 0). 그 파일을 홀로 돌려 15개가 모두 지났고 858초가 걸렸다. 이 PC 에 다른 세션이 여럿 돌던 때의 흔들림으로 보고 다시 커밋했다(어림이다).
+
+둘째 pre-commit 은 위 회고 후보의 `test_rerun_runner.py` 오염 시험 하나만 빨갰다(pytest 한 바퀴 1015초). 앞 세션이 origin/main 판으로도 부하 아래 10/16 빨갛다고 갈랐고, `_readable`은 64비트 윈도에서 참이라 이 PC 의 동작을 바꾸지 않는다(코드를 읽은 것). 다시 커밋했다.

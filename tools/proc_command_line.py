@@ -15,7 +15,8 @@ pid 만 훑고 열지 않는다(윈도 Toolhelp 스냅숏의 원형과 구조도
 막 띄운 자식은 잠깐 명령 줄을 읽지 못한다. 리눅스의 `Popen`은 exec 가 close-on-exec 파이프를 닫는
 순간 돌아오는데, 그때 `/proc/<pid>/cmdline`이 0바이트일 수 있다(늦게 다시 읽은 상태는 R). 리눅스
 컨테이너에서 띄운 직후의 한 번 읽기가 두 실행에서 500회차 가운데 44회차와 8회차 빈 값이었다.
-윈도는 넷을 함께 돌린 부하 아래 두 실행 모두 1200회차 가운데 1회차였다(모두
+윈도는 두 실행 모두 1200회차 가운데 1회차였다(둘째 실행은 넷을 함께 돌린 부하 아래이고, 첫
+실행이 넷을 함께 띄운 방법은 적히지 않았다. 모두
 `.scratch/harness/probes/proc_cmdline_settle.py`, 그 README 행). 리눅스의 까닭은 새 인자 영역이 그
 파이프를 닫은 뒤에 채워진다는 커널 코드를 읽은 어림이고, 윈도의 까닭은 가르지 못했다. 그래서
 `command_line`은 읽지 못했는데 그 프로세스가 아직 살아 있으면(리눅스는 stat 의 상태가 좀비·죽음이
@@ -24,9 +25,9 @@ pid 만 훑고 열지 않는다(윈도 Toolhelp 스냅숏의 원형과 구조도
 
 못 보는 것: 32비트 파이썬의 윈도(PEB 의 x64 자리만 안다), 리눅스와 윈도 밖의 OS, 윈도에서 읽기
 권한으로 열지 못하는 프로세스(다른 사용자의 것 등), 끝났지만 거두지 않은 좀비(리눅스는 명령 줄이
-비었다). 모두 기다리지 않고 None 이다. 살아 있는데 명령 줄이 늘 빈 프로세스(리눅스의 커널 스레드,
-스스로 인자 영역을 지운 것)와 끝 코드 259 로 끝난 윈도 프로세스는 기한까지 기다린 뒤 None 이다.
-뒤의 문장은 코드를 읽은 것이고 재지 않았다. 리눅스의
+비었다). 모두 기다리지 않고 None 이다(앞의 둘은 `_readable`이 거른다). 살아 있는데 명령 줄이 늘 빈
+프로세스(리눅스의 커널 스레드, 스스로 인자 영역을 지운 것)와 끝 코드 259 로 끝난 윈도 프로세스는
+기한까지 기다린 뒤 None 이다. 뒤의 문장은 코드를 읽은 것이고 재지 않았다. 리눅스의
 `/proc/<pid>/cmdline`은 `hidepid`로 숨기지 않았으면 다른 사용자의 것도 읽힌다. 러너는 자기가
 띄운 자식만 읽으므로 이 갈래를 쓰지 않는다.
 """
@@ -325,10 +326,18 @@ def _alive(pid: int) -> bool:
     return False
 
 
+def _readable() -> bool:
+    """이 플랫폼에서 명령 줄을 읽을 수 있다. 32비트 파이썬의 윈도는 `_windows_command_line`이 늘
+    None 이라 살아 있는지 보면 기한까지 헛되이 기다린다."""
+    if sys.platform == "win32":
+        return ctypes.sizeof(ctypes.c_void_p) == 8
+    return sys.platform == "linux"
+
+
 def command_line(pid: int) -> tuple[str, ...] | None:
     """그 pid 의 명령 줄 낱말. 0 이하의 pid, 없는 pid, 읽지 못한 것(모듈 독스트링의 못 보는 것)은
     None 이다. 살아 있는데 읽지 못하면 `SETTLE_SECONDS`까지 다시 읽는다(`settled`)."""
-    if pid <= 0:
+    if pid <= 0 or not _readable():
         return None
     return settled(
         _read_once, _alive, pid, settle=SETTLE_SECONDS, clock=time.monotonic, sleep=time.sleep

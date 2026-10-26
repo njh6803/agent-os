@@ -110,9 +110,35 @@ def test_command_line_은_살아_있는데_빈_읽기를_다시_읽는다(monkey
     def alive(pid: int) -> bool:
         return True
 
+    def readable() -> bool:
+        return True
+
     monkeypatch.setattr(proc_command_line, "_alive", alive)
+    monkeypatch.setattr(proc_command_line, "_readable", readable)
 
     assert command_line(42) == ("python", "-c")
+
+
+def test_command_line_은_읽지_못하는_플랫폼에서_기다리지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """32비트 파이썬의 윈도와 리눅스·윈도 밖의 OS 는 읽기가 늘 빈 값이라, 살아 있다고 보여도
+    기한까지 기다리지 않는다. 위 배선 시험과 `_readable`만 다르다."""
+    monkeypatch.setattr(proc_command_line, "_read_once", _읽기(None, ("python", "-c")))
+    alive_calls: list[int] = []
+
+    def alive(pid: int) -> bool:
+        alive_calls.append(pid)
+        return True
+
+    def readable() -> bool:
+        return False
+
+    monkeypatch.setattr(proc_command_line, "_alive", alive)
+    monkeypatch.setattr(proc_command_line, "_readable", readable)
+
+    assert command_line(42) is None
+    assert alive_calls == []
 
 
 def test_끝났지만_거두지_않은_자식은_빈_값이다() -> None:
