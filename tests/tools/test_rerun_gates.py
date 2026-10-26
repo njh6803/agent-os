@@ -1,4 +1,4 @@
-"""`tools/rerun_gates.py`. 결과 커밋을 새 작업 트리로 꺼내 게이트 셋과 숨은 시험을 돈다.
+"""`tools/rerun_gates.py`. 결과 커밋을 새 작업 트리로 꺼내 게이트와 숨은 시험을 돈다.
 
 임시 원본 저장소(B와 M)에서 회차의 클론을 짓고, 그 클론에 세션의 결과 커밋을 더한 뒤 작은 파이썬
 명령을 게이트·준비·pytest 자리에 넣어 돈다. 실제 명령은 상수로 따로 단언한다.
@@ -20,6 +20,8 @@ from pathlib import Path
 import pytest
 from tools.rerun_files import (
     GATE_COMMANDS,
+    GATE_FILE,
+    OLD_GATE_COMMANDS,
     TIER_SMALL,
     Gate,
     Hidden,
@@ -28,11 +30,13 @@ from tools.rerun_files import (
 )
 from tools.rerun_gates import (
     GATE_ARGV,
+    OLD_GATE_ARGV,
     PYTEST_ARGV,
     GateError,
     Limits,
     check_result,
     count_hidden,
+    has_gate_file,
     setup_failure_of,
 )
 from tools.rerun_round import (
@@ -254,6 +258,40 @@ def test_실제_게이트는_명세의_셋이고_pytest는_uv_run이다() -> Non
     assert defaults["gates"].default is GATE_ARGV
     assert defaults["pytest"].default is PYTEST_ARGV
     assert defaults["limits"].default == Limits()
+
+
+def test_옛_게이트의_인자_목록은_옛_묶음의_글이다() -> None:
+    assert tuple(" ".join(argv) for argv in OLD_GATE_ARGV) == OLD_GATE_COMMANDS
+
+
+def test_B에_게이트_러너가_있는지를_원본에서_가른다(tmp_path: Path) -> None:
+    source = tmp_path / "원본"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    old = _커밋(source, _B, "옛 B")
+    new = _커밋(source, {GATE_FILE: "print('러너')\n"}, "러너를 더한다")
+    gone = _커밋(source, {"tools/other.py": ""}, "다른 파일")
+    _git(source, "rm", "-q", GATE_FILE)
+    _git(source, "commit", "-qm", "러너를 지운다")
+    removed = _git(source, "rev-parse", "HEAD")
+    assert has_gate_file(source, old, _환경()) is False
+    assert has_gate_file(source, new, _환경()) is True
+    assert has_gate_file(source, gone, _환경()) is True
+    assert has_gate_file(source, removed, _환경()) is False
+    # 같은 이름의 폴더는 러너 파일이 아니다
+    folder = _커밋(source, {f"{GATE_FILE}/x.py": ""}, "같은 이름의 폴더")
+    assert has_gate_file(source, folder, _환경()) is False
+
+
+def test_게이트_러너를_가르지_못하면_GateError다(tmp_path: Path) -> None:
+    source = tmp_path / "원본"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    _커밋(source, _B, "B")
+    with pytest.raises(GateError, match="ls-tree"):
+        has_gate_file(source, "0" * 40, _환경())
+    with pytest.raises(GateError, match="40자"):
+        has_gate_file(source, "HEAD", _환경())
 
 
 # --- 끝까지 ---

@@ -19,7 +19,9 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
   `claude-`로 시작하는 이름과 `<synthetic>`, 창·subtype·끝난 까닭·노력은 영소문자 식별자, 도구
   이름은 영문 식별자, 계정 이름은 이메일의 `@` 앞 꼴(첫 글자는 영소문자나 숫자이고 그 뒤는
   영소문자·숫자·`._-`다. 대문자와 `+`는 받지 않는다), 오염 꼴의 이름은 러너 상수의 꼴이다. 게이트와
-  준비의 명령은 명세가 정한 세 명령의 상수(`GATE_COMMANDS`, `SETUP_COMMANDS`)와 같아야 한다. 회차
+  준비의 명령은 명세가 정한 명령의 상수와 같아야 한다. 게이트는 두 묶음(`GATE_SETS`) 가운데 하나를
+  그 차례로 들고, 준비는 세 명령(`SETUP_COMMANDS`) 가운데 하나다. 어느 게이트 묶음이 그 과제의
+  것인지 (B 에 `GATE_FILE`이 있는지)는 기록만으로 알 수 없어 보지 않는다. 회차
   폴더는 뿌리를 뺀 이름만 담고, 그 이름은 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더
   이름이다. 뿌리는 사람이 명령 줄로 준 경로라 커밋하는 기록에 남기지 않는다. 실패한 숨은 시험의
   노드 ID는 겹치지 않고, 숨은 시험 ID와 같은 꼴(아래 허용 목록, 제어 문자(줄바꿈 포함) 없음)이다.
@@ -123,12 +125,27 @@ RULE_ONLY = "하나뿐인 브랜치"
 RULE_NONE = "없음"
 RULES = (RULE_BRANCH, RULE_ONLY, RULE_NONE)
 
-# 결과 작업 트리에서 도는 게이트 셋, 이 차례다(명세 "게이트와 숨은 시험").
+# 결과 작업 트리에서 도는 게이트 셋, 이 차례다(명세 "게이트와 숨은 시험"). B 에 `GATE_FILE`이 있는
+# 과제의 묶음이다.
+GATE_FILE = "tools/run_checks.py"
 GATE_COMMANDS = (
     "uv run ruff check .",
     "uv run ruff format --check .",
-    "uv run python tools/run_checks.py",
+    f"uv run python {GATE_FILE}",
 )
+# B 에 `GATE_FILE`이 없는 과제(2026-10-07 #160 앞)의 게이트, 이 차례다. 셋째 게이트 대신 그때의
+# CLAUDE.md "검증 명령" 절의 손으로 치는 명령을 친다(명세 "게이트와 숨은 시험"의 2026-10-26 주석).
+OLD_GATE_COMMANDS = (
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run pytest -q",
+    "uv run pyright",
+    "uv run lint-imports",
+    "pnpm -C web verify",
+)
+# 회차 기록의 게이트 칸이 받는 묶음. 기록은 그 가운데 하나를 그 차례로 든다.
+GATE_SETS = (GATE_COMMANDS, OLD_GATE_COMMANDS)
+_GATE_NAMES = tuple(dict.fromkeys(c for s in GATE_SETS for c in s))
 # 준비 명령 셋(명세 "준비"). 결과 작업 트리의 준비도 같다.
 SETUP_COMMANDS = (
     "uv sync",
@@ -817,7 +834,7 @@ def _outcome(o: _Obj) -> Outcome:
     if not o.is_null("gates"):
         gates = tuple(
             Gate(
-                command=g.choice("command", GATE_COMMANDS),
+                command=g.choice("command", _GATE_NAMES),
                 exit_code=g.opt_integer("exit_code"),
                 timed_out=g.flag("timed_out"),
             )
@@ -825,8 +842,10 @@ def _outcome(o: _Obj) -> Outcome:
         )
         for i, g in enumerate(gates):
             _check_end(f"{o.where}.gates[{i}]", g.exit_code, timed_out=g.timed_out)
-        if tuple(g.command for g in gates) != GATE_COMMANDS:
-            raise ShapeError(f"{o.where}.gates: 게이트는 {GATE_COMMANDS} 셋이 이 차례로 든다")
+        if tuple(g.command for g in gates) not in GATE_SETS:
+            raise ShapeError(
+                f"{o.where}.gates: 게이트는 {GATE_COMMANDS}나 {OLD_GATE_COMMANDS}가 이 차례로 든다"
+            )
     hidden_obj = o.opt_obj("hidden", _HIDDEN_KEYS)
     hidden = None
     if hidden_obj is not None:
@@ -974,7 +993,7 @@ class JudgeView:
     condition_version: int
     claude_version: str | None
     end: End
-    gates_green: bool | None  # 게이트 셋이 모두 종료 0. 돌지 않았으면 빈 값
+    gates_green: bool | None  # 게이트가 모두 종료 0. 돌지 않았으면 빈 값
     hidden_passed: bool | None  # 숨은 시험이 모두 통과. 돌지 않았으면 빈 값
     cost_claude_code_usd: float
     cost_official_usd: float

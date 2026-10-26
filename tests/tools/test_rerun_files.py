@@ -25,9 +25,12 @@ from tools.rerun_files import (
     END_DONE,
     END_NOT_MEASURED,
     GATE_COMMANDS,
+    GATE_FILE,
+    GATE_SETS,
     LIST_MAIN,
     LIST_PILOT,
     NOT_MEASURED_REASONS,
+    OLD_GATE_COMMANDS,
     RULE_BRANCH,
     RULE_NONE,
     SETUP_COMMANDS,
@@ -790,11 +793,37 @@ def _게이트_칸(*명령: str) -> Json:
         _게이트_칸(*GATE_COMMANDS[:2]),
         _게이트_칸(*reversed(GATE_COMMANDS)),
         _게이트_칸("true"),
+        # 두 묶음을 섞거나 옛 묶음의 일부만 든 것
+        _게이트_칸(*GATE_COMMANDS, *OLD_GATE_COMMANDS[2:]),
+        _게이트_칸(*OLD_GATE_COMMANDS[:5]),
+        _게이트_칸(*OLD_GATE_COMMANDS[:2], *reversed(OLD_GATE_COMMANDS[2:])),
     ],
 )
-def test_게이트는_정해진_셋이_이_차례로_든다(게이트: Json) -> None:
+def test_게이트는_정해진_묶음_하나가_이_차례로_든다(게이트: Json) -> None:
     with pytest.raises(ShapeError, match="gates"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "gates"), 게이트))
+
+
+def test_옛_게이트_묶음은_그때의_손으로_치는_검증_명령이다() -> None:
+    # B 에 `tools/run_checks.py`가 없던 때(2026-10-07 #160 앞)의 CLAUDE.md "검증 명령" 절
+    assert OLD_GATE_COMMANDS == (
+        "uv run ruff check .",
+        "uv run ruff format --check .",
+        "uv run pytest -q",
+        "uv run pyright",
+        "uv run lint-imports",
+        "pnpm -C web verify",
+    )
+    assert GATE_FILE == "tools/run_checks.py" and GATE_FILE in GATE_COMMANDS[2]
+    assert GATE_SETS == (GATE_COMMANDS, OLD_GATE_COMMANDS)
+
+
+def test_옛_게이트_묶음의_기록을_읽는다() -> None:
+    글 = _바꿔(dumps_record(_기록()), ("outcome", "gates"), _게이트_칸(*OLD_GATE_COMMANDS))
+    gates = parse_record(글).outcome.gates
+    assert gates is not None
+    assert tuple(g.command for g in gates) == OLD_GATE_COMMANDS
+    assert parse_record(dumps_record(parse_record(글))) == parse_record(글)
 
 
 def test_실패한_숨은_시험_노드는_겹치지_않는다() -> None:

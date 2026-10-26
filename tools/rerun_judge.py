@@ -180,7 +180,8 @@ def select_rounds(task_ids: Sequence[str], views: Sequence[JudgeView]) -> Select
 
 
 def solved(v: JudgeView) -> bool:
-    """설계 6절 "회차마다": 끝남이고, 게이트 셋이 모두 종료 0이고, 숨은 시험이 모두 통과했다."""
+    """설계 6절 "회차마다": 끝남이고, 게이트(셋, 옛 묶음이면 여섯)가 모두 종료 0이고, 숨은 시험이
+    모두 통과했다."""
     return v.end.kind == END_DONE and v.gates_green is True and v.hidden_passed is True
 
 

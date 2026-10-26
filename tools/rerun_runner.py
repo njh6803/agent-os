@@ -34,8 +34,12 @@
   세션의 마지막 `modelUsage`만으로 셈한다(대개 0이다).
 - 끝남인 회차에서 게이트 작업 트리를 짓지 못하거나(`GateError`) 로그를 쓰지 못하면(`OSError`) 그
   회차를 측정 아님(준비)으로 적고 멈춘다. 세션이 쓴 결과와 별개로 사람이 볼 일일 수 있다(07의 메모).
-- 기록의 게이트와 준비 명령은 갈아 끼운 명령이 아니라 그 자리의 정해진 이름(`GATE_COMMANDS`,
-  `SETUP_COMMANDS`)으로 적는다. 시험이 갈아 끼운 명령도 기록의 꼴을 지나게 하려는 것이다.
+- 기록의 게이트와 준비 명령은 갈아 끼운 명령이 아니라 그 자리의 정해진 이름(`GATE_COMMANDS`나
+  `OLD_GATE_COMMANDS`, `SETUP_COMMANDS`)으로 적는다. 시험이 갈아 끼운 명령도 기록의 꼴을 지나게
+  하려는 것이다.
+- 게이트 묶음은 과제의 B 에 게이트 러너(`GATE_FILE`)가 있는지로 고른다(`tools/rerun_gates.py`의
+  `has_gate_file`). 없으면 옛 묶음(`old_gates`)을 돈다. 가르지 못하면 게이트 작업 트리를 짓지 못한
+  것과 같이 측정 아님(준비)으로 적고 멈춘다.
 - 끄지 못하고 남긴 호출(`LEFT_RUNNING`)이 든 회차가 끝나면 그 프로세스가 돌 수 있어 멈춘다.
 - 공식 단가에 단가가 없는 모델(`PriceError`)이 나면 그 회차를 적지 못하고 멈춘다. 기록 없는 폴더가
   남고, 다시 띄우면 그 폴더를 측정 아님(중단)으로 적으려고 같은 세션을 다시 셈하다 같은 까닭으로
@@ -75,6 +79,7 @@ from tools.rerun_files import (
     END_NOT_MEASURED,
     GATE_COMMANDS,
     LIST_MAIN,
+    OLD_GATE_COMMANDS,
     REASON_LIMIT,
     SETUP_COMMANDS,
     End,
@@ -95,7 +100,15 @@ from tools.rerun_files import (
     read_task_list,
     write_record,
 )
-from tools.rerun_gates import GATE_ARGV, PYTEST_ARGV, GateError, Limits, check_result
+from tools.rerun_gates import (
+    GATE_ARGV,
+    OLD_GATE_ARGV,
+    PYTEST_ARGV,
+    GateError,
+    Limits,
+    check_result,
+    has_gate_file,
+)
 from tools.rerun_judge import PREREG_README, PREREG_SHA256, prereg_problem
 from tools.rerun_round import (
     RECORDS,
@@ -175,12 +188,17 @@ class World:
     read_command_line: CommandLineReader = command_line
     setup: tuple[tuple[str, ...], ...] = SETUP_ARGV
     gates: tuple[tuple[str, ...], ...] = GATE_ARGV
+    old_gates: tuple[tuple[str, ...], ...] = OLD_GATE_ARGV
     pytest: tuple[str, ...] = PYTEST_ARGV
     limits: Limits = Limits()
     home: Path = field(default_factory=Path.home)
 
     def __post_init__(self) -> None:
-        if len(self.setup) != len(SETUP_COMMANDS) or len(self.gates) != len(GATE_COMMANDS):
+        if (
+            len(self.setup) != len(SETUP_COMMANDS)
+            or len(self.gates) != len(GATE_COMMANDS)
+            or len(self.old_gates) != len(OLD_GATE_COMMANDS)
+        ):
             raise ValueError("준비와 게이트 명령의 수는 정해진 명령의 수와 같아야 한다")
 
 
@@ -638,6 +656,10 @@ class _Runner:
         note: str | None = None
         if continued.end.kind == END_DONE and picked.commit is not None:
             try:
+                if has_gate_file(s.source, task.base, env, timeout=w.limits.git):
+                    gates, gate_names = w.gates, GATE_COMMANDS
+                else:
+                    gates, gate_names = w.old_gates, OLD_GATE_COMMANDS
                 checked = check_result(
                     place,
                     source=s.source,
@@ -646,7 +668,7 @@ class _Runner:
                     env=env,
                     out=w.out,
                     setup=w.setup,
-                    gates=w.gates,
+                    gates=gates,
                     pytest=w.pytest,
                     limits=w.limits,
                 )
@@ -658,7 +680,7 @@ class _Runner:
                 outcome = replace(
                     outcome,
                     setup_failure=self._named_setup(checked.setup_failure),
-                    gates=_named_gates(checked.gates),
+                    gates=_named_gates(checked.gates, gate_names),
                     hidden=checked.hidden,
                 )
         findings = screen.findings()
@@ -707,10 +729,13 @@ class _Runner:
         return replace(failure, command=SETUP_COMMANDS[index])
 
 
-def _named_gates(gates: tuple[Gate, ...] | None) -> tuple[Gate, ...] | None:
+def _named_gates(gates: tuple[Gate, ...] | None, names: tuple[str, ...]) -> tuple[Gate, ...] | None:
+    """돈 게이트를 고른 묶음의 정해진 이름 `names`로. 수가 다르면 `ValueError`다."""
     if gates is None:
         return None
-    return tuple(replace(g, command=GATE_COMMANDS[i]) for i, g in enumerate(gates))
+    if len(gates) != len(names):
+        raise ValueError(f"돈 게이트 {len(gates)}개가 묶음의 이름 {len(names)}개와 다르다")
+    return tuple(replace(g, command=name) for g, name in zip(gates, names, strict=True))
 
 
 def _session_ids(place: RoundDir) -> list[str]:

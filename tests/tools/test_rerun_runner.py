@@ -26,8 +26,10 @@ from tools.rerun_files import (
     END_DONE,
     END_NOT_MEASURED,
     GATE_COMMANDS,
+    GATE_FILE,
     LIST_MAIN,
     LIST_PILOT,
+    OLD_GATE_COMMANDS,
     TIER_PILOT,
     TIER_SMALL,
     End,
@@ -94,21 +96,30 @@ def _커밋(repo: Path, files: dict[str, str], message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
-@pytest.fixture(scope="module")
-def 원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
-    repo = tmp_path_factory.mktemp("원본")
+def _원본_짓기(repo: Path, *, gate_file: bool) -> tuple[Path, str, str]:
+    """B 와 M 의 원본. `gate_file`이면 B 에 게이트 러너(`GATE_FILE`)를 둔다."""
     _git(repo, "init", "-q", "-b", "main")
-    base = _커밋(
-        repo,
-        {
-            TICKET: "# 03: 그것을 짓는다\n\n**Status:** ready-for-agent\n",
-            "pytest.ini": "[pytest]\n",
-            "tests/test_old.py": "def test_old():\n    assert True\n",
-        },
-        "B",
-    )
+    files = {
+        TICKET: "# 03: 그것을 짓는다\n\n**Status:** ready-for-agent\n",
+        "pytest.ini": "[pytest]\n",
+        "tests/test_old.py": "def test_old():\n    assert True\n",
+    }
+    if gate_file:
+        files[GATE_FILE] = ""
+    base = _커밋(repo, files, "B")
     merge = _커밋(repo, {"tests/test_new.py": "def test_new():\n    assert True\n"}, "M")
     return repo, base, merge
+
+
+@pytest.fixture(scope="module")
+def 원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
+    return _원본_짓기(tmp_path_factory.mktemp("원본"), gate_file=True)
+
+
+@pytest.fixture(scope="module")
+def 옛_원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
+    """B 에 게이트 러너가 없던 때(2026-10-07 #160 앞)의 과제."""
+    return _원본_짓기(tmp_path_factory.mktemp("옛_원본"), gate_file=False)
 
 
 def _과제(
@@ -254,6 +265,7 @@ class 판:
     readme_text: str = f"머리\n{PREREG_START}\n정의\n{PREREG_END}\n"
     expected: str | None = None  # 빈 값이면 README 절의 해시
     gates: Sequence[Sequence[str]] = (FAIL, PASS, PASS)  # 숨은 시험을 건너뛰어 빠르다
+    old_gates: Sequence[Sequence[str]] = (FAIL, PASS, PASS, PASS, PASS, PASS)
     setup: Sequence[Sequence[str]] = (PASS, PASS, PASS)
     clock: 시계 = field(default_factory=시계)
     lines: list[str] = field(default_factory=list[str])
@@ -305,6 +317,7 @@ class 판:
             read_command_line=self.read_command_line,
             setup=tuple(tuple(c) for c in self.setup),
             gates=tuple(tuple(c) for c in self.gates),
+            old_gates=tuple(tuple(c) for c in self.old_gates),
             pytest=(sys.executable, "-m", "pytest"),
             limits=Limits(setup=120, gates=120, hidden=120, git=120),
             home=self.tmp / "집",
@@ -515,6 +528,41 @@ def test_끝남인_회차는_게이트와_숨은_시험을_돌고_기록에_정�
     assert rec.outcome.hidden is not None and rec.outcome.hidden.passed == 1
     assert rec.spend.claude_code_usd == pytest.approx(2.5)
     assert rec.account == "njh6803" and rec.claude_version == "2.1.302 (Claude Code)"
+
+
+def test_B에_게이트_러너가_없는_과제는_옛_게이트_묶음을_돌고_그_이름으로_적는다(
+    tmp_path: Path, 옛_원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 옛_원본, arms=("A",))
+    board = 판(tmp_path, 옛_원본[0], [task], old_gates=(PASS,) * 6)
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    assert rec.end.kind == END_DONE
+    assert rec.outcome.gates is not None
+    assert [g.command for g in rec.outcome.gates] == list(OLD_GATE_COMMANDS)
+    assert [g.exit_code for g in rec.outcome.gates] == [0] * 6
+    assert rec.outcome.hidden is not None and rec.outcome.hidden.passed == 1
+
+
+def test_옛_게이트_묶음이_실패하면_숨은_시험을_돌지_않는다(
+    tmp_path: Path, 옛_원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 옛_원본, arms=("A",))
+    # 새 묶음은 모두 통과라, 새 묶음을 돌면 숨은 시험이 돈다
+    board = 판(tmp_path, 옛_원본[0], [task], gates=(PASS, PASS, PASS))
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    assert rec.outcome.gates is not None
+    assert [g.exit_code for g in rec.outcome.gates] == [1, 0, 0, 0, 0, 0]
+    assert rec.outcome.hidden is None
+
+
+def test_옛_게이트_명령의_수가_정해진_수와_다르면_거부한다() -> None:
+    with pytest.raises(ValueError, match="게이트"):
+        World(old_gates=(PASS, PASS, PASS))
+    assert len(World().old_gates) == len(OLD_GATE_COMMANDS)
 
 
 def test_끝남이_아닌_회차는_게이트를_돌지_않고_공식_단가는_모든_회차에서_셈한다(
@@ -1016,6 +1064,39 @@ def test_게이트를_돌지_못하면_측정_아님_준비로_적고_멈춘다(
     assert board.run() == 1
     assert _ends(board.saved()) == [("A", 1, END_NOT_MEASURED, "준비")]
     assert any("게이트를 돌지 못했다" in line for line in board.lines)
+
+
+def test_B의_게이트_묶음을_가르지_못하면_측정_아님_준비로_적고_멈춘다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task = _과제(1, 원본, arms=("A",))
+    after = _과제(2, 원본, arms=("A",))
+    board = 판짜기([task, after])
+
+    def broken(*_args: object, **_kw: object) -> object:
+        raise GateError("B 를 읽지 못했다")
+
+    monkeypatch.setattr(rerun_runner, "has_gate_file", broken)
+    board.script({_key(task, "A", 1): [_끝남(task)], _key(after, "A", 1): [_끝남(after)]})
+    assert board.run() == 1
+    assert _ends(board.saved()) == [("A", 1, END_NOT_MEASURED, "준비")]
+    assert any("게이트를 돌지 못했다" in line for line in board.lines)
+
+
+def test_결과_커밋이_게이트_러너를_지워도_B로_고른_묶음을_돈다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task])
+    removing = fake.call(
+        [fake.init_event(), fake.result_event(1.0, "다 했다")],
+        git=[["switch", "-c", task.branch], ["rm", "-q", GATE_FILE], ["commit", "-m", "지웠다"]],
+    )
+    board.script({_key(task, "A", 1): [removing]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    assert rec.outcome.gates is not None
+    assert [g.command for g in rec.outcome.gates] == list(GATE_COMMANDS)
 
 
 def test_끄지_못하고_남긴_호출이_든_회차_뒤에_멈춘다(

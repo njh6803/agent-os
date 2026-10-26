@@ -1,5 +1,5 @@
-"""다시 풀기 회차의 게이트와 숨은 시험. 결과 커밋을 클론에서 새 작업 트리로 꺼내 준비한 뒤 게이트
-셋을 돌고, 같은 작업 트리에 M의 숨은 시험 파일과 시험 지원 파일을 덮어 숨은 시험의 노드만 돌린다.
+"""다시 풀기 회차의 게이트와 숨은 시험. 결과 커밋을 클론에서 새 작업 트리로 꺼내 준비한 뒤 게이트를
+돌고, 같은 작업 트리에 M의 숨은 시험 파일과 시험 지원 파일을 덮어 숨은 시험의 노드만 돌린다.
 
 명세는 `.scratch/model-rerun/spec.md`의 "게이트와 숨은 시험"과 "클론과 설정 폴더"의 회차 폴더
 2026-10-22 주석이고, 티켓은 `.scratch/model-rerun/issues/07-gates-and-official-cost.md`다. 회차의
@@ -14,11 +14,12 @@
    들지 않는다(스토리 34).
 3. 그 작업 트리에서 04의 준비(`tools/rerun_round.py`의 `run_setup`)를 돈다. 실패하면 게이트와 숨은
    시험을 돌지 않고, 실패한 명령과 끝난 꼴을 `SetupFailure`로 옮긴다(`setup_failure_of`).
-4. 게이트 셋을 차례로 돈다. 앞 게이트가 실패해도 셋을 다 돈다. 셋이 함께 쓰는 몫(`Limits.gates`)
-   하나를 두고 게이트마다 남은 몫을 시간 제한으로 준다. 넘긴 게이트는 프로세스 트리째 끄고 시간
-   넘김으로 적는다. 몫이 남지 않아 돌지 않은 게이트, 찾지 못했거나 띄우지 못한 게이트, 작업 트리
-   자리가 링크로 바뀌어 띄우지 않은 게이트는 종료 코드도 시간 넘김도 없다. 링크인 자리에서 띄우면
-   결과 커밋이 아니라 그 링크가 가리키는 바깥에서 돈다.
+4. 받은 게이트를 차례로 돈다. 앞 게이트가 실패해도 다 돈다. 게이트는 대개 셋(`GATE_ARGV`)이고,
+   러너는 B 에 게이트 러너가 없는 과제(`has_gate_file`)에 옛 여섯(`OLD_GATE_ARGV`)을 준다. 모두가
+   함께 쓰는 몫(`Limits.gates`) 하나를 두고 게이트마다 남은 몫을 시간 제한으로 준다. 넘긴 게이트는
+   프로세스 트리째 끄고 시간 넘김으로 적는다. 몫이 남지 않아 돌지 않은 게이트, 찾지 못했거나 띄우지
+   못한 게이트, 작업 트리 자리가 링크로 바뀌어 띄우지 않은 게이트는 종료 코드도 시간 넘김도 없다.
+   링크인 자리에서 띄우면 결과 커밋이 아니라 그 링크가 가리키는 바깥에서 돈다.
 5. 게이트가 모두 0으로 끝났을 때만 숨은 시험을 돈다. 판정(`tools/rerun_judge.py`의 `solved`)이
    게이트 초록을 먼저 요구해, 게이트가 초록이 아닌 회차의 숨은 시험은 판정에 쓰이지 않는다. 노드가
    없는 과제면 돌지 않고 0개로 센다. 노드 없이 띄운 pytest는 결과 커밋의 시험 전체를 돈다. 1에서
@@ -92,6 +93,8 @@ from typing import IO
 
 from tools.rerun_files import (
     GATE_COMMANDS,
+    GATE_FILE,
+    OLD_GATE_COMMANDS,
     Gate,
     Hidden,
     SetupFailure,
@@ -114,6 +117,8 @@ from tools.tidy_checkouts import cut_links
 # 게이트의 인자 목록. 명세 "게이트와 숨은 시험"의 셋이고 글은 `tools/rerun_files.py`의
 # `GATE_COMMANDS`다.
 GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in GATE_COMMANDS)
+# B 에 게이트 러너(`GATE_FILE`)가 없는 과제의 게이트. 글은 `OLD_GATE_COMMANDS`다.
+OLD_GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in OLD_GATE_COMMANDS)
 # 숨은 시험의 pytest. 러너 체크아웃의 `.venv`는 `agent_os`를 러너의 `src/`에 묶어, 그 파이썬으로
 # 돌면 덮은 시험이 러너의 코드로 돈다(`tools/rerun_hidden.py`의 모듈 독스트링).
 PYTEST_ARGV = ("uv", "run", "pytest")
@@ -135,7 +140,7 @@ class Limits:
     """시간 제한(초)."""
 
     setup: float = SETUP_TIMEOUT  # 준비 명령 하나
-    gates: float = 1800.0  # 게이트 셋이 함께 쓰는 몫(명세 "게이트와 숨은 시험")
+    gates: float = 1800.0  # 게이트가 모두 함께 쓰는 몫(명세 "게이트와 숨은 시험")
     hidden: float = 600.0  # 숨은 시험의 pytest(같은 절)
     git: float = GIT_TIMEOUT  # git 하나
 
@@ -336,13 +341,45 @@ class _Git:
         return Registration.ABSENT
 
 
+def _git_of(env: Mapping[str, str], timeout: float) -> tuple[dict[str, str], _Git]:
+    """넘긴 환경에서 저장소 변수를 벗긴 환경과 그 PATH 의 git. git 이 없으면 `GateError`다."""
+    clean = _clean_env(env)
+    exe = shutil.which("git", path=clean.get("PATH"))
+    if exe is None:
+        raise GateError("넘긴 환경의 PATH 에서 git 을 찾지 못했다")
+    return clean, _Git(exe, {**clean, "GIT_TERMINAL_PROMPT": "0"}, timeout)
+
+
+def _is_blob_at(line: str, rel: str) -> bool:
+    """`git ls-tree`의 한 줄(`<모드> <형> <해시>\\t<경로>`)이 `rel`의 blob 인지. 폴더는 tree 다."""
+    head, _, path = line.partition("\t")
+    return head.split(" ")[1:2] == ["blob"] and path == rel
+
+
+def has_gate_file(
+    source: Path, base: str, env: Mapping[str, str], *, timeout: float = GIT_TIMEOUT
+) -> bool:
+    """원본 저장소 `source`의 커밋 `base`(과제의 B)에 게이트 러너(`GATE_FILE`) 파일이 있는지.
+
+    러너가 어느 게이트 묶음을 돌지 가른다. 결과 커밋이 아니라 B 로 가르므로, 세션이 그 파일을
+    지우거나 더해도 묶음은 바뀌지 않는다. 같은 이름의 폴더는 파일이 아니다. 같은 이름의 심볼릭
+    링크는 형이 blob 이라 파일로 센다. `base`가 40자 커밋 해시가 아니거나 git 이 실패하면
+    `GateError`다.
+    """
+    if not _COMMIT.fullmatch(base):
+        raise GateError(f"B 가 40자 커밋 해시가 아니다: {base!r}")
+    _, git = _git_of(env, timeout)
+    out = git.read(source, ["ls-tree", base, "--", GATE_FILE]).decode("utf-8", "replace")
+    return any(_is_blob_at(line, GATE_FILE) for line in out.splitlines())
+
+
 # --- 한 회차 ---
 
 
 def _gates(
     worktree: Path, gates: Sequence[Sequence[str]], env: Mapping[str, str], log: Path, budget: float
 ) -> tuple[Gate, ...]:
-    """게이트를 차례로 돈다. 셋이 몫 `budget` 하나를 함께 쓰고, 게이트마다 남은 몫을 받는다."""
+    """게이트를 차례로 돈다. 모두가 몫 `budget` 하나를 함께 쓰고, 게이트마다 남은 몫을 받는다."""
     deadline = time.monotonic() + budget
     done: list[Gate] = []
     for argv in gates:
@@ -487,7 +524,7 @@ def check_result(
     pytest: Sequence[str] = PYTEST_ARGV,
     limits: Limits = Limits(),  # noqa: B008  # 얼린 데이터클래스라 공유해도 바뀌지 않는다
 ) -> Checked:
-    """회차 `place`의 결과 커밋 `commit`으로 게이트 셋과 `task`의 숨은 시험을 돈다.
+    """회차 `place`의 결과 커밋 `commit`으로 게이트 `gates`와 `task`의 숨은 시험을 돈다.
 
     `source`는 M을 담은 원본 저장소다. 작업 트리를 걷지 못하는 등 결과와 별개로 사람이 알아야 할
     일은 `out`으로 알린다. 결과 작업 트리를 짓지 못하면 `GateError`다. 회차 폴더에 로그를 쓰지
@@ -495,11 +532,7 @@ def check_result(
     """
     if not _COMMIT.fullmatch(commit):
         raise GateError(f"결과 커밋이 40자 커밋 해시가 아니다: {commit!r}")
-    clean = _clean_env(env)
-    exe = shutil.which("git", path=clean.get("PATH"))
-    if exe is None:
-        raise GateError("넘긴 환경의 PATH 에서 git 을 찾지 못했다")
-    git = _Git(exe, {**clean, "GIT_TERMINAL_PROMPT": "0"}, limits.git)
+    clean, git = _git_of(env, limits.git)
     files = dict.fromkeys((*hidden_test_files(task), *task.support_files))
     blobs = {rel: git.read(source, ["cat-file", "blob", f"{task.merge}:{rel}"]) for rel in files}
     worktree = place.path / _WORKTREE

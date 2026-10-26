@@ -324,13 +324,13 @@ new = '''_TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-\d{2,}")'''
 
 [[mutation]]
 name = "게이트의 수와 차례를 보지 않는다"
-tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_셋이"]
+tests = ["tests/tools/test_rerun_files.py", "-k", "정해진_묶음_하나가"]
 expect = "red"
 expect_output = ["DID NOT RAISE"]
 
 [[mutation.edit]]
 file = "tools/rerun_files.py"
-old = '''if tuple(g.command for g in gates) != GATE_COMMANDS:'''
+old = '''if tuple(g.command for g in gates) not in GATE_SETS:'''
 new = '''if False:'''
 
 [[mutation]]
@@ -578,3 +578,16 @@ expect_output = ["DID NOT RAISE"]
 file = "tools/rerun_files.py"
 old = '''support_files=o.paths("support_files", is_support_file),'''
 new = '''support_files=o.strs("support_files"),'''
+
+# 티켓 11(2026-10-26): 회차 기록의 게이트 칸이 옛 게이트 묶음도 받는다
+
+[[mutation]]
+name = "게이트 칸이 새 묶음만 받는다"
+tests = ["tests/tools/test_rerun_files.py", "-k", "옛_게이트_묶음의_기록을_읽는다"]
+expect = "red"
+expect_output = ["ShapeError: 회차 기록.outcome.gates"]
+
+[[mutation.edit]]
+file = "tools/rerun_files.py"
+old = '''        if tuple(g.command for g in gates) not in GATE_SETS:'''
+new = '''        if tuple(g.command for g in gates) not in (GATE_COMMANDS,):'''

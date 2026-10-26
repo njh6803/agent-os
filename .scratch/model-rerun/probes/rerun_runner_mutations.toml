@@ -247,7 +247,7 @@ expect_output = ["where 1 = run()"]
 
 [[mutation.edit]]
 file = "tools/rerun_runner.py"
-old = '''                    gates=_named_gates(checked.gates),'''
+old = '''                    gates=_named_gates(checked.gates, gate_names),'''
 new = '''                    gates=checked.gates,'''
 
 [[mutation]]
@@ -304,3 +304,53 @@ expect_output = ["where False = any(<generator object test_끄지_못하고"]
 file = "tools/rerun_runner.py"
 old = '''        if any(r.launched.drove.stop in LEFT_RUNNING for r in continued.runs):'''
 new = '''        if False:'''
+
+# 티켓 11(2026-10-26): B 에 게이트 러너가 없는 과제의 옛 게이트 묶음
+
+[[mutation]]
+name = "B 와 상관없이 새 게이트 묶음을 돈다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "옛_게이트_묶음"]
+expect = "red"
+expect_output = ["At index 2 diff: 'uv run python tools/run_checks.py' != 'uv run pytest -q'"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    gates, gate_names = w.old_gates, OLD_GATE_COMMANDS'''
+new = '''                    gates, gate_names = w.gates, GATE_COMMANDS'''
+
+[[mutation]]
+name = "돈 게이트를 늘 새 묶음의 이름으로 적는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "옛_게이트_묶음을_돌고"]
+expect = "red"
+# 옛 여섯을 돌고 새 묶음의 이름 셋을 붙이려다 이름 붙이기가 수로 거부해 러너가 멈춘다. 거부
+# 문구는 러너의 출력 줄로 가고 pytest 출력에는 실리지 않는다
+expect_output = ["where 1 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                    gates, gate_names = w.old_gates, OLD_GATE_COMMANDS'''
+new = '''                    gates, gate_names = w.old_gates, GATE_COMMANDS'''
+
+[[mutation]]
+name = "옛 게이트 명령의 수를 보지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "옛_게이트_명령의_수"]
+expect = "red"
+expect_output = ["DID NOT RAISE ValueError"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''            or len(self.old_gates) != len(OLD_GATE_COMMANDS)
+'''
+new = ''''''
+
+[[mutation]]
+name = "결과 커밋으로 게이트 묶음을 가른다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "결과_커밋이_게이트_러너를_지워도"]
+expect = "red"
+# 결과 커밋은 원본에 없어 가르기가 실패하고, 그 회차가 측정 아님(준비)으로 멈춘다
+expect_output = ["where 1 = run()"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''                if has_gate_file(s.source, task.base, env, timeout=w.limits.git):'''
+new = '''                if has_gate_file(s.source, picked.commit, env, timeout=w.limits.git):'''
