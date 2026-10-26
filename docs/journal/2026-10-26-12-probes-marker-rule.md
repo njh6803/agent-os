@@ -1,4 +1,4 @@
-# 2026-10-26 (04) 프로브 규칙 첫 항목에 표지의 일반 조항을 더한다 (harness 015)
+# 2026-10-26 (12) 프로브 규칙 첫 항목에 표지의 일반 조항을 더한다 (harness 015)
 
 ## 구현 (첫 세션)
 
@@ -45,8 +45,8 @@
 시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
 브랜치: chore/015-probes-marker-rule
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 92b61458)부터 한다. 티켓·규칙·카나리아 명세·대기열 닫힘·probe_kit 독스트링은 이미 썼다. 카나리아 probes_rule_marker_other_reading.toml은 지금 판에서 통과 4였고, 셀프 리뷰가 규칙 본문이나 명세를 고치면 operations.md 카나리아 항목대로 사전 확인으로 갈음하거나 다시 돈다. 린트 둘은 통과했고 tools/run_checks.py는 끝나기 전에 인계로 멈췄다. 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+읽을 것: docs/journal/2026-10-26-12-probes-marker-rule.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review 92b61458)부터 한다. 티켓·규칙·카나리아 명세·대기열 닫힘·probe_kit 독스트링은 이미 썼다. 카나리아 probes_rule_marker_other_reading.toml은 지금 판에서 통과 4였고, 셀프 리뷰가 규칙 본문이나 명세를 고치면 operations.md 카나리아 항목대로 사전 확인으로 갈음하거나 다시 돈다. 린트 둘은 통과했고 tools/run_checks.py는 끝나기 전에 인계로 멈췄다. 일지 docs/journal/2026-10-26-12-probes-marker-rule.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -123,8 +123,8 @@ open-session을 부른다 2026-10-26T06:48:18Z
 시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
 브랜치: chore/015-probes-marker-rule
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 b39a3698로 커밋했고(pytest는 부하로 세 번 막혀 SKIP=pytest로 빼고 한 프로세스로 손으로 쳐 초록) 아직 푸시하지 않았다. 열린 PR은 없다. 푸시, PR 직전 리뷰(CodeRabbit CLI 좌석 없음이라 /security-review와 bug-perf-review, 밀 주장은 일지의 셀프 리뷰 "고친 것" 1~4), 티켓 done, PR, 봇 회차, 병합이 남았다. 일지에 커밋하지 않은 인계 절이 있다. PR #388도 .claude/rules/probes.md를 고친다. 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+읽을 것: docs/journal/2026-10-26-12-probes-marker-rule.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 b39a3698로 커밋했고(pytest는 부하로 세 번 막혀 SKIP=pytest로 빼고 한 프로세스로 손으로 쳐 초록) 아직 푸시하지 않았다. 열린 PR은 없다. 푸시, PR 직전 리뷰(CodeRabbit CLI 좌석 없음이라 /security-review와 bug-perf-review, 밀 주장은 일지의 셀프 리뷰 "고친 것" 1~4), 티켓 done, PR, 봇 회차, 병합이 남았다. 일지에 커밋하지 않은 인계 절이 있다. PR #388도 .claude/rules/probes.md를 고친다. 일지 docs/journal/2026-10-26-12-probes-marker-rule.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -182,8 +182,8 @@ PR을 연 명령에서 `hook_handoff`가 세션 컨텍스트 267,118 토큰으�
 시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
 브랜치: chore/015-probes-marker-rule
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
-이어받을 상태: 인계: PR 연 뒤. PR #390을 d6f9c51f로 열었다(PR 직전 리뷰 반영과 티켓 done까지 든 커밋, pre-commit 전부 통과). 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지에 커밋하지 않은 셋째 세션 끝의 두 절(커밋과 PR, 인계)이 있어 병합 전에 봇 회차의 커밋에 싣는다. 형제 PR #388이 같은 규칙 첫 항목을 고쳐, 늦게 병합하는 쪽에서 글자 충돌을 풀고 두 문장이 남았는지 본 뒤 카나리아 둘(probes_rule_marker_other_reading.toml, probes_rule_stream_delete_marker.toml)을 --preflight로 다시 본다. 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+읽을 것: docs/journal/2026-10-26-12-probes-marker-rule.md
+이어받을 상태: 인계: PR 연 뒤. PR #390을 d6f9c51f로 열었다(PR 직전 리뷰 반영과 티켓 done까지 든 커밋, pre-commit 전부 통과). 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지에 커밋하지 않은 셋째 세션 끝의 두 절(커밋과 PR, 인계)이 있어 병합 전에 봇 회차의 커밋에 싣는다. 형제 PR #388이 같은 규칙 첫 항목을 고쳐, 늦게 병합하는 쪽에서 글자 충돌을 풀고 두 문장이 남았는지 본 뒤 카나리아 둘(probes_rule_marker_other_reading.toml, probes_rule_stream_delete_marker.toml)을 --preflight로 다시 본다. 일지 docs/journal/2026-10-26-12-probes-marker-rule.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -228,8 +228,7 @@ CodeRabbit은 아직 요청하지 않아 "Review skipped: manual review required
 
 ## 다음
 
-- 대기열 474(`.claude/rules/probes.md` 첫 항목 나누기)는 이 PR과 형제 #388이 모두 병합된 뒤의 일이다. 그 행의 카나리아를 다시 돈다.
-- 형제 #388이 이 PR보다 늦게 병합되면 그쪽이 첫 항목의 글자 충돌을 풀고, 두 문장이 남았는지 본 뒤 카나리아 둘(`probes_rule_marker_other_reading.toml`, `probes_rule_stream_delete_marker.toml`)을 `--preflight`로 본다.
+- 대기열 474(`.claude/rules/probes.md` 첫 항목 나누기)는 형제 #388이 먼저 병합됐으므로 이 PR이 병합되면 막는 것이 없다. 나누면 첫 항목에 조각이 든 카나리아(`probes_rule.toml`, `probes_rule_stream_delete_marker.toml`, `probes_rule_marker_other_reading.toml`)의 조각 자리가 움직이니 셋을 다시 돈다.
 - 회고 1의 부하 비용(306의 받아들인 종류)을 다시 열지는 사용자가 정한다.
 
 ## 인계 (커밋 뒤, 넷째 세션)
@@ -247,8 +246,8 @@ CodeRabbit은 아직 요청하지 않아 "Review skipped: manual review required
 시작 프롬프트: 대기열 367을 티켓 .scratch/harness/issues/015-probes-marker-rule.md로 쓰고 한다
 브랜치: chore/015-probes-marker-rule
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-26-04-probes-marker-rule.md
-이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차(d6f9c51f)의 Nit을 반영하고 origin/main(#389)을 합친 뒤 회고와 "다음"까지 실어 c68fd594로 커밋했다(pre-commit 통과). 아직 푸시하지 않았다. 일지 끝의 인계 절은 커밋하지 않았으니 새 세션의 시작 기록과 함께 커밋한 뒤 한 번에 푸시한다. 푸시 전에 순서 1의 1대로 gh pr edit으로 PR 본문을 넓힌다(대기열 473·474를 더했다, 리뷰어 참고의 첫 항목 길이는 대기열 474로 두었다, #389를 합쳤다, 체크리스트의 pytest 줄은 새 머리의 pre-commit). 그 뒤 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트는 아직 없다. claude-review 첫 회차의 Minor(첫 항목이 길다)를 보류한 이유를 PR 코멘트로 남긴다(일지의 "claude-review 첫 회차" 절). 형제 #388과의 첫 항목 충돌은 일지 "다음". 일지 docs/journal/2026-10-26-04-probes-marker-rule.md
+읽을 것: docs/journal/2026-10-26-12-probes-marker-rule.md
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차(d6f9c51f)의 Nit을 반영하고 origin/main(#389)을 합친 뒤 회고와 "다음"까지 실어 c68fd594로 커밋했다(pre-commit 통과). 아직 푸시하지 않았다. 일지 끝의 인계 절은 커밋하지 않았으니 새 세션의 시작 기록과 함께 커밋한 뒤 한 번에 푸시한다. 푸시 전에 순서 1의 1대로 gh pr edit으로 PR 본문을 넓힌다(대기열 473·474를 더했다, 리뷰어 참고의 첫 항목 길이는 대기열 474로 두었다, #389를 합쳤다, 체크리스트의 pytest 줄은 새 머리의 pre-commit). 그 뒤 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트는 아직 없다. claude-review 첫 회차의 Minor(첫 항목이 길다)를 보류한 이유를 PR 코멘트로 남긴다(일지의 "claude-review 첫 회차" 절). 형제 #388과의 첫 항목 충돌은 일지 "다음". 일지 docs/journal/2026-10-26-12-probes-marker-rule.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -265,4 +264,14 @@ open-session을 부른다 2026-10-26T11:41:56Z
 
 - 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 `chore/015-probes-marker-rule`은 `.claude/worktrees/015-probes-marker-rule`(`c68fd594`)이라 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 것은 이 일지의 넷째 세션 끝 인계 절이었다.
 - `git fetch origin` 뒤 `git log HEAD..origin/main`이 비었다(origin/main은 합친 `9805a5a7` 그대로다). 형제 PR #388은 아직 열려 있다.
-- 순서 1의 1대로 푸시 전에 `gh pr edit`으로 PR 본문을 넓혔다(대기열 473·474, #389 합침, 리뷰어 참고의 첫 항목 길이는 대기열 474, 체크리스트의 pytest 줄은 `c68fd594`의 pre-commit).
+- 넷째 세션의 인계 절과 이 시작 기록을 `107907bf`로 커밋했다. pre-commit은 병렬 검사 열(pytest 588.9초, web-verify 613.8초, run-hooks 201.8초 등), 표, 줄 구분 문자, 변이 표, 인용, 커밋 메시지가 `Passed`였고, ruff 둘(스테이지된 `.py` 없음), 카나리아 명세 모양, 헌법 판은 `Skipped`였다. 그래서 ruff 두 줄을 손으로 쳐 통과했다(`All checks passed!`, `1058 files already formatted`).
+- 순서 1의 1대로 푸시 전에 `gh pr edit`으로 PR 본문을 넓혔다(대기열 473·474, #389 합침, 리뷰어 참고의 첫 항목 길이는 대기열 474, 체크리스트의 pytest 줄은 `107907bf`의 pre-commit).
+
+### main 합치기 (#388)
+
+- 푸시를 `hook_push_behind_main`이 막았다(origin/main보다 1커밋 뒤). 그새 형제 011의 PR #388이 `3acbd867`로 병합됐다. 넷째 세션의 "다음"은 #388이 늦게 병합되는 쪽을 적었으나 거꾸로 되어, 늦게 병합하는 이 PR이 충돌을 푼다.
+- `git merge --no-edit origin/main`이 `.claude/rules/probes.md` 첫 항목에서 충돌했다(`.scratch/retro-queue.md`는 자동으로 합쳐졌고, 이 브랜치의 행 367·473·474만 main과 달랐다). 두 판의 차이는 둘이었다. 이 브랜치는 표지 문장 뒤의 일반 조항과 끝의 대기열 367 사례를, #388은 `expect_output` 문장 뒤의 대기열 417 문장 하나를 더했다. 이 브랜치의 판에 그 문장을 같은 자리에 넣고, 스크래치 스크립트(`resolve_probes_conflict.py`)로 두 쪽을 대조했다. 합친 줄에서 이 브랜치의 조각을 빼면 #388의 판과, #388의 문장을 빼면 이 브랜치의 판과 글자까지 같았다.
+- 그 스크립트의 `write_text`가 Windows에서 파일 전체를 CRLF로 썼다(git이 `CRLF will be replaced by LF` 경고를 냈다). 이 파일의 속성이 `text=auto eol=lf`라 스테이지하면 인덱스에는 어차피 LF로 들어가지만, 작업 트리도 바이트로 LF로 되돌렸고 `git ls-files --eol`이 `i/lf w/lf`였다. 일지 2026-09-28-06이 두 세션 연속 밟았다고 적은 함정(`Path.write_text`)과 같다.
+- 카나리아: 이 PR의 `probes_rule_marker_other_reading.toml`은 같은 PR에서 같은 claude 판(2.1.302, 지금도 같다)으로 통과 4였고, 그 뒤 고친 것은 규칙 본문뿐이며 `expect`와 머리말은 그대로라 operations.md 카나리아 항목대로 사전 확인으로 갈음했다. 같은 규칙을 원천으로 든 나머지 다섯(`probes_rule.toml`, `probes_rule_conclusion_hook.toml`, `probes_rule_kill_and_snapshot.toml`, `probes_rule_stream_delete_marker.toml`, `probes_rule_uncommitted_edit.toml`)은 #388이 `45e489b1`에서 실제로 돌려 통과 4였고, 이 PR이 main 대비 바꾸는 문장을 재지 않는다. 조각이 제자리에 남았는지만 보려고 여섯을 함께 `--preflight`로 돌려 통과 6이었다. 이 PR의 명세에만 `# 최신 결과:` 줄에 갈음을 덧붙였다(대기열 473의 교훈).
+- 합친 뒤의 `sibling_overlap.py`가 1로 끝났다. 이 브랜치의 일지 04가 main의 최신 일지 2026-10-26-09(#388)보다 이름순으로 앞서, 다음 세션이 이름순 최신 일지의 "다음"을 읽어 이 일지를 지나친다는 것이다. `--move`로 2026-10-26-12로 옮겼다. 인용은 카나리아 명세, 대기열(367·473·474 행), 이 일지에서 고쳐졌고, 줄인 꼴로 남은 것은 첫 세션의 시작 기록("일지 04도 같은 대조가…")뿐이라 그때 받은 번호를 적은 기록으로 두었다. PR 본문의 일지 경로도 도구가 옮긴 판과 견주어 고쳤다(차이는 그 한 줄이었다).
+- 일지 "다음"의 #388 줄은 이 절로 닫혀 지웠고, 대기열 474 줄은 막는 것이 이 PR 하나로 줄었다고 고쳤다.
