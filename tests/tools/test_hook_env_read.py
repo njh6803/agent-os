@@ -604,14 +604,18 @@ def test_못_보는_것_줄임은_두_글로_읽어_어느_쪽이든_걸리면_�
     `--count`·`--color` 의 머리라 grep 이 모호하다고 거부하는데, 값 옵션으로 읽은 글이 `KEY` 를 먹어
     루트를 훑는다고 본다. `--inc` 는 grep 이 `--include` 로 읽어 좁히는데, 플래그로 읽은 글이 좁히지
     않는다."""
-    assert deny_reason_for_command(명령) is not None
+    reason = deny_reason_for_command(명령)
+    assert reason is not None
+    assert "저장소 전체를 훑으며" in reason
 
 
 def test_못_보는_것_가를_긴_옵션이_여덟을_넘으면_읽는_명령을_막는다() -> None:
     """거짓 양성이다. 옵션마다 플래그로 읽을지 줄임으로 읽을지의 조합이 2 의 여덟제곱을 넘으면 다
     판정하지 않고 막는다(`_MAX_AMBIGUOUS`). `--af` 는 grep 이 `--after-context` 로 읽어 `.env` 를
     읽지 않는다. 여덟이면 판정한다."""
-    assert deny_reason_for_command("grep" + " --af 1" * 9 + " KEY notes.md") is not None
+    reason = deny_reason_for_command("grep" + " --af 1" * 9 + " KEY notes.md")
+    assert reason is not None
+    assert "다 판정하지 못한다" in reason
     assert deny_reason_for_command("grep" + " --af 1" * 8 + " KEY notes.md") is None
 
 
