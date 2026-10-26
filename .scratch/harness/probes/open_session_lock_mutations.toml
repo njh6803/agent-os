@@ -1,0 +1,142 @@
+# open_session.ps1 의 기계 전체 열기 잠금(대기열 360, harness 티켓 014. `Invoke-SendLocked` 와 디스패처)의 테스트가 무엇을
+# 재는지 변이로 본다(열둘). 규칙 하나를 빼면 빨강이어야 한다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_lock_mutations.toml
+# 테스트는 파워셸 AST 에서 함수를 떼어 pwsh 서버로 부르고, 잠금을 쥔 쪽은 따로 띄운 pwsh 다(tests/tools/test_open_session.py).
+# 실제 앱에 딥링크를 쏘는 `Send-Prompt`·`Set-Defaults` 는 시험에서 돌지 않는다. 표지는 고른 단언이 실패할 때만 나오는
+# 문구다(단언 메시지는 `AssertionError: ` 머리까지, 나머지는 실패한 pwsh 의 오류 문구나 목록의 값).
+
+[[mutation]]
+name = "360: 잠금을 기다리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "놓을_때까지"]
+expect = "red"
+expect_output = ["30초 안에 잠금"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''$mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec))'''
+new = '''$mutex.WaitOne(0)'''
+
+[[mutation]]
+name = "360: 제한을 넘겨 기다린다"
+tests = ["tests/tools/test_open_session.py", "-k", "제한_시간에"]
+expect = "red"
+expect_output = ["AssertionError: 제한을 넘겨 기다렸다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''[TimeSpan]::FromSeconds($timeoutSec)'''
+new = '''[TimeSpan]::FromSeconds($timeoutSec + 15)'''
+
+[[mutation]]
+name = "360: 잠금을 못 잡고도 멈추지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "제한_시간에"]
+expect = "red"
+expect_output = ["AssertionError: 잠금을 잡지 못하고도 몸이 돌았다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if (-not $got) { throw'''
+new = '''if ($false) { throw'''
+
+[[mutation]]
+name = "360: 버려진 잠금을 받지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "놓지_않고_끝나도"]
+expect = "red"
+expect_output = ["abandoned mutex"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''
+        try { $got = $mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec)) }
+        catch [System.Threading.AbandonedMutexException] {
+            $got = $true
+            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다)'
+        }
+'''
+new = '''
+        $got = $mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec))
+'''
+
+[[mutation]]
+name = "360: 몸 뒤에 잠금을 놓지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "몸이_끝나거나"]
+expect = "red"
+expect_output = ["AssertionError: 몸 뒤에 잠금을 놓지 않았다: held"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''try { & $body } finally { $mutex.ReleaseMutex() }'''
+new = '''& $body'''
+
+[[mutation]]
+name = "360: 잡은 시각을 알리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "놓을_때까지"]
+expect = "red"
+expect_output = ["AssertionError: 잡은 시각의 줄이 없다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''        "lock=$(Get-Date'''
+new = '''        $null = "lock=$(Get-Date'''
+
+[[mutation]]
+name = "360: send 를 잠그지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "잠금_안에서만"]
+expect = "red"
+expect_output = ["Send-Prompt=False"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''Invoke-SendLocked $SendLockName $LockTimeoutSec { Send-Prompt }'''
+new = '''Send-Prompt'''
+
+[[mutation]]
+name = "360: defaults 를 잠그지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "잠금_안에서만"]
+expect = "red"
+expect_output = ["Set-Defaults=False"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''Invoke-SendLocked $SendLockName $LockTimeoutSec { Set-Defaults }'''
+new = '''Set-Defaults'''
+
+[[mutation]]
+name = "360: 되돌리기를 잠금 밖에서 부른다"
+tests = ["tests/tools/test_open_session.py", "-k", "잠금_안에서만"]
+expect = "red"
+expect_output = ["Restore-DraftDefaults=False"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''        'split' { Split-Session }'''
+new = '''        'split' { Split-Session; Restore-DraftDefaults $null $null $null }'''
+
+[[mutation]]
+name = "360: 인자를 몸에서 가리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "인자와_지역_변수"]
+expect = "red"
+expect_output = ["AssertionError: 몸에 샌 이름: body,name"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''
+    Set-Variable name -Option Private -Value $name
+    Set-Variable timeoutSec -Option Private -Value $timeoutSec
+    Set-Variable body -Option Private -Value $body
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "360: 제한 인자를 몸에서 가리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "인자와_지역_변수"]
+expect = "red"
+expect_output = ["AssertionError: 몸이 바깥의 TimeoutSec 대신 5을 봤다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''
+    Set-Variable timeoutSec -Option Private -Value $timeoutSec
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "360: 지역 변수를 몸에서 가리지 않는다"
+tests = ["tests/tools/test_open_session.py", "-k", "인자와_지역_변수"]
+expect = "red"
+expect_output = ["AssertionError: 몸에 샌 이름: mutex"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''$private:mutex = '''
+new = '''$mutex = '''
