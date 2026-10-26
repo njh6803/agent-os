@@ -3,20 +3,25 @@
 // 역할로 본다. 기대하는 문구는 명세(.scratch/web-widget/spec.md)의 "실패 원인의 문구", "요청이 거절될 때", "상한"
 // 절의 표에서 그대로 옮겼다. 가짜는 HTTP(MSW)와 부모 창(testing/site.ts)뿐이다.
 
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { frame, gate, items, limited, rejection, stream } from "../../testing/network";
 import { serveTokens } from "../../testing/site";
 import {
+  advance,
   ask,
+  band,
+  countdown,
   FINISHED,
   findOutput,
+  inTurn,
   onContinue,
   onStart,
   openWidget,
   requestBox,
   sendButton,
+  spoken,
 } from "../../testing/widget";
 
 // --- 실패 원인의 알림 ---
@@ -181,19 +186,6 @@ test("포커스 차례에 알림의 버튼이 대화 안의 버튼으로 든다"
 
 // --- 시작과 이어 가기의 거절 ---
 
-/** 응답을 차례로 하나씩 낸다. 시작과 이어 가기가 함께 쓴다. */
-function inTurn(...responses: readonly (() => Response)[]): () => Response {
-  let next = 0;
-  return () => {
-    const respond = responses[next];
-    next += 1;
-    if (respond === undefined) {
-      throw new Error("준비한 응답보다 요청이 많다");
-    }
-    return respond();
-  };
-}
-
 function lastAlert(): HTMLElement {
   const alert = screen.getAllByRole("alert").at(-1);
   if (alert === undefined) {
@@ -256,8 +248,7 @@ for (const [label, respond] of [
   ["표 밖의 상태 502", () => rejection(502)],
   ["응답 전의 네트워크 실패", () => Response.error()],
   ["시작 항목 전에 끝난 스트림", () => stream([])],
-  // 재접속(티켓 09)이 들어오기 전까지의 틈. 09 가 이 행을 재접속으로 바꾼다.
-  ["시작 항목 뒤에 결말 없이 끝난 스트림", () => items({ type: "started", run_id: "run_1" })],
+  // 시작 항목 뒤에 결말 없이 끝난 스트림은 끊김이다(WidgetReconnect.test.tsx).
 ] as const) {
   test(`${label} 는 요청을 남긴 채 위험 알림 "요청을 처리하지 못했습니다."와 "다시 보내기"다`, async () => {
     serveTokens();
@@ -322,12 +313,6 @@ test("처리하지 못한 거절이 같은 대화에서 세 번째로 거듭되�
 async function afterFinished(user: UserEvent): Promise<void> {
   await ask(user, "첫째");
   await findOutput("도착 예정입니다.");
-}
-
-async function advance(ms: number): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
 }
 
 test("이어 가기의 404 면 1초 뒤 같은 이어 가기를 한 번 더 보내고, 받아들여지면 그대로 이어 간다", async () => {
@@ -522,40 +507,6 @@ test("422 의 안내는 다음에 보낼 때 걷힌다", async () => {
   await findOutput("도착 예정입니다.");
   expect(screen.queryByText(INVALID)).toBeNull();
 });
-
-/** 입력창 위 띠의 자리. 대화 뒤, 입력창 앞의 status 다. */
-function band(): HTMLElement {
-  const statuses = screen.getAllByRole("status");
-  const last = statuses.at(-1);
-  if (
-    last === undefined ||
-    last.compareDocumentPosition(requestBox()) !== Node.DOCUMENT_POSITION_FOLLOWING
-  ) {
-    throw new Error("입력창 앞의 status 가 없다");
-  }
-  return last;
-}
-
-/** 화면 읽기 프로그램이 읽는 글. aria-hidden 인 것을 뺀다. */
-function spoken(element: Element): string {
-  const copy = element.cloneNode(true);
-  if (!(copy instanceof Element)) {
-    throw new Error("요소가 아니다");
-  }
-  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) {
-    hidden.remove();
-  }
-  return copy.textContent;
-}
-
-/** 띠의 줄어드는 숫자. 화면 읽기 프로그램에서 숨는다. 같이 숨는 아이콘은 글이 없어 거른다. */
-function countdown(): string | null {
-  const hidden = Array.from(
-    band().querySelectorAll('[aria-hidden="true"]'),
-    (element) => element.textContent,
-  );
-  return hidden.find((text) => text !== "") ?? null;
-}
 
 for (const path of ["시작", "이어 가기"] as const) {
   test(`${path}의 429 는 요청을 대화에서 빼 입력창으로 되돌리고, 띠가 상한의 문구와 기다릴 시간을 보이며 보내기를 막는다`, async () => {

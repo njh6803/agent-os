@@ -24,7 +24,7 @@ export interface ConnectedWidgetProps {
 export function ConnectedWidget({ embed, problems, connection }: ConnectedWidgetProps) {
   const [draft, setDraft] = useState("");
   // 되돌아온 요청(422, 429)은 입력창에 넣는다.
-  const { conversation, send, reset, decide, wait, invalid } = useConversation(
+  const { conversation, send, reset, decide, wait, invalid, restore, reconnect } = useConversation(
     embed.agent,
     connection,
     setDraft,
@@ -52,14 +52,17 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
       exchanges={conversation.exchanges}
       restarted={conversation.restarted}
       announcements={conversation.announcements}
-      sendBlocked={phase !== "idle" || (wait !== null && wait.remaining > 0)}
+      sendBlocked={restore !== "ready" || phase !== "idle" || (wait !== null && wait.remaining > 0)}
       wait={wait}
       invalid={invalid}
       paused={phase === "paused"}
       onDecide={decide}
-      // 결정을 보내는 동안은 결정 응답이 결말 전이라 막는다. 결정을 기다리기만 할 때는 열려 있다.
+      // 결정을 보내는 동안은 결정 응답이 결말 전이라 막는다. 결정을 기다리기만 할 때는 열려 있다. 끊겨 다시 잇는 동안도
+      // 붙은 응답이 없어 열려 있다. 되돌리는 동안은 고를 대화가 아직 없어 막는다.
       newConversationDisabled={
-        phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
+        restore === "loading" ||
+        (phase === "running" && reconnect === null) ||
+        (waitingApproval(conversation)?.state.sending ?? null) !== null
       }
       draft={draft}
       onDraftChange={setDraft}
@@ -72,6 +75,8 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
       onRetry={send}
       onNewConversation={reset}
       requestChars={requestCharLimit()}
+      restore={restore}
+      reconnect={reconnect}
     />
   );
 }

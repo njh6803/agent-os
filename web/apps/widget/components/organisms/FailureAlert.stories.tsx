@@ -1,5 +1,5 @@
-// 실패 알림을 폭 320px 과 400px 에서 그린다(web-widget 티켓 07, 화면 디자인 mk-failure, mk-rejection). 원인마다의
-// 알림과 거절의 알림을 늘어놓는다. 미리보기의 afterEach 가 클래스를, addon-a11y 가 접근성을, 사진 비교(visual/)가
+// 실패 알림을 폭 320px 과 400px 에서 그린다(web-widget 티켓 07·09, 화면 디자인 mk-failure, mk-rejection). 원인마다의
+// 알림과 거절의 알림(다시 잇기를 멈춘 것 포함)을 늘어놓는다. 미리보기의 afterEach 가 클래스를, addon-a11y 가 접근성을, 사진 비교(visual/)가
 // 그림을 판정한다. 문구와 버튼의 규칙은 화면 동작 테스트(pages/WidgetFailures.test)가 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
@@ -27,6 +27,7 @@ const REJECTIONS: readonly Outcome[] = [
   { kind: "unavailable" },
   { kind: "error", offerNew: false },
   { kind: "error", offerNew: true },
+  { kind: "lost" },
 ];
 
 type ListProps = Omit<FailureAlertProps, "outcome"> & { readonly outcomes: readonly Outcome[] };

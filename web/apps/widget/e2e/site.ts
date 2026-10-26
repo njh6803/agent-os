@@ -6,7 +6,10 @@
 // - 질의 `intruders=1` 이면 페이지가 답하기 전에 끼어드는 iframe 둘(같은 허용 출처의 형제, 허용 밖 출처)이 같은 `id`
 //   로 가짜 토큰을 위젯에 먼저 보낸다. 둘이 보냈다고 알린 뒤 0.5초를 더 기다려 페이지가 진짜 토큰을 보낸다. 위젯이
 //   가짜를 받으면 401 이 되고, 버리면 진짜로 실행이 끝난다.
-// - `/token` 은 사이트의 키로 서명한 새 토큰이다. 시험이 서버에 직접 보내는 요청도 이것을 쓴다.
+// - 질의 `sub` 가 있으면 페이지가 토큰마다 그 주체를 청한다. 없으면 토큰마다 새 주체다(token.ts). 위젯은 저장한 대화의
+//   묶음(발급자와 주체)을 새로 받은 토큰과 견줘, 주체가 바뀌면 앞 사람의 대화로 보고 지운다. 그래서 새로 고친 뒤 다시
+//   붙는 사례는 주체를 고정한다.
+// - `/token` 은 사이트의 키로 서명한 새 토큰이다. 질의 `sub` 가 그 주체다. 시험이 서버에 직접 보내는 요청도 이것을 쓴다.
 // - `/element` 와 그 아래는 페이지 안 방식의 페이지다(element-site.ts).
 //
 // iframe 페이지의 스크립트는 인라인이고 CSP 를 두지 않는다. CSP 를 다는 페이지는 페이지 안 방식의 한 판뿐이다.
@@ -22,8 +25,10 @@ function page(
   agent: string,
   intruders: boolean,
   otherOrigin: string,
+  sub: string | null,
 ): string {
   const widget = `${widgetOrigin}/widget?agent=${encodeURIComponent(agent)}`;
+  const tokenPath = sub === null ? "/token" : `/token?sub=${encodeURIComponent(sub)}`;
   // 위젯 iframe 이 첫 프레임이어야 끼어드는 iframe 이 `parent.frames[0]` 으로 찾는다.
   const nested = intruders
     ? `<iframe class="intruder" title="형제" src="/intruder"></iframe>
@@ -66,7 +71,7 @@ window.addEventListener("message", async (event) => {
     document.body.dataset.intruded = String(intruders.length);
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  const token = await (await fetch("/token")).text();
+  const token = await (await fetch(${JSON.stringify(tokenPath)})).text();
   frame.contentWindow.postMessage({ type: "agent-os/token", id: data.id, token }, WIDGET);
 });
 </script>
@@ -112,7 +117,7 @@ export async function startSite(port: number, origins: SiteOrigins, key: SiteKey
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-store",
       });
-      outgoing.end(signToken(key));
+      outgoing.end(signToken(key, url.searchParams.get("sub") ?? undefined));
       return;
     }
     if (url.pathname === "/intruder") {
@@ -124,7 +129,9 @@ export async function startSite(port: number, origins: SiteOrigins, key: SiteKey
       const agent = url.searchParams.get("agent") ?? "tools";
       const intruders = url.searchParams.get("intruders") === "1";
       outgoing.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      outgoing.end(page(origins.widget, agent, intruders, origins.other));
+      outgoing.end(
+        page(origins.widget, agent, intruders, origins.other, url.searchParams.get("sub")),
+      );
       return;
     }
     const answer = elementAnswer(url, origins);

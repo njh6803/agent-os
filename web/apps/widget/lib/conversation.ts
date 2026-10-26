@@ -18,7 +18,12 @@
 //   카드가 다시 결정을 받는 상태로 돌아오며 그 까닭을 들고, 두 번 404 면 카드가 걷혀 교환이 끝난다(명세 "요청이 거절될
 //   때"의 결정 행).
 //
-// 재접속은 09 가 들인다. 그때까지 시작 항목 뒤에 결말 없이 끝난 스트림은 처리하지 못한 것이다.
+// - 다시 붙을 실행(`reattach`)은 돌거나 멈춘 실행이다(명세 "저장"의 상태의 옮김). `started` 가 오면 그 실행이 되고,
+//   `finished`·`failed`·`unfinished` 가 오면 빈다. `paused` 는 그대로 둔다. 결정이 두 번 404 여도 빈다. 저장(lib/storage)이
+//   이것을 들어 새로 고친 뒤 그 실행에 처음부터 다시 붙는다.
+// - 시작 항목 뒤에 결말 없이 끊긴 스트림은 재접속(lib/reconnect)이 이어 받는다. 구독이 거절되면 상태 코드마다 결말을
+//   준다. 401 은 로그인 정보를 받지 못한 것이고, 처리하지 못한 거절이 거듭되면 다시 잇기를 멈춘 것(`lost`)이다. 둘 다
+//   다시 붙을 실행을 비우지 않아, 새로 고치면 다시 붙는다.
 
 import type { EndUserItem } from "../api/runs";
 import { argsText } from "./approval";
@@ -49,10 +54,12 @@ export type Outcome =
   /** 409. 꺼진 에이전트와 끝나지 않은 앞 실행이 같은 코드다. */
   | { readonly kind: "unavailable" }
   /**
-   * 처리하지 못했다. 500, 표 밖의 상태, 응답 전의 네트워크 실패, 결말 없이 끝난 스트림이다. 같은 대화에서 세 번째로
+   * 처리하지 못했다. 500, 표 밖의 상태, 응답 전의 네트워크 실패, 시작 항목 전에 끝난 스트림이다. 같은 대화에서 세 번째로
    * 거듭된 것이면 `offerNew` 가 참이고 알림에 "새 대화"가 붙는다.
    */
-  | { readonly kind: "error"; readonly offerNew: boolean };
+  | { readonly kind: "error"; readonly offerNew: boolean }
+  /** 다시 이으려 한 구독이 처리하지 못한 거절을 세 번 거듭 받아 멈췄다. 알림에는 "새 대화"만 있다. */
+  | { readonly kind: "lost" };
 
 /** 결정. 거부에만 사유가 있다. */
 export type Decision =
@@ -111,6 +118,8 @@ export interface Conversation {
   readonly exchanges: readonly Exchange[];
   /** 다음 요청이 이어 갈 실행. 없으면 다음 요청은 시작이다. */
   readonly continueFrom: string | null;
+  /** 다시 붙을 실행. 돌거나 멈춘 실행이고, 결말이 오면 빈다. */
+  readonly reattach: string | null;
   /** 숨긴 읽기 영역이 차례로 읽을 글. */
   readonly announcements: readonly string[];
   readonly nextId: number;
@@ -130,10 +139,7 @@ export type Action =
   | { readonly type: "decision-refused"; readonly notice: DecisionNotice | null }
   /** 결정이 두 번 404 였다. */
   | { readonly type: "expired" }
-  /**
-   * 스트림이 끝났다. 결말 없이 끝났으면 처리하지 못한 것이다. 시작 항목 전이면 거절 표의 500 행이고, 뒤면 티켓 09 가
-   * 재접속으로 갈라낼 때까지 같은 알림이다.
-   */
+  /** 시작이나 이어 가기의 응답이 시작 항목 전에 끝났다. 거절 표의 500 행이다. */
   | { readonly type: "ended" }
   /** 실행이 받아들여지지 않았다. 상태 코드이고 응답 전의 네트워크 실패면 null 이다. */
   | { readonly type: "rejected"; readonly status: number | null }
@@ -144,12 +150,24 @@ export type Action =
    * 이력 2026-10-23).
    */
   | { readonly type: "restarted" }
+  /**
+   * 요청을 보내려 받은 토큰의 묶음이 앞 사람의 것과 다르다. 앞 대화를 비우고 도는 교환 하나만 남긴다. 그 요청은 새 대화의
+   * 시작으로 간다. 앞 사람의 대화이니 다시 시작했다는 알림은 세우지 않는다.
+   */
+  | { readonly type: "switched" }
+  /** 구독이 두 번 404 였다. 화면을 비우고 정보 알림만 남긴다. 다시 보낼 요청은 없다. */
+  | { readonly type: "vanished" }
+  /** 다시 잇기를 멈췄다. 처리하지 못한 구독의 거절이 세 번 거듭됐다. */
+  | { readonly type: "lost" }
+  /** 저장에서 되돌린 대화로 바꾼다(lib/storage 의 `conversationOf`). */
+  | { readonly type: "restored"; readonly conversation: Conversation }
   /** 새 대화. */
   | { readonly type: "reset" };
 
 export const INITIAL: Conversation = {
   exchanges: [],
   continueFrom: null,
+  reattach: null,
   announcements: [],
   nextId: 0,
   errorStreak: 0,
@@ -196,6 +214,12 @@ export function reduce(state: Conversation, action: Action): Conversation {
   switch (action.type) {
     case "reset":
       return INITIAL;
+    case "restored":
+      return action.conversation;
+    case "vanished":
+      return { ...INITIAL, nextId: state.nextId, restarted: true };
+    case "lost":
+      return settle(state, { kind: "lost" });
     case "sent":
       return {
         ...state,
@@ -215,12 +239,18 @@ export function reduce(state: Conversation, action: Action): Conversation {
       };
     case "no-token":
       return settle(state, { kind: "unauthorized" });
-    case "restarted": {
+    case "restarted":
+    case "switched": {
       const running = state.exchanges.at(-1);
       if (running?.outcome !== null) {
         return state;
       }
-      return { ...INITIAL, exchanges: [running], nextId: state.nextId, restarted: true };
+      return {
+        ...INITIAL,
+        exchanges: [running],
+        nextId: state.nextId,
+        restarted: action.type === "restarted",
+      };
     }
     case "rejected":
       switch (action.status) {
@@ -255,8 +285,10 @@ export function reduce(state: Conversation, action: Action): Conversation {
         sending: null,
         notice: action.notice,
       }));
-    case "expired":
-      return updateWaiting(state, () => ({ kind: "expired" }), { kind: "expired" });
+    case "expired": {
+      const next = updateWaiting(state, () => ({ kind: "expired" }), { kind: "expired" });
+      return next === state ? state : { ...next, reattach: null };
+    }
   }
 }
 
@@ -340,7 +372,10 @@ function applyItem(state: Conversation, id: number, item: EndUserItem): Conversa
   }
   switch (item.type) {
     case "started":
-      return updateRunning(state, (exchange) => ({ ...exchange, runId: item.run_id }));
+      return {
+        ...updateRunning(state, (exchange) => ({ ...exchange, runId: item.run_id })),
+        reattach: item.run_id,
+      };
     case "calling":
       return updateRunning(state, (exchange) => ({
         ...exchange,
@@ -377,17 +412,27 @@ function applyItem(state: Conversation, id: number, item: EndUserItem): Conversa
     case "finished": {
       const next = settle(state, { kind: "finished", output: item.output });
       return announce(
-        { ...next, continueFrom: running.runId ?? state.continueFrom, errorStreak: 0 },
+        {
+          ...next,
+          continueFrom: running.runId ?? state.continueFrom,
+          reattach: null,
+          errorStreak: 0,
+        },
         item.output,
       );
     }
     case "failed":
       return {
         ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
+        reattach: null,
         errorStreak: 0,
       };
     case "unfinished":
-      return { ...settle(state, { kind: "unfinished", runId: running.runId }), errorStreak: 0 };
+      return {
+        ...settle(state, { kind: "unfinished", runId: running.runId }),
+        reattach: null,
+        errorStreak: 0,
+      };
   }
 }
 

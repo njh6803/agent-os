@@ -138,10 +138,11 @@ expect_output = ['Unable to find role="alert"']
 [[mutation.edit]]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
-        { ...next, continueFrom: running.runId ?? state.continueFrom, errorStreak: 0 },
+          continueFrom: running.runId ?? state.continueFrom,
+          reattach: null,
 '''
 new = '''
-        { ...next, errorStreak: 0 },
+          reattach: null,
 '''
 
 [[mutation]]
@@ -155,11 +156,11 @@ expect_output = ["expected [ [ …(2) ], [ …(2) ] ] to deeply equal"]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
         ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
-        errorStreak: 0,
+        reattach: null,
 '''
 new = '''
         ...settle(state, { kind: "failed", cause: item.cause, runId: item.run_id }),
-        errorStreak: 0,
+        reattach: null,
         continueFrom: running.runId,
 '''
 
@@ -420,10 +421,10 @@ expect_output = ['<textarea …(4)></textarea> to have property "disabled" with 
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.tsx"
 old = '''
-          disabled={misconfigured || paused}
+          disabled={misconfigured || paused || restore !== "ready"}
 '''
 new = '''
-          disabled={misconfigured}
+          disabled={misconfigured || restore !== "ready"}
 '''
 
 [[mutation]]

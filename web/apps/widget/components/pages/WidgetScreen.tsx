@@ -4,6 +4,9 @@
 //
 // - 설정이 잘못됐으면(어느 때인지는 ConnectedWidget 의 머리 주석) 대화 자리에 위험 알림을 보이고 입력 자리를 막는다
 //   (web-widget 명세 "임베드"의 잘못 준 속성).
+// - 저장한 대화를 되돌리는 동안은 대화 자리에 진행 표시만 보이고, 토큰을 받지 못해 그리지 못했으면 401 과 같은 알림을
+//   보인다. 둘 다 입력 자리를 막는다(web-widget 명세 "저장"의 묶음 견주기). 앞 사람의 대화를 토큰 없이 그리지 않기
+//   위해서다.
 // - 교환이 없으면 첫 화면이고, 있으면 대화 목록이다. 다시 시작한 대화는 교환이 비어도(그 시작이 422·429 로
 //   입력창에 돌아왔을 때) 대화 목록이다. 맨 위의 정보 알림을 남긴 채 보내기 때문이다(web-widget 명세 "요청이 거절될
 //   때"의 이어 가기 404).
@@ -11,14 +14,17 @@
 //   화면 읽기 프로그램은 더해진 문단만 읽는다. 영역은 처음부터 서 있어야 더해진 것을 읽으므로 늘 그린다.
 // - 포커스 차례는 문서의 차례 그대로다. 위쪽 띠의 "새 대화" → 대화 영역 → 대화 안의 버튼 → 입력창 → 보내기.
 //   대화 영역이 포커스를 받는 까닭은 organisms/Conversation 의 머리 주석이다.
-import { Alert } from "@agent-os/ui";
+import { Alert, Progress } from "@agent-os/ui";
 import type { Exchange, Decision } from "../../lib/conversation";
 import type { LimitWait } from "../../lib/limit";
+import type { Reconnect } from "../../lib/reconnect";
 import { Welcome } from "../molecules/Welcome";
 import { Composer } from "../organisms/Composer";
 import { Conversation } from "../organisms/Conversation";
+import { FailureAlert } from "../organisms/FailureAlert";
 import { TopBar } from "../organisms/TopBar";
 import { WidgetFrame } from "../templates/WidgetFrame";
+import type { Restore } from "./useConversation";
 
 export interface WidgetScreenProps {
   readonly heading: string;
@@ -49,7 +55,13 @@ export interface WidgetScreenProps {
   readonly onNewConversation: () => void;
   /** 요청 글자 수 상한(코드 포인트). */
   readonly requestChars: number;
+  /** 저장한 대화를 되돌린 자리. */
+  readonly restore: Restore;
+  /** 끊긴 실행에 다시 잇는 중. 입력창 위 띠가 서고 목록의 진행 표시가 숨는다. */
+  readonly reconnect: Reconnect | null;
 }
+
+const noop = () => {};
 
 /** 마지막 교환이 단계 상한(`loop_limit`)으로 실패했으면 그 번호. 그 알림은 버튼 없이 입력창으로 포커스를 보낸다. */
 function focusFor(exchanges: readonly Exchange[]): number | null {
@@ -76,6 +88,8 @@ export function WidgetScreen({
   onRetry,
   onNewConversation,
   requestChars,
+  restore,
+  reconnect,
 }: WidgetScreenProps) {
   let conversation;
   if (misconfigured) {
@@ -84,6 +98,25 @@ export function WidgetScreen({
         <Alert tone="danger" title="위젯 설정이 올바르지 않습니다.">
           사이트 관리자에게 알려 주세요.
         </Alert>
+      </div>
+    );
+  } else if (restore === "loading") {
+    conversation = (
+      <div className="flex flex-1 items-center justify-center p-4">
+        <Progress label="이전 대화를 불러오고 있습니다." />
+      </div>
+    );
+  } else if (restore === "unauthorized") {
+    // 401 과 같은 알림이다. 버튼이 없어 "다시 보내기"는 쓰이지 않는다.
+    conversation = (
+      <div className="p-4">
+        <FailureAlert
+          outcome={{ kind: "unauthorized" }}
+          onRetry={noop}
+          retryBlocked
+          onNewConversation={onNewConversation}
+          newConversationBlocked={newConversationDisabled}
+        />
       </div>
     );
   } else if (exchanges.length === 0 && !restarted) {
@@ -100,6 +133,7 @@ export function WidgetScreen({
         reasonLimit={requestChars}
         decisionBlocked={wait !== null && wait.purpose === "decide" && wait.remaining > 0}
         onDecide={onDecide}
+        reconnecting={reconnect !== null}
       />
     );
   }
@@ -130,12 +164,13 @@ export function WidgetScreen({
           onChange={onDraftChange}
           onSend={onSend}
           limit={requestChars}
-          disabled={misconfigured || paused}
+          disabled={misconfigured || paused || restore !== "ready"}
           blocked={sendBlocked}
           focusFor={focusFor(exchanges)}
           wait={wait}
           invalid={invalid}
           awaitingDecision={paused}
+          reconnect={reconnect}
         />
       }
     />
