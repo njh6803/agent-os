@@ -42,6 +42,7 @@ from tools.tidy_checkouts import (
     delete_path,
     describe_holders,
     dos_path,
+    fold_ignored,
     hold_for_strangers,
     holders_in,
     holds_home,
@@ -432,13 +433,6 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         ".design-sync/.cache/",
         ".scratch/harness/probes/session_cost/cache/",
         "grep.exe.stackdump",
-        # 안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
-        # `.grimp_cache/` 안의 `.gitignore` 에 `*` 를 둔다(셀프 리뷰 명세 축)
-        ".grimp_cache/.gitignore",
-        ".grimp_cache/CACHEDIR.TAG",
-        ".grimp_cache/sub/",
-        "src/.grimp_cache/a.data.json",
-        "web/apps/widget/public/fonts/a.woff2",
     ]
     assert unrecreatable(entries, settings_same=True) == []
 
@@ -446,9 +440,8 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
 def test_다시_만들_수_없는_무시된_것을_돌려준다() -> None:
     """자리째로 보는 폴더와 파일은 같은 이름이 다른 자리에 있으면 다시 만들 수 없는 것이다. 플랜
     모드의 계획 파일은 세션의 계획 원문이라 산출물이 아니다. 접힌 폴더(`web/apps/widget/public/`)는
-    그 안을 모르니 다시 만들 수 없는 것이다. 그래서 `gather` 가 접지 않고 읽는다(대기열 464). 조상
-    폴더는 다시 만들 수 있는 폴더의 이름이나 폴더 자리와 맞아야 하고, 파일 자리는 조상이 되지
-    않는다."""
+    그 안을 모르니 다시 만들 수 없는 것이다. 그래서 `gather` 가 git 의 접힘 없이 읽는다(대기열
+    464). 폴더 안의 항목은 그 이름으로만 본다. 조상 폴더로 접는 것은 `fold_ignored` 다."""
     entries = [
         ".env",
         "traces/",
@@ -498,6 +491,71 @@ def test_루트와_다른_설정_파일은_다시_만들_수_없다() -> None:
 
 def test_같은_이름의_파일은_다시_만들_수_있는_폴더가_아니다() -> None:
     assert unrecreatable([".venv", "node_modules"], settings_same=True) == [".venv", "node_modules"]
+
+
+def _링크_없음(_relative: str) -> bool:
+    return False
+
+
+def test_무시된_항목을_가장_바깥의_다시_만들_수_있는_폴더로_접는다() -> None:
+    """안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
+    `.grimp_cache/` 안의 `.gitignore` 에 `*` 를 둔다(셀프 리뷰 명세 축). 폴더째 접어야 옮기기가 그
+    폴더를 한 번에 옮긴다. 하나씩 옮기다 막히면 먼저 옮긴 안쪽 `.gitignore` 가 빠져 남은 항목이
+    미추적이 된다(PR 직전 bug-perf-review). 접은 자리는 처음 나온 차례로 한 번만 든다."""
+    entries = [
+        ".grimp_cache/.gitignore",
+        ".grimp_cache/CACHEDIR.TAG",
+        ".grimp_cache/sub/",
+        ".grimp_cache/x/node_modules/",
+        "src/.grimp_cache/a.data.json",
+        "web/apps/widget/public/fonts/a.woff2",
+        ".venv/",
+        "web/apps/widget/public/element.js",
+    ]
+    assert fold_ignored(entries, _링크_없음) == (
+        ".grimp_cache/",
+        "src/.grimp_cache/",
+        "web/apps/widget/public/fonts/",
+        ".venv/",
+        "web/apps/widget/public/element.js",
+    )
+
+
+def test_다시_만들_수_있는_폴더가_아닌_조상으로는_접지_않는다() -> None:
+    """반박 시험. 조상 폴더는 다시 만들 수 있는 폴더의 이름이나 폴더 자리와 맞아야 하고, 이름이
+    비슷한 폴더와 파일 자리(끝에 `/` 가 없는 `element.js`)는 조상이 되지 않는다."""
+    entries = [
+        "a.grimp_cache/x.json",
+        "x/.grimp_cache",
+        "notes/.gitignore",
+        "web/apps/widget/public/fontsx/a.woff2",
+        "web/apps/widget/public/element.js/x",
+    ]
+    assert fold_ignored(entries, _링크_없음) == tuple(entries)
+
+
+def test_무시된_항목을_가장_바깥의_링크로_접는다() -> None:
+    """윈도의 git 2.32 는 정션을 따라가 `matching` 으로 그 안을 하나씩 찍는다(PR 직전
+    bug-perf-review 가 재현했다). 링크 안의 항목을 옮기면 링크 바깥의 파일이 옮겨지므로 링크째로
+    접는다. 그러면 링크는 제 이름으로 판정된다. 링크와 다시 만들 수 있는 폴더가 겹치면 더 바깥의
+    것으로 접는다."""
+    links = {"foo", "a/b", ".grimp_cache/l", "bar"}
+    entries = [
+        "foo/node_modules/",
+        "foo/a.stackdump",
+        "a/b/c/x.pyc",
+        "a/y.stackdump",
+        ".grimp_cache/l/x.json",
+        "bar/.grimp_cache/a.json",
+    ]
+    assert fold_ignored(entries, links.__contains__) == (
+        "foo/",
+        "a/b/",
+        "a/y.stackdump",
+        ".grimp_cache/",
+        "bar/",
+    )
+    assert unrecreatable(["foo/", "a/b/"], settings_same=True) == ["foo/", "a/b/"]
 
 
 _HOOK_KEY = f"{HOOK_KEY_PREFIX}x:tdd"
@@ -2396,9 +2454,75 @@ def test_judge_와_remove_는_안쪽_gitignore_로만_무시된_폴더를_조상
     assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
     line = next(line for line in capsys.readouterr().out.splitlines() if "/cachewt" in line)
     assert line.startswith(action), line
+    moved: list[str] = []
+
+    def rename(src: str, dst: str) -> None:
+        if ".tidy-trash" in dst:
+            moved.append(Path(dst).name)
+        os.rename(src, dst)
+
     argv = ["remove", path.as_posix(), "chore/cachewt", head]
-    assert main(argv, cwd=repo, ops=_ops(merged)) == code
+    assert main(argv, cwd=repo, ops=replace(_ops(merged), rename=rename)) == code
     assert path.exists() == (code == 1)
+    # 폴더째 한 번에 옮긴다(PR 직전 bug-perf-review). 안쪽 `.gitignore` 만 먼저 옮기면 남은 것이
+    # 미추적이 된다
+    cache_moves = sorted(name for name in moved if folder in name)
+    assert cache_moves == ([f"cachewt~~{folder}"] if code == 0 else []), moved
+
+
+@pytest.mark.parametrize(
+    ("link", "layout", "windows"),
+    [
+        (
+            ".grimp_cache",
+            {".gitignore": "*\n", "a.json": "{}", "keep/secret.txt": "s"},
+            ("지운다", "", 0),
+        ),
+        (
+            "foo",
+            {"node_modules/pkg/index.js": "x"},
+            ("남긴다", " — 다시 만들 수 없는 무시된 항목: foo/", 1),
+        ),
+    ],
+    ids=["다시_만들_수_있는_이름의_링크", "그_밖의_링크"],
+)
+def test_judge_와_remove_는_링크_안의_무시된_것을_링크째로_보고_바깥을_옮기지_않는다(
+    repo: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    link: str,
+    layout: dict[str, str],
+    windows: tuple[str, str, int],
+) -> None:
+    """PR 직전 bug-perf-review(반박 시험, `.claude/rules/tools.md` 의 지우는 자리 안의 링크). 윈도의
+    git 2.32 는 정션을 따라가 `matching` 으로 그 안을 하나씩 찍는다(첫 단언이 그 표지다). 링크째로
+    접어, 다시 만들 수 있는 이름의 링크는 링크만 옮기고 그 밖의 링크는 남긴다. 리눅스의 git 은
+    심볼릭 링크를 따라가지 않고 미추적 항목으로 찍어 바뀐 파일로 남긴다. 어느 쪽이든 링크 바깥의
+    파일은 그대로다."""
+    path, head = _add(repo, "linkwt")
+    outside = tmp_path / "outside"
+    for relative, text in layout.items():
+        (outside / relative).parent.mkdir(parents=True, exist_ok=True)
+        (outside / relative).write_text(text, encoding="utf-8")
+    _link(path / link, outside)
+    if sys.platform == "win32":
+        listed = _git("status", "--porcelain", "--ignored=matching", cwd=path).splitlines()
+        inner = next(iter(layout)).split("/", 1)[0]
+        assert any(entry.startswith(f"!! {link}/{inner}") for entry in listed), listed
+        action, suffix, code = windows
+    else:
+        assert f"?? {link}" in _git("status", "--porcelain", cwd=path).splitlines()
+        action, suffix, code = "남긴다", " — 바뀐 파일이 있다", 1
+    merged = {"chore/linkwt": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/linkwt" in line)
+    assert line.startswith(action), line
+    assert line.endswith(suffix), line
+    argv = ["remove", path.as_posix(), "chore/linkwt", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == code
+    assert sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*") if p.is_file()) == (
+        sorted(layout)
+    )
 
 
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:

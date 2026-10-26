@@ -59,8 +59,9 @@
   자리(`web/apps/widget/public/fonts/`)가 그 위 폴더로 보였고 위젯을 띄운 병합된 워크트리 아홉이
   남았다(대기열 464, 일지 2026-10-26-01). `matching` 은 무시 패턴에 맞은 자리만 찍는다(git 2.32 의
   임시 저장소에서 두 모드를 손으로 봤고, 시험이 그 접힘을 표지로 고정한다). 그래서 안쪽
-  `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)는 그 안의 항목이 하나씩 찍히고, 조상 폴더가 다시
-  만들 수 있는 폴더인 항목은 다시 만들 수 있는 것으로 본다.
+  `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)와 윈도의 정션은 그 안의 항목이 하나씩 찍히고,
+  판정과 옮기기 전에 그 항목을 가장 바깥의 링크나 다시 만들 수 있는 폴더인 조상으로 접는다
+  (`fold_ignored`). 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다.
   설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
   `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
@@ -1200,14 +1201,12 @@ def tasklist_has(output: str, pid: int) -> bool:
 
 
 def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
-    """`status --ignored=matching` 의 `!!` 항목 중 다시 만들 수 없는 것. 디렉터리는 `/` 로 끝난다.
+    """`fold_ignored` 로 접은 `!!` 항목 중 다시 만들 수 없는 것. 디렉터리는 `/` 로 끝난다.
     `RECREATABLE_PATHS` 는 폴더와 파일을 끝의 `/` 로 가르므로 같은 이름의 다른 종류는 맞지
-    않는다. 다시 만들 수 있는 폴더 아래의 항목은 그 폴더와 같이 본다(`_under_recreatable_dir`)."""
+    않는다."""
     kept: list[str] = []
     for entry in ignored:
         name = entry.rstrip("/").rsplit("/", 1)[-1]
-        if _under_recreatable_dir(entry):
-            continue
         if entry.endswith("/"):
             if name in RECREATABLE_DIRS or entry in RECREATABLE_PATHS:
                 continue
@@ -1222,16 +1221,27 @@ def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
     return kept
 
 
-def _under_recreatable_dir(entry: str) -> bool:
-    """`entry` 의 조상 폴더 가운데 다시 만들 수 있는 폴더(`RECREATABLE_DIRS` 의 이름,
-    `RECREATABLE_PATHS` 의 폴더 자리)가 있다. 안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이
-    그 안의 항목을 하나씩 찍는다. Grimp 는 `.grimp_cache/` 안에 `*` 줄이 든 `.gitignore` 를
-    둔다(셀프 리뷰 명세 축)."""
-    parts = entry.rstrip("/").split("/")[:-1]
-    return any(
-        part in RECREATABLE_DIRS or "/".join(parts[: depth + 1]) + "/" in RECREATABLE_PATHS
-        for depth, part in enumerate(parts)
-    )
+def fold_ignored(entries: Sequence[str], is_link: Callable[[str], bool]) -> tuple[str, ...]:
+    """`status --ignored=matching` 의 `!!` 항목을 가장 바깥의 조상 가운데 링크(심볼릭 링크, 정션.
+    `is_link` 는 워크트리 기준의 상대 경로를 받는다)이거나 다시 만들 수 있는
+    폴더(`_recreatable_dir`) 인 것으로 접는다. 접은 자리는 처음 나온 차례로 한 번만 든다.
+
+    안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
+    `.grimp_cache/` 안에 `*` 줄이 든 `.gitignore` 를 둔다(셀프 리뷰 명세 축). 하나씩 옮기다 막히면
+    먼저 옮긴 그 `.gitignore` 가 빠져 남은 것이 미추적이 되므로 폴더째 접는다. 윈도의 git 2.32 는
+    정션을 따라가 그 안도 하나씩 찍는다. 그대로 옮기면 링크 바깥의 파일이 옮겨지므로 링크째로
+    접어, 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다(둘 다 PR 직전 bug-perf-review 가
+    임시 저장소로 재현했다)."""
+    folded: dict[str, None] = {}
+    for entry in entries:
+        parts = entry.rstrip("/").split("/")
+        for depth in range(1, len(parts)):
+            ancestor = "/".join(parts[:depth])
+            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):
+                entry = ancestor + "/"
+                break
+        folded[entry] = None
+    return tuple(folded)
 
 
 def same_path(left: str, right: str) -> bool:
@@ -1701,7 +1711,8 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
     listed = git(["status", "--porcelain", "-z", "--ignored=matching"], path)
     if listed.returncode != 0 and not status_err:
         status_err = listed.stderr or f"exit {listed.returncode}"
-    ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
+    found = [item[3:] for item in listed.stdout.split("\0") if item.startswith("!! ")]
+    ignored = fold_ignored(found, lambda relative: _is_link(path / relative))
     settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     behind = (
         wt.branch is not None

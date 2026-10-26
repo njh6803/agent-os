@@ -2067,14 +2067,49 @@ new = '''    return touched is not None and 0 <= now - touched < FRESH_SECONDS''
 # 셀프 리뷰 명세 축: `matching` 이 안쪽 `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)를 하나씩 찍는다
 
 [[mutation]]
-name = "다시 만들 수 있는 폴더: 조상 폴더를 보지 않는다"
+name = "무시된 항목 접기: 다시 만들 수 있는 폴더로 접지 않는다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "안쪽_gitignore_로만"]
 expect = "red"
-expect_output = ["다시 만들 수 없는 무시된 항목: .grimp_cache/.gitignore"]
+expect_output = ["무시된 항목: .grimp_cache/.gitignore, .grimp_cache/CACHEDIR.TAG"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''        if _under_recreatable_dir(entry):
-            continue
-'''
-new = ''
+old = '''            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):'''
+new = '''            if is_link(ancestor):'''
+
+# PR 직전 bug-perf-review: 윈도의 git 이 정션 안을 하나씩 찍어 옮기기가 링크 바깥을 옮긴다
+
+[[mutation]]
+name = "무시된 항목 접기: 링크로 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크째로"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[그_밖의_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):'''
+new = '''            if _recreatable_dir(parts[depth - 1], ancestor):'''
+
+[[mutation]]
+name = "무시된 항목 접기: 가장 안쪽 조상으로 접는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "가장_바깥의_링크로"]
+expect = "red"
+expect_output = ["At index 3 diff: '.grimp_cache/l/' != '.grimp_cache/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        for depth in range(1, len(parts)):
+            ancestor = "/".join(parts[:depth])'''
+new = '''        for depth in reversed(range(1, len(parts))):
+            ancestor = "/".join(parts[:depth])'''
+
+[[mutation]]
+name = "무시된 항목 접기: gather 가 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크째로"]
+expect = "red"
+expect_output = ["무시된 항목: .grimp_cache/.gitignore, .grimp_cache/a.json, .grimp_cache/keep/"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    ignored = fold_ignored(found, lambda relative: _is_link(path / relative))'''
+new = '''    ignored = tuple(found)'''

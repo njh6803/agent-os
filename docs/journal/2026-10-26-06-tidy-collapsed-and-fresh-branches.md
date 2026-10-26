@@ -72,3 +72,64 @@ Critical·Major 없음. 수용 기준 1~7이 채워졌다고 봤다. 병합된 P
 - 변이: 임시 표지로 178·181·184 를 돌려 실패 출력을 본 뒤 표지를 달아 셋 모두 기대대로, 시험 이름이 바뀐 182·183 도 기대대로. `--check` 184개 원문 한 번씩.
 - 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다(결과는 커밋 뒤 아래에 적는다).
 - 첫 커밋의 pre-commit 은 pytest 한 시험으로 막혔다(5607 통과, 1 실패, 1645초). 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py` 의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다` 다. 홀로 두 번 더 돌려 두 번 빨갰고(23초) 셋째에 지났다(31초). 빨간 회차의 임시 폴더에서 파일 시각을 보니, `hang=3.0` 인 B 회차가 36.06초에 끝나 A 의 두 번째 회차(36.92초)보다 앞섰고, 그 빈 자리에 각본 없는 C 회차가 열려 "호출"로 끝나 러너가 1을 냈다. 시험은 B 가 매달린 동안 A 의 두 회차가 끝난다고 기대하는데, 나란히 연 여덟 세션의 부하에서 A 의 두 번째 회차 하나가 9.4초였다. 부하에서 흔들리는 시간 시험의 새 사례라 ADR 0036 대로 고치지 않고 회차도 더하지 않으며, 커밋을 다시 쳤다.
+
+## 커밋
+
+- `91f02b96`. 다시 친 커밋의 pre-commit 에서 ruff 둘, 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify 978.5초, pytest 1018.3초), 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세, 인용 대조, 커밋 메시지가 Passed 였다. 헌법 판 검사는 고친 헌법 파일이 없어 Skipped 다.
+
+## 인계
+
+- 경계는 `커밋 뒤` 다. 첫 커밋을 띄운 뒤 계기가 343,662 토큰으로 왔지만 그 커밋이 pre-commit 에 막혀 경계가 아니었고, 다시 친 커밋 뒤 222,706 토큰으로 다시 왔다.
+- 인계하지 않는 때가 아니다. 커밋이 성공했고, 요청 범위가 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"가 `인계:` 로 시작하지 않고, 이 일지에 `인계 못함` 줄이 없고, `get_session` 의 `self` 에 `parentSessionId` 가 없다.
+- 이 세션의 지금 제목은 `chore/017-tidy-collapsed-and-fresh-branches` 다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md. tools/tidy_checkouts.py 가 접힌 무시 폴더(대기열 464)와 막 딴 형제 브랜치(대기열 440)를 바로 가르는 변경을 PR 직전 리뷰부터 병합까지 잇는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다
+브랜치: chore/017-tidy-collapsed-and-fresh-branches
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지의 "셀프 리뷰"(특히 "반영하며 새로 쓴 사실 문장")와 "인계"
+이어받을 상태: 인계: 커밋 뒤. 커밋 91f02b96 에 티켓 017(done), 구현, 시험, 변이 176~184, 카나리아, tidy-checkouts 스킬 3단계 한 문장, 대기열 440·464 닫기, 셀프 리뷰 반영이 들었고 pre-commit 이 통과했다. 그 뒤 일지에 "커밋"과 "인계" 절을 더한 것은 커밋하지 않았다. 푸시하지 않았고 PR 은 없다. 남은 단계는 PR 직전 리뷰(coderabbit-review, 돌지 못하면 bug-perf-review. 일지 "반영하며 새로 쓴 사실 문장" 여섯을 밀 주장으로 넣는다)와 /security-review, 그 반영, 변이 표 전체 실행과 probes README 결과 줄, 일지의 PR·회고·다음, 푸시와 PR, 봇 회차, "워크트리에서 병합할 때"의 병합이다. 일지 docs/journal/2026-10-26-06-tidy-collapsed-and-fresh-branches.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/017-tidy-collapsed-and-fresh-branches (인계함)` 으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리 잠금을 풀었다.
+- open-session을 부른다 2026-10-26T09:24:30Z
+
+## 이어받음
+
+> 사용자: (위 지시문을 첫 메시지로 받았다) "대기열 464·440을 티켓 .scratch/harness/issues/017-tidy-collapsed-and-fresh-branches.md로 쓰고 한다 / 다음 작업: … PR 직전 리뷰부터 병합까지 잇는다 … 이어받을 상태: 인계: 커밋 뒤. … 이번 요청 범위: PR과 병합까지"
+
+- 제목을 브랜치 이름으로 바꾸고, `git worktree list` 에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)` 로 들어갔다. `origin/main` 은 `92b61458` 그대로였다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status` 가 `Seat: not assigned` 라 대체 둘을 나란히 돌렸다. 기준은 `92b61458` 이다.
+
+### 보안 (`/security-review`)
+
+지적 없음. reflog 읽기는 셸 없이 인자 목록으로 넘기고 `refs/heads/` 접두와 `--` 로 끝나며, 무시된 항목의 견줌은 상수 집합이라 바깥 입력이 닿지 않는다고 봤다.
+
+### 버그·성능 (`bug-perf-review`, sonnet)
+
+유효 3, 보류 1, 오탐 0. 밀 주장 여섯은 모두 맞았다(3·4는 코드로만 확인했다).
+
+- 고침(Major, 지우는 자리 안의 링크): 윈도의 git 2.32 는 정션을 따라가 `matching` 으로 그 안을 하나씩 찍는다. `.grimp_cache` 가 바깥 폴더로 가는 정션이면 그 항목이 조상 폴더 판정으로 다시 만들 수 있는 것이 되어, 옮기기가 링크 바깥의 파일을 휴지통으로 옮겼다(리뷰어가 임시 저장소로 재현했다). 세션 스크래치패드의 셸 스크립트로 다시 보니 이름이 평범한 정션(`foo`) 안의 `__pycache__/`·`a.stackdump` 도 `matching` 에서 하나씩 찍혔고(`traditional` 은 `!! foo/` 하나), 둘 다 다시 만들 수 있는 이름이라 같은 길이 열려 있었다. 무시된 항목을 가장 바깥의 링크나 다시 만들 수 있는 폴더인 조상으로 접는 `fold_ignored` 를 `gather` 에 두고, `unrecreatable` 의 조상 판정(`_under_recreatable_dir`)을 걷었다. 링크는 제 이름으로 판정되어 `.grimp_cache` 정션은 링크만 옮겨지고 `foo` 정션은 다시 만들 수 없는 것으로 남는다. 시험을 먼저 써서 아무것도 접지 않는 판에서 바깥 폴더가 빈 것과 `foo` 가 `지운다` 로 찍힌 것을 본 뒤 고쳤다. 리눅스의 git 은 심볼릭 링크를 따라가지 않고 `?? <링크>` 로 찍어, 그 시험은 리눅스에서 바뀐 파일로 남기는 것을 본다(CI 가 잰다).
+- 고침(Minor): 항목을 하나씩 옮기다 막히면 먼저 옮긴 `.grimp_cache/.gitignore` 가 빠져 남은 것이 미추적이 되고, 그 워크트리는 더러운 채 굳는다. 같은 접기가 폴더째 한 번에 옮겨 덮는다. Grimp 꼴의 실제 git 시험에 옮긴 이름이 `cachewt~~.grimp_cache` 하나인지를 더했다.
+- 남김(Minor, 성능): `judge` 가 PR 없이 끝이 `origin/main` 에 있는 브랜치마다 `git log -g` 를 하나씩 띄운다(리뷰어가 한 번에 0.13~0.45초를 쟀다). 그 브랜치는 대개 그 정리에서 지워져 다음 정리의 후보가 줄고, 한 번에 읽으려면 reflog 파일을 직접 읽어 git 의 저장 형식에 기대야 한다. PR 체크리스트에 적는다.
+- 남김(보류): `git log -g` 가 0 이 아니게 끝나면 기록이 없을 때와 같이 None 이라 지울 후보로 간다. 알려진 128 의 길 둘(없는 브랜치, 같은 이름의 태그 때문에 `for-each-ref` 가 `heads/<이름>` 으로 줄여 찍은 브랜치. 뒤의 것은 리뷰어의 어림이다)은 지울 것이 없거나 `branch -D` 가 실패해 잃는 것이 없다. 읽기 실패를 남기는 쪽으로 가르려면 반환 꼴과 이유 줄이 하나씩 더 든다. PR 체크리스트에 적는다.
+
+### 반영하며 새로 쓴 사실 문장
+
+- 독스트링 판정 2: "안쪽 `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)와 윈도의 정션은 그 안의 항목이 하나씩 찍히고, 판정과 옮기기 전에 그 항목을 가장 바깥의 링크나 다시 만들 수 있는 폴더인 조상으로 접는다(`fold_ignored`). 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다." 셀프 리뷰가 쓴 첫 문장을 갈음한다.
+- `fold_ignored` 독스트링: "윈도의 git 2.32 는 정션을 따라가 그 안도 하나씩 찍는다." 위 스크래치 스크립트와 새 시험의 첫 단언이 근거다.
+
+### 다시 돌린 것
+
+- `uv run pytest tests/tools/test_tidy_checkouts.py -q -n 4`: 227 passed.
+- 변이: 184 를 `fold_ignored` 의 다시 만들 수 있는 폴더 조건으로 옮기고, 링크 조건(185), 가장 바깥으로 접기(186), `gather` 의 접기(187)를 더했다. 맞지 않을 임시 표지로 한 번 돌려 고른 단언에서 빨간 것과 그 출력을 본 뒤 그 단언에서만 나오는 문구로 표지를 달았고, 번호로 고른 넷 모두 기대대로(`--check` 187개 원문 한 번씩).
+- 반영 커밋의 첫 시도는 pre-commit 둘로 막혔다. 하나는 `pyright-linux` 다. 새 링크 시험이 `sys.platform` 갈래의 `reason` 을 `is not None` 으로 견줬는데, 리눅스 판정에서는 윈도 갈래가 빠져 그 값이 늘 문자열이라 `reportUnnecessaryComparison` 이었다. 갈래마다 (판정, 이유 꼬리, 종료 코드)를 받아 견줌 없이 단언하게 고쳤고 `uv run pyright --pythonplatform Linux tests/tools/test_tidy_checkouts.py` 가 0 이었다. 다른 하나는 이 브랜치가 건드리지 않은 `tests/channel/cli/test_interrupt.py` 의 `test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다` 다("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다", 5612 통과, 1 실패). 형제 워크트리 넷의 `pytest -n 8` 이 함께 돌던 때이고, 홀로 돌리니 통과 점이 찍혔다. 같은 시험이 부하에서 빨갛던 기록(일지 2026-10-23-33)이 있어 ADR 0036 대로 고치지 않고 커밋을 다시 쳤다.
