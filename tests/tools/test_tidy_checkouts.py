@@ -2739,6 +2739,65 @@ def test_judge_와_remove_는_MAX_PATH_를_넘는_링크도_링크로_본다(
     )
 
 
+def test_remove_는_MAX_PATH_를_넘는_다시_만들_수_있는_이름의_링크도_링크만_옮긴다(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 봇 CodeRabbit 이 한도에 걸려 대신 돌린 bug-perf-review(반박 시험, 윈도 경로 정규화가
+    바꾸는 이름). 다시 만들 수 있는 이름의 링크(`node_modules`)는 판정이 `지운다` 이고 `remove` 가
+    링크만 휴지통으로 옮긴다. 링크 경로가 MAX_PATH(260자)를 넘으면 `\\\\?\\` 없이 물은
+    `os.path.lexists` 가 거짓이라(`LongPathsEnabled=0` 인 이 PC) 옮기기가 그 링크를 건너뛰었고,
+    `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지웠다. 첫 단언(경로 길이)이 그
+    표지다. 리눅스의 git 은 심볼릭 링크를 `node_modules/` 패턴에 맞추지 않고 미추적 항목으로 찍어
+    바뀐 파일로 남긴다."""
+    path, head = _add(repo, "deepnm")
+    link = "/".join(["d" * 40] * 5) + "/node_modules"
+    assert len(str(path / link)) > 260
+    Path(long_path(path / link)).parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    layout = {"pkg/index.js": "x", "keep.txt": "keep\n"}
+    for relative, text in layout.items():
+        (outside / relative).parent.mkdir(parents=True, exist_ok=True)
+        (outside / relative).write_bytes(text.encode())
+    _link(Path(long_path(path / link)), outside)
+    if sys.platform == "win32":
+        action, suffix, code = "지운다", "", 0
+    else:
+        assert _git("status", "--porcelain", cwd=path), "리눅스의 git 이 바뀐 것을 찍지 않았다"
+        action, suffix, code = "남긴다", " — 바뀐 파일이 있다", 1
+    merged = {"chore/deepnm": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/deepnm" in line)
+    assert line.startswith(action), line
+    assert line.endswith(suffix), line
+    argv = ["remove", path.as_posix(), "chore/deepnm", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == code
+    assert sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*") if p.is_file()) == (
+        sorted(layout)
+    )
+
+
+def test_못_보는_것_remove_는_휴지통_자리_이름이_한_토막_한도를_넘는_항목을_옮기지_못해_남긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 명세 축(기점 35481b0b). 휴지통 자리 이름 `<워크트리 이름>~~<flatten(항목)>` 이 파일
+    시스템이 경로 한 토막에 허용하는 길이(이 PC 의 NTFS 에서 255자)를 넘으면 이름 바꾸기가 막힌다.
+    `judge` 는 `지운다` 를 내고 `remove` 는 남긴다(남기는 쪽이다). 첫 단언(자리 이름의 길이)이 그
+    표지다."""
+    path, head = _add(repo, "longslot")
+    entry = "/".join(["d" * 40] * 6) + "/node_modules"
+    assert len(f"{path.name}~~{tidy_checkouts.flatten(entry)}") > 255
+    Path(long_path(path / entry / "pkg")).mkdir(parents=True)
+    Path(long_path(path / entry / "pkg" / "index.js")).write_bytes(b"x")
+    merged = {"chore/longslot": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/longslot" in line)
+    assert line.startswith("지운다"), line
+    argv = ["remove", path.as_posix(), "chore/longslot", head]
+    assert main(argv, cwd=repo, ops=_ops(merged)) == 1
+    assert f"다시 만들 수 있는 {entry}/ 를 휴지통으로 옮기다 막혔다" in capsys.readouterr().out
+    assert os.path.lexists(long_path(path / entry / "pkg" / "index.js"))
+
+
 def test_remove_는_judge_뒤에_바뀌었으면_손대지_않는다(repo: Path) -> None:
     path, head = _add(repo, "done")
     merged = {"chore/done": frozenset({head})}

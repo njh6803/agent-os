@@ -2240,3 +2240,17 @@ expect_output = ["AssertionError: 지운다 ", "[무시된_것이_든_링크]"]
 file = "tools/tidy_checkouts.py"
 old = '''        return _is_link(Path(long_path(path / relative)))'''
 new = '''        return _is_link(path / relative)'''
+
+# 머리 35481b0b 의 대체 bug-perf-review: 다시 만들 수 있는 이름의 MAX_PATH 를 넘는 링크는 `\\?\`
+# 없이 물으면 없는 것으로 보여, 옮기기가 건너뛰고 `git worktree remove` 가 링크 바깥을 지운다
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 옮길 항목이 없는 것으로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다시_만들_수_있는_이름의_링크도_링크만"]
+expect = "red"
+expect_output = ["AssertionError: assert [] == ['keep.txt', 'pkg/index.js']"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if not os.path.lexists(long_path(source)):'''
+new = '''        if not os.path.lexists(source):'''
