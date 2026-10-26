@@ -192,14 +192,16 @@ describe("값으로 맞대기", () => {
   });
 
   test("설명 하나는 그 토큰의 설명 차이다", () => {
+    // 고치기 전의 설명은 디자인 토큰 CSS 의 그 줄 주석이다.
+    const before = BUILT.radius.tokens.find((token) => token.name === "radius-m")?.usage;
     const after = edited((file) => {
       tokenIn(file, "radius", "radius-m").usage = "버튼과 카드";
     });
 
+    expect(before, "고치기 전의 설명").toMatch(/\S/);
+    expect(before).not.toBe("버튼과 카드");
     expect(compare(after)).toEqual({
-      diffs: [
-        { kind: "usage", family: "radius", token: "radius-m", before: "", after: "버튼과 카드" },
-      ],
+      diffs: [{ kind: "usage", family: "radius", token: "radius-m", before, after: "버튼과 카드" }],
       sameHash: false,
     });
   });

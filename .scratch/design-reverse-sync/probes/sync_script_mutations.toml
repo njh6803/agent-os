@@ -1,6 +1,6 @@
 # design-reverse-sync 티켓 02 의 변이 표(`web/tools/sync-design-system`). 짓기와 맞대기의 테스트는 구현 전에 모듈이 없어
 # 모두 빨갰을 뿐 단언 하나하나의 빨강은 보지 못했고, CSS 풀기의 캐스케이드 사례와 진입의 옵션 사례는 구현 뒤에 썼다.
-# 변이마다 그 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+# 변이마다 그 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다. 티켓 03 이 더한 변이는 끝 절이다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/sync_script_mutations.toml [번호 ...]
 # 재지 않은 것: 맞대는 몫 밖의 칸(이름, 판, 테마의 표시 이름) 사례는 정규 꼴이 그 칸을 애초에 읽지 않아 깰 줄이 없다.
 
@@ -579,3 +579,86 @@ expect_output = ["+   \"jacho\" => \"자쵸\","]
 file = "web/tools/sync-design-system/build.ts"
 old = '''  ["jacho", "자초"],'''
 new = '''  ["jacho", "자쵸"],'''
+
+# --- 티켓 03 이 설명 주석과 함께 더하거나 고친 사례 ------------------------------------------------------------
+# 번호가 밀리지 않게 끝에 둔다. 빈 설명이 없다는 단언은 주석을 달기 전에 빨간 것을 봤고, 한 줄이라는 단언, 주석을 벗긴
+# 사본의 가드, 실제 설명을 고치기 전의 설명으로 든 맞대기 사례는 주석을 단 뒤에 썼다. 실제 디자인 토큰 CSS 사례의 두
+# 단언은 같은 꼴(이름 목록과 빈 배열)을 맞대어, 표지는 단언의 메시지까지 든 실패 머리다. 원문은 모두 설명 앞까지만 들어
+# 리뷰가 설명을 고쳐도 그대로 돈다.
+
+[[mutation]]
+name = "설명 하나가 두 줄이면 실제 디자인 토큰 CSS 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "설명이 빈 토큰이 없고"]
+expect = "red"
+expect_output = ["AssertionError: 설명이 여러 줄인 토큰: expected [ 'gray-50' ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''    --gray-50: #f4f8fb; /* '''
+new = '''    --gray-50: #f4f8fb; /* 둘째 줄로
+      이어지는 '''
+
+[[mutation]]
+name = "주석을 벗기지 않으면 벗긴 사본의 가드 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "주석을 벗긴 사본으로"]
+expect = "red"
+expect_output = ["to deeply equal Set{ '' }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.test.ts"
+old = '''  return css.replace(/;[ \t]*\/\*[^\n]*?\*\/[ \t]*$/gm, ";");'''
+new = '''  return css;'''
+
+[[mutation]]
+name = "설명 차이의 전을 고친 쪽에서 읽으면 설명 하나 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "설명 하나는"]
+expect = "red"
+expect_output = ["+       \"before\": \"버튼과 카드\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''      diffs.push({ kind: "usage", family: name, token, before: left.usage, after: right.usage });'''
+new = '''      diffs.push({ kind: "usage", family: name, token, before: right.usage, after: right.usage });'''
+
+[[mutation]]
+name = "설명 하나를 다음 줄로 내리면 실제 디자인 토큰 CSS 사례의 빈 설명 단언이 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "설명이 빈 토큰이 없고"]
+expect = "red"
+expect_output = ["AssertionError: 설명이 빈 토큰: expected [ 'gray-50' ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+# 줄을 차지한 주석은 설명이 아니라서 gray-50 의 설명이 빈 칸이 된다.
+old = '''    --gray-50: #f4f8fb; /* '''
+new = '''    --gray-50: #f4f8fb;
+    /* '''
+
+[[mutation]]
+name = "고치기 전의 설명이 고친 뒤와 같으면 설명 하나 사례의 전제 단언이 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "설명 하나는"]
+expect = "red"
+expect_output = ["AssertionError: expected '버튼과 카드' not to be '버튼과 카드'"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+# 짓기는 한 줄의 첫 주석을 읽어, 앞에 끼운 주석이 설명이 된다.
+old = '''  --radius-m: 8px; /* '''
+new = '''  --radius-m: 8px; /* 버튼과 카드 */ /* '''
+
+[[mutation]]
+name = "고치기 전의 설명이 비면 설명 하나 사례의 전제 단언이 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "설명 하나는"]
+expect = "red"
+expect_output = ["AssertionError: 고치기 전의 설명: expected '' to match /\\S/"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''  --radius-m: 8px; /* '''
+new = '''  --radius-m: 8px;
+  /* '''

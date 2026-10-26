@@ -80,12 +80,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --bg-hover: var(--overlay-black-4);
-'''
-new = '''
-    --bg-hover: var(--gray-100);
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --bg-hover: var(--overlay-black-4);'''
+new = '''    --bg-hover: var(--gray-100);'''
 
 [[mutation]]
 name = "다크의 bg-selected 를 더 밝게 두면 Matrix 의 겹친 바탕 짝이 빨갛다"
@@ -95,12 +92,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --overlay-white-10: #ffffff1a;
-'''
-new = '''
-    --overlay-white-10: #ffffff29;
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --overlay-white-10: #ffffff1a;'''
+new = '''    --overlay-white-10: #ffffff29;'''
 
 [[mutation]]
 name = "테마 목록의 순서를 바꾸면 Matrix 가 빨갛다"
@@ -500,12 +494,9 @@ restore = [
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --overlay-white-10: #ffffff1a;
-'''
-new = '''
-    --overlay-white-10: #ffffff29;
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --overlay-white-10: #ffffff1a;'''
+new = '''    --overlay-white-10: #ffffff29;'''
 
 [[mutation]]
 name = "칠한 픽셀을 버튼 밖에서 읽으면 측정의 표지가 빨갛다"

@@ -23,7 +23,10 @@ const THEME_IDS = [
   "jjokbit-dark",
 ];
 
-/** 사본에서 `line` 으로 시작하는 `nth` 번째(0부터) 줄의 끝에 주석을 단다. 없으면 던진다. */
+/**
+ * 사본에서 `line` 으로 시작하는 `nth` 번째(0부터) 줄의 끝에 주석을 단다. 없거나 그 줄에 이미 주석이 있으면 던진다. 짓기는
+ * 한 줄의 첫 주석만 설명으로 읽어, 이미 있는 주석 뒤에 덧붙이면 덧붙인 문구가 아니라 그 주석이 나온다.
+ */
 function commentLine(css: string, line: string, comment: string, nth = 0): string {
   const lines = css.split("\n");
   const found = lines.flatMap((text, index) => (text.trimStart().startsWith(line) ? [index] : []));
@@ -31,8 +34,17 @@ function commentLine(css: string, line: string, comment: string, nth = 0): strin
   if (at === undefined) {
     throw new Error(`사본에 ${line} 로 시작하는 ${String(nth)} 번째 줄이 없다`);
   }
-  lines[at] = `${lines[at] ?? ""} /* ${comment} */`;
+  const text = lines[at] ?? "";
+  if (text.includes("/*")) {
+    throw new Error(`사본의 ${line} 줄에 이미 주석이 있다`);
+  }
+  lines[at] = `${text} /* ${comment} */`;
   return lines.join("\n");
+}
+
+/** 선언 줄 끝의 주석(토큰 설명)을 모두 벗긴 사본. 주석 자리를 재는 사례가 실제 설명과 섞이지 않게 한다. */
+function withoutLineComments(css: string): string {
+  return css.replace(/;[ \t]*\/\*[^\n]*?\*\/[ \t]*$/gm, ";");
 }
 
 /** 사본의 `anchor` 줄 바로 앞에 줄들을 끼운다. */
@@ -50,6 +62,16 @@ function colorToken(file: TokensFile, name: string): ColorToken {
     throw new Error(`색 토큰 ${name} 이 없다`);
   }
   return token;
+}
+
+/** 지은 파일의 토큰을 색, 글자 스타일, 간격, 모서리의 차례로 한 줄에 펼친다. */
+function allTokens(file: TokensFile): readonly { readonly name: string; readonly usage: string }[] {
+  return [
+    ...file.color.tokens,
+    ...file.type.groups.flatMap((group) => group.styles),
+    ...file.spacing.tokens,
+    ...file.radius.tokens,
+  ];
 }
 
 function perTheme(token: ColorToken): Readonly<Record<string, string>> {
@@ -201,20 +223,27 @@ describe("짓기", () => {
     expect(perTheme(colorToken(file, "gray-50"))["nokcheong-light"]).toBe("#f4f8fb");
   });
 
-  test("지금 디자인 토큰 CSS 에는 줄 끝 주석이 없어 설명이 모두 빈 칸이다", () => {
-    const file = buildTokensFile(CSS);
-    const usages = [
-      ...file.color.tokens,
-      ...file.type.groups.flatMap((group) => group.styles),
-      ...file.spacing.tokens,
-      ...file.radius.tokens,
-    ].map((token) => token.usage);
+  test("실제 디자인 토큰 CSS 로 지은 tokens.json 에는 설명이 빈 토큰이 없고 설명은 모두 한 줄이다", () => {
+    const tokens = allTokens(buildTokensFile(CSS));
+    const empty = tokens.filter((token) => token.usage === "").map((token) => token.name);
+    const multiline = tokens
+      .filter((token) => token.usage.includes("\n"))
+      .map((token) => token.name);
+
+    // 두 단언은 같은 꼴(이름 목록과 빈 배열)을 맞대어, 실패 문구를 메시지로 가른다.
+    expect(tokens).toHaveLength(112);
+    expect(empty, "설명이 빈 토큰").toEqual([]);
+    expect(multiline, "설명이 여러 줄인 토큰").toEqual([]);
+  });
+
+  test("주석을 벗긴 사본으로 지으면 설명이 모두 빈 칸이다", () => {
+    const usages = allTokens(buildTokensFile(withoutLineComments(CSS))).map((token) => token.usage);
 
     expect(new Set(usages)).toEqual(new Set([""]));
   });
 
   test("설명은 그 토큰을 선언한 줄 끝의 주석이다", () => {
-    let css = CSS;
+    let css = withoutLineComments(CSS);
     css = commentLine(css, "--gray-500: #606466;", "흐린 글자의 원색");
     css = commentLine(css, "--overlay-black-4:", "올림의 반투명");
     css = commentLine(css, "--bg: var(--gray-50);", "화면 바탕");
@@ -238,7 +267,7 @@ describe("짓기", () => {
   });
 
   test("설명은 녹청 블록과 라이트 대응 블록의 줄에서만 읽고, 다른 테마 블록·다크 대응·앞 줄의 주석은 읽지 않는다", () => {
-    let css = CSS;
+    let css = withoutLineComments(CSS);
     css = commentLine(css, "--gray-500: #636363;", "군청 블록의 주석");
     css = commentLine(css, "--bg: var(--gray-950);", "다크 대응의 주석");
     // 줄 하나를 차지한 주석은 앞 선언(radius-s)의 것도 뒤 선언(radius-m)의 것도 아니다.
@@ -257,7 +286,8 @@ describe("짓기", () => {
     const { type } = buildTokensFile(CSS);
 
     expect(type.groups).toHaveLength(1);
-    expect(type.groups[0]?.styles).toEqual([
+    // 설명은 위 줄 끝 주석 사례들이 본다. 여기서는 설명의 글을 비우고 나머지 칸을 맞댄다.
+    expect(type.groups[0]?.styles.map((style) => ({ ...style, usage: "" }))).toEqual([
       { name: "text-title", fontSize: "24px", lineHeight: "32px", fontWeight: 600, usage: "" },
       { name: "text-small", fontSize: "12px", lineHeight: "16px", fontWeight: 400, usage: "" },
       { name: "text-badge", fontSize: "12px", lineHeight: "16px", fontWeight: 500, usage: "" },
