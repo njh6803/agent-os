@@ -24,10 +24,12 @@ param(
     # 사이드바 행이 새 제목으로 갱신되는 데 몇 초 걸린다. 넉넉히 둔다. `focus` 는 새 세션이 첫 턴에
     # 스스로 이름을 붙일 때까지 기다리므로 스킬이 더 늘려 준다.
     [int] $TimeoutSec = 30,
-    # `send`·`defaults` 가 다른 열기의 잠금(Invoke-SendLocked)을 기다리는 상한. `send` 호출 하나는 541회 가운데 중앙값 16.3초,
-    # 60초를 넘은 것이 아홉, 가장 긴 것이 127.6초였다(deeplink_overlap.py --until "2026-10-26 18:00" 의 호출 전체. 훅과 허락을
-    # 기다린 시간도 든다). 그래서 60초면 거의 모든 열기를 기다리고, 넘기면 스킬이 한 번 다시 돌린다. 기다림과 열기가 함께 드는
-    # 제한(5분)은 스킬이 PowerShell 도구에 준다. 도구의 기본 2분은 가장 긴 열기와 기다림을 함께 담지 못한다.
+    # `send`·`defaults` 가 다른 열기의 잠금(Invoke-SendLocked)을 기다리는 상한. 열기가 잠금을 쥐는 시간은 그 명령의 길이에서 pwsh
+    # 가 뜨고 화면을 깨우기까지를 뺀 것이다. 쏘고 보내기까지는 483회 가운데 중앙값 4.4초, 가장 긴 것이 17.2초였고, `send` 호출 전체는 541회
+    # 가운데 중앙값 16.3초, 60초를 넘은 것이 아홉, 가장 긴 것이 127.6초였다(deeplink_overlap.py --until "2026-10-26 18:00").
+    # 명령만의 길이는 재지 않았다. 앞의 것은 쏘기 전 점검과 되돌리기가 빠져 그보다 짧고, 뒤의 것은 명령이 돌기 전에 훅과 허락을
+    # 기다린 시간이 들어 그보다 길다. 그래서 60초면 거의 모든 열기를 기다리고, 넘기면 스킬이 한 번 다시 돌린다. 기다림과 열기가
+    # 함께 드는 제한(5분)은 스킬이 PowerShell 도구에 준다. 기다림 60초와 가장 긴 호출을 함께 담는 값이다.
     [int] $LockTimeoutSec = 60
 )
 
@@ -866,8 +868,10 @@ function Get-AppQuitMarker {
 # 되었다(셀프 리뷰, 2026-10-26 에 pwsh 로 손으로 봤다). `param` 안에 `$private:` 를 붙인 판도 샜고, 몸에 들어가기 전에
 # `Set-Variable -Option Private` 로 다시 매기니 막혔다.
 # 못 보는 것: 잠금을 놓은 뒤 새 세션 화면에 남은 지시문(`held=`, 폴더·모델 오류로 멈춰 사람이 보내기를 기다리는 화면)은 다음
-# 열기의 딥링크가 덮는다. `split`·`focus` 는 딥링크를 쏘지 않아 잠그지 않는다. 그 둘이 다른 열기의 화면을 옮겨 놓는지는 재지
-# 않았다. 이 잠금을 잡지 않고 새 세션 화면을 쓰는 것과는 겨루지 않는다. 잠금을 모르는 옛 사본의 스크립트(다른 워크트리), 딥링크를
+# 열기의 딥링크가 덮는다. `split`·`focus` 는 딥링크를 쏘지 않아 잠그지 않는다. 그 둘은 사이드바 행을 누르고(Invoke) 메뉴에
+# 포커스를 준 뒤 키(Enter, →, Esc)를 보내는데, 그것이 다른 열기의 새 세션 화면을 옮겨 놓거나 그 입력창에 키를 넣는지는 재지
+# 않았다. 잠금은 앞 열기가 놓자마자 기다리던 열기를 쏘게 해, 앞 열기를 부른 세션이 이어 거는 `split`·`focus` 가 뒤 열기와
+# 겹치는 차례를 만든다(PR 직전 bug-perf-review 가 코드를 읽어 짚었다. 겹친 회차는 세지 않았다). 이 잠금을 잡지 않고 새 세션 화면을 쓰는 것과는 겨루지 않는다. 잠금을 모르는 옛 사본의 스크립트(다른 워크트리), 딥링크를
 # 쏘는 진단 프로브(`.scratch/harness/probes/` 의 `composer_*.ps1`·`probe_deeplink.ps1`), 사람의 클릭과 손으로 쓰는 글이 그 예다.
 $SendLockName = 'Global\agent-os-open-session'
 
@@ -883,7 +887,7 @@ function Invoke-SendLocked([string] $name, [int] $timeoutSec, [scriptblock] $bod
         try { $got = $mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec)) }
         catch [System.Threading.AbandonedMutexException] {
             $got = $true
-            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다)'
+            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다. 그 열기가 모델을 고른 뒤 끊겼으면 아래 model=·effort= 의 원래 값은 그 열기가 고른 값이다)'
         }
         if (-not $got) { throw "다른 열기가 새 세션 화면을 쓰는 중이라 ${timeoutSec}초 안에 잠금('$name')을 잡지 못했다. 쏘지 않았다. 다시 돌려도 새 세션이 둘 생기지 않는다." }
         "lock=$(Get-Date -Format HH:mm:ss.fff) waited=$([Math]::Round($watch.Elapsed.TotalSeconds, 1))s$note"

@@ -1,4 +1,4 @@
-# 2026-10-26 (08) open-session 딥링크가 겹치는지 앱 로그로 가르고 기계 전체의 잠금으로 막는다 (harness 014)
+# 2026-10-26 (13) open-session 딥링크가 겹치는지 앱 로그로 가르고 기계 전체의 잠금으로 막는다 (harness 014)
 
 ## 구현
 
@@ -60,8 +60,8 @@
 시작 프롬프트: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다
 브랜치: chore/014-open-session-deeplink-lock
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: .scratch/harness/issues/014-open-session-deeplink-lock.md, docs/journal/2026-10-26-08-open-session-deeplink-lock.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 티켓·일지·프로브 deeplink_overlap.py·변이 표·카나리아 명세 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main, 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md)부터 한다. docs/journal/2026-10-26-08-open-session-deeplink-lock.md
+읽을 것: .scratch/harness/issues/014-open-session-deeplink-lock.md, docs/journal/2026-10-26-13-open-session-deeplink-lock.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 티켓·일지·프로브 deeplink_overlap.py·변이 표·카나리아 명세 포함)이 워크트리에 있고 셀프 리뷰(/code-review, base origin/main, 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md)부터 한다. docs/journal/2026-10-26-13-open-session-deeplink-lock.md
 확인할 선행 조건: 검사 러너(tools/run_checks.py)는 pytest와 web이 끝나기 전에 인계로 멈췄다. 셀프 리뷰를 반영한 뒤 커밋의 pre-commit으로 갈음하거나 다시 돈다. 변이 표 open_session_lock_mutations.toml의 전체 실행은 리뷰를 반영해 커밋한 뒤 다시 돈다. 잠금 시험이 CI의 리눅스 pwsh에서도 버려진 뮤텍스를 받는지는 아직 보지 않았다
 이번 요청 범위: PR과 병합까지
 ```
@@ -120,3 +120,51 @@
 - 인용 대조가 경고 6건을 냈다. 모두 위 셀프 리뷰·반영 절에서 고치기 전의 문장이나 뜻을 따옴표로 옮긴 자리라, 따옴표를 떼고 풀어 썼다.
 - 다시 친 커밋은 `SKIP=pyright-linux`로 그 검사만 뺐다. 19:54에 손으로 친 결과가 초록이고, 그 뒤 고친 것은 이 일지 하나다(CLAUDE.md 검증 명령 절의 `SKIP`으로 뺀 검사는 손으로 친다).
 - 그 커밋(20:02~20:21)도 pytest 하나로 실패했다. 1080.09초에 5596 통과, `test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`가 `assert 1 == 0`이었고(`_끝남(task, hang=3.0)`을 쓰는 시간 시험이다), 나머지 아홉 검사는 지났다. 같은 시험이 첫 커밋에서도 빨갰다. 20:23에 그 파일 전체를 혼자 돌리니 53 passed in 168.06s였다. 이 브랜치는 그 파일과 그것이 부르는 도구를 바꾸지 않았고, 같은 파일의 다른 시험이 부하 아래에서만 빨간 일을 일지 2026-10-24-10과 2026-10-25-02가 대기열 306이 받아들여 닫은 종류로 보고 일지에만 적었다. 그래서 회차를 더하지 않는다. 다른 세션의 검사가 계속 돌아 다시 쳐도 또 빨개질 수 있어, 셋째 커밋은 `SKIP=pyright-linux,pytest`로 쳤다. pytest는 이 커밋과 같은 나무에서 위 실행이 그 시험 하나 말고 모두 지났고 그 파일은 혼자 지났으며, CI가 리눅스에서 전체를 다시 돈다.
+- 셋째 커밋 `1ecdb2a2`(20:27~20:32): 나머지 검사가 모두 지났다.
+
+### 인계 (커밋 뒤)
+
+- 커밋 뒤 `hook_handoff`가 컨텍스트 344,213 토큰(문턱 200,000)으로 인계를 알렸다. next-session "인계할 때" 1의 인계하지 않는 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 다른 경계이고, 이 세션이 쓴 `인계 못함` 줄은 없으며, `get_session self`에 `parentSessionId`가 없다.
+- 이 세션의 지금 제목: `chore/014-open-session-deeplink-lock`. 넘기며 `chore/014-open-session-deeplink-lock (인계함)`으로 바꾼다.
+- 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/014-open-session-deeplink-lock.md. open-session 이 딥링크를 쏘기 전에 기계 전체의 잠금을 잡는 변경의 PR 직전 리뷰, PR, 병합
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다
+브랜치: chore/014-open-session-deeplink-lock
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-26-13-open-session-deeplink-lock.md의 "이어서" 절 끝(반영의 밀 주장 목록, 검사, 커밋, 인계), docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. 1ecdb2a2에 셀프 리뷰 반영, 검증 명령, 카나리아 통과 4, 커밋 전 판의 변이 표 열둘, 티켓 done을 담았다(pre-commit은 SKIP=pyright-linux,pytest. 까닭은 일지 "커밋" 절). 일지의 인계 절은 그 뒤에 더했고 커밋하지 않았다. 남은 것은 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 Seat: not assigned라 /security-review와 bug-perf-review를 나란히. bug-perf-review 브리프에는 일지의 "PR 직전 bug-perf-review에 밀 주장" 목록을 싣는다)와 반영, 반영을 커밋한 뒤 변이 표 전체를 다시 돌려 README 행과 일지를 고치기, 푸시, /git-pr(체크리스트에 대체 리뷰 둘과 SKIP의 근거), 봇 회차, 워크트리에서 병합, 회고와 "다음"이다. Select-QuitLogs·Get-AppQuitMarker가 main1.log를 옆 돌림 파일로 전제하는 것은 새 작업 카드로 제안할 일이고 아직 내지 않았다. docs/journal/2026-10-26-13-open-session-deeplink-lock.md
+확인할 선행 조건: 잠금 시험이 CI의 리눅스 pwsh에서도 버려진 뮤텍스를 받는지는 아직 보지 않았다(PR CI에서 처음 본다). 이 커밋의 나무에서 pytest 전체가 한 번에 다 지난 실행은 아직 없다(일지 "커밋" 절. CI의 python 잡이 본다)
+이번 요청 범위: PR과 병합까지
+```
+
+- 제목을 `chore/014-open-session-deeplink-lock (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. `git worktree unlock`은 `is not locked`였다.
+- open-session을 부른다 2026-10-26T11:35:13Z
+
+## 이어서 (PR 직전 리뷰부터)
+
+> 사용자: 대기열 360을 티켓 .scratch/harness/issues/014-open-session-deeplink-lock.md로 쓰고 한다 (위 "커밋 뒤" 인계 지시문. 범위는 PR과 병합까지)
+
+### 시작
+
+- 제목을 `chore/014-open-session-deeplink-lock`으로 바꿨다. 첫 `git worktree list`는 승인 창에서 거부됐고, 사용자가 실수였다고 해 다시 쳤다. 브랜치가 `.claude/worktrees/014-open-session-deeplink-lock`에 있어 `EnterWorktree(path)`로 들어갔다. HEAD는 `1ecdb2a2`, 커밋하지 않은 변경은 이 일지 하나였다.
+- `git fetch origin main` 뒤 origin/main은 `3acbd867`(harness 013 #389, harness 011 #388)이었고 `git merge --no-edit origin/main`이 충돌 없이 합쳤다.
+- `uv run python tools/sibling_overlap.py`가 1로 끝났다. 011의 일지 2026-10-26-09가 병합돼 이 일지(그때 08)가 이름순으로 앞섰다. `--move`로 2026-10-26-13으로 옮겼고, 인용은 프로브 README, 카나리아 명세, 대기열, 이 일지에서 고쳐졌다. 위 "검사" 절의 "이 일지(08)"는 그때의 기록이라 두었다.
+- main에서 온 규약: 변이 도구의 `--check`가 빨강을 기대한 변이의 표지가 시험 원문에 글자 그대로 있으면 알린다(대기열 417). `PYTHONUTF8=1 uv run python tools/mutate.py --check .scratch/harness/probes/open_session_lock_mutations.toml --since 92b61458`: 변이 12를 골랐고 알림 없이 `원문 확인: 변이 12 모두 원문이 한 번씩 있다`였다.
+
+### PR 직전 리뷰
+
+- CodeRabbit CLI 대신 `/security-review`와 `bug-perf-review`(base `3acbd867`)를 나란히 돌렸다. `bug-perf-review` 브리프에는 위 "PR 직전 bug-perf-review에 밀 주장" 다섯을 원문으로 실었다.
+- `/security-review`: 찾는 서브태스크가 신뢰도 8 이상의 후보를 내지 않아 거르는 서브태스크는 띄우지 않았다. 고정된 뮤텍스 이름을 같은 PC의 다른 주체가 쥐면 열기가 멈추는 것은 서비스 거부라 범위 밖이라고 적었다.
+- `bug-perf-review`(호출 29, Critical·Major 없음, 유효 4·보류 2·오탐 5): 그 서브에이전트가 `tests/tools/test_open_session.py` 전체를 돌려 111 통과(92초)였고, `deeplink_overlap.py --until "2026-10-26 18:00"`의 출력이 README와 주석의 수와 같았다고 했다. 밀 주장 다섯은 모두 근거와 맞았고, 1·2의 "열기"라는 말만 아래 첫 지적으로 냈다.
+- 판정(이 세션이 코드를 다시 열어 보았다):
+  - 유효, 고쳤다: 스킬 3단계의 "가장 긴 열기(128초)"와 `-LockTimeoutSec` 주석의 "가장 긴 열기"는 열기가 아니라 호출 전체다(`deeplink_overlap.py`의 `calling`은 호출을 적은 기록부터 결과를 적은 기록까지). 주석에 쏘고 보내기까지(483회, 최대 17.2초)를 함께 적고, 명령만의 길이는 재지 않았으며 두 수가 그 아래와 위 끝이라고 고쳤다. 5분 제한은 그대로다.
+  - 유효, 고쳤다: "막히면"과 그 프로브 독스트링의 "`fired=` 시각으로 시작하는 줄"은 출력과 다르다. 줄은 `%Y-%m-%d %H:%M:%S.%f`의 날짜로 시작한다(`deeplink_overlap.py` 329행). "날짜 뒤에 그 열기의 `fired=` 시각이 오는 줄"로 고치고, 보낸 열기는 겹쳤을 때만 줄이 찍힌다는 것을 더했다(351행의 조건).
+  - 유효, 고쳤다(성능): 그 진단 호출에 시간 제한이 없다. 서브에이전트가 출력 파일의 만든 시각과 끝난 시각으로 82초를 봤다(다른 시험과 함께 돈 때). "막히면"이 도구에 `timeout` 300000을 주게 했다.
+  - 유효, 고쳤다: 모델을 고른 뒤 끊긴 열기의 버려진 잠금을 받은 열기는 그 열기가 고른 값을 원래 값으로 읽어 되돌린다(`Read-DraftDefaults`가 새 세션 화면의 값을 읽는다). 잠금 전에도 있던 일이라 `$note`와 스킬 3단계에 그 말을 더하는 데서 그쳤다. 변이 4의 `old`도 같은 문구로 고쳤다.
+  - 보류, 두었다: `split`·`focus`가 잠금 밖이라, 잠금을 놓은 열기의 세션이 이어 거는 행 누르기(Invoke)와 메뉴 키(Enter, →, Esc)가 막 쏜 뒤 열기의 새 세션 화면을 옮기거나 그 입력창에 들어갈 수 있다. 잠금은 그 차례를 만든다(앞 열기가 놓자마자 뒤 열기가 쏜다). 겹친 회차는 세지 않았다. 고치려면 `focus`가 행 제목을 기다리는 동안(스킬은 90초) 잠금을 쥐지 않게 `Focus-Session`을 갈라야 하고, 시험·변이와 스킬 5단계의 시간 제한까지 바뀐다. `Invoke-SendLocked`의 못 보는 것을 이 길로 고쳐 적고 새 작업으로 제안한다.
+  - 보류, CI에서 본다: 리눅스 pwsh가 `[Environment]::Exit(0)`로 끝난 프로세스의 뮤텍스를 버려진 것으로 알리는지. 인계 지시문의 선행 조건과 같다.

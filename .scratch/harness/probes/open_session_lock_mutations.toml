@@ -46,7 +46,7 @@ old = '''
         try { $got = $mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec)) }
         catch [System.Threading.AbandonedMutexException] {
             $got = $true
-            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다)'
+            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다. 그 열기가 모델을 고른 뒤 끊겼으면 아래 model=·effort= 의 원래 값은 그 열기가 고른 값이다)'
         }
 '''
 new = '''
