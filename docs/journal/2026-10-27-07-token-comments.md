@@ -280,7 +280,54 @@ open-session을 부른다 2026-10-27T03:14:58Z
 
 #### 다시 돌린 것 (병합 뒤 셀프 리뷰)
 
-- 손으로 치는 다섯은 병합 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 아래에 적는다.
+- 손으로 치는 다섯은 병합 커밋의 pre-commit으로 갈음한다. 병합 커밋 `8484bc85`의 pre-commit은 열 검사가 모두 지났다(pytest 381.4초, web-verify 375.9초, pyright 39.0초). ruff 둘은 바뀐 `.py`가 없어 `Skipped`였다. 인용 대조는 경고 5건이었고 막지 않았다. 다섯 모두 이 일지의 인용이다. 67·72행은 첫 세션이 그때 새로 쓴 문장을 원문으로 옮긴 것이고 그 뒤 PR 직전 리뷰가 고쳤다. 236·256행은 이번 리뷰가 고치기 전의 문구를 든 것이고, 254행은 서브에이전트의 말이다. 다섯 다 지난 문구의 기록이라 고치지 않았다.
+- 커밋 직전의 `tools/sibling_overlap.py`는 대기열 486을 origin/main과의 겹침으로 내고 486→490 등 넷을 옮기라고 했다. 인계 절이 미리 적은 결함(대기열 492. 합치는 중이면 merge-base가 옛 main에 머문다)이라 옮기지 않았다. 커밋 뒤 다시 치자 "번호 겹침 없음"이었고 이 브랜치의 새 번호는 일지 2026-10-27-07과 대기열 490·491·492였다. 492가 적은 원인을 한 번 더 손으로 본 셈이다.
+- 그 출력의 형제 줄에서 origin/main이 `60b028e3`으로 움직인 것을 봤다. 07(#400)이 병합됐다. 07은 이 브랜치도 고친 프로브 README, `record_check_mutations.toml`, 대기열을 고쳤다.
+
+## 인계 (병합 커밋 뒤)
+
+병합 커밋을 친 `커밋 뒤` 경계에서 세션 컨텍스트가 약 28만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기가 왔다. 계기는 커밋이 백그라운드에서 도는 동안 왔고, 커밋이 0으로 끝난 뒤 넘긴다. 이 세션의 범위는 PR과 병합까지이고, 곁 세션이 아니며(`get_session`의 `self`에 `parentSessionId`가 없다), 이어받을 상태가 `인계: 셀프 리뷰 직전`이라 이 경계와 다르고, `인계 못함` 줄이 없어 넘긴다.
+
+- 사용자 프롬프트는 이 세션을 연 지시문 하나뿐이다(위 "이어받은 세션 (셀프 리뷰 직전)" 절의 인용). 그 밖에 받은 것은 서브에이전트와 백그라운드 작업의 알림이다.
+- 결정: 병합을 커밋하기 전이라 셀프 리뷰의 기점을 merge-base가 아니라 `5e049681`로 직접 두었다. 명세 축의 Minor 둘(들이기 명령의 Prettier 폭, 설명 갈아 쓰기 사례)은 07이 아니라 10에 넘겼다(위 명세 축 판정). `withoutLineComments`의 둘은 남겼다. 커밋 전 `sibling_overlap.py`의 486 옮기기는 따르지 않았다.
+- 고친 것: 두 리뷰 브리프에 색 표의 경로를 잘못 적어 띄운 직후 정정을 보냈다. 이 일지 "이어받은 세션 (PR 연 뒤)"의 04 서술을 셀프 리뷰가 잡아 고쳤다.
+- 이 세션의 지금 제목: `feature/03-token-comments`. 넘기기 전에 `feature/03-token-comments (인계함)`으로 바꾼다.
+- 남은 단계(새 세션이 한다):
+  1. 이 인계 절을 이어 쓴다. 이 절과 위 "다시 돌린 것"의 커밋 뒤 세 줄은 커밋하지 않았다.
+  2. `git fetch origin` 뒤 origin/main(07, #400)을 합친다. 글자 충돌 후보는 `sibling_overlap.py`가 낸 셋이다. 대기열 끝은 07이 488·489를 487 뒤에 더했고 이 브랜치가 490·491·492를 같은 자리에 더해, 번호가 겹치지 않으니 두 쪽 행을 번호순으로 모두 남긴다. `record_check_mutations.toml`은 07이 끝에 52·53을 더했고 이 브랜치는 5·14를 고쳤다. 프로브 README는 두 쪽의 행·절을 모두 남긴다. 합친 뒤 이 폴더의 시험(`pnpm -C web exec vitest run --project node tools/sync-design-system tools/contrast-module.test.ts`)과 고친 변이 표의 `--check`를 본다. 커밋 전에 `git branch --show-current`와 `sibling_overlap.py`를 치되, `MERGE_HEAD`가 있는 동안 main의 행에 회차만 더한 줄이 새 행으로 보이면 492의 결함이다. 커밋 뒤 한 번 더 친다.
+  3. 합치면서 이 일지 "## 다음"을 고친다. 07이 병합되어 이 PR이 병합되면 08(Blocked by 03, 07)이 열린다. "이 병합으로 새로 열리는 티켓은 없다"와 07 워크트리 문장이 틀린 말이 된다. `.scratch/plan.md`의 design-reverse-sync 행도 07의 병합을 적었는지 보고(07은 plan.md를 고치지 않았다) 03의 문장과 맞춘다.
+  4. 푸시하기 전에 `gh pr edit 396 --body-file`로 PR 본문을 고친다. 초안은 이 세션의 스크래치패드 `C:/Users/User/AppData/Local/Temp/claude/C--project-agent/57b1d957-5487-4a74-ba98-2766bd3ad945/scratchpad/pr_body_396.md`다. 04·05·06의 합침, 병합 뒤 셀프 리뷰, 10으로 넘긴 둘, `8484bc85`의 pre-commit 결과를 담았다. 07을 합친 뒤의 일(합친 커밋의 결과, "관련 티켓"의 08이 열린다는 것)을 더한다. 본문 끝의 CodeRabbit 자동 요약 주석 묶음은 지금 본문에서 옮겨 붙이지 않아도 봇이 다시 쓴다.
+  5. 푸시한 뒤 next-session 순서 1의 2(봇 회차)를 한다. `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 396`을 띄운다. 이 푸시는 두 봇 모두에게 둘째 회차라 Critical·Major만 고친다. 회고와 "다음"은 이미 이 일지에 있어 합친 커밋에 함께 실린다.
+  6. "워크트리에서 병합할 때"대로 병합하고, 주 체크아웃 미갱신 한 줄을 남긴 뒤 next-session 순서 2로 간다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/03-token-comments.md. 디자인 토큰 CSS의 선언 줄마다 쓰임 설명 주석 112개를 달아, 지은 tokens.json에 설명이 빈 토큰이 없게 한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/03-token-comments.md
+브랜치: feature/03-token-comments
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-27-07-token-comments.md 의 "이어받은 세션 (셀프 리뷰 직전)"과 "인계 (병합 커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 04·05·06이 든 origin/main을 합치고 셀프 리뷰를 반영한 병합 커밋까지 했고 아직 푸시하지 않았다. 그사이 origin/main에 07(#400)이 병합되어 그것을 다시 합치고(대기열 끝, 프로브 README, record_check_mutations.toml이 충돌 후보) 일지 "다음"의 08 문장을 고친 뒤, PR 본문 고침(초안은 일지에 적은 경로), 푸시, 둘째 봇 회차, 병합 순이다. 일지의 인계 절은 커밋하지 않았다: docs/journal/2026-10-27-07-token-comments.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 사람은 주석 112개를 리뷰해 고칠 것이 없다고 했고 병합까지 진행하라고 했다(일지의 인용)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/03-token-comments (인계함)`으로 바꿨고(앱이 묻지 않고 바꿨다), 돌던 백그라운드 작업은 없었으며(서브에이전트 둘과 병합 커밋 모두 끝났다), `git worktree unlock C:/project/agent/.claude/worktrees/03-token-comments`는 `is not locked`로 끝났다(이미 풀려 있었다). `open-session`은 디스크의 `SKILL.md`를 Read로 열어 따른다.
+
+open-session을 부른다 2026-10-27T03:46:11Z
+
+## 이어받은 세션 (병합 커밋 뒤)
+
+> 사용자: /implement .scratch/design-reverse-sync/issues/03-token-comments.md (인계로 연 세션. 이어받을 상태: "인계: 커밋 뒤. 04·05·06이 든 origin/main을 합치고 셀프 리뷰를 반영한 병합 커밋까지 했고 아직 푸시하지 않았다. 그사이 origin/main에 07(#400)이 병합되어 그것을 다시 합치고(대기열 끝, 프로브 README, record_check_mutations.toml이 충돌 후보) 일지 "다음"의 08 문장을 고친 뒤, PR 본문 고침(초안은 일지에 적은 경로), 푸시, 둘째 봇 회차, 병합 순이다", 확인할 선행 조건: "병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. 사람은 주석 112개를 리뷰해 고칠 것이 없다고 했고 병합까지 진행하라고 했다(일지의 인용)", 이번 요청 범위: PR과 병합까지)
+
+이 세션의 제목을 `feature/03-token-comments`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. HEAD는 병합 커밋 `8484bc85`이고 작업 트리에는 커밋하지 않은 이 일지만 있었다. `git fetch origin` 뒤 합칠 main 커밋은 07(`60b028e3`, #400) 하나였고, PR #396은 `CONFLICTING`이었다.
+
+- 합치기: 글자 충돌은 인계 절이 내다본 셋 가운데 둘(프로브 README, 대기열)이었고 `record_check_mutations.toml`은 저절로 합쳐졌다. README는 07이 `record_check_mutations.toml` 행의 첫 칸(52·53)과 근거 칸("티켓 05·07의")을 고쳤고 이 브랜치가 같은 행의 "다시 돌 때" 칸에 디자인 토큰 CSS 문장을 더해, 07의 행에 그 문장을 붙였다. 위 두 행(`sync_script`, `import_command`)은 07이 고치지 않아 이 브랜치의 것을 남겼다. 대기열은 07의 488·489 뒤에 이 브랜치의 490·491·492를 두었다. 07이 2회차로 고친 477은 저절로 합쳐졌다. 푼 결과를 `git diff --word-diff=porcelain origin/main`으로 대 봐, 07의 고침이 그대로이고 이 브랜치의 고침만 차이로 남은 것을 봤다.
+- 합친 트리에서 `pnpm -C web exec vitest run --project node tools/sync-design-system tools/contrast-module.test.ts`가 15파일 432개 통과였다(07이 사례 하나를 더했다). 이 브랜치가 고친 변이 표 일곱과 06의 `claim_mutations.toml`의 `--check`가 모두 원문 한 번씩이었고, 07이 더한 변이 52·53을 돌려 둘 다 기대대로 빨갰다.
+- 07이 병합되어 08의 막힘(03, 07)이 이 PR로 모두 풀린다. 아래 "다음"의 08 문장, `.scratch/plan.md`의 design-reverse-sync 행(07은 plan.md를 고치지 않았다), 티켓 03 7행의 "04·05·06 뒤에"를 고쳤다.
 
 ## 회고
 
@@ -303,7 +350,7 @@ open-session을 부른다 2026-10-27T03:14:58Z
 
 ## 다음
 
-- 이 PR(#396)이 병합되면 티켓 03이 닫힌다. 04·05·06은 먼저 병합됐다. 08(첫 올리기)의 막힘 가운데 03이 풀리고 07(스킬)이 남아, 이 병합으로 새로 열리는 티켓은 없다. 07은 이 PC의 워크트리 `07-sync-design-system-skill`에 작업이 있다(`sibling_overlap.py`가 그 워크트리의 일지 2026-10-27-04를 냈다). 다음 작업은 `next-session` 결정표가 정한다.
-- `.scratch/plan.md`의 design-reverse-sync 행에 06과 03의 병합 문장을 더했다. 그 행 앞쪽의 "다음은 막힌 것이 없는 03·04·05다"는 그 뒤에 이어 적은 문장들이 갈음하는 지난 기록으로 남겼다.
+- 이 PR(#396)이 병합되면 티켓 03이 닫힌다. 04·05·06·07은 먼저 병합됐다. 08(첫 올리기, `.scratch/design-reverse-sync/issues/08-first-upload.md`)은 03과 07에 막혀 있었고, 07 일지(2026-10-27-04)의 "다음"대로 둘 가운데 뒤에 병합하는 이 세션의 `next-session`이 08을 연다. 08은 아티팩트를 바꾸고 사람이 `/design-sync`를 한 번 쳐야 하는 운영 단계다. 07이 08에 넘긴 것은 그 티켓의 "07이 넘긴 것"에 있다.
+- `.scratch/plan.md`의 design-reverse-sync 행에 06·07·03의 병합 문장을 더했다(07은 plan.md를 고치지 않아 이 PR이 함께 적었다). 그 행 앞쪽의 "다음은 막힌 것이 없는 03·04·05다"는 그 뒤에 이어 적은 문장들이 갈음하는 지난 기록으로 남겼다.
 - 병합 뒤 셀프 리뷰가 찾은 들이기 명령의 둘(쓰임새 토큰 줄에 옮긴 긴 설명이 Prettier 포맷 검사를 지나지 못하는 것, 설명을 다른 설명으로 갈아 쓰는 시험 사례가 없는 것)은 04의 코드 몫이라 이 PR에 싣지 않고, 티켓 10의 "03이 넘긴 것"과 "편집 켜기"의 첫 체크박스로 넘겼다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
