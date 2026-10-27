@@ -6,7 +6,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** in-progress
+**Status:** done
 
 ### 아이콘
 
@@ -28,8 +28,8 @@
 
 ### 사진
 
-- [ ] `pnpm -C web visual`과 `pnpm -C web visual:widget`을 치고, 빨개지면 바뀐 사진을 보고 `visual:update`·`visual:widget:update`로 정답을 컨테이너 안에서 다시 만든다. 바뀐 사진은 PR 본문에 적는다
+- [x] `pnpm -C web visual`과 `pnpm -C web visual:widget`을 치고, 빨개지면 바뀐 사진을 보고 `visual:update`·`visual:widget:update`로 정답을 컨테이너 안에서 다시 만든다. 바뀐 사진은 PR 본문에 적는다
 
 ### 검증
 
-- [ ] 검증 명령이 모두 초록이다(`CLAUDE.md` 검증 명령. 이 티켓은 모델 경로와 위젯·관리 화면 앱의 코드를 건드리지 않아 `-m llm`·`-m llm_widget`과 e2e는 칠 일이 없다)
+- [x] 검증 명령이 모두 초록이다(`CLAUDE.md` 검증 명령. 이 티켓은 모델 경로와 위젯·관리 화면 앱의 코드를 건드리지 않아 `-m llm`·`-m llm_widget`과 e2e는 칠 일이 없다)
