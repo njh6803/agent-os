@@ -286,6 +286,19 @@ export interface components {
       pause_index: number;
     };
     /**
+     * CallingItem
+     * @description 모델이 도구를 요청했다. 모델이 요청한 도구의 이름을 요청한 차례대로 든다.
+     */
+    CallingItem: {
+      /** Tools */
+      tools: string[];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      type: "calling";
+    };
+    /**
      * ConversationSummarized
      * @description 런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.
      */
@@ -352,6 +365,7 @@ export interface components {
     };
     EndUserItem:
       | components["schemas"]["StartedItem"]
+      | components["schemas"]["CallingItem"]
       | components["schemas"]["ProgressItem"]
       | components["schemas"]["PausedItem"]
       | components["schemas"]["DecidedItem"]
@@ -446,6 +460,26 @@ export interface components {
       status: "ok";
     };
     Json: unknown;
+    /**
+     * LimitEnvelope
+     * @description 상한에 걸린 429 의 에러 응답. 봉투의 네 필드에 어느 상한인지를 더한다.
+     */
+    LimitEnvelope: {
+      code: components["schemas"]["ErrorCode"];
+      limit: components["schemas"]["LimitKind"];
+      /** Message */
+      message: string;
+      /** Request Id */
+      request_id: string;
+      /** Violations */
+      violations: components["schemas"]["Violation"][];
+    };
+    /**
+     * LimitKind
+     * @description 상한의 종류. 동시 실행 수, 시간당 실행 수, 구독 수다.
+     * @enum {string}
+     */
+    LimitKind: "concurrent_runs" | "hourly_runs" | "subscriptions";
     /**
      * LlmCalled
      * @description 모델 호출 하나. 관찰용이면서 재개의 입력이다. prompt 는 루프의 첫 턴에만 담긴다.
@@ -1004,7 +1038,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ErrorEnvelope"];
+          "application/json": components["schemas"]["LimitEnvelope"];
         };
       };
       /** @description 서버가 요청을 처리하지 못했다 */
@@ -1086,7 +1120,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ErrorEnvelope"];
+          "application/json": components["schemas"]["LimitEnvelope"];
         };
       };
       /** @description 서버가 요청을 처리하지 못했다 */
@@ -1168,7 +1202,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ErrorEnvelope"];
+          "application/json": components["schemas"]["LimitEnvelope"];
         };
       };
       /** @description 서버가 요청을 처리하지 못했다 */
@@ -1248,7 +1282,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ErrorEnvelope"];
+          "application/json": components["schemas"]["LimitEnvelope"];
         };
       };
       /** @description 서버가 요청을 처리하지 못했다 */

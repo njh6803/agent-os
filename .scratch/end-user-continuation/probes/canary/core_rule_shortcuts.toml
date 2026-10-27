@@ -1,0 +1,31 @@
+# `.claude/rules/core.md` 의 이어 가기 항목에 더한 문장(옛 대화는 지도 없음이 이어진다, 지도가 있을 때의 거슬러 읽기
+# 함수)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 03).
+# 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 두 번 돌려 통과 5 · 실패 3(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-01). web-widget 티켓 02 가
+# 같은 원천의 다른 항목(에이전트 제너레이터의 닫기, 실행 타임아웃)을 고친 뒤 돌렸다. 실패 셋은 모두 실험군이고 (1)의
+# 굵은 문장은 글자 그대로 옮겨 규칙이 실렸으며, (2)를 옛 대화 갈래의 `_walk` 로 답했다. 이 항목의 문장은 고치지 않았다.
+# 그 앞 결과: 통과 4(2026-10-21, 이 PC, claude 2.1.302, 일지 2026-10-21-06). 같은 날 앞 회차는 통과 3 · 실패 1이었고,
+# 실험군 한 회차가 규칙이 실린 채 옛 대화 갈래의 `_walk` 를 답했다. 첫 판의 지침에서는 굵은 문장이 3/3 실렸지만 함수
+# 이름을 2/3이 `_walk` 로 답했다(꼬리표 "거슬러 읽기(`_walk`)"가 옛 대화 쪽에만 붙어 있었다). 두 갈래를 대칭으로 고친
+# 판이다.
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/core_rule_shortcuts.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 이어 가기에서 시작 이벤트가 드는 에이전트별 지도를 다루는 항목이 있으면 두 가지를
+글자 그대로 옮겨라. (1) 지도가 없는 옛 대화를 두고 굵은 글씨로 적은 문장 하나. (2) 지도가 있을 때 거슬러 읽기를 하는
+함수의 이름(백틱 안의 글).
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["옛 대화는 지도 없음이 이어진다", "_follow"]
+source = ".claude/rules/core.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/core/loop.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

@@ -6,6 +6,9 @@
 import asyncio
 import itertools
 import json
+import sys
+import threading
+import time
 from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
@@ -16,9 +19,10 @@ from collections.abc import (
     Mapping,
     Sequence,
 )
-from contextlib import asynccontextmanager
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import fields
 from datetime import UTC, datetime, timedelta
+from typing import Literal, NoReturn, TypeGuard
 
 import anyio
 import pytest
@@ -31,6 +35,7 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 
+from agent_os.core.continuation import EXCHANGE_COUNT_LIMIT, READ_CAP, before_principal
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
     Absent,
@@ -52,6 +57,7 @@ from agent_os.core.ports import (
     ToolSource,
     ToolSpec,
     Trace,
+    TraceDamagedBeforePrincipal,
     TraceSchemaVersion,
     TraceStore,
     UnknownEvent,
@@ -463,6 +469,13 @@ async def _run(
     ]
 
 
+def _cause(events: Sequence[Event]) -> FailureCause | None:
+    """마지막 이벤트인 실패가 든 원인. 마지막이 실패가 아니면 그 자리에서 빨갛다."""
+    last = events[-1]
+    assert isinstance(last, RunFailed), [e.type for e in events]
+    return last.cause
+
+
 @pytest.fixture
 def trace() -> FakeTrace:
     return FakeTrace()
@@ -553,6 +566,7 @@ async def test_루프가_상한을_넘으면_실패_이벤트로_끝난다(
     assert sum(1 for e in events if e.type == "llm_called") == MAX_TURNS
     assert isinstance(events[-1], RunFailed)
     assert f"{MAX_TURNS}턴" in events[-1].error
+    assert _cause(events) == "loop_limit"
 
 
 async def test_모델_호출이_실패하면_실패_이벤트로_끝나고_트레이스가_남는다(
@@ -565,6 +579,7 @@ async def test_모델_호출이_실패하면_실패_이벤트로_끝나고_트�
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "API down" in events[-1].error
+    assert _cause(events) == "model_call"
     assert trace.events == events
 
 
@@ -576,6 +591,7 @@ async def test_에이전트가_종료_이벤트_없이_끝나면_실패_이벤�
     events = await _run(SilentAgent(), model, trace, clock)
 
     assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
+    assert _cause(events) == "agent_code"
 
 
 async def test_없는_에이전트는_실행_식별자도_트레이스도_없이_실행_전에_끝난다(
@@ -653,6 +669,7 @@ async def test_MCP_서버_기동_실패는_실패_이벤트로_끝나고_트레�
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "server did not start" in events[-1].error
+    assert _cause(events) == "tool_connection"
     assert trace.events == events
 
 
@@ -730,8 +747,9 @@ async def test_트레이스를_쓰지_못해_실행이_멈춰도_도구_연결�
     clock: FakeClock,
 ) -> None:
     """연결을 연 태스크가 닫아야 한다. 도구 연결 안에 멈춘 안쪽 제너레이터를 가비지 수집에 맡기면
-    다른 태스크에서 닫혀 MCP 어댑터의 anyio 취소 범위가 깨진다(http-channel 티켓 03). 쓰기 실패는
-    core 가 run_failed 로 바꾸지 못하는 유일한 실패라 실행 밖으로 올라온다."""
+    다른 태스크에서 닫혀 MCP 어댑터의 anyio 취소 범위가 깨진다(http-channel 티켓 03). 모든 쓰기가
+    실패하면 run_failed 도 쓰지 못해 실행 밖으로 올라온다. 한 번만 실패한 쓰기는 뒤의 run_failed 가
+    그 밖을 든다(아래 "실패 원인" 절)."""
     tools = FakeTools({"add": "4"})
     plugins = FakePlugins({"calc": DirectToolAgent()}, mcp=["calc-server"], servers=["calc-server"])
     events = run(
@@ -1020,6 +1038,7 @@ async def test_승인_대상이_실재하지_않는_도구를_가리키면_도�
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "sned" in events[-1].error
+    assert _cause(events) == "tool_connection"
     assert trace.events == events
     assert tools.closed is True
 
@@ -1038,6 +1057,7 @@ async def test_비밀_선언이_실재하지_않는_도구를_가리키면_같�
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "sned" in events[-1].error
+    assert _cause(events) == "tool_connection"
 
 
 async def test_비밀_선언이_도구에_없는_인자를_가리키면_같은_자리에서_실패한다(
@@ -1059,6 +1079,7 @@ async def test_비밀_선언이_도구에_없는_인자를_가리키면_같은_�
     assert isinstance(events[-1], RunFailed)
     assert "auth.key" in events[-1].error
     assert "add" in events[-1].error
+    assert _cause(events) == "tool_connection"
 
 
 class WrappingAgent:
@@ -1139,6 +1160,7 @@ async def test_에이전트가_지어낸_일시정지_이벤트는_실행을_멈
     assert [e.type for e in events] == ["run_started", "run_paused", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "run_finished" in events[-1].error
+    assert _cause(events) == "agent_code"
 
 
 # --- 재개 ---------------------------------------------------------------------
@@ -1424,6 +1446,7 @@ async def test_루프_상한은_재생된_턴을_포함해_세고_멈추고_재�
 
     assert isinstance(events[-1], RunFailed)
     assert f"{MAX_TURNS}턴" in events[-1].error
+    assert _cause(events) == "loop_limit"
     assert resumes < MAX_TURNS + 1
 
 
@@ -1454,6 +1477,7 @@ async def test_에이전트가_바뀌어_도구_인자가_달라지면_대조가
     assert [e.type for e in events] == ["approval_granted", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "add" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
     assert trace.events[-1] == events[-1]
 
 
@@ -1518,6 +1542,7 @@ async def test_에이전트가_바뀌어_프롬프트가_달라지면_대조가_
     assert [e.type for e in events] == ["approval_granted", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "바뀐 질문" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
 
 
 async def test_재생_구간의_시각은_실행의_시작_시각이고_재개_뒤로는_실제_시각이다(
@@ -1593,6 +1618,7 @@ async def test_승인_대상이_재개_시점에_실재하지_않으면_연결_�
     assert [e.type for e in events] == ["approval_granted", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "sned" in events[-1].error
+    assert _cause(events) == "tool_connection"
 
 
 async def test_일시정지가_아닌_실행은_재개할_수_없다(trace: FakeTrace, clock: FakeClock) -> None:
@@ -1636,8 +1662,10 @@ async def test_다른_실행의_이벤트가_섞인_트레이스는_재개할_�
 
     await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
 
-    with pytest.raises(PluginError, match="run-1"):
+    with pytest.raises(PluginError, match="run-1") as caught:
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is TraceDamagedBeforePrincipal
 
 
 class RefusingTrace(FakeTrace):
@@ -1669,9 +1697,10 @@ async def test_저장소가_결정을_이어_쓰지_못하면_재개는_PluginEr
     await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
     trace.refuse = ("approval_granted",)
 
-    with pytest.raises(PluginError, match="run-1"):
+    with pytest.raises(PluginError, match="run-1") as caught:
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
 
+    assert type(caught.value) is PluginError
     assert tools.connection.calls == []
     assert trace.events[-1].type == "run_paused"
 
@@ -1716,6 +1745,22 @@ class EmptyTrace(FakeTrace):
         return Trace(run_id=found.run_id, schema_version=found.schema_version, events=())
 
 
+class LockedTrace(FakeTrace):
+    """`locked` 의 실행은 단건 읽기가 어댑터가 감싼 `PluginError` 로 실패한다. JSONL 어댑터가 파일을
+    여는 `OSError`(백신이 잠근 파일의 `PermissionError` 따위)를 감싸 올리는 모양이다. 쓰기는 막지
+    않는다 — 런타임은 새 실행을 쓰는 동안 그 트레이스를 읽지 않는다."""
+
+    def __init__(self, locked: Iterable[str] = ()) -> None:
+        super().__init__()
+        self.locked: set[RunId] = {RunId(run_id) for run_id in locked}
+
+    def read(self, run_id: RunId) -> Trace | None:
+        if run_id in self.locked:
+            self.reads.append(run_id)
+            raise PluginError(f"트레이스를 읽을 수 없다: {run_id}.jsonl\nPermissionError: 잠겼다")
+        return super().read(run_id)
+
+
 async def test_모르는_종류의_이벤트가_섞인_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
     """읽기는 원문을 보존하지만 재생은 그 자리를 무엇으로 셀지 알 수 없다."""
     trace = UnknownEventTrace()
@@ -1725,8 +1770,10 @@ async def test_모르는_종류의_이벤트가_섞인_트레이스는_재개할
 
     await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
 
-    with pytest.raises(PluginError, match="run-1"):
+    with pytest.raises(PluginError, match="run-1") as caught:
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is TraceDamagedBeforePrincipal
 
 
 async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClock) -> None:
@@ -1737,8 +1784,10 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
 
     await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
 
-    with pytest.raises(PluginError, match="run-1"):
+    with pytest.raises(PluginError, match="run-1") as caught:
         await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is TraceDamagedBeforePrincipal
 
 
 # --- 실행 전 실패의 갈래 -----------------------------------------------------------
@@ -1748,22 +1797,30 @@ async def test_비어_있는_트레이스는_재개할_수_없다(clock: FakeClo
 # 재개할 수 있는 상태가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아닌 것(재개 불가, 뒤의 것은
 # 아래 "결정의 자리" 절), 요청이 부른 플러그인을 운영자가 꺼 둔 것(꺼짐, ADR 0017), 이어 갈 앞
 # 실행이 다른 주체의 것이거나 끝나지 않은 것(다른 주체, 이어 갈 수 없음, 아래 "이어 가기" 절)이 하위
-# 타입이다. 나머지는 서버의 구성이나 기록이 깨진 것이라 PluginError 그대로다. 꺼짐의 판정 순서는
-# 아래 "꺼진 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
+# 타입이다. 나머지는 서버의 구성이나 기록이 깨진 것이다. 깨진 것은 둘로 갈린다 — 요청이 가리킨
+# 실행을 그 주체와 견주기 전에 읽다 만난 손상(`TraceDamagedBeforePrincipal`, 아래 "주인을 확인하기
+# 전의 손상" 절, ADR 0023 의 2026-10-16 이력)과 그 밖의 것(PluginError 그대로)이다. 꺼짐의 판정
+# 순서는 아래 "꺼진 플러그인" 절이 고정한다. 상태 코드는 여기 없다.
 
 _RUN_1 = RunId("run-1")
-# 하위 타입 다섯. 깨진 것(하위 타입이 아닌 PluginError)을 단언할 때 이것을 뺀다. 늘면 여기에 더한다.
-# 다른 주체와 이어 갈 수 없음은 이어 가기의 것이다(아래 "이어 가기" 절, ADR 0022·0023).
+# 대상이 없거나 대상의 상태나 주체가 요청을 허락하지 않는 하위 타입들. 늘면 여기에 더한다. 다른
+# 주체와 이어 갈 수 없음은 이어 가기의 것이다(아래 "이어 가기" 절, ADR 0022·0023). 주인을 확인하기
+# 전의 손상은 깨진 것의 하위 타입이라 여기 들지 않는다. 깨진 것은 이 목록을 빼는 모양
+# (`not isinstance(…, _SUBTYPES)`)이 아니라 타입 그대로 단언한다 — 기반 타입은
+# `type(…) is PluginError`, 주인을 확인하기 전의 손상은 `type(…) is TraceDamagedBeforePrincipal`
+# 이다. 빼는 모양은 깨진 것의 하위 타입을 걸러 내지 못해, 고리의 깨짐이 그 하위 타입을 잘못 던져도
+# 초록이다(end-user-continuation 명세 검토).
 _SUBTYPES = (Absent, NotResumable, Disabled, DifferentPrincipal, NotContinuable)
 
 
-def test_하위_타입_다섯은_서로_겹치지_않는_PluginError_의_하위_타입이다() -> None:
+def test_하위_타입은_서로_겹치지_않는_PluginError_의_하위_타입이다() -> None:
     """기반 타입을 잡는 채널(CLI)이 하위 타입도 잡는다는 전제다. 진단과 종료 코드가 그대로라는
-    것은 CLI 의 기존 테스트가 판정한다. 다섯은 서로 겹치지 않는다 — 어느 것도 다른 것의 하위
-    타입이 아니라서 표의 갈래 하나가 둘을 잡지 않는다."""
-    for subtype in _SUBTYPES:
+    것은 CLI 의 기존 테스트가 판정한다. 하위 타입은 주인을 확인하기 전의 손상까지 서로 겹치지
+    않는다 — 어느 것도 다른 것의 하위 타입이 아니라서 표의 갈래 하나가 둘을 잡지 않는다."""
+    every = (*_SUBTYPES, TraceDamagedBeforePrincipal)
+    for subtype in every:
         assert issubclass(subtype, PluginError)
-        others = tuple(other for other in _SUBTYPES if other is not subtype)
+        others = tuple(other for other in every if other is not subtype)
         assert not issubclass(subtype, others), subtype
 
 
@@ -1790,7 +1847,7 @@ async def test_재개할_때_트레이스가_가리키는_에이전트가_없으
     with pytest.raises(PluginError, match="calc") as caught:
         await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=FakePlugins({}))
 
-    assert not isinstance(caught.value, Absent)
+    assert type(caught.value) is PluginError
     assert trace.events[-1].type == "run_paused"
 
 
@@ -1909,18 +1966,6 @@ async def _corrupt_operator_file(clock: FakeClock) -> None:
     await _run_with(FakePlugins({"calc": OneShotAgent()}, corrupt=CORRUPT_OPERATOR_FILE), clock)
 
 
-async def _unknown_event(clock: FakeClock) -> None:
-    await _resume_paused(UnknownEventTrace(), clock)
-
-
-async def _empty_trace(clock: FakeClock) -> None:
-    await _resume_paused(EmptyTrace(), clock)
-
-
-async def _mixed_runs(clock: FakeClock) -> None:
-    await _resume_paused(CorruptTrace(), clock)
-
-
 async def _unwritable_decision(clock: FakeClock) -> None:
     trace = RefusingTrace(refuse=("approval_granted",))
     await _resume_paused(trace, clock)
@@ -1934,9 +1979,6 @@ async def _unwritable_decision(clock: FakeClock) -> None:
         pytest.param(_missing_mcp, id="missing-mcp"),
         pytest.param(_masked_approval, id="masked-approval"),
         pytest.param(_corrupt_operator_file, id="corrupt-operator-file"),
-        pytest.param(_unknown_event, id="unknown-event"),
-        pytest.param(_empty_trace, id="empty-trace"),
-        pytest.param(_mixed_runs, id="mixed-runs"),
         pytest.param(_unwritable_decision, id="unwritable-decision"),
     ],
 )
@@ -1944,12 +1986,13 @@ async def test_구성이나_기록이_깨진_것은_부재도_재개_불가도_�
     scenario: Callable[[FakeClock], Awaitable[None]], clock: FakeClock
 ) -> None:
     """서버의 구성이나 기록이 깨진 것이다. 대상이 없는 것도, 대상의 상태나 주체가 요청을 허락하지
-    않는 것도 아니라 하위 타입 다섯 어느 것도 아니다(ADR 0014 의 2026-09-26 이력). 채널은 이것을
-    서버의 고장으로 말한다."""
+    않는 것도 아니고(ADR 0014 의 2026-09-26 이력), 요청이 가리킨 실행을 주체와 견주기 전의 손상도
+    아니라 기반 타입 그대로다. 채널은 이것을 서버의 고장으로 말한다. 요청이 가리킨 실행의 손상은
+    아래 "주인을 확인하기 전의 손상" 절이다."""
     with pytest.raises(PluginError) as caught:
         await scenario(clock)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
 
 
 async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_가려_하면_실패한다(
@@ -1975,6 +2018,7 @@ async def test_마스킹된_인자가_재생_경계를_넘어_실제_도구로_�
     ]
     assert isinstance(events[-1], RunFailed)
     assert "add" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
     assert [name for name, _ in tools.connection.calls] == ["send"]
 
 
@@ -2134,7 +2178,7 @@ async def test_꺼진_에이전트라도_구성이_깨졌으면_하위_타입이
     with pytest.raises(PluginError) as caught:
         await scenario(clock)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
 
 
 async def test_꺼진_에이전트는_import하지_않아_진입점이_깨졌어도_Disabled다(
@@ -2265,7 +2309,7 @@ async def test_재개할_때_트레이스가_가리키는_에이전트가_없으
     with pytest.raises(PluginError, match="calc") as caught:
         await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=vanished)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
     assert trace.events[-1].type == "run_paused"
 
 
@@ -2513,6 +2557,7 @@ async def test_에이전트가_바뀌어_멈춘_것과_다른_도구를_부르�
     assert isinstance(events[-1], RunFailed)
     assert "send" in events[-1].error
     assert "delete" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
     assert tools.connection.calls == []
 
 
@@ -2543,6 +2588,7 @@ async def test_멈춘_도구와_인자가_다르면_승인이_적용되지_않�
     assert [e.type for e in events] == ["approval_granted", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "add" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
     assert tools.connection.calls == []
 
 
@@ -2573,6 +2619,7 @@ async def test_멈춘_도구_호출_대신_모델을_부르면_결정이_적용�
     assert [e.type for e in events] == ["approval_granted", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "add" in events[-1].error
+    assert _cause(events) == "resume_mismatch"
     assert model.calls == 0
     assert tools.connection.calls == []
 
@@ -2724,12 +2771,12 @@ async def test_형식_1_트레이스면_자리와_무관하게_형식을_듣는�
 @pytest.mark.parametrize(
     "trace", [UnknownEventTrace(), CorruptTrace()], ids=["모르는 종류", "다른 실행이 섞임"]
 )
-async def test_손상된_트레이스면_자리와_무관하게_하위_타입이_아닌_PluginError다(
+async def test_손상된_트레이스면_자리와_무관하게_주인을_확인하기_전의_손상이다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """판정 순서가 손상 → 자리 어긋남이다. 기록이 깨진 것(500)을 결정이 지나갔다(409)로 말하면
-    운영자는 트레이스를 다시 읽고 결정을 다시 보낸다. 모르는 종류가 섞인 트레이스는 세는 자리부터
-    트레이스 상세의 인덱스와 같다는 보장이 없다."""
+    """판정 순서가 손상 → 자리 어긋남이다. 기록이 깨진 것(운영자 면의 500)을 결정이 지나갔다(409)로
+    말하면 운영자는 트레이스를 다시 읽고 결정을 다시 보낸다. 모르는 종류가 섞인 트레이스는 세는
+    자리부터 트레이스 상세의 인덱스와 같다는 보장이 없다."""
     model = ToolAwareFakeModel(messages=iter([_tool_request("send")]))
     tools = FakeTools({"send": "sent"})
     plugins = _gated_plugins(OneShotAgent())
@@ -2738,7 +2785,7 @@ async def test_손상된_트레이스면_자리와_무관하게_하위_타입이
     with pytest.raises(PluginError) as caught:
         await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=0)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is TraceDamagedBeforePrincipal
 
 
 async def test_꺼진_에이전트여도_자리_어긋남이_먼저이고_꺼진_집합을_읽지_않는다(
@@ -2878,11 +2925,11 @@ def _unrecorded_summary(trace: FakeTrace) -> None:
     [_damaged_paused, _unrecorded_summary],
     ids=["단건 읽기의 손상", "기록 규칙의 손상"],
 )
-async def test_손상된_트레이스는_다른_주체이고_집합_밖이어도_하위_타입이_아닌_PluginError다(
+async def test_손상된_트레이스는_다른_주체이고_집합_밖이어도_주인을_확인하기_전의_손상이다(
     corrupt: Callable[[FakeTrace], object], trace: FakeTrace, clock: FakeClock
 ) -> None:
     """손상된 트레이스의 주체는 믿을 수 없다. 그래서 손상이 주체보다 앞이다(ADR 0014 의
-    2026-10-05 이력)."""
+    2026-10-05 이력). 기록 규칙도 자기 실행 읽기에서는 주체 앞에 선다."""
     corrupt(trace)
     model = GenericFakeChatModel(messages=iter([]))
     before = list(trace.events)
@@ -2892,7 +2939,7 @@ async def test_손상된_트레이스는_다른_주체이고_집합_밖이어도
             _RUN_1, model, trace, clock, approver=MALLORY, visible_agents=ELSEWHERE, pause_index=1
         )
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is TraceDamagedBeforePrincipal
     assert trace.events == before
 
 
@@ -2972,7 +3019,7 @@ async def test_손상된_형식_1_트레이스에_보낸_결정은_재개_불가
     clock: FakeClock,
 ) -> None:
     """형식 1 판정이 손상 뒤로 가며 바뀐 것이다(ADR 0014 의 2026-10-05 이력). 어느 쪽이든 재개는
-    안 되고 500 이 깨진 자리를 더 바로 가리킨다."""
+    안 되고 운영자 면의 500 이 깨진 자리를 더 바로 가리킨다."""
     trace = FakeTrace(schema_version="1")
     _write_paused(trace)
     trace.damaged.add(_RUN_1)
@@ -2981,7 +3028,7 @@ async def test_손상된_형식_1_트레이스에_보낸_결정은_재개_불가
     with pytest.raises(PluginError) as caught:
         await _resume(_RUN_1, model, trace, clock, pause_index=2)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is TraceDamagedBeforePrincipal
 
 
 async def test_형식_1은_일시정지_아님보다_먼저다(clock: FakeClock) -> None:
@@ -3014,7 +3061,7 @@ async def test_고리는_준비보다_먼저라_꺼진_집합을_읽지_않는�
     with pytest.raises(PluginError, match="r0") as caught:
         await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
     assert plugins.disabled_reads == reads
 
 
@@ -3298,8 +3345,10 @@ def _write_finished(
     principal: Principal = PRINCIPAL,
     previous: str | None = None,
     between: Sequence[Event] = (),
+    shortcuts: Mapping[str, str] | None = None,
 ) -> None:
-    """끝난 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(남의 주체, 요약 자리)도 쓴다."""
+    """끝난 실행 하나를 손으로 쓴다. 런타임이 만들 수 없는 모양(남의 주체, 요약 자리)도 쓴다.
+    바로가기를 주지 않으면 옛 대화의 실행이다."""
     trace.write(
         RunStarted(
             run_id=RunId(run_id),
@@ -3308,11 +3357,20 @@ def _write_finished(
             request=request,
             principal=principal,
             previous_run=None if previous is None else RunId(previous),
+            shortcuts=_map_of(shortcuts),
         )
     )
     for event in between:
         trace.write(event)
     trace.write(RunFinished(run_id=RunId(run_id), ts=FIXED_NOW, output=output))
+
+
+def _map_of(shortcuts: Mapping[str, str] | None) -> Mapping[AgentName, RunId] | None:
+    return (
+        None
+        if shortcuts is None
+        else {AgentName(agent): RunId(run_id) for agent, run_id in shortcuts.items()}
+    )
 
 
 # 컨텍스트 멤버의 값
@@ -3525,18 +3583,23 @@ async def test_패턴을_어긴_앞_실행은_부재이고_포트를_부르지_�
 
 
 @pytest.mark.parametrize(
-    "trace", [UnknownEventTrace(), CorruptTrace(), EmptyTrace()], ids=["모르는 종류", "섞임", "빔"]
+    "trace",
+    [UnknownEventTrace(), CorruptTrace(), EmptyTrace(), LockedTrace(locked=["run-1"])],
+    ids=["모르는 종류", "섞임", "빔", "어댑터가 감싼 읽기 실패"],
 )
-async def test_손상된_앞_실행은_주체보다_먼저_하위_타입이_아닌_PluginError다(
+async def test_손상된_앞_실행은_주체보다_먼저_주인을_확인하기_전의_손상이다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """손상된 트레이스의 주체는 믿을 수 없다. 남의 손상된 실행이어도 500 이다(명세 "판정 순서")."""
+    """손상된 트레이스의 주체는 믿을 수 없다. 남의 손상된 실행이어도 같다(명세 "판정 순서").
+    운영자 면은 500 이고, 최종 사용자 면은 이것만 없는 실행과 같은 404 로 덮는다(ADR 0023 의
+    2026-10-16 이력). 어댑터가 감싸 올린 읽기 실패도 같다 — 감싸기를 빠뜨리면 남의 읽히지 않는
+    파일이 최종 사용자 면에서 500 으로 드러난다."""
     _write_finished(trace, "run-1", principal=BOB)
 
     with pytest.raises(PluginError, match="run-1") as caught:
         await _continue("run-1", trace, clock)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is TraceDamagedBeforePrincipal
     assert clock.ids_issued == 0
 
 
@@ -3742,11 +3805,27 @@ async def test_고리가_깨지면_하위_타입이_아닌_PluginError이고_메
     with pytest.raises(PluginError) as caught:
         await scenario(trace, clock)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
     assert run_id in str(caught.value)
     assert reason in str(caught.value)
     assert clock.ids_issued == 0
     assert all(e.run_id != "run-1" for e in trace.events)
+
+
+async def test_고리의_실행을_어댑터가_읽지_못해도_주인을_확인한_뒤라_기반_타입이다(
+    clock: FakeClock,
+) -> None:
+    """같은 단건 읽기가 요청이 가리킨 앞 실행에서는 주인을 확인하기 전의 손상이고, 고리를 따라갈
+    때는 기반 타입이다 — 주체를 이미 확인한 대화의 고장이라 드러나는 남의 것이 없다(ADR 0023 의
+    2026-10-16 이력)."""
+    trace = LockedTrace(locked=["r1"])
+    _chain_of_two(trace)
+
+    with pytest.raises(PluginError, match="r1") as caught:
+        await _continue("r2", trace, clock)
+
+    assert type(caught.value) is PluginError
+    assert clock.ids_issued == 0
 
 
 async def test_남의_앞_실행은_그_자신의_고리_위반보다_먼저_다른_주체다(
@@ -3788,7 +3867,7 @@ async def test_꺼진_에이전트로_이어_가도_고리가_먼저이고_깨�
 
     with pytest.raises(PluginError) as caught:
         await _continue("r2", trace, clock, plugins=plugins)
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
     assert plugins.disabled_reads == 0
 
     _write_finished(trace, "r1", request="q1", output="a1")
@@ -3796,6 +3875,73 @@ async def test_꺼진_에이전트로_이어_가도_고리가_먼저이고_깨�
         await _continue("r2", trace, clock, plugins=plugins)
     assert plugins.disabled_reads == 1
     assert clock.ids_issued == 0
+
+
+# 주인을 확인하기 전의 손상 — 요청이 가리킨 실행의 것만이다
+#
+# 요청이 가리킨 실행(결정과 구독의 실행, 이어 가기의 앞 실행)을 그 주체와 견주기 전에 읽다 만난
+# 손상은 `TraceDamagedBeforePrincipal` 이다(ADR 0023 의 2026-10-16 이력). 그 실행이 누구의 것인지
+# 아직 모르므로 최종 사용자 면이 이것만 없는 실행과 같은 404 로 덮는다. 주체를 확인한 뒤의
+# 고장(고리, 기록이 가리키는 에이전트, 준비)은 기반 타입 그대로다 — 위 "고리" 절과 "실행 전 실패의
+# 갈래" 절.
+
+_DAMAGED_TRACES: list[Callable[[], FakeTrace]] = [
+    UnknownEventTrace,
+    CorruptTrace,
+    EmptyTrace,
+    lambda: LockedTrace(locked=["run-1"]),
+]
+
+
+@pytest.mark.parametrize(
+    "make", _DAMAGED_TRACES, ids=["모르는 종류", "섞임", "빔", "어댑터가 감싼 읽기 실패"]
+)
+async def test_요청이_가리킨_실행의_손상은_세_진입점_모두_주인을_확인하기_전의_손상이다(
+    make: Callable[[], FakeTrace], clock: FakeClock
+) -> None:
+    """세 진입점이 같은 실행을 가리킨다. 남의 실행이어도 다른 주체보다 손상이 먼저다 — 손상된
+    트레이스의 주체는 믿을 수 없다. 어댑터가 감싸 올린 읽기 실패도 같다. 그것만 500 으로 빼면 그
+    식별자의 남의 파일이 있다는 것이 드러난다(end-user-continuation 명세 "최종 사용자 면의 404
+    덮기")."""
+    trace = make()
+    _write_paused(trace, principal=BOB)
+    model = GenericFakeChatModel(messages=iter([]))
+    before = list(trace.events)
+
+    with pytest.raises(PluginError) as decided:
+        await _resume(_RUN_1, model, trace, clock, pause_index=1)
+    with pytest.raises(PluginError) as subscribed:
+        read_own_run(trace, _RUN_1, PRINCIPAL, None)
+    with pytest.raises(PluginError) as continued:
+        await _continue("run-1", trace, clock)
+
+    for caught in (decided, subscribed, continued):
+        assert type(caught.value) is TraceDamagedBeforePrincipal
+        assert "run-1" in str(caught.value)
+    assert trace.events == before
+    assert clock.ids_issued == 0
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        Absent("없다"),
+        DifferentPrincipal("남의 실행이다"),
+        NotResumable("멈추지 않았다"),
+        TraceDamagedBeforePrincipal("이미 손상이다"),
+    ],
+    ids=["부재", "다른 주체", "재개 불가", "이미 손상"],
+)
+def test_주인을_확인하기_전의_자리는_하위_타입을_손상으로_바꾸지_않고_그대로_올린다(
+    error: PluginError,
+) -> None:
+    """감싸는 자리 안에 4xx 를 내는 판정이 들어와도 그 갈래가 손상(최종 사용자 면의 404, 운영자
+    면의 500)으로 바뀌지 않는다. 이미 손상인 것은 다시 감싸지 않는다. 기반 타입이 손상이 되는
+    것은 위 시험이다."""
+    with pytest.raises(PluginError) as caught, before_principal():
+        raise error
+
+    assert caught.value is error
 
 
 # 이어 간 실행의 재개 — 에이전트는 처음과 같은 멤버를 받는다
@@ -3846,8 +3992,24 @@ async def test_멈춘_사이_거슬러_읽는_범위의_트레이스를_지우�
     with pytest.raises(PluginError, match="r0") as caught:
         await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is PluginError
     assert trace.events == before
+    assert tools.connection.calls == []
+
+
+async def test_멈춘_사이_앞_실행을_어댑터가_읽지_못하게_되면_재개는_기반_타입이다(
+    clock: FakeClock,
+) -> None:
+    """재개가 시작 이벤트의 앞 실행을 다시 읽는 것은 자기 실행의 주체를 확인한 뒤다. 그 읽기
+    실패는 요청이 가리킨 실행이 아니라 서버의 기록이 가리킨 것의 고장이다."""
+    trace = LockedTrace()
+    model, tools, plugins = await _paused_continuation(trace, clock)
+    trace.locked.add(RunId("r1"))
+
+    with pytest.raises(PluginError, match="r1") as caught:
+        await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=2)
+
+    assert type(caught.value) is PluginError
     assert tools.connection.calls == []
 
 
@@ -3896,6 +4058,332 @@ async def test_형식_2_트레이스의_재개와_이어_가지_않은_실행의
         assert set(trace.reads) == {_RUN_1}
 
 
+# --- 바로가기 -------------------------------------------------------------------
+#
+# 시작 이벤트는 에이전트마다 그 대화에서 그 에이전트가 가장 최근에 처리한 실행을 가리키는 지도를
+# 든다(ADR 0022 의 둘째 2026-10-15 이력, end-user-continuation 명세 "바로가기"). 새 대화는 빈
+# 지도이고 이어 가기는 앞 실행의 지도에 앞 실행 자신을 덮어 쓴다. 거슬러 읽기는 지도에서 지금
+# 에이전트의 실행으로 곧장 가고 그 실행의 지도로 그 에이전트의 앞 실행으로 가기를 되풀이해, 다른
+# 에이전트의 실행을 읽지 않는다. 앞 실행에 지도가 없으면(옛 대화) 없음이 이어지고 위 "거슬러 읽기가
+# 멈추는 자리" 절처럼 앞 실행을 하나씩 따라간다 — 위 절의 손으로 쓴 트레이스가 옛 대화의 사례다.
+
+
+def _started_of(events: Sequence[Event]) -> RunStarted:
+    started = events[0]
+    assert isinstance(started, RunStarted), [e.type for e in events]
+    return started
+
+
+# 쓰기
+
+
+async def test_새_대화의_시작_이벤트는_빈_바로가기를_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    events = await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    assert _started_of(events).shortcuts == {}
+
+
+async def test_에이전트를_바꿔_이어_가면_시작_이벤트가_에이전트마다_가장_최근_실행을_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """A → B → A. 앞 실행의 지도에 앞 실행 자신을 덮어 쓴다."""
+    plugins = FakePlugins({"alpha": WeavingAgent(), "beta": WeavingAgent()})
+    model = GenericFakeChatModel(messages=iter([]))
+    await _run(WeavingAgent(), model, trace, clock, plugins=plugins, name="alpha")
+    second = await _continue("run-1", trace, clock, name="beta", plugins=plugins)
+
+    third = await _continue("run-2", trace, clock, name="alpha", plugins=plugins)
+
+    assert _started_of(second).shortcuts == {"alpha": "run-1"}
+    assert _started_of(third).shortcuts == {"alpha": "run-1", "beta": "run-2"}
+
+
+async def test_같은_에이전트로_셋을_이으면_그_칸이_바로_앞_실행이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """지도의 그 칸이 앞 실행 자신이면 판정에서 읽은 것을 다시 읽지 않는다."""
+    await _run(WeavingAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+    await _continue("run-1", trace, clock)
+    trace.reads.clear()
+
+    third = await _continue("run-2", trace, clock)
+
+    assert _started_of(third).shortcuts == {"calc": "run-2"}
+    assert trace.reads == [RunId("run-2"), RunId("run-1")]
+
+
+async def test_옛_대화를_이어_가면_바로가기_없음이_이어지고_앞_실행을_하나씩_따라간다(
+    clock: FakeClock,
+) -> None:
+    """옛 대화를 지도로 옮기지 않는다(명세가 거부했다). 없음이 그 표시다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r1", request="q1", output="a1")
+    _write_finished(trace, "r2", agent="other", previous="r1")
+    trace.reads.clear()
+
+    first = await _continue("r2", trace, clock)
+    second = await _continue("run-1", trace, clock)
+
+    assert _started_of(first).shortcuts is None
+    assert _started_of(second).shortcuts is None
+    assert trace.reads[:2] == [RunId("r2"), RunId("r1")]
+    assert _unwoven(_output_of(second)) == (None, [["q1", "a1"], ["그럼?", _output_of(first)]])
+
+
+# 따라가기
+
+
+@pytest.mark.parametrize("detour", [1, 5])
+async def test_다른_에이전트로_몇_번을_이어_갔든_돌아온_에이전트는_앞_실행과_자기_실행만_읽는다(
+    detour: int, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """A 로 둘, B 로 k 번 이어 간 뒤 A 로 돌아온다. 읽는 실행은 앞 실행(마지막 B)과 A 의 실행
+    둘뿐이고 k 와 무관하다(스토리 3·4)."""
+    plugins = FakePlugins({"alpha": WeavingAgent(), "beta": WeavingAgent()})
+    model = GenericFakeChatModel(messages=iter([]))
+    first = await _run(WeavingAgent(), model, trace, clock, plugins=plugins, name="alpha")
+    second = await _continue("run-1", trace, clock, name="alpha", request="a2", plugins=plugins)
+    for index in range(detour):
+        await _continue(f"run-{index + 2}", trace, clock, name="beta", plugins=plugins)
+    last = f"run-{detour + 2}"
+    trace.reads.clear()
+
+    back = await _continue(last, trace, clock, name="alpha", request="a3", plugins=plugins)
+
+    assert trace.reads == [RunId(last), RunId("run-2"), RunId("run-1")]
+    assert _unwoven(_output_of(back)) == (
+        None,
+        [["2+2?", _output_of(first)], ["a2", _output_of(second)]],
+    )
+
+
+async def test_바로가기를_따라가다_가장_가까운_요약을_만나면_덮는_끝에서_멈춘다(
+    clock: FakeClock,
+) -> None:
+    """멈추는 자리는 옛 대화의 규칙 그대로다. 덮는 끝은 읽지 않는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", request="q0", output="a0", shortcuts={})
+    _write_finished(trace, "r1", request="q1", output="a1", previous="r0", shortcuts={"calc": "r0"})
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1"})
+    _write_finished(
+        trace,
+        "r3",
+        request="q3",
+        output="a3",
+        previous="r2",
+        shortcuts={"calc": "r1", "other": "r2"},
+        between=[_summarized("r3", covers="r1", summary="r1 까지의 요약")],
+    )
+    _write_finished(
+        trace, "r4", agent="other", previous="r3", shortcuts={"calc": "r3", "other": "r2"}
+    )
+    trace.reads.clear()
+
+    events = await _continue("r4", trace, clock)
+
+    assert _unwoven(_output_of(events)) == ("r1 까지의 요약", [["q3", "a3"]])
+    assert trace.reads == [RunId("r4"), RunId("r3")]
+    assert _started_of(events).shortcuts == {"calc": "r3", "other": "r4"}
+
+
+# 검증 — 지도는 서버의 기록이라 어긋나면 깨진 것이다
+
+
+def _write_unfinished(trace: FakeTrace, run_id: str, shortcuts: Mapping[str, str]) -> None:
+    trace.write(
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=FIXED_NOW,
+            agent=AgentName("calc"),
+            request="x",
+            principal=PRINCIPAL,
+            shortcuts=_map_of(shortcuts),
+        )
+    )
+    trace.write(RunFailed(run_id=RunId(run_id), ts=FIXED_NOW, error="down"))
+
+
+def _detoured(trace: FakeTrace) -> None:
+    """r1(calc) 뒤 r2(other). calc 로 r2 를 이어 가면 지도가 r1 을 가리킨다."""
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1"})
+
+
+async def _shortcut_missing(trace: FakeTrace, clock: FakeClock) -> None:
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_damaged(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    trace.damaged.add(RunId("r1"))
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_foreign(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", principal=BOB, shortcuts={})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_other_agent(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", agent="third", shortcuts={})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_unfinished(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_unfinished(trace, "r1", {})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_unmapped(trace: FakeTrace, clock: FakeClock) -> None:
+    """지도가 가리킨 실행은 같은 대화의 지도 있는 실행이어야 한다."""
+    _write_finished(trace, "r1")
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_cycle(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", previous="r2", shortcuts={"calc": "r2"})
+    _write_finished(trace, "r2", previous="r1", shortcuts={"calc": "r1"})
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_escaping_key(trace: FakeTrace, clock: FakeClock) -> None:
+    """앞 실행의 에이전트가 calc 가 아니어도 그 기록 규칙은 본다. 새 지도가 그것을 이어받는다."""
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(
+        trace, "r2", agent="other", previous="r1", shortcuts={"calc": "r1", "Bad Key": "r1"}
+    )
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_escaping_value(trace: FakeTrace, clock: FakeClock) -> None:
+    """따라간 실행의 지도도 기록 규칙을 지난다."""
+    _write_finished(trace, "r0", shortcuts={})
+    _write_finished(trace, "r1", previous="r0", shortcuts={"calc": "r0", "other": "../etc"})
+    _detoured(trace)
+    await _continue("r2", trace, clock)
+
+
+async def _shortcut_uncovered_end(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(
+        trace,
+        "r2",
+        previous="r1",
+        shortcuts={"calc": "r1"},
+        between=[_summarized("r2", covers="ghost")],
+    )
+    _write_finished(trace, "r3", agent="other", previous="r2", shortcuts={"calc": "r2"})
+    await _continue("r3", trace, clock)
+
+
+async def _shortcut_nonempty_without_previous(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={"calc": "r0"})
+    await _continue("r1", trace, clock)
+
+
+async def _shortcut_without_previous_run(trace: FakeTrace, clock: FakeClock) -> None:
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(trace, "r2", previous="r1", shortcuts={"calc": "r0"})
+    await _continue("r2", trace, clock)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "run_id", "reason"),
+    [
+        pytest.param(_shortcut_missing, "r1", "없다", id="가리킨 실행 없음"),
+        pytest.param(_shortcut_damaged, "r1", "모르는 종류", id="가리킨 실행 손상"),
+        pytest.param(_shortcut_foreign, "r1", "주체", id="가리킨 실행의 주체가 다름"),
+        pytest.param(_shortcut_other_agent, "r1", "에이전트", id="가리킨 실행의 에이전트가 다름"),
+        pytest.param(_shortcut_unfinished, "r1", "failed", id="가리킨 실행이 끝나지 않음"),
+        pytest.param(_shortcut_unmapped, "r1", "바로가기가 없다", id="가리킨 실행에 지도 없음"),
+        pytest.param(_shortcut_cycle, "r1", "순환", id="순환"),
+        pytest.param(_shortcut_escaping_key, "r2", "패턴", id="키의 패턴 위반"),
+        pytest.param(_shortcut_escaping_value, "r1", "패턴", id="값의 패턴 위반"),
+        pytest.param(_shortcut_uncovered_end, "ghost", "덮는 끝", id="덮는 끝을 못 만남"),
+        pytest.param(
+            _shortcut_nonempty_without_previous, "r1", "비어", id="앞 실행이 없는데 지도가 참"
+        ),
+        pytest.param(
+            _shortcut_without_previous_run, "r2", "앞 실행", id="지도의 값에 앞 실행이 없음"
+        ),
+    ],
+)
+async def test_바로가기가_어긋나면_하위_타입이_아닌_PluginError이고_메시지가_실행과_이유를_든다(
+    scenario: Callable[[FakeTrace, FakeClock], Awaitable[None]],
+    run_id: str,
+    reason: str,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """요청이 아니라 서버의 기록이 가리킨 것이라 깨진 고리와 같다(명세 "바로가기"의 검증). 거절된
+    이어 가기는 트레이스를 남기지 않는다."""
+    with pytest.raises(PluginError) as caught:
+        await scenario(trace, clock)
+
+    assert type(caught.value) is PluginError
+    assert run_id in str(caught.value)
+    assert reason in str(caught.value)
+    assert clock.ids_issued == 0
+    assert all(e.run_id != "run-1" for e in trace.events)
+
+
+async def test_앞_실행의_지도_위반은_주체와_끝남_뒤에_선다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """지도의 검증은 고리 덩어리라 앞 실행의 판정 순서가 그대로다(티켓 03, 명세 "core — 판정
+    순서")."""
+    _write_finished(trace, "r1", principal=BOB, shortcuts={"Bad Key": "r0"})
+    _write_unfinished(trace, "r2", {"Bad Key": "r0"})
+
+    with pytest.raises(DifferentPrincipal):
+        await _continue("r1", trace, clock)
+    with pytest.raises(NotContinuable):
+        await _continue("r2", trace, clock)
+
+
+async def test_앞_실행_칸의_키를_바꾼_지도는_잡히지_않고_받아들인다(clock: FakeClock) -> None:
+    """앞 실행을 따로 읽지 않으면 지도의 키를 댈 수 없다(명세 검토). r2 의 지도에서 calc 칸의 키를
+    other 로 바꿨다. 잃은 칸의 교환은 빠진다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r1", shortcuts={})
+    _write_finished(trace, "r2", agent="other", previous="r1", shortcuts={"other": "r1"})
+
+    events = await _continue("r2", trace, clock)
+
+    assert _unwoven(_output_of(events)) == (None, [])
+
+
+# 재개 — 자기 지도로 다시 읽는다
+
+
+async def test_바로가기가_있는_이어_간_실행의_재개는_자기_지도로_읽어_앞_실행을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """처음과 같은 실행을 같은 규칙으로 읽어 같은 멤버를 주므로 재생 대조가 통과한다."""
+    _write_finished(trace, "r0", request="q0", output="a0", shortcuts={})
+    _write_finished(trace, "r1", agent="other", previous="r0", shortcuts={"calc": "r0"})
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue("r1", trace, clock, model=model, tools=tools, plugins=plugins)
+    assert [e.type for e in paused] == ["run_started", "llm_called", "run_paused"]
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    assert set(trace.reads) == {_RUN_1, RunId("r0")}
+    recorded = next(e for e in trace.events if isinstance(e, LlmCalled) and e.prompt)
+    assert _unwoven(recorded.prompt.split("\n")[0]) == (None, [["q0", "a0"]])
+
+
 # 에이전트가 낸 요약 이벤트는 실패다
 
 
@@ -3917,6 +4405,7 @@ async def test_에이전트가_대화_요약_이벤트를_내면_그_실행은_r
     failed = events[-1]
     assert isinstance(failed, RunFailed)
     assert "대화 요약" in failed.error
+    assert failed.cause == "agent_code"
     assert trace.events[-1] == failed
 
 
@@ -3970,13 +4459,13 @@ async def test_에이전트가_실패_이벤트를_내면_원인과_무관하게
     assert isinstance(failed, RunFailed)
     assert FORGED_ERROR in failed.error
     assert failed.error != FORGED_ERROR
-    assert failed.cause is None
+    assert failed.cause == "agent_code"
     assert trace.events == events
 
 
 class ClosingAgent:
-    """런타임이 멈추게 하는 자리 뒤에도 끝남을 내려는 에이전트. `finally` 가 돌면 `closed` 이고 그
-    태스크가 `closed_in` 이다.
+    """런타임이 멈추게 하는 자리 뒤에도 끝남을 내려는 에이전트. 처음 돈 태스크가 `ran_in` 이고,
+    `finally` 가 돌면 `closed` 이고 그 태스크가 `closed_in` 이다.
 
     `first` 가 낸 것을 먼저 낸다. 런타임이 그 자리에서 이 제너레이터를 닫지 않고 버리면 `finally` 는
     가비지 수집이 나중에 다른 태스크에서 돌린다(PEP 525).
@@ -3985,9 +4474,11 @@ class ClosingAgent:
     def __init__(self, first: Callable[[AgentContext], Awaitable[Sequence[Event]]]) -> None:
         self._first = first
         self.closed = False
+        self.ran_in: object = None
         self.closed_in: object = None
 
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        self.ran_in = asyncio.current_task()
         try:
             for event in await self._first(ctx):
                 yield event
@@ -4023,15 +4514,15 @@ async def _swallowed_pause(ctx: AgentContext) -> Sequence[Event]:
     ],
     ids=["지어낸 실패", "지어낸 요약", "삼킨 일시정지"],
 )
-async def test_런타임이_멈춘_에이전트의_정리_코드는_실행이_끝나기_전에_같은_태스크에서_돈다(
+async def test_멈춘_에이전트의_정리_코드는_실행이_끝나기_전에_에이전트를_돌린_태스크에서_돈다(
     first: Callable[[AgentContext], Awaitable[Sequence[Event]]],
     last: str,
     trace: FakeTrace,
     clock: FakeClock,
 ) -> None:
-    """몸통이 에이전트의 제너레이터를 그 자리에서 닫는다(이유는 `_closing` 의 독스트링). 이벤트
-    사이에 이벤트 루프에 양보하는 자리가 없어, 닫지 않는 구현에서는 실행이 끝난 바로 그때 정리
-    코드가 아직 돌지 않는다(`contract_mutations.toml` 의 변이가 잰다)."""
+    """에이전트는 몸통이 띄운 제 태스크에서 돌고 그 태스크가 제너레이터를 그 자리에서 닫는다(이유는
+    `_closing` 의 독스트링, ADR 0039). 닫지 않는 구현에서는 실행이 끝난 바로 그때 정리 코드가 아직
+    돌지 않는다(`contract_mutations.toml` 의 변이가 잰다)."""
     agent = ClosingAgent(first)
     model = GenericFakeChatModel(messages=iter([]))
     tools = FakeTools({"send": "sent"})
@@ -4039,7 +4530,8 @@ async def test_런타임이_멈춘_에이전트의_정리_코드는_실행이_�
     events = await _run(agent, model, trace, clock, tools=tools, plugins=_gated_plugins(agent))
 
     assert agent.closed
-    assert agent.closed_in is asyncio.current_task()
+    assert agent.ran_in is not None
+    assert agent.closed_in is agent.ran_in
     assert events[-1].type == last
     assert "run_finished" not in [e.type for e in events]
 
@@ -4069,6 +4561,7 @@ async def test_에이전트의_정리_코드가_낸_예외는_먼저_붙잡은_�
     assert isinstance(failed, RunFailed)
     assert FORGED_ERROR in failed.error
     assert "정리 코드의 예외" not in failed.error
+    assert failed.cause == "agent_code"
 
 
 class SlowCleanupAfterPauseAgent:
@@ -4141,18 +4634,20 @@ async def test_재생_구간에서_에이전트가_실패_이벤트를_내도_�
     failed = events[-1]
     assert isinstance(failed, RunFailed)
     assert "실패 이벤트를 낼 수 없다" in failed.error
+    assert failed.cause == "agent_code"
     assert tools.connection.calls == []
 
 
-# --- 대화 요약 — 한도를 넘으면 런타임이 접는다 ----------------------------------------
+# --- 대화 요약 — 한도나 교환 수 기준을 넘으면 런타임이 접는다 ---------------
 #
 # 이어 가기에서 거슬러 읽기가 모은 원문 교환의 글자 수 합이 그 에이전트의 한도(매니페스트, 없으면
-# core 의 기본 20,000)를 넘으면, 런타임이 에이전트를 부르기 전에 그 실행의 모델과 고정 프롬프트로 앞
-# 요약과 오래된 교환을 새 요약에 접는다(ADR 0022, 명세 "core — 대화 요약"). 가장 최근 교환들은
-# 한도의 절반 안에서 원문으로 남는다. 요약 이벤트는 run_started 바로 뒤에 서고, 에이전트는 새 요약과
-# 원문 꼬리를 받는다. 요약이 실패하면 에이전트를 부르지 않고 run_failed 다. 재개는 모델을 다시
-# 부르지 않고 자기 트레이스의 요약을 쓴다. 교환의 글자 수는 요청과 출력을 더한 파이썬 len 이고, 아래
-# 도우미가 그 크기의 교환으로 고리를 손으로 쓴다.
+# core 의 기본 20,000)를 넘거나 그 수가 교환 수 기준(50)을 넘으면, 런타임이 에이전트를 부르기 전에
+# 그 실행의 모델과 고정 프롬프트로 앞 요약과 오래된 교환을 새 요약에 접는다(ADR 0022, 명세 "core —
+# 대화 요약", end-user-continuation 명세 "요약의 계기와 꼬리"). 가장 최근 교환들은 한도의 절반과
+# 기준의 절반(25개) 안에서 원문으로 남는다. 요약 이벤트는 run_started 바로 뒤에 서고, 에이전트는 새
+# 요약과 원문 꼬리를 받는다. 요약이 실패하면 에이전트를 부르지 않고 run_failed 다. 재개는 모델을
+# 다시 부르지 않고 자기 트레이스의 요약을 쓴다. 교환의 글자 수는 요청과 출력을 더한 파이썬 len 이고,
+# 아래 도우미가 그 크기의 교환으로 고리를 손으로 쓴다.
 
 
 def _chain(trace: FakeTrace, *sizes: int) -> str:
@@ -4310,6 +4805,93 @@ async def test_가장_최근_교환_하나가_절반보다_길면_그것도_접�
             {"request": "요요요요", "output": "답답답답답"},
         ],
     }
+
+
+# 계기와 원문 범위 — 교환 수
+
+_SHORT = {"request": "요", "output": "답"}
+
+
+@pytest.mark.parametrize(("count", "summarized"), [(50, False), (51, True)])
+async def test_짧은_교환이_교환_수_기준_50개와_같으면_요약하지_않고_하나_넘으면_요약한다(
+    count: int, *, summarized: bool, clock: FakeClock
+) -> None:
+    """글자 수는 기본 한도 20,000 아래다. 교환 수의 계기는 글자 수의 것과 둘 가운데 하나라도다
+    (end-user-continuation 명세 "요약의 계기와 꼬리")."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * count)
+    model = _summarizing_model()
+
+    events = await _continue(last, trace, clock, model=model)
+
+    expected = ["run_started", "conversation_summarized", "run_finished"]
+    assert [e.type for e in events] == (expected if summarized else expected[::2])
+    assert model.calls == (1 if summarized else 0)
+
+
+async def test_교환_수로_접히면_꼬리는_기준의_절반인_25개이고_목표는_그대로_한도의_4분의_1이다(
+    clock: FakeClock,
+) -> None:
+    """짧은 교환 51개. 가장 최근 25개(r27~r51)가 원문으로 남고 r1~r26 이 접혀 덮는 끝은 r26 이다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 51)
+    model = _summarizing_model()
+
+    events = await _continue(last, trace, clock, model=model)
+
+    assert _summary_event(events).last_covered_run == "r26"
+    assert _unwoven(_output_of(events)) == ("요약 글", [["요", "답"]] * 25)
+    system, document = _summary_request(model)
+    assert document == {"previous_summary": None, "exchanges": [_SHORT] * 26}
+    assert "5000자" in system
+
+
+async def test_교환_수로_접혀도_꼬리는_글자_수의_절반_규칙을_함께_지킨다(clock: FakeClock) -> None:
+    """한도 1,000, 짧은 교환 49개 뒤에 300자 둘. 합 698 은 한도 아래이고 51개가 계기다. 뒤에서부터
+    300 은 절반 500 안이고 그다음 300 은 넘어, 꼬리는 25개가 아니라 하나다. 목표는 250자다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 49, 300, 300)
+    model = _summarizing_model()
+    plugins = FakePlugins({"calc": WeavingAgent()}, conversation_limit=1_000)
+
+    events = await _continue(last, trace, clock, model=model, plugins=plugins)
+
+    assert _summary_event(events).last_covered_run == "r50"
+    assert _unwoven(_output_of(events)) == ("요약 글", [["요" * 150, "답" * 150]])
+    system, _ = _summary_request(model)
+    assert "250자" in system
+
+
+class CountingAgent:
+    """멤버의 요약과 교환 수만 출력에 옮긴다. 출력이 짧아 여러 번 이어 가도 교환이 커지지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        conversation = ctx.conversation
+        output = f"{conversation.summary}/{len(conversation.exchanges)}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_교환_수로_접힌_뒤_짧은_교환만_이어지면_다음_요약은_26번째_이어_가기에서_온다(
+    clock: FakeClock,
+) -> None:
+    """요약 뒤 원문은 꼬리 25개와 그 실행 자신이라 이어 갈 때마다 하나씩 는다. 25번을 더 이어 가
+    50개에 닿고, 26번째가 51개를 모아 다시 접는다(명세 "요약의 계기와 꼬리")."""
+    trace = FakeTrace()
+    previous = _chain(trace, *[2] * 51)
+    model = _summarizing_model(_reply("요약 글"), _reply("둘째 요약"))
+    plugins = FakePlugins({"calc": CountingAgent()})
+    seen: list[tuple[str, bool]] = []
+
+    for _ in range(27):
+        events = await _continue(previous, trace, clock, model=model, plugins=plugins)
+        summarized = any(isinstance(e, ConversationSummarized) for e in events)
+        seen.append((_output_of(events), summarized))
+        previous = events[0].run_id
+
+    assert seen[0] == ("요약 글/25", True)
+    assert seen[1:26] == [(f"요약 글/{count}", False) for count in range(26, 51)]
+    assert seen[26] == ("둘째 요약/25", True)
+    assert model.calls == 2
 
 
 # 모델 호출과 고정 프롬프트
@@ -4482,6 +5064,7 @@ async def test_요약이_실패하면_요약_이벤트_없이_run_failed_이고_
     assert isinstance(failed, RunFailed)
     assert "대화 요약" in failed.error
     assert "실패" in failed.error
+    assert failed.cause == "conversation_summary"
     assert [e for e in trace.events if e.run_id == "run-1"] == events
     assert tools.servers is None
     assert model.calls == 1
@@ -4618,6 +5201,37 @@ async def test_자기_요약의_덮는_끝이_앞_실행_자신이면_재개는_
     assert set(trace.reads) == {_RUN_1}
 
 
+async def test_자기_요약의_덮는_끝이_지도의_그_에이전트_칸이면_재개는_아무것도_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """바로가기가 있는 실행에서 "덮는 끝이 앞 실행 자신이면"의 일반화다. 앞 실행은 다른 에이전트의
+    실행이고 덮는 끝은 지도의 calc 칸이다."""
+    _write_finished(trace, "r1", request="요", output="답", shortcuts={})
+    _write_finished(
+        trace,
+        "r2",
+        request="요요요요",
+        output="답답답답답",
+        previous="r1",
+        shortcuts={"calc": "r1"},
+    )
+    _write_finished(trace, "r3", agent="other", previous="r2", shortcuts={"calc": "r2"})
+    model = _summarizing_model(_reply("요약 글"), _tool_request("send"), _reply("끝"))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    plugins.conversation_limit = 10
+    paused = await _continue("r3", trace, clock, model=model, tools=tools, plugins=plugins)
+    assert _summary_event(paused).last_covered_run == "r2"
+    for run_id in ("r1", "r2", "r3"):
+        trace.forget(RunId(run_id))
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    assert set(trace.reads) == {_RUN_1}
+
+
 def _paused_with(trace: FakeTrace, between: Sequence[Event], previous: str | None) -> None:
     """요약 이벤트의 자리나 개수가 어긋난, 일시정지한 실행의 트레이스를 손으로 쓴다."""
     _write_finished(trace, "r1")
@@ -4664,7 +5278,8 @@ async def test_자기_요약_이벤트의_자리나_개수가_어긋난_재개�
     clock: FakeClock,
 ) -> None:
     """고리의 실행에 거는 규칙을 자기 트레이스에만 빼는 이유가 없다(to-tickets). 손편집에서만 생기고
-    실행은 일시정지 그대로다."""
+    실행은 일시정지 그대로다. 자기 실행 읽기의 기록 규칙은 주체 앞이라 주인을 확인하기 전의
+    손상이다."""
     _paused_with(trace, between, previous)
     before = list(trace.events)
     tools = FakeTools({"send": "sent"})
@@ -4673,10 +5288,293 @@ async def test_자기_요약_이벤트의_자리나_개수가_어긋난_재개�
     with pytest.raises(PluginError, match="run-1") as caught:
         await _resume(_RUN_1, _summarizing_model(), trace, clock, tools=tools, plugins=plugins)
 
-    assert not isinstance(caught.value, _SUBTYPES)
+    assert type(caught.value) is TraceDamagedBeforePrincipal
     assert reason in str(caught.value)
     assert trace.events == before
     assert tools.servers is None
+
+
+# --- 거슬러 읽기의 상한과 자리 ---------------------------------------------------------
+#
+# 거슬러 읽기 한 번은 앞 실행을 세어 많아야 읽기 상한(100)만큼의 트레이스를 읽고, 닿으면 그때까지
+# 모은 것으로 진행한다 — 실패도 메시지도 아니다. 바로가기를 따라가는 읽기는 교환 수 기준 덕에 많아야
+# 52개라 닿는 것은 옛 대화와, 기준이 서기 전(티켓 03 과 04 사이)에 쓰인 바로가기 대화뿐이다. 이어
+# 가기를 시작할 때의 판정 전부는 한 번의 스레드 호출로 이벤트 루프 밖에서 돌고, 취소가 오면 그
+# 읽기가 끝나기를 기다린다. 재개의 거슬러 읽기는 루프 위에 남고 그것은 이어 간 실행의 동시 재개
+# 테스트(아래 스레드 절의 끝)가 고정한다 — 채널의 동시 재개 테스트(`test_router.py`)는 이어 가지
+# 않은 실행을 재개한다(end-user-continuation 명세 "거슬러 읽기의 상한과 자리").
+
+
+def _detour_chain(trace: FakeTrace, detours: int) -> str:
+    """옛 대화. calc 의 실행 r0 뒤로 other 의 실행 r1 … r{detours} 가 이어진다. 마지막을
+    돌려준다."""
+    _write_finished(trace, "r0", request="q0", output="a0")
+    previous = "r0"
+    for index in range(1, detours + 1):
+        _write_finished(trace, f"r{index}", agent="other", previous=previous)
+        previous = f"r{index}"
+    return previous
+
+
+# 상한
+
+
+@pytest.mark.parametrize(("detours", "reached"), [(99, True), (100, False)])
+async def test_옛_대화의_거슬러_읽기는_앞_실행을_세어_100개까지만_읽고_모은_것으로_진행한다(
+    detours: int, *, reached: bool, clock: FakeClock
+) -> None:
+    """고리가 100개면 처음 r0 까지 읽는다. 101개면 앞 실행부터 100개를 읽고 r0 은 읽지 않은 채 모은
+    것(교환 없음)으로 끝까지 간다."""
+    trace = FakeTrace()
+    last = _detour_chain(trace, detours)
+    trace.reads.clear()
+
+    events = await _continue(last, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_finished"]
+    assert len(trace.reads) == 100
+    assert (RunId("r0") in trace.reads) is reached
+    assert _unwoven(_output_of(events)) == (None, [["q0", "a0"]] if reached else [])
+
+
+async def test_상한에서_멈춘_이어_간_실행의_재개는_같은_실행을_읽어_재생_대조가_통과한다(
+    clock: FakeClock,
+) -> None:
+    """재개가 상한 없이 r0 까지 읽으면 멤버에 r0 의 교환이 들어 프롬프트 대조가 어긋난다."""
+    trace = FakeTrace()
+    last = _detour_chain(trace, 100)
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue(last, trace, clock, model=model, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+    trace.reads.clear()
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+    walked = [run_id for run_id in trace.reads if run_id != _RUN_1]
+    assert len(walked) == 100
+    assert RunId("r0") not in walked
+
+
+async def test_상한에서_모은_것이_계기를_넘으면_접히고_다음_이어_가기는_그_덮는_끝에서_멈춘다(
+    clock: FakeClock,
+) -> None:
+    """옛 대화의 짧은 교환 120개. 100개(r21~r120)를 모아 75개를 접고 25개를 남겨 덮는 끝이 r95 다.
+    다음 이어 가기는 그 요약에서 r96 까지 읽고 멈춘다."""
+    trace = FakeTrace()
+    last = _chain(trace, *[2] * 120)
+    model = _summarizing_model()
+    trace.reads.clear()
+    first = await _continue(last, trace, clock, model=model)
+    assert len(trace.reads) == 100
+    assert _summary_event(first).last_covered_run == "r95"
+    _, document = _summary_request(model)
+    assert document == {"previous_summary": None, "exchanges": [_SHORT] * 75}
+    trace.reads.clear()
+
+    second = await _continue("run-1", trace, clock, request="또?")
+
+    assert trace.reads == [RunId("run-1"), *(RunId(f"r{index}") for index in range(120, 95, -1))]
+    assert _unwoven(_output_of(second)) == (
+        "요약 글",
+        [*([["요", "답"]] * 25), ["그럼?", _output_of(first)]],
+    )
+
+
+async def test_바로가기를_따라가는_읽기도_앞_실행을_세어_100개에서_멈춘다(clock: FakeClock) -> None:
+    """교환 수 기준이 없던 때 쓰인 바로가기 대화(티켓 03 과 04 사이)는 한 에이전트의 원문 실행이
+    100개를 넘을 수 있다. 앞 실행 r100 을 포함해 100개를 읽고 r0 은 읽지 않는다."""
+    trace = FakeTrace()
+    _write_finished(trace, "r0", shortcuts={})
+    for index in range(1, 101):
+        older = f"r{index - 1}"
+        _write_finished(trace, f"r{index}", previous=older, shortcuts={"calc": older})
+    trace.reads.clear()
+
+    events = await _continue("r100", trace, clock, model=_summarizing_model())
+
+    assert len(trace.reads) == 100
+    assert RunId("r0") not in trace.reads
+    assert _summary_event(events).last_covered_run == "r75"
+
+
+async def test_상한에_닿는_자리에서도_덮는_끝을_못_만난_채_처음에_닿으면_깨진_고리다(
+    clock: FakeClock,
+) -> None:
+    """상한은 읽지 않고 가를 수 있는 판정(처음, 순환, 덮는 끝) 뒤, 읽기 바로 앞이다. 고리 100개의
+    처음 r0 을 100번째로 읽은 뒤 처음에 닿았는데 r99 의 요약이 덮는 끝을 아직 만나지 못했다."""
+    trace = FakeTrace()
+    previous = _detour_chain(trace, 98)
+    _write_finished(trace, "r99", previous=previous, between=[_summarized("r99", covers="gone")])
+
+    with pytest.raises(PluginError, match="만나지 못한") as caught:
+        await _continue("r99", trace, clock)
+
+    assert not isinstance(caught.value, _SUBTYPES)
+    assert len(trace.reads) == 100
+
+
+def test_읽기_상한은_교환_수_기준에_2를_더한_것_이상이다() -> None:
+    """원문 교환이 기준을 넘으면 접히므로 바로가기로 읽는 그 에이전트의 원문 실행은 많아야 기준 + 1
+    개이고, 앞 실행이 다른 에이전트의 것이면 하나가 더 든다. 기준을 올리다 이 관계가 깨지면 상한이
+    바로가기 대화까지 자른다."""
+    assert EXCHANGE_COUNT_LIMIT + 2 <= READ_CAP
+
+
+# 스레드
+
+# 막힌 읽기가 박동을 기다리는 기한(초). 루프 밖이면 몇 ms 안에 박동이 뛰고, 루프 위면 그 읽기가
+# 루프를 막아 기한까지 뛰지 않는다. 기한은 빨강의 비용일 뿐이라 부하에도 초록이 흔들리지 않게 넉넉히
+# 둔다(`.claude/rules/tests.md`).
+BEAT_WAIT = 5.0
+
+
+class Heartbeat:
+    """이벤트 루프 위에서 잠들기를 되풀이하며 센다. 루프가 막히면 세지 않는다."""
+
+    def __init__(self) -> None:
+        self.beats = 0
+
+    async def beat(self) -> None:
+        while True:
+            self.beats += 1
+            await anyio.sleep(0.001)
+
+
+class BlockingTrace(FakeTrace):
+    """`blocking` 에 든 실행(없음이면 모두)을 읽을 때 박동이 한 번 뛸 때까지 그 스레드를
+    `time.sleep` 으로 막는다. 막은 읽기마다 그동안 박동이 뛰었는지를 `saw_beat` 에 쌓는다."""
+
+    def __init__(self, heartbeat: Heartbeat, blocking: frozenset[RunId] | None) -> None:
+        super().__init__()
+        self._heartbeat = heartbeat
+        self._blocking = blocking
+        self.saw_beat: list[bool] = []
+
+    def read(self, run_id: RunId) -> Trace | None:
+        if self._blocking is None or run_id in self._blocking:
+            before = self._heartbeat.beats
+            deadline = time.monotonic() + BEAT_WAIT
+            while self._heartbeat.beats == before and time.monotonic() < deadline:
+                time.sleep(0.005)
+            self.saw_beat.append(self._heartbeat.beats != before)
+        return super().read(run_id)
+
+
+@pytest.mark.parametrize(
+    ("blocking", "blocked"),
+    [
+        pytest.param(None, 3, id="읽기마다"),
+        pytest.param(frozenset({RunId("r3")}), 1, id="앞 실행 읽기만"),
+    ],
+)
+async def test_이어_가기의_거슬러_읽기_동안_이벤트_루프가_돈다(
+    blocking: frozenset[RunId] | None, blocked: int, clock: FakeClock
+) -> None:
+    """앞 실행 읽기와 고리 따라가기가 한 번의 스레드 호출이다. 막은 읽기마다 박동을 보므로 읽기마다
+    막는 가짜가 고리만 스레드로 보낸 구현과 앞 실행 읽기만 보낸 구현을 모두 가른다. 앞 실행
+    읽기에서만 막는 가짜는 명세 검토가 든 사례이고 앞의 것만 가른다(변이 표
+    `walk_cap_mutations.toml`)."""
+    heartbeat = Heartbeat()
+    trace = BlockingTrace(heartbeat, blocking)
+    last = _chain(trace, 2, 2, 2)
+    events: list[Event] = []
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(heartbeat.beat)
+        await anyio.sleep(0)
+        events = await _continue(last, trace, clock)
+        group.cancel_scope.cancel()
+
+    assert events[-1].type == "run_finished"
+    assert trace.saw_beat == [True] * blocked
+
+
+class HeldTrace(FakeTrace):
+    """`held` 를 읽기 시작하면 `started` 를 세우고 `release` 까지 그 스레드를 막은 뒤 다 읽고
+    `finished` 를 세운다."""
+
+    def __init__(self, held: RunId) -> None:
+        super().__init__()
+        self._held = held
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.finished = threading.Event()
+
+    def read(self, run_id: RunId) -> Trace | None:
+        if run_id != self._held:
+            return super().read(run_id)
+        self.started.set()
+        self.release.wait(BEAT_WAIT)
+        found = super().read(run_id)
+        self.finished.set()
+        return found
+
+
+async def test_이어_가기의_거슬러_읽기_도중_취소되면_그_읽기가_끝나기를_기다린다(
+    clock: FakeClock,
+) -> None:
+    """앱이 멈추는 바깥 취소. 스레드를 버리면 그것이 포트를 계속 쓴다. 읽기가 시작했다는 표시를 본
+    뒤에 취소하고 그 뒤에야 읽기를 풀어 준다 — 취소가 읽기 앞이나 뒤에 오는 회차가 없다(명세 검토,
+    프로브 `thread_cancel_wait.py`)."""
+    trace = HeldTrace(RunId("r2"))
+    last = _chain(trace, 2, 2)
+    running_at_cancel = False
+
+    with anyio.CancelScope() as scope:
+
+        async def cancel_while_reading() -> None:
+            nonlocal running_at_cancel
+            with anyio.fail_after(BEAT_WAIT):
+                while not trace.started.is_set():
+                    await anyio.sleep(0.001)
+            running_at_cancel = not trace.finished.is_set()
+            scope.cancel()
+            threading.Timer(0.2, trace.release.set).start()
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(cancel_while_reading)
+            await _continue(last, trace, clock)
+
+    assert running_at_cancel
+    assert trace.finished.is_set()
+
+
+async def test_이어_간_실행에_동시에_온_결정_둘은_하나만_받아들여져_도구가_한_번_불린다(
+    clock: FakeClock,
+) -> None:
+    """재개의 거슬러 읽기는 루프 위에 남는다(ADR 0014). 이어 간 실행의 재개는 첫 걸음 안에서 고리를
+    다시 읽으므로, 그 읽기를 스레드로 보내면 둘째 결정이 첫째의 결정보다 먼저 일시정지를 읽어 둘 다
+    받아들여지고 승인된 도구가 두 번 불린다. 채널의 동시 재개 테스트(`test_router.py`)는 이어 가지
+    않은 실행을 재개해 이 읽기를 지나지 않는다."""
+    trace = FakeTrace()
+    last = _chain(trace, 2, 2)
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝"), _reply("또")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(WeavingGatedAgent())
+    paused = await _continue(last, trace, clock, model=model, tools=tools, plugins=plugins)
+    assert paused[-1].type == "run_paused"
+    pause_index = _last_index(trace, _RUN_1)
+    outcomes: list[str] = []
+
+    async def decide() -> None:
+        try:
+            events = await _resume(
+                _RUN_1, model, trace, clock, tools=tools, plugins=plugins, pause_index=pause_index
+            )
+        except NotResumable as error:
+            outcomes.append(str(error))
+        else:
+            outcomes.append(events[-1].type)
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(decide)
+        group.start_soon(decide)
+
+    assert sorted(outcomes) == ["run_finished", "일시정지 상태가 아니라 재개할 수 없다: run-1"]
+    assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
 
 
 # --- 실행 타임아웃 ---------------------------------------------------------------------
@@ -4759,10 +5657,11 @@ class MovableClock(FakeClock):
         return self.at
 
 
-def _failure(events: Sequence[Event]) -> str:
+def _failure(events: Sequence[Event]) -> tuple[str, FailureCause | None]:
+    """마지막 실패의 메시지와 원인."""
     last = events[-1]
     assert isinstance(last, RunFailed), [e.type for e in events]
-    return last.error
+    return last.error, last.cause
 
 
 async def _driven_in_group(events: AsyncIterator[Event]) -> list[Event]:
@@ -4793,9 +5692,28 @@ async def test_모델이_타임아웃보다_오래_자면_run_started_뒤_run_fa
     )
 
     assert [e.type for e in events] == ["run_started", "run_failed"]
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (TIMED_OUT, "timeout")
     assert trace.events == events
     assert tools.servers == {"srv": SERVER}
+    assert tools.closed
+
+
+async def test_기한의_취소를_도구_연결의_닫기가_다른_예외로_바꿔도_원인은_시간_초과다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """에이전트가 도는 중에 기한이 왔고, 연결을 닫는 정리 코드가 그 취소를 일반 예외로 덮었다.
+    먼저 난 것은 기한이다 — 닫기의 예외는 원인도 메시지도 바꾸지 못한다(PR 직전 리뷰)."""
+    model = SleepyModel(messages=iter([_reply("늦은 답")]), delay=LATE)
+    tools = FlakyCloseTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"])
+
+    events = await _run(
+        OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, timeout_seconds=SHORT
+    )
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == (TIMED_OUT, "timeout")
+    assert trace.events == events
     assert tools.closed
 
 
@@ -4817,7 +5735,7 @@ async def test_요약_호출에서_시간이_지나도_같은_메시지의_run_f
     )
 
     assert [e.type for e in events] == ["run_started", "run_failed"]
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (TIMED_OUT, "timeout")
     assert [e for e in trace.events if e.run_id == "run-1"] == events
     assert tools.servers is None
 
@@ -4839,7 +5757,7 @@ async def test_재개도_결정_뒤_시간_안에_결말이_없으면_run_failed
     )
 
     assert [e.type for e in events] == ["approval_granted", "run_resumed", "run_failed"]
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (TIMED_OUT, "timeout")
     assert tools.connection.calls == [("send", {"a": 2, "b": 2})]
     assert tools.closed
 
@@ -4885,7 +5803,7 @@ async def test_타임아웃을_주지_않으면_core_의_기본값_600초다(
 
     events = await _run(OneShotAgent(), model, trace, clock)
 
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (TIMED_OUT, "timeout")
     assert DEFAULT_RUN_TIMEOUT_SECONDS == 600
 
 
@@ -4926,7 +5844,7 @@ async def test_태스크_그룹의_자식이_몰아도_run_failed_는_하나이�
     received = await _driven_in_group(events)
 
     assert [e.type for e in received] == ["run_started", "run_failed"]
-    assert _failure(received) == TIMED_OUT
+    assert _failure(received) == (TIMED_OUT, "timeout")
     assert tools.connection.calls == [("add", {"a": 2, "b": 2})]
     assert tools.closed
 
@@ -4951,18 +5869,20 @@ async def test_결말을_쓴_뒤_도구_연결을_닫다_기한이_와도_결말
     assert tools.closed
 
 
-async def test_run_finished_없이_돌아온_뒤_연결을_닫다_기한이_오면_그_결말은_실패다(
+async def test_run_finished_없이_돌아온_뒤_연결을_닫다_기한이_오면_그_결말은_붙잡은_실패다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """돌아온 것만으로는 결말이 아니다. 마지막이 run_finished 가 아니면 몸통의 결말은 실패이고 아직
-    쓰기 전이라, 기한이 그것을 대신 쓴다. 결말은 하나다."""
+    """돌아온 것만으로는 결말이 아니다. 마지막이 run_finished 가 아니면 몸통은 그 실패를 닫기 전에
+    붙잡고, 닫는 도중에 온 기한은 시간 초과 대신 그것을 쓴다 — 먼저 난 실패가 결말이다. 결말은
+    하나다."""
     tools = ScopedTools(FakeConnection({}, {}), close_seconds=LATE)
     model = GenericFakeChatModel(messages=iter([]))
 
     events = await _run(SilentAgent(), model, trace, clock, tools=tools, timeout_seconds=SHORT)
 
     assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (NO_FINISH, "agent_code")
+    assert trace.events == events
 
 
 class LingeringAgent:
@@ -5000,4 +5920,676 @@ async def test_에이전트가_결말_모양의_이벤트를_낸_뒤에도_돌�
     events = await _run(LingeringAgent(said), model, trace, clock, timeout_seconds=SHORT)
 
     assert [e.type for e in events] == ["run_started", said_type, "run_failed"]
-    assert _failure(events) == TIMED_OUT
+    assert _failure(events) == (TIMED_OUT, "timeout")
+
+
+# --- 실패 원인 ---------------------------------------------------------------------
+#
+# 런타임이 쓰는 run_failed 는 모두 원인을 든다(ADR 0031, end-user-continuation 명세 "실패 원인").
+# 원인은 실패가 처음 생긴 자리로 정한다. 런타임이 에이전트에게 던지는 예외는 던지는 자리에서 그
+# 객체를 기억하고, 에이전트에서 빠져나온 예외가 그 객체 자체면 그 원인이고 아니면 에이전트 코드다.
+# 위의 절들이 갈래마다 원인을 함께 단언하고(요약, 기한, 연결, 루프 상한, 재개 대조), 아래는 그 밖의
+# 갈래와 동일성으로 가르는 사례, 먼저 난 실패와 결말 뒤 닫기다.
+
+NO_FINISH = "에이전트가 run_finished 없이 끝났다"
+AGENT_ERROR = "에이전트의 예외"
+
+
+def _loaded(name: str) -> BaseAgent:
+    """로더처럼 진입점을 이름으로 꺼내 인스턴스를 만든다. sdk 의 시그니처를 어긴 에이전트는 정적
+    타입으로는 만들 수 없고 실제로도 로더(`load_agent`)를 지나서만 온다."""
+    return getattr(sys.modules[__name__], name)()
+
+
+class UnbindableModel(ToolAwareFakeModel):
+    """도구를 붙이는 자리에서 터지는 모델. 붙이기는 루프 밖, `ctx.llm()` 의 첫 줄에서 돈다."""
+
+    def bind_tools(
+        self,
+        tools: Sequence[object],
+        *,
+        tool_choice: str | None = None,
+        **kwargs: object,
+    ) -> Runnable[LanguageModelInput, AIMessage]:
+        raise RuntimeError("도구를 붙일 수 없다")
+
+
+class RefusingConnection(FakeConnection):
+    """도구가 예외 대신 실패한 결과를 돌려준다."""
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self.calls.append((name, args))
+        return ToolResult(ok=False, content="도구가 거절했다")
+
+
+class RaisingAgent:
+    """런타임을 부르지 않고 제 예외를 낸다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        raise ValueError(AGENT_ERROR)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않는다")
+
+
+class UncaughtToolAgent:
+    """직접 부른 도구의 실패(ToolError)를 잡지 않는다."""
+
+    def __init__(self, tool: str = "add") -> None:
+        self._tool = tool
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = await ctx.tool(self._tool, a=2, b=2)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+type Handling = Literal["다시 던짐", "감쌈", "그룹"]
+
+
+class HandlingAgent:
+    """모델 호출의 예외를 잡아 `how` 대로 다시 올린다."""
+
+    def __init__(self, how: Handling) -> None:
+        self._how: Handling = how
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            answer = await ctx.llm(request)
+        except Exception as error:
+            match self._how:
+                case "다시 던짐":
+                    raise
+                case "감쌈":
+                    raise RuntimeError("에이전트가 감쌌다") from error
+                case "그룹":
+                    raise ExceptionGroup("에이전트가 묶었다", [error]) from None
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=answer)
+
+
+class SelfToolErrorAgent:
+    """sdk 의 공개 타입 ToolError 를 스스로 만들어 던진다. 런타임이 던진 것이 아니다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        raise ToolError("에이전트가 지어낸 도구 실패")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않는다")
+
+
+class EarlierFailureAgent:
+    """모델 호출의 예외를 들고 있다가, 뒤에 받은 ToolError 다음에 앞의 그 예외를 다시 던진다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        earlier: Exception | None = None
+        try:
+            await ctx.llm(request)
+        except Exception as error:
+            earlier = error
+        try:
+            await ctx.tool("add", a=2, b=2)
+        except ToolError:
+            if earlier is not None:
+                raise earlier from None
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않는다")
+
+
+class StrayValueAgent:
+    """sdk 의 이벤트가 아닌 값을 낸다. 시그니처를 어겨 `_loaded` 로만 만든다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[object]:
+        yield "이벤트가 아닌 값"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않는다")
+
+
+async def test_모델에_도구를_붙이다_예외가_나면_원인은_모델_호출이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = UnbindableModel(messages=iter([]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=FakeTools({"add": "4"}))
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == ("RuntimeError: 도구를 붙일 수 없다", "model_call")
+
+
+@pytest.mark.parametrize(
+    ("how", "cause"),
+    [("다시 던짐", "model_call"), ("감쌈", "agent_code"), ("그룹", "agent_code")],
+)
+async def test_에이전트가_모델의_예외를_그대로_다시_던지면_모델_호출이고_바꾸면_에이전트_코드다(
+    how: Handling, cause: FailureCause, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """잡아 그대로 다시 던지면 같은 객체라 원인이 남는다. 감싸거나 예외 그룹에 넣으면 에이전트가
+    실패를 자기 것으로 바꾼 것이다."""
+    model = GenericFakeChatModel(messages=_failing_replies())
+
+    events = await _run(HandlingAgent(how), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _cause(events) == cause
+    assert trace.events == events
+
+
+@pytest.mark.parametrize(
+    "connection",
+    [
+        FakeConnection({"add": RuntimeError("boom")}, {}),
+        RefusingConnection({"add": "4"}, {}),
+    ],
+    ids=["도구가 예외를 냄", "도구가 실패를 돌려줌"],
+)
+async def test_직접_부른_도구의_실패를_에이전트가_잡지_않으면_원인은_도구_실패다(
+    connection: FakeConnection, trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = ScopedTools(connection)
+
+    events = await _run(UncaughtToolAgent(), model, trace, clock, tools=tools)
+
+    assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
+    assert _cause(events) == "tool_failure"
+
+
+async def test_재개에서_거부된_직접_호출을_에이전트가_잡지_않으면_원인은_도구_실패다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """승인자가 거부한 직접 호출도 ToolError 다(`_deny`)."""
+    agent = UncaughtToolAgent("send")
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _gated_plugins(agent)
+    await _run(agent, model, trace, clock, tools=tools, plugins=plugins)
+
+    events = await _resume(
+        _RUN_1, model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert [e.type for e in events] == [
+        "approval_denied",
+        "run_resumed",
+        "tool_called",
+        "run_failed",
+    ]
+    assert _cause(events) == "tool_failure"
+    assert tools.connection.calls == []
+
+
+async def test_에이전트가_스스로_만든_ToolError_를_던지면_에이전트_코드다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """타입으로 가르지 않는다. ToolError 는 sdk 의 공개 타입이라 에이전트가 던질 수 있다."""
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(SelfToolErrorAgent(), model, trace, clock)
+
+    assert _failure(events) == ("ToolError: 에이전트가 지어낸 도구 실패", "agent_code")
+
+
+async def test_앞서_받은_모델의_예외를_뒤에_받은_ToolError_다음에_다시_던지면_모델_호출이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """기억하는 것은 마지막 하나가 아니라 그 실행 안에서 던진 예외 전부다."""
+    model = GenericFakeChatModel(messages=_failing_replies())
+    tools = FakeTools({"add": RuntimeError("boom")})
+
+    events = await _run(EarlierFailureAgent(), model, trace, clock, tools=tools)
+
+    assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
+    assert _cause(events) == "model_call"
+    # 가짜 모델은 도구를 붙이지 못해 그 자리에서 먼저 던진다. 그 예외도 런타임이 던진 것이다.
+    assert _failure(events)[0].startswith("NotImplementedError")
+
+
+async def test_에이전트가_제_예외를_내면_에이전트_코드다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(RaisingAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == (f"ValueError: {AGENT_ERROR}", "agent_code")
+
+
+async def test_에이전트가_이벤트가_아닌_값을_내면_쓰기_전에_에이전트_코드로_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """트레이스 쓰기에서 터지기 전에 몸통이 본다. 그 값은 트레이스에 닿지 않는다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    agent = _loaded(StrayValueAgent.__name__)
+
+    events = await _run(agent, model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == (
+        "TypeError: 에이전트가 sdk 의 이벤트가 아닌 값을 냈다: str",
+        "agent_code",
+    )
+    assert trace.events == events
+
+
+async def test_결말_전의_쓰기가_한_번_실패하면_그_밖이고_실패는_남는다(clock: FakeClock) -> None:
+    """디스크가 한 번 거절한 쓰기다. 뒤의 run_failed 는 쓰인다."""
+    trace = RefusingTrace(fail="llm_called")
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    events = await _run(OneShotAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _cause(events) == "other"
+    assert trace.events == events
+
+
+async def test_연결_안에서_에이전트_자리_밖의_런타임_예외는_그_밖이고_결말이_남는다(
+    trace: FakeTrace, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """연결에 들어간 뒤, 에이전트를 부르기 전에 런타임 자신이 터진 것이다. 닫기의 예외처럼 버리면
+    결말도 예외도 없이 사라진다(셀프 리뷰 명세 축)."""
+
+    def broken(*args: object) -> NoReturn:
+        raise RuntimeError("컨텍스트를 만들 수 없다")
+
+    monkeypatch.setattr("agent_os.core.run._Context", broken)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(OneShotAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == ("RuntimeError: 컨텍스트를 만들 수 없다", "other")
+    assert trace.events == events
+
+
+async def test_일시정지를_쓰지_못한_실행은_멈춘_것이_아니라_그_밖의_실패로_끝난다(
+    clock: FakeClock,
+) -> None:
+    """일시정지는 쌓인 이벤트의 마지막이라, 그때까지의 쓰기가 실패했으면 트레이스에 없다. 멈춘
+    실행이라며 덧붙이지 않으면 결말도 예외도 없이 끝난다(셀프 리뷰 표준 축)."""
+    trace = RefusingTrace(fail="run_paused")
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("unreachable")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["send"]
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_failed"]
+    assert _failure(events) == ("OSError: 디스크가 찼다", "other")
+    assert trace.events == events
+    assert tools.connection.calls == []
+
+
+class SlowCleanupForgingAgent:
+    """실패 이벤트를 지어낸 뒤 정리 코드에서 `LATE` 를 기다린다. 런타임이 그 이벤트에서 던진
+    실패는 에이전트를 닫은 뒤에야 위로 올라간다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            yield RunFailed(run_id=ctx.run_id, ts=ctx.now(), error=FORGED_ERROR)
+        finally:
+            await anyio.sleep(LATE)
+
+
+async def test_런타임이_에이전트_자리에서_던진_실패는_정리_코드를_기다리다_기한이_와도_결말이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """먼저 난 실패가 결말이다 — 도구 연결의 닫기와 같은 기준을 에이전트의 닫기에도 건다(01 의
+    `_closing`, 셀프 리뷰 명세 축)."""
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(SlowCleanupForgingAgent(), model, trace, clock, timeout_seconds=SHORT)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    assert FORGED_ERROR in failed.error
+    assert failed.cause == "agent_code"
+    assert trace.events == events
+
+
+class EmittingThenGatedAgent:
+    """제 이벤트를 하나 낸 뒤 승인 대상을 부른다. 그 이벤트가 재생 구간에 든다."""
+
+    def __init__(self, said: str) -> None:
+        self._said = said
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield ToolCalled(run_id=ctx.run_id, ts=ctx.now(), tool=self._said, ok=True)
+        await ctx.tool("send", to="bob")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="보냈다")
+
+
+class ToolFirstAgent:
+    """`tool` 을 먼저 부르고 승인 대상을 부른다."""
+
+    def __init__(self, tool: str) -> None:
+        self._tool = tool
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        await ctx.tool(self._tool, a=2, b=2)
+        await ctx.tool("send", to="bob")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="보냈다")
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        (EmittingThenGatedAgent("처음"), EmittingThenGatedAgent("바뀜")),
+        (ToolFirstAgent("add"), ToolFirstAgent("send")),
+    ],
+    ids=["에이전트가 낸 이벤트", "도구 이름"],
+)
+async def test_재생_구간에서_기록과_어긋나면_원인은_재개_대조다(
+    before: BaseAgent, after: BaseAgent, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """에이전트가 낸 이벤트의 대조는 몸통이 에이전트 밖에서 하지만 같은 원인이다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = _two_tools()
+    await _run(before, model, trace, clock, tools=tools, plugins=_gated_plugins(before))
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=_gated_plugins(after))
+
+    assert [e.type for e in events] == ["approval_granted", "run_failed"]
+    assert _cause(events) == "resume_mismatch"
+
+
+# 먼저 난 실패와 결말 뒤 닫기
+
+
+async def test_에이전트가_예외를_낸_뒤_닫기도_실패하면_결말은_에이전트의_예외다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """닫기의 예외는 뒤따른 것이라 버린다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FlakyCloseTools()
+
+    events = await _run(RaisingAgent(), model, trace, clock, tools=tools)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert _failure(events) == (f"ValueError: {AGENT_ERROR}", "agent_code")
+    assert tools.closed
+
+
+async def test_결말_없이_돌아온_뒤_닫기가_실패하면_결말은_결말이_없다는_것이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(SilentAgent(), model, trace, clock, tools=FlakyCloseTools())
+
+    assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
+    assert _failure(events) == (NO_FINISH, "agent_code")
+
+
+async def test_선언_확인이_실패한_뒤_닫기도_실패하면_결말은_선언_확인의_실패다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """선언 확인도 연결 안에서 나므로 닫기 전에 붙잡는다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FlakyCloseTools({"add": "4"})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, mcp=["srv"], servers=["srv"], requires_approval=["sned"]
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    error, cause = _failure(events)
+    assert "sned" in error
+    assert "close failed" not in error
+    assert cause == "tool_connection"
+
+
+async def test_끝난_뒤_닫기가_실패해도_실패를_덧붙이지_않고_결말은_끝남이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """결말은 이벤트의 종류가 아니라 몸통이 정한다. 멈춘 실행에서 닫기의 예외를 버리는 것과 같다."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+    tools = FlakyCloseTools()
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
+    assert trace.events == events
+    assert tools.closed
+
+
+class FinishThenAgent:
+    """run_finished 를 낸 뒤 돌아오지 않고 `then` 을 한다."""
+
+    def __init__(self, then: Callable[[AgentContext], Awaitable[object]]) -> None:
+        self._then = then
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="다 했다")
+        await self._then(ctx)
+
+
+async def _raise_own(ctx: AgentContext) -> object:
+    raise ValueError(AGENT_ERROR)
+
+
+async def _ask_model(ctx: AgentContext) -> object:
+    return await ctx.llm("하나 더")
+
+
+@pytest.mark.parametrize(
+    ("then", "cause"),
+    [(_raise_own, "agent_code"), (_ask_model, "model_call")],
+    ids=["제 예외", "모델의 예외"],
+)
+async def test_끝남을_낸_뒤_예외를_낸_에이전트는_실패로_끝나고_원인은_일반_규칙대로다(
+    then: Callable[[AgentContext], Awaitable[object]],
+    cause: FailureCause,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    model = GenericFakeChatModel(messages=_failing_replies())
+
+    events = await _run(FinishThenAgent(then), model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_finished", "run_failed"]
+    assert _cause(events) == cause
+
+
+class TimingOutTrace(FakeTrace):
+    """요약 이벤트를 쓰다 저장소가 TimeoutError(OSError 의 하위, ETIMEDOUT)를 낸다."""
+
+    def write(self, event: Event) -> None:
+        if event.type == "conversation_summarized":
+            raise TimeoutError("네트워크 드라이브가 응답하지 않았다")
+        super().write(event)
+
+
+async def test_기한_범위가_아닌_TimeoutError_는_기한이_아니라_결말_없이_올라온다(
+    clock: FakeClock,
+) -> None:
+    """요약 이벤트는 몸통 밖에서 쓰고 그 쓰기의 실패는 결말 없음이다. 같은 타입이어도 디스크가 낸
+    것을 기한으로 읽으면 "N초 안에 끝나지 않았다"가 쓰인다."""
+    trace = TimingOutTrace()
+    last = _chain(trace, 6, 6)
+    plugins = FakePlugins({"calc": WeavingAgent()}, conversation_limit=10)
+
+    with pytest.raises(TimeoutError, match="네트워크 드라이브가 응답하지 않았다"):
+        await _continue(last, trace, clock, model=_summarizing_model(), plugins=plugins)
+
+    assert [e.type for e in trace.events if e.run_id == "run-1"] == ["run_started"]
+
+
+# --- 실시간 중계 — 호출의 이벤트는 기록하는 자리에서 흘린다(ADR 0039) ---------------
+#
+# 에이전트는 몸통이 띄운 제 태스크에서 돌고, 컨텍스트가 모델·도구 호출의 이벤트를 기록하면 몸통이
+# 그것을 내보낼 때까지 기다린다(맞물림). 시점은 잠이 아니라 소비자가 받은 이벤트로 맞추고 기다리는
+# 시험마다 기한을 둔다.
+
+
+class WitnessConnection(FakeConnection):
+    """도구가 불릴 때마다 소비자가 그때까지 받은 이벤트의 종류를 `seen` 에 적는다."""
+
+    def __init__(self, received: Sequence[Event]) -> None:
+        super().__init__({"add": "4"}, {})
+        self._received = received
+        self.seen: list[list[str]] = []
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self.seen.append([event.type for event in self._received])
+        return await super().call(name, args)
+
+
+def _events_of(
+    agent: BaseAgent, model: ChatModel, trace: TraceStore, clock: Clock, tools: ToolSource
+) -> AsyncIterator[Event]:
+    """`_run` 과 같은 실행이되 모으지 않고 흐름 그대로 준다. 소비자가 받는 시점을 시험이 쥔다."""
+    return run(
+        AgentName("calc"),
+        "2+2?",
+        PRINCIPAL,
+        plugins=FakePlugins({"calc": agent}),
+        model=model,
+        tools=tools,
+        trace=trace,
+        clock=clock,
+    )
+
+
+def _closable(events: AsyncIterator[Event]) -> TypeGuard[AsyncGenerator[Event]]:
+    """`run()` 은 `AsyncIterator` 를 약속하지만 실제로는 닫을 수 있는 제너레이터다."""
+    return isinstance(events, AsyncGenerator)
+
+
+async def test_모델이_요청한_도구가_불릴_때_소비자는_이미_그_모델_호출의_이벤트를_받았다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """루프가 `ctx.llm()` 한 번인 에이전트에서도 모델 호출의 이벤트는 그 도구를 부르기 전에, 도구
+    호출의 이벤트는 다음 모델 호출 전에 소비자에게 닿는다. 모으던 판에서는 둘 다 결말 앞에 한꺼번에
+    나와 도구가 불릴 때 소비자는 시작 이벤트만 받았다."""
+    received: list[Event] = []
+    tools = FakeTools()
+    witness = WitnessConnection(received)
+    tools.connection = witness
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _tool_request(), _reply("4")]))
+
+    with anyio.fail_after(PACED):
+        async for event in _events_of(OneShotAgent(), model, trace, clock, tools):
+            received.append(event)
+
+    assert witness.seen == [
+        ["run_started", "llm_called"],
+        ["run_started", "llm_called", "tool_called", "llm_called"],
+    ]
+    assert [e.type for e in received] == [
+        "run_started",
+        *("llm_called", "tool_called") * 2,
+        "llm_called",
+        "run_finished",
+    ]
+
+
+class ModelCallUnwritableTrace(FakeTrace):
+    """모델 호출의 이벤트만 쓰지 못한다."""
+
+    def write(self, event: Event) -> None:
+        if event.type == "llm_called":
+            raise OSError("트레이스를 쓸 수 없다: 디스크가 가득 찼다")
+        super().write(event)
+
+
+async def test_모델_호출의_이벤트를_쓰지_못하면_그_모델이_요청한_도구는_불리지_않는다(
+    clock: FakeClock,
+) -> None:
+    """도구를 요청한 모델 호출의 이벤트는 그 도구를 부르기 전에 트레이스에 쓰인다. 모으던 판에서는
+    루프가 끝난 뒤에 쓰여, 그 쓰기가 실패해도 도구는 이미 불린 뒤였다(ADR 0039)."""
+    tools = FakeTools({"add": "4"})
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("4")]))
+
+    events = await _run(OneShotAgent(), model, ModelCallUnwritableTrace(), clock, tools=tools)
+
+    assert tools.connection.calls == []
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+
+
+class HandshakeConnection(FakeConnection):
+    """도구 둘이 서로를 기다린다. 둘 다 시작해야 둘 다 끝나고, 기한 안에 짝이 오지 않으면
+    실패한다."""
+
+    def __init__(self) -> None:
+        super().__init__({"left": "왼", "right": "오"}, {})
+        self._arrived = {"left": anyio.Event(), "right": anyio.Event()}
+
+    async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
+        self._arrived[name].set()
+        partner = "right" if name == "left" else "left"
+        with anyio.fail_after(PACED):
+            await self._arrived[partner].wait()
+        return await super().call(name, args)
+
+
+class GatheringAgent:
+    """도구 둘을 `asyncio.gather` 로 함께 부른다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        left, right = await asyncio.gather(ctx.tool("left"), ctx.tool("right"))
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=left + right)
+
+
+async def test_함께_부른_도구_둘은_둘_다_시작한_뒤에야_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """맞물림은 이벤트를 흘리는 동안만 에이전트를 세운다. 도구 호출을 하나씩 들이는 구현이면 먼저 든
+    도구가 짝을 기다리다 기한에 걸려 실패한다(`.scratch/web-widget/probes/relay_mutations.toml`
+    의 변이가 잰다)."""
+    tools = FakeTools()
+    tools.connection = HandshakeConnection()
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _run(GatheringAgent(), model, trace, clock, tools=tools)
+
+    finished = events[-1]
+    assert isinstance(finished, RunFinished), [e.type for e in events]
+    assert finished.output == "왼오"
+
+
+class AbandonedAgent:
+    """도구 하나를 부른 뒤 끝없이 기다린다. 끊긴 자리의 예외 타입이 `interrupted_by`, 정리 코드가
+    돌면 `cleaned`, 정리 코드 안의 await 가 취소되면 `cleanup_cancelled` 다."""
+
+    def __init__(self) -> None:
+        self.interrupted_by: type[BaseException] | None = None
+        self.cleaned = False
+        self.cleanup_cancelled = False
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        try:
+            await ctx.tool("add", a=2, b=2)
+            await anyio.sleep_forever()
+            yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
+        except BaseException as error:
+            self.interrupted_by = type(error)
+            raise
+        finally:
+            self.cleaned = True
+            try:
+                await anyio.sleep_forever()
+            except anyio.get_cancelled_exc_class():
+                self.cleanup_cancelled = True
+                raise
+
+
+async def test_소비자가_도중에_스트림을_닫으면_에이전트의_태스크가_취소되고_정리_코드가_돈다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """도구 호출의 이벤트를 받은 소비자가 스트림을 닫는다. 그때 에이전트는 그 도구 호출 안에서
+    맞물림을 기다리므로 몸통이 태스크 그룹을 취소한 것이 그 자리에 취소로 들어간다(ADR 0039
+    Consequences). 실행은 기한 안에 끝난다."""
+    agent = AbandonedAgent()
+    tools = FakeTools({"add": "4"})
+    events = _events_of(agent, GenericFakeChatModel(messages=iter([])), trace, clock, tools)
+    assert _closable(events)
+
+    with anyio.fail_after(PACED) as deadline:
+        async with aclosing(events) as stream:
+            async for event in stream:
+                if event.type == "tool_called":
+                    break
+
+    assert not deadline.cancel_called
+    assert agent.interrupted_by is anyio.get_cancelled_exc_class()
+    assert agent.cleaned
+    assert agent.cleanup_cancelled
+    assert tools.closed

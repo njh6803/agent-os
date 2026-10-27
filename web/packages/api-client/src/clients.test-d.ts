@@ -1,11 +1,18 @@
-// 클라이언트 둘의 타입 테스트. tsc 가 판정한다(`pnpm run typecheck`). `@ts-expect-error` 는 억제가 아니라
+// 클라이언트 셋의 타입 테스트. tsc 가 판정한다(`pnpm run typecheck`). `@ts-expect-error` 는 억제가 아니라
 // "이 코드는 컴파일되면 안 된다"는 단언이다. 그 줄에 에러가 없으면 컴파일이 실패한다(ADR 0020).
 //
-// 토큰이 맡지 않은 경로에 실리는 실수를 타입이 막는지 본다. 헤더에 무엇이 실리는지는 페이지 테스트가 잰다
-// (관리 요청은 05, 결정 요청은 08).
+// 토큰이 맡지 않은 경로에 실리는 실수를 타입이 막는지 본다. 관리·채널 클라이언트의 헤더에 무엇이 실리는지는 페이지
+// 테스트가 잰다(관리 요청은 05, 결정 요청은 08). 위젯 클라이언트의 헤더는 `clients.test.ts` 가 잰다.
 
 import { expectTypeOf } from "vitest";
-import type { AdminClient, AdminPaths, ChannelClient, ChannelPaths } from "./clients";
+import type {
+  AdminClient,
+  AdminPaths,
+  ChannelClient,
+  ChannelPaths,
+  WidgetClient,
+  WidgetPaths,
+} from "./clients";
 import type { components, paths } from "./generated/openapi";
 import { readFrames, type StreamFrame } from "./stream";
 
@@ -13,6 +20,7 @@ type Schemas = components["schemas"];
 
 declare const 관리: AdminClient;
 declare const 채널: ChannelClient;
+declare const 위젯: WidgetClient;
 
 // 결정은 `Decision` 타입의 값으로 넘긴다. 판별 유니온 본문을 인라인 리터럴로 주면 openapi-fetch 0.17.0 의 옵션 추론이
 // 제약으로 떨어져 `parseAs: "stream"` 의 `data` 가 `unknown` 이 된다(`.scratch/web-admin/probes/immutable_readable.sh`).
@@ -91,6 +99,51 @@ export async function 결정_스트림은_본문을_스트림으로_에러를_�
   }
 }
 
+const 서명: { readonly Authorization: string } = { Authorization: "Bearer signed" };
+
+export async function 위젯_클라이언트는_최종_사용자_경로를_부르고_토큰을_요청마다_받는다(): Promise<void> {
+  await 위젯.POST("/end-user/runs", {
+    body: { agent: "echo", request: "안녕" },
+    headers: 서명,
+    parseAs: "stream",
+  });
+  await 위젯.GET("/end-user/runs/{run_id}/subscription", {
+    params: { path: { run_id: "r1" }, header: { "last-event-id": "7" } },
+    headers: 서명,
+    parseAs: "stream",
+  });
+}
+
+export async function 위젯_클라이언트로_운영자_경로를_부르면_컴파일이_실패한다(): Promise<void> {
+  // @ts-expect-error: 위젯 클라이언트는 운영자 채널의 결정 경로를 모른다. 서명 토큰은 그 경로를 열지 않는다
+  await 위젯.POST("/runs/{run_id}/approval", { params: { path: { run_id: "r1" } }, body: 결정 });
+  // @ts-expect-error: 위젯 클라이언트는 운영자 채널의 시작 경로도 모른다
+  await 위젯.POST("/runs", { body: { agent: "echo", request: "안녕" } });
+  // @ts-expect-error: 위젯 클라이언트는 관리 경로도 모른다
+  await 위젯.GET("/plugins");
+}
+
+export async function 상한에_걸린_429의_limit_은_늘_있는_상한의_종류로_좁혀진다(): Promise<void> {
+  const { error } = await 위젯.POST("/end-user/runs", {
+    body: { agent: "echo", request: "안녕" },
+    headers: 서명,
+    parseAs: "stream",
+  });
+  // 최종 사용자 경로의 에러는 네 필드의 봉투이거나 429 의 봉투다. 다른 상태 코드의 봉투에는 `limit` 이 없다.
+  expectTypeOf(error).toEqualTypeOf<
+    Schemas["ErrorEnvelope"] | Schemas["LimitEnvelope"] | undefined
+  >();
+  if (error !== undefined && "limit" in error) {
+    expectTypeOf(error.limit).toEqualTypeOf<Schemas["LimitKind"]>();
+  }
+}
+
+type 시작의_429 = paths["/end-user/runs"]["post"]["responses"][429]["content"]["application/json"];
+expectTypeOf<시작의_429>().toEqualTypeOf<Schemas["LimitEnvelope"]>();
+expectTypeOf<시작의_429["limit"]>().toEqualTypeOf<
+  "concurrent_runs" | "hourly_runs" | "subscriptions"
+>();
+
 // 경로 목록을 고정한다. 계약에 경로가 늘면 관리 클라이언트의 타입에 새 경로가 보여 여기서 컴파일이 실패한다.
 // 채널의 경로면 `clients.ts` 의 채널 경로 목록에, 최종 사용자의 경로면 그 목록에, 관리의 경로면 아래 목록에 더한다.
 // 고칠 자리가 컴파일러 앞에 선다.
@@ -103,6 +156,12 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/traces/{run_id}"
 >();
 expectTypeOf<keyof ChannelPaths>().toEqualTypeOf<"/runs/{run_id}/approval">();
+expectTypeOf<keyof WidgetPaths>().toEqualTypeOf<
+  | "/end-user/runs"
+  | "/end-user/runs/{run_id}/approval"
+  | "/end-user/runs/{run_id}/subscription"
+  | "/end-user/runs/{run_id}/continuation"
+>();
 expectTypeOf<Exclude<keyof paths, keyof AdminPaths>>().toEqualTypeOf<
   | "/runs"
   | "/runs/{run_id}/approval"

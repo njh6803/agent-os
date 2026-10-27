@@ -36,7 +36,7 @@
 | `CODING_STANDARDS.md` | code-review 때 | retro가 세 번째 반복에서 더할 때 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
 | `.scratch/retro-queue.md` | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
-| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다) |
+| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
 | `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |
@@ -44,16 +44,16 @@
 | `README.md` | 사람이 처음 볼 때 | 구조가 바뀔 때 |
 
 ## 검증 명령
-- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 변경을 마치고 전체를 볼 때는 이것 대신 `uv run python tools/run_checks.py`를 친다. pre-commit의 러너라 pytest를 프로세스로 나눠 돌고(한 프로세스로는 8분을 넘긴다) 타입체크·경계·web도 함께 띄운다. 한 바퀴가 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. 다른 세션이 함께 돌면 600초에 닿으므로(581초를 봤다) 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다. ruff 둘은 러너에 없어 린트 줄은 따로 친다(ADR 0035)
+- 테스트: `uv run pytest -q` (LLM 호출 테스트는 `uv run --env-file .env pytest -m llm`. 위젯, api-client의 위젯 몫, 서버의 최종 사용자 경로와 항목의 투영을 건드렸으면 위젯의 실제 모델 e2e인 `-m llm_widget`도 친다. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 변경을 마치고 전체를 볼 때는 이것 대신 `uv run python tools/run_checks.py`를 친다. pre-commit의 러너라 pytest를 프로세스로 나눠 돌고(한 프로세스로는 8분을 넘긴다) 타입체크·경계·web도 함께 띄운다. 한 바퀴가 3분을 넘으니 Bash의 `timeout`을 600000으로 주거나 백그라운드로 돌린다. 다른 세션이 함께 돌면 600초에 닿으므로(581초를 봤다) 백그라운드로 넘어가면 다시 치지 않고 끝 알림을 기다린다. ruff 둘은 러너에 없어 린트 줄은 따로 친다(ADR 0035)
 - 린트: `uv run ruff check . && uv run ruff format --check .`
 - 타입체크: `uv run pyright`
 - 경계: `uv run lint-imports`
-- web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다. e2e는 `pnpm -C web/apps/admin exec playwright test`이고 CI의 `e2e` 잡이 돈다. 로컬에서는 중계·시작 래퍼·api-client·서버 라우트를 건드렸을 때 친다. 사진 비교는 `pnpm -C web visual`이고 CI의 `visual` 잡이 돈다. 로컬에서는 `packages/ui`를 건드렸을 때 Docker로 친다)
+- web: `pnpm -C web verify` (단계는 `web/package.json`의 `verify`. 원칙 III의 TS 판정자가 여기 든다. e2e는 `pnpm -C web/apps/admin exec playwright test`이고 CI의 `e2e` 잡이 돈다. 로컬에서는 중계·시작 래퍼·api-client·서버 라우트를 건드렸을 때 친다. 위젯 e2e는 `pnpm -C web/apps/widget exec playwright test`이고 CI의 `e2e-widget` 잡이 돈다. 로컬에서는 위젯, api-client의 위젯 몫, 서버의 최종 사용자 경로를 건드렸을 때 친다. 사진 비교는 `pnpm -C web visual`(디자인 시스템 패키지)과 `pnpm -C web visual:widget`(위젯)이고 CI의 `visual` 잡이 둘 다 돈다. 로컬에서는 Docker로, `packages/ui`를 건드렸을 때 둘을, `apps/widget`을 건드렸을 때 뒤의 것을 친다)
 
-게이트는 열셋(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. pre-commit도 그 다섯의 명령을 돌린다(pytest만 프로세스를 나눠 돌고, 한 프로세스에서만 나는 실패는 CI가 본다. ADR 0035). 그래서 셀프 리뷰를 반영한 뒤 커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다. 갈음되지 않는 것은 위 괄호의 `-m llm`·e2e·사진 비교와, 출력에서 `Skipped`인 검사다. ruff는 스테이지된 `.py`만 보므로 `.py` 없이 ruff 설정이나 판만 바꾼 커밋에서 `Skipped`이고, `SKIP`으로 뺀 검사도 그렇다. 그것은 손으로 친다. 나머지 가운데 여섯은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`), 워크플로 감사(zizmor, ADR 0027)는 CI도 돌리고, 마크다운 표·줄 구분 문자 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 둘인 e2e와 사진 비교는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
+게이트는 열여섯(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. pre-commit도 그 다섯의 명령을 돌린다(pytest만 프로세스를 나눠 돌고, 한 프로세스에서만 나는 실패는 CI가 본다. ADR 0035). 그래서 셀프 리뷰를 반영한 뒤 커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다. 갈음되지 않는 것은 위 괄호의 `-m llm`·`-m llm_widget`·e2e·사진 비교와, 출력에서 `Skipped`인 검사다. ruff는 스테이지된 `.py`만 보므로 `.py` 없이 ruff 설정이나 판만 바꾼 커밋에서 `Skipped`이고, `SKIP`으로 뺀 검사도 그렇다. 그것은 손으로 친다. 나머지 가운데 여덟은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`), 워크플로 감사(zizmor, ADR 0027), 커밋 검사(`tools/check_ticket.py`, ADR 0037. CI는 가리키는 티켓이 done인지도 본다)는 CI도 돌리고, 마크다운 표·줄 구분 문자·카나리아 명세 모양 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/canary.py --shape`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 셋인 관리 화면 e2e, 위젯 e2e, 사진 비교는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
 
 ## 작업 규약
-1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
+1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. 다음 작업 지시문 없이 새 기능을 시작하는데 그 폴더가 아직 없으면, 그 전에 Skill 도구로 `grill-with-docs`를 불러 설계 인터뷰부터 한다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
 2. 고칠 파일과 영향을 세 줄로 적고 시작한다. 계약(`sdk/`, `openapi.json`, 헌법)에 닿으면 그 티켓이 다른 티켓을 막는다.
 3. 끝나면 검증 명령을 모두 돌린다. 하네스(스킬, 훅, rules, 설정)를 바꿨으면 실제 실행 결과로 확인한다. 바꾼 스킬과 rules는 새 세션에서 불러 본다(`docs/constitution/operations.md` 환경 규약 상세). 파일이 그럴듯해 보이는 것은 확인이 아니다.
 4. 결정이 바뀌면 그것을 참조하는 스킬·훅·rules·워크플로·명세를 같이 고치고, 옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본 뒤 3을 다시 돈다. 기록과의 가름은 `docs/constitution/operations.md` 문서 위치. 하네스는 언젠가 맞출 문서가 아니라 다음 실행에 바로 영향을 주는 코드다.
@@ -64,7 +64,7 @@
 ## 교정 루프
 - 내가 네 결과를 고치거나 되돌리면, 먼저 그 실수를 테스트·린트·훅 같은 자동 검사로 잡을 수 있는지 판단하고 검사를 제안한다.
 - 자동 검사로 잡을 수 없는 판단 기준만 CODING_STANDARDS.md에 한 줄 후보로 올린다. 더할지는 retro가 판정한다(아래 회고 줄).
-- 같은 실수가 세 번 반복될 때 규칙(CODING_STANDARDS.md의 줄) 후보로 올린다. 한 번의 사건으로 규칙을 만들지 않는다. 지침으로 적은 뒤에도 어겨지면 막는 훅 후보다. 계기만 넣는 훅은 단계를 닫는 순간의 지침에 처음부터 붙인다(retro, next-session).
+- 새 검사·훅·지침 문장과 규칙(CODING_STANDARDS.md의 줄)은 같은 실수의 세 번째이거나 손상이 한 번 났을 때 더한다. 그 전에는 대기열에서 회차를 센다. 고침(버그, 틀린 사실, 깨진 경로)은 사건 하나로 한다(retro 4단계, ADR 0036). 지침으로 적은 뒤에도 어겨지면 막는 훅 후보다. 계기만 넣는 훅은 단계를 닫는 순간의 지침에 처음부터 붙인다(retro, next-session).
 - 규칙은 강제력이 가장 높은 층에 둔다. 타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰. 린터가 잡는 것을 지침에 적지 않고, 거짓 양성이 많은 규칙을 하드 게이트로 만들지 않는다.
 - 회고는 retro 스킬이 정해진 계기에 스스로 돈다. 계기는 그 스킬의 설명이 원천이다. 후보의 승인도 retro가 스스로 판정하고, 나에게는 그 스킬이 넘긴 것만 묻는다. 승인됐는데 아직 반영하지 않은 것은 `.scratch/retro-queue.md`가 든다.
 
@@ -87,6 +87,8 @@
 - 로컬 `main`은 main을 체크아웃한 체크아웃에서 `pull`로만 옮기고, 워크트리의 기준은 `origin/main`이다. 다른 체크아웃이 main을 체크아웃한 채 `fetch origin main:main`이나 `branch -f main`으로 옮기면 공유 ref라 그 체크아웃의 HEAD만 움직이고 파일은 남아, main의 새 변경이 스테이지된 되돌림으로 보인다(이 PC의 git 2.32에서 2026-10-05 워크트리 감사 서브에이전트가 임시 저장소로 손으로 재현했다).
 - 파이프와 `&&`·`;` 체인 뒤의 `$?`는 마지막 명령의 종료 코드다. 판정 명령은 파이프·체인 없이 돌린다. 훅이 경고한다.
 - 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(되풀이해 겪었다). 탐침은 실제 호출과 같은 실행 위치·환경으로 돈다. 실행 위치가 다르자 ruff가 그 프로젝트의 `fix` 설정을 읽지 않았다. pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
+- Glob 도구는 설정 `env`의 `CLAUDE_CODE_GLOB_NO_IGNORE=false`로 `.gitignore`를 따른다. `.venv` 안의 파일은 루트에서도 `path` `.venv`에서도 찾지 않고, 그 파일이 든 하위 폴더(`.venv/Lib/site-packages`)를 `path`로 주면 찾았다(`claude -p`에서 `.venv`만 손으로 봤다, harness 티켓 010). 루트의 Glob이 시간 초과로 끝나면 `path`를 무시된 폴더(`.venv`, `node_modules`, `.claude/worktrees/`)를 품지 않는 하위 폴더(`.claude/skills`, `src`)로 좁힌다. 패턴에 `/`가 들면 `**/`로 연다. `**/` 없이 `/`가 든 패턴은 좁힌 `path`에서 찾지 못할 수 있어, `path` `.claude/skills`에 `tidy-checkouts/SKILL.md`를 주면 "No files found"가 났다(2026-10-19 claude 2.1.299에서 손으로 봤다, 일지 2026-10-19-21, 대기열 211).
+- Grep 도구는 glob이 없으면 `.gitignore`를 따른다. glob을 주면 그 glob(중괄호면 갈래 하나)에 바로 맞는 무시된 파일과 폴더는 넘고, 맞은 폴더는 안까지 훑는다. `.claude/**`는 `.claude/worktrees/`에, `[!.]*`는 거의 모든 폴더 이름에 맞으니, 갈래마다 폴더 이름에 맞지 않는 조각(`*.md`, `SKILL.md`)으로 끝낸다. 두 도구 모두 결과 경로에 `.claude/worktrees/<이름>/`이 들면 그 파일은 `<이름>` 워크트리의 사본이다(2026-10-19 claude 2.1.299에서 손으로 봤다, 일지 2026-10-19-21, 대기열 211).
 - 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. 그리고 `uv run python tools/sibling_overlap.py`를 친다(무엇을 보는지는 그 독스트링). 긴 세션 동안 main에 병합된 PR(대기열 48)과 아직 열린 PR(대기열 115)이 번호를 먼저 가져갔다. 1로 끝나면 출력대로 고친다. 번호는 "옮길 번호"대로 비켜 가고, 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다. 출력의 origin/main 줄이 움직였으면 `git diff --name-only HEAD...origin/main`을 이 브랜치가 이름으로 든 파일과도 대조한다. 따라야 할 규약이 새로 섰을 수 있다(대기열 48).
 - 백그라운드 작업(워크플로, 서브에이전트, 백그라운드 명령)이 도는지는 기록 파일의 시각이 아니라 작업 도구의 상태로 본다. 멈춘 워크플로를 이어 돌렸으면, 사용자의 중지 메시지를 자기에게 온 말로 읽고 검증 없이 거절한 판정을 세어 그 몫을 다시 돌린다(일지 2026-10-05-05, 대기열 109·110).
 - main을 합친 뒤 바뀐 스킬은 Skill 도구가 합치기 전의 사본을 싣는다(스킬은 세션을 시작한 체크아웃의 사본이 실린다, `docs/constitution/operations.md` 환경 규약 상세). 그 스킬은 Read로 디스크의 `SKILL.md`를 열어 따른다(일지 2026-10-13-04).

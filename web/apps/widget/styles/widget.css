@@ -1,0 +1,14 @@
+/*
+ * 위젯의 CSS. iframe 페이지(components/pages/WidgetPage.tsx)는 전역으로, 페이지 안 번들(element/index.ts)은 `?inline`
+ * 으로 받아 shadow root 의 시트로, 위젯의 Storybook 은 미리보기에서 싣는다.
+ * 디자인 토큰 CSS 를 들이고 위젯의 소스를 덮는다(ADR 0024). 디자인 토큰 CSS 는 `source(none)` 이고 패키지의 소스만
+ * 덮으므로, 위젯 소스에만 있는 클래스는 아래 `@source` 가 없으면 CSS 를 만들지 않는다. 그 실수는 위젯의 스토리 시험이
+ * 잡는다(미리보기의 afterEach 의 클래스 판정과 WidgetScreen 스토리의 play).
+ *
+ * 글꼴 CSS 는 여기 들이지 않는다. 자기 문서에 선언하는 쪽(iframe 페이지, Storybook)이 따로 싣는다. 페이지 안 번들이
+ * 이 파일을 들이므로, 여기서 글꼴 CSS 를 들이면 번들에 글꼴이 모두 data URL 로 박힌다(글꼴 CSS `fonts.css` 의 머리
+ * 주석). 번들 시험(tools/element.test.ts)이 번들에 글꼴의 data URL 이 없는 것을 본다.
+ */
+@import "@agent-os/ui/theme.css";
+@source "../app";
+@source "../components";

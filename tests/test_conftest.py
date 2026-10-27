@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import os
+import shlex
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,17 @@ pytest_plugins = "pytester"
 
 CONFTEST = (Path(__file__).resolve().parent / "conftest.py").read_text(encoding="utf-8")
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _default_markers() -> str:
+    """기본 실행이 거르는 마커 식. `pyproject.toml` 의 `addopts` 에서 `-m` 의 값을 읽어, 그 식이
+    바뀌면 이 파일의 시험도 따라간다."""
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    options = shlex.split(config["tool"]["pytest"]["ini_options"]["addopts"])
+    return options[options.index("-m") + 1]
+
+
+DEFAULT_MARKERS = _default_markers()
 
 
 def test_agent_os_가_다른_체크아웃에서_불리면_세션을_시작하지_않는다(
@@ -57,20 +70,21 @@ def test_skip_이_없으면_그대로_통과한다(pytester: pytest.Pytester) ->
     assert result.ret == pytest.ExitCode.OK
 
 
-LLM_INI = "[pytest]\nmarkers =\n    llm: 실제 호출\n"
+LLM_INI = "[pytest]\nmarkers =\n    llm: 실제 호출\n    llm_widget: 위젯의 실제 호출\n"
 
 
 def test_deselect_는_skip_이_아니다(pytester: pytest.Pytester) -> None:
-    """기본 실행의 `-m "not llm"` 이 이 판정에 걸리면 매 실행이 빨강이다."""
+    """기본 실행의 마커 제외(`addopts` 의 `-m`)가 이 판정에 걸리면 매 실행이 빨강이다."""
     pytester.makeconftest(CONFTEST)
     pytester.makeini(LLM_INI)
     pytester.makepyfile(
         "import pytest\n\n"
         "@pytest.mark.llm\ndef test_llm():\n    assert False\n\n"
+        "@pytest.mark.llm_widget\ndef test_llm_widget():\n    assert False\n\n"
         "def test_ok():\n    assert True\n"
     )
 
-    result = pytester.runpytest("-p", "no:cacheprovider", "-m", "not llm")
+    result = pytester.runpytest("-p", "no:cacheprovider", "-m", DEFAULT_MARKERS)
 
     assert result.ret == pytest.ExitCode.OK
 
@@ -119,13 +133,56 @@ def test_llm_테스트가_tmp_path_에_남긴_트레이스의_토큰_합계를_�
     )
 
 
-def test_llm_테스트가_돌지_않으면_토큰_합계를_찍지_않는다(pytester: pytest.Pytester) -> None:
-    """기본 실행(`-m "not llm"`)의 끝에 0 이 찍히면 LLM 테스트를 돌렸다고 읽힌다."""
+# `llm_widget` 마커의 시험은 위젯 e2e 를 자식으로 돌리고 serve 의 트레이스 자리로 `tmp_path` 아래를
+# 준다 (`tests/test_widget_llm.py`).
+WIDGET_TRACED = (
+    "import json\n"
+    "import pytest\n\n"
+    'LINE = json.dumps({"type": "llm_called", "input_tokens": 20, "output_tokens": 3}) + "\\n"\n\n'
+    "@pytest.mark.llm_widget\n"
+    "def test_widget(tmp_path):\n"
+    '    (tmp_path / "traces").mkdir()\n'
+    '    (tmp_path / "traces" / "r1.jsonl").write_text(LINE * 2, encoding="utf-8")\n\n'
+    "@pytest.mark.llm\n"
+    "def test_llm(tmp_path):\n"
+    '    (tmp_path / "r2.jsonl").write_text(LINE, encoding="utf-8")\n\n'
+    "def test_fake_model(tmp_path):\n"
+    '    (tmp_path / "r3.jsonl").write_text(LINE, encoding="utf-8")\n'
+)
+
+
+def test_llm_widget_시험이_tmp_path_에_남긴_트레이스도_합계에_든다(
+    pytester: pytest.Pytester,
+) -> None:
+    """`-m llm_widget` 실행이다. 그 시험의 트레이스만 세고 `llm` 시험과 가짜 모델의 시험은 돌지
+    않는다."""
     pytester.makeconftest(CONFTEST)
     pytester.makeini(LLM_INI)
-    pytester.makepyfile(TRACED)
+    pytester.makepyfile(WIDGET_TRACED)
 
-    result = pytester.runpytest("-p", "no:cacheprovider", "-m", "not llm")
+    result = pytester.runpytest("-p", "no:cacheprovider", "-m", "llm_widget")
 
     assert result.ret == pytest.ExitCode.OK
+    result.stdout.fnmatch_lines(
+        [
+            "*LLM 토큰 합계 46(입력 40, 출력 6)*트레이스 1개, 모델 호출 2건. 일지*",
+            "*= 1 passed, 2 deselected in *",
+        ],
+        consecutive=True,
+    )
+
+
+def test_기본_실행은_두_LLM_마커를_돌리지_않고_합계를_찍지_않는다(
+    pytester: pytest.Pytester,
+) -> None:
+    """기본 실행의 마커 제외(`pyproject.toml` 의 `addopts` 의 `-m`)다. 끝에 0 이 찍히면 LLM 테스트를
+    돌렸다고 읽힌다."""
+    pytester.makeconftest(CONFTEST)
+    pytester.makeini(LLM_INI)
+    pytester.makepyfile(WIDGET_TRACED)
+
+    result = pytester.runpytest("-p", "no:cacheprovider", "-m", DEFAULT_MARKERS)
+
+    assert result.ret == pytest.ExitCode.OK
+    result.stdout.fnmatch_lines(["*= 1 passed, 2 deselected in *"])
     assert "LLM 토큰 합계" not in result.stdout.str()

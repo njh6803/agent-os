@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from tools.check_line_separators import (
+    CALL_TIMEOUT,
     ROOT,
     is_text,
     main,
@@ -222,6 +223,23 @@ def test_인자_없이_부르면_지운_파일과_서브모듈은_건너뛴다(t
 
     assert tracked_files(tmp_path) == [tmp_path / "a.txt"]
     assert main(root=tmp_path) == 0
+
+
+def test_git_목록이_시간을_넘기면_예외로_멈춘다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """빈 범위로 읽어 초록으로 지나가지 않는다. `check=True` 의 실패와 같은 갈래다(대기열 342)."""
+    seen: list[object] = []
+
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, 1)
+
+    monkeypatch.setattr(subprocess, "run", stuck)
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        tracked_files(tmp_path)
+    assert seen == [CALL_TIMEOUT]
 
 
 def test_이_저장소의_추적_파일에_날것_줄_구분_문자가_없다() -> None:

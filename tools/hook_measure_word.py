@@ -9,10 +9,16 @@
 낱말을 이름으로 든 것인지는 모델이 가른다(`.claude/rules/tools.md` 의 계기·막는 훅 가름).
 
 왜 따로 등록하는가. Write·Edit 의 다른 PostToolUse 훅은 저마다 다른 일을 판정한다(일지 회고 계기,
-ruff, 줄 구분 문자, 스크래치 스크립트, 도는 커밋. `tools/hook_scratch_probe_rule.py` 의 같은 문단).
-여기에 얹으면 독스트링의 왜·못 보는 것과 페이로드 표의 사례가 두 판정으로 섞인다. 등록은 첫
-`Write|Edit` 묶음에 더한다. 값은 Write·Edit 마다 래퍼를 거친 파이썬 한 번이다(약 0.2초, 이 훅은 재지
-않았고 `.claude/rules/tools.md` 시간 항목의 어림이다).
+ruff, 줄 구분 문자, 스크래치 스크립트, 프로브 결론, 일지 근거, 디자인 폴더, 화면 코드, 도는 변이.
+`tools/hook_scratch_probe_rule.py` 의 같은 문단). 여기에 얹으면 독스트링의 왜·못 보는 것과 페이로드
+표의 사례가 두 판정으로 섞인다. 등록은 첫 `Write|Edit` 묶음에 더한다. 값은 Write·Edit 마다 래퍼를
+거친 파이썬 한 번이다(약 0.2초, 이 훅은 재지 않았고 `.claude/rules/tools.md` 시간 항목의 어림이다).
+
+프로브 README 와 `hook_probe_conclusion`. 그 훅은 프로브 README 를 고치면 근거의 종류를 같은 절로
+짚는다(대기열 421). 그래서 측정 낱말을 든 줄을 프로브 README 에 더한 편집에는 두 알림이 함께 난다.
+그 훅은 세션·에이전트마다 한 번이라 겹침도 그 한 번뿐이고, 그 뒤의 편집은 이 훅만 알린다. 그 훅의
+못 보는 것("한 번 알린 뒤의 결과와 결론")을 이 훅이 낱말이 든 줄만큼 메우므로 프로브 README 를
+범위에서 빼지 않는다(대기열 227 행이 반영할 때 보라고 적은 겹침, 2026-10-28).
 
 판정. 도구가 Write·Edit 이고 `tool_input.file_path` 가 문자열이며 `is_evidence_doc` 이 참이면, 더한
 줄(`added_lines`)마다 `MEASURE_WORDS` 가운데 하나가 들고 `EXEMPT_MARKS` 는 하나도 없는 줄을 고른다.
@@ -21,7 +27,7 @@ Write 와 Edit 에서 문자열이고, 새 파일을 만든 Write 에서는 null
 `journal_number_hook/` 행의 2026-10-16 결과). 쓴 뒤 파일은 Write 면 `content`, Edit 면
 `originalFile` 에서 `old_string` 을 `new_string` 으로 바꾼 글이다(`replace_all` 이 참이면 모두,
 아니면 처음 하나). Edit 의 조각은 줄의 일부일 수 있어, 조각만 보면 같은 줄의 나머지에 든 `probes/`
-를 보지 못한다(셀프 리뷰가 잡았다, 일지 2026-10-19-06). `originalFile` 이 문자열이 아니거나
+를 보지 못한다(셀프 리뷰가 잡았다, 일지 2026-10-28-07). `originalFile` 이 문자열이 아니거나
 `old_string` 이 그 안에 없는 Edit 은 조각 둘을 쓰기 전·뒤 글로 본다. 줄 집합의 차라 순서와 횟수는
 보지 않는다. 걸린 줄은 앞의 `SHOWN_LINES` 개를 `LINE_WIDTH` 글자로 잘라 문장에 싣는다.
 

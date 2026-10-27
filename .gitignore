@@ -38,6 +38,11 @@ blob-report/
 # 빠진다. 패키지 안의 .gitignore 나 앵커 없는 dist/ 는 판정자나 판정 범위 테스트에 걸렸다(ADR 0026, storybook/build.mjs).
 /web/packages/ui/dist/
 /web/packages/ui/storybook-static/
+# 위젯의 Storybook 정적 빌드(위젯 사진 비교의 입력)와 시작 래퍼가 복사하는 글꼴 파일(web/apps/widget/tools/fonts.ts),
+# 시작 래퍼가 짓는 페이지 안 번들(web/apps/widget/tools/element.ts).
+/web/apps/widget/storybook-static/
+/web/apps/widget/public/fonts/
+/web/apps/widget/public/element.js
 # /design-sync 의 산출물과 검증 상태. .design-sync/ 에서는 아래 셋만 무시하고 나머지(설정, NOTES, 사용 규약, 포크와 그
 # 보조 파일)는 스킬의 규약대로 커밋한다(ADR 0026). 판정을 이어 쓰는 근거는 Claude Design 프로젝트에 올린 _ds_sync.json
 # 이다. .design-sync/node_modules 는 위의 node_modules/ 줄이 덮는다.

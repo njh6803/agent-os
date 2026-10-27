@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 from tools.hook_large_result import READ_LIMIT, SHELL_LIMIT, HookPayload, context_for
-from tools.token_report import folder_name_of, main, main_checkout
+from tools.token_report import folder_name_of, main, main_checkout, main_checkout_of
 
 OPUS = "claude-opus-5-5"
 SONNET = "claude-sonnet-5-5"
@@ -968,9 +968,163 @@ def test_첫_줄에만_시각이_없는_응답은_다음_줄의_시각으로_든
     assert "경보 없음" in t.요약()
 
 
-def test_주_체크아웃은_git_공용_디렉터리의_부모다() -> None:
+def test_이_저장소의_주_체크아웃은_dot_git이_폴더인_곳이다() -> None:
     # 워크트리에서 돌면 워크트리가 아니라 주 체크아웃(.git이 폴더인 곳)이 나온다.
     assert (main_checkout() / ".git").is_dir()
+
+
+def test_주_체크아웃을_찾는_데_프로세스를_띄우지_않는다(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 작업 스케줄러는 BELOW_NORMAL로 돌아, CPU가 꽉 차면 띄운 git이 10초 제한을 넘겼다(일지
+    # 2026-10-19-24, .scratch/token-usage/probes/git_priority_load.py).
+    def 막는다(*args: object, **kwargs: object) -> None:
+        raise AssertionError("프로세스를 띄웠다")
+
+    monkeypatch.setattr(subprocess, "Popen", 막는다)
+    assert (main_checkout() / ".git").is_dir()
+
+
+def _git(cwd: Path, *args: str) -> str:
+    done = subprocess.run(
+        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True, encoding="utf-8"
+    )
+    return done.stdout.strip()
+
+
+def _git이_보는_주_체크아웃(checkout: Path) -> Path:
+    return Path(_git(checkout, "rev-parse", "--path-format=absolute", "--git-common-dir")).parent
+
+
+def test_주_체크아웃은_주_저장소와_워크트리에서_git과_같다(tmp_path: Path) -> None:
+    main_repo = tmp_path / "주"
+    main_repo.mkdir()
+    _git(main_repo, "init", "-q", "-b", "main")
+    _git(
+        main_repo,
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "c",
+    )
+    _git(main_repo, "worktree", "add", "-q", str(tmp_path / "워크" / "a"), "-b", "a")
+    separate = tmp_path / "따로"
+    _git(tmp_path, "init", "-q", f"--separate-git-dir={tmp_path / 'git-dir'}", str(separate))
+
+    for checkout in (main_repo, tmp_path / "워크" / "a", separate):
+        assert (
+            main_checkout_of(checkout).resolve() == _git이_보는_주_체크아웃(checkout).resolve()
+        ), checkout
+
+
+def test_gitdir_줄이_없는_git_파일은_OSError다(tmp_path: Path) -> None:
+    (tmp_path / ".git").write_text("엉뚱한 내용\n", encoding="utf-8")
+    with pytest.raises(OSError, match="gitdir: 줄이 없다"):
+        main_checkout_of(tmp_path)
+
+
+def test_콜론_뒤_공백이_없는_gitdir_줄은_OSError다(tmp_path: Path) -> None:
+    # git은 이 모양을 128로 거절한다(PR 직전 bug-perf-review가 임시 저장소에서 git과 맞댔다).
+    (tmp_path / "x").mkdir()
+    (tmp_path / ".git").write_text("gitdir:x\n", encoding="utf-8")
+    with pytest.raises(OSError, match="gitdir: 줄이 없다"):
+        main_checkout_of(tmp_path)
+
+
+@pytest.mark.parametrize("tail", ["  ", "\t", ".", " .", ".."])
+def test_gitdir_줄_끝에_공백이나_점이_있으면_git처럼_OSError다(tmp_path: Path, tail: str) -> None:
+    # git은 이 줄들을 128로 거절한다. 윈도는 마지막 토막 끝의 공백과 점을 지워 `a  `는 폴더로 보이고
+    # `a  /commondir`은 없어, 거르지 않으면 `worktrees`나 주 체크아웃을 돌려줬다.
+    gitdir = tmp_path / "주" / ".git" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    checkout = tmp_path / "워크"
+    checkout.mkdir()
+    (checkout / ".git").write_text(f"gitdir: {gitdir}{tail}\n", encoding="utf-8")
+    with pytest.raises(OSError, match="줄 끝에 공백이나 점"):
+        main_checkout_of(checkout)
+
+
+def test_못_보는_것_하위_폴더를_주면_git과_달리_FileNotFoundError다(tmp_path: Path) -> None:
+    # git은 상위 폴더로 올라가며 `.git`을 찾는다. 이 함수는 주어진 폴더의 `.git`만 읽는다.
+    (tmp_path / "주" / ".git").mkdir(parents=True)
+    sub = tmp_path / "주" / "하위"
+    sub.mkdir()
+    with pytest.raises(FileNotFoundError):
+        main_checkout_of(sub)
+
+
+def test_못_보는_것_gitdir_줄_끝의_슬래시_점은_git과_달리_OSError다(tmp_path: Path) -> None:
+    # git은 `<경로>/.`를 받는다(PR 직전 bug-perf-review가 임시 저장소에서 git과 맞댔다). 이 함수는
+    # 끝의 점에 걸려 거절한다. git이 쓰는 `.git`에는 나오지 않는 모양이라 틀린 부모 대신 실패로
+    # 둔다.
+    gitdir = tmp_path / "주" / ".git" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../..\n", encoding="utf-8")
+    checkout = tmp_path / "워크"
+    checkout.mkdir()
+    (checkout / ".git").write_text(f"gitdir: {gitdir}/.\n", encoding="utf-8")
+    with pytest.raises(OSError, match="줄 끝에 공백이나 점"):
+        main_checkout_of(checkout)
+
+
+def test_못_보는_것_GIT_DIR을_두어도_결과가_같다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    main_repo = tmp_path / "주"
+    (main_repo / ".git" / "worktrees" / "a").mkdir(parents=True)
+    (main_repo / ".git" / "worktrees" / "a" / "commondir").write_text("../..\n", encoding="utf-8")
+    worktree = tmp_path / "워크"
+    worktree.mkdir()
+    (worktree / ".git").write_text(
+        f"gitdir: {main_repo / '.git' / 'worktrees' / 'a'}\n", encoding="utf-8"
+    )
+    (tmp_path / "남" / ".git").mkdir(parents=True)
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "남" / ".git"))
+    assert main_checkout_of(main_repo) == main_repo
+    assert main_checkout_of(worktree).resolve() == main_repo.resolve()
+
+
+def test_gitdir이_가리킨_폴더가_없으면_OSError다(tmp_path: Path) -> None:
+    # git은 이 저장소를 128로 거절한다. 엉뚱한 부모를 돌려주면 보고서가 그 아래에 쓰인다.
+    (tmp_path / ".git").write_text("gitdir: 없는/폴더\n", encoding="utf-8")
+    with pytest.raises(OSError, match="gitdir: 폴더가 없다"):
+        main_checkout_of(tmp_path)
+
+
+def test_commondir이_비었으면_OSError다(tmp_path: Path) -> None:
+    gitdir = tmp_path / "meta" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("\n", encoding="utf-8")
+    (tmp_path / ".git").write_text(f"gitdir: {gitdir}\n", encoding="utf-8")
+    with pytest.raises(OSError, match="비었다"):
+        main_checkout_of(tmp_path)
+
+
+def test_commondir이_가리킨_폴더가_없으면_OSError다(tmp_path: Path) -> None:
+    gitdir = tmp_path / "meta" / "worktrees" / "a"
+    gitdir.mkdir(parents=True)
+    (gitdir / "commondir").write_text("../../없음\n", encoding="utf-8")
+    (tmp_path / ".git").write_text(f"gitdir: {gitdir}\n", encoding="utf-8")
+    with pytest.raises(OSError, match="공용 디렉터리가 없다"):
+        main_checkout_of(tmp_path)
+
+
+def test_UTF8이_아닌_git_파일은_OSError다(tmp_path: Path) -> None:
+    (tmp_path / ".git").write_bytes(b"gitdir: \xff\xfe\n")
+    with pytest.raises(OSError, match="읽지 못했다"):
+        main_checkout_of(tmp_path)
+
+
+def test_dot_git이_없으면_주_체크아웃을_찾지_못했다고_2로_끝난다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr("tools.token_report.CHECKOUT", tmp_path)
+    assert main(["report", "--projects", str(tmp_path)]) == 2
+    assert "주 체크아웃을 찾지 못했다" in capsys.readouterr().err
 
 
 def test_가상_환경_없이_도움말이_돈다() -> None:

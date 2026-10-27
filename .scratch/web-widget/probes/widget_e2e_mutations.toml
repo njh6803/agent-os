@@ -1,0 +1,153 @@
+# web-widget 티켓 06·09 의 변이 표. 위젯 e2e(web/apps/widget/e2e/widget.e2e.ts)의 사례는 구현이 이미 있는 코드를 지키는
+# 시험이라 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 한 번 돌릴 때마다
+# 준비가 위젯을 다시 빌드하므로 변이 하나가 1~2분 걸린다. 뒤의 둘은 티켓 09 의 새로 고침 사례다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/widget_e2e_mutations.toml [번호 ...]
+# chromium 이 Playwright 의 브라우저 캐시에 있어야 하고 uv 의 가상 환경이 서 있어야 한다.
+
+[runner.e2e]
+command = ["pnpm", "exec", "playwright", "test"]
+cwd = "web/apps/widget"
+judge = "playwright"
+
+[[mutation]]
+name = "중계가 응답을 모아 보내면 첫 도구 줄이 결말 전에 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "첫 도구 줄을 결말 전에"]
+expect = "red"
+expect_output = ["getByText('add', { exact: true })"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/relay.ts"
+old = '''
+      pipeline(response, outgoing, () => {
+        // 끊김은 destroy 된 응답으로 브라우저에 그대로 보인다. 여기서 더 할 일은 없다.
+      });
+'''
+new = '''
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk: Buffer) => chunks.push(chunk));
+      response.on("end", () => outgoing.end(Buffer.concat(chunks)));
+'''
+
+[[mutation]]
+name = "위젯의 CSS 를 싣지 않으면 토큰이 풀리지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "디자인 토큰의 값으로"]
+expect = "red"
+expect_output = ['Expected: not "rgba(0, 0, 0, 0)"']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetPage.tsx"
+old = '''
+import "../../styles/widget.css";
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "보낸 창을 보지 않으면 형제 프레임의 가짜 토큰을 받아 빨갛다"
+runner = "e2e"
+tests = ["-g", "부모가 아닌 프레임"]
+expect = "red"
+expect_output = ["getByText('5/9', { exact: true })"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/token.ts"
+old = '''
+      if (event.source !== parent || !allowedOrigins.includes(event.origin)) {
+'''
+new = '''
+      if (!allowedOrigins.includes(event.origin)) {
+'''
+
+[[mutation]]
+name = "frame-ancestors 를 * 로 두면 허용 밖 출처의 페이지가 위젯을 품어 빨갛다"
+runner = "e2e"
+tests = ["-g", "품지 못한다"]
+expect = "red"
+# 기대 배열의 "chrome-error://…" 는 실패 줄 둘레의 코드 조각에도 실려 다른 단언이 빨개져도 맞는다. 받은 쪽 줄을 본다.
+expect_output = ['+   "http://widget.localhost:']
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+'''
+new = '''
+const ancestors = "*";
+'''
+
+[[mutation]]
+name = "출력을 HTML 로 그리면 조각이 글로 보이지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "HTML 조각은"]
+expect = "red"
+expect_output = ["getByText('출력: <img"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+          <p className="text-body wrap-anywhere whitespace-pre-wrap">
+            <span className="sr-only">출력: </span>
+            {outcome.output}
+          </p>
+'''
+new = '''
+          <p
+            className="text-body wrap-anywhere whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: outcome.output }}
+          />
+'''
+
+[[mutation]]
+name = "위젯의 기본 글자 수 상한이 서버와 다르면 빨갛다"
+runner = "e2e"
+tests = ["-g", "글자 수 상한은"]
+expect = "red"
+# 안내 글자는 202 행의 toHaveCount 가 빨개져도 Locator 줄에 실린다. 198 행 하나뿐인 toBeVisible 의 실패 머리를 본다.
+expect_output = ["Error: expect(locator).toBeVisible() failed"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/site-file.ts"
+old = '''
+export const DEFAULT_REQUEST_CHARS = 20_000;
+'''
+new = '''
+export const DEFAULT_REQUEST_CHARS = 19_999;
+'''
+
+[[mutation]]
+name = "되돌린 뒤 도는 실행에 다시 붙지 않으면 새로 고친 뒤 도구 줄이 다시 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "새로 고친 뒤 도는 실행에"]
+expect = "red"
+# 같은 로케이터의 toHaveCount(1) 가 새로 고치기 전에도 있어, 새로 고친 뒤의 줄(157 행)의 자리를 본다.
+expect_output = ["Error: expect(locator).toHaveCount(expected) failed", "widget.e2e.ts:157:57"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/drivers.ts"
+old = '''
+  if (saved.reattach !== null) {
+    await reconnect(
+'''
+new = '''
+  if (saved.reattach === "") {
+    await reconnect(
+'''
+
+[[mutation]]
+name = "멈출 때 다시 붙을 실행을 비우면 새로 고친 뒤 승인 카드가 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "새로 고친 뒤 멈춘 실행에"]
+expect = "red"
+# 카드의 toBeVisible 은 새로 고치기 전에도 있어, 새로 고친 뒤의 줄(180 행)의 자리를 본다.
+expect_output = ["Error: expect(locator).toBeVisible() failed", "widget.e2e.ts:180:22"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+      return announce(next, `승인이 필요합니다: ${item.tool}`);
+'''
+new = '''
+      return announce({ ...next, reattach: null }, `승인이 필요합니다: ${item.tool}`);
+'''

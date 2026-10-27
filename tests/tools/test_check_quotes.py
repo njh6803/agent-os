@@ -5,10 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from tools.check_quotes import (
+    CALL_TIMEOUT,
     ROOT,
     Quote,
     added_lines,
@@ -16,6 +18,7 @@ from tools.check_quotes import (
     check,
     default_files,
     quotes_in,
+    tracked_text_files,
 )
 
 원문 = "지침을 쓰는 사람이 그 지침을 가장 먼저 어긴다는 것이 이 저장소가 훅을 위에 두는 이유다"
@@ -130,6 +133,131 @@ def test_더한_줄은_스테이지와_상관없이_작업_트리가_HEAD_에_�
     warnings = check([quoting], tmp_path, line_filter=lambda p: added_lines(p, tmp_path)).warnings
 
     assert [warning.split(":")[1] for warning in warnings] == ["2", "3"]
+
+
+def test_이름을_바꾼_파일은_옛_경로와_짝지어_바뀐_줄만_본다(tmp_path: Path) -> None:
+    """새 경로 하나로 diff 하면 파일 전체가 더한 줄이라 옮겨 온 옛 줄까지 다시 대조된다(대기열
+    377)."""
+    채움 = "".join(f"채움 줄 {n}번은 인용이 없고 옮겨도 그대로다\n" for n in range(8))
+    _저장소를_만든다(
+        tmp_path, f'옛 줄 "커밋된 옛 줄의 틀린 인용은 이름을 바꿔도 다시 보지 않는다"\n{채움}'
+    )
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    _git(tmp_path, "mv", "docs/quoting.md", "docs/moved.md")
+    moved = tmp_path / "docs" / "moved.md"
+    _덧붙인다(moved, '새 줄 "옮긴 뒤 더한 줄의 틀린 인용은 스무 자를 넘어 잡혀야 한다"\n')
+    _git(tmp_path, "add", ".")
+
+    warnings = check([moved], tmp_path, line_filter=lambda p: added_lines(p, tmp_path)).warnings
+
+    assert [warning.split(":")[:2] for warning in warnings] == [["docs/moved.md", "10"]]
+
+
+def test_이름을_바꾸지_않은_새_파일은_모든_줄이_더한_줄이다(tmp_path: Path) -> None:
+    """옮긴 것이 아니면 짝지을 옛 경로가 없다. 지운 파일이 없으니 git 도 이름 바꾸기로 읽지
+    않는다."""
+    _저장소를_만든다(tmp_path, "첫 줄\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    new = tmp_path / "docs" / "new.md"
+    _덧붙인다(new, "하나\n둘\n셋\n")
+    _git(tmp_path, "add", ".")
+
+    assert added_lines(new, tmp_path) == {1, 2, 3}
+
+
+def test_이름_바꾸기를_묻는_git_이_시간을_넘기면_새_파일_그대로_본다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """넘김은 git 이 실패한 갈래로 센다(대기열 342). 옛 경로를 모르니 파일 전체가 더한 줄이다."""
+    새_파일 = "new file mode 100644\n--- /dev/null\n+++ b/x.md\n@@ -0,0 +1,2 @@\n+a\n+b\n"
+    seen: list[list[str]] = []
+
+    def run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        seen.append(args)
+        if "--name-status" in args:
+            raise subprocess.TimeoutExpired(args, 1)
+        return subprocess.CompletedProcess(args, 0, 새_파일.encode(), b"")
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+    assert added_lines(tmp_path / "x.md", tmp_path) == {1, 2}
+    assert [("--name-status" in args) for args in seen] == [False, True]
+
+
+def test_감긴_독스트링과_주석을_한_줄로_옮긴_인용도_원문을_찾는다(tmp_path: Path) -> None:
+    """독스트링과 주석은 폭 100 으로 감긴다. 한 줄로 옮긴 인용이 없다고 경고됐다(대기열 345)."""
+    (tmp_path / "tool.py").write_text(
+        'def f() -> None:\n    """감긴 독스트링의 첫 줄은 여기서 끊기고\n'
+        '    다음 줄에서 이어지는 문장이다."""\n'
+        "# 감긴 주석의 첫 줄은 여기서 끊기고\n#   다음 줄에서 이어지는 문장이다\n",
+        encoding="utf-8",
+    )
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '독스트링은 "감긴 독스트링의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 '
+        "한다.\n\n"
+        '주석은 "감긴 주석의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 한다.\n',
+    )
+
+    assert check([quoting], tmp_path).warnings == []
+
+
+def test_슬래시_주석으로_감긴_원문을_한_줄로_옮긴_인용도_원문을_찾는다(tmp_path: Path) -> None:
+    """TS·JS 의 `//` 주석도 폭 100 으로 감긴다. 다음 줄 머리의 `//` 를 벗기지 않아 경고됐다(대기열
+    436)."""
+    (tmp_path / "tool.mjs").write_text(
+        "// 감긴 슬래시 주석의 첫 줄은 여기서 끊기고\n//   다음 줄에서 이어지는 문장이다\n",
+        encoding="utf-8",
+    )
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '주석은 "감긴 슬래시 주석의 첫 줄은 여기서 끊기고 다음 줄에서 이어지는 문장이다"라 한다.\n',
+    )
+
+    assert check([quoting], tmp_path).warnings == []
+
+
+@pytest.mark.parametrize("차례", [(0, 1), (1, 0)])
+def test_넘겨받은_미추적_파일은_차례와_상관없이_서로의_원문이다(
+    tmp_path: Path, 차례: tuple[int, int]
+) -> None:
+    """대조하는 차례에 하나씩 말뭉치에 더하면 앞 파일은 뒤 파일의 원문을 보지 못한다(대기열 398)."""
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "base.md").write_text("# 바탕\n", encoding="utf-8")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "처음")
+    adr = tmp_path / "adr.md"
+    일지 = tmp_path / "journal.md"
+    adr.write_text(
+        '사용자가 "일지에 적은 사용자의 원문 한 줄이 여기 그대로 옮겨진다"고 했다.\n'
+        "ADR 이 정한 문장은 이 결정이 다음 세션에도 그대로 이어진다는 것이다.\n",
+        encoding="utf-8",
+    )
+    일지.write_text(
+        "일지에 적은 사용자의 원문 한 줄이 여기 그대로 옮겨진다.\n"
+        'ADR 은 "이 결정이 다음 세션에도 그대로 이어진다는 것이다"라 적었다.\n',
+        encoding="utf-8",
+    )
+    파일 = [adr, 일지]
+
+    report = check([파일[차례[0]], 파일[차례[1]]], tmp_path)
+
+    assert (report.warnings, report.quotes_checked) == ([], 2)
+
+
+def test_빈_줄로_나뉜_두_문단을_이은_인용은_원문으로_세지_않는다(tmp_path: Path) -> None:
+    """줄을 펴는 것은 감긴 줄만이다. 빈 줄은 이음매가 둘이라 문단을 넘어 맞지 않는다."""
+    quoting = _저장소를_만든다(
+        tmp_path,
+        '"앞 문단의 끝 문장이다 그리고 뒤 문단의 첫 문장이다"\n',
+        원천="앞 문단의 끝 문장이다\n\n그리고 뒤 문단의 첫 문장이다",
+    )
+
+    assert len(check([quoting], tmp_path).warnings) == 1
 
 
 def test_상대_경로로_넘어온_파일도_한_번만_센다(
@@ -383,6 +511,37 @@ def test_독스트링이_못_본다고_적은_것은_정말_못_본다(tmp_path:
     quoting = _저장소를_만든다(tmp_path, 같은_틀린_인용, 원천="다른 것")
     assert check([quoting], tmp_path).warnings == []
 
+    # 줄을 편 사본은 줄 머리의 `#` 를 주석 표지로 지워, 마크다운 제목과 앞 줄을 잇는다.
+    제목_자리 = tmp_path / "제목"
+    제목_자리.mkdir()
+    제목과_이어진_인용 = _저장소를_만든다(
+        제목_자리,
+        '"앞 문단의 마지막 줄 끝 제목의 낱말들이 이어진다"\n',
+        원천="앞 문단의 마지막 줄 끝\n## 제목의 낱말들이 이어진다",
+    )
+    assert check([제목과_이어진_인용], 제목_자리).warnings == []
+
+    # 줄 머리의 `//` 도 주석 표지로 지워, 주석이 아니었던 `//` 줄과 앞 줄을 잇는다(대기열 436).
+    슬래시_자리 = tmp_path / "슬래시"
+    슬래시_자리.mkdir()
+    슬래시_줄과_이어진_인용 = _저장소를_만든다(
+        슬래시_자리,
+        '"앞 문단의 마지막 줄 끝 경로처럼 보이는 낱말들이 이어진다"\n',
+        원천="앞 문단의 마지막 줄 끝\n// 경로처럼 보이는 낱말들이 이어진다",
+    )
+    assert check([슬래시_줄과_이어진_인용], 슬래시_자리).warnings == []
+
+    # 같은 사본은 감긴 문장과 서로 무관한 이웃 줄을 가르지 못해, 한 줄의 끝과 다음 줄의 머리를
+    # 잇는다.
+    이웃_자리 = tmp_path / "이웃"
+    이웃_자리.mkdir()
+    이웃_줄이_이어진_인용 = _저장소를_만든다(
+        이웃_자리,
+        '"다른 이야기로 끝나고 무관한 이야기로 시작한다"\n',
+        원천="첫 줄은 다른 이야기로 끝나고\n무관한 이야기로 시작한다 둘째 줄은",
+    )
+    assert check([이웃_줄이_이어진_인용], 이웃_자리).warnings == []
+
 
 def test_이_저장소_전체를_돌려도_끝난다() -> None:
     """경고 수는 고정하지 않는다 — 경고만 내는 검사라 초록의 기준이 없다. 다 읽었는지만 본다."""
@@ -434,3 +593,34 @@ def test_CLI_는_경고가_없어도_본_인용_수를_출력한다(tmp_path: Pa
     # 넘긴 인자는 둘이지만 읽은 파일은 하나다. 저장소 밖이라 diff 가 없어 전체를 봤다.
     assert "파일 1개(그중 전체를 본 것 1개)에서 인용 1건" in process.stdout
     assert "경고 없음" in process.stdout
+
+
+def _멈춘_git(seen: list[object]) -> Callable[..., subprocess.CompletedProcess[bytes]]:
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, 1)
+
+    return stuck
+
+
+def test_git_목록이_시간을_넘기면_저장소_밖처럼_트리를_걷는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """넘김은 git 이 실패한 갈래로 센다(대기열 342)."""
+    (tmp_path / "a.md").write_text("본문\n", encoding="utf-8")
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_git(seen))
+
+    assert tracked_text_files(tmp_path) == [tmp_path / "a.md"]
+    assert seen == [CALL_TIMEOUT]
+
+
+def test_git_diff_가_시간을_넘기면_전체를_본다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "a.md").write_text("본문\n", encoding="utf-8")
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_git(seen))
+
+    assert added_lines(tmp_path / "a.md", tmp_path) is None
+    assert seen == [CALL_TIMEOUT]

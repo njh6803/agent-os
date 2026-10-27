@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>결정 자리의 변형</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div style="display: grid; grid-template-columns: repeat(5, 360px); gap: 48px; align-items: start;">
+
+<section class="flex flex-col gap-3">
+<p class="text-small text-text-muted" style="margin: 0;">기본. 운영자의 실행이 일시정지했고 채널 토큰이 있다.</p>
+<x-import component-from-global-scope="AgentOsUi.Card" as="section" padding="4">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-body font-semibold" style="margin: 0;">결정</h2>
+<p class="text-body text-text-muted" style="margin: 0;">이 실행은 도구 호출 하나의 승인을 기다리며 일시정지했다. 결정은 이 호출 하나에 대한 답이다.</p>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">도구 <code class="font-mono">tool</code></span>
+<span class="font-mono text-mono font-medium">payments.refund</span>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">인자 <code class="font-mono">args</code></span>
+<pre class="font-mono text-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-m); line-height: var(--table-lh); white-space: pre-wrap; overflow-wrap: anywhere;">{
+  "order_id": "A-1042",
+  "amount": 32000,
+  "reason": "damaged"
+}</pre>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">결정의 승인자는 이 화면이 고르지 않는다. <code class="font-mono">agent-os serve</code>를 띄운 OS 사용자로 기록된다.</p>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="3" label="거부 사유" help="거부하려면 적는다. 비어 있으면 거부를 보낼 수 없다."></x-import>
+<div class="flex justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">거부</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+</div>
+</div>
+</x-import>
+</section>
+
+<section class="flex flex-col gap-3">
+<p class="text-small text-text-muted" style="margin: 0;">꺼진 플러그인으로 막힘. 이 실행이 쓰는 플러그인 가운데 꺼진 것이 있다.</p>
+<x-import component-from-global-scope="AgentOsUi.Card" as="section" padding="4">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-body font-semibold" style="margin: 0;">결정</h2>
+<p class="text-body text-text-muted" style="margin: 0;">이 실행은 도구 호출 하나의 승인을 기다리며 일시정지했다. 결정은 이 호출 하나에 대한 답이다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="warning" title="꺼진 플러그인이 있어 재개할 수 없다: 에이전트 calc, MCP filesystem">다시 켜면 결정을 낼 수 있다. <a href="#">플러그인 목록</a></x-import>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">도구 <code class="font-mono">tool</code></span>
+<span class="font-mono text-mono font-medium">payments.refund</span>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">인자 <code class="font-mono">args</code></span>
+<pre class="font-mono text-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-m); line-height: var(--table-lh); white-space: pre-wrap; overflow-wrap: anywhere;">{
+  "order_id": "A-1042",
+  "amount": 32000,
+  "reason": "damaged"
+}</pre>
+</div>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="3" label="거부 사유" disabled="{{yes}}"></x-import>
+<div class="flex justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">거부</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary" disabled="{{yes}}">승인</x-import>
+</div>
+</div>
+</x-import>
+</section>
+
+<section class="flex flex-col gap-3">
+<p class="text-small text-text-muted" style="margin: 0;">최종 사용자의 실행. 결정 자리 대신 이 한 줄만 선다. 채널 토큰이 없어도 같다.</p>
+<p class="flex items-start gap-2 text-body" style="margin: 0; padding: var(--spacing-3) var(--spacing-4); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l);"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="16"></x-import><span>최종 사용자의 실행이라 결정은 그 사람만 낸다</span></p>
+</section>
+
+<section class="flex flex-col gap-3">
+<p class="text-small text-text-muted" style="margin: 0;">채널 토큰 없음. 운영자의 실행인데 이 탭에 채널 토큰이 없다.</p>
+<div class="flex flex-col gap-3" style="padding: var(--spacing-3) var(--spacing-4); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<p class="flex items-start gap-2 text-body" style="margin: 0;"><x-import component-from-global-scope="AgentOsUi.Icon" name="shield-check" size="16"></x-import><span>결정을 내리려면 설정에서 채널 토큰을 넣는다</span></p>
+<a href="#" class="text-body" style="align-self: flex-start;">설정 열기</a>
+</div>
+</section>
+
+<section class="flex flex-col gap-3">
+<p class="text-small text-text-muted" style="margin: 0;">형식 1 트레이스. 결정 자리도 안내도 없고, 실행 머리 아래의 이 한 줄만 있다.</p>
+<p class="flex items-start gap-2 text-body text-text-muted" style="margin: 0;"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-minus" size="16"></x-import><span>형식 1 트레이스라 읽을 수 있지만 재개할 수 없다</span></p>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2140,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

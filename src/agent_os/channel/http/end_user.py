@@ -13,8 +13,10 @@
 안인지, 실행이 누구의 것인지, 상태가 어떤지 먼저 보지 않는다(`.claude/rules/channel.md`). 결정과
 구독에서 실행의 에이전트와 주체는, 이어 가기에서 앞 실행의 주체와 상태는 트레이스 안에 있어, 채널이
 먼저 보면 트레이스를 먼저 읽어 판정 순서가 core 밖으로 샌다. 이어 가기가 열 에이전트 목록으로 보는
-것은 본문이 요청한 에이전트다. 상태 코드는 표가 이 면의 것으로 옮긴다 — 남의 실행, 손상된 실행,
-없는 실행, 열 에이전트 밖의 실행은 모두 같은 404 고정 문구다(`agent_os.http.errors`).
+것은 본문이 요청한 에이전트다. 상태 코드는 표가 이 면의 것으로 옮긴다 — 남의 실행, 그 주체와 견주기
+전에 읽다 손상을 만난 실행, 없는 실행, 열 에이전트 밖의 실행은 모두 같은 404 고정 문구이고, 주체를
+확인한 뒤의 구성이나 기록의 고장은 어느 경로에서나 500 고정 문구다(`agent_os.http.errors`, ADR 0023
+의 2026-10-16 이력).
 
 **프레임은 `data:` 한 줄과 `id:` 한 줄이다.** `data` 는 최종 사용자 항목 하나(`items`)이고 `id` 는
 그 항목의 근거인 트레이스 인덱스의 십진 글자다. 결정 본문의 `pause_index` 는 일시정지 항목의 `id`
@@ -55,7 +57,7 @@ from typing import Annotated
 
 from anyio.streams.memory import MemoryObjectReceiveStream
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, Request
-from fastapi.sse import EventSourceResponse, ServerSentEvent
+from fastapi.sse import ServerSentEvent
 from pydantic.json_schema import SkipJsonSchema
 
 from agent_os.channel.http.bodies import Decision, StartRun
@@ -77,7 +79,7 @@ from agent_os.core.ports import (
 from agent_os.core.run import read_own_run, resume, run
 from agent_os.http.auth import end_user_of
 from agent_os.http.errors import request_id_of
-from agent_os.http.routes import documented_stream_errors
+from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.http.sites import EndUser
 from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
 
@@ -86,9 +88,6 @@ from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
 # 넘기는 조립 층이 이것을 읽는다.
 END_USER_PREFIX = "/end-user"
 _RUNS = "/runs"
-# 시작 경로. 예외 표가 이것으로 시작 경로의 면(깨진 기록이 500)과 실행을 가리키는 경로의 면(깨진
-# 기록이 404)을 가른다.
-END_USER_START_PATH = f"{END_USER_PREFIX}{_RUNS}"
 
 # `Last-Event-ID` 의 형식. 십진 정수의 글자이고 12자리면 어느 트레이스의 인덱스보다 크다. 어기면
 # 422 이고 `violations` 의 `field` 는 `header.last-event-id` 다. 헤더인 이유는 표준(HTML SSE)이 그
@@ -121,7 +120,7 @@ def end_user_router(
 
     구독 수의 셈은 이 라우터가 든다 — 앱 하나에 하나다.
     """
-    router = APIRouter(prefix=END_USER_PREFIX, responses=documented_stream_errors(500))
+    router = APIRouter(prefix=END_USER_PREFIX, responses=documented_errors(500))
     subscriptions = SubscriptionQuota()
 
     async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
@@ -169,10 +168,8 @@ def end_user_router(
         _RUNS,
         operation_id="start_end_user_run",
         summary="서명한 최종 사용자로 실행 하나를 일으켜 그 항목을 생기는 대로 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(
-            401, 404, 409, 422, 429, descriptions={422: _START_INVALID}
-        ),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429, descriptions={422: _START_INVALID}),
     )
     async def start_end_user_run(
         stream: Annotated[RunStream, Depends(start_stream)],
@@ -213,18 +210,18 @@ def end_user_router(
             end_user=user,
         )
 
-    # 404 는 남의 실행, 없는 실행, 열 에이전트 밖의 실행, 그리고 하위 타입이 아닌 `PluginError` 전부
-    # (손상된 트레이스, 깨진 고리, 기록이 가리키는 에이전트의 부재, mcp 와 진입점의 구성 오류)이고
-    # 메시지가 모두 같은 고정 문구다 — 구성 오류까지 404 가 되는 것은 ADR 0023 의 2026-10-05 이력이
-    # 받아들인 대가이고 원인은 서버 기록에 있다. 409 는 자기 실행이 결정을 받을 수 없는 상태(형식 1,
-    # 일시정지 아님, 지나간 자리)이고 메시지가 가르며, 꺼짐은 고정 문구다. 받지 않은 결정은 쓰이지
-    # 않는다.
+    # 404 는 남의 실행, 없는 실행, 열 에이전트 밖의 실행, 손상된 실행이고 메시지가 모두 같은 고정
+    # 문구다 — 손상된 트레이스의 주체는 믿을 수 없어 남의 것일 수 있다. 500 은 주체를 확인한 뒤의
+    # 고장(깨진 고리, 기록이 가리키는 에이전트의 부재, mcp 와 진입점의 구성 오류)이고 고정 문구다 —
+    # 숨길 남이 없고 원인은 서버 기록에 있다(ADR 0023 의 2026-10-16 이력). 409 는 자기 실행이 결정을
+    # 받을 수 없는 상태(형식 1, 일시정지 아님, 지나간 자리)이고 메시지가 가르며, 꺼짐은 고정 문구다.
+    # 받지 않은 결정은 쓰이지 않는다.
     @router.post(
         f"{_RUNS}/{{run_id:verbatim}}/approval",
         operation_id="decide_end_user_approval",
         summary="서명한 최종 사용자의 멈춘 실행에 결정 하나를 내고 결정 항목부터 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422, 429),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429),
     )
     async def decide_end_user_approval(
         stream: Annotated[RunStream, Depends(decide_stream)],
@@ -283,8 +280,8 @@ def end_user_router(
         f"{_RUNS}/{{run_id:verbatim}}/subscription",
         operation_id="subscribe_end_user_run",
         summary="서명한 최종 사용자의 실행에 다시 붙어 놓친 항목부터 결말까지 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(401, 404, 409, 422, 429),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429),
     )
     async def subscribe_end_user_run(
         subscribed: Annotated[_Subscription, Depends(subscription)],
@@ -301,22 +298,21 @@ def end_user_router(
 
     # 시작과 앞 실행 하나만 다르다(ADR 0022 의 첫째 2026-10-15 이력). 본문은 `StartRun` 그대로이고
     # 앞 실행은 경로에만 있다. 이유는 운영자 채널의 이어 가기와 같다(`router` 모듈 독스트링). 404 는
-    # 앞 실행이 없거나 남의 것이거나 손상된 것, 요청한 에이전트가 없거나 그 사이트의 열 에이전트
-    # 밖인 것이고 메시지가 모두 같은 고정 문구다. 실행을 가리키는 경로라 하위 타입이 아닌
-    # `PluginError`(깨진 고리, 요청한 에이전트와 그것이 쓰는 mcp 와 진입점의 구성 오류)도 404 다 —
-    # 구성 오류까지 404 가 되는 것은 결정과 같은 대가이고 원인은 서버 기록에 있다. 409 는 자기 앞
-    # 실행이 끝나지 않은 것(메시지가 실패·일시정지·결말 없음을 든다)과 꺼짐(고정 문구)이다. 422 와
-    # 429 는 시작과 같고 422 설명도 시작의 것을 나눠 쓴다 — 본문이 같은 `StartRun` 이고 같은 상한을
-    # 지난다. 경로 파라미터의 형식 오류는 그 설명의 "요청의 형식이 올바르지 않거나"가 덮는다. 전부
-    # 실행 식별자를 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다.
+    # 앞 실행이 없거나 남의 것이거나 그 주체와 견주기 전에 읽다 손상을 만난 것, 요청한 에이전트가
+    # 없거나 그 사이트의 열 에이전트 밖인 것이고 메시지가 모두 같은 고정 문구다. 500 은 주체를
+    # 확인한 뒤의 고장(앞 실행 자신의 기록 규칙, 깨진 고리, 요청한 에이전트와 그것이 쓰는 mcp 와
+    # 진입점의 구성 오류)이고 결정과 같은 고정 문구다 — 404 로 덮으면 위젯이 저장한 대화를
+    # 지운다(ADR 0023 의 2026-10-16 이력). 409 는 자기 앞 실행이 끝나지 않은 것(메시지가
+    # 실패·일시정지·결말 없음을 든다)과 꺼짐(고정 문구)이다. 422 와 429 는 시작과 같고 422 설명도
+    # 시작의 것을 나눠 쓴다 — 본문이 같은 `StartRun` 이고 같은 상한을 지난다. 경로
+    # 파라미터의 형식 오류는 그 설명의 "요청의 형식이 올바르지 않거나"가 덮는다. 전부 실행 식별자를
+    # 만들기 전이라 거절된 이어 가기는 트레이스를 남기지 않는다.
     @router.post(
         f"{_RUNS}/{{run_id:verbatim}}/continuation",
         operation_id="continue_end_user_run",
         summary="서명한 최종 사용자의 끝난 실행을 이어 가는 새 실행을 일으켜 그 항목을 흘린다",
-        response_class=EventSourceResponse,
-        responses=documented_stream_errors(
-            401, 404, 409, 422, 429, descriptions={422: _START_INVALID}
-        ),
+        response_class=EventSourceWithJsonErrors,
+        responses=documented_errors(401, 404, 409, 422, 429, descriptions={422: _START_INVALID}),
     )
     async def continue_end_user_run(
         stream: Annotated[RunStream, Depends(continue_stream)],

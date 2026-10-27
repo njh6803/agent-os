@@ -17,6 +17,8 @@ from tools.hook_measure_word import (
     is_evidence_doc,
     main,
 )
+from tools.hook_probe_conclusion import HookPayload as ProbeConclusionPayload
+from tools.hook_probe_conclusion import context_for as probe_conclusion_context
 from tools.run_hooks import registered_matchers
 
 ROOT = "C:\\project\\agent\\.claude\\worktrees\\measure-word-hook"
@@ -76,6 +78,17 @@ def test_ADR_에_근거_없는_실측을_더하면_알린다() -> None:
     assert context.startswith(LEAD)
     assert "docs/agents/issue-tracker.md" in context
     assert "한 프로세스가 4초였다(실측)" in context
+
+
+def test_프로브_README_에_더한_측정_낱말에는_결론_계기와_함께_알린다() -> None:
+    """독스트링의 "프로브 README 와 `hook_probe_conclusion`" 문단. 같은 편집에 두 훅이 함께 난다.
+    그 훅은 경로만 보므로 그 훅의 입력 꼴에는 경로만 싣는다."""
+    assert context_for(_edit(PROBE_README, "| a |", "| a |\n| `x.py` | 한 바퀴 4초를 쟀다 |"))
+    conclusion: ProbeConclusionPayload = {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": PROBE_README},
+    }
+    assert probe_conclusion_context(conclusion) is not None
 
 
 def test_세_자리와_세_낱말을_모두_본다() -> None:

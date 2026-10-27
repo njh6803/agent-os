@@ -1,0 +1,117 @@
+Windows fatal exception: code 0xc0020043
+
+Thread 0x0000a1f4 (most recent call first):
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 534 in read
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 567 in from_io
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 1160 in _thread_receiver
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 341 in run
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 411 in _perform_spawn
+
+Thread 0x00008504 (most recent call first):
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 327 in _wmi_query
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 804 in get_win32
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 800 in get
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 860 in processor
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\functools.py", line 998 in __get__
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 865 in __iter__
+  File "C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\platform.py", line 1245 in platform
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\xdist\remote.py", line 386 in getinfodict
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\xdist\remote.py", line 138 in pytest_sessionstart
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\main.py", line 328 in wrap_session
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\_pytest\main.py", line 377 in pytest_cmdline_main
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_callers.py", line 121 in _multicall
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_manager.py", line 120 in _hookexec
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pluggy\_hooks.py", line 512 in __call__
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\xdist\remote.py", line 427 in <module>
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 1291 in executetask
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 341 in run
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 411 in _perform_spawn
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 389 in integrate_as_primary_thread
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 1273 in serve
+  File "C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\execnet\gateway_base.py", line 1806 in serve
+  File "<string>", line 8 in <module>
+  File "<string>", line 1 in <module>
+bringing up nodes...
+[gw5] node down: Not properly terminated
+bringing up nodes...
+
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+............................................F........................... [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+...................                                                      [100%]
+================================== FAILURES ===================================
+__________________________ test_한_줄에_겹친_목록_표식이_선형이다 ___________________________
+[gw8] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+    def test_한_줄에_겹친_목록_표식이_선형이다() -> None:
+        """수평선 판정이 끊긴 자리를 기억한다(cmark 의 thematic_break_kill_pos)."""
+>       assert _seconds("- " * 8000 + "a\n") < LIMIT_SECONDS
+E       AssertionError: assert 1.224137299999711 < 1.0
+E        +  where 1.224137299999711 = _seconds((('- ' * 8000) + 'a\n'))
+
+tests\tools\test_check_md_tables.py:249: AssertionError
+============================== warnings summary ===============================
+tests/test_conftest.py::test_skip_이_하나라도_있으면_세션이_실패한다
+tests/test_conftest.py::test_skip_이_없으면_그대로_통과한다
+tests/test_conftest.py::test_deselect_는_skip_이_아니다
+tests/test_conftest.py::test_llm_테스트가_tmp_path_에_남긴_트레이스의_토큰_합계를_끝에_찍는다
+tests/test_conftest.py::test_llm_테스트가_돌지_않으면_토큰_합계를_찍지_않는다
+  C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pytest_asyncio\plugin.py:299: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+  The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+  
+    warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다
+1 failed, 3618 passed, 5 warnings in 960.55s (0:16:00)

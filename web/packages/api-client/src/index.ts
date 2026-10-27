@@ -4,9 +4,20 @@ export type { components, paths } from "./generated/openapi";
 export {
   createAdminClient,
   createChannelClient,
+  createWidgetClient,
   type AdminClient,
   type AdminPaths,
   type ChannelClient,
   type ChannelPaths,
+  type WidgetClient,
+  type WidgetPaths,
 } from "./clients";
-export { readFrames, type Event, type StreamFrame } from "./stream";
+export {
+  isEndUserItem,
+  readEndUserFrames,
+  readFrames,
+  type EndUserFrame,
+  type EndUserItem,
+  type Event,
+  type StreamFrame,
+} from "./stream";

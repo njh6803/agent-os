@@ -7,9 +7,10 @@
 # 왜 이 둘인지(자동 제출 파라미터가 없고 배치 도구가 거부한다)와 실측은 일지 2026-09-21 open-session.
 # 지시문에 `모델: <모델 메뉴의 이름> / <low|medium|high|xhigh|max>` 줄이 있으면 보내기 전에 입력창의 모델과 노력을 그대로
 # 고르고(`Set-ComposerModel`), 보낸 뒤 새 세션 화면의 모델과 노력 기본값을 고르기 전으로 되돌린다(`Restore-DraftDefaults`).
+# 새 세션 화면을 쓰는 `send`·`defaults` 는 다른 열기와 겹치지 않게 기계 전체의 잠금 안에서 돈다(`Invoke-SendLocked`, 대기열 360).
 #
 # 사용:
-#   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <절대경로> -PromptFile <파일>
+#   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <절대경로> -PromptFile <파일>   [-LockTimeoutSec <초>]
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <세션 제목>
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action focus -Title <세션 제목>   (이미 패널에 있을 때)
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action defaults -Model <모델 메뉴의 이름> -Effort <레벨>   (기본값 복구)
@@ -22,7 +23,14 @@ param(
     [string] $Effort,
     # 사이드바 행이 새 제목으로 갱신되는 데 몇 초 걸린다. 넉넉히 둔다. `focus` 는 새 세션이 첫 턴에
     # 스스로 이름을 붙일 때까지 기다리므로 스킬이 더 늘려 준다.
-    [int] $TimeoutSec = 30
+    [int] $TimeoutSec = 30,
+    # `send`·`defaults` 가 다른 열기의 잠금(Invoke-SendLocked)을 기다리는 상한. 열기가 잠금을 쥐는 시간은 그 명령의 길이에서 pwsh
+    # 가 뜨고 화면을 깨우기까지를 뺀 것이다. 쏘고 보내기까지는 483회 가운데 중앙값 4.4초, 가장 긴 것이 17.2초였고, `send` 호출 전체는 541회
+    # 가운데 중앙값 16.3초, 60초를 넘은 것이 아홉, 가장 긴 것이 127.6초였다(deeplink_overlap.py --until "2026-10-26 18:00").
+    # 명령만의 길이는 재지 않았다. 앞의 것은 쏘기 전 점검과 되돌리기가 빠져 그보다 짧고, 뒤의 것은 명령이 돌기 전에 훅과 허락을
+    # 기다린 시간이 들어 그보다 길다. 그래서 60초면 거의 모든 열기를 기다리고, 넘기면 스킬이 한 번 다시 돌린다. 기다림과 열기가
+    # 함께 드는 제한(5분)은 스킬이 PowerShell 도구에 준다. 기다림 60초와 가장 긴 호출을 함께 담는 값이다.
+    [int] $LockTimeoutSec = 60
 )
 
 $ErrorActionPreference = 'Stop'
@@ -147,8 +155,8 @@ function Send-Prompt {
     if (-not $pick) { 'model=unset 지시문에 모델 줄이 없어 입력창에 있던 값으로 연다' }
     # `folder`를 실으면 앱이 외부에서 온 폴더로 보고(`src=external`) 신뢰를 다시 묻고, 그 대화상자를
     # 거치면 폴더가 떨어져 스크래치 워크스페이스로 열린다(실측 9). 폴더는 싣지 않는다. 앱은 마지막
-    # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 그것이 루트다. 맞는지는 스킬이
-    # `list_sessions`의 cwd 로 확인한다.
+    # 폴더를 기본으로 잡고, 여는 세션이 저장소에서 돌고 있으니 대개 그것이 루트다. 마지막 폴더가 다른 워크트리일 수 있어
+    # 보내기 전에 화면의 폴더를 -Folder 와 대 보고(아래 `folder=`), 보낸 뒤에는 스킬이 `list_sessions`의 cwd 로 확인한다.
     $url = 'claude://code/new?q=' + [uri]::EscapeDataString($prompt) + '&source=open-session'
     # 윈도가 프로토콜 핸들러에 URL 을 명령줄로 넘기고 그 명령줄이 잘린다. 넘치면 앱이 딥링크를 아예
     # 받지 못하고, 스크립트는 아래 `page=` 에서 "화면을 못 찾았다"로 끝나 원인을 가린다. 실측: 9766자는
@@ -216,6 +224,21 @@ function Send-Prompt {
     # 그 상태에서 "빈 입력창이 없다"를 성공으로 치면 확인이 공허해진다(PR #33 리뷰). 못 찾으면 멈춘다.
     $box = Wait-For { Find-PromptBox $win $needle } "지시문('$needle…')이 든 입력창" 6
 
+    # 딥링크가 폴더를 싣지 않아(위 `folder` 주석) 새 세션은 앱의 마지막 폴더에서 열린다. 그 폴더가 다른 워크트리여서 인계
+    # 열기가 그리로 간 일을 대기열 378 이 네 회차로 셌다(둘은 새 세션이 거기 열려 첫 턴에 멈췄고(첫 턴 훅이 막은 것으로 본다),
+    # 둘은 위 신뢰 대화상자에서 멈췄다. 같은 폴더에서 첫 턴에 멈춘 인계 세션이 둘 더 있었다, 일지 2026-10-20-16). 그래서
+    # 화면이 보이는 폴더가 -Folder 가 아니면 모델을 고르기 전에 멈춘다. 화면은 지시문이 든 채 남아 사람이 폴더를 고르고 보낸다. 모델은 아직 고르지 않았으므로 모델 줄이 있으면 멈춤 문구가 그 값도 고르라고 한다. 폴더 글은 입력창보다 늦게
+    # 그려질 수 있어 0.5초 간격으로 여섯 번까지 읽는다.
+    $shown = @()
+    for ($i = 0; $i -lt 6 -and $shown.Count -eq 0; $i++) {
+        if ($i -gt 0) { Start-Sleep -Milliseconds 500 }
+        $shown = @(Read-ShownFolders $box)
+    }
+    $mismatch = Get-FolderMismatch $shown $Folder
+    if ($mismatch -and $pick) { $mismatch += " 모델은 아직 고르지 않았다. 보내기 전에 모델 버튼에서 지시문의 모델 줄대로 '$($pick.Model) / $($pick.Effort)' 도 고른다." }
+    if ($mismatch) { throw $mismatch }
+    "folder=$($shown -join ', ')"
+
     # 모델 줄은 아래 `held=` 보다 먼저 고른다. `held=` 면 사람이 첫 글자만 고쳐 보내므로, 그때도 첫 턴이 줄의 값으로 돈다.
     # 고른 뒤 `sent=` 전에 멈추면(고르기·보내기 버튼·제출 확인의 실패, `held=`) 이 스크립트가 되돌릴 때가 없다. 기본값이 바뀌었으면
     # 사람이 보낸 뒤(제출 확인의 시간 초과면 이미 보냈을 수 있다) 칠 복구를 남긴다(PR 직전 버그·성능 리뷰, Get-PendingRestoreLine).
@@ -267,7 +290,8 @@ function Get-RuntimeKey($el) {
 # 가리키는 문장은 명령이 아니라 지시라 그대로 보낼 수 있다. 왜 이렇게 하는지와 그 대가는 open-session 스킬.
 # 이름은 훅의 전각 대체 경로와 같은 kebab 한 토막이라 `.claude/skills/` 밖을 가리키지 못하고, 파일이 없으면
 # 옮기지 않아 아래 `held=` 가 받는다. 인자에 지시문 전문이 드는 것은 슬래시 명령과 같다.
-# 딥링크가 폴더를 싣지 않아 새 세션은 앱의 마지막 폴더에서 열린다. 그래서 두 겹으로 막는다. 경로는 상대 경로라
+# 딥링크가 폴더를 싣지 않아 새 세션은 앱의 마지막 폴더에서 열린다. 보내기 전의 화면 폴더 확인(`Send-Prompt` 의 `folder=`)
+# 뒤에도 이 줄이 두 겹으로 막는다. 경로는 상대 경로라
 # 저장소가 아닌 폴더에서는 파일을 못 찾아 멈추고, 연 저장소를 표지로 실어 새 세션의 훅이 자기 작업 폴더와
 # 다르면 프롬프트를 막는다(PR #65 의 CodeRabbit). 문구는 hook_prompt_directive 의 `_OPENED_LINE` 이 글자로
 # 파싱하는 형식이라, 바꾸면 tests/tools 의 대조 테스트가 빨개진다.
@@ -391,6 +415,47 @@ function Find-ComposerButton($box, [string] $prefix) {
 
 function Get-EditValue($el) {
     try { return $el.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { return '' }
+}
+
+# 새 세션 화면이 어느 폴더에서 열렸는지. 화면은 입력창 묶음(입력창에서 위로 올라가 `모델:` 버튼이 처음 보이는 조상) 안에 폴더의
+# 전체 경로를 Text 로, 폴더 이름을 `환경: <이름>` 버튼으로 보인다. 분할 보기의 다른 패널과 그 대화 속 경로는 묶음보다 위에서
+# 갈린다(.scratch/harness/probes/composer_folder.ps1, 앱 2.37337.1.0, 2026-10-20). 잰 회차는 마지막 폴더가 C:\project\agent 인
+# 하나뿐이라, 그 Text 가 마지막 폴더를 따라 바뀐다는 것은 어림이다(양성 대조가 없다). 틀려서 다른 폴더를 놓치면 open-session
+# 4단계의 `cwd` 확인이 보낸 뒤에 잡는다. 지시문의 문단도 묶음 안의 Text 라 입력창의
+# 줄과 같은 글은 뺀다. 여러 줄 문단의 Text 는 어느 한 줄과도 같지 않을 수 있고 입력창을 읽지 못하면 줄이 없어, 줄바꿈을 품은 글도
+# 폴더로 읽지 않는다(폴더 경로에는 줄바꿈이 없다). 드라이브 경로(`X:\`)로 시작하는 글만 고르고 같은 글은 한 번 든다. 순수하다.
+function Select-ShownFolders([string[]] $names, [string] $prompt) {
+    $lines = @($prompt -split "`r?`n")
+    return @($names | Where-Object { $_ -cmatch '^[A-Za-z]:\\' -and $_ -notmatch '[\r\n]' -and $lines -cnotcontains $_ } | Select-Object -Unique)
+}
+
+function Read-ShownFolders($box) {
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $buttonCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Button)
+    $textCond = New-Object System.Windows.Automation.PropertyCondition($Auto::ControlTypeProperty, $Types::Text)
+    $node = $box
+    for ($i = 0; $i -lt 20 -and $node; $i++) {
+        $node = $walker.GetParent($node)
+        if (-not $node) { break }
+        $hits = @($node.FindAll($Scope::Descendants, $buttonCond) | Where-Object { try { $_.Current.Name.StartsWith('모델:') } catch { $false } })
+        if ($hits.Count -eq 0) { continue }
+        $names = @($node.FindAll($Scope::Descendants, $textCond) | ForEach-Object { try { $_.Current.Name } catch { $null } })
+        return Select-ShownFolders $names (Get-EditValue $box)
+    }
+    return @()
+}
+
+# 보이는 폴더가 -Folder 와 다르면 보내지 않고 멈출 까닭, 같으면 $null. 끝의 구분자와 `/`·`\`, 대소문자는 가리지 않는다(윈도
+# 경로). 보이는 폴더가 없으면(앱이 화면의 모양을 바꿨다) 확인하지 못한 채 보내지 않는다. 신뢰 대화상자의 폴더 확인과 같은
+# 쪽이다. 순수하다.
+function Get-FolderMismatch([string[]] $shown, [string] $folder) {
+    $norm = { param($p) $p.Replace('/', '\').TrimEnd('\') }
+    $want = & $norm $folder
+    $paths = @($shown | Where-Object { $_ })
+    $tail = "보내지 않았다. 사람이 입력창 아래의 환경 버튼에서 '$want' 를 고른 뒤 보낸다."
+    if ($paths.Count -eq 0) { return "새 세션 화면의 입력창 묶음에서 폴더 경로를 찾지 못했다. $tail" }
+    if (@($paths | Where-Object { (& $norm $_) -ne $want }).Count -eq 0) { return $null }
+    return "새 세션 화면의 폴더가 '$($paths -join ', ')' 이고 '$want' 가 아니다(딥링크는 앱의 마지막 폴더에서 연다). $tail"
 }
 
 # 입력창 묶음의 모델 버튼이 지금 보이는 모델과 노력. 자식 Text 로 읽는다(Split-ComposerTexts 의 주석).
@@ -714,8 +779,9 @@ function Wake-Display {
 }
 
 # 앱이 끝나는 중이면 딥링크를 받지 않는다. 데스크톱 앱(2.9939.2)의 `second-instance` 처리기는 첫 줄 `if(ej())return;` 에서
-# 끝내기 깃발 셋(`JA||YA||XA`)을 보고 로그 없이 돌아간다. 딥링크를 받은 두 번째 인스턴스는 제 기동 줄(`Starting app` 에서
-# `Not main instance` 까지)만 남기고 물러나므로 스크립트는 `page=` 에서 원인 없이 끝난다. 깃발 가운데 업데이트를 위한
+# 끝내기 깃발 셋(`JA||YA||XA`)을 보고 로그 없이 돌아간다. 딥링크를 받은 두 번째 인스턴스는 제 기동 줄(그 판은 `Starting app`
+# 에서 `Not main instance` 까지, 2026-10-15 뒤 판은 `Starting app {` 과 `Quit requested before 'ready'`)만 남기고 물러나므로
+# 스크립트는 `page=` 에서 원인 없이 끝난다. 깃발 가운데 업데이트를 위한
 # 끝내기(`JA`)와 끝낼 준비(`XA`)는 한 번 켜지면 풀리는 자리가 없다. 업데이트를 위한 끝내기가 시작되고 앱이 끝나지 않으면, 밖에서
 # 앱을 끝낼 때까지 모든 딥링크가 버려졌다(2026-09-29 12:19 부터 32시간 넘게). 앱 안의 재시작(업데이트 배너, 메뉴의 끝내기)도
 # 같은 깃발에 막힌다(`QA`·`$A` 의 `ej()||`). 설치본의 app.asar 와 main.log 를 읽었다. 경위는 일지 2026-09-30-06. 그래서 쏘기
@@ -785,6 +851,51 @@ function Get-AppQuitMarker {
     return Find-QuitMarker @($lines) $started
 }
 
+# 새 세션 화면은 앱에 하나다. 앱의 로그와 트랜스크립트를 맞대니, 지시문이 든 입력창을 찾지 못하거나 모델을 고르는 사이 지시문이
+# 바뀌었다며 보내지 않고 멈춘 열기 넷은 모두 자기 딥링크 뒤 보내기 전에 남의 딥링크가 왔고, 보낸 열기 339와 다른 까닭으로 멈춘
+# 여섯에는 그런 딥링크가 없었다(.scratch/harness/probes/deeplink_overlap.py --until "2026-10-26 18:00", 대기열 360). 입력창의
+# 글은 재지 않았고, 뒤의 딥링크가 앞 열기의 입력창을 제 글로 덮었다고 이 동시 발생에서 읽었다. 그래서 새 세션 화면을 쓰는 동작
+# (`send`, 표지 화면을 여는 `defaults`)은 기계 전체의 이름 있는 잠금 안에서 돈다. `send` 는 모델 줄이 있으면 보낸 뒤 기본값을
+# 되돌리며 표지 딥링크를 한 번 더 쏘므로(Restore-DraftDefaults) 놓는 것은 그 뒤다. 위의 네 멈춤 가운데 하나는 앞 열기의 그 표지
+# 딥링크가 끼어든 회차였다(2026-10-19 11:50:28, 로그를 손으로 봤다). 기다리다 $timeoutSec 을 넘기면 쏘지 않고 던진다.
+# .NET 의 뮤텍스는 잡은 스레드가 놓아야 해서 잡기와 놓기를 이 함수 하나의 try/finally 에 둔다. 몸이 던져도 놓는다. 쥔 프로세스가
+# 놓지 않고 끝나면(부르는 도구가 시간 제한으로 끊었다) 기다리던 쪽이 버려진 잠금을 받아 쥔다(AbandonedMutexException. pwsh 의
+# 형식 catch 가 받고, 받은 뒤 놓기도 된다는 것을 2026-10-26 에 다른 pwsh 를 띄워 손으로 봤다). 아무도 기다리지 않았으면 마지막
+# 핸들과 함께 뮤텍스가 사라져 다음 열기는 새 뮤텍스를 잡는다(Win32 CreateMutexW 문서의 "The mutex object is destroyed when its
+# last handle has been closed.", 그것을 2026-10-26 에 손으로 본 기록은 시험의 `_RELEASED` 주석).
+# 몸이 부르는 함수는 이 함수의 인자와 지역 변수를 보지 않는다. PowerShell 은 변수를 부른 쪽의 범위로 거슬러 찾아, 첫 판에서는
+# `Send-Prompt` 가 부르는 `Wait-For` 의 기본값 `$TimeoutSec`(스크립트 파라미터)이 이 함수의 `$timeoutSec`(-LockTimeoutSec)이
+# 되었다(셀프 리뷰, 2026-10-26 에 pwsh 로 손으로 봤다). `param` 안에 `$private:` 를 붙인 판도 샜고, 몸에 들어가기 전에
+# `Set-Variable -Option Private` 로 다시 매기니 막혔다.
+# 못 보는 것: 잠금을 놓은 뒤 새 세션 화면에 남은 지시문(`held=`, 폴더·모델 오류로 멈춰 사람이 보내기를 기다리는 화면)은 다음
+# 열기의 딥링크가 덮는다. `split`·`focus` 는 딥링크를 쏘지 않아 잠그지 않는다. 그 둘은 사이드바 행을 누르고(Invoke) 메뉴에
+# 포커스를 준 뒤 키(Enter, →, Esc)를 보내는데, 그것이 다른 열기의 새 세션 화면을 옮겨 놓거나 그 입력창에 키를 넣는지는 재지
+# 않았다. 잠금은 앞 열기가 놓자마자 기다리던 열기를 쏘게 해, 앞 열기를 부른 세션이 이어 거는 `split`·`focus` 가 뒤 열기와
+# 겹치는 차례를 만든다(PR 직전 bug-perf-review 가 코드를 읽어 짚었다. 겹친 회차는 세지 않았다). 이 잠금을 잡지 않고
+# 새 세션 화면을 쓰는 것과는 겨루지 않는다. 잠금을 모르는 옛 사본의 스크립트(다른 워크트리), 딥링크를 쏘는 진단 프로브
+# (`.scratch/harness/probes/` 의 `composer_*.ps1`·`probe_deeplink.ps1`), 사람의 클릭과 손으로 쓰는 글이 그 예다.
+$SendLockName = 'Global\agent-os-open-session'
+
+function Invoke-SendLocked([string] $name, [int] $timeoutSec, [scriptblock] $body) {
+    Set-Variable name -Option Private -Value $name
+    Set-Variable timeoutSec -Option Private -Value $timeoutSec
+    Set-Variable body -Option Private -Value $body
+    $private:mutex = [System.Threading.Mutex]::new($false, $name)
+    try {
+        $private:watch = [System.Diagnostics.Stopwatch]::StartNew()
+        $private:note = ''
+        $private:got = $false
+        try { $got = $mutex.WaitOne([TimeSpan]::FromSeconds($timeoutSec)) }
+        catch [System.Threading.AbandonedMutexException] {
+            $got = $true
+            $note = ' 앞선 열기가 잠금을 놓지 않고 끝났다(그 열기가 남긴 새 세션 화면은 이 열기가 덮는다. 그 열기가 모델을 고른 뒤 끊겼으면 아래 model=·effort= 의 원래 값은 그 열기가 고른 값이다)'
+        }
+        if (-not $got) { throw "다른 열기가 새 세션 화면을 쓰는 중이라 ${timeoutSec}초 안에 잠금('$name')을 잡지 못했다. 쏘지 않았다. 다시 돌려도 새 세션이 둘 생기지 않는다." }
+        "lock=$(Get-Date -Format HH:mm:ss.fff) waited=$([Math]::Round($watch.Elapsed.TotalSeconds, 1))s$note"
+        try { & $body } finally { $mutex.ReleaseMutex() }
+    } finally { $mutex.Dispose() }
+}
+
 # 스크립트의 끝. 멈춘 접근성 호출이 남았으면(Invoke-PatternTimed 의 주석) pwsh 가 그 스레드를 기다려 끝나지 않는다. 출력과 오류
 # 문구를 낸 뒤 프로세스를 끝낸다. 남은 호출이 없으면 여느 때처럼 끝나고 오류도 그대로 던진다.
 function Invoke-Action([scriptblock] $run) {
@@ -800,9 +911,9 @@ function Invoke-Action([scriptblock] $run) {
 Wake-Display
 Invoke-Action {
     switch ($Action) {
-        'send' { Send-Prompt }
+        'send' { Invoke-SendLocked $SendLockName $LockTimeoutSec { Send-Prompt } }
         'split' { Split-Session }
         'focus' { Focus-Session }
-        'defaults' { Set-Defaults }
+        'defaults' { Invoke-SendLocked $SendLockName $LockTimeoutSec { Set-Defaults } }
     }
 }

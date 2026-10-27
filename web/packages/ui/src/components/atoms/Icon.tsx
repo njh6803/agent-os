@@ -17,6 +17,7 @@ import Menu from "lucide-react/dist/esm/icons/menu";
 import Plug from "lucide-react/dist/esm/icons/plug";
 import Search from "lucide-react/dist/esm/icons/search";
 import Send from "lucide-react/dist/esm/icons/send";
+import Settings from "lucide-react/dist/esm/icons/settings";
 import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
 import TriangleAlert from "lucide-react/dist/esm/icons/triangle-alert";
 import Wrench from "lucide-react/dist/esm/icons/wrench";
@@ -37,12 +38,16 @@ const GLYPHS = {
   wrench: Wrench,
   plug: Plug,
   list: List,
+  settings: Settings,
   search: Search,
   menu: Menu,
   ellipsis: Ellipsis,
 };
 
-/** 디자인 파일의 아이콘 열여섯. 불러오는 중의 `loader-circle` 은 컴포넌트 안에서만 쓰고 여기 들지 않는다. */
+/**
+ * 디자인 파일의 아이콘 열여섯과 관리 화면 탐색의 `settings`(admin-style 명세). 불러오는 중의 `loader-circle` 은 컴포넌트
+ * 안에서만 쓰고 여기 들지 않는다.
+ */
 export type IconName = keyof typeof GLYPHS;
 export const ICON_NAMES = Object.keys(GLYPHS).filter((name): name is IconName => name in GLYPHS);
 

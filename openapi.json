@@ -95,6 +95,32 @@
         "title": "Approve",
         "type": "object"
       },
+      "CallingItem": {
+        "additionalProperties": false,
+        "description": "모델이 도구를 요청했다. 모델이 요청한 도구의 이름을 요청한 차례대로 든다.",
+        "properties": {
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Tools",
+            "type": "array"
+          },
+          "type": {
+            "const": "calling",
+            "default": "calling",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "tools"
+        ],
+        "title": "CallingItem",
+        "type": "object"
+      },
       "ConversationSummarized": {
         "additionalProperties": false,
         "description": "런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.",
@@ -235,6 +261,7 @@
       "EndUserItem": {
         "discriminator": {
           "mapping": {
+            "calling": "#/components/schemas/CallingItem",
             "decided": "#/components/schemas/DecidedItem",
             "failed": "#/components/schemas/FailedItem",
             "finished": "#/components/schemas/FinishedItem",
@@ -248,6 +275,9 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/StartedItem"
+          },
+          {
+            "$ref": "#/components/schemas/CallingItem"
           },
           {
             "$ref": "#/components/schemas/ProgressItem"
@@ -483,6 +513,52 @@
             "type": "null"
           }
         ]
+      },
+      "LimitEnvelope": {
+        "additionalProperties": false,
+        "description": "상한에 걸린 429 의 에러 응답. 봉투의 네 필드에 어느 상한인지를 더한다.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "limit": {
+            "$ref": "#/components/schemas/LimitKind"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/Violation"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "violations",
+          "request_id",
+          "limit"
+        ],
+        "title": "LimitEnvelope",
+        "type": "object"
+      },
+      "LimitKind": {
+        "description": "상한의 종류. 동시 실행 수, 시간당 실행 수, 구독 수다.",
+        "enum": [
+          "concurrent_runs",
+          "hourly_runs",
+          "subscriptions"
+        ],
+        "title": "LimitKind",
+        "type": "string"
       },
       "LlmCalled": {
         "additionalProperties": false,
@@ -1590,7 +1666,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "$ref": "#/components/schemas/LimitEnvelope"
                 }
               }
             },
@@ -1720,7 +1796,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "$ref": "#/components/schemas/LimitEnvelope"
                 }
               }
             },
@@ -1850,7 +1926,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "$ref": "#/components/schemas/LimitEnvelope"
                 }
               }
             },
@@ -1987,7 +2063,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "$ref": "#/components/schemas/LimitEnvelope"
                 }
               }
             },

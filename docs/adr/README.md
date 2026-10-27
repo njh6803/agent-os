@@ -39,5 +39,9 @@
 | [0033](0033-session-context-is-bounded-by-handoff-and-watched-by-a-ledger.md) | 세션 컨텍스트는 단계 경계의 인계와 40만 자동 압축 창으로 묶고, 토큰 사용은 사용량 장부에서 만든 일간 보고서로 지켜본다 | accepted | 2026-10-15 |
 | [0034](0034-mcp-adapter-uses-mcp-2-and-closes-servers-even-when-cancelled.md) | MCP 어댑터는 mcp 2를 직접 써서 취소된 실행의 MCP 서버도 끝까지 닫는다 | accepted | 2026-10-16 |
 | [0035](0035-precommit-pytest-is-split-by-xdist-in-the-runner.md) | pre-commit의 pytest는 러너만 pytest-xdist로 나눠 돌리고, 프로세스 수는 논리 CPU 수의 절반이다 | accepted | 2026-10-16 |
+| [0036](0036-harness-grows-on-third-occurrence-and-queue-rows-expire.md) | 하네스에 더하는 것은 같은 실수의 세 번째나 손상 한 번에 더하고, 쓰이지 않는 훅은 빼자고 넘기며, 대기열 행은 14일이 지나면 목록에서 내린다 | accepted | 2026-10-19 |
+| [0037](0037-every-pr-points-at-one-ticket.md) | main에 들어가는 PR은 모두 티켓 하나를 가리키고, 하네스의 작은 일은 harness 폴더의 세 자리 티켓이며, 커밋 검사와 첫 턴 알림이 지키고, 모델이 스스로 내는 세션 카드는 막는다 | accepted | 2026-10-20 |
+| [0038](0038-env-read-hook-is-tested-against-real-ripgrep.md) | `.env` 읽기 훅의 glob 판정은 pytest가 실제 rg를 띄워 맞대고, rg는 PATH나 Claude Code 실행 파일에서 찾는다 | accepted | 2026-10-23 |
+| [0039](0039-runtime-relays-call-events-as-recorded.md) | 런타임은 모델·도구 호출의 이벤트를 기록하는 자리에서 흘리고, 에이전트는 몸통과 맞물린 제 태스크에서 돈다 | accepted | 2026-10-23 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

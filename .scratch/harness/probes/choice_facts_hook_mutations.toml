@@ -1,0 +1,297 @@
+# tools/hook_choice_facts.py(대기열 308, 막는 꼴은 394·395)의 판정과 옮기기를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/choice_facts_hook_mutations.toml
+# 끝의 하나는 대조군이다. 답 뒤 계기의 끝 문장(압축 뒤 요지만 남는다)은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "도구 이름을 보지 않는다(막는 이유)"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if payload.get("tool_name") != TOOL:
+        return None
+    return _with_quotes(_DENY_BODY'''
+new = '''    if payload.get("tool_name") is None:
+        return None
+    return _with_quotes(_DENY_BODY'''
+
+[[mutation]]
+name = "도구 이름을 보지 않는다(낼 JSON)"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if payload.get("tool_name") != TOOL:
+        return None
+    specific'''
+new = '''    if payload.get("tool_name") is None:
+        return None
+    specific'''
+
+[[mutation]]
+name = "처음 보는 화면을 막지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        specific["permissionDecision"] = "deny"
+'''
+new = ''
+
+[[mutation]]
+name = "다시 부른 화면도 막는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if seen is Seen.FIRST:'''
+new = '''    if seen is not Seen.UNKNOWN:'''
+
+[[mutation]]
+name = "가를 수 없는 화면도 막는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if seen is Seen.FIRST:'''
+new = '''    if seen is not Seen.AGAIN:'''
+
+[[mutation]]
+name = "표지 폴더를 만들지 못하면 처음이라고 본다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    except OSError:
+        return Seen.UNKNOWN
+    try:
+        os.close'''
+new = '''    except OSError:
+        return Seen.FIRST
+    try:
+        os.close'''
+
+[[mutation]]
+name = "세션을 몰라도 표지를 쓴다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if not isinstance(session, str) or not session:
+        return Seen.UNKNOWN'''
+new = '''    if not isinstance(session, str):
+        session = ""'''
+
+[[mutation]]
+name = "열쇠에 설명까지 넣는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        screens.append([question.get("question"), labels])'''
+new = '''        screens.append([question.get("question"), labels, options])'''
+
+[[mutation]]
+name = "열쇠에 라벨을 넣지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        screens.append([question.get("question"), labels])'''
+new = '''        screens.append([question.get("question")])'''
+
+[[mutation]]
+name = "표지 이름에 에이전트를 넣지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    joined = f"{session_id}\0{agent_id}\0{key}"'''
+new = '''    joined = f"{session_id}\0{key}"'''
+
+[[mutation]]
+name = "답 뒤 계기에서 일지 번호 받기를 뺀다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    " 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py` 의 `다음 빈 번호` 줄에서"
+    " 번호를 받아 머리 한 줄 파일을 먼저 만든다(code-review 6단계 끝과 같은 길)."
+'''
+new = ''
+
+[[mutation]]
+name = "막지 못한 알림에서 사용자가 답한 뒤에야 읽힌다는 문장을 뺀다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    f" 직전에 훅이 냈지만 사용자가 답한 뒤에야 읽힌다. {_FACTS}, 답을 쓰기 전에"'''
+new = '''    f" 직전에 훅이 냈다. {_FACTS}, 답을 쓰기 전에"'''
+
+[[mutation]]
+name = "숫자가 든 문장만 고르지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        if not _DIGIT.search(sentence):
+            continue'''
+new = '''        if not sentence:
+            continue'''
+
+[[mutation]]
+name = "문장을 가르지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    for piece in _SENTENCE_BREAK.split(text):'''
+new = '''    for piece in [text]:'''
+
+[[mutation]]
+name = "마침표 뒤 공백이 없어도 가른다(소수점과 판 번호를 가른다)"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"'”’)\]」』])\s+|\n+")'''
+new = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s*|(?<=[.!?][\"'”’)\]」』])\s+|\n+")'''
+
+[[mutation]]
+name = "닫는 따옴표나 괄호 뒤에서 가르지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"'”’)\]」』])\s+|\n+")'''
+new = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|\n+")'''
+
+[[mutation]]
+name = "줄바꿈으로 가르지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"'”’)\]」』])\s+|\n+")'''
+new = '''_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"'”’)\]」』])\s+")'''
+
+[[mutation]]
+name = "한글 수사도 수로 센다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''_DIGIT = re.compile(r"\d")'''
+new = '''_DIGIT = re.compile(r"\d|두 |세 ")'''
+
+[[mutation]]
+name = "질문 문장을 옮기지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        quotes.extend(_quoted("질문", question.get("question")))
+'''
+new = ''
+
+[[mutation]]
+name = "머리를 옮기지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''        quotes.extend(_quoted("머리", question.get("header")))
+'''
+new = ''
+
+[[mutation]]
+name = "라벨을 옮기지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''            quotes.extend(_quoted("라벨", label))
+'''
+new = ''
+
+[[mutation]]
+name = "미리보기도 옮긴다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''            label = option.get("label")
+'''
+new = '''            label = option.get("label")
+            quotes.extend(_quoted("미리보기", option.get("preview")))
+'''
+
+[[mutation]]
+name = "라벨 대신 늘 선택지라고 적는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''label if isinstance(label, str) else "선택지"'''
+new = '''"선택지"'''
+
+[[mutation]]
+name = "옮기는 문장에 한도를 두지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    shown = " / ".join(quotes[:QUOTE_LIMIT])'''
+new = '''    shown = " / ".join(quotes)'''
+
+[[mutation]]
+name = "넘친 문장의 수를 적지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    more = f" 외 {rest}개" if rest > 0 else ""'''
+new = '''    more = ""'''
+
+[[mutation]]
+name = "긴 문장을 자르지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''            sentence = sentence[:QUOTE_WIDTH] + "…"'''
+new = '''            sentence = sentence + "…"'''
+
+[[mutation]]
+name = "tool_input 의 꼴을 보지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    if not isinstance(tool_input, dict):
+        return []
+    questions'''
+new = '''    if tool_input is None:
+        return []
+    questions'''
+
+[[mutation]]
+name = "선택지의 꼴을 보지 않는다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''            if not isinstance(option, dict):
+                continue'''
+new = '''            if option is None:
+                continue'''
+
+[[mutation]]
+name = "대조군: 답 뒤 계기의 끝 문장을 바꾼다"
+tests = ["tests/tools/test_hook_choice_facts.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_choice_facts.py"
+old = '''    " 미루면 컨텍스트 압축 뒤 요지만 남는다."'''
+new = '''    " 미루면 압축 뒤 요지만 남는다."'''

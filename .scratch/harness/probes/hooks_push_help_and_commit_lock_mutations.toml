@@ -247,10 +247,14 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_prompt_directive.py"
 old = '''
-    context = context_for(prompt, payload.get("cwd"))
+    context = first_turn_context(
+        prompt,
+        payload.get("cwd"),
 '''
 new = '''
-    context = context_for(prompt)
+    context = first_turn_context(
+        prompt,
+        None,
 '''
 
 [[mutation]]
@@ -408,8 +412,8 @@ expect = "red"
 [[mutation.edit]]
 file = "tools/hook_edit_during_commit.py"
 old = '''
-    context = context_for(file_path, running_commits(processes))
+    reason = deny_reason(file_path, running_commits(processes))
 '''
 new = '''
-    context = context_for(file_path, [])
+    reason = deny_reason(file_path, [])
 '''

@@ -1,0 +1,212 @@
+# 티켓 03(바로가기)의 변이 표. 바로가기 검증 사례 가운데 여럿(없음, 손상, 다른 주체, 끝나지 않음,
+# 순환, 덮는 끝을 못 만남)은 구현 전에도 옛 거슬러 읽기가 같은 PluginError 를 내 초록이었다. 새 경로
+# (`_follow`)의 그 가드가 실제로 무는지 순환을 뺀 나머지를 하나씩 되돌려 본다. 순환 가드는 되돌리면
+# 끝없이 돌아 시간 제한으로만 드러나고 `tools/mutate.py` 는 시간 초과를 오류로 세므로 넣지 않았다.
+# 쓰기와 재개, 기록 규칙의 가드, 셀프 리뷰가 더한 판정 순서도 함께다. 변이마다 고른 단언이 그 까닭으로
+# 빨개졌다는 표지(`expect_output`)를 단다. 빨강의 판정은 `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/shortcuts_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 가 된 체크아웃에서 돈다.
+
+[[mutation]]
+name = "새 대화의 지도를 없음으로 쓴다"
+tests = ["tests/core/test_run.py", "-k", "새_대화의_시작_이벤트는_빈_바로가기를"]
+expect = "red"
+expect_output = ["assert None == {}"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''        shortcuts={} if continued is None else continued.shortcuts,'''
+new = '''        shortcuts=None if continued is None else continued.shortcuts,'''
+
+[[mutation]]
+name = "앞 실행 자신을 지도에 덮어 쓰지 않는다"
+tests = ["tests/core/test_run.py", "-k", "에이전트마다_가장_최근_실행을"]
+expect = "red"
+# 덮어 쓰지 않은 지도는 셋째 실행의 기록 규칙(일관성)이 먼저 잡아 단언까지 가지 않는다.
+expect_output = ["실행 run-2 의 바로가기에 앞 실행 run-1 이 없다"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    return {**started.shortcuts, started.agent: started.run_id}'''
+new = '''    return dict(started.shortcuts)'''
+
+[[mutation]]
+name = "판정에서 읽은 앞 실행을 다시 읽는다"
+tests = ["tests/core/test_run.py", "-k", "같은_에이전트로_셋을_이으면"]
+expect = "red"
+expect_output = ["assert ['run-2', 'run-2', 'run-1'] == ['run-2', 'run-1']"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if known is not None and known.run_id == target:
+            link = known'''
+new = '''        if False:
+            link = known'''
+
+[[mutation]]
+name = "따라가지 않는 앞 실행의 기록 규칙을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 키의"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    check_record_rules(link)
+    shortcuts = shortcuts_after(link)
+'''
+new = '''
+    shortcuts = shortcuts_after(link)
+'''
+
+[[mutation]]
+name = "앞 실행의 지도를 주체와 끝남보다 먼저 본다"
+tests = ["tests/core/test_run.py", "-k", "지도_위반은_주체와_끝남_뒤에"]
+expect = "red"
+expect_output = ["바로가기 키가 패턴을 어긴다: 'Bad Key'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+    if link.started.principal != principal:
+        raise DifferentPrincipal('''
+new = '''
+    check_record_rules(link)
+    if link.started.principal != principal:
+        raise DifferentPrincipal('''
+
+[[mutation]]
+name = "바로가기가 가리킨 실행이 없음을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 없음"]
+expect = "red"
+expect_output = ["AttributeError: 'NoneType' object has no attribute"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+        if link is None:
+            raise PluginError(
+                f"바로가기가 가리킨 실행이 없다: {target} (실행 {source} 의 바로가기 {agent})"
+            )
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "바로가기가 가리킨 실행의 기록 규칙을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 값의"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''
+        visited.add(target)
+        check_record_rules(link)
+'''
+new = '''
+        visited.add(target)
+'''
+
+[[mutation]]
+name = "바로가기가 가리킨 실행의 주체와 끝남을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and (주체가 or 끝나지)"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        finished = _finished_of(link, principal)
+        if link.started.agent != agent:'''
+new = '''        finished = (
+            link.last
+            if isinstance(link.last, RunFinished)
+            else RunFinished(run_id=link.run_id, ts=link.started.ts, output="")
+        )
+        if link.started.agent != agent:'''
+
+[[mutation]]
+name = "바로가기가 가리킨 실행의 에이전트를 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 에이전트가"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if link.started.agent != agent:
+            raise PluginError('''
+new = '''        if False:
+            raise PluginError('''
+
+[[mutation]]
+name = "바로가기가 가리킨 실행의 지도 없음을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 지도"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        mapped = link.started.shortcuts
+        if mapped is None:'''
+new = '''        mapped = link.started.shortcuts or {}
+        if False:'''
+
+[[mutation]]
+name = "덮는 끝을 만나지 못한 채 처음에 닿아도 멈춘다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 덮는"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if target is None:
+            if summary is not None:'''
+new = '''        if target is None:
+            if False:'''
+
+[[mutation]]
+name = "기록 규칙이 지도의 값 패턴을 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 값의"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''        if not is_run_id(value):'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "기록 규칙이 앞 실행 없는 실행의 지도가 빈지 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 참"]
+expect = "red"
+expect_output = ["assert '비어' in"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    if older is None and shortcuts:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "기록 규칙이 지도의 값에 앞 실행이 있는지 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "바로가기가_어긋나면 and 앞"]
+expect = "red"
+expect_output = ["assert '앞 실행' in"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    if older is not None and older not in shortcuts.values():'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "재개가 자기 지도를 쓰지 않고 앞 실행에서 하나씩 읽는다"
+tests = ["tests/core/test_run.py", "-k", "자기_지도로_읽어 or 지도의_그_에이전트_칸이면"]
+expect = "red"
+expect_output = ["Extra items in the left set:"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/continuation.py"
+old = '''    if started.shortcuts is not None:
+        gathered = _follow('''
+new = '''    if False and started.shortcuts is not None:
+        gathered = _follow('''

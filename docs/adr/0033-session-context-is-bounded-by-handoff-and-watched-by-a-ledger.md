@@ -27,12 +27,12 @@ https://code.claude.com/docs/en/model-config.md). 기록에 남은 자동 압축
 
 **시작 컨텍스트를 줄인다.** 이 저장소에서 쓰지 않는 플러그인 가운데 넷(`document-skills`, `example-skills`,
 `skill-creator`, `code-review` 플러그인판)을 프로젝트 설정(`.claude/settings.json`의 `enabledPlugins`)에서 끈다.
-`frontend-design`, `claude-security`, `coderabbit`, `slack`은 앞으로 쓸 것으로 보고 둔다. `claude-hud`는 상태줄이 쓰고,
+`frontend-design`, `claude-security`, `coderabbit`, `slack`은 앞으로 쓸 것으로 보고 둔다. (바뀜: 이력 2026-10-20 "slack만 끄고 데스크톱 앱이 계정에서 싣는 스킬은 프로젝트 설정으로 끄지 못한다고 적는다") `claude-hud`는 상태줄이 쓰고,
 스킬 목록에 보인 `cowork-plugin-management`는 사용자 설정의 `enabledPlugins`에 없어 이번에 다루지 않았다.
 Playwright MCP는 두 벌이 실리므로 사용자 범위의 서버를 지우고 플러그인판만 남긴다.
 
 **셀프 리뷰의 표준 축은 변경 종류와 상관없이 `sonnet`·`high`로 돈다.** 명세 축은 지금처럼 메인 세션의 모델과 노력을
-물려받는다. 다른 서브에이전트(`bug-perf-review`, `spec-reviewer`, 조사 위임)의 모델과 노력은 보고서를 본 뒤에 정한다.
+물려받는다. 다른 서브에이전트(`bug-perf-review`, `spec-reviewer`, 조사 위임)의 모델과 노력은 보고서를 본 뒤에 정한다. (바뀜: ADR 0029 이력 2026-10-20 "지난 티켓을 갈래마다 다시 풀어 구현 칸과 서브에이전트의 모델을 고른다")
 
 **토큰 사용은 사용량 장부에서 다시 계산한 보고서로 지켜본다.** 작업 스케줄러가 매일 모델 없이 세션 기록을 읽어 주
 체크아웃의 `.scratch/token-report/`(커밋하지 않는다)에 달마다 하나인 사용량 장부를 쌓는다. 일간 보고서(최근 7개),
@@ -186,3 +186,230 @@ retro가 규칙 후보로 올린다(`CLAUDE.md` 교정 루프).
   지시문을 새 세션에 붙여 넣는다.
 
 이 이력은 2026-10-16에 사용자가 승인했다.
+
+### 2026-10-20 slack만 끄고 데스크톱 앱이 계정에서 싣는 스킬은 프로젝트 설정으로 끄지 못한다고 적는다
+
+사용자가 매 호출에 실리는 스킬 목록을 프로젝트 레벨에서 더 줄일 수 있는지 물었다(일지 2026-10-20-17). 그 질문을 받은
+주 체크아웃 세션의 첫 스킬 목록은 26,462자였다(`.scratch/token-usage/probes/skill_listing_entries.py`로 그 세션의 기록을
+읽었다. 일간 보고서 2026-10-19의 중앙값과 같다). 출처별로 `anthropic-skills` 10,211자(17개), 접두 없는 프로젝트·사용자·내장 9,904자,
+`slack` 3,712자(13개), `claude-security` 999자, `cowork-plugin-management` 725자(2개), `coderabbit` 468자,
+`frontend-design` 240자, `claude-hud` 203자였다. 그래서 셋을 프로젝트 설정(`.claude/settings.json`)으로 끄려 했고, 새로
+연 앱 세션의 목록에서 빠진 것은 `slack` 하나였다(아래 "잰 것"). 먹지 않은 두 설정은 두지 않는다. 남겨 두면 읽는 쪽이
+이미 꺼졌다고 읽는다. 아래에서 "원문"이라 적은 공식 문서의 문장은 2026-10-20에 `https://code.claude.com/docs/en/<쪽>.md`를
+내려받아 손으로 대 봤다.
+
+- **`slack`을 끈다.** 위 본문은 앞으로 쓸 것으로 보고 두었다. 그 뒤로 이 저장소의 세션은 Slack 커넥터를 인증하지
+  않았고(그 세션이 시작될 때 `plugin:slack:slack`이 인증 전이라고 떴다), 사용자가 끄기를 골랐다. 프로젝트 설정의
+  `false`가 사용자 설정의 `true`를 이기는 것은 위 근거 "플러그인"의 문서 문장이다.
+- **`cowork-plugin-management`는 끄지 못한다.** `claude plugin list`가 이 플러그인을 claude.ai에서 동기화된 플러그인
+  (`@synced`, 경로 `~/.claude/plugins/synced/` 아래)으로 보였다. 위 본문이 사용자 설정의 `enabledPlugins`에서 찾지
+  못한 까닭이다. 문서는 커밋하는 프로젝트 설정에 `"이름@synced": false`를 두면 그 프로젝트에서 빠진다고 적지만(원문,
+  https://code.claude.com/docs/en/plugins/loading), 그 줄을 둔 앱 세션의 목록에 두 항목이 남았다. 워크트리와 주
+  체크아웃의 `.claude/settings.local.json`에는 `enabledPlugins`가 없어 개인 설정 파일이 다시 켠 것은 아니다. 남은
+  해석은 앱이 이 플러그인을 스스로 넘기는 길이다. 문서는 데스크톱 앱이 claude.ai에서 동기화된 플러그인을 스스로
+  관리한다고 적지만(원문, https://code.claude.com/docs/en/settings-reference 의 `disableSideloadFlags`), 어떤
+  플러그인 ID로 넘기는지는 적지 않았고 확인하지 못했다.
+- **`anthropic-skills:*`는 끄지 못한다.** claude.ai 계정에서 동기화된 스킬(`~/.claude/skills/synced/` 아래 폴더 셋에
+  같은 이름으로 13개씩)과 데스크톱 앱이 따로 싣는 스킬 넷(`consolidate-memory`·`explain-usage`·`schedule`·`setup-claude`)이
+  이 이름 공간을 쓴다. `skillOverrides`에 목록의 이름 그대로 `"anthropic-skills:<이름>": "off"`를 열여섯 적은 앱 세션에서
+  17개가 모두 남았고, 같은 세션에서 같은 방식으로 적은 프로젝트 스킬(`grilling`)과 사용자 스킬(`jira-*`)은 빠졌다.
+  문서는 `skillOverrides`가 플러그인 스킬에 먹지 않는다고 적고, 데스크톱 앱이 동기화된 스킬을 세션에 플러그인으로
+  넘긴다고 적는다(원문, https://code.claude.com/docs/en/skills). 둘을 이으면 결과가 설명되지만 문서가 그 연결을 적지는
+  않았다(어림). 문서가 적은 다른 끄는 길은 이 저장소가 커밋하는 프로젝트 설정으로 쓸 수 없거나, 재지 않았다. 계정 전체에
+  닿는 claude.ai의 스킬 설정과 데스크톱 앱의 Customize(원문, skills), 관리형 설정에만 두는 `disableSideloadFlags`(원문,
+  settings-reference)는 이 저장소의 결정이 아니다. 플러그인 스킬은 `/plugin`으로 다루라는 문장(원문, skills)과 부모
+  프로세스가 넘긴 플러그인을 설정 파일에서 `"<이름>@inline": false`로 끈다는 문장(원문, plugins/loading)은 있지만,
+  앱이 이 이름 공간을 어떤 플러그인 ID로 넘기는지 확인하지 못해 그 키를 적어 재지 않았다.
+- **권한 거부 규칙은 CLI 세션의 목록에서 프로젝트 스킬을 빼지 못했다.** MCP 서버를 프로젝트 설정에서 끄는 것처럼 스킬을
+  끄는 길로 사용자가 물었다. `permissions.deny`의 `Skill(이름)`은 호출만 막는다. 범위를 둔 거부 규칙은 도구를 남기고 맞는
+  호출만 막는다는 것이 공식 permissions 문서의 문장이고(원문을 저장해 읽었다), CLI 세션에서 `Skill(grilling)`·`Skill(retro)`을
+  거부해도 두 항목이 설명과 함께 목록에 남았다. 같은 설정에서 Skill 도구로 `grilling`을 부르자
+  "Skill execution blocked by permission rules"로 막혀, 규칙은 읽혔다
+  (`.scratch/token-usage/probes/skill_listing_deny.py`, claude 2.1.302). 앱 세션과 `anthropic-skills:*`에는 재지
+  않았다.
+
+**잰 것.** 줄어드는 것은 `slack` 3,712자로, 위 세션의 첫 목록의 14%다. 근거 "세션 컨텍스트의 구성"의 무게(스킬 목록
+첨부 12.4%)에 곱하면 메인 세션이 읽는 양의 약 2%다(기간이 다른 두 측정을 곱한 어림이다). 셋이 모두 먹었다면 13,793자
+(52%), 약 6%였다.
+
+- 데스크톱 앱 세션(`5682dc15`, claude 2.1.299): 세 설정과 측정용 임시 설정(`grilling` off,
+  `frontend-design@claude-plugins-official` false, `skillListingBudgetFraction` 0.003)을 둔 워크트리에서 사용자가 새로
+  열었다. 첫 목록에서 `slack`·`frontend-design`·`grilling`·`jira-*`는 빠졌고 `cowork-plugin-management` 2개와
+  `anthropic-skills` 17개는 남았다(`skill_listing_entries.py`). 끈 항목은 이름까지 빠지고 예산에 밀린 항목은 이름이
+  남아(같은 프로브로 `names` 57개와 본문 항목 57개가 같다) 한 목록으로 둘을 갈랐다. 임시 설정은 측정 뒤 되돌렸다.
+- 세션 도중의 변경은 근거로 쓰지 않는다. 설정을 바꾼 세션(`1d37e692`)의 기록에는 첫 목록 뒤에 목록이 세 번 더
+  실렸다(`skill_listing_entries.py`). 03:02 UTC의 목록은 22,749자, `names` 59개로 첫 목록보다 13개 적었고 본문에
+  `slack:` 줄이 없었다(손으로 봤다). 그 뒤의 변경과 압축(03:08)을 지나 03:47에 다시 실린 목록도 같은 22,749자,
+  `names` 59개였다. 다시 실린 까닭(설정을 다시 읽었는지, 압축 뒤에 다시 붙였는지)은 가를 수 없다.
+- CLI 세션(`.scratch/token-usage/probes/skill_listing_cli.py`, claude 2.1.302)은 측정이 되지 않았다. 설정 출처를
+  `project,local`로 좁힌 대조군에도 `anthropic-skills:*`가 하나도 실리지 않았다. 출처에 `user`를 넣으면 이 PC의 사용자
+  설정 Stop 훅이 턴마다 Slack에 알림을 보내 그 갈래는 띄우지 않았다.
+
+고르지 않은 것은 넷이다.
+
+- **동기화를 끈다(`syncClaudeAiSkills: false`).** 커밋하는 프로젝트 설정의 `false`는 무시된다(공식 settings 문서의 예외
+  표, 원문을 저장해 읽었다). 개인 파일(`.claude/settings.local.json`)의 `false`는 받아들여져, 이미 받은 동기화 스킬을
+  싣지 않고 새로 내려받지도 않는다. 받은 스킬을 `~/.claude/skills/.trash/`로 옮긴다고 문서가 적은 것은 사용자 설정과
+  관리형 설정의 `false`다(원문, settings-reference). 그래서 개인 파일에 두면 이 프로젝트 폴더의 세션에서만 빠질 것으로
+  본다(어림). 그래도 고르지 않는다. 커밋하지 않는 파일이라 저장소의 결정으로 둘 수 없다. 데스크톱 문서는 로컬 세션도
+  계정에서 켠 스킬을 싣고 예외는 관리형 설정 `disableSideloadFlags`뿐이라고 적어(원문, desktop) 앱 세션에서 이 키가
+  듣는지 모른다. 들어도 남기려던 `built-in-browser`까지 함께 빠진다. 앱 세션에서 재지 않았다.
+- **번들 스킬을 끈다(`disableBundledSkills`).** 번들 스킬과 워크플로를 한꺼번에 끈다(원문, settings-reference).
+  `bug-perf-review`가 보안 축을 넘기는 내장 `/security-review`도 모델에게서 사라진다. 원문은 번들 스킬은 지우고
+  `/init` 같은 내장 명령은 모델에게 숨긴다고 적는다.
+- **스킬 목록 예산을 낮춘다(`skillListingBudgetFraction`).** 이 저장소에서는 예산이 목록 크기를 정하지 않았다. 플러그인
+  넷을 끄는 변경(PR #268, 2026-10-16 05:03 UTC 병합)의 앞뒤가 섞인 일간 보고서 2026-10-16(지역 시간대 +09:00의 날짜)의
+  첫 목록 중앙값은 28,990자였고, 병합 뒤의 날짜인 2026-10-17에는 25,737자였다. 위 세션의 첫 목록에는 설명 없이 이름만
+  남은 항목이 없었다(`skill_listing_entries.py`). 예산을 낮추면 적게 부른 스킬의 설명부터 빠진다. CLI 세션에서 비율을 낮춰 봤다
+  (`.scratch/token-usage/probes/skill_listing_budget.py`, haiku, claude 2.1.302). 프로젝트·내장 27개(8,822자)의
+  목록에서 기본(0.01)과 0.005는 그대로였고, 0.0025에서 11개, 0.001에서 13개가 설명 없이 이름만 남았다. 설명이 중간에
+  잘린 항목은 없었다. 0.0025에서 설명을 지킨 프로젝트 스킬은 `next-session`과 `code-review` 둘이고, 측정한 날 이 PC의
+  사용 횟수(`~/.claude.json`의 `skillUsage`, 손으로 찍었다)로 1·2위였다. 그때 6회였던 `diagnosing-bugs`는 0.0025에서
+  빠졌다. 내장 스킬 열넷(`dataviz`, `artifact-*` 등)은 0.001에서도 설명을 지켰고, 같은 내장인 `init`과
+  `security-review`는 빠졌다. 공식 문서도 목록이 예산을 넘으면 가장 적게 부른 스킬의 설명부터 뺀다고 적는다(원문,
+  settings-reference와 skills). 위 앱 세션(`5682dc15`)에 0.003을 넣자 첫 목록이 8,676자로 줄고 57개 가운데 38개가
+  이름만 남았다(`skill_listing_entries.py`). 설명을 지킨 프로젝트 스킬은
+  `code-review`·`next-session`·`open-session`·`tidy-checkouts` 넷이고, 스스로 돌 계기를 설명에 둔 프로젝트 스킬
+  `retro`·`writing-for-agents`·`diagnosing-bugs`·`tdd`와 사용자 레벨 스킬 `git-*`의 설명이 빠졌다. 앱에서 넣어 본
+  비율은 0.003 하나다. 사용 횟수는 이 PC의 기록이라 새로 더한 스킬은 부르기 전부터 설명을 잃는다.
+  설명이 빠져도 이름은 남아, 지침과 다른 스킬과 훅이 이름을 들어 부르게 한 길은 그대로다. 0.003에서 설명이 빠진
+  프로젝트 스킬 가운데 `diagnosing-bugs`는 `CLAUDE.md` 작업 규약 6이, `tdd`는 `implement`가, `domain-modeling`은
+  `grill-with-docs`가, `writing-for-agents`는 `retro`가 이름을 들어 부르게 한다. `grill-with-docs`는 `next-session`이
+  설계 인터뷰의 시작 프롬프트로 적고, `retro`는 단계를 닫는 일지 편집에 `hook_journal_retro`가 계기를 넣는다. 사용자
+  레벨 스킬 가운데 `git-branch`·`git-pr`·`git-pr-feedback`·`git-pr-merge`는 `next-session`과 운영 문서
+  (`docs/constitution/operations.md`) 등이 슬래시 명령으로 든다(`CLAUDE.md`, `.claude/skills`, `.claude/agents`,
+  `.claude/rules`, `tools/hook_*.py`, 운영 문서에서 이름을 찾아 손으로 봤다). 잃는 것은 설명에만 적힌 계기다. 사용자의 말에서 시작하는 계기(`diagnosing-bugs`의 "debug this", `git-pr`의
+  "PR 만들어줘", `retro`의 "마무리를 말할 때"), `retro` 밖에서 스킬이나 `CLAUDE.md`를 고칠 때의 `writing-for-agents`,
+  남기려던 `anthropic-skills:built-in-browser`의 "Read this skill before the first step that uses the built-in browser"가
+  그것이다. 공식 문서는 설명이 빠진 스킬도 부를 수는 있지만 모델이 스스로 고를 가능성이 낮아진다고 적는다(원문,
+  settings-reference). 예산을 낮추는 대신 고른 항목만 `skillOverrides`의 `"name-only"`로 설명 없이 싣는 길도 문서에
+  있다(원문, skills). `anthropic-skills:*`에는 같은 키의 `"off"`가 먹지 않아 `"name-only"`도 먹지 않을 것으로 보고(어림)
+  재지 않았다. 그래서 이번에는 고르지 않고, 앱 세션에서 0.003보다 순한 비율 몇을 재 잃는 계기와 줄어드는 양을
+  견준 뒤 정한다(사용자 결정, 일지 2026-10-20-17). 프로젝트·사용자 스킬 몇을 `"name-only"`로 두는 길도 그 측정에서
+  함께 견준다.
+- **동기화된 스킬을 claude.ai에서 하나씩 끈다.** 위 `anthropic-skills:*` 항목이 적은, 문서에 있는 하나씩 끄는 길이다.
+  claude.ai 웹과 이 PC의 다른 프로젝트까지 계정 전체에 닿고, `pdf`와 `xlsx`는 늘 동기화된다(원문, skills). 데스크톱 앱이
+  따로 싣는 넷만 골라 끄는 길은 문서에서 찾지 못했다.
+
+이 이력은 2026-10-20에 사용자가 승인했다.
+
+### 2026-10-20 스킬 목록 예산을 0.006으로 낮춘다
+
+위 이력이 고르지 않고 미룬 "스킬 목록 예산을 낮춘다"를 앱 세션에서 재 골랐다. 프로젝트 설정에
+`"skillListingBudgetFraction": 0.006`을 둔다. 목록이 예산을 넘으면 적게 부른 스킬부터 설명을 빼고 이름만 남기므로
+(원문, settings-reference와 skills), 이 값에서는 플러그인·계정 스킬 열셋만 설명을 잃고 프로젝트·사용자·내장 스킬은
+설명을 모두 지킨다(아래 표). `skillOverrides`의 `"name-only"`는 쓰지 않는다. 고른 것은 사용자다(일지 2026-10-20-26).
+
+**잰 것.** slack을 끈 설정(위 이력)에 아래 한 가지씩만 바꿔 둔 워크트리에서 앱 세션을 새로 열고, 각 세션의 첫 모델 호출
+전 목록을 `.scratch/token-usage/probes/skill_listing_entries.py`로 읽었다. 프로브는 설정을 읽지 않는다. 세션과 설정의
+짝은 바꾼 차례와 각 세션의 첫 프롬프트가 적은 설정으로 손으로 맞췄다. 다섯 세션 모두 claude 2.1.299, 모델
+`claude-opus-5-5`이고 `names`는 59개로 본문 항목 수와 같았다(예산이 항목을 통째로 빼지 않았다).
+
+| 설정 | 첫 목록 | 기본값 대비 | 설명 없이 이름만 남은 항목 |
+|---|---|---|---|
+| 기본값(키 없음) | 22,750자 | 0 | 0개 |
+| 0.006 | 17,030자 | −25% | 13개. `anthropic-skills` 일곱(`google-workspace`·`import-memory`·`morning`·`pdf`·`pptx`·`skill-creator`·`xlsx`), `cowork-plugin-management` 둘, `claude-security:claude-security`, `coderabbit:autofix`·`coderabbit:code-review`, `frontend-design:frontend-design` |
+| 0.005 | 14,018자 | −38% | 17개. 0.006의 13개에서 `anthropic-skills:import-memory`를 빼고 `anthropic-skills`의 `computer-use`·`docs`·`docx`·`explain-usage`·`setup-claude`를 더한 것으로, 모두 플러그인·계정 스킬이다 |
+| 0.004 | 11,198자 | −51% | 27개. 사용자 레벨 `git-branch`와 프로젝트 스킬 `tdd`가 든다 |
+| 기본값 + 여덟 개 `"name-only"` | 21,247자 | −7% | 지정한 여덟(`grilling`·`grill-with-docs`·`domain-modeling`·`open-session`·`tidy-checkouts`·`git-branch`·`git-pr-feedback`·`git-pr-merge`) |
+
+프로젝트·사용자·내장 스킬의 몫은 기본값·0.006·0.005에서 모두 9,904자로 같았고 0.004에서 9,514자였다. 남기려던
+`anthropic-skills:built-in-browser`는 0.004까지 설명을 지켰다. `"name-only"`의 여덟은 설명을 잃어도 다른 길이 남는
+것으로 골랐다. 여덟 모두 `CLAUDE.md`, `.claude/skills`, `.claude/agents`, `.claude/rules`, `docs/constitution`,
+`tools/hook_*.py` 가운데 제 폴더 밖의 한 곳 이상이 이름을 든다(스크래치 스크립트로 세어 손으로 봤다).
+
+**잃는 계기.** 설명이 빠져도 이름은 남아 사용자가 이름으로 부르는 길은 그대로이고, 잃는 것은 설명에만 적힌 계기다(위
+이력). 0.006에서 설명을 잃는 열셋은 위 여섯 자리에서 이름이 한 번도 나오지 않아(손으로 grep해 봤다) 하네스가 이름을
+들어 부르는 길도 없다. 그래서 그 계기는 통째로 사라진다. 열셋의 계기와 이 저장소에서 그것을 잃어도 되는지는 아래와 같다.
+계기는 목록에 실린 각 설명에서 옮겼다.
+
+- `pdf`·`pptx`·`xlsx`·`google-workspace`·`morning`·`import-memory`: 그 파일 형식이나 Google 파일, 아침 브리프, 다른 AI의
+  메모리를 다룰 때다. 이 저장소의 문서는 마크다운이고 이 작업들은 이 저장소의 일이 아니다.
+- `skill-creator`와 `cowork-plugin-management` 둘: 스킬을 만들거나 평가할 때, Cowork 플러그인을 만들거나 맞출 때다. 이
+  저장소에서 스킬을 고칠 때는 설명을 지키는 프로젝트 스킬 `writing-for-agents`를 쓰고(`retro`가 이름을 들어 부른다, 위
+  이력), Cowork 플러그인은 만들지 않는다.
+- `claude-security:claude-security`: 사용자가 Claude Security로 스캔을 청할 때다. 그 말이 곧 이름이라 이름으로 맞는다.
+  PR 직전 보안 축은 내장 `security-review`가 맡는다(위 "번들 스킬을 끈다").
+- `coderabbit:code-review`·`coderabbit:autofix`: 리뷰를 청하거나 모델이 리뷰가 필요하다고 볼 때, PR 리뷰 스레드를 반영할
+  때다. 이 저장소에서는 프로젝트 스킬 `code-review`, 서브에이전트 `coderabbit-review`, 사용자 스킬 `git-pr-feedback`이
+  그 일을 맡는다.
+- `frontend-design:frontend-design`: 새 UI를 짓거나 바꿀 때의 디자인 지침이다. 이 저장소에는 `web/`의 UI가 있어 이것은
+  실제로 잃는 계기다. 본문이 "앞으로 쓸 것으로 보고 둔" 셋(`frontend-design`, `claude-security`, `coderabbit`)은 켜진
+  채 남고 설명만 잃는다. UI 작업에서 필요하면 이름으로 부른다. 하네스(경로 규칙, 훅, 다른 스킬의 단계)가 이 스킬을
+  이름으로 부르게 할지, 디자인 시스템 규칙(`.claude/rules/web-design.md`)과 부딪칠 때 어느 쪽이 이기는지는 이 저장소가
+  쓰는 스킬마다 부르는 자리를 감사하는 뒤 작업에서 정한다(사용자 결정, 일지 2026-10-20-26).
+
+0.005에서 더 잃는 다섯 가운데 `docs`·`docx`는 문서를 만들어 달라는 말, `computer-use`는 데스크톱 앱을 조작해 달라는 말,
+`explain-usage`·`setup-claude`는 사용량 설명과 설정 안내를 청하는 말이 계기다. 모두 사용자의 말에서 시작하는 계기다.
+
+- **0.006을 고른 이유.** 줄어드는 5,720자는 근거 "세션 컨텍스트의 구성"의 무게(스킬 목록 첨부 12.4%)에 곱하면 메인
+  세션이 읽는 양의 약 3%다(기간이 다른 두 측정을 곱한 어림이다). 0.005는 3,012자를 더 줄이지만 사용자의 말에서 시작하는
+  계기 다섯을 더 잃고, 한 단계 아래인 0.004에서는 이미 프로젝트·사용자 스킬의 설명이 빠졌다. 빠지는 차례는 문서대로라면
+  적게 부른 스킬부터이지만 횟수만으로 정해지지는 않았다. `import-memory`는 0.006에서 이름만 남고 0.005에서는 설명을
+  지켰다(예산에 맞춰 남은 자리를 채우는 것으로 보인다, 어림). 그래서 스킬이 늘거나 쓰는 습관이 바뀌면 0.005가 프로젝트
+  스킬에 먼저 닿을 수 있다고 보고(어림), 그 경계에서 한 단계 더 떨어진 0.006을 골랐다.
+- **`"name-only"`를 고르지 않은 이유.** 먹는 것은 확인했지만(위 표) 프로젝트·사용자 스킬 전체가 9,904자라 줄어드는 양이
+  1,503자로 작고, 고른 여덟의 설명에 적힌 사용자의 말에서 시작하는 계기("grill", "PR 병합해줘")를 잃는다.
+- **남는 위험.** 새로 더한 스킬이나 오래 쓰지 않은 스킬은 설명을 먼저 잃을 수 있다. 비율이 문맥 창에 대한 것이라(원문,
+  settings-reference) 창이 작은 모델의 세션과 서브에이전트에서는 더 많이 빠질 것으로 보이지만, 줄어든 목록의 글자 수를
+  비율로 나누면 앞의 CLI haiku 세션(0.0025에서 7,361자, claude 2.1.302, 위 이력의 `skill_listing_budget.py`)과 이 앱
+  세션(0.005에서 14,018자)이 약 294만과 280만으로 비슷해 그 어림을 받쳐 주지 않는다. 버전과 목록 구성이 달라 이것도
+  어림이고, 서브에이전트와 다른 모델의 세션은 재지 않았다. 프로젝트 스킬이 이름만 남은 것을 알아차리는 장치는 없다.
+  다른 일로 첫 목록을 재다가 그것을 보면 이 값을 다시 잰다.
+
+이 이력은 2026-10-20에 사용자가 승인했다.
+
+### 2026-10-20 하네스가 스킬을 부르는 자리를 감사하고, 설명에만 기대던 계기를 하네스로 옮긴다
+
+위 이력의 "잃는 계기"가 뒤 작업으로 넘긴 감사를 했다. 이 저장소가 쓰는 스킬(프로젝트 열여섯, 사용자 레벨 `git-*` 다섯, 플러그인, 하네스에 이름이 나오는 내장 스킬)과 서브에이전트마다, 하네스(`CLAUDE.md`, `.claude/skills`, `.claude/agents`, `.claude/rules`, `docs/constitution`, `tools/hook_*.py`, `.claude/settings.json`)가 그 이름을 들어 부르게 하는 자리를 찾았다. 서브에이전트 하나가 추적 파일에서 이름을 `git grep`으로 찾고, 맞은 줄마다 앞뒤를 열어 계기와 언급을 갈랐다(코드를 읽었다). 아래에서 정한 것은 표의 `coderabbit:code-review` 행(묻지 않고 그대로 두었다) 말고는 모두 설계 인터뷰에서 사용자가 골랐다(일지 2026-10-20-35).
+
+**계기와 언급.** 스킬이 불리는 길은 셋이다. 사용자의 말이 그 이름이나 설명의 말과 맞을 때, 모델이 설명을 보고 상황에 맞다고 스스로 고를 때(설명이 적은 계기), 하네스가 이름을 들어 지금 부르라고 시킬 때(하네스의 계기)다(`CONTEXT.md` 계기). 이름만 드는 줄(경고, 순서 설명, 인용)은 언급이다. 이 이력에서 꾸밈 없이 쓴 계기는 하네스의 계기다. 설명이 빠지면 모델이 스스로 고르는 길이 사라지고, 사용자의 말은 이름이 맞을 때만 남으며, 하네스의 계기는 설명과 무관하게 남는다. 그래서 감사는 모델이 스스로 고르는 길로만 불리던 자리 가운데 계기가 덮지 않는 것을 찾았다.
+
+**계기가 덮지 않던 자리.** 일곱이었다.
+
+| 스킬 | 계기가 덮지 않던 자리 | 감사 때의 계기 | 정한 것 |
+|---|---|---|---|
+| `frontend-design:frontend-design` | 새 UI를 짓거나 바꿀 때 | 없음. 0.006에서 설명을 잃어 실제로 사라졌다 | 화면을 그리는 단계에서만 새 스킬 `/ui-design`이 부른다 |
+| `writing-for-agents` | `retro` 밖에서 스킬·규칙·`CLAUDE.md`를 고칠 때 | `retro`의 첫 단계 하나 | 새 경로 규칙 `.claude/rules/agent-docs.md` |
+| `domain-modeling` | 설계 인터뷰 밖에서 ADR을 쓰거나 용어를 다룰 때 | `grill-with-docs` 하나, `CLAUDE.md` 지도 표의 `CONTEXT.md` 행(약한 계기) | ADR 쪽만 `.claude/rules/adr.md`의 문단 |
+| `grill-with-docs` | 다음 작업 결정표 밖에서 새 기능이 시작될 때 | `next-session` 결정표 하나. 그 스킬을 부르려 할 때 설계 인터뷰가 맞는지 확인하게 하는 훅은 따로 있다 | `CLAUDE.md` 작업 규약 1의 문장 |
+| `next-session` | 작업을 마치지 못한 채 세션을 끊을 때 | 훅 둘과 운영 문서 하나. 모두 PR과 단계 경계다 | 설명에 맡긴다 |
+| `git-commit` | `git diff` 결과가 있을 때 | 없음 | 설명에 맡긴다 |
+| `coderabbit:code-review` | 모델이 리뷰가 필요하다고 볼 때 | 없음. 0.006에서 설명을 잃는다 | 그대로 둔다. 같은 일을 하는 프로젝트 `code-review`를 하네스의 다섯 자리가 부른다 |
+
+나머지 스킬은 계기가 있거나, 설명이 적은 계기가 사용자의 말뿐이었다. 사용자만 부르는 스킬(`implement`·`to-spec`·`to-tickets`)은 목록에 실리지 않지만, 결정표의 시작 프롬프트가 슬래시 명령으로 적으면 `open-session`의 `Convert-StartLine`이 그 줄을 `.claude/skills/<이름>/SKILL.md`를 읽어 따르라는 줄로 바꿔 새 세션에 보낸다(코드를 읽었다, `tools/open_session.ps1`). 이 길은 목록과 무관하게 돈다. 그 파일이 저장소에 있을 때만 바꾸므로 플러그인 스킬에는 쓸 수 없다. 경로 규칙이 스킬을 부르던 선례는 `.claude/rules/tools.md`의 `tidy-checkouts` 한 줄이었고, 쓴 파일의 경로를 보고 계기를 넣는 훅의 선례는 `hook_scratch_probe_rule`이다. 그 훅은 세션·에이전트마다 한 번만 알린다. `hook_journal_retro`도 일지 경로에서 울리지만, 경로만 보던 동안 인용 하나를 고친 Edit마다 울려 세션이 그 계기를 무시하게 되자 본문 조건으로 좁혔다(그 독스트링을 읽었다).
+
+**앞 이력의 근거를 바로잡는다.** 앞의 2026-10-20 이력 "slack만 끄고 데스크톱 앱이 계정에서 싣는 스킬은 프로젝트 설정으로 끄지 못한다고 적는다"는 `git-branch`·`git-pr`·`git-pr-feedback`·`git-pr-merge`를 `next-session`과 운영 문서 등이 슬래시 명령으로 든다며, 설명이 빠져도 남는 "이름을 들어 부르게 한 길"에 넣었다. 감사해 보니 계기는 `git-pr-feedback`·`git-pr-merge`뿐이었다. `git-branch`는 `next-session`이 그 스킬의 `git checkout main`이 워크트리에서 실패하거나 main을 가져간다고 적은 경고로만, `git-pr`은 `implement`·`to-tickets`와 운영 문서의 서술(사람이 `/git-pr`로 연다, 기능 하나의 순서)로만 나온다. 바로 위 이력이 `"name-only"` 후보 여덟을 "제 폴더 밖의 한 곳 이상이 이름을 든다"로 고른 것도 언급까지 센 것이라, 여덟 가운데 `git-branch`는 다른 길이 남지 않는다. 두 이력 모두 그 갈래(0.003, `"name-only"`)를 고르지 않아 결정은 바뀌지 않는다. 지난 이력은 기록이라 고치거나 포인터를 달지 않는다. `git-branch`와 `git-pr`은 설명이 적은 계기가 사용자의 말이라 그대로 둔다.
+
+**정한 것.**
+
+- **`frontend-design`은 화면을 그리는 단계에서만 부른다.** 디자인 시스템의 방향을 탐색하거나 다시 탐색할 때와, 기능마다 화면을 목업·와이어프레임으로 그릴 때다. `web/`의 코드를 고칠 때는 부르지 않는다. 확정된 디자인 파일을 코드로 옮기는 단계는 디자인 파일과 `.claude/rules/web-design.md`를 따른다. 그 규칙은 컴포넌트 코드(`paths`는 `web/packages/ui/**`와 `web/apps/*/components/**`)를 열 때 실린다. 이 스킬은 색과 글꼴의 토큰 체계를 새로 지으라고 해 확정된 디자인에서 벗어나게 할 수 있다.
+- **부딪치면 저장소 규칙이 이긴다.** 저장소 규칙은 `web-design.md`, 디자인 시스템의 토큰, `CONTEXT.md`의 용어다. 그 규칙이 정한 축(색·글꼴·토큰, 도구 이름의 고정폭, 그림자, 움직임, 화면 문구의 용어)은 그대로 따르고, `frontend-design`은 규칙이 비워 둔 축(새 화면의 배치, 문구 다듬기, 찍어 보고 고치기)에만 쓴다. 부딪치는 자리는 둘을 읽어 찾았다. 그 스킬은 색 네 개에서 여섯 개와 흔하지 않은 글꼴로 토큰 체계를 새로 짓게 하지만, 이 저장소의 토큰 값은 `theme.css` 한 자리에만 있다. 그 스킬은 작은 데이터 라벨의 고정폭 글꼴을 흔한 기본값으로 들지만, `web-design.md`는 도구 이름과 인자를 고정폭으로 보이게 한다. 그 스킬은 브리프가 시각 방향을 정하면 그대로 따르라고 적어(코드를 읽었다), 저장소 규칙을 브리프에 넣으면 저장소 규칙이 이길 것으로 본다(어림). 그 스킬이 흔한 기본값으로 든 것이 저장소 규칙에 있으면 바꾸지 않고, 부딪친 자리를 `.scratch/design-system/design/`의 목록 파일에 한 줄씩(어느 화면에서, 그 스킬이 무엇을 권했고, 저장소 규칙의 어느 줄을 따랐는지) 적는다. 디자인 시스템을 다시 탐색하는 세션은 그 폴더의 재탐색 프롬프트(`refresh-prompt.md`)에서 시작하므로, 그 프롬프트가 목록 파일을 가리켜 거기서 고칠지 본다.
+- **화면 디자인 절차를 프로젝트 스킬 `/ui-design`으로 만든다.** 그 스킬의 한 단계가 Skill 도구로 `frontend-design`을 부른다. 플러그인 스킬은 `Convert-StartLine`이 바꾸지 못해 지시문 첫 줄에 둘 수 없으므로, 저장소에 파일이 있는 프로젝트 스킬이 그것을 감싼다. 모델도 부를 수 있고, 단계 사이에서 넘어갈지를 사람에게 묻지 않는다. 사람은 디자인 방향과 확정할 화면만 고른다. 단계는 설치 확인, 디자인 시스템 아티팩트를 고칠 수 있는 계정인지 확인, 참고 디자인 조사, `frontend-design` 부르기(저장소 규칙을 브리프에 넣는다), Design 아티팩트를 만들어 그리기, 사람이 고르기, `.scratch/<기능>/design/`에 옮기고 README 표와 충돌 목록 채우기다. 그리는 길과 계정은 ADR 0025의 2026-10-20 이력이 정한다.
+- **계기 둘을 더한다.** `.scratch/<기능>/design/` 아래를 Write·Edit로 쓰면 훅이 세션·에이전트마다 한 번 `/ui-design`을 따르라고 알린다. 쓰기를 막지는 않는다(선례 `hook_scratch_probe_rule`). `next-session`의 다음 작업 결정표에 "화면 디자인" 줄을 더하고 시작 프롬프트를 `/ui-design <기능>`으로 둔다.
+- **`frontend-design`을 런북의 설치 목록에 넣는다.** `KICKOFF.md` 7단계의 LSP 플러그인 설치 옆에 사람 몫(허락)으로 `claude plugin install frontend-design@claude-plugins-official --scope project`를 더한다. 범위는 LSP 선례를 따라 프로젝트로 두어, 그 프로젝트가 이 플러그인을 쓴다는 것이 저장소 설정에 남는다. 설치한 세션에서 바로 쓰려면 사람이 `/reload-plugins`를 친다(공식 문서에서 읽었다). 단독 Claude Design이 닫히고 화면을 Claude Code가 그리므로 데스크톱 앱의 설치 안내는 넣지 않는다. `/ui-design`의 첫 단계도 설치를 보고, 없으면 허락을 받아 설치한다.
+- **`writing-for-agents`는 경로 규칙이 부른다.** `.claude/rules/agent-docs.md`의 `paths`는 `.claude/skills/**`, `.claude/agents/**`, `.claude/rules/**`, `CLAUDE.md`이고, 그 문서를 쓰거나 고치기 전에 그 스킬을 한 세션에 한 번 부르라고 적는다. Edit는 그 대화에서 먼저 Read를 요구하므로 고치는 세션에는 규칙이 실린다. `CLAUDE.md`는 세션을 시작할 때 지침으로 실리므로, 그것을 읽은 것으로 쳐서 Read 없이 Edit가 되거나 시작할 때 규칙까지 실리면 `paths`에서 빼기로 하고 쟀다. 둘 다 아니어서 남긴다(아래 "잰 것").
+- **`domain-modeling`은 `.claude/rules/adr.md`가 부른다.** ADR을 새로 쓰거나 이력을 더하기 전에 한 세션에 한 번 부르게 하고, 설계 인터뷰가 이미 불렀으면 다시 부르지 않는다. 인터뷰 밖에서 `CONTEXT.md`만 고치는 일은 지도 표의 약한 계기에 맡긴다.
+- **`grill-with-docs`는 `CLAUDE.md`가 부른다.** 작업 규약 1에, 다음 작업 지시문 없이 새 기능을 시작하는데 `.scratch/<slug>/`가 아직 없으면 그 전에 Skill 도구로 `grill-with-docs`를 불러 설계 인터뷰부터 한다는 문장을 더한다. 결정표 밖에서 사람이 새 기능을 꺼낸 세션에도 작업 규약 1은 실린다. 지시문으로 연 세션은 결정표가 정한 단계를 따르므로, 인터뷰를 마치고 명세 전인 세션(그 폴더는 `/to-spec`이 처음 만든다)이 인터뷰를 다시 열지 않는다.
+- **`next-session`의 "끊을 때"와 `git-commit`은 설명에 맡긴다.** 둘 다 0.006에서 설명이 남는다. 앞의 것은 끊는 순간을 하네스가 아는 자리가 Stop 훅뿐이고, Stop 훅이 모델에게 알리면 대화가 한 번 더 이어진다(`.claude/rules/tools.md`). 뒤의 것은 쓴 파일의 경로로 잡히지 않는다. 예산을 더 낮추면 이 둘이 먼저 설명이 적은 계기를 잃는다.
+
+**잰 것.** 모두 이 PC, claude 2.1.302, 모델 sonnet이다.
+
+- `.scratch/harness/probes/claude_md_edit_without_read.py`: 회차마다 새 임시 폴더에서 `claude -p --tools Edit`로 Read 없이 `CLAUDE.md`(세션을 시작할 때 실린다)와 `notes.md`(양성 대조)의 낱말 하나를 바꾸게 했다. 네 회차 모두 Edit가 "File has not been read yet. Read it first before writing to it."로 거부되었고 파일은 바뀌지 않았다(측정 4, 표지 없음 0). 세션을 시작할 때 실린 루트의 `CLAUDE.md`도 Read로 치지 않는다. 잰 것은 `claude -p`의 임시 폴더 루트에 둔 `CLAUDE.md`뿐이고, 데스크톱 앱 세션, 하위·상위 폴더의 `CLAUDE.md`, `@`로 임포트한 파일은 재지 않았다.
+- 카나리아 `.scratch/harness/probes/canary/agent_docs_rule.toml`: 스킬 파일과 `CLAUDE.md`를 Read로 연 실험군 여섯이 규칙의 제목과 스킬 이름을 옮겼고, `paths` 밖을 연 대조군 셋은 "없음"이었다(통과 9). 시작할 때 실린 `CLAUDE.md`는 이 규칙을 함께 싣지 않는다.
+- 카나리아 `adr_rule_domain_modeling.toml`(통과 4)과 `claude_md_grill_new_feature.toml`(통과 4, 대조군은 주 체크아웃 `30949cfc`)이 나머지 두 문장이 실리는 것을 보였다.
+- 재지 못한 것: 데스크톱 앱 세션과 서브에이전트에서 경로 규칙이 실리는지, Write로 처음 만드는 파일에 실리는지, Bash로 읽은 파일에 실리는지. 손으로 본 것은 이렇다. Write로 새 파일을 만들 때 실렸다는 기록이 claude 2.1.296에 있다(`docs/agents/issue-tracker.md` 프로브와 근거 절, 대기열 247). 이 PR의 셀프 리뷰에서는 데스크톱 앱의 서브에이전트가 Read로 스킬 파일을 열자 이 규칙이 실렸다. Bash로 읽은 파일은 `CLAUDE.md` 지도 표가 실리지 않는다고 적지만, 같은 셀프 리뷰에서 실린 때(본 세션이 `cat`으로 카나리아 명세를 읽자 `probes.md`, 서브에이전트가 `sed`로 읽자 `adr.md`·`tools.md`)와 실리지 않은 때(본 세션이 `sed`로 `tools/`의 파일)가 섞였다(일지 2026-10-20-35). 새 스킬을 Write로 만드는 세션에 이 규칙이 실리지 않으면 `writing-for-agents`의 설명에 기댄다.
+
+**고르지 않은 것.**
+
+- **`frontend-design`을 코드를 짤 때도 부른다.** 디자인 파일이 없는 작은 화면까지 덮지만, 확정된 디자인에서 벗어나 고칠 위험이 생기고 web 작업마다 그 스킬 본문 약 9KB가 더 실린다.
+- **부르지 않고 쓸 만한 원칙만 `web-design.md`에 옮긴다.** 그 스킬의 절차(계획, 브리프와 대조, 만들기, 찍어 보고 고치기)가 따라오지 않는다.
+- **부딪칠 때마다 사람에게 묻거나, 부딪친 자리를 남기지 않거나, 일지에 남긴다.** 묻는 안은 화면 작업 중간에 질문이 늘고, 남기지 않는 안은 디자인 규칙이 낡았다는 신호를 다시 볼 기회가 없다. 일지는 날짜순이라 다시 탐색하는 세션이 찾기 어렵다.
+- **절차 문서에 한 줄만 두거나, 디자인 폴더에 경로 규칙을 둔다.** 앞의 것은 그 절을 가리키는 하네스 자리가 없어 세션이 그 절을 읽을 때만 불린다. 뒤의 것은 디자인 파일을 여는 코드 세션에도 실리고, 새 디자인 파일을 Write로 처음 만들 때 실리는지는 재지 못했다(위 "잰 것").
+- **`/ui-design`을 사람만 부르게 한다.** 사용자는 단계를 넘어갈지 사람이 정하는 관문이 아니라, 모델도 부르는 워크플로 스킬로 두기를 골랐다.
+- **이번에는 `frontend-design`만 덮거나, 다섯 모두 덮는다.** 앞의 것은 교정 루프(새 지침은 같은 실수의 세 번째나 손상 뒤에 더한다)와 맞지만, 사용자는 프로젝트 설정의 스킬을 워크플로로 부르게 하려 했다. 뒤의 것은 Stop 훅이 대화를 한 번 더 잇고, `git-commit`은 하네스 어디에서도 이름이 나오지 않으며, 결정표 밖의 새 기능은 가를 신호가 없어 잘못 울릴 것으로 보았다(어림).
+- **감사 표를 살아 있는 문서로 두거나, 이름 검사를 pytest에 둔다.** 살아 있는 표는 같은 사실을 하네스 파일과 두 곳에 둔다. 이름 검사는 `git-branch`처럼 이름이 나와도 계기가 아닌 자리를 가르지 못한다. 그래서 위 표는 그날의 기록이고, 예산을 바꾸거나 스킬을 더할 때 다시 감사한다.
+
+**함께 고치는 것.** 이 이력의 PR은 `.claude/rules/agent-docs.md`, `.claude/rules/adr.md`, `CLAUDE.md` 작업 규약 1, `CONTEXT.md`(계기, 거꾸로 동기화), `.scratch/plan.md`, 위 탐침과 카나리아 명세 셋을 고친다. `/ui-design` 스킬, 디자인 폴더 훅과 그 시험, `next-session` 결정표의 줄, `docs/agents/issue-tracker.md`의 화면 디자인 절, `KICKOFF.md`와 `kickoff/prompting.md`의 디자인 절차·설치 목록·복사 목록, `.scratch/admin-style/design/screens-prompt.md`, 충돌 목록 파일과 그것을 가리키는 `.scratch/design-system/design/refresh-prompt.md`의 줄은 다음 PR이 새 세션에서 고친다. 훅과 스킬은 시험과 새 세션 확인이 들어 따로 한다.
+
+이 이력은 2026-10-20에 사용자가 승인했다.

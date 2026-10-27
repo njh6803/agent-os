@@ -1,0 +1,77 @@
+# 티켓 06(feature/06-hook-blocks-own-cards)의 세션 카드 훅 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/ticket-for-every-pr/probes/session_card_hook_mutations.toml
+# tools/hook_session_card.py 의 판정을 하나씩 깨서, 구현 뒤에 썼거나 첫 판부터 초록이던 시험이 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "출력을 ASCII 이스케이프 없이 낸다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "ASCII"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_session_card.py"
+old = '''                "permissionDecisionReason": REASON,
+            }
+        }
+    )'''
+new = '''                "permissionDecisionReason": REASON,
+            }
+        },
+        ensure_ascii=False,
+    )'''
+
+[[mutation]]
+name = "tool_input 이 객체인지 보지 않는다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "tool_input이_객체가_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_session_card.py"
+old = '''    if not isinstance(tool_input, dict):
+        return None'''
+new = '''    if tool_input is None:
+        return None'''
+
+[[mutation]]
+name = "최상위가 객체인지 보지 않는다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "최상위가_객체가_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_session_card.py"
+old = '''    if not isinstance(payload, dict):
+        return None'''
+new = '''    if payload is None:
+        return None'''
+
+[[mutation]]
+name = "JSON 이 아닌 입력에서 예외를 던진다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "JSON이_아니면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_session_card.py"
+old = '''    except ValueError:
+        return None'''
+new = '''    except KeyError:
+        return None'''
+
+[[mutation]]
+name = "initiation 이 있으면 무엇이든 막는다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "사용자가_시킨_카드는 or 사용자에게_묻는_카드는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_session_card.py"
+old = '''    if tool_input.get("initiation") != BLOCKED_INITIATION:'''
+new = '''    if tool_input.get("initiation") is None:'''
+
+[[mutation]]
+name = "매처를 __start_session 으로 끝나는 모든 도구로 넓힌다"
+tests = ["tests/tools/test_hook_session_card.py", "-k", "다른_세션_도구와"]
+expect = "red"
+
+[[mutation.edit]]
+file = ".claude/settings.json"
+old = '''        "matcher": "mcp__ccd_session__start_session",'''
+new = '''        "matcher": ".*__start_session",'''

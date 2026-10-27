@@ -1,6 +1,7 @@
 // 판정자(eslint.config.mjs)의 변이 테스트. 원칙 III 의 TS 판정자(ADR 0020)와 web 의 층 경계(ADR 0021).
 //
-// 위반을 담은 코드는 이 테스트가 web/ 아래 임시 트리에 쓰고 끝나면 지운다. 커밋한 파일에 위반을 두면 그
+// 위반을 담은 코드는 이 테스트가 web/ 아래 임시 트리에 쓰고 끝나면 지운다. 앞 실행이 끝나기 전에 멈춰 남긴 트리는
+// 시작할 때 지운다(tools/judge-trees.ts). 커밋한 파일에 위반을 두면 그
 // 파일을 판정에서 빼는 목록이 생긴다(ADR 0013 이 경계한 모양).
 //
 // 임시 트리는 워크스페이스의 자리(apps/<이름>/…, packages/<이름>/…)를 흉내 내고, 앱과 패키지마다 기준
@@ -9,11 +10,12 @@
 // 실측). 그래서 사례마다 "빨갛다"가 아니라 기대한 규칙이 보고됐는지를 본다.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { ESLint, type Linter } from "eslint";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { GENERATED } from "./tools/generate-api-client.ts";
+import { makeJudgeTree, removeLeftoverJudgeTrees } from "./tools/judge-trees.ts";
 
 const WEB = import.meta.dirname;
 const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
@@ -89,22 +91,48 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
   "apps/admin/components/organisms/Panel.ts":
     'import { 라벨 } from "../atoms/Label";\n\nexport const 판 = 라벨;\n',
-  "apps/admin/components/organisms/DeepApi.ts":
+  // organisms 는 요청 함수가 든 api 도메인과 hooks/queries 를 부르지 않으므로 barrel 의 판정은 부를 수 있는 pages 에서 잰다.
+  "apps/admin/components/pages/DeepApi.ts":
     'import { 실행_목록 } from "../../api/runs/listRuns";\n\nexport const 깊이 = 실행_목록;\n',
-  "apps/admin/components/organisms/DeepQuery.ts":
+  "apps/admin/components/pages/DeepQuery.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs/useRuns";\n\nexport const 깊이 = 실행_훅;\n',
+  "apps/admin/components/organisms/Query.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
+  "apps/admin/components/organisms/Store.ts":
+    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+  "apps/admin/components/organisms/InlineType.ts":
+    'import { type 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+  "apps/admin/components/organisms/TypeOnly.ts":
+    'import type { 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+  "apps/admin/components/templates/Query.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
+  "apps/admin/components/templates/Runs.ts":
+    'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
+  "apps/admin/components/molecules/Store.ts":
+    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+  "apps/admin/components/pages/Connected.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\nimport { 토큰 } from "../../stores/tokens";\n\nexport const 연결 = [실행_훅, 토큰];\n',
   "apps/admin/components/organisms/DeepType.ts":
     'import { 실행_종류 } from "../../types/run/kinds";\n\nexport const 깊이 = 실행_종류;\n',
   "apps/admin/components/organisms/Runs.ts":
+    'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
+  "apps/admin/components/organisms/RunsType.ts":
+    'import type { 실행_목록 } from "../../api/runs";\n\nexport type 목록 = typeof 실행_목록;\n',
+  "apps/admin/components/organisms/Failure.ts":
+    'import { 풀이 } from "../../api/failure";\n\nexport const 실패 = 풀이;\n',
+  "apps/admin/components/pages/Runs.ts":
     'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
   "apps/admin/components/pages/Home.ts": "export const 홈 = 1;\n",
   "apps/admin/components/pages/Remote.ts":
     'import { 위젯 } from "../../../widget/lib/widget";\n\nexport const 원격 = 위젯;\n',
   "apps/admin/components/templates/Shell.ts": "export const 틀 = 1;\n",
+  "apps/admin/api/failure/index.ts": "export const 풀이 = 1;\n",
   "apps/admin/api/runs/index.ts": 'export { 실행_목록 } from "./listRuns";\n',
   "apps/admin/api/runs/listRuns.ts": "export const 실행_목록 = 1;\n",
   "apps/admin/hooks/queries/runs/index.ts": 'export { 실행_훅 } from "./useRuns";\n',
   "apps/admin/hooks/queries/runs/useRuns.ts": "export const 실행_훅 = 1;\n",
+  "apps/admin/stores/tokens.ts":
+    "export const 토큰 = 1;\n\nexport interface 알림 {\n  readonly 글: string;\n}\n",
   "apps/admin/types/run/index.ts": 'export { 실행_종류 } from "./kinds";\n',
   "apps/admin/types/run/kinds.ts": 'export const 실행_종류 = ["완료", "실패"] as const;\n',
   "apps/admin/app/page.ts":
@@ -249,12 +277,12 @@ const RED: readonly RedCase[] = [
   { name: "앱 사이의 import", path: "apps/admin/components/pages/Remote.ts", rule: BOUNDARIES },
   {
     name: "api 도메인의 barrel 을 거치지 않는 import",
-    path: "apps/admin/components/organisms/DeepApi.ts",
+    path: "apps/admin/components/pages/DeepApi.ts",
     rule: BOUNDARIES,
   },
   {
     name: "hooks/queries 도메인의 barrel 을 거치지 않는 import",
-    path: "apps/admin/components/organisms/DeepQuery.ts",
+    path: "apps/admin/components/pages/DeepQuery.ts",
     rule: BOUNDARIES,
   },
   {
@@ -293,6 +321,48 @@ const RED: readonly RedCase[] = [
     path: "apps/admin/components/molecules/Api.ts",
     rule: BOUNDARIES,
   },
+  {
+    name: "molecules 가 stores 를 import",
+    path: "apps/admin/components/molecules/Store.ts",
+    rule: BOUNDARIES,
+  },
+  // 서버 데이터와 토큰을 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). organisms 와 templates 는 props 로 받는다.
+  {
+    name: "organisms 가 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/organisms/Api.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 hooks/queries 를 barrel 로 import",
+    path: "apps/admin/components/organisms/Query.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 stores 를 import",
+    path: "apps/admin/components/organisms/Store.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    // verbatimModuleSyntax 에서 이 줄은 지워지지 않고 모듈을 싣는다. 타입 지정자만 든 것은 import type 뿐이다.
+    name: "organisms 가 같은 줄의 type 지정자로 stores 를 import",
+    path: "apps/admin/components/organisms/InlineType.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "templates 가 hooks/queries 를 barrel 로 import",
+    path: "apps/admin/components/templates/Query.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 요청 함수가 든 api 도메인을 barrel 로 import",
+    path: "apps/admin/components/organisms/Runs.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "templates 가 요청 함수가 든 api 도메인을 barrel 로 import",
+    path: "apps/admin/components/templates/Runs.ts",
+    rule: BOUNDARIES,
+  },
   // 생성 클라이언트 패키지는 fetch 를 직접 부르지 않는다. openapi-fetch 가 부른다. 그래서 예외가 없다.
   {
     name: "생성 클라이언트 패키지 안의 전역 fetch",
@@ -319,12 +389,24 @@ const RED: readonly RedCase[] = [
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   { name: "as const", path: "apps/admin/lib/kinds.ts" },
   { name: "타입 테스트 파일의 설명 붙은 @ts-expect-error", path: "apps/admin/lib/kinds.test-d.ts" },
-  { name: "barrel 을 거친 import", path: "apps/admin/components/organisms/Runs.ts" },
+  { name: "barrel 을 거친 import", path: "apps/admin/components/pages/Runs.ts" },
   { name: "organisms 가 atoms 를 import", path: "apps/admin/components/organisms/Panel.ts" },
   { name: "app/ 이 pages 와 templates 를 import", path: "apps/admin/app/page.ts" },
   {
-    name: "organisms 가 생성 클라이언트 패키지를 import",
-    path: "apps/admin/components/organisms/Api.ts",
+    name: "organisms 가 stores 의 타입만 import type 으로 받는다",
+    path: "apps/admin/components/organisms/TypeOnly.ts",
+  },
+  {
+    name: "pages 가 hooks/queries 와 stores 를 import",
+    path: "apps/admin/components/pages/Connected.ts",
+  },
+  {
+    name: "organisms 가 api 도메인의 타입만 import type 으로 받는다",
+    path: "apps/admin/components/organisms/RunsType.ts",
+  },
+  {
+    name: "organisms 가 요청 함수가 없는 api/failure 를 import",
+    path: "apps/admin/components/organisms/Failure.ts",
   },
   {
     name: "디자인 시스템 패키지의 Icon.tsx 가 아이콘 모듈 선언을 경로로 참조",
@@ -336,7 +418,9 @@ let fixture = "";
 const messages = new Map<string, readonly Linter.LintMessage[]>();
 
 beforeAll(async () => {
-  fixture = mkdtempSync(join(WEB, "judge-"));
+  // 앞 실행이 afterAll 전에 멈춰 남긴 트리를 junction 을 따라가지 않고 지운다(tools/judge-trees.ts).
+  removeLeftoverJudgeTrees(WEB);
+  fixture = makeJudgeTree(WEB);
   for (const project of PROJECTS) {
     mkdirSync(join(fixture, project), { recursive: true });
     writeFileSync(join(fixture, project, "tsconfig.json"), projectTsconfig(project));
@@ -367,6 +451,12 @@ afterAll(() => {
 
 // 판정자 하나를 모든 테스트가 쓴다. 커밋된 파일의 자리에서 재는 테스트는 위반을 파일에 쓰지 않고 lintText 로 그 경로에 넣는다.
 const judge = new ESLint({ cwd: WEB });
+
+// TypeScript 프로그램을 새로 세우는 테스트(판정자가 관리 화면 앱의 자리를 처음 린트하는 것, verify 의 린트 명령을 자식으로
+// 띄우는 것)의 제한. 프로그램을 세우는 동안은 이벤트 루프가 막혀 vitest 의 제한이 테스트를 끊지 못하고, 끝난 뒤에야 넘김으로
+// 알린다. 그래서 60초 제한은 멈춘 테스트를 막지 못한 채 부하에서 빨갛기만 했다(pre-commit 에서 67·110·144초, ADR 0035 의
+// 2026-10-20 이력 "TypeScript 프로그램을 처음 세우는 eslint 테스트에 넉넉한 제한을 준다"). 자식 eslint 는 같은 값으로 끊는다.
+const PROGRAM_TIMEOUT_MS = 600_000;
 
 async function ruleIdsAt(path: string, source: string): Promise<(string | null)[]> {
   const [result] = await judge.lintText(source, { filePath: path });
@@ -416,7 +506,7 @@ describe("실제 생성 클라이언트 자리", () => {
   });
 
   test("생성 클라이언트 패키지의 실제 파일은 openapi-fetch 를 import 해도 아무것도 보고되지 않는다", async () => {
-    // 클라이언트 둘을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
+    // 클라이언트 셋을 만드는 유일한 자리라 판정자가 여기서만 그 import 를 푼다. 임시 트리에는 openapi-fetch 가
     // 설치되지 않아 타입 기반 규칙이 풀리지 않은 import 를 빨갛게 보므로 실제 자리에서 잰다.
     const path = join(API_CLIENT, "src", "clients.ts");
     const source = readFileSync(path, "utf-8");
@@ -436,7 +526,7 @@ describe("실제 생성 클라이언트 자리", () => {
 // 관리 화면 앱의 실제 자리. 임시 트리에는 next 와 react 가 설치되지 않고 tsconfig 도 손으로 지은 것이라, 실제
 // node_modules 와 Next 가 읽는 tsconfig 에 기대는 것은 여기서 잰다. 파일이 있는 자리만 쓴다. 없는 경로를 주면
 // 프로젝트 서비스가 그 파일을 찾지 못해 규칙이 아니라 파싱 오류가 난다(2026-09-30 실측, 일지 2026-09-30-01).
-describe("실제 관리 화면 자리", () => {
+describe("실제 관리 화면 자리", { timeout: PROGRAM_TIMEOUT_MS }, () => {
   const ADMIN = join(WEB, "apps", "admin");
   const LAYOUT = join(ADMIN, "app", "layout.tsx");
 
@@ -476,6 +566,29 @@ describe("실제 관리 화면 자리", () => {
     const source = 'export const 수: number = JSON.parse("1");\n';
 
     expect(await ruleIdsAt(path, source)).toEqual(["@typescript-eslint/no-unsafe-assignment"]);
+  });
+
+  // 서버 데이터를 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). 임시 트리에는 swr 가 설치되지 않아 여기서 잰다.
+  const ORGANISM = join(ADMIN, "components", "organisms", "PluginList.tsx");
+
+  test("organisms 가 swr 를 import 하면 빨갛다", async () => {
+    const source = 'import useSWR from "swr";\n\nexport const 읽기 = useSWR;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toContain(BOUNDARIES);
+  });
+
+  test("organisms 가 swr 의 서브패스를 import 하면 빨갛다", async () => {
+    const source =
+      'import useSWRInfinite from "swr/infinite";\n\nexport const 더_읽기 = useSWRInfinite;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toContain(BOUNDARIES);
+  });
+
+  test("organisms 가 swr 의 타입만 import type 으로 받는 것은 아무것도 보고되지 않는다", async () => {
+    const source =
+      'import type { SWRResponse } from "swr";\n\nexport type 읽은_것 = SWRResponse<number>;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toEqual([]);
   });
 
   test("앱의 요청 함수 자리에서 openapi-fetch 로 클라이언트를 직접 만들면 빨갛다", async () => {
@@ -536,7 +649,7 @@ describe("판정 범위", () => {
   });
 });
 
-describe("끄기 주석", () => {
+describe("끄기 주석", { timeout: PROGRAM_TIMEOUT_MS }, () => {
   test("끄기 주석이 끄려던 위반은 verify 의 린트 명령에서 그대로 보고되고 빨갛다", () => {
     const run = lintWithVerifyCommand(["cli/next-line.ts", "cli/whole-file.ts"]);
 
@@ -566,8 +679,11 @@ function lintWithVerifyCommand(paths: readonly string[]): {
   const run = spawnSync(
     process.execPath,
     [ESLINT_BIN, ...args, ...paths.map((path) => join(fixture, path))],
-    { cwd: WEB, encoding: "utf-8" },
+    { cwd: WEB, encoding: "utf-8", timeout: PROGRAM_TIMEOUT_MS },
   );
+  if (run.error !== undefined) {
+    throw run.error;
+  }
   return { status: run.status, stdout: run.stdout };
 }
 

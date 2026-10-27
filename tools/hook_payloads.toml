@@ -54,6 +54,19 @@ expect = "silent"
 note = "래퍼 `command` 의 -v 는 명령을 찾기만 하고 돌리지 않는다 — 찾을 이름 뒤에 .env 가 있어도 읽지 않는다"
 payload = { tool_name = "Bash", tool_input = { command = "command -v column .env" } }
 
+[[case]]
+hook = "hook_env_read.py"
+expect = "deny"
+contains = ["glob 에 맞는 gitignore 된 파일도 읽는다"]
+note = "Grep 도구의 중괄호 glob 의 한 갈래가 .env 에 닿는다(대기열 369. 마지막 / 뒤만 본 판이 지나보낸 꼴)"
+payload = { tool_name = "Grep", tool_input = { pattern = "KEY", path = "${ROOT}", glob = "{.claude/**,docs/*.md}" } }
+
+[[case]]
+hook = "hook_env_read.py"
+expect = "silent"
+note = "Grep 도구의 중괄호 glob 의 갈래가 모두 확장자 glob 이다"
+payload = { tool_name = "Grep", tool_input = { pattern = "KEY", path = "${ROOT}", glob = "{*.md,docs/*.md}" } }
+
 # --- hook_user_settings_read (PreToolUse Bash|PowerShell|Read|Grep) ---
 # 대상의 경로만 풀고 파일은 열지 않는다. 사용자 설정을 읽지 않고도 판정이 갈린다.
 [[case]]
@@ -483,6 +496,105 @@ expect = "silent"
 note = "저장소의 프로브 — rules 의 paths 가 이미 싣는다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
+# --- hook_ui_design (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_ui_design.py"
+expect = "context"
+note = "기능의 디자인 폴더에 화면 프롬프트를 쓴다(ADR 0033 이력 2026-10-20 의 계기)"
+contains = ["/ui-design admin-style"]
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\.scratch\\admin-style\\design\\screens-prompt.md", content = "# admin-style 화면 프롬프트\n" } }
+
+[[case]]
+hook = "hook_ui_design.py"
+expect = "silent"
+note = "같은 기능의 명세 — 디자인 폴더 밖이다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\admin-style\\spec.md", old_string = "a", new_string = "b" } }
+
+[[case]]
+hook = "hook_ui_design.py"
+expect = "silent"
+note = "기능 아래 다른 폴더의 design — .scratch 다음 둘째 토막이 아니다"
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\design\\x.toml", content = "a = 1\n" } }
+
+# --- hook_web_edit_check (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것과 들이기 브랜치의 침묵은 tests/tools 가 임시 폴더로 본다.
+# 경로는 임시 저장소(main 브랜치) 아래라 이 저장소의 브랜치에 기대를 걸지 않는다.
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "context"
+note = "디자인 토큰 CSS 를 고친 첫 쓰기(명세 계기 훅의 알리는 때)"
+contains = ["/sync-design-system 확인", "찾았을 때"]
+payload = { tool_name = "Edit", tool_input = { file_path = "${MAIN_REPO}/web/packages/ui/src/styles/theme.css", old_string = "a", new_string = "b" } }
+
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "context"
+note = "서브에이전트가 앱 화면을 쓴다 — 확인 대신 끝 보고에 적을 것"
+contains = ["끝 보고 첫머리"]
+payload = { tool_name = "Write", tool_input = { file_path = "${MAIN_REPO}/web/apps/admin/src/App.tsx", content = "export {};\n" }, agent_id = "a1", agent_type = "general-purpose" }
+
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "silent"
+note = "같은 저장소의 web/tools 스크립트 — 화면 코드가 아니다"
+payload = { tool_name = "Edit", tool_input = { file_path = "${MAIN_REPO}/web/tools/sync-design-system/check.ts", old_string = "a", new_string = "b" } }
+
+# --- hook_probe_conclusion (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_probe_conclusion.py"
+expect = "context"
+note = "프로브 README 의 결론 행을 고쳤다(대기열 346·421. 일지 2026-10-20-17 의 꼴)"
+contains = [
+    ".claude/rules/probes.md",
+    "양성 대조",
+    "근거의 종류",
+    "그 명령과 함께",
+    "결과를 본 뒤 판정 기준",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\README.md", old_string = "| a |", new_string = "| b |" } }
+
+[[case]]
+hook = "hook_probe_conclusion.py"
+expect = "silent"
+note = "probes 가 아닌 폴더의 README — 디자인 산출물 표"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\design-system\\design\\README.md", old_string = "| a |", new_string = "| b |" } }
+
+[[case]]
+hook = "hook_probe_conclusion.py"
+expect = "silent"
+note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
+
+# --- hook_journal_evidence (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "context"
+note = "일지의 단계 줄을 고쳤다(대기열 445. 일지 2026-10-23-27 의 꼴)"
+contains = [
+    "근거의 종류",
+    "그 명령과 함께",
+    "그 문서를 출처로",
+    "보지 않은 것을 본 것처럼",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\journal\\2026-10-23-27-admin-style-screens.md", old_string = "- 5단계", new_string = "- 5단계: 테마 메뉴에 hex가 보인다" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "같은 일에서 고친 디자인 표 — 일지 밖이다(대기열 445 의 둘째 사례)"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\admin-style\\design\\README.md", old_string = "| a |", new_string = "| b |" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "일지 폴더 옆의 ADR — docs 아래지만 journal 이 아니다"
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0036-x.md", content = "# x\n" } }
+
 # --- hook_measure_word (PostToolUse Write|Edit) ---
 # 발동은 대기열 227 의 사건 꼴(ADR 이력에 손으로 돌린 시간 비교를 "재니"로 적었다)이고, 침묵은 이 저장소 ADR 0014 의 실제 줄이다.
 [[case]]
@@ -498,21 +610,37 @@ expect = "silent"
 note = "ADR 0014 의 실제 줄 — 같은 줄에 \"쟀다\"와 그 프로브 경로를 든다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0014-http-channel-streams-the-run.md", old_string = "## 이력\n", new_string = "## 이력\n  취소가 결말로 바뀌고 태스크 그룹이 깨지지 않는 것을 쟀다(`.scratch/end-user-channel/probes/run_timeout.py`).\n" }, tool_response = { originalFile = "# 0014\n\n## 이력\n" } }
 
-# --- hook_edit_during_commit (PostToolUse Write|Edit|NotebookEdit) ---
+# --- hook_edit_during_commit (PreToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
 # 침묵은 같은 저장소의 주 체크아웃 파일이다. 커밋하는 워크트리가 그 폴더 아래에 있어도 다른 체크아웃이다.
 [[case]]
 hook = "hook_edit_during_commit.py"
-expect = "context"
-contains = ["git commit", "대기열 293"]
-note = "커밋이 도는 워크트리의 파일을 고쳤다(대기열 293. 일지 2026-10-16-21 은 이 꼴로 커밋이 실패했다)"
-payload = { hook_event_name = "PostToolUse", tool_name = "Edit", tool_input = { file_path = "${COMMITTING_REPO}/.claude/worktrees/side/tracked.txt", old_string = "x", new_string = "y" }, cwd = "${COMMITTING_REPO}/.claude/worktrees/side" }
+expect = "deny"
+contains = ["git commit", "대기열 293·412", "막았다"]
+note = "커밋이 도는 워크트리의 파일을 고치려 했다(대기열 412. 일지 2026-10-21-14 는 알림 뒤에도 이 꼴로 커밋이 실패했다)"
+payload = { hook_event_name = "PreToolUse", tool_name = "Edit", tool_input = { file_path = "${COMMITTING_REPO}/.claude/worktrees/side/tracked.txt", old_string = "x", new_string = "y" }, cwd = "${COMMITTING_REPO}/.claude/worktrees/side" }
 
 [[case]]
 hook = "hook_edit_during_commit.py"
 expect = "silent"
-note = "그 폴더 아래 워크트리에서 커밋이 도는 주 체크아웃의 파일을 썼다 — 이 저장소의 주 체크아웃과 .claude/worktrees 의 자리"
-payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${COMMITTING_REPO}/notes.md", content = "메모\n" }, cwd = "${COMMITTING_REPO}" }
+note = "그 폴더 아래 워크트리에서 커밋이 도는 주 체크아웃의 파일을 쓰려 했다 — 이 저장소의 주 체크아웃과 .claude/worktrees 의 자리"
+payload = { hook_event_name = "PreToolUse", tool_name = "Write", tool_input = { file_path = "${COMMITTING_REPO}/notes.md", content = "메모\n" }, cwd = "${COMMITTING_REPO}" }
+
+# --- hook_edit_during_mutate (PostToolUse Write|Edit|NotebookEdit) ---
+# `${MUTATING_REPO}` 의 git 디렉터리에는 러너 자신의 pid 로 도는 변이 도구의 표지가 있고,
+# `${STALE_MUTATING_REPO}` 에는 끝난 프로세스의 pid 로 남은 표지가 있다(강제로 끝나 지우지 못했다).
+[[case]]
+hook = "hook_edit_during_mutate.py"
+expect = "context"
+contains = ["tools/mutate.py", "대기열 358", "bash.exe"]
+note = "변이 도구가 도는 체크아웃의 파일을 고쳤다(대기열 358. TaskStop 뒤 남은 묶음이 다음 표를 돌던 17분)"
+payload = { hook_event_name = "PostToolUse", tool_name = "Edit", tool_input = { file_path = "${MUTATING_REPO}/m.py", old_string = "x", new_string = "y" }, cwd = "${MUTATING_REPO}" }
+
+[[case]]
+hook = "hook_edit_during_mutate.py"
+expect = "silent"
+note = "강제로 끝나 남은 표지의 체크아웃 — pid 가 죽어 도는 변이가 없다"
+payload = { hook_event_name = "PostToolUse", tool_name = "Write", tool_input = { file_path = "${STALE_MUTATING_REPO}/m.py", content = "x = 2\n" }, cwd = "${STALE_MUTATING_REPO}" }
 
 # --- hook_prompt_directive (UserPromptSubmit) ---
 [[case]]
@@ -569,9 +697,36 @@ payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서:
 
 [[case]]
 hook = "hook_prompt_directive.py"
-expect = "silent"
-note = "보통 프롬프트"
+expect = "context"
+contains = ["`.scratch/harness/issues/NNN-<slug>.md`", "`git branch -m", "`set_session_title` 에 `self` 와", "`tools/check_ticket.py`"]
+note = "사람이 보는 세션의 첫 턴 보통 프롬프트 — 티켓·브랜치·제목의 차례를 알린다(티켓 ticket-for-every-pr 05). 러너가 헤드리스 변수 둘을 벗겨 러너를 띄운 세션과 상관없다"
 payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "같은 보통 프롬프트지만 첫 턴이 아니다(assistant 기록이 있는 트랜스크립트)"
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${USED_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "헤드리스 세션(`claude -p` 의 `CLAUDE_CODE_SESSION_ATTENDED=0`)의 첫 턴 보통 프롬프트"
+env = { CLAUDE_CODE_SESSION_ATTENDED = "0" }
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "카나리아 도구가 표지 변수를 붙여 띄운 세션의 첫 턴 보통 프롬프트"
+env = { AGENT_OS_HEADLESS = "1" }
+payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
+
+[[case]]
+hook = "hook_prompt_directive.py"
+expect = "silent"
+note = "앱의 예약 작업이 연 세션의 첫 메시지 — 헤드리스로 보이지 않아 머리로 거른다. 2026-10-22 `morning-report-work` 세션 트랜스크립트의 첫 메시지 머리"
+payload = { prompt = "<scheduled-task name=\"morning-report-work\" file=\"C:\\Users\\User\\.claude\\scheduled-tasks\\morning-report-work\\SKILL.md\">\nThis is an automated run of a scheduled task. The user is not present to answer questions. For implementation details, execute autonomously without asking clarifying questions — make reasonable choices and note them in your output.", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 
 # --- hook_stop_korean (Stop) ---
 [[case]]
@@ -648,6 +803,25 @@ expect = "silent"
 note = "문자열 안의 gh pr merge"
 payload = { tool_name = "Bash", tool_input = { command = "echo 'gh pr merge 는 나중에'" } }
 
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "context"
+note = "gh api 로 pulls 에 POST 해 PR 을 열었다(대기열 408)"
+contains = ["여는"]
+payload = { tool_name = "Bash", tool_input = { command = "gh api \"repos/{owner}/{repo}/pulls\" -f title='한글 제목' -f head=b -f base=main" } }
+
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "silent"
+note = "gh api 로 pulls 를 읽기만 한다(GET)"
+payload = { tool_name = "Bash", tool_input = { command = "gh api repos/o/r/pulls -X GET -f state=open" } }
+
+[[case]]
+hook = "hook_pr_next_session.py"
+expect = "silent"
+note = "도움말만 보는 gh pr create(대기열 408)"
+payload = { tool_name = "Bash", tool_input = { command = "gh pr create --help" } }
+
 # --- hook_handoff (PostToolUse Bash|PowerShell|Skill|GitHub MCP 의 PR 만들기) ---
 # 페이로드는 `claude -p` 세션의 탐침 훅이 저장한 실제 입력이다(.scratch/token-usage/probes/handoff_reach.py 의 A, 일지 2026-10-16-63).
 # 경로(자리표시자), 세션 ID(사례마다 다른 이름), `duration_ms`(120) 를 바꾸고 `scratchpad_dir`·`prompt_id` 를 뺐다. 침묵은 같은 커밋 입력을 문턱 아래의 세션에서 받은 것이다. 표지 폴더는 빈 임시 폴더로 준다.
@@ -665,6 +839,21 @@ expect = "silent"
 note = "문턱 아래 세션의 같은 커밋"
 env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
 payload = { session_id = "handoff-case-under", transcript_path = "${UNDER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "git -C ${MAIN_REPO} -c user.name=p -c user.email=p@localhost commit --allow-empty -m probe", description = "Create empty probe commit" }, tool_response = { stdout = "[main 5d4aa98] probe", stderr = "", interrupted = false, isImage = false, noOutputExpected = false, gitOperation = { commit = { sha = "5d4aa98", kind = "committed", branch = "main" } } }, tool_use_id = "toolu_01WyGSabuuYqEkkNV9SxRDs2", duration_ms = 120 }
+
+[[case]]
+hook = "hook_handoff.py"
+expect = "context"
+note = "문턱 위 세션이 gh api 로 pulls 에 POST 했다 — PR 연 뒤(대기열 408). 두 사례 위 '문턱 위 세션의 커밋' 의 실제 입력(같은 트랜스크립트)에서 명령·설명·도구 응답(커밋의 gitOperation 을 뺐다)·세션 ID·tool_use_id 를 PR 열기에 맞게 고쳐 지었다"
+contains = ["`PR 연 뒤`", "인계의 계기"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-api", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "gh api repos/o/r/pulls --input body.json", description = "Open a pull request" }, tool_response = { stdout = "{}", stderr = "", interrupted = false, isImage = false, noOutputExpected = false }, tool_use_id = "toolu_handoff_api", duration_ms = 120 }
+
+[[case]]
+hook = "hook_handoff.py"
+expect = "silent"
+note = "문턱 위 세션이 gh api 로 pulls 를 읽기만 한다(GET) — 경계가 아니다"
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "handoff-case-api-get", transcript_path = "${OVER_HANDOFF_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PostToolUse", tool_name = "Bash", tool_input = { command = "gh api repos/o/r/pulls", description = "List pull requests" }, tool_response = { stdout = "[]", stderr = "", interrupted = false, isImage = false, noOutputExpected = false }, tool_use_id = "toolu_handoff_api_get", duration_ms = 120 }
 
 # --- hook_handoff_notice (Stop) ---
 # 페이로드는 위와 같은 세션의 탐침 훅이 저장한 Stop 입력이다. 세션 ID 를 위 사례와 달리 둬 위의 인계 표지에 걸리지 않게 한다.
@@ -836,6 +1025,65 @@ expect = "silent"
 note = "플러그인 접두의 같은 이름은 이 저장소의 스킬이 아니다(대기열 284)"
 payload = { tool_name = "Skill", tool_input = { skill = "some-plugin:grill-with-docs", args = "admin-foo" } }
 
+# --- hook_choice_facts (PreToolUse AskUserQuestion) ---
+# 입력은 SDK 제어 모드 탐침(`.scratch/harness/probes/choice_facts/probe.py` 의 E, claude 2.1.302)의 표지 훅이 받은 AskUserQuestion
+# 입력이다. 경로(자리표시자), 세션 ID(사례마다 다른 이름)를 바꾸고 `scratchpad_dir`·`prompt_id` 를 뺐다. 표지 폴더는 빈 임시 폴더로 준다.
+# 앞의 두 사례는 같은 세션의 같은 화면이라 차례에 기댄다(러너는 표의 차례로 돌고 한 바퀴에 빈 임시 폴더 하나를 쓴다). 첫째가 표지를
+# 만들어 막고, 둘째는 그 표지를 보고 지나간다. 셋째는 세션 ID 를 빼 표지를 쓰지 않는 길(막지 않고 옛 알림)이다. 이 훅은
+# AskUserQuestion 마다 막거나 알려 받는 입력 가운데 침묵할 것이 없다. 침묵 사례는 다른 도구의 실제 입력(위 grill-with-docs 의 첫째
+# 사례)으로 도구 이름으로 거르는 축을 잰다. 매처를 넓히면 그 입력이 온다.
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "deny"
+note = "이 세션에서 처음 보는 선택 화면 — 막고, 수가 든 설명 문장을 라벨과 함께 이유에 옮긴다(대기열 394)"
+contains = ["설명에 든 사실을 대 보았는지", "아직 사용자에게 뜨지 않았다", "빨강: 서버 하나에 약 4.5초가 든다."]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "choice-case-first", transcript_path = "${NEW_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PreToolUse", tool_name = "AskUserQuestion", tool_input = { questions = [ { question = "어느 쪽으로 할까요?", header = "탐침", options = [ { label = "빨강", description = "서버 하나에 약 4.5초가 든다." }, { label = "파랑", description = "지금 코드는 그대로 둔다." } ], multiSelect = false } ] }, tool_use_id = "toolu_choice_first" }
+
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "context"
+note = "같은 세션이 같은 화면을 다시 불렀다 — 지나가고, 받은 답을 이 턴에 일지에 옮기라고 알린다(대기열 395)"
+contains = ["선택 화면의 답을 받았다", "다음 빈 번호"]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { session_id = "choice-case-first", transcript_path = "${NEW_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PreToolUse", tool_name = "AskUserQuestion", tool_input = { questions = [ { question = "어느 쪽으로 할까요?", header = "탐침", options = [ { label = "빨강", description = "서버 하나에 약 4.5초가 든다." }, { label = "파랑", description = "지금 코드는 그대로 둔다." } ], multiSelect = false } ] }, tool_use_id = "toolu_choice_again" }
+
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "context"
+note = "세션 ID 가 없는 선택 화면 — 같은 화면을 가를 수 없어 막지 않고 답 뒤에 읽힐 알림을 낸다"
+contains = ["설명에 든 사실을 대 보았는지", "막지 못했다", "빨강: 서버 하나에 약 4.5초가 든다."]
+env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
+payload = { tool_name = "AskUserQuestion", tool_input = { questions = [ { question = "어느 쪽으로 할까요?", header = "탐침", options = [ { label = "빨강", description = "서버 하나에 약 4.5초가 든다." }, { label = "파랑", description = "지금 코드는 그대로 둔다." } ], multiSelect = false } ] } }
+
+[[case]]
+hook = "hook_choice_facts.py"
+expect = "silent"
+note = "선택 화면이 아닌 도구 — 매처를 넓혀도 도구 이름으로 거른다"
+payload = { tool_name = "Skill", tool_input = { skill = "grill-with-docs", args = "admin-foo" } }
+
+# --- hook_session_card (PreToolUse mcp__ccd_session__start_session) ---
+# 발동과 proposal_id 침묵은 카드 탐침의 훅이 받은 실제 입력이다(.scratch/ticket-for-every-pr/probes/card_block/2026-10-21-hook-log.jsonl 의 둘째·셋째 줄).
+# 그 기록은 tool_name·tool_use_id·tool_input 만 남겨, session_id 같은 나머지 필드는 없다.
+[[case]]
+hook = "hook_session_card.py"
+expect = "deny"
+note = "모델이 스스로 낸 카드 — 탐침 세션의 own_initiative 호출"
+contains = ["ADR 0037", "user_asked"]
+payload = { tool_name = "mcp__ccd_session__start_session", tool_use_id = "toolu_01FcPX25LpkSHzTKprQhdrr2", tool_input = { initiation = "own_initiative", context = "fresh", title = "탐침: 막히면 아무 일도 없다", prompt = "카드 막기 탐침이다. 이 카드는 시작하지 않는다.", background = "ADR 0037 의 카드 막는 훅을 재는 탐침이다. 훅이 막으면 이 카드는 생기지 않고, 생기면 탐침 세션이 dismiss_task 로 바로 거둔다. 이 카드를 시작하지 않는다." } }
+
+[[case]]
+hook = "hook_session_card.py"
+expect = "silent"
+note = "이미 뜬 카드의 시작 — 탐침 세션의 proposal_id 호출"
+payload = { tool_name = "mcp__ccd_session__start_session", tool_use_id = "toolu_01E1ktVttC51euhENE9uPNz5", tool_input = { proposal_id = "probe-none" } }
+
+[[case]]
+hook = "hook_session_card.py"
+expect = "silent"
+note = "사용자가 말로 시킨 새 세션 — 탐침이 부르지 않아 위 발동 입력의 initiation 을 바꾸고 background 를 빼고 tool_use_id 를 지었다(재구성)"
+payload = { tool_name = "mcp__ccd_session__start_session", tool_use_id = "toolu_01FcPX25LpkSHzTKprQhdrr3", tool_input = { initiation = "user_asked", context = "fresh", title = "탐침: 막히면 아무 일도 없다", prompt = "카드 막기 탐침이다. 이 카드는 시작하지 않는다." } }
+
 # --- hook_session_web_deps (SessionStart startup|resume) ---
 # 러너는 CLAUDE_CODE_REMOTE 를 벗긴다. 클라우드 사례만 env 로 그 값과 CLAUDE_PROJECT_DIR 을 준다.
 [[case]]
@@ -876,3 +1124,27 @@ expect = "silent"
 note = "이어 하기 — 계정만 남긴다"
 env = { CLAUDE_PROJECT_DIR = "${USAGE_REPO}", USERPROFILE = "${USAGE_HOME}", HOME = "${USAGE_HOME}", CLAUDE_CODE_SESSION_ATTENDED = "1" }
 payload = { session_id = "9ff05852-0000-0000-0000-000000000002", transcript_path = "${USAGE_HOME}/9ff05852-0000-0000-0000-000000000002.jsonl", cwd = "${USAGE_REPO}", hook_event_name = "SessionStart", source = "resume", model = "claude-opus-5-5" }
+
+# --- hook_worktree_skill_overrides (PostToolUse EnterWorktree) ---
+# 페이로드의 모양은 claude 2.1.303 의 `claude -p` 세션에서 PostToolUse 훅이 받은 EnterWorktree 입력이다(일지 2026-10-19-14). 사례마다 CLAUDE_PROJECT_DIR 을 ${WORKTREE_SKILLS_REPO} 로 줘 이 저장소의 local 설정에 닿지 않는다.
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "notice"
+contains = ["스킬 사본 2개", ".claude/settings.local.json"]
+note = "주 체크아웃에서 워크트리 side 에 들어갔다 — 사본 둘을 끄는 키를 적고 사람에게만 알린다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000003", cwd = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side" }, tool_response = { worktreePath = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", worktreeBranch = "side", message = "Entered worktree at “${WORKTREE_SKILLS_REPO}/.claude/worktrees/side” on branch “side”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNHy" }
+
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "silent"
+note = "클라우드 세션의 같은 진입 — 그 체크아웃에는 local 을 무시하는 ignore 가 없어 쓰지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}", CLAUDE_CODE_REMOTE = "true" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000004", cwd = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side" }, tool_response = { worktreePath = "${WORKTREE_SKILLS_REPO}/.claude/worktrees/side", worktreeBranch = "side", message = "Entered worktree at “${WORKTREE_SKILLS_REPO}/.claude/worktrees/side” on branch “side”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNHz" }
+
+[[case]]
+hook = "hook_worktree_skill_overrides.py"
+expect = "silent"
+note = "주 체크아웃의 워크트리 자리 밖에 판 워크트리에 들어갔다 — 목록이 붙일 접두를 몰라 적지 않는다"
+env = { CLAUDE_PROJECT_DIR = "${WORKTREE_SKILLS_REPO}" }
+payload = { session_id = "ea9c8772-0000-0000-0000-000000000005", cwd = "${MAIN_REPO}", hook_event_name = "PostToolUse", tool_name = "EnterWorktree", tool_input = { path = "${MAIN_REPO}" }, tool_response = { worktreePath = "${MAIN_REPO}", worktreeBranch = "main", message = "Entered worktree at “${MAIN_REPO}” on branch “main”." }, tool_use_id = "toolu_01Qjqeu14hRffGRpJVDuRNH0" }

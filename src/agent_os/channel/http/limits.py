@@ -33,9 +33,9 @@ core 의 404·409 는 그 뒤다. 걸린 요청은 core 에 닿지 않아 트레
 칸과 구독 수가 같은 동사를 쓴다(`CONTEXT.md` 의 동사 표).
 
 **`Retry-After`.** 시간당에 걸리면 창이 한 칸 비기까지의 초(올림, 1 이상)다. 동시 실행이나 구독
-수에 걸리면 5초다 — 실행이 언제 끝날지 알 수 없어 짐작하지 않는다. 봉투의 문구는 어느 상한인지만
-들고, 서버 기록은 사이트의 발급자와 상한의 범위(주체별·사이트별·전역)와 값을 든다. 주체(`sub`)는
-어디에도 적지 않는다.
+수에 걸리면 5초다 — 실행이 언제 끝날지 알 수 없어 짐작하지 않는다. 봉투는 어느 상한인지만(`limit`
+과 문구) 들고, 서버 기록은 사이트의 발급자와 상한의 범위(주체별·사이트별·전역)와 값을 든다.
+주체(`sub`)는 어디에도 적지 않는다.
 
 **셈은 프로세스 메모리다.** 워커가 하나라 충분하고(ADR 0014) 다시 시작하면 비워진다. 포트가 아니다.
 """
@@ -51,7 +51,7 @@ from datetime import datetime, timedelta
 from fastapi.exceptions import RequestValidationError
 
 from agent_os.core.ports import Clock
-from agent_os.http.errors import Limit, LimitExceeded
+from agent_os.http.errors import LimitExceeded, LimitKind
 from agent_os.http.sites import EndUser, Site
 from agent_os.sdk import Principal
 
@@ -164,7 +164,7 @@ class RunQuota:
         for scope, count, limit in concurrent:
             if count >= limit:
                 return _exceeded(
-                    Limit.CONCURRENT_RUNS, scope, limit, issuer, BUSY_RETRY_AFTER_SECONDS
+                    LimitKind.CONCURRENT_RUNS, scope, limit, issuer, BUSY_RETRY_AFTER_SECONDS
                 )
         hourly = (
             (
@@ -181,7 +181,7 @@ class RunQuota:
         for scope, times, limit in hourly:
             if len(times) >= limit:
                 wait = _seconds_until_room(times, limit, now)
-                return _exceeded(Limit.HOURLY_RUNS, scope, limit, issuer, wait)
+                return _exceeded(LimitKind.HOURLY_RUNS, scope, limit, issuer, wait)
         return None
 
 
@@ -202,7 +202,7 @@ class SubscriptionQuota:
         count = self._open.get(user.principal, 0)
         if count >= limit:
             raise _exceeded(
-                Limit.SUBSCRIPTIONS, "주체별", limit, user.site.issuer, BUSY_RETRY_AFTER_SECONDS
+                LimitKind.SUBSCRIPTIONS, "주체별", limit, user.site.issuer, BUSY_RETRY_AFTER_SECONDS
             )
         self._open[user.principal] = count + 1
         return Seat(principal=user.principal, issuer=user.site.issuer)
@@ -251,10 +251,12 @@ def _seconds_until_room(times: Sequence[datetime], limit: int, now: datetime) ->
     return max(1, math.ceil(seconds))
 
 
-def _exceeded(limit: Limit, scope: str, value: int, issuer: str, retry_after: int) -> LimitExceeded:
+def _exceeded(
+    limit: LimitKind, scope: str, value: int, issuer: str, retry_after: int
+) -> LimitExceeded:
     """거절 하나(질의). 문구는 서버 기록에만 가고 사이트의 발급자와 범위와 값을 든다."""
     return LimitExceeded(
-        f"사이트 {issuer} — {scope} {limit.value} 상한 {value}",
+        f"사이트 {issuer} — {scope} {limit.label} 상한 {value}",
         limit=limit,
         retry_after_seconds=retry_after,
     )

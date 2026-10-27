@@ -1,0 +1,27 @@
+# next-session 1단계에서 일지(3)를 병합 길(4) 앞으로 옮기고, 회고와 "다음"까지 마친 일지를 병합 길의 머리 대조 전에 푸시하라고
+# 더한 문장(대기열 341)이 새 세션에 실리는지. 카나리아는 그 문장의 두 조각이다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(6bd52b06)이다. 옛 판에는 그 문장이 없고 일지가 4, 병합 길이 3이다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 `--control-commit 6bd52b06` 은 "없음", 실험군은 `6bd52b06` 위의
+#   커밋 전 변경, 일지 2026-10-22-11).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 6bd52b06 .scratch/harness/probes/canary/next_session_journal_before_merge.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+1단계의 하위 항목 가운데 일지를 다루는 항목에서, 단계를 닫는 세션이 회고와 "다음"까지 마친 일지를 언제 푸시하라고 적은
+문장을 찾아 처음부터 마침표까지 글자 그대로 옮기고, 그 바로 뒤 문장도 처음부터 첫 쉼표까지 글자 그대로 옮겨라.
+본문의 일지 항목에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["4(병합 길)의 `headRefOid` 대조 전에 푸시한다", "늦어도 마지막 봇 회차의 커밋에 싣고"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-6bd52b06"

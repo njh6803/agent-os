@@ -1,0 +1,12 @@
+기준선 pytest tests/tools/test_open_session.py -k 패턴_호출은: 초록 — 2 passed, 90 deselected in 2.91s
+== 1. 멈춘 호출의 스레드 잡을 지운다: 기대 빨강, 결과 빨강 — 1 failed, 1 passed, 90 deselected in 22.71s
+   tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[20000-1-expand-hung-1-6000]
+== 2. 제한 시간 없이 기다린다: 기대 빨강, 결과 빨강 — 1 failed, 1 passed, 90 deselected in 21.85s
+   tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[20000-1-expand-hung-1-6000]
+== 3. 받은 제한을 버리고 기본 8초로 기다린다: 기대 빨강, 결과 빨강 — 1 failed, 1 passed, 90 deselected in 11.17s
+   tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[20000-1-expand-hung-1-6000]
+== 4. 멈춘 호출을 세지 않는다: 기대 빨강, 결과 빨강 — 1 failed, 1 passed, 90 deselected in 3.04s
+   tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[20000-1-expand-hung-1-6000]
+== 5. 끝난 호출도 멈춘 호출로 센다: 기대 빨강, 결과 빨강 — 1 failed, 90 deselected in 1.73s
+   tests/tools/test_open_session.py::test_패턴_호출은_제한_시간에_돌아오고_멈춘_호출을_센다[0-30-ok-0-30000]
+변이 5 모두 기대대로

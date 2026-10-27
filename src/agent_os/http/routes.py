@@ -1,7 +1,9 @@
-"""라우트를 선언하는 쪽이 쓰는 것 둘. 라우트별 에러 문서와 경로 변환기 `verbatim` 이다(ADR 0016).
+"""라우트를 선언하는 쪽이 쓰는 것 셋. 라우트별 에러 문서, 스트림 라우트의 응답 클래스, 경로 변환기
+`verbatim` 이다(ADR 0016).
 
 관리와 채널의 라우트가 이것을 import 한다. 미들웨어와 핸들러는 `server` 가 앱 전체에 걸어 모든 면을
 함께 덮지만, 라우트가 `responses=` 에 봉투를 적는 것과 `{run_id:verbatim}` 은 라우트 쪽의 일이다.
+스트림 라우트의 응답 클래스는 그 에러 문서가 JSON 아래에 실리게 하는 것이라 여기 함께 있다.
 
 **라우트는 `operation_id` 를 손으로 준다.** FastAPI 가 라우트 함수 이름으로 `operationId` 를 짓는데
 기본값은 `read_health_health_get` 꼴이라 그대로 생성 클라이언트의 함수 이름이 된다.
@@ -11,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from fastapi.sse import EventSourceResponse
 from starlette.convertors import Convertor, register_url_convertor
 
 from agent_os.http.errors import (
@@ -20,6 +23,7 @@ from agent_os.http.errors import (
     RETRY_AFTER_HEADER,
     UNAUTHORIZED_MESSAGE,
     ErrorEnvelope,
+    LimitEnvelope,
 )
 
 # 계약에 적는 에러와 그 설명. 라우트가 자기 `responses` 에 적는다. 401 은 미들웨어가 내는 것이라
@@ -47,33 +51,20 @@ _DOCUMENTED_HEADERS: Mapping[int, Mapping[str, str]] = {
 }
 
 
-def documented_errors(*statuses: int) -> dict[int | str, dict[str, object]]:
-    """라우트의 `responses` 에 적을 에러 응답들(질의). 모양은 언제나 봉투다."""
-    return {
-        status: {
-            "model": ErrorEnvelope,
-            "description": _DOCUMENTED_ERRORS[status],
-            **_headers_of(status),
-        }
-        for status in statuses
-    }
+# 상태 코드마다 봉투의 모양. 429 는 상한의 종류를 더 든 봉투이고 그 밖은 네 필드의 봉투다(ADR 0023
+# 의 2026-10-23 이력). 429 를 내는 것은 표의 상한 갈래(`LimitExceeded`)뿐이라 모양이 상태 코드에
+# 딸린다 — `Retry-After` 처럼 그 상태를 적는 라우트마다 저절로 붙는다.
+_ENVELOPE_OF: Mapping[int, type[ErrorEnvelope]] = {429: LimitEnvelope}
 
 
-# 봉투 컴포넌트의 참조. `documented_errors` 를 쓰는 라우트가 모델로 그 컴포넌트를 등록하고(관리
-# 라우트가 늘 그렇다), 스트림 라우트는 이름으로 가리킨다. 둘이 같은 것을 가리킨다는 것은 에러 문서의
-# 전수 테스트가 모든 경로에서 잰다.
-_ENVELOPE_REF = f"#/components/schemas/{ErrorEnvelope.__name__}"
-
-
-def documented_stream_errors(
+def documented_errors(
     *statuses: int, descriptions: Mapping[int, str] | None = None
 ) -> dict[int | str, dict[str, object]]:
-    """스트림 라우트의 에러 응답들(질의). 모양은 봉투이고 미디어 타입은 JSON 이다.
+    """라우트의 `responses` 에 적을 에러 응답들(질의). 모양은 언제나 봉투이고 미디어 타입은 JSON
+    이다.
 
-    FastAPI 는 에러 문서의 모델을 라우트 응답 클래스의 미디어 타입 아래에 싣는다(fastapi 0.141.1
-    의 `openapi/utils.py`). 스트림 라우트(`EventSourceResponse`)에서 그것은 `text/event-stream`
-    이라, 모델로 적으면 봉투가 스트림으로 온다고 계약이 말한다. 에러는 스트림이 시작되기 전에 JSON
-    봉투로 나가므로 미디어 타입을 손으로 적고 모델 대신 참조를 둔다.
+    스트림 라우트는 응답 클래스로 `EventSourceWithJsonErrors` 를 써야 이 문서가 JSON 아래에
+    실린다(그 독스트링). 모델로 적으므로 봉투의 컴포넌트는 그것을 적는 라우트가 계약에 올린다.
 
     `descriptions` 는 그 라우트에서만 공유 설명과 다르게 말할 상태 코드의 설명이다. 같은 상태 코드가
     라우트마다 다른 것을 약속하는 자리를 라우트 선언에 두어, 공유 표가 라우트를 알지 않게 한다.
@@ -81,12 +72,37 @@ def documented_stream_errors(
     own = descriptions or {}
     return {
         status: {
+            "model": _ENVELOPE_OF.get(status, ErrorEnvelope),
             "description": own.get(status, _DOCUMENTED_ERRORS[status]),
-            "content": {"application/json": {"schema": {"$ref": _ENVELOPE_REF}}},
             **_headers_of(status),
         }
         for status in statuses
     }
+
+
+class EventSourceWithJsonErrors(EventSourceResponse):
+    """스트림 라우트의 응답 클래스. 에러 문서가 JSON 아래에 실리도록 미디어 타입을 비운다.
+
+    FastAPI 는 에러 문서의 모델을 라우트 응답 클래스의 미디어 타입 아래에 싣고, 그 클래스에 미디어
+    타입이 없으면 `application/json` 아래에 싣는다(fastapi 0.141.1 의 `openapi/utils.py`). 관리의
+    `response_class=Response` 라우트가 그 기본값으로 에러 문서를 JSON 에 싣는다.
+    `EventSourceResponse` 의 미디어 타입은 `text/event-stream` 이라 그대로 두면 계약이 "봉투가
+    스트림으로 온다"고 말한다. 에러는 스트림이 시작되기 전에 JSON 봉투로 나간다.
+
+    성공 응답은 이 값을 읽지 않는다. FastAPI 는 SSE 제너레이터 라우트의 200 을 계약에
+    `text/event-stream` 으로 적고, 응답도 그 미디어 타입으로 직접 만든다(같은 판의 `routing.py`).
+    keepalive 도 그대로다 — FastAPI 가 SSE 라우트를 응답 클래스가 `EventSourceResponse` 의 하위
+    타입인지로 가른다. FastAPI 가 셋 가운데 하나를 바꾸면 이 클래스를 쓰는 라우트의 시험이 빨개진다.
+    성공 응답과 에러 응답의 계약의 미디어 타입은 두 면의 계약 시험이, 실제 응답의 `content-type` 과
+    keepalive 주석은 운영자 채널의 시험이 잰다. 두 면이 같은 클래스를 쓰므로 한 면의 시험이 그
+    클래스를 지킨다.
+
+    모델 대신 컴포넌트의 이름 참조를 손으로 적지 않는 이유는, 그러면 컴포넌트를 계약에 올리는 일이
+    모델로 적는 다른 라우트(관리)에 기대기 때문이다. 스트림 라우트만 쓰는 모델(429 의
+    `LimitEnvelope`)은 그때 계약에 오를 길이 없다.
+    """
+
+    media_type = None
 
 
 def _headers_of(status: int) -> dict[str, object]:

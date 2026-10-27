@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum, StrEnum
-from typing import TextIO
+from typing import TextIO, assert_never
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
@@ -43,6 +43,7 @@ from agent_os.core.ports import (
     NotContinuable,
     NotResumable,
     PluginError,
+    TraceDamagedBeforePrincipal,
 )
 from agent_os.http.paths import is_under
 
@@ -136,13 +137,14 @@ class _Failure:
 
     헤더가 여기 있는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다. 405 의 `Allow` 는
     라우터가 예외에 붙여 주는데, 봉투를 새 응답으로 만들면서 버리면 RFC 9110 이 요구하는 것을
-    잃는다.
+    잃는다. `limit` 은 상한에 걸린 것일 때만 있고, 그때 봉투가 `LimitEnvelope` 가 된다.
     """
 
     status: int
     message: str
     violations: tuple[Violation, ...] = ()
     headers: Mapping[str, str] | None = None
+    limit: LimitKind | None = None
 
 
 # 상태 코드 하나가 어휘 하나다. 표 밖의 상태 코드는 계열로 접는다 — 그것은 우리가 고른 것이
@@ -158,17 +160,43 @@ _CODE_BY_STATUS = {
 }
 
 
-class Limit(Enum):
-    """요청하는 쪽이 걸린 상한이 어느 것인가. 값은 봉투의 문구에 드는 이름이다.
+# 요청하는 쪽이 걸린 상한이 어느 것인가. 셋뿐이다 — 주체별인지 사이트별인지 전역인지는 여기 들지
+# 않는다. 동시 실행의 세 범위는 모두 `concurrent_runs` 이고 시간당의 두 범위는 `hourly_runs` 다.
+# 범위를 알아도 최종 사용자가 할 일(기다렸다가 다시 보낸다)은 같고, 사이트별·전역 상한에 걸렸다는
+# 말은 같은 사이트의 다른 사람들이 얼마나 쓰는지를 드러낸다(ADR 0023 의 2026-10-23 이력). 범위는
+# 서버 기록에만 간다(`LimitExceeded` 의 문구). 값이 봉투에 코드로 실리고(`LimitEnvelope`) 위젯이
+# 종류마다 제 문구를 고른다. 사람이 읽는 이름은 `label` 이고 봉투의 `message` 와 서버 기록에 든다.
+# StrEnum 인 이유는 `ErrorCode` 와 같다.
+class LimitKind(StrEnum):
+    """상한의 종류. 동시 실행 수, 시간당 실행 수, 구독 수다."""
 
-    셋뿐이다 — 주체별인지 사이트별인지 전역인지는 여기 들지 않는다. 봉투는 어느 상한인지만 말하고,
-    사이트 전체가 바쁘다는 것을 한 사용자에게 말할 이유가 없다(end-user-channel 명세 "상한"). 범위는
-    서버 기록에만 간다(`LimitExceeded` 의 문구).
-    """
+    CONCURRENT_RUNS = "concurrent_runs"
+    HOURLY_RUNS = "hourly_runs"
+    SUBSCRIPTIONS = "subscriptions"
 
-    CONCURRENT_RUNS = "동시 실행 수"
-    HOURLY_RUNS = "시간당 실행 수"
-    SUBSCRIPTIONS = "구독 수"
+    @property
+    def label(self) -> str:
+        """봉투의 문구와 서버 기록에 드는 이름(질의)."""
+        match self:
+            case LimitKind.CONCURRENT_RUNS:
+                return "동시 실행 수"
+            case LimitKind.HOURLY_RUNS:
+                return "시간당 실행 수"
+            case LimitKind.SUBSCRIPTIONS:
+                return "구독 수"
+            case _:
+                assert_never(self)
+
+
+# 상한에 걸린 429 의 봉투다(ADR 0023 의 2026-10-23 이력). 네 필드는 `ErrorEnvelope` 의 것 그대로이고
+# `code` 는 늘 `too_many_requests` 다. 봉투에 선택 필드를 더하지 않고 스키마를 가른 까닭은, 생성
+# 클라이언트에서 429 응답의 `limit` 이 늘 있는 값으로 좁혀지고 다른 상태 코드의 봉투가 네 필드
+# 그대로 남기 때문이다. 계약에서 이 스키마를 가리키는 것은 429 를 적는 라우트(최종 사용자 면의
+# 넷)뿐이다 (`routes` 의 `documented_errors`).
+class LimitEnvelope(ErrorEnvelope):
+    """상한에 걸린 429 의 에러 응답. 봉투의 네 필드에 어느 상한인지를 더한다."""
+
+    limit: LimitKind
 
 
 class LimitExceeded(Exception):
@@ -176,12 +204,12 @@ class LimitExceeded(Exception):
 
     이 층이 소유하고 채널이 던진다. 표는 채널의 타입을 import 할 수 없고(원칙 IV) 라우트는 상태
     코드를 스스로 정하지 않으므로(`HTTPException(429)` 를 던지지 않는다) 타입 하나가 둘 사이에 선다.
-    `limit` 은 어느 상한인지이고 봉투의 문구가 된다. `retry_after_seconds` 는 다시 보내도 되기까지의
-    초이고 1 이상의 정수다. 예외의 문구는 서버 기록에만 간다 — 사이트의 발급자와 상한의 범위와 값을
-    들되 주체(`sub`)는 들지 않는다(감사 로그는 비목표다).
+    `limit` 은 어느 상한인지이고 봉투의 `limit` 과 문구가 된다. `retry_after_seconds` 는 다시 보내도
+    되기까지의 초이고 1 이상의 정수다. 예외의 문구는 서버 기록에만 간다 — 사이트의 발급자와 상한의
+    범위와 값을 들되 주체(`sub`)는 들지 않는다(감사 로그는 비목표다).
     """
 
-    def __init__(self, detail: str, *, limit: Limit, retry_after_seconds: int) -> None:
+    def __init__(self, detail: str, *, limit: LimitKind, retry_after_seconds: int) -> None:
         super().__init__(detail)
         self.limit = limit
         self.retry_after_seconds = retry_after_seconds
@@ -190,36 +218,30 @@ class LimitExceeded(Exception):
 class Surface(Enum):
     """요청이 어느 면의 것인가. 표가 같은 예외를 면마다 다르게 번역한다(ADR 0023).
 
-    운영자 면(관리와 `/runs`)은 원문 그대로다. 최종 사용자 면은 둘로 갈린다 — 실행을 일으키는 시작
-    경로와, 있는 실행을 가리키는 경로(결정, 구독, 이어 가기)다. 둘이 가르는 것은 하위 타입이 아닌
-    `PluginError`(기록이나 구성이 깨진 것) 하나다. 실행을 가리키는 경로에서 그것을 그대로 내면
-    손상된 남의 트레이스가 있다는 것이 드러난다. 그래서 그 경로에서는 구성 오류도 404 가 되고 원인은
-    서버 기록에 남는다(ADR 0023 의 2026-10-05 이력). 불리언 둘이 아니라 열거 하나인 이유는
+    운영자 면(관리와 `/runs`)은 원문 그대로이고 최종 사용자 면은 덮는다. 최종 사용자 면의 경로끼리는
+    가르지 않는다 — 같은 예외는 시작에서든 실행을 읽는 경로에서든 같은 번역이다. 덮는 404 의 몫인
+    주인을 확인하기 전의 손상(`TraceDamagedBeforePrincipal`)은 실행을 읽는 경로에서만 나므로 경로로
+    가를 것이 남지 않는다(ADR 0023 의 2026-10-16 이력). 불리언이 아니라 열거인 이유는
     `CODING_STANDARDS.md` 의 불리언 플래그 인자다.
     """
 
     OPERATOR = "operator"
-    END_USER_START = "end_user_start"
-    END_USER_RUN = "end_user_run"
+    END_USER = "end_user"
 
 
 @dataclass(frozen=True)
 class EndUserPaths:
-    """최종 사용자 면이 서는 자리. 조립 층이 채널의 접두사와 시작 경로를 넘긴다.
+    """최종 사용자 면이 서는 자리. 조립 층이 채널의 접두사를 넘긴다.
 
     면은 요청의 경로로 정한다. 접두사 비교는 인증 표와 같은 `is_under` 하나라, 서명 토큰으로 열린
-    경로와 최종 사용자 면으로 번역되는 경로가 갈리지 않는다. 시작 경로는 정확히 같은지만 본다 —
-    실행을 가리키는 경로는 그 아래에 서므로 접두사로 보면 둘이 섞인다.
+    경로와 최종 사용자 면으로 번역되는 경로가 갈리지 않는다.
     """
 
     prefix: str
-    start: str
 
     def surface_of(self, path: str) -> Surface:
         """경로 하나의 면(질의)."""
-        if not is_under(path, self.prefix):
-            return Surface.OPERATOR
-        return Surface.END_USER_START if path == self.start else Surface.END_USER_RUN
+        return Surface.END_USER if is_under(path, self.prefix) else Surface.OPERATOR
 
 
 def failure_for(error: Exception, surface: Surface) -> _Failure:
@@ -228,20 +250,22 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
     갈래를 셋으로 나눠 두면 예외 하나를 더할 때 세 곳을 고쳐야 하므로 한 항목이 한 갈래다.
     관리 쪽 부재(포트가 `None` 을 돌려준 것)는 라우트가 `HTTPException(404)` 로 말하고 그것이 첫
     갈래로 들어온다. core 의 실행 전 실패는 타입으로 갈려 오고 여기가 MRO 로 옮긴다(ADR 0014) —
-    부재 404, 재개 불가 409, 꺼짐 409, 다른 주체 409, 이어 갈 수 없음 409, 그 밖의 `PluginError`
-    500. 하위 타입의 갈래가 기반 타입보다 먼저여야 한다. 뒤집히면 전부 500 이 된다. 기준은
-    "깨졌나"다(ADR 0014 의 2026-09-26 이력) — 4xx 는 대상이 없거나 대상의 상태나 주체가 요청을
-    허락하지 않는 것이고, `PluginError` 가 500 인 이유는 하위 타입 다섯을 뺀 뒤 남는 것이 "서버의
-    구성이나 기록이 깨졌다"뿐이기 때문이다. 마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의
-    말은 내부 사정을 담는다. 요청하는 쪽의 상한(`LimitExceeded`)은 면과 무관하게 429 이고 문구는
-    어느 상한인지만 들며 `Retry-After` 를 싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
+    부재 404, 재개 불가 409, 꺼짐 409, 다른 주체 409, 이어 갈 수 없음 409, 주인을 확인하기 전의
+    손상(`TraceDamagedBeforePrincipal`) 500, 그 밖의 `PluginError` 500. 하위 타입의 갈래가 기반
+    타입보다 먼저여야 한다. 뒤집히면 전부 500 이 된다. 기준은 "깨졌나"다(ADR 0014 의 2026-09-26
+    이력) — 4xx 는 대상이 없거나 대상의 상태나 주체가 요청을 허락하지 않는 것이고, `PluginError` 가
+    500 인 이유는 4xx 를 내는 하위 타입 밖의 것이 "서버의 구성이나 기록이 깨졌다"뿐이기 때문이다.
+    주인을 확인하기 전의 손상도 깨진 것이라 운영자 면에서는 500 원문이다. 운영자 면에서는
+    마지막 갈래만 문구를 덮는다 — 우리가 쓰지 않은 예외의 말은 내부 사정을 담는다. 요청하는 쪽의
+    상한(`LimitExceeded`)은 면과 무관하게 429 이고 봉투는 어느 상한인지만(`limit` 과 문구) 들며
+    `Retry-After` 를 싣는다. 그것을 던지는 것은 최종 사용자 면의 채널뿐이다.
 
-    최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05 이력). 404 는 전부 고정 문구 하나다.
-    다른 주체(409)는 없는 실행과 같은 404 다. 실행을 가리키는 경로의 하위 타입이 아닌
-    `PluginError`(500, 기록이나 구성이 깨진 것)도 404 다 — 손상이 주체 판정보다 앞이라(core) 남의
-    손상된 실행이 500 으로 그 존재를 드러내기 때문이고, 구성 오류까지 404 가 되는 것이 그 대가다.
-    시작 경로의 그것은 500 이되 고정 문구다. 꺼짐(409)은 종류와 이름 없는 고정 문구다. 재개 불가와
-    이어 갈 수 없음은 자기 실행의 상태라 메시지 그대로다.
+    최종 사용자 면은 그 위에서 덮는다(ADR 0023 과 그 2026-10-05·2026-10-16 이력). 404 는 전부 고정
+    문구 하나다. 다른 주체(409)는 없는 실행과 같은 404 다. 주인을 확인하기 전의 손상(500)도 404 다
+    — 그 이유는 `TraceDamagedBeforePrincipal` 의 독스트링이 원천이다. 그 밖의 `PluginError`(500,
+    주체를 확인한 뒤의 구성이나 기록의 고장)는 어느 경로에서나 500 이되 고정 문구다 — 숨길 남이
+    없고, 404 로 덮으면 위젯이 저장한 대화를 지운다. 꺼짐(409)은 종류와 이름 없는 고정 문구다. 재개
+    불가와 이어 갈 수 없음은 자기 실행의 상태라 메시지 그대로다.
     """
     operator = surface is Surface.OPERATOR
     match error:
@@ -270,17 +294,16 @@ def failure_for(error: Exception, surface: Surface) -> _Failure:
         case LimitExceeded():
             return _Failure(
                 status=429,
-                message=f"{error.limit.value}의 상한을 넘었다",
+                message=f"{error.limit.label}의 상한을 넘었다",
                 headers={RETRY_AFTER_HEADER: str(error.retry_after_seconds)},
+                limit=error.limit,
             )
+        case TraceDamagedBeforePrincipal():
+            if operator:
+                return _Failure(status=500, message=str(error))
+            return _Failure(status=404, message=NOT_FOUND_MESSAGE)
         case PluginError():
-            match surface:
-                case Surface.OPERATOR:
-                    return _Failure(status=500, message=str(error))
-                case Surface.END_USER_START:
-                    return _Failure(status=500, message=INTERNAL_MESSAGE)
-                case Surface.END_USER_RUN:
-                    return _Failure(status=404, message=NOT_FOUND_MESSAGE)
+            return _Failure(status=500, message=str(error) if operator else INTERNAL_MESSAGE)
         case _:
             return _Failure(status=500, message=INTERNAL_MESSAGE)
 
@@ -327,17 +350,28 @@ def error_envelope(
     message: str,
     violations: Sequence[Violation] = (),
     headers: Mapping[str, str] | None = None,
+    limit: LimitKind | None = None,
 ) -> JSONResponse:
     """에러 봉투 하나(질의). 기록하지 않는다.
 
     헤더를 받는 이유는 상태 코드가 요구하는 헤더가 있기 때문이다 — 405 의 `Allow`, 401 의
-    `WWW-Authenticate`. 봉투가 본문만 나르면 그것들이 응답에서 사라진다.
+    `WWW-Authenticate`. 봉투가 본문만 나르면 그것들이 응답에서 사라진다. 상한의 종류를 받으면
+    봉투가 그것을 든 `LimitEnvelope` 다.
     """
-    envelope = ErrorEnvelope(
-        code=_code_for(status),
-        message=message,
-        violations=tuple(violations),
-        request_id=request_id_of(request),
+    code = _code_for(status)
+    request_id = request_id_of(request)
+    envelope = (
+        ErrorEnvelope(
+            code=code, message=message, violations=tuple(violations), request_id=request_id
+        )
+        if limit is None
+        else LimitEnvelope(
+            code=code,
+            message=message,
+            violations=tuple(violations),
+            request_id=request_id,
+            limit=limit,
+        )
     )
     return JSONResponse(
         status_code=status,
@@ -445,6 +479,7 @@ def _enveloped(request: Request, failure: _Failure) -> JSONResponse:
         message=failure.message,
         violations=failure.violations,
         headers=failure.headers,
+        limit=failure.limit,
     )
 
 
