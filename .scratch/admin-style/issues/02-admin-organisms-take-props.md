@@ -17,7 +17,7 @@
 
 ### 경계를 무엇이 지키나
 
-- [ ] 지금 판정자(`web/eslint.config.mjs`의 층 정책)는 organisms가 `hooks/queries`와 생성 클라이언트를 import하는 것을 허락한다. `web/eslint.config.test.ts`가 지나보낼 사례로 고정한 것은 organisms가 생성 클라이언트 패키지와 `api` barrel을 import하는 둘이고, `hooks/queries`는 barrel을 거치지 않는 import의 위반 사례에만 나온다. `docs/constitution/tech.md`의 프론트 구성도 "API 호출은 organisms 이상만"이라 적는다. 이 옮기기가 세운 경계("organisms는 훅과 스토어를 부르지 않는다")를 판정자로 막는 것은 그 층 경계를 바꾸는 결정이다(`CLAUDE.md` 작업 규약 1·5). 그래서 ADR 0021(`docs/adr/0021-web-workspace-stack.md`)에 이력 초안을 쓰고 셀프 리뷰를 반영한 뒤 사용자에게 보여 승인을 받는다
+- [ ] 지금 판정자(`web/eslint.config.mjs`의 층 정책)는 organisms가 `hooks/queries`와 생성 클라이언트를 import하는 것을 허락한다. `web/eslint.config.test.ts`가 지나보낼 사례로 고정한 것은 organisms가 생성 클라이언트 패키지와 `api` barrel을 import하는 둘이고, `hooks/queries`는 barrel을 거치지 않는 import의 위반 사례에만 나온다. `docs/constitution/tech.md`의 프론트 구성도 "API 호출은 organisms 이상만"이라 적는다. 이 옮기기가 세운 경계, 곧 organisms가 훅과 스토어를 부르지 않는다는 것을 판정자로 막는 것은 그 층 경계를 바꾸는 결정이다(`CLAUDE.md` 작업 규약 1·5). 그래서 ADR 0021(`docs/adr/0021-web-workspace-stack.md`)에 이력 초안을 쓰고 셀프 리뷰를 반영한 뒤 사용자에게 보여 승인을 받는다
   - 승인되면 층 정책에 그 금지를 더하고, `web/eslint.config.test.ts`에 organisms가 `hooks/queries` barrel을 import하는 위반 사례를 더하며, 금지가 생성 클라이언트나 `api`까지 넓으면 지나보낼 사례 둘도 위반 사례로 바꾼다(기대한 규칙 ID를 본다, `.claude/rules/web-workspace.md`). 어디까지 막을지는 ADR 초안이 정한다. `tech.md`의 그 문장을 고친다. 훅이 아닌 함수가 같은 폴더에서 오면 그것도 막히니 옮길 자리를 함께 정한다
   - 거절되면 `.claude/rules/web-workspace.md`의 templates 줄을 organisms까지 넓혀 지침으로 둔다
   - 어느 쪽인지와 그 까닭을 이 티켓의 "이 티켓이 정한 것"에 적는다
