@@ -1,4 +1,4 @@
-# 2026-10-27 (16) 화면 코드를 처음 고친 세션에 웹 편집 확인을 알리는 계기 훅 (design-reverse-sync 09)
+# 2026-10-28 (03) 화면 코드를 처음 고친 세션에 웹 편집 확인을 알리는 계기 훅 (design-reverse-sync 09)
 
 ## 시작
 
@@ -44,8 +44,8 @@
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/09-web-edit-hook.md
 브랜치: feature/09-web-edit-hook
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-27-16-web-edit-hook.md 의 "구현"과 "인계 (셀프 리뷰 직전)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 훅·시험·등록·페이로드 표·스킬과 규칙 문서·변이 표·카나리아 둘까지 했고(변이 19 모두 기대대로, 카나리아 둘 통과 4), 커밋하지 않은 변경(미추적 다섯 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main, 미추적 다섯과 이 일지 포함)부터 한다. run_checks는 끝나기 전에 멈췄고 티켓 09의 체크박스는 아직 채우지 않았다: docs/journal/2026-10-27-16-web-edit-hook.md
+읽을 것: 일지 docs/journal/2026-10-28-03-web-edit-hook.md 의 "구현"과 "인계 (셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 훅·시험·등록·페이로드 표·스킬과 규칙 문서·변이 표·카나리아 둘까지 했고(변이 19 모두 기대대로, 카나리아 둘 통과 4), 커밋하지 않은 변경(미추적 다섯 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main, 미추적 다섯과 이 일지 포함)부터 한다. run_checks는 끝나기 전에 멈췄고 티켓 09의 체크박스는 아직 채우지 않았다: docs/journal/2026-10-28-03-web-edit-hook.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -125,8 +125,8 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/09-web-edit-hook.md
 브랜치: feature/09-web-edit-hook
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-27-16-web-edit-hook.md 의 "셀프 리뷰"와 "인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 판을 커밋했고(929d4934, pre-commit 모두 통과) PR은 아직 없다. 일지의 인계 절은 커밋하지 않았다. 남은 것은 일지 커밋, 커밋한 판에서 변이 표 전체 한 번, PR 직전 리뷰(밀 주장은 일지의 목록), PR·봇 회차·회고·병합이다: docs/journal/2026-10-27-16-web-edit-hook.md
+읽을 것: 일지 docs/journal/2026-10-28-03-web-edit-hook.md 의 "셀프 리뷰"와 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 판을 커밋했고(929d4934, pre-commit 모두 통과) PR은 아직 없다. 일지의 인계 절은 커밋하지 않았다. 남은 것은 일지 커밋, 커밋한 판에서 변이 표 전체 한 번, PR 직전 리뷰(밀 주장은 일지의 목록), PR·봇 회차·회고·병합이다: docs/journal/2026-10-28-03-web-edit-hook.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -145,4 +145,18 @@ open-session을 부른다 2026-10-27T15:07:36Z
 
 - 차례를 바꿨다. 인계 절의 남은 단계는 변이 표 전체 실행을 PR 직전 리뷰보다 앞에 두었지만, `tools/mutate.py` 독스트링의 "언제 전체를 돌리나"는 전체 실행을 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤에 한 번 돌라고 한다(리뷰가 시험을 고치면 그 전의 실행은 옛 시험을 잰 것이다). 그래서 일지 커밋, origin/main 합치기, PR 직전 리뷰, 반영 커밋, 변이 표 전체 실행의 차례로 간다.
 - PR 직전 리뷰: `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`를 찍어(손으로 봤다) CLI 축이 비어, 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
-- `tools/sibling_overlap.py`: 번호 겹침 없음(도구가 찍은 줄). 이 일지(2026-10-27-16)를 이름순으로 앞서는 형제는 워크트리 `01-ui-settings-icon-password-widths`(2026-10-27-17)와 `018-git-help-exit-code`(2026-10-28-01)다. 함께 고친 파일은 인계 전과 같다(PR #296·#297, 워크트리 `bug-perf-review-batch`·`measure-word-hook`의 `.claude/rules/tools.md`, `.claude/settings.json`, `tools/hook_payloads.toml`).
+- `tools/sibling_overlap.py`: 번호 겹침 없음(도구가 찍은 줄). 이 일지(2026-10-28-03)를 이름순으로 앞서는 형제는 워크트리 `01-ui-settings-icon-password-widths`(2026-10-27-17)와 `018-git-help-exit-code`(2026-10-28-01)다. 함께 고친 파일은 인계 전과 같다(PR #296·#297, 워크트리 `bug-perf-review-batch`·`measure-word-hook`의 `.claude/rules/tools.md`, `.claude/settings.json`, `tools/hook_payloads.toml`).
+- 일지를 커밋했다(`b8582c4d`, pre-commit 모두 통과. 출력의 줄). `git merge --no-edit origin/main`으로 `fb147fc1`을 충돌 없이 합쳤다(`e3a73c87`). main이 바꾼 규칙 둘(`.claude/rules/web-admin.md`, `web-workspace.md`)은 관리 화면의 organisms 규칙이라 이 브랜치가 고친 파일과 이름으로 든 파일에 걸리지 않았다(`git diff HEAD~1 HEAD -- <둘>`과 바뀐 네 파일의 Grep을 손으로 봤다).
+
+## PR 직전 리뷰
+
+대체 둘을 나란히 돌렸다. 기준은 합친 뒤의 merge-base `fb147fc1`이고 범위는 파일 열둘이다.
+
+- 보안(`/security-review`): 식별 서브태스크가 HIGH·MEDIUM 없음, 신뢰도 0.7을 넘는 후보도 없음으로 보고했다(서브에이전트의 보고). 그래서 지적마다 거짓 양성을 거르는 둘째 단계는 띄울 대상이 없었다. 따라간 흐름은 stdin의 `json.loads`, 세션·에이전트 ID의 sha256 표지 이름, 고친 파일에서 위로 `.git` 찾기, `gitdir:`를 따라 `HEAD` 첫 줄 읽기, 구분자 없는 티켓 토막의 `is_file()`, 상수 문장 둘만 내는 출력이고, 자식 프로세스는 없다(서브에이전트가 코드를 읽었다). 보고하지 않은 둘: `gitdir:`가 UNC 경로를 가리키면 SMB 접속이 날 수 있으나 기존 `tools/hook_edit_during_mutate.py`가 모든 Write·Edit에서 같은 길을 이미 걷고, 공유 임시 폴더의 표지를 남이 미리 만들면 알림 한 번이 빠질 뿐이다.
+- 버그·성능(`bug-perf-review`, `[호출 40]`): Minor 하나(유효), 오탐 다섯.
+  - Minor: `/sync-design-system`의 `확인` 줄이 부모 세션이 부르지 않는 조건을 "들이기를 하는 세션"으로만 적어, 훅이 침묵하는 둘(들이기 세션과 design-reverse-sync의 구현 티켓 세션)보다 좁다. 구현 티켓 브랜치의 부모가 다른 브랜치의 워크트리로 띄운 서브에이전트가 화면을 고치면, 부모는 표를 따라 불필요한 확인을 한 번 부른다(서브에이전트가 코드와 문서를 읽은 시나리오이고 재현하지 않았다). 훅 독스트링 49~53행과 명세 231행이 침묵 대상을 둘로 적은 것을 손으로 봐 유효로 판정했다. 고치는 값이 작아 PR 전에 고쳤다. 그 줄을 "그 훅이 침묵하는 세션(들이기 세션, design-reverse-sync의 구현 티켓 세션)이 아닐 때"로 바꿔 훅을 원천으로 가리키게 하고(이 세션에서 `writing-for-agents`를 부른 뒤), 카나리아 `sync_design_system_web_edit_hook.toml`의 기대 둘째 문구를 같은 문장으로 바꿨다. 옛 표현의 잔존은 카나리아 머리 주석의 지난 결과 서술과 이 일지의 인용뿐이다(Grep을 손으로 봤다).
+  - 밀 주장: 1(폴더 경로)과 2(꼴이 어긋난 입력)는 서브에이전트가 `is_screen_code`와 `output_for`를 경계 입력(`web/apps/..`, `\\?\` 접두, NUL·홀로 선 서로게이트·예약 장치 이름이 든 경로, BOM으로 시작하는 `HEAD`, 대문자 `GITDIR:` 등)으로 불러 문장대로였다고 보고했다. 3(나란히 보낸 쓰기)은 재지 않은 어림이라 그대로 둔다. 4는 위 Minor이고, 5(프로브 README와 카나리아 대조군 서술)는 변이 표와 카나리아 명세를 열어 맞았다고 보고했다.
+  - 오탐 다섯(서브에이전트의 판정): `_absolute`의 `os.getcwd()`가 `try` 밖이지만 상대 경로와 `cwd`가 함께 없을 때만 난다. 끝에 점·공백이 붙은 `web/packages/ui.`는 지나가지만 모델이 쓰는 경로가 아니다. 드라이브 상대 `C:web/...`는 도구가 절대 경로만 받는다. 표지 파일이 쌓이는 것은 `tools/launch_hook.py`와 같은 모양이다. 시험 파일 첫 실행 128초는 `uv run`의 환경 준비였다.
+  - 성능: 프로세스 안의 한 호출이 표지가 있는 침묵 길 약 1.2ms, 첫 판정 3~6ms, 화면 코드가 아닌 경로 약 0.02ms였다(서브에이전트가 잰 보고). Write·Edit마다의 값은 파이썬 기동이 지배한다.
+- 고친 스킬의 카나리아(`tools/canary.py .scratch/design-reverse-sync/probes/canary/sync_design_system_web_edit_hook.toml`)는 "통과 4 · 실패 0"이었다(도구가 찍은 줄). 실험군 세 회차가 고친 문장을 글자 그대로 옮겼고, 대조군 주 체크아웃(`35028cba`)은 스킬을 불러 "없음"이었다(저장한 출력을 손으로 봤다). 실험군은 `e3a73c87` 위의 커밋하지 않은 작업 트리다. 결과는 그 명세의 머리 주석에 옮겼다. 규칙의 카나리아 `tools_rule_web_edit_hook.toml`은 규칙 문장을 고치지 않아 다시 돌지 않았다.
+- 반영을 커밋하기 전의 `tools/sibling_overlap.py`가 1로 끝났다. origin/main이 `0ac9e98d`(harness 018, #406)로 나가 그쪽의 일지 2026-10-28-01이 이 일지(당시 2026-10-27-16)보다 이름순으로 뒤가 되었기 때문이다(도구가 찍은 줄). `--move`로 이 일지를 2026-10-28-03으로 옮겼고, 도구가 머리 줄과 이 파일 안의 인용을 고쳤다. 옛 번호(`27-16`)의 잔존은 저장소의 `.md`·`.toml`·`.py`·`.json`에 없었다(Grep을 손으로 봤다).
