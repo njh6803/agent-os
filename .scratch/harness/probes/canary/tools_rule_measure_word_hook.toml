@@ -7,7 +7,8 @@
 #   일지 2026-10-28-07). 통과한 `tools_rule_edit_during_commit.toml` 처럼 번호 둘로 나눠 자리를 짚게 고쳤다.
 # 2026-10-28 에 origin/main 을 합치며 나열이 여덟으로 늘어(probe_conclusion·journal_evidence·ui_design·web_edit_check)
 #   이 훅이 아홉째가 됐고, 시간의 말도 "둘 다"에서 "여섯 다"로 바뀌어 물음과 카나리아를 그에 맞췄다.
-# 최신 결과: 통과 4, 실패 0, "없음" 섞인 통과 0(2026-10-28, 이 PC, 고친 물음, 러너가 찍은 커밋 ee93101a, 일지 2026-10-28-07).
+# 최신 결과: 통과 4, 실패 0, "없음" 섞인 통과 0(2026-10-28, 이 PC, claude 2.1.302, PR #297 이 이 PR 을 합친 작업 트리,
+#   러너가 찍은 커밋 43a00c99, 일지 2026-10-28-08). 그 전 결과도 통과 4였다(고친 물음, 러너가 찍은 커밋 ee93101a, 일지 2026-10-28-07).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_measure_word_hook.toml <출력 디렉터리>
 kind = "rule"
 question = '''
