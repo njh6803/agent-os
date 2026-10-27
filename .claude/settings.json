@@ -22,7 +22,7 @@
   },
   "permissions": {
     "allow": [
-      "PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send *)"
+      "PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send -Folder C:\\project\\agent -PromptFile *)"
     ],
     "deny": [
       "Read(//**/.env)",

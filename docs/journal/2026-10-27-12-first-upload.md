@@ -207,7 +207,7 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 
 후보 열하나. 넘김 둘(사용자가 둘 다 추천을 골랐다), 승인 둘(더하는 것, 대기열), 기각 일곱이다. 일지에만 남기는 사례가 하나 더 있다. `tools/queue_open_rows.py`는 이 브랜치와 `--ref origin/main` 모두 만료할 행이 없었다.
 
-1. **넘김, 사용자 승인(이 세션에서 반영).** 자동 모드 분류기가 인계 열기(`tools/open_session.ps1 -Action send`)를 거부해 인계를 못 하고 같은 세션이 압축으로 이었다(일지 2026-10-27-06과 이 세션의 "인계 못함"). 처방이 권한 허용을 넓히는 것이라 넘겼다. `.claude/settings.json`에 `permissions.allow`를 두고 `PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send *)`를 더했다. 규칙의 꼴은 공식 문서 permissions의 PowerShell 절(Bash와 같은 꼴, 공백 뒤 끝 `*`)을 서브에이전트가 받은 원문으로 대 봤다. 허용 규칙에 맞는 호출이 판정기를 거치지 않는다는 것은 permission-modes 문서의 요약으로만 봤다. 다음 인계에서 확인하는 일은 대기열 498(2회차)이다.
+1. **넘김, 사용자 승인(이 세션에서 반영).** 자동 모드 분류기가 인계 열기(`tools/open_session.ps1 -Action send`)를 거부해 인계를 못 하고 같은 세션이 압축으로 이었다(일지 2026-10-27-06과 이 세션의 "인계 못함"). 처방이 권한 허용을 넓히는 것이라 넘겼다. `.claude/settings.json`에 `permissions.allow`를 두고 `PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send *)`를 더했다. 그 커밋(`525f5ad3`)을 푸시한 뒤 백그라운드 보안 리뷰가 MEDIUM으로 짚었다. 스크립트는 신뢰 대화상자의 폴더를 호출자가 준 `-Folder`와만 견주므로(`tools/open_session.ps1` 212행), 끝의 `*`가 `-Folder`까지 덮으면 아무 폴더의 신뢰 수락이 판정기 없이 지난다. 사용자가 고른 범위 안에서 `open-session` 3이 치는 꼴로 좁혀 `-Folder C:\project\agent -PromptFile *`만 허용했다. 리뷰가 함께 낸 스크립트 쪽 고침은 대기열 498에 적었다. 규칙의 꼴은 공식 문서 permissions의 PowerShell 절(Bash와 같은 꼴, 공백 뒤 끝 `*`)을 서브에이전트가 받은 원문으로 대 봤다. 허용 규칙에 맞는 호출이 판정기를 거치지 않는다는 것은 permission-modes 문서의 요약으로만 봤다. 다음 인계에서 확인하는 일은 대기열 498(2회차)이다.
 2. **넘김, 사용자 승인(이 세션에서 반영).** 자동 모드 분류기가 병합 뒤 `git push origin --delete <브랜치>`를 거부해 원격 브랜치가 남았다(일지 2026-10-23-49, 2026-10-27-02·04·07·09). 처방이 권한 허용을 넓히거나 저장소 설정을 바꾸는 것이라 넘겼다. `gh api -X PATCH repos/njh6803/agent-os -F delete_branch_on_merge=true`로 켰고 응답이 `true`였다. 병합 절차의 원격 정리 문장을 고치는 일은 대기열 497(5회차)이다.
 
 > 사용자(선택, 질문 "새 세션을 여는 스크립트가 판정기에 막혀 인계가 두 번 실패했습니다. 어떻게 할까요?"): 허용 목록에 넣는다 (Recommended): "`.claude/settings.json`에 허용 목록(`permissions.allow`)을 두고 `tools/open_session.ps1 -Action send` 명령을 넣습니다. 지금 그 파일에는 금지 목록(`deny`)만 있습니다. 허용 규칙이 있으면 판정기가 그 명령을 다시 검사하지 않을 것으로 어림하며, 실제로 건너뛰는지는 다음 인계 때 확인합니다. 이 스크립트는 앱 창을 조작해 새 세션을 열고 보내기 버튼까지 누르므로, 그 동작을 판정기가 다시 보지 않게 되는 것이 치르는 값입니다. 두 번은 최근 일지(2026-10-27-06과 이 세션)에 적힌 거부입니다."
@@ -223,6 +223,8 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 9. **기각.** CodeRabbit CLI 좌석이 없고 PR 봇은 한도였다. 대기열 136이 닫으며 정한 대체 길(`/security-review`, `bug-perf-review`)을 따랐고 새로 처방할 것이 없다.
 10. **기각.** 내장 브라우저가 claude.ai에 로그인되어 있지 않아 사람이 로그인했다. 그 브라우저의 로그인은 프로필에 남아 다음에는 필요 없다(built-in-browser 스킬).
 11. **기각.** 첫 인계 때 컨텍스트의 대부분이 `tidy-checkouts`의 세션 목록 두 번이었다는 것은 재지 않은 어림이라 사건으로 세지 않는다.
+
+회고 뒤의 사건: 허용 규칙을 좁힌 커밋의 첫 시도에서 pre-commit의 web-verify가 위젯 시험 `WidgetApproval.test.tsx`의 사유 글자 수 사례(`getByText("18,000 / 20,000")`를 찾지 못함) 하나로 빨갰다. 그 커밋은 설정, 대기열, 일지만 바꿨고 앞 커밋 `525f5ad3`은 같은 코드로 통과했다. 열린 대기열 486이 처방한 사건이라 회차로 세는 것(승인)이고, 그 행을 3회차로 올렸다. 같은 내용으로 커밋을 다시 쳤다.
 
 일지에만 남기는 사례: PR 직전 리뷰가 잡은 `upload-output.mjs` 머리 주석의 결과 방향(셀프 리뷰를 반영하며 새로 쓴 문장, 밀 주장 7)은 대기열 386이 값을 받아들여 닫은 종류의 새 사례라 잇지 않는다.
 
